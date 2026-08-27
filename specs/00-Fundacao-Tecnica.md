@@ -9,15 +9,9 @@ status: "Vigente — prevalece sobre qualquer spec numerada"
 # Spec 00 — Fundação Técnica
 
 > **Este documento é a base de todas as specs deste repositório.**
-> Toda spec de `heranca-v2.0/001` a `heranca-v2.0/039`, e toda spec da v2.1 a partir de
-> `001`, **herda** o que está aqui e não precisa repetir. Onde uma spec numerada
-> contradisser este documento, **este documento vence** — e a contradição é defeito da
-> spec, a ser corrigido, não uma exceção a ser negociada.
->
-> **Numeração — duas séries, dois diretórios.** Em 26/08/2026 a numeração foi reiniciada
-> para a v2.1: as 39 specs herdadas da v2.0 passaram a viver em `specs/heranca-v2.0/` e as
-> specs da v2.1 recomeçam em `specs/001-…`. Uma referência a "spec 001" **precisa dizer de
-> qual série** — `heranca-v2.0/001-migracao-saneamento-dados` não é a `001` da v2.1.
+> Toda spec de 001 a 039, e toda spec futura, **herda** o que está aqui e não precisa
+> repetir. Onde uma spec numerada contradisser este documento, **este documento vence** —
+> e a contradição é defeito da spec, a ser corrigido, não uma exceção a ser negociada.
 
 ## Por que este documento existe
 
@@ -195,7 +189,7 @@ regra de negócio (`RN-INST-05` generalizada), não lacuna. PR que acrescente `f
 - `timestamptz`, banco em UTC, apresentação em `America/Sao_Paulo`.
 
 O schema completo está em `docs/fase-2/21-Schema-Fisico-PostgreSQL.md` e nos seis scripts
-de `docs/sql-referencia/`. **26 tabelas, 34 chaves estrangeiras, todas com `ON DELETE` explícito.**
+de `sql/`. **26 tabelas, 34 chaves estrangeiras, todas com `ON DELETE` explícito.**
 
 ---
 
@@ -269,9 +263,9 @@ v1.0→v2.0, decisão P-14, `Origem_Migracao_v1`, colunas `*_Legado_v1`, histór
 Traduzir isso apagaria a trilha, e é o **Princípio IV** (Integridade do Histórico) aplicado
 à documentação: corrige-se o passado registrando evento novo, nunca reescrevendo o registro.
 
-Hoje isso se resume a três arquivos, em **`heranca-v2.0/001-migracao-saneamento-dados`** e
-**`heranca-v2.0/004-rbac-ampliado-usuarios`**, que descrevem a própria migração e por isso
-citam os nomes antigos por dever de ofício.
+Hoje isso se resume a três arquivos, em **001-migracao-saneamento-dados** e
+**004-rbac-ampliado-usuarios**, que descrevem a própria migração e por isso citam os nomes
+antigos por dever de ofício.
 
 ### 8.2 O que NÃO foi convertido, e por quê
 
@@ -306,6 +300,6 @@ que ninguém tenha notado.
 **Implementa:** `RNF-PLAT-01.1` a `RNF-PLAT-08` · `RNF-SEG-01` (revisado) · `RF-AUTH-01` a
 `RF-AUTH-10` · `RN-RBAC-01` · `RN-RBAC-02` · `RN-INST-05` (generalizada).
 **Depende de:** constitution v2.1 (`docs/vibe-coding/40`), documentos 21, 22, 23, 24 e 25.
-**Prevalece sobre:** todas as specs de `heranca-v2.0/001` a `heranca-v2.0/039` e todas as da v2.1.
+**Prevalece sobre:** todas as specs de 001 a 039 e as futuras.
 
 *Fim do Spec 00.*

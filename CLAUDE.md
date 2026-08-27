@@ -220,7 +220,11 @@ divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, colun
 | Sistema em produção | **v2.0** (Apps Script + Sheets). Continua sendo a produção **até o corte**. Base viva: `Banco de dados CIAARA-11 v2.0`, 23 abas, sendo escrita todo dia |
 | Decisão de migrar | ✅ Bernardo, 25/08/2026 |
 | Projeto Supabase | ✅ Criado e **alcançável pela aplicação** (`cqhpfuaweoyglhtrckcp`, chave publicável no `.env.local`, conexão verificada em 26/08/2026). Schema ainda **vazio** — aguarda o Épico 1 |
-| Repositório GitHub | ✅ Criado pelo Bernardo — **ainda sem push**. Nada do scaffold foi commitado |
+| Repositório GitHub | ✅ `villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1` — **PÚBLICO** desde 26/08/2026 (decisão de Bernardo), branch padrão `main`, um commit (`a1aa9fb`, só `README.md`). `gh` autenticado. **Ainda sem push da v2.1**: o commit de 26/08 vive em `master` no repo `SIS11` e precisa ser replantado em `main` (FR-021 da spec 001) |
+| Proteção da branch `main` | ⬜ **Disponível, não configurada** (`404 Branch not protected`). Aplicar o comando do documento 10 §2.7 **depois** do `ci.yml` e **antes** do primeiro PR — os três contextos (`qualidade`, `banco`, `build`) precisam existir com esses nomes |
+| ⚠️ Repositório público | Toda a suíte documental das Fases 1–3 fica **legível por qualquer pessoa** quando o push acontecer: estrutura da CIAARA-11, volumes de pessoal, regras da MB, referência normativa e o ref do projeto Supabase. **Não é credencial** — a `service_role` está fora do repo e o `.env.local` é ignorado. É exposição institucional, decidida por Bernardo |
+| Gerenciador de pacotes | ✅ **`pnpm` confirmado por Bernardo em 26/08/2026.** Pendência fechada |
+| Preview na Vercel | ✅ **Liberada em 26/08/2026, só com dado sintético** até a CIAARA-14.2 decidir sobre hospedagem fora da MB. Nem a base viva nem o Supabase de produção alcançáveis pela preview (FR-022 da spec 001) |
 | Documentação (Fases 1–3 + Vibe Coding) | ✅ Escrita. `docs/sql-referencia/` com os seis scripts de referência |
 | **Épico 0 — Fundação** | 🟨 **Em andamento.** Feitos §6.1 e §2.8. **Retomar em §6.2** do documento 10 |
 | Épicos 1 a 13 | ⬜ Pendentes |
@@ -259,8 +263,7 @@ máximo. **É uma base pequena: priorize clareza de schema e manutenibilidade so
 
 | # | Decisão | Bloqueia |
 |---|---|---|
-| **Hospedagem fora da infraestrutura da MB** | Pendente na CIAARA-14.2 | **Épico 2.** Única pendência capaz de bloquear a versão por razão não técnica |
-| **Gerenciador de pacotes** | `pnpm` **em uso** (11.24.0, `pnpm-lock.yaml` criado) — falta confirmação nominal | **Épico 0.** Trocar por npm ainda é barato: apagar `pnpm-lock.yaml` e `pnpm-workspace.yaml`. Depois do CI, não é |
+| **Hospedagem fora da infraestrutura da MB** | Pendente na CIAARA-14.2 | **Épico 2.** Única pendência capaz de bloquear a versão por razão não técnica. *Não bloqueia mais o Épico 0: em 26/08/2026 Bernardo liberou a preview com dado sintético apenas* |
 | **CONST-1** | Constitution em dois endereços: consolidar ou manter espelho | Nenhum épico. Custo cresce a cada emenda |
 | **TURMA-1** | Status "Arquivada" no domínio de turma | Épico 1 (barato agora) |
 | **LIQ-3** | Papel titular/reserva na atribuição | Épico 11 |
