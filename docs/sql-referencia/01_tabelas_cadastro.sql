@@ -407,7 +407,7 @@ comment on column public.turmas.codigo is
   'histórico que a referencia (C-04).';
 comment on column public.turmas.status is
   'Domínio fechado nos quatro valores observados. O valor "arquivada" do rascunho de '
-  'funcionalidades NÃO foi incluído — achado TURMA-1 (v2.0 §7) segue ABERTO.';
+  'funcionalidades NAO foi incluido — TURMA-1 FECHADO em 28/08/2026: filtro, nao dominio.';
 
 alter table public.turmas enable row level security;
 

@@ -161,7 +161,7 @@ cabeçalho não há alvo de FK para "a configuração" (documento 21 §3.2).
 | `Data_Inicio` | `data_inicio` | `date` | `DD/MM/YYYY` | — |
 | `Data_Termino` | `data_termino` | `date` | `DD/MM/YYYY` | `CHECK término ≥ início` |
 | `Sala_Alocada` | `sala_alocada` | `text` | `nullif` | — |
-| `Status` | `status` | `status_turma` NOT NULL | `Planejada`/`Ativa`/`Concluida`/`Cancelada` → minúsculo | A única turma vazia já foi classificada na v2.0. ⚠️ `arquivada` **não** existe no ENUM (achado TURMA-1, aberto) |
+| `Status` | `status` | `status_turma` NOT NULL | `Planejada`/`Ativa`/`Concluida`/`Cancelada` → minúsculo | A única turma vazia já foi classificada na v2.0. `arquivada` **não** existe no ENUM, por decisão de 28/08/2026 (TURMA-1 fechada: é filtro de apresentação) |
 | `Nome_Completo_Curso` | — (view) | — | **descartada** | `FORMULA` de exibição → `vw_turmas_rotulo`. Depende de outra tabela ⇒ view, não coluna gerada |
 | `Origem_Migracao_v1` | `origem_migracao_v1` | `text` | `'Turmas_Ativas:<ID_Turma>'` | — |
 | `Editado_Por` / `Timestamp_Edicao` | `editado_por` / `editado_em` | `uuid` / `timestamptz` | e-mail→uuid; fuso | — |

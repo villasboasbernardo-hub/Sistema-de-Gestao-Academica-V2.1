@@ -179,7 +179,7 @@ Uma linha por Tempo de Aula de cada configuração. A v2.0 já despivotou esta a
 | `modalidade` | Presencial · EAD · Semipresencial da **turma** | Domínio fechado. Prevalece sobre a do curso (RN-MAT-04) |
 | `data_inicio`, `data_termino` | Janela real | `data_termino >= data_inicio` (CHECK) |
 | `sala_alocada` | Sala | Opcional. Alimenta a visão de ocupação (RF-CRONOS-09/10) |
-| `status` | `planejada` · `ativa` · `concluida` · `cancelada` | ENUM. Ver decisão pendente TURMA-1 (§8.2) |
+| `status` | `planejada` · `ativa` · `concluida` · `cancelada` | ENUM **fechado nestes quatro valores**. TURMA-1 decidida em 28/08/2026: "Arquivada" é filtro de apresentação, não valor de dado (§9.2) |
 
 Unicidade: `curso_id` + `turma` + `ano_letivo`.
 
@@ -722,6 +722,47 @@ Quatro achados foram registrados em `01-schema.md` (§7 e §8) e deliberadamente
 >
 > **A análise abaixo permanece íntegra e não foi reescrita** — é o registro de como a decisão foi
 > tomada, e corrigir o passado é registrar evento novo, nunca editar o registro (Princípio IV).
+>
+> ---
+>
+> ### ✅ Complemento — 28/08/2026 · a origem do dado de UE
+>
+> A decisão de 26/08 fixou o **grão**. Faltava saber **de onde viriam as UEs**, e a hipótese de
+> trabalho era que precisariam ser criadas sinteticamente. **Estava errada.**
+>
+> As Unidades de Ensino **já existem, aprovadas e vigentes**, nos currículos oficiais da Diretoria de
+> Ensino da Marinha — um PDF por curso/estágio, em `SIS11/Curriculos/`. Cada currículo traz, por
+> disciplina, a seção `LISTA DE UNIDADES DE ENSINO` com número, tópico, carga horária e subunidades.
+> É exatamente a estrutura que a rota (b) exige.
+>
+> **Extração feita e validada em 28/08/2026** (`scripts/etl/extrair_unidades_ensino.py`):
+>
+> | Métrica | Valor |
+> |---|---|
+> | Currículos processados / que declaram UE | 24 / **21** |
+> | Disciplinas com UE | **134** |
+> | **Unidades de Ensino** | **572** |
+> | Subunidades de Ensino (SUE) | 2.446 |
+> | CH total distribuída em UE | 7.231 horas |
+> | Disciplinas em que a soma das CH das UEs **fecha** com a CH da disciplina | **134 de 134** |
+> | Violações de `unique (disciplina_id, numero_ue)` | **0** |
+> | UEs com `numero_ue <= 0` | **0** |
+>
+> **Consequências:** `unidades_ensino` nasce povoada por **seed de dado normativo real**, com norma de
+> origem (o nº do Ofício da DEnsM que aprovou o currículo). A objeção de "175 UEs sintéticas visíveis
+> na tela" **desaparece**. As duas constraints da entidade ficam verificadas contra o dado real antes
+> mesmo de a migration existir.
+>
+> **Três currículos não declaram UE:** `Est-QF-APOC` (PDF digitalizado, sem camada de texto) e
+> `C-Espc-FR`/`C-Espc-HN` (modelo por competências — `COMPETÊNCIA TÉCNICA` → `INDICADORES` —, que não
+> tem UE). Encaminhados em **Q1.b**.
+>
+> **O que continua aberto (Q1.b, Épico 2):** o catálogo diz *quais* UEs existem; **não** diz a qual
+> UE pertence cada um dos 1.566 registros de aula históricos — a v2.0 nunca guardou essa informação.
+> **Não bloqueia o Épico 1**: o grão de `registros_aula` é o mesmo em qualquer das saídas possíveis.
+>
+> **A subunidade (SUE) não vira tabela na v2.1** enquanto não houver requisito que a peça — Princípio
+> X. Fica registrada no catálogo extraído.
 
 **Origem:** `01-schema.md` §7, achado UE-1, registrado em 2026-08-14. Status: **fechado em 2026-08-26 pela rota (b)** — o texto a seguir é o registro da análise que precedeu a decisão.
 
@@ -762,9 +803,21 @@ Três coisas ficam gratuitas que não eram: (i) a FK `unidades_ensino → discip
 
 **Impacto no sequenciamento.** Esta decisão precisa ser tomada **antes do Épico 1** (schema PostgreSQL). Não porque a entidade precise existir na primeira migration — ela não precisa —, mas porque a resposta determina se `registros_aula` mantém o grão atual. Mudar o grão de uma tabela de fatos depois que ela está povoada e consumida por quatro módulos é o tipo de retrabalho que a Fase 1 existe para evitar.
 
-### 9.2 TURMA-1 · Status "Arquivada" ausente do domínio de status de turma — **impacto: Baixo**
+### 9.2 TURMA-1 · Status "Arquivada" ausente do domínio de status de turma — **DECIDIDO: filtro de apresentação** — impacto: Baixo
 
-**Origem:** `01-schema.md` §7, achado TURMA-1.
+> ## ✅ Decisão — 28/08/2026 · Bernardo Villas Bôas dos Santos
+>
+> **A recomendação desta seção foi acolhida integralmente.** "Arquivada" **não** é valor de dado: é
+> **filtro de apresentação** sobre turmas concluídas.
+>
+> **O que isto fixa para o Épico 1:** o domínio `status_turma` nasce com **exatamente os quatro
+> valores reais** da base viva — `planejada`, `ativa`, `concluida`, `cancelada`. **Nenhum valor
+> novo entra no domínio fechado.** "Arquivada" é resolvida por VIEW, ao custo de zero migration.
+>
+> **A análise abaixo permanece íntegra e não foi reescrita** — é o registro de como a decisão foi
+> tomada (Princípio IV).
+
+**Origem:** `01-schema.md` §7, achado TURMA-1. Status: **fechado em 2026-08-28.**
 
 **O que é.** O rascunho de funcionalidades lista **cinco** status de turma para filtro no módulo de cursos: Ativas, Planejadas, Concluídas, Canceladas e **Arquivadas**. A base viva tem quatro valores reais — `Planejada` (11), `Ativa` (7), `Concluida` (7), `Cancelada` (3), mais uma linha vazia já classificada na migração. "Arquivada" não é valor observado nem ENUM declarado em nenhum documento da Fase 1.
 
@@ -862,7 +915,7 @@ Isso tem uma consequência de projeto que precisa ser dita com todas as letras, 
 | `01-schema.md` §2 (convenções C-01 a C-10) | §2 e §7 — cada convenção mapeada para a garantia equivalente do PostgreSQL |
 | `01-schema.md` §3 (mapa de abas) e §5 (abas complementares) | §3 e §4 — mapa de entidades e dicionário conceitual |
 | `01-schema.md` §6.8 (decisão por achado) | §8.1 — coluna "estado final" |
-| `01-schema.md` §7 (UE-1, TURMA-1, DISC-1, DISC-2) | §9.1 (**UE-1 fechado em 2026-08-26, rota (b)**) e §9.2 (TURMA-1 aberto); DISC-1 aplicado em `disciplinas` (§4.1); DISC-2 confirmado como VIEW derivada |
+| `01-schema.md` §7 (UE-1, TURMA-1, DISC-1, DISC-2) | §9.1 (**UE-1 fechado em 2026-08-26, rota (b)**) e §9.2 (**TURMA-1 fechado em 2026-08-28: filtro de apresentação**); DISC-1 aplicado em `disciplinas` (§4.1); DISC-2 confirmado como VIEW derivada |
 | `01-schema.md` §8 (LIQ-1 a LIQ-5) | LIQ-1 modelado em `turma_disciplina` (§4.1); LIQ-2 descartado, preservado; LIQ-3 e LIQ-4 em §9.3 e §9.4; LIQ-5 confirmado em `instrutores` (§4.2) |
 | BRIEF §2, §2.1, §3, §9, §10 | Autoridade de nomes, convenções, RBAC, invariáveis e volumes |
 

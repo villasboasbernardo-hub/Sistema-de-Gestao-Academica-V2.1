@@ -1,0 +1,33 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+pnpm-lock.yaml
+lib/tipos/database.ts
+docs/
+specs/
+*.docx
+*.xlsx
+*.pdf
+.specify/
+supabase/.temp/
+
+# Artefatos de terceiros e documentos escritos a mao — reformatar so produz ruido.
+.claude/
+ferramentas/
+CHANGELOG.md
+
+# Escritos e alinhados a mao. Prettier reflui tabela e troca *enfase* por _enfase_ — puro ruido
+# no arquivo que o agente le a cada sessao.
+CLAUDE.md
+AGENTS.md
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# Dados gerados pelo ETL — saida de `scripts/etl/extrair_unidades_ensino.py`.
+# Formatar aqui produziria diff ruidoso a cada reextracao e nao traz ganho de leitura:
+# o arquivo e conferido pela invariante do proprio extrator, nao pelo olho.
+scripts/etl/dados/

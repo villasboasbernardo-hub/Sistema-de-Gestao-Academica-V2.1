@@ -227,8 +227,10 @@ divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, colun
 | Preview na Vercel | ✅ **Liberada em 26/08/2026, só com dado sintético** até a CIAARA-14.2 decidir sobre hospedagem fora da MB. Nem a base viva nem o Supabase de produção alcançáveis pela preview (FR-022 da spec 001) |
 | Documentação (Fases 1–3 + Vibe Coding) | ✅ Escrita. `docs/sql-referencia/` com os seis scripts de referência |
 | **Épico 0 — Fundação** | 🟨 **Em andamento.** Feitos §6.1 e §2.8. **Retomar em §6.2** do documento 10 |
-| Épicos 1 a 13 | ⬜ Pendentes |
-| **Decisão UE-1** | ✅ **Fechada em 26/08/2026 — rota (b)**: `registros_aula` no grão de **Unidade de Ensino**; disciplina é agregado derivado. Épico 1 **desbloqueado**. Ver documento 05 §9.1 |
+| **Épico 1 — Schema + RLS** | 🟨 **Especificado** em `specs/002-schema-rls-permissoes/` (28/08/2026), clarificado (Q1/Q2/Q3) e sem marcador pendente. **Retomar em `/speckit-plan`.** Não começa antes de §6.3 e §6.5 do Épico 0 |
+| **Catálogo de Unidades de Ensino** | ✅ **Extraído em 28/08/2026** dos 24 currículos da DEnsM (`SIS11/Curriculos/`): **572 UEs**, 134 disciplinas, 21 currículos. Invariante fecha em **134/134** (soma das CH das UEs = CH da disciplina). Script `scripts/etl/extrair_unidades_ensino.py`, dado em `scripts/etl/dados/`. **3 currículos sem UE** — ver Q1.b |
+| Épicos 2 a 13 | ⬜ Pendentes |
+| **Decisão UE-1** | ✅ **Fechada em 26/08/2026 — rota (b)**: `registros_aula` no grão de **Unidade de Ensino**; disciplina é agregado derivado. Épico 1 **desbloqueado**. Ver documento 05 §9.1. **Origem do dado resolvida em 28/08/2026**: as UEs vêm dos **currículos oficiais da DEnsM**, não de linha sintética |
 | Numeração das specs | ✅ **Reiniciada em 26/08/2026.** As 39 specs herdadas da v2.0 vivem em `specs/heranca-v2.0/`; a v2.1 recomeça em `specs/001-…`. "Spec 001" **exige o diretório** para não ser ambíguo |
 
 **Épico 0 — de pé em 26/08/2026:** `pnpm` 11.24.0 via `corepack` · Next.js **16.3.3** + React
@@ -251,8 +253,12 @@ pgTAP (§6.5) · scripts do documento 24 §7 no `package.json` (§6.6) · `.gith
 2. **Spec Kit 0.16.0 usa hífen:** `/speckit-specify`, não `/speckit.specify` como o documento 10
    §2.8 escreve. As skills estão instaladas e corretas.
 3. **A constitution existe em dois endereços** — `docs/vibe-coding/40-Constitution-v2.1.md` e
-   `.specify/memory/constitution.md`, hoje idênticos. **Emenda tem de ir nos dois**, sob pena de
-   divergência silenciosa. Consolidar num só é decisão pendente do Bernardo.
+   `.specify/memory/constitution.md`. **Emenda tem de ir nos dois**, sob pena de divergência
+   silenciosa. Consolidar num só é decisão pendente do Bernardo (CONST-1).
+   **⚠️ Corrigido em 28/08/2026: eles NÃO são idênticos.** O corpo normativo já divergia em 5 linhas
+   antes de qualquer edição desta data — a cópia de `.specify` aponta para `sql/05_rls_policies.sql`,
+   caminho que não existe (o certo é `docs/sql-referencia/05_rls_policies.sql`), e o rodapé de versão
+   está posicionado de forma diferente. **A divergência silenciosa que o CONST-1 previa já aconteceu.**
 
 **Volumes** (para dimensionar, não para otimizar): 24 cursos · 29 turmas · 175 disciplinas ·
 177 instrutores · 798 vínculos instrutor↔disciplina · ~1.753 registros de aula · 663 + 1 = 664
@@ -265,7 +271,9 @@ máximo. **É uma base pequena: priorize clareza de schema e manutenibilidade so
 |---|---|---|
 | **Hospedagem fora da infraestrutura da MB** | Pendente na CIAARA-14.2 | **Épico 2.** Única pendência capaz de bloquear a versão por razão não técnica. *Não bloqueia mais o Épico 0: em 26/08/2026 Bernardo liberou a preview com dado sintético apenas* |
 | **CONST-1** | Constitution em dois endereços: consolidar ou manter espelho | Nenhum épico. Custo cresce a cada emenda |
-| **TURMA-1** | Status "Arquivada" no domínio de turma | Épico 1 (barato agora) |
+| ~~**TURMA-1**~~ | ✅ **Fechada em 28/08/2026 — filtro de apresentação.** O domínio de status de turma fica com os quatro valores reais (`planejada`, `ativa`, `concluida`, `cancelada`); "Arquivada" é VIEW, **não** valor novo | — |
+| **Q1.b** | A qual UE pertence cada um dos 1.566 registros de aula históricos — a v2.0 nunca guardou essa informação. E como participam do grão de UE os 3 cursos sem UE no currículo (Est-QF-APOC digitalizado; C-Espc-FR e C-Espc-HN no modelo por competências) | **Épico 2.** Não bloqueia o Épico 1: o grão é o mesmo nas três saídas |
+| **UE-PUB** | O catálogo de UE (572 unidades, 2.446 subunidades, ementa de 134 disciplinas) fica **legível por qualquer pessoa** no repositório público. Não é credencial — é conteúdo programático da MB em grão bem mais fino que a suíte documental já exposta | Nenhum épico. **Confirmar antes do push**; se não for desejado, `.gitignore` em `scripts/etl/dados/` |
 | **LIQ-3** | Papel titular/reserva na atribuição | Épico 11 |
 | **LIQ-4** | Persistência da LIQ emitida | Épico 11 |
 

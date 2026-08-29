@@ -18,8 +18,15 @@ status: "Vigente"
 > **Nota de proveniência.** Este arquivo nasceu como contrato de trabalho durante a redação
 > da suíte v2.1 e foi **entregue ao repositório em 26/08/2026**, depois que a auditoria do
 > Épico 1 apontou que `CLAUDE.md`, a constitution e o documento 42 o citavam sem que ele
-> existisse em `docs/`. O conteúdo abaixo é o estado final, já com as correções que a
-> validação contra PostgreSQL 16 e a auditoria da planilha real produziram.
+> existisse em `docs/`. O conteúdo abaixo já traz as correções que a validação contra
+> PostgreSQL 16 e a auditoria da planilha real produziram.
+>
+> **Revisão de 26/08/2026 (achados D-5 e D-6).** A primeira entrega deste arquivo não
+> conhecia a decisão **UE-1 rota (b)**, tomada no mesmo dia: o §2.1 tinha 26 tabelas, sem
+> `unidades_ensino`, e descrevia `registros_aula` no grão antigo. Como o §2.1 se declara
+> autoridade de nomes, ele levaria o Épico 1 a excluir a tabela que a decisão exige.
+> Corrigido em **§2.1** (mapa), **§2.2** (o grão do fato, novo) e **§11** (o que em
+> `docs/sql-referencia/` ficou para trás). D-6 está resolvido na nota ao fim do §2.1.
 
 ---
 
@@ -103,10 +110,25 @@ na UI**.
 
 ### 2.1 Mapa de tabelas — **use exatamente estes nomes**
 
-São **26 tabelas**, na ordem de criação das migrations. Esta tabela é a autoridade de nomes
-citada pelo prompt do Épico 1 (documento 42) e casa exatamente com `docs/sql-referencia/`.
+São **27 tabelas**. Esta tabela é a autoridade de nomes citada pelo prompt do Épico 1
+(documento 42, *"use EXATAMENTE estes nomes"*).
 
-| # | Aba v2.0 (Sheets) | **Tabela v2.1 (PostgreSQL)** | Script |
+> ### ⚠️ Revisão de 26/08/2026 — decisão UE-1, rota (b)
+>
+> **Esta seção foi corrigida depois da decisão UE-1**, e a correção não é cosmética.
+>
+> A primeira versão do mapa tinha 26 tabelas e **não conhecia `unidades_ensino`**. Como o prompt
+> do Épico 1 manda usar exatamente os nomes daqui, ele levaria o agente a **excluir justamente a
+> tabela que a rota (b) exige** — e a excluí-la com autoridade, citando este documento. É o mesmo
+> padrão do achado P-1 (`turma_disciplina` fora do mapa), e a lição é a mesma: **um mapa
+> declarado autoritativo herda a obrigação de estar completo.**
+>
+> **`docs/sql-referencia/` ainda reflete o grão antigo.** Os seis scripts foram escritos e
+> validados **antes** da decisão, e neles `registros_aula.disciplina_id` é `NOT NULL` — grão de
+> disciplina. **A migration do Épico 1 implementa o grão de UE; ela não copia o script de
+> referência neste ponto.** Ver §2.2 e §11.
+
+| # | Aba v2.0 (Sheets) | **Tabela v2.1 (PostgreSQL)** | Script de referência |
 |---|---|---|---|
 | 1 | `Cad_Cursos` | `cursos` | 01 |
 | 2 | *(cabeçalho extraído de `Horarios_Tempos_Aula`)* | `configuracoes_horario` | 01 |
@@ -114,26 +136,27 @@ citada pelo prompt do Épico 1 (documento 42) e casa exatamente com `docs/sql-re
 | 4 | `Cad_Cursos_Regime_Historico` | `curso_regime_historico` | 01 |
 | 5 | `Turmas_Ativas` | `turmas` | 01 |
 | 6 | `Cad_Disciplinas` | `disciplinas` | 01 |
-| 7 | `Turma_Disciplina` | `turma_disciplina` | 01 |
-| 8 | `Cad_Instrutor` | `instrutores` | 01 |
-| 9 | `Instrutor_Disciplina` | `instrutor_disciplina` | 01 |
-| 10 | `Responsaveis_Curso` | `responsaveis_curso` | 01 |
-| 11 | *(colunas-lista de `Turma_Disciplina`)* | **`turma_disciplina_instrutor`** | 01 |
-| 12 | `Avaliacoes_Planejadas` | `avaliacoes_planejadas` | 02 |
-| 13 | `Registro_Aulas_E_Atividades` | `registros_aula` | 02 |
-| 14 | `Avaliacoes` | `avaliacoes` | 02 |
-| 15 | `Eventos_Extracurriculares` | `atividades_nao_letivas` | 02 |
-| 16 | `Planejamento_Anual` | `planejamento_anual` | 02 |
-| 17 | `Config_Listas` | `config_listas` | 03 |
-| 18 | `Config_Parametros` | `config_parametros` | 03 |
-| 19 | *(nova)* | `perfil_permissao` | 03 |
-| 20 | `Calendario_Feriados` + `Eventos_Globais` | `feriados` | 03 |
-| 21 | `Calendario_Janelas_Curso` | `janelas_curso` | 03 |
-| 22 | `Calendario_Reservas` | `reservas_proens` | 03 |
-| 23 | `_Migracao_Log` | `migracao_log` | 03 |
-| 24 | `_Arquivo_Avaliacoes_v1` | `arquivo_avaliacoes_v1` | 03 |
-| 25 | `Usuarios` | `usuarios` | 05 |
-| 26 | `Usuario_Curso` | `usuario_curso` | 05 |
+| 7 | *(não existia — UE-1 rota (b))* | **`unidades_ensino`** | **a criar no Épico 1** |
+| 8 | `Turma_Disciplina` | `turma_disciplina` | 01 |
+| 9 | `Cad_Instrutor` | `instrutores` | 01 |
+| 10 | `Instrutor_Disciplina` | `instrutor_disciplina` | 01 |
+| 11 | `Responsaveis_Curso` | `responsaveis_curso` | 01 |
+| 12 | *(colunas-lista de `Turma_Disciplina`)* | **`turma_disciplina_instrutor`** | 01 |
+| 13 | `Avaliacoes_Planejadas` | `avaliacoes_planejadas` | 02 |
+| 14 | `Registro_Aulas_E_Atividades` | `registros_aula` **(grão de UE — §2.2)** | 02 *(a revisar)* |
+| 15 | `Avaliacoes` | `avaliacoes` | 02 |
+| 16 | `Eventos_Extracurriculares` | `atividades_nao_letivas` | 02 |
+| 17 | `Planejamento_Anual` | `planejamento_anual` | 02 |
+| 18 | `Config_Listas` | `config_listas` | 03 |
+| 19 | `Config_Parametros` | `config_parametros` | 03 |
+| 20 | *(nova)* | `perfil_permissao` | 03 |
+| 21 | `Calendario_Feriados` + `Eventos_Globais` | `feriados` | 03 |
+| 22 | `Calendario_Janelas_Curso` | `janelas_curso` | 03 |
+| 23 | `Calendario_Reservas` | `reservas_proens` | 03 |
+| 24 | `_Migracao_Log` | `migracao_log` | 03 |
+| 25 | `_Arquivo_Avaliacoes_v1` | `arquivo_avaliacoes_v1` | 03 |
+| 26 | `Usuarios` | `usuarios` | 05 |
+| 27 | `Usuario_Curso` | `usuario_curso` | 05 |
 | — | `_Meta_Colunas` | **aposentada** — ver abaixo | — |
 
 **`_Meta_Colunas` é o exemplo canônico de "requisito absorvido pela plataforma".** Ela existia
@@ -141,8 +164,12 @@ para dar ao Sheets um contrato de coluna que ele não tinha nativamente. No Post
 (`information_schema`) e os tipos TypeScript gerados pelo Supabase CLI cumprem esse papel com
 garantia do motor. Cite-a quando precisar do exemplo.
 
-**Três tabelas não têm correspondência 1:1 com uma aba, e o motivo importa:**
+**Quatro tabelas não têm correspondência 1:1 com uma aba, e o motivo importa:**
 
+- **`unidades_ensino`** — **[NOVO — UE-1 rota (b), 26/08/2026]** a Unidade de Ensino como entidade
+  de primeira classe. Não existia em aba nenhuma: o `Rascunho de funcionalidades.txt` a descrevia
+  (número da UE, tópico, instrutor daquela UE, data, tempos), mas nenhum documento da suíte a
+  modelava. Detalhe em §2.2.
 - **`configuracoes_horario`** — cabeçalho extraído de `Horarios_Tempos_Aula`, que era
   desnormalizada (`Nome_Config` repetido em todas as linhas da mesma configuração). Sem esse
   cabeçalho não existe alvo de FK para "a configuração", que é o que elimina as chaves órfãs
@@ -153,6 +180,76 @@ garantia do motor. Cite-a quando precisar do exemplo.
   Coluna escalar não comporta isso. **É daqui que a LIQ e a OS de Instrutoria leem** — ler
   `instrutor_disciplina` no lugar foi o defeito de produção que a spec 034 corrigiu.
 - **`perfil_permissao`** — a matriz de autorização como dado (§3).
+
+> **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
+> `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
+> do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a
+> terceira da despivotagem de `Horarios_Tempos_Aula`.
+>
+> **Autoridade, para não travar o Épico 1:** em **inventário e nome de tabela**, este §2.1 prevalece
+> — é o que a constitution e o documento 42 citam. O documento 05 §4 é a fonte de **semântica de
+> atributo**, e está **incompleto**, não errado: as três entradas faltantes precisam ser escritas
+> lá, e essa é uma pendência de documentação, não um bloqueio de implementação. Não invente
+> atributo para as três a partir do §4 — use o §2.2 abaixo e `docs/sql-referencia/`.
+
+### 2.2 O grão do fato de execução — **decisão UE-1, rota (b)**
+
+**Decidido em 26/08/2026 por Bernardo Villas Bôas dos Santos. Registro em `docs/fase-1/05` §9.1 e
+na tabela de decisões da constitution.** É bloqueante para o Épico 1 porque **grão de tabela de
+fato se escolhe na primeira migration, não depois**.
+
+Quatro consequências, todas obrigatórias:
+
+1. **`unidades_ensino` é entidade de primeira classe** — FK `disciplina_id → disciplinas(id)` e
+   `unique (disciplina_id, numero_ue)`.
+2. **`registros_aula` nasce no grão de UE**, não no grão de disciplina. É a mudança de fundo, e é a
+   razão de a decisão ter travado o épico.
+3. **"CH executada da disciplina" é derivada** — VIEW ou coluna `GENERATED`, **jamais uma segunda
+   fonte de verdade**. É o que elimina a objeção principal que existia contra a rota (b): "duas
+   fontes de quanto foi dado" deixa de ser risco quando uma é derivada da outra pelo motor.
+4. **CHD, DSA, Cronograma e motor preditivo leem o agregado**, não o fato bruto — salvo onde a UE
+   for o objeto explícito da tela, que é o diário de classe.
+
+**O custo foi assumido de olhos abertos, e está declarado aqui para que ninguém o descubra depois.**
+A recomendação da revisão de 14/08 era a rota (a), por Princípio VI (mudança cirúrgica). A rota (b)
+foi escolhida assim mesmo, pela coerência conceitual e porque sob PostgreSQL a assimetria de custo
+diminuiu muito — a FK é declarativa, o agregado é VIEW e mover o grão é `INSERT … SELECT`. **A
+contrapartida é que os quatro consumidores centrais entram no escopo do Épico 1 desde o primeiro
+dia.**
+
+**O que isso muda em `docs/sql-referencia/02_tabelas_fato.sql`:** hoje `registros_aula` tem
+`disciplina_id uuid not null references disciplinas(id)`. Na migration do Épico 1 o fato passa a
+apontar para `unidades_ensino`, e a disciplina volta como agregado derivado. O script de referência
+**não** é a autoridade neste ponto — esta seção é.
+
+> ### ✅ Complemento de 28/08/2026 — a origem do dado de UE
+>
+> **As Unidades de Ensino não precisam ser inventadas: elas estão nos currículos oficiais da DEnsM**,
+> um PDF por curso/estágio, em `SIS11/Curriculos/`. Cada currículo traz, por disciplina, a seção
+> `LISTA DE UNIDADES DE ENSINO` com número, tópico, carga horária e subunidades.
+>
+> Extração feita e validada em 28/08/2026 (`scripts/etl/extrair_unidades_ensino.py`, saída em
+> `scripts/etl/dados/`): **572 UEs**, **134 disciplinas**, **21 dos 24 currículos**. A invariante que
+> prova a leitura — soma das CH das UEs igual à CH da disciplina — **fecha em 134 de 134**.
+>
+> **Consequência para o Épico 1:** `unidades_ensino` nasce povoada por **seed de dado normativo**,
+> com norma de origem (o nº do Ofício da DEnsM), na mesma natureza de `config_parametros`. **Não** é
+> carga do ETL histórico e **não** é linha sintética.
+>
+> **Três currículos não declaram UE**, por motivos distintos: **Est-QF-APOC** é PDF digitalizado sem
+> camada de texto; **C-Espc-FR** e **C-Espc-HN** usam o modelo por competências
+> (`COMPETÊNCIA TÉCNICA` → `INDICADORES`), que não tem UE. Encaminhamento em **Q1.b**, do Épico 2.
+>
+> **O que continua em aberto (Q1.b, Épico 2):** o catálogo diz *quais* UEs existem; não diz *a qual
+> UE pertence cada um dos 1.566 registros de aula históricos* — a v2.0 nunca guardou isso. **Não
+> bloqueia o Épico 1**: o grão de `registros_aula` é o mesmo em qualquer das saídas.
+
+**O que a decisão NÃO autoriza.** Ela fixa o grão e a entidade; **não** define atributos além dos
+que o §9.1 do documento 05 nomeia (`numero_ue`, `topico`, `ch_prevista_tempos`,
+`tecnica_ensino_sugerida`, `status`), e **não** cria tela nova. O diário de classe por UE é
+funcionalidade, e funcionalidade nova esbarra no **Princípio X — Paridade Antes de Novidade**: a
+v2.1 entrega a estrutura que a decisão exige, não a tela que ela viabiliza. Se faltar atributo,
+**pergunte** (Princípio I).
 
 **As três formas de atribuição, que o schema agora separa:**
 
@@ -350,12 +447,32 @@ desempenho não é um problema real deste sistema, e a v2.1 não deve fingir que
 
 ## 11. Estado verificado do schema
 
+> ### ⚠️ `docs/sql-referencia/` é REFERÊNCIA, não é a migration do Épico 1
+>
+> Os números abaixo são reais e foram medidos — mas **datam de antes da decisão UE-1**, tomada em
+> 26/08/2026. Duas divergências conhecidas, e nenhuma delas é erro do script: são o schema anterior
+> a uma decisão que veio depois.
+>
+> | Ponto | `docs/sql-referencia/` | O que o Épico 1 deve implementar |
+> |---|---|---|
+> | Tabelas | 26 | **27** — falta `unidades_ensino` (§2.1) |
+> | Grão de `registros_aula` | `disciplina_id NOT NULL` | **`unidade_ensino_id`** — grão de UE (§2.2) |
+> | CH executada da disciplina | coluna do próprio fato | **VIEW/`GENERATED`** sobre as UEs (§2.2) |
+>
+> **Tudo o mais permanece válido e vale a pena reaproveitar**: os 27 ENUMs, as funções do schema
+> `app`, as 74 policies, a matriz `perfil_permissao` semeada, os gatilhos de auditoria e as duas
+> correções de produção do fim desta seção não são afetados pela mudança de grão.
+>
+> **Regra para o agente do Épico 1:** o script de referência é ponto de partida revisável, **não é
+> cópia**. Onde §2.1 ou §2.2 divergirem dele, **o BRIEF vence** — e a divergência é do script, que
+> nasceu antes da decisão.
+
 As seis migrations de `docs/sql-referencia/` foram aplicadas em ordem contra um **PostgreSQL 16
 real**, com stubs de `auth.users`, `auth.uid()` e dos papéis `anon`/`authenticated`/`service_role`:
 
 | Métrica | Valor |
 |---|---|
-| Tabelas | **26** |
+| Tabelas (no script de referência) | **26** — o alvo é 27, §2.1 |
 | Chaves primárias | 26 |
 | Chaves estrangeiras | **34**, todas com `ON DELETE` explícito |
 | Restrições de unicidade | 31 |

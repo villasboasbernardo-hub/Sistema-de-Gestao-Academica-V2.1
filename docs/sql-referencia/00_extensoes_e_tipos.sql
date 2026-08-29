@@ -239,13 +239,14 @@ comment on type public.status_config_horario is
   'assumiu. A linha original nunca é editada nem apagada. Origem: v2.0 §4.3.';
 
 -- Ciclo de vida da turma. Os quatro valores observados na base viva (11 Planejada,
--- 7 Ativa, 7 Concluida, 3 Cancelada). "Arquivada" NÃO entra — ver achado TURMA-1.
+-- 7 Ativa, 7 Concluida, 3 Cancelada). "Arquivada" NAO entra — TURMA-1 FECHADO em
+-- 28/08/2026: e filtro de apresentacao (VIEW), nao valor de dominio.
 create type public.status_turma as enum ('planejada', 'ativa', 'concluida', 'cancelada');
 comment on type public.status_turma is
   'Ciclo de vida da turma. Domínio fechado nos QUATRO valores observados na base viva. '
   'O valor "arquivada", citado no rascunho de funcionalidades, NÃO foi incluído: o achado '
-  'TURMA-1 (v2.0 §7) segue ABERTO, aguardando decisão. Acrescentá-lo depois é '
-  '`ALTER TYPE ... ADD VALUE`, aditivo e sem risco.';
+  'TURMA-1 foi FECHADO em 28/08/2026 (Bernardo): "Arquivada" e filtro de apresentacao, '
+  'resolvido por VIEW sobre turmas concluidas, e NAO valor deste dominio.';
 
 -- Situação de execução de uma avaliação (RN-AVAL-01 revisada).
 create type public.status_avaliacao as enum

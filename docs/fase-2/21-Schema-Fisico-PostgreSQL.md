@@ -307,8 +307,9 @@ suporta `ENUM` diretamente, tornando o cast desnecessário.
 | `status` | `status_turma` | **não** | — | `Status` — a única turma vazia foi classificada na migração |
 
 **[REVOGADO — v2.1]** `Nome_Completo_Curso` (`FORMULA`) → view `vw_turmas_rotulo`.
-**[ABERTO]** achado `TURMA-1`: o valor `arquivada` **não** foi acrescentado ao ENUM; acrescentá-lo
-depois é `ALTER TYPE … ADD VALUE`, aditivo e sem risco.
+**[FECHADO — 28/08/2026]** achado `TURMA-1`: o valor `arquivada` **não** entra no ENUM, e agora isso
+é decisão, não pendência. "Arquivada" é **filtro de apresentação** sobre turmas concluídas, resolvido
+por VIEW. O domínio fica nos quatro valores reais. Ver documento 05 §9.2.
 
 ### 4.6 `disciplinas` ← `Cad_Disciplinas`
 
@@ -991,7 +992,7 @@ sempre calculada na leitura. `GENERATED` recusaria a expressão de qualquer modo
 | Achado | Situação | Efeito neste schema |
 |---|---|---|
 | **UE-1** — Unidade de Ensino não modelada | **FECHADO em 2026-08-26 — rota (b)** (impacto Alto) | `unidades_ensino` **é criada** no Épico 1 e **`registros_aula` passa ao grão de UE** — ver a nota em §4.12. A disciplina vira agregado derivado. CHD, DSA, Cronograma e motor preditivo entram no escopo do Épico 1 |
-| **TURMA-1** — status `Arquivada` | **Aberto** (impacto Baixo) | Valor **não** acrescentado a `status_turma`; acrescentá-lo é `ALTER TYPE … ADD VALUE`, aditivo |
+| **TURMA-1** — status `Arquivada` | ✅ **Fechado em 28/08/2026** | Valor **não** entra em `status_turma`, por decisão: "Arquivada" é filtro de apresentação (VIEW), não valor de dado |
 | **LIQ-3** — papel titular/reserva | **Deferido** por decisão de 2026-08-20 | Coluna `papel_liq` **não** criada |
 | **LIQ-4** — persistência da LIQ emitida | **Deferido** | Tabela `LIQ_Emitida` **não** criada |
 | **LIQ-2** — impedimentos do instrutor | **Descartado** por Bernardo em 2026-08-20 | Entidade `Instrutor_Impedimento` **não** criada. A coluna "Observação" da LIQ sai deliberadamente em branco: o sistema produz uma **minuta** |

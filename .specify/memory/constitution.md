@@ -600,12 +600,17 @@ escolha do agente. Divergência entre 5–6 e qualquer um acima resolve-se sempr
 | 2026-08-25 | Autenticação por **e-mail/senha somente por convite**; reverte D1 (conta Google) | Princípio III.b |
 | 2026-08-26 | `turma_disciplina` e `configuracoes_horario` são obrigatórias no mapa de tabelas | BRIEF §2.1 |
 | 2026-08-26 | **UE-1 — rota (b)**: o fato de execução passa ao grão de **Unidade de Ensino**; disciplina vira agregado (VIEW) | Documento 05 §9.1 |
+| 2026-08-28 | **TURMA-1 — filtro de apresentação**: "Arquivada" não é valor do domínio de status de turma; é VIEW sobre turmas concluídas | Documento 05 §9.2 |
+| 2026-08-28 | **Origem do dado de UE**: as Unidades de Ensino vêm dos currículos oficiais da DEnsM (572 UEs, 134 disciplinas), não de linha sintética | BRIEF §2.2 · documento 05 §9.1 |
+| 2026-08-28 | **Matriz de permissões**: a CIAARA-11 escreve nas tabelas de fato; CIAARA-11 e Admin administram calendário e parâmetros (concessões `(a)` e `(b)` confirmadas) | Documento 22 §11, itens 2 e 3 |
 
 **Decisões pendentes que bloqueiam épicos** (nenhuma reaberta aqui; listadas para que ninguém as
-atropele): **TURMA-1** — status "Arquivada"; **LIQ-3** — papel titular/reserva,
-bloqueia o Épico 11; **LIQ-4** — persistência da LIQ emitida; **hospedagem fora da infraestrutura da
-MB**, pendente na CIAARA-14.2, **decidir antes do Épico 2** — é a única pendência capaz de bloquear
-a versão por razão não técnica.
+atropele): **LIQ-3** — papel titular/reserva, bloqueia o Épico 11; **LIQ-4** — persistência da LIQ
+emitida; **Q1.b** — a qual Unidade de Ensino pertence cada registro de aula histórico, e como
+participam do grão de UE os três cursos cujo currículo não a declara, **decidir no Épico 2**;
+**hospedagem fora da infraestrutura da MB**, pendente na CIAARA-14.2, **decidir antes do Épico 2** —
+é a única pendência capaz de bloquear a versão por razão não técnica. **TURMA-1 saiu desta lista:
+fechada em 28/08/2026.**
 
 **UE-1 saiu desta lista em 26/08/2026** — decidida pela rota (b), registrada na tabela acima. O
 Épico 1 está desbloqueado.
