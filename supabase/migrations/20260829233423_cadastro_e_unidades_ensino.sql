@@ -18,6 +18,8 @@
 --   2. `turmas` e `disciplinas` ganham a chave auxiliar `unique (id, curso_id)`, alvo das
 --      chaves estrangeiras compostas que tornam RN-MAT-01 declarativa (FR-061).
 --   3. Nenhuma verificacao de contiguidade de `numero_ue` — lacuna e dado valido (FR-025).
+--   4. O EXCLUDE de vigencia de `responsaveis_curso` ACRESCENTADO: o documento 05 §7.5
+--      especifica dois, o referencia so implementa um. Sem ele FR-018 fica sem garantia.
 --
 -- Pre-requisito: M1 aplicada.
 -- -------------------------------------------------------------------------------------
@@ -1089,7 +1091,20 @@ create table public.responsaveis_curso (
   -- Modo dinâmico PRECISA de uma chave de resolução do usuário da sessão.
   constraint resp_dinamico_tem_chave
     check (preenchimento <> 'dinamico_usuario_logado'
-           or email_usuario is not null or usuario_id is not null)
+           or email_usuario is not null or usuario_id is not null),
+
+  -- FR-018 · documento 05 §7.5. AUSENTE NO REFERENCIA — acrescentado aqui.
+  -- Um papel de assinatura por curso, por vez. E o que impede um DSA reimpresso sair com
+  -- duas rubricas do mesmo papel. `vigente_ate` nulo e tratado como infinito.
+  -- Nota: `curso_id` e anulavel (assinatura global). Em constraint de exclusao uma linha
+  -- com expressao nula nao conflita com ninguem, entao assinaturas globais ficam fora
+  -- desta protecao — coerente com o dominio, e registrado para nao surpreender.
+  constraint ex_assinatura_sem_sobreposicao
+    exclude using gist (
+      curso_id         with =,
+      papel_assinatura with =,
+      daterange(vigente_de, vigente_ate, '[)') with &&
+    ) where (status = 'ativo')
 );
 
 comment on table  public.responsaveis_curso is

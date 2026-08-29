@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-26
 
-**Status**: Draft — clarificada em 26/08/2026 (Q1–Q3 respondidas). Pronta para `/speckit-plan`
+**Status**: Clarificada (26–27/08/2026, 8 perguntas), planejada, decomposta em 62 tarefas e analisada.
+`/speckit-analyze` de 27/08/2026 apontou 10 achados — **todos aplicados**. Pronta para
+`/speckit-implement`.
 
 **Input**: User description: "Épico 0 — Fundação: repositório, Next.js, Supabase, CI, tipos gerados"
 
@@ -41,7 +43,7 @@ em 26/08/2026, por leitura direta — não por leitura do `CLAUDE.md`.
 | Vitest · Playwright · pgTAP rodando vazios | nenhum instalado |
 | Scripts do doc 24 §7 | `package.json` tem 4 scripts: `dev`, `build`, `start`, `lint`. Faltam 24, inclusive `verificar` e `db:tipos` |
 | `.github/workflows/ci.yml` | `.github/` não existe |
-| Primeira preview verde na Vercel | sem remote git configurado (`git remote -v` vazio) |
+| Primeira pré-visualização verde na Vercel | sem remote git configurado (`git remote -v` vazio) |
 | `AGENTS.md` na raiz | **existe** — conferir conteúdo antes de reescrever |
 
 **Repositório de destino — verificado em 26/08/2026, depois do `gh auth login`:**
@@ -97,6 +99,28 @@ infraestrutura da MB é a única pendência capaz de bloquear a versão por raz�
 viva, nem o projeto Supabase de produção — vai para a Vercel enquanto a CIAARA-14.2 não decidir. O
 Épico 0 fecha completo; o limite vira requisito verificável (FR-022).
 
+### Session 2026-08-27
+
+- Q: Qual banco a pré-visualização da Vercel deve usar, já que hoje existe um único projeto Supabase e
+  o FR-022 exige que a pré-visualização não alcance o de produção? → A: **Opção C** — o projeto existente
+  `cqhpfuaweoyglhtrckcp` passa a ser o de **desenvolvimento/preview**; o projeto de **produção** é
+  criado depois, antes da carga real do Épico 2.
+- Q: O comando único de verificação local deve incluir os testes que exigem Docker e banco no ar
+  (pgTAP e o teste negativo de RLS), ou deve ficar restrito ao que roda em segundos? → A: **Opção C** —
+  **dois comandos**: `verificar` (rápido, sem Docker, como o documento 24 §7 define) e
+  `verificar:tudo` (a sequência completa do CI, a rodar antes de abrir o PR). Emenda ao documento 24 §7.
+- Q: Depois que a v2.1 for replantada no repositório próprio, o que acontece com a pasta
+  `Versao_2.1_NextJS/` que hoje vive dentro do repositório `SIS11`? → A: **Opção A** — a cópia de
+  trabalho **sai de dentro do `SIS11`** e passa a ser pasta irmã, onde vira o repositório próprio. Os
+  commits de 26/08 permanecem no `SIS11` como registro; nada é apagado.
+- Q: O repositório deve ligar a proteção de push contra segredos do GitHub, que recusa um push contendo
+  chave reconhecida, ou basta a inspeção humana antes do merge que o FR-002 já exige? → A: **Opção A** —
+  ligar **varredura de segredos e proteção de push**, mantendo o FR-002. Verificado em 27/08/2026: as
+  duas estão `disabled` no repositório, que é público desde 26/08.
+- Q: O Épico 0 cria um ambiente de **produção** na Vercel, ou só pré-visualizações por branch até o
+  corte? → A: **Opção A** — **só pré-visualizações**. O `main` não publica em produção. O ambiente de produção
+  nasce perto do corte, junto do projeto Supabase de produção (FR-022.1), pela mesma razão.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
@@ -113,7 +137,7 @@ projeto do cenário real desta organização — rotatividade de pessoal. Um sis
 consegue subir é um sistema com um único ponto de falha humano.
 
 **Independent Test**: clonar numa pasta nova, seguir o README à risca, sem consultar nenhuma outra
-fonte. Entrega valor sozinho mesmo que CI e preview ainda não existam.
+fonte. Entrega valor sozinho mesmo que CI e pré-visualização ainda não existam.
 
 **Acceptance Scenarios**:
 
@@ -209,8 +233,9 @@ Quem faz push numa branch recebe um endereço próprio, com a mudança rodando, 
 O Bernardo valida olhando a tela, não lendo o diff.
 
 **Why this priority**: é o que substitui o modelo de implantação da v2.0 e o que torna a revisão humana
-viável para quem não lê código. Fica em P2 porque depende de decisão externa ainda pendente (ver Q3),
-não porque valha menos.
+viável para quem não lê código. Fica em P2 porque depende de infraestrutura externa — Vercel e o
+projeto de desenvolvimento no Supabase —, não porque valha menos. **Somente pré-visualização:** esta
+fatia não cria produção da v2.1 (FR-016.1); a produção do CIAARA-11 segue sendo a v2.0 até o corte.
 
 **Independent Test**: push numa branch qualquer, abrir a URL gerada, ver a aplicação.
 
@@ -240,7 +265,9 @@ não porque valha menos.
   primeira execução. Ler o log do job, não adivinhar.
 - **Alguém desliga uma das duas fronteiras** — por comentário de supressão ou editando a configuração:
   o teste que prova a regra ativa precisa quebrar. É o único aviso que restará.
-- **Segredo real chega ao arquivo de exemplo** por descuido: precisa ser barrado antes do merge.
+- **Segredo real chega a um commit** por descuido — no arquivo de exemplo ou em qualquer outro: o push
+  precisa ser **recusado** (FR-002.1). Se ainda assim escapar, o repositório é público e a chave conta
+  como comprometida: rotacionar, não apagar o commit (FR-002.2).
 - **O contrato de dados é editado à mão** para "consertar" um erro de tipo: o CI precisa reprovar,
   porque a correção certa é a migration.
 
@@ -257,6 +284,13 @@ não porque valha menos.
   pacotes. *(doc 06, critério 1 — cujo texto ainda diz `npm`; prevalece a decisão de 26/08/2026)*
 - **FR-002**: O arquivo de exemplo de variáveis de ambiente MUST listar **toda** variável necessária,
   com comentário do que cada uma faz, e MUST NOT conter nenhum segredo real. *(doc 06, critério 6)*
+- **FR-002.1**: O repositório MUST ter **varredura de segredos e proteção de push** habilitadas, de modo
+  que um push contendo chave reconhecida seja **recusado pelo servidor**, não apenas sinalizado depois.
+  Verificado em 27/08/2026: ambas estavam desligadas. *(decisão de 27/08/2026; o repositório é público
+  desde 26/08, e uma `service_role` vazada ignora a RLS inteira)*
+- **FR-002.2**: Se um segredo real chegar a ser empurrado, o procedimento MUST ser **rotacionar a
+  chave**, não apagar o commit — em repositório público, remover history não desfaz a exposição. O
+  procedimento MUST estar escrito onde quem opera vá encontrá-lo.
 - **FR-003**: A ausência de uma variável de ambiente MUST produzir aviso legível, nunca exceção não
   tratada. *(`RN-DEG-01`, Princípio V)*
 
@@ -291,8 +325,15 @@ não porque valha menos.
   estar configuradas e **rodando vazias**, cada uma com um teste trivial que passa. *(doc 10 §6.5)*
 - **FR-012**: O `package.json` MUST conter os scripts do documento 24 §7 **com os comentários**, que são
   a interface de comando do projeto, e MUST declarar `pnpm` como gerenciador. *(doc 10 §6.6)*
-- **FR-013**: MUST existir um comando único (`pnpm verificar`) que roda localmente a mesma sequência do
-  CI. *(doc 24 §7)*
+- **FR-013**: MUST existir **dois** comandos de verificação local, com propósitos distintos e ambos
+  documentados no README *(decisão de 27/08/2026)*:
+  - **`pnpm verificar`** — rápido, **sem Docker**, exatamente como o documento 24 §7 o define
+    (checagem de tipos, lint, formatação, testes de unidade, build). É o de cada commit.
+  - **`pnpm verificar:tudo`** — a **sequência completa do CI**, incluindo os blocos que exigem banco no
+    ar (invariantes pgTAP e teste negativo de RLS) e o de ponta a ponta. É o de antes de abrir o PR.
+- **FR-013.1**: `verificar:tudo` **não existe no documento 24 §7** e é **emenda** a ele, autorizada por
+  Bernardo em 27/08/2026. A emenda MUST ser aplicada no documento 24, não só aqui — sob pena da mesma
+  divergência silenciosa que esta spec existe para evitar. *(pendência D-7)*
 - **FR-014**: O CI MUST rodar em três blocos — qualidade, banco e build — no repositório
   `villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1`, em **todo push e todo PR**, e MUST
   **bloquear o merge** quando qualquer bloco falhar. *(doc 06, critério 3)*
@@ -307,17 +348,28 @@ não porque valha menos.
 
 - **FR-016**: Todo push em branch MUST gerar um ambiente de pré-visualização com URL própria.
   *(doc 06, critério 2)*
-- **FR-017**: Todo ambiente MUST se identificar visualmente (local · preview · produção), para que
-  ninguém registre aula de verdade achando que está em homologação.
+- **FR-016.1**: Esta fatia MUST NOT criar ambiente de **produção** da v2.1. O `main` MUST NOT publicar
+  em produção. A produção do CIAARA-11 é a **v2.0**, até o corte; um endereço de produção da v2.1 no ar,
+  sem tela de negócio, seria só superfície de confusão. O ambiente de produção nasce perto do corte,
+  junto do projeto Supabase de produção (FR-022.1). *(decisão de 27/08/2026)*
+- **FR-017**: Todo ambiente MUST se identificar visualmente pelo rótulo que lhe corresponde — nesta
+  fatia, apenas **`local`** e **`preview`** existem —, para que ninguém registre aula de verdade
+  achando que está em homologação. O rótulo `producao` MUST permanecer previsto e **não utilizado**.
 - **FR-018**: A implantação MUST ser atômica: falha de deploy MUST manter o ambiente anterior no ar.
   *(substitui `RF-MOD-04`, revogado)*
 
 **Governança e estrutura**
 
-- **FR-019**: A estrutura de diretórios MUST seguir o documento 24, e a degradação segura MUST existir
-  por segmento de rota (`error.tsx` + `loading.tsx`). *(`RF-MOD-01/02/03` reinterpretados; `RN-DEG-01`)*
-- **FR-020**: Nenhuma tabela, nenhuma tela de negócio, nenhum dado e nenhum token de design entram
-  nesta fatia. *(Princípio IX — contenção de escopo)*
+- **FR-019**: A estrutura de diretórios MUST seguir o documento 24 **naquilo que esta fatia cria** —
+  `lib/{supabase,dominio,validacao,acoes,tipos}/`, `tests/{unidade,invariantes/rls,e2e}/` e
+  `supabase/` —, e a degradação segura MUST existir no segmento de rota que existe hoje (`app/`:
+  `error.tsx`, `loading.tsx`, `not-found.tsx`). Os diretórios de outros épicos — `components/`,
+  `app/(auth)/`, `app/(app)/`, `app/print/`, `scripts/etl/` — **MUST NOT ser criados aqui**: criar
+  pasta vazia para um épico futuro é antecipar escopo, não preparar terreno.
+  *(`RF-MOD-01/02/03` reinterpretados; `RN-DEG-01`; Princípio IX)*
+- **FR-020**: Nenhuma tabela, nenhuma tela de negócio, nenhum dado, nenhum token de design, **nenhum
+  ambiente de produção** e **nenhum projeto Supabase de produção** entram nesta fatia.
+  *(Princípio IX — contenção de escopo)*
 
 **Repositório e hospedagem** *(decididos em 26/08/2026 — ver Clarifications)*
 
@@ -325,10 +377,28 @@ não porque valha menos.
   `villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1` — e não como subpasta do repositório
   `SIS11`, que guarda v1.0 e v2.0. O commit de 26/08/2026 MUST ser preservado no replantio; nenhuma
   história é descartada. *(Princípio IV)*
+- **FR-021.1**: A cópia de trabalho MUST **sair de dentro do worktree do `SIS11`** e passar a ser pasta
+  irmã — proposta: `OneDrive/Documentos/CIAARA-11-v2.1` —, onde é o repositório próprio.
+  MUST NOT existir repositório aninhado dentro do worktree do `SIS11`, nem duas cópias de trabalho
+  vivas da mesma árvore. *(decisão de 27/08/2026)*
+- **FR-021.2**: Os commits `d19ab10` e `d31bd56`, na branch `chore/UE-1-versionar-v2.1` do `SIS11`,
+  MUST permanecer como estão — registro de que a v2.1 passou por ali. **Não são apagados nem
+  reescritos**, ainda que o conteúdo passe a viver noutro repositório. *(Princípio IV)*
+- **FR-021.3**: Ao fim do replantio, MUST ser possível provar que existe **uma só** cópia de trabalho
+  da v2.1: o caminho antigo não responde mais como projeto ativo, e o `git status` do `SIS11` não
+  acusa a árvore da v2.1 como modificada.
 - **FR-022**: Enquanto a CIAARA-14.2 não decidir sobre hospedagem fora da infraestrutura da MB, o
   ambiente de pré-visualização MUST operar **somente com dado sintético**: nem a base viva
   `Banco de dados CIAARA-11 v2.0`, nem o projeto Supabase de produção MUST estar alcançáveis a partir
   dele. A separação MUST ser verificável, não apenas acordada.
+- **FR-022.1**: O projeto Supabase existente `cqhpfuaweoyglhtrckcp` MUST ser designado, nesta fatia,
+  como o projeto de **desenvolvimento/preview** — não de produção. O projeto de **produção** MUST ser
+  criado adiante, **antes da carga real do Épico 2**, e MUST NOT existir enquanto não houver dado real
+  a proteger. Enquanto ele não existir, FR-022 é satisfeito por construção: não há produção a alcançar.
+- **FR-022.2**: Toda variável de ambiente MUST declarar a que ambiente pertence, e o rótulo de ambiente
+  (`local` · `preview` · `producao`) MUST corresponder ao projeto realmente apontado. **Achado de
+  26/08/2026:** o `.env.local` traz `NEXT_PUBLIC_AMBIENTE="local"` apontando para `cqhpfu…` — com
+  FR-022.1 isso passa a estar correto, mas a correspondência MUST ser conferida, não presumida.
 - **FR-023**: O repositório MUST declarar normalização de fim de linha, para que a verificação de
   formatação produza o mesmo resultado no Windows (onde se escreve) e no Linux (onde o CI roda).
 
@@ -348,13 +418,17 @@ não porque valha menos.
   disponível — com a proteção da branch `main` configurada (FR-014.1).
 - **SC-004**: As duas fronteiras arquiteturais têm, cada uma, **um teste que falha quando a regra é
   desligada** — verificado desligando-as de propósito uma vez.
-- **SC-005**: O veredito local e o veredito do CI **coincidem** nos casos testados.
+- **SC-005**: O veredito de `verificar:tudo` e o veredito do CI **coincidem** nos casos testados — um
+  verde local seguido de vermelho no CI é defeito da verificação, não azar. *(`verificar`, o rápido,
+  não faz essa promessa: ele cobre os blocos que dispensam Docker.)*
 - **SC-006**: Um push em branch produz URL de pré-visualização acessível, **aberta e conferida por
   Bernardo** ao menos uma vez antes do fechamento do épico.
-- **SC-007**: A camada de domínio termina o épico **vazia** e a contagem de tabelas no banco é **zero**
-  — a fundação não antecipou escopo de outro épico.
-- **SC-008**: O ciclo completo de verificação local cabe no tempo de uma pausa curta — alvo de **até 5
-  minutos** — para que ninguém o pule por pressa.
+- **SC-007**: A camada de domínio termina o épico **vazia**, a contagem de tabelas de negócio no banco é
+  **zero**, e existe **zero** ambiente de produção da v2.1 — a fundação não antecipou escopo de outro
+  épico.
+- **SC-008**: `pnpm verificar` (o rápido) cabe no tempo de uma pausa curta — alvo de **até 5 minutos** —
+  para que ninguém o pule por pressa. `pnpm verificar:tudo` não tem esse teto: roda uma vez por PR, e o
+  que se exige dele é **coincidir com o CI** (SC-005), não ser rápido.
 
 ---
 
@@ -390,8 +464,12 @@ não porque valha menos.
 - **O replantio do repositório é operação de git com história.** Assume-se que o commit de 26/08/2026 é
   preservado — `git init` na pasta com o histórico reaproveitado, ou filtro de subdiretório —, nunca
   refeito do zero. Qual das duas técnicas usar é decisão do `/speckit-plan`, não desta spec.
-- **"Dado sintético" na pré-visualização** significa projeto Supabase separado do de produção, populado
-  por seed versionado. Assume-se que o seed vem com o Épico 1; até lá, a preview sobe com schema vazio.
+- **"Dado sintético" na pré-visualização** significa o projeto de desenvolvimento/preview
+  (`cqhpfuaweoyglhtrckcp`, decisão de 27/08/2026), populado por seed versionado. Assume-se que o seed
+  vem com o Épico 1; até lá, a pré-visualização sobe com schema vazio.
+- **A CLI do Supabase não está autenticada** nesta máquina (`supabase projects list` devolve
+  *Access token not provided*), então não foi possível confirmar quantos projetos existem na conta.
+  Assume-se que `cqhpfuaweoyglhtrckcp` é o único. O planejamento deve confirmar com `supabase login`.
 - **`docs/BRIEF-v2.1.md` apareceu no repositório em 26/08/2026**, durante esta spec. Ela foi escrita
   antes dele, a partir dos documentos 06, 10 e 24 — que não o contradizem em nada relevante ao Épico 0.
   O BRIEF **não foi relido linha a linha** para reconferir esta spec; foi verificado o suficiente para
@@ -407,7 +485,11 @@ Nenhuma bloqueia o `/speckit-plan`. Registradas para que ninguém as descubra de
 |---|---|---|
 | D-1 | O critério de aceite 1 do documento 06 diz `npm install` / `npm run dev`; a decisão é `pnpm` | `docs/fase-1/06-Backlog-de-Epicos-V2.1.md`, Épico 0 |
 | ~~D-2~~ | ~~`docs/BRIEF-v2.1.md` não existe~~ — **resolvido em 26/08/2026**: o arquivo apareceu no repositório, 394 linhas, datado 26/08/2026, com §2.1 (mapa de tabelas), §7 (DoD), §9 (invariáveis) e §10 (volumes) | — |
-| **D-5** | **O BRIEF §2.1 não conhece `unidades_ensino`.** Verificado: **zero** menções a "Unidade de Ensino", `unidades_ensino` ou UE-1 nas 394 linhas; `registros_aula` aparece no grão antigo. Como o §2.1 manda "use **exatamente** estes nomes", o Épico 1 excluiria a tabela que a decisão UE-1 rota (b) exige. É o mesmo padrão de P-1 (`turma_disciplina` fora do mapa) | **`docs/BRIEF-v2.1.md` §2.1** — propor a inclusão de `unidades_ensino` e a nota de grão em `registros_aula`. **Decisão do Bernardo: não aplicar sem autorização** — o BRIEF é precedência 2 |
-| **D-6** | O BRIEF §2.1 traz `turma_disciplina_instrutor` (tabela 11) e `configuracoes_horario` (tabela 2), ausentes do dicionário do documento 05 §4 | conciliar documento 05 com o BRIEF, ou registrar a diferença |
+| ~~**D-5**~~ | ~~O BRIEF §2.1 não conhece `unidades_ensino`~~ — **RESOLVIDO**, verificado em T005 (27/08/2026): o BRIEF foi revisado em 26/08, o §2.1 passou a 27 tabelas **com** `unidades_ensino`, e ganhou um **§2.2 novo** que fixa o grão de UE e as quatro consequências da rota (b) | — |
+| ~~**D-6**~~ | ~~BRIEF × documento 05 sobre `turma_disciplina_instrutor` e `configuracoes_horario`~~ — **RESOLVIDO** na nota ao fim do §2.1 do próprio BRIEF | — |
+| **D-9** | O BRIEF §1 diz "Next.js **15+**"; o instalado é **16.3.3**. Atende ao piso, mas o texto não registra que a linha 16 é a real | `docs/BRIEF-v2.1.md` §1 — nota de uma linha |
+| **D-10** | O BRIEF §1 lista **TanStack Query** e **`nuqs`** na stack; nenhum dos dois é instalado nesta fatia (fora de escopo, FR-020). Não é divergência — é registro para que o Épico 4 não os julgue esquecidos | nenhuma ação |
+| **D-7** | `verificar:tudo` foi autorizado por Bernardo em 27/08/2026 e **não existe** no documento 24 §7 | acrescentar o script ao **`docs/fase-2/24-Estrutura-do-Repositorio-e-Convencoes.md` §7**, com o comentário explicando por que são dois |
+| **D-8** | O `CLAUDE.md` diz "Comando único que roda a sequência do CI localmente: `pnpm verificar`" — passaram a ser dois, com promessas diferentes | `CLAUDE.md`, seção *Definition of Done* |
 | D-3 | `CLAUDE.md` diz "Repositório GitHub ✅ criado — ainda sem push"; o endereço só foi nomeado em 26/08/2026 | `CLAUDE.md`, *Estado atual* |
 | D-4 | A pendência "gerenciador de pacotes" continua listada como aberta no `CLAUDE.md` | `CLAUDE.md`, *Decisões pendentes* |

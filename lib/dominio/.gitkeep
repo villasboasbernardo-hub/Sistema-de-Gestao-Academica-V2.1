@@ -1,0 +1,7 @@
+# lib/dominio/ — as ~40 regras RN- da v2.0 viram funcoes TypeScript PURAS aqui.
+#
+# TERMINA O EPICO 0 VAZIO, de proposito (FR-004, SC-007): a fronteira e instalada ANTES de
+# haver o que proteger. Instala-la depois custa uma negociacao por import indevido ja escrito.
+#
+# REGRA: nada aqui importa supabase, next ou react. Imposta por eslint.config.mjs e provada por
+# tests/unidade/lint/fronteiras.test.ts.
