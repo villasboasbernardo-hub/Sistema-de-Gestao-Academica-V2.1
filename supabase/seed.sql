@@ -1,0 +1,2 @@
+-- Seed do banco local. Vazio nesta fatia: o schema e os dados normativos sao do Epico 1.
+-- Ver docs/BRIEF-v2.1.md §2 e specs/001-fundacao-repositorio-ci/data-model.md §2.
