@@ -10,7 +10,7 @@
 -- inventario completo e as cinco guardas negativas do epico.
 -- =====================================================================================
 begin;
-select plan(17);
+select plan(20);
 
 -- ---------------------------------------------------------------------------- M1: base
 select has_schema('app', 'schema `app` existe — casa das funcoes auxiliares (BRIEF §3)');
@@ -121,6 +121,37 @@ select is(
       and (table_name like '%subunidade%' or table_name like '%sue%')),
   0,
   'FR-026: nao existe tabela de subunidade de ensino — funcionalidade sem requisito nao entra'
+);
+
+-- ============================ RN-INST-05 — situacao SEMPRE explicita, nunca deduzida
+-- A auditoria de 31/07/2026 achou os 177 instrutores com `Status` em branco: a regra de
+-- exclusao logica nunca tinha sido exercitada sobre dado real. Aqui a coluna nao aceita
+-- vazio em tabela nenhuma, e por isso RN-INST-02 e testavel desde o primeiro dia.
+select is_empty(
+  $$select c.table_name from information_schema.columns c
+      join information_schema.tables t
+        on t.table_schema = c.table_schema and t.table_name = c.table_name
+     where c.table_schema = 'public' and c.column_name = 'status'
+       and c.is_nullable = 'YES' and t.table_type = 'BASE TABLE'$$,
+  'RN-INST-05 · nenhuma coluna `status` aceita vazio — a situacao nunca e deduzida de NULL'
+);
+
+-- ============================ RN-AVAL-02 — agendamento e execucao sao UM UNICO fato
+-- A base viva tinha 111 avaliacoes agendadas e 186 registros de execucao em cadastros nao
+-- vinculados, sem correspondencia garantida — subdimensionando a carga horaria de forma
+-- sistematica. A ESTRUTURA que permitia o descasamento deixa de existir: nao ha tabela
+-- paralela de execucao onde 186 registros pudessem flutuar soltos.
+select is_empty(
+  $$select table_name from information_schema.tables
+     where table_schema = 'public'
+       and table_name similar to '%(execucao_aval|avaliacao_execu|aval_realizada)%'$$,
+  'RN-AVAL-02 · nao existe tabela paralela de execucao de avaliacao — o descasamento nao e construivel'
+);
+select ok(
+  (select count(*)::int from information_schema.columns
+    where table_schema = 'public' and table_name = 'avaliacoes'
+      and column_name in ('data_avaliacao', 'data_vista_prova', 'tempos_consumidos')) = 3,
+  'RN-AVAL-02 · agendamento, aplicacao e vista convivem na MESMA linha de `avaliacoes`'
 );
 
 select * from finish();

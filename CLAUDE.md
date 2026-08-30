@@ -227,7 +227,8 @@ divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, colun
 | Preview na Vercel | ✅ **Liberada em 26/08/2026, só com dado sintético** até a CIAARA-14.2 decidir sobre hospedagem fora da MB. Nem a base viva nem o Supabase de produção alcançáveis pela preview (FR-022 da spec 001) |
 | Documentação (Fases 1–3 + Vibe Coding) | ✅ Escrita. `docs/sql-referencia/` com os seis scripts de referência |
 | **Épico 0 — Fundação** | 🟨 **Em andamento.** Feitos §6.1 e §2.8. **Retomar em §6.2** do documento 10 |
-| **Épico 1 — Schema + RLS** | 🟨 **Especificado** em `specs/002-schema-rls-permissoes/` (28/08/2026), clarificado (Q1/Q2/Q3) e sem marcador pendente. **Retomar em `/speckit-plan`.** Não começa antes de §6.3 e §6.5 do Épico 0 |
+| **Épico 1 — Schema + RLS** | ✅ **Implementado em 30/08/2026.** Seis migrations em `supabase/migrations/`, aplicadas do zero por `pnpm db:reset`. Medido no banco: **27 tabelas · 0 sem RLS · 0 com FORCE · 77 policies · 0 de DELETE · 0 UPDATE sem WITH CHECK · 152 linhas de matriz · 10 views**. **80 asserções pgTAP** e **19 testes de RLS com sessão autenticada de verdade**. `pnpm verificar:tudo` sai 0. Falta: PR e a proteção da branch |
+| Épico 1 — o que **não** entrou | A **carga das 572 UEs** (depende de `disciplinas`, é do Épico 2 — achado A-13) e o `ci.yml` (Épico 0 §6.7) |
 | **Catálogo de Unidades de Ensino** | ✅ **Extraído em 28/08/2026** dos 24 currículos da DEnsM (`SIS11/Curriculos/`): **572 UEs**, 134 disciplinas, 21 currículos. Invariante fecha em **134/134** (soma das CH das UEs = CH da disciplina). Script `scripts/etl/extrair_unidades_ensino.py`, dado em `scripts/etl/dados/`. **3 currículos sem UE** — ver Q1.b |
 | Épicos 2 a 13 | ⬜ Pendentes |
 | **Decisão UE-1** | ✅ **Fechada em 26/08/2026 — rota (b)**: `registros_aula` no grão de **Unidade de Ensino**; disciplina é agregado derivado. Épico 1 **desbloqueado**. Ver documento 05 §9.1. **Origem do dado resolvida em 28/08/2026**: as UEs vêm dos **currículos oficiais da DEnsM**, não de linha sintética |
@@ -245,6 +246,26 @@ integração `claude`, scripts `sh`, 10 skills em `.claude/skills/` · constitut
 `lib/tipos/database.ts` (§6.4 — depende do schema do Épico 1) · suítes vazias Vitest/Playwright/
 pgTAP (§6.5) · scripts do documento 24 §7 no `package.json` (§6.6) · `.github/workflows/ci.yml`
 (§6.7) · primeiro deploy verde na Vercel (§6.8).
+
+**Quatro achados do Épico 1 — corrigidos, e que ninguém deve reintroduzir:**
+
+1. **`TRUNCATE` não passa pela RLS.** O Supabase concede `ALL` a `authenticated` por padrão e
+   `docs/sql-referencia/05` nunca revogava `DELETE` nem `TRUNCATE`. Um usuário autenticado
+   poderia **truncar `migracao_log`** e apagar a evidência auditável da migração sem que
+   policy nenhuma fosse consultada. M6 revoga os dois. A "proteção dupla" do FR-033 só existia
+   pela metade.
+2. **`responsaveis_curso` não tinha `EXCLUDE` de vigência.** O documento 05 §7.5 especifica
+   dois; o referência implementa um. Sem ele, um DSA reimpresso sairia com duas rubricas do
+   mesmo papel. Acrescentado em M2.
+3. **Uma FK usava `CASCADE`** (`horarios_tempos_aula`), contra a regra geral do BRIEF §2 e sem
+   justificativa escrita. Trocada por `restrict` — nada é apagado neste sistema, então não muda
+   comportamento alcançável.
+4. **O rodapé de `docs/sql-referencia/01` está extraviado**, antes da TABELA 11. Quem extrair
+   "do início até o rodapé" perde `turma_disciplina_instrutor` — a tabela de onde a LIQ lê.
+
+**Divergência reportada, não corrigida:** a semântica de `vigente_ate`. O documento 05 §7.5
+escreve `daterange(…, '[)')` — fim **exclusivo**; o referência implementa `vigente_ate + 1` —
+fim **inclusivo**. Vale um dia, na fronteira. Seguimos o referência.
 
 **Três armadilhas já pagas — não redescobrir:**
 

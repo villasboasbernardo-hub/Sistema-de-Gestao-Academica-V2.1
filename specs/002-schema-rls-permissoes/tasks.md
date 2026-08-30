@@ -226,10 +226,10 @@ credencial de maior privilégio.
 
 ## Phase 8: Polish e fechamento
 
-- [ ] T086 Executar `pnpm verificar:tudo` — a sequência completa: verificação rápida, `db:reset`, conferência de tipos, invariantes e RLS
-- [ ] T087 [P] Percorrer [quickstart.md](./quickstart.md) do passo 1 ao 9 numa base recém-reconstruída e confirmar **cada valor esperado**: 27 tabelas, zero sem RLS, zero policies de `DELETE`, zero RLS forçada
-- [ ] T088 [P] Conferir a rastreabilidade: **toda regra `RN-` de risco alto** tocada por esta fatia tem asserção **nomeada pelo próprio identificador**. Stub explicitamente pendente é aceito; **cobertura fingida não** (FR-059) — varrer `supabase/tests/*.sql` e `tests/invariantes/rls/rls.test.ts`
-- [ ] T089 [P] Atualizar a seção *Estado atual e onde retomar* do `CLAUDE.md`: Épico 1 concluído, contagens reais de tabelas, policies e tipos medidas no banco
+- [X] T086 Executar `pnpm verificar:tudo` — a sequência completa: verificação rápida, `db:reset`, conferência de tipos, invariantes e RLS
+- [X] T087 [P] Percorrer [quickstart.md](./quickstart.md) do passo 1 ao 9 numa base recém-reconstruída e confirmar **cada valor esperado**: 27 tabelas, zero sem RLS, zero policies de `DELETE`, zero RLS forçada
+- [X] T088 [P] Conferir a rastreabilidade: **toda regra `RN-` de risco alto** tocada por esta fatia tem asserção **nomeada pelo próprio identificador**. Stub explicitamente pendente é aceito; **cobertura fingida não** (FR-059) — varrer `supabase/tests/*.sql` e `tests/invariantes/rls/rls.test.ts`
+- [X] T089 [P] Atualizar a seção *Estado atual e onde retomar* do `CLAUDE.md`: Épico 1 concluído, contagens reais de tabelas, policies e tipos medidas no banco
 - [ ] T090 [P] Registrar em `docs/` os achados A-1 a A-5 e A-12 — as contagens divergentes entre documentos e o conflito do documento 24 §1 sobre onde vivem os testes. **São correções de documento, não de código**
 - [ ] T091 Abrir o PR com o template inteiro preenchido, **os seis planos de reversão** e a lista de conferência de [quickstart.md](./quickstart.md) §10. Commits no padrão `db(<identificador>): <resumo no imperativo>`
 
