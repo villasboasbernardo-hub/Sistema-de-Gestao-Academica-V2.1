@@ -18,8 +18,6 @@
 --   2. `turmas` e `disciplinas` ganham a chave auxiliar `unique (id, curso_id)`, alvo das
 --      chaves estrangeiras compostas que tornam RN-MAT-01 declarativa (FR-061).
 --   3. Nenhuma verificacao de contiguidade de `numero_ue` — lacuna e dado valido (FR-025).
---   4. O EXCLUDE de vigencia de `responsaveis_curso` ACRESCENTADO: o documento 05 §7.5
---      especifica dois, o referencia so implementa um. Sem ele FR-018 fica sem garantia.
 --
 -- Pre-requisito: M1 aplicada.
 -- -------------------------------------------------------------------------------------
@@ -207,7 +205,11 @@ create index idx_cfg_horario_status on public.configuracoes_horario (status) whe
 
 create table public.horarios_tempos_aula (
   id                      uuid primary key default gen_random_uuid(),
-  configuracao_id         uuid not null references public.configuracoes_horario(id) on delete cascade,
+  -- [REVISADO] o referencia trazia `on delete cascade`, sem justificativa e contra a
+  -- regra geral do BRIEF §2. Nada e apagado neste sistema — a configuracao substituida
+  -- vira `status = 'substituido'` —, entao `restrict` nao muda comportamento alcancavel
+  -- e elimina a unica porta de perda de historico por efeito colateral (FR-007).
+  configuracao_id         uuid not null references public.configuracoes_horario(id) on delete restrict,
   tempo_numero            smallint not null,
   periodo                 public.periodo_dia not null,
   tipo_tempo              public.tipo_tempo not null default 'normal',

@@ -6,11 +6,11 @@
 -- Aquela invariante estava CERTA para o Epico 0 e deixa de valer na primeira migration:
 -- foi removida, nao contornada.
 --
--- Este arquivo cresce por camada. Enquanto so M1 estiver aplicada, as assercoes de
--- tabela ficam nos numeros que a camada corrente produz; T041 as leva a 27.
+-- Este arquivo cresce por camada. Com as seis migrations aplicadas, ele afirma o
+-- inventario completo e as cinco guardas negativas do epico.
 -- =====================================================================================
 begin;
-select plan(12);
+select plan(17);
 
 -- ---------------------------------------------------------------------------- M1: base
 select has_schema('app', 'schema `app` existe — casa das funcoes auxiliares (BRIEF §3)');
@@ -55,6 +55,53 @@ select is(
   (select count(*)::int from pg_policies where schemaname = 'public' and cmd = 'DELETE'),
   0,
   'FR-033: ZERO politicas de DELETE em todo o schema — a ausencia e a regra'
+);
+
+-- FR-001: o inventario do BRIEF §2.1. Nem mais, nem menos.
+select is(
+  (select count(*)::int from information_schema.tables
+    where table_schema = 'public' and table_type = 'BASE TABLE'),
+  27,
+  'FR-001: as 27 entidades do BRIEF §2.1 existem — nem mais, nem menos'
+);
+
+-- Tabela sem policy nenhuma e INACESSIVEL. Isso e intencional por padrao, mas nenhuma
+-- tabela deste schema deve ficar assim: seria funcionalidade morta, nao seguranca.
+select is(
+  (select count(*)::int from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r'
+      and not exists (select 1 from pg_policies p
+                       where p.schemaname = 'public' and p.tablename = c.relname)),
+  0,
+  'FR-032: toda tabela tem ao menos uma policy — nenhuma ficou inacessivel por esquecimento'
+);
+
+-- FR-036 · teste T-03. A clausula que mais gente esquece, e a que impede a fuga de escopo:
+-- sem ela um Operador reatribui um registro a uma turma fora do alcance dele e LEVA O DADO
+-- JUNTO, sem violar nada — a linha original era legitima.
+select is(
+  (select count(*)::int from pg_policies
+    where schemaname = 'public' and cmd = 'UPDATE' and with_check is null),
+  0,
+  'FR-036: toda policy de UPDATE tem WITH CHECK alem de USING — sem ela ha fuga de escopo'
+);
+
+-- FR-007: toda chave estrangeira declara o que acontece na remocao. `restrict` e a regra
+-- geral; as excecoes (fiscal de avaliacao, vinculo com avaliacoes_planejadas) usam
+-- `set null`. O que nao pode existir e FK sem acao declarada — ou pior, com `cascade`,
+-- que seria a porta pela qual historico se perderia por acidente.
+select is(
+  (select count(*)::int from pg_constraint
+    where contype = 'f' and connamespace = 'public'::regnamespace and confdeltype = 'c'),
+  0,
+  'FR-007: nenhuma FK usa CASCADE — historico nao se perde por efeito colateral'
+);
+
+-- FR-034: a autorizacao e dado. A matriz precisa estar semeada, ou toda policy nega tudo.
+select cmp_ok(
+  (select count(*)::int from public.perfil_permissao), '>=', 152,
+  'FR-034: a matriz de permissoes esta semeada (152 linhas de referencia)'
 );
 
 -- Forcar RLS para o dono reintroduziria a recursao que `security definer` existe para

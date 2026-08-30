@@ -34,6 +34,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      arquivo_avaliacoes_v1: {
+        Row: {
+          arquivado_em: string
+          arquivado_por: string | null
+          avaliacao_destino_codigo_v1: string | null
+          avaliacao_destino_id: string | null
+          codigo: string
+          conteudo_resumo_v1: string | null
+          data: string | null
+          disciplina_codigo_v1: string | null
+          id: string
+          instrutor_codigo_v1: string | null
+          local_v1: string | null
+          metodologia_v1: string | null
+          observacao_migracao: string | null
+          observacoes_v1: string | null
+          registrado_em_v1: string | null
+          registrado_por_v1: string | null
+          ta_inicial_v1: number | null
+          tempos_consumidos_v1: number | null
+          tipo_atividade_v1: string | null
+          turma_codigo_v1: string | null
+        }
+        Insert: {
+          arquivado_em?: string
+          arquivado_por?: string | null
+          avaliacao_destino_codigo_v1?: string | null
+          avaliacao_destino_id?: string | null
+          codigo: string
+          conteudo_resumo_v1?: string | null
+          data?: string | null
+          disciplina_codigo_v1?: string | null
+          id?: string
+          instrutor_codigo_v1?: string | null
+          local_v1?: string | null
+          metodologia_v1?: string | null
+          observacao_migracao?: string | null
+          observacoes_v1?: string | null
+          registrado_em_v1?: string | null
+          registrado_por_v1?: string | null
+          ta_inicial_v1?: number | null
+          tempos_consumidos_v1?: number | null
+          tipo_atividade_v1?: string | null
+          turma_codigo_v1?: string | null
+        }
+        Update: {
+          arquivado_em?: string
+          arquivado_por?: string | null
+          avaliacao_destino_codigo_v1?: string | null
+          avaliacao_destino_id?: string | null
+          codigo?: string
+          conteudo_resumo_v1?: string | null
+          data?: string | null
+          disciplina_codigo_v1?: string | null
+          id?: string
+          instrutor_codigo_v1?: string | null
+          local_v1?: string | null
+          metodologia_v1?: string | null
+          observacao_migracao?: string | null
+          observacoes_v1?: string | null
+          registrado_em_v1?: string | null
+          registrado_por_v1?: string | null
+          ta_inicial_v1?: number | null
+          tempos_consumidos_v1?: number | null
+          tipo_atividade_v1?: string | null
+          turma_codigo_v1?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arquivo_avaliacoes_v1_avaliacao_destino_id_fkey"
+            columns: ["avaliacao_destino_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arquivo_avaliacoes_v1_avaliacao_destino_id_fkey"
+            columns: ["avaliacao_destino_id"]
+            isOneToOne: false
+            referencedRelation: "vw_avaliacoes_situacao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       atividades_nao_letivas: {
         Row: {
           categoria_normativa: Database["public"]["Enums"]["categoria_normativa"]
@@ -111,6 +195,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "turmas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
           },
         ]
       }
@@ -229,11 +341,39 @@ export type Database = {
             referencedColumns: ["id", "curso_id"]
           },
           {
+            foreignKeyName: "aval_disciplina_do_curso"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id", "curso_id"]
+          },
+          {
             foreignKeyName: "aval_turma_do_curso"
             columns: ["turma_id", "curso_id"]
             isOneToOne: false
             referencedRelation: "turmas"
             referencedColumns: ["id", "curso_id"]
+          },
+          {
+            foreignKeyName: "aval_turma_do_curso"
+            columns: ["turma_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id", "curso_id"]
+          },
+          {
+            foreignKeyName: "aval_turma_do_curso"
+            columns: ["turma_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id", "curso_id"]
+          },
+          {
+            foreignKeyName: "aval_turma_do_curso"
+            columns: ["turma_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id", "curso_id"]
           },
           {
             foreignKeyName: "avaliacoes_curso_id_fkey"
@@ -243,11 +383,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "avaliacoes_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+          {
             foreignKeyName: "avaliacoes_disciplina_id_fkey"
             columns: ["disciplina_id"]
             isOneToOne: false
             referencedRelation: "disciplinas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
           },
           {
             foreignKeyName: "avaliacoes_fiscal_id_fkey"
@@ -257,11 +411,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "avaliacoes_fiscal_id_fkey"
+            columns: ["fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
+          },
+          {
             foreignKeyName: "avaliacoes_instrutor_responsavel_id_fkey"
             columns: ["instrutor_responsavel_id"]
             isOneToOne: false
             referencedRelation: "instrutores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_instrutor_responsavel_id_fkey"
+            columns: ["instrutor_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
           },
           {
             foreignKeyName: "avaliacoes_item_planejado_id_fkey"
@@ -276,6 +444,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "turmas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
           },
         ]
       }
@@ -339,7 +535,113 @@ export type Database = {
             referencedRelation: "cursos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "avaliacoes_planejadas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
         ]
+      }
+      config_listas: {
+        Row: {
+          ativo: boolean
+          criado_em: string
+          criado_por: string | null
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          lista: string
+          observacao: string | null
+          ordem: number
+          origem_migracao_v1: string | null
+          rotulo_exibicao: string
+          valor: string
+        }
+        Insert: {
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          lista: string
+          observacao?: string | null
+          ordem?: number
+          origem_migracao_v1?: string | null
+          rotulo_exibicao: string
+          valor: string
+        }
+        Update: {
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          lista?: string
+          observacao?: string | null
+          ordem?: number
+          origem_migracao_v1?: string | null
+          rotulo_exibicao?: string
+          valor?: string
+        }
+        Relationships: []
+      }
+      config_parametros: {
+        Row: {
+          ano_vigencia: number | null
+          chave: string
+          criado_em: string
+          criado_por: string | null
+          descricao: string | null
+          editado_em: string | null
+          editado_por: string | null
+          editavel_por: Database["public"]["Enums"]["perfil_usuario"] | null
+          fundamento_normativo: string | null
+          id: string
+          origem_migracao_v1: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          tipo: string
+          unidade: string | null
+          valor: string
+        }
+        Insert: {
+          ano_vigencia?: number | null
+          chave: string
+          criado_em?: string
+          criado_por?: string | null
+          descricao?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          editavel_por?: Database["public"]["Enums"]["perfil_usuario"] | null
+          fundamento_normativo?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          tipo?: string
+          unidade?: string | null
+          valor: string
+        }
+        Update: {
+          ano_vigencia?: number | null
+          chave?: string
+          criado_em?: string
+          criado_por?: string | null
+          descricao?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          editavel_por?: Database["public"]["Enums"]["perfil_usuario"] | null
+          fundamento_normativo?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          tipo?: string
+          unidade?: string | null
+          valor?: string
+        }
+        Relationships: []
       }
       configuracoes_horario: {
         Row: {
@@ -475,6 +777,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cursos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curso_regime_historico_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
           },
         ]
       }
@@ -628,7 +937,65 @@ export type Database = {
             referencedRelation: "cursos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "disciplinas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
         ]
+      }
+      feriados: {
+        Row: {
+          abrangencia: string | null
+          ano: number
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          data: string
+          descricao: string
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          impacto: Database["public"]["Enums"]["impacto_feriado"]
+          origem_migracao_v1: string | null
+          origem_proens: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+        }
+        Insert: {
+          abrangencia?: string | null
+          ano: number
+          codigo: string
+          criado_em?: string
+          criado_por?: string | null
+          data: string
+          descricao: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          impacto?: Database["public"]["Enums"]["impacto_feriado"]
+          origem_migracao_v1?: string | null
+          origem_proens?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+        }
+        Update: {
+          abrangencia?: string | null
+          ano?: number
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          data?: string
+          descricao?: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          impacto?: Database["public"]["Enums"]["impacto_feriado"]
+          origem_migracao_v1?: string | null
+          origem_proens?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+        }
+        Relationships: []
       }
       horarios_tempos_aula: {
         Row: {
@@ -735,11 +1102,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "instrutor_disciplina_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
             foreignKeyName: "instrutor_disciplina_instrutor_id_fkey"
             columns: ["instrutor_id"]
             isOneToOne: false
             referencedRelation: "instrutores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrutor_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
           },
         ]
       }
@@ -854,6 +1235,159 @@ export type Database = {
         }
         Relationships: []
       }
+      janelas_curso: {
+        Row: {
+          ano: number
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          curso_id: string
+          data_inicio_prevista: string | null
+          data_termino_prevista: string | null
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          origem_migracao_v1: string | null
+          origem_proens: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          turma_prevista: string | null
+        }
+        Insert: {
+          ano: number
+          codigo: string
+          criado_em?: string
+          criado_por?: string | null
+          curso_id: string
+          data_inicio_prevista?: string | null
+          data_termino_prevista?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          origem_proens?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_prevista?: string | null
+        }
+        Update: {
+          ano?: number
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          curso_id?: string
+          data_inicio_prevista?: string | null
+          data_termino_prevista?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          origem_proens?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_prevista?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "janelas_curso_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "janelas_curso_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+        ]
+      }
+      migracao_log: {
+        Row: {
+          acao: Database["public"]["Enums"]["acao_migracao"]
+          codigo: string
+          destino_chave: string | null
+          destino_tabela: string | null
+          executado_em: string
+          executado_por: string | null
+          id: string
+          observacao: string | null
+          origem_chave: string | null
+          origem_tabela: string
+          regra_aplicada: string | null
+          valor_antes: string | null
+          valor_depois: string | null
+        }
+        Insert: {
+          acao: Database["public"]["Enums"]["acao_migracao"]
+          codigo: string
+          destino_chave?: string | null
+          destino_tabela?: string | null
+          executado_em?: string
+          executado_por?: string | null
+          id?: string
+          observacao?: string | null
+          origem_chave?: string | null
+          origem_tabela: string
+          regra_aplicada?: string | null
+          valor_antes?: string | null
+          valor_depois?: string | null
+        }
+        Update: {
+          acao?: Database["public"]["Enums"]["acao_migracao"]
+          codigo?: string
+          destino_chave?: string | null
+          destino_tabela?: string | null
+          executado_em?: string
+          executado_por?: string | null
+          id?: string
+          observacao?: string | null
+          origem_chave?: string | null
+          origem_tabela?: string
+          regra_aplicada?: string | null
+          valor_antes?: string | null
+          valor_depois?: string | null
+        }
+        Relationships: []
+      }
+      perfil_permissao: {
+        Row: {
+          acao: string
+          criado_em: string
+          criado_por: string | null
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          observacao: string | null
+          perfil: Database["public"]["Enums"]["perfil_usuario"]
+          permitido: boolean
+          recurso: string
+        }
+        Insert: {
+          acao: string
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          observacao?: string | null
+          perfil: Database["public"]["Enums"]["perfil_usuario"]
+          permitido?: boolean
+          recurso: string
+        }
+        Update: {
+          acao?: string
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          observacao?: string | null
+          perfil?: Database["public"]["Enums"]["perfil_usuario"]
+          permitido?: boolean
+          recurso?: string
+        }
+        Relationships: []
+      }
       planejamento_anual: {
         Row: {
           ano_letivo: number
@@ -948,6 +1482,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "planejamento_anual_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+          {
             foreignKeyName: "planejamento_anual_disciplina_id_fkey"
             columns: ["disciplina_id"]
             isOneToOne: false
@@ -955,11 +1496,46 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "planejamento_anual_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
             foreignKeyName: "planejamento_anual_turma_prevista_id_fkey"
             columns: ["turma_prevista_id"]
             isOneToOne: false
             referencedRelation: "turmas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planejamento_anual_turma_prevista_id_fkey"
+            columns: ["turma_prevista_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "planejamento_anual_turma_prevista_id_fkey"
+            columns: ["turma_prevista_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "planejamento_anual_turma_prevista_id_fkey"
+            columns: ["turma_prevista_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "planejamento_anual_turma_prevista_id_fkey"
+            columns: ["turma_prevista_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
           },
         ]
       }
@@ -1045,11 +1621,39 @@ export type Database = {
             referencedColumns: ["id", "curso_id"]
           },
           {
+            foreignKeyName: "reg_aula_turma_do_curso"
+            columns: ["turma_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id", "curso_id"]
+          },
+          {
+            foreignKeyName: "reg_aula_turma_do_curso"
+            columns: ["turma_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id", "curso_id"]
+          },
+          {
+            foreignKeyName: "reg_aula_turma_do_curso"
+            columns: ["turma_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id", "curso_id"]
+          },
+          {
             foreignKeyName: "reg_aula_ue_do_curso"
             columns: ["unidade_ensino_id", "curso_id"]
             isOneToOne: false
             referencedRelation: "unidades_ensino"
             referencedColumns: ["id", "curso_id"]
+          },
+          {
+            foreignKeyName: "reg_aula_ue_do_curso"
+            columns: ["unidade_ensino_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_unidades_ensino_execucao"
+            referencedColumns: ["unidade_ensino_id", "curso_id"]
           },
           {
             foreignKeyName: "registros_aula_curso_id_fkey"
@@ -1059,11 +1663,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "registros_aula_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+          {
             foreignKeyName: "registros_aula_instrutor_id_fkey"
             columns: ["instrutor_id"]
             isOneToOne: false
             referencedRelation: "instrutores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registros_aula_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
           },
           {
             foreignKeyName: "registros_aula_turma_id_fkey"
@@ -1073,11 +1691,112 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "registros_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "registros_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "registros_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "registros_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+          {
             foreignKeyName: "registros_aula_unidade_ensino_id_fkey"
             columns: ["unidade_ensino_id"]
             isOneToOne: false
             referencedRelation: "unidades_ensino"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registros_aula_unidade_ensino_id_fkey"
+            columns: ["unidade_ensino_id"]
+            isOneToOne: false
+            referencedRelation: "vw_unidades_ensino_execucao"
+            referencedColumns: ["unidade_ensino_id"]
+          },
+        ]
+      }
+      reservas_proens: {
+        Row: {
+          ano: number
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          criterio: string | null
+          curso_id: string
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          origem_migracao_v1: string | null
+          origem_proens: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          tempos_reservados: number
+          tipo_reserva: Database["public"]["Enums"]["tipo_reserva"]
+        }
+        Insert: {
+          ano: number
+          codigo: string
+          criado_em?: string
+          criado_por?: string | null
+          criterio?: string | null
+          curso_id: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          origem_proens?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          tempos_reservados: number
+          tipo_reserva: Database["public"]["Enums"]["tipo_reserva"]
+        }
+        Update: {
+          ano?: number
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          criterio?: string | null
+          curso_id?: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          origem_proens?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          tempos_reservados?: number
+          tipo_reserva?: Database["public"]["Enums"]["tipo_reserva"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_proens_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_proens_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
           },
         ]
       }
@@ -1169,11 +1888,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "responsaveis_curso_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+          {
             foreignKeyName: "responsaveis_curso_instrutor_id_fkey"
             columns: ["instrutor_id"]
             isOneToOne: false
             referencedRelation: "instrutores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "responsaveis_curso_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
           },
         ]
       }
@@ -1232,11 +1965,46 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "turma_disciplina_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
             foreignKeyName: "turma_disciplina_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "turmas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
           },
         ]
       }
@@ -1293,6 +2061,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "instrutores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
           },
           {
             foreignKeyName: "turma_disciplina_instrutor_turma_disciplina_id_fkey"
@@ -1366,6 +2141,13 @@ export type Database = {
             referencedRelation: "cursos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "turmas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
         ]
       }
       unidades_ensino: {
@@ -1429,11 +2211,25 @@ export type Database = {
             referencedColumns: ["id", "curso_id"]
           },
           {
+            foreignKeyName: "ue_curso_coerente"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id", "curso_id"]
+          },
+          {
             foreignKeyName: "unidades_ensino_curso_id_fkey"
             columns: ["curso_id"]
             isOneToOne: false
             referencedRelation: "cursos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unidades_ensino_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
           },
           {
             foreignKeyName: "unidades_ensino_disciplina_id_fkey"
@@ -1442,11 +2238,712 @@ export type Database = {
             referencedRelation: "disciplinas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "unidades_ensino_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+        ]
+      }
+      usuario_curso: {
+        Row: {
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          curso_id: string
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          observacao: string | null
+          origem_migracao_v1: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          usuario_id: string
+        }
+        Insert: {
+          codigo: string
+          criado_em?: string
+          criado_por?: string | null
+          curso_id: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          observacao?: string | null
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          usuario_id: string
+        }
+        Update: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          curso_id?: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          observacao?: string | null
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuario_curso_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuario_curso_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+          {
+            foreignKeyName: "usuario_curso_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usuarios: {
+        Row: {
+          auth_user_id: string | null
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          editado_em: string | null
+          editado_por: string | null
+          email: string
+          escopo_curso: Database["public"]["Enums"]["escopo_curso"]
+          id: string
+          instrutor_id: string | null
+          nome: string
+          nome_exibicao: string | null
+          observacao: string | null
+          origem_migracao_v1: string | null
+          perfil: Database["public"]["Enums"]["perfil_usuario"]
+          status: Database["public"]["Enums"]["status_registro"]
+          ultimo_acesso: string | null
+        }
+        Insert: {
+          auth_user_id?: string | null
+          codigo: string
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          email: string
+          escopo_curso?: Database["public"]["Enums"]["escopo_curso"]
+          id?: string
+          instrutor_id?: string | null
+          nome: string
+          nome_exibicao?: string | null
+          observacao?: string | null
+          origem_migracao_v1?: string | null
+          perfil: Database["public"]["Enums"]["perfil_usuario"]
+          status?: Database["public"]["Enums"]["status_registro"]
+          ultimo_acesso?: string | null
+        }
+        Update: {
+          auth_user_id?: string | null
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          email?: string
+          escopo_curso?: Database["public"]["Enums"]["escopo_curso"]
+          id?: string
+          instrutor_id?: string | null
+          nome?: string
+          nome_exibicao?: string | null
+          observacao?: string | null
+          origem_migracao_v1?: string | null
+          perfil?: Database["public"]["Enums"]["perfil_usuario"]
+          status?: Database["public"]["Enums"]["status_registro"]
+          ultimo_acesso?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuarios_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      vw_avaliacoes_situacao: {
+        Row: {
+          cod_disciplina: string | null
+          codigo: string | null
+          conciliacao_migracao:
+            | Database["public"]["Enums"]["conciliacao_migracao"]
+            | null
+          conteudo_resumo: string | null
+          criado_em: string | null
+          criado_por: string | null
+          curso_id: string | null
+          data_avaliacao: string | null
+          data_vista_prova: string | null
+          disciplina_id: string | null
+          editado_em: string | null
+          editado_por: string | null
+          fiscal_id: string | null
+          id: string | null
+          instrutor_responsavel_id: string | null
+          item_planejado_id: string | null
+          local: string | null
+          local_vista: string | null
+          metodologia: string | null
+          nome_disciplina: string | null
+          nome_fiscal_externo: string | null
+          observacoes: string | null
+          origem_execucao_v1: string | null
+          origem_migracao_v1: string | null
+          situacao_vista: Database["public"]["Enums"]["status_vista"] | null
+          status: Database["public"]["Enums"]["status_avaliacao"] | null
+          ta_final: number | null
+          ta_final_vista: number | null
+          ta_inicial: number | null
+          ta_inicial_vista: number | null
+          tempos_consumidos: number | null
+          tempos_consumidos_vista: number | null
+          tipo_avaliacao: string | null
+          turma_codigo: string | null
+          turma_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aval_disciplina_do_curso"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id", "curso_id"]
+          },
+          {
+            foreignKeyName: "aval_disciplina_do_curso"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id", "curso_id"]
+          },
+          {
+            foreignKeyName: "aval_turma_do_curso"
+            columns: ["turma_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id", "curso_id"]
+          },
+          {
+            foreignKeyName: "aval_turma_do_curso"
+            columns: ["turma_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id", "curso_id"]
+          },
+          {
+            foreignKeyName: "aval_turma_do_curso"
+            columns: ["turma_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id", "curso_id"]
+          },
+          {
+            foreignKeyName: "aval_turma_do_curso"
+            columns: ["turma_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id", "curso_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fiscal_id_fkey"
+            columns: ["fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fiscal_id_fkey"
+            columns: ["fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_instrutor_responsavel_id_fkey"
+            columns: ["instrutor_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_instrutor_responsavel_id_fkey"
+            columns: ["instrutor_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_item_planejado_id_fkey"
+            columns: ["item_planejado_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes_planejadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+        ]
+      }
+      vw_carga_horaria_turma: {
+        Row: {
+          ano_letivo: number | null
+          chd_executada: number | null
+          chr_curricular: number | null
+          cht_executada: number | null
+          curso_codigo: string | null
+          curso_id: string | null
+          nome_curso: string | null
+          status_turma: Database["public"]["Enums"]["status_turma"] | null
+          ta_aec: number | null
+          ta_aula: number | null
+          ta_avaliacao: number | null
+          ta_estudo_individual: number | null
+          ta_extraclasse: number | null
+          ta_tad: number | null
+          ta_tr: number | null
+          ta_vista_prova: number | null
+          turma_codigo: string | null
+          turma_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turmas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turmas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+        ]
+      }
+      vw_conformidade_tetos: {
+        Row: {
+          aec_excedido: boolean | null
+          ano_letivo: number | null
+          chd_executada: number | null
+          chr_curricular: number | null
+          cht_executada: number | null
+          curso_codigo: string | null
+          curso_id: string | null
+          nome_curso: string | null
+          ta_aec: number | null
+          ta_estudo_individual: number | null
+          ta_tad: number | null
+          ta_tr: number | null
+          tad_excedido: boolean | null
+          tad_reservado_proens: number | null
+          teto_aec: number | null
+          teto_tad: number | null
+          teto_tr: number | null
+          tr_excedido: boolean | null
+          tr_reservado_proens: number | null
+          turma_codigo: string | null
+          turma_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turmas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turmas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+        ]
+      }
+      vw_cursos_regime_vigente: {
+        Row: {
+          classificacao: Database["public"]["Enums"]["escopo_curso"] | null
+          config_horario_excecao: string | null
+          config_horario_padrao: string | null
+          curso_codigo: string | null
+          curso_id: string | null
+          fundamento_excecao: string | null
+          hora_inicio_manha: string | null
+          hora_inicio_tarde: string | null
+          intervalo_padrao_manha_min: number | null
+          intervalo_padrao_tarde_min: number | null
+          limite_diario_ead_horas: number | null
+          modalidade: Database["public"]["Enums"]["modalidade_ensino"] | null
+          nome_curso: string | null
+          regime_excecao_tempos: number | null
+          regime_padrao_tempos: number | null
+          status: Database["public"]["Enums"]["status_registro"] | null
+          ta_excecao_duracao_min: number | null
+          ta_padrao_duracao_min: number | null
+        }
+        Relationships: []
+      }
+      vw_disciplinas_execucao: {
+        Row: {
+          ano_letivo: number | null
+          carga_horaria_tempos: number | null
+          cod_disciplina: string | null
+          curso_id: string | null
+          data_real_inicio: string | null
+          data_real_termino: string | null
+          disciplina_codigo: string | null
+          disciplina_id: string | null
+          nome_disciplina: string | null
+          origem_periodo: Database["public"]["Enums"]["origem_periodo"] | null
+          previsao_inicio_efetiva: string | null
+          previsao_termino_efetiva: string | null
+          ta_aula_executados: number | null
+          ta_avaliacao_executados: number | null
+          ta_executados: number | null
+          ta_saldo: number | null
+          turma_codigo: string | null
+          turma_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disciplinas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disciplinas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+        ]
+      }
+      vw_instrutor_carga_anual: {
+        Row: {
+          ano: number | null
+          dep_divisao: string | null
+          faixa_semanal_max: number | null
+          faixa_semanal_min: number | null
+          instrutor_codigo: string | null
+          instrutor_id: string | null
+          nome_completo: string | null
+          nome_exibicao: string | null
+          om: string | null
+          ordem_antiguidade: number | null
+          posto_graduacao: string | null
+          qtd_disciplinas_habilitadas: number | null
+          regime_trabalho:
+            | Database["public"]["Enums"]["regime_trabalho_docente"]
+            | null
+          status: Database["public"]["Enums"]["status_registro"] | null
+          ta_fiscalizado_ano: number | null
+          ta_ministrado_ano: number | null
+          tempo_setor_anos: number | null
+        }
+        Relationships: []
+      }
+      vw_instrutor_disciplina_rotulada: {
+        Row: {
+          carga_horaria_tempos: number | null
+          cod_disciplina: string | null
+          curso_codigo: string | null
+          curso_id: string | null
+          disciplina_id: string | null
+          instrutor_id: string | null
+          instrutor_rotulo: string | null
+          modo_atribuicao_efetivo:
+            | Database["public"]["Enums"]["modo_atribuicao"]
+            | null
+          nome_completo: string | null
+          nome_curso: string | null
+          nome_disciplina: string | null
+          nome_guerra: string | null
+          ordem_antiguidade: number | null
+          posto_graduacao: string | null
+          status: Database["public"]["Enums"]["status_registro"] | null
+          vinculo_codigo: string | null
+          vinculo_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disciplinas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disciplinas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+          {
+            foreignKeyName: "instrutor_disciplina_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrutor_disciplina_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "instrutor_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrutor_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
+          },
+        ]
+      }
+      vw_ocupacao_ta: {
+        Row: {
+          data: string | null
+          disciplina_id: string | null
+          fato_id: string | null
+          instrutor_id: string | null
+          origem: string | null
+          ta_final: number | null
+          ta_inicial: number | null
+          tempos_consumidos: number | null
+          turma_id: string | null
+        }
+        Relationships: []
+      }
+      vw_turmas_rotulo: {
+        Row: {
+          ano_letivo: number | null
+          curso_codigo: string | null
+          curso_id: string | null
+          data_inicio: string | null
+          data_termino: string | null
+          nome_completo_curso: string | null
+          nome_curso: string | null
+          rotulo_completo: string | null
+          status: Database["public"]["Enums"]["status_turma"] | null
+          turma: string | null
+          turma_codigo: string | null
+          turma_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turmas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turmas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+        ]
+      }
+      vw_unidades_ensino_execucao: {
+        Row: {
+          ch_prevista_tempos: number | null
+          curso_id: string | null
+          data_real_inicio: string | null
+          data_real_termino: string | null
+          disciplina_id: string | null
+          lancamentos: number | null
+          numero_ue: number | null
+          ta_executados: number | null
+          ta_saldo: number | null
+          topico: string | null
+          turma_id: string | null
+          unidade_codigo: string | null
+          unidade_ensino_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registros_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registros_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "registros_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "registros_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "registros_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "ue_curso_coerente"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id", "curso_id"]
+          },
+          {
+            foreignKeyName: "ue_curso_coerente"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id", "curso_id"]
+          },
+          {
+            foreignKeyName: "unidades_ensino_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unidades_ensino_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+          {
+            foreignKeyName: "unidades_ensino_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unidades_ensino_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never
