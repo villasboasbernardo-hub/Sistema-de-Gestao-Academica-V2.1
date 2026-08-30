@@ -294,7 +294,7 @@ máximo. **É uma base pequena: priorize clareza de schema e manutenibilidade so
 | **CONST-1** | Constitution em dois endereços: consolidar ou manter espelho | Nenhum épico. Custo cresce a cada emenda |
 | ~~**TURMA-1**~~ | ✅ **Fechada em 28/08/2026 — filtro de apresentação.** O domínio de status de turma fica com os quatro valores reais (`planejada`, `ativa`, `concluida`, `cancelada`); "Arquivada" é VIEW, **não** valor novo | — |
 | **Q1.b** | A qual UE pertence cada um dos 1.566 registros de aula históricos — a v2.0 nunca guardou essa informação. E como participam do grão de UE os 3 cursos sem UE no currículo (Est-QF-APOC digitalizado; C-Espc-FR e C-Espc-HN no modelo por competências) | **Épico 2.** Não bloqueia o Épico 1: o grão é o mesmo nas três saídas |
-| **UE-PUB** | O catálogo de UE (572 unidades, 2.446 subunidades, ementa de 134 disciplinas) fica **legível por qualquer pessoa** no repositório público. Não é credencial — é conteúdo programático da MB em grão bem mais fino que a suíte documental já exposta | Nenhum épico. **Confirmar antes do push**; se não for desejado, `.gitignore` em `scripts/etl/dados/` |
+| ~~**UE-PUB**~~ | ✅ **Fechada em 30/08/2026 — pode ser público.** O catálogo de UE (572 unidades, 2.446 subunidades, ementa de 134 disciplinas) fica legível por qualquer pessoa no repositório. Decisão de Bernardo, na mesma linha da abertura do repositório em 26/08. `scripts/etl/dados/` permanece versionado | — |
 | **LIQ-3** | Papel titular/reserva na atribuição | Épico 11 |
 | **LIQ-4** | Persistência da LIQ emitida | Épico 11 |
 

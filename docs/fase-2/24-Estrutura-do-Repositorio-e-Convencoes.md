@@ -106,10 +106,24 @@ ciaara-11/
 ├── scripts/
 │   └── etl/                               #   Python — Sheets → CSV → COPY (reaproveita migracao/*.py)
 │
+├── supabase/tests/*.sql                   # pgTAP — É AQUI que `supabase test db` procura (§7)
 ├── tests/
 │   ├── unidade/                           #   Vitest sobre lib/dominio/** — sem banco, sem rede
-│   ├── invariantes/                       #   pgTAP + SQL: contagens, integridade, RN- de risco alto
+│   ├── invariantes/rls/                   #   teste NEGATIVO de RLS, por perfil, com sessão de verdade
 │   └── e2e/                               #   Playwright: percursos principais + rotas /print/*
+
+> **Os testes vivem em dois lugares, e a divisão é por natureza — não por gosto.** *(Achado A-12,
+> corrigido em 30/08/2026: esta árvore punha o pgTAP em `tests/invariantes/`, enquanto o §7 define
+> `"test:invariantes": "supabase test db"`, comando que **só procura em `supabase/tests/`** e não é
+> configurável. Os dois pontos do mesmo documento não podiam estar certos ao mesmo tempo.)*
+>
+> **`supabase/tests/*.sql`** — pgTAP: estrutura, unicidade, condicionais, vigência, grão, derivados,
+> imutabilidade. Roda **como dono do schema**, e prova regra de dado.
+>
+> **`tests/invariantes/rls/`** — o teste **negativo** de RLS, por perfil. Precisa de **cliente
+> autenticado com JWT de verdade**: sob privilégio de dono a RLS não se aplica, e um teste de RLS
+> escrito em pgTAP **aprovaria uma RLS desligada**. Foi rodando com sessão real que se encontrou o
+> defeito do `GRANT` do schema `extensions`.
 │
 ├── docs/                                  # esta documentação, versionada junto do código
 ├── public/                                # estáticos: brasão, imagens da Ficha, favicon

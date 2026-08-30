@@ -60,6 +60,12 @@ A tabela abaixo resume o salto conceitual. Cada linha é uma classe de problema 
 
 Nomes de tabela **exatamente** conforme BRIEF §2.1. A coluna "Natureza" classifica a entidade para efeito de convenção de auditoria (BRIEF §2: tabela transacional carrega o quarteto completo; tabela de cadastro carrega ao menos o par de edição).
 
+> **⚠️ Este mapa tem 24 entradas; o schema tem 27.** *(Achado A-1, corrigido em 30/08/2026.)* Faltam aqui
+> `unidades_ensino` (decisão UE-1 de 26/08/2026), `turma_disciplina_instrutor` e `configuracoes_horario` —
+> as três nasceram depois desta seção. **Em inventário e nome de tabela, a autoridade é o BRIEF §2.1**
+> (achado D-6); este documento é a fonte de **semântica de atributo**, e está incompleto, não errado.
+> A semântica das três está em BRIEF §2.2 e nas migrations do Épico 1.
+
 | # | Entidade (v2.1) | Aba de origem (v2.0) | Natureza | Volume | Chave de negócio |
 |---|---|---|---|---|---|
 | 1 | `cursos` | `Cad_Cursos` | Cadastro | 24 | `codigo` (sigla do curso, ex. `C-Esp-ALH`) |

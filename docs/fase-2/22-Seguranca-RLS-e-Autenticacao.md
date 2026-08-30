@@ -289,7 +289,7 @@ descrever o que o sistema realmente faz, e este sistema não apaga nada.
    `perfil_usuario` é domínio normativo fechado (BRIEF §2) e criar um perfil é decisão
    organizacional, não configuração de tela.
 2. `INSERT` das linhas de permissão em `perfil_permissao`.
-3. Pronto. **Nenhuma policy muda.** As 68 policies existentes já sabem responder ao novo perfil,
+3. Pronto. **Nenhuma policy muda.** As 77 policies existentes já sabem responder ao novo perfil,
    porque perguntam à matriz, não ao ENUM.
 
 ### 5.3 As funções de alcance
@@ -336,7 +336,10 @@ Centro inteiro. **Verificado pelo teste T-10.**
 
 ## 6. As policies
 
-68 policies sobre 25 tabelas, em `docs/sql-referencia/05_rls_policies.sql`.
+**77 policies sobre as 27 tabelas.** O arquivo de referência `docs/sql-referencia/05_rls_policies.sql`
+traz 74; as três restantes são de `unidades_ensino`, criada no Épico 1 pela decisão UE-1 e
+posterior àquele arquivo. **Número medido no banco em 30/08/2026, não estimado.**
+*(Corrigido — este parágrafo dizia "68 policies sobre 25 tabelas", achado A-2.)*
 
 ### 6.1 O padrão, sem exceção
 

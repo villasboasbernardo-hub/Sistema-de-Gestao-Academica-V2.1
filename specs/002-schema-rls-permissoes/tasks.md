@@ -230,8 +230,8 @@ credencial de maior privilégio.
 - [X] T087 [P] Percorrer [quickstart.md](./quickstart.md) do passo 1 ao 9 numa base recém-reconstruída e confirmar **cada valor esperado**: 27 tabelas, zero sem RLS, zero policies de `DELETE`, zero RLS forçada
 - [X] T088 [P] Conferir a rastreabilidade: **toda regra `RN-` de risco alto** tocada por esta fatia tem asserção **nomeada pelo próprio identificador**. Stub explicitamente pendente é aceito; **cobertura fingida não** (FR-059) — varrer `supabase/tests/*.sql` e `tests/invariantes/rls/rls.test.ts`
 - [X] T089 [P] Atualizar a seção *Estado atual e onde retomar* do `CLAUDE.md`: Épico 1 concluído, contagens reais de tabelas, policies e tipos medidas no banco
-- [ ] T090 [P] Registrar em `docs/` os achados A-1 a A-5 e A-12 — as contagens divergentes entre documentos e o conflito do documento 24 §1 sobre onde vivem os testes. **São correções de documento, não de código**
-- [ ] T091 Abrir o PR com o template inteiro preenchido, **os seis planos de reversão** e a lista de conferência de [quickstart.md](./quickstart.md) §10. Commits no padrão `db(<identificador>): <resumo no imperativo>`
+- [X] T090 [P] Registrar em `docs/` os achados A-1 a A-5 e A-12 — as contagens divergentes entre documentos e o conflito do documento 24 §1 sobre onde vivem os testes. **São correções de documento, não de código**
+- [ ] T091 **BLOQUEADO — não por esta fatia.** Abrir o PR exige um remote, e a raiz do git é `SIS11`, não `Versao_2.1_NextJS`: um push publicaria a **base viva** (`Banco de dados CIAARA-11.xlsx`), o Ofício do PROENS, o código da v1.0/v2.0 e todo o histórico. O desbloqueio é o **FR-021 da spec 001** (replantar a v2.1 em repositório próprio), que é do Épico 0 e move a cópia de trabalho no disco. **O corpo do PR está pronto** em [PULL_REQUEST.md](./PULL_REQUEST.md), com os seis planos de reversão e a lista de conferência. Abrir o PR com o template inteiro preenchido, **os seis planos de reversão** e a lista de conferência de [quickstart.md](./quickstart.md) §10. Commits no padrão `db(<identificador>): <resumo no imperativo>`
 
 ---
 

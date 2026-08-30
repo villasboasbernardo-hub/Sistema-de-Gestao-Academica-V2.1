@@ -120,7 +120,7 @@ Quatro épicos da v2.1 não têm épico correspondente na v2.0 porque cobrem fun
 
 | Item | Detalhe |
 |---|---|
-| Tabelas | As 24 entidades do documento 05 §3, com os nomes do BRIEF §2.1 |
+| Tabelas | As **27** entidades do **BRIEF §2.1**, que é a autoridade de inventário e de nome (achado D-6). *Corrigido — esta linha dizia "as 24 entidades do documento 05 §3" (achado A-1). O documento 05 §3 lista 24 porque é anterior a `unidades_ensino`, `turma_disciplina_instrutor` e `configuracoes_horario`; ele é fonte de **semântica de atributo**, não de inventário* |
 | Convenções | `id uuid` PK, `codigo text unique not null`, `origem_migracao_v1`, `status`, quarteto de auditoria, trigger `set_auditoria()` |
 | Integridade | Toda FK da matriz de cardinalidade (documento 05 §5.2), com `on delete restrict` como regra geral |
 | Unicidade | As sete regras do documento 05 §7.2, incluindo o índice parcial `UNIQUE (ano_letivo) WHERE status_previa = 'salvo'` |
@@ -785,7 +785,7 @@ Herdadas de `docs/arquitetura/01-schema.md` §7 e §8 e detalhadas no documento 
 | **TURMA-1** | Status "Arquivada" no domínio de turma | Baixo | ~~Épico 1~~ — **DECIDIDO em 28/08/2026** | **Filtro de apresentação**, por decisão de Bernardo: a recomendação desta linha foi acolhida. O domínio `status_turma` fica com os quatro valores reais (`planejada`, `ativa`, `concluida`, `cancelada`); "Arquivada" é VIEW e **não** entra no `ENUM`. Registro em documento 05 §9.2 |
 | **LIQ-3** | Papel titular/reserva na atribuição | Médio | **Épico 11** (aditivo, não bloqueia o Épico 1) | Preferir inteiro `ordem_prioridade` a `ENUM` de três valores, com `UNIQUE` na posição. Pergunta a responder: o papel é **da grade** ou **da turma**? Depois de LIQ-1, provavelmente da turma |
 | **LIQ-4** | Persistência da LIQ emitida | Médio | **Épico 11** | Implementar apenas a persistência do que foi emitido (ano, trimestre, versão, nº do Ofício, status, URL), com índice parcial de uma aprovada por trimestre. **Não** implementar workflow de aprovação da DHN — está fora da Matriz de Responsabilidades da CIAARA-11 |
-| **P-1** | `turma_disciplina` fora do mapa do BRIEF §2.1 | Alto (documental) | **Épico 1** | A entidade existe na planilha ao vivo desde 2026-08-20, com 210 linhas, e é indispensável à LIQ. Incluir a linha `Turma_Disciplina → turma_disciplina` no BRIEF §2.1 |
+| ~~**P-1**~~ | `turma_disciplina` fora do mapa do BRIEF §2.1 | Alto (documental) | ✅ **ATENDIDO** — verificado em 30/08/2026 (achado A-4) | A linha `Turma_Disciplina → turma_disciplina` **já consta** do BRIEF §2.1 (item 8), e a tabela foi criada em M2 do Épico 1 com as 210 linhas previstas. Continuava listado como pendente por engano |
 
 **LIQ-2 permanece fechado.** `Instrutor_Impedimento` **não será criada**; a coluna "Observação" da LIQ sai sempre vazia. Decisão de Bernardo, 2026-08-20. Registrada aqui para que nenhum épico a reabra por engano.
 
@@ -847,7 +847,7 @@ Do Épico 5 em diante a ordem é por **valor entregue**, com as dependências re
 Caminho crítico:   0 → 1 → 2 → 3 → 5 → 6 → 9 → 8 → 7 → 10 → 12
 Paralelo desde 0:  4 (Design System + shell)  ·  lib/dominio/ (regras RN- puras)
 Paralelo desde 5:  11 (LIQ/OS/Ficha)  ·  13 (ROTA)
-Decisão antes de 1: TURMA-1 · P-1 (turma_disciplina no BRIEF §2.1)   [UE-1 decidido em 26/08 — rota (b)]
+Decisão antes de 1: nenhuma pendente   [UE-1 rota (b) 26/08 · TURMA-1 28/08 · P-1 já atendido]
 Decisão antes de 11: LIQ-3 · LIQ-4
 ```
 

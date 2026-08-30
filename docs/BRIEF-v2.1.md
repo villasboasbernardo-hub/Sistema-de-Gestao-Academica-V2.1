@@ -459,7 +459,8 @@ desempenho não é um problema real deste sistema, e a v2.1 não deve fingir que
 > | Grão de `registros_aula` | `disciplina_id NOT NULL` | **`unidade_ensino_id`** — grão de UE (§2.2) |
 > | CH executada da disciplina | coluna do próprio fato | **VIEW/`GENERATED`** sobre as UEs (§2.2) |
 >
-> **Tudo o mais permanece válido e vale a pena reaproveitar**: os 27 ENUMs, as funções do schema
+> **Tudo o mais permanece válido e vale a pena reaproveitar**: os **28** tipos enumerados
+> *(eram descritos como 27 — achado A-3; o número foi medido em disco e no banco)*, as funções do schema
 > `app`, as 74 policies, a matriz `perfil_permissao` semeada, os gatilhos de auditoria e as duas
 > correções de produção do fim desta seção não são afetados pela mudança de grão.
 >
