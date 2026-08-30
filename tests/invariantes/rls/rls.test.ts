@@ -12,14 +12,48 @@
  *
  * Porta os doze testes T-01 a T-12 de `docs/sql-referencia/05_rls_policies.sql`, Parte VI.
  */
+import { readFileSync } from "node:fs";
+
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-const URL_SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321";
-const CHAVE_ANON =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "<chave-publicavel-local>";
-const CHAVE_SERVICO =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? "<chave-local-do-supabase>";
+/**
+ * As chaves vêm do ambiente, e nenhuma é embutida aqui.
+ *
+ * **Este repositório é público.** Uma literal `sb_secret_…` no código, ainda que seja só a chave do
+ * stack local, dispara a varredura de segredos do GitHub e normaliza o hábito que o BRIEF §2 proíbe
+ * — a `service_role` ignora a RLS inteira, e o lugar dela nunca é o versionamento.
+ *
+ * Ordem de resolução: variável de ambiente (é assim no CI) → `.env.local` (é assim na máquina de
+ * quem desenvolve, e o arquivo está no `.gitignore`). Faltando as duas, a suíte falha dizendo o que
+ * fazer, em vez de rodar contra um banco que ninguém sabe qual é.
+ */
+function doAmbiente(chave: string): string {
+  const doProcesso = process.env[chave];
+  if (doProcesso) return doProcesso;
+
+  try {
+    const arquivo = readFileSync(new URL("../../../.env.local", import.meta.url), "utf8");
+    const linha = arquivo
+      .split(/\r?\n/)
+      .find((l) => l.trim().startsWith(`${chave}=`))
+      ?.slice(chave.length + 1)
+      .trim()
+      .replace(/^["']|["']$/g, "");
+    if (linha) return linha;
+  } catch {
+    // `.env.local` ausente é caso normal no CI, onde as variáveis vêm do ambiente.
+  }
+
+  throw new Error(
+    `${chave} não está definida. Rode \`pnpm db:start\` e copie as chaves para \`.env.local\`, ` +
+      `ou exporte-as no ambiente. A suíte de RLS precisa de sessão autenticada de verdade.`,
+  );
+}
+
+const URL_SUPABASE = doAmbiente("NEXT_PUBLIC_SUPABASE_URL");
+const CHAVE_ANON = doAmbiente("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+const CHAVE_SERVICO = doAmbiente("SUPABASE_SERVICE_ROLE_KEY");
 
 const SENHA = "senha-de-teste-com-12+";
 
