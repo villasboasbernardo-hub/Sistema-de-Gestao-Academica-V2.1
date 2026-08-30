@@ -1,10 +1,143 @@
-# CIAARA-11 v2.1 — Documentação da Migração
+# CIAARA-11 v2.1
+
+Sistema de gestão acadêmica da Divisão de Administração Acadêmica (**CIAARA-11**) do Centro de
+Instrução e Adestramento Almirante Radler de Aquino, Marinha do Brasil.
+
+> **A produção do CIAARA-11 é a v2.0**, sobre Google Apps Script + Sheets, até o corte. Este
+> repositório é a **plataforma nova, no mesmo domínio**. Nada aqui está em uso operacional ainda.
+
+---
+
+## Subir o sistema numa máquina limpa
+
+Este roteiro é **completo e autossuficiente**: se você precisar consultar qualquer outra fonte para
+chegar ao sistema no ar, isso é um defeito deste arquivo — abra uma questão em vez de contornar.
+
+### 1. Pré-requisitos
+
+| Ferramenta   | Versão mínima | Conferir com                        |
+| ------------ | ------------- | ----------------------------------- |
+| Node.js      | **22**        | `node --version`                    |
+| pnpm         | 11            | `corepack enable && pnpm --version` |
+| Docker       | em execução   | `docker info`                       |
+| Supabase CLI | 2.x           | `supabase --version`                |
+| Git          | 2.40          | `git --version`                     |
+
+**pnpm, não npm.** Decisão de 26/08/2026. `pnpm-lock.yaml` é o lockfile do projeto.
+
+### 2. Clonar e instalar
+
+```bash
+git clone https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1.git
+cd Sistema-de-Gestao-Academica-V2.1
+pnpm install
+```
+
+### 3. Configurar o ambiente
+
+```bash
+cp .env.local.example .env.local
+```
+
+Abra o `.env.local` e preencha. **Se esquecer, o sistema sobe assim mesmo e diz na tela qual
+variável falta** — não quebra com stack trace. Para trabalhar só contra o banco local, os valores
+que interessam saem do passo 4.
+
+O que cada variável faz está comentado no próprio arquivo de exemplo. Uma regra basta para não
+errar: **variável com prefixo `NEXT_PUBLIC_` vai para o navegador**; sem o prefixo, fica no
+servidor. Se você precisou pôr `NEXT_PUBLIC_` num segredo, o desenho está errado.
+
+### 4. Subir o banco local
+
+```bash
+pnpm db:start
+```
+
+Imprime as URLs e chaves locais. Copie `API_URL` para `NEXT_PUBLIC_SUPABASE_URL` e `ANON_KEY` para
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` no `.env.local`.
+
+O banco local é **descartável por definição** — `pnpm db:reset` reconstrói do zero, sem passo
+manual. Use sem medo.
+
+### 5. Rodar
+
+```bash
+pnpm dev
+```
+
+`http://localhost:3000`. Uma faixa no topo diz em que ambiente você está — ela existe para que
+ninguém registre aula de verdade achando que está em homologação.
+
+---
+
+## Verificar antes de commitar
+
+**São dois comandos, com promessas diferentes.** Não são redundantes:
+
+| Comando               | Cobre                                       | Docker? | Promete                     | Quando              |
+| --------------------- | ------------------------------------------- | ------- | --------------------------- | ------------------- |
+| `pnpm verificar`      | tipos, lint, formatação, unidade, build     | não     | rapidez — alvo de **5 min** | a cada commit       |
+| `pnpm verificar:tudo` | tudo acima **+** pgTAP, RLS e ponta a ponta | sim     | **coincidir com o CI**      | antes de abrir o PR |
+
+Verde em `verificar:tudo` seguido de vermelho no CI é **defeito da verificação**, não azar — vira
+tarefa de correção.
+
+`pnpm run` lista os 28 scripts. O porquê de cada um está em `scriptsComentarios`, no
+`package.json` — JSON não aceita comentário, então eles vivem na chave irmã.
+
+---
+
+## Regras que o repositório impõe por ferramenta
+
+Duas fronteiras são verificadas pelo lint e **provadas por teste** (`pnpm test:unidade`). Não são
+estilo: são arquitetura.
+
+1. **`lib/dominio/` é puro.** Nada ali importa `supabase`, `next` ou `react`. É onde as regras de
+   negócio viram funções testáveis sem banco.
+2. **A `service_role` nunca chega ao navegador.** `lib/supabase/admin.ts` ignora toda a RLS.
+   Importá-lo de um Client Component **quebra o build**.
+
+Se você desligar uma delas, `tests/unidade/lint/fronteiras.test.ts` fica vermelho. É de propósito.
+
+---
+
+## O contrato de dados é gerado, nunca digitado
+
+`lib/tipos/database.ts` sai do banco por comando. **Ninguém digita nome de coluna.**
+
+```bash
+pnpm db:tipos          # regenera a partir do banco LOCAL
+pnpm db:tipos:conferir # regenera E falha se divergir do commitado — é o portão do CI
+```
+
+**Rode `pnpm db:tipos` depois de TODA migration, sem exceção.** O CI reprova quando o arquivo
+commitado diverge das migrations, e é a única defesa que não depende de alguém lembrar.
+
+Este arquivo substitui a aba `_Meta_Colunas` da v2.0: o contrato de coluna que o Sheets não tinha
+passa a ser garantido pelo motor. Hoje ele é praticamente vazio — **o schema é o Épico 1, e isso
+está correto.** O portão nasce funcionando antes de existir o que ele protege, para que o Épico 1
+não precise construí-lo junto com a primeira migration.
+
+Se o `tsc` reclamar de uma coluna que "deveria existir": quase sempre é coluna inventada. A
+correção é a migration, não editar o tipo.
+
+---
+
+## Nunca
+
+- **Nunca `git push` direto na `main`.** Branch, PR, revisão.
+- **Nunca edite `lib/tipos/database.ts` à mão.** É gerado.
+- **Nunca commite `.env.local`.** Está no `.gitignore` e precisa continuar lá.
+
+---
+
+## Documentação da migração
 
 ## Nota de migração (v2.1)
 
 Esta pasta é a suíte de documentação da **Versão 2.1** do sistema de gestão acadêmica do CIAARA-11 (Divisão de Administração Acadêmica do Centro de Instrução e Adestramento Almirante Radler de Aquino, Marinha do Brasil). A v2.1 é **uma migração de plataforma, e nada além disso**: o sistema da v2.0 — hoje em produção sobre Google Apps Script + Google Sheets, com 39 ciclos Spec Kit executados e a base já saneada — é reimplantado sobre **Next.js 15 (App Router, React 19, TypeScript `strict`) + Supabase (PostgreSQL, Auth, RLS)**, hospedado na Vercel. Requisitos, regras de negócio e vocabulário institucional permanecem **intactos**; muda o substrato técnico. A decisão é de **Bernardo Villas Bôas dos Santos, Primeiro-Tenente**, arquiteto/desenvolvedor responsável, em **25/08/2026**. Não há funcionalidade nova de negócio nesta versão: o valor entregue é a plataforma — integridade referencial, transações, segurança no dado (RLS), deep-link por tela, ambiente de teste por branch e tipos verificados em compilação.
 
-**Regra que governa tudo aqui:** a v2.1 **não reinventa o domínio**. Todo `RF-`, `RN-` e `RNF-` da v2.0 tem destino explícito — *preservado*, *preservado com nova implementação*, *absorvido pela plataforma* ou *revogado* — e **nenhum requisito é apagado**.
+**Regra que governa tudo aqui:** a v2.1 **não reinventa o domínio**. Todo `RF-`, `RN-` e `RNF-` da v2.0 tem destino explícito — _preservado_, _preservado com nova implementação_, _absorvido pela plataforma_ ou _revogado_ — e **nenhum requisito é apagado**.
 
 ---
 
@@ -12,7 +145,7 @@ Esta pasta é a suíte de documentação da **Versão 2.1** do sistema de gestã
 
 **Se você tem 15 minutos:** leia `docs/fase-1/00-Visao-Geral-e-Escopo.md`, seções **5** (por que migrar, com as perdas declaradas) e **9** (os 12 critérios de aceite). Elas contêm o essencial da decisão.
 
-**Se você vai começar a implementar hoje**, o primeiro comando prático é o do **Épico 0 — Fundação**. O projeto Supabase e o repositório GitHub **já existem** (ver *Estado do projeto*), então o passo real é conectar o repositório à base e gerar os tipos:
+**Se você vai começar a implementar hoje**, o primeiro comando prático é o do **Épico 0 — Fundação**. O projeto Supabase e o repositório GitHub **já existem** (ver _Estado do projeto_), então o passo real é conectar o repositório à base e gerar os tipos:
 
 ```bash
 # 1. no repositório já criado no GitHub, inicializar o Next.js (Épico 0)
@@ -35,39 +168,39 @@ Antes de escrever a primeira migration, leia `docs/fase-2/21-Schema-Fisico-Postg
 
 ### Quem vai **implementar** (escrever código, conduzir os ciclos Spec Kit)
 
-| Ordem | Leia | Por quê |
-|---|---|---|
-| 1 | `docs/vibe-coding/40-Constitution-v2.1.md` | Os princípios que prevalecem sobre qualquer plano ou tarefa. Em especial o **Princípio III**, reescrito: deixa de proibir framework/banco externo/CI e passa a fixar a nova stack |
-| 2 | `docs/fase-2/20-Arquitetura-Alvo-Next-Supabase.md` | O desenho de conjunto e as fronteiras de camada |
-| 3 | `docs/fase-2/24-Estrutura-do-Repositorio-e-Convencoes.md` | Onde cada coisa mora e como se nomeia |
-| 4 | `docs/fase-1/04-Regras-de-Negocio-a-Preservar.md` | **O contrato.** As ~40 regras `RN-`, que viram funções puras em `lib/dominio/` |
-| 5 | `docs/fase-2/21-Schema-Fisico-PostgreSQL.md` + `docs/sql-referencia/` | O schema e os scripts, na ordem numérica |
-| 6 | `docs/vibe-coding/42-Prompts-por-Epico.md` | O prompt de partida do épico em que você vai trabalhar |
-| 7 | `docs/fase-1/07-Glossario.md` | Consulta permanente — sobretudo a coluna *Equivalente na v2.0* |
+| Ordem | Leia                                                                  | Por quê                                                                                                                                                                           |
+| ----- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `docs/vibe-coding/40-Constitution-v2.1.md`                            | Os princípios que prevalecem sobre qualquer plano ou tarefa. Em especial o **Princípio III**, reescrito: deixa de proibir framework/banco externo/CI e passa a fixar a nova stack |
+| 2     | `docs/fase-2/20-Arquitetura-Alvo-Next-Supabase.md`                    | O desenho de conjunto e as fronteiras de camada                                                                                                                                   |
+| 3     | `docs/fase-2/24-Estrutura-do-Repositorio-e-Convencoes.md`             | Onde cada coisa mora e como se nomeia                                                                                                                                             |
+| 4     | `docs/fase-1/04-Regras-de-Negocio-a-Preservar.md`                     | **O contrato.** As ~40 regras `RN-`, que viram funções puras em `lib/dominio/`                                                                                                    |
+| 5     | `docs/fase-2/21-Schema-Fisico-PostgreSQL.md` + `docs/sql-referencia/` | O schema e os scripts, na ordem numérica                                                                                                                                          |
+| 6     | `docs/vibe-coding/42-Prompts-por-Epico.md`                            | O prompt de partida do épico em que você vai trabalhar                                                                                                                            |
+| 7     | `docs/fase-1/07-Glossario.md`                                         | Consulta permanente — sobretudo a coluna _Equivalente na v2.0_                                                                                                                    |
 
 > **As duas regras que mais economizam retrabalho:** **nada em `lib/dominio/` importa `supabase`** (regra pura ⇒ testável sem banco), e **nenhuma regra de negócio vive só na UI**.
 
 ### Quem vai **revisar requisito** (conferir escopo, fronteira e conformidade normativa)
 
-| Ordem | Leia | Por quê |
-|---|---|---|
-| 1 | `docs/fase-1/00-Visao-Geral-e-Escopo.md` | Escopo, não-escopo e o que foi revogado em 25/08/2026 (seção 7.1) |
-| 2 | `docs/fase-1/01-Stakeholders-e-Perfis-de-Usuario.md` | A fronteira organizacional (seção 0) e a matriz perfil × recurso × ação (seção 2.5) |
-| 3 | `docs/fase-1/02` e `03` | Requisitos funcionais e não-funcionais, com a coluna *Destino na v2.1* |
-| 4 | `docs/fase-1/04-Regras-de-Negocio-a-Preservar.md` | Classificação de risco e de conformidade de cada regra |
-| 5 | `docs/fase-1/08` e `09` *(históricos)* | A fundamentação: decisões D1–D7, achados A-1..A-12, propostas P-1..P-14 |
+| Ordem | Leia                                                 | Por quê                                                                             |
+| ----- | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 1     | `docs/fase-1/00-Visao-Geral-e-Escopo.md`             | Escopo, não-escopo e o que foi revogado em 25/08/2026 (seção 7.1)                   |
+| 2     | `docs/fase-1/01-Stakeholders-e-Perfis-de-Usuario.md` | A fronteira organizacional (seção 0) e a matriz perfil × recurso × ação (seção 2.5) |
+| 3     | `docs/fase-1/02` e `03`                              | Requisitos funcionais e não-funcionais, com a coluna _Destino na v2.1_              |
+| 4     | `docs/fase-1/04-Regras-de-Negocio-a-Preservar.md`    | Classificação de risco e de conformidade de cada regra                              |
+| 5     | `docs/fase-1/08` e `09` _(históricos)_               | A fundamentação: decisões D1–D7, achados A-1..A-12, propostas P-1..P-14             |
 
-> **O teste de escopo, em uma frase (Princípio IX):** *este processo está atribuído à CIAARA-11 na Matriz de Responsabilidades?* Se não, está fora — por mais simples que seja implementar. É o critério que sustenta `RNF-NORM-06` (o sistema **não** calcula nota, média, aprovação ou documento escolar).
+> **O teste de escopo, em uma frase (Princípio IX):** _este processo está atribuído à CIAARA-11 na Matriz de Responsabilidades?_ Se não, está fora — por mais simples que seja implementar. É o critério que sustenta `RNF-NORM-06` (o sistema **não** calcula nota, média, aprovação ou documento escolar).
 
 ### Quem vai **operar a migração** (ETL, corte, reconciliação)
 
-| Ordem | Leia | Por quê |
-|---|---|---|
-| 1 | `docs/fase-3/30-Plano-de-Migracao-ETL.md` | Ordem de carga, congelamento de escrita, corte, reconciliação, critério de aborto e rollback |
-| 2 | `docs/fase-3/31-Mapa-De-Para-Sheets-PostgreSQL.md` | Aba por aba, coluna por coluna, com a transformação aplicada |
-| 3 | `docs/fase-1/05-Modelo-de-Dados-Conceitual.md` | As entidades e as convenções (`codigo`, `origem_migracao_v1`, exclusão lógica, vigência) |
-| 4 | `docs/fase-1/00`, seção **9** | Os critérios **CA-02**, **CA-03**, **CA-10** e **CA-11** — que são o portão do corte |
-| 5 | `docs/fase-1/07-Glossario.md`, seção *Termos de migração* | Para que "reconciliação", "corte" e "rollback" signifiquem a mesma coisa para todos |
+| Ordem | Leia                                                      | Por quê                                                                                      |
+| ----- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 1     | `docs/fase-3/30-Plano-de-Migracao-ETL.md`                 | Ordem de carga, congelamento de escrita, corte, reconciliação, critério de aborto e rollback |
+| 2     | `docs/fase-3/31-Mapa-De-Para-Sheets-PostgreSQL.md`        | Aba por aba, coluna por coluna, com a transformação aplicada                                 |
+| 3     | `docs/fase-1/05-Modelo-de-Dados-Conceitual.md`            | As entidades e as convenções (`codigo`, `origem_migracao_v1`, exclusão lógica, vigência)     |
+| 4     | `docs/fase-1/00`, seção **9**                             | Os critérios **CA-02**, **CA-03**, **CA-10** e **CA-11** — que são o portão do corte         |
+| 5     | `docs/fase-1/07-Glossario.md`, seção _Termos de migração_ | Para que "reconciliação", "corte" e "rollback" signifiquem a mesma coisa para todos          |
 
 > **Duas decisões já tomadas, para não serem rediscutidas no meio do corte:** **dupla escrita foi considerada e rejeitada** (o corte é único, com congelamento curto); e **a CAHO 2026 não é padrão-ouro** — validação é por invariante estrutural e matemático, nunca por diff com a saída histórica de um curso.
 
@@ -143,18 +276,18 @@ Se você vai ler a suíte inteira, esta é a sequência que faz cada documento s
 
 ## Estado do projeto (25/08/2026)
 
-| Item | Estado |
-|---|---|
-| **Sistema em produção** | **v2.0** — Apps Script + Sheets. Continua sendo a produção até o corte. Base viva: `Banco de dados CIAARA-11 v2.0`, 23 abas |
-| **Decisão de migrar** | ✅ Tomada por Bernardo Villas Bôas dos Santos em **25/08/2026** |
-| **Projeto Supabase** | ✅ **Criado pelo Bernardo** — vazio, aguardando o schema do Épico 1 |
-| **Repositório GitHub** | ✅ **Criado pelo Bernardo** — aguardando o *scaffold* do Épico 0 |
-| **Stack** | ✅ Decidida, não em aberto: Next.js 15 · React 19 · TypeScript `strict` · Tailwind v4 · shadcn/ui · Supabase · Vercel · Vitest/Playwright/pgTAP · ETL em Python |
-| **Documentação Fase 1** | 🟡 Em redação — `00`, `01` e `07` escritos; `02`–`06` e `10` pendentes |
-| **Documentação Fases 2–3 e Vibe Coding** | ⬜ Pendentes |
-| **Schema PostgreSQL / `docs/sql-referencia/`** | ⬜ Pendente (Épico 1) |
-| **ETL e corte** | ⬜ Pendentes (Épicos 2 e o plano do documento 30) |
-| **Ambiente de preview e CI** | ⬜ Pendentes (Épico 0) |
+| Item                                           | Estado                                                                                                                                                          |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sistema em produção**                        | **v2.0** — Apps Script + Sheets. Continua sendo a produção até o corte. Base viva: `Banco de dados CIAARA-11 v2.0`, 23 abas                                     |
+| **Decisão de migrar**                          | ✅ Tomada por Bernardo Villas Bôas dos Santos em **25/08/2026**                                                                                                 |
+| **Projeto Supabase**                           | ✅ **Criado pelo Bernardo** — vazio, aguardando o schema do Épico 1                                                                                             |
+| **Repositório GitHub**                         | ✅ **Criado pelo Bernardo** — aguardando o _scaffold_ do Épico 0                                                                                                |
+| **Stack**                                      | ✅ Decidida, não em aberto: Next.js 15 · React 19 · TypeScript `strict` · Tailwind v4 · shadcn/ui · Supabase · Vercel · Vitest/Playwright/pgTAP · ETL em Python |
+| **Documentação Fase 1**                        | 🟡 Em redação — `00`, `01` e `07` escritos; `02`–`06` e `10` pendentes                                                                                          |
+| **Documentação Fases 2–3 e Vibe Coding**       | ⬜ Pendentes                                                                                                                                                    |
+| **Schema PostgreSQL / `docs/sql-referencia/`** | ⬜ Pendente (Épico 1)                                                                                                                                           |
+| **ETL e corte**                                | ⬜ Pendentes (Épicos 2 e o plano do documento 30)                                                                                                               |
+| **Ambiente de preview e CI**                   | ⬜ Pendentes (Épico 0)                                                                                                                                          |
 
 **Sequenciamento dos épicos:** `0 → 1 → 2 → 3 → 4`, depois por valor. **O Épico 2 (ETL) vem antes do 3 (Auth)**: sem dado migrado não há o que proteger.
 
@@ -183,13 +316,13 @@ Se você vai ler a suíte inteira, esta é a sequência que faz cada documento s
 
 ---
 
-## `specs/` — as 39 specs da v2.0, convertidas *(acrescentado em 26/08/2026)*
+## `specs/` — as 39 specs da v2.0, convertidas _(acrescentado em 26/08/2026)_
 
-| Item | O que é |
-|---|---|
+| Item                           | O que é                                                                                                                                                                                                         |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `specs/00-Fundacao-Tecnica.md` | **Spec 00 — o documento mestre.** Declara Next.js (App Router), Tailwind CSS e Supabase (banco + auth), fixa o Login como primeira tela e o RBAC via Supabase Auth. **Prevalece sobre qualquer spec numerada.** |
-| `specs/README.md` | Guia de leitura das specs, com o grau de confiabilidade de cada artefato |
-| `specs/001-…` a `specs/039-…` | As 39 specs executadas na v2.0, com a plataforma convertida — ~11.300 substituições, zero menção a Apps Script/Sheets |
+| `specs/README.md`              | Guia de leitura das specs, com o grau de confiabilidade de cada artefato                                                                                                                                        |
+| `specs/001-…` a `specs/039-…`  | As 39 specs executadas na v2.0, com a plataforma convertida — ~11.300 substituições, zero menção a Apps Script/Sheets                                                                                           |
 
 ⚠️ `plan.md` e `tasks.md` de cada spec foram **traduzidos, não replanejados**. Ao retomar uma
 feature, regere os dois com `/speckit.plan` e `/speckit.tasks` a partir do `spec.md`.

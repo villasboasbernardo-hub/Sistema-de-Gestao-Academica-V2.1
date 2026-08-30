@@ -43,3 +43,12 @@ next-env.d.ts
 
 # claude code — configuracao local pode conter credencial (aviso do specify init)
 .claude/settings.local.json
+
+# testes
+/test-results/
+/playwright-report/
+/blob-report/
+/coverage/
+
+# supabase local
+/supabase/.temp/

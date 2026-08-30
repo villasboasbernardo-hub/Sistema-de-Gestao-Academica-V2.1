@@ -1,0 +1,45 @@
+# =============================================================================================
+# CIAARA-11 v2.1 — normalização de fim de linha (FR-023)
+#
+# POR QUÊ: o trabalho é feito no Windows e o CI roda em Linux. Sem isto, `prettier --check`
+#          reprova no CI arquivos que passam na máquina de quem escreveu — e o git já avisa
+#          "LF will be replaced by CRLF" a cada `git add`.
+# COMO   : tudo que é texto é normalizado para LF no repositório. O checkout no Windows pode
+#          usar CRLF localmente; o que fica GRAVADO é sempre LF.
+# =============================================================================================
+
+# Padrão: o git detecta o que é texto e normaliza para LF ao gravar.
+* text=auto eol=lf
+
+# Explícitos — não deixar o detector decidir no que importa.
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.js        text eol=lf
+*.mjs       text eol=lf
+*.cjs       text eol=lf
+*.json      text eol=lf
+*.jsonc     text eol=lf
+*.css       text eol=lf
+*.md        text eol=lf
+*.sql       text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.toml      text eol=lf
+*.py        text eol=lf
+*.sh        text eol=lf
+.gitignore  text eol=lf
+.gitattributes text eol=lf
+
+# Binários — nunca tocar. `.docx` é a suíte documental em Word: normalizar corromperia.
+*.docx      binary
+*.xlsx      binary
+*.pdf       binary
+*.PDF       binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.woff      binary
+*.woff2     binary
+*.tar.gz    binary
