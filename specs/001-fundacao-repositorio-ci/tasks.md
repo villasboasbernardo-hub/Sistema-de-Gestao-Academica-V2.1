@@ -144,12 +144,20 @@ confere melhor.
 **Independent Test**: abrir PR descartável com defeito deliberado e observar o merge **bloqueado**
 (quickstart V-7).
 
-- [ ] T039 [US2] **Pré-requisito humano, do Bernardo**: `gh auth refresh -s workflow`. Sem esse escopo o push de `.github/workflows/ci.yml` é **recusado**; os escopos atuais são `gist`, `read:org`, `repo` (FR-014, research R-5)
-- [ ] T040 [US2] Criar `.github/workflows/ci.yml` com o job **`qualidade`**: `next typegen` → `tsc --noEmit` → `eslint` → `prettier --check` → `vitest run tests/unidade` (FR-014, contracts/ci-contextos.md)
-- [ ] T041 [US2] Acrescentar o job **`banco`** em `.github/workflows/ci.yml`: `supabase start` → `db reset` → `db:tipos` → `git diff --exit-code lib/tipos/database.ts` → `supabase test db` → `vitest run tests/invariantes/rls` (FR-014)
+> **Estado em 03/09/2026 — ler antes de marcar mais nada.** O arquivo
+> `.github/workflows/ci.yml` **existe, com os três contextos**, e **nunca foi executado**: não há
+> remote configurado (o replantio, fase 6, não aconteceu) e o token ainda não tem o escopo `workflow`.
+> As tarefas de **escrita** estão feitas; as de **prova** — T042, T048, T049 — continuam abertas, e são
+> elas que valem, porque este projeto exige prova e não declaração (Princípio VI). Conferido nesta
+> máquina: `pnpm lint --max-warnings=0` sai 0 e `CI=true pnpm test:e2e` fica verde (1 passou, 2 puladas,
+> 50,1 s). O bloco `banco` **não** foi executado localmente.
+
+- [ ] T039 [US2] **Pré-requisito humano, do Bernardo**: `gh auth refresh -s workflow`. Sem esse escopo o push de `.github/workflows/ci.yml` é **recusado**; os escopos atuais são `gist`, `read:org`, `repo` (FR-014, research R-5). **Continua aberto:** o escopo trava o push, não a escrita — o arquivo foi criado sem ele
+- [X] T040 [US2] Criar `.github/workflows/ci.yml` com o job **`qualidade`**: `next typegen` → `tsc --noEmit` → `eslint --max-warnings=0` → `prettier --check` → `vitest run tests/unidade` (FR-014, contracts/ci-contextos.md). **`--max-warnings=0` acrescentado em 03/09/2026**: sem a flag o ESLint sai 0 com aviso, e a DoD exige "sem aviso novo"
+- [X] T041 [US2] Acrescentar o job **`banco`** em `.github/workflows/ci.yml`: `supabase start` → `db reset` → `db:tipos` → `git diff --exit-code lib/tipos/database.ts` → `supabase test db` → `vitest run tests/invariantes/rls` (FR-014)
 - [ ] T042 [US2] Confirmar que o passo de `git diff --exit-code` do job `banco` reprova quando o contrato de dados está desatualizado — **é o portão do FR-010, que serve US4** (FR-010, quickstart V-5)
-- [ ] T043 [US2] Acrescentar o job **`build`** em `.github/workflows/ci.yml`: `next build` — é o único bloco que pega erro de fronteira servidor/cliente (FR-005, FR-014)
-- [ ] T044 [US2] Fixar em `.github/workflows/ci.yml` a versão da CLI do Supabase e Node **22**; CLI sem versão fixada é a causa nº 1 de o bloco `banco` falhar na primeira execução (invariantes CI-3 e CI-4)
+- [X] T043 [US2] Acrescentar o job **`build`** em `.github/workflows/ci.yml`: `next build` — é o único bloco que pega erro de fronteira servidor/cliente (FR-005, FR-014) — **e, desde 03/09/2026, a suíte de ponta a ponta**: `playwright install --with-deps chromium` → `pnpm test:e2e`. Nenhum contexto do CI a executava, contra o SC-003 e o FR-013 (achado CHK011/CHK012 de `checklists/entrega.md`; decisão de Bernardo por acrescentá-la ao `build` em vez de criar um quarto contexto — ver `contracts/ci-contextos.md`, invariante CI-7)
+- [X] T044 [US2] Fixar em `.github/workflows/ci.yml` a versão da CLI do Supabase e Node **22**; CLI sem versão fixada é a causa nº 1 de o bloco `banco` falhar na primeira execução (invariantes CI-3 e CI-4). **Nota:** o Node 22 exigiu `actions/setup-node@v4` nos três jobs — o `pnpm/action-setup@v4` instala o pnpm, **não** fixa o Node
 - [ ] T045 [US2] Configurar a proteção da branch `main` com o comando de `contracts/ci-contextos.md` — revisão aprovada, verificações estritas e os três contextos exigidos. **Depois de T040–T044, antes do primeiro PR** (FR-014.1)
 - [ ] T046 [US2] Ligar varredura de segredos e **proteção de push** no repositório — verificado em 27/08/2026: as duas estão `disabled`, e o repositório é público desde 26/08 (FR-002.1)
 - [ ] T047 [US2] **Acrescentar** a `README.md` o procedimento para segredo vazado: **rotacionar a chave**, não apagar o commit — em repositório público, remover história não desfaz a exposição (FR-002.2)
