@@ -45,16 +45,31 @@ Aplicar **depois** de os três contextos existirem com estes nomes, e **antes do
 (FR-014.1). Passou a ser possível quando o repositório virou público em 26/08/2026 — antes disso a API
 respondia `403 Upgrade to GitHub Pro`.
 
+**⚠️ Corrigido em 06/09/2026.** A forma pontuada (`-F required_status_checks.strict=true`) **não
+funciona**: o `gh` não monta objeto aninhado a partir de ponto e a API devolve
+`422 — "required_pull_request_reviews", "required_status_checks" weren't supplied`. Descoberto ao
+aplicar de verdade. O corpo vai como JSON:
+
 ```bash
-gh api -X PUT repos/:owner/:repo/branches/main/protection \
-  -F required_pull_request_reviews.required_approving_review_count=1 \
-  -F required_status_checks.strict=true \
-  -F 'required_status_checks.contexts[]=qualidade' \
-  -F 'required_status_checks.contexts[]=banco' \
-  -F 'required_status_checks.contexts[]=build' \
-  -F enforce_admins=false \
-  -F restrictions=null
+cat > protecao-main.json <<'JSON'
+{
+  "required_status_checks": { "strict": true, "contexts": ["qualidade", "banco", "build"] },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null
+}
+JSON
+
+gh api -X PUT repos/:owner/:repo/branches/main/protection --input protecao-main.json
 ```
+
+`required_pull_request_reviews` é `null` por decisão de Bernardo (03/09/2026): exigir uma aprovação
+**trava um projeto de operador único**, porque ninguém aprova o próprio PR. Fecha o **CHK014**.
+
+**Aplicada e conferida em 03/09/2026:** contextos `qualidade`/`banco`/`build`, `strict=true`,
+`enforce_admins=false`, sem revisão exigida. Ver o documento 10 §2.7 para o comando de conferência e
+para a consequência que segue aberta (**CHK013**: assim configurado, o portão não barra o
+administrador — o que contradiz a letra do `SC-003`).
 
 ## Invariantes
 

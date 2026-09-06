@@ -257,16 +257,44 @@ gh repo view              # confirma que o diretório aponta para o repositório
 
 Proteção da branch principal — **faça isto antes do primeiro PR**, não depois:
 
+> **⚠️ Corrigido em 06/09/2026 — a forma anterior deste comando não funciona.** Ele usava
+> `-F required_status_checks.strict=true`, com chave pontuada. O `gh` **não monta objeto aninhado a
+> partir de ponto**: manda a chave literal `required_status_checks.strict`, e a API responde
+> **`422 — "required_pull_request_reviews", "required_status_checks" weren't supplied`**. Verificado
+> ao aplicar de verdade. Passe o corpo como JSON:
+
 ```bash
-gh api -X PUT repos/:owner/:repo/branches/main/protection \
-  -F required_pull_request_reviews.required_approving_review_count=1 \
-  -F required_status_checks.strict=true \
-  -F 'required_status_checks.contexts[]=qualidade' \
-  -F 'required_status_checks.contexts[]=banco' \
-  -F 'required_status_checks.contexts[]=build' \
-  -F enforce_admins=false \
-  -F restrictions=null
+cat > protecao-main.json <<'JSON'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["qualidade", "banco", "build"]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null
+}
+JSON
+
+gh api -X PUT repos/:owner/:repo/branches/main/protection --input protecao-main.json
+
+# conferir lendo de volta — aplicar não é o mesmo que valer
+gh api repos/:owner/:repo/branches/main/protection \
+  --jq '{contextos: .required_status_checks.contexts, estrito: .required_status_checks.strict,
+         admins_sujeitos: .enforce_admins.enabled, revisao_exigida: (.required_pull_request_reviews != null)}'
 ```
+
+**`required_pull_request_reviews` está `null` de propósito.** A forma anterior exigia
+`required_approving_review_count=1`, o que **trava um projeto de operador único**: o GitHub não
+permite aprovar o próprio PR, e não há segunda pessoa para aprová-lo. Decisão de Bernardo em
+03/09/2026.
+
+**Consequência que fica em aberto, e que não é detalhe.** Com `enforce_admins=false` **e** sem
+revisão exigida, o portão **não barra o dono do repositório**: ele dá o veredito e registra, mas o
+botão de merge continua disponível. Para quem opera sozinho, isso é um portão **consultivo**. Se o
+que se quer é bloqueio de verdade — como o `SC-003` da spec 001 escreve, *"em nenhum dos quatro casos
+o merge fica disponível"* —, `enforce_admins` precisa ser `true`. Os dois textos não podem estar
+certos ao mesmo tempo.
 
 **Quando falhar.** Em repositório pessoal de plano gratuito, a proteção de branch pode não estar
 disponível — nesse caso a regra vira **acordo escrito no `CLAUDE.md`** ("nunca `git push` direto na

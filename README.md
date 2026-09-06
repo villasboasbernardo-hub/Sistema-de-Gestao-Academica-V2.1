@@ -131,6 +131,58 @@ correção é a migration, não editar o tipo.
 
 ---
 
+## Se um segredo vazar
+
+**Rotacione a chave. Não apague o commit.**
+
+Este repositório é **público** desde 26/08/2026. Reescrever a história não desfaz exposição: quem
+clonou continua com a cópia, e o GitHub serve o objeto antigo por um tempo mesmo depois do
+`force-push`. Uma chave que saiu do cofre está comprometida — inclusive se saiu por conversa, por
+captura de tela ou por mensagem, não só por commit.
+
+O procedimento, na ordem:
+
+1. **Rotacione no Supabase** — _Project Settings → API Keys_. Atenção: se o projeto ainda usa as
+   chaves JWT legadas, girar o segredo **regenera as duas**, `anon` e `service_role`.
+2. **Atualize onde a chave vivia:** o seu `.env.local` e o escopo **Preview** da Vercel
+   (`vercel env rm` seguido de `vercel env add`). Não há escopo Production nesta fatia.
+3. **Registre o que aconteceu** — qual chave, quando, por onde vazou. Sem isso ninguém sabe, depois,
+   se a chave que está no ar é a comprometida ou a nova.
+
+**Qual chave é qual, antes de colar em qualquer lugar:**
+
+| Chave                    | Formato                                          | Pode circular?                                                                                   |
+| ------------------------ | ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| publicável / `anon`      | `sb_publishable_…` ou JWT com `"role":"anon"`    | **Sim.** Vai embutida no bundle do navegador por definição; quem protege o dado é a RLS          |
+| secreta / `service_role` | `sb_secret_…` ou JWT com `"role":"service_role"` | **Não. Nunca.** Ignora a RLS inteira — as 27 tabelas e as 77 policies não valem nada diante dela |
+
+Se você recebeu um JWT e não sabe qual é, procure `role` no trecho do meio: ele diz `anon` ou
+`service_role` em texto quase legível dentro do base64.
+
+---
+
+## De onde vem a história deste repositório
+
+A v2.1 nasceu como subpasta do repositório `SIS11`, que guarda também a v1.0 e a v2.0, e foi
+**replantada** aqui em repositório próprio (FR-021). Os commits originais **continuam intactos no
+`SIS11`** — nada foi apagado nem reescrito (Princípio IV).
+
+O `git subtree split` preserva mensagem, autor e data, mas **gera commits novos**. A correspondência,
+para quem precisar seguir a trilha:
+
+| Original no `SIS11` | Aqui      | Commit                                                                |
+| ------------------- | --------- | --------------------------------------------------------------------- |
+| `d19ab10`           | `0eb509c` | `chore(UE-1): versionar a v2.1 com UE-1 decidida e specs renumeradas` |
+| `d31bd56`           | `e64484d` | `docs(EPICO-0): especificar a fundacao e registrar o repo publico`    |
+
+Os SHAs `27e977a` e `a693373`, citados na pesquisa R-1 da spec 001, são de um **teste seco** feito em
+27/08/2026 — ficaram no `SIS11` e não são os do replantio real.
+
+O `596d46e Initial commit`, de 25/08/2026, é o commit que criou este repositório no GitHub e antecede
+o replantio.
+
+---
+
 ## Documentação da migração
 
 ## Nota de migração (v2.1)

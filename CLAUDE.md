@@ -180,7 +180,15 @@ squash, via PR com o template inteiro preenchido.
 6. Migration aplicada em preview e **revertível** (plano de reversão escrito no PR).
 7. Commits no padrão `feat(RF-…): …`.
 
-Comando único que roda a sequência do CI localmente: **`pnpm verificar`**.
+**São dois comandos, com promessas diferentes** *(emenda de 27/08/2026 — pendência D-8)*:
+
+| Comando | Cobre | Docker? | Promete | Quando |
+|---|---|---|---|---|
+| **`pnpm verificar`** | tipos, lint, formatação, unidade, build | não | **rapidez** — alvo de 5 min (`SC-008`) | a cada commit |
+| **`pnpm verificar:tudo`** | tudo acima **+** pgTAP, RLS negativa e ponta a ponta | sim | **coincidir com o CI** (`SC-005`) | antes de abrir o PR |
+
+Não são redundantes: um só comando não promete as duas coisas. Verde em `verificar:tudo` seguido de
+vermelho no CI é **defeito da verificação**, não azar — vira tarefa de correção.
 
 ## Gotchas da plataforma — os quatro que produzem defeito silencioso
 
