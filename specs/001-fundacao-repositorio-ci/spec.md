@@ -483,13 +483,33 @@ Nenhuma bloqueia o `/speckit-plan`. Registradas para que ninguém as descubra de
 
 | # | Item | Onde corrigir |
 |---|---|---|
-| D-1 | O critério de aceite 1 do documento 06 diz `npm install` / `npm run dev`; a decisão é `pnpm` | `docs/fase-1/06-Backlog-de-Epicos-V2.1.md`, Épico 0 |
+| ~~D-1~~ | ✅ **RESOLVIDA em 06/09/2026** — o critério 1 do documento 06 passou a `pnpm install` / `pnpm dev`, com a decisão datada e a prova do clone limpo |
 | ~~D-2~~ | ~~`docs/BRIEF-v2.1.md` não existe~~ — **resolvido em 26/08/2026**: o arquivo apareceu no repositório, 394 linhas, datado 26/08/2026, com §2.1 (mapa de tabelas), §7 (DoD), §9 (invariáveis) e §10 (volumes) | — |
 | ~~**D-5**~~ | ~~O BRIEF §2.1 não conhece `unidades_ensino`~~ — **RESOLVIDO**, verificado em T005 (27/08/2026): o BRIEF foi revisado em 26/08, o §2.1 passou a 27 tabelas **com** `unidades_ensino`, e ganhou um **§2.2 novo** que fixa o grão de UE e as quatro consequências da rota (b) | — |
 | ~~**D-6**~~ | ~~BRIEF × documento 05 sobre `turma_disciplina_instrutor` e `configuracoes_horario`~~ — **RESOLVIDO** na nota ao fim do §2.1 do próprio BRIEF | — |
 | **D-9** | O BRIEF §1 diz "Next.js **15+**"; o instalado é **16.3.3**. Atende ao piso, mas o texto não registra que a linha 16 é a real | `docs/BRIEF-v2.1.md` §1 — nota de uma linha |
 | **D-10** | O BRIEF §1 lista **TanStack Query** e **`nuqs`** na stack; nenhum dos dois é instalado nesta fatia (fora de escopo, FR-020). Não é divergência — é registro para que o Épico 4 não os julgue esquecidos | nenhuma ação |
-| **D-7** | `verificar:tudo` foi autorizado por Bernardo em 27/08/2026 e **não existe** no documento 24 §7 | acrescentar o script ao **`docs/fase-2/24-Estrutura-do-Repositorio-e-Convencoes.md` §7**, com o comentário explicando por que são dois |
-| **D-8** | O `CLAUDE.md` diz "Comando único que roda a sequência do CI localmente: `pnpm verificar`" — passaram a ser dois, com promessas diferentes | `CLAUDE.md`, seção *Definition of Done* |
-| D-3 | `CLAUDE.md` diz "Repositório GitHub ✅ criado — ainda sem push"; o endereço só foi nomeado em 26/08/2026 | `CLAUDE.md`, *Estado atual* |
-| D-4 | A pendência "gerenciador de pacotes" continua listada como aberta no `CLAUDE.md` | `CLAUDE.md`, *Decisões pendentes* |
+| ~~**D-7**~~ | ✅ **RESOLVIDA em 06/09/2026** — o documento 24 §7 traz os dois scripts com comentário e a nota de emenda com os tempos medidos |
+| ~~**D-8**~~ | ✅ **RESOLVIDA em 06/09/2026** — a linha "comando único" da *Definition of Done* do `CLAUDE.md` virou tabela de dois comandos |
+| ~~D-3~~ | ✅ **RESOLVIDA em 06/09/2026** — o *Estado atual* do `CLAUDE.md` foi reescrito (T062); o replantio está registrado com a correspondência de SHA |
+| ~~D-4~~ | ✅ **RESOLVIDA** — a pendência "gerenciador de pacotes" já não consta em *Decisões pendentes* |
+
+---
+
+## Achados de convergência — registrados em 06/09/2026
+
+Estes não são divergências entre documentos: são **coisas que a implementação fez e nenhuma tarefa
+pedia**, ou que a tarefa pedia diferente. Registrados porque o Princípio VI exige mudança cirúrgica —
+o que entrou sem pedido fica escrito, não some.
+
+| # | Achado | Situação |
+|---|---|---|
+| **C-1** | **Dívida de estilo.** `app/error.tsx`, `app/loading.tsx`, `app/not-found.tsx` e `components/faixa-de-ambiente.tsx` usam `style={{}}` com **cor literal** — `#0a0a0a`, `#171717`, `#1e3a8a`, `#9a3412`, `#ededed`, `#f4f4f5`, `#ffffff` —, contra a convenção de que `components/ciaara/` não define cor literal, só token do `@theme` | **Aceita, com prazo.** Os tokens são do **Épico 4**; não havia `@theme` para consumir. Entra como **item de entrada do Épico 4** *(T065)* |
+| **C-2** | **`middleware.ts` → `proxy.ts`.** O Next 16 depreciou a convenção e avisava a cada build. A migração foi feita; **nenhuma tarefa a pedia** | **Feita, artefatos reconciliados.** `proxy.ts` vive na raiz. Atenção: `lib/supabase/middleware.ts` **continua existindo e está correto** — é o cliente de renovação de sessão do FR-007, coisa diferente da convenção de rota. Onde `spec.md`, `plan.md` e `tasks.md` dizem "middleware" referindo-se à **rota**, leia-se `proxy.ts` *(T066)* |
+| **C-3** | **Contagem de scripts.** O `contracts/comandos.md` declara **26**; o `package.json` tem **28**. Os dois a mais são `typegen` (o CI precisa dele isolado, antes do `tsc`) e `db:tipos:conferir` (o portão do FR-010) | **Corrigido no contrato** *(T067)* |
+| **C-4** | **"Com os comentários" (FR-012).** O documento 24 §7 define os scripts *com comentário*; **JSON não aceita comentário**. A forma adotada foi a chave irmã **`scriptsComentarios`**, um comentário por script — e isso não estava escrito em lugar nenhum | **Registrado.** A forma é deliberada e satisfaz o FR-012; script novo entra **com** comentário *(T068)* |
+| **C-5** | **Reescrita de `app/page.tsx` e `app/layout.tsx`.** O scaffold trazia `lang="en"` e o título "Create Next App", contra o princípio do Idioma, e a T027 precisava de superfície para mostrar o aviso de configuração. **Nenhuma tarefa pedia a reescrita** | **Justificada.** Sem ela, o FR-003 não teria onde se manifestar e o Idioma ficaria violado na primeira tela *(T070)* |
+| **C-6** | **Ampliação de `.prettierignore` e `.gitignore`.** O `pnpm format` reformatou as 10 `SKILL.md` do Spec Kit e o `README.md` de `ferramentas/dicionario-traducao/` — revertidos em seguida. Foram acrescentados `.claude/`, `ferramentas/`, `CLAUDE.md`, `AGENTS.md` e artefatos de teste | **Justificada.** Formatador não deve reescrever arquivo de terceiro nem instrução de agente *(T071)* |
+| **C-7** | **A faixa de ambiente foi entregue na fase 4, não na 8.** A T054 a coloca na fase 8, mas ela já vive em `components/faixa-de-ambiente.tsx` desde a fase 4 — porque `app/layout.tsx` seria tocado duas vezes | **Reconciliado.** A T054 é **verificação**, não implementação: conferir na pré-visualização no ar que o rótulo corresponde ao projeto apontado *(T072)* |
+
+**O que nenhum destes é:** mudança de regra de negócio. Nenhum toca `RN-`, schema ou policy.
