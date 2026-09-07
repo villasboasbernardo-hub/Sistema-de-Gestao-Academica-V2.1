@@ -11,7 +11,21 @@ explicam *por que* cada um existe, o que nenhum nome de script consegue.
 
 | | Hoje | Alvo desta fatia |
 |---|---|---|
-| Scripts | **4** (`dev`, `build`, `start`, `lint`) | **26** — os 25 do documento 24 §7 + `verificar:tudo` |
+| Scripts | **4** (`dev`, `build`, `start`, `lint`) | **28** — os 25 do documento 24 §7 + `verificar:tudo` + `typegen` + `db:tipos:conferir` |
+
+> **Corrigido em 06/09/2026 (achado C-3).** Este contrato declarava **26**; o `package.json` tem
+> **28**. Os dois a mais nasceram da implementação e são necessários:
+>
+> - **`typegen`** — o CI precisa dele **isolado**, antes do `tsc`, porque no Next 16 a checagem de
+>   tipos sozinha acusa `Cannot find name 'LayoutProps'` até os tipos de rota existirem (research R-6).
+> - **`db:tipos:conferir`** — é **o portão do FR-010**: regenera e falha se divergir do commitado.
+>   Sem ele, o CI precisaria repetir dois comandos à mão.
+>
+> **Como "com os comentários" foi satisfeito (achado C-4, FR-012).** O documento 24 §7 define os
+> scripts *com comentário*, e **JSON não aceita comentário**. A forma adotada é a chave irmã
+> **`scriptsComentarios`** no `package.json`, com **um comentário por script**, explicando *por quê* —
+> nenhum nome de script consegue isso. **Script novo entra com comentário.** A forma é deliberada e
+> não estava escrita em lugar nenhum até esta data.
 
 ## Os dois comandos de verificação — o ponto do contrato
 

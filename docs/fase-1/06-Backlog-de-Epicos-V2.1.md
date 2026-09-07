@@ -95,7 +95,7 @@ Quatro épicos da v2.1 não têm épico correspondente na v2.0 porque cobrem fun
 
 **Critérios de aceite.**
 
-1. `git clone` + `npm install` + `npm run dev` sobe a aplicação num ambiente limpo, seguindo apenas o README.
+1. `git clone` + `pnpm install` + `pnpm dev` sobe a aplicação num ambiente limpo, seguindo apenas o README. *(Corrigido em 06/09/2026 — pendência D-1: dizia `npm`. Bernardo decidiu por **`pnpm`** em 26/08/2026, e é o que o `package.json` declara em `packageManager`. Provado em 03/09/2026 num clone limpo fora do OneDrive: clone → `pnpm install` → `pnpm dev` respondeu em `localhost` em menos de 4 minutos.)*
 2. Um push em branch gera preview na Vercel com URL própria.
 3. O CI roda `tsc --noEmit`, `eslint`, `vitest` e `playwright` e falha o merge se qualquer um falhar.
 4. `lib/tipos/database.ts` é gerado por comando documentado e o CI falha se estiver desatualizado em relação às migrations.

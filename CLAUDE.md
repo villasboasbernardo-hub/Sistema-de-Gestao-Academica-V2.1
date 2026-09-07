@@ -180,7 +180,15 @@ squash, via PR com o template inteiro preenchido.
 6. Migration aplicada em preview e **revertível** (plano de reversão escrito no PR).
 7. Commits no padrão `feat(RF-…): …`.
 
-Comando único que roda a sequência do CI localmente: **`pnpm verificar`**.
+**São dois comandos, com promessas diferentes** *(emenda de 27/08/2026 — pendência D-8)*:
+
+| Comando | Cobre | Docker? | Promete | Quando |
+|---|---|---|---|---|
+| **`pnpm verificar`** | tipos, lint, formatação, unidade, build | não | **rapidez** — alvo de 5 min (`SC-008`) | a cada commit |
+| **`pnpm verificar:tudo`** | tudo acima **+** pgTAP, RLS negativa e ponta a ponta | sim | **coincidir com o CI** (`SC-005`) | antes de abrir o PR |
+
+Não são redundantes: um só comando não promete as duas coisas. Verde em `verificar:tudo` seguido de
+vermelho no CI é **defeito da verificação**, não azar — vira tarefa de correção.
 
 ## Gotchas da plataforma — os quatro que produzem defeito silencioso
 
@@ -219,16 +227,16 @@ divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, colun
 |---|---|
 | Sistema em produção | **v2.0** (Apps Script + Sheets). Continua sendo a produção **até o corte**. Base viva: `Banco de dados CIAARA-11 v2.0`, 23 abas, sendo escrita todo dia |
 | Decisão de migrar | ✅ Bernardo, 25/08/2026 |
-| Projeto Supabase | ✅ Criado e **alcançável pela aplicação** (`cqhpfuaweoyglhtrckcp`, chave publicável no `.env.local`, conexão verificada em 26/08/2026). Schema ainda **vazio** — aguarda o Épico 1 |
-| Repositório GitHub | ✅ `villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1` — **PÚBLICO** desde 26/08/2026 (decisão de Bernardo), branch padrão `main`, um commit (`a1aa9fb`, só `README.md`). `gh` autenticado. **Ainda sem push da v2.1**: o commit de 26/08 vive em `master` no repo `SIS11` e precisa ser replantado em `main` (FR-021 da spec 001) |
-| Proteção da branch `main` | ⬜ **Disponível, não configurada** (`404 Branch not protected`). Aplicar o comando do documento 10 §2.7 **depois** do `ci.yml` e **antes** do primeiro PR — os três contextos (`qualidade`, `banco`, `build`) precisam existir com esses nomes |
-| ⚠️ Repositório público | Toda a suíte documental das Fases 1–3 fica **legível por qualquer pessoa** quando o push acontecer: estrutura da CIAARA-11, volumes de pessoal, regras da MB, referência normativa e o ref do projeto Supabase. **Não é credencial** — a `service_role` está fora do repo e o `.env.local` é ignorado. É exposição institucional, decidida por Bernardo |
+| Projeto Supabase | ✅ `cqhpfuaweoyglhtrckcp`, **designado desenvolvimento/preview** (FR-022.1) — o de produção nasce antes da carga real do Épico 2 e **não existe ainda**. Schema **preenchido pelo Épico 1**: 27 tabelas, aplicadas do zero por `pnpm db:reset`. ⚠️ A CLI do Supabase **não está autenticada** nesta máquina (`supabase login` pendente), então só o banco local é alcançável por comando |
+| Repositório GitHub | ✅ `villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1` — **PÚBLICO** desde 26/08/2026, branch padrão `main`. **Replantio FEITO** (FR-021): `main` local e remota em dia. Correspondência de SHA no `README.md` — `d19ab10`→`0eb509c`, `d31bd56`→`e64484d`; os originais seguem intactos no `SIS11`. `gh` com escopos `gist`, `read:org`, `repo`, **`workflow`** |
+| Proteção da branch `main` | ✅ **Aplicada em 03/09/2026** e conferida lendo de volta: contextos `qualidade`/`banco`/`build`, `strict=true`, **`enforce_admins=true`** (07/09/2026) e **sem revisão exigida** — num projeto de um operador ninguém aprova o próprio PR (fecha o **CHK014**), mas o portão **barra todo mundo, inclusive você** (fecha o **CHK013**). A `main` não aceita mais push direto. ⚠️ **O comando do documento 10 §2.7 não funcionava**: `gh -F` não aninha chave com ponto e a API devolve 422 — corrigido para JSON via `--input` |
+| ⚠️ Repositório público | **O push aconteceu.** Toda a suíte documental das Fases 1–3 está **legível por qualquer pessoa**: estrutura da CIAARA-11, volumes de pessoal, regras da MB, referência normativa e o ref do projeto Supabase. **Não é credencial** — a `service_role` está fora do repo e o `.env.local` é ignorado. Exposição institucional, decidida por Bernardo. Procedimento de vazamento: `README.md` §*Se um segredo vazar* — **rotacionar, nunca apagar o commit** |
 | Gerenciador de pacotes | ✅ **`pnpm` confirmado por Bernardo em 26/08/2026.** Pendência fechada |
-| Preview na Vercel | ✅ **Liberada em 26/08/2026, só com dado sintético** até a CIAARA-14.2 decidir sobre hospedagem fora da MB. Nem a base viva nem o Supabase de produção alcançáveis pela preview (FR-022 da spec 001) |
+| Preview na Vercel | 🟨 **Projeto vinculado em 03/09/2026** — `ciaara-11/sistema-de-gestao-academica-v2-1`, **sem URL de produção** (FR-016.1). Escopo **Preview** com `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `NEXT_PUBLIC_AMBIENTE=preview`; escopo **Production vazio**, e é essa ausência que satisfaz o FR-022. Falta `NEXT_PUBLIC_URL_APLICACAO` (decisão pendente) e as provas T053–T056 |
 | Documentação (Fases 1–3 + Vibe Coding) | ✅ Escrita. `docs/sql-referencia/` com os seis scripts de referência |
-| **Épico 0 — Fundação** | 🟨 **Em andamento.** Feitos §6.1 e §2.8. **Retomar em §6.2** do documento 10 |
-| **Épico 1 — Schema + RLS** | ✅ **Implementado em 30/08/2026.** Seis migrations em `supabase/migrations/`, aplicadas do zero por `pnpm db:reset`. Medido no banco: **27 tabelas · 0 sem RLS · 0 com FORCE · 77 policies · 0 de DELETE · 0 UPDATE sem WITH CHECK · 152 linhas de matriz · 10 views**. **80 asserções pgTAP** e **19 testes de RLS com sessão autenticada de verdade**. `pnpm verificar:tudo` sai 0. Falta: PR e a proteção da branch |
-| Épico 1 — o que **não** entrou | A **carga das 572 UEs** (depende de `disciplinas`, é do Épico 2 — achado A-13) e o `ci.yml` (Épico 0 §6.7) |
+| **Épico 0 — Fundação** | 🟨 **61 de 72 tarefas** (07/09/2026) — **NÃO fechado**. De pé: as duas fronteiras provadas por teste, as quatro suítes, os 28 scripts, o replantio, o **CI verde nos três contextos**, a proteção da `main` com `enforce_admins=true` e o Preview vinculado. **Falta o que só se prova com deploy e com PR:** T042/T048/T049 (o bloqueio de merge nunca foi provado quebrando o CI de propósito), T046 (varredura de segredos **desligada**), T053–T056 (nenhum deploy aconteceu ainda), T057/T058. **Retomar por T048** — é ela que dá sentido ao portão |
+| **Épico 1 — Schema + RLS** | ✅ **CONCLUÍDO.** Implementado em 30/08/2026 e **na `main`** desde então. Medido no banco: **27 tabelas · 0 sem RLS · 0 com FORCE · 77 policies · 0 de DELETE · 0 UPDATE sem WITH CHECK · 152 linhas de matriz · 10 views**. **80 asserções pgTAP** e **19 testes de RLS com sessão autenticada**, tudo rodando **no CI**, no bloco `banco`, verde. A T091 (abrir PR) ficou **sem objeto**: o código entrou na `main` em 30/08, antes de existir CI ou proteção. Registrado, não encenado — abrir PR retroativo para código já mesclado não provaria nada |
+| Épico 1 — o que **não** entrou | A **carga das 572 UEs** — depende de `disciplinas`, é do Épico 2 (achado A-13). *(O `ci.yml` saiu desta lista: existe desde 03/09/2026 e roda verde.)* |
 | **Catálogo de Unidades de Ensino** | ✅ **Extraído em 28/08/2026** dos 24 currículos da DEnsM (`SIS11/Curriculos/`): **572 UEs**, 134 disciplinas, 21 currículos. Invariante fecha em **134/134** (soma das CH das UEs = CH da disciplina). Script `scripts/etl/extrair_unidades_ensino.py`, dado em `scripts/etl/dados/`. **3 currículos sem UE** — ver Q1.b |
 | Épicos 2 a 13 | ⬜ Pendentes |
 | **Decisão UE-1** | ✅ **Fechada em 26/08/2026 — rota (b)**: `registros_aula` no grão de **Unidade de Ensino**; disciplina é agregado derivado. Épico 1 **desbloqueado**. Ver documento 05 §9.1. **Origem do dado resolvida em 28/08/2026**: as UEs vêm dos **currículos oficiais da DEnsM**, não de linha sintética |

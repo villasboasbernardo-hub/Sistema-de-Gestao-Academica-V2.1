@@ -257,16 +257,48 @@ gh repo view              # confirma que o diretório aponta para o repositório
 
 Proteção da branch principal — **faça isto antes do primeiro PR**, não depois:
 
+> **⚠️ Corrigido em 06/09/2026 — a forma anterior deste comando não funciona.** Ele usava
+> `-F required_status_checks.strict=true`, com chave pontuada. O `gh` **não monta objeto aninhado a
+> partir de ponto**: manda a chave literal `required_status_checks.strict`, e a API responde
+> **`422 — "required_pull_request_reviews", "required_status_checks" weren't supplied`**. Verificado
+> ao aplicar de verdade. Passe o corpo como JSON:
+
 ```bash
-gh api -X PUT repos/:owner/:repo/branches/main/protection \
-  -F required_pull_request_reviews.required_approving_review_count=1 \
-  -F required_status_checks.strict=true \
-  -F 'required_status_checks.contexts[]=qualidade' \
-  -F 'required_status_checks.contexts[]=banco' \
-  -F 'required_status_checks.contexts[]=build' \
-  -F enforce_admins=false \
-  -F restrictions=null
+cat > protecao-main.json <<'JSON'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["qualidade", "banco", "build"]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": null,
+  "restrictions": null
+}
+JSON
+
+gh api -X PUT repos/:owner/:repo/branches/main/protection --input protecao-main.json
+
+# conferir lendo de volta — aplicar não é o mesmo que valer
+gh api repos/:owner/:repo/branches/main/protection \
+  --jq '{contextos: .required_status_checks.contexts, estrito: .required_status_checks.strict,
+         admins_sujeitos: .enforce_admins.enabled, revisao_exigida: (.required_pull_request_reviews != null)}'
 ```
+
+**`required_pull_request_reviews` está `null` de propósito.** A forma anterior exigia
+`required_approving_review_count=1`, o que **trava um projeto de operador único**: o GitHub não
+permite aprovar o próprio PR, e não há segunda pessoa para aprová-lo. Decisão de Bernardo em
+03/09/2026.
+
+**`enforce_admins` é `true`, e isso vale para você também** *(decisão de Bernardo, 07/09/2026)*.
+A configuração anterior, com `false`, deixava o portão **consultivo** para o dono do repositório: dava
+o veredito mas não impedia o merge — o que contradizia a letra do `SC-003` da spec 001, *"em nenhum
+dos quatro casos o merge fica disponível"*. Com `true`, a promessa passa a ser cumprível e a prova do
+bloqueio (FR-015) deixa de ser encenação.
+
+**O custo, que é real e vale conhecer antes de precisar dele.** Se o CI quebrar por motivo alheio ao
+código — runner fora do ar, imagem do Supabase falhando —, **não há caminho de merge** até consertar.
+A saída é desligar a proteção pela API e religá-la depois; é um comando, e é reversível. Saber que
+existe evita a descoberta às onze da noite.
 
 **Quando falhar.** Em repositório pessoal de plano gratuito, a proteção de branch pode não estar
 disponível — nesse caso a regra vira **acordo escrito no `CLAUDE.md`** ("nunca `git push` direto na

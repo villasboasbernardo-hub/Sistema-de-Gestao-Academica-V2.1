@@ -873,11 +873,23 @@ o aprovado da v2.0 (`RNF-COMP-01`) mora aí.
     "etl:reconciliar": "python scripts/etl/reconciliar.py",
 
     // ── Composição ─────────────────────────────────────────────────────────────────────────────
-    // Roda localmente a mesma sequência do CI. Rode antes de abrir o PR e economize um ciclo.
-    "verificar": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test:unidade && pnpm build"
+    // O RÁPIDO, de cada commit. Sem Docker, alvo de 5 min (SC-008) — para que ninguém o pule por pressa.
+    // Cobre o que dispensa banco no ar; NÃO promete coincidir com o CI.
+    "verificar": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test:unidade && pnpm build",
+
+    // O COMPLETO, de antes de abrir o PR. Exige Docker. Sem teto de tempo: o que se exige dele é
+    // COINCIDIR COM O CI (SC-005). Verde aqui e vermelho no CI é defeito da verificação, não azar.
+    "verificar:tudo": "pnpm verificar && pnpm db:reset && pnpm db:tipos:conferir && pnpm test:invariantes && pnpm test:rls && pnpm test:e2e"
   }
 }
 ```
+
+> **Emenda de 27/08/2026 (pendência D-7), autorizada por Bernardo.** Até esta data o documento previa
+> **um** comando de verificação. São **dois**, com promessas diferentes e deliberadamente não
+> redundantes: `verificar` promete **rapidez**, `verificar:tudo` promete **coincidência com o CI**.
+> Um só comando não consegue prometer as duas coisas — o que exige Docker e banco no ar não cabe no
+> teto de 5 minutos, e o que cabe no teto não cobre pgTAP, RLS nem ponta a ponta.
+> Medido em 03/09/2026: `verificar` 44 s, `verificar:tudo` 2 min 20 s.
 
 ---
 

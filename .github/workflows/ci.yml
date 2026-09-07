@@ -1,0 +1,117 @@
+# CI da CIAARA-11 v2.1 — os tres contextos do contrato.
+#
+# Os identificadores dos jobs (`qualidade`, `banco`, `build`) sao CONTRATO: a protecao da branch
+# `main` os referencia pelo nome. Renomear um job sem atualizar a protecao nao quebra nada
+# visivelmente — o portao simplesmente para de exigir aquele bloco, em silencio (invariante CI-1).
+#
+# Fonte: specs/001-fundacao-repositorio-ci/contracts/ci-contextos.md · FR-014, FR-014.1, FR-015
+
+name: CI
+
+# Todo push e todo PR (FR-014). Push tambem, nao so PR: enquanto a protecao nao estiver
+# configurada, o push e o unico sinal que existe.
+on:
+  push:
+  pull_request:
+
+# PR e push na mesma branch nao precisam de dois vereditos simultaneos: o mais novo cancela o antigo.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------------------------
+  # 1. QUALIDADE — sem Docker. Tipos, lint (inclusive as duas fronteiras), formatacao e unidade.
+  # ---------------------------------------------------------------------------------------------
+  qualidade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      # Node 22 fixado (invariante CI-4), coerente com `engines` do package.json e com a Vercel.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `typegen` ANTES do tsc (research R-6): no Next 16 a checagem isolada acusa
+      # "Cannot find name 'LayoutProps'" ate os tipos de rota existirem. Nao e erro de codigo.
+      - run: pnpm typecheck
+
+      # Reprova com aviso, nao so com erro: a DoD exige "eslint sem aviso novo".
+      - run: pnpm lint --max-warnings=0
+
+      - run: pnpm format:check
+
+      # Inclui os testes que provam as duas fronteiras ativas (FR-006).
+      - run: pnpm test:unidade
+
+  # ---------------------------------------------------------------------------------------------
+  # 2. BANCO — exige Docker. Migrations do zero, contrato de dados, pgTAP e RLS negativa.
+  # ---------------------------------------------------------------------------------------------
+  banco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Versao FIXADA (invariante CI-3): CLI sem versao fixada e a causa n. 1 de este bloco
+      # falhar na primeira execucao.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.116.0
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: supabase start
+
+      # Prova que as migrations aplicam do zero, sem passo manual (FR-008).
+      - run: supabase db reset
+
+      # Portao do FR-010: regenera e COMPARA. O CI nunca commita — quem commita e gente
+      # (invariante CI-2). O diff no log ja diz qual coluna divergiu.
+      - run: pnpm db:tipos
+      - run: git diff --exit-code lib/tipos/database.ts
+
+      # Invariantes pgTAP: uma assercao nomeada por regra RN- de Risco Alto.
+      - run: supabase test db
+
+      # Teste NEGATIVO por perfil: o que cada perfil nao pode ler/escrever e negado pelo banco.
+      - run: pnpm test:rls
+
+  # ---------------------------------------------------------------------------------------------
+  # 3. BUILD — o unico bloco que pega erro de fronteira servidor/cliente (FR-005), inclusive
+  #    `admin.ts` alcancado do navegador. Desde 03/09/2026 carrega tambem a ponta a ponta.
+  # ---------------------------------------------------------------------------------------------
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # 8. BUILD — erro de fronteira servidor/cliente aparece aqui, nunca no tsc.
+      - run: pnpm build
+
+      # 9. PONTA A PONTA — acrescentado para cobrir o CHK011 e o SC-003: sem isto, nenhum
+      #    contexto do CI executava Playwright, e um defeito de ponta a ponta nao barrava o merge.
+      #    Nesta fatia a suite roda praticamente vazia (FR-011) — o que se prova e o encanamento.
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
