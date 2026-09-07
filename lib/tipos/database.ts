@@ -1,3 +1,4 @@
+// LINHA DESCARTAVEL — editada a mao, para provar o portao do FR-010 (T042).
 export type Json =
   | string
   | number
