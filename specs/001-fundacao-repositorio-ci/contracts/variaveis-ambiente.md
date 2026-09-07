@@ -30,6 +30,26 @@ Isto vale ainda mais agora: **o repositório é público desde 26/08/2026**.
 | **Preview** | Apontam para `cqhpfuaweoyglhtrckcp`, com `NEXT_PUBLIC_AMBIENTE="preview"` | É o projeto de desenvolvimento (FR-022.1) |
 | **Production** | **Nenhuma** | Não há ambiente de produção nesta fatia (FR-016.1). A ausência **é** a garantia do FR-022 |
 
+> ⚠️ **A realidade divergiu deste contrato em 07/09/2026.** `SUPABASE_SERVICE_ROLE_KEY` foi cadastrada
+> nos escopos **Production e Preview** da Vercel, por decisão de Bernardo, com a justificativa de que a
+> Server Action de convite de usuário precisa dela.
+>
+> **O que este contrato de fato diz**, para que a divergência seja legível e não vire memória de quem
+> estava presente:
+>
+> - o inventário atribui à `service_role` os escopos **`local · CI (se necessário)`** — **não** preview,
+>   **não** production;
+> - esta tabela atribui a Production **"Nenhuma"**, e diz que **a ausência é a garantia do FR-022**;
+> - o **V-5** lista o convite de usuário entre os **três usos autorizados** — nisso a justificativa está
+>   correta —, mas conclui **"nunca por requisição de tela"**, e o convite ainda não existe: nenhum
+>   arquivo de `app/`, `lib/` ou `components/` importa `lib/supabase/admin.ts` (verificado em 07/09).
+>   A Server Action de convite é do **Épico 3**.
+>
+> **Consequências mecânicas**, independentes de opinião: o **SC-007** ("zero ambiente de produção da
+> v2.1") e o **FR-016.1** deixam de valer, e o **V-9** do quickstart passa a reprovar. Ou o contrato,
+> o FR-016.1 e o SC-007 são emendados com data e motivo, ou a variável sai dos dois escopos.
+> **Enquanto isso não se decidir, a T052 fica aberta.**
+
 ## Invariantes
 
 - **V-1**: `.env.local` **nunca** é versionado. Coberto por `.env*` no `.gitignore` — **verificado em
