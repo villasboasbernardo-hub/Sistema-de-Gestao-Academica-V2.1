@@ -54,7 +54,7 @@ aplicar de verdade. O corpo vai como JSON:
 cat > protecao-main.json <<'JSON'
 {
   "required_status_checks": { "strict": true, "contexts": ["qualidade", "banco", "build"] },
-  "enforce_admins": false,
+  "enforce_admins": true,
   "required_pull_request_reviews": null,
   "restrictions": null
 }
@@ -66,10 +66,11 @@ gh api -X PUT repos/:owner/:repo/branches/main/protection --input protecao-main.
 `required_pull_request_reviews` é `null` por decisão de Bernardo (03/09/2026): exigir uma aprovação
 **trava um projeto de operador único**, porque ninguém aprova o próprio PR. Fecha o **CHK014**.
 
-**Aplicada e conferida em 03/09/2026:** contextos `qualidade`/`banco`/`build`, `strict=true`,
-`enforce_admins=false`, sem revisão exigida. Ver o documento 10 §2.7 para o comando de conferência e
-para a consequência que segue aberta (**CHK013**: assim configurado, o portão não barra o
-administrador — o que contradiz a letra do `SC-003`).
+**Aplicada em 03/09/2026 e endurecida em 07/09/2026**, conferida lendo de volta nas duas vezes:
+contextos `qualidade`/`banco`/`build`, `strict=true`, sem revisão exigida e **`enforce_admins=true`**.
+O `true` fecha o **CHK013**: o portão passa a barrar **também o dono do repositório**, sem o que o
+`SC-003` não teria como ser cumprido. Consequência: a `main` não aceita mais push direto de ninguém —
+o acordo escrito virou portão mecânico.
 
 ## Invariantes
 

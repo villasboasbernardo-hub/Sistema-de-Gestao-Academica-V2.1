@@ -270,7 +270,7 @@ cat > protecao-main.json <<'JSON'
     "strict": true,
     "contexts": ["qualidade", "banco", "build"]
   },
-  "enforce_admins": false,
+  "enforce_admins": true,
   "required_pull_request_reviews": null,
   "restrictions": null
 }
@@ -289,12 +289,16 @@ gh api repos/:owner/:repo/branches/main/protection \
 permite aprovar o próprio PR, e não há segunda pessoa para aprová-lo. Decisão de Bernardo em
 03/09/2026.
 
-**Consequência que fica em aberto, e que não é detalhe.** Com `enforce_admins=false` **e** sem
-revisão exigida, o portão **não barra o dono do repositório**: ele dá o veredito e registra, mas o
-botão de merge continua disponível. Para quem opera sozinho, isso é um portão **consultivo**. Se o
-que se quer é bloqueio de verdade — como o `SC-003` da spec 001 escreve, *"em nenhum dos quatro casos
-o merge fica disponível"* —, `enforce_admins` precisa ser `true`. Os dois textos não podem estar
-certos ao mesmo tempo.
+**`enforce_admins` é `true`, e isso vale para você também** *(decisão de Bernardo, 07/09/2026)*.
+A configuração anterior, com `false`, deixava o portão **consultivo** para o dono do repositório: dava
+o veredito mas não impedia o merge — o que contradizia a letra do `SC-003` da spec 001, *"em nenhum
+dos quatro casos o merge fica disponível"*. Com `true`, a promessa passa a ser cumprível e a prova do
+bloqueio (FR-015) deixa de ser encenação.
+
+**O custo, que é real e vale conhecer antes de precisar dele.** Se o CI quebrar por motivo alheio ao
+código — runner fora do ar, imagem do Supabase falhando —, **não há caminho de merge** até consertar.
+A saída é desligar a proteção pela API e religá-la depois; é um comando, e é reversível. Saber que
+existe evita a descoberta às onze da noite.
 
 **Quando falhar.** Em repositório pessoal de plano gratuito, a proteção de branch pode não estar
 disponível — nesse caso a regra vira **acordo escrito no `CLAUDE.md`** ("nunca `git push` direto na
