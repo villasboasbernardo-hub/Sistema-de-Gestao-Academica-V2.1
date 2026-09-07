@@ -30,7 +30,19 @@ Isto vale ainda mais agora: **o repositório é público desde 26/08/2026**.
 | **Preview** | Apontam para `cqhpfuaweoyglhtrckcp`, com `NEXT_PUBLIC_AMBIENTE="preview"` | É o projeto de desenvolvimento (FR-022.1) |
 | **Production** | **Nenhuma** | Não há ambiente de produção nesta fatia (FR-016.1). A ausência **é** a garantia do FR-022 |
 
-> ⚠️ **A realidade divergiu deste contrato em 07/09/2026.** `SUPABASE_SERVICE_ROLE_KEY` foi cadastrada
+> ⚠️ **Este contrato diverge do documento 10, e o documento 10 prevalece** *(decisão de Bernardo, 07/09/2026)*.
+>
+> O **documento 10 §2.6, linhas 239–246**, traz um bloco explícito mandando cadastrar
+> `SUPABASE_SERVICE_ROLE_KEY` nos escopos **production e preview** da Vercel. Este contrato diz o
+> oposto — atribui à chave os escopos `local · CI` e dá a Production "Nenhuma". **Os dois não podem
+> estar certos.** Bernardo decidiu pelo documento 10: a chave é **infraestrutura pré-requisito**, e
+> cadastrá-la não cria ambiente publicado — nenhum deploy de produção existe e a `main` não publica.
+>
+> **O que precisa ser reescrito, e ainda não foi:** a linha de inventário desta chave, esta tabela de
+> escopos, e o **V-9** do `quickstart.md`, que roda `vercel env ls production` esperando ausência e
+> hoje reprova por construção.
+>
+> ~~Texto anterior, mantido por honestidade de registro:~~ *A realidade divergiu deste contrato em 07/09/2026.* `SUPABASE_SERVICE_ROLE_KEY` foi cadastrada
 > nos escopos **Production e Preview** da Vercel, por decisão de Bernardo, com a justificativa de que a
 > Server Action de convite de usuário precisa dela.
 >
