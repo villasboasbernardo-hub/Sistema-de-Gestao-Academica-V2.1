@@ -13,7 +13,7 @@
 -- =================================================================================
 
 begin;
-select plan(4);
+select plan(6);
 
 -- ---------------------------------------------------------------------------------
 -- 1. A coluna aceita nulo — sem isso, os 17 cursos sem fonte não entram.
@@ -71,6 +71,27 @@ select throws_ok(
   '23514',
   null,
   'RN-UE-4 (NEGATIVO): linha migrada com editado_em preenchido EXIGE a UE — a catraca'
+);
+
+-- ---------------------------------------------------------------------------------
+-- 5. A quarentena da disciplina existe — e NAO e a segunda fonte de verdade.
+--    Decisao de 08/09/2026 (opcao C): os 665 registros sem UE perderiam o vinculo com
+--    a disciplina, porque a rota (b) eliminou `disciplina_id`. A quarentena guarda o
+--    ID_Grade verbatim, como TEXTO e sem FK.
+-- ---------------------------------------------------------------------------------
+select has_column(
+  'public', 'registros_aula', 'disciplina_codigo_legado_v1',
+  'RN-UE-5: existe quarentena para o ID_Grade legado — os 665 sem UE nao perdem a evidencia'
+);
+
+-- ---------------------------------------------------------------------------------
+-- 6. NEGATIVO E INEGOCIAVEL — `disciplina_id` continua PROIBIDA.
+--    A quarentena preserva evidencia; ela NAO reabre a rota (b). Se alguem, um dia,
+--    resolver "facilitar" criando a coluna, este teste quebra.
+-- ---------------------------------------------------------------------------------
+select hasnt_column(
+  'public', 'registros_aula', 'disciplina_id',
+  'RN-UE-6 (NEGATIVO): disciplina_id SEGUE PROIBIDA — guardar as duas seria a segunda fonte de verdade que a rota (b) eliminou (FR-020)'
 );
 
 select * from finish();

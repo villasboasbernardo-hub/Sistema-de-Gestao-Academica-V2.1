@@ -105,7 +105,7 @@ migration aditiva — é regressão.
 
 ### Carga e promoção (etapas 3 e 4)
 
-- [ ] T029 [US1] Implementar a etapa 3: `truncate` + `COPY` de `normalizado/*.csv` para `staging.*`, **tudo `text`**, sem conversão (contrato pipeline P-2)
+- [X] T029 [US1] Implementar a etapa 3: `truncate` + `COPY` de `normalizado/*.csv` para `staging.*`, **tudo `text`**, sem conversão (contrato pipeline P-2) ✅ `carregar.py`, etapa 3. **24 tabelas, 5.634 linhas**, tudo `text`. As tabelas de staging nascem do **cabeçalho do CSV**, não de migration: ela é efêmera e espelha uma origem que não controlamos — 24 definições a manter em sincronia divergiriam em silêncio. Nascendo do cabeçalho, a divergência aparece na hora.
 - [ ] T029.1 [US1] Capturar o **estado do `migracao_log` antes da carga** — checksum das linhas históricas — para que a integridade seja provável por comparação antes/depois, não por contagem nem amostragem (FR-004.1)
 - [ ] T030 [US1] Implementar a etapa 4 em `executar.py`: promoção na ordem de `ordem.py`, **numa transação única** — ou as 25 tabelas entram, ou nenhuma (FR-005)
 - [ ] T031 [US1] Garantir que `config_listas` é a **tabela nº 1**: quatro gatilhos validam contra ela, e carregá-la depois faz os 1.566 registros de aula falharem com "valor fora do domínio", sem a mensagem dizer que o problema é a ordem (contrato pipeline P-5)

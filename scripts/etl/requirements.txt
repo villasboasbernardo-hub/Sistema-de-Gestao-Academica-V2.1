@@ -14,7 +14,11 @@
 # pode precisar delas — mas nao sao mais pre-requisito de carga.
 
 openpyxl==3.1.5          # etapas 1 e 1-B: leitura dos .xlsx da v2.0 e da v1.0
-psycopg[binary]==3.2.3   # PostgreSQL. Sem ORM (Principio III)
+# psycopg 3.2.13 e nao 3.2.3: a 3.2.3 NAO tem roda para Python 3.14, e o pip so
+# oferece 3.2.10+. Descoberto ao instalar, em 08/09/2026 — o pino errado teria
+# quebrado a instalacao numa maquina limpa, que e exatamente o que o pino existe
+# para impedir.
+psycopg[binary]==3.2.13   # PostgreSQL. Sem ORM (Principio III)
 
 # tzdata: OBRIGATORIA no Windows, onde o desenvolvimento acontece.
 # O Windows nao traz base de fusos do sistema, e sem este pacote
