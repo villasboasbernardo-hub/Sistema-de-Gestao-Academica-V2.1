@@ -20,6 +20,19 @@ banco e as expõe pela aplicação.
 
 **A ordem 2 antes de 3 foi deliberada** (BRIEF §8): sem dado migrado não há o que proteger. Agora há.
 
+## Clarifications
+
+### Sessão 2026-09-08
+
+- P: Quais dos 9 perfis podem ler identificação civil e residência de instrutor? →
+  R: **Três** — `admin`, `encarregado_administracao_academica` e
+  `ajudante_administracao_academica`. Os outros seis leem apenas o dado funcional.
+  *(A escolha nomeou "Admin e Ajudante"; o Encarregado foi confirmado dentro em seguida —
+  é o chefe da CIAARA-11 e responde pela Ficha de Docentes.)*
+- P: As telas entram nesta fatia ou esperam o Épico 4? → R: **Entram agora**, funcionais e
+  sóbrias: `/login`, `/convite/[token]`, `/recuperar-senha` e `/admin/usuarios`. O estilo é
+  revisitado no Épico 4.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - O Admin convida, a pessoa entra (Priority: P1)
@@ -250,6 +263,20 @@ tela, ausentes na resposta do banco.
   restrita ao próprio Admin.
 - **FR-025**: Estado vazio MUST distinguir *"não há dado"* de *"você não tem permissão de ver"*.
 
+#### Telas
+
+- **FR-025.1**: MUST existir tela de **login** com e-mail e senha.
+- **FR-025.2**: MUST existir tela de **definição de senha por convite**, endereçada pelo token do
+  convite.
+- **FR-025.3**: MUST existir tela de **recuperação de senha**.
+- **FR-025.4**: MUST existir tela de **gestão de usuários**, cobrindo o que o FR-014 exige.
+- **FR-025.5**: As quatro telas MUST ser funcionais e sóbrias, **sem** depender do *design system*
+  do Épico 4. MUST **não** introduzir cor literal em componente — a dívida de estilo C-1 já existe
+  em 4 arquivos e não deve crescer.
+- **FR-025.6**: As telas de login, convite e recuperação MUST viver **fora** do grupo de rotas
+  autenticadas: são as únicas alcançáveis sem sessão, e agrupá-las com as demais faria o
+  middleware do FR-005 exigir sessão para obter sessão.
+
 #### Auditoria
 
 - **FR-026**: O sistema MUST registrar `usuarios.ultimo_acesso` a cada autenticação bem-sucedida
@@ -263,11 +290,21 @@ tela, ausentes na resposta do banco.
 
 #### Dado pessoal
 
-- **FR-028**: A leitura das colunas de identificação civil e residência de `instrutores` — `cpf`,
-  `rg`, `orgao_emissor`, `telefone`, `retelma` e as sete de endereço — MUST ser restrita a perfis
-  declarados, e a restrição MUST ser imposta **pelo banco**.
-  [NEEDS CLARIFICATION: quais dos 9 perfis têm necessidade de conhecer identificação civil e
-  residência de instrutor? Ver Q1.]
+- **FR-028**: A leitura das 12 colunas de identificação civil e residência de `instrutores` —
+  `cpf`, `rg`, `orgao_emissor`, `telefone`, `retelma` e as sete de endereço — MUST ser restrita a
+  **exatamente três perfis**: `admin`, `encarregado_administracao_academica` e
+  `ajudante_administracao_academica`. A restrição MUST ser imposta **pelo banco**.
+- **FR-028.1**: Os outros **seis** perfis — `chefe_departamento_ensino`,
+  `encarregado_orientacao_pedagogica`, `ajudante_orientacao_pedagogica`, `encarregado_curso`,
+  `operador` e `visualizacao` — MUST **não** alcançar aquelas colunas por nenhum caminho.
+  ⚠️ `chefe_departamento_ensino` está entre os que **não** alcançam, e isso é deliberado: ele
+  enxerga todos os cursos do sistema, o que faria dele o perfil de maior alcance sobre dado
+  pessoal se fosse incluído por inércia.
+- **FR-028.2**: A restrição MUST ser **por coluna**, e não por linha. ⚠️ Isto é uma diferença de
+  mecanismo, não de redação: `ROW LEVEL SECURITY` decide quais **linhas** uma sessão enxerga, e
+  não sabe recortar colunas. Restringir coluna exige outro instrumento do banco. Qual deles —
+  privilégio por coluna, visão que omite as colunas, ou separação em tabela própria — é decisão
+  do plano; o requisito é que a decisão seja do **banco** e não da consulta que a tela escreve.
 - **FR-029**: O recorte MUST preservar o acesso de todos os perfis ao dado **funcional** do
   instrutor (posto, especialidade, habilitação, regime, carga horária) — sem o qual a grade, a LIQ e
   o DSA não se montam.
@@ -334,8 +371,9 @@ tela, ausentes na resposta do banco.
 - **SC-009**: `ultimo_acesso` é atualizado em toda autenticação bem-sucedida.
 - **SC-010**: A tela de recuperação produz **resposta indistinguível** para e-mail cadastrado e não
   cadastrado — comparadas a resposta visível e o tempo de resposta.
-- **SC-011**: Um perfil sem autorização para dado pessoal recebe as 12 colunas de identificação
-  civil e residência **ausentes**, e o dado funcional presente, na mesma leitura.
+- **SC-011**: Cada um dos **seis** perfis sem autorização recebe as 12 colunas de identificação
+  civil e residência **ausentes**, e o dado funcional presente, na mesma leitura. Cada um dos
+  **três** autorizados recebe as 12 preenchidas. **9 de 9 perfis verificados**, não uma amostra.
 - **SC-012**: A inconsistência entre credencial e cadastro é detectada por rotina executável, nos
   dois sentidos, sem inspeção manual do banco.
 - **SC-013**: As 3 contas migradas da v2.0 recebem credencial **por convite**, preservando `codigo`
@@ -356,9 +394,11 @@ tela, ausentes na resposta do banco.
    dado reside*, que aquela autorização fechou.
 5. **Não há SSO, MFA obrigatória nem federação com conta institucional** — fora de escopo declarado
    no documento 06. MFA opcional para o Admin é configuração de painel, não requisito desta fatia.
-6. **A tela usa o que o Épico 4 ainda não construiu.** Não existem *design system* nem shell de
-   navegação. [NEEDS CLARIFICATION: esta fatia entrega telas funcionais e sóbrias agora, a serem
-   revisitadas no Épico 4, ou entrega só o mecanismo e espera o Épico 4 para as telas? Ver Q2.]
+6. **As telas entram nesta fatia, funcionais e sóbrias** (decisão de 08/09/2026). Não existem
+   *design system* nem shell de navegação — eles são o Épico 4 —, então as quatro telas nascem
+   sem tokens `@theme` e serão retrabalhadas depois. O retrabalho é conhecido, está orçado em
+   quatro telas, e é o preço de não deixar 5.394 linhas de dado real sem porta por mais um épico
+   inteiro. ⚠️ A dívida de estilo **fica registrada aqui** para não ser descoberta no Épico 4.
 7. **`instrutor_id` em `usuarios`** liga a pessoa ao cadastro docente quando ela é as duas coisas. O
    comportamento quando o instrutor referenciado está inativo é decidido nesta fatia.
 
@@ -388,9 +428,13 @@ tela, ausentes na resposta do banco.
 
 ## Perguntas em aberto
 
-- **Q3.a — Quais perfis veem dado pessoal de instrutor?** A US5 exige o recorte; ela **não** decide
-  quem fica de que lado. É decisão do Bernardo, e provavelmente da CIAARA-11 como divisão.
-  **Em aberto — ver Q1.**
+- ~~**Q3.a — Quais perfis veem dado pessoal de instrutor?**~~ ✅ **Fechada em 08/09/2026:** os três
+  da CIAARA-11 administrativa (`admin`, `encarregado_administracao_academica`,
+  `ajudante_administracao_academica`). Ver FR-028.
+- **Q3.c — Log de leitura de dado pessoal.** Fora do escopo desta fatia por decisão registrada,
+  mas o recorte do FR-028 torna a pergunta mais nítida, não menos: a partir daqui existe um
+  conjunto declarado de três perfis que **podem** ler PII, e nada registra **quando** leram. Não é
+  requisito aqui; é pendência que fica mais visível depois desta fatia do que antes dela.
 - **Q3.b — Quem opera o convite no dia a dia?** O documento 06 diz "Admin". Se na prática houver
   mais de uma pessoa convidando, o perfil `admin` passa a ser plural e a fronteira das três tabelas
   (documento 22 §6.4) merece uma segunda leitura.

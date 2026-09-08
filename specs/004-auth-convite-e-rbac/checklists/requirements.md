@@ -13,7 +13,7 @@
 
 ## Completude dos requisitos
 
-- [ ] Nenhum marcador `[NEEDS CLARIFICATION]` remanescente — **2 em aberto**, ver Notas
+- [x] Nenhum marcador `[NEEDS CLARIFICATION]` remanescente — os 2 foram fechados em 08/09/2026
 - [x] Requisitos testáveis e sem ambiguidade
 - [x] Critérios de sucesso mensuráveis
 - [x] Critérios de sucesso independentes de tecnologia
@@ -24,7 +24,7 @@
 
 ## Prontidão da feature
 
-- [ ] Todo requisito funcional tem critério de aceite claro — **FR-028/FR-029 dependem da Q1**
+- [x] Todo requisito funcional tem critério de aceite claro
 - [x] Os cenários de usuário cobrem os percursos principais
 - [x] A feature atende aos resultados mensuráveis dos Critérios de Sucesso
 - [x] Nenhum detalhe de implementação vaza para a especificação
@@ -46,13 +46,17 @@
 
 ## Notas
 
-**Dois `[NEEDS CLARIFICATION]` em aberto**, ambos de escopo e ambos sem padrão razoável que possa
-ser presumido:
+**Os dois `[NEEDS CLARIFICATION]` foram fechados em 08/09/2026:**
 
-1. **Q1 — Quais perfis podem ler o dado pessoal de instrutor?** Bloqueia FR-028 e FR-029. Não é
-   escolha técnica: é decisão sobre quem, dentro da Divisão, tem necessidade de conhecer
-   identificação civil e residência de 177 militares.
-2. **Q2 — Telas agora ou depois do Épico 4?** Bloqueia o dimensionamento da fatia inteira. As duas
-   leituras são defensáveis e levam a entregas materialmente diferentes.
+1. **Q1 — Dado pessoal de instrutor:** três perfis leem — `admin`,
+   `encarregado_administracao_academica` e `ajudante_administracao_academica`. Os outros seis não.
+   ⚠️ Registrado no FR-028.2 que **restringir coluna não é `ROW LEVEL SECURITY`**: RLS decide quais
+   linhas a sessão enxerga e não sabe recortar coluna. O requisito exige que a decisão seja do
+   banco; **qual** instrumento do banco é escolha do plano.
+2. **Q2 — Telas:** entram nesta fatia, funcionais e sóbrias. A dívida de estilo ficou registrada na
+   premissa 6 e no FR-025.5, para não ser descoberta no Épico 4.
 
-Itens marcados como incompletos exigem atualização da especificação antes de `/speckit-plan`.
+**36 → 46 requisitos** depois das decisões: as quatro telas viraram requisito nomeado (FR-025.1 a
+FR-025.6) e o recorte de PII ganhou os desdobramentos FR-028.1 e FR-028.2.
+
+Checklist **completo**. A especificação está pronta para `/speckit-plan`.
