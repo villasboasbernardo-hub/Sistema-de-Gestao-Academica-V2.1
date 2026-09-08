@@ -19,84 +19,92 @@ vez** — requisito ambíguo aqui produz dado errado que ninguém questiona, por
 
 ## Idempotência e checksum — o conflito mais caro
 
-- [ ] CHK001 ⛔ O **checksum por tabela** (FR-006, R-08) está definido? Sobre quais colunas, em que ordem de linha, com qual algoritmo — nada disso está escrito [Gap, Spec §FR-006]
+- [x] CHK001 O **checksum por tabela** está definido — colunas, ordem, algoritmo? [Gap, Spec §FR-006] — ✅ **`md5()` nativo do PostgreSQL** sobre a concatenação textual dos valores, ordenada pelas colunas de negócio, excluindo as de auditoria *(decisão de 08/09)*.
 - [x] CHK002 ✅ **RESOLVIDO 08/09** — o FR-006 passou a excluir `id` e o quarteto de auditoria do checksum. ⛔ **Conflito não resolvido:** o quarteto de auditoria (`criado_em`, `criado_por`, `editado_em`, `editado_por`) é preenchido por gatilho a cada carga. Duas execuções produzem carimbos **diferentes** — logo checksum "idêntico" é **impossível** a menos que essas colunas sejam excluídas do cálculo. O requisito não as exclui [Conflito, Spec §FR-006 × Épico 1 `app.set_auditoria()`]
 - [x] CHK003 ✅ **RESOLVIDO 08/09** — FR-006.1 novo: `migracao_log` fica fora da idempotência. ⛔ **Conflito não resolvido:** o FR-006 exige que reexecutar produza resultado **idêntico**, e o FR-004 exige que `migracao_log` seja **append-only e continuado**. A segunda execução ou acrescenta linhas de log (e o resultado deixa de ser idêntico) ou não acrescenta (e a carga deixa de ser registrada). Os dois requisitos não podem valer juntos como escritos [Conflito, Spec §FR-006 × §FR-004]
-- [ ] CHK004 A idempotência é "por `codigo`" (documento 30 §5.4), mas o requisito não diz o que acontece quando a **origem mudou** entre as duas execuções — a planilha é escrita todo dia [Gap, Coverage]
+- [x] CHK004 A idempotência é por `codigo`, mas nada dizia o que acontece quando a **origem muda** entre execuções — a planilha é escrita todo dia [Gap, Coverage] — ✅ A unidade de idempotência é o **snapshot** (FR-008), não a planilha viva. FR-006 reescrito.
 
 ## Contagem, linha de base e as identidades aritméticas
 
 - [x] CHK005 ✅ **RESOLVIDO 08/09** — o FR-012 passou a afirmar a **relação**, com os literais como linha de base recalculável. ⛔ **Conflito não resolvido:** o FR-012 crava as identidades em números literais (1.566+1+186=1.753 · 663+1=664 · 531+62+60+11=664), e o FR-009.1 manda **refazer a linha de base** contra a planilha viva. Se a contagem mudar, as identidades ficam obsoletas — e elas são critério **bloqueante** [Conflito, Spec §FR-012 × §FR-009.1]
-- [ ] CHK006 ⛔ "O delta contra o documento 05 §10 MUST ser registrado e **aprovado**" — aprovado **por quem** e **segundo qual critério**? Um delta de 3 linhas e um de 300 recebem o mesmo tratamento? [Clareza, Mensurabilidade, Spec §FR-009.1]
-- [ ] CHK007 O `migracao_log` histórico é descrito como **"717+ linhas"**. O sinal de mais torna o número não verificável, e o documento 30 §11 registra que o log vivo já passou de `LOG-001060` [Mensurabilidade, Conflito, Spec §FR-004, §SC-006]
-- [ ] CHK008 O documento 30 §4 escreve `avaliacoes` como **"111 + órfãs"**. As órfãs não estão quantificadas em lugar nenhum, e a contagem é critério bloqueante [Gap, Spec §FR-009]
-- [ ] CHK009 O volume declarado (~5.400 linhas) vem do mesmo inventário de 02/08 que o P-8 dá como vencido. Ele é premissa de desenho ou número a reconferir? [Premissa, Spec §Assumptions]
-- [ ] CHK010 A ordem de carga prevê `planejamento_anual` com **0 linhas**. O requisito de contagem exata trata "zero esperado" como caso normal ou como tabela ausente? [Clareza, Caso de borda]
+- [x] CHK006 Aprovado por quem, e segundo qual critério? [Clareza, Mensurabilidade, Spec §FR-009.1] — ✅ **Bernardo, autoridade única, com justificativa documentada linha a linha.** Aprovação em bloco ou por amostragem não é aceita *(decisão de 08/09)*.
+- [x] CHK007 As **717+ linhas** não são número verificável, e o log vivo já passou de `LOG-001060` [Mensurabilidade, Conflito] — ✅ Absorvido pelo **FR-009.2**: todo número vindo do inventário de 02/08 segue a linha de base refeita.
+- [x] CHK008 `avaliacoes` consta como 111 + órfãs, com as órfãs não quantificadas [Gap] — ✅ Absorvido pelo **FR-009.2** — a sondagem as quantifica antes de a contagem virar critério.
+- [x] CHK009 O volume de ~5.400 linhas vem do inventário vencido [Premissa] — ✅ Absorvido pelo **FR-009.2**.
+- [x] CHK010 Zero esperado é caso normal ou tabela ausente? [Clareza, Caso de borda] — ✅ **FR-009.3**: zero é valor válido e verificado como qualquer outro; tabela ausente é falha distinta.
 
 ## Reconciliação — a que decide o corte
 
-- [ ] CHK011 ⛔ O **R-02** compara o somatório de TA "origem × destino". A origem é a staging, que é **integralmente `text`** por desenho. Somar exige conversão numérica — e a conversão é justamente o que pode estar errado. O requisito não diz como o lado da origem é somado sem repetir o defeito que ele deveria detectar [Lacuna, contracts/reconciliacao.md R-02 × data-model §2]
+- [x] CHK011 Como o lado da origem é somado sem repetir o defeito que deveria detectar? [Lacuna] — ✅ **FR-014.1**: soma **bruta do CSV extraído, sem filtro de negócio** *(decisão de 08/09)*.
 - [x] CHK012 ✅ **RESOLVIDO 08/09** — a staging é **truncada no início da execução seguinte**, não descartada ao fim. ⛔ **Conflito não resolvido:** o `data-model.md` §2 diz que a staging é **"descartada ao fim de cada execução"**, mas o contrato do pipeline diz que a etapa 5 é **reexecutável sozinha** e compara `public.* × staging.*`. Descartada a staging, `--somente-reconciliar` não tem contra o que comparar [Conflito, data-model §2 × contracts/pipeline.md]
-- [ ] CHK013 A lista de invariantes bloqueantes (R-01 a R-08) é **fechada**? O FR-015 fala em "invariante estrutural e matemática" sem enumerá-las, e é o critério que o documento 06 chama de inegociável [Completude, Spec §FR-015]
-- [ ] CHK014 O formato de "divergência nomeada" vive só no contrato (C-2: *"tabela X, linha Y, esperado Z, obtido W"*), não no requisito. O FR-014 exige nomear sem dizer o que é nomear [Clareza, Spec §FR-014]
-- [ ] CHK015 A reconciliação é declarada **"só leitura"** (C-4). O requisito diz o que fazer quando ela **não consegue ler** — staging ausente, conexão caída no meio? [Lacuna, Fluxo de exceção]
-- [ ] CHK016 O SC-008 exige que uma troca deliberada de FK seja detectada. O requisito não diz **qual troca** nem em que tabela — e a força da prova depende disso: trocar turma num registro de 1 TA é diferente de trocar num de 12 [Mensurabilidade, Spec §SC-008]
+- [x] CHK013 A lista de invariantes bloqueantes é fechada? [Completude, Spec §FR-015] — ✅ **FR-015.1**: fechada em **R-01 a R-08**; U-01 a U-03 informam. Invariante nova exige emenda ao contrato.
+- [x] CHK014 O formato de divergência nomeada vivia só no contrato [Clareza, Spec §FR-014] — ✅ Promovido ao requisito: **tabela · linha · esperado · obtido**. Contagem agregada não conta como nomeação.
+- [x] CHK015 O que fazer quando a reconciliação **não consegue ler**? [Lacuna, Fluxo de exceção] — ✅ **FR-014.2**: falha com erro nomeado. Ausência de divergência por ausência de leitura não é aprovação (`RN-DEG-01`).
+- [x] CHK016 Qual troca de FK prova o SC-008? [Mensurabilidade] — ✅ O **caso mais difícil**: registro de `tempos_consumidos > 1` movido para **outra turma do mesmo curso** — mesma janela, contagem idêntica dos dois lados.
 
 ## Rastro, proveniência e o log
 
-- [ ] CHK017 ⛔ O que exatamente vai em **`origem_migracao_v1`**? O FR-002 exige "preenchido" sem dizer com quê — e a coluna deixou de ser só auditoria: o `CHECK` da R-1 a usa para **decidir se a UE pode ser nula**. O conteúdo dela agora afeta correção, não só rastreabilidade [Gap, Spec §FR-002 × §FR-025.8]
-- [ ] CHK018 `codigo` deve ser único **por tabela** ou **globalmente**? Os identificadores da v2.0 são prefixados (`CUR-`, `VIN-`), o que sugere por tabela, mas o requisito não diz [Clareza, Spec §FR-002]
-- [ ] CHK019 O FR-004 exige o log "íntegro — nenhuma reescrita". Está definido o que se compara para **provar** que nada foi reescrito: contagem, checksum das linhas antigas, ou leitura por amostragem? [Mensurabilidade, Spec §FR-004]
-- [ ] CHK020 As três famílias de evento do log (data-model §4) estão no modelo de dados, não nos requisitos. Registrar o **não casado** é obrigação ou escolha de desenho? [Rastreabilidade, data-model §4 × Spec]
-- [ ] CHK021 O log é gravado "em bloco, no fim". Se a gravação do log **falhar** depois de as 25 tabelas terem sido promovidas na mesma transação, o requisito não diz se a carga inteira volta [Lacuna, Fluxo de exceção]
+- [x] CHK017 O que vai em **`origem_migracao_v1`**? A coluna deixou de ser só auditoria [Gap] — ✅ **FR-002.1**: `<tabela_origem>:<chave_original>`, por exemplo `Registros_Aula:REG-001234` *(decisão de 08/09)*.
+- [x] CHK018 `codigo` é único por tabela ou globalmente? [Clareza] — ✅ **Medido no banco: 23 constraints `UNIQUE(codigo)`, uma por tabela.** O FR-002 passou a dizê-lo.
+- [x] CHK019 Como se **prova** que o log não foi reescrito? [Mensurabilidade] — ✅ **FR-004.1**: checksum das linhas anteriores à carga, comparado antes e depois. Não por contagem, não por amostragem.
+- [x] CHK020 As três famílias de evento estavam no modelo, não nos requisitos [Rastreabilidade] — ✅ **FR-004.2** as promove, com a família (c) — o não casado — explicitamente obrigatória.
+- [x] CHK021 Se a gravação do log falhar depois das 25 tabelas promovidas? [Lacuna, Fluxo de exceção] — ✅ **FR-004.3**: o log é escrito **dentro** da transação do FR-005. Carga sem registro de carga não é estado alcançável.
 
 ## Integridade referencial e o novo nulo
 
-- [ ] CHK022 ⛔ "**Zero FK órfã**" (FR-011) foi escrito quando `unidade_ensino_id` era `NOT NULL`. Agora ela aceita nulo. O requisito distingue **nulo legítimo** de **órfã**? Como está, uma leitura literal pode contar 1.566 nulos como violação [Clareza, Conflito, Spec §FR-011 × §FR-025.8]
-- [ ] CHK023 ⛔ O `CHECK` da R-1 admite nulo quando `origem_migracao_v1` está preenchido. Nada impede que **dado novo** também preencha essa coluna e escape da obrigatoriedade. O requisito protege contra isso? [Lacuna, Spec §FR-025.8]
-- [ ] CHK024 As duas colunas de P-6 nascem **anuláveis** porque a v2.0 não as preenche em todas as 210 linhas. Está escrito **quantas** devem vir preenchidas, para que a ausência seja verificável em vez de presumida? [Mensurabilidade, data-model §1.1]
-- [ ] CHK025 O FR-013 crava 89 herdados e 121 em branco em `turma_disciplina`. Se a linha de base for refeita (FR-009.1), esses dois números seguem a mesma sorte das identidades do CHK005? [Consistência, Spec §FR-013]
+- [x] CHK022 Zero FK órfã foi escrito quando a UE era `NOT NULL` [Clareza, Conflito] — ✅ **FR-011.1**: chave anulável pode conter nulo legitimamente, e nulo **não** é órfã. A verificação distingue *não há a que apontar* de *aponta para o que não existe* *(decisão de 08/09)*.
+- [x] CHK023 O `CHECK` admitia nulo com `origem_migracao_v1` preenchido, sem impedir que **dado novo** preenchesse a coluna e escapasse da obrigatoriedade [Lacuna] — ✅ **Trava reforçada (FR-025.8):** nulo só com `origem_migracao_v1` preenchido **E** `editado_em` estritamente nulo. É uma **catraca** — linha migrada que for editada passa a exigir a UE. ⚠️ **Residual declarado:** um `INSERT` novo também nasce com `editado_em` nulo, então quem preencher `origem_migracao_v1` no formato do FR-002.1 ainda consegue gravar sem UE. A trava tornou a fraude **deliberada em vez de acidental**; fechá-la por completo exigiria gatilho que distinga a sessão do ETL — decisão do Épico 3 (auth), registrada aqui para não se perder.
+- [x] CHK024 Quantas das 210 linhas devem trazer as colunas de P-6 preenchidas? [Mensurabilidade] — ✅ Absorvido pelo **FR-009.2**: a sondagem estabelece o número antes de ele virar critério.
+- [x] CHK025 Os 89/121 seguem a sorte das identidades? [Consistência] — ✅ **FR-009.2** os inclui nominalmente.
 
 ## Conversão, tipo e fuso
 
-- [ ] CHK026 ⛔ O FR-019 exige "fuso explícito", mas `registros_aula.data` é **`date`**, tipo sem fuso. O requisito confunde a data do fato com os carimbos de auditoria (`timestamptz`)? Sem essa distinção, "converter com fuso" pode **introduzir** o deslocamento de um dia que o requisito existe para evitar [Ambiguidade, Spec §FR-019]
-- [ ] CHK027 "Datas de fronteira" (FR-019) não está definido: virada de ano, horário de verão, primeiro e último dia da turma? [Clareza, Spec §FR-019]
-- [ ] CHK028 O FR-018 exige conversão "verificada por coluna antes da gravação definitiva". Está escrito **o que** se verifica — formato, faixa, domínio, ou os três? [Clareza, Spec §FR-018]
-- [ ] CHK029 A normalização de `1P` → `1` (FR-025.9) trata o sufixo como *parte prática*. O requisito diz o que fazer com **outros sufixos** que apareçam nos 6 arquivos ainda não inspecionados coluna a coluna? [Coverage, Gap, Spec §FR-025.9]
+- [x] CHK026 Fuso sobre `date`, um tipo sem fuso [Ambiguidade] — ✅ **FR-019**: conversão de fuso sobre `date` fica **vedada**; extração e inserção no literal `YYYY-MM-DD`. **FR-019.1**: `timestamptz` em `America/Sao_Paulo`, apresentação `DD/MM/AAAA` *(decisão de 08/09)*.
+- [x] CHK027 Datas de fronteira não estava definido [Clareza] — ✅ **FR-019.2**: virada de ano, primeiro e último dia de turma, e horário de verão se houver no período.
+- [x] CHK028 O que se verifica na conversão por coluna? [Clareza] — ✅ **FR-018.2**: os **três** eixos — formato, faixa e domínio.
+- [x] CHK029 O que fazer com outros sufixos de UE nos arquivos não inspecionados? [Coverage, Gap] — ✅ **Medido nos 7 arquivos: `P` é o único sufixo, 434 ocorrências.** Sufixo novo que apareça cai na regra geral de valor fora de domínio (FR-017).
 
 ## Consistência entre os artefatos
 
-- [ ] CHK030 O `contracts/reconciliacao.md` lista **R-01 a R-08 e U-01 a U-03**; a spec descreve as verificações em FR-009 a FR-014. As duas listas correspondem uma a uma? [Consistência]
-- [ ] CHK031 O documento 30 §13 lista **P-7 como bloqueante** e ela está resolvida desde o Épico 1 (research R-3). Enquanto o documento não for corrigido (T069), qual texto prevalece para quem chegar agora? [Conflito, research §R-3]
-- [ ] CHK032 O documento 31 é o de-para das 23 abas da v2.0 e **não conhece a segunda fonte** (T072). Até ser atualizado, o de-para da v1.0 vive só no `contracts/cruzamento-ue.md` — isso está declarado? [Rastreabilidade, Lacuna]
-- [ ] CHK033 O termo **"lançamento"** (linha da v1.0, grão de TA) e **"registro"** (linha da v2.0, grão de sessão) são usados de forma consistente em spec, plan, data-model e contratos? Trocá-los inverte o sentido de toda frase sobre o cruzamento [Terminologia, Consistência]
+- [x] CHK030 As listas R-01…R-08 e FR-009…FR-014 correspondem uma a uma? [Consistência] — ✅ Correspondência declarada no **FR-015.1**, que fecha a lista e a torna referência única.
+- [x] CHK031 Enquanto o documento 30 §13 não for corrigido, qual texto prevalece? [Conflito] — ✅ **A spec prevalece**, e a correção é a T069. Registrado em research §R-3.
+- [x] CHK032 Até o documento 31 ser atualizado, onde vive o de-para da v1.0? [Rastreabilidade] — ✅ No **`contracts/cruzamento-ue.md`**, que prevalece até a T072.
+- [x] CHK033 Lançamento (v1.0, grão de TA) e registro (v2.0, grão de sessão) são usados de forma consistente? [Terminologia] — ✅ Conferido nos cinco artefatos; a distinção está declarada em data-model §3.1 e §3.2.
 
 ## Cobertura de cenário e recuperação
 
-- [ ] CHK034 Existe requisito para a carga **interrompida por queda** — energia, conexão, processo morto — em vez de por defeito de dado? A transação protege o banco, mas os artefatos de `dados/` ficam num estado que ninguém descreveu [Lacuna, Fluxo de recuperação]
-- [ ] CHK035 O FR-007 exige cada etapa "reexecutável isoladamente". Está escrito o que garante que uma etapa reexecutada **não use artefato obsoleto** de outra etapa anterior? [Lacuna, Spec §FR-007]
-- [ ] CHK036 Há requisito de **observabilidade** para uma carga que leva minutos — progresso, etapa corrente, o que fazer quando ela parece travada? Registrado como Outstanding no `/speckit-clarify`, mas segue sem requisito [Gap, Não funcional]
+- [x] CHK034 Existe requisito para carga interrompida por **queda**? [Lacuna, Recuperação] — ✅ **FR-007.1**: retomada da etapa 1 sem estado residual que altere o resultado.
+- [x] CHK035 O que impede uma etapa reexecutada de usar artefato obsoleto? [Lacuna] — ✅ **FR-007.1**: a etapa recusa artefato cujo **snapshot de origem** não corresponda ao seu.
+- [x] CHK036 Há requisito de **observabilidade** para uma carga de minutos? [Gap, Não funcional] — ✅ **FR-021.1**: etapa corrente e tempo por etapa registrados, para distinguir carga lenta de carga travada.
 
 ---
 
-## Portão — o que precisa de decisão antes de T007
+## Portão — fechado em 08/09/2026
 
-**Bloqueantes (⛔), em ordem de custo se descobertos tarde:**
+**36 de 36 verdes.** Onze bloqueantes na origem, todos resolvidos: quatro por correção de redação
+(os conflitos formais) e sete por decisão de Bernardo.
 
-| # | Item | Por que agora |
-| --- | --- | --- |
-| **CHK002 · CHK003** | Idempotência × auditoria × log append-only | São **dois conflitos formais**. O FR-006 é insatisfazível como escrito: carimbos mudam a cada execução e o log cresce. Descoberto na implementação, custa reescrever requisito **e** teste |
-| **CHK005** | Identidades cravadas × linha de base refeita | Ambos bloqueantes, e um invalida o outro |
-| **CHK011 · CHK012** | Como a origem é somada, e se a staging sobrevive | Decidem se a reconciliação é executável. O CHK012 é conflito direto entre dois artefatos |
-| **CHK017** | O conteúdo de `origem_migracao_v1` | Deixou de ser auditoria: o `CHECK` da R-1 depende dela para decidir se a UE pode ser nula |
-| **CHK022 · CHK023** | "Zero FK órfã" × a coluna que virou anulável | O FR-011 foi escrito antes da R-1 e não foi revisto |
-| **CHK006** | Quem aprova o delta da linha de base, e com que critério | Sem isso, "aprovado" é assinatura em branco |
-| **CHK026** | Fuso sobre um tipo `date` | Aplicar fuso a uma data sem fuso é como se **produz** o deslocamento de um dia |
+| Origem da resolução | Itens |
+| --- | --- |
+| **Conflito formal, corrigido na redação** | CHK002 · CHK003 · CHK005 · CHK012 |
+| **Decisão de Bernardo (08/09)** | CHK001 · CHK006 · CHK011 · CHK017 · CHK022 · CHK023 · CHK026 |
+| **Medido no banco ou nos arquivos** | CHK018 (23 constraints `UNIQUE`) · CHK029 (`P` é o único sufixo, 434 ocorrências) |
+| **Absorvido pela linha de base do FR-009.2** | CHK007 · CHK008 · CHK009 · CHK024 · CHK025 |
+| **Redação derivada, sem decisão nova** | os 13 restantes |
 
-**Onze itens bloqueantes.** Nenhum exige trabalho de código para responder — todos são decisão ou
-redação. Os quatro conflitos formais (CHK002, CHK003, CHK005, CHK012) são pares de requisitos que
-**não podem estar os dois certos**, e nenhum deles foi detectado pelo `requirements.md`, que valida a
-spec como documento e não cruza requisito com requisito.
+**Efeito na spec: 57 requisitos**, contra os 34 com que ela começou o dia.
+
+### ⚠️ Um residual declarado, dentro do CHK023
+
+A trava do FR-025.8 — nulo só com `origem_migracao_v1` preenchido **e** `editado_em` nulo — funciona
+como **catraca**: linha migrada que for editada passa a exigir a Unidade de Ensino. Mas um `INSERT`
+novo também nasce com `editado_em` nulo, então quem preencher `origem_migracao_v1` no formato do
+FR-002.1 ainda consegue gravar sem UE.
+
+**O item está verde porque a decisão foi tomada e aplicada**, e porque a trava mudou a natureza do
+risco: a fraude passou de **acidental** a **deliberada**. Fechá-la por completo exige gatilho que
+distinga a sessão do ETL da sessão de um usuário — e isso é o Épico 3, que traz autenticação. Fica
+registrado aqui para que ninguém o descubra sozinho em 2027.
 
 ## Notas
 

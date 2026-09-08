@@ -313,8 +313,14 @@ planilha volta a ser a fonte de verdade sem perda.
 
 - **FR-001**: A carga MUST trazer **100%** do histórico da planilha de origem para o banco, sem
   reinterpretar conteúdo. *(documento 06, Épico 2 — objetivo)*
-- **FR-002**: Toda linha migrada MUST ter `codigo` não nulo e único, guardando o identificador da
-  v2.0 **verbatim**, e MUST ter a marca de procedência preenchida. *(critério 4)*
+- **FR-002**: Toda linha migrada MUST ter `codigo` não nulo e **único dentro da própria tabela** —
+  medido: **23 constraints `UNIQUE(codigo)`**, uma por tabela —, guardando o identificador da v2.0
+  **verbatim**. *(critério 4; unicidade esclarecida em 08/09/2026 — achado CHK018)*
+- **FR-002.1**: `origem_migracao_v1` MUST guardar a **concatenação do nome da tabela de origem com a
+  chave original**, no formato `<tabela_origem>:<chave_original>` — por exemplo
+  `Registros_Aula:REG-001234`. A coluna deixou de ser apenas auditoria: o `CHECK` do FR-025.8 depende
+  dela para admitir Unidade de Ensino nula, logo seu conteúdo afeta **correção**, não só rastro.
+  *(decisão de 08/09/2026 — achado CHK017)*
 - **FR-003**: O ETL MUST NOT corrigir conteúdo de negócio. Correção é **evento separado e logado**,
   nunca embutida no transporte. *(documento 06 — "fora de escopo"; risco declarado)*
 - **FR-004**: O log de migração da v2.0 MUST chegar **íntegro** — as 717+ linhas históricas sem
@@ -324,8 +330,12 @@ planilha volta a ser a fonte de verdade sem perda.
 
 - **FR-005**: A carga MUST acontecer em **transação única**: ou as 25 tabelas entram, ou nenhuma
   entra. Estado parcial MUST NOT ser alcançável. *(documento 30 §4)*
-- **FR-006**: Reexecutar a carga do zero MUST produzir, em cada tabela de negócio, **contagem
-  idêntica** e **checksum idêntico das colunas de negócio**, ordenadas por `codigo`. O checksum MUST
+- **FR-006**: Reexecutar a carga **sobre o mesmo snapshot** (FR-008) MUST produzir, em cada tabela de
+  negócio, **contagem idêntica** e **checksum idêntico das colunas de negócio**, ordenadas por
+  `codigo`. O snapshot — não a planilha ao vivo, que é escrita todo dia — é a unidade sobre a qual a
+  idempotência é afirmada. *(escopo esclarecido em 08/09/2026 — achado CHK004)* O checksum MUST ser
+  **`md5()` do PostgreSQL sobre a concatenação textual dos valores**, ordenada pelas colunas de
+  negócio. *(algoritmo fixado em 08/09/2026 — achado CHK001)* O checksum MUST
   excluir `id` e o quarteto de auditoria (`criado_por`, `criado_em`, `editado_por`, `editado_em`) —
   os cinco são **gerados a cada execução por construção** (`gen_random_uuid()` e o gatilho
   `app.set_auditoria()`), e sua variação **não indica divergência de dado**. *(critério 6; redação
@@ -346,7 +356,13 @@ planilha volta a ser a fonte de verdade sem perda.
 - **FR-010**: O somatório de tempos de aula **por turma** MUST ser idêntico na origem e no destino,
   **zero divergência nas 29 turmas, sem tolerância** — é a verificação que pega troca de chave
   estrangeira, que a contagem não pega. *(documento 30 §7.2)*
-- **FR-011**: A base MUST ter **zero** chave estrangeira órfã após a carga. *(critério 3)*
+- **FR-011**: A base MUST ter **zero** chave estrangeira **órfã** após a carga — órfã sendo valor
+  preenchido que não encontra destino. *(critério 3)*
+- **FR-011.1**: Chave estrangeira **anulável** MUST poder conter nulo legitimamente, e nulo MUST NOT
+  ser contado como órfã. Aplica-se hoje a `registros_aula.unidade_ensino_id` (FR-025.8),
+  `turma_disciplina.instrutor_id` e `registros_aula.instrutor_id`. A verificação MUST distinguir
+  *"não aponta para nada porque não há a que apontar"* de *"aponta para algo que não existe"*.
+  *(decisão de 08/09/2026 — achado CHK022; o FR-011 foi escrito quando a UE era `NOT NULL`)*
 - **FR-012**: As três identidades MUST fechar como **relação estrutural**, sobre a linha de base
   vigente, verificadas por teste de invariante:
   `registros_aula + transferidas + avaliações = total de registros` ·
@@ -359,7 +375,37 @@ planilha volta a ser a fonte de verdade sem perda.
 - **FR-013**: As 210 linhas de turma-disciplina MUST chegar com **89 períodos herdados e 121 em
   branco**, exatamente como na origem. *(critério 7)*
 - **FR-014**: A reconciliação MUST produzir relatório com **veredito explícito** e, quando bloqueado,
-  **cada divergência nomeada**. Relatório sem veredito MUST NOT ser aceito como aprovação.
+  **cada divergência nomeada no formato `tabela · linha · esperado · obtido`**. Contagem agregada
+  ("2 divergências") MUST NOT ser aceita como nomeação. Relatório sem veredito MUST NOT ser aceito
+  como aprovação. *(formato promovido do contrato ao requisito em 08/09/2026 — achado CHK014)*
+- **FR-014.1**: O somatório do lado da **origem** MUST ser calculado sobre o **CSV extraído, em soma
+  bruta, sem aplicar nenhum filtro de negócio** — é o que impede que a reconciliação repita, do lado
+  da origem, o mesmo defeito de interpretação que ela existe para detectar do lado do destino.
+  *(decisão de 08/09/2026 — achado CHK011)*
+- **FR-014.2**: Quando a reconciliação **não conseguir ler** — staging ausente, conexão perdida —, ela
+  MUST falhar com erro nomeado. Ausência de divergência por ausência de leitura MUST NOT ser
+  apresentada como aprovação (`RN-DEG-01`). *(achado CHK015)*
+- **FR-009.3**: Contagem esperada **zero** — hoje `planejamento_anual` — MUST ser tratada como valor
+  válido e verificada como qualquer outra. Tabela **ausente** é falha distinta e MUST ser reportada
+  como tal. *(achado CHK010)*
+- **FR-004.1**: A integridade do log histórico MUST ser provada por **checksum das linhas anteriores
+  à carga, comparado antes e depois** — não por contagem nem por amostragem. *(achado CHK019)*
+- **FR-004.2**: O log MUST registrar as **três famílias** de evento: (a) por linha migrada, (b) por
+  Unidade de Ensino recuperada, com arquivo/aba/linha, (c) **por registro não casado, com seu
+  veredito**. A família (c) é obrigatória: é a ausência que alguém vai querer explicar depois.
+  *(promovido do modelo de dados ao requisito — achado CHK020)*
+- **FR-004.3**: Falha ao gravar o log MUST reverter a carga inteira — ele é escrito **dentro** da
+  mesma transação do FR-005. Carga sem registro de carga MUST NOT ser um estado alcançável.
+  *(achado CHK021)*
+- **FR-007.1**: Etapa reexecutada MUST recusar artefato de outra etapa cujo **snapshot de origem não
+  corresponda** ao seu. Pipeline interrompido por queda MUST poder ser retomado da etapa 1 sem estado
+  residual que altere o resultado. *(achados CHK034, CHK035)*
+- **FR-015.1**: A lista de invariantes bloqueantes é **fechada**: **R-01 a R-08** do
+  `contracts/reconciliacao.md`. `U-01` a `U-03` informam e não bloqueiam. Invariante nova exige
+  emenda ao contrato — não se acrescenta critério de bloqueio em tempo de execução.
+  *(achado CHK013)*
+- **FR-021.1**: A execução MUST registrar **etapa corrente e tempo por etapa**, para que uma carga de
+  minutos seja distinguível de uma carga travada. *(achado CHK036)*
 - **FR-015**: A não regressão MUST ser provada **por invariante estrutural**, nunca por diferença
   com a saída histórica de um curso específico. **A CAHO 2026 permanece rejeitada como padrão-ouro**
   (Bernardo, 10/08/2026). *(critério 8 — "inegociável")*
@@ -373,8 +419,17 @@ planilha volta a ser a fonte de verdade sem perda.
 - **FR-018**: Conversão de tipo MUST ser explícita e verificada por coluna antes da gravação
   definitiva, com o dado passando primeiro por área de staging **integralmente textual**.
   *(risco declarado: "tipo mal convertido em silêncio")*
-- **FR-019**: Datas MUST ser tratadas com fuso explícito, e o teste MUST incluir **datas de
-  fronteira**. *(risco declarado: "timezone deslocando datas em um dia")*
+- **FR-019**: **É vedada a aplicação de conversão de fuso horário sobre colunas do tipo `date`.**
+  Dia civil não tem fuso, e convertê-lo é precisamente como se **produz** o deslocamento de um dia que
+  este requisito existe para evitar. Colunas `date` MUST ser extraídas e inseridas no literal
+  `YYYY-MM-DD`. *(decisão de 08/09/2026 — achado CHK026; a redação anterior exigia "fuso explícito"
+  sobre um tipo que não tem fuso)*
+- **FR-019.1**: Colunas `timestamptz` MUST usar **`America/Sao_Paulo`** em todo o sistema, e a
+  apresentação de dia civil ao usuário MUST ser **`DD/MM/AAAA`**, sem conversão que desloque o dia.
+- **FR-019.2**: O teste de fronteira MUST cobrir: **virada de ano**, **primeiro e último dia de
+  turma**, e data em **horário de verão** — se houver no período migrado. *(achado CHK027)*
+- **FR-018.2**: A verificação por coluna do FR-018 MUST cobrir os **três** eixos: **formato**,
+  **faixa** e **domínio**. *(achado CHK028)*
 
 **Operação do corte**
 
@@ -428,15 +483,25 @@ planilha volta a ser a fonte de verdade sem perda.
   o cabeçalho a cada seção, 36 vezes só no `C-AP-FR` — MUST ser descartada na extração, e o descarte
   MUST ser contado no relatório. Cabeçalho lido como dado vira lançamento fantasma.
 - **FR-009.1**: A linha de base da contagem MUST ser refeita pela **sondagem prévia**, contra a
-  planilha ao vivo, **antes** da carga. O delta contra o documento 05 §10 MUST ser registrado e
-  aprovado antes de virar critério. A contagem continua **bloqueante** — muda de onde vem o número
+  planilha ao vivo, **antes** da carga. O delta contra o documento 05 §10 MUST ser aprovado
+  **nominalmente por Bernardo — autoridade única — com justificativa documentada linha a linha**.
+  Aprovação em bloco ou por amostragem MUST NOT ser aceita. *(autoridade fixada em 08/09/2026 —
+  achado CHK006)*
+- **FR-009.2**: Todo número de aceite derivado do inventário de 02/08/2026 MUST seguir a linha de base
+  refeita — inclusive as três identidades (FR-012), os **89/121** de `turma_disciplina` (FR-013), o
+  volume de ~5.400 linhas, as **717+** linhas de log e as avaliações órfãs, hoje não quantificadas.
+  *(achados CHK007, CHK008, CHK009, CHK025)* A contagem continua **bloqueante** — muda de onde vem o número
   esperado, não o rigor. *(pendência P-8; decisão de 08/09/2026)*
 - **FR-018.1**: Quando uma coluna obrigatória não tiver valor na origem — os cinco `NOT NULL` de
   `instrutores`, pendência D-08 —, a carga MUST **falhar nomeando o registro e a coluna**. Valor
   MUST NOT ser fabricado. A lacuna é **pendência operacional a resolver na planilha antes do corte**.
   *(decisão de 08/09/2026)*
 - **FR-025.8**: `registros_aula.unidade_ensino_id` MUST tornar-se anulável **com `CHECK` que confine
-  o nulo ao histórico migrado** — nulo admitido apenas quando `origem_migracao_v1` estiver preenchido.
+  o nulo ao histórico migrado**: nulo admitido apenas quando `origem_migracao_v1` estiver preenchido
+  **E** `editado_em` for **estritamente nulo**. A segunda condição é uma **catraca**: assim que uma
+  linha migrada é editada, ela passa a exigir a Unidade de Ensino — o histórico pode ficar incompleto,
+  mas não pode ser *mantido* incompleto por quem mexe nele.
+  *(trava reforçada em 08/09/2026 — achado CHK023)*
   O grão de Unidade de Ensino MUST permanecer **obrigatório para todo dado novo**, preservando a
   decisão UE-1 onde ela importa. *(decisão de 08/09/2026, resolve o bloqueio R-1)*
 - **FR-025.4**: As planilhas da v1.0 MUST NOT ser versionadas. São dado real da MB e o repositório é
@@ -482,8 +547,11 @@ planilha volta a ser a fonte de verdade sem perda.
   alterá-las é recusada **pelo banco** para todo perfil.
 - **SC-007**: O ensaio completo roda **sem nenhuma escrita** na planilha de origem, e seu tempo total
   é conhecido antes do corte.
-- **SC-008**: Uma troca deliberada de chave estrangeira, feita para testar, é **detectada** pela
-  reconciliação mesmo com a contagem total inalterada.
+- **SC-008**: Uma troca deliberada de chave estrangeira é **detectada** pela reconciliação mesmo com
+  a contagem total inalterada. A prova MUST usar o **caso mais difícil**: mover um registro de
+  `tempos_consumidos > 1` para **outra turma do mesmo curso** — mesma janela, mesmo curso, contagem
+  idêntica dos dois lados. Trocar entre cursos diferentes seria prova fácil demais.
+  *(precisado em 08/09/2026 — achado CHK016)*
 - **SC-009**: Ao fim do épico há **zero** tela nova e **zero** regra de negócio nova — o épico
   transportou, não reinterpretou.
 
