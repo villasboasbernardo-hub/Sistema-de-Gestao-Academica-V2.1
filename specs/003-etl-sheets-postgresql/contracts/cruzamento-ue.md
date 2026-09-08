@@ -29,9 +29,38 @@ existe para pegar. Melhor não produzi-lo.
 | --- | --- |
 | 1 | `curso_sigla` (da planilha) → **curso** da v2.0 |
 | 2 | **curso + `data` do lançamento** → **turma**, pela janela de datas da turma. Se a data cair na janela de **duas** turmas do mesmo curso, o lançamento é **ambíguo** e não casa |
-| 3 | `turma + data + disciplina` → registro de aula da v2.0, na staging |
+| 3 | **Traduzir o código de disciplina**, quando os dois lados falarem línguas diferentes — ver *A ponte*, abaixo |
+| 4 | `turma + data + disciplina` → registro de aula da v2.0, na staging |
 
-O passo 2 é o que a autorização não previu, e é o que impede o casamento errado.
+O passo 2 é o que a autorização não previu, e é o que impede o casamento errado. O passo 3 foi
+descoberto **medindo o resultado** em 08/09/2026, e sem ele 607 registros ficavam sem UE por engano.
+
+## A ponte romano ↔ mnemônico — o passo 3
+
+**O achado.** Os cursos de **aperfeiçoamento** usam algarismo romano nos dois lados e casam direto.
+Os de **especialização** não: a v1.0 grava `I`, `II`, `III`; a v2.0 grava `ADMANFR-014`,
+`AUXNAVFR-008`, `HN-1104-0506`. São espaços de nome distintos.
+
+Isso concentrava **607 dos 717 `sem_fonte` em dois cursos** — C-Espc-FR e C-Espc-HN. Não faltava aula
+na planilha: **a chave nunca teve chance de casar**.
+
+**A ponte.** Os dois lados trazem o nome da disciplina — `BD DISCIPLINAS.disciplina` na v1.0,
+`Cad_Disciplinas.Nome_Disciplina` na v2.0. Mas abreviam de formas diferentes: *"ADM DE AUXÍLIOS À
+NAVEGAÇÃO"* contra *"ADMINISTRAÇÃO DE AUXÍLIOS À NAVEGAÇÃO."*. Igualdade não serve.
+
+**Por que isto não é adivinhar**, que o épico proíbe em toda parte:
+
+| Salvaguarda | O que impede |
+| --- | --- |
+| **Melhor par mútuo** | `A` só casa com `B` se `A` é o melhor de `B` **e** `B` é o melhor de `A`. Par assimétrico não casa |
+| **Piso de similaridade (0,60)** | Semelhança fraca não vira correspondência |
+| **Empate reprova** | Duas disciplinas com a mesma nota máxima → nenhuma casa |
+| **Sem dicionário de abreviações** | Um token casa com outro quando é **prefixo** dele, com 3+ caracteres. `ADM` ↔ `ADMINISTRACAO` sai disso, não de uma tabela que alguém escreveu |
+| **Ponte auditável** | Toda correspondência aceita é gravada em `ue_ponte_codigos.csv`, com **os dois nomes e a nota**, para conferência humana |
+| **Não se constrói ponte onde não é preciso** | Se os dois lados já compartilham códigos, o passo é **pulado** — construir ponte ali só criaria risco |
+
+**Resultado medido em 08/09/2026:** 25 pontes, todas nos dois cursos de especialização (13 + 12).
+Nenhuma nos de aperfeiçoamento, corretamente. As 10 primeiras foram conferidas uma a uma.
 
 ## O desempate — e o que não é desempate
 

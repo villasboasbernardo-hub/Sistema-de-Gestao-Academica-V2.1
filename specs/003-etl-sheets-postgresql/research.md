@@ -188,6 +188,13 @@ o plano não depende deles.
 ## R-7 · A extração da v1.0 não é a etapa 1 do documento 30 — é uma etapa 1-B
 
 O pipeline do documento 30 tem cinco etapas, e a etapa 1 lê **a planilha da v2.0 pela API do Sheets**.
+
+> **⚠️ Superado em 08/09/2026.** Bernardo salvou a base da v2.0 localmente, e a etapa 1 passou a ler
+> **arquivo** (FR-008.1). O efeito é maior do que parece: a etapa 1 era a **única** que dependia de
+> rede, então o pipeline inteiro passou a rodar offline — e o arquivo local **já é** a cópia datada e
+> imutável que o FR-008 exige. O raciocínio abaixo sobre a etapa 1-B continua valendo integralmente;
+> o que muda é que agora as duas extrações leem do disco, e a assimetria que motivava a numeração
+> `1` / `1-B` deixou de existir.
 As planilhas da v1.0 são **arquivos locais `.xlsx`**, de outra origem, com outro formato.
 
 **Decisão:** entram como **etapa 1-B**, paralela à 1, produzindo seu próprio artefato bruto
