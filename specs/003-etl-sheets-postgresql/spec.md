@@ -324,8 +324,15 @@ planilha volta a ser a fonte de verdade sem perda.
 
 - **FR-005**: A carga MUST acontecer em **transação única**: ou as 25 tabelas entram, ou nenhuma
   entra. Estado parcial MUST NOT ser alcançável. *(documento 30 §4)*
-- **FR-006**: Reexecutar a carga do zero MUST produzir base idêntica em contagem e checksum por
-  tabela. *(critério 6)*
+- **FR-006**: Reexecutar a carga do zero MUST produzir, em cada tabela de negócio, **contagem
+  idêntica** e **checksum idêntico das colunas de negócio**, ordenadas por `codigo`. O checksum MUST
+  excluir `id` e o quarteto de auditoria (`criado_por`, `criado_em`, `editado_por`, `editado_em`) —
+  os cinco são **gerados a cada execução por construção** (`gen_random_uuid()` e o gatilho
+  `app.set_auditoria()`), e sua variação **não indica divergência de dado**. *(critério 6; redação
+  corrigida em 08/09/2026 — achado CHK002: como estava, o requisito era insatisfazível)*
+- **FR-006.1**: A idempotência do FR-006 MUST NOT se aplicar a `migracao_log`. **Crescer a cada
+  execução é o comportamento correto** dessa tabela, não violação — o que se exige dela é o FR-004:
+  linhas históricas intactas e numeração continuada. *(achado CHK003)*
 - **FR-007**: Cada etapa do pipeline MUST produzir **artefato inspecionável** e MUST ser
   reexecutável isoladamente, para que "onde exatamente errou?" seja respondível sem refazer tudo.
   *(documento 30 §1.1)*
@@ -340,8 +347,15 @@ planilha volta a ser a fonte de verdade sem perda.
   **zero divergência nas 29 turmas, sem tolerância** — é a verificação que pega troca de chave
   estrangeira, que a contagem não pega. *(documento 30 §7.2)*
 - **FR-011**: A base MUST ter **zero** chave estrangeira órfã após a carga. *(critério 3)*
-- **FR-012**: As três identidades aritméticas MUST fechar, verificadas por teste de invariante:
-  1.566 + 1 + 186 = 1.753 · 663 + 1 = 664 · 531 + 62 + 60 + 11 = 664. *(critério 2)*
+- **FR-012**: As três identidades MUST fechar como **relação estrutural**, sobre a linha de base
+  vigente, verificadas por teste de invariante:
+  `registros_aula + transferidas + avaliações = total de registros` ·
+  `atividades não letivas + 1 = total` ·
+  `soma das quatro categorias = total de atividades`.
+  Os valores **1.566+1+186=1.753 · 663+1=664 · 531+62+60+11=664** são a linha de base de
+  **02/08/2026** e MUST ser recalculados pela sondagem prévia (FR-009.1). **A identidade é o
+  critério; o literal é a foto.** *(critério 2; redação corrigida em 08/09/2026 — achado CHK005: os
+  literais brigavam com o FR-009.1, e ambos eram bloqueantes)*
 - **FR-013**: As 210 linhas de turma-disciplina MUST chegar com **89 períodos herdados e 121 em
   branco**, exatamente como na origem. *(critério 7)*
 - **FR-014**: A reconciliação MUST produzir relatório com **veredito explícito** e, quando bloqueado,

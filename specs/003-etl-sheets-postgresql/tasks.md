@@ -115,7 +115,7 @@ migration aditiva — é regressão.
 - [ ] T039 [US1] Tratar a regra de não sobreposição de vigência em `curso_regime_historico`, que **pode recusar dado legítimo** vindo da planilha (documento 30 §6.5)
 - [ ] T040 [US1] Escrever `scripts/etl/executar.py` como **ponto de entrada único**, com `--ambiente`, `--primeira-carga` e `--somente-reconciliar`. Não existe rodar uma tabela isolada (contrato pipeline P-7)
 - [ ] T041 [US1] Provar a atomicidade: injetar defeito numa tabela do meio da ordem e confirmar **zero linha gravada** em qualquer tabela, com mensagem nomeando tabela e linha (quickstart V-2)
-- [ ] T042 [US1] Provar a idempotência: duas execuções do zero produzem **contagens e checksums idênticos** por tabela (FR-006, quickstart V-5)
+- [ ] T042 [US1] Provar a idempotência: duas execuções do zero produzem contagens e checksums idênticos **nas tabelas de negócio**, com o checksum **excluindo `id` e o quarteto de auditoria** e com `migracao_log` **fora da comparação** — os cinco variam por construção (FR-006, FR-006.1, quickstart V-5)
 
 ---
 
@@ -128,7 +128,7 @@ migration aditiva — é regressão.
 - [ ] T043 [US2] Implementar **R-01** em `scripts/etl/reconciliar.py`: contagem por tabela contra o documento 05 §10. **Uma linha de diferença bloqueia** (FR-009)
 - [ ] T044 [US2] Implementar **R-02**, o somatório de **TA por turma**, origem × destino, incluindo aula, aplicação de avaliação, vista de prova e atividade não letiva. Aceite: **0 nas 29 turmas, sem tolerância** (FR-010)
 - [ ] T045 [P] [US2] Implementar **R-03**: zero FK órfã em toda a base (FR-011)
-- [ ] T046 [P] [US2] Implementar **R-04**, as três identidades: 1.566+1+186=**1.753** · 663+1=**664** · 531+62+60+11=**664** (FR-012)
+- [ ] T046 [P] [US2] Implementar **R-04** como **relação estrutural**, não como literal: as três identidades fecham sobre a linha de base vigente. Os números de 02/08 são a foto inicial (FR-012, redação corrigida)
 - [ ] T047 [P] [US2] Implementar **R-05**: `codigo` não nulo e único, procedência preenchida, em 100% das linhas (FR-002)
 - [ ] T048 [P] [US2] Implementar **R-07**: `turma_disciplina` com **89** períodos herdados e **121** em branco, exatamente como na origem (FR-013)
 - [ ] T049 [US2] Implementar o relatório em `dados/relatorio_divergencia.md` com **veredito explícito** e **cada divergência nomeada** — "2 divergências" não serve; serve "tabela X, linha Y, esperado Z, obtido W" (FR-014, contrato C-2)
@@ -162,7 +162,7 @@ migration aditiva — é regressão.
 
 - [ ] T060 [US4] Garantir que **nenhuma etapa escreve na origem** — leitura apenas, em todo o pipeline (FR-021)
 - [ ] T061 [US4] Implementar a **sondagem prévia** do documento 30 §7.6, executável contra a planilha real **antes** do corte, antecipando as divergências conhecidas (FR-020)
-- [ ] T061.1 [US4] Fazer a sondagem **refazer a linha de base** da contagem contra a planilha ao vivo, registrar o **delta contra o documento 05 §10** e submetê-lo a aprovação **antes** de virar critério. Sem isso o FR-009 reprova por construção (FR-009.1)
+- [ ] T061.1 [US4] Fazer a sondagem **refazer a linha de base** da contagem contra a planilha ao vivo **e recalcular as três identidades** sobre ela, registrar o **delta contra o documento 05 §10** e submetê-lo a aprovação **antes** de virar critério. Sem isso o FR-009 reprova por construção (FR-009.1, FR-012)
 - [ ] T062 [US4] Reconferir o inventário na sondagem: o de 02/08/2026 **já não corresponde** à planilha ao vivo — ela ganhou `Turma_Disciplina` em 20/08 e o log passou de `LOG-001060` (pendência **P-8**)
 - [ ] T063 [US4] Instrumentar `executar.py` para registrar o **tempo de cada etapa**, e rodar o ensaio completo medindo o total (FR-021, quickstart V-7)
 - [ ] T064 [US4] Executar `quickstart.md` V-4 e conferir a distribuição dos quatro vereditos do cruzamento, com os `ambiguo` e `sem_fonte` **nomeados** no relatório

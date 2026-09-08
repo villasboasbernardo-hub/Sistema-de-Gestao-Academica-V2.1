@@ -9,11 +9,11 @@
 | **R-01** | Contagem por tabela × documento 05 §10 | exata | **Sim** — uma linha de diferença bloqueia |
 | **R-02** | **Somatório de TA por turma**, origem × destino | `0` nas **29** turmas | **Sim**, sem tolerância |
 | **R-03** | Integridade referencial | **zero** FK órfã | **Sim** |
-| **R-04** | As três identidades aritméticas | 1.566+1+186=**1.753** · 663+1=**664** · 531+62+60+11=**664** | **Sim** |
+| **R-04** | As três identidades, como **relação estrutural** | fecham sobre a linha de base vigente; os literais de 02/08 são a foto, não o critério (FR-012) | **Sim** |
 | **R-05** | `codigo` não nulo e único; procedência preenchida | 100% | **Sim** |
 | **R-06** | `migracao_log` histórico intacto | **717+** linhas, nenhuma reescrita | **Sim** |
 | **R-07** | `turma_disciplina` com **89** herdados e **121** em branco | exato | **Sim** |
-| **R-08** | Idempotência: duas execuções, mesmos checksums | idênticos | **Sim** |
+| **R-08** | Idempotência das tabelas de negócio | checksums idênticos **excluindo `id` e o quarteto de auditoria**; `migracao_log` **fica fora** (FR-006, FR-006.1) | **Sim** |
 | **U-01** | UEs recuperadas por cruzamento | — | Não — **informa** |
 | **U-02** | Registros `ambiguo` e `sem_fonte` | — | Não — **exigem leitura humana** |
 | **U-03** | Registros `fora_de_cobertura` (17 cursos) | esperado | **Não** — é o previsto |

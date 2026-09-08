@@ -59,7 +59,11 @@ estrutura em memória e resultado de consulta — que é justamente a que passa 
 **As três colunas de proveniência — `arquivo`, `aba`, `linha` — não são luxo.** São o que cumpre o
 FR-025.6 e o que permite responder "de onde veio esta UE?" sem reabrir a planilha.
 
-**A staging é descartada ao fim de cada execução.** Não é histórico; é andaime.
+**A staging é truncada no início da execução seguinte**, não descartada ao fim da atual — assim ela
+sobrevive para o `--somente-reconciliar` (etapa 5, reexecutável sozinha) e cada carga ainda começa
+limpa. Não é histórico; é andaime que só cai quando o próximo andaime sobe.
+*(corrigido em 08/09/2026 — achado CHK012: "descartada ao fim" contradizia o contrato do pipeline,
+que exige a etapa 5 reexecutável contra `public × staging`)*
 
 ---
 
