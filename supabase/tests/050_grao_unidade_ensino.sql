@@ -17,8 +17,30 @@ select has_column('public', 'registros_aula', 'unidade_ensino_id',
 select hasnt_column('public', 'registros_aula', 'disciplina_id',
   'FR-020 · registros_aula NAO guarda disciplina_id — guardar as duas seria a segunda fonte de verdade que a rota (b) elimina');
 
-select col_not_null('public', 'registros_aula', 'unidade_ensino_id',
-  'FR-020 · o vinculo com a unidade e OBRIGATORIO — forca Q1.b a ser respondida antes da carga');
+-- ---------------------------------------------------------------------------------
+-- ⚠️ ASSERCAO ALTERADA EM 08/09/2026 — e a alteracao e o registro de que ela FUNCIONOU.
+--
+-- Ate aqui esta linha era:
+--     select col_not_null('public','registros_aula','unidade_ensino_id',
+--       'FR-020 · o vinculo com a unidade e OBRIGATORIO — forca Q1.b a ser respondida
+--        antes da carga');
+--
+-- O `NOT NULL` foi posto pelo Epico 1 como FUNCAO FORCANTE: obrigar a Q1.b a ser
+-- decidida antes de qualquer carga. Ela cumpriu o papel. Em 07/09/2026 Bernardo
+-- respondeu: a UE vem por cruzamento com as planilhas da v1.0 (7 cursos) e fica NULA
+-- nos 17 sem fonte — inventar UE sintetica foi vetado.
+--
+-- O que substitui o `NOT NULL` NAO e ausencia de protecao: e a CATRACA do
+-- constraint `reg_aula_ue_so_nula_no_historico` (FR-025.8), que admite nulo apenas em
+-- linha migrada e nunca editada. Dado novo continua obrigado a declarar a UE — a
+-- decisao UE-1 segue valendo onde importa.
+--
+-- As provas NEGATIVAS dessa catraca vivem em `091_ue_anulavel.sql`, que tenta gravar
+-- sem UE nos dois casos proibidos e ESPERA A FALHA. Aqui prova-se que a protecao
+-- existe; la, que ela morde.
+-- ---------------------------------------------------------------------------------
+select has_check('public', 'registros_aula',
+  'FR-020 · o vinculo com a unidade continua protegido — agora por CHECK com catraca, nao por NOT NULL. Q1.b foi respondida em 07/09/2026; ver 091_ue_anulavel.sql');
 
 -- FR-028 — a contraparte: a grandeza derivada nao tem coluna gravavel em lugar nenhum.
 select hasnt_column('public', 'disciplinas', 'ch_executada',

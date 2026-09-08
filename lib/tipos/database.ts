@@ -138,7 +138,7 @@ export type Database = {
           subtipo: string | null
           ta_final: number | null
           ta_inicial: number | null
-          tempos_consumidos: number
+          tempos_consumidos: number | null
           tipo_legado_v1: string | null
           turma_id: string | null
         }
@@ -161,7 +161,7 @@ export type Database = {
           subtipo?: string | null
           ta_final?: number | null
           ta_inicial?: number | null
-          tempos_consumidos: number
+          tempos_consumidos?: number | null
           tipo_legado_v1?: string | null
           turma_id?: string | null
         }
@@ -184,7 +184,7 @@ export type Database = {
           subtipo?: string | null
           ta_final?: number | null
           ta_inicial?: number | null
-          tempos_consumidos?: number
+          tempos_consumidos?: number | null
           tipo_legado_v1?: string | null
           turma_id?: string | null
         }
@@ -243,7 +243,7 @@ export type Database = {
           editado_por: string | null
           fiscal_id: string | null
           id: string
-          instrutor_responsavel_id: string
+          instrutor_responsavel_id: string | null
           item_planejado_id: string | null
           local: string | null
           local_vista: string | null
@@ -278,7 +278,7 @@ export type Database = {
           editado_por?: string | null
           fiscal_id?: string | null
           id?: string
-          instrutor_responsavel_id: string
+          instrutor_responsavel_id?: string | null
           item_planejado_id?: string | null
           local?: string | null
           local_vista?: string | null
@@ -313,7 +313,7 @@ export type Database = {
           editado_por?: string | null
           fiscal_id?: string | null
           id?: string
-          instrutor_responsavel_id?: string
+          instrutor_responsavel_id?: string | null
           item_planejado_id?: string | null
           local?: string | null
           local_vista?: string | null
@@ -601,6 +601,7 @@ export type Database = {
           editavel_por: Database["public"]["Enums"]["perfil_usuario"] | null
           fundamento_normativo: string | null
           id: string
+          natureza: string
           origem_migracao_v1: string | null
           status: Database["public"]["Enums"]["status_registro"]
           tipo: string
@@ -618,6 +619,7 @@ export type Database = {
           editavel_por?: Database["public"]["Enums"]["perfil_usuario"] | null
           fundamento_normativo?: string | null
           id?: string
+          natureza?: string
           origem_migracao_v1?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
           tipo?: string
@@ -635,6 +637,7 @@ export type Database = {
           editavel_por?: Database["public"]["Enums"]["perfil_usuario"] | null
           fundamento_normativo?: string | null
           id?: string
+          natureza?: string
           origem_migracao_v1?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
           tipo?: string
@@ -700,8 +703,8 @@ export type Database = {
           editado_em: string | null
           editado_por: string | null
           fundamento_curricular: string | null
-          hora_inicio_manha: string
-          hora_inicio_tarde: string
+          hora_inicio_manha: string | null
+          hora_inicio_tarde: string | null
           id: string
           intervalo_manha_min: number
           intervalo_tarde_min: number
@@ -724,8 +727,8 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           fundamento_curricular?: string | null
-          hora_inicio_manha: string
-          hora_inicio_tarde: string
+          hora_inicio_manha?: string | null
+          hora_inicio_tarde?: string | null
           id?: string
           intervalo_manha_min: number
           intervalo_tarde_min: number
@@ -748,8 +751,8 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           fundamento_curricular?: string | null
-          hora_inicio_manha?: string
-          hora_inicio_tarde?: string
+          hora_inicio_manha?: string | null
+          hora_inicio_tarde?: string | null
           id?: string
           intervalo_manha_min?: number
           intervalo_tarde_min?: number
@@ -1058,7 +1061,7 @@ export type Database = {
           codigo: string
           criado_em: string
           criado_por: string | null
-          disciplina_id: string
+          disciplina_id: string | null
           editado_em: string | null
           editado_por: string | null
           id: string
@@ -1071,7 +1074,7 @@ export type Database = {
           codigo: string
           criado_em?: string
           criado_por?: string | null
-          disciplina_id: string
+          disciplina_id?: string | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
@@ -1084,7 +1087,7 @@ export type Database = {
           codigo?: string
           criado_em?: string
           criado_por?: string | null
-          disciplina_id?: string
+          disciplina_id?: string | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
@@ -1128,9 +1131,11 @@ export type Database = {
         Row: {
           antiguidade_declarada: string | null
           antiguidade_declarada_num: number | null
+          area_conhecimento: string | null
           capacitacao_didatica: string | null
           categoria: string
           codigo: string
+          cpf: string | null
           criado_em: string
           criado_por: string | null
           data_assuncao_setor: string | null
@@ -1143,7 +1148,14 @@ export type Database = {
           editado_em: string | null
           editado_por: string | null
           email: string | null
-          esp_hab_obs: string
+          endereco_bairro: string | null
+          endereco_cep: string | null
+          endereco_cidade: string | null
+          endereco_complemento: string | null
+          endereco_estado: string | null
+          endereco_logradouro: string | null
+          endereco_numero: string | null
+          esp_hab_obs: string | null
           formacao_principal_secundaria: string | null
           id: string
           nip: string | null
@@ -1152,21 +1164,27 @@ export type Database = {
           nome_guerra: string | null
           nome_normalizado: string | null
           om: string
+          orgao_emissor: string | null
           origem_migracao_v1: string | null
           posto_graduacao: string
           preferencia: string | null
           regime_trabalho:
             | Database["public"]["Enums"]["regime_trabalho_docente"]
             | null
+          retelma: string | null
+          rg: string | null
           status: Database["public"]["Enums"]["status_registro"]
+          telefone: string | null
           ultima_avaliacao_desempenho: string | null
         }
         Insert: {
           antiguidade_declarada?: string | null
           antiguidade_declarada_num?: number | null
+          area_conhecimento?: string | null
           capacitacao_didatica?: string | null
           categoria: string
           codigo: string
+          cpf?: string | null
           criado_em?: string
           criado_por?: string | null
           data_assuncao_setor?: string | null
@@ -1179,7 +1197,14 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           email?: string | null
-          esp_hab_obs: string
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_complemento?: string | null
+          endereco_estado?: string | null
+          endereco_logradouro?: string | null
+          endereco_numero?: string | null
+          esp_hab_obs?: string | null
           formacao_principal_secundaria?: string | null
           id?: string
           nip?: string | null
@@ -1188,21 +1213,27 @@ export type Database = {
           nome_guerra?: string | null
           nome_normalizado?: string | null
           om: string
+          orgao_emissor?: string | null
           origem_migracao_v1?: string | null
           posto_graduacao: string
           preferencia?: string | null
           regime_trabalho?:
             | Database["public"]["Enums"]["regime_trabalho_docente"]
             | null
+          retelma?: string | null
+          rg?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
+          telefone?: string | null
           ultima_avaliacao_desempenho?: string | null
         }
         Update: {
           antiguidade_declarada?: string | null
           antiguidade_declarada_num?: number | null
+          area_conhecimento?: string | null
           capacitacao_didatica?: string | null
           categoria?: string
           codigo?: string
+          cpf?: string | null
           criado_em?: string
           criado_por?: string | null
           data_assuncao_setor?: string | null
@@ -1215,7 +1246,14 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           email?: string | null
-          esp_hab_obs?: string
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_complemento?: string | null
+          endereco_estado?: string | null
+          endereco_logradouro?: string | null
+          endereco_numero?: string | null
+          esp_hab_obs?: string | null
           formacao_principal_secundaria?: string | null
           id?: string
           nip?: string | null
@@ -1224,13 +1262,17 @@ export type Database = {
           nome_guerra?: string | null
           nome_normalizado?: string | null
           om?: string
+          orgao_emissor?: string | null
           origem_migracao_v1?: string | null
           posto_graduacao?: string
           preferencia?: string | null
           regime_trabalho?:
             | Database["public"]["Enums"]["regime_trabalho_docente"]
             | null
+          retelma?: string | null
+          rg?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
+          telefone?: string | null
           ultima_avaliacao_desempenho?: string | null
         }
         Relationships: []
@@ -1312,7 +1354,7 @@ export type Database = {
           id: string
           observacao: string | null
           origem_chave: string | null
-          origem_tabela: string
+          origem_tabela: string | null
           regra_aplicada: string | null
           valor_antes: string | null
           valor_depois: string | null
@@ -1327,7 +1369,7 @@ export type Database = {
           id?: string
           observacao?: string | null
           origem_chave?: string | null
-          origem_tabela: string
+          origem_tabela?: string | null
           regra_aplicada?: string | null
           valor_antes?: string | null
           valor_depois?: string | null
@@ -1342,7 +1384,7 @@ export type Database = {
           id?: string
           observacao?: string | null
           origem_chave?: string | null
-          origem_tabela?: string
+          origem_tabela?: string | null
           regra_aplicada?: string | null
           valor_antes?: string | null
           valor_depois?: string | null
@@ -1548,6 +1590,7 @@ export type Database = {
           criado_por: string | null
           curso_id: string
           data: string
+          disciplina_codigo_legado_v1: string | null
           editado_em: string | null
           editado_por: string | null
           id: string
@@ -1559,10 +1602,10 @@ export type Database = {
           status: Database["public"]["Enums"]["status_registro"]
           ta_final: number | null
           ta_inicial: number | null
-          tempos_consumidos: number
+          tempos_consumidos: number | null
           tipo_atividade: string | null
           turma_id: string
-          unidade_ensino_id: string
+          unidade_ensino_id: string | null
         }
         Insert: {
           categoria_normativa?: Database["public"]["Enums"]["categoria_registro_aula"]
@@ -1572,6 +1615,7 @@ export type Database = {
           criado_por?: string | null
           curso_id: string
           data: string
+          disciplina_codigo_legado_v1?: string | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
@@ -1583,10 +1627,10 @@ export type Database = {
           status?: Database["public"]["Enums"]["status_registro"]
           ta_final?: number | null
           ta_inicial?: number | null
-          tempos_consumidos: number
+          tempos_consumidos?: number | null
           tipo_atividade?: string | null
           turma_id: string
-          unidade_ensino_id: string
+          unidade_ensino_id?: string | null
         }
         Update: {
           categoria_normativa?: Database["public"]["Enums"]["categoria_registro_aula"]
@@ -1596,6 +1640,7 @@ export type Database = {
           criado_por?: string | null
           curso_id?: string
           data?: string
+          disciplina_codigo_legado_v1?: string | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
@@ -1607,10 +1652,10 @@ export type Database = {
           status?: Database["public"]["Enums"]["status_registro"]
           ta_final?: number | null
           ta_inicial?: number | null
-          tempos_consumidos?: number
+          tempos_consumidos?: number | null
           tipo_atividade?: string | null
           turma_id?: string
-          unidade_ensino_id?: string
+          unidade_ensino_id?: string | null
         }
         Relationships: [
           {
@@ -1741,7 +1786,7 @@ export type Database = {
           criado_em: string
           criado_por: string | null
           criterio: string | null
-          curso_id: string
+          curso_id: string | null
           editado_em: string | null
           editado_por: string | null
           id: string
@@ -1757,7 +1802,7 @@ export type Database = {
           criado_em?: string
           criado_por?: string | null
           criterio?: string | null
-          curso_id: string
+          curso_id?: string | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
@@ -1773,7 +1818,7 @@ export type Database = {
           criado_em?: string
           criado_por?: string | null
           criterio?: string | null
-          curso_id?: string
+          curso_id?: string | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
@@ -1912,6 +1957,7 @@ export type Database = {
       }
       turma_disciplina: {
         Row: {
+          ch_prevista_por_instrutor: number | null
           codigo: string
           criado_em: string
           criado_por: string | null
@@ -1919,6 +1965,7 @@ export type Database = {
           editado_em: string | null
           editado_por: string | null
           id: string
+          instrutor_id: string | null
           origem_migracao_v1: string | null
           origem_periodo: Database["public"]["Enums"]["origem_periodo"]
           previsao_inicio: string | null
@@ -1927,6 +1974,7 @@ export type Database = {
           turma_id: string
         }
         Insert: {
+          ch_prevista_por_instrutor?: number | null
           codigo: string
           criado_em?: string
           criado_por?: string | null
@@ -1934,6 +1982,7 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           id?: string
+          instrutor_id?: string | null
           origem_migracao_v1?: string | null
           origem_periodo?: Database["public"]["Enums"]["origem_periodo"]
           previsao_inicio?: string | null
@@ -1942,6 +1991,7 @@ export type Database = {
           turma_id: string
         }
         Update: {
+          ch_prevista_por_instrutor?: number | null
           codigo?: string
           criado_em?: string
           criado_por?: string | null
@@ -1949,6 +1999,7 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           id?: string
+          instrutor_id?: string | null
           origem_migracao_v1?: string | null
           origem_periodo?: Database["public"]["Enums"]["origem_periodo"]
           previsao_inicio?: string | null
@@ -1970,6 +2021,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_disciplinas_execucao"
             referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
           },
           {
             foreignKeyName: "turma_disciplina_turma_id_fkey"
@@ -2095,7 +2160,7 @@ export type Database = {
           origem_migracao_v1: string | null
           sala_alocada: string | null
           status: Database["public"]["Enums"]["status_turma"]
-          turma: string
+          turma: string | null
         }
         Insert: {
           alunos?: number | null
@@ -2113,7 +2178,7 @@ export type Database = {
           origem_migracao_v1?: string | null
           sala_alocada?: string | null
           status: Database["public"]["Enums"]["status_turma"]
-          turma: string
+          turma?: string | null
         }
         Update: {
           alunos?: number | null
@@ -2131,7 +2196,7 @@ export type Database = {
           origem_migracao_v1?: string | null
           sala_alocada?: string | null
           status?: Database["public"]["Enums"]["status_turma"]
-          turma?: string
+          turma?: string | null
         }
         Relationships: [
           {
@@ -2955,6 +3020,8 @@ export type Database = {
         | "conciliado"
         | "arquivado"
         | "corrigido"
+        | "adicionado"
+        | "descartado"
       categoria_normativa: "AEC" | "TAD" | "TR" | "Estudo_Individual"
       categoria_registro_aula: "aula" | "atividade_extraclasse"
       conciliacao_migracao:
@@ -2973,6 +3040,8 @@ export type Database = {
         | "expedito"
         | "estagio_qualificacao"
         | "ead_semipresencial"
+        | "aperfeicoamento_avancado"
+        | "especial"
       impacto_feriado: "dia_inteiro" | "parcial" | "informativo"
       modalidade_ensino: "presencial" | "ead" | "semipresencial"
       modo_atribuicao: "herdar" | "dividido" | "simultaneo"
@@ -3153,6 +3222,8 @@ export const Constants = {
         "conciliado",
         "arquivado",
         "corrigido",
+        "adicionado",
+        "descartado",
       ],
       categoria_normativa: ["AEC", "TAD", "TR", "Estudo_Individual"],
       categoria_registro_aula: ["aula", "atividade_extraclasse"],
@@ -3174,6 +3245,8 @@ export const Constants = {
         "expedito",
         "estagio_qualificacao",
         "ead_semipresencial",
+        "aperfeicoamento_avancado",
+        "especial",
       ],
       impacto_feriado: ["dia_inteiro", "parcial", "informativo"],
       modalidade_ensino: ["presencial", "ead", "semipresencial"],

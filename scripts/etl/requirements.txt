@@ -1,0 +1,29 @@
+# Dependencias do ETL — Epico 2.
+#
+# POR QUE VERSAO FIXADA: e o mesmo principio do `pnpm-lock.yaml`. O CI, a maquina do
+# operador e quem for auditar a migracao em 2028 precisam ler os mesmos bytes. Numa
+# migracao que roda UMA vez com dado historico, "funcionou na minha maquina" nao e
+# anedota — e perda de dado.
+#
+# ⚠️ SEM DEPENDENCIA DE REDE (decisao de Bernardo, 08/09/2026).
+# A base da v2.0 foi salva localmente e e lida do disco, nao pela API do Google Sheets.
+# Com isso `google-api-python-client` e `google-auth` sairam desta lista, e o pipeline
+# inteiro passou a rodar offline — a etapa 1 era a unica que dependia de rede.
+# Consequencia colateral: `ETL_CREDENCIAL_GOOGLE` e `ETL_PLANILHA_ID` saem do caminho
+# critico do Epico 2. Ficam no `.env.local.example` porque o Epico 12 (ETL continuo)
+# pode precisar delas — mas nao sao mais pre-requisito de carga.
+
+openpyxl==3.1.5          # etapas 1 e 1-B: leitura dos .xlsx da v2.0 e da v1.0
+# psycopg 3.2.13 e nao 3.2.3: a 3.2.3 NAO tem roda para Python 3.14, e o pip so
+# oferece 3.2.10+. Descoberto ao instalar, em 08/09/2026 — o pino errado teria
+# quebrado a instalacao numa maquina limpa, que e exatamente o que o pino existe
+# para impedir.
+psycopg[binary]==3.2.13   # PostgreSQL. Sem ORM (Principio III)
+
+# tzdata: OBRIGATORIA no Windows, onde o desenvolvimento acontece.
+# O Windows nao traz base de fusos do sistema, e sem este pacote
+# ZoneInfo("America/Sao_Paulo") levanta ZoneInfoNotFoundError — o ETL nem importa.
+# Descoberto ao rodar o primeiro teste de fumaca, em 08/09/2026.
+# No Linux do CI e redundante, mas fixa-la nos dois lugares e o que faz o
+# comportamento ser o mesmo nas duas maquinas.
+tzdata==2024.2

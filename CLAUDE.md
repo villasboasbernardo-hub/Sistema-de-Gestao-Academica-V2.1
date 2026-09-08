@@ -238,8 +238,9 @@ divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, colun
 | **Épico 1 — Schema + RLS** | ✅ **CONCLUÍDO.** Implementado em 30/08/2026 e **na `main`** desde então. Medido no banco: **27 tabelas · 0 sem RLS · 0 com FORCE · 77 policies · 0 de DELETE · 0 UPDATE sem WITH CHECK · 152 linhas de matriz · 10 views**. **80 asserções pgTAP** e **19 testes de RLS com sessão autenticada**, tudo rodando **no CI**, no bloco `banco`, verde. A T091 (abrir PR) ficou **sem objeto**: o código entrou na `main` em 30/08, antes de existir CI ou proteção. Registrado, não encenado — abrir PR retroativo para código já mesclado não provaria nada |
 | Épico 1 — o que **não** entrou | A **carga das 572 UEs** — depende de `disciplinas`, é do Épico 2 (achado A-13). *(O `ci.yml` saiu desta lista: existe desde 03/09/2026 e roda verde.)* |
 | **Catálogo de Unidades de Ensino** | ✅ **Extraído em 28/08/2026** dos 24 currículos da DEnsM (`SIS11/Curriculos/`): **572 UEs**, 134 disciplinas, 21 currículos. Invariante fecha em **134/134** (soma das CH das UEs = CH da disciplina). Script `scripts/etl/extrair_unidades_ensino.py`, dado em `scripts/etl/dados/`. **3 currículos sem UE** — ver Q1.b |
-| **Épico 2 — Migração de dados** | ⬜ **É O PRÓXIMO.** Herda: schema de 27 tabelas no ar, CI que barra merge, preview por branch, `service_role` disponível em Preview e Production (decisão de 07/09). **Bloqueios não técnicos, ambos do Bernardo:** (a) **hospedagem fora da infraestrutura da MB**, pendente na CIAARA-14.2 — é a única capaz de barrar a versão por razão não técnica; (b) **Q1.b** — a qual UE pertence cada um dos 1.566 registros de aula históricos, que a v2.0 nunca guardou, e como entram os 3 cursos sem UE no currículo. **Entra junto:** a carga das 572 UEs (achado A-13). **Dívida herdada do Épico 0:** o V-9 do `quickstart.md` reprova por construção e precisa ser reescrito; `contracts/variaveis-ambiente.md` contradiz o documento 10 sobre os escopos da `service_role` |
-| Épicos 3 a 13 | ⬜ Pendentes. **Entram no Épico 3:** a Server Action de convite (primeiro consumidor real de `lib/supabase/admin.ts`) e `NEXT_PUBLIC_URL_APLICACAO`, deixada fora do Épico 0 por decisão de 07/09. **Entra no Épico 4:** a dívida de estilo C-1 — 4 arquivos usam `style={{}}` com cor literal, à espera dos tokens `@theme` |
+| **Épico 2 — Migração de dados** | ✅ **CONCLUÍDO em 08/09/2026.** **5.394 linhas em 26 tabelas**, transação única, contra o banco local. Reconciliação **APROVADA nas oito bloqueantes** (R-01 a R-08), com a R-02 **provada**: `REG-0176` movido de turma à mão, contagem total intacta em 1.566, e a verificação acusou os dois lados. **96 asserções pgTAP** verdes com a base povoada **e** vazia. Ponto de entrada único: `python -m scripts.etl.executar`, cujo **código de saída é o veredito da reconciliação**. Os dois bloqueios não técnicos caíram: a **CIAARA-14.2 autorizou a hospedagem de dado pessoal em nuvem** (08/09) e a **Q1.b foi resolvida por cruzamento** com as planilhas de planejamento da v1.0 |
+| Épico 2 — o que **não** entrou | A **carga das 572 UEs** e a aplicação do cruzamento. `unidades_ensino` está **vazia** e `registros_aula.unidade_ensino_id` é **nula nas 1.566** — ratificado por Bernardo em 08/09 (*"o ETL deve ser o retrato fiel da origem, sem preenchimentos inventados"*). O cruzamento existe e tem **901 `casado` de 1.566** (`dados/normalizado/ue_cruzamento.csv`); o que falta é reconciliar um **terceiro** espaço de nomes — a sigla de curso do catálogo da DEnsM não bate com `cursos.codigo` em **8 dos 21** (`EST - QF - APHID` × `EST-QF-APHID`) e o `disciplina_id` fecha em **84 de 134** pelo nome |
+| Épicos 3 a 13 | ⬜ Pendentes. **Entra no Épico 3, além do abaixo:** a carga das 572 UEs, que é o único item do Épico 2 deixado aberto. **Entram no Épico 3:** a Server Action de convite (primeiro consumidor real de `lib/supabase/admin.ts`) e `NEXT_PUBLIC_URL_APLICACAO`, deixada fora do Épico 0 por decisão de 07/09. **Entra no Épico 4:** a dívida de estilo C-1 — 4 arquivos usam `style={{}}` com cor literal, à espera dos tokens `@theme` |
 | **Decisão UE-1** | ✅ **Fechada em 26/08/2026 — rota (b)**: `registros_aula` no grão de **Unidade de Ensino**; disciplina é agregado derivado. Épico 1 **desbloqueado**. Ver documento 05 §9.1. **Origem do dado resolvida em 28/08/2026**: as UEs vêm dos **currículos oficiais da DEnsM**, não de linha sintética |
 | Numeração das specs | ✅ **Reiniciada em 26/08/2026.** As 39 specs herdadas da v2.0 vivem em `specs/heranca-v2.0/`; a v2.1 recomeça em `specs/001-…`. "Spec 001" **exige o diretório** para não ser ambíguo |
 
@@ -255,6 +256,38 @@ integração `claude`, scripts `sh`, 10 skills em `.claude/skills/` · constitut
 `lib/tipos/database.ts` (§6.4 — depende do schema do Épico 1) · suítes vazias Vitest/Playwright/
 pgTAP (§6.5) · scripts do documento 24 §7 no `package.json` (§6.6) · `.github/workflows/ci.yml`
 (§6.7) · primeiro deploy verde na Vercel (§6.8).
+
+**Os treze achados do Épico 2 — o schema encontrando o dado real pela primeira vez.**
+Cada um está medido e justificado na migration que o corrige, e **todos foram ratificados por
+Bernardo em 08/09/2026** (*"foram balizados por medição real e justificados na migration"*):
+
+1. **`escopo_curso` não cobria a base.** Faltavam `especial` e `aperfeicoamento_avancado` — **7
+   dos 24 cursos**. `acao_migracao` não tinha `adicionado`/`descartado`, os verbos de 3 linhas do
+   log histórico: traduzi-los seria **reescrever linha de log**, que a regra 5 proíbe.
+2. **Cinco `NOT NULL` em que a ausência é legítima e permanente** — hora de turno em curso EAD (a
+   própria planilha escreve "sem regime de TA presencial"), designador de turma única, sufixo de
+   especialidade, instrutor responsável por avaliação, tabela de origem em evento que não
+   transportou nada.
+3. **Cinco em que a ausência é só do histórico** — entram por **catraca**, o padrão da UE: exigem a
+   coluna em linha nova **e** quando alguém editar a linha migrada. Para dado novo é **mais forte**
+   que o `NOT NULL` original.
+4. **`GERAL` é sentinela, não curso** (`reservas_proens`, `responsaveis_curso`). Criar uma linha
+   `cursos` chamada "GERAL" a faria aparecer em toda listagem e todo relatório para sempre.
+5. **A conferência de órfãos estava PROMETIDA no cabeçalho do ETL e não acontecia** — o chamador
+   descartava a lista. Sem ela, `LEFT JOIN` sem par gravava vínculo nulo **sem erro nenhum**.
+6. **`Turma_Disciplina.ID_Instrutor` guarda LISTA** (`'17, 18, 19, 20, 40, 60, 55'`). As **96**
+   atribuições vão para `turma_disciplina_instrutor` — a tabela de junção **que já existia no
+   schema** e o ETL ignorava. Contagem conferida por outro caminho.
+7. **`Tipo_Atividade` e `Config_Listas` nunca foram o mesmo vocabulário.** A coluna guarda
+   `Aula Teórica`; a lista tem `Aula`, `Palestra`, `Avaliação`. A v2.0 é planilha e não impunha a
+   lista; o gatilho da v2.1 é a primeira conferência da história. **10 valores semeados**, marcados
+   por procedência — traduzir apagaria a distinção teórica/prática de 1.566 lançamentos.
+8. **`config_parametros` misturava normativo com operacional.** `natureza` separa os dois e o
+   RNF-NORM-08 virou **CHECK do banco**, não teste.
+9. **13 parâmetros normativos chegavam por duas chaves.** Decisão de Bernardo (08/09): fica a
+   **canônica da v2.1**; as 13 da v2.0 são transportadas e chegam **`inativo`** — exclusão lógica,
+   regra 4. Se os valores divergirem, a carga **aborta**: dois números para a mesma norma não é
+   duplicidade de nome, é conflito.
 
 **Quatro achados do Épico 1 — corrigidos, e que ninguém deve reintroduzir:**
 
@@ -299,10 +332,10 @@ máximo. **É uma base pequena: priorize clareza de schema e manutenibilidade so
 
 | # | Decisão | Bloqueia |
 |---|---|---|
-| **Hospedagem fora da infraestrutura da MB** | Pendente na CIAARA-14.2 | **Épico 2.** Única pendência capaz de bloquear a versão por razão não técnica. *Não bloqueia mais o Épico 0: em 26/08/2026 Bernardo liberou a preview com dado sintético apenas* |
+| ~~**Hospedagem fora da infraestrutura da MB**~~ | ✅ **AUTORIZADA pela CIAARA-14.2 em 08/09/2026**, inclusive para **dado pessoal** — CPF, RG, telefone e endereço dos 177 instrutores migram em cheio (migration `20260908071000`). ⚠️ **Consequência que fica aberta:** a RLS do Épico 1 foi desenhada para dado FUNCIONAL, e hoje quem lê `instrutores` lê tudo. Não há recorte que permita ver posto e habilitação **sem** ver CPF e endereço — e é plausível que devesse haver. É desenho de segurança, portanto **Épico 3** | Nada. Era a única pendência capaz de bloquear a versão por razão não técnica |
 | **CONST-1** | Constitution em dois endereços: consolidar ou manter espelho | Nenhum épico. Custo cresce a cada emenda |
 | ~~**TURMA-1**~~ | ✅ **Fechada em 28/08/2026 — filtro de apresentação.** O domínio de status de turma fica com os quatro valores reais (`planejada`, `ativa`, `concluida`, `cancelada`); "Arquivada" é VIEW, **não** valor novo | — |
-| **Q1.b** | A qual UE pertence cada um dos 1.566 registros de aula históricos — a v2.0 nunca guardou essa informação. E como participam do grão de UE os 3 cursos sem UE no currículo (Est-QF-APOC digitalizado; C-Espc-FR e C-Espc-HN no modelo por competências) | **Épico 2.** Não bloqueia o Épico 1: o grão é o mesmo nas três saídas |
+| ~~**Q1.b**~~ | ✅ **Fechada em 08/09/2026.** O cruzamento com as 7 planilhas de planejamento da v1.0 recuperou a UE de **901 dos 1.566** lançamentos; os demais ficam **nulos**, amparados pela catraca `reg_aula_ue_so_nula_no_historico`. Bernardo ratificou os nulos: *"o ETL deve ser o retrato fiel da origem, sem preenchimentos inventados"* | — |
 | ~~**UE-PUB**~~ | ✅ **Fechada em 30/08/2026 — pode ser público.** O catálogo de UE (572 unidades, 2.446 subunidades, ementa de 134 disciplinas) fica legível por qualquer pessoa no repositório. Decisão de Bernardo, na mesma linha da abertura do repositório em 26/08. `scripts/etl/dados/` permanece versionado | — |
 | **LIQ-3** | Papel titular/reserva na atribuição | Épico 11 |
 | **LIQ-4** | Persistência da LIQ emitida | Épico 11 |
