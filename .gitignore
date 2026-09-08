@@ -52,3 +52,10 @@ next-env.d.ts
 
 # supabase local
 /supabase/.temp/
+
+# Planilhas de origem da v1.0 — dado real da MB, NUNCA versionadas.
+# O repositorio e publico desde 26/08/2026. Estas planilhas trazem nome de instrutor,
+# carga horaria e estrutura de curso; sao fonte do ETL (Epico 2), nao artefato do repo.
+/Cursos Regulares/
+/Cursos Especiais*/
+/C-EXP-METOC-OF*.xlsx
