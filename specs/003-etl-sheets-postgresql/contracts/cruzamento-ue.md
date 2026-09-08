@@ -44,6 +44,7 @@ O cruzamento é **de muitos para um**: 7.421 lançamentos para 1.566 registros.
 | A data cai na janela de **duas turmas** do mesmo curso | `ambiguo` | **nula**, reportado |
 | Nenhum lançamento casa | `sem_fonte` | **nula**, reportado |
 | Curso sem planilha (17 deles) | `fora_de_cobertura` | **nula**, **esperado** |
+| Código **não é disciplina** (`AD`·`FE`·`PL`·`TR`·`TE`·`LP`) | `nao_aplicavel` | **nula**, **esperado** — não há UE a procurar |
 
 **O que MUST NOT ser usado como desempate**, em nenhuma hipótese:
 
@@ -53,6 +54,30 @@ O cruzamento é **de muitos para um**: 7.421 lançamentos para 1.566 registros.
 - qualquer heurística de "provavelmente é esta".
 
 Todas produzem preenchimento com aparência de dado. A regra é: **na dúvida, nulo e relatório.**
+
+## Normalização do número de UE *(08/09/2026)*
+
+`unidades_ensino.numero_ue` é **`smallint`**. A planilha grava valores como **`1P`** — 210 ocorrências
+só no `C-AP-FR`, o segundo valor mais comum da coluna.
+
+**Regra:** o sufixo alfabético marca a **parte prática da mesma UE**. Normaliza-se para o número
+(`1P` → `1`), e o sufixo vai para `migracao_log` como proveniência. Nada se perde e nada se inventa.
+
+**Cabeçalho repetido:** a aba repete o cabeçalho a cada seção — `COD` aparece como *valor* 36 vezes
+no `C-AP-FR`. Essas linhas são descartadas na extração, e o descarte é **contado** no relatório.
+Cabeçalho lido como dado vira lançamento fantasma.
+
+## Os seis códigos que não são disciplina
+
+`AD` (181) · `FE` (42) · `LP` (17) · `TR` (13) · `TE` (9) · `PL` (8) — **270 linhas só no `C-AP-FR`**.
+
+São atividade não letiva ou evento de calendário: **não têm UE por natureza**. Recebem
+`nao_aplicavel` e ficam **fora** do cruzamento.
+
+**Por que não `sem_fonte`:** `sem_fonte` afirma *"procurei e não achei"* — e não é verdade. Usá-lo
+aqui poluiria o relatório com **270 falsos negativos por arquivo**, e quem lesse concluiria que o
+cruzamento falhou onde ele nem devia tentar. `nao_aplicavel` diz o que houve: *não havia o que
+procurar*.
 
 ## As fontes
 

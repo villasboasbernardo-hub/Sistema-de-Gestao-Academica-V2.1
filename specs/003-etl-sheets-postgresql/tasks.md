@@ -5,6 +5,8 @@
 **Prerequisites**: [plan.md](./plan.md) · [spec.md](./spec.md) · [research.md](./research.md) ·
 [data-model.md](./data-model.md) · [contracts/](./contracts/) · [quickstart.md](./quickstart.md)
 
+**Revisão**: `/speckit-clarify` de 08/09/2026 acrescentou 6 tarefas (T018.1, T018.2, T021.1, T026.1, T061.1) — ver *Clarifications* na spec.
+
 **Testes**: **obrigatórios**, e são o produto tanto quanto o código. Um ETL sem reconciliação é um ETL
 em que ninguém pode confiar — e este épico existe justamente para produzir a confiança, não só o dado.
 
@@ -80,17 +82,21 @@ migration aditiva — é regressão.
 - [ ] T016 [US1] Fazer a extração produzir **cópia datada e imutável** da origem, para que a carga seja reproduzível sem a planilha ao vivo (FR-008)
 - [ ] T017 [P] [US1] Escrever `scripts/etl/extrair_ue_v1.py` — etapa 1-B: lê `PREENCHIMENTO` (cabeçalho na linha 3, dado da 4) e `BD DISCIPLINAS` (cabeçalho na 2, dado da 3) dos **7 arquivos autorizados**, para `dados/bruto/ue_v1/<curso>.csv` (research R-5)
 - [ ] T018 [US1] Codificar em `extrair_ue_v1.py` a lista **fechada** de fontes do contrato `cruzamento-ue.md`: os 7 arquivos, **sem** o `C-AP-HN 2026.xlsx` (vale a `Cópia … Sabado`) e **com** a `CAHO_2026.xlsx`. Arquivo fora da lista **não é lido** — nem se aparecer no diretório
+- [ ] T018.1 [US1] Descartar em `extrair_ue_v1.py` as **linhas de cabeçalho repetidas** dentro da faixa de dados — `COD` aparece como valor 36 vezes só no `C-AP-FR` — e **contar** os descartes no relatório (FR-025.11)
+- [ ] T018.2 [US1] Normalizar o número de UE com sufixo alfabético em `extrair_ue_v1.py`: `1P` → `1`, com o sufixo preservado como proveniência. `numero_ue` é `smallint`; `1P` é o **2º valor mais comum** da coluna (FR-025.9)
 - [ ] T019 [US1] Gravar `arquivo`, `aba` e `linha` em toda linha extraída da v1.0 — é o que cumpre o FR-025.6 e o invariante X-2. **UE sem proveniência é UE inventada**
 
 ### Normalização e cruzamento (etapas 2 e 2-B)
 
 - [ ] T020 [US1] Escrever a normalização (etapa 2): `bruto/*.csv` → `normalizado/<tabela>.csv`, com as colunas do destino e sufixo `_codigo` onde guarda um `ID_*` a resolver
 - [ ] T021 [US1] Implementar a conversão de data com **fuso explícito** e cobrir **datas de fronteira** com teste — é o defeito clássico, invisível na contagem (FR-019)
+- [ ] T021.1 [US1] Implementar a falha nomeada para **coluna obrigatória sem valor na origem** (os cinco `NOT NULL` de `instrutores`, D-08): aborta dizendo qual instrutor e qual coluna. **Valor nunca é fabricado** (FR-018.1)
 - [ ] T022 [US1] Implementar a rejeição de **valor fora de domínio fechado**: interrompe nomeando tabela, coluna e valor. **Nunca** vira padrão silencioso (FR-017)
 - [ ] T023 [US1] Escrever `scripts/etl/cruzar_ue.py` — etapa 2-B, passo 1: `curso_sigla` da planilha → curso da v2.0
 - [ ] T024 [US1] Implementar o **passo 2** do cruzamento em `cruzar_ue.py`: `curso + data` → **turma**, pela janela de datas da turma. Data que cai na janela de **duas** turmas do mesmo curso → veredito `ambiguo`, **não casa** (contrato cruzamento-ue §A chave)
 - [ ] T025 [US1] Implementar o **passo 3**: `turma + data + disciplina` → registro de aula na staging, resolvendo o código da disciplina entre os dois espaços de nomes (data-model §3.1)
 - [ ] T026 [US1] Implementar o desempate de muitos-para-um: UEs concordantes → `casado`; **UEs diferentes → `ambiguo`, UE nula, reportado**. Proibido usar frequência, proximidade ou "a primeira" (contrato X-1)
+- [ ] T026.1 [US1] Implementar o veredito **`nao_aplicavel`** para os seis códigos que não são disciplina — `AD`·`FE`·`PL`·`TR`·`TE`·`LP`, **270 linhas só no `C-AP-FR`** —, mantendo-os **fora** do cruzamento e **distintos de `sem_fonte`** no relatório (FR-025.10)
 - [ ] T027 [US1] Marcar os registros dos **17 cursos sem planilha** como `fora_de_cobertura`, com UE nula — **esperado, não é divergência** (contrato X-4)
 - [ ] T028 [US1] Escrever `tests/etl/test_cruzamento.py` com casos sintéticos para os quatro vereditos, incluindo **o caso de duas turmas na mesma data** — é o que a autorização original não previa
 
@@ -156,6 +162,7 @@ migration aditiva — é regressão.
 
 - [ ] T060 [US4] Garantir que **nenhuma etapa escreve na origem** — leitura apenas, em todo o pipeline (FR-021)
 - [ ] T061 [US4] Implementar a **sondagem prévia** do documento 30 §7.6, executável contra a planilha real **antes** do corte, antecipando as divergências conhecidas (FR-020)
+- [ ] T061.1 [US4] Fazer a sondagem **refazer a linha de base** da contagem contra a planilha ao vivo, registrar o **delta contra o documento 05 §10** e submetê-lo a aprovação **antes** de virar critério. Sem isso o FR-009 reprova por construção (FR-009.1)
 - [ ] T062 [US4] Reconferir o inventário na sondagem: o de 02/08/2026 **já não corresponde** à planilha ao vivo — ela ganhou `Turma_Disciplina` em 20/08 e o log passou de `LOG-001060` (pendência **P-8**)
 - [ ] T063 [US4] Instrumentar `executar.py` para registrar o **tempo de cada etapa**, e rodar o ensaio completo medindo o total (FR-021, quickstart V-7)
 - [ ] T064 [US4] Executar `quickstart.md` V-4 e conferir a distribuição dos quatro vereditos do cruzamento, com os `ambiguo` e `sem_fonte` **nomeados** no relatório

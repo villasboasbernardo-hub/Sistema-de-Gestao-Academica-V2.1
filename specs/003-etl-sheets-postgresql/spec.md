@@ -118,6 +118,41 @@ mais conservadora.
 divergem. Usar os dois **duplica** lançamento; escolher errado **perde** 150. A pergunta não foi
 respondida.
 
+### Sessão 2026-09-08 — `/speckit-clarify`
+
+Quatro ambiguidades encontradas na varredura, **todas descobertas abrindo os arquivos**, não lendo os
+documentos. Bernardo autorizou em bloco ("aplicar todas as recomendações"); cada uma fica escrita por
+extenso, porque autorização em bloco só é auditável se der para conferir o que foi decidido.
+
+- **Q: O que significa o sufixo `P` num número de UE como `1P`, e como tratá-lo?**
+  → **A: Opção A — é a parte prática da mesma UE.** Normaliza para `numero_ue = 1` e o sufixo fica
+  registrado em `migracao_log` como proveniência.
+  *Achado:* `unidades_ensino.numero_ue` é **`smallint`**, e `1P` é o **segundo valor mais comum** da
+  coluna — 210 ocorrências só no `C-AP-FR`. Sem regra, 210 lançamentos cairiam em `sem_fonte` sem
+  ninguém ter decidido isso.
+
+- **Q: Os lançamentos cujo código não é disciplina (`AD`, `FE`, `PL`, `TR`, `TE`, `LP`) participam do
+  cruzamento?**
+  → **A: Não. Ficam com o veredito novo `nao_aplicavel`.**
+  *Achado:* são **270 linhas só no `C-AP-FR`** — `AD` 181, `FE` 42, `LP` 17, `TR` 13, `TE` 9, `PL` 8.
+  Não são disciplina, logo **não têm UE por natureza**: são atividade não letiva ou evento de
+  calendário. Marcá-las `sem_fonte` seria mentir — `sem_fonte` diz "procurei e não achei";
+  `nao_aplicavel` diz "não havia o que procurar".
+
+- **Q: A contagem de aceite vem de um inventário já desatualizado (P-8). O que prevalece?**
+  → **A: A sondagem prévia refaz a linha de base contra a planilha ao vivo, ANTES da carga, e o delta
+  contra o documento 05 §10 é registrado e aprovado.** A contagem continua **bloqueante** — o que muda
+  é de onde vem o número esperado.
+  *Achado:* o inventário é de 02/08/2026; a planilha ganhou `Turma_Disciplina` em 20/08 e o log passou
+  de `LOG-001060`. Sem refazer a base, o **FR-009 reprova por construção**.
+
+- **Q: O que fazer quando os cinco `NOT NULL` de `instrutores` (D-08) não têm valor na origem?**
+  → **A: A carga falha, nomeando instrutor e coluna. Nunca se fabrica valor.** A lacuna vira
+  **pendência operacional a resolver na planilha antes do corte**, não no ETL.
+  *Razão:* preencher `NOT NULL` com valor inventado é exatamente o "aproveitar e corrigir" que o
+  documento 06 proíbe — e um valor fabricado num campo obrigatório é indistinguível de dado real
+  depois.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A carga inteira roda por um comando e diz se pode confiar nela (Priority: P1)
@@ -260,6 +295,13 @@ planilha volta a ser a fonte de verdade sem perda.
   destino** no schema.
 - **A tentação de "aproveitar e corrigir"** um dado durante o transporte. Proibida: correção de
   conteúdo é evento separado e logado.
+- **Número de UE não numérico** (`1P`) contra uma coluna `smallint` — 210 ocorrências num arquivo só.
+- **Cabeçalho repetido dentro da faixa de dados**, 36 vezes por arquivo: lido como dado, vira
+  lançamento fantasma que ninguém encomendou.
+- **Código que não é disciplina** (`AD`, `FE`, `PL`, `TR`, `TE`, `LP`) — 270 linhas num arquivo só.
+  Não têm UE por natureza, e tratá-las como falha de busca poluiria o relatório com 270 falsos
+  negativos.
+- **Coluna obrigatória sem valor na origem** (D-08): a carga falha nomeando; nunca fabrica.
 
 ---
 
@@ -362,6 +404,23 @@ planilha volta a ser a fonte de verdade sem perda.
 - **FR-025.7**: Para o curso C-Ap-HN, a fonte autoritativa é **`Cópia de C-AP-HN 2026 - Sabado.xlsx`**.
   O `C-AP-HN 2026.xlsx` MUST NOT ser lido — usar os dois duplicaria lançamento e faria o curso inteiro
   cair em `ambiguo`. *(decisão de 08/09/2026, fecha o A-2)*
+- **FR-025.9**: Número de UE com sufixo alfabético (`1P`) MUST ser normalizado para o número, e o
+  sufixo MUST ser registrado em `migracao_log` como proveniência. *(decisão de 08/09/2026)*
+- **FR-025.10**: Lançamento cujo código **não é disciplina** — `AD`, `FE`, `PL`, `TR`, `TE`, `LP` —
+  MUST receber o veredito **`nao_aplicavel`** e MUST NOT entrar no cruzamento. `nao_aplicavel` MUST
+  ser distinguido de `sem_fonte` no relatório: o primeiro diz *não havia o que procurar*, o segundo
+  diz *procurei e não achei*. *(decisão de 08/09/2026)*
+- **FR-025.11**: Linha de cabeçalho repetida dentro da faixa de dados — a aba `PREENCHIMENTO` repete
+  o cabeçalho a cada seção, 36 vezes só no `C-AP-FR` — MUST ser descartada na extração, e o descarte
+  MUST ser contado no relatório. Cabeçalho lido como dado vira lançamento fantasma.
+- **FR-009.1**: A linha de base da contagem MUST ser refeita pela **sondagem prévia**, contra a
+  planilha ao vivo, **antes** da carga. O delta contra o documento 05 §10 MUST ser registrado e
+  aprovado antes de virar critério. A contagem continua **bloqueante** — muda de onde vem o número
+  esperado, não o rigor. *(pendência P-8; decisão de 08/09/2026)*
+- **FR-018.1**: Quando uma coluna obrigatória não tiver valor na origem — os cinco `NOT NULL` de
+  `instrutores`, pendência D-08 —, a carga MUST **falhar nomeando o registro e a coluna**. Valor
+  MUST NOT ser fabricado. A lacuna é **pendência operacional a resolver na planilha antes do corte**.
+  *(decisão de 08/09/2026)*
 - **FR-025.8**: `registros_aula.unidade_ensino_id` MUST tornar-se anulável **com `CHECK` que confine
   o nulo ao histórico migrado** — nulo admitido apenas quando `origem_migracao_v1` estiver preenchido.
   O grão de Unidade de Ensino MUST permanecer **obrigatório para todo dado novo**, preservando a

@@ -29,7 +29,27 @@
 - [x] Feature meets measurable outcomes defined in Success Criteria
 - [x] No implementation details leak into specification
 
-**Resultado: 16 de 16** *(2026-09-07, terceira iteração)*. Zero marcadores. A spec está pronta para
+**Resultado: 16 de 16** *(revalidado em 2026-09-08, após `/speckit-clarify` — sem regressão)*.
+
+### `/speckit-clarify` de 08/09/2026 — 4 ambiguidades, nenhuma vinha dos documentos
+
+Todas foram encontradas **abrindo os arquivos**, não relendo a spec. É o argumento a favor de rodar a
+clarificação com a fonte à mão em vez de só com o texto:
+
+| Achado | Volume | Por que passaria batido |
+| --- | --- | --- |
+| `Nº U.E` = `1P` contra `numero_ue smallint` | **210** ocorrências num arquivo | 2º valor mais comum da coluna; 210 lançamentos cairiam em `sem_fonte` sem decisão |
+| Códigos que não são disciplina | **270** linhas num arquivo | Marcá-los `sem_fonte` produziria 270 falsos negativos **por arquivo** |
+| Cabeçalho repetido na faixa de dados | **36** por arquivo | Lido como dado, vira lançamento fantasma |
+| Contagem de aceite vinda de inventário vencido | — | O **FR-009 reprovaria por construção** |
+
+**Efeito:** 6 FRs novos (FR-009.1, FR-018.1, FR-025.9/.10/.11), 4 casos de borda e 5 tarefas
+(T018.1, T018.2, T021.1, T026.1, T061.1).
+
+**Nota de método:** este `/speckit-clarify` rodou **depois** de `plan` e `tasks`, contra a ordem
+recomendada. Não houve retrabalho de desenho — as quatro clarificações couberam como acréscimo —, mas
+duas delas (o `1P` e os códigos não-disciplina) teriam mudado o contrato do cruzamento se tivessem
+aparecido mais tarde, já na implementação. Zero marcadores. A spec está pronta para
 `/speckit-plan`.
 
 **Dois achados seguem abertos e não são marcadores de clarificação** — são questões de **identidade de
