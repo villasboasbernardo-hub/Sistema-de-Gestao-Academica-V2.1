@@ -27,7 +27,7 @@ anulabilidade da UE **os 17 cursos sem fonte não têm como entrar**. Carga ante
 | --- | --- | --- |
 | 1 | Setup do pacote e das fontes | Não |
 | **2** | **As duas migrations + a staging** | Não |
-| 3 · US1 | A carga por um comando, com a recuperação da UE | **Sim** — etapa 1 lê o Sheets |
+| 3 · US1 | A carga por um comando, com a recuperação da UE | **Não, desde 08/09** — a v2.0 passou a ser lida de arquivo local (FR-008.1) |
 | 4 · US2 | Reconciliação | Não |
 | 5 · US3 | Rastro e `migracao_log` | Não |
 | 6 · US4 | Ensaio e sondagem prévia | Sim |
