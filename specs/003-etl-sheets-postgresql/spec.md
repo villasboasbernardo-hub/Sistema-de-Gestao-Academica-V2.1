@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-07
 
-**Status**: Clarificada em 07/09/2026 — Q1, Q2, Q3 e os resíduos Q1.c/Q1.d/Q1.e respondidos. **Dois achados abertos**, ambos sobre identidade de arquivo: A-1 (a planilha "CAL 2026" não existe) e A-2 (duplicata do C-Ap-HN). Nenhum bloqueia o desenho do plano
+**Status**: Clarificada em 07/09/2026 — Q1, Q2, Q3 e os resíduos Q1.c/Q1.d/Q1.e respondidos. **Todas as pendências fechadas em 08/09/2026** — A-1 (era a CAHO), A-2 (vale a *Cópia … Sabado*) e o bloqueio R-1 (coluna anulável com `CHECK`). Planejada; pronta para `/speckit-tasks`
 
 **Input**: User description: "Épico 2 da v2.1 — ETL Sheets → PostgreSQL com reconciliação verificável"
 
@@ -77,7 +77,8 @@ da v2.0 com as planilhas da v1.0** para recuperar a Unidade de Ensino. Fontes: a
 | --- | --- |
 | **Q1.c — cobertura** | Para os cursos **não cobertos**, a Unidade de Ensino **permanece `NULL`** no histórico. **Exceção declarada** à regra anterior de não usar nulo — e ela vale só aqui: continua proibido inventar dado sintético |
 | **Q1.d — grão** | Cruzamento pela **chave composta `Turma + Data + Disciplina`** |
-| **Q1.e — CAHO** | `CAHO_2026.xlsx` **sai do cruzamento por inteiro**. A rejeição de 10/08/2026 está mantida e não foi reaberta |
+| **Q1.e — CAHO** | ⚠️ **Revisto em 08/09/2026.** `CAHO_2026.xlsx` **entra como fonte de transporte** — o "CAL 2026" da autorização anterior era ela. A rejeição de 10/08/2026 **permanece**, e vale para o papel de **padrão-ouro de validação**, que é outro: transportar dela é transporte; comparar contra ela seria validação, e essa segue proibida |
+| **A-2 — duplicata do C-Ap-HN** | Vale **apenas** `Cópia de C-AP-HN 2026 - Sabado.xlsx`. O `C-AP-HN 2026.xlsx` **sai** *(decisão de 08/09/2026)* |
 | **Não regressão** | Continua por **invariante estrutural e matemática**. Nenhuma planilha vira padrão-ouro — nem a CAHO, nem qualquer outra usada como fonte de transporte |
 
 **A distinção que sustenta tudo isso:** uma planilha pode ser **fonte de dado** sem ser **padrão de
@@ -86,13 +87,17 @@ primeira e proíbe a segunda.
 
 ### Cobertura real, depois de excluir a CAHO
 
-| | Antes | **Depois de excluir a CAHO** |
-| --- | ---: | ---: |
-| Cursos cobertos | 7 de 24 | **6 de 24** |
-| Cursos sem fonte de UE → `NULL` | 17 | **18** |
-| Lançamentos com `Nº U.E` disponíveis | 8.312 | **6.666** |
+*(Fechada em 08/09/2026, com a CAHO dentro e a duplicata do C-Ap-HN resolvida.)*
 
-Os seis cobertos: C-Ap-FR · C-Ap-HN · C-Espc-HN · C-Espc-FR · C-ESP-ME · C-Exp-METOC-OF.
+| | Valor |
+| --- | ---: |
+| Arquivos usados | **7** de 8 — sai o `C-AP-HN 2026.xlsx` |
+| Cursos cobertos | **7 de 24** |
+| Cursos sem fonte de UE → `NULL` | **17** |
+| UEs disponíveis | **1.270** |
+| Lançamentos com `Nº U.E` | **7.421** |
+
+Os sete cobertos: C-Ap-FR · C-Ap-HN · C-Espc-HN · **CAHO** · C-Espc-FR · C-ESP-ME · C-Exp-METOC-OF.
 
 ### Duas coisas que continuam abertas
 
@@ -342,20 +347,25 @@ planilha volta a ser a fonte de verdade sem perda.
 - **FR-025.2**: O cruzamento MUST usar a chave composta **`Turma + Data + Disciplina`**. Registro que
   **não casar** MUST ficar com Unidade de Ensino **`NULL`** e MUST ser **reportado nominalmente** no
   relatório — nunca preenchido por aproximação. *(decisão de 07/09/2026)*
-- **FR-025.3**: Para os **18 cursos sem planilha de origem**, a Unidade de Ensino MUST permanecer
+- **FR-025.3**: Para os **17 cursos sem planilha de origem**, a Unidade de Ensino MUST permanecer
   `NULL`. É **exceção declarada** à regra de não usar nulo, e vale **apenas** para esses registros:
   continua proibido criar UE sintética. *(decisão de 07/09/2026)*
-- **FR-025.4**: `CAHO_2026.xlsx` MUST ser **excluída do cruzamento por inteiro**. A rejeição de
-  10/08/2026 permanece e não foi reaberta.
+- **FR-025.4**: `CAHO_2026.xlsx` MUST ser usada **apenas como fonte de transporte**
+  *(decisão de 08/09/2026)*. Ela MUST NOT ser usada como padrão-ouro de não regressão — a rejeição
+  de 10/08/2026 permanece nesse papel e não foi reaberta.
 - **FR-025.5**: Nenhuma planilha usada como fonte de transporte MUST ser tratada como **padrão-ouro
   de não regressão**. A não regressão continua provada por **invariante estrutural e matemática**
   (FR-015). Fonte de dado e padrão de validação são coisas diferentes, e confundi-las é o defeito que
   a decisão de 10/08/2026 existe para impedir.
 - **FR-025.6**: O cruzamento MUST deixar rastro em `migracao_log`: para cada Unidade de Ensino
   recuperada, de qual arquivo, aba e linha ela veio. *(decisão de 07/09/2026)*
-- **FR-025.7**: MUST estar declarado qual arquivo é autoritativo quando dois descrevem o mesmo curso
-  — `C-AP-HN 2026.xlsx` e `Cópia de C-AP-HN 2026 - Sabado.xlsx` divergem em 1 UE e 150 lançamentos.
-  Usar os dois duplica; escolher errado perde. *(achado A-2, aberto)*
+- **FR-025.7**: Para o curso C-Ap-HN, a fonte autoritativa é **`Cópia de C-AP-HN 2026 - Sabado.xlsx`**.
+  O `C-AP-HN 2026.xlsx` MUST NOT ser lido — usar os dois duplicaria lançamento e faria o curso inteiro
+  cair em `ambiguo`. *(decisão de 08/09/2026, fecha o A-2)*
+- **FR-025.8**: `registros_aula.unidade_ensino_id` MUST tornar-se anulável **com `CHECK` que confine
+  o nulo ao histórico migrado** — nulo admitido apenas quando `origem_migracao_v1` estiver preenchido.
+  O grão de Unidade de Ensino MUST permanecer **obrigatório para todo dado novo**, preservando a
+  decisão UE-1 onde ela importa. *(decisão de 08/09/2026, resolve o bloqueio R-1)*
 - **FR-025.4**: As planilhas da v1.0 MUST NOT ser versionadas. São dado real da MB e o repositório é
   público — protegidas no `.gitignore` em 07/09/2026, antes de qualquer commit.
 - **FR-026**: As duas lacunas de schema — P-6 e P-7 do documento 30 §13 — MUST ser corrigidas por

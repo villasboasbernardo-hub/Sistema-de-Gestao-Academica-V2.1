@@ -3,7 +3,7 @@
 **2026-09-07** · [plan.md](./plan.md) · [research.md](./research.md)
 
 Esta fatia **não cria tabela de negócio**. O schema é do Épico 1. O que ela acrescenta é: uma
-migration aditiva, uma área de staging efêmera, e a decisão pendente sobre a obrigatoriedade da UE.
+migration aditiva, uma que afrouxa a obrigatoriedade da UE sob `CHECK`, e uma área de staging efêmera.
 
 ---
 
@@ -19,20 +19,26 @@ migration aditiva, uma área de staging efêmera, e a decisão pendente sobre a 
 Ambas anuláveis: a v2.0 não preenche as duas em todas as 210 linhas, e exigir valor faria a carga
 falhar por dado que nunca existiu. `restrict` porque **nada é apagado neste sistema**.
 
-### 1.2 R-1 — a obrigatoriedade da UE ⛔ **decisão pendente**
+### 1.2 R-1 — a UE torna-se anulável, **blindada por `CHECK`** *(autorizado 08/09/2026)*
 
 Hoje: `registros_aula.unidade_ensino_id` é **`NOT NULL`** — medido, não suposto.
 
-A decisão de 07/09 (UE nula nos 18 cursos sem fonte) **não cabe nesse schema**. Ver [research.md
-§R-1](./research.md) para as três saídas. A recomendação é tornar a coluna anulável **com `CHECK`
-que confina o nulo ao histórico migrado**:
+A decisão de 07/09 (UE nula nos 17 cursos sem fonte) **não cabia nesse schema**. Bernardo autorizou
+em 08/09 a saída A na forma blindada — a coluna passa a aceitar nulo **com `CHECK` que o confina ao
+histórico migrado**:
 
 > `unidade_ensino_id` pode ser nulo **apenas** quando `origem_migracao_v1` estiver preenchido.
 
 Assim o grão de UE continua **obrigatório para todo dado novo** — a decisão UE-1 sobrevive onde
 importa — e o nulo fica onde é verdade: no que a v2.0 nunca registrou.
 
-**Nenhuma migration é escrita antes de Bernardo decidir isto.**
+| Regra | Efeito |
+| --- | --- |
+| `unidade_ensino_id` deixa de ser `NOT NULL` | os 17 cursos sem fonte podem ser migrados |
+| `CHECK (unidade_ensino_id is not null or origem_migracao_v1 is not null)` | **dado novo continua obrigado** a declarar a UE |
+
+A decisão UE-1 sobrevive onde importa: no que o sistema escrever daqui em diante. O nulo fica onde é
+verdade — no que a v2.0 nunca registrou. E a regra vira **explícita no banco**, não comentário.
 
 ---
 
@@ -75,14 +81,14 @@ e `tempos_consumidos`.
 
 ### 3.3 A relação — **muitos para um, e é aí que mora o risco**
 
-6.666 lançamentos → 1.566 registros. Vários lançamentos casam com um registro.
+7.421 lançamentos → 1.566 registros. Vários lançamentos casam com um registro.
 
 | Situação | Veredito |
 | --- | --- |
 | Todos os lançamentos que casam apontam **a mesma** UE | `casado` — a UE é resolvida |
 | Os lançamentos apontam **UEs diferentes** | `ambiguo` — **não casa**, UE fica nula, e o caso é **reportado nominalmente** |
 | Nenhum lançamento casa | `sem_fonte` — UE nula, reportado |
-| O curso não tem planilha (18 deles) | `fora_de_cobertura` — UE nula, **esperado**, não é divergência |
+| O curso não tem planilha (17 deles) | `fora_de_cobertura` — UE nula, **esperado**, não é divergência |
 
 **Nunca** se escolhe "a UE mais frequente". Frequência não é evidência; é chute com aparência de
 estatística.
@@ -110,4 +116,4 @@ correto mas confunde na leitura (documento 30 §4).
 ## 5. O que esta fatia **não** modela
 
 Nenhuma tabela de negócio nova · nenhum `ENUM` novo · nenhuma view · nenhuma policy. O schema é do
-Épico 1, e esta fatia só o toca em P-6 e — se autorizado — na anulabilidade da R-1.
+Épico 1, e esta fatia só o toca em dois pontos, ambos autorizados: P-6 e a anulabilidade da R-1.

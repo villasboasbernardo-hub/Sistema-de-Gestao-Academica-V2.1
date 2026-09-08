@@ -7,7 +7,7 @@ documento e o disco divergem, o disco venceu e a divergência está registrada.
 
 ---
 
-## R-1 · ⛔ `registros_aula.unidade_ensino_id` é **NOT NULL** — a decisão de deixar `NULL` não cabe
+## R-1 · ✅ `unidade_ensino_id` era **NOT NULL** — resolvido em 08/09/2026 pela saída A
 
 **Medido:**
 
@@ -21,7 +21,7 @@ instrutor_id      :: uuid :: ACEITA NULO
 
 **O conflito, em duas frases.** A decisão **UE-1** (26/08/2026, rota (b)) pôs `registros_aula` no grão
 de Unidade de Ensino, e o Épico 1 a materializou com a coluna **obrigatória** — é o que *significa*
-estar no grão de UE. A decisão de **07/09/2026** manda deixar a UE **nula** nos 18 cursos sem fonte.
+estar no grão de UE. A decisão de **07/09/2026** manda deixar a UE **nula** nos 17 cursos sem fonte.
 **As duas não podem valer ao mesmo tempo.**
 
 **As três saídas, e o que cada uma custa:**
@@ -29,7 +29,7 @@ estar no grão de UE. A decisão de **07/09/2026** manda deixar a UE **nula** no
 | # | Saída | Custo |
 | --- | --- | --- |
 | **A** | Migration tornando `unidade_ensino_id` **anulável** | O grão de UE deixa de ser garantido pelo banco e passa a ser convenção. É enfraquecer a UE-1 — que foi decisão estrutural, não detalhe. Toda consulta por UE passa a tratar nulo |
-| **B** | Não migrar os registros dos 18 cursos | Viola o FR-001 (100% do histórico) e o critério 1 do documento 06. **Descartável de saída** |
+| **B** | Não migrar os registros dos 17 cursos | Viola o FR-001 (100% do histórico) e o critério 1 do documento 06. **Descartável de saída** |
 | **C** | UE sintética por disciplina para os não cobertos | **Vetada por Bernardo em 07/09/2026**, e com razão: cria 134 UEs que ninguém escreveu em currículo nenhum |
 
 **Recomendação: A, com a anulabilidade restrita e declarada.** Tornar a coluna anulável e acrescentar
@@ -38,8 +38,16 @@ ser nulo apenas se `origem_migracao_v1` estiver preenchido"*. Assim o grão de U
 para todo dado novo**, e o nulo fica confinado ao histórico que a v2.0 nunca registrou. A regra vira
 explícita no banco em vez de virar comentário.
 
-**Isto precisa de decisão do Bernardo antes da primeira migration.** É a única pendência bloqueante
-que sobrou.
+**✅ DECIDIDO em 08/09/2026 — saída A, na forma blindada.** Bernardo autorizou tornar a coluna
+anulável **com `CHECK` que confina o nulo ao histórico migrado**: nulo admitido apenas quando
+`origem_migracao_v1` estiver preenchido.
+
+O que isso preserva: a decisão **UE-1 continua valendo para todo dado novo** — o grão de Unidade de
+Ensino segue obrigatório onde o sistema é escrito daqui em diante. O nulo fica confinado ao que a
+v2.0 nunca registrou, e a regra vira **explícita no banco** em vez de virar comentário que alguém
+lê em 2028 e não entende.
+
+O bloqueio está levantado. A migration entra como tarefa da primeira frente.
 
 ---
 
@@ -134,7 +142,7 @@ INSTRUTOR/PROFESSOR · CH CONCLUÍDA · CH RESTANTE · · OK/PASSOU/FALTA`
 Traz o **nome da UE**, a **CH prevista**, o **local**, a **técnica (T/E)** e o **instrutor** —
 material para conferência, além do número da UE.
 
-**Contagem por arquivo** *(a CAHO consta para registro; está **excluída** por decisão de 07/09)*:
+**Contagem por arquivo** *(revisto em 08/09/2026)*:
 
 | Arquivo | Curso | UEs | Lançamentos com UE |
 | --- | --- | ---: | ---: |
@@ -145,8 +153,12 @@ material para conferência, além do número da UE.
 | `ESPC-FR 2026.xlsx` | C-Espc-FR | 250 | 1.438 |
 | `C-ESP-ME 2026.xlsx` | C-ESP-ME | 120 | 804 |
 | `C-EXP-METOC-OF T01_26.xlsx` | C-Exp-METOC-OF | 55 | 178 |
-| **Utilizável** | **6 cursos** | **1.190** | **6.666** |
-| ~~`CAHO_2026.xlsx`~~ | ~~CAHO~~ | ~~294~~ | ~~1.646~~ — **excluída** |
+| `CAHO_2026.xlsx` | CAHO | 294 | 1.646 |
+| **Utilizável (revisto 08/09)** | **7 cursos** | **1.270** | **7.421** |
+
+**Revisão de 08/09/2026, que mudou a conta:** a `CAHO_2026.xlsx` **entra** — o "CAL 2026" da
+autorização anterior era ela —, e o `C-AP-HN 2026.xlsx` **sai**, porque para o C-Ap-HN vale apenas a
+`Cópia … Sabado`. São **7 arquivos**, 7 cursos cobertos e **17** sem fonte.
 
 **Duas coisas que a estrutura não resolve:**
 
@@ -156,7 +168,7 @@ material para conferência, além do número da UE.
    **quatro cursos** rodam duas turmas no mesmo ano com janelas distintas — não coincidem, e o
    cruzamento por curso **casaria a linha na turma errada**. É o defeito que a reconciliação por
    somatório de TA por turma (FR-010) existe para pegar; melhor não produzi-lo.
-2. **O grão continua diferente:** 6.666 lançamentos de tempo de aula contra 1.566 registros de sessão.
+2. **O grão continua diferente:** 7.421 lançamentos de tempo de aula contra 1.566 registros de sessão.
    Vários lançamentos da v1.0 casam com um registro da v2.0. A regra precisa dizer o que fazer quando
    **os lançamentos que casam apontam UEs diferentes**.
 

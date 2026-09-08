@@ -17,7 +17,7 @@ executável por quem não escreveu o código.
 | Credencial do Sheets | `.env.local` | ⬜ `ETL_CREDENCIAL_GOOGLE` |
 
 ⛔ **Antes de tudo:** a pendência **R-1** precisa estar decidida. `registros_aula.unidade_ensino_id` é
-`NOT NULL`, e sem decisão a primeira carga falha nos 18 cursos sem fonte de UE.
+`NOT NULL`, e sem decisão a primeira carga falha nos 17 cursos sem fonte de UE.
 
 ---
 
@@ -71,7 +71,7 @@ python -m scripts.etl.cruzar_ue --relatorio
 | `casado` | todos os lançamentos concordam na UE |
 | `ambiguo` | **UE nula** + nome no relatório |
 | `sem_fonte` | **UE nula** + nome no relatório |
-| `fora_de_cobertura` | os 18 cursos sem planilha — **esperado, não bloqueia** |
+| `fora_de_cobertura` | os 17 cursos sem planilha — **esperado, não bloqueia** |
 
 **A prova que importa:** pegar um registro `casado` e conferir que `migracao_log` diz **de qual
 arquivo, aba e linha** veio a UE. Sem isso, a UE é inventada com aparência de recuperada.

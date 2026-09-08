@@ -8,12 +8,12 @@
 
 Levar as ~5.400 linhas da planilha da v2.0 para o PostgreSQL, **numa transação única**, com
 reconciliação que bloqueia o corte quando algo não fecha — e, no caminho, **recuperar a Unidade de
-Ensino** de 6 cursos cruzando com as planilhas de planejamento da v1.0, que a v2.0 nunca guardou.
+Ensino** de 7 cursos cruzando com as planilhas de planejamento da v1.0, que a v2.0 nunca guardou.
 
 O plano tem três frentes, nesta ordem obrigatória:
 
-1. **Destravar o schema** — uma migration aditiva (P-6) e uma decisão pendente sobre a
-   obrigatoriedade da UE (R-1). Nada de carga antes disso: a primeira falharia por `NOT NULL`.
+1. **Destravar o schema** — duas migrations: a aditiva de P-6 e a que torna a UE anulável sob
+   `CHECK` (R-1). Nada de carga antes disso: a primeira falharia por `NOT NULL`.
 2. **O transporte da v2.0** — o pipeline de cinco etapas do documento 30, escrito do zero (R-6), com
    a área de staging textual que torna a reconciliação uma comparação entre duas tabelas do mesmo
    motor.
@@ -56,8 +56,8 @@ diagnosticadas (documento 30 §3) · `migracao_log` é append-only por gatilho, 
 administrativa** · nenhuma planilha vira padrão-ouro de não regressão (FR-025.5) · as planilhas da
 v1.0 **nunca** são versionadas (FR-025.4).
 
-**Scale/Scope**: 25 tabelas · ~5.400 linhas · 1.566 registros de aula · 6.666 lançamentos da v1.0
-para cruzar · 6 cursos com fonte de UE, **18 sem**.
+**Scale/Scope**: 25 tabelas · ~5.400 linhas · 1.566 registros de aula · 7.421 lançamentos da v1.0
+para cruzar · 7 cursos com fonte de UE, **17 sem**.
 
 ## Constitution Check
 
@@ -69,7 +69,7 @@ para cruzar · 6 cursos com fonte de UE, **18 sem**.
 | II | Preservação de Regras de Negócio | ✅ **Passa** | O épico **transporta**, não reinterpreta (FR-003). Nenhuma `RN-` é tocada |
 | III | Restrição de Plataforma | ✅ **Passa** | Python para ETL é o que o BRIEF §1 determina. Sem ORM |
 | IV | Integridade do Histórico | ✅ **Passa, e é o eixo do épico** | `migracao_log` íntegro e continuado (FR-004); `codigo` verbatim (FR-002); rastro do cruzamento gravado (FR-025.6) |
-| V | Degradação Segura | ⚠️ **Tensão declarada** | Registro que não casa fica com UE nula e é **reportado** (FR-025.2) — degradação com aviso. **Mas o banco não aceita nulo nessa coluna** (R-1). A tensão é real e precisa de decisão, não de contorno |
+| V | Degradação Segura | ✅ **Passa** | Registro que não casa fica com UE nula e é **reportado** (FR-025.2) — degradação com aviso, nunca exceção. A tensão com o `NOT NULL` foi resolvida em 08/09 pelo `CHECK` que confina o nulo ao histórico migrado |
 | VI | Mudança Cirúrgica | ✅ **Passa** | Três frentes com ordem obrigatória, cada uma fechando em commit próprio. A prova é por invariante, nunca por diff com curso (FR-015) |
 | VII | Configuração Sobre Constante | ✅ **Passa** | A ordem de carga tem **uma única definição** no repositório (FR-016) |
 | VIII | Rastreabilidade | ✅ **Passa** | Cada UE recuperada diz de qual arquivo, aba e linha veio (FR-025.6) |
@@ -77,8 +77,8 @@ para cruzar · 6 cursos com fonte de UE, **18 sem**.
 | X | Paridade Antes de Novidade | ✅ **Passa** | Zero funcionalidade nova. É transporte |
 | XI | O Banco é a Fronteira | ✅ **Passa, e cobra** | É o `NOT NULL` do banco que expõe o conflito da R-1 — exatamente o que este princípio existe para fazer. A fronteira funcionou antes de a primeira linha ser escrita |
 
-**Gate: PASSA COM UMA PENDÊNCIA BLOQUEANTE.** A R-1 precisa de decisão de Bernardo antes da primeira
-migration. As duas tensões (V e IX) estão declaradas e autorizadas, não contornadas.
+**Gate: PASSA.** Nenhuma pendência bloqueante. A R-1 foi decidida em 08/09/2026 e a tensão do
+Princípio IX (escopo ampliado) tem autorização nominal e data. Nada foi contornado.
 
 ### Reavaliação após a Fase 1
 
@@ -90,7 +90,7 @@ migration. As duas tensões (V e IX) estão declaradas e autorizadas, não conto
    rodam duas turmas no mesmo ano, cruzar por curso casa na turma errada. O desenho resolve
    desambiguando pela **janela de datas da turma** antes do casamento — e o que continuar ambíguo
    **não casa**, por FR-025.2.
-2. **O cruzamento é de muitos para um.** 6.666 lançamentos contra 1.566 registros. Quando os
+2. **O cruzamento é de muitos para um.** 7.421 lançamentos contra 1.566 registros. Quando os
    lançamentos que casam apontarem **UEs diferentes**, a regra é **não casar e reportar** — nunca
    escolher a mais frequente.
 3. **P-7 saiu do escopo** (R-3): já resolvida no Épico 1. A migration desta fatia cobre só P-6.
@@ -133,7 +133,7 @@ scripts/etl/
 supabase/
 ├── migrations/
 │   └── <ts>_p6_turma_disciplina_instrutor.sql    # P-6 (R-4)
-│   └── <ts>_ue_anulavel_no_historico.sql         # R-1 — SÓ APÓS DECISÃO
+│   └── <ts>_ue_anulavel_no_historico.sql         # R-1 — autorizada 08/09
 └── tests/
     └── 090_reconciliacao_etl.sql                 # invariantes que bloqueiam o corte
 ```
@@ -149,5 +149,5 @@ novos (`extrair_ue_v1.py`, `cruzar_ue.py`) são a materialização do escopo amp
 | --- | --- | --- |
 | **Segunda fonte de dado (v1.0)**, fora dos documentos 30 e 31 | É a única forma de recuperar a UE sem inventá-la. Autorizado nominalmente por Bernardo em 07/09/2026 | Deixar tudo nulo (rejeitado por Bernardo); UE sintética (vetada) |
 | **Etapa 1-B paralela**, em vez de enriquecimento pós-carga | `unidade_ensino_id` é `NOT NULL` (R-1): não há linha para enriquecer depois — a UE precisa estar resolvida antes do `INSERT` | `UPDATE` após a promoção |
-| **Migration que afrouxa `NOT NULL`** (se a saída A da R-1 for escolhida) | Sem ela, os 18 cursos sem fonte não têm como ser migrados, e o FR-001 cai | Não migrar esses cursos (viola o critério 1 do documento 06) |
+| **Migration que afrouxa `NOT NULL`** (se a saída A da R-1 for escolhida) | Sem ela, os 17 cursos sem fonte não têm como ser migrados, e o FR-001 cai | Não migrar esses cursos (viola o critério 1 do documento 06) |
 | **Escrita do zero, sem reaproveitar `migracao/*.py`** | Os scripts **não estão nesta máquina** (R-6), ainda que o documento 06 os pressuponha | Bloquear o épico até localizá-los |

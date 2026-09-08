@@ -35,7 +35,7 @@ O passo 2 é o que a autorização não previu, e é o que impede o casamento er
 
 ## O desempate — e o que não é desempate
 
-O cruzamento é **de muitos para um**: 6.666 lançamentos para 1.566 registros.
+O cruzamento é **de muitos para um**: 7.421 lançamentos para 1.566 registros.
 
 | Situação | Veredito | UE |
 | --- | --- | --- |
@@ -43,7 +43,7 @@ O cruzamento é **de muitos para um**: 6.666 lançamentos para 1.566 registros.
 | Apontam **UEs diferentes** | `ambiguo` | **nula**, reportado nominalmente |
 | A data cai na janela de **duas turmas** do mesmo curso | `ambiguo` | **nula**, reportado |
 | Nenhum lançamento casa | `sem_fonte` | **nula**, reportado |
-| Curso sem planilha (18 deles) | `fora_de_cobertura` | **nula**, **esperado** |
+| Curso sem planilha (17 deles) | `fora_de_cobertura` | **nula**, **esperado** |
 
 **O que MUST NOT ser usado como desempate**, em nenhuma hipótese:
 
@@ -61,19 +61,28 @@ Todas produzem preenchimento com aparência de dado. A regra é: **na dúvida, n
 | Arquivo | Curso |
 | --- | --- |
 | `C-AP-FR 2026.xlsx` | C-Ap-FR |
-| `C-AP-HN 2026.xlsx` | C-Ap-HN ⚠️ ver A-2 |
+| ~~`C-AP-HN 2026.xlsx`~~ | ~~C-Ap-HN~~ — **NÃO usar** (A-2 fechado) |
+| `CAHO_2026.xlsx` | CAHO — **entra como fonte de transporte** (08/09/2026) |
 | `C-ESPC-HN 2026.xlsx` | C-Espc-HN |
-| `Cópia de C-AP-HN 2026 - Sabado.xlsx` | C-Ap-HN ⚠️ ver A-2 |
+| `Cópia de C-AP-HN 2026 - Sabado.xlsx` | C-Ap-HN — **a autoritativa** |
 | `ESPC-FR 2026.xlsx` | C-Espc-FR |
 | `C-ESP-ME 2026.xlsx` | C-ESP-ME |
 | `C-EXP-METOC-OF T01_26.xlsx` | C-Exp-METOC-OF |
 
-**Excluída, por decisão de 07/09/2026:** `CAHO_2026.xlsx` — **sai do cruzamento por inteiro**. A
-rejeição de 10/08/2026 permanece e não foi reaberta.
+**Sobre a CAHO — a distinção que sustenta a decisão.** Em 07/09 a instrução foi excluí-la do
+cruzamento; em 08/09 Bernardo esclareceu que o "CAL 2026" da autorização **era ela**, e que entra
+**como fonte de transporte**. Não há conflito com a regra de 10/08/2026, porque os papéis são
+distintos:
 
-**Não localizada:** a planilha **"CAL 2026"**, mencionada na autorização, **não existe** — nem nos
-três caminhos indicados, nem em `Documentos/`. Achado **A-1**, aberto. Enquanto não se esclarecer, a
-CAHO segue excluída, que é a instrução explícita.
+| Papel | CAHO 2026 |
+| --- | --- |
+| **Fonte de dado a transportar** | ✅ autorizada (08/09/2026) |
+| **Padrão-ouro de não regressão** | 🚫 **rejeitada** (10/08/2026) — e a rejeição **não foi reaberta** |
+
+Transportar dela é transporte. Comparar contra ela seria validação — e essa segue proibida (X-1).
+
+**A-1 encerrado:** não existe planilha "CAL 2026"; era a `CAHO_2026.xlsx`.
+**A-2 encerrado:** para o C-Ap-HN vale **apenas** a `Cópia de C-AP-HN 2026 - Sabado.xlsx`.
 
 ## Invariantes
 
@@ -84,7 +93,7 @@ CAHO segue excluída, que é a instrução explícita.
   proveniência é UE inventada.
 - **X-3**: o que **não casou** MUST ser gravado com seu veredito, não apenas omitido. A ausência é o
   que alguém vai querer explicar depois.
-- **X-4**: `fora_de_cobertura` **não é divergência** e MUST NOT bloquear o corte — são os 18 cursos
+- **X-4**: `fora_de_cobertura` **não é divergência** e MUST NOT bloquear o corte — são os 17 cursos
   sem fonte, e isso é o esperado. `ambiguo` e `sem_fonte` **entram no relatório** e exigem leitura
   humana.
 - **X-5**: o cruzamento acontece **na staging**, antes da promoção — porque `registros_aula` não tem
@@ -92,9 +101,10 @@ CAHO segue excluída, que é a instrução explícita.
 - **X-6**: as planilhas da v1.0 **nunca** são versionadas. Protegidas no `.gitignore` em 07/09/2026,
   antes de qualquer commit. O repositório é público.
 
-## Achados abertos
+## Cobertura final
 
-| # | Achado | Efeito se não resolvido |
-| --- | --- | --- |
-| **A-1** | A planilha "CAL 2026" não existe | A CAHO segue excluída — leitura conservadora |
-| **A-2** | `C-AP-HN 2026.xlsx` (214 UEs, 891 lançamentos) e `Cópia de C-AP-HN 2026 - Sabado.xlsx` (215, 1.041) descrevem o **mesmo curso** e divergem | Usar os dois **duplica** lançamento e faz o C-Ap-HN cair inteiro em `ambiguo`. É preciso declarar qual manda |
+**7 arquivos · 7 cursos · 1.270 UEs · 7.421 lançamentos.** Dos 24 cursos, **17 ficam sem fonte** e
+seus registros vão para `fora_de_cobertura`, com Unidade de Ensino nula — o que o `CHECK` da migration
+da R-1 admite, por ser histórico migrado.
+
+**Nenhum achado aberto.** A-1 e A-2 foram fechados em 08/09/2026.

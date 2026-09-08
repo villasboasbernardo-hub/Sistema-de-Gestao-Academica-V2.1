@@ -16,7 +16,7 @@
 | **R-08** | Idempotência: duas execuções, mesmos checksums | idênticos | **Sim** |
 | **U-01** | UEs recuperadas por cruzamento | — | Não — **informa** |
 | **U-02** | Registros `ambiguo` e `sem_fonte` | — | Não — **exigem leitura humana** |
-| **U-03** | Registros `fora_de_cobertura` (18 cursos) | esperado | **Não** — é o previsto |
+| **U-03** | Registros `fora_de_cobertura` (17 cursos) | esperado | **Não** — é o previsto |
 
 ## A que rodaria primeiro, se pudesse escolher uma só
 
@@ -37,5 +37,5 @@ saldo do DSA — é o achado A-5, já pago uma vez.
   10/08/2026) — e nenhuma das planilhas usadas como fonte de transporte a substitui nesse papel.
   Critério **inegociável** do documento 06.
 - **C-4**: a reconciliação é **só leitura**. Não corrige nada; aponta.
-- **C-5**: `U-03` **não bloqueia**. Os 18 cursos sem fonte de UE são resultado esperado da decisão de
+- **C-5**: `U-03` **não bloqueia**. Os 17 cursos sem fonte de UE são resultado esperado da decisão de
   07/09/2026, não defeito da migração.
