@@ -72,6 +72,12 @@ python -m scripts.etl.cruzar_ue --relatorio
 | `ambiguo` | **UE nula** + nome no relatório |
 | `sem_fonte` | **UE nula** + nome no relatório |
 | `fora_de_cobertura` | os 17 cursos sem planilha — **esperado, não bloqueia** |
+| `nao_aplicavel` | código que não é disciplina (`AD`·`FE`·`PL`·`TR`·`TE`·`LP`) — **esperado**, não havia UE a procurar |
+
+**Conferir também**, porque são decisões de 08/09 que só aqui aparecem no ar: a UE veio normalizada
+(`1P` → `1`, com o sufixo em `migracao_log`), o `origem_migracao_v1` está no formato
+`<tabela_origem>:<chave_original>`, e nenhuma coluna `date` sofreu conversão de fuso — o literal
+`YYYY-MM-DD` chegou intacto.
 
 **A prova que importa:** pegar um registro `casado` e conferir que `migracao_log` diz **de qual
 arquivo, aba e linha** veio a UE. Sem isso, a UE é inventada com aparência de recuperada.

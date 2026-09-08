@@ -5,7 +5,7 @@
 **Prerequisites**: [plan.md](./plan.md) · [spec.md](./spec.md) · [research.md](./research.md) ·
 [data-model.md](./data-model.md) · [contracts/](./contracts/) · [quickstart.md](./quickstart.md)
 
-**Revisão**: `/speckit-clarify` de 08/09/2026 acrescentou 6 tarefas (T018.1, T018.2, T021.1, T026.1, T061.1) — ver *Clarifications* na spec.
+**Revisão**: `/speckit-analyze` de 08/09/2026 acrescentou 9 tarefas e citou 8 requisitos que estavam órfãos — 16 dos 22 requisitos criados naquele dia não tinham tarefa nenhuma. Antes dele, o `/speckit-clarify` acrescentou 6 tarefas (T018.1, T018.2, T021.1, T026.1, T061.1) — ver *Clarifications* na spec.
 
 **Testes**: **obrigatórios**, e são o produto tanto quanto o código. Um ETL sem reconciliação é um ETL
 em que ninguém pode confiar — e este épico existe justamente para produzir a confiança, não só o dado.
@@ -44,7 +44,7 @@ migration aditiva — é regressão.
 
 **Purpose**: o esqueleto do pacote e a leitura confiável das fontes
 
-- [ ] T001 Criar a estrutura de `scripts/etl/` conforme plan.md §Project Structure: `__init__.py`, `_comum.py`, `ordem.py`, `tabelas/`, `dados/{bruto,normalizado}/`
+- [ ] T001 Criar a estrutura de `scripts/etl/` conforme plan.md §Project Structure: `__init__.py`, `_comum.py`, `ordem.py`, `snapshot.py`, `reconciliar.py`, `tabelas/`, `dados/{bruto,normalizado}/` — **`snapshot.py` e `reconciliar.py` acrescentados em 08/09**: o plano os criou e nenhuma tarefa os instanciava (achados F2 e U1)
 - [ ] T002 [P] Acrescentar `scripts/etl/dados/` ao `.gitignore` — os artefatos brutos contêm dado real da MB e o repositório é público (contrato pipeline P-8)
 - [ ] T003 [P] Declarar as dependências Python em `scripts/etl/requirements.txt`: `openpyxl` 3.1.5 (fixado), cliente PostgreSQL, cliente da API do Sheets
 - [ ] T004 Escrever `scripts/etl/ordem.py` com as 25 tabelas na ordem do documento 30 §4 — **é a única definição da ordem no repositório** (FR-016). Nenhum módulo de tabela conhece a ordem
@@ -59,8 +59,10 @@ migration aditiva — é regressão.
 
 **⚠️ CRÍTICO**: nenhuma história começa antes desta fase fechar
 
+- [ ] T006.1 Escrever `scripts/etl/snapshot.py`: gera o **identificador do snapshot** na extração e o carimba em todo artefato de `dados/`. Cada etapa **confere** o identificador na entrada e **recusa** artefato de snapshot diferente (FR-007.1)
+- [ ] T006.2 Implementar em `_comum.py` a construção de **`origem_migracao_v1`** no formato `<tabela_origem>:<chave_original>` — por exemplo `Registros_Aula:REG-001234`. A coluna deixou de ser texto livre: o `CHECK` do FR-025.8 depende dela para admitir UE nula (FR-002.1)
 - [ ] T007 Criar a migration de **P-6** em `supabase/migrations/<ts>_p6_turma_disciplina_instrutor.sql`: `instrutor_id uuid references instrutores(id) on delete restrict` e `ch_prevista_por_instrutor`, **ambas anuláveis**, com comentário citando o achado LIQ-1 — é a LIQ do Épico 11 que lê dali (research R-4)
-- [ ] T008 Criar a migration da **R-1** em `supabase/migrations/<ts>_ue_anulavel_no_historico.sql`: remover `not null` de `registros_aula.unidade_ensino_id` e acrescentar `check (unidade_ensino_id is not null or origem_migracao_v1 is not null)`, com comentário explicando que a decisão UE-1 **continua obrigatória para todo dado novo** (data-model §1.2)
+- [ ] T008 Criar a migration da **R-1** em `supabase/migrations/<ts>_ue_anulavel_no_historico.sql`: remover `not null` de `registros_aula.unidade_ensino_id` e acrescentar `check (unidade_ensino_id is not null or origem_migracao_v1 is not null)`, com **catraca**: nulo só quando `origem_migracao_v1` estiver preenchido **E** `editado_em` for estritamente nulo. Comentário explicando que a decisão UE-1 **continua obrigatória para todo dado novo** (FR-025.8, data-model §1.2)
 - [ ] T009 Escrever o plano de reversão das duas migrations no corpo do PR — campo obrigatório do template (documento 24 §6.3)
 - [ ] T010 Provar que as migrations são aditivas de verdade: `pnpm db:reset` e a suíte pgTAP do Épico 1 (**80 asserções**) continua verde. Migration que quebra invariante existente é regressão, não adição
 - [ ] T011 Acrescentar a asserção pgTAP do `CHECK` da R-1 em `supabase/tests/091_ue_anulavel.sql`: inserir registro **sem** UE e **sem** `origem_migracao_v1` **falha**; com `origem_migracao_v1` **passa**. É o teste que prova que o grão de UE ainda vale para dado novo
@@ -88,10 +90,11 @@ migration aditiva — é regressão.
 
 ### Normalização e cruzamento (etapas 2 e 2-B)
 
+- [ ] T019.1 [US1] Implementar em `_comum.py` os **dois caminhos de data**, separados de propósito: coluna `date` sai e entra como **literal `YYYY-MM-DD`, sem conversão de fuso**; coluna `timestamptz` usa **`America/Sao_Paulo`**. Misturá-los é como o deslocamento de um dia nasce (FR-019, FR-019.1)
 - [ ] T020 [US1] Escrever a normalização (etapa 2): `bruto/*.csv` → `normalizado/<tabela>.csv`, com as colunas do destino e sufixo `_codigo` onde guarda um `ID_*` a resolver
-- [ ] T021 [US1] Implementar a conversão de data com **fuso explícito** e cobrir **datas de fronteira** com teste — é o defeito clássico, invisível na contagem (FR-019)
+- [ ] T021 [US1] Implementar a conversão de data com **fuso explícito** e cobrir **datas de fronteira** com teste — é o defeito clássico, invisível na contagem (FR-019, FR-019.2 — virada de ano, primeiro e último dia de turma, horário de verão)
 - [ ] T021.1 [US1] Implementar a falha nomeada para **coluna obrigatória sem valor na origem** (os cinco `NOT NULL` de `instrutores`, D-08): aborta dizendo qual instrutor e qual coluna. **Valor nunca é fabricado** (FR-018.1)
-- [ ] T022 [US1] Implementar a rejeição de **valor fora de domínio fechado**: interrompe nomeando tabela, coluna e valor. **Nunca** vira padrão silencioso (FR-017)
+- [ ] T022 [US1] Implementar a rejeição de **valor fora de domínio fechado**: interrompe nomeando tabela, coluna e valor. **Nunca** vira padrão silencioso (FR-017). A verificação por coluna cobre os **três** eixos: formato, faixa e domínio (FR-018.2)
 - [ ] T023 [US1] Escrever `scripts/etl/cruzar_ue.py` — etapa 2-B, passo 1: `curso_sigla` da planilha → curso da v2.0
 - [ ] T024 [US1] Implementar o **passo 2** do cruzamento em `cruzar_ue.py`: `curso + data` → **turma**, pela janela de datas da turma. Data que cai na janela de **duas** turmas do mesmo curso → veredito `ambiguo`, **não casa** (contrato cruzamento-ue §A chave)
 - [ ] T025 [US1] Implementar o **passo 3**: `turma + data + disciplina` → registro de aula na staging, resolvendo o código da disciplina entre os dois espaços de nomes (data-model §3.1)
@@ -103,6 +106,7 @@ migration aditiva — é regressão.
 ### Carga e promoção (etapas 3 e 4)
 
 - [ ] T029 [US1] Implementar a etapa 3: `truncate` + `COPY` de `normalizado/*.csv` para `staging.*`, **tudo `text`**, sem conversão (contrato pipeline P-2)
+- [ ] T029.1 [US1] Capturar o **estado do `migracao_log` antes da carga** — checksum das linhas históricas — para que a integridade seja provável por comparação antes/depois, não por contagem nem amostragem (FR-004.1)
 - [ ] T030 [US1] Implementar a etapa 4 em `executar.py`: promoção na ordem de `ordem.py`, **numa transação única** — ou as 25 tabelas entram, ou nenhuma (FR-005)
 - [ ] T031 [US1] Garantir que `config_listas` é a **tabela nº 1**: quatro gatilhos validam contra ela, e carregá-la depois faz os 1.566 registros de aula falharem com "valor fora do domínio", sem a mensagem dizer que o problema é a ordem (contrato pipeline P-5)
 - [ ] T032 [US1] Tratar a **armadilha A** do documento 30 §3.1: `app.set_auditoria()` descarta os carimbos em silêncio quando não há sessão autenticada
@@ -126,14 +130,19 @@ migration aditiva — é regressão.
 **Independent Test**: mover uma FK de propósito e confirmar que a reconciliação acusa com a contagem total intacta.
 
 - [ ] T043 [US2] Implementar **R-01** em `scripts/etl/reconciliar.py`: contagem por tabela contra o documento 05 §10. **Uma linha de diferença bloqueia** (FR-009)
+- [ ] T043.1 [P] [US2] Tratar **contagem esperada zero** como valor válido e verificado — hoje `planejamento_anual`. Tabela **ausente** é falha distinta e reportada como tal (FR-009.3)
 - [ ] T044 [US2] Implementar **R-02**, o somatório de **TA por turma**, origem × destino, incluindo aula, aplicação de avaliação, vista de prova e atividade não letiva. Aceite: **0 nas 29 turmas, sem tolerância** (FR-010)
+- [ ] T044.1 [US2] Somar o lado da **origem em bruto**: `staging.*` **sem cláusula `WHERE`**, com a conversão numérica feita **na própria consulta de reconciliação** — nunca reaproveitando a conversão da normalização, que é o que está sob suspeita (FR-014.1, plan.md §A nota que o FR-014.1 exigiu)
 - [ ] T045 [P] [US2] Implementar **R-03**: zero FK órfã em toda a base (FR-011)
+- [ ] T045.1 [US2] Fazer a verificação de órfãs ser **por coluna**, com a lista das FK anuláveis declarada — `registros_aula.unidade_ensino_id`, `registros_aula.instrutor_id`, `turma_disciplina.instrutor_id`. **Nulo não é órfã**: sem isso, os 1.566 nulos legítimos seriam contados como violação (FR-011.1)
 - [ ] T046 [P] [US2] Implementar **R-04** como **relação estrutural**, não como literal: as três identidades fecham sobre a linha de base vigente. Os números de 02/08 são a foto inicial (FR-012, redação corrigida)
 - [ ] T047 [P] [US2] Implementar **R-05**: `codigo` não nulo e único, procedência preenchida, em 100% das linhas (FR-002)
 - [ ] T048 [P] [US2] Implementar **R-07**: `turma_disciplina` com **89** períodos herdados e **121** em branco, exatamente como na origem (FR-013)
 - [ ] T049 [US2] Implementar o relatório em `dados/relatorio_divergencia.md` com **veredito explícito** e **cada divergência nomeada** — "2 divergências" não serve; serve "tabela X, linha Y, esperado Z, obtido W" (FR-014, contrato C-2)
+- [ ] T049.1 [US2] Fazer a reconciliação **falhar com erro nomeado** quando não conseguir ler — staging ausente, conexão perdida. Ausência de divergência por ausência de leitura **não é aprovação** (FR-014.2, `RN-DEG-01`)
+- [ ] T049.2 [US2] Implementar o **checksum canônico** em `reconciliar.py`: **`md5()`** sobre a concatenação textual dos valores, ordenada pelas colunas de negócio, **excluindo `id` e o quarteto de auditoria**, e **pulando `migracao_log`** por lista explícita (FR-006, FR-006.1)
 - [ ] T050 [US2] Separar no relatório o que **bloqueia** (R-01 a R-08) do que **informa** (U-01, U-02) e do que é **esperado** (U-03, os 17 cursos sem fonte de UE) — contrato reconciliacao C-5
-- [ ] T051 [US2] Escrever as invariantes em `supabase/tests/090_reconciliacao_etl.sql` (pgTAP), uma asserção **nomeada** por verificação bloqueante
+- [ ] T051 [US2] Escrever as invariantes em `supabase/tests/090_reconciliacao_etl.sql` (pgTAP), uma asserção **nomeada** por verificação bloqueante. A lista é **fechada** em R-01 a R-08 — critério de bloqueio não se acrescenta em tempo de execução (FR-015.1)
 - [ ] T052 [US2] **Provar que a R-02 prova algo**: mover um registro de aula de turma à mão e confirmar que a reconciliação **acusa**, com a contagem total inalterada. Se passar, a verificação não vale nada (quickstart V-3, SC-008)
 
 ---
@@ -146,9 +155,9 @@ migration aditiva — é regressão.
 
 - [ ] T053 [US3] Preencher `codigo` com o `ID_*` da v2.0 **verbatim** e `origem_migracao_v1` em toda linha migrada (FR-002)
 - [ ] T054 [US3] Transportar `migracao_log` **íntegro** — as 717+ linhas históricas sem nenhuma reescrita — e **continuar** a numeração, nunca reiniciar (FR-004)
-- [ ] T055 [US3] Gravar `migracao_log` **em bloco, no fim** da transação: escrever durante a carga faz um `ROLLBACK` levar o log junto (contrato pipeline P-6)
+- [ ] T055 [US3] Gravar `migracao_log` **em bloco, no fim** da transação: escrever durante a carga faz um `ROLLBACK` levar o log junto (contrato pipeline P-6). A gravação acontece **dentro** da transação: carga sem registro de carga não é estado alcançável (FR-004.3)
 - [ ] T056 [US3] Registrar em `migracao_log` a **família 2**: por UE recuperada, de qual arquivo, aba e linha da v1.0 ela veio (FR-025.6)
-- [ ] T057 [US3] Registrar a **família 3**: por registro **não** casado, com o veredito. **A ausência é o que alguém vai querer explicar depois** (contrato X-3)
+- [ ] T057 [US3] Registrar a **família 3**: por registro **não** casado, com o veredito. **A ausência é o que alguém vai querer explicar depois** (contrato X-3, FR-004.2)
 - [ ] T058 [US3] Provar que `migracao_log` recusa `UPDATE` e `DELETE` **de todo perfil, inclusive o administrativo** — o gatilho já existe desde o Épico 1; aqui se prova que a carga não o contorna (SC-006, quickstart V-6)
 - [ ] T059 [US3] Provar o rastro de ponta a ponta: escolher uma linha ao acaso e reconstruir sua origem **usando apenas o banco** (SC-005)
 
@@ -162,9 +171,9 @@ migration aditiva — é regressão.
 
 - [ ] T060 [US4] Garantir que **nenhuma etapa escreve na origem** — leitura apenas, em todo o pipeline (FR-021)
 - [ ] T061 [US4] Implementar a **sondagem prévia** do documento 30 §7.6, executável contra a planilha real **antes** do corte, antecipando as divergências conhecidas (FR-020)
-- [ ] T061.1 [US4] Fazer a sondagem **refazer a linha de base** da contagem contra a planilha ao vivo **e recalcular as três identidades** sobre ela, registrar o **delta contra o documento 05 §10** e submetê-lo a aprovação **antes** de virar critério. Sem isso o FR-009 reprova por construção (FR-009.1, FR-012)
+- [ ] T061.1 [US4] Fazer a sondagem **refazer a linha de base** da contagem contra a planilha ao vivo **e recalcular as três identidades** sobre ela, registrar o **delta contra o documento 05 §10** e submetê-lo a **aprovação nominal de Bernardo, com justificativa linha a linha**, antes de virar critério. **Todo** número herdado do inventário de 02/08 segue esta linha de base — identidades, 89/121, volume, log e avaliações órfãs. Sem isso o FR-009 reprova por construção (FR-009.1, FR-009.2, FR-012)
 - [ ] T062 [US4] Reconferir o inventário na sondagem: o de 02/08/2026 **já não corresponde** à planilha ao vivo — ela ganhou `Turma_Disciplina` em 20/08 e o log passou de `LOG-001060` (pendência **P-8**)
-- [ ] T063 [US4] Instrumentar `executar.py` para registrar o **tempo de cada etapa**, e rodar o ensaio completo medindo o total (FR-021, quickstart V-7)
+- [ ] T063 [US4] Instrumentar `executar.py` para registrar **etapa corrente e tempo de cada etapa** — para distinguir carga lenta de carga travada — e rodar o ensaio completo medindo o total (FR-021, FR-021.1, quickstart V-7)
 - [ ] T064 [US4] Executar `quickstart.md` V-4 e conferir a distribuição dos quatro vereditos do cruzamento, com os `ambiguo` e `sem_fonte` **nomeados** no relatório
 
 ---

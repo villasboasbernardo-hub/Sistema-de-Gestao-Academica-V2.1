@@ -461,7 +461,7 @@ planilha volta a ser a fonte de verdade sem perda.
 - **FR-025.3**: Para os **17 cursos sem planilha de origem**, a Unidade de Ensino MUST permanecer
   `NULL`. É **exceção declarada** à regra de não usar nulo, e vale **apenas** para esses registros:
   continua proibido criar UE sintética. *(decisão de 07/09/2026)*
-- **FR-025.4**: `CAHO_2026.xlsx` MUST ser usada **apenas como fonte de transporte**
+- **FR-025.12**: `CAHO_2026.xlsx` MUST ser usada **apenas como fonte de transporte**
   *(decisão de 08/09/2026)*. Ela MUST NOT ser usada como padrão-ouro de não regressão — a rejeição
   de 10/08/2026 permanece nesse papel e não foi reaberta.
 - **FR-025.5**: Nenhuma planilha usada como fonte de transporte MUST ser tratada como **padrão-ouro

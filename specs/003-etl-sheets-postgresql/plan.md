@@ -222,4 +222,4 @@ conforme as decisões entravam. O que mudou em cada um:
 | `data-model.md`                 | Ciclo de vida da staging corrigido (truncada no início, não descartada ao fim); §1.2 passou de pendência a decisão aplicada                             |
 | `contracts/cruzamento-ue.md`    | Quinto veredito `nao_aplicavel`; normalização do `1P`; cabeçalho repetido; A-1 e A-2 encerrados                                                         |
 | `contracts/reconciliacao.md`    | R-04 virou relação estrutural; R-08 ganhou a exclusão de `id`, auditoria e `migracao_log`                                                               |
-| `quickstart.md`                 | Sem mudança — os oito blocos de validação continuam válidos                                                                                            |
+| `quickstart.md`                 | **Corrigido em 08/09, depois do `/speckit-analyze`:** o V-4 listava **4 vereditos** e o contrato tem **5**. A afirmação anterior — "sem mudança" — estava errada, e era minha |

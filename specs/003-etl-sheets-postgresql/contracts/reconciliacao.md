@@ -13,7 +13,7 @@
 | **R-05** | `codigo` não nulo e único; procedência preenchida | 100% | **Sim** |
 | **R-06** | `migracao_log` histórico intacto | **717+** linhas, nenhuma reescrita | **Sim** |
 | **R-07** | `turma_disciplina` com **89** herdados e **121** em branco | exato | **Sim** |
-| **R-08** | Idempotência das tabelas de negócio | checksums idênticos **excluindo `id` e o quarteto de auditoria**; `migracao_log` **fica fora** (FR-006, FR-006.1) | **Sim** |
+| **R-08** | Idempotência das tabelas de negócio | **`md5()`** sobre a concatenação textual ordenada pelas colunas de negócio, **excluindo `id` e o quarteto de auditoria**; `migracao_log` **fica fora** (FR-006, FR-006.1) | **Sim** |
 | **U-01** | UEs recuperadas por cruzamento | — | Não — **informa** |
 | **U-02** | Registros `ambiguo` e `sem_fonte` | — | Não — **exigem leitura humana** |
 | **U-03** | Registros `fora_de_cobertura` (17 cursos) | esperado | **Não** — é o previsto |
