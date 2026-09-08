@@ -155,6 +155,24 @@ Transportar dela é transporte. Comparar contra ela seria validação — e essa
 - **X-6**: as planilhas da v1.0 **nunca** são versionadas. Protegidas no `.gitignore` em 07/09/2026,
   antes de qualquer commit. O repositório é público.
 
+## Os `sem_fonte` — medidos e justificados em 08/09/2026
+
+Depois da ponte, restaram **282** registros sem fonte de UE, de 1.566. Foram medidos **exaustivamente**
+para atestar que não escondem defeito sistêmico de cruzamento:
+
+| Causa | | Leitura |
+| --- | ---: | --- |
+| Dia **e** disciplina existem na v1.0, **mas não no mesmo dia** | **180** (63%) | **Divergência entre previsto e executado.** A v1.0 é o planejamento; a v2.0 é o que aconteceu. Aula remarcada e disciplina trocada de dia são o objeto do Épico 7 — não são erro de leitura |
+| Disciplina ausente na planilha da v1.0 | **97** (34%) | **A ponte se recusando a adivinhar**, e é o desfecho desejado. São **5 pares**; o maior é `AUXNAVFR-008` = *"AUXÍLIOS À NAVEGAÇÃO."* contra a v1.0 *"ADM DE AUXÍLIOS À NAVEGAÇÃO"*, já pareada com `ADMANFR-014`. A regra de melhor par mútuo barrou — casá-los poria **36 registros na UE da disciplina errada** |
+| Dia ausente na planilha | 5 (1%) | Falha pontual da v1.0 |
+
+**Distribuição:** espalhados pelos 5 cursos com fonte (20 a 116 cada), em 20 a 83 dias distintos por
+curso. **Sem concentração** — o padrão de ruído legítimo, não o de defeito.
+
+**Decisão registrada:** os 282 ficam com Unidade de Ensino **nula**, amparados pelo `CHECK` do
+FR-025.8, e cada um leva seu motivo em `migracao_log` (FR-004.2, família c). Nenhum é preenchido por
+aproximação.
+
 ## Cobertura final
 
 **7 arquivos · 7 cursos · 1.270 UEs · 7.421 lançamentos.** Dos 24 cursos, **17 ficam sem fonte** e

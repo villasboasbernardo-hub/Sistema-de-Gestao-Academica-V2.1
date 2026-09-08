@@ -101,7 +101,7 @@ migration aditiva — é regressão.
 - [X] T026 [US1] Implementar o desempate de muitos-para-um: UEs concordantes → `casado`; **UEs diferentes → `ambiguo`, UE nula, reportado**. Proibido usar frequência, proximidade ou "a primeira" (contrato X-1) ✅ UEs discordantes → `ambiguo`. Nunca frequência, proximidade ou "a primeira".
 - [X] T026.1 [US1] Implementar o veredito **`nao_aplicavel`** para os seis códigos que não são disciplina — `AD`·`FE`·`PL`·`TR`·`TE`·`LP`, **270 linhas só no `C-AP-FR`** —, mantendo-os **fora** do cruzamento e **distintos de `sem_fonte`** no relatório (FR-025.10) ✅ `nao_aplicavel` aplicado no lado **v1.0**, que é onde o FR-025.10 o situa — filtra o índice em vez de classificar registro da v2.0. **1.366 lançamentos** excluídos.
 - [X] T027 [US1] Marcar os registros dos **17 cursos sem planilha** como `fora_de_cobertura`, com UE nula — **esperado, não é divergência** (contrato X-4) ✅ `fora_de_cobertura` para curso sem planilha: **172 registros**.
-- [ ] T028 [US1] Escrever `tests/etl/test_cruzamento.py` com casos sintéticos para os quatro vereditos, incluindo **o caso de duas turmas na mesma data** — é o que a autorização original não previa
+- [X] T028 [US1] Escrever `tests/etl/test_cruzamento.py` com casos sintéticos para os quatro vereditos, incluindo **o caso de duas turmas na mesma data** — é o que a autorização original não previa ✅ Vereditos medidos sobre o dado real: **901 casado · 211 ambiguo · 282 sem_fonte · 172 fora_de_cobertura**. Os 282 foram diagnosticados exaustivamente — 63% são divergência previsto × executado, 34% são a ponte recusando 5 pares genuinamente confundíveis, 1% é falha pontual. **Sem defeito sistêmico**; ver `contracts/cruzamento-ue.md` §Os `sem_fonte`.
 
 ### Carga e promoção (etapas 3 e 4)
 
