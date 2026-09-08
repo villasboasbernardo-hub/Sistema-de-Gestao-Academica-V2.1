@@ -18,7 +18,7 @@
 -- "conserte" o que nao esta quebrado.
 -- =====================================================================================
 begin;
-select plan(7);
+select plan(8);
 
 insert into public.cursos (id, codigo, nome_curso, classificacao) values
   ('11111111-0000-0000-0000-0000000000d1', 'NORM-A', 'Curso Normativo', 'regular');
@@ -67,11 +67,27 @@ select is(
   'RN-2027-06 · regime de 20h tem faixa 8-12h, e nao "20"'
 );
 
--- Todo parametro declara a norma de que veio. Sem isso, revisao normativa vira arqueologia.
+-- Todo parametro NORMATIVO declara a norma de que veio. Sem isso, revisao normativa
+-- vira arqueologia.
+--
+-- ⚠️ O `natureza = 'normativo'` entrou em 08/09/2026, quando a carga real do Epico 2
+--    trouxe `id_template_ficha_instrutor` — ID de template do Google Docs (spec 022),
+--    parametro OPERACIONAL, que nao vem de norma nenhuma e nao tem fundamento a citar.
+--    O recorte NAO afrouxa a regra: `natureza` nasce `normativo` por default, de modo
+--    que parametro novo continua obrigado; ser operacional exige declaracao explicita
+--    em `mapa.PARAMETROS_OPERACIONAIS`.
 select is_empty(
   $$select chave from public.config_parametros
-     where fundamento_normativo is null or btrim(fundamento_normativo) = ''$$,
+     where natureza = 'normativo'
+       and (fundamento_normativo is null or btrim(fundamento_normativo) = '')$$,
   'RNF-NORM-08 · todo parametro normativo declara o seu fundamento'
+);
+
+-- E a regra acima nao depende deste teste rodar: o banco a impoe. Asserir a existencia
+-- do CHECK e o que separa "passou hoje" de "nao e possivel gravar o contrario".
+select has_check(
+  'public', 'config_parametros',
+  'RNF-NORM-08 (PROVA) · o CHECK config_param_normativo_tem_fundamento existe no banco'
 );
 
 -- ============================ FR-046 — dominio administravel muda sem migration

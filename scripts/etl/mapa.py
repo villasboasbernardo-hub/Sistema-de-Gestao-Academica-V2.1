@@ -109,7 +109,7 @@ CONFIG_PARAMETROS = MapaDeTabela(
          "os limites de TA por dia (RNF-NORM-08). 13 chaves de seed normativo vem da "
          "migration 03, NAO da planilha — e diferenca ESPERADA na R-01."),
     colunas=(
-        C("Chave", "chave", T.TEXTO, "🛑 CHECK '^[a-z][a-z0-9_.]*$'. As linhas PRIORIDADE_DISCIPLINA_{ID_Grade} violavam-no em 4 pontos — P-7 RESOLVIDA no Epico 1: virou disciplinas.prioridade_alocacao_peso"),
+        C("Chave", "chave", T.DOMINIO, "🛑 CHECK '^[a-z][a-z0-9_.]*$' e a v2.0 escreve `TETO_AEC_PCT` — DOMINIO minusculiza, que e o que a chave pede. 🛑 CHECK '^[a-z][a-z0-9_.]*$'. As linhas PRIORIDADE_DISCIPLINA_{ID_Grade} violavam-no em 4 pontos — P-7 RESOLVIDA no Epico 1: virou disciplinas.prioridade_alocacao_peso"),
         C("Valor", "valor", T.TEXTO, "sempre texto; `tipo` diz como interpretar"),
         C("Tipo", "tipo", T.DOMINIO, "CHECK in (numero, percentual, inteiro, texto, booleano)"),
         C("Unidade", "unidade", T.TEXTO_OU_NULO),
@@ -261,25 +261,49 @@ INSTRUTORES = MapaDeTabela(
         C("Data_Nascimento", "data_nascimento", T.DATA_CIVIL),
         C("Dep_Divisao", "dep_divisao", T.TEXTO_OU_NULO, "era 'Dep. / Divisao' na v1.0 — achado (g)"),
         C("Data_Assuncao_Setor", "data_assuncao_setor", T.DATA_CIVIL, "insumo de vw_instrutor_carga_anual"),
-        C("E-mail", "email", T.TEXTO, "lower(btrim). CHECK de formato; UQ parcial WHERE ativo"),
-        C("Regime de trabalho", "regime_trabalho", T.DOMINIO, "20h/40h/Dedicacao Exclusiva. ⚠️ CORRIGE o defeito historico de usar o NUMERO do regime como teto (RNF-NORM-03)"),
+        C("Email", "email", T.TEXTO, "lower(btrim). CHECK de formato; UQ parcial WHERE ativo. ⚠️ o documento 31 escreve `E-mail`; a base tem `Email`"),
+        C("Regime_Trabalho", "regime_trabalho", T.DOMINIO, "20h/40h/Dedicacao Exclusiva. ⚠️ CORRIGE o defeito historico de usar o NUMERO do regime como teto (RNF-NORM-03). ⚠️ o documento 31 escreve `Regime de trabalho`; a base tem `Regime_Trabalho`"),
         C("Nivel_Escolaridade", "nivel_escolaridade", T.TEXTO_OU_NULO),
         C("Formacao_Principal_Secundaria", "formacao_principal_secundaria", T.TEXTO_OU_NULO),
         C("Capacitacao_Didatica", "capacitacao_didatica", T.TEXTO_OU_NULO, "vazio em 83,6% — ALERTA, NUNCA BLOQUEIO (RNF-NORM-05)"),
         C("Data_Inicio_Docencia_MB", "data_inicio_docencia_mb", T.DATA_CIVIL),
         C("Data_Inicio_Docencia_CIAARA", "data_inicio_docencia_ciaara", T.DATA_CIVIL, "⚠️ CHECK CIAARA >= MB — pode recusar dado inconsistente"),
-        C("Ultima_Avaliacao_Desempenho", "ultima_avaliacao_desempenho", T.TEXTO_OU_NULO, "⚠️ havia script de remocao NAO EXECUTADO na v2.0 — conferir se a coluna ainda existe"),
-        C("Data_Avaliacao_Desempenho", "data_avaliacao_desempenho", T.DATA_CIVIL),
+        # ⚠️ `Ultima_Avaliacao_Desempenho` REMOVIDA do mapa em 08/09/2026: o documento 31
+        # dizia "havia script de remocao NAO EXECUTADO — conferir se a coluna ainda existe".
+        # Conferido: FOI EXECUTADO. A coluna nao existe mais na base.
+        C("Data_Avaliacao", "data_avaliacao_desempenho", T.DATA_CIVIL, "⚠️ o documento 31 escreve `Data_Avaliacao_Desempenho`; a base tem `Data_Avaliacao`"),
         C("Preferencia", "preferencia", T.TEXTO_OU_NULO, "preferencia de horario semanal"),
         C("Disciplinas_Ministradas", "disciplinas_ministradas_legado_v1", T.BRUTO, "⚠️ LEGADO. Texto livre da v1.0. NAO e fonte de atribuicao — a fonte e instrutor_disciplina"),
         C("Antiguidade_Declarada", "antiguidade_declarada", T.BRUTO, "achado (d): dado VIVO (177/177), nao morto. Criterio de desempate da RN-ANT"),
         C(None, "antiguidade_declarada_num", T.GERADA, "digitos extraidos por regex, para ordenacao"),
         C("Status", "status", T.STATUS, "decisao da migracao, nao observacao — evento no log"),
-        C("Estado", None, T.STAGING, "⚠️ P-3: adicionada pela spec 025, sem definicao semantica => nao modelada"),
-        C("Tempo no setor (Anos)", None, T.DESCARTADA, "FORMULA -> vw_instrutor_carga_anual"),
-        C("Docente <= 2 disciplinas?", None, T.DESCARTADA, "idem"),
-        C("Carga horaria ministrada no ano", None, T.DESCARTADA, "RN-INST-04: carga e SEMPRE calculada, nunca digitada"),
-        C("Instrutor Completo", None, T.DESCARTADA, "removida pela spec 025 e NAO recriada: RN-INST-03 passa a ser garantida pelos cinco NOT NULL"),
+        # ⚠️ `Estado` REMOVIDA do mapa em 08/09/2026: o documento 31 a marcava como P-3
+        # ("sem definicao semantica => nao modelada"). Conferido: nao existe mais na base.
+        C("Tempo_Setor_Anos", None, T.DESCARTADA, "FORMULA -> vw_instrutor_carga_anual"),
+        C("Docente_Ate_2_Disciplinas", None, T.DESCARTADA, "idem"),
+        C("Carga_Horaria_Ministrada_Ano", None, T.DESCARTADA, "RN-INST-04: carga e SEMPRE calculada, nunca digitada"),
+        # ⚠️ `Instrutor Completo` REMOVIDA do mapa em 08/09/2026: o proprio documento 31
+        # registrava que a spec 025 a removeu. Conferido na base: nao existe.
+        # -------------------------------------------------------------------------
+        # DADOS PESSOAIS — 13 colunas que a base tem e o documento 31 nao conhecia.
+        # Vieram da spec de ficha de docentes; sem elas, 177 instrutores x 12 campos
+        # ficariam para tras, contra o FR-001.
+        # Migradas por AUTORIZACAO DA CIAARA-14.2, 08/09/2026, que liberou a
+        # hospedagem de dado pessoal em nuvem comercial.
+        # -------------------------------------------------------------------------
+        C("CPF", "cpf", T.TEXTO_OU_NULO, "DADO PESSOAL. Texto: preserva zero a esquerda e formatacao"),
+        C("RG", "rg", T.TEXTO_OU_NULO, "DADO PESSOAL"),
+        C("Orgao_Emissor", "orgao_emissor", T.TEXTO_OU_NULO),
+        C("Telefone", "telefone", T.TEXTO_OU_NULO, "DADO PESSOAL"),
+        C("RETELMA", "retelma", T.TEXTO_OU_NULO, "rede telefonica da MB — termo institucional"),
+        C("Endereco_Logradouro", "endereco_logradouro", T.TEXTO_OU_NULO, "DADO PESSOAL"),
+        C("Endereco_Numero", "endereco_numero", T.TEXTO_OU_NULO, "TEXTO: a origem traz 's/n', '12-A', 'KM 5'"),
+        C("Endereco_Complemento", "endereco_complemento", T.TEXTO_OU_NULO),
+        C("Endereco_Bairro", "endereco_bairro", T.TEXTO_OU_NULO, "DADO PESSOAL"),
+        C("Endereco_Cidade", "endereco_cidade", T.TEXTO_OU_NULO),
+        C("Endereco_Estado", "endereco_estado", T.TEXTO_OU_NULO),
+        C("Endereco_CEP", "endereco_cep", T.TEXTO_OU_NULO, "DADO PESSOAL. Texto: preserva hifen e zero a esquerda"),
+        C("Area_Conhecimento", "area_conhecimento", T.TEXTO_OU_NULO, "NAO e dado pessoal; estava no mesmo bloco nao mapeado"),
         C("ID_Instrutor", "origem_migracao_v1", T.PROCEDENCIA),
         *_AUD_EDIT,
     ),
@@ -310,7 +334,8 @@ DISCIPLINAS = MapaDeTabela(
         C(None, "tecnica_ensino_sugerida", T.LITERAL, "⚠️ NULL. Coluna nova SEM ORIGEM: a spec 033 confirmou que nao existe na planilha (DISC-1, 15/08)"),
         C(None, "local_padrao", T.LITERAL, "⚠️ NULL, idem"),
         C("Status", "status", T.STATUS, "a duplicata C-Esp-ALH/ALH-II tem 1 ativo + 1 inativo — o indice UQ e PARCIAL por isso"),
-        C("Instrutores_Selecionados", None, T.DESCARTADA, "ja removida (spec 033). Era FORMULA derivada e estava #ERROR!. A exibicao vira JOIN"),
+        # ⚠️ `Instrutores_Selecionados` REMOVIDA do mapa em 08/09/2026: o documento 31
+        # ja registrava que a spec 033 a removeu. Conferido na base: nao existe.
         C(None, "prioridade_alocacao_peso", T.LITERAL, "NULL na carga. ⚠️ P-7 RESOLVIDA no Epico 1 — a coluna existe; a origem em Config_Parametros violava o CHECK de chave"),
         C("ID_Grade", "origem_migracao_v1", T.PROCEDENCIA, "traz o rastro Cad_Materias:* da v1.0"),
         *_AUD_EDIT,
@@ -355,12 +380,13 @@ INSTRUTOR_DISCIPLINA = MapaDeTabela(
         C("ID_Grade_Legado_v1", None, T.DESCARTADA, "so existia para o vinculo orfao VIN-000419, ja corrigido. Se tiver conteudo, vai para migracao_log.valor_antes"),
         C("Modo_Atribuicao", "modo_atribuicao", T.DOMINIO, "Herdar/Dividido/Simultaneo. `herdar` le disciplinas.modo_atribuicao_padrao (RN-MAT-05)"),
         C("Status", "status", T.STATUS),
-        C("Instrutor (Posto/Grad. e Nome)", None, T.DESCARTADA, "FORMULA -> vw_instrutor_disciplina_rotulada"),
-        C("Matéria", None, T.DESCARTADA, "idem"),
-        C("Curso", None, T.DESCARTADA, "idem"),
+        C("Instrutor_Descricao", None, T.DESCARTADA, "FORMULA -> vw_instrutor_disciplina_rotulada. ⚠️ o documento 31 escreve `Instrutor (Posto/Grad. e Nome)`"),
+        C("Disciplina", None, T.DESCARTADA, "idem. ⚠️ o documento 31 escreve `Matéria` — renomeada pela P-14"),
         C(None, "papel_liq", T.DESCARTADA, "[DEFERIDO] achado LIQ-3 (Titular/Reserva_1/Reserva_2, Anexo C NORMHIDRO 30-23) — decisao de 20/08/2026"),
         C("ID_Vinculo", "origem_migracao_v1", T.PROCEDENCIA),
-        *_AUD_EDIT,
+        # ⚠️ SEM colunas de auditoria: conferido em 08/09/2026, esta aba NAO tem
+        # `Editado_Por` nem `Timestamp_Edicao` na base, ao contrario do que o
+        # documento 31 mapeia. O quarteto fica a cargo do gatilho set_auditoria().
     ),
 )
 
@@ -376,7 +402,7 @@ USUARIOS = MapaDeTabela(
         C("Nome", "nome", T.TEXTO),
         C(None, "nome_exibicao", T.LITERAL, "NULL — coluna nova; a UI cai para `nome`"),
         C("Perfil", "perfil", T.DOMINIO, "⚠️ substitui o Funcao de 3 valores da v1.0; ENUM de 9 valores"),
-        C("Funcao", None, T.DESCARTADA, "dominio de 3 valores superado por Perfil. Valor bruto vai para migracao_log.valor_antes"),
+        C("Funcao_Legado_v1", None, T.DESCARTADA, "dominio de 3 valores superado por Perfil. ⚠️ o documento 31 escreve `Funcao`; a v2.0 ja a renomeou para `Funcao_Legado_v1`"),
         C("Escopo_Curso", "escopo_curso", T.DOMINIO, "vazio -> geral. CHECK: operador EXIGE escopo. Recorte do Operador na RLS"),
         C("ID_Instrutor_Link", "instrutor_id", T.FK_OPCIONAL, "instrutores — liga a conta ao cadastro docente"),
         C("Status", "status", T.STATUS, "⚠️ inativo faz app.usuario_atual() devolver NULL — PERDA DE ACESSO IMEDIATA (teste T-11)"),
@@ -384,7 +410,9 @@ USUARIOS = MapaDeTabela(
         C(None, "auth_user_id", T.LITERAL, "⚠️ NULL na carga. Preenchido pelo EPICO 3, no convite. NULL = 'credencial ainda nao criada', e a RLS nega tudo nesse estado, CORRETAMENTE (T-09)"),
         C(None, "observacao", T.LITERAL, "NULL"),
         C("ID_Usuario", "origem_migracao_v1", T.PROCEDENCIA),
-        *_AUD_EDIT,
+        # ⚠️ SEM colunas de auditoria: conferido em 08/09/2026, esta aba NAO tem
+        # `Editado_Por` nem `Timestamp_Edicao` na base, ao contrario do que o
+        # documento 31 mapeia. O quarteto fica a cargo do gatilho set_auditoria().
     ),
 )
 
@@ -450,7 +478,9 @@ AVALIACOES_PLANEJADAS = MapaDeTabela(
         C("Observacoes", "observacoes", T.TEXTO_OU_NULO),
         C("Status", "status", T.STATUS),
         C("ID_Item", "origem_migracao_v1", T.PROCEDENCIA),
-        *_AUD_EDIT,
+        # ⚠️ SEM colunas de auditoria: conferido em 08/09/2026, esta aba NAO tem
+        # `Editado_Por` nem `Timestamp_Edicao` na base, ao contrario do que o
+        # documento 31 mapeia. O quarteto fica a cargo do gatilho set_auditoria().
     ),
 )
 
@@ -770,3 +800,186 @@ def conferir_cobertura(ordem_de_carga: tuple[str, ...]) -> dict[str, list[str]]:
         "na_ordem_sem_mapa": sorted(na_ordem - mapeadas),
         "mapeadas_fora_da_ordem": sorted(mapeadas - na_ordem),
     }
+
+
+# =====================================================================================
+# DE-PARA DE DOMÍNIO — onde a palavra da origem não é a palavra do ENUM
+#
+# POR QUE ISTO EXISTE: o `promover.py` resolve sozinho todo valor que, depois de tirar
+# acento, minúsculo e trocar espaço/hífen por `_`, coincide com um rótulo real do ENUM.
+# Isso cobre a maioria (`Dedicação Exclusiva`→`dedicacao_exclusiva`, `AEC`→`AEC`,
+# `Presencial`→`presencial`). O que sobra são casos em que a v2.0 usa OUTRA PALAVRA —
+# e adivinhar outra palavra é exatamente o que uma migração não pode fazer em silêncio.
+#
+# REGRA DE OURO: valor que não resolve sozinho e não está nesta tabela **aborta a carga**
+# com o nome do valor e a contagem de linhas. Nunca vira NULL, nunca vira "o mais
+# parecido". Ver `promover.conferir_dominios()`.
+#
+# A chave é `(tabela_destino, coluna_destino)`; a chave interna é o valor da origem
+# **verbatim**, como está na planilha.
+# =====================================================================================
+
+DE_PARA_DOMINIO: dict[tuple[str, str], dict[str, str]] = {
+    # -------------------------------------------------------------------------------
+    # `Classificacao` da v2.0 escreve por extenso; o ENUM `escopo_curso` é sintético.
+    # ⚠️ `Curso Especial` e `Curso de Aperfeicoamento Avancado` NAO TINHAM DESTINO: o
+    #    ENUM foi declarado a partir do BRIEF §3, que nao lista os dois. Sao 7 dos 24
+    #    cursos. Os valores foram ACRESCENTADOS ao ENUM pela migration
+    #    `20260908083000_dominios_que_a_base_exige.sql` — ver a justificativa la.
+    # -------------------------------------------------------------------------------
+    ("cursos", "classificacao"): {
+        "Curso Regular": "regular",
+        "Curso Expedito": "expedito",
+        "Estágio de qualificação": "estagio_qualificacao",
+        "Curso Especial": "especial",
+        "Curso de Aperfeiçoamento Avançado": "aperfeicoamento_avancado",
+    },
+    # -------------------------------------------------------------------------------
+    # Modalidade: a v2.0 nunca fechou o dominio (P-4), e a coluna virou texto livre.
+    # As tres formas abaixo sao 1 curso cada. A leitura de cada uma:
+    #   · "A Distância"                     → `ead`: e a forma antiga de escrever EAD.
+    #   · "A Distância (EAD / Presencial)"   → `semipresencial`: o proprio texto diz que
+    #     tem as duas pontas, que e a definicao de semipresencial.
+    #   · "Presencial (podendo ser ministrado por videoconferência síncrona)"
+    #     → `presencial`: videoconferencia SINCRONA e presenca em tempo real; o
+    #     parentese descreve o MEIO, nao muda a modalidade.
+    # -------------------------------------------------------------------------------
+    ("cursos", "modalidade"): {
+        "A Distância": "ead",
+        "A Distância (EAD / Presencial)": "semipresencial",
+        "Presencial (podendo ser ministrado por videoconferência síncrona)": "presencial",
+    },
+    ("turmas", "modalidade"): {
+        "Semi-Presencial": "semipresencial",
+    },
+    # -------------------------------------------------------------------------------
+    # Os 24 cursos trazem `Padrao`. O comentario do proprio ENUM diz qual e o padrao:
+    # "`carga_restante_por_dia_util` e o comportamento atual e fixo da v1.0 (RN-2027-05)
+    # e permanece como default, garantindo nao regressao". `Padrao` da v2.0 e, literal-
+    # mente, esse comportamento — nao ha segunda leitura possivel.
+    # -------------------------------------------------------------------------------
+    ("cursos", "prioridade_alocacao"): {
+        "Padrao": "carga_restante_por_dia_util",
+    },
+    # -------------------------------------------------------------------------------
+    # `Encarregado_Div_Adm_Academica` (17 linhas) e o nome v2.0 do mesmo perfil. O
+    # comentario do ENUM `perfil_usuario` registra que as variacoes "Encarregado/Ajudante
+    # por divisao" foram contadas separadamente no BRIEF e unificadas aqui.
+    # -------------------------------------------------------------------------------
+    ("config_parametros", "editavel_por"): {
+        "Encarregado_Div_Adm_Academica": "encarregado_administracao_academica",
+    },
+    # -------------------------------------------------------------------------------
+    # `Consulta` e o rotulo v1.0 do perfil so-leitura. O documento 31 §Cad_Usuarios
+    # mapeia `Visualizacao`→`visualizacao`; `Consulta` e a forma anterior da MESMA coisa
+    # (o `Funcao` de 3 valores da v1.0 que o `Perfil` substituiu).
+    # -------------------------------------------------------------------------------
+    ("usuarios", "perfil"): {
+        "Consulta": "visualizacao",
+    },
+    # -------------------------------------------------------------------------------
+    # ⚠️ `Adicionado` (2 linhas) e `Descartado` (1) sao verbos da migracao v1.0→v2.0,
+    #    registrados no log HISTORICO que estamos transportando. Cinco dos sete verbos
+    #    ja coincidem com o ENUM. Traduzir estes dois para o verbo mais proximo seria
+    #    REESCREVER LINHA DE LOG JA GRAVADA — o que a regra 5 do CLAUDE.md proibe
+    #    explicitamente ("migracao_log e append-only... corrigir e logar evento novo").
+    #    Por isso os dois valores foram ACRESCENTADOS ao ENUM, preservando o verbo
+    #    verbatim. O mapeamento abaixo e identidade: existe para documentar a decisao.
+    # -------------------------------------------------------------------------------
+    ("migracao_log", "acao"): {
+        "Adicionado": "adicionado",
+        "Descartado": "descartado",
+    },
+    # -------------------------------------------------------------------------------
+    # "20h Semanais" → "20h". O ENUM guarda o rotulo curto porque ele e a CHAVE de
+    # `config_parametros` onde vivem as faixas (RNF-NORM-08): o join so fecha se o
+    # rotulo for identico dos dois lados.
+    # -------------------------------------------------------------------------------
+    # -------------------------------------------------------------------------------
+    # `config_parametros.tipo` NÃO é ENUM — é `text` com CHECK de 5 valores
+    # (`numero, percentual, inteiro, texto, booleano`). A v2.0 usa outro conjunto:
+    # `INTEIRO`, `DECIMAL`, `HORA`, `TEXTO`. Dois casam depois de minúsculo; dois não:
+    #   · `DECIMAL` → `numero`  — é o mesmo conceito com outro nome.
+    #   · `HORA`    → `texto`   — o CHECK não tem tipo temporal, e o valor é uma string
+    #     de hora ("08:00"). `texto` é o que ele é hoje; classificá-lo como `numero`
+    #     seria pior. ⚠️ Se a v2.1 quiser um tipo `hora`, é emenda ao CHECK, não aqui.
+    # -------------------------------------------------------------------------------
+    ("config_parametros", "tipo"): {
+        "DECIMAL": "numero",
+        "HORA": "texto",
+    },
+    ("instrutores", "regime_trabalho"): {
+        "20h Semanais": "20h",
+        "40h Semanais": "40h",
+    },
+}
+
+
+# =====================================================================================
+# SENTINELAS DE CHAVE ESTRANGEIRA — o valor que significa "não aponta para nada"
+#
+# A v2.0 não tinha NULL confortável em planilha, e resolvia a ausência de vínculo com
+# uma palavra combinada. `Calendario_Reservas.ID_Curso = 'GERAL'` não é um curso: é
+# "reserva válida para a Divisão inteira". Cinco dos seis códigos das 12 reservas são
+# cursos de verdade; `GERAL` é este sexto.
+#
+# ⚠️ POR QUE DECLARAR EM VEZ DE DEIXAR O `LEFT JOIN` RESOLVER: sem esta lista, `GERAL`
+#    é indistinguível de uma chave órfã — e chave órfã tem de ABORTAR a carga
+#    (documento 30 §2.6). Declarar a sentinela é o que permite ao conferidor de órfãos
+#    ser rigoroso com todo o resto.
+# =====================================================================================
+
+SENTINELAS_DE_FK: dict[tuple[str, str], frozenset[str]] = {
+    ("reservas_proens", "curso_id"): frozenset({"GERAL"}),
+    # Mesmo `GERAL`, mesma leitura: responsável que assina por toda a Divisão, não por
+    # um curso. São as 2 linhas de `Responsaveis_Curso`, e o `LOG-000399` do próprio
+    # log de migração da v2.0 as descreve: "2 sementes GERAL criadas".
+    ("responsaveis_curso", "curso_id"): frozenset({"GERAL"}),
+}
+
+
+# =====================================================================================
+# COLUNAS MULTIVALORADAS — uma célula da planilha, várias linhas no banco
+#
+# `Turma_Disciplina.ID_Instrutor` guarda LISTA: `'40, 60'`, `'17, 18, 19, 20, 40, 60,
+# 55'`. Seis das 210 linhas. Numa planilha isso é natural; numa FK é impossível — e o
+# `LEFT JOIN` por `codigo` devolvia nulo, perdendo até seis atribuições numa linha só,
+# sem erro.
+#
+# A v2.1 já tem a casa certa: `turma_disciplina_instrutor`, a tabela de junção **de onde
+# a LIQ lê**. Ela existia no schema e o ETL não a usava.
+#
+# ⚠️ O QUE CARREGA ONDE, e por quê:
+#    · `turma_disciplina_instrutor` recebe **TODAS** as atribuições, uma linha por
+#      instrutor — inclusive as de instrutor único. Junção que só tem os casos
+#      múltiplos é pior que junção nenhuma: toda consulta feita sobre ela sairia com
+#      menos atribuições do que existem, e ninguém notaria.
+#    · `turma_disciplina.instrutor_id` continua preenchida **só quando há exatamente
+#      um** — é o atalho desnormalizado, e num caso de sete instrutores não há atalho
+#      possível. Nula ali significa "olhe a junção", não "não há instrutor".
+# =====================================================================================
+
+MULTIVALORADAS: dict[tuple[str, str], str] = {
+    ("turma_disciplina", "instrutor_id"): "turma_disciplina_instrutor",
+}
+
+
+# =====================================================================================
+# PARÂMETROS OPERACIONAIS — os que NÃO vêm de norma
+#
+# `config_parametros.natureza` nasce `normativo`, e `normativo` obriga a citar a norma
+# (CHECK `config_param_normativo_tem_fundamento`). Esta lista é a declaração explícita
+# do contrário — e é curta de propósito: cada entrada aqui é um parâmetro que ninguém
+# vai encontrar ao revisar uma norma.
+#
+# ⚠️ NÃO derivar esta lista de "`Fundamento_Normativo` está vazio". Seria circular: todo
+#    parâmetro sem fundamento viraria operacional sozinho e o invariante RNF-NORM-08
+#    deixaria de provar coisa alguma.
+# =====================================================================================
+
+PARAMETROS_OPERACIONAIS: frozenset[str] = frozenset({
+    # ID do template do Google Docs da Ficha de Docentes (spec 022 da v2.0). Operacional
+    # e, além disso, APOSENTADO: a v2.1 emite a Ficha por `/print/*`, sem Google Docs.
+    # Transportado porque nada é apagado — mas não é norma, e não tem fundamento.
+    "id_template_ficha_instrutor",
+})

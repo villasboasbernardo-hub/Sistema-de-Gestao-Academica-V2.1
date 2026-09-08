@@ -54,6 +54,13 @@ ORDEM_DE_CARGA: tuple[str, ...] = (
 # Tabelas que ficam FORA da comparação de idempotência (FR-006.1).
 # `migracao_log` cresce a cada execução, e isso é o comportamento CORRETO dela:
 # exigir que ficasse idêntica seria exigir que a segunda carga não fosse registrada.
+# Tabelas da v2.1 que nascem de uma aba JÁ USADA por outra tabela — e por isso
+# precisam de `select distinct`. A v2.0 guardava numa planilha só o que o schema
+# normalizou em pai e filho: `Horarios_Tempos_Aula` tem 40 linhas (5 configurações ×
+# 8 tempos); `configuracoes_horario` quer as 5, `horarios_tempos_aula` quer as 40.
+# Sem `distinct`, a primeira tenta inserir 40 linhas com 5 códigos e bate na UNIQUE.
+NASCE_DE_ABA_COMPARTILHADA: frozenset[str] = frozenset({"configuracoes_horario"})
+
 FORA_DA_IDEMPOTENCIA: frozenset[str] = frozenset({"migracao_log"})
 
 # Colunas excluídas do checksum (FR-006). As cinco variam a cada execução POR
