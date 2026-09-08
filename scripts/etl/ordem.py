@@ -67,7 +67,20 @@ FORA_DA_IDEMPOTENCIA: frozenset[str] = frozenset({"migracao_log"})
 # CONSTRUÇÃO: `id` vem de `gen_random_uuid()` e o quarteto vem do gatilho
 # `app.set_auditoria()`. Incluí-las tornaria a idempotência insatisfazível.
 COLUNAS_FORA_DO_CHECKSUM: frozenset[str] = frozenset(
-    {"id", "criado_por", "criado_em", "editado_por", "editado_em"}
+    {
+        "id",
+        "criado_por",
+        "criado_em",
+        "editado_por",
+        "editado_em",
+        # `arquivo_avaliacoes_v1.arquivado_em` e `arquivado_por` são o `now()` e o autor
+        # DA CARGA, não fatos sobre a avaliação arquivada. São o quarteto de auditoria
+        # com outro nome, e ficam fora pela mesma razão: duas cargas idênticas rodam em
+        # instantes diferentes, e um checksum que mudasse por isso não provaria nada.
+        # Achado pela prova T042 em 08/09/2026.
+        "arquivado_em",
+        "arquivado_por",
+    }
 )
 
 # Chaves estrangeiras ANULÁVEIS. Nulo aqui é legítimo e NÃO é órfã (FR-011.1).

@@ -499,12 +499,59 @@ def r07_periodos(con: psycopg.Connection) -> list[Divergencia]:
 #    cada execução por definição. Exigir que o hash dele não mude seria exigir que a
 #    migração não registrasse nada.
 # =====================================================================================
+def _fks_da_tabela(k, tabela: str) -> dict[str, tuple[str, str]]:
+    """`coluna -> (tabela_alvo, coluna_alvo)` das chaves estrangeiras de uma coluna só."""
+    k.execute(
+        """
+        select a.attname, c.confrelid::regclass::text, f.attname
+          from pg_constraint c
+          join pg_attribute a on a.attrelid = c.conrelid  and a.attnum = c.conkey[1]
+          join pg_attribute f on f.attrelid = c.confrelid and f.attnum = c.confkey[1]
+         where c.contype = 'f' and c.conrelid = ('public.' || %s)::regclass
+           and array_length(c.conkey, 1) = 1
+        """,
+        (tabela,),
+    )
+    achadas = {r[0]: (r[1], r[2]) for r in k.fetchall()}
+    # Só serve para o checksum a FK cujo alvo tem `codigo` — a chave de NEGÓCIO, estável
+    # entre cargas. `auth.users` não tem: o `auth_user_id` é criado pelo Supabase Auth,
+    # não pelo ETL. A coluna é excluída do checksum em vez de entrar como UUID cru, o
+    # que reintroduziria a instabilidade que esta função existe para eliminar.
+    com_codigo = {}
+    for coluna, (alvo, coluna_alvo) in achadas.items():
+        k.execute(
+            "select count(*) from information_schema.columns "
+            "where table_schema || '.' || table_name = replace(%s, 'public.', 'public.') "
+            "  and column_name = 'codigo'",
+            (alvo if "." in alvo else f"public.{alvo}",),
+        )
+        com_codigo[coluna] = (alvo, coluna_alvo) if k.fetchone()[0] else None
+    return com_codigo
+
+
 def r08_checksums(con: psycopg.Connection) -> dict[str, str]:
+    """`md5()` canônico por tabela — estável entre cargas, sensível ao que importa.
+
+    ⚠️ A COLUNA DE FK ENTRA PELO `codigo` DO ALVO, NUNCA PELO UUID. O FR-006.1 manda
+    excluir `id` e o quarteto de auditoria, e isso é necessário mas **não é suficiente**:
+    `turmas.curso_id` guarda o `gen_random_uuid()` de `cursos`, que é outro a cada carga.
+    Com o UUID cru, **13 das 23 tabelas davam hash diferente em duas cargas idênticas** —
+    a verificação reprovava por construção, e a "correção" natural seria excluir toda
+    coluna `uuid`. Isso a esvaziaria: mover um lançamento de turma deixaria de mudar o
+    hash, que é precisamente o que a R-08 existe para pegar.
+
+    Trocar o UUID pelo `codigo` do alvo mantém as duas propriedades ao mesmo tempo:
+    estável entre execuções e sensível a **para onde a linha aponta**.
+
+    Descoberto pela prova T042 (`provar_carregador.py`), que é exatamente para isso que
+    a prova existe — a definição do FR-006.1 estava incompleta desde que foi escrita.
+    """
     resultado: dict[str, str] = {}
     with con.cursor() as k:
         for tabela in ordem.ORDEM_DE_CARGA:
             if tabela in ordem.FORA_DA_IDEMPOTENCIA or tabela not in mapa.MAPAS:
                 continue
+            fks = _fks_da_tabela(k, tabela)
             k.execute(
                 "select column_name from information_schema.columns "
                 "where table_schema='public' and table_name=%s order by column_name",
@@ -515,13 +562,32 @@ def r08_checksums(con: psycopg.Connection) -> dict[str, str]:
             ]
             if not colunas:
                 continue
-            concat = " || '' || ".join(f"coalesce({c}::text, '')" for c in colunas)
-            ordenacao = "codigo" if "codigo" in colunas else colunas[0]
+            partes: list[str] = []
+            for c in colunas:
+                if c in fks and fks[c] is None:
+                    continue  # FK sem `codigo` no alvo: fora do checksum, ver acima
+                if c in fks:
+                    alvo, coluna_alvo = fks[c]
+                    partes.append(
+                        f"coalesce((select d.codigo from {alvo} d "
+                        f"where d.{coluna_alvo} = t.{c}), '')"
+                    )
+                else:
+                    partes.append(f"coalesce(t.{c}::text, '')")
+            concat = " || '' || ".join(partes)
+            # ⚠️ ORDENA PELA PRÓPRIA CONCATENAÇÃO, não por uma coluna eleita. Nem toda
+            #    tabela tem `codigo` — `horarios_tempos_aula` não tem — e a eleição
+            #    anterior caía em `configuracao_id`, que se repete 8 vezes por
+            #    configuração: `string_agg` sem chave única não garante ordem, e duas
+            #    cargas idênticas produziam hashes diferentes por permutação. Ordenar
+            #    pelo próprio conteúdo torna o hash um resumo canônico do CONJUNTO,
+            #    sem depender de nenhuma coluna ser única.
+            ordenacao = concat
             resultado[tabela] = (
                 _uma(
                     k,
                     f"select md5(coalesce(string_agg({concat}, '' "
-                    f"order by {ordenacao}), ''))  from public.{tabela}",
+                    f"order by {ordenacao}), ''))  from public.{tabela} t",
                 )
                 or ""
             )
@@ -531,9 +597,19 @@ def r08_checksums(con: psycopg.Connection) -> dict[str, str]:
 # =====================================================================================
 # U-01 a U-03 — informativos. NÃO bloqueiam (contrato C-5).
 # =====================================================================================
-def u_informativos(con: psycopg.Connection) -> tuple[list[Divergencia], list[Divergencia]]:
+def u_informativos(
+    con: psycopg.Connection,
+) -> tuple[list[Divergencia], list[Divergencia], list[Divergencia]]:
+    """Informativos, esperados — e o que a decisão de 08/09 tornou BLOQUEANTE.
+
+    A terceira lista existe porque a decisão sobre as chaves duplicadas mudou a
+    natureza da verificação: enquanto ninguém tinha escolhido, "duas chaves para o
+    mesmo teto" era informação. Escolhida a canônica, deixar a legada ativa passa a ser
+    defeito — e defeito bloqueia.
+    """
     informa: list[Divergencia] = []
     esperado: list[Divergencia] = []
+    bloqueia: list[Divergencia] = []
     with con.cursor() as k:
         sem_ue = _uma(
             k,
@@ -566,29 +642,41 @@ def u_informativos(con: psycopg.Connection) -> tuple[list[Divergencia], list[Div
                 "0 no regime novo", f"{sem_instrutor}"
             )
         )
-        # ⚠️ O MESMO TETO NORMATIVO EM DUAS CHAVES. A migration do Épico 1 semeou
-        #    `teto.aec_percentual_chr` (com fundamento citado) e a v2.0 traz
-        #    `teto_aec_pct`. As duas dizem a mesma coisa, e o `RNF-NORM-08` quer uma
-        #    fonte por parâmetro. NÃO bloqueia — o ETL transporta e o schema semeou,
-        #    ambos corretamente — mas alguém precisa escolher qual fica.
-        k.execute(
-            """
-            select v.chave, n.chave
-              from public.config_parametros v
-              join public.config_parametros n
-                on n.origem_migracao_v1 is null
-               and replace(replace(lower(v.chave), '_pct', ''), '_', '.')
-                   = replace(replace(lower(n.chave), '.percentual.chr', ''), '_', '.')
-             where v.origem_migracao_v1 is not null
-            """
-        )
-        for da_v20, do_schema in k.fetchall():
-            informa.append(
-                Divergencia(
-                    "U-02", "config_parametros", "mesmo parametro, duas chaves",
-                    f"schema: {do_schema}", f"v2.0: {da_v20}"
-                )
+        # ⚠️ A CHAVE CANÔNICA É A ÚNICA ATIVA. Decisão de Bernardo, 08/09/2026: das 13
+        #    duplicidades de nomenclatura, fica valendo a chave da v2.1 semeada pela
+        #    migration; a da v2.0 é transportada e chega `inativo`.
+        #
+        #    A primeira versão desta verificação casava as chaves por um `replace` de
+        #    padrão — e só achou 4 dos 13 pares, porque só o formato `ch_docente`
+        #    coincidia com o padrão. Agora lê a lista DECLARADA, que é a mesma que o
+        #    carregador usa: uma fonte de verdade, não duas heurísticas parecidas.
+        for legada, canonica in sorted(mapa.PARAMETROS_SUPERADOS_PELO_SEED.items()):
+            estado = _uma(
+                k,
+                "select status::text from public.config_parametros where chave = %s",
+                (legada,),
             )
+            ativa_canonica = _uma(
+                k,
+                "select status::text from public.config_parametros where chave = %s",
+                (canonica,),
+            )
+            if estado != "inativo" or ativa_canonica != "ativo":
+                # Bloqueante: a decisão era manter EXCLUSIVAMENTE a canônica ativa.
+                bloqueia.append(
+                    Divergencia(
+                        "R-05", "config_parametros", f"{legada} → {canonica}",
+                        "legada inativo, canonica ativo",
+                        f"legada {estado}, canonica {ativa_canonica}",
+                    )
+                )
+        esperado.append(
+            Divergencia(
+                "U-03", "config_parametros", "chaves legadas desativadas",
+                "previsto — decisão de 08/09/2026, a canônica da v2.1 é a que vale",
+                f"{len(mapa.PARAMETROS_SUPERADOS_PELO_SEED)}",
+            )
+        )
 
         sem_tempos = _uma(
             k,
@@ -601,7 +689,7 @@ def u_informativos(con: psycopg.Connection) -> tuple[list[Divergencia], list[Div
                 "0", f"{sem_tempos}"
             )
         )
-    return informa, esperado
+    return informa, esperado, bloqueia
 
 
 # =====================================================================================
@@ -639,9 +727,10 @@ def reconciliar(conexao: str = CONEXAO_LOCAL) -> Veredito:
             v.executadas.append(nome)
         v.checksums = r08_checksums(con)
         v.executadas.append("R-08 checksum canonico")
-        informa, esperado = u_informativos(con)
+        informa, esperado, bloqueia = u_informativos(con)
         v.informativos.extend(informa)
         v.esperados.extend(esperado)
+        v.bloqueantes.extend(bloqueia)
     return v
 
 

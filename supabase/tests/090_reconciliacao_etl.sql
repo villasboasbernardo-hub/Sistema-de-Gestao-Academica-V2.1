@@ -19,7 +19,7 @@
 -- =================================================================================
 
 begin;
-select plan(8);
+select plan(9);
 
 -- Há base carregada? É a pergunta que decide entre asserir e pular.
 create temporary table _ha_dado as
@@ -122,6 +122,31 @@ select col_is_unique(
   'public', 'turma_disciplina', 'codigo',
   'R-08 · codigo e unico: sem isso a ordenacao canonica do checksum nao e determinista'
 );
+
+-- ---------------------------------------------------------------------------------
+-- DECISAO DE 08/09/2026 · a chave canonica da v2.1 e a UNICA ativa.
+--
+-- `config_parametros` recebe 13 parametros normativos por dois caminhos: a migration
+-- do Epico 1 semeia a chave canonica da v2.1 e o ETL transporta a da v2.0. Bernardo
+-- decidiu manter exclusivamente a canonica. "Descartar" aqui e exclusao LOGICA (regra
+-- 4): a linha da v2.0 e transportada e chega `inativo` — quem for auditar daqui a tres
+-- anos acha a chave antiga, o valor que ela tinha, e ve que foi superada.
+--
+-- A asserção e NEGATIVA de proposito: prova que nenhuma legada ficou ativa.
+-- ---------------------------------------------------------------------------------
+select case when (select sim from _ha_dado) then
+  is_empty(
+    $$select chave from public.config_parametros
+       where status = 'ativo'
+         and chave in ('teto_aec_pct', 'teto_tad_pct', 'teto_tr_pct',
+                       'ch_docente_20h_min', 'ch_docente_20h_max',
+                       'ch_docente_40h_min', 'ch_docente_40h_max',
+                       'ch_docente_de_min', 'ch_docente_de_max',
+                       'teto_semanal_tfm_ta', 'teto_semanal_recomendado_ta',
+                       'prazo_vista_prova_dias', 'bloco_prova_ta')$$,
+    'DECISAO 08/09 (NEGATIVO) · nenhuma chave legada da v2.0 permanece ativa'
+  )
+else pass('DECISAO 08/09 SKIP · ' || :'motivo') end;
 
 select * from finish();
 rollback;

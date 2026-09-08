@@ -284,6 +284,50 @@ def conferir_orfaos(con: psycopg.Connection) -> list[str]:
     return problemas
 
 
+def conferir_parametros_superados(con: psycopg.Connection) -> list[str]:
+    """Os 13 pares chave-legada / chave-canônica declaram o MESMO número?
+
+    ⚠️ POR QUE ISTO ABORTA EM VEZ DE INFORMAR: desativar a chave da v2.0 é seguro
+    enquanto ela disser a mesma coisa que a canônica. Se os números divergirem, não há
+    duplicidade de nomenclatura: há duas afirmações incompatíveis sobre qual é a norma,
+    e desativar uma delas escolheria a resposta em silêncio. A carga para, nomeia as
+    duas chaves e os dois valores, e alguém decide.
+
+    Confere contra a ORIGEM em `staging`, e não contra `public`, porque no momento em
+    que roda a linha da v2.0 ainda não foi gravada — é justamente o que se quer: saber
+    antes de escrever.
+    """
+    problemas: list[str] = []
+    with con.cursor() as k:
+        for legada, canonica in sorted(mapa.PARAMETROS_SUPERADOS_PELO_SEED.items()):
+            k.execute(
+                """
+                select (select btrim(s."valor") from staging."Config_Parametros" s
+                         where lower(btrim(s."chave")) = %s),
+                       (select btrim(p.valor) from public.config_parametros p
+                         where p.chave = %s and p.origem_migracao_v1 is null)
+                """,
+                (legada, canonica),
+            )
+            na_v20, no_seed = k.fetchone()
+            if na_v20 is None:
+                problemas.append(
+                    f"{legada}: declarada como superada, mas NAO EXISTE em "
+                    f"Config_Parametros — a declaracao esta velha"
+                )
+            elif no_seed is None:
+                problemas.append(
+                    f"{canonica}: e a chave canonica de {legada}, mas NAO FOI SEMEADA "
+                    f"pela migration — desativar {legada} perderia o parametro"
+                )
+            elif na_v20 != no_seed:
+                problemas.append(
+                    f"{legada} = {na_v20!r} mas {canonica} = {no_seed!r} — nao e "
+                    f"duplicidade de nome, e conflito sobre qual e a norma"
+                )
+    return problemas
+
+
 def conferir_dominios(con: psycopg.Connection) -> list[str]:
     """Pré-voo: lista todo valor de domínio sem destino, com a contagem de linhas.
 
@@ -465,6 +509,24 @@ def montar_insert(
         destinos.append(_col(c.destino))
         expressoes.append(e)
 
+    # ⚠️ `status = inativo` para a chave da v2.0 que o seed normativo da v2.1 superou.
+    #    Sai no próprio INSERT, e não num UPDATE depois: a linha nunca chega a existir
+    #    ativa, o que evita a janela em que duas chaves valeriam ao mesmo tempo.
+    #    Exclusão LÓGICA — a linha é transportada, o valor fica legível, a chave antiga
+    #    fica rastreável (regra 4 do CLAUDE.md; decisão de Bernardo de 08/09/2026).
+    if nome == "config_parametros" and mapa.PARAMETROS_SUPERADOS_PELO_SEED:
+        legadas = ", ".join(
+            f"'{x}'" for x in sorted(mapa.PARAMETROS_SUPERADOS_PELO_SEED)
+        )
+        alvo = _col("status")
+        if alvo in destinos:
+            i = destinos.index(alvo)
+            expressoes[i] = (
+                f"(case when {_normalizada_em_sql(chr(115) + chr(46) + chr(34) + 'chave' + chr(34))}"
+                f" in ({legadas}) then 'inativo' else {expressoes[i]}::text end)"
+                f"::public.status_registro"
+            )
+
     # ⚠️ `natureza` DECLARADA, em `config_parametros`. Tem de sair no proprio INSERT e
     #    nao num UPDATE depois: o CHECK `config_param_normativo_tem_fundamento` dispara
     #    na inserção, e a linha operacional seria recusada antes de haver o que corrigir.
@@ -634,6 +696,13 @@ def promover(conexao: str = CONEXAO_LOCAL, *, diagnostico: bool = False) -> Resu
         con.autocommit = False
 
         # PRÉ-VOO: domínio sem destino aborta ANTES de qualquer escrita.
+        superados = conferir_parametros_superados(con)
+        if superados:
+            raise DominioSemDestino(
+                "Parametros superados pelo seed em conflito — nada foi escrito:\n  "
+                + "\n  ".join(superados)
+            )
+
         res.dominios_sem_destino = conferir_dominios(con)
         if res.dominios_sem_destino and not diagnostico:
             raise DominioSemDestino(

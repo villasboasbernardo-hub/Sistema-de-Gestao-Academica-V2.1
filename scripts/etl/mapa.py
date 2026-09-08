@@ -983,3 +983,51 @@ PARAMETROS_OPERACIONAIS: frozenset[str] = frozenset({
     # Transportado porque nada é apagado — mas não é norma, e não tem fundamento.
     "id_template_ficha_instrutor",
 })
+
+
+# =====================================================================================
+# PARÂMETROS SUPERADOS PELO SEED NORMATIVO DA v2.1
+#
+# `config_parametros` recebe o mesmo parâmetro normativo por dois caminhos: a migration
+# do Épico 1 o semeia com a chave canônica da v2.1 (`teto.aec_percentual_chr`) e o ETL
+# o transporta com a chave da v2.0 (`teto_aec_pct`). São **13 pares**, e nos 13 o valor
+# é idêntico dos dois lados — é duplicidade de NOME, não de número.
+#
+# ⚠️ DECISÃO DE BERNARDO, 08/09/2026: "mantenha exclusivamente a chave canônica da v2.1
+#    definida no seed normativo, descartando a nomenclatura legada da v2.0".
+#
+# ⚠️ "DESCARTAR" AQUI É EXCLUSÃO LÓGICA, NÃO REMOÇÃO. A regra 4 do CLAUDE.md é
+#    inviolável: nada é apagado. As 13 linhas da v2.0 são transportadas — o FR-001
+#    continua exigindo 100% do histórico — e chegam com `status = 'inativo'`. Quem
+#    procurar de onde veio o teto de 10% daqui a três anos acha a chave antiga, acha o
+#    valor que ela tinha, e vê que ela foi superada. Se fossem removidas, não acharia
+#    nada e concluiria que a v2.0 nunca teve o parâmetro.
+#
+# ⚠️ E SE OS VALORES DIVERGIREM: `promover.conferir_parametros_superados()` **aborta a
+#    carga**. Duas chaves com o mesmo significado e números diferentes não são
+#    duplicidade de nomenclatura — são um conflito sobre qual é a norma, e desativar um
+#    dos lados em silêncio esconderia exatamente a pergunta que precisa ser feita.
+#
+# A chave é a da v2.0 (que sai de cena); o valor é a canônica da v2.1 (que fica).
+# =====================================================================================
+
+PARAMETROS_SUPERADOS_PELO_SEED: dict[str, str] = {
+    "teto_aec_pct": "teto.aec_percentual_chr",
+    "teto_tad_pct": "teto.tad_percentual_chr",
+    "teto_tr_pct": "teto.tr_percentual_chr",
+    "ch_docente_20h_min": "ch_docente.20h.min",
+    "ch_docente_20h_max": "ch_docente.20h.max",
+    "ch_docente_40h_min": "ch_docente.40h.min",
+    "ch_docente_40h_max": "ch_docente.40h.max",
+    "ch_docente_de_min": "ch_docente.dedicacao_exclusiva.min",
+    "ch_docente_de_max": "ch_docente.dedicacao_exclusiva.max",
+    "teto_semanal_tfm_ta": "alocacao.teto_tfm_rigido",
+    "teto_semanal_recomendado_ta": "alocacao.teto_geral_recomendado",
+    "prazo_vista_prova_dias": "avaliacao.prazo_vista_dias",
+    "bloco_prova_ta": "avaliacao.ta_padrao_bloco_prova",
+    # ⚠️ NÃO ENTRAM AQUI, e o motivo importa: `estudo_obrig_com_regime_pct`,
+    #    `estudo_obrig_sem_regime_pct`, `janela_almoco_inicio` e `janela_almoco_fim`
+    #    são normativos e **não têm par no seed** — a v2.1 não os declarou. Ficam
+    #    ATIVOS com a chave da v2.0, porque desativá-los perderia a norma. E
+    #    `id_template_ficha_instrutor` é operacional (ver PARAMETROS_OPERACIONAIS).
+}
