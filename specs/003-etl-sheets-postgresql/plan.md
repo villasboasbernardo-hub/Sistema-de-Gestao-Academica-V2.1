@@ -68,8 +68,9 @@ etapa de normalização, que é justamente o que pode estar errado.
 **Language/Version**: Python 3.14 (medido) para o ETL — BRIEF §1 e documento 30 §1.3. SQL para
 migrations e reconciliação.
 
-**Primary Dependencies**: `openpyxl` 3.1.5 (já instalado) · cliente PostgreSQL · API do Google Sheets.
-**Sem ORM** (Princípio III).
+**Primary Dependencies**: `openpyxl` 3.1.5 · `psycopg` 3.2.3 · `tzdata` 2024.2 (**obrigatória no
+Windows**: sem ela `ZoneInfo("America/Sao_Paulo")` levanta `ZoneInfoNotFoundError`). **Sem ORM**
+(Princípio III). **Sem API do Google** — ver FR-008.1.
 
 **Storage**: PostgreSQL local via Supabase CLI em Docker — **decisão de Bernardo (Q3, 07/09/2026)**.
 Nenhum dado real sai da máquina enquanto a CIAARA-14.2 não decidir. Destino: as 27 tabelas do Épico 1.
@@ -171,7 +172,7 @@ scripts/etl/
 ├── _comum.py                    # promoção staging→public · origem_migracao_v1 · log
 ├── ordem.py                     # a ÚNICA definição da ordem de carga (FR-016)
 ├── snapshot.py                  # identidade do snapshot, conferida por cada etapa ⭐
-├── extrair_sheets.py            # etapa 1   — v2.0, pela API
+├── extrair_v20.py               # etapa 1   — v2.0, de ARQUIVO LOCAL (sem rede) ⭐
 ├── extrair_ue_v1.py             # etapa 1-B — v1.0, dos .xlsx locais
 ├── cruzar_ue.py                 # etapa 2-B — casa v1.0 × v2.0, 5 vereditos
 ├── reconciliar.py               # etapa 5   — R-01 a R-08 + checksum md5 canônico ⭐

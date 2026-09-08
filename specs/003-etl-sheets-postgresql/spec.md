@@ -348,6 +348,14 @@ planilha volta a ser a fonte de verdade sem perda.
   *(documento 30 §1.1)*
 - **FR-008**: A extração MUST produzir uma cópia **datada e imutável** da origem, e a carga MUST
   poder ser reproduzida a partir dela sem depender da planilha ao vivo.
+- **FR-008.1**: A origem da v2.0 MUST ser lida de **arquivo local**, não pela API do Google Sheets
+  *(decisão de Bernardo, 08/09/2026)*. Com isso **nenhuma etapa do pipeline depende de rede** — a
+  etapa 1 era a única que dependia. O arquivo local **é** a cópia datada que o FR-008 exige, e
+  `ETL_CREDENCIAL_GOOGLE` e `ETL_PLANILHA_ID` saem do caminho crítico deste épico.
+- **FR-008.2**: A data do arquivo de origem MUST ser registrada no snapshot e **declarada no
+  relatório**. O arquivo em uso é de **20/08/2026**; a planilha viva continua sendo escrita. Retratar
+  20/08 é o que se espera de um snapshot — desde que ninguém o confunda com "o estado de hoje", e é a
+  sondagem prévia que mede o quanto a origem andou (T061.1).
 
 **Reconciliação — o que bloqueia**
 

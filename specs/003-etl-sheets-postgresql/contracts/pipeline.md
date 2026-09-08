@@ -9,7 +9,7 @@ o que permite responder *"onde exatamente errou?"* sem reexecutar tudo.
 
 | # | Etapa | Entrada | Artefato de saída | Reexecuta sozinha? |
 | --- | --- | --- | --- | --- |
-| 1 | **Extração v2.0** | API do Sheets | `dados/bruto/<aba>.csv` — cópia fiel, tudo texto | Sim (única que depende de rede) |
+| 1 | **Extração v2.0** | `Banco de dados CIAARA-11 v2.0.xlsx` — **arquivo local** | `dados/bruto/v20/<aba>.csv` — cópia fiel, tudo texto | Sim, **offline** |
 | **1-B** | **Extração v1.0** ⭐ | os 7 `.xlsx` locais | `dados/bruto/ue_v1/<curso>.csv` | Sim, offline |
 | 2 | **Normalização** | `bruto/*.csv` | `dados/normalizado/<tabela>.csv` | Sim, offline |
 | **2-B** | **Cruzamento da UE** ⭐ | normalizado de ambas | `dados/normalizado/ue_cruzamento.csv` | Sim, offline |

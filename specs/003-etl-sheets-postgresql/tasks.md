@@ -80,8 +80,8 @@ migration aditiva — é regressão.
 
 ### Extração (etapas 1 e 1-B)
 
-- [ ] T015 [US1] Escrever `scripts/etl/extrair_sheets.py` — etapa 1: as 23 abas da v2.0 pela API, para `dados/bruto/<aba>.csv`, **tudo texto**, sem conversão
-- [ ] T016 [US1] Fazer a extração produzir **cópia datada e imutável** da origem, para que a carga seja reproduzível sem a planilha ao vivo (FR-008)
+- [X] T015 [US1] Escrever `scripts/etl/extrair_sheets.py` — etapa 1: as 23 abas da v2.0 pela API, para `dados/bruto/<aba>.csv`, **tudo texto**, sem conversão ✅ **Reescrita como `extrair_v20.py`, lendo ARQUIVO LOCAL** (decisão de Bernardo, 08/09). A API do Google saiu: nenhuma etapa do pipeline depende mais de rede. Executada: **24 abas**, snapshot `784e6a1c5d39c81d`.
+- [X] T016 [US1] Fazer a extração produzir **cópia datada e imutável** da origem, para que a carga seja reproduzível sem a planilha ao vivo (FR-008) ✅ O próprio arquivo local **é** a cópia datada e imutável — de **20/08/2026 22:21**. O snapshot registra o `mtime` da origem, e a data fica declarada no relatório (FR-008.2).
 - [ ] T017 [P] [US1] Escrever `scripts/etl/extrair_ue_v1.py` — etapa 1-B: lê `PREENCHIMENTO` (cabeçalho na linha 3, dado da 4) e `BD DISCIPLINAS` (cabeçalho na 2, dado da 3) dos **7 arquivos autorizados**, para `dados/bruto/ue_v1/<curso>.csv` (research R-5)
 - [ ] T018 [US1] Codificar em `extrair_ue_v1.py` a lista **fechada** de fontes do contrato `cruzamento-ue.md`: os 7 arquivos, **sem** o `C-AP-HN 2026.xlsx` (vale a `Cópia … Sabado`) e **com** a `CAHO_2026.xlsx`. Arquivo fora da lista **não é lido** — nem se aparecer no diretório
 - [ ] T018.1 [US1] Descartar em `extrair_ue_v1.py` as **linhas de cabeçalho repetidas** dentro da faixa de dados — `COD` aparece como valor 36 vezes só no `C-AP-FR` — e **contar** os descartes no relatório (FR-025.11)
