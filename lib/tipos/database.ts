@@ -1562,7 +1562,7 @@ export type Database = {
           tempos_consumidos: number
           tipo_atividade: string | null
           turma_id: string
-          unidade_ensino_id: string
+          unidade_ensino_id: string | null
         }
         Insert: {
           categoria_normativa?: Database["public"]["Enums"]["categoria_registro_aula"]
@@ -1586,7 +1586,7 @@ export type Database = {
           tempos_consumidos: number
           tipo_atividade?: string | null
           turma_id: string
-          unidade_ensino_id: string
+          unidade_ensino_id?: string | null
         }
         Update: {
           categoria_normativa?: Database["public"]["Enums"]["categoria_registro_aula"]
@@ -1610,7 +1610,7 @@ export type Database = {
           tempos_consumidos?: number
           tipo_atividade?: string | null
           turma_id?: string
-          unidade_ensino_id?: string
+          unidade_ensino_id?: string | null
         }
         Relationships: [
           {
@@ -1912,6 +1912,7 @@ export type Database = {
       }
       turma_disciplina: {
         Row: {
+          ch_prevista_por_instrutor: number | null
           codigo: string
           criado_em: string
           criado_por: string | null
@@ -1919,6 +1920,7 @@ export type Database = {
           editado_em: string | null
           editado_por: string | null
           id: string
+          instrutor_id: string | null
           origem_migracao_v1: string | null
           origem_periodo: Database["public"]["Enums"]["origem_periodo"]
           previsao_inicio: string | null
@@ -1927,6 +1929,7 @@ export type Database = {
           turma_id: string
         }
         Insert: {
+          ch_prevista_por_instrutor?: number | null
           codigo: string
           criado_em?: string
           criado_por?: string | null
@@ -1934,6 +1937,7 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           id?: string
+          instrutor_id?: string | null
           origem_migracao_v1?: string | null
           origem_periodo?: Database["public"]["Enums"]["origem_periodo"]
           previsao_inicio?: string | null
@@ -1942,6 +1946,7 @@ export type Database = {
           turma_id: string
         }
         Update: {
+          ch_prevista_por_instrutor?: number | null
           codigo?: string
           criado_em?: string
           criado_por?: string | null
@@ -1949,6 +1954,7 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           id?: string
+          instrutor_id?: string | null
           origem_migracao_v1?: string | null
           origem_periodo?: Database["public"]["Enums"]["origem_periodo"]
           previsao_inicio?: string | null
@@ -1970,6 +1976,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_disciplinas_execucao"
             referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
           },
           {
             foreignKeyName: "turma_disciplina_turma_id_fkey"

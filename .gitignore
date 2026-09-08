@@ -59,3 +59,21 @@ next-env.d.ts
 /Cursos Regulares/
 /Cursos Especiais*/
 /C-EXP-METOC-OF*.xlsx
+
+# Python — o ETL do Epico 2 (scripts/etl/). Bytecode e ambiente nunca sao versionados.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# ETL — artefatos BRUTOS da extracao. NUNCA versionados: contem dado real da MB
+# (nome de instrutor, carga horaria) e o repositorio e publico. Contrato pipeline P-8.
+#
+# ATENCAO ao alcance: ignora-se `bruto/` e `normalizado/`, NAO o `dados/` inteiro.
+# A decisao UE-PUB (Bernardo, 30/08/2026) determina que `scripts/etl/dados/`
+# PERMANECA VERSIONADO — e onde vive o catalogo das 572 Unidades de Ensino,
+# publico por decisao. Ignorar o diretorio todo atropelaria isso.
+/scripts/etl/dados/bruto/
+/scripts/etl/dados/normalizado/
