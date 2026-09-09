@@ -56,7 +56,23 @@
 2. **Q2 — Telas:** entram nesta fatia, funcionais e sóbrias. A dívida de estilo ficou registrada na
    premissa 6 e no FR-025.5, para não ser descoberta no Épico 4.
 
-**36 → 46 requisitos** depois das decisões: as quatro telas viraram requisito nomeado (FR-025.1 a
-FR-025.6) e o recorte de PII ganhou os desdobramentos FR-028.1 e FR-028.2.
+**36 → 46 → 51 requisitos.** As telas viraram requisito nomeado (FR-025.1 a FR-025.7), o recorte de
+PII ganhou FR-028.1 e FR-028.2, e a sessão de clarificação de 08/09 acrescentou FR-005.2, FR-024.1,
+FR-031.1, FR-032.1 e dois critérios de sucesso.
+
+## Sessão de clarificação — 08/09/2026
+
+Três perguntas, todas de impacto material. Duas ambiguidades candidatas foram **descartadas por
+medição** antes de virarem pergunta:
+
+- *`usuario_curso` chega vazia — os Encarregados de Curso migrados ficam sem alcance?* **Não há
+  Encarregado de Curso migrado.** Os três usuários da v2.0 são dois `admin` e um `visualizacao`,
+  todos de escopo `Geral`. Registrado no FR-032.1.
+- *Qual o comportamento quando `instrutor_id` aponta para instrutor inativo?* Não há segunda leitura
+  defensável: nada é apagado e a tela mostra a situação. Resolvido por premissa, não por pergunta.
+
+**O achado da sessão**: o documento 22 tem modelo de ameaças de A-1 a A-7 e **nenhuma delas é
+tentativa repetida de senha**. A defesa de A-7 protege a senha escolhida, não o endereço de login.
+O FR-005.2 trata a lacuna nesta fatia e prevê **propor uma ameaça A-8** ao documento 22.
 
 Checklist **completo**. A especificação está pronta para `/speckit-plan`.

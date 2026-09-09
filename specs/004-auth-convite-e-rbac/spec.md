@@ -29,6 +29,20 @@ banco e as expõe pela aplicação.
   `ajudante_administracao_academica`. Os outros seis leem apenas o dado funcional.
   *(A escolha nomeou "Admin e Ajudante"; o Encarregado foi confirmado dentro em seguida —
   é o chefe da CIAARA-11 e responde pela Ficha de Docentes.)*
+- P: A edição da matriz `perfil_permissao` ganha tela nesta fatia? → R: **Só leitura.** Alterar uma
+  linha segue sendo operação no banco. ⚠️ O `SC-006` continua sendo provado — pelo teste, que altera
+  a linha e observa a policy mudar sem *deploy*. A tela de escrita mais sensível do sistema (doc 22
+  §6.4: *"quem escreve nela pode se autoconceder qualquer permissão"*) não nasce sem *design
+  system* e para um único usuário que já alcança o banco.
+- P: O sistema se defende de tentativa repetida de senha? → R: **Item de conferência**, na mesma
+  forma do auto-cadastro (FR-003): a fatia não escreve contagem de tentativa própria, e ganha uma
+  conferência verificável do limite que a plataforma aplica. ⚠️ O documento 22 **não trata do
+  assunto** — o modelo de ameaças vai de A-1 a A-7 e nenhuma é tentativa repetida de senha; a
+  defesa de A-7 protege a senha, não o endereço de login.
+- P: A reconstituição das 3 contas migradas envia convite real nesta fatia? → R: **Não.** A fatia
+  implementa e prova o convite com **endereços de teste** em preview; a reconstituição das contas
+  reais acontece **no corte**, contra o projeto de produção — que ainda não existe. Duas das três
+  linhas são pessoas com e-mail pessoal, e um convite de preview as levaria ao ambiente errado.
 - P: As telas entram nesta fatia ou esperam o Épico 4? → R: **Entram agora**, funcionais e
   sóbrias: `/login`, `/convite/[token]`, `/recuperar-senha` e `/admin/usuarios`. O estilo é
   revisitado no Épico 4.
@@ -181,8 +195,14 @@ tela, ausentes na resposta do banco.
 - **Aplicação sem configuração de ambiente**: hoje o middleware sai de lado (`RN-DEG-01`). Com
   autenticação, sair de lado significaria **liberar rota protegida** — o comportamento tem de ser o
   oposto.
-- **`instrutor_id` de um usuário aponta para instrutor inativo**: o vínculo pessoa↔docente existe na
-  tabela e precisa de comportamento definido.
+- **`instrutor_id` de um usuário aponta para instrutor inativo**: o vínculo **permanece** e a tela
+  **mostra a situação**. Nada é apagado (regra 4), e um docente inativo que já foi usuário continua
+  tendo sido — romper o vínculo perderia a informação de que a pessoa é a mesma. *(Padrão adotado
+  em 08/09/2026; não foi objeto de pergunta por não haver segunda leitura defensável.)*
+- **Sessão expira no meio do trabalho**: o usuário é levado ao login preservando o destino
+  (FR-005), e nenhuma das cinco telas desta fatia tem formulário longo cuja perda doa. ⚠️ A partir
+  do Épico 5 passa a haver, e aí a preservação do que foi digitado vira requisito de verdade —
+  **fica registrado aqui para não ser redescoberto lá**.
 
 ## Requirements *(mandatory)*
 
@@ -197,7 +217,9 @@ tela, ausentes na resposta do banco.
   do documento 06).
 - **FR-003**: O auto-cadastro MUST estar **desligado na plataforma**, não apenas oculto na
   interface. Como é configuração de painel e não código, MUST existir um **item de conferência
-  verificável** que ateste o estado (documento 22 §3.4).
+  verificável** que ateste o estado (documento 22 §3.4). ⚠️ É a primeira de **duas** garantias
+  desta fatia que não se obtêm por código; a outra é o FR-005.2. Ambas MUST ser conferidas de
+  forma que o resultado fique registrado, e não afirmado.
 - **FR-004**: O sistema MUST manter a sessão entre recarregamentos e abas, renovando o token
   enquanto for válida, e MUST oferecer ação explícita de **encerrar sessão** (`RF-AUTH-08`).
 - **FR-005**: Toda rota do grupo autenticado MUST exigir sessão válida; a rota sem sessão MUST
@@ -205,6 +227,15 @@ tela, ausentes na resposta do banco.
 - **FR-005.1**: Na **ausência de configuração de ambiente**, o middleware MUST **negar** o acesso à
   rota protegida. É a única exceção declarada ao `RN-DEG-01`: degradar para "vazio com aviso" numa
   fronteira de autenticação significa degradar para "aberto".
+- **FR-005.2**: MUST existir **item de conferência verificável** do limite de tentativas de
+  autenticação que a plataforma aplica, na mesma forma do FR-003. A fatia MUST **não** implementar
+  contagem de tentativa própria — uma defesa escrita à mão neste ponto costuma ser pior que a
+  nativa, e passa a ser mais uma coisa a manter.
+  ⚠️ **Isto é lacuna do modelo de ameaças, não só desta fatia.** O documento 22 §1.2 lista A-1 a
+  A-7 e nenhuma delas é tentativa repetida de senha; a defesa de A-7 (política de senha) protege a
+  senha escolhida, não o endereço de login. Depois desta fatia o endereço passa a dar acesso a CPF
+  e residência de 177 militares. **MUST ser proposta a inclusão de uma ameaça A-8 ao documento 22**
+  — a proposta é entregável desta fatia; aprová-la é do Bernardo.
 - **FR-006**: A senha MUST ter no mínimo **12 caracteres** e MUST ser verificada contra listas
   públicas de vazamento. Composição obrigatória e expiração compulsória MUST **não** ser exigidas
   (documento 22 §4.5).
@@ -259,8 +290,15 @@ tela, ausentes na resposta do banco.
   **não** ser tratada como proteção (critério 7 do documento 06).
 - **FR-023**: Alterar uma linha de `perfil_permissao` MUST mudar o comportamento efetivo **sem novo
   deploy e sem migration** (`RF-AUTH-10`, critério 6).
-- **FR-024**: O Admin MUST dispor de tela de **leitura** da matriz de permissões, com edição
-  restrita ao próprio Admin.
+- **FR-024**: O Admin MUST dispor de tela de **leitura** da matriz de permissões, que responda à
+  pergunta *"por que este perfil não vê este botão?"* sem consultar o banco.
+- **FR-024.1**: A **edição** da matriz MUST ficar **fora** desta fatia (decisão de 08/09/2026).
+  ⚠️ Isto **não** enfraquece o FR-023 nem o SC-006: alterar a matriz continua tendo de mudar o
+  comportamento sem *deploy* e sem migration, e continua sendo **provado por teste** que altera a
+  linha e observa a policy mudar. O que fica de fora é a interface para fazer a alteração, não a
+  propriedade.
+  ⚠️ Quando a tela de edição existir, ela MUST ancorar-se em `app.eh_admin()` e **não** na própria
+  matriz — a matriz não pode ser a autoridade sobre quem edita a matriz (documento 22 §6.4).
 - **FR-025**: Estado vazio MUST distinguir *"não há dado"* de *"você não tem permissão de ver"*.
 
 #### Telas
@@ -270,7 +308,9 @@ tela, ausentes na resposta do banco.
   convite.
 - **FR-025.3**: MUST existir tela de **recuperação de senha**.
 - **FR-025.4**: MUST existir tela de **gestão de usuários**, cobrindo o que o FR-014 exige.
-- **FR-025.5**: As quatro telas MUST ser funcionais e sóbrias, **sem** depender do *design system*
+- **FR-025.7**: MUST existir tela de **leitura** da matriz de permissões (FR-024). São **cinco**
+  telas nesta fatia, e nenhuma delas escreve em `perfil_permissao`.
+- **FR-025.5**: As cinco telas MUST ser funcionais e sóbrias, **sem** depender do *design system*
   do Épico 4. MUST **não** introduzir cor literal em componente — a dívida de estilo C-1 já existe
   em 4 arquivos e não deve crescer.
 - **FR-025.6**: As telas de login, convite e recuperação MUST viver **fora** do grupo de rotas
@@ -314,9 +354,18 @@ tela, ausentes na resposta do banco.
 
 - **FR-031**: As contas de usuário vindas da v2.0 MUST ser **reconstituídas por convite**, não por
   senha atribuída pelo Admin (`RF-MIG-06`). As linhas já existem em `usuarios` com perfil e escopo;
-  falta a credencial.
+  falta apenas a credencial.
+- **FR-031.1**: Esta fatia MUST entregar o **mecanismo** e prová-lo com **endereços de teste**. A
+  execução sobre os três endereços reais MUST acontecer **no corte**, contra o projeto de produção.
+  ⚠️ Duas das três linhas são pessoas com e-mail pessoal, e o projeto de produção **ainda não
+  existe**: um convite emitido agora levaria a pessoa a definir senha num ambiente de preview que
+  será descartado. *(Decisão de 08/09/2026.)*
 - **FR-032**: A reconstituição MUST preservar `codigo` e `origem_migracao_v1` das linhas migradas —
   o rastro até a v2.0 não se perde ao ganhar credencial.
+- **FR-032.1**: MUST estar registrado que `usuario_curso` chega **vazia** da v2.0, e que isso
+  **não é lacuna**: os três usuários migrados são dois `admin` e um `visualizacao`, todos de escopo
+  `Geral`, que alcança todos os cursos sem precisar de vínculo. O primeiro `encarregado_curso` do
+  sistema será criado por convite, não migrado.
 
 #### Configuração
 
@@ -360,6 +409,8 @@ tela, ausentes na resposta do banco.
   com o convidado alcançando exatamente o escopo atribuído.
 - **SC-003**: Senha com menos de 12 caracteres é recusada; senha presente em lista pública de
   vazamento é recusada.
+- **SC-003.1**: O limite de tentativas de autenticação aplicado pela plataforma está **conferido e
+  registrado** — não presumido. A conferência nomeia o limite observado.
 - **SC-004**: Para **cada um dos 9 perfis** existe teste negativo provando que o banco nega ao menos
   uma leitura e uma escrita fora do escopo. **9 de 9, sem exceção.**
 - **SC-005**: Um Encarregado de Curso vinculado a dois cursos lê os dois e **não** lê um terceiro.
@@ -376,8 +427,9 @@ tela, ausentes na resposta do banco.
   **três** autorizados recebe as 12 preenchidas. **9 de 9 perfis verificados**, não uma amostra.
 - **SC-012**: A inconsistência entre credencial e cadastro é detectada por rotina executável, nos
   dois sentidos, sem inspeção manual do banco.
-- **SC-013**: As 3 contas migradas da v2.0 recebem credencial **por convite**, preservando `codigo`
-  e `origem_migracao_v1`.
+- **SC-013**: O percurso de reconstituição é provado com **endereço de teste** sobre uma linha que
+  tenha `codigo` e `origem_migracao_v1` preenchidos, e os dois **sobrevivem** à obtenção da
+  credencial. A execução sobre os três endereços reais é do corte, não desta fatia.
 - **SC-014**: `pnpm verificar:tudo` e o CI dão **veredito idêntico** sobre o mesmo commit.
 
 ## Assumptions
@@ -395,7 +447,7 @@ tela, ausentes na resposta do banco.
 5. **Não há SSO, MFA obrigatória nem federação com conta institucional** — fora de escopo declarado
    no documento 06. MFA opcional para o Admin é configuração de painel, não requisito desta fatia.
 6. **As telas entram nesta fatia, funcionais e sóbrias** (decisão de 08/09/2026). Não existem
-   *design system* nem shell de navegação — eles são o Épico 4 —, então as quatro telas nascem
+   *design system* nem shell de navegação — eles são o Épico 4 —, então as cinco telas nascem
    sem tokens `@theme` e serão retrabalhadas depois. O retrabalho é conhecido, está orçado em
    quatro telas, e é o preço de não deixar 5.394 linhas de dado real sem porta por mais um épico
    inteiro. ⚠️ A dívida de estilo **fica registrada aqui** para não ser descoberta no Épico 4.
@@ -417,12 +469,17 @@ tela, ausentes na resposta do banco.
 - **SSO, MFA obrigatória, federação com conta institucional** — não pedidos (documento 06).
 - **Auto-cadastro em qualquer forma.**
 - **Design system e shell de navegação** — Épico 4.
+- **A tela de edição da matriz de permissões** (decisão de 08/09/2026). A de leitura entra; a de
+  escrita não. A propriedade que importa — mudar a matriz muda o comportamento sem *deploy* —
+  continua provada por teste.
 - **Telas de domínio** (turmas, DSA, LIQ, cronograma) — épicos 5 a 13.
 - **Log de leitura de dado pessoal.** O documento 22 §9 registra a ausência; criar registro de
   *leitura* é decisão de retenção e volume que ninguém tomou, e não está no escopo declarado deste
   épico. **Fica listado como pendência, não como requisito.**
 - **Política de retenção e descarte de dado pessoal.** Mesma razão: o sistema hoje nunca apaga, e
   decidir se isso é conforme é matéria da autoridade, não de engenharia.
+- **A emissão de convite aos três endereços reais da v2.0.** O mecanismo é desta fatia (FR-031.1);
+  o disparo é do corte, quando existir projeto de produção.
 - **Rotina de revisão periódica de contas inativas** — o documento 22 §4.4 registra a pendência e
   sugere revisão semestral. É procedimento administrativo, não código.
 
