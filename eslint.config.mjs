@@ -53,7 +53,18 @@ const eslintConfig = defineConfig([
      * verificação local: o `tsc` sozinho não vê erro de fronteira.
      */
     files: ["**/*.ts", "**/*.tsx"],
-    ignores: ["lib/supabase/admin.ts"],
+    /*
+     * ⚠️ A LISTA DE EXCEÇÕES É A LISTA DOS USOS AUTORIZADOS, e alargá-la é DECISÃO, não
+     * conveniência. O BRIEF §3 autoriza três usos da `service_role`, e só três: convite de
+     * usuário pelo Admin, carga do ETL, e script de manutenção versionado rodado à mão.
+     *
+     * `lib/acoes/usuarios.ts` entrou aqui no Épico 3 por ser o PRIMEIRO consumidor real — a
+     * Server Action de convite. Está nomeada por arquivo, e não como `lib/acoes/**`, de
+     * propósito: um padrão amplo autorizaria toda Server Action futura a ignorar a RLS, que é
+     * exatamente o que esta regra existe para impedir. Se uma tela precisou da `service_role`
+     * para funcionar, a policy está errada — conserte a policy (Princípio XI).
+     */
+    ignores: ["lib/supabase/admin.ts", "lib/acoes/usuarios.ts"],
     rules: {
       "no-restricted-imports": [
         "error",

@@ -538,3 +538,26 @@ describe("FR-028 · recorte do dado pessoal de instrutor", () => {
     },
   );
 });
+
+describe("FR-026 · `ultimo_acesso` e o gatilho anti-escalonamento", () => {
+  // ⚠️ ESTE TESTE EXISTE POR UMA RAZÃO ESPECÍFICA, e ela é fácil de esquecer:
+  // `app.impedir_autoescalonamento` bloqueia mudança de `perfil`, `escopo_curso` e `status` feita
+  // por quem não é admin. `ultimo_acesso` NÃO está nessa lista hoje — e o login depende disso.
+  // A lista pode crescer; no dia em que `ultimo_acesso` entrar nela, o carimbo de acesso passaria
+  // a falhar em silêncio e ninguém saberia, porque a escrita é deliberadamente tolerante a falha.
+  it("o próprio usuário carimba o seu `ultimo_acesso` — não é escalonamento", async () => {
+    const { error } = await cliente("operador")
+      .from("usuarios")
+      .update({ ultimo_acesso: new Date().toISOString() })
+      .eq("email", "rls-operador@ciaara.teste");
+    expect(error).toBeNull();
+  });
+
+  it("(NEGATIVO) mas continua NÃO podendo mexer no próprio perfil na mesma escrita", async () => {
+    const { error } = await cliente("operador")
+      .from("usuarios")
+      .update({ ultimo_acesso: new Date().toISOString(), perfil: "admin" })
+      .eq("email", "rls-operador@ciaara.teste");
+    expect(error).not.toBeNull();
+  });
+});
