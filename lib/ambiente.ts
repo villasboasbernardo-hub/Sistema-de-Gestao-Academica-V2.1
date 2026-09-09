@@ -30,6 +30,11 @@ const NECESSARIAS_NO_NAVEGADOR = [
     variavel: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     paraQueServe: "chave pública do Supabase (papel anon/authenticated; a RLS é quem protege)",
   },
+  {
+    variavel: "NEXT_PUBLIC_URL_APLICACAO",
+    paraQueServe:
+      "URL canônica desta instância, usada nos links de convite e de recuperação de senha",
+  },
 ] as const;
 
 /**
@@ -79,6 +84,27 @@ export function credenciaisPublicasDoSupabase(): { url: string; chaveAnonima: st
  * Rótulo do ambiente. `local` é o padrão seguro: na dúvida, o sistema se apresenta como o ambiente
  * em que registrar aula não tem consequência.
  */
+/**
+ * URL canônica desta instância, para montar links de convite e de recuperação.
+ *
+ * ⚠️ POR QUE ELA É PERIGOSA QUANDO ERRADA: o fluxo inteiro FUNCIONA com o valor errado. O convite
+ * sai, o e-mail chega, a pessoa clica, define a senha — no ambiente errado. Nenhum teste pega,
+ * porque nada falha. Por isso ela entra em `conferirAmbiente()`: ausente, o middleware nega a rota
+ * protegida (FR-005.1) em vez de deixar o sistema montar links para lugar nenhum.
+ *
+ * Sem barra ao final, sempre — quem monta o caminho acrescenta a sua.
+ */
+export function urlDaAplicacao(): string {
+  const bruto = process.env.NEXT_PUBLIC_URL_APLICACAO?.trim();
+  if (!bruto) {
+    throw new Error(
+      mensagemDeConfiguracaoIncompleta(conferirAmbiente()) ??
+        "NEXT_PUBLIC_URL_APLICACAO não configurada.",
+    );
+  }
+  return bruto.replace(/\/+$/, "");
+}
+
 export function ambienteAtual(): Ambiente {
   const bruto = process.env.NEXT_PUBLIC_AMBIENTE?.trim();
   return bruto === "preview" || bruto === "producao" ? bruto : "local";

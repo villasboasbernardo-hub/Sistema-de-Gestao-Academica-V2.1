@@ -1,0 +1,12 @@
+i.cpf,
+  i.rg,
+  i.orgao_emissor,
+  i.telefone,
+  i.retelma,
+  i.endereco_logradouro,
+  i.endereco_numero,
+  i.endereco_complemento,
+  i.endereco_bairro,
+  i.endereco_cidade,
+  i.endereco_estado,
+  i.endereco_cep

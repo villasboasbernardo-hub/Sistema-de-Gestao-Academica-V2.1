@@ -80,7 +80,8 @@ type Perfil =
   | "operador"
   | "visualizacao"
   | "encarregado_curso"
-  | "encarregado_administracao_academica";
+  | "encarregado_administracao_academica"
+  | "ajudante_administracao_academica";
 
 const sessoes = new Map<Perfil, SupabaseClient>();
 
@@ -207,6 +208,9 @@ beforeAll(async () => {
   // por isso ele recebe escopo "geral" e mesmo assim so enxerga o curso vinculado.
   await criarUsuario("encarregado_curso", "rls-enc-curso@ciaara.teste", "geral", [CURSO_EXPEDITO]);
   await criarUsuario("encarregado_administracao_academica", "rls-ciaara11@ciaara.teste", "geral");
+  // O Ajudante existe nesta suite por causa do recorte de PII: ele e um dos TRES perfis que
+  // leem identificacao civil, e sem ele o lado autorizado ficaria sem prova.
+  await criarUsuario("ajudante_administracao_academica", "rls-ajudante@ciaara.teste", "geral");
 }, 60_000);
 
 afterAll(limpar);
@@ -387,4 +391,150 @@ describe("FR-044 · um usuário real, autenticado, consegue cadastrar", () => {
     expect(error).toBeNull();
     await admin.from("instrutores").delete().eq("codigo", "RLS-INS-OK");
   });
+});
+
+// =================================================================================================
+// O RECORTE DO DADO PESSOAL DE INSTRUTOR — as asserções de COMPORTAMENTO
+//
+// As estruturais vivem em `supabase/tests/092_recorte_pii.sql`. Estas precisam estar AQUI, e o
+// motivo é o mesmo que o cabeçalho deste arquivo dá para a RLS: **o pgTAP roda como dono do
+// schema, e o dono tem todo privilégio de coluna.** Um teste de recorte escrito lá passaria com o
+// recorte desligado.
+//
+// ⚠️ P-2, P-3, P-7 e P-8 são o contrato. Os positivos são controle. Uma suíte só com os positivos
+//    aprova um recorte que não recorta — foi exatamente o resultado da primeira tentativa do
+//    experimento do research.md §R-1, com o CPF completamente exposto.
+//
+// Contrato: specs/004-auth-convite-e-rbac/contracts/recorte-pii.md
+// =================================================================================================
+
+const SEM_PII: readonly Perfil[] = ["operador", "visualizacao", "encarregado_curso"];
+const COM_PII: readonly Perfil[] = [
+  "admin",
+  "encarregado_administracao_academica",
+  "ajudante_administracao_academica",
+];
+
+describe("FR-028 · recorte do dado pessoal de instrutor", () => {
+  beforeAll(async () => {
+    const { error } = await admin.from("instrutores").insert({
+      codigo: "RLS-INS-PII",
+      posto_graduacao: "CT",
+      esp_hab_obs: "-EF",
+      nome_completo: "Instrutor Com Dado Pessoal",
+      categoria: "Militar",
+      om: "CIAARA",
+      cpf: "111.222.333-44",
+      endereco_logradouro: "RUA DE TESTE",
+    });
+    if (error) throw new Error(`falha ao criar instrutor de PII: ${error.message}`);
+  });
+
+  afterAll(async () => {
+    await admin.from("instrutores").delete().eq("codigo", "RLS-INS-PII");
+  });
+
+  // ------------------------------------------------------------------ P-2 · NEGATIVO
+  it.each(SEM_PII.concat(COM_PII))(
+    "P-2 (NEGATIVO) · %s NÃO lê `cpf` direto da tabela — nem os três autorizados",
+    async (perfil) => {
+      const { error } = await cliente(perfil).from("instrutores").select("cpf");
+      expect(error).not.toBeNull();
+    },
+  );
+
+  // ------------------------------------------------------------------ P-3 · NEGATIVO
+  it.each(SEM_PII.concat(COM_PII))(
+    "P-3 (NEGATIVO) · %s NÃO faz `select *` na tabela — o `*` expande para as colunas revogadas",
+    async (perfil) => {
+      const { error } = await cliente(perfil).from("instrutores").select("*");
+      expect(error).not.toBeNull();
+    },
+  );
+
+  // ------------------------------------------------------------------ P-8 · NEGATIVO
+  it.each(SEM_PII)(
+    "P-8 (NEGATIVO) · %s NÃO usa `cpf` nem como FILTRO — o privilégio é do banco, não da forma da consulta",
+    async (perfil) => {
+      const { error } = await cliente(perfil)
+        .from("instrutores")
+        .select("codigo")
+        .not("cpf", "is", null);
+      expect(error).not.toBeNull();
+    },
+  );
+
+  // ------------------------------------------------------------------ P-1 · controle positivo
+  it.each(SEM_PII.concat(COM_PII))(
+    "P-1 · %s LÊ o dado funcional — o recorte não pode recortar demais (FR-029)",
+    async (perfil) => {
+      const { data, error } = await cliente(perfil)
+        .from("instrutores")
+        .select("codigo, posto_graduacao, esp_hab_obs, area_conhecimento")
+        .eq("codigo", "RLS-INS-PII");
+      expect(error).toBeNull();
+      expect(data?.[0]?.posto_graduacao).toBe("CT");
+    },
+  );
+
+  // ------------------------------------------------------------------ P-4 · a ergonomia de volta
+  it.each(SEM_PII.concat(COM_PII))(
+    "P-4 · %s faz `select *` em `vw_instrutores` sem PII no resultado",
+    async (perfil) => {
+      const { data, error } = await cliente(perfil)
+        .from("vw_instrutores")
+        .select("*")
+        .eq("codigo", "RLS-INS-PII");
+      expect(error).toBeNull();
+      expect(data?.[0]).not.toHaveProperty("cpf");
+      expect(data?.[0]).not.toHaveProperty("endereco_logradouro");
+    },
+  );
+
+  // ------------------------------------------------------------------ P-5 · os TRÊS autorizados
+  it.each(COM_PII)("P-5 · %s LÊ a PII pela visão com porteiro", async (perfil) => {
+    const { data, error } = await cliente(perfil)
+      .from("vw_instrutor_dados_pessoais")
+      .select("codigo, cpf")
+      .eq("codigo", "RLS-INS-PII");
+    expect(error).toBeNull();
+    expect(data?.[0]?.cpf).toBe("111.222.333-44");
+  });
+
+  // ------------------------------------------------------------------ P-6 · os SEIS demais
+  it.each(SEM_PII)(
+    "P-6 (NEGATIVO) · %s recebe ZERO LINHAS da visão — vazio, não erro",
+    async (perfil) => {
+      const { data, error } = await cliente(perfil)
+        .from("vw_instrutor_dados_pessoais")
+        .select("codigo, cpf");
+      // ⚠️ Vazio E NÃO ERRO é o comportamento correto, e a distinção importa: erro revelaria que
+      // a coluna existe e que alguém a alcança. Zero linhas não conta nada a quem não pode ver.
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    },
+  );
+
+  // ------------------------------------------------------------------ P-9 · o ETL continua de pé
+  it("P-9 · `service_role` continua lendo a PII — sem isto o ETL do Épico 2 pararia", async () => {
+    const { data, error } = await admin
+      .from("instrutores")
+      .select("codigo, cpf")
+      .eq("codigo", "RLS-INS-PII");
+    expect(error).toBeNull();
+    expect(data?.[0]?.cpf).toBe("111.222.333-44");
+  });
+
+  // ------------------------------------------------------------------ P-10 · nada quebrou
+  it.each(["vw_instrutor_carga_anual", "vw_instrutor_disciplina_rotulada"])(
+    "P-10 · a view existente `%s` continua de pé e não passou a vazar PII",
+    async (view) => {
+      const { data, error } = await cliente("operador").from(view).select("*").limit(1);
+      expect(error).toBeNull();
+      for (const linha of data ?? []) {
+        expect(linha).not.toHaveProperty("cpf");
+        expect(linha).not.toHaveProperty("endereco_cep");
+      }
+    },
+  );
 });
