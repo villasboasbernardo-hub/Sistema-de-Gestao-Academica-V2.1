@@ -48,7 +48,7 @@ de nada (ver a nota de ordem acima).
 - [ ] T004 Criar `middleware.ts` na raiz, chamando `renovarSessao()` de `lib/supabase/middleware.ts`, com o `matcher` excluindo estáticos e imagens (FR-004, contrato sessao-e-rotas C-3)
 - [ ] T005 Criar os grupos de rota `app/(auth)/` e `app/(app)/` com seus `layout.tsx`. ⚠️ `/login`, `/convite/[token]` e `/recuperar-senha` vão em `(auth)`: se ficassem sob o middleware que exige sessão, seria preciso ter sessão para obter sessão — o laço não aparece no `tsc`, aparece no navegador (FR-025.6)
 - [ ] T006 Implementar em `middleware.ts` a exigência de sessão para `(app)`, redirecionando ao login **com o destino preservado** (FR-005, contrato sessao-e-rotas C-1)
-- [ ] T007 **Inverter o `RN-DEG-01`** em `lib/supabase/middleware.ts` e `middleware.ts`: quando `conferirAmbiente()` acusar falta, **negar** a rota de `(app)` em vez de seguir. Escrever no código o porquê — degradar para "vazio com aviso" numa fronteira de autenticação é degradar para "aberto" (FR-005.1, contrato sessao-e-rotas)
+- [ ] T007 Fazer `lib/supabase/middleware.ts` e `middleware.ts` **negarem** a rota de `(app)` quando `conferirAmbiente()` acusar falta, exibindo o que falta configurar. ⚠️ Escrever no código que isto **cumpre** o `RN-DEG-01` e não o excetua: o princípio proíbe exceção **não tratada** por falta de **dado**, e aqui falta **configuração** e a resposta é tratada. Muda o destino da requisição, não o tratamento (FR-005.1, contrato sessao-e-rotas)
 - [ ] T008 Escrever `lib/autorizacao/sessao.ts`: devolve o usuário corrente **lido do banco a cada requisição**. ⚠️ Não guardar perfil, escopo nem permissão em cache — é o que faz a desativação valer na requisição seguinte (R-2, contrato sessao-e-rotas C-4)
 - [ ] T009 [P] Criar `app/(app)/layout.tsx` carregando usuário e matriz **uma vez por requisição** e disponibilizando-os à subárvore, sem `"use client"` (BRIEF: `"use client"` só em folha)
 - [ ] T010 [P] Escrever `components/ciaara/EstadoVazio.tsx`, que recebe o motivo e distingue *"não há dado"* de *"você não tem permissão de ver"* (FR-025)
@@ -67,7 +67,7 @@ entrar, e ver a aplicação responder como o perfil convidado.
 ### Testes da US1
 
 - [ ] T011 [P] [US1] Escrever `tests/e2e/convite.spec.ts` cobrindo V-3 do contrato convite: convite → definição de senha → primeiro acesso, com o escopo atribuído (FR-036, SC-002)
-- [ ] T012 [P] [US1] Escrever em `tests/e2e/convite.spec.ts` o teste V-1: e-mail nunca convidado **não** cria conta, **inclusive chamando a interface de autenticação diretamente** — não só pela tela (SC-001, critério 1 do documento 06)
+- [ ] T012 [P] [US1] Escrever em `tests/e2e/convite.spec.ts` o teste V-1: e-mail nunca convidado **não** cria conta, **inclusive chamando a interface de autenticação diretamente** — não só pela tela (**FR-002**, SC-001, critério 1 do documento 06)
 - [ ] T013 [P] [US1] Escrever o teste V-2 em `tests/invariantes/rls/`: linha em `usuarios` com `auth_user_id` nulo **não alcança nada** — é o T-09 aplicado ao estado de convite pendente
 - [ ] T014 [P] [US1] Escrever em `tests/e2e/convite.spec.ts` os testes V-4, V-5 e V-6: link já usado é recusado **sem revelar se a conta existe**; convite para e-mail com conta ativa é recusado sem duplicata; reenvio invalida o link anterior
 
@@ -81,7 +81,10 @@ entrar, e ver a aplicação responder como o perfil convidado.
 - [ ] T020 [US1] Criar `app/(auth)/login/page.tsx` com e-mail e senha (FR-001, FR-025.1)
 - [ ] T021 [US1] Implementar `reenviar` em `lib/acoes/usuarios.ts`, invalidando o link anterior (FR-011)
 - [ ] T022 [US1] Implementar em `lib/acoes/usuarios.ts` a recusa de convite para e-mail com conta ativa, sem criar duplicata (FR-012)
-- [ ] T023 [US1] Escrever a rotina de detecção do FR-013 em `scripts/manutencao/conferir_contas.py` ou equivalente versionado, percorrendo **os dois sentidos** — credencial sem linha e linha sem credencial além da validade do convite —, executável sem inspeção manual do banco (SC-012)
+- [ ] T023 [US1] Escrever a rotina de detecção do FR-013 em `scripts/manutencao/conferir_contas.py`, percorrendo **os dois sentidos** — credencial sem linha e linha sem credencial além da validade do convite —, executável sem inspeção manual do banco (SC-012)
+- [ ] T023.1 [US1] Escrever em `tests/e2e/convite.spec.ts` o teste do **mecanismo de reconstituição** (FR-031, SC-013): convidar um **endereço de teste** sobre uma linha que já tenha `codigo` e `origem_migracao_v1` preenchidos, e provar que os dois **sobrevivem** à obtenção da credencial (FR-032)
+- [ ] T023.2 [US1] Registrar em `lib/acoes/usuarios.ts` que a emissão aos **três endereços reais** da v2.0 é do **corte**, não desta fatia (FR-031.1). ⚠️ Duas das três linhas são pessoas com e-mail pessoal e o projeto de produção ainda não existe: um convite emitido do preview levaria alguém a definir senha num ambiente que será descartado
+- [ ] T023.3 [P] [US1] Escrever em `tests/invariantes/rls/rls.test.ts` a asserção do FR-032.1: `usuario_curso` vazia **não é lacuna** — os três usuários migrados são dois `admin` e um `visualizacao`, todos de escopo `Geral`, que alcança todos os cursos sem vínculo
 - [ ] T024 [US1] Implementar em `lib/acoes/sessao.ts` a atualização de `usuarios.ultimo_acesso` na autenticação bem-sucedida, uma vez por sessão (FR-026, SC-009, R-5)
 - [ ] T025 [US1] Escrever em `tests/invariantes/rls/rls.test.ts` o teste que prova que `app.impedir_autoescalonamento` **não** bloqueia a escrita de `ultimo_acesso`. ⚠️ A lista de colunas protegidas pelo gatilho pode crescer, e no dia em que `ultimo_acesso` entrar nela o login quebra em silêncio (R-5)
 
@@ -108,12 +111,14 @@ chamada fora da tela.
 - [ ] T031 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do SC-005: Encarregado de Curso com dois cursos em `usuario_curso` lê os dois e **não** lê um terceiro
 - [ ] T032 [US2] Escrever o teste do SC-007 em **duas partes separadas** — (a) em `tests/e2e/`, (b) em `tests/invariantes/rls/rls.test.ts`: (a) o botão some da tela; (b) a mesma ação, invocada por fora, é negada pelo banco. ⚠️ Provar só (a) é provar cortesia; provar só (b) é deixar a tela oferecer o que não funciona (FR-020, FR-022)
 - [ ] T033 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do SC-006: alterar uma linha de `perfil_permissao` muda o comportamento efetivo **sem novo deploy e sem migration** (FR-023)
-- [ ] T034 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do FR-027.1: uma escrita de tela **sem identidade autenticada não passa**. ⚠️ `app.set_auditoria()` descarta os carimbos em silêncio sem sessão — comportamento correto no ETL e defeito grave numa tela
+- [ ] T034 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do FR-027.1: uma escrita de tela **sem identidade autenticada não passa** (**FR-027**, FR-027.1). ⚠️ `app.set_auditoria()` descarta os carimbos em silêncio sem sessão — comportamento correto no ETL e defeito grave numa tela
 
 ### Implementação da US2
 
 - [ ] T035 [US2] Escrever `lib/autorizacao/matriz.ts`: carrega `perfil_permissao` do usuário corrente e expõe `pode(recurso, acao)`. ⚠️ **Nenhuma lista de perfis ou de recursos escrita no código** — seria a segunda fonte de verdade que o FR-021 proíbe, e divergiria da primeira no dia em que alguém alterasse a matriz (R-4)
 - [ ] T036 [US2] Escrever `components/ciaara/SePodeVer.tsx`, que **oculta** — não desabilita — o que o perfil não pode (FR-020)
+- [ ] T036.1 [US2] Criar `app/(app)/admin/permissoes/page.tsx` — tela de **leitura** da matriz, que responda à pergunta *"por que este perfil não vê este botão?"* sem consultar o banco. ⚠️ **Sem edição** (FR-024.1): a tela de escrita mais sensível do sistema não nasce sem *design system* e para um único usuário que já alcança o banco. Quando existir, terá de ancorar-se em `app.eh_admin()` e **não** na própria matriz — a matriz não pode ser a autoridade sobre quem edita a matriz (**FR-024**, FR-024.1, documento 22 §6.4)
+- [ ] T036.2 [P] [US2] Escrever em `tests/e2e/permissoes.spec.ts` o teste de que `app/(app)/admin/permissoes/page.tsx` **não oferece** nenhuma ação de escrita sobre a matriz (FR-024.1, FR-025.7)
 - [ ] T037 [US2] Aplicar `components/ciaara/EstadoVazio.tsx` nas telas de `app/(app)/` de modo que o vazio por falta de permissão diga *"você não vê"*, nunca *"não há"* (FR-025)
 
 **Checkpoint**: o alcance de cada perfil é o da matriz, provado dos dois lados.
@@ -181,14 +186,14 @@ habilitação vêm preenchidos enquanto CPF e endereço vêm **ausentes na respo
 
 ### Testes da US5 — escritos ANTES da migration
 
-- [ ] T051 [US5] Escrever `supabase/tests/092_recorte_pii.sql` com **P-2, P-3, P-7 e P-8** do contrato recorte-pii: CPF direto negado, `select *` negado, subconsulta negada, filtro por `cpf` negado. ⚠️ **Estes quatro são o contrato.** Uma suíte com P-1, P-4 e P-5 aprova um recorte que não recorta — foi literalmente o resultado da primeira tentativa do experimento do R-1
+- [ ] T051 [US5] Escrever `supabase/tests/092_recorte_pii.sql` com **P-2, P-3, P-7 e P-8** do contrato recorte-pii: CPF direto negado, `select *` negado, subconsulta negada, filtro por `cpf` negado. ⚠️ **Estes quatro são o contrato.** Uma suíte com P-1, P-4 e P-5 aprova um recorte que não recorta — foi literalmente o resultado da primeira tentativa do experimento do R-1 (**FR-028**, FR-028.1, FR-030)
 - [ ] T052 [US5] Rodar `supabase/tests/092_recorte_pii.sql` (via `pnpm test:invariantes`) **contra o schema atual, antes da migration**, e confirmar que ele **reprova**. Um teste de proteção que passa antes de a proteção existir não está testando nada
-- [ ] T053 [P] [US5] Acrescentar a `supabase/tests/092_recorte_pii.sql` os controles positivos P-1, P-4, P-5, P-6 e P-9: os 9 leem o funcional; `vw_instrutores` devolve 33 colunas; os **3** leem a PII pela visão; os **6** recebem **0 linhas** — vazio, não erro; `service_role` continua lendo
+- [ ] T053 [P] [US5] Acrescentar a `supabase/tests/092_recorte_pii.sql` os controles positivos P-1, P-4, P-5, P-6 e P-9: os 9 leem o funcional; `vw_instrutores` devolve 33 colunas; os **3** leem a PII pela visão; os **6** recebem **0 linhas** — vazio, não erro; `service_role` continua lendo (**SC-011**)
 - [ ] T054 [P] [US5] Acrescentar a `supabase/tests/092_recorte_pii.sql` o P-10: as **10 views existentes** continuam de pé e nenhuma passa a vazar PII
 
 ### Implementação da US5
 
-- [ ] T055 [US5] Escrever `supabase/migrations/<ts>_recorte_dado_pessoal_instrutor.sql` com as três peças **na ordem**: `revoke select on public.instrutores from authenticated`; `grant select (<as 33 funcionais>)`; `create view public.vw_instrutor_dados_pessoais` com o porteiro `app.perfil_atual() in (<os 3>)`. ⚠️ Sem o `revoke` da **tabela**, o `grant` por coluna não tem efeito nenhum — medido (R-1, contrato recorte-pii C-1)
+- [ ] T055 [US5] Escrever `supabase/migrations/<ts>_recorte_dado_pessoal_instrutor.sql` com as três peças **na ordem**: `revoke select on public.instrutores from authenticated`; `grant select (<as 33 funcionais>)`; `create view public.vw_instrutor_dados_pessoais` com o porteiro `app.perfil_atual() in (<os 3>)`. ⚠️ Sem o `revoke` da **tabela**, o `grant` por coluna não tem efeito nenhum — medido (**FR-028.2**, **FR-029**, R-1, contrato recorte-pii C-1)
 - [ ] T056 [US5] Criar `public.vw_instrutores` **com `security_invoker = true`**, só as 33 funcionais. ⚠️ Sem essa opção a view roda com os direitos do dono e **contorna a policy** — trocaria um problema de coluna por um problema de linha (contrato recorte-pii C-5)
 - [ ] T057 [US5] Escrever no comentário de `supabase/migrations/<ts>_recorte_dado_pessoal_instrutor.sql` **o erro que a pessoa vai ver** — `permission denied for table instrutores` — e que ele **não é a RLS**, é `select *` ou uma coluna de PII citada por nome numa consulta que deveria usar `vw_instrutores`
 - [ ] T058 [US5] Escrever o plano de reversão no rodapé de `supabase/migrations/<ts>_recorte_dado_pessoal_instrutor.sql`, com o SQL literal, e registrar que reverter **devolve a PII a 6 perfis**
@@ -202,12 +207,14 @@ habilitação vêm preenchidos enquanto CPF e endereço vêm **ausentes na respo
 
 ## Phase 8: Polish e travessias
 
-- [ ] T062 [P] Executar as três conferências de `contracts/conferencias-de-painel.md`, registrando **o valor observado** de cada uma — auto-cadastro, limite de tentativas e região do projeto. ⚠️ "Está configurado" sem o número não é conferência, é lembrança (FR-003, FR-005.2)
+- [ ] T062 [P] Executar as **quatro** conferências de `contracts/conferencias-de-painel.md`, registrando **o valor observado** de cada uma — auto-cadastro, limite de tentativas, política de senha e região do projeto. ⚠️ "Está configurado" sem o número não é conferência, é lembrança (FR-003, FR-005.2, **FR-006, SC-003, SC-003.1**)
+- [ ] T062.1 [P] Conferir e registrar que `NEXT_PUBLIC_URL_APLICACAO` está cadastrada no escopo **Preview** da Vercel e **ausente** do escopo Production — a T003 a cadastra e nada provava que ficou lá (FR-033, FR-022)
 - [ ] T063 Redigir a proposta de **ameaça A-8** para o `docs/fase-2/22-Seguranca-RLS-e-Autenticacao.md` §1.2: tentativa repetida de senha contra o endereço de login, com a defesa observada na T062. ⚠️ Propor é desta fatia; **aprovar é do Bernardo**
 - [ ] T064 [P] Atualizar `docs/fase-2/22-Seguranca-RLS-e-Autenticacao.md` §10.2 marcando T-02, T-03 e T-10 como portados, e §9 registrando que a pendência da CIAARA-14.2 foi resolvida em 08/09/2026
 - [ ] T065 [P] Registrar em `contracts/conferencias-de-painel.md` os valores observados na T062, com a data
+- [ ] T065.1 Conferir, arquivo a arquivo, que nenhuma das cinco telas novas de `app/(auth)/` e `app/(app)/` introduz **cor literal** em `style={{}}` ou em classe. ⚠️ A dívida C-1 já existe em 4 arquivos à espera dos tokens `@theme` do Épico 4; esta fatia acrescenta 5 telas e **não deve fazê-la crescer** (FR-025.5)
 - [ ] T066 Atualizar o *Estado atual* do `CLAUDE.md`: Épico 3 e o que o Épico 4 herda — inclusive a dívida de estilo das cinco telas sem tokens `@theme`
-- [ ] T067 Rodar `pnpm verificar:tudo` e abrir o PR com o template inteiro preenchido, incluindo o plano de reversão da migration
+- [ ] T067 Rodar `pnpm verificar:tudo`, confirmar que ele e o CI dão **veredito idêntico** sobre o mesmo commit (**SC-014**), e abrir o PR com o template inteiro preenchido, incluindo o plano de reversão da migration
 
 ---
 

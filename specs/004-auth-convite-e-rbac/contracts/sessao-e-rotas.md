@@ -1,4 +1,4 @@
-# Contrato — sessão, rotas e a exceção declarada ao `RN-DEG-01`
+# Contrato — sessão, rotas e o `RN-DEG-01` na fronteira de autenticação
 
 **Fase 1** · 08/09/2026 · fonte: spec FR-004 a FR-005.2 · documento 24 §Estrutura
 
@@ -26,7 +26,7 @@ infinito, e ele não aparece em `tsc` — aparece no navegador do usuário.
   requisição. É o que faz a desativação valer na requisição seguinte (R-2). Guardá-los em cookie
   ou em memória do servidor manteria a pessoa alcançando o que já lhe foi tirado.
 
-## A exceção declarada ao `RN-DEG-01`
+## O `RN-DEG-01` aqui — cumprido, não excetuado
 
 **Hoje** (`lib/supabase/middleware.ts`, linhas 23-25):
 
@@ -37,14 +37,17 @@ if (conferirAmbiente().length > 0) return resposta;
 
 **A partir desta fatia**, esse caminho passa a **negar** o acesso à rota de `(app)`.
 
-⚠️ **Por que o princípio se inverte aqui, e só aqui.** O `RN-DEG-01` existe para que dependência
-ausente devolva vazio com aviso em vez de exceção não tratada — protege o usuário de tela quebrada.
-Numa fronteira de autenticação, "seguir em frente com aviso" significa **rota protegida aberta**:
-uma variável de ambiente faltando passaria a abrir o sistema inteiro. O princípio protege a tela;
-aqui ele abriria a porta.
+⚠️ **O princípio não se inverte: ele se cumpre.** O `RN-DEG-01` proíbe *exceção não tratada* quando
+falta **dado de domínio**. Aqui falta **configuração da fronteira de segurança**, e a resposta é
+uma tela que diz **o que falta configurar**, sem expor valor de configuração — que é exatamente o
+"vazio/neutro com aviso" que ele pede.
 
-**A degradação continua existindo, e continua segura** — muda o destino: em vez de seguir, a
-requisição vai para uma tela que diz **o que falta configurar**, sem expor valor de configuração.
+O que muda é o **destino** da requisição, não o tratamento: em vez de seguir para a rota protegida,
+ela vai para a tela informativa. Seguir seria o problema — uma variável de ambiente faltando
+abriria o sistema inteiro.
+
+*(Redação corrigida em 08/09/2026. A primeira chamava isto de "exceção declarada ao `RN-DEG-01`",
+o que superestimava o conflito e sugeria uma emenda à Constituição que não é necessária.)*
 
 | Situação | Grupo `(auth)` | Grupo `(app)` |
 |---|---|---|

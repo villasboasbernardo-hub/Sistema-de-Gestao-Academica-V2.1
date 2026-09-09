@@ -10,9 +10,9 @@ banco — 23 funções `app.*`, 152 linhas de matriz, 77 policies, gatilho anti-
 testes negativos. O Épico 2 encheu esse banco com 5.394 linhas de dado real. Falta o caminho pelo
 qual uma pessoa entra e exerce o que a matriz lhe permite.
 
-A fatia entrega **cinco telas**, o fluxo de convite, a sessão, a recuperação de senha, e **uma**
-alteração no banco: o recorte por coluna do dado pessoal de instrutor — dívida registrada no
-cabeçalho da migration que criou aquelas colunas, para ser paga aqui.
+A fatia entrega **cinco telas**, o fluxo de convite, a sessão, a recuperação de senha, e **duas**
+migrations: o recorte por coluna do dado pessoal de instrutor — dívida registrada no cabeçalho da
+migration que criou aquelas colunas, para ser paga aqui — e o gatilho que protege o último Admin.
 
 **Nada da autorização existente é redesenhado.** As policies, as funções e a matriz são consumidas
 como estão.
@@ -29,7 +29,7 @@ como estão.
 **Metas de desempenho**: nenhuma específica. Volume real: 9 perfis, dezenas de usuários simultâneos
 no máximo, matriz de 152 linhas. **Priorizar clareza sobre desempenho** (BRIEF)
 **Restrições**: sem *design system* (Épico 4) · sem ORM · regra de negócio nunca só na UI
-**Escala/escopo**: 5 telas · 1 migration · ~18 asserções negativas novas de RLS
+**Escala/escopo**: 5 telas · **2 migrations** · ~18 asserções negativas novas de RLS
 
 ### O que já existe e é consumido, não construído
 
@@ -40,7 +40,7 @@ no máximo, matriz de 152 linhas. **Priorizar clareza sobre desempenho** (BRIEF)
 | `app.impedir_autoescalonamento` | ✅ instalado, com teste |
 | `app.set_auditoria()` | ✅ instalado. ⚠️ **descarta carimbo em silêncio sem sessão** — correto no ETL, defeito numa tela (FR-027.1) |
 | `lib/supabase/{server,client,middleware,admin}.ts` | ✅ do Épico 0 |
-| `lib/ambiente.ts` + `app/error.tsx` | ✅ ⚠️ o middleware hoje **sai de lado** sem configuração; o FR-005.1 inverte isso |
+| `lib/ambiente.ts` + `app/error.tsx` | ✅ ⚠️ o middleware hoje **sai de lado** sem configuração; o FR-005.1 muda o destino da requisição, sem deixar de tratá-la |
 | 13 testes de RLS com sessão autenticada | ✅ passando |
 
 ## Verificação contra a Constituição
@@ -51,22 +51,47 @@ no máximo, matriz de 152 linhas. **Priorizar clareza sobre desempenho** (BRIEF)
 | **II. Preservação de regras** | ✅ | Nenhuma `RN-` é alterada. `RN-RBAC-02` é **consumida**, não reescrita |
 | **III. Restrição de plataforma** | ✅ | Sem ORM, sem biblioteca de componentes nova, Server Actions com Zod na primeira linha |
 | **IV. Integridade do histórico** | ✅ | Desativação é lógica; nenhuma coluna é removida — o recorte de PII **revoga privilégio**, não apaga dado |
-| **V. Degradação segura** | ⚠️ **exceção declarada** | O FR-005.1 **inverte** o `RN-DEG-01` na fronteira de autenticação. Ver *Complexidade* |
+| **V. Degradação segura** | ✅ | O FR-005.1 **cumpre** o princípio, não o excetua — ver *Complexidade*. E o FR-025 atende à obrigação explícita do princípio de distinguir *"não há dado"* de *"há dado que você não pode ver"* |
 | **VI. Mudança validada por invariante** | ✅ | 18 asserções negativas novas + T-02, T-03, T-10; o recorte de PII foi decidido por **experimento**, não por leitura |
 | **VII. Configuração sobre constante** | ✅ | `NEXT_PUBLIC_URL_APLICACAO` (FR-033); a matriz continua sendo dado; **nenhuma lista de perfis no código da aplicação** (FR-021) |
 | **VIII. Rastreabilidade** | ✅ | `codigo` e `origem_migracao_v1` sobrevivem à obtenção de credencial (FR-032) |
 | **IX. Contenção de escopo** | ✅ | Auth e RBAC estão na Matriz de Responsabilidades da CIAARA-11. Fora: SSO, MFA obrigatória, log de leitura, retenção |
-| **X. Paridade antes de novidade** | ⚠️ **item novo, justificado** | O recorte de PII **não existia na v2.0** — mas as colunas também não estavam numa nuvem comercial. É consequência do Épico 2, não novidade de negócio |
+| **X. Paridade antes de novidade** | ✅ | O recorte de PII **é paridade**, não novidade — ver *Complexidade* |
 | **XI. O banco é a fronteira** | ✅ | O recorte é privilégio de banco. A ocultação na interface é cortesia e está escrita como tal (FR-020 e FR-022 separados) |
 
-**Veredito: aprovado**, com dois desvios registrados abaixo.
+**Veredito: aprovado, sem desvio.**
 
-## Complexidade — os dois desvios, e por que valem
+## Complexidade — dois pontos que pareciam desvio, e não são
 
-| Desvio | Por que é necessário | Por que a alternativa simples não serve |
-|---|---|---|
-| **FR-005.1 inverte o `RN-DEG-01`**: sem configuração de ambiente, o middleware **nega** em vez de sair de lado | `RN-DEG-01` existe para que dependência ausente devolva vazio com aviso, e não exceção. Numa fronteira de autenticação, "vazio com aviso" significa **rota protegida aberta** | Manter o comportamento atual faria uma variável de ambiente faltando abrir o sistema inteiro. O princípio protege o usuário de tela quebrada; aqui ele abriria a porta |
-| **O recorte de PII é item novo** (Princípio X) | O Épico 2 pôs CPF, RG e endereço de 177 militares num provedor comercial, sob autorização da CIAARA-14.2. A v2.0 não tinha o problema porque o dado estava no Drive institucional | Adiar para depois da paridade deixaria o dado exposto a 6 dos 9 perfis por vários épicos. A dívida foi **registrada no momento em que nasceu**, com a data e o lugar |
+⚠️ **A primeira versão deste plano declarou dois desvios à Constituição. A análise de 08/09/2026
+mostrou que nenhum dos dois é desvio**, e a correção vale ser registrada: declarar desvio falso
+tem custo próprio — normaliza o desvio, e sugere emenda à Constituição onde não é preciso nenhuma.
+
+### FR-005.1 e o Princípio V — **cumpre, não excetua**
+
+O princípio diz: *"quando uma funcionalidade depende de um **dado que ainda não existe**, o retorno
+é vazio/neutro com aviso — **nunca uma exceção não tratada**"*.
+
+Duas coisas o afastam do caso do FR-005.1:
+
+1. **O que falta não é dado de domínio, é configuração da fronteira de segurança.** O princípio
+   fala do painel de KPIs que abre vazio porque a tabela ainda não tem linha.
+2. **A resposta do FR-005.1 é tratada.** Negar a rota exibindo uma tela que diz **o que falta
+   configurar** é exatamente o "vazio/neutro com aviso" que o princípio pede. Não há exceção
+   estourando.
+
+**O princípio nunca disse "deixe a requisição passar". Disse "não estoure".** O FR-005.1 não
+estoura; ele muda o **destino** da requisição, e o destino é uma tela que informa.
+
+### O recorte de PII e o Princípio X — **é paridade**
+
+A triagem do princípio é uma pergunta: *isto é paridade ou é novidade?*
+
+O recorte **não acrescenta função de negócio nenhuma**. Ele restaura, na plataforma nova, o
+confinamento que o dado já tinha: na v2.0, CPF e endereço viviam numa planilha do Drive
+institucional, alcançável por quem a Divisão autorizasse. A migração os pôs numa tabela que 6 dos 9
+perfis leem. **Restaurar o confinamento é paridade de proteção**, e adiá-la seria aceitar uma perda
+de proteção como preço da mudança de plataforma — que é o oposto do que o Princípio X protege.
 
 ## Estrutura do projeto
 
@@ -117,7 +142,8 @@ components/ciaara/
 └── EstadoVazio.tsx                # distingue "não há" de "você não vê" (FR-025)
 
 supabase/
-├── migrations/<ts>_recorte_dado_pessoal_instrutor.sql
+├── migrations/<ts>_recorte_dado_pessoal_instrutor.sql   # US5 — o recorte
+├── migrations/<ts>_ultimo_admin_protegido.sql           # US3 — gatilho do FR-016
 └── tests/092_recorte_pii.sql
 
 tests/
@@ -138,15 +164,19 @@ De dentro para fora, como manda o `CLAUDE.md`:
 | 2 | **Sessão e rotas** | `middleware.ts`, grupos `(auth)`/`(app)` | rota protegida sem sessão redireciona; **sem configuração, nega** |
 | 3 | **Autorização na aplicação** | `lib/autorizacao/` + `SePodeVer` | ocultação e negação provadas **separadamente** |
 | 4 | **Convite** | Server Action + `/convite/[token]` | e2e convite → senha → primeiro acesso |
-| 5 | **Gestão de usuários** | `/admin/usuarios` | desativar zera alcance na requisição seguinte |
+| 5 | **Gestão de usuários** | `/admin/usuarios` + **2ª migration** (gatilho do último Admin) | desativar zera alcance na requisição seguinte |
 | 6 | **Recuperação** | `/recuperar-senha` | resposta indistinguível, medida |
 | 7 | **Leitura da matriz** | `/admin/permissoes` | — |
 | 8 | **Teste negativo dos 9 perfis** | fixtures + tabela | 18 asserções nomeadas |
 | 9 | **Conferências de painel** | valores observados, registrados | — |
 
-⚠️ **A fatia 1 vem primeiro de propósito.** É a única que toca o banco, e o `pnpm db:tipos` que ela
-exige precisa estar commitado antes de qualquer código de tela — foi exatamente essa a omissão que
-o portão pegou no Épico 2.
+⚠️ **A fatia 1 vem primeiro de propósito.** O `pnpm db:tipos` que ela exige precisa estar commitado
+antes de qualquer código de tela — foi exatamente essa a omissão que o portão pegou no Épico 2.
+
+⚠️ **São DUAS migrations nesta fatia, não uma.** A segunda saiu da decomposição: a proteção do
+último Admin (FR-016) precisa de **gatilho**, porque policy não enxerga `OLD`/`NEW` e conferência
+que só existe na Server Action é contornável por quem chamar a interface de dados direto. Mesmo
+motivo pelo qual `app.impedir_autoescalonamento` é gatilho. Cada uma exige o seu `db:tipos`.
 
 ## Riscos
 

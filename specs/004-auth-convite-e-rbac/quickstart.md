@@ -56,8 +56,9 @@ pnpm test:e2e                 # S-1 a S-4
 `/login` abre; e — o que importa — **com a variável de ambiente ausente, a rota de `(app)` é
 negada**, não liberada.
 
-⚠️ É o FR-005.1, a única exceção declarada ao `RN-DEG-01`. O teste S-4 existe para impedir que
-alguém "conserte" o middleware de volta ao comportamento anterior por achar que é o princípio.
+⚠️ É o FR-005.1. O teste S-4 existe para impedir que alguém "conserte" o middleware de volta ao
+comportamento anterior **achando que o `RN-DEG-01` manda seguir em frente**. Não manda: ele proíbe
+exceção não tratada por falta de dado, e negar com uma tela informativa é tratamento, não estouro.
 
 ## V-4 · Convite → senha → primeiro acesso
 
@@ -112,7 +113,8 @@ propriedade continua sendo requisito e continua sendo provada.
 
 Ver [`contracts/conferencias-de-painel.md`](./contracts/conferencias-de-painel.md).
 
-**Espera-se: um valor observado registrado para cada um dos três itens** — não um "sim". "Está
+**Espera-se: um valor observado registrado para cada um dos quatro itens** — inclusive a política
+de senha, que é a prova do SC-003 — não um "sim". "Está
 configurado" sem o número não é conferência, é lembrança.
 
 ---

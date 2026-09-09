@@ -225,8 +225,13 @@ tela, ausentes na resposta do banco.
 - **FR-005**: Toda rota do grupo autenticado MUST exigir sessão válida; a rota sem sessão MUST
   redirecionar ao login **preservando o destino pretendido**.
 - **FR-005.1**: Na **ausência de configuração de ambiente**, o middleware MUST **negar** o acesso à
-  rota protegida. É a única exceção declarada ao `RN-DEG-01`: degradar para "vazio com aviso" numa
-  fronteira de autenticação significa degradar para "aberto".
+  rota protegida, exibindo o que falta configurar.
+  ⚠️ **Isto NÃO é exceção ao `RN-DEG-01`, e a distinção importa.** Aquele princípio proíbe *exceção
+  não tratada* quando falta **dado de domínio**; aqui falta **configuração da fronteira de
+  segurança**, e a resposta — uma tela que diz o que falta — é precisamente o "vazio/neutro com
+  aviso" que ele pede. O princípio nunca disse "deixe a requisição passar"; disse "não estoure".
+  O que muda é o **destino** da requisição, não o tratamento. *(Redação corrigida em 08/09/2026:
+  a primeira dizia "única exceção declarada", o que superestimava o conflito.)*
 - **FR-005.2**: MUST existir **item de conferência verificável** do limite de tentativas de
   autenticação que a plataforma aplica, na mesma forma do FR-003. A fatia MUST **não** implementar
   contagem de tentativa própria — uma defesa escrita à mão neste ponto costuma ser pior que a
@@ -435,8 +440,11 @@ tela, ausentes na resposta do banco.
 ## Assumptions
 
 1. **A autorização do banco não é redesenhada.** As 77 policies, as 23 funções `app.*` e a matriz do
-   Épico 1 estão corretas e provadas; este épico as consome. A **única** alteração prevista no banco
-   é o recorte de dado pessoal da US5 — e ela é acréscimo, não revisão.
+   Épico 1 estão corretas e provadas; este épico as consome. As **duas** alterações previstas no
+   banco são acréscimo, não revisão: o recorte de dado pessoal (US5) e o gatilho que protege o
+   último Admin (FR-016). ⚠️ O segundo saiu da decomposição em tarefas, não desta premissa
+   original — policy não enxerga `OLD`/`NEW`, e conferência que só existe na Server Action é
+   contornável.
 2. **Os 9 perfis do ENUM `perfil_usuario` são o conjunto final.** O documento 01 fala em "~12" porque
    conta as variações Encarregado/Ajudante por divisão separadamente; o ENUM já as unificou.
 3. **A plataforma de autenticação envia os e-mails.** Não há serviço de e-mail próprio nesta fatia.
@@ -477,7 +485,7 @@ tela, ausentes na resposta do banco.
   *leitura* é decisão de retenção e volume que ninguém tomou, e não está no escopo declarado deste
   épico. **Fica listado como pendência, não como requisito.**
 - **Política de retenção e descarte de dado pessoal.** Mesma razão: o sistema hoje nunca apaga, e
-  decidir se isso é conforme é matéria da autoridade, não de engenharia.
+  decidir se isso é conforme é assunto da autoridade, não de engenharia.
 - **A emissão de convite aos três endereços reais da v2.0.** O mecanismo é desta fatia (FR-031.1);
   o disparo é do corte, quando existir projeto de produção.
 - **Rotina de revisão periódica de contas inativas** — o documento 22 §4.4 registra a pendência e

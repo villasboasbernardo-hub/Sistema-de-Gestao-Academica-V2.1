@@ -36,7 +36,16 @@ registra-se **o que se viu**.
 | **Valor a registrar** | **o número observado**, não "está configurado" |
 | **Por que importa** | ⚠️ **O documento 22 não trata do assunto.** O modelo de ameaças vai de A-1 a A-7 e nenhuma delas é tentativa repetida de senha; a defesa de A-7 (política de senha) protege a senha escolhida, não o endereço de login. Depois desta fatia esse endereço dá acesso a CPF e residência de 177 militares |
 
-### 3. Região do projeto
+### 3. Política de senha (FR-006)
+
+| | |
+|---|---|
+| **Onde** | Painel do projeto → Authentication → Policies |
+| **O que conferir** | comprimento mínimo **12**; verificação contra vazamento (HaveIBeenPwned) **habilitada** |
+| **Valor a registrar** | **os dois valores observados**, e a data |
+| **Por que importa** | É a defesa da ameaça **A-7** do documento 22 §1.2 — senha fraca ou reutilizada, probabilidade **média**. ⚠️ Composição obrigatória e expiração compulsória ficam **desligadas de propósito** (documento 22 §4.5, alinhado ao NIST SP 800-63B): exigir símbolo e trocar senha a cada 90 dias produz senhas piores, previsíveis e anotadas em papel. Se alguém as ligar "para reforçar", **enfraquece** |
+
+### 4. Região do projeto
 
 | | |
 |---|---|
@@ -46,6 +55,6 @@ registra-se **o que se viu**.
 
 ## Entregável desta fatia
 
-Além das três conferências: **propor ao documento 22 uma ameaça A-8** — tentativa repetida de
+Além das quatro conferências: **propor ao documento 22 uma ameaça A-8** — tentativa repetida de
 senha contra o endereço de login, com a defesa observada no item 2. Propor é da fatia; **aprovar é
 do Bernardo**.
