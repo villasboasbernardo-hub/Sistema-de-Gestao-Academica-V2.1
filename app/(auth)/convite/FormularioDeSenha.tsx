@@ -22,7 +22,43 @@ export function FormularioDeSenha({ rotulo }: { readonly rotulo: string }) {
 
   useEffect(() => {
     const supabase = criarClienteDeNavegador();
-    supabase.auth.getSession().then(({ data }) => setTemSessao(Boolean(data.session)));
+
+    // ⚠️ NÃO BASTA UM `getSession()`. O link de convite traz o token no FRAGMENTO da URL, e o
+    // cliente o processa de forma ASSÍNCRONA depois de montar. Um `getSession()` disparado no
+    // primeiro `useEffect` corre com esse processamento e costuma perder: a tela então diz
+    // "link inválido" com um link perfeitamente válido — que é o pior erro possível aqui, porque
+    // manda a pessoa pedir outro convite sem necessidade.
+    //
+    // `onAuthStateChange` cobre a corrida: dispara quando a sessão aparece, venha ela do
+    // armazenamento ou do fragmento.
+    const { data: assinatura } = supabase.auth.onAuthStateChange((_evento, sessao) => {
+      setTemSessao(Boolean(sessao));
+    });
+
+    // ⚠️ O TOKEN VEM NO FRAGMENTO, E O CLIENTE NÃO O PEGA SOZINHO. `createBrowserClient` do
+    // `@supabase/ssr` usa fluxo **PKCE** por padrão: ele procura `?code=` na query e IGNORA o
+    // `#access_token=` que o endpoint de verificação do convite devolve. O resultado, sem isto,
+    // é a tela dizer "link inválido" com um link perfeitamente bom — e mandar a pessoa pedir
+    // outro convite sem necessidade.
+    //
+    // `setSession` com o que veio no fragmento resolve, e vale para os dois fluxos.
+    const fragmento = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const acesso = fragmento.get("access_token");
+    const renovacao = fragmento.get("refresh_token");
+
+    if (acesso && renovacao) {
+      void supabase.auth
+        .setSession({ access_token: acesso, refresh_token: renovacao })
+        .then(({ error }) => setTemSessao(!error));
+      return () => assinatura.subscription.unsubscribe();
+    }
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setTemSessao(true);
+      else setTimeout(() => setTemSessao((atual) => atual ?? false), 1500);
+    });
+
+    return () => assinatura.subscription.unsubscribe();
   }, []);
 
   async function definir(dados: FormData) {

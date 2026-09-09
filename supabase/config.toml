@@ -159,7 +159,17 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# ⚠️ `localhost` E `127.0.0.1` SÃO ENDEREÇOS DIFERENTES para esta lista, que é de URLs EXATAS.
+# O Playwright usa `localhost:3000`; sem a entrada correspondente, o link de convite é recusado
+# no redirecionamento e o teste ponta a ponta falha sem dizer por quê.
+additional_redirect_urls = [
+  "https://127.0.0.1:3000",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3000/convite",
+  "http://localhost:3000",
+  "http://localhost:3000/convite",
+  "http://localhost:3000/recuperar-senha",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -171,8 +181,17 @@ enable_refresh_token_rotation = true
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
-# Allow/disallow new user signups to your project.
-enable_signup = true
+# ⚠️ DESLIGADO PELO FR-003, E NÃO É PREFERÊNCIA. O acesso ao sistema é SOMENTE POR CONVITE do
+# Admin (BRIEF §3). Com isto ligado, qualquer pessoa com o endereço da aplicação cria credencial:
+# ela não alcançaria dado nenhum — sem linha em `usuarios`, `app.usuario_atual()` devolve NULL e
+# nenhuma policy concede acesso a NULL, provado pelo teste T-09 — mas teria credencial válida no
+# projeto, o que é lixo desnecessário e superfície de ataque gratuita.
+#
+# ⚠️ E ISTO CORRIGE UMA SUPOSIÇÃO DO CONTRATO. O documento 22 §3.4 diz "não há como garanti-lo
+# por código, é item de checklist do painel". Para o projeto REMOTO isso continua verdade. Para o
+# stack local e para o `supabase db reset`, `config.toml` É código, é versionado, e o CI o aplica
+# a cada execução — aqui a garantia é automática.
+enable_signup = false
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
@@ -195,7 +214,16 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+#
+# ⚠️ 100 É VALOR DE AMBIENTE DE TESTE, e a distinção importa. O padrão do CLI é **2 por hora** —
+# o que faz a suíte ponta a ponta do convite falhar na terceira execução do dia com
+# "nenhum e-mail chegou", uma mensagem que não sugere limite de envio nenhum. Custou uma
+# investigação; fica escrito.
+#
+# ⚠️ ISTO NÃO É A DEFESA CONTRA FORÇA BRUTA, e não deve ser confundido com ela. O limite que
+# protege o endereço de login em produção é o do PAINEL do projeto remoto, e é ele que o FR-005.2
+# manda conferir e registrar. Este arquivo só governa o stack local, onde não há o que atacar.
+email_sent = 100
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -216,7 +244,14 @@ web3 = 30
 # secret = ""
 
 [auth.email]
-# Allow/disallow new user signups via email to your project.
+# ⚠️ ESTE FICA `true`, E NÃO É CONTRADIÇÃO COM O FR-003. Quem desliga o auto-cadastro é o
+# `enable_signup` da seção `[auth]`, acima — este aqui mapeia para `GOTRUE_EXTERNAL_EMAIL_ENABLED`
+# e governa o PROVEDOR de e-mail inteiro. Desligá-lo derruba também o LOGIN por e-mail e senha,
+# que é o único mecanismo de autenticação do sistema.
+#
+# Medido: com este `false`, toda a suíte de RLS falhou em bloco com
+# "Email logins are disabled" — 98 testes pulados, e a mensagem não sugere auto-cadastro a
+# ninguém. Custou uma investigação; fica escrito.
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.

@@ -240,7 +240,8 @@ divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, colun
 | **Catálogo de Unidades de Ensino** | ✅ **Extraído em 28/08/2026** dos 24 currículos da DEnsM (`SIS11/Curriculos/`): **572 UEs**, 134 disciplinas, 21 currículos. Invariante fecha em **134/134** (soma das CH das UEs = CH da disciplina). Script `scripts/etl/extrair_unidades_ensino.py`, dado em `scripts/etl/dados/`. **3 currículos sem UE** — ver Q1.b |
 | **Épico 2 — Migração de dados** | ✅ **CONCLUÍDO em 08/09/2026.** **5.394 linhas em 26 tabelas**, transação única, contra o banco local. Reconciliação **APROVADA nas oito bloqueantes** (R-01 a R-08), com a R-02 **provada**: `REG-0176` movido de turma à mão, contagem total intacta em 1.566, e a verificação acusou os dois lados. **96 asserções pgTAP** verdes com a base povoada **e** vazia. Ponto de entrada único: `python -m scripts.etl.executar`, cujo **código de saída é o veredito da reconciliação**. Os dois bloqueios não técnicos caíram: a **CIAARA-14.2 autorizou a hospedagem de dado pessoal em nuvem** (08/09) e a **Q1.b foi resolvida por cruzamento** com as planilhas de planejamento da v1.0 |
 | Épico 2 — o que **não** entrou | A **carga das 572 UEs** e a aplicação do cruzamento. `unidades_ensino` está **vazia** e `registros_aula.unidade_ensino_id` é **nula nas 1.566** — ratificado por Bernardo em 08/09 (*"o ETL deve ser o retrato fiel da origem, sem preenchimentos inventados"*). O cruzamento existe e tem **901 `casado` de 1.566** (`dados/normalizado/ue_cruzamento.csv`); o que falta é reconciliar um **terceiro** espaço de nomes — a sigla de curso do catálogo da DEnsM não bate com `cursos.codigo` em **8 dos 21** (`EST - QF - APHID` × `EST-QF-APHID`) e o `disciplina_id` fecha em **84 de 134** pelo nome |
-| Épicos 3 a 13 | ⬜ Pendentes. **Entra no Épico 3, além do abaixo:** a carga das 572 UEs, que é o único item do Épico 2 deixado aberto. **Entram no Épico 3:** a Server Action de convite (primeiro consumidor real de `lib/supabase/admin.ts`) e `NEXT_PUBLIC_URL_APLICACAO`, deixada fora do Épico 0 por decisão de 07/09. **Entra no Épico 4:** a dívida de estilo C-1 — 4 arquivos usam `style={{}}` com cor literal, à espera dos tokens `@theme` |
+| **Épico 3 — Auth, usuários e RBAC** | 🟨 **QUASE FECHADO em 09/09/2026.** As cinco histórias implementadas e verificadas: `pnpm verificar:tudo` sai **0** — 16 unidade · **102 pgTAP** · **98 RLS** · 5 ponta a ponta. Cinco telas (`/login`, `/convite`, `/recuperar-senha`, `/admin/usuarios`, `/admin/permissoes`), o fluxo de convite com **e-mail interceptado no Mailpit**, e duas migrations: o recorte de PII e o gatilho do último Admin. **Falta**: a carga das 572 UEs (herdada do Épico 2), a conferência do painel do projeto remoto e o PR |
+| Épicos 4 a 13 | ⬜ Pendentes. **Entra no Épico 4:** a dívida de estilo — agora são **9 arquivos** sem tokens `@theme`, não 4: as 5 telas do Épico 3 nasceram sóbrias por decisão registrada. **Entram no Épico 3:** a Server Action de convite (primeiro consumidor real de `lib/supabase/admin.ts`) e `NEXT_PUBLIC_URL_APLICACAO`, deixada fora do Épico 0 por decisão de 07/09. **Entra no Épico 4:** a dívida de estilo C-1 — 4 arquivos usam `style={{}}` com cor literal, à espera dos tokens `@theme` |
 | **Decisão UE-1** | ✅ **Fechada em 26/08/2026 — rota (b)**: `registros_aula` no grão de **Unidade de Ensino**; disciplina é agregado derivado. Épico 1 **desbloqueado**. Ver documento 05 §9.1. **Origem do dado resolvida em 28/08/2026**: as UEs vêm dos **currículos oficiais da DEnsM**, não de linha sintética |
 | Numeração das specs | ✅ **Reiniciada em 26/08/2026.** As 39 specs herdadas da v2.0 vivem em `specs/heranca-v2.0/`; a v2.1 recomeça em `specs/001-…`. "Spec 001" **exige o diretório** para não ser ambíguo |
 
@@ -289,6 +290,34 @@ Bernardo em 08/09/2026** (*"foram balizados por medição real e justificados na
    regra 4. Se os valores divergirem, a carga **aborta**: dois números para a mesma norma não é
    duplicidade de nome, é conflito.
 
+**Os seis achados de plataforma do Épico 3 — todos custaram investigação, nenhum aparece no `tsc`:**
+
+1. **`process.env[variavel]` com chave dinâmica NÃO é substituído no bundle.** Só o acesso
+   literal `process.env.NEXT_PUBLIC_FOO` é. `conferirAmbiente()` fazia leitura dinâmica desde o
+   Épico 0 e ninguém notou, porque no servidor `process.env` é objeto de verdade. No primeiro
+   componente de cliente que a chamou, **a tela abriu dizendo que todas as variáveis faltavam,
+   com o `.env.local` inteiro preenchido**. A forma que concilia as duas exigências — literal
+   para o Next, tardia para os testes — é **acesso literal dentro de função**.
+2. **Não crie `middleware.ts`.** O Next 16 depreciou a convenção e `proxy.ts` já existia desde o
+   Épico 0. `next build` recusa os dois juntos; o `tsc` não vê.
+3. **O `.env.local` aponta para o Supabase REMOTO**, e o ponta a ponta construía a aplicação com
+   ele. O convite era emitido pelo stack local e a tela tentava validá-lo no remoto — erro
+   `unrecognized JWT kid ... for algorithm ES256`, que não sugere ambiente trocado a ninguém.
+   Resolvido em `playwright.config.ts`, que agora passa as chaves locais por `webServer.env`.
+4. **`[auth.email].enable_signup = false` derruba o LOGIN**, não só o auto-cadastro: mapeia para
+   `GOTRUE_EXTERNAL_EMAIL_ENABLED`. Os 98 testes de RLS falharam em bloco com *"Email logins are
+   disabled"*. Quem desliga o auto-cadastro é o `enable_signup` da seção `[auth]`.
+5. **`email_sent = 2` por hora** é o padrão do CLI. A suíte de convite falha na terceira execução
+   do dia com "nenhum e-mail chegou". Elevado a 100 **no stack local**, com a distinção escrita:
+   não é a defesa contra força bruta, que é a do painel remoto.
+6. **`@supabase/ssr` usa fluxo PKCE e ignora token no fragmento.** O link de convite devolve
+   `#access_token=`, e a tela dizia "link inválido" com um link perfeitamente bom. Resolvido com
+   `setSession` explícito a partir do fragmento.
+
+**⚠️ E um que os testes existentes pegaram:** view nova nasce com `DELETE` e `TRUNCATE` para
+`authenticated`. O `revoke ... on all tables` do Épico 1 é **uma foto do momento**, não regra
+permanente — **toda migration que criar tabela ou view precisa repetir o revoke**.
+
 **Quatro achados do Épico 1 — corrigidos, e que ninguém deve reintroduzir:**
 
 1. **`TRUNCATE` não passa pela RLS.** O Supabase concede `ALL` a `authenticated` por padrão e
@@ -333,6 +362,7 @@ máximo. **É uma base pequena: priorize clareza de schema e manutenibilidade so
 | # | Decisão | Bloqueia |
 |---|---|---|
 | ~~**Hospedagem fora da infraestrutura da MB**~~ | ✅ **AUTORIZADA pela CIAARA-14.2 em 08/09/2026**, inclusive para **dado pessoal** — CPF, RG, telefone e endereço dos 177 instrutores migram em cheio (migration `20260908071000`). ⚠️ **Consequência que fica aberta:** a RLS do Épico 1 foi desenhada para dado FUNCIONAL, e hoje quem lê `instrutores` lê tudo. Não há recorte que permita ver posto e habilitação **sem** ver CPF e endereço — e é plausível que devesse haver. É desenho de segurança, portanto **Épico 3** | Nada. Era a única pendência capaz de bloquear a versão por razão não técnica |
+| ~~**PII-1**~~ | ✅ **Fechada em 08/09/2026.** Leem identificação civil e residência de instrutor **três** perfis: `admin`, `encarregado_administracao_academica` e `ajudante_administracao_academica`. `chefe_departamento_ensino` fica **de fora de propósito** — ele enxerga todos os cursos, e entraria como o perfil de maior alcance sobre dado pessoal. ⚠️ O mecanismo **não é RLS**: é `revoke` de tabela + `grant` por coluna + visão com porteiro (RLS não recorta coluna) | — |
 | **CONST-1** | Constitution em dois endereços: consolidar ou manter espelho | Nenhum épico. Custo cresce a cada emenda |
 | ~~**TURMA-1**~~ | ✅ **Fechada em 28/08/2026 — filtro de apresentação.** O domínio de status de turma fica com os quatro valores reais (`planejada`, `ativa`, `concluida`, `cancelada`); "Arquivada" é VIEW, **não** valor novo | — |
 | ~~**Q1.b**~~ | ✅ **Fechada em 08/09/2026.** O cruzamento com as 7 planilhas de planejamento da v1.0 recuperou a UE de **901 dos 1.566** lançamentos; os demais ficam **nulos**, amparados pela catraca `reg_aula_ue_so_nula_no_historico`. Bernardo ratificou os nulos: *"o ETL deve ser o retrato fiel da origem, sem preenchimentos inventados"* | — |

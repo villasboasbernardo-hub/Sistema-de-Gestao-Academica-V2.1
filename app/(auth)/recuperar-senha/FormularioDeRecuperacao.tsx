@@ -26,7 +26,27 @@ export function FormularioDeRecuperacao() {
 
   useEffect(() => {
     const supabase = criarClienteDeNavegador();
-    supabase.auth.getSession().then(({ data }) => setTemSessao(Boolean(data.session)));
+
+    // ⚠️ NÃO BASTA UM `getSession()`. O link de convite traz o token no FRAGMENTO da URL, e o
+    // cliente o processa de forma ASSÍNCRONA depois de montar. Um `getSession()` disparado no
+    // primeiro `useEffect` corre com esse processamento e costuma perder: a tela então diz
+    // "link inválido" com um link perfeitamente válido — que é o pior erro possível aqui, porque
+    // manda a pessoa pedir outro convite sem necessidade.
+    //
+    // `onAuthStateChange` cobre a corrida: dispara quando a sessão aparece, venha ela do
+    // armazenamento ou do fragmento.
+    const { data: assinatura } = supabase.auth.onAuthStateChange((_evento, sessao) => {
+      setTemSessao(Boolean(sessao));
+    });
+
+    // E o `getSession()` continua, para o caso de a sessão JÁ existir quando a tela monta —
+    // situação em que `onAuthStateChange` não dispara nada.
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setTemSessao(true);
+      else setTimeout(() => setTemSessao((atual) => atual ?? false), 1500);
+    });
+
+    return () => assinatura.subscription.unsubscribe();
   }, []);
 
   if (temSessao === null) return <p className="mt-6 text-sm">Carregando…</p>;

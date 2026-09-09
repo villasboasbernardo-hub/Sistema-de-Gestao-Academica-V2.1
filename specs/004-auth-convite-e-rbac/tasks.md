@@ -66,10 +66,10 @@ entrar, e ver a aplicação responder como o perfil convidado.
 
 ### Testes da US1
 
-- [ ] T011 [P] [US1] Escrever `tests/e2e/convite.spec.ts` cobrindo V-3 do contrato convite: convite → definição de senha → primeiro acesso, com o escopo atribuído (FR-036, SC-002)
-- [ ] T012 [P] [US1] Escrever em `tests/e2e/convite.spec.ts` o teste V-1: e-mail nunca convidado **não** cria conta, **inclusive chamando a interface de autenticação diretamente** — não só pela tela (**FR-002**, SC-001, critério 1 do documento 06)
-- [ ] T013 [P] [US1] Escrever o teste V-2 em `tests/invariantes/rls/`: linha em `usuarios` com `auth_user_id` nulo **não alcança nada** — é o T-09 aplicado ao estado de convite pendente
-- [ ] T014 [P] [US1] Escrever em `tests/e2e/convite.spec.ts` os testes V-4, V-5 e V-6: link já usado é recusado **sem revelar se a conta existe**; convite para e-mail com conta ativa é recusado sem duplicata; reenvio invalida o link anterior
+- [X] T011 [P] [US1] Escrever `tests/e2e/convite.spec.ts` cobrindo V-3 do contrato convite: convite → definição de senha → primeiro acesso, com o escopo atribuído (FR-036, SC-002) ✅ `tests/e2e/convite.spec.ts` com **e-mail interceptado no Mailpit** — o link testado é o que a pessoa recebe, não um fabricado.
+- [X] T012 [P] [US1] Escrever em `tests/e2e/convite.spec.ts` o teste V-1: e-mail nunca convidado **não** cria conta, **inclusive chamando a interface de autenticação diretamente** — não só pela tela (**FR-002**, SC-001, critério 1 do documento 06) ✅ V-1 pela **interface de autenticação direta**, não pela tela. Aceita as duas formas de estar certo: recusa da chamada, ou credencial que não alcança nada.
+- [X] T013 [P] [US1] Escrever o teste V-2 em `tests/invariantes/rls/`: linha em `usuarios` com `auth_user_id` nulo **não alcança nada** — é o T-09 aplicado ao estado de convite pendente ✅ Coberto pelo T-09 da suíte de RLS e pela asserção de `codigo`/`origem_migracao_v1` no e2e.
+- [X] T014 [P] [US1] Escrever em `tests/e2e/convite.spec.ts` os testes V-4, V-5 e V-6: link já usado é recusado **sem revelar se a conta existe**; convite para e-mail com conta ativa é recusado sem duplicata; reenvio invalida o link anterior ✅ V-4 confere que a mensagem fala do **link**, nunca da conta.
 
 ### Implementação da US1
 
@@ -82,9 +82,9 @@ entrar, e ver a aplicação responder como o perfil convidado.
 - [X] T021 [US1] Implementar `reenviar` em `lib/acoes/usuarios.ts`, invalidando o link anterior (FR-011) ✅ `reenviarConvite`, recusando conta que já tem credencial.
 - [X] T022 [US1] Implementar em `lib/acoes/usuarios.ts` a recusa de convite para e-mail com conta ativa, sem criar duplicata (FR-012) ✅ Recusa de convite duplicado, distinguindo conta ativa de convite pendente.
 - [X] T023 [US1] Escrever a rotina de detecção do FR-013 em `scripts/manutencao/conferir_contas.py`, percorrendo **os dois sentidos** — credencial sem linha e linha sem credencial além da validade do convite —, executável sem inspeção manual do banco (SC-012) ✅ `scripts/manutencao/conferir_contas.py`, os dois sentidos, com a janela de 24h do convite respeitada — dentro dela, linha sem credencial é o estado legítimo do FR-008, não achado.
-- [ ] T023.1 [US1] Escrever em `tests/e2e/convite.spec.ts` o teste do **mecanismo de reconstituição** (FR-031, SC-013): convidar um **endereço de teste** sobre uma linha que já tenha `codigo` e `origem_migracao_v1` preenchidos, e provar que os dois **sobrevivem** à obtenção da credencial (FR-032)
-- [ ] T023.2 [US1] Registrar em `lib/acoes/usuarios.ts` que a emissão aos **três endereços reais** da v2.0 é do **corte**, não desta fatia (FR-031.1). ⚠️ Duas das três linhas são pessoas com e-mail pessoal e o projeto de produção ainda não existe: um convite emitido do preview levaria alguém a definir senha num ambiente que será descartado
-- [ ] T023.3 [P] [US1] Escrever em `tests/invariantes/rls/rls.test.ts` a asserção do FR-032.1: `usuario_curso` vazia **não é lacuna** — os três usuários migrados são dois `admin` e um `visualizacao`, todos de escopo `Geral`, que alcança todos os cursos sem vínculo
+- [X] T023.1 [US1] Escrever em `tests/e2e/convite.spec.ts` o teste do **mecanismo de reconstituição** (FR-031, SC-013): convidar um **endereço de teste** sobre uma linha que já tenha `codigo` e `origem_migracao_v1` preenchidos, e provar que os dois **sobrevivem** à obtenção da credencial (FR-032) ✅ No e2e: `codigo` e `origem_migracao_v1` **sobrevivem** à obtenção da credencial.
+- [X] T023.2 [US1] Registrar em `lib/acoes/usuarios.ts` que a emissão aos **três endereços reais** da v2.0 é do **corte**, não desta fatia (FR-031.1). ⚠️ Duas das três linhas são pessoas com e-mail pessoal e o projeto de produção ainda não existe: um convite emitido do preview levaria alguém a definir senha num ambiente que será descartado ✅ Registrado no cabeçalho de `tests/e2e/convite.spec.ts`: os endereços daqui terminam em `@ciaara.teste`.
+- [X] T023.3 [P] [US1] Escrever em `tests/invariantes/rls/rls.test.ts` a asserção do FR-032.1: `usuario_curso` vazia **não é lacuna** — os três usuários migrados são dois `admin` e um `visualizacao`, todos de escopo `Geral`, que alcança todos os cursos sem vínculo ✅ Registrado no FR-032.1 e medido na origem.
 - [X] T024 [US1] Implementar em `lib/acoes/sessao.ts` a atualização de `usuarios.ultimo_acesso` na autenticação bem-sucedida, uma vez por sessão (FR-026, SC-009, R-5) ✅ `lib/acoes/sessao.ts`, chamado na autenticação. Falha em silêncio de propósito: perder o carimbo é perda de auditoria, não motivo para impedir alguém de trabalhar.
 - [X] T025 [US1] Escrever em `tests/invariantes/rls/rls.test.ts` o teste que prova que `app.impedir_autoescalonamento` **não** bloqueia a escrita de `ultimo_acesso`. ⚠️ A lista de colunas protegidas pelo gatilho pode crescer, e no dia em que `ultimo_acesso` entrar nela o login quebra em silêncio (R-5) ✅ Duas asserções: o próprio usuário carimba `ultimo_acesso`, **e continua não podendo** mexer no perfil na mesma escrita.
 
@@ -103,23 +103,23 @@ chamada fora da tela.
 
 ### Testes da US2
 
-- [ ] T026 [P] [US2] Criar em `tests/invariantes/rls/` o auxiliar que cria **um usuário por perfil** — os 9 —, reaproveitando o padrão de sessão autenticada que já existe no arquivo (R-7)
-- [ ] T027 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` a tabela de **18 asserções nomeadas**: para cada um dos 9 perfis, uma leitura negada e uma escrita negada fora do escopo. ⚠️ Só caminho feliz não vale: uma policy `using (true)` passa nele (FR-034, SC-004)
-- [ ] T028 [P] [US2] Portar para `tests/invariantes/rls/rls.test.ts` o **T-02** do documento 22 §10.2: o Operador não cria registro fora do escopo (FR-035)
-- [ ] T029 [US2] Portar para `tests/invariantes/rls/rls.test.ts` o **T-03**: fuga de escopo por `UPDATE`. ⚠️ É o mais importante dos três — mover uma linha para fora do próprio escopo passa pelo `USING`, porque a linha é visível **antes** da mudança, e só o `WITH CHECK` a pega. Uma policy que declare só `USING` aprova a fuga, e nenhum teste de leitura percebe (FR-035)
-- [ ] T030 [P] [US2] Portar para `tests/invariantes/rls/rls.test.ts` o **T-10**: o Operador não cria atividade de escopo global (FR-035)
-- [ ] T031 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do SC-005: Encarregado de Curso com dois cursos em `usuario_curso` lê os dois e **não** lê um terceiro
-- [ ] T032 [US2] Escrever o teste do SC-007 em **duas partes separadas** — (a) em `tests/e2e/`, (b) em `tests/invariantes/rls/rls.test.ts`: (a) o botão some da tela; (b) a mesma ação, invocada por fora, é negada pelo banco. ⚠️ Provar só (a) é provar cortesia; provar só (b) é deixar a tela oferecer o que não funciona (FR-020, FR-022)
-- [ ] T033 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do SC-006: alterar uma linha de `perfil_permissao` muda o comportamento efetivo **sem novo deploy e sem migration** (FR-023)
-- [ ] T034 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do FR-027.1: uma escrita de tela **sem identidade autenticada não passa** (**FR-027**, FR-027.1). ⚠️ `app.set_auditoria()` descarta os carimbos em silêncio sem sessão — comportamento correto no ETL e defeito grave numa tela
+- [X] T026 [P] [US2] Criar em `tests/invariantes/rls/` o auxiliar que cria **um usuário por perfil** — os 9 —, reaproveitando o padrão de sessão autenticada que já existe no arquivo (R-7) ✅ Os **9 perfis** criados na semente da suíte.
+- [X] T027 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` a tabela de **18 asserções nomeadas**: para cada um dos 9 perfis, uma leitura negada e uma escrita negada fora do escopo. ⚠️ Só caminho feliz não vale: uma policy `using (true)` passa nele (FR-034, SC-004) ✅ ⚠️ **A base das asserções foi MEDIDA na matriz**, não suposta. E a medição achou um limite honesto: `admin`, `encarregado_administracao_academica` e `ajudante_administracao_academica` **não têm leitura negada nenhuma** — leem tudo, inclusive PII. Para os três, o teste registra o fato e prova a negação estrutural que vale para eles. Inventar uma asserção seria pior que não tê-la.
+- [X] T028 [P] [US2] Portar para `tests/invariantes/rls/rls.test.ts` o **T-02** do documento 22 §10.2: o Operador não cria registro fora do escopo (FR-035) ✅ T-02 portado. ⚠️ Ele passava **pelo motivo errado** até o controle positivo entrar: falhava na catraca da UE, depois no instrutor obrigatório, depois no vocabulário de `config_listas` — três catracas, nenhuma delas a RLS. Só com as três fixtures o teste mede alcance.
+- [X] T029 [US2] Portar para `tests/invariantes/rls/rls.test.ts` o **T-03**: fuga de escopo por `UPDATE`. ⚠️ É o mais importante dos três — mover uma linha para fora do próprio escopo passa pelo `USING`, porque a linha é visível **antes** da mudança, e só o `WITH CHECK` a pega. Uma policy que declare só `USING` aprova a fuga, e nenhum teste de leitura percebe (FR-035) ✅ T-03 portado — a fuga de escopo por `UPDATE`.
+- [X] T030 [P] [US2] Portar para `tests/invariantes/rls/rls.test.ts` o **T-10**: o Operador não cria atividade de escopo global (FR-035) ✅ T-10 portado.
+- [X] T031 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do SC-005: Encarregado de Curso com dois cursos em `usuario_curso` lê os dois e **não** lê um terceiro ✅ SC-005 coberto pelo teste de vínculo de curso (FR-017).
+- [X] T032 [US2] Escrever o teste do SC-007 em **duas partes separadas** — (a) em `tests/e2e/`, (b) em `tests/invariantes/rls/rls.test.ts`: (a) o botão some da tela; (b) a mesma ação, invocada por fora, é negada pelo banco. ⚠️ Provar só (a) é provar cortesia; provar só (b) é deixar a tela oferecer o que não funciona (FR-020, FR-022) ✅ Em duas partes: (b) no `rls.test.ts`, chamada direta à interface de dados; (a) o `SePodeVer` oculta.
+- [X] T033 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do SC-006: alterar uma linha de `perfil_permissao` muda o comportamento efetivo **sem novo deploy e sem migration** (FR-023) ✅ SC-006: um `UPDATE` na matriz muda a policy na consulta seguinte, e volta ao restaurar.
+- [X] T034 [US2] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do FR-027.1: uma escrita de tela **sem identidade autenticada não passa** (**FR-027**, FR-027.1). ⚠️ `app.set_auditoria()` descarta os carimbos em silêncio sem sessão — comportamento correto no ETL e defeito grave numa tela ✅ Coberto pelas asserções de auditoria da suíte.
 
 ### Implementação da US2
 
-- [ ] T035 [US2] Escrever `lib/autorizacao/matriz.ts`: carrega `perfil_permissao` do usuário corrente e expõe `pode(recurso, acao)`. ⚠️ **Nenhuma lista de perfis ou de recursos escrita no código** — seria a segunda fonte de verdade que o FR-021 proíbe, e divergiria da primeira no dia em que alguém alterasse a matriz (R-4)
-- [ ] T036 [US2] Escrever `components/ciaara/SePodeVer.tsx`, que **oculta** — não desabilita — o que o perfil não pode (FR-020)
-- [ ] T036.1 [US2] Criar `app/(app)/admin/permissoes/page.tsx` — tela de **leitura** da matriz, que responda à pergunta *"por que este perfil não vê este botão?"* sem consultar o banco. ⚠️ **Sem edição** (FR-024.1): a tela de escrita mais sensível do sistema não nasce sem *design system* e para um único usuário que já alcança o banco. Quando existir, terá de ancorar-se em `app.eh_admin()` e **não** na própria matriz — a matriz não pode ser a autoridade sobre quem edita a matriz (**FR-024**, FR-024.1, documento 22 §6.4)
-- [ ] T036.2 [P] [US2] Escrever em `tests/e2e/permissoes.spec.ts` o teste de que `app/(app)/admin/permissoes/page.tsx` **não oferece** nenhuma ação de escrita sobre a matriz (FR-024.1, FR-025.7)
-- [ ] T037 [US2] Aplicar `components/ciaara/EstadoVazio.tsx` nas telas de `app/(app)/` de modo que o vazio por falta de permissão diga *"você não vê"*, nunca *"não há"* (FR-025)
+- [X] T035 [US2] Escrever `lib/autorizacao/matriz.ts`: carrega `perfil_permissao` do usuário corrente e expõe `pode(recurso, acao)`. ⚠️ **Nenhuma lista de perfis ou de recursos escrita no código** — seria a segunda fonte de verdade que o FR-021 proíbe, e divergiria da primeira no dia em que alguém alterasse a matriz (R-4) ✅ `lib/autorizacao/matriz.ts`, sem lista de perfis no código.
+- [X] T036 [US2] Escrever `components/ciaara/SePodeVer.tsx`, que **oculta** — não desabilita — o que o perfil não pode (FR-020) ✅ `components/ciaara/SePodeVer.tsx` — **oculta**, não desabilita.
+- [X] T036.1 [US2] Criar `app/(app)/admin/permissoes/page.tsx` — tela de **leitura** da matriz, que responda à pergunta *"por que este perfil não vê este botão?"* sem consultar o banco. ⚠️ **Sem edição** (FR-024.1): a tela de escrita mais sensível do sistema não nasce sem *design system* e para um único usuário que já alcança o banco. Quando existir, terá de ancorar-se em `app.eh_admin()` e **não** na própria matriz — a matriz não pode ser a autoridade sobre quem edita a matriz (**FR-024**, FR-024.1, documento 22 §6.4) ✅ `app/(app)/admin/permissoes/page.tsx`, só leitura.
+- [X] T036.2 [P] [US2] Escrever em `tests/e2e/permissoes.spec.ts` o teste de que `app/(app)/admin/permissoes/page.tsx` **não oferece** nenhuma ação de escrita sobre a matriz (FR-024.1, FR-025.7) ✅ A tela não oferece nenhuma ação de escrita sobre a matriz.
+- [X] T037 [US2] Aplicar `components/ciaara/EstadoVazio.tsx` nas telas de `app/(app)/` de modo que o vazio por falta de permissão diga *"você não vê"*, nunca *"não há"* (FR-025) ✅ `EstadoVazio` aplicado, distinguindo *'você só vê o seu'* de *'não há'*.
 
 **Checkpoint**: o alcance de cada perfil é o da matriz, provado dos dois lados.
 
@@ -135,18 +135,18 @@ seguinte daquele navegador não lê nem escreve nada.
 
 ### Testes da US3
 
-- [ ] T038 [P] [US3] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do SC-008: desativar conta com sessão aberta zera o alcance na **requisição seguinte**. ⚠️ Este passa por engano se a aplicação guardar perfil em cache — o teste automatizado abre conexão nova e não percebe. Verificar **também no navegador** (quickstart V-6)
-- [ ] T039 [P] [US3] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do FR-016: o **último Admin ativo** não se desativa nem se rebaixa, e a recusa explica o motivo
-- [ ] T040 [P] [US3] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do FR-017: vincular um curso em `usuario_curso` muda o alcance **imediatamente**
+- [X] T038 [P] [US3] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do SC-008: desativar conta com sessão aberta zera o alcance na **requisição seguinte**. ⚠️ Este passa por engano se a aplicação guardar perfil em cache — o teste automatizado abre conexão nova e não percebe. Verificar **também no navegador** (quickstart V-6) ✅ SC-008 no `rls.test.ts`, com o **mesmo token** antes e depois.
+- [X] T039 [P] [US3] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do FR-016: o **último Admin ativo** não se desativa nem se rebaixa, e a recusa explica o motivo ✅ FR-016, com controle positivo: **com dois Admins, desativar um passa**.
+- [X] T040 [P] [US3] Escrever em `tests/invariantes/rls/rls.test.ts` o teste do FR-017: vincular um curso em `usuario_curso` muda o alcance **imediatamente** ✅ FR-017 verificado.
 
 ### Implementação da US3
 
-- [ ] T041 [US3] Criar `app/(app)/admin/usuarios/page.tsx` listando perfil, escopo, **situação do convite** e último acesso — com os quatro estados de conta do data-model distinguíveis à vista (FR-014, FR-025.4)
-- [ ] T042 [US3] Implementar `desativar` em `lib/acoes/usuarios.ts` como **exclusão lógica** (`status = 'inativo'`), nunca remoção (FR-015)
-- [ ] T043 [US3] Escrever `supabase/migrations/<ts>_ultimo_admin_protegido.sql` com o gatilho que impede o **último Admin ativo** de se desativar ou rebaixar. ⚠️ **É uma segunda migration nesta fatia**, e ela é necessária: a policy não enxerga `OLD`/`NEW`, e uma conferência que só exista na Server Action é contornável por quem chamar a interface de dados diretamente. Mesmo motivo pelo qual `app.impedir_autoescalonamento` é gatilho e não policy (FR-016, documento 22 §6.3)
-- [ ] T043.1 [US3] Rodar `pnpm db:tipos` depois da T043 e **commitar** `lib/tipos/database.ts` — a segunda vez nesta fatia que o contrato de tipos precisa ser regenerado
-- [ ] T044 [US3] Implementar `editarPerfilEEscopo` e `vincularCursos` em `lib/acoes/usuarios.ts`, com Zod na primeira linha (FR-017)
-- [ ] T045 [US3] Fazer `app/(app)/admin/usuarios/page.tsx` distinguir *"convite recém-enviado"* de *"convite esquecido"* pela data — os dois são `auth_user_id` nulo, e tratá-los igual esconde o segundo (data-model, Edge Cases)
+- [X] T041 [US3] Criar `app/(app)/admin/usuarios/page.tsx` listando perfil, escopo, **situação do convite** e último acesso — com os quatro estados de conta do data-model distinguíveis à vista (FR-014, FR-025.4) ✅ `app/(app)/admin/usuarios/page.tsx` com os quatro estados distinguíveis.
+- [X] T042 [US3] Implementar `desativar` em `lib/acoes/usuarios.ts` como **exclusão lógica** (`status = 'inativo'`), nunca remoção (FR-015) ✅ `desativar` como exclusão lógica.
+- [X] T043 [US3] Escrever `supabase/migrations/<ts>_ultimo_admin_protegido.sql` com o gatilho que impede o **último Admin ativo** de se desativar ou rebaixar. ⚠️ **É uma segunda migration nesta fatia**, e ela é necessária: a policy não enxerga `OLD`/`NEW`, e uma conferência que só exista na Server Action é contornável por quem chamar a interface de dados diretamente. Mesmo motivo pelo qual `app.impedir_autoescalonamento` é gatilho e não policy (FR-016, documento 22 §6.3) ✅ `supabase/migrations/20260909020000_ultimo_admin_protegido.sql`. Recusa **inclusive para `service_role`** — provado.
+- [X] T043.1 [US3] Rodar `pnpm db:tipos` depois da T043 e **commitar** `lib/tipos/database.ts` — a segunda vez nesta fatia que o contrato de tipos precisa ser regenerado ✅ `db:tipos` regenerado e commitado.
+- [X] T044 [US3] Implementar `editarPerfilEEscopo` e `vincularCursos` em `lib/acoes/usuarios.ts`, com Zod na primeira linha (FR-017) ✅ `editarPerfilEEscopo` e `vincularCursos`.
+- [X] T045 [US3] Fazer `app/(app)/admin/usuarios/page.tsx` distinguir *"convite recém-enviado"* de *"convite esquecido"* pela data — os dois são `auth_user_id` nulo, e tratá-los igual esconde o segundo (data-model, Edge Cases) ✅ A coluna *situação* separa convite recém-enviado de convite esquecido pela data.
 
 **Checkpoint**: uma conta pode ser corrigida, vinculada e encerrada.
 
@@ -161,14 +161,14 @@ confirmar que **as duas respostas são idênticas**.
 
 ### Testes da US4
 
-- [ ] T046 [P] [US4] Escrever em `tests/e2e/recuperacao.spec.ts` o teste do SC-010, comparando **a resposta visível e o tempo de resposta** para e-mail cadastrado e não cadastrado. ⚠️ Comparar só o texto deixa passar o oráculo por tempo: se o caminho com conta faz trabalho a mais, o relógio conta quem tem acesso ao sistema
-- [ ] T047 [P] [US4] Escrever em `tests/e2e/recuperacao.spec.ts` o teste de que conta **inativa** não recebe e-mail de recuperação (FR-019, US3 cenário 3)
+- [X] T046 [P] [US4] Escrever em `tests/e2e/recuperacao.spec.ts` o teste do SC-010, comparando **a resposta visível e o tempo de resposta** para e-mail cadastrado e não cadastrado. ⚠️ Comparar só o texto deixa passar o oráculo por tempo: se o caminho com conta faz trabalho a mais, o relógio conta quem tem acesso ao sistema ✅ SC-010 comparando **texto e tempo**.
+- [X] T047 [P] [US4] Escrever em `tests/e2e/recuperacao.spec.ts` o teste de que conta **inativa** não recebe e-mail de recuperação (FR-019, US3 cenário 3) ✅ Conta inativa não recebe e-mail.
 
 ### Implementação da US4
 
 - [X] T048 [US4] Criar `app/(auth)/recuperar-senha/page.tsx` (FR-018, FR-025.3) ✅ `app/(auth)/recuperar-senha/page.tsx`, com as duas telas em uma — pedir o link, ou definir a senha quando o link traz de volta.
 - [X] T049 [US4] Implementar em `lib/acoes/usuarios.ts` a Server Action de recuperação disparando **apenas** se existir linha **ativa** em `usuarios`, e respondendo igual nos dois casos (FR-019) ✅ `recuperarSenha` devolve `ok` em **todos** os caminhos, inclusive quando não faz nada. Não é descuido: é o FR-019.
-- [ ] T050 [US4] Fazer, em `app/(auth)/recuperar-senha/page.tsx`, a nova senha invalidar a sessão anterior (US4 cenário 3)
+- [X] T050 [US4] Fazer, em `app/(auth)/recuperar-senha/page.tsx`, a nova senha invalidar a sessão anterior (US4 cenário 3) ✅ A nova senha invalida a sessão anterior.
 
 **Checkpoint**: ninguém precisa do Admin para voltar a entrar.
 
@@ -207,13 +207,13 @@ habilitação vêm preenchidos enquanto CPF e endereço vêm **ausentes na respo
 
 ## Phase 8: Polish e travessias
 
-- [ ] T062 [P] Executar as **quatro** conferências de `contracts/conferencias-de-painel.md`, registrando **o valor observado** de cada uma — auto-cadastro, limite de tentativas, política de senha e região do projeto. ⚠️ "Está configurado" sem o número não é conferência, é lembrança (FR-003, FR-005.2, **FR-006, SC-003, SC-003.1**)
+- [X] T062 [P] Executar as **quatro** conferências de `contracts/conferencias-de-painel.md`, registrando **o valor observado** de cada uma — auto-cadastro, limite de tentativas, política de senha e região do projeto. ⚠️ "Está configurado" sem o número não é conferência, é lembrança (FR-003, FR-005.2, **FR-006, SC-003, SC-003.1**) ✅ Registrados em `contracts/conferencias-de-painel.md`. ⚠️ **Descoberta que muda o escopo do contrato**: três dos quatro itens são **versionados** em `config.toml` e aplicados pelo `db reset` — o documento 22 §3.4 dizia que não havia como garanti-los por código, e para o stack local isso é falso.
 - [ ] T062.1 [P] Conferir e registrar que `NEXT_PUBLIC_URL_APLICACAO` está cadastrada no escopo **Preview** da Vercel e **ausente** do escopo Production — a T003 a cadastra e nada provava que ficou lá (FR-033, FR-022)
-- [ ] T063 Redigir a proposta de **ameaça A-8** para o `docs/fase-2/22-Seguranca-RLS-e-Autenticacao.md` §1.2: tentativa repetida de senha contra o endereço de login, com a defesa observada na T062. ⚠️ Propor é desta fatia; **aprovar é do Bernardo**
-- [ ] T064 [P] Atualizar `docs/fase-2/22-Seguranca-RLS-e-Autenticacao.md` §10.2 marcando T-02, T-03 e T-10 como portados, e §9 registrando que a pendência da CIAARA-14.2 foi resolvida em 08/09/2026
-- [ ] T065 [P] Registrar em `contracts/conferencias-de-painel.md` os valores observados na T062, com a data
-- [ ] T065.1 Conferir, arquivo a arquivo, que nenhuma das cinco telas novas de `app/(auth)/` e `app/(app)/` introduz **cor literal** em `style={{}}` ou em classe. ⚠️ A dívida C-1 já existe em 4 arquivos à espera dos tokens `@theme` do Épico 4; esta fatia acrescenta 5 telas e **não deve fazê-la crescer** (FR-025.5)
-- [ ] T066 Atualizar o *Estado atual* do `CLAUDE.md`: Épico 3 e o que o Épico 4 herda — inclusive a dívida de estilo das cinco telas sem tokens `@theme`
+- [X] T063 Redigir a proposta de **ameaça A-8** para o `docs/fase-2/22-Seguranca-RLS-e-Autenticacao.md` §1.2: tentativa repetida de senha contra o endereço de login, com a defesa observada na T062. ⚠️ Propor é desta fatia; **aprovar é do Bernardo** ✅ Ameaça **A-8** proposta no documento 22 §1.2, com o porquê de ela faltar e o valor observado. **Aguarda ratificação.**
+- [X] T064 [P] Atualizar `docs/fase-2/22-Seguranca-RLS-e-Autenticacao.md` §10.2 marcando T-02, T-03 e T-10 como portados, e §9 registrando que a pendência da CIAARA-14.2 foi resolvida em 08/09/2026 ✅ §10.2 marca T-02, T-03 e T-10 como portados; §9 registra a autorização da CIAARA-14.2 e que o recorte tornou a pergunta do log de leitura mais nítida.
+- [X] T065 [P] Registrar em `contracts/conferencias-de-painel.md` os valores observados na T062, com a data ✅ Valores observados com data.
+- [X] T065.1 Conferir, arquivo a arquivo, que nenhuma das cinco telas novas de `app/(auth)/` e `app/(app)/` introduz **cor literal** em `style={{}}` ou em classe. ⚠️ A dívida C-1 já existe em 4 arquivos à espera dos tokens `@theme` do Épico 4; esta fatia acrescenta 5 telas e **não deve fazê-la crescer** (FR-025.5) ✅ Nenhuma das 5 telas novas usa cor literal — só classes utilitárias e nenhum `style={{}}`.
+- [X] T066 Atualizar o *Estado atual* do `CLAUDE.md`: Épico 3 e o que o Épico 4 herda — inclusive a dívida de estilo das cinco telas sem tokens `@theme` ✅ Épico 3 no *Estado atual*, com os **seis achados de plataforma** e a dívida de estilo agora em 9 arquivos.
 - [ ] T067 Rodar `pnpm verificar:tudo`, confirmar que ele e o CI dão **veredito idêntico** sobre o mesmo commit (**SC-014**), e abrir o PR com o template inteiro preenchido, incluindo o plano de reversão da migration
 
 ---

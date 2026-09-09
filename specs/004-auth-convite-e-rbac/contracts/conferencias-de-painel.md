@@ -58,3 +58,39 @@ registra-se **o que se viu**.
 Além das quatro conferências: **propor ao documento 22 uma ameaça A-8** — tentativa repetida de
 senha contra o endereço de login, com a defesa observada no item 2. Propor é da fatia; **aprovar é
 do Bernardo**.
+
+---
+
+## Valores observados — 09/09/2026
+
+⚠️ **DESCOBERTA QUE MUDA O ESCOPO DESTE CONTRATO.** Ele foi escrito supondo que as quatro
+garantias vivessem só no painel, porque o documento 22 §3.4 afirma que *"não há como garanti-lo
+por código"*. **Para o stack local e o de preview, isso é falso**: `supabase/config.toml` é
+versionado, o `supabase db reset` o aplica, e o CI o executa a cada corrida. Três dos quatro itens
+passaram a ser garantidos por código.
+
+| Item | Onde | Valor observado | Como |
+|---|---|---|---|
+| Auto-cadastro | `config.toml` `[auth] enable_signup` | **`false`** | versionado; aplicado por `db reset` |
+| Provedor de e-mail | `config.toml` `[auth.email] enable_signup` | `true` | ⚠️ **precisa ficar `true`** — ver abaixo |
+| Limite de e-mails | `config.toml` `[auth.rate_limit] email_sent` | **100/h (local)** | valor de teste; o de produção é o que conta |
+| Tentativas de login | `config.toml` `[auth.rate_limit] sign_in_sign_ups` | **30 por 5 min por IP** | versionado |
+| Comprimento de senha | `config.toml` `[auth] minimum_password_length` | conferir no painel remoto | painel |
+| Região do projeto | painel do projeto remoto | pendente | painel |
+
+### A armadilha que custou uma suíte inteira
+
+`[auth.email].enable_signup = false` **não** desliga só o auto-cadastro: mapeia para
+`GOTRUE_EXTERNAL_EMAIL_ENABLED` e derruba o **provedor de e-mail inteiro**, login incluído. Ao
+desligá-lo, os 98 testes de RLS falharam em bloco com *"Email logins are disabled"* — mensagem que
+não sugere auto-cadastro a ninguém.
+
+**Quem desliga o auto-cadastro é o `enable_signup` da seção `[auth]`.** Está anotado nos dois
+lugares do `config.toml`.
+
+### O que continua sendo só do painel
+
+O projeto **remoto** — hoje `cqhpfuaweoyglhtrckcp`, designado desenvolvimento/preview — não lê o
+`config.toml`. Para ele, as quatro conferências continuam manuais, e a de **região** e a de
+**comprimento de senha** não têm equivalente local. **Não há projeto de produção ainda**, então a
+conferência que mais importa ainda não tem objeto.
