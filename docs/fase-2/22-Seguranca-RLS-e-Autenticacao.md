@@ -48,7 +48,7 @@ identificados nominalmente. Sem cadastro público, sem página aberta, sem API p
 |---|---|---|---|---|
 | A-1 | **Erro honesto com poder demais.** Um Operador de curso expedito edita, sem má intenção, um lançamento de curso regular que não deveria enxergar | Alta | Médio | RLS com recorte de escopo (§5) |
 | A-2 | **Conta que sobrevive à pessoa.** Militar é transferido, conta continua ativa | Alta | Médio | Exclusão lógica + `ultimo_acesso` + revisão periódica (§4.4) |
-| A-3 | **Vazamento de dado pessoal de militar** (nome, NIP, posto, e-mail) por hospedagem fora da infraestrutura da MB | Média | **Alto** | Pendência formal — §9 |
+| A-3 | **Vazamento de dado pessoal de militar** (nome, NIP, posto, e-mail, e — desde o Épico 3 — **CPF, RG, telefone e endereço residencial**) por hospedagem fora da infraestrutura da MB | Média | **Alto** | **Hospedagem autorizada pela CIAARA-14.2 em 08/09/2026**, inclusive para dado pessoal (§9). O recorte por coluna do Épico 3 limita a leitura da identificação civil a **três** perfis (`FR-028`) |
 | A-4 | **Escalonamento de privilégio.** Usuário altera o próprio perfil para admin | Baixa | **Alto** | Gatilho `app.impedir_autoescalonamento` (§6.3) |
 | A-5 | **Vazamento da chave `service_role`** para o navegador | Baixa | **Crítico** | Isolamento + regra de ESLint (§7) |
 | A-6 | **Reescrita do histórico.** Alguém "corrige" `migracao_log` | Baixa | **Alto** | GRANT revogado + gatilho de bloqueio (§8.2) |
@@ -588,6 +588,14 @@ reescrevendo log é sempre proibido — o jeito certo é logar a correção como
 O sistema armazena, de 177 instrutores e de todos os usuários: **nome completo, nome de guerra,
 NIP, posto/graduação, data de nascimento, e-mail, OM, divisão, formação e capacitação didática.**
 
+E, **de instrutor, desde a migração do Épico 3** (`20260908071000`), mais **12 colunas de
+identificação civil e residência**: **CPF, RG e órgão emissor, telefone, RETELMA e o endereço
+residencial completo** — logradouro, número, complemento, bairro, cidade, estado e CEP.
+
+⚠️ **São estas as colunas mais sensíveis da base, e a lista acima não as trazia até 09/09/2026.**
+Elas não existiam quando esta seção foi escrita. A leitura delas é restrita a **três** perfis pelo
+`FR-028`, por `revoke` de tabela mais `grant` por coluna — **não por RLS**, que não recorta coluna.
+
 Isso já era verdade na v2.0. O que muda na v2.1 é **onde o dado reside**: sai do Google Drive
 institucional e passa a residir em **Supabase (banco) e Vercel (aplicação)** — dois provedores
 comerciais, com armazenamento fora da infraestrutura da Marinha do Brasil.
@@ -600,15 +608,22 @@ comerciais, com armazenamento fora da infraestrutura da Marinha do Brasil.
 | Classificação do dado | Inalterada em relação à v2.0 |
 | Base legal (LGPD) | Execução de política pública / atribuição legal da administração — a mesma da v2.0 |
 | **Localização física** | **Muda.** Selecionar região do projeto Supabase em **São Paulo (`sa-east-1`)**, não em região estrangeira |
-| **Ciência da CIAARA-14.2** (Tecnologia da Informação) | ✅ **AUTORIZADA em 08/09/2026**, inclusive para dado pessoal. Era a única pendência capaz de bloquear a versão por razão não técnica |
+| **Ciência da CIAARA-14.2** (Tecnologia da Informação) | ✅ **AUTORIZADA em 08/09/2026**, inclusive para dado pessoal |
 | Criptografia em repouso e em trânsito | Nativa em ambos os provedores (AES-256 / TLS 1.2+) |
 | Retenção e descarte | Não definida. Hoje o sistema nunca apaga — é preciso decidir se isso é conforme |
 | Registro de acesso a dado pessoal | Parcial (`ultimo_acesso`, `criado_por`/`editado_por`). Não há log de *leitura*. ⚠️ **O Épico 3 tornou a pergunta mais nítida, não menos**: a partir dele existe um conjunto declarado de **três** perfis que podem ler PII (`admin`, `encarregado_administracao_academica`, `ajudante_administracao_academica`), e nada registra **quando** leram |
 
-> **Esta é a única pendência deste documento que pode bloquear a v2.1 por razão não técnica.**
-> Recomendação: levar a questão à CIAARA-14.2 **antes do Épico 2 (ETL)**, e não depois — o Épico 2
-> é o momento em que dado pessoal real sai do Drive institucional e entra no Supabase. Antes dele,
-> a migração é reversível sem consequência; depois, o dado já saiu.
+> **✅ RESOLVIDA em 08/09/2026 — a CIAARA-14.2 autorizou a hospedagem, inclusive de dado pessoal.**
+> A recomendação deste documento era levar a questão **antes do Épico 2 (ETL)**, e foi o que
+> aconteceu: a autorização veio no mesmo dia em que a carga real foi executada. O raciocínio fica
+> registrado porque explica a urgência — o Épico 2 é o momento em que dado pessoal real sai do
+> Drive institucional e entra no Supabase; antes dele a migração é reversível sem consequência,
+> depois o dado já saiu.
+>
+> ⚠️ **A autorização responde *onde o dado reside*, e só isso.** *Quem, dentro da Divisão, o vê* é
+> pergunta distinta, tratada pelo `FR-028` da spec 004 e implementada pelo recorte por coluna do
+> Épico 3. E *quando alguém o leu* continua sem resposta — ver a linha **Registro de acesso** na
+> tabela acima.
 >
 > Se a resposta for negativa, existe um caminho alternativo conhecido: **Supabase self-hosted** em
 > infraestrutura da MB. A arquitetura desta versão não muda — schema, RLS, funções e aplicação são
@@ -681,7 +696,7 @@ as encontrou nomeado.
 
 | # | Ponto | Situação atual | Por que importa |
 |---|---|---|---|
-| 1 | **Hospedagem fora da infraestrutura da MB** (§9) | Pendente na CIAARA-14.2 | É a única pendência capaz de bloquear a versão por razão não técnica. Decidir **antes do Épico 2** |
+| 1 | ~~**Hospedagem fora da infraestrutura da MB**~~ (§9) | ✅ **AUTORIZADA em 08/09/2026 pela CIAARA-14.2**, inclusive para dado pessoal | Era a última pendência capaz de bloquear a versão por razão não técnica, e foi decidida **antes da carga real do Épico 2**, como o documento recomendava. O que fica aberto é outra pergunta: **quem, dentro da Divisão, vê o quê** — tratada pelo `FR-028` |
 | 2 | ~~**Escrita da CIAARA-11 em tabelas de fato**~~ | ✅ **DECIDIDO em 28/08/2026 por Bernardo: a concessão fica.** O Encarregado e o Ajudante da CIAARA-11 **têm** escrita em `registros_aula`, `avaliacoes` e `atividades_nao_letivas`. A leitura literal do documento 01 impediria o dono do sistema de lançar aula, e isso é artefato da leitura, não intenção da norma | As linhas `(a)` **permanecem** em `docs/sql-referencia/05_rls_policies.sql` e a marca de revisão sai. **Consequência:** é a matriz do documento 01 que está desatualizada neste ponto — corrigir lá |
 | 3 | ~~**Quem administra `calendario` e `parametros`**~~ | ✅ **DECIDIDO em 28/08/2026 por Bernardo: CIAARA-11 e Admin**, como o seed já previa | As linhas `(b)` **permanecem** e a marca de revisão sai. A designação passa a ser decisão registrada, não suposição do autor do seed |
 | 4 | **Encarregado × Ajudante** | Permissão **idêntica** — a matriz da v2.0 não os distingue em área de dados alguma | Manter idêntico é fidelidade ao documento. Distinguir é decisão nova a registrar |
