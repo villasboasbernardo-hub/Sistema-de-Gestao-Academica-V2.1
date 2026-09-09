@@ -108,7 +108,7 @@ specs/004-auth-convite-e-rbac/
 │   ├── convite.md                    o fluxo, os estados e o que falha
 │   ├── recorte-pii.md                as três peças do R-1, e a ordem entre elas
 │   ├── sessao-e-rotas.md             o middleware, os grupos de rota, o FR-005.1
-│   └── conferencias-de-painel.md     o que não se garante por código
+│   └── conferencias-de-painel.md     o que o código garante e o que só o painel garante
 └── checklists/requirements.md ✅ 20/20
 ```
 

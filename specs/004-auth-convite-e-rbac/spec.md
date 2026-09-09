@@ -220,6 +220,11 @@ tela, ausentes na resposta do banco.
   verificável** que ateste o estado (documento 22 §3.4). ⚠️ É a primeira de **duas** garantias
   desta fatia que não se obtêm por código; a outra é o FR-005.2. Ambas MUST ser conferidas de
   forma que o resultado fique registrado, e não afirmado.
+  ⚠️ **Emenda de 09/09/2026, aprovada por Bernardo.** A premissa *"é configuração de painel e não
+  código"* vale para o projeto **remoto**, e só para ele. No stack local e no de preview,
+  `supabase/config.toml` **é código versionado** que o `db reset` aplica e o CI executa: ali
+  `[auth] enable_signup = false` é garantia automática. A conferência humana continua exigida onde
+  ela é a única coisa que existe — o painel do projeto remoto.
 - **FR-004**: O sistema MUST manter a sessão entre recarregamentos e abas, renovando o token
   enquanto for válida, e MUST oferecer ação explícita de **encerrar sessão** (`RF-AUTH-08`).
 - **FR-005**: Toda rota do grupo autenticado MUST exigir sessão válida; a rota sem sessão MUST
@@ -241,9 +246,16 @@ tela, ausentes na resposta do banco.
   senha escolhida, não o endereço de login. Depois desta fatia o endereço passa a dar acesso a CPF
   e residência de 177 militares. **MUST ser proposta a inclusão de uma ameaça A-8 ao documento 22**
   — a proposta é entregável desta fatia; aprová-la é do Bernardo.
+  ✅ **RATIFICADA por Bernardo em 09/09/2026.** A-8 está no documento 22 §1.2 e o modelo de ameaças
+  do sistema passa a ir de **A-1 a A-8**.
 - **FR-006**: A senha MUST ter no mínimo **12 caracteres** e MUST ser verificada contra listas
   públicas de vazamento. Composição obrigatória e expiração compulsória MUST **não** ser exigidas
   (documento 22 §4.5).
+  ⚠️ **Emenda de 09/09/2026, aprovada por Bernardo.** O 12 MUST ser imposto **pela plataforma**,
+  não só pelo formulário. Até esta data ele existia apenas como `minLength={12}` no navegador,
+  enquanto `config.toml` trazia o padrão do CLI, `6` — regra de negócio implementada apenas na UI,
+  que o BRIEF §2 proíbe. Corrigido em `[auth] minimum_password_length = 12`. A verificação contra
+  vazamento **não tem chave** no `config.toml` e permanece conferência de painel.
 
 #### Convite
 
