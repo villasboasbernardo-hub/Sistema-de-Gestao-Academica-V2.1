@@ -183,11 +183,18 @@ test("V-3 · convite, senha e primeiro acesso, com o escopo atribuído", async (
 // =================================================================================================
 test("V-4 (NEGATIVO) · link inválido é recusado sem dizer se a conta existe", async ({ page }) => {
   await page.goto("/convite#access_token=invalido&type=invite");
-  const texto = await page.locator("body").innerText();
 
-  expect(texto).toMatch(/não é mais válido|nao e mais valido/i);
+  // ⚠️ ESPERAR, E NÃO LER DIRETO. A conferência do link é ASSÍNCRONA — a tela chama `setSession`
+  // contra a API de auth e, enquanto não volta, mostra "Conferindo o link…". Ler o `body` na
+  // linha seguinte ao `goto` pegava esse estado intermediário, e o teste falhava por CORRIDA,
+  // não por defeito do sistema. Medido em 09/09/2026, com o contêiner de auth recém-subido:
+  // vermelho na suíte inteira, verde ao rodar sozinho. Um teste que decide por tempo não prova
+  // nada — `toBeVisible()` reexecuta até o estado final aparecer.
+  await expect(page.getByText(/não é mais válido|nao e mais valido/i)).toBeVisible();
+
   // ⚠️ A mensagem fala do LINK, nunca da conta. Se dissesse "conta não encontrada", bastaria
   // variar o endereço para levantar quem tem acesso ao sistema.
+  const texto = await page.locator("body").innerText();
   expect(texto).not.toMatch(/conta não encontrada|usuário não existe/i);
 });
 
