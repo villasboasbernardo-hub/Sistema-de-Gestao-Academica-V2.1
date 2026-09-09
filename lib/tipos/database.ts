@@ -418,6 +418,20 @@ export type Database = {
             referencedColumns: ["instrutor_id"]
           },
           {
+            foreignKeyName: "avaliacoes_fiscal_id_fkey"
+            columns: ["fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fiscal_id_fkey"
+            columns: ["fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "avaliacoes_instrutor_responsavel_id_fkey"
             columns: ["instrutor_responsavel_id"]
             isOneToOne: false
@@ -430,6 +444,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_instrutor_carga_anual"
             referencedColumns: ["instrutor_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_instrutor_responsavel_id_fkey"
+            columns: ["instrutor_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_instrutor_responsavel_id_fkey"
+            columns: ["instrutor_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "avaliacoes_item_planejado_id_fkey"
@@ -1125,6 +1153,20 @@ export type Database = {
             referencedRelation: "vw_instrutor_carga_anual"
             referencedColumns: ["instrutor_id"]
           },
+          {
+            foreignKeyName: "instrutor_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrutor_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       instrutores: {
@@ -1729,6 +1771,20 @@ export type Database = {
             referencedColumns: ["instrutor_id"]
           },
           {
+            foreignKeyName: "registros_aula_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registros_aula_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "registros_aula_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
@@ -1953,6 +2009,20 @@ export type Database = {
             referencedRelation: "vw_instrutor_carga_anual"
             referencedColumns: ["instrutor_id"]
           },
+          {
+            foreignKeyName: "responsaveis_curso_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "responsaveis_curso_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       turma_disciplina: {
@@ -2035,6 +2105,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_instrutor_carga_anual"
             referencedColumns: ["instrutor_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "turma_disciplina_turma_id_fkey"
@@ -2133,6 +2217,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_instrutor_carga_anual"
             referencedColumns: ["instrutor_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "turma_disciplina_instrutor_turma_disciplina_id_fkey"
@@ -2449,6 +2547,20 @@ export type Database = {
             referencedRelation: "vw_instrutor_carga_anual"
             referencedColumns: ["instrutor_id"]
           },
+          {
+            foreignKeyName: "usuarios_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -2579,6 +2691,20 @@ export type Database = {
             referencedColumns: ["instrutor_id"]
           },
           {
+            foreignKeyName: "avaliacoes_fiscal_id_fkey"
+            columns: ["fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_fiscal_id_fkey"
+            columns: ["fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "avaliacoes_instrutor_responsavel_id_fkey"
             columns: ["instrutor_responsavel_id"]
             isOneToOne: false
@@ -2591,6 +2717,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_instrutor_carga_anual"
             referencedColumns: ["instrutor_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_instrutor_responsavel_id_fkey"
+            columns: ["instrutor_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_instrutor_responsavel_id_fkey"
+            columns: ["instrutor_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "avaliacoes_item_planejado_id_fkey"
@@ -2800,6 +2940,57 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_instrutor_dados_pessoais: {
+        Row: {
+          codigo: string | null
+          cpf: string | null
+          endereco_bairro: string | null
+          endereco_cep: string | null
+          endereco_cidade: string | null
+          endereco_complemento: string | null
+          endereco_estado: string | null
+          endereco_logradouro: string | null
+          endereco_numero: string | null
+          id: string | null
+          orgao_emissor: string | null
+          retelma: string | null
+          rg: string | null
+          telefone: string | null
+        }
+        Insert: {
+          codigo?: string | null
+          cpf?: string | null
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_complemento?: string | null
+          endereco_estado?: string | null
+          endereco_logradouro?: string | null
+          endereco_numero?: string | null
+          id?: string | null
+          orgao_emissor?: string | null
+          retelma?: string | null
+          rg?: string | null
+          telefone?: string | null
+        }
+        Update: {
+          codigo?: string | null
+          cpf?: string | null
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_complemento?: string | null
+          endereco_estado?: string | null
+          endereco_logradouro?: string | null
+          endereco_numero?: string | null
+          id?: string | null
+          orgao_emissor?: string | null
+          retelma?: string | null
+          rg?: string | null
+          telefone?: string | null
+        }
+        Relationships: []
+      }
       vw_instrutor_disciplina_rotulada: {
         Row: {
           carga_horaria_tempos: number | null
@@ -2865,7 +3056,135 @@ export type Database = {
             referencedRelation: "vw_instrutor_carga_anual"
             referencedColumns: ["instrutor_id"]
           },
+          {
+            foreignKeyName: "instrutor_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrutor_disciplina_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      vw_instrutores: {
+        Row: {
+          antiguidade_declarada: string | null
+          antiguidade_declarada_num: number | null
+          area_conhecimento: string | null
+          capacitacao_didatica: string | null
+          categoria: string | null
+          codigo: string | null
+          criado_em: string | null
+          criado_por: string | null
+          data_assuncao_setor: string | null
+          data_avaliacao_desempenho: string | null
+          data_inicio_docencia_ciaara: string | null
+          data_inicio_docencia_mb: string | null
+          data_nascimento: string | null
+          dep_divisao: string | null
+          disciplinas_ministradas_legado_v1: string | null
+          editado_em: string | null
+          editado_por: string | null
+          email: string | null
+          esp_hab_obs: string | null
+          formacao_principal_secundaria: string | null
+          id: string | null
+          nip: string | null
+          nivel_escolaridade: string | null
+          nome_completo: string | null
+          nome_guerra: string | null
+          nome_normalizado: string | null
+          om: string | null
+          origem_migracao_v1: string | null
+          posto_graduacao: string | null
+          preferencia: string | null
+          regime_trabalho:
+            | Database["public"]["Enums"]["regime_trabalho_docente"]
+            | null
+          status: Database["public"]["Enums"]["status_registro"] | null
+          ultima_avaliacao_desempenho: string | null
+        }
+        Insert: {
+          antiguidade_declarada?: string | null
+          antiguidade_declarada_num?: number | null
+          area_conhecimento?: string | null
+          capacitacao_didatica?: string | null
+          categoria?: string | null
+          codigo?: string | null
+          criado_em?: string | null
+          criado_por?: string | null
+          data_assuncao_setor?: string | null
+          data_avaliacao_desempenho?: string | null
+          data_inicio_docencia_ciaara?: string | null
+          data_inicio_docencia_mb?: string | null
+          data_nascimento?: string | null
+          dep_divisao?: string | null
+          disciplinas_ministradas_legado_v1?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          email?: string | null
+          esp_hab_obs?: string | null
+          formacao_principal_secundaria?: string | null
+          id?: string | null
+          nip?: string | null
+          nivel_escolaridade?: string | null
+          nome_completo?: string | null
+          nome_guerra?: string | null
+          nome_normalizado?: string | null
+          om?: string | null
+          origem_migracao_v1?: string | null
+          posto_graduacao?: string | null
+          preferencia?: string | null
+          regime_trabalho?:
+            | Database["public"]["Enums"]["regime_trabalho_docente"]
+            | null
+          status?: Database["public"]["Enums"]["status_registro"] | null
+          ultima_avaliacao_desempenho?: string | null
+        }
+        Update: {
+          antiguidade_declarada?: string | null
+          antiguidade_declarada_num?: number | null
+          area_conhecimento?: string | null
+          capacitacao_didatica?: string | null
+          categoria?: string | null
+          codigo?: string | null
+          criado_em?: string | null
+          criado_por?: string | null
+          data_assuncao_setor?: string | null
+          data_avaliacao_desempenho?: string | null
+          data_inicio_docencia_ciaara?: string | null
+          data_inicio_docencia_mb?: string | null
+          data_nascimento?: string | null
+          dep_divisao?: string | null
+          disciplinas_ministradas_legado_v1?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          email?: string | null
+          esp_hab_obs?: string | null
+          formacao_principal_secundaria?: string | null
+          id?: string | null
+          nip?: string | null
+          nivel_escolaridade?: string | null
+          nome_completo?: string | null
+          nome_guerra?: string | null
+          nome_normalizado?: string | null
+          om?: string | null
+          origem_migracao_v1?: string | null
+          posto_graduacao?: string | null
+          preferencia?: string | null
+          regime_trabalho?:
+            | Database["public"]["Enums"]["regime_trabalho_docente"]
+            | null
+          status?: Database["public"]["Enums"]["status_registro"] | null
+          ultima_avaliacao_desempenho?: string | null
+        }
+        Relationships: []
       }
       vw_ocupacao_ta: {
         Row: {

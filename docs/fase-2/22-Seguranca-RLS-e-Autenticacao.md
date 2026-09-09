@@ -53,6 +53,30 @@ identificados nominalmente. Sem cadastro público, sem página aberta, sem API p
 | A-5 | **Vazamento da chave `service_role`** para o navegador | Baixa | **Crítico** | Isolamento + regra de ESLint (§7) |
 | A-6 | **Reescrita do histórico.** Alguém "corrige" `migracao_log` | Baixa | **Alto** | GRANT revogado + gatilho de bloqueio (§8.2) |
 | A-7 | Senha fraca ou reutilizada | Média | Médio | Política de senha + verificação de vazamento (§4.5) |
+| **A-8** | **Tentativa repetida de senha contra o endereço de login** (força bruta / credenciais vazadas de outro serviço) | Média | **Alto** | Limite de tentativas da plataforma, **conferido e registrado** — não presumido (FR-005.2) |
+
+> **[RATIFICADA — Bernardo, 09/09/2026] A-8 é ameaça do modelo, em vigor.**
+>
+> Proposta no Épico 3 e aprovada no mesmo dia. O modelo de ameaças deste sistema vai de **A-1 a
+> A-8**.
+>
+> **Por que ela faltava.** O modelo ia de A-1 a A-7, e a defesa listada para A-7 é a política de
+> senha — que protege a **senha escolhida**, não o **endereço de login**. Não havia entrada para
+> quem simplesmente tenta muitas vezes, ou reusa uma senha vazada de outro serviço. A distinção
+> importa porque as defesas são diferentes: uma vive na escolha da senha, a outra no limite de
+> tentativas.
+>
+> **Por que agora.** Até o Épico 3 não havia tela de login: não existia endereço a atacar. A partir
+> dele existe, e ele dá acesso a CPF, RG, telefone e endereço residencial de 177 militares — dado
+> que só passou a estar em nuvem comercial com a autorização da CIAARA-14.2 de 08/09/2026.
+>
+> **Defesa, e o que ela não é.** A fatia **não implementa contagem de tentativa própria**: uma
+> defesa escrita à mão neste ponto costuma ser pior que a nativa e vira mais uma coisa a manter.
+> O que ela faz é **conferir e registrar o valor observado** — `sign_in_sign_ups = 30 por 5 min
+> por IP` no `config.toml` versionado, e o do painel para o projeto remoto. Ver
+> `specs/004-auth-convite-e-rbac/contracts/conferencias-de-painel.md`.
+>
+> ⚠️ **Registrar "está configurado" sem o número não é conferência, é lembrança.**
 
 ### 1.3 O que está fora do modelo
 
@@ -194,7 +218,36 @@ o que impede que qualquer pessoa com o endereço da aplicação crie uma credenc
 verificado pelo teste T-09), ela teria credencial válida no projeto, o que é lixo desnecessário e
 superfície de ataque gratuita.
 
-**Item de checklist do Épico 3, verificável no painel. Não há como garanti-lo por código.**
+> **[CORRIGIDO — Bernardo, 09/09/2026]** Esta seção dizia *"item de checklist do Épico 3,
+> verificável no painel; **não há como garanti-lo por código**"*. **A segunda metade é falsa para o
+> stack local e o de preview.** `supabase/config.toml` é versionado e o CI o aplica a cada corrida:
+> ali `[auth] enable_signup = false` **é código**, e a garantia é automática — não lembrada.
+>
+> A divisão que vale a partir de agora:
+>
+> | Garantia | Stack local e `db reset` | Projeto remoto |
+> |---|---|---|
+> | Auto-cadastro desligado (FR-003) | `[auth] enable_signup = false` | painel |
+> | Comprimento mínimo de senha (FR-006, §4.5) | `[auth] minimum_password_length = 12` | painel |
+> | Composição de senha não exigida (§4.5) | `[auth] password_requirements = ""` | painel |
+> | Limite de tentativas de login (**A-8**) | `[auth.rate_limit] sign_in_sign_ups` | painel |
+> | Verificação contra vazamento (HaveIBeenPwned) | **não tem chave no `config.toml`** | painel, sempre |
+> | Região do projeto | **não existe localmente** | painel, sempre |
+>
+> ⚠️ **Os dois lados não se substituem.** O `config.toml` governa o ambiente onde não há o que
+> atacar. O que protege o endereço de login em produção é o valor do **painel**, e é ele que o
+> FR-005.2 manda conferir e **registrar com o número observado**. O que a correção elimina é a
+> classe de erro em que a configuração local diverge da decisão escrita sem ninguém notar.
+>
+> ⚠️ **E "versionado" não quer dizer "aplicado".** Medido em 09/09/2026: `supabase db reset`
+> **não** recarrega a seção `[auth]`. Depois de mudar `minimum_password_length` para 12 e rodar
+> `pnpm db:reset`, o contêiner de auth continuava com `GOTRUE_PASSWORD_MIN_LENGTH=6`; só
+> `supabase stop` seguido de `supabase start` aplicou. O CI escapa porque sobe o stack do zero;
+> a máquina de quem desenvolve, com o stack de pé, não escapa.
+> **Guardado desde 09/09/2026** por `tests/invariantes/rls/config-auth-aplicado.test.ts`, que
+> compara estas chaves com o ambiente do contêiner e diz o que fazer quando divergem.
+
+**Item de checklist do Épico 3 para o projeto remoto. No stack local, é `config.toml` versionado.**
 
 ---
 
@@ -234,11 +287,21 @@ pelo teste T-11.**
 
 | Item | Decisão | Onde se configura |
 |---|---|---|
-| Comprimento mínimo | 12 caracteres | Painel Supabase → Auth → Policies |
-| Verificação contra vazamentos | **Habilitada** (HaveIBeenPwned, nativo) | Painel Supabase |
-| Composição obrigatória | **Não exigida** | — |
+| Comprimento mínimo | 12 caracteres | `config.toml` `[auth] minimum_password_length` (local, versionado) · Painel → Auth → Policies (remoto) |
+| Verificação contra vazamentos | **Habilitada** (HaveIBeenPwned, nativo) | Painel Supabase — **sem chave no `config.toml`** |
+| Composição obrigatória | **Não exigida** | `config.toml` `[auth] password_requirements = ""` (local) · Painel (remoto) |
 | Expiração compulsória | **Não** | — |
 | MFA | Opcional agora; recomendado para `admin` | Painel Supabase |
+
+> **Emenda de 09/09/2026 (Épico 3, aprovada por Bernardo).** Até esta data o **12 existia só no
+> navegador** — `minLength={12}` nos dois campos de `app/(auth)/convite/FormularioDeSenha.tsx` —
+> enquanto o `config.toml` trazia o padrão do CLI, **6**. Era regra de negócio implementada apenas
+> na UI, que o BRIEF §2 proíbe, e o efeito era alcançável: uma chamada direta à API de auth
+> aceitaria seis caracteres. Corrigido no `config.toml`; a divisão local/remoto está em §3.4.
+>
+> **E agora tem teste, não só conferência:** `tests/invariantes/rls/politica-de-senha.test.ts`
+> tenta trocar a senha por uma de 11 caracteres pelo mesmo caminho da tela de convite e exige a
+> recusa, citando o número. Conferido por defeito deliberado — com o mínimo de volta em 6, reprova.
 
 As duas ausências são deliberadas e alinhadas à orientação corrente de segurança (NIST SP 800-63B):
 exigir símbolo e trocar senha a cada 90 dias produz senhas piores, previsíveis e anotadas em papel.
@@ -537,10 +600,10 @@ comerciais, com armazenamento fora da infraestrutura da Marinha do Brasil.
 | Classificação do dado | Inalterada em relação à v2.0 |
 | Base legal (LGPD) | Execução de política pública / atribuição legal da administração — a mesma da v2.0 |
 | **Localização física** | **Muda.** Selecionar região do projeto Supabase em **São Paulo (`sa-east-1`)**, não em região estrangeira |
-| **Ciência da CIAARA-14.2** (Tecnologia da Informação) | **PENDENTE.** Pode exigir anuência formal |
+| **Ciência da CIAARA-14.2** (Tecnologia da Informação) | ✅ **AUTORIZADA em 08/09/2026**, inclusive para dado pessoal. Era a única pendência capaz de bloquear a versão por razão não técnica |
 | Criptografia em repouso e em trânsito | Nativa em ambos os provedores (AES-256 / TLS 1.2+) |
 | Retenção e descarte | Não definida. Hoje o sistema nunca apaga — é preciso decidir se isso é conforme |
-| Registro de acesso a dado pessoal | Parcial (`ultimo_acesso`, `criado_por`/`editado_por`). Não há log de *leitura* |
+| Registro de acesso a dado pessoal | Parcial (`ultimo_acesso`, `criado_por`/`editado_por`). Não há log de *leitura*. ⚠️ **O Épico 3 tornou a pergunta mais nítida, não menos**: a partir dele existe um conjunto declarado de **três** perfis que podem ler PII (`admin`, `encarregado_administracao_academica`, `ajudante_administracao_academica`), e nada registra **quando** leram |
 
 > **Esta é a única pendência deste documento que pode bloquear a v2.1 por razão não técnica.**
 > Recomendação: levar a questão à CIAARA-14.2 **antes do Épico 2 (ETL)**, e não depois — o Épico 2
@@ -581,15 +644,15 @@ rollback;
 | # | Verifica | Resultado |
 |---|---|---|
 | T-01 | Operador `expedito` não enxerga turma de curso regular | ✅ passou |
-| T-02 | Operador não cria registro fora do escopo | a portar |
-| T-03 | **Fuga de escopo por UPDATE** — só o `WITH CHECK` pega | a portar |
+| T-02 | Operador não cria registro fora do escopo | ✅ **portado no Épico 3** |
+| T-03 | **Fuga de escopo por UPDATE** — só o `WITH CHECK` pega | ✅ **portado no Épico 3** |
 | T-04 | Perfil `visualizacao` não escreve em lugar nenhum | ✅ passou — **encontrou o defeito do schema `extensions`** |
 | T-05 | **Escalonamento de privilégio** | ✅ passou |
 | T-06 | Só o admin escreve na matriz de permissões | ✅ passou |
 | T-07 | `DELETE` impossível em toda tabela | ✅ passou |
 | T-08 | `migracao_log` imutável | a portar |
 | T-09 | Sessão sem linha em `usuarios` não alcança nada | ✅ passou |
-| T-10 | Operador não cria atividade de escopo global | a portar |
+| T-10 | Operador não cria atividade de escopo global | ✅ **portado no Épico 3** |
 | T-11 | Usuário desativado perde acesso imediatamente | ✅ passou — **encontrou o defeito do gatilho no contexto de servidor** |
 | T-12 | Encarregado de Curso vê só os cursos vinculados | a portar |
 
