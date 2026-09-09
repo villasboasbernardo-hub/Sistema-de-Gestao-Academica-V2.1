@@ -189,17 +189,43 @@ refresh_token_reuse_interval = 10
 #
 # ⚠️ E ISTO CORRIGE UMA SUPOSIÇÃO DO CONTRATO. O documento 22 §3.4 diz "não há como garanti-lo
 # por código, é item de checklist do painel". Para o projeto REMOTO isso continua verdade. Para o
-# stack local e para o `supabase db reset`, `config.toml` É código, é versionado, e o CI o aplica
-# a cada execução — aqui a garantia é automática.
+# stack local, `config.toml` É código, é versionado, e o CI o aplica a cada execução — aqui a
+# garantia é automática. Corrigido no documento 22 §3.4 em 09/09/2026, aprovado por Bernardo.
+#
+# ⚠️⚠️ MAS `supabase db reset` NÃO RECARREGA ESTA SEÇÃO. Medido em 09/09/2026: depois de alterar
+# `minimum_password_length` e rodar `pnpm db:reset`, o contêiner `supabase_auth_*` ainda trazia
+# `GOTRUE_PASSWORD_MIN_LENGTH=6`. O `db reset` reinicia contêiner; o ambiente de `[auth]` é
+# montado no `supabase start`. Quem edita esta seção precisa de `pnpm db:stop && pnpm db:start`.
+# O CI não cai nessa armadilha porque sobe o stack do zero (`supabase start` antes do `db reset`);
+# a máquina de quem desenvolve, com o stack já de pé, cai — e o sintoma é `verificar:tudo` verde
+# discordando do CI, que a Definition of Done trata como DEFEITO DA VERIFICAÇÃO.
+#
+# Como conferir o que está de fato valendo, sem acreditar no arquivo:
+#   docker inspect supabase_auth_ciaara-11-v2-1 --format '{{range .Config.Env}}{{println .}}{{end}}'
 enable_signup = false
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+#
+# ⚠️ 12 É O NÚMERO DO DOCUMENTO 22 §4.5 E DO FR-006, e até 09/09/2026 ele só existia no
+# NAVEGADOR: os dois campos de `app/(auth)/convite/FormularioDeSenha.tsx` trazem `minLength={12}`
+# e esta chave ficava no padrão do CLI, **6**. Regra de negócio implementada apenas na UI é
+# proibida pelo BRIEF §2, e aqui a consequência era alcançável: uma chamada direta à API de auth,
+# sem passar pelo formulário, aceitaria senha de seis caracteres. Agora o número é o mesmo dos
+# dois lados da fronteira.
+#
+# ⚠️ A VERIFICAÇÃO CONTRA VAZAMENTO (HaveIBeenPwned) NÃO TEM CHAVE AQUI, e por isso continua
+# sendo conferência humana no painel do projeto remoto — item 3 de
+# `specs/004-auth-convite-e-rbac/contracts/conferencias-de-painel.md`.
+minimum_password_length = 12
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
+#
+# ⚠️ VAZIO DE PROPÓSITO, e não por esquecimento. O documento 22 §4.5 recusa composição
+# obrigatória por alinhamento ao NIST SP 800-63B: exigir símbolo e maiúscula produz senha pior,
+# previsível e anotada em papel. Quem preencher isto "para reforçar" ENFRAQUECE a política.
 password_requirements = ""
 
 # Configure passkey sign-ins.
