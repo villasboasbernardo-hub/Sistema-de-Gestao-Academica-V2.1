@@ -89,6 +89,14 @@ jobs:
       # Teste NEGATIVO por perfil: o que cada perfil nao pode ler/escrever e negado pelo banco.
       - run: pnpm test:rls
 
+      # PONTA A PONTA (CHK011, SC-003). Roda AQUI, e nao no bloco `build`, porque
+      # `playwright.config.ts` pede as chaves ao `supabase status` ao carregar, e o percurso do
+      # convite intercepta o e-mail no Mailpit do stack local. Sem CLI e sem stack, a suite nem
+      # comeca. A aplicacao sob teste e construida pelo proprio `webServer` (`pnpm build && pnpm
+      # start`), contra o Supabase LOCAL — nunca contra o remoto do `.env.local`.
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+
   # ---------------------------------------------------------------------------------------------
   # 3. BUILD — o unico bloco que pega erro de fronteira servidor/cliente (FR-005), inclusive
   #    `admin.ts` alcancado do navegador. Desde 03/09/2026 carrega tambem a ponta a ponta.
@@ -110,8 +118,18 @@ jobs:
       # 8. BUILD — erro de fronteira servidor/cliente aparece aqui, nunca no tsc.
       - run: pnpm build
 
-      # 9. PONTA A PONTA — acrescentado para cobrir o CHK011 e o SC-003: sem isto, nenhum
-      #    contexto do CI executava Playwright, e um defeito de ponta a ponta nao barrava o merge.
-      #    Nesta fatia a suite roda praticamente vazia (FR-011) — o que se prova e o encanamento.
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      # 9. A PONTA A PONTA MUDOU-SE PARA O BLOCO `banco` em 09/09/2026, e nao foi preferencia.
+      #    Ela vivia aqui desde 03/09 (CHK011, SC-003), quando a suite era `aplicacao-sobe` e nao
+      #    precisava de banco. O Epico 3 acrescentou o percurso do convite, e com ele o
+      #    `playwright.config.ts` passou a perguntar as chaves ao `supabase status` — no CARREGAMENTO
+      #    da configuracao, antes de qualquer teste. Este bloco nao tem a CLI nem o stack de pe, e
+      #    o resultado era `spawnSync supabase ENOENT`: a suite nem chegava a comecar.
+      #
+      #    ⚠️ E O LOCAL NAO PEGAVA, porque na maquina de quem desenvolve a CLI existe e o stack
+      #    esta sempre no ar. Verde no `verificar:tudo`, vermelho no CI, sobre o mesmo commit —
+      #    exatamente o que a Definition of Done chama de DEFEITO DA VERIFICACAO.
+      #
+      #    O bloco `banco` ja instala a CLI e sobe o stack. Uma suite que fala com o banco pertence
+      #    a ele; duplicar `supabase start` aqui custaria os mesmos minutos duas vezes. Os tres
+      #    contextos exigidos continuam sendo `qualidade`, `banco` e `build`, entao a cobertura do
+      #    portao nao muda de tamanho — muda de bloco.

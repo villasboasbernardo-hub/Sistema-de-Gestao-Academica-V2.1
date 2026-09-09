@@ -290,7 +290,7 @@ Bernardo em 08/09/2026** (*"foram balizados por medição real e justificados na
    regra 4. Se os valores divergirem, a carga **aborta**: dois números para a mesma norma não é
    duplicidade de nome, é conflito.
 
-**Os nove achados de plataforma do Épico 3 — todos custaram investigação, nenhum aparece no `tsc`:**
+**Os dez achados de plataforma do Épico 3 — todos custaram investigação, nenhum aparece no `tsc`:**
 
 1. **`process.env[variavel]` com chave dinâmica NÃO é substituído no bundle.** Só o acesso
    literal `process.env.NEXT_PUBLIC_FOO` é. `conferirAmbiente()` fazia leitura dinâmica desde o
@@ -334,6 +334,13 @@ Bernardo em 08/09/2026** (*"foram balizados por medição real e justificados na
    `body.innerText()` na linha seguinte ao `goto`, e a conferência do link é **assíncrona**: ele
    pegava *"Conferindo o link…"*. Vermelho na suíte inteira, verde sozinho — o pior modo de falha
    possível, porque parece azar. `expect(...).toBeVisible()` reexecuta; leitura direta, não.
+10. **A ponta a ponta não podia mais viver no bloco `build` do CI**, e só o primeiro PR da fatia
+   revelou. O `playwright.config.ts` passou a perguntar as chaves ao `supabase status` **no
+   carregamento da configuração**; o bloco `build` não tem a CLI nem o stack, e a suíte morria em
+   `spawnSync supabase ENOENT` antes do primeiro teste. ⚠️ **O local não pega**: na máquina de
+   quem desenvolve a CLI existe e o stack está no ar. Verde no `verificar:tudo`, vermelho no CI,
+   sobre o mesmo commit. Mudou para o bloco `banco`, que já sobe o stack. **Uma suíte que fala com
+   o banco pertence ao bloco que tem banco.**
 
 **⚠️ E um que os testes existentes pegaram:** view nova nasce com `DELETE` e `TRUNCATE` para
 `authenticated`. O `revoke ... on all tables` do Épico 1 é **uma foto do momento**, não regra
