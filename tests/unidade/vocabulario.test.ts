@@ -5,6 +5,9 @@
  * Épicos 1 a 3: dizem o que NÃO PODE acontecer, e reprovam quando acontece. Uma fatia sem regra de
  * negócio e sem banco continua tendo o que provar.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { claro, escuro, exposicao, papeisDeCor } from "@/lib/design/ler-globals";
@@ -63,6 +66,19 @@ describe("I-4 · nenhuma variável de terceiro sem par (`SC-010`)", () => {
       .filter(([, destino]) => !papeis.has(destino))
       .map(([origem, destino]) => `${origem} → ${destino}`);
     expect(orfas, `o de-para aponta para papel inexistente: ${orfas.join(", ")}`).toEqual([]);
+  });
+
+  it("toda variável do de-para está DECLARADA no ponto único, apontando para o papel certo", () => {
+    // ⚠️ O teste anterior prova que o de-para é coerente consigo mesmo. Este prova que ele foi
+    // APLICADO: sem isto, a tabela poderia estar perfeita e o CSS não a seguir — que é o caso em
+    // que passam a existir dois pontos únicos de verdade e nada acusa erro.
+    const css = readFileSync(resolve(process.cwd(), "app/globals.css"), "utf8");
+    const erradas = Object.entries(RECONCILIACAO)
+      .filter(([variavel, papel]) => !css.includes(`--${variavel}: var(--${papel});`))
+      .map(([v, p]) => `--${v} deveria apontar para var(--${p})`);
+    expect(erradas, `o de-para não foi aplicado em app/globals.css: ${erradas.join("; ")}`).toEqual(
+      [],
+    );
   });
 
   it("`destructive` aponta para conflito, NÃO para atrasado", () => {

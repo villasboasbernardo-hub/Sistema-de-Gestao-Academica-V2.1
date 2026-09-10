@@ -13,6 +13,17 @@
  * Server Component: lê o ponto único no servidor. Só o alternador é folha de cliente.
  */
 import { SeletorDeTema } from "@/components/ciaara/seletor-tema";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { claro, escuro } from "@/lib/design/ler-globals";
 import {
   ISENTOS,
@@ -46,6 +57,18 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
  * inventado ao lado de um token que não existe. Que o token exista é garantido pela invariante
  * I-1b; se algum dia não for, esta tela deve quebrar, não mentir.
  */
+/** Os dois valores de um token, lidos do ponto único. Estoura se faltar — ver `medir`. */
+function valores(
+  claroM: Map<string, string>,
+  escuroM: Map<string, string>,
+  token: string,
+): { claro: string; escuro: string } {
+  const c = claroM.get(token);
+  const e = escuroM.get(token);
+  if (!c || !e) throw new Error(`token ausente no ponto único: --${token}`);
+  return { claro: c, escuro: e };
+}
+
 function medir(tema: Map<string, string>, frente: string, fundo: string): number {
   const a = tema.get(frente);
   const b = tema.get(fundo);
@@ -53,18 +76,33 @@ function medir(tema: Map<string, string>, frente: string, fundo: string): number
   return razao(a, b);
 }
 
-/** Uma amostra de cor, com o nome do token embaixo. */
-function Amostra({ token }: { token: string }) {
+/**
+ * Uma amostra de cor, com o nome do token e **o valor de cada tema**.
+ *
+ * ⚠️ O VALOR EXIBIDO NÃO PRECISA DE EXCEÇÃO DE LINT, e a razão importa: ele é **lido de
+ * `app/globals.css` em tempo de execução**, não escrito aqui. A regra barra cor *escrita à mão no
+ * código-fonte*; uma cadeia que vem do ponto único é o oposto disso — é o ponto único falando.
+ *
+ * ⚠️ E DESLIGAR A REGRA AQUI SERIA PIOR QUE INÚTIL: um `eslint-disable` nesta tela passaria a
+ * esconder cor de verdade escrita à mão no dia em que alguém acrescentasse uma, que é exatamente
+ * o arquivo onde isso é mais tentador.
+ */
+function Amostra({ token, claro: vClaro, escuro: vEscuro }: Amostrada) {
   return (
     <div className="flex flex-col gap-1">
       <div
         className="border-borda-forte rounded-ciaara-sm h-10 border"
         style={{ backgroundColor: `var(--${token})` }}
       />
-      <code className="text-texto-suave text-2xs">--{token}</code>
+      <code className="text-2xs">--{token}</code>
+      <code className="text-texto-suave text-2xs tabular-nums">
+        {vClaro} · {vEscuro}
+      </code>
     </div>
   );
 }
+
+type Amostrada = { token: string; claro: string; escuro: string };
 
 export default function Vitrine() {
   const temaClaro = claro();
@@ -85,7 +123,7 @@ export default function Vitrine() {
       <Secao titulo="Papéis — superfície, texto e marca">
         <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
           {PAPEIS_BASE.map((t) => (
-            <Amostra key={t} token={t} />
+            <Amostra key={t} token={t} {...valores(temaClaro, temaEscuro, t)} />
           ))}
         </div>
       </Secao>
@@ -181,9 +219,45 @@ export default function Vitrine() {
       <Secao titulo="Séries de gráfico — ordem fixa, luminâncias distintas para sobreviver ao P&B">
         <div className="grid grid-cols-4 gap-3 md:grid-cols-8">
           {SERIES.map((t) => (
-            <Amostra key={t} token={t} />
+            <Amostra key={t} token={t} {...valores(temaClaro, temaEscuro, t)} />
           ))}
         </div>
+      </Secao>
+
+      <Secao titulo="Componentes base — pintados pelos tokens CIAARA, não pelas cores deles">
+        {/* ⚠️ É AQUI QUE A RECONCILIAÇÃO SE VÊ. Estes componentes vieram de terceiro com o próprio
+            vocabulário de papéis; o que os pinta é o de-para de `globals.css`. Se algum aparecer
+            com cor que não é do CIAARA, o casamento não está valendo — e nada mais acusaria. */}
+        <div className="flex flex-wrap items-start gap-4">
+          <Button>Ação principal</Button>
+          <Button variant="secondary">Secundária</Button>
+          <Button variant="destructive">Destrutiva</Button>
+          <Button variant="outline">Contorno</Button>
+          <Badge>Emblema</Badge>
+          <Badge variant="secondary">Secundário</Badge>
+        </div>
+        <Card className="max-w-sm">
+          <CardHeader>
+            <CardTitle>Cartão</CardTitle>
+          </CardHeader>
+          <CardContent className="text-texto-suave text-sm">
+            Superfície, texto e limite vindos do vocabulário do CIAARA.
+          </CardContent>
+        </Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Instrutor</TableHead>
+              <TableHead>Turma</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>CT-EF Silva</TableCell>
+              <TableCell>C-Ap-HN 2026</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </Secao>
 
       <Secao titulo="Raio e sombra">

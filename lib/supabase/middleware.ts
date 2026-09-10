@@ -16,8 +16,16 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { conferirAmbiente } from "@/lib/ambiente";
 
-/** Rotas alcançáveis SEM sessão. Tudo o mais em `(app)` exige uma. */
-const SEM_SESSAO = ["/login", "/convite", "/recuperar-senha", "/sem-configuracao"];
+/**
+ * Rotas alcançáveis SEM sessão. Tudo o mais em `(app)` exige uma.
+ *
+ * ⚠️ `/estilo` ENTROU EM 10/09/2026, com o Épico 4 fatia (a), e a inclusão merece justificativa
+ * porque mexe na superfície de autenticação: ela é a **vitrine do vocabulário visual** e não
+ * exibe dado algum — só token de cor, escala tipográfica e a razão de contraste medida. Exigir
+ * sessão para ver uma paleta não protege nada e impede que a fatia seja conferida, porque até a
+ * fatia (c) não há cabeçalho nem navegação por onde chegar nela depois de entrar.
+ */
+const SEM_SESSAO = ["/login", "/convite", "/recuperar-senha", "/sem-configuracao", "/estilo"];
 
 function ehRotaAberta(caminho: string): boolean {
   return SEM_SESSAO.some((r) => caminho === r || caminho.startsWith(`${r}/`));

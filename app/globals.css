@@ -267,6 +267,62 @@
   --color-serie-8: var(--serie-8);
 }
 
+/* ── 4b. RECONCILIAÇÃO COM OS COMPONENTES COPIADOS (`FR-018`, `SC-010`) ───────────────────────
+ * Os componentes do shadcn trazem o PRÓPRIO vocabulário de papéis. Deixá-los conviver com o do
+ * CIAARA sem casamento explícito cria DOIS pontos únicos de verdade — a negação do `RF-DS-01`
+ * COM A AGRAVANTE DE PARECER CUMPRIDO: todo componente fica bonito e nada acusa erro.
+ *
+ * ⚠️ NENHUMA VARIÁVEL MANTÉM VALOR PRÓPRIO. Todas apontam para um papel do CIAARA, e por isso
+ * seguem o tema sozinhas — é também por isso que elas ficam aqui e não no `@theme` estático.
+ *
+ * ⚠️ `destructive` APONTA PARA CONFLITO, NÃO PARA ATRASADO. Vermelho é conflito, que exige ação;
+ * amarelo é aviso de atraso. Trocar os dois NÃO acusaria erro nenhum e faria um botão de
+ * desativar parecer aviso de atraso. Guardado por teste.
+ *
+ * Contrato: specs/005-design-system-tokens-e-tema/contracts/reconciliacao-shadcn.md */
+:root,
+.dark {
+  --background: var(--fundo);
+  --foreground: var(--texto);
+  --card: var(--superficie);
+  --card-foreground: var(--texto);
+  --popover: var(--superficie);
+  --popover-foreground: var(--texto);
+  --muted: var(--superficie-2);
+  --muted-foreground: var(--texto-suave);
+  --primary: var(--marca);
+  --primary-foreground: var(--marca-contraste);
+  --secondary: var(--superficie-2);
+  --secondary-foreground: var(--texto);
+  --accent: var(--marca-suave);
+  --accent-foreground: var(--texto);
+  --destructive: var(--conflito-tinta);
+  --border: var(--borda);
+  --input: var(--borda-forte);
+  --ring: var(--foco);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
 /* ── 5. CAMADA BASE. O mínimo — o resto é utilitário no componente (RF-DS-04). ────────────────── */
 @layer base {
   * {
