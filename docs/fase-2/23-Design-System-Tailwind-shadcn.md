@@ -219,11 +219,11 @@ exceção já registrada em UI-03 e **[PRESERVADA]**. Vivem em `public/instituci
   --fundo: #f4f7fa;              /* cinza-azulado, não branco: reduz fadiga em tabela longa */
   --superficie: #ffffff;         /* cartão, tabela, modal                                   */
   --superficie-2: #eef2f7;       /* cabeçalho fixo, zebra, área desabilitada                */
-  --texto: #0f1720;              /* 15.9:1 sobre --superficie                               */
-  --texto-suave: #47546a;        /* 7.6:1 — rótulo secundário, unidade, legenda             */
-  --texto-tenue: #6b7889;        /* 4.6:1 — placeholder. NUNCA para dado; só para dica.     */
-  --borda: #dde3ea;              --borda-forte: #c3ccd8;   /* 3.1:1 — limite de componente   */
-  --marca: #003366;              --marca-contraste: #ffffff;  /* 13.4:1 sobre --marca        */
+  --texto: #0f1720;              /* tinta principal                                         */
+  --texto-suave: #47546a;        /* rótulo secundário, unidade, legenda                     */
+  --texto-tenue: #6b7889;        /* placeholder. NUNCA para dado; só para dica.             */
+  --borda: #dde3ea;              --borda-forte: #c3ccd8;   /* divisória e limite de campo    */
+  --marca: #003366;              --marca-contraste: #ffffff;  /* tinta sobre a marca         */
   --marca-suave: #eef4fa;        --foco: #1f5a97;             /* anel de foco — RNF-USA-06   */
 
   /* SEMÂNTICAS DE STATUS DO DOMÍNIO. Cada trio fundo/tinta/borda é validado em AA (§8.1).
@@ -251,8 +251,8 @@ exceção já registrada em UI-03 e **[PRESERVADA]**. Vivem em `public/instituci
 .dark {
   color-scheme: dark;
   --fundo: #0b0f14;              --superficie: #141a22;     --superficie-2: #1c242e;
-  --texto: #e8edf3;              /* 14.2:1 */    --texto-suave: #a8b3c2;  /* 7.9:1 */
-  --texto-tenue: #7b8899;        /* 4.7:1  */    --borda: #2a343f;        --borda-forte: #3d4855;
+  --texto: #e8edf3;                             --texto-suave: #a8b3c2;
+  --texto-tenue: #7b8899;                       --borda: #2a343f;        --borda-forte: #3d4855;
   --marca: #4a7fb8;              /* #003366 não contrasta sobre fundo escuro: sobe na rampa */
   --marca-contraste: #04121f;    --marca-suave: #17293c;    --foco: #7ea7d2;
 
@@ -310,6 +310,29 @@ exceção já registrada em UI-03 e **[PRESERVADA]**. Vivem em `public/instituci
   }
 }
 ```
+
+> **[SANEAMENTO — 10/09/2026] As razões de contraste anotadas neste bloco foram REMOVIDAS.**
+>
+> Elas eram um **segundo lugar de verdade** para um número que hoje é calculado e auditado, e
+> envelheceram exatamente como se previa: medidas em 09 e 10/09/2026, **seis das sete estavam
+> erradas**. Só a de `--texto-suave` conferia.
+>
+> | Anotava | Media de fato |
+> |---|---|
+> | `--texto` claro, 15,9:1 | **18,05** |
+> | `--texto-tenue` claro, 4,6:1 | **4,49** |
+> | `--borda-forte`, 3,1:1 | **1,62** |
+> | `--marca-contraste`, 13,4:1 | **12,61** |
+> | `--texto` noturno, 14,2:1 | **14,86** |
+> | `--texto-tenue` noturno, 4,7:1 | **4,85** |
+>
+> Nenhuma cor foi alterada — **só o comentário saiu**. O número passa a existir num lugar só: a
+> auditoria de `tests/unidade/contraste.test.ts`, que percorre os pares de
+> `lib/design/vocabulario.ts` e falha nomeando o par e a razão medida. **A vitrine `/estilo` exibe
+> exatamente esse número**, e é onde se confere a olho.
+>
+> ⚠️ **A lição é a do Princípio VII aplicada a comentário**: valor que se pode calcular não se
+> escreve à mão. Uma anotação errada é pior que nenhuma, porque alguém confia nela.
 
 ### 1.4 Cores semânticas de status — leitura do domínio
 
@@ -1235,8 +1258,24 @@ export function GraficoBarras({ dados }: { dados: { nome: string; valor: number 
 
 ### 8.1 Contraste AA e codificação dupla
 
-Texto normal ≥ **4.5:1**; texto grande (≥ 24px, ou ≥ 18.7px em negrito) ≥ **3:1**; limite de
-componente e elemento gráfico ≥ **3:1**. Os *tokens* do §1.3 satisfazem isso **nos dois temas**, e a
+Texto normal ≥ **4.5:1**; texto grande (≥ 24px, ou ≥ 18.7px em negrito) ≥ **3:1**; **borda
+interativa ou informativa** e elemento gráfico ≥ **3:1**.
+
+> **[EMENDA — 10/09/2026, decidida por Bernardo] O limite de 3:1 NÃO se aplica a borda decorativa
+> nem a linha de grade estrutural.** Ele cobre o traço que **identifica** um controle — foco,
+> campo, botão — ou que **porta informação sozinho**. Divisória, linha de grade e contorno de
+> etiqueta cujo significado já vem do texto ficam **isentos**, e a isenção MUST trazer o motivo
+> escrito, par a par.
+>
+> **Por que a emenda.** A redação anterior dizia "limite de componente", e ao virar auditoria em
+> 09/09/2026 ela reprovou **22 asserções** medindo de 1,25 a 1,88 — todas as bordas do sistema. A
+> causa era a regra, não a paleta: uma borda a 3:1 contra o próprio preenchimento é um traço quase
+> preto, e numa tabela de 300 linhas isso **piora** a legibilidade em nome dela.
+>
+> ⚠️ **`--borda-forte` fica como pendência declarada**, nem auditada nem isenta: ela é o traço que
+> identifica um **campo**, e o preenchimento do campo quase não contrasta com a página — medido,
+> 1,20. Não há campo até a fatia (b) do Épico 4; a fatia que construir o primeiro resolve. Chamá-la
+> de decorativa seria mentira, e é por isso que ela tem categoria própria. Os *tokens* do §1.3 satisfazem isso **nos dois temas**, e a
 verificação entra no CI como auditoria automática das combinações declaradas (`fundo × tinta` de
 cada status). **`--texto-tenue` nunca carrega dado** — serve a *placeholder* e dica; usá-lo para
 conteúdo real reintroduz a reclamação de `RF-DS-03`.
@@ -1248,9 +1287,22 @@ ou padrão de traço) e linha de tabela em conflito (badge, não só fundo averm
 ### 8.2 Foco visível
 
 `:focus-visible` global de 2px no *token* `--foco`, com 2px de deslocamento (§1.3). Regra de
-revisão: **`outline: none` sem substituto é rejeitado**, inclusive ao reescrever o anel de foco dos
-primitivos shadcn/ui copiados — o ajuste é feito no arquivo de `components/ui/` e passa por *diff*
-como qualquer código nosso.
+revisão: **`outline: none` sem substituto é rejeitado**.
+
+> **[EMENDA — 10/09/2026, decidida por Bernardo] O anel de foco NATIVO dos primitivos copiados é
+> aceito, e não precisa ser reescrito** — desde que satisfaça as duas condições que importam:
+>
+> 1. o foco continua **visível** ao navegar por teclado; e
+> 2. o contraste do indicador atinge **3:1**, que é o limite de borda interativa do §8.1.
+>
+> **Por que a emenda.** A redação anterior mandava reescrever o anel de cada primitivo copiado. Isso
+> cria trabalho a cada componente novo — são catorze ainda por vir —, e cada reescrita é uma chance
+> de piorar acessibilidade que já vinha correta e testada de origem. O que interessa é o resultado,
+> não a autoria do CSS.
+>
+> ⚠️ **O que continua rejeitado é remover sem substituir.** Um primitivo que traga `outline: none`
+> e não desenhe indicador próprio **não** está coberto por esta emenda: aí o ajuste é obrigatório,
+> no arquivo de `components/ui/`, e passa por *diff* como qualquer código nosso.
 
 ### 8.3 Teclado nas tabelas e grades densas
 

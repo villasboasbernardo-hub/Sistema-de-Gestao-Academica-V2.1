@@ -126,6 +126,20 @@ export const PARES: readonly Par[] = [
     limite: 3,
     proposito: "anel de foco — borda INTERATIVA (RNF-USA-06)",
   },
+  // ⚠️ AS OITO SÉRIES ENTRARAM EM 10/09/2026, no saneamento normativo. Elas estavam declaradas no
+  // ponto único, apareciam na vitrine e NÃO TINHAM PAR AUDITADO NENHUM — e o documento 23 §8.1
+  // sempre exigiu 3:1 de ELEMENTO GRÁFICO. Não é requisito novo: é regra que a spec havia perdido.
+  //
+  // ⚠️ MEDIDAS CONTRA `--fundo`, e não contra `--superficie`, porque é o par MAIS APERTADO dos
+  // dois e é onde o gráfico de fato se desenha. A `serie-3` no tema claro mede 3,03 — passa por
+  // três centésimos, o que já diz que a rampa não tem folga aqui.
+  ...SERIES.map((serie, i) => ({
+    id: `D-${1 + i}`,
+    frente: serie,
+    fundo: "fundo",
+    limite: 3 as const,
+    proposito: `série ${i + 1} de gráfico — elemento gráfico`,
+  })),
 ];
 
 /**

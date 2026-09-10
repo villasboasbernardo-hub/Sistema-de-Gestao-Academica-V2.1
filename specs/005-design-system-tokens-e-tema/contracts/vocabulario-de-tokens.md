@@ -50,7 +50,19 @@ auditava 26 pares com um limite só para toda borda, e **22 asserções reprovar
 | A-6 a A-14 | `<status>-tinta` sobre `<status>-fundo`, para os nove | 4,5:1 |
 | C-1 | `foco` sobre `fundo` | 3:1 |
 
-**15 pares, medidos nos dois temas — 30 asserções.**
+| D-1 a D-8 | `serie-1` a `serie-8` sobre `fundo` | 3:1 |
+
+**23 pares, medidos nos dois temas — 46 asserções.**
+
+⚠️ **As oito séries entraram em 10/09/2026, no saneamento normativo, e não são requisito novo**: o
+documento 23 §8.1 sempre exigiu 3:1 de **elemento gráfico**, e a spec havia perdido a regra. Elas
+estavam declaradas no ponto único, apareciam na vitrine, e **nenhum par as auditava**. São medidas
+contra `--fundo`, que é o par mais apertado e onde o gráfico se desenha. ⚠️ A `serie-3` no tema
+claro mede **3,03**: passa por três centésimos, o que já diz que não há folga aí.
+
+⚠️ **O limite depende do que o par é.** Texto normal, 4,5:1. Texto grande — a partir de 24px, ou
+18,7px em negrito — 3:1. Elemento gráfico e borda interativa, 3:1. É o documento 23 §8.1, e a spec
+o havia perdido em parte até 10/09/2026.
 
 ⚠️ **A razão é arredondada a uma casa decimal antes da comparação.** `--texto-tenue` mede **4,49** e
 passa. Meio centésimo não é diferença que olho algum distinga, e limite que reprova por isso vira

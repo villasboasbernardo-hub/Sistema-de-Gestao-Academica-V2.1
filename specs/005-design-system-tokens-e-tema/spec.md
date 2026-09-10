@@ -210,12 +210,20 @@ a tipografia continua correta.
 
 #### Contraste e legibilidade
 
-- **FR-011**: Todo par de **texto sobre fundo** do vocabulário MUST atingir no mínimo **4,5:1** nos
-  **dois** temas, com a razão **arredondada a uma casa decimal** antes da comparação.
-  O limite de **3:1** MUST ser cobrado **apenas de borda interativa ou informativa** — foco, campo,
-  botão, e qualquer traço que seja a **única** coisa a identificar um controle ou a portar
-  informação. Borda **decorativa ou estrutural** — divisória, linha de grade, contorno de etiqueta
-  cujo significado já vem do texto — MUST ser **isenta**.
+- **FR-011**: Nos **dois** temas, com a razão **arredondada a uma casa decimal** antes da
+  comparação:
+  1. **texto normal** sobre fundo MUST atingir **4,5:1**;
+  2. **texto grande** — a partir de **24px**, ou **18,7px em negrito** — MUST atingir **3:1**;
+  3. **elemento gráfico** MUST atingir **3:1**. As oito séries de gráfico são elemento gráfico, e
+     MUST ser auditadas contra o fundo da página;
+  4. **borda interativa ou informativa** MUST atingir **3:1** — foco, campo, botão, e qualquer
+     traço que seja a **única** coisa a identificar um controle ou a portar informação;
+  5. **borda decorativa ou estrutural** MUST ser **isenta** — divisória, linha de grade, contorno
+     de etiqueta cujo significado já vem do texto.
+  ⚠️ **Emenda de 10/09/2026 — saneamento normativo.** Os itens 2 e 3 **não são requisito novo**:
+  o documento 23 §8.1 já os trazia, e a spec os havia perdido. O item 2 tornava a auditoria **mais
+  rígida que a norma**; o item 3 deixava as oito séries **sem par auditado nenhum**, e elas entram
+  em uso na fatia (b).
   ⚠️ **Emenda de 09/09/2026, decidida por Bernardo depois da primeira medição.** A redação anterior
   cobrava 3:1 de **toda** borda, e as **22** asserções do grupo reprovaram medindo de 1,25 a 1,88.
   A causa era a redação, não a paleta: a norma cobre o traço que **identifica** um controle, não
@@ -299,7 +307,8 @@ Esta fatia não introduz entidade de dado. O vocabulário visual é configuraç�
 - **SC-004**: **Nenhum** quadro intermediário exibe o tema não escolhido durante o carregamento,
   medido antes da hidratação.
 - **SC-005**: **100%** dos pares **auditados** atingem o seu limite, **nos dois temas**, com o valor
-  de cada par registrado. A lista de pares **isentos** MUST trazer o motivo da isenção, e a de
+  de cada par registrado. A auditoria MUST cobrir as **oito séries de gráfico** contra o fundo da
+  página. A lista de pares **isentos** MUST trazer o motivo da isenção, e a de
   **pendentes** MUST trazer a medição e a fatia que a resolve.
   ⚠️ **Isenção sem motivo escrito é a mesma coisa que limite afrouxado em silêncio.** A diferença
   entre as duas está inteiramente no registro.
@@ -341,6 +350,7 @@ Esta fatia não introduz entidade de dado. O vocabulário visual é configuraç�
 | **A2** | O `FR-005` comparava com "aplicação web típica", linha de base que ninguém definiu | Vira **14px de corpo, 11px de mínimo** |
 | **C2** | O `FR-019` proibia biblioteca nova sem nenhum portão. Proibição sem portão é conselho | Passa a exigir **verificação automática** |
 | **C1** | O `SC-001` não tinha tarefa — o critério que dá nome à história P1 estava sem prova | Ganhou a **T019.1**, no molde do defeito deliberado |
+| **SANEAMENTO** | ⚠️ **10/09/2026** — a lista `acessibilidade-e-entrega.md` achou que a spec havia **perdido duas regras do documento 23 §8.1**: o limite menor para texto grande, e o de elemento gráfico | O `FR-011` passa a ter os **cinco** casos. **Nenhum requisito novo**: são regras que já existiam e não tinham sido transcritas |
 | **CONTRASTE** | ⚠️ **Achado ao MEDIR, não ao revisar**: o `FR-011` cobrava 3:1 de toda borda e reprovou 22 asserções. E o documento 23 anota razões que **não conferem** com as cores que anota — 4,6 para `--texto-tenue`, que mede 4,49, e 3,1 para `--borda-forte`, que mede 1,62 | Bernardo isentou borda decorativa e estrutural, e aceitou 4,49 como 4,5. **Nenhuma cor foi alterada** |
 | **C1.b** | ⚠️ **Achado ao escrever a tarefa, não na análise**: o `SC-001` dizia "zero edições em qualquer outro arquivo" e **contradizia a regra 4** do contrato de vocabulário, que exige três lugares para registrar token novo | O critério passa a medir o **consumo**, que é o que custa zero. O registro custa três, de propósito |
 
