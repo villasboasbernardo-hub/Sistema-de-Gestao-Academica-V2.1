@@ -186,8 +186,11 @@ a tipografia continua correta.
   documento é a mesma classe de defeito do mínimo de senha que vivia só no navegador (`FR-006` da
   spec 004). ⚠️ **Ela pode ser bloqueante já, e isso foi medido**: depois de pagos os cinco arquivos
   do `SC-007`, não sobra nenhuma violação no repositório.
-- **FR-005**: A escala tipográfica MUST partir de um corpo **menor** que o de aplicação web típica.
-  É sistema de gestão com tabelas grandes: **densidade vence estética**.
+- **FR-005**: O corpo padrão de texto MUST ser de **14px**, contra os 16px usuais de aplicação web,
+  e a escala MUST descer até **11px** para sigla e unidade em célula. Valores do documento 23 §1.3.
+  ⚠️ **O número substitui a comparação**: "menor que o de aplicação web típica" — como estava antes
+  de 09/09/2026 — compara com uma linha de base que ninguém definiu. É sistema de gestão com
+  tabelas grandes: **densidade vence estética**, e densidade se mede.
 
 #### Tema
 
@@ -198,7 +201,12 @@ a tipografia continua correta.
 - **FR-009**: O carregamento MUST **não** exibir o tema errado em nenhum quadro intermediário.
   ⚠️ Este é o requisito mais fácil de declarar cumprido sem estar: o flash dura milissegundos e não
   aparece em captura estática. A verificação precisa medir o estado **antes** da hidratação.
-- **FR-010**: A troca de tema MUST **não** produzir transição de cor arrastada pela página.
+- **FR-010**: A troca de tema MUST ser **instantânea**: nenhuma propriedade de cor MUST estar em
+  transição durante a alternância.
+  ⚠️ **O critério é "zero transição", não "transição curta"**, e a diferença importa porque
+  "arrastada" — como estava escrito antes de 09/09/2026 — não reprova nada: qualquer duração passa
+  se o avaliador achar que não arrastou. A conferência é visual, no `quickstart.md` §5, e é
+  deliberadamente visual: medir isto automaticamente custa mais do que vale, e o olho pega na hora.
 
 #### Contraste e legibilidade
 
@@ -222,7 +230,8 @@ a tipografia continua correta.
 
 #### Vitrine do vocabulário
 
-- **FR-020**: MUST existir uma **rota de vitrine** que exiba o vocabulário inteiro — toda cor de
+- **FR-020**: MUST existir uma **rota de vitrine**, no endereço **`/estilo`**, que exiba o
+  vocabulário inteiro — toda cor de
   papel, toda cor de status, a escala tipográfica, os espaçamentos, os raios e as sombras — e que
   traga o **alternador de tema**.
   ⚠️ **Ela não é enfeite: é o único lugar onde esta fatia pode ser conferida.** Sem cabeçalho e sem
@@ -250,8 +259,11 @@ a tipografia continua correta.
   vocabulário de papéis. Se ele conviver com o do CIAARA sem casamento explícito, passam a existir
   **dois** pontos únicos de verdade — que é a negação do `RF-DS-01`, com a agravante de parecer
   cumprido.
-- **FR-019**: Nenhuma biblioteca de componentes **além** da já decidida MUST ser instalada. É
-  proibição do BRIEF §1, sem discussão.
+- **FR-019**: Nenhuma biblioteca de componentes **além** da já decidida MUST ser instalada, e a
+  proibição MUST ser **verificada automaticamente** sobre as dependências declaradas.
+  ⚠️ É proibição do BRIEF §1, sem discussão — e proibição sem portão é conselho. Uma biblioteca
+  entra por conveniência, num dia de pressa, e depois de duas telas usarem-na tirá-la deixa de ser
+  decisão técnica e passa a ser retrabalho.
 
 ### Key Entities
 
@@ -261,8 +273,14 @@ Esta fatia não introduz entidade de dado. O vocabulário visual é configuraç�
 
 ### Measurable Outcomes
 
-- **SC-001**: Uma cor semântica nova é acrescentada em **um** lugar e passa a valer em toda tela que
-  a declara, com **zero** edições em qualquer outro arquivo.
+- **SC-001**: Uma cor semântica nova é acrescentada ao ponto único e passa a valer em toda tela que
+  a declara, com **zero** edições em **arquivo de tela ou de componente**.
+  ⚠️ **A redação anterior dizia "zero edições em qualquer outro arquivo", e contradizia o contrato
+  de vocabulário.** A regra 4 daquele contrato exige que token novo entre **junto** com o par
+  auditado e com a amostra na vitrine — três coisas ou nenhuma. Os dois estão certos, e falam de
+  coisas diferentes: **registrar** o token custa três lugares, de propósito, para que ele não nasça
+  morto; **consumir** o token custa zero. O `SC-001` mede o consumo. Corrigido em 09/09/2026, pela
+  análise de consistência.
 - **SC-002**: A contagem de **violações** do FR-001 no repositório é **zero** — somando cor escrita
   à mão e utilitário da paleta padrão —, medida por verificação bloqueante.
 - **SC-003**: A escolha de tema sobrevive a **100%** dos recarregamentos e das aberturas de nova
@@ -297,6 +315,21 @@ Esta fatia não introduz entidade de dado. O vocabulário visual é configuraç�
 - **SC-010**: **Zero** variáveis de cor dos componentes base ficam sem par declarado com um token
   CIAARA. Duas fontes de verdade para a mesma cor é a negação do objetivo, com a agravante de
   parecer cumprido.
+
+## Correções da análise de consistência — 09/09/2026
+
+`/speckit-analyze` encontrou nove pontos entre spec, plano e tarefas. Os que mudaram **esta spec**:
+
+| # | O que estava errado | Correção |
+|---|---|---|
+| **N1** | O endereço da vitrine era decidido no plano e nas tarefas, nunca aqui. Endereço é coisa que o usuário vê | O `FR-020` fixa **`/estilo`** |
+| **A1** | O `FR-010` dizia "sem transição arrastada" — que não reprova nada, porque qualquer duração passa se o avaliador achar que não arrastou | Vira **zero transição**, conferido a olho no `quickstart.md` §5 |
+| **A2** | O `FR-005` comparava com "aplicação web típica", linha de base que ninguém definiu | Vira **14px de corpo, 11px de mínimo** |
+| **C2** | O `FR-019` proibia biblioteca nova sem nenhum portão. Proibição sem portão é conselho | Passa a exigir **verificação automática** |
+| **C1** | O `SC-001` não tinha tarefa — o critério que dá nome à história P1 estava sem prova | Ganhou a **T019.1**, no molde do defeito deliberado |
+| **C1.b** | ⚠️ **Achado ao escrever a tarefa, não na análise**: o `SC-001` dizia "zero edições em qualquer outro arquivo" e **contradizia a regra 4** do contrato de vocabulário, que exige três lugares para registrar token novo | O critério passa a medir o **consumo**, que é o que custa zero. O registro custa três, de propósito |
+
+As outras cinco mudaram `tasks.md` e `quickstart.md`.
 
 ## Assumptions
 

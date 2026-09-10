@@ -30,7 +30,7 @@ falta construir é o que impede a cor de escapar depois.
 **Propósito**: as duas dependências que faltam, e nada além delas.
 
 - [ ] T001 Acrescentar `next-themes` ao `package.json` e instalar. ⚠️ **Só ela.** Conferido em 09/09/2026: `nuqs`, `zustand` e a biblioteca de gráficos também estão ausentes, e são das fatias (b) e (c) — instalá-las por antecipação é escopo que ninguém pediu (research R-5)
-- [ ] T002 Inicializar o shadcn/ui gerando `components.json` na raiz, com destino `components/ui/` e o formato de Tailwind v4. ⚠️ **O arquivo é versionado**: ele é a configuração que faz o próximo componente copiado nascer no lugar certo (`FR-017`)
+- [ ] T002 Inicializar o shadcn/ui gerando `components.json` na raiz, com destino `components/ui/` e o formato de Tailwind v4. ⚠️ **O arquivo é versionado**: ele é a configuração que faz o próximo componente copiado nascer no lugar certo (`FR-017`). ⚠️ **A inicialização REESCREVE `app/globals.css`.** Por isso ela vem **antes** da Fase 2, e não depois. Reexecutá-la mais tarde atropela os tokens — se for preciso, salve o arquivo antes e reconcilie à mão
 
 ---
 
@@ -67,20 +67,22 @@ que ela passa a valer sem edição em nenhum outro arquivo.
 
 - [ ] T010 [US1] Acrescentar a `eslint.config.mjs` a regra de **cor escrita à mão** — hexadecimal, `rgb`, `rgba`, `hsl`, `hsla` — sobre rota e componente, com a mensagem que **ensina o token certo** e diz o que fazer quando falta um. Base pronta no documento 23 §9.3 (`FR-001` P-1, `FR-004`)
 - [ ] T011 [US1] Acrescentar a `eslint.config.mjs` a regra da **paleta padrão** — `text-gray-500`, `bg-slate-100` e afins. ⚠️ É a metade da regra que costuma escapar, e a decisão de 09/09/2026: `text-gray-500` é cor que **não vem do ponto único** (`FR-001` P-2, contrato verificação-de-cor)
-- [ ] T012 [US1] Escrever `tests/unidade/regra-de-cor.test.ts` provando que **as duas regras estão ativas**, com trechos sintéticos que devem reprovar. ⚠️ Regra de lint configurada e desligada por engano não acusa nada — foi assim que o Épico 0 provou a fronteira de `lib/dominio/`
+- [ ] T012 [US1] Escrever `tests/unidade/regra-de-cor.test.ts` provando que **as duas regras estão ativas**, com trechos sintéticos que devem reprovar (`FR-004`, `SC-002`). ⚠️ Regra de lint configurada e desligada por engano não acusa nada — foi assim que o Épico 0 provou a fronteira de `lib/dominio/`
 
 ### A dívida — cinco arquivos, nomeados
 
-- [ ] T013 [P] [US1] Trocar a cor literal por token em `app/error.tsx`
-- [ ] T014 [P] [US1] Trocar a cor literal por token em `app/loading.tsx`
-- [ ] T015 [P] [US1] Trocar a cor literal por token em `app/not-found.tsx`
-- [ ] T016 [P] [US1] Trocar a cor literal por token em `components/faixa-de-ambiente.tsx`
+- [ ] T013 [P] [US1] Trocar a cor literal por token em `app/error.tsx` (`FR-001` P-1, `SC-007`)
+- [ ] T014 [P] [US1] Trocar a cor literal por token em `app/loading.tsx` (`FR-001` P-1, `SC-007`)
+- [ ] T015 [P] [US1] Trocar a cor literal por token em `app/not-found.tsx` (`FR-001` P-1, `SC-007`)
+- [ ] T016 [P] [US1] Trocar a cor literal por token em `components/faixa-de-ambiente.tsx` (`FR-001` P-1, `SC-007`)
 - [ ] T017 [US1] Trocar os **10 utilitários da paleta padrão** por token em `app/page.tsx`. ⚠️ Este arquivo **não constava de lista nenhuma** até 09/09/2026 — apareceu na medição da regra P-2 (`SC-007`)
 
 ### A vitrine
 
 - [ ] T018 [US1] Criar `app/estilo/page.tsx` exibindo **todo** o vocabulário: papéis, os nove trios de status, escala de texto, espaçamentos, raios e sombras. Sem `"use client"` (`FR-020`)
 - [ ] T019 [US1] Escrever `tests/e2e/vitrine.spec.ts` provando a invariante **I-5**: **100%** dos tokens do contrato aparecem na vitrine. ⚠️ É o que impede token nascido morto — declarado, nunca visto, nunca conferido (`SC-009`)
+
+- [ ] T019.1 [US1] Provar o `SC-001` **por defeito deliberado**, no molde da T012 e da T030: acrescentar um token de status novo ao ponto único mais o par auditado mais a amostra na vitrine, conferir que ele passa a valer **sem tocar em arquivo de tela ou de componente**, e desfazer. ⚠️ **Era o único critério de história P1 sem tarefa** — achado pela análise de consistência de 09/09/2026. ⚠️ E os **três** lugares do registro são o preço declarado pela regra 4 do contrato de vocabulário: é o que impede token nascido morto. O que o `SC-001` mede é o **consumo**, que custa zero
 
 **Checkpoint**: a regra bloqueia, a dívida está paga, e existe onde ver o vocabulário. `pnpm lint`
 sai 0 com o repositório inteiro.
@@ -96,9 +98,9 @@ escolha sobreviveu e que nenhum quadro mostrou o tema anterior.
 
 - [ ] T020 [US2] Criar `components/ciaara/provedor-de-tema.tsx` como **folha** com `"use client"`, encapsulando o provedor: estratégia de classe, padrão seguindo o sistema operacional, escolha manual prevalecendo, sem transição arrastada (`FR-006` a `FR-008`, `FR-010`)
 - [ ] T021 [US2] Ligar o provedor em `app/layout.tsx`. ⚠️ **O layout continua SEM `"use client"`** — o marcador contamina toda a subárvore e mandaria o catálogo de telas para o pacote do navegador. O `tsc` **não acusa**; só o build (research R-5, gotcha nº 1 do `CLAUDE.md`)
-- [ ] T022 [US2] Acrescentar `suppressHydrationWarning` ao elemento raiz em `app/layout.tsx`, **com o comentário do porquê**: a classe é escrita antes da hidratação, e sem isso o React acusa divergência entre servidor e cliente (documento 23 §2.1)
+- [ ] T022 [US2] Acrescentar `suppressHydrationWarning` ao elemento raiz em `app/layout.tsx`, **com o comentário do porquê**: a classe é escrita antes da hidratação, e sem isso o React acusa divergência entre servidor e cliente (`FR-009`, documento 23 §2.1)
 - [ ] T023 [US2] Criar `components/ciaara/seletor-tema.tsx` como **folha**, e usá-lo na vitrine. ⚠️ É o alternador **provisório desta fatia**: o definitivo entra no cabeçalho da fatia (c). A vitrine permanece (`FR-022`)
-- [ ] T024 [US2] Escrever em `tests/e2e/tema.spec.ts` a persistência: escolher o noturno, recarregar, abrir outra aba, e afirmar que continua noturno (`SC-003`)
+- [ ] T024 [US2] Escrever em `tests/e2e/tema.spec.ts` a persistência: escolher o noturno, recarregar, abrir outra aba, e afirmar que continua noturno (`FR-007`, `SC-003`)
 - [ ] T025 [US2] Acrescentar a `tests/e2e/tema.spec.ts` os dois casos de precedência: sem escolha manual segue o sistema operacional; havendo escolha manual, ela prevalece (`FR-008`)
 - [ ] T026 [US2] Acrescentar a `tests/e2e/tema.spec.ts` a asserção de **ausência de flash**, medindo a classe do elemento raiz **antes da hidratação**. ⚠️ **Não use captura de tela**: ela mede o estado final, que não é o que está em questão, e aprovaria o defeito. É a mesma armadilha do V-4 do Épico 3, que decidia por tempo (`FR-009`, `SC-004`, research R-1)
 - [ ] T027 [US2] Acrescentar a `tests/e2e/tema.spec.ts` o caso de fronteira do **armazenamento indisponível**: a página cai para a preferência do sistema operacional, **sem quebrar e sem piscar**, e sem aviso — não é falha do usuário (Princípio V, casos de fronteira da spec)
@@ -116,7 +118,7 @@ nomeando o par e a razão.
 
 - [ ] T028 [US3] Escrever `tests/unidade/contraste.test.ts` calculando a razão de cada um dos **25 pares** do contrato, nos **dois** temas — **50 asserções**. Limite 4,5:1 para texto sobre fundo, 3:1 para limite de componente (`FR-011`, `FR-012`, `SC-005`)
 - [ ] T029 [US3] Fazer a falha **nomear o par e a razão observada**, não apenas reprovar. ⚠️ Verificação que diz só "reprovou" obriga a refazer a conta à mão para descobrir onde — é a lição do `CHK008` (`FR-012`)
-- [ ] T030 [US3] Conferir a auditoria **por defeito deliberado**: escurecer um `-fundo` de status no ponto único, ver o teste reprovar nomeando aquele par, e desfazer. ⚠️ Auditoria nunca vista reprovando é carimbo, não medição
+- [ ] T030 [US3] Conferir a auditoria **por defeito deliberado**: escurecer um `-fundo` de status no ponto único, ver o teste reprovar nomeando aquele par, e desfazer. ⚠️ Auditoria nunca vista reprovando é carimbo, não medição (`FR-012`, `SC-005`)
 - [ ] T031 [US3] Exibir na vitrine, ao lado de cada par, a **razão de contraste medida**, em `app/estilo/page.tsx`. ⚠️ O número na tela tem de ser o mesmo que o teste afere — é o que impede a auditoria de virar enfeite (`FR-021`)
 - [ ] T032 [P] [US3] Conferir, olhando a vitrine no modo noturno, que **nenhum status reaproveita o pastel do tema claro** (`FR-013`, quickstart §5)
 - [ ] T033 [P] [US3] Conferir que nenhum significado é comunicado **só** por cor: todo status na vitrine traz rótulo textual junto (`FR-014`)
@@ -149,13 +151,14 @@ tipografia continua correta.
 ⚠️ **Esta fase não pertence a nenhuma história porque atravessa as quatro.** É o que a fatia (b) vai
 herdar pronto ou vai ter de descobrir sozinha, sob pressão.
 
-- [ ] T036 [P] Copiar o componente **botão** para `components/ui/`
-- [ ] T037 [P] Copiar o componente **cartão** para `components/ui/`
-- [ ] T038 [P] Copiar o componente **tabela** para `components/ui/`
-- [ ] T039 [P] Copiar o componente **emblema** para `components/ui/`
+- [ ] T036 [P] Copiar o componente **botão** para `components/ui/` (`FR-017`)
+- [ ] T037 [P] Copiar o componente **cartão** para `components/ui/` (`FR-017`)
+- [ ] T038 [P] Copiar o componente **tabela** para `components/ui/` (`FR-017`)
+- [ ] T039 [P] Copiar o componente **emblema** para `components/ui/` (`FR-017`)
 - [ ] T040 Casar as **14 variáveis** de cor do shadcn com os tokens CIAARA em `app/globals.css`, seguindo `contracts/reconciliacao-shadcn.md`. ⚠️ **`destructive` NÃO é `atrasado`**: vermelho é conflito, que exige ação, e amarelo é aviso. Trocar os dois não acusaria erro nenhum e faria um botão de desativar parecer aviso de atraso (`FR-018`)
 - [ ] T041 Escrever em `tests/unidade/vocabulario.test.ts` a invariante **I-4**: **zero** variáveis do shadcn sem par declarado com um token CIAARA. Variável nova, vinda com componente novo, **reprova até ser casada** (`SC-010`)
-- [ ] T042 Exibir os quatro componentes na vitrine, em `app/estilo/page.tsx`, pintados pelos tokens CIAARA e não pelas cores próprias deles (quickstart §5)
+- [ ] T041.1 Escrever a verificação do `FR-019` sobre as dependências declaradas do `package.json`: **nenhuma biblioteca de componentes além da decidida**. ⚠️ Proibição do BRIEF §1 que até 09/09/2026 **não tinha portão** — e proibição sem portão é conselho. Uma biblioteca entra num dia de pressa, e depois de duas telas usarem-na tirá-la vira retrabalho, não decisão
+- [ ] T042 Exibir os quatro componentes na vitrine, em `app/estilo/page.tsx`, pintados pelos tokens CIAARA e não pelas cores próprias deles (`FR-017`, `FR-018`, quickstart §5)
 
 **Checkpoint**: a fatia (b) pode copiar os catorze primitivos restantes sabendo exatamente o que fazer.
 
@@ -163,7 +166,7 @@ herdar pronto ou vai ter de descobrir sozinha, sob pressão.
 
 ## Phase 8: Polish e travessias
 
-- [ ] T043 [P] Conferir que **nenhum** `page.tsx` ou `layout.tsx` abre com `"use client"`, arquivo a arquivo e não por busca de texto. ⚠️ A busca por texto acusa comentário: `app/(app)/layout.tsx` cita o marcador num comentário que explica por que ele **não** está ali
+- [ ] T043 [P] Conferir que **nenhum** `page.tsx` ou `layout.tsx` abre com `"use client"`, arquivo a arquivo e não por busca de texto. ⚠️ A busca por texto acusa comentário: `app/(app)/layout.tsx` cita o marcador num comentário que explica por que ele **não** está ali (Princípio III, `CLAUDE.md`)
 - [ ] T044 [P] Conferir que a exceção de impressão **não foi usada** — ela é prevista, e a rota não existe ainda (contrato verificação-de-cor)
 - [ ] T045 Atualizar o *Estado atual* do `CLAUDE.md`: a dívida de estilo cai de **nove para cinco** arquivos, e as cinco telas do Épico 3 são o que sobra, para a fatia (c)
 - [ ] T046 Rodar `pnpm verificar:tudo`, confirmar que ele e o CI dão **veredito idêntico** sobre o mesmo commit (`SC-008`), e abrir o PR com o template inteiro preenchido
@@ -184,6 +187,7 @@ Fase 8 (Polish) ── depois de tudo.
 
 | Dependência | Por quê |
 |---|---|
+| **⚠️ Ponta a ponta → PR do `fix/EPICO-3-fechar-espelho-e-CHK008`** | **Dependência externa a esta fatia, e é decisão de Bernardo.** Aquele PR conserta a corrida do arquivo de telemetria que fez a suíte reprovar **2 de 3 execuções**, em testes diferentes a cada vez. Esta fatia acrescenta **três** arquivos de ponta a ponta (T019, T024–T027, T035) e multiplica a exposição. Mesclar antes da US2, ou conviver com reexecução |
 | Fase 2 → todas | Sem token não há o que consumir nem o que medir |
 | US1 → US3 | A auditoria de contraste mede os pares que a US1 transcreveu e conferiu |
 | US1 → Fase 7 | A vitrine precisa existir antes de exibir componente nela |

@@ -6,11 +6,24 @@ Cinco conferências. As quatro primeiras são comando; a quinta é o olho, e é 
 
 ## Pré-requisitos
 
-O stack local não é necessário: **esta fatia não toca banco**. Basta o repositório instalado.
-
 ```
 pnpm install
+pnpm db:start
 ```
+
+⚠️ **O `pnpm db:start` é necessário, e a razão é contraintuitiva: não é por causa desta fatia.**
+Ela não toca banco nenhum. Mas `playwright.config.ts` pergunta as chaves ao `supabase status`
+**no carregamento da configuração**, antes do primeiro teste — então a suíte de ponta a ponta não
+sobe sem o stack, mesmo quando o teste em questão não faz uma única consulta.
+
+Se você rodar `pnpm test:e2e` sem o stack de pé, a suíte **morre no carregamento da configuração,
+antes do primeiro teste** — e o erro vem da chamada ao `supabase status`, não do teste que você
+queria rodar. Quem não souber disso procura no teste. Está escrito aqui para não procurar.
+
+**Os passos 1, 2, 3 e 5 não precisam do banco.** Só o 4.
+
+*(Corrigido em 09/09/2026 pela análise de consistência: esta seção dizia que o stack não era
+necessário, e isso estava errado.)*
 
 ## 1 · O portão inteiro
 
@@ -49,6 +62,8 @@ carimbar, escureça um `-fundo` de status no ponto único e rode de novo: ela de
 **qual par** e **qual razão observada**, não apenas "reprovou".
 
 ## 4 · O tema persiste e não pisca
+
+**Exige o stack local de pé** — ver os pré-requisitos.
 
 ```
 pnpm test:e2e
