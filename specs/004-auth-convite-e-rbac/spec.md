@@ -248,14 +248,29 @@ tela, ausentes na resposta do banco.
   — a proposta é entregável desta fatia; aprová-la é do Bernardo.
   ✅ **RATIFICADA por Bernardo em 09/09/2026.** A-8 está no documento 22 §1.2 e o modelo de ameaças
   do sistema passa a ir de **A-1 a A-8**.
-- **FR-006**: A senha MUST ter no mínimo **12 caracteres** e MUST ser verificada contra listas
-  públicas de vazamento. Composição obrigatória e expiração compulsória MUST **não** ser exigidas
-  (documento 22 §4.5).
-  ⚠️ **Emenda de 09/09/2026, aprovada por Bernardo.** O 12 MUST ser imposto **pela plataforma**,
-  não só pelo formulário. Até esta data ele existia apenas como `minLength={12}` no navegador,
-  enquanto `config.toml` trazia o padrão do CLI, `6` — regra de negócio implementada apenas na UI,
-  que o BRIEF §2 proíbe. Corrigido em `[auth] minimum_password_length = 12`. A verificação contra
-  vazamento **não tem chave** no `config.toml` e permanece conferência de painel.
+- **FR-006**: A senha MUST ter no mínimo **12 caracteres**, e o mínimo MUST ser imposto **pelo
+  GoTrue** — `[auth] minimum_password_length = 12` em `supabase/config.toml`, versionado, para o
+  stack local e o de preview; painel de Authentication → Policies para o projeto remoto. O
+  `minLength={12}` das telas é **conveniência de digitação, nunca a garantia**.
+  A senha MUST ser verificada contra listas públicas de vazamento (HaveIBeenPwned). Esta segunda
+  exigência **só tem imposição no painel** do projeto remoto: **não existe chave correspondente em
+  `config.toml`**, e por isso ela é conferência humana com valor observado registrado, não teste.
+  Composição obrigatória e expiração compulsória MUST **não** ser exigidas — nem na tela nem na
+  plataforma (`[auth] password_requirements = ""`), conforme documento 22 §4.5, alinhado ao NIST SP
+  800-63B: exigir símbolo e trocar senha a cada 90 dias produz senhas piores.
+
+  📐 **Este requisito é o modelo para os próximos `FR-` de segurança**, e a mudança de redação é o
+  ponto. Cada exigência agora nomeia **qual mecanismo a impõe e em qual ambiente** — é o item
+  **CHK001** de [`checklists/security.md`](./checklists/security.md). Requisito de segurança que
+  não diz quem o impõe não é verificável: é intenção.
+
+  ⚠️ **Emenda de 09/09/2026, aprovada por Bernardo.** A redação anterior dizia apenas *"a senha
+  MUST ter no mínimo 12 caracteres"*, sem nomear o impositor — e o número atravessou a fatia
+  inteira vivendo **só no navegador**, com `config.toml` no padrão do CLI, `6`. Era regra de
+  negócio implementada apenas na UI, que o BRIEF §2 proíbe, e o efeito era alcançável por chamada
+  direta a `PUT /auth/v1/user`. Guardado desde então por
+  `tests/invariantes/rls/politica-de-senha.test.ts`. **Nada na regra mudou: mudou quem a escreve
+  no lugar certo.**
 
 #### Convite
 
