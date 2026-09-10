@@ -57,7 +57,7 @@ fazer se faltar um. Desfaça e confirme que volta a passar.
 pnpm test:unidade
 ```
 
-Espera-se: **50 asserções** — 25 pares nos dois temas. Para provar que a auditoria mede em vez de
+Espera-se: **52 asserções** — 26 pares nos dois temas. Para provar que a auditoria mede em vez de
 carimbar, escureça um `-fundo` de status no ponto único e rode de novo: ela deve falhar dizendo
 **qual par** e **qual razão observada**, não apenas "reprovou".
 

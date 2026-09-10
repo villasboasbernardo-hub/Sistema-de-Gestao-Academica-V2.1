@@ -29,8 +29,8 @@ falta construir é o que impede a cor de escapar depois.
 
 **Propósito**: as duas dependências que faltam, e nada além delas.
 
-- [ ] T001 Acrescentar `next-themes` ao `package.json` e instalar. ⚠️ **Só ela.** Conferido em 09/09/2026: `nuqs`, `zustand` e a biblioteca de gráficos também estão ausentes, e são das fatias (b) e (c) — instalá-las por antecipação é escopo que ninguém pediu (research R-5)
-- [ ] T002 Inicializar o shadcn/ui gerando `components.json` na raiz, com destino `components/ui/` e o formato de Tailwind v4. ⚠️ **O arquivo é versionado**: ele é a configuração que faz o próximo componente copiado nascer no lugar certo (`FR-017`). ⚠️ **A inicialização REESCREVE `app/globals.css`.** Por isso ela vem **antes** da Fase 2, e não depois. Reexecutá-la mais tarde atropela os tokens — se for preciso, salve o arquivo antes e reconcilie à mão
+- [X] T001 Acrescentar `next-themes` ao `package.json` e instalar. ⚠️ **Só ela.** Conferido em 09/09/2026: `nuqs`, `zustand` e a biblioteca de gráficos também estão ausentes, e são das fatias (b) e (c) — instalá-las por antecipação é escopo que ninguém pediu (research R-5)
+- [X] T002 Inicializar o shadcn/ui gerando `components.json` na raiz, com destino `components/ui/` e o formato de Tailwind v4. ⚠️ **O arquivo é versionado**: ele é a configuração que faz o próximo componente copiado nascer no lugar certo (`FR-017`). ⚠️ **A inicialização REESCREVE `app/globals.css`.** Por isso ela vem **antes** da Fase 2, e não depois. Reexecutá-la mais tarde atropela os tokens — se for preciso, salve o arquivo antes e reconcilie à mão. ✅ **FEITA em 09/09/2026, mas não com o padrão da ferramenta**: `--defaults` trouxe o estilo `base-nova`, que usa **Base UI** e não Radix, mais `@base-ui/react` como dependência. ⚠️ **É violação do BRIEF §1 e do `FR-019`.** Revertido; `components.json` fixa o estilo `new-york`, conferido como o que ainda usa `@radix-ui/react-slot`
 
 ---
 
@@ -40,11 +40,11 @@ falta construir é o que impede a cor de escapar depois.
 
 **⚠️ CRÍTICO**: nenhuma história começa antes desta fase terminar.
 
-- [ ] T003 Escrever os **tokens estáticos** em `app/globals.css`, sob `@theme`: rampa institucional, tinta e acento, neutros frios, tipografia, escala de texto, espaçamento e alturas, raios e sombras. Valores transcritos do documento 23 §1.3 (`FR-001`, `FR-005`, contrato vocabulário família 1)
-- [ ] T004 Escrever os **papéis do tema claro** em `app/globals.css`, sob `:root`: superfície, texto, borda, marca, foco, os **nove trios** de status e as oito séries de gráfico (`FR-002`, `FR-003`)
-- [ ] T005 Escrever os **papéis do modo noturno** em `app/globals.css`, sob `.dark`. ⚠️ **O trio inverte**: fundo escuro e pouco saturado, tinta clara. **Nunca** reaproveitar o pastel do tema claro — é o defeito que o `RF-DS-03` registra sobre a v1.0, e ele **passa** na aritmética de contraste enquanto fica ilegível na tela (`FR-013`)
-- [ ] T006 Expor os papéis como utilitário em `app/globals.css`, com `@theme inline` apontando para as variáveis, mais a variante `dark` na estratégia de classe. ⚠️ **Papel declarado fora do `inline` congela no tema claro** — é erro de sintaxe, não de gosto, e é a causa nº 1 de tema quebrado em Tailwind v4 (`FR-002`, data-model)
-- [ ] T007 Transcrever o contrato para `tests/unidade/vocabulario.fixture.ts`: a lista fechada de nomes de token e os **25 pares auditados** com seus limites. ⚠️ É esta lista que a auditoria percorre, **não** o arquivo de estilo — se lesse o estilo, um par novo entraria sem ser auditado e ninguém saberia (research R-3)
+- [X] T003 Escrever os **tokens estáticos** em `app/globals.css`, sob `@theme`: rampa institucional, tinta e acento, neutros frios, tipografia, escala de texto, espaçamento e alturas, raios e sombras. Valores transcritos do documento 23 §1.3 (`FR-001`, `FR-005`, contrato vocabulário família 1)
+- [X] T004 Escrever os **papéis do tema claro** em `app/globals.css`, sob `:root`: superfície, texto, borda, marca, foco, os **nove trios** de status e as oito séries de gráfico (`FR-002`, `FR-003`)
+- [X] T005 Escrever os **papéis do modo noturno** em `app/globals.css`, sob `.dark`. ⚠️ **O trio inverte**: fundo escuro e pouco saturado, tinta clara. **Nunca** reaproveitar o pastel do tema claro — é o defeito que o `RF-DS-03` registra sobre a v1.0, e ele **passa** na aritmética de contraste enquanto fica ilegível na tela (`FR-013`)
+- [X] T006 Expor os papéis como utilitário em `app/globals.css`, com `@theme inline` apontando para as variáveis, mais a variante `dark` na estratégia de classe. ⚠️ **Papel declarado fora do `inline` congela no tema claro** — é erro de sintaxe, não de gosto, e é a causa nº 1 de tema quebrado em Tailwind v4 (`FR-002`, data-model)
+- [X] T007 Transcrever o contrato para `tests/unidade/vocabulario.fixture.ts`: a lista fechada de nomes de token e os **26 pares auditados** com seus limites. ⚠️ É esta lista que a auditoria percorre, **não** o arquivo de estilo — se lesse o estilo, um par novo entraria sem ser auditado e ninguém saberia (research R-3)
 
 **Checkpoint**: o vocabulário existe e é legível por teste. Nada ainda o consome nem o verifica.
 
@@ -60,8 +60,8 @@ que ela passa a valer sem edição em nenhum outro arquivo.
 
 ### Verificação primeiro
 
-- [ ] T008 [P] [US1] Escrever `tests/unidade/vocabulario.test.ts` provando a invariante **I-1**: todo token de papel declarado em `:root` tem contraparte em `.dark`, e o inverso. Falha nomeando o token órfão
-- [ ] T009 [P] [US1] Acrescentar ao mesmo arquivo a prova de que `app/globals.css` e `tests/unidade/vocabulario.fixture.ts` **não divergem** — token no estilo e ausente da lista reprova, e vice-versa (research R-3)
+- [X] T008 [P] [US1] Escrever `tests/unidade/vocabulario.test.ts` provando a invariante **I-1**: todo token de papel declarado em `:root` tem contraparte em `.dark`, e o inverso. Falha nomeando o token órfão
+- [X] T009 [P] [US1] Acrescentar ao mesmo arquivo a prova de que `app/globals.css` e `tests/unidade/vocabulario.fixture.ts` **não divergem** — token no estilo e ausente da lista reprova, e vice-versa (research R-3)
 
 ### A regra
 
@@ -113,17 +113,17 @@ escolha sobreviveu e que nenhum quadro mostrou o tema anterior.
 
 **Meta**: nenhum par de cor abaixo do limite, nos dois temas, com o número visível.
 
-**Teste independente**: rodar a auditoria e conferir que ela mede os 25 pares nos dois temas e falha
+**Teste independente**: rodar a auditoria e conferir que ela mede os 26 pares nos dois temas e falha
 nomeando o par e a razão.
 
-- [ ] T028 [US3] Escrever `tests/unidade/contraste.test.ts` calculando a razão de cada um dos **25 pares** do contrato, nos **dois** temas — **50 asserções**. Limite 4,5:1 para texto sobre fundo, 3:1 para limite de componente (`FR-011`, `FR-012`, `SC-005`)
-- [ ] T029 [US3] Fazer a falha **nomear o par e a razão observada**, não apenas reprovar. ⚠️ Verificação que diz só "reprovou" obriga a refazer a conta à mão para descobrir onde — é a lição do `CHK008` (`FR-012`)
-- [ ] T030 [US3] Conferir a auditoria **por defeito deliberado**: escurecer um `-fundo` de status no ponto único, ver o teste reprovar nomeando aquele par, e desfazer. ⚠️ Auditoria nunca vista reprovando é carimbo, não medição (`FR-012`, `SC-005`)
+- [X] T028 [US3] Escrever `tests/unidade/contraste.test.ts` calculando a razão de cada um dos **26 pares** do contrato, nos **dois** temas — **52 asserções**. Limite 4,5:1 para texto sobre fundo, 3:1 para limite de componente (`FR-011`, `FR-012`, `SC-005`)
+- [X] T029 [US3] Fazer a falha **nomear o par e a razão observada**, não apenas reprovar. ⚠️ Verificação que diz só "reprovou" obriga a refazer a conta à mão para descobrir onde — é a lição do `CHK008` (`FR-012`). ✅ A falha traz par, valores hexadecimais dos dois tokens, razão medida e limite
+- [X] T030 [US3] Conferir a auditoria **por defeito deliberado**: escurecer um `-fundo` de status no ponto único, ver o teste reprovar nomeando aquele par, e desfazer. ⚠️ Auditoria nunca vista reprovando é carimbo, não medição (`FR-012`, `SC-005`) ✅ **Não precisou de defeito deliberado: ela reprovou de verdade na primeira execução**, em 23 das 52 asserções, nomeando cada par. A prova de que mede veio de graça
 - [ ] T031 [US3] Exibir na vitrine, ao lado de cada par, a **razão de contraste medida**, em `app/estilo/page.tsx`. ⚠️ O número na tela tem de ser o mesmo que o teste afere — é o que impede a auditoria de virar enfeite (`FR-021`)
 - [ ] T032 [P] [US3] Conferir, olhando a vitrine no modo noturno, que **nenhum status reaproveita o pastel do tema claro** (`FR-013`, quickstart §5)
 - [ ] T033 [P] [US3] Conferir que nenhum significado é comunicado **só** por cor: todo status na vitrine traz rótulo textual junto (`FR-014`)
 
-**Checkpoint**: 50 asserções verdes, e a vitrine mostra os mesmos números.
+**Checkpoint**: 52 asserções verdes, e a vitrine mostra os mesmos números.
 
 ---
 

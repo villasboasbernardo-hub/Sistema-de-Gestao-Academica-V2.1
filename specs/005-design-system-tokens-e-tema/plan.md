@@ -40,7 +40,7 @@ carregada **sem requisição a domínio externo**
 **Restrições**: nenhum valor de cor fora do ponto único, nem literal nem da paleta padrão ·
 `"use client"` só em folha · nenhuma biblioteca de componentes além da já decidida (BRIEF §1)
 
-**Escala/Escopo**: ~60 tokens, 2 temas, 1 rota de vitrine, 4 componentes base copiados,
+**Escala/Escopo**: ~60 tokens, 26 pares auditados, 2 temas, 1 rota de vitrine, 4 componentes base copiados,
 **5 arquivos de dívida pagos**, 3 verificações novas
 
 ## Constitution Check

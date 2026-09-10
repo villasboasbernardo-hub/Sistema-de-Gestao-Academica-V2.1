@@ -47,7 +47,11 @@ sobreviver ao preto-e-branco da impressão. Consumidas a partir da fatia (b).
 | B-3 a B-11 | `<status>-borda` sobre `<status>-fundo`, para os nove | 3:1 |
 | C-1 | `foco` sobre `fundo` | 3:1 |
 
-**Total: 25 pares, medidos nos dois temas — 50 asserções.**
+**Total: 26 pares, medidos nos dois temas — 52 asserções.**
+
+⚠️ **Dizia "25" até 09/09/2026, e o número contradizia a própria tabela acima**: A-1 a A-14 são
+quatorze, B-1 a B-11 são onze, mais o C-1. Descoberto ao **transcrever** a lista para o teste, não
+ao revisá-la — que é o argumento a favor de transcrever.
 
 ⚠️ **A verificação lê esta lista, não o arquivo de estilo.** Se lesse o estilo, um par novo entraria
 sem ser auditado. Um teste separado garante que os dois não divergem: todo token de papel do arquivo
