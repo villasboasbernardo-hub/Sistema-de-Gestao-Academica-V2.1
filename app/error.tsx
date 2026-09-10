@@ -34,15 +34,7 @@ export default function Erro({
           : "A falha foi contida nesta tela. O resto do sistema continua disponível."}
       </p>
 
-      <pre
-        style={{
-          whiteSpace: "pre-wrap",
-          background: "#f4f4f5",
-          padding: "1rem",
-          borderRadius: "0.375rem",
-          fontSize: "0.875rem",
-        }}
-      >
+      <pre className="rounded-ciaara bg-superficie-2 p-4 text-base whitespace-pre-wrap">
         {error.message}
       </pre>
 

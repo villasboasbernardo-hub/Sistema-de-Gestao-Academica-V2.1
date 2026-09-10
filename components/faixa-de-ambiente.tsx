@@ -10,9 +10,23 @@
  */
 import { ambienteAtual, conferirAmbiente } from "@/lib/ambiente";
 
+/**
+ * ⚠️ AS CORES SAÍRAM DAQUI EM 09/09/2026 (`FR-001`). Eram `#1e3a8a` e `#9a3412` escritos à mão, e
+ * a regra de lint da fatia (a) do Épico 4 as barra — cor fora de `app/globals.css` é erro, não
+ * divergência que ninguém notou.
+ *
+ * O local usa o tom **planejado**, que é o do que ainda não aconteceu; a pré-visualização usa
+ * **atrasado**, que é o tom de aviso. Os dois são do vocabulário do domínio, e não escolha nova.
+ */
 const APARENCIA = {
-  local: { rotulo: "AMBIENTE LOCAL", fundo: "#1e3a8a" },
-  preview: { rotulo: "PRÉ-VISUALIZAÇÃO — dado sintético, não é o sistema real", fundo: "#9a3412" },
+  local: {
+    rotulo: "AMBIENTE LOCAL",
+    classe: "bg-planejado-tinta text-planejado-fundo",
+  },
+  preview: {
+    rotulo: "PRÉ-VISUALIZAÇÃO — dado sintético, não é o sistema real",
+    classe: "bg-atrasado-tinta text-atrasado-fundo",
+  },
   producao: null,
 } as const;
 
@@ -26,15 +40,7 @@ export function FaixaDeAmbiente() {
   return (
     <div
       role="status"
-      style={{
-        background: aparencia.fundo,
-        color: "white",
-        padding: "0.375rem 1rem",
-        fontSize: "0.75rem",
-        fontWeight: 600,
-        letterSpacing: "0.05em",
-        textAlign: "center",
-      }}
+      className={`px-4 py-1.5 text-center text-xs font-semibold tracking-wider ${aparencia.classe}`}
     >
       {aparencia.rotulo}
       {faltas.length > 0 ? ` · ${faltas.length} variável(is) de ambiente por preencher` : null}
