@@ -113,6 +113,47 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+
+  {
+    /*
+     * FRONTEIRA 3 — NENHUMA COR ENTRA FORA DO PONTO ÚNICO (`RF-DS-01`, `RNF-MAN-03`, `FR-001`).
+     *
+     * POR QUÊ: o objeto global `UI` da v2.0 centralizava cor POR CONVENÇÃO, e convenção é o que
+     * cede num dia de pressa. Aqui a centralização passa a ser garantia do motor de build: cor
+     * fora de `app/globals.css` é ERRO, não divergência que ninguém notou.
+     *
+     * ⚠️ SÃO DUAS REGRAS, E A SEGUNDA É A QUE COSTUMA ESCAPAR. Proibir só `#003366` deixa passar
+     * `text-gray-500`, que também é uma cor que NÃO VEM do ponto único. Decisão de 09/09/2026.
+     *
+     * ⚠️ A MENSAGEM ENSINA O CAMINHO, em vez de só barrar: quem esbarra na regra precisa saber
+     * para onde ir, senão contorna. Contrato: contracts/verificacao-de-cor.md.
+     *
+     * ⚠️ EXCEÇÃO AUTORIZADA, UMA SÓ: o CSS de impressão, para a normalização preto-no-branco.
+     * Ela ainda NÃO EXISTE — a rota de impressão é dos épicos 10 e 11 — e fica prevista aqui para
+     * não ser negociada às pressas no dia em que aparecer, que é como exceção vira regra.
+     */
+    files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: String.raw`Literal[value=/#[0-9a-fA-F]{3,8}\b|\b(rgb|rgba|hsl|hsla)\(/]`,
+          message:
+            "Cor escrita à mão é proibida fora de app/globals.css (RF-DS-01, FR-001). " +
+            "Use um token: bg-executado-fundo, text-conflito-tinta, border-borda. " +
+            "Falta um token? Acrescente-o em globals.css NOS DOIS TEMAS, no par auditado de " +
+            "lib/design/vocabulario.ts e na vitrine — as três coisas, ou nenhuma.",
+        },
+        {
+          selector: String.raw`Literal[value=/\b(text|bg|border|ring|fill|stroke|from|via|to|decoration|outline|shadow|accent|caret|divide|placeholder)-(slate|gray|grey|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(-\d{2,3})?\b/]`,
+          message:
+            "Utilitário da paleta padrão é proibido (FR-001, decisão de 09/09/2026): " +
+            "text-gray-500 é uma cor que NÃO VEM do ponto único. " +
+            "Use um token do vocabulário CIAARA: text-texto-suave, bg-superficie-2, border-borda.",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

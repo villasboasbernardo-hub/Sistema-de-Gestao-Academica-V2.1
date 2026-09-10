@@ -7,8 +7,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { claro, escuro, exposicao, papeisDeCor } from "./ler-globals";
-import { PAPEIS, RECONCILIACAO } from "./vocabulario.fixture";
+import { claro, escuro, exposicao, papeisDeCor } from "@/lib/design/ler-globals";
+import { PAPEIS, RECONCILIACAO } from "@/lib/design/vocabulario";
 
 describe("I-1 · todo papel existe nos DOIS temas", () => {
   it("nenhum papel do tema claro falta no noturno", () => {

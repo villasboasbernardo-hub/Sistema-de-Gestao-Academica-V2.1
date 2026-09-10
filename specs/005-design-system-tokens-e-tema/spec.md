@@ -211,7 +211,18 @@ a tipografia continua correta.
 #### Contraste e legibilidade
 
 - **FR-011**: Todo par de **texto sobre fundo** do vocabulário MUST atingir no mínimo **4,5:1** nos
-  **dois** temas. Todo **limite de componente** MUST atingir no mínimo **3:1**.
+  **dois** temas, com a razão **arredondada a uma casa decimal** antes da comparação.
+  O limite de **3:1** MUST ser cobrado **apenas de borda interativa ou informativa** — foco, campo,
+  botão, e qualquer traço que seja a **única** coisa a identificar um controle ou a portar
+  informação. Borda **decorativa ou estrutural** — divisória, linha de grade, contorno de etiqueta
+  cujo significado já vem do texto — MUST ser **isenta**.
+  ⚠️ **Emenda de 09/09/2026, decidida por Bernardo depois da primeira medição.** A redação anterior
+  cobrava 3:1 de **toda** borda, e as **22** asserções do grupo reprovaram medindo de 1,25 a 1,88.
+  A causa era a redação, não a paleta: a norma cobre o traço que **identifica** um controle, não
+  toda linha de grade. Uma borda a 3:1 contra o próprio preenchimento seria um traço quase preto
+  numa tabela de 300 linhas — pioraria a legibilidade em nome dela.
+  ⚠️ **O arredondamento também é decisão dele**: `--texto-tenue` mede **4,49** e passa. Meio
+  centésimo não é diferença que olho algum distinga, e um limite que reprova por isso vira ruído.
 - **FR-012**: A conformidade do FR-011 MUST ser **medida por verificação automática** sobre os pares
   declarados, e a falha MUST nomear o par e a razão observada.
 - **FR-013**: No modo noturno, o fundo de status MUST ser escuro e pouco saturado, e a tinta MUST
@@ -287,8 +298,11 @@ Esta fatia não introduz entidade de dado. O vocabulário visual é configuraç�
   aba, na mesma sessão de navegador.
 - **SC-004**: **Nenhum** quadro intermediário exibe o tema não escolhido durante o carregamento,
   medido antes da hidratação.
-- **SC-005**: **100%** dos pares de texto sobre fundo do vocabulário atingem 4,5:1, e **100%** dos
-  limites de componente atingem 3:1, **nos dois temas**, com o valor de cada par registrado.
+- **SC-005**: **100%** dos pares **auditados** atingem o seu limite, **nos dois temas**, com o valor
+  de cada par registrado. A lista de pares **isentos** MUST trazer o motivo da isenção, e a de
+  **pendentes** MUST trazer a medição e a fatia que a resolve.
+  ⚠️ **Isenção sem motivo escrito é a mesma coisa que limite afrouxado em silêncio.** A diferença
+  entre as duas está inteiramente no registro.
 - **SC-006**: A tipografia institucional carrega **sem nenhuma requisição a domínio externo**,
   verificável com a rede de terceiros bloqueada.
 - **SC-007**: **Cinco arquivos** são pagos nesta fatia, e a lista é nominal porque contagem sem
@@ -327,6 +341,7 @@ Esta fatia não introduz entidade de dado. O vocabulário visual é configuraç�
 | **A2** | O `FR-005` comparava com "aplicação web típica", linha de base que ninguém definiu | Vira **14px de corpo, 11px de mínimo** |
 | **C2** | O `FR-019` proibia biblioteca nova sem nenhum portão. Proibição sem portão é conselho | Passa a exigir **verificação automática** |
 | **C1** | O `SC-001` não tinha tarefa — o critério que dá nome à história P1 estava sem prova | Ganhou a **T019.1**, no molde do defeito deliberado |
+| **CONTRASTE** | ⚠️ **Achado ao MEDIR, não ao revisar**: o `FR-011` cobrava 3:1 de toda borda e reprovou 22 asserções. E o documento 23 anota razões que **não conferem** com as cores que anota — 4,6 para `--texto-tenue`, que mede 4,49, e 3,1 para `--borda-forte`, que mede 1,62 | Bernardo isentou borda decorativa e estrutural, e aceitou 4,49 como 4,5. **Nenhuma cor foi alterada** |
 | **C1.b** | ⚠️ **Achado ao escrever a tarefa, não na análise**: o `SC-001` dizia "zero edições em qualquer outro arquivo" e **contradizia a regra 4** do contrato de vocabulário, que exige três lugares para registrar token novo | O critério passa a medir o **consumo**, que é o que custa zero. O registro custa três, de propósito |
 
 As outras cinco mudaram `tasks.md` e `quickstart.md`.

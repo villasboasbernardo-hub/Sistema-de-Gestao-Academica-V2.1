@@ -11,7 +11,7 @@
  *    (eslint.config.mjs), não por combinação — ver contracts/verificacao-de-cor.md.
  *
  * ⚠️ TOKEN NOVO ENTRA EM TRÊS LUGARES, ou em nenhum: aqui, no par auditado de
- *    tests/unidade/vocabulario.fixture.ts, e na amostra de app/estilo/page.tsx. É o que impede
+ *    lib/design/vocabulario.ts, e na amostra de app/estilo/page.tsx. É o que impede
  *    token nascido morto — declarado, nunca visto, nunca conferido por ninguém.
  *
  * Valores transcritos do documento 23 §1.3. Esta fatia NÃO redesenha a paleta.
@@ -85,12 +85,9 @@
   --radius-ciaara-sm: 0.25rem;
   --radius-ciaara: 0.375rem;
   --radius-ciaara-lg: 0.5rem;
-  --shadow-ciaara-1:
-    0 1px 2px 0 rgb(15 23 32 / 0.06), 0 1px 3px 0 rgb(15 23 32 / 0.08);
-  --shadow-ciaara-2:
-    0 2px 4px -1px rgb(15 23 32 / 0.08), 0 4px 8px -2px rgb(15 23 32 / 0.1);
-  --shadow-ciaara-3:
-    0 8px 16px -4px rgb(15 23 32 / 0.12), 0 16px 32px -8px rgb(15 23 32 / 0.14);
+  --shadow-ciaara-1: 0 1px 2px 0 rgb(15 23 32 / 0.06), 0 1px 3px 0 rgb(15 23 32 / 0.08);
+  --shadow-ciaara-2: 0 2px 4px -1px rgb(15 23 32 / 0.08), 0 4px 8px -2px rgb(15 23 32 / 0.1);
+  --shadow-ciaara-3: 0 8px 16px -4px rgb(15 23 32 / 0.12), 0 16px 32px -8px rgb(15 23 32 / 0.14);
 }
 
 /* ── 2. PAPÉIS — TEMA CLARO (padrão) ──────────────────────────────────────────────────────────

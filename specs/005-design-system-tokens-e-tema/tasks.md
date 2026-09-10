@@ -65,21 +65,21 @@ que ela passa a valer sem edição em nenhum outro arquivo.
 
 ### A regra
 
-- [ ] T010 [US1] Acrescentar a `eslint.config.mjs` a regra de **cor escrita à mão** — hexadecimal, `rgb`, `rgba`, `hsl`, `hsla` — sobre rota e componente, com a mensagem que **ensina o token certo** e diz o que fazer quando falta um. Base pronta no documento 23 §9.3 (`FR-001` P-1, `FR-004`)
-- [ ] T011 [US1] Acrescentar a `eslint.config.mjs` a regra da **paleta padrão** — `text-gray-500`, `bg-slate-100` e afins. ⚠️ É a metade da regra que costuma escapar, e a decisão de 09/09/2026: `text-gray-500` é cor que **não vem do ponto único** (`FR-001` P-2, contrato verificação-de-cor)
-- [ ] T012 [US1] Escrever `tests/unidade/regra-de-cor.test.ts` provando que **as duas regras estão ativas**, com trechos sintéticos que devem reprovar (`FR-004`, `SC-002`). ⚠️ Regra de lint configurada e desligada por engano não acusa nada — foi assim que o Épico 0 provou a fronteira de `lib/dominio/`
+- [X] T010 [US1] Acrescentar a `eslint.config.mjs` a regra de **cor escrita à mão** — hexadecimal, `rgb`, `rgba`, `hsl`, `hsla` — sobre rota e componente, com a mensagem que **ensina o token certo** e diz o que fazer quando falta um. Base pronta no documento 23 §9.3 (`FR-001` P-1, `FR-004`)
+- [X] T011 [US1] Acrescentar a `eslint.config.mjs` a regra da **paleta padrão** — `text-gray-500`, `bg-slate-100` e afins. ⚠️ É a metade da regra que costuma escapar, e a decisão de 09/09/2026: `text-gray-500` é cor que **não vem do ponto único** (`FR-001` P-2, contrato verificação-de-cor)
+- [X] T012 [US1] Escrever `tests/unidade/regra-de-cor.test.ts` provando que **as duas regras estão ativas**, com trechos sintéticos que devem reprovar (`FR-004`, `SC-002`). ⚠️ Regra de lint configurada e desligada por engano não acusa nada — foi assim que o Épico 0 provou a fronteira de `lib/dominio/`
 
 ### A dívida — cinco arquivos, nomeados
 
-- [ ] T013 [P] [US1] Trocar a cor literal por token em `app/error.tsx` (`FR-001` P-1, `SC-007`)
-- [ ] T014 [P] [US1] Trocar a cor literal por token em `app/loading.tsx` (`FR-001` P-1, `SC-007`)
-- [ ] T015 [P] [US1] Trocar a cor literal por token em `app/not-found.tsx` (`FR-001` P-1, `SC-007`)
-- [ ] T016 [P] [US1] Trocar a cor literal por token em `components/faixa-de-ambiente.tsx` (`FR-001` P-1, `SC-007`)
-- [ ] T017 [US1] Trocar os **10 utilitários da paleta padrão** por token em `app/page.tsx`. ⚠️ Este arquivo **não constava de lista nenhuma** até 09/09/2026 — apareceu na medição da regra P-2 (`SC-007`)
+- [X] T013 [P] [US1] Trocar a cor literal por token em `app/error.tsx` (`FR-001` P-1, `SC-007`)
+- [X] T014 [P] [US1] Trocar a cor literal por token em `app/loading.tsx` (`FR-001` P-1, `SC-007`) ✅ ⚠️ **Não tinha cor literal.** Tem `style={{}}` só com espaçamento. O `CLAUDE.md` contava 4 arquivos com cor literal; medido, são **2**
+- [X] T015 [P] [US1] Trocar a cor literal por token em `app/not-found.tsx` (`FR-001` P-1, `SC-007`) ✅ ⚠️ **Idem à T014**: `style={{}}` só com espaçamento e tipografia, nenhuma cor
+- [X] T016 [P] [US1] Trocar a cor literal por token em `components/faixa-de-ambiente.tsx` (`FR-001` P-1, `SC-007`)
+- [X] T017 [US1] Trocar os **10 utilitários da paleta padrão** por token em `app/page.tsx`. ⚠️ Este arquivo **não constava de lista nenhuma** até 09/09/2026 — apareceu na medição da regra P-2 (`SC-007`)
 
 ### A vitrine
 
-- [ ] T018 [US1] Criar `app/estilo/page.tsx` exibindo **todo** o vocabulário: papéis, os nove trios de status, escala de texto, espaçamentos, raios e sombras. Sem `"use client"` (`FR-020`)
+- [X] T018 [US1] Criar `app/estilo/page.tsx` exibindo **todo** o vocabulário: papéis, os nove trios de status, escala de texto, espaçamentos, raios e sombras. Sem `"use client"` (`FR-020`)
 - [ ] T019 [US1] Escrever `tests/e2e/vitrine.spec.ts` provando a invariante **I-5**: **100%** dos tokens do contrato aparecem na vitrine. ⚠️ É o que impede token nascido morto — declarado, nunca visto, nunca conferido (`SC-009`)
 
 - [ ] T019.1 [US1] Provar o `SC-001` **por defeito deliberado**, no molde da T012 e da T030: acrescentar um token de status novo ao ponto único mais o par auditado mais a amostra na vitrine, conferir que ele passa a valer **sem tocar em arquivo de tela ou de componente**, e desfazer. ⚠️ **Era o único critério de história P1 sem tarefa** — achado pela análise de consistência de 09/09/2026. ⚠️ E os **três** lugares do registro são o preço declarado pela regra 4 do contrato de vocabulário: é o que impede token nascido morto. O que o `SC-001` mede é o **consumo**, que custa zero
@@ -96,10 +96,10 @@ sai 0 com o repositório inteiro.
 **Teste independente**: na vitrine, alternar o tema, recarregar, abrir outra aba e conferir que a
 escolha sobreviveu e que nenhum quadro mostrou o tema anterior.
 
-- [ ] T020 [US2] Criar `components/ciaara/provedor-de-tema.tsx` como **folha** com `"use client"`, encapsulando o provedor: estratégia de classe, padrão seguindo o sistema operacional, escolha manual prevalecendo, sem transição arrastada (`FR-006` a `FR-008`, `FR-010`)
-- [ ] T021 [US2] Ligar o provedor em `app/layout.tsx`. ⚠️ **O layout continua SEM `"use client"`** — o marcador contamina toda a subárvore e mandaria o catálogo de telas para o pacote do navegador. O `tsc` **não acusa**; só o build (research R-5, gotcha nº 1 do `CLAUDE.md`)
-- [ ] T022 [US2] Acrescentar `suppressHydrationWarning` ao elemento raiz em `app/layout.tsx`, **com o comentário do porquê**: a classe é escrita antes da hidratação, e sem isso o React acusa divergência entre servidor e cliente (`FR-009`, documento 23 §2.1)
-- [ ] T023 [US2] Criar `components/ciaara/seletor-tema.tsx` como **folha**, e usá-lo na vitrine. ⚠️ É o alternador **provisório desta fatia**: o definitivo entra no cabeçalho da fatia (c). A vitrine permanece (`FR-022`)
+- [X] T020 [US2] Criar `components/ciaara/provedor-de-tema.tsx` como **folha** com `"use client"`, encapsulando o provedor: estratégia de classe, padrão seguindo o sistema operacional, escolha manual prevalecendo, sem transição arrastada (`FR-006` a `FR-008`, `FR-010`)
+- [X] T021 [US2] Ligar o provedor em `app/layout.tsx`. ⚠️ **O layout continua SEM `"use client"`** — o marcador contamina toda a subárvore e mandaria o catálogo de telas para o pacote do navegador. O `tsc` **não acusa**; só o build (research R-5, gotcha nº 1 do `CLAUDE.md`)
+- [X] T022 [US2] Acrescentar `suppressHydrationWarning` ao elemento raiz em `app/layout.tsx`, **com o comentário do porquê**: a classe é escrita antes da hidratação, e sem isso o React acusa divergência entre servidor e cliente (`FR-009`, documento 23 §2.1)
+- [X] T023 [US2] Criar `components/ciaara/seletor-tema.tsx` como **folha**, e usá-lo na vitrine. ⚠️ É o alternador **provisório desta fatia**: o definitivo entra no cabeçalho da fatia (c). A vitrine permanece (`FR-022`)
 - [ ] T024 [US2] Escrever em `tests/e2e/tema.spec.ts` a persistência: escolher o noturno, recarregar, abrir outra aba, e afirmar que continua noturno (`FR-007`, `SC-003`)
 - [ ] T025 [US2] Acrescentar a `tests/e2e/tema.spec.ts` os dois casos de precedência: sem escolha manual segue o sistema operacional; havendo escolha manual, ela prevalece (`FR-008`)
 - [ ] T026 [US2] Acrescentar a `tests/e2e/tema.spec.ts` a asserção de **ausência de flash**, medindo a classe do elemento raiz **antes da hidratação**. ⚠️ **Não use captura de tela**: ela mede o estado final, que não é o que está em questão, e aprovaria o defeito. É a mesma armadilha do V-4 do Épico 3, que decidia por tempo (`FR-009`, `SC-004`, research R-1)
@@ -119,7 +119,7 @@ nomeando o par e a razão.
 - [X] T028 [US3] Escrever `tests/unidade/contraste.test.ts` calculando a razão de cada um dos **26 pares** do contrato, nos **dois** temas — **52 asserções**. Limite 4,5:1 para texto sobre fundo, 3:1 para limite de componente (`FR-011`, `FR-012`, `SC-005`)
 - [X] T029 [US3] Fazer a falha **nomear o par e a razão observada**, não apenas reprovar. ⚠️ Verificação que diz só "reprovou" obriga a refazer a conta à mão para descobrir onde — é a lição do `CHK008` (`FR-012`). ✅ A falha traz par, valores hexadecimais dos dois tokens, razão medida e limite
 - [X] T030 [US3] Conferir a auditoria **por defeito deliberado**: escurecer um `-fundo` de status no ponto único, ver o teste reprovar nomeando aquele par, e desfazer. ⚠️ Auditoria nunca vista reprovando é carimbo, não medição (`FR-012`, `SC-005`) ✅ **Não precisou de defeito deliberado: ela reprovou de verdade na primeira execução**, em 23 das 52 asserções, nomeando cada par. A prova de que mede veio de graça
-- [ ] T031 [US3] Exibir na vitrine, ao lado de cada par, a **razão de contraste medida**, em `app/estilo/page.tsx`. ⚠️ O número na tela tem de ser o mesmo que o teste afere — é o que impede a auditoria de virar enfeite (`FR-021`)
+- [X] T031 [US3] Exibir na vitrine, ao lado de cada par, a **razão de contraste medida**, em `app/estilo/page.tsx`. ⚠️ O número na tela tem de ser o mesmo que o teste afere — é o que impede a auditoria de virar enfeite (`FR-021`)
 - [ ] T032 [P] [US3] Conferir, olhando a vitrine no modo noturno, que **nenhum status reaproveita o pastel do tema claro** (`FR-013`, quickstart §5)
 - [ ] T033 [P] [US3] Conferir que nenhum significado é comunicado **só** por cor: todo status na vitrine traz rótulo textual junto (`FR-014`)
 
@@ -137,7 +137,7 @@ tipografia continua correta.
 **Nota**: os quatro arquivos e a licença **já estão versionados** em `public/fontes/` desde
 09/09/2026, com a assinatura conferida. Falta ligá-los.
 
-- [ ] T034 [US4] Declarar a tipografia auto-hospedada em `app/layout.tsx`, com os quatro pesos e a pilha de reserva, expondo a variável que a tipografia do `@theme` consome (`FR-015`)
+- [X] T034 [US4] Declarar a tipografia auto-hospedada em `app/layout.tsx`, com os quatro pesos e a pilha de reserva, expondo a variável que a tipografia do `@theme` consome (`FR-015`)
 - [ ] T035 [US4] Escrever em `tests/e2e/tipografia.spec.ts` a prova de que **nenhuma requisição a domínio externo** acontece ao carregar. ⚠️ Na v2.0 a fonte vinha por CDN, e é isso que quebraria a impressão, que não pode depender de rede na hora de imprimir (`SC-006`)
 
 **Checkpoint**: a tipografia é do sistema, e a prova não depende de ninguém lembrar de olhar.

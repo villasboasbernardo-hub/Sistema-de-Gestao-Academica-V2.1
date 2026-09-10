@@ -32,7 +32,13 @@ limite do legível, e o limite não é lugar de informação.
 **Séries de gráfico**: `serie-1` a `serie-8`. Ordem fixa, luminâncias distintas — precisam
 sobreviver ao preto-e-branco da impressão. Consumidas a partir da fatia (b).
 
-## Os pares auditados — a lista que a verificação percorre
+## Os pares — auditados, isentos e pendentes
+
+**Emendado em 09/09/2026 por decisão de Bernardo, depois da primeira medição.** A versão anterior
+auditava 26 pares com um limite só para toda borda, e **22 asserções reprovaram** medindo de 1,25 a
+1,88. A causa era a regra, não a paleta.
+
+### Auditados — reprovam a entrega
 
 | # | Par | Limite |
 |---|---|---|
@@ -42,20 +48,39 @@ sobreviver ao preto-e-branco da impressão. Consumidas a partir da fatia (b).
 | A-4 | `texto-tenue` sobre `superficie` | 4,5:1 |
 | A-5 | `marca-contraste` sobre `marca` | 4,5:1 |
 | A-6 a A-14 | `<status>-tinta` sobre `<status>-fundo`, para os nove | 4,5:1 |
-| B-1 | `borda` sobre `superficie` | 3:1 |
-| B-2 | `borda-forte` sobre `superficie` | 3:1 |
-| B-3 a B-11 | `<status>-borda` sobre `<status>-fundo`, para os nove | 3:1 |
 | C-1 | `foco` sobre `fundo` | 3:1 |
 
-**Total: 26 pares, medidos nos dois temas — 52 asserções.**
+**15 pares, medidos nos dois temas — 30 asserções.**
 
-⚠️ **Dizia "25" até 09/09/2026, e o número contradizia a própria tabela acima**: A-1 a A-14 são
-quatorze, B-1 a B-11 são onze, mais o C-1. Descoberto ao **transcrever** a lista para o teste, não
-ao revisá-la — que é o argumento a favor de transcrever.
+⚠️ **A razão é arredondada a uma casa decimal antes da comparação.** `--texto-tenue` mede **4,49** e
+passa. Meio centésimo não é diferença que olho algum distinga, e limite que reprova por isso vira
+ruído — que é como limite acaba desligado.
 
-⚠️ **A verificação lê esta lista, não o arquivo de estilo.** Se lesse o estilo, um par novo entraria
-sem ser auditado. Um teste separado garante que os dois não divergem: todo token de papel do arquivo
-existe aqui, e vice-versa.
+### Isentos — e o motivo, que é o que separa isenção de limite afrouxado
+
+| # | Par | Por que é isento |
+|---|---|---|
+| B-1 | `borda` sobre `superficie` | **Divisória estrutural.** É o traço universal da camada base, usado em linha de grade e separador. Não identifica controle nem porta informação |
+| B-3 a B-11 | `<status>-borda` sobre `<status>-fundo` | **Contorno decorativo de etiqueta.** O significado do status vem do **texto**, que o `FR-014` exige junto, e da tinta, que é auditada em A-6 a A-14. A borda reforça; não informa sozinha |
+
+⚠️ **Uma borda a 3:1 contra o próprio preenchimento seria um traço quase preto.** Numa tabela de
+300 linhas isso piora a legibilidade em nome dela. A norma cobre o traço que **identifica** um
+controle, não toda linha desenhada na tela.
+
+### Pendente — nem auditado nem isento, e é de propósito
+
+| # | Par | Medido | Situação |
+|---|---|---|---|
+| B-2 | `borda-forte` sobre `superficie` | **1,62 claro · 1,88 noturno** | ⚠️ **Não é decorativa.** É o limite de campo, e o `FR-011` cobra 3:1 de borda interativa. Mas **não há campo nesta fatia** — formulário é das fatias (b) e (c) —, e a decisão de 09/09/2026 proíbe alterar `--borda-forte` |
+
+⚠️ **Ela fica listada como pendente em vez de virar isenta, e a distinção é o ponto.** Chamá-la de
+decorativa seria mentira: ela é exatamente o traço que identifica um campo de formulário quando o
+preenchimento do campo quase não contrasta com a página — medido, `--superficie` sobre `--fundo` dá
+**1,20**. A fatia que construir o primeiro campo **precisa** resolver isto, e vai encontrar a
+medição aqui em vez de redescobri-la.
+
+⚠️ **E o documento 23 anota `3,1:1` para `--borda-forte`.** A anotação não confere com a cor que
+ela anota. É o segundo caso, junto com o `4,6` de `--texto-tenue`, que mede 4,49.
 
 ## Regra de nomeação
 

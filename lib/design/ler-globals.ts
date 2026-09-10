@@ -32,8 +32,10 @@ function bloco(seletor: string): Map<string, string> {
 
   const corpo = css.slice(inicio, fim);
   const mapa = new Map<string, string>();
-  for (const [, nome, valor] of corpo.matchAll(/--([a-z0-9-]+)\s*:\s*([^;]+);/gi)) {
-    mapa.set(nome, valor.trim());
+  for (const achado of corpo.matchAll(/--([a-z0-9-]+)\s*:\s*([^;]+);/gi)) {
+    const nome = achado[1];
+    const valor = achado[2];
+    if (nome && valor) mapa.set(nome, valor.trim());
   }
   return mapa;
 }
