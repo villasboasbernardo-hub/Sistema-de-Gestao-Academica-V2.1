@@ -38,6 +38,15 @@
   foram baixados, conferidos pela assinatura `wOF2` e versionados com o texto da licença OFL-1.1.
   A spec registra a procedência, incluindo o fato de que a origem oficial do gov.br não publica os
   arquivos e o empacotamento veio de terceiro.
+- **Três esclarecimentos integrados em 09/09/2026** (`/speckit-clarify`), e os três **acrescentaram
+  requisito** em vez de só desambiguar: a rota de vitrine, sem a qual a história 2 não teria onde
+  ser exercitada; a proibição da paleta padrão além da cor literal, que trouxe um quinto arquivo
+  que nenhuma lista contava; e a reconciliação das variáveis dos componentes base com os tokens,
+  que é o trabalho real escondido atrás de "copiar componente".
+- **Um critério estava confundindo duas coisas e foi separado.** O `SC-007` media "arquivos com cor
+  fora do vocabulário" e somava peras com maçãs: quatro arquivos com cor divergente mais cinco
+  telas que simplesmente ainda não usam o vocabulário. Medido: as cinco telas **não violam** o
+  `FR-001`, porque não usam cor nenhuma. A verificação pode nascer bloqueante com elas intactas.
 - **Uma tensão registrada, não resolvida.** O gabarito pede critérios de sucesso *independentes de
   tecnologia*, e o projeto acabou de decidir o contrário para requisito de segurança: o `FR-006` da
   spec 004 foi reescrito em 09/09/2026 **justamente para nomear o mecanismo que o impõe**, porque a

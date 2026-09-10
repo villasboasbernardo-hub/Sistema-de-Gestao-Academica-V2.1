@@ -16,7 +16,8 @@ separadamente.
 Hoje o sistema tem cinco telas funcionais e **nenhum vocabulário visual**. `app/globals.css` tem 26
 linhas e traz apenas o `@theme inline` que veio do gerador do Next. Não existe `components/ui/`.
 Não existe `public/institucional/` nem `public/fontes/`. A dívida de estilo registrada no
-`CLAUDE.md` está em **nove arquivos** sem token, e esta fatia paga **quatro** deles.
+`CLAUDE.md` está em **nove arquivos** sem token. Esta fatia paga **cinco**, e a lista não é a mesma:
+ver o `SC-007`, que separa *cor divergente* de *ainda sem vocabulário*.
 
 ### Duas declarações que o documento 06 exige explicitamente
 
@@ -30,6 +31,14 @@ verdade para o estado de navegação"* — é **[PRESERVADO]**, e o ponto de ver
 URL**. ⚠️ A realização do `RF-NAV-01` é da **fatia (c)**; a declaração fica aqui porque é o mesmo
 movimento conceitual, e o documento 06 pede que os dois sejam ditos juntos.
 
+## Clarifications
+
+### Session 2026-09-09
+
+- Q: Onde a pessoa troca de tema nesta fatia, se o cabeçalho só nasce na fatia (c)? → A: Numa **rota de vitrine própria**, que traz o alternador e a amostra de todos os tokens nos dois temas. O alternador definitivo entra no cabeçalho da fatia (c).
+- Q: A verificação automática proíbe só valor de cor escrito à mão, ou também os utilitários da paleta padrão do Tailwind? → A: **Os dois.** Só token CIAARA vale. `app/page.tsx`, que ninguém tinha contado, entra na conta desta fatia.
+- Q: Quais componentes base são copiados nesta fatia, se o documento 23 nomeia dezoito primitivos? → A: **Só o mínimo que a vitrine exercita** — botão, cartão, tabela e emblema —, com a reconciliação das variáveis de cor do shadcn com os tokens CIAARA **feita e documentada**. Os demais vêm com a fatia que os usar.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A identidade visual muda num lugar só (Priority: P1)
@@ -41,8 +50,8 @@ literais espalhados.
 **Why this priority**: é o `RF-DS-01`, a razão de existir da fatia. Sem isto, as fatias (b) e (c)
 nascem com a mesma dívida que o épico veio pagar, e cada tela nova a aumenta.
 
-**Independent Test**: acrescentar uma cor semântica nova ao ponto único e observar que todo
-componente que a declara passa a usá-la, sem edição em nenhum outro arquivo.
+**Independent Test**: acrescentar uma cor semântica nova ao ponto único e observar, na rota de
+vitrine, que ela passa a valer sem edição em nenhum outro arquivo.
 
 **Acceptance Scenarios**:
 
@@ -64,8 +73,12 @@ antes de assentar no escolhido.
 **Why this priority**: é o `RF-DS-03` mais o `RF-DS-03.1`, e o flash de tema errado é o defeito que
 a v1.0 tinha e que este épico existe para não reintroduzir.
 
-**Independent Test**: alternar o tema, recarregar, abrir outra aba e conferir que a escolha
-sobreviveu e que nenhum quadro intermediário mostrou o tema anterior.
+**Independent Test**: na rota de vitrine, alternar o tema, recarregar, abrir outra aba e conferir
+que a escolha sobreviveu e que nenhum quadro intermediário mostrou o tema anterior.
+
+⚠️ **A rota de vitrine existe porque sem ela esta história não é testável.** Até a fatia (c) não há
+cabeçalho nem navegação, e portanto não haveria onde clicar para trocar de tema — o requisito
+sairia da fatia sem que ninguém, nem pessoa nem teste, pudesse exercitá-lo.
 
 **Acceptance Scenarios**:
 
@@ -154,7 +167,12 @@ a tipografia continua correta.
 #### Vocabulário visual
 
 - **FR-001**: MUST existir **um único arquivo** que declare toda cor, tipografia, espaçamento, raio
-  e sombra do sistema. Nenhum valor literal de cor MUST existir fora dele.
+  e sombra do sistema. Fora dele MUST **não** existir:
+  1. **valor de cor escrito à mão** — `#003366`, `rgb(…)`, `hsl(…)`, nome de cor CSS; **nem**
+  2. **utilitário da paleta padrão** do motor de estilo — `text-gray-500`, `bg-slate-100` e afins.
+  ⚠️ **Os dois, e o segundo é o que costuma escapar.** `text-gray-500` é uma cor que **não vem do
+  ponto único**, e o `RF-DS-01` diz que todas as telas obtêm cores de um único lugar. Permitir a
+  paleta padrão mantém aberta exatamente a porta pela qual a divergência entra.
 - **FR-002**: O vocabulário MUST separar **o que não muda com o tema** — a rampa institucional e as
   escalas — **do que é papel** — fundo, superfície, texto, borda, tom de status. ⚠️ Papel declarado
   como valor estático congela no tema claro, e o modo noturno sai com campos claros demais. É o
@@ -163,9 +181,11 @@ a tipografia continua correta.
   cor nem por rótulo genérico. `executado`, `atrasado`, `conflito`, `conformidade`, `nao-letivo`,
   `planejado`, `adiantado`, `reserva`, `inativo`. ⚠️ Quem lê `executado` sabe o que significa; quem
   lia `success` precisava saber o que "success" queria dizer naquele módulo.
-- **FR-004**: A regra do FR-001 MUST ser **imposta por verificação automática** que reprova a
-  entrega, e não apenas escrita na documentação. ⚠️ Regra de estilo que só existe em documento é a
-  mesma classe de defeito do mínimo de senha que vivia só no navegador (`FR-006` da spec 004).
+- **FR-004**: A regra do FR-001 MUST ser **imposta por verificação automática bloqueante** ao fim
+  desta fatia — não em modo de aviso, não em revisão de PR. ⚠️ Regra de estilo que só existe em
+  documento é a mesma classe de defeito do mínimo de senha que vivia só no navegador (`FR-006` da
+  spec 004). ⚠️ **Ela pode ser bloqueante já, e isso foi medido**: depois de pagos os cinco arquivos
+  do `SC-007`, não sobra nenhuma violação no repositório.
 - **FR-005**: A escala tipográfica MUST partir de um corpo **menor** que o de aplicação web típica.
   É sistema de gestão com tabelas grandes: **densidade vence estética**.
 
@@ -200,11 +220,37 @@ a tipografia continua correta.
   Bernardo em 09/09/2026. O número fica reservado e vazio de propósito, para que a renumeração não
   desalinhe as referências já escritas.
 
+#### Vitrine do vocabulário
+
+- **FR-020**: MUST existir uma **rota de vitrine** que exiba o vocabulário inteiro — toda cor de
+  papel, toda cor de status, a escala tipográfica, os espaçamentos, os raios e as sombras — e que
+  traga o **alternador de tema**.
+  ⚠️ **Ela não é enfeite: é o único lugar onde esta fatia pode ser conferida.** Sem cabeçalho e sem
+  navegação, que só nascem na fatia (c), não haveria onde trocar de tema nem onde ver um token
+  aplicado. É a vitrine que torna as histórias 1, 2 e 3 verificáveis, por pessoa e por teste.
+- **FR-021**: A vitrine MUST exibir, ao lado de cada par de cor, a **razão de contraste medida**.
+  ⚠️ Um número visível ao lado da cor é o que impede a auditoria automática de virar carimbo: quem
+  olha a tela vê a mesma medida que o teste afere.
+- **FR-022**: O **alternador de tema** da vitrine é **provisório desta fatia**. Ele MUST ser
+  substituído pelo alternador do cabeçalho na fatia (c). A vitrine em si **permanece**, porque
+  continua sendo onde se confere o vocabulário quando ele mudar.
+
 #### Base de componentes
 
-- **FR-017**: A biblioteca de componentes base MUST ser **copiada para dentro do repositório e
-  versionada**, não consumida como dependência opaca.
-- **FR-018**: Nenhuma biblioteca de componentes **além** da já decidida MUST ser instalada. É
+- **FR-017**: A biblioteca de componentes base MUST ser inicializada e seus componentes MUST ser
+  **copiados para dentro do repositório e versionados**, não consumidos como dependência opaca.
+  Nesta fatia MUST ser copiado **apenas o mínimo que a vitrine exercita** — botão, cartão, tabela e
+  emblema. Os demais primitivos que o documento 23 §3.1 nomeia entram **com a fatia que os usar**.
+  ⚠️ **Copiar os dezoito de uma vez multiplicaria por dezoito um problema ainda não resolvido uma
+  vez** — ver o FR-018 —, e código copiado que ninguém usa também não é revisado por ninguém.
+- **FR-018**: A reconciliação entre as **variáveis de cor próprias** dos componentes base e os
+  **tokens CIAARA** MUST ser feita nesta fatia e MUST ficar **escrita**, com o de-para de cada
+  variável.
+  ⚠️ **É o trabalho real escondido atrás de "copiar componente".** O shadcn traz o próprio
+  vocabulário de papéis. Se ele conviver com o do CIAARA sem casamento explícito, passam a existir
+  **dois** pontos únicos de verdade — que é a negação do `RF-DS-01`, com a agravante de parecer
+  cumprido.
+- **FR-019**: Nenhuma biblioteca de componentes **além** da já decidida MUST ser instalada. É
   proibição do BRIEF §1, sem discussão.
 
 ### Key Entities
@@ -217,8 +263,8 @@ Esta fatia não introduz entidade de dado. O vocabulário visual é configuraç�
 
 - **SC-001**: Uma cor semântica nova é acrescentada em **um** lugar e passa a valer em toda tela que
   a declara, com **zero** edições em qualquer outro arquivo.
-- **SC-002**: A contagem de valores literais de cor fora do ponto único é **zero**, medida por
-  verificação automática que reprova a entrega.
+- **SC-002**: A contagem de **violações** do FR-001 no repositório é **zero** — somando cor escrita
+  à mão e utilitário da paleta padrão —, medida por verificação bloqueante.
 - **SC-003**: A escolha de tema sobrevive a **100%** dos recarregamentos e das aberturas de nova
   aba, na mesma sessão de navegador.
 - **SC-004**: **Nenhum** quadro intermediário exibe o tema não escolhido durante o carregamento,
@@ -227,13 +273,30 @@ Esta fatia não introduz entidade de dado. O vocabulário visual é configuraç�
   limites de componente atingem 3:1, **nos dois temas**, com o valor de cada par registrado.
 - **SC-006**: A tipografia institucional carrega **sem nenhuma requisição a domínio externo**,
   verificável com a rede de terceiros bloqueada.
-- **SC-007**: A quantidade de arquivos com cor fora do vocabulário cai de **nove para cinco**.
-  Medido em 09/09/2026: os **quatro** que cravam cor literal em atributo de estilo são
-  `app/error.tsx`, `app/loading.tsx`, `app/not-found.tsx` e `components/faixa-de-ambiente.tsx`, e
-  são pagos **nesta fatia**. As **cinco** telas do Épico 3 ficam para a fatia (c), que vai
-  retrabalhá-las de qualquer forma. **As duas listas não se sobrepõem** — os quatro são raiz e
-  casca, nenhum é tela do Épico 3.
+- **SC-007**: **Cinco arquivos** são pagos nesta fatia, e a lista é nominal porque contagem sem
+  nome não se confere:
+
+  | Arquivo | O que tem hoje |
+  |---|---|
+  | `app/error.tsx` | cor literal em atributo de estilo |
+  | `app/loading.tsx` | cor literal em atributo de estilo |
+  | `app/not-found.tsx` | cor literal em atributo de estilo |
+  | `components/faixa-de-ambiente.tsx` | cor literal em atributo de estilo |
+  | `app/page.tsx` | **10 utilitários da paleta padrão** — não estava em lista nenhuma até 09/09/2026 |
+
+  ⚠️ **O `CLAUDE.md` fala em nove arquivos, e o número mistura duas coisas diferentes.** São quatro
+  com cor literal mais cinco telas do Épico 3. As cinco telas **não violam o FR-001**: medido em
+  09/09/2026, elas não usam cor nenhuma — nasceram sóbrias, com utilitário de forma e tamanho, sem
+  utilitário de cor. Elas ficam para a fatia (c) por não usarem **ainda** o vocabulário, o que é
+  outra coisa que não ter cor divergente. **Ao fim desta fatia a verificação passa com zero
+  violações mesmo com as cinco telas intactas.**
+
 - **SC-008**: `pnpm verificar` e o CI dão **veredito idêntico** sobre o mesmo commit.
+- **SC-009**: A vitrine exibe **100%** dos tokens do vocabulário — nenhum token existe sem aparecer
+  ali. É o que impede um token de nascer morto, declarado e nunca visto por ninguém.
+- **SC-010**: **Zero** variáveis de cor dos componentes base ficam sem par declarado com um token
+  CIAARA. Duas fontes de verdade para a mesma cor é a negação do objetivo, com a agravante de
+  parecer cumprido.
 
 ## Assumptions
 
