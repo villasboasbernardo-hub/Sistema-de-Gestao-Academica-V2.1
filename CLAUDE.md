@@ -311,7 +311,7 @@ Bernardo em 08/09/2026** (*"foram balizados por medição real e justificados na
    **1,20**. A fatia que construir o primeiro formulário precisa resolver, e encontra a medição
    registrada em vez de redescobri-la.
 
-**Os cinco achados do Épico 4, fatia (b) — e o primeiro não é de código:**
+**Os seis achados do Épico 4, fatia (b) — e o primeiro não é de código:**
 
 1. **Um pacote inteiro chegou ZERADO em disco, e o `tsc` não viu nada.** `d3-shape@3.2.0`, que a
    biblioteca de gráficos arrasta, tinha **40 arquivos preenchidos com NUL** — `package.json`
@@ -327,19 +327,28 @@ Bernardo em 08/09/2026** (*"foram balizados por medição real e justificados na
    passava a ter nove paradas, e *"`Tab` entra na grade e sai dela em um passo"* deixava de valer
    sem que nada acusasse. O cabeçalho virou **a linha 0 da grade**, que é o padrão ARIA, e ordenar
    passou a ser ativar a célula.
-3. **Dois testes de ponta a ponta decidiam por tempo**, e os dois passavam sozinhos e reprovavam na
-   suíte cheia — a dica ao apontar do emblema de teto e a medição do ponto de quebra. Com quatro
-   processos de trabalho, o ponteiro nem sempre entra no elemento e o leiaute nem sempre é refeito a
-   tempo. ⚠️ **É o V-4 do Épico 3 de novo, e ele continua sendo o pior modo de falha possível,
-   porque parece azar.** Resolvido com gatilho determinístico (foco, não ponteiro) e `expect.poll`,
-   que reexecuta.
-4. **Três verificações reprovaram lendo a PRÓPRIA documentação como violação.** A varredura de
+3. **Seletor por papel numa página que tem faixa de ambiente é AMBÍGUO, e ambiguidade não se
+   resolve com mais tempo.** Três casos instáveis no CI, em três lugares diferentes, todos com a
+   mesma causa: `main` casava com o da página **e** com o do `app/loading.tsx`; `status` casava com
+   a faixa "AMBIENTE LOCAL" **e** com a mensagem procurada. ⚠️ **Violação de modo estrito falha na
+   hora — ela NÃO reexecuta**, então `expect` não salva. E a mensagem engana: ela começa com
+   *"expect(locator).toBeVisible() failed"* e só na terceira linha diz *"resolved to 2 elements"*.
+   ⚠️ **E o primeiro diagnóstico foi errado, com custo medido:** li como lentidão, aumentei o prazo,
+   e a instabilidade subiu **de dois casos para seis**. A correção é escopo — esperar pelo título da
+   vitrine, procurar a resposta dentro do `main` do formulário.
+4. **`focus()` programático não abre dica ao apontar do Radix.** Ela só abre no foco quando ele é
+   **visível** (`:focus-visible`), e o navegador não o aplica a foco programático quando a última
+   interação foi de ponteiro. O caso passava numa execução e reprovava na outra **no mesmo commit**,
+   porque o que decidia era o que tinha acontecido na página antes. A forma que não depende disso é
+   **pressionar tecla**: focar o vizinho e voltar com `Shift+Tab`. É também mais honesto — mede o
+   caminho de quem navega por teclado em vez de simular o resultado dele.
+5. **Três verificações reprovaram lendo a PRÓPRIA documentação como violação.** A varredura de
    domínio do filtro leu *"ele não conhece instrutor"* do cabeçalho como se conhecesse; a de
    `--texto-tenue` leu três frases **sobre** o token como usos dele. ⚠️ **Um teste que confunde a
    frase que promete a ausência com a violação ensina a apagar a documentação para ficar verde** —
    exatamente o contrário do que estes requisitos querem. Toda varredura desta fatia lê **código sem
    comentário**.
-5. **A suíte de unidade reprovou uma vez por cache frio, logo depois do `pnpm install`.** Os dois
+6. **A suíte de unidade reprovou uma vez por cache frio, logo depois do `pnpm install`.** Os dois
    casos que instanciam o ESLint estouraram os 30 segundos; na execução seguinte levaram 6. Não foi
    corrigido porque não se reproduziu — fica registrado para não custar uma investigação no dia em
    que aparecer no CI.
