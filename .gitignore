@@ -77,3 +77,13 @@ venv/
 # publico por decisao. Ignorar o diretorio todo atropelaria isso.
 /scripts/etl/dados/bruto/
 /scripts/etl/dados/normalizado/
+
+# Pasta de entrega de arquivo bruto — NAO versionada desde 11/09/2026.
+#
+# O brasao institucional foi entregue aqui e versionado em `public/marca/`, com
+# procedencia escrita. `images/` guardava copias BYTE A BYTE IDENTICAS dos mesmos
+# dois arquivos: 6,5 MB repetidos num repositorio publico, e — pior que o peso —
+# dois lugares de onde alguem poderia importar o mesmo brasao.
+#
+# O local servido e `public/marca/`, e a procedencia vive ao lado dele.
+/images/
