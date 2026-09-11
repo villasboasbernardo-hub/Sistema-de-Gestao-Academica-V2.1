@@ -12,6 +12,22 @@
  *
  * Server Component: lê o ponto único no servidor. Só o alternador é folha de cliente.
  */
+import {
+  AmostraAlertaEteto,
+  AmostraCampo,
+  AmostraDialogoConfirmacao,
+  AmostraEmblemasDeStatus,
+  AmostraEsqueleto,
+  AmostraEstadoVazio,
+  AmostraFiltroAvancado,
+  AmostraIndicadores,
+  AmostraNomeInstrutor,
+  AmostraSeletorInstrutor,
+  AmostraSeletorTurma,
+  AmostraGraficos,
+  AmostraTabelaDensa,
+  AmostraTabelaVazia,
+} from "@/app/estilo/amostras";
 import { SeletorDeTema } from "@/components/ciaara/seletor-tema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -281,6 +297,67 @@ export default function Vitrine() {
             </div>
           ))}
         </div>
+      </Secao>
+
+      {/* ═══ COMPONENTES CIAARA — a fatia (b) (`FR-027`, `SC-001`) ═════════════════════════════
+          ⚠️ CADA COMPONENTE PRECISA DE AMOSTRA, e isso é contado: `tests/e2e/vitrine.spec.ts`
+          varre `components/ciaara/` e `components/graficos/` e reprova se algum ficar de fora.
+          É a invariante I-5 da fatia (a) estendida de token para componente. */}
+
+      <Secao titulo="Indicador — número grande, e ele não calcula nada">
+        <AmostraIndicadores />
+      </Secao>
+
+      <Secao titulo="Emblema de status — os nove tons, cada um com rótulo textual obrigatório">
+        <AmostraEmblemasDeStatus />
+      </Secao>
+
+      <Secao titulo="Campo obrigatório — o traço é `--texto-tenue`, e a obrigatoriedade vai no atributo">
+        <AmostraCampo />
+      </Secao>
+
+      <Secao titulo="Esqueleto de tabela — silhueta no formato do conteúdo, sem pulsação para quem pediu menos movimento">
+        <AmostraEsqueleto />
+      </Secao>
+
+      <Secao titulo="Estado vazio — distingue “não há” de “você não vê”">
+        <AmostraEstadoVazio />
+      </Secao>
+
+      <Secao titulo="Diálogo de confirmação — a consequência, que neste sistema nunca é perda">
+        <AmostraDialogoConfirmacao />
+      </Secao>
+
+      <Secao titulo="Filtro avançado — genérico, e ele não conhece domínio nenhum">
+        <AmostraFiltroAvancado />
+      </Secao>
+
+      <Secao titulo="Nome de instrutor — P/G, especialidade e o nome COMPLETO, com o nome de guerra em negrito">
+        <AmostraNomeInstrutor />
+      </Secao>
+
+      <Secao titulo="Seletor de instrutor — a lista chega desordenada e aparece por antiguidade">
+        <AmostraSeletorInstrutor />
+      </Secao>
+
+      <Secao titulo="Seletor de turma — escolha simples, sem busca">
+        <AmostraSeletorTurma />
+      </Secao>
+
+      <Secao titulo="Tabela densa — todas as linhas, três densidades, e o teclado do documento 23 §8.3">
+        <AmostraTabelaDensa />
+      </Secao>
+
+      <Secao titulo="Tabela sem linhas — o contêiner continua alcançável, e o vazio diz qual vazio é">
+        <AmostraTabelaVazia />
+      </Secao>
+
+      <Secao titulo="Gráficos — forma e rótulo, porque a cor sozinha não distingue série nenhuma">
+        <AmostraGraficos />
+      </Secao>
+
+      <Secao titulo="Alerta de conformidade e emblema de teto — avisam, e não impedem">
+        <AmostraAlertaEteto />
       </Secao>
     </main>
   );
