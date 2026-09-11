@@ -176,6 +176,39 @@ export const CONTRATO = {
         avisaServidor: false,
         limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
       },
+      /*
+       * ⚠️ A ORDENAÇÃO VIAJA EM DOIS PARÂMETROS, E NÃO NUM SÓ. Um valor composto — `rotulo:asc` —
+       * caberia num parâmetro de texto e obrigaria a inventar uma gramática que só este sistema
+       * entende: quem edita a barra de endereço à mão erra o separador, e a degradação teria de
+       * adivinhar qual das duas metades salvar. Dois parâmetros de escolha degradam cada um por si.
+       *
+       * ⚠️ `sentido` TEM PADRÃO ENTRE AS OPÇÕES, ao contrário dos filtros. Aqui o padrão não é "sem
+       * recorte": ordenar sem sentido declarado é ordenar crescente, e é isso que o padrão diz.
+       */
+      ordenar_por: {
+        nome: "ordenar_por",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: ["rotulo", "sigla", "horas"],
+        historico: "substitui",
+        avisaServidor: false,
+      },
+      sentido: {
+        nome: "sentido",
+        tipo: "escolha",
+        padrao: "crescente",
+        opcoes: ["crescente", "decrescente"],
+        historico: "substitui",
+        avisaServidor: false,
+      },
+      filtro: {
+        nome: "filtro",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: false,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
+      },
     },
   },
 } as const satisfies Record<string, ContratoDeRota>;

@@ -31,7 +31,12 @@ import {
 import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { SeletorTurma } from "@/components/ciaara/seletor-turma";
-import { TabelaDensa, type Coluna, type Densidade } from "@/components/ciaara/tabela-densa";
+import {
+  TabelaDensa,
+  type Coluna,
+  type Densidade,
+  type Ordem,
+} from "@/components/ciaara/tabela-densa";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
 import { GraficoLinha } from "@/components/graficos/grafico-linha";
 import { GraficoPizza } from "@/components/graficos/grafico-pizza";
@@ -460,6 +465,61 @@ export function AmostraTabelaDensa() {
       <p className="text-texto-suave text-xs">
         45 linhas, todas renderizadas. <kbd>Tab</kbd> entra e sai em um passo; as setas andam célula
         a célula; <kbd>PageDown</kbd> salta 20 linhas e para na última.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * A mesma tabela, com o recorte vindo da URL (`FR-012`, `SC-009`).
+ *
+ * ⚠️ ELA PROVA O QUE O `CHK012` APONTOU. Até a fatia (b) a tabela guardava ordenação e filtro por
+ * dentro e **não os expunha** — era a única divergência conhecida entre o que a fatia entregou e o
+ * que o documento 25 prescreve, e impedia o recorte de virar link.
+ *
+ * ⚠️ E A AMOSTRA DE CIMA CONTINUA EXISTINDO, NÃO CONTROLADA. As duas juntas são a prova de que as
+ * propriedades são **opcionais de verdade**: se a de cima precisasse mudar, a fatia (b) teria
+ * regredido, e toda chamada existente no sistema teria de ser reescrita.
+ *
+ * ⚠️ A ORDENAÇÃO É DE APRESENTAÇÃO, e continua sendo. Levá-la para a URL não a torna regra de
+ * domínio: a antiguidade segue na função pura, aplicada antes de a tabela ver a linha.
+ */
+export function AmostraTabelaNaUrl() {
+  const [ordenarPor, definirOrdenarPor] = useParametro("/estilo", "ordenar_por");
+  const [sentido, definirSentido] = useParametro("/estilo", "sentido");
+  const [filtro, definirFiltro] = useParametro("/estilo", "filtro");
+
+  const ordem =
+    ordenarPor === "" ? null : { chave: ordenarPor, crescente: sentido !== "decrescente" };
+
+  const aoOrdenar = (proxima: Ordem | null) => {
+    if (proxima === null) {
+      // Voltar à ordem original apaga os dois — deixar o sentido pendurado sujaria o link.
+      void definirOrdenarPor(null);
+      void definirSentido(null);
+      return;
+    }
+    void definirOrdenarPor(proxima.chave);
+    void definirSentido(proxima.crescente ? "crescente" : "decrescente");
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <TabelaDensa
+        linhas={LINHAS_DA_AMOSTRA}
+        colunas={COLUNAS_DA_AMOSTRA}
+        chaveLinha={(l) => l.id}
+        rotulo="Registros na URL"
+        densidade="compacta"
+        comBusca
+        ordem={ordem}
+        aoOrdenar={aoOrdenar}
+        busca={filtro}
+        aoBuscar={(proxima) => void definirFiltro(proxima)}
+      />
+      <p data-slot="amostra-tabela-na-url" className="text-texto-suave text-xs">
+        Ordene por uma coluna e filtre: o recorte vai para a barra de endereço. Recarregue ou
+        compartilhe o endereço — a tabela abre no mesmo estado.
       </p>
     </div>
   );

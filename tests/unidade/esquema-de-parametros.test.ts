@@ -77,7 +77,15 @@ describe("`FR-007` · parâmetro fora do contrato é ignorado, e a tela não que
      * lado: entrada inteiramente estranha não produz valor estranho.
      */
     const { valores, descartes } = lerParametros("/estilo", url("qualquer=coisa"));
-    expect(valores).toEqual({ demo: "", categoria: "", etiquetas: [], busca: "" });
+    expect(valores).toEqual({
+      demo: "",
+      categoria: "",
+      etiquetas: [],
+      busca: "",
+      ordenar_por: "",
+      sentido: "crescente",
+      filtro: "",
+    });
     expect(descartes).toEqual([
       { parametro: "qualquer", motivo: "fora-do-contrato", recebido: "coisa" },
     ]);

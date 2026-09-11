@@ -99,13 +99,13 @@ prescreve deixa de existir.
 **Teste independente**: montar a tabela com ordenação e filtro vindos de fora, mudá-los por fora, e
 ver a tabela acompanhar.
 
-- [ ] T027 [US2] Acrescentar `ordem` e `aoOrdenar` como propriedades **opcionais** em `components/ciaara/tabela-densa.tsx` (`FR-012`, `FR-012.1`)
-- [ ] T028 [US2] Acrescentar `busca` e `aoBuscar` como propriedades **opcionais** em `components/ciaara/tabela-densa.tsx` (`FR-012`)
-- [ ] T029 [US2] Garantir **fonte única** em `components/ciaara/tabela-densa.tsx` (`FR-012.1`): a presença da propriedade decide quem manda ⚠️ **aceitar as duas ao mesmo tempo faz elas divergirem no primeiro clique** — é a armadilha conhecida deste padrão
-- [ ] T030 [P] [US2] Escrever `tests/unidade/tabela-densa-controlada.test.ts` provando os dois modos, controlado e não controlado (`SC-009`)
-- [ ] T031 [US2] **Provar não regressão**: rodar `pnpm test:e2e tests/e2e/vitrine.spec.ts` e `pnpm test:unidade` **sem alterar um teste sequer** da fatia (b) (`SC-010`) ⚠️ **se algum precisou mudar, a propriedade não era opcional de verdade**
-- [ ] T031.1 [US2] Conferir que `seletor-instrutor.tsx`, `filtro-avancado.tsx` e `lista-navegavel.tsx` **continuam com o estado interno intacto** (`FR-013`) ⚠️ **A não regressão da T031 mede só a tabela.** Os outros três guardam estado **efêmero**, que o documento 25 §3 mantém fora da URL de propósito — levá-los junto seria o erro oposto, e nada estava conferindo isso
-- [ ] T032 [US2] Acrescentar em `app/estilo/amostras.tsx` uma amostra da tabela **controlada**, com o recorte vindo da URL (`FR-012`)
+- [X] T027 [US2] Acrescentar `ordem` e `aoOrdenar` como propriedades **opcionais** em `components/ciaara/tabela-densa.tsx` (`FR-012`, `FR-012.1`)
+- [X] T028 [US2] Acrescentar `busca` e `aoBuscar` como propriedades **opcionais** em `components/ciaara/tabela-densa.tsx` (`FR-012`)
+- [X] T029 [US2] Garantir **fonte única** em `components/ciaara/tabela-densa.tsx` (`FR-012.1`): a presença da propriedade decide quem manda ⚠️ **aceitar as duas ao mesmo tempo faz elas divergirem no primeiro clique** — é a armadilha conhecida deste padrão
+- [X] T030 [P] [US2] Escrever `tests/unidade/tabela-densa-controlada.test.ts` provando os dois modos, controlado e não controlado (`SC-009`)
+- [X] T031 [US2] **Provar não regressão**: rodar `pnpm test:e2e tests/e2e/vitrine.spec.ts` e `pnpm test:unidade` **sem alterar um teste sequer** da fatia (b) (`SC-010`) ⚠️ **se algum precisou mudar, a propriedade não era opcional de verdade**
+- [X] T031.1 [US2] Conferir que `seletor-instrutor.tsx`, `filtro-avancado.tsx` e `lista-navegavel.tsx` **continuam com o estado interno intacto** (`FR-013`) ⚠️ **A não regressão da T031 mede só a tabela.** Os outros três guardam estado **efêmero**, que o documento 25 §3 mantém fora da URL de propósito — levá-los junto seria o erro oposto, e nada estava conferindo isso
+- [X] T032 [US2] Acrescentar em `app/estilo/amostras.tsx` uma amostra da tabela **controlada**, com o recorte vindo da URL (`FR-012`)
 
 **Ponto de conferência**: a suíte da fatia (b) verde, sem edição.
 

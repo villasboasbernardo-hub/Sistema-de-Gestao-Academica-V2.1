@@ -197,3 +197,45 @@ test.describe("`SC-014` · oito teclas produzem UMA entrada de histórico, não 
  * uma tela com a URL impecável e a consulta velha — e é justamente esse o defeito que o `FR-004.1`
  * existe para pegar.
  */
+
+test.describe("`FR-012` · a tabela densa entrega o recorte a quem chama", () => {
+  const TABELA_NA_URL =
+    'section:has([data-slot="amostra-tabela-na-url"]) [data-slot="tabela-densa"]';
+
+  test("ordenar por uma coluna escreve na barra de endereço", async ({ page }) => {
+    /*
+     * ⚠️ É A METADE QUE O TESTE DE UNIDADE NÃO ALCANÇA. Lá se prova a LEITURA: dada uma ordenação,
+     * a tabela desenha naquela ordem. Aqui se prova a ESCRITA — que o clique sai do componente em
+     * vez de ficar guardado dentro dele, que era exatamente o achado `CHK012`.
+     */
+    await abrirVitrine(page);
+
+    await page.locator(`${TABELA_NA_URL} th`, { hasText: "Curso" }).first().click();
+    await expect.poll(() => parametro(page, "ordenar_por")).toBe("sigla");
+
+    // Segundo clique inverte o sentido; o terceiro volta à ordem original e limpa os DOIS.
+    await page.locator(`${TABELA_NA_URL} th`, { hasText: "Curso" }).first().click();
+    await expect.poll(() => parametro(page, "sentido")).toBe("decrescente");
+
+    await page.locator(`${TABELA_NA_URL} th`, { hasText: "Curso" }).first().click();
+    await expect.poll(() => parametro(page, "ordenar_por")).toBeNull();
+    expect(parametro(page, "sentido"), "o sentido ficou pendurado sem coluna").toBeNull();
+  });
+
+  test("link direto com ordenação abre a tabela já ordenada", async ({ page }) => {
+    await abrirVitrine(page, "?ordenar_por=horas&sentido=decrescente");
+    await expect(page.locator(`${TABELA_NA_URL} th[aria-sort="descending"]`)).toHaveCount(1);
+  });
+
+  test("⚠️ a tabela NÃO controlada ao lado continua sem escrever na URL", async ({ page }) => {
+    // É a prova de que a propriedade é opcional de verdade: a amostra da fatia (b) segue guardando
+    // a ordenação por dentro, e nenhuma chamada existente precisou mudar.
+    await abrirVitrine(page);
+    const naMemoria =
+      'section:has(:text("45 linhas, todas renderizadas")) [data-slot="tabela-densa"]';
+
+    await page.locator(`${naMemoria} th`, { hasText: "Curso" }).first().click();
+    await expect(page.locator(`${naMemoria} th[aria-sort="ascending"]`)).toHaveCount(1);
+    expect(parametro(page, "ordenar_por"), "a tabela não controlada escreveu na URL").toBeNull();
+  });
+});

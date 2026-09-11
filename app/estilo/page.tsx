@@ -28,6 +28,7 @@ import {
   AmostraSeletorTurma,
   AmostraGraficos,
   AmostraTabelaDensa,
+  AmostraTabelaNaUrl,
   AmostraTabelaVazia,
 } from "@/app/estilo/amostras";
 import { SeletorDeTema } from "@/components/ciaara/seletor-tema";
@@ -360,6 +361,10 @@ export default function Vitrine() {
 
       <Secao titulo="Tabela sem linhas — o contêiner continua alcançável, e o vazio diz qual vazio é">
         <AmostraTabelaVazia />
+      </Secao>
+
+      <Secao titulo="Tabela densa na URL — a MESMA tabela, com o recorte vindo do endereço">
+        <AmostraTabelaNaUrl />
       </Secao>
 
       <Secao titulo="Gráficos — forma e rótulo, porque a cor sozinha não distingue série nenhuma">
