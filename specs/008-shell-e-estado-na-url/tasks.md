@@ -52,15 +52,15 @@ espera funcionalidade.
 - [X] T010 Trocar a guarda de `app/(auth)/login/FormularioDeLogin.tsx` por `destinoSeguro` (`FR-042`) ⚠️ **a guarda atual é `startsWith("/")`**, e um endereço com duas barras começa com barra
 - [X] T011 Escrever `tests/e2e/destino-do-login.spec.ts` (`FR-043`, `SC-018`, `SC-019`) medindo **onde o navegador parou**, e não o que a função devolveu ⚠️ **asserção sobre a condição passaria com o código de hoje**, que é o que tem o defeito
 - [X] T012 **Conferir a T011 por defeito deliberado**: repor `startsWith("/")` em `app/(auth)/login/FormularioDeLogin.tsx`, provar que o teste reprova, desfazer (`FR-042`) ⚠️ **portão nunca visto reprovando é afirmação, não prova**
-- [ ] T012.1 Abrir **PR próprio** com T008 a T012, preenchendo `.github/pull_request_template.md`, e **mesclar antes de seguir** (`FR-042`, `SC-019`) ⚠️ **Decisão de 11/09/2026, aplicada da análise.** Amarrar uma correção de segurança a 66 tarefas faz ela esperar a fatia inteira. ⚠️ **Não há exposição em produção hoje** — o projeto não tem URL de produção —, então isto é higiene de entrega, não incêndio: correção viaja sozinha porque é correção
+- [X] T012.1 Abrir **PR próprio** com T008 a T012, preenchendo `.github/pull_request_template.md`, e **mesclar antes de seguir** (`FR-042`, `SC-019`) ⚠️ **Decisão de 11/09/2026, aplicada da análise.** Amarrar uma correção de segurança a 66 tarefas faz ela esperar a fatia inteira. ⚠️ **Não há exposição em produção hoje** — o projeto não tem URL de produção —, então isto é higiene de entrega, não incêndio: correção viaja sozinha porque é correção
 
 ### O contrato de parâmetros
 
-- [ ] T013 Escrever `lib/navegacao/contrato.ts` com as rotas desta fatia, cada parâmetro trazendo tipo, padrão, política de histórico, aviso ao servidor e `RF-` de origem (`FR-001` a `FR-005`)
-- [ ] T014 Escrever `lib/navegacao/esquema.ts` — validação por esquema na leitura, com degradação para o padrão (`FR-006`, `FR-007`, `FR-041`, `SC-017`)
-- [ ] T015 [P] Escrever `tests/unidade/contrato-de-parametros.test.ts` (`SC-007`) — todo parâmetro tem os cinco campos, e **a origem aponta para um `RF-` que existe**
-- [ ] T016 [P] Escrever `tests/unidade/esquema-de-parametros.test.ts` — degradação nos quatro tipos, **lista degradando por item** e os demais parâmetros preservados (`FR-006`)
-- [ ] T017 Fazer o parâmetro fora do contrato **não compilar** em `lib/navegacao/contrato.ts` (`FR-001`, `SC-006`) ⚠️ **é o que separa isto da tabela que existe desde a Fase 2 e que ninguém era obrigado a seguir**
+- [X] T013 Escrever `lib/navegacao/contrato.ts` com as rotas desta fatia, cada parâmetro trazendo tipo, padrão, política de histórico, aviso ao servidor e `RF-` de origem (`FR-001` a `FR-005`)
+- [X] T014 Escrever `lib/navegacao/esquema.ts` — validação por esquema na leitura, com degradação para o padrão (`FR-006`, `FR-007`, `FR-041`, `SC-017`)
+- [X] T015 [P] Escrever `tests/unidade/contrato-de-parametros.test.ts` (`SC-007`) — todo parâmetro tem os cinco campos, e **a origem aponta para um `RF-` que existe**
+- [X] T016 [P] Escrever `tests/unidade/esquema-de-parametros.test.ts` — degradação nos quatro tipos, **lista degradando por item** e os demais parâmetros preservados (`FR-006`)
+- [X] T017 Fazer o parâmetro fora do contrato **não compilar** em `lib/navegacao/contrato.ts` (`FR-001`, `SC-006`) ⚠️ **é o que separa isto da tabela que existe desde a Fase 2 e que ninguém era obrigado a seguir**
 
 **Ponto de conferência**: `pnpm test:unidade` verde, e o defeito da `main` corrigido e provado.
 
