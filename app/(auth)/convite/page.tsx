@@ -16,14 +16,15 @@ export default function Convite() {
   return (
     <main className="mx-auto max-w-sm p-8">
       <h1 className="text-lg font-semibold">Definir senha</h1>
-      <p className="mt-1 text-sm opacity-80">
+      <p className="mt-1 text-texto-suave text-sm">
         Você foi convidado para o sistema de gestão acadêmica da CIAARA-11. Escolha uma senha para
         concluir o primeiro acesso.
       </p>
 
       <FormularioDeSenha rotulo="Concluir primeiro acesso" />
 
-      <p className="mt-6 text-xs opacity-70">
+      {/* veste: a dica sobre a política de senha — texto fixo, nunca dado */}
+      <p className="mt-6 text-texto-tenue text-xs">
         Mínimo de 12 caracteres. Senhas presentes em vazamentos públicos conhecidos são recusadas —
         não é frescura: senha reutilizada é a ameaça A-7 do modelo de segurança.
       </p>

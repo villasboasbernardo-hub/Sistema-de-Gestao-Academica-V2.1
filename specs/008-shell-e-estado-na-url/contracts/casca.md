@@ -113,3 +113,60 @@ Cada segmento tem retorno visual e contenção de erro próprios (`FR-020`, `RF-
 
 ⚠️ **A falha de uma região não derruba a casca.** É o que separa uma tela com um painel quebrado de
 uma sessão perdida — e é a razão de a contenção ser por segmento, e não uma só na raiz.
+
+---
+
+## Submissão a Bernardo — as três perguntas, com o que está implementado hoje
+
+**Estado em 11/09/2026:** a casca está de pé e o menu abaixo é o que ela desenha. **Ele é rascunho
+até esta seção ser respondida** (`FR-017.1`, `SC-012`), e a implementação foi escrita para que a
+resposta custe uma edição em `lib/navegacao/menu.ts`, e nada mais.
+
+| # | Rótulo | Rota | Estado da tela |
+|---|---|---|---|
+| 1 | Início | `/inicio` | **em breve** — História 4 desta fatia |
+| 2 | Cursos | `/cursos` | em breve — Épico 7 |
+| 3 | Cronograma | `/cronograma` | em breve — Épico 9 |
+| 4 | Atividades | `/atividades` | em breve — Épico 8 |
+| 5 | Instrutores | `/instrutores` | em breve — Épico 5 |
+| 6 | Disciplinas | `/disciplinas` | em breve — Épico 6 |
+| 7 | Administração | `/admin/usuarios` | **pronta** |
+
+### Q1 — A ordem das entradas está certa?
+
+A lista acima veio da **árvore de rotas do documento 24 §1**, que é o alvo da v2.1 — **não** o menu
+que está em produção. O `RF-NAV-02` é **[PRESERVADO]** e diz que a troca de mecanismo de estado *"não
+autoriza reorganizar o menu nem renomear entradas"*. Derivar da árvore-alvo **é** reorganizar sem
+perceber, e só quem vê a v2.0 sabe se aconteceu.
+
+### Q2 — "Disciplinas" é o rótulo que a v2.0 usa no menu?
+
+A decisão **P-14** fixou o termo em schema, código e documentação. Ela não disse nada sobre o texto
+do menu da v2.0, que pode trazer o antigo. **Se trouxer, o `RF-NAV-02` manda preservar o antigo na
+tela** — e a divergência entre o rótulo e o schema passa a ser pretendida, não descuido.
+
+### Q3 — Administração é entrada única ou grupo?
+
+Hoje é **entrada única**, apontando para Usuários; Permissões é alcançada por uma aba dentro da
+própria tela de administração. Foi resolvido assim de propósito, **sem mexer no menu**, porque é o
+mesmo padrão que o `RF-CURSO-02` manda usar para Avaliações e Relatório: a função é alcançada pela
+tela de que ela faz parte.
+
+### Uma decisão de projeto que também precisa do seu aval
+
+**As entradas sem tela aparecem no menu, marcadas "em breve".** A alternativa era mostrar só o que
+existe — e aí o menu cresceria a cada épico, ensinando quem usa a reaprender a navegação sete vezes.
+⚠️ **O risco da escolha atual é parecer quebrado**; o risco da outra é contrariar o `RF-NAV-02`, que
+manda manter os mesmos pontos de entrada de hoje.
+
+### Registro da validação
+
+| Item | Resposta | Data |
+|---|---|---|
+| Q1 · ordem | *(pendente)* | — |
+| Q2 · rótulo de Disciplinas | *(pendente)* | — |
+| Q3 · Administração única ou grupo | *(pendente)* | — |
+| Entradas futuras visíveis | *(pendente)* | — |
+
+⚠️ **ENQUANTO ESTA TABELA TIVER "pendente", O `FR-017` NÃO É VERIFICÁVEL** — e é por isso que ela
+existe em vez de a validação ser dada por feita.

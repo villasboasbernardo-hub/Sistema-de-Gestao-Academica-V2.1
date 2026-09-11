@@ -2,29 +2,64 @@
  * Tema claro e noturno: escolha, persistência e — o que importa — AUSÊNCIA DE FLASH.
  * (`FR-006` a `FR-010`, `SC-003`, `SC-004`)
  *
- * ⚠️ ESTES TESTES RODAM NA VITRINE porque, até a fatia (c), não existe cabeçalho nem navegação.
- * Sem ela não haveria onde clicar, e a história 2 sairia da fatia sem que ninguém pudesse
- * exercitá-la.
+ * ⚠️ **ELES MUDARAM DE LUGAR EM 11/09/2026, E O MOTIVO É O `FR-018`.** Até a fatia (b) o alternador
+ * morava na vitrine, porque não existia cabeçalho nem navegação — sem ele não haveria onde clicar.
+ * Com a casca de pé, o alternador definitivo vive no cabeçalho e **o da vitrine saiu**: manter os
+ * dois seria a duplicação que o `CHK019` previu.
+ *
+ * ⚠️ **SÓ OS DOIS CASOS QUE CLICAM PRECISAM DE SESSÃO.** Os demais leem preferência do sistema,
+ * armazenamento e a primeira classe escrita na raiz — nada disso exige alternador, e mantê-los na
+ * vitrine preserva a medição do flash na tela mais pesada do sistema, que é onde ela é mais dura.
+ *
+ * ⚠️ **E A PERSISTÊNCIA CONTINUA SENDO CONFERIDA NA VITRINE**, de propósito: o tema é do documento
+ * inteiro, e provar a escolha numa rota e o efeito noutra é prova mais forte que fazer as duas na
+ * mesma tela.
  */
 import { expect, test, type Page } from "@playwright/test";
 
+import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+
 const VITRINE = "/estilo";
+
+/** A tela autenticada onde o alternador existe. Serve de ponto de clique, não de objeto de teste. */
+const COM_CABECALHO = "/admin/usuarios";
+
+let EMAIL = "";
+let contaPronta: Promise<void> | undefined;
+
+/**
+ * ⚠️ A CONTA NASCE SÓ QUANDO ALGUÉM PRECISA DELA, e não num `beforeAll`. Três dos cinco casos desta
+ * suíte não têm sessão: criar conta para todos faria **todo** processo de trabalho falar com a CLI
+ * do Supabase ao mesmo tempo — que é exatamente a falha de contenção medida em 11/09/2026.
+ */
+async function garantirConta(processo: number): Promise<string> {
+  EMAIL = emailDeTeste("tema", processo);
+  contaPronta ??= criarConta(EMAIL, `USR-TEMA-${processo}`);
+  await contaPronta;
+  return EMAIL;
+}
+
+test.afterAll(async () => {
+  if (contaPronta) await apagarConta(EMAIL);
+});
 
 /** A classe que o provedor escreve no elemento raiz. */
 const classeDoTema = (page: Page) => page.evaluate(() => document.documentElement.className);
 
 test.describe("US2 · tema escolhido e lembrado", () => {
-  test("a escolha do noturno sobrevive ao recarregamento e a outra aba", async ({
+  test("a escolha do noturno atravessa a navegação e a aba nova", async ({
     page,
     context,
-  }) => {
-    await page.goto(VITRINE);
+  }, info) => {
+    await entrar(page, await garantirConta(info.workerIndex), COM_CABECALHO);
     await page.getByTestId("tema-dark").click();
     await expect.poll(() => classeDoTema(page)).toContain("dark");
 
-    await page.reload();
+    await page.goto(VITRINE);
     await expect
-      .poll(() => classeDoTema(page), { message: "a escolha não sobreviveu ao recarregamento" })
+      .poll(() => classeDoTema(page), {
+        message: "a escolha não atravessou a navegação para outra rota",
+      })
       .toContain("dark");
 
     const outraAba = await context.newPage();
@@ -43,16 +78,18 @@ test.describe("US2 · tema escolhido e lembrado", () => {
     await contexto.close();
   });
 
-  test("havendo escolha manual, ela prevalece sobre o sistema operacional", async ({ browser }) => {
+  test("havendo escolha manual, ela prevalece sobre o sistema operacional", async ({
+    browser,
+  }, info) => {
     // ⚠️ O sistema pede escuro; a pessoa escolheu claro. A escolha vence — é o `FR-008`, e é o
     // caso que uma implementação ingênua erra, porque o sinal do sistema chega depois.
     const contexto = await browser.newContext({ colorScheme: "dark" });
     const pagina = await contexto.newPage();
-    await pagina.goto(VITRINE);
+    await entrar(pagina, await garantirConta(info.workerIndex), COM_CABECALHO);
     await pagina.getByTestId("tema-light").click();
     await expect.poll(() => classeDoTema(pagina)).toContain("light");
 
-    await pagina.reload();
+    await pagina.goto(VITRINE);
     await expect
       .poll(() => classeDoTema(pagina), { message: "o sistema operacional atropelou a escolha" })
       .toContain("light");

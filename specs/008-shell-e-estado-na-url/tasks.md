@@ -117,19 +117,19 @@ ver a tabela acompanhar.
 
 **Teste independente**: entrar e alcançar qualquer tela existente sem digitar URL.
 
-- [ ] T033 [US3] Escrever `components/casca/casca-do-app.tsx` — **sem** marcador de cliente (`FR-019`, contrato de casca)
-- [ ] T034 [US3] Escrever `components/casca/cabecalho-do-app.tsx` com o brasão de tela e o alternador (`FR-032.1`) — **sem** marcador de cliente
-- [ ] T035 [US3] Escrever `components/casca/navegacao-lateral.tsx` — marcador de cliente **apenas** no abrir e fechar de tela estreita (`FR-019`) ⚠️ **um marcador na casca manda todas as telas para o navegador**, e o erro não aparece na checagem de tipos
-- [ ] T036 [US3] Derivar a lista de entradas em `lib/navegacao/menu.ts`, com a subtração do `RF-CURSO-02` aplicada ⚠️ **Avaliações e Relatório têm rota própria e ficam FORA do menu**
-- [ ] T037 [US3] Montar a casca em `app/(app)/layout.tsx`, **substituindo** o cabeçalho provisório do Épico 3 (`FR-016`, `FR-018`)
-- [ ] T038 [US3] Remover o alternador de tema de `app/estilo/page.tsx` (`FR-018`) ⚠️ **substituição, não duplicação** — dois alternadores é o que o `CHK019` previu
-- [ ] T038.1 [US3] Manter `app/estilo/` **fora** do grupo autenticado e sem a casca, e cobrir isso em `tests/e2e/vitrine.spec.ts` (`FR-038`, fecha o `CHK021`) ⚠️ **Era lacuna da lista, e o risco é concreto:** é este passo que mexe no layout que poderia capturá-la. Trinta e poucos casos de ponta a ponta abrem essa rota sem autenticar
-- [ ] T039 [US3] Implementar a acessibilidade da navegação em `components/casca/casca-do-app.tsx` e `navegacao-lateral.tsx`: marco anunciado, atalho para pular ao conteúdo, destino de foco ao trocar de rota (`FR-021`)
-- [ ] T040 [US3] Criar `loading.tsx` e `error.tsx` nos segmentos de `app/(app)/` (`FR-020`, `RN-DEG-01`)
-- [ ] T041 [P] [US3] Escrever `tests/e2e/shell.spec.ts` provando que **toda tela existente é alcançável sem digitar URL** (`SC-002`, `SC-003`)
-- [ ] T042 [P] [US3] Cobrir em `tests/e2e/acessibilidade.spec.ts` o atalho para o conteúdo, o marco de navegação e o foco ao trocar de rota (`FR-021`)
-- [ ] T043 [US3] Aplicar o vocabulário visual da fatia (a) às cinco telas do Épico 3, em `app/(auth)/` e `app/(app)/admin/` (`FR-022`)
-- [ ] T044 [US3] Acrescentar os três componentes de casca ao inventário de `docs/fase-2/23-Design-System-Tailwind-shadcn.md` §3.1, com arquivo, base e fronteira (`FR-015`, `SC-011`) ⚠️ **é emenda de documento normativo**, e fica registrado que o inventário passa a descrever casca além de vocabulário
+- [X] T033 [US3] Escrever `components/casca/casca-do-app.tsx` — **sem** marcador de cliente (`FR-019`, contrato de casca)
+- [X] T034 [US3] Escrever `components/casca/cabecalho-do-app.tsx` com o brasão de tela e o alternador (`FR-032.1`) — **sem** marcador de cliente
+- [X] T035 [US3] Escrever `components/casca/navegacao-lateral.tsx` — marcador de cliente **apenas** no abrir e fechar de tela estreita (`FR-019`) ⚠️ **um marcador na casca manda todas as telas para o navegador**, e o erro não aparece na checagem de tipos
+- [X] T036 [US3] Derivar a lista de entradas em `lib/navegacao/menu.ts`, com a subtração do `RF-CURSO-02` aplicada ⚠️ **Avaliações e Relatório têm rota própria e ficam FORA do menu**
+- [X] T037 [US3] Montar a casca em `app/(app)/layout.tsx`, **substituindo** o cabeçalho provisório do Épico 3 (`FR-016`, `FR-018`)
+- [X] T038 [US3] Remover o alternador de tema de `app/estilo/page.tsx` (`FR-018`) ⚠️ **substituição, não duplicação** — dois alternadores é o que o `CHK019` previu
+- [X] T038.1 [US3] Manter `app/estilo/` **fora** do grupo autenticado e sem a casca, e cobrir isso em `tests/e2e/vitrine.spec.ts` (`FR-038`, fecha o `CHK021`) ⚠️ **Era lacuna da lista, e o risco é concreto:** é este passo que mexe no layout que poderia capturá-la. Trinta e poucos casos de ponta a ponta abrem essa rota sem autenticar
+- [X] T039 [US3] Implementar a acessibilidade da navegação em `components/casca/casca-do-app.tsx` e `navegacao-lateral.tsx`: marco anunciado, atalho para pular ao conteúdo, destino de foco ao trocar de rota (`FR-021`)
+- [X] T040 [US3] Criar `loading.tsx` e `error.tsx` nos segmentos de `app/(app)/` (`FR-020`, `RN-DEG-01`)
+- [X] T041 [P] [US3] Escrever `tests/e2e/shell.spec.ts` provando que **toda tela existente é alcançável sem digitar URL** (`SC-002`, `SC-003`)
+- [X] T042 [P] [US3] Cobrir em `tests/e2e/acessibilidade.spec.ts` o atalho para o conteúdo, o marco de navegação e o foco ao trocar de rota (`FR-021`)
+- [X] T043 [US3] Aplicar o vocabulário visual da fatia (a) às cinco telas do Épico 3, em `app/(auth)/` e `app/(app)/admin/` (`FR-022`)
+- [X] T044 [US3] Acrescentar os três componentes de casca ao inventário de `docs/fase-2/23-Design-System-Tailwind-shadcn.md` §3.1, com arquivo, base e fronteira (`FR-015`, `SC-011`) ⚠️ **é emenda de documento normativo**, e fica registrado que o inventário passa a descrever casca além de vocabulário
 - [ ] T045 [US3] Submeter o rascunho de `specs/008-shell-e-estado-na-url/contracts/casca.md` a Bernardo e registrar a validação contra a v2.0 (`FR-017.1`, `SC-012`) ⚠️ **sem isto o `FR-017` não é verificável**, e as três perguntas do rascunho continuam sem resposta
 
 **Ponto de conferência**: o passo 5 do [quickstart](./quickstart.md), que só Bernardo faz.

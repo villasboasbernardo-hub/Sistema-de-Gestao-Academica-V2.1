@@ -77,9 +77,24 @@ async function linkDoUltimoEmail(destinatario: string): Promise<string> {
   throw new Error(`nenhum e-mail chegou para ${destinatario}`);
 }
 
-test.beforeAll(async () => {
-  await fetch(`${MAILPIT}/api/v1/messages`, { method: "DELETE" }).catch(() => undefined);
-});
+/*
+ * ⚠️ **A LIMPEZA GERAL DO MAILPIT SAIU DAQUI EM 11/09/2026, E ERA UMA CORRIDA ENTRE PROCESSOS.**
+ *
+ * O `beforeAll` roda **uma vez por processo de trabalho**, não uma vez por suíte — a mesma
+ * propriedade que já tinha custado um diagnóstico na criação de contas. Só que aqui ele apagava
+ * **a caixa inteira**, que é estado compartilhado: o processo B começava, limpava tudo, e o e-mail
+ * que o processo A tinha acabado de emitir sumia antes de A conseguir lê-lo. O caso reprovava com
+ * *"nenhum e-mail chegou"* — que se lê como defeito no envio, e não como teste apagando a prova do
+ * vizinho.
+ *
+ * ⚠️ **MEDIDO:** rodando `convite.spec.ts` duas vezes seguidas, a primeira passava e a segunda
+ * reprovava. O limite de envio foi descartado como causa por medição direta no contêiner de auth —
+ * `GOTRUE_RATE_LIMIT_EMAIL_SENT=360000`.
+ *
+ * ⚠️ **E A LIMPEZA NÃO FAZIA FALTA:** a busca já é por destinatário (`to:`), e cada caso usa um
+ * endereço com carimbo de tempo. Isolar por endereço é isolamento de verdade; limpar tudo é o
+ * contrário disso.
+ */
 
 // =================================================================================================
 // V-1 · e-mail nunca convidado NÃO cria conta — inclusive por chamada direta

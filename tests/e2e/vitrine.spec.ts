@@ -137,3 +137,26 @@ test.describe("US1 · a vitrine mostra o vocabulário de COMPONENTES inteiro", (
     }
   });
 });
+
+/**
+ * A vitrine fica **fora** do grupo autenticado, e sem a casca (`FR-038`, fecha o `CHK021`).
+ *
+ * ⚠️ **ESTE É O PASSO QUE PODERIA TÊ-LA CAPTURADO.** A História 3 construiu o layout do grupo
+ * autenticado; levar `/estilo` para dentro dele seria uma linha, e o efeito só apareceria como
+ * trinta e poucos casos de ponta a ponta pedindo login de repente. **Provar menos, custando mais.**
+ */
+test.describe("`FR-038` · a vitrine continua sem sessão e sem casca", () => {
+  test("ela abre sem autenticar", async ({ page }) => {
+    const resposta = await page.goto("/estilo");
+    expect(resposta?.status(), "a vitrine passou a exigir sessão").toBeLessThan(400);
+    expect(new URL(page.url()).pathname, "a vitrine redirecionou para o login").toBe("/estilo");
+  });
+
+  test("e não veste a casca do sistema", async ({ page }) => {
+    // ⚠️ A razão é a mesma da fatia (a): ela não exibe dado algum, e um menu aqui ofereceria
+    // destinos que quem olha uma paleta não pediu.
+    await abrirVitrine(page);
+    await expect(page.locator('[data-slot="casca-do-app"]')).toHaveCount(0);
+    await expect(page.getByRole("navigation", { name: "Navegação principal" })).toHaveCount(0);
+  });
+});

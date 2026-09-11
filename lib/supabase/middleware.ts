@@ -14,6 +14,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { CABECALHO_DO_CAMINHO } from "@/lib/navegacao/caminho";
+
 import { conferirAmbiente } from "@/lib/ambiente";
 
 /**
@@ -31,8 +33,22 @@ function ehRotaAberta(caminho: string): boolean {
   return SEM_SESSAO.some((r) => caminho === r || caminho.startsWith(`${r}/`));
 }
 
+/**
+ * Os cabeçalhos da requisição **com o caminho junto**, para a casca poder marcar a entrada ativa
+ * sem virar componente de cliente (`FR-016`).
+ *
+ * ⚠️ ELE É MONTADO A CADA CHAMADA, E NÃO GUARDADO NUMA VARIÁVEL. `requisicao.cookies.set()` altera
+ * o cabeçalho de cookie da própria requisição — copiar os cabeçalhos **antes** da renovação da
+ * sessão mandaria adiante os cookies velhos, e a sessão renovada não chegaria à tela.
+ */
+function cabecalhosComCaminho(requisicao: NextRequest): Headers {
+  const cabecalhos = new Headers(requisicao.headers);
+  cabecalhos.set(CABECALHO_DO_CAMINHO, requisicao.nextUrl.pathname);
+  return cabecalhos;
+}
+
 export async function renovarSessao(requisicao: NextRequest) {
-  let resposta = NextResponse.next({ request: requisicao });
+  let resposta = NextResponse.next({ request: { headers: cabecalhosComCaminho(requisicao) } });
   const caminho = requisicao.nextUrl.pathname;
 
   // ⚠️ SEM CONFIGURAÇÃO, A ROTA PROTEGIDA É NEGADA — e isto CUMPRE o RN-DEG-01, não o excetua.
@@ -65,7 +81,7 @@ export async function renovarSessao(requisicao: NextRequest) {
           for (const { name, value } of cookiesParaGravar) {
             requisicao.cookies.set(name, value);
           }
-          resposta = NextResponse.next({ request: requisicao });
+          resposta = NextResponse.next({ request: { headers: cabecalhosComCaminho(requisicao) } });
           for (const { name, value, options } of cookiesParaGravar) {
             resposta.cookies.set(name, value, options);
           }

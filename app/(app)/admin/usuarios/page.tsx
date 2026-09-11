@@ -77,7 +77,7 @@ export default async function Usuarios() {
   return (
     <section>
       <h1 className="text-lg font-semibold">Usuários</h1>
-      <p className="mt-1 text-sm opacity-80">
+      <p className="mt-1 text-texto-suave text-sm">
         {data?.length ?? 0} cadastros. O acesso é <strong>somente por convite</strong>: não há
         autocadastro, e desativar nunca apaga.
       </p>
@@ -90,13 +90,27 @@ export default async function Usuarios() {
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th className="border px-2 py-1 text-left">Nome</th>
-              <th className="border px-2 py-1 text-left">E-mail</th>
-              <th className="border px-2 py-1 text-left">Perfil</th>
-              <th className="border px-2 py-1 text-left">Escopo</th>
-              <th className="border px-2 py-1 text-left">Situação</th>
-              <th className="border px-2 py-1 text-left">Último acesso</th>
-              <th className="border px-2 py-1 text-left">Ações</th>
+              <th className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left">
+                Nome
+              </th>
+              <th className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left">
+                E-mail
+              </th>
+              <th className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left">
+                Perfil
+              </th>
+              <th className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left">
+                Escopo
+              </th>
+              <th className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left">
+                Situação
+              </th>
+              <th className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left">
+                Último acesso
+              </th>
+              <th className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left">
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -104,17 +118,19 @@ export default async function Usuarios() {
               const situacao = situacaoDa(linha);
               return (
                 <tr key={linha.id}>
-                  <td className="border px-2 py-1">{linha.nome}</td>
-                  <td className="border px-2 py-1">{linha.email}</td>
-                  <td className="border px-2 py-1">{linha.perfil}</td>
-                  <td className="border px-2 py-1">{linha.escopo_curso ?? "—"}</td>
-                  <td className="border px-2 py-1">{ROTULO[situacao]}</td>
-                  <td className="border px-2 py-1">
+                  <td className="border-borda text-texto border px-2 py-1">{linha.nome}</td>
+                  <td className="border-borda text-texto border px-2 py-1">{linha.email}</td>
+                  <td className="border-borda text-texto border px-2 py-1">{linha.perfil}</td>
+                  <td className="border-borda text-texto border px-2 py-1">
+                    {linha.escopo_curso ?? "—"}
+                  </td>
+                  <td className="border-borda text-texto border px-2 py-1">{ROTULO[situacao]}</td>
+                  <td className="border-borda text-texto border px-2 py-1">
                     {linha.ultimo_acesso
                       ? new Date(linha.ultimo_acesso).toLocaleDateString("pt-BR")
                       : "nunca"}
                   </td>
-                  <td className="border px-2 py-1">
+                  <td className="border-borda text-texto border px-2 py-1">
                     <AcoesDeUsuario
                       usuarioId={linha.id}
                       temCredencial={Boolean(linha.auth_user_id)}

@@ -20,10 +20,23 @@ import { describe, expect, it } from "vitest";
 
 const DIRETORIOS = ["components/ciaara", "components/graficos"];
 
-/** Os arquivos de componente desta fatia, com o código já sem comentários. */
-function componentes(): { arquivo: string; codigo: string }[] {
+/**
+ * As pastas onde a regra de **fronteira** vale, e elas são mais do que as do vocabulário.
+ *
+ * ⚠️ **A CASCA ENTROU EM 11/09/2026, E É ONDE A FRONTEIRA CUSTA MAIS CARO.** Um `"use client"` num
+ * componente de vocabulário manda aquele componente para o navegador; um na casca manda **toda tela
+ * do sistema**, porque ela envolve todas. O erro não aparece na checagem de tipos.
+ *
+ * ⚠️ **MAS A REGRA DE AMOSTRA NA VITRINE NÃO A ALCANÇA, e a distinção é do contrato.** O documento
+ * 23 §3.1 descreve **vocabulário de domínio**; casca não é vocabulário. Exigir amostra de um
+ * cabeçalho de aplicação numa vitrine de tokens seria pedir o exemplo errado da peça certa.
+ */
+const DIRETORIOS_DE_FRONTEIRA = [...DIRETORIOS, "components/casca"];
+
+/** Lê os arquivos de componente das pastas dadas, com o código já sem comentários. */
+function lerDe(diretorios: readonly string[]): { arquivo: string; codigo: string }[] {
   const achados: { arquivo: string; codigo: string }[] = [];
-  for (const dir of DIRETORIOS) {
+  for (const dir of diretorios) {
     const caminho = resolve(process.cwd(), dir);
     for (const nome of readdirSync(caminho).filter((f) => /\.tsx?$/.test(f))) {
       const fonte = readFileSync(resolve(caminho, nome), "utf8");
@@ -34,6 +47,14 @@ function componentes(): { arquivo: string; codigo: string }[] {
     }
   }
   return achados;
+}
+
+/** Os arquivos das pastas onde a fronteira vale — vocabulário **e** casca. */
+const comFronteira = () => lerDe(DIRETORIOS_DE_FRONTEIRA);
+
+/** Os arquivos de componente desta fatia, com o código já sem comentários. */
+function componentes(): { arquivo: string; codigo: string }[] {
+  return lerDe(DIRETORIOS);
 }
 
 describe("`SC-007` · zero componente acessa banco (`FR-019`)", () => {
@@ -118,7 +139,9 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
     "components/ciaara/lista-navegavel.tsx",
     "components/ciaara/provedor-de-tema.tsx",
     "components/ciaara/seletor-instrutor.tsx",
-    "components/ciaara/seletor-tema.tsx",
+    "components/casca/foco-ao-trocar-de-rota.tsx",
+    "components/casca/painel-retratil.tsx",
+    "components/casca/seletor-de-tema.tsx",
     "components/ciaara/seletor-turma.tsx",
     "components/ciaara/tabela-densa.tsx",
     "components/graficos/grafico-barras.tsx",
@@ -128,7 +151,7 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
   ];
 
   const declaram = () =>
-    componentes()
+    comFronteira()
       .filter(({ codigo }) => /^\s*"use client";/m.test(codigo))
       .map(({ arquivo }) => arquivo)
       .sort();
