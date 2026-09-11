@@ -121,6 +121,31 @@ mantendo só o esquema. Ele passa na guarda. Variantes com contrabarra são a me
 host resolvido não seja o da própria aplicação — não inspecionar o texto em busca de padrões
 proibidos. **Lista de permissão sobre a origem, não lista de negação sobre a cadeia.**
 
+### Medido em 11/09/2026, com a guarda antiga reposta de propósito
+
+| Destino | O que o navegador fez |
+|---|---|
+| `//dominio-hostil/` | **saiu da aplicação** e parou em `chrome-error://chromewebdata/` |
+| `/\dominio-hostil/` | **saiu da aplicação** e parou em `chrome-error://chromewebdata/` |
+| `https://dominio-hostil/x` | recusado pela guarda antiga — ela já barrava o absoluto |
+
+⚠️ **O erro de navegador é a prova, não a absolvição.** `chrome-error://chromewebdata/` é o que se vê
+quando a navegação para fora **acontece e falha** — aqui, porque o domínio do teste não existe. Com
+um domínio que resolva, o navegador teria chegado lá. **Duas das três formas saem da aplicação.**
+
+⚠️ **E TRÊS FORMULAÇÕES DE TESTE FORAM PRECISAS PARA PROVAR ISSO**, as duas primeiras passando com o
+defeito no lugar:
+
+1. comparar o **nome do host** com o domínio hostil: passa, porque a barra de endereço final é
+   `chrome-error://chromewebdata/` e o nome hostil não está nela;
+2. comparar a **origem** com uma leitura que reexecuta: passa, porque ela aprova na **primeira**
+   leitura — e logo após o clique a página ainda é a de login;
+3. **registrar toda navegação do quadro principal** e conferir a lista depois: reprova, e é a única
+   que reprova.
+
+**A lição serve além deste caso:** provar que algo **nunca** acontece exige observar uma janela, e
+não amostrar um instante. Verificação que amostra dá a ausência por provada quando só chegou cedo.
+
 ⚠️ **Este achado é da fatia (c) por acidente de agenda, não por escopo.** Ele nasceu no Épico 3. Fica
 registrado aqui porque foi aqui que apareceu, e porque o `FR-042` já o cobre.
 

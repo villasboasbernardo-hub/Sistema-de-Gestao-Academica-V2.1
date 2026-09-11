@@ -47,11 +47,11 @@ espera funcionalidade.
 
 ### A correção de segurança, primeiro — e ela sai em PR próprio
 
-- [ ] T008 Escrever `lib/navegacao/destino-seguro.ts` — resolve o destino contra a origem da própria aplicação e **recusa** o que não for dela (`FR-042`)
-- [ ] T009 [P] Escrever `tests/unidade/destino-seguro.test.ts` (`FR-042`, `SC-019`) — relativo ao protocolo, variante com contrabarra, absoluto com outro domínio, e o caminho interno legítimo que **precisa passar**
-- [ ] T010 Trocar a guarda de `app/(auth)/login/FormularioDeLogin.tsx` por `destinoSeguro` (`FR-042`) ⚠️ **a guarda atual é `startsWith("/")`**, e um endereço com duas barras começa com barra
-- [ ] T011 Escrever `tests/e2e/destino-do-login.spec.ts` (`FR-043`, `SC-018`, `SC-019`) medindo **onde o navegador parou**, e não o que a função devolveu ⚠️ **asserção sobre a condição passaria com o código de hoje**, que é o que tem o defeito
-- [ ] T012 **Conferir a T011 por defeito deliberado**: repor `startsWith("/")` em `app/(auth)/login/FormularioDeLogin.tsx`, provar que o teste reprova, desfazer (`FR-042`) ⚠️ **portão nunca visto reprovando é afirmação, não prova**
+- [X] T008 Escrever `lib/navegacao/destino-seguro.ts` — resolve o destino contra a origem da própria aplicação e **recusa** o que não for dela (`FR-042`)
+- [X] T009 [P] Escrever `tests/unidade/destino-seguro.test.ts` (`FR-042`, `SC-019`) — relativo ao protocolo, variante com contrabarra, absoluto com outro domínio, e o caminho interno legítimo que **precisa passar**
+- [X] T010 Trocar a guarda de `app/(auth)/login/FormularioDeLogin.tsx` por `destinoSeguro` (`FR-042`) ⚠️ **a guarda atual é `startsWith("/")`**, e um endereço com duas barras começa com barra
+- [X] T011 Escrever `tests/e2e/destino-do-login.spec.ts` (`FR-043`, `SC-018`, `SC-019`) medindo **onde o navegador parou**, e não o que a função devolveu ⚠️ **asserção sobre a condição passaria com o código de hoje**, que é o que tem o defeito
+- [X] T012 **Conferir a T011 por defeito deliberado**: repor `startsWith("/")` em `app/(auth)/login/FormularioDeLogin.tsx`, provar que o teste reprova, desfazer (`FR-042`) ⚠️ **portão nunca visto reprovando é afirmação, não prova**
 - [ ] T012.1 Abrir **PR próprio** com T008 a T012, preenchendo `.github/pull_request_template.md`, e **mesclar antes de seguir** (`FR-042`, `SC-019`) ⚠️ **Decisão de 11/09/2026, aplicada da análise.** Amarrar uma correção de segurança a 66 tarefas faz ela esperar a fatia inteira. ⚠️ **Não há exposição em produção hoje** — o projeto não tem URL de produção —, então isto é higiene de entrega, não incêndio: correção viaja sozinha porque é correção
 
 ### O contrato de parâmetros
