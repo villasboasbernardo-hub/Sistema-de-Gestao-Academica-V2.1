@@ -196,7 +196,7 @@ luminância; no noturno, as séries 4 e 7 a `0,0005`. **A paleta não é tocada.
 - [X] T070 Escrever `tests/unidade/consumidor-006.test.ts` — cada componente que a spec 006 nomeia existe e é exportado (`SC-009`) ⚠️ **é proxy, não prova**: a prova é o Épico 5 consumir os treze sem construir nenhum
 - [X] T065 Atualizar a seção *Estado atual e onde retomar* do `CLAUDE.md` com o resultado medido da fatia ⚠️ **medido, não declarado** — é a regra que a fatia (a) aplicou a si mesma quando a dívida de estilo revelou ser 2 arquivos e não 9
 - [X] T066 Rodar `pnpm verificar:tudo` e conferir que sai **0** (`SC-010`)
-- [ ] T067 Abrir o PR com o template inteiro preenchido, cobrindo os onze critérios `SC-` da spec ⚠️ **esta fatia não tem migration, então o plano de reversão é `git revert`** — e isso se escreve, não se subentende
+- [X] T067 Abrir o PR com o template inteiro preenchido, cobrindo os onze critérios `SC-` da spec ⚠️ **esta fatia não tem migration, então o plano de reversão é `git revert`** — e isso se escreve, não se subentende
 
 ---
 
