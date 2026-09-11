@@ -14,6 +14,7 @@
 "use client";
 
 import * as React from "react";
+import { useQueryState } from "nuqs";
 
 import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
@@ -531,6 +532,53 @@ export function AmostraAlertaEteto() {
           </p>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * ⚠️ AMOSTRA DE FUMAÇA DA BIBLIOTECA DE ESTADO NA URL (`FR-001`, T003 da fatia (c)).
+ *
+ * Ela existe para **provar que a biblioteca funciona nesta versão do arcabouço**, antes de qualquer
+ * coisa depender dela. Os pares declarados dizem `next >=14.2.0`, o que não exclui a 16 nem a
+ * afirma — e a fatia (b) pagou o preço de uma dependência que entrou sem ninguém conferir, com a
+ * tela ficando idêntica.
+ *
+ * ⚠️ ELA NÃO USA O CONTRATO, e não deve: o contrato nasce depois. É por isso que o parâmetro se
+ * chama `demo` e não pertence a rota nenhuma — ele é a prova, não o produto.
+ */
+export function AmostraEstadoNaUrl() {
+  /*
+   * ⚠️ `history: "push"` É EXPLÍCITO, E DESCOBRIR ISSO CUSTOU UMA EXECUÇÃO. O padrão da biblioteca
+   * é **substituir** a entrada de histórico, não empilhar — então um parâmetro que troca CONTEXTO e
+   * esquece esta opção deixa o botão voltar sem nada para desfazer. **A URL fica certa e o
+   * histórico some**, que é a mesma família de erro silencioso do aviso ao servidor.
+   *
+   * É por isso que `historico` é campo OBRIGATÓRIO do contrato, e não uma opção com padrão.
+   */
+  const [valor, definirValor] = useQueryState("demo", {
+    defaultValue: "",
+    history: "push",
+  });
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {["alfa", "bravo", "charlie"].map((opcao) => (
+          <Button
+            key={opcao}
+            size="sm"
+            variant={valor === opcao ? "default" : "outline"}
+            onClick={() => void definirValor(valor === opcao ? null : opcao)}
+          >
+            {opcao}
+          </Button>
+        ))}
+      </div>
+      <p data-slot="amostra-estado-na-url" className="text-texto-suave text-xs">
+        Escolhido: <strong data-valor={valor}>{valor || "nenhum"}</strong>. O valor vai para a barra
+        de endereço, sobrevive ao recarregamento e some quando volta ao padrão.
+      </p>
     </div>
   );
 }

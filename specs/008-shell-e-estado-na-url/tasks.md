@@ -28,14 +28,14 @@ espera funcionalidade.
 
 ## Fase 1 — Preparação
 
-- [ ] T001 Instalar `nuqs` e registrá-lo em `package.json` (`FR-001`, research §R-2)
-- [ ] T002 [P] Estender `tests/unidade/dependencias.test.ts` com controle positivo para `nuqs` (`FR-001`) — presença declarada, para que a remoção acidental reprove
-- [ ] T003 Conferir **na prática** que a biblioteca funciona nesta versão do arcabouço, criando `tests/e2e/biblioteca-de-estado.spec.ts` com um percurso mínimo (`FR-001`) ⚠️ **arquivo próprio, e não o da Fase 3**: a conferência acontece **antes** de existir contrato, e pendurá-la num arquivo que só nasce na US1 inverteria a ordem da própria lista
+- [X] T001 Instalar `nuqs` e registrá-lo em `package.json` (`FR-001`, research §R-2)
+- [X] T002 [P] Estender `tests/unidade/dependencias.test.ts` com controle positivo para `nuqs` (`FR-001`) — presença declarada, para que a remoção acidental reprove
+- [X] T003 Conferir **na prática** que a biblioteca funciona nesta versão do arcabouço, criando `tests/e2e/biblioteca-de-estado.spec.ts` com um percurso mínimo (`FR-001`) ⚠️ **arquivo próprio, e não o da Fase 3**: a conferência acontece **antes** de existir contrato, e pendurá-la num arquivo que só nasce na US1 inverteria a ordem da própria lista
   ⚠️ **os pares declaram `next >=14.2.0`, o que não exclui a 16 nem a afirma** — foi assim que a fatia (b) recebeu uma base de componentes diferente da decidida, com a tela idêntica
-- [ ] T004 [P] Versionar o brasão de tela em `public/marca/brasao-ciaara.png`, renomeado sem acento e sem espaço (`FR-032`, `FR-032.2`)
-- [ ] T005 [P] Versionar o brasão de impressão em `public/marca/brasao-ciaara-impressao.png` (`FR-032.1`) ⚠️ **226 KB contra 6,3 MB** — o de impressão nunca vai para o cabeçalho
-- [ ] T006 [P] Escrever `public/marca/PROCEDENCIA.md` com origem e data, como a fatia (a) fez com a tipografia (`FR-032`)
-- [ ] T007 Emendar `docs/fase-2/25-Camada-de-Dados-e-Estado.md` §1.3 acrescentando `modalidade` à rota `/inicio` (`FR-001.1`) ⚠️ **é emenda de documento normativo**: só a linha que faltava, para alinhá-lo ao `RF-INI-02`, que é **[PRESERVADO]**
+- [X] T004 [P] Versionar o brasão de tela em `public/marca/brasao-ciaara.png`, renomeado sem acento e sem espaço (`FR-032`, `FR-032.2`)
+- [X] T005 [P] Versionar o brasão de impressão em `public/marca/brasao-ciaara-impressao.png` (`FR-032.1`) ⚠️ **226 KB contra 6,3 MB** — o de impressão nunca vai para o cabeçalho
+- [X] T006 [P] Escrever `public/marca/PROCEDENCIA.md` com origem e data, como a fatia (a) fez com a tipografia (`FR-032`)
+- [X] T007 Emendar `docs/fase-2/25-Camada-de-Dados-e-Estado.md` §1.3 acrescentando `modalidade` à rota `/inicio` (`FR-001.1`) ⚠️ **é emenda de documento normativo**: só a linha que faltava, para alinhá-lo ao `RF-INI-02`, que é **[PRESERVADO]**
 
 **Ponto de conferência**: `pnpm verificar` sai 0, e os dois arquivos de imagem saíram de `images/`.
 

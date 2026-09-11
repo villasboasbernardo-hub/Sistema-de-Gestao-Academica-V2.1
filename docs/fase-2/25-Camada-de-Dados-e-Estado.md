@@ -86,7 +86,7 @@ até a v2.0 (BRIEF §2), e um `uuid` na barra de endereço não diz nada a ningu
 
 | Rota | Parâmetros | Tipo | Padrão | Origem |
 |---|---|---|---|---|
-| `/inicio` | `classificacao` | texto | `""` (todas) | RF-INI |
+| `/inicio` | `classificacao`, `modalidade` | texto | `""` (todas) | RF-INI-02 |
 | `/cursos/[curso]` | `aba`, `turma` | texto | `"grade"`, `""` | RF-CURSOS |
 | `/turmas/[turma]/dsa` | `semana`, `ano` | inteiro | semana/ano correntes | RF-DSA-01 |
 | `/cronograma` | `curso`, `ano`, `granularidade`, `visao` | texto/int | `""`, ano corrente, `"semana"`, `"previsto_executado"` | RF-CRONOS-01..08 |
@@ -97,6 +97,12 @@ até a v2.0 (BRIEF §2), e um `uuid` na barra de endereço não diz nada a ningu
 | `/disciplinas` | `curso`, `status`, `busca` | texto | `""` | RF-MATERIAS |
 | `/admin/usuarios` | `perfil`, `escopo`, `status` | texto | `""` | RF-AUTH-05 |
 | `/print/*` | os mesmos da tela de origem | — | — | RNF-COMP-01 |
+
+⚠️ **EMENDA DE 11/09/2026 — `modalidade` acrescentada a `/inicio`.** A linha listava apenas
+`classificacao`, e o `RF-INI-02`, que é **[PRESERVADO]**, escreve `?classificacao=&modalidade=` na
+própria nota de mecanismo. **Não era o requisito que estava errado: era esta tabela que estava
+incompleta.** Sem a emenda, a primeira tela da fatia (c) já inventaria um parâmetro fora do contrato
+— o que o `FR-001` daquela spec proíbe. Origem: análise da spec `008-shell-e-estado-na-url`.
 
 Regras do contrato:
 

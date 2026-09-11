@@ -13,6 +13,7 @@
  */
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { FaixaDeAmbiente } from "@/components/faixa-de-ambiente";
 import { ProvedorDeTema } from "@/components/ciaara/provedor-de-tema";
@@ -55,10 +56,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${rawline.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <ProvedorDeTema>
-          <FaixaDeAmbiente />
-          {children}
-        </ProvedorDeTema>
+        {/*
+          ⚠️ O ADAPTADOR DO ESTADO NA URL FICA NA RAIZ, e não dentro do grupo autenticado (FR-001).
+          A vitrine também usa estado na URL, e ela vive fora de `(app)` por decisão registrada —
+          um adaptador por grupo seria dois pontos de verdade para a mesma barra de endereço.
+
+          ⚠️ ELE NÃO TRAZ MARCADOR DE CLIENTE PARA CÁ. É um provedor, como o de tema: quem carrega
+          o marcador é o próprio componente da biblioteca, não este arquivo. A regra continua valendo
+          — `layout.tsx` não pode ter `"use client"`, e não tem.
+        */}
+        <NuqsAdapter>
+          <ProvedorDeTema>
+            <FaixaDeAmbiente />
+            {children}
+          </ProvedorDeTema>
+        </NuqsAdapter>
       </body>
     </html>
   );

@@ -91,3 +91,35 @@ describe("FR-003.1 · as duas dependências decididas continuam declaradas", () 
     ).toBe("lucide");
   });
 });
+
+/**
+ * ⚠️ CONTROLE POSITIVO DA BIBLIOTECA DE ESTADO NA URL (`FR-001`, fatia (c)).
+ *
+ * Ela é a decidida no BRIEF, e **não é alternativa aos ganchos nativos do roteador: é construída
+ * sobre eles**. A restrição de plataforma fica satisfeita por ela, e trocá-la exigiria autorização
+ * nominal.
+ *
+ * ⚠️ O CASO DO ADAPTADOR É O QUE IMPORTA. Presença no manifesto não prova compatibilidade: os pares
+ * declarados dizem `next >=14.2.0`, o que **não exclui a 16 nem a afirma**. O que prova é o pacote
+ * exportar o adaptador do roteador que esta plataforma usa — e é isso que se afere aqui.
+ */
+describe("FR-001 · a biblioteca de estado na URL é a decidida, e serve a este roteador", () => {
+  it("está declarada", () => {
+    expect(
+      dependencias(),
+      "sem ela não há como cumprir o FR-001, e o estado de navegação volta para a memória",
+    ).toContain("nuqs");
+  });
+
+  it("exporta o adaptador do roteador desta plataforma", async () => {
+    // ⚠️ Se um dia a biblioteca deixar de trazer este adaptador, o estado na URL para de funcionar
+    // **sem erro de tipo** — o `import` falha só em tempo de execução.
+    const manifesto = JSON.parse(
+      readFileSync(resolve(process.cwd(), "node_modules/nuqs/package.json"), "utf8"),
+    );
+    expect(
+      Object.keys(manifesto.exports ?? {}),
+      "o pacote não expõe o adaptador do App Router",
+    ).toContain("./adapters/next/app");
+  });
+});

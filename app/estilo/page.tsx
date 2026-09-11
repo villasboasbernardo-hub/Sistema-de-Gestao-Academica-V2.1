@@ -17,6 +17,7 @@ import {
   AmostraCampo,
   AmostraDialogoConfirmacao,
   AmostraEmblemasDeStatus,
+  AmostraEstadoNaUrl,
   AmostraEsqueleto,
   AmostraEstadoVazio,
   AmostraFiltroAvancado,
@@ -326,6 +327,10 @@ export default function Vitrine() {
 
       <Secao titulo="Diálogo de confirmação — a consequência, que neste sistema nunca é perda">
         <AmostraDialogoConfirmacao />
+      </Secao>
+
+      <Secao titulo="Estado na URL — prova de fumaça da biblioteca, antes de o contrato existir">
+        <AmostraEstadoNaUrl />
       </Secao>
 
       <Secao titulo="Filtro avançado — genérico, e ele não conhece domínio nenhum">
