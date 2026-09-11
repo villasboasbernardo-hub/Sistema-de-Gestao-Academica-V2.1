@@ -70,7 +70,22 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
-  use: { baseURL: URL_BASE, trace: "on-first-retry" },
+  /**
+   * ⚠️ NAVEGAÇÃO COM PRAZO PRÓPRIO, MAIOR QUE O DAS ASSERÇÕES — e o número saiu de uma medição, não
+   * de cautela. Em 10/09/2026, no primeiro CI da fatia (b), **dois casos ficaram instáveis**:
+   * falharam em `expect(page.locator("main")).toBeVisible()` logo depois de abrir `/estilo`, e
+   * passaram na repetição. A causa é o que a fatia acrescentou à vitrine — biblioteca de gráficos,
+   * tabela de 45 linhas, dezesseis componentes —, tudo carregado por quatro processos de trabalho
+   * ao mesmo tempo, num executor mais lento que esta máquina.
+   *
+   * ⚠️ **O PRAZO DE ASSERÇÃO CONTINUA EM 5 SEGUNDOS, DE PROPÓSITO.** Alargar os dois junto
+   * esconderia falha de verdade: uma tela que leva 15s para mostrar um emblema está quebrada. O que
+   * cresce é só o prazo de CARREGAR a página, que é onde a lentidão de fato mora.
+   *
+   * ⚠️ **Instável é defeito da verificação, não azar** — é a regra do projeto desde o `SC-005`, e
+   * ela vale mesmo quando o portão fica verde na repetição, porque o próximo pode não ficar.
+   */
+  use: { baseURL: URL_BASE, trace: "on-first-retry", navigationTimeout: 60_000 },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: "pnpm build && pnpm start",

@@ -11,9 +11,10 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 
+import { abrirVitrine } from "./abrir-vitrine";
+
 test.beforeEach(async ({ page }) => {
-  await page.goto("/estilo");
-  await expect(page.locator("main")).toBeVisible();
+  await abrirVitrine(page);
 });
 
 /** O nome acessível de um elemento, pela árvore de acessibilidade do navegador. */

@@ -10,11 +10,13 @@ import { resolve } from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { abrirVitrine } from "./abrir-vitrine";
+
 import { PAPEIS_BASE, PARES, SERIES, STATUS } from "../../lib/design/vocabulario";
 
 test.describe("US1 · a vitrine mostra o vocabulário inteiro", () => {
   test("todo papel, status e série aparece — invariante I-5", async ({ page }) => {
-    await page.goto("/estilo");
+    await abrirVitrine(page);
     const texto = await page.locator("main").innerText();
 
     const ausentes = [
@@ -30,7 +32,7 @@ test.describe("US1 · a vitrine mostra o vocabulário inteiro", () => {
   });
 
   test("cada par auditado mostra a razão medida, nos dois temas (`FR-021`)", async ({ page }) => {
-    await page.goto("/estilo");
+    await abrirVitrine(page);
     const texto = await page.locator("main").innerText();
 
     const semLinha = PARES.filter((p) => !texto.includes(p.id)).map((p) => p.id);
@@ -42,7 +44,7 @@ test.describe("US1 · a vitrine mostra o vocabulário inteiro", () => {
   });
 
   test("todo status traz rótulo textual junto da cor (`FR-014`)", async ({ page }) => {
-    await page.goto("/estilo");
+    await abrirVitrine(page);
     const texto = await page.locator("main").innerText();
     const semRotulo = STATUS.filter((s) => !texto.includes(s));
     expect(
@@ -55,7 +57,7 @@ test.describe("US1 · a vitrine mostra o vocabulário inteiro", () => {
   test("cada isenção do limite de 3:1 aparece COM o motivo", async ({ page }) => {
     // ⚠️ Isenção sem motivo visível é limite afrouxado em silêncio. A diferença entre as duas
     // está inteiramente no registro, e a vitrine é onde ele fica à vista.
-    await page.goto("/estilo");
+    await abrirVitrine(page);
     const texto = await page.locator("main").innerText();
     expect(texto).toContain("B-1");
     expect(texto, "a vitrine lista isenções sem dizer por quê").toMatch(
@@ -102,7 +104,7 @@ test.describe("US1 · a vitrine mostra o vocabulário de COMPONENTES inteiro", (
   test("todo marcador de componente aparece na vitrine — invariante I-5 estendida", async ({
     page,
   }) => {
-    await page.goto("/estilo");
+    await abrirVitrine(page);
     const adiados = SO_QUANDO_ABERTO.map((s) => s.slot);
     const esperados = slotsDeclarados().filter((s) => !adiados.includes(s));
 
@@ -121,7 +123,7 @@ test.describe("US1 · a vitrine mostra o vocabulário de COMPONENTES inteiro", (
   test("o que só existe aberto é aberto, e conferido", async ({ page }) => {
     // ⚠️ Isentar seria mais fácil e provaria menos: um diálogo que nunca é aberto num teste é um
     // diálogo cujo foco preso ninguém nunca exercitou.
-    await page.goto("/estilo");
+    await abrirVitrine(page);
     for (const { slot, abrir } of SO_QUANDO_ABERTO) {
       await page.getByRole("button", { name: abrir }).click();
       await expect(page.locator(`[data-slot="${slot}"]`)).toBeVisible();

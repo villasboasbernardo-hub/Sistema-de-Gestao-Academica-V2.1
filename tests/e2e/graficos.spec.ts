@@ -10,8 +10,10 @@
  */
 import { expect, test } from "@playwright/test";
 
+import { abrirVitrine } from "./abrir-vitrine";
+
 test.beforeEach(async ({ page }) => {
-  await page.goto("/estilo");
+  await abrirVitrine(page);
   await expect(page.locator('[data-slot="grafico-barras"]').first()).toBeVisible();
 });
 

@@ -13,6 +13,8 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 
+import { abrirVitrine } from "./abrir-vitrine";
+
 const TABELA = '[data-slot="tabela-densa"]';
 const GRADE = `${TABELA} table[role="grid"]`;
 
@@ -31,7 +33,7 @@ async function entrarNaGrade(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/estilo");
+  await abrirVitrine(page);
   await expect(page.locator(GRADE).first()).toBeVisible();
 });
 
@@ -226,7 +228,7 @@ test.describe("`FR-028` · o ponto de quebra de 1024px", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 800, height: 900 });
-    await page.goto("/estilo");
+    await abrirVitrine(page);
     await expect(page.locator(GRADE).first()).toBeVisible();
 
     await expect
@@ -244,7 +246,7 @@ test.describe("`FR-028` · o ponto de quebra de 1024px", () => {
 
   test("acima de 1024px a tabela ocupa a largura disponível, sem rolagem", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/estilo");
+    await abrirVitrine(page);
     await expect(page.locator(GRADE).first()).toBeVisible();
 
     await expect

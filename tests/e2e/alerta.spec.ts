@@ -9,10 +9,12 @@
  */
 import { expect, test } from "@playwright/test";
 
+import { abrirVitrine } from "./abrir-vitrine";
+
 const ALERTA = '[data-slot="alerta-conformidade"]';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/estilo");
+  await abrirVitrine(page);
   await expect(page.locator(ALERTA)).toBeVisible();
 });
 
