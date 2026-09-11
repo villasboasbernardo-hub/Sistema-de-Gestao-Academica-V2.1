@@ -37,6 +37,11 @@ prova se os componentes nasceram genéricos ou moldados a uma tela.
 
 - Q: As três grades densas entram nesta fatia? → A: **Nenhuma.** Pertencem aos Épicos 6 e 7, que são quem as usa. **Componente moldado a uma tela não é Design System, é antecipação** — a mesma regra que decidiu a dependência do Épico 5.
 - Q: A documentação viva fica na vitrine ou entra ferramenta dedicada? → A: **Na vitrine `/estilo`**, sem ferramenta nova. Zero dependência acrescentada, e o teste que exige todo token aparecer lá estende-se a componente.
+- Q: O seletor de instrutor **ordena** a lista que recebe, ou só exibe uma já ordenada? → A: **Ordena sempre**, aplicando a função pura de domínio e ignorando a ordem de chegada. Ponto único que aceita qualquer ordem não garante nada.
+- Q: Qual biblioteca de ícones, já que o documento 23 deixou a pendência §11.2 aberta? → A: **A que acompanha o shadcn**, versionada e sem rede externa. **Fecha a pendência §11.2.**
+- Q: A tabela densa renderiza só as linhas visíveis quando a lista for grande? → A: **Não — renderiza todas.** Os volumes reais não pedem isso, e a complexidade brigaria com a navegação por teclado.
+- Q: Impresso em preto e branco, o que distingue uma série da outra? → A: **Forma e rótulo.** Medido: no tema claro as séries 1 e 8 ficam a 0,0003 de luminância; no noturno, a 4 e a 7 a 0,0005. A cor deixa de ser o que distingue.
+- Q: Qual traço identifica a borda do campo, se nenhuma cor de borda alcança 3:1? → A: **`--texto-tenue`**, medido em 4,49 no claro e 4,85 no noturno. Nenhuma cor muda, nenhum token nasce. **Fecha a pendência da fatia (a).**
 - Q: Quantos dos 21 itens abertos do checklist esta fatia fecha? → A: **Doze, nomeados**: CHK005, CHK006, CHK007, CHK008, CHK009, CHK010, CHK013, CHK014, CHK015, CHK016, CHK017 e CHK018. Mais o CHK003 **em parte**.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -82,6 +87,8 @@ deve existir nenhuma.
    existe **exatamente um** componente que o faz.
 2. **Dado** esse componente, **quando** ele lista instrutores, **então** a ordem é a da antiguidade,
    sem que quem o usa precise pedir.
+2.1. **Dado** uma lista **desordenada** entregue ao componente, **quando** ele a exibe, **então** ela
+   aparece **ordenada mesmo assim** — a ordem de chegada é ignorada.
 3. **Dado** uma tela nova, **quando** ela precisa de seletor de instrutor, **então** usá-lo é o
    caminho mais curto — e construir outro exige esforço deliberado.
 
@@ -121,7 +128,8 @@ e a Ficha do Instrutor são impressos e a impressora nem sempre é colorida.
 impresso em mancha cinza, e ninguém descobre isso antes de imprimir.
 
 **Independent Test**: conferir contraste de cada série contra o fundo nos dois temas, e conferir que
-as luminâncias das oito são distintas entre si.
+cada série traz **marcador de forma própria e rótulo** — a prova é o gráfico continuar legível com a
+cor removida.
 
 **Acceptance Scenarios**:
 
@@ -132,6 +140,9 @@ as luminâncias das oito são distintas entre si.
    recarga.
 3. **Dado** um gráfico, **quando** ele recebe dados, **então** eles chegam **prontos**: a agregação
    é de quem chama, nunca do componente.
+4. **Dado** um gráfico **com a cor removida**, **quando** alguém o lê, **então** ainda distingue
+   cada série — por forma e por rótulo (`FR-018`). ⚠️ É o caso de quem imprime em preto e branco e
+   o de quem não distingue cores, e um único requisito cobre os dois.
 
 ---
 
@@ -160,7 +171,12 @@ fatia; a regra que decide **quando** alertar é do domínio, e não entra aqui.
 - **Valor fora do domínio conhecido** — posto desconhecido, status inesperado: aparece numa faixa
   **"Outros"** ao final, **nunca é omitido em silêncio** (`RN-DEG-01`).
 - **Tabela sem colunas** ou com uma coluna só: não quebra a navegação por teclado.
+- **Tabela com muitas linhas**: renderiza todas (`FR-006.1`). ⚠️ Se algum dia um conjunto real
+  chegar inteiro e grande à tela, a decisão de 10/09/2026 precisa ser **reaberta com a medição na
+  mão** — não contornada com um limite arbitrário no componente.
 - **Gráfico sem dados**: mostra estado vazio, não área em branco sem explicação.
+- **Gráfico com mais séries do que formas de marcador**: as formas **repetem** antes de a cor virar
+  o único distintivo, e o rótulo junto do traço continua desempatando.
 - **Instrutor sem nome de guerra**: o componente de nome degrada para o formato possível, sem
   espaço duplo nem rótulo órfão.
 - **Preferência por menos movimento** declarada no sistema: nenhum componente introduz animação
@@ -181,6 +197,16 @@ fatia; a regra que decide **quando** alertar é do domínio, e não entra aqui.
   agravante de parecer cumprido.
 - **FR-003**: Nenhuma biblioteca de componentes além da já decidida MUST ser instalada, e a
   verificação existente MUST continuar verde (BRIEF §1).
+- **FR-003.1**: A **biblioteca de ícones** MUST ser a que acompanha a base de componentes já
+  decidida, **versionada** e **sem depender de rede externa**.
+  ⚠️ **Decisão de 10/09/2026, e ela FECHA a pendência §11.2 do documento 23**, que estava aberta
+  desde a Fase 2. Ícone não é componente, então não esbarra na proibição do BRIEF §1 — mas é
+  dependência, e dependência não decidida é cada componente resolvendo do seu jeito.
+  ⚠️ **A alternativa da v2.0 vinha por CDN** — a mesma classe de dependência externa que já quebrou
+  a tipografia e que a fatia (a) removeu.
+- **FR-003.2**: Nenhum componente MUST desenhar ícone próprio quando existir equivalente na
+  biblioteca. ⚠️ Treze componentes desenhando o próprio ícone é a mesma divergência que a paleta
+  veio fechar, num vocabulário diferente.
 
 #### Componentes CIAARA
 
@@ -188,6 +214,16 @@ fatia; a regra que decide **quando** alertar é do domínio, e não entra aqui.
 - **FR-005**: MUST existir componente de **emblema de status**, com variante por tom do domínio.
 - **FR-006**: MUST existir componente de **tabela densa**, com ordenação, filtro e navegação por
   teclado.
+- **FR-006.1**: A tabela MUST renderizar **todas** as linhas recebidas. Renderização parcial por
+  janela de visão MUST **não** ser implementada nesta fatia.
+  ⚠️ **Decisão de 10/09/2026, e é a mais difícil de reverter desta fatia** — por isso foi decidida
+  aqui e não no plano. Os volumes reais não a pedem: 177 instrutores, 175 disciplinas, 29 turmas, e
+  o maior conjunto, ~1.753 registros de aula, chega **filtrado por turma e semana**, nunca inteiro.
+  O `CLAUDE.md` manda priorizar clareza e manutenibilidade sobre desempenho **porque a base é
+  pequena**.
+  ⚠️ **E a complexidade brigaria com a acessibilidade**: renderização parcial precisa de artifício
+  para que o teclado alcance linha que não está na tela, e o `FR-023` exige justamente isso.
+  Complexidade que briga com acessibilidade precisa de um problema **medido**, e não há.
 - **FR-007**: MUST existir componente de **filtro avançado**, **genérico**, com filtragem cruzada —
   cada filtro opera sobre o resultado do anterior.
   ⚠️ Ele MUST **não conhecer instrutor**. É o teste de que a fatia entregou vocabulário, e não uma
@@ -198,6 +234,13 @@ fatia; a regra que decide **quando** alertar é do domínio, e não entra aqui.
 - **FR-010**: MUST existir **seletor de turma** e **seletor de instrutor**.
 - **FR-011**: O **seletor de instrutor** MUST ser o **único** ponto de construção de seletor de
   instrutor da aplicação, e isso MUST ser verificado por teste (`RN-ANT-01`).
+- **FR-011.1**: Ele MUST **ordenar** a lista que recebe, aplicando a função pura de domínio, e MUST
+  **ignorar a ordem em que os dados chegaram**.
+  ⚠️ **Decisão de 10/09/2026, e é ela que faz a `FR-011` valer alguma coisa.** Um ponto único que
+  apenas **exibe** aceita lista desordenada — o esquecimento não desaparece, só muda de lugar. Um
+  que **ordena** torna o esquecimento impossível, que é o que uma regra de Risco Alto pede.
+  ⚠️ **Isto não fere a fronteira do `FR-020`**: quem **calcula** o peso da antiguidade continua
+  sendo função pura de domínio, fora do componente. O componente **aplica**; não decide.
 - **FR-012**: MUST existir componente de **nome de instrutor**, no formato
   **`P/G Especialidade Nome de Guerra`**, alimentado por **função pura de domínio**
   (`RF-INSTR-15`, `RF-DS-05`).
@@ -214,8 +257,20 @@ fatia; a regra que decide **quando** alertar é do domínio, e não entra aqui.
   ⚠️ **Agregação é de quem chama, nunca do componente** (documento 24).
 - **FR-017**: Todo gráfico MUST usar as **oito séries** do ponto único, em **ordem fixa**.
   ⚠️ Reordenar a paleta conforme os dados faz o leitor **reaprender a legenda a cada recarga**.
-- **FR-018**: A ordem das cores MUST sobreviver à **impressão em preto e branco** — as luminâncias
-  das oito são distintas entre si, e essa propriedade MUST ser verificada.
+- **FR-018**: Todo gráfico MUST distinguir suas séries **por forma e por rótulo**, e MUST continuar
+  legível quando a cor é removida — impresso em preto e branco, ou lido por quem não distingue
+  cores. Marcador de forma própria por série e rótulo junto do traço, não só na legenda.
+  ⚠️ **Decisão de 10/09/2026, e ela SUBSTITUI o que esta linha dizia.** A redação anterior cobrava
+  luminâncias distintas entre as oito séries. **Eu medi, e a paleta que já está na `main` não
+  entrega isso**: no tema claro a série 1 (`0,0984`) e a série 8 (`0,0987`) ficam a **0,0003** uma
+  da outra; no noturno, a série 4 e a série 7 ficam a **0,0005**. Em cinza, cada par vira a mesma
+  tinta. O critério reprovaria no primeiro dia — é a mesma armadilha da fatia (a), um requisito meu
+  cobrando da paleta o que ela não entrega.
+  ⚠️ **Por que não reabrir a paleta:** ela está mesclada, e a premissa 1 desta spec diz que a fatia
+  **consome** sem redesenhar. E forma resolve também **na tela**, para quem não distingue cores —
+  reespaçar luminância só resolveria no papel.
+  ⚠️ **Isto não é requisito novo:** é o `FR-025` — nunca comunicar significado só por cor —
+  aplicado ao gráfico.
 
 #### Fronteira — o que estes componentes não fazem
 
@@ -258,10 +313,22 @@ fatia; a regra que decide **quando** alertar é do domínio, e não entra aqui.
   acessível, região anunciada e ordem de leitura previsível. *Fecha o `CHK010`.*
 - **FR-031**: A proibição de `--texto-tenue` **carregar dado** MUST ser verificável, e não apenas
   escrita. *Fecha o `CHK013`.*
-- **FR-032**: O componente de **campo** desta fatia MUST resolver a pendência da borda de campo
-  registrada na fatia (a) — o traço que identifica o campo MUST atingir o limite de borda
-  interativa. ⚠️ **É aqui que a pendência vence**: ela dizia *"resolve na fatia que construir o
+- **FR-032**: O componente de **campo** desta fatia MUST usar `--texto-tenue` como traço
+  identificador, e esse traço MUST atingir o limite de borda interativa nos dois temas.
+  ⚠️ **É aqui que a pendência da fatia (a) vence**: ela dizia *"resolve na fatia que construir o
   primeiro campo"*, e esta é. *Fecha o `CHK018`.*
+  ⚠️ **Decisão de 10/09/2026, tomada sobre medição.** Medi os catorze tokens de borda da paleta:
+  **nenhum** alcança 3:1. O melhor é `--conformidade-borda`, com **2,02** no claro, e
+  `--executado-borda`, com **2,23** no noturno. `--texto-tenue` mede **4,49** e **4,85** contra o
+  preenchimento do campo, e passa com folga.
+  ⚠️ **Nenhuma cor muda e nenhum token nasce.** A regra proíbe cor fora do ponto único; não proíbe
+  usar um token do ponto único num papel novo. E `--borda` e `--borda-forte` ficam intactos, como
+  Bernardo determinou em 09/09/2026.
+  ⚠️ **A consequência visual é intencional**: o campo fica com traço mais escuro que toda outra
+  borda do sistema. É isso que faz o campo parecer um campo.
+- **FR-032.1**: O par `--texto-tenue` contra o preenchimento do campo MUST entrar na auditoria de
+  contraste como par próprio. ⚠️ Sem isso a decisão vira anotação, e anotação que ninguém confere
+  envelhece — foi o que aconteceu com as sete do documento 23.
 
 ### Key Entities
 
@@ -273,21 +340,26 @@ origem.
 ### Measurable Outcomes
 
 - **SC-001**: **100%** dos componentes desta fatia aparecem na vitrine com exemplo.
-- **SC-002**: A contagem de construções de seletor de instrutor no repositório é **exatamente um**.
+- **SC-002**: A contagem de construções de seletor de instrutor no repositório é **exatamente um**, e
+  esse um **reordena** o que recebe — provado entregando-lhe uma lista fora de ordem.
 - **SC-003**: A contagem de violações da regra de cor continua **zero**.
 - **SC-004**: A contagem de variáveis de primitivo sem par com token CIAARA continua **zero**.
-- **SC-005**: A auditoria de contraste continua verde nos **dois** temas, incluindo as oito séries.
+- **SC-005**: A auditoria de contraste continua verde nos **dois** temas, incluindo as oito séries
+  **e o par novo do traço de campo** (`FR-032.1`).
 - **SC-006**: **100%** dos movimentos de teclado previstos funcionam na tabela densa.
 - **SC-007**: A contagem de componentes de `components/ciaara/` que importam cliente de banco ou
   implementam regra `RN-` é **zero**.
-- **SC-008**: As luminâncias das oito séries são **distintas entre si** — verificado, não presumido.
+- **SC-008**: **100%** das séries de um gráfico trazem marcador de forma própria e rótulo, e o
+  gráfico continua legível **com a cor removida** — verificado, não presumido.
+  ⚠️ **Note o que este critério NÃO diz mais**: não cobra luminâncias distintas. A paleta mesclada
+  não as tem, e está medido no `FR-018`.
 - **SC-009**: O primeiro consumidor real, a spec 006, encontra **pronto** cada componente de que
   precisa, sem construir nenhum.
+- **SC-010**: `pnpm verificar:tudo` e o CI dão **veredito idêntico** sobre o mesmo commit.
 - **SC-011**: **Doze** itens do checklist de acessibilidade e entrega da fatia (a) passam de abertos
   a fechados — CHK005 a CHK010, CHK013 a CHK018 —, cada um com o requisito desta spec que o fecha
   apontado pelo número. ⚠️ Fechar item de checklist **sem apontar o que o fechou** é o mesmo que
   desmarcá-lo por cansaço.
-- **SC-010**: `pnpm verificar:tudo` e o CI dão **veredito idêntico** sobre o mesmo commit.
 
 ## Assumptions
 
@@ -300,8 +372,9 @@ origem.
    componentes desta fatia recebem e devolvem estado por propriedade, sem saber onde ele mora.
 4. **As regras de negócio ficam no domínio.** O componente exibe; quem calcula é função pura. É a
    fronteira do documento 23 §3.2, e é o que permite testar regra sem navegador.
-5. **A ordenação por antiguidade é resolvida no domínio e servida pelo banco.** O seletor a
-   consome; não a implementa.
+5. **Quem CALCULA a antiguidade é o domínio; quem a APLICA é o seletor.** A função é pura e vive
+   fora do componente — o componente não a implementa, mas **também não confia** em receber a lista
+   já ordenada (`FR-011.1`, decisão de 10/09/2026).
 
 ## Dependências
 
@@ -311,6 +384,7 @@ origem.
 | Documento 23 §3.1 — inventário e base de cada componente | ✅ escrito |
 | Spec 006 — o primeiro consumidor real, que valida a genericidade | ✅ escrita e **bloqueada por esta fatia** |
 | Biblioteca de gráficos | ⬜ entra aqui |
+| Biblioteca de ícones | ⬜ entra aqui — **fecha a pendência §11.2** do documento 23 |
 
 ## Quem espera esta fatia
 
@@ -344,5 +418,19 @@ origem.
    `components/impressao/` e de `components/graficos/` na mesma tabela, com a coluna de arquivo
    distinguindo-os. Os de impressão são dos Épicos 10 e 11 e **não** entram aqui, mas quem ler a
    tabela como lista de trabalho desta fatia os incluiria.
-3. **A linha do `EstadoVazio` diz base "—" e ele já existe desde o Épico 3.** O documento o lista
+3. **Nenhum dos catorze tokens de borda da paleta alcança 3:1** — medido em 10/09/2026, o teto é
+   `2,02` no claro e `2,23` no noturno. ⚠️ A pendência da fatia (a) supunha que a fatia do primeiro
+   campo escolheria **uma borda** que servisse, e não havia nenhuma. Resolvido pelo `FR-032` com um
+   token de **texto**. **A paleta não foi tocada.**
+4. **A paleta das oito séries NÃO sobrevive à conversão para cinza**, e isso não estava registrado
+   em lugar nenhum. Medido em 10/09/2026: tema claro, série 1 em `0,0984` e série 8 em `0,0987`;
+   tema noturno, série 4 e série 7 a `0,0005` uma da outra. ⚠️ **O documento 23 §7 trata a
+   distinção impressa como resolvida pela paleta**, e ela não resolve. Contornado aqui pelo
+   `FR-018`, que passa a distinção para forma e rótulo. **A paleta não foi tocada**, e o parágrafo
+   do documento 23 continua dizendo o que dizia — emendá-lo é decisão à parte.
+5. **A pendência §11.2 do documento 23 ficou aberta desde a Fase 2**, e ninguém a tinha reaberto:
+   ela pergunta qual biblioteca de ícones o sistema usa. ✅ **Fechada em 10/09/2026** pelo
+   `FR-003.1`. ⚠️ **O documento 23 continua registrando-a como pendente**, e emendá-lo é decisão à
+   parte.
+6. **A linha do `EstadoVazio` diz base "—" e ele já existe desde o Épico 3.** O documento o lista
    como se estivesse por fazer. Não é erro de regra, é inventário desatualizado.
