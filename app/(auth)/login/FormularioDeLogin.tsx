@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { registrarAcesso } from "@/lib/acoes/sessao";
+import { caminhoDeRetorno } from "@/lib/navegacao/destino-seguro";
 import { criarClienteDeNavegador } from "@/lib/supabase/client";
 
 export function FormularioDeLogin({ destino }: { readonly destino: string }) {
@@ -52,7 +53,17 @@ export function FormularioDeLogin({ destino }: { readonly destino: string }) {
     // `refresh()` antes de navegar: o layout de `(app)` lê o usuário no servidor, e sem isto a
     // primeira renderização usaria a árvore em cache, sem sessão.
     roteador.refresh();
-    roteador.replace(destino.startsWith("/") ? destino : "/");
+    /*
+     * ⚠️ A GUARDA ANTERIOR ERA `destino.startsWith("/")`, E ELA NÃO PROTEGIA NADA. Um endereço
+     * começando com **duas** barras é relativo ao protocolo: o navegador o resolve para outro host
+     * mantendo só o esquema — **e ele começa com barra**. Passava direto, e o link de retorno
+     * terminava fora do sistema depois do login.
+     *
+     * ⚠️ CORRIGIDO EM 11/09/2026, e a diferença não é de rigor, é de pergunta: procurar padrões
+     * proibidos na cadeia pergunta *"isto parece perigoso?"* e erra pelo caso que ninguém pensou.
+     * `caminhoDeRetorno` resolve o destino contra a origem desta janela e pergunta *"isto é meu?"*.
+     */
+    roteador.replace(caminhoDeRetorno(destino, window.location.origin));
   }
 
   return (
