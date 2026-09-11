@@ -1,34 +1,51 @@
 /**
  * Abrir a vitrine, e **esperar que ela esteja de pé** — num lugar só.
  *
- * ⚠️ ELE EXISTE POR CAUSA DE UMA MEDIÇÃO, não por gosto de abstrair. No primeiro CI da fatia (b),
- * em 10/09/2026, **dois casos ficaram instáveis**: falharam em `expect(main).toBeVisible()` logo
- * depois de abrir `/estilo`, e passaram na repetição. A causa é o que a fatia acrescentou à
- * vitrine — biblioteca de gráficos, tabela de 45 linhas, dezesseis componentes —, carregada por
- * quatro processos de trabalho ao mesmo tempo num executor mais lento que a máquina de quem
- * desenvolve.
+ * ⚠️ ELE EXISTE POR CAUSA DE UM DEFEITO QUE CUSTOU DOIS DIAGNÓSTICOS. No CI da fatia (b), casos
+ * começaram a falhar logo depois de abrir `/estilo` e a passar na repetição. **A primeira leitura
+ * foi lentidão** — a vitrine ganhou biblioteca de gráficos, tabela de 45 linhas e dezesseis
+ * componentes —, e alargar o prazo **piorou**: de dois instáveis para seis.
  *
- * ⚠️ **INSTÁVEL É DEFEITO DA VERIFICAÇÃO, NÃO AZAR**, e a regra vale mesmo quando o portão fica
- * verde na repetição — porque o próximo pode não ficar, e porque um teste que às vezes reprova
- * ensina a ignorar a cor vermelha.
+ * ⚠️ **A CAUSA ERA OUTRA, E ESTAVA NA MENSAGEM INTEIRA DO ERRO:** *"strict mode violation:
+ * locator('main') resolved to 2 elements"*. O `app/loading.tsx` também desenha um `<main>`, e
+ * enquanto o segmento carrega os dois convivem no documento. Esperar por `main` é esperar por algo
+ * **ambíguo** — e ambiguidade não se resolve com mais tempo, só fica mais provável de ser vista.
+ *
+ * ⚠️ **A ESPERA É PELO QUE SÓ A PÁGINA PRONTA TEM**: o título da vitrine. Quando ele aparece, a
+ * silhueta de carregamento já saiu, e qualquer contagem de marcos feita depois mede a página, não
+ * a transição.
  *
  * ⚠️ **O PRAZO MAIOR É SÓ O DA PRONTIDÃO.** As asserções de comportamento continuam com os 5
- * segundos padrão, de propósito: alargar os dois junto esconderia falha de verdade, porque uma
- * tela que leva meio minuto para mostrar um emblema está quebrada. O que se espera aqui é a
- * página **existir**; o que ela faz depois é medido no prazo normal.
+ * segundos padrão, de propósito: alargar os dois junto esconderia falha de verdade, porque uma tela
+ * que leva quinze segundos para mostrar um emblema está quebrada.
+ *
+ * ⚠️ **Instável é defeito da verificação, não azar** — a regra vale mesmo quando o portão fica
+ * verde na repetição, porque o próximo pode não ficar, e porque um teste que às vezes reprova
+ * ensina a ignorar a cor vermelha.
  */
 import { expect, type Page } from "@playwright/test";
 
-/** O prazo da prontidão. Medido no executor do CI, não escolhido por cautela. */
-export const PRAZO_DE_PRONTIDAO = 30_000;
+/** O prazo da prontidão. Folga para o executor do CI, que é mais lento que a máquina local. */
+export const PRAZO_DE_PRONTIDAO = 15_000;
 
 /**
- * Navega para `/estilo` e só devolve quando a página está desenhada.
+ * Navega para `/estilo` e só devolve quando a página **pronta** está desenhada.
  *
  * A vitrine **não pede sessão** — foi deixada aberta na fatia (a) de propósito: ela não exibe dado
  * algum, e exigir login para ver uma paleta não protegeria nada.
  */
 export async function abrirVitrine(page: Page): Promise<void> {
   await page.goto("/estilo");
-  await expect(page.locator("main")).toBeVisible({ timeout: PRAZO_DE_PRONTIDAO });
+  await expect(
+    page.getByRole("heading", { name: "Vocabulário visual", level: 1 }),
+    "a vitrine não terminou de carregar: o título da página não apareceu",
+  ).toBeVisible({ timeout: PRAZO_DE_PRONTIDAO });
+
+  /*
+   * ⚠️ E A TRANSIÇÃO TERMINOU DE VERDADE — um `<main>` só. Sem esta linha, qualquer teste que use
+   * `page.locator("main")` depois daqui pode esbarrar no `<main>` do carregamento, que **não
+   * reexecuta**: violação de modo estrito falha na hora, não espera. É a diferença entre um teste
+   * que às vezes reprova e um que não reprova.
+   */
+  await expect(page.locator("main")).toHaveCount(1, { timeout: PRAZO_DE_PRONTIDAO });
 }
