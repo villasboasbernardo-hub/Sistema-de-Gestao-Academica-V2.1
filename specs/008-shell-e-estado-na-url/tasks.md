@@ -184,7 +184,7 @@ está aqui só por pertencer a esta história.
 - [X] T063 Conferir que a regra de `eslint.config.mjs` continua em **zero violações** no repositório inteiro, com `components/casca/` incluído (`FR-037`, `SC-013`)
 - [X] T064 Atualizar a seção *Estado atual e onde retomar* do `CLAUDE.md` com o resultado **medido** da fatia (`SC-015`) ⚠️ **medido, não declarado**
 - [X] T065 Rodar `pnpm verificar:tudo` na raiz do repositório e conferir que sai **0** (`SC-015`)
-- [ ] T066 Abrir o PR preenchendo `.github/pull_request_template.md` inteiro (`SC-015`, `SC-016`) ⚠️ **e o achado de segurança precisa aparecer no corpo**, porque ele corrige código que já estava mesclado — plano de reversão é `git revert`, sem migration
+- [X] T066 Abrir o PR preenchendo `.github/pull_request_template.md` inteiro (`SC-015`, `SC-016`) ⚠️ **e o achado de segurança precisa aparecer no corpo**, porque ele corrige código que já estava mesclado — plano de reversão é `git revert`, sem migration
 
 ---
 
