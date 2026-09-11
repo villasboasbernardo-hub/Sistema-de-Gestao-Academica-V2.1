@@ -31,7 +31,12 @@ import {
 import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { SeletorTurma } from "@/components/ciaara/seletor-turma";
-import { TabelaDensa, type Coluna, type Densidade } from "@/components/ciaara/tabela-densa";
+import {
+  TabelaDensa,
+  type Coluna,
+  type Densidade,
+  type Ordem,
+} from "@/components/ciaara/tabela-densa";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
 import { GraficoLinha } from "@/components/graficos/grafico-linha";
 import { GraficoPizza } from "@/components/graficos/grafico-pizza";
@@ -41,34 +46,41 @@ import { Input } from "@/components/ui/input";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { STATUS } from "@/lib/design/vocabulario";
+import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 /**
  * ⚠️ OS CAMPOS DE EXEMPLO NÃO FALAM DE INSTRUTOR, e a escolha é deliberada: o `FiltroAvancado` é
  * genérico, e uma amostra que o exercitasse com vocabulário de instrutor esconderia justamente a
  * propriedade que o `FR-007` cobra. Aqui ele filtra fruta.
+ *
+ * ⚠️ E AS CHAVES MUDARAM EM 11/09/2026, POR UM DEFEITO QUE A SEGUNDA AMOSTRA REVELOU. Elas eram
+ * `categoria`, `etiquetas` e `busca` — **os mesmos nomes dos parâmetros do contrato**. Com as duas
+ * amostras na mesma página, o componente montava `id="filtro-busca"` duas vezes: identificador
+ * repetido no documento, e todo `<label for>` apontando para o primeiro. A tela pareceria certa e o
+ * rótulo do segundo campo comandaria o campo errado — defeito de acessibilidade que nenhum tipo vê.
  */
 const CAMPOS_DE_EXEMPLO: readonly CampoDeFiltro[] = [
   {
-    chave: "categoria",
-    rotulo: "Categoria",
+    chave: "variedade",
+    rotulo: "Variedade",
     tipo: "escolha",
     opcoes: [
-      { valor: "a", rotulo: "Categoria A", contagem: 12 },
-      { valor: "b", rotulo: "Categoria B", contagem: 7 },
+      { valor: "a", rotulo: "Variedade A", contagem: 12 },
+      { valor: "b", rotulo: "Variedade B", contagem: 7 },
     ],
   },
   {
-    chave: "etiquetas",
-    rotulo: "Etiquetas",
+    chave: "marcas",
+    rotulo: "Marcas",
     tipo: "escolha-multipla",
     opcoes: [
-      { valor: "x", rotulo: "Etiqueta X", contagem: 4 },
-      { valor: "y", rotulo: "Etiqueta Y", contagem: 9 },
-      { valor: "z", rotulo: "Etiqueta Z", contagem: 0 },
+      { valor: "x", rotulo: "Marca X", contagem: 4 },
+      { valor: "y", rotulo: "Marca Y", contagem: 9 },
+      { valor: "z", rotulo: "Marca Z", contagem: 0 },
     ],
   },
-  { chave: "busca", rotulo: "Texto livre", tipo: "texto" },
-  { chave: "periodo", rotulo: "Período", tipo: "intervalo" },
+  { chave: "procura", rotulo: "Procurar fruta", tipo: "texto" },
+  { chave: "colheita", rotulo: "Período", tipo: "intervalo" },
 ];
 
 export function AmostraIndicadores() {
@@ -155,8 +167,102 @@ export function AmostraFiltroAvancado() {
     <div className="flex flex-col gap-2">
       <FiltroAvancado campos={CAMPOS_DE_EXEMPLO} estado={estado} aoMudar={definirEstado} />
       <p className="text-texto-suave text-xs">
-        Estado devolvido por propriedade: <code>{JSON.stringify(estado)}</code>. Levá-lo para a URL
-        é da fatia (c) — o componente não sabe onde ele mora.
+        Estado devolvido por propriedade: <code>{JSON.stringify(estado)}</code>. Onde ele mora é
+        escolha de quem chama — aqui é memória; na amostra seguinte, a URL.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * ⚠️ OS CAMPOS SÃO OS MESMOS DE CIMA, MENOS O INTERVALO — e a subtração é declaração, não descuido.
+ * O contrato de parâmetros tem quatro tipos (texto, inteiro, escolha, lista) e **nenhum deles é
+ * intervalo**. O primeiro intervalo de verdade é a janela de semana do Épico 6; inventar o tipo
+ * agora, para uma amostra, seria escolher a forma antes de existir o caso.
+ */
+const CAMPOS_NA_URL: readonly CampoDeFiltro[] = [
+  {
+    chave: "categoria",
+    rotulo: "Categoria",
+    tipo: "escolha",
+    opcoes: [
+      { valor: "a", rotulo: "Categoria A", contagem: 12 },
+      { valor: "b", rotulo: "Categoria B", contagem: 7 },
+    ],
+  },
+  {
+    chave: "etiquetas",
+    rotulo: "Etiquetas",
+    tipo: "escolha-multipla",
+    opcoes: [
+      { valor: "x", rotulo: "Etiqueta X", contagem: 4 },
+      { valor: "y", rotulo: "Etiqueta Y", contagem: 9 },
+      { valor: "z", rotulo: "Etiqueta Z", contagem: 0 },
+    ],
+  },
+  { chave: "busca", rotulo: "Texto livre", tipo: "texto" },
+];
+
+/**
+ * O mesmo filtro da amostra acima, com o estado na URL (`FR-014`).
+ *
+ * ⚠️ **O COMPONENTE NÃO MUDOU UMA LINHA**, e é isso que esta amostra prova. Ele já recebia e
+ * devolvia estado por propriedade desde a fatia (b) — a única peça do vocabulário que não precisou
+ * de refatoração. Trocar memória por URL é trocar quem responde às duas propriedades.
+ *
+ * ⚠️ AS TRÊS POLÍTICAS SÃO DIFERENTES, e nenhuma está escrita aqui: categoria e etiquetas
+ * **substituem** a entrada de histórico, porque refinar não é navegar; busca substitui **e** limita
+ * a frequência da escrita. Tudo vem do descritor.
+ *
+ * ⚠️ VOLTAR AO VAZIO É `null`, NÃO LISTA VAZIA. A biblioteca só apaga o parâmetro da URL quando o
+ * valor é idêntico ao padrão, e duas listas vazias não são idênticas — passar `[]` deixaria
+ * `?etiquetas=` pendurado no link compartilhado.
+ */
+export function AmostraFiltroNaUrl() {
+  const [categoria, definirCategoria] = useParametro("/estilo", "categoria");
+  const [etiquetas, definirEtiquetas] = useParametro("/estilo", "etiquetas");
+  const [busca, definirBusca] = useParametro("/estilo", "busca");
+
+  const estado: EstadoDeFiltro = {
+    categoria: categoria === "" ? [] : [categoria],
+    etiquetas,
+    busca: busca === "" ? [] : [busca],
+  };
+
+  const aoMudar = (proximo: EstadoDeFiltro) => {
+    /*
+     * ⚠️ AS DUAS FORMAS DE VOLTAR AO PADRÃO NÃO SÃO EQUIVALENTES, e a diferença é medível.
+     *
+     * `null` apaga o parâmetro **sem consultar o padrão** — funciona mesmo com `clearOnDefault`
+     * desligado. O valor padrão em si (aqui, o texto vazio) só sai da URL **porque** a opção está
+     * ligada. Medido em 11/09/2026: com `clearOnDefault: false`, o percurso que limpava por `null`
+     * passava com o defeito no lugar; o que limpa por valor padrão reprova.
+     *
+     * Por isso a busca devolve o próprio texto, inclusive vazio, e as outras devolvem `null`: escolha
+     * sem opção marcada e lista vazia **não têm** valor padrão que o componente saiba produzir.
+     */
+    const escolha = (chave: string) => proximo[chave]?.[0] ?? null;
+    const lista = (chave: string) => {
+      const itens = proximo[chave] ?? [];
+      return itens.length === 0 ? null : itens;
+    };
+    void definirCategoria(escolha("categoria"));
+    void definirEtiquetas(lista("etiquetas"));
+    void definirBusca(proximo.busca?.[0] ?? "");
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <FiltroAvancado
+        campos={CAMPOS_NA_URL}
+        estado={estado}
+        aoMudar={aoMudar}
+        titulo="Filtros na URL"
+      />
+      <p data-slot="amostra-filtro-na-url" className="text-texto-suave text-xs">
+        Recorte lido da URL:{" "}
+        <code data-estado={JSON.stringify(estado)}>{JSON.stringify(estado)}</code>. Recarregue,
+        compartilhe o endereço ou use o botão voltar — o recorte é do link, não desta aba.
       </p>
     </div>
   );
@@ -364,6 +470,61 @@ export function AmostraTabelaDensa() {
   );
 }
 
+/**
+ * A mesma tabela, com o recorte vindo da URL (`FR-012`, `SC-009`).
+ *
+ * ⚠️ ELA PROVA O QUE O `CHK012` APONTOU. Até a fatia (b) a tabela guardava ordenação e filtro por
+ * dentro e **não os expunha** — era a única divergência conhecida entre o que a fatia entregou e o
+ * que o documento 25 prescreve, e impedia o recorte de virar link.
+ *
+ * ⚠️ E A AMOSTRA DE CIMA CONTINUA EXISTINDO, NÃO CONTROLADA. As duas juntas são a prova de que as
+ * propriedades são **opcionais de verdade**: se a de cima precisasse mudar, a fatia (b) teria
+ * regredido, e toda chamada existente no sistema teria de ser reescrita.
+ *
+ * ⚠️ A ORDENAÇÃO É DE APRESENTAÇÃO, e continua sendo. Levá-la para a URL não a torna regra de
+ * domínio: a antiguidade segue na função pura, aplicada antes de a tabela ver a linha.
+ */
+export function AmostraTabelaNaUrl() {
+  const [ordenarPor, definirOrdenarPor] = useParametro("/estilo", "ordenar_por");
+  const [sentido, definirSentido] = useParametro("/estilo", "sentido");
+  const [filtro, definirFiltro] = useParametro("/estilo", "filtro");
+
+  const ordem =
+    ordenarPor === "" ? null : { chave: ordenarPor, crescente: sentido !== "decrescente" };
+
+  const aoOrdenar = (proxima: Ordem | null) => {
+    if (proxima === null) {
+      // Voltar à ordem original apaga os dois — deixar o sentido pendurado sujaria o link.
+      void definirOrdenarPor(null);
+      void definirSentido(null);
+      return;
+    }
+    void definirOrdenarPor(proxima.chave);
+    void definirSentido(proxima.crescente ? "crescente" : "decrescente");
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <TabelaDensa
+        linhas={LINHAS_DA_AMOSTRA}
+        colunas={COLUNAS_DA_AMOSTRA}
+        chaveLinha={(l) => l.id}
+        rotulo="Registros na URL"
+        densidade="compacta"
+        comBusca
+        ordem={ordem}
+        aoOrdenar={aoOrdenar}
+        busca={filtro}
+        aoBuscar={(proxima) => void definirFiltro(proxima)}
+      />
+      <p data-slot="amostra-tabela-na-url" className="text-texto-suave text-xs">
+        Ordene por uma coluna e filtre: o recorte vai para a barra de endereço. Recarregue ou
+        compartilhe o endereço — a tabela abre no mesmo estado.
+      </p>
+    </div>
+  );
+}
+
 export function AmostraTabelaVazia() {
   return (
     <TabelaDensa
@@ -531,6 +692,51 @@ export function AmostraAlertaEteto() {
           </p>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * ⚠️ AMOSTRA DE FUMAÇA DA BIBLIOTECA DE ESTADO NA URL (`FR-001`, T003 da fatia (c)).
+ *
+ * Ela existe para **provar que a biblioteca funciona nesta versão do arcabouço**, antes de qualquer
+ * coisa depender dela. Os pares declarados dizem `next >=14.2.0`, o que não exclui a 16 nem a
+ * afirma — e a fatia (b) pagou o preço de uma dependência que entrou sem ninguém conferir, com a
+ * tela ficando idêntica.
+ *
+ * ⚠️ ELA NÃO USA O CONTRATO, e não deve: o contrato nasce depois. É por isso que o parâmetro se
+ * chama `demo` e não pertence a rota nenhuma — ele é a prova, não o produto.
+ */
+export function AmostraEstadoNaUrl() {
+  /*
+   * ⚠️ ESTA AMOSTRA ERA A PRIMEIRA VIOLAÇÃO DO `FR-001`, e não era de ninguém: era nossa. Até
+   * 11/09/2026 ela chamava a biblioteca direto, com `history: "push"` escrito à mão e um parâmetro
+   * `demo` que contrato nenhum declarava. Funcionava — e é esse o ponto. **Uma tela que inventa
+   * parâmetro não parece errada**, e foi por isso que o `FR-001` deixou de ser tabela e virou tipo.
+   *
+   * ⚠️ A OPÇÃO DE HISTÓRICO SUMIU DAQUI, E ISSO É O RESULTADO. Ela agora vem do descritor, e quem
+   * escreve tela nova não tem como esquecê-la: não há onde passá-la.
+   */
+  const [valor, definirValor] = useParametro("/estilo", "demo");
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {["alfa", "bravo", "charlie"].map((opcao) => (
+          <Button
+            key={opcao}
+            size="sm"
+            variant={valor === opcao ? "default" : "outline"}
+            onClick={() => void definirValor(valor === opcao ? null : opcao)}
+          >
+            {opcao}
+          </Button>
+        ))}
+      </div>
+      <p data-slot="amostra-estado-na-url" className="text-texto-suave text-xs">
+        Escolhido: <strong data-valor={valor}>{valor || "nenhum"}</strong>. O valor vai para a barra
+        de endereço, sobrevive ao recarregamento e some quando volta ao padrão.
+      </p>
     </div>
   );
 }

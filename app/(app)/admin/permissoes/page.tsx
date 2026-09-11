@@ -51,11 +51,11 @@ export default async function Permissoes() {
   return (
     <section>
       <h1 className="text-lg font-semibold">Matriz de permissões</h1>
-      <p className="mt-1 text-sm opacity-80">
+      <p className="mt-1 text-texto-suave text-sm">
         {data.length} concessões · {perfis.length} perfis · {recursos.length} recursos. A ausência
         de uma linha <strong>é</strong> a negação: a matriz guarda apenas o que é permitido.
       </p>
-      <p className="mt-1 text-sm opacity-80">
+      <p className="mt-1 text-texto-suave text-sm">
         Esta tela é <strong>somente leitura</strong>. Alterar uma permissão é operação no banco, e
         passa a valer sem novo <i>deploy</i>.
       </p>
@@ -64,9 +64,14 @@ export default async function Permissoes() {
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th className="border px-2 py-1 text-left">Recurso</th>
+              <th className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left">
+                Recurso
+              </th>
               {perfis.map((p) => (
-                <th key={p} className="border px-2 py-1 text-left">
+                <th
+                  key={p}
+                  className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left"
+                >
                   {p}
                 </th>
               ))}
@@ -75,11 +80,13 @@ export default async function Permissoes() {
           <tbody>
             {recursos.map((recurso) => (
               <tr key={recurso}>
-                <th className="border px-2 py-1 text-left font-normal">{recurso}</th>
+                <th className="border-borda text-texto border px-2 py-1 text-left font-normal">
+                  {recurso}
+                </th>
                 {perfis.map((perfil) => {
                   const tem = ACOES.filter((a) => concedido.has(`${perfil}|${recurso}|${a}`));
                   return (
-                    <td key={perfil} className="border px-2 py-1">
+                    <td key={perfil} className="border-borda text-texto border px-2 py-1">
                       {tem.length > 0 ? tem.join(" · ") : <span aria-label="nenhuma">—</span>}
                     </td>
                   );

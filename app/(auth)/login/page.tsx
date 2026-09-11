@@ -20,13 +20,14 @@ export default async function Login({
   return (
     <main className="mx-auto max-w-sm p-8">
       <h1 className="text-lg font-semibold">CIAARA-11</h1>
-      <p className="mt-1 text-sm opacity-80">
+      <p className="mt-1 text-texto-suave text-sm">
         Divisão de Administração Acadêmica — Gestão Acadêmica
       </p>
 
       <FormularioDeLogin destino={destino ?? "/"} />
 
-      <p className="mt-6 text-xs opacity-70">
+      {/* veste: a dica de rodapé sobre o acesso por convite — texto fixo, nunca dado */}
+      <p className="mt-6 text-texto-tenue text-xs">
         O acesso é <strong>somente por convite</strong> do Admin. Não há autocadastro.
       </p>
       <a className="mt-2 inline-block text-sm underline" href="/recuperar-senha">

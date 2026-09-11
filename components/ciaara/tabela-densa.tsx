@@ -19,6 +19,15 @@
  * coluna de horas não alinha, e a tabela densa perde exatamente o que a torna densa.
  *
  * ⚠️ COM MARCADOR DE CLIENTE: teclado, foco, ordenação e filtro são comportamento de navegador.
+ *
+ * ⚠️ ORDENAÇÃO E BUSCA PODEM VIR DE FORA desde 11/09/2026 (`FR-012`, achado `CHK012`). Até a fatia
+ * (b) ela guardava as duas por dentro e **não as expunha** — era a única divergência conhecida entre
+ * o que aquela fatia entregou e o que o documento 25 prescreve, e impedia o recorte de virar link.
+ *
+ * ⚠️ **AS PROPRIEDADES SÃO OPCIONAIS, E ISSO É METADE DO REQUISITO.** Nenhuma chamada existente
+ * mudou, e a suíte da fatia (b) continua verde **sem uma asserção editada** — se alguma tivesse de
+ * mudar, a propriedade não seria opcional de verdade e a prova de não regressão seria uma suíte
+ * reescrita, que não prova nada.
  */
 "use client";
 
@@ -29,6 +38,9 @@ import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon, SearchIcon } from "luci
 import { EstadoVazio, type MotivoDoVazio } from "@/components/ciaara/EstadoVazio";
 import { CelulaNavegavel, ListaNavegavel } from "@/components/ciaara/lista-navegavel";
 import { Input } from "@/components/ui/input";
+
+/** Por qual coluna a tabela está ordenada, e em que sentido. `null` é a ordem original. */
+export type Ordem = { readonly chave: string; readonly crescente: boolean };
 
 /** As três densidades do documento 23 §5. */
 export type Densidade = "compacta" | "padrao" | "confortavel";
@@ -78,6 +90,20 @@ export type TabelaDensaProps<T> = {
   readonly aoAtivarLinha?: (linha: T) => void;
   readonly motivoDoVazio?: MotivoDoVazio;
   readonly className?: string;
+
+  /**
+   * A ordenação, vinda de fora. **A presença desta propriedade decide quem manda** (`FR-012.1`).
+   *
+   * ⚠️ `null` É PRESENÇA, e significa *"sem ordenação"*. Com `exactOptionalPropertyTypes` ligado,
+   * passar `undefined` de propósito não compila — então ausente e nulo são coisas distintas, e a
+   * distinção é o mecanismo.
+   */
+  readonly ordem?: Ordem | null;
+  readonly aoOrdenar?: (proxima: Ordem | null) => void;
+
+  /** O filtro textual, vindo de fora. Mesma regra: a presença decide quem manda. */
+  readonly busca?: string;
+  readonly aoBuscar?: (proxima: string) => void;
 };
 
 const ALINHAMENTO = {
@@ -85,8 +111,6 @@ const ALINHAMENTO = {
   fim: "text-right",
   centro: "text-center",
 } as const;
-
-type Ordem = { readonly chave: string; readonly crescente: boolean };
 
 /** Compara dois valores de célula. Texto por `localeCompare`; número por subtração. */
 function comparar(a: string | number, b: string | number): number {
@@ -98,19 +122,47 @@ function alinhamentoDe<T>(coluna: Coluna<T>): string {
   return ALINHAMENTO[coluna.alinhamento ?? (coluna.numerica ? "fim" : "inicio")];
 }
 
-export function TabelaDensa<T>({
-  linhas,
-  colunas,
-  chaveLinha,
-  rotulo,
-  densidade = "padrao",
-  comBusca = false,
-  aoAtivarLinha,
-  motivoDoVazio = "sem-dado",
-  className,
-}: TabelaDensaProps<T>) {
-  const [ordem, definirOrdem] = React.useState<Ordem | null>(null);
-  const [busca, definirBusca] = React.useState("");
+export function TabelaDensa<T>(props: TabelaDensaProps<T>) {
+  const {
+    linhas,
+    colunas,
+    chaveLinha,
+    rotulo,
+    densidade = "padrao",
+    comBusca = false,
+    aoAtivarLinha,
+    motivoDoVazio = "sem-dado",
+    className,
+  } = props;
+
+  /*
+   * ⚠️ **FONTE ÚNICA, E A PRESENÇA DA PROPRIEDADE É QUEM DECIDE** (`FR-012.1`). Manter o estado
+   * interno em dia *e* aceitar o valor de fora é a armadilha conhecida deste padrão: as duas cópias
+   * divergem no primeiro clique, e a tabela passa a mostrar uma ordenação que a URL não tem.
+   *
+   * ⚠️ A CONFERÊNCIA É `in`, E NÃO `!== undefined`, DE PROPÓSITO. Com `exactOptionalPropertyTypes`
+   * ligado, quem não quer controlar **omite** a propriedade; quem quer controlar sem ordenação
+   * passa `null`. Se a conferência fosse por `undefined`, esses dois casos seriam o mesmo — e uma
+   * tabela controlada com ordem nula voltaria a se ordenar sozinha, em silêncio.
+   */
+  const ordemControlada = "ordem" in props;
+  const buscaControlada = "busca" in props;
+
+  const [ordemInterna, definirOrdemInterna] = React.useState<Ordem | null>(null);
+  const [buscaInterna, definirBuscaInterna] = React.useState("");
+
+  const ordem = ordemControlada ? (props.ordem ?? null) : ordemInterna;
+  const busca = buscaControlada ? (props.busca ?? "") : buscaInterna;
+
+  const definirOrdem = (proxima: Ordem | null) => {
+    if (ordemControlada) props.aoOrdenar?.(proxima);
+    else definirOrdemInterna(proxima);
+  };
+
+  const definirBusca = (proxima: string) => {
+    if (buscaControlada) props.aoBuscar?.(proxima);
+    else definirBuscaInterna(proxima);
+  };
 
   const filtradas = React.useMemo(() => {
     const alvo = busca.trim().toLocaleLowerCase("pt-BR");
@@ -139,13 +191,14 @@ export function TabelaDensa<T>({
   }, [filtradas, colunas, ordem]);
 
   function alternarOrdem(chave: string) {
-    definirOrdem((atual) => {
-      if (!atual || atual.chave !== chave) return { chave, crescente: true };
-      // ⚠️ Três estados, e o terceiro importa: crescente, decrescente e DE VOLTA À ORDEM ORIGINAL.
-      // Sem ele, quem clicou por engano não tem como desfazer — e a ordem original pode ser a de
-      // domínio, que é a única que o sistema garante.
-      return atual.crescente ? { chave, crescente: false } : null;
-    });
+    if (!ordem || ordem.chave !== chave) {
+      definirOrdem({ chave, crescente: true });
+      return;
+    }
+    // ⚠️ Três estados, e o terceiro importa: crescente, decrescente e DE VOLTA À ORDEM ORIGINAL.
+    // Sem ele, quem clicou por engano não tem como desfazer — e a ordem original pode ser a de
+    // domínio, que é a única que o sistema garante.
+    definirOrdem(ordem.crescente ? { chave, crescente: false } : null);
   }
 
   const semBusca = busca.trim().length === 0;

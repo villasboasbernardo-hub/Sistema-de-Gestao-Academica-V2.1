@@ -12,10 +12,17 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { abrirVitrine } from "./abrir-vitrine";
+import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 
-test.beforeEach(async ({ page }) => {
-  await abrirVitrine(page);
-});
+/**
+ * ⚠️ A ABERTURA DA VITRINE DESCEU PARA DENTRO DE CADA BLOCO EM 11/09/2026. Ela era de arquivo, e a
+ * casca de navegação **não vive na vitrine** — o `FR-038` a mantém fora do grupo autenticado, de
+ * propósito. Um preparo de arquivo obrigaria os casos da casca a abrir uma tela que não os contém.
+ */
+const naVitrine = () =>
+  test.beforeEach(async ({ page }) => {
+    await abrirVitrine(page);
+  });
 
 /** O nome acessível de um elemento, pela árvore de acessibilidade do navegador. */
 async function semNomeAcessivel(page: Page): Promise<string[]> {
@@ -53,6 +60,8 @@ async function semNomeAcessivel(page: Page): Promise<string[]> {
 }
 
 test.describe("`FR-030` (a) · nome acessível em todo controle", () => {
+  naVitrine();
+
   test("nenhum controle da vitrine fica sem nome", async ({ page }) => {
     const semNome = await semNomeAcessivel(page);
     expect(
@@ -93,6 +102,8 @@ test.describe("`FR-030` (a) · nome acessível em todo controle", () => {
 });
 
 test.describe("`FR-030` (b) · região anunciada ao mudar, sem roubar o foco", () => {
+  naVitrine();
+
   test("as regiões vivas declaram como são anunciadas", async ({ page }) => {
     const alerta = page.locator('[data-slot="alerta-conformidade"]');
     await expect(alerta).toHaveAttribute("aria-live", "polite");
@@ -120,6 +131,8 @@ test.describe("`FR-030` (b) · região anunciada ao mudar, sem roubar o foco", (
 });
 
 test.describe("`FR-030` (c) · a ordem de leitura acompanha a ordem visual", () => {
+  naVitrine();
+
   test("os títulos de seção saem no documento na mesma ordem em que aparecem", async ({ page }) => {
     /*
      * ⚠️ É O REQUISITO MEDIDO, e não uma impressão: a ordem do DOM é a ordem em que o leitor de
@@ -146,5 +159,88 @@ test.describe("`FR-030` (c) · a ordem de leitura acompanha a ordem visual", () 
       .locator("h1")
       .evaluate((n) => n.getBoundingClientRect().top + window.scrollY);
     expect(h1).toBeLessThan(primeiroH2);
+  });
+});
+
+/**
+ * A navegação — a parte que a fatia (b) não alcançou (`FR-021`).
+ *
+ * ⚠️ **SEM O ATALHO, QUEM USA TECLADO ATRAVESSA O MENU INTEIRO A CADA TELA.** É o mesmo problema dos
+ * 2.400 pressionamentos que a tabela densa resolveu na fatia (b), noutro lugar: lá era a grade, aqui
+ * é a casca, e a casca aparece em **toda** tela do sistema.
+ */
+test.describe("`FR-021` · a casca se atravessa por teclado", () => {
+  let EMAIL = "";
+
+  test.beforeAll(async ({}, info) => {
+    EMAIL = emailDeTeste("acessibilidade-casca", info.workerIndex);
+    await criarConta(EMAIL, `USR-ACESS-CASCA-${info.workerIndex}`);
+  });
+
+  test.afterAll(async () => {
+    await apagarConta(EMAIL);
+  });
+
+  test("o atalho para o conteúdo é a PRIMEIRA parada de tabulação", async ({ page }) => {
+    await entrar(page, EMAIL);
+    /*
+     * ⚠️ `keyboard.press`, E NÃO `locator("body").press`. O segundo foca o elemento antes de
+     * teclar, e `body` não é focável: a tabulação parte de um lugar indefinido e o caso reprova com
+     * *"element(s) not found"* — que se lê como "o atalho não existe", quando ele existe.
+     */
+    await page.keyboard.press("Tab");
+
+    const foco = page.locator(":focus");
+    await expect(foco).toHaveText(/pular para o conteúdo/i);
+  });
+
+  test("⚠️ e ele APARECE ao receber o foco — invisível no foco é enfeite", async ({ page }) => {
+    /*
+     * Um atalho que continua escondido depois de focado existe para o leitor de tela e não para
+     * quem enxerga e navega por teclado — que é metade de quem precisa dele.
+     */
+    await entrar(page, EMAIL);
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: /pular para o conteúdo/i })).toBeInViewport();
+  });
+
+  test("o atalho leva o foco ao conteúdo, e o conteúdo aceita foco", async ({ page }) => {
+    await entrar(page, EMAIL);
+    /*
+     * ⚠️ A PRIMEIRA PARADA É CONFERIDA ANTES DE TECLAR ENTER. Sem isto o caso é uma corrida: se a
+     * tabulação acontecer antes de a página assentar, o `Enter` aciona outra coisa e a falha se lê
+     * como "o atalho não leva a lugar nenhum" — diagnóstico errado sobre um atalho que funciona.
+     */
+    await page.keyboard.press("Tab");
+    await expect(page.locator(":focus")).toHaveText(/pular para o conteúdo/i);
+
+    await page.keyboard.press("Enter");
+
+    // ⚠️ Alvo que não aceita foco recebe a âncora e deixa o foco onde estava: o endereço muda, a
+    // tabulação seguinte volta para o menu, e o atalho parece funcionar sem funcionar.
+    await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe("conteudo");
+  });
+
+  test("o marco de navegação é anunciado, e há um só", async ({ page }) => {
+    await entrar(page, EMAIL);
+    await expect(page.getByRole("navigation", { name: "Navegação principal" })).toHaveCount(1);
+  });
+
+  test("trocar de rota não deixa o foco na entrada que ficou para trás", async ({ page }) => {
+    /*
+     * ⚠️ É O CASO QUE DISTINGUE NAVEGAÇÃO DE TROCA DE CONTEÚDO. Se o foco permanecer no link
+     * clicado, quem usa leitor de tela continua ouvindo o menu enquanto a tela inteira mudou — e
+     * precisa procurar, a cada navegação, onde o conteúdo novo começou.
+     */
+    await entrar(page, EMAIL);
+    await page.getByRole("link", { name: "Permissões" }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/admin/permissoes");
+
+    const focoContinuaNoLink = await page.evaluate(
+      () => document.activeElement?.getAttribute("href") === "/admin/permissoes",
+    );
+    expect(focoContinuaNoLink, "o foco ficou preso no link do menu depois da navegação").toBe(
+      false,
+    );
   });
 });

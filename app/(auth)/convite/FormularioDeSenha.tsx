@@ -107,7 +107,7 @@ export function FormularioDeSenha({ rotulo }: { readonly rotulo: string }) {
           required
           minLength={12}
           autoComplete="new-password"
-          className="mt-1 w-full rounded border px-2 py-1"
+          className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca mt-1 w-full border px-2 py-1 focus-visible:ring-2 focus-visible:outline-none"
         />
       </label>
 
@@ -119,17 +119,24 @@ export function FormularioDeSenha({ rotulo }: { readonly rotulo: string }) {
           required
           minLength={12}
           autoComplete="new-password"
-          className="mt-1 w-full rounded border px-2 py-1"
+          className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca mt-1 w-full border px-2 py-1 focus-visible:ring-2 focus-visible:outline-none"
         />
       </label>
 
       {erro ? (
-        <p role="alert" className="text-sm">
+        <p
+          role="alert"
+          className="border-conflito-borda bg-conflito-fundo text-conflito-tinta rounded-ciaara border px-3 py-2 text-sm"
+        >
           {erro}
         </p>
       ) : null}
 
-      <button type="submit" disabled={enviando} className="w-full rounded border px-3 py-2 text-sm">
+      <button
+        type="submit"
+        disabled={enviando}
+        className="border-marca bg-marca text-marca-contraste rounded-ciaara focus-visible:ring-marca w-full border px-3 py-2 text-sm font-medium disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      >
         {enviando ? "Salvando…" : rotulo}
       </button>
     </form>

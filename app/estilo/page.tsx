@@ -17,18 +17,20 @@ import {
   AmostraCampo,
   AmostraDialogoConfirmacao,
   AmostraEmblemasDeStatus,
+  AmostraEstadoNaUrl,
   AmostraEsqueleto,
   AmostraEstadoVazio,
   AmostraFiltroAvancado,
+  AmostraFiltroNaUrl,
   AmostraIndicadores,
   AmostraNomeInstrutor,
   AmostraSeletorInstrutor,
   AmostraSeletorTurma,
   AmostraGraficos,
   AmostraTabelaDensa,
+  AmostraTabelaNaUrl,
   AmostraTabelaVazia,
 } from "@/app/estilo/amostras";
-import { SeletorDeTema } from "@/components/ciaara/seletor-tema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,7 +135,12 @@ export default function Vitrine() {
             Ponto único do CIAARA-11. Toda cor desta tela vem de <code>app/globals.css</code>.
           </p>
         </div>
-        <SeletorDeTema />
+        {/*
+          ⚠️ O ALTERNADOR DE TEMA SAIU DAQUI EM 11/09/2026 (`FR-018` da fatia c). Ele era provisório:
+          existia porque, sem cabeçalho e sem navegação, não haveria onde clicar para exercitar o
+          tema. O definitivo mora no cabeçalho da casca, e manter os dois seria a duplicação que o
+          `CHK019` previu — **substituição, não acréscimo**.
+        */}
       </header>
 
       <Secao titulo="Papéis — superfície, texto e marca">
@@ -328,8 +335,16 @@ export default function Vitrine() {
         <AmostraDialogoConfirmacao />
       </Secao>
 
+      <Secao titulo="Estado na URL — pelo contrato, e a política de histórico já não se escreve aqui">
+        <AmostraEstadoNaUrl />
+      </Secao>
+
       <Secao titulo="Filtro avançado — genérico, e ele não conhece domínio nenhum">
         <AmostraFiltroAvancado />
+      </Secao>
+
+      <Secao titulo="Filtro avançado na URL — o MESMO componente, sem uma linha de mudança">
+        <AmostraFiltroNaUrl />
       </Secao>
 
       <Secao titulo="Nome de instrutor — P/G, especialidade e o nome COMPLETO, com o nome de guerra em negrito">
@@ -350,6 +365,10 @@ export default function Vitrine() {
 
       <Secao titulo="Tabela sem linhas — o contêiner continua alcançável, e o vazio diz qual vazio é">
         <AmostraTabelaVazia />
+      </Secao>
+
+      <Secao titulo="Tabela densa na URL — a MESMA tabela, com o recorte vindo do endereço">
+        <AmostraTabelaNaUrl />
       </Secao>
 
       <Secao titulo="Gráficos — forma e rótulo, porque a cor sozinha não distingue série nenhuma">

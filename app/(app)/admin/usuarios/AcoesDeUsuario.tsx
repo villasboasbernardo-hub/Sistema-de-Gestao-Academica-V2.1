@@ -37,7 +37,7 @@ export function AcoesDeUsuario({
           type="button"
           disabled={ocupado}
           onClick={() => executar(() => reenviarConvite({ usuarioId }))}
-          className="rounded border px-2 py-0.5 text-xs"
+          className="border-borda-forte text-texto hover:bg-marca-suave rounded-ciaara-sm focus-visible:ring-marca border px-2 py-0.5 text-xs focus-visible:ring-2 focus-visible:outline-none"
         >
           Reenviar convite
         </button>
@@ -48,7 +48,7 @@ export function AcoesDeUsuario({
           type="button"
           disabled={ocupado}
           onClick={() => executar(() => desativar({ usuarioId }))}
-          className="rounded border px-2 py-0.5 text-xs"
+          className="border-borda-forte text-texto hover:bg-marca-suave rounded-ciaara-sm focus-visible:ring-marca border px-2 py-0.5 text-xs focus-visible:ring-2 focus-visible:outline-none"
         >
           Desativar
         </button>

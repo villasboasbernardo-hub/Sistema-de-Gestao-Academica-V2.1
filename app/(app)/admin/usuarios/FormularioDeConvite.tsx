@@ -30,7 +30,10 @@ export function FormularioDeConvite() {
   }
 
   return (
-    <form action={enviar} className="mt-4 space-y-2 rounded border p-4">
+    <form
+      action={enviar}
+      className="border-borda bg-superficie rounded-ciaara mt-4 space-y-2 border p-4"
+    >
       <h2 className="text-sm font-medium">Convidar</h2>
 
       <div className="flex flex-wrap gap-2">
@@ -38,17 +41,21 @@ export function FormularioDeConvite() {
           name="nome"
           placeholder="Nome completo"
           required
-          className="rounded border px-2 py-1 text-sm"
+          className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
         />
         <input
           name="email"
           type="email"
           placeholder="e-mail"
           required
-          className="rounded border px-2 py-1 text-sm"
+          className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
         />
 
-        <select name="perfil" required className="rounded border px-2 py-1 text-sm">
+        <select
+          name="perfil"
+          required
+          className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
+        >
           {Constants.public.Enums.perfil_usuario.map((p) => (
             <option key={p} value={p}>
               {p}
@@ -56,7 +63,11 @@ export function FormularioDeConvite() {
           ))}
         </select>
 
-        <select name="escopo" required className="rounded border px-2 py-1 text-sm">
+        <select
+          name="escopo"
+          required
+          className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
+        >
           {Constants.public.Enums.escopo_curso.map((e) => (
             <option key={e} value={e}>
               {e}
@@ -64,7 +75,11 @@ export function FormularioDeConvite() {
           ))}
         </select>
 
-        <button type="submit" disabled={enviando} className="rounded border px-3 py-1 text-sm">
+        <button
+          type="submit"
+          disabled={enviando}
+          className="border-marca bg-marca text-marca-contraste rounded-ciaara focus-visible:ring-marca border px-3 py-1 text-sm font-medium disabled:opacity-60 focus-visible:ring-2 focus-visible:outline-none"
+        >
           {enviando ? "Enviando…" : "Enviar convite"}
         </button>
       </div>

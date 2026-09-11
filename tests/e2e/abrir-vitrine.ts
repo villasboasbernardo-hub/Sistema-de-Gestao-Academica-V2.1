@@ -33,9 +33,11 @@ export const PRAZO_DE_PRONTIDAO = 15_000;
  *
  * A vitrine **não pede sessão** — foi deixada aberta na fatia (a) de propósito: ela não exibe dado
  * algum, e exigir login para ver uma paleta não protegeria nada.
+ *
+ * @param consulta a parte da URL a partir de `?`, para exercitar link direto. Vazia por padrão.
  */
-export async function abrirVitrine(page: Page): Promise<void> {
-  await page.goto("/estilo");
+export async function abrirVitrine(page: Page, consulta = ""): Promise<void> {
+  await page.goto(`/estilo${consulta}`);
   await expect(
     page.getByRole("heading", { name: "Vocabulário visual", level: 1 }),
     "a vitrine não terminou de carregar: o título da página não apareceu",

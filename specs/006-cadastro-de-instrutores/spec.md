@@ -36,6 +36,15 @@ até fazer falta.
 ⚠️ **A 038 removeu comportamento.** Reintroduzir edição em linha "para agilizar" desfaz uma correção
 que já foi feita uma vez.
 
+## Clarifications
+
+### Session 2026-09-10
+
+- Q: Quem pode **escrever** CPF, RG, telefone e endereço, já que o recorte do Épico 3 governa apenas a leitura? → A: **Espelhar a leitura.** Os mesmos três perfis que leem identificação civil e residência são os únicos que a escrevem. Quem não vê, não escreve.
+- Q: Como os civis entram na ordenação, se a escala do documento 04 vai de `CMG=1` a `MN=12`? → A: **Peso 13 para `SC` e `SCNS`**, como o schema já faz. Civis depois de todos os militares, com a antiguidade declarada como desempate entre eles.
+- Q: O que acontece com a conta de acesso quando o instrutor vinculado é desativado? → A: **Nada.** Os dois ciclos de vida são independentes, e a tela de usuários mostra que o instrutor vinculado está inativo.
+- Q: Quais indicadores e gráficos a tela precisa ter, já que o requisito diz "entre outros pertinentes"? → A: **Fechar a lista extraindo das specs 014 e 015 da v2.0.** Extraído em 10/09/2026: **4 indicadores e 7 gráficos**, mais os filtros, as colunas obrigatórias da listagem e três refinamentos que "entre outros pertinentes" teria engolido.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A ordem é sempre a da antiguidade (Priority: P1)
@@ -57,6 +66,8 @@ sistema e conferir a ordem em cada uma — não por amostragem.
    aparecem em ordem crescente de antiguidade, **derivada do posto/graduação**.
 2. **Dado** dois instrutores de **mesmo posto**, **quando** a lista os apresenta, **então** o
    desempate é a antiguidade declarada, e apenas ela.
+2.1. **Dado** um instrutor civil e um militar, **quando** a lista os apresenta, **então** o civil
+   vem **depois** de todos os militares — e o desempate entre dois civis é o mesmo.
 3. **Dado** uma tela nova qualquer, **quando** ela exibe instrutores, **então** ela já nasce
    ordenada — sem que o autor precise lembrar.
 
@@ -146,6 +157,8 @@ nova atribuição, permaneceu em tudo o que já estava lançado.
    com nome e vínculos.
 3. **Dado** um instrutor desativado, **quando** ele é reativado, **então** volta às listas sem
    perder nada.
+4. **Dado** um instrutor que também tem conta de acesso, **quando** ele é desativado, **então** a
+   conta **continua ativa** — e a tela de usuários mostra que o instrutor vinculado está inativo.
 
 ---
 
@@ -180,8 +193,14 @@ refinamento reaparece.
 - **FR-001**: Toda lista, seletor e filtro de instrutores MUST ser ordenado por **antiguidade
   crescente**, sem exceção, em qualquer tela (`RN-ANT-01`, `RF-INSTR-05`).
 - **FR-002**: A antiguidade MUST ser derivada do **posto/graduação**, pela escala fixa em que peso
-  menor é mais antigo. A **antiguidade declarada** MUST ser usada **apenas como desempate** entre
-  instrutores de mesmo posto (`RN-ANT-02`).
+  menor é mais antigo, de `CMG` a `MN`. As categorias **civis** `SC` e `SCNS` MUST receber o peso
+  **imediatamente posterior ao último posto militar**, de modo que apareçam **depois** de todos os
+  militares. A **antiguidade declarada** MUST ser usada **apenas como desempate** entre instrutores
+  de mesmo peso — militares ou civis (`RN-ANT-02`).
+  ⚠️ **A parte civil é decisão de 10/09/2026, e ela documenta o que já existia.** A escala do
+  documento 04 termina em `MN` e **não cobre civis**; o schema já resolvia por peso 13, citando um
+  achado da própria v2.0. Sem isto escrito, cada tela ordenaria os civis de um jeito — e a
+  ordenação que precisa ser idêntica em todo lugar deixaria de ser.
   ⚠️ **Inverter os dois quebra a ordenação do sistema inteiro e a seção 1 da LIQ.** A antiguidade
   declarada é campo legado preservado por decisão, não critério primário.
 - **FR-003**: A escala de posto/graduação MUST ser **dado administrável**, não constante em código
@@ -204,6 +223,16 @@ refinamento reaparece.
 - **FR-009**: Instrutor desativado MUST sair das listas de **nova** atribuição e MUST **permanecer**
   em todo histórico já lançado (`RF-INSTR-07`).
 - **FR-010**: MUST ser possível **reativar** um instrutor desativado, sem perda.
+- **FR-010.1**: Desativar um instrutor MUST **não** alterar a conta de acesso da pessoa, quando
+  existir vínculo entre as duas. A tela de usuários MUST **mostrar** que o instrutor vinculado está
+  inativo.
+  ⚠️ **São dois cadastros com ciclos de vida diferentes, e o Épico 3 já decidiu isto na direção
+  inversa**: usuário ligado a instrutor inativo mantém o vínculo, e a tela mostra a situação.
+  Desativar o docente diz que ele **não recebe aula nova** — não que perdeu o acesso. Quem
+  administra o sistema continua administrando.
+  ⚠️ **As duas escolhas erradas são ruins de jeitos opostos**: desativar em cascata tira o acesso
+  de alguém por um ato que não era sobre isso; ignorar o vínculo esconde de quem administra que
+  existe conta ativa ligada a docente inativo.
 - **FR-011**: O salvamento de cadastro novo ou edição MUST pedir **confirmação** (`RF-INSTR-11`).
 - **FR-012**: Ao editar, todos os campos MUST vir carregados com os valores salvos, **nenhum em
   branco por engano** (`RF-INSTR-04`).
@@ -247,13 +276,55 @@ refinamento reaparece.
 
 - **FR-023**: Ficha individual e **formulário avançado** (specs 016 e 025).
 - **FR-024**: **Máscaras de entrada** nos campos de formato conhecido (spec 025).
-- **FR-025**: **Filtros e cross-filtering** — filtro aplicado sobre o resultado do anterior
-  (spec 015).
-- **FR-026**: **Indicadores agregados** e **gráficos** (`RF-INSTR-08`, spec 014).
+- **FR-025**: **Filtros avançados e cross-filtering** — filtro aplicado sobre o resultado do
+  anterior (spec 015). Os filtros MUST ser, no mínimo: **OM, categoria, capacitação, regime e
+  escolaridade**.
+- **FR-026**: MUST existir **quatro indicadores**, e são estes — a lista é **fechada**, extraída da
+  spec 014 em 10/09/2026, e "entre outros pertinentes" do `RF-INSTR-08` deixa de ser aceitável como
+  redação:
+  1. **Total de instrutores**;
+  2. **Instrutores com capacitação didática** — conta quem tem o campo **não vazio**;
+  3. **CH total ministrada no ano**;
+  4. **Taxa de seleção, habilitados × selecionados**.
+- **FR-026.1**: A taxa de seleção MUST exibir **os dois valores absolutos sempre**, e o percentual
+  apenas como informação secundária.
+  ⚠️ **Selecionados NÃO é subconjunto de habilitados.** A v2.0 mediu **10 casos reais** de instrutor
+  selecionado sem vínculo de habilitação ativo. Forçar o menor dos dois, ou esconder um percentual
+  acima de 100%, apagaria justamente a inconsistência que o número existe para revelar.
+- **FR-026.2**: MUST existir **sete gráficos**, e o de **posto/graduação** MUST vir **sempre em
+  primeiro** e **sempre em ordem de antiguidade**: habilitados × selecionados, classificação,
+  **posto/graduação**, OM, escolaridade, regime de trabalho e capacitação didática.
+  ⚠️ **Ordenação alfabética é PROIBIDA** nesse gráfico — está escrito assim na spec 014.
+- **FR-026.3**: Posto/graduação fora do domínio conhecido MUST aparecer numa faixa **"Outros"** ao
+  final da ordenação, **nunca ser omitido em silêncio** (Princípio V, degradação segura).
+- **FR-026.4**: No gráfico de capacitação didática, um instrutor com **duas** qualificações MUST
+  contar em **ambas** as barras; quem tem o campo vazio MUST **não** contar em nenhuma.
 - **FR-027**: **Quadro de avisos de qualidade de cadastro** (`RF-INSTR-09`).
+- **FR-027.1**: A listagem MUST trazer, no mínimo, as colunas **posto/graduação, nome completo,
+  categoria, OM, regime e CH total no ano** (spec 014).
+- **FR-027.2**: No nome completo, a palavra correspondente ao **nome de guerra** MUST aparecer em
+  negrito, quando houver (spec 014).
+- **FR-027.3**: Nenhum seletor de instrutor MUST exibir identificador técnico ao usuário (spec 014).
+- **FR-027.4**: Filtro combinado que não retorna ninguém MUST mostrar mensagem clara — e MUST
+  distinguir *"não há"* de *"você não tem permissão de ver"* (`RN-DEG-01`, e é o gotcha nº 4 do
+  BRIEF).
 - **FR-028**: O estado de tela — filtro aplicado, instrutor selecionado — MUST viver **na URL**, de
   modo que recarregar ou compartilhar o endereço reproduza a mesma tela (`RF-NAV-01`).
 - **FR-029**: Toda escrita MUST ser registrada com autoria e momento (`RF-INSTR-12`).
+
+#### Dado pessoal — a metade da escrita, que estava aberta
+
+- **FR-032**: A **escrita** das colunas de identificação civil e residência MUST ser restrita aos
+  **mesmos três perfis** que hoje as leem, e a restrição MUST ser **por coluna**, imposta pelo
+  banco.
+  ⚠️ **Medido em 10/09/2026, e é o motivo deste requisito existir**: `authenticated` tem `SELECT`
+  em 33 colunas de `instrutores` e `UPDATE` em **45**. O mesmo perfil que **não consegue ler** o
+  CPF **consegue gravá-lo**. O recorte do Épico 3 revogou apenas o `select`.
+  ⚠️ **A regra fica dizível numa frase: quem não vê, não escreve.** Qualquer recorte diferente
+  exigiria explicar por que alguém edita às cegas um campo que não pode conferir — e edição às
+  cegas de CPF é como um dado se apaga sem ninguém notar.
+- **FR-033**: MUST existir **teste negativo por perfil** para a escrita, como já existe para a
+  leitura. ⚠️ Provar só o caminho autorizado não prova nada sobre o recorte.
 
 #### Preferências e ficha
 
@@ -292,7 +363,12 @@ refinamento reaparece.
   Nenhum dos dois é impedido de nada.
 - **SC-007**: Cada um dos refinamentos das **oito specs** do inventário tem endereço apontado na
   v2.1 — a lista é percorrida item a item e **nenhum fica sem resposta**.
+- **SC-007.1**: São exibidos **4 indicadores** e **7 gráficos**, e o de posto/graduação está em
+  primeiro, em ordem de antiguidade. Contagem exata, não "aproximadamente".
 - **SC-008**: Recarregar a página com filtros aplicados reproduz **exatamente** a mesma tela.
+- **SC-010**: O número de perfis que **escrevem** identificação civil e residência é **igual** ao
+  número que as **lê** — três —, e a diferença entre colunas com `SELECT` e colunas com `UPDATE`
+  para o papel autenticado é **zero**. Hoje ela é **12**.
 - **SC-009**: `pnpm verificar:tudo` e o CI dão **veredito idêntico** sobre o mesmo commit.
 
 ## Decisões de Bernardo — 10/09/2026
@@ -305,9 +381,13 @@ refinamento reaparece.
 
 ## Assumptions
 
-1. **O schema já existe e não muda.** As 177 linhas estão migradas desde o Épico 2, com os cinco
-   `NOT NULL`, o status explícito e as duas colunas de antiguidade. Esta fatia **consome** o banco
-   do Épico 1; não o redesenha.
+1. **O schema já existe e muda pouco — mas muda.** As 177 linhas estão migradas desde o Épico 2,
+   com os cinco `NOT NULL`, o status explícito e as duas colunas de antiguidade. Esta fatia
+   **consome** o banco do Épico 1 e **não o redesenha**.
+   ⚠️ **Correção de 10/09/2026**: a premissa dizia "não muda", e o `FR-032` a desmente. Fechar o
+   recorte de escrita é `grant update` por coluna, e portanto **esta fatia tem migration** — com
+   plano de reversão, teste negativo por perfil e tudo o que a Definition of Done exige de quem
+   toca o banco.
 2. **A RLS do Épico 1 governa quem vê o quê**, e o recorte de dado pessoal do Épico 3 continua
    valendo: identificação civil e residência são legíveis por três perfis.
 3. **Nenhuma regra `RN-` é alterada.** Esta fatia é porte: reescreve na sintaxe nova preservando o
@@ -370,18 +450,33 @@ Conforme o pedido, e conforme a regra 1 do `CLAUDE.md`.
    `MN=12` e para aí. O schema, porém, comenta que as categorias civis `SC` e `SCNS` recebem
    **peso 13**, citando um "achado residual da v2.0 §6.8". **O peso 13 não está no documento 04.**
    A regra escrita e a implementada divergem, e a implementada é mais completa — o que sugere que o
-   documento é que está incompleto. Não corrigi.
+   documento é que está incompleto.
+   ✅ **Resolvido para esta fatia em 10/09/2026**, no `FR-002`: os civis vêm depois de todos os
+   militares. ⚠️ **O documento 04 continua sem essa linha**, e emendá-lo é decisão à parte.
 2. **O `RN-ANT-02` diz que a coluna de antiguidade da v2.0 "não é migrada como campo funcional",
    e ela foi.** O texto afirma que ela fica só em `origem_migracao_v1` para rastreabilidade
    histórica. O schema tem `antiguidade_declarada` como coluna viva, com leitura numérica gerada
    ao lado, e o comentário registra a decisão de reaproveitá-la como **desempate**. Os dois podem
    ser conciliados — deixou de ser critério **primário** —, mas a frase do documento 04, lida ao
    pé da letra, contradiz o schema.
-3. **O `RF-CRUD-02` foi `[ABSORVIDO PELA PLATAFORMA]` e isso muda o que se pode prometer.** Na v2.0
+3. **A spec 014 da v2.0 e o `RN-ANT-02` descrevem escalas de tamanhos diferentes.** A spec 014 fala
+   em *"domínio fechado de 11 valores conhecidos"* e lista `CMG, CF, CC, CT, 1ºTen, 2ºTen, SO,
+   1ºSG, 2ºSG, 3ºSG, SC` — **sem `CB` e sem `MN`**, e com o civil em décimo primeiro. O `RN-ANT-02`
+   lista **12**, terminando em `MN`, **sem civis**. A leitura que concilia é que os 11 da spec 014
+   são os valores **observados na base**, não a escala normativa. **Não é contradição com o
+   `FR-002`** — o civil continua vindo depois de todo militar presente —, mas quem ler a spec 014
+   isolada vai achar que a escala tem 11 posições.
+4. **O texto do seletor de habilitação diverge do formato padronizado de nome.** A spec 014 fixa
+   `[Posto/Graduação] [Nome Completo]` para o menu de habilitação; o `RF-INSTR-15` fixa
+   `P/G Especialidade Nome de Guerra` para **toda tela**. O `RF-INSTR-15` é posterior e mais
+   abrangente, então **adotei o formato padronizado** e mantive da spec 014 apenas a regra de não
+   exibir identificador técnico (`FR-027.3`). Registro porque é uma escolha entre dois textos
+   escritos, não uma dedução.
+5. **O `RF-CRUD-02` foi `[ABSORVIDO PELA PLATAFORMA]` e isso muda o que se pode prometer.** Na v2.0
    uma coluna nova aparecia sozinha porque o cabeçalho era dinâmico. Aqui, coluna nova é migration
    mais tipo regenerado. O requisito continua na lista de cobertura do Épico 5, e **não é mais
    verificável como estava escrito**.
-4. **O critério 9 do documento 06 não existe na numeração original.** O pedido cita "8" e "9" —
+6. **O critério 9 do documento 06 não existe na numeração original.** O pedido cita "8" e "9" —
    cadastro incompleto recusado e CH nunca digitável —, e o documento 06 lista **sete** critérios
    para o Épico 5. Os dois são regra real (`RN-INST-03` e `RN-INST-04`); o que não existe é a
    numeração. Adotei-os como critério desta fatia e registro a divergência.

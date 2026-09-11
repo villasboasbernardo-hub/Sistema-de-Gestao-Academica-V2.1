@@ -80,11 +80,15 @@ export function FormularioDeRecuperacao() {
           type="email"
           required
           autoComplete="username"
-          className="mt-1 w-full rounded border px-2 py-1"
+          className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca mt-1 w-full border px-2 py-1 focus-visible:ring-2 focus-visible:outline-none"
         />
       </label>
 
-      <button type="submit" disabled={enviando} className="w-full rounded border px-3 py-2 text-sm">
+      <button
+        type="submit"
+        disabled={enviando}
+        className="border-marca bg-marca text-marca-contraste rounded-ciaara focus-visible:ring-marca w-full border px-3 py-2 text-sm font-medium disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      >
         {enviando ? "Enviando…" : "Enviar link de recuperação"}
       </button>
     </form>

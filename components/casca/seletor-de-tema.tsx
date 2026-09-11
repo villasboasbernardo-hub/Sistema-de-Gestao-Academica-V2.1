@@ -3,9 +3,15 @@
 /**
  * Alternador de tema (`FR-006`, `FR-022`).
  *
- * ⚠️ ELE É PROVISÓRIO DESTA FATIA. O definitivo entra no cabeçalho da fatia (c), que é onde ele
- * pertence. Aqui ele existe porque, sem cabeçalho e sem navegação, **não haveria onde clicar** —
- * e a história 2 sairia da fatia sem que ninguém, nem pessoa nem teste, pudesse exercitá-la.
+ * ⚠️ ELE CHEGOU AO LUGAR DELE EM 11/09/2026, e a mudança de endereço é parte do requisito. Na fatia
+ * (a) ele morava em `components/ciaara/` e aparecia na vitrine, porque sem cabeçalho e sem navegação
+ * **não haveria onde clicar**. O `FR-018` manda substituir, não duplicar: com a casca de pé ele é
+ * **cromo**, não vocabulário de domínio, e por isso mudou de pasta junto com o de tela.
+ *
+ * ⚠️ **E A MUDANÇA DE PASTA NÃO É COSMÉTICA.** A invariante da fatia (a) exige que **todo** componente
+ * de `components/ciaara/` tenha amostra na vitrine — foi ela que acusou a remoção, e com razão:
+ * enquanto o arquivo estivesse ali, tirá-lo da vitrine o deixaria sem exemplo utilizável. Movê-lo
+ * concilia os dois requisitos em vez de isentar um deles.
  *
  * ⚠️ `suppressHydrationWarning` NO BOTÃO, e não um estado de montagem: no servidor não se sabe
  * qual tema o navegador vai resolver, então `aria-pressed` diverge de propósito. A alternativa

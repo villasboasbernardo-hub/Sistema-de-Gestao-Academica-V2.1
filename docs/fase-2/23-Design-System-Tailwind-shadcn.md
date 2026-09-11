@@ -457,13 +457,43 @@ escuro, **fundo escuro e pouco saturado, tinta clara**. Reaproveitar `#e3f5ec` c
 | `FormularioCiaara` | formulário + `CAMPOS_OBRIGATORIOS` + `IND-01/02` | `Form` (react-hook-form + `zodResolver`) | `ciaara/formulario-ciaara.tsx` | sim | `RF-CRUD-01` |
 | `CampoObrigatorio` | asterisco vermelho na label (`IND-01`) | `Label` | `ciaara/campo-obrigatorio.tsx` | não | `IND-01` |
 | `NomeInstrutor` | montado inline em vários pontos do `index.html` | — (texto + `<strong>`) | `ciaara/nome-instrutor.tsx` | não | **`RF-DS-05`**, `RF-INSTR-15` |
-| `SeletorTema` | botão de tema da topbar | `DropdownMenu` | `ciaara/seletor-tema.tsx` | sim | `RNF-USA-05` |
+| `SeletorDeTema` | botão de tema da topbar | grupo de botões com `aria-pressed` | `casca/seletor-de-tema.tsx` | sim | `RNF-USA-05` |
 | `EstadoVazio` | ad hoc, quando existia | — | `ciaara/estado-vazio.tsx` | não | `RN-DEG-01` |
 | `EsqueletoTabela` / `EsqueletoGrade` | `#overlay` global (`IND-02`) | `Skeleton` | `ciaara/esqueleto-*.tsx` | não | `RNF-PERF-06` |
 | `CabecalhoImpressao` | cabeçalho reconstruído por relatório | — | `impressao/cabecalho-impressao.tsx` | **nunca** | `RNF-COMP-01` |
 | `RodapeAssinatura` | rodapé de assinatura do DSA | — | `impressao/rodape-assinatura.tsx` | **nunca** | `RF-DSA-06` |
 | `LegendaTons` / `QuebraPagina` | legenda ad hoc / `<div class="page-break">` | — | `impressao/*.tsx` | **nunca** | `RNF-COMP-01` |
 | `GraficoBarras` / `GraficoPizza` / `GraficoLinha` | *helper* `renderizarGrafico_` (ApexCharts) | Recharts | `graficos/*.tsx` | **sempre** | `RF-INSTR-08`, §7 |
+
+#### Emenda de 11/09/2026 — a casca entra no inventário, e ele passa a descrever duas coisas
+
+**Nenhum dos componentes de casca tinha linha aqui** (`CHK015`, medido em 11/09/2026), e a ausência
+tem explicação: **esta seção descrevia vocabulário de domínio, e casca não é vocabulário.** O
+inventário passa a descrever as duas coisas, e a distinção fica escrita em vez de subentendida.
+
+| Componente de casca | Origem na v2.0 | Base | Arquivo | `"use client"` | Requisito |
+|---|---|---|---|---|---|
+| `CascaDoApp` | `index.html` inteiro, com topbar e sidebar embutidas | — (composição) | `casca/casca-do-app.tsx` | **nunca** | `RF-MOD-01`, `FR-016` |
+| `CabecalhoDoApp` | topbar com marca, usuário e tema | — (composição) | `casca/cabecalho-do-app.tsx` | **nunca** | `RF-NAV-02`, `RF-INI-05` |
+| `NavegacaoLateral` | menu lateral do `index.html` | — (lista + `Link`) | `casca/navegacao-lateral.tsx` | **nunca** | `RF-NAV-02`, `FR-017` |
+| `PainelRetratil` | abrir/fechar do menu em tela estreita | `Button` | `casca/painel-retratil.tsx` | **sim** | `FR-019` |
+| `FocoAoTrocarDeRota` | inexistente | — (efeito, não renderiza nada) | `casca/foco-ao-trocar-de-rota.tsx` | **sim** | `FR-021` |
+| `SeletorDeTema` | botão de tema da topbar | grupo de botões com `aria-pressed` | `casca/seletor-de-tema.tsx` | **sim** | `RNF-USA-05` |
+
+⚠️ **A COLUNA DO MARCADOR DE CLIENTE É A MAIS CARA DESTA TABELA.** Um `"use client"` num componente
+de vocabulário manda aquele componente para o pacote do navegador; **um na casca manda toda tela do
+sistema**, porque ela envolve todas. Por isso três dos seis dizem **nunca**, e os três que dizem
+*sim* são folhas: um botão que abre e fecha, um efeito que move foco, e o alternador de tema.
+
+⚠️ **`FocoAoTrocarDeRota` É O SEXTO, E NÃO ESTAVA PREVISTO NO CONTRATO DA FATIA.** Ele nasceu de uma
+medição: sem ele, navegar pelo menu deixava o foco preso na entrada clicada — a tela inteira mudava
+e o foco não, e quem usa leitor de tela continuava ouvindo a navegação. A adição é declarada aqui em
+vez de aparecer só no código.
+
+⚠️ **`SeletorDeTema` MUDOU DE PASTA, e a linha acima foi corrigida.** Ele morava em
+`components/ciaara/` desde a fatia (a), quando a vitrine era o único lugar onde havia onde clicar. A
+invariante que exige amostra na vitrine para todo componente de `components/ciaara/` foi quem acusou
+a mudança — movê-lo concilia os dois requisitos em vez de isentar um deles.
 
 **`.mat-piscar` — [REVISADO — v2.1], a única mudança de aparência proposta.** A classe fazia piscar
 a linha da disciplina que exigia atenção. Conteúdo que pisca é problema de acessibilidade por três
