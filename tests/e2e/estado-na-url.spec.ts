@@ -184,18 +184,19 @@ test.describe("`SC-014` · oito teclas produzem UMA entrada de histórico, não 
 });
 
 /**
- * ⚠️ O QUE ESTA SUÍTE NÃO PROVA, e por quê — declarado em vez de omitido.
+ * ⚠️ O QUE ESTA SUÍTE NÃO PROVA, e **onde cada coisa é provada** — declarado em vez de omitido.
  *
- * | Não provado aqui | Por quê | Onde é provado |
+ * | Não provado aqui | Por quê | Provado em |
  * |---|---|---|
- * | o número na tela muda ao trocar o filtro (`FR-004.1`) | a vitrine não consulta servidor nenhum | `inicio.spec.ts`, História 4 |
- * | sinal visível antes de o dado chegar (`FR-045`, `SC-023`) | não há espera para sinalizar | `inicio.spec.ts`, História 4 |
- * | link compartilhado entre dois perfis (`FR-025`) | quem nega é o banco, e a vitrine não lê banco | `inicio.spec.ts`, História 4 |
- * | retorno após a autenticação com parâmetros (`FR-027`, `SC-005`) | a vitrine não pede sessão | `destino-do-login.spec.ts` |
+ * | o número na tela muda ao trocar o filtro (`FR-004.1`) | a vitrine não consulta servidor nenhum | `inicio.spec.ts` ✅ |
+ * | sinal visível antes de o dado chegar (`FR-045`, `SC-023`) | não há espera para sinalizar | `inicio.spec.ts` ✅ |
+ * | link compartilhado entre dois perfis (`FR-025`) | quem nega é o banco, e a vitrine não lê banco | `inicio.spec.ts` ✅ |
+ * | retorno após a autenticação com parâmetros (`FR-027`, `SC-005`) | a vitrine não pede sessão | `destino-do-login.spec.ts` ✅ |
  *
- * ⚠️ **OS TRÊS PRIMEIROS SÃO OS QUE MEDEM O ERRO SILENCIOSO.** Uma suíte que parasse aqui aprovaria
- * uma tela com a URL impecável e a consulta velha — e é justamente esse o defeito que o `FR-004.1`
- * existe para pegar.
+ * ⚠️ **OS TRÊS PRIMEIROS SÃO OS QUE MEDEM O ERRO SILENCIOSO**, e é por isso que esta tabela existe em
+ * vez de a lacuna ficar implícita. Uma suíte que parasse aqui aprovaria uma tela com a URL impecável
+ * e a consulta velha — o defeito que o `FR-004.1` existe para pegar. **A divisão é de meio, não de
+ * rigor:** aqui se mede a mecânica da URL, lá se mede o efeito dela sobre o dado.
  */
 
 test.describe("`FR-012` · a tabela densa entrega o recorte a quem chama", () => {

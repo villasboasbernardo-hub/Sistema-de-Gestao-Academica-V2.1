@@ -11,12 +11,15 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  CLASSIFICACOES,
   CONTRATO,
   LIMITE_DE_FREQUENCIA_MS,
+  MODALIDADES,
   parametrosDaRota,
   type Parametro,
   type Rota,
 } from "@/lib/navegacao/contrato";
+import { Constants } from "@/lib/tipos/database";
 
 const ROTAS = Object.keys(CONTRATO) as Rota[];
 const TODOS: readonly Parametro[] = ROTAS.flatMap((r) => parametrosDaRota(r));
@@ -117,5 +120,34 @@ describe("`FR-001.1` · a emenda ao documento 25 foi aplicada nos DOIS lugares",
     expect(linha, "a linha da tela inicial sumiu da tabela do documento 25").toBeDefined();
     expect(linha).toContain("classificacao");
     expect(linha).toContain("modalidade");
+  });
+});
+
+describe("`RF-INI-02` · o domínio do filtro é o domínio do BANCO, não uma lista à mão", () => {
+  /*
+   * ⚠️ ESTE BLOCO NASCEU DE UM DEFEITO MEDIDO EM 11/09/2026. A primeira versão do contrato listava
+   * três classificações; a coluna `cursos.classificacao` aceita **sete**. O efeito seria do pior
+   * tipo: um link filtrando por `estagio_qualificacao` seria degradado para "todas" pelo `FR-006`, a
+   * tela abriria cheia, e não haveria erro nenhum para ver — só um recorte que não pegou.
+   *
+   * ⚠️ E A TABELA DO DOCUMENTO 25 ESCONDIA A DIVERGÊNCIA porque anotava o tipo como **texto**: texto
+   * não tem domínio do qual estar fora. Foi a emenda para **escolha** que criou a pergunta certa.
+   */
+  it("classificação oferece exatamente o enum do banco", () => {
+    expect([...CLASSIFICACOES]).toEqual([...Constants.public.Enums.escopo_curso]);
+  });
+
+  it("modalidade oferece exatamente o enum do banco", () => {
+    expect([...MODALIDADES]).toEqual([...Constants.public.Enums.modalidade_ensino]);
+  });
+
+  it("⚠️ e o contrato não encolhe o domínio — nenhum valor do banco fica de fora", () => {
+    // Escrever a lista à mão é justamente como ela encolhe: alguém copia os valores que conhece.
+    // `pnpm db:tipos` mantém o outro lado em dia, e o CI reprova se ele divergir do schema.
+    const nomes = parametrosDaRota("/inicio").map((p) => p.nome);
+    expect(nomes).toEqual(["classificacao", "modalidade"]);
+    for (const p of parametrosDaRota("/inicio")) {
+      expect(p.tipo, `${p.nome} voltou a ser texto — texto não tem domínio`).toBe("escolha");
+    }
   });
 });

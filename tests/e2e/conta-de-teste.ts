@@ -76,7 +76,7 @@ function lerAmbienteLocal(): Record<string, string> {
   return mapa;
 }
 
-function chaveLocal(nomeNoCli: string): string {
+export function chaveLocal(nomeNoCli: string): string {
   const valor = lerAmbienteLocal()[nomeNoCli];
   if (!valor) throw new Error(`nao achei ${nomeNoCli} no supabase status`);
   return valor;
@@ -108,7 +108,12 @@ async function apagar(email: string) {
 }
 
 /** Cria a conta do zero, apagando qualquer resto de execução anterior. */
-export async function criarConta(email: string, codigo: string, perfil = "admin"): Promise<void> {
+export async function criarConta(
+  email: string,
+  codigo: string,
+  perfil = "admin",
+  escopo = "geral",
+): Promise<void> {
   await apagar(email);
 
   const { data, error } = await admin().auth.admin.createUser({
@@ -124,7 +129,12 @@ export async function criarConta(email: string, codigo: string, perfil = "admin"
     email,
     nome: "Conta de percurso automatizado",
     perfil,
-    escopo_curso: "geral",
+    /*
+     * ⚠️ O ESCOPO É PARÂMETRO PORQUE ELE É O QUE A RLS LÊ para o perfil `operador`: ela devolve só
+     * os cursos cuja classificação bate com ele. Sem um segundo usuário de escopo estreito, "o link
+     * compartilhado não vaza" é afirmação sem contraprova.
+     */
+    escopo_curso: escopo,
   });
   if (erroUsuario) throw new Error(`falha ao cadastrar o usuario: ${erroUsuario.message}`);
 }

@@ -16,6 +16,8 @@
  * Reabrir isso exige medição na mão, não um parâmetro reservado por via das dúvidas.
  */
 
+import { Constants } from "@/lib/tipos/database";
+
 /** Se a mudança empilha uma entrada de histórico ou substitui a atual (documento 25 §1.6). */
 export type Historico = "empilha" | "substitui";
 
@@ -75,11 +77,28 @@ export type ContratoDeRota = {
   readonly parametros: Readonly<Record<string, Parametro>>;
 };
 
-/** As classificações de curso (`RF-INI-02`). Valores do domínio, não do banco. */
-export const CLASSIFICACOES = ["expedito", "especial", "regular"] as const;
+/**
+ * As classificações de curso (`RF-INI-02`) — **lidas do contrato de dados, não escritas à mão**.
+ *
+ * ⚠️ **A PRIMEIRA VERSÃO TINHA TRÊS VALORES, E O BANCO TEM SETE.** Medido em 11/09/2026:
+ * `cursos.classificacao` é do tipo `escopo_curso`, cujo domínio inclui `estagio_qualificacao`,
+ * `ead_semipresencial`, `aperfeicoamento_avancado` e `geral` além dos três que eu havia listado.
+ * **O efeito seria silencioso e do pior tipo:** um link filtrando por `estagio_qualificacao` seria
+ * degradado para "todas" pelo `FR-006`, a tela abriria cheia, e ninguém veria erro nenhum — só um
+ * recorte que não pegou.
+ *
+ * ⚠️ **E A TABELA DO DOCUMENTO 25 ESCONDIA ISSO**, porque anotava o tipo como *texto*: texto não tem
+ * domínio do qual estar fora, então não havia como a divergência aparecer. Foi a emenda que passou o
+ * tipo para **escolha** que criou a pergunta *"escolha entre o quê?"* — e a resposta estava errada.
+ *
+ * ⚠️ **`geral` FICA NA LISTA.** Ele é sentinela noutras tabelas (achado 4 do Épico 2), mas aqui o
+ * critério é outro: o filtro não pode recusar um valor que a coluna aceita. Filtrar por uma
+ * classificação que nenhum curso tem devolve vazio, e vazio é resposta honesta.
+ */
+export const CLASSIFICACOES = Constants.public.Enums.escopo_curso;
 
-/** As modalidades (`RF-INI-02`), literais do requisito. */
-export const MODALIDADES = ["presencial", "ead", "semipresencial"] as const;
+/** As modalidades (`RF-INI-02`) — mesma fonte, pelo mesmo motivo. */
+export const MODALIDADES = Constants.public.Enums.modalidade_ensino;
 
 /**
  * O contrato.

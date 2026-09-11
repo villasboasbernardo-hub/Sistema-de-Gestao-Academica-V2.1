@@ -45,12 +45,12 @@ export const FORA_DO_MENU = [
 
 export const MENU: readonly EntradaDeMenu[] = [
   /*
-   * ⚠️ `disponivel: false` ATÉ A HISTÓRIA 4 DESTA MESMA FATIA construir a tela. Entrada que aponta
-   * para rota inexistente é um menu que devolve "não encontrado" — pior que entrada anunciada como
-   * futura. O teste do shell confere os dois sentidos: nenhuma entrada disponível pode faltar, e
-   * nenhuma indisponível pode já existir. É ele que obriga a virada a acontecer junto com a página.
+   * ⚠️ A BANDEIRA VIROU JUNTO COM A PÁGINA, e não depois. O teste do shell confere os **dois**
+   * sentidos — nenhuma entrada disponível pode faltar, e nenhuma anunciada como futura pode já
+   * existir —, e foi ele que obrigou a virada a acontecer no mesmo passo. Sem o segundo sentido, a
+   * tela nasceria e o menu continuaria dizendo "em breve": ninguém a encontraria.
    */
-  { rotulo: "Início", rota: "/inicio", disponivel: false, entregaEm: "Épico 4 (c), História 4" },
+  { rotulo: "Início", rota: "/inicio", disponivel: true, entregaEm: "Épico 4 (c), História 4" },
   { rotulo: "Cursos", rota: "/cursos", disponivel: false, entregaEm: "Épico 7" },
   { rotulo: "Cronograma", rota: "/cronograma", disponivel: false, entregaEm: "Épico 9" },
   { rotulo: "Atividades", rota: "/atividades", disponivel: false, entregaEm: "Épico 8" },

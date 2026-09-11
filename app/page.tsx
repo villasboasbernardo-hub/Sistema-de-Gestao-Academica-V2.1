@@ -1,25 +1,24 @@
 /**
- * Página inicial provisória do Épico 0.
+ * A porta de entrada pública (`FR-030`, `SC-002`).
  *
- * O sistema ainda não tem tela de negócio — isso é dos épicos 4 em diante (FR-020). O que esta
- * página faz é o que o Épico 0 promete: mostrar que a fundação está de pé e, se a configuração
- * estiver incompleta, **dizer qual variável falta** em vez de quebrar (FR-003, RN-DEG-01).
+ * ⚠️ **ELA ERA UM BECO ATÉ 11/09/2026**, e a palavra é literal: mostrava que a fundação estava de pé
+ * e **não levava a lugar nenhum**. Quem entrava no sistema sem destino guardado terminava aqui, numa
+ * página sem um único link, e a única saída era digitar um endereço. O `SC-003` cobra que o número
+ * de telas alcançáveis só por digitação seja **zero**, e esta era a primeira delas.
+ *
+ * ⚠️ **O AVISO DE CONFIGURAÇÃO FICA, e não é resíduo do Épico 0.** Ele é a única tela do sistema que
+ * se alcança **sem sessão e sem banco** — se faltar variável de ambiente, é aqui que a pessoa lê o
+ * que falta, em vez de bater numa tela de login que não tem como funcionar.
+ *
+ * ⚠️ **LINK, E NÃO REDIRECIONAMENTO.** Mandar direto para `/inicio` empurraria quem não tem sessão
+ * para o login sem nunca ver o aviso acima — e um sistema que não sobe mandaria a pessoa para a tela
+ * que menos explica o que houve.
  */
+import Link from "next/link";
+
 import { ambienteAtual, conferirAmbiente, mensagemDeConfiguracaoIncompleta } from "@/lib/ambiente";
 
-/**
- * ⚠️ AS CORES SAÍRAM DAQUI EM 09/09/2026 (`FR-001`). Eram dez utilitários da paleta padrão —
- * `text-zinc-600`, `bg-amber-50`, `border-emerald-400` e afins —, e este arquivo NÃO CONSTAVA DE
- * LISTA NENHUMA de dívida: apareceu na medição da regra de lint.
- *
- * ⚠️ E OS `dark:` SUMIRAM JUNTO, o que é o ponto do vocabulário: `bg-atrasado-fundo` já segue o
- * tema em tempo de pintura. Cada par `claro/escuro` escrito à mão era uma chance de os dois
- * divergirem sem ninguém notar.
- *
- * ⚠️ O TEXTO "nenhuma tabela de negócio existe ainda" está DESATUALIZADO desde o Épico 1 e não foi
- * tocado aqui: esta tarefa é de cor, e a página inteira é substituída pela fatia (c).
- */
-export default function Inicio() {
+export default function Raiz() {
   const faltas = conferirAmbiente();
   const aviso = mensagemDeConfiguracaoIncompleta(faltas);
 
@@ -28,24 +27,36 @@ export default function Inicio() {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">CIAARA-11 · Gestão Acadêmica</h1>
         <p className="text-texto-suave text-sm">
-          Versão 2.1 — Épico 0 (Fundação). Ambiente: <strong>{ambienteAtual()}</strong>.
+          Divisão de Administração Acadêmica. Ambiente: <strong>{ambienteAtual()}</strong>.
         </p>
       </header>
 
       {aviso ? (
         <section className="border-atrasado-borda bg-atrasado-fundo text-atrasado-tinta rounded-ciaara border p-4">
           <h2 className="font-semibold">Configuração incompleta</h2>
-          <pre className="mt-2 whitespace-pre-wrap text-sm">{aviso}</pre>
+          <pre className="mt-2 text-sm whitespace-pre-wrap">{aviso}</pre>
         </section>
-      ) : (
-        <section className="border-executado-borda bg-executado-fundo text-executado-tinta rounded-ciaara border p-4">
-          <h2 className="font-semibold">Fundação de pé</h2>
-          <p className="text-sm">
-            Variáveis de ambiente completas. Nenhuma tabela de negócio existe ainda — o schema é o
-            Épico 1.
-          </p>
-        </section>
-      )}
+      ) : null}
+
+      {/*
+        ⚠️ O CAMINHO PARA DENTRO APARECE MESMO COM A CONFIGURAÇÃO INCOMPLETA, e isso é decisão. A
+        primeira versão mostrava **ou** o aviso **ou** o link, e o efeito era o pior dos dois mundos:
+        num ambiente com variável faltando, a raiz voltava a ser o beco que este arquivo veio
+        consertar. Quem clicar sem configuração encontra a tela que explica o que falta — o proxy já
+        cuida disso, e ele explica melhor do que uma página sem saída.
+      */}
+      <section className="flex flex-col items-start gap-3">
+        <p className="text-texto text-sm">
+          O panorama das turmas fica na tela Início. O acesso é <strong>somente por convite</strong>{" "}
+          do Admin.
+        </p>
+        <Link
+          href="/inicio"
+          className="bg-marca text-marca-contraste rounded-ciaara focus-visible:ring-marca inline-block px-4 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
+          Ir para o Início
+        </Link>
+      </section>
 
       <footer className="text-texto-suave text-sm">
         <p>

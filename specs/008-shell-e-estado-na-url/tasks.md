@@ -79,10 +79,10 @@ outra.
 - [ ] T020.1 [US1] Fazer toda troca de recorte produzir **retorno visual imediato** em `lib/navegacao/usar-parametro.ts` e nos segmentos de `app/(app)/`, ainda que o dado demore (`FR-045`) ⚠️ **Era lacuna da lista, e veio de decisão sua.** Na v2.0 trocar contexto era instantâneo porque era memória; aqui é ida ao servidor, e **o que estraga não é a latência, é o silêncio** — sem sinal, a pessoa clica de novo
 - [X] T021 [US1] Completar o retorno após a autenticação preservando **os parâmetros** em `app/(auth)/login/page.tsx` e `FormularioDeLogin.tsx` (`FR-027`, `SC-005`) ⚠️ **a metade de ida já existe e está certa** — o proxy do Épico 3 guarda caminho e consulta
 - [X] T022 [P] [US1] Escrever `tests/e2e/estado-na-url.spec.ts` cobrindo link direto, histórico um passo por vez, recarga e parâmetro padrão ausente (`FR-023`, `FR-024`, `FR-026`, `SC-001`, `SC-004`)
-- [ ] T023 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` que **o número na tela muda** ao trocar o filtro (`FR-004.1`) ⚠️ **é o teste que não se faz por atributo**: um que confira só a URL passa com o aviso ao servidor desligado, que é o defeito que ele deveria pegar
+- [X] T023 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` que **o número na tela muda** ao trocar o filtro (`FR-004.1`) ⚠️ **é o teste que não se faz por atributo**: um que confira só a URL passa com o aviso ao servidor desligado, que é o defeito que ele deveria pegar
 - [X] T024 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` que oito teclas digitadas produzem **uma** entrada de histórico (`SC-014`)
-- [ ] T024.1 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` que **toda** troca de recorte produz sinal visível antes de o dado chegar (`SC-023`)
-- [ ] T025 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` o link compartilhado entre **dois perfis de escopos diferentes** (`FR-025`) ⚠️ **quem nega é o banco**, e é isso que faz o link não vazar
+- [X] T024.1 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` que **toda** troca de recorte produz sinal visível antes de o dado chegar (`SC-023`)
+- [X] T025 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` o link compartilhado entre **dois perfis de escopos diferentes** (`FR-025`) ⚠️ **quem nega é o banco**, e é isso que faz o link não vazar
 - [X] T025.1 [US1] Ligar `components/ciaara/filtro-avancado.tsx` ao contrato **sem alterar o componente**, na amostra de `app/estilo/amostras.tsx` (`FR-014`) ⚠️ **Era lacuna da lista.** Ele já recebe e devolve estado por propriedade desde a fatia (b) — é a única peça que não precisa de refatoração, e justamente por isso ninguém tinha escrito a tarefa de usá-la
 - [X] T026 [US1] Acrescentar em `specs/008-shell-e-estado-na-url/contracts/parametros.md` o registro do que ficou exercitado e do que espera as telas dos Épicos 5 a 9 (`FR-003`) ⚠️ **e declarar que a chave de negócio legível não foi exercitada aqui**: nenhuma rota desta fatia tem parâmetro de identidade
 - [X] T026.1 [US1] Declarar em `lib/navegacao/contrato.ts` que a rota de impressão **herda** os parâmetros da tela de origem, sem tradução (`FR-035`) ⚠️ **é reserva, não implementação**: as rotas de impressão são dos Épicos 10 e 11, e o contrato precisa já saber disso para elas não inventarem parâmetro próprio
@@ -142,14 +142,14 @@ ver a tabela acompanhar.
 
 **Teste independente**: entrar e, sem digitar URL, ver o panorama e alcançar uma turma.
 
-- [ ] T046 [US4] Escrever `app/(app)/inicio/page.tsx` com o **progresso por turma** que o dado atual sustenta (`FR-028`)
-- [ ] T047 [US4] Ligar o recorte por `classificacao` e `modalidade` ao contrato, em `app/(app)/inicio/page.tsx` (`FR-029`, `FR-001.1`)
-- [ ] T048 [US4] Fazer cada turma ser ponto de entrada para a sua tela em `app/(app)/inicio/page.tsx` (`FR-030`)
-- [ ] T049 [US4] Reservar a região de alertas, sempre visível, em `app/(app)/inicio/page.tsx` (`FR-031`) ⚠️ **a região entra; os predicados são dos Épicos 5 a 9**
-- [ ] T050 [US4] Implementar o estado **"ainda não existe no sistema"** em `app/(app)/inicio/page.tsx` (`FR-033`) ⚠️ **é um terceiro caso**, nem *"não há"* nem *"você não vê"* — e é o único dos três que some sozinho com o tempo
-- [ ] T051 [US4] Fazer `app/page.tsx` levar à tela inicial em vez de ser um beco (`FR-030`, `SC-002`)
-- [ ] T052 [P] [US4] Escrever `tests/e2e/inicio.spec.ts` cobrindo panorama, recorte na URL e entrada para a turma (`FR-028`, `FR-029`, `SC-004`)
-- [ ] T053 [P] [US4] Cobrir em `tests/e2e/inicio.spec.ts` o escopo por perfil: dois usuários, e o banco negando (`FR-026` da spec, Princípio XI)
+- [X] T046 [US4] Escrever `app/(app)/inicio/page.tsx` com o **progresso por turma** que o dado atual sustenta (`FR-028`)
+- [X] T047 [US4] Ligar o recorte por `classificacao` e `modalidade` ao contrato, em `app/(app)/inicio/page.tsx` (`FR-029`, `FR-001.1`)
+- [X] T048 [US4] Fazer cada turma ser ponto de entrada para a sua tela em `app/(app)/inicio/page.tsx` (`FR-030`)
+- [X] T049 [US4] Reservar a região de alertas, sempre visível, em `app/(app)/inicio/page.tsx` (`FR-031`) ⚠️ **a região entra; os predicados são dos Épicos 5 a 9**
+- [X] T050 [US4] Implementar o estado **"ainda não existe no sistema"** em `app/(app)/inicio/page.tsx` (`FR-033`) ⚠️ **é um terceiro caso**, nem *"não há"* nem *"você não vê"* — e é o único dos três que some sozinho com o tempo
+- [X] T051 [US4] Fazer `app/page.tsx` levar à tela inicial em vez de ser um beco (`FR-030`, `SC-002`)
+- [X] T052 [P] [US4] Escrever `tests/e2e/inicio.spec.ts` cobrindo panorama, recorte na URL e entrada para a turma (`FR-028`, `FR-029`, `SC-004`)
+- [X] T053 [P] [US4] Cobrir em `tests/e2e/inicio.spec.ts` o escopo por perfil: dois usuários, e o banco negando (`FR-026` da spec, Princípio XI)
 
 **Ponto de conferência**: entrar no sistema e chegar a uma turma sem tocar na barra de endereço.
 
