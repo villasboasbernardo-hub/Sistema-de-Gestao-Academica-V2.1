@@ -41,6 +41,20 @@
 
 ## Notas
 
+- ⚠️ **Revalidado em 11/09/2026, depois da segunda rodada.** A spec passou de 42 para **49
+  requisitos** e de 16 para **22 critérios**, com três acréscimos e uma recusa: a seção de
+  **segurança** (`FR-041` a `FR-043`), o **guia de uso para o Épico 5** (`FR-044`), a proibição de
+  contêiner de contexto como fonte de verdade (`FR-011.1`), e a **paginação recusada** (`FR-037.1`).
+  Os dezesseis itens continuam aprovados.
+- ⚠️ **A seção de segurança era lacuna minha, e o pedido a pegou.** A spec validava parâmetro
+  inválido e parâmetro fora do contrato, e **em nenhum lugar tratava a barra de endereço como
+  superfície de ataque** — apesar de o `RF-NAV-01` ser exatamente o requisito que a transforma em
+  entrada de usuário.
+- ⚠️ **Duas correções técnicas entraram junto, as duas medidas**: a opção `shallow` **não existe** na
+  navegação desta plataforma (era do roteador antigo), e na biblioteca decidida ela significa *não
+  avisar o servidor* — ligada num filtro, mantém a URL em dia e deixa a consulta velha na tela. Virou
+  o `FR-004.1`.
+
 - **Itens incompletos exigem atualização da spec antes de `/speckit-clarify` ou `/speckit-plan`.**
 - ⚠️ **Cinco fatos desta spec foram MEDIDOS em 11/09/2026, não presumidos**, e estão marcados como
   tais no texto: nenhum componente de shell no inventário do documento 23 §3.1; o cabeçalho

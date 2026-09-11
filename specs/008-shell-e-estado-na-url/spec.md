@@ -64,6 +64,12 @@ o contexto.** Esta fatia é a que devolve os quatro.
    barra de endereço — o erro oposto, e igualmente proibido pelo documento 25 §3.3.
 4. **`nuqs` não está instalado**, e nenhum gerenciador de estado efêmero está instalado.
 5. **Não há brasão em `public/`**, só os desenhos padrão do arcabouço. O `RF-INI-05` o exige.
+6. **A navegação do App Router não aceita `shallow`.** Medido nos tipos da versão instalada: as
+   opções de navegação trazem rolagem e tipos de transição, e **nada mais**. `shallow` era do
+   roteador antigo, que esta plataforma não usa. ⚠️ **E na biblioteca decidida ele existe com OUTRO
+   sentido** — *não avisar o servidor* —, de modo que um filtro com `shallow` ligado muda a URL e o
+   componente de servidor **não refaz a consulta**. É o oposto do que um filtro precisa, e é a razão
+   de o `FR-004.1` existir.
 
 ## Clarifications
 
@@ -72,6 +78,13 @@ o contexto.** Esta fatia é a que devolve os quatro.
 - Q: A tela Início entra completa nesta fatia, se o `RF-INI-01` e o `RF-INI-04` dependem de agregações que os Épicos 5 a 9 ainda não produzem? → A: **Casca navegável, com o que o dado sustenta.** A tela existe e navega; o que depende dos épicos seguintes aparece como estado vazio explicado. A pessoa deixa de cair num beco **hoje**, e a fatia não nasce carregando tela sem o que exibir.
 - Q: O breadcrumb entra, se nenhum `RF-` o menciona? → A: **Fica fora, por ora.** Sem requisito de origem e sem equivalente na v2.0, ele é **novidade** — e o Princípio X a barra até haver paridade funcional. É **recusa declarada**, não esquecimento: volta quando houver paridade.
 - Q: Como provar os quatro comportamentos do `RF-NAV-04`, se os critérios de aceite escritos usam rotas dos Épicos 5 a 9? → A: **Sobre as rotas que esta fatia cria.** Início, vitrine e as telas do Épico 3, com parâmetros reais. **Nada provisório** — rota provisória costuma sobreviver mais do que se planeja —, e o `RF-NAV-04` ganha dono agora em vez de ficar esperando a primeira tela de domínio.
+
+### Session 2026-09-11 (segunda rodada)
+
+- Q: A paginação entra no contrato de parâmetros? → A: **Não entra.** O contrato do documento 25 §1.3 não tem parâmetro de página em nenhuma das onze rotas, e a fatia (b) decidiu em 10/09/2026 que a tabela renderiza **todas** as linhas. São 177 instrutores e 29 turmas: paginar seria novidade sem problema medido. **Recusa declarada** — `FR-037.1`.
+- Q: O mecanismo é a biblioteca decidida no BRIEF ou os ganchos nativos do roteador? → A: **A biblioteca decidida, e ela NÃO é alternativa aos ganchos: é construída sobre eles.** A restrição de usar os ganchos nativos fica satisfeita, e a decisão de plataforma fica intacta. Trocá-la exigiria autorização nominal, que não foi pedida.
+- Q: A URL passa a ser entrada de usuário. Isso vira requisito de segurança? → A: **Sim, e com teste de carga hostil.** Era lacuna desta spec: ela validava parâmetro inválido e fora de contrato, e **em nenhum lugar tratava a barra de endereço como superfície de ataque**. Vira a seção *Segurança*, `FR-041` a `FR-043`.
+- Q: O Épico 5 precisa de guia de uso? → A: **Sim, versionado com o código.** Um contrato que a próxima tela não sabe seguir é um contrato que a próxima tela reinventa — e reinventar contrato de navegação é como o `AppState` volta. Vira o `FR-044`.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -174,14 +187,20 @@ que transforma a navegação em algo que se usa, e não apenas em algo que exist
 
 ---
 
-### User Story 5 - Uma URL errada não quebra a tela (Priority: P3)
+### User Story 5 - Uma URL errada não quebra a tela, e uma URL hostil não a usa (Priority: P3)
 
 Quem cola um link truncado, antigo ou editado à mão precisa de uma tela que **funcione mesmo assim**.
+E quem **recebe** um link precisa que ele não o leve para fora do sistema.
 
 **Why this priority**: com o `RF-NAV-01`, a barra de endereço passa a ser **entrada de usuário** — e
 nenhum requisito a tratava como tal. É o achado `CHK003` do checklist de entrada.
 
-**Independent Test**: editar a URL à mão com valores impossíveis e conferir que a tela abre.
+⚠️ **São dois problemas com a mesma origem e consequências diferentes.** O link errado é acidente, e
+a resposta é degradar. O link hostil é deliberado, e a resposta é recusar. ⚠️ **E quem cola um link
+não é sempre quem o escreveu** — é isso que separa esta história de um caso de fronteira.
+
+**Independent Test**: editar a URL à mão, primeiro com valores impossíveis e depois com carga
+hostil, e conferir que a tela abre no primeiro caso e recusa no segundo.
 
 **Acceptance Scenarios**:
 
@@ -193,6 +212,10 @@ nenhum requisito a tratava como tal. É o achado `CHK003` do checklist de entrad
    **então** ela distingue *"não há"* de *"você não vê"*.
 4. **Dado** qualquer um dos casos acima, **quando** ele acontece, **então** **nenhuma exceção não
    tratada** chega à pessoa.
+5. **Dado** um destino de retorno que aponta **para fora do sistema**, **quando** a autenticação
+   termina, **então** ele é recusado e a pessoa vai para o destino padrão.
+6. **Dado** carga hostil em qualquer parâmetro do contrato, **quando** a tela a recebe, **então**
+   nada dela é interpretado como marcação nem alcança filtro de consulta.
 
 ### Edge Cases
 
@@ -230,6 +253,13 @@ nenhum requisito a tratava como tal. É o achado `CHK003` do checklist de entrad
   limita frequência.
   ⚠️ O documento 25 §1.6 chama essa política de *"a única regra que se erra na prática"*, e ela não
   tem critério de aceite em requisito nenhum (`CHK005`).
+- **FR-004.1**: Parâmetro que **alimenta consulta no servidor** MUST fazer o servidor recalcular ao
+  mudar. Parâmetro **puramente visual** MUST poder mudar sem isso.
+  ⚠️ **Decisão de 11/09/2026, e ela corrige uma armadilha de nome.** A instrução original pedia
+  navegação *"sem recarregar a página"*, com a opção `shallow`. Ela **não existe** na navegação desta
+  plataforma — era do roteador antigo — e, na biblioteca decidida, o nome significa outra coisa: *não
+  avisar o servidor*. Ligada num filtro, ela mantém a URL em dia e deixa a consulta velha na tela.
+  **O mesmo nome, dois comportamentos, e o errado parece o certo.**
 - **FR-005**: A limitação de frequência da busca MUST ter **valor declarado em requisito**, e não
   apenas em exemplo de código (`CHK006`).
 - **FR-006**: Parâmetro com **valor fora do domínio** MUST fazer a tela usar o valor padrão daquele
@@ -251,6 +281,43 @@ nenhum requisito a tratava como tal. É o achado `CHK003` do checklist de entrad
   ⚠️ **Decisão de contenção, e ela repete o que a fatia (b) mediu**: lá a lista de instalação encolheu
   de catorze pacotes para dois, porque o que já estava instalado cobria sete primitivos. Instalar
   antes de precisar é como o `AppState` volta.
+- **FR-011.1**: Nenhum contêiner de contexto de interface MUST ser usado como **fonte de verdade** de
+  estado de navegação.
+  ⚠️ Ele é o caminho mais curto para recriar o `AppState` sem instalar nada — e por não instalar
+  nada, nenhum portão de dependência o pegaria.
+
+### Segurança — a URL é entrada não confiável
+
+⚠️ **É a consequência menos óbvia do `RF-NAV-01`, e esta spec não a tinha.** Ela validava parâmetro
+inválido e parâmetro fora do contrato, e em nenhum lugar tratava a barra de endereço como algo que
+alguém edita de propósito. **Quem cola um link não é sempre quem o escreveu.**
+
+- **FR-041**: Todo parâmetro MUST ser validado contra o contrato **antes** de alcançar consulta,
+  renderização ou redirecionamento — nunca depois, e nunca só na tela que o usa.
+- **FR-042**: O destino do retorno após a autenticação MUST ser restrito a **caminho interno** da
+  própria aplicação. Destino absoluto, com outro domínio ou com esquema próprio MUST ser recusado e
+  substituído pelo padrão.
+  ⚠️ **É o redirecionamento aberto, e é a superfície mais explorada de um parâmetro de URL.** O
+  `FR-027` obriga a preservar os parâmetros através do login; esta linha impede que a preservação
+  vire o vetor. Sem ela, um link de phishing hospedado no domínio do sistema termina em outro lugar.
+- **FR-043**: Nenhum valor vindo da URL MUST ser interpretado como marcação, nem concatenado para
+  formar filtro de consulta. MUST haver teste com **carga hostil** em todo parâmetro do contrato.
+  ⚠️ **E o teste precisa medir a coisa certa.** A camada de renderização já escapa texto por padrão,
+  então um teste que só procura marcação refletida passa sem provar nada. O que este requisito cobra
+  é o conjunto: redirecionamento para fora, valor injetado em filtro de consulta, e valor que chega a
+  uma interpolação de marcação — os três com carga hostil, os três medidos.
+  ⚠️ **A última defesa continua sendo o banco** (Princípio XI): parâmetro fora do escopo do perfil é
+  negado lá, e não pela tela. Esta seção reduz a superfície; ela não substitui a fronteira.
+
+### Entrega para o Épico 5
+
+- **FR-044**: MUST existir **guia de uso versionado com o código**, dizendo como uma tela nova declara
+  os seus parâmetros, os lê, os escreve, e escolhe a política de histórico — com **exemplo
+  executável**, não apenas descrição.
+  ⚠️ **É o requisito que decide se o contrato vale alguma coisa.** A fatia (b) registrou a mesma
+  lição no seu `SC-009`: *"genérico" é uma intenção verificada só por quem escreveu*, até outro épico
+  consumir. Um contrato de navegação que a próxima tela não sabe seguir é um contrato que ela
+  reinventa — e reinventar estado de navegação é exatamente como o `AppState` volta.
 
 ### Os componentes da fatia (b) — estado por fora
 
@@ -350,6 +417,12 @@ nenhum requisito a tratava como tal. É o achado `CHK003` do checklist de entrad
 - **FR-036**: Nenhuma **regra de negócio** MUST ser implementada em componente de shell.
 - **FR-037**: Nenhuma cor MUST entrar fora do ponto único — a regra da fatia (a) continua valendo, e
   o shell é código novo que precisa nascer dentro dela.
+- **FR-037.1**: **Paginação** MUST **não** entrar no contrato de parâmetros nesta fatia.
+  ⚠️ **Recusa declarada em 11/09/2026, e ela tem medição por trás.** O contrato do documento 25 §1.3
+  não traz parâmetro de página em nenhuma das onze rotas, e a fatia (b) decidiu em 10/09 que a tabela
+  renderiza **todas** as linhas — 177 instrutores, 29 turmas, e o maior conjunto chegando filtrado
+  por turma e semana. **Reabrir isso exige medição na mão**, não um parâmetro reservado por via das
+  dúvidas: parâmetro declarado e nunca usado envelhece sem ninguém conferir.
 
 ### Requisitos que fecham dívida herdada
 
@@ -410,6 +483,17 @@ não dado de negócio — ele vive no código, é lido por toda tela, e é o que
 - **SC-016**: Os **nove itens** ainda abertos no checklist da fatia (a) e os **quarenta** do checklist
   de entrada estão **fechados ou explicitamente recusados** ao fim desta fatia — recusa declarada
   conta; silêncio, não.
+- **SC-017**: **100%** dos parâmetros do contrato são validados antes de alcançar consulta,
+  renderização ou redirecionamento.
+- **SC-018**: Carga hostil em **todo** parâmetro do contrato não produz redirecionamento para fora do
+  sistema, marcação interpretada, filtro de consulta alterado, nem exceção não tratada.
+- **SC-019**: A contagem de destinos de retorno **externos** aceitos após a autenticação é **zero**.
+- **SC-020**: A contagem de parâmetros de paginação no contrato é **zero**.
+- **SC-021**: Existe guia de uso versionado, e uma tela nova é construída a partir dele **sem
+  inventar parâmetro fora do contrato**. ⚠️ É proxy, não prova: a prova é o Épico 5 seguir o contrato
+  sem reabri-lo.
+- **SC-022**: A contagem de contêineres de contexto usados como fonte de verdade de estado de
+  navegação é **zero**.
 
 ## Assumptions
 
@@ -436,3 +520,9 @@ contestadas, e não para passarem despercebidas.
   guardam estado efêmero, que o documento 25 §3 mantém fora da URL de propósito.
 - **Persistir rascunho de formulário no navegador fica fora.** A decisão é de Bernardo (documento 25
   §9.4), toca o recorte de PII do Épico 3, e não há formulário longo antes do Épico 5.
+- **A camada de renderização escapa texto por padrão.** Por isso o `FR-043` não trata marcação
+  refletida como o risco principal: o risco principal é o **redirecionamento aberto** e o valor que
+  vira filtro de consulta. Assumir o contrário produziria um teste que passa sem provar nada.
+- **O mecanismo de estado na URL é o decidido no BRIEF, e ele é construído sobre os ganchos nativos
+  do roteador.** A restrição de usar os ganchos fica satisfeita por ele; trocá-lo exigiria autorização
+  nominal, que não foi pedida.
