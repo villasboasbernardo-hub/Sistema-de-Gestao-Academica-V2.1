@@ -63,7 +63,13 @@ o contexto.** Esta fatia é a que devolve os quatro.
    estado. Os outros três estão certos como estão, e mudá-los seria empurrar estado efêmero para a
    barra de endereço — o erro oposto, e igualmente proibido pelo documento 25 §3.3.
 4. **`nuqs` não está instalado**, e nenhum gerenciador de estado efêmero está instalado.
-5. **Não há brasão em `public/`**, só os desenhos padrão do arcabouço. O `RF-INI-05` o exige.
+5. **Não há brasão em `public/`**, só os desenhos padrão do arcabouço — e o `RF-INI-05` o exige.
+   ✅ **Resolvido em 11/09/2026**: Bernardo forneceu o arquivo, em duas resoluções, medidas na
+   entrega — **794 × 1123** e **3250 × 4913**, ambas PNG com transparência. Elas estão em `images/`,
+   **fora do controle de versão e fora de `public/`**, e é a fatia que as coloca no lugar.
+   ⚠️ **Não há versão vetorial.** Para o cabeçalho a menor sobra; para as rotas de impressão dos
+   Épicos 10 e 11, a maior dá cerca de 27 cm a 300 pontos por polegada. **Nenhuma das duas serve nos
+   dois lugares**: 6,3 MB não vão para o pacote do navegador.
 6. **A navegação do App Router não aceita `shallow`.** Medido nos tipos da versão instalada: as
    opções de navegação trazem rolagem e tipos de transição, e **nada mais**. `shallow` era do
    roteador antigo, que esta plataforma não usa. ⚠️ **E na biblioteca decidida ele existe com OUTRO
@@ -85,6 +91,14 @@ o contexto.** Esta fatia é a que devolve os quatro.
 - Q: O mecanismo é a biblioteca decidida no BRIEF ou os ganchos nativos do roteador? → A: **A biblioteca decidida, e ela NÃO é alternativa aos ganchos: é construída sobre eles.** A restrição de usar os ganchos nativos fica satisfeita, e a decisão de plataforma fica intacta. Trocá-la exigiria autorização nominal, que não foi pedida.
 - Q: A URL passa a ser entrada de usuário. Isso vira requisito de segurança? → A: **Sim, e com teste de carga hostil.** Era lacuna desta spec: ela validava parâmetro inválido e fora de contrato, e **em nenhum lugar tratava a barra de endereço como superfície de ataque**. Vira a seção *Segurança*, `FR-041` a `FR-043`.
 - Q: O Épico 5 precisa de guia de uso? → A: **Sim, versionado com o código.** Um contrato que a próxima tela não sabe seguir é um contrato que a próxima tela reinventa — e reinventar contrato de navegação é como o `AppState` volta. Vira o `FR-044`.
+
+### Session 2026-09-11 (terceira rodada)
+
+- Q: O contrato de parâmetros da tela Início passa a incluir `modalidade`, além de `classificacao`? → A: **Sim, e o documento 25 §1.3 é emendado.** O `RF-INI-02` é **[PRESERVADO]** e já nomeia os dois na própria nota de mecanismo; a tabela do documento 25 é que está incompleta. O contrato nasce completo e o documento 25 continua sendo o ponto único. Vira o `FR-001.1`.
+- Q: De onde vem o arquivo do brasão institucional que o `RF-INI-05` exige? → A: **Bernardo fornece, e a fatia o versiona** — entregue em 11/09/2026, em duas resoluções PNG com transparência. Fecha uma pendência que atravessou a v2.0 inteira: a spec 009 de lá já registrava três assets de brasão ausentes. Vira o `FR-032`, agora com origem e com as duas resoluções declaradas.
+- Q: De onde sai a lista de entradas do menu contra a qual o `FR-017` mede a paridade? → A: **Rascunho derivado da árvore de rotas do documento 24, validado por Bernardo contra a v2.0 em produção.** A árvore é o alvo da v2.1 e não o menu de hoje, então o rascunho **não** vale como fonte: ele existe para dar o que conferir, em vez de um pedido em branco. ⚠️ E ele já nasce com uma subtração: Avaliações e Relatório têm rota própria e **ficam fora do menu**, por força do `RF-CURSO-02`.
+- Q: A rota da vitrine continua acessível sem sessão depois de existir navegação autenticada? → A: **Continua sem sessão.** Ela não exibe dado algum — tokens, componentes e amostras sintéticas —, e exigir login para ver uma paleta não protegeria nada. ⚠️ **A pergunta foi feita porque o requisito original era circular**: ele mandava "ficar escrito se a rota continua sem sessão", que é prometer que um requisito existe. É o mesmo padrão que a fatia (b) corrigiu duas vezes, e ele reapareceu aqui.
+- Q: A fatia declara requisito de desempenho para a troca de recorte na URL? → A: **Retorno visual imediato, sem alvo numérico.** Toda troca produz sinal visível na hora, mesmo que o dado demore. ⚠️ **Ataca a falha real, que é a tela muda — não a latência.** Na v2.0 trocar contexto era instantâneo, em memória; aqui é ida ao servidor, e uma tela que fica silenciosa faz a pessoa clicar de novo. ⚠️ **E não inventa um número**: o projeto não tem base para escolhê-lo antes de existirem as telas densas dos Épicos 5 a 9. Vira o `FR-045` e o `SC-023`. Fecha o `CHK009`.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -242,6 +256,14 @@ hostil, e conferir que a tela abre no primeiro caso e recusa no segundo.
   ⚠️ Hoje o mapa vive no documento 25 §1.3, que se autodenomina *"contrato único do sistema"* e que
   **nenhum requisito cita** — então uma tela nova pode inventar parâmetro sem violar requisito nenhum
   (`CHK001`).
+- **FR-001.1**: O contrato da tela inicial MUST conter **`classificacao` e `modalidade`**, e a tabela
+  do documento 25 §1.3 MUST ser **emendada** para trazer os dois.
+  ⚠️ **Medido em 11/09/2026: a tabela lista só `classificacao`.** O `RF-INI-02`, que é
+  **[PRESERVADO]**, escreve `?classificacao=&modalidade=` na própria nota de mecanismo — então não é
+  o requisito que está errado, é a tabela que está incompleta.
+  ⚠️ **É emenda a documento normativo, e por isso está declarada num requisito** em vez de feita de
+  passagem. Sem ela, a **primeira tela desta fatia** já inventaria um parâmetro fora do contrato —
+  exatamente o que o `FR-001` proíbe, e logo na estreia.
 - **FR-002**: Todo parâmetro MUST ter **tipo e valor padrão declarados**, e o parâmetro no valor
   padrão MUST **não aparecer** na URL.
 - **FR-003**: O valor de um parâmetro que identifica registro MUST ser a **chave de negócio legível**
@@ -255,6 +277,16 @@ hostil, e conferir que a tela abre no primeiro caso e recusa no segundo.
   tem critério de aceite em requisito nenhum (`CHK005`).
 - **FR-004.1**: Parâmetro que **alimenta consulta no servidor** MUST fazer o servidor recalcular ao
   mudar. Parâmetro **puramente visual** MUST poder mudar sem isso.
+- **FR-045**: Toda troca de recorte MUST produzir **retorno visual imediato**, ainda que o dado
+  demore — a tela MUST **não ficar muda** entre o comando e a resposta.
+  ⚠️ **Decisão de 11/09/2026, e ela escolhe a falha certa para combater.** Na v2.0 trocar contexto
+  era instantâneo, porque era memória; aqui é ida ao servidor. **O que estraga a experiência não é a
+  latência, é o silêncio**: sem sinal, a pessoa clica de novo, e a navegação nova parece pior que a
+  antiga mesmo estando correta.
+  ⚠️ **Sem alvo numérico, e a ausência é deliberada.** O projeto não tem base para escolher o número
+  antes de existirem as telas densas dos Épicos 5 a 9, e um teto tirado da tela mais leve do sistema
+  amarraria a fatia a uma medida que não representa nada. É o mesmo critério que recusou a paginação
+  e a renderização parcial: **sem problema medido, não entra número**. Fecha o `CHK009`.
   ⚠️ **Decisão de 11/09/2026, e ela corrige uma armadilha de nome.** A instrução original pedia
   navegação *"sem recarregar a página"*, com a opção `shallow`. Ela **não existe** na navegação desta
   plataforma — era do roteador antigo — e, na biblioteca decidida, o nome significa outra coisa: *não
@@ -348,9 +380,17 @@ alguém edita de propósito. **Quem cola um link não é sempre quem o escreveu.
 - **FR-017**: As entradas do menu MUST ser **as mesmas da v2.0**, com os mesmos nomes. A mudança de
   mecanismo de estado MUST **não** autorizar reorganizar nem renomear (`RF-NAV-02`).
 - **FR-017.1**: A **lista das entradas atuais** MUST ser registrada nesta fatia, como referência
-  contra a qual a paridade se mede.
+  contra a qual a paridade se mede, e MUST ser **validada contra a v2.0 em produção** antes de a
+  fatia fechar.
   ⚠️ Sem a lista escrita, o `FR-017` não é verificável — e requisito não verificável passa por
   vacuidade (`CHK017`).
+  ⚠️ **Decisão de 11/09/2026 sobre COMO obtê-la**: a fatia produz um **rascunho** derivado da árvore
+  de rotas do documento 24, e Bernardo o confere contra o sistema em produção. **O rascunho não é a
+  fonte** — a árvore é o alvo da v2.1, não o menu de hoje, e os dois podem divergir. Ele existe para
+  dar o que conferir, em vez de transformar a validação num pedido em branco.
+  ⚠️ **E o rascunho já nasce com uma subtração:** Avaliações e Relatório têm rota própria na árvore e
+  **ficam fora do menu**, por força do `RF-CURSO-02`. Quem derivar a lista da árvore sem ler esse
+  requisito acrescenta duas entradas que a v2.0 nunca teve.
 - **FR-018**: O cabeçalho provisório do Épico 3 MUST ser **substituído**, não duplicado. O alternador
   de tema da vitrine MUST **sair** quando o do cabeçalho entrar (`CHK037`).
 - **FR-019**: MUST existir requisito declarando **qual parte do shell** tem interação, e portanto vai
@@ -395,10 +435,21 @@ alguém edita de propósito. **Quem cola um link não é sempre quem o escreveu.
   ⚠️ **A região entra; os predicados, não.** O `RF-INI-04` nomeia quatro alertas — disciplina sem
   instrutor, disciplina em atraso, vista de prova vencida e mudança de regime próxima — e os quatro
   são funções puras que dependem de dado dos Épicos 5 a 9. Entram lá, **na região que nasce aqui**.
-- **FR-032**: A identidade institucional MUST aparecer na tela inicial, e o arquivo MUST ter
-  **procedência e licença registradas** no repositório (`RF-INI-05`).
-  ⚠️ **Medido em 11/09/2026: não há brasão no repositório.** A fatia (a) resolveu isto para a
-  tipografia, com a licença versionada ao lado; aqui não há requisito equivalente (`CHK025`).
+- **FR-032**: A identidade institucional MUST aparecer na tela inicial, servida **pelo próprio
+  repositório**, e o arquivo MUST trazer **procedência registrada ao lado** (`RF-INI-05`).
+  ⚠️ **Origem resolvida em 11/09/2026**: fornecido por Bernardo, em duas resoluções PNG com
+  transparência. **É o mesmo tratamento que a fatia (a) deu à tipografia** — arquivo versionado, com
+  a procedência escrita ao lado —, e fecha uma pendência que atravessou a v2.0 inteira.
+- **FR-032.1**: MUST ser versionada a resolução adequada a **cada** destino, e a de tela MUST **não**
+  carregar o peso da de impressão.
+  ⚠️ **Medido: 226 KB contra 6,3 MB.** Mandar a de impressão para o cabeçalho seria multiplicar por
+  vinte e oito o peso de um desenho que aparece a quarenta pixels de altura. **E não existe versão
+  vetorial**, que resolveria os dois com um arquivo só — então a escolha por destino é obrigatória,
+  não preferência.
+- **FR-032.2**: O arquivo MUST ser renomeado para a convenção do repositório — sem acento e sem
+  espaço — ao ser versionado.
+  ⚠️ Nome com espaço vira `%20` na URL, e nome com acento depende da codificação que o servidor
+  escolher. A fatia (a) já fixou a convenção em `public/fontes/`, e vale a mesma aqui.
 - **FR-033**: O conteúdo que **depende de épicos ainda não entregues** MUST exibir estado vazio
   explicado, dizendo **qual** informação ainda não existe, e MUST **não** parecer defeito.
   ⚠️ **Decisão de 11/09/2026: a tela entra como casca navegável, não completa.** O backlog diz que o
@@ -426,8 +477,17 @@ alguém edita de propósito. **Quem cola um link não é sempre quem o escreveu.
 
 ### Requisitos que fecham dívida herdada
 
-- **FR-038**: MUST ficar escrito se a rota da vitrine continua **sem sessão** depois de existir
-  navegação autenticada (`CHK039`).
+- **FR-038**: A rota da vitrine MUST permanecer **acessível sem sessão**, fora do grupo autenticado
+  e sem o shell (`CHK039`).
+  ⚠️ **Decisão de 11/09/2026, e ela substitui uma redação circular.** A versão anterior deste
+  requisito dizia *"deve ficar escrito se a rota continua sem sessão"* — **prometer que um requisito
+  existe não é requisito**, e é o mesmo padrão que a fatia (b) corrigiu duas vezes, no `FR-028` e no
+  `FR-030`. Reapareceu aqui, e foi pego na revisão em vez de na implementação.
+  ⚠️ **A razão é a mesma da fatia (a):** a vitrine não exibe dado algum, e exigir autenticação para
+  ver uma paleta não protegeria nada.
+  ⚠️ **E há uma consequência medida:** trinta e poucos casos de ponta a ponta abrem essa rota sem
+  autenticar. Levá-la para dentro do grupo autenticado reescreveria a suíte inteira para provar
+  menos.
 - **FR-039**: O módulo de design nascido na fatia (a) MUST constar da estrutura do repositório
   documentada (`CHK040` da lista anterior, `CHK022` da fatia (a)).
 - **FR-040**: O **breadcrumb** MUST **não** ser construído nesta fatia.
@@ -494,6 +554,8 @@ não dado de negócio — ele vive no código, é lido por toda tela, e é o que
   sem reabri-lo.
 - **SC-022**: A contagem de contêineres de contexto usados como fonte de verdade de estado de
   navegação é **zero**.
+- **SC-023**: **100%** das trocas de recorte produzem sinal visível antes de o dado chegar, medido no
+  percurso automatizado.
 
 ## Assumptions
 

@@ -54,6 +54,16 @@
   navegação desta plataforma (era do roteador antigo), e na biblioteca decidida ela significa *não
   avisar o servidor* — ligada num filtro, mantém a URL em dia e deixa a consulta velha na tela. Virou
   o `FR-004.1`.
+- ⚠️ **Revalidado em 11/09/2026, depois da terceira rodada** (`/speckit-clarify`, cinco perguntas). A
+  spec foi de 49 para **53 requisitos** e de 22 para **23 critérios**. **Os dezesseis itens continuam
+  aprovados, e nenhum mudou de estado** — as cinco respostas fecharam lacunas de conteúdo, não de
+  qualidade de redação.
+- ⚠️ **Uma das cinco perguntas existiu para corrigir um defeito meu.** O `FR-038` mandava *"ficar
+  escrito se a rota da vitrine continua sem sessão"* — **prometer que um requisito existe não é
+  requisito**, e é o mesmo padrão que a fatia (b) corrigiu duas vezes, no `FR-028` e no `FR-030`. Ele
+  reapareceu aqui e foi pego na revisão, não na implementação. **O checklist de qualidade não o
+  pegou**: "requisitos testáveis e não ambíguos" passou, porque a frase é clara — ela só não decide
+  nada. Vale considerar um item novo para essa classe.
 
 - **Itens incompletos exigem atualização da spec antes de `/speckit-clarify` ou `/speckit-plan`.**
 - ⚠️ **Cinco fatos desta spec foram MEDIDOS em 11/09/2026, não presumidos**, e estão marcados como
