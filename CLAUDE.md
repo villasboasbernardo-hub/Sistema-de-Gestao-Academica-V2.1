@@ -243,7 +243,9 @@ divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, colun
 | **Épico 3 — Auth, usuários e RBAC** | 🟨 **QUASE FECHADO em 09/09/2026.** As cinco histórias implementadas e verificadas: `pnpm verificar:tudo` sai **0** — 16 unidade · **102 pgTAP** · **104 RLS e ambiente** · 5 ponta a ponta. As seis asserções novas guardam a política de senha e a aplicação do `[auth]` do `config.toml`. Cinco telas (`/login`, `/convite`, `/recuperar-senha`, `/admin/usuarios`, `/admin/permissoes`), o fluxo de convite com **e-mail interceptado no Mailpit**, e duas migrations: o recorte de PII e o gatilho do último Admin. **Três decisões de Bernardo em 09/09/2026:** a ameaça **A-8 foi ratificada** (o modelo vai de A-1 a **A-8**), a **correção do contrato de conferências foi aprovada** (o `config.toml` versiona parte do que o documento 22 dizia ser só do painel), e as tarefas **T003 e T062.1 ficaram com ele**, para execução manual no painel da Vercel. **PR #5 aberto e verde** — `qualidade`, `banco` e `build` passam, e a ponta a ponta dá **5 passados e 2 pulados no CI, o mesmo do local** (SC-014). ⚠️ **Antes de mesclar, duas coisas que não estão no código:** o projeto Supabase remoto **não tem as duas migrations desta fatia** (medido: `PGRST205` para `vw_instrutores`), e a CLI não está autenticada aqui para aplicá-las. **Falta**: a carga das 572 UEs (herdada do Épico 2), a conferência do painel do projeto remoto, e as T003/T062.1, que ficaram com Bernardo |
 | **Épico 4 — fatia (a): tokens e tema** | 🟨 **IMPLEMENTADA em 10/09/2026.** `app/globals.css` é o **ponto único**: rampa institucional, neutros frios, escala de gestão (14px de corpo, 11px de mínimo), nove trios de status nos dois temas, oito séries e a reconciliação com o shadcn. **A regra de cor é bloqueante nas duas metades** — cor escrita à mão **e** utilitário da paleta padrão — e o repositório inteiro passa em zero violações. Tema claro/noturno com `next-themes`, sem flash, **medido antes da hidratação**. Rawline auto-hospedada, 4 pesos, licença OFL-1.1 versionada. Vitrine em **`/estilo`**, único lugar onde a fatia se vê até a fatia (c). ⚠️ **`/estilo` é rota SEM sessão** — ela não exibe dado algum, e exigir login para ver uma paleta não protegeria nada |
 | Épico 4 — o que a fatia (a) **mediu, e corrige neste registro** | ⚠️ A dívida de estilo **não eram 9 arquivos com cor literal**: eram **2** (`app/error.tsx`, `components/faixa-de-ambiente.tsx`). Outros dois têm `style={{}}` só com espaçamento, e as 5 telas do Épico 3 **não usam cor nenhuma**. Apareceu um **quinto**, `app/page.tsx`, com 10 utilitários da paleta padrão, que não constava de lista alguma. **Os cinco estão pagos**; restam as 5 telas do Épico 3 para a fatia (c) |
-| Épicos 4 (b e c) a 13 | ⬜ Pendentes. **Entra no Épico 4:** a dívida de estilo — agora são **9 arquivos** sem tokens `@theme`, não 4: as 5 telas do Épico 3 nasceram sóbrias por decisão registrada. **Entram no Épico 3:** a Server Action de convite (primeiro consumidor real de `lib/supabase/admin.ts`) e `NEXT_PUBLIC_URL_APLICACAO`, deixada fora do Épico 0 por decisão de 07/09. **Entra no Épico 4:** a dívida de estilo C-1 — 4 arquivos usam `style={{}}` com cor literal, à espera dos tokens `@theme` |
+| **Épico 4 — fatia (b): componentes CIAARA** | ✅ **CONCLUÍDA em 10/09/2026.** `pnpm verificar:tudo` sai **0** — **220 de unidade** · **102 pgTAP** · **104 RLS e ambiente** · **60 ponta a ponta** (2 pulados). Entraram **10 primitivos**, **13 componentes CIAARA**, **3 gráficos** e as **2 primeiras funções puras de `lib/dominio/`**, que estava vazio desde o Épico 0. A `RN-ANT-01`, de *Risco: Alto*, deixou de depender de memória: o seletor de instrutor é **exatamente um** no repositório e **reordena a lista que recebe**, ignorando a ordem de chegada — as duas metades conferidas **por defeito deliberado**, que reprovou nas duas. **12 itens do checklist da fatia (a) fechados**, cada um apontando pelo número o requisito que o fecha. ⚠️ **A carga das 572 UEs continua pendente**, herdada do Épico 2 |
+| Épico 4 — o que a fatia (b) **mediu, e contraria expectativa** | ⚠️ **Os dez primitivos novos trouxeram ZERO variável de cor nova** — a reconciliação continua com **18 pares**, não 32. O que cresceu foi a verificação: a invariante **I-4b** passou a valer na direção que pega defeito — toda variável de terceiro **usada** em `components/ui/` precisa ter par, senão ela não resolve para cor nenhuma e a tela sai errada **sem erro**. ⚠️ E **`radix-ui` já exportava sete** dos dez primitivos: a lista de instalação encolheu para gráficos e ícones, **nenhum pacote de componente novo**. ⚠️ A auditoria de contraste foi de 23 para **24 pares** — entrou o **C-2**, `--texto-tenue` como traço de campo |
+| Épico 4 (c) e Épicos 5 a 13 | ⬜ Pendentes. **Entra na fatia (c):** shell, navegação e estado na URL (`nuqs`) — e é lá que as 5 telas do Épico 3 recebem o vocabulário, porque a (b) entregou os componentes e não reescreveu tela. **Entram no Épico 3:** a Server Action de convite (primeiro consumidor real de `lib/supabase/admin.ts`) e `NEXT_PUBLIC_URL_APLICACAO`, deixada fora do Épico 0 por decisão de 07/09. ⚠️ **A dívida de estilo dos 4 arquivos com `style={{}}` continua aberta**: os da vitrine leem o valor do ponto único em tempo de execução, e trocá-los por utilitário exigiria gerar classe a partir de dado — decisão da fatia (c) |
 | **Decisão UE-1** | ✅ **Fechada em 26/08/2026 — rota (b)**: `registros_aula` no grão de **Unidade de Ensino**; disciplina é agregado derivado. Épico 1 **desbloqueado**. Ver documento 05 §9.1. **Origem do dado resolvida em 28/08/2026**: as UEs vêm dos **currículos oficiais da DEnsM**, não de linha sintética |
 | Numeração das specs | ✅ **Reiniciada em 26/08/2026.** As 39 specs herdadas da v2.0 vivem em `specs/heranca-v2.0/`; a v2.1 recomeça em `specs/001-…`. "Spec 001" **exige o diretório** para não ser ambíguo |
 
@@ -308,6 +310,54 @@ Bernardo em 08/09/2026** (*"foram balizados por medição real e justificados na
    identifica um campo, e o preenchimento do campo quase não contrasta com a página — medido,
    **1,20**. A fatia que construir o primeiro formulário precisa resolver, e encontra a medição
    registrada em vez de redescobri-la.
+
+**Os seis achados do Épico 4, fatia (b) — e o primeiro não é de código:**
+
+1. **Um pacote inteiro chegou ZERADO em disco, e o `tsc` não viu nada.** `d3-shape@3.2.0`, que a
+   biblioteca de gráficos arrasta, tinha **40 arquivos preenchidos com NUL** — `package.json`
+   inclusive, 1668 bytes de zero. O `next build` falhou com *"Export symbolWye doesn't exist in
+   target module"*, que não sugere corrupção a ninguém. ⚠️ **E `pnpm install` reproduzia o defeito**,
+   porque os arquivos do `node_modules` e os do armazém são **o mesmo inode**: zerar um zera o outro.
+   O conserto foi achar os vínculos com `fsutil hardlink list`, apagar as **112 entradas** do armazém
+   e reinstalar. ⚠️ **O repositório vive dentro do OneDrive** — 113 arquivos zerados em 5 pacotes têm
+   a assinatura de sincronização interrompida. Se acontecer de novo, a varredura é por arquivo
+   inteiramente NUL, não por tamanho.
+2. **O cabeçalho ordenável quebrava a primeira frase do contrato de teclado.** Um `<button>` dentro
+   de cada `<th>` vira uma parada de tabulação **dentro** do contêiner: uma tabela de oito colunas
+   passava a ter nove paradas, e *"`Tab` entra na grade e sai dela em um passo"* deixava de valer
+   sem que nada acusasse. O cabeçalho virou **a linha 0 da grade**, que é o padrão ARIA, e ordenar
+   passou a ser ativar a célula.
+3. **Seletor por papel numa página que tem faixa de ambiente é AMBÍGUO, e ambiguidade não se
+   resolve com mais tempo.** Três casos instáveis no CI, em três lugares diferentes, todos com a
+   mesma causa: `main` casava com o da página **e** com o do `app/loading.tsx`; `status` casava com
+   a faixa "AMBIENTE LOCAL" **e** com a mensagem procurada. ⚠️ **Violação de modo estrito falha na
+   hora — ela NÃO reexecuta**, então `expect` não salva. E a mensagem engana: ela começa com
+   *"expect(locator).toBeVisible() failed"* e só na terceira linha diz *"resolved to 2 elements"*.
+   ⚠️ **E o primeiro diagnóstico foi errado, com custo medido:** li como lentidão, aumentei o prazo,
+   e a instabilidade subiu **de dois casos para seis**. A correção é escopo — esperar pelo título da
+   vitrine, procurar a resposta dentro do `main` do formulário.
+4. **`focus()` programático não abre dica ao apontar do Radix.** Ela só abre no foco quando ele é
+   **visível** (`:focus-visible`), e o navegador não o aplica a foco programático quando a última
+   interação foi de ponteiro. O caso passava numa execução e reprovava na outra **no mesmo commit**,
+   porque o que decidia era o que tinha acontecido na página antes. A forma que não depende disso é
+   **pressionar tecla**: focar o vizinho e voltar com `Shift+Tab`. É também mais honesto — mede o
+   caminho de quem navega por teclado em vez de simular o resultado dele.
+5. **Três verificações reprovaram lendo a PRÓPRIA documentação como violação.** A varredura de
+   domínio do filtro leu *"ele não conhece instrutor"* do cabeçalho como se conhecesse; a de
+   `--texto-tenue` leu três frases **sobre** o token como usos dele. ⚠️ **Um teste que confunde a
+   frase que promete a ausência com a violação ensina a apagar a documentação para ficar verde** —
+   exatamente o contrário do que estes requisitos querem. Toda varredura desta fatia lê **código sem
+   comentário**.
+6. **A suíte de unidade reprovou uma vez por cache frio, logo depois do `pnpm install`.** Os dois
+   casos que instanciam o ESLint estouraram os 30 segundos; na execução seguinte levaram 6. Não foi
+   corrigido porque não se reproduziu — fica registrado para não custar uma investigação no dia em
+   que aparecer no CI.
+
+⚠️ **E uma divergência reportada, não corrigida:** o documento 06, linha 287, traz a **mesma
+compressão errada** do formato do nome de instrutor que o `FR-012` e o `CHK016` tinham — escreve
+`P/G Especialidade Nome de Guerra`, descartando o nome completo. Os dois primeiros foram corrigidos
+em 10/09/2026; **o documento 06 não**, porque emendá-lo é decisão à parte. O código segue o
+`RF-INSTR-15`, que é **[PRESERVADO]**.
 
 **Os dez achados de plataforma do Épico 3 — todos custaram investigação, nenhum aparece no `tsc`:**
 

@@ -126,6 +126,21 @@ export const PARES: readonly Par[] = [
     limite: 3,
     proposito: "anel de foco — borda INTERATIVA (RNF-USA-06)",
   },
+  // ⚠️ O PAR C-2 ENTROU EM 10/09/2026, com a fatia (b), e ele é a `FR-032.1`. O traço que
+  // identifica um campo passou a ser `--texto-tenue` porque NENHUM dos catorze tokens de borda
+  // alcança 3:1 — o melhor mede 2,23. Sem este par, a decisão viraria anotação, e anotação que
+  // ninguém confere envelhece: foi exatamente o que aconteceu com as sete do documento 23 §1.3.
+  //
+  // ⚠️ ELE MEDE OS MESMOS DOIS TOKENS DO A-4 E NÃO É DUPLICATA. O A-4 audita `--texto-tenue` como
+  // TEXTO, a 4,5:1; este o audita como BORDA INTERATIVA, a 3:1. São dois papéis do mesmo token, e
+  // é o papel que escolhe o limite. Se um dia o papel de texto sair, este par continua valendo.
+  {
+    id: "C-2",
+    frente: "texto-tenue",
+    fundo: "superficie",
+    limite: 3,
+    proposito: "traço que identifica o campo — borda INTERATIVA (FR-032)",
+  },
   // ⚠️ AS OITO SÉRIES ENTRARAM EM 10/09/2026, no saneamento normativo. Elas estavam declaradas no
   // ponto único, apareciam na vitrine e NÃO TINHAM PAR AUDITADO NENHUM — e o documento 23 §8.1
   // sempre exigiu 3:1 de ELEMENTO GRÁFICO. Não é requisito novo: é regra que a spec havia perdido.
@@ -168,20 +183,27 @@ export const ISENTOS: readonly { id: string; par: string; motivo: string }[] = [
 /**
  * Nem auditado nem isento — e a categoria existe de propósito.
  *
- * ⚠️ CHAMAR ISTO DE DECORATIVO SERIA MENTIRA. `--borda-forte` é exatamente o traço que identifica
- * um campo de formulário, e ele importa porque o preenchimento do campo quase não contrasta com a
- * página: `--superficie` sobre `--fundo` mede 1,20 no tema claro.
+ * ⚠️ O GATILHO DISPAROU EM 10/09/2026, e a resposta não foi a que a fatia (a) esperava. O
+ * "resolve em" dizia *"a fatia que construir o primeiro campo"*, e a fatia (b) o construiu. Medidos
+ * os catorze tokens de borda da paleta, **nenhum** alcança 3:1 — o melhor é `--executado-borda`,
+ * com 2,23 no noturno. Então o traço do campo passou a ser `--texto-tenue` (`FR-032`), auditado
+ * como par **C-2**, e a cor não foi tocada, como Bernardo determinou em 09/09/2026.
  *
- * Não é auditado porque NÃO HÁ CAMPO NESTA FATIA — formulário é das fatias (b) e (c) — e porque a
- * decisão de 09/09/2026 proíbe alterar a cor. Fica medido aqui para a fatia que construir o
- * primeiro campo encontrar em vez de redescobrir.
+ * ⚠️ O QUE FICA PENDENTE MUDOU DE PERGUNTA, E POR ISSO A ENTRADA CONTINUA AQUI. A frase anterior —
+ * *"chamar isto de decorativo seria mentira, `--borda-forte` é o traço que identifica um campo"* —
+ * **deixou de ser verdade**: o campo não o usa mais. Hoje `--borda-forte` sobrevive só como
+ * `--input` do de-para, num contorno de botão no tema noturno, que é uso estrutural. Classificá-lo
+ * como isento seria a conclusão natural — e é decisão de Bernardo, não minha, porque foi decisão
+ * dele que criou a categoria. Fica pendente com a pergunta certa em vez de resolvida por dedução.
  */
 export const PENDENTES: readonly { id: string; par: string; medido: string; resolve: string }[] = [
   {
     id: "B-2",
     par: "borda-forte sobre superficie",
     medido: "1,62 no claro · 1,88 no noturno · limite 3:1",
-    resolve: "a fatia que construir o primeiro campo de formulário — (b) ou (c)",
+    resolve:
+      "Bernardo — o gatilho da fatia (a) disparou e o campo NÃO o usa mais (FR-032). Resta " +
+      "classificar o uso restante, que é estrutural: isento como o B-1, ou auditado",
   },
 ];
 
@@ -240,3 +262,66 @@ export function razao(frente: string, fundo: string): number {
   const [claro_, escuro_] = a > b ? [a, b] : [b, a];
   return ((claro_ as number) + 0.05) / ((escuro_ as number) + 0.05);
 }
+
+/**
+ * O vocabulário de cor que os componentes copiados TRAZEM CONSIGO — a lista fechada contra a qual
+ * a varredura de `components/ui/` roda.
+ *
+ * ⚠️ ELA EXISTE PARA QUE A INVARIANTE VALHA NA DIREÇÃO QUE PEGA DEFEITO. O `RECONCILIACAO` prova
+ * que todo par declarado aponta para um papel do CIAARA; sozinho, ele não impede um primitivo novo
+ * de usar uma variável que NINGUÉM declarou. Essa é a falha silenciosa de verdade: a variável não
+ * resolve, a cor sai transparente ou preta, e nada acusa erro — a tela só fica um pouco errada.
+ *
+ * ⚠️ MEDIDO EM 10/09/2026, na fatia (b): os dez primitivos novos — campo, rótulo, silhueta, aviso,
+ * seleção, painel flutuante, dica, diálogo, diálogo de confirmação e recolhível — trouxeram
+ * **zero** variável além das 18 que a fatia (a) já reconciliara. A reconciliação não cresceu, e
+ * isso é resultado de medição, não de sorte: o que cresceu foi a verificação.
+ *
+ * Fonte: o conjunto canônico de variáveis de cor do shadcn/ui, incluindo as famílias `chart-*` e
+ * `sidebar-*`, que esta fatia NÃO usa e que por isso mesmo precisam estar na lista — variável não
+ * usada hoje é a que entra amanhã sem ninguém notar.
+ */
+export const VOCABULARIO_SHADCN: readonly string[] = [
+  "background",
+  "foreground",
+  "card",
+  "card-foreground",
+  "popover",
+  "popover-foreground",
+  "primary",
+  "primary-foreground",
+  "secondary",
+  "secondary-foreground",
+  "muted",
+  "muted-foreground",
+  "accent",
+  "accent-foreground",
+  "destructive",
+  "destructive-foreground",
+  "border",
+  "input",
+  "ring",
+  "chart-1",
+  "chart-2",
+  "chart-3",
+  "chart-4",
+  "chart-5",
+  "sidebar",
+  "sidebar-foreground",
+  "sidebar-primary",
+  "sidebar-primary-foreground",
+  "sidebar-accent",
+  "sidebar-accent-foreground",
+  "sidebar-border",
+  "sidebar-ring",
+];
+
+/**
+ * Os tons de status, derivados de `STATUS` — **não redeclarados** (`FR-005`, `FR-025`).
+ *
+ * ⚠️ DERIVAR, E NÃO COPIAR, É O REQUISITO. Uma segunda lista de nove nomes passaria em todo teste
+ * desta fatia e divergiria no dia em que um status décimo entrasse no ponto único: o emblema
+ * continuaria compilando, sem o tom novo, e ninguém saberia. Derivado, o status novo QUEBRA A
+ * COMPILAÇÃO de quem não o tratou — que é o comportamento desejado.
+ */
+export type Tom = (typeof STATUS)[number];

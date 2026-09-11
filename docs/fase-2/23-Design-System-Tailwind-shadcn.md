@@ -140,7 +140,7 @@ sobre a v1.0 e que a v2.1 não pode reintroduzir por descuido de sintaxe.
 | `shadow-sm` | Bootstrap 5 | `--shadow-ciaara-1` | cartões | |
 | `col-12 col-md-6 col-lg-4` | grade Bootstrap | `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3` | listagens em cartão | UI-02 preservado no comportamento |
 | `Rawline` via CDN | `<link>` em `_Estilos.html` | `next/font/local` auto-hospedada | `--font-sans` | UI-04 preservado; sem dependência externa |
-| Font Awesome 6 (UI-03) | CDN | `lucide-react` | ícones de interface | **pendência §11.2** |
+| Font Awesome 6 (UI-03) | CDN | `lucide-react` | ícones de interface | ✅ **§11.2 fechada** — ver abaixo |
 | ApexCharts / Chart.js (UI-06) | CDN | **Recharts** | `components/graficos/` | BRIEF §1 |
 | `#overlay` + `gs()` (IND-02) | `_Comum.html` | `loading.tsx` + `<Suspense>` + `useFormStatus` | carregamento | `RNF-PERF-06` |
 | `AppState` | `AppState.js` | URL + `nuqs` | estado de navegação | documento 25 |
@@ -1464,10 +1464,20 @@ v2.0. Motivo: WCAG 2.2.2 e 2.3.1, e perda de eficácia quando muitas linhas pisc
 Substituto: faixa lateral no *token* `conformidade` + ícone persistente + rótulo + entrada no
 `AlertaConformidade`. **Confirmar** que a perda do movimento é aceitável.
 
-**11.2 — Biblioteca de ícones.** UI-03 da v2.0 fixava **Font Awesome 6**. O shadcn/ui traz
-`lucide-react` por padrão, e o BRIEF §1 proíbe biblioteca de *componentes* além de shadcn/Radix, mas
-não trata de ícones. **Confirmar** `lucide-react` (recomendado: acompanha o shadcn, é
-*tree-shakeable*, não depende de CDN) ou manter Font Awesome 6.
+**11.2 — Biblioteca de ícones.** ✅ **FECHADA em 10/09/2026** — decisão de Bernardo, transcrita no
+`FR-003.1` da spec `007-componentes-ciaara`: fica o **`lucide-react`**, versionado e sem depender de
+rede externa. A Font Awesome 6 sai. ⚠️ **Registro de fechamento, não emenda:** o texto original da
+pendência segue abaixo, intacto, porque é ele que explica o que foi decidido.
+
+> UI-03 da v2.0 fixava **Font Awesome 6**. O shadcn/ui traz
+> `lucide-react` por padrão, e o BRIEF §1 proíbe biblioteca de *componentes* além de shadcn/Radix, mas
+> não trata de ícones. **Confirmar** `lucide-react` (recomendado: acompanha o shadcn, é
+> *tree-shakeable*, não depende de CDN) ou manter Font Awesome 6.
+
+⚠️ **A configuração já apontava para ela havia catorze dias**, em `iconLibrary` do `components.json`,
+enquanto a pendência continuava aberta neste documento. É o mesmo padrão das sete anotações de
+contraste do §1.3: **registro e realidade divergindo em silêncio.** Por isso a decisão entrou também
+como teste — `tests/unidade/dependencias.test.ts` compara a configuração com a dependência instalada.
 
 **11.3 — Cronograma impresso: A4 paisagem por trimestre, ou A3?** A proposta é A4 paisagem com
 recorte por trimestre, por não pressupor impressora A3. **Confirmar** se há A3 disponível.
