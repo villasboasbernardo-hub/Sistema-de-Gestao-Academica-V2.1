@@ -68,10 +68,19 @@ describe("`FR-007` · parâmetro fora do contrato é ignorado, e a tela não que
     });
   });
 
-  it("uma rota SEM parâmetros ignora tudo e não estoura", () => {
-    // A vitrine não recorta nada, e isso é declaração, não omissão.
-    expect(() => lerParametros("/estilo", url("qualquer=coisa"))).not.toThrow();
-    expect(lerParametros("/estilo", url("qualquer=coisa")).valores).toEqual({});
+  it("uma rota sem NENHUM parâmetro reconhecido devolve todos os padrões e não estoura", () => {
+    /*
+     * ⚠️ ESTE CASO JÁ FOI "a rota sem parâmetros", E A VITRINE DEIXOU DE SER UMA. Medido em
+     * 11/09/2026: a amostra de estado na URL da fatia (a) escrevia `?demo=` sem que contrato nenhum
+     * o declarasse — a primeira tela a infringir o `FR-001` foi a nossa. Declarar os parâmetros da
+     * vitrine fechou o furo, e o que este caso passa a guardar é o mesmo comportamento pelo outro
+     * lado: entrada inteiramente estranha não produz valor estranho.
+     */
+    const { valores, descartes } = lerParametros("/estilo", url("qualquer=coisa"));
+    expect(valores).toEqual({ demo: "", categoria: "", etiquetas: [], busca: "" });
+    expect(descartes).toEqual([
+      { parametro: "qualquer", motivo: "fora-do-contrato", recebido: "coisa" },
+    ]);
   });
 });
 
@@ -118,5 +127,36 @@ describe("a entrada pode vir do navegador ou do servidor", () => {
 
   it("`lerParametro` é atalho do mesmo resultado", () => {
     expect(lerParametro("/inicio", "modalidade", url("modalidade=ead"))).toBe("ead");
+  });
+});
+
+describe("a lista degrada por ITEM, e chega nas duas codificações", () => {
+  it("separada por vírgula — é o que este sistema escreve", () => {
+    expect(lerParametros("/estilo", url("etiquetas=x,y")).valores.etiquetas).toEqual(["x", "y"]);
+  });
+
+  it("chave repetida — é o que outra ferramenta pode montar", () => {
+    /*
+     * ⚠️ ACEITAR AS DUAS É DELIBERADO. Com o `RF-NAV-01` a barra de endereço é entrada de usuário, e
+     * quem cola um link montado fora daqui não sabe qual forma este sistema escolheu. Recusar a
+     * forma alheia devolveria uma lista vazia **em silêncio**, que é pior que devolver erro.
+     */
+    expect(lerParametros("/estilo", url("etiquetas=x&etiquetas=y")).valores.etiquetas).toEqual([
+      "x",
+      "y",
+    ]);
+  });
+
+  it("⚠️ um item podre no meio NÃO apaga os bons", () => {
+    // Transformar um erro de digitação em perda do recorte inteiro é o defeito que este caso impede.
+    const { valores, descartes } = lerParametros("/estilo", url("etiquetas=x,inventada,z"));
+    expect(valores.etiquetas).toEqual(["x", "z"]);
+    expect(descartes).toEqual([
+      { parametro: "etiquetas", motivo: "item-invalido", recebido: "inventada" },
+    ]);
+  });
+
+  it("lista inteiramente podre cai para o padrão, e a tela abre", () => {
+    expect(lerParametros("/estilo", url("etiquetas=nada,disso")).valores.etiquetas).toEqual([]);
   });
 });

@@ -21,6 +21,7 @@ import {
   AmostraEsqueleto,
   AmostraEstadoVazio,
   AmostraFiltroAvancado,
+  AmostraFiltroNaUrl,
   AmostraIndicadores,
   AmostraNomeInstrutor,
   AmostraSeletorInstrutor,
@@ -329,12 +330,16 @@ export default function Vitrine() {
         <AmostraDialogoConfirmacao />
       </Secao>
 
-      <Secao titulo="Estado na URL — prova de fumaça da biblioteca, antes de o contrato existir">
+      <Secao titulo="Estado na URL — pelo contrato, e a política de histórico já não se escreve aqui">
         <AmostraEstadoNaUrl />
       </Secao>
 
       <Secao titulo="Filtro avançado — genérico, e ele não conhece domínio nenhum">
         <AmostraFiltroAvancado />
+      </Secao>
+
+      <Secao titulo="Filtro avançado na URL — o MESMO componente, sem uma linha de mudança">
+        <AmostraFiltroNaUrl />
       </Secao>
 
       <Secao titulo="Nome de instrutor — P/G, especialidade e o nome COMPLETO, com o nome de guerra em negrito">

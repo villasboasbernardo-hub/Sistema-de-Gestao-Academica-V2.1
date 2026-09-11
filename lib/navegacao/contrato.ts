@@ -120,11 +120,63 @@ export const CONTRATO = {
       },
     },
   },
+  /*
+   * A vitrine (`RF-DS-01`).
+   *
+   * ⚠️ ELA ENTROU NO CONTRATO PORQUE JÁ ESTAVA VIOLANDO-O. Medido em 11/09/2026: a amostra de estado
+   * na URL da fatia (a) escrevia `?demo=` com um parâmetro que contrato nenhum declarava — ou seja,
+   * **a primeira tela a infringir o `FR-001` foi a nossa**, escrita antes de o requisito existir. A
+   * nota anterior deste bloco dizia que a vitrine "não recorta nada", e isso deixou de ser verdade
+   * no instante em que a amostra foi escrita.
+   *
+   * ⚠️ E ELA É O ÚNICO LUGAR ONDE OS QUATRO TIPOS SE EXERCITAM JUNTOS antes dos Épicos 5 a 9: escolha
+   * que empilha, escolha que substitui, lista e texto com limite de frequência. As telas de verdade
+   * usam um ou dois tipos cada.
+   */
   "/estilo": {
     rota: "/estilo",
     origem: "RF-DS-01",
-    // ⚠️ Vazio de propósito, e é declaração e não omissão: a vitrine não recorta nada.
-    parametros: {},
+    parametros: {
+      // Troca de CONTEXTO: empilha, para o botão voltar ter o que desfazer.
+      demo: {
+        nome: "demo",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: ["alfa", "bravo", "charlie"],
+        historico: "empilha",
+        avisaServidor: false,
+      },
+      // REFINO da mesma tela: substitui. Três cliques de filtro não são três passos de navegação.
+      categoria: {
+        nome: "categoria",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: ["a", "b"],
+        historico: "substitui",
+        avisaServidor: false,
+      },
+      etiquetas: {
+        nome: "etiquetas",
+        tipo: "lista",
+        padrao: [],
+        opcoes: ["x", "y", "z"],
+        historico: "substitui",
+        avisaServidor: false,
+      },
+      /*
+       * ⚠️ BUSCA SUBSTITUI **E** LIMITA FREQUÊNCIA (`FR-004`, `FR-005`). As duas, não uma: sem
+       * substituir, cada tecla vira um passo de histórico; sem o limite, cada tecla vira uma escrita
+       * na barra de endereço — e, numa tela que avisa o servidor, uma consulta.
+       */
+      busca: {
+        nome: "busca",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: false,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
+      },
+    },
   },
 } as const satisfies Record<string, ContratoDeRota>;
 
@@ -147,4 +199,22 @@ export function descritor<R extends Rota>(rota: R, nome: ParametroDe<R>): Parame
 /** Todos os descritores de uma rota, na ordem em que foram declarados. */
 export function parametrosDaRota<R extends Rota>(rota: R): readonly Parametro[] {
   return Object.values(CONTRATO[rota].parametros as Readonly<Record<string, Parametro>>);
+}
+
+/** O prefixo das rotas de impressão (documento 25 §1.3, regra 2). */
+export const PREFIXO_DE_IMPRESSAO = "/print";
+
+/**
+ * Os parâmetros de uma rota de impressão: **os mesmos da tela de origem, sem tradução** (`FR-035`).
+ *
+ * ⚠️ É RESERVA, NÃO IMPLEMENTAÇÃO. As rotas de impressão são dos Épicos 10 e 11, e nenhuma existe
+ * neste contrato hoje — o teste confere isso. O que esta função reserva é a **ausência de tradução**:
+ * ela delega, e a delegação é o requisito. Uma versão futura que traduzisse nomes ou recortasse
+ * parâmetros faria `/print/dsa` imprimir algo diferente do que está na tela, que é o defeito que a
+ * regra 2 do documento 25 §1.3 existe para impedir.
+ *
+ * ⚠️ E É POR ISSO QUE ELA É UMA LINHA SÓ. Se um dia precisar de mais de uma, a regra mudou.
+ */
+export function parametrosDaImpressaoDe<R extends Rota>(rota: R): readonly Parametro[] {
+  return parametrosDaRota(rota);
 }

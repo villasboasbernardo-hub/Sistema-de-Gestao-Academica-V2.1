@@ -107,3 +107,56 @@ sem sinal, a pessoa clica de novo. E não se escolhe um número antes de existir
 
 ⚠️ **O último é o que não se prova por atributo.** Um teste que confira só a URL passa com o aviso
 desligado — e é exatamente o defeito que ele deveria pegar.
+
+---
+
+## O que ficou exercitado nesta fatia, e o que espera as telas (`FR-003`)
+
+Registro de 11/09/2026, ao fim da História 1.
+
+| Rota | Parâmetros no contrato | Exercitada | Onde |
+|---|---|---|---|
+| `/estilo` | `demo`, `categoria`, `etiquetas`, `busca` | **sim** | `tests/e2e/estado-na-url.spec.ts` |
+| `/inicio` | `classificacao`, `modalidade` | História 4 | `tests/e2e/inicio.spec.ts` |
+| as nove demais do documento 25 §1.3 | — | não | entram com as suas telas, Épicos 5 a 9 |
+
+⚠️ **A VITRINE ENTROU NO CONTRATO PORQUE JÁ O VIOLAVA.** Medido em 11/09/2026: a amostra de estado na
+URL da fatia (a) escrevia `?demo=` com um parâmetro que contrato nenhum declarava. **A primeira tela a
+infringir o `FR-001` foi a nossa** — escrita antes de o requisito existir, e funcionando. É a prova de
+que uma tela que inventa parâmetro não parece errada.
+
+⚠️ **E ela é o único lugar onde os quatro tipos convivem**: escolha que empilha, escolha que
+substitui, lista e texto com limite de frequência. As telas de verdade usam um ou dois tipos cada.
+
+### A chave de negócio legível **não** foi exercitada aqui
+
+O `FR-003` manda o parâmetro que identifica registro carregar a chave de negócio (`TUR-000012`), e
+não o identificador técnico. **Nenhuma rota desta fatia tem parâmetro de identidade**: a tela inicial
+recorta por classificação e modalidade, que são escolha; a vitrine não identifica nada.
+
+⚠️ **A declaração existe para o requisito não passar por cumprido.** O primeiro exercício real é o
+Épico 5, com a rota de instrutores, e o Épico 6, com turma e semana. O contrato o declara desde já; a
+prova chega com a tela.
+
+### Codificação de lista
+
+Este sistema **escreve** separado por vírgula (`?etiquetas=x,y`) e **lê** as duas formas — vírgula e
+chave repetida (`?etiquetas=x&etiquetas=y`).
+
+⚠️ A tolerância na leitura é deliberada: com o `RF-NAV-01` a barra de endereço é entrada de usuário, e
+quem cola um link montado por outra ferramenta não sabe qual forma este sistema escolheu. Recusar a
+forma alheia devolveria uma lista vazia **em silêncio**.
+
+### O que o intervalo ainda não é
+
+O contrato tem quatro tipos, e **nenhum é intervalo**. O filtro avançado oferece o campo desde a fatia
+(b), e a amostra ligada à URL o deixa de fora de propósito: o primeiro intervalo de verdade é a janela
+de semana do Épico 6, e escolher a forma antes de existir o caso é escolher errado com antecedência.
+
+### Nome do gancho
+
+O gancho se chama **`useParametro`**, com o prefixo em inglês — **exigência do motor, não tradução**,
+da mesma classe que o `snake_case` dos identificadores de banco. O React reconhece gancho pelo nome, e
+a regra de lint que impede um gancho de ser chamado dentro de condição **deixa de valer** para
+qualquer outro nome. O documento 25 §1.4 e §1.5 já escreviam `useParametrosDsa` desde a Fase 2; o nome
+do **arquivo** continua em português.

@@ -86,7 +86,8 @@ até a v2.0 (BRIEF §2), e um `uuid` na barra de endereço não diz nada a ningu
 
 | Rota | Parâmetros | Tipo | Padrão | Origem |
 |---|---|---|---|---|
-| `/inicio` | `classificacao`, `modalidade` | texto | `""` (todas) | RF-INI-02 |
+| `/inicio` | `classificacao`, `modalidade` | escolha | `""` (todas) | RF-INI-02 |
+| `/estilo` | `demo`, `categoria`, `etiquetas`, `busca` | escolha/lista/texto | `""`, `[]` | RF-DS-01 |
 | `/cursos/[curso]` | `aba`, `turma` | texto | `"grade"`, `""` | RF-CURSOS |
 | `/turmas/[turma]/dsa` | `semana`, `ano` | inteiro | semana/ano correntes | RF-DSA-01 |
 | `/cronograma` | `curso`, `ano`, `granularidade`, `visao` | texto/int | `""`, ano corrente, `"semana"`, `"previsto_executado"` | RF-CRONOS-01..08 |
@@ -103,6 +104,17 @@ até a v2.0 (BRIEF §2), e um `uuid` na barra de endereço não diz nada a ningu
 própria nota de mecanismo. **Não era o requisito que estava errado: era esta tabela que estava
 incompleta.** Sem a emenda, a primeira tela da fatia (c) já inventaria um parâmetro fora do contrato
 — o que o `FR-001` daquela spec proíbe. Origem: análise da spec `008-shell-e-estado-na-url`.
+
+⚠️ **EMENDA DE 11/09/2026 — `/estilo` acrescentada, e o tipo da tela inicial corrigido.**
+
+A vitrine **já escrevia estado na URL** desde a fatia (a) — `?demo=` — sem linha nesta tabela. Ela era,
+portanto, a primeira tela do sistema a inventar parâmetro fora do contrato, e foi escrita por nós. A
+linha fecha o furo e dá à fatia (c) o único lugar onde os quatro tipos convivem.
+
+O tipo de `classificacao` e `modalidade` passou de **texto** a **escolha**: o `RF-INI-02` tem domínio
+fechado, e declarar texto aceitaria qualquer cadeia — o que tornaria o `FR-006` da spec `008`
+inexequível, porque não haveria domínio do qual estar fora. Origem: implementação da História 1 da
+spec `008-shell-e-estado-na-url`.
 
 Regras do contrato:
 

@@ -49,11 +49,26 @@ function primeiro(entrada: EntradaDeParametros, nome: string): string | undefine
   return Array.isArray(bruto) ? bruto[0] : (bruto as string);
 }
 
+/**
+ * Os itens de uma lista, **nas duas codificações**.
+ *
+ * ⚠️ A ESCRITA DESTE SISTEMA USA VÍRGULA (`?secoes=a,b`) — é o que `usar-parametro.ts` produz. A
+ * leitura aceita **também** a chave repetida (`?secoes=a&secoes=b`), e a tolerância é deliberada:
+ * com o `RF-NAV-01` a barra de endereço é entrada de usuário, e quem cola um link montado por outra
+ * ferramenta não sabe qual das duas formas este sistema escolheu. Recusar a forma alheia
+ * transformaria um link legítimo numa lista vazia, em silêncio.
+ */
 function todos(entrada: EntradaDeParametros, nome: string): readonly string[] {
-  if (entrada instanceof URLSearchParams) return entrada.getAll(nome);
-  const bruto = entrada[nome];
-  if (bruto === undefined) return [];
-  return Array.isArray(bruto) ? bruto : [bruto as string];
+  const repetidos =
+    entrada instanceof URLSearchParams
+      ? entrada.getAll(nome)
+      : entrada[nome] === undefined
+        ? []
+        : Array.isArray(entrada[nome])
+          ? (entrada[nome] as readonly string[])
+          : [entrada[nome] as string];
+
+  return repetidos.flatMap((bruto) => bruto.split(",")).filter((item) => item !== "");
 }
 
 function chaves(entrada: EntradaDeParametros): readonly string[] {
@@ -78,6 +93,19 @@ function esquemaDe(p: Parametro): z.ZodType {
     case "lista":
       return z.string().refine((v) => p.opcoes.includes(v));
   }
+}
+
+/**
+ * Confere um valor bruto contra o descritor. Devolve `null` quando ele não serve.
+ *
+ * ⚠️ É O ÚNICO LUGAR ONDE UM VALOR É JULGADO, e isso é de propósito. A leitura do servidor
+ * (`lerParametros`, aqui) e a escrita do navegador (`usar-parametro.ts`) precisam do **mesmo**
+ * veredito: se divergissem, a mesma URL daria uma tela no primeiro carregamento e outra depois do
+ * primeiro clique — e a diferença apareceria só para quem abrisse um link velho.
+ */
+export function conferirValor(p: Parametro, bruto: string): string | number | null {
+  const resultado = esquemaDe(p).safeParse(bruto);
+  return resultado.success ? (resultado.data as string | number) : null;
 }
 
 /**
@@ -115,9 +143,9 @@ export function lerParametros<R extends Rota>(rota: R, entrada: EntradaDeParamet
       continue;
     }
 
-    const resultado = esquemaDe(p).safeParse(bruto);
-    if (resultado.success) {
-      valores[nome] = resultado.data as string | number;
+    const conferido = conferirValor(p, bruto);
+    if (conferido !== null) {
+      valores[nome] = conferido;
     } else {
       valores[nome] = p.padrao;
       descartes.push({ parametro: nome, motivo: "fora-do-dominio", recebido: bruto });

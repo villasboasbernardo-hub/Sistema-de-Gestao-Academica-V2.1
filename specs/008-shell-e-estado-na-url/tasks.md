@@ -73,19 +73,19 @@ espera funcionalidade.
 **Teste independente**: colar uma URL com recorte numa aba nova e cair na tela exata, sem passar por
 outra.
 
-- [ ] T018 [US1] Escrever `lib/navegacao/usar-parametro.ts` — lê e escreve pelo contrato, aplicando a política de histórico e o aviso ao servidor (`FR-004`, `FR-004.1`)
-- [ ] T019 [US1] Aplicar o limite de frequência de **300 ms** à busca em `lib/navegacao/usar-parametro.ts` (`FR-005`) ⚠️ **o número vivia num exemplo de código do documento 25 §1.5**, não numa regra
-- [ ] T020 [US1] Fazer o parâmetro no valor padrão **sumir da URL** em `lib/navegacao/usar-parametro.ts` (`FR-002`)
+- [X] T018 [US1] Escrever `lib/navegacao/usar-parametro.ts` — lê e escreve pelo contrato, aplicando a política de histórico e o aviso ao servidor (`FR-004`, `FR-004.1`)
+- [X] T019 [US1] Aplicar o limite de frequência de **300 ms** à busca em `lib/navegacao/usar-parametro.ts` (`FR-005`) ⚠️ **o número vivia num exemplo de código do documento 25 §1.5**, não numa regra
+- [X] T020 [US1] Fazer o parâmetro no valor padrão **sumir da URL** em `lib/navegacao/usar-parametro.ts` (`FR-002`)
 - [ ] T020.1 [US1] Fazer toda troca de recorte produzir **retorno visual imediato** em `lib/navegacao/usar-parametro.ts` e nos segmentos de `app/(app)/`, ainda que o dado demore (`FR-045`) ⚠️ **Era lacuna da lista, e veio de decisão sua.** Na v2.0 trocar contexto era instantâneo porque era memória; aqui é ida ao servidor, e **o que estraga não é a latência, é o silêncio** — sem sinal, a pessoa clica de novo
-- [ ] T021 [US1] Completar o retorno após a autenticação preservando **os parâmetros** em `app/(auth)/login/page.tsx` e `FormularioDeLogin.tsx` (`FR-027`, `SC-005`) ⚠️ **a metade de ida já existe e está certa** — o proxy do Épico 3 guarda caminho e consulta
-- [ ] T022 [P] [US1] Escrever `tests/e2e/estado-na-url.spec.ts` cobrindo link direto, histórico um passo por vez, recarga e parâmetro padrão ausente (`FR-023`, `FR-024`, `FR-026`, `SC-001`, `SC-004`)
+- [X] T021 [US1] Completar o retorno após a autenticação preservando **os parâmetros** em `app/(auth)/login/page.tsx` e `FormularioDeLogin.tsx` (`FR-027`, `SC-005`) ⚠️ **a metade de ida já existe e está certa** — o proxy do Épico 3 guarda caminho e consulta
+- [X] T022 [P] [US1] Escrever `tests/e2e/estado-na-url.spec.ts` cobrindo link direto, histórico um passo por vez, recarga e parâmetro padrão ausente (`FR-023`, `FR-024`, `FR-026`, `SC-001`, `SC-004`)
 - [ ] T023 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` que **o número na tela muda** ao trocar o filtro (`FR-004.1`) ⚠️ **é o teste que não se faz por atributo**: um que confira só a URL passa com o aviso ao servidor desligado, que é o defeito que ele deveria pegar
-- [ ] T024 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` que oito teclas digitadas produzem **uma** entrada de histórico (`SC-014`)
+- [X] T024 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` que oito teclas digitadas produzem **uma** entrada de histórico (`SC-014`)
 - [ ] T024.1 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` que **toda** troca de recorte produz sinal visível antes de o dado chegar (`SC-023`)
 - [ ] T025 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` o link compartilhado entre **dois perfis de escopos diferentes** (`FR-025`) ⚠️ **quem nega é o banco**, e é isso que faz o link não vazar
-- [ ] T025.1 [US1] Ligar `components/ciaara/filtro-avancado.tsx` ao contrato **sem alterar o componente**, na amostra de `app/estilo/amostras.tsx` (`FR-014`) ⚠️ **Era lacuna da lista.** Ele já recebe e devolve estado por propriedade desde a fatia (b) — é a única peça que não precisa de refatoração, e justamente por isso ninguém tinha escrito a tarefa de usá-la
-- [ ] T026 [US1] Acrescentar em `specs/008-shell-e-estado-na-url/contracts/parametros.md` o registro do que ficou exercitado e do que espera as telas dos Épicos 5 a 9 (`FR-003`) ⚠️ **e declarar que a chave de negócio legível não foi exercitada aqui**: nenhuma rota desta fatia tem parâmetro de identidade
-- [ ] T026.1 [US1] Declarar em `lib/navegacao/contrato.ts` que a rota de impressão **herda** os parâmetros da tela de origem, sem tradução (`FR-035`) ⚠️ **é reserva, não implementação**: as rotas de impressão são dos Épicos 10 e 11, e o contrato precisa já saber disso para elas não inventarem parâmetro próprio
+- [X] T025.1 [US1] Ligar `components/ciaara/filtro-avancado.tsx` ao contrato **sem alterar o componente**, na amostra de `app/estilo/amostras.tsx` (`FR-014`) ⚠️ **Era lacuna da lista.** Ele já recebe e devolve estado por propriedade desde a fatia (b) — é a única peça que não precisa de refatoração, e justamente por isso ninguém tinha escrito a tarefa de usá-la
+- [X] T026 [US1] Acrescentar em `specs/008-shell-e-estado-na-url/contracts/parametros.md` o registro do que ficou exercitado e do que espera as telas dos Épicos 5 a 9 (`FR-003`) ⚠️ **e declarar que a chave de negócio legível não foi exercitada aqui**: nenhuma rota desta fatia tem parâmetro de identidade
+- [X] T026.1 [US1] Declarar em `lib/navegacao/contrato.ts` que a rota de impressão **herda** os parâmetros da tela de origem, sem tradução (`FR-035`) ⚠️ **é reserva, não implementação**: as rotas de impressão são dos Épicos 10 e 11, e o contrato precisa já saber disso para elas não inventarem parâmetro próprio
 
 **Ponto de conferência**: o passo 2 do [quickstart](./quickstart.md) inteiro, na mão.
 
