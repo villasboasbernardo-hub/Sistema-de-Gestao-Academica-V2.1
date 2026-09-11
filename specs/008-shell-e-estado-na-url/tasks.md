@@ -162,10 +162,10 @@ ver a tabela acompanhar.
 **Teste independente**: editar a URL à mão, primeiro com valores impossíveis e depois com carga
 hostil.
 
-- [ ] T054 [US5] **Ligar** a tela inicial ao esquema da T014, em `app/(app)/inicio/page.tsx`, de modo que a degradação aconteça na leitura e não na tela (`FR-006`, `FR-007`, `FR-041`) ⚠️ **A T014 escreve a degradação; esta apenas a liga.** A redação anterior dizia "aplicar a degradação" e parecia uma segunda implementação — se cada tela aplicar a sua, volta a existir uma tolerância por tela, que é o que o esquema veio acabar
-- [ ] T055 [P] [US5] Escrever `tests/e2e/url-degradada.spec.ts` (`FR-006`, `FR-007`, `SC-008`) cobrindo os quatro casos: valor fora do domínio, parâmetro fora do contrato, par incompleto e tudo inválido de uma vez
-- [ ] T056 [P] [US5] Escrever `tests/e2e/url-hostil.spec.ts` cobrindo os **três vetores** do [contrato de segurança](./contracts/seguranca-da-url.md): saída do domínio, valor chegando a filtro de consulta, valor chegando a interpolação de marcação (`FR-043`)
-- [ ] T057 [US5] Conferir em `tests/e2e/url-degradada.spec.ts` que o identificador fora de escopo distingue *"não há"* de *"você não vê"* (`FR-008`)
+- [X] T054 [US5] **Ligar** a tela inicial ao esquema da T014, em `app/(app)/inicio/page.tsx`, de modo que a degradação aconteça na leitura e não na tela (`FR-006`, `FR-007`, `FR-041`) ⚠️ **A T014 escreve a degradação; esta apenas a liga.** A redação anterior dizia "aplicar a degradação" e parecia uma segunda implementação — se cada tela aplicar a sua, volta a existir uma tolerância por tela, que é o que o esquema veio acabar
+- [X] T055 [P] [US5] Escrever `tests/e2e/url-degradada.spec.ts` (`FR-006`, `FR-007`, `SC-008`) cobrindo os quatro casos: valor fora do domínio, parâmetro fora do contrato, par incompleto e tudo inválido de uma vez
+- [X] T056 [P] [US5] Escrever `tests/e2e/url-hostil.spec.ts` cobrindo os **três vetores** do [contrato de segurança](./contracts/seguranca-da-url.md): saída do domínio, valor chegando a filtro de consulta, valor chegando a interpolação de marcação (`FR-043`)
+- [X] T057 [US5] Conferir em `tests/e2e/url-degradada.spec.ts` que o identificador fora de escopo distingue *"não há"* de *"você não vê"* (`FR-008`)
 
 ⚠️ **Cinco casos degradam; um recusa.** O que recusa é o destino do login, e ele já foi na Fase 2 —
 está aqui só por pertencer a esta história.
