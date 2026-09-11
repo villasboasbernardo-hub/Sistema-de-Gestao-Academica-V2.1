@@ -25,10 +25,10 @@ liberadas.
 
 ## Fase 1 — Preparação
 
-- [ ] T001 Instalar a biblioteca de gráficos decidida no BRIEF §1 e registrá-la em `package.json` (`FR-016`)
-- [ ] T002 Instalar a biblioteca de ícones que o `components.json` já declara em `iconLibrary`, e registrá-la em `package.json` (`FR-003.1`)
-- [ ] T003 Estender `tests/unidade/dependencias.test.ts` com controle positivo para as duas bibliotecas novas — presença declarada, para que a remoção acidental reprove (`FR-003`)
-- [ ] T004 Registrar em `docs/fase-2/23-Design-System-Tailwind-shadcn.md` que a pendência §11.2 está fechada, apontando o `FR-003.1` ⚠️ **é emenda de documento normativo: só o registro do fechamento, sem tocar em regra**
+- [X] T001 Instalar a biblioteca de gráficos decidida no BRIEF §1 e registrá-la em `package.json` (`FR-016`)
+- [X] T002 Instalar a biblioteca de ícones que o `components.json` já declara em `iconLibrary`, e registrá-la em `package.json` (`FR-003.1`)
+- [X] T003 Estender `tests/unidade/dependencias.test.ts` com controle positivo para as duas bibliotecas novas — presença declarada, para que a remoção acidental reprove (`FR-003`)
+- [X] T004 Registrar em `docs/fase-2/23-Design-System-Tailwind-shadcn.md` que a pendência §11.2 está fechada, apontando o `FR-003.1` ⚠️ **é emenda de documento normativo: só o registro do fechamento, sem tocar em regra**
 
 **Ponto de conferência**: `pnpm test:unidade` verde, e `pnpm verificar` continua saindo 0.
 
@@ -40,30 +40,30 @@ liberadas.
 
 ### Os primitivos, com a reconciliação crescendo junto
 
-- [ ] T005 [P] Copiar o primitivo de campo de texto para `components/ui/input.tsx` (`FR-001`)
-- [ ] T006 [P] Copiar o primitivo de rótulo para `components/ui/label.tsx` (`FR-001`)
-- [ ] T007 [P] Copiar o primitivo de silhueta de carregamento para `components/ui/skeleton.tsx` (`FR-001`)
-- [ ] T008 [P] Copiar o primitivo de aviso para `components/ui/alert.tsx` (`FR-001`)
-- [ ] T009 [P] Copiar o primitivo de seleção para `components/ui/select.tsx` (`FR-001`)
-- [ ] T010 [P] Copiar o primitivo de painel flutuante para `components/ui/popover.tsx` (`FR-001`)
-- [ ] T011 [P] Copiar o primitivo de dica ao apontar para `components/ui/tooltip.tsx` (`FR-001`)
-- [ ] T012 [P] Copiar o primitivo de diálogo para `components/ui/dialog.tsx` (`FR-001`)
-- [ ] T013 [P] Copiar o primitivo de diálogo de confirmação para `components/ui/alert-dialog.tsx` (`FR-001`)
-- [ ] T014 [P] Copiar o primitivo recolhível para `components/ui/collapsible.tsx` (`FR-001`)
-- [ ] T015 Estender a reconciliação em `app/globals.css` com **toda** variável de cor que os dez primitivos trouxerem, apontando para token CIAARA (`FR-002`)
-- [ ] T016 Estender `lib/design/vocabulario.ts` com os pares novos da reconciliação, e `tests/unidade/vocabulario.test.ts` para que a invariante de **zero variável órfã** cubra os dez (`SC-004`)
+- [X] T005 [P] Copiar o primitivo de campo de texto para `components/ui/input.tsx` (`FR-001`)
+- [X] T006 [P] Copiar o primitivo de rótulo para `components/ui/label.tsx` (`FR-001`)
+- [X] T007 [P] Copiar o primitivo de silhueta de carregamento para `components/ui/skeleton.tsx` (`FR-001`)
+- [X] T008 [P] Copiar o primitivo de aviso para `components/ui/alert.tsx` (`FR-001`)
+- [X] T009 [P] Copiar o primitivo de seleção para `components/ui/select.tsx` (`FR-001`)
+- [X] T010 [P] Copiar o primitivo de painel flutuante para `components/ui/popover.tsx` (`FR-001`)
+- [X] T011 [P] Copiar o primitivo de dica ao apontar para `components/ui/tooltip.tsx` (`FR-001`)
+- [X] T012 [P] Copiar o primitivo de diálogo para `components/ui/dialog.tsx` (`FR-001`)
+- [X] T013 [P] Copiar o primitivo de diálogo de confirmação para `components/ui/alert-dialog.tsx` (`FR-001`)
+- [X] T014 [P] Copiar o primitivo recolhível para `components/ui/collapsible.tsx` (`FR-001`)
+- [X] T015 Estender a reconciliação em `app/globals.css` com **toda** variável de cor que os dez primitivos trouxerem, apontando para token CIAARA (`FR-002`)
+- [X] T016 Estender `lib/design/vocabulario.ts` com os pares novos da reconciliação, e `tests/unidade/vocabulario.test.ts` para que a invariante de **zero variável órfã** cubra os dez (`SC-004`)
 
 ⚠️ **A T015 é onde o primitivo tenta trazer o próprio vocabulário de cor.** O teste da T016 é o que
 impede — e ele já provou o próprio valor na fatia (a).
 
 ### O tipo do vocabulário
 
-- [ ] T017 Derivar o tipo de tom de `STATUS` em `lib/design/vocabulario.ts` com `typeof … [number]`, sem redeclarar a lista (`FR-005`, `FR-025`) ⚠️ **derivar, não copiar: status novo tem de quebrar a compilação de quem não o tratou**
+- [X] T017 Derivar o tipo de tom de `STATUS` em `lib/design/vocabulario.ts` com `typeof … [number]`, sem redeclarar a lista (`FR-005`, `FR-025`) ⚠️ **derivar, não copiar: status novo tem de quebrar a compilação de quem não o tratou**
 
 ### A navegação por teclado, uma vez só
 
-- [ ] T018 Escrever `components/ciaara/lista-navegavel.tsx` com *roving tabindex*, nas duas dimensões, conforme [contracts/teclado.md](./contracts/teclado.md)
-- [ ] T019 [P] Escrever `tests/e2e/teclado.spec.ts` cobrindo as seis teclas do documento 23 §8.3 e os cinco casos de fronteira do contrato
+- [X] T018 Escrever `components/ciaara/lista-navegavel.tsx` com *roving tabindex*, nas duas dimensões, conforme [contracts/teclado.md](./contracts/teclado.md)
+- [X] T019 [P] Escrever `tests/e2e/teclado.spec.ts` cobrindo as seis teclas do documento 23 §8.3 e os cinco casos de fronteira do contrato
 
 ⚠️ **A T018 vem antes dos dois componentes que dependem dela.** Fazê-la depois significaria
 implementá-la duas vezes, e duas navegações por teclado divergem — que é o defeito que esta fatia
@@ -80,16 +80,16 @@ passa isolado.
 
 **Teste independente**: abrir `/estilo` e encontrar cada um destes com exemplo, nos dois temas.
 
-- [ ] T020 [P] [US1] Escrever `components/ciaara/card-kpi.tsx` — número grande, rótulo, unidade, variação com sentido declarado (`FR-004`)
-- [ ] T021 [P] [US1] Escrever `components/ciaara/badge-status.tsx` com os nove tons por `cva` e **rótulo textual obrigatório no tipo** (`FR-005`, `FR-025`)
-- [ ] T022 [P] [US1] Escrever `components/ciaara/campo-obrigatorio.tsx`, com o traço do campo em `--texto-tenue` e a obrigatoriedade no atributo que o leitor de tela lê (`FR-014`, `FR-032`)
-- [ ] T023 [P] [US1] Escrever `components/ciaara/esqueleto-tabela.tsx`, com a silhueta no formato do conteúdo real e sem pulsação para quem pediu menos movimento (`FR-014`, `FR-029`)
-- [ ] T024 [P] [US1] Escrever `components/ciaara/dialogo-confirmacao.tsx` com foco preso e retorno de foco ao fechar (`FR-013`)
-- [ ] T025 [US1] Revisar `components/ciaara/EstadoVazio.tsx` para consumir o vocabulário e **distinguir *"não há"* de *"você não vê"*** (`FR-015`)
-- [ ] T026 [US1] Escrever `components/ciaara/filtro-avancado.tsx` — genérico, recolhível, com contagem por opção, **sem conhecer nenhum domínio** (`FR-007`)
-- [ ] T027 [US1] Acrescentar em `app/estilo/page.tsx` a amostra de cada componente desta história (`FR-027`)
-- [ ] T028 [P] [US1] Escrever `tests/unidade/filtro-avancado.test.ts` provando que a filtragem cruzada é do chamador (`FR-007`): o componente exibe a contagem que recebe e não a recalcula
-- [ ] T029 [P] [US1] Estender `tests/unidade/contraste.test.ts` com o par `--texto-tenue` sobre o preenchimento do campo, nos dois temas (`FR-032.1`, `SC-005`)
+- [X] T020 [P] [US1] Escrever `components/ciaara/card-kpi.tsx` — número grande, rótulo, unidade, variação com sentido declarado (`FR-004`)
+- [X] T021 [P] [US1] Escrever `components/ciaara/badge-status.tsx` com os nove tons por `cva` e **rótulo textual obrigatório no tipo** (`FR-005`, `FR-025`)
+- [X] T022 [P] [US1] Escrever `components/ciaara/campo-obrigatorio.tsx`, com o traço do campo em `--texto-tenue` e a obrigatoriedade no atributo que o leitor de tela lê (`FR-014`, `FR-032`)
+- [X] T023 [P] [US1] Escrever `components/ciaara/esqueleto-tabela.tsx`, com a silhueta no formato do conteúdo real e sem pulsação para quem pediu menos movimento (`FR-014`, `FR-029`)
+- [X] T024 [P] [US1] Escrever `components/ciaara/dialogo-confirmacao.tsx` com foco preso e retorno de foco ao fechar (`FR-013`)
+- [X] T025 [US1] Revisar `components/ciaara/EstadoVazio.tsx` para consumir o vocabulário e **distinguir *"não há"* de *"você não vê"*** (`FR-015`)
+- [X] T026 [US1] Escrever `components/ciaara/filtro-avancado.tsx` — genérico, recolhível, com contagem por opção, **sem conhecer nenhum domínio** (`FR-007`)
+- [X] T027 [US1] Acrescentar em `app/estilo/page.tsx` a amostra de cada componente desta história (`FR-027`)
+- [X] T028 [P] [US1] Escrever `tests/unidade/filtro-avancado.test.ts` provando que a filtragem cruzada é do chamador (`FR-007`): o componente exibe a contagem que recebe e não a recalcula
+- [X] T029 [P] [US1] Estender `tests/unidade/contraste.test.ts` com o par `--texto-tenue` sobre o preenchimento do campo, nos dois temas (`FR-032.1`, `SC-005`)
 
 ⚠️ **T026 é o teste de que a fatia entregou vocabulário e não uma tela disfarçada de componente.**
 Se para atender a spec 006 for preciso escrever a palavra "instrutor" dentro dele, o componente
@@ -106,17 +106,17 @@ está errado.
 **Teste independente**: entregar ao seletor uma lista **fora de ordem** e ver que ela aparece
 ordenada mesmo assim.
 
-- [ ] T030 [US2] Escrever `lib/dominio/nome-instrutor.ts` — porte do algoritmo da spec 020 da v2.0, marcação **palavra a palavra** dentro do nome completo, com o `RF-` e a citação literal no topo ⚠️ **o formato é o do `RF-INSTR-15`**, corrigido em 10/09/2026: nome **completo**, com as palavras do nome de guerra em negrito
-- [ ] T031 [US2] Escrever `components/ciaara/nome-instrutor.tsx`, **sem** marcador de cliente, porque as rotas de impressão dos Épicos 10 e 11 vão consumi-lo (`FR-012`, `RF-DS-05`)
-- [ ] T032 [P] [US2] Escrever `tests/unidade/nome-instrutor.test.ts` (`FR-012`) com os quatro casos do [research.md §R-8](./research.md): contíguo, **não contíguo**, palavra sem correspondência (sem destaque, **sem exceção**) e sem nome de guerra (sem espaço duplo)
-- [ ] T033 [US2] Escrever `lib/dominio/antiguidade.ts` — peso por P/G **recebido como argumento**, ordenação crescente, empate por nome, com o `RN-ANT-01` e a citação literal no topo (`RN-ANT-02`, Princípio VII)
-- [ ] T034 [P] [US2] Escrever `tests/unidade/antiguidade.test.ts` cobrindo os doze postos, o empate e o **posto desconhecido, que vai para o fim com aviso e nunca some** (`RN-DEG-01`)
-- [ ] T035 [US2] Escrever `components/ciaara/seletor-turma.tsx` sobre o primitivo de seleção — 29 turmas não pedem busca — **sem exibir identificador técnico** (`FR-010`, `FR-027.3` da spec 006)
-- [ ] T036 [US2] Escrever `components/ciaara/seletor-instrutor.tsx` sobre painel flutuante mais a lista navegável da T018, com busca — e ele é o **único** construtor de seletor de instrutor do repositório (`FR-010`, `FR-011`)
-- [ ] T037 [US2] Fazer o seletor **aplicar** a ordenação da T033 **ignorando a ordem de chegada** (`FR-011.1`)
-- [ ] T038 [P] [US2] Escrever `tests/unidade/seletor-unico.test.ts` — contagem de construtores de seletor de instrutor no repositório é **exatamente um**, e esse um reordena o que recebe (`SC-002`)
-- [ ] T039 [US2] **Conferir a T038 por defeito deliberado**: escrever um segundo seletor em qualquer lugar, provar que o teste reprova, desfazer ⚠️ **portão nunca visto reprovando é afirmação, não prova** — foi assim que o Épico 0 fechou
-- [ ] T040 [US2] Acrescentar as amostras dos dois seletores e do nome em `app/estilo/page.tsx`, incluindo **uma lista deliberadamente desordenada** (`FR-027`)
+- [X] T030 [US2] Escrever `lib/dominio/nome-instrutor.ts` — porte do algoritmo da spec 020 da v2.0, marcação **palavra a palavra** dentro do nome completo, com o `RF-` e a citação literal no topo ⚠️ **o formato é o do `RF-INSTR-15`**, corrigido em 10/09/2026: nome **completo**, com as palavras do nome de guerra em negrito
+- [X] T031 [US2] Escrever `components/ciaara/nome-instrutor.tsx`, **sem** marcador de cliente, porque as rotas de impressão dos Épicos 10 e 11 vão consumi-lo (`FR-012`, `RF-DS-05`)
+- [X] T032 [P] [US2] Escrever `tests/unidade/nome-instrutor.test.ts` (`FR-012`) com os quatro casos do [research.md §R-8](./research.md): contíguo, **não contíguo**, palavra sem correspondência (sem destaque, **sem exceção**) e sem nome de guerra (sem espaço duplo)
+- [X] T033 [US2] Escrever `lib/dominio/antiguidade.ts` — peso por P/G **recebido como argumento**, ordenação crescente, empate por nome, com o `RN-ANT-01` e a citação literal no topo (`RN-ANT-02`, Princípio VII)
+- [X] T034 [P] [US2] Escrever `tests/unidade/antiguidade.test.ts` cobrindo os doze postos, o empate e o **posto desconhecido, que vai para o fim com aviso e nunca some** (`RN-DEG-01`)
+- [X] T035 [US2] Escrever `components/ciaara/seletor-turma.tsx` sobre o primitivo de seleção — 29 turmas não pedem busca — **sem exibir identificador técnico** (`FR-010`, `FR-027.3` da spec 006)
+- [X] T036 [US2] Escrever `components/ciaara/seletor-instrutor.tsx` sobre painel flutuante mais a lista navegável da T018, com busca — e ele é o **único** construtor de seletor de instrutor do repositório (`FR-010`, `FR-011`)
+- [X] T037 [US2] Fazer o seletor **aplicar** a ordenação da T033 **ignorando a ordem de chegada** (`FR-011.1`)
+- [X] T038 [P] [US2] Escrever `tests/unidade/seletor-unico.test.ts` — contagem de construtores de seletor de instrutor no repositório é **exatamente um**, e esse um reordena o que recebe (`SC-002`)
+- [X] T039 [US2] **Conferir a T038 por defeito deliberado**: escrever um segundo seletor em qualquer lugar, provar que o teste reprova, desfazer ⚠️ **portão nunca visto reprovando é afirmação, não prova** — foi assim que o Épico 0 fechou
+- [X] T040 [US2] Acrescentar as amostras dos dois seletores e do nome em `app/estilo/page.tsx`, incluindo **uma lista deliberadamente desordenada** (`FR-027`)
 
 ⚠️ **A T037 é a fronteira fina da fatia.** Quem **calcula** o peso é a função pura; o componente
 **aplica**. Um ponto único que apenas exibe aceita lista desordenada — o esquecimento não
@@ -132,15 +132,15 @@ desaparece, só muda de lugar.
 
 **Teste independente**: percorrer a amostra da vitrine inteira com o teclado, sem tocar no rato.
 
-- [ ] T041 [US3] Escrever `components/ciaara/tabela-densa.tsx`, genérica em `T`, com as três densidades do documento 23 §5 e **renderizando todas as linhas** (`FR-006`, `FR-006.1`)
-- [ ] T041.1 [US3] Implementar o ponto de quebra do `FR-028`: abaixo de **1024px** a tabela rola **horizontalmente dentro do próprio contêiner**, e a **página não rola horizontalmente** ⚠️ **fecha o `CHK005`, cuja reclamação era "sem número"**
-- [ ] T042 [US3] Ligar a lista navegável da T018 à tabela, nas duas dimensões (`FR-023`)
-- [ ] T043 [US3] Ligar o algarismo tabular do `@theme` em coluna numérica (`FR-006`, documento 23 §5) ⚠️ **sem ele, coluna de horas não alinha e a tabela densa perde o que a torna densa**
-- [ ] T044 [US3] Implementar ordenação de apresentação e filtro textual ⚠️ **ordenação de apresentação, NUNCA de domínio**: a antiguidade não passa por aqui, senão a `RN-ANT-01` ganha um segundo endereço
-- [ ] T045 [P] [US3] Estender `tests/e2e/teclado.spec.ts` para a tabela: as seis teclas, o salto de 20 linhas, e o foco **visível** em cada parada (`SC-006`, `FR-024`)
-- [ ] T046 [P] [US3] Cobrir em teste os casos de fronteira do [contrato de teclado](./contracts/teclado.md): sem colunas, uma coluna, sem linhas, `PageDown` com menos de 20 restantes, e **o fim da lista que não rola circularmente**
-- [ ] T046.1 [P] [US3] Cobrir o ponto de quebra em `tests/e2e/teclado.spec.ts` ou suíte própria: numa janela de **800px**, a página não rola na horizontal e a tabela rola (`FR-028`)
-- [ ] T047 [US3] Acrescentar a amostra da tabela em `app/estilo/page.tsx`, com linhas suficientes para o salto de 20 fazer sentido (`FR-027`)
+- [X] T041 [US3] Escrever `components/ciaara/tabela-densa.tsx`, genérica em `T`, com as três densidades do documento 23 §5 e **renderizando todas as linhas** (`FR-006`, `FR-006.1`)
+- [X] T041.1 [US3] Implementar o ponto de quebra do `FR-028`: abaixo de **1024px** a tabela rola **horizontalmente dentro do próprio contêiner**, e a **página não rola horizontalmente** ⚠️ **fecha o `CHK005`, cuja reclamação era "sem número"**
+- [X] T042 [US3] Ligar a lista navegável da T018 à tabela, nas duas dimensões (`FR-023`)
+- [X] T043 [US3] Ligar o algarismo tabular do `@theme` em coluna numérica (`FR-006`, documento 23 §5) ⚠️ **sem ele, coluna de horas não alinha e a tabela densa perde o que a torna densa**
+- [X] T044 [US3] Implementar ordenação de apresentação e filtro textual ⚠️ **ordenação de apresentação, NUNCA de domínio**: a antiguidade não passa por aqui, senão a `RN-ANT-01` ganha um segundo endereço
+- [X] T045 [P] [US3] Estender `tests/e2e/teclado.spec.ts` para a tabela: as seis teclas, o salto de 20 linhas, e o foco **visível** em cada parada (`SC-006`, `FR-024`)
+- [X] T046 [P] [US3] Cobrir em teste os casos de fronteira do [contrato de teclado](./contracts/teclado.md): sem colunas, uma coluna, sem linhas, `PageDown` com menos de 20 restantes, e **o fim da lista que não rola circularmente**
+- [X] T046.1 [P] [US3] Cobrir o ponto de quebra em `tests/e2e/teclado.spec.ts` ou suíte própria: numa janela de **800px**, a página não rola na horizontal e a tabela rola (`FR-028`)
+- [X] T047 [US3] Acrescentar a amostra da tabela em `app/estilo/page.tsx`, com linhas suficientes para o salto de 20 fazer sentido (`FR-027`)
 
 **Ponto de conferência**: o percurso do passo 2 do [quickstart](./quickstart.md) inteiro, na mão.
 
@@ -152,14 +152,14 @@ desaparece, só muda de lugar.
 
 **Teste independente**: remover a cor e continuar distinguindo cada série.
 
-- [ ] T048 [US4] Definir em `components/graficos/tipos.ts` o tipo de série com `forma` e `rotulo` **obrigatórios** ⚠️ **é a `FR-018` expressa no tipo: série sem forma não compila**
-- [ ] T049 [P] [US4] Escrever `components/graficos/grafico-barras.tsx` — barras com eixo começando em zero, rótulo direto, sem animação (`FR-016`)
-- [ ] T050 [P] [US4] Escrever `components/graficos/grafico-pizza.tsx` — até cinco categorias, **percentual escrito**, não só fatia (`FR-016`)
-- [ ] T051 [P] [US4] Escrever `components/graficos/grafico-linha.tsx` ⚠️ **é o único componente da fatia sem consumidor nomeado** — vem do inventário do documento 23, e o primeiro uso real é dos Épicos 9 e 12
-- [ ] T052 [US4] Aplicar as oito séries em **ordem fixa** e a recusa acima de seis séries, apontando a tabela densa (`FR-017`, documento 23 §7)
-- [ ] T053 [P] [US4] Escrever `tests/unidade/graficos.test.ts` (`FR-017`, `FR-018`) provando que toda série sai com forma e rótulo distintos, e que sete séries são **recusadas**
-- [ ] T054 [P] [US4] Escrever `tests/e2e/graficos.spec.ts` conferindo que nenhuma cor literal aparece e que o rótulo acompanha cada traço (`SC-008`)
-- [ ] T055 [US4] Acrescentar as amostras dos três gráficos em `app/estilo/page.tsx` (`FR-027`)
+- [X] T048 [US4] Definir em `components/graficos/tipos.ts` o tipo de série com `forma` e `rotulo` **obrigatórios** ⚠️ **é a `FR-018` expressa no tipo: série sem forma não compila**
+- [X] T049 [P] [US4] Escrever `components/graficos/grafico-barras.tsx` — barras com eixo começando em zero, rótulo direto, sem animação (`FR-016`)
+- [X] T050 [P] [US4] Escrever `components/graficos/grafico-pizza.tsx` — até cinco categorias, **percentual escrito**, não só fatia (`FR-016`)
+- [X] T051 [P] [US4] Escrever `components/graficos/grafico-linha.tsx` ⚠️ **é o único componente da fatia sem consumidor nomeado** — vem do inventário do documento 23, e o primeiro uso real é dos Épicos 9 e 12
+- [X] T052 [US4] Aplicar as oito séries em **ordem fixa** e a recusa acima de seis séries, apontando a tabela densa (`FR-017`, documento 23 §7)
+- [X] T053 [P] [US4] Escrever `tests/unidade/graficos.test.ts` (`FR-017`, `FR-018`) provando que toda série sai com forma e rótulo distintos, e que sete séries são **recusadas**
+- [X] T054 [P] [US4] Escrever `tests/e2e/graficos.spec.ts` conferindo que nenhuma cor literal aparece e que o rótulo acompanha cada traço (`SC-008`)
+- [X] T055 [US4] Acrescentar as amostras dos três gráficos em `app/estilo/page.tsx` (`FR-027`)
 
 ⚠️ **A medição que forçou tudo isto**: no tema claro, as séries 1 e 8 ficam a `0,0003` de
 luminância; no noturno, as séries 4 e 7 a `0,0005`. **A paleta não é tocada.**
@@ -174,10 +174,10 @@ luminância; no noturno, as séries 4 e 7 a `0,0005`. **A paleta não é tocada.
 
 **Teste independente**: com o alerta na tela, a ação que ele comenta continua disponível.
 
-- [ ] T056 [US5] Escrever `components/ciaara/alerta-conformidade.tsx` — faixa fixada no topo da região, ícone, rótulo e região anunciada, **sem marcador de cliente** e **sem botão de dispensar** (`FR-008`, `FR-026`)
-- [ ] T057 [US5] Escrever `components/ciaara/badge-teto.tsx` com o limite vindo por propriedade e a explicação ao apontar (`FR-009`)
-- [ ] T058 [P] [US5] Escrever `tests/e2e/alerta.spec.ts` provando que o alerta **sobrevive à rolagem**, é anunciado ao leitor de tela, e **não desabilita nada** (`RNF-USA-04`, `RN-DEG-02`)
-- [ ] T059 [US5] Acrescentar as amostras do alerta e do emblema de teto em `app/estilo/page.tsx` (`FR-027`)
+- [X] T056 [US5] Escrever `components/ciaara/alerta-conformidade.tsx` — faixa fixada no topo da região, ícone, rótulo e região anunciada, **sem marcador de cliente** e **sem botão de dispensar** (`FR-008`, `FR-026`)
+- [X] T057 [US5] Escrever `components/ciaara/badge-teto.tsx` com o limite vindo por propriedade e a explicação ao apontar (`FR-009`)
+- [X] T058 [P] [US5] Escrever `tests/e2e/alerta.spec.ts` provando que o alerta **sobrevive à rolagem**, é anunciado ao leitor de tela, e **não desabilita nada** (`RNF-USA-04`, `RN-DEG-02`)
+- [X] T059 [US5] Acrescentar as amostras do alerta e do emblema de teto em `app/estilo/page.tsx` (`FR-027`)
 
 ⚠️ **Nenhum número de teto escrito no componente.** Os tetos vivem em `config_parametros`
 (`RNF-NORM-08`); uma constante aqui passaria em todo teste desta fatia violando o Princípio VII.
@@ -186,16 +186,16 @@ luminância; no noturno, as séries 4 e 7 a `0,0005`. **A paleta não é tocada.
 
 ## Fase 8 — Fechamento e dívida da fatia (a)
 
-- [ ] T060 Estender `tests/e2e/vitrine.spec.ts` para exigir que **todo** componente de `components/ciaara/` e `components/graficos/` apareça na vitrine (`SC-001`) ⚠️ **é a invariante I-5 estendida de token para componente: componente sem amostra é componente que ninguém nota quando quebra**
-- [ ] T061 Escrever `tests/unidade/fronteira-componentes.test.ts` — **zero** componente de `components/ciaara/` importando cliente de banco ou implementando regra `RN-` (`FR-019`, `FR-020`, `SC-007`), e na mesma varredura: **nenhum desenho vetorial escrito à mão** onde a biblioteca de ícones tem equivalente (`FR-003.2`)
-- [ ] T062 Escrever teste de que nenhum componente declara marcador de cliente fora da lista do documento 23 §3.1 (`FR-021`) ⚠️ **é o erro que não aparece no `tsc` e aparece no `next build`**
-- [ ] T063 Conferir que a regra de cor continua em **zero violações** no repositório inteiro (`FR-022`, `SC-003`)
-- [ ] T064 Escrever em `specs/005-design-system-tokens-e-tema/checklists/acessibilidade-e-entrega.md` o fechamento dos doze itens — CHK005 a CHK010 e CHK013 a CHK018 —, **cada um apontando pelo número o requisito desta fatia que o fecha** (`SC-011`) ⚠️ **fechar item sem apontar o que o fechou é o mesmo que desmarcá-lo por cansaço**
-- [ ] T068 Escrever a verificação do `FR-031`: todo uso de `--texto-tenue` em `components/` e `app/` traz, na linha acima, o comentário declarando **o que ele veste**; uso sem declaração **reprova** ⚠️ **é o mecanismo das isenções da fatia (a)**: a máquina não distingue dica de dado, mas **impede a omissão**. *Fecha o `CHK013`*
-- [ ] T069 Escrever `tests/e2e/acessibilidade.spec.ts` cobrindo as três do `FR-030` sobre a vitrine: **nome acessível** em todo controle, **região anunciada** ao mudar o alerta, e **ordem de leitura** acompanhando a ordem visual. *Fecha o `CHK010`*
-- [ ] T070 Escrever `tests/unidade/consumidor-006.test.ts` — cada componente que a spec 006 nomeia existe e é exportado (`SC-009`) ⚠️ **é proxy, não prova**: a prova é o Épico 5 consumir os treze sem construir nenhum
-- [ ] T065 Atualizar a seção *Estado atual e onde retomar* do `CLAUDE.md` com o resultado medido da fatia ⚠️ **medido, não declarado** — é a regra que a fatia (a) aplicou a si mesma quando a dívida de estilo revelou ser 2 arquivos e não 9
-- [ ] T066 Rodar `pnpm verificar:tudo` e conferir que sai **0** (`SC-010`)
+- [X] T060 Estender `tests/e2e/vitrine.spec.ts` para exigir que **todo** componente de `components/ciaara/` e `components/graficos/` apareça na vitrine (`SC-001`) ⚠️ **é a invariante I-5 estendida de token para componente: componente sem amostra é componente que ninguém nota quando quebra**
+- [X] T061 Escrever `tests/unidade/fronteira-componentes.test.ts` — **zero** componente de `components/ciaara/` importando cliente de banco ou implementando regra `RN-` (`FR-019`, `FR-020`, `SC-007`), e na mesma varredura: **nenhum desenho vetorial escrito à mão** onde a biblioteca de ícones tem equivalente (`FR-003.2`)
+- [X] T062 Escrever teste de que nenhum componente declara marcador de cliente fora da lista do documento 23 §3.1 (`FR-021`) ⚠️ **é o erro que não aparece no `tsc` e aparece no `next build`**
+- [X] T063 Conferir que a regra de cor continua em **zero violações** no repositório inteiro (`FR-022`, `SC-003`)
+- [X] T064 Escrever em `specs/005-design-system-tokens-e-tema/checklists/acessibilidade-e-entrega.md` o fechamento dos doze itens — CHK005 a CHK010 e CHK013 a CHK018 —, **cada um apontando pelo número o requisito desta fatia que o fecha** (`SC-011`) ⚠️ **fechar item sem apontar o que o fechou é o mesmo que desmarcá-lo por cansaço**
+- [X] T068 Escrever a verificação do `FR-031`: todo uso de `--texto-tenue` em `components/` e `app/` traz, na linha acima, o comentário declarando **o que ele veste**; uso sem declaração **reprova** ⚠️ **é o mecanismo das isenções da fatia (a)**: a máquina não distingue dica de dado, mas **impede a omissão**. *Fecha o `CHK013`*
+- [X] T069 Escrever `tests/e2e/acessibilidade.spec.ts` cobrindo as três do `FR-030` sobre a vitrine: **nome acessível** em todo controle, **região anunciada** ao mudar o alerta, e **ordem de leitura** acompanhando a ordem visual. *Fecha o `CHK010`*
+- [X] T070 Escrever `tests/unidade/consumidor-006.test.ts` — cada componente que a spec 006 nomeia existe e é exportado (`SC-009`) ⚠️ **é proxy, não prova**: a prova é o Épico 5 consumir os treze sem construir nenhum
+- [X] T065 Atualizar a seção *Estado atual e onde retomar* do `CLAUDE.md` com o resultado medido da fatia ⚠️ **medido, não declarado** — é a regra que a fatia (a) aplicou a si mesma quando a dívida de estilo revelou ser 2 arquivos e não 9
+- [X] T066 Rodar `pnpm verificar:tudo` e conferir que sai **0** (`SC-010`)
 - [ ] T067 Abrir o PR com o template inteiro preenchido, cobrindo os onze critérios `SC-` da spec ⚠️ **esta fatia não tem migration, então o plano de reversão é `git revert`** — e isso se escreve, não se subentende
 
 ---
