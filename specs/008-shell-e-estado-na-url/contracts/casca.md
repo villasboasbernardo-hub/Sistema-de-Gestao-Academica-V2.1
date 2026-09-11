@@ -1,4 +1,4 @@
-# Contrato — o shell de navegação
+# Contrato — a casca de navegação
 
 **Fase 1** · 11/09/2026 · fonte: documento 23 §3.1 e §3.2 · documento 24 §1 · `RF-NAV-02`,
 `RF-MOD-01`, `FR-015` a `FR-022`

@@ -270,6 +270,11 @@ hostil, e conferir que a tela abre no primeiro caso e recusa no segundo.
   (`TUR-000012`), nunca o identificador técnico interno.
   ⚠️ Um identificador técnico na barra de endereço não diz nada a ninguém, e a chave de negócio é
   rastreável até a v2.0.
+  ⚠️ **ESTE REQUISITO NÃO É EXERCITÁVEL NESTA FATIA, e a declaração evita que ele passe por
+  cumprido.** Medido em 11/09/2026: nenhuma das rotas que a fatia entrega tem parâmetro de
+  identidade — a tela inicial recorta por classificação e modalidade, que são escolha. **O primeiro
+  exercício real é o Épico 5**, com a rota de instrutores, e o Épico 6, com turma e semana. O
+  contrato o declara desde já; a prova chega com a tela.
 - **FR-004**: A política de **histórico** MUST ser declarada por tipo de ação: trocar contexto
   acrescenta entrada; refinar a mesma tela substitui a entrada; digitar em busca substitui **e**
   limita frequência.

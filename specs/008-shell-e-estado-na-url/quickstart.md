@@ -91,7 +91,7 @@ Abrir a v2.0 em produção ao lado do preview desta fatia e conferir, entrada po
 - a **mesma ordem**;
 - Avaliações e Relatório **ausentes** do menu, alcançados pela página do curso (`RF-CURSO-02`).
 
-O rascunho a conferir está em [contracts/shell.md](./contracts/shell.md), com as três perguntas que
+O rascunho a conferir está em [contracts/casca.md](./contracts/casca.md), com as três perguntas que
 ele não tem como responder sozinho.
 
 ## Passo 6 — A tabela densa não quebrou

@@ -93,7 +93,7 @@ specs/008-shell-e-estado-na-url/
 ├── quickstart.md        # Fase 1 — como validar
 ├── contracts/
 │   ├── parametros.md    # o contrato por rota: tipo, padrão, histórico, aviso ao servidor
-│   ├── shell.md         # os três componentes + o rascunho da lista de entradas
+│   ├── casca.md         # os três componentes + o rascunho da lista de entradas
 │   └── seguranca-da-url.md  # o que se valida, onde, e a carga hostil do teste
 ├── checklists/
 │   └── requirements.md  # 16/16, da fase de especificação
@@ -106,9 +106,11 @@ specs/008-shell-e-estado-na-url/
 lib/navegacao/                  # NOVO — o contrato, num lugar só
 ├── contrato.ts                 # parâmetros por rota: tipo, padrão, histórico, aviso
 ├── esquema.ts                  # validação por esquema, com degradação para o padrão
+├── usar-parametro.ts           # leitura e escrita pelo contrato, com histórico e aviso
+├── menu.ts                     # as entradas do menu como dado, validadas contra a v2.0
 └── destino-seguro.ts           # o retorno do login: origem própria, ou o padrão
 
-components/shell/               # NOVO — três componentes, todos no inventário §3.1
+components/casca/               # NOVO — três componentes, todos no inventário §3.1
 ├── casca-do-app.tsx            # servidor: usuário, permissões, estrutura
 ├── navegacao-lateral.tsx       # cliente APENAS no abrir/fechar de tela estreita
 └── cabecalho-do-app.tsx        # servidor: marca, entrada ativa, usuário, tema
@@ -128,9 +130,15 @@ docs/guias/estado-na-url.md     # NOVO — o guia que o Épico 5 segue (FR-044)
 ```
 
 **Decisão de estrutura**: dois diretórios novos, e os dois têm motivo. `lib/navegacao/` existe para
-que o contrato seja **um lugar**, e não uma convenção repetida por tela. `components/shell/` existe
-porque o documento 24 já separa casca de vocabulário, e misturar o shell com
-`components/ciaara/` faria o inventário §3.1 deixar de descrever o que descreve.
+que o contrato seja **um lugar**, e não uma convenção repetida por tela. `components/casca/` existe
+porque o documento 24 já separa casca de vocabulário, e misturar as duas faria o inventário §3.1
+deixar de descrever o que descreve.
+
+⚠️ **O diretório chama-se `casca/`, e não `shell/`, por correção de 11/09/2026.** A primeira versão
+misturava o estrangeirismo no nome do diretório com o português no nome dos arquivos —
+`components/casca/casca-do-app.tsx`. **"Shell" continua valendo como palavra de prosa**, e é assim
+que os documentos 06 e 24 a usam; o que não vale é meio nome em cada língua, num projeto cuja regra
+é português em tudo, inclusive nome de arquivo.
 
 ⚠️ **`lib/navegacao/` NÃO é `lib/dominio/`.** Ele conhece o arcabouço; a regra de pureza não se
 aplica a ele, e por isso ele não mora lá.
@@ -170,7 +178,7 @@ De dentro para fora, como o documento 24 exige — com uma inversão deliberada 
 | Violação | Por que é necessária | Alternativa simples rejeitada porque |
 |---|---|---|
 | `lib/navegacao/`, um diretório que o documento 24 não prevê | O contrato precisa de **um** endereço; espalhá-lo por tela é a convenção que o `FR-001` existe para acabar | Pô-lo em `lib/` solto misturaria contrato de navegação com utilitário; pô-lo em `lib/dominio/` violaria a pureza, porque ele conhece o arcabouço |
-| `components/shell/`, idem | O inventário §3.1 descreve **vocabulário de domínio**; o shell é casca. Misturar os dois faria o inventário deixar de descrever o que descreve | Pô-lo em `components/ciaara/` é o que o documento 23 implicitamente faria — e foi justamente a ausência dos quatro no inventário que o `CHK015` pegou |
+| `components/casca/`, idem | O inventário §3.1 descreve **vocabulário de domínio**; a casca não é vocabulário. Misturar os dois faria o inventário deixar de descrever o que descreve | Pô-lo em `components/ciaara/` é o que o documento 23 implicitamente faria — e foi justamente a ausência dos quatro no inventário que o `CHK015` pegou |
 
 ## Reavaliação do portão, depois da Fase 1
 
@@ -179,7 +187,7 @@ O desenho não abriu violação nova, e fechou as duas atenções:
 | Atenção de antes | Onde ficou resolvida |
 |---|---|
 | **V · os cinco caminhos de degradação** | [contracts/seguranca-da-url.md](./contracts/seguranca-da-url.md) separa os quatro que degradam do único que recusa, e diz por que o quinto é diferente |
-| **X · a lista do menu** | [contracts/shell.md](./contracts/shell.md) traz o **rascunho**, derivado da árvore com a subtração do `RF-CURSO-02` aplicada, pronto para Bernardo conferir |
+| **X · a lista do menu** | [contracts/casca.md](./contracts/casca.md) traz o **rascunho**, derivado da árvore com a subtração do `RF-CURSO-02` aplicada, pronto para Bernardo conferir |
 
 ⚠️ **Duas violações novas apareceram e foram absorvidas**: os dois diretórios do *Complexity
 Tracking*. As duas são sobre **endereço**, não sobre mecanismo, e as duas nascem do mesmo achado —
