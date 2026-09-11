@@ -205,7 +205,8 @@ fatia; a regra que decide **quando** alertar é do domínio, e não entra aqui.
   ⚠️ **A alternativa da v2.0 vinha por CDN** — a mesma classe de dependência externa que já quebrou
   a tipografia e que a fatia (a) removeu.
 - **FR-003.2**: Nenhum componente MUST desenhar ícone próprio quando existir equivalente na
-  biblioteca. ⚠️ Treze componentes desenhando o próprio ícone é a mesma divergência que a paleta
+  biblioteca, e isso MUST ser **verificado por varredura** de desenho vetorial escrito à mão em
+  `components/`. ⚠️ Treze componentes desenhando o próprio ícone é a mesma divergência que a paleta
   veio fechar, num vocabulário diferente.
 
 #### Componentes CIAARA
@@ -242,8 +243,16 @@ fatia; a regra que decide **quando** alertar é do domínio, e não entra aqui.
   ⚠️ **Isto não fere a fronteira do `FR-020`**: quem **calcula** o peso da antiguidade continua
   sendo função pura de domínio, fora do componente. O componente **aplica**; não decide.
 - **FR-012**: MUST existir componente de **nome de instrutor**, no formato
-  **`P/G Especialidade Nome de Guerra`**, alimentado por **função pura de domínio**
-  (`RF-INSTR-15`, `RF-DS-05`).
+  **`P/G Especialidade/Habilitação Nome Completo`**, com **as palavras do nome de guerra em
+  negrito**, alimentado por **função pura de domínio** (`RF-INSTR-15`, `RF-DS-05`).
+  ⚠️ **Correção de 10/09/2026, e o erro era meu.** Esta linha dizia
+  `P/G Especialidade Nome de Guerra` — uma compressão que **descartava o nome completo** e
+  contrariava o `RF-INSTR-15`, que é **[PRESERVADO]**. A spec 006 já concordava com o documento, no
+  `FR-027.2`. **Nenhuma regra mudou**: o que mudou foi a transcrição errada dela.
+  ⚠️ **O erro é mais antigo que esta spec.** O `CHK016`, escrito na fatia (a), trazia a mesma
+  compressão e ainda a chamava de *"vocabulário intraduzível"* — corrigido no mesmo dia.
+  ⚠️ **O nome de guerra NÃO substitui o nome completo: marca palavras dentro dele**, e palavras não
+  contíguas recebem destaque cada uma. É o porte da spec 020 da v2.0, com seus casos de teste.
 - **FR-013**: MUST existir **diálogo de confirmação** para ação destrutiva ou irreversível
   (`RNF-USA-03`).
 - **FR-014**: MUST existir marcação de **campo obrigatório** e **esqueleto de carregamento**.
@@ -305,14 +314,38 @@ fatia; a regra que decide **quando** alertar é do domínio, e não entra aqui.
 
 #### Requisitos que fecham dívida da fatia (a)
 
-- **FR-028**: MUST existir requisito escrito de **ponto de quebra responsivo** para conteúdo denso,
-  declarando que o uso típico é em tela grande (`RNF-USA-02`). *Fecha o `CHK005`.*
+- **FR-028**: Abaixo de **1024px** de largura, conteúdo denso MUST rolar **horizontalmente dentro do
+  próprio contêiner**, e a página MUST **não** rolar horizontalmente. Acima disso, a tabela ocupa a
+  largura disponível. **Nenhuma versão dedicada a telefone é construída nesta fase** (`RNF-USA-02`).
+  *Fecha o `CHK005`.*
+  ⚠️ **Correção de 10/09/2026.** Esta linha dizia *"MUST existir requisito escrito de ponto de
+  quebra"* — **um requisito que promete que um requisito existe não é requisito**, e o `CHK005`
+  reclamava exatamente de *"uso típico em desktop, sem número"*. A redação anterior reproduzia o
+  defeito que dizia fechar.
+  ⚠️ **1024px não é escolha de gosto**: oito colunas a 14px numa tabela densa ocupam perto de 900px,
+  e o `RNF-USA-02` diz que o uso típico destas telas é em tela grande.
 - **FR-029**: O requisito de **movimento reduzido** MUST existir como requisito, e não apenas como
   linha de folha de estilo. *Fecha o `CHK009`.*
-- **FR-030**: MUST existir requisito de **leitor de tela** para os componentes desta fatia: nome
-  acessível, região anunciada e ordem de leitura previsível. *Fecha o `CHK010`.*
-- **FR-031**: A proibição de `--texto-tenue` **carregar dado** MUST ser verificável, e não apenas
-  escrita. *Fecha o `CHK013`.*
+- **FR-030**: Todo componente desta fatia MUST satisfazer as três, **cada uma verificada**:
+  **(a) nome acessível** — todo controle tem nome legível por leitor de tela, e nenhum depende só de
+  ícone; **(b) região anunciada** — o alerta de conformidade é anunciado ao mudar, sem roubar o
+  foco; **(c) ordem de leitura previsível** — a ordem do documento acompanha a ordem visual.
+  *Fecha o `CHK010`.*
+  ⚠️ **Correção de 10/09/2026**: a redação anterior dizia *"MUST existir requisito de leitor de
+  tela"*, que é a mesma promessa circular do `FR-028`. As três agora são afirmações sobre o
+  comportamento, e as três são medíveis na árvore de acessibilidade.
+- **FR-031**: Todo uso de `--texto-tenue` em `components/` e `app/` MUST trazer, na linha acima, um
+  comentário declarando **o que** ele veste — e o texto declarado MUST ser **estático**: rótulo,
+  dica, unidade, cabeçalho ou traço de campo, **nunca valor vindo de propriedade**. Uma verificação
+  MUST reprovar o uso sem essa declaração. *Fecha o `CHK013`.*
+  ⚠️ **Correção de 10/09/2026**: a redação anterior dizia *"MUST ser verificável"* sem dizer **como**
+  — e o `CHK013` reclamava justamente que *"nada distingue dica de dado no código"*. Continuava
+  verdade.
+  ⚠️ **O mecanismo é o mesmo das isenções da fatia (a)**, que exigem `motivo` obrigatório: a máquina
+  não sabe distinguir dica de dado, mas sabe exigir que alguém tenha declarado qual é qual. **Ela
+  não valida a frase; ela impede a omissão.**
+  ⚠️ **O traço de campo do `FR-032` é um uso legítimo** e declarado — não é texto, e é por isso que
+  a regra fala em *"o que ele veste"* e não em *"que texto ele pinta"*.
 - **FR-032**: O componente de **campo** desta fatia MUST usar `--texto-tenue` como traço
   identificador, e esse traço MUST atingir o limite de borda interativa nos dois temas.
   ⚠️ **É aqui que a pendência da fatia (a) vence**: ela dizia *"resolve na fatia que construir o
@@ -353,8 +386,11 @@ origem.
   gráfico continua legível **com a cor removida** — verificado, não presumido.
   ⚠️ **Note o que este critério NÃO diz mais**: não cobra luminâncias distintas. A paleta mesclada
   não as tem, e está medido no `FR-018`.
-- **SC-009**: O primeiro consumidor real, a spec 006, encontra **pronto** cada componente de que
-  precisa, sem construir nenhum.
+- **SC-009**: **100%** dos componentes que a spec 006 nomeia existem e são exportados — verificado
+  aqui, por lista.
+  ⚠️ **Este é o proxy, não a prova.** A prova é o Épico 5 consumir os treze **sem construir
+  nenhum**, e ela só acontece lá. Até lá, *"genérico"* é intenção verificada só por mim, e o
+  critério diz o que pode dizer.
 - **SC-010**: `pnpm verificar:tudo` e o CI dão **veredito idêntico** sobre o mesmo commit.
 - **SC-011**: **Doze** itens do checklist de acessibilidade e entrega da fatia (a) passam de abertos
   a fechados — CHK005 a CHK010, CHK013 a CHK018 —, cada um com o requisito desta spec que o fecha

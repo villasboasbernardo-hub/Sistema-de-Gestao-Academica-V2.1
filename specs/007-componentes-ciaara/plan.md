@@ -206,9 +206,10 @@ O desenho não abriu violação nova, e fechou as duas atenções:
 ⚠️ **Uma violação nova apareceu e foi absorvida**: `lista-navegavel.tsx` não está no inventário do
 documento 23 §3.1. Está declarada no *Complexity Tracking*, com a alternativa nomeada.
 
-⚠️ **E um conflito ficou ABERTO de propósito**: o `FR-012` contradiz o `RF-INSTR-15` (achado P-1).
-Eu não o corrijo aqui, porque a instrução desta fatia é **listar, não consertar**. Ele precisa de
-decisão antes da implementação — é o primeiro item que `/speckit-analyze` deve pegar.
+✅ **O conflito que ficou aberto foi pego e fechado.** O `FR-012` contradizia o `RF-INSTR-15`
+(achado P-1). A análise o classificou como crítico e Bernardo autorizou a correção em 10/09/2026 —
+junto com o `CHK016`, que trazia o mesmo erro desde a fatia (a). **Nenhuma regra mudou**; a
+transcrição é que estava errada.
 
 ## Achados do planejamento — listados, e três deles são erros meus
 
@@ -218,8 +219,8 @@ está certo.** O `FR-012` escreve `P/G Especialidade Nome de Guerra`. O `RF-INST
 guerra **em negrito**"*. Não é a mesma coisa: a minha versão **descarta o nome completo**. A spec
 006 concorda com o documento, no `FR-027.2`. ⚠️ **E o erro é mais antigo que esta spec**: o
 `CHK016`, escrito na fatia (a), traz a mesma compressão errada e ainda a chama de *"vocabulário
-intraduzível"*. **A implementação segue o documento 02**, e a `FR-012` precisa ser corrigida — é
-transcrição, não mudança de regra.
+intraduzível"*. ✅ **CORRIGIDO em 10/09/2026**, no `FR-012` e no `CHK016`. Foi transcrição, não mudança de
+regra.
 
 **P-2 · O algoritmo de nome de guerra é porte, não invenção.** Ele foi corrigido na spec 020 da
 v2.0, versionada em `specs/heranca-v2.0/`, com o defeito nomeado: o destaque falhava em silêncio
@@ -238,10 +239,11 @@ lógica. Não é contradição: desativar um instrutor é reversível no banco e
 e o `RNF-USA-03` pede confirmação para consequência, não para perda. O componente fica; o que muda
 é o texto, que é de quem chama.
 
-**P-5 · O documento 23 §7 exige que todo gráfico tenha alternativa em tabela**, preservando o
+**P-5 · CONTINUA ABERTO. O documento 23 §7 exige que todo gráfico tenha alternativa em tabela**, preservando o
 `DYN-03` da v2.0 — *"é o que torna o dado acessível a leitor de tela"*. **Nenhum requisito da spec
 007 cobre isso.** Não invento requisito no plano: fica registrado aqui, e o contrato de gráficos
-prevê o encaixe, para que promover a `FR-` seja decisão de quem analisa.
+prevê o encaixe. ⚠️ **A análise de 10/09/2026 não o listou entre os achados, e portanto ele não
+entrou na rodada de correções.** Promovê-lo a `FR-` continua sendo decisão pendente.
 
 **P-6 · O documento 23 §7 repete a afirmação que a medição de 10/09 derrubou** — a de que as oito
 séries têm *"luminâncias distintas entre si"*. ⚠️ **Mas a tabela de regras do mesmo §7 já manda o
