@@ -204,14 +204,26 @@ test("V-4 (NEGATIVO) · link inválido é recusado sem dizer se a conta existe",
 test("SC-010 · resposta indistinguível para e-mail cadastrado e não cadastrado", async ({
   page,
 }) => {
+  /*
+   * ⚠️ A RESPOSTA É PROCURADA DENTRO DO FORMULÁRIO, e não na página inteira. `getByRole("status")`
+   * solto casa TAMBÉM com a faixa de ambiente, que é um `status` e está sempre lá: são dois
+   * elementos, e violação de modo estrito **falha na hora — ela não reexecuta**. O caso passava
+   * numa execução e reprovava na outra, no mesmo commit, conforme a resposta aparecesse antes ou
+   * depois de a leitura acontecer.
+   *
+   * Corrigido em 10/09/2026, durante a fatia (b) do Épico 4. O teste é do Épico 3; o defeito é de
+   * seletor, não de comportamento — a recuperação de senha sempre respondeu igual.
+   */
+  const resposta = page.locator("main").getByRole("status");
+
   async function pedir(email: string): Promise<{ texto: string; ms: number }> {
     await page.goto("/recuperar-senha");
     await page.locator('input[name="email"]').fill(email);
     const inicio = Date.now();
     await page.getByRole("button", { name: /enviar/i }).click();
-    await page.getByRole("status").waitFor({ timeout: 15_000 });
+    await resposta.waitFor({ timeout: 15_000 });
     const ms = Date.now() - inicio;
-    return { texto: (await page.getByRole("status").innerText()).trim(), ms };
+    return { texto: (await resposta.innerText()).trim(), ms };
   }
 
   const inexistente = await pedir("ninguem-tem-esta-conta@ciaara.teste");
