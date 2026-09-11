@@ -1,11 +1,16 @@
 /**
  * As entradas do menu lateral (`RF-NAV-02`, `RF-CURSO-02`, `FR-017`, `FR-017.1`).
  *
- * ⚠️ **ESTA LISTA É RASCUNHO ATÉ BERNARDO VALIDÁ-LA CONTRA A v2.0**, e a marcação está no tipo, não
- * num comentário solto. Ela foi derivada da árvore de rotas do documento 24 §1 — que é o **alvo da
- * v2.1**, e não o menu que existe em produção. O `RF-NAV-02` é **[PRESERVADO]** e diz, com todas as
- * letras, que a troca de mecanismo de estado *"não autoriza reorganizar o menu nem renomear
- * entradas"*. Derivar da árvore-alvo é exatamente reorganizar sem perceber.
+ * ✅ **VALIDADA POR BERNARDO CONTRA A v2.0 EM 11/09/2026** — ordem, rótulos e Administração como
+ * entrada única, com o registro datado em `specs/008-shell-e-estado-na-url/contracts/casca.md`. Ela
+ * tinha sido derivada da árvore de rotas do documento 24 §1 — que é o **alvo da v2.1**, e não o menu
+ * que existe em produção. O `RF-NAV-02` é **[PRESERVADO]** e diz, com todas as letras, que a troca
+ * de mecanismo de estado *"não autoriza reorganizar o menu nem renomear entradas"*. Derivar da
+ * árvore-alvo é exatamente reorganizar sem perceber — e a conferência é o que separa *"não
+ * reorganizou"* de *"ninguém olhou"*.
+ *
+ * ⚠️ **MUDAR QUALQUER LINHA DESTA LISTA EXIGE NOVA VALIDAÇÃO.** A paridade se mede contra o sistema
+ * em produção, não contra este arquivo, e é por isso que o registro tem data.
  *
  * ⚠️ **DUAS ROTAS EXISTEM E NÃO ENTRAM AQUI**, por força do `RF-CURSO-02`, também **[PRESERVADO]**:
  * Avaliações e Relatório são alcançadas **pela página do curso**, e o requisito escreve que elas

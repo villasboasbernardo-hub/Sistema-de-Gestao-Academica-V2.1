@@ -130,7 +130,7 @@ ver a tabela acompanhar.
 - [X] T042 [P] [US3] Cobrir em `tests/e2e/acessibilidade.spec.ts` o atalho para o conteúdo, o marco de navegação e o foco ao trocar de rota (`FR-021`)
 - [X] T043 [US3] Aplicar o vocabulário visual da fatia (a) às cinco telas do Épico 3, em `app/(auth)/` e `app/(app)/admin/` (`FR-022`)
 - [X] T044 [US3] Acrescentar os três componentes de casca ao inventário de `docs/fase-2/23-Design-System-Tailwind-shadcn.md` §3.1, com arquivo, base e fronteira (`FR-015`, `SC-011`) ⚠️ **é emenda de documento normativo**, e fica registrado que o inventário passa a descrever casca além de vocabulário
-- [ ] T045 [US3] Submeter o rascunho de `specs/008-shell-e-estado-na-url/contracts/casca.md` a Bernardo e registrar a validação contra a v2.0 (`FR-017.1`, `SC-012`) ⚠️ **sem isto o `FR-017` não é verificável**, e as três perguntas do rascunho continuam sem resposta
+- [X] T045 [US3] Submeter o rascunho de `specs/008-shell-e-estado-na-url/contracts/casca.md` a Bernardo e registrar a validação contra a v2.0 (`FR-017.1`, `SC-012`) ⚠️ **sem isto o `FR-017` não é verificável** — ✅ **respondido em 11/09/2026**, e as **quatro** respostas confirmaram o rascunho: ordem mantida, rótulo **"Disciplinas"**, Administração como **entrada única** e entradas futuras **visíveis**. `lib/navegacao/menu.ts` **não mudou uma linha**, e é isso que transforma a paridade de suposição em fato datado
 
 **Ponto de conferência**: o passo 5 do [quickstart](./quickstart.md), que só Bernardo faz.
 
@@ -257,7 +257,8 @@ comportamentos é a v2.0 com outra aparência.
 | 8 · fechamento | 11 | 2 |
 | **Total** | **75** | **23** |
 
-**Bloqueadas: nenhuma.** A T045 depende de Bernardo, e é a única que não fecha sozinha.
+**Bloqueadas: nenhuma. Concluídas: 75 de 75.** A T045 dependia de Bernardo e foi respondida em
+11/09/2026 — as quatro respostas confirmaram o que estava implementado, sem custar edição de código.
 
 **Rastreabilidade medida em 11/09/2026**: **51 dos 53** requisitos funcionais e **23 dos 23**
 critérios são citados por alguma tarefa. Os dois que sobram — `FR-034` e `FR-040` — são **proibição

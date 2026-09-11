@@ -59,13 +59,19 @@ alguém digite a URL.
 
 ---
 
-## O rascunho da lista de entradas
+## A lista de entradas — validada em 11/09/2026
 
-⚠️ **ISTO É RASCUNHO, E NÃO É A FONTE.** Ele foi derivado da árvore de rotas do documento 24 §1, que
-é o **alvo da v2.1** — não o menu da v2.0, que é o que o `RF-NAV-02` manda preservar. **Bernardo
-valida contra o sistema em produção antes de a fatia fechar** (`FR-017.1`).
+✅ **ERA RASCUNHO, E DEIXOU DE SER EM 11/09/2026.** Ele foi derivado da árvore de rotas do documento
+24 §1, que é o **alvo da v2.1** — não o menu da v2.0, que é o que o `RF-NAV-02` manda preservar.
+**Bernardo validou contra o sistema em produção**, e as quatro respostas estão na tabela de registro,
+no fim deste documento (`FR-017.1`, `SC-012`).
 
-| # | Rótulo proposto | Rota |
+⚠️ **O rascunho estava certo nos quatro pontos, e isso não estava garantido.** Derivar da
+árvore-alvo poderia ter reorganizado o menu sem ninguém perceber, que é justamente o que o
+`RF-NAV-02` proíbe. Não reorganizou — e a conferência é o que separa *"não reorganizou"* de
+*"ninguém olhou"*.
+
+| # | Rótulo | Rota |
 |---|---|---|
 | 1 | Início | `/inicio` |
 | 2 | Cursos | `/cursos` |
@@ -85,10 +91,9 @@ valida contra o sistema em produção antes de a fatia fechar** (`FR-017.1`).
 **Quem derivar a lista da árvore sem ler o `RF-CURSO-02` acrescenta duas entradas que a v2.0 nunca
 teve** — e o `FR-017` proíbe exatamente isso.
 
-⚠️ **Três perguntas que só quem vê a v2.0 responde**, e que o rascunho não tem como acertar sozinho:
-a **ordem** das entradas; se "Disciplinas" aparece com esse rótulo (a decisão P-14 fixou o termo no
-schema e no código, mas o menu da v2.0 pode trazer o antigo); e se Administração é entrada única ou
-grupo.
+✅ **As três perguntas que só quem vê a v2.0 responde foram respondidas em 11/09/2026**, e as três
+confirmaram o rascunho: a **ordem** das entradas, o rótulo **"Disciplinas"** e **Administração como
+entrada única**. O registro, com data, está no fim deste documento.
 
 ---
 
@@ -118,9 +123,10 @@ uma sessão perdida — e é a razão de a contenção ser por segmento, e não 
 
 ## Submissão a Bernardo — as três perguntas, com o que está implementado hoje
 
-**Estado em 11/09/2026:** a casca está de pé e o menu abaixo é o que ela desenha. **Ele é rascunho
-até esta seção ser respondida** (`FR-017.1`, `SC-012`), e a implementação foi escrita para que a
-resposta custe uma edição em `lib/navegacao/menu.ts`, e nada mais.
+**Estado em 11/09/2026:** a casca está de pé e o menu abaixo é o que ela desenha. **Esta seção foi
+respondida na mesma data** (`FR-017.1`, `SC-012`). A implementação tinha sido escrita para que a
+resposta custasse uma edição em `lib/navegacao/menu.ts`, e nada mais — **ela não custou nenhuma**,
+porque as quatro respostas confirmaram o que já estava no lugar.
 
 | # | Rótulo | Rota | Estado da tela |
 |---|---|---|---|
@@ -139,11 +145,16 @@ que está em produção. O `RF-NAV-02` é **[PRESERVADO]** e diz que a troca de 
 autoriza reorganizar o menu nem renomear entradas"*. Derivar da árvore-alvo **é** reorganizar sem
 perceber, e só quem vê a v2.0 sabe se aconteceu.
 
+✅ **Respondida em 11/09/2026 — a ordem do rascunho está certa.** Nenhuma entrada muda de lugar.
+
 ### Q2 — "Disciplinas" é o rótulo que a v2.0 usa no menu?
 
 A decisão **P-14** fixou o termo em schema, código e documentação. Ela não disse nada sobre o texto
 do menu da v2.0, que pode trazer o antigo. **Se trouxer, o `RF-NAV-02` manda preservar o antigo na
 tela** — e a divergência entre o rótulo e o schema passa a ser pretendida, não descuido.
+
+✅ **Respondida em 11/09/2026 — a v2.0 usa "Disciplinas".** Não há rótulo antigo a preservar: o menu
+e o schema dizem a mesma palavra, e o `RF-NAV-02` fica satisfeito pelo termo que a P-14 fixou.
 
 ### Q3 — Administração é entrada única ou grupo?
 
@@ -152,6 +163,8 @@ própria tela de administração. Foi resolvido assim de propósito, **sem mexer
 mesmo padrão que o `RF-CURSO-02` manda usar para Avaliações e Relatório: a função é alcançada pela
 tela de que ela faz parte.
 
+✅ **Respondida em 11/09/2026 — entrada única, como está.** O menu não ganha grupo.
+
 ### Uma decisão de projeto que também precisa do seu aval
 
 **As entradas sem tela aparecem no menu, marcadas "em breve".** A alternativa era mostrar só o que
@@ -159,14 +172,24 @@ existe — e aí o menu cresceria a cada épico, ensinando quem usa a reaprender
 ⚠️ **O risco da escolha atual é parecer quebrado**; o risco da outra é contrariar o `RF-NAV-02`, que
 manda manter os mesmos pontos de entrada de hoje.
 
+✅ **Avalizada em 11/09/2026 — as entradas futuras ficam visíveis, marcadas "em breve".** Fecha
+também a pendência **MENU-2** do `CLAUDE.md`.
+
 ### Registro da validação
 
 | Item | Resposta | Data |
 |---|---|---|
-| Q1 · ordem | *(pendente)* | — |
-| Q2 · rótulo de Disciplinas | *(pendente)* | — |
-| Q3 · Administração única ou grupo | *(pendente)* | — |
-| Entradas futuras visíveis | *(pendente)* | — |
+| Q1 · ordem | **Confirmada** — Início · Cursos · Cronograma · Atividades · Instrutores · Disciplinas · Administração | 11/09/2026 |
+| Q2 · rótulo de Disciplinas | **"Disciplinas"** — a v2.0 usa o mesmo termo que a P-14 fixou | 11/09/2026 |
+| Q3 · Administração única ou grupo | **Entrada única**, apontando para Usuários | 11/09/2026 |
+| Entradas futuras visíveis | **Sim**, marcadas "em breve" | 11/09/2026 |
 
-⚠️ **ENQUANTO ESTA TABELA TIVER "pendente", O `FR-017` NÃO É VERIFICÁVEL** — e é por isso que ela
-existe em vez de a validação ser dada por feita.
+✅ **A TABELA ESTÁ PREENCHIDA, E O `FR-017` PASSA A SER VERIFICÁVEL.** Ela existia para que a
+validação não fosse dada por feita; agora é o registro de que ela aconteceu, com data.
+
+⚠️ **As quatro respostas confirmaram o que já estava implementado, e `lib/navegacao/menu.ts` não
+mudou uma linha.** Isso **não** torna a pergunta dispensável: o custo de perguntar era uma edição, e
+o de não perguntar era um menu reorganizado em silêncio contra um requisito **[PRESERVADO]**.
+
+⚠️ **MUDAR QUALQUER LINHA DA LISTA EXIGE NOVA VALIDAÇÃO.** A paridade se mede contra o sistema em
+produção, não contra este documento, e é por isso que o registro tem data.

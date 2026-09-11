@@ -59,8 +59,8 @@ Item reprovado vira correção de requisito **antes** de a fatia começar.
   - ✅ **Fechado por** `FR-015` — os seis componentes de casca entraram no inventário do documento 23 §3.1.
 - [X] CHK016 O **breadcrumb** é citado por algum `RF-`? [Gap, Princípio X] ⚠️ Ele aparece só no backlog. Se é novidade, o Princípio X exige a distinção declarada: *paridade antes de novidade*.
   - ✅ **Fechado por** `FR-040` — **recusa declarada**: sem `RF-` de origem, o breadcrumb é novidade, e o Princípio X a barra.
-- [ ] CHK017 `RF-NAV-02` proíbe reorganizar o menu e renomear entradas. Existe, em algum lugar, **a lista das entradas atuais** da v2.0, contra a qual a paridade se mede? [Measurability, RF-NAV-02] ⚠️ Sem a lista, a proibição não é verificável — e é exatamente o tipo de requisito que passa por vacuidade.
-  - ⏳ **Aberto por depender de Bernardo** — `FR-017.1`: o rascunho está em `specs/008-shell-e-estado-na-url/contracts/casca.md`, com as três perguntas e a tabela de registro por preencher.
+- [X] CHK017 `RF-NAV-02` proíbe reorganizar o menu e renomear entradas. Existe, em algum lugar, **a lista das entradas atuais** da v2.0, contra a qual a paridade se mede? [Measurability, RF-NAV-02] ⚠️ Sem a lista, a proibição não é verificável — e é exatamente o tipo de requisito que passa por vacuidade.
+  - ✅ **Fechado por** `FR-017.1` **em 11/09/2026** — Bernardo validou o menu contra a v2.0 em produção, e a tabela de registro de `specs/008-shell-e-estado-na-url/contracts/casca.md` está preenchida com data: ordem confirmada, rótulo **"Disciplinas"**, Administração como **entrada única**, e entradas futuras **visíveis**, marcadas "em breve". ⚠️ **As quatro respostas confirmaram o rascunho, e `lib/navegacao/menu.ts` não mudou uma linha** — a lista contra a qual a paridade se mede passa a existir, que é o que este item cobrava, e ela custou zero edição de código.
 - [X] CHK018 Existe requisito de **acessibilidade da navegação** — marco de navegação anunciado, atalho para pular ao conteúdo, e para onde vai o foco ao trocar de rota? [Gap, Coverage] ⚠️ A fatia (b) fechou o `CHK010` para componentes; a navegação é a parte que ele não alcançou.
   - ✅ **Fechado por** `FR-021` — marco anunciado, atalho para o conteúdo e destino de foco ao trocar de rota.
 - [X] CHK019 Existe requisito dizendo **quais segmentos** ganham `loading.tsx` e `error.tsx` nesta fatia, ou apenas a regra geral? [Completeness, RF-MOD-01 · RN-DEG-01]
@@ -143,18 +143,18 @@ Item reprovado vira correção de requisito **antes** de a fatia começar.
 
 ## Fechamento de 11/09/2026 — Épico 4, fatia (c)
 
-**34 dos 40 fechados**, cada um apontando pelo número o requisito que o fecha (`SC-016`).
+**35 dos 40 fechados**, cada um apontando pelo número o requisito que o fecha (`SC-016`).
 
-Os **seis que continuam abertos** não são pendência de implementação, e a distinção importa:
+Os **cinco que continuam abertos** não são pendência de implementação, e a distinção importa:
 
 | # | Por que continua aberto |
 |---|---|
-| `CHK017` | depende de Bernardo conferir o menu contra a v2.0 em produção |
 | `CHK030` | só se exercita quando existir a segunda entrada para a mesma tela (Épico 7) |
 | `CHK032` | o pacote de formulário não tem consumidor nesta fatia, e o `FR-011` proíbe instalar antes |
 | `CHK034` | premissa sobre estabilidade do `codigo`, herdada do ETL — decisão de Bernardo |
 | `CHK036` | rascunho de formulário no navegador — decisão de Bernardo, e toca PII |
 | `CHK040` | paridade visual por tela não é mensurável antes de existir tela reconstruída |
 
-⚠️ **QUATRO DELES ESPERAM UMA DECISÃO, E NÃO CÓDIGO.** Fechá-los por conta própria seria decidir no
-lugar de quem decide — é o Princípio I.
+⚠️ **TRÊS DELES ESPERAM UMA DECISÃO, E NÃO CÓDIGO.** Fechá-los por conta própria seria decidir no
+lugar de quem decide — é o Princípio I. **O quarto era o `CHK017`, e ele fechou em 11/09/2026** pelo
+único caminho que existia: perguntar.

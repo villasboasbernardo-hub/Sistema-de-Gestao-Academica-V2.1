@@ -6,7 +6,8 @@
  * O `SC-003` cobra **zero** telas alcançáveis apenas por digitação, e esta era uma.
  *
  * ⚠️ **E ELA NÃO VIRA ENTRADA NO MENU LATERAL, de propósito.** Se Administração é entrada única ou
- * grupo é **uma das três perguntas que só quem vê a v2.0 responde** (`FR-017.1`), e o `RF-NAV-02` é
+ * grupo era **uma das três perguntas que só quem vê a v2.0 responde** (`FR-017.1`), e Bernardo
+ * respondeu em 11/09/2026: **entrada única**, que é o que está aqui. O `RF-NAV-02` é
  * **[PRESERVADO]**: a troca de mecanismo de estado não autoriza reorganizar o menu. Resolver o
  * alcance sem mexer no menu é o mesmo padrão que o `RF-CURSO-02` manda usar para Avaliações e
  * Relatório — a função é alcançada **pela tela de que ela faz parte**.

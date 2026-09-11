@@ -85,14 +85,19 @@ desta fatia: é de RLS.
 
 ⚠️ **É o passo que só Bernardo faz**, e sem ele o `FR-017` não é verificável.
 
+✅ **EXECUTADO EM 11/09/2026.** As quatro respostas confirmaram o rascunho, e o registro datado está
+na seção *Registro da validação* de [contracts/casca.md](./contracts/casca.md). O roteiro abaixo fica
+como está porque **toda mudança na lista exige repeti-lo**: a paridade se mede contra o sistema em
+produção, não contra o documento.
+
 Abrir a v2.0 em produção ao lado do preview desta fatia e conferir, entrada por entrada:
 
 - os **mesmos rótulos**, sem melhorias de redação;
 - a **mesma ordem**;
 - Avaliações e Relatório **ausentes** do menu, alcançados pela página do curso (`RF-CURSO-02`).
 
-O rascunho a conferir está em [contracts/casca.md](./contracts/casca.md), com as três perguntas que
-ele não tem como responder sozinho.
+A lista a conferir está em [contracts/casca.md](./contracts/casca.md), com as três perguntas que ela
+não tem como responder sozinha — e, desde 11/09/2026, com as respostas.
 
 ## Passo 6 — A tabela densa não quebrou
 
