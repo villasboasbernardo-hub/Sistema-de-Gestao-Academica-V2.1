@@ -89,28 +89,39 @@ test.describe("US5 · o emblema de teto", () => {
     await expect(estourado.locator(".sr-only")).toContainText("alerta, não impedimento");
   });
 
-  test("a explicação aparece ao ALCANÇAR o emblema — pelo teclado e pelo ponteiro", async ({
-    page,
-  }) => {
-    /*
-     * ⚠️ O FOCO VEM PRIMEIRO, E NÃO É PREFERÊNCIA — É DETERMINISMO. A primeira versão deste caso
-     * abria a dica só por `hover`, e ele passava sozinho e reprovava na suíte cheia: com quatro
-     * processos de trabalho, o ponteiro nem sempre entra no elemento a tempo. **Verde sozinho e
-     * vermelho em conjunto é o pior modo de falha possível, porque parece azar** — é a lição do
-     * V-4 do Épico 3, e ela vale igual aqui.
-     *
-     * ⚠️ E O FOCO É O QUE DE FATO IMPORTA: quem navega por teclado precisa alcançar a explicação.
-     * Uma dica que só abre ao apontar não existe para essa pessoa.
-     */
+  test("a explicação aparece ao APONTAR (`FR-009`)", async ({ page }) => {
     const emblema = page.locator('[data-slot="badge-teto"]').first();
-    await emblema.focus();
+    await emblema.scrollIntoViewIfNeeded();
+    await emblema.hover();
+    await expect(page.getByRole("tooltip")).toContainText("teto normativo");
+  });
+
+  test("e ela é alcançável pelo TECLADO — com tabulação de verdade", async ({ page }) => {
+    /*
+     * ⚠️ `focus()` PROGRAMÁTICO NÃO SERVE AQUI, e descobrir isso custou uma execução do CI. A dica
+     * ao apontar do Radix só abre no foco quando ele é **visível** — `:focus-visible` —, e o
+     * navegador não o aplica a um foco programático quando a última interação foi de ponteiro.
+     * Resultado: o caso passava numa execução e reprovava na outra, no mesmo commit, porque o que
+     * decidia era o que tinha acontecido na página antes.
+     *
+     * ⚠️ A FORMA QUE NÃO DEPENDE DISSO É PRESSIONAR TECLA: focar o segundo emblema e voltar um com
+     * `Shift+Tab` é navegação real, com modalidade de teclado, e o `:focus-visible` vale. **E é
+     * mais honesto**: mede o caminho de quem de fato navega por teclado, em vez de simular o
+     * resultado dele.
+     *
+     * ⚠️ QUEM USA TECLADO PRECISA ALCANÇAR A EXPLICAÇÃO. Uma dica que só abre ao apontar não existe
+     * para essa pessoa — e é por isso que a comparação numérica fica no emblema, não aqui.
+     */
+    const primeiro = page.locator('[data-slot="badge-teto"]').first();
+    const segundo = page.locator('[data-slot="badge-teto"]').nth(1);
+
+    await segundo.focus();
+    await page.keyboard.press("Shift+Tab");
+    await expect(primeiro).toBeFocused();
     await expect(page.getByRole("tooltip")).toContainText("teto normativo");
 
     await page.keyboard.press("Escape");
     await expect(page.getByRole("tooltip")).toBeHidden();
-
-    await emblema.hover();
-    await expect(page.getByRole("tooltip")).toContainText("teto normativo");
   });
 
   test("NADA é desabilitado: a ação que o alerta comenta continua disponível", async ({ page }) => {
