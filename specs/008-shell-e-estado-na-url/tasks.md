@@ -76,7 +76,7 @@ outra.
 - [X] T018 [US1] Escrever `lib/navegacao/usar-parametro.ts` — lê e escreve pelo contrato, aplicando a política de histórico e o aviso ao servidor (`FR-004`, `FR-004.1`)
 - [X] T019 [US1] Aplicar o limite de frequência de **300 ms** à busca em `lib/navegacao/usar-parametro.ts` (`FR-005`) ⚠️ **o número vivia num exemplo de código do documento 25 §1.5**, não numa regra
 - [X] T020 [US1] Fazer o parâmetro no valor padrão **sumir da URL** em `lib/navegacao/usar-parametro.ts` (`FR-002`)
-- [ ] T020.1 [US1] Fazer toda troca de recorte produzir **retorno visual imediato** em `lib/navegacao/usar-parametro.ts` e nos segmentos de `app/(app)/`, ainda que o dado demore (`FR-045`) ⚠️ **Era lacuna da lista, e veio de decisão sua.** Na v2.0 trocar contexto era instantâneo porque era memória; aqui é ida ao servidor, e **o que estraga não é a latência, é o silêncio** — sem sinal, a pessoa clica de novo
+- [X] T020.1 [US1] Fazer toda troca de recorte produzir **retorno visual imediato** em `lib/navegacao/usar-parametro.ts` e nos segmentos de `app/(app)/`, ainda que o dado demore (`FR-045`) ⚠️ **Era lacuna da lista, e veio de decisão sua.** Na v2.0 trocar contexto era instantâneo porque era memória; aqui é ida ao servidor, e **o que estraga não é a latência, é o silêncio** — sem sinal, a pessoa clica de novo
 - [X] T021 [US1] Completar o retorno após a autenticação preservando **os parâmetros** em `app/(auth)/login/page.tsx` e `FormularioDeLogin.tsx` (`FR-027`, `SC-005`) ⚠️ **a metade de ida já existe e está certa** — o proxy do Épico 3 guarda caminho e consulta
 - [X] T022 [P] [US1] Escrever `tests/e2e/estado-na-url.spec.ts` cobrindo link direto, histórico um passo por vez, recarga e parâmetro padrão ausente (`FR-023`, `FR-024`, `FR-026`, `SC-001`, `SC-004`)
 - [X] T023 [P] [US1] Cobrir em `tests/e2e/estado-na-url.spec.ts` que **o número na tela muda** ao trocar o filtro (`FR-004.1`) ⚠️ **é o teste que não se faz por atributo**: um que confira só a URL passa com o aviso ao servidor desligado, que é o defeito que ele deveria pegar
@@ -174,16 +174,16 @@ está aqui só por pertencer a esta história.
 
 ## Fase 8 — Fechamento
 
-- [ ] T058 Escrever `docs/guias/estado-na-url.md` — como uma tela nova declara, lê e escreve seus parâmetros, **com exemplo executável** (`FR-044`, `SC-021`) ⚠️ **é o requisito que decide se o contrato vale alguma coisa**
-- [ ] T058.1 Acrescentar a `docs/guias/estado-na-url.md` a seção do que **NÃO** vai para a URL, com as seis proibições nomeadas e **exemplo e contraexemplo** de estado efêmero (`FR-009`, `FR-010`) ⚠️ **Fecha o `CHK007` e o `CHK008`.** O risco tem nome no backlog do Épico 4 — *o gerenciador de estado virar o `AppState` disfarçado` —, e o guia é onde alguém o lê antes de errar
-- [ ] T059 Fechar os itens correspondentes em `specs/007-componentes-ciaara/checklists/navegacao-e-estado.md`, **cada um apontando pelo número o requisito que o fecha** (`SC-016`)
-- [ ] T060 Fechar em `specs/005-design-system-tokens-e-tema/checklists/acessibilidade-e-entrega.md` os itens que esta fatia resolve — `CHK019` a `CHK025` (`SC-016`)
-- [ ] T060.1 Registrar `lib/design/` e `lib/navegacao/` na árvore de `docs/fase-2/24-Estrutura-do-Repositorio-e-Convencoes.md` (`FR-039`, fecha o `CHK022`) ⚠️ **é emenda de documento normativo**, e os dois módulos nasceram sem endereço documentado — o de design na fatia (a), o de navegação aqui
-- [ ] T061 Escrever `tests/unidade/fronteira-casca.test.ts` — zero componente de `components/casca/` acessando banco ou implementando regra `RN-`, e marcador de cliente só onde o contrato declara (`FR-019`, `FR-036`)
-- [ ] T062 Escrever `tests/unidade/sem-contexto-de-navegacao.test.ts` — **zero** contêiner de contexto usado como fonte de verdade de navegação (`FR-011.1`, `SC-022`), **zero** parâmetro de paginação no contrato (`FR-037.1`, `SC-020`) e **zero** gerenciador de estado global instalado sem consumidor (`FR-011`) ⚠️ **Três recusas declaradas passam a ser contadas.** Recusa sem contagem é intenção: ela sobrevive até o dia em que alguém acrescenta o parâmetro e ninguém percebe
-- [ ] T063 Conferir que a regra de `eslint.config.mjs` continua em **zero violações** no repositório inteiro, com `components/casca/` incluído (`FR-037`, `SC-013`)
-- [ ] T064 Atualizar a seção *Estado atual e onde retomar* do `CLAUDE.md` com o resultado **medido** da fatia (`SC-015`) ⚠️ **medido, não declarado**
-- [ ] T065 Rodar `pnpm verificar:tudo` na raiz do repositório e conferir que sai **0** (`SC-015`)
+- [X] T058 Escrever `docs/guias/estado-na-url.md` — como uma tela nova declara, lê e escreve seus parâmetros, **com exemplo executável** (`FR-044`, `SC-021`) ⚠️ **é o requisito que decide se o contrato vale alguma coisa**
+- [X] T058.1 Acrescentar a `docs/guias/estado-na-url.md` a seção do que **NÃO** vai para a URL, com as seis proibições nomeadas e **exemplo e contraexemplo** de estado efêmero (`FR-009`, `FR-010`) ⚠️ **Fecha o `CHK007` e o `CHK008`.** O risco tem nome no backlog do Épico 4 — *o gerenciador de estado virar o `AppState` disfarçado` —, e o guia é onde alguém o lê antes de errar
+- [X] T059 Fechar os itens correspondentes em `specs/007-componentes-ciaara/checklists/navegacao-e-estado.md`, **cada um apontando pelo número o requisito que o fecha** (`SC-016`)
+- [X] T060 Fechar em `specs/005-design-system-tokens-e-tema/checklists/acessibilidade-e-entrega.md` os itens que esta fatia resolve — `CHK019` a `CHK025` (`SC-016`)
+- [X] T060.1 Registrar `lib/design/` e `lib/navegacao/` na árvore de `docs/fase-2/24-Estrutura-do-Repositorio-e-Convencoes.md` (`FR-039`, fecha o `CHK022`) ⚠️ **é emenda de documento normativo**, e os dois módulos nasceram sem endereço documentado — o de design na fatia (a), o de navegação aqui
+- [X] T061 Escrever `tests/unidade/fronteira-casca.test.ts` — zero componente de `components/casca/` acessando banco ou implementando regra `RN-`, e marcador de cliente só onde o contrato declara (`FR-019`, `FR-036`)
+- [X] T062 Escrever `tests/unidade/sem-contexto-de-navegacao.test.ts` — **zero** contêiner de contexto usado como fonte de verdade de navegação (`FR-011.1`, `SC-022`), **zero** parâmetro de paginação no contrato (`FR-037.1`, `SC-020`) e **zero** gerenciador de estado global instalado sem consumidor (`FR-011`) ⚠️ **Três recusas declaradas passam a ser contadas.** Recusa sem contagem é intenção: ela sobrevive até o dia em que alguém acrescenta o parâmetro e ninguém percebe
+- [X] T063 Conferir que a regra de `eslint.config.mjs` continua em **zero violações** no repositório inteiro, com `components/casca/` incluído (`FR-037`, `SC-013`)
+- [X] T064 Atualizar a seção *Estado atual e onde retomar* do `CLAUDE.md` com o resultado **medido** da fatia (`SC-015`) ⚠️ **medido, não declarado**
+- [X] T065 Rodar `pnpm verificar:tudo` na raiz do repositório e conferir que sai **0** (`SC-015`)
 - [ ] T066 Abrir o PR preenchendo `.github/pull_request_template.md` inteiro (`SC-015`, `SC-016`) ⚠️ **e o achado de segurança precisa aparecer no corpo**, porque ele corrige código que já estava mesclado — plano de reversão é `git revert`, sem migration
 
 ---

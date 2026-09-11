@@ -75,6 +75,9 @@ ciaara-11/
 │   │                                      #   GradeAlocacao, FiltroAvancado, AlertaConformidade,
 │   │                                      #   TabelaDensa, SeletorTurma
 │   ├── graficos/                          #   wrappers de Recharts — TODOS "use client"
+│   ├── casca/                             #   CASCA DA APLICAÇÃO: cabeçalho, menu, conteúdo.
+│   │                                      #   NUNCA "use client" nos três que enquadram — um
+│   │                                      #   marcador aqui manda TODA tela para o navegador
 │   └── impressao/                         #   blocos reutilizados pelas rotas /print/*
 │
 ├── lib/                                   # LÓGICA. Nada aqui renderiza JSX.
@@ -96,6 +99,11 @@ ciaara-11/
 │   ├── acoes/                             #   Server Actions por domínio ("use server" no topo)
 │   ├── tipos/database.ts                  #   GERADO por `supabase gen types`. Nunca editar à mão.
 │   ├── formato/                           #   formatação de data, número, carga horária (§4)
+│   ├── design/                            #   leitura do ponto único de cor e auditoria de
+│   │                                      #   contraste (Épico 4a) — não renderiza, não decide cor
+│   ├── navegacao/                         #   CONTRATO DE PARÂMETROS DA URL (Épico 4c):
+│   │                                      #   contrato.ts · esquema.ts · usar-parametro.ts ·
+│   │                                      #   menu.ts · caminho.ts · destino-seguro.ts
 │   └── constantes/                        #   rótulos institucionais, ordens fixas, mapas de ENUM
 │
 ├── supabase/
@@ -157,12 +165,25 @@ ciaara-11/
 | `lib/supabase/**` | os quatro clientes e nada mais | consulta específica de tela (vai em `lib/consultas/` ou na própria página) |
 | `lib/tipos/database.ts` | saída de `supabase gen types typescript` | **edição manual, jamais** |
 | `lib/formato/**` | formatação de apresentação (data, número, CH) | parsing de entrada do usuário (é Zod) |
+| `lib/design/**` | leitura do ponto único de cor, auditoria de contraste | JSX; token escrito à mão (o ponto único é `app/globals.css`) |
+| `lib/navegacao/**` | contrato de parâmetros da URL, esquema de leitura, gancho, menu, destino de retorno | regra `RN-`; consulta a banco. ⚠️ **conhece o arcabouço de propósito** — por isso não vive em `lib/dominio/` |
+| `components/casca/**` | cabeçalho, menu lateral, região de conteúdo | consulta de negócio; decisão de permissão (chega pronta); `"use client"` nos três que enquadram |
 | `supabase/migrations/**` | SQL escrito à mão, um arquivo por mudança | dado de produção; `DROP` sem plano de reversão |
 | `scripts/etl/**` | Python de carga e reconciliação | código chamado pelo app em runtime |
 | `tests/unidade/**` | Vitest sobre `lib/dominio/**` | teste que precise de banco, rede ou DOM |
 | `tests/invariantes/**` | pgTAP e SQL de asserção | asserção sobre saída histórica de um curso específico (rejeitado em 2026-08-10) |
 | `tests/e2e/**` | Playwright, um arquivo por percurso | teste de unidade disfarçado |
 | `docs/**` | os documentos numerados da v2.1 | anotação temporária, rascunho, TODO solto |
+
+⚠️ **EMENDA DE 11/09/2026 — três diretórios que nasceram sem endereço documentado.**
+`lib/design/` nasceu na fatia (a) do Épico 4, `lib/navegacao/` e `components/casca/` na fatia (c), e
+**nenhum dos três constava desta estrutura** (`CHK022`). Módulo sem endereço documentado é módulo que
+a próxima pessoa cria de novo noutro lugar — foi assim que a v2.0 acumulou três versões do mesmo
+formatador de data.
+
+⚠️ **E `lib/navegacao/` É A EXCEÇÃO QUE PRECISA ESTAR ESCRITA:** ele importa `next` e `react` de
+propósito, e por isso **não cabe** na regra de pureza do `lib/dominio/**`. Ele não guarda regra de
+negócio; guarda o contrato entre a barra de endereço e as telas.
 
 ### 1.2 Regra de colocação (*colocation*)
 

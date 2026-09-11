@@ -44,16 +44,23 @@ a pena no Épico 3: os achados moravam no documento normativo, não na spec.
 ## Entrega — o que a fatia (a) deixa pendente
 
 - [x] CHK018 A pendência da `--borda-forte` tem **dono e gatilho** de reabertura? [Assumption, Contrato vocabulário] Ela está medida e nomeada, e o "resolve em" diz *"a fatia que construir o primeiro campo"*. Nenhuma tarefa de fatia alguma a reivindica. ✅ **FECHADO em 10/09/2026: o gatilho disparou, e a resposta não foi a esperada.** A fatia (b) construiu o campo, e o `FR-032` decidiu sobre medição — **nenhum** dos catorze tokens de borda alcança 3:1, o melhor mede 2,23. O traço que identifica o campo passou a ser **`--texto-tenue`**, que mede 4,49 no claro e 4,85 no noturno, auditado como par **C-2** (`FR-032.1`). **Nenhuma cor foi alterada e nenhum token nasceu.** ⚠️ **O que fica aberto mudou de pergunta**, e está registrado em `PENDENTES` de `lib/design/vocabulario.ts`: `--borda-forte` não é mais o traço de campo, e classificá-la como isenta é decisão de Bernardo — foi decisão dele que criou a categoria.
-- [ ] CHK019 Está escrito que o **alternador de tema provisório** deve ser substituído, e não apenas duplicado? [Clarity, Spec §FR-022] O requisito diz que ele é provisório. Não diz que o da vitrine **sai** quando o do cabeçalho entrar — dois alternadores é o resultado mais provável.
-- [ ] CHK020 As **cinco telas do Épico 3** sem vocabulário têm requisito na fatia (c)? [Gap, Spec §SC-007] Elas estão registradas como dívida herdada. Nenhum `FR-` da (c) existe ainda para cobrá-las.
-- [ ] CHK021 A rota `/estilo` continua **sem sessão** depois da fatia (c)? [Gap, Ambiguity] Ela foi liberada em 10/09/2026 porque não exibe dado. Quando houver navegação e cabeçalho, ninguém escreveu se ela entra no grupo autenticado ou permanece aberta.
-- [ ] CHK022 O módulo `lib/design/` está previsto na estrutura do repositório? [Gap, Doc 24] Ele nasceu na fatia (a) para que a vitrine exibisse o mesmo número que a auditoria afere. O documento 24 não o menciona.
+- [X] CHK019 Está escrito que o **alternador de tema provisório** deve ser substituído, e não apenas duplicado? [Clarity, Spec §FR-022] O requisito diz que ele é provisório. Não diz que o da vitrine **sai** quando o do cabeçalho entrar — dois alternadores é o resultado mais provável.
+  - ✅ **Fechado por** `FR-018` da spec `008` — o alternador da vitrine **saiu**, mudou de pasta para `components/casca/`, e há percurso que confere os dois lados.
+- [X] CHK020 As **cinco telas do Épico 3** sem vocabulário têm requisito na fatia (c)? [Gap, Spec §SC-007] Elas estão registradas como dívida herdada. Nenhum `FR-` da (c) existe ainda para cobrá-las.
+  - ✅ **Fechado por** `FR-022` da spec `008` — nove arquivos das cinco telas ganharam token de papel, borda e raio; zero cor literal.
+- [X] CHK021 A rota `/estilo` continua **sem sessão** depois da fatia (c)? [Gap, Ambiguity] Ela foi liberada em 10/09/2026 porque não exibe dado. Quando houver navegação e cabeçalho, ninguém escreveu se ela entra no grupo autenticado ou permanece aberta.
+  - ✅ **Fechado por** `FR-038` da spec `008` — `/estilo` permanece **sem sessão**, fora do grupo autenticado e sem a casca, com percurso próprio.
+- [X] CHK022 O módulo `lib/design/` está previsto na estrutura do repositório? [Gap, Doc 24] Ele nasceu na fatia (a) para que a vitrine exibisse o mesmo número que a auditoria afere. O documento 24 não o menciona.
+  - ✅ **Fechado por** `FR-039` da spec `008` — `lib/design/`, `lib/navegacao/` e `components/casca/` entraram na árvore do documento 24 §1, com emenda datada.
 
 ## Entrega para a fatia (c) — shell e estado
 
-- [ ] CHK023 O `RF-NAV-01` tem requisito **realizável** em alguma spec? [Gap, Spec §Contexto] A spec 005 **declara** que o ponto de verdade passa a ser a URL, por exigência do documento 06, e diz que a realização é da fatia (c). A (c) ainda não existe, então a declaração está sem par.
-- [ ] CHK024 Está definido o que é **estado efêmero de interface**, com exemplo e contraexemplo? [Clarity, Doc 06 riscos] O risco nomeado é o gerenciador de estado virar o `AppState` disfarçado. A fronteira precisa ser escrita **antes**, não descoberta na revisão.
-- [ ] CHK025 A raiz autenticada tem requisito? [Gap] Medido em 09/09/2026: depois de entrar, a pessoa cai numa página **sem um único link**, cujo texto ainda afirma que nenhuma tabela de negócio existe. Nenhum requisito diz o que a raiz deve ser.
+- [X] CHK023 O `RF-NAV-01` tem requisito **realizável** em alguma spec? [Gap, Spec §Contexto] A spec 005 **declara** que o ponto de verdade passa a ser a URL, por exigência do documento 06, e diz que a realização é da fatia (c). A (c) ainda não existe, então a declaração está sem par.
+  - ✅ **Fechado por** `FR-001` a `FR-007` da spec `008` — o `RF-NAV-01` passou a ter contrato tipado, esquema de leitura e gancho, todos exercitados.
+- [X] CHK024 Está definido o que é **estado efêmero de interface**, com exemplo e contraexemplo? [Clarity, Doc 06 riscos] O risco nomeado é o gerenciador de estado virar o `AppState` disfarçado. A fronteira precisa ser escrita **antes**, não descoberta na revisão.
+  - ✅ **Fechado por** `FR-010` da spec `008` — definido pela pergunta *"isto faz sentido num link que eu mando para outra pessoa?"*, com exemplo e contraexemplo, em `docs/guias/estado-na-url.md`.
+- [X] CHK025 A raiz autenticada tem requisito? [Gap] Medido em 09/09/2026: depois de entrar, a pessoa cai numa página **sem um único link**, cujo texto ainda afirma que nenhuma tabela de negócio existe. Nenhum requisito diz o que a raiz deve ser.
+  - ✅ **Fechado por** `FR-016` e `FR-030` da spec `008` — a casca dá para onde ir, e a raiz leva à tela Início em vez de ser um beco.
 - [ ] CHK026 Existe requisito de **paridade visual por tela** para os épicos 5 a 13? [Measurability, Doc 06 critério 8] Ele exige que nenhuma tela da v2.0 perca informação, cor semântica ou estado visual. É vacuamente verdadeiro hoje e não diz **como** se mede quando cada tela for reconstruída.
 
 ## Notas
@@ -66,3 +73,19 @@ a pena no Épico 3: os achados moravam no documento normativo, não na spec.
   documento normativo é decisão do Bernardo.
 - ⚠️ O **CHK002** é o de maior alcance imediato: as oito séries de gráfico entram em uso na fatia
   (b), e hoje **não há um único par auditado** que as cubra.
+
+
+---
+
+## Fechamento de 11/09/2026 — o que a fatia (c) resolveu
+
+`CHK019` a `CHK025`, **os sete**, cada um apontando pelo número o requisito que o fecha (`SC-016`).
+
+⚠️ **SEIS DELES ERAM LACUNAS DE REQUISITO, E NÃO DE CÓDIGO** — a fatia (a) os registrou justamente
+por isso, e eles atravessaram a fatia (b) intactos porque ela entregou vocabulário e não tela. O que
+os fechou foi a fatia que tinha de escrever a navegação.
+
+⚠️ **E UM DELES FOI PEGO POR UM PORTÃO, NÃO POR REVISÃO.** O `CHK019` mandava o alternador da vitrine
+sair; ao tirá-lo, a invariante que exige amostra na vitrine para todo componente de
+`components/ciaara/` reprovou. A solução não foi isentar: foi **mover o arquivo** para
+`components/casca/`, porque ele é cromo da aplicação e não vocabulário de domínio.
