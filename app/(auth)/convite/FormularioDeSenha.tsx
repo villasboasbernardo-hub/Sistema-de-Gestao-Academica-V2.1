@@ -81,6 +81,25 @@ export function FormularioDeSenha({ rotulo }: { readonly rotulo: string }) {
       return;
     }
 
+    /*
+     * ⚠️ SEM ESTA CHAMADA, A PESSOA AUTENTICA E NÃO ENTRA. `convidar()` cria a linha de
+     * `usuarios` com `auth_user_id` NULO — a janela do FR-008 —, e até 11/09/2026 **nada
+     * no sistema a preenchia de volta**: nem código, nem gatilho. `usuarioDaSessao()`
+     * procura a linha por essa coluna, não achava, e o layout de `(app)` devolvia para
+     * `/login`. Como a raiz é estática e renderiza sem sessão, o efeito parecia senha
+     * errada — e era espelho aberto.
+     *
+     * ⚠️ O VÍNCULO É DO BANCO, NÃO DAQUI. A função não recebe parâmetro: ela lê o e-mail
+     * de `auth.users` pelo `auth.uid()` da sessão. Passar o e-mail daqui seria deixar o
+     * cliente escolher de quem é o cadastro que ele assume.
+     *
+     * ⚠️ FALHA EM SILÊNCIO DE PROPÓSITO, e só aqui: a senha **já foi gravada**, e barrar a
+     * tela agora deixaria a pessoa sem senha nova e sem entrada. O caso em que devolve
+     * `false` — cadastro inativo, ou vínculo já feito — é indistinguível de sucesso para
+     * quem está olhando, e o portão que cobra o espelho é o teste, não esta linha.
+     */
+    await supabase.rpc("vincular_credencial");
+
     roteador.refresh();
     roteador.replace("/");
   }
