@@ -3330,7 +3330,7 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      vincular_credencial: { Args: never; Returns: boolean }
     }
     Enums: {
       acao_migracao:

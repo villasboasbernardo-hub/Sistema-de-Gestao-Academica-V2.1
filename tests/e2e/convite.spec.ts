@@ -170,11 +170,16 @@ test("V-3 · convite, senha e primeiro acesso, com o escopo atribuído", async (
   await page.locator('input[name="senha"]').fill(SENHA);
   await confirmacao.fill(SENHA);
   await page.getByRole("button", { name: /concluir|salvar/i }).click();
-  await page.waitForURL(/\/$|\/login/, { timeout: 15_000 });
+  /*
+   * ⚠️ `/login` SAIU DESTA EXPRESSÃO EM 11/09/2026, E ERA ELE QUE ESCONDIA O DEFEITO.
+   * Aceitar os dois desfechos fazia o caso passar exatamente no cenário que ele existe para
+   * reprovar: quem define a senha e é devolvido ao login **não** concluiu o convite.
+   */
+  await page.waitForURL(/\/$/, { timeout: 15_000 });
 
-  // A credencial passou a existir: é o espelho `usuarios.auth_user_id` fechado (FR-010).
   const { data: contasApos } = await admin.auth.admin.listUsers();
-  expect((contasApos?.users ?? []).some((u) => u.email === email)).toBe(true);
+  const conta = (contasApos?.users ?? []).find((u) => u.email === email);
+  expect(conta, "a credencial não foi criada").toBeTruthy();
 
   // ⚠️ SC-013 · `codigo` e `origem_migracao_v1` SOBREVIVEM à obtenção da credencial. É o que faz
   // o rastro até a v2.0 não se perder quando a conta migrada ganha senha (FR-032).
@@ -185,6 +190,27 @@ test("V-3 · convite, senha e primeiro acesso, com o escopo atribuído", async (
     .single();
   expect(depois?.codigo).toBe(linha!.codigo);
   expect(depois?.origem_migracao_v1).toBe(linha!.origem_migracao_v1);
+
+  /*
+   * ⚠️ A ASSERÇÃO QUE FALTAVA, E A COLUNA JÁ ESTAVA SENDO SELECIONADA ACIMA.
+   *
+   * Até 11/09/2026 este caso lia `auth_user_id` e conferia `codigo` e `origem_migracao_v1` —
+   * o comentário dizia que o espelho fechava, e nada olhava o espelho. Ele ficou verde
+   * enquanto **nenhuma pessoa convidada conseguia entrar no sistema**, porque a aplicação
+   * nunca escrevia essa coluna: quem a escrevia era `conta-de-teste.ts`, ao criar as contas
+   * dos outros 130 casos. A suíte inteira rodava como contas que a aplicação não sabe criar.
+   */
+  expect(depois?.auth_user_id, "o espelho usuarios.auth_user_id ficou aberto (FR-010)").toBe(
+    conta!.id,
+  );
+
+  /*
+   * ⚠️ E O QUE A PESSOA REALMENTE QUER: alcançar uma tela autenticada. É a medição do
+   * desfecho, não da condição — o mesmo motivo pelo qual o caso do destino de login mede
+   * onde o navegador parou, e não o que a função devolveu.
+   */
+  await page.goto("/inicio");
+  await expect(page, "a pessoa convidada foi devolvida ao login").toHaveURL(/\/inicio/);
 
   await admin.from("usuarios").delete().eq("email", email);
   const { data: contas } = await admin.auth.admin.listUsers();
