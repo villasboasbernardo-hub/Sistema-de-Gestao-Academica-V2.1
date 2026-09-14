@@ -132,7 +132,71 @@ export async function convidar(dados: unknown): Promise<Resultado> {
   return sucesso;
 }
 
-/** Reenvia o convite. O link anterior deixa de valer — quem emite o novo é a plataforma. */
+/**
+ * Traduz o erro da API de autenticação para português (`RNF-USA-…`, e o padrão de mensagem do
+ * resto deste arquivo).
+ *
+ * ⚠️ **A MENSAGEM DA PLATAFORMA NÃO CHEGA MAIS À TELA.** Ela vem em inglês, fala de conceito da
+ * plataforma e não do domínio — *"A user with this email address has already been registered"* não
+ * diz a quem lê o que fazer a seguir. O sistema inteiro fala português, e o `CLAUDE.md` trata isso
+ * como regra, não preferência.
+ *
+ * ⚠️ **O CÓDIGO É O DISCRIMINADOR, NUNCA O TEXTO.** Casar por trecho da mensagem quebraria em
+ * silêncio na primeira vez que a plataforma reescrevesse a frase — e quebraria devolvendo o texto
+ * genérico, que é o modo de falha mais difícil de notar. `AuthError.code` é campo estável.
+ *
+ * ⚠️ **O PADRÃO DEVOLVE TEXTO GENÉRICO DE PROPÓSITO, e o original vai para o log do servidor.**
+ * Repassar a mensagem desconhecida seria o mesmo vazamento, só que com mais passos.
+ */
+function erroDeConviteEmPortugues(erro: {
+  readonly code?: string | undefined;
+  readonly message: string;
+}): string {
+  switch (erro.code) {
+    // O e-mail já tem credencial. É a MESMA frase da guarda por `auth_user_id` logo acima, e a
+    // repetição é intencional: os dois caminhos descrevem o mesmo estado para quem lê.
+    case "email_exists":
+      return "Esta conta já tem credencial. Use recuperação de senha.";
+    case "over_email_send_rate_limit":
+    case "over_request_rate_limit":
+      return "Muitos envios em pouco tempo. Aguarde alguns minutos e tente de novo.";
+    case "email_address_invalid":
+      return "O e-mail cadastrado não é válido. Corrija o cadastro antes de reenviar.";
+    case "email_address_not_authorized":
+      return "Este e-mail não é aceito pelo provedor de envio.";
+    case "email_provider_disabled":
+      return "O envio de e-mail está desligado neste ambiente.";
+    case "user_not_found":
+      return "Usuário não encontrado.";
+    case "validation_failed":
+      return "Dados inválidos.";
+    default:
+      // O que a pessoa vê é português; o que a investigação precisa fica no log do servidor.
+      console.error("[reenviarConvite] erro não mapeado da API de autenticação:", erro);
+      return "Não foi possível reenviar o convite. Tente de novo em alguns minutos.";
+  }
+}
+
+/**
+ * Reenvia o convite. O link anterior deixa de valer — quem emite o novo é a plataforma.
+ *
+ * ⚠️ **`inviteUserByEmail` É A ROTINA CERTA, E FOI MEDIDO.** A suspeita natural é que ela falhe
+ * por tentar recriar quem já existe, e **não é isso**. Medido no stack local em 14/09/2026, para um
+ * usuário já convidado e **ainda não confirmado** — que é o estado "convite enviado":
+ *
+ *   inviteUserByEmail            -> ok, e o e-mail CHEGA (a caixa vai de 1 para 2)
+ *   generateLink({type:"invite"}) -> ok, devolve `action_link`, e NÃO ENVIA NADA (a caixa não muda)
+ *
+ * ⚠️ **TROCAR POR `generateLink` QUEBRARIA O REENVIO PARECENDO CONSERTÁ-LO:** a ação passaria a
+ * devolver sucesso sem que e-mail nenhum saísse, e ninguém descobriria até alguém reclamar que o
+ * convite não chegou. É o pior desfecho possível para esta correção.
+ *
+ * ⚠️ **O `email_exists` SÓ APARECE PARA USUÁRIO CONFIRMADO** — medido: com a conta confirmada,
+ * tanto `inviteUserByEmail` quanto `generateLink({type:"invite"})` devolvem `422 email_exists`.
+ * Quem chega aqui nesse estado passou pela guarda de `auth_user_id` porque **a coluna estava
+ * vazia**, e é o defeito que o `FR-010` corrige à parte. Aqui a resposta deixa de ser a frase em
+ * inglês da plataforma e passa a ser a mesma frase em português da guarda.
+ */
 export async function reenviarConvite(dados: unknown): Promise<Resultado> {
   const conferido = esquemaDeReenvio.safeParse(dados);
   if (!conferido.success) return falha("Dados inválidos.");
@@ -153,7 +217,7 @@ export async function reenviarConvite(dados: unknown): Promise<Resultado> {
   const { error } = await admin.auth.admin.inviteUserByEmail(linha.email, {
     redirectTo: `${urlDaAplicacao()}/convite`,
   });
-  if (error) return falha(error.message);
+  if (error) return falha(erroDeConviteEmPortugues(error));
 
   revalidatePath("/admin/usuarios");
   return sucesso;
