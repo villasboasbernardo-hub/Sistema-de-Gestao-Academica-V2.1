@@ -563,10 +563,28 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     await limparInstrutores(PROCESSO, "C");
   });
 
+  /**
+   * Entra direto na ficha e só devolve quando ela está desenhada.
+   *
+   * ⚠️ O PRAZO É MEDIDO, NÃO CHUTADO (15/09/2026, base real carregada): a ficha leva 1,5 a 2,4 s com um
+   * processo e 4,2 a 5,1 s com quatro — o prazo padrão do `expect` é 5 s. Quem domina é
+   * `vw_instrutor_carga_anual`, ~700 ms sob RLS por agregar todos os registros antes de filtrar o
+   * instrutor. Esta suíte abre quatro fichas ao mesmo tempo, e sem a espera reprovava três de quatro
+   * casos com a página ainda em "Carregando a ficha do instrutor…". A lentidão da view fica registrada
+   * como achado, e não é corrigida aqui.
+   */
+  async function abrirFicha(page: Page, codigo: string) {
+    await entrar(page, EMAIL_ADMIN, `/instrutores/${codigo}`);
+    await expect(
+      page.locator('[data-slot="rodape-do-formulario"]'),
+      "a ficha não terminou de desenhar",
+    ).toBeVisible({ timeout: 15_000 });
+  }
+
   test("20h com 14 horas por semana alerta nomeando as semanas, e gravar continua disponível", async ({
     page,
   }) => {
-    await entrar(page, EMAIL_ADMIN, `/instrutores/${amostra.codigos.ctMaisAntigo}`);
+    await abrirFicha(page, amostra.codigos.ctMaisAntigo);
     const alerta = page
       .locator('[data-slot="alerta-conformidade"]')
       .filter({ hasText: "Carga semanal prevista fora da faixa do regime" });
@@ -590,7 +608,7 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     const codigo = amostra.codigos.cmg;
     await servico().from("instrutores").update({ esp_hab_obs: null }).eq("codigo", codigo);
 
-    await entrar(page, EMAIL_ADMIN, `/instrutores/${codigo}`);
+    await abrirFicha(page, codigo);
     await expect(page.locator('input[name="esp_hab_obs"]')).toHaveValue("");
     await page
       .locator('[data-slot="rodape-do-formulario"]')
@@ -614,8 +632,32 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     expect(data?.editado_em, "a gravação não chegou ao banco").not.toBeNull();
   });
 
+  test("`FR-017` · docência há mais de um ano sem capacitação alerta, e quem tem capacitação não", async ({
+    page,
+  }) => {
+    const titulo = "Docência há mais de um ano sem capacitação didática";
+    await abrirFicha(page, amostra.codigos.semCapacitacao);
+    const alerta = page.locator('[data-slot="alerta-conformidade"]').filter({ hasText: titulo });
+    await expect(alerta).toBeVisible();
+    await expect(
+      alerta.getByText(
+        "Em docência no CIAARA desde 01/03/2021, sem capacitação didática registrada.",
+      ),
+    ).toBeVisible();
+    await expect(
+      page
+        .locator('[data-slot="rodape-do-formulario"]')
+        .getByRole("button", { name: "Gravar alterações" }),
+    ).toBeEnabled();
+
+    await abrirFicha(page, amostra.codigos.comAula);
+    await expect(
+      page.locator('[data-slot="alerta-conformidade"]').filter({ hasText: titulo }),
+    ).toHaveCount(0);
+  });
+
   test("40h com 20 horas por semana está dentro da faixa, e não alerta", async ({ page }) => {
-    await entrar(page, EMAIL_ADMIN, `/instrutores/${amostra.codigos.ctMaisModerno}`);
+    await abrirFicha(page, amostra.codigos.ctMaisModerno);
     await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("80 TA");
     await expect(
       page
