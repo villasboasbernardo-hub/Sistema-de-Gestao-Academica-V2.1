@@ -1225,7 +1225,7 @@ export type Database = {
           area_conhecimento?: string | null
           capacitacao_didatica?: string | null
           categoria: string
-          codigo: string
+          codigo?: string
           cpf?: string | null
           criado_em?: string
           criado_por?: string | null
