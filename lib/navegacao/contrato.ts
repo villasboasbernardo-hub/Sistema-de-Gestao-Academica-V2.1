@@ -100,6 +100,38 @@ export const CLASSIFICACOES = Constants.public.Enums.escopo_curso;
 /** As modalidades (`RF-INI-02`) — mesma fonte, pelo mesmo motivo. */
 export const MODALIDADES = Constants.public.Enums.modalidade_ensino;
 
+/** Os regimes de trabalho docente (`FR-025` da spec 006) — domínio fechado do banco. */
+export const REGIMES_DOCENTES = Constants.public.Enums.regime_trabalho_docente;
+
+/** A situação de cadastro (`FR-009` da spec 006) — `ativo` ou `inativo`, nunca inferida. */
+export const SITUACOES_DE_CADASTRO = Constants.public.Enums.status_registro;
+
+/**
+ * As ordenações de apresentação da listagem de instrutores.
+ *
+ * ⚠️ UM VALOR POR SENTIDO, E NÃO UMA GRAMÁTICA. `nome_desc` é uma opção inteira, validada contra a
+ * lista como qualquer outra — não um texto que alguém precise partir no separador. A vitrine resolveu
+ * o mesmo problema com dois parâmetros; aqui o contrato da spec 006 declara um só, e a lista fechada
+ * é o que o mantém degradável.
+ *
+ * ⚠️ NENHUMA DELAS SUBSTITUI A ANTIGUIDADE. A consulta sempre pede `ordem_antiguidade` ao banco; estas
+ * reordenam por cima, na apresentação (`RN-ANT-01`, contrato parametros-instrutores §Ordenação).
+ */
+export const ORDENS_DE_INSTRUTOR = [
+  "posto",
+  "posto_desc",
+  "nome",
+  "nome_desc",
+  "categoria",
+  "categoria_desc",
+  "om",
+  "om_desc",
+  "regime",
+  "regime_desc",
+  "ch_ano",
+  "ch_ano_desc",
+] as const;
+
 /**
  * O contrato.
  *
@@ -229,6 +261,121 @@ export const CONTRATO = {
         limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
       },
     },
+  },
+  /*
+   * A listagem de instrutores (`RF-INSTR-01`, `FR-025`, `FR-028` da spec 006).
+   *
+   * Contrato humano: `specs/006-cadastro-de-instrutores/contracts/parametros-instrutores.md`
+   *
+   * ⚠️ TODO FILTRO SUBSTITUI, E ISSO É ESCOLHA. Três cliques de refino não são três passos de
+   * navegação; quem pusesse `empilha` num filtro faria o voltar desfazer letra por letra.
+   *
+   * ⚠️ OM, CATEGORIA, CAPACITAÇÃO E ESCOLARIDADE SÃO TEXTO, E NÃO ESCOLHA. O contrato humano os
+   * anotava como escolha, mas o domínio deles é o DADO — as OMs cadastradas, as capacitações
+   * escritas —, e não uma lista fechada. Uma escolha com opções escritas aqui degradaria para
+   * "todas", em silêncio, o link que filtrasse por uma OM nova. Texto que não casa com nenhum
+   * instrutor devolve vazio, e vazio é resposta honesta. Regime e situação têm domínio fechado no
+   * banco, e esses sim são escolha.
+   *
+   * ⚠️ NENHUM PARÂMETRO ACEITA IDENTIFICAÇÃO CIVIL. CPF na barra de endereço vaza por histórico, por
+   * log de servidor e por ombro — recusa declarada do contrato humano.
+   */
+  "/instrutores": {
+    rota: "/instrutores",
+    origem: "RF-INSTR-01",
+    parametros: {
+      busca: {
+        nome: "busca",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
+      },
+      om: {
+        nome: "om",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      categoria: {
+        nome: "categoria",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      capacitacao: {
+        nome: "capacitacao",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      regime: {
+        nome: "regime",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: REGIMES_DOCENTES,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      escolaridade: {
+        nome: "escolaridade",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      /*
+       * ⚠️ O ÚNICO PADRÃO NÃO VAZIO DESTA ROTA. A listagem abre com quem está ativo, como na v2.0, e o
+       * padrão some da URL: `/instrutores` limpo já significa "ativos", e ver os inativos exige
+       * `?situacao=inativo` — que é link compartilhável.
+       */
+      situacao: {
+        nome: "situacao",
+        tipo: "escolha",
+        padrao: "ativo",
+        opcoes: SITUACOES_DE_CADASTRO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      /*
+       * ⚠️ O ÚNICO QUE NÃO AVISA O SERVIDOR. A ordem canônica é a antiguidade, servida pelo banco;
+       * `ordem` só reordena o que já chegou. Avisar o servidor aqui convidaria a consulta a trocar
+       * `ordem_antiguidade` por outra coluna — que é como a `RN-ANT-01` se quebra sem ninguém ver.
+       */
+      ordem: {
+        nome: "ordem",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: ORDENS_DE_INSTRUTOR,
+        historico: "substitui",
+        avisaServidor: false,
+      },
+    },
+  },
+  /*
+   * A ficha (`RF-INSTR-10`). A identidade vive no CAMINHO, e é o `codigo` — o número que a pessoa
+   * reconhece —, nunca o `id` uuid. Nenhum parâmetro de consulta: a aba aberta é estado efêmero.
+   */
+  "/instrutores/[codigo]": {
+    rota: "/instrutores/[codigo]",
+    origem: "RF-INSTR-10",
+    parametros: {},
+  },
+  /*
+   * O cadastro (`RF-INSTR-02`).
+   *
+   * ⚠️ ROTA QUE O CONTRATO HUMANO DA FASE 1 NÃO TINHA (achado D-6 do tasks.md da spec 006). Criar
+   * instrutor não cabe em `/instrutores/[codigo]`, que pressupõe um código existente. Nenhum
+   * parâmetro: rascunho de formulário não vai para a URL — é o `CHK036`, decisão pendente, e toca PII.
+   */
+  "/instrutores/novo": {
+    rota: "/instrutores/novo",
+    origem: "RF-INSTR-02",
+    parametros: {},
   },
 } as const satisfies Record<string, ContratoDeRota>;
 

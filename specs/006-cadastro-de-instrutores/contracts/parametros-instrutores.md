@@ -15,6 +15,9 @@ guia obrigatório: [`docs/guias/estado-na-url.md`](../../../docs/guias/estado-na
 |---|---|---|
 | `/instrutores` | `RF-INSTR-01`, `RF-NAV-01` | listagem, filtros, indicadores e gráficos |
 | `/instrutores/[codigo]` | `RF-INSTR-10` | ficha individual |
+| `/instrutores/novo` | `RF-INSTR-02` | cadastro de instrutor novo |
+
+**Rota acrescentada em 15/09/2026** (achado D-6, T021): `/instrutores/novo` não constava da Fase 1. Criar instrutor não cabe em `/instrutores/[codigo]`, que pressupõe um código existente. Sem parâmetro de consulta: o rascunho de formulário fica fora da URL (`CHK036`, decisão pendente, e toca PII). O título desta seção continua dizendo "duas rotas" como registro do que a Fase 1 previa.
 
 ⚠️ **`/instrutores` já está no menu desde a fatia (c) do Épico 4, marcada *"em breve"*.** Entregar a
 tela **exige virar a bandeira** `disponivel` em `lib/navegacao/menu.ts` no **mesmo passo** — o teste
@@ -34,6 +37,10 @@ do shell confere os dois sentidos e reprova se a tela nascer com o menu ainda di
 | `escolaridade` | escolha | `""` | substitui | **sim** | `FR-025` |
 | `situacao` | escolha | `ativo` | substitui | **sim** | `FR-009` |
 | `ordem` | escolha | `""` | substitui | não | `FR-012` da spec 008 |
+
+**Tipo corrigido na implementação, em 15/09/2026** (T020): `om`, `categoria`, `capacitacao` e `escolaridade` são **texto** em `lib/navegacao/contrato.ts`, e não escolha. O tipo escolha exige lista fechada de opções escrita no contrato, e o domínio desses quatro é o **dado** — as OMs cadastradas, as capacitações escritas. Uma lista fixa degradaria para "todas", em silêncio, o link que filtrasse por uma OM nova. `regime` e `situacao` têm domínio fechado no banco (`regime_trabalho_docente`, `status_registro`) e continuam escolha, lidos de `Constants`. `ordem` é escolha com um valor por sentido — `nome`, `nome_desc` — e não uma gramática com separador.
+
+⚠️ **Divergência com o documento 25 §1.3, anotada e não corrigida.** Aquela tabela declara para `/instrutores` os parâmetros `curso`, `posto`, `circulo`, `categoria`, `om`, `capacitacao`, `status` e `busca`, todos como texto, citando a spec 015. Este contrato, e o código, seguem o `FR-025` da spec 006; emendar o documento 25 é decisão à parte.
 
 ### As decisões que o formato esconde
 

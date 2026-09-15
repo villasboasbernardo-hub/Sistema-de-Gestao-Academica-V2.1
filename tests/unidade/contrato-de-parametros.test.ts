@@ -151,3 +151,86 @@ describe("`RF-INI-02` · o domínio do filtro é o domínio do BANCO, não uma l
     }
   });
 });
+
+describe("`FR-028` da spec 006 · as rotas de instrutor seguem o contrato humano", () => {
+  /*
+   * Contrato: `specs/006-cadastro-de-instrutores/contracts/parametros-instrutores.md`
+   *
+   * ⚠️ O ERRO QUE ESTE BLOCO GUARDA É SILENCIOSO. Um filtro que não avisasse o servidor deixaria a URL
+   * certa, o link compartilhado abrindo — e o número na tela velho. Um filtro que empilhasse faria o
+   * voltar desfazer letra por letra. Nenhum dos dois quebra a tela.
+   */
+  const FILTROS = ["busca", "om", "categoria", "capacitacao", "regime", "escolaridade", "situacao"];
+
+  it("as três rotas existem: listagem, ficha e cadastro", () => {
+    expect(ROTAS).toEqual(
+      expect.arrayContaining(["/instrutores", "/instrutores/[codigo]", "/instrutores/novo"]),
+    );
+  });
+
+  it("a listagem declara exatamente os oito parâmetros do contrato, na ordem dele", () => {
+    expect(parametrosDaRota("/instrutores").map((p) => p.nome)).toEqual([...FILTROS, "ordem"]);
+  });
+
+  it("ficha e cadastro não têm parâmetro de consulta — identidade no caminho, rascunho fora da URL", () => {
+    expect(parametrosDaRota("/instrutores/[codigo]")).toEqual([]);
+    expect(parametrosDaRota("/instrutores/novo")).toEqual([]);
+  });
+
+  it.each(FILTROS)("o filtro %s substitui o histórico e avisa o servidor", (nome) => {
+    const p = parametrosDaRota("/instrutores").find((x) => x.nome === nome);
+    expect(p?.historico, `${nome} empilharia: o voltar desfaria refino`).toBe("substitui");
+    expect(p?.avisaServidor, `${nome} deixaria o número da tela velho`).toBe(true);
+  });
+
+  it("`ordem` é o único que não avisa o servidor — a antiguidade continua vindo do banco", () => {
+    const naoAvisam = parametrosDaRota("/instrutores")
+      .filter((p) => !p.avisaServidor)
+      .map((p) => p.nome);
+    expect(naoAvisam).toEqual(["ordem"]);
+  });
+
+  it("`situacao` é o único padrão não vazio, e ele é `ativo`", () => {
+    const naoVazios = parametrosDaRota("/instrutores").filter((p) => p.padrao !== "");
+    expect(naoVazios.map((p) => [p.nome, p.padrao])).toEqual([["situacao", "ativo"]]);
+  });
+
+  it("a busca limita frequência pelo número do contrato", () => {
+    const busca = parametrosDaRota("/instrutores").find((p) => p.nome === "busca");
+    expect(busca?.limiteDeFrequenciaMs).toBe(LIMITE_DE_FREQUENCIA_MS);
+  });
+
+  it("regime e situação oferecem exatamente o domínio do banco", () => {
+    const porNome = (nome: string) =>
+      parametrosDaRota("/instrutores").find((p) => p.nome === nome) as Parametro;
+    const regime = porNome("regime");
+    const situacao = porNome("situacao");
+    expect(regime.tipo === "escolha" && [...regime.opcoes]).toEqual([
+      ...Constants.public.Enums.regime_trabalho_docente,
+    ]);
+    expect(situacao.tipo === "escolha" && [...situacao.opcoes]).toEqual([
+      ...Constants.public.Enums.status_registro,
+    ]);
+  });
+
+  it("⚠️ nenhum parâmetro de instrutor aceita identificação civil ou residência", () => {
+    const pii = [
+      "cpf",
+      "rg",
+      "orgao_emissor",
+      "telefone",
+      "retelma",
+      "endereco",
+      "cep",
+      "logradouro",
+      "bairro",
+      "cidade",
+      "estado",
+    ];
+    const achados = ["/instrutores", "/instrutores/[codigo]", "/instrutores/novo"]
+      .flatMap((r) => parametrosDaRota(r as Rota))
+      .filter((p) => pii.some((termo) => p.nome.includes(termo)))
+      .map((p) => p.nome);
+    expect(achados, `PII na barra de endereço: ${achados.join(", ")}`).toEqual([]);
+  });
+});
