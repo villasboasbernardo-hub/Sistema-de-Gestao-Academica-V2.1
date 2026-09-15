@@ -119,6 +119,35 @@ test.describe("`RN-INST-03` · o cadastro não aceita ficar pela metade", () => 
   });
 });
 
+test.describe("`RN-INST-03` delimitado · especialidade de militar em cadastro novo", () => {
+  const om = () => `${omDoProcesso()}-ESP`;
+
+  test.afterAll(async () => {
+    await servico().from("instrutores").delete().eq("om", om());
+  });
+
+  test("militar novo sem especialidade é recusado, com a mensagem própria, e nada é gravado", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, "/instrutores/novo");
+    await preencherObrigatorios(page, {
+      nome: `Militar Sem Especialidade ${PROCESSO}`,
+      om: om(),
+      especialidade: "",
+    });
+    await cadastrar(page);
+
+    await expect(
+      page.locator('[data-slot="formulario-de-instrutor"]').getByRole("alert"),
+    ).toHaveText("Informe a especialidade/habilitação: ela é obrigatória no cadastro de militar.");
+    const { count } = await servico()
+      .from("instrutores")
+      .select("id", { count: "exact", head: true })
+      .eq("om", om());
+    expect(count, "o militar sem especialidade foi gravado").toBe(0);
+  });
+});
+
 /** Confirma uma ação de situação pelo caminho que a tela exige: botão, diálogo, confirmar. */
 async function confirmarSituacao(page: Page, botao: string, confirmar: string) {
   await page.getByRole("button", { name: botao, exact: true }).click();
@@ -449,6 +478,142 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
   });
 });
 
+test.describe("`FR-027` emendado · o quadro de avisos nasce recolhido, no topo, com as contagens", () => {
+  let amostra: AmostraDeInstrutores;
+
+  test.beforeAll(async () => {
+    amostra = await semearInstrutores(PROCESSO, "Q");
+  });
+
+  test.afterAll(async () => {
+    await limparInstrutores(PROCESSO, "Q");
+  });
+
+  test("recolhido mostra contagem por tipo e total, sem tipo zerado; abrir mostra a lista e não mexe na URL", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, `/instrutores?om=${amostra.om}`);
+    const quadro = page.locator('[data-slot="quadro-de-avisos"]');
+    // ⚠️ Prazo medido: com a base real e quatro processos, a listagem passa de 5 s (ver `abrirFicha`).
+    await expect(quadro).toBeVisible({ timeout: 15_000 });
+
+    // No topo: o quadro vem antes da barra de filtros.
+    const acima = await page.evaluate(() => {
+      const q = document.querySelector('[data-slot="quadro-de-avisos"]');
+      const f = document.querySelector('[data-slot="filtros-de-instrutores"]');
+      return !!q && !!f && !!(q.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    expect(acima, "o quadro de avisos não está acima dos filtros").toBe(true);
+
+    // Recolhido: a lista não está montada, e as contagens estão à vista.
+    await expect(quadro.getByRole("button", { name: "Exibir avisos" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await expect(quadro.locator("[data-aviso]")).toHaveCount(0);
+    const contagens = quadro.locator("[data-contagem]");
+    await expect(contagens.first()).toBeVisible();
+    const quantidades = await contagens.evaluateAll((els) =>
+      els.map((e) => [e.getAttribute("data-contagem"), Number(e.getAttribute("data-quantidade"))]),
+    );
+    expect(
+      quantidades.every(([, n]) => (n as number) > 0),
+      "tipo com contagem zero apareceu na linha",
+    ).toBe(true);
+    // A amostra tem todos os obrigatórios preenchidos: esse tipo não aparece.
+    await expect(quadro.locator('[data-contagem="obrigatorio-pendente"]')).toHaveCount(0);
+    const soma = quantidades.reduce((t, [, n]) => t + (n as number), 0);
+    await expect(quadro.locator('[data-slot="total-de-avisos"]')).toHaveAttribute(
+      "data-quantidade",
+      String(soma),
+    );
+
+    const antes = page.url();
+    await quadro.getByRole("button", { name: "Exibir avisos" }).click();
+    await expect(quadro.getByRole("button", { name: "Ocultar avisos" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    for (const [chave, n] of quantidades) {
+      await expect(quadro.locator(`[data-aviso="${chave}"] li`)).toHaveCount(n as number);
+    }
+    expect(page.url(), "abrir o quadro mexeu na URL").toBe(antes);
+  });
+
+  test("recorte sem aviso nenhum mantém o quadro na tela, dizendo isso", async ({ page }) => {
+    await entrar(page, EMAIL_ADMIN, `/instrutores?om=${amostra.om}-SEM-NINGUEM`);
+    const quadro = page.locator('[data-slot="quadro-de-avisos"]');
+    // ⚠️ Prazo medido: com a base real e quatro processos, a listagem passa de 5 s (ver `abrirFicha`).
+    await expect(quadro).toBeVisible({ timeout: 15_000 });
+    await expect(quadro.getByRole("status")).toHaveText("Nenhum aviso de cadastro neste recorte.");
+  });
+});
+
+test.describe("Regra 4, exceção · exclusão permanente de instrutor sem histórico", () => {
+  let amostra: AmostraDeInstrutores;
+  const om = () => `${omDoProcesso()}-EXC`;
+
+  test.beforeAll(async () => {
+    amostra = await semearInstrutores(PROCESSO, "E");
+  });
+
+  test.afterAll(async () => {
+    await servico().from("instrutores").delete().eq("om", om());
+    await limparInstrutores(PROCESSO, "E");
+  });
+
+  test("cadastrar, excluir confirmando pelo código, e o instrutor some do banco", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, "/instrutores/novo");
+    await preencherObrigatorios(page, { nome: `Cadastro Por Engano ${PROCESSO}`, om: om() });
+    await cadastrar(page);
+    await expect
+      .poll(() => new URL(page.url()).pathname, { timeout: 15_000 })
+      .toMatch(/^\/instrutores\/\d+$/);
+    const codigo = new URL(page.url()).pathname.split("/").pop() as string;
+
+    const rodape = page.locator('[data-slot="rodape-do-formulario"]');
+    await expect(rodape).toBeVisible({ timeout: 15_000 });
+    const excluir = rodape.getByRole("button", { name: "Excluir instrutor", exact: true });
+    await expect(excluir, "o botão de excluir não está ao lado de desativar").toBeEnabled();
+    await expect(rodape.getByRole("button", { name: "Desativar instrutor" })).toBeVisible();
+    await excluir.click();
+
+    const dialogo = page.getByRole("alertdialog");
+    await expect(dialogo).toContainText("permanente e irreversível");
+    const confirmar = dialogo.getByRole("button", { name: "Excluir permanentemente" });
+    await expect(confirmar, "a confirmação liberou sem digitar o código").toBeDisabled();
+    await dialogo.getByLabel(/Digite o código do instrutor/).fill(`${codigo}9`);
+    await expect(confirmar, "a confirmação liberou com o código errado").toBeDisabled();
+    await dialogo.getByLabel(/Digite o código do instrutor/).fill(codigo);
+    await expect(confirmar).toBeEnabled();
+    await confirmar.click();
+
+    await expect.poll(() => new URL(page.url()).pathname, { timeout: 15_000 }).toBe("/instrutores");
+    const { count } = await servico()
+      .from("instrutores")
+      .select("id", { count: "exact", head: true })
+      .eq("codigo", codigo);
+    expect(count, "o instrutor excluído continua no banco").toBe(0);
+  });
+
+  test("instrutor com histórico mostra o botão desabilitado, com o motivo escrito ao lado", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, `/instrutores/${amostra.codigos.comAula}`);
+    const bloco = page.locator('[data-slot="excluir-instrutor"]');
+    await expect(bloco).toBeVisible({ timeout: 15_000 });
+    await expect(bloco.getByRole("button", { name: "Excluir instrutor" })).toBeDisabled();
+    await expect(bloco.locator('[data-slot="motivo-de-nao-excluir"]')).toContainText(
+      "aula lançada",
+    );
+    await expect(bloco.locator('[data-slot="motivo-de-nao-excluir"]')).toContainText(
+      "só pode ser desativado",
+    );
+  });
+});
+
 test.describe("`FR-022` e `FR-011` · painel de disciplinas, confirmação e a posição de desativar", () => {
   let amostra: AmostraDeInstrutores;
 
@@ -675,6 +840,19 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     }
     // A atribuição começou no ano anterior: não entra na carga prevista do ano (T011 c).
     await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("0 TA");
+  });
+
+  test("CHK019 · a ficha de instrutor inativo não exibe alerta normativo", async ({ page }) => {
+    // O sem capacitação alerta ativo (FR-017) e está fora da faixa (CHK005). Inativo, nenhum dos dois.
+    const codigo = amostra.codigos.semCapacitacao;
+    await servico().from("instrutores").update({ status: "inativo" }).eq("codigo", codigo);
+    try {
+      await abrirFicha(page, codigo);
+      await expect(page.locator('header [data-slot="badge-status"]')).toContainText("inativo");
+      await expect(page.locator('[data-slot="alerta-conformidade"]')).toHaveCount(0);
+    } finally {
+      await servico().from("instrutores").update({ status: "ativo" }).eq("codigo", codigo);
+    }
   });
 
   test("40h com 20 horas por semana está dentro da faixa, e não alerta", async ({ page }) => {

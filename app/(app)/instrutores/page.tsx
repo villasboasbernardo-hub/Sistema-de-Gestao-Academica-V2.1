@@ -212,9 +212,10 @@ export default async function Instrutores({
         </p>
       </header>
 
-      <FiltrosDeInstrutores opcoes={opcoes} />
-
+      {/* ⚠️ No topo, acima dos filtros, e recolhido — com as contagens à vista (emenda de 15/09/2026 ao FR-027). */}
       <QuadroDeAvisos avisos={avisos} />
+
+      <FiltrosDeInstrutores opcoes={opcoes} />
 
       <PainelDeInstrutores indicadores={indicadores} graficos={graficos} />
 
