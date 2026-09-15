@@ -11,7 +11,12 @@
  * ⚠️ **ERRO DE LEITURA NÃO ESTOURA** (`RN-DEG-01`): vira o vazio de "você não vê", que é o que uma
  * negativa da RLS de fato significa.
  */
+import Link from "next/link";
+
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import { SePodeVer } from "@/components/ciaara/SePodeVer";
+import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
+import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -44,10 +49,14 @@ export default async function Instrutores({
   };
 
   const supabase = await criarClienteDeServidor();
-  const { data, error } = await montarConsultaDeInstrutores(
-    supabase.from("vw_instrutores").select(COLUNAS_DA_LISTAGEM),
-    parametros,
-  );
+  const [usuario, { data, error }] = await Promise.all([
+    usuarioDaSessao(),
+    montarConsultaDeInstrutores(
+      supabase.from("vw_instrutores").select(COLUNAS_DA_LISTAGEM),
+      parametros,
+    ),
+  ]);
+  const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
 
   if (error) {
     return (
@@ -74,7 +83,18 @@ export default async function Instrutores({
   return (
     <section className="flex flex-col gap-5">
       <header className="flex flex-col gap-1">
-        <h1 className="text-texto text-lg font-semibold">Instrutores</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-texto text-lg font-semibold">Instrutores</h1>
+          {/* ⚠️ Oculto para quem não pode criar — e a RLS nega se a ação vier por fora da tela. */}
+          <SePodeVer permissoes={permissoes} recurso="instrutores" acao="criar">
+            <Link
+              href="/instrutores/novo"
+              className="border-marca bg-marca text-marca-contraste rounded-ciaara focus-visible:ring-marca border px-3 py-1 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+            >
+              Novo instrutor
+            </Link>
+          </SePodeVer>
+        </div>
         {/* veste: a dica que explica a ordem da lista — texto fixo, nunca dado */}
         <p className="text-texto-tenue text-xs">
           A lista sai sempre em antiguidade. Clicar num cabeçalho reordena só a exibição.

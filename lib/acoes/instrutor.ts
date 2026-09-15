@@ -1,0 +1,151 @@
+"use server";
+
+/**
+ * Server Actions do cadastro de instrutor (`RN-INST-03`, `FR-005` a `FR-012`, `FR-032` da spec 006).
+ *
+ * ⚠️ SERVER ACTION É ENDPOINT HTTP DE FATO. `safeParse` na primeira linha de cada uma, sem exceção —
+ * quem chama pode ser a tela ou pode ser `curl`.
+ *
+ * ⚠️ NENHUMA DELAS USA `service_role`. Ela é para convite, ETL e manutenção, nunca por requisição de
+ * tela. Quem decide se a escrita passa é a RLS, o privilégio de coluna e o porteiro da função de
+ * dado pessoal — esta camada só recusa cedo e traduz o erro.
+ *
+ * ⚠️ O DADO PESSOAL NÃO ENTRA NO INSERT NEM NO UPDATE DA TABELA. `authenticated` não tem mais escrita
+ * nas 12 colunas (migration `20260915052719`): ele passa por `gravar_dados_pessoais_instrutor`, que
+ * recusa quem não lê a PII. Quem não vê, não escreve.
+ */
+import { revalidatePath } from "next/cache";
+
+import { criarClienteDeServidor } from "@/lib/supabase/server";
+import {
+  esquemaDeCriacaoDeInstrutor,
+  esquemaDeEdicaoDeInstrutor,
+  esquemaDeGravacaoDePessoais,
+  OBRIGATORIOS_DO_INSTRUTOR,
+} from "@/lib/validacao/instrutor";
+
+export type ResultadoDeInstrutor =
+  { readonly ok: true; readonly codigo: string } | { readonly ok: false; readonly erro: string };
+
+const falha = (erro: string): ResultadoDeInstrutor => ({ ok: false, erro });
+
+type ErroDoBanco = { readonly code?: string; readonly message: string };
+
+/**
+ * A mensagem de cada `CHECK` de `instrutores`, pelo nome da restrição.
+ *
+ * ⚠️ O NOME DA RESTRIÇÃO É NOSSO, E ESTÁVEL — é declarado nas migrations. Não é o texto do erro da
+ * plataforma, que pode mudar de redação; é o identificador que o próprio schema escolheu.
+ */
+const MENSAGEM_DO_CHECK: Readonly<Record<string, string>> = {
+  instrutores_posto_graduacao_preenchido: OBRIGATORIOS_DO_INSTRUTOR[0].mensagem,
+  instrutores_esp_hab_obs_preenchido: OBRIGATORIOS_DO_INSTRUTOR[1].mensagem,
+  instrutores_nome_completo_preenchido: OBRIGATORIOS_DO_INSTRUTOR[2].mensagem,
+  instrutores_categoria_preenchida: OBRIGATORIOS_DO_INSTRUTOR[3].mensagem,
+  instrutores_om_preenchida: OBRIGATORIOS_DO_INSTRUTOR[4].mensagem,
+  instrutores_email_formato: "Informe um e-mail válido.",
+  instrutores_docencia_coerente:
+    "O início da docência no CIAARA não pode ser anterior ao início da docência na MB.",
+};
+
+/**
+ * Traduz o erro do banco para quem está na tela.
+ *
+ * ⚠️ O DISCRIMINADOR É O CÓDIGO, e a mensagem desconhecida NÃO é repassada — ela vai para o log do
+ * servidor. Repassar o texto cru seria o vazamento que o PR #13 corrigiu no reenvio de convite.
+ */
+function traduzirErro(erro: ErroDoBanco): string {
+  if (erro.code === "23514") {
+    for (const [restricao, mensagem] of Object.entries(MENSAGEM_DO_CHECK)) {
+      if (erro.message.includes(restricao)) return mensagem;
+    }
+    return "O banco recusou o cadastro: um campo não atende à regra.";
+  }
+  if (erro.code === "42501") return "O seu perfil não pode fazer esta alteração.";
+  if (erro.code === "23505") return "Já existe instrutor com este código.";
+  console.error("[CIAARA-11] escrita de instrutor recusada:", erro);
+  return "Não foi possível gravar o instrutor.";
+}
+
+/** A primeira mensagem do Zod — a que diz qual campo falta. */
+function primeiraMensagem(issues: readonly { message: string }[]): string {
+  return issues[0]?.message ?? "Dados inválidos.";
+}
+
+/**
+ * Cadastra um instrutor. O `codigo` é gerado pelo banco (`FR-007`), e volta para a tela abrir a ficha.
+ *
+ * ⚠️ SEM DADO PESSOAL. A identificação civil é gravada na ficha, por quem a lê — ver o cabeçalho.
+ */
+export async function criarInstrutor(dados: unknown): Promise<ResultadoDeInstrutor> {
+  const conferido = esquemaDeCriacaoDeInstrutor.safeParse(dados);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+
+  const supabase = await criarClienteDeServidor();
+  const { data, error } = await supabase
+    .from("instrutores")
+    .insert(conferido.data.funcional)
+    .select("codigo")
+    .single();
+  if (error) return falha(traduzirErro(error));
+
+  revalidatePath("/instrutores");
+  return { ok: true, codigo: data.codigo };
+}
+
+/**
+ * Edita o dado funcional de um instrutor.
+ *
+ * ⚠️ ZERO LINHAS NÃO É SUCESSO. A RLS nega edição **filtrando**, e não com erro: sem o `select` de
+ * volta, uma edição negada pareceria gravada. É o gotcha nº 4 do BRIEF, do lado da escrita.
+ */
+export async function editarInstrutor(dados: unknown): Promise<ResultadoDeInstrutor> {
+  const conferido = esquemaDeEdicaoDeInstrutor.safeParse(dados);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+
+  const supabase = await criarClienteDeServidor();
+  const { data, error } = await supabase
+    .from("instrutores")
+    .update(conferido.data.funcional)
+    .eq("id", conferido.data.id)
+    .select("codigo");
+  if (error) return falha(traduzirErro(error));
+  const linha = data?.[0];
+  if (!linha) return falha("Instrutor inexistente, ou o seu perfil não pode editá-lo.");
+
+  revalidatePath("/instrutores");
+  revalidatePath(`/instrutores/${linha.codigo}`);
+  return { ok: true, codigo: linha.codigo };
+}
+
+/**
+ * Grava identificação civil e residência (`FR-032`).
+ *
+ * ⚠️ O PORTEIRO É DO BANCO. Esta ação não confere perfil: a função recusa com `42501` quem não lê a
+ * PII, e a mensagem abaixo só traduz essa recusa.
+ */
+export async function gravarDadosPessoaisDoInstrutor(
+  dados: unknown,
+): Promise<ResultadoDeInstrutor> {
+  const conferido = esquemaDeGravacaoDePessoais.safeParse(dados);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+
+  const supabase = await criarClienteDeServidor();
+  const { error } = await supabase.rpc("gravar_dados_pessoais_instrutor", {
+    p_instrutor_id: conferido.data.id,
+    p_dados: conferido.data.pessoal,
+  });
+  if (error) {
+    if (error.code === "42501") return falha("O seu perfil não grava dado pessoal de instrutor.");
+    return falha(traduzirErro(error));
+  }
+
+  const { data } = await supabase
+    .from("vw_instrutores")
+    .select("codigo")
+    .eq("id", conferido.data.id)
+    .maybeSingle();
+  revalidatePath("/instrutores");
+  if (data?.codigo) revalidatePath(`/instrutores/${data.codigo}`);
+  return { ok: true, codigo: data?.codigo ?? "" };
+}
