@@ -23,6 +23,7 @@ import {
   esquemaDeGravacaoDePessoais,
   esquemaDeHabilitacoes,
   esquemaDeSituacao,
+  ESPECIALIDADE_EM_BRANCO,
   OBRIGATORIOS_DO_INSTRUTOR,
 } from "@/lib/validacao/instrutor";
 
@@ -42,10 +43,10 @@ type ErroDoBanco = { readonly code?: string; readonly message: string };
  */
 const MENSAGEM_DO_CHECK: Readonly<Record<string, string>> = {
   instrutores_posto_graduacao_preenchido: OBRIGATORIOS_DO_INSTRUTOR[0].mensagem,
-  instrutores_esp_hab_obs_preenchido: OBRIGATORIOS_DO_INSTRUTOR[1].mensagem,
-  instrutores_nome_completo_preenchido: OBRIGATORIOS_DO_INSTRUTOR[2].mensagem,
-  instrutores_categoria_preenchida: OBRIGATORIOS_DO_INSTRUTOR[3].mensagem,
-  instrutores_om_preenchida: OBRIGATORIOS_DO_INSTRUTOR[4].mensagem,
+  instrutores_esp_hab_obs_preenchido: ESPECIALIDADE_EM_BRANCO,
+  instrutores_nome_completo_preenchido: OBRIGATORIOS_DO_INSTRUTOR[1].mensagem,
+  instrutores_categoria_preenchida: OBRIGATORIOS_DO_INSTRUTOR[2].mensagem,
+  instrutores_om_preenchida: OBRIGATORIOS_DO_INSTRUTOR[3].mensagem,
   instrutores_email_formato: "Informe um e-mail válido.",
   instrutores_docencia_coerente:
     "O início da docência no CIAARA não pode ser anterior ao início da docência na MB.",

@@ -16,6 +16,7 @@ import {
   esquemaDeDadosPessoais,
   esquemaDeEdicaoDeInstrutor,
   esquemaDeSituacao,
+  ESPECIALIDADE_EM_BRANCO,
   OBRIGATORIOS_DO_INSTRUTOR,
 } from "@/lib/validacao/instrutor";
 
@@ -27,15 +28,40 @@ const VALIDO = {
   om: "CIAARA",
 };
 
-describe("`FR-005` · os cinco obrigatórios", () => {
-  it("são exatamente os cinco do `RN-INST-03`", () => {
+describe("`FR-005` emendado em 15/09/2026 · os quatro obrigatórios", () => {
+  it("são exatamente quatro — especialidade/habilitação saiu da lista", () => {
     expect(OBRIGATORIOS_DO_INSTRUTOR.map((o) => o.campo)).toEqual([
       "posto_graduacao",
-      "esp_hab_obs",
       "nome_completo",
       "categoria",
       "om",
     ]);
+  });
+
+  it("especialidade vazia ou ausente passa, e grava nulo — os 15 militares sem sufixo salvam a ficha", () => {
+    const vazia = esquemaDeCriacaoDeInstrutor.safeParse({
+      funcional: { ...VALIDO, esp_hab_obs: "" },
+    });
+    expect(vazia.success && vazia.data.funcional.esp_hab_obs).toBeNull();
+    const semCampo: Record<string, string> = { ...VALIDO };
+    delete semCampo.esp_hab_obs;
+    const ausente = esquemaDeCriacaoDeInstrutor.safeParse({ funcional: semCampo });
+    expect(ausente.success && ausente.data.funcional.esp_hab_obs).toBeNull();
+  });
+
+  it("especialidade só com espaços continua recusada, com a mensagem própria", () => {
+    const r = esquemaDeCriacaoDeInstrutor.safeParse({
+      funcional: { ...VALIDO, esp_hab_obs: "   " },
+    });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toBe(ESPECIALIDADE_EM_BRANCO);
+  });
+
+  it("especialidade preenchida sai aparada", () => {
+    const r = esquemaDeCriacaoDeInstrutor.safeParse({
+      funcional: { ...VALIDO, esp_hab_obs: "  -EF " },
+    });
+    expect(r.success && r.data.funcional.esp_hab_obs).toBe("-EF");
   });
 
   it("controle positivo: os cinco preenchidos passam", () => {

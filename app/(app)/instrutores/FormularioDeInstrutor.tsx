@@ -2,7 +2,8 @@
  * O formulário de instrutor, para cadastro e edição — **folha de cliente** (`FR-005`, `FR-011`,
  * `FR-012`, `FR-015`, `FR-030` e `FR-032` da spec 006).
  *
- * ⚠️ OS CINCO OBRIGATÓRIOS SÃO MARCADOS, MAS A RECUSA É DO SERVIDOR E DO BANCO. O atributo `required`
+ * ⚠️ OS QUATRO OBRIGATÓRIOS SÃO MARCADOS, MAS A RECUSA É DO SERVIDOR E DO BANCO. Especialidade ficou
+ * opcional em 15/09/2026 — preenchida só com espaços continua recusada. O atributo `required`
  * só impede o envio vazio; texto só com espaços passa pelo navegador e é recusado pela Server Action,
  * com a mensagem que diz **qual** campo falta — e, por qualquer outro caminho, pelo `CHECK`.
  *
@@ -247,12 +248,8 @@ export function FormularioDeInstrutor({
             obrigatorio
           />
         )}
-        <Campo
-          id="esp_hab_obs"
-          rotulo="Especialidade/Habilitação"
-          valor={v.esp_hab_obs}
-          obrigatorio
-        />
+        {/* Opcional desde 15/09/2026 (emenda ao RN-INST-03 e ao FR-005): há militar sem sufixo. */}
+        <Campo id="esp_hab_obs" rotulo="Especialidade/Habilitação" valor={v.esp_hab_obs} />
         <Campo id="nome_completo" rotulo="Nome completo" valor={v.nome_completo} obrigatorio />
         <Campo id="nome_guerra" rotulo="Nome de guerra" valor={v.nome_guerra} />
         <Campo id="categoria" rotulo="Categoria" valor={v.categoria} obrigatorio />

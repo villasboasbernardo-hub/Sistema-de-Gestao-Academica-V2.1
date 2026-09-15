@@ -36,18 +36,37 @@ import { Constants } from "@/lib/tipos/database";
 
 const REGIMES = Constants.public.Enums.regime_trabalho_docente;
 
-/** Os cinco obrigatórios, com a mensagem que diz qual falta. A ordem é a do `RN-INST-03`. */
+/**
+ * Os obrigatórios, com a mensagem que diz qual falta. A ordem é a do `RN-INST-03`.
+ *
+ * ⚠️ SÃO QUATRO DESDE 15/09/2026, E NÃO CINCO (decisão de Bernardo Villas Boas, 15/09/2026). Especialidade/habilitação ficou
+ * **opcional**: o Épico 2 mediu 15 instrutores da base real sem sufixo de especialidade — todos
+ * militares — e tirou o `NOT NULL` do banco; exigir o campo na tela impedia esses 15 de salvar a própria
+ * ficha. Emenda registrada ao `RN-INST-03` e ao `FR-005` na spec 006, sem alterar o documento 04.
+ */
 export const OBRIGATORIOS_DO_INSTRUTOR = [
   { campo: "posto_graduacao", rotulo: "Posto/Graduação", mensagem: "Informe o posto/graduação." },
-  {
-    campo: "esp_hab_obs",
-    rotulo: "Especialidade/Habilitação",
-    mensagem: "Informe a especialidade/habilitação.",
-  },
   { campo: "nome_completo", rotulo: "Nome completo", mensagem: "Informe o nome completo." },
   { campo: "categoria", rotulo: "Categoria", mensagem: "Informe a categoria." },
   { campo: "om", rotulo: "Organização militar", mensagem: "Informe a organização militar." },
 ] as const;
+
+/** A mensagem de especialidade preenchida só com espaços — recusada no Zod e no `CHECK` do banco. */
+export const ESPECIALIDADE_EM_BRANCO =
+  "A especialidade/habilitação não pode ter só espaços: preencha ou deixe vazia.";
+
+/**
+ * Especialidade/habilitação: opcional, mas **texto em branco é recusado**, e não convertido em vazio.
+ *
+ * ⚠️ VAZIO É "NÃO TEM"; SÓ ESPAÇOS É ERRO. O `CHECK` `instrutores_esp_hab_obs_preenchido` aceita nulo e
+ * recusa branco — o Zod diz o mesmo antes, com a mensagem que o banco não diz.
+ */
+const especialidadeOpcional = z
+  .string()
+  .optional()
+  .refine((v) => v === undefined || v === "" || v.trim() !== "", ESPECIALIDADE_EM_BRANCO)
+  .transform((v) => (v === undefined || v === "" ? null : v.trim()))
+  .refine((v) => v === null || v.length <= 200, "Texto longo demais.");
 
 const obrigatorio = (mensagem: string) =>
   z.string({ error: mensagem }).trim().min(1, mensagem).max(200, "Texto longo demais.");
@@ -112,10 +131,10 @@ const regimeOpcional = z
  */
 export const esquemaFuncionalDeInstrutor = z.object({
   posto_graduacao: obrigatorio(OBRIGATORIOS_DO_INSTRUTOR[0].mensagem),
-  esp_hab_obs: obrigatorio(OBRIGATORIOS_DO_INSTRUTOR[1].mensagem),
-  nome_completo: obrigatorio(OBRIGATORIOS_DO_INSTRUTOR[2].mensagem),
-  categoria: obrigatorio(OBRIGATORIOS_DO_INSTRUTOR[3].mensagem),
-  om: obrigatorio(OBRIGATORIOS_DO_INSTRUTOR[4].mensagem),
+  esp_hab_obs: especialidadeOpcional,
+  nome_completo: obrigatorio(OBRIGATORIOS_DO_INSTRUTOR[1].mensagem),
+  categoria: obrigatorio(OBRIGATORIOS_DO_INSTRUTOR[2].mensagem),
+  om: obrigatorio(OBRIGATORIOS_DO_INSTRUTOR[3].mensagem),
   nome_guerra: textoOpcional(120),
   nip: comMascara("O NIP deve ter 8 dígitos.", [8], mascararNip),
   data_nascimento: dataOpcional,

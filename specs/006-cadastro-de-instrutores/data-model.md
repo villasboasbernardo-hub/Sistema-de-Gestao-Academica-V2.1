@@ -38,12 +38,16 @@ automaticamente** para instrutor novo.
 
 ⚠️ **Divergência com o documento 04, anotada e não corrigida.** Para a `RN-CRUD-03`, o documento 04 indica como artefato de destino um **gatilho** `gerar_codigo()` por tabela, que produz "prefixo + sequencial para o padrão geral, inteiro simples para `instrutores`". Lido em 15/09/2026: para instrutores ele não define regra além do formato — não trata de reuso de número, lacuna nem bloqueio —, então é um contador simples, e a sequência cumpre a regra. O mecanismo diverge do nome do artefato: **sequência, não gatilho**. ⚠️ Uma sequência não devolve número consumido por transação desfeita; o documento 04 fala em "sequencial" e não proíbe lacuna. O gatilho `gerar_codigo()` não existe no schema, para nenhuma tabela.
 
-### Os cinco obrigatórios (`FR-005`, `RN-INST-03`)
+### Os obrigatórios (`FR-005`, `RN-INST-03`)
+
+**Emenda registrada em 15/09/2026**: são **quatro**. Especialidade/habilitação passou a ser opcional
+(`FR-005` emendado); preenchida só com espaços continua recusada pelo `CHECK`. A linha dela abaixo
+dizia `NOT NULL`, o que já não era verdade desde o Épico 2 (migration `20260908084000`). *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 | Campo | Coluna | Observação |
 |---|---|---|
 | Posto/graduação | `posto_graduacao` | `NOT NULL`; casa com `escala_antiguidade.valor` |
-| Especialidade | `esp_hab_obs` | `NOT NULL` |
+| Especialidade | `esp_hab_obs` | **opcional** — nula aceita; branco recusado pelo `CHECK` |
 | Nome completo | `nome_completo` | `NOT NULL` |
 | Categoria | `categoria` | `NOT NULL` |
 | Organização militar | `om` | `NOT NULL` |
