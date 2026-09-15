@@ -3101,6 +3101,7 @@ export type Database = {
           nome_guerra: string | null
           nome_normalizado: string | null
           om: string | null
+          ordem_antiguidade: number | null
           origem_migracao_v1: string | null
           posto_graduacao: string | null
           preferencia: string | null
@@ -3138,6 +3139,7 @@ export type Database = {
           nome_guerra?: string | null
           nome_normalizado?: string | null
           om?: string | null
+          ordem_antiguidade?: never
           origem_migracao_v1?: string | null
           posto_graduacao?: string | null
           preferencia?: string | null
@@ -3175,6 +3177,7 @@ export type Database = {
           nome_guerra?: string | null
           nome_normalizado?: string | null
           om?: string | null
+          ordem_antiguidade?: never
           origem_migracao_v1?: string | null
           posto_graduacao?: string | null
           preferencia?: string | null
