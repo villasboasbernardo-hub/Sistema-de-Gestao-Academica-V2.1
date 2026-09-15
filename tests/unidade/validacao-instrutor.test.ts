@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import {
   esquemaDeCriacaoDeInstrutor,
   esquemaDeEdicaoDeInstrutor,
+  esquemaDeSituacao,
   OBRIGATORIOS_DO_INSTRUTOR,
 } from "@/lib/validacao/instrutor";
 
@@ -95,5 +96,21 @@ describe("`FR-032` · dado pessoal viaja separado do funcional", () => {
         funcional: VALIDO,
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("`FR-008` · a situação vem da ação, não do cliente", () => {
+  const id = "0b0e5a4c-1111-4222-8333-444455556666";
+
+  it("aceita só o id, e descarta um status mandado junto", () => {
+    const r = esquemaDeSituacao.safeParse({ id, status: "ativo" });
+    expect(r.success).toBe(true);
+    expect(r.success && r.data).toEqual({ id });
+  });
+
+  it("recusa id que não é identificador", () => {
+    const r = esquemaDeSituacao.safeParse({ id: "12" });
+    expect(r.success).toBe(false);
+    expect(!r.success && r.error.issues[0]?.message).toBe("Instrutor inválido.");
   });
 });

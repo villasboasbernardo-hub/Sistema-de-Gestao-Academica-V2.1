@@ -1169,3 +1169,81 @@ describe("SC-007 (parte b) · a ação invocada FORA da tela é negada pelo banc
     expect(error).not.toBeNull();
   });
 });
+
+describe("FR-010.1 · desativar instrutor não toca a conta", () => {
+  // ⚠️ SÃO DOIS CADASTROS COM CICLOS DE VIDA DIFERENTES. Desativar o docente diz que ele não recebe
+  // aula nova — não que perdeu o acesso. O Épico 3 decidiu o mesmo na direção inversa: usuário
+  // ligado a instrutor inativo mantém o vínculo, e a tela mostra a situação.
+  //
+  // ⚠️ A DESATIVAÇÃO VAI PELA SESSÃO DO ADMIN, e não pela `service_role`: um gatilho que desativasse
+  // a conta em cascata só dispararia pelo caminho real, e é esse caminho que precisa ficar provado.
+  const EMAIL = "rls-visual@ciaara.teste";
+  let idDoInstrutor = "";
+
+  beforeAll(async () => {
+    await admin.from("usuarios").update({ instrutor_id: null }).eq("email", EMAIL);
+    await admin.from("instrutores").delete().eq("codigo", "RLS-INS-VIN");
+    const { data, error } = await admin
+      .from("instrutores")
+      .insert({
+        codigo: "RLS-INS-VIN",
+        posto_graduacao: "CT",
+        esp_hab_obs: "-EF",
+        nome_completo: "Instrutor Com Conta",
+        categoria: "Militar",
+        om: "CIAARA",
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`falha ao criar instrutor vinculado: ${error.message}`);
+    idDoInstrutor = data.id as string;
+    const { error: erroVinculo } = await admin
+      .from("usuarios")
+      .update({ instrutor_id: idDoInstrutor })
+      .eq("email", EMAIL);
+    if (erroVinculo) throw new Error(`falha ao vincular: ${erroVinculo.message}`);
+  });
+
+  afterAll(async () => {
+    await admin.from("usuarios").update({ instrutor_id: null }).eq("email", EMAIL);
+    await admin.from("instrutores").delete().eq("codigo", "RLS-INS-VIN");
+  });
+
+  it("com o instrutor vinculado desativado, a conta segue ativa, vinculada, e alcança o mesmo", async () => {
+    const antes = await cliente("visualizacao").from("cursos").select("codigo").order("codigo");
+    expect(
+      (antes.data ?? []).length,
+      "controle: a sessão precisa alcançar algo antes",
+    ).toBeGreaterThan(0);
+
+    const { data: desativado, error } = await cliente("admin")
+      .from("instrutores")
+      .update({ status: "inativo" })
+      .eq("id", idDoInstrutor)
+      .select("status");
+    expect(error).toBeNull();
+    expect(desativado?.[0]?.status, "a desativação pela sessão do admin não gravou").toBe(
+      "inativo",
+    );
+
+    const { data: conta } = await admin
+      .from("usuarios")
+      .select("status, instrutor_id")
+      .eq("email", EMAIL)
+      .single();
+    expect(conta?.status, "desativar o instrutor desativou a conta em cascata").toBe("ativo");
+    expect(conta?.instrutor_id, "desativar o instrutor desfez o vínculo").toBe(idDoInstrutor);
+
+    const depois = await cliente("visualizacao").from("cursos").select("codigo").order("codigo");
+    expect(depois.data, "a sessão perdeu alcance quando o instrutor foi desativado").toEqual(
+      antes.data,
+    );
+
+    // Reativar (FR-010) volta o cadastro sem mexer na conta, pelo mesmo caminho.
+    const { error: erroReativar } = await cliente("admin")
+      .from("instrutores")
+      .update({ status: "ativo" })
+      .eq("id", idDoInstrutor);
+    expect(erroReativar).toBeNull();
+  });
+});

@@ -21,6 +21,7 @@ import {
   esquemaDeCriacaoDeInstrutor,
   esquemaDeEdicaoDeInstrutor,
   esquemaDeGravacaoDePessoais,
+  esquemaDeSituacao,
   OBRIGATORIOS_DO_INSTRUTOR,
 } from "@/lib/validacao/instrutor";
 
@@ -148,4 +149,53 @@ export async function gravarDadosPessoaisDoInstrutor(
   revalidatePath("/instrutores");
   if (data?.codigo) revalidatePath(`/instrutores/${data.codigo}`);
   return { ok: true, codigo: data?.codigo ?? "" };
+}
+
+/**
+ * Grava a situação de cadastro. Chamada só pelas duas ações abaixo, **depois** do Zod delas.
+ *
+ * ⚠️ É `UPDATE` DE `status`, E NUNCA `DELETE` (`RN-INST-05`, regra 4 do BRIEF). Nenhuma tabela tem
+ * policy de `DELETE`; um `delete` aqui seria negado pelo banco, mas a intenção errada ficaria escrita.
+ *
+ * ⚠️ A CONTA DE ACESSO NÃO É TOCADA (`FR-010.1`). Desativar o docente diz que ele não recebe aula
+ * nova, não que perdeu o acesso — `tests/invariantes/rls/rls.test.ts` prova pela sessão real.
+ */
+async function gravarSituacao(
+  id: string,
+  status: "ativo" | "inativo",
+): Promise<ResultadoDeInstrutor> {
+  const supabase = await criarClienteDeServidor();
+  const { data, error } = await supabase
+    .from("instrutores")
+    .update({ status })
+    .eq("id", id)
+    .select("codigo");
+  if (error) return falha(traduzirErro(error));
+  const linha = data?.[0];
+  // ⚠️ Zero linhas não é sucesso: a RLS nega filtrando, e sem o `select` a negação pareceria gravada.
+  if (!linha) return falha("Instrutor inexistente, ou o seu perfil não pode alterá-lo.");
+
+  revalidatePath("/instrutores");
+  revalidatePath(`/instrutores/${linha.codigo}`);
+  revalidatePath("/admin/usuarios");
+  return { ok: true, codigo: linha.codigo };
+}
+
+/**
+ * Desativa um instrutor (`FR-008`, `RN-INST-02`): sai das atribuições futuras e fica em todo histórico.
+ *
+ * ⚠️ O CLIENTE MANDA SÓ O `id`. A situação é decidida pela ação que ele chamou; um `status` no corpo
+ * da requisição é descartado pelo Zod, que não conhece a chave.
+ */
+export async function desativarInstrutor(dados: unknown): Promise<ResultadoDeInstrutor> {
+  const conferido = esquemaDeSituacao.safeParse(dados);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  return gravarSituacao(conferido.data.id, "inativo");
+}
+
+/** Reativa um instrutor (`FR-010`): volta às atribuições futuras, sem perda de nada. */
+export async function reativarInstrutor(dados: unknown): Promise<ResultadoDeInstrutor> {
+  const conferido = esquemaDeSituacao.safeParse(dados);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  return gravarSituacao(conferido.data.id, "ativo");
 }

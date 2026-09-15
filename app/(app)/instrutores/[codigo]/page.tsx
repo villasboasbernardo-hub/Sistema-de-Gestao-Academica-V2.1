@@ -31,6 +31,7 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { COLUNAS_PESSOAIS, valoresFuncionaisDe, valoresPessoaisDe } from "../campos";
 import { FormularioDeInstrutor } from "../FormularioDeInstrutor";
+import { AcoesDeInstrutor } from "./AcoesDeInstrutor";
 
 const COLUNAS_DA_FICHA =
   "id, codigo, status, posto_graduacao, esp_hab_obs, nome_completo, categoria, om, nome_guerra, nip, data_nascimento, dep_divisao, data_assuncao_setor, email, regime_trabalho, nivel_escolaridade, formacao_principal_secundaria, capacitacao_didatica, data_inicio_docencia_mb, data_inicio_docencia_ciaara, ultima_avaliacao_desempenho, data_avaliacao_desempenho, preferencia, antiguidade_declarada, area_conhecimento";
@@ -126,6 +127,10 @@ export default async function FichaDoInstrutor({
           </span>
           <BadgeStatus tom={ativo ? "executado" : "inativo"} rotulo={ativo ? "ativo" : "inativo"} />
         </div>
+        {/* ⚠️ Oculto para quem não pode editar — e a RLS nega se a ação vier por fora da tela. */}
+        <SePodeVer permissoes={permissoes} recurso="instrutores" acao="editar">
+          <AcoesDeInstrutor instrutorId={instrutor.id} ativo={ativo} />
+        </SePodeVer>
       </header>
 
       <dl className="border-borda rounded-ciaara grid gap-x-6 gap-y-2 border p-4 text-sm sm:grid-cols-2">
