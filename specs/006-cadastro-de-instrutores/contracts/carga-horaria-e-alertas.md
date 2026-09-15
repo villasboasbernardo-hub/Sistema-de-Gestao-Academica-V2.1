@@ -40,6 +40,45 @@ fonte de verdade. Gravar o total seria as duas violações na mesma linha.
 ⚠️ **A view nova repete o `revoke`** de `delete`, `truncate`, `insert` e `update` — o do Épico 1 é
 foto do momento, e toda view nova nasce com eles de volta.
 
+### T011 — a fórmula da prevista, registrada em 15/09/2026
+
+**Decisão de Bernardo**, nas quatro perguntas da T011: *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
+| # | Pergunta | Resposta |
+|---|---|---|
+| (a) | conversão de tempo de aula em hora | **1 tempo de aula ≈ 1 hora** nesta fatia. A duração exata do tempo é definida no currículo de cada curso; os casos de exceção — tempo reduzido por mudança de regime no dia — ficam para épico futuro |
+| (b) | o divisor que torna a prevista semanal | **média simples**: tempos previstos da disciplina ÷ semanas entre a data de início prevista e a data de término prevista da disciplina. Exemplo: 40 tempos em 4 semanas = 10 por semana. A distribuição real, com encaixe de agenda entre vários instrutores, é feature futura |
+| (c) | qual data põe uma atribuição num ano | a **data de início prevista** da disciplina |
+| (d) | se os limites da faixa são inclusivos | **inclusivos**: exatamente 8h ou 12h, no regime de 20h, está dentro e não alerta; menos de 8 ou mais de 12 alerta |
+
+**O que já estava escrito e completa a resposta, sem nada inventado:**
+
+| Ponto | Regra escrita | Onde |
+|---|---|---|
+| Quanto da disciplina cabe a cada instrutor | **modo dividido** reparte a carga entre os designados; **modo simultâneo** dá a carga integral a cada um | `RN-MAT-05` (documento 04), `RF-MATERIAS-06` |
+| Rateio declarado × não declarado | `turma_disciplina_instrutor.ch_prevista_tempos` preenchido vale; **nulo divide igualmente** | comentário da coluna, migration `20260829233423` |
+| De onde vem o modo | o do vínculo de habilitação; `herdar` resolve no `modo_atribuicao_padrao` da disciplina | comentário de `instrutor_disciplina.modo_atribuicao` |
+| Quantas semanas tem a janela | `disciplinas.semanas` = `floor((término − início) / 7) + 1`, coluna gerada | migration `20260829233423` |
+| A média simples da disciplina | `disciplinas.ch_semanal` = carga ÷ semanas, coluna gerada, "média informativa, **não** a distribuição semanal" | idem; a distribuição é `RN-DIST-01`, fora desta fatia |
+
+⚠️ **As datas de `turma_disciplina` coincidem com as da disciplina** nas 89 linhas preenchidas da
+base real (medido em 15/09/2026), e a decisão diz "da disciplina": a fonte é `disciplinas`.
+
+⚠️ **Atribuição sem data de início prevista não tem ano**, e por isso não entra em ano nenhum. Não é
+zero escondido: a view de atribuições a mostra com `ano` nulo.
+
+**Pendência registrada em 15/09/2026 — a semanal do instrutor.** A decisão (b) define a média
+semanal **de uma disciplina**. Não diz como compor a semanal **do instrutor** que tem várias
+disciplinas no mesmo ano, em janelas que podem ou não se sobrepor — somar as médias do ano, ou somar
+só as das disciplinas abertas em cada semana e comparar a pior semana, dão alertas diferentes. O
+alerta do `FR-016`, a coluna `ta_previsto_semanal` e o `SC-006` esperam essa resposta.
+
+| Coluna ou view | Estado em 15/09/2026 |
+|---|---|
+| `vw_instrutor_carga_prevista` — uma linha por atribuição ativa: ano, tempos do instrutor, semanas, média semanal | ✅ implementável: tudo acima está escrito |
+| `vw_instrutor_carga_anual.ta_previsto_ano` — soma dos tempos das atribuições do ano | ✅ implementável |
+| `vw_instrutor_carga_anual.ta_previsto_semanal` | ⏸️ espera a pendência acima |
+
 ---
 
 ## A faixa do regime — o erro que parece certo
@@ -157,11 +196,13 @@ séries em vez de avisar. Sete gráficos, nenhum deles com mais de sete séries.
 | `sem-nip` | Instrutor sem NIP | `nip` vazio, nulo ou só com espaços |
 | `obrigatorio-pendente` | Campo obrigatório pendente | algum dos cinco do `RN-INST-03` vazio, nulo ou só com espaços |
 
-⚠️ **O segundo aviso hoje não encontra ninguém, e isso é esperado.** Os cinco obrigatórios são
-`NOT NULL` com `CHECK` de branco (migration `20260915054204`): o banco já recusa a linha pendente. O
-aviso fica como defesa para dado que chegue por caminho que não passe por essas restrições, e porque
-é o exemplo que o `RF-INSTR-09` nomeia. Um aviso que nunca aparece não é defeito; um aviso que some
-da lista porque "não dispara" apagaria o exemplo da regra.
+⚠️ **Correção registrada em 15/09/2026: o segundo aviso encontra 15 instrutores na base real.** A
+redação anterior dizia que ele não encontraria ninguém, porque os cinco obrigatórios seriam
+`NOT NULL`. **Não são**: o Épico 2 tirou o `NOT NULL` de `esp_hab_obs` (migration `20260908084000`),
+porque 15 dos 177 instrutores não têm sufixo de especialidade, e Bernardo ratificou em 08/09/2026. O
+`CHECK` de branco aceita o nulo. ⚠️ **Conflito aberto, não resolvido aqui**: o `RN-INST-03` manda
+exigir especialidade/habilitação, e o esquema da tela a exige — então salvar a ficha de um desses 15
+é recusado.
 
 ### Como a lista cresce
 
@@ -182,3 +223,43 @@ mudança de contrato, que é o que a decisão de 15/09/2026 recusou.
 | Aviso **nunca bloqueia** nada: nenhum botão, nenhuma gravação depende dele | `RN-DEG-02` |
 | O nome de cada instrutor sai por `NomeInstrutor` | `FR-019`, `FR-020` |
 
+---
+
+## Indicadores e gráficos — segunda emenda de 15/09/2026
+
+*(decisão de Bernardo Villas Boas, 15/09/2026)*
+
+**Indicadores — exatamente 3**: total de instrutores · com capacitação didática · habilitados ×
+selecionados. O cartão de CH ministrada no ano sai; a CH do ano **fica** como coluna da listagem.
+
+**Gráficos — exatamente 9**:
+
+| # | Gráfico | Forma | Regra |
+|---|---|---|---|
+| 1 | Status de Seleção | barras | habilitados e selecionados em **duas cores**; título da spec 021 |
+| 2 | Classificação | pizza | coluna `categoria`, rótulos da v2.0: `Militar da Ativa` → Militares da Ativa, `TTC` → TTC, `SCNS` → Civis, `MMN` → Magistério Militar Naval (spec 014, `data-model.md`); valor fora do mapa aparece como está |
+| 3 | Posto/graduação | barras | antiguidade; "Outros" no fim (`FR-026.3`) |
+| 4 | OM | barras | |
+| 5 | Escolaridade | pizza ⏸️ | **pendência**: 6 categorias no dado real, e o documento 23 §7 limita a pizza a 5. Fica em barras até a decisão |
+| 6 | Regime de trabalho | pizza | |
+| 7 | Capacitação didática | pizza | duas qualificações contam nas duas; **"Nenhuma"** conta o campo vazio (`FR-026.4` emendado) |
+| 8 | Círculo hierárquico | pizza | novo. Oficiais e Praças pelo mapa da spec 015; o posto fora do mapa (SC, e CB e MN, que a escala tem e o mapa da v2.0 não) vai para **"Outros"**, pela mesma regra do `FR-026.3` — nunca some em silêncio |
+| 9 | Índice de capacitação geral | pizza | spec 021: exatamente duas fatias, "Com Capacitação Didática" e "Sem Capacitação Didática", somando o total do recorte |
+
+| Regra visual | Por quê |
+|---|---|
+| Uma cor por categoria, da paleta `--serie-N`, nos dois temas | fim da cor única; o documento 23 §7 já manda a cor vir do token |
+| Valor escrito em toda barra, além do eixo | rótulo direto, documento 23 §7 |
+| Percentual escrito em toda pizza | documento 23 §7 |
+| **Sem 3D nem perspectiva** | a pizza inclinada distorce o ângulo, e o ângulo é o percentual |
+| Elevação leve no **cartão** que envolve o gráfico, pelo token `--shadow-ciaara-1` | o documento 23 §7 veda sombra **no gráfico**; o cartão já usa esse token pela tabela de equivalências do mesmo documento |
+
+⚠️ **A pizza de capacitação didática soma mais que o total**, porque quem tem duas qualificações
+conta nas duas. O percentual de cada fatia é sobre a **soma das fatias**, que é como a pizza se lê.
+O índice de capacitação geral (#9) é o que soma o total de instrutores.
+
+**Exibir/ocultar estatísticas** (`FR-026.5`): botão que recolhe e expande indicadores e gráficos,
+começando recolhido, com o estado **fora da URL**.
+
+**Legenda clicável** (`FR-026.6`): ⏸️ **pendência** — não há descrição do comportamento nas specs da
+herança.

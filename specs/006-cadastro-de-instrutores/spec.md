@@ -235,6 +235,7 @@ refinamento reaparece.
   de alguém por um ato que não era sobre isso; ignorar o vínculo esconde de quem administra que
   existe conta ativa ligada a docente inativo.
 - **FR-011**: O salvamento de cadastro novo ou edição MUST pedir **confirmação** (`RF-INSTR-11`).
+  **Anotação registrada em 15/09/2026**: vale para **todo** caminho de gravação — cadastro, edição pela ficha, dado pessoal e painel de disciplinas. O botão "Desativar instrutor" fica no fim da página, ao lado de "Gravar alterações" e com formato parecido, longe do caminho habitual; o `FR-008` e o `RN-INST-02` não mudam, só a posição. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-012**: Ao editar, todos os campos MUST vir carregados com os valores salvos, **nenhum em
   branco por engano** (`RF-INSTR-04`).
 - **FR-013**: A listagem MUST **não** ter edição em linha (spec 038 da v2.0, que a removeu).
@@ -243,6 +244,7 @@ refinamento reaparece.
 
 - **FR-014**: MUST existir **duas grandezas de carga horária distintas, ambas calculadas**: a
   **ministrada no ano** e a **prevista** (`RN-INST-04`, `RF-INSTR-13`).
+  **Decisão registrada em 15/09/2026 (T011)**: 1 tempo de aula ≈ 1 hora nesta fatia; a prevista de uma atribuição é a carga da disciplina rateada pelo `RN-MAT-05`; o ano da atribuição é o da **data de início prevista** da disciplina; a média semanal da disciplina é a média simples dos tempos pelas semanas entre início e término previstos. O texto integral, com o que fica para épico futuro, está em `contracts/carga-horaria-e-alertas.md`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-015**: **Não MUST existir campo de carga horária digitável** em formulário algum, e a
   escrita por fora da tela MUST ser recusada.
   ⚠️ **"Permitir ajuste manual" é proibido.** É grandeza derivada; um número digitado é a origem de
@@ -254,9 +256,12 @@ refinamento reaparece.
   **20h → 8–12h · 40h → 16–24h · Dedicação Exclusiva → 16–30h** (`RN-2027-06`, `RF-INSTR-14`).
   ⚠️ **O teto é a FAIXA, jamais o número do regime.** Um instrutor de 40h com 20h previstas está
   **dentro**, não no limite.
+  **Decisão registrada em 15/09/2026 (T011 d)**: os limites da faixa são **inclusivos** — exatamente 8h ou 12h no regime de 20h está dentro e não alerta; menos de 8 ou mais de 12 alerta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Pendência registrada em 15/09/2026**: a decisão define a média semanal **de uma disciplina**, mas não diz como compor a semanal **do instrutor** quando ele tem várias disciplinas no mesmo ano, em períodos que podem ou não se sobrepor. O alerta deste requisito espera essa resposta.
 - **FR-017**: MUST ser sinalizado o instrutor em docência há **mais de um ano sem capacitação
   didática** (`RF-INSTR-16`).
   **Decisão registrada em 15/09/2026**: o campo de referência para contar o tempo de docência é `data_inicio_docencia_ciaara`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Pendência mantida em 15/09/2026**: continua sem resposta o que fazer quando `data_inicio_docencia_ciaara` está vazia (T053). O alerta deste requisito espera essa resposta.
 - **FR-018**: Os alertas dos `FR-016` e `FR-017` MUST ser **avisos, nunca bloqueios** (`RN-DEG-02`).
   ⚠️ Transformá-los em impedimento **muda a regra de negócio** e exige autorização nominal.
 
@@ -275,6 +280,7 @@ refinamento reaparece.
   ⚠️ **A regra é delimitada**: avaliação e vista de prova **não** exigem habilitação.
   **Anotação registrada em 15/09/2026**: nenhuma tela desta fatia escolhe instrutor para ministrar ou ser responsável. A regra só fica observável numa fatia futura, ainda não especificada; aqui ela entra como função pura com teste de unidade. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-022**: MUST existir **painel de atribuição de disciplinas** ao instrutor (spec 019 da v2.0).
+  **Decisão registrada em 15/09/2026 (T082)**: o código do vínculo criado pelo painel segue o formato real da base, `VIN-NNNNNN` com **6 dígitos**, gerado por sequência que começa acima do maior código existente. ⚠️ **Divergência com o documento 04, anotada e não corrigida**: o `RN-CRUD-03` fala em prefixo com número sequencial de **4** dígitos; o dado migrado e o comentário da coluna têm 6. O documento 04 não é alterado. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 #### Refinamentos da v2.0 que MUST reaparecer
 
@@ -283,6 +289,7 @@ refinamento reaparece.
 - **FR-025**: **Filtros avançados e cross-filtering** — filtro aplicado sobre o resultado do
   anterior (spec 015). Os filtros MUST ser, no mínimo: **OM, categoria, capacitação, regime e
   escolaridade**.
+  **Emenda registrada em 15/09/2026**: além dos cinco, a barra MUST trazer **habilitado** (sim/não), **selecionado** (sim/não), **curso**, **classificação do curso**, **posto/graduação** e **círculo hierárquico**, e o filtro de capacitação didática MUST oferecer a opção **"nenhuma"**. Regras lidas na spec 015 da v2.0: habilitado **não é** selecionado — habilitado pode dar aula, selecionado foi escolhido para ministrar; curso casa com instrutor que tem vínculo **ou** atribuição a alguma disciplina daquele curso; círculo é derivado do posto (Oficiais: CMG, CF, CC, CT, 1ºTen, 2ºTen; Praças: SO, 1ºSG, 2ºSG, 3ºSG; quem não está no mapa não entra em nenhum dos dois); as classificações oferecidas são as cinco do glossário. A seleção em si é de épico futuro; o filtro opera sobre os vínculos e atribuições que já existem. Inativos continuam em `?situacao=`, visível na barra. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-026**: MUST existir **quatro indicadores**, e são estes — a lista é **fechada**, extraída da
   spec 014 em 10/09/2026, e "entre outros pertinentes" do `RF-INSTR-08` deixa de ser aceitável como
   redação:
@@ -291,6 +298,7 @@ refinamento reaparece.
   3. **CH total ministrada no ano corrente**;
   4. **Taxa de seleção, habilitados × selecionados**.
   **Anotação registrada em 15/09/2026**: "no ano", no item 3 acima e no `FR-027.1`, é o **ano corrente**. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Emenda registrada em 15/09/2026**: o cartão de **CH total ministrada no ano** sai; a lista fechada passa a ter **três** indicadores — total, com capacitação didática e habilitados × selecionados. A CH do ano corrente **fica** como coluna da listagem (`FR-027.1`). *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-026.1**: A taxa de seleção MUST exibir **os dois valores absolutos sempre**, e o percentual
   apenas como informação secundária.
   ⚠️ **Selecionados NÃO é subconjunto de habilitados.** A v2.0 mediu **10 casos reais** de instrutor
@@ -302,14 +310,21 @@ refinamento reaparece.
   **não** tem posição fixa na tela.
   ⚠️ **Ordenação alfabética é PROIBIDA** nesse gráfico — está escrito assim na spec 014.
   **Emenda registrada em 15/09/2026**: a redação anterior dizia que o gráfico de posto/graduação vinha "sempre em primeiro", enquanto a própria lista o punha em terceiro. A spec 014 da v2.0 diz "sempre na **ordem** de antiguidade", referindo-se às barras, e não fixa posição; o texto passa a concordar com ela. Fica explícito também que "classificação" é a coluna `categoria`, como no `FR-002` da spec 014. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Segunda emenda registrada em 15/09/2026**: passam a ser **nove gráficos** — três de **barras** (status de seleção, com habilitados e selecionados em duas cores; posto/graduação; OM) e seis de **pizza** (classificação, escolaridade, regime de trabalho, capacitação didática, círculo hierárquico e índice de capacitação geral). Os dois novos vêm da v2.0: o índice de capacitação geral é o da spec 021 (com × sem capacitação didática, somando o total do recorte), e o título "Status de Seleção" do gráfico de habilitados × selecionados também é da spec 021. A classificação exibe os rótulos da v2.0 (Militares da Ativa, TTC, Civis, Magistério Militar Naval). Toda cor vem da paleta categórica `--serie-N` do Épico 4, uma por categoria, nos dois temas; toda barra traz o valor escrito além do eixo; toda pizza traz o percentual escrito, sem 3D nem perspectiva, porque inclinar a pizza distorce a leitura do percentual; a elevação leve fica no cartão que envolve o gráfico, pelo token de sombra. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Pendência registrada em 15/09/2026**: a escolaridade tem **seis** categorias no dado real (cinco níveis e "Não informado", 142 de 177), e o documento 23 §7 limita a pizza a **cinco** — o componente `GraficoPizza` recusa acima disso. Até a decisão, a escolaridade continua em barras.
 - **FR-026.3**: Posto/graduação fora do domínio conhecido MUST aparecer numa faixa **"Outros"** ao
   final da ordenação, **nunca ser omitido em silêncio** (Princípio V, degradação segura).
 - **FR-026.4**: No gráfico de capacitação didática, um instrutor com **duas** qualificações MUST
   contar em **ambas** as barras; quem tem o campo vazio MUST **não** contar em nenhuma.
+  **Emenda registrada em 15/09/2026**: o gráfico de capacitação didática passa a exibir a categoria **"Nenhuma"**, que conta quem tem o campo vazio. Quem tem duas qualificações continua contando nas duas. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+- **FR-026.5**: MUST existir um botão de **exibir/ocultar as estatísticas** — indicadores e gráficos —, como na v2.0 (spec 015, painel de estatísticas que se expande e recolhe). O estado é **efêmero**, fora da URL, pela pergunta do contrato de estado: *isto faz sentido num link que eu mando?* O painel começa recolhido, como na v2.0, e quando aberto mostra o recorte filtrado corrente. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+- **FR-026.6**: Legenda clicável que marca e desmarca categorias ou séries e atualiza o gráfico. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Pendência registrada em 15/09/2026**: a descrição desse comportamento **não foi encontrada** nas specs 014, 015 e 021 da herança — nenhuma fala em legenda clicável. Não é implementada até a regra ser escrita.
 - **FR-027**: **Quadro de avisos de qualidade de cadastro** (`RF-INSTR-09`).
   **Decisão registrada em 15/09/2026**: a lista de avisos é **aberta e extensível**, não um conjunto fechado. Ela começa pelos dois exemplos do `RF-INSTR-09` — instrutor sem NIP e campo obrigatório pendente — e aceita aviso novo sem mudar o tipo que a descreve. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-027.1**: A listagem MUST trazer, no mínimo, as colunas **posto/graduação, nome completo,
   categoria, OM, regime e CH total no ano corrente** (spec 014).
+  **Emenda registrada em 15/09/2026**: a coluna de posto/graduação sai, e a coluna "Nome" passa a se chamar **"Instrutor"**, exibindo o formato do `FR-019` por `NomeInstrutor`. As colunas são: instrutor, categoria, OM, regime e CH total no ano corrente. A ordenação por posto continua existindo por cima da antiguidade, agora no cabeçalho "Instrutor". É a coluna única da spec 020 da v2.0. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-027.2**: No nome completo, a palavra correspondente ao **nome de guerra** MUST aparecer em
   negrito, quando houver (spec 014).
 - **FR-027.3**: Nenhum seletor de instrutor MUST exibir identificador técnico ao usuário (spec 014).
@@ -345,6 +360,8 @@ refinamento reaparece.
   existe por turma é dado sem onde morar.
 - **FR-031**: MUST existir **ficha individual do instrutor em tela** (`RF-INSTR-10`). A **saída em
   PDF e a rota de impressão** ficam para o **Épico 11**.
+  **Emenda registrada em 15/09/2026**: a **geração da ficha em A4 retrato e a impressão pelo navegador** entram **nesta** fatia, com botão "Gerar ficha" na página do instrutor. O salvar como arquivo ou PDF dentro do sistema continua no Épico 11. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Pendência registrada em 15/09/2026**: o layout da ficha da v2.0 (specs 016, 025 e 026) é o export HTML do documento oficial `FICHA CADASTRO DE DOCENTES CIAARA(2).docx`, em `SIS11/modelos/Ficha de cadastro/`, e **depende de duas imagens oficiais** (`image1.png`, `image2.png`, os brasões do cabeçalho) que não estão no repositório nem no schema. Pela instrução de 15/09/2026, a implementação para aqui até a decisão sobre esses arquivos.
   ⚠️ **Decisão de 10/09/2026**: adiar a ficha inteira quebraria a paridade com a v2.0 num ponto que
   Bernardo usa; e o `FR-023` já a pressupõe. O que fica para o Épico 11 é o **documento**, não a
   leitura.
@@ -374,6 +391,7 @@ refinamento reaparece.
   v2.1 — a lista é percorrida item a item e **nenhum fica sem resposta**.
 - **SC-007.1**: São exibidos **4 indicadores** e **7 gráficos**, e as barras do de posto/graduação
   seguem a ordem de antiguidade. Contagem exata, não "aproximadamente".
+  **Segunda emenda registrada em 15/09/2026**: passam a ser **3 indicadores** e **9 gráficos** — 3 de barras e 6 de pizza —, com as barras de posto/graduação em antiguidade. Enquanto a pendência de escolaridade do `FR-026.2` não fecha, ela é contada entre os de barras. *(decisão de Bernardo Villas Boas, 15/09/2026)*
   **Emenda registrada em 15/09/2026**: a redação anterior exigia o gráfico de posto/graduação "em primeiro". Passa a concordar com o `FR-026.2` emendado na mesma data. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **SC-008**: Recarregar a página com filtros aplicados reproduz **exatamente** a mesma tela.
 - **SC-010**: O número de perfis que **escrevem** identificação civil e residência é **igual** ao

@@ -268,6 +268,53 @@ refinamento reaparece (`SC-007`).
 
 ---
 
+## Fase 8.1 — Emendas de 15/09/2026, depois da verificação com dado real
+
+**Origem**: Bernardo conferiu a fatia no ambiente local com a base real do Épico 2 e decidiu destravar
+a T011 e a T082 e restaurar partes da v2.0 que a spec tinha deixado de fora. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
+**Ordem**: emendas e tarefas → implementação por bloco → verificação. Regra da v2.0 é lida na herança
+e reimplementada fiel; detalhe que não está escrito em lugar nenhum **para e vira pergunta**.
+
+### Bloco 1 — destravar a T011 e a T082
+
+- [X] T090 👤 Registrar em `contracts/carga-horaria-e-alertas.md` as quatro respostas da T011, e as regras já escritas que completam a fórmula (`RN-MAT-05`, comentário de `ch_prevista_tempos`, `disciplinas.semanas`) (`FR-014`, `FR-016`, T011) ✅ Registrado nesta rodada: as quatro respostas, as regras escritas que completam a fórmula, e a pendência da semanal do instrutor.
+- [ ] T091 [US4] Escrever `supabase/migrations/<ts>_carga_prevista_por_instrutor.sql`: view `vw_instrutor_carga_prevista`, uma linha por atribuição ativa, com ano pela data de início prevista, tempos do instrutor pelo rateio do `RN-MAT-05` e média semanal = tempos ÷ `disciplinas.semanas`; e `vw_instrutor_carga_anual` recriada com `ta_previsto_ano` **no fim**, com os anos de fato **e** de previsão; `revoke` nas duas (`FR-014`, `RN-INST-04`, `RN-MAT-05`, T013, T014) ⚠️ `ta_previsto_semanal` **não** entra: espera a composição semanal do instrutor
+- [ ] T092 [US4] Trocar os dois `todo` de `supabase/tests/094_carga_prevista_e_ordem.sql` por asserções reais, e acrescentar as nomeadas `RN-INST-04 · ta_previsto_ano conta só atribuições ativas, no ano da data de início prevista`, `RN-MAT-05 · modo dividido reparte e modo simultâneo dá a carga integral` e `T011 b · média semanal da atribuição = tempos ÷ semanas da janela prevista` (`FR-014`, `RN-MAT-05`) ⚠️ a asserção da semanal do instrutor (T014) fica `todo`, pela pendência
+- [ ] T093 [P] [US4] Criar `lib/dominio/carga-horaria.ts` e `tests/unidade/carga-horaria.test.ts`: a semanal situada na faixa recebida por argumento, **com limites inclusivos** — 8 e 12 dentro, 7,9 e 12,1 fora —, 40h com 20h dentro e 20h com 14h acima (`FR-016`, `RN-2027-06`, `SC-006`, T054, T057) ⚠️ a função recebe a semanal pronta; como compô-la é a pendência
+- [ ] T094 [US4] Completar a T045: a ficha mostra a CH **prevista** do ano e as atribuições com a média semanal de cada uma, somente leitura (`FR-014`, `RF-INSTR-13`)
+- [ ] T095 Escrever `supabase/migrations/<ts>_codigo_do_vinculo.sql`: sequência `app.instrutor_disciplina_codigo_seq`, função `app.proximo_codigo_vinculo()` que devolve `VIN-` + 6 dígitos e avança para depois do maior código existente, como `default` de `instrutor_disciplina.codigo` (`FR-022`, `RN-CRUD-03`, T082) ⚠️ divergência com o documento 04 (4 dígitos) anotada no cabeçalho, sem alterá-lo
+- [ ] T096 Escrever `public.sincronizar_habilitacoes(p_instrutor_id uuid, p_disciplinas uuid[])`, `SECURITY INVOKER`, numa transação: marcada e ativa não muda; marcada e inativa é **reativada**, não duplicada; marcada sem vínculo é criada; ativa desmarcada é **inativada**, nunca apagada; vínculo com disciplina **inativa** não é tocado (spec 019, `FR-009` a `FR-013`; `RN-INST-05`) ⚠️ a RLS filtra `UPDATE` em silêncio: a função confere a contagem e recusa com `42501`
+- [ ] T097 [P] Escrever `supabase/tests/096_codigo_e_habilitacoes.sql` (formato e sequência do código, reativar sem duplicar, inativar sem apagar, disciplina inativa intocada) e o bloco `FR-022 · painel de disciplinas` em `tests/invariantes/rls/rls.test.ts` (quem não edita instrutor é negado; controle positivo com o admin) (`FR-022`, `RN-INST-05`)
+- [ ] T098 Criar a Server Action `sincronizarHabilitacoes` em `lib/acoes/instrutor.ts`, Zod na primeira linha, e o painel `app/(app)/instrutores/PainelDeDisciplinas.tsx` **dentro do formulário**, no fim, em cadastro e edição: busca por nome e sigla do curso, rótulo "Disciplina (SIGLA)", pré-marcado com os vínculos ativos, gravado junto com o cadastro, depois do instrutor existir (spec 019, `FR-001` a `FR-008`, `FR-014`; spec 021, siglas) ⚠️ a busca é estado efêmero, fora da URL
+- [ ] T099 [P] Mostrar na ficha em leitura as disciplinas habilitadas, e escrever a ponta a ponta do painel: marcar, gravar com confirmação, desmarcar e conferir o vínculo inativo no banco (`FR-022`, spec 019)
+
+### Bloco 2 — os filtros da v2.0
+
+- [ ] T100 Acrescentar ao contrato de `/instrutores` em `lib/navegacao/contrato.ts` os parâmetros `habilitado`, `selecionado`, `curso`, `classificacao`, `posto` e `circulo`, com os testes em `tests/unidade/contrato-de-parametros.test.ts` (`FR-025`, `FR-028`)
+- [ ] T101 [P] Criar `lib/dominio/circulo-hierarquico.ts` com o mapa da spec 015 (research §4) e `lib/dominio/filtros-por-vinculo.ts`, que devolve os instrutores a incluir e a excluir por habilitado, selecionado, curso e classificação, com testes (`FR-025`, spec 015 `FR-005` a `FR-009`) ⚠️ habilitado e selecionado são conjuntos independentes
+- [ ] T102 Aplicar os filtros novos em `app/(app)/instrutores/consulta.ts` e `page.tsx`, na mesma consulta, e a opção `nenhuma` de capacitação (`FR-025`, `FR-026.4`)
+- [ ] T103 Acrescentar os campos a `FiltrosDeInstrutores.tsx`: posto em antiguidade, curso pela sigla, as cinco classificações do glossário, círculo, habilitado, selecionado e "Nenhuma" em capacitação; e a ponta a ponta de dois filtros novos (`FR-025`, `SC-008`)
+
+### Bloco 3 — gráficos e estatísticas
+
+- [ ] T104 Dar a `components/graficos/grafico-barras.tsx` cor por categoria e valor escrito em cada barra, e ao cartão dos gráficos a elevação pelo token de sombra, com o teste do componente atualizado (`FR-026.2`, documento 23 §7)
+- [ ] T105 Reescrever `lib/dominio/graficos-instrutor.ts` para os 9 gráficos — "Nenhuma" em capacitação, círculo com "Outros", índice de capacitação geral — e o de-para de classificação em `lib/constantes/instrutor.ts`, com os testes de contagem (`FR-026.2`, `FR-026.4`, `SC-007.1`)
+- [ ] T106 Reduzir `lib/dominio/indicadores-instrutor.ts` a 3 indicadores e atualizar os testes (`FR-026`)
+- [ ] T107 Criar o botão de exibir/ocultar estatísticas, efêmero e começando recolhido, e atualizar `PainelDeInstrutores.tsx` e a ponta a ponta do passo 5 para 3 indicadores e 9 gráficos (`FR-026.5`, `SC-007.1`)
+
+### Bloco 4 — listagem e ficha
+
+- [ ] T108 Tirar a coluna de posto de `TabelaDeInstrutores.tsx` e renomear "Nome" para "Instrutor", ordenável por antiguidade (`FR-027.1` emendado, spec 020)
+- [ ] T109 Conferir o diálogo do `FR-011` em todo caminho de gravação, inclusive `Enter` num campo, e corrigir o que faltar, com caso de ponta a ponta (`FR-011`)
+- [ ] T110 Mover "Desativar instrutor" para o fim da página, ao lado de "Gravar alterações", com formato parecido (`FR-008`, posição apenas)
+- [ ] T111 ⏸️ Ficha A4 com "Gerar ficha" e impressão pelo navegador (`FR-031` emendado) — **parada**: o layout da v2.0 depende dos dois brasões de `SIS11/modelos/Ficha de cadastro/images/`, que não estão no repositório
+
+### Fechamento
+
+- [ ] T112 Atualizar `paridade.md` e `quickstart.md` com as decisões de 15/09/2026
+- [ ] T113 Rodar `pnpm verificar` a cada bloco e `pnpm verificar:tudo` ao fim
+
 ## Fase 9 — Fechamento
 
 - [X] T083 [P] Criar `tests/unidade/nome-padronizado.test.ts`: varredura de `app/` e `components/`, em código sem comentário, que exige que todo nome de instrutor exibido passe por `NomeInstrutor` ou `nomeEmTexto`, com controle positivo (`FR-019`, `FR-020`, `SC-005`) ✅ `nome-padronizado.test.ts`: três moldes de exibição crua (filho de JSX, interpolação, atributo de texto). Defeito deliberado (`<span>{i.nome_completo}</span>` num arquivo de tela): reprovou apontando o arquivo.

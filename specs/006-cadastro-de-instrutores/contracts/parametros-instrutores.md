@@ -38,6 +38,22 @@ do shell confere os dois sentidos e reprova se a tela nascer com o menu ainda di
 | `situacao` | escolha | `ativo` | substitui | **sim** | `FR-009` |
 | `ordem` | escolha | `""` | substitui | não | `FR-012` da spec 008 |
 
+**Emenda registrada em 15/09/2026** (`FR-025` emendado): *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
+| Nome | Tipo | Padrão | Histórico | Avisa servidor | Origem |
+|---|---|---|---|---|---|
+| `habilitado` | escolha: `sim`, `nao` | `""` | substitui | **sim** | `FR-025` · vínculo ativo em `instrutor_disciplina` |
+| `selecionado` | escolha: `sim`, `nao` | `""` | substitui | **sim** | `FR-025` · atribuição ativa em `turma_disciplina_instrutor` |
+| `curso` | texto (o `codigo` do curso) | `""` | substitui | **sim** | `FR-025` · vínculo **ou** atribuição a disciplina do curso (spec 015) |
+| `classificacao` | escolha: `escopo_curso` | `""` | substitui | **sim** | `FR-025` · as cinco do glossário aparecem na barra |
+| `posto` | texto | `""` | substitui | **sim** | `FR-025` · opções em antiguidade (spec 015, `FR-008`) |
+| `circulo` | escolha: `oficiais`, `pracas` | `""` | substitui | **sim** | `FR-025` · mapa da spec 015, research §4 |
+| `capacitacao` | texto, com o valor reservado `nenhuma` | `""` | substitui | **sim** | `FR-025` · `nenhuma` casa com o campo vazio |
+
+⚠️ **`curso` e `posto` são texto** pelo mesmo motivo de `om`: o domínio é o dado cadastrado.
+`classificacao` é escolha porque o domínio é o enum `escopo_curso`, lido de `Constants`, como na tela
+`/inicio`. ⚠️ **`situacao` já atende inativos** e continua visível na barra.
+
 **Tipo corrigido na implementação, em 15/09/2026** (T020): `om`, `categoria`, `capacitacao` e `escolaridade` são **texto** em `lib/navegacao/contrato.ts`, e não escolha. O tipo escolha exige lista fechada de opções escrita no contrato, e o domínio desses quatro é o **dado** — as OMs cadastradas, as capacitações escritas. Uma lista fixa degradaria para "todas", em silêncio, o link que filtrasse por uma OM nova. `regime` e `situacao` têm domínio fechado no banco (`regime_trabalho_docente`, `status_registro`) e continuam escolha, lidos de `Constants`. `ordem` é escolha com um valor por sentido — `nome`, `nome_desc` — e não uma gramática com separador.
 
 ⚠️ **Divergência com o documento 25 §1.3, anotada e não corrigida.** Aquela tabela declara para `/instrutores` os parâmetros `curso`, `posto`, `circulo`, `categoria`, `om`, `capacitacao`, `status` e `busca`, todos como texto, citando a spec 015. Este contrato, e o código, seguem o `FR-025` da spec 006; emendar o documento 25 é decisão à parte.
