@@ -124,7 +124,10 @@ caso pelo motivo errado e reprova o sistema em produção.
 | `ta_previsto_ano`, com rateio do `RN-MAT-05` e ano pela data de início prevista | ✅ `094`, asserções 10 a 12 |
 | média semanal **de cada atribuição** = tempos ÷ semanas da janela | ✅ `094` e ficha |
 | limites da faixa inclusivos — 8 e 12 dentro | ✅ `tests/unidade/carga-horaria.test.ts` |
-| semanal **do instrutor** e os dois alertas da US4 na ficha | ⏸️ pendência: como compor várias disciplinas no ano, e o `FR-017` com data vazia |
+| semanal **do instrutor** por semana ISO — janelas que não se tocam, sobrepostas, 8 e 12 exatos, sem atribuição | ✅ `tests/unidade/carga-semanal.test.ts` (decisão de Bernardo Villas Boas, 15/09/2026) |
+| `ta_previsto_semanal` **não** é coluna: a semanal é por semana | ✅ `094`, asserções 14 e 15 |
+| alerta de faixa nomeando a semana, e do `FR-017`; data vazia não alerta | ✅ `tests/unidade/alertas-instrutor.test.ts` e ponta a ponta `SC-006` |
+| aviso "Data de início de docência não informada" | ✅ `tests/unidade/avisos-cadastro-instrutor.test.ts` |
 
 ---
 
@@ -146,7 +149,7 @@ pnpm test:e2e tests/e2e/instrutores.spec.ts
    *"não há"* de *"você não vê"*.
 8. Contar na tela: **4 indicadores** e **7 gráficos**, com as barras de posto/graduação em ordem de
    antiguidade — **nunca alfabética**. *(Corrigido em 15/09/2026: dizia "com posto/graduação primeiro"; ver a emenda do `FR-026.2`.)*
-   **Segunda correção, de 15/09/2026**: clicar em **"Exibir estatísticas"** (o painel nasce recolhido) e contar **3 indicadores** e **9 gráficos** — 3 de barras e 6 de pizza; enquanto a pendência de escolaridade não fecha, 4 e 5. Cada barra traz o valor escrito, o status de seleção tem duas cores, e a pizza traz o percentual. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+   **Segunda correção, de 15/09/2026**: clicar em **"Exibir estatísticas"** (o painel nasce recolhido) e contar **3 indicadores** e **9 gráficos** — **4 de barras e 5 de pizza**, com a escolaridade em barras (decidido em 15/09/2026, não reabrir). Cada barra traz o valor escrito, o status de seleção tem duas cores, e a pizza traz o percentual. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 9. Procurar edição em linha na listagem. **Esperado**: não existe — a spec 038 a removeu.
 10. **Acrescentado em 15/09/2026**: aplicar os filtros novos — círculo hierárquico, habilitado,
     selecionado, curso, classificação do curso, posto e capacitação "Nenhuma". **Esperado**: cada um
@@ -156,6 +159,16 @@ pnpm test:e2e tests/e2e/instrutores.spec.ts
 12. **Acrescentado em 15/09/2026**: na ficha, marcar uma disciplina no painel, gravar com confirmação
     e conferir o vínculo `VIN-NNNNNN`; desmarcar e conferir que o vínculo fica inativo, não apagado.
     "Desativar instrutor" está no fim da página, ao lado de "Gravar alterações". *(decisão de Bernardo Villas Boas, 15/09/2026)*
+13. **Acrescentado no fechamento de 15/09/2026**: abrir a ficha de um instrutor cuja carga prevista sai
+    da faixa em alguma semana. **Esperado**: alerta "Carga semanal prevista fora da faixa do regime" no
+    topo, uma linha por semana fora, e "Gravar alterações" e "Desativar instrutor" habilitados. Numa
+    ficha dentro da faixa em todas as semanas, nenhum alerta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+14. **Acrescentado no fechamento de 15/09/2026**: no quadro de avisos da listagem, conferir o aviso
+    **"Data de início de docência não informada"**; numa ficha com a data de início há mais de um ano e
+    capacitação vazia, conferir o alerta "Docência há mais de um ano sem capacitação didática". *(decisão de Bernardo Villas Boas, 15/09/2026)*
+15. **Acrescentado no fechamento de 15/09/2026**: abrir a ficha de um militar sem especialidade e gravar
+    sem preenchê-la. **Esperado**: grava. Preencher a especialidade só com espaços. **Esperado**:
+    recusado, com a mensagem de especialidade em branco. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 ---
 
@@ -174,6 +187,9 @@ não era sobre isso.
 ---
 
 ## Passo 7 — Os cinco obrigatórios, inclusive o branco disfarçado
+
+**Emenda de 15/09/2026**: são **quatro** — especialidade/habilitação ficou opcional pelo `FR-005`
+emendado. Ela continua na segunda linha da tabela: só com espaços, é recusada. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 | Tentativa | Esperado |
 |---|---|

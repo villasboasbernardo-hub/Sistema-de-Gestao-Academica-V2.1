@@ -13,6 +13,11 @@ rótulos de classificação e da coluna de posto foram **decididas por Bernardo*
 (painel) foi destravada; a ficha imprimível entrou nesta fatia e parou nos brasões. *(decisão de
 Bernardo Villas Boas, 15/09/2026)*
 
+**Fechamento de 15/09/2026**: das seis pendências, quatro foram **decididas e implementadas** — carga
+semanal por semana ISO, `FR-017` com data vazia, escolaridade em barras e especialidade opcional — e
+duas **pararam depois de conferência**: a legenda clicável não está no código da v2.0, e falta um dos
+dois brasões da ficha A4. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
 ---
 
 ## `014-refatoracao-modulo-instrutores` — Módulo de Instrutores (destino: Épico 5)
@@ -27,7 +32,7 @@ Bernardo Villas Boas, 15/09/2026)*
 | Rótulos de exibição do gráfico de classificação (*Militares da Ativa*, *Civis*, *Magistério Militar Naval*) | ✅ decidido | `ROTULO_DA_CATEGORIA` em `lib/constantes/instrutor.ts`, aplicado na pizza de classificação |
 | Gráficos com cor por categoria e valor escrito | ✅ | `GraficoBarras` com `corPorCategoria` e rótulo de valor; `GraficoPizza` com percentual escrito |
 | Painel de estatísticas que se expande e recolhe | ✅ | `EstatisticasRecolhiveis.tsx`, começando recolhido, estado fora da URL (`FR-026.5`) |
-| Legenda clicável que liga e desliga categorias | ⏸️ | **Não descrita** nas specs 014, 015 e 021 da herança (`FR-026.6`). Espera a regra escrita |
+| Legenda clicável que liga e desliga categorias | ⏸️ | **Não descrita** nas specs 014, 015 e 021 da herança, e **não está no código** da v2.0: `renderizarGrafico_` (`SIS11/CIAARA-11-v2/src/frontend/_Comum.html`, linhas 253 a 264) não configura legenda nem evento, conferido em 15/09/2026 (`FR-026.6`, T119). Sem origem na v2.0, é novidade e espera Bernardo |
 | Editar abre em nova aba (`SC-006` da 014) | 🟨 | A ficha abre em `/instrutores/<codigo>`, na mesma aba, com endereço compartilhável (`FR-028`) |
 
 ## `015-hotfix-filtros-cross-instrutores` — filtros e *cross-filtering* (destinos: Épicos 5 e 4)
@@ -54,7 +59,7 @@ Bernardo Villas Boas, 15/09/2026)*
 | Máscara estrita de NIP `00.0000.00` | ✅ | `lib/formato/mascaras.ts` · Zod |
 | Datas por seletor nativo | ✅ | `type="date"` · `dataParaLeitura` sem `Date` |
 | "Disciplinas Habilitadas" calculada na ficha | ✅ | Seção "Disciplinas habilitadas" em `FichaEmLeitura.tsx` |
-| **Ficha imprimível em retrato, com `window.print()`** | ⏸️ | Entrou **nesta** fatia pela emenda de 15/09/2026 ao `FR-031`, e **parou**: o layout oficial (specs 025 e 026) é o export HTML de `FICHA CADASTRO DE DOCENTES CIAARA(2).docx` e depende de dois brasões, `image1.png` e `image2.png`, em `SIS11/modelos/Ficha de cadastro/images/`, fora do repositório (T111) |
+| **Ficha imprimível em retrato, com `window.print()`** | ⏸️ | Entrou **nesta** fatia pela emenda de 15/09/2026 ao `FR-031`, e **parou**: o layout oficial (specs 025 e 026) é o export HTML de `FICHA CADASTRO DE DOCENTES CIAARA(2).docx` e depende de dois brasões, `image1.png` e `image2.png`, em `SIS11/modelos/Ficha de cadastro/images/`. **Conferido em 15/09/2026**: o do CIAARA já está em `public/marca/brasao-ciaara-impressao.png`; o selo "Marinha do Brasil — Hidrografia e Navegação" **não está** no repositório (T111) |
 | Salvar como arquivo ou PDF no sistema | ➡️ | Épico 11 (`FR-031`) |
 
 ## `019-atribuicao-disciplinas-instrutor` — painel de atribuição (destino: Épico 5)
@@ -105,13 +110,18 @@ Bernardo Villas Boas, 15/09/2026)*
 
 ---
 
-## Pendências abertas em 15/09/2026 — o que espera Bernardo
+## Pendências de 15/09/2026 — como fecharam
 
-| # | Pendência | Onde está registrada |
-|---|---|---|
-| 1 | Como compor a carga semanal **do instrutor** com várias disciplinas no ano | contrato de carga horária, T014 |
-| 2 | O alerta de capacitação quando `data_inicio_docencia_ciaara` está vazia | `FR-017`, T053 |
-| 3 | Escolaridade em pizza tem 6 categorias contra o limite de 5 do documento 23 §7 | `FR-026.2` |
-| 4 | Legenda clicável não descrita na herança | `FR-026.6` |
-| 5 | Os dois brasões da ficha A4, fora do repositório | `FR-031`, T111 |
-| 6 | Especialidade/habilitação: opcional no banco desde o Épico 2 (15 instrutores sem), obrigatória no `RN-INST-03` e na tela | contrato de carga horária, seção de avisos |
+*(decisão de Bernardo Villas Boas, 15/09/2026)*
+
+| # | Pendência | Como fechou | Onde está registrada |
+|---|---|---|---|
+| 1 | Como compor a carga semanal **do instrutor** com várias disciplinas no ano | ✅ soma das médias das atribuições cuja janela cobre cada semana ISO; somar o ano é proibido. `lib/dominio/carga-semanal.ts`, alerta na ficha | `FR-016`, contrato, T014, T114 |
+| 2 | O alerta de capacitação quando `data_inicio_docencia_ciaara` está vazia | ✅ não alerta; aviso "Data de início de docência não informada" no quadro. ⚠️ o recorte "e sem capacitação" é leitura a confirmar | `FR-017`, `FR-027`, T053, T116 |
+| 3 | Escolaridade em pizza tem 6 categorias contra o limite de 5 do documento 23 §7 | ✅ fica em barras, não reabrir: 4 barras e 5 pizzas | `FR-026.2`, `SC-007.1`, T118 |
+| 4 | Legenda clicável não descrita na herança | ⏸️ conferido no código da v2.0, não existe: parada | `FR-026.6`, T119 |
+| 5 | Os dois brasões da ficha A4, fora do repositório | ⏸️ o do CIAARA está no repositório, o selo de Hidrografia e Navegação não: parada | `FR-031`, T111 |
+| 6 | Especialidade/habilitação: opcional no banco desde o Épico 2 (15 instrutores sem), obrigatória no `RN-INST-03` e na tela | ✅ opcional na tela, branco recusado; os 15 são militares e o aviso continua cobrando | `FR-005`, contrato, T117 |
+
+**O que ficou pedindo decisão** está em `checklists/fechamento.md`: CHK004, CHK005, CHK008, CHK012,
+CHK019, CHK020, CHK021 e CHK022.
