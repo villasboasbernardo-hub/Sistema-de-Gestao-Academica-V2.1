@@ -721,6 +721,61 @@ describe("FR-032 · recorte de escrita do dado pessoal", () => {
   });
 });
 
+/**
+ * `FR-029` da spec 006, `FR-027` da spec 004 — a autoria vem da SESSÃO, nunca do corpo da escrita.
+ *
+ * ⚠️ O CARIMBO É DO MOTOR. Quem grava pela interface de dados controla o corpo da requisição, e um
+ * `criado_por` escolhido por quem escreve é autoria falsificável. Os dois casos mandam de propósito
+ * um autor que não é a sessão, e exigem que o banco o ignore.
+ */
+describe("FR-029 · autoria vem da sessão, e não do que o cliente manda", () => {
+  const AUTOR_FALSO = "00000000-0000-0000-0000-00000000dead";
+
+  afterAll(async () => {
+    await admin.from("instrutores").delete().eq("codigo", "RLS-INS-AUT");
+  });
+
+  it("INSERT autenticado grava `criado_por` com a sessão, mesmo mandando outro autor", async () => {
+    await admin.from("instrutores").delete().eq("codigo", "RLS-INS-AUT");
+    const {
+      data: { user },
+    } = await cliente("admin").auth.getUser();
+    const { error } = await cliente("admin").from("instrutores").insert({
+      codigo: "RLS-INS-AUT",
+      posto_graduacao: "CT",
+      esp_hab_obs: "-EF",
+      nome_completo: "Instrutor Da Autoria",
+      categoria: "Militar",
+      om: "CIAARA",
+      criado_por: AUTOR_FALSO,
+    });
+    expect(error).toBeNull();
+    const { data } = await admin
+      .from("instrutores")
+      .select("criado_por")
+      .eq("codigo", "RLS-INS-AUT")
+      .single();
+    expect(data?.criado_por, "o banco aceitou o autor mandado pelo cliente").toBe(user?.id);
+  });
+
+  it("UPDATE autenticado grava `editado_por` com a sessão, mesmo mandando outro autor", async () => {
+    const {
+      data: { user },
+    } = await cliente("admin").auth.getUser();
+    const { error } = await cliente("admin")
+      .from("instrutores")
+      .update({ nome_guerra: "Autoria", editado_por: AUTOR_FALSO })
+      .eq("codigo", "RLS-INS-AUT");
+    expect(error).toBeNull();
+    const { data } = await admin
+      .from("instrutores")
+      .select("editado_por")
+      .eq("codigo", "RLS-INS-AUT")
+      .single();
+    expect(data?.editado_por, "o banco aceitou o editor mandado pelo cliente").toBe(user?.id);
+  });
+});
+
 describe("FR-026 · `ultimo_acesso` e o gatilho anti-escalonamento", () => {
   // ⚠️ ESTE TESTE EXISTE POR UMA RAZÃO ESPECÍFICA, e ela é fácil de esquecer:
   // `app.impedir_autoescalonamento` bloqueia mudança de `perfil`, `escopo_curso` e `status` feita
