@@ -356,6 +356,7 @@ fatia não cria produção da v2.1 (FR-016.1); a produção do CIAARA-11 segue s
 - **FR-017**: Todo ambiente MUST se identificar visualmente pelo rótulo que lhe corresponde — nesta
   fatia, apenas **`local`** e **`preview`** existem —, para que ninguém registre aula de verdade
   achando que está em homologação. O rótulo `producao` MUST permanecer previsto e **não utilizado**.
+  **Exceção registrada em 15/09/2026**: o rótulo `producao` passou a ser utilizado no escopo Production da Vercel, por exceção formal (ver FR-016.1). Enquanto ela vigorar, esta fatia deixa de ter apenas `local` e `preview` em uso. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-018**: A implantação MUST ser atômica: falha de deploy MUST manter o ambiente anterior no ar.
   *(substitui `RF-MOD-04`, revogado)*
 
