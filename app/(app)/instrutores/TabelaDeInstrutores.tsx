@@ -6,8 +6,13 @@
  * é clicar no cabeçalho e escrever `?ordem=` na barra de endereço. `page.tsx` não leva marcador.
  *
  * ⚠️ AS LINHAS CHEGAM EM ANTIGUIDADE, E ESTA FOLHA NÃO AS REORDENA POR CONTA PRÓPRIA. Sem `?ordem=`, a
- * tabela mostra a ordem do banco. Com ele, reordena **por cima**, na apresentação — e a coluna de
- * posto ordena por `ordem_antiguidade`, para que "ordenar por posto" nunca vire ordem alfabética.
+ * tabela mostra a ordem do banco. Com ele, reordena **por cima**, na apresentação — e a coluna
+ * "Instrutor" ordena por `ordem_antiguidade`, para que "ordenar por posto" nunca vire ordem alfabética.
+ *
+ * ⚠️ UMA COLUNA "INSTRUTOR", E NÃO POSTO E NOME SEPARADOS (`FR-027.1` emendado em 15/09/2026, decisão
+ * de Bernardo Villas Boas; spec 020 da v2.0). O nome já sai no formato do `FR-019` — posto,
+ * especialidade e nome completo, com o nome de guerra em negrito —, e uma coluna de posto ao lado o
+ * repetiria. Clicar no cabeçalho continua ordenando por posto, que é a antiguidade (`?ordem=posto`).
  *
  * ⚠️ SEM EDIÇÃO EM LINHA (`FR-013`). A spec 038 da v2.0 a removeu; ativar uma linha abre a ficha.
  *
@@ -59,18 +64,12 @@ function paraParametro(ordem: Ordem | null): string | null {
 function colunas(ano: number): readonly Coluna<LinhaDeInstrutor>[] {
   return [
     {
+      // ⚠️ A chave é `posto`: ordenar esta coluna é ordenar por antiguidade, e não pelo texto do nome
+      // nem do posto — "CC" viria antes de "CMG".
       chave: "posto",
-      titulo: "Posto/Graduação",
+      titulo: "Instrutor",
       ordenavel: true,
-      // ⚠️ Ordena pela antiguidade, e não pelo texto do posto — "CC" viria antes de "CMG".
       valor: (l) => l.ordemAntiguidade,
-      celula: (l) => l.pg,
-    },
-    {
-      chave: "nome",
-      titulo: "Nome",
-      ordenavel: true,
-      valor: (l) => l.nomeCompleto,
       celula: (l) => (
         <Link
           href={`/instrutores/${l.codigo}`}

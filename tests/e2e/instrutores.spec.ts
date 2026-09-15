@@ -407,6 +407,16 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
       "as barras de posto não seguem a antiguidade",
     ).toEqual(["CMG", "CF", "CC", "CT", "1ºTen", "SO", "SC", "SCNS", "Outros"]);
 
+    // FR-027.1 emendado · uma coluna "Instrutor", sem a de posto ao lado.
+    const cabecalhos = await grade(page).locator("thead th").allInnerTexts();
+    expect(cabecalhos.map((c) => c.split("\n")[0]?.trim())).toEqual([
+      "Instrutor",
+      "Categoria",
+      "OM",
+      "Regime",
+      expect.stringMatching(/^CH \d{4} \(TA\)$/),
+    ]);
+
     // A lista sem `ordem`: a amostra em antiguidade, com nomes que invertem a ordem alfabética.
     const texto = (await grade(page).innerText()).replace(/\s+/g, " ");
     const ordemEsperada = [

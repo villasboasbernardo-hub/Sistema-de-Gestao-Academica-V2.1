@@ -305,7 +305,7 @@ e reimplementada fiel; detalhe que não está escrito em lugar nenhum **para e v
 
 ### Bloco 4 — listagem e ficha
 
-- [ ] T108 Tirar a coluna de posto de `TabelaDeInstrutores.tsx` e renomear "Nome" para "Instrutor", ordenável por antiguidade (`FR-027.1` emendado, spec 020)
+- [X] T108 Tirar a coluna de posto de `TabelaDeInstrutores.tsx` e renomear "Nome" para "Instrutor", ordenável por antiguidade (`FR-027.1` emendado, spec 020) ✅ Coluna "Instrutor" com `NomeInstrutor`, chave `posto` ordenando por `ordem_antiguidade`; colunas conferidas na ponta a ponta: Instrutor, Categoria, OM, Regime e CH do ano.
 - [X] T109 Conferir o diálogo do `FR-011` em todo caminho de gravação, inclusive `Enter` num campo, e corrigir o que faltar, com caso de ponta a ponta (`FR-011`) ✅ Conferido: o formulário não tem botão de envio, então `Enter` num campo não grava; o caso de ponta a ponta prova com `Enter` no nome de guerra e na busca do painel, sem diálogo e sem gravação. O painel grava pelo mesmo diálogo de "Gravar alterações"; desativar e reativar têm o próprio. Nenhum caminho sem confirmação encontrado.
 - [X] T110 Mover "Desativar instrutor" para o fim da página, ao lado de "Gravar alterações", com formato parecido (`FR-008`, posição apenas) ✅ `AcoesDeInstrutor` saiu do cabeçalho e entrou no rodapé do formulário, ao lado de "Gravar alterações"; ponta a ponta confere a posição.
 - [ ] T111 ⏸️ Ficha A4 com "Gerar ficha" e impressão pelo navegador (`FR-031` emendado) — **parada**: o layout da v2.0 depende dos dois brasões de `SIS11/modelos/Ficha de cadastro/images/`, que não estão no repositório
