@@ -95,6 +95,11 @@ depois, quando ninguém lembra quem era a pessoa.
 opcional, e o teste independente e os cenários 1 e 2 valem para **quatro** campos — posto, nome
 completo, categoria e OM. A especialidade continua no cenário 2: preenchida só com espaços, é recusada. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
+**Segunda emenda registrada em 15/09/2026 (CHK008 e CHK012)**: pelo `FR-005` emendado de novo, são
+**cinco** campos, e o teste independente e os cenários 1 e 2 valem para os cinco no **cadastro novo de
+militar**. Para civil (`SC`, `SCNS`), especialidade não se aplica; e ficha já existente de militar sem
+especialidade continua salvando. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
 ---
 
 ### User Story 3 - A carga horária é lida, nunca digitada (Priority: P1)
@@ -170,6 +175,11 @@ nova atribuição, permaneceu em tudo o que já estava lançado.
 4. **Dado** um instrutor que também tem conta de acesso, **quando** ele é desativado, **então** a
    conta **continua ativa** — e a tela de usuários mostra que o instrutor vinculado está inativo.
 
+**Acréscimo registrado em 15/09/2026 (`FR-008.1`)**: cenário 5 — **dado** um instrutor sem histórico
+nenhum, **quando** se confirma a exclusão digitando o código dele, **então** ele sai do banco; **dado**
+um instrutor com histórico, **quando** a ficha é exibida, **então** "Excluir instrutor" aparece
+desabilitado, com o motivo ao lado, e o banco recusa a exclusão por qualquer caminho. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
 ---
 
 ### User Story 6 - A ficha mostra o que a v2.0 mostrava (Priority: P2)
@@ -224,6 +234,7 @@ refinamento reaparece.
   nome completo, categoria e organização militar** — inclusive quando preenchidos só com espaços
   (`RN-INST-03`, `RF-INSTR-02`).
   **Emenda registrada em 15/09/2026 (e ao `RN-INST-03`, nesta spec)**: especialidade/habilitação passa a ser **opcional** — são **quatro** os obrigatórios. Preenchida só com espaços continua recusada, pelo esquema e pelo `CHECK` do banco. Motivo: o Épico 2 mediu 15 instrutores da base real sem sufixo de especialidade, todos militares (12 da ativa e 3 do Magistério Militar Naval), tirou o `NOT NULL` do banco, e exigir o campo na tela impedia esses 15 de salvar a própria ficha — defeito. ⚠️ **O documento 04 não é alterado**: o `RN-INST-03` de lá continua listando cinco campos; a divergência fica anotada aqui. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Segunda emenda registrada em 15/09/2026 (fecha o CHK008 e o CHK012; substitui a emenda acima)**: o `RN-INST-03` **mantém os cinco obrigatórios**, com delimitação registrada — especialidade/habilitação **se aplica a instrutor militar**; civil é quem tem posto `SC` ou `SCNS`, pelo `FR-002`. A recusa de militar sem especialidade vale para **cadastro novo**, pela tela e pelo banco (gatilho da migration `20260915140000`); ficha já existente sem especialidade continua salvando e fica no quadro de avisos até alguém preencher, e os 15 militares da base real não voltam a travar. Com isso a spec volta a bater com o documento 04, que não foi alterado. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-006**: A recusa MUST valer **por qualquer caminho**, não apenas pela tela.
 - **FR-007**: O identificador de instrutor MUST ser gerado automaticamente e MUST ser **inteiro
   simples, sem prefixo** (`RN-CRUD-03`, exceção documentada).
@@ -231,6 +242,10 @@ refinamento reaparece.
   já interpreta o identificador de instrutor como número.
 - **FR-008**: A exclusão MUST ser **lógica**, por status explícito, nunca física (`RN-INST-02`,
   `RN-INST-05`). O status MUST ser explícito, **nunca inferido de ausência**.
+  **Emenda registrada em 15/09/2026**: a regra continua valendo para todo instrutor com histórico; a exceção única, delimitada, está no `FR-008.1`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+- **FR-008.1**: A **exclusão permanente** de instrutor MUST ser possível **só** para registro **sem histórico nenhum**, e MUST ser recusada **pelo banco** para instrutor com aula lançada, atribuição, vínculo de habilitação ou conta de acesso ligada — em qualquer situação, ativa ou inativa — e, pela mesma delimitação, com avaliação ou responsabilidade de curso, as outras referências a instrutor encontradas no schema. A tela MUST mostrar **"Excluir instrutor"** no fim da página, ao lado de "Desativar", com aparência destrutiva dos tokens; oculto para quem não tem a permissão; **visível e desabilitado, com o motivo escrito ao lado**, para instrutor com histórico; e, ao clicar, um diálogo avisando que é permanente e irreversível, que só libera a confirmação quando se **digita o código** do instrutor.
+  > "Autorização de Bernardo Villas Boas, 15/09/2026: fica autorizada a exclusão permanente de instrutor, delimitada a registro SEM HISTÓRICO NENHUM. A regra 4 do CLAUDE.md ('nada é apagado') passa a ter essa exceção única, delimitada e registrada. Motivo: a regra existe para proteger histórico, e um cadastro criado por engano não tem histórico a proteger. Instrutor com qualquer aula lançada, atribuição, vínculo de habilitação ou conta de acesso ligada continua não podendo ser excluído — só desativado."
+  **Respostas registradas em 15/09/2026** *(decisão de Bernardo Villas Boas, 15/09/2026)*: (a) qualquer um dos quatro impede; (b) a permissão é `criar` instrutor — a matriz não tem ação de exclusão, nenhuma linha foi inventada, e `criar` é a ação de escrita mais restritiva que ela já oferece (três perfis: admin, encarregado e ajudante de Administração Acadêmica, contra cinco de `editar`); (c) conta de acesso ligada é impeditivo, e nenhuma conta é apagada; (d) **não há onde registrar a exclusão**: o schema só tem `migracao_log`, que é o rastro append-only da migração, com domínio de ação sem verbo de exclusão — nada é gravado, e nenhuma tabela foi criada. A negação é das funções `app.impedimentos_de_exclusao_do_instrutor` e `app.excluir_instrutor` (migration `20260915140100`), que conferem tudo na mesma transação, com a linha travada. ⚠️ **Medido em 15/09/2026: nenhum dos 177 instrutores da base real é excluível** — todos têm ao menos um vínculo com o histórico.
 - **FR-009**: Instrutor desativado MUST sair das listas de **nova** atribuição e MUST **permanecer**
   em todo histórico já lançado (`RF-INSTR-07`).
   **Anotação registrada em 15/09/2026**: nenhuma tela desta fatia tem lista de nova atribuição. A primeira metade deste requisito só fica observável numa fatia futura, ainda não especificada; aqui ela entra como função pura com teste de unidade, e o `SC-004` mede a segunda metade. *(decisão de Bernardo Villas Boas, 15/09/2026)*
@@ -278,6 +293,7 @@ refinamento reaparece.
   **Decisão registrada em 15/09/2026 (fecha o CHK004 — a leitura acima passa a ser decisão, não inferência)**: o aviso "Data de início de docência não informada" cobra **apenas** quem está sem a data **e também** sem capacitação didática registrada. Quem já tem capacitação nunca dispararia o alerta do `FR-017`, então cobrar a data dessa pessoa seria ruído. Na base real, são 148 dos 176 sem a data. "Mais de um ano" segue o texto do `RF-INSTR-16`: estrito, e um ano exato não alerta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-018**: Os alertas dos `FR-016` e `FR-017` MUST ser **avisos, nunca bloqueios** (`RN-DEG-02`).
   ⚠️ Transformá-los em impedimento **muda a regra de negócio** e exige autorização nominal.
+  **Decisão registrada em 15/09/2026 (fecha o CHK019)**: a ficha de instrutor **inativo** não exibe alerta normativo (`FR-016`, `FR-017`) nem aviso de qualidade de cadastro. Os dois falam de quem está em docência; o inativo não recebe atribuição nova, e o alerta seria ruído. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 #### Nome e apresentação
 
@@ -334,9 +350,12 @@ refinamento reaparece.
 - **FR-026.5**: MUST existir um botão de **exibir/ocultar as estatísticas** — indicadores e gráficos —, como na v2.0 (spec 015, painel de estatísticas que se expande e recolhe). O estado é **efêmero**, fora da URL, pela pergunta do contrato de estado: *isto faz sentido num link que eu mando?* O painel começa recolhido, como na v2.0, e quando aberto mostra o recorte filtrado corrente. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-026.6**: Legenda clicável que marca e desmarca categorias ou séries e atualiza o gráfico. *(decisão de Bernardo Villas Boas, 15/09/2026)*
   **Conferência registrada em 15/09/2026 — parada**: a pedido de Bernardo, o código real da v2.0 foi lido em `SIS11/CIAARA-11-v2`. O componente de gráfico, `renderizarGrafico_` (`src/frontend/_Comum.html`, linhas 253 a 264), cria o gráfico só com `chart`, `labels`/`series` e `xaxis`, **sem nenhuma opção de legenda nem de evento**; a busca por `legend`, `onItemClick`, `toggleDataSeries`, `dataPointSelection` e `events:` em `src/frontend/` e `appsscript/` não achou nada. A biblioteca vinha de CDN sem versão fixada (`_Estilos.html`, linha 11), sem cópia local para conferir o comportamento padrão. **Não está no código, e não é implementada**: vira requisito novo, que Bernardo define depois.
+  **Pendência mantida em 15/09/2026 (CHK020)**: continua parada por falta de material — sem origem no código da v2.0, o comportamento precisa ser escrito como requisito novo antes de qualquer implementação. Nada foi implementado. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-027**: **Quadro de avisos de qualidade de cadastro** (`RF-INSTR-09`).
   **Decisão registrada em 15/09/2026**: a lista de avisos é **aberta e extensível**, não um conjunto fechado. Ela começa pelos dois exemplos do `RF-INSTR-09` — instrutor sem NIP e campo obrigatório pendente — e aceita aviso novo sem mudar o tipo que a descreve. *(decisão de Bernardo Villas Boas, 15/09/2026)*
   **Acréscimo registrado em 15/09/2026**: entra o aviso **"Data de início de docência não informada"**, no lugar do alerta do `FR-017` quando a data está vazia. E o aviso de campo obrigatório pendente **continua cobrando especialidade** dos militares sem ela — os 15 da base real são todos militares; como nenhum civil está sem o campo, nenhuma delimitação para civil foi registrada. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Emenda registrada em 15/09/2026 (CHK012)**: o aviso de campo obrigatório pendente cobra especialidade/habilitação **apenas de militar**; civil sem especialidade não é pendência. A frase acima sobre "nenhuma delimitação para civil" fica substituída por esta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Emenda registrada em 15/09/2026 ao `FR-027` e ao `RNF-USA-04`, nesta spec**: o quadro **nasce recolhido** e fica no **topo da página, acima dos filtros**. Recolhido, MUST mostrar a **contagem de cada tipo de aviso** — instrutor sem NIP, campo obrigatório pendente, data de início de docência não informada — e o **total**, que é de avisos: quem está em dois tipos conta nos dois. Tipo com contagem zero **não aparece** na linha de contagens, e recorte sem aviso nenhum mantém o quadro na tela dizendo isso (`RN-DEG-01`). Clicar expande e mostra a lista detalhada, como antes; o estado aberto ou recolhido é **efêmero e fica fora da URL**, como no painel de estatísticas. ⚠️ **Por que isto preserva o `RNF-USA-04`**: a redação anterior — sempre visível, nunca recolhido por padrão — proibia nascer recolhido. A intenção do requisito é o aviso de qualidade de dados não sair da vista de quem usa; o que se recolhe é só a lista de nomes, e as **contagens ficam visíveis sem abrir nada**. O documento 03 não é alterado. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-027.1**: A listagem MUST trazer, no mínimo, as colunas **posto/graduação, nome completo,
   categoria, OM, regime e CH total no ano corrente** (spec 014).
   **Emenda registrada em 15/09/2026**: a coluna de posto/graduação sai, e a coluna "Nome" passa a se chamar **"Instrutor"**, exibindo o formato do `FR-019` por `NomeInstrutor`. As colunas são: instrutor, categoria, OM, regime e CH total no ano corrente. A ordenação por posto continua existindo por cima da antiguidade, agora no cabeçalho "Instrutor". É a coluna única da spec 020 da v2.0. *(decisão de Bernardo Villas Boas, 15/09/2026)*
@@ -377,14 +396,15 @@ refinamento reaparece.
   PDF e a rota de impressão** ficam para o **Épico 11**.
   **Emenda registrada em 15/09/2026**: a **geração da ficha em A4 retrato e a impressão pelo navegador** entram **nesta** fatia, com botão "Gerar ficha" na página do instrutor. O salvar como arquivo ou PDF dentro do sistema continua no Épico 11. *(decisão de Bernardo Villas Boas, 15/09/2026)*
   **Conferência registrada em 15/09/2026 — parada**: das duas imagens do cabeçalho oficial, uma está no repositório e a outra não. `image1.png` é uma captura de tela do brasão do CIAARA, e o brasão oficial já está em `public/marca/brasao-ciaara-impressao.png` (fornecido por Bernardo em 11/09/2026). `image2.png` é o selo verde **"Marinha do Brasil — Hidrografia e Navegação"**, que **não está** no repositório. Sem os dois, a ficha não é implementada nem improvisada; o salvar como arquivo continua no Épico 11.
+  **Pendência mantida em 15/09/2026 (CHK021)**: continua parada por falta de material — falta o selo verde "Marinha do Brasil — Hidrografia e Navegação" do cabeçalho oficial. Nada foi implementado nem improvisado. *(decisão de Bernardo Villas Boas, 15/09/2026)*
   ⚠️ **Decisão de 10/09/2026**: adiar a ficha inteira quebraria a paridade com a v2.0 num ponto que
   Bernardo usa; e o `FR-023` já a pressupõe. O que fica para o Épico 11 é o **documento**, não a
   leitura.
 
 ### Key Entities
 
-- **Instrutor** — o docente. Identificado por inteiro simples. Quatro campos obrigatórios (cinco
-  até a emenda de 15/09/2026 ao `FR-005`). Status explícito. Antiguidade derivada do posto, com desempate declarado.
+- **Instrutor** — o docente. Identificado por inteiro simples. Cinco campos obrigatórios, com a
+  especialidade delimitada a militar (emendas de 15/09/2026 ao `FR-005`). Status explícito. Antiguidade derivada do posto, com desempate declarado.
 - **Vínculo instrutor↔disciplina** — a habilitação. Sem ele não há atribuição de aula.
 - **Carga horária do instrutor** — **duas grandezas derivadas**, nunca armazenadas como entrada.
 
@@ -398,6 +418,7 @@ refinamento reaparece.
 - **SC-003**: Cadastro sem qualquer um dos cinco campos obrigatórios é recusado em **100%** das
   tentativas, inclusive fora da tela.
   **Emenda registrada em 15/09/2026**: são **quatro** os obrigatórios, pelo `FR-005` emendado; especialidade só com espaços continua recusada em 100% das tentativas. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Segunda emenda registrada em 15/09/2026 (CHK008)**: são **cinco**, com a especialidade delimitada a militar e recusada em **cadastro novo**; o critério mede a recusa em 100% das tentativas de cadastro novo de militar sem ela, inclusive fora da tela. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **SC-004**: Instrutor desativado desaparece de **100%** das listas de nova atribuição e permanece
   em **100%** dos registros históricos já lançados.
 - **SC-005**: O nome aparece no formato padronizado em **100%** das telas que o exibem.
@@ -415,6 +436,7 @@ refinamento reaparece.
 - **SC-010**: O número de perfis que **escrevem** identificação civil e residência é **igual** ao
   número que as **lê** — três —, e a diferença entre colunas com `SELECT` e colunas com `UPDATE`
   para o papel autenticado é **zero**. Hoje ela é **12**.
+  **Emenda registrada em 15/09/2026 (T002 — aprovada por Bernardo, é só redação)**: a comparação é das colunas com `SELECT` contra a **união** das colunas com `UPDATE` e `INSERT` para o papel autenticado. Comparando só com `UPDATE`, revogar o `update` deixaria o critério verde com a escrita por `insert` aberta (research R-4). *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **SC-009**: `pnpm verificar:tudo` e o CI dão **veredito idêntico** sobre o mesmo commit.
 
 ## Decisões de Bernardo — 10/09/2026
@@ -434,6 +456,12 @@ refinamento reaparece.
    recorte de escrita é `grant update` por coluna, e portanto **esta fatia tem migration** — com
    plano de reversão, teste negativo por perfil e tudo o que a Definition of Done exige de quem
    toca o banco.
+   **Emenda registrada em 15/09/2026 (T003 — aprovada por Bernardo, é só redação)**: esta fatia tem **nove**
+   migrations — `20260915052719` recorte de escrita do dado pessoal, `20260915053511` ordem de
+   antiguidade, `20260915054204` obrigatórios e código, `20260915060809` autoria da sessão,
+   `20260915084854` carga prevista, `20260915084857` código do vínculo e habilitações,
+   `20260915091717` filtros de vínculo, `20260915140000` especialidade de militar novo e
+   `20260915140100` exclusão sem histórico. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 2. **A RLS do Épico 1 governa quem vê o quê**, e o recorte de dado pessoal do Épico 3 continua
    valendo: identificação civil e residência são legíveis por três perfis.
 3. **Nenhuma regra `RN-` é alterada.** Esta fatia é porte: reescreve na sintaxe nova preservando o
@@ -441,6 +469,12 @@ refinamento reaparece.
 4. **A ordenação canônica é servida pelo banco**, e a função de domínio é pura e testável sem banco.
 5. **Gráficos e componentes densos vêm do Épico 4.** Ver *Dependências* — é o ponto que mais pode
    atrasar esta fatia.
+6. **Desempenho: medido, sem requisito** (CHK022) *(decisão de Bernardo Villas Boas, 15/09/2026)*. Não se cria requisito de tempo de
+   resposta. Fica registrada, como ponto de partida para quem otimizar depois, a medição de 15/09/2026
+   com a base real no stack local: a ficha leva **1,5 a 2,4 s** sozinha e **4,2 a 5,1 s** com quatro
+   processos simultâneos; `vw_instrutor_carga_anual` custa **~700 ms** sob RLS, porque agrega todos os
+   registros antes de filtrar o instrutor; `vw_instrutores` por código, ~290 ms; e
+   `vw_instrutor_carga_prevista`, ~230 ms.
 
 ## Dependências
 
@@ -534,3 +568,6 @@ Conforme o pedido, e conforme a regra 1 do `CLAUDE.md`.
    `RN-INST-03` desta spec *(decisão de Bernardo Villas Boas, 15/09/2026)*, porque 15 militares da base real não têm o campo
    e não conseguiam salvar a ficha. O banco já aceitava o nulo desde o Épico 2. ⚠️ **O documento 04
    não foi alterado** — emendá-lo é decisão à parte, como no item 1.
+   **Atualização registrada em 15/09/2026 (CHK008)**: a divergência **fechou**. A spec voltou a ter cinco
+   obrigatórios, com a especialidade delimitada a militar e recusada em cadastro novo, e bate de novo com
+   o documento 04, que não foi alterado. A delimitação fica registrada no `FR-005`. *(decisão de Bernardo Villas Boas, 15/09/2026)*

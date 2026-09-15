@@ -166,6 +166,10 @@ pnpm test:e2e tests/e2e/instrutores.spec.ts
 14. **Acrescentado no fechamento de 15/09/2026**: no quadro de avisos da listagem, conferir o aviso
     **"Data de início de docência não informada"**; numa ficha com a data de início há mais de um ano e
     capacitação vazia, conferir o alerta "Docência há mais de um ano sem capacitação didática". *(decisão de Bernardo Villas Boas, 15/09/2026)*
+    **Emenda de 15/09/2026**: o quadro fica no **topo, acima dos filtros**, e **nasce recolhido**. **Esperado**: a
+    contagem de cada tipo e o total à vista sem abrir nada, sem tipo zerado na linha; "Exibir avisos" abre a
+    lista, e a URL não muda. Num recorte sem aviso, o quadro continua na tela dizendo isso. Numa ficha de
+    instrutor **inativo**, nenhum alerta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 15. **Acrescentado no fechamento de 15/09/2026**: abrir a ficha de um militar sem especialidade e gravar
     sem preenchê-la. **Esperado**: grava. Preencher a especialidade só com espaços. **Esperado**:
     recusado, com a mensagem de especialidade em branco. *(decisão de Bernardo Villas Boas, 15/09/2026)*
@@ -184,12 +188,24 @@ pnpm test:e2e tests/e2e/instrutores.spec.ts
 ⚠️ **A última linha é a que se esquece.** Desativar em cascata tira o acesso de alguém por um ato que
 não era sobre isso.
 
+**Acrescentado em 15/09/2026 — a exceção única à regra 4 (`FR-008.1`)** *(decisão de Bernardo Villas Boas, 15/09/2026)*:
+
+| Passo | Esperado |
+|---|---|
+| cadastrar um instrutor de teste e abrir a ficha | "Excluir instrutor" no fim, ao lado de "Desativar", habilitado |
+| clicar em excluir | diálogo avisando que é permanente e irreversível; confirmar **desabilitado** |
+| digitar um código errado, depois o certo | só o certo libera a confirmação |
+| confirmar | volta para a listagem, e o instrutor **não existe mais** no banco |
+| abrir a ficha de um instrutor com aula, atribuição, vínculo ou conta | botão **desabilitado**, com o motivo escrito ao lado |
+| perfil que não cria instrutor | o botão **não aparece** |
+
 ---
 
 ## Passo 7 — Os cinco obrigatórios, inclusive o branco disfarçado
 
-**Emenda de 15/09/2026**: são **quatro** — especialidade/habilitação ficou opcional pelo `FR-005`
-emendado. Ela continua na segunda linha da tabela: só com espaços, é recusada. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+**Segunda emenda de 15/09/2026 (CHK008)**: são **cinco**, com a especialidade delimitada a militar —
+cadastrar militar novo sem especialidade é recusado, com a mensagem própria; civil sem ela passa; ficha
+existente de militar sem ela continua salvando. Só com espaços, é recusada sempre. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 | Tentativa | Esperado |
 |---|---|

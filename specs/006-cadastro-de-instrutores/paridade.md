@@ -125,3 +125,18 @@ dois brasões da ficha A4. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 **O que ficou pedindo decisão** está em `checklists/fechamento.md`: CHK004, CHK005, CHK008, CHK012,
 CHK019, CHK020, CHK021 e CHK022.
+
+
+### Respostas de Bernardo ao checklist, e duas mudanças novas — 15/09/2026
+
+*(decisão de Bernardo Villas Boas, 15/09/2026)*
+
+| Item | Como ficou |
+|---|---|
+| CHK004 e CHK005 | ✅ decididos: o aviso de data não informada cobra só quem também está sem capacitação; o alerta de faixa avalia todas as semanas ISO do ano corrente |
+| CHK008 e CHK012 | ✅ o `RN-INST-03` mantém cinco obrigatórios, especialidade delimitada a militar e recusada em cadastro novo; o aviso cobra especialidade só de militar. A linha 6 da tabela acima fica assim |
+| CHK019 | ✅ ficha de instrutor inativo sem alerta normativo |
+| CHK020 e CHK021 | ⏸️ pendentes por falta de material — legenda clicável sem origem na v2.0; selo verde da ficha A4 |
+| CHK022 | ✅ sem requisito de tempo; a medição fica registrada nas *Assumptions* da spec |
+| Quadro de avisos | 🟨 **diverge da v2.0 por decisão**: nasce recolhido, no topo, com as contagens à vista (`FR-027` e `RNF-USA-04` emendados) |
+| Exclusão permanente | **[NOVO — v2.1], não é paridade**: exceção única à regra 4, só para instrutor sem histórico nenhum (`FR-008.1`), autorizada nominalmente |

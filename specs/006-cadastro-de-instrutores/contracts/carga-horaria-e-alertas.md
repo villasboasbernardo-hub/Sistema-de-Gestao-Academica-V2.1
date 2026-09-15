@@ -216,7 +216,7 @@ séries em vez de avisar. Sete gráficos, nenhum deles com mais de sete séries.
 | Chave | Aviso | Quando um instrutor entra nele |
 |---|---|---|
 | `sem-nip` | Instrutor sem NIP | `nip` vazio, nulo ou só com espaços |
-| `obrigatorio-pendente` | Campo obrigatório pendente | posto, especialidade, nome completo, categoria ou OM vazio, nulo ou só com espaços |
+| `obrigatorio-pendente` | Campo obrigatório pendente | posto, nome completo, categoria ou OM vazio, nulo ou só com espaços; especialidade vazia **só de militar** — posto que não é `SC` nem `SCNS` (delimitação de 15/09/2026, CHK012) |
 | `sem-data-docencia` | Data de início de docência não informada | `data_inicio_docencia_ciaara` vazia **e** capacitação didática vazia — no lugar do alerta do `FR-017` (decisão de Bernardo Villas Boas, 15/09/2026). O recorte "e capacitação vazia" é **decisão** desde 15/09/2026 (CHK004), não mais leitura |
 
 ⚠️ **Correção registrada em 15/09/2026: o aviso de campo obrigatório pendente encontra 15 instrutores
@@ -228,6 +228,12 @@ obrigatórios seriam `NOT NULL` — e não são: o Épico 2 tirou o `NOT NULL` d
 Naval, nenhum civil. Especialidade/habilitação ficou **opcional** na tela (emenda ao `RN-INST-03` e ao
 `FR-005`), e a ficha desses 15 voltou a salvar. O aviso **continua cobrando** a especialidade desses
 militares. Nenhuma delimitação para civil foi registrada, porque nenhum civil está sem o campo.
+
+**Atualização de 15/09/2026 (CHK008 e CHK012)** *(decisão de Bernardo Villas Boas, 15/09/2026)*: o `RN-INST-03` mantém os **cinco**
+obrigatórios, com a especialidade/habilitação **delimitada a militar**, e o aviso passa a cobrá-la
+só de militar — a frase acima sobre "nenhuma delimitação para civil" fica substituída. A recusa ao
+salvar militar sem especialidade vale para **cadastro novo**, pela tela e pelo gatilho da migration
+`20260915140000`; ficha existente continua salvando. Na base real o aviso segue com os mesmos 15.
 
 **Alerta do `FR-017` com data vazia** *(decisão de Bernardo Villas Boas, 15/09/2026)*: não dispara — sem data não há como contar o ano —, e o
 aviso `sem-data-docencia` entra no quadro no lugar dele. Na base real, 176 dos 177 instrutores estão
@@ -251,7 +257,8 @@ mudança de contrato, que é o que a decisão de 15/09/2026 recusou.
 
 | Regra | Origem |
 |---|---|
-| **Sempre visível**, nunca recolhido por padrão | `RNF-USA-04` |
+| ~~Sempre visível, nunca recolhido por padrão~~ → **nasce recolhido, no topo da página, acima dos filtros**, com a **contagem de cada tipo e o total sempre à vista**; a lista detalhada abre por clique, com estado efêmero fora da URL. O total é de avisos: quem está em dois tipos conta nos dois | `FR-027` e `RNF-USA-04` emendados em 15/09/2026 *(decisão de Bernardo Villas Boas, 15/09/2026)*. O que se recolhe é só a lista de nomes; as contagens mantêm o aviso à vista, que é a intenção do `RNF-USA-04` |
+| Tipo com contagem zero **não aparece** na linha de contagens | `FR-027` emendado em 15/09/2026 |
 | Avaliado sobre **o mesmo recorte da listagem** — o filtro aplicado vale para os avisos, como vale para indicadores e gráficos | spec 015 da v2.0, `FR-016` |
 | Sem aviso no recorte, o quadro **continua na tela** e diz que não há aviso | `RN-DEG-01` |
 | Aviso **nunca bloqueia** nada: nenhum botão, nenhuma gravação depende dele | `RN-DEG-02` |

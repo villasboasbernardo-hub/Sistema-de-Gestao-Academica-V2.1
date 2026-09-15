@@ -44,10 +44,15 @@ automaticamente** para instrutor novo.
 (`FR-005` emendado); preenchida só com espaços continua recusada pelo `CHECK`. A linha dela abaixo
 dizia `NOT NULL`, o que já não era verdade desde o Épico 2 (migration `20260908084000`). *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
+**Segunda emenda registrada em 15/09/2026 (CHK008 e CHK012)**: são **cinco**, e a especialidade é
+**delimitada a militar** (posto que não é `SC` nem `SCNS`). Ausente, é recusada só em **cadastro novo**,
+pelo gatilho `trg_instrutores_especialidade_de_militar_novo` (migration `20260915140000`), que vale para
+linha sem `origem_migracao_v1`; ficha existente e linha migrada continuam aceitando o nulo. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
 | Campo | Coluna | Observação |
 |---|---|---|
 | Posto/graduação | `posto_graduacao` | `NOT NULL`; casa com `escala_antiguidade.valor` |
-| Especialidade | `esp_hab_obs` | **opcional** — nula aceita; branco recusado pelo `CHECK` |
+| Especialidade | `esp_hab_obs` | **de militar** — nula recusada no cadastro novo de militar pelo gatilho; aceita para civil, ficha existente e linha migrada; branco sempre recusado pelo `CHECK` |
 | Nome completo | `nome_completo` | `NOT NULL` |
 | Categoria | `categoria` | `NOT NULL` |
 | Organização militar | `om` | `NOT NULL` |
