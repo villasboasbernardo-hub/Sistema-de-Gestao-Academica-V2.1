@@ -313,7 +313,7 @@ e reimplementada fiel; detalhe que não está escrito em lugar nenhum **para e v
 ### Fechamento
 
 - [X] T112 Atualizar `paridade.md` e `quickstart.md` com as decisões de 15/09/2026 ✅ `paridade.md` reescrita com as decisões de 15/09/2026 e uma tabela das seis pendências abertas; `quickstart.md` com o passo 4 atualizado e os itens 10 a 12 do passo 5.
-- [ ] T113 Rodar `pnpm verificar` a cada bloco e `pnpm verificar:tudo` ao fim
+- [X] T113 Rodar `pnpm verificar` a cada bloco e `pnpm verificar:tudo` ao fim ✅ `pnpm verificar` verde ao fim de cada bloco; `pnpm verificar:tudo` saiu **0** no commit `bb43822`: 496 de unidade · 148 pgTAP (1 `todo`, a semanal do instrutor) · 131 RLS · 147 ponta a ponta (2 pulados). ⚠️ A conferência com o CI não foi feita: exige push, que não houve.
 
 ## Fase 9 — Fechamento
 
