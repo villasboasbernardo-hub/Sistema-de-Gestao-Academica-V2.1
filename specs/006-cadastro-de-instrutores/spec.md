@@ -92,8 +92,8 @@ depois, quando ninguém lembra quem era a pessoa.
 3. **Dado** a recusa, **quando** ela acontece, **então** nada é salvo pela metade.
 
 **Emenda registrada em 15/09/2026**: pelo `FR-005` emendado, especialidade/habilitação passa a ser
-opcional, e os cenários 1 e 2 valem para **quatro** campos — posto, nome completo, categoria e OM. A
-especialidade continua no cenário 2: preenchida só com espaços, é recusada. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+opcional, e o teste independente e os cenários 1 e 2 valem para **quatro** campos — posto, nome
+completo, categoria e OM. A especialidade continua no cenário 2: preenchida só com espaços, é recusada. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 ---
 
@@ -140,6 +140,12 @@ continua funcionando.
    **não** há aviso: 20h está dentro de 16–24h. ⚠️ **O teto é a FAIXA, jamais o número do regime.**
 3. **Dado** docência iniciada há mais de um ano sem capacitação didática registrada, **quando** a
    ficha é exibida, **então** há aviso — e nada é impedido.
+
+**Emenda registrada em 15/09/2026**: pela decisão do `FR-016`, a "previsão" dos cenários 1 e 2 é a
+carga de **cada semana ISO coberta** pelas atribuições, e o aviso do cenário 1 nomeia as semanas fora
+da faixa. Pela decisão do `FR-017`, entra o cenário 4: **dado** docência sem data de início
+registrada, **quando** a ficha é exibida, **então** não há alerta de capacitação, e o caso aparece no
+quadro de avisos como "Data de início de docência não informada". *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 ---
 
@@ -266,7 +272,8 @@ refinamento reaparece.
 - **FR-017**: MUST ser sinalizado o instrutor em docência há **mais de um ano sem capacitação
   didática** (`RF-INSTR-16`).
   **Decisão registrada em 15/09/2026**: o campo de referência para contar o tempo de docência é `data_inicio_docencia_ciaara`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
-  **Decisão registrada em 15/09/2026 (fecha a T053)**: com `data_inicio_docencia_ciaara` vazia, o alerta **não dispara** — sem data não há como contar o ano —, e em lugar dele entra no quadro de avisos o aviso próprio **"Data de início de docência não informada"** (`FR-027`), para quem também não tem capacitação didática. "Mais de um ano" é estrito: um ano exato não alerta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Decisão registrada em 15/09/2026 (fecha a T053)**: com `data_inicio_docencia_ciaara` vazia, o alerta **não dispara** — sem data não há como contar o ano —, e em lugar dele entra no quadro de avisos o aviso próprio **"Data de início de docência não informada"** (`FR-027`). *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Leitura aplicada em 15/09/2026, a confirmar por Bernardo** (checklist `fechamento.md`, CHK004): o aviso lista quem está sem a data **e** sem capacitação didática — "em lugar do alerta" foi lido como "para quem o alerta seria avaliado", e quem tem capacitação não seria alertado com data nenhuma. "Mais de um ano" foi lido como estrito: um ano exato não alerta. Se a decisão for cobrar a data de todos, a mudança é uma linha da regra do aviso.
 - **FR-018**: Os alertas dos `FR-016` e `FR-017` MUST ser **avisos, nunca bloqueios** (`RN-DEG-02`).
   ⚠️ Transformá-los em impedimento **muda a regra de negócio** e exige autorização nominal.
 
@@ -374,8 +381,8 @@ refinamento reaparece.
 
 ### Key Entities
 
-- **Instrutor** — o docente. Identificado por inteiro simples. Cinco campos obrigatórios. Status
-  explícito. Antiguidade derivada do posto, com desempate declarado.
+- **Instrutor** — o docente. Identificado por inteiro simples. Quatro campos obrigatórios (cinco
+  até a emenda de 15/09/2026 ao `FR-005`). Status explícito. Antiguidade derivada do posto, com desempate declarado.
 - **Vínculo instrutor↔disciplina** — a habilitação. Sem ele não há atribuição de aula.
 - **Carga horária do instrutor** — **duas grandezas derivadas**, nunca armazenadas como entrada.
 
@@ -388,11 +395,13 @@ refinamento reaparece.
 - **SC-002**: A contagem de campos de carga horária digitáveis em todo o sistema é **zero**.
 - **SC-003**: Cadastro sem qualquer um dos cinco campos obrigatórios é recusado em **100%** das
   tentativas, inclusive fora da tela.
+  **Emenda registrada em 15/09/2026**: são **quatro** os obrigatórios, pelo `FR-005` emendado; especialidade só com espaços continua recusada em 100% das tentativas. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **SC-004**: Instrutor desativado desaparece de **100%** das listas de nova atribuição e permanece
   em **100%** dos registros históricos já lançados.
 - **SC-005**: O nome aparece no formato padronizado em **100%** das telas que o exibem.
 - **SC-006**: Um instrutor de 40h com 20h previstas **não** gera alerta; um de 20h com 14h **gera**.
   Nenhum dos dois é impedido de nada.
+  **Emenda registrada em 15/09/2026**: "previstas" é a carga de cada semana ISO coberta, pela decisão do `FR-016` — 20h em todas as semanas cobertas não alerta; 14h em alguma semana coberta alerta, nomeando a semana. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **SC-007**: Cada um dos refinamentos das **oito specs** do inventário tem endereço apontado na
   v2.1 — a lista é percorrida item a item e **nenhum fica sem resposta**.
 - **SC-007.1**: São exibidos **4 indicadores** e **7 gráficos**, e as barras do de posto/graduação
@@ -518,3 +527,8 @@ Conforme o pedido, e conforme a regra 1 do `CLAUDE.md`.
    cadastro incompleto recusado e CH nunca digitável —, e o documento 06 lista **sete** critérios
    para o Épico 5. Os dois são regra real (`RN-INST-03` e `RN-INST-04`); o que não existe é a
    numeração. Adotei-os como critério desta fatia e registro a divergência.
+7. **O `RN-INST-03` do documento 04 lista cinco obrigatórios, e esta spec passou a ter quatro.**
+   Registrado em 15/09/2026: especialidade/habilitação ficou opcional por emenda ao `FR-005` e ao
+   `RN-INST-03` desta spec *(decisão de Bernardo Villas Boas, 15/09/2026)*, porque 15 militares da base real não têm o campo
+   e não conseguiam salvar a ficha. O banco já aceitava o nulo desde o Épico 2. ⚠️ **O documento 04
+   não foi alterado** — emendá-lo é decisão à parte, como no item 1.

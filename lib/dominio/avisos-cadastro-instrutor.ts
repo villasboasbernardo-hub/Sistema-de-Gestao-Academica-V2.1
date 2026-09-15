@@ -23,7 +23,9 @@
  *
  * ⚠️ "DATA DE INÍCIO DE DOCÊNCIA NÃO INFORMADA" ENTRA NO LUGAR DO ALERTA DO `FR-017` (decisão de Bernardo Villas Boas, 15/09/2026):
  * sem a data não há como contar o ano. Ele cobra quem **também** não tem capacitação — é para esses que o
- * alerta precisaria da data; quem tem capacitação não seria alertado com data nenhuma.
+ * alerta precisaria da data; quem tem capacitação não seria alertado com data nenhuma. ⚠️ Esse recorte é
+ * LEITURA APLICADA, A CONFIRMAR por Bernardo (spec 006, `FR-017`): cobrando a data de todos, a regra
+ * perde o segundo termo.
  */
 
 export type InstrutorParaAvisos = {

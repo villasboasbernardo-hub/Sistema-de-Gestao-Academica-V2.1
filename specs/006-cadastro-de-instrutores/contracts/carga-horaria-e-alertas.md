@@ -86,6 +86,7 @@ semana nenhuma: duas disciplinas de 10 h por semana, uma em março e outra em ag
 | Onde é calculada | `lib/dominio/carga-semanal.ts`, função pura, sobre as linhas de `vw_instrutor_carga_prevista` |
 | Atribuição sem janela ou sem média | não entra em semana nenhuma |
 | Sem faixa (regime não informado) | não há o que comparar, e não há alerta |
+| Atribuições avaliadas na ficha | as do **ano corrente** pela data de início prevista (T011 c), o mesmo recorte da seção de carga — inclusive semanas que já passaram. ⚠️ **Leitura aplicada, a confirmar por Bernardo** (checklist `fechamento.md`, CHK005): a decisão não diz se semanas passadas alertam, nem se a janela de uma atribuição do ano anterior que invade o corrente entra |
 | Mensagem | `Semana 12/2026 (16/03 a 22/03): 14 h, acima da faixa de 8 a 12 h.` — uma linha por semana fora |
 
 ⚠️ **Consequência da decisão, registrada para não surpreender**: `disciplinas.semanas` conta blocos
@@ -214,7 +215,7 @@ séries em vez de avisar. Sete gráficos, nenhum deles com mais de sete séries.
 |---|---|---|
 | `sem-nip` | Instrutor sem NIP | `nip` vazio, nulo ou só com espaços |
 | `obrigatorio-pendente` | Campo obrigatório pendente | posto, especialidade, nome completo, categoria ou OM vazio, nulo ou só com espaços |
-| `sem-data-docencia` | Data de início de docência não informada | `data_inicio_docencia_ciaara` vazia **e** capacitação didática vazia — no lugar do alerta do `FR-017` (decisão de Bernardo Villas Boas, 15/09/2026) |
+| `sem-data-docencia` | Data de início de docência não informada | `data_inicio_docencia_ciaara` vazia **e** capacitação didática vazia — no lugar do alerta do `FR-017` (decisão de Bernardo Villas Boas, 15/09/2026). ⚠️ O recorte "e capacitação vazia" é **leitura aplicada, a confirmar** (spec, `FR-017`) |
 
 ⚠️ **Correção registrada em 15/09/2026: o aviso de campo obrigatório pendente encontra 15 instrutores
 na base real.** A primeira redação desta seção dizia que ele não encontraria ninguém, porque os cinco
@@ -228,7 +229,9 @@ militares. Nenhuma delimitação para civil foi registrada, porque nenhum civil 
 
 **Alerta do `FR-017` com data vazia** *(decisão de Bernardo Villas Boas, 15/09/2026)*: não dispara — sem data não há como contar o ano —, e o
 aviso `sem-data-docencia` entra no quadro no lugar dele. Na base real, 176 dos 177 instrutores estão
-sem a data, e 148 deles também sem capacitação: são esses 148 que o aviso lista.
+sem a data, e 148 deles também sem capacitação: são esses 148 que o aviso lista. ⚠️ Listar só quem
+também está sem capacitação é **leitura aplicada, a confirmar por Bernardo** — "em lugar do alerta"
+lido como "para quem o alerta seria avaliado". Cobrando a data de todos, seriam 176.
 
 ### Como a lista cresce
 
