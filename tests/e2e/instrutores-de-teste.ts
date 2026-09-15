@@ -18,10 +18,11 @@
  * aula lançada, inativo e vínculo com conta. Acumular várias num só instrutor faria um caso reprovar
  * pelo motivo de outro.
  *
- * ⚠️ **A CARGA PREVISTA NÃO ESTÁ AQUI, E A AUSÊNCIA É DELIBERADA.** O 20h com 14h previstas e o 40h
- * com 20h previstas existem com o **regime**, mas sem a atribuição que produziria esses números: qual
- * data põe uma atribuição num ano, e como o total do ano vira semanal, é a T011, que Bernardo ainda
- * não respondeu. Semear "14 horas" agora seria escolher a fórmula no teste. A US4 acrescenta.
+ * ⚠️ **A CARGA PREVISTA ENTRA SÓ COM `comCargaPrevista`**, desde que a T011 e a composição semanal
+ * foram decididas (decisão de Bernardo Villas Boas, 15/09/2026). Com a opção, o CT mais antigo (20h)
+ * recebe uma disciplina de 56 tempos e o CT mais moderno (40h) uma de 80, as duas numa janela de quatro
+ * semanas ISO exatas — 14 e 20 horas por semana, os dois lados do `SC-006`. Sem a opção, a amostra fica
+ * como era, para não mudar as contagens das outras suítes.
  *
  * ⚠️ **AS CAPACITAÇÕES SÃO SEPARADAS POR VÍRGULA**, como a base da v2.0 as escreve
  * (`"C-Exp-TE, C-Esp-DID"`; spec 014 da v2.0, `data-model.md`: *"split por vírgula"*).
@@ -163,6 +164,7 @@ const emailVinculado = (processo: number, suite: string) =>
 export async function semearInstrutores(
   processo: number,
   suite: string,
+  opcoes: { readonly comCargaPrevista?: boolean } = {},
 ): Promise<AmostraDeInstrutores> {
   await limparInstrutores(processo, suite);
 
@@ -285,6 +287,70 @@ export async function semearInstrutores(
       },
     ]);
   if (erroSelecao) throw new Error(`falha ao semear seleção: ${erroSelecao.message}`);
+
+  if (opcoes.comCargaPrevista) {
+    // A primeira segunda-feira de março do ano corrente, e o domingo quatro semanas depois.
+    const primeiroDeMarco = new Date(Date.UTC(ano, 2, 1));
+    const ateSegunda = (8 - primeiroDeMarco.getUTCDay()) % 7;
+    const inicio = new Date(Date.UTC(ano, 2, 1 + ateSegunda));
+    const termino = new Date(inicio.getTime() + 27 * 86_400_000);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+    const { data: previstas, error: erroPrevistas } = await admin()
+      .from("disciplinas")
+      .insert([
+        {
+          codigo: `DIS-${p}-P14`,
+          curso_id: curso.id,
+          cod_disciplina: `${p}-14`,
+          nome_disciplina: `Prevista de 14 horas ${p}`,
+          carga_horaria_tempos: 56,
+          previsao_inicio: iso(inicio),
+          previsao_termino: iso(termino),
+        },
+        {
+          codigo: `DIS-${p}-P20`,
+          curso_id: curso.id,
+          cod_disciplina: `${p}-20`,
+          nome_disciplina: `Prevista de 20 horas ${p}`,
+          carga_horaria_tempos: 80,
+          previsao_inicio: iso(inicio),
+          previsao_termino: iso(termino),
+        },
+      ])
+      .select("id, codigo");
+    if (erroPrevistas)
+      throw new Error(`falha ao semear disciplinas previstas: ${erroPrevistas.message}`);
+    const idDaPrevista = (codigo: string) =>
+      previstas?.find((d) => d.codigo === codigo)?.id as string;
+
+    const { data: tds, error: erroTds } = await admin()
+      .from("turma_disciplina")
+      .insert([
+        { codigo: `TD-${p}-P14`, turma_id: turma.id, disciplina_id: idDaPrevista(`DIS-${p}-P14`) },
+        { codigo: `TD-${p}-P20`, turma_id: turma.id, disciplina_id: idDaPrevista(`DIS-${p}-P20`) },
+      ])
+      .select("id, codigo");
+    if (erroTds) throw new Error(`falha ao semear turmas das previstas: ${erroTds.message}`);
+    const idDoTd = (codigo: string) => tds?.find((t) => t.codigo === codigo)?.id as string;
+
+    const { error: erroDesignacao } = await admin()
+      .from("turma_disciplina_instrutor")
+      .insert([
+        {
+          codigo: `TDI-${p}-P14`,
+          turma_disciplina_id: idDoTd(`TD-${p}-P14`),
+          instrutor_id: idDe("ctMaisAntigo"),
+        },
+        {
+          codigo: `TDI-${p}-P20`,
+          turma_disciplina_id: idDoTd(`TD-${p}-P20`),
+          instrutor_id: idDe("ctMaisModerno"),
+        },
+      ]);
+    if (erroDesignacao)
+      throw new Error(`falha ao designar as previstas: ${erroDesignacao.message}`);
+  }
 
   const { error: erroAula } = await admin()
     .from("registros_aula")

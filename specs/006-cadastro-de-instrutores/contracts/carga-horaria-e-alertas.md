@@ -67,17 +67,36 @@ base real (medido em 15/09/2026), e a decisão diz "da disciplina": a fonte é `
 ⚠️ **Atribuição sem data de início prevista não tem ano**, e por isso não entra em ano nenhum. Não é
 zero escondido: a view de atribuições a mostra com `ano` nulo.
 
-**Pendência registrada em 15/09/2026 — a semanal do instrutor.** A decisão (b) define a média
-semanal **de uma disciplina**. Não diz como compor a semanal **do instrutor** que tem várias
-disciplinas no mesmo ano, em janelas que podem ou não se sobrepor — somar as médias do ano, ou somar
-só as das disciplinas abertas em cada semana e comparar a pior semana, dão alertas diferentes. O
-alerta do `FR-016`, a coluna `ta_previsto_semanal` e o `SC-006` esperam essa resposta.
+### A semanal do instrutor — decisão de 15/09/2026
+
+*(decisão de Bernardo Villas Boas, 15/09/2026)*
+
+> A carga semanal do instrutor numa semana é a **soma das médias semanais das atribuições ativas cuja
+> janela prevista** (início e término previstos da disciplina) **cobre aquela semana**. Semana sem
+> atribuição nenhuma não entra no cálculo nem gera alerta. O alerta do `FR-016` dispara quando
+> **alguma** semana coberta sai da faixa do regime — limites inclusivos — e a mensagem nomeia a semana.
+
+🛑 **Somar as médias do ano inteiro é PROIBIDO.** Criaria alerta para quem nunca passou da faixa em
+semana nenhuma: duas disciplinas de 10 h por semana, uma em março e outra em agosto, somariam 20 h.
+
+| Ponto | Como ficou |
+|---|---|
+| Semana | **ISO 8601, de segunda a domingo**. A herança não define outro início; o projeto já usa semana ISO (documento 20, consolidação do DSA; documento 25, `?semana=`) |
+| Janela cobre a semana | quando tem ao menos um dia dentro dela |
+| Onde é calculada | `lib/dominio/carga-semanal.ts`, função pura, sobre as linhas de `vw_instrutor_carga_prevista` |
+| Atribuição sem janela ou sem média | não entra em semana nenhuma |
+| Sem faixa (regime não informado) | não há o que comparar, e não há alerta |
+| Mensagem | `Semana 12/2026 (16/03 a 22/03): 14 h, acima da faixa de 8 a 12 h.` — uma linha por semana fora |
+
+⚠️ **Consequência da decisão, registrada para não surpreender**: `disciplinas.semanas` conta blocos
+de sete dias a partir do início previsto, e a semana ISO começa na segunda. Uma janela que começa numa
+quarta pode tocar **uma semana ISO a mais** do que `semanas` conta; a média é a mesma em todas elas.
 
 | Coluna ou view | Estado em 15/09/2026 |
 |---|---|
 | `vw_instrutor_carga_prevista` — uma linha por atribuição ativa: ano, tempos do instrutor, semanas, média semanal | ✅ implementável: tudo acima está escrito |
 | `vw_instrutor_carga_anual.ta_previsto_ano` — soma dos tempos das atribuições do ano | ✅ implementável |
-| `vw_instrutor_carga_anual.ta_previsto_semanal` | ⏸️ espera a pendência acima |
+| `vw_instrutor_carga_anual.ta_previsto_semanal` | **não é coluna**: a semanal é por semana, calculada no domínio; o pgTAP `094` confere a ausência |
 
 ---
 
@@ -194,15 +213,22 @@ séries em vez de avisar. Sete gráficos, nenhum deles com mais de sete séries.
 | Chave | Aviso | Quando um instrutor entra nele |
 |---|---|---|
 | `sem-nip` | Instrutor sem NIP | `nip` vazio, nulo ou só com espaços |
-| `obrigatorio-pendente` | Campo obrigatório pendente | algum dos cinco do `RN-INST-03` vazio, nulo ou só com espaços |
+| `obrigatorio-pendente` | Campo obrigatório pendente | posto, especialidade, nome completo, categoria ou OM vazio, nulo ou só com espaços |
+| `sem-data-docencia` | Data de início de docência não informada | `data_inicio_docencia_ciaara` vazia **e** capacitação didática vazia — no lugar do alerta do `FR-017` (decisão de Bernardo Villas Boas, 15/09/2026) |
 
-⚠️ **Correção registrada em 15/09/2026: o segundo aviso encontra 15 instrutores na base real.** A
-redação anterior dizia que ele não encontraria ninguém, porque os cinco obrigatórios seriam
-`NOT NULL`. **Não são**: o Épico 2 tirou o `NOT NULL` de `esp_hab_obs` (migration `20260908084000`),
-porque 15 dos 177 instrutores não têm sufixo de especialidade, e Bernardo ratificou em 08/09/2026. O
-`CHECK` de branco aceita o nulo. ⚠️ **Conflito aberto, não resolvido aqui**: o `RN-INST-03` manda
-exigir especialidade/habilitação, e o esquema da tela a exige — então salvar a ficha de um desses 15
-é recusado.
+⚠️ **Correção registrada em 15/09/2026: o aviso de campo obrigatório pendente encontra 15 instrutores
+na base real.** A primeira redação desta seção dizia que ele não encontraria ninguém, porque os cinco
+obrigatórios seriam `NOT NULL` — e não são: o Épico 2 tirou o `NOT NULL` de `esp_hab_obs` (migration
+`20260908084000`), porque 15 dos 177 não têm sufixo de especialidade.
+
+**Decisão de 15/09/2026** *(decisão de Bernardo Villas Boas, 15/09/2026)*: os 15 são **todos militares** — 12 da ativa e 3 do Magistério Militar
+Naval, nenhum civil. Especialidade/habilitação ficou **opcional** na tela (emenda ao `RN-INST-03` e ao
+`FR-005`), e a ficha desses 15 voltou a salvar. O aviso **continua cobrando** a especialidade desses
+militares. Nenhuma delimitação para civil foi registrada, porque nenhum civil está sem o campo.
+
+**Alerta do `FR-017` com data vazia** *(decisão de Bernardo Villas Boas, 15/09/2026)*: não dispara — sem data não há como contar o ano —, e o
+aviso `sem-data-docencia` entra no quadro no lugar dele. Na base real, 176 dos 177 instrutores estão
+sem a data, e 148 deles também sem capacitação: são esses 148 que o aviso lista.
 
 ### Como a lista cresce
 
@@ -232,7 +258,7 @@ mudança de contrato, que é o que a decisão de 15/09/2026 recusou.
 **Indicadores — exatamente 3**: total de instrutores · com capacitação didática · habilitados ×
 selecionados. O cartão de CH ministrada no ano sai; a CH do ano **fica** como coluna da listagem.
 
-**Gráficos — exatamente 9**:
+**Gráficos — exatamente 9, 4 de barras e 5 de pizza** (escolaridade decidida em barras em 15/09/2026):
 
 | # | Gráfico | Forma | Regra |
 |---|---|---|---|
@@ -240,7 +266,7 @@ selecionados. O cartão de CH ministrada no ano sai; a CH do ano **fica** como c
 | 2 | Classificação | pizza | coluna `categoria`, rótulos da v2.0: `Militar da Ativa` → Militares da Ativa, `TTC` → TTC, `SCNS` → Civis, `MMN` → Magistério Militar Naval (spec 014, `data-model.md`); valor fora do mapa aparece como está |
 | 3 | Posto/graduação | barras | antiguidade; "Outros" no fim (`FR-026.3`) |
 | 4 | OM | barras | |
-| 5 | Escolaridade | pizza ⏸️ | **pendência**: 6 categorias no dado real, e o documento 23 §7 limita a pizza a 5. Fica em barras até a decisão |
+| 5 | Escolaridade | **barras** | **decidido em 15/09/2026, não reabrir** (decisão de Bernardo Villas Boas): 6 categorias contra o limite de 5 do documento 23 §7, e 142 de 177 sem o campo, o que faria a pizza quase toda "Não informado" |
 | 6 | Regime de trabalho | pizza | |
 | 7 | Capacitação didática | pizza | duas qualificações contam nas duas; **"Nenhuma"** conta o campo vazio (`FR-026.4` emendado) |
 | 8 | Círculo hierárquico | pizza | novo. Oficiais e Praças pelo mapa da spec 015; o posto fora do mapa (SC, e CB e MN, que a escala tem e o mapa da v2.0 não) vai para **"Outros"**, pela mesma regra do `FR-026.3` — nunca some em silêncio |
@@ -261,5 +287,6 @@ O índice de capacitação geral (#9) é o que soma o total de instrutores.
 **Exibir/ocultar estatísticas** (`FR-026.5`): botão que recolhe e expande indicadores e gráficos,
 começando recolhido, com o estado **fora da URL**.
 
-**Legenda clicável** (`FR-026.6`): ⏸️ **pendência** — não há descrição do comportamento nas specs da
-herança.
+**Legenda clicável** (`FR-026.6`): ⏸️ **parada em 15/09/2026, depois da conferência no código real da
+v2.0.** `renderizarGrafico_` (`SIS11/CIAARA-11-v2/src/frontend/_Comum.html`, linhas 253 a 264) não
+configura legenda nem evento, e nada em `src/frontend/` ou `appsscript/` o faz. Vira requisito novo.

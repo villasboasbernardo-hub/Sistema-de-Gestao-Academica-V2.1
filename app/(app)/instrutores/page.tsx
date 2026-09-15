@@ -183,6 +183,8 @@ export default async function Instrutores({
       categoria: l.categoria,
       om: l.om,
       nip: (brutas[n]?.nip as string | null | undefined) ?? null,
+      dataInicioDocenciaCiaara: brutas[n]?.data_inicio_docencia_ciaara ?? null,
+      capacitacaoDidatica: brutas[n]?.capacitacao_didatica ?? null,
     })),
     AVISOS_INICIAIS,
   );

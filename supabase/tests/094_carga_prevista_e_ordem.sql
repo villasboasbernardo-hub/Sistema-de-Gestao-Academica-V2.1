@@ -19,7 +19,7 @@
 -- =================================================================================
 
 begin;
-select plan(14);
+select plan(15);
 
 -- ---------------------------------------------------------------------------------
 -- A amostra. Pesos da `escala_antiguidade`: CMG=1, CT=4, SC=13, SCNS=13; posto fora da escala
@@ -258,16 +258,23 @@ select is_empty(
 );
 
 -- ---------------------------------------------------------------------------------
--- 14. PENDENTE — a semanal do INSTRUTOR (T014).
+-- 14 e 15. A SEMANAL DO INSTRUTOR — decisao de Bernardo Villas Boas, 15/09/2026 (T014).
 --
--- ⚠️ A decisao (b) define a media de uma disciplina. Como compor a de um instrutor com varias no
---    mesmo ano e pendencia registrada no contrato em 15/09/2026; ate la, a coluna nao existe.
+-- A carga semanal do instrutor numa semana e a SOMA das medias das atribuicoes cuja janela prevista
+-- cobre aquela semana ISO; somar as medias do ano inteiro e PROIBIDO. Por isso ela NAO e uma coluna
+-- anual: e calculada semana a semana por `lib/dominio/carga-semanal.ts`, a partir das linhas desta
+-- view. O que o banco precisa garantir e entregar a janela e a media de cada atribuicao.
 -- ---------------------------------------------------------------------------------
-select todo('T014 pendente: a composicao da semanal do instrutor espera a decisao de Bernardo', 1);
-
-select has_column(
+select hasnt_column(
   'public', 'vw_instrutor_carga_anual', 'ta_previsto_semanal',
-  'RN-2027-06 · ta_previsto_semanal segue a fórmula registrada'
+  'T014 · a semanal do instrutor nao e coluna anual — somar as medias do ano e proibido'
+);
+
+select ok(
+  (select count(*) = 3 from information_schema.columns
+    where table_schema = 'public' and table_name = 'vw_instrutor_carga_prevista'
+      and column_name in ('previsao_inicio', 'previsao_termino', 'media_semanal')),
+  'RN-2027-06 · vw_instrutor_carga_prevista entrega janela e media de cada atribuicao para a soma por semana'
 );
 
 select * from finish();

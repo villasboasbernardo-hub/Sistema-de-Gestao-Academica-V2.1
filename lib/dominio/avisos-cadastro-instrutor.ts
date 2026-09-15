@@ -15,13 +15,21 @@
  * ⚠️ AVISO NÃO BLOQUEIA (`RN-DEG-02`). O resultado é só lista de quem aparece em cada aviso; não há
  * campo que uma tela possa usar para desabilitar gravação.
  *
- * ⚠️ O AVISO DE OBRIGATÓRIO PENDENTE HOJE NÃO ENCONTRA NINGUÉM — os cinco são `NOT NULL` com `CHECK`
- * de branco. Ele fica como defesa e como o exemplo que a regra nomeia; ver o contrato
- * `carga-horaria-e-alertas.md`.
+ * ⚠️ O AVISO DE OBRIGATÓRIO PENDENTE ENCONTRA 15 NA BASE REAL, e todos são militares (12 da ativa e 3
+ * do Magistério Militar Naval), medido em 15/09/2026. Especialidade/habilitação ficou opcional na tela
+ * pela emenda ao `RN-INST-03` (decisão de Bernardo Villas Boas, 15/09/2026), mas o aviso **continua cobrando** a especialidade
+ * desses militares: a decisão manda cobrar quando há militar entre eles. Nenhum civil está sem o campo,
+ * e por isso nenhuma delimitação para civil foi registrada.
+ *
+ * ⚠️ "DATA DE INÍCIO DE DOCÊNCIA NÃO INFORMADA" ENTRA NO LUGAR DO ALERTA DO `FR-017` (decisão de Bernardo Villas Boas, 15/09/2026):
+ * sem a data não há como contar o ano. Ele cobra quem **também** não tem capacitação — é para esses que o
+ * alerta precisaria da data; quem tem capacitação não seria alertado com data nenhuma.
  */
 
 export type InstrutorParaAvisos = {
   readonly id: string;
+  readonly dataInicioDocenciaCiaara: string | null;
+  readonly capacitacaoDidatica: string | null;
   readonly nip: string | null;
   readonly pg: string | null;
   readonly especialidade: string | null;
@@ -44,7 +52,7 @@ export type AvisoDeCadastro<T> = {
 
 const vazio = (texto: string | null): boolean => texto === null || texto.trim() === "";
 
-/** Os dois avisos com que a lista começa, na ordem do `RF-INSTR-09`. */
+/** Os dois avisos do `RF-INSTR-09`, na ordem dele, e o de 15/09/2026 sobre a data de docência. */
 export const AVISOS_INICIAIS: readonly RegraDeAviso[] = [
   {
     chave: "sem-nip",
@@ -56,6 +64,11 @@ export const AVISOS_INICIAIS: readonly RegraDeAviso[] = [
     titulo: "Campo obrigatório pendente",
     seAplica: (i) =>
       [i.pg, i.especialidade, i.nomeCompleto, i.categoria, i.om].some((campo) => vazio(campo)),
+  },
+  {
+    chave: "sem-data-docencia",
+    titulo: "Data de início de docência não informada",
+    seAplica: (i) => vazio(i.dataInicioDocenciaCiaara) && vazio(i.capacitacaoDidatica),
   },
 ];
 

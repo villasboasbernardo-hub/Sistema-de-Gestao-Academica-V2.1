@@ -12,6 +12,8 @@ import {
 
 const completo: InstrutorParaAvisos = {
   id: "completo",
+  dataInicioDocenciaCiaara: "2020-01-01",
+  capacitacaoDidatica: "C-Exp-TE",
   nip: "12.3456.78",
   pg: "CT",
   especialidade: "-EF",
@@ -21,8 +23,30 @@ const completo: InstrutorParaAvisos = {
 };
 
 describe("`RF-INSTR-09` · os dois avisos com que a lista começa", () => {
-  it("a lista começa por 'sem NIP' e 'obrigatório pendente', nesta ordem", () => {
-    expect(AVISOS_INICIAIS.map((r) => r.chave)).toEqual(["sem-nip", "obrigatorio-pendente"]);
+  it("a lista começa por 'sem NIP' e 'obrigatório pendente', e ganhou a data de docência em 15/09/2026", () => {
+    expect(AVISOS_INICIAIS.map((r) => r.chave)).toEqual([
+      "sem-nip",
+      "obrigatorio-pendente",
+      "sem-data-docencia",
+    ]);
+  });
+
+  it("data de docência vazia avisa só quem também não tem capacitação — no lugar do alerta do FR-017", () => {
+    const lista = [
+      {
+        ...completo,
+        id: "sem-data-sem-cap",
+        dataInicioDocenciaCiaara: null,
+        capacitacaoDidatica: null,
+      },
+      { ...completo, id: "sem-data-com-cap", dataInicioDocenciaCiaara: null },
+      { ...completo, id: "com-data-sem-cap", capacitacaoDidatica: "" },
+    ];
+    const aviso = avisosDoCadastro(lista, AVISOS_INICIAIS).find(
+      (a) => a.chave === "sem-data-docencia",
+    );
+    expect(aviso?.titulo).toBe("Data de início de docência não informada");
+    expect(aviso?.instrutores.map((i) => i.id)).toEqual(["sem-data-sem-cap"]);
   });
 
   it("NIP nulo, vazio ou só com espaços entra em 'sem NIP'; o completo não entra em nada", () => {
@@ -46,7 +70,7 @@ describe("`RF-INSTR-09` · os dois avisos com que a lista começa", () => {
   });
 
   it("aviso que não encontra ninguém continua no resultado — não some do quadro", () => {
-    expect(avisosDoCadastro([completo], AVISOS_INICIAIS)).toHaveLength(2);
+    expect(avisosDoCadastro([completo], AVISOS_INICIAIS)).toHaveLength(3);
   });
 });
 
@@ -66,9 +90,10 @@ describe("`FR-027` · a lista é aberta — aviso novo entra sem mudar a funçã
     expect(resultado.map((a) => a.chave)).toEqual([
       "sem-nip",
       "obrigatorio-pendente",
+      "sem-data-docencia",
       "sem-regime",
     ]);
-    expect(resultado[2]?.instrutores.map((i) => i.id)).toEqual(["sem"]);
+    expect(resultado[3]?.instrutores.map((i) => i.id)).toEqual(["sem"]);
   });
 
   it("o resultado não tem campo que bloqueie — só título e quem aparece (`RN-DEG-02`)", () => {

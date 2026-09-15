@@ -95,7 +95,7 @@ export const PARAMETROS_SEM_RECORTE: ParametrosDaListagem = {
  * saber quais colunas a consulta traz — as linhas chegam tipadas como erro.
  */
 export const COLUNAS_DA_LISTAGEM =
-  "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, categoria, om, regime_trabalho, nivel_escolaridade, capacitacao_didatica, nip, status, antiguidade_declarada_num, ordem_antiguidade, habilitado, selecionado";
+  "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, categoria, om, regime_trabalho, nivel_escolaridade, capacitacao_didatica, nip, status, antiguidade_declarada_num, ordem_antiguidade, habilitado, selecionado, data_inicio_docencia_ciaara";
 
 /**
  * Normaliza a busca como `app.normalizar_texto` normaliza `nome_normalizado`: sem acento, sem caixa,

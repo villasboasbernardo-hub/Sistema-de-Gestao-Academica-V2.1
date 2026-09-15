@@ -25,7 +25,10 @@ import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { anoCorrente } from "@/lib/formato/ano-corrente";
+import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
+import { alertaForaDaFaixa, alertaSemCapacitacao } from "@/lib/dominio/alertas-instrutor";
+import { cargaPorSemana, semanasForaDaFaixa } from "@/lib/dominio/carga-semanal";
+import { anoCorrente, hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { COLUNAS_PESSOAIS, valoresFuncionaisDe, valoresPessoaisDe } from "../campos";
@@ -104,7 +107,7 @@ export default async function FichaDoInstrutor({
       .maybeSingle(),
     supabase
       .from("vw_instrutor_carga_anual")
-      .select("ta_ministrado_ano, ta_previsto_ano")
+      .select("ta_ministrado_ano, ta_previsto_ano, faixa_semanal_min, faixa_semanal_max")
       .eq("instrutor_id", instrutor.id)
       .eq("ano", ano)
       .maybeSingle(),
@@ -137,6 +140,19 @@ export default async function FichaDoInstrutor({
   // ⚠️ Falha de leitura é "—", não zero (`RN-DEG-01`): zero afirmaria que não houve aula.
   const ministrada = cargaRes.error ? null : Number(cargaRes.data?.ta_ministrado_ano ?? 0);
   const prevista = cargaRes.error ? null : Number(cargaRes.data?.ta_previsto_ano ?? 0);
+
+  /*
+   * ⚠️ OS ALERTAS DA US4 AVISAM E NÃO BLOQUEIAM (`FR-018`, `RN-DEG-02`). Nenhum deles condiciona o botão
+   * de gravar, o de desativar ou o painel. A carga semanal é somada **por semana ISO** — nunca o ano
+   * inteiro — pela decisão de Bernardo Villas Boas de 15/09/2026, e a faixa vem de `config_parametros`.
+   */
+  const faixa =
+    cargaRes.data?.faixa_semanal_min != null && cargaRes.data?.faixa_semanal_max != null
+      ? {
+          minimo: Number(cargaRes.data.faixa_semanal_min),
+          maximo: Number(cargaRes.data.faixa_semanal_max),
+        }
+      : null;
   const atribuicoes = atribuicoesRes.error
     ? null
     : (atribuicoesRes.data ?? []).map((a) => ({
@@ -150,6 +166,28 @@ export default async function FichaDoInstrutor({
         semanas: a.semanas,
         mediaSemanal: a.media_semanal === null ? null : Number(a.media_semanal),
       }));
+  const alertas = [
+    alertaForaDaFaixa(
+      semanasForaDaFaixa(
+        cargaPorSemana(
+          (atribuicoes ?? []).map((a) => ({
+            inicio: a.inicio,
+            termino: a.termino,
+            mediaSemanal: a.mediaSemanal,
+          })),
+        ),
+        faixa,
+      ),
+      faixa,
+    ),
+    alertaSemCapacitacao(
+      {
+        dataInicioDocenciaCiaara: instrutor.data_inicio_docencia_ciaara,
+        capacitacaoDidatica: instrutor.capacitacao_didatica,
+      },
+      hojeNaCiaara(),
+    ),
+  ].flatMap((a) => (a ? [a] : []));
 
   const ativo = instrutor.status === "ativo";
 
@@ -174,6 +212,16 @@ export default async function FichaDoInstrutor({
           <BadgeStatus tom={ativo ? "executado" : "inativo"} rotulo={ativo ? "ativo" : "inativo"} />
         </div>
       </header>
+
+      {alertas.map((a) => (
+        <AlertaConformidade
+          key={a.chave}
+          tom="conformidade"
+          titulo={a.titulo}
+          avisos={a.detalhes}
+          className="static"
+        />
+      ))}
 
       <FichaEmLeitura
         id={instrutor.id}

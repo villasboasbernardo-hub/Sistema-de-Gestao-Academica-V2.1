@@ -5,9 +5,9 @@
  * dos lançamentos, e a prevista das atribuições ativas, pela fórmula da T011 (decisão de Bernardo
  * Villas Boas, 15/09/2026) — ano pela data de início prevista, rateio pelo `RN-MAT-05`.
  *
- * ⚠️ A MÉDIA SEMANAL APARECE POR ATRIBUIÇÃO, E NÃO SOMADA. Como compor a semanal do instrutor com várias
- * disciplinas no ano é pendência registrada no contrato de carga horária; somar aqui seria escolher a
- * resposta na tela. Por isso também não há alerta de faixa nesta seção.
+ * ⚠️ A MÉDIA SEMANAL APARECE POR ATRIBUIÇÃO, E NÃO SOMADA. A soma é por semana ISO, só das atribuições
+ * que cobrem a mesma semana (decisão de Bernardo Villas Boas, 15/09/2026), e vive em
+ * `lib/dominio/carga-semanal.ts`; o alerta de faixa sai no topo da ficha, nomeando a semana.
  *
  * ⚠️ FALHA DE LEITURA É "—", NÃO ZERO (`RN-DEG-01`). Zero afirmaria que não houve aula nem atribuição.
  */

@@ -91,6 +91,10 @@ depois, quando ninguém lembra quem era a pessoa.
    é recusado igual. ⚠️ Texto em branco é ausência disfarçada.
 3. **Dado** a recusa, **quando** ela acontece, **então** nada é salvo pela metade.
 
+**Emenda registrada em 15/09/2026**: pelo `FR-005` emendado, especialidade/habilitação passa a ser
+opcional, e os cenários 1 e 2 valem para **quatro** campos — posto, nome completo, categoria e OM. A
+especialidade continua no cenário 2: preenchida só com espaços, é recusada. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
 ---
 
 ### User Story 3 - A carga horária é lida, nunca digitada (Priority: P1)
@@ -213,6 +217,7 @@ refinamento reaparece.
 - **FR-005**: O sistema MUST recusar salvar cadastro sem **posto/graduação, especialidade,
   nome completo, categoria e organização militar** — inclusive quando preenchidos só com espaços
   (`RN-INST-03`, `RF-INSTR-02`).
+  **Emenda registrada em 15/09/2026 (e ao `RN-INST-03`, nesta spec)**: especialidade/habilitação passa a ser **opcional** — são **quatro** os obrigatórios. Preenchida só com espaços continua recusada, pelo esquema e pelo `CHECK` do banco. Motivo: o Épico 2 mediu 15 instrutores da base real sem sufixo de especialidade, todos militares (12 da ativa e 3 do Magistério Militar Naval), tirou o `NOT NULL` do banco, e exigir o campo na tela impedia esses 15 de salvar a própria ficha — defeito. ⚠️ **O documento 04 não é alterado**: o `RN-INST-03` de lá continua listando cinco campos; a divergência fica anotada aqui. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-006**: A recusa MUST valer **por qualquer caminho**, não apenas pela tela.
 - **FR-007**: O identificador de instrutor MUST ser gerado automaticamente e MUST ser **inteiro
   simples, sem prefixo** (`RN-CRUD-03`, exceção documentada).
@@ -257,11 +262,11 @@ refinamento reaparece.
   ⚠️ **O teto é a FAIXA, jamais o número do regime.** Um instrutor de 40h com 20h previstas está
   **dentro**, não no limite.
   **Decisão registrada em 15/09/2026 (T011 d)**: os limites da faixa são **inclusivos** — exatamente 8h ou 12h no regime de 20h está dentro e não alerta; menos de 8 ou mais de 12 alerta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
-  **Pendência registrada em 15/09/2026**: a decisão define a média semanal **de uma disciplina**, mas não diz como compor a semanal **do instrutor** quando ele tem várias disciplinas no mesmo ano, em períodos que podem ou não se sobrepor. O alerta deste requisito espera essa resposta.
+  **Decisão registrada em 15/09/2026 (fecha a pendência acima)**: a carga semanal do instrutor numa semana ISO — de segunda a domingo — é a **soma das médias semanais das atribuições ativas cuja janela prevista cobre aquela semana**. Semana sem atribuição não entra no cálculo nem gera alerta. O alerta dispara quando **alguma** semana coberta sai da faixa, e a mensagem nomeia a semana. 🛑 **Somar as médias do ano inteiro é proibido**: criaria alerta para quem nunca passou da faixa em semana nenhuma. A herança não define outro início de semana, e o projeto já usa semana ISO (documentos 20 e 25). *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-017**: MUST ser sinalizado o instrutor em docência há **mais de um ano sem capacitação
   didática** (`RF-INSTR-16`).
   **Decisão registrada em 15/09/2026**: o campo de referência para contar o tempo de docência é `data_inicio_docencia_ciaara`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
-  **Pendência mantida em 15/09/2026**: continua sem resposta o que fazer quando `data_inicio_docencia_ciaara` está vazia (T053). O alerta deste requisito espera essa resposta.
+  **Decisão registrada em 15/09/2026 (fecha a T053)**: com `data_inicio_docencia_ciaara` vazia, o alerta **não dispara** — sem data não há como contar o ano —, e em lugar dele entra no quadro de avisos o aviso próprio **"Data de início de docência não informada"** (`FR-027`), para quem também não tem capacitação didática. "Mais de um ano" é estrito: um ano exato não alerta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-018**: Os alertas dos `FR-016` e `FR-017` MUST ser **avisos, nunca bloqueios** (`RN-DEG-02`).
   ⚠️ Transformá-los em impedimento **muda a regra de negócio** e exige autorização nominal.
 
@@ -311,7 +316,7 @@ refinamento reaparece.
   ⚠️ **Ordenação alfabética é PROIBIDA** nesse gráfico — está escrito assim na spec 014.
   **Emenda registrada em 15/09/2026**: a redação anterior dizia que o gráfico de posto/graduação vinha "sempre em primeiro", enquanto a própria lista o punha em terceiro. A spec 014 da v2.0 diz "sempre na **ordem** de antiguidade", referindo-se às barras, e não fixa posição; o texto passa a concordar com ela. Fica explícito também que "classificação" é a coluna `categoria`, como no `FR-002` da spec 014. *(decisão de Bernardo Villas Boas, 15/09/2026)*
   **Segunda emenda registrada em 15/09/2026**: passam a ser **nove gráficos** — três de **barras** (status de seleção, com habilitados e selecionados em duas cores; posto/graduação; OM) e seis de **pizza** (classificação, escolaridade, regime de trabalho, capacitação didática, círculo hierárquico e índice de capacitação geral). Os dois novos vêm da v2.0: o índice de capacitação geral é o da spec 021 (com × sem capacitação didática, somando o total do recorte), e o título "Status de Seleção" do gráfico de habilitados × selecionados também é da spec 021. A classificação exibe os rótulos da v2.0 (Militares da Ativa, TTC, Civis, Magistério Militar Naval). Toda cor vem da paleta categórica `--serie-N` do Épico 4, uma por categoria, nos dois temas; toda barra traz o valor escrito além do eixo; toda pizza traz o percentual escrito, sem 3D nem perspectiva, porque inclinar a pizza distorce a leitura do percentual; a elevação leve fica no cartão que envolve o gráfico, pelo token de sombra. *(decisão de Bernardo Villas Boas, 15/09/2026)*
-  **Pendência registrada em 15/09/2026**: a escolaridade tem **seis** categorias no dado real (cinco níveis e "Não informado", 142 de 177), e o documento 23 §7 limita a pizza a **cinco** — o componente `GraficoPizza` recusa acima disso. Até a decisão, a escolaridade continua em barras.
+  **Decisão registrada em 15/09/2026 (não reabrir)**: a escolaridade **permanece em barras** e não vira pizza. São seis categorias contra o limite de cinco do documento 23 §7, e a maioria dos instrutores está sem o campo — 142 de 177 —, o que faria a pizza ser quase toda "Não informado". Os gráficos ficam **quatro de barras e cinco de pizza**. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-026.3**: Posto/graduação fora do domínio conhecido MUST aparecer numa faixa **"Outros"** ao
   final da ordenação, **nunca ser omitido em silêncio** (Princípio V, degradação segura).
 - **FR-026.4**: No gráfico de capacitação didática, um instrutor com **duas** qualificações MUST
@@ -319,9 +324,10 @@ refinamento reaparece.
   **Emenda registrada em 15/09/2026**: o gráfico de capacitação didática passa a exibir a categoria **"Nenhuma"**, que conta quem tem o campo vazio. Quem tem duas qualificações continua contando nas duas. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-026.5**: MUST existir um botão de **exibir/ocultar as estatísticas** — indicadores e gráficos —, como na v2.0 (spec 015, painel de estatísticas que se expande e recolhe). O estado é **efêmero**, fora da URL, pela pergunta do contrato de estado: *isto faz sentido num link que eu mando?* O painel começa recolhido, como na v2.0, e quando aberto mostra o recorte filtrado corrente. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-026.6**: Legenda clicável que marca e desmarca categorias ou séries e atualiza o gráfico. *(decisão de Bernardo Villas Boas, 15/09/2026)*
-  **Pendência registrada em 15/09/2026**: a descrição desse comportamento **não foi encontrada** nas specs 014, 015 e 021 da herança — nenhuma fala em legenda clicável. Não é implementada até a regra ser escrita.
+  **Conferência registrada em 15/09/2026 — parada**: a pedido de Bernardo, o código real da v2.0 foi lido em `SIS11/CIAARA-11-v2`. O componente de gráfico, `renderizarGrafico_` (`src/frontend/_Comum.html`, linhas 253 a 264), cria o gráfico só com `chart`, `labels`/`series` e `xaxis`, **sem nenhuma opção de legenda nem de evento**; a busca por `legend`, `onItemClick`, `toggleDataSeries`, `dataPointSelection` e `events:` em `src/frontend/` e `appsscript/` não achou nada. A biblioteca vinha de CDN sem versão fixada (`_Estilos.html`, linha 11), sem cópia local para conferir o comportamento padrão. **Não está no código, e não é implementada**: vira requisito novo, que Bernardo define depois.
 - **FR-027**: **Quadro de avisos de qualidade de cadastro** (`RF-INSTR-09`).
   **Decisão registrada em 15/09/2026**: a lista de avisos é **aberta e extensível**, não um conjunto fechado. Ela começa pelos dois exemplos do `RF-INSTR-09` — instrutor sem NIP e campo obrigatório pendente — e aceita aviso novo sem mudar o tipo que a descreve. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Acréscimo registrado em 15/09/2026**: entra o aviso **"Data de início de docência não informada"**, no lugar do alerta do `FR-017` quando a data está vazia. E o aviso de campo obrigatório pendente **continua cobrando especialidade** dos militares sem ela — os 15 da base real são todos militares; como nenhum civil está sem o campo, nenhuma delimitação para civil foi registrada. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-027.1**: A listagem MUST trazer, no mínimo, as colunas **posto/graduação, nome completo,
   categoria, OM, regime e CH total no ano corrente** (spec 014).
   **Emenda registrada em 15/09/2026**: a coluna de posto/graduação sai, e a coluna "Nome" passa a se chamar **"Instrutor"**, exibindo o formato do `FR-019` por `NomeInstrutor`. As colunas são: instrutor, categoria, OM, regime e CH total no ano corrente. A ordenação por posto continua existindo por cima da antiguidade, agora no cabeçalho "Instrutor". É a coluna única da spec 020 da v2.0. *(decisão de Bernardo Villas Boas, 15/09/2026)*
@@ -361,7 +367,7 @@ refinamento reaparece.
 - **FR-031**: MUST existir **ficha individual do instrutor em tela** (`RF-INSTR-10`). A **saída em
   PDF e a rota de impressão** ficam para o **Épico 11**.
   **Emenda registrada em 15/09/2026**: a **geração da ficha em A4 retrato e a impressão pelo navegador** entram **nesta** fatia, com botão "Gerar ficha" na página do instrutor. O salvar como arquivo ou PDF dentro do sistema continua no Épico 11. *(decisão de Bernardo Villas Boas, 15/09/2026)*
-  **Pendência registrada em 15/09/2026**: o layout da ficha da v2.0 (specs 016, 025 e 026) é o export HTML do documento oficial `FICHA CADASTRO DE DOCENTES CIAARA(2).docx`, em `SIS11/modelos/Ficha de cadastro/`, e **depende de duas imagens oficiais** (`image1.png`, `image2.png`, os brasões do cabeçalho) que não estão no repositório nem no schema. Pela instrução de 15/09/2026, a implementação para aqui até a decisão sobre esses arquivos.
+  **Conferência registrada em 15/09/2026 — parada**: das duas imagens do cabeçalho oficial, uma está no repositório e a outra não. `image1.png` é uma captura de tela do brasão do CIAARA, e o brasão oficial já está em `public/marca/brasao-ciaara-impressao.png` (fornecido por Bernardo em 11/09/2026). `image2.png` é o selo verde **"Marinha do Brasil — Hidrografia e Navegação"**, que **não está** no repositório. Sem os dois, a ficha não é implementada nem improvisada; o salvar como arquivo continua no Épico 11.
   ⚠️ **Decisão de 10/09/2026**: adiar a ficha inteira quebraria a paridade com a v2.0 num ponto que
   Bernardo usa; e o `FR-023` já a pressupõe. O que fica para o Épico 11 é o **documento**, não a
   leitura.
@@ -392,6 +398,7 @@ refinamento reaparece.
 - **SC-007.1**: São exibidos **4 indicadores** e **7 gráficos**, e as barras do de posto/graduação
   seguem a ordem de antiguidade. Contagem exata, não "aproximadamente".
   **Segunda emenda registrada em 15/09/2026**: passam a ser **3 indicadores** e **9 gráficos** — 3 de barras e 6 de pizza —, com as barras de posto/graduação em antiguidade. Enquanto a pendência de escolaridade do `FR-026.2` não fecha, ela é contada entre os de barras. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Terceira emenda registrada em 15/09/2026**: com a escolaridade decidida em barras, são **3 indicadores** e **9 gráficos — 4 de barras e 5 de pizza**. *(decisão de Bernardo Villas Boas, 15/09/2026)*
   **Emenda registrada em 15/09/2026**: a redação anterior exigia o gráfico de posto/graduação "em primeiro". Passa a concordar com o `FR-026.2` emendado na mesma data. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **SC-008**: Recarregar a página com filtros aplicados reproduz **exatamente** a mesma tela.
 - **SC-010**: O número de perfis que **escrevem** identificação civil e residência é **igual** ao

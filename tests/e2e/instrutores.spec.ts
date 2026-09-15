@@ -551,3 +551,76 @@ test.describe("`FR-022` e `FR-011` · painel de disciplinas, confirmação e a p
     ).toHaveCount(0);
   });
 });
+
+test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqueia", () => {
+  let amostra: AmostraDeInstrutores;
+
+  test.beforeAll(async () => {
+    amostra = await semearInstrutores(PROCESSO, "C", { comCargaPrevista: true });
+  });
+
+  test.afterAll(async () => {
+    await limparInstrutores(PROCESSO, "C");
+  });
+
+  test("20h com 14 horas por semana alerta nomeando as semanas, e gravar continua disponível", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, `/instrutores/${amostra.codigos.ctMaisAntigo}`);
+    const alerta = page
+      .locator('[data-slot="alerta-conformidade"]')
+      .filter({ hasText: "Carga semanal prevista fora da faixa do regime" });
+    await expect(alerta).toBeVisible();
+    await expect(
+      alerta.getByText(
+        /^Semana \d+\/\d{4} \(\d{2}\/\d{2} a \d{2}\/\d{2}\): 14 h, acima da faixa de 8 a 12 h\.$/,
+      ),
+    ).toHaveCount(4);
+
+    // FR-018 · o alerta não condiciona nada: gravar continua habilitado, e desativar também.
+    const rodape = page.locator('[data-slot="rodape-do-formulario"]');
+    await expect(rodape.getByRole("button", { name: "Gravar alterações" })).toBeEnabled();
+    await expect(rodape.getByRole("button", { name: "Desativar instrutor" })).toBeEnabled();
+  });
+
+  test("`RN-INST-03` emendado · militar sem especialidade salva a própria ficha, e o campo segue nulo", async ({
+    page,
+  }) => {
+    // O defeito dos 15 instrutores da base real: sem sufixo de especialidade, a ficha não salvava.
+    const codigo = amostra.codigos.cmg;
+    await servico().from("instrutores").update({ esp_hab_obs: null }).eq("codigo", codigo);
+
+    await entrar(page, EMAIL_ADMIN, `/instrutores/${codigo}`);
+    await expect(page.locator('input[name="esp_hab_obs"]')).toHaveValue("");
+    await page
+      .locator('[data-slot="rodape-do-formulario"]')
+      .getByRole("button", { name: "Gravar alterações", exact: true })
+      .click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Gravar", exact: true })
+      .click();
+    await expect(
+      page.getByText("Alterações gravadas."),
+      "a ficha sem especialidade continua sem salvar",
+    ).toBeVisible({ timeout: 15_000 });
+
+    const { data } = await servico()
+      .from("instrutores")
+      .select("esp_hab_obs, editado_em")
+      .eq("codigo", codigo)
+      .single();
+    expect(data?.esp_hab_obs).toBeNull();
+    expect(data?.editado_em, "a gravação não chegou ao banco").not.toBeNull();
+  });
+
+  test("40h com 20 horas por semana está dentro da faixa, e não alerta", async ({ page }) => {
+    await entrar(page, EMAIL_ADMIN, `/instrutores/${amostra.codigos.ctMaisModerno}`);
+    await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("80 TA");
+    await expect(
+      page
+        .locator('[data-slot="alerta-conformidade"]')
+        .filter({ hasText: "Carga semanal prevista fora da faixa do regime" }),
+    ).toHaveCount(0);
+  });
+});

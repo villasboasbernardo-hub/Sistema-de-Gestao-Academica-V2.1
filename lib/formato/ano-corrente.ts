@@ -8,6 +8,20 @@
  */
 const FUSO_DA_CIAARA = "America/Sao_Paulo";
 
+/**
+ * A data de hoje no fuso da CIAARA-11, `AAAA-MM-DD` — para comparar com coluna `date` sem fuso.
+ *
+ * ⚠️ `en-CA` É SÓ O FORMATO: é o locale que escreve a data como `AAAA-MM-DD`. O fuso é o da CIAARA-11.
+ */
+export function hojeNaCiaara(agora: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: FUSO_DA_CIAARA,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(agora);
+}
+
 export function anoCorrente(agora: Date = new Date()): number {
   const ano = new Intl.DateTimeFormat("en-US", {
     timeZone: FUSO_DA_CIAARA,
