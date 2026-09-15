@@ -34,7 +34,41 @@ export type EscalaDeAntiguidade = Readonly<Record<string, number>>;
 export type Ordenavel = {
   readonly pg: string;
   readonly nomeCompleto: string;
+  /**
+   * A antiguidade declarada, **só como desempate** entre quem tem o mesmo peso (`FR-002` da spec 006).
+   *
+   * ⚠️ OPCIONAL, E A AUSÊNCIA TEM LUGAR DEFINIDO: quem não a traz fica no fim do próprio posto, igual
+   * ao `coalesce(..., 99999)` de `app.fn_antiguidade_ordem`. Opcional também para que quem só tem
+   * posto e nome — o seletor da fatia (b) — continue ordenando como sempre ordenou.
+   */
+  readonly antiguidadeDeclarada?: number | null;
 };
+
+/** Uma linha de `config_listas` da lista `escala_antiguidade`, como a consulta a devolve. */
+export type LinhaDaEscala = {
+  readonly valor: string;
+  readonly ordem: number;
+  readonly ativo: boolean;
+};
+
+/**
+ * `RN-ANT-02` — a escala, montada a partir das linhas de `config_listas` (`FR-003` da spec 006).
+ *
+ * > *"A antiguidade é derivada do posto/graduação (`P/G`), não de um campo de banco de dados
+ * > dedicado, segundo a escala fixa: CMG=1, CF=2, […] MN=12 (peso menor = mais antigo)."*
+ * > — documento 04, `RN-ANT-02`
+ *
+ * ⚠️ ELA NÃO CONHECE POSTO NENHUM, e é para isso que existe: traduz o que a consulta trouxe no
+ * formato que a ordenação recebe, sem acrescentar nem corrigir valor. Linha inativa não entra — a
+ * escala administrável é a ativa.
+ */
+export function escalaDeLinhas(linhas: readonly LinhaDaEscala[]): EscalaDeAntiguidade {
+  const escala: Record<string, number> = {};
+  for (const linha of linhas) {
+    if (linha.ativo) escala[linha.valor] = linha.ordem;
+  }
+  return escala;
+}
 
 /**
  * O peso de um `P/G`, ou `null` quando a escala não o conhece.
@@ -69,7 +103,12 @@ export type ResultadoDaOrdenacao<T> = {
 };
 
 /**
- * Ordena por antiguidade crescente, com empate resolvido por nome.
+ * Ordena por antiguidade crescente: peso do posto, depois a antiguidade declarada, depois o nome.
+ *
+ * ⚠️ O DESEMPATE PELA DECLARADA ENTROU EM 15/09/2026 (`FR-002` da spec 006), e alinha esta função ao
+ * banco. `app.fn_antiguidade_ordem` sempre desempatou pela declarada; esta função desempatava direto
+ * pelo nome, e uma lista ordenada em memória discordaria da ordenada pela consulta. O nome continua
+ * como último critério, entre quem não declarou.
  *
  * ⚠️ POSTO DESCONHECIDO VAI PARA O FIM, COM AVISO, E **NUNCA SOME** (`RN-DEG-01`). Filtrar o que a
  * escala não conhece seria a saída fácil e a pior: o instrutor desapareceria da lista, e quem
@@ -101,6 +140,10 @@ export function ordenarPorAntiguidade<T extends Ordenavel>(
       const pa = a.peso ?? Number.POSITIVE_INFINITY;
       const pb = b.peso ?? Number.POSITIVE_INFINITY;
       if (pa !== pb) return pa - pb;
+      // ⚠️ Sem declarada = fim do próprio posto, sem inventar número plausível.
+      const da = a.instrutor.antiguidadeDeclarada ?? Number.POSITIVE_INFINITY;
+      const db = b.instrutor.antiguidadeDeclarada ?? Number.POSITIVE_INFINITY;
+      if (da !== db) return da - db;
       return a.instrutor.nomeCompleto.localeCompare(b.instrutor.nomeCompleto, "pt-BR");
     })
     .map((x) => x.instrutor);
