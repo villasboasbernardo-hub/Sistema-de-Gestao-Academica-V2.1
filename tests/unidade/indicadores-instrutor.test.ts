@@ -8,18 +8,15 @@ import {
   type InstrutorParaIndicadores,
 } from "@/lib/dominio/indicadores-instrutor";
 
-const instrutor = (
-  id: string,
-  capacitacaoDidatica: string | null,
-  cargaNoAno: number | null = 0,
-): InstrutorParaIndicadores => ({ id, capacitacaoDidatica, cargaNoAno });
+const instrutor = (id: string, capacitacaoDidatica: string | null): InstrutorParaIndicadores => ({
+  id,
+  capacitacaoDidatica,
+});
 
-describe("`FR-026` · exatamente quatro indicadores", () => {
-  it("o resultado tem quatro chaves, e são as quatro da lista fechada", () => {
+describe("`FR-026` emendado em 15/09/2026 · exatamente três indicadores", () => {
+  it("o resultado tem três chaves, e o cartão de CH do ano não está entre elas", () => {
     const r = indicadoresDeInstrutores([], new Set(), new Set());
-    expect(Object.keys(r).sort()).toEqual(
-      ["cargaMinistradaNoAno", "comCapacitacaoDidatica", "taxaDeSelecao", "total"].sort(),
-    );
+    expect(Object.keys(r).sort()).toEqual(["comCapacitacaoDidatica", "taxaDeSelecao", "total"]);
   });
 
   it("capacitação conta o campo NÃO VAZIO — espaço em branco não é capacitação", () => {
@@ -36,23 +33,6 @@ describe("`FR-026` · exatamente quatro indicadores", () => {
     );
     expect(r.total).toBe(5);
     expect(r.comCapacitacaoDidatica, "duas qualificações ainda é UM instrutor").toBe(2);
-  });
-
-  it("a carga do ano é a soma do recorte; com uma leitura falhada, é null e não soma parcial", () => {
-    expect(
-      indicadoresDeInstrutores(
-        [instrutor("a", null, 4), instrutor("b", null, 6)],
-        new Set(),
-        new Set(),
-      ).cargaMinistradaNoAno,
-    ).toBe(10);
-    expect(
-      indicadoresDeInstrutores(
-        [instrutor("a", null, 4), instrutor("b", null, null)],
-        new Set(),
-        new Set(),
-      ).cargaMinistradaNoAno,
-    ).toBeNull();
   });
 });
 

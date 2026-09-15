@@ -1,19 +1,22 @@
 /**
- * `FR-026.2`, `FR-026.3` e `FR-026.4` da spec 006 — os sete gráficos.
+ * `FR-026.2`, `FR-026.3` e `FR-026.4` da spec 006, com a segunda emenda de 15/09/2026 — os nove gráficos.
  *
- * ⚠️ O TETO DE SÉRIES É O DO DESIGN SYSTEM, NÃO "SETE VALORES". A T064 dizia *"nenhuma série com mais
- * de 7 valores"*; o que `components/graficos/` recusa é gráfico com mais de `MAXIMO_DE_SERIES` (6)
- * **séries**. Uma OM a mais é uma categoria a mais no eixo, não uma série — o gráfico de OM da base
- * viva tem oito barras e uma série só. O caso abaixo confere o teto real.
+ * ⚠️ O TETO DE SÉRIES É O DO DESIGN SYSTEM. `components/graficos/` recusa gráfico com mais de
+ * `MAXIMO_DE_SERIES` (6) **séries**, e pizza com mais de `MAXIMO_DE_CATEGORIAS_NA_PIZZA` (5)
+ * **categorias**. O gráfico de OM tem oito barras e uma série; as pizzas da amostra real ficam em até
+ * quatro fatias.
  */
 import { describe, expect, it } from "vitest";
 
 import { conferirTetoDeSeries, MAXIMO_DE_SERIES } from "@/components/graficos/tipos";
 import { escalaDeLinhas } from "@/lib/dominio/antiguidade";
 import {
+  CAPACITACAO_NENHUMA,
+  COM_CAPACITACAO,
   FAIXA_OUTROS,
   graficosDeInstrutores,
   NAO_INFORMADO,
+  SEM_CAPACITACAO,
   type InstrutorParaGraficos,
 } from "@/lib/dominio/graficos-instrutor";
 
@@ -46,27 +49,48 @@ const SELECAO = { habilitados: 2, selecionados: 3 };
 const grafico = (lista: readonly InstrutorParaGraficos[], chave: string) =>
   graficosDeInstrutores(lista, ESCALA, SELECAO).find((g) => g.chave === chave);
 
-describe("`FR-026.2` · exatamente sete gráficos, na ordem da spec", () => {
-  it("são sete, e são os sete nomeados", () => {
+describe("`FR-026.2` emendado · exatamente nove gráficos, três de barras e seis de pizza", () => {
+  it("são nove, na ordem da spec, com os dois novos no fim", () => {
     expect(graficosDeInstrutores([], ESCALA, SELECAO).map((g) => g.chave)).toEqual([
-      "habilitados-selecionados",
+      "status-de-selecao",
       "classificacao",
       "posto-graduacao",
       "om",
       "escolaridade",
       "regime",
       "capacitacao",
+      "circulo",
+      "indice-capacitacao",
     ]);
   });
 
-  it("habilitados × selecionados usa as contagens recebidas — o mesmo número do indicador", () => {
-    expect(grafico([], "habilitados-selecionados")?.barras).toEqual([
+  it("barras: status de seleção, posto e OM — e escolaridade, enquanto a pendência não fecha", () => {
+    const formas = Object.fromEntries(
+      graficosDeInstrutores([], ESCALA, SELECAO).map((g) => [g.chave, g.forma]),
+    );
+    expect(formas).toEqual({
+      "status-de-selecao": "barras",
+      classificacao: "pizza",
+      "posto-graduacao": "barras",
+      om: "barras",
+      escolaridade: "barras",
+      regime: "pizza",
+      capacitacao: "pizza",
+      circulo: "pizza",
+      "indice-capacitacao": "pizza",
+    });
+  });
+
+  it("Status de Seleção usa as contagens recebidas — o mesmo número do indicador (spec 021)", () => {
+    const g = grafico([], "status-de-selecao");
+    expect(g?.titulo).toBe("Status de Seleção");
+    expect(g?.barras).toEqual([
       { nome: "Habilitados", valor: 2 },
       { nome: "Selecionados", valor: 3 },
     ]);
   });
 
-  it("a classificação é lida da coluna `categoria`", () => {
+  it("a classificação é lida da coluna `categoria` — o rótulo da v2.0 é de quem desenha", () => {
     const lista = [
       com("1", { categoria: "TTC" }),
       com("2", { categoria: "Militar da Ativa" }),
@@ -109,23 +133,63 @@ describe("`RN-ANT-01` · barras de posto/graduação em antiguidade, nunca alfab
   });
 });
 
-describe("`FR-026.4` · capacitação didática", () => {
-  it("duas qualificações contam nas duas barras; campo vazio não conta em nenhuma", () => {
+describe("`FR-026.4` emendado · capacitação didática com a fatia 'Nenhuma'", () => {
+  it("duas qualificações contam nas duas fatias; o campo vazio conta em Nenhuma, no fim", () => {
     const lista = [
       com("1", { capacitacaoDidatica: "C-Exp-TE, C-Esp-DID" }),
       com("2", { capacitacaoDidatica: "C-Exp-TE" }),
       com("3", { capacitacaoDidatica: "" }),
       com("4", { capacitacaoDidatica: null }),
     ];
-    const barras = grafico(lista, "capacitacao")?.barras ?? [];
-    expect(barras).toEqual([
+    expect(grafico(lista, "capacitacao")?.barras).toEqual([
       { nome: "C-Exp-TE", valor: 2 },
       { nome: "C-Esp-DID", valor: 1 },
+      { nome: CAPACITACAO_NENHUMA, valor: 2 },
     ]);
-    expect(
-      barras.reduce((s, b) => s + b.valor, 0),
-      "a soma não fecha com o total, e isso é correto",
-    ).toBe(3);
+  });
+
+  it("o índice de capacitação geral tem exatamente duas fatias e soma o total (spec 021)", () => {
+    const lista = [
+      com("1", { capacitacaoDidatica: "C-Exp-TE, C-Esp-DID" }),
+      com("2", { capacitacaoDidatica: "   " }),
+      com("3", { capacitacaoDidatica: null }),
+    ];
+    const fatias = grafico(lista, "indice-capacitacao")?.barras ?? [];
+    expect(fatias).toEqual([
+      { nome: COM_CAPACITACAO, valor: 1 },
+      { nome: SEM_CAPACITACAO, valor: 2 },
+    ]);
+    expect(fatias.reduce((s, f) => s + f.valor, 0)).toBe(lista.length);
+  });
+
+  it("recorte vazio: o índice mostra zero nas duas fatias, sem exceção (spec 021, casos de fronteira)", () => {
+    expect(grafico([], "indice-capacitacao")?.barras).toEqual([
+      { nome: COM_CAPACITACAO, valor: 0 },
+      { nome: SEM_CAPACITACAO, valor: 0 },
+    ]);
+  });
+});
+
+describe("círculo hierárquico · Oficiais, Praças e 'Outros'", () => {
+  it("SC e posto fora do mapa vão para Outros, e não somem", () => {
+    const lista = [
+      com("1", { pg: "CMG" }),
+      com("2", { pg: "SO" }),
+      com("3", { pg: "3ºSG" }),
+      com("4", { pg: "SC" }),
+      com("5", { pg: "XYZ" }),
+    ];
+    expect(grafico(lista, "circulo")?.barras).toEqual([
+      { nome: "Oficiais", valor: 1 },
+      { nome: "Praças", valor: 2 },
+      { nome: FAIXA_OUTROS, valor: 2 },
+    ]);
+  });
+
+  it("fatia sem ninguém não aparece", () => {
+    expect(grafico([com("1", { pg: "CT" })], "circulo")?.barras).toEqual([
+      { nome: "Oficiais", valor: 1 },
+    ]);
   });
 });
 
@@ -148,7 +212,7 @@ describe("degradação segura · valor vazio não some do gráfico", () => {
 });
 
 describe("o teto do Design System · nenhum gráfico passa de MAXIMO_DE_SERIES séries", () => {
-  it("cada um dos sete é uma série só, mesmo com muitas categorias", () => {
+  it("cada um dos nove é uma série só, mesmo com muitas categorias", () => {
     const muitasOms = Array.from({ length: 12 }, (_, i) => com(String(i), { om: `OM-${i}` }));
     for (const g of graficosDeInstrutores(muitasOms, ESCALA, SELECAO)) {
       const series = [

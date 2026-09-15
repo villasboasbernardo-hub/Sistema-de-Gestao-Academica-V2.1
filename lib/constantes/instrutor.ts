@@ -76,3 +76,23 @@ export const CLASSIFICACOES_DE_CURSO_NA_BARRA = [
   { valor: "aperfeicoamento_avancado", rotulo: "Curso de Aperfeiçoamento Avançado" },
   { valor: "estagio_qualificacao", rotulo: "Estágio de Qualificação" },
 ] as const;
+
+/**
+ * O rótulo de exibição da classificação do instrutor no gráfico (`FR-026.2` emendado em 15/09/2026).
+ *
+ * > `{ 'Militar da Ativa': 'Militares da Ativa', 'TTC': 'TTC', 'SCNS': 'Civis', 'MMN': 'Magistério
+ * > Militar Naval' }` — spec 014 da v2.0, `data-model.md`
+ *
+ * ⚠️ `categoria` NÃO É ENUM: é texto do cadastro, e os quatro valores são os da base real. Valor fora do
+ * mapa aparece como está, em vez de sumir ou virar "Outros" — um rótulo inventado esconderia o dado.
+ */
+export const ROTULO_DA_CATEGORIA: Readonly<Record<string, string>> = {
+  "Militar da Ativa": "Militares da Ativa",
+  TTC: "TTC",
+  SCNS: "Civis",
+  MMN: "Magistério Militar Naval",
+};
+
+export function rotuloDaCategoria(categoria: string): string {
+  return ROTULO_DA_CATEGORIA[categoria.trim()] ?? categoria;
+}

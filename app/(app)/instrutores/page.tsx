@@ -155,7 +155,6 @@ export default async function Instrutores({
     linhas.map((l, n) => ({
       id: l.id,
       capacitacaoDidatica: brutas[n]?.capacitacao_didatica ?? null,
-      cargaNoAno: l.cargaNoAno,
     })),
     idsOnde("habilitado"),
     idsOnde("selecionado"),
@@ -215,7 +214,7 @@ export default async function Instrutores({
 
       <QuadroDeAvisos avisos={avisos} />
 
-      <PainelDeInstrutores indicadores={indicadores} graficos={graficos} ano={ano} />
+      <PainelDeInstrutores indicadores={indicadores} graficos={graficos} />
 
       <p className="text-texto-suave text-sm" data-slot="contagem-de-instrutores">
         {linhas.length} instrutor(es){" "}

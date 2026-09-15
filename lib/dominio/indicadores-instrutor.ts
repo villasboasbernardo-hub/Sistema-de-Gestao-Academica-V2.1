@@ -8,8 +8,9 @@
  * > *"A taxa de seleção MUST exibir os dois valores absolutos sempre, e o percentual apenas como
  * > informação secundária. ⚠️ Selecionados NÃO é subconjunto de habilitados."* — `FR-026.1`
  *
- * ⚠️ A LISTA É FECHADA EM QUATRO (`FR-026`), e o tipo de retorno tem quatro chaves. "Entre outros
- * pertinentes" deixou de ser redação aceitável em 10/09/2026.
+ * ⚠️ A LISTA É FECHADA EM TRÊS (`FR-026`, emenda de 15/09/2026, decisão de Bernardo Villas Boas), e o
+ * tipo de retorno tem três chaves. O cartão de CH ministrada no ano saiu; a CH do ano corrente continua
+ * como coluna da listagem. "Entre outros pertinentes" deixou de ser redação aceitável em 10/09/2026.
  *
  * ⚠️ OS INDICADORES SÃO DO RECORTE, NÃO DO CADASTRO. Quem chama entrega os instrutores já filtrados,
  * e habilitado e selecionado só contam se estiverem nesse recorte — é o refinamento da spec 015 da
@@ -28,8 +29,6 @@
 export type InstrutorParaIndicadores = {
   readonly id: string;
   readonly capacitacaoDidatica: string | null;
-  /** TA ministrados no ano; `null` quando a leitura da carga falhou. */
-  readonly cargaNoAno: number | null;
 };
 
 export type TaxaDeSelecao = {
@@ -42,8 +41,6 @@ export type TaxaDeSelecao = {
 export type IndicadoresDeInstrutores = {
   readonly total: number;
   readonly comCapacitacaoDidatica: number;
-  /** `null` quando a carga de algum instrutor do recorte não pôde ser lida: soma parcial seria mentira. */
-  readonly cargaMinistradaNoAno: number | null;
   readonly taxaDeSelecao: TaxaDeSelecao;
 };
 
@@ -61,15 +58,9 @@ export function indicadoresDeInstrutores(
   const qtdHabilitados = contarNoRecorte(habilitados);
   const qtdSelecionados = contarNoRecorte(selecionados);
 
-  const cargaIndisponivel = instrutores.some((i) => i.cargaNoAno === null);
-  const carga = cargaIndisponivel
-    ? null
-    : instrutores.reduce((soma, i) => soma + (i.cargaNoAno ?? 0), 0);
-
   return {
     total: instrutores.length,
     comCapacitacaoDidatica: instrutores.filter((i) => preenchido(i.capacitacaoDidatica)).length,
-    cargaMinistradaNoAno: carga,
     taxaDeSelecao: {
       habilitados: qtdHabilitados,
       selecionados: qtdSelecionados,

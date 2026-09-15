@@ -298,10 +298,10 @@ e reimplementada fiel; detalhe que não está escrito em lugar nenhum **para e v
 
 ### Bloco 3 — gráficos e estatísticas
 
-- [ ] T104 Dar a `components/graficos/grafico-barras.tsx` cor por categoria e valor escrito em cada barra, e ao cartão dos gráficos a elevação pelo token de sombra, com o teste do componente atualizado (`FR-026.2`, documento 23 §7)
-- [ ] T105 Reescrever `lib/dominio/graficos-instrutor.ts` para os 9 gráficos — "Nenhuma" em capacitação, círculo com "Outros", índice de capacitação geral — e o de-para de classificação em `lib/constantes/instrutor.ts`, com os testes de contagem (`FR-026.2`, `FR-026.4`, `SC-007.1`)
-- [ ] T106 Reduzir `lib/dominio/indicadores-instrutor.ts` a 3 indicadores e atualizar os testes (`FR-026`)
-- [ ] T107 Criar o botão de exibir/ocultar estatísticas, efêmero e começando recolhido, e atualizar `PainelDeInstrutores.tsx` e a ponta a ponta do passo 5 para 3 indicadores e 9 gráficos (`FR-026.5`, `SC-007.1`)
+- [X] T104 Dar a `components/graficos/grafico-barras.tsx` cor por categoria e valor escrito em cada barra, e ao cartão dos gráficos a elevação pelo token de sombra, com o teste do componente atualizado (`FR-026.2`, documento 23 §7) ✅ `GraficoBarras` ganhou `corPorCategoria` (uma `Cell` com `var(--serie-N)` por categoria quando há uma série) e o valor escrito em cima de cada barra, junto do marcador de forma; os cartões dos gráficos usam `shadow-ciaara-1`. Suítes de gráficos e vitrine verdes (18 casos).
+- [X] T105 Reescrever `lib/dominio/graficos-instrutor.ts` para os 9 gráficos — "Nenhuma" em capacitação, círculo com "Outros", índice de capacitação geral — e o de-para de classificação em `lib/constantes/instrutor.ts`, com os testes de contagem (`FR-026.2`, `FR-026.4`, `SC-007.1`) ✅ 9 gráficos em `lib/dominio/graficos-instrutor.ts`, cada um com `forma`: status de seleção (título da spec 021), "Nenhuma" em capacitação, círculo com "Outros", índice de capacitação geral com as duas fatias da spec 021 somando o total; de-para `ROTULO_DA_CATEGORIA` da spec 014 aplicado na exibição. 13 casos. ⚠️ Escolaridade segue em barras pela pendência do limite de 5 fatias; por isso a ponta a ponta conta 4 de barras e 5 de pizza até a decisão.
+- [X] T106 Reduzir `lib/dominio/indicadores-instrutor.ts` a 3 indicadores e atualizar os testes (`FR-026`) ✅ 3 indicadores; teste confere que a CH do ano não está mais entre as chaves.
+- [X] T107 Criar o botão de exibir/ocultar estatísticas, efêmero e começando recolhido, e atualizar `PainelDeInstrutores.tsx` e a ponta a ponta do passo 5 para 3 indicadores e 9 gráficos (`FR-026.5`, `SC-007.1`) ✅ `EstatisticasRecolhiveis.tsx`: começa recolhido, `aria-expanded`, conteúdo não montado quando fechado; ponta a ponta confere que abrir não mexe na URL, 3 cartões, 9 gráficos, valores escritos no status de seleção, duas cores por token e percentual na pizza.
 
 ### Bloco 4 — listagem e ficha
 

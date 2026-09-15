@@ -356,16 +356,48 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
     await expect(vazio).toContainText("não é falta de acesso");
   });
 
-  test("4 indicadores, 7 gráficos com posto em antiguidade, lista em antiguidade e sem edição em linha", async ({
+  test("3 indicadores, 9 gráficos com posto em antiguidade, lista em antiguidade e sem edição em linha", async ({
     page,
   }) => {
     await entrar(page, EMAIL_ADMIN, `/instrutores?om=${amostra.om}`);
     await expect(grade(page)).toBeVisible();
 
+    // FR-026.5 · as estatísticas nascem recolhidas, como na v2.0, e abrir não mexe na URL.
+    await expect(page.locator('[data-slot="card-kpi"]')).toHaveCount(0);
+    const urlAntes = page.url();
+    await page.getByRole("button", { name: "Exibir estatísticas" }).click();
+    expect(page.url(), "abrir as estatísticas foi para a URL — é estado efêmero").toBe(urlAntes);
+
     await expect(
       page.locator('[data-slot="indicadores-de-instrutores"] [data-slot="card-kpi"]'),
+    ).toHaveCount(3);
+    await expect(page.locator('[data-slot="grafico-de-instrutores"]')).toHaveCount(9);
+    await expect(
+      page.locator('[data-slot="grafico-de-instrutores"][data-forma="barras"]'),
     ).toHaveCount(4);
-    await expect(page.locator('[data-slot="grafico-de-instrutores"]')).toHaveCount(7);
+    await expect(
+      page.locator('[data-slot="grafico-de-instrutores"][data-forma="pizza"]'),
+    ).toHaveCount(5);
+
+    // Toda barra traz o valor escrito; o status de seleção pinta as duas barras com cores diferentes.
+    const status = page.locator('[data-chave="status-de-selecao"]');
+    await expect(status.locator('[data-slot="rotulo-da-barra"] text')).toHaveText(["2", "2"]);
+    const cores = await status
+      .locator(".recharts-bar-rectangle path")
+      .evaluateAll((els) => els.map((e) => e.getAttribute("fill")));
+    expect(new Set(cores).size, "habilitados e selecionados saíram na mesma cor").toBe(2);
+    expect(
+      cores.every((c) => /^var\(--serie-\d\)$/.test(c ?? "")),
+      "cor fora do token",
+    ).toBe(true);
+
+    // A pizza escreve o percentual, e o índice de capacitação soma o recorte.
+    await expect(
+      page.locator('[data-chave="indice-capacitacao"] [data-slot="grafico-pizza"]'),
+    ).toContainText("%");
+    await page.getByRole("button", { name: "Ocultar estatísticas" }).click();
+    await expect(page.locator('[data-slot="card-kpi"]')).toHaveCount(0);
+    await page.getByRole("button", { name: "Exibir estatísticas" }).click();
 
     const barrasDePosto = await page
       .locator('[data-slot="grafico-de-instrutores"][data-chave="posto-graduacao"]')
