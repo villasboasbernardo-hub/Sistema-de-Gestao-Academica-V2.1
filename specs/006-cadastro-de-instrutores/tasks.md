@@ -37,7 +37,7 @@ começa antes.
 | **D-5** | **`vw_instrutores` não expõe a ordem de antiguidade**, e o contrato de parâmetros exige que a consulta a peça ao banco. Só `vw_instrutor_carga_anual` a expõe, e ela só tem linha em ano com fato | T012, T013 |
 | **D-6** | **O contrato de URL tem duas rotas, e o cadastro precisa de uma terceira.** Criar instrutor não cabe em `/instrutores/[codigo]`, que pressupõe código existente | T020, T021 |
 | **D-7** | 👤 **O quadro de avisos (`FR-027`) não tem lista fechada, e o alerta do `FR-017` não diz qual data de docência conta.** O `RF-INSTR-09` dá dois exemplos; o schema tem `data_inicio_docencia_mb` **e** `data_inicio_docencia_ciaara`. ✅ **Decidido em 15/09/2026**: a data é `data_inicio_docencia_ciaara`, e a lista de avisos é aberta e extensível | T053, T060 |
-| **D-8** | 👤 **O projeto remoto de preview é o mesmo de Production** (exceção do `FR-016.1`, 15/09/2026). Aplicar as migrations desta fatia no preview as aplica em Production | T087 |
+| **D-8** | 👤 **O projeto remoto de preview é o mesmo de Production** (exceção do `FR-016.1`, 15/09/2026). Aplicar as migrations desta fatia no preview as aplica em Production. ✅ **Aplicadas em 15/09/2026**, com autorização: as nove no `cqhpfuaweoyglhtrckcp`, antes do merge | T087 |
 
 ---
 
@@ -360,7 +360,7 @@ no mesmo PR #16, antes do merge *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - [X] T084 [P] Criar `specs/006-cadastro-de-instrutores/paridade.md` com a tabela §4 do documento 06 — as specs `014`, `015`, `016`, `019`, `020`, `025`, `036` e `038` — e o endereço de cada refinamento na v2.1, **nenhum** sem resposta, inclusive a `038`: *"a edição em linha continua removida"* (`SC-007`, quickstart passo 9) ✅ `paridade.md`: as oito specs, cada refinamento com endereço, divergência ou travamento. As diferenças que pedem decisão estão marcadas 🟨 e ⏸️.
 - [X] T085 Rodar `pnpm verificar:tudo` e conferir que o CI de `.github/workflows/ci.yml` dá **veredito idêntico** sobre o mesmo commit (`SC-009`, quickstart passo 8) ⚠️ verde local e vermelho no CI é defeito da verificação, e vira tarefa ⏸️ **METADE LOCAL FEITA em 15/09/2026**, sobre o commit `2af1278`: `pnpm verificar:tudo` saiu **0** — 465 de unidade · 130 pgTAP (2 `todo` da T011) · 127 RLS · 143 ponta a ponta (2 pulados). **A metade do CI não foi feita**: exige push do ramo, e não houve push por instrução de 15/09/2026. **Remedido no fechamento de 15/09/2026**, sobre o commit `5e82dce`: `pnpm verificar:tudo` saiu **0** — **513** de unidade · **149** pgTAP (**nenhum** `todo`) · **131** RLS · **151** ponta a ponta (2 pulados). ✅ **E o CI deu o mesmo veredito** sobre `c713f93` (push: `qualidade`, `banco` e `build` verdes) e no PR #16. ⚠️ A primeira execução do PR reprovou o `banco` **antes de qualquer teste**: `supabase start` achou a porta 54322 ocupada no executor do GitHub (*address already in use*); reexecutada, passou. Defeito de infraestrutura do executor, não da verificação.
 - [X] T086 Listar na descrição do PR, sem corrigir, o achado R-8 (dez views do Épico 1 com `INSERT`/`UPDATE` para `authenticated`) e as seis regras que pareceram estranhas na spec (`CLAUDE.md` regra 1, research R-8) ✅ Na descrição do PR #16: o R-8, as sete regras estranhas (a sétima é o `RN-INST-03` com quatro obrigatórios), o achado corrigido de `set_auditoria()` e a medição de desempenho da ficha.
-- [ ] T087 👤 Aplicar as migrations desta fatia, de `supabase/migrations/`, no projeto remoto **só com autorização de Bernardo**, porque ele é ao mesmo tempo preview e Production, com os planos de reversão prontos no PR (`FR-016.1` da spec 001 e sua exceção de 15/09/2026, Definition of Done item 6, D-8)
+- [X] T087 👤 Aplicar as migrations desta fatia, de `supabase/migrations/`, no projeto remoto **só com autorização de Bernardo**, porque ele é ao mesmo tempo preview e Production, com os planos de reversão prontos no PR (`FR-016.1` da spec 001 e sua exceção de 15/09/2026, Definition of Done item 6, D-8) ✅ **APLICADAS em 15/09/2026, com autorização de Bernardo** *(decisão de Bernardo Villas Boas, 15/09/2026)*. As **nove** migrations foram para o projeto `cqhpfuaweoyglhtrckcp` pelo caminho do documento 10 §8.3: `supabase projects list` (um único projeto, `linked`), `supabase migration list --linked`, `supabase db push --linked --dry-run` (9 migrations, `seeds: []`, `roles: []`) e `pnpm db:push`. Nenhum comando de reset, recriação ou carga. **Conferido no próprio remoto**: histórico com 29 migrations dos dois lados, sem divergência; uma impressão digital de catálogo de `public` e `app` — fonte de função, definição de view, privilégios, policies, gatilhos, restrições e colunas — deu **1.119 itens iguais** no remoto e no local; as views de instrutor respondem sem erro como `authenticated` (0 linhas, o remoto não tem instrutor); as funções novas recusam com `P0002`, `42501` e `22023` conforme o porteiro; `authenticated` continua sem DELETE e sem escrita nas colunas de PII. A Production, que roda a `main`, continuou respondendo, sem erro novo nos registros da Vercel.
 - [X] T088 Atualizar a seção *Estado atual e onde retomar* do `CLAUDE.md` com o fechamento da fatia e os achados D-1 a D-8 (`CLAUDE.md`, instrução no topo da seção) ✅ Feito na T121, em 15/09/2026.
 - [X] T089 Abrir o PR com o modelo de `.github/pull_request_template.md` inteiro preenchido, incluindo o plano de reversão de cada migration desta fatia (Definition of Done item 6, *Convenções de commit*) ✅ PR #16 aberto em 15/09/2026 contra a `main`, **sem merge**, com o aviso de que as sete migrations precisam ser aplicadas no Supabase remoto antes — o mesmo projeto serve Preview e Production. A T087 segue aberta.
 
@@ -381,7 +381,7 @@ no mesmo PR #16, antes do merge *(decisão de Bernardo Villas Boas, 15/09/2026)*
 | **US5** (Fase 6) | T039 (a ficha) |
 | **US4** (Fase 7) | T011, T014, T053 e T039 |
 | **US6** (Fase 8) | T028, T037 e T039; a T067, a T073 e a T077 dependem da T060; a T081 da T061; a T082 da T062 |
-| Fase 9 | todas as histórias; a T087 depende de autorização |
+| Fase 9 | todas as histórias; a T087 foi autorizada e feita em 15/09/2026 |
 
 **Ordem das histórias**: US1 → US2 → US3 → US5 → US4 → US6. Ela segue a sequência por risco do
 plano, e não a numeração da spec: a US4 depende de duas decisões, e a US5 não.
@@ -432,6 +432,6 @@ plano, e não a numeração da spec: a US4 depende de duas decisões, e a US5 n�
 | 9 — Fechamento | 7 |
 | **Total** | **132** |
 
-👤 **Cinco tarefas dependem de Bernardo**: T002, T003, T011, T053 e T087. Outras duas — T016 e
+👤 **Cinco tarefas dependeram de Bernardo**: T002, T003, T011, T053 e T087 — **todas respondidas em 15/09/2026**. Outras duas — T016 e
 T062 — são conferências que **só param** se o que medirem exigir decisão. *(Atualizado em
 15/09/2026: a T060 e a T061 deixaram de depender de decisão, e a T041.1 foi acrescentada.)*
