@@ -86,7 +86,9 @@ semana nenhuma: duas disciplinas de 10 h por semana, uma em março e outra em ag
 | Onde é calculada | `lib/dominio/carga-semanal.ts`, função pura, sobre as linhas de `vw_instrutor_carga_prevista` |
 | Atribuição sem janela ou sem média | não entra em semana nenhuma |
 | Sem faixa (regime não informado) | não há o que comparar, e não há alerta |
-| Atribuições avaliadas na ficha | as do **ano corrente** pela data de início prevista (T011 c), o mesmo recorte da seção de carga — inclusive semanas que já passaram. ⚠️ **Leitura aplicada, a confirmar por Bernardo** (checklist `fechamento.md`, CHK005): a decisão não diz se semanas passadas alertam, nem se a janela de uma atribuição do ano anterior que invade o corrente entra |
+| Semanas avaliadas na ficha | ✅ **Decidido em 15/09/2026 (CHK005)** *(decisão de Bernardo Villas Boas, 15/09/2026)*: **todas** as semanas ISO do **ano corrente** cobertas por atribuição ativa — inclusive as já passadas, e inclusive a parte do ano corrente de uma janela que começou no ano anterior. O ano da semana é o **ano ISO** (o da quinta-feira): a semana 1 de 2026 vai de 29/12/2025 a 04/01/2026, e a de 28/12/2026 a 03/01/2027 é a 53 de 2026. `limitesDoAnoIso` e `semanasDoAno`, em `lib/dominio/carga-semanal.ts`. *(Substitui a leitura aplicada anterior, que avaliava só as atribuições com início no ano corrente.)* |
+| A faixa de um ano só tocado pela janela | `vw_instrutor_carga_anual` passa a ter linha em **todo ano que a janela prevista toca** (`previsao_inicio - 3` a `previsao_termino + 3`, por causa da quinta-feira ISO), e não só nos anos de fato e de início. Sem isso, a janela vinda do ano anterior não teria faixa e o alerta calaria. `ta_previsto_ano` continua pela data de início; o ano só tocado tem previsto zero. Guardado pelo pgTAP `094`, asserção 16 |
+| A seção de carga da ficha | lista as atribuições **com início no ano corrente** (T011 c), como antes; a consulta traz também as janelas que tocam o ano, e só o alerta as usa |
 | Mensagem | `Semana 12/2026 (16/03 a 22/03): 14 h, acima da faixa de 8 a 12 h.` — uma linha por semana fora |
 
 ⚠️ **Consequência da decisão, registrada para não surpreender**: `disciplinas.semanas` conta blocos
@@ -215,7 +217,7 @@ séries em vez de avisar. Sete gráficos, nenhum deles com mais de sete séries.
 |---|---|---|
 | `sem-nip` | Instrutor sem NIP | `nip` vazio, nulo ou só com espaços |
 | `obrigatorio-pendente` | Campo obrigatório pendente | posto, especialidade, nome completo, categoria ou OM vazio, nulo ou só com espaços |
-| `sem-data-docencia` | Data de início de docência não informada | `data_inicio_docencia_ciaara` vazia **e** capacitação didática vazia — no lugar do alerta do `FR-017` (decisão de Bernardo Villas Boas, 15/09/2026). ⚠️ O recorte "e capacitação vazia" é **leitura aplicada, a confirmar** (spec, `FR-017`) |
+| `sem-data-docencia` | Data de início de docência não informada | `data_inicio_docencia_ciaara` vazia **e** capacitação didática vazia — no lugar do alerta do `FR-017` (decisão de Bernardo Villas Boas, 15/09/2026). O recorte "e capacitação vazia" é **decisão** desde 15/09/2026 (CHK004), não mais leitura |
 
 ⚠️ **Correção registrada em 15/09/2026: o aviso de campo obrigatório pendente encontra 15 instrutores
 na base real.** A primeira redação desta seção dizia que ele não encontraria ninguém, porque os cinco
@@ -229,9 +231,12 @@ militares. Nenhuma delimitação para civil foi registrada, porque nenhum civil 
 
 **Alerta do `FR-017` com data vazia** *(decisão de Bernardo Villas Boas, 15/09/2026)*: não dispara — sem data não há como contar o ano —, e o
 aviso `sem-data-docencia` entra no quadro no lugar dele. Na base real, 176 dos 177 instrutores estão
-sem a data, e 148 deles também sem capacitação: são esses 148 que o aviso lista. ⚠️ Listar só quem
-também está sem capacitação é **leitura aplicada, a confirmar por Bernardo** — "em lugar do alerta"
-lido como "para quem o alerta seria avaliado". Cobrando a data de todos, seriam 176.
+sem a data, e 148 deles também sem capacitação: são esses 148 que o aviso lista.
+
+**O recorte passou a ser decisão, e deixou de ser inferência (CHK004)** *(decisão de Bernardo Villas Boas, 15/09/2026)*: o aviso
+cobra **apenas** quem está sem a data **e também** sem capacitação didática registrada. Quem já tem
+capacitação nunca dispararia o alerta do `FR-017`, então cobrar a data dessa pessoa seria ruído. Até
+esta decisão, o recorte estava registrado como leitura aplicada de "em lugar do alerta", a confirmar.
 
 ### Como a lista cresce
 

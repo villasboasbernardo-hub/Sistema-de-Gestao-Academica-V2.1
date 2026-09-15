@@ -117,7 +117,7 @@ dois brasões da ficha A4. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 | # | Pendência | Como fechou | Onde está registrada |
 |---|---|---|---|
 | 1 | Como compor a carga semanal **do instrutor** com várias disciplinas no ano | ✅ soma das médias das atribuições cuja janela cobre cada semana ISO; somar o ano é proibido. `lib/dominio/carga-semanal.ts`, alerta na ficha | `FR-016`, contrato, T014, T114 |
-| 2 | O alerta de capacitação quando `data_inicio_docencia_ciaara` está vazia | ✅ não alerta; aviso "Data de início de docência não informada" no quadro. ⚠️ o recorte "e sem capacitação" é leitura a confirmar | `FR-017`, `FR-027`, T053, T116 |
+| 2 | O alerta de capacitação quando `data_inicio_docencia_ciaara` está vazia | ✅ não alerta; aviso "Data de início de docência não informada" no quadro. o recorte "e sem capacitação" é decisão desde 15/09/2026 (CHK004) | `FR-017`, `FR-027`, T053, T116 |
 | 3 | Escolaridade em pizza tem 6 categorias contra o limite de 5 do documento 23 §7 | ✅ fica em barras, não reabrir: 4 barras e 5 pizzas | `FR-026.2`, `SC-007.1`, T118 |
 | 4 | Legenda clicável não descrita na herança | ⏸️ conferido no código da v2.0, não existe: parada | `FR-026.6`, T119 |
 | 5 | Os dois brasões da ficha A4, fora do repositório | ⏸️ o do CIAARA está no repositório, o selo de Hidrografia e Navegação não: parada | `FR-031`, T111 |
