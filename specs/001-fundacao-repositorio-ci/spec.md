@@ -352,6 +352,7 @@ fatia não cria produção da v2.1 (FR-016.1); a produção do CIAARA-11 segue s
   em produção. A produção do CIAARA-11 é a **v2.0**, até o corte; um endereço de produção da v2.1 no ar,
   sem tela de negócio, seria só superfície de confusão. O ambiente de produção nasce perto do corte,
   junto do projeto Supabase de produção (FR-022.1). *(decisão de 27/08/2026)*
+  **Exceção registrada em 15/09/2026**: o escopo Production da Vercel foi populado antecipadamente, reaproveitando o projeto Supabase de desenvolvimento/preview (`cqhpfuaweoyglhtrckcp`), para destravar login e uso administrativo real antes do corte. Contas reais criadas nesse período — a primeira, a conta admin de Bernardo Villas Boas — residem no projeto de dev/preview e MUST ser migradas quando o projeto de produção dedicado (FR-022.1) for criado. Esta exceção cobre a infraestrutura já existente; NÃO autoriza, por si só, novos convites a contas reais além dessa — isso permanece decisão separada (ver decisão de 08/09/2026). *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-017**: Todo ambiente MUST se identificar visualmente pelo rótulo que lhe corresponde — nesta
   fatia, apenas **`local`** e **`preview`** existem —, para que ninguém registre aula de verdade
   achando que está em homologação. O rótulo `producao` MUST permanecer previsto e **não utilizado**.
@@ -399,6 +400,7 @@ fatia não cria produção da v2.1 (FR-016.1); a produção do CIAARA-11 segue s
   (`local` · `preview` · `producao`) MUST corresponder ao projeto realmente apontado. **Achado de
   26/08/2026:** o `.env.local` traz `NEXT_PUBLIC_AMBIENTE="local"` apontando para `cqhpfu…` — com
   FR-022.1 isso passa a estar correto, mas a correspondência MUST ser conferida, não presumida.
+  **Exceção registrada em 15/09/2026**: o rótulo `producao` no escopo Production da Vercel aponta, temporariamente, para o projeto de desenvolvimento/preview (`cqhpfuaweoyglhtrckcp`) — não há correspondência estrita ao projeto de produção enquanto ele não existir (FR-022.1). Aceito como exceção transitória, ver FR-016.1. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-023**: O repositório MUST declarar normalização de fim de linha, para que a verificação de
   formatação produza o mesmo resultado no Windows (onde se escreve) e no Linux (onde o CI roda).
 
