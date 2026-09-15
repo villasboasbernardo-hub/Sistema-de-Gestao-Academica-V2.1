@@ -22,3 +22,39 @@ export function rotuloDoRegime(regime: string | null): string {
   if (regime === null || regime === "") return "—";
   return ROTULO_DO_REGIME[regime as RegimeDocente] ?? regime;
 }
+
+/**
+ * As 27 unidades da Federação, para o campo Estado do endereço (spec 025 da v2.0, US4).
+ *
+ * ⚠️ É LISTA NACIONAL FECHADA, NÃO PARÂMETRO NORMATIVO. Não vive em `config_parametros` porque não é
+ * regra da MB nem da CIAARA-11; muda por emenda constitucional, não por portaria.
+ */
+export const UFS = [
+  "AC",
+  "AL",
+  "AM",
+  "AP",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MG",
+  "MS",
+  "MT",
+  "PA",
+  "PB",
+  "PE",
+  "PI",
+  "PR",
+  "RJ",
+  "RN",
+  "RO",
+  "RR",
+  "RS",
+  "SC",
+  "SE",
+  "SP",
+  "TO",
+] as const;

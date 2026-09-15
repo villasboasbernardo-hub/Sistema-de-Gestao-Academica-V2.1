@@ -13,8 +13,8 @@
  *      aparece como `name="…"` literal em JSX; o esquema do Zod é onde ele teria de entrar.
  *
  * ⚠️ O VOCABULÁRIO É O DA CARGA DO INSTRUTOR, E NÃO QUALQUER "CARGA HORÁRIA". `carga_horaria_tempos` da
- * disciplina e `ch_prevista_tempos` da unidade de ensino são dado curricular da DEnsM, não grandeza
- * derivada — pôr os dois aqui faria reprovar, no Épico 6, o cadastro que tem de digitá-los.
+ * disciplina, `ch_semanal` da disciplina e `ch_prevista_tempos` da unidade de ensino são dado
+ * curricular da DEnsM, não grandeza derivada — pôr os dois aqui faria reprovar, no Épico 6, o cadastro que tem de digitá-los.
  *
  * ⚠️ A VARREDURA LÊ CÓDIGO SEM COMENTÁRIO, como as outras desta fatia: o cabeçalho que promete a
  * ausência não pode contar como violação.
@@ -28,7 +28,7 @@ const RAIZ = process.cwd();
 
 /** As grandezas de carga do instrutor — as de `vw_instrutor_carga_anual` e os nomes da v1.0/v2.0. */
 const GRANDEZA_DE_CARGA =
-  /\b(ta_ministrado_ano|ta_previsto_ano|ta_previsto_semanal|ta_fiscalizado_ano|carga_horaria_ministrada\w*|carga_horaria_prevista\w*|carga_ministrada\w*|carga_prevista\w*|ch_ministrada\w*|ch_semanal\w*|ch_total\w*)\b/i;
+  /\b(ta_ministrado_ano|ta_previsto_ano|ta_previsto_semanal|ta_fiscalizado_ano|carga_horaria_ministrada\w*|carga_horaria_prevista\w*|carga_ministrada\w*|carga_prevista\w*|ch_ministrada\w*)\b/i;
 
 /** Sinais de que o arquivo desenha um campo que aceita digitação ou escolha. */
 const CONTROLE_DE_FORMULARIO = /<(input|select|textarea|Input|Select|Textarea|CampoDeEscolha)\b/;
@@ -109,5 +109,6 @@ describe("controle positivo — a varredura enxerga o que diz enxergar", () => {
   it("a CH curricular da disciplina e da unidade de ensino não é a carga do instrutor", () => {
     expect(campoDeCargaNaTela('<input name="carga_horaria_tempos" />')).toBe(false);
     expect(campoDeCargaNaTela('<input name="ch_prevista_tempos" />')).toBe(false);
+    expect(campoDeCargaNaTela('<input name="ch_semanal" />')).toBe(false);
   });
 });

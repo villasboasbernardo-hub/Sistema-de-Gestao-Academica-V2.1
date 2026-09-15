@@ -11,11 +11,17 @@
  *
  * ⚠️ SEM EDIÇÃO EM LINHA (`FR-013`). A spec 038 da v2.0 a removeu; ativar uma linha abre a ficha.
  *
+ * ⚠️ DOIS CAMINHOS PARA A FICHA, UM POR DISPOSITIVO. A grade ativa linha só por teclado (`Enter`), e
+ * sem mais nada quem usa mouse não chegaria à ficha pela listagem — defeito que a ponta a ponta do
+ * passo 5 revelou. O nome é link, com `tabIndex={-1}`: o clique funciona, e a grade continua sendo
+ * **uma** parada de tabulação, como o contrato de teclado da `TabelaDensa` exige.
+ *
  * ⚠️ AS LINHAS NÃO TRAZEM DADO PESSOAL. O tipo abaixo é o mínimo que a tabela desenha: o que entra
  * numa folha de cliente vai para o navegador.
  */
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
@@ -66,15 +72,21 @@ function colunas(ano: number): readonly Coluna<LinhaDeInstrutor>[] {
       ordenavel: true,
       valor: (l) => l.nomeCompleto,
       celula: (l) => (
-        <NomeInstrutor
-          instrutor={{
-            id: l.id,
-            pg: l.pg,
-            especialidade: l.especialidade,
-            nomeCompleto: l.nomeCompleto,
-            nomeDeGuerra: l.nomeDeGuerra,
-          }}
-        />
+        <Link
+          href={`/instrutores/${l.codigo}`}
+          tabIndex={-1}
+          className="text-texto underline-offset-2 hover:underline"
+        >
+          <NomeInstrutor
+            instrutor={{
+              id: l.id,
+              pg: l.pg,
+              especialidade: l.especialidade,
+              nomeCompleto: l.nomeCompleto,
+              nomeDeGuerra: l.nomeDeGuerra,
+            }}
+          />
+        </Link>
       ),
     },
     {

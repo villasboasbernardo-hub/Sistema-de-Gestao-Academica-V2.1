@@ -25,13 +25,13 @@ import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { rotuloDoRegime } from "@/lib/constantes/instrutor";
 import { anoCorrente } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { COLUNAS_PESSOAIS, valoresFuncionaisDe, valoresPessoaisDe } from "../campos";
 import { FormularioDeInstrutor } from "../FormularioDeInstrutor";
 import { AcoesDeInstrutor } from "./AcoesDeInstrutor";
+import { FichaEmLeitura } from "./FichaEmLeitura";
 
 const COLUNAS_DA_FICHA =
   "id, codigo, status, posto_graduacao, esp_hab_obs, nome_completo, categoria, om, nome_guerra, nip, data_nascimento, dep_divisao, data_assuncao_setor, email, regime_trabalho, nivel_escolaridade, formacao_principal_secundaria, capacitacao_didatica, data_inicio_docencia_mb, data_inicio_docencia_ciaara, ultima_avaliacao_desempenho, data_avaliacao_desempenho, preferencia, antiguidade_declarada, area_conhecimento";
@@ -133,24 +133,7 @@ export default async function FichaDoInstrutor({
         </SePodeVer>
       </header>
 
-      <dl className="border-borda rounded-ciaara grid gap-x-6 gap-y-2 border p-4 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-texto-suave">Categoria</dt>
-          <dd className="text-texto">{instrutor.categoria}</dd>
-        </div>
-        <div>
-          <dt className="text-texto-suave">Organização militar</dt>
-          <dd className="text-texto">{instrutor.om}</dd>
-        </div>
-        <div>
-          <dt className="text-texto-suave">Regime de trabalho</dt>
-          <dd className="text-texto">{rotuloDoRegime(instrutor.regime_trabalho)}</dd>
-        </div>
-        <div>
-          <dt className="text-texto-suave">Capacitação didática</dt>
-          <dd className="text-texto">{instrutor.capacitacao_didatica ?? "—"}</dd>
-        </div>
-      </dl>
+      <FichaEmLeitura id={instrutor.id} valores={valoresFuncionaisDe(instrutor)} />
 
       <section
         aria-labelledby="carga-do-instrutor"
@@ -181,6 +164,7 @@ export default async function FichaDoInstrutor({
       </section>
 
       <SePodeVer permissoes={permissoes} recurso="instrutores" acao="editar">
+        <h2 className="text-texto text-base font-semibold">Editar cadastro</h2>
         <FormularioDeInstrutor
           modo="edicao"
           instrutorId={instrutor.id}

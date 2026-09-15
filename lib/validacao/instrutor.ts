@@ -11,11 +11,27 @@
  * ⚠️ NENHUM CAMPO DE CARGA HORÁRIA (`FR-015`). `z.object` descarta chave desconhecida, então uma
  * carga horária mandada no corpo nem chega à escrita. A grandeza é view; não há onde gravá-la.
  *
+ * ⚠️ CAMPO COM MÁSCARA É VALIDADO PELOS DÍGITOS E GRAVADO NO FORMATO MASCARADO (`FR-024`). A contagem
+ * de dígitos é o que o documento 25 manda validar; a gravação, porém, **não** é só dos dígitos, ao
+ * contrário do exemplo daquele documento. Medido em 15/09/2026: o NIP chega da v2.0 mascarado em 157
+ * das 157 linhas preenchidas (`00.0000.00`), e o ETL preserva a formatação do CPF. Gravar só dígitos
+ * dali para frente deixaria o mesmo campo com dois formatos no banco — divergência anotada, não
+ * corrigida no documento 25.
+ *
  * ⚠️ DADO PESSOAL VIAJA EM ESQUEMA PRÓPRIO (`FR-032`). O bloco funcional descarta CPF, RG, telefone e
  * endereço: eles só são gravados pela função com porteiro, e só por quem os lê.
  */
 import { z } from "zod";
 
+import { UFS } from "@/lib/constantes/instrutor";
+import {
+  limparMascara,
+  mascararCep,
+  mascararCpf,
+  mascararNip,
+  mascararRetelma,
+  mascararTelefone,
+} from "@/lib/formato/mascaras";
 import { Constants } from "@/lib/tipos/database";
 
 const REGIMES = Constants.public.Enums.regime_trabalho_docente;
@@ -61,6 +77,27 @@ const emailOpcional = z
   .transform((v) => (v === undefined || v === "" ? null : v))
   .refine((v) => v === null || z.email().safeParse(v).success, "Informe um e-mail válido.");
 
+/**
+ * Campo com máscara: aceita qualquer pontuação, confere a quantidade de dígitos e devolve o formato
+ * canônico — ou `null`, quando vazio. Nunca obrigatório: a spec 016 da v2.0 salva sem NIP.
+ */
+const comMascara = (
+  mensagem: string,
+  tamanhos: readonly number[],
+  mascarar: (valor: string) => string,
+) =>
+  z
+    .string()
+    .optional()
+    .transform((v) => limparMascara(v ?? ""))
+    .refine((d) => d.length === 0 || tamanhos.includes(d.length), mensagem)
+    .transform((d) => (d === "" ? null : mascarar(d)));
+
+const ufOpcional = z
+  .union([z.enum(UFS, { error: "Estado fora da lista de UFs." }), z.literal("")])
+  .optional()
+  .transform((v) => (v === undefined || v === "" ? null : v));
+
 const regimeOpcional = z
   .union([z.enum(REGIMES, { error: "Regime fora do domínio." }), z.literal("")])
   .optional()
@@ -80,7 +117,7 @@ export const esquemaFuncionalDeInstrutor = z.object({
   categoria: obrigatorio(OBRIGATORIOS_DO_INSTRUTOR[3].mensagem),
   om: obrigatorio(OBRIGATORIOS_DO_INSTRUTOR[4].mensagem),
   nome_guerra: textoOpcional(120),
-  nip: textoOpcional(20),
+  nip: comMascara("O NIP deve ter 8 dígitos.", [8], mascararNip),
   data_nascimento: dataOpcional,
   dep_divisao: textoOpcional(120),
   data_assuncao_setor: dataOpcional,
@@ -105,18 +142,18 @@ export const esquemaFuncionalDeInstrutor = z.object({
  * confere a forma; quem decide se a pessoa pode gravar é o banco.
  */
 export const esquemaDeDadosPessoais = z.object({
-  cpf: textoOpcional(20),
+  cpf: comMascara("O CPF deve ter 11 dígitos.", [11], mascararCpf),
   rg: textoOpcional(30),
   orgao_emissor: textoOpcional(30),
-  telefone: textoOpcional(20),
-  retelma: textoOpcional(20),
+  telefone: comMascara("O telefone deve ter 10 ou 11 dígitos.", [10, 11], mascararTelefone),
+  retelma: comMascara("O RETELMA deve ter 8 ou 10 dígitos.", [8, 10], mascararRetelma),
   endereco_logradouro: textoOpcional(200),
   endereco_numero: textoOpcional(20),
   endereco_complemento: textoOpcional(120),
   endereco_bairro: textoOpcional(120),
   endereco_cidade: textoOpcional(120),
-  endereco_estado: textoOpcional(2),
-  endereco_cep: textoOpcional(10),
+  endereco_estado: ufOpcional,
+  endereco_cep: comMascara("O CEP deve ter 8 dígitos.", [8], mascararCep),
 });
 
 export const esquemaDeCriacaoDeInstrutor = z.object({ funcional: esquemaFuncionalDeInstrutor });

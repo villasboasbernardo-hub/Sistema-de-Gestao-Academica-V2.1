@@ -140,3 +140,45 @@ e isso é correto — quem "corrigir" para fechar a soma quebra o requisito.
 
 ⚠️ **Os gráficos vêm do Épico 4 (b)** — `components/graficos/`, com a moldura que **recusa** oito
 séries em vez de avisar. Sete gráficos, nenhum deles com mais de sete séries.
+
+---
+
+## O quadro de avisos de qualidade de cadastro (`FR-027`, `RF-INSTR-09`)
+
+**Registrado em 15/09/2026** (T060): a lista de avisos é **aberta e extensível**, e não um conjunto fechado. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
+> *"O sistema deve exibir um quadro de avisos de qualidade de cadastro (ex.: instrutores sem NIP ou
+> com campos obrigatórios pendentes)."* — `RF-INSTR-09`, **[PRESERVADO]**
+
+### A lista começa por dois avisos
+
+| Chave | Aviso | Quando um instrutor entra nele |
+|---|---|---|
+| `sem-nip` | Instrutor sem NIP | `nip` vazio, nulo ou só com espaços |
+| `obrigatorio-pendente` | Campo obrigatório pendente | algum dos cinco do `RN-INST-03` vazio, nulo ou só com espaços |
+
+⚠️ **O segundo aviso hoje não encontra ninguém, e isso é esperado.** Os cinco obrigatórios são
+`NOT NULL` com `CHECK` de branco (migration `20260915054204`): o banco já recusa a linha pendente. O
+aviso fica como defesa para dado que chegue por caminho que não passe por essas restrições, e porque
+é o exemplo que o `RF-INSTR-09` nomeia. Um aviso que nunca aparece não é defeito; um aviso que some
+da lista porque "não dispara" apagaria o exemplo da regra.
+
+### Como a lista cresce
+
+A lista é **dado**: cada aviso é uma regra com `chave`, `titulo` e a condição sobre um instrutor. Uma
+**única função** avalia a lista inteira. Aviso novo entra acrescentando uma regra, **sem mudar o tipo
+que descreve a lista** nem a função que a avalia — o teste da T067 prova isso com um terceiro aviso.
+
+🛑 **Nunca como `enum` ou união fechada de chaves.** Fechar o tipo faria cada aviso novo exigir
+mudança de contrato, que é o que a decisão de 15/09/2026 recusou.
+
+### Como aparece
+
+| Regra | Origem |
+|---|---|
+| **Sempre visível**, nunca recolhido por padrão | `RNF-USA-04` |
+| Avaliado sobre **o mesmo recorte da listagem** — o filtro aplicado vale para os avisos, como vale para indicadores e gráficos | spec 015 da v2.0, `FR-016` |
+| Sem aviso no recorte, o quadro **continua na tela** e diz que não há aviso | `RN-DEG-01` |
+| Aviso **nunca bloqueia** nada: nenhum botão, nenhuma gravação depende dele | `RN-DEG-02` |
+| O nome de cada instrutor sai por `NomeInstrutor` | `FR-019`, `FR-020` |
+

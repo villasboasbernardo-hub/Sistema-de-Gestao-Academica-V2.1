@@ -5,9 +5,12 @@
  * semear a ponta a ponta com ela levaria dado pessoal para captura de tela e relatório de falha.
  * Esta amostra é sintética, e nenhum campo de identificação civil é preenchido.
  *
- * ⚠️ **UMA OM POR PROCESSO.** Todo instrutor semeado aqui é da OM `OM-AMOSTRA-<processo>`: é o que
- * permite a um caso filtrar a listagem e contar **só** a amostra, com a base local vazia ou povoada,
- * e com outro processo semeando ao mesmo tempo.
+ * ⚠️ **UMA OM POR PROCESSO E POR SUÍTE.** Todo instrutor semeado aqui é da OM
+ * `OM-AMOSTRA-<processo>-<suíte>`, e todo nome termina com o marcador `AM<processo><suíte>`: é o que
+ * permite a um caso filtrar a listagem — por OM ou pela busca — e contar **só** a amostra, com a base
+ * local vazia ou povoada e com outro processo semeando ao mesmo tempo. ⚠️ A suíte entra na chave
+ * porque a configuração roda em paralelo total: duas suítes do mesmo arquivo podem cair no mesmo
+ * processo, e o `afterAll` de uma apagaria a amostra que a outra ainda usa.
  *
  * ⚠️ **CADA CARACTERÍSTICA TEM UM DONO, E O NOME DIZ QUAL.** A T004 da spec pede postos diferentes,
  * dois do mesmo posto com antiguidade declarada distinta, um `SC` e um `SCNS`, um posto fora da
@@ -141,6 +144,8 @@ const NOMES: Readonly<Record<ChaveDaAmostra, string>> = {
 
 export type AmostraDeInstrutores = {
   readonly processo: number;
+  /** O marcador que todo nome da amostra carrega — buscar por ele devolve só a amostra. */
+  readonly marcador: string;
   /** A OM exclusiva deste processo — filtre por ela para contar só a amostra. */
   readonly om: string;
   readonly codigos: Readonly<Record<ChaveDaAmostra, string>>;
@@ -149,22 +154,26 @@ export type AmostraDeInstrutores = {
   readonly emailDaContaVinculada: string;
 };
 
-const prefixo = (processo: number) => `AM${processo}`;
-const omDaAmostra = (processo: number) => `OM-AMOSTRA-${processo}`;
-const emailVinculado = (processo: number) => emailDeTeste("amostra-vinculado", processo);
+const prefixo = (processo: number, suite: string) => `AM${processo}${suite}`;
+const omDaAmostra = (processo: number, suite: string) => `OM-AMOSTRA-${processo}-${suite}`;
+const emailVinculado = (processo: number, suite: string) =>
+  emailDeTeste(`amostra-vinculado-${suite.toLowerCase()}`, processo);
 
 /** Semeia a amostra inteira, apagando antes qualquer resto de execução anterior deste processo. */
-export async function semearInstrutores(processo: number): Promise<AmostraDeInstrutores> {
-  await limparInstrutores(processo);
+export async function semearInstrutores(
+  processo: number,
+  suite: string,
+): Promise<AmostraDeInstrutores> {
+  await limparInstrutores(processo, suite);
 
-  const p = prefixo(processo);
-  const om = omDaAmostra(processo);
+  const p = prefixo(processo, suite);
+  const om = omDaAmostra(processo, suite);
   const chaves = Object.keys(SEMENTES) as ChaveDaAmostra[];
   const codigos = Object.fromEntries(chaves.map((c) => [c, `${p}-${c}`])) as Record<
     ChaveDaAmostra,
     string
   >;
-  const nomes = Object.fromEntries(chaves.map((c) => [c, `${NOMES[c]} ${processo}`])) as Record<
+  const nomes = Object.fromEntries(chaves.map((c) => [c, `${NOMES[c]} ${p}`])) as Record<
     ChaveDaAmostra,
     string
   >;
@@ -194,7 +203,7 @@ export async function semearInstrutores(processo: number): Promise<AmostraDeInst
     .from("cursos")
     .insert({
       codigo: `CUR-${p}`,
-      nome_curso: `Curso da amostra ${processo}`,
+      nome_curso: `Curso da amostra ${p}`,
       classificacao: "regular",
     })
     .select("id")
@@ -206,8 +215,8 @@ export async function semearInstrutores(processo: number): Promise<AmostraDeInst
     .insert({
       codigo: `DIS-${p}`,
       curso_id: curso.id,
-      cod_disciplina: `AM-${processo}`,
-      nome_disciplina: `Disciplina da amostra ${processo}`,
+      cod_disciplina: p,
+      nome_disciplina: `Disciplina da amostra ${p}`,
       carga_horaria_tempos: 30,
     })
     .select("id")
@@ -221,7 +230,7 @@ export async function semearInstrutores(processo: number): Promise<AmostraDeInst
       disciplina_id: disciplina.id,
       curso_id: curso.id,
       numero_ue: 1,
-      topico: `Unidade da amostra ${processo}`,
+      topico: `Unidade da amostra ${p}`,
       ch_prevista_tempos: 30,
     })
     .select("id")
@@ -290,7 +299,7 @@ export async function semearInstrutores(processo: number): Promise<AmostraDeInst
     });
   if (erroAula) throw new Error(`falha ao semear aula: ${erroAula.message}`);
 
-  const emailDaContaVinculada = emailVinculado(processo);
+  const emailDaContaVinculada = emailVinculado(processo, suite);
   await criarConta(emailDaContaVinculada, `USR-${p}-VIN`, "operador");
   const { error: erroVinculo } = await admin()
     .from("usuarios")
@@ -298,7 +307,7 @@ export async function semearInstrutores(processo: number): Promise<AmostraDeInst
     .eq("email", emailDaContaVinculada);
   if (erroVinculo) throw new Error(`falha ao vincular a conta: ${erroVinculo.message}`);
 
-  return { processo, om, codigos, nomes, emailDaContaVinculada };
+  return { processo, marcador: p, om, codigos, nomes, emailDaContaVinculada };
 }
 
 /**
@@ -308,9 +317,9 @@ export async function semearInstrutores(processo: number): Promise<AmostraDeInst
  * destruído pela `service_role` no stack local, como em `panorama-de-teste.ts`. A ordem segue as
  * chaves estrangeiras, que são `restrict`: o fato antes do cadastro.
  */
-export async function limparInstrutores(processo: number): Promise<void> {
-  const p = prefixo(processo);
-  await apagarConta(emailVinculado(processo));
+export async function limparInstrutores(processo: number, suite: string): Promise<void> {
+  const p = prefixo(processo, suite);
+  await apagarConta(emailVinculado(processo, suite));
 
   const { data: cursos } = await admin().from("cursos").select("id").eq("codigo", `CUR-${p}`);
   const cursoIds = (cursos ?? []).map((c) => c.id as string);
@@ -346,5 +355,5 @@ export async function limparInstrutores(processo: number): Promise<void> {
     await admin().from("cursos").delete().in("id", cursoIds);
   }
 
-  await admin().from("instrutores").delete().eq("om", omDaAmostra(processo));
+  await admin().from("instrutores").delete().eq("om", omDaAmostra(processo, suite));
 }

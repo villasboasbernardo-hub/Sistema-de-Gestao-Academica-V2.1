@@ -131,11 +131,11 @@ test.describe("`RN-INST-02` · desativar preserva o passado (quickstart, passo 6
   let amostra: AmostraDeInstrutores;
 
   test.beforeAll(async () => {
-    amostra = await semearInstrutores(PROCESSO);
+    amostra = await semearInstrutores(PROCESSO, "D");
   });
 
   test.afterAll(async () => {
-    await limparInstrutores(PROCESSO);
+    await limparInstrutores(PROCESSO, "D");
   });
 
   const grade = (page: Page) => page.getByRole("grid", { name: "Instrutores" });
@@ -211,5 +211,159 @@ test.describe("`RN-INST-02` · desativar preserva o passado (quickstart, passo 6
       .eq("email", amostra.emailDaContaVinculada)
       .single();
     expect(conta?.status, "desativar o instrutor desativou a conta (FR-010.1)").toBe("ativo");
+  });
+});
+
+test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quickstart, passo 5)", () => {
+  let amostra: AmostraDeInstrutores;
+  /** Um civil ativo FORA da OM da amostra, com o mesmo marcador no nome: o que prova o E lógico. */
+  const codigoDeFora = () => `${amostra.marcador}-fora`;
+
+  test.beforeAll(async () => {
+    amostra = await semearInstrutores(PROCESSO, "P");
+    await servico().from("instrutores").delete().eq("codigo", codigoDeFora());
+    const { error } = await servico()
+      .from("instrutores")
+      .insert({
+        codigo: codigoDeFora(),
+        posto_graduacao: "CT",
+        esp_hab_obs: "-",
+        nome_completo: `Fora Da Om ${amostra.marcador}`,
+        categoria: "Civil",
+        om: `${amostra.om}-OUTRA`,
+        status: "ativo",
+      });
+    if (error) throw new Error(`falha ao semear o instrutor de fora: ${error.message}`);
+  });
+
+  test.afterAll(async () => {
+    // ⚠️ Semeadura que falhou no meio deixa `amostra` indefinida; limpar ainda precisa acontecer.
+    if (amostra) await servico().from("instrutores").delete().eq("codigo", codigoDeFora());
+    await limparInstrutores(PROCESSO, "P");
+  });
+
+  const grade = (page: Page) => page.getByRole("grid", { name: "Instrutores" });
+  const contagem = (page: Page) => page.locator('[data-slot="contagem-de-instrutores"]');
+  const parametro = (page: Page, nome: string) => new URL(page.url()).searchParams.get(nome);
+
+  async function escolher(page: Page, campo: string, opcao: string) {
+    await page.getByRole("combobox", { name: campo, exact: true }).click();
+    await page.getByRole("option", { name: opcao, exact: true }).click();
+  }
+
+  test("OM na URL muda a contagem, categoria opera sobre o resultado, e o link reproduz a tela", async ({
+    page,
+    context,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, `/instrutores?busca=${amostra.marcador.toLowerCase()}`);
+    // 10 ativos da amostra (o inativo fica de fora) + o civil de outra OM.
+    await expect(contagem(page)).toContainText("11 instrutor(es)");
+
+    await escolher(page, "OM", amostra.om);
+    await expect.poll(() => parametro(page, "om")).toBe(amostra.om);
+    await expect(contagem(page), "o filtro foi para a URL e o número ficou velho").toContainText(
+      "10 instrutor(es)",
+    );
+
+    await escolher(page, "Categoria", "Civil");
+    await expect.poll(() => parametro(page, "categoria")).toBe("Civil");
+    await expect(
+      contagem(page),
+      "a categoria não operou sobre o resultado da OM: o civil de outra OM entrou",
+    ).toContainText("2 instrutor(es)");
+    await expect(grade(page)).toContainText(amostra.nomes.sc);
+    await expect(grade(page)).toContainText(amostra.nomes.scns);
+    await expect(grade(page)).not.toContainText(`Fora Da Om ${amostra.marcador}`);
+
+    const outraAba = await context.newPage();
+    await outraAba.goto(page.url());
+    await expect(contagem(outraAba), "o link em aba nova não reproduziu o recorte").toContainText(
+      "2 instrutor(es)",
+    );
+    await expect(grade(outraAba)).toContainText(amostra.nomes.scns);
+    await outraAba.close();
+  });
+
+  test("oito letras na busca geram no máximo uma entrada de histórico", async ({ page }) => {
+    await entrar(page, EMAIL_ADMIN, `/instrutores?om=${amostra.om}`);
+    await expect(grade(page)).toBeVisible();
+    const antes = await page.evaluate(() => window.history.length);
+
+    const campo = page.getByLabel("Buscar por nome");
+    await campo.click();
+    for (const letra of "zacarias") await campo.press(letra);
+    await expect.poll(() => parametro(page, "busca"), { timeout: 5_000 }).toBe("zacarias");
+
+    const passos = (await page.evaluate(() => window.history.length)) - antes;
+    expect(passos, `oito letras produziram ${passos} passos de histórico`).toBeLessThanOrEqual(1);
+    await expect(grade(page)).toContainText(amostra.nomes.cmg);
+  });
+
+  test("a ficha abre por código, e código inexistente diz 'não há', não 'você não vê'", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, `/instrutores?om=${amostra.om}`);
+    await grade(page).getByText(amostra.nomes.scns).click();
+    await expect
+      .poll(() => new URL(page.url()).pathname)
+      .toBe(`/instrutores/${amostra.codigos.scns}`);
+    expect(page.url(), "a URL da ficha expôs um uuid").not.toMatch(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+    );
+
+    await page.goto("/instrutores/CODIGO-QUE-NAO-EXISTE");
+    const vazio = page.locator('[data-slot="estado-vazio"]');
+    await expect(vazio).toHaveAttribute("data-motivo", "sem-dado");
+    await expect(vazio).toContainText("não é falta de acesso");
+  });
+
+  test("4 indicadores, 7 gráficos com posto em antiguidade, lista em antiguidade e sem edição em linha", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, `/instrutores?om=${amostra.om}`);
+    await expect(grade(page)).toBeVisible();
+
+    await expect(
+      page.locator('[data-slot="indicadores-de-instrutores"] [data-slot="card-kpi"]'),
+    ).toHaveCount(4);
+    await expect(page.locator('[data-slot="grafico-de-instrutores"]')).toHaveCount(7);
+
+    const barrasDePosto = await page
+      .locator('[data-slot="grafico-de-instrutores"][data-chave="posto-graduacao"]')
+      .getAttribute("data-barras");
+    expect(
+      JSON.parse(barrasDePosto ?? "[]"),
+      "as barras de posto não seguem a antiguidade",
+    ).toEqual(["CMG", "CF", "CC", "CT", "1ºTen", "SO", "SC", "SCNS", "Outros"]);
+
+    // A lista sem `ordem`: a amostra em antiguidade, com nomes que invertem a ordem alfabética.
+    const texto = (await grade(page).innerText()).replace(/\s+/g, " ");
+    const ordemEsperada = [
+      amostra.nomes.cmg,
+      amostra.nomes.comAula,
+      amostra.nomes.semCapacitacao,
+      amostra.nomes.ctMaisAntigo,
+      amostra.nomes.ctMaisModerno,
+      amostra.nomes.selecionadoSemHabilitacao,
+      amostra.nomes.vinculado,
+      amostra.nomes.scns,
+      amostra.nomes.sc,
+      amostra.nomes.foraDaEscala,
+    ];
+    const posicoes = ordemEsperada.map((nome) => texto.indexOf(nome));
+    expect(
+      posicoes.every((p) => p >= 0),
+      "algum instrutor da amostra não apareceu",
+    ).toBe(true);
+    expect(posicoes, "a listagem não saiu em antiguidade").toEqual(
+      [...posicoes].sort((a, b) => a - b),
+    );
+
+    await expect(page.locator('[data-slot="quadro-de-avisos"]')).toContainText("Instrutor sem NIP");
+
+    await expect(
+      grade(page).locator('input, select, textarea, [contenteditable="true"]'),
+      "a listagem ganhou edição em linha — a spec 038 da v2.0 a removeu",
+    ).toHaveCount(0);
   });
 });

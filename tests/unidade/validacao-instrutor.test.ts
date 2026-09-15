@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   esquemaDeCriacaoDeInstrutor,
+  esquemaDeDadosPessoais,
   esquemaDeEdicaoDeInstrutor,
   esquemaDeSituacao,
   OBRIGATORIOS_DO_INSTRUTOR,
@@ -112,5 +113,47 @@ describe("`FR-008` · a situação vem da ação, não do cliente", () => {
     const r = esquemaDeSituacao.safeParse({ id: "12" });
     expect(r.success).toBe(false);
     expect(!r.success && r.error.issues[0]?.message).toBe("Instrutor inválido.");
+  });
+});
+
+describe("`FR-024` · máscara: valida os dígitos, grava o formato canônico", () => {
+  it("CPF digitado só com dígitos é gravado mascarado", () => {
+    const r = esquemaDeDadosPessoais.safeParse({ cpf: "12345678901" });
+    expect(r.success && r.data.cpf).toBe("123.456.789-01");
+  });
+
+  it("CPF com dígitos a menos é recusado, e a mensagem diz quantos", () => {
+    const r = esquemaDeDadosPessoais.safeParse({ cpf: "123.456" });
+    expect(!r.success && r.error.issues[0]?.message).toBe("O CPF deve ter 11 dígitos.");
+  });
+
+  it("telefone aceita 10 e 11 dígitos; RETELMA aceita 8 e 10", () => {
+    const r = esquemaDeDadosPessoais.safeParse({
+      telefone: "(21) 98765-4321",
+      retelma: "12345678",
+      endereco_cep: "12345678",
+    });
+    expect(r.success && [r.data.telefone, r.data.retelma, r.data.endereco_cep]).toEqual([
+      "(21) 98765-4321",
+      "1234-5678",
+      "12345-678",
+    ]);
+  });
+
+  it("campo com máscara vazio vira null, não string em branco", () => {
+    const r = esquemaDeDadosPessoais.safeParse({ cpf: "", telefone: "   " });
+    expect(r.success && [r.data.cpf, r.data.telefone]).toEqual([null, null]);
+  });
+
+  it("Estado só aceita UF; vazio vira null", () => {
+    expect(esquemaDeDadosPessoais.safeParse({ endereco_estado: "RJ" }).success).toBe(true);
+    expect(esquemaDeDadosPessoais.safeParse({ endereco_estado: "XX" }).success).toBe(false);
+    const vazio = esquemaDeDadosPessoais.safeParse({ endereco_estado: "" });
+    expect(vazio.success && vazio.data.endereco_estado).toBeNull();
+  });
+
+  it("NIP no bloco funcional segue o mesmo caminho", () => {
+    const r = esquemaDeCriacaoDeInstrutor.safeParse({ funcional: { ...VALIDO, nip: "12345678" } });
+    expect(r.success && r.data.funcional.nip).toBe("12.3456.78");
   });
 });

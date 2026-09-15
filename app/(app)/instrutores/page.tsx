@@ -12,6 +12,13 @@
  * `vw_instrutor_carga_anual`, na mesma rodada de consultas, e é casada por `instrutor_id`. A view só
  * tem linha de um ano em que houve fato: **ausência é zero**, não "instrutor sumido".
  *
+ * ⚠️ **INDICADORES, GRÁFICOS E AVISOS SÃO DO RECORTE** (spec 015 da v2.0, `FR-016`). Eles são
+ * calculados sobre as mesmas linhas que a tabela mostra, pelas funções de `lib/dominio/`; mudar um
+ * filtro muda os três junto com a lista, e nunca mostra o total seguido de uma correção.
+ *
+ * ⚠️ **SEM PERMISSÃO E SEM DADO SÃO VAZIOS DIFERENTES** (`FR-027.4`, gotcha nº 4). A negativa da RLS
+ * de leitura filtra em silêncio: a tela confere a permissão antes de dizer "não há".
+ *
  * ⚠️ **ERRO DE LEITURA NÃO ESTOURA** (`RN-DEG-01`): vira o vazio de "você não vê", que é o que uma
  * negativa da RLS de fato significa.
  */
@@ -19,7 +26,15 @@ import Link from "next/link";
 
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
-import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
+import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
+import { escalaDeLinhas } from "@/lib/dominio/antiguidade";
+import {
+  AVISOS_INICIAIS,
+  avisosDoCadastro,
+  type RegraDeAviso,
+} from "@/lib/dominio/avisos-cadastro-instrutor";
+import { graficosDeInstrutores } from "@/lib/dominio/graficos-instrutor";
+import { indicadoresDeInstrutores } from "@/lib/dominio/indicadores-instrutor";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { anoCorrente } from "@/lib/formato/ano-corrente";
 import { lerParametros } from "@/lib/navegacao/esquema";
@@ -30,6 +45,10 @@ import {
   montarConsultaDeInstrutores,
   type ParametrosDaListagem,
 } from "./consulta";
+import { FiltrosDeInstrutores } from "./FiltrosDeInstrutores";
+import { opcoesDosFiltros } from "./opcoes";
+import { PainelDeInstrutores } from "./PainelDeInstrutores";
+import { QuadroDeAvisos, type InstrutorDoAviso } from "./QuadroDeAvisos";
 import { TabelaDeInstrutores, type LinhaDeInstrutor } from "./TabelaDeInstrutores";
 
 export default async function Instrutores({
@@ -55,7 +74,15 @@ export default async function Instrutores({
 
   const ano = anoCorrente();
   const supabase = await criarClienteDeServidor();
-  const [usuario, { data, error }, cargaRes] = await Promise.all([
+  const [
+    usuario,
+    { data, error },
+    cargaRes,
+    habilitadosRes,
+    selecionadosRes,
+    escalaRes,
+    opcoesRes,
+  ] = await Promise.all([
     usuarioDaSessao(),
     montarConsultaDeInstrutores(
       supabase.from("vw_instrutores").select(COLUNAS_DA_LISTAGEM),
@@ -65,6 +92,20 @@ export default async function Instrutores({
       .from("vw_instrutor_carga_anual")
       .select("instrutor_id, ta_ministrado_ano")
       .eq("ano", ano),
+    // Habilitados: vínculo ativo em `instrutor_disciplina` (`FR-026.1`).
+    supabase.from("instrutor_disciplina").select("instrutor_id").eq("status", "ativo"),
+    // Selecionados: atribuição ativa em `turma_disciplina_instrutor` (achado 6 do Épico 2).
+    supabase.from("turma_disciplina_instrutor").select("instrutor_id").eq("status", "ativo"),
+    supabase
+      .from("config_listas")
+      .select("valor, ordem, ativo")
+      .eq("lista", "escala_antiguidade")
+      .order("ordem"),
+    // As opções dos filtros saem do cadastro inteiro, não do recorte (ver `opcoes.ts`).
+    supabase
+      .from("vw_instrutores")
+      .select("om, categoria, capacitacao_didatica, nivel_escolaridade")
+      .order("ordem_antiguidade"),
   ]);
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
 
@@ -87,7 +128,8 @@ export default async function Instrutores({
     if (c.instrutor_id) cargaPorInstrutor.set(c.instrutor_id, Number(c.ta_ministrado_ano ?? 0));
   }
 
-  const linhas: LinhaDeInstrutor[] = (data ?? []).map((i) => ({
+  const brutas = data ?? [];
+  const linhas: LinhaDeInstrutor[] = brutas.map((i) => ({
     id: i.id as string,
     codigo: i.codigo as string,
     pg: i.posto_graduacao as string,
@@ -100,6 +142,53 @@ export default async function Instrutores({
     ordemAntiguidade: i.ordem_antiguidade as number,
     cargaNoAno: cargaDisponivel ? (cargaPorInstrutor.get(i.id as string) ?? 0) : null,
   }));
+
+  const idsDe = (res: { data: { instrutor_id: string | null }[] | null }) =>
+    new Set((res.data ?? []).flatMap((v) => (v.instrutor_id ? [v.instrutor_id] : [])));
+  const indicadores = indicadoresDeInstrutores(
+    linhas.map((l, n) => ({
+      id: l.id,
+      capacitacaoDidatica: brutas[n]?.capacitacao_didatica ?? null,
+      cargaNoAno: l.cargaNoAno,
+    })),
+    idsDe(habilitadosRes),
+    idsDe(selecionadosRes),
+  );
+  const graficos = graficosDeInstrutores(
+    linhas.map((l, n) => ({
+      id: l.id,
+      pg: l.pg,
+      categoria: l.categoria,
+      om: l.om,
+      escolaridade: brutas[n]?.nivel_escolaridade ?? null,
+      regime: l.regime,
+      capacitacaoDidatica: brutas[n]?.capacitacao_didatica ?? null,
+    })),
+    escalaDeLinhas(
+      (escalaRes.data ?? []).map((e) => ({
+        valor: e.valor,
+        ordem: Number(e.ordem),
+        ativo: e.ativo !== false,
+      })),
+    ),
+    indicadores.taxaDeSelecao,
+  );
+  const avisos = avisosDoCadastro<InstrutorDoAviso & Parameters<RegraDeAviso["seAplica"]>[0]>(
+    linhas.map((l, n) => ({
+      id: l.id,
+      codigo: l.codigo,
+      pg: l.pg,
+      especialidade: l.especialidade,
+      nomeCompleto: l.nomeCompleto,
+      nomeDeGuerra: l.nomeDeGuerra,
+      categoria: l.categoria,
+      om: l.om,
+      nip: (brutas[n]?.nip as string | null | undefined) ?? null,
+    })),
+    AVISOS_INICIAIS,
+  );
+  const opcoes = opcoesDosFiltros(opcoesRes.data ?? []);
+  const podeLer = pode(permissoes, "instrutores", "ler");
 
   return (
     <section className="flex flex-col gap-5">
@@ -122,6 +211,12 @@ export default async function Instrutores({
         </p>
       </header>
 
+      <FiltrosDeInstrutores opcoes={opcoes} />
+
+      <QuadroDeAvisos avisos={avisos} />
+
+      <PainelDeInstrutores indicadores={indicadores} graficos={graficos} ano={ano} />
+
       <p className="text-texto-suave text-sm" data-slot="contagem-de-instrutores">
         {linhas.length} instrutor(es){" "}
         {parametros.situacao === "inativo" ? "inativo(s)" : "ativo(s)"}
@@ -134,7 +229,22 @@ export default async function Instrutores({
         </p>
       )}
 
-      <TabelaDeInstrutores linhas={linhas} ano={ano} />
+      {linhas.length === 0 ? (
+        podeLer ? (
+          <EstadoVazio
+            motivo="sem-dado"
+            titulo="Nenhum instrutor neste recorte"
+            detalhe="O seu perfil lê o cadastro inteiro: não é falta de acesso. Afrouxe ou limpe os filtros."
+          />
+        ) : (
+          <EstadoVazio
+            motivo="sem-permissao"
+            detalhe="O seu perfil não lê o cadastro de instrutores. Fale com o Admin se precisar."
+          />
+        )
+      ) : (
+        <TabelaDeInstrutores linhas={linhas} ano={ano} />
+      )}
     </section>
   );
 }

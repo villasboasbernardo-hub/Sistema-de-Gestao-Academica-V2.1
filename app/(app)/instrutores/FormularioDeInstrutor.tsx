@@ -14,6 +14,15 @@
  * ⚠️ AO EDITAR, TODO CAMPO VEM COM O VALOR SALVO (`FR-012`), inclusive o posto que a escala não conhece:
  * ele entra como opção, em vez de sumir e virar "Selecione" — que salvaria em branco por engano.
  *
+ * ⚠️ AS MÁSCARAS ASSISTEM A DIGITAÇÃO E NÃO DECIDEM NADA (`FR-024`). NIP, CPF, telefone, RETELMA e CEP
+ * se formatam a cada tecla; quem recusa quantidade errada de dígitos é o Zod da Server Action. O valor
+ * já salvo aparece como está, sem reformatação em lote (spec 025 da v2.0, casos de fronteira).
+ *
+ * ⚠️ O ESTADO NÃO NASCE COM RJ, E ISTO DIVERGE DA v2.0. Lá, `RJ` vinha pré-selecionado **em modo
+ * cadastro**; aqui o cadastro não tem a seção de endereço (ela só existe na ficha, para quem lê a PII).
+ * Pré-selecionar `RJ` na edição gravaria um estado em quem nunca informou endereço, a cada vez que
+ * alguém salvasse o dado funcional. Registrado em `specs/006-cadastro-de-instrutores/paridade.md`.
+ *
  * ⚠️ `preferencia` É TEXTO LIVRE nesta fatia — simplificação deliberada do `RF-INSTR-06`, decidida
  * por Bernardo em 15/09/2026 (T061). A grade dia × período com observação não é construída aqui.
  *
@@ -35,7 +44,14 @@ import {
   editarInstrutor,
   gravarDadosPessoaisDoInstrutor,
 } from "@/lib/acoes/instrutor";
-import { ROTULO_DO_REGIME } from "@/lib/constantes/instrutor";
+import { ROTULO_DO_REGIME, UFS } from "@/lib/constantes/instrutor";
+import {
+  mascararCep,
+  mascararCpf,
+  mascararNip,
+  mascararRetelma,
+  mascararTelefone,
+} from "@/lib/formato/mascaras";
 import { Constants } from "@/lib/tipos/database";
 
 import { CampoDeEscolha } from "./CampoDeEscolha";
@@ -57,12 +73,15 @@ function Campo({
   valor,
   obrigatorio = false,
   tipo = "texto",
+  mascara,
 }: {
   readonly id: string;
   readonly rotulo: string;
   readonly valor: string;
   readonly obrigatorio?: boolean;
   readonly tipo?: Tipo;
+  /** Formata enquanto se digita. O campo continua sem estado: a máscara reescreve o próprio valor. */
+  readonly mascara?: (valor: string) => string;
 }) {
   const controle = propsDoControle(id, obrigatorio);
   return (
@@ -77,6 +96,14 @@ function Campo({
           type={tipo === "data" ? "date" : tipo === "email" ? "email" : "text"}
           defaultValue={valor}
           className={CAMPO}
+          {...(mascara
+            ? {
+                inputMode: "numeric" as const,
+                onInput: (e: React.FormEvent<HTMLInputElement>) => {
+                  e.currentTarget.value = mascara(e.currentTarget.value);
+                },
+              }
+            : {})}
         />
       )}
     </div>
@@ -197,7 +224,7 @@ export function FormularioDeInstrutor({
         <Campo id="nome_completo" rotulo="Nome completo" valor={v.nome_completo} obrigatorio />
         <Campo id="nome_guerra" rotulo="Nome de guerra" valor={v.nome_guerra} />
         <Campo id="categoria" rotulo="Categoria" valor={v.categoria} obrigatorio />
-        <Campo id="nip" rotulo="NIP" valor={v.nip} />
+        <Campo id="nip" rotulo="NIP" valor={v.nip} mascara={mascararNip} />
         <Campo
           id="data_nascimento"
           rotulo="Data de nascimento"
@@ -282,11 +309,16 @@ export function FormularioDeInstrutor({
 
       {pessoais !== null ? (
         <Secao titulo="Identificação civil e residência">
-          <Campo id="cpf" rotulo="CPF" valor={pessoais.cpf} />
+          <Campo id="cpf" rotulo="CPF" valor={pessoais.cpf} mascara={mascararCpf} />
           <Campo id="rg" rotulo="RG" valor={pessoais.rg} />
           <Campo id="orgao_emissor" rotulo="Órgão emissor" valor={pessoais.orgao_emissor} />
-          <Campo id="telefone" rotulo="Telefone" valor={pessoais.telefone} />
-          <Campo id="retelma" rotulo="RETELMA" valor={pessoais.retelma} />
+          <Campo
+            id="telefone"
+            rotulo="Telefone"
+            valor={pessoais.telefone}
+            mascara={mascararTelefone}
+          />
+          <Campo id="retelma" rotulo="RETELMA" valor={pessoais.retelma} mascara={mascararRetelma} />
           <Campo
             id="endereco_logradouro"
             rotulo="Logradouro"
@@ -300,8 +332,26 @@ export function FormularioDeInstrutor({
           />
           <Campo id="endereco_bairro" rotulo="Bairro" valor={pessoais.endereco_bairro} />
           <Campo id="endereco_cidade" rotulo="Cidade" valor={pessoais.endereco_cidade} />
-          <Campo id="endereco_estado" rotulo="Estado" valor={pessoais.endereco_estado} />
-          <Campo id="endereco_cep" rotulo="CEP" valor={pessoais.endereco_cep} />
+          <CampoDeEscolha
+            id="endereco_estado"
+            rotulo="Estado"
+            valor={pessoais.endereco_estado}
+            opcoes={[
+              ...UFS,
+              // Valor legado fora da lista entra como opção, em vez de sumir e salvar em branco.
+              ...(pessoais.endereco_estado !== "" &&
+              !(UFS as readonly string[]).includes(pessoais.endereco_estado)
+                ? [pessoais.endereco_estado]
+                : []),
+            ].map((uf) => ({ valor: uf, rotulo: uf }))}
+            vazio="Não informado"
+          />
+          <Campo
+            id="endereco_cep"
+            rotulo="CEP"
+            valor={pessoais.endereco_cep}
+            mascara={mascararCep}
+          />
         </Secao>
       ) : null}
 
