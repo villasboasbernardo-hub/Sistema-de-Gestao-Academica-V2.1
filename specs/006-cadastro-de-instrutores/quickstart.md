@@ -117,6 +117,15 @@ pnpm test:invariantes && pnpm test:unidade
 🛑 **O teto é a FAIXA, jamais o número do regime.** Um teste que use 40 como limite passa no primeiro
 caso pelo motivo errado e reprova o sistema em produção.
 
+**Atualizado em 15/09/2026, com a T011 respondida.** *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
+| Asserção | Estado |
+|---|---|
+| `ta_previsto_ano`, com rateio do `RN-MAT-05` e ano pela data de início prevista | ✅ `094`, asserções 10 a 12 |
+| média semanal **de cada atribuição** = tempos ÷ semanas da janela | ✅ `094` e ficha |
+| limites da faixa inclusivos — 8 e 12 dentro | ✅ `tests/unidade/carga-horaria.test.ts` |
+| semanal **do instrutor** e os dois alertas da US4 na ficha | ⏸️ pendência: como compor várias disciplinas no ano, e o `FR-017` com data vazia |
+
 ---
 
 ## Passo 5 — A tela, pelo percurso de quem usa
@@ -137,7 +146,16 @@ pnpm test:e2e tests/e2e/instrutores.spec.ts
    *"não há"* de *"você não vê"*.
 8. Contar na tela: **4 indicadores** e **7 gráficos**, com as barras de posto/graduação em ordem de
    antiguidade — **nunca alfabética**. *(Corrigido em 15/09/2026: dizia "com posto/graduação primeiro"; ver a emenda do `FR-026.2`.)*
+   **Segunda correção, de 15/09/2026**: clicar em **"Exibir estatísticas"** (o painel nasce recolhido) e contar **3 indicadores** e **9 gráficos** — 3 de barras e 6 de pizza; enquanto a pendência de escolaridade não fecha, 4 e 5. Cada barra traz o valor escrito, o status de seleção tem duas cores, e a pizza traz o percentual. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 9. Procurar edição em linha na listagem. **Esperado**: não existe — a spec 038 a removeu.
+10. **Acrescentado em 15/09/2026**: aplicar os filtros novos — círculo hierárquico, habilitado,
+    selecionado, curso, classificação do curso, posto e capacitação "Nenhuma". **Esperado**: cada um
+    vai para a URL e muda a contagem; habilitado e selecionado são independentes. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+11. **Acrescentado em 15/09/2026**: a listagem tem a coluna **"Instrutor"**, e não posto e nome
+    separados. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+12. **Acrescentado em 15/09/2026**: na ficha, marcar uma disciplina no painel, gravar com confirmação
+    e conferir o vínculo `VIN-NNNNNN`; desmarcar e conferir que o vínculo fica inativo, não apagado.
+    "Desativar instrutor" está no fim da página, ao lado de "Gravar alterações". *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 ---
 
