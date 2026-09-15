@@ -3330,6 +3330,10 @@ export type Database = {
       }
     }
     Functions: {
+      gravar_dados_pessoais_instrutor: {
+        Args: { p_dados: Json; p_instrutor_id: string }
+        Returns: undefined
+      }
       vincular_credencial: { Args: never; Returns: boolean }
     }
     Enums: {

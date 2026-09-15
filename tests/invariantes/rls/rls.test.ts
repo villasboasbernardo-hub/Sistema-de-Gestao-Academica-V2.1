@@ -567,6 +567,160 @@ describe("FR-028 · recorte do dado pessoal de instrutor", () => {
   );
 });
 
+/**
+ * `FR-032`, `FR-033` — a metade da ESCRITA do recorte, que o Épico 3 deixou aberta.
+ *
+ * Contrato: `specs/006-cadastro-de-instrutores/contracts/recorte-de-escrita.md`
+ *
+ * ⚠️ A FRASE INTEIRA DO CONTRATO É *"QUEM NÃO VÊ, NÃO ESCREVE"*. Medido em 10/09/2026: os dois perfis
+ * de Orientação Pedagógica têm `editar` em instrutores e **não** leem a PII — gravavam CPF e endereço
+ * que a tela nunca lhes mostra. São eles que as negativas N-1 e N-2 nomeiam.
+ *
+ * ⚠️ AS NEGATIVAS CONFEREM O CÓDIGO DO ERRO, E NÃO SÓ A PRESENÇA DE ERRO. Antes da migration a função
+ * não existe, e a interface de dados responde "função não encontrada" — um teste que aceitasse
+ * qualquer erro passaria com o recorte ausente. Foi o que a primeira escrita desta suíte fazia.
+ *
+ * ⚠️ N-3 E N-5 SÃO CONTROLE POSITIVO, E SEM ELAS O BLOCO NÃO VALE. Um recorte que negasse todo mundo
+ * passaria em N-1, N-2 e N-6 — e quebraria a tela para quem tem direito, sem erro visível.
+ */
+const EDITAM_INSTRUTOR: readonly Perfil[] = [
+  ...COM_PII,
+  "encarregado_orientacao_pedagogica",
+  "ajudante_orientacao_pedagogica",
+];
+const NAO_LEEM_PII: readonly Perfil[] = [
+  ...SEM_PII,
+  "chefe_departamento_ensino",
+  "encarregado_orientacao_pedagogica",
+  "ajudante_orientacao_pedagogica",
+];
+
+describe("FR-032 · recorte de escrita do dado pessoal", () => {
+  let idDoInstrutor = "";
+
+  const lerComoDono = async () => {
+    const { data } = await admin
+      .from("instrutores")
+      .select("cpf, endereco_cep, nome_guerra")
+      .eq("id", idDoInstrutor)
+      .single();
+    return data;
+  };
+
+  beforeAll(async () => {
+    await admin.from("instrutores").delete().like("codigo", "RLS-INS-ESC%");
+    const { data, error } = await admin
+      .from("instrutores")
+      .insert({
+        codigo: "RLS-INS-ESC",
+        posto_graduacao: "CT",
+        esp_hab_obs: "-EF",
+        nome_completo: "Instrutor Da Escrita",
+        categoria: "Militar",
+        om: "CIAARA",
+        cpf: "000.000.000-00",
+        endereco_cep: "00000-000",
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`falha ao criar instrutor da escrita: ${error.message}`);
+    idDoInstrutor = data.id as string;
+  });
+
+  afterAll(async () => {
+    await admin.from("instrutores").delete().like("codigo", "RLS-INS-ESC%");
+  });
+
+  // ------------------------------------------------------------------ N-1 · NEGATIVO
+  it("N-1 (NEGATIVO) · encarregado_orientacao_pedagogica NÃO grava `cpf` — edita instrutor e não lê a PII", async () => {
+    const { error } = await cliente("encarregado_orientacao_pedagogica")
+      .from("instrutores")
+      .update({ cpf: "999.999.999-99" })
+      .eq("id", idDoInstrutor);
+    expect(error?.code, "a gravação de cpf não foi negada pelo privilégio de coluna").toBe("42501");
+    expect((await lerComoDono())?.cpf).toBe("000.000.000-00");
+  });
+
+  // ------------------------------------------------------------------ N-2 · NEGATIVO
+  it("N-2 (NEGATIVO) · ajudante_orientacao_pedagogica NÃO grava `endereco_cep`", async () => {
+    const { error } = await cliente("ajudante_orientacao_pedagogica")
+      .from("instrutores")
+      .update({ endereco_cep: "99999-999" })
+      .eq("id", idDoInstrutor);
+    expect(error?.code, "a gravação de endereco_cep não foi negada pelo banco").toBe("42501");
+    expect((await lerComoDono())?.endereco_cep).toBe("00000-000");
+  });
+
+  // ------------------------------------------------------------------ N-3 · controle positivo
+  it.each(COM_PII)("N-3 · %s grava `cpf` pela função com porteiro", async (perfil) => {
+    const valor = `${String(COM_PII.indexOf(perfil) + 1).repeat(3)}.000.000-00`;
+    const { error } = await cliente(perfil).rpc("gravar_dados_pessoais_instrutor", {
+      p_instrutor_id: idDoInstrutor,
+      p_dados: { cpf: valor },
+    });
+    expect(error).toBeNull();
+    expect((await lerComoDono())?.cpf).toBe(valor);
+  });
+
+  // ------------------------------------------------------------------ N-6 · NEGATIVO
+  it.each(NAO_LEEM_PII)(
+    "N-6 (NEGATIVO) · %s NÃO grava PII pela função — o porteiro é o mesmo da leitura",
+    async (perfil) => {
+      const antes = (await lerComoDono())?.cpf;
+      const { error } = await cliente(perfil).rpc("gravar_dados_pessoais_instrutor", {
+        p_instrutor_id: idDoInstrutor,
+        p_dados: { cpf: "888.888.888-88" },
+      });
+      expect(error?.code, "a função não recusou quem não lê a PII").toBe("42501");
+      expect((await lerComoDono())?.cpf).toBe(antes);
+    },
+  );
+
+  // ------------------------------------------------------------------ N-5 · controle positivo
+  it.each(EDITAM_INSTRUTOR)(
+    "N-5 · %s continua gravando coluna funcional — o recorte não recortou demais",
+    async (perfil) => {
+      const valor = `Guerra ${perfil}`;
+      const { error } = await cliente(perfil)
+        .from("instrutores")
+        .update({ nome_guerra: valor })
+        .eq("id", idDoInstrutor);
+      expect(error).toBeNull();
+      expect((await lerComoDono())?.nome_guerra).toBe(valor);
+    },
+  );
+
+  // ------------------------------------------------------------------ N-7 · NEGATIVO
+  it.each(COM_PII)(
+    "N-7 (NEGATIVO) · %s NÃO insere `cpf` direto na tabela — a inserção também passa pela função",
+    async (perfil) => {
+      const { error } = await cliente(perfil)
+        .from("instrutores")
+        .insert({
+          codigo: `RLS-INS-ESC-${COM_PII.indexOf(perfil)}`,
+          posto_graduacao: "CT",
+          esp_hab_obs: "-EF",
+          nome_completo: "Instrutor Inserido Com Cpf",
+          categoria: "Militar",
+          om: "CIAARA",
+          cpf: "777.777.777-77",
+        });
+      expect(error?.code, "a inserção com cpf não foi negada pelo privilégio de coluna").toBe(
+        "42501",
+      );
+    },
+  );
+
+  // ------------------------------------------------------------------ N-8 · NEGATIVO
+  it("N-8 (NEGATIVO) · a função recusa coluna fora das 12 — não vira porta dos fundos", async () => {
+    const { error } = await cliente("admin").rpc("gravar_dados_pessoais_instrutor", {
+      p_instrutor_id: idDoInstrutor,
+      p_dados: { nome_completo: "Nome Trocado Pela Porta Dos Fundos" },
+    });
+    expect(error?.code, "a função aceitou coluna que não é dado pessoal").toBe("22023");
+  });
+});
+
 describe("FR-026 · `ultimo_acesso` e o gatilho anti-escalonamento", () => {
   // ⚠️ ESTE TESTE EXISTE POR UMA RAZÃO ESPECÍFICA, e ela é fácil de esquecer:
   // `app.impedir_autoescalonamento` bloqueia mudança de `perfil`, `escopo_curso` e `status` feita
