@@ -34,6 +34,8 @@ export type LinhaDeInstrutor = {
   readonly om: string;
   readonly regime: string | null;
   readonly ordemAntiguidade: number;
+  /** TA ministrados no ano corrente; `null` quando a leitura da carga falhou — nunca zero inventado. */
+  readonly cargaNoAno: number | null;
 };
 
 /** `nome_desc` → `{ chave: "nome", crescente: false }`. Vazio é a ordem do banco. */
@@ -48,50 +50,67 @@ function paraParametro(ordem: Ordem | null): string | null {
   return ordem.crescente ? ordem.chave : `${ordem.chave}_desc`;
 }
 
-const COLUNAS: readonly Coluna<LinhaDeInstrutor>[] = [
-  {
-    chave: "posto",
-    titulo: "Posto/Graduação",
-    ordenavel: true,
-    // ⚠️ Ordena pela antiguidade, e não pelo texto do posto — "CC" viria antes de "CMG".
-    valor: (l) => l.ordemAntiguidade,
-    celula: (l) => l.pg,
-  },
-  {
-    chave: "nome",
-    titulo: "Nome",
-    ordenavel: true,
-    valor: (l) => l.nomeCompleto,
-    celula: (l) => (
-      <NomeInstrutor
-        instrutor={{
-          id: l.id,
-          pg: l.pg,
-          especialidade: l.especialidade,
-          nomeCompleto: l.nomeCompleto,
-          nomeDeGuerra: l.nomeDeGuerra,
-        }}
-      />
-    ),
-  },
-  {
-    chave: "categoria",
-    titulo: "Categoria",
-    ordenavel: true,
-    valor: (l) => l.categoria,
-    celula: (l) => l.categoria,
-  },
-  { chave: "om", titulo: "OM", ordenavel: true, valor: (l) => l.om, celula: (l) => l.om },
-  {
-    chave: "regime",
-    titulo: "Regime",
-    ordenavel: true,
-    valor: (l) => l.regime ?? "",
-    celula: (l) => rotuloDoRegime(l.regime),
-  },
-];
+function colunas(ano: number): readonly Coluna<LinhaDeInstrutor>[] {
+  return [
+    {
+      chave: "posto",
+      titulo: "Posto/Graduação",
+      ordenavel: true,
+      // ⚠️ Ordena pela antiguidade, e não pelo texto do posto — "CC" viria antes de "CMG".
+      valor: (l) => l.ordemAntiguidade,
+      celula: (l) => l.pg,
+    },
+    {
+      chave: "nome",
+      titulo: "Nome",
+      ordenavel: true,
+      valor: (l) => l.nomeCompleto,
+      celula: (l) => (
+        <NomeInstrutor
+          instrutor={{
+            id: l.id,
+            pg: l.pg,
+            especialidade: l.especialidade,
+            nomeCompleto: l.nomeCompleto,
+            nomeDeGuerra: l.nomeDeGuerra,
+          }}
+        />
+      ),
+    },
+    {
+      chave: "categoria",
+      titulo: "Categoria",
+      ordenavel: true,
+      valor: (l) => l.categoria,
+      celula: (l) => l.categoria,
+    },
+    { chave: "om", titulo: "OM", ordenavel: true, valor: (l) => l.om, celula: (l) => l.om },
+    {
+      chave: "regime",
+      titulo: "Regime",
+      ordenavel: true,
+      valor: (l) => l.regime ?? "",
+      celula: (l) => rotuloDoRegime(l.regime),
+    },
+    {
+      // ⚠️ SÓ LEITURA (`FR-015`): a carga é derivada dos lançamentos, e esta célula não tem campo.
+      chave: "ch_ano",
+      titulo: `CH ${ano} (TA)`,
+      numerica: true,
+      ordenavel: true,
+      valor: (l) => l.cargaNoAno ?? -1,
+      celula: (l) => (l.cargaNoAno === null ? "—" : l.cargaNoAno),
+    },
+  ];
+}
 
-export function TabelaDeInstrutores({ linhas }: { readonly linhas: readonly LinhaDeInstrutor[] }) {
+export function TabelaDeInstrutores({
+  linhas,
+  ano,
+}: {
+  readonly linhas: readonly LinhaDeInstrutor[];
+  readonly ano: number;
+}) {
   const router = useRouter();
   const [ordem, definirOrdem] = useParametro("/instrutores", "ordem");
 
@@ -99,7 +118,7 @@ export function TabelaDeInstrutores({ linhas }: { readonly linhas: readonly Linh
     <TabelaDensa
       rotulo="Instrutores"
       linhas={linhas}
-      colunas={COLUNAS}
+      colunas={colunas(ano)}
       chaveLinha={(l) => l.id}
       ordem={paraOrdem(ordem)}
       aoOrdenar={(proxima) => void definirOrdem(paraParametro(proxima))}

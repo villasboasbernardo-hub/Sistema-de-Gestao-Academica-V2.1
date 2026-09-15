@@ -17,7 +17,7 @@
 -- =================================================================================
 
 begin;
-select plan(8);
+select plan(9);
 
 -- ---------------------------------------------------------------------------------
 -- A amostra. Pesos da `escala_antiguidade`: CMG=1, CT=4, SC=13, SCNS=13; posto fora da escala
@@ -105,7 +105,47 @@ select is_empty(
 );
 
 -- ---------------------------------------------------------------------------------
--- 7 e 8. PENDENTES DA T011 — carga prevista por instrutor (RN-INST-04, FR-014).
+-- 7. RN-INST-04 · a carga ministrada acompanha o lançamento, sem ação adicional (US3, cenário 2).
+--
+-- ⚠️ A ASSERÇÃO É SOBRE A DIFERENÇA, E NÃO SOBRE O VALOR. A base local pode trazer lançamentos do
+--    ETL no ano corrente; conferir "ficou 4" dependeria dela. Mede-se antes, lança-se 4 tempos para
+--    o mesmo instrutor, e exige-se que a soma do ano tenha subido exatamente 4 — sem refresh, sem
+--    recálculo, sem gatilho: a view lê o fato.
+-- ---------------------------------------------------------------------------------
+insert into public.cursos (id, codigo, nome_curso, classificacao) values
+  ('11111111-0000-0000-0000-000000000094', 'T094-CUR', 'Curso T094', 'regular');
+insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
+  ('22222222-0000-0000-0000-000000000094', 'T094-DIS', '11111111-0000-0000-0000-000000000094', 'T94', 'Disciplina T094', 30);
+insert into public.unidades_ensino (id, codigo, disciplina_id, curso_id, numero_ue, topico, ch_prevista_tempos) values
+  ('33333333-0000-0000-0000-000000000094', 'T094-UE1', '22222222-0000-0000-0000-000000000094', '11111111-0000-0000-0000-000000000094', 1, 'Unidade T094', 30);
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status) values
+  ('44444444-0000-0000-0000-000000000094', 'T094-TUR', '11111111-0000-0000-0000-000000000094', 'T1',
+   extract(year from current_date)::smallint, 'ativa');
+
+create temp table t094_antes on commit drop as
+  select coalesce(sum(c.ta_ministrado_ano), 0) as ta
+    from public.vw_instrutor_carga_anual c
+    join public.instrutores i on i.id = c.instrutor_id
+   where i.codigo = 'T094-CT-1' and c.ano = extract(year from current_date);
+
+insert into public.registros_aula
+  (codigo, data, turma_id, unidade_ensino_id, curso_id, tempos_consumidos, ta_inicial, categoria_normativa, instrutor_id)
+select 'T094-REG-1', current_date, '44444444-0000-0000-0000-000000000094',
+       '33333333-0000-0000-0000-000000000094', '11111111-0000-0000-0000-000000000094',
+       4, 1, 'atividade_extraclasse', i.id
+  from public.instrutores i where i.codigo = 'T094-CT-1';
+
+select is(
+  (select coalesce(sum(c.ta_ministrado_ano), 0) - (select ta from t094_antes)
+     from public.vw_instrutor_carga_anual c
+     join public.instrutores i on i.id = c.instrutor_id
+    where i.codigo = 'T094-CT-1' and c.ano = extract(year from current_date)),
+  4::numeric,
+  'RN-INST-04 · lançamento novo muda ta_ministrado_ano sem ação adicional'
+);
+
+-- ---------------------------------------------------------------------------------
+-- 8 e 9. PENDENTES DA T011 — carga prevista por instrutor (RN-INST-04, FR-014).
 --
 -- ⚠️ `ta_previsto_ano` só entra quando a T011 (c) disser qual data põe uma atribuição num ano. E
 --    `vw_instrutor_carga_anual` só perde o INSERT e o UPDATE de `authenticated` quando for recriada

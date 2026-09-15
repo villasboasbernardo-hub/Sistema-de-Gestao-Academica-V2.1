@@ -11,6 +11,11 @@
  * permissão de ler instrutor, a tela diz que o perfil não alcança; com permissão e sem linha, diz
  * que o código não existe.
  *
+ * ⚠️ **A CARGA HORÁRIA É SÓ LEITURA** (`FR-014`, `FR-015`, `RF-INSTR-13`). A ministrada vem de
+ * `vw_instrutor_carga_anual`, em TA, que é a unidade que a view entrega; a view só tem linha de ano
+ * com fato, e ausência é zero. **A prevista ainda não existe no banco**: ela espera a T011 da spec
+ * 006 — qual data põe uma atribuição num ano —, e a ficha diz isso em vez de mostrar zero.
+ *
  * ⚠️ **O DADO PESSOAL SÓ É LIDO PELA VISÃO COM PORTEIRO.** Se ela entrega a linha, a sessão é de um
  * dos três perfis que leem a PII, e só então a seção existe no formulário. Quem decidiu foi o banco.
  */
@@ -21,6 +26,7 @@ import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { rotuloDoRegime } from "@/lib/constantes/instrutor";
+import { anoCorrente } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { COLUNAS_PESSOAIS, valoresFuncionaisDe, valoresPessoaisDe } from "../campos";
@@ -81,11 +87,22 @@ export default async function FichaDoInstrutor({
     );
   }
 
-  const { data: pessoal } = await supabase
-    .from("vw_instrutor_dados_pessoais")
-    .select(COLUNAS_PESSOAIS)
-    .eq("id", instrutor.id)
-    .maybeSingle();
+  const ano = anoCorrente();
+  const [{ data: pessoal }, cargaRes] = await Promise.all([
+    supabase
+      .from("vw_instrutor_dados_pessoais")
+      .select(COLUNAS_PESSOAIS)
+      .eq("id", instrutor.id)
+      .maybeSingle(),
+    supabase
+      .from("vw_instrutor_carga_anual")
+      .select("ta_ministrado_ano")
+      .eq("instrutor_id", instrutor.id)
+      .eq("ano", ano)
+      .maybeSingle(),
+  ]);
+  // ⚠️ Falha de leitura é "—", não zero (`RN-DEG-01`): zero afirmaria que não houve aula.
+  const ministrada = cargaRes.error ? null : Number(cargaRes.data?.ta_ministrado_ano ?? 0);
 
   const ativo = instrutor.status === "ativo";
 
@@ -129,6 +146,34 @@ export default async function FichaDoInstrutor({
           <dd className="text-texto">{instrutor.capacitacao_didatica ?? "—"}</dd>
         </div>
       </dl>
+
+      <section
+        aria-labelledby="carga-do-instrutor"
+        className="border-borda rounded-ciaara flex flex-col gap-2 border p-4 text-sm"
+        data-slot="carga-do-instrutor"
+      >
+        <h2 id="carga-do-instrutor" className="text-texto font-semibold">
+          Carga horária de {ano}
+        </h2>
+        <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+          <div>
+            <dt className="text-texto-suave">Ministrada no ano</dt>
+            <dd className="text-texto" data-slot="carga-ministrada">
+              {ministrada === null ? "—" : `${ministrada} TA`}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-texto-suave">Prevista no ano</dt>
+            <dd className="text-texto-suave" data-slot="carga-prevista">
+              ainda não calculada
+            </dd>
+          </div>
+        </dl>
+        {/* veste: a dica que diz de onde vêm os números — texto fixo, nunca dado */}
+        <p className="text-texto-tenue text-xs">
+          Calculada a partir das aulas e avaliações lançadas; não é digitada.
+        </p>
+      </section>
 
       <SePodeVer permissoes={permissoes} recurso="instrutores" acao="editar">
         <FormularioDeInstrutor

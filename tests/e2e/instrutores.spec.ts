@@ -100,6 +100,8 @@ test.describe("`RN-INST-03` · o cadastro não aceita ficar pela metade", () => 
       .poll(() => new URL(page.url()).pathname, { timeout: 15_000 })
       .toMatch(/^\/instrutores\/\d+$/);
     await expect(page.locator('[data-slot="codigo-do-instrutor"]')).toContainText(/Código \d+/);
+    // `FR-014` · instrutor sem lançamento no ano: a view não tem linha, e a ficha mostra zero — não "—".
+    await expect(page.locator('[data-slot="carga-ministrada"]')).toHaveText("0 TA");
 
     const { data } = await servico()
       .from("instrutores")

@@ -8,6 +8,10 @@
  * sempre; `?ordem=` reordena por cima, na folha. É a separação que `tests/unidade/consulta-de-instrutores.test.ts`
  * prova, e que a varredura de `ordenacao-de-instrutor.test.ts` cobra de toda tela nova.
  *
+ * ⚠️ **A CARGA DO ANO É LIDA, NUNCA DIGITADA** (`FR-014`, `RN-INST-04`). Ela vem de
+ * `vw_instrutor_carga_anual`, na mesma rodada de consultas, e é casada por `instrutor_id`. A view só
+ * tem linha de um ano em que houve fato: **ausência é zero**, não "instrutor sumido".
+ *
  * ⚠️ **ERRO DE LEITURA NÃO ESTOURA** (`RN-DEG-01`): vira o vazio de "você não vê", que é o que uma
  * negativa da RLS de fato significa.
  */
@@ -17,6 +21,7 @@ import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { anoCorrente } from "@/lib/formato/ano-corrente";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -48,13 +53,18 @@ export default async function Instrutores({
     ordem: String(valores.ordem),
   };
 
+  const ano = anoCorrente();
   const supabase = await criarClienteDeServidor();
-  const [usuario, { data, error }] = await Promise.all([
+  const [usuario, { data, error }, cargaRes] = await Promise.all([
     usuarioDaSessao(),
     montarConsultaDeInstrutores(
       supabase.from("vw_instrutores").select(COLUNAS_DA_LISTAGEM),
       parametros,
     ),
+    supabase
+      .from("vw_instrutor_carga_anual")
+      .select("instrutor_id, ta_ministrado_ano")
+      .eq("ano", ano),
   ]);
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
 
@@ -65,6 +75,16 @@ export default async function Instrutores({
         <EstadoVazio motivo="sem-permissao" />
       </section>
     );
+  }
+
+  /*
+   * ⚠️ A CARGA QUE FALHA NÃO DERRUBA A LISTA (`RN-DEG-01`). Sem ela, a coluna mostra "—" e um aviso
+   * diz por quê; zero seria mentira — afirmaria que ninguém deu aula.
+   */
+  const cargaDisponivel = !cargaRes.error;
+  const cargaPorInstrutor = new Map<string, number>();
+  for (const c of cargaRes.data ?? []) {
+    if (c.instrutor_id) cargaPorInstrutor.set(c.instrutor_id, Number(c.ta_ministrado_ano ?? 0));
   }
 
   const linhas: LinhaDeInstrutor[] = (data ?? []).map((i) => ({
@@ -78,6 +98,7 @@ export default async function Instrutores({
     om: i.om as string,
     regime: i.regime_trabalho,
     ordemAntiguidade: i.ordem_antiguidade as number,
+    cargaNoAno: cargaDisponivel ? (cargaPorInstrutor.get(i.id as string) ?? 0) : null,
   }));
 
   return (
@@ -106,7 +127,14 @@ export default async function Instrutores({
         {parametros.situacao === "inativo" ? "inativo(s)" : "ativo(s)"}
       </p>
 
-      <TabelaDeInstrutores linhas={linhas} />
+      {!cargaDisponivel && (
+        <p className="text-texto-suave text-sm" role="status" data-slot="carga-indisponivel">
+          Não foi possível ler a carga horária de {ano}. A lista continua completa; a coluna mostra
+          “—” até a leitura voltar.
+        </p>
+      )}
+
+      <TabelaDeInstrutores linhas={linhas} ano={ano} />
     </section>
   );
 }
