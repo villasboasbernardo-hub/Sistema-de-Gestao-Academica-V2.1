@@ -135,8 +135,8 @@ pnpm test:e2e tests/e2e/instrutores.spec.ts
 6. Abrir a ficha de um instrutor. **Esperado**: URL `/instrutores/<codigo>`, **nunca** um uuid.
 7. **Controle negativo**: `/instrutores/CODIGO-QUE-NAO-EXISTE`. **Esperado**: a tela distingue
    *"não há"* de *"você não vê"*.
-8. Contar na tela: **4 indicadores** e **7 gráficos**, com posto/graduação **primeiro** e em ordem de
-   antiguidade — **nunca alfabética**.
+8. Contar na tela: **4 indicadores** e **7 gráficos**, com as barras de posto/graduação em ordem de
+   antiguidade — **nunca alfabética**. *(Corrigido em 15/09/2026: dizia "com posto/graduação primeiro"; ver a emenda do `FR-026.2`.)*
 9. Procurar edição em linha na listagem. **Esperado**: não existe — a spec 038 a removeu.
 
 ---

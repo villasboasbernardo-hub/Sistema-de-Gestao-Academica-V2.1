@@ -116,15 +116,17 @@ selecionado sem vínculo de habilitação ativo. Os **dois valores absolutos apa
 percentual é secundário (`FR-026.1`). Forçar o menor dos dois, ou esconder um percentual acima de
 100%, **apagaria justamente a inconsistência que o número existe para revelar**.
 
-### Gráficos — exatamente 7, e o primeiro é fixo
+### Gráficos — exatamente 7, e as barras de posto seguem a antiguidade
 
-1. **Posto/graduação** — **sempre primeiro**, **sempre em ordem de antiguidade**
-2. Habilitados × selecionados
-3. Classificação
+1. Habilitados × selecionados
+2. Classificação — coluna `categoria`
+3. **Posto/graduação** — barras **sempre em ordem de antiguidade**, sem posição fixa na tela
 4. OM
 5. Escolaridade
 6. Regime de trabalho
 7. Capacitação didática
+
+**Correção registrada em 15/09/2026**: esta lista punha posto/graduação "sempre primeiro". Passa a seguir a ordem da spec 014 da v2.0 e o `FR-026.2` emendado: a antiguidade governa as **barras** do gráfico, não a posição dele. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 🛑 **Ordenação alfabética é PROIBIDA no gráfico de posto/graduação** — está escrito assim na spec 014
 da v2.0.

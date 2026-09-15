@@ -42,7 +42,10 @@ Tailwind v4.3.3 · shadcn/ui sobre **Radix** · `@supabase/ssr` 0.12.5 e `@supab
 **Testes**: Vitest (unidade) · pgTAP (invariantes SQL) · Vitest com sessão autenticada (RLS
 negativa) · Playwright (ponta a ponta)
 
-**Plataforma alvo**: Vercel, preview por ramo. Sem URL de produção ainda
+**Plataforma alvo**: Vercel, preview por ramo, e **Production desde 15/09/2026**, por exceção
+registrada no `FR-016.1` da spec 001, sobre o mesmo projeto Supabase de desenvolvimento/preview
+
+**Atualização registrada em 15/09/2026**: esta linha dizia "Sem URL de produção ainda". *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 **Tipo de projeto**: aplicação web, App Router, sem `src/`, alias `@/*`
 
@@ -53,7 +56,12 @@ projeto é priorizar clareza de schema e manutenibilidade sobre desempenho
 `lib/dominio/` não importa `supabase`, `next` nem `react` · Zod na primeira linha de toda Server
 Action · nenhuma cor literal em `components/ciaara/`
 
-**Escala/escopo**: 2 rotas novas · 2 migrations · ~6 funções de domínio · 4 indicadores · 7 gráficos
+**Escala/escopo**: **3 rotas novas** (`/instrutores`, `/instrutores/[codigo]`, `/instrutores/novo`) ·
+**3 migrations**, ou 4 se a `ta_previsto_semanal` sair depois da migration de carga mesclada ·
+**7 módulos novos em `lib/dominio/`** mais a extensão de `antiguidade.ts` · 1 módulo em
+`lib/formato/` · 1 módulo de montagem de consulta ao lado da página · 4 indicadores · 7 gráficos
+
+**Atualização registrada em 15/09/2026**: esta linha dizia "2 rotas novas · 2 migrations · ~6 funções de domínio". Os números passam a bater com o `tasks.md`, que achou a terceira rota (D-6), a migration dos obrigatórios e do código (D-3, D-4) e a montagem da consulta exigida pela correção da T026. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 ---
 
@@ -117,37 +125,49 @@ specs/006-cadastro-de-instrutores/
 ```text
 supabase/migrations/
 ├── <ts>_recorte_escrita_dado_pessoal.sql     # FR-032/033 — revoke + grant por coluna + função
-└── <ts>_carga_prevista_por_instrutor.sql     # FR-014 — estende vw_instrutor_carga_anual
+├── <ts>_carga_prevista_por_instrutor.sql     # FR-014 — estende vw_instrutor_carga_anual e vw_instrutores
+└── <ts>_obrigatorios_e_codigo_instrutor.sql  # FR-005 a FR-007 — CHECK de branco + sequência do codigo
+
+supabase/tests/                               # pgTAP (I-1, I-5, I-8) — 093, 094 e 095
 
 lib/
 ├── dominio/
-│   ├── antiguidade.ts                        # ✅ EXISTE — consumir, não reescrever
+│   ├── antiguidade.ts                        # ✅ EXISTE — estender com a escala lida de config_listas
 │   ├── nome-instrutor.ts                     # ✅ EXISTE — consumir, não reescrever
 │   ├── carga-horaria.ts                      # faixa do regime; FR-016 puro
 │   ├── alertas-instrutor.ts                  # FR-016 e FR-017, sem banco
-│   └── indicadores-instrutor.ts              # os 4, incluindo a taxa que passa de 100%
+│   ├── indicadores-instrutor.ts              # os 4, incluindo a taxa que passa de 100%
+│   ├── graficos-instrutor.ts                 # as 7 séries
+│   ├── habilitacao.ts                        # RN-INST-01, com a delimitação
+│   ├── avisos-cadastro-instrutor.ts          # FR-027, lista aberta
+│   └── ciclo-de-vida-instrutor.ts            # FR-009
+├── formato/mascaras.ts                       # FR-024
 ├── validacao/instrutor.ts                    # Zod dos 5 obrigatórios, branco inclusive
-├── acoes/instrutor.ts                        # Server Actions: criar, editar, desativar, reativar
-└── navegacao/contrato.ts                     # + /instrutores e /instrutores/[codigo]
+├── acoes/instrutor.ts                        # Server Actions: criar, editar, desativar, reativar, habilitações
+└── navegacao/contrato.ts                     # + /instrutores, /instrutores/[codigo] e /instrutores/novo
 
 app/(app)/instrutores/
 ├── page.tsx                                  # listagem, filtros, indicadores, gráficos
+├── consulta.ts                               # montagem da consulta no servidor, testável sem banco
+├── novo/page.tsx                             # cadastro
 ├── [codigo]/page.tsx                         # ficha individual
-├── loading.tsx · error.tsx                   # RN-DEG-01, por segmento
+├── loading.tsx · error.tsx                   # RN-DEG-01, nos três segmentos
 └── *.tsx                                     # folhas de cliente, declaradas e contadas
 
 components/ciaara/                            # ✅ 16 arquivos do Épico 4 (b) — consumir
 components/graficos/                          # ✅ 5 arquivos — consumir
 
 tests/
-├── unidade/                                  # domínio + varreduras (SC-001, SC-002)
-├── invariantes/                              # pgTAP (I-1, I-5, I-8) + RLS negativa (I-2, I-3)
+├── unidade/                                  # domínio, montagem da consulta e varreduras (SC-001, SC-002)
+├── invariantes/rls/                          # RLS negativa com sessão autenticada (I-2, I-3)
 └── e2e/instrutores.spec.ts                   # o percurso do passo 5 do quickstart
 ```
 
+**Correção registrada em 15/09/2026**: a árvore acima punha o pgTAP em `tests/invariantes/`. No repositório, e no `tasks.md`, ele vive em **`supabase/tests/`**; `tests/invariantes/rls/` guarda só a RLS com sessão autenticada. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
 **Decisão de estrutura**: a do documento 24, sem desvio. A ordem de implementação é a do
 `CLAUDE.md` — **de dentro para fora**: `lib/dominio/` → `lib/validacao/` → `lib/acoes/` → `app/` →
-`components/`. As duas migrations vêm **antes** de tudo, porque o recorte é o item de maior risco e
+`components/`. As migrations vêm **antes** de tudo, porque o recorte é o item de maior risco e
 `pnpm db:tipos` precisa rodar antes de o TypeScript conhecer as colunas novas.
 
 ---
@@ -168,6 +188,8 @@ tests/
 ⚠️ **O bloco 1 sai sozinho, e pelo mesmo motivo de sempre:** amarrar uma correção de segurança à
 fatia inteira faz ela esperar a fatia inteira. **Não há exposição em produção hoje** — o projeto não
 tem URL de produção —, então é higiene de entrega, não incêndio.
+
+**Atualização registrada em 15/09/2026**: a frase acima deixou de valer como escrita. Desde 15/09/2026 existe Production na Vercel, por exceção registrada no `FR-016.1` da spec 001, **sobre o mesmo projeto Supabase** do preview. O projeto remoto foi medido em 14/09/2026 sem linha de instrutor, então o recorte continua sem dado real a expor ali; ele deixa de ser só higiene no dia em que instrutores forem carregados nesse projeto. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 ---
 

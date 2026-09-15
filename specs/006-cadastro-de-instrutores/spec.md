@@ -222,6 +222,7 @@ refinamento reaparece.
   `RN-INST-05`). O status MUST ser explícito, **nunca inferido de ausência**.
 - **FR-009**: Instrutor desativado MUST sair das listas de **nova** atribuição e MUST **permanecer**
   em todo histórico já lançado (`RF-INSTR-07`).
+  **Anotação registrada em 15/09/2026**: nenhuma tela desta fatia tem lista de nova atribuição. A primeira metade deste requisito só fica observável numa fatia futura, ainda não especificada; aqui ela entra como função pura com teste de unidade, e o `SC-004` mede a segunda metade. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-010**: MUST ser possível **reativar** um instrutor desativado, sem perda.
 - **FR-010.1**: Desativar um instrutor MUST **não** alterar a conta de acesso da pessoa, quando
   existir vínculo entre as duas. A tela de usuários MUST **mostrar** que o instrutor vinculado está
@@ -255,13 +256,15 @@ refinamento reaparece.
   **dentro**, não no limite.
 - **FR-017**: MUST ser sinalizado o instrutor em docência há **mais de um ano sem capacitação
   didática** (`RF-INSTR-16`).
+  **Decisão registrada em 15/09/2026**: o campo de referência para contar o tempo de docência é `data_inicio_docencia_ciaara`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-018**: Os alertas dos `FR-016` e `FR-017` MUST ser **avisos, nunca bloqueios** (`RN-DEG-02`).
   ⚠️ Transformá-los em impedimento **muda a regra de negócio** e exige autorização nominal.
 
 #### Nome e apresentação
 
-- **FR-019**: O nome MUST aparecer no formato **`P/G Especialidade Nome de Guerra`** em toda tela
-  (`RF-INSTR-15`, `RF-DS-05`).
+- **FR-019**: O nome MUST aparecer no formato **`P/G Especialidade/Habilitação Nome Completo`**, com o
+  nome ou nomes de guerra em negrito, em toda tela (`RF-INSTR-15`, `RF-DS-05`).
+  **Emenda registrada em 15/09/2026**: a redação anterior dizia `P/G Especialidade Nome de Guerra`. Era uma compressão que descartava o nome completo e contradizia o `RF-INSTR-15`, que é **[PRESERVADO]**; o texto passa a ser o dele. O componente `NomeInstrutor` já seguia o `RF-INSTR-15`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-020**: A montagem do nome MUST vir de **função pura de domínio**, e MUST ser exibida por
   **um único componente** — não remontada em cada tela.
 
@@ -270,6 +273,7 @@ refinamento reaparece.
 - **FR-021**: Um instrutor só MUST poder ser escolhido para **ministrar** ou ser **responsável** por
   uma disciplina se existir vínculo de habilitação explícito (`RN-INST-01`).
   ⚠️ **A regra é delimitada**: avaliação e vista de prova **não** exigem habilitação.
+  **Anotação registrada em 15/09/2026**: nenhuma tela desta fatia escolhe instrutor para ministrar ou ser responsável. A regra só fica observável numa fatia futura, ainda não especificada; aqui ela entra como função pura com teste de unidade. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-022**: MUST existir **painel de atribuição de disciplinas** ao instrutor (spec 019 da v2.0).
 
 #### Refinamentos da v2.0 que MUST reaparecer
@@ -284,24 +288,28 @@ refinamento reaparece.
   redação:
   1. **Total de instrutores**;
   2. **Instrutores com capacitação didática** — conta quem tem o campo **não vazio**;
-  3. **CH total ministrada no ano**;
+  3. **CH total ministrada no ano corrente**;
   4. **Taxa de seleção, habilitados × selecionados**.
+  **Anotação registrada em 15/09/2026**: "no ano", no item 3 acima e no `FR-027.1`, é o **ano corrente**. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-026.1**: A taxa de seleção MUST exibir **os dois valores absolutos sempre**, e o percentual
   apenas como informação secundária.
   ⚠️ **Selecionados NÃO é subconjunto de habilitados.** A v2.0 mediu **10 casos reais** de instrutor
   selecionado sem vínculo de habilitação ativo. Forçar o menor dos dois, ou esconder um percentual
   acima de 100%, apagaria justamente a inconsistência que o número existe para revelar.
-- **FR-026.2**: MUST existir **sete gráficos**, e o de **posto/graduação** MUST vir **sempre em
-  primeiro** e **sempre em ordem de antiguidade**: habilitados × selecionados, classificação,
-  **posto/graduação**, OM, escolaridade, regime de trabalho e capacitação didática.
+- **FR-026.2**: MUST existir **sete gráficos**: habilitados × selecionados, classificação (coluna
+  `categoria`), **posto/graduação**, OM, escolaridade, regime de trabalho e capacitação didática. As
+  barras do gráfico de **posto/graduação** MUST seguir **sempre a ordem de antiguidade**; o gráfico
+  **não** tem posição fixa na tela.
   ⚠️ **Ordenação alfabética é PROIBIDA** nesse gráfico — está escrito assim na spec 014.
+  **Emenda registrada em 15/09/2026**: a redação anterior dizia que o gráfico de posto/graduação vinha "sempre em primeiro", enquanto a própria lista o punha em terceiro. A spec 014 da v2.0 diz "sempre na **ordem** de antiguidade", referindo-se às barras, e não fixa posição; o texto passa a concordar com ela. Fica explícito também que "classificação" é a coluna `categoria`, como no `FR-002` da spec 014. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-026.3**: Posto/graduação fora do domínio conhecido MUST aparecer numa faixa **"Outros"** ao
   final da ordenação, **nunca ser omitido em silêncio** (Princípio V, degradação segura).
 - **FR-026.4**: No gráfico de capacitação didática, um instrutor com **duas** qualificações MUST
   contar em **ambas** as barras; quem tem o campo vazio MUST **não** contar em nenhuma.
 - **FR-027**: **Quadro de avisos de qualidade de cadastro** (`RF-INSTR-09`).
+  **Decisão registrada em 15/09/2026**: a lista de avisos é **aberta e extensível**, não um conjunto fechado. Ela começa pelos dois exemplos do `RF-INSTR-09` — instrutor sem NIP e campo obrigatório pendente — e aceita aviso novo sem mudar o tipo que a descreve. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-027.1**: A listagem MUST trazer, no mínimo, as colunas **posto/graduação, nome completo,
-  categoria, OM, regime e CH total no ano** (spec 014).
+  categoria, OM, regime e CH total no ano corrente** (spec 014).
 - **FR-027.2**: No nome completo, a palavra correspondente ao **nome de guerra** MUST aparecer em
   negrito, quando houver (spec 014).
 - **FR-027.3**: Nenhum seletor de instrutor MUST exibir identificador técnico ao usuário (spec 014).
@@ -331,6 +339,7 @@ refinamento reaparece.
 - **FR-030**: MUST ser possível registrar **preferências e restrições gerais** do instrutor
   (`RF-INSTR-06`). As preferências **por turma e por disciplina** do `RF-INSTR-06.1` ficam para
   **depois da fatia (b)**.
+  **Simplificação deliberada registrada em 15/09/2026**: nesta fatia a preferência é **texto livre**, na coluna `preferencia`. A grade dia × período com observação que o `RF-INSTR-06` descreve **não** é construída aqui; é simplificação escolhida e registrada, não divergência silenciosa. *(decisão de Bernardo Villas Boas, 15/09/2026)*
   ⚠️ **Decisão de 10/09/2026**: antecipá-las exigiria inventar a estrutura de disciplina por turma,
   que é justamente o que a fatia (b) constrói. Preferência presa a uma disciplina que ainda não
   existe por turma é dado sem onde morar.
@@ -363,8 +372,9 @@ refinamento reaparece.
   Nenhum dos dois é impedido de nada.
 - **SC-007**: Cada um dos refinamentos das **oito specs** do inventário tem endereço apontado na
   v2.1 — a lista é percorrida item a item e **nenhum fica sem resposta**.
-- **SC-007.1**: São exibidos **4 indicadores** e **7 gráficos**, e o de posto/graduação está em
-  primeiro, em ordem de antiguidade. Contagem exata, não "aproximadamente".
+- **SC-007.1**: São exibidos **4 indicadores** e **7 gráficos**, e as barras do de posto/graduação
+  seguem a ordem de antiguidade. Contagem exata, não "aproximadamente".
+  **Emenda registrada em 15/09/2026**: a redação anterior exigia o gráfico de posto/graduação "em primeiro". Passa a concordar com o `FR-026.2` emendado na mesma data. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **SC-008**: Recarregar a página com filtros aplicados reproduz **exatamente** a mesma tela.
 - **SC-010**: O número de perfis que **escrevem** identificação civil e residência é **igual** ao
   número que as **lê** — três —, e a diferença entre colunas com `SELECT` e colunas com `UPDATE`
@@ -404,8 +414,10 @@ refinamento reaparece.
 | Épico 2 — as 177 linhas migradas | ✅ concluído |
 | Épico 3 — sessão, perfil e recorte de PII | ✅ na `main` |
 | Épico 4, fatia (a) — tokens e tema | ✅ na `main` |
-| **Épico 4, fatia (b)** — `TabelaDensa`, `FiltroAvancado`, `BadgeStatus`, `NomeInstrutor`, `SeletorInstrutor`, gráficos | ⬜ **NÃO EXISTE** — Q5c.a |
-| **Épico 4, fatia (c)** — shell, navegação e **estado na URL** | ⬜ **NÃO EXISTE** — Q5c.a |
+| **Épico 4, fatia (b)** — `TabelaDensa`, `FiltroAvancado`, `BadgeStatus`, `NomeInstrutor`, `SeletorInstrutor`, gráficos | ✅ **concluída**, na `main` desde 11/09/2026 |
+| **Épico 4, fatia (c)** — shell, navegação e **estado na URL** | ✅ **concluída**, na `main` desde 11/09/2026 |
+
+**Correção registrada em 15/09/2026**: as duas linhas acima diziam ⬜ **NÃO EXISTE** — Q5c.a, o estado de 10/09/2026. As fatias (b) e (c) do Épico 4 foram mescladas na `main` em 11/09/2026, e a Q5c.a está satisfeita (research R-1). O registro do bloqueio abaixo fica como histórico. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 ⚠️ **Medido em 10/09/2026**: `components/ciaara/` tem quatro arquivos, nenhum deles de domínio; a
 biblioteca de gráficos e a de estado na URL **não estão instaladas**. O `FR-025`, o `FR-026` e o
@@ -472,6 +484,7 @@ Conforme o pedido, e conforme a regra 1 do `CLAUDE.md`.
    abrangente, então **adotei o formato padronizado** e mantive da spec 014 apenas a regra de não
    exibir identificador técnico (`FR-027.3`). Registro porque é uma escolha entre dois textos
    escritos, não uma dedução.
+   **Anotação registrada em 15/09/2026**: a citação do `RF-INSTR-15` neste item estava comprimida. O texto dele é `P/G Especialidade/Habilitação Nome Completo`, com o nome ou nomes de guerra em negrito; ver a emenda do `FR-019`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 5. **O `RF-CRUD-02` foi `[ABSORVIDO PELA PLATAFORMA]` e isso muda o que se pode prometer.** Na v2.0
    uma coluna nova aparecia sozinha porque o cabeçalho era dinâmico. Aqui, coluna nova é migration
    mais tipo regenerado. O requisito continua na lista de cobertura do Épico 5, e **não é mais

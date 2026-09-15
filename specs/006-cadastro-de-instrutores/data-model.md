@@ -21,6 +21,8 @@
 | `config_listas.escala_antiguidade` | a escala `P/G` → peso, **14 valores** | ✅ com `SC`/`SCNS` em 13 |
 | `perfil_permissao` | quem pode `ler`/`criar`/`editar` instrutor | ✅ 152 linhas |
 
+**Anotação registrada em 15/09/2026 — nomes que o documento 04 cita e o schema não tem.** O documento 04 indica `vw_instrutores_ordenados` como artefato da `RN-ANT-01` e `vw_instrutor_carga_horaria` como artefato da `RN-INST-04`. Nenhuma das duas existe: o schema real usa **`vw_instrutores`** e **`vw_instrutor_carga_anual`**. Esta fatia usa os nomes reais, e o documento 04 **não** é alterado aqui. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
 ---
 
 ## Entidade 1 — Instrutor
@@ -29,7 +31,12 @@
 
 ⚠️ **O `FR-007` fala do identificador que a PESSOA vê, não da chave.** O requisito manda inteiro
 simples sem prefixo; a convenção do projeto manda FK apontar para `id`. Não brigam: `codigo` guarda
-o número legível verbatim, e `id` é a chave. Nenhum dos dois muda aqui.
+o número legível verbatim, e `id` é a chave. O `id` não muda aqui; o `codigo` passa a ser **gerado
+automaticamente** para instrutor novo.
+
+**Correção registrada em 15/09/2026**: esta seção dizia "Nenhum dos dois muda aqui", mas `codigo` não tem hoje `default`, sequência nem gatilho — os 177 vieram do ETL —, e o `FR-007` exige geração automática. O `codigo` de instrutor novo passa a ser **gerado automaticamente por sequência**, como `default` da coluna, começando acima do maior código migrado (T018). *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
+⚠️ **Divergência com o documento 04, anotada e não corrigida.** Para a `RN-CRUD-03`, o documento 04 indica como artefato de destino um **gatilho** `gerar_codigo()` por tabela, que produz "prefixo + sequencial para o padrão geral, inteiro simples para `instrutores`". Lido em 15/09/2026: para instrutores ele não define regra além do formato — não trata de reuso de número, lacuna nem bloqueio —, então é um contador simples, e a sequência cumpre a regra. O mecanismo diverge do nome do artefato: **sequência, não gatilho**. ⚠️ Uma sequência não devolve número consumido por transação desfeita; o documento 04 fala em "sequencial" e não proíbe lacuna. O gatilho `gerar_codigo()` não existe no schema, para nenhuma tabela.
 
 ### Os cinco obrigatórios (`FR-005`, `RN-INST-03`)
 
