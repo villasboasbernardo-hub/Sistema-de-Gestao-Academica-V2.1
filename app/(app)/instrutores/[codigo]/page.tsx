@@ -33,6 +33,7 @@ import {
   semanasDoAno,
   semanasForaDaFaixa,
 } from "@/lib/dominio/carga-semanal";
+import { motivoDoImpedimento } from "@/lib/dominio/exclusao-de-instrutor";
 import { anoCorrente, hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -40,6 +41,7 @@ import { COLUNAS_PESSOAIS, valoresFuncionaisDe, valoresPessoaisDe } from "../cam
 import { FormularioDeInstrutor } from "../FormularioDeInstrutor";
 import { comSigla } from "../catalogo";
 import { AcoesDeInstrutor } from "./AcoesDeInstrutor";
+import { ExcluirInstrutor } from "./ExcluirInstrutor";
 import { CargaDoInstrutor } from "./CargaDoInstrutor";
 import { FichaEmLeitura } from "./FichaEmLeitura";
 
@@ -105,40 +107,46 @@ export default async function FichaDoInstrutor({
 
   const ano = anoCorrente();
   const limitesDoAno = limitesDoAnoIso(ano);
-  const [{ data: pessoal }, cargaRes, atribuicoesRes, vinculosRes] = await Promise.all([
-    supabase
-      .from("vw_instrutor_dados_pessoais")
-      .select(COLUNAS_PESSOAIS)
-      .eq("id", instrutor.id)
-      .maybeSingle(),
-    supabase
-      .from("vw_instrutor_carga_anual")
-      .select("ta_ministrado_ano, ta_previsto_ano, faixa_semanal_min, faixa_semanal_max")
-      .eq("instrutor_id", instrutor.id)
-      .eq("ano", ano)
-      .maybeSingle(),
-    supabase
-      .from("vw_instrutor_carga_prevista")
-      .select(
-        "atribuicao_id, ano, nome_disciplina, curso_codigo, turma_codigo, previsao_inicio, previsao_termino, tempos_previstos, semanas, media_semanal",
-      )
-      .eq("instrutor_id", instrutor.id)
-      /*
-       * ⚠️ DUAS PERGUNTAS NA MESMA CONSULTA (CHK005, decisão de Bernardo Villas Boas, 15/09/2026). A seção
-       * de carga lista as atribuições **do ano** pela data de início (T011 c); o alerta de faixa precisa
-       * de toda janela que toca o ano ISO corrente, inclusive a que começou no ano anterior. Vêm as duas,
-       * e a lista é recortada abaixo, em memória.
-       */
-      .or(
-        `ano.eq.${ano},and(previsao_inicio.lte.${limitesDoAno.fim},previsao_termino.gte.${limitesDoAno.inicio})`,
-      )
-      .order("previsao_inicio"),
-    supabase
-      .from("instrutor_disciplina")
-      .select("disciplina_id")
-      .eq("instrutor_id", instrutor.id)
-      .eq("status", "ativo"),
-  ]);
+  const podeExcluir = pode(permissoes, "instrutores", "criar");
+  const [{ data: pessoal }, cargaRes, atribuicoesRes, vinculosRes, impedimentosRes] =
+    await Promise.all([
+      supabase
+        .from("vw_instrutor_dados_pessoais")
+        .select(COLUNAS_PESSOAIS)
+        .eq("id", instrutor.id)
+        .maybeSingle(),
+      supabase
+        .from("vw_instrutor_carga_anual")
+        .select("ta_ministrado_ano, ta_previsto_ano, faixa_semanal_min, faixa_semanal_max")
+        .eq("instrutor_id", instrutor.id)
+        .eq("ano", ano)
+        .maybeSingle(),
+      supabase
+        .from("vw_instrutor_carga_prevista")
+        .select(
+          "atribuicao_id, ano, nome_disciplina, curso_codigo, turma_codigo, previsao_inicio, previsao_termino, tempos_previstos, semanas, media_semanal",
+        )
+        .eq("instrutor_id", instrutor.id)
+        /*
+         * ⚠️ DUAS PERGUNTAS NA MESMA CONSULTA (CHK005, decisão de Bernardo Villas Boas, 15/09/2026). A seção
+         * de carga lista as atribuições **do ano** pela data de início (T011 c); o alerta de faixa precisa
+         * de toda janela que toca o ano ISO corrente, inclusive a que começou no ano anterior. Vêm as duas,
+         * e a lista é recortada abaixo, em memória.
+         */
+        .or(
+          `ano.eq.${ano},and(previsao_inicio.lte.${limitesDoAno.fim},previsao_termino.gte.${limitesDoAno.inicio})`,
+        )
+        .order("previsao_inicio"),
+      supabase
+        .from("instrutor_disciplina")
+        .select("disciplina_id")
+        .eq("instrutor_id", instrutor.id)
+        .eq("status", "ativo"),
+      // A exceção única à regra 4 (autorização de Bernardo Villas Boas, 15/09/2026): só pergunta quem pode.
+      podeExcluir
+        ? supabase.rpc("impedimentos_de_exclusao_do_instrutor", { p_instrutor_id: instrutor.id })
+        : Promise.resolve(null),
+    ]);
 
   const catalogo = comSigla(disciplinasRes.data ?? [], cursosRes.data ?? []);
   const habilitadas = (vinculosRes.data ?? []).flatMap((v) =>
@@ -212,6 +220,24 @@ export default async function FichaDoInstrutor({
 
   const ativo = instrutor.status === "ativo";
 
+  /*
+   * ⚠️ FICHA DE INSTRUTOR INATIVO NÃO EXIBE ALERTA NORMATIVO (CHK019, decisão de Bernardo Villas Boas,
+   * 15/09/2026). Faixa do regime e capacitação didática falam de quem está em docência; o inativo não
+   * recebe atribuição nova, e o alerta seria ruído sobre alguém fora da escala.
+   */
+  const alertasExibidos = ativo ? alertas : [];
+
+  /*
+   * ⚠️ SEM RESPOSTA DO BANCO, A EXCLUSÃO FICA INDISPONÍVEL — nunca liberada (`RN-DEG-01`). Um erro de
+   * leitura dos impedimentos não pode virar "não tem histórico".
+   */
+  const motivoDeNaoExcluir =
+    impedimentosRes === null
+      ? null
+      : impedimentosRes.error
+        ? "Não foi possível conferir o histórico deste instrutor; a exclusão fica indisponível."
+        : motivoDoImpedimento((impedimentosRes.data as string[] | null) ?? []);
+
   return (
     <section className="flex flex-col gap-5">
       <header className="flex flex-col gap-2">
@@ -234,7 +260,7 @@ export default async function FichaDoInstrutor({
         </div>
       </header>
 
-      {alertas.map((a) => (
+      {alertasExibidos.map((a) => (
         <AlertaConformidade
           key={a.chave}
           tom="conformidade"
@@ -271,7 +297,19 @@ export default async function FichaDoInstrutor({
           habilitadas={habilitadas}
           // ⚠️ Desativar fica no fim, ao lado de gravar, longe do caminho habitual (anotação de
           // 15/09/2026 ao `FR-011`). Oculto para quem não edita, como o formulário inteiro.
-          rodape={<AcoesDeInstrutor instrutorId={instrutor.id} ativo={ativo} />}
+          rodape={
+            <div className="flex flex-wrap items-start gap-3">
+              <AcoesDeInstrutor instrutorId={instrutor.id} ativo={ativo} />
+              {/* ⚠️ Excluir é de quem CRIA instrutor — a ação de escrita mais restritiva da matriz. */}
+              <SePodeVer permissoes={permissoes} recurso="instrutores" acao="criar">
+                <ExcluirInstrutor
+                  instrutorId={instrutor.id}
+                  codigo={instrutor.codigo}
+                  motivoDoImpedimento={motivoDeNaoExcluir}
+                />
+              </SePodeVer>
+            </div>
+          }
         />
       </SePodeVer>
     </section>

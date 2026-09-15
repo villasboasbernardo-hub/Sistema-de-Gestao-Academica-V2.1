@@ -16,13 +16,16 @@
  */
 import { revalidatePath } from "next/cache";
 
+import { chavesDaRecusa, motivoDoImpedimento } from "@/lib/dominio/exclusao-de-instrutor";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
   esquemaDeCriacaoDeInstrutor,
   esquemaDeEdicaoDeInstrutor,
+  esquemaDeExclusaoDeInstrutor,
   esquemaDeGravacaoDePessoais,
   esquemaDeHabilitacoes,
   esquemaDeSituacao,
+  ESPECIALIDADE_DE_MILITAR,
   ESPECIALIDADE_EM_BRANCO,
   OBRIGATORIOS_DO_INSTRUTOR,
 } from "@/lib/validacao/instrutor";
@@ -44,6 +47,7 @@ type ErroDoBanco = { readonly code?: string; readonly message: string };
 const MENSAGEM_DO_CHECK: Readonly<Record<string, string>> = {
   instrutores_posto_graduacao_preenchido: OBRIGATORIOS_DO_INSTRUTOR[0].mensagem,
   instrutores_esp_hab_obs_preenchido: ESPECIALIDADE_EM_BRANCO,
+  instrutores_esp_hab_obs_de_militar_novo: ESPECIALIDADE_DE_MILITAR,
   instrutores_nome_completo_preenchido: OBRIGATORIOS_DO_INSTRUTOR[1].mensagem,
   instrutores_categoria_preenchida: OBRIGATORIOS_DO_INSTRUTOR[2].mensagem,
   instrutores_om_preenchida: OBRIGATORIOS_DO_INSTRUTOR[3].mensagem,
@@ -239,4 +243,39 @@ export async function sincronizarHabilitacoes(dados: unknown): Promise<Resultado
   revalidatePath("/instrutores");
   if (data?.codigo) revalidatePath(`/instrutores/${data.codigo}`);
   return { ok: true, codigo: data?.codigo ?? "" };
+}
+
+/**
+ * Exclui **permanentemente** um instrutor sem histórico nenhum — a exceção única à regra 4, autorizada
+ * por Bernardo Villas Boas em 15/09/2026.
+ *
+ * ⚠️ O PORTEIRO É DO BANCO. `excluir_instrutor` confere a permissão (`criar` instrutor, a mais restritiva
+ * que a matriz oferece), o código digitado e cada impedimento, na mesma transação, e recusa com erro
+ * específico. Esta ação só traduz. Quem tem histórico continua só podendo ser desativado.
+ */
+export async function excluirInstrutor(dados: unknown): Promise<ResultadoDeInstrutor> {
+  const conferido = esquemaDeExclusaoDeInstrutor.safeParse(dados);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+
+  const supabase = await criarClienteDeServidor();
+  const { data, error } = await supabase.rpc("excluir_instrutor", {
+    p_instrutor_id: conferido.data.id,
+    p_codigo_confirmacao: conferido.data.codigoConfirmacao,
+  });
+  if (error) {
+    if (error.code === "42501") return falha("O seu perfil não exclui instrutor.");
+    if (error.code === "22023") return falha("O código digitado não é o deste instrutor.");
+    if (error.code === "P0002") return falha("Instrutor inexistente.");
+    if (error.code === "23503") {
+      return falha(
+        motivoDoImpedimento(chavesDaRecusa(error.message)) ??
+          "Este instrutor tem histórico e só pode ser desativado.",
+      );
+    }
+    return falha(traduzirErro(error));
+  }
+
+  const excluido = data as { codigo?: string } | null;
+  revalidatePath("/instrutores");
+  return { ok: true, codigo: excluido?.codigo ?? "" };
 }

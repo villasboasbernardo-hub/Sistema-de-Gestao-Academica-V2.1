@@ -1384,3 +1384,186 @@ describe("FR-022 · painel de disciplinas — sincronizar habilitações", () =>
     expect(await vinculos()).toEqual(antes);
   });
 });
+
+describe("Regra 4, exceção · exclusão permanente só de instrutor sem histórico", () => {
+  // > "Autorização de Bernardo Villas Boas, 15/09/2026: fica autorizada a exclusão permanente de
+  // > instrutor, delimitada a registro SEM HISTÓRICO NENHUM. [...] Instrutor com qualquer aula lançada,
+  // > atribuição, vínculo de habilitação ou conta de acesso ligada continua não podendo ser excluído —
+  // > só desativado."
+  //
+  // ⚠️ PELA SESSÃO REAL DE CADA PERFIL. A função é SECURITY DEFINER com porteiro: é o JWT que diz quem
+  // chama. A `service_role` só monta a amostra e confere, depois, o que ficou no banco.
+  const EMAIL_CONTA = "rls-chefe@ciaara.teste";
+  const CODIGOS = [
+    "RLS-EXC-LIMPO",
+    "RLS-EXC-AULA",
+    "RLS-EXC-ATRIB",
+    "RLS-EXC-VINC",
+    "RLS-EXC-CONTA",
+  ];
+  const id: Record<string, string> = {};
+
+  const existe = async (codigo: string) => {
+    const { data } = await admin.from("instrutores").select("id").eq("codigo", codigo);
+    return (data ?? []).length === 1;
+  };
+
+  const limparAmostra = async () => {
+    await admin.from("usuarios").update({ instrutor_id: null }).eq("email", EMAIL_CONTA);
+    await admin.from("registros_aula").delete().eq("codigo", "REG-RLS-EXC");
+    await admin.from("turma_disciplina_instrutor").delete().eq("codigo", "TDI-RLS-EXC");
+    await admin.from("turma_disciplina").delete().eq("codigo", "TD-RLS-EXC");
+    await admin.from("instrutor_disciplina").delete().eq("codigo", "VIN-RLS-EXC");
+    await admin.from("disciplinas").delete().eq("codigo", "RLS-DISC-EXC");
+    await admin.from("instrutores").delete().in("codigo", CODIGOS);
+  };
+
+  beforeAll(async () => {
+    await limparAmostra();
+    const { data: ins, error } = await admin
+      .from("instrutores")
+      .insert(
+        CODIGOS.map((codigo) => ({
+          codigo,
+          posto_graduacao: "CT",
+          esp_hab_obs: "-EF",
+          nome_completo: `Instrutor ${codigo}`,
+          categoria: "Militar",
+          om: "CIAARA",
+        })),
+      )
+      .select("id, codigo");
+    if (error) throw new Error(`falha ao criar instrutores da exclusão: ${error.message}`);
+    for (const i of ins ?? []) id[i.codigo as string] = i.id as string;
+
+    const { data: disc, error: erroD } = await admin
+      .from("disciplinas")
+      .insert({
+        codigo: "RLS-DISC-EXC",
+        curso_id: CURSO_EXPEDITO,
+        cod_disciplina: "EXC-1",
+        nome_disciplina: "Disciplina Da Exclusao",
+        carga_horaria_tempos: 10,
+      })
+      .select("id")
+      .single();
+    if (erroD) throw new Error(`falha ao criar disciplina da exclusão: ${erroD.message}`);
+
+    const { data: td, error: erroTd } = await admin
+      .from("turma_disciplina")
+      .insert({ codigo: "TD-RLS-EXC", turma_id: TURMA_EXPEDITA, disciplina_id: disc.id })
+      .select("id")
+      .single();
+    if (erroTd) throw new Error(`falha ao criar turma_disciplina: ${erroTd.message}`);
+
+    const passos = await Promise.all([
+      admin.from("registros_aula").insert({
+        codigo: "REG-RLS-EXC",
+        data: "2026-04-14",
+        turma_id: TURMA_EXPEDITA,
+        curso_id: CURSO_EXPEDITO,
+        unidade_ensino_id: UE_EXPEDITA,
+        instrutor_id: id["RLS-EXC-AULA"],
+        categoria_normativa: "aula",
+        tipo_atividade: "Aula",
+        metodologia: "Exposição Oral",
+        tempos_consumidos: 2,
+      }),
+      admin.from("turma_disciplina_instrutor").insert({
+        codigo: "TDI-RLS-EXC",
+        turma_disciplina_id: td.id,
+        instrutor_id: id["RLS-EXC-ATRIB"],
+        status: "inativo",
+      }),
+      admin.from("instrutor_disciplina").insert({
+        codigo: "VIN-RLS-EXC",
+        instrutor_id: id["RLS-EXC-VINC"],
+        disciplina_id: disc.id,
+        status: "inativo",
+      }),
+      admin.from("usuarios").update({ instrutor_id: id["RLS-EXC-CONTA"] }).eq("email", EMAIL_CONTA),
+    ]);
+    for (const p of passos) {
+      if (p.error) throw new Error(`falha ao montar o histórico: ${p.error.message}`);
+    }
+  });
+
+  afterAll(async () => {
+    await limparAmostra();
+  });
+
+  it.each([
+    ["RLS-EXC-AULA", "aula_lancada"],
+    ["RLS-EXC-ATRIB", "atribuicao"],
+    ["RLS-EXC-VINC", "vinculo_de_habilitacao"],
+    ["RLS-EXC-CONTA", "conta_de_acesso"],
+  ])(
+    "(NEGATIVO) %s tem histórico (%s): o admin não exclui, e o banco diz por quê",
+    async (codigo, chave) => {
+      const { data: impedimentos } = await cliente("admin").rpc(
+        "impedimentos_de_exclusao_do_instrutor",
+        { p_instrutor_id: id[codigo] },
+      );
+      expect(impedimentos).toEqual([chave]);
+
+      const { error } = await cliente("admin").rpc("excluir_instrutor", {
+        p_instrutor_id: id[codigo],
+        p_codigo_confirmacao: codigo,
+      });
+      expect(error?.code, "a exclusão de instrutor com histórico não foi negada").toBe("23503");
+      expect(error?.message).toContain(chave);
+      expect(await existe(codigo), "o instrutor com histórico sumiu").toBe(true);
+    },
+  );
+
+  it("(NEGATIVO) a conta ligada não é tocada pela recusa", async () => {
+    const { data } = await admin
+      .from("usuarios")
+      .select("status, instrutor_id")
+      .eq("email", EMAIL_CONTA)
+      .single();
+    expect(data?.status).toBe("ativo");
+    expect(data?.instrutor_id).toBe(id["RLS-EXC-CONTA"]);
+  });
+
+  it.each(["encarregado_orientacao_pedagogica", "visualizacao"] as const)(
+    "(NEGATIVO) %s não exclui nem o instrutor limpo",
+    async (perfil) => {
+      const { error } = await cliente(perfil).rpc("excluir_instrutor", {
+        p_instrutor_id: id["RLS-EXC-LIMPO"],
+        p_codigo_confirmacao: "RLS-EXC-LIMPO",
+      });
+      expect(error?.code, `${perfil} excluiu instrutor`).toBe("42501");
+      expect(await existe("RLS-EXC-LIMPO")).toBe(true);
+    },
+  );
+
+  it("(NEGATIVO) com o código errado, nem o admin exclui", async () => {
+    const { error } = await cliente("admin").rpc("excluir_instrutor", {
+      p_instrutor_id: id["RLS-EXC-LIMPO"],
+      p_codigo_confirmacao: "RLS-EXC-OUTRO",
+    });
+    expect(error?.code).toBe("22023");
+    expect(await existe("RLS-EXC-LIMPO")).toBe(true);
+  });
+
+  it("(NEGATIVO) nem a exceção abre DELETE direto na tabela", async () => {
+    const { data, error } = await cliente("admin")
+      .from("instrutores")
+      .delete()
+      .eq("id", id["RLS-EXC-LIMPO"])
+      .select("id");
+    expect(error !== null || (data ?? []).length === 0, "DELETE direto apagou").toBe(true);
+    expect(await existe("RLS-EXC-LIMPO")).toBe(true);
+  });
+
+  it("controle positivo: o admin exclui o instrutor limpo, com o código, e ele some do banco", async () => {
+    const { data, error } = await cliente("admin").rpc("excluir_instrutor", {
+      p_instrutor_id: id["RLS-EXC-LIMPO"],
+      p_codigo_confirmacao: "RLS-EXC-LIMPO",
+    });
+    expect(error).toBeNull();
+    expect(data).toMatchObject({ codigo: "RLS-EXC-LIMPO" });
+    expect(await existe("RLS-EXC-LIMPO"), "o instrutor limpo continua no banco").toBe(false);
+  });
+});

@@ -3453,9 +3453,17 @@ export type Database = {
       }
     }
     Functions: {
+      excluir_instrutor: {
+        Args: { p_codigo_confirmacao: string; p_instrutor_id: string }
+        Returns: Json
+      }
       gravar_dados_pessoais_instrutor: {
         Args: { p_dados: Json; p_instrutor_id: string }
         Returns: undefined
+      }
+      impedimentos_de_exclusao_do_instrutor: {
+        Args: { p_instrutor_id: string }
+        Returns: string[]
       }
       sincronizar_habilitacoes: {
         Args: { p_disciplinas: string[]; p_instrutor_id: string }
