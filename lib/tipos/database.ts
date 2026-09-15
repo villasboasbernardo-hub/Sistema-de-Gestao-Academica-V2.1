@@ -348,6 +348,13 @@ export type Database = {
             referencedColumns: ["disciplina_id", "curso_id"]
           },
           {
+            foreignKeyName: "aval_disciplina_do_curso"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id", "curso_id"]
+          },
+          {
             foreignKeyName: "aval_turma_do_curso"
             columns: ["turma_id", "curso_id"]
             isOneToOne: false
@@ -401,6 +408,13 @@ export type Database = {
             columns: ["disciplina_id"]
             isOneToOne: false
             referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
             referencedColumns: ["disciplina_id"]
           },
           {
@@ -1099,7 +1113,7 @@ export type Database = {
           status: Database["public"]["Enums"]["status_registro"]
         }
         Insert: {
-          codigo: string
+          codigo?: string
           criado_em?: string
           criado_por?: string | null
           disciplina_id?: string | null
@@ -1137,6 +1151,13 @@ export type Database = {
             columns: ["disciplina_id"]
             isOneToOne: false
             referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "instrutor_disciplina_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
             referencedColumns: ["disciplina_id"]
           },
           {
@@ -1225,7 +1246,7 @@ export type Database = {
           area_conhecimento?: string | null
           capacitacao_didatica?: string | null
           categoria: string
-          codigo: string
+          codigo?: string
           cpf?: string | null
           criado_em?: string
           criado_por?: string | null
@@ -1584,6 +1605,13 @@ export type Database = {
             columns: ["disciplina_id"]
             isOneToOne: false
             referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "planejamento_anual_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
             referencedColumns: ["disciplina_id"]
           },
           {
@@ -2093,6 +2121,13 @@ export type Database = {
             referencedColumns: ["disciplina_id"]
           },
           {
+            foreignKeyName: "turma_disciplina_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
             foreignKeyName: "turma_disciplina_instrutor_id_fkey"
             columns: ["instrutor_id"]
             isOneToOne: false
@@ -2381,6 +2416,13 @@ export type Database = {
             referencedColumns: ["disciplina_id", "curso_id"]
           },
           {
+            foreignKeyName: "ue_curso_coerente"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id", "curso_id"]
+          },
+          {
             foreignKeyName: "unidades_ensino_curso_id_fkey"
             columns: ["curso_id"]
             isOneToOne: false
@@ -2406,6 +2448,13 @@ export type Database = {
             columns: ["disciplina_id"]
             isOneToOne: false
             referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "unidades_ensino_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
             referencedColumns: ["disciplina_id"]
           },
         ]
@@ -2621,6 +2670,13 @@ export type Database = {
             referencedColumns: ["disciplina_id", "curso_id"]
           },
           {
+            foreignKeyName: "aval_disciplina_do_curso"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id", "curso_id"]
+          },
+          {
             foreignKeyName: "aval_turma_do_curso"
             columns: ["turma_id", "curso_id"]
             isOneToOne: false
@@ -2674,6 +2730,13 @@ export type Database = {
             columns: ["disciplina_id"]
             isOneToOne: false
             referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
             referencedColumns: ["disciplina_id"]
           },
           {
@@ -2936,9 +2999,117 @@ export type Database = {
           status: Database["public"]["Enums"]["status_registro"] | null
           ta_fiscalizado_ano: number | null
           ta_ministrado_ano: number | null
+          ta_previsto_ano: number | null
           tempo_setor_anos: number | null
         }
         Relationships: []
+      }
+      vw_instrutor_carga_prevista: {
+        Row: {
+          ano: number | null
+          atribuicao_id: string | null
+          curso_codigo: string | null
+          curso_id: string | null
+          disciplina_id: string | null
+          instrutor_id: string | null
+          instrutores_designados: number | null
+          media_semanal: number | null
+          modo: Database["public"]["Enums"]["modo_atribuicao"] | null
+          nome_disciplina: string | null
+          previsao_inicio: string | null
+          previsao_termino: string | null
+          semanas: number | null
+          tempos_previstos: number | null
+          turma_codigo: string | null
+          turma_disciplina_id: string | null
+          turma_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disciplinas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disciplinas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_instrutor_turma_disciplina_id_fkey"
+            columns: ["turma_disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "turma_disciplina"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+        ]
       }
       vw_instrutor_dados_pessoais: {
         Row: {
@@ -3043,6 +3214,13 @@ export type Database = {
             referencedColumns: ["disciplina_id"]
           },
           {
+            foreignKeyName: "instrutor_disciplina_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
             foreignKeyName: "instrutor_disciplina_instrutor_id_fkey"
             columns: ["instrutor_id"]
             isOneToOne: false
@@ -3079,9 +3257,11 @@ export type Database = {
           area_conhecimento: string | null
           capacitacao_didatica: string | null
           categoria: string | null
+          classificacoes_vinculadas: string[] | null
           codigo: string | null
           criado_em: string | null
           criado_por: string | null
+          cursos_vinculados: string[] | null
           data_assuncao_setor: string | null
           data_avaliacao_desempenho: string | null
           data_inicio_docencia_ciaara: string | null
@@ -3094,6 +3274,7 @@ export type Database = {
           email: string | null
           esp_hab_obs: string | null
           formacao_principal_secundaria: string | null
+          habilitado: boolean | null
           id: string | null
           nip: string | null
           nivel_escolaridade: string | null
@@ -3101,88 +3282,16 @@ export type Database = {
           nome_guerra: string | null
           nome_normalizado: string | null
           om: string | null
+          ordem_antiguidade: number | null
           origem_migracao_v1: string | null
           posto_graduacao: string | null
           preferencia: string | null
           regime_trabalho:
             | Database["public"]["Enums"]["regime_trabalho_docente"]
             | null
+          selecionado: boolean | null
           status: Database["public"]["Enums"]["status_registro"] | null
           ultima_avaliacao_desempenho: string | null
-        }
-        Insert: {
-          antiguidade_declarada?: string | null
-          antiguidade_declarada_num?: number | null
-          area_conhecimento?: string | null
-          capacitacao_didatica?: string | null
-          categoria?: string | null
-          codigo?: string | null
-          criado_em?: string | null
-          criado_por?: string | null
-          data_assuncao_setor?: string | null
-          data_avaliacao_desempenho?: string | null
-          data_inicio_docencia_ciaara?: string | null
-          data_inicio_docencia_mb?: string | null
-          data_nascimento?: string | null
-          dep_divisao?: string | null
-          disciplinas_ministradas_legado_v1?: string | null
-          editado_em?: string | null
-          editado_por?: string | null
-          email?: string | null
-          esp_hab_obs?: string | null
-          formacao_principal_secundaria?: string | null
-          id?: string | null
-          nip?: string | null
-          nivel_escolaridade?: string | null
-          nome_completo?: string | null
-          nome_guerra?: string | null
-          nome_normalizado?: string | null
-          om?: string | null
-          origem_migracao_v1?: string | null
-          posto_graduacao?: string | null
-          preferencia?: string | null
-          regime_trabalho?:
-            | Database["public"]["Enums"]["regime_trabalho_docente"]
-            | null
-          status?: Database["public"]["Enums"]["status_registro"] | null
-          ultima_avaliacao_desempenho?: string | null
-        }
-        Update: {
-          antiguidade_declarada?: string | null
-          antiguidade_declarada_num?: number | null
-          area_conhecimento?: string | null
-          capacitacao_didatica?: string | null
-          categoria?: string | null
-          codigo?: string | null
-          criado_em?: string | null
-          criado_por?: string | null
-          data_assuncao_setor?: string | null
-          data_avaliacao_desempenho?: string | null
-          data_inicio_docencia_ciaara?: string | null
-          data_inicio_docencia_mb?: string | null
-          data_nascimento?: string | null
-          dep_divisao?: string | null
-          disciplinas_ministradas_legado_v1?: string | null
-          editado_em?: string | null
-          editado_por?: string | null
-          email?: string | null
-          esp_hab_obs?: string | null
-          formacao_principal_secundaria?: string | null
-          id?: string | null
-          nip?: string | null
-          nivel_escolaridade?: string | null
-          nome_completo?: string | null
-          nome_guerra?: string | null
-          nome_normalizado?: string | null
-          om?: string | null
-          origem_migracao_v1?: string | null
-          posto_graduacao?: string | null
-          preferencia?: string | null
-          regime_trabalho?:
-            | Database["public"]["Enums"]["regime_trabalho_docente"]
-            | null
-          status?: Database["public"]["Enums"]["status_registro"] | null
-          ultima_avaliacao_desempenho?: string | null
         }
         Relationships: []
       }
@@ -3299,6 +3408,13 @@ export type Database = {
             referencedColumns: ["disciplina_id", "curso_id"]
           },
           {
+            foreignKeyName: "ue_curso_coerente"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id", "curso_id"]
+          },
+          {
             foreignKeyName: "unidades_ensino_curso_id_fkey"
             columns: ["curso_id"]
             isOneToOne: false
@@ -3326,10 +3442,33 @@ export type Database = {
             referencedRelation: "vw_disciplinas_execucao"
             referencedColumns: ["disciplina_id"]
           },
+          {
+            foreignKeyName: "unidades_ensino_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id"]
+          },
         ]
       }
     }
     Functions: {
+      excluir_instrutor: {
+        Args: { p_codigo_confirmacao: string; p_instrutor_id: string }
+        Returns: Json
+      }
+      gravar_dados_pessoais_instrutor: {
+        Args: { p_dados: Json; p_instrutor_id: string }
+        Returns: undefined
+      }
+      impedimentos_de_exclusao_do_instrutor: {
+        Args: { p_instrutor_id: string }
+        Returns: string[]
+      }
+      sincronizar_habilitacoes: {
+        Args: { p_disciplinas: string[]; p_instrutor_id: string }
+        Returns: Json
+      }
       vincular_credencial: { Args: never; Returns: boolean }
     }
     Enums: {

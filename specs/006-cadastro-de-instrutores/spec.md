@@ -91,6 +91,15 @@ depois, quando ninguém lembra quem era a pessoa.
    é recusado igual. ⚠️ Texto em branco é ausência disfarçada.
 3. **Dado** a recusa, **quando** ela acontece, **então** nada é salvo pela metade.
 
+**Emenda registrada em 15/09/2026**: pelo `FR-005` emendado, especialidade/habilitação passa a ser
+opcional, e o teste independente e os cenários 1 e 2 valem para **quatro** campos — posto, nome
+completo, categoria e OM. A especialidade continua no cenário 2: preenchida só com espaços, é recusada. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
+**Segunda emenda registrada em 15/09/2026 (CHK008 e CHK012)**: pelo `FR-005` emendado de novo, são
+**cinco** campos, e o teste independente e os cenários 1 e 2 valem para os cinco no **cadastro novo de
+militar**. Para civil (`SC`, `SCNS`), especialidade não se aplica; e ficha já existente de militar sem
+especialidade continua salvando. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
 ---
 
 ### User Story 3 - A carga horária é lida, nunca digitada (Priority: P1)
@@ -137,6 +146,12 @@ continua funcionando.
 3. **Dado** docência iniciada há mais de um ano sem capacitação didática registrada, **quando** a
    ficha é exibida, **então** há aviso — e nada é impedido.
 
+**Emenda registrada em 15/09/2026**: pela decisão do `FR-016`, a "previsão" dos cenários 1 e 2 é a
+carga de **cada semana ISO coberta** pelas atribuições, e o aviso do cenário 1 nomeia as semanas fora
+da faixa. Pela decisão do `FR-017`, entra o cenário 4: **dado** docência sem data de início
+registrada, **quando** a ficha é exibida, **então** não há alerta de capacitação, e o caso aparece no
+quadro de avisos como "Data de início de docência não informada". *(decisão de Bernardo Villas Boas, 15/09/2026)*
+
 ---
 
 ### User Story 5 - Desativar preserva o passado (Priority: P2)
@@ -159,6 +174,11 @@ nova atribuição, permaneceu em tudo o que já estava lançado.
    perder nada.
 4. **Dado** um instrutor que também tem conta de acesso, **quando** ele é desativado, **então** a
    conta **continua ativa** — e a tela de usuários mostra que o instrutor vinculado está inativo.
+
+**Acréscimo registrado em 15/09/2026 (`FR-008.1`)**: cenário 5 — **dado** um instrutor sem histórico
+nenhum, **quando** se confirma a exclusão digitando o código dele, **então** ele sai do banco; **dado**
+um instrutor com histórico, **quando** a ficha é exibida, **então** "Excluir instrutor" aparece
+desabilitado, com o motivo ao lado, e o banco recusa a exclusão por qualquer caminho. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 ---
 
@@ -213,6 +233,8 @@ refinamento reaparece.
 - **FR-005**: O sistema MUST recusar salvar cadastro sem **posto/graduação, especialidade,
   nome completo, categoria e organização militar** — inclusive quando preenchidos só com espaços
   (`RN-INST-03`, `RF-INSTR-02`).
+  **Emenda registrada em 15/09/2026 (e ao `RN-INST-03`, nesta spec)**: especialidade/habilitação passa a ser **opcional** — são **quatro** os obrigatórios. Preenchida só com espaços continua recusada, pelo esquema e pelo `CHECK` do banco. Motivo: o Épico 2 mediu 15 instrutores da base real sem sufixo de especialidade, todos militares (12 da ativa e 3 do Magistério Militar Naval), tirou o `NOT NULL` do banco, e exigir o campo na tela impedia esses 15 de salvar a própria ficha — defeito. ⚠️ **O documento 04 não é alterado**: o `RN-INST-03` de lá continua listando cinco campos; a divergência fica anotada aqui. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Segunda emenda registrada em 15/09/2026 (fecha o CHK008 e o CHK012; substitui a emenda acima)**: o `RN-INST-03` **mantém os cinco obrigatórios**, com delimitação registrada — especialidade/habilitação **se aplica a instrutor militar**; civil é quem tem posto `SC` ou `SCNS`, pelo `FR-002`. A recusa de militar sem especialidade vale para **cadastro novo**, pela tela e pelo banco (gatilho da migration `20260915140000`); ficha já existente sem especialidade continua salvando e fica no quadro de avisos até alguém preencher, e os 15 militares da base real não voltam a travar. Com isso a spec volta a bater com o documento 04, que não foi alterado. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-006**: A recusa MUST valer **por qualquer caminho**, não apenas pela tela.
 - **FR-007**: O identificador de instrutor MUST ser gerado automaticamente e MUST ser **inteiro
   simples, sem prefixo** (`RN-CRUD-03`, exceção documentada).
@@ -220,8 +242,13 @@ refinamento reaparece.
   já interpreta o identificador de instrutor como número.
 - **FR-008**: A exclusão MUST ser **lógica**, por status explícito, nunca física (`RN-INST-02`,
   `RN-INST-05`). O status MUST ser explícito, **nunca inferido de ausência**.
+  **Emenda registrada em 15/09/2026**: a regra continua valendo para todo instrutor com histórico; a exceção única, delimitada, está no `FR-008.1`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+- **FR-008.1**: A **exclusão permanente** de instrutor MUST ser possível **só** para registro **sem histórico nenhum**, e MUST ser recusada **pelo banco** para instrutor com aula lançada, atribuição, vínculo de habilitação ou conta de acesso ligada — em qualquer situação, ativa ou inativa — e, pela mesma delimitação, com avaliação ou responsabilidade de curso, as outras referências a instrutor encontradas no schema. A tela MUST mostrar **"Excluir instrutor"** no fim da página, ao lado de "Desativar", com aparência destrutiva dos tokens; oculto para quem não tem a permissão; **visível e desabilitado, com o motivo escrito ao lado**, para instrutor com histórico; e, ao clicar, um diálogo avisando que é permanente e irreversível, que só libera a confirmação quando se **digita o código** do instrutor.
+  > "Autorização de Bernardo Villas Boas, 15/09/2026: fica autorizada a exclusão permanente de instrutor, delimitada a registro SEM HISTÓRICO NENHUM. A regra 4 do CLAUDE.md ('nada é apagado') passa a ter essa exceção única, delimitada e registrada. Motivo: a regra existe para proteger histórico, e um cadastro criado por engano não tem histórico a proteger. Instrutor com qualquer aula lançada, atribuição, vínculo de habilitação ou conta de acesso ligada continua não podendo ser excluído — só desativado."
+  **Respostas registradas em 15/09/2026** *(decisão de Bernardo Villas Boas, 15/09/2026)*: (a) qualquer um dos quatro impede; (b) a permissão é `criar` instrutor — a matriz não tem ação de exclusão, nenhuma linha foi inventada, e `criar` é a ação de escrita mais restritiva que ela já oferece (três perfis: admin, encarregado e ajudante de Administração Acadêmica, contra cinco de `editar`); (c) conta de acesso ligada é impeditivo, e nenhuma conta é apagada; (d) **não há onde registrar a exclusão**: o schema só tem `migracao_log`, que é o rastro append-only da migração, com domínio de ação sem verbo de exclusão — nada é gravado, e nenhuma tabela foi criada. A negação é das funções `app.impedimentos_de_exclusao_do_instrutor` e `app.excluir_instrutor` (migration `20260915140100`), que conferem tudo na mesma transação, com a linha travada. ⚠️ **Medido em 15/09/2026: nenhum dos 177 instrutores da base real é excluível** — todos têm ao menos um vínculo com o histórico.
 - **FR-009**: Instrutor desativado MUST sair das listas de **nova** atribuição e MUST **permanecer**
   em todo histórico já lançado (`RF-INSTR-07`).
+  **Anotação registrada em 15/09/2026**: nenhuma tela desta fatia tem lista de nova atribuição. A primeira metade deste requisito só fica observável numa fatia futura, ainda não especificada; aqui ela entra como função pura com teste de unidade, e o `SC-004` mede a segunda metade. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-010**: MUST ser possível **reativar** um instrutor desativado, sem perda.
 - **FR-010.1**: Desativar um instrutor MUST **não** alterar a conta de acesso da pessoa, quando
   existir vínculo entre as duas. A tela de usuários MUST **mostrar** que o instrutor vinculado está
@@ -234,6 +261,7 @@ refinamento reaparece.
   de alguém por um ato que não era sobre isso; ignorar o vínculo esconde de quem administra que
   existe conta ativa ligada a docente inativo.
 - **FR-011**: O salvamento de cadastro novo ou edição MUST pedir **confirmação** (`RF-INSTR-11`).
+  **Anotação registrada em 15/09/2026**: vale para **todo** caminho de gravação — cadastro, edição pela ficha, dado pessoal e painel de disciplinas. O botão "Desativar instrutor" fica no fim da página, ao lado de "Gravar alterações" e com formato parecido, longe do caminho habitual; o `FR-008` e o `RN-INST-02` não mudam, só a posição. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-012**: Ao editar, todos os campos MUST vir carregados com os valores salvos, **nenhum em
   branco por engano** (`RF-INSTR-04`).
 - **FR-013**: A listagem MUST **não** ter edição em linha (spec 038 da v2.0, que a removeu).
@@ -242,6 +270,7 @@ refinamento reaparece.
 
 - **FR-014**: MUST existir **duas grandezas de carga horária distintas, ambas calculadas**: a
   **ministrada no ano** e a **prevista** (`RN-INST-04`, `RF-INSTR-13`).
+  **Decisão registrada em 15/09/2026 (T011)**: 1 tempo de aula ≈ 1 hora nesta fatia; a prevista de uma atribuição é a carga da disciplina rateada pelo `RN-MAT-05`; o ano da atribuição é o da **data de início prevista** da disciplina; a média semanal da disciplina é a média simples dos tempos pelas semanas entre início e término previstos. O texto integral, com o que fica para épico futuro, está em `contracts/carga-horaria-e-alertas.md`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-015**: **Não MUST existir campo de carga horária digitável** em formulário algum, e a
   escrita por fora da tela MUST ser recusada.
   ⚠️ **"Permitir ajuste manual" é proibido.** É grandeza derivada; um número digitado é a origem de
@@ -253,15 +282,24 @@ refinamento reaparece.
   **20h → 8–12h · 40h → 16–24h · Dedicação Exclusiva → 16–30h** (`RN-2027-06`, `RF-INSTR-14`).
   ⚠️ **O teto é a FAIXA, jamais o número do regime.** Um instrutor de 40h com 20h previstas está
   **dentro**, não no limite.
+  **Decisão registrada em 15/09/2026 (T011 d)**: os limites da faixa são **inclusivos** — exatamente 8h ou 12h no regime de 20h está dentro e não alerta; menos de 8 ou mais de 12 alerta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Decisão registrada em 15/09/2026 (fecha a pendência acima)**: a carga semanal do instrutor numa semana ISO — de segunda a domingo — é a **soma das médias semanais das atribuições ativas cuja janela prevista cobre aquela semana**. Semana sem atribuição não entra no cálculo nem gera alerta. O alerta dispara quando **alguma** semana coberta sai da faixa, e a mensagem nomeia a semana. 🛑 **Somar as médias do ano inteiro é proibido**: criaria alerta para quem nunca passou da faixa em semana nenhuma. A herança não define outro início de semana, e o projeto já usa semana ISO (documentos 20 e 25). *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Decisão registrada em 15/09/2026 (fecha o CHK005)**: o alerta de faixa avalia **todas** as semanas ISO que caem no **ano corrente** e estão cobertas por atribuição ativa — **inclusive semanas já passadas**, e **inclusive a parte que cai no ano corrente de uma janela que começou no ano anterior**. Semana ISO "do ano" é a do ano ISO, o da quinta-feira da semana (ISO 8601): a semana 1 de 2026 começa em 29/12/2025. A carga prevista **do ano** (`FR-014`) não muda: continua contando a atribuição no ano da data de início (T011 c). *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-017**: MUST ser sinalizado o instrutor em docência há **mais de um ano sem capacitação
   didática** (`RF-INSTR-16`).
+  **Decisão registrada em 15/09/2026**: o campo de referência para contar o tempo de docência é `data_inicio_docencia_ciaara`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Decisão registrada em 15/09/2026 (fecha a T053)**: com `data_inicio_docencia_ciaara` vazia, o alerta **não dispara** — sem data não há como contar o ano —, e em lugar dele entra no quadro de avisos o aviso próprio **"Data de início de docência não informada"** (`FR-027`). *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  ~~**Leitura aplicada em 15/09/2026, a confirmar por Bernardo**~~ (checklist `fechamento.md`, CHK004): o aviso lista quem está sem a data **e** sem capacitação didática — "em lugar do alerta" foi lido como "para quem o alerta seria avaliado", e quem tem capacitação não seria alertado com data nenhuma. "Mais de um ano" foi lido como estrito: um ano exato não alerta. Se a decisão for cobrar a data de todos, a mudança é uma linha da regra do aviso.
+  **Decisão registrada em 15/09/2026 (fecha o CHK004 — a leitura acima passa a ser decisão, não inferência)**: o aviso "Data de início de docência não informada" cobra **apenas** quem está sem a data **e também** sem capacitação didática registrada. Quem já tem capacitação nunca dispararia o alerta do `FR-017`, então cobrar a data dessa pessoa seria ruído. Na base real, são 148 dos 176 sem a data. "Mais de um ano" segue o texto do `RF-INSTR-16`: estrito, e um ano exato não alerta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-018**: Os alertas dos `FR-016` e `FR-017` MUST ser **avisos, nunca bloqueios** (`RN-DEG-02`).
   ⚠️ Transformá-los em impedimento **muda a regra de negócio** e exige autorização nominal.
+  **Decisão registrada em 15/09/2026 (fecha o CHK019)**: a ficha de instrutor **inativo** não exibe alerta normativo (`FR-016`, `FR-017`) nem aviso de qualidade de cadastro. Os dois falam de quem está em docência; o inativo não recebe atribuição nova, e o alerta seria ruído. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 #### Nome e apresentação
 
-- **FR-019**: O nome MUST aparecer no formato **`P/G Especialidade Nome de Guerra`** em toda tela
-  (`RF-INSTR-15`, `RF-DS-05`).
+- **FR-019**: O nome MUST aparecer no formato **`P/G Especialidade/Habilitação Nome Completo`**, com o
+  nome ou nomes de guerra em negrito, em toda tela (`RF-INSTR-15`, `RF-DS-05`).
+  **Emenda registrada em 15/09/2026**: a redação anterior dizia `P/G Especialidade Nome de Guerra`. Era uma compressão que descartava o nome completo e contradizia o `RF-INSTR-15`, que é **[PRESERVADO]**; o texto passa a ser o dele. O componente `NomeInstrutor` já seguia o `RF-INSTR-15`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-020**: A montagem do nome MUST vir de **função pura de domínio**, e MUST ser exibida por
   **um único componente** — não remontada em cada tela.
 
@@ -270,7 +308,9 @@ refinamento reaparece.
 - **FR-021**: Um instrutor só MUST poder ser escolhido para **ministrar** ou ser **responsável** por
   uma disciplina se existir vínculo de habilitação explícito (`RN-INST-01`).
   ⚠️ **A regra é delimitada**: avaliação e vista de prova **não** exigem habilitação.
+  **Anotação registrada em 15/09/2026**: nenhuma tela desta fatia escolhe instrutor para ministrar ou ser responsável. A regra só fica observável numa fatia futura, ainda não especificada; aqui ela entra como função pura com teste de unidade. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-022**: MUST existir **painel de atribuição de disciplinas** ao instrutor (spec 019 da v2.0).
+  **Decisão registrada em 15/09/2026 (T082)**: o código do vínculo criado pelo painel segue o formato real da base, `VIN-NNNNNN` com **6 dígitos**, gerado por sequência que começa acima do maior código existente. ⚠️ **Divergência com o documento 04, anotada e não corrigida**: o `RN-CRUD-03` fala em prefixo com número sequencial de **4** dígitos; o dado migrado e o comentário da coluna têm 6. O documento 04 não é alterado. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 #### Refinamentos da v2.0 que MUST reaparecer
 
@@ -279,29 +319,46 @@ refinamento reaparece.
 - **FR-025**: **Filtros avançados e cross-filtering** — filtro aplicado sobre o resultado do
   anterior (spec 015). Os filtros MUST ser, no mínimo: **OM, categoria, capacitação, regime e
   escolaridade**.
+  **Emenda registrada em 15/09/2026**: além dos cinco, a barra MUST trazer **habilitado** (sim/não), **selecionado** (sim/não), **curso**, **classificação do curso**, **posto/graduação** e **círculo hierárquico**, e o filtro de capacitação didática MUST oferecer a opção **"nenhuma"**. Regras lidas na spec 015 da v2.0: habilitado **não é** selecionado — habilitado pode dar aula, selecionado foi escolhido para ministrar; curso casa com instrutor que tem vínculo **ou** atribuição a alguma disciplina daquele curso; círculo é derivado do posto (Oficiais: CMG, CF, CC, CT, 1ºTen, 2ºTen; Praças: SO, 1ºSG, 2ºSG, 3ºSG; quem não está no mapa não entra em nenhum dos dois); as classificações oferecidas são as cinco do glossário. A seleção em si é de épico futuro; o filtro opera sobre os vínculos e atribuições que já existem. Inativos continuam em `?situacao=`, visível na barra. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-026**: MUST existir **quatro indicadores**, e são estes — a lista é **fechada**, extraída da
   spec 014 em 10/09/2026, e "entre outros pertinentes" do `RF-INSTR-08` deixa de ser aceitável como
   redação:
   1. **Total de instrutores**;
   2. **Instrutores com capacitação didática** — conta quem tem o campo **não vazio**;
-  3. **CH total ministrada no ano**;
+  3. **CH total ministrada no ano corrente**;
   4. **Taxa de seleção, habilitados × selecionados**.
+  **Anotação registrada em 15/09/2026**: "no ano", no item 3 acima e no `FR-027.1`, é o **ano corrente**. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Emenda registrada em 15/09/2026**: o cartão de **CH total ministrada no ano** sai; a lista fechada passa a ter **três** indicadores — total, com capacitação didática e habilitados × selecionados. A CH do ano corrente **fica** como coluna da listagem (`FR-027.1`). *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-026.1**: A taxa de seleção MUST exibir **os dois valores absolutos sempre**, e o percentual
   apenas como informação secundária.
   ⚠️ **Selecionados NÃO é subconjunto de habilitados.** A v2.0 mediu **10 casos reais** de instrutor
   selecionado sem vínculo de habilitação ativo. Forçar o menor dos dois, ou esconder um percentual
   acima de 100%, apagaria justamente a inconsistência que o número existe para revelar.
-- **FR-026.2**: MUST existir **sete gráficos**, e o de **posto/graduação** MUST vir **sempre em
-  primeiro** e **sempre em ordem de antiguidade**: habilitados × selecionados, classificação,
-  **posto/graduação**, OM, escolaridade, regime de trabalho e capacitação didática.
+- **FR-026.2**: MUST existir **sete gráficos**: habilitados × selecionados, classificação (coluna
+  `categoria`), **posto/graduação**, OM, escolaridade, regime de trabalho e capacitação didática. As
+  barras do gráfico de **posto/graduação** MUST seguir **sempre a ordem de antiguidade**; o gráfico
+  **não** tem posição fixa na tela.
   ⚠️ **Ordenação alfabética é PROIBIDA** nesse gráfico — está escrito assim na spec 014.
+  **Emenda registrada em 15/09/2026**: a redação anterior dizia que o gráfico de posto/graduação vinha "sempre em primeiro", enquanto a própria lista o punha em terceiro. A spec 014 da v2.0 diz "sempre na **ordem** de antiguidade", referindo-se às barras, e não fixa posição; o texto passa a concordar com ela. Fica explícito também que "classificação" é a coluna `categoria`, como no `FR-002` da spec 014. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Segunda emenda registrada em 15/09/2026**: passam a ser **nove gráficos** — três de **barras** (status de seleção, com habilitados e selecionados em duas cores; posto/graduação; OM) e seis de **pizza** (classificação, escolaridade, regime de trabalho, capacitação didática, círculo hierárquico e índice de capacitação geral). Os dois novos vêm da v2.0: o índice de capacitação geral é o da spec 021 (com × sem capacitação didática, somando o total do recorte), e o título "Status de Seleção" do gráfico de habilitados × selecionados também é da spec 021. A classificação exibe os rótulos da v2.0 (Militares da Ativa, TTC, Civis, Magistério Militar Naval). Toda cor vem da paleta categórica `--serie-N` do Épico 4, uma por categoria, nos dois temas; toda barra traz o valor escrito além do eixo; toda pizza traz o percentual escrito, sem 3D nem perspectiva, porque inclinar a pizza distorce a leitura do percentual; a elevação leve fica no cartão que envolve o gráfico, pelo token de sombra. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Decisão registrada em 15/09/2026 (não reabrir)**: a escolaridade **permanece em barras** e não vira pizza. São seis categorias contra o limite de cinco do documento 23 §7, e a maioria dos instrutores está sem o campo — 142 de 177 —, o que faria a pizza ser quase toda "Não informado". Os gráficos ficam **quatro de barras e cinco de pizza**. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-026.3**: Posto/graduação fora do domínio conhecido MUST aparecer numa faixa **"Outros"** ao
   final da ordenação, **nunca ser omitido em silêncio** (Princípio V, degradação segura).
 - **FR-026.4**: No gráfico de capacitação didática, um instrutor com **duas** qualificações MUST
   contar em **ambas** as barras; quem tem o campo vazio MUST **não** contar em nenhuma.
+  **Emenda registrada em 15/09/2026**: o gráfico de capacitação didática passa a exibir a categoria **"Nenhuma"**, que conta quem tem o campo vazio. Quem tem duas qualificações continua contando nas duas. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+- **FR-026.5**: MUST existir um botão de **exibir/ocultar as estatísticas** — indicadores e gráficos —, como na v2.0 (spec 015, painel de estatísticas que se expande e recolhe). O estado é **efêmero**, fora da URL, pela pergunta do contrato de estado: *isto faz sentido num link que eu mando?* O painel começa recolhido, como na v2.0, e quando aberto mostra o recorte filtrado corrente. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+- **FR-026.6**: Legenda clicável que marca e desmarca categorias ou séries e atualiza o gráfico. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Conferência registrada em 15/09/2026 — parada**: a pedido de Bernardo, o código real da v2.0 foi lido em `SIS11/CIAARA-11-v2`. O componente de gráfico, `renderizarGrafico_` (`src/frontend/_Comum.html`, linhas 253 a 264), cria o gráfico só com `chart`, `labels`/`series` e `xaxis`, **sem nenhuma opção de legenda nem de evento**; a busca por `legend`, `onItemClick`, `toggleDataSeries`, `dataPointSelection` e `events:` em `src/frontend/` e `appsscript/` não achou nada. A biblioteca vinha de CDN sem versão fixada (`_Estilos.html`, linha 11), sem cópia local para conferir o comportamento padrão. **Não está no código, e não é implementada**: vira requisito novo, que Bernardo define depois.
+  **Pendência mantida em 15/09/2026 (CHK020)**: continua parada por falta de material — sem origem no código da v2.0, o comportamento precisa ser escrito como requisito novo antes de qualquer implementação. Nada foi implementado. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-027**: **Quadro de avisos de qualidade de cadastro** (`RF-INSTR-09`).
+  **Decisão registrada em 15/09/2026**: a lista de avisos é **aberta e extensível**, não um conjunto fechado. Ela começa pelos dois exemplos do `RF-INSTR-09` — instrutor sem NIP e campo obrigatório pendente — e aceita aviso novo sem mudar o tipo que a descreve. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Acréscimo registrado em 15/09/2026**: entra o aviso **"Data de início de docência não informada"**, no lugar do alerta do `FR-017` quando a data está vazia. E o aviso de campo obrigatório pendente **continua cobrando especialidade** dos militares sem ela — os 15 da base real são todos militares; como nenhum civil está sem o campo, nenhuma delimitação para civil foi registrada. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Emenda registrada em 15/09/2026 (CHK012)**: o aviso de campo obrigatório pendente cobra especialidade/habilitação **apenas de militar**; civil sem especialidade não é pendência. A frase acima sobre "nenhuma delimitação para civil" fica substituída por esta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Emenda registrada em 15/09/2026 ao `FR-027` e ao `RNF-USA-04`, nesta spec**: o quadro **nasce recolhido** e fica no **topo da página, acima dos filtros**. Recolhido, MUST mostrar a **contagem de cada tipo de aviso** — instrutor sem NIP, campo obrigatório pendente, data de início de docência não informada — e o **total**, que é de avisos: quem está em dois tipos conta nos dois. Tipo com contagem zero **não aparece** na linha de contagens, e recorte sem aviso nenhum mantém o quadro na tela dizendo isso (`RN-DEG-01`). Clicar expande e mostra a lista detalhada, como antes; o estado aberto ou recolhido é **efêmero e fica fora da URL**, como no painel de estatísticas. ⚠️ **Por que isto preserva o `RNF-USA-04`**: a redação anterior — sempre visível, nunca recolhido por padrão — proibia nascer recolhido. A intenção do requisito é o aviso de qualidade de dados não sair da vista de quem usa; o que se recolhe é só a lista de nomes, e as **contagens ficam visíveis sem abrir nada**. O documento 03 não é alterado. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-027.1**: A listagem MUST trazer, no mínimo, as colunas **posto/graduação, nome completo,
-  categoria, OM, regime e CH total no ano** (spec 014).
+  categoria, OM, regime e CH total no ano corrente** (spec 014).
+  **Emenda registrada em 15/09/2026**: a coluna de posto/graduação sai, e a coluna "Nome" passa a se chamar **"Instrutor"**, exibindo o formato do `FR-019` por `NomeInstrutor`. As colunas são: instrutor, categoria, OM, regime e CH total no ano corrente. A ordenação por posto continua existindo por cima da antiguidade, agora no cabeçalho "Instrutor". É a coluna única da spec 020 da v2.0. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-027.2**: No nome completo, a palavra correspondente ao **nome de guerra** MUST aparecer em
   negrito, quando houver (spec 014).
 - **FR-027.3**: Nenhum seletor de instrutor MUST exibir identificador técnico ao usuário (spec 014).
@@ -331,19 +388,23 @@ refinamento reaparece.
 - **FR-030**: MUST ser possível registrar **preferências e restrições gerais** do instrutor
   (`RF-INSTR-06`). As preferências **por turma e por disciplina** do `RF-INSTR-06.1` ficam para
   **depois da fatia (b)**.
+  **Simplificação deliberada registrada em 15/09/2026**: nesta fatia a preferência é **texto livre**, na coluna `preferencia`. A grade dia × período com observação que o `RF-INSTR-06` descreve **não** é construída aqui; é simplificação escolhida e registrada, não divergência silenciosa. *(decisão de Bernardo Villas Boas, 15/09/2026)*
   ⚠️ **Decisão de 10/09/2026**: antecipá-las exigiria inventar a estrutura de disciplina por turma,
   que é justamente o que a fatia (b) constrói. Preferência presa a uma disciplina que ainda não
   existe por turma é dado sem onde morar.
 - **FR-031**: MUST existir **ficha individual do instrutor em tela** (`RF-INSTR-10`). A **saída em
   PDF e a rota de impressão** ficam para o **Épico 11**.
+  **Emenda registrada em 15/09/2026**: a **geração da ficha em A4 retrato e a impressão pelo navegador** entram **nesta** fatia, com botão "Gerar ficha" na página do instrutor. O salvar como arquivo ou PDF dentro do sistema continua no Épico 11. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Conferência registrada em 15/09/2026 — parada**: das duas imagens do cabeçalho oficial, uma está no repositório e a outra não. `image1.png` é uma captura de tela do brasão do CIAARA, e o brasão oficial já está em `public/marca/brasao-ciaara-impressao.png` (fornecido por Bernardo em 11/09/2026). `image2.png` é o selo verde **"Marinha do Brasil — Hidrografia e Navegação"**, que **não está** no repositório. Sem os dois, a ficha não é implementada nem improvisada; o salvar como arquivo continua no Épico 11.
+  **Pendência mantida em 15/09/2026 (CHK021)**: continua parada por falta de material — falta o selo verde "Marinha do Brasil — Hidrografia e Navegação" do cabeçalho oficial. Nada foi implementado nem improvisado. *(decisão de Bernardo Villas Boas, 15/09/2026)*
   ⚠️ **Decisão de 10/09/2026**: adiar a ficha inteira quebraria a paridade com a v2.0 num ponto que
   Bernardo usa; e o `FR-023` já a pressupõe. O que fica para o Épico 11 é o **documento**, não a
   leitura.
 
 ### Key Entities
 
-- **Instrutor** — o docente. Identificado por inteiro simples. Cinco campos obrigatórios. Status
-  explícito. Antiguidade derivada do posto, com desempate declarado.
+- **Instrutor** — o docente. Identificado por inteiro simples. Cinco campos obrigatórios, com a
+  especialidade delimitada a militar (emendas de 15/09/2026 ao `FR-005`). Status explícito. Antiguidade derivada do posto, com desempate declarado.
 - **Vínculo instrutor↔disciplina** — a habilitação. Sem ele não há atribuição de aula.
 - **Carga horária do instrutor** — **duas grandezas derivadas**, nunca armazenadas como entrada.
 
@@ -356,19 +417,26 @@ refinamento reaparece.
 - **SC-002**: A contagem de campos de carga horária digitáveis em todo o sistema é **zero**.
 - **SC-003**: Cadastro sem qualquer um dos cinco campos obrigatórios é recusado em **100%** das
   tentativas, inclusive fora da tela.
+  **Emenda registrada em 15/09/2026**: são **quatro** os obrigatórios, pelo `FR-005` emendado; especialidade só com espaços continua recusada em 100% das tentativas. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Segunda emenda registrada em 15/09/2026 (CHK008)**: são **cinco**, com a especialidade delimitada a militar e recusada em **cadastro novo**; o critério mede a recusa em 100% das tentativas de cadastro novo de militar sem ela, inclusive fora da tela. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **SC-004**: Instrutor desativado desaparece de **100%** das listas de nova atribuição e permanece
   em **100%** dos registros históricos já lançados.
 - **SC-005**: O nome aparece no formato padronizado em **100%** das telas que o exibem.
 - **SC-006**: Um instrutor de 40h com 20h previstas **não** gera alerta; um de 20h com 14h **gera**.
   Nenhum dos dois é impedido de nada.
+  **Emenda registrada em 15/09/2026**: "previstas" é a carga de cada semana ISO coberta, pela decisão do `FR-016` — 20h em todas as semanas cobertas não alerta; 14h em alguma semana coberta alerta, nomeando a semana. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **SC-007**: Cada um dos refinamentos das **oito specs** do inventário tem endereço apontado na
   v2.1 — a lista é percorrida item a item e **nenhum fica sem resposta**.
-- **SC-007.1**: São exibidos **4 indicadores** e **7 gráficos**, e o de posto/graduação está em
-  primeiro, em ordem de antiguidade. Contagem exata, não "aproximadamente".
+- **SC-007.1**: São exibidos **4 indicadores** e **7 gráficos**, e as barras do de posto/graduação
+  seguem a ordem de antiguidade. Contagem exata, não "aproximadamente".
+  **Segunda emenda registrada em 15/09/2026**: passam a ser **3 indicadores** e **9 gráficos** — 3 de barras e 6 de pizza —, com as barras de posto/graduação em antiguidade. Enquanto a pendência de escolaridade do `FR-026.2` não fecha, ela é contada entre os de barras. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Terceira emenda registrada em 15/09/2026**: com a escolaridade decidida em barras, são **3 indicadores** e **9 gráficos — 4 de barras e 5 de pizza**. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  **Emenda registrada em 15/09/2026**: a redação anterior exigia o gráfico de posto/graduação "em primeiro". Passa a concordar com o `FR-026.2` emendado na mesma data. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **SC-008**: Recarregar a página com filtros aplicados reproduz **exatamente** a mesma tela.
 - **SC-010**: O número de perfis que **escrevem** identificação civil e residência é **igual** ao
   número que as **lê** — três —, e a diferença entre colunas com `SELECT` e colunas com `UPDATE`
   para o papel autenticado é **zero**. Hoje ela é **12**.
+  **Emenda registrada em 15/09/2026 (T002 — aprovada por Bernardo, é só redação)**: a comparação é das colunas com `SELECT` contra a **união** das colunas com `UPDATE` e `INSERT` para o papel autenticado. Comparando só com `UPDATE`, revogar o `update` deixaria o critério verde com a escrita por `insert` aberta (research R-4). *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **SC-009**: `pnpm verificar:tudo` e o CI dão **veredito idêntico** sobre o mesmo commit.
 
 ## Decisões de Bernardo — 10/09/2026
@@ -388,6 +456,12 @@ refinamento reaparece.
    recorte de escrita é `grant update` por coluna, e portanto **esta fatia tem migration** — com
    plano de reversão, teste negativo por perfil e tudo o que a Definition of Done exige de quem
    toca o banco.
+   **Emenda registrada em 15/09/2026 (T003 — aprovada por Bernardo, é só redação)**: esta fatia tem **nove**
+   migrations — `20260915052719` recorte de escrita do dado pessoal, `20260915053511` ordem de
+   antiguidade, `20260915054204` obrigatórios e código, `20260915060809` autoria da sessão,
+   `20260915084854` carga prevista, `20260915084857` código do vínculo e habilitações,
+   `20260915091717` filtros de vínculo, `20260915140000` especialidade de militar novo e
+   `20260915140100` exclusão sem histórico. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 2. **A RLS do Épico 1 governa quem vê o quê**, e o recorte de dado pessoal do Épico 3 continua
    valendo: identificação civil e residência são legíveis por três perfis.
 3. **Nenhuma regra `RN-` é alterada.** Esta fatia é porte: reescreve na sintaxe nova preservando o
@@ -395,6 +469,12 @@ refinamento reaparece.
 4. **A ordenação canônica é servida pelo banco**, e a função de domínio é pura e testável sem banco.
 5. **Gráficos e componentes densos vêm do Épico 4.** Ver *Dependências* — é o ponto que mais pode
    atrasar esta fatia.
+6. **Desempenho: medido, sem requisito** (CHK022) *(decisão de Bernardo Villas Boas, 15/09/2026)*. Não se cria requisito de tempo de
+   resposta. Fica registrada, como ponto de partida para quem otimizar depois, a medição de 15/09/2026
+   com a base real no stack local: a ficha leva **1,5 a 2,4 s** sozinha e **4,2 a 5,1 s** com quatro
+   processos simultâneos; `vw_instrutor_carga_anual` custa **~700 ms** sob RLS, porque agrega todos os
+   registros antes de filtrar o instrutor; `vw_instrutores` por código, ~290 ms; e
+   `vw_instrutor_carga_prevista`, ~230 ms.
 
 ## Dependências
 
@@ -404,8 +484,10 @@ refinamento reaparece.
 | Épico 2 — as 177 linhas migradas | ✅ concluído |
 | Épico 3 — sessão, perfil e recorte de PII | ✅ na `main` |
 | Épico 4, fatia (a) — tokens e tema | ✅ na `main` |
-| **Épico 4, fatia (b)** — `TabelaDensa`, `FiltroAvancado`, `BadgeStatus`, `NomeInstrutor`, `SeletorInstrutor`, gráficos | ⬜ **NÃO EXISTE** — Q5c.a |
-| **Épico 4, fatia (c)** — shell, navegação e **estado na URL** | ⬜ **NÃO EXISTE** — Q5c.a |
+| **Épico 4, fatia (b)** — `TabelaDensa`, `FiltroAvancado`, `BadgeStatus`, `NomeInstrutor`, `SeletorInstrutor`, gráficos | ✅ **concluída**, na `main` desde 11/09/2026 |
+| **Épico 4, fatia (c)** — shell, navegação e **estado na URL** | ✅ **concluída**, na `main` desde 11/09/2026 |
+
+**Correção registrada em 15/09/2026**: as duas linhas acima diziam ⬜ **NÃO EXISTE** — Q5c.a, o estado de 10/09/2026. As fatias (b) e (c) do Épico 4 foram mescladas na `main` em 11/09/2026, e a Q5c.a está satisfeita (research R-1). O registro do bloqueio abaixo fica como histórico. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 ⚠️ **Medido em 10/09/2026**: `components/ciaara/` tem quatro arquivos, nenhum deles de domínio; a
 biblioteca de gráficos e a de estado na URL **não estão instaladas**. O `FR-025`, o `FR-026` e o
@@ -472,6 +554,7 @@ Conforme o pedido, e conforme a regra 1 do `CLAUDE.md`.
    abrangente, então **adotei o formato padronizado** e mantive da spec 014 apenas a regra de não
    exibir identificador técnico (`FR-027.3`). Registro porque é uma escolha entre dois textos
    escritos, não uma dedução.
+   **Anotação registrada em 15/09/2026**: a citação do `RF-INSTR-15` neste item estava comprimida. O texto dele é `P/G Especialidade/Habilitação Nome Completo`, com o nome ou nomes de guerra em negrito; ver a emenda do `FR-019`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
 5. **O `RF-CRUD-02` foi `[ABSORVIDO PELA PLATAFORMA]` e isso muda o que se pode prometer.** Na v2.0
    uma coluna nova aparecia sozinha porque o cabeçalho era dinâmico. Aqui, coluna nova é migration
    mais tipo regenerado. O requisito continua na lista de cobertura do Épico 5, e **não é mais
@@ -480,3 +563,11 @@ Conforme o pedido, e conforme a regra 1 do `CLAUDE.md`.
    cadastro incompleto recusado e CH nunca digitável —, e o documento 06 lista **sete** critérios
    para o Épico 5. Os dois são regra real (`RN-INST-03` e `RN-INST-04`); o que não existe é a
    numeração. Adotei-os como critério desta fatia e registro a divergência.
+7. **O `RN-INST-03` do documento 04 lista cinco obrigatórios, e esta spec passou a ter quatro.**
+   Registrado em 15/09/2026: especialidade/habilitação ficou opcional por emenda ao `FR-005` e ao
+   `RN-INST-03` desta spec *(decisão de Bernardo Villas Boas, 15/09/2026)*, porque 15 militares da base real não têm o campo
+   e não conseguiam salvar a ficha. O banco já aceitava o nulo desde o Épico 2. ⚠️ **O documento 04
+   não foi alterado** — emendá-lo é decisão à parte, como no item 1.
+   **Atualização registrada em 15/09/2026 (CHK008)**: a divergência **fechou**. A spec voltou a ter cinco
+   obrigatórios, com a especialidade delimitada a militar e recusada em cadastro novo, e bate de novo com
+   o documento 04, que não foi alterado. A delimitação fica registrada no `FR-005`. *(decisão de Bernardo Villas Boas, 15/09/2026)*
