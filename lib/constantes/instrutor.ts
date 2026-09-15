@@ -58,3 +58,21 @@ export const UFS = [
   "SP",
   "TO",
 ] as const;
+
+/**
+ * As classificações de curso que a barra de filtros oferece, com o nome do glossário.
+ *
+ * > *"Classificação (do curso). Categoria administrativa do curso: Curso Regular, Curso Expedito,
+ * > Curso Especial, Curso de Aperfeiçoamento Avançado, ou Estágio de Qualificação."* — documento 07
+ *
+ * ⚠️ SÃO CINCO, E O ENUM TEM SETE. `geral` e `ead_semipresencial` existem em `escopo_curso` para o RBAC,
+ * mas não são classificação de curso no glossário nem na spec 015 da v2.0 (achado 8); a URL continua
+ * aceitando os sete, pelo contrato, e a barra oferece os cinco com o nome que a Divisão usa.
+ */
+export const CLASSIFICACOES_DE_CURSO_NA_BARRA = [
+  { valor: "regular", rotulo: "Curso Regular" },
+  { valor: "expedito", rotulo: "Curso Expedito" },
+  { valor: "especial", rotulo: "Curso Especial" },
+  { valor: "aperfeicoamento_avancado", rotulo: "Curso de Aperfeiçoamento Avançado" },
+  { valor: "estagio_qualificacao", rotulo: "Estágio de Qualificação" },
+] as const;

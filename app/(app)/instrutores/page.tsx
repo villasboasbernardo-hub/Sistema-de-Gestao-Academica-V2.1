@@ -68,21 +68,19 @@ export default async function Instrutores({
     capacitacao: String(valores.capacitacao),
     regime: String(valores.regime),
     escolaridade: String(valores.escolaridade),
+    posto: String(valores.posto),
+    circulo: String(valores.circulo),
+    curso: String(valores.curso),
+    classificacao: String(valores.classificacao),
+    habilitado: String(valores.habilitado),
+    selecionado: String(valores.selecionado),
     situacao: String(valores.situacao),
     ordem: String(valores.ordem),
   };
 
   const ano = anoCorrente();
   const supabase = await criarClienteDeServidor();
-  const [
-    usuario,
-    { data, error },
-    cargaRes,
-    habilitadosRes,
-    selecionadosRes,
-    escalaRes,
-    opcoesRes,
-  ] = await Promise.all([
+  const [usuario, { data, error }, cargaRes, cursosRes, escalaRes, opcoesRes] = await Promise.all([
     usuarioDaSessao(),
     montarConsultaDeInstrutores(
       supabase.from("vw_instrutores").select(COLUNAS_DA_LISTAGEM),
@@ -92,10 +90,7 @@ export default async function Instrutores({
       .from("vw_instrutor_carga_anual")
       .select("instrutor_id, ta_ministrado_ano")
       .eq("ano", ano),
-    // Habilitados: vínculo ativo em `instrutor_disciplina` (`FR-026.1`).
-    supabase.from("instrutor_disciplina").select("instrutor_id").eq("status", "ativo"),
-    // Selecionados: atribuição ativa em `turma_disciplina_instrutor` (achado 6 do Épico 2).
-    supabase.from("turma_disciplina_instrutor").select("instrutor_id").eq("status", "ativo"),
+    supabase.from("cursos").select("codigo").order("codigo"),
     supabase
       .from("config_listas")
       .select("valor, ordem, ativo")
@@ -104,9 +99,16 @@ export default async function Instrutores({
     // As opções dos filtros saem do cadastro inteiro, não do recorte (ver `opcoes.ts`).
     supabase
       .from("vw_instrutores")
-      .select("om, categoria, capacitacao_didatica, nivel_escolaridade")
+      .select("om, categoria, capacitacao_didatica, nivel_escolaridade, posto_graduacao")
       .order("ordem_antiguidade"),
   ]);
+  const escala = escalaDeLinhas(
+    (escalaRes.data ?? []).map((e) => ({
+      valor: e.valor,
+      ordem: Number(e.ordem),
+      ativo: e.ativo !== false,
+    })),
+  );
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
 
   if (error) {
@@ -143,16 +145,20 @@ export default async function Instrutores({
     cargaNoAno: cargaDisponivel ? (cargaPorInstrutor.get(i.id as string) ?? 0) : null,
   }));
 
-  const idsDe = (res: { data: { instrutor_id: string | null }[] | null }) =>
-    new Set((res.data ?? []).flatMap((v) => (v.instrutor_id ? [v.instrutor_id] : [])));
+  /*
+   * ⚠️ HABILITADO E SELECIONADO VÊM DA PRÓPRIA LINHA (`vw_instrutores`, migration `20260915091717`),
+   * que é o mesmo critério dos filtros — cartão, gráfico e filtro não podem discordar.
+   */
+  const idsOnde = (coluna: "habilitado" | "selecionado") =>
+    new Set(brutas.filter((b) => b[coluna] === true).map((b) => b.id as string));
   const indicadores = indicadoresDeInstrutores(
     linhas.map((l, n) => ({
       id: l.id,
       capacitacaoDidatica: brutas[n]?.capacitacao_didatica ?? null,
       cargaNoAno: l.cargaNoAno,
     })),
-    idsDe(habilitadosRes),
-    idsDe(selecionadosRes),
+    idsOnde("habilitado"),
+    idsOnde("selecionado"),
   );
   const graficos = graficosDeInstrutores(
     linhas.map((l, n) => ({
@@ -164,13 +170,7 @@ export default async function Instrutores({
       regime: l.regime,
       capacitacaoDidatica: brutas[n]?.capacitacao_didatica ?? null,
     })),
-    escalaDeLinhas(
-      (escalaRes.data ?? []).map((e) => ({
-        valor: e.valor,
-        ordem: Number(e.ordem),
-        ativo: e.ativo !== false,
-      })),
-    ),
+    escala,
     indicadores.taxaDeSelecao,
   );
   const avisos = avisosDoCadastro<InstrutorDoAviso & Parameters<RegraDeAviso["seAplica"]>[0]>(
@@ -187,7 +187,7 @@ export default async function Instrutores({
     })),
     AVISOS_INICIAIS,
   );
-  const opcoes = opcoesDosFiltros(opcoesRes.data ?? []);
+  const opcoes = opcoesDosFiltros(opcoesRes.data ?? [], cursosRes.data ?? [], escala);
   const podeLer = pode(permissoes, "instrutores", "ler");
 
   return (

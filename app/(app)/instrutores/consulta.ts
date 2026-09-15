@@ -19,6 +19,7 @@
  *
  * ⚠️ VIVE AO LADO DA PÁGINA, COMO `inicio/panorama.ts`, porque é da tela. Não é regra de domínio.
  */
+import { POSTOS_POR_CIRCULO } from "@/lib/dominio/circulo-hierarquico";
 
 /**
  * O mínimo encadeável que a montagem usa. O construtor da interface de dados tem esses três métodos.
@@ -30,18 +31,40 @@
  * comportamento é provado por `tests/unidade/consulta-de-instrutores.test.ts`.
  */
 export type Encadeavel = {
-  eq(coluna: string, valor: string): Encadeavel;
+  eq(coluna: string, valor: string | boolean): Encadeavel;
   ilike(coluna: string, padrao: string): Encadeavel;
+  in(coluna: string, valores: readonly string[]): Encadeavel;
+  or(filtros: string): Encadeavel;
+  contains(coluna: string, valores: readonly string[]): Encadeavel;
   order(coluna: string, opcoes: { ascending: boolean }): Encadeavel;
 };
 
-/** Os oito parâmetros do contrato, já degradados por `lerParametros`. */
+/** Os parâmetros do contrato, já degradados por `lerParametros`. */
 export type ParametrosDaListagem = Readonly<
   Record<
-    "busca" | "om" | "categoria" | "capacitacao" | "regime" | "escolaridade" | "situacao" | "ordem",
+    | "busca"
+    | "om"
+    | "categoria"
+    | "capacitacao"
+    | "regime"
+    | "escolaridade"
+    | "posto"
+    | "circulo"
+    | "curso"
+    | "classificacao"
+    | "habilitado"
+    | "selecionado"
+    | "situacao"
+    | "ordem",
     string
   >
 >;
+
+/**
+ * O valor reservado do filtro de capacitação que casa com o campo **vazio** (`FR-025` emendado em
+ * 15/09/2026; spec 015 da v2.0, *"Sem capacitação didática"*).
+ */
+export const CAPACITACAO_NENHUMA = "nenhuma";
 
 /** A listagem aberta sem recorte: só quem está ativo, como na v2.0. */
 export const PARAMETROS_SEM_RECORTE: ParametrosDaListagem = {
@@ -51,6 +74,12 @@ export const PARAMETROS_SEM_RECORTE: ParametrosDaListagem = {
   capacitacao: "",
   regime: "",
   escolaridade: "",
+  posto: "",
+  circulo: "",
+  curso: "",
+  classificacao: "",
+  habilitado: "",
+  selecionado: "",
   situacao: "ativo",
   ordem: "",
 };
@@ -66,7 +95,7 @@ export const PARAMETROS_SEM_RECORTE: ParametrosDaListagem = {
  * saber quais colunas a consulta traz — as linhas chegam tipadas como erro.
  */
 export const COLUNAS_DA_LISTAGEM =
-  "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, categoria, om, regime_trabalho, nivel_escolaridade, capacitacao_didatica, nip, status, antiguidade_declarada_num, ordem_antiguidade";
+  "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, categoria, om, regime_trabalho, nivel_escolaridade, capacitacao_didatica, nip, status, antiguidade_declarada_num, ordem_antiguidade, habilitado, selecionado";
 
 /**
  * Normaliza a busca como `app.normalizar_texto` normaliza `nome_normalizado`: sem acento, sem caixa,
@@ -106,8 +135,31 @@ export function montarConsultaDeInstrutores<C>(consulta: C, parametros: Parametr
    * (`C-Exp-TE, Licenciatura`), e é por isso que o gráfico de capacitação conta o mesmo instrutor em
    * duas barras (`FR-026.4`). Filtrar por igualdade esconderia quem tem duas.
    */
-  if (parametros.capacitacao !== "") {
+  if (parametros.capacitacao === CAPACITACAO_NENHUMA) {
+    // "Nenhuma" é o campo vazio: nulo ou texto vazio, a mesma regra do indicador e do gráfico.
+    c = c.or("capacitacao_didatica.is.null,capacitacao_didatica.eq.");
+  } else if (parametros.capacitacao !== "") {
     c = c.ilike("capacitacao_didatica", `%${escaparCuringas(parametros.capacitacao.trim())}%`);
+  }
+
+  if (parametros.posto !== "") c = c.eq("posto_graduacao", parametros.posto);
+  if (parametros.circulo === "oficiais" || parametros.circulo === "pracas") {
+    c = c.in("posto_graduacao", POSTOS_POR_CIRCULO[parametros.circulo]);
+  }
+
+  /*
+   * ⚠️ HABILITADO, SELECIONADO, CURSO E CLASSIFICAÇÃO SÃO COLUNAS DA VIEW (migration
+   * `20260915091717`), e não listas de ids calculadas aqui. A primeira versão mandava `not in (...)`
+   * com 175 identificadores, e a consulta falhou com a base real. Habilitado e selecionado são
+   * independentes: cada um é o seu predicado.
+   */
+  if (parametros.habilitado === "sim") c = c.eq("habilitado", true);
+  if (parametros.habilitado === "nao") c = c.eq("habilitado", false);
+  if (parametros.selecionado === "sim") c = c.eq("selecionado", true);
+  if (parametros.selecionado === "nao") c = c.eq("selecionado", false);
+  if (parametros.curso !== "") c = c.contains("cursos_vinculados", [parametros.curso]);
+  if (parametros.classificacao !== "") {
+    c = c.contains("classificacoes_vinculadas", [parametros.classificacao]);
   }
 
   const busca = normalizar(parametros.busca);

@@ -12,6 +12,11 @@
  * ⚠️ NENHUM FILTRO POR IDENTIFICAÇÃO CIVIL. CPF, RG, telefone e endereço não são critério de busca
  * nesta tela, e a leitura deles é recortada por coluna (`FR-028` da spec 004).
  *
+ * ⚠️ OS SEIS FILTROS DA EMENDA DE 15/09/2026 (`FR-025`, decisão de Bernardo Villas Boas): posto, em
+ * antiguidade; círculo hierárquico; curso, pela sigla; classificação do curso, com os cinco nomes do
+ * glossário; habilitado e selecionado, que são conjuntos independentes. E capacitação ganhou "Nenhuma",
+ * que casa com o campo vazio.
+ *
  * ⚠️ VOLTAR AO PADRÃO É `null` PARA ESCOLHA, E TEXTO VAZIO PARA A BUSCA — a distinção medida na
  * fatia (c) do Épico 4 e documentada em `app/estilo/amostras.tsx`.
  */
@@ -23,11 +28,19 @@ import {
   type EstadoDeFiltro,
 } from "@/components/ciaara/filtro-avancado";
 import { Button } from "@/components/ui/button";
-import { ROTULO_DO_REGIME } from "@/lib/constantes/instrutor";
-import { REGIMES_DOCENTES } from "@/lib/navegacao/contrato";
+import { CLASSIFICACOES_DE_CURSO_NA_BARRA, ROTULO_DO_REGIME } from "@/lib/constantes/instrutor";
+import { ROTULO_DO_CIRCULO } from "@/lib/dominio/circulo-hierarquico";
+import { CIRCULOS_HIERARQUICOS, CLASSIFICACOES, REGIMES_DOCENTES } from "@/lib/navegacao/contrato";
+
+import { CAPACITACAO_NENHUMA } from "./consulta";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 import type { OpcoesDosFiltros } from "./opcoes";
+
+const SIM_NAO = [
+  { valor: "sim", rotulo: "Sim" },
+  { valor: "nao", rotulo: "Não" },
+];
 
 const ROTA = "/instrutores";
 
@@ -46,6 +59,12 @@ export function FiltrosDeInstrutores({ opcoes }: { readonly opcoes: OpcoesDosFil
   const [regime, definirRegime] = useParametro(ROTA, "regime");
   const [escolaridade, definirEscolaridade] = useParametro(ROTA, "escolaridade");
   const [situacao, definirSituacao] = useParametro(ROTA, "situacao");
+  const [posto, definirPosto] = useParametro(ROTA, "posto");
+  const [circulo, definirCirculo] = useParametro(ROTA, "circulo");
+  const [curso, definirCurso] = useParametro(ROTA, "curso");
+  const [classificacao, definirClassificacao] = useParametro(ROTA, "classificacao");
+  const [habilitado, definirHabilitado] = useParametro(ROTA, "habilitado");
+  const [selecionado, definirSelecionado] = useParametro(ROTA, "selecionado");
 
   const campos: readonly CampoDeFiltro[] = [
     { chave: "busca", rotulo: "Buscar por nome", tipo: "texto" },
@@ -60,7 +79,10 @@ export function FiltrosDeInstrutores({ opcoes }: { readonly opcoes: OpcoesDosFil
       chave: "capacitacao",
       rotulo: "Capacitação didática",
       tipo: "escolha",
-      opcoes: comEscolhido(opcoes.capacitacao, capacitacao),
+      opcoes: [
+        { valor: CAPACITACAO_NENHUMA, rotulo: "Nenhuma" },
+        ...comEscolhido(opcoes.capacitacao, capacitacao === CAPACITACAO_NENHUMA ? "" : capacitacao),
+      ],
     },
     {
       chave: "regime",
@@ -74,6 +96,32 @@ export function FiltrosDeInstrutores({ opcoes }: { readonly opcoes: OpcoesDosFil
       tipo: "escolha",
       opcoes: comEscolhido(opcoes.escolaridade, escolaridade),
     },
+    {
+      chave: "posto",
+      rotulo: "Posto/graduação",
+      tipo: "escolha",
+      opcoes: comEscolhido(opcoes.posto, posto),
+    },
+    {
+      chave: "circulo",
+      rotulo: "Círculo hierárquico",
+      tipo: "escolha",
+      opcoes: CIRCULOS_HIERARQUICOS.map((c) => ({ valor: c, rotulo: ROTULO_DO_CIRCULO[c] })),
+    },
+    {
+      chave: "curso",
+      rotulo: "Curso",
+      tipo: "escolha",
+      opcoes: comEscolhido(opcoes.curso, curso),
+    },
+    {
+      chave: "classificacao",
+      rotulo: "Classificação do curso",
+      tipo: "escolha",
+      opcoes: CLASSIFICACOES_DE_CURSO_NA_BARRA.map((c) => ({ valor: c.valor, rotulo: c.rotulo })),
+    },
+    { chave: "habilitado", rotulo: "Habilitado", tipo: "escolha", opcoes: SIM_NAO },
+    { chave: "selecionado", rotulo: "Selecionado", tipo: "escolha", opcoes: SIM_NAO },
     {
       chave: "situacao",
       rotulo: "Situação",
@@ -92,6 +140,12 @@ export function FiltrosDeInstrutores({ opcoes }: { readonly opcoes: OpcoesDosFil
     capacitacao: capacitacao === "" ? [] : [capacitacao],
     regime: regime === "" ? [] : [regime],
     escolaridade: escolaridade === "" ? [] : [escolaridade],
+    posto: posto === "" ? [] : [posto],
+    circulo: circulo === "" ? [] : [circulo],
+    curso: curso === "" ? [] : [curso],
+    classificacao: classificacao === "" ? [] : [classificacao],
+    habilitado: habilitado === "" ? [] : [habilitado],
+    selecionado: selecionado === "" ? [] : [selecionado],
     situacao: [situacao],
   };
 
@@ -111,14 +165,40 @@ export function FiltrosDeInstrutores({ opcoes }: { readonly opcoes: OpcoesDosFil
     if (escolha("escolaridade") !== (escolaridade || null)) {
       void definirEscolaridade(escolha("escolaridade"));
     }
+    if (escolha("posto") !== (posto || null)) void definirPosto(escolha("posto"));
+    if (escolha("circulo") !== (circulo || null)) {
+      void definirCirculo(escolha("circulo") as (typeof CIRCULOS_HIERARQUICOS)[number] | null);
+    }
+    if (escolha("curso") !== (curso || null)) void definirCurso(escolha("curso"));
+    if (escolha("classificacao") !== (classificacao || null)) {
+      void definirClassificacao(escolha("classificacao") as (typeof CLASSIFICACOES)[number] | null);
+    }
+    if (escolha("habilitado") !== (habilitado || null)) {
+      void definirHabilitado(escolha("habilitado") as "sim" | "nao" | null);
+    }
+    if (escolha("selecionado") !== (selecionado || null)) {
+      void definirSelecionado(escolha("selecionado") as "sim" | "nao" | null);
+    }
     if (escolha("situacao") !== situacao) {
       void definirSituacao(escolha("situacao") as "ativo" | "inativo" | null);
     }
   };
 
   const algumAtivo =
-    [busca, om, categoria, capacitacao, regime, escolaridade].some((v) => v !== "") ||
-    situacao !== "ativo";
+    [
+      busca,
+      om,
+      categoria,
+      capacitacao,
+      regime,
+      escolaridade,
+      posto,
+      circulo,
+      curso,
+      classificacao,
+      habilitado,
+      selecionado,
+    ].some((v) => v !== "") || situacao !== "ativo";
 
   const limpar = () => {
     void definirBusca("");
@@ -127,6 +207,12 @@ export function FiltrosDeInstrutores({ opcoes }: { readonly opcoes: OpcoesDosFil
     void definirCapacitacao(null);
     void definirRegime(null);
     void definirEscolaridade(null);
+    void definirPosto(null);
+    void definirCirculo(null);
+    void definirCurso(null);
+    void definirClassificacao(null);
+    void definirHabilitado(null);
+    void definirSelecionado(null);
     void definirSituacao(null);
   };
 

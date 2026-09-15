@@ -33,6 +33,18 @@ class Gravador {
     this.chamadas.push(["ilike", coluna, padrao]);
     return this;
   }
+  in(coluna: string, valores: readonly string[]) {
+    this.chamadas.push(["in", coluna, [...valores]]);
+    return this;
+  }
+  contains(coluna: string, valores: readonly string[]) {
+    this.chamadas.push(["contains", coluna, [...valores]]);
+    return this;
+  }
+  or(filtros: string) {
+    this.chamadas.push(["or", filtros]);
+    return this;
+  }
   order(coluna: string, opcoes: unknown) {
     this.chamadas.push(["order", coluna, opcoes]);
     return this;
@@ -102,5 +114,59 @@ describe("`FR-025` · os filtros entram na mesma consulta, em E lógico", () => 
   it("⚠️ curinga digitado na busca é literal — `%` e `_` não viram padrão", () => {
     const busca = montar({ busca: "a_b%c" }).find((c) => c[0] === "ilike");
     expect(busca).toEqual(["ilike", "nome_normalizado", "%a\\_b\\%c%"]);
+  });
+});
+
+describe("`FR-025` emendado em 15/09/2026 · os filtros novos entram na mesma consulta", () => {
+  it('capacitação = nenhuma casa com o campo vazio, e não com o texto "nenhuma"', () => {
+    const filtros = montar({ capacitacao: "nenhuma" }).filter((c) => c[0] !== "order");
+    expect(filtros).toEqual([
+      ["eq", "status", "ativo"],
+      ["or", "capacitacao_didatica.is.null,capacitacao_didatica.eq."],
+    ]);
+  });
+
+  it("posto é igualdade, e círculo é a lista de postos do mapa da spec 015", () => {
+    const filtros = montar({ posto: "CT", circulo: "pracas" }).filter((c) => c[0] !== "order");
+    expect(filtros).toEqual(
+      expect.arrayContaining([
+        ["eq", "posto_graduacao", "CT"],
+        ["in", "posto_graduacao", ["SO", "1ºSG", "2ºSG", "3ºSG"]],
+      ]),
+    );
+  });
+
+  it("habilitado e selecionado são predicados independentes, e não listas de ids", () => {
+    const filtros = montar({ habilitado: "nao", selecionado: "sim" }).filter(
+      (c) => c[0] !== "order",
+    );
+    expect(filtros).toEqual([
+      ["eq", "status", "ativo"],
+      ["eq", "habilitado", false],
+      ["eq", "selecionado", true],
+    ]);
+    expect(
+      filtros.some((c) => c[1] === "id"),
+      "o filtro voltou a mandar ids na URL",
+    ).toBe(false);
+  });
+
+  it("curso e classificação casam pelos arranjos da view — vínculo OU atribuição", () => {
+    const filtros = montar({ curso: "CAHO", classificacao: "regular" }).filter(
+      (c) => c[0] !== "order",
+    );
+    expect(filtros).toEqual(
+      expect.arrayContaining([
+        ["contains", "cursos_vinculados", ["CAHO"]],
+        ["contains", "classificacoes_vinculadas", ["regular"]],
+      ]),
+    );
+  });
+
+  it("⚠️ os filtros novos não trocam a ordenação: continua sendo a antiguidade", () => {
+    const ordens = montar({ curso: "X", habilitado: "sim", circulo: "oficiais" }).filter(
+      (c) => c[0] === "order",
+    );
+    expect(ordens).toEqual([["order", "ordem_antiguidade", { ascending: true }]]);
   });
 });

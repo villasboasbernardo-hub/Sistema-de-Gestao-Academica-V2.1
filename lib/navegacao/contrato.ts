@@ -103,6 +103,18 @@ export const MODALIDADES = Constants.public.Enums.modalidade_ensino;
 /** Os regimes de trabalho docente (`FR-025` da spec 006) — domínio fechado do banco. */
 export const REGIMES_DOCENTES = Constants.public.Enums.regime_trabalho_docente;
 
+/**
+ * Sim ou não, para os filtros de habilitado e de selecionado (`FR-025` emendado em 15/09/2026).
+ *
+ * ⚠️ SÃO DOIS FILTROS, E NÃO UM "STATUS" DE TRÊS OPÇÕES COMO NA SPEC 015 DA v2.0. Habilitado não é
+ * selecionado — habilitado pode dar aula, selecionado foi escolhido para ministrar —, e os dois
+ * conjuntos não são um subconjunto do outro. Decisão de Bernardo Villas Boas, 15/09/2026.
+ */
+export const SIM_OU_NAO = ["sim", "nao"] as const;
+
+/** Os círculos hierárquicos da spec 015 da v2.0 — derivados do posto, não campo do banco. */
+export const CIRCULOS_HIERARQUICOS = ["oficiais", "pracas"] as const;
+
 /** A situação de cadastro (`FR-009` da spec 006) — `ativo` ou `inativo`, nunca inferida. */
 export const SITUACOES_DE_CADASTRO = Constants.public.Enums.status_registro;
 
@@ -325,6 +337,57 @@ export const CONTRATO = {
         nome: "escolaridade",
         tipo: "texto",
         padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      /*
+       * Os seis da emenda de 15/09/2026 ao `FR-025` (decisão de Bernardo Villas Boas). `posto` e
+       * `curso` são texto pelo mesmo motivo de `om`: o domínio é o dado cadastrado. `classificacao`
+       * é o enum de curso, como em `/inicio`; `circulo`, `habilitado` e `selecionado` têm lista fechada.
+       */
+      posto: {
+        nome: "posto",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      circulo: {
+        nome: "circulo",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: CIRCULOS_HIERARQUICOS,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      curso: {
+        nome: "curso",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      classificacao: {
+        nome: "classificacao",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: CLASSIFICACOES,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      habilitado: {
+        nome: "habilitado",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: SIM_OU_NAO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      selecionado: {
+        nome: "selecionado",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: SIM_OU_NAO,
         historico: "substitui",
         avisaServidor: true,
       },

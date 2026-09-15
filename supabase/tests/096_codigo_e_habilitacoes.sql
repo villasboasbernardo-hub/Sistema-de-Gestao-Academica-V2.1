@@ -44,8 +44,19 @@ select matches(
 );
 
 -- 3. Codigo explicito alto (o ETL grava assim) e o proximo gerado vem depois dele.
+--    ⚠️ O explicito e calculado ACIMA do valor atual da sequencia: como ela nao volta com o rollback,
+--    um numero fixo ficaria abaixo dela na segunda execucao, e o teste reprovaria pelo motivo errado.
+create temp table t096_alto on commit drop as
+  select (greatest(
+            (select last_value from app.instrutor_disciplina_codigo_seq),
+            coalesce((select max(substring(codigo from 5)::bigint) from public.instrutor_disciplina
+                       where codigo ~ '^VIN-[0-9]+$'), 0)
+          ) + 500) as numero;
+
 insert into public.instrutor_disciplina (codigo, instrutor_id, disciplina_id, status)
-values ('VIN-990000', '66666666-0000-0000-0000-000000000096', '22222222-0000-0000-0000-0000000960d2', 'inativo');
+select 'VIN-' || lpad(numero::text, 6, '0'), '66666666-0000-0000-0000-000000000096',
+       '22222222-0000-0000-0000-0000000960d2', 'inativo'
+  from t096_alto;
 insert into public.instrutor_disciplina (instrutor_id, disciplina_id)
 values ('66666666-0000-0000-0000-000000000096', '22222222-0000-0000-0000-0000000960d2');
 
@@ -53,7 +64,7 @@ select is(
   (select codigo from public.instrutor_disciplina
     where instrutor_id = '66666666-0000-0000-0000-000000000096'
       and disciplina_id = '22222222-0000-0000-0000-0000000960d2' and status = 'ativo'),
-  'VIN-990001',
+  (select 'VIN-' || lpad((numero + 1)::text, 6, '0') from t096_alto),
   'T082 · a sequencia avanca para depois do maior codigo gravado — o ETL grava codigo explicito'
 );
 

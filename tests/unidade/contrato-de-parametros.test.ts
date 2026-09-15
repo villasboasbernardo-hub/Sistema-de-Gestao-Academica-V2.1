@@ -160,7 +160,21 @@ describe("`FR-028` da spec 006 · as rotas de instrutor seguem o contrato humano
    * certa, o link compartilhado abrindo — e o número na tela velho. Um filtro que empilhasse faria o
    * voltar desfazer letra por letra. Nenhum dos dois quebra a tela.
    */
-  const FILTROS = ["busca", "om", "categoria", "capacitacao", "regime", "escolaridade", "situacao"];
+  const FILTROS = [
+    "busca",
+    "om",
+    "categoria",
+    "capacitacao",
+    "regime",
+    "escolaridade",
+    "posto",
+    "circulo",
+    "curso",
+    "classificacao",
+    "habilitado",
+    "selecionado",
+    "situacao",
+  ];
 
   it("as três rotas existem: listagem, ficha e cadastro", () => {
     expect(ROTAS).toEqual(
@@ -168,7 +182,7 @@ describe("`FR-028` da spec 006 · as rotas de instrutor seguem o contrato humano
     );
   });
 
-  it("a listagem declara exatamente os oito parâmetros do contrato, na ordem dele", () => {
+  it("a listagem declara exatamente os parâmetros do contrato, na ordem dele (emenda de 15/09/2026)", () => {
     expect(parametrosDaRota("/instrutores").map((p) => p.nome)).toEqual([...FILTROS, "ordem"]);
   });
 
@@ -232,5 +246,20 @@ describe("`FR-028` da spec 006 · as rotas de instrutor seguem o contrato humano
       .filter((p) => pii.some((termo) => p.nome.includes(termo)))
       .map((p) => p.nome);
     expect(achados, `PII na barra de endereço: ${achados.join(", ")}`).toEqual([]);
+  });
+
+  it("os filtros da emenda de 15/09/2026 oferecem o domínio certo", () => {
+    const porNome = (nome: string) =>
+      parametrosDaRota("/instrutores").find((p) => p.nome === nome) as Parametro;
+    const opcoes = (nome: string) => {
+      const p = porNome(nome);
+      return p.tipo === "escolha" ? [...p.opcoes] : null;
+    };
+    expect(opcoes("habilitado")).toEqual(["sim", "nao"]);
+    expect(opcoes("selecionado")).toEqual(["sim", "nao"]);
+    expect(opcoes("circulo")).toEqual(["oficiais", "pracas"]);
+    expect(opcoes("classificacao")).toEqual([...Constants.public.Enums.escopo_curso]);
+    expect(porNome("posto").tipo, "posto tem domínio no dado, e é texto").toBe("texto");
+    expect(porNome("curso").tipo, "curso tem domínio no dado, e é texto").toBe("texto");
   });
 });

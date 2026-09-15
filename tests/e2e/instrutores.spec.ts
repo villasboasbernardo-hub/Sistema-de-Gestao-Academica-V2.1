@@ -284,6 +284,45 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
     await outraAba.close();
   });
 
+  test("os filtros de 15/09/2026: círculo, habilitado, selecionado, curso e capacitação nenhuma", async ({
+    page,
+  }) => {
+    /*
+     * A amostra deste processo, com o marcador na busca: 10 ativos e o civil de outra OM.
+     *   · Oficiais: CMG, os dois CT, o CC, a 1ºTen, o CF e o de fora (CT) = 7;
+     *   · habilitados: o CT mais antigo e o da aula = 2;
+     *   · selecionado E não habilitado: só a 1ºTen = 1 — o caso real da v2.0;
+     *   · curso da amostra: habilitados ∪ selecionados = CT mais antigo, o da aula e a 1ºTen = 3;
+     *   · capacitação vazia: SC, SCNS, o de posto desconhecido, o CC, a 1ºTen, o SO e o de fora = 7.
+     */
+    const base = `/instrutores?busca=${amostra.marcador.toLowerCase()}`;
+    await entrar(page, EMAIL_ADMIN, base);
+    await expect(contagem(page)).toContainText("11 instrutor(es)");
+
+    await escolher(page, "Círculo hierárquico", "Oficiais");
+    await expect.poll(() => parametro(page, "circulo")).toBe("oficiais");
+    await expect(contagem(page)).toContainText("7 instrutor(es)");
+
+    await page.goto(base);
+    await escolher(page, "Habilitado", "Sim");
+    await expect.poll(() => parametro(page, "habilitado")).toBe("sim");
+    await expect(contagem(page)).toContainText("2 instrutor(es)");
+
+    await page.goto(`${base}&selecionado=sim&habilitado=nao`);
+    await expect(contagem(page), "selecionado sem habilitação sumiu").toContainText(
+      "1 instrutor(es)",
+    );
+    await expect(grade(page)).toContainText(amostra.nomes.selecionadoSemHabilitacao);
+
+    await page.goto(`${base}&curso=CUR-${amostra.marcador}`);
+    await expect(contagem(page), "curso não casou vínculo OU atribuição").toContainText(
+      "3 instrutor(es)",
+    );
+
+    await page.goto(`${base}&capacitacao=nenhuma`);
+    await expect(contagem(page)).toContainText("7 instrutor(es)");
+  });
+
   test("oito letras na busca geram no máximo uma entrada de histórico", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN, `/instrutores?om=${amostra.om}`);
     await expect(grade(page)).toBeVisible();
