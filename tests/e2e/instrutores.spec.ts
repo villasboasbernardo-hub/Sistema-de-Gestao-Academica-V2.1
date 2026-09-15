@@ -367,3 +367,106 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
     ).toHaveCount(0);
   });
 });
+
+test.describe("`FR-022` e `FR-011` · painel de disciplinas, confirmação e a posição de desativar", () => {
+  let amostra: AmostraDeInstrutores;
+
+  test.beforeAll(async () => {
+    amostra = await semearInstrutores(PROCESSO, "H");
+  });
+
+  test.afterAll(async () => {
+    await limparInstrutores(PROCESSO, "H");
+  });
+
+  const vinculosDe = async (codigo: string) => {
+    const { data: ins } = await servico()
+      .from("instrutores")
+      .select("id")
+      .eq("codigo", codigo)
+      .single();
+    const { data } = await servico()
+      .from("instrutor_disciplina")
+      .select("codigo, status")
+      .eq("instrutor_id", ins?.id as string);
+    return data ?? [];
+  };
+
+  async function gravar(page: Page) {
+    await page
+      .locator('[data-slot="rodape-do-formulario"]')
+      .getByRole("button", { name: "Gravar alterações", exact: true })
+      .click();
+    const dialogo = page.getByRole("alertdialog");
+    await expect(dialogo, "gravar não pediu confirmação (FR-011)").toBeVisible();
+    await dialogo.getByRole("button", { name: "Gravar", exact: true }).click();
+    await expect(page.getByText("Alterações gravadas.")).toBeVisible({ timeout: 15_000 });
+  }
+
+  test("marcar grava o vínculo com código VIN, e desmarcar o inativa sem apagar", async ({
+    page,
+  }) => {
+    const codigo = amostra.codigos.ctMaisModerno;
+    const sigla = `CUR-${amostra.marcador}`;
+    await entrar(page, EMAIL_ADMIN, `/instrutores/${codigo}`);
+
+    const painel = page.locator('[data-slot="painel-de-disciplinas"]');
+    await painel.getByLabel("Buscar disciplina ou sigla do curso").fill(sigla);
+    const caixa = painel.getByRole("checkbox", { name: new RegExp(sigla) });
+    await expect(caixa).toHaveCount(1);
+    await caixa.check();
+    await gravar(page);
+
+    const depoisDeMarcar = await vinculosDe(codigo);
+    expect(depoisDeMarcar).toHaveLength(1);
+    expect(depoisDeMarcar[0]?.status).toBe("ativo");
+    expect(depoisDeMarcar[0]?.codigo, "o vínculo novo não recebeu VIN-NNNNNN").toMatch(
+      /^VIN-\d{6}$/,
+    );
+
+    await page.reload();
+    await expect(page.locator('[data-slot="disciplinas-habilitadas"]')).toContainText(sigla);
+    await painel.getByLabel("Buscar disciplina ou sigla do curso").fill(sigla);
+    await expect(painel.getByRole("checkbox", { name: new RegExp(sigla) })).toBeChecked();
+
+    await painel.getByRole("checkbox", { name: new RegExp(sigla) }).uncheck();
+    await gravar(page);
+
+    const depoisDeDesmarcar = await vinculosDe(codigo);
+    expect(depoisDeDesmarcar, "desmarcar apagou o vínculo (RN-INST-05)").toHaveLength(1);
+    expect(depoisDeDesmarcar[0]?.status).toBe("inativo");
+  });
+
+  test("Enter num campo, ou na busca do painel, não grava sem confirmação", async ({ page }) => {
+    const codigo = amostra.codigos.scns;
+    await entrar(page, EMAIL_ADMIN, `/instrutores/${codigo}`);
+
+    const nomeDeGuerra = page.locator('input[name="nome_guerra"]');
+    await nomeDeGuerra.fill("Zuleica");
+    await nomeDeGuerra.press("Enter");
+    await page
+      .locator('[data-slot="painel-de-disciplinas"]')
+      .getByLabel("Buscar disciplina ou sigla do curso")
+      .press("Enter");
+
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    const { data } = await servico()
+      .from("instrutores")
+      .select("nome_guerra")
+      .eq("codigo", codigo)
+      .single();
+    expect(data?.nome_guerra, "Enter gravou sem passar pelo diálogo do FR-011").toBeNull();
+  });
+
+  test("desativar fica no fim da página, ao lado de gravar, e não no cabeçalho", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, `/instrutores/${amostra.codigos.cmg}`);
+    const rodape = page.locator('[data-slot="rodape-do-formulario"]');
+    await expect(rodape.getByRole("button", { name: "Gravar alterações" })).toBeVisible();
+    await expect(rodape.getByRole("button", { name: "Desativar instrutor" })).toBeVisible();
+    await expect(
+      page.locator("header").getByRole("button", { name: "Desativar instrutor" }),
+    ).toHaveCount(0);
+  });
+});

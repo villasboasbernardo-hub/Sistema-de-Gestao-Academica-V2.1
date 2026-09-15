@@ -23,6 +23,14 @@
  * Pré-selecionar `RJ` na edição gravaria um estado em quem nunca informou endereço, a cada vez que
  * alguém salvasse o dado funcional. Registrado em `specs/006-cadastro-de-instrutores/paridade.md`.
  *
+ * ⚠️ O PAINEL DE DISCIPLINAS GRAVA DEPOIS DO INSTRUTOR (`FR-022`; spec 019 da v2.0, `FR-007`). Se o
+ * cadastro falha, nenhum vínculo é criado; se o cadastro passa, a sincronização vai numa chamada só,
+ * e o banco decide o que criar, reativar e inativar.
+ *
+ * ⚠️ TODO CAMINHO DE GRAVAÇÃO PASSA PELO DIÁLOGO (`FR-011`, anotação de 15/09/2026). O botão abre a
+ * confirmação e só ela envia; não há botão de envio no formulário, então `Enter` num campo não grava.
+ * A ação de desativar chega pelo `rodape`, ao lado do botão de gravar, com o próprio diálogo.
+ *
  * ⚠️ `preferencia` É TEXTO LIVRE nesta fatia — simplificação deliberada do `RF-INSTR-06`, decidida
  * por Bernardo em 15/09/2026 (T061). A grade dia × período com observação não é construída aqui.
  *
@@ -43,6 +51,7 @@ import {
   criarInstrutor,
   editarInstrutor,
   gravarDadosPessoaisDoInstrutor,
+  sincronizarHabilitacoes,
 } from "@/lib/acoes/instrutor";
 import { ROTULO_DO_REGIME, UFS } from "@/lib/constantes/instrutor";
 import {
@@ -55,6 +64,7 @@ import {
 import { Constants } from "@/lib/tipos/database";
 
 import { CampoDeEscolha } from "./CampoDeEscolha";
+import { PainelDeDisciplinas, type DisciplinaDoPainel } from "./PainelDeDisciplinas";
 import {
   CAMPOS_FUNCIONAIS,
   CAMPOS_PESSOAIS,
@@ -133,6 +143,12 @@ export type FormularioDeInstrutorProps = {
   readonly pessoais: ValoresPessoais | null;
   /** Os postos da escala de antiguidade, como `config_listas` os entrega. */
   readonly postos: readonly string[];
+  /** O catálogo de disciplinas ativas do painel (`FR-022`). */
+  readonly disciplinas: readonly DisciplinaDoPainel[];
+  /** As disciplinas com vínculo ativo — o painel nasce com elas marcadas. */
+  readonly habilitadas: readonly string[];
+  /** Ações que ficam ao lado de "Gravar alterações", no fim do formulário. */
+  readonly rodape?: React.ReactNode;
 };
 
 export function FormularioDeInstrutor({
@@ -141,11 +157,15 @@ export function FormularioDeInstrutor({
   iniciais,
   pessoais,
   postos,
+  disciplinas,
+  habilitadas,
+  rodape,
 }: FormularioDeInstrutorProps) {
   const router = useRouter();
   const formulario = useRef<HTMLFormElement>(null);
   const [mensagem, setMensagem] = useState<{ tom: "erro" | "ok"; texto: string } | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [marcadas, setMarcadas] = useState<ReadonlySet<string>>(() => new Set(habilitadas));
 
   const opcoesDePosto =
     iniciais.posto_graduacao !== "" && !postos.includes(iniciais.posto_graduacao)
@@ -177,6 +197,18 @@ export function FormularioDeInstrutor({
         setEnviando(false);
         return;
       }
+    }
+
+    const idGravado = modo === "novo" ? resultado.id : instrutorId;
+    const sincronizado = await sincronizarHabilitacoes({
+      instrutorId: idGravado,
+      disciplinas: [...marcadas],
+    });
+    if (!sincronizado.ok) {
+      setMensagem({ tom: "erro", texto: `Cadastro gravado. ${sincronizado.erro}` });
+      setEnviando(false);
+      if (modo === "novo") router.push(`/instrutores/${resultado.codigo}`);
+      return;
     }
 
     setEnviando(false);
@@ -355,6 +387,8 @@ export function FormularioDeInstrutor({
         </Secao>
       ) : null}
 
+      <PainelDeDisciplinas disciplinas={disciplinas} marcadas={marcadas} aoMudar={setMarcadas} />
+
       {mensagem ? (
         <p
           role={mensagem.tom === "erro" ? "alert" : "status"}
@@ -365,7 +399,10 @@ export function FormularioDeInstrutor({
         </p>
       ) : null}
 
-      <div>
+      <div
+        className="flex flex-wrap items-center justify-between gap-3"
+        data-slot="rodape-do-formulario"
+      >
         <DialogoConfirmacao
           titulo={modo === "novo" ? "Cadastrar este instrutor?" : "Gravar as alterações?"}
           consequencia={
@@ -380,6 +417,7 @@ export function FormularioDeInstrutor({
             {enviando ? "Gravando…" : modo === "novo" ? "Cadastrar instrutor" : "Gravar alterações"}
           </Button>
         </DialogoConfirmacao>
+        {rodape}
       </div>
     </form>
   );

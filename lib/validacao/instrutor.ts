@@ -170,5 +170,16 @@ export const esquemaDeGravacaoDePessoais = z.object({
 
 export const esquemaDeSituacao = z.object({ id: z.guid("Instrutor inválido.") });
 
+/**
+ * O painel de disciplinas (`FR-022`, spec 019 da v2.0): o instrutor e o conjunto marcado.
+ *
+ * ⚠️ O CONJUNTO É O ESTADO FINAL, NÃO A DIFERENÇA. Quem decide o que criar, reativar ou inativar é a
+ * função do banco, numa transação — a tela manda o que está marcado, e só.
+ */
+export const esquemaDeHabilitacoes = z.object({
+  instrutorId: z.guid("Instrutor inválido."),
+  disciplinas: z.array(z.guid("Disciplina inválida.")).max(1000, "Disciplinas demais."),
+});
+
 export type DadosFuncionaisDeInstrutor = z.infer<typeof esquemaFuncionalDeInstrutor>;
 export type DadosPessoaisDeInstrutor = z.infer<typeof esquemaDeDadosPessoais>;

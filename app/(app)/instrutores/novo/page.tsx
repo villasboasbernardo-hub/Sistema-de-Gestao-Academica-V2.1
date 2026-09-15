@@ -17,6 +17,7 @@ import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { valoresFuncionaisDe } from "../campos";
+import { comSigla } from "../catalogo";
 import { FormularioDeInstrutor } from "../FormularioDeInstrutor";
 
 export default async function NovoInstrutor() {
@@ -36,12 +37,20 @@ export default async function NovoInstrutor() {
   }
 
   const supabase = await criarClienteDeServidor();
-  const { data: escala } = await supabase
-    .from("config_listas")
-    .select("valor, ordem")
-    .eq("lista", "escala_antiguidade")
-    .eq("ativo", true)
-    .order("ordem");
+  const [{ data: escala }, { data: disciplinas }, { data: cursos }] = await Promise.all([
+    supabase
+      .from("config_listas")
+      .select("valor, ordem")
+      .eq("lista", "escala_antiguidade")
+      .eq("ativo", true)
+      .order("ordem"),
+    supabase
+      .from("disciplinas")
+      .select("id, nome_disciplina, curso_id, status")
+      .eq("status", "ativo")
+      .order("nome_disciplina"),
+    supabase.from("cursos").select("id, codigo"),
+  ]);
 
   return (
     <section className="flex flex-col gap-4">
@@ -59,6 +68,8 @@ export default async function NovoInstrutor() {
         iniciais={valoresFuncionaisDe(null)}
         pessoais={null}
         postos={(escala ?? []).map((e) => e.valor)}
+        disciplinas={comSigla(disciplinas ?? [], cursos ?? [])}
+        habilitadas={[]}
       />
     </section>
   );

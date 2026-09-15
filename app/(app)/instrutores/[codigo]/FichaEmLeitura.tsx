@@ -45,9 +45,12 @@ function Secao({ titulo, itens }: { readonly titulo: string; readonly itens: rea
 export function FichaEmLeitura({
   id,
   valores: v,
+  habilitadas,
 }: {
   readonly id: string;
   readonly valores: ValoresFuncionais;
+  /** Disciplinas com vínculo ativo; `null` quando a leitura falhou (`RN-DEG-01`). */
+  readonly habilitadas: readonly { readonly nome: string; readonly sigla: string }[] | null;
 }) {
   return (
     <div className="flex flex-col gap-3" data-slot="ficha-do-instrutor">
@@ -118,6 +121,27 @@ export function FichaEmLeitura({
           { rotulo: "Preferências e restrições gerais", valor: texto(v.preferencia) },
         ]}
       />
+      <section
+        className="border-borda rounded-ciaara flex flex-col gap-2 border p-4 text-sm"
+        data-slot="disciplinas-habilitadas"
+      >
+        <h2 className="text-texto font-semibold">Disciplinas habilitadas</h2>
+        {habilitadas === null ? (
+          <p className="text-texto-suave" role="status">
+            Não foi possível ler as habilitações deste instrutor.
+          </p>
+        ) : habilitadas.length === 0 ? (
+          <p className="text-texto-suave">—</p>
+        ) : (
+          <ul className="text-texto flex flex-col gap-0.5">
+            {habilitadas.map((d) => (
+              <li key={`${d.sigla}-${d.nome}`}>
+                {d.nome} ({d.sigla})
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

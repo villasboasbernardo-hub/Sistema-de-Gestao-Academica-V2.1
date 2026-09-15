@@ -1247,3 +1247,140 @@ describe("FR-010.1 · desativar instrutor não toca a conta", () => {
     expect(erroReativar).toBeNull();
   });
 });
+
+describe("FR-022 · painel de disciplinas — sincronizar habilitações", () => {
+  // ⚠️ AS REGRAS SÃO AS DA SPEC 019 DA v2.0: desmarcar inativa e nunca apaga (FR-009); marcada sem
+  // vínculo é criada (FR-010); marcada com vínculo inativo é reativada, sem duplicar (FR-011); e
+  // vínculo com disciplina descontinuada fica como está (FR-013).
+  //
+  // ⚠️ PELA SESSÃO DO ADMIN, e não pela `service_role`: a função é SECURITY INVOKER, e é a RLS com JWT
+  // de verdade que decide. A `service_role` só monta a amostra e confere o que ficou gravado.
+  const CODIGOS_DISC = ["RLS-DISC-HAB1", "RLS-DISC-HAB2", "RLS-DISC-HAB3"];
+  let instrutorId = "";
+  const disc: Record<string, string> = {};
+
+  const vinculos = async () => {
+    const { data } = await admin
+      .from("instrutor_disciplina")
+      .select("codigo, disciplina_id, status")
+      .eq("instrutor_id", instrutorId)
+      .order("codigo");
+    return data ?? [];
+  };
+
+  const limparAmostra = async () => {
+    const { data: ins } = await admin.from("instrutores").select("id").eq("codigo", "RLS-INS-HAB");
+    for (const i of ins ?? []) {
+      await admin.from("instrutor_disciplina").delete().eq("instrutor_id", i.id);
+    }
+    await admin.from("disciplinas").delete().in("codigo", CODIGOS_DISC);
+    await admin.from("instrutores").delete().eq("codigo", "RLS-INS-HAB");
+  };
+
+  beforeAll(async () => {
+    await limparAmostra();
+    const { data: ins, error } = await admin
+      .from("instrutores")
+      .insert({
+        codigo: "RLS-INS-HAB",
+        posto_graduacao: "CT",
+        esp_hab_obs: "-EF",
+        nome_completo: "Instrutor Do Painel",
+        categoria: "Militar",
+        om: "CIAARA",
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`falha ao criar instrutor do painel: ${error.message}`);
+    instrutorId = ins.id as string;
+
+    const { data: ds, error: erroD } = await admin
+      .from("disciplinas")
+      .insert(
+        CODIGOS_DISC.map((codigo, n) => ({
+          codigo,
+          curso_id: CURSO_REGULAR,
+          cod_disciplina: `HAB-${n + 1}`,
+          nome_disciplina: `Disciplina Do Painel ${n + 1}`,
+          carga_horaria_tempos: 10,
+          status: n === 2 ? "inativo" : "ativo",
+        })),
+      )
+      .select("id, codigo");
+    if (erroD) throw new Error(`falha ao criar disciplinas do painel: ${erroD.message}`);
+    for (const d of ds ?? []) disc[d.codigo as string] = d.id as string;
+
+    // HAB2 já teve vínculo, desmarcado antes; HAB3 é disciplina inativa com vínculo ainda ativo.
+    const { error: erroV } = await admin.from("instrutor_disciplina").insert([
+      {
+        codigo: "VIN-RLSHAB2",
+        instrutor_id: instrutorId,
+        disciplina_id: disc["RLS-DISC-HAB2"],
+        status: "inativo",
+      },
+      {
+        codigo: "VIN-RLSHAB3",
+        instrutor_id: instrutorId,
+        disciplina_id: disc["RLS-DISC-HAB3"],
+        status: "ativo",
+      },
+    ]);
+    if (erroV) throw new Error(`falha ao criar vínculos do painel: ${erroV.message}`);
+  });
+
+  afterAll(async () => {
+    await limparAmostra();
+  });
+
+  it("marcar cria o novo, reativa o antigo sem duplicar, e não toca a disciplina inativa", async () => {
+    const { data, error } = await cliente("admin").rpc("sincronizar_habilitacoes", {
+      p_instrutor_id: instrutorId,
+      p_disciplinas: [disc["RLS-DISC-HAB1"], disc["RLS-DISC-HAB2"]],
+    });
+    expect(error).toBeNull();
+    expect(data).toEqual({ criados: 1, reativados: 1, inativados: 0 });
+
+    const linhas = await vinculos();
+    const deHab2 = linhas.filter((l) => l.disciplina_id === disc["RLS-DISC-HAB2"]);
+    expect(deHab2, "reativar duplicou o vínculo (FR-011)").toHaveLength(1);
+    expect(deHab2[0]?.status).toBe("ativo");
+
+    const criado = linhas.find((l) => l.disciplina_id === disc["RLS-DISC-HAB1"]);
+    expect(criado?.status).toBe("ativo");
+    expect(criado?.codigo, "o vínculo novo não recebeu o código VIN-NNNNNN").toMatch(/^VIN-\d{6}$/);
+
+    const deHab3 = linhas.find((l) => l.disciplina_id === disc["RLS-DISC-HAB3"]);
+    expect(deHab3?.status, "a disciplina inativa foi tocada (FR-013)").toBe("ativo");
+  });
+
+  it("desmarcar inativa e não apaga", async () => {
+    const { data, error } = await cliente("admin").rpc("sincronizar_habilitacoes", {
+      p_instrutor_id: instrutorId,
+      p_disciplinas: [disc["RLS-DISC-HAB2"]],
+    });
+    expect(error).toBeNull();
+    expect(data).toEqual({ criados: 0, reativados: 0, inativados: 1 });
+
+    const deHab1 = (await vinculos()).filter((l) => l.disciplina_id === disc["RLS-DISC-HAB1"]);
+    expect(deHab1, "desmarcar apagou o vínculo (FR-009, RN-INST-05)").toHaveLength(1);
+    expect(deHab1[0]?.status).toBe("inativo");
+  });
+
+  it("marcar disciplina inativa é recusado", async () => {
+    const { error } = await cliente("admin").rpc("sincronizar_habilitacoes", {
+      p_instrutor_id: instrutorId,
+      p_disciplinas: [disc["RLS-DISC-HAB3"]],
+    });
+    expect(error?.code).toBe("22023");
+  });
+
+  it("(NEGATIVO) o perfil de visualização não sincroniza, e nada muda", async () => {
+    const antes = await vinculos();
+    const { error } = await cliente("visualizacao").rpc("sincronizar_habilitacoes", {
+      p_instrutor_id: instrutorId,
+      p_disciplinas: [],
+    });
+    expect(error?.code, "a sincronização não foi negada pelo banco").toBe("42501");
+    expect(await vinculos()).toEqual(antes);
+  });
+});

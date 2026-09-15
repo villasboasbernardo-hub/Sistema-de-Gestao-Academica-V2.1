@@ -11,10 +11,10 @@
  * permissão de ler instrutor, a tela diz que o perfil não alcança; com permissão e sem linha, diz
  * que o código não existe.
  *
- * ⚠️ **A CARGA HORÁRIA É SÓ LEITURA** (`FR-014`, `FR-015`, `RF-INSTR-13`). A ministrada vem de
- * `vw_instrutor_carga_anual`, em TA, que é a unidade que a view entrega; a view só tem linha de ano
- * com fato, e ausência é zero. **A prevista ainda não existe no banco**: ela espera a T011 da spec
- * 006 — qual data põe uma atribuição num ano —, e a ficha diz isso em vez de mostrar zero.
+ * ⚠️ **A CARGA HORÁRIA É SÓ LEITURA** (`FR-014`, `FR-015`, `RF-INSTR-13`). A ministrada e a prevista
+ * vêm de `vw_instrutor_carga_anual`, em TA; a view só tem linha de ano com fato ou previsão, e
+ * ausência é zero. As atribuições, com a média semanal de cada uma, vêm de
+ * `vw_instrutor_carga_prevista` (T011, decisão de Bernardo Villas Boas, 15/09/2026).
  *
  * ⚠️ **O DADO PESSOAL SÓ É LIDO PELA VISÃO COM PORTEIRO.** Se ela entrega a linha, a sessão é de um
  * dos três perfis que leem a PII, e só então a seção existe no formulário. Quem decidiu foi o banco.
@@ -30,7 +30,9 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { COLUNAS_PESSOAIS, valoresFuncionaisDe, valoresPessoaisDe } from "../campos";
 import { FormularioDeInstrutor } from "../FormularioDeInstrutor";
+import { comSigla } from "../catalogo";
 import { AcoesDeInstrutor } from "./AcoesDeInstrutor";
+import { CargaDoInstrutor } from "./CargaDoInstrutor";
 import { FichaEmLeitura } from "./FichaEmLeitura";
 
 const COLUNAS_DA_FICHA =
@@ -55,8 +57,13 @@ export default async function FichaDoInstrutor({
   }
 
   const supabase = await criarClienteDeServidor();
-  const [instrutorRes, escalaRes] = await Promise.all([
+  const [instrutorRes, disciplinasRes, cursosRes, escalaRes] = await Promise.all([
     supabase.from("vw_instrutores").select(COLUNAS_DA_FICHA).eq("codigo", codigo).maybeSingle(),
+    supabase
+      .from("disciplinas")
+      .select("id, nome_disciplina, curso_id, status")
+      .order("nome_disciplina"),
+    supabase.from("cursos").select("id, codigo"),
     supabase
       .from("config_listas")
       .select("valor, ordem")
@@ -89,7 +96,7 @@ export default async function FichaDoInstrutor({
   }
 
   const ano = anoCorrente();
-  const [{ data: pessoal }, cargaRes] = await Promise.all([
+  const [{ data: pessoal }, cargaRes, atribuicoesRes, vinculosRes] = await Promise.all([
     supabase
       .from("vw_instrutor_dados_pessoais")
       .select(COLUNAS_PESSOAIS)
@@ -97,13 +104,52 @@ export default async function FichaDoInstrutor({
       .maybeSingle(),
     supabase
       .from("vw_instrutor_carga_anual")
-      .select("ta_ministrado_ano")
+      .select("ta_ministrado_ano, ta_previsto_ano")
       .eq("instrutor_id", instrutor.id)
       .eq("ano", ano)
       .maybeSingle(),
+    supabase
+      .from("vw_instrutor_carga_prevista")
+      .select(
+        "atribuicao_id, nome_disciplina, curso_codigo, turma_codigo, previsao_inicio, previsao_termino, tempos_previstos, semanas, media_semanal",
+      )
+      .eq("instrutor_id", instrutor.id)
+      .eq("ano", ano)
+      .order("previsao_inicio"),
+    supabase
+      .from("instrutor_disciplina")
+      .select("disciplina_id")
+      .eq("instrutor_id", instrutor.id)
+      .eq("status", "ativo"),
   ]);
+
+  const catalogo = comSigla(disciplinasRes.data ?? [], cursosRes.data ?? []);
+  const habilitadas = (vinculosRes.data ?? []).flatMap((v) =>
+    v.disciplina_id ? [v.disciplina_id] : [],
+  );
+  const doCatalogo = new Map(catalogo.map((d) => [d.id, d]));
+  const habilitadasEmLeitura = vinculosRes.error
+    ? null
+    : habilitadas.flatMap((id) => {
+        const d = doCatalogo.get(id);
+        return d ? [{ nome: d.nome, sigla: d.sigla }] : [];
+      });
   // ⚠️ Falha de leitura é "—", não zero (`RN-DEG-01`): zero afirmaria que não houve aula.
   const ministrada = cargaRes.error ? null : Number(cargaRes.data?.ta_ministrado_ano ?? 0);
+  const prevista = cargaRes.error ? null : Number(cargaRes.data?.ta_previsto_ano ?? 0);
+  const atribuicoes = atribuicoesRes.error
+    ? null
+    : (atribuicoesRes.data ?? []).map((a) => ({
+        id: a.atribuicao_id as string,
+        disciplina: a.nome_disciplina as string,
+        curso: a.curso_codigo as string,
+        turma: a.turma_codigo as string,
+        inicio: a.previsao_inicio,
+        termino: a.previsao_termino,
+        tempos: Number(a.tempos_previstos ?? 0),
+        semanas: a.semanas,
+        mediaSemanal: a.media_semanal === null ? null : Number(a.media_semanal),
+      }));
 
   const ativo = instrutor.status === "ativo";
 
@@ -127,41 +173,20 @@ export default async function FichaDoInstrutor({
           </span>
           <BadgeStatus tom={ativo ? "executado" : "inativo"} rotulo={ativo ? "ativo" : "inativo"} />
         </div>
-        {/* ⚠️ Oculto para quem não pode editar — e a RLS nega se a ação vier por fora da tela. */}
-        <SePodeVer permissoes={permissoes} recurso="instrutores" acao="editar">
-          <AcoesDeInstrutor instrutorId={instrutor.id} ativo={ativo} />
-        </SePodeVer>
       </header>
 
-      <FichaEmLeitura id={instrutor.id} valores={valoresFuncionaisDe(instrutor)} />
+      <FichaEmLeitura
+        id={instrutor.id}
+        valores={valoresFuncionaisDe(instrutor)}
+        habilitadas={habilitadasEmLeitura}
+      />
 
-      <section
-        aria-labelledby="carga-do-instrutor"
-        className="border-borda rounded-ciaara flex flex-col gap-2 border p-4 text-sm"
-        data-slot="carga-do-instrutor"
-      >
-        <h2 id="carga-do-instrutor" className="text-texto font-semibold">
-          Carga horária de {ano}
-        </h2>
-        <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-          <div>
-            <dt className="text-texto-suave">Ministrada no ano</dt>
-            <dd className="text-texto" data-slot="carga-ministrada">
-              {ministrada === null ? "—" : `${ministrada} TA`}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-texto-suave">Prevista no ano</dt>
-            <dd className="text-texto-suave" data-slot="carga-prevista">
-              ainda não calculada
-            </dd>
-          </div>
-        </dl>
-        {/* veste: a dica que diz de onde vêm os números — texto fixo, nunca dado */}
-        <p className="text-texto-tenue text-xs">
-          Calculada a partir das aulas e avaliações lançadas; não é digitada.
-        </p>
-      </section>
+      <CargaDoInstrutor
+        ano={ano}
+        ministrada={ministrada}
+        prevista={prevista}
+        atribuicoes={atribuicoes}
+      />
 
       <SePodeVer permissoes={permissoes} recurso="instrutores" acao="editar">
         <h2 className="text-texto text-base font-semibold">Editar cadastro</h2>
@@ -173,6 +198,11 @@ export default async function FichaDoInstrutor({
             pessoal ? valoresPessoaisDe(pessoal as unknown as Record<string, unknown>) : null
           }
           postos={(escalaRes.data ?? []).map((e) => e.valor)}
+          disciplinas={catalogo.filter((d) => d.ativa)}
+          habilitadas={habilitadas}
+          // ⚠️ Desativar fica no fim, ao lado de gravar, longe do caminho habitual (anotação de
+          // 15/09/2026 ao `FR-011`). Oculto para quem não edita, como o formulário inteiro.
+          rodape={<AcoesDeInstrutor instrutorId={instrutor.id} ativo={ativo} />}
         />
       </SePodeVer>
     </section>

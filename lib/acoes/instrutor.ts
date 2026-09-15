@@ -21,12 +21,14 @@ import {
   esquemaDeCriacaoDeInstrutor,
   esquemaDeEdicaoDeInstrutor,
   esquemaDeGravacaoDePessoais,
+  esquemaDeHabilitacoes,
   esquemaDeSituacao,
   OBRIGATORIOS_DO_INSTRUTOR,
 } from "@/lib/validacao/instrutor";
 
 export type ResultadoDeInstrutor =
-  { readonly ok: true; readonly codigo: string } | { readonly ok: false; readonly erro: string };
+  | { readonly ok: true; readonly codigo: string; readonly id?: string }
+  | { readonly ok: false; readonly erro: string };
 
 const falha = (erro: string): ResultadoDeInstrutor => ({ ok: false, erro });
 
@@ -86,12 +88,12 @@ export async function criarInstrutor(dados: unknown): Promise<ResultadoDeInstrut
   const { data, error } = await supabase
     .from("instrutores")
     .insert(conferido.data.funcional)
-    .select("codigo")
+    .select("id, codigo")
     .single();
   if (error) return falha(traduzirErro(error));
 
   revalidatePath("/instrutores");
-  return { ok: true, codigo: data.codigo };
+  return { ok: true, codigo: data.codigo, id: data.id };
 }
 
 /**
@@ -198,4 +200,42 @@ export async function reativarInstrutor(dados: unknown): Promise<ResultadoDeInst
   const conferido = esquemaDeSituacao.safeParse(dados);
   if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
   return gravarSituacao(conferido.data.id, "ativo");
+}
+
+/**
+ * Sincroniza as habilitações do instrutor com o painel de disciplinas (`FR-022`, spec 019 da v2.0).
+ *
+ * ⚠️ UMA CHAMADA, UMA TRANSAÇÃO. `sincronizar_habilitacoes` cria, reativa sem duplicar e inativa sem
+ * apagar; fazer isso aqui, em várias escritas, deixaria o painel pela metade na primeira recusa.
+ *
+ * ⚠️ A NEGAÇÃO É DO BANCO: a função é `SECURITY INVOKER`, consulta a permissão da sessão e recusa com
+ * `42501` quando a RLS não alcança alguma disciplina.
+ */
+export async function sincronizarHabilitacoes(dados: unknown): Promise<ResultadoDeInstrutor> {
+  const conferido = esquemaDeHabilitacoes.safeParse(dados);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+
+  const supabase = await criarClienteDeServidor();
+  const { error } = await supabase.rpc("sincronizar_habilitacoes", {
+    p_instrutor_id: conferido.data.instrutorId,
+    p_disciplinas: conferido.data.disciplinas,
+  });
+  if (error) {
+    if (error.code === "42501") {
+      return falha("O seu perfil não alcança alguma das disciplinas marcadas.");
+    }
+    if (error.code === "22023") {
+      return falha("Há disciplina inativa ou inexistente entre as marcadas.");
+    }
+    return falha(traduzirErro(error));
+  }
+
+  const { data } = await supabase
+    .from("vw_instrutores")
+    .select("codigo")
+    .eq("id", conferido.data.instrutorId)
+    .maybeSingle();
+  revalidatePath("/instrutores");
+  if (data?.codigo) revalidatePath(`/instrutores/${data.codigo}`);
+  return { ok: true, codigo: data?.codigo ?? "" };
 }
