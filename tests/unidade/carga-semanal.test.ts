@@ -8,7 +8,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   cargaPorSemana,
+  limitesDoAnoIso,
   semanaIsoDe,
+  semanasDoAno,
   semanasForaDaFaixa,
   type AtribuicaoComJanela,
 } from "@/lib/dominio/carga-semanal";
@@ -127,5 +129,39 @@ describe("sem atribuição · sem semana e sem alerta", () => {
   it("sem faixa — regime não informado — não há o que comparar", () => {
     const cargas = cargaPorSemana([janela("2026-03-02", "2026-03-08", 40)]);
     expect(semanasForaDaFaixa(cargas, null)).toEqual([]);
+  });
+});
+
+describe("CHK005 · todas as semanas ISO do ano corrente, decisão de 15/09/2026", () => {
+  it("o ano ISO de 2026 vai de 29/12/2025 a 03/01/2027; o de 2027, de 04/01/2027 a 02/01/2028", () => {
+    expect(limitesDoAnoIso(2026)).toEqual({ inicio: "2025-12-29", fim: "2027-01-03" });
+    expect(limitesDoAnoIso(2027)).toEqual({ inicio: "2027-01-04", fim: "2028-01-02" });
+  });
+
+  it("a parte de 2026 de uma janela que começou em 2025 entra; as semanas de 2025 saem", () => {
+    // 01/12/2025 (segunda, semana 49 de 2025) a 25/01/2026 (domingo, semana 4 de 2026).
+    const cargas = cargaPorSemana([janela("2025-12-01", "2026-01-25", 14)]);
+    const doAno = semanasDoAno(cargas, 2026);
+    expect(doAno.map((c) => `${c.semana.numero}/${c.semana.ano}`)).toEqual([
+      "1/2026",
+      "2/2026",
+      "3/2026",
+      "4/2026",
+    ]);
+    // A semana 1 de 2026 começa em 29/12/2025: ela é do ano corrente, mesmo com três dias de 2025.
+    expect(doAno[0]?.semana.segunda).toBe("2025-12-29");
+    expect(semanasForaDaFaixa(doAno, REGIME_20H)).toHaveLength(4);
+  });
+
+  it("semana de janela que avança para o ano seguinte sai do ano corrente", () => {
+    // 21/12/2026 a 10/01/2027: semanas 52 e 53 de 2026, e 1 de 2027.
+    const cargas = cargaPorSemana([janela("2026-12-21", "2027-01-10", 14)]);
+    expect(semanasDoAno(cargas, 2026).map((c) => c.semana.numero)).toEqual([52, 53]);
+    expect(semanasDoAno(cargas, 2027).map((c) => c.semana.numero)).toEqual([1]);
+  });
+
+  it("não há recorte por hoje: semana que já passou conta igual", () => {
+    const cargas = cargaPorSemana([janela("2026-01-05", "2026-01-11", 20)]);
+    expect(semanasForaDaFaixa(semanasDoAno(cargas, 2026), REGIME_20H)).toHaveLength(1);
   });
 });

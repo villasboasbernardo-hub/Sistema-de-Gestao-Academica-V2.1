@@ -24,6 +24,15 @@
  * rateados pelo `RN-MAT-05` ÷ `disciplinas.semanas` (T011, 15/09/2026). Esta função não recalcula a média
  * nem conhece rateio; ela só distribui a média pelas semanas ISO que a janela toca.
  *
+ * > *"O alerta de faixa avalia TODAS as semanas ISO que caem no ano corrente e estão cobertas por
+ * > atribuição ativa, inclusive semanas já passadas, e inclusive a parte que cai no ano corrente de uma
+ * > janela que começou no ano anterior."* — decisão de Bernardo Villas Boas, 15/09/2026 (CHK005)
+ *
+ * ⚠️ "SEMANA DO ANO" É A DO ANO ISO, que é o ano da quinta-feira da semana (ISO 8601). A semana 1 de 2026
+ * começa em 29/12/2025, e a de 28/12/2026 a 03/01/2027 é a 53 de 2026. `limitesDoAnoIso` dá a primeira
+ * segunda e o último domingo do ano, e `semanasDoAno` recorta as semanas por ele. Não há recorte por
+ * "hoje": semana que já passou conta igual.
+ *
  * ⚠️ ATRIBUIÇÃO SEM JANELA OU SEM MÉDIA NÃO ENTRA EM SEMANA NENHUMA. Sem data não há semana a cobrir; a
  * ficha já mostra essa atribuição com a janela em branco.
  *
@@ -96,6 +105,21 @@ export function semanaIsoDe(data: string): SemanaIso | null {
   return dia === null ? null : semanaDoDia(dia);
 }
 
+/**
+ * A primeira segunda-feira e o último domingo do ano ISO, `AAAA-MM-DD`.
+ *
+ * A semana 1 é a que contém 04/01; a última é a que contém 28/12. É o intervalo que uma janela precisa
+ * tocar para ter semana no ano — inclusive vinda do ano anterior.
+ */
+export function limitesDoAnoIso(ano: number): { readonly inicio: string; readonly fim: string } {
+  const quatroDeJaneiro = Math.floor(Date.UTC(ano, 0, 4) / DIA_MS);
+  const vinteEOitoDeDezembro = Math.floor(Date.UTC(ano, 11, 28) / DIA_MS);
+  return {
+    inicio: paraData(segundaDe(quatroDeJaneiro)),
+    fim: paraData(segundaDe(vinteEOitoDeDezembro) + 6),
+  };
+}
+
 /** Arredonda a centésimos: a soma de médias em ponto flutuante não pode errar o limite exato. */
 const centesimos = (n: number) => Math.round(n * 100) / 100;
 
@@ -131,6 +155,17 @@ export function cargaPorSemana(
       carga: centesimos(v.carga),
       atribuicoes: v.atribuicoes,
     }));
+}
+
+/**
+ * As semanas do ano ISO informado, inclusive as já passadas e as de janela vinda do ano anterior
+ * (decisão de 15/09/2026, CHK005). Semana de outro ano ISO sai.
+ */
+export function semanasDoAno(
+  cargas: readonly CargaDaSemana[],
+  ano: number,
+): readonly CargaDaSemana[] {
+  return cargas.filter((c) => c.semana.ano === ano);
 }
 
 /**

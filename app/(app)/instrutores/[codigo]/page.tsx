@@ -27,7 +27,12 @@ import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
 import { alertaForaDaFaixa, alertaSemCapacitacao } from "@/lib/dominio/alertas-instrutor";
-import { cargaPorSemana, semanasForaDaFaixa } from "@/lib/dominio/carga-semanal";
+import {
+  cargaPorSemana,
+  limitesDoAnoIso,
+  semanasDoAno,
+  semanasForaDaFaixa,
+} from "@/lib/dominio/carga-semanal";
 import { anoCorrente, hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -99,6 +104,7 @@ export default async function FichaDoInstrutor({
   }
 
   const ano = anoCorrente();
+  const limitesDoAno = limitesDoAnoIso(ano);
   const [{ data: pessoal }, cargaRes, atribuicoesRes, vinculosRes] = await Promise.all([
     supabase
       .from("vw_instrutor_dados_pessoais")
@@ -114,10 +120,18 @@ export default async function FichaDoInstrutor({
     supabase
       .from("vw_instrutor_carga_prevista")
       .select(
-        "atribuicao_id, nome_disciplina, curso_codigo, turma_codigo, previsao_inicio, previsao_termino, tempos_previstos, semanas, media_semanal",
+        "atribuicao_id, ano, nome_disciplina, curso_codigo, turma_codigo, previsao_inicio, previsao_termino, tempos_previstos, semanas, media_semanal",
       )
       .eq("instrutor_id", instrutor.id)
-      .eq("ano", ano)
+      /*
+       * ⚠️ DUAS PERGUNTAS NA MESMA CONSULTA (CHK005, decisão de Bernardo Villas Boas, 15/09/2026). A seção
+       * de carga lista as atribuições **do ano** pela data de início (T011 c); o alerta de faixa precisa
+       * de toda janela que toca o ano ISO corrente, inclusive a que começou no ano anterior. Vêm as duas,
+       * e a lista é recortada abaixo, em memória.
+       */
+      .or(
+        `ano.eq.${ano},and(previsao_inicio.lte.${limitesDoAno.fim},previsao_termino.gte.${limitesDoAno.inicio})`,
+      )
       .order("previsao_inicio"),
     supabase
       .from("instrutor_disciplina")
@@ -153,28 +167,35 @@ export default async function FichaDoInstrutor({
           maximo: Number(cargaRes.data.faixa_semanal_max),
         }
       : null;
-  const atribuicoes = atribuicoesRes.error
-    ? null
-    : (atribuicoesRes.data ?? []).map((a) => ({
-        id: a.atribuicao_id as string,
-        disciplina: a.nome_disciplina as string,
-        curso: a.curso_codigo as string,
-        turma: a.turma_codigo as string,
-        inicio: a.previsao_inicio,
-        termino: a.previsao_termino,
-        tempos: Number(a.tempos_previstos ?? 0),
-        semanas: a.semanas,
-        mediaSemanal: a.media_semanal === null ? null : Number(a.media_semanal),
-      }));
+  const janelasDoAno = atribuicoesRes.error ? null : (atribuicoesRes.data ?? []);
+  const atribuicoes =
+    janelasDoAno === null
+      ? null
+      : janelasDoAno
+          .filter((a) => a.ano === ano)
+          .map((a) => ({
+            id: a.atribuicao_id as string,
+            disciplina: a.nome_disciplina as string,
+            curso: a.curso_codigo as string,
+            turma: a.turma_codigo as string,
+            inicio: a.previsao_inicio,
+            termino: a.previsao_termino,
+            tempos: Number(a.tempos_previstos ?? 0),
+            semanas: a.semanas,
+            mediaSemanal: a.media_semanal === null ? null : Number(a.media_semanal),
+          }));
   const alertas = [
     alertaForaDaFaixa(
       semanasForaDaFaixa(
-        cargaPorSemana(
-          (atribuicoes ?? []).map((a) => ({
-            inicio: a.inicio,
-            termino: a.termino,
-            mediaSemanal: a.mediaSemanal,
-          })),
+        semanasDoAno(
+          cargaPorSemana(
+            (janelasDoAno ?? []).map((a) => ({
+              inicio: a.previsao_inicio,
+              termino: a.previsao_termino,
+              mediaSemanal: a.media_semanal === null ? null : Number(a.media_semanal),
+            })),
+          ),
+          ano,
         ),
         faixa,
       ),

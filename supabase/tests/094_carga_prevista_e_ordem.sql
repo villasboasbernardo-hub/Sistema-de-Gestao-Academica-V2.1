@@ -19,7 +19,7 @@
 -- =================================================================================
 
 begin;
-select plan(15);
+select plan(16);
 
 -- ---------------------------------------------------------------------------------
 -- A amostra. Pesos da `escala_antiguidade`: CMG=1, CT=4, SC=13, SCNS=13; posto fora da escala
@@ -275,6 +275,37 @@ select ok(
     where table_schema = 'public' and table_name = 'vw_instrutor_carga_prevista'
       and column_name in ('previsao_inicio', 'previsao_termino', 'media_semanal')),
   'RN-2027-06 · vw_instrutor_carga_prevista entrega janela e media de cada atribuicao para a soma por semana'
+);
+
+-- ---------------------------------------------------------------------------------
+-- 16. CHK005 — decisao de Bernardo Villas Boas, 15/09/2026.
+--
+-- O alerta de faixa avalia TODAS as semanas ISO do ano corrente cobertas por atribuicao ativa,
+-- inclusive a parte de uma janela que comecou no ano anterior. A faixa do ano sai da linha de
+-- `vw_instrutor_carga_anual`; por isso a janela precisa dar linha em todo ano que toca.
+-- Amostra: T094-CT-SEM, sem nenhuma outra atribuicao, numa janela de 20/12/2027 a 30/01/2028.
+-- Esperado: linhas em 2027 (inicio, com os tempos) e 2028 (so tocado pela janela, previsto zero).
+-- ---------------------------------------------------------------------------------
+insert into public.disciplinas
+  (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos,
+   previsao_inicio, previsao_termino, modo_atribuicao_padrao)
+values
+  ('22222222-0000-0000-0000-0000000940d5', 'T094-VIR', '11111111-0000-0000-0000-000000000094',
+   'T94-VIR', 'Virada de ano T094', 18, '2027-12-20', '2028-01-30', 'dividido');
+insert into public.turma_disciplina (id, codigo, turma_id, disciplina_id) values
+  ('55555555-0000-0000-0000-0000000940a5', 'T094-TD-VIR', '44444444-0000-0000-0000-000000000094', '22222222-0000-0000-0000-0000000940d5');
+insert into public.turma_disciplina_instrutor (codigo, turma_disciplina_id, instrutor_id, status)
+select 'T094-TDI-9', '55555555-0000-0000-0000-0000000940a5', i.id, 'ativo'
+  from public.instrutores i where i.codigo = 'T094-CT-SEM';
+
+select results_eq(
+  $$select c.ano::int, c.ta_previsto_ano::numeric
+      from public.vw_instrutor_carga_anual c
+      join public.instrutores i on i.id = c.instrutor_id
+     where i.codigo = 'T094-CT-SEM'
+     order by c.ano$$,
+  $$values (2027, 18.00::numeric), (2028, 0.00)$$,
+  'CHK005 · a janela que atravessa o ano da linha — e faixa — em todo ano que toca, e o previsto fica no ano do inicio'
 );
 
 select * from finish();

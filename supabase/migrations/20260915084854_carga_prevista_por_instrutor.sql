@@ -37,6 +37,15 @@
 --    sao as da migration `20260829235731`, na mesma ordem e com as mesmas expressoes; o que muda e o
 --    FROM, que passa a ter os anos de fato E os de previsao — antes, instrutor com carga prevista num
 --    ano sem aula lancada nao teria linha naquele ano.
+--
+-- ⚠️ E TAMBEM OS ANOS QUE A JANELA PREVISTA TOCA (decisao de Bernardo Villas Boas, 15/09/2026, CHK005):
+--    o alerta de faixa avalia todas as semanas ISO do ano corrente cobertas por atribuicao ativa,
+--    inclusive a parte de uma janela que comecou no ano anterior. A faixa do ano vem desta view; sem a
+--    linha daquele ano, a janela vinda do ano anterior nao teria faixa e o alerta nao dispararia.
+--    `ta_previsto_ano` nao muda: continua contando pela data de inicio (T011 c), e o ano so tocado
+--    pela janela tem linha com previsto zero. Os limites usam `inicio - 3` e `termino + 3` porque a
+--    semana ISO pertence ao ano da sua quinta-feira: 01/01 numa sexta cai na ultima semana do ano
+--    anterior. Uma linha a mais, com zero, e inofensiva; uma a menos cala o alerta.
 -- =================================================================================
 
 create view public.vw_instrutor_carga_prevista
@@ -147,10 +156,23 @@ previstos as (
    where ano is not null
    group by 1, 2
 ),
+janelas as (
+  select p.instrutor_id,
+         generate_series(
+           extract(year from p.previsao_inicio - 3)::int,
+           extract(year from p.previsao_termino + 3)::int
+         )::smallint as ano
+    from public.vw_instrutor_carga_prevista p
+   where p.previsao_inicio is not null
+     and p.previsao_termino is not null
+     and p.previsao_termino >= p.previsao_inicio
+),
 anos as (
   select instrutor_id, ano from consolidado
   union
   select instrutor_id, ano from previstos
+  union
+  select instrutor_id, ano from janelas
 )
 select
   i.id                            as instrutor_id,

@@ -656,6 +656,27 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     ).toHaveCount(0);
   });
 
+  test("CHK005 · a janela que começou no ano anterior alerta só nas semanas do ano corrente", async ({
+    page,
+  }) => {
+    // 01/12 do ano anterior a 31/01 do corrente, 25 h por semana: acima da faixa de 8 a 12 h do 20h.
+    const ano = new Date().getFullYear();
+    await abrirFicha(page, amostra.codigos.semCapacitacao);
+    const alerta = page
+      .locator('[data-slot="alerta-conformidade"]')
+      .filter({ hasText: "Carga semanal prevista fora da faixa do regime" });
+    await expect(alerta).toBeVisible();
+    const linhas = alerta.getByText(/^Semana \d+\/\d{4} \(/);
+    expect(await linhas.count(), "a parte do ano corrente não alertou").toBeGreaterThanOrEqual(4);
+    for (const texto of await linhas.allInnerTexts()) {
+      expect(texto, "semana de outro ano entrou no alerta").toMatch(
+        new RegExp(`^Semana [0-9]+/${ano} [(].*: 25 h, acima da faixa de 8 a 12 h[.]$`),
+      );
+    }
+    // A atribuição começou no ano anterior: não entra na carga prevista do ano (T011 c).
+    await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("0 TA");
+  });
+
   test("40h com 20 horas por semana está dentro da faixa, e não alerta", async ({ page }) => {
     await abrirFicha(page, amostra.codigos.ctMaisModerno);
     await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("80 TA");

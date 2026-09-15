@@ -21,8 +21,10 @@
  * ⚠️ **A CARGA PREVISTA ENTRA SÓ COM `comCargaPrevista`**, desde que a T011 e a composição semanal
  * foram decididas (decisão de Bernardo Villas Boas, 15/09/2026). Com a opção, o CT mais antigo (20h)
  * recebe uma disciplina de 56 tempos e o CT mais moderno (40h) uma de 80, as duas numa janela de quatro
- * semanas ISO exatas — 14 e 20 horas por semana, os dois lados do `SC-006`. Sem a opção, a amostra fica
- * como era, para não mudar as contagens das outras suítes.
+ * semanas ISO exatas — 14 e 20 horas por semana, os dois lados do `SC-006`. E o sem capacitação (20h)
+ * recebe uma de 225 tempos de 01/12 do ano anterior a 31/01 do corrente — 9 semanas, 25 horas por semana —,
+ * a janela que atravessa o ano do CHK005 (decisão de Bernardo Villas Boas, 15/09/2026). Sem a opção, a
+ * amostra fica como era, para não mudar as contagens das outras suítes.
  *
  * ⚠️ **AS CAPACITAÇÕES SÃO SEPARADAS POR VÍRGULA**, como a base da v2.0 as escreve
  * (`"C-Exp-TE, C-Esp-DID"`; spec 014 da v2.0, `data-model.md`: *"split por vírgula"*).
@@ -317,6 +319,15 @@ export async function semearInstrutores(
           previsao_inicio: iso(inicio),
           previsao_termino: iso(termino),
         },
+        {
+          codigo: `DIS-${p}-PV`,
+          curso_id: curso.id,
+          cod_disciplina: `${p}-V`,
+          nome_disciplina: `Virada de ano ${p}`,
+          carga_horaria_tempos: 225,
+          previsao_inicio: `${ano - 1}-12-01`,
+          previsao_termino: `${ano}-01-31`,
+        },
       ])
       .select("id, codigo");
     if (erroPrevistas)
@@ -329,6 +340,7 @@ export async function semearInstrutores(
       .insert([
         { codigo: `TD-${p}-P14`, turma_id: turma.id, disciplina_id: idDaPrevista(`DIS-${p}-P14`) },
         { codigo: `TD-${p}-P20`, turma_id: turma.id, disciplina_id: idDaPrevista(`DIS-${p}-P20`) },
+        { codigo: `TD-${p}-PV`, turma_id: turma.id, disciplina_id: idDaPrevista(`DIS-${p}-PV`) },
       ])
       .select("id, codigo");
     if (erroTds) throw new Error(`falha ao semear turmas das previstas: ${erroTds.message}`);
@@ -346,6 +358,11 @@ export async function semearInstrutores(
           codigo: `TDI-${p}-P20`,
           turma_disciplina_id: idDoTd(`TD-${p}-P20`),
           instrutor_id: idDe("ctMaisModerno"),
+        },
+        {
+          codigo: `TDI-${p}-PV`,
+          turma_disciplina_id: idDoTd(`TD-${p}-PV`),
+          instrutor_id: idDe("semCapacitacao"),
         },
       ]);
     if (erroDesignacao)
