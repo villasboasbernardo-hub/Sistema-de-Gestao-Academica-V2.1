@@ -15,11 +15,11 @@
  * ⚠️ AVISO NÃO BLOQUEIA (`RN-DEG-02`). O resultado é só lista de quem aparece em cada aviso; não há
  * campo que uma tela possa usar para desabilitar gravação.
  *
- * ⚠️ O AVISO DE OBRIGATÓRIO PENDENTE ENCONTRA 15 NA BASE REAL, e todos são militares (12 da ativa e 3
- * do Magistério Militar Naval), medido em 15/09/2026. Especialidade/habilitação ficou opcional na tela
- * pela emenda ao `RN-INST-03` (decisão de Bernardo Villas Boas, 15/09/2026), mas o aviso **continua cobrando** a especialidade
- * desses militares: a decisão manda cobrar quando há militar entre eles. Nenhum civil está sem o campo,
- * e por isso nenhuma delimitação para civil foi registrada.
+ * ⚠️ O AVISO DE OBRIGATÓRIO PENDENTE COBRA ESPECIALIDADE SÓ DE MILITAR (decisão de Bernardo Villas Boas,
+ * 15/09/2026, CHK008 e CHK012). O `RN-INST-03` mantém os cinco obrigatórios, e o quinto —
+ * especialidade/habilitação — se aplica a instrutor militar (`ehMilitar`, pelo `FR-002`). Civil sem
+ * especialidade não é pendência. Na base real, medido em 15/09/2026, o aviso encontra 15, todos
+ * militares (12 da ativa e 3 do Magistério Militar Naval).
  *
  * ⚠️ "DATA DE INÍCIO DE DOCÊNCIA NÃO INFORMADA" ENTRA NO LUGAR DO ALERTA DO `FR-017` (decisão de Bernardo Villas Boas, 15/09/2026):
  * sem a data não há como contar o ano. Ele cobra quem **também** não tem capacitação — é para esses que o
@@ -27,6 +27,8 @@
  * DECISÃO de Bernardo Villas Boas, 15/09/2026 (CHK004): cobrar a data de quem já tem capacitação
  * seria ruído.
  */
+
+import { ehMilitar } from "./militar-ou-civil";
 
 export type InstrutorParaAvisos = {
   readonly id: string;
@@ -65,7 +67,8 @@ export const AVISOS_INICIAIS: readonly RegraDeAviso[] = [
     chave: "obrigatorio-pendente",
     titulo: "Campo obrigatório pendente",
     seAplica: (i) =>
-      [i.pg, i.especialidade, i.nomeCompleto, i.categoria, i.om].some((campo) => vazio(campo)),
+      [i.pg, i.nomeCompleto, i.categoria, i.om].some((campo) => vazio(campo)) ||
+      (ehMilitar(i.pg) && vazio(i.especialidade)),
   },
   {
     chave: "sem-data-docencia",

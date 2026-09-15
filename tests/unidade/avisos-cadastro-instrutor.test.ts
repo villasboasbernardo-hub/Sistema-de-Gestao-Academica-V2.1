@@ -69,6 +69,22 @@ describe("`RF-INSTR-09` · os dois avisos com que a lista começa", () => {
     expect(pendente?.instrutores.map((i) => i.id)).toEqual(["sem-om", "sem-especialidade"]);
   });
 
+  it("especialidade vazia é pendência só de militar — civil (SC, SCNS) sem ela não entra (CHK008 e CHK012)", () => {
+    const lista = [
+      { ...completo, id: "militar-sem-esp", especialidade: null },
+      { ...completo, id: "sc-sem-esp", pg: "SC", categoria: "SCNS", especialidade: null },
+      { ...completo, id: "scns-sem-esp", pg: "SCNS", especialidade: "  " },
+      { ...completo, id: "fora-da-escala-sem-esp", pg: "XYZ", especialidade: null },
+      { ...completo, id: "civil-sem-om", pg: "SC", especialidade: null, om: null },
+    ];
+    const pendente = avisosDoCadastro(lista, AVISOS_INICIAIS)[1];
+    expect(pendente?.instrutores.map((i) => i.id)).toEqual([
+      "militar-sem-esp",
+      "fora-da-escala-sem-esp",
+      "civil-sem-om",
+    ]);
+  });
+
   it("aviso que não encontra ninguém continua no resultado — não some do quadro", () => {
     expect(avisosDoCadastro([completo], AVISOS_INICIAIS)).toHaveLength(3);
   });

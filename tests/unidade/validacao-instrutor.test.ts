@@ -16,6 +16,7 @@ import {
   esquemaDeDadosPessoais,
   esquemaDeEdicaoDeInstrutor,
   esquemaDeSituacao,
+  ESPECIALIDADE_DE_MILITAR,
   ESPECIALIDADE_EM_BRANCO,
   OBRIGATORIOS_DO_INSTRUTOR,
 } from "@/lib/validacao/instrutor";
@@ -28,8 +29,8 @@ const VALIDO = {
   om: "CIAARA",
 };
 
-describe("`FR-005` emendado em 15/09/2026 · os quatro obrigatórios", () => {
-  it("são exatamente quatro — especialidade/habilitação saiu da lista", () => {
+describe("`RN-INST-03` delimitado em 15/09/2026 · quatro de todo instrutor e a especialidade de militar", () => {
+  it("os de todo instrutor são exatamente quatro — a especialidade é regra à parte, de militar", () => {
     expect(OBRIGATORIOS_DO_INSTRUTOR.map((o) => o.campo)).toEqual([
       "posto_graduacao",
       "nome_completo",
@@ -38,15 +39,33 @@ describe("`FR-005` emendado em 15/09/2026 · os quatro obrigatórios", () => {
     ]);
   });
 
-  it("especialidade vazia ou ausente passa, e grava nulo — os 15 militares sem sufixo salvam a ficha", () => {
+  it("cadastro novo de militar sem especialidade é recusado, com a mensagem própria", () => {
     const vazia = esquemaDeCriacaoDeInstrutor.safeParse({
       funcional: { ...VALIDO, esp_hab_obs: "" },
     });
-    expect(vazia.success && vazia.data.funcional.esp_hab_obs).toBeNull();
+    expect(vazia.success).toBe(false);
+    expect(vazia.error?.issues[0]?.message).toBe(ESPECIALIDADE_DE_MILITAR);
+    expect(vazia.error?.issues[0]?.path).toEqual(["funcional", "esp_hab_obs"]);
     const semCampo: Record<string, string> = { ...VALIDO };
     delete semCampo.esp_hab_obs;
-    const ausente = esquemaDeCriacaoDeInstrutor.safeParse({ funcional: semCampo });
-    expect(ausente.success && ausente.data.funcional.esp_hab_obs).toBeNull();
+    expect(esquemaDeCriacaoDeInstrutor.safeParse({ funcional: semCampo }).success).toBe(false);
+  });
+
+  it("cadastro novo de civil (SC, SCNS) sem especialidade passa, e grava nulo", () => {
+    for (const posto of ["SC", "SCNS"]) {
+      const r = esquemaDeCriacaoDeInstrutor.safeParse({
+        funcional: { ...VALIDO, posto_graduacao: posto, categoria: "SCNS", esp_hab_obs: "" },
+      });
+      expect(r.success && r.data.funcional.esp_hab_obs).toBeNull();
+    }
+  });
+
+  it("edição de militar sem especialidade passa, e grava nulo — os 15 da base real salvam a ficha", () => {
+    const r = esquemaDeEdicaoDeInstrutor.safeParse({
+      id: "00000000-0000-4000-8000-000000000001",
+      funcional: { ...VALIDO, esp_hab_obs: "" },
+    });
+    expect(r.success && r.data.funcional.esp_hab_obs).toBeNull();
   });
 
   it("especialidade só com espaços continua recusada, com a mensagem própria", () => {

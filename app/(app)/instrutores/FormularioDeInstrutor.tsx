@@ -248,7 +248,7 @@ export function FormularioDeInstrutor({
             obrigatorio
           />
         )}
-        {/* Opcional desde 15/09/2026 (emenda ao RN-INST-03 e ao FR-005): há militar sem sufixo. */}
+        {/* RN-INST-03 delimitado (15/09/2026): obrigatória em cadastro NOVO de militar — o Zod e o banco recusam; ficha existente sem ela salva. Sem asterisco, porque civil não a tem. */}
         <Campo id="esp_hab_obs" rotulo="Especialidade/Habilitação" valor={v.esp_hab_obs} />
         <Campo id="nome_completo" rotulo="Nome completo" valor={v.nome_completo} obrigatorio />
         <Campo id="nome_guerra" rotulo="Nome de guerra" valor={v.nome_guerra} />

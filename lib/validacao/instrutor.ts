@@ -24,6 +24,7 @@
 import { z } from "zod";
 
 import { UFS } from "@/lib/constantes/instrutor";
+import { ehMilitar } from "@/lib/dominio/militar-ou-civil";
 import {
   limparMascara,
   mascararCep,
@@ -37,12 +38,14 @@ import { Constants } from "@/lib/tipos/database";
 const REGIMES = Constants.public.Enums.regime_trabalho_docente;
 
 /**
- * Os obrigatórios, com a mensagem que diz qual falta. A ordem é a do `RN-INST-03`.
+ * Os obrigatórios de **todo** instrutor, com a mensagem que diz qual falta. A ordem é a do `RN-INST-03`.
  *
- * ⚠️ SÃO QUATRO DESDE 15/09/2026, E NÃO CINCO (decisão de Bernardo Villas Boas, 15/09/2026). Especialidade/habilitação ficou
- * **opcional**: o Épico 2 mediu 15 instrutores da base real sem sufixo de especialidade — todos
- * militares — e tirou o `NOT NULL` do banco; exigir o campo na tela impedia esses 15 de salvar a própria
- * ficha. Emenda registrada ao `RN-INST-03` e ao `FR-005` na spec 006, sem alterar o documento 04.
+ * ⚠️ O `RN-INST-03` TEM CINCO, E O QUINTO É DELIMITADO (decisão de Bernardo Villas Boas, 15/09/2026,
+ * CHK008 e CHK012). Especialidade/habilitação se aplica a **militar** — `ehMilitar`, pelo `FR-002` — e é
+ * recusada ausente só em **cadastro novo** (`esquemaDeCriacaoDeInstrutor`). Ficha já existente sem
+ * especialidade continua salvando: o Épico 2 mediu 15 militares da base real sem sufixo, e travar a
+ * ficha deles foi o defeito corrigido na rodada anterior. Por isso a lista abaixo tem os quatro que
+ * valem para todos, e a especialidade vive numa regra à parte.
  */
 export const OBRIGATORIOS_DO_INSTRUTOR = [
   { campo: "posto_graduacao", rotulo: "Posto/Graduação", mensagem: "Informe o posto/graduação." },
@@ -50,6 +53,10 @@ export const OBRIGATORIOS_DO_INSTRUTOR = [
   { campo: "categoria", rotulo: "Categoria", mensagem: "Informe a categoria." },
   { campo: "om", rotulo: "Organização militar", mensagem: "Informe a organização militar." },
 ] as const;
+
+/** A mensagem de militar novo sem especialidade — recusado no Zod e no gatilho do banco. */
+export const ESPECIALIDADE_DE_MILITAR =
+  "Informe a especialidade/habilitação: ela é obrigatória no cadastro de militar.";
 
 /** A mensagem de especialidade preenchida só com espaços — recusada no Zod e no `CHECK` do banco. */
 export const ESPECIALIDADE_EM_BRANCO =
@@ -175,7 +182,19 @@ export const esquemaDeDadosPessoais = z.object({
   endereco_cep: comMascara("O CEP deve ter 8 dígitos.", [8], mascararCep),
 });
 
-export const esquemaDeCriacaoDeInstrutor = z.object({ funcional: esquemaFuncionalDeInstrutor });
+/**
+ * Cadastro novo: os quatro de todo instrutor **e** a especialidade de militar (`RN-INST-03` delimitado).
+ *
+ * ⚠️ SÓ NA CRIAÇÃO. A edição usa o esquema funcional puro — ficha existente sem especialidade continua
+ * salvando (decisão de Bernardo Villas Boas, 15/09/2026).
+ */
+export const esquemaDeCriacaoDeInstrutor = z.object({
+  funcional: esquemaFuncionalDeInstrutor.superRefine((f, ctx) => {
+    if (ehMilitar(f.posto_graduacao) && f.esp_hab_obs === null) {
+      ctx.addIssue({ code: "custom", path: ["esp_hab_obs"], message: ESPECIALIDADE_DE_MILITAR });
+    }
+  }),
+});
 
 export const esquemaDeEdicaoDeInstrutor = z.object({
   id: z.guid("Instrutor inválido."),
@@ -188,6 +207,20 @@ export const esquemaDeGravacaoDePessoais = z.object({
 });
 
 export const esquemaDeSituacao = z.object({ id: z.guid("Instrutor inválido.") });
+
+/**
+ * A exclusão permanente de instrutor sem histórico (autorização de Bernardo Villas Boas, 15/09/2026).
+ *
+ * ⚠️ O CÓDIGO DIGITADO VIAJA ATÉ O BANCO, que o confere de novo: a confirmação por digitação é parte
+ * da regra de "permanente e irreversível", e não enfeite da tela.
+ */
+export const esquemaDeExclusaoDeInstrutor = z.object({
+  id: z.guid("Instrutor inválido."),
+  codigoConfirmacao: z
+    .string({ error: "Digite o código do instrutor para confirmar." })
+    .trim()
+    .min(1, "Digite o código do instrutor para confirmar."),
+});
 
 /**
  * O painel de disciplinas (`FR-022`, spec 019 da v2.0): o instrutor e o conjunto marcado.
