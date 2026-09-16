@@ -112,6 +112,9 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
     .insert({
       codigo: `INS-${s}`,
       posto_graduacao: "CT",
+      // ⚠️ Militar novo precisa de especialidade desde 15/09/2026 (`RN-INST-03` delimitado, gatilho de
+      // `20260915140000`). Sem ela a amostra nem nasce, e a tela Início reprova por motivo alheio.
+      esp_hab_obs: "-EF",
       nome_completo: `Instrutor De Percurso ${processo}`,
       categoria: "organica",
       om: "CIAARA",

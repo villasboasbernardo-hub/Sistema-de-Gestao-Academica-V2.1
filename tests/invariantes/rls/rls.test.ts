@@ -567,6 +567,215 @@ describe("FR-028 · recorte do dado pessoal de instrutor", () => {
   );
 });
 
+/**
+ * `FR-032`, `FR-033` — a metade da ESCRITA do recorte, que o Épico 3 deixou aberta.
+ *
+ * Contrato: `specs/006-cadastro-de-instrutores/contracts/recorte-de-escrita.md`
+ *
+ * ⚠️ A FRASE INTEIRA DO CONTRATO É *"QUEM NÃO VÊ, NÃO ESCREVE"*. Medido em 10/09/2026: os dois perfis
+ * de Orientação Pedagógica têm `editar` em instrutores e **não** leem a PII — gravavam CPF e endereço
+ * que a tela nunca lhes mostra. São eles que as negativas N-1 e N-2 nomeiam.
+ *
+ * ⚠️ AS NEGATIVAS CONFEREM O CÓDIGO DO ERRO, E NÃO SÓ A PRESENÇA DE ERRO. Antes da migration a função
+ * não existe, e a interface de dados responde "função não encontrada" — um teste que aceitasse
+ * qualquer erro passaria com o recorte ausente. Foi o que a primeira escrita desta suíte fazia.
+ *
+ * ⚠️ N-3 E N-5 SÃO CONTROLE POSITIVO, E SEM ELAS O BLOCO NÃO VALE. Um recorte que negasse todo mundo
+ * passaria em N-1, N-2 e N-6 — e quebraria a tela para quem tem direito, sem erro visível.
+ */
+const EDITAM_INSTRUTOR: readonly Perfil[] = [
+  ...COM_PII,
+  "encarregado_orientacao_pedagogica",
+  "ajudante_orientacao_pedagogica",
+];
+const NAO_LEEM_PII: readonly Perfil[] = [
+  ...SEM_PII,
+  "chefe_departamento_ensino",
+  "encarregado_orientacao_pedagogica",
+  "ajudante_orientacao_pedagogica",
+];
+
+describe("FR-032 · recorte de escrita do dado pessoal", () => {
+  let idDoInstrutor = "";
+
+  const lerComoDono = async () => {
+    const { data } = await admin
+      .from("instrutores")
+      .select("cpf, endereco_cep, nome_guerra")
+      .eq("id", idDoInstrutor)
+      .single();
+    return data;
+  };
+
+  beforeAll(async () => {
+    await admin.from("instrutores").delete().like("codigo", "RLS-INS-ESC%");
+    const { data, error } = await admin
+      .from("instrutores")
+      .insert({
+        codigo: "RLS-INS-ESC",
+        posto_graduacao: "CT",
+        esp_hab_obs: "-EF",
+        nome_completo: "Instrutor Da Escrita",
+        categoria: "Militar",
+        om: "CIAARA",
+        cpf: "000.000.000-00",
+        endereco_cep: "00000-000",
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`falha ao criar instrutor da escrita: ${error.message}`);
+    idDoInstrutor = data.id as string;
+  });
+
+  afterAll(async () => {
+    await admin.from("instrutores").delete().like("codigo", "RLS-INS-ESC%");
+  });
+
+  // ------------------------------------------------------------------ N-1 · NEGATIVO
+  it("N-1 (NEGATIVO) · encarregado_orientacao_pedagogica NÃO grava `cpf` — edita instrutor e não lê a PII", async () => {
+    const { error } = await cliente("encarregado_orientacao_pedagogica")
+      .from("instrutores")
+      .update({ cpf: "999.999.999-99" })
+      .eq("id", idDoInstrutor);
+    expect(error?.code, "a gravação de cpf não foi negada pelo privilégio de coluna").toBe("42501");
+    expect((await lerComoDono())?.cpf).toBe("000.000.000-00");
+  });
+
+  // ------------------------------------------------------------------ N-2 · NEGATIVO
+  it("N-2 (NEGATIVO) · ajudante_orientacao_pedagogica NÃO grava `endereco_cep`", async () => {
+    const { error } = await cliente("ajudante_orientacao_pedagogica")
+      .from("instrutores")
+      .update({ endereco_cep: "99999-999" })
+      .eq("id", idDoInstrutor);
+    expect(error?.code, "a gravação de endereco_cep não foi negada pelo banco").toBe("42501");
+    expect((await lerComoDono())?.endereco_cep).toBe("00000-000");
+  });
+
+  // ------------------------------------------------------------------ N-3 · controle positivo
+  it.each(COM_PII)("N-3 · %s grava `cpf` pela função com porteiro", async (perfil) => {
+    const valor = `${String(COM_PII.indexOf(perfil) + 1).repeat(3)}.000.000-00`;
+    const { error } = await cliente(perfil).rpc("gravar_dados_pessoais_instrutor", {
+      p_instrutor_id: idDoInstrutor,
+      p_dados: { cpf: valor },
+    });
+    expect(error).toBeNull();
+    expect((await lerComoDono())?.cpf).toBe(valor);
+  });
+
+  // ------------------------------------------------------------------ N-6 · NEGATIVO
+  it.each(NAO_LEEM_PII)(
+    "N-6 (NEGATIVO) · %s NÃO grava PII pela função — o porteiro é o mesmo da leitura",
+    async (perfil) => {
+      const antes = (await lerComoDono())?.cpf;
+      const { error } = await cliente(perfil).rpc("gravar_dados_pessoais_instrutor", {
+        p_instrutor_id: idDoInstrutor,
+        p_dados: { cpf: "888.888.888-88" },
+      });
+      expect(error?.code, "a função não recusou quem não lê a PII").toBe("42501");
+      expect((await lerComoDono())?.cpf).toBe(antes);
+    },
+  );
+
+  // ------------------------------------------------------------------ N-5 · controle positivo
+  it.each(EDITAM_INSTRUTOR)(
+    "N-5 · %s continua gravando coluna funcional — o recorte não recortou demais",
+    async (perfil) => {
+      const valor = `Guerra ${perfil}`;
+      const { error } = await cliente(perfil)
+        .from("instrutores")
+        .update({ nome_guerra: valor })
+        .eq("id", idDoInstrutor);
+      expect(error).toBeNull();
+      expect((await lerComoDono())?.nome_guerra).toBe(valor);
+    },
+  );
+
+  // ------------------------------------------------------------------ N-7 · NEGATIVO
+  it.each(COM_PII)(
+    "N-7 (NEGATIVO) · %s NÃO insere `cpf` direto na tabela — a inserção também passa pela função",
+    async (perfil) => {
+      const { error } = await cliente(perfil)
+        .from("instrutores")
+        .insert({
+          codigo: `RLS-INS-ESC-${COM_PII.indexOf(perfil)}`,
+          posto_graduacao: "CT",
+          esp_hab_obs: "-EF",
+          nome_completo: "Instrutor Inserido Com Cpf",
+          categoria: "Militar",
+          om: "CIAARA",
+          cpf: "777.777.777-77",
+        });
+      expect(error?.code, "a inserção com cpf não foi negada pelo privilégio de coluna").toBe(
+        "42501",
+      );
+    },
+  );
+
+  // ------------------------------------------------------------------ N-8 · NEGATIVO
+  it("N-8 (NEGATIVO) · a função recusa coluna fora das 12 — não vira porta dos fundos", async () => {
+    const { error } = await cliente("admin").rpc("gravar_dados_pessoais_instrutor", {
+      p_instrutor_id: idDoInstrutor,
+      p_dados: { nome_completo: "Nome Trocado Pela Porta Dos Fundos" },
+    });
+    expect(error?.code, "a função aceitou coluna que não é dado pessoal").toBe("22023");
+  });
+});
+
+/**
+ * `FR-029` da spec 006, `FR-027` da spec 004 — a autoria vem da SESSÃO, nunca do corpo da escrita.
+ *
+ * ⚠️ O CARIMBO É DO MOTOR. Quem grava pela interface de dados controla o corpo da requisição, e um
+ * `criado_por` escolhido por quem escreve é autoria falsificável. Os dois casos mandam de propósito
+ * um autor que não é a sessão, e exigem que o banco o ignore.
+ */
+describe("FR-029 · autoria vem da sessão, e não do que o cliente manda", () => {
+  const AUTOR_FALSO = "00000000-0000-0000-0000-00000000dead";
+
+  afterAll(async () => {
+    await admin.from("instrutores").delete().eq("codigo", "RLS-INS-AUT");
+  });
+
+  it("INSERT autenticado grava `criado_por` com a sessão, mesmo mandando outro autor", async () => {
+    await admin.from("instrutores").delete().eq("codigo", "RLS-INS-AUT");
+    const {
+      data: { user },
+    } = await cliente("admin").auth.getUser();
+    const { error } = await cliente("admin").from("instrutores").insert({
+      codigo: "RLS-INS-AUT",
+      posto_graduacao: "CT",
+      esp_hab_obs: "-EF",
+      nome_completo: "Instrutor Da Autoria",
+      categoria: "Militar",
+      om: "CIAARA",
+      criado_por: AUTOR_FALSO,
+    });
+    expect(error).toBeNull();
+    const { data } = await admin
+      .from("instrutores")
+      .select("criado_por")
+      .eq("codigo", "RLS-INS-AUT")
+      .single();
+    expect(data?.criado_por, "o banco aceitou o autor mandado pelo cliente").toBe(user?.id);
+  });
+
+  it("UPDATE autenticado grava `editado_por` com a sessão, mesmo mandando outro autor", async () => {
+    const {
+      data: { user },
+    } = await cliente("admin").auth.getUser();
+    const { error } = await cliente("admin")
+      .from("instrutores")
+      .update({ nome_guerra: "Autoria", editado_por: AUTOR_FALSO })
+      .eq("codigo", "RLS-INS-AUT");
+    expect(error).toBeNull();
+    const { data } = await admin
+      .from("instrutores")
+      .select("editado_por")
+      .eq("codigo", "RLS-INS-AUT")
+      .single();
+    expect(data?.editado_por, "o banco aceitou o editor mandado pelo cliente").toBe(user?.id);
+  });
+});
+
 describe("FR-026 · `ultimo_acesso` e o gatilho anti-escalonamento", () => {
   // ⚠️ ESTE TESTE EXISTE POR UMA RAZÃO ESPECÍFICA, e ela é fácil de esquecer:
   // `app.impedir_autoescalonamento` bloqueia mudança de `perfil`, `escopo_curso` e `status` feita
@@ -958,5 +1167,403 @@ describe("SC-007 (parte b) · a ação invocada FORA da tela é negada pelo banc
       classificacao: "regular",
     });
     expect(error).not.toBeNull();
+  });
+});
+
+describe("FR-010.1 · desativar instrutor não toca a conta", () => {
+  // ⚠️ SÃO DOIS CADASTROS COM CICLOS DE VIDA DIFERENTES. Desativar o docente diz que ele não recebe
+  // aula nova — não que perdeu o acesso. O Épico 3 decidiu o mesmo na direção inversa: usuário
+  // ligado a instrutor inativo mantém o vínculo, e a tela mostra a situação.
+  //
+  // ⚠️ A DESATIVAÇÃO VAI PELA SESSÃO DO ADMIN, e não pela `service_role`: um gatilho que desativasse
+  // a conta em cascata só dispararia pelo caminho real, e é esse caminho que precisa ficar provado.
+  const EMAIL = "rls-visual@ciaara.teste";
+  let idDoInstrutor = "";
+
+  beforeAll(async () => {
+    await admin.from("usuarios").update({ instrutor_id: null }).eq("email", EMAIL);
+    await admin.from("instrutores").delete().eq("codigo", "RLS-INS-VIN");
+    const { data, error } = await admin
+      .from("instrutores")
+      .insert({
+        codigo: "RLS-INS-VIN",
+        posto_graduacao: "CT",
+        esp_hab_obs: "-EF",
+        nome_completo: "Instrutor Com Conta",
+        categoria: "Militar",
+        om: "CIAARA",
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`falha ao criar instrutor vinculado: ${error.message}`);
+    idDoInstrutor = data.id as string;
+    const { error: erroVinculo } = await admin
+      .from("usuarios")
+      .update({ instrutor_id: idDoInstrutor })
+      .eq("email", EMAIL);
+    if (erroVinculo) throw new Error(`falha ao vincular: ${erroVinculo.message}`);
+  });
+
+  afterAll(async () => {
+    await admin.from("usuarios").update({ instrutor_id: null }).eq("email", EMAIL);
+    await admin.from("instrutores").delete().eq("codigo", "RLS-INS-VIN");
+  });
+
+  it("com o instrutor vinculado desativado, a conta segue ativa, vinculada, e alcança o mesmo", async () => {
+    const antes = await cliente("visualizacao").from("cursos").select("codigo").order("codigo");
+    expect(
+      (antes.data ?? []).length,
+      "controle: a sessão precisa alcançar algo antes",
+    ).toBeGreaterThan(0);
+
+    const { data: desativado, error } = await cliente("admin")
+      .from("instrutores")
+      .update({ status: "inativo" })
+      .eq("id", idDoInstrutor)
+      .select("status");
+    expect(error).toBeNull();
+    expect(desativado?.[0]?.status, "a desativação pela sessão do admin não gravou").toBe(
+      "inativo",
+    );
+
+    const { data: conta } = await admin
+      .from("usuarios")
+      .select("status, instrutor_id")
+      .eq("email", EMAIL)
+      .single();
+    expect(conta?.status, "desativar o instrutor desativou a conta em cascata").toBe("ativo");
+    expect(conta?.instrutor_id, "desativar o instrutor desfez o vínculo").toBe(idDoInstrutor);
+
+    const depois = await cliente("visualizacao").from("cursos").select("codigo").order("codigo");
+    expect(depois.data, "a sessão perdeu alcance quando o instrutor foi desativado").toEqual(
+      antes.data,
+    );
+
+    // Reativar (FR-010) volta o cadastro sem mexer na conta, pelo mesmo caminho.
+    const { error: erroReativar } = await cliente("admin")
+      .from("instrutores")
+      .update({ status: "ativo" })
+      .eq("id", idDoInstrutor);
+    expect(erroReativar).toBeNull();
+  });
+});
+
+describe("FR-022 · painel de disciplinas — sincronizar habilitações", () => {
+  // ⚠️ AS REGRAS SÃO AS DA SPEC 019 DA v2.0: desmarcar inativa e nunca apaga (FR-009); marcada sem
+  // vínculo é criada (FR-010); marcada com vínculo inativo é reativada, sem duplicar (FR-011); e
+  // vínculo com disciplina descontinuada fica como está (FR-013).
+  //
+  // ⚠️ PELA SESSÃO DO ADMIN, e não pela `service_role`: a função é SECURITY INVOKER, e é a RLS com JWT
+  // de verdade que decide. A `service_role` só monta a amostra e confere o que ficou gravado.
+  const CODIGOS_DISC = ["RLS-DISC-HAB1", "RLS-DISC-HAB2", "RLS-DISC-HAB3"];
+  let instrutorId = "";
+  const disc: Record<string, string> = {};
+
+  const vinculos = async () => {
+    const { data } = await admin
+      .from("instrutor_disciplina")
+      .select("codigo, disciplina_id, status")
+      .eq("instrutor_id", instrutorId)
+      .order("codigo");
+    return data ?? [];
+  };
+
+  const limparAmostra = async () => {
+    const { data: ins } = await admin.from("instrutores").select("id").eq("codigo", "RLS-INS-HAB");
+    for (const i of ins ?? []) {
+      await admin.from("instrutor_disciplina").delete().eq("instrutor_id", i.id);
+    }
+    await admin.from("disciplinas").delete().in("codigo", CODIGOS_DISC);
+    await admin.from("instrutores").delete().eq("codigo", "RLS-INS-HAB");
+  };
+
+  beforeAll(async () => {
+    await limparAmostra();
+    const { data: ins, error } = await admin
+      .from("instrutores")
+      .insert({
+        codigo: "RLS-INS-HAB",
+        posto_graduacao: "CT",
+        esp_hab_obs: "-EF",
+        nome_completo: "Instrutor Do Painel",
+        categoria: "Militar",
+        om: "CIAARA",
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`falha ao criar instrutor do painel: ${error.message}`);
+    instrutorId = ins.id as string;
+
+    const { data: ds, error: erroD } = await admin
+      .from("disciplinas")
+      .insert(
+        CODIGOS_DISC.map((codigo, n) => ({
+          codigo,
+          curso_id: CURSO_REGULAR,
+          cod_disciplina: `HAB-${n + 1}`,
+          nome_disciplina: `Disciplina Do Painel ${n + 1}`,
+          carga_horaria_tempos: 10,
+          status: n === 2 ? "inativo" : "ativo",
+        })),
+      )
+      .select("id, codigo");
+    if (erroD) throw new Error(`falha ao criar disciplinas do painel: ${erroD.message}`);
+    for (const d of ds ?? []) disc[d.codigo as string] = d.id as string;
+
+    // HAB2 já teve vínculo, desmarcado antes; HAB3 é disciplina inativa com vínculo ainda ativo.
+    const { error: erroV } = await admin.from("instrutor_disciplina").insert([
+      {
+        codigo: "VIN-RLSHAB2",
+        instrutor_id: instrutorId,
+        disciplina_id: disc["RLS-DISC-HAB2"],
+        status: "inativo",
+      },
+      {
+        codigo: "VIN-RLSHAB3",
+        instrutor_id: instrutorId,
+        disciplina_id: disc["RLS-DISC-HAB3"],
+        status: "ativo",
+      },
+    ]);
+    if (erroV) throw new Error(`falha ao criar vínculos do painel: ${erroV.message}`);
+  });
+
+  afterAll(async () => {
+    await limparAmostra();
+  });
+
+  it("marcar cria o novo, reativa o antigo sem duplicar, e não toca a disciplina inativa", async () => {
+    const { data, error } = await cliente("admin").rpc("sincronizar_habilitacoes", {
+      p_instrutor_id: instrutorId,
+      p_disciplinas: [disc["RLS-DISC-HAB1"], disc["RLS-DISC-HAB2"]],
+    });
+    expect(error).toBeNull();
+    expect(data).toEqual({ criados: 1, reativados: 1, inativados: 0 });
+
+    const linhas = await vinculos();
+    const deHab2 = linhas.filter((l) => l.disciplina_id === disc["RLS-DISC-HAB2"]);
+    expect(deHab2, "reativar duplicou o vínculo (FR-011)").toHaveLength(1);
+    expect(deHab2[0]?.status).toBe("ativo");
+
+    const criado = linhas.find((l) => l.disciplina_id === disc["RLS-DISC-HAB1"]);
+    expect(criado?.status).toBe("ativo");
+    expect(criado?.codigo, "o vínculo novo não recebeu o código VIN-NNNNNN").toMatch(/^VIN-\d{6}$/);
+
+    const deHab3 = linhas.find((l) => l.disciplina_id === disc["RLS-DISC-HAB3"]);
+    expect(deHab3?.status, "a disciplina inativa foi tocada (FR-013)").toBe("ativo");
+  });
+
+  it("desmarcar inativa e não apaga", async () => {
+    const { data, error } = await cliente("admin").rpc("sincronizar_habilitacoes", {
+      p_instrutor_id: instrutorId,
+      p_disciplinas: [disc["RLS-DISC-HAB2"]],
+    });
+    expect(error).toBeNull();
+    expect(data).toEqual({ criados: 0, reativados: 0, inativados: 1 });
+
+    const deHab1 = (await vinculos()).filter((l) => l.disciplina_id === disc["RLS-DISC-HAB1"]);
+    expect(deHab1, "desmarcar apagou o vínculo (FR-009, RN-INST-05)").toHaveLength(1);
+    expect(deHab1[0]?.status).toBe("inativo");
+  });
+
+  it("marcar disciplina inativa é recusado", async () => {
+    const { error } = await cliente("admin").rpc("sincronizar_habilitacoes", {
+      p_instrutor_id: instrutorId,
+      p_disciplinas: [disc["RLS-DISC-HAB3"]],
+    });
+    expect(error?.code).toBe("22023");
+  });
+
+  it("(NEGATIVO) o perfil de visualização não sincroniza, e nada muda", async () => {
+    const antes = await vinculos();
+    const { error } = await cliente("visualizacao").rpc("sincronizar_habilitacoes", {
+      p_instrutor_id: instrutorId,
+      p_disciplinas: [],
+    });
+    expect(error?.code, "a sincronização não foi negada pelo banco").toBe("42501");
+    expect(await vinculos()).toEqual(antes);
+  });
+});
+
+describe("Regra 4, exceção · exclusão permanente só de instrutor sem histórico", () => {
+  // > "Autorização de Bernardo Villas Boas, 15/09/2026: fica autorizada a exclusão permanente de
+  // > instrutor, delimitada a registro SEM HISTÓRICO NENHUM. [...] Instrutor com qualquer aula lançada,
+  // > atribuição, vínculo de habilitação ou conta de acesso ligada continua não podendo ser excluído —
+  // > só desativado."
+  //
+  // ⚠️ PELA SESSÃO REAL DE CADA PERFIL. A função é SECURITY DEFINER com porteiro: é o JWT que diz quem
+  // chama. A `service_role` só monta a amostra e confere, depois, o que ficou no banco.
+  const EMAIL_CONTA = "rls-chefe@ciaara.teste";
+  const CODIGOS = [
+    "RLS-EXC-LIMPO",
+    "RLS-EXC-AULA",
+    "RLS-EXC-ATRIB",
+    "RLS-EXC-VINC",
+    "RLS-EXC-CONTA",
+  ];
+  const id: Record<string, string> = {};
+
+  const existe = async (codigo: string) => {
+    const { data } = await admin.from("instrutores").select("id").eq("codigo", codigo);
+    return (data ?? []).length === 1;
+  };
+
+  const limparAmostra = async () => {
+    await admin.from("usuarios").update({ instrutor_id: null }).eq("email", EMAIL_CONTA);
+    await admin.from("registros_aula").delete().eq("codigo", "REG-RLS-EXC");
+    await admin.from("turma_disciplina_instrutor").delete().eq("codigo", "TDI-RLS-EXC");
+    await admin.from("turma_disciplina").delete().eq("codigo", "TD-RLS-EXC");
+    await admin.from("instrutor_disciplina").delete().eq("codigo", "VIN-RLS-EXC");
+    await admin.from("disciplinas").delete().eq("codigo", "RLS-DISC-EXC");
+    await admin.from("instrutores").delete().in("codigo", CODIGOS);
+  };
+
+  beforeAll(async () => {
+    await limparAmostra();
+    const { data: ins, error } = await admin
+      .from("instrutores")
+      .insert(
+        CODIGOS.map((codigo) => ({
+          codigo,
+          posto_graduacao: "CT",
+          esp_hab_obs: "-EF",
+          nome_completo: `Instrutor ${codigo}`,
+          categoria: "Militar",
+          om: "CIAARA",
+        })),
+      )
+      .select("id, codigo");
+    if (error) throw new Error(`falha ao criar instrutores da exclusão: ${error.message}`);
+    for (const i of ins ?? []) id[i.codigo as string] = i.id as string;
+
+    const { data: disc, error: erroD } = await admin
+      .from("disciplinas")
+      .insert({
+        codigo: "RLS-DISC-EXC",
+        curso_id: CURSO_EXPEDITO,
+        cod_disciplina: "EXC-1",
+        nome_disciplina: "Disciplina Da Exclusao",
+        carga_horaria_tempos: 10,
+      })
+      .select("id")
+      .single();
+    if (erroD) throw new Error(`falha ao criar disciplina da exclusão: ${erroD.message}`);
+
+    const { data: td, error: erroTd } = await admin
+      .from("turma_disciplina")
+      .insert({ codigo: "TD-RLS-EXC", turma_id: TURMA_EXPEDITA, disciplina_id: disc.id })
+      .select("id")
+      .single();
+    if (erroTd) throw new Error(`falha ao criar turma_disciplina: ${erroTd.message}`);
+
+    const passos = await Promise.all([
+      admin.from("registros_aula").insert({
+        codigo: "REG-RLS-EXC",
+        data: "2026-04-14",
+        turma_id: TURMA_EXPEDITA,
+        curso_id: CURSO_EXPEDITO,
+        unidade_ensino_id: UE_EXPEDITA,
+        instrutor_id: id["RLS-EXC-AULA"],
+        categoria_normativa: "aula",
+        tipo_atividade: "Aula",
+        metodologia: "Exposição Oral",
+        tempos_consumidos: 2,
+      }),
+      admin.from("turma_disciplina_instrutor").insert({
+        codigo: "TDI-RLS-EXC",
+        turma_disciplina_id: td.id,
+        instrutor_id: id["RLS-EXC-ATRIB"],
+        status: "inativo",
+      }),
+      admin.from("instrutor_disciplina").insert({
+        codigo: "VIN-RLS-EXC",
+        instrutor_id: id["RLS-EXC-VINC"],
+        disciplina_id: disc.id,
+        status: "inativo",
+      }),
+      admin.from("usuarios").update({ instrutor_id: id["RLS-EXC-CONTA"] }).eq("email", EMAIL_CONTA),
+    ]);
+    for (const p of passos) {
+      if (p.error) throw new Error(`falha ao montar o histórico: ${p.error.message}`);
+    }
+  });
+
+  afterAll(async () => {
+    await limparAmostra();
+  });
+
+  it.each([
+    ["RLS-EXC-AULA", "aula_lancada"],
+    ["RLS-EXC-ATRIB", "atribuicao"],
+    ["RLS-EXC-VINC", "vinculo_de_habilitacao"],
+    ["RLS-EXC-CONTA", "conta_de_acesso"],
+  ])(
+    "(NEGATIVO) %s tem histórico (%s): o admin não exclui, e o banco diz por quê",
+    async (codigo, chave) => {
+      const { data: impedimentos } = await cliente("admin").rpc(
+        "impedimentos_de_exclusao_do_instrutor",
+        { p_instrutor_id: id[codigo] },
+      );
+      expect(impedimentos).toEqual([chave]);
+
+      const { error } = await cliente("admin").rpc("excluir_instrutor", {
+        p_instrutor_id: id[codigo],
+        p_codigo_confirmacao: codigo,
+      });
+      expect(error?.code, "a exclusão de instrutor com histórico não foi negada").toBe("23503");
+      expect(error?.message).toContain(chave);
+      expect(await existe(codigo), "o instrutor com histórico sumiu").toBe(true);
+    },
+  );
+
+  it("(NEGATIVO) a conta ligada não é tocada pela recusa", async () => {
+    const { data } = await admin
+      .from("usuarios")
+      .select("status, instrutor_id")
+      .eq("email", EMAIL_CONTA)
+      .single();
+    expect(data?.status).toBe("ativo");
+    expect(data?.instrutor_id).toBe(id["RLS-EXC-CONTA"]);
+  });
+
+  it.each(["encarregado_orientacao_pedagogica", "visualizacao"] as const)(
+    "(NEGATIVO) %s não exclui nem o instrutor limpo",
+    async (perfil) => {
+      const { error } = await cliente(perfil).rpc("excluir_instrutor", {
+        p_instrutor_id: id["RLS-EXC-LIMPO"],
+        p_codigo_confirmacao: "RLS-EXC-LIMPO",
+      });
+      expect(error?.code, `${perfil} excluiu instrutor`).toBe("42501");
+      expect(await existe("RLS-EXC-LIMPO")).toBe(true);
+    },
+  );
+
+  it("(NEGATIVO) com o código errado, nem o admin exclui", async () => {
+    const { error } = await cliente("admin").rpc("excluir_instrutor", {
+      p_instrutor_id: id["RLS-EXC-LIMPO"],
+      p_codigo_confirmacao: "RLS-EXC-OUTRO",
+    });
+    expect(error?.code).toBe("22023");
+    expect(await existe("RLS-EXC-LIMPO")).toBe(true);
+  });
+
+  it("(NEGATIVO) nem a exceção abre DELETE direto na tabela", async () => {
+    const { data, error } = await cliente("admin")
+      .from("instrutores")
+      .delete()
+      .eq("id", id["RLS-EXC-LIMPO"])
+      .select("id");
+    expect(error !== null || (data ?? []).length === 0, "DELETE direto apagou").toBe(true);
+    expect(await existe("RLS-EXC-LIMPO")).toBe(true);
+  });
+
+  it("controle positivo: o admin exclui o instrutor limpo, com o código, e ele some do banco", async () => {
+    const { data, error } = await cliente("admin").rpc("excluir_instrutor", {
+      p_instrutor_id: id["RLS-EXC-LIMPO"],
+      p_codigo_confirmacao: "RLS-EXC-LIMPO",
+    });
+    expect(error).toBeNull();
+    expect(data).toMatchObject({ codigo: "RLS-EXC-LIMPO" });
+    expect(await existe("RLS-EXC-LIMPO"), "o instrutor limpo continua no banco").toBe(false);
   });
 });

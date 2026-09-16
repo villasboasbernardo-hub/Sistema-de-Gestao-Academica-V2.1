@@ -160,3 +160,81 @@ describe("`RN-DEG-01` · posto desconhecido vai para o fim, com aviso, e NUNCA s
     expect(avisos).toHaveLength(4);
   });
 });
+
+/**
+ * `FR-002` da spec 006 — o que a fatia (b) do Épico 4 não cobria.
+ *
+ * ⚠️ O DESEMPATE DO `FR-002` É A ANTIGUIDADE DECLARADA, E NÃO O NOME. A função nasceu desempatando por
+ * nome, e o banco (`app.fn_antiguidade_ordem`) sempre desempatou pela declarada: eram duas regras para
+ * a mesma lista, e uma tela ordenada em memória discordaria da ordenada pela consulta. Os casos abaixo
+ * usam nomes que invertem a ordem alfabética, para que o desempate por nome reprove.
+ *
+ * ⚠️ O NOME CONTINUA COMO ÚLTIMO DESEMPATE, entre quem não declarou nada — é o caso "empate de posto
+ * resolve por nome" acima, que segue valendo quando a declarada não chega.
+ */
+describe("`FR-002` da spec 006 · civis depois de militares, e o desempate é a declarada", () => {
+  const ESCALA_COM_CIVIS: EscalaDeAntiguidade = { ...ESCALA, SC: 13, SCNS: 13 };
+  const comDeclarada = (
+    pg: string,
+    nomeCompleto: string,
+    antiguidadeDeclarada: number | null,
+  ): Ordenavel => ({ pg, nomeCompleto, antiguidadeDeclarada });
+
+  it("todo civil vem depois de todo militar, mesmo com nome que viria antes", () => {
+    const { ordenados } = ordenarPorAntiguidade(
+      [
+        comDeclarada("SC", "Abel Civil", 1),
+        comDeclarada("MN", "Zeca Marinheiro", 9),
+        comDeclarada("SCNS", "Aarão Civil", 1),
+        comDeclarada("CMG", "Zuleica Comandante", 9),
+      ],
+      ESCALA_COM_CIVIS,
+    );
+    expect(ordenados.slice(0, 2).map((p) => p.pg)).toEqual(["CMG", "MN"]);
+    expect(new Set(ordenados.slice(2).map((p) => p.pg))).toEqual(new Set(["SC", "SCNS"]));
+  });
+
+  it("mesmo posto desempata pela antiguidade declarada, e não pelo nome", () => {
+    const { ordenados } = ordenarPorAntiguidade(
+      [
+        comDeclarada("CT", "Almeida", 3),
+        comDeclarada("CT", "Zacarias", 1),
+        comDeclarada("CT", "Moreira", 2),
+      ],
+      ESCALA,
+    );
+    expect(ordenados.map((p) => p.nomeCompleto)).toEqual(["Zacarias", "Moreira", "Almeida"]);
+  });
+
+  it("quem não declarou fica no fim do próprio posto, e nunca sai dele", () => {
+    const { ordenados } = ordenarPorAntiguidade(
+      [
+        comDeclarada("CF", "Aaa Sem Declarada", null),
+        comDeclarada("CF", "Zzz Com Declarada", 7),
+        comDeclarada("CT", "Aaa Capitao Tenente", 1),
+      ],
+      ESCALA,
+    );
+    expect(ordenados.map((p) => p.nomeCompleto)).toEqual([
+      "Zzz Com Declarada",
+      "Aaa Sem Declarada",
+      "Aaa Capitao Tenente",
+    ]);
+  });
+
+  it("dois civis desempatam pela declarada, como os militares", () => {
+    const { ordenados } = ordenarPorAntiguidade(
+      [comDeclarada("SC", "Abel", 2), comDeclarada("SCNS", "Zeca", 1)],
+      ESCALA_COM_CIVIS,
+    );
+    expect(ordenados.map((p) => p.nomeCompleto)).toEqual(["Zeca", "Abel"]);
+  });
+
+  it("posto fora da escala vai para depois dos civis — nunca para o topo", () => {
+    const { ordenados } = ordenarPorAntiguidade(
+      [comDeclarada("XYZ", "Aaa Desconhecido", 1), comDeclarada("SC", "Zzz Civil", 9)],
+      ESCALA_COM_CIVIS,
+    );
+    expect(ordenados.map((p) => p.pg)).toEqual(["SC", "XYZ"]);
+  });
+});

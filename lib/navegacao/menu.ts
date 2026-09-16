@@ -59,7 +59,7 @@ export const MENU: readonly EntradaDeMenu[] = [
   { rotulo: "Cursos", rota: "/cursos", disponivel: false, entregaEm: "Épico 7" },
   { rotulo: "Cronograma", rota: "/cronograma", disponivel: false, entregaEm: "Épico 9" },
   { rotulo: "Atividades", rota: "/atividades", disponivel: false, entregaEm: "Épico 8" },
-  { rotulo: "Instrutores", rota: "/instrutores", disponivel: false, entregaEm: "Épico 5" },
+  { rotulo: "Instrutores", rota: "/instrutores", disponivel: true, entregaEm: "Épico 5 (c)" },
   { rotulo: "Disciplinas", rota: "/disciplinas", disponivel: false, entregaEm: "Épico 6" },
   { rotulo: "Administração", rota: "/admin/usuarios", disponivel: true, entregaEm: "Épico 3" },
 ];
