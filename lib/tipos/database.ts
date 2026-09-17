@@ -595,6 +595,7 @@ export type Database = {
           editado_por: string | null
           id: string
           lista: string
+          metadados: Json
           observacao: string | null
           ordem: number
           origem_migracao_v1: string | null
@@ -609,6 +610,7 @@ export type Database = {
           editado_por?: string | null
           id?: string
           lista: string
+          metadados?: Json
           observacao?: string | null
           ordem?: number
           origem_migracao_v1?: string | null
@@ -623,6 +625,7 @@ export type Database = {
           editado_por?: string | null
           id?: string
           lista?: string
+          metadados?: Json
           observacao?: string | null
           ordem?: number
           origem_migracao_v1?: string | null

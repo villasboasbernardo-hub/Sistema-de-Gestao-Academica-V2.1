@@ -19,7 +19,7 @@
     "test:unidade": "vitest run tests/unidade",
     "test:cobertura": "vitest run tests/unidade --coverage",
     "test:invariantes": "supabase test db",
-    "test:rls": "vitest run tests/invariantes/rls",
+    "test:rls": "vitest run tests/invariantes/rls --no-file-parallelism",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "db:start": "supabase start",
