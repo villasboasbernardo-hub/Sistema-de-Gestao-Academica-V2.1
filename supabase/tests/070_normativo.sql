@@ -20,14 +20,14 @@
 begin;
 select plan(8);
 
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-0000-0000-0000-0000000000d1', 'NORM-A', 'Curso Normativo', 'regular');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-0000-0000-0000-0000000000d1', 'NORM-A', 'Curso Normativo', 'regular', 'presencial', 30);
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
   ('22222222-0000-0000-0000-0000000000d1', 'NORM-A-MAT', '11111111-0000-0000-0000-0000000000d1', 'MAT', 'Disciplina Normativa', 40);
 insert into public.unidades_ensino (id, codigo, disciplina_id, curso_id, numero_ue, topico, ch_prevista_tempos) values
   ('33333333-0000-0000-0000-0000000000d1', 'NORM-A-MAT-UE1', '22222222-0000-0000-0000-0000000000d1', '11111111-0000-0000-0000-0000000000d1', 1, 'Unidade Normativa', 40);
-insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status) values
-  ('44444444-0000-0000-0000-0000000000d1', 'NORM-A 2026', '11111111-0000-0000-0000-0000000000d1', 'T1', 2026, 'ativa');
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade) values
+  ('44444444-0000-0000-0000-0000000000d1', 'NORM-A T1 2026', '11111111-0000-0000-0000-0000000000d1', 'T1', 2026, 'ativa', 'presencial');
 
 -- ======================================= FR-050 — O TESTE POSITIVO DO 9o TEMPO DE AULA
 select lives_ok(

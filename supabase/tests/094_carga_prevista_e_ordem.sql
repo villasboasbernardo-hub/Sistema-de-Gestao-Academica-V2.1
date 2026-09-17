@@ -114,15 +114,22 @@ select is_empty(
 --    o mesmo instrutor, e exige-se que a soma do ano tenha subido exatamente 4 — sem refresh, sem
 --    recálculo, sem gatilho: a view lê o fato.
 -- ---------------------------------------------------------------------------------
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-0000-0000-0000-000000000094', 'T094-CUR', 'Curso T094', 'regular');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-0000-0000-0000-000000000094', 'T094-CUR', 'Curso T094', 'regular', 'presencial', 30);
+-- ⚠️ A TURMA VEM ANTES DAS DISCIPLINAS (spec 009, T011 / A-2). A partir da migration 4 desta fatia,
+-- criar turma faz nascer uma linha de `turma_disciplina` por disciplina ATIVA do curso (`FR-032.2`).
+-- Com a disciplina criada antes, a linha nasceria sozinha e as quatro `turma_disciplina` explícitas das linhas abaixo
+-- disputariam `uq_turma_disciplina_ativo` com as que o gatilho criaria.
+-- Trocando a ordem, o curso ainda não tem disciplina quando a turma nasce, e a grade continua sendo
+-- montada pelo próprio teste — que é de onde saem os números que as asserções conferem.
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade) values
+  ('44444444-0000-0000-0000-000000000094', 'T094-CUR T1 ' || extract(year from current_date)::text,
+   '11111111-0000-0000-0000-000000000094', 'T1',
+   extract(year from current_date)::smallint, 'ativa', 'presencial');
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
   ('22222222-0000-0000-0000-000000000094', 'T094-DIS', '11111111-0000-0000-0000-000000000094', 'T94', 'Disciplina T094', 30);
 insert into public.unidades_ensino (id, codigo, disciplina_id, curso_id, numero_ue, topico, ch_prevista_tempos) values
   ('33333333-0000-0000-0000-000000000094', 'T094-UE1', '22222222-0000-0000-0000-000000000094', '11111111-0000-0000-0000-000000000094', 1, 'Unidade T094', 30);
-insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status) values
-  ('44444444-0000-0000-0000-000000000094', 'T094-TUR', '11111111-0000-0000-0000-000000000094', 'T1',
-   extract(year from current_date)::smallint, 'ativa');
 
 create temp table t094_antes on commit drop as
   select coalesce(sum(c.ta_ministrado_ano), 0) as ta

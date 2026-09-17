@@ -12,15 +12,21 @@
 begin;
 select plan(7);
 
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-0000-0000-0000-000000000001', 'UNI-A', 'Curso Unicidade A', 'regular'),
-  ('11111111-0000-0000-0000-000000000002', 'UNI-B', 'Curso Unicidade B', 'expedito');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-0000-0000-0000-000000000001', 'UNI-A', 'Curso Unicidade A', 'regular', 'presencial', 30),
+  ('11111111-0000-0000-0000-000000000002', 'UNI-B', 'Curso Unicidade B', 'expedito', 'presencial', 10);
+
+-- A TURMA VEM ANTES DAS DISCIPLINAS (spec 009, T003 / A-2). A partir da migration 4 desta fatia,
+-- criar turma faz nascer uma linha de `turma_disciplina` por disciplina ATIVA do curso (FR-032.2).
+-- Com a disciplina criada antes, a linha nasceria sozinha e o insert explicito da assercao de
+-- FR-011, abaixo, colidiria com `uq_turma_disciplina_ativo` FORA de qualquer assercao. Trocando a
+-- ordem, o curso ainda nao tem disciplina quando a turma nasce, e a grade continua sendo montada
+-- pelo proprio teste — que e o que as duas assercoes de FR-011 provam.
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade) values
+  ('33333333-0000-0000-0000-000000000001', 'UNI-A T1 2026', '11111111-0000-0000-0000-000000000001', 'T1', 2026, 'ativa', 'presencial');
 
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
   ('22222222-0000-0000-0000-000000000001', 'UNI-A-MAT', '11111111-0000-0000-0000-000000000001', 'MAT', 'Matematica A', 40);
-
-insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status) values
-  ('33333333-0000-0000-0000-000000000001', 'UNI-A 2026 T1', '11111111-0000-0000-0000-000000000001', 'T1', 2026, 'ativa');
 
 insert into public.instrutores (id, codigo, posto_graduacao, esp_hab_obs, nome_completo, categoria, om) values
   ('44444444-0000-0000-0000-000000000001', 'UNI-INS-1', 'CC', 'AA', 'Instrutor Unicidade', 'Militar', 'CIAARA');
@@ -46,8 +52,8 @@ select lives_ok(
 
 -- FR-009 — uma turma por curso, rotulo e ano letivo.
 select throws_ok(
-  $$insert into public.turmas (codigo, curso_id, turma, ano_letivo, status)
-    values ('UNI-A 2026 T1 DUP', '11111111-0000-0000-0000-000000000001', 'T1', 2026, 'planejada')$$,
+  $$insert into public.turmas (codigo, curso_id, turma, ano_letivo, status, modalidade)
+    values ('UNI-A T1 2026', '11111111-0000-0000-0000-000000000001', 'T1', 2026, 'planejada', 'presencial')$$,
   '23505',
   null,
   'FR-009 · turma repetida no mesmo curso e ano letivo e recusada'

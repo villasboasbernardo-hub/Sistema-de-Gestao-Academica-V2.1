@@ -209,10 +209,34 @@ export async function semearInstrutores(
       codigo: `CUR-${p}`,
       nome_curso: `Curso da amostra ${p}`,
       classificacao: "regular",
+      modalidade: "presencial",
+      duracao_dias: 30,
     })
     .select("id")
     .single();
   if (erroCurso) throw new Error(`falha ao semear curso: ${erroCurso.message}`);
+
+  /*
+   * ⚠️ A TURMA VEM ANTES DAS DISCIPLINAS (spec 009, T016 / A-2). A partir da migration 4 daquela fatia,
+   * criar turma faz nascer uma `turma_disciplina` por disciplina ATIVA do curso (`FR-032.2`). Com as
+   * disciplinas criadas antes, as linhas nasceriam sozinhas e as inserções explícitas abaixo — de onde
+   * saem *selecionado*, a habilitação e as cargas de 14 h e 20 h por semana que os testes conferem —
+   * colidiriam com `uq_turma_disciplina_ativo`. Criada primeiro, a turma nasce sem grade, e a grade
+   * continua sendo a que esta amostra monta.
+   */
+  const { data: turma, error: erroTurma } = await admin()
+    .from("turmas")
+    .insert({
+      codigo: `CUR-${p} T1 ${ano}`,
+      curso_id: curso.id,
+      turma: "T1",
+      ano_letivo: ano,
+      status: "ativa",
+      modalidade: "presencial",
+    })
+    .select("id")
+    .single();
+  if (erroTurma) throw new Error(`falha ao semear turma: ${erroTurma.message}`);
 
   const { data: disciplina, error: erroDisciplina } = await admin()
     .from("disciplinas")
@@ -240,19 +264,6 @@ export async function semearInstrutores(
     .select("id")
     .single();
   if (erroUnidade) throw new Error(`falha ao semear unidade: ${erroUnidade.message}`);
-
-  const { data: turma, error: erroTurma } = await admin()
-    .from("turmas")
-    .insert({
-      codigo: `TUR-${p}`,
-      curso_id: curso.id,
-      turma: "T1",
-      ano_letivo: ano,
-      status: "ativa",
-    })
-    .select("id")
-    .single();
-  if (erroTurma) throw new Error(`falha ao semear turma: ${erroTurma.message}`);
 
   const { data: turmaDisciplina, error: erroTd } = await admin()
     .from("turma_disciplina")

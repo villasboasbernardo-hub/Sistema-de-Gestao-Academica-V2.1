@@ -147,12 +147,16 @@ beforeAll(async () => {
         codigo: "RLS-REG",
         nome_curso: "Curso Regular RLS",
         classificacao: "regular",
+        modalidade: "presencial",
+        duracao_dias: 30,
       },
       {
         id: CURSO_EXPEDITO,
         codigo: "RLS-EXP",
         nome_curso: "Curso Expedito RLS",
         classificacao: "expedito",
+        modalidade: "presencial",
+        duracao_dias: 10,
       },
     ])
   ).error;
@@ -162,19 +166,21 @@ beforeAll(async () => {
     await admin.from("turmas").insert([
       {
         id: TURMA_REGULAR,
-        codigo: "RLS-REG 2026",
+        codigo: "RLS-REG T1 2026",
         curso_id: CURSO_REGULAR,
         turma: "T1",
         ano_letivo: 2026,
         status: "ativa",
+        modalidade: "presencial",
       },
       {
         id: TURMA_EXPEDITA,
-        codigo: "RLS-EXP 2026",
+        codigo: "RLS-EXP T1 2026",
         curso_id: CURSO_EXPEDITO,
         turma: "T1",
         ano_letivo: 2026,
         status: "ativa",
+        modalidade: "presencial",
       },
     ])
   ).error;
@@ -250,15 +256,23 @@ const cliente = (p: Perfil): SupabaseClient => {
 };
 
 describe("T-01 · alcance: o Operador não enxerga curso fora do escopo", () => {
+  /*
+   * ⚠️ OS DOIS LITERAIS MUDARAM JUNTO COM A AMOSTRA (spec 009, T015) — `RLS-REG 2026` virou
+   * `RLS-REG T1 2026` e `RLS-EXP 2026` virou `RLS-EXP T1 2026`, porque o código da turma passa a ser
+   * `sigla [rótulo] ano` (`FR-025.1`). **Regra dos valores esperados: (a)** — o valor novo é o correto:
+   * ele é a IDENTIDADE da linha que esta mesma amostra renomeou, e o fato provado — o alcance do
+   * Operador — não mudou. Deixar o literal antigo seria pior do que falhar: a asserção NEGATIVA
+   * passaria a valer por vacuidade, porque `RLS-REG 2026` deixou de existir em qualquer lugar.
+   */
   it("Operador de escopo expedito NÃO lê a turma de curso regular", async () => {
     const { data } = await cliente("operador").from("turmas").select("id, codigo");
     const codigos = (data ?? []).map((t) => t.codigo);
-    expect(codigos).not.toContain("RLS-REG 2026");
+    expect(codigos).not.toContain("RLS-REG T1 2026");
   });
 
   it("controle positivo: ele lê a turma do curso expedito", async () => {
     const { data } = await cliente("operador").from("turmas").select("codigo");
-    expect((data ?? []).map((t) => t.codigo)).toContain("RLS-EXP 2026");
+    expect((data ?? []).map((t) => t.codigo)).toContain("RLS-EXP T1 2026");
   });
 });
 
@@ -1160,13 +1174,25 @@ describe("SC-007 (parte b) · a ação invocada FORA da tela é negada pelo banc
   // ⚠️ A parte (a) — o botão some — é do e2e. As duas são provadas SEPARADAMENTE de propósito:
   // provar só (a) é provar cortesia; provar só (b) é deixar a tela oferecer o que não funciona.
   // Este teste não passa por tela nenhuma: é chamada direta à interface de dados.
+  /*
+   * ⚠️ A LINHA VAI COMPLETA, E O CÓDIGO DO ERRO É CONFERIDO — emenda do `FR-044` (spec 009, T015).
+   * Escrito como estava, com a linha incompleta e só `error not null`, este caso passaria a partir da
+   * migration 2 desta fatia pelo motivo ERRADO: `modalidade` e `duracao_dias` viram obrigatórias, e o
+   * banco devolveria `23502` (coluna nula) ANTES de a policy ser consultada. O teste ficaria verde
+   * **com a RLS desligada** — que é exatamente o modo de falha que esta suíte existe para impedir.
+   * Mandando a linha inteira, o único motivo possível de recusa é a política: `42501`.
+   */
   it("o `visualizacao` não cria curso mesmo chamando a interface de dados diretamente", async () => {
     const { error } = await cliente("visualizacao").from("cursos").insert({
       codigo: "RLS-FORA-DA-TELA",
       nome_curso: "Criado Por Fora",
       classificacao: "regular",
+      modalidade: "presencial",
+      duracao_dias: 30,
     });
-    expect(error).not.toBeNull();
+    expect(error?.code, "a criação de curso pelo `visualizacao` não foi negada pela policy").toBe(
+      "42501",
+    );
   });
 });
 

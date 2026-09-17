@@ -62,8 +62,8 @@ select ok(
 -- PASSA VACUAMENTE enquanto a base estiver vazia — a carga e do Epico 2 — e passa DE
 -- VERDADE quando o catalogo chegar. Esta escrita agora para que o dado ja encontre o
 -- teste pronto, em vez de o teste ser escrito depois, contra o dado que ja entrou.
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-0000-0000-0000-0000000000e1', 'GRAO-A', 'Curso Grao', 'regular');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-0000-0000-0000-0000000000e1', 'GRAO-A', 'Curso Grao', 'regular', 'presencial', 30);
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
   ('22222222-0000-0000-0000-0000000000e1', 'GRAO-A-MAT', '11111111-0000-0000-0000-0000000000e1', 'MAT', 'Disciplina Grao', 60);
 insert into public.unidades_ensino (codigo, disciplina_id, curso_id, numero_ue, topico, ch_prevista_tempos) values

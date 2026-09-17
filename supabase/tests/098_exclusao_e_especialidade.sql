@@ -39,15 +39,23 @@ insert into public.usuarios (codigo, auth_user_id, email, nome, perfil, instruto
   ('T098-USR-EOP',   '98000000-0000-0000-0000-000000000002', 't098-eop@ciaara.teste',   'EOP T098',   'encarregado_orientacao_pedagogica', null),
   ('T098-USR-CONTA', '98000000-0000-0000-0000-000000000003', 't098-conta@ciaara.teste', 'Conta T098', 'visualizacao', '98100000-0000-0000-0000-000000000005');
 
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('98200000-0000-0000-0000-000000000001', 'T098-CUR', 'Curso T098', 'regular');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('98200000-0000-0000-0000-000000000001', 'T098-CUR', 'Curso T098', 'regular', 'presencial', 30);
+-- ⚠️ A TURMA VEM ANTES DAS DISCIPLINAS (spec 009, T014 / A-2). A partir da migration 4 desta fatia,
+-- criar turma faz nascer uma linha de `turma_disciplina` por disciplina ATIVA do curso (`FR-032.2`).
+-- Com a disciplina criada antes, a linha nasceria sozinha e a `turma_disciplina` de id fixo abaixo —
+-- sobre a qual o teste grava a atribuição que IMPEDE a exclusão do instrutor — não seria a única
+-- da turma, e a inserção explícita colidiria com `uq_turma_disciplina_ativo`.
+-- Trocando a ordem, o curso ainda não tem disciplina quando a turma nasce, e a grade continua sendo
+-- montada pelo próprio teste — que é de onde saem os números que as asserções conferem.
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade) values
+  ('98500000-0000-0000-0000-000000000001', 'T098-CUR T1 ' || extract(year from current_date)::text,
+   '98200000-0000-0000-0000-000000000001', 'T1',
+   extract(year from current_date)::smallint, 'ativa', 'presencial');
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
   ('98300000-0000-0000-0000-000000000001', 'T098-DIS', '98200000-0000-0000-0000-000000000001', 'T98', 'Disciplina T098', 30);
 insert into public.unidades_ensino (id, codigo, disciplina_id, curso_id, numero_ue, topico, ch_prevista_tempos) values
   ('98400000-0000-0000-0000-000000000001', 'T098-UE1', '98300000-0000-0000-0000-000000000001', '98200000-0000-0000-0000-000000000001', 1, 'Unidade T098', 30);
-insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status) values
-  ('98500000-0000-0000-0000-000000000001', 'T098-TUR', '98200000-0000-0000-0000-000000000001', 'T1',
-   extract(year from current_date)::smallint, 'ativa');
 insert into public.registros_aula
   (codigo, data, turma_id, unidade_ensino_id, curso_id, tempos_consumidos, ta_inicial, categoria_normativa, instrutor_id)
 values

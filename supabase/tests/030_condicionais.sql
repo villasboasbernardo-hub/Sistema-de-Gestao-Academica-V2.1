@@ -8,12 +8,12 @@
 begin;
 select plan(9);
 
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-0000-0000-0000-0000000000c1', 'COND-A', 'Curso Condicional', 'regular');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-0000-0000-0000-0000000000c1', 'COND-A', 'Curso Condicional', 'regular', 'presencial', 30);
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
   ('22222222-0000-0000-0000-0000000000c1', 'COND-A-MAT', '11111111-0000-0000-0000-0000000000c1', 'MAT', 'Disciplina Condicional', 40);
-insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status) values
-  ('33333333-0000-0000-0000-0000000000c1', 'COND-A 2026', '11111111-0000-0000-0000-0000000000c1', 'T1', 2026, 'ativa');
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade) values
+  ('33333333-0000-0000-0000-0000000000c1', 'COND-A T1 2026', '11111111-0000-0000-0000-0000000000c1', 'T1', 2026, 'ativa', 'presencial');
 insert into public.instrutores (id, codigo, posto_graduacao, esp_hab_obs, nome_completo, categoria, om) values
   ('44444444-0000-0000-0000-0000000000c1', 'COND-INS-1', 'CT', 'AA', 'Instrutor Condicional', 'Militar', 'CIAARA'),
   ('44444444-0000-0000-0000-0000000000c2', 'COND-INS-2', 'CT', 'AA', 'Fiscal Condicional', 'Militar', 'CIAARA');

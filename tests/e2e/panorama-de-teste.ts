@@ -41,8 +41,11 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
   const semeado: PanoramaSemeado = {
     cursoRegular: `CUR-${s}-REG`,
     cursoExpedito: `CUR-${s}-EXP`,
-    turmaAtrasada: `TUR-${s}-REG1`,
-    turmaEmDia: `TUR-${s}-EXP1`,
+    // ⚠️ O código da turma é `sigla [rótulo] ano` (`FR-025.1` da spec 009) — aqui sem rótulo, que é
+    // ausência legítima em turma única. A partir da migration 3 daquela fatia o banco o GERA, e
+    // recusa qualquer valor divergente; a amostra passa a escrever o mesmo que o banco escreveria.
+    turmaAtrasada: `CUR-${s}-REG 2026`,
+    turmaEmDia: `CUR-${s}-EXP 2026`,
   };
 
   await limparPanorama(semeado);
@@ -55,12 +58,14 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
         nome_curso: `Curso regular de percurso ${processo}`,
         classificacao: "regular",
         modalidade: "presencial",
+        duracao_dias: 30,
       },
       {
         codigo: semeado.cursoExpedito,
         nome_curso: `Curso expedito de percurso ${processo}`,
         classificacao: "expedito",
         modalidade: "ead",
+        duracao_dias: 10,
       },
     ])
     .select("id, codigo");
@@ -158,12 +163,14 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
         curso_id: id(semeado.cursoRegular),
         ano_letivo: 2026,
         status: "ativa",
+        modalidade: "presencial",
       },
       {
         codigo: semeado.turmaEmDia,
         curso_id: id(semeado.cursoExpedito),
         ano_letivo: 2026,
         status: "ativa",
+        modalidade: "ead",
       },
     ])
     .select("id, codigo, curso_id");
@@ -226,6 +233,18 @@ export async function limparPanorama(semeado: PanoramaSemeado | undefined): Prom
 
   if (ids.length > 0) {
     await admin().from("registros_aula").delete().in("curso_id", ids);
+    /*
+     * ⚠️ `turma_disciplina` SAI ANTES DE `turmas` (spec 009, T017 / A-2). A partir da migration 4
+     * daquela fatia toda turma nasce com uma linha por disciplina ativa do curso, e a FK
+     * `turma_disciplina.turma_id` é `on delete restrict`: apagar a turma primeiro passaria a falhar
+     * — em silêncio, porque esta limpeza não confere erro —, e a execução seguinte encontraria a
+     * amostra anterior de pé.
+     */
+    const { data: turmasDoCurso } = await admin().from("turmas").select("id").in("curso_id", ids);
+    const idsDeTurma = (turmasDoCurso ?? []).map((t) => t.id);
+    if (idsDeTurma.length > 0) {
+      await admin().from("turma_disciplina").delete().in("turma_id", idsDeTurma);
+    }
     await admin().from("turmas").delete().in("curso_id", ids);
     await admin().from("unidades_ensino").delete().in("curso_id", ids);
     await admin().from("disciplinas").delete().in("curso_id", ids);
