@@ -173,6 +173,20 @@ virtual explícita em toda sala. **Teste independente**: `099_salas.sql` e o cas
 
 ---
 
+## ⚠️ Achados da execução — fatia 1 (T001 a T021), 17/09/2026
+
+**Registro de execução, não escopo novo.** Nenhum deles foi corrigido aqui; os dois primeiros são de
+código alheio a esta fatia, e corrigir teste alheio é decisão, não subproduto.
+
+| # | Achado | Medido | Proposta |
+|---|---|---|---|
+| **E-1** | **`pnpm test:rls` reprova numa base carregada pelo ETL** — **12 casos**, e nenhum deles fala de salas. O `rls.test.ts` do Épico 1 assere que *"desativar o último Admin é recusado"*, e a base real traz **dois Admins ativos** (`USR-01`, `USR-02`): a desativação passa, a conta Admin da suíte fica `inativo`, e tudo que depende dela cai com `42501`. `pnpm verificar:tudo` **não vê**, porque faz `db:reset` antes | 17/09/2026, base local com ETL carregado | Tornar o caso independente da contagem global — contar os Admins antes e sair pelo `skip` com motivo, como o `090` faz. **Pendência a nomear**, se Bernardo quiser |
+| **E-2** | **Rodar o ETL depois da suíte de RLS faz a reconciliação divergir em 1.** `R-01` e `R-06` esperam **930** linhas em `migracao_log` e encontram **931**: a suíte grava `LOG-RLS-1` para provar que a tabela é append-only, e append-only **é o que impede desfazer**. Saída **1**, veredito reprovado, sem nada errado no dado | 17/09/2026 | A ordem correta é sempre `db:reset` **antes** do ETL. Se virar tropeço recorrente, a reconciliação conta por **procedência**, como já faz com `config_listas` |
+| **E-3** | **Duas falhas de ponta a ponta que NÃO se reproduziram**, numa execução de `verificar:tudo`: (1) `convite.spec.ts` V-4 morreu em `supabase status -o env` com erro de **rename do `telemetry.json`** da CLI — ambiente, não código; (2) `inicio.spec.ts` `FR-025` comparou **4 com 4**, porque a amostra do panorama é **por processo** e os trabalhadores do Playwright semeiam em paralelo: a contagem do escopo geral é tirada num instante e a do escopo estreito noutro, com mais turmas semeadas no meio | 17/09/2026; o arquivo sozinho passa (8/8) e a suíte inteira, remedida, dá **158 passados** | (2) é a mesma família dos cinco achados da fatia (c): medir as duas contagens **no mesmo instante**, ou recortar a asserção às turmas do próprio processo. Fora do escopo desta fatia |
+| **E-4** | **A carga do ETL não completa entre a migration 1 e a T075** — e isso é a **previsão do `FR-029.8` cumprindo-se**: com o gatilho de sala no lugar e sem a substituição no ETL, `python -m scripts.etl.executar` **aborta com saída 3**, nomeando `Laboratório de informática`, e a transação única não deixa nada atrás | 17/09/2026 | Nenhuma. É a ordem planejada; fecha na **T075**. Só não confundir com defeito quem rodar a carga antes dela |
+
+---
+
 ## Fase 4 — US4 e US5 (PR 1): obrigatórios, rótulo e auditoria da sigla (migration 2)
 
 **Objetivo**: nenhum valor-padrão silencioso; limite pela classificação; rótulo `T<n>`; troca de sigla
