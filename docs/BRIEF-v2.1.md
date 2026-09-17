@@ -128,6 +128,34 @@ São **27 tabelas**. Esta tabela é a autoridade de nomes citada pelo prompt do 
 > disciplina. **A migration do Épico 1 implementa o grão de UE; ela não copia o script de
 > referência neste ponto.** Ver §2.2 e §11.
 
+> ### ⚠️ Emenda de 17/09/2026 — a 28ª tabela, `curso_sigla_historico`
+>
+> **Acréscimo, não reescrita.** O texto original acima e a tabela abaixo ficam como estão; esta
+> emenda acrescenta **a 28ª tabela** e registra a observação que evita reabrir a questão na 29ª.
+>
+> | # | Aba v2.0 (Sheets) | **Tabela v2.1 (PostgreSQL)** | Script de referência |
+> |---|---|---|---|
+> | 28 | *(não existia — B-21, 17/09/2026)* | **`curso_sigla_historico`** | **criada no Épico 5, fatia (a)** |
+>
+> Uma linha por **troca de sigla de curso** — sigla anterior, sigla nova, quem trocou e quando.
+> Escrita **só por gatilho**, sem alteração nem exclusão por caminho nenhum, inclusive
+> `service_role`; leitura por `auditoria.ler`. Decisão de Bernardo Villas Boas, 17/09/2026
+> (`FR-014.1` da spec `009-cursos-e-turmas`). **Nunca** um campo de histórico dentro de `cursos`:
+> o quarteto de auditoria guarda só a **última** edição, e um rastro dentro da própria linha
+> poderia ser reescrito pela mesma operação que troca a sigla.
+>
+> ⚠️ **A LISTA É NORMATIVA; A CONTAGEM É DESCRITIVA E DERIVA DELA.** *"São 27 tabelas"*, acima,
+> era verdadeiro quando foi escrito e passou a ser **28** com esta emenda. O que a seção promete —
+> e o que o prompt do Épico 1 cita — é **o conjunto de nomes**, não o número. Por isso a asserção
+> correspondente em `supabase/tests/010_estrutura.sql` passou, na mesma data, a comparar o
+> **conjunto de nomes** de `public` com o conjunto declarado aqui, em vez de contar linhas:
+> contagem é fato com prazo de validade, quebraria de novo na 29ª tabela, e acusa **que** algo
+> mudou sem dizer **o quê**.
+>
+> ⚠️ **O `.docx` correspondente NÃO recebeu esta emenda.** `BRIEF-v2.1.docx` é o original entregue
+> e não é emendado; pela regra de precedência registrada no `CLAUDE.md` em 17/09/2026, **o `.md`
+> prevalece** sempre que os dois divergirem.
+
 | # | Aba v2.0 (Sheets) | **Tabela v2.1 (PostgreSQL)** | Script de referência |
 |---|---|---|---|
 | 1 | `Cad_Cursos` | `cursos` | 01 |

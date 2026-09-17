@@ -278,10 +278,18 @@ describe("T-01 · alcance: o Operador não enxerga curso fora do escopo", () => 
 
 describe("T-04 · o perfil de visualização não escreve em lugar nenhum", () => {
   it("não cria curso", async () => {
-    const { error } = await cliente("visualizacao")
-      .from("cursos")
-      .insert({ codigo: "RLS-NEG-1", nome_curso: "Nao deve entrar", classificacao: "regular" });
-    expect(error).not.toBeNull();
+    // ⚠️ LINHA COMPLETA E CÓDIGO CONFERIDO (spec 009, T015 / A-3): com `modalidade` e
+    // `duracao_dias` obrigatórias a partir da migration 2, uma linha incompleta seria recusada
+    // com `23502` ANTES de a policy ser consultada — e este teste ficaria verde com a RLS
+    // desligada. É o modo de falha que os controles positivos deste arquivo existem para pegar.
+    const { error } = await cliente("visualizacao").from("cursos").insert({
+      codigo: "RLS-NEG-1",
+      nome_curso: "Nao deve entrar",
+      classificacao: "regular",
+      modalidade: "presencial",
+      duracao_dias: 30,
+    });
+    expect(error?.code, "o `visualizacao` criou curso").toBe("42501");
   });
 
   it("não cria instrutor", async () => {
@@ -906,6 +914,9 @@ describe("SC-004 · LEITURA negada, por perfil", () => {
 });
 
 describe("SC-004 · ESCRITA negada, por perfil", () => {
+  // ⚠️ A LINHA VAI COMPLETA, E O CÓDIGO É CONFERIDO (spec 009, T015 / A-3). Ver a nota do T-04:
+  // sem `modalidade` e `duracao_dias`, os seis passariam pelo `23502` — coluna obrigatória
+  // ausente —, que é indistinguível de recusa da RLS quando só se olha `error not null`.
   it.each(NAO_ESCREVEM_CURSOS)("%s NÃO cria curso", async (perfil) => {
     const { error } = await cliente(perfil)
       .from("cursos")
@@ -913,8 +924,10 @@ describe("SC-004 · ESCRITA negada, por perfil", () => {
         codigo: `RLS-NEG-${perfil.slice(0, 6)}`,
         nome_curso: "Curso Que Nao Deve Existir",
         classificacao: "regular",
+        modalidade: "presencial",
+        duracao_dias: 30,
       });
-    expect(error).not.toBeNull();
+    expect(error?.code, `${perfil} criou curso`).toBe("42501");
   });
 
   it.each(NAO_ESCREVEM_USUARIOS)(
@@ -1010,8 +1023,10 @@ describe("controle positivo · o mesmo payload passa para quem PODE", () => {
       codigo: "RLS-NEG-CONTROLE",
       nome_curso: "Curso Que Nao Deve Existir",
       classificacao: "regular",
+      modalidade: "presencial",
+      duracao_dias: 30,
     });
-    expect(error).toBeNull();
+    expect(error, `o admin não criou o curso: ${error?.message}`).toBeNull();
     await admin.from("cursos").delete().eq("codigo", "RLS-NEG-CONTROLE");
   });
 

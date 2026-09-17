@@ -57,12 +57,29 @@ select is(
   'FR-033: ZERO politicas de DELETE em todo o schema — a ausencia e a regra'
 );
 
--- FR-001: o inventario do BRIEF §2.1. Nem mais, nem menos.
-select is(
-  (select count(*)::int from information_schema.tables
-    where table_schema = 'public' and table_type = 'BASE TABLE'),
-  27,
-  'FR-001: as 27 entidades do BRIEF §2.1 existem — nem mais, nem menos'
+-- FR-001 (spec 002, Epico 1): o inventario do BRIEF §2.1. Nem mais, nem menos.
+--
+-- ⚠️ POR CONJUNTO DE NOMES, NAO POR CONTAGEM (decisao de Bernardo Villas Boas, 17/09/2026).
+--    Ate a fatia (a) do Epico 5 esta assercao contava 27 linhas. Contagem e fato com PRAZO DE
+--    VALIDADE: quebrou quando a 28a tabela entrou por decisao registrada (B-21), e quebraria de
+--    novo na 29a, trazendo de volta a mesma pergunta. Pior: contagem acusa QUE algo mudou e nao
+--    O QUE mudou — tabela faltando e tabela inesperada dao o mesmo numero errado. O conjunto
+--    pega as duas, e a mensagem de falha do `set_eq` NOMEIA o que falta e o que sobra.
+--
+--    A lista abaixo e a transcricao do §2.1 do BRIEF, que e a AUTORIDADE DE NOMES. Tabela nova
+--    entra aqui DEPOIS de entrar la — nunca antes, e nunca so aqui.
+select set_eq(
+  $$select table_name::text from information_schema.tables
+     where table_schema = 'public' and table_type = 'BASE TABLE'$$,
+  $$values ('cursos'), ('configuracoes_horario'), ('horarios_tempos_aula'),
+           ('curso_regime_historico'), ('turmas'), ('disciplinas'), ('unidades_ensino'),
+           ('turma_disciplina'), ('instrutores'), ('instrutor_disciplina'),
+           ('responsaveis_curso'), ('turma_disciplina_instrutor'), ('avaliacoes_planejadas'),
+           ('registros_aula'), ('avaliacoes'), ('atividades_nao_letivas'), ('planejamento_anual'),
+           ('config_listas'), ('config_parametros'), ('perfil_permissao'), ('feriados'),
+           ('janelas_curso'), ('reservas_proens'), ('migracao_log'), ('arquivo_avaliacoes_v1'),
+           ('usuarios'), ('usuario_curso'), ('curso_sigla_historico')$$,
+  'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 
 -- Tabela sem policy nenhuma e INACESSIVEL. Isso e intencional por padrao, mas nenhuma
