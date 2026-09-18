@@ -12,6 +12,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { mudarSituacaoDoCurso, semearCursoInativavel } from "./curso-de-teste";
 import {
   limparInstrutores,
   semearInstrutores,
@@ -862,6 +863,180 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
       page
         .locator('[data-slot="alerta-conformidade"]')
         .filter({ hasText: "Carga semanal prevista fora da faixa do regime" }),
+    ).toHaveCount(0);
+  });
+});
+
+// =================================================================================================
+// `FR-017.6`, `FR-017.9` e `FR-017.10` · curso inativo na tela de instrutores
+// =================================================================================================
+test.describe("`FR-017.6` · curso inativo não vaza para lista de escolha, e o histórico fica", () => {
+  /*
+   * ⚠️ O QUE ESTA PROVA MEDE, E POR QUE ELA NÃO EXISTIA ANTES. Até a migration 7 da spec 009,
+   * `app.cursos_do_usuario()` filtrava `status = 'ativo'`, e disciplina de curso desativado
+   * simplesmente NÃO CHEGAVA a esta tela — o alcance a escondia. A migration tirou esse filtro de
+   * propósito (`FR-017.1`: desativar tira de OFERTA, não de VISTA), e cada consumidor passou a ser
+   * responsável pelo próprio recorte. Sem as T061 a T064, o painel oferece uma disciplina que o
+   * banco vai RECUSAR na gravação.
+   *
+   * ⚠️ E A DESATIVAÇÃO É POR SESSÃO AUTENTICADA DE ADMIN — nunca pela `service_role`, que não tem
+   * perfil e cai em `situacao_sem_permissao` (achado A-4), nem pela Server Action `desativarCurso`,
+   * que só nasce no PR 2 (A-4, achado 4 do analyze).
+   */
+  let amostra: AmostraDeInstrutores;
+  let CURSO: Awaited<ReturnType<typeof semearCursoInativavel>>;
+
+  test.beforeAll(async () => {
+    amostra = await semearInstrutores(PROCESSO, "I");
+    CURSO = await semearCursoInativavel(PROCESSO);
+  });
+
+  test.afterAll(async () => {
+    /*
+     * ⚠️ OS VÍNCULOS CRIADOS AQUI APONTAM PARA A DISCIPLINA DE **OUTRO** CURSO — o desta prova —, e
+     * `limparInstrutores` só apaga os vínculos do curso da própria amostra. Sem esta linha o
+     * instrutor fica preso pela FK, o `delete` dele não acontece, e a semeadura da execução seguinte
+     * colide em `instrutores_codigo_key`. **Medido em 18/09/2026**: a reprovação apareceu no caso
+     * seguinte, não neste, e a mensagem falava de chave duplicada — nada que aponte para
+     * contaminação entre amostras.
+     */
+    await servico().from("instrutor_disciplina").delete().eq("disciplina_id", CURSO.disciplinaId);
+    await limparInstrutores(PROCESSO, "I");
+  });
+
+  test.afterEach(async () => {
+    await mudarSituacaoDoCurso(EMAIL_ADMIN, CURSO.codigo, "ativo");
+  });
+
+  /** O mesmo caminho de gravação do painel: rodapé, confirmação, e a resposta que vier. */
+  async function gravarEsperando(page: Page, textoEsperado: string) {
+    await page
+      .locator('[data-slot="rodape-do-formulario"]')
+      .getByRole("button", { name: "Gravar alterações", exact: true })
+      .click();
+    const dialogo = page.getByRole("alertdialog");
+    await expect(dialogo, "gravar não pediu confirmação (FR-011)").toBeVisible();
+    await dialogo.getByRole("button", { name: "Gravar", exact: true }).click();
+    await expect(page.getByText(textoEsperado, { exact: false })).toBeVisible({ timeout: 15_000 });
+  }
+
+  test("o painel do CADASTRO NOVO deixa de oferecer a disciplina do curso desativado", async ({
+    page,
+  }) => {
+    // Metade 1: com o curso ATIVO, a disciplina É oferecida — sem isto, a metade 2 não prova nada.
+    await entrar(page, EMAIL_ADMIN, "/instrutores/novo");
+    const painelAtivo = page.locator('[data-slot="painel-de-disciplinas"]');
+    await painelAtivo.getByLabel("Buscar disciplina ou sigla do curso").fill(CURSO.codigo);
+    await expect(
+      painelAtivo.getByRole("checkbox", { name: new RegExp(CURSO.codigo) }),
+      "a amostra não serve: a disciplina não era oferecida nem com o curso ativo",
+    ).toHaveCount(1);
+
+    // Metade 2: desativado, some — e o veredito vira sobre a MESMA tela e a MESMA busca.
+    await mudarSituacaoDoCurso(EMAIL_ADMIN, CURSO.codigo, "inativo");
+    await page.reload();
+    const painel = page.locator('[data-slot="painel-de-disciplinas"]');
+    await painel.getByLabel("Buscar disciplina ou sigla do curso").fill(CURSO.codigo);
+    await expect(
+      painel.getByRole("checkbox", { name: new RegExp(CURSO.codigo) }),
+      "o painel do cadastro novo ofereceu disciplina de curso INATIVO (FR-017.6)",
+    ).toHaveCount(0);
+  });
+
+  test("na FICHA, a opção some mas a habilitação existente continua exibida", async ({ page }) => {
+    const codigoDoInstrutor = amostra.codigos.scns;
+
+    // Habilita pelo caminho real, com o curso ainda ATIVO.
+    await entrar(page, EMAIL_ADMIN, `/instrutores/${codigoDoInstrutor}`);
+    const painel = page.locator('[data-slot="painel-de-disciplinas"]');
+    await painel.getByLabel("Buscar disciplina ou sigla do curso").fill(CURSO.codigo);
+    await painel.getByRole("checkbox", { name: new RegExp(CURSO.codigo) }).check();
+    await gravarEsperando(page, "Alterações gravadas.");
+
+    await mudarSituacaoDoCurso(EMAIL_ADMIN, CURSO.codigo, "inativo");
+    await page.reload();
+
+    await expect(
+      page.locator('[data-slot="disciplinas-habilitadas"]'),
+      "a habilitação existente em curso inativo sumiu da ficha — isso apaga histórico (FR-017.6)",
+    ).toContainText(CURSO.codigo);
+
+    const painelDepois = page.locator('[data-slot="painel-de-disciplinas"]');
+    await painelDepois.getByLabel("Buscar disciplina ou sigla do curso").fill(CURSO.codigo);
+    await expect(
+      painelDepois.getByRole("checkbox", { name: new RegExp(CURSO.codigo) }),
+      "a ficha ofereceu como opção uma disciplina de curso INATIVO (FR-017.6)",
+    ).toHaveCount(0);
+  });
+
+  test("`FR-017.10` · o filtro por curso MOSTRA o inativo, depois dos ativos e marcado", async ({
+    page,
+  }) => {
+    /*
+     * ⚠️ AQUI O REQUISITO VAI NA DIREÇÃO CONTRÁRIA DAS DUAS PROVAS ACIMA, e por isso tem caso
+     * próprio: filtrar instrutor por curso arquivado é consulta sobre HISTÓRICO, e escondê-lo
+     * tornaria o passado inalcançável. O que se pede é que ele não se CONFUNDA com curso em oferta
+     * — daí a posição no fim e a marca no rótulo.
+     */
+    await mudarSituacaoDoCurso(EMAIL_ADMIN, CURSO.codigo, "inativo");
+    await entrar(page, EMAIL_ADMIN, "/instrutores");
+
+    /*
+     * ⚠️ O FILTRO É UM `Select` DO RADIX, NÃO UM `<select>` NATIVO — a primeira formulação deste
+     * caso procurou `select[name="curso"] option`, casou ZERO elementos e reprovou dizendo que o
+     * curso tinha sumido do filtro. Reprovação certa pelo motivo errado: a lista só existe no DOM
+     * depois de ser aberta, e ela vem num portal, fora da árvore do gatilho.
+     *
+     * ⚠️ E O SELETOR É PELO `id`, não pelo papel com nome: `getByRole("combobox", { name: "Curso" })`
+     * casa DOIS elementos — este e o de *"Classificação do curso"*, cujo nome CONTÉM "Curso". É o
+     * achado 3 da fatia (b) do Épico 4 repetido, e ele falha em modo estrito, sem reexecutar.
+     */
+    await page.locator("#filtro-curso").click();
+    const rotulos = await page.getByRole("option").allTextContents();
+
+    const meu = rotulos.findIndex((r) => r.includes(CURSO.codigo));
+    expect(meu, "o curso inativo sumiu do filtro — o histórico ficou inalcançável").toBeGreaterThan(
+      -1,
+    );
+    expect(rotulos[meu], "o curso inativo não está marcado no filtro").toContain("inativo");
+
+    const ultimoAtivo = rotulos.reduce(
+      (maior, rotulo, i) => (rotulo !== "" && !rotulo.includes("inativo") ? i : maior),
+      0,
+    );
+    expect(meu, "o curso inativo apareceu ANTES de algum ativo").toBeGreaterThan(ultimoAtivo);
+  });
+
+  test("`FR-017.9` · marcar disciplina de curso inativo recebe a mensagem de NEGÓCIO", async ({
+    page,
+  }) => {
+    /*
+     * ⚠️ O PERCURSO É A CORRIDA REAL, e não um atalho: a ficha é aberta com o curso ATIVO — portanto
+     * a opção é oferecida —, o curso é desativado POR OUTRA SESSÃO com a página aberta, e só então a
+     * pessoa marca e grava. É o único jeito honesto de chegar à gravação depois das T061 e T062,
+     * que tiram a opção da tela.
+     *
+     * ⚠️ E A MENSAGEM PRECISA SER DE NEGÓCIO, NÃO DE PERMISSÃO. A policy sozinha devolveria `42501`,
+     * que a ação traduz como *"o seu perfil não pode fazer esta alteração"* — e a pessoa tem
+     * exatamente o perfil certo. Mandá-la procurar o Admin seria mandá-la ao lugar errado.
+     */
+    const codigoDoInstrutor = amostra.codigos.ctMaisModerno;
+    await entrar(page, EMAIL_ADMIN, `/instrutores/${codigoDoInstrutor}`);
+
+    const painel = page.locator('[data-slot="painel-de-disciplinas"]');
+    await painel.getByLabel("Buscar disciplina ou sigla do curso").fill(CURSO.codigo);
+    await painel.getByRole("checkbox", { name: new RegExp(CURSO.codigo) }).check();
+
+    await mudarSituacaoDoCurso(EMAIL_ADMIN, CURSO.codigo, "inativo");
+
+    await gravarEsperando(page, CURSO.nomeDaDisciplina);
+    await expect(
+      page.getByText("curso inativo", { exact: false }),
+      "a recusa não disse que o motivo é o curso estar inativo (FR-017.9)",
+    ).toBeVisible();
+    await expect(
+      page.getByText("perfil não pode", { exact: false }),
+      "a recusa chegou como falta de PERMISSÃO — a tradução do 23514 não pegou",
     ).toHaveCount(0);
   });
 });

@@ -83,6 +83,43 @@ policies de leitura — duplica a regra de escopo em duas funções que podem di
 
 ---
 
+### ⚠️ Adendo de 18/09/2026 — a varredura refeita POR BUSCA, depois das 7 migrations
+
+*(exigência de Bernardo Villas Boas, 18/09/2026: "o rastreio dos consumidores refeito por busca, não
+por memória… e diga se algum outro número mudou". A medição original não é reescrita.)*
+
+**Refeita contra dois artefatos, nomeados** (regra 9.2 do `CLAUDE.md`): o **banco local** com as 7
+migrations aplicadas, por `pg_proc`/`pg_policy`/`pg_class`; e o **repositório**, por `grep` sobre
+`app/`, `lib/`, `components/`, `tests/` e `supabase/tests/`.
+
+| # | O que R-1 mediu | Remedido em 18/09 | Mudou? |
+|---|---|---|---|
+| 1 | **3** funções SQL, direta ou indiretamente | **3** — `alcanca_curso` chama direto; `alcanca_turma` e `alcanca_disciplina` chegam **através** dela | **não** |
+| 2 | **46** policies de alcance em **16** tabelas — 15 de leitura, 31 de escrita | **46** em **16** — 15 e 31, idênticos | **não** |
+| 3 | **8** views `security_invoker` | **8**, as mesmas oito | **não** |
+| 4 | **5** arquivos da aplicação | **5**, os mesmos cinco | **não** |
+| 5 | **1** função chamada pela aplicação | **1** — `sincronizar_habilitacoes` | **não** |
+| 6 | **0** testes nomeando a função ou o alcance | **2** — `103_permissoes.sql` e `105_curso_inativo.sql` | **sim**, e os dois **nasceram nesta fatia** |
+
+**Nenhum número de R-1 estava errado, e a lista NÃO cresceu.** A única mudança é a linha 6, e ela é
+consequência do próprio trabalho: antes desta fatia nenhum teste nomeava o alcance, e agora dois
+nomeiam — que era o buraco que o R-1 registrou ao medir zero.
+
+⚠️ **E a varredura quase produziu um quarto consumidor que não existe.** A busca por `cursos_do_usuario`
+em `pg_proc.prosrc` devolve **duas** funções além dela mesma: `app.alcanca_curso` e
+`public.criar_curso_com_regime`. A segunda **não a chama** — ela só a **menciona num comentário**, o
+que explica por que `INSERT … RETURNING` falhava ali. Removido o comentário antes de comparar
+(`regexp_replace(prosrc, '--[^
+]*', '', 'g')`), sobra **uma** chamada direta. **É a mesma armadilha do
+achado 5 da fatia (b) do Épico 4** — varredura que lê a documentação como se fosse uso —, e desta vez
+ela apareceu do lado do SQL. **Toda varredura de consumidor MUST tirar comentário antes de contar.**
+
+**O que a §3 do `data-model.md` reusou errado, e está corrigido lá por adendo:** as **31** policies de
+escrita com **alcance** (16 tabelas) não são as **30** que **ganham a condição de oferta** (15 tabelas).
+A diferença é exatamente `cursos_editar`, que não a recebe de propósito.
+
+---
+
 ## R-2 · `sincronizar_habilitacoes` quebraria no primeiro curso desativado
 
 **Origem**: `FR-017.5`, `FR-017.6`; fatia (c), `FR-009` e `FR-013` da spec 006.

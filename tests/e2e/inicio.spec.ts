@@ -13,6 +13,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { mudarSituacaoDoCurso, mudarStatusDaTurma } from "./curso-de-teste";
 import { limparPanorama, semearPanorama, type PanoramaSemeado } from "./panorama-de-teste";
 
 let EMAIL_GERAL = "";
@@ -190,5 +191,73 @@ test.describe("`FR-030` · a raiz deixou de ser um beco", () => {
     await page.goto("/");
     await page.getByRole("link", { name: /ir para o início/i }).click();
     await expect.poll(() => new URL(page.url()).pathname).toBe("/inicio");
+  });
+});
+
+test.describe("`FR-017.6` · curso inativo sai do panorama, e a contagem continua contando todos", () => {
+  /*
+   * ⚠️ O QUE MUDOU DEBAIXO DESTA TELA. Até a migration 7, `app.cursos_do_usuario()` filtrava
+   * `status = 'ativo'`, e o panorama nunca via curso inativo — não porque a tela filtrasse, mas
+   * porque o alcance escondia. A migration tirou esse filtro de propósito (`FR-017.1`: desativar
+   * tira de OFERTA, não de VISTA), e o filtro passou a ser responsabilidade de cada consumidor.
+   * Sem a correção da T066, esta tela começa a mostrar turma de curso desativado.
+   *
+   * ⚠️ E A CONTAGEM É O CONTRAPESO. Ela distingue *"ainda não existe no sistema"* de *"o seu recorte
+   * não achou nada"*, e para isso conta TODOS os cursos — inclusive os inativos. Uma correção que
+   * filtrasse "ativo" em toda parte faria a tela dizer "base vazia" num sistema com 24 cursos
+   * arquivados, que é o oposto do que o FR-017.1 quer.
+   */
+  /**
+   * Tira as duas turmas de pendentes e desativa os cursos pedidos — nesta ordem, que é a que a
+   * regra impõe (`FR-017.2`).
+   */
+  async function desativar(...codigos: readonly string[]): Promise<void> {
+    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaEmDia, "concluida");
+    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaAtrasada, "concluida");
+    for (const codigo of codigos) {
+      await mudarSituacaoDoCurso(EMAIL_GERAL, codigo, "inativo");
+    }
+  }
+
+  test.afterEach(async () => {
+    // ⚠️ CURSO PRIMEIRO: com ele inativo, escrever em `turmas` é recusado pela condicao de oferta.
+    await mudarSituacaoDoCurso(EMAIL_GERAL, SEMEADO.cursoExpedito, "ativo");
+    await mudarSituacaoDoCurso(EMAIL_GERAL, SEMEADO.cursoRegular, "ativo");
+    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaEmDia, "ativa");
+    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaAtrasada, "ativa");
+  });
+
+  test("a turma do curso desativado some do panorama, e a do ativo fica", async ({ page }) => {
+    await desativar(SEMEADO.cursoExpedito);
+    await entrar(page, EMAIL_GERAL, "/inicio");
+
+    await expect(
+      page.locator(`[data-turma="${SEMEADO.turmaEmDia}"]`),
+      "turma de curso INATIVO continua no panorama (FR-017.6)",
+    ).toHaveCount(0);
+    await expect(
+      page.locator(`[data-turma="${SEMEADO.turmaAtrasada}"]`),
+      "o filtro excedeu o alvo e levou junto a turma do curso ATIVO",
+    ).toBeVisible();
+  });
+
+  test("⚠️ CONTRAPESO · com TODOS inativos, a tela diz 'recorte vazio', não 'base vazia'", async ({
+    page,
+  }) => {
+    /*
+     * ⚠️ ESTA É A METADE QUE PEGA O EXCESSO, e ela só morde com os DOIS cursos inativos: com um
+     * ativo sobrando o panorama não fica vazio e nenhum estado vazio é desenhado — a asserção
+     * passaria sem provar nada. Com os dois fora, `panorama.length === 0` e a tela precisa escolher
+     * entre as duas mensagens. A certa é *"nenhuma turma neste recorte"*, porque cursos EXISTEM;
+     * *"ainda não existe no sistema"* seria mentira, e é o que aparece se a contagem for filtrada
+     * junto com o resto.
+     */
+    await desativar(SEMEADO.cursoExpedito, SEMEADO.cursoRegular);
+    await entrar(page, EMAIL_GERAL, "/inicio");
+
+    await expect(
+      page.getByText("Ainda não existe no sistema", { exact: false }),
+      "a contagem passou a ignorar curso inativo e a tela declarou a BASE vazia (FR-017.6, R-1)",
+    ).toHaveCount(0);
   });
 });

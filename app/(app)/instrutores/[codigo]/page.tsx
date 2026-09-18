@@ -73,7 +73,9 @@ export default async function FichaDoInstrutor({
       .from("disciplinas")
       .select("id, nome_disciplina, curso_id, status")
       .order("nome_disciplina"),
-    supabase.from("cursos").select("id, codigo"),
+    // ⚠️ `status` entra pelo mesmo motivo do cadastro novo, e aqui com a segunda metade: as
+    //    habilitações JÁ EXISTENTES em curso inativo continuam EXIBIDAS, só leitura (`FR-017.6`).
+    supabase.from("cursos").select("id, codigo, status"),
     supabase
       .from("config_listas")
       .select("valor, ordem")

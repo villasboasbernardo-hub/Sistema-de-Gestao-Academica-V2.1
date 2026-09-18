@@ -120,6 +120,23 @@ diferente *(decisão de 17/09/2026)*. ⚠️ **Medido no histórico em
    código fixo faz a segunda execução falhar por `23505`, que **parece recusa de permissão e não é**.
    ⚠️ **E a idempotência MUST ser provada rodando a suíte DUAS VEZES SEGUIDAS** — foi assim que ela
    foi verificada aqui, e é o único jeito de saber que a limpeza não era o que fazia a suíte passar.
+9.2. **Todo "medido: N" MUST nomear o artefato contra o qual foi medido** — a origem, o banco, a
+   lista de um documento, o repositório *(decisão de Bernardo Villas Boas, 18/09/2026, na terceira
+   ocorrência)*. **Número sem artefato nomeado é número que ninguém consegue reconferir**, e os três
+   casos desta fatia mediram, cada um, a coisa errada: o **0** da conferência 3 do ETL (medido na base
+   **carregada**, quando o que a conferência pergunta é sobre a **origem** — são **13**); os **"16
+   testes existentes a ajustar"** (eram **17**); e as **"31 policies em 16 tabelas"** (medido sobre a
+   **lista do próprio documento**, não sobre o banco — são **30 em 15**). ⚠️ **Os três passaram por
+   revisão sem serem notados**, porque um número isolado parece um fato; o que o torna conferível é o
+   artefato ao lado dele.
+9.3. **Nenhuma afirmação de resultado entra em disco antes da medição que a sustenta**
+   *(decisão de Bernardo Villas Boas, 18/09/2026)*. Vale para relatório, comentário, cabeçalho de
+   migration, spec e mensagem de commit: se a frase diz *"passou"*, *"não houve corrupção"* ou *"são
+   N"*, a medição vem **antes** de a frase ser escrita. Quando o texto precisa existir antes, o lugar
+   do número é um marcador explícito — `[pendente]` — trocado **depois**, e nunca uma estimativa
+   plausível. ⚠️ **O modo de falha é específico e caro**: a frase escrita por antecipação quase sempre
+   **acerta**, e por isso a vez em que ela erra passa despercebida — foi o que produziu o veredito
+   falso e tranquilizador do script da corrida, que contava uma recusa como corrupção.
 10. **Não regressão se prova por invariante**, nunca por diff com a saída histórica de um curso.
     **A CAHO 2026 foi rejeitada como padrão-ouro** (Bernardo, 10/08/2026) — não reabrir.
 11. **`RNF-NORM-04` permanece rejeitado** (sequenciamento pedagógico de técnica de ensino): não gera

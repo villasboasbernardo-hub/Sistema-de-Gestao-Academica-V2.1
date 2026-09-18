@@ -36,7 +36,33 @@ export type ResultadoDeInstrutor =
 
 const falha = (erro: string): ResultadoDeInstrutor => ({ ok: false, erro });
 
-type ErroDoBanco = { readonly code?: string; readonly message: string };
+type ErroDoBanco = {
+  readonly code?: string;
+  readonly message: string;
+  /** A chave estável da recusa de negócio — nossa, não da plataforma. */
+  readonly hint?: string | null;
+  /** O `DETAIL` do `raise`, que as recusas desta fatia mandam como JSON. */
+  readonly details?: string | null;
+};
+
+/**
+ * As disciplinas nomeadas no `DETAIL` de uma recusa, ou lista vazia.
+ *
+ * ⚠️ **LER O `DETAIL` É OPCIONAL, E A MENSAGEM PRECISA FUNCIONAR SEM ELE.** Ele chega como texto e
+ * pode não ser JSON — foi o que quebrou o auxiliar de recusa do pgTAP em 17/09/2026, com uma
+ * violação de `EXCLUDE` cujo `DETAIL` é frase corrida. Aqui a falha de leitura degrada para o plural
+ * genérico, nunca para exceção (`RN-DEG-01`).
+ */
+function disciplinasNoDetalhe(detalhe: string | null | undefined): string[] {
+  if (!detalhe) return [];
+  try {
+    const lido: unknown = JSON.parse(detalhe);
+    const lista = (lido as { disciplinas?: unknown }).disciplinas;
+    return Array.isArray(lista) ? lista.filter((d): d is string => typeof d === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 /**
  * A mensagem de cada `CHECK` de `instrutores`, pelo nome da restrição.
@@ -231,6 +257,25 @@ export async function sincronizarHabilitacoes(dados: unknown): Promise<Resultado
     }
     if (error.code === "22023") {
       return falha("Há disciplina inativa ou inexistente entre as marcadas.");
+    }
+    /*
+     * ⚠️ A RECUSA DE CURSO INATIVO CHEGA COMO `23514`, E NÃO COMO `42501` — de propósito
+     * (`FR-017.9` da spec 009). A policy sozinha devolveria `42501`, que esta ação traduz como
+     * *"o seu perfil não pode"* — e o problema **não é de permissão**: é de o curso estar fora de
+     * oferta. A pessoa tem exatamente o perfil certo, e a mensagem errada a mandaria procurar o
+     * Admin. Por isso a função levanta antes, com chave própria em `hint`.
+     */
+    if (error.hint === "habilitacao_em_curso_inativo") {
+      const nomes = disciplinasNoDetalhe(error.details);
+      if (nomes.length === 1) {
+        return falha(`${nomes[0]} é de curso inativo e não recebe habilitação nova.`);
+      }
+      if (nomes.length > 1) {
+        return falha(`${nomes.join(", ")} são de curso inativo e não recebem habilitação nova.`);
+      }
+      return falha(
+        "Há disciplina de curso inativo entre as marcadas, e ela não recebe habilitação nova.",
+      );
     }
     return falha(traduzirErro(error));
   }

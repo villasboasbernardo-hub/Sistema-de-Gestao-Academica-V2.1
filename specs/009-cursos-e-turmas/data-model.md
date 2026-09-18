@@ -283,6 +283,54 @@ asserção negativa por tabela, com curso inativo, e o total de policies de escr
 
 ---
 
+⚠️ **Adendo de 18/09/2026 — a contagem certa é 30 policies em 15 tabelas.**
+*(decisão de Bernardo Villas Boas, 18/09/2026. O parágrafo acima fica como está: ele registra o que
+R-1 mediu, e a medição é que estava errada — não o texto que a relatou.)*
+
+**Medido no banco**, depois de aplicada a migration `20260918041449`, percorrendo `pg_policy`: as
+**15** tabelas da tabela acima têm **exatamente 2** policies de escrita cada — `INSERT` e `UPDATE` —,
+e 15 × 2 = **30**. Nenhuma tem 1 nem 3.
+
+⚠️ **E a causa NÃO é erro de soma — é o mesmo número respondendo a duas perguntas diferentes.**
+*(Esta frase corrige a primeira versão deste adendo, escrita em 18/09/2026, que dizia "erro de soma"
+**antes** de a varredura ser refeita. Medido depois, no banco:)*
+
+| Pergunta | Resposta medida |
+|---|---|
+| Quantas policies de **escrita** usam **alcance** (`app.alcanca_*`)? | **31**, em **16** tabelas |
+| Quantas **ganham a condição de oferta**? | **30**, em **15** tabelas |
+
+**O R-1 mediu a primeira pergunta, e acertou.** O título da §3 — *"As 31 policies de escrita que
+ganham 'em oferta'"* — herdou o número dele para responder à **segunda**. A diferença de exatamente
+**uma** é `cursos_editar`: única policy de escrita com alcance que **deliberadamente não** recebe a
+condição, porque recebê-la tornaria o curso irreativável (§2). E a 16ª tabela é `cursos`, que aparece
+na tabela acima com *"nenhuma"*.
+
+⚠️ **É precisamente o caso que a regra 9.2 do `CLAUDE.md` descreve**: o número estava certo para o
+artefato em que foi medido e errado para aquele em que foi reusado. Não havia como notar sem o
+artefato escrito ao lado. O número certo já estava guardado por teste antes deste adendo —
+`105_curso_inativo.sql` **enumera** as 30 e falha se uma ficar de fora.
+
+---
+
+⚠️ **`usuario_curso` fica DE FORA, e é decisão, não esquecimento** *(decisão de Bernardo Villas Boas,
+18/09/2026)*. Ela é a **única** tabela do schema com `curso_id` e policies de escrita que não recebe a
+condição de oferta — medido por varredura de `pg_policy` cruzada com `information_schema.columns`.
+
+**O motivo é de segurança, e vale nos dois sentidos.** O `FR-017.5` existe para que curso inativo não
+receba **dado acadêmico** novo. Designação de acesso **não é dado acadêmico** — é controle de acesso, e
+prendê-lo machuca duas vezes:
+
+1. **com o `UPDATE` protegido, não se revoga quem saiu da função** — e capacidade de revogar acesso
+   **nunca** pode depender do estado do objeto acessado; seria regressão de segurança disfarçada de
+   regra de integridade;
+2. **com o `INSERT` protegido, não se concede acesso a alguém novo** que precise consultar o histórico
+   do curso arquivado — necessidade real quando um Encarregado é substituído.
+
+Proteger as duas perde as duas coisas; proteger só o `INSERT` perde a segunda e compra muito pouco.
+
+---
+
 ## 4. Invariantes — cada uma vira asserção pgTAP nomeada
 
 | # | Invariante | Arquivo | Origem |

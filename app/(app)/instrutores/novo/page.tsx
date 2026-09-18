@@ -49,7 +49,9 @@ export default async function NovoInstrutor() {
       .select("id, nome_disciplina, curso_id, status")
       .eq("status", "ativo")
       .order("nome_disciplina"),
-    supabase.from("cursos").select("id, codigo"),
+    // ⚠️ `status` entra porque o painel precisa dele: disciplina ATIVA de curso INATIVO não é
+    //    oferecível (`FR-017.6` da spec 009). Ver `catalogo.ts`.
+    supabase.from("cursos").select("id, codigo, status"),
   ]);
 
   return (
@@ -68,7 +70,7 @@ export default async function NovoInstrutor() {
         iniciais={valoresFuncionaisDe(null)}
         pessoais={null}
         postos={(escala ?? []).map((e) => e.valor)}
-        disciplinas={comSigla(disciplinas ?? [], cursos ?? [])}
+        disciplinas={comSigla(disciplinas ?? [], cursos ?? []).filter((d) => d.ativa)}
         habilitadas={[]}
       />
     </section>

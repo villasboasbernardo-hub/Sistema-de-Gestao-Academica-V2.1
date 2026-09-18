@@ -51,6 +51,20 @@ function comEscolhido(valores: readonly string[], escolhido: string) {
   return lista.map((v) => ({ valor: v, rotulo: v }));
 }
 
+/**
+ * A mesma garantia da função acima, para opções que já trazem rótulo próprio: o valor que veio da
+ * URL continua escolhível mesmo que não esteja na lista — senão o link compartilhado se apaga
+ * sozinho ao abrir, que é o defeito nº 4 da fatia (c) do Épico 4.
+ */
+function comEscolhidoRotulado(
+  opcoes: readonly { readonly valor: string; readonly rotulo: string }[],
+  escolhido: string,
+) {
+  return escolhido !== "" && !opcoes.some((o) => o.valor === escolhido)
+    ? [...opcoes, { valor: escolhido, rotulo: escolhido }]
+    : opcoes;
+}
+
 export function FiltrosDeInstrutores({ opcoes }: { readonly opcoes: OpcoesDosFiltros }) {
   const [busca, definirBusca] = useParametro(ROTA, "busca");
   const [om, definirOm] = useParametro(ROTA, "om");
@@ -112,7 +126,7 @@ export function FiltrosDeInstrutores({ opcoes }: { readonly opcoes: OpcoesDosFil
       chave: "curso",
       rotulo: "Curso",
       tipo: "escolha",
-      opcoes: comEscolhido(opcoes.curso, curso),
+      opcoes: comEscolhidoRotulado(opcoes.curso, curso),
     },
     {
       chave: "classificacao",

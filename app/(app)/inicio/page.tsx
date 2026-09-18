@@ -53,7 +53,19 @@ export default async function Inicio({
 
   const supabase = await criarClienteDeServidor();
 
-  let consultaDeCursos = supabase.from("cursos").select("id, codigo, classificacao, modalidade");
+  /*
+   * ⚠️ `status = "ativo"` É EXPLÍCITO AQUI, E PRECISA SER (`FR-017.6` da spec 009, R-1). Até a
+   * migration 7 desta fatia, `app.cursos_do_usuario()` filtrava a situação, e o panorama nunca via
+   * curso inativo — não porque esta tela filtrasse, mas porque o ALCANCE escondia. A migration tirou
+   * o filtro de lá de propósito (`FR-017.1`: desativar tira de OFERTA, não de VISTA), e o recorte
+   * passou a ser responsabilidade de cada consumidor, explicitamente. **Sem esta linha, turma de
+   * curso desativado volta ao panorama sem erro nenhum** — medido em 18/09/2026, pelo caso de
+   * `inicio.spec.ts`, que reprovou antes dela existir.
+   */
+  let consultaDeCursos = supabase
+    .from("cursos")
+    .select("id, codigo, classificacao, modalidade")
+    .eq("status", "ativo");
   if (classificacao !== "") consultaDeCursos = consultaDeCursos.eq("classificacao", classificacao);
   if (modalidade !== "") consultaDeCursos = consultaDeCursos.eq("modalidade", modalidade);
 
@@ -68,6 +80,13 @@ export default async function Inicio({
      * ⚠️ ESTA TERCEIRA CONSULTA EXISTE SÓ PARA DISTINGUIR OS VAZIOS, e é uma contagem — não traz
      * linha. Sem ela não há como separar *"o recorte não achou nada"* de *"a base ainda não recebeu
      * a carga"*, e as duas frases levam a pessoa a lugares opostos.
+     *
+     * ⚠️ **E ELA CONTA TODOS OS CURSOS, INCLUSIVE OS INATIVOS — de propósito** (`FR-017.6`, R-1).
+     * A pergunta que ela responde é *"existe curso neste sistema?"*, e curso arquivado existe.
+     * Acrescentar `status = "ativo"` aqui, por simetria com a consulta acima, faria a tela anunciar
+     * *"ainda não existe no sistema"* numa base com dezenas de cursos arquivados — mentira que manda
+     * a pessoa procurar a carga em vez do filtro. As duas consultas fazem perguntas diferentes, e é
+     * por isso que só uma delas filtra.
      */
     supabase.from("cursos").select("id", { count: "exact", head: true }),
   ]);

@@ -22,7 +22,7 @@
 -- =================================================================================
 
 begin;
-select plan(15);
+select plan(16);
 
 -- --------------------------------------------------------------------------- amostra
 insert into auth.users (id, email, aud, role) values
@@ -121,6 +121,40 @@ select is(
     where p.polcmd in ('a', 'w')),
   30,
   'FR-017.5 · sao 30 policies de escrita em 15 tabelas — duas por tabela, criar e editar'
+);
+
+-- ---------------------------------------------------------------- a exclusao DECLARADA, nao ausente
+-- ⚠️ AUSENCIA SILENCIOSA NUMA LISTA DE ENUMERACAO E LIDA COMO ESQUECIMENTO pela proxima pessoa que
+--    for acrescentar uma tabela (exigencia de Bernardo Villas Boas, 18/09/2026). `usuario_curso` tem
+--    `curso_id` e policies de escrita e NAO recebe a condicao de oferta — de proposito.
+--
+--    MOTIVO, e ele e de SEGURANCA: o FR-017.5 existe para que curso inativo nao receba DADO
+--    ACADEMICO novo. Designacao de acesso nao e dado academico — e controle de acesso, e prende-lo
+--    machuca nos dois sentidos: com o UPDATE protegido nao se REVOGA quem saiu da funcao (e poder
+--    revogar acesso nunca pode depender do estado do objeto acessado — seria regressao de seguranca
+--    disfarcada de regra de integridade), e com o INSERT protegido nao se CONCEDE acesso a quem
+--    precise consultar o historico do curso arquivado, que e o caso real da substituicao de um
+--    Encarregado de Curso.
+create temporary table _fora_de_proposito as
+select * from (values
+  ('usuario_curso', 'designacao de acesso, nao dado academico — ver data-model §3, 18/09/2026')
+) as v(tabela, motivo);
+
+-- E o conjunto das EXCLUIDAS tambem e fechado: tabela nova com `curso_id` e escrita que nasca sem a
+-- condicao aparece aqui PELO NOME, em vez de passar por nao estar em lista nenhuma.
+select results_eq(
+  $$select t.tabela from _fora_de_proposito t order by t.tabela$$,
+  $$select distinct (p.polrelid::regclass)::text
+      from pg_policy p
+      join information_schema.columns c
+        on c.table_schema = 'public'
+       and c.table_name   = (p.polrelid::regclass)::text
+       and c.column_name  = 'curso_id'
+     where p.polcmd in ('a', 'w')
+       and coalesce(pg_get_expr(p.polqual, p.polrelid), '')
+           || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') !~ '(curso|turma|disciplina)_em_oferta'
+     order by 1$$,
+  'FR-017.5 · as tabelas com curso_id que NAO tem a condicao sao exatamente as excluidas de proposito'
 );
 
 -- ⚠️ E `cursos_editar` NAO carrega a condicao, de proposito: a excecao cirurgica da reativacao mora
