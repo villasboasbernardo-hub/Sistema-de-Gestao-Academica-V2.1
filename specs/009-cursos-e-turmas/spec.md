@@ -2443,6 +2443,31 @@ Conforme a regra 1 do `CLAUDE.md`. Cada uma foi **medida**; nenhuma foi conserta
   a pendência **`PEND-5a-3`**; nem a regra nem o comportamento mudaram. A constituição (Princípio IV) promete
   só que o gatilho impede **`UPDATE`** inclusive para a `service_role` — o que é verdade — e não foi tocada.
   *(decisão de Bernardo Villas Boas, 17/09/2026)*
+- **D-22 — O recurso `horarios` do documento 01 cobre duas tabelas, e só uma passou a lê-lo.** O
+  documento 01 §2.5 define o recurso **`horarios`** como *"Regime de horário e vigência
+  (`horarios_tempos_aula`, `curso_regime_historico`)"*. A migration 5 desta fatia fez as policies de
+  escrita de **`curso_regime_historico`** lerem `horarios.criar` e `horarios.editar` (`FR-024.1`); as de
+  **`horarios_tempos_aula`** — e as de `configuracoes_horario`, que é o cabeçalho dela — **continuam
+  lendo `parametros`**, como desde o Épico 1. **Medido em 17/09/2026.**
+  **Não movido, de propósito:** mover aquelas policies mudaria **quem edita a grade de tempos de aula**,
+  que é efeito de permissão sobre um cadastro que esta fatia não toca, e nenhuma tarefa o cobre.
+  Enquanto não for movido, o documento promete sobre `horarios_tempos_aula` um recurso que o banco não
+  usa ali. **A correção pertence a quem for tratar da grade de horário** — Épico 6 ou 7, pelo documento
+  06 —, e leva junto o negativo por perfil de cada célula movida.
+  *(decisão de Bernardo Villas Boas, 17/09/2026)*
+- **D-23 — Duas permissões entram sem leitor, e isso é decisão, não lacuna.** `horarios.ler` e
+  `horarios.desativar` foram gravadas na matriz pela migration 5 porque o **documento 01 §2.5 as
+  declara**, mas **nada as consulta** nesta fatia: a leitura da vigência continua em `cursos.ler`
+  (`FR-024.1`), a de `horarios_tempos_aula` em `app.usuario_atual() is not null`, e cancelar vigência é
+  `horarios.editar` (`FR-021.1`). O negativo delas é de **catálogo** (`103_permissoes.sql`), e não de
+  comportamento: **não existe caminho para observar uma recusa que nada consulta**, e inventar um seria
+  testar a nossa própria invenção.
+  ⚠️ **A condição, e ela é a parte que importa:** **permissão concedida que nada lê é concessão
+  latente** — ela vira efetiva no dia em que alguém escrever a policy que a lê, sem saber quem já a
+  tem. Por isso, **quando um consumidor aparecer, o negativo correspondente é escrito NAQUELE
+  MOMENTO**, na mesma migration que cria a policy, e não depois. O mesmo vale para `cursos.desativar`,
+  que entra sem leitor na migration 5 e ganha o seu na 7 (`app.guardar_situacao_do_curso()`), com o
+  negativo junto. *(decisão de Bernardo Villas Boas, 17/09/2026)*
 
 ---
 

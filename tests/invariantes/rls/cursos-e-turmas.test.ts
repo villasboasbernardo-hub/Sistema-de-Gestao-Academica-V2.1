@@ -64,7 +64,8 @@ const email = (p: Perfil) => `5a-${p}@ciaara.teste5a`;
 const SALAS_DO_TESTE = ["Sala 5A Ajudante", "Sala 5A Admin", "Sala 5A Encarregado"];
 
 /** O curso e a disciplina da prova do gatilho de nascimento (`FR-032.2`, R-6). */
-const CURSO_NASCIMENTO = "5a000000-0000-0000-0000-00000000c001";
+// ⚠️ A RPC gera o `id` dela — estas variáveis são preenchidas depois da criação.
+let CURSO_NASCIMENTO = "";
 const DISCIPLINA_NASCIMENTO = "5a000000-0000-0000-0000-00000000d001";
 
 /*
@@ -73,8 +74,8 @@ const DISCIPLINA_NASCIMENTO = "5a000000-0000-0000-0000-00000000d001";
  * `db:reset`, VAZIA, e depender de curso da carga faria o caso passar ou falhar pelo estado do banco
  * em vez de pelo requisito.
  */
-const CURSO_DO_ESCOPO = "5a000000-0000-0000-0000-00000000c002";
-const CURSO_FORA_DO_ESCOPO = "5a000000-0000-0000-0000-00000000c003";
+let CURSO_DO_ESCOPO = "";
+let CURSO_FORA_DO_ESCOPO = "";
 /** Uma turma que o Admin cria no curso FORA do escopo, para o Operador tentar mexer nela. */
 const TURMA_FORA_DO_ESCOPO = "5a000000-0000-0000-0000-00000000a003";
 
@@ -128,24 +129,27 @@ async function limpar(): Promise<void> {
     .eq("recurso", "disciplinas")
     .eq("acao", "editar");
 
-  const { data: turmasDoTeste } = await admin
-    .from("turmas")
+  const { data: cursosDoTeste } = await admin
+    .from("cursos")
     .select("id")
-    .in("curso_id", [CURSO_NASCIMENTO, CURSO_DO_ESCOPO, CURSO_FORA_DO_ESCOPO]);
+    .in("codigo", ["5A-NASC", "5A-EXP", "5A-REG"]);
+  const idsDeCurso = (cursosDoTeste ?? []).map((c) => c.id);
+
+  const { data: turmasDoTeste } = idsDeCurso.length
+    ? await admin.from("turmas").select("id").in("curso_id", idsDeCurso)
+    : { data: [] };
   const idsDeTurma = (turmasDoTeste ?? []).map((t) => t.id);
   if (idsDeTurma.length > 0) {
     await admin.from("turma_disciplina").delete().in("turma_id", idsDeTurma);
     await admin.from("turmas").delete().in("id", idsDeTurma);
   }
   await admin.from("disciplinas").delete().eq("id", DISCIPLINA_NASCIMENTO);
+  // ⚠️ OS CURSOS E AS VIGÊNCIAS FICAM: a vigência é append-only (`DELETE` recusado inclusive para a
+  //    `service_role`), e a FK do curso é `restrict`. A fixture é idempotente por isso.
   await admin
     .from("curso_regime_historico")
     .delete()
-    .in("curso_id", [CURSO_DO_ESCOPO, CURSO_FORA_DO_ESCOPO]);
-  await admin
-    .from("cursos")
-    .delete()
-    .in("id", [CURSO_NASCIMENTO, CURSO_DO_ESCOPO, CURSO_FORA_DO_ESCOPO]);
+    .in("codigo", ["REG-5A-NEG", "REG-5A-OK", "REG-5A-OPE", "REG-5A-OPE-FORA"]);
 
   await admin.from("config_listas").delete().eq("lista", "salas").in("valor", SALAS_DO_TESTE);
   await admin.from("usuarios").delete().like("email", "%@ciaara.teste5a");
@@ -163,9 +167,20 @@ beforeAll(async () => {
   await criarUsuario("operador", "expedito");
   await criarUsuario("encarregado_orientacao_pedagogica", "geral");
 
-  const { error: erroEscopo } = await admin.from("cursos").insert([
+  // ⚠️ PELA RPC: curso sem vigência `padrao` é recusado no COMMIT (`curso_sem_regime`, FR-019.5),
+  // e cada requisição do PostgREST é uma transação. E o curso não é apagável depois — a vigência é
+  // append-only —, então a fixture reaproveita o que já existe.
+  const regime = {
+    regime_tempos: 8,
+    ta_duracao_min: 45,
+    intervalo_manha_min: 10,
+    intervalo_tarde_min: 10,
+    hora_inicio_manha: "07:30",
+    hora_inicio_tarde: "13:30",
+    vigente_de: "2020-01-01",
+  };
+  for (const linha of [
     {
-      id: CURSO_DO_ESCOPO,
       codigo: "5A-EXP",
       nome_curso: "Curso expedito do escopo do Operador",
       classificacao: "expedito",
@@ -173,15 +188,32 @@ beforeAll(async () => {
       duracao_dias: 10,
     },
     {
-      id: CURSO_FORA_DO_ESCOPO,
       codigo: "5A-REG",
       nome_curso: "Curso regular fora do escopo do Operador",
       classificacao: "regular",
       modalidade: "presencial",
       duracao_dias: 30,
     },
-  ]);
-  if (erroEscopo) throw new Error(`fixture do par de cursos falhou: ${erroEscopo.message}`);
+  ]) {
+    const { data: existe } = await admin
+      .from("cursos")
+      .select("id")
+      .eq("codigo", linha.codigo)
+      .maybeSingle();
+    if (existe) continue;
+    const { error } = await admin.rpc("criar_curso_com_regime", {
+      p_curso: linha,
+      p_regime: regime,
+    });
+    if (error) throw new Error(`fixture do par de cursos falhou: ${error.message}`);
+  }
+
+  const { data: cursosCriados } = await admin
+    .from("cursos")
+    .select("id, codigo")
+    .in("codigo", ["5A-EXP", "5A-REG"]);
+  CURSO_DO_ESCOPO = (cursosCriados ?? []).find((c) => c.codigo === "5A-EXP")?.id as string;
+  CURSO_FORA_DO_ESCOPO = (cursosCriados ?? []).find((c) => c.codigo === "5A-REG")?.id as string;
 
   const { error: erroTurmaFora } = await admin.from("turmas").insert({
     id: TURMA_FORA_DO_ESCOPO,
@@ -193,15 +225,30 @@ beforeAll(async () => {
   });
   if (erroTurmaFora) throw new Error(`fixture da turma alheia falhou: ${erroTurmaFora.message}`);
 
-  const { error: erroCurso } = await admin.from("cursos").insert({
-    id: CURSO_NASCIMENTO,
-    codigo: "5A-NASC",
-    nome_curso: "Curso do nascimento das disciplinas",
-    classificacao: "regular",
-    modalidade: "presencial",
-    duracao_dias: 30,
-  });
-  if (erroCurso) throw new Error(`fixture de curso falhou: ${erroCurso.message}`);
+  const { data: nascExiste } = await admin
+    .from("cursos")
+    .select("id")
+    .eq("codigo", "5A-NASC")
+    .maybeSingle();
+  if (!nascExiste) {
+    const { error: erroCurso } = await admin.rpc("criar_curso_com_regime", {
+      p_curso: {
+        codigo: "5A-NASC",
+        nome_curso: "Curso do nascimento das disciplinas",
+        classificacao: "regular",
+        modalidade: "presencial",
+        duracao_dias: 30,
+      },
+      p_regime: regime,
+    });
+    if (erroCurso) throw new Error(`fixture de curso falhou: ${erroCurso.message}`);
+  }
+  const { data: cursoNasc } = await admin
+    .from("cursos")
+    .select("id")
+    .eq("codigo", "5A-NASC")
+    .single();
+  CURSO_NASCIMENTO = cursoNasc?.id as string;
 
   const { error: erroDisciplina } = await admin.from("disciplinas").insert({
     id: DISCIPLINA_NASCIMENTO,
@@ -358,24 +405,49 @@ describe("`FR-025` / `FR-024` · as permissões novas, cada uma com o seu negati
    * ⚠️ E CADA NEGATIVO TEM O SEU CONTROLE POSITIVO, com o MESMO payload. Sem ele, um negativo verde
    * pode estar provando apenas que a linha era inválida.
    */
-  const vigencia = (cursoId: string, codigo: string) => ({
-    codigo,
-    curso_id: cursoId,
-    tipo_regime: "padrao" as const,
-    regime_tempos: 8,
-    ta_duracao_min: 45,
-    intervalo_manha_min: 10,
-    intervalo_tarde_min: 10,
-    hora_inicio_manha: "07:30",
-    hora_inicio_tarde: "13:30",
-    vigente_de: "2046-01-01",
+  /*
+   * ⚠️ PELA RPC, e não por `insert` solto: registrar vigência nova SOBRE uma ativa exige fechar a
+   * anterior na mesma transação (R-19), e é isso que `registrar_vigencia_regime` faz. Um `insert`
+   * direto bate na `EXCLUDE` `regime_sem_sobreposicao` com `23P01` — e o teste passaria a medir
+   * sobreposição em vez de permissão, que é o que ele diz medir.
+   */
+  /*
+   * ⚠️ E A DATA DE INÍCIO É CALCULADA A CADA EXECUÇÃO, porque a vigência registrada FICA: ela é
+   * append-only, e `DELETE` é recusado inclusive para a `service_role`. Com data fixa, a segunda
+   * execução sobrepõe a primeira e reprova com `23P01` — e `23P01` pareceria recusa de permissão
+   * sem ser. Cada execução começa um ano depois da última que encontrou.
+   */
+  let vigenteDe = "2046-01-01";
+
+  beforeAll(async () => {
+    const { data } = await admin
+      .from("curso_regime_historico")
+      .select("vigente_de")
+      .in("curso_id", [CURSO_DO_ESCOPO, CURSO_FORA_DO_ESCOPO])
+      .order("vigente_de", { ascending: false })
+      .limit(1);
+    const maior = data?.[0]?.vigente_de ?? "2045-01-01";
+    vigenteDe = `${Number(maior.slice(0, 4)) + 1}-01-01`;
   });
+
+  const registrar = (sessao: Perfil, cursoId: string) =>
+    cliente(sessao).rpc("registrar_vigencia_regime", {
+      p_curso_id: cursoId,
+      p_vigencia: {
+        tipo_regime: "padrao",
+        regime_tempos: 8,
+        ta_duracao_min: 45,
+        intervalo_manha_min: 10,
+        intervalo_tarde_min: 10,
+        hora_inicio_manha: "07:30",
+        hora_inicio_tarde: "13:30",
+        vigente_de: vigenteDe,
+      },
+    });
 
   // ------------------------------------------------------------------ `horarios.criar`
   it("NEGATIVO · quem tem só `horarios.ler` NÃO cria vigência de regime — 42501", async () => {
-    const { error } = await cliente("encarregado_orientacao_pedagogica")
-      .from("curso_regime_historico")
-      .insert(vigencia(CURSO_DO_ESCOPO, "REG-5A-NEG"));
+    const { error } = await registrar("encarregado_orientacao_pedagogica", CURSO_DO_ESCOPO);
     expect(error?.code, "o perfil sem `horarios.criar` registrou vigência").toBe("42501");
   });
 
@@ -386,9 +458,7 @@ describe("`FR-025` / `FR-024` · as permissões novas, cada uma com o seu negati
    * REGULAR (o Encarregado tem alcance geral) e deixa o EXPEDITO livre para o Operador, no N-1b.
    */
   it("controle positivo · o Encarregado da Divisão cria a MESMA vigência, em outro curso", async () => {
-    const { error } = await cliente("encarregado_administracao_academica")
-      .from("curso_regime_historico")
-      .insert(vigencia(CURSO_FORA_DO_ESCOPO, "REG-5A-OK"));
+    const { error } = await registrar("encarregado_administracao_academica", CURSO_FORA_DO_ESCOPO);
     expect(
       error,
       `o Encarregado da Divisão não registrou a vigência: ${error?.message}`,
@@ -405,9 +475,7 @@ describe("`FR-025` / `FR-024` · as permissões novas, cada uma com o seu negati
    * isso que ela existe.
    */
   it("N-1b · o Operador REGISTRA vigência no curso do escopo — ele tem `horarios`, não `cursos.editar`", async () => {
-    const { error } = await cliente("operador")
-      .from("curso_regime_historico")
-      .insert(vigencia(CURSO_DO_ESCOPO, "REG-5A-OPE"));
+    const { error } = await registrar("operador", CURSO_DO_ESCOPO);
     expect(
       error,
       "o Operador não registrou vigência: a policy ainda lê `cursos.editar`, não `horarios.criar`",
@@ -415,13 +483,53 @@ describe("`FR-025` / `FR-024` · as permissões novas, cada uma com o seu negati
   });
 
   it("N-2b · e NÃO registra vigência em curso fora do escopo — 42501", async () => {
-    const { error } = await cliente("operador")
-      .from("curso_regime_historico")
-      .insert(vigencia(CURSO_FORA_DO_ESCOPO, "REG-5A-OPE-FORA"));
+    const { error } = await registrar("operador", CURSO_FORA_DO_ESCOPO);
     expect(
       error?.code,
       "o Operador registrou vigência fora do escopo — recurso novo, alcance perdido",
     ).toBe("42501");
+  });
+
+  /*
+   * ⚠️ N-8 · O CURSO NÃO EXISTE SEM REGIME, E A RECUSA VEM NO `COMMIT`. Cada requisição do PostgREST
+   * é uma transação, então o gatilho de restrição adiado dispara dentro dela e a recusa chega na
+   * hora — com a chave `curso_sem_regime`, e não com um erro de transação pela metade.
+   */
+  it("N-8 · o Admin NÃO cria curso pela API sem vigência — `curso_sem_regime` no COMMIT", async () => {
+    const { error } = await cliente("admin")
+      .from("cursos")
+      .insert({
+        codigo: `5A-SEM-REGIME-${Date.now()}`,
+        nome_curso: "Curso sem regime",
+        classificacao: "regular",
+        modalidade: "presencial",
+        duracao_dias: 30,
+      });
+    expect(error?.hint ?? error?.message, "o curso entrou sem vigência padrão").toContain(
+      "curso_sem_regime",
+    );
+  });
+
+  it("N-8 · e pela RPC, com a vigência junto, é aceito", async () => {
+    const { error } = await cliente("admin").rpc("criar_curso_com_regime", {
+      p_curso: {
+        codigo: `5A-COM-REGIME-${Date.now()}`,
+        nome_curso: "Curso com regime",
+        classificacao: "regular",
+        modalidade: "presencial",
+        duracao_dias: 30,
+      },
+      p_regime: {
+        regime_tempos: 8,
+        ta_duracao_min: 45,
+        intervalo_manha_min: 10,
+        intervalo_tarde_min: 10,
+        hora_inicio_manha: "07:30",
+        hora_inicio_tarde: "13:30",
+        vigente_de: "2020-01-01",
+      },
+    });
+    expect(error, `o Admin não criou curso pela RPC: ${error?.message}`).toBeNull();
   });
 
   // ------------------------------------------------------------------ `turmas.criar`

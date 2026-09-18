@@ -222,6 +222,15 @@ histórico do banco, e renomeá-lo quebra a ordem e a correspondência com o que
    falha já medido nesta base: seis negativos do `SC-004` passavam pelo motivo errado, e só o
    **controle positivo** os pegou. Toda asserção negativa manda a **linha completa** e confere o
    código.
+8. **O caso que discrimina: teste que dá o mesmo veredito antes e depois da mudança não testa a
+   mudança** *(registrado em 17/09/2026, spec 009)*. Toda migration que altere **qual permissão,
+   coluna ou condição uma regra lê** MUST trazer ao menos um caso cujo **veredito vira** — tipicamente
+   um perfil, ou um dado, que tenha a condição **nova** sem ter a **antiga**. Negativo e controle
+   positivo provam que a regra **existe**; só o caso que discrimina prova que ela **mudou**.
+   **Exemplo, o `N-1b` da fatia (a) do Épico 5:** a escrita de vigência passou de `cursos.editar` para
+   `horarios.criar`, e o **Operador** é o único perfil que tem a segunda sem ter a primeira — o
+   negativo (quem não tem nenhuma das duas) e o controle positivo (quem tem as duas) passavam
+   **antes e depois**, e só por ele a troca de recurso se observa.
 5. **Playwright** no percurso principal, incluindo a rota `/print/*` quando houver.
 6. Migration aplicada em preview e **revertível** (plano de reversão escrito no PR).
 7. Commits no padrão `feat(RF-…): …`.

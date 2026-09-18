@@ -203,18 +203,47 @@ export async function semearInstrutores(
 
   // Curso, disciplina, unidade e turma: o mínimo para atribuir e lançar.
   const ano = anoCorrente();
-  const { data: curso, error: erroCurso } = await admin()
+  /*
+   * ⚠️ CURSO NASCE PELA RPC, E NÃO SE APAGA MAIS (spec 009, migration 6). Duas consequências, as duas
+   * medidas em 18/09/2026:
+   *
+   *   1. `criar_curso_com_regime` é o único caminho: um `insert into cursos` solto é recusado no
+   *      COMMIT pelo gatilho adiado, com a chave `curso_sem_regime` (`FR-019.5`). E cada requisição
+   *      do PostgREST é uma transação, então a recusa chega na hora.
+   *   2. `curso_regime_historico` é append-only — `DELETE` e `TRUNCATE` recusados por gatilho de
+   *      statement, **inclusive para a `service_role`** (`FR-020`). Como a FK do curso é `restrict`,
+   *      **o curso também deixou de ser apagável**. A limpeza apaga tudo o que pende dele e o DEIXA
+   *      de pé; a amostra passou a ser IDEMPOTENTE, reaproveitando o curso que já existe.
+   */
+  const { data: cursoExistente } = await admin()
     .from("cursos")
-    .insert({
-      codigo: `CUR-${p}`,
-      nome_curso: `Curso da amostra ${p}`,
-      classificacao: "regular",
-      modalidade: "presencial",
-      duracao_dias: 30,
-    })
     .select("id")
-    .single();
-  if (erroCurso) throw new Error(`falha ao semear curso: ${erroCurso.message}`);
+    .eq("codigo", `CUR-${p}`)
+    .maybeSingle();
+
+  let curso = cursoExistente;
+  if (!curso) {
+    const { data: criado, error: erroCurso } = await admin().rpc("criar_curso_com_regime", {
+      p_curso: {
+        codigo: `CUR-${p}`,
+        nome_curso: `Curso da amostra ${p}`,
+        classificacao: "regular",
+        modalidade: "presencial",
+        duracao_dias: 30,
+      },
+      p_regime: {
+        regime_tempos: 8,
+        ta_duracao_min: 45,
+        intervalo_manha_min: 10,
+        intervalo_tarde_min: 10,
+        hora_inicio_manha: "07:30",
+        hora_inicio_tarde: "13:30",
+        vigente_de: "2020-01-01",
+      },
+    });
+    if (erroCurso) throw new Error(`falha ao semear curso: ${erroCurso.message}`);
+    curso = criado as { id: string };
+  }
 
   /*
    * ⚠️ A TURMA VEM ANTES DAS DISCIPLINAS (spec 009, T016 / A-2). A partir da migration 4 daquela fatia,
@@ -446,7 +475,9 @@ export async function limparInstrutores(processo: number, suite: string): Promis
     await admin().from("turmas").delete().in("curso_id", cursoIds);
     await admin().from("unidades_ensino").delete().in("curso_id", cursoIds);
     await admin().from("disciplinas").delete().in("curso_id", cursoIds);
-    await admin().from("cursos").delete().in("id", cursoIds);
+    // ⚠️ O CURSO FICA. A vigência de regime não é apagável nem pela `service_role`, e a FK é
+    //    `restrict` — apagar o curso falharia. A amostra reaproveita o que já está aqui.
+    // (antes: `await admin().from("cursos").delete().in("id", cursoIds);`)
   }
 
   await admin().from("instrutores").delete().eq("om", omDaAmostra(processo, suite));

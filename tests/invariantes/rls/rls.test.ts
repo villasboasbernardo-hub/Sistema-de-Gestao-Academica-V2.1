@@ -31,8 +31,8 @@ const admin = createClient(URL_SUPABASE, CHAVE_SERVICO, {
 });
 
 /** Um curso regular e um expedito: é o recorte que o escopo do Operador precisa distinguir. */
-const CURSO_REGULAR = "aaaa0000-0000-0000-0000-0000000c0001";
-const CURSO_EXPEDITO = "aaaa0000-0000-0000-0000-0000000c0002";
+let CURSO_REGULAR = "";
+let CURSO_EXPEDITO = "";
 const TURMA_REGULAR = "aaaa0000-0000-0000-0000-0000000a0001";
 const TURMA_EXPEDITA = "aaaa0000-0000-0000-0000-0000000a0002";
 // ⚠️ Disciplina e Unidade de Ensino de teste, no curso EXPEDITO. Existem por uma razao precisa:
@@ -125,7 +125,8 @@ async function limpar(): Promise<void> {
   await admin.from("unidades_ensino").delete().eq("codigo", "RLS-UE-EXP");
   await admin.from("disciplinas").delete().eq("codigo", "RLS-DISC-EXP");
   await admin.from("turmas").delete().in("id", [TURMA_REGULAR, TURMA_EXPEDITA]);
-  await admin.from("cursos").delete().in("id", [CURSO_REGULAR, CURSO_EXPEDITO]);
+  // ⚠️ OS CURSOS FICAM — ver a nota da fixture: vigência append-only + FK `restrict`.
+  await admin.from("cursos").delete().eq("codigo", "RLS-NEG-CONTROLE");
   const { data } = await admin.auth.admin.listUsers();
   for (const u of data?.users ?? []) {
     if (u.email?.endsWith("@ciaara.teste")) await admin.auth.admin.deleteUser(u.id);
@@ -140,27 +141,58 @@ beforeAll(async () => {
   // negativa VACUOSA — "o operador não vê a turma alheia" passa trivialmente quando turma
   // nenhuma foi criada. É o modo de falha que esta suíte existe para impedir, e ela não
   // pode cair nele.
-  const erroCursos = (
-    await admin.from("cursos").insert([
-      {
-        id: CURSO_REGULAR,
-        codigo: "RLS-REG",
-        nome_curso: "Curso Regular RLS",
-        classificacao: "regular",
-        modalidade: "presencial",
-        duracao_dias: 30,
+  /*
+   * ⚠️ CURSO NASCE PELA RPC, E NÃO SE APAGA MAIS (spec 009, migration 6): `insert into cursos` solto
+   * é recusado no COMMIT (`curso_sem_regime`), e a vigência de regime é append-only — `DELETE`
+   * recusado por gatilho **inclusive para a `service_role`**, o que, com a FK `restrict`, torna o
+   * curso não apagável. Daí a fixture ser IDEMPOTENTE: reaproveita o curso que já está aqui.
+   *
+   * ⚠️ E o `id` fixo não pode mais ser imposto — a RPC gera o dela. As constantes viraram o que
+   * sempre foram de fato: a CHAVE de busca. Os ids reais são lidos de volta.
+   */
+  for (const linha of [
+    {
+      codigo: "RLS-REG",
+      nome_curso: "Curso Regular RLS",
+      classificacao: "regular",
+      modalidade: "presencial",
+      duracao_dias: 30,
+    },
+    {
+      codigo: "RLS-EXP",
+      nome_curso: "Curso Expedito RLS",
+      classificacao: "expedito",
+      modalidade: "presencial",
+      duracao_dias: 10,
+    },
+  ]) {
+    const { data: existe } = await admin
+      .from("cursos")
+      .select("id")
+      .eq("codigo", linha.codigo)
+      .maybeSingle();
+    if (existe) continue;
+    const { error } = await admin.rpc("criar_curso_com_regime", {
+      p_curso: linha,
+      p_regime: {
+        regime_tempos: 8,
+        ta_duracao_min: 45,
+        intervalo_manha_min: 10,
+        intervalo_tarde_min: 10,
+        hora_inicio_manha: "07:30",
+        hora_inicio_tarde: "13:30",
+        vigente_de: "2020-01-01",
       },
-      {
-        id: CURSO_EXPEDITO,
-        codigo: "RLS-EXP",
-        nome_curso: "Curso Expedito RLS",
-        classificacao: "expedito",
-        modalidade: "presencial",
-        duracao_dias: 10,
-      },
-    ])
-  ).error;
-  if (erroCursos) throw new Error(`fixture de cursos falhou: ${erroCursos.message}`);
+    });
+    if (error) throw new Error(`fixture de cursos falhou: ${error.message}`);
+  }
+
+  const { data: cursosDaAmostra } = await admin
+    .from("cursos")
+    .select("id, codigo")
+    .in("codigo", ["RLS-REG", "RLS-EXP"]);
+  CURSO_REGULAR = (cursosDaAmostra ?? []).find((c) => c.codigo === "RLS-REG")?.id as string;
+  CURSO_EXPEDITO = (cursosDaAmostra ?? []).find((c) => c.codigo === "RLS-EXP")?.id as string;
 
   const erroTurmas = (
     await admin.from("turmas").insert([
@@ -1019,15 +1051,35 @@ describe("T-10 · o Operador não cria atividade de escopo global", () => {
 
 describe("controle positivo · o mesmo payload passa para quem PODE", () => {
   it("admin CRIA o curso que os seis outros perfis não criaram", async () => {
-    const { error } = await cliente("admin").from("cursos").insert({
-      codigo: "RLS-NEG-CONTROLE",
-      nome_curso: "Curso Que Nao Deve Existir",
-      classificacao: "regular",
-      modalidade: "presencial",
-      duracao_dias: 30,
+    // ⚠️ PELA RPC, como os seis negativos acima (spec 009, T050): a partir da migration 6 um
+    // `insert into cursos` solto é recusado no COMMIT com `curso_sem_regime`, e o controle
+    // positivo tem de usar O MESMO CAMINHO que os negativos — senão ele deixa de ser controle.
+    const { error } = await cliente("admin").rpc("criar_curso_com_regime", {
+      p_curso: {
+        // ⚠️ CÓDIGO ÚNICO POR EXECUÇÃO: o curso não é apagável (vigência append-only + FK
+        // `restrict`), e um código fixo faria a segunda execução falhar por `23505` — que
+        // pareceria recusa de permissão e não é.
+        codigo: `RLS-NEG-CONTROLE-${Date.now()}`,
+        nome_curso: "Curso Que Nao Deve Existir",
+        classificacao: "regular",
+        modalidade: "presencial",
+        duracao_dias: 30,
+      },
+      p_regime: {
+        regime_tempos: 8,
+        ta_duracao_min: 45,
+        intervalo_manha_min: 10,
+        intervalo_tarde_min: 10,
+        hora_inicio_manha: "07:30",
+        hora_inicio_tarde: "13:30",
+        vigente_de: "2020-01-01",
+      },
     });
     expect(error, `o admin não criou o curso: ${error?.message}`).toBeNull();
-    await admin.from("cursos").delete().eq("codigo", "RLS-NEG-CONTROLE");
+    // O curso não é apagável (vigência append-only + FK `restrict`): a próxima execução o encontra
+    // e o insert acima falharia por `codigo` repetido. Por isso ele sai da lista de limpeza e a
+    // asserção passa a tolerar a existência — ver `limpar()`.
+    await admin.from("curso_regime_historico").delete().eq("codigo", "RLS-NEG-CONTROLE-REG");
   });
 
   it("admin CRIA o usuário que os oito outros perfis não criaram", async () => {
