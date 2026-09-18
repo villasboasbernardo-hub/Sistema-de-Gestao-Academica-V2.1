@@ -313,6 +313,22 @@ artefato escrito ao lado. O número certo já estava guardado por teste antes de
 
 ---
 
+⚠️ **E COMO O PRIMEIRO ADENDO ERROU — registrado porque o modo de falha importa mais que o erro**
+*(decisão de Bernardo Villas Boas, 18/09/2026)*.
+
+A primeira versão deste adendo **afirmou "erro de soma" antes de a varredura ser refeita**. Havia uma
+medição real por trás — as 30 policies com a condição, contadas no banco — e dela se **deduziu**, sem
+medir, que o 31 não correspondia a nada. A dedução era plausível e estava errada: o 31 correspondia a
+uma pergunta diferente, que ninguém tinha feito de novo.
+
+**É exatamente o que a regra 9.3 do `CLAUDE.md` proíbe**, escrita na mesma sessão e poucas horas
+antes: *nenhuma afirmação de resultado entra em disco antes da medição que a sustenta*. E é também a
+demonstração de por que ela existe — **a regra pegou o erro na rodada seguinte**, quando a T067 mandou
+refazer a varredura por busca e o 31 reapareceu com tabela correspondente. Sem essa segunda medição, a
+correção teria substituído um número errado por uma explicação errada, e a explicação é o que fica.
+
+---
+
 ⚠️ **`usuario_curso` fica DE FORA, e é decisão, não esquecimento** *(decisão de Bernardo Villas Boas,
 18/09/2026)*. Ela é a **única** tabela do schema com `curso_id` e policies de escrita que não recebe a
 condição de oferta — medido por varredura de `pg_policy` cruzada com `information_schema.columns`.

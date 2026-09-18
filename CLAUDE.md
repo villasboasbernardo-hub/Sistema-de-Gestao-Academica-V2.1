@@ -120,6 +120,18 @@ diferente *(decisão de 17/09/2026)*. ⚠️ **Medido no histórico em
    código fixo faz a segunda execução falhar por `23505`, que **parece recusa de permissão e não é**.
    ⚠️ **E a idempotência MUST ser provada rodando a suíte DUAS VEZES SEGUIDAS** — foi assim que ela
    foi verificada aqui, e é o único jeito de saber que a limpeza não era o que fazia a suíte passar.
+9.1.1. **Toda varredura por busca de texto MUST remover COMENTÁRIO antes de contar** — em
+   `pg_proc.prosrc`, em TypeScript, em SQL, em qualquer lugar *(decisão de Bernardo Villas Boas,
+   18/09/2026, na segunda ocorrência: duas vezes é padrão)*. **Uso mencionado não é uso.** As duas:
+   na fatia (b) do Épico 4, três verificações leram a **própria documentação** como violação — a frase
+   *"ele não conhece instrutor"* contada como se conhecesse; na fatia (a) do Épico 5, a varredura de
+   consumidores de `app.cursos_do_usuario()` produziu um quarto consumidor que **não existe**, porque
+   `criar_curso_com_regime` a **menciona num comentário** e nunca a chama. ⚠️ **Os dois erram para
+   lados opostos e ambos são caros**: o primeiro ensina a **apagar a documentação** para ficar verde;
+   o segundo faz **crescer uma lista de impacto**, e lista que cresce sem motivo manda mexer em código
+   que não precisava. Em SQL, `regexp_replace(prosrc, '--[^
+]*', '', 'g')`; em código, ler sem
+   comentário antes de casar o padrão.
 9.2. **Todo "medido: N" MUST nomear o artefato contra o qual foi medido** — a origem, o banco, a
    lista de um documento, o repositório *(decisão de Bernardo Villas Boas, 18/09/2026, na terceira
    ocorrência)*. **Número sem artefato nomeado é número que ninguém consegue reconferir**, e os três
@@ -330,6 +342,17 @@ que aponta para a **escrita** e faz procurar permissão de criar, que estava cer
 **Solução: gerar o `id` antes, inserir sem `RETURNING`, e ler em comando separado**, que tira retrato
 novo. ⚠️ **Vai reaparecer em toda RPC que insira em tabela com policy de leitura por alcance** —
 `criar_curso_com_regime` foi a primeira.
+
+**6. SEQUÊNCIA NÃO OBEDECE A `ROLLBACK`** *(medido em 18/09/2026, spec 009, com custo)*.
+`nextval` e **`setval` são não transacionais** — é assim que duas sessões conseguem pegar números
+diferentes sem esperar uma pela outra. A consequência que morde: **um defeito deliberado plantado com
+`setval` dentro de uma transação desfeita NÃO é desfeito**. Aqui, uma prova que voltava as quatro
+sequências de código a `1` para ver a verificação reprovar deixou-as em `1`, e o pgTAP seguinte
+quebrou em **sete arquivos** com `duplicate key value violates unique constraint
+"turma_disciplina_codigo_key"` — erro que aponta para a tabela, não para a prova que rodou antes.
+⚠️ **Toda prova que mexa em sequência MUST restaurá-la explicitamente**, com o valor lido antes; e
+consumir `nextval` numa transação desfeita é inofensivo (a sequência só avança), mas `setval` é
+destrutivo e permanente.
 
 **5.2. E dá para ler o mecanismo no tipo gerado, sem abrir o SQL.** Como o gerador **enxerga `DEFAULT`
 e não enxerga gatilho**, o tipo revela qual mecanismo preenche a coluna: **opcional em `Insert` =

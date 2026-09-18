@@ -354,11 +354,16 @@ de curso inativo da RLS e os casos de vazamento verdes.
 **Objetivo**: todo endereço de turma sai de uma função, e o link do Início sai codificado. **Teste
 independente**: ida e volta dos 28 códigos e das 24 siglas, varredura e o link do Início verdes.
 
-- [ ] T068 [PR1] [P] [US2] Escrever `tests/unidade/endereco-de-turma.test.ts` com o retrato versionado dos **28** códigos de turma e das **24** siglas da base de 16/09/2026 em `tests/unidade/dados/codigos-da-base.json`, gerado por consulta ao banco local povoado: cada um, codificado e decodificado, volta **idêntico**; `enderecoDaTurma`, `enderecoDaTurmaNoCurso` (com `%20`, nunca `+`) e `enderecoDaNovaTurma` produzem os exemplos do contrato; decodificar **uma vez só** (`FR-031.1` a `FR-031.3`, `SC-002.1`, contrato de rotas §4) — ver reprovando antes da T069
-- [ ] T069 [PR1] [US2] Criar `lib/navegacao/endereco-de-turma.ts` — TypeScript puro, sem `next` nem `react` — com as quatro funções do contrato de rotas §4 (`FR-031.1`, `FR-031.2`, `FR-037`) ⛓ T068 · teste: T068
-- [ ] T070 [PR1] [P] [US2] Escrever `tests/unidade/endereco-de-turma-unico.test.ts`: varredura de `app/`, `components/` e `lib/` **em código sem comentário** que reprova `/turmas/` ou `?turma=` montado fora de `lib/navegacao/endereco-de-turma.ts`, com controle positivo (`FR-031.2`, `SC-002.1`) ⛓ T069
-- [ ] T071 [PR1] [P] [US2] Escrever em `tests/e2e/inicio.spec.ts` o caso: o link de uma turma de teste com espaço no código sai **codificado** (`%20`) no `href` (`FR-031.2`, `SC-002.1`) — ver reprovando antes da T072
-- [ ] T072 [PR1] [US2] Em `app/(app)/inicio/page.tsx`, montar o link com `enderecoDaTurmaNoCurso` (`FR-031.2`) ⛓ T066, T069, T071 · testes: T070, T071
+- [X] T068 [PR1] [P] [US2] Escrever `tests/unidade/endereco-de-turma.test.ts` com o retrato versionado dos **28** códigos de turma e das **24** siglas da base de 16/09/2026 em `tests/unidade/dados/codigos-da-base.json`, gerado por consulta ao banco local povoado: cada um, codificado e decodificado, volta **idêntico**; `enderecoDaTurma`, `enderecoDaTurmaNoCurso` (com `%20`, nunca `+`) e `enderecoDaNovaTurma` produzem os exemplos do contrato; decodificar **uma vez só** (`FR-031.1` a `FR-031.3`, `SC-002.1`, contrato de rotas §4) — ver reprovando antes da T069
+      ✅ **18/09/2026** — **11** asserções, sobre o retrato de `tests/unidade/dados/codigos-da-base.json`, gerado **por consulta ao banco carregado** (28 turmas, 24 siglas). ⚠️ **Por isso a Fase 11 rodou ANTES da 10**: um retrato inventado passaria com qualquer implementação, porque os exemplos que alguém inventa são os que ele já sabe que funcionam. Inclui o caso do código com `%`, que **nenhum dos 28 tem** — e é justamente por isso que ele existe: a decodificação dupla passaria despercebida na base inteira.
+- [X] T069 [PR1] [US2] Criar `lib/navegacao/endereco-de-turma.ts` — TypeScript puro, sem `next` nem `react` — com as quatro funções do contrato de rotas §4 (`FR-031.1`, `FR-031.2`, `FR-037`) ⛓ T068 · teste: T068
+      ✅ **18/09/2026** — `lib/navegacao/endereco-de-turma.ts`, as quatro funções. ⚠️ **`encodeURIComponent` e não `URLSearchParams`**: este serializa espaço como `+`, que é válido em corpo de formulário e **não** em caminho de URL; os dois decodificam para o mesmo texto, e o `FR-031.1` pede **uma** representação.
+- [X] T070 [PR1] [P] [US2] Escrever `tests/unidade/endereco-de-turma-unico.test.ts`: varredura de `app/`, `components/` e `lib/` **em código sem comentário** que reprova `/turmas/` ou `?turma=` montado fora de `lib/navegacao/endereco-de-turma.ts`, com controle positivo (`FR-031.2`, `SC-002.1`) ⛓ T069
+      ✅ **18/09/2026** — e o **controle positivo pegou a fraqueza da própria varredura**: a primeira formulação exigia `"/turmas/` dentro do módulo e reprovou, porque ele declara `RAIZ_DE_TURMAS = "/turmas"`, sem barra. Uma verificação que não encontra o caso que deveria encontrar não distingue *"ninguém viola"* de *"eu procuro errado"*.
+- [X] T071 [PR1] [P] [US2] Escrever em `tests/e2e/inicio.spec.ts` o caso: o link de uma turma de teste com espaço no código sai **codificado** (`%20`) no `href` (`FR-031.2`, `SC-002.1`) — ver reprovando antes da T072
+      ✅ **18/09/2026** — **2** casos: o `href` traz `%20` e **é exatamente** o que a função produz. A segunda metade fecha a regra — *"tem `%20`"* passaria com qualquer codificação parcial feita à mão. ⚠️ E a asserção é sobre o `href` que foi para o DOM, **não** sobre a URL depois do clique: o navegador conserta o espaço ao navegar, e medir depois mostraria verde com o defeito no lugar.
+- [X] T072 [PR1] [US2] Em `app/(app)/inicio/page.tsx`, montar o link com `enderecoDaTurmaNoCurso` (`FR-031.2`) ⛓ T066, T069, T071 · testes: T070, T071
+      ✅ **18/09/2026** — o defeito do `FR-031.2` **estava na `main`** desde a fatia (c) do Épico 4: `href={`/cursos/${t.cursoCodigo}?turma=${t.turmaCodigo}`}`, sem codificar, e o código da turma **contém espaço**.
 
 ---
 
@@ -369,33 +374,59 @@ independente**: ida e volta dos 28 códigos e das 24 siglas, varredura e o link 
 scripts no padrão de `scripts/etl/provar_carregador.py` e são **rodadas à mão**, com a saída registrada no PR 1
 (decisão de 17/09/2026). **Levá-las ao CI é a pendência `PEND-5a-4`**, em PR próprio e **sem** dado real da v2.0.
 
-- [ ] T073 [PR1] Acrescentar à carga, em `scripts/etl/carregar.py`, o passo final que avança cada sequência de código — `turma_disciplina`, `curso_regime_historico`, e as duas da fatia (c) — para o maior valor carregado (`FR-032.2`, `FR-019.3`, R-16) · prova: T074
+- [X] T073 [PR1] Acrescentar à carga, em `scripts/etl/carregar.py`, o passo final que avança cada sequência de código — `turma_disciplina`, `curso_regime_historico`, e as duas da fatia (c) — para o maior valor carregado (`FR-032.2`, `FR-019.3`, R-16) · prova: T074
+      ✅ **18/09/2026** — `avancar_sequencias()` em `carregar.py`, chamada por `promover()` **dentro da transação**: ela lê `public`, que no início da carga está vazia, e promoção desfeita não pode deixar sequência avançada. ⚠️ `setval(…, n, true)` — com `false` o próximo `nextval` devolveria `n`, e a primeira turma nova colidiria com a última carregada.
       ⚠️ **O MOTIVO MEDIDO, escrito aqui porque quem testar pelo caminho bom conclui que esta tarefa é redundante** *(17/09/2026)*: aplicando as migrations **sobre a base já carregada**, o `setval` da migration 4 posiciona a sequência no maior código existente — **medido: 210** — e o passo parece desnecessário. No caminho **inverso**, que é o de todo dia (`pnpm db:reset` primeiro, carga depois), as migrations rodam sobre base **vazia**, a sequência fica em **1**, o ETL grava `TDI-000001` a `TDI-000210` explicitamente, e a **primeira turma nova colide com `23505`**. Mesmo princípio do `--no-file-parallelism`: **sinalizador sem motivo registrado é sinalizador apagado**
-- [ ] T074 [PR1] [P] Escrever em `scripts/etl/provar_carga_009.py` a prova das sequências: depois da carga, criar uma turma e uma vigência de teste e conferir `TDI-000211` e `REG-000030`; sem o passo da T073, reprova com `23505` (`FR-032.2`, `FR-019.3`, R-16, quickstart passo 1) ⛓ T073
-- [ ] T075 [PR1] Aplicar na promoção, em `scripts/etl/promover.py`, **a mesma lista de substituições de sala** da migration 1, e gravar cada troca em `migracao_log` como `corrigido` (`FR-029.8`, R-20) ⛓ T020 · prova: T076
-- [ ] T076 [PR1] [P] Acrescentar a `scripts/etl/provar_carga_009.py` a prova da substituição: **9** turmas com `Laboratório de Informática`, **0** com a grafia antiga, **9** eventos `corrigido` (`FR-029.8`, `SC-014.4`) ⛓ T075
-- [ ] T077 [PR1] Criar a estrutura da verificação prévia em `scripts/etl/carregar.py`, dentro de `conferir_antes_de_escrever`: lê o `staging` já preparado, reúne **todas** as falhas de todas as conferências com a linha e o requisito, e impede a carga antes de qualquer `INSERT` (`FR-019.6`, R-27) · provas: T088 a T097
-- [ ] T078 [PR1] Conferência 1 — curso sem vigência `Padrao` ativa em `Cad_Cursos_Regime_Historico`, nomeando código e nome do curso (`FR-019.5`, `FR-019.6`) ⛓ T077 · prova: T088
-- [ ] T079 [PR1] Conferência 2 — curso com classificação `geral` ou `ead_semipresencial` (`FR-003.1`, `FR-019.6`) ⛓ T077 · prova: T089
-- [ ] T080 [PR1] Conferência 3 — curso sem modalidade ou sem duração em dias (`FR-015`, `FR-019.6`) ⛓ T077 · prova: T090
-- [ ] T081 [PR1] Conferência 4 — turma sem modalidade (`FR-015`, `FR-027`, `FR-019.6`) ⛓ T077 · prova: T091
-- [ ] T082 [PR1] Conferência 5 — sala sem correspondência na lista **depois** da substituição da T075 (`FR-029`, `FR-029.8`, `FR-019.6`) ⛓ T077, T075 · prova: T092
-- [ ] T083 [PR1] Conferência 6 — rótulo fora da forma `T<n>` (`FR-025.2`, `FR-019.6`) ⛓ T077 · prova: T093
-- [ ] T084 [PR1] Conferência 7 — código de turma diferente de `sigla [rótulo] ano` (`FR-025.1`, `FR-019.6`) ⛓ T077 · prova: T094
-- [ ] T085 [PR1] Conferência 8 — duas turmas com o mesmo rótulo, vazio incluído, no mesmo curso e ano (`FR-026`, `FR-019.6`) ⛓ T077 · prova: T095
-- [ ] T086 [PR1] Conferência 9 — vigência ativa com `Vigente_Ate` sem sucessora ativa no dia seguinte (`FR-020`, `FR-019.6`) ⛓ T077 · prova: T096
-- [ ] T087 [PR1] Conferência 10 — ordem de carga em `scripts/etl/ordem.py`: `cursos` antes de `curso_regime_historico`; `turmas` antes de `disciplinas`; `curso_regime_historico` antes de `registros_aula`, `avaliacoes` e `atividades_nao_letivas` (`FR-032.2`, `FR-019.4`, `FR-019.6`) ⛓ T077 · prova: T097
-- [ ] T088 [PR1] [P] Prova da conferência 1 em `scripts/etl/provar_verificacao_previa.py`: `staging` sem a linha `Padrao` de um curso → carga falha na verificação, mensagem nomeia o curso, **zero** linhas gravadas (`FR-019.6`, `SC-011.6`) ⛓ T078
-- [ ] T089 [PR1] [P] Prova da conferência 2 no mesmo script: um curso com `EAD_Semipresencial` (`FR-003.1`, `SC-011.6`) ⛓ T079
-- [ ] T090 [PR1] [P] Prova da conferência 3: um curso sem modalidade e outro sem duração em dias (`FR-015`, `SC-011.6`) ⛓ T080
-- [ ] T091 [PR1] [P] Prova da conferência 4: uma turma sem modalidade (`FR-027`, `SC-011.6`) ⛓ T081
-- [ ] T092 [PR1] [P] Prova da conferência 5: uma turma com `Sala 05` (`FR-029`, `SC-011.6`) ⛓ T082
-- [ ] T093 [PR1] [P] Prova da conferência 6: uma turma com rótulo `t1` (`FR-025.2`, `SC-011.6`) ⛓ T083
-- [ ] T094 [PR1] [P] Prova da conferência 7: uma turma com código `CAHO 2026 T1` (`FR-025.1`, `SC-011.6`) ⛓ T084
-- [ ] T095 [PR1] [P] Prova da conferência 8: duas turmas sem rótulo no mesmo curso e ano (`FR-026`, `SC-011.6`) ⛓ T085
-- [ ] T096 [PR1] [P] Prova da conferência 9: uma vigência com `Vigente_Ate` e sem sucessora (`FR-020`, `SC-011.6`) ⛓ T086
-- [ ] T097 [PR1] [P] Prova da conferência 10: uma ordem de carga com `disciplinas` antes de `turmas`, montada na prova sem tocar em `ordem.py` (`FR-032.2`, `SC-011.6`) ⛓ T087
-- [ ] T098 [PR1] Carga completa sobre as sete migrations: `pnpm db:reset` + `python -m scripts.etl.executar` saindo **0**, reconciliação APROVADA, as dez conferências em **zero**, `curso_sigla_historico` sem tropeçar na cobertura (A-8); rodar `provar_carga_009.py` e `provar_verificacao_previa.py` e registrar as saídas; conferir à mão com a base povoada as **18 de 29** vigências corrigíveis (quickstart passos 1 e 2) (`FR-019.6`, `SC-011.1`, `SC-011.6`, `SC-014.4`) ⛓ T074, T076, T088 a T097, T067
+- [X] T074 [PR1] [P] Escrever em `scripts/etl/provar_carga_009.py` a prova das sequências: depois da carga, criar uma turma e uma vigência de teste e conferir `TDI-000211` e `REG-000030`; sem o passo da T073, reprova com `23505` (`FR-032.2`, `FR-019.3`, R-16, quickstart passo 1) ⛓ T073
+      ✅ **18/09/2026** — medido: **TDI-000211** e **REG-000030**, exatamente o previsto. Provado por **defeito deliberado** (as quatro em 1 → reprova). ⚠️ **ACHADO: as duas da fatia (c) passam mesmo zeradas** — a rede do `MAX+1` dentro de `proximo_codigo_vinculo` e `proximo_codigo_instrutor` mascara o defeito, e é o que a **T132** vai tirar; no dia em que sair, este passo é a única defesa. ⚠️ **E a prova foi tornada IDEMPOTENTE**: `nextval`/`setval` **não obedecem a `ROLLBACK`**, e a primeira versão reprovava na segunda execução sem nada de errado na carga.
+- [X] T075 [PR1] Aplicar na promoção, em `scripts/etl/promover.py`, **a mesma lista de substituições de sala** da migration 1, e gravar cada troca em `migracao_log` como `corrigido` (`FR-029.8`, R-20) ⛓ T020 · prova: T076
+      ✅ **18/09/2026** — ⚠️ **e a posição do passo é o aprendizado**: escrito ao fim da promoção, a carga **abortou** com *"O valor «Laboratório de informática» não pertence à lista «salas»"* — `trg_turmas_sala_alocada` recusa no instante em que `turmas` é promovida. A substituição passou para **antes do laço**, sobre o `staging`; o **registro** ficou para depois, porque `migracao_log` só existe no fim e o código do evento continua a numeração da origem.
+- [X] T076 [PR1] [P] Acrescentar a `scripts/etl/provar_carga_009.py` a prova da substituição: **9** turmas com `Laboratório de Informática`, **0** com a grafia antiga, **9** eventos `corrigido` (`FR-029.8`, `SC-014.4`) ⛓ T075
+      ✅ **18/09/2026** — **9** turmas na grafia canônica, **0** na antiga, **9** eventos `corrigido`, e cada evento conferido contra a turma: o `valor_depois` é o que está gravado hoje. Contar eventos não prova nada; o que prova é que o registro descreve uma correção real.
+- [X] T077 [PR1] Criar a estrutura da verificação prévia em `scripts/etl/carregar.py`, dentro de `conferir_antes_de_escrever`: lê o `staging` já preparado, reúne **todas** as falhas de todas as conferências com a linha e o requisito, e impede a carga antes de qualquer `INSERT` (`FR-019.6`, R-27) · provas: T088 a T097
+      ✅ **18/09/2026** — ⚠️ **a ordem em `carregar()` mudou, e a mudança é o ponto**: a verificação lê o `staging`, então ele é preparado **antes** — dentro da mesma transação. Recusa → `rollback` desfaz até a criação das tabelas (DDL é transacional no PostgreSQL), e a base fica **byte a byte** como estava. É isso que faz *"nada foi escrito"* ser conferível, e não uma promessa.
+- [X] T078 [PR1] Conferência 1 — curso sem vigência `Padrao` ativa em `Cad_Cursos_Regime_Historico`, nomeando código e nome do curso (`FR-019.5`, `FR-019.6`) ⛓ T077 · prova: T088
+      ✅ **18/09/2026** — curso sem vigência `Padrao` ativa. Medida **zero** na origem.
+- [X] T079 [PR1] Conferência 2 — curso com classificação `geral` ou `ead_semipresencial` (`FR-003.1`, `FR-019.6`) ⛓ T077 · prova: T089
+      ✅ **18/09/2026** — classificação que o banco recusa. Medida **zero** na origem.
+- [X] T080 [PR1] Conferência 3 — curso sem modalidade ou sem duração em dias (`FR-015`, `FR-019.6`) ⛓ T077 · prova: T090
+      ✅ **18/09/2026** — curso sem duração **ou** sem modalidade. Medida **zero** na origem. ⚠️ **AS DUAS METADES TÊM DESFECHOS DIFERENTES, e isso é a decisão E-6**: duração ausente **aborta** (`NOT NULL` sem catraca); modalidade ausente **não aborta** — a catraca aceita nulo em linha migrada e nunca editada. Mas os **13** são **relatados em voz alta** mesmo sem abortar: silenciá-los faria a carga passar sem ninguém saber que 13 dos 24 cursos entraram sem modalidade.
+- [X] T081 [PR1] Conferência 4 — turma sem modalidade (`FR-015`, `FR-027`, `FR-019.6`) ⛓ T077 · prova: T091
+      ✅ **18/09/2026** — turma sem modalidade. Medida **zero** na origem.
+- [X] T082 [PR1] Conferência 5 — sala sem correspondência na lista **depois** da substituição da T075 (`FR-029`, `FR-029.8`, `FR-019.6`) ⛓ T077, T075 · prova: T092
+      ✅ **18/09/2026** — sala sem correspondência. Medida **zero** na origem. ⚠️ Casa por `app.normalizar_texto()`, a **mesma** regra da substituição — conferir por igualdade exata acusaria as 9 turmas que a promoção corrige sozinha, e a carga abortaria por um problema que ela mesma resolve.
+- [X] T083 [PR1] Conferência 6 — rótulo fora da forma `T<n>` (`FR-025.2`, `FR-019.6`) ⛓ T077 · prova: T093
+      ✅ **18/09/2026** — rótulo fora de `T<n>`. Medida **zero** na origem.
+- [X] T084 [PR1] Conferência 7 — código de turma diferente de `sigla [rótulo] ano` (`FR-025.1`, `FR-019.6`) ⛓ T077 · prova: T094
+      ✅ **18/09/2026** — código ≠ `sigla [rótulo] ano`. Medida **zero** na origem.
+- [X] T085 [PR1] Conferência 8 — duas turmas com o mesmo rótulo, vazio incluído, no mesmo curso e ano (`FR-026`, `FR-019.6`) ⛓ T077 · prova: T095
+      ✅ **18/09/2026** — rótulo repetido no mesmo curso e ano. Medida **zero** na origem.
+- [X] T086 [PR1] Conferência 9 — vigência ativa com `Vigente_Ate` sem sucessora ativa no dia seguinte (`FR-020`, `FR-019.6`) ⛓ T077 · prova: T096
+      ✅ **18/09/2026** — vigência encerrada sem sucessora. Medida **zero** na origem.
+- [X] T087 [PR1] Conferência 10 — ordem de carga em `scripts/etl/ordem.py`: `cursos` antes de `curso_regime_historico`; `turmas` antes de `disciplinas`; `curso_regime_historico` antes de `registros_aula`, `avaliacoes` e `atividades_nao_letivas` (`FR-032.2`, `FR-019.4`, `FR-019.6`) ⛓ T077 · prova: T097
+      ✅ **18/09/2026** — ordem de carga. Medida **zero** na origem. ⚠️ Confere **precedência**, não lista literal: comparar com uma cópia da ordem certa só detectaria que alguém mexeu, e obrigaria a manter duas listas em sincronia.
+- [X] T088 [PR1] [P] Prova da conferência 1 em `scripts/etl/provar_verificacao_previa.py`: `staging` sem a linha `Padrao` de um curso → carga falha na verificação, mensagem nomeia o curso, **zero** linhas gravadas (`FR-019.6`, `SC-011.6`) ⛓ T078
+      ✅ **18/09/2026** — `provar_verificacao_previa.py`. **As dez pegam**, cada uma com um defeito injetado no `staging` e desfeito por savepoint; mais o **controle positivo** (a origem real passa nas dez), sem o qual uma verificação que recusasse tudo passaria em todas as provas.
+- [X] T089 [PR1] [P] Prova da conferência 2 no mesmo script: um curso com `EAD_Semipresencial` (`FR-003.1`, `SC-011.6`) ⛓ T079
+      ✅ **18/09/2026** — ver T088.
+- [X] T090 [PR1] [P] Prova da conferência 3: um curso sem modalidade e outro sem duração em dias (`FR-015`, `SC-011.6`) ⛓ T080
+      ✅ **18/09/2026** — ver T088.
+- [X] T091 [PR1] [P] Prova da conferência 4: uma turma sem modalidade (`FR-027`, `SC-011.6`) ⛓ T081
+      ✅ **18/09/2026** — ver T088.
+- [X] T092 [PR1] [P] Prova da conferência 5: uma turma com `Sala 05` (`FR-029`, `SC-011.6`) ⛓ T082
+      ✅ **18/09/2026** — ver T088.
+- [X] T093 [PR1] [P] Prova da conferência 6: uma turma com rótulo `t1` (`FR-025.2`, `SC-011.6`) ⛓ T083
+      ✅ **18/09/2026** — ver T088.
+- [X] T094 [PR1] [P] Prova da conferência 7: uma turma com código `CAHO 2026 T1` (`FR-025.1`, `SC-011.6`) ⛓ T084
+      ✅ **18/09/2026** — ver T088.
+- [X] T095 [PR1] [P] Prova da conferência 8: duas turmas sem rótulo no mesmo curso e ano (`FR-026`, `SC-011.6`) ⛓ T085
+      ✅ **18/09/2026** — ver T088.
+- [X] T096 [PR1] [P] Prova da conferência 9: uma vigência com `Vigente_Ate` e sem sucessora (`FR-020`, `SC-011.6`) ⛓ T086
+      ✅ **18/09/2026** — ver T088.
+- [X] T097 [PR1] [P] Prova da conferência 10: uma ordem de carga com `disciplinas` antes de `turmas`, montada na prova sem tocar em `ordem.py` (`FR-032.2`, `SC-011.6`) ⛓ T087
+      ✅ **18/09/2026** — ver T088.
+- [X] T098 [PR1] Carga completa sobre as sete migrations: `pnpm db:reset` + `python -m scripts.etl.executar` saindo **0**, reconciliação APROVADA, as dez conferências em **zero**, `curso_sigla_historico` sem tropeçar na cobertura (A-8); rodar `provar_carga_009.py` e `provar_verificacao_previa.py` e registrar as saídas; conferir à mão com a base povoada as **18 de 29** vigências corrigíveis (quickstart passos 1 e 2) (`FR-019.6`, `SC-011.1`, `SC-011.6`, `SC-014.4`) ⛓ T074, T076, T088 a T097, T067
+      ✅ **18/09/2026** — `pnpm db:reset` + `python -m scripts.etl.executar --primeira-carga` sai **0**, reconciliação **APROVADA**, **5.394** linhas promovidas, as dez conferências em zero. As **18 de 29** vigências corrigíveis conferidas à mão na base povoada — e **11 travadas**, como o `SC-011.1` prevê. ⚠️ **O ABORTO FOI PROVADO POR COMPARAÇÃO, não por mensagem** *(exigência de Bernardo Villas Boas, 18/09/2026)*: as **55** tabelas de `public` e `staging` têm contagem **idêntica** antes e depois de uma carga abortada com origem inválida. *"Abortou com saída 3"* prova que parou, não que não escreveu.
 
 ---
 

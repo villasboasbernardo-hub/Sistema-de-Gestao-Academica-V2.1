@@ -36,6 +36,14 @@ semeiam a própria amostra. Os **números exatos** da spec — 18 de 29, 6 de 24
   tabela é *append-only* — e *append-only* é exatamente o que impede desfazer. Saída **1**, veredito
   reprovado, **sem nada errado no dado**. Resetar antes resolve; apagar a linha, não — é o que a regra 5
   do `CLAUDE.md` proíbe.
+- ⚠️ **SOBRE A BASE CARREGADA, `tests/e2e/instrutores.spec.ts` REPROVA 6 CASOS** — pendência
+  `PEND-5a-6`, **não** defeito desta fatia *(medido em 18/09/2026)*. Eles semeiam a própria amostra e
+  afirmam contagens que só valem se a base não tiver mais nada: `"11 instrutor(es)"` contra os **177**
+  reais. Mesma família da `PEND-5a-5` — lá o teste supõe ser o único Admin, aqui supõe ser o único
+  dado. ✅ **A ponta a ponta do `inicio.spec.ts`, essa sim, foi corrigida aqui**, porque o defeito era
+  outro: três casos **liam o panorama sem esperar** e passavam por sorte de tempo. Medido: casca em
+  **1136 ms**, leitura imediata **0**, e as **28 turmas em 2159 ms**. É o gotcha nº 9 do Épico 3, e a
+  base real foi o que o expôs.
 - ⚠️ **E NENHUMA suíte sobrevive a um `db:reset` rodando ao mesmo tempo** *(medido em 18/09/2026, com
   custo)*. A ponta a ponta foi posta em segundo plano e, com ela no ar, um `db:reset` foi executado para
   desfazer a reversão da T058: **25 casos reprovaram**, em 7 arquivos que não tinham relação nenhuma com

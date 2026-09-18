@@ -23,6 +23,12 @@ import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { CardKpi } from "@/components/ciaara/card-kpi";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+// ⚠️ O ENDERECO DE TURMA VEM DO MODULO, E NAO DE UM TEMPLATE AQUI (`FR-031.2`). O codigo da
+//    turma e `sigla [rotulo] ano` e CONTEM ESPACO — montar a mao produzia um `href` com
+//    espaco cru, que o navegador aceita e o servidor recebe diferente. Defeito medido e
+//    corrigido em 18/09/2026; a varredura de `endereco-de-turma-unico.test.ts` o impede
+//    de voltar.
+import { enderecoDaTurmaNoCurso } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -177,7 +183,7 @@ export default async function Inicio({
                 destino é do Épico 7; o link já carrega o recorte que ela vai ler.
               */}
               <Link
-                href={`/cursos/${t.cursoCodigo}?turma=${t.turmaCodigo}`}
+                href={enderecoDaTurmaNoCurso(t.cursoCodigo, t.turmaCodigo)}
                 data-turma={t.turmaCodigo}
                 className="border-borda bg-superficie rounded-ciaara hover:bg-marca-suave focus-visible:ring-marca flex flex-wrap items-center justify-between gap-3 border p-3 focus-visible:ring-2 focus-visible:outline-none"
               >
