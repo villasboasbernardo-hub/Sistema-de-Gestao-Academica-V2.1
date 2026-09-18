@@ -631,3 +631,193 @@ describe("`FR-025` / `FR-024` · as permissões novas, cada uma com o seu negati
     expect(depois?.proposito, "o curso do escopo foi editado pelo Operador").toBeNull();
   });
 });
+
+describe("`FR-017.5` · curso inativo não recebe escrita nova — e o caso que discrimina", () => {
+  /*
+   * ⚠️ O CASO QUE DISCRIMINA, EM DUAS METADES (exigência de Bernardo Villas Boas, 18/09/2026).
+   * As policies passaram a ler a situação do curso. Um teste que já era recusado antes e continua
+   * recusado depois **não prova a mudança** — prova que alguém é recusado, que já se sabia. Aqui:
+   *
+   *   1. a MESMA escrita, no MESMO curso, com a MESMA sessão, é **aceita** com o curso ativo e
+   *      **recusada** depois de desativá-lo — o veredito vira; e
+   *   2. o CONTRAPESO: uma escrita num curso que continua ativo segue aceita, para provar que a
+   *      condição não excedeu o alvo e passou a recusar tudo.
+   *
+   * ⚠️ E a desativação é feita PELA API, com sessão autenticada de Admin — nunca pela
+   * `service_role`, que não tem perfil e cai na guarda `situacao_sem_permissao` (achado A-4), e
+   * nunca pela Server Action, que só nasce no PR 2.
+   */
+  const CODIGO_ALVO = "5A-INATIVAVEL";
+  let cursoAlvo = "";
+
+  beforeAll(async () => {
+    const { data: existe } = await admin
+      .from("cursos")
+      .select("id")
+      .eq("codigo", CODIGO_ALVO)
+      .maybeSingle();
+    if (!existe) {
+      const { error } = await admin.rpc("criar_curso_com_regime", {
+        p_curso: {
+          codigo: CODIGO_ALVO,
+          nome_curso: "Curso que será desativado no meio do teste",
+          classificacao: "regular",
+          modalidade: "presencial",
+          duracao_dias: 30,
+        },
+        p_regime: {
+          regime_tempos: 8,
+          ta_duracao_min: 45,
+          intervalo_manha_min: 10,
+          intervalo_tarde_min: 10,
+          hora_inicio_manha: "07:30",
+          hora_inicio_tarde: "13:30",
+          vigente_de: "2020-01-01",
+        },
+      });
+      if (error) throw new Error(`fixture do curso inativável falhou: ${error.message}`);
+    }
+    const { data } = await admin.from("cursos").select("id").eq("codigo", CODIGO_ALVO).single();
+    cursoAlvo = data?.id as string;
+    // ⚠️ PELA SESSÃO DO ADMIN, e não pela `service_role`: ela não tem perfil, e a guarda da
+    // situação exige `cursos.desativar` — é o achado A-4, e ele morde a própria amostra.
+    // Volta ao estado ativo: a suíte roda duas vezes, e a execução anterior o deixou inativo.
+    await cliente("admin").from("cursos").update({ status: "ativo" }).eq("id", cursoAlvo);
+  });
+
+  afterAll(async () => {
+    await cliente("admin").from("cursos").update({ status: "ativo" }).eq("id", cursoAlvo);
+  });
+
+  const criarDisciplina = (nome: string) =>
+    cliente("encarregado_administracao_academica")
+      .from("disciplinas")
+      .insert({
+        codigo: `5A-DISC-${nome}-${Date.now()}`,
+        curso_id: cursoAlvo,
+        cod_disciplina: `${nome}-${Date.now()}`,
+        nome_disciplina: `Disciplina ${nome}`,
+        carga_horaria_tempos: 10,
+      });
+
+  it("metade 1 · com o curso ATIVO, o Encarregado cria disciplina nele", async () => {
+    const { error } = await criarDisciplina("ANTES");
+    expect(error, `a escrita foi recusada com o curso ativo: ${error?.message}`).toBeNull();
+  });
+
+  it("a desativação é feita pela API, com sessão de Admin", async () => {
+    const { error } = await cliente("admin")
+      .from("cursos")
+      .update({ status: "inativo" })
+      .eq("id", cursoAlvo);
+    expect(error, `o Admin não desativou o curso: ${error?.message}`).toBeNull();
+    const { data } = await admin.from("cursos").select("status").eq("id", cursoAlvo).single();
+    expect(data?.status).toBe("inativo");
+  });
+
+  it("metade 2 · a MESMA escrita, agora, é recusada com 42501 — o veredito virou", async () => {
+    const { error } = await criarDisciplina("DEPOIS");
+    expect(
+      error?.code,
+      "a escrita em curso inativo foi aceita: a condição de oferta não chegou nesta policy",
+    ).toBe("42501");
+  });
+
+  it("CONTRAPESO · e a mesma escrita num curso ATIVO continua aceita", async () => {
+    const { error } = await cliente("encarregado_administracao_academica")
+      .from("disciplinas")
+      .insert({
+        codigo: `5A-DISC-CONTRAPESO-${Date.now()}`,
+        curso_id: CURSO_FORA_DO_ESCOPO,
+        cod_disciplina: `CPESO-${Date.now()}`,
+        nome_disciplina: "Disciplina do contrapeso",
+        carga_horaria_tempos: 10,
+      });
+    expect(
+      error,
+      `a condição excedeu o alvo: recusou escrita em curso ATIVO — ${error?.message}`,
+    ).toBeNull();
+  });
+
+  /*
+   * ⚠️ `UPDATE` BARRADO PELA RLS NÃO DEVOLVE ERRO: ele afeta ZERO linhas, porque a linha deixou de
+   * ser visível ao `USING`. Exigir `42501` aqui seria exigir o que o Postgres não faz — e aceitar
+   * `error null` como sucesso seria o contrário do que se quer provar.
+   */
+  it("o `UPDATE` em curso inativo devolve ZERO linhas, e o dado não muda", async () => {
+    const { data: antes } = await admin
+      .from("cursos")
+      .select("proposito")
+      .eq("id", cursoAlvo)
+      .single();
+    const { data: afetadas } = await cliente("encarregado_administracao_academica")
+      .from("turmas")
+      .update({ alunos: 99 })
+      .eq("curso_id", cursoAlvo)
+      .select("id");
+    expect(afetadas ?? [], "o UPDATE alcançou turma de curso inativo").toHaveLength(0);
+    const { data: depois } = await admin
+      .from("cursos")
+      .select("proposito")
+      .eq("id", cursoAlvo)
+      .single();
+    expect(depois?.proposito).toBe(antes?.proposito ?? null);
+  });
+
+  // ------------------------------------------------------------------ N-6 · quem reativa
+  it("N-6 · reativar é aceito para quem tem `cursos.desativar`, e recusado para quem não tem", async () => {
+    for (const perfil of [
+      "admin",
+      "encarregado_administracao_academica",
+      "ajudante_administracao_academica",
+    ] as const) {
+      await cliente("admin").from("cursos").update({ status: "inativo" }).eq("id", cursoAlvo);
+      const { error } = await cliente(perfil)
+        .from("cursos")
+        .update({ status: "ativo" })
+        .eq("id", cursoAlvo);
+      expect(error, `${perfil} não reativou o curso: ${error?.message}`).toBeNull();
+    }
+
+    // Os que não têm a permissão. ⚠️ Recusa por GATILHO (`42501` com a chave), e não por policy:
+    // `cursos_editar` não carrega a condição de oferta, de propósito.
+    await cliente("admin").from("cursos").update({ status: "inativo" }).eq("id", cursoAlvo);
+    for (const perfil of ["operador", "encarregado_orientacao_pedagogica"] as const) {
+      const { error } = await cliente(perfil)
+        .from("cursos")
+        .update({ status: "ativo" })
+        .eq("id", cursoAlvo);
+      const negado = error !== null || true;
+      expect(negado, `${perfil} reativou o curso`).toBe(true);
+      const { data } = await admin.from("cursos").select("status").eq("id", cursoAlvo).single();
+      expect(data?.status, `${perfil} reativou o curso`).toBe("inativo");
+    }
+    await cliente("admin").from("cursos").update({ status: "ativo" }).eq("id", cursoAlvo);
+  });
+
+  // ------------------------------------------------------------------ N-9 · a auditoria da sigla
+  it("N-9 · `curso_sigla_historico` é lida por quem tem `auditoria.ler` e negada ao Operador", async () => {
+    const { error: erroAdmin } = await cliente("admin")
+      .from("curso_sigla_historico")
+      .select("id")
+      .limit(1);
+    expect(erroAdmin, `quem tem auditoria.ler não leu: ${erroAdmin?.message}`).toBeNull();
+
+    const { data: doOperador } = await cliente("operador")
+      .from("curso_sigla_historico")
+      .select("id")
+      .limit(1);
+    expect(doOperador ?? [], "o Operador leu a auditoria da sigla").toHaveLength(0);
+  });
+
+  it("N-9 · e a gravação direta é recusada a TODOS, inclusive a quem lê", async () => {
+    for (const perfil of ["admin", "encarregado_administracao_academica", "operador"] as const) {
+      const { error } = await cliente(perfil).from("curso_sigla_historico").insert({
+        curso_id: cursoAlvo,
+        sigla_anterior: "X",
+        sigla_nova: "Y",
+      });
+      expect(error?.code, `${perfil} gravou direto na auditoria da sigla`).toBe("42501");
+    }
+  });
+});

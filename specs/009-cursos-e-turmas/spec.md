@@ -1267,6 +1267,43 @@ pergunta** (`→ Q-nn`) em vez de fixar uma resposta. Isso é deliberado.
   pode entrar entre a conferência e a troca. O requisito é o **resultado** — nenhum lançamento
   gravado sob a vigência durante a correção —, e o plano MUST mostrar como o lado do lançamento o
   respeita (a mesma trava do lado de quem lança, ou nível de isolamento que detecte o conflito).
+  ---
+
+  ⚠️ **Emenda de 18/09/2026 — o que a trava de fato entrega, medido com duas sessões.**
+  *(decisão de Bernardo Villas Boas, 18/09/2026)*
+
+  **Acréscimo, sem reescrever o texto acima.** O `FR-021.3` e o acréscimo (1) da Q-06.1 foram escritos
+  supondo que, **sem** a trava, haveria **corrupção silenciosa**. A prova de
+  `scripts/provas/provar_corrida_vigencia.py` — duas sessões concorrentes, com defeito deliberado —
+  mediu outra coisa em 18/09/2026:
+
+  | | a sessão que lança foi bloqueada? | desfecho da correção |
+  |---|---|---|
+  | **com** a trava | **sim** | a correção passa, e a aula nasce **sob a vigência corrigida** |
+  | **sem** a trava | não | a correção é **RECUSADA**, com `vigencia_com_lancamento` |
+
+  **Sem a trava não houve corrupção: houve recusa tardia.** O motivo é que existem **duas defesas
+  independentes**, e só uma delas é a trava:
+
+  1. **a trava** (`app.travar_curso_para_correcao`), que faz quem lança **esperar**; e
+  2. **a reconferência interna da RPC**, que confere o lançamento **outra vez** já dentro dela — e em
+     `READ COMMITTED` cada comando tira **retrato novo**, então ela enxerga o que a primeira não viu.
+
+  **O que a trava entrega, dito com precisão: ela SERIALIZA.** Converte uma recusa **imprevisível sob
+  concorrência** — que para quem usa é "às vezes não deixa corrigir, sem motivo visível" — numa
+  **espera**, e faz o lançamento nascer sob a vigência que de fato vale.
+
+  ⚠️ **E AS DUAS SÃO UM PAR — a advertência é a parte que importa.** Agora que se sabe que são duas,
+  cada uma corre o risco de ser removida por quem acredite que a outra cobre. **Nenhuma das duas
+  sozinha entrega o desfecho desejado:**
+  - **sem a trava**, a correção falha de modo **aleatório** sob concorrência — o resultado passa a
+    depender de quem chegou primeiro, e a recusa não tem explicação para quem a recebe;
+  - **sem a reconferência interna**, sobra a janela entre a conferência e o `COMMIT` — e essa janela
+    **não é forçável de fora** justamente porque a RPC é **um comando só**, o que significa que
+    nenhum teste de caixa-preta a pegaria.
+
+  **Remover qualquer uma das duas exige decisão registrada e datada.**
+
 - **FR-021.4**: Havendo lançamento, a recusa MUST chegar como **mensagem compreensível**, que diga
   **qual lançamento impede** — ao menos o tipo (aula, avaliação, vista de prova ou atividade), a
   data e a turma do primeiro encontrado, e quantos são — e **qual é o caminho**: registrar vigência

@@ -65,6 +65,24 @@ Tudo o que é "hoje" foi medido no banco local povoado em 16/09 e 17/09/2026.
 - RLS ligada, índice por `curso_id`. **Sem tela nesta fatia.**
 - **Nunca** um campo de histórico dentro de `cursos` (`FR-014.1`).
 
+⚠️ **DOIS DESENHOS DE APPEND-ONLY NESTA FATIA, E ELES NÃO SÃO O MESMO — não uniformizar**
+*(registrado em 18/09/2026)*:
+
+| | `curso_sigla_historico` | `curso_regime_historico` |
+|---|---|---|
+| `UPDATE` | **bloqueado** por gatilho de **statement** | **guardado** por gatilho de **linha**, coluna a coluna |
+| `DELETE` | bloqueado por statement | bloqueado por statement |
+| `TRUNCATE` | bloqueado por statement | bloqueado por statement |
+| vale para `service_role`? | **sim**, nos três | **sim**, nos dois de statement |
+
+**O motivo da diferença é requisito, não estilo.** `curso_sigla_historico` é **append-only puro**: uma
+linha gravada não tem escrita legítima nenhuma. `curso_regime_historico` MUST aceitar **exatamente
+duas** escritas numa linha existente (`FR-020`) — gravar `vigente_ate` quando a sucessora entra, e
+passar `status` a `cancelado` —, e um gatilho de **statement** em `UPDATE` **recusaria as duas**.
+Por isso ali o `UPDATE` é guardado por gatilho de **linha**, que compara coluna a coluna e devolve a
+lista do que mudou no `DETAIL`. **Uniformizar os dois desenhos quebra um dos dois requisitos**, e qual
+deles depende de para que lado a uniformização for.
+
 ### `turmas` — 28 linhas
 
 | Coluna / objeto | Hoje | Depois | Origem |

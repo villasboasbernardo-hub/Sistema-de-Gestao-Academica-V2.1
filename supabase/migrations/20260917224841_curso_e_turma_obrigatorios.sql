@@ -199,6 +199,13 @@ create trigger trg_curso_sigla_historico_auditoria
   before insert on public.curso_sigla_historico
   for each row execute function app.set_auditoria();
 
+-- ⚠️ E ESTE DESENHO NAO E O DA `curso_regime_historico` — nao uniformizar (registrado em
+--    18/09/2026). Aqui o `UPDATE` e BLOQUEADO por statement, porque esta tabela e append-only PURO:
+--    linha gravada nao tem escrita legitima nenhuma. La, o `FR-020` manda aceitar EXATAMENTE DUAS
+--    escritas numa linha existente — `vigente_ate` e o cancelamento —, e um gatilho de statement em
+--    `UPDATE` recusaria as duas; por isso la o `UPDATE` e guardado por gatilho de LINHA, coluna a
+--    coluna. Uniformizar os dois quebra um dos dois requisitos.
+--
 -- ⚠️ DOIS gatilhos de STATEMENT, e o de TRUNCATE e deliberado. O de `migracao_log` e so
 --    `BEFORE DELETE OR UPDATE`, e a `service_role` TEM o privilegio de TRUNCATE nela — medido e
 --    provado em 17/09/2026 numa tabela descartavel (R-22). TRUNCATE nao dispara gatilho de linha

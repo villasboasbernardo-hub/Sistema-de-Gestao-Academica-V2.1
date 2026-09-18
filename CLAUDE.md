@@ -111,6 +111,15 @@ diferente *(decisão de 17/09/2026)*. ⚠️ **Medido no histórico em
 8. **Parâmetro normativo é dado, nunca constante.** Tetos, faixas de CH docente, feriados, janelas e
    reservas do PROENS vivem em `config_parametros` e nas tabelas de calendário (`RNF-NORM-08`).
 9. **Nada em `lib/dominio/` importa `supabase`, `next` ou `react`.** Imposto por ESLint.
+9.1. **Curso não é apagável, e isso muda como toda amostra é escrita** *(propriedade do sistema desde
+   a fatia (a) do Épico 5, 18/09/2026)*. `curso_regime_historico` é **append-only** com `DELETE` e
+   `TRUNCATE` recusados por gatilho **inclusive para a `service_role`**, e a FK `cursos` é `restrict`
+   — logo **nenhuma amostra apaga curso**. Consequências, que valem para **as fatias futuras
+   inteiras**: toda amostra que cria curso MUST ser **idempotente**, reaproveitando o que já existe;
+   identificadores MUST ser **gerados ou buscados**, **nunca fixos** — a RPC gera o `id` dela, e
+   código fixo faz a segunda execução falhar por `23505`, que **parece recusa de permissão e não é**.
+   ⚠️ **E a idempotência MUST ser provada rodando a suíte DUAS VEZES SEGUIDAS** — foi assim que ela
+   foi verificada aqui, e é o único jeito de saber que a limpeza não era o que fazia a suíte passar.
 10. **Não regressão se prova por invariante**, nunca por diff com a saída histórica de um curso.
     **A CAHO 2026 foi rejeitada como padrão-ouro** (Bernardo, 10/08/2026) — não reabrir.
 11. **`RNF-NORM-04` permanece rejeitado** (sequenciamento pedagógico de técnica de ensino): não gera
@@ -294,6 +303,16 @@ sem isso, **a gravação falha com `permission denied for function`**, e o erro 
 para a coluna — diagnóstico caro para quem está criando uma turma. ⚠️ Gatilho é o contrário: função de
 gatilho **não** exige `EXECUTE` de quem grava, e por isso ela leva `revoke all` de `public`, `anon` e
 `authenticated`.
+
+**4.1. Erro de RLS numa escrita cuja permissão está correta? Olhe a policy de LEITURA**
+*(medido em 18/09/2026, spec 009)*. **`INSERT … RETURNING` exige que a linha passe também pela policy
+de `SELECT`** — e quando o alcance é resolvido por função **`STABLE`** (`app.alcanca_curso()` →
+`app.cursos_do_usuario()`), ela **não enxerga a linha recém-inserida dentro do mesmo comando**: o
+alcance dá **falso**, e a recusa chega como **`new row violates row-level security policy`** — mensagem
+que aponta para a **escrita** e faz procurar permissão de criar, que estava certa o tempo todo.
+**Solução: gerar o `id` antes, inserir sem `RETURNING`, e ler em comando separado**, que tira retrato
+novo. ⚠️ **Vai reaparecer em toda RPC que insira em tabela com policy de leitura por alcance** —
+`criar_curso_com_regime` foi a primeira.
 
 **5.2. E dá para ler o mecanismo no tipo gerado, sem abrir o SQL.** Como o gerador **enxerga `DEFAULT`
 e não enxerga gatilho**, o tipo revela qual mecanismo preenche a coluna: **opcional em `Insert` =

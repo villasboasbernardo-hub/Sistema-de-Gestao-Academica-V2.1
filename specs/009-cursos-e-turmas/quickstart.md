@@ -36,6 +36,17 @@ semeiam a própria amostra. Os **números exatos** da spec — 18 de 29, 6 de 24
   tabela é *append-only* — e *append-only* é exatamente o que impede desfazer. Saída **1**, veredito
   reprovado, **sem nada errado no dado**. Resetar antes resolve; apagar a linha, não — é o que a regra 5
   do `CLAUDE.md` proíbe.
+- ⚠️ **E NENHUMA suíte sobrevive a um `db:reset` rodando ao mesmo tempo** *(medido em 18/09/2026, com
+  custo)*. A ponta a ponta foi posta em segundo plano e, com ela no ar, um `db:reset` foi executado para
+  desfazer a reversão da T058: **25 casos reprovaram**, em 7 arquivos que não tinham relação nenhuma com
+  a migration. **E o modo de falha ENGANA** — as mensagens acusam a aplicação, não a base:
+  `Database error checking email` (11 casos), `Could not find the function
+  public.criar_curso_com_regime in the schema cache` (4), `The destination stream closed early` (7) e
+  `supabase status falhou duas vezes`. A causa saiu do **relógio**, não do texto: a suíte correu de
+  01:21:20 a 01:23:57, e `docker inspect` mostra o contêiner do **banco reiniciado às 01:22:45** e o do
+  **auth às 01:23:32** — dentro da janela. **Rodada sozinha em seguida, sem nada mais tocando o banco, a MESMA suíte passou — 158 passados, 2 pulados, nenhum reprovado.** **Antes de
+  investigar reprovação de ponta a ponta, confira o `StartedAt` dos contêineres contra a janela da
+  execução**: é uma pergunta de dois segundos que teria poupado a investigação inteira.
 
 ---
 
