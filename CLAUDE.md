@@ -210,6 +210,18 @@ histórico do banco, e renomeá-lo quebra a ordem e a correspondência com o que
    *Risco: Alto*. Stub explicitamente pendente é aceito; **cobertura fingida não**.
 4. **RLS — teste negativo por perfil:** o que cada perfil **não** pode ler/escrever é negado **pelo
    banco**. Testar só o caminho feliz não prova nada.
+   ⚠️ **E prova de permissão NÃO mora em pgTAP** *(registrado em 17/09/2026, spec 009)*. O pgTAP roda
+   como **dono do schema**, e **sob privilégio de dono a RLS não se aplica**: uma asserção de "este
+   perfil pode / não pode" escrita ali passaria **com a RLS desligada**, que é o defeito que a suíte
+   existe para impedir. A divisão é: **pgTAP prova estrutura e regra de banco** — restrição, gatilho,
+   contagem, invariante —, e **quem pode o quê se prova em `tests/invariantes/rls/`**, com **sessão
+   autenticada de verdade**. Simular sessão com `request.jwt.claim.sub` no pgTAP serve para **auditoria
+   e gatilho** (quem carimbou a linha), **nunca** para autorização.
+   ⚠️ **E a recusa MUST ser conferida pelo código certo — `42501`, vindo da RLS.** Aceitar `error not
+   null`, ou um `23502` de coluna obrigatória ausente, como se fosse prova de permissão é o modo de
+   falha já medido nesta base: seis negativos do `SC-004` passavam pelo motivo errado, e só o
+   **controle positivo** os pegou. Toda asserção negativa manda a **linha completa** e confere o
+   código.
 5. **Playwright** no percurso principal, incluindo a rota `/print/*` quando houver.
 6. Migration aplicada em preview e **revertível** (plano de reversão escrito no PR).
 7. Commits no padrão `feat(RF-…): …`.
@@ -263,6 +275,22 @@ justamente o que o `FR-015.1` proíbe onde a pessoa deveria escolher, e ele não
 linha. O caminho é **não inserir por cliente tipado** onde há gatilho: a escrita vai por **RPC** que
 recebe `jsonb`, como `criar_curso_com_regime`. Amostra de teste que insere direto é o outro caso — e
 ela usa cliente sem tipo, por isso não acusa.
+
+**5.1. E o `DEFAULT` que chama função precisa de `grant execute` a quem insere** *(padrão, não caso:
+duas ocorrências — o gerador `VIN-` da fatia (c) e o `TDI-` da (a))*. O `DEFAULT` é avaliado **com os
+direitos de quem faz o `INSERT`**, não com os do dono da tabela, mesmo quando a função é
+`SECURITY DEFINER` — a definição precisa ser executável pelo papel. Toda coluna cujo `DEFAULT` chama
+função MUST vir com `grant execute on function … to authenticated` (e `service_role`, para o ETL);
+sem isso, **a gravação falha com `permission denied for function`**, e o erro aponta para a função, não
+para a coluna — diagnóstico caro para quem está criando uma turma. ⚠️ Gatilho é o contrário: função de
+gatilho **não** exige `EXECUTE` de quem grava, e por isso ela leva `revoke all` de `public`, `anon` e
+`authenticated`.
+
+**5.2. E dá para ler o mecanismo no tipo gerado, sem abrir o SQL.** Como o gerador **enxerga `DEFAULT`
+e não enxerga gatilho**, o tipo revela qual mecanismo preenche a coluna: **opcional em `Insert` =
+`DEFAULT`**; **obrigatória apesar de ser preenchida sozinha = gatilho**. Serve de conferência barata de
+que a coluna ficou como se pretendia — `turma_disciplina.codigo` virou opcional (é `DEFAULT`), e
+`turmas.codigo` continuou obrigatória (é gatilho), que é exatamente o desenho decidido.
 
 ## Estado atual e onde retomar
 

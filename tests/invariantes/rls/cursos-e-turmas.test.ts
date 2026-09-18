@@ -48,7 +48,14 @@ const admin = createClient(URL_SUPABASE, CHAVE_SERVICO, {
 });
 
 type Perfil =
-  "admin" | "encarregado_administracao_academica" | "ajudante_administracao_academica" | "operador";
+  | "admin"
+  | "encarregado_administracao_academica"
+  | "ajudante_administracao_academica"
+  | "operador"
+  // ⚠️ O Encarregado da Divisão de Orientação Educacional e Pedagógica entrou por um motivo
+  // preciso: ele é o perfil que o documento 01 §2.5 deixa com `L` em `horarios` e em `turmas` —
+  // ou seja, o perfil pelo qual se prova o NEGATIVO de cada permissão nova desta fatia.
+  | "encarregado_orientacao_pedagogica";
 
 const sessoes = new Map<Perfil, SupabaseClient>();
 const email = (p: Perfil) => `5a-${p}@ciaara.teste5a`;
@@ -59,6 +66,17 @@ const SALAS_DO_TESTE = ["Sala 5A Ajudante", "Sala 5A Admin", "Sala 5A Encarregad
 /** O curso e a disciplina da prova do gatilho de nascimento (`FR-032.2`, R-6). */
 const CURSO_NASCIMENTO = "5a000000-0000-0000-0000-00000000c001";
 const DISCIPLINA_NASCIMENTO = "5a000000-0000-0000-0000-00000000d001";
+
+/*
+ * O par de cursos do recorte do Operador: um EXPEDITO, que é o escopo dele, e um REGULAR, que não é.
+ * ⚠️ São fixtures, e não `C-Exp-BATI` e `CAHO` como a spec mediu: esta suíte roda sobre a base do
+ * `db:reset`, VAZIA, e depender de curso da carga faria o caso passar ou falhar pelo estado do banco
+ * em vez de pelo requisito.
+ */
+const CURSO_DO_ESCOPO = "5a000000-0000-0000-0000-00000000c002";
+const CURSO_FORA_DO_ESCOPO = "5a000000-0000-0000-0000-00000000c003";
+/** Uma turma que o Admin cria no curso FORA do escopo, para o Operador tentar mexer nela. */
+const TURMA_FORA_DO_ESCOPO = "5a000000-0000-0000-0000-00000000a003";
 
 const cliente = (p: Perfil): SupabaseClient => {
   const c = sessoes.get(p);
@@ -113,14 +131,21 @@ async function limpar(): Promise<void> {
   const { data: turmasDoTeste } = await admin
     .from("turmas")
     .select("id")
-    .eq("curso_id", CURSO_NASCIMENTO);
+    .in("curso_id", [CURSO_NASCIMENTO, CURSO_DO_ESCOPO, CURSO_FORA_DO_ESCOPO]);
   const idsDeTurma = (turmasDoTeste ?? []).map((t) => t.id);
   if (idsDeTurma.length > 0) {
     await admin.from("turma_disciplina").delete().in("turma_id", idsDeTurma);
     await admin.from("turmas").delete().in("id", idsDeTurma);
   }
   await admin.from("disciplinas").delete().eq("id", DISCIPLINA_NASCIMENTO);
-  await admin.from("cursos").delete().eq("id", CURSO_NASCIMENTO);
+  await admin
+    .from("curso_regime_historico")
+    .delete()
+    .in("curso_id", [CURSO_DO_ESCOPO, CURSO_FORA_DO_ESCOPO]);
+  await admin
+    .from("cursos")
+    .delete()
+    .in("id", [CURSO_NASCIMENTO, CURSO_DO_ESCOPO, CURSO_FORA_DO_ESCOPO]);
 
   await admin.from("config_listas").delete().eq("lista", "salas").in("valor", SALAS_DO_TESTE);
   await admin.from("usuarios").delete().like("email", "%@ciaara.teste5a");
@@ -136,6 +161,37 @@ beforeAll(async () => {
   await criarUsuario("encarregado_administracao_academica", "geral");
   await criarUsuario("ajudante_administracao_academica", "geral");
   await criarUsuario("operador", "expedito");
+  await criarUsuario("encarregado_orientacao_pedagogica", "geral");
+
+  const { error: erroEscopo } = await admin.from("cursos").insert([
+    {
+      id: CURSO_DO_ESCOPO,
+      codigo: "5A-EXP",
+      nome_curso: "Curso expedito do escopo do Operador",
+      classificacao: "expedito",
+      modalidade: "presencial",
+      duracao_dias: 10,
+    },
+    {
+      id: CURSO_FORA_DO_ESCOPO,
+      codigo: "5A-REG",
+      nome_curso: "Curso regular fora do escopo do Operador",
+      classificacao: "regular",
+      modalidade: "presencial",
+      duracao_dias: 30,
+    },
+  ]);
+  if (erroEscopo) throw new Error(`fixture do par de cursos falhou: ${erroEscopo.message}`);
+
+  const { error: erroTurmaFora } = await admin.from("turmas").insert({
+    id: TURMA_FORA_DO_ESCOPO,
+    curso_id: CURSO_FORA_DO_ESCOPO,
+    turma: "T1",
+    ano_letivo: 2046,
+    status: "planejada",
+    modalidade: "presencial",
+  });
+  if (erroTurmaFora) throw new Error(`fixture da turma alheia falhou: ${erroTurmaFora.message}`);
 
   const { error: erroCurso } = await admin.from("cursos").insert({
     id: CURSO_NASCIMENTO,
@@ -288,5 +344,182 @@ describe("`FR-032.2` / R-6 · o gatilho de nascimento roda com os direitos do do
       "o perfil sem `disciplinas.editar` escreveu direto em turma_disciplina — o SECURITY DEFINER " +
         "não está fazendo o trabalho, a permissão é que ficou irrelevante",
     ).toBe("42501");
+  });
+});
+
+describe("`FR-025` / `FR-024` · as permissões novas, cada uma com o seu negativo", () => {
+  /*
+   * ⚠️ TODA PERMISSÃO CONCEDIDA VEM COM O NEGATIVO DE UM PERFIL QUE NÃO A TEM, e a recusa é conferida
+   * pelo CÓDIGO — `42501`, que é o que a RLS devolve (exigência de Bernardo Villas Boas, 17/09/2026).
+   * Aceitar `error not null`, ou um `23502` de coluna obrigatória ausente, foi exatamente como seis
+   * negativos do `SC-004` passaram pelo motivo errado nesta mesma fatia — e lá só o controle positivo
+   * salvou. Por isso, aqui: **linha completa em toda tentativa** e **código conferido**.
+   *
+   * ⚠️ E CADA NEGATIVO TEM O SEU CONTROLE POSITIVO, com o MESMO payload. Sem ele, um negativo verde
+   * pode estar provando apenas que a linha era inválida.
+   */
+  const vigencia = (cursoId: string, codigo: string) => ({
+    codigo,
+    curso_id: cursoId,
+    tipo_regime: "padrao" as const,
+    regime_tempos: 8,
+    ta_duracao_min: 45,
+    intervalo_manha_min: 10,
+    intervalo_tarde_min: 10,
+    hora_inicio_manha: "07:30",
+    hora_inicio_tarde: "13:30",
+    vigente_de: "2046-01-01",
+  });
+
+  // ------------------------------------------------------------------ `horarios.criar`
+  it("NEGATIVO · quem tem só `horarios.ler` NÃO cria vigência de regime — 42501", async () => {
+    const { error } = await cliente("encarregado_orientacao_pedagogica")
+      .from("curso_regime_historico")
+      .insert(vigencia(CURSO_DO_ESCOPO, "REG-5A-NEG"));
+    expect(error?.code, "o perfil sem `horarios.criar` registrou vigência").toBe("42501");
+  });
+
+  /*
+   * ⚠️ O CONTROLE POSITIVO VAI NO OUTRO CURSO, e não é detalhe: duas vigências `padrao` ATIVAS do
+   * mesmo curso se sobrepõem, e o `EXCLUDE` do Épico 1 as recusa — a segunda falharia por
+   * sobreposição, e a mensagem falaria de exclusão, não de permissão. O controle usa o curso
+   * REGULAR (o Encarregado tem alcance geral) e deixa o EXPEDITO livre para o Operador, no N-1b.
+   */
+  it("controle positivo · o Encarregado da Divisão cria a MESMA vigência, em outro curso", async () => {
+    const { error } = await cliente("encarregado_administracao_academica")
+      .from("curso_regime_historico")
+      .insert(vigencia(CURSO_FORA_DO_ESCOPO, "REG-5A-OK"));
+    expect(
+      error,
+      `o Encarregado da Divisão não registrou a vigência: ${error?.message}`,
+    ).toBeNull();
+  });
+
+  /*
+   * ⚠️ E ESTE É O CASO QUE DISCRIMINA A MUDANÇA DE POLICY, e sem ele os dois de cima passariam
+   * ANTES e DEPOIS da migration 5 — provando que alguém é recusado, e não que a policy mudou de
+   * recurso. O documento 01 §2.5 dá ao Operador `LCE` em `horarios` e apenas `L` em `cursos`: ele é
+   * o único perfil que tem `horarios.criar` SEM ter `cursos.editar`. Logo, registrar vigência pelo
+   * Operador é **recusado** enquanto a policy lê `cursos.editar` e **aceito** quando ela passa a ler
+   * `horarios.criar` — é a única asserção desta suíte que muda de veredito com a migration, e é por
+   * isso que ela existe.
+   */
+  it("N-1b · o Operador REGISTRA vigência no curso do escopo — ele tem `horarios`, não `cursos.editar`", async () => {
+    const { error } = await cliente("operador")
+      .from("curso_regime_historico")
+      .insert(vigencia(CURSO_DO_ESCOPO, "REG-5A-OPE"));
+    expect(
+      error,
+      "o Operador não registrou vigência: a policy ainda lê `cursos.editar`, não `horarios.criar`",
+    ).toBeNull();
+  });
+
+  it("N-2b · e NÃO registra vigência em curso fora do escopo — 42501", async () => {
+    const { error } = await cliente("operador")
+      .from("curso_regime_historico")
+      .insert(vigencia(CURSO_FORA_DO_ESCOPO, "REG-5A-OPE-FORA"));
+    expect(
+      error?.code,
+      "o Operador registrou vigência fora do escopo — recurso novo, alcance perdido",
+    ).toBe("42501");
+  });
+
+  // ------------------------------------------------------------------ `turmas.criar`
+  it("NEGATIVO · quem tem só `turmas.ler` NÃO cria turma — 42501", async () => {
+    const { error } = await cliente("encarregado_orientacao_pedagogica").from("turmas").insert({
+      curso_id: CURSO_FORA_DO_ESCOPO,
+      turma: "T8",
+      ano_letivo: 2046,
+      status: "planejada",
+      modalidade: "presencial",
+    });
+    expect(error?.code, "o perfil sem `turmas.criar` criou turma").toBe("42501");
+  });
+
+  // ------------------------------------------------------------------ N-1: o Operador, dentro do escopo
+  it("N-1 · o Operador CRIA turma no curso do seu escopo", async () => {
+    const { data, error } = await cliente("operador")
+      .from("turmas")
+      .insert({
+        curso_id: CURSO_DO_ESCOPO,
+        turma: "T1",
+        ano_letivo: 2046,
+        status: "planejada",
+        modalidade: "presencial",
+      })
+      .select("id, codigo")
+      .single();
+    expect(error, `o Operador não criou turma no escopo dele: ${error?.message}`).toBeNull();
+    expect(data?.codigo).toBe("5A-EXP T1 2046");
+  });
+
+  it("N-1 · e MUDA o status dela — inclusive o status, diz a emenda do documento 01", async () => {
+    const { data: turma } = await admin
+      .from("turmas")
+      .select("id")
+      .eq("curso_id", CURSO_DO_ESCOPO)
+      .limit(1)
+      .single();
+    const { error } = await cliente("operador")
+      .from("turmas")
+      .update({ status: "ativa" })
+      .eq("id", turma?.id as string);
+    expect(error, `o Operador não mudou o status da turma dele: ${error?.message}`).toBeNull();
+  });
+
+  // ------------------------------------------------------------------ N-2: fora do escopo
+  it("N-2 · o MESMO Operador NÃO cria turma em curso fora do escopo — 42501", async () => {
+    const { error } = await cliente("operador").from("turmas").insert({
+      curso_id: CURSO_FORA_DO_ESCOPO,
+      turma: "T7",
+      ano_letivo: 2046,
+      status: "planejada",
+      modalidade: "presencial",
+    });
+    expect(error?.code, "o Operador criou turma fora do escopo").toBe("42501");
+  });
+
+  it("N-2 · e NÃO muda o status da turma alheia — a `UPDATE` negada some, e isso é medido", async () => {
+    /*
+     * ⚠️ `UPDATE` barrado pela RLS NÃO devolve erro: ele afeta ZERO linhas, porque a linha não é
+     * visível. Exigir `42501` aqui seria exigir o que o Postgres não faz — e aceitar `error null`
+     * como sucesso seria pior. Mede-se a CONTAGEM de linhas afetadas, e confere-se que o status
+     * não mudou no banco.
+     */
+    const { data: afetadas } = await cliente("operador")
+      .from("turmas")
+      .update({ status: "cancelada" })
+      .eq("id", TURMA_FORA_DO_ESCOPO)
+      .select("id");
+    expect(afetadas ?? [], "o Operador alcançou a turma alheia num UPDATE").toHaveLength(0);
+
+    const { data: depois } = await admin
+      .from("turmas")
+      .select("status")
+      .eq("id", TURMA_FORA_DO_ESCOPO)
+      .single();
+    expect(depois?.status, "o status da turma alheia mudou").toBe("planejada");
+  });
+
+  // ------------------------------------------------------------------ N-3: curso, nos dois lados
+  it("N-3 · o Operador NÃO edita curso — nem dentro, nem fora do escopo", async () => {
+    for (const [onde, cursoId] of [
+      ["dentro do escopo", CURSO_DO_ESCOPO],
+      ["fora do escopo", CURSO_FORA_DO_ESCOPO],
+    ] as const) {
+      const { data: afetadas } = await cliente("operador")
+        .from("cursos")
+        .update({ proposito: "editado pelo operador" })
+        .eq("id", cursoId)
+        .select("id");
+      expect(afetadas ?? [], `o Operador editou o curso ${onde}`).toHaveLength(0);
+    }
+
+    const { data: depois } = await admin
+      .from("cursos")
+      .select("proposito")
+      .eq("id", CURSO_DO_ESCOPO)
+      .single();
+    expect(depois?.proposito, "o curso do escopo foi editado pelo Operador").toBeNull();
   });
 });
