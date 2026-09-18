@@ -195,6 +195,13 @@ test(RN-ANT-02): cobrir empate de posto por antiguidade declarada
 Branch: `<tipo>/<identificador>-<resumo-curto>`. **Nunca `git push` direto na `main`.** Merge por
 squash, via PR com o template inteiro preenchido.
 
+**Data de migration: duas datas, e as duas estão certas** *(registrado em 17/09/2026)*. O **nome do
+arquivo** carrega carimbo **UTC**, gerado pela CLI do Supabase (`supabase migration new`); o
+**cabeçalho e as decisões** carregam a **data local do responsável**. Diferença de um dia entre os dois
+é **fuso, não erro** — `20260918002208` é 00:22 UTC, e aqui eram 21:22 de 17/09/2026. ⚠️ **O arquivo
+MUST NOT ser renomeado para "corrigir" a data**: o nome é a chave de ordenação das migrations e do
+histórico do banco, e renomeá-lo quebra a ordem e a correspondência com o que já foi aplicado.
+
 ## Definition of Done — uma fatia só está pronta quando **todos** passam
 
 1. `tsc --noEmit` sem erro e `eslint` sem aviso novo.

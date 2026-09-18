@@ -94,6 +94,13 @@ select is(
 -- Pela EDICAO a ordem se inverte: o codigo NUNCA muda (FR-025.1 da spec 009), entao mudar o rotulo
 -- de T2 para T1 colide so em (curso, ano, rotulo) — e quem recusa e `turmas_unica_por_ano`, pelo
 -- nome. Os quatro caminhos de colisao estao no `101_turma_codigo_e_rotulo.sql`.
+--
+-- ⚠️ A REGRA GERAL QUE ESTE PAR DEIXOU, e que vale para a proxima vez (decisao de Bernardo Villas
+--    Boas, 17/09/2026): **quando duas restricoes sao acionaveis pelo mesmo caso, escolher o CAMINHO
+--    em que so a pretendida pode disparar vale mais do que afirmar o nome no caminho ambiguo.**
+--    Afirmar o nome na insercao teria provado a regra ERRADA com toda a confianca do mundo — ali a
+--    regra pretendida nunca chegava a ser exercida. Nomear a restricao e o comeco; escolher o
+--    caminho em que ela e a unica candidata e o que faz a assercao provar o que diz provar.
 insert into public.turmas (codigo, curso_id, turma, ano_letivo, status, modalidade) values
   ('UNI-A T2 2026', '11111111-0000-0000-0000-000000000001', 'T2', 2026, 'planejada', 'presencial');
 select is(

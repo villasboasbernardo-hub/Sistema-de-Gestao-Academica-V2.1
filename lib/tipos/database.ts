@@ -2127,7 +2127,7 @@ export type Database = {
         }
         Insert: {
           ch_prevista_por_instrutor?: number | null
-          codigo: string
+          codigo?: string
           criado_em?: string
           criado_por?: string | null
           disciplina_id: string

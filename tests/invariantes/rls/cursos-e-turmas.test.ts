@@ -56,6 +56,10 @@ const email = (p: Perfil) => `5a-${p}@ciaara.teste5a`;
 /** As salas que esta suíte cria. Nomeadas para a limpeza alcançar todas, e só elas. */
 const SALAS_DO_TESTE = ["Sala 5A Ajudante", "Sala 5A Admin", "Sala 5A Encarregado"];
 
+/** O curso e a disciplina da prova do gatilho de nascimento (`FR-032.2`, R-6). */
+const CURSO_NASCIMENTO = "5a000000-0000-0000-0000-00000000c001";
+const DISCIPLINA_NASCIMENTO = "5a000000-0000-0000-0000-00000000d001";
+
 const cliente = (p: Perfil): SupabaseClient => {
   const c = sessoes.get(p);
   if (!c) throw new Error(`sessao ausente para ${p}`);
@@ -96,6 +100,28 @@ async function criarUsuario(perfil: Perfil, escopo: string): Promise<void> {
  * `beforeAll` não pode inviabilizar a seguinte.
  */
 async function limpar(): Promise<void> {
+  // ⚠️ A MATRIZ VOLTA AO LUGAR ANTES E DEPOIS. A prova do gatilho tira `disciplinas.editar` do
+  // Encarregado da Divisão, e deixar isso para trás mudaria o resultado de toda a suíte seguinte —
+  // inclusive de arquivos que não sabem que esta prova existe.
+  await admin
+    .from("perfil_permissao")
+    .update({ permitido: true })
+    .eq("perfil", "encarregado_administracao_academica")
+    .eq("recurso", "disciplinas")
+    .eq("acao", "editar");
+
+  const { data: turmasDoTeste } = await admin
+    .from("turmas")
+    .select("id")
+    .eq("curso_id", CURSO_NASCIMENTO);
+  const idsDeTurma = (turmasDoTeste ?? []).map((t) => t.id);
+  if (idsDeTurma.length > 0) {
+    await admin.from("turma_disciplina").delete().in("turma_id", idsDeTurma);
+    await admin.from("turmas").delete().in("id", idsDeTurma);
+  }
+  await admin.from("disciplinas").delete().eq("id", DISCIPLINA_NASCIMENTO);
+  await admin.from("cursos").delete().eq("id", CURSO_NASCIMENTO);
+
   await admin.from("config_listas").delete().eq("lista", "salas").in("valor", SALAS_DO_TESTE);
   await admin.from("usuarios").delete().like("email", "%@ciaara.teste5a");
   const { data } = await admin.auth.admin.listUsers();
@@ -110,6 +136,26 @@ beforeAll(async () => {
   await criarUsuario("encarregado_administracao_academica", "geral");
   await criarUsuario("ajudante_administracao_academica", "geral");
   await criarUsuario("operador", "expedito");
+
+  const { error: erroCurso } = await admin.from("cursos").insert({
+    id: CURSO_NASCIMENTO,
+    codigo: "5A-NASC",
+    nome_curso: "Curso do nascimento das disciplinas",
+    classificacao: "regular",
+    modalidade: "presencial",
+    duracao_dias: 30,
+  });
+  if (erroCurso) throw new Error(`fixture de curso falhou: ${erroCurso.message}`);
+
+  const { error: erroDisciplina } = await admin.from("disciplinas").insert({
+    id: DISCIPLINA_NASCIMENTO,
+    codigo: "5A-NASC-D1",
+    curso_id: CURSO_NASCIMENTO,
+    cod_disciplina: "5A-1",
+    nome_disciplina: "Disciplina do nascimento",
+    carga_horaria_tempos: 10,
+  });
+  if (erroDisciplina) throw new Error(`fixture de disciplina falhou: ${erroDisciplina.message}`);
 }, 60_000);
 
 afterAll(limpar);
@@ -158,5 +204,89 @@ describe("N-4 e N-5 · quem escreve na lista de salas é decisão do banco (`FR-
     const valores = (data ?? []).map((l) => l.valor);
     expect(valores).toContain("Moodle");
     expect(valores).toContain("Sala CAHO");
+  });
+});
+
+describe("`FR-032.2` / R-6 · o gatilho de nascimento roda com os direitos do dono", () => {
+  /*
+   * ⚠️ AS DUAS METADES, E A SEGUNDA É A QUE PROVA O `SECURITY DEFINER` (exigência de Bernardo Villas
+   * Boas, 17/09/2026). Só a primeira — "quem não tem `disciplinas.editar` cria turma e as linhas
+   * nascem" — provaria apenas que a permissão é IRRELEVANTE, que é conclusão diferente e errada. A
+   * segunda mostra que a permissão continua valendo para escrita direta, na MESMA sessão: o que muda
+   * é quem escreve, não o que o perfil pode.
+   *
+   * ⚠️ E É SESSÃO AUTENTICADA DE VERDADE, não simulada por `request.jwt.claim.sub`. Sob privilégio
+   * de dono a RLS não se aplica, e uma prova de permissão ali passaria com a RLS desligada — por
+   * isso ela não mora no pgTAP `102`.
+   *
+   * ⚠️ POR QUE O ENCARREGADO, e não o Operador: hoje os quatro perfis que criam turma TÊM
+   * `disciplinas.editar` (é só por isso que o gatilho funcionaria com os direitos de quem cria), e o
+   * Operador só ganha `turmas.criar` na migration 5. A prova tira a permissão de quem já cria turma
+   * — que é exatamente a decisão de negócio legítima que o R-6 diz que não pode quebrar o cadastro.
+   */
+  beforeAll(async () => {
+    const { error } = await admin
+      .from("perfil_permissao")
+      .update({ permitido: false })
+      .eq("perfil", "encarregado_administracao_academica")
+      .eq("recurso", "disciplinas")
+      .eq("acao", "editar");
+    if (error) throw new Error(`não consegui retirar disciplinas.editar: ${error.message}`);
+  });
+
+  afterAll(async () => {
+    await admin
+      .from("perfil_permissao")
+      .update({ permitido: true })
+      .eq("perfil", "encarregado_administracao_academica")
+      .eq("recurso", "disciplinas")
+      .eq("acao", "editar");
+  });
+
+  it("metade 1 · SEM `disciplinas.editar`, o Encarregado cria turma e as linhas NASCEM", async () => {
+    const { data: turma, error } = await cliente("encarregado_administracao_academica")
+      .from("turmas")
+      .insert({
+        curso_id: CURSO_NASCIMENTO,
+        turma: "T1",
+        ano_letivo: 2045,
+        status: "planejada",
+        modalidade: "presencial",
+      })
+      .select("id, codigo")
+      .single();
+    expect(error, `criar turma falhou sem disciplinas.editar: ${error?.message}`).toBeNull();
+    expect(turma?.codigo).toBe("5A-NASC T1 2045");
+
+    const { data: linhas } = await admin
+      .from("turma_disciplina")
+      .select("id, codigo")
+      .eq("turma_id", turma?.id as string);
+    expect(
+      (linhas ?? []).length,
+      "a turma nasceu sem a linha de disciplina: o gatilho não rodou com os direitos do dono",
+    ).toBe(1);
+  });
+
+  it("metade 2 · e o MESMO perfil, na MESMA sessão, é recusado ao escrever direto na tabela", async () => {
+    const { data: turma } = await admin
+      .from("turmas")
+      .select("id")
+      .eq("curso_id", CURSO_NASCIMENTO)
+      .limit(1)
+      .single();
+
+    const { error } = await cliente("encarregado_administracao_academica")
+      .from("turma_disciplina")
+      .insert({
+        codigo: "TDI-999999",
+        turma_id: turma?.id as string,
+        disciplina_id: DISCIPLINA_NASCIMENTO,
+      });
+    expect(
+      error?.code,
+      "o perfil sem `disciplinas.editar` escreveu direto em turma_disciplina — o SECURITY DEFINER " +
+        "não está fazendo o trabalho, a permissão é que ficou irrelevante",
+    ).toBe("42501");
   });
 });
