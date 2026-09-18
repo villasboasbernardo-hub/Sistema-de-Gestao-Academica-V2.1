@@ -898,7 +898,7 @@ export type Database = {
           editado_por: string | null
           id: string
           limite_turmas_ano: number
-          modalidade: Database["public"]["Enums"]["modalidade_ensino"]
+          modalidade: Database["public"]["Enums"]["modalidade_ensino"] | null
           nome_curso: string
           nome_normalizado: string | null
           origem_migracao_v1: string | null
@@ -917,7 +917,7 @@ export type Database = {
           editado_por?: string | null
           id?: string
           limite_turmas_ano: number
-          modalidade: Database["public"]["Enums"]["modalidade_ensino"]
+          modalidade?: Database["public"]["Enums"]["modalidade_ensino"] | null
           nome_curso: string
           nome_normalizado?: string | null
           origem_migracao_v1?: string | null
@@ -936,7 +936,7 @@ export type Database = {
           editado_por?: string | null
           id?: string
           limite_turmas_ano?: number
-          modalidade?: Database["public"]["Enums"]["modalidade_ensino"]
+          modalidade?: Database["public"]["Enums"]["modalidade_ensino"] | null
           nome_curso?: string
           nome_normalizado?: string | null
           origem_migracao_v1?: string | null

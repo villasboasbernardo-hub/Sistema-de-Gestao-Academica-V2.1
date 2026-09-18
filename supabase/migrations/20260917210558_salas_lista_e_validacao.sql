@@ -21,12 +21,21 @@
 --    `null`, nao `boolean`. Sem as duas metades, o padrao silencioso que o FR-029.6 proibiu
 --    voltaria pela porta dos fundos.
 --
--- ⚠️ TERCEIRO ARGUMENTO, NAO FUNCAO-VARIANTE (R-4). `app.validar_dominio_config_lista()` ganha
---    `TG_ARGV[2] = 'aceita_inativo'`, OPCIONAL: sem ele, o comportamento e o de hoje, byte a byte,
---    e os QUATRO gatilhos que ja a usam — `registros_aula.tipo_atividade`, `registros_aula.
---    metodologia`, `avaliacoes.tipo_avaliacao`, `avaliacoes.metodologia` — NAO sao recriados e nao
---    mudam. Uma variante copiaria a funcao inteira para trocar uma linha, e as duas copias
---    divergiriam na proxima correcao. O pgTAP `099_salas.sql` prova que o padrao nao vazou.
+-- ⚠️ PARAMETRO, NAO FUNCAO-VARIANTE (R-4). `app.validar_dominio_config_lista()` ganha DOIS
+--    argumentos opcionais: `TG_ARGV[2] = 'aceita_inativo'` e `TG_ARGV[3] = <chave estavel>`. Sem
+--    eles, o comportamento e o de hoje BYTE A BYTE — mensagem, HINT e ausencia de DETAIL —, e os
+--    QUATRO gatilhos que ja a usam (`registros_aula.tipo_atividade`, `registros_aula.metodologia`,
+--    `avaliacoes.tipo_avaliacao`, `avaliacoes.metodologia`) NAO sao recriados e nao mudam. Uma
+--    variante copiaria a funcao inteira para trocar duas linhas, e as duas copias divergiriam na
+--    proxima correcao. O pgTAP `099_salas.sql` prova as duas metades: que a sala emite a chave, e
+--    que o `tipo_atividade` inativo continua recusado com a mensagem de sempre.
+--
+-- ⚠️ POR QUE A CHAVE ESTAVEL (decisao de Bernardo Villas Boas, 17/09/2026, achado E-8). O contrato
+--    de escritas §2 diz que a Server Action le CODIGO, CHAVE e DADOS — e nunca o `message` cru
+--    (FR-042, RN-DEG-01). Sem a chave, a recusa de sala chegaria a tela como uma frase, e a unica
+--    forma de reconhece-la seria comparar texto. Com `TG_ARGV[3]`, ela chega como
+--    `sala_fora_da_lista` no HINT e `{valor, lista}` no DETAIL, sem que a funcao compartilhada
+--    mude para quem ja a usava.
 --
 -- ⚠️ SALA DESATIVADA CONTINUA ACEITA (FR-029.4), e isso NAO e lacuna: desativar e sair do seletor
 --    de turma NOVA, nunca recusar a edicao de turma que ja a usa. Ligado sem o terceiro argumento,
@@ -148,6 +157,9 @@ declare
   --    valor ATIVO e aceito. Com 'aceita_inativo', valor desativado tambem passa — e o que o
   --    FR-029.4 exige da sala, e o que os quatro gatilhos anteriores NAO querem.
   v_inativo boolean := coalesce(tg_argv[2], '') = 'aceita_inativo';
+  -- ⚠️ QUARTO ARGUMENTO, OPCIONAL (E-8, 17/09/2026): a chave estavel que a traducao de recusas
+  --    reconhece. Ausente, a recusa sai exatamente como sempre saiu.
+  v_chave   text := nullif(tg_argv[3], '');
   v_valor   text;
 begin
   v_valor := to_jsonb(new) ->> v_coluna;
@@ -161,11 +173,22 @@ begin
     select 1 from public.config_listas c
      where c.lista = v_lista and c.valor = v_valor and (c.ativo or v_inativo)
   ) then
-    raise exception
-      'O valor "%" não pertence à lista "%" (coluna %.%).',
-      v_valor, v_lista, tg_table_name, v_coluna
-      using errcode = '23514',
-            hint = 'Cadastre o valor em config_listas antes de usá-lo, ou escolha um valor ativo da lista. Origem: BRIEF v2.1 §2 (domínio operacional administrável).';
+    -- Os dois ramos sao deliberadamente separados: o de baixo tem de sair BYTE A BYTE como sempre
+    -- saiu, e `using detail = ''` NAO e o mesmo que nao mandar DETAIL nenhum.
+    if v_chave is not null then
+      raise exception
+        'O valor "%" não pertence à lista "%" (coluna %.%).',
+        v_valor, v_lista, tg_table_name, v_coluna
+        using errcode = '23514',
+              hint = v_chave,
+              detail = jsonb_build_object('valor', v_valor, 'lista', v_lista)::text;
+    else
+      raise exception
+        'O valor "%" não pertence à lista "%" (coluna %.%).',
+        v_valor, v_lista, tg_table_name, v_coluna
+        using errcode = '23514',
+              hint = 'Cadastre o valor em config_listas antes de usá-lo, ou escolha um valor ativo da lista. Origem: BRIEF v2.1 §2 (domínio operacional administrável).';
+    end if;
   end if;
 
   return new;
@@ -173,17 +196,19 @@ end;
 $$;
 
 comment on function app.validar_dominio_config_lista() is
-  'Gatilho generico de dominio administravel. TG_ARGV[0] coluna, TG_ARGV[1] lista, e TG_ARGV[2] '
-  'opcional: com "aceita_inativo", valor desativado tambem e aceito (FR-029.4 da spec 009). Sem o '
-  'terceiro argumento o comportamento e o de sempre — so valor ativo —, e os quatro gatilhos '
-  'anteriores nao foram recriados.';
+  'Gatilho generico de dominio administravel. TG_ARGV[0] coluna, TG_ARGV[1] lista; TG_ARGV[2] e '
+  'TG_ARGV[3] sao OPCIONAIS — "aceita_inativo" faz valor desativado ser aceito (FR-029.4 da spec '
+  '009), e o quarto e a chave estavel emitida no HINT, com {valor, lista} no DETAIL (E-8). Sem os '
+  'dois, o comportamento e o de sempre, byte a byte, e os quatro gatilhos anteriores nao foram '
+  'recriados.';
 
 revoke all on function app.validar_dominio_config_lista() from public, anon;
 
 -- ---------------------------------------------------------------- 6. a sala da turma, conferida
 create trigger trg_turmas_sala_alocada
   before insert or update of sala_alocada on public.turmas
-  for each row execute function app.validar_dominio_config_lista('sala_alocada', 'salas', 'aceita_inativo');
+  for each row execute function app.validar_dominio_config_lista(
+    'sala_alocada', 'salas', 'aceita_inativo', 'sala_fora_da_lista');
 
 -- =================================================================================
 -- PLANO DE REVERSAO — ESCRITO E EXECUTADO em 17/09/2026, numa base descartavel (T021)
@@ -198,8 +223,8 @@ create trigger trg_turmas_sala_alocada
 --
 --   drop trigger if exists trg_turmas_sala_alocada on public.turmas;
 --
---   -- volta a funcao ao que era: sem o terceiro argumento. Os quatro gatilhos que a usam
---   -- continuam apontando para ela e nao precisam ser recriados — e o mesmo nome e a mesma
+--   -- volta a funcao ao que era: sem o terceiro nem o quarto argumento. Os quatro gatilhos que a
+--   -- usam continuam apontando para ela e nao precisam ser recriados — e o mesmo nome e a mesma
 --   -- assinatura.
 --   create or replace function app.validar_dominio_config_lista() ... (sem v_inativo)
 --

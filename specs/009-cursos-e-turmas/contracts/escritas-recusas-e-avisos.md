@@ -50,6 +50,18 @@ continuam decidindo.
 **Uma RPC de leitura**, `protecao_das_vigencias_por_atividade_global(curso_id)`, chamada pelo **Server
 Component** da ficha da turma no carregamento — não por Server Action (Restrição 5). Ver §3.
 
+⚠️ **Nota de 17/09/2026 — como a sala emite a chave, e por que não foi preciso emendar esta tabela
+(achado E-8).** A linha `sala_fora_da_lista` prometia chave estável e `DETAIL` estruturado, e o gatilho
+genérico de domínio não os emitia: ele usa o `HINT` para uma frase humana e não manda `DETAIL`. Emendar a
+função para todo mundo mudaria o `HINT` dos **quatro** gatilhos que já a usam, contra o *byte a byte* do
+R-4; envolvê-la num gatilho próprio de sala duplicaria a regra em duas implementações.
+**Caminho seguido — o da exceção autorizada:** a própria **B-2/R-4** já tinha decidido parametrizar a
+função, e o parâmetro foi **estendido**: `TG_ARGV[3]` opcional carrega a chave estável, e quando ela vem,
+a recusa sai com `hint = <chave>` e `detail = {valor, lista}`. **Os quatro consumidores existentes passam
+dois argumentos e não mudaram em nada** — o `099_salas.sql` prova as duas metades: a sala emite
+`sala_fora_da_lista`, e o `tipo_atividade` inativo continua com o `HINT` de sempre e **sem** `DETAIL`.
+*(decisão de Bernardo Villas Boas, 17/09/2026)*
+
 ---
 
 ## 2. As recusas e a tradução
@@ -69,7 +81,7 @@ mostra o `message` cru (`RN-DEG-01`, `FR-021.4`).
 | `codigo_de_turma_divergente` / `codigo_de_turma_imutavel` | `23514` | gatilho de `turmas` | `esperado` | *"O código da turma é gerado pelo sistema e não muda."* | `FR-025.1` |
 | (restrição `turmas_unica_por_ano`) | `23505` | `UNIQUE NULLS NOT DISTINCT` | — | *"Já existe a turma {codigo} com {este rótulo \| sem rótulo} em {sigla} {ano}. Escolha outro rótulo."* — a ação **lê** a turma ocupante, que está no mesmo curso e portanto no alcance | `FR-026` |
 | (restrição do rótulo) | `23514` | `CHECK` | — | *"O rótulo da turma é T seguido do número — T1, T2."* | `FR-025.2` |
-| `sala_fora_da_lista` | `23514` | gatilho genérico | `valor`, `lista` | *"A sala {valor} não está na lista de salas. Salas novas são acrescentadas em Administração › Salas."* | `FR-029`, `FR-029.2` |
+| `sala_fora_da_lista` | `23514` | gatilho genérico, **pelo 4º argumento** ⚠️ | `valor`, `lista` | *"A sala {valor} não está na lista de salas. Salas novas são acrescentadas em Administração › Salas."* | `FR-029`, `FR-029.2` |
 | (restrição `config_listas_sala_com_natureza`) | `23514` | `CHECK` | — | *"Informe se a sala é física ou ambiente virtual."* | `FR-029.6`, `FR-029.7` |
 | (restrição de classificação) | `23514` | `CHECK` | — | *"Esta classificação não é aceita para curso."* | `FR-003.1` |
 | (`NOT NULL`) | `23502` | coluna | coluna | *"{Campo} é obrigatório."* | `FR-015` |

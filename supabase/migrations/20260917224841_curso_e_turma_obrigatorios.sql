@@ -49,9 +49,50 @@ alter table public.cursos alter column limite_turmas_ano drop default;
 alter table public.cursos alter column duracao_dias      set not null;
 alter table public.turmas alter column modalidade        set not null;
 
+-- ⚠️ A CATRACA DA MODALIDADE DO CURSO (decisao de Bernardo Villas Boas, 17/09/2026, achado E-6).
+--
+--    MEDIDO NA ORIGEM, e nao na base carregada: `scripts/etl/dados/bruto/v20/Cad_Cursos.csv` tem
+--    **13 dos 24 cursos com `Modalidade` VAZIA** — CAHO, C-Ap-HN, C-Espc-HN, C-Exp-Ag-Mag,
+--    C-Exp-BATI, C-Exp-Obs-ME, C-Esp-ALH, C-Esp-ME, EST-QF-APOC, EST-QF-APHID, EST-QF-EM2040PHS,
+--    EST-QF-PGRS100 e EST-QF-MAREFLU. Ate hoje o `DEFAULT 'presencial'` os preenchia em silencio,
+--    e `promover.py` dependia disso (`coalesce(expr, <default>)`, lido do `information_schema`).
+--
+--    Tirado o default, restavam tres saidas. A escolhida e a (b), A CATRACA — o padrao ja ratificado
+--    no achado 3 do Epico 2 para ausencia que pertence SO ao historico: nulo e admitido apenas em
+--    linha MIGRADA e NUNCA EDITADA; linha nova exige a modalidade, e editar a migrada tambem.
+--
+--    RECUSADA a (a), gravar `presencial` para os 13 mesmo que declarado e logado: contraria o
+--    principio ratificado em 08/09/2026 — *"o ETL e retrato fiel da origem, sem preenchimentos
+--    inventados"* — e, pior que o principio, o EFEITO: valor inventado, uma vez gravado, fica
+--    INDISTINGUIVEL de valor real, porque relatorio, DSA e decisao leem a coluna, nao o
+--    `migracao_log`. E entre os 13 ha cursos da familia EST-QF, que tem curso EAD na base: seria
+--    palpite com contraexemplo conhecido ao lado.
+--
+--    E a (c) — Bernardo informar a modalidade dos 13 — nao foi recusada: foi ADIADA pela propria
+--    catraca. O dado fica visivelmente ausente, o sistema acusa, e a modalidade passa a ser exigida
+--    no momento em que alguem editar aquele curso — com a informacao a frente da pessoa certa, um
+--    curso por vez.
+alter table public.cursos alter column modalidade drop not null;
+
+alter table public.cursos
+  add constraint cursos_modalidade_so_nula_no_historico check (
+    modalidade is not null
+    or (origem_migracao_v1 is not null and editado_em is null)
+  );
+
+comment on constraint cursos_modalidade_so_nula_no_historico on public.cursos is
+  'FR-015.1 com a catraca do achado 3 do Epico 2 (decisao de 17/09/2026): a modalidade so pode ser '
+  'nula em linha MIGRADA e NUNCA EDITADA. Os 13 cursos que a v2.0 deixou em branco entram assim, '
+  'visivelmente ausentes, em vez de receber um "presencial" inventado que nenhum relatorio '
+  'distinguiria de escolha real. Curso NOVO continua obrigado a declara-la, e editar um curso '
+  'historico passa a exigi-la: o historico pode ficar incompleto, mas nao pode ser MANTIDO '
+  'incompleto por quem mexe nele. ⚠️ Residual conhecido, o mesmo do CHK023: um INSERT novo que '
+  'preencha `origem_migracao_v1` escapa — a catraca torna a fraude DELIBERADA, nao acidental.';
+
 comment on column public.cursos.modalidade is
   'FR-015.1: SEM default. Ausencia e rejeitada, nunca interpretada como "presencial" — o padrao '
-  'silencioso impede distinguir quem escolheu de quem nao informou.';
+  'silencioso impede distinguir quem escolheu de quem nao informou. Anulavel APENAS no historico '
+  'migrado nao editado (constraint cursos_modalidade_so_nula_no_historico).';
 comment on column public.cursos.limite_turmas_ano is
   'FR-003.2: SEM default. Chega nulo quando nao informado, e `app.limite_de_turmas_pela_classificacao()` '
   'preenche pela classificacao (regular -> 1, demais -> 2). Informado explicitamente, e RESPEITADO, '
@@ -305,10 +346,17 @@ create trigger trg_cursos_recusar_sigla_de_outro_curso
 --   drop function if exists app.limite_de_turmas_pela_classificacao();
 --   alter table public.turmas alter column modalidade        drop not null;
 --   alter table public.cursos alter column duracao_dias      drop not null;
+--   alter table public.cursos drop constraint if exists cursos_modalidade_so_nula_no_historico;
+--   -- ⚠️ E so entao o `set not null` da modalidade volta — nesta ordem, porque a catraca admite
+--   --    nulo e o `set not null` o recusa. Se houver curso migrado com modalidade nula quando a
+--   --    reversao rodar, o `set not null` FALHA, e falhar ali e o certo: reverter nao deve
+--   --    inventar valor para caber na coluna.
+--   alter table public.cursos alter column modalidade        set not null;
 --   alter table public.cursos alter column limite_turmas_ano set default 1;
 --   alter table public.cursos alter column modalidade        set default 'presencial';
 --
 -- ⚠️ REVERTER DEVOLVE OS PADROES SILENCIOSOS: curso volta a nascer `presencial` sem ninguem ter
---    dito isso, e Expedito volta a nascer com limite 1. A tabela de auditoria fica, mas para de
+--    dito isso, e Expedito volta a nascer com limite 1. E a ausencia dos 13 cursos da v2.0 volta a
+--    ser indistinguivel de escolha. A tabela de auditoria fica, mas para de
 --    receber linha nova — e uma troca de sigla feita depois da reversao nao deixa rastro nenhum.
 -- =================================================================================

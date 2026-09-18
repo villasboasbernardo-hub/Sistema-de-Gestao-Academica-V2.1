@@ -28,7 +28,7 @@
 -- =================================================================================
 
 begin;
-select plan(22);
+select plan(26);
 
 -- --------------------------------------------------------------------------- amostra
 insert into auth.users (id, email, aud, role) values
@@ -41,12 +41,48 @@ insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, du
   ('10000000-0000-0000-0000-000000000002', 'T100-OUTRO', 'Curso Que Quer A Sigla', 'expedito', 'presencial', 10);
 
 -- ===================================== FR-015 / FR-015.1 — obrigatório é obrigatório
+--
+-- ⚠️ A MODALIDADE DO CURSO ENTRA POR CATRACA, e nao por `NOT NULL` (decisao de Bernardo Villas
+--    Boas, 17/09/2026, achado E-6). Medido NA ORIGEM — `bruto/v20/Cad_Cursos.csv`, nao a base
+--    carregada —, **13 dos 24 cursos tem `Modalidade` vazia**, e ate aqui o `DEFAULT 'presencial'`
+--    os preenchia em silencio. Gravar `presencial` para eles seria valor inventado que nenhum
+--    relatorio distinguiria de escolha real, e ha curso EAD na mesma familia (EST-QF). Entao:
+--    nulo SO em linha migrada e NUNCA editada — as quatro assercoes abaixo sao as quatro metades
+--    dessa regra, no mesmo desenho do `091_ue_anulavel.sql`.
+select col_is_null(
+  'public', 'cursos', 'modalidade',
+  'FR-015.1 · a coluna aceita nulo — sem isso, os 13 cursos que a v2.0 deixou em branco nao entram'
+);
+
 select throws_ok(
   $$insert into public.cursos (codigo, nome_curso, classificacao, duracao_dias)
     values ('T100-SEM-MOD', 'Curso Sem Modalidade', 'regular', 30)$$,
-  '23502',
+  '23514',
   null,
-  'FR-015 · curso SEM modalidade e recusado — o DEFAULT silencioso saiu'
+  'FR-015.1 · curso NOVO sem modalidade e RECUSADO — o DEFAULT silencioso saiu, e a catraca nao vale para dado novo'
+);
+
+select lives_ok(
+  $$insert into public.cursos (id, codigo, nome_curso, classificacao, duracao_dias, origem_migracao_v1)
+    values ('10000000-0000-0000-0000-0000000000f0', 'T100-MIGRADO', 'Curso Migrado Sem Modalidade',
+            'regular', 30, 'Cad_Cursos:T100-MIGRADO')$$,
+  'FR-015.1 · curso MIGRADO e nunca editado entra SEM modalidade — a ausencia e da origem, e fica visivel'
+);
+
+-- A catraca: o historico pode NASCER incompleto, mas nao pode ser MANTIDO incompleto por quem
+-- mexe nele. `app.set_auditoria()` carimba `editado_em` no UPDATE, e e ele que fecha a catraca.
+select throws_ok(
+  $$update public.cursos set nome_curso = 'Curso Migrado Reeditado'
+     where codigo = 'T100-MIGRADO'$$,
+  '23514',
+  null,
+  'FR-015.1 · editar o curso migrado SEM informar a modalidade e RECUSADO — e a catraca'
+);
+
+select lives_ok(
+  $$update public.cursos set nome_curso = 'Curso Migrado Reeditado', modalidade = 'ead'
+     where codigo = 'T100-MIGRADO'$$,
+  'FR-015.1 · e editar INFORMANDO a modalidade e aceito — a exigencia chega a quem tem a informacao'
 );
 
 select throws_ok(

@@ -21,7 +21,26 @@
 -- =================================================================================
 
 begin;
-select plan(18);
+select plan(21);
+
+-- Captura o que a recusa CARREGA, e nao so o codigo: e o que a Server Action le (contrato de
+-- escritas §2 — codigo, chave e dados, nunca o `message` cru).
+create function pg_temp.recusa(p_sql text) returns jsonb
+language plpgsql as $f$
+declare
+  v_hint text;
+  v_detail text;
+begin
+  execute p_sql;
+  return jsonb_build_object('recusou', false);
+exception when others then
+  get stacked diagnostics v_hint = pg_exception_hint, v_detail = pg_exception_detail;
+  return jsonb_build_object(
+    'recusou', true, 'sqlstate', sqlstate, 'hint', v_hint,
+    'detail', nullif(v_detail, '')::jsonb
+  );
+end;
+$f$;
 
 -- Há base carregada? É a pergunta que decide entre asserir e pular, como no 090.
 create temporary table _ha_dado as
@@ -111,6 +130,27 @@ select throws_ok(
   'FR-029 · sala fora da lista e RECUSADA pelo banco'
 );
 
+-- ⚠️ A RECUSA CARREGA CHAVE ESTAVEL E DADOS (E-8, decisao de 17/09/2026). Sem isso, a unica forma
+-- de a tela reconhecer esta recusa seria comparar o texto da mensagem — e o FR-042 proibe mostrar
+-- o `message` cru. A chave vem do QUARTO argumento do gatilho generico, que so o gatilho de sala
+-- passa.
+select is(
+  (pg_temp.recusa(
+     $$update public.turmas set sala_alocada = 'Sala Que Nao Existe'
+        where id = '99100000-0000-0000-0000-000000000001'$$) ->> 'hint'),
+  'sala_fora_da_lista',
+  'FR-029 · a recusa da sala traz a chave estavel no HINT, como o contrato de escritas §2 promete'
+);
+
+select results_eq(
+  $$select d ->> 'valor', d ->> 'lista'
+      from (select pg_temp.recusa(
+              $x$update public.turmas set sala_alocada = 'Sala Que Nao Existe'
+                  where id = '99100000-0000-0000-0000-000000000001'$x$) -> 'detail' as d) x$$,
+  $$values ('Sala Que Nao Existe'::text, 'salas'::text)$$,
+  'FR-029 · e os dados no DETAIL, para a mensagem de negocio nomear a sala sem ler o message cru'
+);
+
 select lives_ok(
   $$update public.turmas set sala_alocada = null
      where id = '99100000-0000-0000-0000-000000000001'$$,
@@ -161,6 +201,24 @@ select throws_ok(
   '23514',
   null,
   'R-4 · tipo_atividade INATIVO continua RECUSADO — o parametro novo nao mudou os 4 gatilhos de hoje'
+);
+
+-- ⚠️ E A OUTRA METADE DO "BYTE A BYTE": os quatro gatilhos que NAO passam a chave continuam
+-- devolvendo o HINT de sempre e NENHUM detail. Se alguem "uniformizar" a funcao e passar a emitir
+-- chave para todo mundo, esta assercao reprova — e e o que se quer que aconteca.
+select results_eq(
+  $$select r ->> 'hint' = 'Cadastre o valor em config_listas antes de usá-lo, ou escolha um valor ativo da lista. Origem: BRIEF v2.1 §2 (domínio operacional administrável).',
+           jsonb_typeof(r -> 'detail') = 'null'   -- jsonb null, nao SQL NULL
+      from (select pg_temp.recusa(
+              $x$insert into public.registros_aula
+                   (codigo, data, turma_id, unidade_ensino_id, curso_id, tempos_consumidos,
+                    ta_inicial, categoria_normativa, instrutor_id, tipo_atividade)
+                 values ('SALA-REG-2', '2026-05-05', '99100000-0000-0000-0000-000000000001',
+                         '99300000-0000-0000-0000-000000000001', '99000000-0000-0000-0000-000000000001',
+                         2, 1, 'atividade_extraclasse', '99400000-0000-0000-0000-000000000001',
+                         'Tipo Inativo Das Salas')$x$) as r) x$$,
+  $$values (true, true)$$,
+  'R-4 · e os 4 gatilhos de hoje seguem com o HINT de sempre e SEM detail — byte a byte'
 );
 
 -- =============================================== SC-014.2 / FR-029.1 — nenhum 'Moodle' em código

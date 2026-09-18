@@ -246,6 +246,17 @@ vê"* no estado vazio. E: **policy não enxerga `OLD`/`NEW`** — quando a regra
 **Bônus:** `pnpm db:tipos` **depois de toda migration**. O CI falha se `lib/tipos/database.ts`
 divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, coluna inventada.
 
+**5. O gerador de tipos não enxerga gatilho** *(medido em 17/09/2026, spec 009)*. Ele decide se a
+coluna é opcional em `Insert` olhando **`DEFAULT` e nulabilidade no catálogo** — nada mais. Então
+**toda coluna `NOT NULL` preenchida por gatilho aparece como obrigatória no tipo de inserção**, e o
+código tipado é forçado a mandar um valor que o banco ia gerar. Já vale para `cursos.limite_turmas_ano`
+(preenchido pela classificação), e valerá para o código de turma, o código `TDI-` e o regime, todos
+gerados por gatilho nesta fatia. **Não é defeito e não se conserta com `DEFAULT`** — o `DEFAULT` é
+justamente o que o `FR-015.1` proíbe onde a pessoa deveria escolher, e ele não enxerga outra coluna da
+linha. O caminho é **não inserir por cliente tipado** onde há gatilho: a escrita vai por **RPC** que
+recebe `jsonb`, como `criar_curso_com_regime`. Amostra de teste que insere direto é o outro caso — e
+ela usa cliente sem tipo, por isso não acusa.
+
 ## Estado atual e onde retomar
 
 *Atualize esta seção ao fim de cada fatia — é a primeira coisa que o agente lê numa sessão nova.*

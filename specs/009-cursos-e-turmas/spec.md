@@ -945,6 +945,20 @@ pergunta** (`→ Q-nn`) em vez de fixar uma resposta. Isso é deliberado.
   sempre**. Um curso EAD que virou `presencial` por padrão **jamais** apareceria num aviso. O limite de
   turmas não é padrão silencioso: ele é **regra declarada** (`FR-003.2`), aplicada à vista e editável.
   *(decisão de Bernardo Villas Boas, 16/09/2026)*
+  **Emenda de 17/09/2026 — como os 13 cursos que a v2.0 deixou em branco entram (achado E-6).** Tirado
+  o `DEFAULT 'presencial'`, **13 dos 24 cursos** ficam sem modalidade na origem, e a carga bateria no
+  `NOT NULL`. **Decidido: catraca** — `cursos.modalidade` passa a ser **anulável apenas em linha
+  migrada e nunca editada**, obrigatória em linha nova **e** ao editar a migrada; é o padrão já
+  ratificado no **achado 3 do Épico 2** para ausência que pertence só ao histórico
+  (`cursos_modalidade_so_nula_no_historico`). **Recusado gravar `presencial` para os 13**, ainda que
+  declarado e logado: contraria *"o ETL é retrato fiel da origem, sem preenchimentos inventados"*
+  (08/09/2026) e — pior que o princípio — **valor inventado, uma vez gravado, fica indistinguível de
+  valor real**, porque relatório, DSA e decisão leem a coluna, não o `migracao_log`; e entre os 13 há
+  cursos da família `EST-QF`, que tem curso EAD na base, de modo que `presencial` seria palpite **com
+  contraexemplo conhecido ao lado**. Informar a modalidade real dos 13 **não foi recusado, foi adiado
+  pela própria catraca**: o dado fica visivelmente ausente, o sistema acusa, e a modalidade passa a ser
+  exigida quando alguém editar aquele curso — com a informação à frente da pessoa certa, um curso por
+  vez. *(decisão de Bernardo Villas Boas, 17/09/2026)*
 - **FR-015.2**: `cursos.prioridade_alocacao` **mantém** o padrão `carga_restante_por_dia_util` (B-19,
   17/09/2026), e isso **não** é o padrão silencioso do `FR-015.1`, por três razões conferidas:
   1. **O valor é a regra em vigor, não um palpite no lugar de uma resposta.** O `RF-CRONOS-08` descreve a
@@ -1165,6 +1179,35 @@ pergunta** (`→ Q-nn`) em vez de fixar uma resposta. Isso é deliberado.
 
   A **prova** usa um dado de origem que faz **cada** conferência falhar pelo menos uma vez, e confere que a
   mensagem nomeia a linha e que **nada** foi gravado. *(decisão de Bernardo Villas Boas, 17/09/2026)*
+
+  ---
+
+  ⚠️ **Emenda de 17/09/2026 — a medição acima foi feita no artefato errado, e uma das dez muda.**
+  *(decisão de Bernardo Villas Boas, 17/09/2026, achado E-6 da implementação)*
+
+  **Acréscimo, sem reescrever o texto original.** A tabela acima diz *"Medido em 17/09/2026"* sobre **o
+  dado de origem**, mas os números foram tirados **da base já carregada** — onde os `DEFAULT` de coluna
+  já tinham preenchido o que a origem deixou vazio. **O erro é de método, não de número**: medir a coisa
+  errada pode afetar mais de uma linha, e *"medido: N"* só vale se for confiável. Por isso as **dez**
+  são reapresentadas abaixo, cada uma medida **contra o artefato de origem**, nomeado.
+
+  | # | Conferência | Artefato medido | Medido na **origem**, 17/09/2026 |
+  |---|---|---|---|
+  | 1 | curso sem vigência `Padrao` ativa | `bruto/v20/Cad_Cursos.csv` × `Cad_Cursos_Regime_Historico.csv` | **0** — 24 `Padrao` e 5 `Excecao`, todas `Ativo` |
+  | 2 | classificação que o banco recusa | `bruto/v20/Cad_Cursos.csv` | **0** — os 5 rótulos da v2.0 mapeiam para `regular`, `expedito`, `estagio_qualificacao`, `aperfeicoamento_avancado` e `especial` |
+  | 3 | curso sem modalidade **ou** sem duração em dias | `bruto/v20/Cad_Cursos.csv` | ⚠️ **13 sem modalidade** (0 sem duração). Eram *"0"* na base carregada porque o `DEFAULT 'presencial'` já havia preenchido. **Decidido: catraca** (E-6) |
+  | 4 | turma sem modalidade | `bruto/v20/Turmas_Ativas.csv` (28 linhas com `ID_Turma`) | **0** |
+  | 5 | sala sem correspondência **depois** da substituição | `bruto/v20/Turmas_Ativas.csv` | **0** — 7 valores e 2 vazias; só `Laboratório de informática` (9 turmas) difere, e só na caixa |
+  | 6 | rótulo fora da forma `T<n>` | `bruto/v20/Turmas_Ativas.csv` | **0** — 6 `T1`, 4 `T2`, 18 vazios |
+  | 7 | código ≠ `sigla [rótulo] ano` | `bruto/v20/Turmas_Ativas.csv` | **0** — 28 de 28 |
+  | 8 | duas turmas com o mesmo rótulo, curso e ano | `bruto/v20/Turmas_Ativas.csv` | **0** |
+  | 9 | vigência ativa com `Vigente_Ate` sem sucessora no dia seguinte | `bruto/v20/Cad_Cursos_Regime_Historico.csv` | **0** |
+  | 10 | ordem de carga | `scripts/etl/ordem.py` | **em ordem** — `cursos` → `curso_regime_historico` → `turmas` → `disciplinas` → lançamentos |
+
+  **Nove das dez confirmaram-se; só a 3 mudou.** A 29ª linha de `Turmas_Ativas.csv` continua fora da
+  conta por não ter `ID_Turma` (D-7), e as 13 da conferência 3 são: CAHO, C-Ap-HN, C-Espc-HN,
+  C-Exp-Ag-Mag, C-Exp-BATI, C-Exp-Obs-ME, C-Esp-ALH, C-Esp-ME, EST-QF-APOC, EST-QF-APHID,
+  EST-QF-EM2040PHS, EST-QF-PGRS100 e EST-QF-MAREFLU.
 - **FR-020**: **Nenhum parâmetro** de uma vigência existente MUST ser alterado — TA por dia
   (`regime_tempos`), duração do TA (`ta_duracao_min`), horários de início (`hora_inicio_manha`,
   `hora_inicio_tarde`), intervalos (`intervalo_manha_min`, `intervalo_tarde_min`), limite diário EAD,

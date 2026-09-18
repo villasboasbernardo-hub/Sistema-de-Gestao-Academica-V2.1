@@ -23,6 +23,20 @@ pnpm db:tipos          # OBRIGATÓRIO depois de toda migration
 semeiam a própria amostra. Os **números exatos** da spec — 18 de 29, 6 de 24, 9 turmas de laboratório
 — só existem na base **povoada** pela carga do Épico 2 (passo 1). Os dois caminhos precisam passar.
 
+⚠️ **A ORDEM IMPORTA, E NÃO É PREFERÊNCIA — é `db:reset` → ETL → suítes.** *(medido em 17/09/2026)*
+
+- **`pnpm test:rls` pressupõe base recém-resetada.** Sobre base **carregada**, ele reprova **12 casos**
+  que não têm relação com o que se mexeu: o `rls.test.ts` do Épico 1 prova *"desativar o último Admin é
+  recusado"* assumindo ser o único Admin, e a base real traz **`USR-01` e `USR-02`**, dois Admins
+  ativos. A desativação passa, a conta Admin da suíte fica `inativo`, e o resto cai em `42501` **em
+  cascata**. **Isso é a `PEND-5a-5`**, não defeito desta fatia — está registrada no `plan.md`, e **não é
+  corrigida aqui**: o teste é do Épico 1.
+- **E rodar o ETL DEPOIS da suíte faz a reconciliação divergir em 1.** `R-01` e `R-06` esperam **930**
+  linhas em `migracao_log` e encontram **931**: a suíte de RLS grava `LOG-RLS-1` para provar que a
+  tabela é *append-only* — e *append-only* é exatamente o que impede desfazer. Saída **1**, veredito
+  reprovado, **sem nada errado no dado**. Resetar antes resolve; apagar a linha, não — é o que a regra 5
+  do `CLAUDE.md` proíbe.
+
 ---
 
 ## Passo 1 — A carga do Épico 2 continua passando por cima das migrations novas
@@ -40,7 +54,8 @@ python -m scripts.etl.executar      # o código de saída É o veredito da recon
 | `turma_disciplina` | **210**, nenhuma criada pelo gatilho durante a carga | `FR-032.2`, R-20 |
 | sequências `TDI-` e `REG-` | `TDI-000211` e `REG-000030` como próximos | R-16 |
 | curso sem vigência `padrao` | **0** — a carga passa pela garantia do `FR-019.5` no `COMMIT` | R-24 |
-| verificação prévia — as **dez** conferências | as dez dão **zero** com o dado de 16/09/2026; com um `staging` que faz **cada** conferência falhar, a carga **falha antes de escrever**, com **10 de 10** nomeando as linhas, e **nenhuma** linha é gravada | `FR-019.6`, `SC-011.6`, R-27 |
+| verificação prévia — as **dez** conferências | **nove** dão zero contra o dado de origem; a **conferência 3** lista os **13 cursos sem modalidade**, que entram pela **catraca** e **não** abortam a carga (emenda de 17/09/2026 ao `FR-019.6`). Com um `staging` que faz **cada** conferência falhar, a carga **falha antes de escrever**, com **10 de 10** nomeando as linhas, e **nenhuma** linha é gravada | `FR-019.6`, `FR-015.1`, `SC-011.6`, R-27 |
+| cursos com modalidade nula depois da carga | **13**, todos com `origem_migracao_v1` preenchido e `editado_em` nulo — a ausência é da origem e fica **visível**. Editar qualquer um deles passa a **exigir** a modalidade | `FR-015.1`, catraca de 17/09/2026 |
 
 ⚠️ **Se a carga abortar com "sala fora da lista"**, o de-para do ETL não tem a substituição da
 migration 1 — é o defeito que o R-20 prevê, não dado ruim.
