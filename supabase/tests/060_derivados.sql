@@ -12,15 +12,15 @@
 begin;
 select plan(8);
 
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-0000-0000-0000-0000000000f1', 'DER-A', 'Curso Derivados', 'regular');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-0000-0000-0000-0000000000f1', 'DER-A', 'Curso Derivados', 'regular', 'presencial', 30);
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos, previsao_inicio, previsao_termino) values
   ('22222222-0000-0000-0000-0000000000f1', 'DER-A-MAT', '11111111-0000-0000-0000-0000000000f1', 'MAT', 'Disciplina Derivados', 60, '2026-03-01', '2026-06-30');
 insert into public.unidades_ensino (id, codigo, disciplina_id, curso_id, numero_ue, topico, ch_prevista_tempos) values
   ('33333333-0000-0000-0000-0000000000f1', 'DER-UE1', '22222222-0000-0000-0000-0000000000f1', '11111111-0000-0000-0000-0000000000f1', 1, 'Unidade 1', 30),
   ('33333333-0000-0000-0000-0000000000f2', 'DER-UE2', '22222222-0000-0000-0000-0000000000f1', '11111111-0000-0000-0000-0000000000f1', 2, 'Unidade 2', 30);
-insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status) values
-  ('44444444-0000-0000-0000-0000000000f1', 'DER-A 2026', '11111111-0000-0000-0000-0000000000f1', 'T1', 2026, 'ativa');
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade) values
+  ('44444444-0000-0000-0000-0000000000f1', 'DER-A T1 2026', '11111111-0000-0000-0000-0000000000f1', 'T1', 2026, 'ativa', 'presencial');
 
 -- 8 TA na unidade 1 e 5 na unidade 2 = 13 executados na disciplina.
 insert into public.registros_aula (codigo, data, turma_id, unidade_ensino_id, curso_id, tempos_consumidos, ta_inicial, categoria_normativa, instrutor_id) values

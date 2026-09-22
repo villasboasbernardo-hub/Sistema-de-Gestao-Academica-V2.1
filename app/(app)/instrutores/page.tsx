@@ -90,7 +90,13 @@ export default async function Instrutores({
       .from("vw_instrutor_carga_anual")
       .select("instrutor_id, ta_ministrado_ano")
       .eq("ano", ano),
-    supabase.from("cursos").select("codigo").order("codigo"),
+    /*
+     * ⚠️ `status` ENTRA NA CONSULTA (`FR-017.10` da spec 009). Curso inativo CONTINUA no filtro — a
+     * listagem de instrutores é consulta sobre histórico, e esconder o curso arquivado tornaria o
+     * passado inalcançável. O que muda é que ele vai para o FIM da lista e sai marcado, o que
+     * `opcoesDosFiltros` resolve. Sem a coluna, os dois ficam indistinguíveis.
+     */
+    supabase.from("cursos").select("codigo, status").order("codigo"),
     supabase
       .from("config_listas")
       .select("valor, ordem, ativo")

@@ -17,8 +17,8 @@
 begin;
 select plan(6);
 
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-0000-0000-0000-0000000000a1', 'VIG-A', 'Curso Vigencia', 'regular');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-0000-0000-0000-0000000000a1', 'VIG-A', 'Curso Vigencia', 'regular', 'presencial', 30);
 
 -- ============================================= FR-017 / RN-2027-09 — regime do curso
 insert into public.curso_regime_historico
@@ -101,8 +101,8 @@ select lives_ok(
 -- e validado contra banco real e corresponde ao que uma pessoa quer dizer ao preencher
 -- "vigente ate": vale ATE esse dia, inclusive. A divergencia esta reportada, nao corrigida.
 -- Por isso o primeiro regime encerra em 31/12/2026, nao em 01/01/2027.
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-0000-0000-0000-0000000000a2', 'VIG-B', 'Curso Sucessao', 'regular');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-0000-0000-0000-0000000000a2', 'VIG-B', 'Curso Sucessao', 'regular', 'presencial', 30);
 insert into public.curso_regime_historico
   (codigo, curso_id, tipo_regime, regime_tempos, ta_duracao_min, intervalo_manha_min,
    intervalo_tarde_min, hora_inicio_manha, hora_inicio_tarde, vigente_de, vigente_ate)

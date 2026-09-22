@@ -41,30 +41,68 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
   const semeado: PanoramaSemeado = {
     cursoRegular: `CUR-${s}-REG`,
     cursoExpedito: `CUR-${s}-EXP`,
-    turmaAtrasada: `TUR-${s}-REG1`,
-    turmaEmDia: `TUR-${s}-EXP1`,
+    // ⚠️ O código da turma é `sigla [rótulo] ano` (`FR-025.1` da spec 009) — aqui sem rótulo, que é
+    // ausência legítima em turma única. A partir da migration 3 daquela fatia o banco o GERA, e
+    // recusa qualquer valor divergente; a amostra passa a escrever o mesmo que o banco escreveria.
+    turmaAtrasada: `CUR-${s}-REG 2026`,
+    turmaEmDia: `CUR-${s}-EXP 2026`,
   };
 
   await limparPanorama(semeado);
 
-  const { data: cursos, error: erroCursos } = await admin()
+  /*
+   * ⚠️ CURSO NASCE PELA RPC, E NÃO SE APAGA MAIS (spec 009, migration 6). Duas consequências, as duas
+   * medidas em 18/09/2026:
+   *
+   *   1. `criar_curso_com_regime` é o único caminho: um `insert into cursos` solto é recusado no
+   *      COMMIT pelo gatilho adiado, com a chave `curso_sem_regime` (`FR-019.5`). E cada requisição
+   *      do PostgREST é uma transação, então a recusa chega na hora.
+   *   2. `curso_regime_historico` é append-only — `DELETE` e `TRUNCATE` recusados por gatilho de
+   *      statement, **inclusive para a `service_role`** (`FR-020`). Como a FK do curso é `restrict`,
+   *      **o curso também deixou de ser apagável**. A limpeza apaga tudo o que pende dele e o DEIXA
+   *      de pé; a amostra passou a ser IDEMPOTENTE, reaproveitando o curso que já existe.
+   */
+  for (const linha of [
+    {
+      codigo: semeado.cursoRegular,
+      nome_curso: `Curso regular de percurso ${processo}`,
+      classificacao: "regular",
+      modalidade: "presencial",
+      duracao_dias: 30,
+    },
+    {
+      codigo: semeado.cursoExpedito,
+      nome_curso: `Curso expedito de percurso ${processo}`,
+      classificacao: "expedito",
+      modalidade: "ead",
+      duracao_dias: 10,
+    },
+  ]) {
+    const { data: existe } = await admin()
+      .from("cursos")
+      .select("id")
+      .eq("codigo", linha.codigo)
+      .maybeSingle();
+    if (existe) continue;
+    const { error: erroCurso } = await admin().rpc("criar_curso_com_regime", {
+      p_curso: linha,
+      p_regime: {
+        regime_tempos: 8,
+        ta_duracao_min: 45,
+        intervalo_manha_min: 10,
+        intervalo_tarde_min: 10,
+        hora_inicio_manha: "07:30",
+        hora_inicio_tarde: "13:30",
+        vigente_de: "2020-01-01",
+      },
+    });
+    if (erroCurso) throw new Error(`falha ao semear curso ${linha.codigo}: ${erroCurso.message}`);
+  }
+
+  const { data: cursos } = await admin()
     .from("cursos")
-    .insert([
-      {
-        codigo: semeado.cursoRegular,
-        nome_curso: `Curso regular de percurso ${processo}`,
-        classificacao: "regular",
-        modalidade: "presencial",
-      },
-      {
-        codigo: semeado.cursoExpedito,
-        nome_curso: `Curso expedito de percurso ${processo}`,
-        classificacao: "expedito",
-        modalidade: "ead",
-      },
-    ])
-    .select("id, codigo");
-  if (erroCursos) throw new Error(`falha ao semear cursos: ${erroCursos.message}`);
+    .select("id, codigo")
+    .in("codigo", [semeado.cursoRegular, semeado.cursoExpedito]);
 
   const id = (codigo: string) => cursos?.find((c) => c.codigo === codigo)?.id as string;
 
@@ -158,12 +196,14 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
         curso_id: id(semeado.cursoRegular),
         ano_letivo: 2026,
         status: "ativa",
+        modalidade: "presencial",
       },
       {
         codigo: semeado.turmaEmDia,
         curso_id: id(semeado.cursoExpedito),
         ano_letivo: 2026,
         status: "ativa",
+        modalidade: "ead",
       },
     ])
     .select("id, codigo, curso_id");
@@ -226,10 +266,23 @@ export async function limparPanorama(semeado: PanoramaSemeado | undefined): Prom
 
   if (ids.length > 0) {
     await admin().from("registros_aula").delete().in("curso_id", ids);
+    /*
+     * ⚠️ `turma_disciplina` SAI ANTES DE `turmas` (spec 009, T017 / A-2). A partir da migration 4
+     * daquela fatia toda turma nasce com uma linha por disciplina ativa do curso, e a FK
+     * `turma_disciplina.turma_id` é `on delete restrict`: apagar a turma primeiro passaria a falhar
+     * — em silêncio, porque esta limpeza não confere erro —, e a execução seguinte encontraria a
+     * amostra anterior de pé.
+     */
+    const { data: turmasDoCurso } = await admin().from("turmas").select("id").in("curso_id", ids);
+    const idsDeTurma = (turmasDoCurso ?? []).map((t) => t.id);
+    if (idsDeTurma.length > 0) {
+      await admin().from("turma_disciplina").delete().in("turma_id", idsDeTurma);
+    }
     await admin().from("turmas").delete().in("curso_id", ids);
     await admin().from("unidades_ensino").delete().in("curso_id", ids);
     await admin().from("disciplinas").delete().in("curso_id", ids);
-    await admin().from("cursos").delete().in("id", ids);
+    // ⚠️ O CURSO FICA — ver a nota da semeadura: a vigência não é apagável, e a FK é `restrict`.
+    // (antes: `await admin().from("cursos").delete().in("id", ids);`)
   }
 
   const sufixo = semeado.cursoRegular.replace("CUR-", "").replace("-REG", "");

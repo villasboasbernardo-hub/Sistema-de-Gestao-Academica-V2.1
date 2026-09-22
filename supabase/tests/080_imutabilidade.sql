@@ -84,8 +84,8 @@ select is(
 -- Sem sessao autenticada — o caminho do ETL, que e o menos testado. Uma implementacao que
 -- pressuponha JWT descarta os carimbos JUSTAMENTE aqui: `jsonb_set` e STRICT, e um NULL
 -- anularia o acumulador inteiro. E o que o involucro `app.jsonb_valor()` impede.
-insert into public.cursos (id, codigo, nome_curso, classificacao)
-  values ('11111111-0000-0000-0000-0000000000b1', 'IMUT-A', 'Curso Imutabilidade', 'regular');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias)
+  values ('11111111-0000-0000-0000-0000000000b1', 'IMUT-A', 'Curso Imutabilidade', 'regular', 'presencial', 30);
 select is(
   (select nome_curso from public.cursos where codigo = 'IMUT-A'),
   'Curso Imutabilidade',

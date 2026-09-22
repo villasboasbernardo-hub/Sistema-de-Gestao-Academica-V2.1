@@ -595,6 +595,7 @@ export type Database = {
           editado_por: string | null
           id: string
           lista: string
+          metadados: Json
           observacao: string | null
           ordem: number
           origem_migracao_v1: string | null
@@ -609,6 +610,7 @@ export type Database = {
           editado_por?: string | null
           id?: string
           lista: string
+          metadados?: Json
           observacao?: string | null
           ordem?: number
           origem_migracao_v1?: string | null
@@ -623,6 +625,7 @@ export type Database = {
           editado_por?: string | null
           id?: string
           lista?: string
+          metadados?: Json
           observacao?: string | null
           ordem?: number
           origem_migracao_v1?: string | null
@@ -761,7 +764,7 @@ export type Database = {
           vigente_de: string
         }
         Insert: {
-          codigo: string
+          codigo?: string
           configuracao_horario_id?: string | null
           criado_em?: string
           criado_por?: string | null
@@ -832,19 +835,70 @@ export type Database = {
           },
         ]
       }
+      curso_sigla_historico: {
+        Row: {
+          criado_em: string
+          criado_por: string | null
+          curso_id: string
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          origem_migracao_v1: string | null
+          sigla_anterior: string
+          sigla_nova: string
+        }
+        Insert: {
+          criado_em?: string
+          criado_por?: string | null
+          curso_id: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          sigla_anterior: string
+          sigla_nova: string
+        }
+        Update: {
+          criado_em?: string
+          criado_por?: string | null
+          curso_id?: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          sigla_anterior?: string
+          sigla_nova?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curso_sigla_historico_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curso_sigla_historico_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+        ]
+      }
       cursos: {
         Row: {
           classificacao: Database["public"]["Enums"]["escopo_curso"]
           codigo: string
           criado_em: string
           criado_por: string | null
-          duracao_dias: number | null
+          duracao_dias: number
           duracao_semanas: number | null
           editado_em: string | null
           editado_por: string | null
           id: string
           limite_turmas_ano: number
-          modalidade: Database["public"]["Enums"]["modalidade_ensino"]
+          modalidade: Database["public"]["Enums"]["modalidade_ensino"] | null
           nome_curso: string
           nome_normalizado: string | null
           origem_migracao_v1: string | null
@@ -857,13 +911,13 @@ export type Database = {
           codigo: string
           criado_em?: string
           criado_por?: string | null
-          duracao_dias?: number | null
+          duracao_dias: number
           duracao_semanas?: number | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
-          limite_turmas_ano?: number
-          modalidade?: Database["public"]["Enums"]["modalidade_ensino"]
+          limite_turmas_ano: number
+          modalidade?: Database["public"]["Enums"]["modalidade_ensino"] | null
           nome_curso: string
           nome_normalizado?: string | null
           origem_migracao_v1?: string | null
@@ -876,13 +930,13 @@ export type Database = {
           codigo?: string
           criado_em?: string
           criado_por?: string | null
-          duracao_dias?: number | null
+          duracao_dias?: number
           duracao_semanas?: number | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
           limite_turmas_ano?: number
-          modalidade?: Database["public"]["Enums"]["modalidade_ensino"]
+          modalidade?: Database["public"]["Enums"]["modalidade_ensino"] | null
           nome_curso?: string
           nome_normalizado?: string | null
           origem_migracao_v1?: string | null
@@ -2073,7 +2127,7 @@ export type Database = {
         }
         Insert: {
           ch_prevista_por_instrutor?: number | null
-          codigo: string
+          codigo?: string
           criado_em?: string
           criado_por?: string | null
           disciplina_id: string
@@ -2289,7 +2343,7 @@ export type Database = {
           editado_em: string | null
           editado_por: string | null
           id: string
-          modalidade: Database["public"]["Enums"]["modalidade_ensino"] | null
+          modalidade: Database["public"]["Enums"]["modalidade_ensino"]
           origem_migracao_v1: string | null
           sala_alocada: string | null
           status: Database["public"]["Enums"]["status_turma"]
@@ -2307,7 +2361,7 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           id?: string
-          modalidade?: Database["public"]["Enums"]["modalidade_ensino"] | null
+          modalidade: Database["public"]["Enums"]["modalidade_ensino"]
           origem_migracao_v1?: string | null
           sala_alocada?: string | null
           status: Database["public"]["Enums"]["status_turma"]
@@ -2325,7 +2379,7 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           id?: string
-          modalidade?: Database["public"]["Enums"]["modalidade_ensino"] | null
+          modalidade?: Database["public"]["Enums"]["modalidade_ensino"]
           origem_migracao_v1?: string | null
           sala_alocada?: string | null
           status?: Database["public"]["Enums"]["status_turma"]
@@ -3453,6 +3507,67 @@ export type Database = {
       }
     }
     Functions: {
+      corrigir_vigencia_regime: {
+        Args: { p_sucessora: Json; p_vigencia_id: string }
+        Returns: {
+          codigo: string
+          configuracao_horario_id: string | null
+          criado_em: string
+          criado_por: string | null
+          curso_id: string
+          editado_em: string | null
+          editado_por: string | null
+          fundamento_curricular: string | null
+          hora_inicio_manha: string | null
+          hora_inicio_tarde: string | null
+          id: string
+          intervalo_manha_min: number
+          intervalo_tarde_min: number
+          limite_diario_ead_horas: number | null
+          motivo: string | null
+          origem_migracao_v1: string | null
+          regime_tempos: number
+          status: Database["public"]["Enums"]["status_vigencia"]
+          ta_duracao_min: number
+          tipo_regime: Database["public"]["Enums"]["tipo_regime"]
+          vigente_ate: string | null
+          vigente_de: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "curso_regime_historico"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      criar_curso_com_regime: {
+        Args: { p_curso: Json; p_regime: Json }
+        Returns: {
+          classificacao: Database["public"]["Enums"]["escopo_curso"]
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          duracao_dias: number
+          duracao_semanas: number | null
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          limite_turmas_ano: number
+          modalidade: Database["public"]["Enums"]["modalidade_ensino"] | null
+          nome_curso: string
+          nome_normalizado: string | null
+          origem_migracao_v1: string | null
+          prioridade_alocacao: Database["public"]["Enums"]["criterio_prioridade_alocacao"]
+          proposito: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cursos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       excluir_instrutor: {
         Args: { p_codigo_confirmacao: string; p_instrutor_id: string }
         Returns: Json
@@ -3464,6 +3579,50 @@ export type Database = {
       impedimentos_de_exclusao_do_instrutor: {
         Args: { p_instrutor_id: string }
         Returns: string[]
+      }
+      protecao_das_vigencias_por_atividade_global: {
+        Args: { p_curso_id: string }
+        Returns: {
+          atividade: string
+          data_atividade: string
+          travada_por_lancamento_proprio: boolean
+          turmas: string[]
+          vigencia: string
+          vigente_de: string
+        }[]
+      }
+      registrar_vigencia_regime: {
+        Args: { p_curso_id: string; p_vigencia: Json }
+        Returns: {
+          codigo: string
+          configuracao_horario_id: string | null
+          criado_em: string
+          criado_por: string | null
+          curso_id: string
+          editado_em: string | null
+          editado_por: string | null
+          fundamento_curricular: string | null
+          hora_inicio_manha: string | null
+          hora_inicio_tarde: string | null
+          id: string
+          intervalo_manha_min: number
+          intervalo_tarde_min: number
+          limite_diario_ead_horas: number | null
+          motivo: string | null
+          origem_migracao_v1: string | null
+          regime_tempos: number
+          status: Database["public"]["Enums"]["status_vigencia"]
+          ta_duracao_min: number
+          tipo_regime: Database["public"]["Enums"]["tipo_regime"]
+          vigente_ate: string | null
+          vigente_de: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "curso_regime_historico"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       sincronizar_habilitacoes: {
         Args: { p_disciplinas: string[]; p_instrutor_id: string }

@@ -31,8 +31,8 @@ const admin = createClient(URL_SUPABASE, CHAVE_SERVICO, {
 });
 
 /** Um curso regular e um expedito: é o recorte que o escopo do Operador precisa distinguir. */
-const CURSO_REGULAR = "aaaa0000-0000-0000-0000-0000000c0001";
-const CURSO_EXPEDITO = "aaaa0000-0000-0000-0000-0000000c0002";
+let CURSO_REGULAR = "";
+let CURSO_EXPEDITO = "";
 const TURMA_REGULAR = "aaaa0000-0000-0000-0000-0000000a0001";
 const TURMA_EXPEDITA = "aaaa0000-0000-0000-0000-0000000a0002";
 // ⚠️ Disciplina e Unidade de Ensino de teste, no curso EXPEDITO. Existem por uma razao precisa:
@@ -125,7 +125,8 @@ async function limpar(): Promise<void> {
   await admin.from("unidades_ensino").delete().eq("codigo", "RLS-UE-EXP");
   await admin.from("disciplinas").delete().eq("codigo", "RLS-DISC-EXP");
   await admin.from("turmas").delete().in("id", [TURMA_REGULAR, TURMA_EXPEDITA]);
-  await admin.from("cursos").delete().in("id", [CURSO_REGULAR, CURSO_EXPEDITO]);
+  // ⚠️ OS CURSOS FICAM — ver a nota da fixture: vigência append-only + FK `restrict`.
+  await admin.from("cursos").delete().eq("codigo", "RLS-NEG-CONTROLE");
   const { data } = await admin.auth.admin.listUsers();
   for (const u of data?.users ?? []) {
     if (u.email?.endsWith("@ciaara.teste")) await admin.auth.admin.deleteUser(u.id);
@@ -140,41 +141,78 @@ beforeAll(async () => {
   // negativa VACUOSA — "o operador não vê a turma alheia" passa trivialmente quando turma
   // nenhuma foi criada. É o modo de falha que esta suíte existe para impedir, e ela não
   // pode cair nele.
-  const erroCursos = (
-    await admin.from("cursos").insert([
-      {
-        id: CURSO_REGULAR,
-        codigo: "RLS-REG",
-        nome_curso: "Curso Regular RLS",
-        classificacao: "regular",
+  /*
+   * ⚠️ CURSO NASCE PELA RPC, E NÃO SE APAGA MAIS (spec 009, migration 6): `insert into cursos` solto
+   * é recusado no COMMIT (`curso_sem_regime`), e a vigência de regime é append-only — `DELETE`
+   * recusado por gatilho **inclusive para a `service_role`**, o que, com a FK `restrict`, torna o
+   * curso não apagável. Daí a fixture ser IDEMPOTENTE: reaproveita o curso que já está aqui.
+   *
+   * ⚠️ E o `id` fixo não pode mais ser imposto — a RPC gera o dela. As constantes viraram o que
+   * sempre foram de fato: a CHAVE de busca. Os ids reais são lidos de volta.
+   */
+  for (const linha of [
+    {
+      codigo: "RLS-REG",
+      nome_curso: "Curso Regular RLS",
+      classificacao: "regular",
+      modalidade: "presencial",
+      duracao_dias: 30,
+    },
+    {
+      codigo: "RLS-EXP",
+      nome_curso: "Curso Expedito RLS",
+      classificacao: "expedito",
+      modalidade: "presencial",
+      duracao_dias: 10,
+    },
+  ]) {
+    const { data: existe } = await admin
+      .from("cursos")
+      .select("id")
+      .eq("codigo", linha.codigo)
+      .maybeSingle();
+    if (existe) continue;
+    const { error } = await admin.rpc("criar_curso_com_regime", {
+      p_curso: linha,
+      p_regime: {
+        regime_tempos: 8,
+        ta_duracao_min: 45,
+        intervalo_manha_min: 10,
+        intervalo_tarde_min: 10,
+        hora_inicio_manha: "07:30",
+        hora_inicio_tarde: "13:30",
+        vigente_de: "2020-01-01",
       },
-      {
-        id: CURSO_EXPEDITO,
-        codigo: "RLS-EXP",
-        nome_curso: "Curso Expedito RLS",
-        classificacao: "expedito",
-      },
-    ])
-  ).error;
-  if (erroCursos) throw new Error(`fixture de cursos falhou: ${erroCursos.message}`);
+    });
+    if (error) throw new Error(`fixture de cursos falhou: ${error.message}`);
+  }
+
+  const { data: cursosDaAmostra } = await admin
+    .from("cursos")
+    .select("id, codigo")
+    .in("codigo", ["RLS-REG", "RLS-EXP"]);
+  CURSO_REGULAR = (cursosDaAmostra ?? []).find((c) => c.codigo === "RLS-REG")?.id as string;
+  CURSO_EXPEDITO = (cursosDaAmostra ?? []).find((c) => c.codigo === "RLS-EXP")?.id as string;
 
   const erroTurmas = (
     await admin.from("turmas").insert([
       {
         id: TURMA_REGULAR,
-        codigo: "RLS-REG 2026",
+        codigo: "RLS-REG T1 2026",
         curso_id: CURSO_REGULAR,
         turma: "T1",
         ano_letivo: 2026,
         status: "ativa",
+        modalidade: "presencial",
       },
       {
         id: TURMA_EXPEDITA,
-        codigo: "RLS-EXP 2026",
+        codigo: "RLS-EXP T1 2026",
         curso_id: CURSO_EXPEDITO,
         turma: "T1",
         ano_letivo: 2026,
         status: "ativa",
+        modalidade: "presencial",
       },
     ])
   ).error;
@@ -250,24 +288,40 @@ const cliente = (p: Perfil): SupabaseClient => {
 };
 
 describe("T-01 · alcance: o Operador não enxerga curso fora do escopo", () => {
+  /*
+   * ⚠️ OS DOIS LITERAIS MUDARAM JUNTO COM A AMOSTRA (spec 009, T015) — `RLS-REG 2026` virou
+   * `RLS-REG T1 2026` e `RLS-EXP 2026` virou `RLS-EXP T1 2026`, porque o código da turma passa a ser
+   * `sigla [rótulo] ano` (`FR-025.1`). **Regra dos valores esperados: (a)** — o valor novo é o correto:
+   * ele é a IDENTIDADE da linha que esta mesma amostra renomeou, e o fato provado — o alcance do
+   * Operador — não mudou. Deixar o literal antigo seria pior do que falhar: a asserção NEGATIVA
+   * passaria a valer por vacuidade, porque `RLS-REG 2026` deixou de existir em qualquer lugar.
+   */
   it("Operador de escopo expedito NÃO lê a turma de curso regular", async () => {
     const { data } = await cliente("operador").from("turmas").select("id, codigo");
     const codigos = (data ?? []).map((t) => t.codigo);
-    expect(codigos).not.toContain("RLS-REG 2026");
+    expect(codigos).not.toContain("RLS-REG T1 2026");
   });
 
   it("controle positivo: ele lê a turma do curso expedito", async () => {
     const { data } = await cliente("operador").from("turmas").select("codigo");
-    expect((data ?? []).map((t) => t.codigo)).toContain("RLS-EXP 2026");
+    expect((data ?? []).map((t) => t.codigo)).toContain("RLS-EXP T1 2026");
   });
 });
 
 describe("T-04 · o perfil de visualização não escreve em lugar nenhum", () => {
   it("não cria curso", async () => {
-    const { error } = await cliente("visualizacao")
-      .from("cursos")
-      .insert({ codigo: "RLS-NEG-1", nome_curso: "Nao deve entrar", classificacao: "regular" });
-    expect(error).not.toBeNull();
+    // ⚠️ LINHA COMPLETA E CÓDIGO CONFERIDO (spec 009, T015 / A-3): com `modalidade` e
+    // `duracao_dias` obrigatórias a partir da migration 2, uma linha incompleta seria recusada
+    // com `23502` ANTES de a policy ser consultada — e este teste ficaria verde com a RLS
+    // desligada. É o modo de falha que os controles positivos deste arquivo existem para pegar.
+    const { error } = await cliente("visualizacao").from("cursos").insert({
+      codigo: "RLS-NEG-1",
+      nome_curso: "Nao deve entrar",
+      classificacao: "regular",
+      modalidade: "presencial",
+      duracao_dias: 30,
+    });
+    expect(error?.code, "o `visualizacao` criou curso").toBe("42501");
   });
 
   it("não cria instrutor", async () => {
@@ -892,6 +946,9 @@ describe("SC-004 · LEITURA negada, por perfil", () => {
 });
 
 describe("SC-004 · ESCRITA negada, por perfil", () => {
+  // ⚠️ A LINHA VAI COMPLETA, E O CÓDIGO É CONFERIDO (spec 009, T015 / A-3). Ver a nota do T-04:
+  // sem `modalidade` e `duracao_dias`, os seis passariam pelo `23502` — coluna obrigatória
+  // ausente —, que é indistinguível de recusa da RLS quando só se olha `error not null`.
   it.each(NAO_ESCREVEM_CURSOS)("%s NÃO cria curso", async (perfil) => {
     const { error } = await cliente(perfil)
       .from("cursos")
@@ -899,8 +956,10 @@ describe("SC-004 · ESCRITA negada, por perfil", () => {
         codigo: `RLS-NEG-${perfil.slice(0, 6)}`,
         nome_curso: "Curso Que Nao Deve Existir",
         classificacao: "regular",
+        modalidade: "presencial",
+        duracao_dias: 30,
       });
-    expect(error).not.toBeNull();
+    expect(error?.code, `${perfil} criou curso`).toBe("42501");
   });
 
   it.each(NAO_ESCREVEM_USUARIOS)(
@@ -992,13 +1051,35 @@ describe("T-10 · o Operador não cria atividade de escopo global", () => {
 
 describe("controle positivo · o mesmo payload passa para quem PODE", () => {
   it("admin CRIA o curso que os seis outros perfis não criaram", async () => {
-    const { error } = await cliente("admin").from("cursos").insert({
-      codigo: "RLS-NEG-CONTROLE",
-      nome_curso: "Curso Que Nao Deve Existir",
-      classificacao: "regular",
+    // ⚠️ PELA RPC, como os seis negativos acima (spec 009, T050): a partir da migration 6 um
+    // `insert into cursos` solto é recusado no COMMIT com `curso_sem_regime`, e o controle
+    // positivo tem de usar O MESMO CAMINHO que os negativos — senão ele deixa de ser controle.
+    const { error } = await cliente("admin").rpc("criar_curso_com_regime", {
+      p_curso: {
+        // ⚠️ CÓDIGO ÚNICO POR EXECUÇÃO: o curso não é apagável (vigência append-only + FK
+        // `restrict`), e um código fixo faria a segunda execução falhar por `23505` — que
+        // pareceria recusa de permissão e não é.
+        codigo: `RLS-NEG-CONTROLE-${Date.now()}`,
+        nome_curso: "Curso Que Nao Deve Existir",
+        classificacao: "regular",
+        modalidade: "presencial",
+        duracao_dias: 30,
+      },
+      p_regime: {
+        regime_tempos: 8,
+        ta_duracao_min: 45,
+        intervalo_manha_min: 10,
+        intervalo_tarde_min: 10,
+        hora_inicio_manha: "07:30",
+        hora_inicio_tarde: "13:30",
+        vigente_de: "2020-01-01",
+      },
     });
-    expect(error).toBeNull();
-    await admin.from("cursos").delete().eq("codigo", "RLS-NEG-CONTROLE");
+    expect(error, `o admin não criou o curso: ${error?.message}`).toBeNull();
+    // O curso não é apagável (vigência append-only + FK `restrict`): a próxima execução o encontra
+    // e o insert acima falharia por `codigo` repetido. Por isso ele sai da lista de limpeza e a
+    // asserção passa a tolerar a existência — ver `limpar()`.
+    await admin.from("curso_regime_historico").delete().eq("codigo", "RLS-NEG-CONTROLE-REG");
   });
 
   it("admin CRIA o usuário que os oito outros perfis não criaram", async () => {
@@ -1160,13 +1241,25 @@ describe("SC-007 (parte b) · a ação invocada FORA da tela é negada pelo banc
   // ⚠️ A parte (a) — o botão some — é do e2e. As duas são provadas SEPARADAMENTE de propósito:
   // provar só (a) é provar cortesia; provar só (b) é deixar a tela oferecer o que não funciona.
   // Este teste não passa por tela nenhuma: é chamada direta à interface de dados.
+  /*
+   * ⚠️ A LINHA VAI COMPLETA, E O CÓDIGO DO ERRO É CONFERIDO — emenda do `FR-044` (spec 009, T015).
+   * Escrito como estava, com a linha incompleta e só `error not null`, este caso passaria a partir da
+   * migration 2 desta fatia pelo motivo ERRADO: `modalidade` e `duracao_dias` viram obrigatórias, e o
+   * banco devolveria `23502` (coluna nula) ANTES de a policy ser consultada. O teste ficaria verde
+   * **com a RLS desligada** — que é exatamente o modo de falha que esta suíte existe para impedir.
+   * Mandando a linha inteira, o único motivo possível de recusa é a política: `42501`.
+   */
   it("o `visualizacao` não cria curso mesmo chamando a interface de dados diretamente", async () => {
     const { error } = await cliente("visualizacao").from("cursos").insert({
       codigo: "RLS-FORA-DA-TELA",
       nome_curso: "Criado Por Fora",
       classificacao: "regular",
+      modalidade: "presencial",
+      duracao_dias: 30,
     });
-    expect(error).not.toBeNull();
+    expect(error?.code, "a criação de curso pelo `visualizacao` não foi negada pela policy").toBe(
+      "42501",
+    );
   });
 });
 

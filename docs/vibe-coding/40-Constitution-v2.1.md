@@ -263,6 +263,13 @@ irreversível na prática assim que roda em produção com dado real em cima. Po
 migration coesa, revertível, com o plano de reversão escrito **antes** do merge, e aplicada primeiro
 em preview. O documento 10 §8.3 e §8.4 trazem o procedimento.
 
+> **Nota de 17/09/2026 (CONST-1 — mantida nos dois endereços) · decisão de Bernardo Villas Boas.** O texto acima
+> **não muda**: *"uma fatia = uma migration coesa"* é uma norma deliberadamente superável, não um fato. Ela **admite
+> exceção por decisão registrada e datada, com a justificativa escrita em *Complexity Tracking* do plano da fatia** —
+> e o atrito de ter de justificar é o que produz a justificativa. A exceção foi exercida **duas vezes**: a fatia (c)
+> do Épico 5, com **9** migrations (PR #16, 15/09/2026), e a fatia (a), com **7** (spec 009, B-1, 17/09/2026).
+> Afrouxar o texto tornaria múltiplas migrations gratuitas, e ninguém voltaria a justificar.
+
 ---
 
 ### VII. Configuração Sobre Constante · **[PRESERVADO E ESTENDIDO]**

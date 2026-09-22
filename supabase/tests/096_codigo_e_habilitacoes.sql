@@ -15,8 +15,8 @@
 begin;
 select plan(8);
 
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-0000-0000-0000-000000000096', 'T096-CUR', 'Curso T096', 'regular');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-0000-0000-0000-000000000096', 'T096-CUR', 'Curso T096', 'regular', 'presencial', 30);
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
   ('22222222-0000-0000-0000-0000000960d1', 'T096-D1', '11111111-0000-0000-0000-000000000096', 'T96-1', 'Disciplina T096 um', 10),
   ('22222222-0000-0000-0000-0000000960d2', 'T096-D2', '11111111-0000-0000-0000-000000000096', 'T96-2', 'Disciplina T096 dois', 10);

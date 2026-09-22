@@ -366,6 +366,17 @@ no mesmo PR #16, antes do merge *(decisão de Bernardo Villas Boas, 15/09/2026)*
 
 ---
 
+## Pendência nomeada, registrada depois do merge — 17/09/2026
+
+**Origem**: pergunta B-6 do plano da spec 009 (fatia a do Épico 5), respondida por Bernardo com a
+condição de registrar a pendência **aqui, junto das pendências desta fatia, com número e dono** —
+*"pendência sem nome é esquecimento agendado"*. *(decisão de Bernardo Villas Boas, 17/09/2026)*
+
+- [ ] T132 ⏸️ Retirar o recurso `MAX(...)+1` de `app.proximo_codigo_vinculo()` (migration `20260915084857`) e de `app.proximo_codigo_instrutor()` (migration `20260915054204`), que passam a fazer **só** `nextval`. **Dono: Bernardo Villas Boas.** **Quando:** em **PR próprio de correção**, **depois** do merge do PR de banco da spec 009 — é ele que traz o passo final do ETL que avança as sequências de código depois da carga (research R-16 da spec 009); retirar o recurso antes quebraria a criação de instrutor e de vínculo logo depois de toda carga. **Por quê:** com a sequência atrás do maior código, duas sessões simultâneas leem o mesmo `max` e devolvem o **mesmo** código — raro e barulhento, porque a `unique` recusa, mas é o padrão que a spec 009 proíbe para os geradores novos, e os dois não devem conviver. **Pronto quando:** as duas funções sem `max()`, pgTAP provando que duas chamadas seguidas nunca repetem código e que a sequência não fica atrás do maior código com a base povoada.
+      ⚠️ **Apontamento recíproco — a T073 da spec 009** *(registrado em 22/09/2026)*. O passo final do ETL que avança as sequências (T073 da spec 009, `scripts/etl/carregar.py`, `avancar_sequencias`) é o que torna **esta** tarefa segura, e **esta** tarefa é o que torna a T073 **indispensável**. Medido pela T074 da spec 009, com as quatro sequências de volta a `1` por defeito deliberado: `turma_disciplina` e `curso_regime_historico` **reprovaram**, e as duas **desta** spec — vínculo e instrutor — **passaram**, porque o `MAX+1` que a T132 vai tirar **mascara** a sequência atrasada. **Depois da T132, a T073 é a única defesa**: quem a remover, ou quem rodar uma carga sem ela, faz a primeira criação de instrutor ou de vínculo depois da carga colidir em `23505`.
+
+---
+
 ## Dependências
 
 | Fase ou tarefa | Depende de |
@@ -431,6 +442,10 @@ plano, e não a numeração da spec: a US4 depende de duas decisões, e a US5 n�
 | 8.4 — Restante do checklist, quadro e exclusão | 7 |
 | 9 — Fechamento | 7 |
 | **Total** | **132** |
+
+**Acrescentada depois do merge, fora do total da fatia entregue:** a **T132**, pendência nomeada de
+17/09/2026 (B-6 da spec 009). O total acima continua sendo o da fatia (c) como foi entregue — é a régua
+que a spec 009 usou para se medir.
 
 👤 **Cinco tarefas dependeram de Bernardo**: T002, T003, T011, T053 e T087 — **todas respondidas em 15/09/2026**. Outras duas — T016 e
 T062 — são conferências que **só param** se o que medirem exigir decisão. *(Atualizado em

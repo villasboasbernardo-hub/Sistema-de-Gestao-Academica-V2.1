@@ -30,7 +30,7 @@ from pathlib import Path
 
 import psycopg
 
-from . import mapa, ordem
+from . import carregar, mapa, ordem
 from .mapa import T
 
 CONEXAO_LOCAL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
@@ -63,6 +63,10 @@ class Resultado:
     orfaos: list[str] = field(default_factory=list)
     puladas: dict[str, str] = field(default_factory=dict)
     dominios_sem_destino: list[str] = field(default_factory=list)
+    # (código da turma, grafia gravada, grafia canônica) — uma por troca de sala.
+    salas_corrigidas: list[tuple[str, str, str]] = field(default_factory=list)
+    # sequência → maior código carregado nela (0 = tabela vazia, sequência intocada).
+    sequencias: dict[str, int] = field(default_factory=dict)
     vocabulario_semeado: list[tuple[str, str]] = field(default_factory=list)
 
 
@@ -690,6 +694,107 @@ def carregar_juncao_instrutores(con: psycopg.Connection) -> int:
     return gravadas
 
 
+def normalizar_salas(con: psycopg.Connection) -> list[tuple[str, str, str]]:
+    """A MESMA lista de substituições da migration 1, aplicada à carga (FR-029.8, R-20).
+
+    ⚠️ **POR QUE ISTO EXISTE EM DOIS LUGARES, E NÃO É DUPLICAÇÃO POR DESCUIDO.** A
+    migration 1 reconcilia a grafia das salas **da base que já está carregada**; ela roda
+    uma vez, no dia em que é aplicada. No caminho de todo dia — `pnpm db:reset` primeiro,
+    carga depois — ela roda sobre base **vazia** e não tem o que reconciliar, e são as
+    turmas do ETL que chegam com a grafia da planilha. Sem este passo, a carga bate no
+    gatilho `trg_turmas_sala_alocada` e **aborta com `sala_fora_da_lista`** — o ETL sai 3
+    e nada entra.
+
+    ⚠️ **E A REGRA É A MESMA, NÃO UMA CÓPIA DELA**: casar por `app.normalizar_texto()`
+    contra `config_listas`, que é a única fonte do inventário. Uma lista de pares escrita
+    à mão aqui divergiria da migration na primeira sala nova.
+
+    ⚠️ **CADA TROCA VIRA UM EVENTO `corrigido` EM `migracao_log`** — a regra 5 do
+    `CLAUDE.md`: o ETL não reescreve em silêncio. Quem olhar a turma daqui a um ano
+    precisa achar que a grafia foi mudada, qual era, e por quê.
+    """
+    with con.cursor() as k:
+        # Quem será trocado, ANTES de trocar — depois do UPDATE a informação já se perdeu.
+        k.execute(
+            """
+            with canonico as (
+              select valor, app.normalizar_texto(valor) as chave
+                from public.config_listas
+               where lista = 'salas'
+            )
+            select btrim(t.id_turma), btrim(t.sala_alocada), c.valor
+              from staging."Turmas_Ativas" t
+              join canonico c on c.chave = app.normalizar_texto(btrim(t.sala_alocada))
+             where coalesce(btrim(t.id_turma), '') <> ''
+               and coalesce(btrim(t.sala_alocada), '') <> ''
+               and btrim(t.sala_alocada) <> c.valor
+             order by 1
+            """
+        )
+        trocas = [(r[0], r[1], r[2]) for r in k.fetchall()]
+        if not trocas:
+            return []
+
+        k.execute(
+            """
+            with canonico as (
+              select valor, app.normalizar_texto(valor) as chave
+                from public.config_listas
+               where lista = 'salas'
+            )
+            update staging."Turmas_Ativas" t
+               set sala_alocada = c.valor
+              from canonico c
+             where coalesce(btrim(t.sala_alocada), '') <> ''
+               and app.normalizar_texto(btrim(t.sala_alocada)) = c.chave
+               and btrim(t.sala_alocada) <> c.valor
+            """
+        )
+    return trocas
+
+
+def registrar_correcoes_de_sala(
+    con: psycopg.Connection, trocas: list[tuple[str, str, str]]
+) -> None:
+    """Grava um evento `corrigido` por troca de sala — DEPOIS de `migracao_log` carregada.
+
+    ⚠️ **A ORDEM NÃO É DETALHE.** O código do evento continua a numeração da origem
+    (`LOG-NNNNNN`, mapa §24), e a origem traz 930 linhas. Gravar antes de `migracao_log`
+    ser promovida faria o `max` valer zero e os eventos novos nascerem `LOG-000001`,
+    colidindo com a numeração que está prestes a entrar. Por isso a substituição acontece
+    cedo — antes de `turmas`, senão o gatilho recusa — e o registro dela, tarde.
+    """
+    if not trocas:
+        return
+    with con.cursor() as k:
+        k.execute(
+            "select coalesce(max(substring(codigo from 5)::bigint), 0) "
+            "from public.migracao_log where codigo ~ '^LOG-[0-9]+$'"
+        )
+        proximo = int(k.fetchone()[0] or 0)
+
+        for i, (codigo_turma, antes, depois) in enumerate(trocas, start=1):
+            k.execute(
+                """
+                insert into public.migracao_log
+                  (codigo, origem_tabela, origem_chave, destino_tabela, destino_chave,
+                   acao, regra_aplicada, valor_antes, valor_depois, observacao)
+                values (%s, 'Turmas_Ativas', %s, 'turmas', %s, 'corrigido', %s, %s, %s, %s)
+                """,
+                (
+                    f"LOG-{proximo + i:06d}",
+                    codigo_turma,
+                    codigo_turma,
+                    "FR-029.3: grafia da sala reconciliada com o inventario de `config_listas`, "
+                    "casando por texto normalizado (minusculas, sem acento, espaco colapsado)",
+                    antes,
+                    depois,
+                    "Mesma substituicao da migration 20260917210558. Aplicada aqui porque, no "
+                    "caminho de todo dia, a migration roda sobre base vazia.",
+                ),
+            )
+
+
 def promover(conexao: str = CONEXAO_LOCAL, *, diagnostico: bool = False) -> Resultado:
     res = Resultado()
     with psycopg.connect(conexao) as con:
@@ -714,6 +819,12 @@ def promover(conexao: str = CONEXAO_LOCAL, *, diagnostico: bool = False) -> Resu
         # contra o que comparar, e no início da transação elas estão vazias. Roda,
         # portanto, ao FIM — antes do commit, e num modo em que abortar ainda desfaz
         # tudo. Ver a chamada depois do laço.
+
+        # ⚠️ ANTES DO LAÇO, e não depois: `trg_turmas_sala_alocada` recusa a grafia da
+        #    planilha no momento em que `turmas` é promovida. Medido em 18/09/2026 — a
+        #    primeira versão deste passo rodava ao fim, e a carga abortava com
+        #    "O valor «Laboratório de informática» não pertence à lista «salas»".
+        res.salas_corrigidas = normalizar_salas(con)
 
         for nome in ordem.ORDEM_DE_CARGA:
             if nome in mapa.SEM_DE_PARA:
@@ -757,6 +868,13 @@ def promover(conexao: str = CONEXAO_LOCAL, *, diagnostico: bool = False) -> Resu
                 else:
                     con.rollback()
                     raise
+
+        # O registro das trocas, agora que `migracao_log` já está povoada.
+        registrar_correcoes_de_sala(con, res.salas_corrigidas)
+
+        # As sequências de código, à frente do maior valor carregado (T073). Dentro da
+        # transação: promoção desfeita não pode deixar sequência avançada.
+        res.sequencias = carregar.avancar_sequencias(con)
 
         # ÓRFÃOS: agora que as tabelas de destino estão povoadas, a comparação tem
         # sentido. Ainda dentro da transação — abortar aqui desfaz as 25 tabelas.

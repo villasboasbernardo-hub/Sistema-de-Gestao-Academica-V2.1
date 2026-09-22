@@ -100,6 +100,29 @@ DESCARTES_DECLARADOS: dict[str, tuple[int, str]] = {
 
 
 # =====================================================================================
+# TABELAS EM QUE A PRÓPRIA CARGA ESCREVE — e como separar o transportado do criado
+#
+# ⚠️ ESTA LISTA NASCEU DE UMA DIVERGÊNCIA REAL, em 18/09/2026, e o registro importa mais
+#    que a correção. A carga da fatia (a) do Épico 5 passou a gravar em `migracao_log` um
+#    evento `corrigido` por grafia de sala reconciliada (`FR-029.8`) — 9 eventos. A R-01 e
+#    a R-06 contavam a TABELA INTEIRA contra a linha de base da origem (930) e passaram a
+#    acusar 939.
+#
+#    ⚠️ **E A CORREÇÃO NÃO FOI TROCAR 930 POR 939.** Trocar o número seria atualizar o
+#    esperado para igualar o que saiu — e a partir daí a verificação não pegaria mais uma
+#    linha de origem perdida, porque qualquer total passaria a ser "o total". O esperado
+#    da ORIGEM continua **930**, e o que mudou foi *o que se conta*: só o transportado.
+#    Os eventos criados pela carga ganharam verificação PRÓPRIA, na R-06, que confere que
+#    cada um descreve uma correção que de fato aconteceu.
+#
+#    O separador é `observacao`, declarada no de-para como "coluna nova para eventos da
+#    v2.1": linha vinda da planilha a tem NULA, por construção.
+NASCEM_DA_PROPRIA_CARGA: dict[str, str] = {
+    "migracao_log": "observacao is null",
+}
+
+
+# =====================================================================================
 # TABELAS QUE O PRÓPRIO SCHEMA SEMEIA — e por isso têm linhas sem procedência v2.0
 #
 # `config_listas` recebe 14 linhas da migration do Épico 1 (a `escala_antiguidade`, que
@@ -167,6 +190,21 @@ def r01_contagem(con: psycopg.Connection) -> list[Divergencia]:
                     f"select count(*) from public.{tabela} "
                     f"where origem_migracao_v1 like %s",
                     (f"{m.aba}:%",),
+                )
+            elif tabela in NASCEM_DA_PROPRIA_CARGA:
+                # ⚠️ `migracao_log` NÃO TEM `origem_migracao_v1` — e a ausência é
+                #    deliberada (mapa §24: "o log É o rastro; um rastro do rastro seria
+                #    recursão sem informação"). Mas a partir de 18/09/2026 o ETL passou a
+                #    ESCREVER nela: cada correção de grafia de sala vira um evento
+                #    `corrigido` (`FR-029.8`). Contar a tabela inteira passou a misturar
+                #    o que veio da origem com o que esta carga criou.
+                #
+                #    O separador é `observacao`, que o próprio de-para declara como
+                #    "coluna nova para eventos da v2.1": linha transportada a tem NULA.
+                #    Contar só essas mede exatamente o que a origem entregou — que é o
+                #    que a R-01 sempre quis dizer.
+                obtido = _uma(
+                    k, f"select count(*) from public.{tabela} where {NASCEM_DA_PROPRIA_CARGA[tabela]}"
                 )
             else:
                 obtido = _uma(k, f"select count(*) from public.{tabela}")
@@ -427,11 +465,58 @@ def r06_log_intacto(con: psycopg.Connection) -> list[Divergencia]:
     achados: list[Divergencia] = []
     with con.cursor() as k:
         na_origem = _uma(k, 'select count(*) from staging."_Migracao_Log"')
+        # ⚠️ SÓ O TRANSPORTADO — ver `NASCEM_DA_PROPRIA_CARGA`. A tabela é append-only e
+        #    a própria carga escreve nela desde 18/09/2026; comparar o total com a origem
+        #    passou a acusar os eventos que o ETL criou de propósito.
+        transportadas = _uma(
+            k, "select count(*) from public.migracao_log where observacao is null"
+        )
         no_destino = _uma(k, "select count(*) from public.migracao_log")
-        if no_destino != na_origem:
+        if transportadas != na_origem:
             achados.append(
-                Divergencia("R-06", "migracao_log", "linhas", f"{na_origem}", f"{no_destino}")
+                Divergencia("R-06", "migracao_log", "linhas transportadas",
+                            f"{na_origem}", f"{transportadas}")
             )
+
+        # Os eventos que ESTA carga criou: cada um tem de descrever uma correção que de
+        # fato aconteceu. Contar quantos são não prova nada — o que prova é que o valor
+        # registrado como "depois" é o que está gravado na turma hoje.
+        k.execute(
+            """
+            select l.codigo, l.destino_chave, l.valor_antes, l.valor_depois, t.sala_alocada
+              from public.migracao_log l
+              left join public.turmas t on t.codigo = l.destino_chave
+             where l.observacao is not null
+             order by l.codigo
+            """
+        )
+        for codigo, turma, antes, depois, atual in k.fetchall():
+            if atual is None:
+                achados.append(
+                    Divergencia("R-06", "migracao_log", f"evento {codigo}",
+                                "aponta para uma turma existente", f"turma {turma!r} nao existe")
+                )
+            elif atual != depois:
+                achados.append(
+                    Divergencia("R-06", "migracao_log", f"evento {codigo}",
+                                f"a turma {turma} com sala {depois!r}", f"sala {atual!r}")
+                )
+            elif antes == depois:
+                achados.append(
+                    Divergencia("R-06", "migracao_log", f"evento {codigo}",
+                                "uma correcao de verdade", f"antes e depois iguais: {antes!r}")
+                )
+        k.execute(
+            "select count(*) from public.migracao_log "
+            "where observacao is not null and acao <> 'corrigido'"
+        )
+        fora_do_verbo = int(k.fetchone()[0])
+        if fora_do_verbo:
+            achados.append(
+                Divergencia("R-06", "migracao_log", "verbo dos eventos da carga",
+                            "todos `corrigido`", f"{fora_do_verbo} com outro verbo")
+            )
+
         if no_destino < 717:
             achados.append(
                 Divergencia(

@@ -7,6 +7,23 @@ version: "2.1"
 
 # Stakeholders e Perfis de Usuário — CIAARA-11 Versão 2.1
 
+> ### ⚠️ Emenda de 17/09/2026 — Bernardo Villas Boas · Épico 5, fatia (a), `FR-028.3`
+>
+> Duas seções deste documento foram emendadas na implementação da fatia (a) do Épico 5 (spec
+> `009-cursos-e-turmas`), e a emenda está marcada no corpo delas:
+>
+> - **§2.2** — as responsabilidades de escrita do **Operador** passam a incluir **abrir e editar as
+>   turmas do seu escopo, inclusive o status**;
+> - **§2.5** — na linha `turmas`, a coluna `OPE` passa de `L` para **`LCE`**.
+>
+> A linha **`horarios` não muda**: ela já dava `LCE` ao Operador desde a redação original, e quem se
+> corrige ali é o **seed** de `perfil_permissao`, que nunca gravou essas linhas — a divergência é de
+> implementação, não de requisito (Q-12, 16/09/2026).
+>
+> ⚠️ **O `.docx` correspondente NÃO recebeu esta emenda.** `01-Stakeholders-e-Perfis-de-Usuario.docx`
+> é o original entregue e não é emendado; pela regra de precedência registrada no `CLAUDE.md` em
+> 17/09/2026, **o `.md` prevalece** sobre o `.docx` sempre que os dois divergirem.
+
 ## Nota de migração (v2.1)
 
 Este documento é a reescrita do `01-Stakeholders-e-Perfis-de-Usuario.md` da v2.0 para a **v2.1 — migração para Next.js + Supabase**. O que muda e o que não muda, dito de saída:
@@ -104,7 +121,7 @@ Os perfis abaixo são **exatamente** os da v2.0 v1.3, sem renomeação, sem fus�
 | **Ajudante da Divisão de Administração Acadêmica** | `ajudante_administracao_academica` | Ver nota 2.4 | Total | Idêntica à do Encarregado |
 | **Encarregado da Divisão de Orientação Educacional e Pedagógica** | `encarregado_orientacao_pedagogica` | CIAARA-12 | Total | Disciplinas, avaliações planejadas e agendadas |
 | **Ajudante da Divisão de Orientação Educacional e Pedagógica** | `ajudante_orientacao_pedagogica` | Ver nota 2.4 | Total | Idêntica à do Encarregado |
-| **Operador** (atributo *Escopo de Curso*) | `operador` | Sem correspondência regimental direta | Restrita ao escopo, quando não "Geral" | Registro de aulas/atividades, avaliações, atividades extraclasse e não letivas, cadastro/edição/desativação de instrutor, vínculo de habilitação, configuração de regime/horário |
+| **Operador** (atributo *Escopo de Curso*) | `operador` | Sem correspondência regimental direta | Restrita ao escopo, quando não "Geral" | Registro de aulas/atividades, avaliações, atividades extraclasse e não letivas, cadastro/edição/desativação de instrutor, vínculo de habilitação, configuração de regime/horário, **abrir e editar as turmas do seu escopo, inclusive o status** ⚠️ *(emenda de 17/09/2026)* |
 | **Encarregado de Curso** | `encarregado_curso` | Ver nota 2.4 | Restrita ao(s) curso(s) sob coordenação | Nenhuma |
 | **Visualização** | `visualizacao` | — | Total | Nenhuma |
 
@@ -148,7 +165,7 @@ Esta é a tradução operacional das seções 2.2 e 2.3, e o **insumo direto do 
 | Recurso (`recurso`) | Cobre | ADM | CHE | E11 | A11 | E12 | A12 | OPE | ENC | VIS |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `cursos` | Cadastro de cursos e sua classificação | LCED | L | LCED | LCED | L | L | L | L¹ | L |
-| `turmas` | Turmas, datas, nº de alunos, modalidade | LCED | L | LCED | LCED | L | L | L | L¹ | L |
+| `turmas` | Turmas, datas, nº de alunos, modalidade | LCED | L | LCED | LCED | L | L | **LCE**⚠️ | L¹ | L |
 | `horarios` | Regime de horário e vigência (`horarios_tempos_aula`, `curso_regime_historico`) | LCED | L | LCED | LCED | L | L | LCE | L¹ | L |
 | `disciplinas` | Disciplinas e grade curricular por turma | LCED | L | LCED | LCED | LCE | LCE | L | L¹ | L |
 | `instrutores` | Cadastro de instrutores | LCED | L | LCED | LCED | L | L | LCED | L¹ | L |
@@ -173,6 +190,10 @@ Esta é a tradução operacional das seções 2.2 e 2.3, e o **insumo direto do 
 - **¹** — Leitura **restrita aos cursos vinculados** ao usuário em `usuario_curso` (seção 2.3). Não é uma permissão diferente: é a **mesma** permissão `ler` com a dimensão de escopo aplicada pela RLS. O mesmo vale para o Operador com `escopo_curso ≠ geral`, em **todos** os recursos que tenham curso ou turma.
 - **†** — **Célula a confirmar com Bernardo.** Marca as posições que a matriz da v2.0 (seção 2.2) **não decidia explicitamente** e que esta tabela precisou resolver para virar seed. Todas foram preenchidas pela leitura mais conservadora, e estão listadas em 2.5.1.
 - **—** — sem acesso; a RLS nega. Nenhuma linha em `perfil_permissao`.
+- **⚠️** — **célula emendada em 17/09/2026** (`FR-028.3` da spec 009). O Operador passa de `L` para
+  `LCE` em `turmas`: ele abre e edita as turmas do **seu escopo**, inclusive o **status**, e o recorte
+  por escopo continua sendo o da nota **¹** — a permissão é a mesma, o alcance é que é restrito. Ele
+  **não** ganha `D`: desativar turma não é ação dele. A linha `horarios` **não** foi tocada.
 
 #### 2.5.1 Células que precisam de confirmação explícita
 

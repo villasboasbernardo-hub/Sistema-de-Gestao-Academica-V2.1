@@ -10,17 +10,48 @@
 -- tinha de lembrar de chamar. Aqui elas deixam de ser construiveis.
 -- =====================================================================================
 begin;
-select plan(7);
+select plan(8);
 
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-0000-0000-0000-000000000001', 'UNI-A', 'Curso Unicidade A', 'regular'),
-  ('11111111-0000-0000-0000-000000000002', 'UNI-B', 'Curso Unicidade B', 'expedito');
+-- ⚠️ POR QUE ESTE ARQUIVO PASSOU A AFIRMAR O NOME DA RESTRICAO, e nao so o SQLSTATE
+-- (decisao de Bernardo Villas Boas, 17/09/2026):
+--
+--   A partir da spec 009 o codigo da turma e FUNCAO DETERMINISTICA de curso, rotulo e ano. Com
+--   isso, uma segunda turma que colida em (curso, ano, rotulo) colide TAMBEM em `codigo`, e as
+--   DUAS restricoes passam a ser acionaveis pelo mesmo caso. A ordem em que o Postgres as avalia
+--   NAO E GARANTIDA, e `23505` sozinho deixou de dizer QUAL regra recusou: se um dia a unicidade
+--   por (curso, ano, rotulo) for removida, este teste segue VERDE pelo indice do codigo.
+--
+--   E a mesma doenca dos seis negativos do `SC-004` no `rls.test.ts`, que passavam pelo motivo
+--   errado — la o controle positivo pegou; aqui nao existe controle que distinga. Por isso a
+--   assercao nomeia a restricao.
+create function pg_temp.restricao_violada(p_sql text) returns text
+language plpgsql as $f$
+declare
+  v_restricao text;
+begin
+  execute p_sql;
+  return '(nao houve recusa)';
+exception when others then
+  get stacked diagnostics v_restricao = constraint_name;
+  return sqlstate || ' · ' || coalesce(nullif(v_restricao, ''), '(sem nome de restricao)');
+end;
+$f$;
+
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-0000-0000-0000-000000000001', 'UNI-A', 'Curso Unicidade A', 'regular', 'presencial', 30),
+  ('11111111-0000-0000-0000-000000000002', 'UNI-B', 'Curso Unicidade B', 'expedito', 'presencial', 10);
+
+-- A TURMA VEM ANTES DAS DISCIPLINAS (spec 009, T003 / A-2). A partir da migration 4 desta fatia,
+-- criar turma faz nascer uma linha de `turma_disciplina` por disciplina ATIVA do curso (FR-032.2).
+-- Com a disciplina criada antes, a linha nasceria sozinha e o insert explicito da assercao de
+-- FR-011, abaixo, colidiria com `uq_turma_disciplina_ativo` FORA de qualquer assercao. Trocando a
+-- ordem, o curso ainda nao tem disciplina quando a turma nasce, e a grade continua sendo montada
+-- pelo proprio teste — que e o que as duas assercoes de FR-011 provam.
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade) values
+  ('33333333-0000-0000-0000-000000000001', 'UNI-A T1 2026', '11111111-0000-0000-0000-000000000001', 'T1', 2026, 'ativa', 'presencial');
 
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
   ('22222222-0000-0000-0000-000000000001', 'UNI-A-MAT', '11111111-0000-0000-0000-000000000001', 'MAT', 'Matematica A', 40);
-
-insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status) values
-  ('33333333-0000-0000-0000-000000000001', 'UNI-A 2026 T1', '11111111-0000-0000-0000-000000000001', 'T1', 2026, 'ativa');
 
 insert into public.instrutores (id, codigo, posto_graduacao, esp_hab_obs, nome_completo, categoria, om) values
   ('44444444-0000-0000-0000-000000000001', 'UNI-INS-1', 'CC', 'AA', 'Instrutor Unicidade', 'Militar', 'CIAARA');
@@ -45,12 +76,39 @@ select lives_ok(
 );
 
 -- FR-009 — uma turma por curso, rotulo e ano letivo.
-select throws_ok(
-  $$insert into public.turmas (codigo, curso_id, turma, ano_letivo, status)
-    values ('UNI-A 2026 T1 DUP', '11111111-0000-0000-0000-000000000001', 'T1', 2026, 'planejada')$$,
-  '23505',
-  null,
-  'FR-009 · turma repetida no mesmo curso e ano letivo e recusada'
+-- ⚠️ MEDIDO EM 17/09/2026, E CONTRARIA A EXPECTATIVA: por INSERCAO, quem recusa e
+-- `turmas_codigo_key`, nao `turmas_unica_por_ano`. Com o codigo sendo funcao deterministica de
+-- curso, rotulo e ano, duas turmas que colidem em (curso, ano, rotulo) colidem TAMBEM no codigo, e
+-- o indice do codigo — criado antes — e avaliado primeiro. A assercao diz o nome VERDADEIRO.
+select is(
+  pg_temp.restricao_violada(
+    $$insert into public.turmas (codigo, curso_id, turma, ano_letivo, status, modalidade)
+      values ('UNI-A T1 2026', '11111111-0000-0000-0000-000000000001', 'T1', 2026, 'planejada', 'presencial')$$
+  ),
+  '23505 · turmas_codigo_key',
+  'FR-009 · turma repetida por INSERCAO e recusada por turmas_codigo_key — o codigo ja carrega curso, rotulo e ano'
+);
+
+-- ⚠️ E ESTA E A QUE FECHA O BURACO. Se a assercao acima fosse a unica, remover a unicidade por
+-- (curso, ano, rotulo) deixaria o arquivo VERDE, porque o indice do codigo continuaria recusando.
+-- Pela EDICAO a ordem se inverte: o codigo NUNCA muda (FR-025.1 da spec 009), entao mudar o rotulo
+-- de T2 para T1 colide so em (curso, ano, rotulo) — e quem recusa e `turmas_unica_por_ano`, pelo
+-- nome. Os quatro caminhos de colisao estao no `101_turma_codigo_e_rotulo.sql`.
+--
+-- ⚠️ A REGRA GERAL QUE ESTE PAR DEIXOU, e que vale para a proxima vez (decisao de Bernardo Villas
+--    Boas, 17/09/2026): **quando duas restricoes sao acionaveis pelo mesmo caso, escolher o CAMINHO
+--    em que so a pretendida pode disparar vale mais do que afirmar o nome no caminho ambiguo.**
+--    Afirmar o nome na insercao teria provado a regra ERRADA com toda a confianca do mundo — ali a
+--    regra pretendida nunca chegava a ser exercida. Nomear a restricao e o comeco; escolher o
+--    caminho em que ela e a unica candidata e o que faz a assercao provar o que diz provar.
+insert into public.turmas (codigo, curso_id, turma, ano_letivo, status, modalidade) values
+  ('UNI-A T2 2026', '11111111-0000-0000-0000-000000000001', 'T2', 2026, 'planejada', 'presencial');
+select is(
+  pg_temp.restricao_violada(
+    $$update public.turmas set turma = 'T1' where codigo = 'UNI-A T2 2026'$$
+  ),
+  '23505 · turmas_unica_por_ano',
+  'FR-009 · mudar o rotulo para um ja ocupado e recusado por turmas_unica_por_ano — a regra tem prova propria'
 );
 
 -- FR-010 — uma habilitacao por instrutor e disciplina. Habilitacao, nao atribuicao:

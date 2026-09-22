@@ -13,14 +13,21 @@
 begin;
 select plan(5);
 
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-0000-0000-0000-0000000970c1', 'T097-REG', 'Curso T097 regular', 'regular'),
-  ('11111111-0000-0000-0000-0000000970c2', 'T097-EXP', 'Curso T097 expedito', 'expedito');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-0000-0000-0000-0000000970c1', 'T097-REG', 'Curso T097 regular', 'regular', 'presencial', 30),
+  ('11111111-0000-0000-0000-0000000970c2', 'T097-EXP', 'Curso T097 expedito', 'expedito', 'presencial', 10);
+-- ⚠️ A TURMA VEM ANTES DAS DISCIPLINAS (spec 009, T013 / A-2). A partir da migration 4 desta fatia,
+-- criar turma faz nascer uma linha de `turma_disciplina` por disciplina ATIVA do curso (`FR-032.2`).
+-- Com a disciplina criada antes, a linha nasceria sozinha e a `turma_disciplina` de id fixo da linha seguinte,
+-- que o teste INATIVA mais abaixo para provar que atribuição em grade inativa não seleciona ninguém,
+-- conviveria com outra linha ATIVA da mesma disciplina, criada pelo gatilho.
+-- Trocando a ordem, o curso ainda não tem disciplina quando a turma nasce, e a grade continua sendo
+-- montada pelo próprio teste — que é de onde saem os números que as asserções conferem.
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade) values
+  ('44444444-0000-0000-0000-0000000970e1', 'T097-EXP T1 2026', '11111111-0000-0000-0000-0000000970c2', 'T1', 2026, 'ativa', 'presencial');
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
   ('22222222-0000-0000-0000-0000000970d1', 'T097-D-REG', '11111111-0000-0000-0000-0000000970c1', 'T97-R', 'Disciplina T097 reg', 10),
   ('22222222-0000-0000-0000-0000000970d2', 'T097-D-EXP', '11111111-0000-0000-0000-0000000970c2', 'T97-E', 'Disciplina T097 exp', 10);
-insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status) values
-  ('44444444-0000-0000-0000-0000000970e1', 'T097-TUR', '11111111-0000-0000-0000-0000000970c2', 'T1', 2026, 'ativa');
 insert into public.turma_disciplina (id, codigo, turma_id, disciplina_id) values
   ('55555555-0000-0000-0000-0000000970f1', 'T097-TD', '44444444-0000-0000-0000-0000000970e1', '22222222-0000-0000-0000-0000000970d2');
 insert into public.instrutores (id, codigo, posto_graduacao, esp_hab_obs, nome_completo, categoria, om) values

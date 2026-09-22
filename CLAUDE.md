@@ -47,6 +47,16 @@ Implantação agora é **Git → preview por branch → merge → produção**.
 
 Vivem em `docs/`. **Leia antes de responder sobre requisito; não parafraseie de memória.**
 
+⚠️ **Documento em `.md` e `.docx`: o `.md` prevalece** *(decisão de Bernardo Villas Boas, 17/09/2026)*. O
+`.docx` é o **documento original entregue** e é **preservado como tal — nunca emendado nem apagado** (regra
+4). Toda emenda vai **só** no `.md`, que registra, junto dela, que o `.docx` não a recebeu. Motivo: o repositório
+é a única fonte da verdade (P-1), e duas cópias do mesmo documento normativo sem regra de precedência é lacuna de
+governança. Reflexão manual no `.docx` a cada emenda falha por desgaste. **E toda citação de requisito de OUTRA
+spec carrega o número da spec** — `FR-001` da spec 002 —, porque cada spec reusa os mesmos números com conteúdo
+diferente *(decisão de 17/09/2026)*. ⚠️ **Medido no histórico em
+17/09/2026: 11 documentos já divergiam antes desta regra** — o `.md` foi emendado e o `.docx` não: BRIEF, 05,
+06, 10, 21, 22, 23, 24, 25, 31 e a constituição (40). A regra não os altera: confirma que o `.md` é o que vale.
+
 | Quando | Leia |
 |---|---|
 | **Sempre, antes de qualquer fatia** | `docs/vibe-coding/40-Constitution-v2.1.md` — os 11 princípios. Prevalece sobre qualquer plano |
@@ -86,6 +96,14 @@ Vivem em `docs/`. **Leia antes de responder sobre requisito; não parafraseie de
    (`FR-008.1` da spec 006).
 5. **`migracao_log` é append-only.** Nunca reescrever linha já gravada — corrigir é **logar evento
    novo**. Bloqueado por gatilho **inclusive para `service_role`** (Princípio IV).
+   ⚠️ **Lacuna conhecida, anotada em 17/09/2026 — pendência `PEND-5a-3` (spec 009):** o gatilho
+   `trg_migracao_log_imutavel` recusa **`UPDATE` e `DELETE`**, mas **não `TRUNCATE`**, e a `service_role`
+   **tem** o privilégio de `TRUNCATE` na tabela — pode esvaziá-la sem passar pelo gatilho. **A
+   imutabilidade prometida acima ainda não é integral.** Medido no banco local em 17/09/2026: gatilho
+   `BEFORE DELETE OR UPDATE`, privilégio `TRUNCATE` para `service_role` e `postgres`; e provado numa
+   tabela descartável com o mesmo gatilho, desfeita em seguida — `DELETE` recusado, `TRUNCATE` esvaziou.
+   **A regra não mudou, e o comportamento também não**: esta nota só faz o documento dizer o que vale hoje.
+   *(decisão de Bernardo Villas Boas, 17/09/2026)*
 6. **Regra normativa vira alerta, nunca bloqueio** (`RN-DEG-02`). Os tetos AEC 10% / TAD 5% / TR 10%
    e o 9º TA são **alerta**. **Nunca transformá-los em `CHECK`** — mudaria a regra de negócio.
 7. **Degradação segura** (`RN-DEG-01`): dependência ausente devolve vazio/neutro com aviso, nunca
@@ -93,6 +111,44 @@ Vivem em `docs/`. **Leia antes de responder sobre requisito; não parafraseie de
 8. **Parâmetro normativo é dado, nunca constante.** Tetos, faixas de CH docente, feriados, janelas e
    reservas do PROENS vivem em `config_parametros` e nas tabelas de calendário (`RNF-NORM-08`).
 9. **Nada em `lib/dominio/` importa `supabase`, `next` ou `react`.** Imposto por ESLint.
+9.1. **Curso não é apagável, e isso muda como toda amostra é escrita** *(propriedade do sistema desde
+   a fatia (a) do Épico 5, 18/09/2026)*. `curso_regime_historico` é **append-only** com `DELETE` e
+   `TRUNCATE` recusados por gatilho **inclusive para a `service_role`**, e a FK `cursos` é `restrict`
+   — logo **nenhuma amostra apaga curso**. Consequências, que valem para **as fatias futuras
+   inteiras**: toda amostra que cria curso MUST ser **idempotente**, reaproveitando o que já existe;
+   identificadores MUST ser **gerados ou buscados**, **nunca fixos** — a RPC gera o `id` dela, e
+   código fixo faz a segunda execução falhar por `23505`, que **parece recusa de permissão e não é**.
+   ⚠️ **E a idempotência MUST ser provada rodando a suíte DUAS VEZES SEGUIDAS** — foi assim que ela
+   foi verificada aqui, e é o único jeito de saber que a limpeza não era o que fazia a suíte passar.
+9.1.1. **Toda varredura por busca de texto MUST remover COMENTÁRIO antes de contar** — em
+   `pg_proc.prosrc`, em TypeScript, em SQL, em qualquer lugar *(decisão de Bernardo Villas Boas,
+   18/09/2026, na segunda ocorrência: duas vezes é padrão)*. **Uso mencionado não é uso.** As duas:
+   na fatia (b) do Épico 4, três verificações leram a **própria documentação** como violação — a frase
+   *"ele não conhece instrutor"* contada como se conhecesse; na fatia (a) do Épico 5, a varredura de
+   consumidores de `app.cursos_do_usuario()` produziu um quarto consumidor que **não existe**, porque
+   `criar_curso_com_regime` a **menciona num comentário** e nunca a chama. ⚠️ **Os dois erram para
+   lados opostos e ambos são caros**: o primeiro ensina a **apagar a documentação** para ficar verde;
+   o segundo faz **crescer uma lista de impacto**, e lista que cresce sem motivo manda mexer em código
+   que não precisava. Em SQL, `regexp_replace(prosrc, '--[^
+]*', '', 'g')`; em código, ler sem
+   comentário antes de casar o padrão.
+9.2. **Todo "medido: N" MUST nomear o artefato contra o qual foi medido** — a origem, o banco, a
+   lista de um documento, o repositório *(decisão de Bernardo Villas Boas, 18/09/2026, na terceira
+   ocorrência)*. **Número sem artefato nomeado é número que ninguém consegue reconferir**, e os três
+   casos desta fatia mediram, cada um, a coisa errada: o **0** da conferência 3 do ETL (medido na base
+   **carregada**, quando o que a conferência pergunta é sobre a **origem** — são **13**); os **"16
+   testes existentes a ajustar"** (eram **17**); e as **"31 policies em 16 tabelas"** (medido sobre a
+   **lista do próprio documento**, não sobre o banco — são **30 em 15**). ⚠️ **Os três passaram por
+   revisão sem serem notados**, porque um número isolado parece um fato; o que o torna conferível é o
+   artefato ao lado dele.
+9.3. **Nenhuma afirmação de resultado entra em disco antes da medição que a sustenta**
+   *(decisão de Bernardo Villas Boas, 18/09/2026)*. Vale para relatório, comentário, cabeçalho de
+   migration, spec e mensagem de commit: se a frase diz *"passou"*, *"não houve corrupção"* ou *"são
+   N"*, a medição vem **antes** de a frase ser escrita. Quando o texto precisa existir antes, o lugar
+   do número é um marcador explícito — `[pendente]` — trocado **depois**, e nunca uma estimativa
+   plausível. ⚠️ **O modo de falha é específico e caro**: a frase escrita por antecipação quase sempre
+   **acerta**, e por isso a vez em que ela erra passa despercebida — foi o que produziu o veredito
+   falso e tranquilizador do script da corrida, que contava uma recusa como corrupção.
 10. **Não regressão se prova por invariante**, nunca por diff com a saída histórica de um curso.
     **A CAHO 2026 foi rejeitada como padrão-ouro** (Bernardo, 10/08/2026) — não reabrir.
 11. **`RNF-NORM-04` permanece rejeitado** (sequenciamento pedagógico de técnica de ensino): não gera
@@ -124,7 +180,9 @@ Regra prática: **se o Bernardo não usaria a palavra numa conversa, ela não en
 
 - `snake_case` minúsculo, sem acento, sem aspas. **Tabelas no plural.**
 - `id uuid primary key default gen_random_uuid()`.
-- `codigo text unique not null` — guarda o `ID_*` da v2.0 verbatim (`CUR-000001`, `VIN-000123`).
+- `codigo text unique not null` — guarda o `ID_*` da v2.0 verbatim (`VIN-000123`, `TDI-000210`). ⚠️ **Nem toda
+  tabela tem prefixo**: `cursos.codigo` é a **sigla institucional** (`C-Ap-FR`) e `turmas.codigo` é `sigla [rótulo] ano`
+  (`C-ApA-PCN-PR-EAD T2 2026`) — o exemplo `CUR-000001` que esta linha trazia era vencido (D-6 da spec 009, 17/09/2026).
   **FKs apontam para `id`, nunca para `codigo`.**
 - `origem_migracao_v1 text` em toda tabela migrada.
 - **Exclusão lógica universal:** `status` explícito (`ativo`/`inativo`), **nunca inferido de `NULL`**.
@@ -175,6 +233,13 @@ test(RN-ANT-02): cobrir empate de posto por antiguidade declarada
 Branch: `<tipo>/<identificador>-<resumo-curto>`. **Nunca `git push` direto na `main`.** Merge por
 squash, via PR com o template inteiro preenchido.
 
+**Data de migration: duas datas, e as duas estão certas** *(registrado em 17/09/2026)*. O **nome do
+arquivo** carrega carimbo **UTC**, gerado pela CLI do Supabase (`supabase migration new`); o
+**cabeçalho e as decisões** carregam a **data local do responsável**. Diferença de um dia entre os dois
+é **fuso, não erro** — `20260918002208` é 00:22 UTC, e aqui eram 21:22 de 17/09/2026. ⚠️ **O arquivo
+MUST NOT ser renomeado para "corrigir" a data**: o nome é a chave de ordenação das migrations e do
+histórico do banco, e renomeá-lo quebra a ordem e a correspondência com o que já foi aplicado.
+
 ## Definition of Done — uma fatia só está pronta quando **todos** passam
 
 1. `tsc --noEmit` sem erro e `eslint` sem aviso novo.
@@ -183,6 +248,27 @@ squash, via PR com o template inteiro preenchido.
    *Risco: Alto*. Stub explicitamente pendente é aceito; **cobertura fingida não**.
 4. **RLS — teste negativo por perfil:** o que cada perfil **não** pode ler/escrever é negado **pelo
    banco**. Testar só o caminho feliz não prova nada.
+   ⚠️ **E prova de permissão NÃO mora em pgTAP** *(registrado em 17/09/2026, spec 009)*. O pgTAP roda
+   como **dono do schema**, e **sob privilégio de dono a RLS não se aplica**: uma asserção de "este
+   perfil pode / não pode" escrita ali passaria **com a RLS desligada**, que é o defeito que a suíte
+   existe para impedir. A divisão é: **pgTAP prova estrutura e regra de banco** — restrição, gatilho,
+   contagem, invariante —, e **quem pode o quê se prova em `tests/invariantes/rls/`**, com **sessão
+   autenticada de verdade**. Simular sessão com `request.jwt.claim.sub` no pgTAP serve para **auditoria
+   e gatilho** (quem carimbou a linha), **nunca** para autorização.
+   ⚠️ **E a recusa MUST ser conferida pelo código certo — `42501`, vindo da RLS.** Aceitar `error not
+   null`, ou um `23502` de coluna obrigatória ausente, como se fosse prova de permissão é o modo de
+   falha já medido nesta base: seis negativos do `SC-004` passavam pelo motivo errado, e só o
+   **controle positivo** os pegou. Toda asserção negativa manda a **linha completa** e confere o
+   código.
+8. **O caso que discrimina: teste que dá o mesmo veredito antes e depois da mudança não testa a
+   mudança** *(registrado em 17/09/2026, spec 009)*. Toda migration que altere **qual permissão,
+   coluna ou condição uma regra lê** MUST trazer ao menos um caso cujo **veredito vira** — tipicamente
+   um perfil, ou um dado, que tenha a condição **nova** sem ter a **antiga**. Negativo e controle
+   positivo provam que a regra **existe**; só o caso que discrimina prova que ela **mudou**.
+   **Exemplo, o `N-1b` da fatia (a) do Épico 5:** a escrita de vigência passou de `cursos.editar` para
+   `horarios.criar`, e o **Operador** é o único perfil que tem a segunda sem ter a primeira — o
+   negativo (quem não tem nenhuma das duas) e o controle positivo (quem tem as duas) passavam
+   **antes e depois**, e só por ele a troca de recurso se observa.
 5. **Playwright** no percurso principal, incluindo a rota `/print/*` quando houver.
 6. Migration aplicada em preview e **revertível** (plano de reversão escrito no PR).
 7. Commits no padrão `feat(RF-…): …`.
@@ -226,6 +312,54 @@ vê"* no estado vazio. E: **policy não enxerga `OLD`/`NEW`** — quando a regra
 **Bônus:** `pnpm db:tipos` **depois de toda migration**. O CI falha se `lib/tipos/database.ts`
 divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, coluna inventada.
 
+**5. O gerador de tipos não enxerga gatilho** *(medido em 17/09/2026, spec 009)*. Ele decide se a
+coluna é opcional em `Insert` olhando **`DEFAULT` e nulabilidade no catálogo** — nada mais. Então
+**toda coluna `NOT NULL` preenchida por gatilho aparece como obrigatória no tipo de inserção**, e o
+código tipado é forçado a mandar um valor que o banco ia gerar. Já vale para `cursos.limite_turmas_ano`
+(preenchido pela classificação), e valerá para o código de turma, o código `TDI-` e o regime, todos
+gerados por gatilho nesta fatia. **Não é defeito e não se conserta com `DEFAULT`** — o `DEFAULT` é
+justamente o que o `FR-015.1` proíbe onde a pessoa deveria escolher, e ele não enxerga outra coluna da
+linha. O caminho é **não inserir por cliente tipado** onde há gatilho: a escrita vai por **RPC** que
+recebe `jsonb`, como `criar_curso_com_regime`. Amostra de teste que insere direto é o outro caso — e
+ela usa cliente sem tipo, por isso não acusa.
+
+**5.1. E o `DEFAULT` que chama função precisa de `grant execute` a quem insere** *(padrão, não caso:
+duas ocorrências — o gerador `VIN-` da fatia (c) e o `TDI-` da (a))*. O `DEFAULT` é avaliado **com os
+direitos de quem faz o `INSERT`**, não com os do dono da tabela, mesmo quando a função é
+`SECURITY DEFINER` — a definição precisa ser executável pelo papel. Toda coluna cujo `DEFAULT` chama
+função MUST vir com `grant execute on function … to authenticated` (e `service_role`, para o ETL);
+sem isso, **a gravação falha com `permission denied for function`**, e o erro aponta para a função, não
+para a coluna — diagnóstico caro para quem está criando uma turma. ⚠️ Gatilho é o contrário: função de
+gatilho **não** exige `EXECUTE` de quem grava, e por isso ela leva `revoke all` de `public`, `anon` e
+`authenticated`.
+
+**4.1. Erro de RLS numa escrita cuja permissão está correta? Olhe a policy de LEITURA**
+*(medido em 18/09/2026, spec 009)*. **`INSERT … RETURNING` exige que a linha passe também pela policy
+de `SELECT`** — e quando o alcance é resolvido por função **`STABLE`** (`app.alcanca_curso()` →
+`app.cursos_do_usuario()`), ela **não enxerga a linha recém-inserida dentro do mesmo comando**: o
+alcance dá **falso**, e a recusa chega como **`new row violates row-level security policy`** — mensagem
+que aponta para a **escrita** e faz procurar permissão de criar, que estava certa o tempo todo.
+**Solução: gerar o `id` antes, inserir sem `RETURNING`, e ler em comando separado**, que tira retrato
+novo. ⚠️ **Vai reaparecer em toda RPC que insira em tabela com policy de leitura por alcance** —
+`criar_curso_com_regime` foi a primeira.
+
+**6. SEQUÊNCIA NÃO OBEDECE A `ROLLBACK`** *(medido em 18/09/2026, spec 009, com custo)*.
+`nextval` e **`setval` são não transacionais** — é assim que duas sessões conseguem pegar números
+diferentes sem esperar uma pela outra. A consequência que morde: **um defeito deliberado plantado com
+`setval` dentro de uma transação desfeita NÃO é desfeito**. Aqui, uma prova que voltava as quatro
+sequências de código a `1` para ver a verificação reprovar deixou-as em `1`, e o pgTAP seguinte
+quebrou em **sete arquivos** com `duplicate key value violates unique constraint
+"turma_disciplina_codigo_key"` — erro que aponta para a tabela, não para a prova que rodou antes.
+⚠️ **Toda prova que mexa em sequência MUST restaurá-la explicitamente**, com o valor lido antes; e
+consumir `nextval` numa transação desfeita é inofensivo (a sequência só avança), mas `setval` é
+destrutivo e permanente.
+
+**5.2. E dá para ler o mecanismo no tipo gerado, sem abrir o SQL.** Como o gerador **enxerga `DEFAULT`
+e não enxerga gatilho**, o tipo revela qual mecanismo preenche a coluna: **opcional em `Insert` =
+`DEFAULT`**; **obrigatória apesar de ser preenchida sozinha = gatilho**. Serve de conferência barata de
+que a coluna ficou como se pretendia — `turma_disciplina.codigo` virou opcional (é `DEFAULT`), e
+`turmas.codigo` continuou obrigatória (é gatilho), que é exatamente o desenho decidido.
+
 ## Estado atual e onde retomar
 
 *Atualize esta seção ao fim de cada fatia — é a primeira coisa que o agente lê numa sessão nova.*
@@ -255,9 +389,10 @@ divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, colun
 | **Épico 4 — fatia (c): casca e estado na URL** | ✅ **CONCLUÍDA em 11/09/2026**, mesclada na `main` por squash em `53ab503` — **75 de 75 tarefas**. **Medido**: `pnpm verificar:tudo` sai **0** — **318** de unidade · **102** pgTAP · **104** RLS · **132** ponta a ponta (2 pulados). O contrato de parâmetros virou **tipo**: parâmetro fora dele **não compila**, provado por defeito deliberado. A casca (`components/casca/`) é **servidor**, com três folhas de cliente declaradas e contadas por teste. A tela **`/inicio`** entrega o panorama por turma com o recorte na URL, e a raiz deixou de ser um beco. O guia `docs/guias/estado-na-url.md` é o que as telas dos Épicos 5 a 9 leem antes de errar. ✅ **As quatro decisões de Bernardo saíram em 11/09/2026** — a **MENU-1** e a **MENU-2** fecharam juntas, e a validação do menu contra a v2.0 está registrada com data em `specs/008-shell-e-estado-na-url/contracts/casca.md`. ⚠️ **As quatro respostas confirmaram o que já estava implementado, e `lib/navegacao/menu.ts` não mudou uma linha** — o custo de perguntar era uma edição; o de não perguntar era um menu reorganizado em silêncio contra um requisito **[PRESERVADO]**. ⚠️ **A junção com a `main` foi o último risco, e ele era real:** o PR #9 já tinha levado a correção do redirecionamento para lá, e esta fatia tocava o **mesmo arquivo** para aplicar o vocabulário visual. A junção preservou as duas coisas, e `verificar:tudo` foi **remedido depois dela**, com os mesmos números |
 | Épico 4 — **os cinco achados da fatia (c)**, todos medidos | **1.** Redirecionamento aberto **na `main`**: a guarda era `destino.startsWith("/")`, e `//dominio/` começa com barra — o navegador **saía da aplicação**. Corrigido em PR próprio (#9), com três formulações de teste, e **as duas primeiras passavam com o defeito no lugar**. **2.** O contrato declarava **3** classificações de curso; a coluna `cursos.classificacao` aceita **7** — um link com uma das quatro que faltavam degradaria para "todas" em silêncio, e a tela abriria cheia sem erro nenhum. A lista agora vem de `Constants`, com teste comparando com o enum. **3.** A **vitrine já violava** o `FR-001`: a amostra da fatia (a) escrevia `?demo=` sem contrato algum — **a primeira tela a infringir o requisito foi a nossa**, escrita antes de ele existir, e funcionando. **4.** O percurso do valor padrão **não provava nada**: ele limpava mandando `null`, e `null` apaga o parâmetro sem consultar o padrão; com `clearOnDefault` desligado de propósito, os sete casos passavam. **5.** Duas **corridas entre processos** na suíte de ponta a ponta — `supabase status` chamado no carregamento do módulo, e o `beforeAll` do convite apagando o Mailpit **inteiro**, que é estado compartilhado. As duas faziam reprovar um caso que não tinha relação nenhuma com a causa |
 | **Épico 4 — fechado** | ✅ **As três fatias na `main` em 11/09/2026.** Tokens e tema, vocabulário de componentes, casca e estado na URL |
-| **Épico 5 — fatia (c): cadastro de instrutores** | 🟨 **IMPLEMENTADA em 15/09/2026, PR #16 aberto e SEM merge.** Spec `006-cadastro-de-instrutores`. `pnpm verificar:tudo` sai **0** — **529** de unidade · **167** pgTAP (nenhum `todo`) · **141** RLS e ambiente · **158** ponta a ponta (2 pulados), remedido em 15/09/2026 depois do restante do checklist. Listagem em antiguidade pelo banco, filtros da v2.0 na URL, 3 indicadores e 9 gráficos (4 barras, 5 pizzas); ficha com cadastro, edição, painel de disciplinas (`VIN-NNNNNN`), desativação que preserva o passado e **alertas que não bloqueiam** — carga semanal **por semana ISO**, somando só as atribuições cuja janela cobre a semana (somar o ano é proibido), e docência há mais de um ano sem capacitação. A escrita de CPF, RG, telefone e endereço ficou com os três perfis que os leem, **por coluna, no banco**. **Nove migrations, ✅ APLICADAS no Supabase remoto em 15/09/2026** (T087, com autorização de Bernardo), **antes do merge** — o mesmo projeto serve Preview e Production (exceção do `FR-016.1`), e mesclar sem aplicar faria Production pedir colunas que não existem. Conferido no próprio remoto: 29 migrations dos dois lados, catálogo de `public` e `app` com **1.119 itens iguais** ao local, views e funções novas respondendo, `authenticated` sem DELETE e sem escrita de PII; a Production, que roda a `main`, seguiu respondendo sem erro novo. ⏸️ **Pararam depois de conferência**: legenda clicável (não está no código da v2.0, T119) e ficha A4 (falta o selo "Marinha do Brasil — Hidrografia e Navegação", T111). **Checklist de fechamento com 20 de 22**: CHK004, CHK005, CHK008, CHK012, CHK019 e CHK022 decididos por Bernardo em 15/09/2026 — cinco obrigatórios com a especialidade delimitada a militar e recusada em cadastro novo; alerta de faixa em todas as semanas ISO do ano corrente; ficha de inativo sem alerta. **Entraram também**: o quadro de avisos **recolhível**, no topo, com as contagens à vista, e a **exclusão permanente de instrutor sem histórico**, exceção única à regra 4 — e nenhum dos 177 da base real é excluível. T002 e T003 fechadas. **Pendentes por falta de material**: CHK020 e CHK021 |
+| **Épico 5 — fatia (c): cadastro de instrutores** | ✅ **CONCLUÍDA — PR #16 mesclado na `main` por squash em `7b85f27` (16/09/2026).** *(Registro anterior, vencido: "IMPLEMENTADA em 15/09/2026, PR #16 aberto e SEM merge" — corrigido em 17/09/2026.)* Spec `006-cadastro-de-instrutores`. `pnpm verificar:tudo` sai **0** — **529** de unidade · **167** pgTAP (nenhum `todo`) · **141** RLS e ambiente · **158** ponta a ponta (2 pulados), remedido em 15/09/2026 depois do restante do checklist. Listagem em antiguidade pelo banco, filtros da v2.0 na URL, 3 indicadores e 9 gráficos (4 barras, 5 pizzas); ficha com cadastro, edição, painel de disciplinas (`VIN-NNNNNN`), desativação que preserva o passado e **alertas que não bloqueiam** — carga semanal **por semana ISO**, somando só as atribuições cuja janela cobre a semana (somar o ano é proibido), e docência há mais de um ano sem capacitação. A escrita de CPF, RG, telefone e endereço ficou com os três perfis que os leem, **por coluna, no banco**. **Nove migrations, ✅ APLICADAS no Supabase remoto em 15/09/2026** (T087, com autorização de Bernardo), **antes do merge** — o mesmo projeto serve Preview e Production (exceção do `FR-016.1`), e mesclar sem aplicar faria Production pedir colunas que não existem. Conferido no próprio remoto: 29 migrations dos dois lados, catálogo de `public` e `app` com **1.119 itens iguais** ao local, views e funções novas respondendo, `authenticated` sem DELETE e sem escrita de PII; a Production, que roda a `main`, seguiu respondendo sem erro novo. ⏸️ **Pararam depois de conferência**: legenda clicável (não está no código da v2.0, T119) e ficha A4 (falta o selo "Marinha do Brasil — Hidrografia e Navegação", T111). **Checklist de fechamento com 20 de 22**: CHK004, CHK005, CHK008, CHK012, CHK019 e CHK022 decididos por Bernardo em 15/09/2026 — cinco obrigatórios com a especialidade delimitada a militar e recusada em cadastro novo; alerta de faixa em todas as semanas ISO do ano corrente; ficha de inativo sem alerta. **Entraram também**: o quadro de avisos **recolhível**, no topo, com as contagens à vista, e a **exclusão permanente de instrutor sem histórico**, exceção única à regra 4 — e nenhum dos 177 da base real é excluível. T002 e T003 fechadas. **Pendentes por falta de material**: CHK020 e CHK021. **Pendência nomeada de 17/09/2026: T132** — tirar o `MAX+1` de `proximo_codigo_vinculo` e `proximo_codigo_instrutor`, **dono Bernardo**, em PR próprio **depois** do PR de banco da spec 009 (B-6) |
 | Épico 5 (c) — **os achados D-1 a D-8 e os da verificação com dado real** | **D-1/D-2** a fórmula da carga e os limites da faixa não estavam escritos — respondidos por Bernardo (T011: 1 TA ≈ 1 h, média = tempos ÷ `disciplinas.semanas`, ano pelo início previsto, limites inclusivos). **D-3** o código de instrutor não era gerado pelo banco — sequência. **D-4** o `CHECK` de branco não estava no plano. **D-5** `vw_instrutores` não expunha a antiguidade. **D-6** o cadastro precisava de rota própria. **D-7** a data de docência do `FR-017` é `data_inicio_docencia_ciaara`, e com ela vazia o alerta não dispara e vira aviso. **D-8** preview e Production são o mesmo projeto. ⚠️ **Com a base real**: os filtros por vínculo mandavam **175 ids na URL** da interface de dados e falhavam — a regra foi para colunas da view; **15 militares** sem especialidade não salvavam a própria ficha — o campo ficou opcional (emenda ao `RN-INST-03` da spec; o documento 04 não mudou); `set_auditoria()` **gravava `criado_por` mandado pelo cliente** numa criação com sessão — corrigido, e o gatilho é universal; a ficha leva **1,5 a 2,4 s** (4,2 a 5,1 s com quatro acessos), dominada por `vw_instrutor_carga_anual` a ~700 ms sob RLS — registrado, não otimizado. **R-8**: dez views do Épico 1 seguem com `INSERT`/`UPDATE` para `authenticated`, inertes só pela forma |
-| Épicos 5 a 13 | ⬜ Pendentes, **exceto a fatia (c) do Épico 5, acima**. **A dívida de estilo está paga**: as cinco telas do Épico 3 ganharam o vocabulário visual na fatia (c), e o repositório inteiro mede **zero violações** da regra de cor em 91 arquivos. **Entra no Épico 3:** a Server Action de convite (primeiro consumidor real de `lib/supabase/admin.ts`) e `NEXT_PUBLIC_URL_APLICACAO`, deixada fora do Épico 0 por decisão de 07/09 |
+| **Épico 5 — fatia (a): cursos e turmas, PR 1** | 🟨 **IMPLEMENTADO LOCALMENTE em 22/09/2026, NÃO aplicado no remoto e SEM PR.** Spec `009-cursos-e-turmas`, ramo `feat/EPICO-5a-cursos-e-turmas`. **7 migrations** (`20260917210558` a `20260918041449`), carga do ETL **APROVADA** sobre elas (5.394 linhas, as dez conferências prévias em zero, aborto provado sem rastro por contagem de 55 tabelas), a varredura dos consumidores do alcance e o endereço de turma num módulo só. `pnpm verificar:tudo` sai **0** em 22/09/2026 — 548 de unidade · 325 pgTAP · 167 RLS · 166 ponta a ponta (2 pulados). **Conferência local feita por Bernardo em 22/09/2026**, com o `roteiro-de-conferencia.md`. ✅ **APLICADO NO REMOTO em 22/09/2026** (T105, autorização de Bernardo depois do CI verde no commit `5b16820`): `supabase db push --linked` saiu **0** em 5 segundos, as 7 na ordem. **Conferido só por leitura (T106), na hora**: **36 migrations dos dois lados**, nenhuma só de um; **esquema idêntico** — a impressão digital de `public` e `app` dá **1.456 objetos** e o **mesmo md5** no local e no remoto, sem uma linha de diferença; `curso_sigla_historico` com os **três** gatilhos; **zero** `DELETE`/`TRUNCATE` para `authenticated` e **zero** policies de `DELETE`; as **quatro RPCs respondem e recusam com `42501`** quem não tem sessão, sem gravar nada; e a **Production sem erro novo** — `/` e as telas protegidas levam ao login, `/login` responde 200. ⚠️ **O remoto seguia VAZIO de dado de negócio** — 0 cursos, 0 turmas, 0 instrutores, 1 usuário —, e é por isso que as migrations 1 e 2 não tiveram o que reconciliar. **Falta**: a T108 (PR). O plano está em `specs/009-cursos-e-turmas/plano-de-aplicacao-no-remoto.md`. Pendências nomeadas: `PEND-5a-1` a `PEND-5a-6` e a T132 da spec 006 |
+| Épicos 5 a 13 | ⬜ Pendentes, **exceto a fatia (c) do Épico 5 e o PR 1 da fatia (a), acima**. O PR 2 da fatia (a), com as telas, **só nasce depois do merge do PR 1**. **A dívida de estilo está paga**: as cinco telas do Épico 3 ganharam o vocabulário visual na fatia (c), e o repositório inteiro mede **zero violações** da regra de cor em 91 arquivos. **Entra no Épico 3:** a Server Action de convite (primeiro consumidor real de `lib/supabase/admin.ts`) e `NEXT_PUBLIC_URL_APLICACAO`, deixada fora do Épico 0 por decisão de 07/09 |
 | **Decisão UE-1** | ✅ **Fechada em 26/08/2026 — rota (b)**: `registros_aula` no grão de **Unidade de Ensino**; disciplina é agregado derivado. Épico 1 **desbloqueado**. Ver documento 05 §9.1. **Origem do dado resolvida em 28/08/2026**: as UEs vêm dos **currículos oficiais da DEnsM**, não de linha sintética |
 | Numeração das specs | ✅ **Reiniciada em 26/08/2026.** As 39 specs herdadas da v2.0 vivem em `specs/heranca-v2.0/`; a v2.1 recomeça em `specs/001-…`. "Spec 001" **exige o diretório** para não ser ambíguo |
 
@@ -461,7 +596,8 @@ fim **inclusivo**. Vale um dia, na fronteira. Seguimos o referência.
    caminho que não existe (o certo é `docs/sql-referencia/05_rls_policies.sql`), e o rodapé de versão
    está posicionado de forma diferente. **A divergência silenciosa que o CONST-1 previa já aconteceu.**
 
-**Volumes** (para dimensionar, não para otimizar): 24 cursos · 29 turmas · 175 disciplinas ·
+**Volumes** (para dimensionar, não para otimizar): 24 cursos · **28** turmas (a documentação dizia 29; a planilha
+tem 29 linhas e só 28 com `ID_Turma` — D-7 da spec 009) · 175 disciplinas ·
 177 instrutores · 798 vínculos instrutor↔disciplina · ~1.753 registros de aula · 663 + 1 = 664
 atividades não letivas (531 Estudo Individual · 62 AEC · 60 TAD · 11 TR) · 111 avaliações · 210 linhas de `turma_disciplina` · dezenas de usuários simultâneos no
 máximo. **É uma base pequena: priorize clareza de schema e manutenibilidade sobre desempenho.**
@@ -470,15 +606,18 @@ máximo. **É uma base pequena: priorize clareza de schema e manutenibilidade so
 
 | # | Decisão | Bloqueia |
 |---|---|---|
-| ~~**Hospedagem fora da infraestrutura da MB**~~ | ✅ **AUTORIZADA pela CIAARA-14.2 em 08/09/2026**, inclusive para **dado pessoal** — CPF, RG, telefone e endereço dos 177 instrutores migram em cheio (migration `20260908071000`). ⚠️ **Consequência que fica aberta:** a RLS do Épico 1 foi desenhada para dado FUNCIONAL, e hoje quem lê `instrutores` lê tudo. Não há recorte que permita ver posto e habilitação **sem** ver CPF e endereço — e é plausível que devesse haver. É desenho de segurança, portanto **Épico 3** | Nada. Era a única pendência capaz de bloquear a versão por razão não técnica |
+| ~~**Hospedagem fora da infraestrutura da MB**~~ | ✅ **AUTORIZADA pela CIAARA-14.2 em 08/09/2026**, inclusive para **dado pessoal** — CPF, RG, telefone e endereço dos 177 instrutores migram em cheio (migration `20260908071000`). ⚠️ **Correção de 22/09/2026: as COLUNAS migram; DADO não há.** Medido na própria planilha (`bruto/v20/Cad_Instrutor.csv`, extração de 08/09/2026): **CPF, RG, telefone, endereço e área de conhecimento têm 0 de 177 preenchidos**; e-mail **2**, nome de guerra **2**, data de nascimento **4**, início da docência no CIAARA **1**. A frase acima descrevia o transporte, e é fácil lê-la como se o dado existisse. ⚠️ **Consequência:** o recorte de PII por coluna e por perfil da fatia (c) — `revoke` de tabela, `grant` por coluna e visão com porteiro — **está correto e hoje protege coluna vazia**. Ele passa a proteger dado no dia em que alguém preencher, e é exatamente por isso que continua valendo. ⚠️ **Consequência que fica aberta:** a RLS do Épico 1 foi desenhada para dado FUNCIONAL, e hoje quem lê `instrutores` lê tudo. Não há recorte que permita ver posto e habilitação **sem** ver CPF e endereço — e é plausível que devesse haver. É desenho de segurança, portanto **Épico 3** | Nada. Era a única pendência capaz de bloquear a versão por razão não técnica |
 | ~~**PII-1**~~ | ✅ **Fechada em 08/09/2026.** Leem identificação civil e residência de instrutor **três** perfis: `admin`, `encarregado_administracao_academica` e `ajudante_administracao_academica`. `chefe_departamento_ensino` fica **de fora de propósito** — ele enxerga todos os cursos, e entraria como o perfil de maior alcance sobre dado pessoal. ⚠️ O mecanismo **não é RLS**: é `revoke` de tabela + `grant` por coluna + visão com porteiro (RLS não recorta coluna) | — |
 | **CONST-1** | Constitution em dois endereços: consolidar ou manter espelho | Nenhum épico. Custo cresce a cada emenda |
 | ~~**MENU-1**~~ | ✅ **Fechada em 11/09/2026 — o rascunho estava certo nos três pontos.** Ordem mantida (Início · Cursos · Cronograma · Atividades · Instrutores · Disciplinas · Administração), rótulo **"Disciplinas"** (a v2.0 usa o mesmo termo que a P-14 fixou, então não há divergência a preservar) e Administração como **entrada única**, com Permissões alcançada por aba. Registro com data em `specs/008-shell-e-estado-na-url/contracts/casca.md`. Fecha o `FR-017.1` e o `CHK017` — o `FR-017` passa a ser verificável | — |
 | ~~**MENU-2**~~ | ✅ **Fechada em 11/09/2026 — as entradas sem tela ficam visíveis, marcadas *"em breve"*.** O menu não cresce a cada épico, e ninguém reaprende a navegação sete vezes. ⚠️ O risco aceito é parecer quebrado; o risco recusado era contrariar o `RF-NAV-02`, que manda manter os pontos de entrada de hoje | — |
 | ~~**PR-4c**~~ | ✅ **Fechada em 11/09/2026.** O **PR #9** (redirecionamento aberto) e o **PR #10** (fatia c) estão na `main`. ⚠️ **O #10 entrou por squash**, e os #8 e #9 tinham entrado por merge commit — decisão de Bernardo em 11/09: vale o squash que a seção *Convenções de commit* já mandava, e os dois anteriores ficam registrados como desvio | — |
 | ~~**TURMA-1**~~ | ✅ **Fechada em 28/08/2026 — filtro de apresentação.** O domínio de status de turma fica com os quatro valores reais (`planejada`, `ativa`, `concluida`, `cancelada`); "Arquivada" é VIEW, **não** valor novo | — |
-| ~~**Q1.b**~~ | ✅ **Fechada em 08/09/2026.** O cruzamento com as 7 planilhas de planejamento da v1.0 recuperou a UE de **901 dos 1.566** lançamentos; os demais ficam **nulos**, amparados pela catraca `reg_aula_ue_so_nula_no_historico`. Bernardo ratificou os nulos: *"o ETL deve ser o retrato fiel da origem, sem preenchimentos inventados"* | — |
+| ~~**Q1.b**~~ | ✅ **Fechada em 08/09/2026.** O cruzamento com as 7 planilhas de planejamento da v1.0 recuperou a UE de **901 dos 1.566** lançamentos; os demais ficam **nulos**, amparados pela catraca `reg_aula_ue_so_nula_no_historico`. Bernardo ratificou os nulos: *"o ETL deve ser o retrato fiel da origem, sem preenchimentos inventados"*. ⚠️ **Emenda de 22/09/2026, sem reescrever o princípio** *(decisão de Bernardo Villas Boas)*: **a regra restringe o ETL, não o responsável pelo dado.** Bernardo pode corrigir a planilha da v2.0 onde souber o valor certo, e o ETL passa a transportar fielmente o valor corrigido. **O que segue proibido é a máquina inferir.** Critério, em uma linha: **corrige quem consegue nomear a origem da resposta; deixa vazio quem só tem palpite — e a catraca continua valendo para o vazio.** Toda correção fica registrada em `scripts/etl/dados/correcoes-de-origem.md` — data, o quê, valor antigo → novo, e de onde veio a resposta —, porque sem isso ninguém distingue correção de aparição | — |
 | ~~**UE-PUB**~~ | ✅ **Fechada em 30/08/2026 — pode ser público.** O catálogo de UE (572 unidades, 2.446 subunidades, ementa de 134 disciplinas) fica legível por qualquer pessoa no repositório. Decisão de Bernardo, na mesma linha da abertura do repositório em 26/08. `scripts/etl/dados/` permanece versionado | — |
+| ~~**AMBIENTE-1**~~ | ✅ **Decidida por Bernardo em 21/09/2026 — preview e production seguem no MESMO projeto Supabase por ora**, com a **separação agendada para o dia da virada**. Confirma a exceção do `FR-016.1` da spec 001 até lá: aplicar migration no remoto é aplicá-la **também na Production**, e o que a `main` roda passa a falar com o banco novo antes do merge | O plano de aplicação no remoto de cada PR de banco |
+| ~~**AMBIENTE-2**~~ | ✅ **Decidida por Bernardo em 21/09/2026 — a primeira carga no remoto é a ÚLTIMA**, e o script MUST **recusar `--primeira-carga` contra destino que já tenha dados**. ⚠️ **Ainda NÃO implementado — medido em 22/09/2026**: hoje `--primeira-carga` **só muda o texto final** (`scripts/etl/executar.py`, a própria ajuda diz *"muda o texto final, nao o comportamento"*). O que impede uma segunda carga hoje é **colisão de chave no meio da promoção** — transação desfeita, saída 3, mas por acidente e não por recusa declarada. **Amarrado por Bernardo em 22/09/2026, com estas palavras: *nenhuma carga é executada contra o remoto antes de o script recusar `--primeira-carga` contra destino com dados.* É PRÉ-REQUISITO DA CARGA, e não tarefa do PR que a acompanha.** Motivo: *hoje o que impede uma segunda carga é colisão de chave por acidente, e proteção acidental é o que a fatia (a) do Épico 5 inteira vem eliminando.* Não entra no PR 1 da spec 009. ⚠️ **E um segundo pré-requisito, com prazo** *(decisão de Bernardo Villas Boas, 22/09/2026)*: correção feita na planilha **antes** da carga no remoto entra **sem custo**; **depois** dela, a mesma correção exige a tela de turma ou de curso, que é do PR 2 da spec 009. **Portanto a carga no remoto só acontece depois de Bernardo dizer que terminou as correções de origem que sabe fazer** | **Toda carga contra o remoto** |
+| ~~**AMBIENTE-3**~~ | ✅ **Decidida por Bernardo em 21/09/2026 — levantar onde a chave `service_role` está configurada, só relatar, sem alterar.** **Levantado em 22/09/2026**, sem ler nenhum valor: (1) **Vercel**, `SUPABASE_SERVICE_ROLE_KEY` como *Secret* nos escopos **Production** (criada há 8 dias) e **Preview** (há 15); (2) **`.env.local`** desta máquina, com a chave **do projeto remoto** — fora do git (`.gitignore:34`), ⚠️ **mas dentro da pasta do OneDrive**, portanto **replicada na nuvem da Microsoft** e em todo aparelho que sincroniza a pasta; (3) **GitHub**: **nenhum** segredo no repositório, e o CI **não** a usa — as suítes leem a chave **local** do `supabase status`; (4) **código**: um consumidor só, `lib/supabase/admin.ts`, com `server-only`; `scripts/dev-local.mjs` e `scripts/manutencao/credencial_local.py` usam a chave **local**; (5) **19 arquivos versionados citam o nome** e **nenhum traz valor** — os dois que pareciam trazer são marcadores (`sb_secret_XXXX…` no `.env.local.example`, e o cabeçalho padrão de JWT seguido de `...` no documento 24) | — |
 | **LIQ-3** | Papel titular/reserva na atribuição | Épico 11 |
 | **LIQ-4** | Persistência da LIQ emitida | Épico 11 |
 

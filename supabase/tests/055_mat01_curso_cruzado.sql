@@ -28,13 +28,13 @@ select plan(6);
 -- ------------------------------------------------------------------------- cenario
 -- Dois cursos, cada um com sua turma, sua disciplina e sua unidade de ensino. O unico
 -- jeito de errar e cruzar os dois — que e exatamente o que a regra proibe.
-insert into public.cursos (id, codigo, nome_curso, classificacao) values
-  ('11111111-1111-1111-1111-111111111111', 'SONDA-A', 'Curso Sonda A', 'regular'),
-  ('22222222-2222-2222-2222-222222222222', 'SONDA-B', 'Curso Sonda B', 'regular');
+insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
+  ('11111111-1111-1111-1111-111111111111', 'SONDA-A', 'Curso Sonda A', 'regular', 'presencial', 30),
+  ('22222222-2222-2222-2222-222222222222', 'SONDA-B', 'Curso Sonda B', 'regular', 'presencial', 30);
 
-insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status) values
-  ('aaaaaaaa-0000-0000-0000-000000000001', 'SONDA-A 2026', '11111111-1111-1111-1111-111111111111', 'T1', 2026, 'ativa'),
-  ('bbbbbbbb-0000-0000-0000-000000000001', 'SONDA-B 2026', '22222222-2222-2222-2222-222222222222', 'T1', 2026, 'ativa');
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade) values
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'SONDA-A T1 2026', '11111111-1111-1111-1111-111111111111', 'T1', 2026, 'ativa', 'presencial'),
+  ('bbbbbbbb-0000-0000-0000-000000000001', 'SONDA-B T1 2026', '22222222-2222-2222-2222-222222222222', 'T1', 2026, 'ativa', 'presencial');
 
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
   ('aaaaaaaa-0000-0000-0000-000000000002', '1 - SONDA-A - MAT', '11111111-1111-1111-1111-111111111111', 'MAT', 'Disciplina do Curso A', 40),

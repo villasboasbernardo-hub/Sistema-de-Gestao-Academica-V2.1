@@ -23,6 +23,12 @@ import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { CardKpi } from "@/components/ciaara/card-kpi";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+// ⚠️ O ENDERECO DE TURMA VEM DO MODULO, E NAO DE UM TEMPLATE AQUI (`FR-031.2`). O codigo da
+//    turma e `sigla [rotulo] ano` e CONTEM ESPACO — montar a mao produzia um `href` com
+//    espaco cru, que o navegador aceita e o servidor recebe diferente. Defeito medido e
+//    corrigido em 18/09/2026; a varredura de `endereco-de-turma-unico.test.ts` o impede
+//    de voltar.
+import { enderecoDaTurmaNoCurso } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -53,7 +59,19 @@ export default async function Inicio({
 
   const supabase = await criarClienteDeServidor();
 
-  let consultaDeCursos = supabase.from("cursos").select("id, codigo, classificacao, modalidade");
+  /*
+   * ⚠️ `status = "ativo"` É EXPLÍCITO AQUI, E PRECISA SER (`FR-017.6` da spec 009, R-1). Até a
+   * migration 7 desta fatia, `app.cursos_do_usuario()` filtrava a situação, e o panorama nunca via
+   * curso inativo — não porque esta tela filtrasse, mas porque o ALCANCE escondia. A migration tirou
+   * o filtro de lá de propósito (`FR-017.1`: desativar tira de OFERTA, não de VISTA), e o recorte
+   * passou a ser responsabilidade de cada consumidor, explicitamente. **Sem esta linha, turma de
+   * curso desativado volta ao panorama sem erro nenhum** — medido em 18/09/2026, pelo caso de
+   * `inicio.spec.ts`, que reprovou antes dela existir.
+   */
+  let consultaDeCursos = supabase
+    .from("cursos")
+    .select("id, codigo, classificacao, modalidade")
+    .eq("status", "ativo");
   if (classificacao !== "") consultaDeCursos = consultaDeCursos.eq("classificacao", classificacao);
   if (modalidade !== "") consultaDeCursos = consultaDeCursos.eq("modalidade", modalidade);
 
@@ -68,6 +86,13 @@ export default async function Inicio({
      * ⚠️ ESTA TERCEIRA CONSULTA EXISTE SÓ PARA DISTINGUIR OS VAZIOS, e é uma contagem — não traz
      * linha. Sem ela não há como separar *"o recorte não achou nada"* de *"a base ainda não recebeu
      * a carga"*, e as duas frases levam a pessoa a lugares opostos.
+     *
+     * ⚠️ **E ELA CONTA TODOS OS CURSOS, INCLUSIVE OS INATIVOS — de propósito** (`FR-017.6`, R-1).
+     * A pergunta que ela responde é *"existe curso neste sistema?"*, e curso arquivado existe.
+     * Acrescentar `status = "ativo"` aqui, por simetria com a consulta acima, faria a tela anunciar
+     * *"ainda não existe no sistema"* numa base com dezenas de cursos arquivados — mentira que manda
+     * a pessoa procurar a carga em vez do filtro. As duas consultas fazem perguntas diferentes, e é
+     * por isso que só uma delas filtra.
      */
     supabase.from("cursos").select("id", { count: "exact", head: true }),
   ]);
@@ -158,7 +183,7 @@ export default async function Inicio({
                 destino é do Épico 7; o link já carrega o recorte que ela vai ler.
               */}
               <Link
-                href={`/cursos/${t.cursoCodigo}?turma=${t.turmaCodigo}`}
+                href={enderecoDaTurmaNoCurso(t.cursoCodigo, t.turmaCodigo)}
                 data-turma={t.turmaCodigo}
                 className="border-borda bg-superficie rounded-ciaara hover:bg-marca-suave focus-visible:ring-marca flex flex-wrap items-center justify-between gap-3 border p-3 focus-visible:ring-2 focus-visible:outline-none"
               >
