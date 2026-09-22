@@ -1154,6 +1154,32 @@ pergunta** (`→ Q-nn`) em vez de fixar uma resposta. Isso é deliberado.
   `padrao` — a restrição entra sem saneamento. ⚠️ **Consequência registrada:** a carga do ETL é um desses
   caminhos — um curso sem regime na v2.0 no dia do corte faz a carga **abortar**, e a reconciliação MUST
   nomeá-lo. *(decisão de Bernardo Villas Boas, 17/09/2026)*
+
+  ---
+
+  ⚠️ **Emenda de 22/09/2026 — defesa em profundidade: `cursos_criar` e este gatilho são UM PAR.**
+  *(decisão de Bernardo Villas Boas, 22/09/2026; segunda ocorrência do padrão nesta fatia — a primeira é o
+  par da corrida de vigência, no `FR-021.3`)*
+
+  **Acréscimo, sem reescrever o texto acima.** Criar curso passa por **duas defesas independentes**:
+
+  1. a **policy `cursos_criar`**, que decide **quem** pode criar (`FR-044`); e
+  2. o **gatilho adiado `app.conferir_curso_com_regime()`**, que decide **o quê** pode existir — curso só
+     com vigência `padrao` —, e recusa no `COMMIT`.
+
+  **Medido pelo defeito deliberado T101, em 22/09/2026:** com a policy **escancarada** — `with check (true)` —,
+  os **8** casos de "não cria curso" reprovaram, e mesmo assim **nenhum curso foi gravado**. Numa transação
+  desfeita, o `INSERT` **passou pela RLS** (`INSERT 0 1`) e quem recusou foi o gatilho, no `COMMIT`:
+  *"Todo curso tem regime de horario"*, chave `curso_sem_regime`. **A segunda defesa segurou sozinha, com a
+  primeira aberta.**
+
+  ⚠️ **E A ADVERTÊNCIA É A PARTE QUE IMPORTA.** Agora que se sabe que são duas, cada uma corre o risco de ser
+  removida por quem acredite que a outra cobre — e **nenhuma cobre a outra**: a policy não sabe se o curso
+  tem regime, e o gatilho não sabe quem está criando. **Sem o gatilho**, quem pode criar grava curso **sem
+  regime** — medido pelo T102: com a função removida, **1** curso sem vigência ficou gravado. **Sem a policy**,
+  sobra só o gatilho, que não pergunta quem é: a recusa passa a depender de a vigência **não** vir junto.
+  **Nenhuma das duas deve ser removida por quem acredite que a outra cobre. Remover qualquer uma exige
+  decisão registrada e datada.**
 - **FR-019.6**: A carga do ETL MUST ter uma **verificação prévia**, que roda **antes de qualquer escrita**,
   **lista todos os cursos sem vigência `padrao` ativa** no dado de origem e **falha cedo, com mensagem
   clara** — o código e o nome de cada curso, e o que falta —, **em vez de** a carga abortar no meio, no

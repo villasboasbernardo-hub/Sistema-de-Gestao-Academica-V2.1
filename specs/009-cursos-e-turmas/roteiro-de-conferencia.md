@@ -19,8 +19,8 @@
 
 | O que se conferiu | Resultado |
 |---|---|
-| Os cinco números da §4, na tela | **[pendente — o resultado não veio na mensagem de 22/09/2026]** |
-| As 9 turmas com a grafia da sala trocada (§5.1) | **[pendente — o resultado não veio na mensagem de 22/09/2026]** |
+| Os cinco números da §4, na tela | ✅ **Conferiram**, em 22/09/2026 |
+| As 9 turmas com a grafia da sala trocada (§5.1) | **Reformulada em 22/09/2026.** A substituição **casou por texto normalizado exato** contra a lista canônica — minúsculas, sem acento, espaço colapsado, e **igualdade**, não semelhança —, e as 8 salas da lista têm **8 formas normalizadas distintas** (medido). **Trocar uma sala por outra era impossível pelo caminho usado**: uma grafia só podia virar a sala cuja forma normalizada é idêntica à dela. **O que fica para conferência humana é a distribuição** — **9** turmas no laboratório — **e as 2 turmas sem sala**, **pendentes da leitura de Bernardo** da tabela entregue em 22/09/2026 |
 
 ⚠️ **Dois defeitos de acesso apareceram no caminho, e os dois valem para quem repetir o roteiro:**
 
@@ -65,7 +65,7 @@ A planilha da v2.0 nunca teve senha, então os cadastros chegam **sem** credenci
 cria a sua, **só nesta máquina**:
 
 ```
-python -m scripts.manutencao.credencial_local villasboasbernardo@gmail.com
+python -m scripts.manutencao.credencial_local <o-seu-e-mail-cadastrado>
 ```
 
 Ele responde com o endereço, o e-mail e a senha. Guarde a senha: `conferencia-local-12345`.
@@ -135,8 +135,9 @@ planilha. São as 9 que tiveram a grafia trocada:
 > C-Exp-Metoc-OF-SP 2026 · C-Exp-MetocOf 2026 · EST-QF-APHID 2026 · EST-QF-APOC 2026 ·
 > EST-QF-EM2040PHS 2026
 
-O que importa é se alguma sala **ficou de fora** desta lista, ou se alguma foi trocada **errado** —
-isto é, se alguma dessas 9 na verdade não era o laboratório.
+⚠️ **Trocar uma sala por OUTRA não era possível pelo caminho da carga** (registro de 22/09/2026): ela casa
+por **igualdade** do texto normalizado contra a lista, e as 8 salas têm 8 formas normalizadas diferentes.
+O que importa conferir é a **distribuição** — se são mesmo **9** no laboratório — e as 2 sem sala.
 
 ⚠️ **Duas turmas estão sem sala nenhuma** — **EST-QF-MAREFLU 2026** e **EST-QF-PGRS100 2026** —, e
 é o que a planilha traz. Não foi perda na carga. Se elas deveriam ter sala, é achado.

@@ -17,6 +17,12 @@ COMO   : `python -m scripts.etl.executar [--primeira-carga] [--somente-reconcili
    dela**. Uma carga que termina 0 é uma carga conferida; qualquer outra coisa não é
    carga terminada, é carga interrompida.
 
+⚠️ **NENHUMA CARGA CONTRA O REMOTO ANTES DE ESTE SCRIPT RECUSAR `--primeira-carga` CONTRA DESTINO
+   COM DADOS** (AMBIENTE-2, amarrado por Bernardo Villas Boas em 22/09/2026). **Hoje ele NÃO recusa**:
+   `--primeira-carga` só muda o texto final, e o que impede uma segunda carga é colisão de chave no
+   meio da promoção — por acidente. A recusa é **pré-requisito da carga**, não tarefa do PR que a
+   acompanha: proteção acidental é exatamente o que a spec 009 vem eliminando.
+
 Códigos de saída, e a diferença entre eles importa:
    0 — carregou e a reconciliação APROVOU.
    1 — carregou e a reconciliação BLOQUEOU: há divergência nomeada no relatório.

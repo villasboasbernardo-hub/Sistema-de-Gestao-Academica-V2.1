@@ -1,6 +1,6 @@
 """Dá credencial LOCAL a um cadastro que já existe em `usuarios` — para conferir com os olhos.
 
-    python -m scripts.manutencao.credencial_local villasboasbernardo@gmail.com
+    python -m scripts.manutencao.credencial_local <o-seu-e-mail-cadastrado>
 
 O QUÊ  : cria a conta de acesso (`auth.users`) para uma linha de `usuarios` que veio da carga
          e a vincula, para que a pessoa consiga **entrar no sistema local** e olhar os dados
