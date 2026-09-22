@@ -63,7 +63,10 @@ def executar(
     if not somente_reconciliar:
         _linha("ETAPA 3 — carga em staging")
         try:
-            rel = carregar.carregar(conexao)
+            rel = carregar.carregar(conexao, primeira_carga=primeira_carga)
+        except carregar.DestinoJaCarregado as erro:
+            print(f"[RECUSADO] {erro}")
+            return 3
         except carregar.CoberturaIncompleta as erro:
             print(f"[ABORTADO] {erro}")
             return 3
