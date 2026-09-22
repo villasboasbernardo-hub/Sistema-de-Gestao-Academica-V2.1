@@ -18,5 +18,17 @@ daqui a seis meses, um valor que "apareceu" entre duas extrações só tem expli
 |---|---|---|---|
 | 22/09/2026 | Turma `C-Ap-HN 2026` · sala | `Sala 02` → `Sala 01` | conhecimento do responsável |
 
+## Pendentes de decisão de Bernardo — levantados, **não** corrigidos
+
+Concentração desse tamanho sugere **falha de preenchimento na origem**, e não ausência legítima. Ficam
+aqui até ele decidir; **nada foi preenchido** *(levantado em 22/09/2026)*.
+
+| Onde | O que | Efeito enquanto estiver assim |
+|---|---|---|
+| Turma `C-Esp-ME 2026` | **172 de 173** aulas sem instrutor — as demais 1.393 aulas da base têm | Essas aulas não contam na carga de nenhum instrutor. A reconciliação do ETL informa (U-02) e não bloqueia |
+| Turma `C-Ap-HN 2026` | **52** aulas sem tempos consumidos, todas de aula teórica | Ficam fora da carga executada da turma: o progresso dela no Início sai menor do que foi dado |
+
+---
+
 ⚠️ **O retrato local ainda não tem as correções.** `bruto/v20/` foi extraído em 08/09/2026, e nele a
 `C-Ap-HN 2026` está em `Sala 02`. Cada correção chega na próxima extração da planilha.

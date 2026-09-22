@@ -74,6 +74,14 @@ e não pode ser feita sem aplicar algo lá.
 3. A T106: `curso_sigla_historico` com os gatilhos, `authenticated` sem `DELETE`, as RPCs respondendo
    e a Production sem erro novo.
 
+⚠️ **Acréscimo de 22/09/2026 — a impressão digital é 1.456 objetos, não 1.461.** O 1.461 saiu de uma
+medição em **base suja**: uma tabela temporária de 5 objetos (1 coluna, 1 RLS e 3 privilégios), sobra da
+própria prova de *"migration que falha no meio"*, que o `db:reset` seguinte limpou. Confirmado recriando
+a tabela numa transação desfeita: com ela, 1.461; sem ela, 1.456. ⚠️ **A comparação local × remoto nunca
+esteve errada** — ela compara os dois lados na mesma hora, e o que estava errado era o número absoluto
+registrado. O valor errado ficou **só na mensagem do commit `a292b78`**, que já está publicado: **não se
+reescreve ramo publicado por causa disso**. *(decisão de Bernardo Villas Boas, 22/09/2026)*
+
 ## 5. O que acontece com a Production entre a aplicação e o merge
 
 Preview e Production usam **o mesmo projeto** (AMBIENTE-1). Aplicar é aplicar **na Production**, e
