@@ -22,6 +22,9 @@ COMO   : `python -m scripts.etl.executar [--primeira-carga] [--somente-reconcili
    `--primeira-carga` só muda o texto final, e o que impede uma segunda carga é colisão de chave no
    meio da promoção — por acidente. A recusa é **pré-requisito da carga**, não tarefa do PR que a
    acompanha: proteção acidental é exatamente o que a spec 009 vem eliminando.
+⚠️ **E NENHUMA CARGA CONTRA O REMOTO ANTES DE BERNARDO DIZER QUE TERMINOU AS CORREÇÕES DE ORIGEM**
+   (decisão de 22/09/2026). Corrigir na planilha antes da carga não custa nada; depois, exige a tela de
+   turma ou de curso, que é do PR 2. As correções ficam em `dados/correcoes-de-origem.md`.
 
 Códigos de saída, e a diferença entre eles importa:
    0 — carregou e a reconciliação APROVOU.

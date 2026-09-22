@@ -959,6 +959,7 @@ pergunta** (`→ Q-nn`) em vez de fixar uma resposta. Isso é deliberado.
   pela própria catraca**: o dado fica visivelmente ausente, o sistema acusa, e a modalidade passa a ser
   exigida quando alguém editar aquele curso — com a informação à frente da pessoa certa, um curso por
   vez. *(decisão de Bernardo Villas Boas, 17/09/2026)*
+  ⚠️ **Revisto em 22/09/2026** *(decisão de Bernardo Villas Boas)*: o "adiado pela própria catraca" acima **deixou de ser o único caminho**. O princípio de 08/09 foi emendado — **ele restringe o ETL, não o responsável pelo dado** —, e Bernardo pode corrigir a modalidade dos 13 **na planilha, antes da carga no remoto**, onde souber o valor certo; o ETL transporta o valor corrigido, e a correção fica em `scripts/etl/dados/correcoes-de-origem.md`. **Continua recusado** o que esta emenda recusou: a **máquina** gravar `presencial`, ou qualquer valor que ela deduza. E a catraca **continua valendo** para o curso que ficar em branco. **Por que mudou:** depois da carga no remoto, a mesma correção só se faz pela tela de curso, que é do PR 2 — corrigir antes é de graça, corrigir depois custa uma tela.
 - **FR-015.2**: `cursos.prioridade_alocacao` **mantém** o padrão `carga_restante_por_dia_util` (B-19,
   17/09/2026), e isso **não** é o padrão silencioso do `FR-015.1`, por três razões conferidas:
   1. **O valor é a regra em vigor, não um palpite no lugar de uma resposta.** O `RF-CRONOS-08` descreve a
