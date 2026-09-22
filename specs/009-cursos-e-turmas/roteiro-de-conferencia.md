@@ -13,6 +13,26 @@
 > mandei você usar. O passo 3 agora usa `pnpm dev:local`, e o login foi refeito em 22/09/2026 com o
 > seu e-mail e a sua senha, num navegador de verdade, até a tela mostrar as 28 turmas.
 
+## Registro da conferência — 22/09/2026
+
+**Feita por Bernardo Villas Boas em 22/09/2026, e concluída.**
+
+| O que se conferiu | Resultado |
+|---|---|
+| Os cinco números da §4, na tela | **[pendente — o resultado não veio na mensagem de 22/09/2026]** |
+| As 9 turmas com a grafia da sala trocada (§5.1) | **[pendente — o resultado não veio na mensagem de 22/09/2026]** |
+
+⚠️ **Dois defeitos de acesso apareceram no caminho, e os dois valem para quem repetir o roteiro:**
+
+1. **`pnpm dev` abre o sistema contra o banco da NUVEM**, e a conta de conferência só existe no da
+   máquina — o login responde *"e-mail ou senha incorretos"* com a senha certa. Corrigido no passo 3
+   (`pnpm dev:local`). E um `pnpm dev` esquecido aberto **continua respondendo no lugar do novo**: foi
+   o que manteve o erro na segunda tentativa.
+2. **Abrir pelo endereço de rede da máquina, e não por `localhost`, também impede o login** — ver o
+   aviso no passo 3.
+
+---
+
 Este roteiro é para você abrir o sistema na sua máquina e comparar o que aparece na tela com o
 que você sabe que existe na planilha. Nada aqui apaga nada: o banco da sua máquina é uma cópia
 descartável, e o sistema em produção continua sendo a v2.0, intocado.
@@ -65,6 +85,12 @@ pnpm dev:local
 A primeira linha que ele imprime tem de dizer **`banco: http://127.0.0.1:54321`** — é a confirmação
 de que está falando com o banco da sua máquina. Então abra no navegador:
 **http://localhost:3000/login** e entre com o seu e-mail e a senha acima.
+
+⚠️ **Abra por `localhost`, nunca pelo endereço "Network" que o comando também imprime** (algo como
+`http://10.217.174.90:3000`). Por esse endereço o Next **bloqueia os arquivos de desenvolvimento** —
+o terminal mostra *"Blocked cross-origin request to Next.js dev resource"* —, a tela aparece mas o
+botão **Entrar não funciona**, e o login não acontece. Reproduzido em 22/09/2026: pelo `localhost`
+entrou, pelo endereço de rede ficou parado em `/login`.
 
 A primeira abertura de cada tela demora alguns segundos — é o programa se montando, não é
 lentidão do sistema.
