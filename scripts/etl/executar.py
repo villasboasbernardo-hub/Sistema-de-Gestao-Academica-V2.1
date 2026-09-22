@@ -40,7 +40,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import carregar, promover, reconciliar
+from . import carregar, correcoes, promover, reconciliar
 
 # ⚠️ O console do Windows abre em cp1252, e cp1252 não tem `→` (U+2192) — o programa
 #    morria com `UnicodeEncodeError` ao IMPRIMIR o título de uma etapa, depois de a
@@ -74,6 +74,9 @@ def executar(
         _linha("ETAPA 4 — promoção staging → public")
         try:
             res = promover.promover(conexao)
+        except (correcoes.CorrecaoObsoleta, correcoes.CorrecaoInvalida) as erro:
+            print(f"[ABORTADO] {erro}")
+            return 3
         except (promover.DominioSemDestino, promover.ChaveOrfa) as erro:
             print(f"[ABORTADO] {erro}")
             return 3
@@ -81,6 +84,11 @@ def executar(
             print(f"[ABORTADO] {str(erro).splitlines()[0]}")
             return 3
         print(f"  {sum(res.inseridas.values())} linhas promovidas")
+        if res.correcoes_aplicadas:
+            print(
+                f"  {len(res.correcoes_aplicadas)} correcao(oes) de origem aplicadas por cima do "
+                f"retrato fiel (dados/correcoes-de-origem.md)"
+            )
         if res.vocabulario_semeado:
             print(
                 f"  {len(res.vocabulario_semeado)} valores semeados em config_listas "

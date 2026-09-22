@@ -37,7 +37,9 @@ from pathlib import Path
 
 import psycopg
 
-from . import mapa, ordem
+from psycopg import sql as psql
+
+from . import correcoes, mapa, ordem
 
 CONEXAO_LOCAL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 RELATORIO = Path(__file__).parent / "dados" / "relatorio_divergencia.md"
@@ -481,12 +483,18 @@ def r06_log_intacto(con: psycopg.Connection) -> list[Divergencia]:
         # Os eventos que ESTA carga criou: cada um tem de descrever uma correção que de
         # fato aconteceu. Contar quantos são não prova nada — o que prova é que o valor
         # registrado como "depois" é o que está gravado na turma hoje.
+        # ⚠️ SÓ OS EVENTOS DA NORMALIZAÇÃO DE SALA. A partir de 22/09/2026 existe uma
+        #    segunda origem de evento com `observacao`: a camada de correções de origem,
+        #    que corrige **qualquer** tabela — e a primeira versão desta verificação, que
+        #    supunha `turmas` para todo evento, acusou 14 falsos positivos na primeira
+        #    carga com correções de `cursos`. A verificação estava certa em reclamar: ela
+        #    é que era estreita demais. As correções têm conferência própria, logo abaixo.
         k.execute(
             """
             select l.codigo, l.destino_chave, l.valor_antes, l.valor_depois, t.sala_alocada
               from public.migracao_log l
               left join public.turmas t on t.codigo = l.destino_chave
-             where l.observacao is not null
+             where l.observacao is not null and l.origem_tabela = 'Turmas_Ativas'
              order by l.codigo
             """
         )
@@ -506,6 +514,33 @@ def r06_log_intacto(con: psycopg.Connection) -> list[Divergencia]:
                     Divergencia("R-06", "migracao_log", f"evento {codigo}",
                                 "uma correcao de verdade", f"antes e depois iguais: {antes!r}")
                 )
+        # As CORREÇÕES DE ORIGEM, conferidas contra o arquivo que as declara — e não
+        # contra o evento: o arquivo é quem diz tabela, registro, coluna e valor novo,
+        # então a conferência vale para qualquer tabela que venha a ser corrigida.
+        for c in correcoes.ler():
+            k.execute(
+                psql.SQL("select {}::text from public.{} where codigo = %s").format(
+                    psql.Identifier(c.coluna), psql.Identifier(c.tabela)
+                ),
+                (c.registro,),
+            )
+            linha_atual = k.fetchone()
+            atual = None if linha_atual is None else linha_atual[0]
+            if atual != c.para:
+                achados.append(
+                    Divergencia("R-06", f"{c.tabela}.{c.coluna}", f"correcao da linha {c.linha}",
+                                f"{c.registro} em {c.para!r}", f"{atual!r}")
+                )
+            k.execute(
+                "select count(*) from public.migracao_log where observacao = %s and acao = 'corrigido'",
+                (f"correcoes-de-origem.md:{c.linha}",),
+            )
+            if int(k.fetchone()[0]) != 1:
+                achados.append(
+                    Divergencia("R-06", "migracao_log", f"rastro da correcao da linha {c.linha}",
+                                "exatamente 1 evento `corrigido`", "outro numero")
+                )
+
         k.execute(
             "select count(*) from public.migracao_log "
             "where observacao is not null and acao <> 'corrigido'"

@@ -30,7 +30,7 @@ from pathlib import Path
 
 import psycopg
 
-from . import carregar, mapa, ordem
+from . import carregar, correcoes, mapa, ordem
 from .mapa import T
 
 CONEXAO_LOCAL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
@@ -67,6 +67,8 @@ class Resultado:
     salas_corrigidas: list[tuple[str, str, str]] = field(default_factory=list)
     # sequência → maior código carregado nela (0 = tabela vazia, sequência intocada).
     sequencias: dict[str, int] = field(default_factory=dict)
+    # as correções de origem aplicadas por cima do retrato fiel (etapa 4-B).
+    correcoes_aplicadas: list = field(default_factory=list)
     vocabulario_semeado: list[tuple[str, str]] = field(default_factory=list)
 
 
@@ -871,6 +873,10 @@ def promover(conexao: str = CONEXAO_LOCAL, *, diagnostico: bool = False) -> Resu
 
         # O registro das trocas, agora que `migracao_log` já está povoada.
         registrar_correcoes_de_sala(con, res.salas_corrigidas)
+
+        # ETAPA 4-B · as correções de origem, POR CIMA do retrato fiel e dentro da mesma
+        # transação: uma correção obsoleta aborta a carga inteira, e nada fica pela metade.
+        res.correcoes_aplicadas = correcoes.aplicar(con)
 
         # As sequências de código, à frente do maior valor carregado (T073). Dentro da
         # transação: promoção desfeita não pode deixar sequência avançada.

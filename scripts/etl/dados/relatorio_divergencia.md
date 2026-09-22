@@ -45,7 +45,7 @@ auditoria. Reexecutar a carga com a mesma origem tem de reproduzi-los.
 | `config_parametros` | `710752274ab38b5c9483424778dbbdc3` |
 | `configuracoes_horario` | `b647c78e497c19b7a7a94c58f8e575b8` |
 | `curso_regime_historico` | `94f00d73debd016414ee487d29d1f4db` |
-| `cursos` | `a26b903523e75096f220d5cc574422bc` |
+| `cursos` | `738c4ffec0ce4915aea5e061feba5f74` |
 | `disciplinas` | `62695a39b2d67bde327004da06243b21` |
 | `feriados` | `972cfa330000bde5b9e58ffeb1cbd955` |
 | `horarios_tempos_aula` | `0ade5a411c23711191e0cc35445e701c` |
@@ -57,6 +57,6 @@ auditoria. Reexecutar a carga com a mesma origem tem de reproduzi-los.
 | `reservas_proens` | `ee386f349489b09de1ec40232cfb82f3` |
 | `responsaveis_curso` | `9af18c376b74b4e056f6fa55bde802a3` |
 | `turma_disciplina` | `cf3132c4039000ffb819f0720d5e4bbe` |
-| `turmas` | `0cdc26bd62b9622a0b3f2f3ebd02e381` |
+| `turmas` | `cb90d02fe5cbed4c92dcdd9a34ef3722` |
 | `usuario_curso` | `d41d8cd98f00b204e9800998ecf8427e` |
 | `usuarios` | `f3b3368fe962bbf2d611df48807ca960` |

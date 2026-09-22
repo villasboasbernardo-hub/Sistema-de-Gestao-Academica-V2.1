@@ -14,10 +14,46 @@ daqui a seis meses, um valor que "apareceu" entre duas extrações só tem expli
   dela, a mesma correção exige a tela de turma ou de curso, que é do PR 2 da spec 009.
 - ⚠️ **O repositório é público.** Instrutor e usuário entram **só pelo código**, nunca pelo nome.
 
-| Data | O que foi corrigido | Valor antigo → valor novo | De onde veio a resposta |
-|---|---|---|---|
-| 22/09/2026 | Turma `C-Ap-HN 2026` · sala | `Sala 02` → `Sala 01` | conhecimento do responsável |
-| 22/09/2026 | Curso `C-ApA-PCN-PR-EAD` · modalidade | `semipresencial` → `ead` | conhecimento do responsável |
+## Correções aplicadas pela carga
+
+⚠️ **ESTA TABELA É LIDA PELA CARGA** (`scripts/etl/correcoes.py`), **depois** de o retrato fiel
+estar escrito. A extração e o `bruto/v20/` **não mudam**: eles continuam fiéis à cópia datada de
+20/08/2026, e a correção é uma **camada à parte**, aplicada por cima, com rastro.
+
+**Como a carga a trata, e por que assim:**
+
+- **`De` é conferido antes de escrever.** A correção só se aplica à linha cuja coluna está
+  **exatamente** no valor declarado em `De` — `(vazio)` significa nulo ou vazio.
+- ⚠️ **Correção que não acha o `De` que declara corrigir ABORTA a carga, nomeando a linha deste
+  arquivo.** Ela virou **no-op**, e no-op silencioso é o pior desfecho: significa que a origem
+  mudou (alguém corrigiu na planilha, ou o valor virou outro) e ninguém ficou sabendo. **Correção
+  podre tem de gritar.** Quando isso acontecer, o conserto é **apagar a linha daqui** se a origem
+  já está certa, ou **reescrevê-la** com o `De` novo — nunca reaplicar às cegas.
+- **Cada aplicação vira um evento `corrigido` em `migracao_log`**, com o valor antes, o depois e o
+  número da linha deste arquivo, porque a regra 5 do `CLAUDE.md` não admite reescrita silenciosa.
+
+| Data | Tabela | Registro | Coluna | De | Para | Origem |
+|---|---|---|---|---|---|---|
+| 22/09/2026 | turmas | C-Ap-HN 2026 | sala_alocada | Sala 02 | Sala 01 | conhecimento do responsável |
+| 22/09/2026 | cursos | C-ApA-PCN-PR-EAD | modalidade | semipresencial | ead | conhecimento do responsável |
+| 22/09/2026 | cursos | CAHO | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | C-Ap-HN | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | C-Espc-HN | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | C-Exp-Ag-Mag | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | C-Exp-BATI | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | C-Exp-Obs-ME | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | C-Esp-ALH | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | C-Esp-ME | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | EST-QF-APOC | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | EST-QF-APHID | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | EST-QF-EM2040PHS | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | EST-QF-PGRS100 | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 22/09/2026 | cursos | EST-QF-MAREFLU | modalidade | (vazio) | presencial | conhecimento do responsável |
+
+**15 correções: 1 de sala, 1 de modalidade divergente e 13 de modalidade que a v2.0 deixou em
+branco.** As outras 10 modalidades da lista de 22/09/2026 **conferem com o que já está gravado** e
+por isso **não** entram aqui — correção que não corrige nada é exatamente o que a regra acima
+recusa.
 
 ## Modalidade dos 24 cursos — informada pelo responsável em 22/09/2026
 
