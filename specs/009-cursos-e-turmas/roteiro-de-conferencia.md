@@ -5,6 +5,14 @@
 
 > Os cinco números da §4 foram **conferidos na própria tela** em 18/09/2026, e não deduzidos do banco.
 
+> ⚠️ **Correção de 22/09/2026 — a primeira versão deste roteiro não deixava entrar.** Ela mandava
+> abrir o sistema com `pnpm dev`, e esse comando conversa com o **banco remoto**, não com o da sua
+> máquina: a sua conta existia e a senha estava certa, mas a pergunta ia para outro lugar, e a tela
+> respondia *"e-mail ou senha incorretos"*. **O erro foi de conferência, e foi meu**: eu tinha
+> conferido os números por um caminho que já aponta para o banco local, e não pelo comando que
+> mandei você usar. O passo 3 agora usa `pnpm dev:local`, e o login foi refeito em 22/09/2026 com o
+> seu e-mail e a sua senha, num navegador de verdade, até a tela mostrar as 28 turmas.
+
 Este roteiro é para você abrir o sistema na sua máquina e comparar o que aparece na tela com o
 que você sabe que existe na planilha. Nada aqui apaga nada: o banco da sua máquina é uma cópia
 descartável, e o sistema em produção continua sendo a v2.0, intocado.
@@ -42,15 +50,29 @@ python -m scripts.manutencao.credencial_local villasboasbernardo@gmail.com
 
 Ele responde com o endereço, o e-mail e a senha. Guarde a senha: `conferencia-local-12345`.
 
-## 3. Abrir o sistema
+## 3. Abrir o sistema — atenção: é `dev:local`, não `dev`
+
+**Primeiro, feche qualquer `pnpm dev` que esteja aberto.** Vá na janela do terminal onde ele está
+rodando e aperte **Ctrl + C**. Se houver um de pé, o próximo comando se recusa a subir e avisa
+*"Another next dev server is already running"*.
+
+Depois:
 
 ```
-pnpm dev
+pnpm dev:local
 ```
 
-Depois abra no navegador: **http://localhost:3000/login** e entre com o seu e-mail e a senha
-acima. A primeira abertura de cada tela demora alguns segundos — é o programa se montando, não
-é lentidão do sistema.
+A primeira linha que ele imprime tem de dizer **`banco: http://127.0.0.1:54321`** — é a confirmação
+de que está falando com o banco da sua máquina. Então abra no navegador:
+**http://localhost:3000/login** e entre com o seu e-mail e a senha acima.
+
+A primeira abertura de cada tela demora alguns segundos — é o programa se montando, não é
+lentidão do sistema.
+
+⚠️ **Por que não `pnpm dev`:** o arquivo de configuração do projeto aponta para o banco **remoto**,
+e o `pnpm dev` obedece a ele. A sua conta de conferência só existe no banco **da sua máquina**, então
+por `pnpm dev` a tela diz *"e-mail ou senha incorretos"* — com a senha certa. O `pnpm dev:local`
+troca o endereço só enquanto está rodando, sem mexer no arquivo.
 
 ---
 
@@ -143,6 +165,11 @@ instrutores, a ficha de instrutor e as telas de administração.
 ---
 
 ## 7. Se algo não bater
+
+**Se o login recusar**, confira nesta ordem: (1) o comando foi `pnpm dev:local`, e a primeira linha
+dele disse `banco: http://127.0.0.1:54321`; (2) o passo 2 respondeu `[PRONTO]` ou `[NADA A FAZER]`;
+(3) depois do passo 2 **não** rodou `pnpm db:reset` de novo — ele apaga a conta, e aí é repetir o
+passo 1 inteiro e o 2.
 
 Anote **o que você esperava, o que apareceu e onde**, e me mande. Três coisas ajudam muito:
 

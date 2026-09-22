@@ -97,7 +97,8 @@ def _criar(email: str) -> int:
     if ja_tem:
         print(
             f"[NADA A FAZER] {codigo} ({perfil}) ja tem credencial. "
-            f"Entre com {email} e a senha {SENHA_LOCAL!r}."
+            f"Entre com {email} e a senha {SENHA_LOCAL!r}, subindo o sistema com "
+            f"`pnpm dev:local` (NAO `pnpm dev`, que fala com o banco remoto)."
         )
         return 0
 
@@ -130,6 +131,7 @@ def _criar(email: str) -> int:
 
     print(
         f"[PRONTO] {codigo} ({perfil}) agora entra no sistema local.\n"
+        f"         Suba o sistema com:  pnpm dev:local   (NAO `pnpm dev`, que fala com o remoto)\n"
         f"         Endereco: http://localhost:3000/login\n"
         f"         E-mail:   {email}\n"
         f"         Senha:    {SENHA_LOCAL}\n\n"

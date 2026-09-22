@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "next dev --turbo",
+    "dev:local": "node scripts/dev-local.mjs",
     "build": "next build",
     "start": "next start",
     "typegen": "next typegen",
@@ -38,6 +39,7 @@
   "scriptsComentarios": {
     "_": "FR-012: o documento 24 §7 define os scripts COM comentarios; JSON nao aceita comentario, entao eles vivem aqui, um por script. Comentario explica POR QUE o script existe — nenhum nome de script consegue isso. Script novo entra COM comentario.",
     "dev": "Next em desenvolvimento com Turbopack. Recompilacao incremental rapida.",
+    "dev:local": "O mesmo Next, mas falando com o banco do DOCKER, e nao com o remoto. O .env.local aponta para o Supabase remoto (achado 3 do Epico 3): `pnpm dev` abre as telas contra ele, e uma conta criada no banco local responde \"e-mail ou senha incorretos\". E o comando do roteiro de conferencia. Medido em 22/09/2026.",
     "build": "Compila para producao. E a barreira que revela erro de fronteira servidor/cliente (ex.: server-only importado por Client Component) — erro que o tsc sozinho NAO ve.",
     "start": "Serve o build de producao localmente. Usado para conferir a impressao (/print/*), que se comporta diferente em dev por causa do overlay.",
     "typegen": "Gera os tipos de rota do Next 16. Existe separado porque o CI precisa dele antes do tsc.",

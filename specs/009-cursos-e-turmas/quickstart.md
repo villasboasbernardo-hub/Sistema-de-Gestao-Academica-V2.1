@@ -36,6 +36,16 @@ semeiam a própria amostra. Os **números exatos** da spec — 18 de 29, 6 de 24
   tabela é *append-only* — e *append-only* é exatamente o que impede desfazer. Saída **1**, veredito
   reprovado, **sem nada errado no dado**. Resetar antes resolve; apagar a linha, não — é o que a regra 5
   do `CLAUDE.md` proíbe.
+- ⚠️ **PARA ABRIR AS TELAS SOBRE A BASE LOCAL, É `pnpm dev:local` — NUNCA `pnpm dev`**
+  *(medido em 22/09/2026, com custo)*. O `.env.local` aponta para o Supabase **remoto** (achado 3 do
+  Épico 3), e `pnpm dev` obedece a ele: uma conta criada no banco local responde *"e-mail ou senha
+  incorretos"* **com a senha certa**, porque a pergunta vai para outro banco. Foi o que aconteceu no
+  roteiro de conferência. ⚠️ **E o erro foi de conferência**: o roteiro tinha sido verificado pelo
+  Playwright, que já injeta as chaves locais por `webServer.env` — **um caminho diferente do que ele
+  mandava a pessoa usar**. `scripts/dev-local.mjs` faz para quem abre o sistema com as mãos o mesmo que
+  o Playwright faz, lendo as chaves do `supabase status`; o Next não deixa o `.env.local` sobrescrever
+  variável que já está no processo (medido com o carregador do próprio Next). E o Next 16 recusa **dois**
+  servidores de desenvolvimento na mesma pasta — o `pnpm dev` antigo precisa ser fechado antes.
 - ⚠️ **SOBRE A BASE CARREGADA, `tests/e2e/instrutores.spec.ts` REPROVA 6 CASOS** — pendência
   `PEND-5a-6`, **não** defeito desta fatia *(medido em 18/09/2026)*. Eles semeiam a própria amostra e
   afirmam contagens que só valem se a base não tiver mais nada: `"11 instrutor(es)"` contra os **177**
