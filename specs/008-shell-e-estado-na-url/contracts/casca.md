@@ -130,13 +130,19 @@ porque as quatro respostas confirmaram o que já estava no lugar.
 
 | # | Rótulo | Rota | Estado da tela |
 |---|---|---|---|
-| 1 | Início | `/inicio` | **em breve** — História 4 desta fatia |
-| 2 | Cursos | `/cursos` | em breve — Épico 7 |
-| 3 | Cronograma | `/cronograma` | em breve — Épico 9 |
-| 4 | Atividades | `/atividades` | em breve — Épico 8 |
-| 5 | Instrutores | `/instrutores` | em breve — Épico 5 |
-| 6 | Disciplinas | `/disciplinas` | em breve — Épico 6 |
+| 1 | Início | `/inicio` | **pronta** — História 4 desta fatia |
+| 2 | Cursos | `/cursos` | **pronta** — Épico 5 (a) |
+| 3 | Cronograma | `/cronograma` | em breve — Épico 7 |
+| 4 | Atividades | `/atividades` | em breve — Épico 9 |
+| 5 | Instrutores | `/instrutores` | **pronta** — Épico 5 (c) |
+| 6 | Disciplinas | `/disciplinas` | em breve — Épico 5 (b) |
 | 7 | Administração | `/admin/usuarios` | **pronta** |
+
+⚠️ **EMENDADA EM 23/09/2026** (`FR-040`, T131 da spec 009). A tabela era o retrato do dia em que a
+casca nasceu, e três das entregas estavam trocadas: Cursos não é do Épico 7, Cronograma não é do 9 e
+Atividades não é do 8. **Nenhuma delas muda comportamento** — e é por isso que passaram: são a
+promessa que o menu faz a quem pergunta "quando isto chega?". `lib/navegacao/menu.ts` é a fonte, e
+esta tabela agora concorda com ele. O `.md` prevalece; o `.docx` não recebeu esta emenda.
 
 ### Q1 — A ordem das entradas está certa?
 

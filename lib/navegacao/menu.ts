@@ -54,13 +54,23 @@ export const MENU: readonly EntradaDeMenu[] = [
    * sentidos — nenhuma entrada disponível pode faltar, e nenhuma anunciada como futura pode já
    * existir —, e foi ele que obrigou a virada a acontecer no mesmo passo. Sem o segundo sentido, a
    * tela nasceria e o menu continuaria dizendo "em breve": ninguém a encontraria.
+   *
+   * ⚠️ **E FOI EXATAMENTE ISSO QUE ACONTECEU EM 23/09/2026** — a `/cursos` entrou na fatia (a) do
+   * Épico 5 e este arquivo não; o caso do shell reprovou no CI com *"`/cursos` já existe, e o menu
+   * ainda anuncia 'em breve'"*, que é a mensagem que ele foi escrito para dar. A `tasks.md` já
+   * mandava virar a bandeira **no mesmo commit** da página (T130), e a guarda cobrou.
+   *
+   * ⚠️ **OS QUATRO `entregaEm` FORAM CORRIGIDOS JUNTO** (`FR-038`, US7): Cursos é do **Épico 5 (a)**,
+   * Disciplinas do **5 (b)**, Cronograma do **7** e Atividades do **9**. Os três últimos estavam
+   * trocados desde a fatia (c) do Épico 4 — não mudam comportamento, e por isso ninguém os notou:
+   * são a promessa que o menu faz a quem pergunta "quando isto chega?".
    */
   { rotulo: "Início", rota: "/inicio", disponivel: true, entregaEm: "Épico 4 (c), História 4" },
-  { rotulo: "Cursos", rota: "/cursos", disponivel: false, entregaEm: "Épico 7" },
-  { rotulo: "Cronograma", rota: "/cronograma", disponivel: false, entregaEm: "Épico 9" },
-  { rotulo: "Atividades", rota: "/atividades", disponivel: false, entregaEm: "Épico 8" },
+  { rotulo: "Cursos", rota: "/cursos", disponivel: true, entregaEm: "Épico 5 (a)" },
+  { rotulo: "Cronograma", rota: "/cronograma", disponivel: false, entregaEm: "Épico 7" },
+  { rotulo: "Atividades", rota: "/atividades", disponivel: false, entregaEm: "Épico 9" },
   { rotulo: "Instrutores", rota: "/instrutores", disponivel: true, entregaEm: "Épico 5 (c)" },
-  { rotulo: "Disciplinas", rota: "/disciplinas", disponivel: false, entregaEm: "Épico 6" },
+  { rotulo: "Disciplinas", rota: "/disciplinas", disponivel: false, entregaEm: "Épico 5 (b)" },
   { rotulo: "Administração", rota: "/admin/usuarios", disponivel: true, entregaEm: "Épico 3" },
 ];
 

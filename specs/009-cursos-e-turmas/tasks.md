@@ -507,9 +507,9 @@ de um curso.
 **Antecipada**: a entrada "Cursos" vira `disponivel` **no mesmo commit** da página `/cursos` (`FR-039`) —
 o teste do shell confere os dois sentidos.
 
-- [ ] T129 [PR2] [P] [US7] Atualizar `tests/e2e/shell.spec.ts` (e o teste de unidade do menu, se houver) para esperar Cursos → `"Épico 5 (a)"` **disponível**, Disciplinas → `"Épico 5 (b)"`, Cronograma → `"Épico 7"`, Atividades → `"Épico 9"`, ordem e rótulos iguais (`FR-038`, `FR-039`, `SC-008`) — ver reprovando antes da T130
-- [ ] T130 [PR2] [US7] Corrigir `lib/navegacao/menu.ts`: os quatro `entregaEm` e `disponivel: true` em Cursos; `FORA_DO_MENU` **não** muda (`FR-038`, `FR-039`, `FR-008`) ⛓ T124, T129 · teste: T129 ⚠️ mesmo commit da T124
-- [ ] T131 [PR2] [P] [US7] Emendar com data a tabela da MENU-1 em `specs/008-shell-e-estado-na-url/contracts/casca.md` (linhas 134–138) com os mesmos quatro rótulos (`FR-040`)
+- [X] T129 [PR2] [P] [US7] Atualizar `tests/e2e/shell.spec.ts` (e o teste de unidade do menu, se houver) para esperar Cursos → `"Épico 5 (a)"` **disponível**, Disciplinas → `"Épico 5 (b)"`, Cronograma → `"Épico 7"`, Atividades → `"Épico 9"`, ordem e rótulos iguais (`FR-038`, `FR-039`, `SC-008`) — ver reprovando antes da T130
+- [X] T130 [PR2] [US7] Corrigir `lib/navegacao/menu.ts`: os quatro `entregaEm` e `disponivel: true` em Cursos; `FORA_DO_MENU` **não** muda (`FR-038`, `FR-039`, `FR-008`) ⛓ T124, T129 · teste: T129 ⚠️ mesmo commit da T124
+- [X] T131 [PR2] [P] [US7] Emendar com data a tabela da MENU-1 em `specs/008-shell-e-estado-na-url/contracts/casca.md` (linhas 134–138) com os mesmos quatro rótulos (`FR-040`)
 
 ---
 
