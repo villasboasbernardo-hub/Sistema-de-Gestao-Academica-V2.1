@@ -619,15 +619,15 @@ sala em uso e seguir editando.
 esta vigência" só onde cabe. **Teste independente**: corrigir uma das 18, ser recusado numa das 11 com a
 mensagem, registrar uma futura.
 
-- [ ] T196 [PR2] [P] [US6] Escrever `tests/unidade/vigencia-de-regime.test.ts`: histórico por tipo, **ativas e canceladas**, a mais recente primeiro, cancelada marcada com motivo e data; "Corrigir esta vigência" oferecida **só** onde o banco disse que não há lançamento; o formulário pré-preenchido com os valores atuais (`FR-011`, `FR-021.1`, `FR-021.2`) — ver reprovando antes da T197
-- [ ] T197 [PR2] [US6] Criar `lib/dominio/vigencia-de-regime.ts` (`FR-011`, `FR-019` a `FR-021.1`, `FR-043`) ⛓ T196 · teste: T196
-- [ ] T198 [PR2] [P] [US6] Escrever `tests/unidade/validacao-vigencia-regime.test.ts`: tipo e `vigente_de` obrigatórios; os parâmetros dentro do que o banco já valida (45 ou 50 min, 1 a 12 TA, EAD com limite diário) (`FR-019`, `FR-022`) — ver reprovando antes da T199
-- [ ] T199 [PR2] [US6] Criar `lib/validacao/vigencia-regime.ts` (`FR-019`, `FR-022`) ⛓ T198 · teste: T198
-- [ ] T200 [PR2] [US6] Criar `lib/acoes/vigencia-regime.ts` com `registrarVigencia` (RPC `registrar_vigencia_regime`) e `corrigirVigencia` (RPC `corrigir_vigencia_regime`), lendo a recusa no **resultado da RPC** — inclusive as que só chegam no `COMMIT` (`FR-019`, `FR-019.4`, `FR-021.1`, `FR-021.4`, `FR-042`) ⛓ T113, T199 · teste: T204
-- [ ] T201 [PR2] [US6] Criar `app/(app)/cursos/[curso]/editar/SecaoDeRegime.tsx` com o histórico da T197 (`FR-011`, `FR-019.1`) ⛓ T167, T197 · teste: T204
-- [ ] T202 [PR2] [US6] Criar `app/(app)/cursos/[curso]/editar/FormularioDeVigencia.tsx`, folha de cliente para registrar vigência nova, com o `fundamento_curricular` ao lado e confirmação **sempre** (`FR-019`, `FR-022`, `FR-018.1`) ⛓ T115, T200, T201 · teste: T204
-- [ ] T203 [PR2] [US6] Acrescentar "Corrigir esta vigência" a `SecaoDeRegime.tsx`, só nas corrigíveis, abrindo `FormularioDeVigencia.tsx` pré-preenchido e confirmando **sempre** (`FR-021.1`, `FR-018.1`) ⛓ T202 · teste: T204
-- [ ] T204 [PR2] [US6] Escrever `tests/e2e/vigencia.spec.ts`: corrigir a vigência corrigível da amostra deixa uma **cancelada** e uma **ativa**; na vigência com lançamento, a ação **não** aparece, e a chamada direta à ação recebe a mensagem com tipo, data, turma e total — **nunca** erro cru; registrar vigência futura; o histórico mostra a cancelada marcada (`FR-019`, `FR-021.1`, `FR-021.4`, `SC-011.1`, US6 cenários 1, 4 a 6) ⛓ T110, T203
+- [X] T196 [PR2] [P] [US6] Escrever `tests/unidade/vigencia-de-regime.test.ts`: histórico por tipo, **ativas e canceladas**, a mais recente primeiro, cancelada marcada com motivo e data; "Corrigir esta vigência" oferecida **só** onde o banco disse que não há lançamento; o formulário pré-preenchido com os valores atuais (`FR-011`, `FR-021.1`, `FR-021.2`) — ver reprovando antes da T197
+- [X] T197 [PR2] [US6] Criar `lib/dominio/vigencia-de-regime.ts` (`FR-011`, `FR-019` a `FR-021.1`, `FR-043`) ⛓ T196 · teste: T196
+- [X] T198 [PR2] [P] [US6] Escrever `tests/unidade/validacao-vigencia-regime.test.ts`: tipo e `vigente_de` obrigatórios; os parâmetros dentro do que o banco já valida (45 ou 50 min, 1 a 12 TA, EAD com limite diário) (`FR-019`, `FR-022`) — ver reprovando antes da T199
+- [X] T199 [PR2] [US6] Criar `lib/validacao/vigencia-regime.ts` (`FR-019`, `FR-022`) ⛓ T198 · teste: T198
+- [X] T200 [PR2] [US6] Criar `lib/acoes/vigencia-regime.ts` com `registrarVigencia` (RPC `registrar_vigencia_regime`) e `corrigirVigencia` (RPC `corrigir_vigencia_regime`), lendo a recusa no **resultado da RPC** — inclusive as que só chegam no `COMMIT` (`FR-019`, `FR-019.4`, `FR-021.1`, `FR-021.4`, `FR-042`) ⛓ T113, T199 · teste: T204
+- [X] T201 [PR2] [US6] Criar `app/(app)/cursos/[curso]/editar/SecaoDeRegime.tsx` com o histórico da T197 (`FR-011`, `FR-019.1`) ⛓ T167, T197 · teste: T204
+- [X] T202 [PR2] [US6] Criar `app/(app)/cursos/[curso]/editar/FormularioDeVigencia.tsx`, folha de cliente para registrar vigência nova, com o `fundamento_curricular` ao lado e confirmação **sempre** (`FR-019`, `FR-022`, `FR-018.1`) ⛓ T115, T200, T201 · teste: T204
+- [X] T203 [PR2] [US6] Acrescentar "Corrigir esta vigência" a `SecaoDeRegime.tsx`, só nas corrigíveis, abrindo `FormularioDeVigencia.tsx` pré-preenchido e confirmando **sempre** (`FR-021.1`, `FR-018.1`) ⛓ T202 · teste: T204
+- [X] T204 [PR2] [US6] Escrever `tests/e2e/vigencia.spec.ts`: corrigir a vigência corrigível da amostra deixa uma **cancelada** e uma **ativa**; na vigência com lançamento, a ação **não** aparece, e a chamada direta à ação recebe a mensagem com tipo, data, turma e total — **nunca** erro cru; registrar vigência futura; o histórico mostra a cancelada marcada (`FR-019`, `FR-021.1`, `FR-021.4`, `SC-011.1`, US6 cenários 1, 4 a 6) ⛓ T110, T203
 
 ---
 
