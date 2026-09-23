@@ -341,3 +341,38 @@ describe("`FR-004` · o catálogo `/cursos` declara os três filtros, e nada mai
     }
   });
 });
+
+describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
+  const daPagina = (nome: string) =>
+    parametrosDaRota("/cursos/[curso]").find((p) => p.nome === nome) as Parametro;
+
+  it("a rota existe, com exatamente dois parâmetros", () => {
+    expect(ROTAS).toContain("/cursos/[curso]");
+    expect(parametrosDaRota("/cursos/[curso]").map((p) => p.nome)).toEqual(["aba", "turma"]);
+  });
+
+  it("`aba` é escolha entre duas, com padrão `grade`", () => {
+    const aba = daPagina("aba");
+    expect(aba.tipo).toBe("escolha");
+    if (aba.tipo === "escolha") expect([...aba.opcoes]).toEqual(["grade", "sobre"]);
+    expect(aba.padrao).toBe("grade");
+  });
+
+  it("⚠️ `turma` é TEXTO, e não escolha — o domínio dela é o dado, não uma lista fechada", () => {
+    // As turmas mudam a cada ano letivo. Uma escolha com opções escritas no contrato degradaria
+    // para "nenhuma", em silêncio, o link que apontasse para uma turma criada depois.
+    expect(daPagina("turma").tipo).toBe("texto");
+    expect(daPagina("turma").padrao).toBe("");
+  });
+
+  it("⚠️ os dois EMPILHAM histórico — trocar de aba ou de turma é navegação (`FR-036`)", () => {
+    // É a diferença para os filtros de `/cursos`, que substituem: filtrar é refinar a mesma vista,
+    // trocar de turma é ir a outro lugar, e "voltar" precisa desfazer um passo.
+    expect(daPagina("aba").historico).toBe("empilha");
+    expect(daPagina("turma").historico).toBe("empilha");
+  });
+
+  it("os dois avisam o servidor — a leitura da turma é do servidor", () => {
+    for (const p of parametrosDaRota("/cursos/[curso]")) expect(p.avisaServidor).toBe(true);
+  });
+});

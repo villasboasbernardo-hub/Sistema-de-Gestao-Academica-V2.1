@@ -24,6 +24,8 @@
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
 
+import { mensagemDoDialogo, type AnoAcimaDoLimite } from "./limite-de-turmas";
+
 /** As 11 escritas da fatia — as mesmas do contrato de escritas §1. A lista é fechada. */
 export const TIPOS_DE_GRAVACAO = [
   "criar_curso",
@@ -41,12 +43,12 @@ export const TIPOS_DE_GRAVACAO = [
 
 export type TipoDeGravacao = (typeof TIPOS_DE_GRAVACAO)[number];
 
-/** Um ano em que a contagem de turmas passa do limite — como `limite-de-turmas.ts` o devolve. */
-export type AnoAcimaDoLimite = {
-  readonly ano: number;
-  readonly turmas: number;
-  readonly limite: number;
-};
+/*
+ * ⚠️ O TIPO E A FRASE VÊM DE `limite-de-turmas.ts`, e não são reescritos aqui. Enquanto aquele módulo
+ * não existia, esta fatia tinha uma cópia da mensagem — e duas cópias da mesma frase divergem no dia
+ * em que alguém corrige uma. Quem calcula o limite é lá; aqui só se decide se confirma.
+ */
+export type { AnoAcimaDoLimite } from "./limite-de-turmas";
 
 export type ContextoDaGravacao = {
   /** A sigla do curso, para os títulos que o nomeiam. */
@@ -87,11 +89,6 @@ export type Confirmacao =
 
 const NAO: Confirmacao = { confirma: false };
 
-/** A mensagem do limite, a mesma do `FR-030` que o quadro do curso mostra. */
-function mensagemDoLimite({ ano, turmas, limite }: AnoAcimaDoLimite): string {
-  return `Este curso já tem ${turmas} turma(s) em ${ano}, e o limite é ${limite}; confirmar mesmo assim?`;
-}
-
 /**
  * A frase da troca de sigla — **com todas as letras** (`FR-014.2`).
  *
@@ -131,14 +128,14 @@ function motivosDaEdicaoDeCurso(contexto: ContextoDaGravacao): string[] {
     mensagens.push(mensagemDaClassificacao(classificacaoAntiga, classificacaoNova));
   }
 
-  for (const ano of contexto.anosAcimaDoLimite ?? []) mensagens.push(mensagemDoLimite(ano));
+  for (const ano of contexto.anosAcimaDoLimite ?? []) mensagens.push(mensagemDoDialogo(ano));
 
   return mensagens;
 }
 
 /** Os motivos de uma gravação de turma — limite e proteção de vigência, **num diálogo só**. */
 function motivosDaGravacaoDeTurma(contexto: ContextoDaGravacao): string[] {
-  const mensagens = (contexto.anosAcimaDoLimite ?? []).map(mensagemDoLimite);
+  const mensagens = (contexto.anosAcimaDoLimite ?? []).map(mensagemDoDialogo);
   const vigencias = contexto.vigenciasDesprotegidas ?? [];
   if (vigencias.length > 0) {
     mensagens.push(

@@ -342,6 +342,43 @@ export const CONTRATO = {
       },
     },
   },
+  /*
+   * A página do curso (`RF-CURSO-01`, `FR-006.2`).
+   *
+   * ⚠️ **OS DOIS EMPILHAM HISTÓRICO, e é a diferença para os filtros de `/cursos`.** Filtrar é
+   * refinar a mesma vista — substitui. Trocar de aba ou de turma é **ir a outro lugar**, e quem
+   * aperta "voltar" espera desfazer **um** passo (`FR-036`, documento 25 §1.6).
+   *
+   * ⚠️ **`turma` É TEXTO, E NÃO ESCOLHA.** O domínio dela é o dado — as turmas do curso, que mudam a
+   * cada ano letivo —, e não uma lista fechada. Uma escolha com opções escritas aqui degradaria para
+   * "nenhuma", em silêncio, o link que apontasse para uma turma criada depois. É o mesmo critério
+   * que já vale para `om` e `capacitacao` em `/instrutores`.
+   *
+   * ⚠️ **O VALOR É O `codigo` DA TURMA, codificado pela função única do `FR-031.2`** — nunca `uuid`.
+   * O código tem espaços (`C-Ap-FR T2 2026`), e quem o escrever à mão na URL produz um link que
+   * parece funcionar e resolve para turma nenhuma.
+   */
+  "/cursos/[curso]": {
+    rota: "/cursos/[curso]",
+    origem: "RF-CURSO-01",
+    parametros: {
+      aba: {
+        nome: "aba",
+        tipo: "escolha",
+        padrao: "grade",
+        opcoes: ["grade", "sobre"],
+        historico: "empilha",
+        avisaServidor: true,
+      },
+      turma: {
+        nome: "turma",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
+    },
+  },
   "/instrutores": {
     rota: "/instrutores",
     origem: "RF-INSTR-01",
