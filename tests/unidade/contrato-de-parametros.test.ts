@@ -10,6 +10,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { CLASSIFICACOES_DE_CURSO } from "@/lib/dominio/classificacoes-de-curso";
 import {
   CLASSIFICACOES,
   CONTRATO,
@@ -261,5 +262,82 @@ describe("`FR-028` da spec 006 · as rotas de instrutor seguem o contrato humano
     expect(opcoes("classificacao")).toEqual([...Constants.public.Enums.escopo_curso]);
     expect(porNome("posto").tipo, "posto tem domínio no dado, e é texto").toBe("texto");
     expect(porNome("curso").tipo, "curso tem domínio no dado, e é texto").toBe("texto");
+  });
+});
+
+describe("`FR-004` · o catálogo `/cursos` declara os três filtros, e nada mais", () => {
+  const doCatalogo = (nome: string) =>
+    parametrosDaRota("/cursos").find((p) => p.nome === nome) as Parametro;
+
+  const opcoes = (nome: string) => {
+    const p = doCatalogo(nome);
+    return p && p.tipo === "escolha" ? [...p.opcoes] : null;
+  };
+
+  it("a rota existe", () => {
+    expect(ROTAS).toContain("/cursos");
+  });
+
+  it("são exatamente três: classificação, modalidade e situação", () => {
+    expect(parametrosDaRota("/cursos").map((p) => p.nome)).toEqual([
+      "classificacao",
+      "modalidade",
+      "situacao",
+    ]);
+  });
+
+  it("⚠️ `situacao` tem padrão `ativo`, e é o único padrão não vazio — como em `/instrutores`", () => {
+    expect(doCatalogo("situacao").padrao).toBe("ativo");
+    const naoVazios = parametrosDaRota("/cursos").filter((p) => p.padrao !== "");
+    expect(naoVazios.map((p) => p.nome)).toEqual(["situacao"]);
+  });
+
+  it("`situacao` oferece o mesmo domínio de `/instrutores` — não uma segunda lista", () => {
+    expect(opcoes("situacao")).toEqual([...Constants.public.Enums.status_registro]);
+    const daListagemDeInstrutores = parametrosDaRota("/instrutores").find(
+      (p) => p.nome === "situacao",
+    ) as Parametro;
+    expect(daListagemDeInstrutores.tipo).toBe("escolha");
+    if (daListagemDeInstrutores.tipo === "escolha") {
+      expect(opcoes("situacao")).toEqual([...daListagemDeInstrutores.opcoes]);
+    }
+  });
+
+  it("modalidade oferece o enum do banco inteiro", () => {
+    expect(opcoes("modalidade")).toEqual([...MODALIDADES]);
+  });
+
+  it("⚠️ classificação oferece as CINCO do Glossário, e NÃO o enum inteiro", () => {
+    // É a diferença entre `/cursos` e `/inicio`, e ela é deliberada: aqui a classificação AGRUPA
+    // os cartões, e um grupo `geral` ou `ead_semipresencial` nunca teria cartão — o banco recusa
+    // os dois valores. No Início ela só filtra, e lá o critério registrado é o oposto.
+    expect(opcoes("classificacao")).toEqual([...CLASSIFICACOES_DE_CURSO]);
+    expect(opcoes("classificacao")).not.toContain("geral");
+    expect(opcoes("classificacao")).not.toContain("ead_semipresencial");
+  });
+
+  it("⚠️ e o Início NÃO mudou — as duas listas convivem de propósito (D-19)", () => {
+    const doInicio = parametrosDaRota("/inicio").find(
+      (p) => p.nome === "classificacao",
+    ) as Parametro;
+    expect(doInicio.tipo).toBe("escolha");
+    if (doInicio.tipo === "escolha") {
+      expect([...doInicio.opcoes]).toEqual([...CLASSIFICACOES]);
+      expect([...doInicio.opcoes]).toContain("geral");
+    }
+  });
+
+  it("⚠️ nenhum filtro de busca por texto — o catálogo tem 24 cartões, não uma tabela", () => {
+    expect(parametrosDaRota("/cursos").map((p) => p.tipo)).toEqual([
+      "escolha",
+      "escolha",
+      "escolha",
+    ]);
+  });
+
+  it("os três avisam o servidor — o recorte é feito pela consulta, não no navegador", () => {
+    for (const p of parametrosDaRota("/cursos")) {
+      expect(p.avisaServidor, `${p.nome} filtra sem consultar o banco`).toBe(true);
+    }
   });
 });

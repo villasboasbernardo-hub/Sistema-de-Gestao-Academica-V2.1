@@ -16,6 +16,7 @@
  * Reabrir isso exige medição na mão, não um parâmetro reservado por via das dúvidas.
  */
 
+import { CLASSIFICACOES_DE_CURSO } from "@/lib/dominio/classificacoes-de-curso";
 import { Constants } from "@/lib/tipos/database";
 
 /** Se a mudança empilha uma entrada de histórico ou substitui a atual (documento 25 §1.6). */
@@ -292,6 +293,55 @@ export const CONTRATO = {
    * ⚠️ NENHUM PARÂMETRO ACEITA IDENTIFICAÇÃO CIVIL. CPF na barra de endereço vaza por histórico, por
    * log de servidor e por ombro — recusa declarada do contrato humano.
    */
+  /*
+   * O catálogo de cursos (`RF-CURSOS-01`, `RF-CURSOS-02`).
+   *
+   * ⚠️ **TRÊS ESCOLHAS, E NENHUMA BUSCA POR TEXTO.** São 24 cursos em cinco grupos; uma caixa de
+   * busca aqui resolveria um problema que a tela não tem, e convidaria a consulta a crescer.
+   *
+   * ⚠️ **`classificacao` OFERECE AS CINCO DO GLOSSÁRIO, E NÃO O TIPO DO BANCO — ao contrário do
+   * `/inicio`.** A divergência é deliberada e está registrada como D-19. Os critérios são
+   * diferentes porque o papel do parâmetro é diferente: no Início ele **filtra**, e o critério de lá
+   * é *"o filtro não pode recusar um valor que a coluna aceita"*; aqui ele **agrupa os cartões**, e
+   * um grupo `geral` ou `ead_semipresencial` nunca teria cartão nenhum — o banco recusa os dois
+   * (`cursos_classificacao_nao_geral` e `FR-003.1`). Oferecer um grupo impossível é oferecer um
+   * vazio que a pessoa lê como "não há curso cadastrado".
+   *
+   * ⚠️ **`situacao` É O MESMO DESCRITOR DE `/instrutores`, e de propósito.** Mesma lista, mesmo
+   * padrão `ativo`, mesmo comportamento: a tela abre com o que está ativo, o padrão some da URL, e
+   * ver o que foi desativado exige `?situacao=inativo` — que é link compartilhável (`FR-017.2`).
+   * Duas listas de situação divergiriam no dia em que uma delas mudasse.
+   */
+  "/cursos": {
+    rota: "/cursos",
+    origem: "RF-CURSOS-01",
+    parametros: {
+      classificacao: {
+        nome: "classificacao",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: CLASSIFICACOES_DE_CURSO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      modalidade: {
+        nome: "modalidade",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: MODALIDADES,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      situacao: {
+        nome: "situacao",
+        tipo: "escolha",
+        padrao: "ativo",
+        opcoes: SITUACOES_DE_CADASTRO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+    },
+  },
   "/instrutores": {
     rota: "/instrutores",
     origem: "RF-INSTR-01",

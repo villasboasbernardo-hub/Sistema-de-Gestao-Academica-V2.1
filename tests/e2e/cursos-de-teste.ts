@@ -474,6 +474,54 @@ async function semearLancamento(processo: number, cursoId: string, turma: string
 }
 
 /**
+ * Dá a um Encarregado de Curso a responsabilidade por **um** curso.
+ *
+ * ⚠️ **É O QUE DÁ SENTIDO AO RECORTE DELE.** `app.cursos_do_usuario()` devolve, para o perfil
+ * `encarregado_curso`, só os cursos com vínculo **ativo** em `usuario_curso` — e sem nenhum vínculo
+ * ele não alcança curso nenhum. Os dois estados são amostra: um Encarregado com um curso prova o
+ * recorte; um sem nenhum prova o vazio de *"você não vê"* (`FR-047`), que numa base povoada não se
+ * produz de outro jeito.
+ *
+ * ⚠️ Idempotente: reaproveita o vínculo que já existe e o devolve a `ativo`.
+ */
+export async function responsabilizarPorCurso(email: string, sigla: string): Promise<void> {
+  const { data: usuario, error: erroUsuario } = await admin()
+    .from("usuarios")
+    .select("id")
+    .eq("email", email)
+    .single();
+  if (erroUsuario) throw new Error(`nao li o usuario ${email}: ${erroUsuario.message}`);
+
+  const { data: curso, error: erroCurso } = await admin()
+    .from("cursos")
+    .select("id")
+    .eq("codigo", sigla)
+    .single();
+  if (erroCurso) throw new Error(`nao li o curso ${sigla}: ${erroCurso.message}`);
+
+  const { data: existe } = await admin()
+    .from("usuario_curso")
+    .select("id")
+    .eq("usuario_id", usuario.id)
+    .eq("curso_id", curso.id)
+    .maybeSingle();
+
+  if (existe) {
+    await admin().from("usuario_curso").update({ status: "ativo" }).eq("id", existe.id);
+    return;
+  }
+
+  const { error } = await admin()
+    .from("usuario_curso")
+    .insert({
+      codigo: `UCU-${sigla}-${email.split("@")[0]}`.slice(0, 60),
+      usuario_id: usuario.id,
+      curso_id: curso.id,
+    });
+  if (error) throw new Error(`nao vinculei ${email} a ${sigla}: ${error.message}`);
+}
+
+/**
  * A vigência `padrao` **ativa** de um curso, buscada na hora.
  *
  * ⚠️ **BUSCADA, NUNCA GUARDADA** — ver a nota do cabeçalho. Depois que o percurso da T204 corrige uma
@@ -539,6 +587,7 @@ export async function limparCursos(semeado: CursosSemeados | undefined): Promise
     await admin().from("disciplinas").delete().in("curso_id", ids);
   }
 
+  if (ids.length > 0) await admin().from("usuario_curso").delete().in("curso_id", ids);
   await admin().from("instrutores").delete().eq("codigo", `INS-${s}`);
   await admin()
     .from("config_listas")

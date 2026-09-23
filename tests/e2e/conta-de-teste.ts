@@ -99,10 +99,29 @@ export function emailDeTeste(prefixo: string, processo: number): string {
   return `${prefixo}-${processo}@ciaara.teste`;
 }
 
+/**
+ * Apaga a conta, **varrendo todas as páginas do Auth**.
+ *
+ * ⚠️ **`listUsers()` PAGINA, E O PADRÃO É 50.** A versão anterior lia a primeira página e parava. Ela
+ * funcionou enquanto o stack local tinha poucas contas; medido em 23/09/2026, tinha **78**, das quais
+ * **77 eram restos de teste** — e a conta a apagar caía na segunda página. O efeito é o pior possível:
+ * `apagar` devolve sucesso sem ter apagado, e a falha aparece depois, em `criarConta`, como
+ * *"A user with this email address has already been registered"* — que se lê como corrida entre
+ * processos e **não é**.
+ *
+ * ⚠️ **E ELE SE AGRAVA SOZINHO.** Cada execução que não consegue apagar deixa mais uma conta, e a
+ * primeira página cobre uma fração cada vez menor do total. Era por isso que a suíte passava sozinha
+ * e reprovava acompanhada: não pelo paralelismo, mas pelo número de contas que o paralelismo criou.
+ */
 async function apagar(email: string) {
-  const { data: existentes } = await admin().auth.admin.listUsers();
-  for (const u of existentes?.users ?? []) {
-    if (u.email === email) await admin().auth.admin.deleteUser(u.id);
+  const porPagina = 200;
+  for (let pagina = 1; ; pagina++) {
+    const { data } = await admin().auth.admin.listUsers({ page: pagina, perPage: porPagina });
+    const usuarios = data?.users ?? [];
+    for (const u of usuarios) {
+      if (u.email === email) await admin().auth.admin.deleteUser(u.id);
+    }
+    if (usuarios.length < porPagina) break;
   }
   await admin().from("usuarios").delete().eq("email", email);
 }

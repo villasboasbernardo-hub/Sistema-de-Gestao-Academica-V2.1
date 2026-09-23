@@ -486,19 +486,19 @@ Villas Boas, 17/09/2026: o PR 1 toca 46 policies, mudança na revisão é prová
 **Teste independente**: abrir `/cursos`, contar 5 grupos e 24 cartões, filtrar por situação, chegar à página
 de um curso.
 
-- [ ] T116 [PR2] [P] [US1] Escrever `tests/unidade/classificacoes-de-curso.test.ts`: as **5** na ordem do Glossário; subconjunto do tipo `escopo_curso` de `Constants`; `geral` e `ead_semipresencial` fora (`FR-003`, D-19) — ver reprovando antes da T117
-- [ ] T117 [PR2] [US1] Criar `lib/dominio/classificacoes-de-curso.ts` (`FR-003`, `FR-043`) ⛓ T116 · teste: T116
-- [ ] T118 [PR2] [P] [US1] Escrever `tests/unidade/indicadores-do-catalogo.test.ts`: cursos regulares, estágios de qualificação, duração média **em dias** por classificação, cursos por classificação; lista **fechada** — nada além dos quatro (`FR-002`) — ver reprovando antes da T119
-- [ ] T119 [PR2] [US1] Criar `lib/dominio/indicadores-do-catalogo.ts` (`FR-002`, `RF-CURSOS-02`) ⛓ T118 · teste: T118
-- [ ] T120 [PR2] [P] [US1] Acrescentar a `tests/unidade/contrato-de-parametros.test.ts` a rota `/cursos` com `classificacao`, `modalidade` e `situacao` (padrão `ativo`) (`FR-004`, `FR-017.2`, `FR-037`) — ver reprovando antes da T121
-- [ ] T121 [PR2] [US1] Acrescentar `/cursos` a `lib/navegacao/contrato.ts`, com `CLASSIFICACOES_DE_CURSO` e o descritor de `situacao` igual ao de `/instrutores`; o Início **não** muda (`FR-004`, `FR-017.2`, `FR-037`, D-19) ⛓ T117, T120 · teste: T120
-- [ ] T122 [PR2] [P] [US1] Escrever `tests/unidade/consulta-de-cursos.test.ts`: a montagem da consulta de `/cursos` aplica os três filtros, **uma** consulta, e devolve o motivo do vazio — *não há*, *você não vê*, *ainda não existe* (`FR-004`, `FR-047`, `FR-012`) — ver reprovando antes da T123
-- [ ] T123 [PR2] [US1] Criar `app/(app)/cursos/consulta.ts` (`FR-004`, `FR-012`, `FR-047`) ⛓ T121, T122 · teste: T122
-- [ ] T124 [PR2] [US1] Criar `app/(app)/cursos/page.tsx` (Server Component), `loading.tsx` e `error.tsx`, com os três estados vazios por `EstadoVazio` (`FR-005`, `FR-041`, `FR-047`, `RN-DEG-01`) ⛓ T123 · teste: T128 ⚠️ **mesmo commit** da T130 (`FR-039`)
-- [ ] T125 [PR2] [P] [US1] Criar `app/(app)/cursos/CatalogoDeCursos.tsx`: cartões agrupados na ordem da T117, só informação descritiva, link para `/cursos/[sigla]` (`FR-001`, `FR-003`, `RF-CURSOS-02`) ⛓ T124 · teste: T128
-- [ ] T126 [PR2] [P] [US1] Criar `app/(app)/cursos/IndicadoresDoCatalogo.tsx` com `CardKpi` e dois `GraficoBarras` (`FR-002`, `FR-048`) ⛓ T119, T124 · teste: T128
-- [ ] T127 [PR2] [P] [US1] Criar `app/(app)/cursos/FiltrosDoCatalogo.tsx`, folha de cliente com `useParametro` para os três filtros (`FR-004`, `FR-017.2`, `FR-041`) ⛓ T121, T124 · teste: T128
-- [ ] T128 [PR2] [US1] Escrever `tests/e2e/cursos.spec.ts`: **5** grupos na ordem com a amostra da T110; os indicadores; filtros que mudam a URL e sobrevivem ao `F5`; `?situacao=inativo` mostra o curso desativado; Encarregado de Curso vê só o seu; os três estados vazios; clique no cartão chega à página do curso (`SC-001`, `SC-001.3`, `SC-002`, US1 cenários 1 a 5) ⛓ T110, T125 a T127
+- [X] T116 [PR2] [P] [US1] Escrever `tests/unidade/classificacoes-de-curso.test.ts`: as **5** na ordem do Glossário; subconjunto do tipo `escopo_curso` de `Constants`; `geral` e `ead_semipresencial` fora (`FR-003`, D-19) — ver reprovando antes da T117
+- [X] T117 [PR2] [US1] Criar `lib/dominio/classificacoes-de-curso.ts` (`FR-003`, `FR-043`) ⛓ T116 · teste: T116
+- [X] T118 [PR2] [P] [US1] Escrever `tests/unidade/indicadores-do-catalogo.test.ts`: cursos regulares, estágios de qualificação, duração média **em dias** por classificação, cursos por classificação; lista **fechada** — nada além dos quatro (`FR-002`) — ver reprovando antes da T119
+- [X] T119 [PR2] [US1] Criar `lib/dominio/indicadores-do-catalogo.ts` (`FR-002`, `RF-CURSOS-02`) ⛓ T118 · teste: T118
+- [X] T120 [PR2] [P] [US1] Acrescentar a `tests/unidade/contrato-de-parametros.test.ts` a rota `/cursos` com `classificacao`, `modalidade` e `situacao` (padrão `ativo`) (`FR-004`, `FR-017.2`, `FR-037`) — ver reprovando antes da T121
+- [X] T121 [PR2] [US1] Acrescentar `/cursos` a `lib/navegacao/contrato.ts`, com `CLASSIFICACOES_DE_CURSO` e o descritor de `situacao` igual ao de `/instrutores`; o Início **não** muda (`FR-004`, `FR-017.2`, `FR-037`, D-19) ⛓ T117, T120 · teste: T120
+- [X] T122 [PR2] [P] [US1] Escrever `tests/unidade/consulta-de-cursos.test.ts`: a montagem da consulta de `/cursos` aplica os três filtros, **uma** consulta, e devolve o motivo do vazio — *não há*, *você não vê*, *ainda não existe* (`FR-004`, `FR-047`, `FR-012`) — ver reprovando antes da T123
+- [X] T123 [PR2] [US1] Criar `app/(app)/cursos/consulta.ts` (`FR-004`, `FR-012`, `FR-047`) ⛓ T121, T122 · teste: T122
+- [X] T124 [PR2] [US1] Criar `app/(app)/cursos/page.tsx` (Server Component), `loading.tsx` e `error.tsx`, com os três estados vazios por `EstadoVazio` (`FR-005`, `FR-041`, `FR-047`, `RN-DEG-01`) ⛓ T123 · teste: T128 ⚠️ **mesmo commit** da T130 (`FR-039`)
+- [X] T125 [PR2] [P] [US1] Criar `app/(app)/cursos/CatalogoDeCursos.tsx`: cartões agrupados na ordem da T117, só informação descritiva, link para `/cursos/[sigla]` (`FR-001`, `FR-003`, `RF-CURSOS-02`) ⛓ T124 · teste: T128
+- [X] T126 [PR2] [P] [US1] Criar `app/(app)/cursos/IndicadoresDoCatalogo.tsx` com `CardKpi` e dois `GraficoBarras` (`FR-002`, `FR-048`) ⛓ T119, T124 · teste: T128
+- [X] T127 [PR2] [P] [US1] Criar `app/(app)/cursos/FiltrosDoCatalogo.tsx`, folha de cliente com `useParametro` para os três filtros (`FR-004`, `FR-017.2`, `FR-041`) ⛓ T121, T124 · teste: T128
+- [X] T128 [PR2] [US1] Escrever `tests/e2e/cursos.spec.ts`: **5** grupos na ordem com a amostra da T110; os indicadores; filtros que mudam a URL e sobrevivem ao `F5`; `?situacao=inativo` mostra o curso desativado; Encarregado de Curso vê só o seu; os três estados vazios; clique no cartão chega à página do curso (`SC-001`, `SC-001.3`, `SC-002`, US1 cenários 1 a 5) ⛓ T110, T125 a T127
 
 ---
 
