@@ -66,20 +66,31 @@ test.describe("`SC-001` · os cinco grupos, na ordem do Glossário", () => {
     await expect(catalogo(page)).toBeVisible();
 
     /*
-     * ⚠️ A ORDEM É `FR-003`, E ELA NÃO É A DO `ENUM`. Este caso é o que separa "os cinco aparecem"
-     * de "os cinco aparecem na ordem certa" — uma implementação que derivasse a lista de `Constants`
-     * passaria na primeira e reprovaria aqui.
+     * ⚠️ A ORDEM É `FR-003`, E ELA NÃO É A DO `ENUM`. É este caso que separa "os grupos aparecem" de
+     * "os grupos aparecem na ordem certa" — uma implementação que derivasse a lista de `Constants`
+     * passaria na primeira e reprovaria aqui, porque a ordem do tipo põe `estagio_qualificacao`
+     * ANTES de `aperfeicoamento_avancado`, e o Glossário põe depois.
+     *
+     * ⚠️ **A ASSERÇÃO É SOBRE A ORDEM RELATIVA, E NÃO SOBRE OS CINCO ESTAREM LÁ** — e isso foi
+     * medido, não previsto: o CI reseta o banco, e ali só existem os cursos da amostra. O único
+     * `especial` dela nasce **desativado**, então a listagem padrão mostra **quatro** grupos, contra
+     * os cinco da base carregada. Exigir cinco fazia o caso passar nesta máquina e reprovar no CI,
+     * sobre o mesmo commit — que é o defeito de verificação que a spec 009 vem eliminando. A
+     * promessa do `FR-003` é a ORDEM; quais grupos têm cartão é dado.
      */
-    const ordem = await grupos(page).evaluateAll((nos) =>
-      nos.map((n) => n.getAttribute("data-grupo")),
-    );
-    expect(ordem).toEqual([
+    const GLOSSARIO = [
       "regular",
       "expedito",
       "especial",
       "aperfeicoamento_avancado",
       "estagio_qualificacao",
-    ]);
+    ];
+    const ordem = await grupos(page).evaluateAll((nos) =>
+      nos.map((n) => n.getAttribute("data-grupo")),
+    );
+    expect(ordem).toEqual(GLOSSARIO.filter((c) => ordem.includes(c)));
+    // A amostra garante pelo menos quatro grupos com curso ativo, em qualquer base.
+    expect(ordem.length, "a amostra não produziu grupo nenhum").toBeGreaterThanOrEqual(4);
   });
 
   test("cada grupo mostra a própria contagem, e a soma bate com os cartões", async ({ page }) => {
@@ -151,9 +162,15 @@ test.describe("`SC-001.3` · os filtros vivem na URL", () => {
   }) => {
     // `geral` está no ENUM e NÃO está no contrato de `/cursos`. Sem o porteiro, a consulta filtraria
     // por um valor que nenhum curso pode ter e a tela diria "nenhum curso com estes filtros".
-    await entrar(page, EMAIL_ADMIN, "/cursos?classificacao=geral");
+    await entrar(page, EMAIL_ADMIN, "/cursos");
     await expect(catalogo(page)).toBeVisible();
-    await expect(grupos(page)).toHaveCount(5);
+    const semFiltro = await grupos(page).count();
+
+    await page.goto("/cursos?classificacao=geral");
+    await expect(catalogo(page)).toBeVisible();
+    // ⚠️ Comparado com a tela SEM filtro, e não com um número fixo: quantos grupos existem depende
+    //    da base, e o que este caso mede é que o valor recusado degradou para "todas".
+    await expect(grupos(page)).toHaveCount(semFiltro);
   });
 
   test("`?situacao=inativo` mostra o curso que saiu de oferta", async ({ page }) => {
