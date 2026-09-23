@@ -14,8 +14,9 @@
  * (regra 9.1.1 do `CLAUDE.md`) e `pg_constraint`, banco local, 23/09/2026. **Duas divergências
  * achadas, e a primeira seria muda:** o contrato §2 nomeia `vigencia_parametro_imutavel` e o banco
  * emite **`vigencia_imutavel`** — escrever a do contrato faria a tradução nunca disparar, e a pessoa
- * receberia a frase genérica sem que nada acusasse; e o banco emite **`vigencia_cancelada_imutavel`**,
- * que o contrato não lista. Aqui vale o que o banco emite; a emenda do contrato é decisão à parte.
+ * receberia a frase genérica sem que nada acusasse; e o banco emitia **`vigencia_cancelada_imutavel`**,
+ * que o contrato não listava. ✅ **O contrato §2 foi emendado em 23/09/2026** *(decisão de Bernardo
+ * Villas Boas)* e agora nomeia as duas, com os `DETAIL` remedidos na mesma leitura.
  *
  * Origem: `specs/009-cursos-e-turmas/contracts/escritas-recusas-e-avisos.md` §2.
  */

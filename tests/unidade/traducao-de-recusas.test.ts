@@ -8,7 +8,8 @@
  * ⚠️ **AS CHAVES E OS `DETAIL` DESTE ARQUIVO FORAM MEDIDOS NO BANCO LOCAL em 23/09/2026**, lendo
  * `pg_proc.prosrc` **sem comentário** (`CLAUDE.md`, regra 9.1.1) das dez funções que recusam nesta
  * fatia, e `pg_constraint` para os nomes de restrição. Não foram copiados do contrato — e ainda bem:
- * o contrato §2 nomeia `vigencia_parametro_imutavel`, e o banco emite `vigencia_imutavel`.
+ * o contrato §2 nomeava `vigencia_parametro_imutavel`, e o banco emite `vigencia_imutavel`. A emenda
+ * de 23/09/2026 corrigiu o contrato; estes casos continuam medindo o **banco**, que é a fonte.
  *
  * Origem: contrato `specs/009-cursos-e-turmas/contracts/escritas-recusas-e-avisos.md` §2, `FR-042`,
  * `FR-021.4`, `RN-DEG-01`.
