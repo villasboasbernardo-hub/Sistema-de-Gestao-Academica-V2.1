@@ -368,6 +368,32 @@ export const CONTRATO = {
    * ⚠️ **`/cursos/[curso]/editar` É TAMBÉM ONDE A VIGÊNCIA SE REGISTRA E SE CORRIGE** (`FR-013.1`,
    * decisão de 17/09/2026) — o cabeçalho da página do curso aponta para cá.
    */
+  /*
+   * Turmas e salas (`FR-031`, `FR-029.2`, `FR-037`).
+   *
+   * ⚠️ **NENHUMA DAS TRÊS TEM PARÂMETRO DE CONSULTA.** A ficha da turma se identifica pelo CAMINHO —
+   * `/turmas/<codigo>` —, e o rascunho do formulário não é estado compartilhável.
+   *
+   * ⚠️ **NÃO EXISTE `/turmas` (lista global) NEM `/turmas/[turma]/dsa`** (`FR-031.7`). A turma se
+   * alcança pela página do curso; o lançamento diário é do Épico 6. Declarar rota que nenhuma tela
+   * entrega é declarar o que ninguém confere — e a guarda de ausência em
+   * `tests/unidade/contrato-de-parametros.test.ts` cobra as duas.
+   */
+  "/cursos/[curso]/turmas/nova": {
+    rota: "/cursos/[curso]/turmas/nova",
+    origem: "RF-CURSO-01",
+    parametros: {},
+  },
+  "/turmas/[turma]": {
+    rota: "/turmas/[turma]",
+    origem: "RF-CURSO-01",
+    parametros: {},
+  },
+  "/admin/salas": {
+    rota: "/admin/salas",
+    origem: "RF-CRUD-01",
+    parametros: {},
+  },
   "/cursos/novo": {
     rota: "/cursos/novo",
     origem: "RF-CURSOS-01",

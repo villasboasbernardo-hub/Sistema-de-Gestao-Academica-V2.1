@@ -5,7 +5,7 @@
  * tabela que descreve intenção e um contrato que alguém é obrigado a seguir — e a tabela do
  * documento 25 §1.3 existia desde a Fase 2 sem que requisito nenhum a citasse.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -387,5 +387,53 @@ describe("`FR-013.1` · cadastro e edição de curso não têm parâmetro de con
     // compartilhável, e pô-lo na barra de endereço vaza por histórico e por ombro.
     expect(parametrosDaRota("/cursos/novo")).toEqual([]);
     expect(parametrosDaRota("/cursos/[curso]/editar")).toEqual([]);
+  });
+});
+
+describe("`FR-031` · turma e salas: identidade no caminho, nada na consulta", () => {
+  it("as três rotas existem", () => {
+    expect(ROTAS).toEqual(
+      expect.arrayContaining(["/cursos/[curso]/turmas/nova", "/turmas/[turma]", "/admin/salas"]),
+    );
+  });
+
+  it("e nenhuma delas declara parâmetro", () => {
+    for (const rota of ["/cursos/[curso]/turmas/nova", "/turmas/[turma]", "/admin/salas"]) {
+      expect(parametrosDaRota(rota as Rota), rota).toEqual([]);
+    }
+  });
+});
+
+describe("⚠️ `FR-031.7` · a guarda de AUSÊNCIA — o que esta fatia NÃO entrega", () => {
+  /*
+   * ⚠️ AUSÊNCIA TAMBÉM SE VERIFICA. Sem estes casos, uma lista global de turmas ou uma rota de DSA
+   * poderiam nascer "de passagem" numa fatia futura, e ninguém notaria até a tela existir — que é
+   * tarde. A turma se alcança pela página do curso; o lançamento diário é do **Épico 6**.
+   */
+  it("não há rota `/turmas` (lista global) nem `/turmas/[turma]/dsa`", () => {
+    expect(
+      ROTAS,
+      "nasceu uma lista global de turmas — o FR-031.7 diz que a turma se alcança pelo curso",
+    ).not.toContain("/turmas");
+    expect(ROTAS, "o DSA é do Épico 6, e não desta fatia").not.toContain("/turmas/[turma]/dsa");
+  });
+
+  it("o menu não ganhou entrada 'Turmas'", () => {
+    const doc = readFileSync(resolve(process.cwd(), "lib/navegacao/menu.ts"), "utf8");
+    const semComentario = doc.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\r\n]*/g, " ");
+
+    expect(
+      semComentario,
+      'o menu ganhou entrada "Turmas" — o FR-031.7 e a MENU-1 dizem que ela não existe',
+    ).not.toMatch(/rotulo:\s*"Turmas"/);
+  });
+
+  it("e as telas não existem em `app/`", () => {
+    for (const caminho of ["app/(app)/turmas/page.tsx", "app/(app)/turmas/[turma]/dsa"]) {
+      expect(
+        existsSync(resolve(process.cwd(), caminho)),
+        `${caminho} nasceu: a lista global de turmas e o DSA são do Épico 6 (FR-031.7)`,
+      ).toBe(false);
+    }
   });
 });
