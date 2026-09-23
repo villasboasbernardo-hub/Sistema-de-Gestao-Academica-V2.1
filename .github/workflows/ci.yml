@@ -110,7 +110,15 @@ jobs:
       # studio; `gen types --local` fala direto com o banco), `logflare` e `vector` (analitica, e
       # saem em par), `supavisor` (o pooler; as suites usam a porta direta).
       # -------------------------------------------------------------------------------------
+      # ⚠️ TERCEIRA METADE DA MESMA CORRECAO, e a que de fato destrava: TROCAR DE REGISTRO.
+      #    Com login e com nove conteineres a menos, a puxada ainda morria — agora no `mailpit`.
+      #    O estrangulamento e do ghcr.io, e a CLI escolhe o registro por variavel de ambiente
+      #    (`SUPABASE_INTERNAL_IMAGE_REGISTRY`, que o `setup-cli` fixa em `ghcr.io`). Apontando para
+      #    o Docker Hub, as mesmas imagens vem de outra cota. Nao e biblioteca nova: e um botao da
+      #    CLI que ja esta no projeto.
       - name: Subir o stack local sem o que os testes nao usam
+        env:
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: docker.io
         run: >
           supabase start
           -x studio,edge-runtime,realtime,storage-api,imgproxy,postgres-meta,logflare,vector,supavisor
