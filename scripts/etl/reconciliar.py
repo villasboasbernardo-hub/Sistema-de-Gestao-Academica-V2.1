@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 import psycopg
@@ -78,6 +79,14 @@ class Veredito:
     esperados: list[Divergencia] = field(default_factory=list)
     checksums: dict[str, str] = field(default_factory=dict)
     executadas: list[str] = field(default_factory=list)
+
+    # ⚠️ CONTRA QUAL BASE ISTO FOI MEDIDO. O relatório é um arquivo só, sobrescrito por
+    #    qualquer execução, e sem esta linha ele não diz se o veredito veio do banco do
+    #    Docker ou do projeto remoto. Em 23/09/2026 o custo apareceu: um BLOQUEADA vindo
+    #    do remoto foi lido como sujeira da base local, e as duas leituras cabiam no mesmo
+    #    arquivo (`CLAUDE.md`, regra 9.2 — número medido nomeia o artefato).
+    medido_contra: str = ""
+    medido_em: str = ""
 
     @property
     def aprovada(self) -> bool:
@@ -139,6 +148,39 @@ NASCEM_DA_PROPRIA_CARGA: dict[str, str] = {
 # =====================================================================================
 
 SEMEADAS_PELO_SCHEMA: frozenset[str] = frozenset({"config_listas", "config_parametros"})
+
+
+# =====================================================================================
+# LINHAS QUE NASCEM DA PLATAFORMA — procedência nula é o registro certo, não é lacuna
+#
+# ⚠️ EXCEÇÃO ÚNICA, DELIMITADA E DATADA — *"a exceção da R-05 vale só para `usuarios`, só
+#    para linha vinculada a uma credencial do Auth, e não dispensa procedência em nenhuma
+#    outra tabela"* (autorização de Bernardo Villas Boas, 23/09/2026).
+#
+# O QUE ACONTECEU: a reconciliação da carga contra o projeto REMOTO saiu **BLOQUEADA** por
+#    uma linha só — `USR-ADMIN-001`, perfil `admin`, `origem_migracao_v1` nula. Ela não veio
+#    da planilha da v2.0: é a conta que abriu o próprio ambiente, criada pelo Supabase Auth.
+#    Exigir procedência dela é exigir que declare uma origem que não existe, e preencher o
+#    campo para acalmar a verificação seria inventar migração — o contrário do que a R-05
+#    existe para garantir.
+#
+# ⚠️ POR QUE A CONDIÇÃO É `auth_user_id`, E NÃO "a tabela `usuarios` é isenta": porque
+#    `usuarios` RECEBE linhas migradas, e elas têm de continuar declarando procedência. A
+#    coluna separa as duas populações sem ambiguidade: é FK para `auth.users` (migration
+#    `20260830000111`) e quem a preenche é `app.vincular_credencial()` (migration
+#    `20260911230000`), uma vez só, no primeiro acesso de quem aceitou o convite. Ela é
+#    portanto a marca de uma conta que existe de verdade. Linha de `usuarios` sem
+#    procedência **e sem credencial** continua bloqueando, e esse é justamente o caso de
+#    uma linha migrada que perdeu a marca — e o de um convite ainda não aceito.
+#
+# ⚠️ E A ISENÇÃO NÃO ALCANÇA NENHUMA OUTRA TABELA. O dicionário é lido por nome: o que não
+#    está aqui é conferido como sempre foi. Acrescentar tabela aqui é decisão do Bernardo,
+#    não manutenção.
+# =====================================================================================
+
+NASCEM_DA_PLATAFORMA: dict[str, str] = {
+    "usuarios": "auth_user_id is not null",
+}
 
 
 def _uma(k, sql: str, args: tuple = ()) -> object:
@@ -447,10 +489,18 @@ def r05_identidade_e_procedencia(con: psycopg.Connection) -> list[Divergencia]:
                 and tabela not in ordem.FORA_DA_IDEMPOTENCIA
                 and tabela not in SEMEADAS_PELO_SCHEMA
             ):
+                # ⚠️ O RECORTE É POR TABELA **E** POR CONDIÇÃO — ver `NASCEM_DA_PLATAFORMA`.
+                #    Sem a segunda metade a isenção viraria "a tabela inteira é isenta", e
+                #    uma linha migrada que perdesse a marca passaria despercebida.
+                # ⚠️ E OS PARÊNTESES NÃO SÃO ESTILO: `and` liga mais forte que `or`, então
+                #    sem eles o recorte se aplicaria só ao segundo lado do `or` e a
+                #    verificação mudaria de sentido calada.
+                nascida_aqui = NASCEM_DA_PLATAFORMA.get(tabela)
+                recorte = f" and not ({nascida_aqui})" if nascida_aqui else ""
                 sem = _uma(
                     k,
-                    f"select count(*) from public.{tabela} "
-                    f"where origem_migracao_v1 is null or btrim(origem_migracao_v1) = ''",
+                    f"select count(*) from public.{tabela} where "
+                    f"(origem_migracao_v1 is null or btrim(origem_migracao_v1) = ''){recorte}",
                 )
                 # `planejamento_anual` e `usuario_curso` chegam vazias: 0 de 0 é 100%.
                 if sem and _uma(k, f"select count(*) from public.{tabela}"):
@@ -835,6 +885,10 @@ def reconciliar(conexao: str = CONEXAO_LOCAL) -> Veredito:
 
     with con:
         con.read_only = True  # contrato C-4, imposto pela sessão e não pela boa vontade
+        # Sem usuário nem senha: o que identifica a base é o endereço dela.
+        i = con.info
+        v.medido_contra = f"{i.host}:{i.port}/{i.dbname}"
+        v.medido_em = datetime.now().astimezone().strftime("%d/%m/%Y %H:%M %z")
         _exigir_leitura(con)
         for nome, funcao in VERIFICACOES:
             try:
@@ -859,6 +913,8 @@ def escrever_relatorio(v: Veredito, destino: Path = RELATORIO) -> Path:
         "# Relatório de reconciliação — Épico 2",
         "",
         f"**Veredito: {'APROVADA' if v.aprovada else 'BLOQUEADA'}**",
+        "",
+        f"**Medido contra:** `{v.medido_contra}` · **em** {v.medido_em}",
         "",
         "Relatório sem veredito não é aprovação (contrato reconciliacao C-1).",
         "",
