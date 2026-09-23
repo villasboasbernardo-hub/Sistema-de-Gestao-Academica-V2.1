@@ -10,11 +10,10 @@
  * saber que está vendo outra turma; sem o aviso, ele lê a tela como se fosse a que pediu — e é o
  * mesmo defeito do estado vazio que não distingue "não há" de "você não vê".
  *
- * ⚠️ **O CÓDIGO DA TURMA É DECODIFICADO PELA FUNÇÃO ÚNICA** (`FR-031.2`), e uma vez só. O código tem
- * espaços, e decodificar duas vezes é destrutivo para qualquer código que venha a conter `%`.
+ * ⚠️ **O `?turma=` NÃO É DECODIFICADO AQUI** — ele chega pronto do `searchParams`. Decodificar
+ * parâmetro de consulta à mão é o defeito que `tests/unidade/sem-decode-manual.test.ts` proíbe.
  */
 import { preSelecionarTurma, type TurmaParaSelecao } from "@/lib/dominio/pre-selecao-de-turma";
-import { codigoDaTurmaNoSegmento } from "@/lib/navegacao/endereco-de-turma";
 
 /**
  * As colunas do curso que a página consome.
@@ -50,10 +49,15 @@ export function resolverTurmaSelecionada(
 ): TurmaSelecionada {
   const preSelecionada = preSelecionarTurma(turmas, hoje);
 
-  const bruto = pedida.trim();
-  if (bruto === "") return { codigo: preSelecionada, aviso: null };
-
-  const codigo = codigoDaTurmaNoSegmento(bruto);
+  /*
+   * ⚠️ **O `?turma=` CHEGA JÁ DECODIFICADO, e decodificá-lo de novo era defeito.** Ele vem do
+   * `searchParams` do Next, que é `URLSearchParams`: o `+` já virou espaço e o `%20` também. Até
+   * 23/09/2026 esta função chamava `codigoDaTurmaNoSegmento` aqui — inofensivo para os 28 códigos de
+   * hoje e **destrutivo** para qualquer código que venha a conter `%`, que viraria sequência de
+   * escape. Aquela função é do **caminho**, não da consulta.
+   */
+  const codigo = pedida.trim();
+  if (codigo === "") return { codigo: preSelecionada, aviso: null };
   if (turmas.some((t) => t.codigo === codigo)) return { codigo, aviso: null };
 
   /*

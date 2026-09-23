@@ -11,10 +11,20 @@
  * falha **em silêncio**, porque o navegador aceita o espaço e o servidor recebe outra
  * coisa. Concentrar aqui torna a codificação um fato do módulo, não uma lembrança.
  *
- * ⚠️ **`encodeURIComponent` E NÃO `URLSearchParams` PARA O ESPAÇO.** `URLSearchParams`
- * serializa espaço como `+`, que é válido em corpo de formulário e **não** em caminho de
- * URL. Os dois decodificam para o mesmo texto, mas o `FR-031.1` pede **uma representação
- * só** — duas grafias do mesmo endereço quebram comparação de link, cache e histórico.
+ * ⚠️ **NO CAMINHO, `encodeURIComponent`: espaço vira `%20`.** `+` é forma de corpo de formulário e
+ * **não** vale em caminho de URL.
+ *
+ * ⚠️ **NA CONSULTA, `+` — decisão de Bernardo Villas Boas, 23/09/2026, fechando a `PEND-5a-8`.** O
+ * `FR-036` obriga a escolha de turma a ir para a URL **por `useParametro`**, que é o `nuqs`; e o
+ * `encodeQueryValue` dele escapa `%` **primeiro** e depois troca espaço por `+`
+ * (`node_modules/nuqs/dist/context-Mu913OAK.js:31`, medido em 23/09/2026). **Não há costura**:
+ * `processUrlSearchParams` roda antes da serialização, e pré-codificar produziria `%2520`.
+ *
+ * ⚠️ **ENQUANTO ESTA FUNÇÃO ESCREVIA `%20` NA CONSULTA, O SISTEMA TINHA DUAS GRAFIAS** do mesmo
+ * endereço — a do vínculo do Início e a que o seletor escrevia ao trocar de turma —, que é
+ * exatamente o que o `FR-031.1` proíbe. A unificação foi pela grafia do `nuqs` porque o `FR-036` não
+ * dá escolha sobre quem escreve. **O que o `%20` original protegia continua protegido**: o defeito
+ * de 18/09/2026 era **espaço cru** no `href` (`FR-031.2`), e `+` não é espaço cru.
  */
 
 /** O prefixo das rotas de turma. Mudou de lugar? Mudou aqui, e só aqui. */
@@ -38,13 +48,35 @@ export function enderecoDaTurma(codigo: string): string {
  * abas diferentes não sejam a mesma cadeia por acidente de ordem.
  *
  * @example enderecoDaTurmaNoCurso("C-ApA-PCN-PR-EAD", "C-ApA-PCN-PR-EAD T2 2026", "grade")
- *          → "/cursos/C-ApA-PCN-PR-EAD?aba=grade&turma=C-ApA-PCN-PR-EAD%20T2%202026"
+ *          → "/cursos/C-ApA-PCN-PR-EAD?aba=grade&turma=C-ApA-PCN-PR-EAD+T2+2026"
  */
+/**
+ * Um valor de consulta escrito **exatamente como o `nuqs` o escreve**.
+ *
+ * ⚠️ É CÓPIA DELIBERADA DO `encodeQueryValue` DELE, e a ordem das trocas importa: `%` primeiro,
+ * espaço depois. Reproduzi-la aqui é o que garante que o vínculo montado por esta função e a URL que
+ * o seletor escreve sejam **a mesma cadeia**, byte a byte — a única representação, como o `FR-031.1`
+ * exige.
+ */
+function comoAConsultaEscreve(valor: string): string {
+  return valor
+    .replace(/%/g, "%25")
+    .replace(/\+/g, "%2B")
+    .replace(/ /g, "+")
+    .replace(/#/g, "%23")
+    .replace(/&/g, "%26")
+    .replace(/"/g, "%22")
+    .replace(/'/g, "%27")
+    .replace(/`/g, "%60")
+    .replace(/</g, "%3C")
+    .replace(/>/g, "%3E");
+}
+
 export function enderecoDaTurmaNoCurso(sigla: string, codigo: string, aba?: string): string {
   const caminho = `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}`;
   const partes = [
-    ...(aba ? [`aba=${encodeURIComponent(aba)}`] : []),
-    `turma=${encodeURIComponent(codigo)}`,
+    ...(aba ? [`aba=${comoAConsultaEscreve(aba)}`] : []),
+    `turma=${comoAConsultaEscreve(codigo)}`,
   ];
   return `${caminho}?${partes.join("&")}`;
 }

@@ -74,13 +74,13 @@ describe("os exemplos do contrato de rotas §4, literalmente", () => {
 
   it("`enderecoDaTurmaNoCurso` produz o exemplo do contrato, com a aba", () => {
     expect(enderecoDaTurmaNoCurso("C-ApA-PCN-PR-EAD", "C-ApA-PCN-PR-EAD T2 2026", "grade")).toBe(
-      "/cursos/C-ApA-PCN-PR-EAD?aba=grade&turma=C-ApA-PCN-PR-EAD%20T2%202026",
+      "/cursos/C-ApA-PCN-PR-EAD?aba=grade&turma=C-ApA-PCN-PR-EAD+T2+2026",
     );
   });
 
   it("sem aba, o endereço traz só a turma", () => {
     expect(enderecoDaTurmaNoCurso("C-Ap-FR", "C-Ap-FR 2026")).toBe(
-      "/cursos/C-Ap-FR?turma=C-Ap-FR%202026",
+      "/cursos/C-Ap-FR?turma=C-Ap-FR+2026",
     );
   });
 

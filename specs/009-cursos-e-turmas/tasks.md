@@ -553,7 +553,7 @@ abas, pré-seleção pela janela, e nada anunciado que não exista. **Teste inde
 - [X] T155 [PR2] [US3] Criar `lib/dominio/seletor-de-turma.ts` (`FR-034`, `FR-035`, `FR-043`) ⛓ T154 · teste: T154
 - [X] T156 [PR2] [US3] Em `app/(app)/cursos/[curso]/AbaGrade.tsx`, adotar `components/ciaara/seletor-turma.tsx` com as turmas de **um** curso, ordenadas pela T155, escrevendo `?turma=` por `useParametro` com histórico **empilhado** (`FR-033`, `FR-033.1`, `FR-036`) ⛓ T148, T155 · testes: T157, T158
 - [X] T157 [PR2] [P] [US3] Escrever `tests/unidade/seletor-turma-unico.test.ts`: **exatamente um** construtor de seletor de turma na aplicação, lendo código sem comentário, com controle positivo — no molde de `tests/unidade/seletor-unico.test.ts` (`FR-033`, `SC-004`) ⛓ T156
-- [X] T158 [PR2] [US3] Acrescentar a `tests/e2e/curso-pagina.spec.ts`: trocar a turma pelo seletor deixa na URL **exatamente** o que `enderecoDaTurmaNoCurso` produz (`%20`, não `+`); abrir, escolher e fechar pelo teclado; lista vazia com motivo (`FR-031.1`, `FR-033`, `SC-002.1`, US3 cenários 1 a 3) ⛓ T156
+- [X] T158 [PR2] [US3] Acrescentar a `tests/e2e/curso-pagina.spec.ts`: trocar a turma pelo seletor deixa na URL **exatamente** o que `enderecoDaTurmaNoCurso` produz — **`+`, e não `%20`**, *(corrigido em 23/09/2026, `PEND-5a-8`: o `FR-036` obriga o `nuqs`, e ele não emite `%20`)*; abrir, escolher e fechar pelo teclado; lista vazia com motivo (`FR-031.1`, `FR-033`, `SC-002.1`, US3 cenários 1 a 3) ⛓ T156
 - [X] T159 [PR2] [US3] Defeito deliberado: um segundo `<select>` de turma em `AbaGrade.tsx` — a T157 **reprova**; desfazer e registrar (`FR-033`, `SC-004`) ⛓ T157
 
 ---

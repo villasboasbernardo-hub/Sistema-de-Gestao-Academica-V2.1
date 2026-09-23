@@ -62,10 +62,22 @@ describe("`?turma=` explícito", () => {
     expect(resolverTurmaSelecionada(lista, "C-Ap-FR T1 2026", HOJE).codigo).toBe("C-Ap-FR T1 2026");
   });
 
-  it("chega codificado pela função única, e é decodificado uma vez só", () => {
-    expect(resolverTurmaSelecionada(DUAS, "C-Ap-FR%20T2%202026", HOJE).codigo).toBe(
-      "C-Ap-FR T2 2026",
-    );
+  it("⚠️ chega JÁ DECODIFICADO do `searchParams` — a função não decodifica nada", () => {
+    /*
+     * O `+` do `nuqs` e o `%20` do vínculo já viraram espaço antes de chegar aqui. Quem decodificava
+     * de novo (até 23/09/2026) destruiria qualquer código que viesse a conter `%`.
+     */
+    expect(resolverTurmaSelecionada(DUAS, "C-Ap-FR T2 2026", HOJE)).toEqual({
+      codigo: "C-Ap-FR T2 2026",
+      aviso: null,
+    });
+
+    /*
+     * ⚠️ O QUE DISCRIMINA É O AVISO, e não o código: `%20…` degrada para a pré-seleção, que por
+     * acaso é a mesma turma. Com decodificação manual, ele seria ENCONTRADO e o aviso viria nulo.
+     */
+    const comEscape = resolverTurmaSelecionada(DUAS, "C-Ap-FR%20T2%202026", HOJE);
+    expect(comEscape.aviso, "ainda decodifica o parâmetro de consulta à mão").not.toBeNull();
   });
 });
 
