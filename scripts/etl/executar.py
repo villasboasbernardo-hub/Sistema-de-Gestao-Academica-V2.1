@@ -17,11 +17,12 @@ COMO   : `python -m scripts.etl.executar [--primeira-carga] [--somente-reconcili
    dela**. Uma carga que termina 0 é uma carga conferida; qualquer outra coisa não é
    carga terminada, é carga interrompida.
 
-⚠️ **NENHUMA CARGA CONTRA O REMOTO ANTES DE ESTE SCRIPT RECUSAR `--primeira-carga` CONTRA DESTINO
-   COM DADOS** (AMBIENTE-2, amarrado por Bernardo Villas Boas em 22/09/2026). **Hoje ele NÃO recusa**:
-   `--primeira-carga` só muda o texto final, e o que impede uma segunda carga é colisão de chave no
-   meio da promoção — por acidente. A recusa é **pré-requisito da carga**, não tarefa do PR que a
-   acompanha: proteção acidental é exatamente o que a spec 009 vem eliminando.
+⚠️ **A RECUSA DA AMBIENTE-2 EXISTE** desde 22/09/2026 (`carregar.dados_ja_carregados`, saída 3):
+   `--primeira-carga` contra destino que já tem dado **recusa antes de tocar no `staging`**, nomeando
+   tabela e contagem, e o critério é a **procedência** — o que a plataforma semeia não conta. Era
+   pré-requisito da carga, amarrado por Bernardo Villas Boas, e não tarefa do PR que a acompanha:
+   até ele, o que impedia uma segunda carga era colisão de chave no meio da promoção, por acidente,
+   e proteção acidental é o que a spec 009 vem eliminando.
 ⚠️ **E NENHUMA CARGA CONTRA O REMOTO ANTES DE BERNARDO DIZER QUE TERMINOU AS CORREÇÕES DE ORIGEM**
    (decisão de 22/09/2026). Corrigir na planilha antes da carga não custa nada; depois, exige a tela de
    turma ou de curso, que é do PR 2. As correções ficam em `dados/correcoes-de-origem.md`.
@@ -130,7 +131,8 @@ def main() -> int:
     p.add_argument(
         "--primeira-carga",
         action="store_true",
-        help="Marca a execucao como a carga inicial: muda o texto final, nao o comportamento.",
+        help="Marca a execucao como a carga inicial. RECUSA (saida 3) se o destino ja tiver "
+        "dado com procedencia da v2.0, nomeando tabela e contagem.",
     )
     p.add_argument(
         "--somente-reconciliar",
