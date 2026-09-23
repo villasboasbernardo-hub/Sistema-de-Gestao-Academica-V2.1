@@ -60,6 +60,14 @@ jobs:
     permissions:
       contents: read
       packages: read
+    # -----------------------------------------------------------------------------------------
+    # ⚠️ O REGISTRO VALE PARA O BLOCO INTEIRO, e nao so para o `supabase start` — medido em
+    #    23/09/2026, com o bloco vermelho. Declarado so naquele passo, o `pnpm db:tipos` seguinte
+    #    puxava por conta propria e ia parar em `public.ecr.aws`, onde caiu em
+    #    `toomanyrequests: Rate exceeded`. Qualquer passo que puxe imagem precisa do mesmo botao.
+    # -----------------------------------------------------------------------------------------
+    env:
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: docker.io
     steps:
       - uses: actions/checkout@v4
 
@@ -105,10 +113,16 @@ jobs:
       # `config-auth-aplicado.test.ts`, que compara o `config.toml` com o conteiner); `mailpit`
       # (o percurso do convite intercepta o e-mail nele).
       #
+      # ⚠️ `postgres-meta` VOLTOU PARA A LISTA DOS QUE FICAM, e a linha anterior estava ERRADA.
+      # Ela dizia que ele "serve ao studio" e que `gen types --local` fala direto com o banco.
+      # MEDIDO em 23/09/2026, no run 35935232072: `pnpm db:tipos` sobe um `postgres-meta`
+      # EFEMERO, e com a imagem fora do stack a CLI a puxa na hora — de `public.ecr.aws`, onde o
+      # bloco morreu com `toomanyrequests: Rate exceeded`. Excluir o conteiner nao economizou
+      # puxada: trocou uma puxada no `start` por uma puxada pior, no meio do bloco.
+      #
       # SAEM: `studio` (interface), `edge-runtime` (nao ha Edge Function no repositorio),
-      # `realtime`, `storage-api`, `imgproxy` (dependente de storage), `postgres-meta` (serve ao
-      # studio; `gen types --local` fala direto com o banco), `logflare` e `vector` (analitica, e
-      # saem em par), `supavisor` (o pooler; as suites usam a porta direta).
+      # `realtime`, `storage-api`, `imgproxy` (dependente de storage), `logflare` e `vector`
+      # (analitica, e saem em par), `supavisor` (o pooler; as suites usam a porta direta).
       # -------------------------------------------------------------------------------------
       # ⚠️ TERCEIRA METADE DA MESMA CORRECAO, e a que de fato destrava: TROCAR DE REGISTRO.
       #    Com login e com nove conteineres a menos, a puxada ainda morria — agora no `mailpit`.
@@ -117,11 +131,9 @@ jobs:
       #    o Docker Hub, as mesmas imagens vem de outra cota. Nao e biblioteca nova: e um botao da
       #    CLI que ja esta no projeto.
       - name: Subir o stack local sem o que os testes nao usam
-        env:
-          SUPABASE_INTERNAL_IMAGE_REGISTRY: docker.io
         run: >
           supabase start
-          -x studio,edge-runtime,realtime,storage-api,imgproxy,postgres-meta,logflare,vector,supavisor
+          -x studio,edge-runtime,realtime,storage-api,imgproxy,logflare,vector,supavisor
 
       # Prova que as migrations aplicam do zero, sem passo manual (FR-008).
       - run: supabase db reset
