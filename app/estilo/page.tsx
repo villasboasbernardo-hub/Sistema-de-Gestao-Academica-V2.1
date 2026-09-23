@@ -14,6 +14,7 @@
  */
 import {
   AmostraAlertaEteto,
+  AmostraAvisosRecolhiveis,
   AmostraCampo,
   AmostraDialogoConfirmacao,
   AmostraEmblemasDeStatus,
@@ -329,6 +330,10 @@ export default function Vitrine() {
 
       <Secao titulo="Estado vazio — distingue “não há” de “você não vê”">
         <AmostraEstadoVazio />
+      </Secao>
+
+      <Secao titulo="Quadro de avisos recolhível — as contagens ficam à vista; só a lista se recolhe">
+        <AmostraAvisosRecolhiveis />
       </Secao>
 
       <Secao titulo="Diálogo de confirmação — a consequência, que neste sistema nunca é perda">

@@ -133,6 +133,10 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
    * visível, não um `"use client"` digitado sem pensar.
    */
   const COM_INTERACAO = [
+    // Chegou de `app/(app)/instrutores/` na fatia (a) do Épico 5 (T111): o quadro de avisos passa a
+    // ser vocabulário, porque curso e turma têm o seu. O marcador veio junto, e é legítimo — o que
+    // abre e fecha é estado efêmero de tela.
+    "components/ciaara/avisos-recolhiveis.tsx",
     "components/ciaara/badge-teto.tsx",
     "components/ciaara/dialogo-confirmacao.tsx",
     "components/ciaara/filtro-avancado.tsx",

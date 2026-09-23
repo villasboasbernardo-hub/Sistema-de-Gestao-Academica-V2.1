@@ -16,6 +16,7 @@
 import * as React from "react";
 
 import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
+import { AvisosRecolhiveis } from "@/components/ciaara/avisos-recolhiveis";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BadgeTeto, type Teto } from "@/components/ciaara/badge-teto";
 import { CampoObrigatorio, propsDoControle } from "@/components/ciaara/campo-obrigatorio";
@@ -137,6 +138,38 @@ export function AmostraEstadoVazio() {
       <EstadoVazio motivo="sem-dado" />
       <EstadoVazio motivo="sem-permissao" acao={<Button size="sm">Solicitar acesso</Button>} />
     </div>
+  );
+}
+
+/**
+ * O quadro recolhível — **as contagens ficam, a lista some** (`FR-027` e `RNF-USA-04` da spec 006).
+ *
+ * ⚠️ A AMOSTRA MOSTRA AS DUAS METADES DE PROPÓSITO. Uma amostra que só abrisse e fechasse passaria
+ * também numa implementação que recolhesse as contagens junto — que é justamente a que o
+ * `RNF-USA-04` proíbe, porque tira o aviso da tela.
+ */
+export function AmostraAvisosRecolhiveis() {
+  return (
+    <AvisosRecolhiveis
+      contagens={
+        <ul className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <li className="text-texto">
+            Sem duração em semanas: <strong>12</strong>
+          </li>
+          <li className="text-texto">
+            Sem propósito: <strong>10</strong>
+          </li>
+          <li className="text-texto">
+            Total: <strong>22</strong> avisos
+          </li>
+        </ul>
+      }
+    >
+      <ul className="flex flex-col gap-1">
+        <li className="text-texto">Sem duração em semanas: C-Ap-HN, C-Ap-FR, C-Esp-ALH</li>
+        <li className="text-texto">Sem propósito: C-Exp-BATI, C-ApA-OcOp-PR-SP</li>
+      </ul>
+    </AvisosRecolhiveis>
   );
 }
 
