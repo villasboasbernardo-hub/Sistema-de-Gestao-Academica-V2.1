@@ -24,6 +24,11 @@ import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { Button } from "@/components/ui/button";
 import { avisosDaTurma, type TurmaParaAvisos } from "@/lib/dominio/avisos-da-turma";
+import {
+  ordenarTurmasParaSeletor,
+  ROTULO_DO_STATUS_DE_TURMA,
+  rotuloDaTurma,
+} from "@/lib/dominio/seletor-de-turma";
 import { enderecoDaNovaTurma, enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
 import { SeletorDeTurmaNaUrl } from "./SeletorDeTurmaNaUrl";
@@ -32,13 +37,6 @@ export type TurmaDaGrade = TurmaParaAvisos & {
   readonly codigo: string;
   readonly rotulo: string | null;
   readonly ano: number;
-};
-
-const ROTULO_DO_STATUS: Readonly<Record<string, string>> = {
-  planejada: "Planejada",
-  ativa: "Ativa",
-  concluida: "Concluída",
-  cancelada: "Cancelada",
 };
 
 const TOM_DO_STATUS: Readonly<
@@ -118,8 +116,22 @@ export function AbaGrade({
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         {turmas.length > 1 ? (
+          /*
+           * ⚠️ A ORDEM É A DO `FR-035`, e ela vem de `lib/dominio/` — ano ↓, início ↓ com sem data
+           *    por último, código. O componente canônico **exibe** a lista como ela chega
+           *    (`FR-033`); quem ordena é quem chama, e é aqui.
+           * ⚠️ E O RÓTULO É `código · Status` (`FR-034`), nunca a `vw_turmas_rotulo`, que devolve
+           *    nulo em 18 das 28 turmas.
+           */
           <SeletorDeTurmaNaUrl
-            turmas={turmas.map((t) => ({ id: t.codigo, rotulo: t.codigo }))}
+            turmas={ordenarTurmasParaSeletor(
+              turmas.map((t) => ({
+                codigo: t.codigo,
+                ano: t.ano,
+                dataInicio: t.dataInicio,
+                status: t.status,
+              })),
+            ).map((t) => ({ id: t.codigo, rotulo: rotuloDaTurma(t) }))}
             selecionada={selecionada}
           />
         ) : null}
@@ -136,7 +148,7 @@ export function AbaGrade({
           <p className="text-sm">
             <Rotulo>Situação:</Rotulo>{" "}
             <span className="text-texto">
-              {ROTULO_DO_STATUS[turmaAtual.status] ?? turmaAtual.status}
+              {ROTULO_DO_STATUS_DE_TURMA[turmaAtual.status] ?? turmaAtual.status}
             </span>
           </p>
           <p className="text-sm">
@@ -206,7 +218,7 @@ export function AbaGrade({
                   <td className="py-1">
                     <BadgeStatus
                       tom={TOM_DO_STATUS[t.status] ?? "planejado"}
-                      rotulo={ROTULO_DO_STATUS[t.status] ?? t.status}
+                      rotulo={ROTULO_DO_STATUS_DE_TURMA[t.status] ?? t.status}
                     />
                   </td>
                   <td className="text-texto py-1">{janela(t)}</td>

@@ -136,6 +136,87 @@ test.describe("`FR-006.1` · a pré-seleção e o `?turma=`", () => {
   });
 });
 
+test.describe("`FR-033` a `FR-036` · o seletor de turma escreve na URL", () => {
+  test("⚠️ trocar a turma escreve o código na URL, sem espaço cru, e a volta é fiel", async ({
+    page,
+  }) => {
+    /*
+     * ⚠️ `URLSearchParams` SERIALIZA ESPAÇO COMO `+`, e o código da turma tem espaços. As duas
+     * grafias decodificam para o mesmo texto, e por isso o defeito passa despercebido — mas o
+     * `FR-031.1` pede UMA representação só, senão comparação de link, cache e histórico divergem.
+     */
+    await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular));
+    await expect(page.locator('[data-slot="seletor-turma"]')).toBeVisible();
+
+    await page.locator('[data-slot="seletor-turma"]').click();
+    await page.getByRole("option", { name: SEMEADO.turmaJanelaCedo, exact: false }).click();
+
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("turma"))
+      .toBe(SEMEADO.turmaJanelaCedo);
+
+    /*
+     * ⚠️ **DUAS GRAFIAS CONVIVEM HOJE, E ISSO É `PEND-5a-8` — não é o que este caso mede.** O
+     * `FR-036` obriga a escrita a ir pelo `useParametro`, e o `encodeQueryValue` do `nuqs` escapa
+     * `%` primeiro e depois troca espaço por `+` (`nuqs/dist/context-Mu913OAK.js:31`): não há
+     * costura para ele emitir `%20`, e `processUrlSearchParams` roda **antes** da serialização.
+     * `enderecoDaTurmaNoCurso` escreve `%20`, e `tests/e2e/inicio.spec.ts` tem guarda para isso
+     * desde o Épico 4 (c). As duas decisões são testadas e se contradizem — a escolha é de Bernardo.
+     *
+     * ⚠️ **O QUE ESTE CASO MEDE, E É MEDÍVEL: a ida e a volta são fiéis.** O parâmetro decodifica
+     * para o código exato, a página resolve a turma certa, e o espaço **nunca** sai cru — que era o
+     * defeito que o `FR-031.2` nomeou em 18/09/2026.
+     */
+    const bruto = page.url().split("?")[1] ?? "";
+    expect(bruto, "o espaço saiu CRU na URL — o defeito do FR-031.2").not.toContain(" ");
+    expect(new URL(page.url()).searchParams.get("turma")).toBe(SEMEADO.turmaJanelaCedo);
+
+    await expect(turmaSelecionada(page)).toHaveAttribute("data-turma", SEMEADO.turmaJanelaCedo);
+  });
+
+  test("⚠️ a troca EMPILHA: 'voltar' devolve a turma anterior", async ({ page }) => {
+    await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular));
+    await expect(turmaSelecionada(page)).toHaveAttribute("data-turma", SEMEADO.turmaJanelaTarde);
+
+    await page.locator('[data-slot="seletor-turma"]').click();
+    await page.getByRole("option", { name: SEMEADO.turmaJanelaCedo, exact: false }).click();
+    await expect(turmaSelecionada(page)).toHaveAttribute("data-turma", SEMEADO.turmaJanelaCedo);
+
+    await page.goBack();
+    await expect(turmaSelecionada(page)).toHaveAttribute("data-turma", SEMEADO.turmaJanelaTarde);
+  });
+
+  test("abrir, escolher e fechar só com o teclado", async ({ page }) => {
+    await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular));
+    const gatilho = page.locator('[data-slot="seletor-turma"]');
+    await gatilho.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("listbox")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(gatilho).toBeFocused();
+  });
+
+  test("`FR-034` · o rótulo é `código · Status`, e existe para toda opção", async ({ page }) => {
+    await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular));
+    await page.locator('[data-slot="seletor-turma"]').click();
+    const opcoes = page.getByRole("option");
+    await expect(opcoes).toHaveCount(2);
+    for (const texto of await opcoes.allInnerTexts()) {
+      expect(texto.trim().length, "opção em branco no seletor").toBeGreaterThan(0);
+      expect(texto).toContain("·");
+    }
+  });
+
+  test("`FR-006.1` · curso de uma turma só NÃO tem seletor", async ({ page }) => {
+    // Sem seletor não há outra escolha — e a página abre naquela turma.
+    await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.estagio_qualificacao));
+    await expect(page.locator('[data-slot="aba-grade"]')).toBeVisible();
+    await expect(page.locator('[data-slot="seletor-turma"]')).toHaveCount(0);
+  });
+});
+
 test.describe("`FR-028.1` · a lista de turmas, com a SALA de cada uma (23/09/2026)", () => {
   test("a sala aparece na linha da turma e no painel da selecionada", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular));
