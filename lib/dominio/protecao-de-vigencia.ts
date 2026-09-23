@@ -95,13 +95,26 @@ export function vigenciasQuePerdemProtecao(
  * qualquer forma: o teto é alerta, nunca bloqueio.
  */
 export function mensagemDaProtecaoPerdida(perdidas: readonly VigenciaProtegida[]): string | null {
-  if (perdidas.length === 0) return null;
-  const linhas = perdidas.map(
-    (p) =>
-      `vigência de ${p.vigenteDe} (${p.vigencia}) — travada pela atividade ${p.atividade} de ${p.dataAtividade}`,
-  );
+  const linhas = linhasDaProtecaoPerdida(perdidas);
+  if (linhas.length === 0) return null;
   return (
     `Com esta janela, deixam de estar protegidas: ${linhas.join("; ")}. ` +
     `Elas poderão ser corrigidas.`
+  );
+}
+
+/**
+ * **Uma linha por vigência, sem o envoltório da frase** — é isto que o diálogo do `FR-018.1` recebe.
+ *
+ * ⚠️ **ELA EXISTE PORQUE O ENVOLTÓRIO TEM UM DONO SÓ.** `confirmacao-de-gravacao.ts` já escreve
+ * *"Com esta janela, deixam de estar protegidas: … Elas poderão ser corrigidas."* em volta do que
+ * recebe; passar-lhe a frase pronta de `mensagemDaProtecaoPerdida` produzia o texto **duas vezes**,
+ * aninhado — medido no percurso de encurtar janela em 23/09/2026. Quem monta a frase inteira é o
+ * quadro; quem monta o diálogo é o diálogo, e os dois leem as mesmas linhas daqui.
+ */
+export function linhasDaProtecaoPerdida(perdidas: readonly VigenciaProtegida[]): readonly string[] {
+  return perdidas.map(
+    (p) =>
+      `vigência de ${p.vigenteDe} (${p.vigencia}) — travada pela atividade ${p.atividade} de ${p.dataAtividade}`,
   );
 }

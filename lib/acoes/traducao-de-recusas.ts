@@ -309,7 +309,15 @@ function porRestricao(erro: ErroDoBanco, contexto: ContextoDaRecusa): string | u
       : "Já existe curso com esta sigla.";
   }
 
-  if (erro.message.includes("turmas_unica_por_ano")) {
+  /*
+   * ⚠️ **SÃO DUAS RESTRIÇÕES PARA A MESMA COLISÃO, e qual delas morde primeiro não é escolha de
+   *    ninguém.** `turmas.codigo` é derivado de (sigla, rótulo, ano) pelo gatilho, então `T1` repetida
+   *    em 2027 viola `turmas_unica_por_ano` **e** `turmas_codigo_key` — e o motor relata a que ele
+   *    conferiu antes. Medido em 23/09/2026: na criação veio `turmas_codigo_key`, na edição veio
+   *    `turmas_unica_por_ano`, e a primeira caía no 23505 genérico, que não diz **qual** turma ocupa.
+   *    Para quem lê a tela as duas são o mesmo fato.
+   */
+  if (erro.message.includes("turmas_unica_por_ano") || erro.message.includes("turmas_codigo_key")) {
     const t = contexto.turmaOcupante;
     if (!t) return "Já existe turma com este rótulo neste curso e ano. Escolha outro rótulo.";
     const comOuSem = t.rotulo ? `com o rótulo ${t.rotulo}` : "sem rótulo";

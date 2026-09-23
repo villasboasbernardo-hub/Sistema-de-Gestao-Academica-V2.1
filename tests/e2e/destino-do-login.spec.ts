@@ -17,6 +17,8 @@ import { execFileSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
+import { apagarConta } from "./conta-de-teste";
+
 function chaveLocal(nomeNoCli: string): string {
   const saida = execFileSync("supabase", ["status", "-o", "env"], {
     encoding: "utf8",
@@ -58,11 +60,13 @@ const ORIGEM_DA_APLICACAO = process.env.URL_BASE_E2E ?? "http://localhost:3000";
 test.beforeAll(async ({}, info) => {
   EMAIL = `destino-do-login-${info.workerIndex}@ciaara.teste`;
 
-  const { data: existentes } = await admin.auth.admin.listUsers();
-  for (const u of existentes?.users ?? []) {
-    if (u.email === EMAIL) await admin.auth.admin.deleteUser(u.id);
-  }
-  await admin.from("usuarios").delete().eq("email", EMAIL);
+  /*
+   * ⚠️ A LIMPEZA PASSA PELO AUXILIAR, QUE **PAGINA**. Até 23/09/2026 ela lia só a primeira página de
+   *    `listUsers()` — 50 contas — e com **165** no stack local deixava a própria conta de pé; o
+   *    `createUser` seguinte reprovava com *"already been registered"*, que se lê como corrida entre
+   *    processos e não é. Era a `PEND-5a-7` inteira, neste arquivo e no do convite.
+   */
+  await apagarConta(EMAIL);
 
   const { data, error } = await admin.auth.admin.createUser({
     email: EMAIL,
@@ -83,11 +87,7 @@ test.beforeAll(async ({}, info) => {
 });
 
 test.afterAll(async () => {
-  const { data: existentes } = await admin.auth.admin.listUsers();
-  for (const u of existentes?.users ?? []) {
-    if (u.email === EMAIL) await admin.auth.admin.deleteUser(u.id);
-  }
-  await admin.from("usuarios").delete().eq("email", EMAIL);
+  await apagarConta(EMAIL);
 });
 
 /** Entra pelo formulário, com o destino que se quer exercitar. */

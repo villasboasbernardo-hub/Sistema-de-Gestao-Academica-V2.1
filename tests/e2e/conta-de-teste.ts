@@ -114,16 +114,34 @@ export function emailDeTeste(prefixo: string, processo: number): string {
  * e reprovava acompanhada: não pelo paralelismo, mas pelo número de contas que o paralelismo criou.
  */
 async function apagar(email: string) {
+  for (const u of await contasDoAuth(email)) {
+    await admin().auth.admin.deleteUser(u.id);
+  }
+  await admin().from("usuarios").delete().eq("email", email);
+}
+
+/**
+ * As contas do Auth com este e-mail, **varrendo todas as páginas**.
+ *
+ * ⚠️ **QUEM PROCURA CONTA TAMBÉM PAGINA, e não só quem apaga.** Medido em 23/09/2026, com **165**
+ * contas no stack local: `convite.spec.ts` procurava a credencial recém-criada na primeira página e
+ * concluía *"a credencial não foi criada"*; `destino-do-login.spec.ts` limpava a própria conta pela
+ * primeira página e a deixava de pé, e o `createUser` seguinte reprovava com *"A user with this
+ * email address has already been registered"*. **As duas mensagens acusam o sistema por um defeito da
+ * verificação**, e as duas pioram a cada execução — porque cada uma deixa mais uma conta para trás.
+ */
+export async function contasDoAuth(email: string): Promise<{ readonly id: string }[]> {
   const porPagina = 200;
+  const achadas: { readonly id: string }[] = [];
   for (let pagina = 1; ; pagina++) {
     const { data } = await admin().auth.admin.listUsers({ page: pagina, perPage: porPagina });
     const usuarios = data?.users ?? [];
     for (const u of usuarios) {
-      if (u.email === email) await admin().auth.admin.deleteUser(u.id);
+      if (u.email === email) achadas.push({ id: u.id });
     }
     if (usuarios.length < porPagina) break;
   }
-  await admin().from("usuarios").delete().eq("email", email);
+  return achadas;
 }
 
 /** Cria a conta do zero, apagando qualquer resto de execução anterior. */

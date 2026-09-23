@@ -154,7 +154,15 @@ export async function editarTurma(
     return falha(recusaPorAlcance(cursoId ? await contextoDoCurso(cursoId, "alterações") : {}));
   }
 
+  /*
+   * ⚠️ **O CÓDIGO VOLTA DO BANCO, E NÃO É O QUE ENTROU** (`FR-025.1`). Mudar o ano ou o rótulo faz o
+   *    gatilho **regerar** `sigla [rótulo] ano`: devolver `codigoAtual` mandaria a pessoa para uma
+   *    ficha que deixou de existir no mesmo comando, e o 404 apareceria como se a gravação tivesse
+   *    falhado. As duas revalidações existem porque os dois endereços mudaram de conteúdo.
+   */
+  const codigo = (data[0]?.codigo as string | undefined) ?? codigoAtual;
   revalidatePath("/cursos");
   revalidatePath(enderecoDaTurma(codigoAtual));
-  return { ok: true, codigo: codigoAtual, destino: enderecoDaTurma(codigoAtual) };
+  if (codigo !== codigoAtual) revalidatePath(enderecoDaTurma(codigo));
+  return { ok: true, codigo, destino: enderecoDaTurma(codigo) };
 }

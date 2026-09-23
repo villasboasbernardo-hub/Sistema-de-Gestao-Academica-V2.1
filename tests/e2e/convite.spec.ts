@@ -13,6 +13,8 @@ import { execFileSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test } from "@playwright/test";
 
+import { apagarConta, contasDoAuth } from "./conta-de-teste";
+
 function chaveLocal(nomeNoCli: string): string {
   const saida = execFileSync("supabase", ["status", "-o", "env"], {
     encoding: "utf8",
@@ -177,8 +179,11 @@ test("V-3 · convite, senha e primeiro acesso, com o escopo atribuído", async (
    */
   await page.waitForURL(/\/$/, { timeout: 15_000 });
 
-  const { data: contasApos } = await admin.auth.admin.listUsers();
-  const conta = (contasApos?.users ?? []).find((u) => u.email === email);
+  /*
+   * ⚠️ A BUSCA PAGINA. Ler só a primeira página fazia este `expect` dizer *"a credencial não foi
+   *    criada"* sobre uma credencial criada — acusação ao sistema por defeito da verificação.
+   */
+  const [conta] = await contasDoAuth(email);
   expect(conta, "a credencial não foi criada").toBeTruthy();
 
   // ⚠️ SC-013 · `codigo` e `origem_migracao_v1` SOBREVIVEM à obtenção da credencial. É o que faz
@@ -212,11 +217,7 @@ test("V-3 · convite, senha e primeiro acesso, com o escopo atribuído", async (
   await page.goto("/inicio");
   await expect(page, "a pessoa convidada foi devolvida ao login").toHaveURL(/\/inicio/);
 
-  await admin.from("usuarios").delete().eq("email", email);
-  const { data: contas } = await admin.auth.admin.listUsers();
-  for (const u of contas?.users ?? []) {
-    if (u.email === email) await admin.auth.admin.deleteUser(u.id);
-  }
+  await apagarConta(email);
 });
 
 // =================================================================================================
