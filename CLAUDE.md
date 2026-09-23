@@ -211,6 +211,13 @@ Regra prática: **se o Bernardo não usaria a palavra numa conversa, ela não en
 - Server Action **é endpoint HTTP de fato**: `safeParse` do Zod na primeira linha, sem exceção.
 - Estado de tela vai para a **URL** (`nuqs`), não para `useState`. É o que dá deep-link de graça.
 - `components/ciaara/` **não define cor literal** — só token do `@theme`.
+- **Toda página que tem filtro nasce com o botão "Limpar filtros"** *(decisão de Bernardo Villas Boas,
+  23/09/2026 — padrão de tela)*. É **um componente só**, `components/ciaara/botao-limpar-filtros.tsx`,
+  e a regra de **quando aparecer mora dentro dele**: só há botão quando há filtro fora do padrão.
+  ⚠️ **Segundo componente de limpar filtro é rejeitado** — ele nasceu como JSX solto dentro de
+  `FiltrosDeInstrutores.tsx` e virou componente na segunda tela que precisou dele; a terceira cópia
+  seria o terceiro botão a divergir. ⚠️ **E o padrão do filtro conta**: `situacao` vale `ativo` por
+  padrão, então compará-la com `""` faria o botão nunca aparecer para quem só trocou a situação.
 - Densidade antes de beleza: é sistema de gestão, com tabelas grandes.
 - Toda função de `lib/dominio/` traz no topo o identificador `RN-` e a **citação literal** da regra.
 

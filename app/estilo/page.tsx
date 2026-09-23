@@ -15,6 +15,7 @@
 import {
   AmostraAlertaEteto,
   AmostraAvisosRecolhiveis,
+  AmostraBotaoLimparFiltros,
   AmostraCampo,
   AmostraDialogoConfirmacao,
   AmostraEmblemasDeStatus,
@@ -334,6 +335,10 @@ export default function Vitrine() {
 
       <Secao titulo="Quadro de avisos recolhível — as contagens ficam à vista; só a lista se recolhe">
         <AmostraAvisosRecolhiveis />
+      </Secao>
+
+      <Secao titulo="Limpar filtros — padrão de toda tela que filtra; some quando não há o que limpar">
+        <AmostraBotaoLimparFiltros />
       </Secao>
 
       <Secao titulo="Diálogo de confirmação — a consequência, que neste sistema nunca é perda">

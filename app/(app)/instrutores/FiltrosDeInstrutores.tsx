@@ -22,12 +22,12 @@
  */
 "use client";
 
+import { BotaoLimparFiltros } from "@/components/ciaara/botao-limpar-filtros";
 import {
   FiltroAvancado,
   type CampoDeFiltro,
   type EstadoDeFiltro,
 } from "@/components/ciaara/filtro-avancado";
-import { Button } from "@/components/ui/button";
 import { CLASSIFICACOES_DE_CURSO_NA_BARRA, ROTULO_DO_REGIME } from "@/lib/constantes/instrutor";
 import { ROTULO_DO_CIRCULO } from "@/lib/dominio/circulo-hierarquico";
 import { CIRCULOS_HIERARQUICOS, CLASSIFICACOES, REGIMES_DOCENTES } from "@/lib/navegacao/contrato";
@@ -233,13 +233,7 @@ export function FiltrosDeInstrutores({ opcoes }: { readonly opcoes: OpcoesDosFil
   return (
     <div className="flex flex-col gap-2" data-slot="filtros-de-instrutores">
       <FiltroAvancado campos={campos} estado={estado} aoMudar={aoMudar} />
-      {algumAtivo ? (
-        <div>
-          <Button type="button" variant="ghost" size="sm" onClick={limpar}>
-            Limpar filtros
-          </Button>
-        </div>
-      ) : null}
+      <BotaoLimparFiltros haFiltroAtivo={algumAtivo} aoLimpar={limpar} />
     </div>
   );
 }

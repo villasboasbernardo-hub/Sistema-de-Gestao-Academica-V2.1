@@ -17,6 +17,7 @@
  */
 "use client";
 
+import { BotaoLimparFiltros } from "@/components/ciaara/botao-limpar-filtros";
 import {
   FiltroAvancado,
   type CampoDeFiltro,
@@ -83,5 +84,23 @@ export function FiltrosDoCatalogo() {
     if (escolha("situacao") !== situacao) void definirSituacao(escolha("situacao"));
   };
 
-  return <FiltroAvancado campos={campos} estado={estado} aoMudar={aoMudar} titulo="Filtros" />;
+  /*
+   * ⚠️ `situacao` ENTRA NA CONTA PELO PADRÃO, e não por estar preenchida. Ela sempre tem valor —
+   * `ativo` quando ninguém escolheu nada —, e compará-la com "" faria o botão nunca aparecer para
+   * quem só trocou a situação.
+   */
+  const haFiltroAtivo = classificacao !== "" || modalidade !== "" || situacao !== "ativo";
+
+  const limpar = () => {
+    void definirClassificacao(null);
+    void definirModalidade(null);
+    void definirSituacao(null);
+  };
+
+  return (
+    <div className="flex flex-col gap-2" data-slot="filtros-do-catalogo">
+      <FiltroAvancado campos={campos} estado={estado} aoMudar={aoMudar} titulo="Filtros" />
+      <BotaoLimparFiltros haFiltroAtivo={haFiltroAtivo} aoLimpar={limpar} />
+    </div>
+  );
 }

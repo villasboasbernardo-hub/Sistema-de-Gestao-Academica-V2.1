@@ -200,6 +200,39 @@ test.describe("`SC-001.3` · os filtros vivem na URL", () => {
   });
 });
 
+test.describe("Limpar filtros — padrão de toda tela que filtra (23/09/2026)", () => {
+  test("aplicar um filtro, limpar, e a URL volta sem os parâmetros e o catálogo completo", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, "/cursos");
+    await expect(catalogo(page)).toBeVisible();
+    const gruposCompletos = await grupos(page).count();
+
+    // ⚠️ Sem filtro, o botão NÃO existe — um botão de limpar que nunca some ensina a ignorá-lo.
+    await expect(page.locator('[data-slot="limpar-filtros"]')).toHaveCount(0);
+
+    await page.goto("/cursos?classificacao=expedito&situacao=inativo");
+    await expect(page.locator('[data-slot="limpar-filtros"]')).toBeVisible();
+
+    await page.locator('[data-slot="limpar-filtros"]').click();
+
+    await expect.poll(() => new URL(page.url()).searchParams.get("classificacao")).toBeNull();
+    expect(new URL(page.url()).searchParams.get("situacao")).toBeNull();
+    expect(new URL(page.url()).searchParams.get("modalidade")).toBeNull();
+
+    await expect(catalogo(page)).toBeVisible();
+    await expect(grupos(page)).toHaveCount(gruposCompletos);
+    await expect(page.locator('[data-slot="limpar-filtros"]')).toHaveCount(0);
+  });
+
+  test("⚠️ só trocar a situação já faz o botão aparecer — o padrão dela não é vazio", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, "/cursos?situacao=inativo");
+    await expect(page.locator('[data-slot="limpar-filtros"]')).toBeVisible();
+  });
+});
+
 test.describe("`FR-047` · os vazios dizem qual vazio é", () => {
   test("*não há* — com filtro aplicado, e a frase fala dos filtros", async ({ page }) => {
     /*
