@@ -38,7 +38,19 @@ const SINAIS_DE_CONSTRUCAO = [
   "SelectContent",
 ];
 
-const SINAL_DE_TURMA = /turma/i;
+/**
+ * O sinal de que a escolha é **de turma**: uma lista de turmas virando opção.
+ *
+ * ⚠️ **"O ARQUIVO CITA TURMA" NÃO BASTA, e isso foi medido em 23/09/2026.** A primeira versão desta
+ * varredura usava `/turma/i`, e acusou `app/(app)/cursos/FormularioDeCurso.tsx` — que tem `<select>`
+ * de **classificação** e **modalidade**, e cita "turma" só no rótulo *"Limite de turmas por ano"*.
+ * Uma guarda que reprova o arquivo errado ensina a contorná-la, e o ponto único deixa de valer.
+ *
+ * ⚠️ **E A TABELA DA ABA GRADE TAMBÉM ITERA `turmas`** — em `<tr>`, não em `<option>`. A janela de 300
+ * caracteres entre o `.map(` e a opção é o que separa "lista de turmas" de "escolha de turma".
+ */
+const OPCOES_DE_TURMA =
+  /turmas?\s*(?:\.filter\([^)]*\))?\s*\.map\([\s\S]{0,300}?(?:<option|SelectItem)/i;
 
 function arquivosDeCodigo(): string[] {
   const achados: string[] = [];
@@ -62,7 +74,7 @@ function construtoresDeSeletorDeTurma(): string[] {
   return arquivosDeCodigo()
     .filter((caminho) => {
       const codigo = semComentarios(readFileSync(caminho, "utf8"));
-      return SINAL_DE_TURMA.test(codigo) && SINAIS_DE_CONSTRUCAO.some((s) => codigo.includes(s));
+      return OPCOES_DE_TURMA.test(codigo) && SINAIS_DE_CONSTRUCAO.some((s) => codigo.includes(s));
     })
     .map((caminho) => relative(RAIZ, caminho).replaceAll("\\", "/"));
 }
@@ -86,6 +98,19 @@ describe("`SC-004` · exatamente um construtor de seletor de turma", () => {
   it("⚠️ controle positivo: o canônico de fato constrói — não é só um nome de arquivo", () => {
     const codigo = semComentarios(readFileSync(resolve(RAIZ, CANONICO), "utf8"));
     expect(SINAIS_DE_CONSTRUCAO.some((s) => codigo.includes(s))).toBe(true);
+    expect(OPCOES_DE_TURMA.test(codigo), "o canônico deixou de virar turmas em opções").toBe(true);
+  });
+
+  it("⚠️ e a varredura NÃO confunde outras escolhas com a de turma", () => {
+    // `FormularioDeCurso.tsx` tem `<select>` de classificação e de modalidade, e cita "turma" no
+    // rótulo do limite. `AbaGrade.tsx` itera `turmas` — em `<tr>`, não em `<option>`.
+    for (const arquivo of [
+      "app/(app)/cursos/FormularioDeCurso.tsx",
+      "app/(app)/cursos/[curso]/AbaGrade.tsx",
+    ]) {
+      const codigo = semComentarios(readFileSync(resolve(RAIZ, arquivo), "utf8"));
+      expect(OPCOES_DE_TURMA.test(codigo), `${arquivo} foi lido como seletor de turma`).toBe(false);
+    }
   });
 });
 

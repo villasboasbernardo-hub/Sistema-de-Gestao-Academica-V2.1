@@ -1,39 +1,80 @@
 /**
- * Desativar e reativar o curso — **oculto para quem não pode** (`FR-017.8`).
+ * Desativar e reativar o curso — **oculto para quem não pode**, e sempre com confirmação
+ * (`FR-017`, `FR-017.4`, `FR-017.7`, `FR-017.8`, `FR-018.1`).
  *
  * ⚠️ **OCULTO, E NÃO DESABILITADO.** Quem não tem `cursos.desativar` não vê o botão. Botão
- * desabilitado anuncia uma capacidade que a pessoa não tem e a manda pedir explicação a quem não
- * pode dar — é a mesma decisão do `FR-008`/A-4: *"a tela não anuncia o que não entrega"*.
+ * desabilitado anuncia uma capacidade que a pessoa não tem e a manda pedir explicação a quem não pode
+ * dar — a mesma decisão do `FR-008`/A-4.
+ *
+ * ⚠️ **AS DUAS CONFIRMAM SEMPRE** (`FR-018.1`), e o texto vem de `lib/dominio/confirmacao-de-gravacao.ts`.
+ * Sair de oferta e voltar a ela são mudanças difíceis de desfazer sem que alguém perceba.
  *
  * ⚠️ **QUEM DECIDE É O BANCO, e esta folha só esconde.** `app.guardar_situacao_do_curso()` recusa com
- * `situacao_sem_permissao` mesmo que a ação seja chamada por outro caminho. Esconder o botão é
- * conforto de quem usa, nunca a proteção.
- *
- * ⚠️ **`aoAcionar` É OBRIGATÓRIO, DE PROPÓSITO.** A gravação nasce na US4 (`desativarCurso`), e até lá
- * esta folha **não é montada por tela nenhuma** — em vez de aparecer inerte. Um botão que existe e
- * não faz nada é pior que um botão ausente: ele ensina que apertar não adianta.
+ * `situacao_sem_permissao` e com `curso_com_turma_pendente` — e a segunda **nomeia cada turma**, o que
+ * a tela mostra sem reimplementar a regra.
  */
 "use client";
 
+import * as React from "react";
+import { useRouter } from "next/navigation";
+
+import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { Button } from "@/components/ui/button";
+import { desativarCurso, reativarCurso } from "@/lib/acoes/curso";
+import { confirmacaoDaGravacao } from "@/lib/dominio/confirmacao-de-gravacao";
 
 export function AcoesDeSituacao({
+  sigla,
   ativo,
-  aoAcionar,
 }: {
+  readonly sigla: string;
   readonly ativo: boolean;
-  readonly aoAcionar: () => void;
 }) {
+  const router = useRouter();
+  const [erro, definirErro] = React.useState<string | null>(null);
+  const [gravando, definirGravando] = React.useState(false);
+
+  const confirmacao = confirmacaoDaGravacao(ativo ? "desativar_curso" : "reativar_curso", {
+    sigla,
+  });
+
+  async function acionar() {
+    definirGravando(true);
+    definirErro(null);
+    const resultado = ativo ? await desativarCurso({ sigla }) : await reativarCurso({ sigla });
+    definirGravando(false);
+    if (!resultado.ok) {
+      definirErro(resultado.erro);
+      return;
+    }
+    router.refresh();
+  }
+
   return (
-    <div data-slot="acoes-de-situacao">
-      <Button
-        type="button"
-        variant={ativo ? "destructive" : "default"}
-        size="sm"
-        onClick={aoAcionar}
-      >
-        {ativo ? "Desativar curso" : "Reativar curso"}
-      </Button>
+    <div className="flex flex-col gap-2" data-slot="acoes-de-situacao">
+      {erro ? (
+        <p role="alert" className="text-atrasado-tinta text-sm" data-slot="erro-de-situacao">
+          {erro}
+        </p>
+      ) : null}
+
+      {confirmacao.confirma ? (
+        <DialogoConfirmacao
+          titulo={confirmacao.titulo}
+          consequencia={confirmacao.mensagens.join(" ")}
+          rotuloConfirmar={confirmacao.rotuloConfirmar}
+          aoConfirmar={() => void acionar()}
+        >
+          <Button
+            type="button"
+            variant={ativo ? "destructive" : "default"}
+            size="sm"
+            disabled={gravando}
+          >
+            {ativo ? "Desativar curso" : "Reativar curso"}
+          </Button>
+        </DialogoConfirmacao>
+      ) : null}
     </div>
   );
 }

@@ -358,6 +358,26 @@ export const CONTRATO = {
    * O código tem espaços (`C-Ap-FR T2 2026`), e quem o escrever à mão na URL produz um link que
    * parece funcionar e resolve para turma nenhuma.
    */
+  /*
+   * Cadastro e edição de curso (`FR-013.1`, `FR-037`).
+   *
+   * ⚠️ **SEM PARÂMETRO DE CONSULTA, e isso é decisão.** O que a pessoa está digitando não é estado
+   * compartilhável: pô-lo na URL vaza por histórico e por ombro, e faz o "voltar" desfazer letra a
+   * letra. Mesma regra de `/instrutores/novo`.
+   *
+   * ⚠️ **`/cursos/[curso]/editar` É TAMBÉM ONDE A VIGÊNCIA SE REGISTRA E SE CORRIGE** (`FR-013.1`,
+   * decisão de 17/09/2026) — o cabeçalho da página do curso aponta para cá.
+   */
+  "/cursos/novo": {
+    rota: "/cursos/novo",
+    origem: "RF-CURSOS-01",
+    parametros: {},
+  },
+  "/cursos/[curso]/editar": {
+    rota: "/cursos/[curso]/editar",
+    origem: "RF-CURSO-01",
+    parametros: {},
+  },
   "/cursos/[curso]": {
     rota: "/cursos/[curso]",
     origem: "RF-CURSO-01",

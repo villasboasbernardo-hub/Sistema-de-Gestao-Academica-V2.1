@@ -376,3 +376,16 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
     for (const p of parametrosDaRota("/cursos/[curso]")) expect(p.avisaServidor).toBe(true);
   });
 });
+
+describe("`FR-013.1` · cadastro e edição de curso não têm parâmetro de consulta", () => {
+  it("as duas rotas existem", () => {
+    expect(ROTAS).toEqual(expect.arrayContaining(["/cursos/novo", "/cursos/[curso]/editar"]));
+  });
+
+  it("⚠️ e nenhuma das duas declara parâmetro — rascunho de formulário NÃO vai para a URL", () => {
+    // É a mesma decisão de `/instrutores/novo`: o que a pessoa ainda está digitando não é estado
+    // compartilhável, e pô-lo na barra de endereço vaza por histórico e por ombro.
+    expect(parametrosDaRota("/cursos/novo")).toEqual([]);
+    expect(parametrosDaRota("/cursos/[curso]/editar")).toEqual([]);
+  });
+});

@@ -14,6 +14,7 @@
  * *"em breve"*: *"a tela não anuncia o que não entrega"*. A reserva das duas rotas em `FORA_DO_MENU`
  * continua valendo — ela diz que o menu não as terá, não que esta página já as mostra.
  */
+import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { avisosDoCurso } from "@/lib/dominio/avisos-do-curso";
@@ -24,6 +25,7 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../consulta";
 import { AbaGrade, type TurmaDaGrade } from "./AbaGrade";
+import { AcoesDeSituacao } from "./AcoesDeSituacao";
 import { AbaSobre, type AvaliacaoPrevista, type DisciplinaDaGrade } from "./AbaSobre";
 import { AbasDoCurso } from "./AbasDoCurso";
 import { CabecalhoDoCurso } from "./CabecalhoDoCurso";
@@ -198,6 +200,11 @@ export default async function PaginaDoCurso({
 
       {/* ⚠️ ACIMA DAS ABAS, fora de qualquer uma (`FR-010.1`) */}
       <QuadroDeAvisosDoCurso avisos={avisos} />
+
+      {/* ⚠️ OCULTO para quem não tem a permissão — e o banco recusa de qualquer forma (`FR-017.8`) */}
+      <SePodeVer permissoes={permissoes} recurso="cursos" acao="desativar">
+        <AcoesDeSituacao sigla={curso.codigo as string} ativo={cursoAtivo} />
+      </SePodeVer>
 
       <AbasDoCurso
         grade={
