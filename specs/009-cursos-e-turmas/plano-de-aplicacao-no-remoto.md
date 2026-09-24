@@ -37,6 +37,34 @@ privilégio, não a recusa do `FR-021.2`. Só o caminho de tela, com sessão de 
 **Esta migration precisa ser aplicada no remoto antes do merge do PR 2** — pelo mesmo motivo das 7
 anteriores (AMBIENTE-1: o projeto serve Preview **e** Production).
 
+## 0.2. ✅ APLICADA no remoto em 23/09/2026 — o que foi medido
+
+*(autorização de Bernardo Villas Boas, depois do CI verde no commit `2e746f7`, run 35943892619)*
+
+| # | Leitura | Resultado |
+|---|---|---|
+| 1 | `supabase migration list --linked`, **antes** | 36 dos dois lados, **1 só no local** — `20260923231815` |
+| 2 | `supabase db push --linked --dry-run` | **exatamente** aquela migration; `seeds: []`, `roles: []` |
+| 3 | `supabase db push --linked` | `Applying migration 20260923231815…`, saída **0** |
+| 4 | `supabase migration list --linked`, **depois** | **37** dos dois lados, **nenhuma só de um lado** |
+| 5 | catálogo: a função existe | `public.vigencias_do_curso` → **1**, `SECURITY DEFINER`, volatilidade **`s`** (stable: não escreve) |
+| 6 | catálogo: os privilégios | `authenticated` **executa** `app.recusar_se_ha_lancamento` → **`true`** (era `false`); `vigencias_do_curso` → `authenticated` **`true`**, `anon` **`false`** |
+| 7 | Production | `/` → **307** para `/login?destino=%2F`; `/login` → **200**; `/cursos` → **307** para o login; `/estilo` → **200**. O mesmo de antes |
+
+⚠️ **COMO SE VERIFICOU QUE UM AUTENTICADO AGORA CORRIGE VIGÊNCIA, SEM ESCREVER NADA NO REMOTO — em
+uma linha:** conferindo no catálogo **a causa**, e não o efeito — `has_function_privilege('authenticated',
+'app.recusar_se_ha_lancamento(uuid,date,text)', 'execute')` passou de **`false`** para **`true`**, e era
+exatamente esse privilégio que faltava (a recusa era *"permission denied for function
+recusar_se_ha_lancamento"*); **o efeito foi provado no LOCAL**, com sessão autenticada de verdade, em
+`tests/e2e/vigencia.spec.ts`. Conferir o efeito no remoto exigiria **gravar uma vigência lá**, que é
+escrita de dado de teste em produção.
+
+⚠️ **E UM ACHADO QUE MUDA UM REGISTRO: o remoto NÃO está mais vazio de dado de negócio.** Medido na
+mesma conferência: **24 cursos, 28 turmas, 29 vigências, 177 instrutores, 5 usuários, 8 salas**. O
+`CLAUDE.md` e este plano diziam *"0 cursos, 0 turmas, 0 instrutores, 1 usuário"*, medição de
+**22/09/2026** — **está vencida**. Nada disso veio desta aplicação: a migration só cria função e
+concede `execute`, e o `db push` reportou `seeds: []`.
+
 ## 1. Antes de aplicar — tudo só de leitura
 
 | # | Comando | O que tem de dar |
