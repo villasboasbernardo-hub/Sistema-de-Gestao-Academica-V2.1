@@ -10,6 +10,33 @@ toda conexão esgota o tempo. **Enquanto estiver assim, nada deste plano roda**,
 Vercel, que aponta para este projeto (AMBIENTE-1), **não alcança o banco**. Reativar é pelo painel da
 Supabase: é ação no remoto, e a decisão é de Bernardo.
 
+## 0.1. Emenda de 23/09/2026 — o PR 2 traz UMA migration, e ela conserta um defeito que hoje está no remoto
+
+*(medido na Fase 20 do PR 2; as 7 do PR 1 já foram aplicadas em 22/09/2026)*
+
+| Arquivo | O que faz |
+|---|---|
+| `20260923231815_vigencias_do_curso_para_a_tela.sql` | **A.** `public.vigencias_do_curso(curso_id)` — o histórico de vigências com o primeiro lançamento que trava cada uma, para a tela saber onde oferecer *"Corrigir esta vigência"*. **B.** o `grant execute` que faltava em `app.recusar_se_ha_lancamento` |
+
+⚠️ **A parte B não é acréscimo, é conserto — e o defeito está NO REMOTO desde 22/09/2026.**
+`public.corrigir_vigencia_regime` é `SECURITY INVOKER` e chama `app.recusar_se_ha_lancamento`; a
+migration `20260918025141` revogou essa auxiliar de `authenticated` e **nunca devolveu o
+`execute`**. Medido pela tela em 23/09/2026: *"permission denied for function
+recusar_se_ha_lancamento"*. **Hoje, no remoto, nenhum usuário autenticado consegue corrigir
+vigência** — o único caminho do `FR-021.1` não existe na prática. As duas irmãs chamadas pela mesma
+RPC (`app.lancamentos_que_travam_vigencia` e `app.travar_curso_para_correcao`) já tinham o grant: era
+esquecimento, não decisão.
+
+⚠️ **Por que nenhuma suíte pegou:** o pgTAP roda como **dono do schema**, que tem tudo; e um teste
+negativo que aceite *"deu erro"* como prova de recusa **passa pelo motivo errado** — ali o erro era de
+privilégio, não a recusa do `FR-021.2`. Só o caminho de tela, com sessão de verdade, encontrou.
+
+⚠️ **Reversão:** `revoke execute ... from authenticated, service_role` e
+`drop function public.vigencias_do_curso(uuid)`. Reverter B **fecha de novo** a correção de vigência.
+
+**Esta migration precisa ser aplicada no remoto antes do merge do PR 2** — pelo mesmo motivo das 7
+anteriores (AMBIENTE-1: o projeto serve Preview **e** Production).
+
 ## 1. Antes de aplicar — tudo só de leitura
 
 | # | Comando | O que tem de dar |

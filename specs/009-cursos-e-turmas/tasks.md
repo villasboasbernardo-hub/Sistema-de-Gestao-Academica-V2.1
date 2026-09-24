@@ -633,11 +633,11 @@ mensagem, registrar uma futura.
 
 ## Fase 21 — Fechamento do PR 2
 
-- [ ] T205 [PR2] [P] Acrescentar as telas novas a `tests/e2e/acessibilidade.spec.ts` e `tests/e2e/teclado.spec.ts`: `/cursos`, `/cursos/[curso]` nas duas abas, `/cursos/novo`, `/turmas/[turma]`, `/admin/salas` (`FR-041`, `FR-048`, contrato de teclado do Épico 4 (b))
-- [ ] T206 [PR2] [P] Varreduras: **nenhum** `page.tsx` nem `layout.tsx` com `"use client"`; folhas de cliente declaradas e contadas; **nenhum** `await` em laço em `app/**`; regra de cor em **zero** violações; **zero** campos digitáveis de carga horária nas telas de curso e turma — estendendo os testes que já existem em `tests/unidade/` (`FR-041`, `FR-045`, `SC-007`, `SC-010`)
+- [X] T205 [PR2] [P] ⚠️ **Feita em `tests/e2e/telas-acessiveis.spec.ts`, e não dentro dos dois arquivos que esta linha nomeia** *(desvio registrado em 23/09/2026, com o motivo)*: `acessibilidade.spec.ts` e `teclado.spec.ts` têm `beforeEach` **de arquivo** que abre a vitrine, que é rota **sem sessão** (`FR-038`); as telas desta fatia exigem sessão e amostra, e enfiá-las lá obrigaria a desmontar o preparo dos dois. As telas novas: `/cursos`, `/cursos/[curso]` nas duas abas, `/cursos/novo`, `/turmas/[turma]`, `/admin/salas` (`FR-041`, `FR-048`, contrato de teclado do Épico 4 (b))
+- [X] T206 [PR2] [P] Varreduras: **nenhum** `page.tsx` nem `layout.tsx` com `"use client"`; folhas de cliente declaradas e contadas; **nenhum** `await` em laço em `app/**`; regra de cor em **zero** violações; **zero** campos digitáveis de carga horária nas telas de curso e turma — estendendo os testes que já existem em `tests/unidade/` (`FR-041`, `FR-045`, `SC-007`, `SC-010`)
 - [ ] T207 [PR2] `pnpm verificar:tudo` saindo 0 e o CI com **o mesmo veredito** sobre o mesmo commit (`FR-046.1`, `SC-009`) ⛓ T128 a T206
 - [ ] T208 [PR2] [P] Atualizar *Estado atual e onde retomar* do `CLAUDE.md` com o fechamento da fatia e marcar os itens de `specs/009-cursos-e-turmas/checklists/requirements.md` que passarem (`FR-046.1`, `CLAUDE.md`) ⛓ T207
-- [ ] T209 [PR2] Abrir o PR 2 com `.github/pull_request_template.md` inteiro, declarando **nenhuma migration** (`FR-046.1`, Definition of Done) ⛓ T208
+- [ ] T209 [PR2] Abrir o PR 2 com `.github/pull_request_template.md` inteiro. ⚠️ **A declaração de "nenhuma migration" DEIXOU DE VALER em 23/09/2026**: a Fase 20 criou `20260923231815_vigencias_do_curso_para_a_tela.sql`, e ela **precisa ser aplicada no remoto antes do merge** — a parte B conserta um defeito que hoje está lá (o `grant` que faltava em `app.recusar_se_ha_lancamento`, sem o qual ninguém corrige vigência). Ver `plano-de-aplicacao-no-remoto.md` §0.1 (`FR-046.1`, Definition of Done) ⛓ T208
 
 ---
 

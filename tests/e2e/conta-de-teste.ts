@@ -38,6 +38,21 @@ import { expect, type Page } from "@playwright/test";
  */
 let ambienteLocal: Record<string, string> | undefined;
 
+/**
+ * Os nomes que `playwright.config.ts` ja gravou em `process.env`, por chave do CLI.
+ *
+ * ⚠️ **O PROCESSO PRINCIPAL JA PERGUNTOU, E OS PROCESSOS DE TRABALHO HERDAM.** Perguntar de novo aqui
+ * é a corrida que a configuração existe para eliminar: a CLI reescreve `~/.supabase/telemetry.json` a
+ * cada execução, e dois processos renomeando o mesmo temporário derrubam um deles com uma mensagem
+ * que não fala de concorrência nenhuma. Ler o ambiente primeiro faz a CLI ser chamada **zero** vezes
+ * na execução normal — e a leitura abaixo só sobra para quem rode um arquivo à mão.
+ */
+const NO_AMBIENTE: Readonly<Record<string, string>> = {
+  API_URL: "SUPABASE_URL_TESTE",
+  PUBLISHABLE_KEY: "SUPABASE_ANON_KEY_TESTE",
+  SECRET_KEY: "SUPABASE_SERVICE_ROLE_KEY_TESTE",
+};
+
 function lerAmbienteLocal(): Record<string, string> {
   if (ambienteLocal) return ambienteLocal;
 
@@ -77,6 +92,9 @@ function lerAmbienteLocal(): Record<string, string> {
 }
 
 export function chaveLocal(nomeNoCli: string): string {
+  const doAmbiente = NO_AMBIENTE[nomeNoCli] ? process.env[NO_AMBIENTE[nomeNoCli]] : undefined;
+  if (doAmbiente) return doAmbiente;
+
   const valor = lerAmbienteLocal()[nomeNoCli];
   if (!valor) throw new Error(`nao achei ${nomeNoCli} no supabase status`);
   return valor;

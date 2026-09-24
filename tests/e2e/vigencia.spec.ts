@@ -32,15 +32,29 @@ let EMAIL_VISUALIZACAO = "";
 let SEMEADO: CursosSemeados;
 
 /**
- * Uma data que nenhuma execução anterior usou.
+ * O dia seguinte à ÚLTIMA vigência do curso — lido do banco, não sorteado.
  *
- * ⚠️ **O `EXCLUDE` DE SOBREPOSIÇÃO É REAL**, e duas execuções com a mesma data futura colidiriam —
- * numa recusa correta do banco que se leria como defeito da tela.
+ * ⚠️ **A PRIMEIRA VERSÃO DERIVAVA A DATA DO RELÓGIO (`Date.now() % 10_000` dias), E ISSO ESTAVA
+ * ERRADO DE UM JEITO QUE SÓ APARECE NA SEGUNDA EXECUÇÃO.** O resto dá voltas a cada dez segundos, de
+ * modo que a data **não é crescente**: uma execução gravava 2115 com ponta aberta e a seguinte tentava
+ * 2103 — **dentro** daquela janela —, e o `EXCLUDE` de sobreposição recusava. A recusa era correta, e
+ * a leitura fácil era *"a tela não registrou"*. Vigência não se apaga (regra 9.1): a única data segura
+ * é a que vem **depois de todas as que já existem**.
  */
-function dataFuturaUnica(): string {
-  const base = Date.UTC(2100, 0, 1);
-  const deslocamento = (Date.now() % 10_000) * 86_400_000;
-  return new Date(base + deslocamento).toISOString().slice(0, 10);
+async function diaSeguinteAUltimaVigencia(sigla: string): Promise<string> {
+  const { data: curso } = await admin().from("cursos").select("id").eq("codigo", sigla).single();
+  const { data, error } = await admin()
+    .from("curso_regime_historico")
+    .select("vigente_de")
+    .eq("curso_id", curso!.id)
+    .order("vigente_de", { ascending: false })
+    .limit(1)
+    .single();
+  if (error) throw new Error(`nao li as vigencias de ${sigla}: ${error.message}`);
+
+  const ultima = new Date(`${data.vigente_de as string}T00:00:00Z`).getTime();
+  const piso = Date.UTC(2100, 0, 1);
+  return new Date(Math.max(ultima + 86_400_000, piso)).toISOString().slice(0, 10);
 }
 
 test.beforeAll(async ({}, info) => {
@@ -219,7 +233,7 @@ test.describe("`FR-021.2` · a vigência com lançamento não se corrige", () =>
 test.describe("`FR-019` · registrar vigência nova a partir de uma data", () => {
   test("a vigência futura entra, e o histórico passa a mostrá-la", async ({ page }) => {
     const sigla = SEMEADO.porClassificacao.estagio_qualificacao;
-    const quando = dataFuturaUnica();
+    const quando = await diaSeguinteAUltimaVigencia(sigla);
 
     await entrar(page, EMAIL_ENCARREGADO, enderecoDaEdicao(sigla));
     await secao(page).locator('[data-slot="registrar-nova-vigencia"] summary').click();

@@ -12,30 +12,16 @@
  * ⚠️ E O CONTROLE POSITIVO É METADE DO VALOR: uma guarda que recusasse tudo passaria em todos os
  * casos hostis e quebraria o retorno legítimo, que é a única razão de o parâmetro existir.
  */
-import { execFileSync } from "node:child_process";
-
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
-import { apagarConta } from "./conta-de-teste";
+import { apagarConta, chaveLocal } from "./conta-de-teste";
 
-function chaveLocal(nomeNoCli: string): string {
-  const saida = execFileSync("supabase", ["status", "-o", "env"], {
-    encoding: "utf8",
-    windowsHide: true,
-  });
-  const valor = saida
-    .split("\n")
-    .find((l) => l.startsWith(`${nomeNoCli}=`))
-    ?.split("=")
-    .slice(1)
-    .join("=")
-    .replace(/^"|"$/g, "")
-    .trim();
-  if (!valor) throw new Error(`nao achei ${nomeNoCli} no supabase status`);
-  return valor;
-}
-
+/*
+ * ⚠️ **A CÓPIA LOCAL DE `chaveLocal` SAIU em 23/09/2026.** Ela chamava `supabase status` no
+ *    carregamento do módulo, sem ler o ambiente que o processo principal já resolveu e sem repetir
+ *    quando a CLI recusa por concorrência — e derrubava casos que nada tinham com a causa.
+ */
 const admin = createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
   auth: { persistSession: false, autoRefreshToken: false },
 });

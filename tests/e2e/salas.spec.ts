@@ -119,8 +119,16 @@ test.describe("`FR-029.4` · desativar sala em uso avisa e deixa prosseguir", ()
      * ⚠️ A CONTAGEM É LIDA DA TELA, NÃO ESCRITA À MÃO. O que o cenário mede é que o diálogo nomeia
      *    **as turmas medidas**; fixar "5" seria medir a base real, que o CI não tem.
      */
+    /*
+     * ⚠️ **O PRAZO AQUI É O MESMO DOS OUTROS PASSOS DESTE PERCURSO (15 s), e não o padrão de 5 s.**
+     *    Medido em 23/09/2026: numa execução em três da suíte inteira, em paralelo, este primeiro
+     *    `expect` reprovava enquanto os seguintes — que já pediam 15 s — passavam. A tela de salas lê
+     *    a lista **e** todas as turmas, para dizer quem usa cada sala; sob quatro processos ela passa
+     *    dos 5 s. Deixar o primeiro passo com prazo menor que os demais não media nada: media qual
+     *    passo do percurso tinha o número menor escrito ao lado.
+     */
     const usadaPor = linha.locator('[data-slot="turmas-que-usam"]');
-    await expect(usadaPor).toContainText(SEMEADO.turmaJanelaTarde);
+    await expect(usadaPor).toContainText(SEMEADO.turmaJanelaTarde, { timeout: 15_000 });
     expect(Number(await usadaPor.getAttribute("data-quantidade"))).toBeGreaterThan(0);
 
     await linha.locator('[data-slot="desativar-sala"]').click();
