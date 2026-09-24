@@ -132,6 +132,63 @@ describe("`FR-042` · cada linha do contrato §2 vira a mensagem de negócio del
     ).toBe(esperada);
   });
 
+  /**
+   * ⚠️ **OS DOIS CASOS SÃO UM PAR, e um sozinho não prova nada.** *"Escolha outro"* é a frase certa
+   * para o que a pessoa digita e a **pior possível** para o que o sistema numera: ela manda conferir
+   * um valor que a tela não controla. Medido em 24/09/2026, na conferência de Bernardo: criar curso
+   * falhava com *"Já existe um registro com este valor. Escolha outro."* e **dados inéditos**,
+   * porque a numeração das vigências tinha voltado ao início.
+   */
+  describe("`23505` · a mensagem depende de QUEM escolhe o valor", () => {
+    it("⚠️ código gerado pelo sistema: NÃO manda escolher outro, e pede o suporte", () => {
+      for (const [restricao, trecho] of [
+        ["curso_regime_historico_codigo_key", "vigências de regime"],
+        ["turma_disciplina_codigo_key", "grade da turma"],
+        ["instrutor_disciplina_codigo_key", "vínculos de instrutor"],
+        ["instrutores_codigo_key", "instrutores"],
+      ] as const) {
+        const mensagem = traduzirRecusa(
+          erro("23505", {
+            message: `duplicate key value violates unique constraint "${restricao}"`,
+          }),
+        );
+        expect(mensagem, restricao).toContain("Erro interno de numeração");
+        expect(mensagem, restricao).toContain(trecho);
+        expect(mensagem, restricao).toContain("Avise o suporte");
+        expect(mensagem, `${restricao} mandou escolher um valor que ninguém escolhe`).not.toContain(
+          "Escolha outro",
+        );
+      }
+    });
+
+    it("campo que a pessoa digita: continua mandando escolher outro", () => {
+      const mensagem = traduzirRecusa(
+        erro("23505", {
+          message: 'duplicate key value violates unique constraint "disciplinas_codigo_key"',
+        }),
+      );
+      expect(mensagem).toBe("Já existe um registro com este valor. Escolha outro.");
+    });
+
+    it("⚠️ e a colisão SEM constraint reconhecida continua na frase genérica", () => {
+      expect(traduzirRecusa(erro("23505"))).toBe(
+        "Já existe um registro com este valor. Escolha outro.",
+      );
+    });
+
+    it("⚠️ `turmas` fica de fora: ali a colisão é de RÓTULO, que a pessoa escolhe", () => {
+      const mensagem = traduzirRecusa(
+        erro("23505", {
+          message: 'duplicate key value violates unique constraint "turmas_codigo_key"',
+        }),
+        { turmaOcupante: { codigo: "C-Ap-FR T2 2026", rotulo: "T2", sigla: "C-Ap-FR", ano: 2026 } },
+      );
+      expect(mensagem).toContain("C-Ap-FR T2 2026");
+      expect(mensagem).toContain("Escolha outro rótulo.");
+      expect(mensagem).not.toContain("Erro interno de numeração");
+    });
+  });
+
   it("`turmas_unica_por_ano` nomeia a turma ocupante — com rótulo e sem rótulo", () => {
     const duplicada = erro("23505", {
       message: 'duplicate key value violates unique constraint "turmas_unica_por_ano"',

@@ -330,6 +330,34 @@ function porRestricao(erro: ErroDoBanco, contexto: ContextoDaRecusa): string | u
   return undefined;
 }
 
+/**
+ * As quatro numerações que o **sistema** gera, e o que dizer de cada uma.
+ *
+ * ⚠️ **A LISTA NÃO É OPINIÃO: ELA FOI MEDIDA NO CATÁLOGO.** São exatamente as colunas `codigo` com
+ * `DEFAULT` que chama função geradora — `app.proximo_codigo_*` —, e é o mesmo critério do gotcha 5.2
+ * do `CLAUDE.md`. `cursos`, `disciplinas` e `usuarios` **não** têm `DEFAULT`: ali o código é
+ * digitado, e *"escolha outro"* é a frase certa.
+ *
+ * ⚠️ **`turmas` FICA DE FORA DE PROPÓSITO, e não por esquecimento.** O código dela é gerado por
+ * **gatilho** a partir de sigla, rótulo e ano — mas a colisão que acontece de verdade é a do
+ * **rótulo**, que a pessoa escolhe, e ela já é traduzida acima com o nome da turma que ocupa o
+ * lugar. Mandá-la para cá trocaria uma mensagem acionável por um pedido de suporte.
+ */
+const NUMERACAO_INTERNA: Readonly<Record<string, string>> = {
+  curso_regime_historico_codigo_key: "a numeração das vigências de regime",
+  turma_disciplina_codigo_key: "a numeração da grade da turma",
+  instrutor_disciplina_codigo_key: "a numeração dos vínculos de instrutor",
+  instrutores_codigo_key: "a numeração dos instrutores",
+};
+
+/** Qual numeração interna estourou, se foi uma delas. */
+function numeracaoInterna(mensagem: string): string | undefined {
+  for (const [restricao, oQue] of Object.entries(NUMERACAO_INTERNA)) {
+    if (mensagem.includes(restricao)) return oQue;
+  }
+  return undefined;
+}
+
 /** A coluna nomeada por um `23502`, se o motor a nomeou. */
 function colunaObrigatoria(mensagem: string): string | undefined {
   return /column "([a-z_]+)"/.exec(mensagem)?.[1];
@@ -366,8 +394,25 @@ export function traduzirRecusa(erro: ErroDoBanco, contexto: ContextoDaRecusa = {
       return "Outra gravação no mesmo curso aconteceu ao mesmo tempo. Tente de novo.";
     case "23514":
       return "O banco recusou a gravação: um campo não atende à regra.";
-    case "23505":
+    case "23505": {
+      /*
+       * ⚠️ **"ESCOLHA OUTRO" SÓ VALE ONDE A PESSOA ESCOLHE.** Quando a unicidade violada é a de uma
+       *    coluna de **código gerado pelo sistema**, mandar escolher outro valor é mandar fazer o
+       *    impossível: aquele número sai de uma sequência, e nenhum campo da tela o controla. Medido
+       *    em 24/09/2026, na conferência de Bernardo: criar curso no local dava *"Já existe um
+       *    registro com este valor. Escolha outro."* com dados **inéditos** — a pessoa conferia a
+       *    sigla três vezes procurando o engano dela num defeito de numeração do sistema.
+       */
+      const numeracao = numeracaoInterna(erro.message);
+      if (numeracao) {
+        return (
+          `Erro interno de numeração: ${numeracao} gerou um código que já existe. ` +
+          `Avise o suporte — mudar o que você digitou não resolve, porque este valor não é ` +
+          `escolhido por você.`
+        );
+      }
       return "Já existe um registro com este valor. Escolha outro.";
+    }
     case "23503":
       return "Esta gravação aponta para um registro que não existe mais. Recarregue a página.";
     default:

@@ -411,6 +411,19 @@ abria a porta errada.
 quanto o contrário (`SC-005`). **Conserto:** `pnpm db:reset:limpo` — o mesmo comando do CI — é o que
 o `verificar:tudo` usa; o `db:reset` que se digita continua criando a conta.
 
+**9. RESTAURAR DADO SEM AVANÇAR AS SEQUÊNCIAS QUEBRA A PRIMEIRA CRIAÇÃO NA TELA** *(medido em
+24/09/2026, na conferência de Bernardo)*. As sequências de código vivem em **`app`**, e um dump de
+`public` **não as traz**: elas voltam ao início, e o próximo `REG-000001` colide com um que o
+retrato acabou de trazer. O sintoma é *"Já existe um registro com este valor"* **com dados
+inéditos**, e ele **não aparece em suíte nenhuma** — as suítes semeiam num banco recém-resetado,
+onde as sequências estão no lugar. Quem restaura chama `carregar.avancar_sequencias`, que é **uma
+função só** e declara, por tabela, como extrair o número (⚠️ `instrutores.codigo` é numérico puro,
+os demais são `PREFIXO-NNNNNN`). Guardado por `tests/unidade/sequencias-apos-restaurar.test.ts`.
+⚠️ **E a mensagem de recusa passou a distinguir quem escolhe o valor:** *"escolha outro"* vale para
+o que a pessoa digita; para código gerado pelo sistema — as **quatro** colunas com `DEFAULT
+app.proximo_codigo_*`, medidas no catálogo — a frase é de **erro interno de numeração**, pedindo o
+suporte, porque mandar escolher outro valor é mandar fazer o impossível.
+
 **Bônus:** `pnpm db:tipos` **depois de toda migration**. O CI falha se `lib/tipos/database.ts`
 divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, coluna inventada.
 

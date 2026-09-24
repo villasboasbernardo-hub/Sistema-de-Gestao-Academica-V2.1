@@ -58,6 +58,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import psycopg
+
+from scripts.etl import carregar
+
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # As tabelas cujo dado é da plataforma ou do histórico do próprio ETL, e que não descrevem
@@ -151,7 +155,7 @@ def main(argv: list[str] | None = None) -> int:
     copia = pasta / f"remoto-{carimbo}.sql"
 
     # ---------------------------------------------------------------- 1. ler o remoto
-    print(f"1/5  lendo o remoto (so leitura) -> {copia}")
+    print(f"1/6  lendo o remoto (so leitura) -> {copia}")
     exclusoes: list[str] = []
     for tabela in FORA_DA_COPIA:
         exclusoes += ["-x", tabela]
@@ -174,7 +178,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     # ---------------------------------------------------------------- 2. estrutura do repo
-    print("2/5  recriando o banco LOCAL pelas migrations (`supabase db reset`)")
+    print("2/6  recriando o banco LOCAL pelas migrations (`supabase db reset`)")
     r = subprocess.run(
         ["supabase", "db", "reset"], capture_output=True, text=True, shell=True, check=False
     )
@@ -190,7 +194,7 @@ def main(argv: list[str] | None = None) -> int:
     # ⚠️ `session_replication_role = replica` desliga os gatilhos **desta sessão**, no banco
     #    LOCAL: é o mesmo recurso que o dump da própria plataforma usa para restaurar o
     #    retrato como ele é. Não é caminho de produção, e não existe fora daqui.
-    print("3/5  esvaziando o que as migrations semearam, para o retrato do remoto entrar inteiro")
+    print("3/6  esvaziando o que as migrations semearam, para o retrato do remoto entrar inteiro")
     _psql(
         conteiner,
         "set session_replication_role = replica; "
@@ -201,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # ---------------------------------------------------------------- 4. restaurar
-    print("4/5  restaurando os dados do remoto no local")
+    print("4/6  restaurando os dados do remoto no local")
     with copia.open("rb") as arquivo:
         r = subprocess.run(
             ["docker", "exec", "-i", conteiner, "psql", "-U", "postgres", "-d", "postgres",
@@ -217,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"           a copia do remoto continua em {copia} — nada se perdeu.")
         return 6
 
-    # ------------------------------------------------------- 5/5. fechar a coerência
+    # ------------------------------------------------------- 5/6. fechar a coerência
     # ⚠️ **A RESTAURAÇÃO DEIXA REFERÊNCIA ÓRFÃ, E ISSO FOI MEDIDO — 1 linha em 24/09/2026.**
     #    `usuarios.auth_user_id` é FK para `auth.users`, e o dump da plataforma restaura com
     #    `session_replication_role = replica`, que desliga **também a verificação de chave
@@ -238,6 +242,25 @@ def main(argv: list[str] | None = None) -> int:
     )
     if orfaos and orfaos != "0":
         print(f"     {orfaos} vinculo(s) com credencial de OUTRO ambiente foram desfeitos aqui")
+
+    # ------------------------------------------------------- 6/6. avançar as sequências
+    # ⚠️ **SEM ISTO, A PRIMEIRA CRIAÇÃO NA TELA FALHA — e com a pior mensagem possível.** Medido em
+    #    24/09/2026, na conferência de Bernardo: criar curso no local dava *"Já existe um registro
+    #    com este valor"* com dados **inéditos**. A causa é que este script copia só o schema
+    #    `public`, e as sequências de código vivem em **`app`**: elas voltam ao início, e o próximo
+    #    `REG-000001` colide com o que o retrato trouxe. A carga do ETL não sofre porque avança as
+    #    sequências ao fim da promoção.
+    #
+    # ⚠️ **A FUNÇÃO É A DO ETL, e não uma segunda implementação.** `carregar.avancar_sequencias`
+    #    declara, por tabela, como extrair o número do código — `instrutores.codigo` é numérico puro,
+    #    os demais são `PREFIXO-NNNNNN`. Uma cópia dessa regra aqui divergiria no dia em que uma
+    #    sequência nova nascesse, e o sintoma seria este mesmo erro, meses depois.
+    print("6/6  avancando as sequencias de codigo (elas vivem em `app`, que a copia nao traz)")
+    with psycopg.connect(carregar.CONEXAO_LOCAL) as con:
+        avancadas = carregar.avancar_sequencias(con)
+        con.commit()
+    for sequencia, valor in sorted(avancadas.items()):
+        print(f"     {sequencia} -> {valor if valor else '(tabela vazia, fica onde esta)'}")
 
     # ---------------------------------------------------------------- o retrato do que ficou
     retrato = _psql(
