@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] **Nenhum marcador de clarificação restante** — ⚠️ **17 perguntas abertas de propósito** (Q-01 a Q-17), por decisão de Bernardo em 24/09/2026: *"NÃO responda nenhuma e NÃO rode o clarify"*. Os requisitos afetados apontam a pergunta em vez de assumir (`FR-012`, `FR-022`/`FR-024`, `FR-030..032`, `FR-040..043`, `FR-052`, `FR-062..065`, `FR-070`)
+- [x] **Nenhum marcador de clarificação restante** — as 17 perguntas do specify (Q-01 a Q-17) foram **decididas por Bernardo em 24/09/2026** e propagadas aos requisitos (`FR-003`, `FR-011`, `FR-012`, `FR-024`, `FR-030.1`, `FR-032`/`FR-032.1`, `FR-035`, `FR-040..043`, `FR-052`, `FR-062..065`, `FR-070`). ⚠️ Ficam **5 perguntas novas** (N-1 a N-5, lote 2), nenhuma bloqueante para a leitura da spec; decidem detalhe de carga e de gatilho e podem entrar no plano
 - [x] Requisitos testáveis e sem ambiguidade fora das perguntas abertas
 - [x] Critérios de sucesso mensuráveis (SC-001 a SC-013, com os critérios 3, 4 e 5 do Épico 5)
 - [x] Critérios de sucesso sem detalhe de implementação

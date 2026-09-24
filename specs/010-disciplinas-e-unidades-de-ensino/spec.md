@@ -4,7 +4,8 @@
 
 **Created**: 24/09/2026
 
-**Status**: Draft — **specify concluído; clarify NÃO rodado** (decisão de Bernardo, 24/09/2026)
+**Status**: Draft — specify concluído em 24/09/2026; **clarify rodado em lote em 24/09/2026** (Q-01 a
+Q-17 decididas por Bernardo Villas Boas — ver *Clarifications*); **plan NÃO rodado**
 
 **Input**: `/speckit.specify Épico 5 da v2.1 — Cadastros. FATIA (b): DISCIPLINAS E UNIDADES DE ENSINO.`
 (pedido de 24/09/2026, com as decisões D-B1 a D-B4, a análise obrigatória dos currículos e a lista de
@@ -62,6 +63,88 @@ foi **só consulta**, como pedido. **Não é base deste ramo** e **não foi apag
 Estas quatro **não são reinterpretadas** aqui. Onde uma delas encontra uma regra do documento 04 ou
 um dado do banco que parece contrariá-la, a tensão está **listada ao final** ("Regras que pareceram
 erradas"), não resolvida.
+
+---
+
+## Clarifications
+
+### Session 2026-09-24
+
+*(Respostas em lote de **Bernardo Villas Boas**, 24/09/2026, às 17 perguntas do specify. Cada uma está
+propagada ao requisito que a citava; as medições pedidas estão ao lado da resposta, com artefato.)*
+
+- Q: Q-01 — o que fazer com `turma_disciplina.instrutor_id`, `ch_prevista_por_instrutor` e
+  `disciplinas.instrutores_atribuidos`? → A: **Aposentar os três.** A fonte da verdade da atribuição
+  por turma é **`turma_disciplina_instrutor`**. Antes de aposentar, **provar** que os 79 valores de
+  `instrutor_id` já estão na junção, sem perder nenhum; depois a coluna para de ser escrita. **Nenhum
+  quinto lugar.** *Medido em 24/09/2026 (retrato `remoto-20260924-153818.sql`):* dos **79**
+  `turma_disciplina.instrutor_id` preenchidos, **79** têm linha **ativa** na junção com o **mesmo**
+  instrutor; `ch_prevista_por_instrutor` preenchida em **0**; `instrutores_atribuidos` preenchido em
+  **0 de 175**. **Não há nada a migrar** — a prova vira asserção pgTAP antes da migration que aposenta
+  (`FR-032`, `FR-032.1`).
+- Q: Q-02 — quais disciplinas em modo simultâneo, e o que é `herdar`? → A: **Começam como simultâneo as
+  três da `RN-MAT-05`** — Prática de Fim de Curso, LHFC e Prática de Manutenção de Auxílios à
+  Navegação —, identificadas no banco **pelo nome atual**; as demais Bernardo marca **pela tela** (o
+  modo é campo editável da disciplina). **`herdar` = usar o modo padrão da disciplina, sem outro
+  significado.** *Medido em 24/09/2026, `disciplinas.nome_disciplina` com `DE CURSO`, `LHFC` ou
+  `PRÁTICA`+`MANUTEN`:* **casam 3 linhas** — `53 - C-Ap-FR - XIII` *PRÁTICA DE  DE CURSO EM MANUTENÇÃO
+  DE AUXÍLIOS À NAVEGAÇÃO* (casa as duas práticas de uma vez), `41 - C-Ap-HN - XVIII` e
+  `20 - CAHO - XVIII` *LEVANTAMENTO HIDROGRÁFICO DE  DE CURSO* (LHFC). **Não casam** por nome, ficam
+  para a tela: `82 - C-Espc-FR - MBFCFR-017` *MANUTENÇÃO DE AUXÍLIOS À NAVEGAÇÃO DE  DE CURSO* (sem a
+  palavra "prática" — candidata provável), e os quatro trabalhos/projetos de conclusão
+  (`C-ApA-AuxNav-PR-SP III`, `C-ApA-OcOp-PR-SP X`, `C-ApA-PCN-PR-EAD PCN-PR-VII-EAD`,
+  `C-ApA-PrevMe-PR-EAD PrevMe VII`), que não são práticas. Todas as 8 estão hoje em `dividido`
+  (`FR-040`).
+- Q: Q-03 — resto do rateio e as 96 linhas com CH `NULL`? → A: **Resto para os mais antigos, pela ordem
+  de antiguidade do sistema. `NULL` = dividir igualmente só na leitura, sem gravar** (`FR-042`,
+  `FR-043`).
+- Q: Q-04 — desativar libera o código? `ALH-II` fica? → A: **Sim — desativar libera o código, como o
+  banco já faz. `ALH-II` fica** (`FR-011`, `FR-013`, D-5).
+- Q: Q-05 — exceções da carga? → A: **Carga por UE, sem fundir linhas, com o tratamento que a spec
+  propõe para cada exceção. Exceção sem tratamento claro fica FORA da carga como pendência nomeada, sem
+  bloquear o resto. `EST-QF-APOC`: pendência — tentar OCR; se não for confiável, fica sem UE até
+  transcrição** (`FR-063`, `FR-065`).
+- Q: Q-06 — soma das UEs não fecha com a CH da disciplina? → A: **Aviso, nunca recusa. CH derivada fica
+  como pergunta para o plano** (`FR-062`).
+- Q: Q-07 — período fora da janela da turma? → A: **Recusa quando o período sai da janela de uma turma
+  que tem janela (paridade v2.0, spec 029). Turma sem janela: aceita** (`FR-030.1`).
+- Q: Q-08 — grade muda com turma existente? → A: **Disciplina acrescentada à grade nasce como
+  `nao_informado` nas turmas não concluídas; disciplina desativada continua nas turmas onde já está**
+  (`FR-070`).
+- Q: Q-09 — onde mora o rastro de exclusão? → A: **Tabela nova, só de acréscimo** (`FR-024`).
+- Q: Q-10 — quem edita período e instrutor por turma? → A: **`disciplinas.editar`, como está, operador
+  incluído** (`FR-035`).
+- Q: Q-11 — código de disciplina nova? → A: **`DIS-` por sequência em `app` — e a sequência MUST entrar
+  na lista de `avancar_sequencias`, com teste, como as outras quatro** (`FR-012`).
+- Q: Q-12 — 1 TA = 1 hora para carregar a CH do currículo? → A: **Sim** (`FR-064`, Assumptions).
+- Q: Q-13 — renomear disciplinas para a grafia do currículo? → A: **Não renomear. Pendência**
+  (`PEND-5b-2`).
+- Q: Q-14 — concluída e atrasada derivam de quê? → A: **Da execução** (`FR-052`).
+- Q: Q-15 — edição em linha ou painel? → A: **Painel** (`FR-003`).
+- Q: Q-16 — aposentar a `RN-MAT-02`? → A: **Medir no banco: se não existe mais nenhuma duplicata do
+  `C-Ap-FR`, a `RN-MAT-02` está aposentada (era transitória até o fim da migração); se existir, mantém.**
+  *Medido em 24/09/2026, `disciplinas` × `cursos` onde `codigo = 'C-Ap-FR'`, qualquer status:* **0
+  pares** de `cod_disciplina` repetido em **13** linhas, **0** inativas, **0** sem previsão de início.
+  **Logo a `RN-MAT-02` está APOSENTADA** — emenda registrada no documento 04 (`.md`; o `.docx` não a
+  recebe), item 3 de "Regras que pareceram erradas" fechado (A-3).
+- Q: Q-17 — `RF-INSTR-06.1` nesta fatia? → A: **Não.**
+- Q: A "leitura humana dos 15 PDFs sem Ofício no nome" — o que verifica, e o que acontece sem ela? → A:
+  *(pedido de explicação, respondido com medição)* Ela verificaria **só o identificador do ato que
+  aprovou o currículo** (o *"Of nº 10-6/2025, da DEnsM"*), para a coluna `fundamento_normativo` —
+  **não versão nem conteúdo**: a decisão de 28/08/2026 já fixou os arquivos de `SIS11/Curriculos/` como
+  fonte oficial. *Medido em 24/09/2026 no texto dos 24 PDFs (PyMuPDF):* o Ofício está **legível por
+  máquina em 15** (os 9 do nome do arquivo + `c-ap-hn` `Of nº 10-6/2025`, `c-esp-alh` `10-16/2020`,
+  `c-esp-me` `10-22/2025`, `c-esp-opap` `10-20/2025`, `c-exp-agmag` `10-24/2025`, `c-exp-bati`
+  `10-17/2025`); **8 não trazem Ofício nenhum** e se identificam pela capa — *"CURRÍCULO … (sigla) —
+  MARINHA DO BRASIL — DIRETORIA DE ENSINO DA MARINHA, 2011"* (`C-EXP-METOC-OF`, `C-EXP-OBS-ME`) ou
+  *"… CENTRO DE INSTRUÇÃO E ADESTRAMENTO ALMIRANTE RADLER DE AQUINO, 2023/2024/2025/2026"* (os 6
+  estágios); **1** é ilegível (`EST-QF-APOC`). **Conclusão: a leitura humana é DISPENSADA** — o
+  extrator captura o Ofício onde ele existe e a capa (órgão + ano) onde não existe (`FR-064`). O que
+  fica é a pergunta **N-1** sobre o formato do fundamento nos 8 sem Ofício.
+- Q: A emenda nominal da regra 4 do `CLAUDE.md` (exclusão por RPC para disciplina e UE)? → A:
+  **Aprovada — é consequência da D-B1.** Aplicada em 24/09/2026 no `CLAUDE.md`, com data e autoria
+  (`FR-020`).
+- Q: A divisão em 3 PRs (banco → carga das UEs → telas)? → A: **Aprovada.**
 
 ---
 
@@ -184,7 +267,8 @@ disciplina — preservando na edição quem já está atribuído, mesmo desabili
    *"nenhum instrutor habilitado para esta disciplina"* com caminho clicável ao painel de habilitação
    da ficha do instrutor (`/instrutores/[codigo]`, spec 006) — não uma lista vazia muda.
 5. **Given** período informado fora da janela da turma, **When** salvo, **Then** o comportamento é o
-   decidido em **Q-07** (não assumido aqui).
+   seguinte: turma **com** janela → o banco recusa e a tela mostra a janela; turma **sem** janela →
+   grava (Q-07, 24/09/2026).
 
 ---
 
@@ -204,8 +288,8 @@ parcelas somam **10**; no simultâneo, **cada** um recebe **10**; com 1 instruto
 **Acceptance Scenarios**:
 
 1. **Given** disciplina de 30 tempos, modo dividido, 3 instrutores, **When** salvo, **Then** 10/10/10.
-2. **Given** 10 tempos, dividido, 3 instrutores, **When** salvo, **Then** a soma é 10 e a regra de
-   distribuição do resto é a decidida em **Q-03** (não assumida).
+2. **Given** 10 tempos, dividido, 3 instrutores (CT, 1ºTen, SO), **When** salvo, **Then** 4/3/3 — o
+   resto vai ao mais antigo (Q-03).
 3. **Given** modo simultâneo, **When** salvo, **Then** cada instrutor tem a CH integral e a CH
    **cumprida** não muda (`RF-MATERIAS-06`: *"a CH prevista é rateada; a CH cumprida, nunca"*).
 4. **Given** a pessoa ajusta o rateio à mão, **When** a soma não fecha, **Then** a gravação é recusada
@@ -261,7 +345,8 @@ criar UE `99` em disciplina de amostra, excluí-la (sem aula: some), tentar excl
    `reg_aula_ue_do_curso`) e a tela diz *"tem histórico — desative"*; **When** desativo, **Then** ela
    sai das opções de lançamento e o histórico fica.
 3. **Given** UE criada no sistema (não do currículo), **Then** ela é distinguível da UE do currículo
-   (origem visível), e o que acontece com a soma 134/134 quando a CH muda é o decidido em **Q-06**.
+   (origem visível); **When** a soma das UEs deixa de fechar com a CH da disciplina, **Then** a tela
+   **avisa** com a diferença e **grava** (Q-06).
 
 ---
 
@@ -288,16 +373,17 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 ### Edge Cases
 
 - **Código reaproveitado depois de desativar**: `uq_disciplinas_curso_cod_ativo` só vale entre ativas —
-  desativar `ALH-II` libera o código para uma nova? E excluir? **Q-04**, não assumido.
-- **Grade muda com turma existente** (`FR-032.4` da spec 009): disciplina **acrescentada** ao curso —
-  nasce linha nas turmas existentes? quais (planejadas? ativas?) — e disciplina **desativada** — a linha
-  fica (é histórico) e sai de onde? **Q-08**.
+  desativar **libera** o código (e excluir também); reativar com o código tomado é recusada (Q-04).
+- **Grade muda com turma existente** (`FR-032.4` da spec 009): disciplina **acrescentada** nasce
+  `nao_informado` nas turmas não concluídas; **desativada** fica onde está (Q-08, `FR-070`).
+- **Período fora da janela**: recusa pelo banco quando a turma tem janela; sem janela, aceita (Q-07,
+  `FR-030.1`).
 - **Reativar disciplina** cujo código foi tomado por outra enquanto estava inativa: o índice parcial
   recusa a reativação (`23505`) — a tela traduz como *"o código está em uso por outra disciplina ativa"*.
 - **Instrutor atribuído e depois desabilitado** (vínculo inativo): fica na edição, marcado, com o
   rótulo do estado; não aparece como opção **nova** em outra turma.
 - **Rateio com CH da disciplina alterada depois**: as parcelas gravadas deixam de somar a CH nova —
-  aviso na linha, nunca recálculo silencioso (**Q-03** define se a soma é imposta por gatilho).
+  aviso na linha, nunca recálculo silencioso; o gatilho do `FR-043` só age na **próxima** gravação.
 - **UE com aula em uma turma e sem em outra**: a UE é do **curso**; a recusa de exclusão vale se houver
   aula em **qualquer** turma.
 - **Disciplina sem habilitado nenhum** (55): a atribuição abre vazia com caminho para habilitar.
@@ -326,7 +412,8 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   a lista real é maior (D-6).
 - **FR-003**: A tabela MUST ser **expansível** (spec 031): a mesma tabela, não uma segunda, ganha as
   colunas de turma quando há turma; a linha expandida mostra detalhe (instrutores e rateio; UEs quando
-  o curso tem) **sem** trocar de página.
+  o curso tem) **sem** trocar de página. **Toda edição é por painel** (`dialogo`/formulário sobre a
+  página), **nunca em linha** — Q-15, 24/09/2026, paridade com a spec 038.
 - **FR-004**: Sem turma escolhida, a tela MUST mostrar a **grade do curso** (visão de catálogo) com
   edição de cadastro (US2) e **degradar** os indicadores de turma com aviso (`RN-DEG-01`; paridade
   obrigatória do `RF-MATERIAS-04`).
@@ -345,10 +432,17 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 - **FR-011**: O banco MUST recusar código repetido **entre disciplinas ativas do mesmo curso**
   (`uq_disciplinas_curso_cod_ativo` + `trg_disciplinas_unicidade`, já existentes — `RF-DADOS-06`), e a
   tela MUST traduzir o `23505` por `traducao-de-recusas.ts`, **nunca** expondo o texto cru. O mesmo
-  código em cursos diferentes MUST ser aceito.
+  código em cursos diferentes MUST ser aceito. **Desativar libera o código** para outra disciplina
+  ativa do curso — é o comportamento do índice parcial, **confirmado** (Q-04, 24/09/2026); a dupla
+  `C-Esp-ALH`/`ALH-II` (ativo × inativo) **fica como está**. Reativar uma inativa cujo código foi tomado
+  é recusada pelo mesmo índice e traduzida como *"o código está em uso por outra disciplina ativa"*.
 - **FR-012**: O identificador MUST ser **gerado pelo banco** (`RN-CRUD-03`): `disciplinas.codigo` hoje
-  guarda o `ID_Grade` da v2.0 verbatim (`53 - C-Ap-FR - XIII`); para disciplina nova, o formato MUST ser
-  o decidido em **Q-11** — não há gerador hoje, e a tela MUST NOT pedir que a pessoa digite.
+  guarda o `ID_Grade` da v2.0 verbatim (`53 - C-Ap-FR - XIII`); para disciplina nova o código MUST ser
+  **`DIS-NNNNNN`**, por **sequência em `app`** com `DEFAULT app.proximo_codigo_disciplina()` (mesmo
+  desenho do `TDI-`, com o `grant execute` do gotcha 5.1), e **a sequência MUST entrar em
+  `carregar.SEQUENCIAS_DE_CODIGO`**, coberta por `tests/unidade/sequencias-apos-restaurar.test.ts` e
+  pela prova `provar_sequencias_apos_copia.py` (P3 passa a exigir **5**) — Q-11, 24/09/2026. A tela
+  MUST NOT pedir que a pessoa digite; o `23505` desta coluna é *"erro interno de numeração"* (gotcha 9).
 - **FR-013**: **Desativar** e **reativar** MUST ser `UPDATE` de `status` (regra 4). Disciplina inativa
   MUST sair das opções de **nova** atribuição e da criação de linha em turma nova (`FR-032.3` da spec
   009) e MUST permanecer em todo histórico.
@@ -385,9 +479,10 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 - **FR-024**: **Rastro**: toda exclusão MUST gravar **quem** (`auth.uid()`), **o quê** (tabela, `id`,
   `codigo`, e o retrato JSON da linha apagada) e **quando**, **na mesma transação** da RPC, numa tabela
   **append-only** (gatilho recusando `UPDATE`/`DELETE`/`TRUNCATE` inclusive para `service_role`, como
-  `curso_regime_historico`), legível por quem tem `auditoria.ler`. ⚠️ Hoje **não existe** tabela para
-  isso (só `migracao_log`, que é da migração) e a RPC de instrutor **não grava rastro** — **onde** o
-  rastro mora é **Q-09**; que ele existe é D-B1.
+  `curso_regime_historico`), legível por quem tem `auditoria.ler`. **Decidido (Q-09, 24/09/2026): é
+  uma TABELA NOVA, só de acréscimo** — nome e colunas são do plano; `migracao_log` **não** é reutilizada
+  (é da migração, regra 5). Hoje a RPC de instrutor **não grava rastro** (A-9) — harmonizá-la é
+  `PEND-5b-1`.
 - **FR-025**: A exclusão de instrutor existente MUST NOT ser alterada por esta fatia; harmonizar o rastro
   dela com o desta é `PEND-5b-1`, junto com estender D-B1 aos outros cadastros.
 
@@ -400,41 +495,63 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 - **FR-031**: Os instrutores da disciplina **na turma** MUST ser gravados em
   **`turma_disciplina_instrutor`** (uma linha por instrutor, com `ch_prevista_tempos` e, quando LIQ-3
   vier, `papel`). **É a única tabela que esta fatia escreve para "instrutor da disciplina".**
-- **FR-032**: **Os outros lugares, e quem escreve cada um** — nenhum quarto é criado:
+- **FR-032**: **Os outros lugares, e o destino de cada um** — decidido em **Q-01, 24/09/2026**: a
+  fonte da verdade é a junção, **nenhum quinto lugar**, e os três resquícios são **aposentados**:
   | Lugar | Significa | Quem escreve | Esta fatia |
   |---|---|---|---|
   | `instrutor_disciplina` | **habilitação** (`RN-INST-01`, `VIN-`) | painel de habilitação da ficha do instrutor (spec 006, `FR-030` lá) | **só lê**, para filtrar quem pode ser oferecido (`RF-MATERIAS-02`) |
-  | `turma_disciplina_instrutor` | **atribuição por turma** | **esta fatia** (`FR-031`) | escreve |
-  | `disciplinas.instrutores_atribuidos` (`uuid[]`, vazio nas 175) | "atribuição de planejamento" (`RN-CRONOS-01`) | ninguém hoje | **não lê nem escreve** (D-2) |
-  | `turma_disciplina.instrutor_id` (79 preenchidos) | *"instrutor da disciplina NAQUELA turma … de onde a LIQ lê"* (comentário da coluna, P-6) | ETL | ⚠️ **quarto lugar** — o que esta fatia faz com ele é **Q-01** (D-3) |
+  | `turma_disciplina_instrutor` | **atribuição por turma — a fonte da verdade** | **esta fatia** (`FR-031`) | escreve |
+  | `disciplinas.instrutores_atribuidos` (`uuid[]`, **vazio nas 175**) | "atribuição de planejamento" (`RN-CRONOS-01`) | ninguém | **APOSENTADA** — comentário `[APOSENTADA — v2.1]`, sem `drop` (regra de banco); o gatilho `trg_disciplinas_instrutores_fk` fica inerte |
+  | `turma_disciplina.instrutor_id` (**79** preenchidos) | *"de onde a LIQ lê"* (comentário da coluna, P-6) | ETL | **APOSENTADA** depois da prova do `FR-032.1`; a LIQ (Épico 11) lê a junção — o comentário da coluna é reescrito para dizer isso |
+  | `turma_disciplina.ch_prevista_por_instrutor` (**0** preenchidos) | CH rateada na linha | ninguém | **APOSENTADA** — a CH rateada vive só em `turma_disciplina_instrutor.ch_prevista_tempos` (A-4, D-7) |
+- **FR-032.1**: **Antes** da migration que aposenta, uma asserção pgTAP MUST provar, **na base
+  carregada**, que **todo** `turma_disciplina.instrutor_id` não nulo tem linha **ativa** na junção com o
+  **mesmo** instrutor, e que `ch_prevista_por_instrutor` e `instrutores_atribuidos` estão vazios — se
+  um valor não estiver na junção, a migration **o migra para lá** antes de aposentar, **sem perder
+  nenhum**. *Medido em 24/09/2026: 79 de 79 na junção, 0 e 0 nos outros dois — nada a migrar.*
 - **FR-033**: A escolha MUST oferecer **só os habilitados** (`instrutor_disciplina.status = 'ativo'`)
   como opção nova, e MUST **preservar** na edição quem já está atribuído mesmo desabilitado ou
   desativado (`RF-MATERIAS-02`), com o estado visível — `on delete restrict` + `status`, nunca `DELETE`.
 - **FR-034**: Toda lista, seletor e filtro de instrutor MUST sair por `components/ciaara/seletor-instrutor.tsx`
   e `lib/dominio/antiguidade.ts` (`RN-ANT-01/02`), **sem exceção** — verificado em **todas** as
   ocorrências (critério 1). Nome no formato do `RF-INSTR-15`, por `nome-instrutor.tsx` (critério 2).
-- **FR-035**: Quem edita período e instrutor por turma MUST ser decidido **pelo banco**: hoje as
-  policies de `turma_disciplina` e `turma_disciplina_instrutor` leem `disciplinas.editar` (+ alcance de
-  turma + turma em oferta). Se o recorte deve ser outro, é **Q-10**; esta spec **não** muda a matriz.
+- **FR-035**: Quem edita período e instrutor por turma MUST ser decidido **pelo banco**, pelas policies
+  **existentes** de `turma_disciplina` e `turma_disciplina_instrutor`: **`disciplinas.editar`** (+
+  alcance de turma + turma em oferta), **operador incluído** — Q-10, 24/09/2026. A matriz **não** muda.
+- **FR-030.1**: Período previsto **fora da janela da turma** MUST ser **recusado pelo banco** quando a
+  turma **tem** janela (`data_inicio`/`data_termino` preenchidas) — paridade com a v2.0 (spec 029
+  `FR-005`/`FR-006`); turma **sem** janela **aceita** o período informado — Q-07, 24/09/2026. A recusa
+  vem com chave própria, traduzida como *"o período sai da janela da turma (dd/mm/aaaa a dd/mm/aaaa)"*.
 
 #### Rateio da CH prevista (`RF-MATERIAS-06`, `RN-MAT-05`)
 
 - **FR-040**: O modo MUST ser **dado**, nunca inferido do nome (`RN-MAT-05`): `disciplinas.modo_atribuicao_padrao`
-  marcável no cadastro (US2). O valor `herdar` do ENUM hoje não tem semântica escrita — **Q-02** diz o que
-  ele significa e **quais** disciplinas ficam `simultaneo` (a regra nomeia três práticas de fim de curso;
-  o banco tem 0 e os nomes perderam "FIM" — A-1).
+  é **campo editável** do cadastro (US2). **Decidido (Q-02, 24/09/2026):** a migration do PR 1 marca
+  `simultaneo` nas **três** linhas cujo nome atual casa com as três práticas da `RN-MAT-05` —
+  `53 - C-Ap-FR - XIII`, `41 - C-Ap-HN - XVIII`, `20 - CAHO - XVIII` —, **nomeadas uma a uma na
+  migration** (é decisão de Bernardo sobre linhas identificadas, não inferência por nome em tempo de
+  execução); as demais, inclusive `82 - C-Espc-FR - MBFCFR-017`, Bernardo marca **pela tela**.
+  **`herdar` significa "usar o modo padrão da disciplina", e nada mais** — sem coluna de modo por turma
+  nesta fatia, o rateio lê sempre `disciplinas.modo_atribuicao_padrao`; o que fazer com `herdar`
+  gravado **na própria** `disciplinas` é a pergunta **N-2**.
 - **FR-041**: A função pura `lib/dominio/rateio-de-carga.ts` (nome proposto; o documento 04 cita
   `distribuirCargaEntreInstrutores` em `carga-instrutor.ts` — o nome definitivo é do plano) MUST ser
   a **referência**: recebe CH da disciplina, lista de instrutores **já ordenada por antiguidade** e
   modo; devolve as parcelas. Dividido: soma **exata**; simultâneo: CH integral para cada um; 1 instrutor:
   integral nos dois modos. **Vitest com 2 e 3 instrutores em cada modo** (documento 04).
-- **FR-042**: A regra do **resto** quando a CH não divide (10 entre 3) MUST ser a decidida em **Q-03**
-  — a v2.0 (spec 032, `FR-007`) fazia divisão inteira com o resto **no último da lista**; o pedido
-  desta fatia exige soma exata e o documento 06 diz *"sem sobra nem falta"*. Não assumido.
+- **FR-042**: Quando a CH não divide igualmente (10 tempos entre 3), a **divisão é inteira e o resto vai
+  aos mais antigos, um tempo cada, pela ordem de antiguidade do sistema** (`lib/dominio/antiguidade.ts`,
+  com `antiguidade_declarada` como desempate) — Q-03, 24/09/2026. Registrado: a v2.0 (spec 032,
+  `FR-007`) punha o resto **no último da lista**; a regra muda de propósito, por decisão nominal.
+  Exemplos obrigatórios no Vitest: 10 entre 3 → 4/3/3 (mais antigo primeiro); 11 entre 3 → 4/4/3;
+  30 entre 3 → 10/10/10.
 - **FR-043**: A soma exata no modo dividido MUST ser **invariante do banco** (gatilho em
-  `turma_disciplina_instrutor`, recusa com chave própria traduzida), não só da tela — e MUST aceitar a
-  situação transitória em que `ch_prevista_tempos` é `NULL` nas 96 linhas migradas (**Q-03**: `NULL` =
-  "dividir igualmente", como o `RN-DEG-01` lê hoje, ou a carga desta fatia preenche as 96?).
+  `turma_disciplina_instrutor`, recusa com chave própria traduzida), não só da tela. **`ch_prevista_tempos`
+  `NULL` significa "dividir igualmente" SÓ NA LEITURA — nunca é gravado por inferência** (Q-03,
+  24/09/2026): as 96 linhas migradas **ficam `NULL`** até alguém salvar a atribuição daquela turma; a
+  função pura recebe as parcelas gravadas e, se todas forem `NULL`, devolve a divisão igual **com
+  aviso** (`RN-DEG-01`). O gatilho só confere a soma quando **todas** as parcelas da disciplina na turma
+  estão preenchidas; mistura de `NULL` com valor é recusada.
 - **FR-044**: A CH **cumprida** MUST NOT ser tocada por nada desta fatia — vem de `registros_aula`
   via `vw_disciplinas_execucao` / `vw_unidades_ensino_execucao` (spec 032, `FR-011`).
 
@@ -446,10 +563,11 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 - **FR-051**: A sinalização MUST distinguir *sem instrutor* e *início em ≤ N dias* **com** e **sem**
   instrutor (`RF-MATERIAS-03`), por `badge-status.tsx`; período `NULL` **não** sinaliza.
 - **FR-052**: Indicadores MUST ser total, concluídas, atrasadas e sem instrutor (`RF-MATERIAS-04`),
-  calculados por função pura sobre `vw_disciplinas_execucao`, com a derivação de *concluída* e *atrasada*
-  decidida em **Q-14** (a v2.0, spec 037 `FR-003`, usava *Não iniciada / Em andamento / Concluída* da
-  fórmula de execução — o vocabulário está em `badge-status.tsx`: `naoIniciada`, `emAndamento`,
-  `disciplinaConcluida`, `atrasada`).
+  calculados por função pura sobre `vw_disciplinas_execucao`. **Derivam da execução** (Q-14,
+  24/09/2026): *não iniciada* = `ta_executados = 0`; *em andamento* = executado > 0 e `ta_saldo > 0`;
+  *concluída* = `ta_saldo <= 0`; *atrasada* = hoje > `previsao_termino_efetiva` **e** `ta_saldo > 0` —
+  com `previsao_termino_efetiva` `NULL`, **nunca** atrasada. Vocabulário de `badge-status.tsx`
+  (`naoIniciada`, `emAndamento`, `disciplinaConcluida`, `atrasada`), fórmula da spec 037 `FR-003`.
 - **FR-053**: Filtros por instrutor e por situação (da turma e da disciplina) MUST viver na URL e MUST
   reiniciar ao trocar curso/turma (spec 037 `FR-005`); tabela, indicadores e gráfico MUST refletir
   **o mesmo** subconjunto.
@@ -464,28 +582,44 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 - **FR-061**: A UE MUST ter número, tópico, CH prevista (tempos, `> 0`), `fundamento_normativo` e
   origem visível — **do currículo** (carga) ou **criada no sistema**. `unique (disciplina_id, numero_ue)`
   já existe e MUST ser traduzida como *"já existe UE com este número nesta disciplina"*.
-- **FR-062**: A tela MUST mostrar a **soma** das CH das UEs contra a CH da disciplina. O que acontece
-  quando alguém muda a CH de uma UE ou da disciplina e a soma deixa de fechar — aviso (`RN-DEG-02`-like)
-  ou recusa (a asserção pgTAP `FR-024` da spec 002 hoje é sobre o **dado carregado**, não gatilho) — é
-  **Q-06**. Não assumido.
+- **FR-062**: A tela MUST mostrar a **soma** das CH das UEs contra a CH da disciplina. Quando a soma
+  **não fecha** — UE editada, UE criada no sistema, CH da disciplina alterada, ou as 3 divergências
+  reais de CH da análise §4.1 — o sistema MUST **avisar, nunca recusar** (Q-06, 24/09/2026): aviso na
+  linha da disciplina e no quadro, com a soma e a diferença à vista; a asserção pgTAP `FR-024` da spec
+  002 passa a valer **sobre a carga** (dado do currículo), não como gatilho sobre edição. **CH da
+  disciplina derivada da soma das UEs fica como pergunta para o plano**, não decidida aqui.
 - **FR-063**: **Cursos e disciplinas sem UE** MUST ser **dado**, não dedução: um marcador no curso
   (`cursos.sem_unidades_ensino`, ou equivalente decidido no plano) preenchido pela carga para
   `C-Espc-FR`, `C-Espc-HN` e `EST-QF-APOC`, e um estado por disciplina para as 5 `AMBIENTAÇÃO VIRTUAL` e
   `C-Ap-FR` TOPOGRAFIA. Com o marcador, a tela **não renderiza** seção de UE, **não** avisa e **não**
   exige (D-B3). ⚠️ `EST-QF-APOC` fica marcado como **"currículo não legível por máquina"**, não como
-  "sem UE" — a distinção é dado (§2.1 da análise), e o desmarcar é decisão de quem ler o PDF.
+  "sem UE" — a distinção é dado (§2.1 da análise). **Decidido (Q-05, 24/09/2026): pendência
+  `PEND-5b-3` — tentar OCR no PR 2; se o resultado não for confiável (invariante da soma não fecha, ou
+  texto ilegível), o curso fica sem UE até transcrição humana**, sem bloquear a carga dos demais.
 - **FR-064**: A carga das UEs MUST vir **da extração existente** (`scripts/etl/extrair_unidades_ensino.py`,
   saída versionada `scripts/etl/dados/unidades_ensino.csv`, **idêntica** à reexecução de hoje), por
   `INSERT … SELECT` que resolve `disciplina_id` com a **tabela de pareamento explícita** da análise
   (§3–§4), **versionada e revisada por Bernardo** — nunca por casamento automático de nome em tempo de
-  carga. **Toda linha carregada** MUST ter `fundamento_normativo` = o Ofício da DEnsM **lido do
-  currículo** (9 estão no nome do arquivo; 15 só no corpo do PDF — se não houver, a disciplina fica
-  **sem carga** e o caso vai para Bernardo, nunca um Ofício inventado) e `origem_migracao_v1` nomeando o
-  arquivo. Nome de UE e tópico com a **grafia do currículo**.
-- **FR-065**: As **exceções medidas** MUST ser decididas antes da carga, uma a uma (**Q-05**): as 7 UEs
-  de `HN-2101-0621` (banco desdobrou em `I` e `I-I`); as 3 de `MATFIS` (`CAHO`, `MAT` + `FIS`); a
-  disciplina emprestada `C-Exp-Metoc-OF-SP` `IV`; TOPOGRAFIA de `C-Ap-FR` sem lista; o nome truncado e o
-  "DE DE" da extração. **Nenhuma** é resolvida por inferência.
+  carga. **Toda linha carregada** MUST ter `fundamento_normativo` **capturado pelo extrator do texto
+  do PDF** — *medido em 24/09/2026:* o Ofício da DEnsM é legível por máquina em **15 dos 24**
+  (`Of nº 10-6/2025` etc.); nos **8** sem Ofício, a capa traz órgão e ano (*"Diretoria de Ensino da
+  Marinha, 2011"* / *"CIAARA, 2023–2026"*), que é o que se grava (formato em **N-1**); **leitura
+  humana dispensada** (decisão de 24/09/2026 — a fonte oficial é o arquivo, desde 28/08/2026). Nunca um
+  Ofício inventado; `origem_migracao_v1` nomeia o arquivo. Nome de UE e tópico com a **grafia do
+  currículo**. **CH: 1 TA = 1 hora, sem conversão** (Q-12, 24/09/2026).
+- **FR-065**: As **exceções medidas** têm tratamento decidido (Q-05, 24/09/2026 — *carga por UE, sem
+  fundir linhas; exceção sem tratamento claro fica FORA da carga como pendência nomeada, sem bloquear o
+  resto*):
+  | Exceção | Tratamento |
+  |---|---|
+  | 7 UEs de `HN-2101-0621` (`C-Ap-HN`; banco tem `I` MATEMÁTICA 105 e `I-I` FÍSICA 21) | **carga por UE**, cada uma para a metade que o currículo indica. *Medido:* UE 7 *FÍSICA* = **21 h** = CH de `I-I`; UEs 1–6 (matemática, estatística, erros, incerteza, ajustamento) somam **105 h** = CH de `I`. A tabela de pareamento por UE é **revisada por Bernardo** antes da carga (**N-3**) |
+  | UEs de `MATFIS` (`CAHO`; banco tem `MAT` 28 e `FIS` 28) — **são 2, não 3** (correção da análise §4.2) | **carga por UE**: UE 1 *EMPREGO DOS CONCEITOS DE MATEMÁTICA…* 28 h → `MAT`; UE 2 *…DE FÍSICA…* 28 h → `FIS` — revisada por Bernardo (**N-3**) |
+  | `C-Exp-Metoc-OF-SP` `IV` (emprestada de `C-Exp-MetocOf`) | **sem UE** nesta carga — pendência `PEND-5b-5`; replicar seria inferir |
+  | TOPOGRAFIA de `C-Ap-FR` (`VIII`, 100) | **não é exceção do currículo — é defeito do extrator**: *medido em 24/09/2026 no PDF*, a seção existe com o cabeçalho grafado *"LISTA DE UNIDADES DEENSINO"* (sem espaço) e traz **10 UEs que somam 100 h**; o extrator, que procura *"UNIDADES DE ENSINO"*, não a viu. O PR 2 corrige o extrator (**uma** implementação) e o catálogo passa a **582 UEs em 135 disciplinas**, invariante 135/135 — número a **remedir** depois da correção |
+  | Nome truncado (`C-Exp-MetocOf` `IV`) e "DE DE DADOS" (2 estágios) | corrigir/confirmar **no extrator**, contra o PDF, no PR 2; o nome gravado é o do PDF |
+  | 5 `AMBIENTAÇÃO VIRTUAL` | **sem UE**, marcadas (`FR-063`) |
+  | `EST-QF-APOC` | `FR-063` — OCR, senão pendência |
+  **Nenhuma** é resolvida por inferência: o pareamento por UE é tabela explícita, versionada e revisada.
 - **FR-066**: A carga MUST ser **migration/seed aplicada ao remoto como as demais** — depois do CI verde,
   com **cópia datada do remoto antes** (`dado_do_remoto.py --somente-copia`, arquivo citado no PR) —
   **antes do merge**, porque preview e Production são o mesmo projeto (AMBIENTE-1). ⚠️ **Nada disto é
@@ -496,9 +630,11 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 
 #### Fronteira herdada da spec 009
 
-- **FR-070**: `FR-032.4` da spec 009 — o que acontece com as linhas de `turma_disciplina` das turmas
-  **existentes** quando a grade muda (disciplina acrescentada, desativada) — é **desta** fatia e MUST ser
-  o decidido em **Q-08**. Hoje o gatilho `trg_turmas_fazer_nascer_disciplinas` só age em turma **nova**.
+- **FR-070**: `FR-032.4` da spec 009 — decidido (Q-08, 24/09/2026): **disciplina acrescentada à grade
+  nasce como `nao_informado` nas turmas não concluídas** do curso, por gatilho `AFTER INSERT` em
+  `disciplinas` (simétrico ao `trg_turmas_fazer_nascer_disciplinas`, que só age em turma nova);
+  **disciplina desativada continua nas turmas onde já está** — a linha de `turma_disciplina` fica, sai
+  das listas de nova atribuição e aparece como inativa. Se "não concluídas" inclui `cancelada` é **N-4**.
 
 #### Transversal
 
@@ -585,8 +721,8 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 - **A-2** · A unicidade existe, mas **só entre ativas** (índice parcial + gatilho). A "duplicata"
   `C-Esp-ALH`/`ALH-II` é `ativo` × `inativo` — hoje **legal** pela regra do banco. Se desativar libera o
   código é a pergunta certa, não "como sanear" (**Q-04**).
-- **A-3** · `RN-MAT-02` (`C-Ap-FR`): **0** duplicatas; a regra se declara transitória. Aposentá-la é
-  alterar o documento 04 — **Q-16**, não decidido.
+- **A-3** · `RN-MAT-02` (`C-Ap-FR`): **0** duplicatas em qualquer status (13 linhas, 0 inativas, 0 sem
+  previsão). ✅ **Aposentada por Bernardo em 24/09/2026 (Q-16)** — emenda no documento 04 `.md`.
 - **A-4** · CH rateada: **0 de 210** em `turma_disciplina.ch_prevista_por_instrutor` e **NULL nas 96**
   de `turma_disciplina_instrutor.ch_prevista_tempos`. Há **duas colunas** para o mesmo dado (uma
   `numeric(6,2)` na linha, outra por instrutor na junção) — esta spec escreve **só** na junção
@@ -594,7 +730,8 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 - **A-5** · **Quatro** lugares de "instrutor da disciplina", não três: o pedido nomeou
   `disciplinas.instrutores_atribuidos`, `instrutor_disciplina` e `turma_disciplina_instrutor`; o banco
   tem ainda **`turma_disciplina.instrutor_id`** (79 preenchidos, todos também na junção; 6 só na junção),
-  cujo comentário diz ser *"a coluna de onde a LIQ do Épico 11 lê"*. **Q-01**.
+  cujo comentário diz ser *"a coluna de onde a LIQ do Épico 11 lê"*. ✅ **Decidido (Q-01): a junção é a
+  fonte; os resquícios são aposentados** (`FR-032`, `FR-032.1`).
 - **A-6** · `EST-QF-APOC` é PDF **sem camada de texto**: "sem UE" nunca foi medido — foi **não lido**.
 - **A-7** · O extrator não lê o ordinal em `c-exp-metocof_0.pdf` (5 × `?`) e trunca um nome; e há
   "DE DE" em dois estágios — na extração; se está no PDF, é do currículo (análise §6).
@@ -621,7 +758,7 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   **não** marcou (0 de 175). Regra não alterada; o dado é que não a cumpre (A-1).
 - **D-5** · `RF-DADOS-06` diz `unique (curso_id, codigo)`; o implementado é **parcial** (`where status =
   'ativo'`) sobre `cod_disciplina`. Comportamento diferente do texto: código de inativa é reutilizável.
-  Não alterado — **Q-04**.
+  ✅ **Confirmado como o comportamento pretendido (Q-04, 24/09/2026)**; o documento 02 não foi emendado.
 - **D-6** · Documento 25 lista `/disciplinas` com `curso, status, busca`; a cascata exige `turma` e os
   filtros da spec 037 exigem `instrutor` e a situação. O contrato tipado (`FR-002`) é a fonte; o
   documento 25 **não** foi emendado.
@@ -641,7 +778,7 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 
 ---
 
-## Proposta de divisão em PRs — com justificativa
+## Divisão em PRs — ✅ APROVADA por Bernardo Villas Boas em 24/09/2026
 
 | PR | Conteúdo | Por que separado |
 |---|---|---|
@@ -655,10 +792,12 @@ fundir PR 1 e PR 2 (uma ida só ao remoto, uma cópia só).
 
 ---
 
-## Perguntas para o `/speckit.clarify` — em LOTE, nenhuma respondida aqui
+## Perguntas do specify — ✅ TODAS DECIDIDAS em 24/09/2026 (registro histórico)
 
-*(Ordenadas pelo que mais muda **tela e banco**. Cada uma traz opções e uma recomendação, que é
-opinião do agente e **não** decisão. Decisão de Bernardo, 24/09/2026: o specify para aqui.)*
+*(A tabela abaixo é a que o specify entregou, mantida como registro do que foi perguntado e
+recomendado. **A decisão de cada uma está em *Clarifications*, e não é sempre a recomendação** — Q-03
+mudou a regra do resto em relação à v2.0; Q-16 foi decidida por medição. As perguntas **novas** que o
+clarify produziu estão no lote 2, abaixo desta tabela.)*
 
 | # | Pergunta | Opções | Recomendação (não decisão) | Muda |
 |---|---|---|---|---|
@@ -680,6 +819,16 @@ opinião do agente e **não** decisão. Decisão de Bernardo, 24/09/2026: o spec
 | **Q-16** | Aposentar a `RN-MAT-02` (0 duplicatas em `C-Ap-FR`; regra transitória)? Exige autorização nominal | (a) sim, com data; (b) manter como no-op documentado | **(b)** até autorização | doc 04 |
 | **Q-17** | `RF-INSTR-06.1` (preferências por turma/disciplina) entra aqui, já que a estrutura por turma existe? (spec 006 deixou "depois da fatia (b)") | (a) não — fatia própria; (b) sim, mínimo | **(a)** | escopo |
 
+### Lote 2 — perguntas novas do clarify de 24/09/2026, nenhuma respondida
+
+| # | Pergunta | Opções | Recomendação (não decisão) | Muda |
+|---|---|---|---|---|
+| **N-1** | Nos **8** currículos sem Ofício, o que vai em `fundamento_normativo`? | (a) *"Currículo `<sigla>` — `<órgão da capa>`, `<ano da capa>`"* (ex.: *Currículo EST-QF-APHID — CIAARA, 2023*), capturado pelo extrator; (b) o nome do arquivo; (c) deixar `NULL` e pendência | **(a)** — é o que o documento diz de si mesmo, legível por máquina; (b) não é fundamento; (c) contraria `FR-023` da spec 002 (coluna obrigatória) | carga |
+| **N-2** | `herdar` = "usar o padrão da disciplina" — mas o ENUM está **na própria** `disciplinas.modo_atribuicao_padrao`, onde não há de quem herdar. O que fazer? | (a) `CHECK` proibindo `herdar` em `disciplinas`; o valor fica reservado para uma futura coluna por turma; a tela oferece só `dividido`/`simultaneo`; (b) tratar `herdar` em `disciplinas` como `dividido` (leitura), sem `CHECK`; (c) criar `turma_disciplina.modo_atribuicao` `default 'herdar'` já nesta fatia | **(a)** — dado sem semântica não deve ser gravável; (c) é estrutura sem requisito | banco, tela |
+| **N-3** | O pareamento **por UE** das duas disciplinas desdobradas: aceitar a tabela proposta no `FR-065` (`HN-2101` UEs 1–6 → `I`, UE 7 → `I-I`; `MATFIS` UE 1 → `MAT`, UE 2 → `FIS` — as CH fecham exatamente nas quatro) como **revisada**? | (a) sim, como está; (b) Bernardo revisa contra o PDF antes do PR 2; (c) fora da carga, pendência | **(b)** — é o que o Q-05 pediu ("revisada"); as somas exatas tornam a revisão rápida, mas confirmar é dele, não do agente | carga |
+| **N-4** | "Turmas não concluídas" do Q-08 inclui as **canceladas**? | (a) não — só `planejada` e `ativa` recebem a linha nova; (b) sim, todas menos `concluida` | **(a)** — turma cancelada não terá lançamento; linha nova nela é ruído na LIQ | banco (gatilho) |
+| **N-5** | `disciplinas.codigo` das linhas migradas (`53 - C-Ap-FR - XIII`) e o novo `DIS-NNNNNN` convivem na mesma coluna `unique`. A sequência começa em **1** (`DIS-000001`) — há risco de colisão com algum `codigo` legado? *Medido: nenhum dos 175 começa com `DIS-`* | (a) começa em 1, com asserção pgTAP de que nenhum legado tem o prefixo; (b) começa em 1000 por precaução | **(a)** — medido, não há colisão possível; (b) é superstição | banco |
+
 ---
 
 ## Fora de escopo — declarado, não esquecido
@@ -687,7 +836,7 @@ opinião do agente e **não** decisão. Decisão de Bernardo, 24/09/2026: o spec
 - **Regime/vigência** (fatia (a), T-1; critério 7 **não** é daqui — D-1).
 - **Avaliações e atividades** de qualquer tipo (Épicos 8, 9); **DSA** (6); **cronograma** (7);
   **LIQ/OS** (11) e **LIQ-3**.
-- **Preferências do instrutor** `RF-INSTR-06.1` — salvo Q-17.
+- **Preferências do instrutor** `RF-INSTR-06.1` — **confirmado fora** (Q-17, 24/09/2026).
 - **D-B1 nos outros cadastros** (`PEND-5b-1`).
 - **Qualquer escrita no banco remoto nesta rodada.**
 - **Ficha em PDF**; **subunidade (SUE)** como tabela (documento 05: Princípio X).
@@ -698,7 +847,9 @@ opinião do agente e **não** decisão. Decisão de Bernardo, 24/09/2026: o spec
   o rastro de `excluir_instrutor`.
 - `PEND-5b-2` — grafia das disciplinas do banco × currículo (Q-13).
 - `PEND-5b-3` — transcrição/OCR do currículo de `EST-QF-APOC`.
-- `PEND-5b-4` — normalizar `disciplinas.instrutores_atribuidos` (documento 21 §9) ou aposentar.
+- `PEND-5b-4` — ~~normalizar `disciplinas.instrutores_atribuidos` ou aposentar~~ ✅ **decidido: aposentar**
+  (Q-01, 24/09/2026) — vira tarefa do PR 1, não pendência.
+- `PEND-5b-5` — UEs da disciplina emprestada `C-Exp-Metoc-OF-SP` `IV` (fora da carga, `FR-065`).
 
 ---
 
@@ -707,13 +858,14 @@ opinião do agente e **não** decisão. Decisão de Bernardo, 24/09/2026: o spec
 1. **`RN-MAT-05`** diz que o ETL marca `simultaneo` — não marcou (D-4).
 2. **`RF-DADOS-06`** descreve `unique (curso_id, codigo)`; o banco tem unicidade **parcial** sobre
    `cod_disciplina` (D-5).
-3. **`RN-MAT-02`** se declara transitória e já não tem objeto (A-3).
+3. ~~**`RN-MAT-02`** se declara transitória e já não tem objeto (A-3).~~ ✅ **Aposentada em 24/09/2026
+   por Bernardo Villas Boas (Q-16), sob medição de 0 duplicatas** — emenda no documento 04 `.md`.
 4. **`RF-MATERIAS-05`** fala em "da disciplina"; o fato é por turma (D-2).
 5. **O comentário de `turma_disciplina.instrutor_id`** afirma que a LIQ lê dali — mas a junção existe e
    tem mais dado (A-5). Um dos dois comentários está vencido.
 6. **Documento 05 §9.1** diz que a SUE "não vira tabela enquanto não houver requisito" — a tela de UE
    mostrará o tópico; se Bernardo quiser as subunidades visíveis, é requisito novo, não desta fatia.
-7. **D-B1 × regra 4 do `CLAUDE.md`**: a regra 4 diz *"nenhuma outra tabela ganha exceção"* além de
-   instrutor. D-B1 **amplia** a exceção para `disciplinas` e `unidades_ensino`, sob a mesma delimitação
-   (sem histórico nenhum). A regra 4 **precisa de emenda nominal** no `CLAUDE.md` para dizer isso — não
-   feita aqui.
+7. ~~**D-B1 × regra 4 do `CLAUDE.md`** … precisa de emenda nominal~~ ✅ **Emenda aprovada por Bernardo
+   Villas Boas em 24/09/2026 e aplicada no `CLAUDE.md`**: a exceção passa a cobrir instrutor,
+   disciplina e unidade de ensino, sempre sem histórico nenhum, por RPC com porteiro e rastro; nenhuma
+   outra tabela.

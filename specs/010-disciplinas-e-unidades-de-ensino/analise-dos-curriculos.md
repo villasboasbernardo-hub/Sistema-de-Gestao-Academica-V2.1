@@ -55,10 +55,18 @@ UE · **572** UEs · invariante *soma das UE = CH da disciplina* **fecha em 134 
 aferíveis** (saída do extrator, hoje). **8 siglas** de currículo não batem com `cursos.codigo` e foram
 mapeadas à mão (coluna 3) — é o "terceiro espaço de nomes" que o `CLAUDE.md` já registrava no Épico 2.
 
-**Norma de origem.** O nome do arquivo carrega o Ofício da DEnsM em **9** currículos (`of-10-6-2025`,
-`of-10-26-2022`, `of-10-31-????`, `of-10-16-2023`, `of-10-16-2025`, `of-10-27-2022`, `of10-82-2024` ×2 e
-o de CAHO). Nos **15** restantes o Ofício só pode vir **do corpo do PDF** — não foi lido nesta rodada,
-e a spec proíbe inventá-lo (`FR-050`).
+**Norma de origem — medida no texto dos 24 PDFs em 24/09/2026 (PyMuPDF, padrão `Of nº N-N/AAAA`).**
+O Ofício da DEnsM é **legível por máquina em 15**: os 9 cujo nome de arquivo já o traz (`Of nº 10-6/2025`
+para CAHO e C-Ap-FR; `10-26/2022`; `10-31/2022` — o ano que faltava no nome está no corpo; `10-16/2023`;
+`10-16/2025`; `10-27/2022`; `10-82/2024` ×2) e mais 6 só no corpo (`c-ap-hn` `10-6/2025`; `c-esp-alh`
+`10-16/2020`; `c-esp-me` `10-22/2025`; `c-esp-opap` `10-20/2025`; `c-exp-agmag` `10-24/2025`;
+`c-exp-bati` `10-17/2025`). **8 não trazem Ofício nenhum** e se identificam pela capa: *"CURRÍCULO … —
+MARINHA DO BRASIL — DIRETORIA DE ENSINO DA MARINHA — 2011"* (`c-exp-metocof`, `c-exp-obs-me`) e
+*"… — CENTRO DE INSTRUÇÃO E ADESTRAMENTO ALMIRANTE RADLER DE AQUINO — 2023/2024/2024/2026/2026/2025"*
+(`est-qf-aphid`, `em2040phs`, `proc-mf-ead`, `mareflu`, `navflu-ead`, `pgrs100`). **1** é ilegível
+(`est-qf-apoc`). Consequência: a leitura humana que a spec pedia **é dispensada** (decisão de
+24/09/2026) — o extrator captura o que o PDF diz de si; o formato para os 8 sem Ofício é a pergunta
+**N-1** da spec.
 
 ### 2.1 Os três currículos sem UE — confirmados, com a distinção que importa
 
@@ -120,16 +128,19 @@ a disciplina do currículo que não tem lista — §4.4.)
 Nenhuma foi "corrigida" em lado nenhum. Qual lado vale, e como a CH da disciplina se concilia com a
 soma das UEs dela (invariante 134/134), é **Q-06** e **Q-12** da spec.
 
-### 4.2 Uma disciplina do currículo, duas no banco (2 casos, 7 + 3 UEs)
+### 4.2 Uma disciplina do currículo, duas no banco (2 casos, 7 + 2 UEs)
+
+*(⚠️ Correção de 24/09/2026, no clarify: a primeira versão desta seção dizia **3** UEs para `MATFIS`;
+lido no JSON da extração, são **2**.)*
 
 | Currículo | Banco | Soma confere? | UEs do currículo |
 |---|---|---|---|
-| `C-Ap-HN` · `HN-2101-0621` MATEMÁTICA E FÍSICA APLICADAS À HIDROGRAFIA · 126 h · **7 UEs** | `I` MATEMÁTICA APLICADA À HIDROGRAFIA 105 + `I-I` FÍSICA APLICADA À HIDROGRAFIA 21 | 105 + 21 = **126** ✓ | sem destino único — cada UE pertence a uma das duas metades, e **só o currículo diz qual** |
-| `CAHO` · `MATFIS` 56 h · **3 UEs** | `MAT` 28 + `FIS` NIVELAMENTO DE FÍSICA 28 | 28 + 28 = **56** ✓ | idem (aqui `MAT` pareou com `MATFIS` pelo prefixo, e é por isso que aparece em §4.1) |
+| `C-Ap-HN` · `HN-2101-0621` MATEMÁTICA E FÍSICA APLICADAS À HIDROGRAFIA · 126 h · **7 UEs** | `I` MATEMÁTICA APLICADA À HIDROGRAFIA 105 + `I-I` FÍSICA APLICADA À HIDROGRAFIA 21 | 105 + 21 = **126** ✓ | UE 1 *MATEMÁTICA APLICADA NA RESOLUÇÃO DE PROBLEMAS HIDROGRÁFICOS* 48 h · UE 2 *ESTATÍSTICA* 21 · UE 3 *FUNDAMENTOS DA TEORIA DOS ERROS* 11 · UE 4 *PROPAGAÇÃO DE ERROS* 7 · UE 5 *QUANTIFICAÇÃO DA INCERTEZA POSICIONAL* 3 · UE 6 *AJUSTAMENTO TOPO-GEODÉSICO* 15 · UE 7 *FÍSICA* 21. **UEs 1–6 somam 105 = `I`; UE 7 = 21 = `I-I`** |
+| `CAHO` · `MATFIS` NIVELAMENTO DE MATEMÁTICA E FÍSICA · 56 h · **2 UEs** | `MAT` 28 + `FIS` NIVELAMENTO DE FÍSICA 28 | 28 + 28 = **56** ✓ | UE 1 *EMPREGO DOS CONCEITOS DE MATEMÁTICA NA RESOLUÇÃO DE PROBLEMAS PRÁTICOS* 28 h · UE 2 *EMPREGO DOS CONHECIMENTOS DE FÍSICA…* 28 h. **UE 1 = 28 = `MAT`; UE 2 = 28 = `FIS`** (aqui `MAT` pareou com `MATFIS` pelo prefixo, e é por isso que aparece em §4.1) |
 
-⚠️ A carga **não pode decidir isto por inferência** (D-B4). Ou o pareamento é feito **por UE**, lendo
-o tópico contra o currículo, ou as duas linhas do banco voltam a ser uma — as duas saídas mudam o
-banco e estão em **Q-05**.
+✅ **Decidido em 24/09/2026 (Q-05): carga por UE, sem fundir linhas.** A tabela de destino por UE acima
+é **proposta pela soma exata das CH** e fica sujeita à revisão de Bernardo (**N-3** da spec) — não é
+a máquina decidindo; é a máquina mostrando que só há uma partição que fecha.
 
 ### 4.3 Disciplina do banco sem par no currículo (41)
 
@@ -142,12 +153,18 @@ banco e estão em **Q-05**.
 
 **Conferência:** 32 + 5 + 3 + 1 = **41** ✓.
 
-### 4.4 Disciplina do currículo sem lista de UE (1)
+### 4.4 Disciplina do currículo sem lista de UE (1) — ✅ resolvido: é defeito do extrator
 
-`C-Ap-FR` · `FR-2208-1010` TOPOGRAFIA · 100 h — o extrator achou a disciplina e **nenhuma**
-`LISTA DE UNIDADES DE ENSINO` sob ela. Pareia com `VIII` TOPOGRAFIA 100 do banco. **Precisa de leitura
-humana do PDF**: ou o currículo realmente não lista UE para ela, ou o extrator não a viu. Registrado,
-não decidido (**Q-05**).
+`C-Ap-FR` · `FR-2208-1010` TOPOGRAFIA · 100 h — o extrator achou a disciplina e **nenhuma** lista sob
+ela. Pareia com `VIII` TOPOGRAFIA 100 do banco. **Lido no PDF em 24/09/2026 (clarify):** a seção
+existe, com o cabeçalho grafado **`LISTA DE UNIDADES DEENSINO`** (sem espaço) — o extrator procura
+`UNIDADES DE ENSINO` e não a vê. A lista tem **10 UEs** (*CONCEITOS MATEMÁTICOS NA REPRESENTAÇÃO DA
+TERRA E DA CARTA NÁUTICA* 4 h · *SEMELHANÇA DE TRIÂNGULOS NA NAVEGAÇÃO COSTEIRA* 4 · *GEOMETRIA MÉTRICA
+ESPACIAL APLICADA À TOPOGRAFIA* 3 · *MEDIDA DE ÂNGULO* 10 · *TOPOGRAFIA* 5 · *MEDIDA DE ÂNGULOS EM
+TOPOGRAFIA* 16 · *MEDIDA DE DISTÂNCIAS* 10 · *ALTIMETRIA* 14 · *SISTEMAS ORBITAIS (RASTREIO)* 20 ·
+*PLANIMETRIA* 14) que **somam 100 h** — a invariante fecha. Corrigir o extrator é do PR 2 (uma
+implementação só); depois da correção o catálogo passa a **582 UEs em 135 disciplinas**, número a
+remedir.
 
 ### 4.5 Nome diferente entre par (grafia — pareado, não corrigido)
 
@@ -184,7 +201,10 @@ A spec manda que o nome da UE **siga a grafia do currículo** — mas **renomear
 | `avaliacoes` com `disciplina_id` | 188, em 62 disciplinas · `planejamento_anual`: 0 | idem |
 | unicidade de código | índice **parcial** `uq_disciplinas_curso_cod_ativo (curso_id, cod_disciplina) where status = 'ativo'` **+** gatilho `trg_disciplinas_unicidade` (`validar_unicidade_disciplina`, só entre ativas, `errcode 23505`) | `pg_indexes`, `pg_proc.prosrc` sem comentário |
 | duplicata de código | entre ativas **0**; contando inativas **1** — `C-Esp-ALH` `ALH-II`: `95 - C-Esp-ALH - ALH-II` (ativo, *SISTEMAS DE INFORMAÇÃO…*) e `96 - C-Esp-ALH - ALH-II` (**inativo**, *PUBLICAÇÕES E NORMAS*), cada uma com 1 linha de `turma_disciplina` | consulta por `(curso_id, cod_disciplina)` |
-| `RN-MAT-02` (duplicatas em `C-Ap-FR`) | **0** | idem |
+| `RN-MAT-02` (duplicatas em `C-Ap-FR`) | **0** pares em qualquer status — 13 linhas, 0 inativas, 0 sem previsão de início (remedido no clarify de 24/09/2026 → regra **aposentada**, Q-16) | `group by cod_disciplina having count(*) > 1` sobre `disciplinas` × `cursos` |
+| `RN-MAT-05` — as três práticas, pelo nome atual | **3 linhas casam**: `53 - C-Ap-FR - XIII`, `41 - C-Ap-HN - XVIII`, `20 - CAHO - XVIII`; **5 não casam** (`MBFCFR-017` sem a palavra "prática"; 4 trabalhos/projetos de conclusão); as 8 estão em `dividido` | `nome_disciplina ilike '%DE CURSO%' or '%LHFC%' or ('%PRÁTICA%' and '%MANUTEN%')` |
+| `turma_disciplina.instrutor_id` × junção (Q-01) | **79 de 79** com linha **ativa** na junção com o **mesmo** instrutor; `ch_prevista_por_instrutor` **0**; `instrutores_atribuidos` **0 de 175** | `exists (… i.instrutor_id = td.instrutor_id and i.status = 'ativo')` |
+| `disciplinas.codigo` começando com `DIS-` | **0 de 175** (N-5) | `codigo like 'DIS-%'` |
 | `modo_atribuicao` (ENUM) | rótulos **`herdar`, `dividido`, `simultaneo`** — em `disciplinas.modo_atribuicao_padrao`; **não há** coluna de modo em `turma_disciplina` nem em `turma_disciplina_instrutor` | `pg_enum`, `information_schema.columns` |
 | `modo_atribuicao_padrao = 'simultaneo'` | **0 de 175** | `select count(*)` |
 | `disciplinas.instrutores_atribuidos` (`uuid[]`) | vazio nas 175; comentário: *"Atribuição de PLANEJAMENTO (RN-CRONOS-01) … PENDENTE DE DECISÃO: normalizar em tabela própria"* | `col_description` |
@@ -210,8 +230,12 @@ A spec manda que o nome da UE **siga a grafia do currículo** — mas **renomear
    que usar o nome do currículo para esta disciplina precisa do nome inteiro — **do PDF, não do CSV**.
 3. **"DE DE DADOS"** em dois estágios (§4.5) — a duplicação está na extração; se estiver no PDF, o
    nome carregado repete o currículo e a spec anota a origem.
-4. **TOPOGRAFIA de `C-Ap-FR` sem lista de UE** (§4.4).
-5. **`EST-QF-APOC` não é "sem UE"; é "sem texto"** (§2.1).
+4. **TOPOGRAFIA de `C-Ap-FR`: o cabeçalho `LISTA DE UNIDADES DEENSINO` (sem espaço) escapa ao padrão
+   do extrator** — 10 UEs, 100 h, não lidas (§4.4). É a única disciplina do PDF com essa grafia.
+5. **`EST-QF-APOC` não é "sem UE"; é "sem texto"** (§2.1). Decidido em 24/09/2026: tentar OCR no PR 2;
+   sem resultado confiável, fica sem UE até transcrição (`PEND-5b-3`).
+6. **O Ofício não é capturado**: o extrator não lê o `fundamento_normativo`, e ele está no texto de 15
+   PDFs e na capa dos outros 8 (§2). O PR 2 acrescenta a captura — sem leitura humana.
 
 Nenhum destes foi corrigido no extrator, no dado versionado ou no banco: o pedido desta rodada é
 **documento**, e corrigir extrator é código.

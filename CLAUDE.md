@@ -92,8 +92,17 @@ diferente *(decisão de 17/09/2026)*. ⚠️ **Medido no histórico em
    [...] Motivo: a regra existe para proteger histórico, e um cadastro criado por engano não tem
    histórico a proteger."* Só instrutor sem aula, atribuição, vínculo, conta, avaliação nem
    responsabilidade de curso; só pelas funções com porteiro de `20260915140100`, que conferem tudo no
-   banco. **Continua sem policy e sem privilégio de DELETE**; nenhuma outra tabela ganha exceção
-   (`FR-008.1` da spec 006).
+   banco. **Continua sem policy e sem privilégio de DELETE**.
+   **Emenda de 24/09/2026** *(decisão D-B1 de Bernardo Villas Boas, spec 010; emenda nominal aprovada
+   no clarify do mesmo dia)*: **a exceção passa a cobrir TRÊS tabelas — `instrutores`, `disciplinas` e
+   `unidades_ensino`** —, sempre delimitada a registro **SEM HISTÓRICO NENHUM** (disciplina sem linha de
+   turma, vínculo, avaliação, planejamento, UE nem aula, inclusive a alcançada por
+   `disciplina_codigo_legado_v1`; UE sem aula), **sempre por RPC com porteiro** que confere os
+   impedimentos no banco e recusa com `23503`, com **confirmação pelo código**, e — novo em relação à
+   de instrutor — com **rastro de quem, o quê e quando** numa tabela só de acréscimo. **Continua sem
+   policy e sem privilégio de DELETE; nenhuma outra tabela ganha exceção** (`FR-008.1` da spec 006;
+   `FR-020` a `FR-025` da spec 010). Estender a cursos, turmas e salas é pendência `PEND-5b-1`, não
+   escopo. Medido em 24/09/2026: **nenhuma** das 175 disciplinas reais é excluível (0 sem dependente).
 5. **`migracao_log` é append-only.** Nunca reescrever linha já gravada — corrigir é **logar evento
    novo**. Bloqueado por gatilho **inclusive para `service_role`** (Princípio IV).
    ⚠️ **Lacuna conhecida, anotada em 17/09/2026 — pendência `PEND-5a-3` (spec 009):** o gatilho
