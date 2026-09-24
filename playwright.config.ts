@@ -19,7 +19,20 @@ import { execFileSync } from "node:child_process";
 
 import { defineConfig, devices } from "@playwright/test";
 
-const URL_BASE = process.env.URL_BASE_E2E ?? "http://localhost:3000";
+/**
+ * ⚠️ **A SUÍTE VIVE NA 3100, E NÃO NA 3000 — medido em 24/09/2026, com custo de diagnóstico.**
+ *
+ * `reuseExistingServer` é `true` fora do CI, e ele **não distingue** que servidor está na porta: com
+ * `pnpm dev:local` de pé para conferir na tela — que é o uso normal da máquina —, o Playwright
+ * reaproveitava o servidor de **desenvolvimento** em vez de construir o de produção, contra o qual
+ * esta suíte foi escrita. O efeito é o pior possível: **quatro casos reprovavam em QUALQUER ramo,
+ * inclusive na `main`**, e a leitura fácil era "o ramo quebrou a vitrine".
+ *
+ * Separar as portas resolve sem tirar nada de ninguém: quem confere continua na 3000, a suíte
+ * constrói a sua na 3100. No CI nada muda — lá não há servidor de pé para reaproveitar.
+ */
+const PORTA = process.env.PORTA_E2E ?? "3100";
+const URL_BASE = process.env.URL_BASE_E2E ?? `http://localhost:${PORTA}`;
 
 /**
  * Pergunta ao próprio Supabase CLI. Nenhuma chave é embutida neste arquivo.
@@ -93,7 +106,7 @@ export default defineConfig({
   use: { baseURL: URL_BASE, trace: "on-first-retry" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm build && pnpm start",
+    command: `pnpm build && pnpm start -p ${PORTA}`,
     url: URL_BASE,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

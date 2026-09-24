@@ -22,6 +22,8 @@ const admin = () =>
 
 let EMAIL_AJUDANTE = "";
 let EMAIL_VISUALIZACAO = "";
+/** ⚠️ O único perfil com `horarios.criar` SEM `cursos.criar`/`cursos.editar` — o que discrimina. */
+let EMAIL_OPERADOR = "";
 let EMAIL_ADMIN = "";
 let SEMEADO: CursosSemeados;
 /** O carimbo que torna a sigla desta execução única — curso não se apaga. */
@@ -34,11 +36,13 @@ test.beforeAll(async ({}, info) => {
   EMAIL_ADMIN = emailDeTeste("cadastro-admin", p);
   EMAIL_AJUDANTE = emailDeTeste("cadastro-ajudante", p);
   EMAIL_VISUALIZACAO = emailDeTeste("cadastro-visu", p);
+  EMAIL_OPERADOR = emailDeTeste("cadastro-operador", p);
 
   await criarConta(EMAIL_ADMIN, `USR-CAD-ADM-${p}`);
   SEMEADO = await semearCursos(p, EMAIL_ADMIN);
   await criarConta(EMAIL_AJUDANTE, `USR-CAD-AJU-${p}`, "ajudante_administracao_academica");
   await criarConta(EMAIL_VISUALIZACAO, `USR-CAD-VIS-${p}`, "visualizacao");
+  await criarConta(EMAIL_OPERADOR, `USR-CAD-OPE-${p}`, "operador", "geral");
 });
 
 test.afterAll(async () => {
@@ -46,6 +50,7 @@ test.afterAll(async () => {
   await apagarConta(EMAIL_ADMIN);
   await apagarConta(EMAIL_AJUDANTE);
   await apagarConta(EMAIL_VISUALIZACAO);
+  await apagarConta(EMAIL_OPERADOR);
 });
 
 const formulario = (page: Page) => page.locator('[data-slot="formulario-de-curso"]');
@@ -61,10 +66,32 @@ async function preencherCriacao(page: Page, sigla: string) {
   await page.locator("#regime-de").fill("2026-01-01");
 }
 
+/**
+ * Vai do menu até a tela, **clicando** — nunca por `goto`.
+ *
+ * ⚠️ **ISTO NÃO É PREFERÊNCIA DE ESTILO: é o que teria pego os dois defeitos de 24/09/2026.**
+ * `page.goto("/cursos/novo")` prova que a tela **funciona**; não prova que alguém **chega** nela. E
+ * não chegava: não havia link nenhum para `/cursos/novo` na aplicação inteira, e a única entrada da
+ * edição era um link chamado *"histórico e correção"*. A suíte passava, e a tela estava inalcançável.
+ */
+async function irPeloMenuAteCursos(page: Page) {
+  await page
+    .getByRole("navigation", { name: "Navegação principal" })
+    .getByRole("link", { name: "Cursos", exact: true })
+    .click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/cursos");
+}
+
 test.describe("`FR-013` · cadastrar curso", () => {
-  test("Ajudante cria o curso com regime, e ele aparece no grupo certo", async ({ page }) => {
+  test("Ajudante cria o curso CLICANDO: menu → Cursos → Novo curso", async ({ page }) => {
     const sigla = `C-Exp-N${SELO}`;
-    await entrar(page, EMAIL_AJUDANTE, "/cursos/novo");
+
+    // ⚠️ Entra no Início, e não na tela de destino: o percurso é o caminho, não o endereço.
+    await entrar(page, EMAIL_AJUDANTE, "/inicio");
+    await irPeloMenuAteCursos(page);
+
+    await page.locator('[data-slot="ir-para-novo-curso"]').click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/cursos/novo");
     await expect(formulario(page)).toHaveAttribute("data-modo", "novo");
 
     await preencherCriacao(page, sigla);
@@ -155,10 +182,72 @@ test.describe("`FR-013` · cadastrar curso", () => {
   });
 });
 
-test.describe("`FR-016` · editar curso", () => {
-  test("editar o propósito grava SEM diálogo (`FR-018.1`)", async ({ page }) => {
+test.describe("`SC-003` · cada botão segue a permissão da SUA página", () => {
+  /**
+   * ⚠️ **O OPERADOR É O CASO QUE DISCRIMINA, e um perfil só prova as duas metades.** Ele tem
+   * `horarios.criar` **sem** `cursos.criar` e **sem** `cursos.editar` — medido na matriz do banco em
+   * 24/09/2026, e é o único perfil nessa situação. Logo: ele **vê** "Editar curso", porque a página
+   * de edição o aceita para registrar vigência, e **não vê** "Novo curso", porque a de criação não.
+   * Um botão que herdasse a regra do outro reprovaria aqui — e em nenhum outro caso.
+   */
+  test("⚠️ o Operador vê Editar curso e NÃO vê Novo curso", async ({ page }) => {
     const sigla = SEMEADO.porClassificacao.regular;
-    await entrar(page, EMAIL_ADMIN, `/cursos/${encodeURIComponent(sigla)}/editar`);
+    await entrar(page, EMAIL_OPERADOR, "/cursos");
+
+    await expect(
+      page.locator('[data-slot="ir-para-novo-curso"]'),
+      "o Operador não cria curso, e o botão apareceu",
+    ).toHaveCount(0);
+
+    await page.locator(`[data-curso="${sigla}"]`).click();
+    await expect(
+      page.locator('[data-slot="ir-para-editar-curso"]'),
+      "o Operador registra vigência e ficou sem caminho clicável para a edição",
+    ).toHaveCount(1);
+  });
+
+  test("Visualização não vê nenhum dos dois", async ({ page }) => {
+    const sigla = SEMEADO.porClassificacao.regular;
+    await entrar(page, EMAIL_VISUALIZACAO, "/cursos");
+    await expect(page.locator('[data-slot="ir-para-novo-curso"]')).toHaveCount(0);
+
+    await page.locator(`[data-curso="${sigla}"]`).click();
+    await expect(page.locator('[data-slot="ir-para-editar-curso"]')).toHaveCount(0);
+    // ⚠️ E o link do regime some junto: as duas entradas obedecem à mesma regra.
+    await expect(page.locator('[data-slot="ir-para-historico-de-regime"]')).toHaveCount(0);
+  });
+
+  test("o Ajudante vê os dois", async ({ page }) => {
+    const sigla = SEMEADO.porClassificacao.regular;
+    await entrar(page, EMAIL_AJUDANTE, "/cursos");
+    await expect(page.locator('[data-slot="ir-para-novo-curso"]')).toHaveCount(1);
+
+    await page.locator(`[data-curso="${sigla}"]`).click();
+    await expect(page.locator('[data-slot="ir-para-editar-curso"]')).toHaveCount(1);
+  });
+});
+
+test.describe("`FR-016` · editar curso", () => {
+  test("editar o propósito CLICANDO: menu → Cursos → cartão → Editar curso", async ({ page }) => {
+    const sigla = SEMEADO.porClassificacao.regular;
+
+    await entrar(page, EMAIL_ADMIN, "/inicio");
+    await irPeloMenuAteCursos(page);
+
+    /*
+     * ⚠️ O CARTÃO É O TERCEIRO DEGRAU, e ele já existia. O que faltava era o quarto: até
+     *    24/09/2026 a única saída daqui para a edição era um link chamado *"histórico e correção"*,
+     *    ao lado do regime — que ninguém lê como *"editar curso"*.
+     */
+    await page.locator(`[data-curso="${sigla}"]`).click();
+    await expect
+      .poll(() => new URL(page.url()).pathname)
+      .toBe(`/cursos/${encodeURIComponent(sigla)}`);
+
+    await page.locator('[data-slot="ir-para-editar-curso"]').click();
+    await expect
+      .poll(() => new URL(page.url()).pathname)
+      .toBe(`/cursos/${encodeURIComponent(sigla)}/editar`);
     await expect(formulario(page)).toHaveAttribute("data-modo", "edicao");
 
     await page.locator("#curso-proposito").fill("Propósito revisado pelo percurso.");

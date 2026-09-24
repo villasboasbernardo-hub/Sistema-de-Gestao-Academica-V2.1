@@ -169,6 +169,15 @@ additional_redirect_urls = [
   "http://localhost:3000",
   "http://localhost:3000/convite",
   "http://localhost:3000/recuperar-senha",
+  # A porta da suite de ponta a ponta, separada da 3000 em 24/09/2026 para nao disputar com o
+  # `pnpm dev:local` de quem confere na tela. O Auth IGNORA em silencio um `redirectTo` que nao
+  # esteja nesta lista e manda para a `site_url` — o convite chegava, o link abria a porta errada,
+  # e a falha se lia como "a tela de convite nao carregou".
+  "http://localhost:3100",
+  "http://localhost:3100/convite",
+  "http://localhost:3100/recuperar-senha",
+  "http://127.0.0.1:3100",
+  "http://127.0.0.1:3100/convite",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600

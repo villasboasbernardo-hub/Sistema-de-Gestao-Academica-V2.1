@@ -276,6 +276,20 @@ dela teria os cadastros e nenhuma senha; as contas se refazem por convite.
   `FiltrosDeInstrutores.tsx` e virou componente na segunda tela que precisou dele; a terceira cópia
   seria o terceiro botão a divergir. ⚠️ **E o padrão do filtro conta**: `situacao` vale `ativo` por
   padrão, então compará-la com `""` faria o botão nunca aparecer para quem só trocou a situação.
+- **Tela sem caminho clicável até ela é tela NÃO ENTREGUE** *(decisão de Bernardo Villas Boas,
+  24/09/2026)*. Toda rota de página tem de ser alcançável **por clique** a partir de outra tela —
+  destino do menu, botão, aba ou link —, e o botão que leva até ela **segue a permissão da página de
+  destino**, nunca uma regra própria.
+  ⚠️ **NASCEU DE DOIS DEFEITOS QUE A SUÍTE INTEIRA DEIXOU PASSAR:** `/cursos/novo` não tinha link
+  nenhum na aplicação, e a única entrada de `/cursos/[curso]/editar` era um link chamado *"histórico
+  e correção"*. **A causa foi o teste**: os percursos chegavam com `page.goto`, que prova que a tela
+  **funciona** e não prova que alguém **chega** nela.
+  ⚠️ **SÃO DUAS GUARDAS, e uma não substitui a outra:**
+  `tests/unidade/toda-tela-tem-caminho.test.ts` varre as rotas e exige o `href` em outro arquivo — e
+  ⚠️ **a primeira versão dela era CEGA**, porque lia `lib/navegacao/contrato.ts`, que declara **toda**
+  rota do sistema, como se fossem links; só o defeito deliberado mostrou. O **percurso por clique**
+  de cada tela fica nos casos de ponta a ponta, e ali `goto` só é aceitável para chegar ao **ponto de
+  partida**.
 - Densidade antes de beleza: é sistema de gestão, com tabelas grandes.
 - Toda função de `lib/dominio/` traz no topo o identificador `RN-` e a **citação literal** da regra.
 
@@ -373,6 +387,29 @@ com `permission denied`, **o primeiro suspeito é o `GRANT`, não a policy.**
 erro**, e o usuário conclui "não tem dado cadastrado". Distinga sempre *"não há"* de *"você não
 vê"* no estado vazio. E: **policy não enxerga `OLD`/`NEW`** — quando a regra depende do que mudou
 (auto-escalonamento de perfil, por exemplo), é **gatilho**, não policy.
+
+**7. A SUÍTE REAPROVEITAVA O SERVIDOR DE DESENVOLVIMENTO, E O VEREDITO MUDAVA** *(medido em
+24/09/2026, com custo)*. `playwright.config.ts` usa `reuseExistingServer: !CI`, e ele **não
+distingue** que servidor ocupa a porta: com `pnpm dev:local` de pé para conferir na tela — que é o
+uso normal da máquina —, a suíte rodava contra o servidor de **desenvolvimento** em vez do build de
+produção contra o qual foi escrita. ⚠️ **O sintoma é o pior possível: quatro casos reprovavam em
+QUALQUER ramo, inclusive na `main`**, e a leitura fácil era *"o meu ramo quebrou a vitrine"*. Só
+medir a `main` desfez. **A suíte passou a viver na porta 3100** (`PORTA_E2E`), e quem confere
+continua na 3000. ⚠️ **Duas consequências vieram junto**: origem escrita à mão (`localhost:3000`) em
+quatro arquivos de teste passou a acusar *"o navegador saiu da aplicação"* sobre a própria
+aplicação; e o `redirectTo` do convite deixou de valer, porque o **Auth ignora em silêncio** um
+destino fora de `additional_redirect_urls` e manda para a `site_url` — o e-mail chegava e o link
+abria a porta errada.
+
+**8. `pnpm db:reset` PASSOU A CRIAR UM ADMIN, E ISSO DERRUBOU 12 CASOS DE RLS** *(medido em
+24/09/2026)*. Desde que o reset encadeia `conta:local`, a base deixa de nascer sem Admin — e
+`tests/invariantes/rls/rls.test.ts` **pressupõe ser o único Admin** (`PEND-5a-5`):
+`app.impedir_remocao_do_ultimo_admin()` conta os **outros** Admins ativos, então com um a mais
+*"desativar o último Admin"* deixa de ser recusado e as 12 asserções seguintes caem em cascata.
+⚠️ **E o modo de falha é o inverso do usual, o que atrasa o diagnóstico**: vermelho no local e
+**verde no CI**, porque o CI roda `supabase db reset` direto. Isso é defeito da verificação tanto
+quanto o contrário (`SC-005`). **Conserto:** `pnpm db:reset:limpo` — o mesmo comando do CI — é o que
+o `verificar:tudo` usa; o `db:reset` que se digita continua criando a conta.
 
 **Bônus:** `pnpm db:tipos` **depois de toda migration**. O CI falha se `lib/tipos/database.ts`
 divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, coluna inventada.

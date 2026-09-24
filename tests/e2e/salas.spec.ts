@@ -58,6 +58,29 @@ const linhaDaSala = (page: Page, valor: string) => page.locator(`tr[data-sala="$
 
 const dialogo = (page: Page) => page.locator('[data-slot="dialogo-confirmacao"]');
 
+test.describe("`SC-003` · chega-se a Salas CLICANDO, pela aba da Administração", () => {
+  test("menu → Administração → aba Salas", async ({ page }) => {
+    /*
+     * ⚠️ `/admin/salas` NÃO É DESTINO DO MENU — Administração é **entrada única** (decisão MENU-1),
+     *    e as demais telas dela se alcançam por aba. Sem um percurso que **clique** a aba, a tela
+     *    ficaria na mesma situação em que `/cursos/novo` ficou: existindo e inalcançável.
+     */
+    await entrar(page, EMAIL_ENCARREGADO, "/inicio");
+    await page
+      .getByRole("navigation", { name: "Navegação principal" })
+      .getByRole("link", { name: "Administração", exact: true })
+      .click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/admin/usuarios");
+
+    await page
+      .getByRole("navigation", { name: "Administração" })
+      .getByRole("link", { name: "Salas", exact: true })
+      .click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/admin/salas");
+    await expect(page.locator('[data-slot="tabela-de-salas"]')).toBeVisible();
+  });
+});
+
 test.describe("`FR-029.2` · acrescentar sala", () => {
   /* ⚠️ SERIAL PELO MESMO MOTIVO DO BLOCO DE BAIXO: o segundo caso lê o que o primeiro gravou. */
   test.describe.configure({ mode: "serial" });

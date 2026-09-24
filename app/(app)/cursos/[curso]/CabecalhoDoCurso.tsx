@@ -17,6 +17,7 @@
 import Link from "next/link";
 
 import { BadgeStatus } from "@/components/ciaara/badge-status";
+import { buttonVariants } from "@/components/ui/button";
 import {
   ROTULO_DA_CLASSIFICACAO,
   ehClassificacaoDeCurso,
@@ -62,11 +63,19 @@ function regimeEmPalavras(regime: RegimeVigente | null): string {
 export function CabecalhoDoCurso({
   curso,
   regime,
-  podeEditar,
+  podeAbrirEdicao,
 }: {
   readonly curso: CursoNoCabecalho;
   readonly regime: RegimeVigente | null;
-  readonly podeEditar: boolean;
+  /**
+   * A **mesma** regra de alcance da página de edição: `cursos.editar` **ou** `horarios.criar`.
+   *
+   * ⚠️ **NÃO É `cursos.editar` SOZINHO, e a diferença tem nome.** `/cursos/[curso]/editar` atende
+   *    duas permissões — editar o cadastro é uma, registrar vigência é outra —, e o **Operador**
+   *    tem a segunda sem ter a primeira. Um botão preso à primeira o deixaria sem caminho clicável
+   *    para o que a policy lhe permite fazer, que é exatamente o defeito que esta prop conserta.
+   */
+  readonly podeAbrirEdicao: boolean;
 }) {
   const classificacao = ehClassificacaoDeCurso(curso.classificacao)
     ? ROTULO_DA_CLASSIFICACAO[curso.classificacao]
@@ -80,6 +89,22 @@ export function CabecalhoDoCurso({
         </h1>
         <p className="text-texto text-base">{curso.nome}</p>
         {curso.ativo ? null : <BadgeStatus tom="inativo" rotulo="Fora de oferta" />}
+
+        {/*
+          ⚠️ **A ENTRADA PARA A EDIÇÃO, NO CABEÇALHO E COM ESTE NOME.** Até 24/09/2026 a única era
+             o link *"histórico e correção"*, ao lado do regime — e ninguém lê aquilo como *"editar
+             curso"*. A conferência de Bernardo encontrou; o link continua, porque leva ao mesmo
+             lugar por outro motivo, mas deixou de ser a única porta.
+        */}
+        {podeAbrirEdicao ? (
+          <Link
+            href={`/cursos/${encodeURIComponent(curso.codigo)}/editar`}
+            className={buttonVariants({ size: "sm", variant: "outline" })}
+            data-slot="ir-para-editar-curso"
+          >
+            Editar curso
+          </Link>
+        ) : null}
       </div>
 
       <p className="text-texto-suave text-sm" data-slot="catalogo-resumido">
@@ -91,7 +116,7 @@ export function CabecalhoDoCurso({
         {/* veste: o rótulo "Regime vigente"; o que vem depois é dado */}
         <span className="text-texto-tenue">Regime vigente:</span>{" "}
         <span className="text-texto-suave">{regimeEmPalavras(regime)}</span>
-        {podeEditar ? (
+        {podeAbrirEdicao ? (
           <>
             {" — "}
             <Link

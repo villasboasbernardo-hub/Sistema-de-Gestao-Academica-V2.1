@@ -16,7 +16,12 @@
  * curso" e "ainda não existe curso no sistema" são fatos diferentes. A Production hoje é o terceiro,
  * e mostrar-lhe o primeiro ensinaria a concluir que a migração falhou.
  */
+import Link from "next/link";
+
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import { SePodeVer } from "@/components/ciaara/SePodeVer";
+import { buttonVariants } from "@/components/ui/button";
+import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { indicadoresDoCatalogo } from "@/lib/dominio/indicadores-do-catalogo";
 import { lerParametros } from "@/lib/navegacao/esquema";
@@ -76,13 +81,36 @@ export default async function Cursos({
     usuarioDaSessao(),
     montarConsultaDeCursos(supabase.from("cursos").select(COLUNAS_DO_CATALOGO), parametros),
   ]);
+  const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
 
+  /*
+   * ⚠️ **A ÚNICA ENTRADA CLICÁVEL PARA `/cursos/novo`** — e até 24/09/2026 não havia nenhuma:
+   *    a tela existia e só se chegava nela digitando o endereço. A conferência de Bernardo
+   *    encontrou, e a causa foi a suíte: os percursos chegavam por `page.goto`, que prova que a
+   *    tela funciona e **não** prova que alguém a alcança. **Tela sem caminho clicável é tela não
+   *    entregue** (regra do `CLAUDE.md`).
+   *
+   * ⚠️ **ELE SEGUE A PERMISSÃO DA PÁGINA, e não uma regra própria.** `/cursos/novo` recusa quem
+   *    não tem `cursos.criar`; oferecer o botão a quem vai ser recusado é ensinar a bater na
+   *    porta. Esconder **não** é a proteção — quem protege é a policy `cursos_criar`.
+   */
   const cabecalho = (
-    <div className="flex flex-col gap-1">
-      <h1 className="text-texto text-lg font-semibold">Cursos</h1>
-      <p className="text-texto-suave text-sm">
-        O catálogo agrupado por classificação. Clique num curso para abrir a página dele.
-      </p>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-texto text-lg font-semibold">Cursos</h1>
+        <p className="text-texto-suave text-sm">
+          O catálogo agrupado por classificação. Clique num curso para abrir a página dele.
+        </p>
+      </div>
+      <SePodeVer permissoes={permissoes} recurso="cursos" acao="criar">
+        <Link
+          href="/cursos/novo"
+          className={buttonVariants({ size: "sm" })}
+          data-slot="ir-para-novo-curso"
+        >
+          Novo curso
+        </Link>
+      </SePodeVer>
     </div>
   );
 

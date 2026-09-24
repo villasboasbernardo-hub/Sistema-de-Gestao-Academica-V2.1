@@ -88,7 +88,7 @@ test("reenviar convite a cadastro SEM credencial envia um e-mail novo, sem erro"
   // O convite original — depois dele a conta JÁ EXISTE em `auth.users`, e é esse o estado em que
   // se suspeitava que o reenvio falhasse.
   await admin().auth.admin.inviteUserByEmail(alvo, {
-    redirectTo: "http://localhost:3000/convite",
+    redirectTo: `${process.env.URL_BASE_E2E ?? `http://localhost:${process.env.PORTA_E2E ?? "3100"}`}/convite`,
   });
   await expect.poll(() => quantosEmails(alvo), { timeout: 20_000 }).toBeGreaterThan(0);
   const antes = await quantosEmails(alvo);

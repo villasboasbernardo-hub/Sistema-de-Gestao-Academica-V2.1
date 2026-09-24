@@ -147,7 +147,7 @@ test("V-3 · convite, senha e primeiro acesso, com o escopo atribuído", async (
   expect(linha!.id).toBeTruthy();
 
   await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: "http://localhost:3000/convite",
+    redirectTo: `${process.env.URL_BASE_E2E ?? `http://localhost:${process.env.PORTA_E2E ?? "3100"}`}/convite`,
   });
   const link = await linkDoUltimoEmail(email);
 

@@ -115,6 +115,46 @@ async function preencherNova(page: Page, ano: string, rotulo: string) {
   await page.locator("#turma-rotulo").fill(rotulo);
 }
 
+test.describe("`SC-003` · chega-se às telas de turma CLICANDO, não digitando", () => {
+  /**
+   * ⚠️ **ESTE BLOCO EXISTE POR CAUSA DOS DOIS DEFEITOS DE 24/09/2026.** Todos os percursos deste
+   * arquivo chegam às telas por endereço — o que prova que elas funcionam e **não** prova que alguém
+   * chega nelas. Foi assim que `/cursos/novo` ficou sem link nenhum e ninguém notou. Aqui se mede o
+   * caminho: menu → Cursos → cartão → aba Grade → **Nova turma**, e o mesmo até a ficha da turma.
+   */
+  test("menu → Cursos → cartão → Nova turma, e o mesmo até a ficha da turma", async ({ page }) => {
+    const sigla = SEMEADO.porClassificacao.regular;
+    await entrar(page, EMAIL_AJUDANTE, "/inicio");
+
+    await page
+      .getByRole("navigation", { name: "Navegação principal" })
+      .getByRole("link", { name: "Cursos", exact: true })
+      .click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/cursos");
+
+    await page.locator(`[data-curso="${sigla}"]`).click();
+    await expect
+      .poll(() => new URL(page.url()).pathname)
+      .toBe(`/cursos/${encodeURIComponent(sigla)}`);
+
+    // ── até a criação de turma ────────────────────────────────────────────────────────────────
+    await page.locator('[data-slot="nova-turma"]').click();
+    await expect
+      .poll(() => new URL(page.url()).pathname)
+      .toBe(`/cursos/${encodeURIComponent(sigla)}/turmas/nova`);
+    await expect(page.locator('[data-slot="formulario-de-turma"]')).toHaveAttribute(
+      "data-modo",
+      "novo",
+    );
+
+    // ── e até a ficha de uma turma que já existe ──────────────────────────────────────────────
+    await page.goBack();
+    await page.getByRole("link", { name: SEMEADO.turmaJanelaCedo }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe(enderecoDe(SEMEADO.turmaJanelaCedo));
+    await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(SEMEADO.turmaJanelaCedo);
+  });
+});
+
 test.describe("`FR-025` · criar turma sob o curso do caminho", () => {
   test("cria a T3 de 2027 e cai na ficha, com o curso e o caminho de volta", async ({ page }) => {
     const sigla = SEMEADO.porClassificacao.regular;

@@ -195,7 +195,14 @@ export default async function PaginaDoCurso({
           ativo: cursoAtivo,
         }}
         regime={regime}
-        podeEditar={pode(permissoes, "cursos", "editar")}
+        /*
+         * ⚠️ A MESMA REGRA DA PÁGINA DE EDIÇÃO — `cursos.editar` **ou** `horarios.criar`. Ela é
+         *    montada aqui, no servidor, e o cabeçalho só a recebe: duas telas decidindo alcance
+         *    por conta própria é como as duas divergem.
+         */
+        podeAbrirEdicao={
+          pode(permissoes, "cursos", "editar") || pode(permissoes, "horarios", "criar")
+        }
       />
 
       {/* ⚠️ ACIMA DAS ABAS, fora de qualquer uma (`FR-010.1`) */}
