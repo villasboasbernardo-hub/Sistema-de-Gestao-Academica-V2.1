@@ -12,28 +12,16 @@
  * ⚠️ E O CONTROLE POSITIVO É METADE DO VALOR: uma guarda que recusasse tudo passaria em todos os
  * casos hostis e quebraria o retorno legítimo, que é a única razão de o parâmetro existir.
  */
-import { execFileSync } from "node:child_process";
-
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
-function chaveLocal(nomeNoCli: string): string {
-  const saida = execFileSync("supabase", ["status", "-o", "env"], {
-    encoding: "utf8",
-    windowsHide: true,
-  });
-  const valor = saida
-    .split("\n")
-    .find((l) => l.startsWith(`${nomeNoCli}=`))
-    ?.split("=")
-    .slice(1)
-    .join("=")
-    .replace(/^"|"$/g, "")
-    .trim();
-  if (!valor) throw new Error(`nao achei ${nomeNoCli} no supabase status`);
-  return valor;
-}
+import { apagarConta, chaveLocal } from "./conta-de-teste";
 
+/*
+ * ⚠️ **A CÓPIA LOCAL DE `chaveLocal` SAIU em 23/09/2026.** Ela chamava `supabase status` no
+ *    carregamento do módulo, sem ler o ambiente que o processo principal já resolveu e sem repetir
+ *    quando a CLI recusa por concorrência — e derrubava casos que nada tinham com a causa.
+ */
 const admin = createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
   auth: { persistSession: false, autoRefreshToken: false },
 });
@@ -53,16 +41,26 @@ const SENHA = "senha-de-teste-com-12+";
 const HOSTIL = "ciaara-falso.exemplo";
 
 /** A origem da aplicação sob teste. É contra ela que a permanência é medida. */
-const ORIGEM_DA_APLICACAO = process.env.URL_BASE_E2E ?? "http://localhost:3000";
+/*
+ * ⚠️ **A ORIGEM VEM DA CONFIGURAÇÃO, E NÃO DE UM NÚMERO ESCRITO AQUI.** Medido em 24/09/2026:
+ *    com a suíte movida para a porta 3100 — para não disputar a 3000 com o `pnpm dev:local` de
+ *    quem confere —, o literal `3000` fazia este arquivo acusar *"o navegador saiu da
+ *    aplicação"* listando endereços **da própria aplicação**. A porta é detalhe de ambiente; a
+ *    origem é o que o `playwright.config.ts` decidiu.
+ */
+const ORIGEM_DA_APLICACAO =
+  process.env.URL_BASE_E2E ?? `http://localhost:${process.env.PORTA_E2E ?? "3100"}`;
 
 test.beforeAll(async ({}, info) => {
   EMAIL = `destino-do-login-${info.workerIndex}@ciaara.teste`;
 
-  const { data: existentes } = await admin.auth.admin.listUsers();
-  for (const u of existentes?.users ?? []) {
-    if (u.email === EMAIL) await admin.auth.admin.deleteUser(u.id);
-  }
-  await admin.from("usuarios").delete().eq("email", EMAIL);
+  /*
+   * ⚠️ A LIMPEZA PASSA PELO AUXILIAR, QUE **PAGINA**. Até 23/09/2026 ela lia só a primeira página de
+   *    `listUsers()` — 50 contas — e com **165** no stack local deixava a própria conta de pé; o
+   *    `createUser` seguinte reprovava com *"already been registered"*, que se lê como corrida entre
+   *    processos e não é. Era a `PEND-5a-7` inteira, neste arquivo e no do convite.
+   */
+  await apagarConta(EMAIL);
 
   const { data, error } = await admin.auth.admin.createUser({
     email: EMAIL,
@@ -83,11 +81,7 @@ test.beforeAll(async ({}, info) => {
 });
 
 test.afterAll(async () => {
-  const { data: existentes } = await admin.auth.admin.listUsers();
-  for (const u of existentes?.users ?? []) {
-    if (u.email === EMAIL) await admin.auth.admin.deleteUser(u.id);
-  }
-  await admin.from("usuarios").delete().eq("email", EMAIL);
+  await apagarConta(EMAIL);
 });
 
 /** Entra pelo formulário, com o destino que se quer exercitar. */

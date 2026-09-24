@@ -72,26 +72,55 @@ mostra o `message` cru (`RN-DEG-01`, `FR-021.4`).
 
 | Chave (`HINT`) | `SQLSTATE` | Quem recusa | Dados (`DETAIL`) | Mensagem de negócio | Origem |
 |---|---|---|---|---|---|
-| `curso_com_turma_pendente` | `23514` | gatilho de `cursos` | `turmas: [codigo, status]` | *"Não é possível desativar: {n} turma(s) planejada(s) ou ativa(s) — {lista}. Conclua ou cancele cada uma primeiro."* | `FR-017.4` |
-| `curso_inativo_so_reativa` | `23514` | gatilho de `cursos` | `colunas: [...]` | *"O curso está inativo. Reative-o antes de editar."* | `FR-017.5`, `FR-017.7` |
-| `situacao_sem_permissao` | `42501` | gatilho de `cursos` | — | *"O seu perfil não desativa nem reativa curso."* | `FR-017` |
-| `sigla_de_outro_curso` | `23505` | gatilho de `cursos` — **recusa, nunca aviso** | `curso_sigla_atual`, `curso_nome`, `deixada_em` | *"A sigla {sigla} identificou o curso {curso_sigla_atual} — {curso_nome} — até {deixada_em}, e continua nos códigos das turmas dele. Escolha outra sigla."* A sigla que foi do **próprio** curso **não** cai aqui | `FR-014.3` |
+| `curso_com_turma_pendente` | `23514` | gatilho de `cursos` | `curso`, `turmas: [{codigo, status}]` | *"Não é possível desativar: {n} turma(s) planejada(s) ou ativa(s) — {lista}. Conclua ou cancele cada uma primeiro."* | `FR-017.4` |
+| `curso_inativo_so_reativa` | `23514` | gatilho de `cursos` | `curso`, `colunas: [...]` | *"O curso está inativo. Reative-o antes de editar."* | `FR-017.5`, `FR-017.7` |
+| `situacao_sem_permissao` | `42501` | gatilho de `cursos` | `curso` | *"O seu perfil não desativa nem reativa curso."* | `FR-017` |
+| `sigla_de_outro_curso` | `23505` | gatilho de `cursos` — **recusa, nunca aviso** | `sigla`, `curso_sigla_atual`, `curso_nome`, `deixada_em` | *"A sigla {sigla} identificou o curso {curso_sigla_atual} — {curso_nome} — até {deixada_em}, e continua nos códigos das turmas dele. Escolha outra sigla."* A sigla que foi do **próprio** curso **não** cai aqui | `FR-014.3` |
 | (restrição `cursos_codigo_key`) | `23505` | `UNIQUE` | — | *"Já existe curso com a sigla {sigla}."* | `FR-014` |
 | `curso_sem_regime` | `23514`, **no `COMMIT`** | gatilho adiado | `curso` | *"Todo curso tem regime de horário. Informe o regime padrão junto com o curso."* — e, no cancelamento: *"Esta é a única vigência padrão do curso; registre a que a substitui."* | `FR-019.5` |
-| `codigo_de_turma_divergente` / `codigo_de_turma_imutavel` | `23514` | gatilho de `turmas` | `esperado` | *"O código da turma é gerado pelo sistema e não muda."* | `FR-025.1` |
+| `codigo_de_turma_divergente` / `codigo_de_turma_imutavel` | `23514` | gatilho de `turmas` | `esperado` — e `recebido` só na divergente | *"O código da turma é gerado pelo sistema e não muda."* | `FR-025.1` |
 | (restrição `turmas_unica_por_ano`) | `23505` | `UNIQUE NULLS NOT DISTINCT` | — | *"Já existe a turma {codigo} com {este rótulo \| sem rótulo} em {sigla} {ano}. Escolha outro rótulo."* — a ação **lê** a turma ocupante, que está no mesmo curso e portanto no alcance | `FR-026` |
-| (restrição do rótulo) | `23514` | `CHECK` | — | *"O rótulo da turma é T seguido do número — T1, T2."* | `FR-025.2` |
+| (restrição `turmas_rotulo_forma`) | `23514` | `CHECK` | — | *"O rótulo da turma é T seguido do número — T1, T2."* | `FR-025.2` |
 | `sala_fora_da_lista` | `23514` | gatilho genérico, **pelo 4º argumento** ⚠️ | `valor`, `lista` | *"A sala {valor} não está na lista de salas. Salas novas são acrescentadas em Administração › Salas."* | `FR-029`, `FR-029.2` |
 | (restrição `config_listas_sala_com_natureza`) | `23514` | `CHECK` | — | *"Informe se a sala é física ou ambiente virtual."* | `FR-029.6`, `FR-029.7` |
-| (restrição de classificação) | `23514` | `CHECK` | — | *"Esta classificação não é aceita para curso."* | `FR-003.1` |
+| (restrição `cursos_classificacao_nao_geral`) | `23514` | `CHECK` | — | *"Esta classificação não é aceita para curso."* | `FR-003.1` |
 | (`NOT NULL`) | `23502` | coluna | coluna | *"{Campo} é obrigatório."* | `FR-015` |
-| `vigencia_parametro_imutavel` | `23514` | gatilho de vigência | `coluna` | *"Vigência registrada não muda. Para mudar o regime a partir de uma data, registre nova vigência."* | `FR-020` |
-| `vigencia_sem_sucessora` | `23514`, **no `COMMIT`** | gatilho adiado | `vigencia` | *"Uma vigência só é encerrada quando a seguinte é registrada."* | `FR-020` |
-| `vigencia_com_lancamento` | `23514` | gatilho de vigência / RPC | `tipo`, `data`, `turma`, `atividade`, `total`, `ponta_ausente` | *"Esta vigência já tem {total} lançamento(s) — o primeiro: {tipo} de {data} em {turma}. Para mudar o regime, registre nova vigência a partir de uma data."* Com atividade global: nomeia **a atividade e a turma**; com janela incompleta: diz **qual ponta falta** | `FR-021.2`, `FR-021.4` a `FR-021.6` |
-| `vigencia_reinterpretaria_lancamento` | `23514` | gatilho de inserção de vigência | os mesmos, e `ultimo_lancamento` | *"Uma vigência a partir de {data} mudaria o horário de {total} lançamento(s) já gravado(s) — o último em {data}. Escolha uma data posterior."* | `FR-019.4`, `RN-2027-09` |
+| `vigencia_imutavel` ⚠️ | `23514` | gatilho de vigência | `vigencia`, `colunas` | *"Vigência registrada não muda. Para mudar o regime a partir de uma data, registre nova vigência."* | `FR-020` |
+| `vigencia_cancelada_imutavel` ⚠️ | `23514` | gatilho de vigência — **três `raise`, uma chave** | `vigencia` | *"Esta vigência está cancelada e não recebe alteração nem volta a valer. Registre uma vigência nova a partir da data que passa a valer."* | `FR-020`, `FR-021.3` |
+| `vigencia_sem_sucessora` | `23514`, **no `COMMIT`** | gatilho adiado | `vigencia`, `sem_regime_a_partir_de` | *"Uma vigência só é encerrada quando a seguinte é registrada."* | `FR-020` |
+| `vigencia_com_lancamento` | `23514` | gatilho de vigência / RPC | `vigencia`, `tipo`, `data`, `turma`, `atividade`, `total`, `ponta_ausente` | *"Esta vigência já tem {total} lançamento(s) — o primeiro: {tipo} de {data} em {turma}. Para mudar o regime, registre nova vigência a partir de uma data."* Com atividade global: nomeia **a atividade e a turma**; com janela incompleta: diz **qual ponta falta** | `FR-021.2`, `FR-021.4` a `FR-021.6` |
+| `vigencia_reinterpretaria_lancamento` | `23514` | gatilho de inserção de vigência | `vigente_de`, `tipo`, `ultimo_lancamento`, `turma`, `atividade`, `total`, `ponta_ausente` — **sem** `data` e **sem** `vigencia` | *"Uma vigência a partir de {data} mudaria o horário de {total} lançamento(s) já gravado(s) — o último em {data}. Escolha uma data posterior."* | `FR-019.4`, `RN-2027-09` |
 | (impasse) | `40P01` | motor | — | *"Outra gravação no mesmo curso aconteceu ao mesmo tempo. Tente de novo."* | `FR-021.3`, R-7 |
 | `habilitacao_em_curso_inativo` | `23514` | `sincronizar_habilitacoes` | `disciplinas` | *"{Disciplina} é de curso inativo e não recebe habilitação nova."* | `FR-017.9` |
 | (RLS) | `42501` | policy | — | ver abaixo | `FR-044`, `FR-017.5` |
+
+⚠️ **EMENDA DE 23/09/2026 — a tabela nomeava uma chave que o banco NÃO emite, e omitia uma que ele
+emite** *(decisão de Bernardo Villas Boas)*. Achado ao escrever `lib/acoes/traducao-de-recusas.ts`
+(T113), medindo `pg_proc.prosrc` **sem comentário** (regra 9.1.1 do `CLAUDE.md`) e `pg_constraint` no
+banco local:
+
+| A tabela dizia | O banco emite |
+|---|---|
+| `vigencia_parametro_imutavel` | **`vigencia_imutavel`** — `app.guardar_vigencia_de_regime()` |
+| *(não listava)* | **`vigencia_cancelada_imutavel`** — a mesma função, em **três `raise`** |
+
+⚠️ **A PRIMEIRA SERIA MUDA, e é por isso que ela importa mais que a segunda.** Uma tradução escrita
+contra `vigencia_parametro_imutavel` **nunca dispararia**: o `HINT` não casaria, a recusa cairia na
+frase genérica do `23514`, e a pessoa leria *"o banco recusou a gravação: um campo não atende à
+regra"* em vez de *"vigência registrada não muda"*. Nada acusaria — nem teste, nem tipo, nem lint —,
+porque uma chave que não casa não é erro, é só uma chave que não casa.
+
+A `vigencia_cancelada_imutavel` sai de **três** recusas com a **mesma** chave e a **mesma** mensagem:
+vigência cancelada não recebe data de término, não volta a `ativo`, e a única mudança de situação
+aceita é o cancelamento. Uma chave por **consequência para quem está na tela**, não por `raise`.
+
+⚠️ **E as colunas de `DETAIL` da tabela acima foram remedidas na mesma leitura**, porque o modo de
+falha é o mesmo em menor grau: ler um campo que o `raise` não manda devolve `undefined`, a mensagem
+degrada para a forma genérica, e ninguém percebe. As correções estão nas linhas: `curso` em três
+recusas, `sigla` na de sigla, `sem_regime_a_partir_de`, `vigencia`, `recebido`, e a
+`vigencia_reinterpretaria_lancamento`, que manda `vigente_de` e **não** manda `data` nem `vigencia`.
+
+⚠️ **O `.md` é o que vale, e o `.docx` não recebeu esta emenda** (regra de precedência de 17/09/2026).
 
 ⚠️ **Recusa no `COMMIT` chega depois do último comando.** Os dois gatilhos adiados só falam quando a
 RPC termina; a mensagem é a mesma, mas a tradução mora na leitura do **resultado da RPC**, não de um

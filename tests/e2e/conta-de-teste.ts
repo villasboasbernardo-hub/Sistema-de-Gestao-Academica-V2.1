@@ -38,6 +38,21 @@ import { expect, type Page } from "@playwright/test";
  */
 let ambienteLocal: Record<string, string> | undefined;
 
+/**
+ * Os nomes que `playwright.config.ts` ja gravou em `process.env`, por chave do CLI.
+ *
+ * ⚠️ **O PROCESSO PRINCIPAL JA PERGUNTOU, E OS PROCESSOS DE TRABALHO HERDAM.** Perguntar de novo aqui
+ * é a corrida que a configuração existe para eliminar: a CLI reescreve `~/.supabase/telemetry.json` a
+ * cada execução, e dois processos renomeando o mesmo temporário derrubam um deles com uma mensagem
+ * que não fala de concorrência nenhuma. Ler o ambiente primeiro faz a CLI ser chamada **zero** vezes
+ * na execução normal — e a leitura abaixo só sobra para quem rode um arquivo à mão.
+ */
+const NO_AMBIENTE: Readonly<Record<string, string>> = {
+  API_URL: "SUPABASE_URL_TESTE",
+  PUBLISHABLE_KEY: "SUPABASE_ANON_KEY_TESTE",
+  SECRET_KEY: "SUPABASE_SERVICE_ROLE_KEY_TESTE",
+};
+
 function lerAmbienteLocal(): Record<string, string> {
   if (ambienteLocal) return ambienteLocal;
 
@@ -77,6 +92,9 @@ function lerAmbienteLocal(): Record<string, string> {
 }
 
 export function chaveLocal(nomeNoCli: string): string {
+  const doAmbiente = NO_AMBIENTE[nomeNoCli] ? process.env[NO_AMBIENTE[nomeNoCli]] : undefined;
+  if (doAmbiente) return doAmbiente;
+
   const valor = lerAmbienteLocal()[nomeNoCli];
   if (!valor) throw new Error(`nao achei ${nomeNoCli} no supabase status`);
   return valor;
@@ -99,12 +117,49 @@ export function emailDeTeste(prefixo: string, processo: number): string {
   return `${prefixo}-${processo}@ciaara.teste`;
 }
 
+/**
+ * Apaga a conta, **varrendo todas as páginas do Auth**.
+ *
+ * ⚠️ **`listUsers()` PAGINA, E O PADRÃO É 50.** A versão anterior lia a primeira página e parava. Ela
+ * funcionou enquanto o stack local tinha poucas contas; medido em 23/09/2026, tinha **78**, das quais
+ * **77 eram restos de teste** — e a conta a apagar caía na segunda página. O efeito é o pior possível:
+ * `apagar` devolve sucesso sem ter apagado, e a falha aparece depois, em `criarConta`, como
+ * *"A user with this email address has already been registered"* — que se lê como corrida entre
+ * processos e **não é**.
+ *
+ * ⚠️ **E ELE SE AGRAVA SOZINHO.** Cada execução que não consegue apagar deixa mais uma conta, e a
+ * primeira página cobre uma fração cada vez menor do total. Era por isso que a suíte passava sozinha
+ * e reprovava acompanhada: não pelo paralelismo, mas pelo número de contas que o paralelismo criou.
+ */
 async function apagar(email: string) {
-  const { data: existentes } = await admin().auth.admin.listUsers();
-  for (const u of existentes?.users ?? []) {
-    if (u.email === email) await admin().auth.admin.deleteUser(u.id);
+  for (const u of await contasDoAuth(email)) {
+    await admin().auth.admin.deleteUser(u.id);
   }
   await admin().from("usuarios").delete().eq("email", email);
+}
+
+/**
+ * As contas do Auth com este e-mail, **varrendo todas as páginas**.
+ *
+ * ⚠️ **QUEM PROCURA CONTA TAMBÉM PAGINA, e não só quem apaga.** Medido em 23/09/2026, com **165**
+ * contas no stack local: `convite.spec.ts` procurava a credencial recém-criada na primeira página e
+ * concluía *"a credencial não foi criada"*; `destino-do-login.spec.ts` limpava a própria conta pela
+ * primeira página e a deixava de pé, e o `createUser` seguinte reprovava com *"A user with this
+ * email address has already been registered"*. **As duas mensagens acusam o sistema por um defeito da
+ * verificação**, e as duas pioram a cada execução — porque cada uma deixa mais uma conta para trás.
+ */
+export async function contasDoAuth(email: string): Promise<{ readonly id: string }[]> {
+  const porPagina = 200;
+  const achadas: { readonly id: string }[] = [];
+  for (let pagina = 1; ; pagina++) {
+    const { data } = await admin().auth.admin.listUsers({ page: pagina, perPage: porPagina });
+    const usuarios = data?.users ?? [];
+    for (const u of usuarios) {
+      if (u.email === email) achadas.push({ id: u.id });
+    }
+    if (usuarios.length < porPagina) break;
+  }
+  return achadas;
 }
 
 /** Cria a conta do zero, apagando qualquer resto de execução anterior. */

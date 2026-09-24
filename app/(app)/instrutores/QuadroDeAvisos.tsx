@@ -25,7 +25,7 @@ import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import type { AvisoDeCadastro } from "@/lib/dominio/avisos-cadastro-instrutor";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 
-import { AvisosRecolhiveis } from "./AvisosRecolhiveis";
+import { AvisosRecolhiveis } from "@/components/ciaara/avisos-recolhiveis";
 
 export type InstrutorDoAviso = InstrutorParaExibir & { readonly codigo: string };
 

@@ -311,7 +311,7 @@ test.describe("`FR-031.2` · o link da turma sai codificado, e de uma funcao so"
    * o navegador conserta o espaco ao navegar, entao medir depois do clique mostraria verde
    * com o defeito no lugar. O que se quer provar e o que a pagina ESCREVEU.
    */
-  test("o `href` da turma traz %20, nunca espaco cru nem +", async ({ page }) => {
+  test("o `href` da turma sai codificado, nunca com espaco cru", async ({ page }) => {
     await entrar(page, EMAIL_GERAL, "/inicio");
 
     // ⚠️ `data-turma` fica NO PROPRIO `<Link>`, que renderiza como `<a>` — procurar um `a`
@@ -322,8 +322,14 @@ test.describe("`FR-031.2` · o link da turma sai codificado, e de uma funcao so"
 
     expect(href, "a turma do panorama nao tem link").not.toBeNull();
     expect(href, `o href saiu com espaco cru: ${href}`).not.toContain(" ");
-    expect(href, `o href serializou o espaco como +: ${href}`).not.toContain("+");
-    expect(href, `o href nao codificou o espaco: ${href}`).toContain("%20");
+    /*
+     * ⚠️ **O `+` PASSOU A SER O CERTO NA CONSULTA — decisao de Bernardo Villas Boas, 23/09/2026,
+     * declaracao (a) da `PEND-5a-8`.** O `FR-036` obriga a escrita a ir pelo `useParametro`, que e o
+     * `nuqs`, e o `encodeQueryValue` dele nao emite `%20` — nao ha costura. O `FR-031.1` exige UMA
+     * representacao, e a unica alcancavel e a do `nuqs`. **O que esta guarda protegia continua
+     * protegido**: o defeito de 18/09/2026 era ESPACO CRU no `href`, e `+` nao e espaco cru.
+     */
+    expect(href, `o href nao usou a grafia unica da consulta: ${href}`).toContain("+");
     expect(href, "o link nao aponta para a pagina do curso com a turma na URL").toContain(
       "?turma=",
     );

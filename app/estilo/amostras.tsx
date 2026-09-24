@@ -16,7 +16,9 @@
 import * as React from "react";
 
 import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
+import { AvisosRecolhiveis } from "@/components/ciaara/avisos-recolhiveis";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
+import { BotaoLimparFiltros } from "@/components/ciaara/botao-limpar-filtros";
 import { BadgeTeto, type Teto } from "@/components/ciaara/badge-teto";
 import { CampoObrigatorio, propsDoControle } from "@/components/ciaara/campo-obrigatorio";
 import { CardKpi } from "@/components/ciaara/card-kpi";
@@ -136,6 +138,62 @@ export function AmostraEstadoVazio() {
     <div className="grid gap-3 md:grid-cols-2">
       <EstadoVazio motivo="sem-dado" />
       <EstadoVazio motivo="sem-permissao" acao={<Button size="sm">Solicitar acesso</Button>} />
+    </div>
+  );
+}
+
+/**
+ * O quadro recolhível — **as contagens ficam, a lista some** (`FR-027` e `RNF-USA-04` da spec 006).
+ *
+ * ⚠️ A AMOSTRA MOSTRA AS DUAS METADES DE PROPÓSITO. Uma amostra que só abrisse e fechasse passaria
+ * também numa implementação que recolhesse as contagens junto — que é justamente a que o
+ * `RNF-USA-04` proíbe, porque tira o aviso da tela.
+ */
+export function AmostraAvisosRecolhiveis() {
+  return (
+    <AvisosRecolhiveis
+      contagens={
+        <ul className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <li className="text-texto">
+            Sem duração em semanas: <strong>12</strong>
+          </li>
+          <li className="text-texto">
+            Sem propósito: <strong>10</strong>
+          </li>
+          <li className="text-texto">
+            Total: <strong>22</strong> avisos
+          </li>
+        </ul>
+      }
+    >
+      <ul className="flex flex-col gap-1">
+        <li className="text-texto">Sem duração em semanas: C-Ap-HN, C-Ap-FR, C-Esp-ALH</li>
+        <li className="text-texto">Sem propósito: C-Exp-BATI, C-ApA-OcOp-PR-SP</li>
+      </ul>
+    </AvisosRecolhiveis>
+  );
+}
+
+/**
+ * "Limpar filtros" — **padrão de toda tela que filtra** (decisão de 23/09/2026).
+ *
+ * ⚠️ A AMOSTRA MOSTRA OS DOIS ESTADOS DE PROPÓSITO. Uma amostra que só mostrasse o botão aceso
+ * passaria também numa implementação que o deixasse sempre visível — que é justamente o que ele não
+ * pode fazer: botão de limpar numa tela sem filtro não faz nada, e ensina a ignorá-lo.
+ */
+export function AmostraBotaoLimparFiltros() {
+  const [comFiltro, definirComFiltro] = React.useState(true);
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        <Button size="sm" variant="outline" onClick={() => definirComFiltro((v) => !v)}>
+          {comFiltro ? "Simular tela sem filtro" : "Simular tela com filtro"}
+        </Button>
+        <span className="text-texto-suave text-sm">
+          {comFiltro ? "Há filtro aplicado — o botão aparece." : "Sem filtro — o botão não existe."}
+        </span>
+      </div>
+      <BotaoLimparFiltros haFiltroAtivo={comFiltro} aoLimpar={() => definirComFiltro(false)} />
     </div>
   );
 }

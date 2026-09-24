@@ -613,7 +613,50 @@ def avancar_sequencias(con: psycopg.Connection) -> dict[str, int]:
     return avancadas
 
 
-def carregar(conexao: str = CONEXAO_LOCAL, *, somente_conferir: bool = False) -> Relatorio:
+class DestinoJaCarregado(RuntimeError):
+    """`--primeira-carga` contra destino que já tem dado carregado. Recusa antes de escrever."""
+
+
+def dados_ja_carregados(con: psycopg.Connection) -> list[tuple[str, int]]:
+    """As tabelas do destino que já têm dado vindo de uma carga anterior.
+
+    ⚠️ **ISTO É O QUE A AMBIENTE-2 EXIGE** *(decisão de Bernardo Villas Boas, 21/09/2026,
+    amarrada em 22/09)*: **nenhuma carga contra o remoto antes de o script recusar
+    `--primeira-carga` contra destino com dados.** Até aqui, o que impedia uma segunda
+    carga era **colisão de chave no meio da promoção** — transação desfeita, saída 3, mas
+    **por acidente**: a recusa vinha de uma `unique`, não de uma decisão. Proteção
+    acidental é exatamente o que esta fatia vem eliminando.
+
+    ⚠️ **O CRITÉRIO É A PROCEDÊNCIA, e não "a tabela tem linha".** `origem_migracao_v1`
+    marca o que veio da v2.0; o que a plataforma ou uma migration semeiam — a matriz de
+    permissões, a escala de antiguidade, o primeiro usuário — **não** conta, e é por isso
+    que um destino recém-migrado continua elegível. `migracao_log` entra pela contagem,
+    porque ela é o rastro e não carrega procedência (mapa §24).
+    """
+    achados: list[tuple[str, int]] = []
+    with con.cursor() as k:
+        for tabela in ordem.ORDEM_DE_CARGA:
+            if tabela == "migracao_log":
+                k.execute("select count(*) from public.migracao_log")
+            else:
+                k.execute(
+                    "select count(*) from information_schema.columns where table_schema='public' "
+                    "and table_name=%s and column_name='origem_migracao_v1'",
+                    (tabela,),
+                )
+                if not k.fetchone()[0]:
+                    continue
+                k.execute(
+                    f"select count(*) from public.{tabela} where origem_migracao_v1 is not null"
+                )
+            n = int(k.fetchone()[0])
+            if n:
+                achados.append((tabela, n))
+    return achados
+
+
+def carregar(conexao: str = CONEXAO_LOCAL, *, somente_conferir: bool = False,
+             primeira_carga: bool = False) -> Relatorio:
     rel = Relatorio()
     with psycopg.connect(conexao) as con:
         con.autocommit = False
@@ -625,6 +668,21 @@ def carregar(conexao: str = CONEXAO_LOCAL, *, somente_conferir: bool = False) ->
         #    criação das tabelas (DDL é transacional no PostgreSQL), e a base fica
         #    **byte a byte** como estava. É isso que faz "nada foi escrito" ser uma
         #    afirmação conferível, e não uma promessa.
+        # A recusa da AMBIENTE-2 vem ANTES de qualquer outra coisa: se o destino já tem
+        # carga, nem o `staging` precisa ser mexido.
+        if primeira_carga:
+            ja = dados_ja_carregados(con)
+            if ja:
+                con.rollback()
+                raise DestinoJaCarregado(
+                    "`--primeira-carga` contra destino que JA TEM DADO CARREGADO — nada foi escrito:\n  "
+                    + "\n  ".join(f"public.{t}: {n} linha(s)" for t, n in ja)
+                    + "\n  A primeira carga e a ULTIMA (AMBIENTE-2, 21/09/2026). Se a intencao e"
+                    "\n  recarregar o ambiente local, rode `pnpm db:reset` antes. Contra o remoto,"
+                    "\n  recarregar exige decisao registrada: o que ja esta la foi conferido contra"
+                    "\n  a origem."
+                )
+
         preparar_staging(con, rel)
 
         problemas = conferir_antes_de_escrever(con)

@@ -5,11 +5,12 @@
  * tabela que descreve intenção e um contrato que alguém é obrigado a seguir — e a tabela do
  * documento 25 §1.3 existia desde a Fase 2 sem que requisito nenhum a citasse.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { CLASSIFICACOES_DE_CURSO } from "@/lib/dominio/classificacoes-de-curso";
 import {
   CLASSIFICACOES,
   CONTRATO,
@@ -261,5 +262,178 @@ describe("`FR-028` da spec 006 · as rotas de instrutor seguem o contrato humano
     expect(opcoes("classificacao")).toEqual([...Constants.public.Enums.escopo_curso]);
     expect(porNome("posto").tipo, "posto tem domínio no dado, e é texto").toBe("texto");
     expect(porNome("curso").tipo, "curso tem domínio no dado, e é texto").toBe("texto");
+  });
+});
+
+describe("`FR-004` · o catálogo `/cursos` declara os três filtros, e nada mais", () => {
+  const doCatalogo = (nome: string) =>
+    parametrosDaRota("/cursos").find((p) => p.nome === nome) as Parametro;
+
+  const opcoes = (nome: string) => {
+    const p = doCatalogo(nome);
+    return p && p.tipo === "escolha" ? [...p.opcoes] : null;
+  };
+
+  it("a rota existe", () => {
+    expect(ROTAS).toContain("/cursos");
+  });
+
+  it("são exatamente três: classificação, modalidade e situação", () => {
+    expect(parametrosDaRota("/cursos").map((p) => p.nome)).toEqual([
+      "classificacao",
+      "modalidade",
+      "situacao",
+    ]);
+  });
+
+  it("⚠️ `situacao` tem padrão `ativo`, e é o único padrão não vazio — como em `/instrutores`", () => {
+    expect(doCatalogo("situacao").padrao).toBe("ativo");
+    const naoVazios = parametrosDaRota("/cursos").filter((p) => p.padrao !== "");
+    expect(naoVazios.map((p) => p.nome)).toEqual(["situacao"]);
+  });
+
+  it("`situacao` oferece o mesmo domínio de `/instrutores` — não uma segunda lista", () => {
+    expect(opcoes("situacao")).toEqual([...Constants.public.Enums.status_registro]);
+    const daListagemDeInstrutores = parametrosDaRota("/instrutores").find(
+      (p) => p.nome === "situacao",
+    ) as Parametro;
+    expect(daListagemDeInstrutores.tipo).toBe("escolha");
+    if (daListagemDeInstrutores.tipo === "escolha") {
+      expect(opcoes("situacao")).toEqual([...daListagemDeInstrutores.opcoes]);
+    }
+  });
+
+  it("modalidade oferece o enum do banco inteiro", () => {
+    expect(opcoes("modalidade")).toEqual([...MODALIDADES]);
+  });
+
+  it("⚠️ classificação oferece as CINCO do Glossário, e NÃO o enum inteiro", () => {
+    // É a diferença entre `/cursos` e `/inicio`, e ela é deliberada: aqui a classificação AGRUPA
+    // os cartões, e um grupo `geral` ou `ead_semipresencial` nunca teria cartão — o banco recusa
+    // os dois valores. No Início ela só filtra, e lá o critério registrado é o oposto.
+    expect(opcoes("classificacao")).toEqual([...CLASSIFICACOES_DE_CURSO]);
+    expect(opcoes("classificacao")).not.toContain("geral");
+    expect(opcoes("classificacao")).not.toContain("ead_semipresencial");
+  });
+
+  it("⚠️ e o Início NÃO mudou — as duas listas convivem de propósito (D-19)", () => {
+    const doInicio = parametrosDaRota("/inicio").find(
+      (p) => p.nome === "classificacao",
+    ) as Parametro;
+    expect(doInicio.tipo).toBe("escolha");
+    if (doInicio.tipo === "escolha") {
+      expect([...doInicio.opcoes]).toEqual([...CLASSIFICACOES]);
+      expect([...doInicio.opcoes]).toContain("geral");
+    }
+  });
+
+  it("⚠️ nenhum filtro de busca por texto — o catálogo tem 24 cartões, não uma tabela", () => {
+    expect(parametrosDaRota("/cursos").map((p) => p.tipo)).toEqual([
+      "escolha",
+      "escolha",
+      "escolha",
+    ]);
+  });
+
+  it("os três avisam o servidor — o recorte é feito pela consulta, não no navegador", () => {
+    for (const p of parametrosDaRota("/cursos")) {
+      expect(p.avisaServidor, `${p.nome} filtra sem consultar o banco`).toBe(true);
+    }
+  });
+});
+
+describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
+  const daPagina = (nome: string) =>
+    parametrosDaRota("/cursos/[curso]").find((p) => p.nome === nome) as Parametro;
+
+  it("a rota existe, com exatamente dois parâmetros", () => {
+    expect(ROTAS).toContain("/cursos/[curso]");
+    expect(parametrosDaRota("/cursos/[curso]").map((p) => p.nome)).toEqual(["aba", "turma"]);
+  });
+
+  it("`aba` é escolha entre duas, com padrão `grade`", () => {
+    const aba = daPagina("aba");
+    expect(aba.tipo).toBe("escolha");
+    if (aba.tipo === "escolha") expect([...aba.opcoes]).toEqual(["grade", "sobre"]);
+    expect(aba.padrao).toBe("grade");
+  });
+
+  it("⚠️ `turma` é TEXTO, e não escolha — o domínio dela é o dado, não uma lista fechada", () => {
+    // As turmas mudam a cada ano letivo. Uma escolha com opções escritas no contrato degradaria
+    // para "nenhuma", em silêncio, o link que apontasse para uma turma criada depois.
+    expect(daPagina("turma").tipo).toBe("texto");
+    expect(daPagina("turma").padrao).toBe("");
+  });
+
+  it("⚠️ os dois EMPILHAM histórico — trocar de aba ou de turma é navegação (`FR-036`)", () => {
+    // É a diferença para os filtros de `/cursos`, que substituem: filtrar é refinar a mesma vista,
+    // trocar de turma é ir a outro lugar, e "voltar" precisa desfazer um passo.
+    expect(daPagina("aba").historico).toBe("empilha");
+    expect(daPagina("turma").historico).toBe("empilha");
+  });
+
+  it("os dois avisam o servidor — a leitura da turma é do servidor", () => {
+    for (const p of parametrosDaRota("/cursos/[curso]")) expect(p.avisaServidor).toBe(true);
+  });
+});
+
+describe("`FR-013.1` · cadastro e edição de curso não têm parâmetro de consulta", () => {
+  it("as duas rotas existem", () => {
+    expect(ROTAS).toEqual(expect.arrayContaining(["/cursos/novo", "/cursos/[curso]/editar"]));
+  });
+
+  it("⚠️ e nenhuma das duas declara parâmetro — rascunho de formulário NÃO vai para a URL", () => {
+    // É a mesma decisão de `/instrutores/novo`: o que a pessoa ainda está digitando não é estado
+    // compartilhável, e pô-lo na barra de endereço vaza por histórico e por ombro.
+    expect(parametrosDaRota("/cursos/novo")).toEqual([]);
+    expect(parametrosDaRota("/cursos/[curso]/editar")).toEqual([]);
+  });
+});
+
+describe("`FR-031` · turma e salas: identidade no caminho, nada na consulta", () => {
+  it("as três rotas existem", () => {
+    expect(ROTAS).toEqual(
+      expect.arrayContaining(["/cursos/[curso]/turmas/nova", "/turmas/[turma]", "/admin/salas"]),
+    );
+  });
+
+  it("e nenhuma delas declara parâmetro", () => {
+    for (const rota of ["/cursos/[curso]/turmas/nova", "/turmas/[turma]", "/admin/salas"]) {
+      expect(parametrosDaRota(rota as Rota), rota).toEqual([]);
+    }
+  });
+});
+
+describe("⚠️ `FR-031.7` · a guarda de AUSÊNCIA — o que esta fatia NÃO entrega", () => {
+  /*
+   * ⚠️ AUSÊNCIA TAMBÉM SE VERIFICA. Sem estes casos, uma lista global de turmas ou uma rota de DSA
+   * poderiam nascer "de passagem" numa fatia futura, e ninguém notaria até a tela existir — que é
+   * tarde. A turma se alcança pela página do curso; o lançamento diário é do **Épico 6**.
+   */
+  it("não há rota `/turmas` (lista global) nem `/turmas/[turma]/dsa`", () => {
+    expect(
+      ROTAS,
+      "nasceu uma lista global de turmas — o FR-031.7 diz que a turma se alcança pelo curso",
+    ).not.toContain("/turmas");
+    expect(ROTAS, "o DSA é do Épico 6, e não desta fatia").not.toContain("/turmas/[turma]/dsa");
+  });
+
+  it("o menu não ganhou entrada 'Turmas'", () => {
+    const doc = readFileSync(resolve(process.cwd(), "lib/navegacao/menu.ts"), "utf8");
+    const semComentario = doc.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\r\n]*/g, " ");
+
+    expect(
+      semComentario,
+      'o menu ganhou entrada "Turmas" — o FR-031.7 e a MENU-1 dizem que ela não existe',
+    ).not.toMatch(/rotulo:\s*"Turmas"/);
+  });
+
+  it("e as telas não existem em `app/`", () => {
+    for (const caminho of ["app/(app)/turmas/page.tsx", "app/(app)/turmas/[turma]/dsa"]) {
+      expect(
+        existsSync(resolve(process.cwd(), caminho)),
+        `${caminho} nasceu: a lista global de turmas e o DSA são do Épico 6 (FR-031.7)`,
+      ).toBe(false);
+    }
   });
 });

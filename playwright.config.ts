@@ -19,7 +19,20 @@ import { execFileSync } from "node:child_process";
 
 import { defineConfig, devices } from "@playwright/test";
 
-const URL_BASE = process.env.URL_BASE_E2E ?? "http://localhost:3000";
+/**
+ * ⚠️ **A SUÍTE VIVE NA 3100, E NÃO NA 3000 — medido em 24/09/2026, com custo de diagnóstico.**
+ *
+ * `reuseExistingServer` é `true` fora do CI, e ele **não distingue** que servidor está na porta: com
+ * `pnpm dev:local` de pé para conferir na tela — que é o uso normal da máquina —, o Playwright
+ * reaproveitava o servidor de **desenvolvimento** em vez de construir o de produção, contra o qual
+ * esta suíte foi escrita. O efeito é o pior possível: **quatro casos reprovavam em QUALQUER ramo,
+ * inclusive na `main`**, e a leitura fácil era "o ramo quebrou a vitrine".
+ *
+ * Separar as portas resolve sem tirar nada de ninguém: quem confere continua na 3000, a suíte
+ * constrói a sua na 3100. No CI nada muda — lá não há servidor de pé para reaproveitar.
+ */
+const PORTA = process.env.PORTA_E2E ?? "3100";
+const URL_BASE = process.env.URL_BASE_E2E ?? `http://localhost:${PORTA}`;
 
 /**
  * Pergunta ao próprio Supabase CLI. Nenhuma chave é embutida neste arquivo.
@@ -69,11 +82,31 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+
+  /*
+   * ⚠️ **10 SEGUNDOS, E NÃO OS 5 DO PADRÃO** *(decisão de Bernardo Villas Boas, 23/09/2026, opção (a)
+   *    da `PEND-5a-7`)*. Este é o prazo de cada `expect` — o tempo que ele reexecuta a asserção antes
+   *    de desistir —, e não o limite do caso, que continua em 30 s.
+   *
+   *    **O que foi medido**, sem `retries`, em paralelo, na base resetada: três execuções da suíte
+   *    inteira deram 251, 251 e 250 passados, e a única reprovação foi o **primeiro** `expect` de um
+   *    percurso de `/admin/salas` — tela que lê a lista de salas **e** todas as turmas para dizer quem
+   *    usa cada uma. Os passos seguintes do mesmo percurso já pediam 15 s e passavam. Com quatro
+   *    processos de trabalho, um servidor Next de produção e o stack do Supabase na mesma máquina,
+   *    **tela de gestão passa de 5 s** — e um prazo que reprova por carga da máquina não mede a tela.
+   *
+   * ⚠️ **ISTO NÃO ESCONDE LENTIDÃO REAL, E A DISTINÇÃO IMPORTA.** O que o prazo absorve é a variação
+   *    sob carga; uma tela que passe a levar 10 s continua reprovando. A otimização do que as torna
+   *    lentas — `vw_instrutor_carga_anual` a ~700 ms sob RLS, e a leitura de todas as turmas na tela de
+   *    salas — **fica registrada como não bloqueante**, para reavaliar se a conferência no preview
+   *    mostrar lentidão (opção (b) da mesma decisão).
+   */
+  expect: { timeout: 10_000 },
   reporter: process.env.CI ? "github" : "list",
   use: { baseURL: URL_BASE, trace: "on-first-retry" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm build && pnpm start",
+    command: `pnpm build && pnpm start -p ${PORTA}`,
     url: URL_BASE,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

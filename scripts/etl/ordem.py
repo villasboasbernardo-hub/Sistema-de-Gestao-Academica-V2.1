@@ -63,9 +63,12 @@ NASCE_DE_ABA_COMPARTILHADA: frozenset[str] = frozenset({"configuracoes_horario"}
 
 FORA_DA_IDEMPOTENCIA: frozenset[str] = frozenset({"migracao_log"})
 
-# Colunas excluídas do checksum (FR-006). As cinco variam a cada execução POR
-# CONSTRUÇÃO: `id` vem de `gen_random_uuid()` e o quarteto vem do gatilho
-# `app.set_auditoria()`. Incluí-las tornaria a idempotência insatisfazível.
+# Colunas excluídas do checksum (FR-006). Todas variam sem que nenhum fato migrado tenha
+# mudado: `id` vem de `gen_random_uuid()` e o quarteto vem do gatilho `app.set_auditoria()`.
+# Incluí-las tornaria a idempotência insatisfazível.
+#
+# ⚠️ O CRITÉRIO É **"muda sem que a origem mude"**, e não "é coluna de auditoria". Foi por lê-lo
+#    como a segunda coisa que `ultimo_acesso` ficou dentro do checksum até 23/09/2026 — ver abaixo.
 COLUNAS_FORA_DO_CHECKSUM: frozenset[str] = frozenset(
     {
         "id",
@@ -73,6 +76,20 @@ COLUNAS_FORA_DO_CHECKSUM: frozenset[str] = frozenset(
         "criado_em",
         "editado_por",
         "editado_em",
+        # ⚠️ `usuarios.ultimo_acesso` É TELEMETRIA DE SESSÃO, NÃO FATO MIGRADO — e estar dentro do
+        # checksum tornava a promessa da R-08 **insatisfazível por construção** em qualquer base com
+        # login de verdade: *"reexecutar a carga com a mesma origem tem de reproduzi-los"*, e bastava
+        # alguém entrar no sistema entre duas medições para o hash de `usuarios` mudar sem que uma
+        # linha da origem tivesse mudado.
+        #
+        # Medido no projeto remoto em 23/09/2026: a mesma reconciliação, com **um acesso** entre as
+        # duas leituras, deu `1e74482727efca14b93267e937f858ea` e depois
+        # `31609ffdca0a4b3f3e023390c4cbd089` — três das quatro linhas de `usuarios` idênticas, e a
+        # diferença inteira em `ultimo_acesso`. *(decisão de Bernardo Villas Boas, 23/09/2026.)*
+        #
+        # ⚠️ ELA EXISTE SÓ EM `usuarios` (conferido em `information_schema` no banco local em
+        # 23/09/2026), então a exclusão não alcança nenhuma outra tabela por tabela nenhuma.
+        "ultimo_acesso",
         # `arquivo_avaliacoes_v1.arquivado_em` e `arquivado_por` são o `now()` e o autor
         # DA CARGA, não fatos sobre a avaliação arquivada. São o quarteto de auditoria
         # com outro nome, e ficam fora pela mesma razão: duas cargas idênticas rodam em

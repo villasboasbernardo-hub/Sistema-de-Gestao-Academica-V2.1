@@ -23,7 +23,14 @@ import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste"
 let EMAIL = "";
 
 /** A origem da aplicação sob teste. É contra ela que a permanência é medida. */
-const ORIGEM = process.env.URL_BASE_E2E ?? "http://localhost:3000";
+/*
+ * ⚠️ **A ORIGEM VEM DA CONFIGURAÇÃO, E NÃO DE UM NÚMERO ESCRITO AQUI.** Medido em 24/09/2026:
+ *    com a suíte movida para a porta 3100 — para não disputar a 3000 com o `pnpm dev:local` de
+ *    quem confere —, o literal `3000` fazia este arquivo acusar *"o navegador saiu da
+ *    aplicação"* listando endereços **da própria aplicação**. A porta é detalhe de ambiente; a
+ *    origem é o que o `playwright.config.ts` decidiu.
+ */
+const ORIGEM = process.env.URL_BASE_E2E ?? `http://localhost:${process.env.PORTA_E2E ?? "3100"}`;
 
 test.beforeAll(async ({}, info) => {
   EMAIL = emailDeTeste("url-hostil", info.workerIndex);

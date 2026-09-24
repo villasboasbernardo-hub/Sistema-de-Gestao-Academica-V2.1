@@ -25,7 +25,9 @@
     "test:e2e:ui": "playwright test --ui",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
-    "db:reset": "supabase db reset",
+    "db:reset": "supabase db reset && pnpm conta:local",
+    "db:reset:limpo": "supabase db reset",
+    "conta:local": "python -m scripts.manutencao.conta_local",
     "db:migration": "supabase migration new",
     "db:tipos": "supabase gen types typescript --local > lib/tipos/database.ts",
     "db:tipos:conferir": "supabase gen types typescript --local > lib/tipos/database.ts && git diff --exit-code lib/tipos/database.ts",
@@ -34,7 +36,7 @@
     "etl:carregar": "python scripts/etl/carregar_postgres.py",
     "etl:reconciliar": "python scripts/etl/reconciliar.py",
     "verificar": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test:unidade && pnpm build",
-    "verificar:tudo": "pnpm verificar && pnpm db:reset && pnpm db:tipos:conferir && pnpm test:invariantes && pnpm test:rls && pnpm test:e2e"
+    "verificar:tudo": "pnpm verificar && pnpm db:reset:limpo && pnpm db:tipos:conferir && pnpm test:invariantes && pnpm test:rls && pnpm test:e2e"
   },
   "scriptsComentarios": {
     "_": "FR-012: o documento 24 §7 define os scripts COM comentarios; JSON nao aceita comentario, entao eles vivem aqui, um por script. Comentario explica POR QUE o script existe — nenhum nome de script consegue isso. Script novo entra COM comentario.",
@@ -57,7 +59,9 @@
     "test:e2e:ui": "Abre o inspetor do Playwright para depurar um percurso passo a passo.",
     "db:start": "Sobe PostgreSQL + Auth + Studio em Docker. Primeiro comando do dia.",
     "db:stop": "Derruba os conteineres. Roda ao fim do dia para liberar memoria.",
-    "db:reset": "Derruba, reaplica TODAS as migrations do zero e roda seed.sql. E o teste real de que a sequencia aplica numa base limpa. Use sem medo: o banco local e descartavel por definicao.",
+    "db:reset": "Derruba, reaplica TODAS as migrations do zero, roda seed.sql e RECRIA A SUA CONTA LOCAL (conta:local). E o teste real de que a sequencia aplica numa base limpa. Use sem medo: o banco local e descartavel por definicao.",
+    "db:reset:limpo": "Igual ao db:reset, SEM criar a conta local. E o que `verificar:tudo` usa, porque e o que o CI roda: `tests/invariantes/rls/rls.test.ts` pressupoe ser o UNICO Admin (PEND-5a-5), e um Admin a mais faz 12 casos cairem em cascata — vermelho no local com verde no CI, que e defeito da verificacao (SC-005).",
+    "conta:local": "Garante a sua credencial no Auth LOCAL e o vinculo com a linha de usuarios, perfil admin. Idempotente: rodar de novo nao duplica nada. O e-mail vem do `git config user.email` — nunca esta escrito no repositorio, que e publico. Recusa qualquer destino que nao seja o Docker desta maquina.",
     "db:migration": "Cria migration vazia com timestamp. O SQL e escrito A MAO — migration gerada por diff que ninguem leu foi como o schema da v2.0 divergiu do documentado.",
     "db:tipos": "Regenera lib/tipos/database.ts a partir do banco LOCAL. OBRIGATORIO depois de toda migration (risco R-04).",
     "db:tipos:conferir": "Igual ao db:tipos, mas FALHA se o resultado divergir do commitado. E o portao do CI (FR-010). Nunca commita sozinho: quem commita e gente.",

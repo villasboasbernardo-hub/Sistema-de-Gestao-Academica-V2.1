@@ -8,28 +8,20 @@
  * ⚠️ SÓ ENDEREÇO DE TESTE (FR-031.1). A emissão aos três endereços reais da v2.0 é do corte, e
  * este arquivo não tem como emiti-la: os endereços daqui terminam em `@ciaara.teste`.
  */
-import { execFileSync } from "node:child_process";
-
 import { createClient } from "@supabase/supabase-js";
 import { expect, test } from "@playwright/test";
 
-function chaveLocal(nomeNoCli: string): string {
-  const saida = execFileSync("supabase", ["status", "-o", "env"], {
-    encoding: "utf8",
-    windowsHide: true,
-  });
-  const valor = saida
-    .split("\n")
-    .find((l) => l.startsWith(`${nomeNoCli}=`))
-    ?.split("=")
-    .slice(1)
-    .join("=")
-    .replace(/^"|"$/g, "")
-    .trim();
-  if (!valor) throw new Error(`nao achei ${nomeNoCli} no supabase status`);
-  return valor;
-}
+import { apagarConta, chaveLocal, contasDoAuth } from "./conta-de-teste";
 
+/*
+ * ⚠️ **AS CHAVES VÊM DO AUXILIAR ÚNICO, E NÃO DE UMA CÓPIA LOCAL** — corrigido em 23/09/2026, e o
+ *    padrão é o mesmo do `listUsers` sem paginar: `conta-de-teste.ts` foi endurecido duas vezes (ler
+ *    o ambiente que o processo principal já resolveu, e repetir se a CLI recusar por concorrência) e
+ *    **este arquivo tinha a própria cópia, sem nenhuma das duas**. Ele chamava `supabase status`
+ *    TRÊS vezes no carregamento do módulo — que é exatamente o defeito nº 5 do Épico 4 (c) —, e
+ *    morria com `Command failed: supabase status -o env` levando junto um caso que não tem relação
+ *    nenhuma com a causa.
+ */
 const URL_SUPABASE = chaveLocal("API_URL");
 const CHAVE_SERVICO = chaveLocal("SECRET_KEY");
 const CHAVE_ANON = chaveLocal("PUBLISHABLE_KEY");
@@ -155,7 +147,7 @@ test("V-3 · convite, senha e primeiro acesso, com o escopo atribuído", async (
   expect(linha!.id).toBeTruthy();
 
   await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: "http://localhost:3000/convite",
+    redirectTo: `${process.env.URL_BASE_E2E ?? `http://localhost:${process.env.PORTA_E2E ?? "3100"}`}/convite`,
   });
   const link = await linkDoUltimoEmail(email);
 
@@ -177,8 +169,11 @@ test("V-3 · convite, senha e primeiro acesso, com o escopo atribuído", async (
    */
   await page.waitForURL(/\/$/, { timeout: 15_000 });
 
-  const { data: contasApos } = await admin.auth.admin.listUsers();
-  const conta = (contasApos?.users ?? []).find((u) => u.email === email);
+  /*
+   * ⚠️ A BUSCA PAGINA. Ler só a primeira página fazia este `expect` dizer *"a credencial não foi
+   *    criada"* sobre uma credencial criada — acusação ao sistema por defeito da verificação.
+   */
+  const [conta] = await contasDoAuth(email);
   expect(conta, "a credencial não foi criada").toBeTruthy();
 
   // ⚠️ SC-013 · `codigo` e `origem_migracao_v1` SOBREVIVEM à obtenção da credencial. É o que faz
@@ -212,11 +207,7 @@ test("V-3 · convite, senha e primeiro acesso, com o escopo atribuído", async (
   await page.goto("/inicio");
   await expect(page, "a pessoa convidada foi devolvida ao login").toHaveURL(/\/inicio/);
 
-  await admin.from("usuarios").delete().eq("email", email);
-  const { data: contas } = await admin.auth.admin.listUsers();
-  for (const u of contas?.users ?? []) {
-    if (u.email === email) await admin.auth.admin.deleteUser(u.id);
-  }
+  await apagarConta(email);
 });
 
 // =================================================================================================

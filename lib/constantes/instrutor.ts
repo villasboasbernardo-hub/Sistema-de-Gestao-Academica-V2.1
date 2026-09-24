@@ -7,6 +7,11 @@
  * ⚠️ É RÓTULO, NÃO REGRA. As faixas de carga horária por regime vivem em `config_parametros`
  * (`RNF-NORM-08`) — nunca neste arquivo.
  */
+import {
+  CLASSIFICACOES_DE_CURSO,
+  ROTULO_DA_CLASSIFICACAO,
+  type ClassificacaoDeCurso,
+} from "@/lib/dominio/classificacoes-de-curso";
 import type { Database } from "@/lib/tipos/database";
 
 export type RegimeDocente = Database["public"]["Enums"]["regime_trabalho_docente"];
@@ -65,17 +70,22 @@ export const UFS = [
  * > *"Classificação (do curso). Categoria administrativa do curso: Curso Regular, Curso Expedito,
  * > Curso Especial, Curso de Aperfeiçoamento Avançado, ou Estágio de Qualificação."* — documento 07
  *
+ * ⚠️ **ELA DERIVA DE `lib/dominio/classificacoes-de-curso.ts` desde 23/09/2026**, e antes era uma
+ * segunda cópia dos mesmos cinco nomes. A fatia (a) do Épico 5 ia criar uma terceira para o
+ * catálogo `/cursos` — e com rótulo diferente, porque leu a ordem do `FR-003` como se fosse o
+ * vocabulário. Uma lista só, e o Glossário como fonte.
+ *
  * ⚠️ SÃO CINCO, E O ENUM TEM SETE. `geral` e `ead_semipresencial` existem em `escopo_curso` para o RBAC,
  * mas não são classificação de curso no glossário nem na spec 015 da v2.0 (achado 8); a URL continua
  * aceitando os sete, pelo contrato, e a barra oferece os cinco com o nome que a Divisão usa.
  */
-export const CLASSIFICACOES_DE_CURSO_NA_BARRA = [
-  { valor: "regular", rotulo: "Curso Regular" },
-  { valor: "expedito", rotulo: "Curso Expedito" },
-  { valor: "especial", rotulo: "Curso Especial" },
-  { valor: "aperfeicoamento_avancado", rotulo: "Curso de Aperfeiçoamento Avançado" },
-  { valor: "estagio_qualificacao", rotulo: "Estágio de Qualificação" },
-] as const;
+export const CLASSIFICACOES_DE_CURSO_NA_BARRA: readonly {
+  readonly valor: ClassificacaoDeCurso;
+  readonly rotulo: string;
+}[] = CLASSIFICACOES_DE_CURSO.map((valor) => ({
+  valor,
+  rotulo: ROTULO_DA_CLASSIFICACAO[valor],
+}));
 
 /**
  * O rótulo de exibição da classificação do instrutor no gráfico (`FR-026.2` emendado em 15/09/2026).

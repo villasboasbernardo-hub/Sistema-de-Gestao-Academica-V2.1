@@ -33,11 +33,14 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 import psycopg
 
-from . import mapa, ordem
+from psycopg import sql as psql
+
+from . import correcoes, mapa, ordem
 
 CONEXAO_LOCAL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 RELATORIO = Path(__file__).parent / "dados" / "relatorio_divergencia.md"
@@ -76,6 +79,14 @@ class Veredito:
     esperados: list[Divergencia] = field(default_factory=list)
     checksums: dict[str, str] = field(default_factory=dict)
     executadas: list[str] = field(default_factory=list)
+
+    # ⚠️ CONTRA QUAL BASE ISTO FOI MEDIDO. O relatório é um arquivo só, sobrescrito por
+    #    qualquer execução, e sem esta linha ele não diz se o veredito veio do banco do
+    #    Docker ou do projeto remoto. Em 23/09/2026 o custo apareceu: um BLOQUEADA vindo
+    #    do remoto foi lido como sujeira da base local, e as duas leituras cabiam no mesmo
+    #    arquivo (`CLAUDE.md`, regra 9.2 — número medido nomeia o artefato).
+    medido_contra: str = ""
+    medido_em: str = ""
 
     @property
     def aprovada(self) -> bool:
@@ -137,6 +148,74 @@ NASCEM_DA_PROPRIA_CARGA: dict[str, str] = {
 # =====================================================================================
 
 SEMEADAS_PELO_SCHEMA: frozenset[str] = frozenset({"config_listas", "config_parametros"})
+
+
+# =====================================================================================
+# LINHAS QUE NASCEM DA PLATAFORMA — procedência nula é o registro certo, não é lacuna
+#
+# ⚠️ EXCEÇÃO ÚNICA, DELIMITADA E DATADA — *"a exceção da R-05 vale só para `usuarios`, só
+#    para linha vinculada a uma credencial do Auth, e não dispensa procedência em nenhuma
+#    outra tabela"* (autorização de Bernardo Villas Boas, 23/09/2026).
+#
+# O QUE ACONTECEU: a reconciliação da carga contra o projeto REMOTO saiu **BLOQUEADA** por
+#    uma linha só — `USR-ADMIN-001`, perfil `admin`, `origem_migracao_v1` nula. Ela não veio
+#    da planilha da v2.0: é a conta que abriu o próprio ambiente, criada pelo Supabase Auth.
+#    Exigir procedência dela é exigir que declare uma origem que não existe, e preencher o
+#    campo para acalmar a verificação seria inventar migração — o contrário do que a R-05
+#    existe para garantir.
+#
+# ⚠️ POR QUE A CONDIÇÃO É `auth_user_id`, E NÃO "a tabela `usuarios` é isenta": porque
+#    `usuarios` RECEBE linhas migradas, e elas têm de continuar declarando procedência. A
+#    coluna separa as duas populações sem ambiguidade: é FK para `auth.users` (migration
+#    `20260830000111`) e quem a preenche é `app.vincular_credencial()` (migration
+#    `20260911230000`), uma vez só, no primeiro acesso de quem aceitou o convite. Ela é
+#    portanto a marca de uma conta que existe de verdade. Linha de `usuarios` sem
+#    procedência **e sem credencial** continua bloqueando, e esse é justamente o caso de
+#    uma linha migrada que perdeu a marca — e o de um convite ainda não aceito.
+#
+# ⚠️ E A ISENÇÃO NÃO ALCANÇA NENHUMA OUTRA TABELA. O dicionário é lido por nome: o que não
+#    está aqui é conferido como sempre foi. Acrescentar tabela aqui é decisão do Bernardo,
+#    não manutenção.
+# =====================================================================================
+
+NASCEM_DA_PLATAFORMA: dict[str, str] = {
+    "usuarios": "auth_user_id is not null",
+}
+
+
+# =====================================================================================
+# LINHAS QUE O APLICATIVO CRIOU DEPOIS DA CARGA — a segunda isenção, e esta é GERAL
+#
+# ⚠️ DECISÃO DE BERNARDO VILLAS BOAS, 24/09/2026: *"o banco remoto passa a ser a fonte da
+#    verdade dos CADASTROS (cursos, turmas, instrutores; disciplinas quando a fatia (b) for
+#    mesclada). Testadores vão editar e completar esses dados pelo preview."* A partir daí,
+#    linha sem procedência deixa de ser sintoma de carga incompleta e passa a ser o registro
+#    normal do que **nasceu na tela** — exigir `origem_migracao_v1` dela seria exigir que
+#    declarasse uma migração que não houve.
+#
+# ⚠️ O QUE SEPARA AS DUAS POPULAÇÕES É A AUDITORIA, e ela não se preenche sozinha:
+#    `criado_por` vem do gatilho `app.set_auditoria()`, a partir de `auth.uid()` — isto é,
+#    **só existe quando houve sessão autenticada**. O ETL carrega pela `service_role`, sem
+#    sessão: tudo que ele grava sai com `criado_por` NULO. Logo:
+#
+#      sem procedência **e** COM auditoria  ->  nasceu no aplicativo, é legítima
+#      sem procedência **e** SEM auditoria  ->  continua BLOQUEANDO, como sempre
+#
+#    A segunda linha é o que mantém a regra viva: é o caso da linha migrada que perdeu a
+#    marca, e o do dado inserido à mão por fora do sistema.
+#
+# ⚠️ E ELA NÃO SUBSTITUI A ISENÇÃO DE `usuarios`, ACIMA — as duas convivem, por motivos
+#    diferentes e MEDIDOS. `USR-ADMIN-001`, a conta que abriu o ambiente, tem credencial do
+#    Auth e `criado_por` **nulo**; medido no projeto remoto em 24/09/2026, os quatro
+#    cadastros anteriores à decisão têm `criado_por` nulo e só o quinto — criado pela tela em
+#    23/09 — o tem preenchido. Trocar uma isenção pela outra faria a conta do Admin voltar a
+#    bloquear.
+#
+# ⚠️ A ISENÇÃO SÓ VALE ONDE A COLUNA EXISTE. Tabela sem `criado_por` não ganha nada: o
+#    recorte é montado a partir das colunas lidas do catálogo, e não de uma lista à mão.
+# =====================================================================================
+
+CRIADA_PELO_APLICATIVO = "criado_por is not null"
 
 
 def _uma(k, sql: str, args: tuple = ()) -> object:
@@ -445,10 +524,24 @@ def r05_identidade_e_procedencia(con: psycopg.Connection) -> list[Divergencia]:
                 and tabela not in ordem.FORA_DA_IDEMPOTENCIA
                 and tabela not in SEMEADAS_PELO_SCHEMA
             ):
+                # ⚠️ O RECORTE É POR TABELA **E** POR CONDIÇÃO — ver `NASCEM_DA_PLATAFORMA`.
+                #    Sem a segunda metade a isenção viraria "a tabela inteira é isenta", e
+                #    uma linha migrada que perdesse a marca passaria despercebida.
+                # ⚠️ E OS PARÊNTESES NÃO SÃO ESTILO: `and` liga mais forte que `or`, então
+                #    sem eles o recorte se aplicaria só ao segundo lado do `or` e a
+                #    verificação mudaria de sentido calada.
+                # ⚠️ DUAS ISENÇÕES, LIGADAS POR `or`, cada uma com o seu motivo: a nominal
+                #    de `usuarios` (credencial do Auth, 23/09/2026) e a geral de quem nasceu
+                #    na tela (auditoria preenchida, 24/09/2026).
+                isencoes = [CRIADA_PELO_APLICATIVO] if "criado_por" in colunas else []
+                nascida_aqui = NASCEM_DA_PLATAFORMA.get(tabela)
+                if nascida_aqui:
+                    isencoes.append(nascida_aqui)
+                recorte = f" and not ({' or '.join(isencoes)})" if isencoes else ""
                 sem = _uma(
                     k,
-                    f"select count(*) from public.{tabela} "
-                    f"where origem_migracao_v1 is null or btrim(origem_migracao_v1) = ''",
+                    f"select count(*) from public.{tabela} where "
+                    f"(origem_migracao_v1 is null or btrim(origem_migracao_v1) = ''){recorte}",
                 )
                 # `planejamento_anual` e `usuario_curso` chegam vazias: 0 de 0 é 100%.
                 if sem and _uma(k, f"select count(*) from public.{tabela}"):
@@ -481,12 +574,18 @@ def r06_log_intacto(con: psycopg.Connection) -> list[Divergencia]:
         # Os eventos que ESTA carga criou: cada um tem de descrever uma correção que de
         # fato aconteceu. Contar quantos são não prova nada — o que prova é que o valor
         # registrado como "depois" é o que está gravado na turma hoje.
+        # ⚠️ SÓ OS EVENTOS DA NORMALIZAÇÃO DE SALA. A partir de 22/09/2026 existe uma
+        #    segunda origem de evento com `observacao`: a camada de correções de origem,
+        #    que corrige **qualquer** tabela — e a primeira versão desta verificação, que
+        #    supunha `turmas` para todo evento, acusou 14 falsos positivos na primeira
+        #    carga com correções de `cursos`. A verificação estava certa em reclamar: ela
+        #    é que era estreita demais. As correções têm conferência própria, logo abaixo.
         k.execute(
             """
             select l.codigo, l.destino_chave, l.valor_antes, l.valor_depois, t.sala_alocada
               from public.migracao_log l
               left join public.turmas t on t.codigo = l.destino_chave
-             where l.observacao is not null
+             where l.observacao is not null and l.origem_tabela = 'Turmas_Ativas'
              order by l.codigo
             """
         )
@@ -506,6 +605,33 @@ def r06_log_intacto(con: psycopg.Connection) -> list[Divergencia]:
                     Divergencia("R-06", "migracao_log", f"evento {codigo}",
                                 "uma correcao de verdade", f"antes e depois iguais: {antes!r}")
                 )
+        # As CORREÇÕES DE ORIGEM, conferidas contra o arquivo que as declara — e não
+        # contra o evento: o arquivo é quem diz tabela, registro, coluna e valor novo,
+        # então a conferência vale para qualquer tabela que venha a ser corrigida.
+        for c in correcoes.ler():
+            k.execute(
+                psql.SQL("select {}::text from public.{} where codigo = %s").format(
+                    psql.Identifier(c.coluna), psql.Identifier(c.tabela)
+                ),
+                (c.registro,),
+            )
+            linha_atual = k.fetchone()
+            atual = None if linha_atual is None else linha_atual[0]
+            if atual != c.para:
+                achados.append(
+                    Divergencia("R-06", f"{c.tabela}.{c.coluna}", f"correcao da linha {c.linha}",
+                                f"{c.registro} em {c.para!r}", f"{atual!r}")
+                )
+            k.execute(
+                "select count(*) from public.migracao_log where observacao = %s and acao = 'corrigido'",
+                (f"correcoes-de-origem.md:{c.linha}",),
+            )
+            if int(k.fetchone()[0]) != 1:
+                achados.append(
+                    Divergencia("R-06", "migracao_log", f"rastro da correcao da linha {c.linha}",
+                                "exatamente 1 evento `corrigido`", "outro numero")
+                )
+
         k.execute(
             "select count(*) from public.migracao_log "
             "where observacao is not null and acao <> 'corrigido'"
@@ -800,6 +926,10 @@ def reconciliar(conexao: str = CONEXAO_LOCAL) -> Veredito:
 
     with con:
         con.read_only = True  # contrato C-4, imposto pela sessão e não pela boa vontade
+        # Sem usuário nem senha: o que identifica a base é o endereço dela.
+        i = con.info
+        v.medido_contra = f"{i.host}:{i.port}/{i.dbname}"
+        v.medido_em = datetime.now().astimezone().strftime("%d/%m/%Y %H:%M %z")
         _exigir_leitura(con)
         for nome, funcao in VERIFICACOES:
             try:
@@ -824,6 +954,8 @@ def escrever_relatorio(v: Veredito, destino: Path = RELATORIO) -> Path:
         "# Relatório de reconciliação — Épico 2",
         "",
         f"**Veredito: {'APROVADA' if v.aprovada else 'BLOQUEADA'}**",
+        "",
+        f"**Medido contra:** `{v.medido_contra}` · **em** {v.medido_em}",
         "",
         "Relatório sem veredito não é aprovação (contrato reconciliacao C-1).",
         "",

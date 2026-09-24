@@ -17,11 +17,12 @@ COMO   : `python -m scripts.etl.executar [--primeira-carga] [--somente-reconcili
    dela**. Uma carga que termina 0 é uma carga conferida; qualquer outra coisa não é
    carga terminada, é carga interrompida.
 
-⚠️ **NENHUMA CARGA CONTRA O REMOTO ANTES DE ESTE SCRIPT RECUSAR `--primeira-carga` CONTRA DESTINO
-   COM DADOS** (AMBIENTE-2, amarrado por Bernardo Villas Boas em 22/09/2026). **Hoje ele NÃO recusa**:
-   `--primeira-carga` só muda o texto final, e o que impede uma segunda carga é colisão de chave no
-   meio da promoção — por acidente. A recusa é **pré-requisito da carga**, não tarefa do PR que a
-   acompanha: proteção acidental é exatamente o que a spec 009 vem eliminando.
+⚠️ **A RECUSA DA AMBIENTE-2 EXISTE** desde 22/09/2026 (`carregar.dados_ja_carregados`, saída 3):
+   `--primeira-carga` contra destino que já tem dado **recusa antes de tocar no `staging`**, nomeando
+   tabela e contagem, e o critério é a **procedência** — o que a plataforma semeia não conta. Era
+   pré-requisito da carga, amarrado por Bernardo Villas Boas, e não tarefa do PR que a acompanha:
+   até ele, o que impedia uma segunda carga era colisão de chave no meio da promoção, por acidente,
+   e proteção acidental é o que a spec 009 vem eliminando.
 ⚠️ **E NENHUMA CARGA CONTRA O REMOTO ANTES DE BERNARDO DIZER QUE TERMINOU AS CORREÇÕES DE ORIGEM**
    (decisão de 22/09/2026). Corrigir na planilha antes da carga não custa nada; depois, exige a tela de
    turma ou de curso, que é do PR 2. As correções ficam em `dados/correcoes-de-origem.md`.
@@ -40,7 +41,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import carregar, promover, reconciliar
+from . import carregar, correcoes, promover, reconciliar
 
 # ⚠️ O console do Windows abre em cp1252, e cp1252 não tem `→` (U+2192) — o programa
 #    morria com `UnicodeEncodeError` ao IMPRIMIR o título de uma etapa, depois de a
@@ -63,7 +64,10 @@ def executar(
     if not somente_reconciliar:
         _linha("ETAPA 3 — carga em staging")
         try:
-            rel = carregar.carregar(conexao)
+            rel = carregar.carregar(conexao, primeira_carga=primeira_carga)
+        except carregar.DestinoJaCarregado as erro:
+            print(f"[RECUSADO] {erro}")
+            return 3
         except carregar.CoberturaIncompleta as erro:
             print(f"[ABORTADO] {erro}")
             return 3
@@ -74,6 +78,9 @@ def executar(
         _linha("ETAPA 4 — promoção staging → public")
         try:
             res = promover.promover(conexao)
+        except (correcoes.CorrecaoObsoleta, correcoes.CorrecaoInvalida) as erro:
+            print(f"[ABORTADO] {erro}")
+            return 3
         except (promover.DominioSemDestino, promover.ChaveOrfa) as erro:
             print(f"[ABORTADO] {erro}")
             return 3
@@ -81,6 +88,11 @@ def executar(
             print(f"[ABORTADO] {str(erro).splitlines()[0]}")
             return 3
         print(f"  {sum(res.inseridas.values())} linhas promovidas")
+        if res.correcoes_aplicadas:
+            print(
+                f"  {len(res.correcoes_aplicadas)} correcao(oes) de origem aplicadas por cima do "
+                f"retrato fiel (dados/correcoes-de-origem.md)"
+            )
         if res.vocabulario_semeado:
             print(
                 f"  {len(res.vocabulario_semeado)} valores semeados em config_listas "
@@ -102,6 +114,22 @@ def executar(
         print(f"    (informa) {d.verificacao} · {d.tabela} · {d.linha}: {d.obtido}")
     print(f"  relatorio: {caminho}")
 
+    # ⚠️ A CONTA LOCAL VOLTA SOZINHA AO FIM DA CARGA — decisão de Bernardo Villas Boas,
+    #    24/09/2026. Depois da carga o banco tem 5.394 linhas e **nenhuma credencial**: sem
+    #    isto, conferir o dado na tela exige um passo manual que ninguém lembra de fazer, e
+    #    o custo é alguém deixar de conferir. Só no destino LOCAL, e o script tem porteiro
+    #    próprio — aqui a condição é para não tentar sequer.
+    if conexao == carregar.CONEXAO_LOCAL:
+        try:
+            from scripts.manutencao import conta_local
+
+            print()
+            conta_local.main([])
+        except SystemExit as erro:  # o porteiro do script, ou stack fora do ar
+            print(f"  (conta local nao criada: {erro})")
+        except Exception as erro:  # noqa: BLE001 — a carga passou; isto é conveniência
+            print(f"  (conta local nao criada: {erro})")
+
     if primeira_carga and v.aprovada:
         print(
             "\n  Primeira carga aprovada. O corte so acontece depois da conferencia "
@@ -119,7 +147,8 @@ def main() -> int:
     p.add_argument(
         "--primeira-carga",
         action="store_true",
-        help="Marca a execucao como a carga inicial: muda o texto final, nao o comportamento.",
+        help="Marca a execucao como a carga inicial. RECUSA (saida 3) se o destino ja tiver "
+        "dado com procedencia da v2.0, nomeando tabela e contagem.",
     )
     p.add_argument(
         "--somente-reconciliar",

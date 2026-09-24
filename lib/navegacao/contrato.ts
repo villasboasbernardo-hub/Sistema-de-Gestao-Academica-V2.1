@@ -16,6 +16,7 @@
  * Reabrir isso exige medição na mão, não um parâmetro reservado por via das dúvidas.
  */
 
+import { CLASSIFICACOES_DE_CURSO } from "@/lib/dominio/classificacoes-de-curso";
 import { Constants } from "@/lib/tipos/database";
 
 /** Se a mudança empilha uma entrada de histórico ou substitui a atual (documento 25 §1.6). */
@@ -292,6 +293,138 @@ export const CONTRATO = {
    * ⚠️ NENHUM PARÂMETRO ACEITA IDENTIFICAÇÃO CIVIL. CPF na barra de endereço vaza por histórico, por
    * log de servidor e por ombro — recusa declarada do contrato humano.
    */
+  /*
+   * O catálogo de cursos (`RF-CURSOS-01`, `RF-CURSOS-02`).
+   *
+   * ⚠️ **TRÊS ESCOLHAS, E NENHUMA BUSCA POR TEXTO.** São 24 cursos em cinco grupos; uma caixa de
+   * busca aqui resolveria um problema que a tela não tem, e convidaria a consulta a crescer.
+   *
+   * ⚠️ **`classificacao` OFERECE AS CINCO DO GLOSSÁRIO, E NÃO O TIPO DO BANCO — ao contrário do
+   * `/inicio`.** A divergência é deliberada e está registrada como D-19. Os critérios são
+   * diferentes porque o papel do parâmetro é diferente: no Início ele **filtra**, e o critério de lá
+   * é *"o filtro não pode recusar um valor que a coluna aceita"*; aqui ele **agrupa os cartões**, e
+   * um grupo `geral` ou `ead_semipresencial` nunca teria cartão nenhum — o banco recusa os dois
+   * (`cursos_classificacao_nao_geral` e `FR-003.1`). Oferecer um grupo impossível é oferecer um
+   * vazio que a pessoa lê como "não há curso cadastrado".
+   *
+   * ⚠️ **`situacao` É O MESMO DESCRITOR DE `/instrutores`, e de propósito.** Mesma lista, mesmo
+   * padrão `ativo`, mesmo comportamento: a tela abre com o que está ativo, o padrão some da URL, e
+   * ver o que foi desativado exige `?situacao=inativo` — que é link compartilhável (`FR-017.2`).
+   * Duas listas de situação divergiriam no dia em que uma delas mudasse.
+   */
+  "/cursos": {
+    rota: "/cursos",
+    origem: "RF-CURSOS-01",
+    parametros: {
+      classificacao: {
+        nome: "classificacao",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: CLASSIFICACOES_DE_CURSO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      modalidade: {
+        nome: "modalidade",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: MODALIDADES,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      situacao: {
+        nome: "situacao",
+        tipo: "escolha",
+        padrao: "ativo",
+        opcoes: SITUACOES_DE_CADASTRO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+    },
+  },
+  /*
+   * A página do curso (`RF-CURSO-01`, `FR-006.2`).
+   *
+   * ⚠️ **OS DOIS EMPILHAM HISTÓRICO, e é a diferença para os filtros de `/cursos`.** Filtrar é
+   * refinar a mesma vista — substitui. Trocar de aba ou de turma é **ir a outro lugar**, e quem
+   * aperta "voltar" espera desfazer **um** passo (`FR-036`, documento 25 §1.6).
+   *
+   * ⚠️ **`turma` É TEXTO, E NÃO ESCOLHA.** O domínio dela é o dado — as turmas do curso, que mudam a
+   * cada ano letivo —, e não uma lista fechada. Uma escolha com opções escritas aqui degradaria para
+   * "nenhuma", em silêncio, o link que apontasse para uma turma criada depois. É o mesmo critério
+   * que já vale para `om` e `capacitacao` em `/instrutores`.
+   *
+   * ⚠️ **O VALOR É O `codigo` DA TURMA, codificado pela função única do `FR-031.2`** — nunca `uuid`.
+   * O código tem espaços (`C-Ap-FR T2 2026`), e quem o escrever à mão na URL produz um link que
+   * parece funcionar e resolve para turma nenhuma.
+   */
+  /*
+   * Cadastro e edição de curso (`FR-013.1`, `FR-037`).
+   *
+   * ⚠️ **SEM PARÂMETRO DE CONSULTA, e isso é decisão.** O que a pessoa está digitando não é estado
+   * compartilhável: pô-lo na URL vaza por histórico e por ombro, e faz o "voltar" desfazer letra a
+   * letra. Mesma regra de `/instrutores/novo`.
+   *
+   * ⚠️ **`/cursos/[curso]/editar` É TAMBÉM ONDE A VIGÊNCIA SE REGISTRA E SE CORRIGE** (`FR-013.1`,
+   * decisão de 17/09/2026) — o cabeçalho da página do curso aponta para cá.
+   */
+  /*
+   * Turmas e salas (`FR-031`, `FR-029.2`, `FR-037`).
+   *
+   * ⚠️ **NENHUMA DAS TRÊS TEM PARÂMETRO DE CONSULTA.** A ficha da turma se identifica pelo CAMINHO —
+   * `/turmas/<codigo>` —, e o rascunho do formulário não é estado compartilhável.
+   *
+   * ⚠️ **NÃO EXISTE `/turmas` (lista global) NEM `/turmas/[turma]/dsa`** (`FR-031.7`). A turma se
+   * alcança pela página do curso; o lançamento diário é do Épico 6. Declarar rota que nenhuma tela
+   * entrega é declarar o que ninguém confere — e a guarda de ausência em
+   * `tests/unidade/contrato-de-parametros.test.ts` cobra as duas.
+   */
+  "/cursos/[curso]/turmas/nova": {
+    rota: "/cursos/[curso]/turmas/nova",
+    origem: "RF-CURSO-01",
+    parametros: {},
+  },
+  "/turmas/[turma]": {
+    rota: "/turmas/[turma]",
+    origem: "RF-CURSO-01",
+    parametros: {},
+  },
+  "/admin/salas": {
+    rota: "/admin/salas",
+    origem: "RF-CRUD-01",
+    parametros: {},
+  },
+  "/cursos/novo": {
+    rota: "/cursos/novo",
+    origem: "RF-CURSOS-01",
+    parametros: {},
+  },
+  "/cursos/[curso]/editar": {
+    rota: "/cursos/[curso]/editar",
+    origem: "RF-CURSO-01",
+    parametros: {},
+  },
+  "/cursos/[curso]": {
+    rota: "/cursos/[curso]",
+    origem: "RF-CURSO-01",
+    parametros: {
+      aba: {
+        nome: "aba",
+        tipo: "escolha",
+        padrao: "grade",
+        opcoes: ["grade", "sobre"],
+        historico: "empilha",
+        avisaServidor: true,
+      },
+      turma: {
+        nome: "turma",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
+    },
+  },
   "/instrutores": {
     rota: "/instrutores",
     origem: "RF-INSTR-01",

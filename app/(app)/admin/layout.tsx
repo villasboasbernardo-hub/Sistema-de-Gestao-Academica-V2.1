@@ -23,6 +23,13 @@ import { CABECALHO_DO_CAMINHO, caminhoOuRaiz } from "@/lib/navegacao/caminho";
 const ABAS = [
   { rotulo: "Usuários", rota: "/admin/usuarios" },
   { rotulo: "Permissões", rota: "/admin/permissoes" },
+  /*
+   * ⚠️ **SALAS ENTRA AQUI, E NÃO NO MENU LATERAL** (`FR-029`, 23/09/2026). É o mesmo motivo das
+   *    outras duas: Administração é entrada única, decidida na MENU-1, e a lista de salas é
+   *    parâmetro administrado — não um módulo do ensino. Sem esta aba ela seria alcançável só por
+   *    digitação, que é o que o `SC-003` proíbe.
+   */
+  { rotulo: "Salas", rota: "/admin/salas" },
 ] as const;
 
 export default async function LayoutDaAdministracao({ children }: { children: React.ReactNode }) {

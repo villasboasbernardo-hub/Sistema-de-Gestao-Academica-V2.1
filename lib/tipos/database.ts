@@ -3628,6 +3628,32 @@ export type Database = {
         Args: { p_disciplinas: string[]; p_instrutor_id: string }
         Returns: Json
       }
+      vigencias_do_curso: {
+        Args: { p_curso_id: string }
+        Returns: {
+          codigo: string
+          fundamento_curricular: string
+          hora_inicio_manha: string
+          hora_inicio_tarde: string
+          id: string
+          intervalo_manha_min: number
+          intervalo_tarde_min: number
+          limite_diario_ead_horas: number
+          motivo: string
+          regime_tempos: number
+          status: Database["public"]["Enums"]["status_vigencia"]
+          ta_duracao_min: number
+          tipo_regime: Database["public"]["Enums"]["tipo_regime"]
+          trava_atividade: string
+          trava_data: string
+          trava_ponta_ausente: string
+          trava_tipo: string
+          trava_total: number
+          trava_turma: string
+          vigente_ate: string
+          vigente_de: string
+        }[]
+      }
       vincular_credencial: { Args: never; Returns: boolean }
     }
     Enums: {

@@ -176,6 +176,64 @@ O teto é a **faixa**, nunca o número do regime (`RN-2027-06`).
 
 Regra prática: **se o Bernardo não usaria a palavra numa conversa, ela não entra no código.**
 
+## A fonte da verdade, e a direção em que as coisas andam
+
+*(decisão de **Bernardo Villas Boas**, **24/09/2026**)*
+
+> **O banco REMOTO é a fonte da verdade dos CADASTROS** — cursos, turmas, instrutores, e
+> disciplinas quando a fatia (b) for mesclada. **Quem testa edita e completa esses dados pelo
+> preview.** A planilha da v2.0 continua fonte **só dos lançamentos** — aulas, avaliações e
+> atividades — até os épicos que os implementam.
+
+⚠️ **A REGRA DE DIREÇÃO, e ela não tem exceção:**
+
+| O quê | De onde | Para onde |
+|---|---|---|
+| **Estrutura** (migrations, funções, policies) | do **repositório** | para os **dois** bancos |
+| **Dado** | do **remoto** | **só** para o **local** |
+| **Dado** | do **local** | **para lugar nenhum** |
+
+**Dado NUNCA vai do local para o remoto.** O que o banco local tem é resto de suíte, amostra de
+teste e experimento — empurrá-lo para o remoto apagaria o trabalho de quem está testando. O
+caminho autorizado, e o único que existe em código, é
+`python -m scripts.manutencao.dado_do_remoto`: ele lê o remoto, guarda uma cópia datada **fora do
+git**, recria o local pelas migrations e restaura ali o retrato. Ele **recusa** qualquer destino
+que não seja o Docker desta máquina — provado por `provar_porteiro_do_dado.py`, com três
+endereços não-locais recusados e o local aprovado.
+
+⚠️ **CONSEQUÊNCIA IMEDIATA NA R-05, e ela já está aplicada:** linha sem `origem_migracao_v1`
+deixou de ser sintoma de carga incompleta. A partir desta decisão, **sem procedência e COM
+auditoria** (`criado_por` preenchido, que só o gatilho põe quando há sessão) é o registro normal
+de quem **nasceu na tela**; **sem procedência e SEM auditoria** continua **bloqueando**. As duas
+isenções convivem: a nominal de `usuarios` (credencial do Auth, 23/09) e esta, geral (24/09) —
+trocar uma pela outra faria a conta que abriu o ambiente voltar a bloquear. Provado por
+`scripts/etl/provar_r05_auditoria.py`, com o caso que discrimina.
+
+⚠️ **O QUE ISSO NÃO AUTORIZA:** escrever no remoto por script, rodar suíte contra ele, ou usar a
+carga do ETL para "atualizar" cadastro que alguém editou na tela. A carga final da planilha será
+**seletiva** — ver a pendência **VIRADA-1**, abaixo.
+
+⚠️ **E TODA APLICAÇÃO DE MIGRATION NO REMOTO É PRECEDIDA DE BACKUP** *(decisão de Bernardo Villas
+Boas, 24/09/2026)*. Antes de `supabase db push --linked`, roda-se
+
+```
+python -m scripts.manutencao.dado_do_remoto --somente-copia
+```
+
+e **o arquivo datado que ele imprime é citado no relatório da aplicação**. O modo `--somente-copia`
+existe exatamente para isto: ele guarda a cópia e **não toca no banco local** — sem ele, quem
+quisesse só o backup perderia a base local no `db reset` do modo completo.
+
+**Por que a regra nasce agora:** enquanto o remoto estava vazio de dado de negócio, uma migration
+que desse errado custava um `db push` de novo. Desde que ele virou **fonte da verdade dos
+cadastros**, ela custa o trabalho que os testadores fizeram na tela — e isso não está em lugar
+nenhum além dali. ⚠️ **O backup não é rede de segurança automática**: restaurá-lo no remoto seria
+escrita no remoto, que esta mesma seção proíbe sem decisão expressa. O que ele garante é que o
+dado **existe** para ser reposto quando a decisão vier.
+
+⚠️ **A CÓPIA NÃO TRAZ O SCHEMA `auth`** — credencial não é cadastro. Um remoto restaurado a partir
+dela teria os cadastros e nenhuma senha; as contas se refazem por convite.
+
 ## Convenções de banco
 
 - `snake_case` minúsculo, sem acento, sem aspas. **Tabelas no plural.**
@@ -211,6 +269,27 @@ Regra prática: **se o Bernardo não usaria a palavra numa conversa, ela não en
 - Server Action **é endpoint HTTP de fato**: `safeParse` do Zod na primeira linha, sem exceção.
 - Estado de tela vai para a **URL** (`nuqs`), não para `useState`. É o que dá deep-link de graça.
 - `components/ciaara/` **não define cor literal** — só token do `@theme`.
+- **Toda página que tem filtro nasce com o botão "Limpar filtros"** *(decisão de Bernardo Villas Boas,
+  23/09/2026 — padrão de tela)*. É **um componente só**, `components/ciaara/botao-limpar-filtros.tsx`,
+  e a regra de **quando aparecer mora dentro dele**: só há botão quando há filtro fora do padrão.
+  ⚠️ **Segundo componente de limpar filtro é rejeitado** — ele nasceu como JSX solto dentro de
+  `FiltrosDeInstrutores.tsx` e virou componente na segunda tela que precisou dele; a terceira cópia
+  seria o terceiro botão a divergir. ⚠️ **E o padrão do filtro conta**: `situacao` vale `ativo` por
+  padrão, então compará-la com `""` faria o botão nunca aparecer para quem só trocou a situação.
+- **Tela sem caminho clicável até ela é tela NÃO ENTREGUE** *(decisão de Bernardo Villas Boas,
+  24/09/2026)*. Toda rota de página tem de ser alcançável **por clique** a partir de outra tela —
+  destino do menu, botão, aba ou link —, e o botão que leva até ela **segue a permissão da página de
+  destino**, nunca uma regra própria.
+  ⚠️ **NASCEU DE DOIS DEFEITOS QUE A SUÍTE INTEIRA DEIXOU PASSAR:** `/cursos/novo` não tinha link
+  nenhum na aplicação, e a única entrada de `/cursos/[curso]/editar` era um link chamado *"histórico
+  e correção"*. **A causa foi o teste**: os percursos chegavam com `page.goto`, que prova que a tela
+  **funciona** e não prova que alguém **chega** nela.
+  ⚠️ **SÃO DUAS GUARDAS, e uma não substitui a outra:**
+  `tests/unidade/toda-tela-tem-caminho.test.ts` varre as rotas e exige o `href` em outro arquivo — e
+  ⚠️ **a primeira versão dela era CEGA**, porque lia `lib/navegacao/contrato.ts`, que declara **toda**
+  rota do sistema, como se fossem links; só o defeito deliberado mostrou. O **percurso por clique**
+  de cada tela fica nos casos de ponta a ponta, e ali `goto` só é aceitável para chegar ao **ponto de
+  partida**.
 - Densidade antes de beleza: é sistema de gestão, com tabelas grandes.
 - Toda função de `lib/dominio/` traz no topo o identificador `RN-` e a **citação literal** da regra.
 
@@ -309,6 +388,42 @@ erro**, e o usuário conclui "não tem dado cadastrado". Distinga sempre *"não 
 vê"* no estado vazio. E: **policy não enxerga `OLD`/`NEW`** — quando a regra depende do que mudou
 (auto-escalonamento de perfil, por exemplo), é **gatilho**, não policy.
 
+**7. A SUÍTE REAPROVEITAVA O SERVIDOR DE DESENVOLVIMENTO, E O VEREDITO MUDAVA** *(medido em
+24/09/2026, com custo)*. `playwright.config.ts` usa `reuseExistingServer: !CI`, e ele **não
+distingue** que servidor ocupa a porta: com `pnpm dev:local` de pé para conferir na tela — que é o
+uso normal da máquina —, a suíte rodava contra o servidor de **desenvolvimento** em vez do build de
+produção contra o qual foi escrita. ⚠️ **O sintoma é o pior possível: quatro casos reprovavam em
+QUALQUER ramo, inclusive na `main`**, e a leitura fácil era *"o meu ramo quebrou a vitrine"*. Só
+medir a `main` desfez. **A suíte passou a viver na porta 3100** (`PORTA_E2E`), e quem confere
+continua na 3000. ⚠️ **Duas consequências vieram junto**: origem escrita à mão (`localhost:3000`) em
+quatro arquivos de teste passou a acusar *"o navegador saiu da aplicação"* sobre a própria
+aplicação; e o `redirectTo` do convite deixou de valer, porque o **Auth ignora em silêncio** um
+destino fora de `additional_redirect_urls` e manda para a `site_url` — o e-mail chegava e o link
+abria a porta errada.
+
+**8. `pnpm db:reset` PASSOU A CRIAR UM ADMIN, E ISSO DERRUBOU 12 CASOS DE RLS** *(medido em
+24/09/2026)*. Desde que o reset encadeia `conta:local`, a base deixa de nascer sem Admin — e
+`tests/invariantes/rls/rls.test.ts` **pressupõe ser o único Admin** (`PEND-5a-5`):
+`app.impedir_remocao_do_ultimo_admin()` conta os **outros** Admins ativos, então com um a mais
+*"desativar o último Admin"* deixa de ser recusado e as 12 asserções seguintes caem em cascata.
+⚠️ **E o modo de falha é o inverso do usual, o que atrasa o diagnóstico**: vermelho no local e
+**verde no CI**, porque o CI roda `supabase db reset` direto. Isso é defeito da verificação tanto
+quanto o contrário (`SC-005`). **Conserto:** `pnpm db:reset:limpo` — o mesmo comando do CI — é o que
+o `verificar:tudo` usa; o `db:reset` que se digita continua criando a conta.
+
+**9. RESTAURAR DADO SEM AVANÇAR AS SEQUÊNCIAS QUEBRA A PRIMEIRA CRIAÇÃO NA TELA** *(medido em
+24/09/2026, na conferência de Bernardo)*. As sequências de código vivem em **`app`**, e um dump de
+`public` **não as traz**: elas voltam ao início, e o próximo `REG-000001` colide com um que o
+retrato acabou de trazer. O sintoma é *"Já existe um registro com este valor"* **com dados
+inéditos**, e ele **não aparece em suíte nenhuma** — as suítes semeiam num banco recém-resetado,
+onde as sequências estão no lugar. Quem restaura chama `carregar.avancar_sequencias`, que é **uma
+função só** e declara, por tabela, como extrair o número (⚠️ `instrutores.codigo` é numérico puro,
+os demais são `PREFIXO-NNNNNN`). Guardado por `tests/unidade/sequencias-apos-restaurar.test.ts`.
+⚠️ **E a mensagem de recusa passou a distinguir quem escolhe o valor:** *"escolha outro"* vale para
+o que a pessoa digita; para código gerado pelo sistema — as **quatro** colunas com `DEFAULT
+app.proximo_codigo_*`, medidas no catálogo — a frase é de **erro interno de numeração**, pedindo o
+suporte, porque mandar escolher outro valor é mandar fazer o impossível.
+
 **Bônus:** `pnpm db:tipos` **depois de toda migration**. O CI falha se `lib/tipos/database.ts`
 divergir do schema. Coluna que o TypeScript não conhece é, quase sempre, coluna inventada.
 
@@ -392,6 +507,7 @@ que a coluna ficou como se pretendia — `turma_disciplina.codigo` virou opciona
 | **Épico 5 — fatia (c): cadastro de instrutores** | ✅ **CONCLUÍDA — PR #16 mesclado na `main` por squash em `7b85f27` (16/09/2026).** *(Registro anterior, vencido: "IMPLEMENTADA em 15/09/2026, PR #16 aberto e SEM merge" — corrigido em 17/09/2026.)* Spec `006-cadastro-de-instrutores`. `pnpm verificar:tudo` sai **0** — **529** de unidade · **167** pgTAP (nenhum `todo`) · **141** RLS e ambiente · **158** ponta a ponta (2 pulados), remedido em 15/09/2026 depois do restante do checklist. Listagem em antiguidade pelo banco, filtros da v2.0 na URL, 3 indicadores e 9 gráficos (4 barras, 5 pizzas); ficha com cadastro, edição, painel de disciplinas (`VIN-NNNNNN`), desativação que preserva o passado e **alertas que não bloqueiam** — carga semanal **por semana ISO**, somando só as atribuições cuja janela cobre a semana (somar o ano é proibido), e docência há mais de um ano sem capacitação. A escrita de CPF, RG, telefone e endereço ficou com os três perfis que os leem, **por coluna, no banco**. **Nove migrations, ✅ APLICADAS no Supabase remoto em 15/09/2026** (T087, com autorização de Bernardo), **antes do merge** — o mesmo projeto serve Preview e Production (exceção do `FR-016.1`), e mesclar sem aplicar faria Production pedir colunas que não existem. Conferido no próprio remoto: 29 migrations dos dois lados, catálogo de `public` e `app` com **1.119 itens iguais** ao local, views e funções novas respondendo, `authenticated` sem DELETE e sem escrita de PII; a Production, que roda a `main`, seguiu respondendo sem erro novo. ⏸️ **Pararam depois de conferência**: legenda clicável (não está no código da v2.0, T119) e ficha A4 (falta o selo "Marinha do Brasil — Hidrografia e Navegação", T111). **Checklist de fechamento com 20 de 22**: CHK004, CHK005, CHK008, CHK012, CHK019 e CHK022 decididos por Bernardo em 15/09/2026 — cinco obrigatórios com a especialidade delimitada a militar e recusada em cadastro novo; alerta de faixa em todas as semanas ISO do ano corrente; ficha de inativo sem alerta. **Entraram também**: o quadro de avisos **recolhível**, no topo, com as contagens à vista, e a **exclusão permanente de instrutor sem histórico**, exceção única à regra 4 — e nenhum dos 177 da base real é excluível. T002 e T003 fechadas. **Pendentes por falta de material**: CHK020 e CHK021. **Pendência nomeada de 17/09/2026: T132** — tirar o `MAX+1` de `proximo_codigo_vinculo` e `proximo_codigo_instrutor`, **dono Bernardo**, em PR próprio **depois** do PR de banco da spec 009 (B-6) |
 | Épico 5 (c) — **os achados D-1 a D-8 e os da verificação com dado real** | **D-1/D-2** a fórmula da carga e os limites da faixa não estavam escritos — respondidos por Bernardo (T011: 1 TA ≈ 1 h, média = tempos ÷ `disciplinas.semanas`, ano pelo início previsto, limites inclusivos). **D-3** o código de instrutor não era gerado pelo banco — sequência. **D-4** o `CHECK` de branco não estava no plano. **D-5** `vw_instrutores` não expunha a antiguidade. **D-6** o cadastro precisava de rota própria. **D-7** a data de docência do `FR-017` é `data_inicio_docencia_ciaara`, e com ela vazia o alerta não dispara e vira aviso. **D-8** preview e Production são o mesmo projeto. ⚠️ **Com a base real**: os filtros por vínculo mandavam **175 ids na URL** da interface de dados e falhavam — a regra foi para colunas da view; **15 militares** sem especialidade não salvavam a própria ficha — o campo ficou opcional (emenda ao `RN-INST-03` da spec; o documento 04 não mudou); `set_auditoria()` **gravava `criado_por` mandado pelo cliente** numa criação com sessão — corrigido, e o gatilho é universal; a ficha leva **1,5 a 2,4 s** (4,2 a 5,1 s com quatro acessos), dominada por `vw_instrutor_carga_anual` a ~700 ms sob RLS — registrado, não otimizado. **R-8**: dez views do Épico 1 seguem com `INSERT`/`UPDATE` para `authenticated`, inertes só pela forma |
 | **Épico 5 — fatia (a): cursos e turmas, PR 1** | 🟨 **IMPLEMENTADO LOCALMENTE em 22/09/2026, NÃO aplicado no remoto e SEM PR.** Spec `009-cursos-e-turmas`, ramo `feat/EPICO-5a-cursos-e-turmas`. **7 migrations** (`20260917210558` a `20260918041449`), carga do ETL **APROVADA** sobre elas (5.394 linhas, as dez conferências prévias em zero, aborto provado sem rastro por contagem de 55 tabelas), a varredura dos consumidores do alcance e o endereço de turma num módulo só. `pnpm verificar:tudo` sai **0** em 22/09/2026 — 548 de unidade · 325 pgTAP · 167 RLS · 166 ponta a ponta (2 pulados). **Conferência local feita por Bernardo em 22/09/2026**, com o `roteiro-de-conferencia.md`. ✅ **APLICADO NO REMOTO em 22/09/2026** (T105, autorização de Bernardo depois do CI verde no commit `5b16820`): `supabase db push --linked` saiu **0** em 5 segundos, as 7 na ordem. **Conferido só por leitura (T106), na hora**: **36 migrations dos dois lados**, nenhuma só de um; **esquema idêntico** — a impressão digital de `public` e `app` dá **1.456 objetos** e o **mesmo md5** no local e no remoto, sem uma linha de diferença; `curso_sigla_historico` com os **três** gatilhos; **zero** `DELETE`/`TRUNCATE` para `authenticated` e **zero** policies de `DELETE`; as **quatro RPCs respondem e recusam com `42501`** quem não tem sessão, sem gravar nada; e a **Production sem erro novo** — `/` e as telas protegidas levam ao login, `/login` responde 200. ⚠️ **O remoto seguia VAZIO de dado de negócio** — 0 cursos, 0 turmas, 0 instrutores, 1 usuário —, e é por isso que as migrations 1 e 2 não tiveram o que reconciliar. **Falta**: a T108 (PR). O plano está em `specs/009-cursos-e-turmas/plano-de-aplicacao-no-remoto.md`. Pendências nomeadas: `PEND-5a-1` a `PEND-5a-6` e a T132 da spec 006 |
+| **Épico 5 — fatia (a): cursos e turmas, PR 2 (telas)** | 🟨 **EM CURSO no ramo `feat/EPICO-5a-cursos-e-turmas-telas`, sem PR e sem merge.** Spec `009-cursos-e-turmas`, **210 de 215 tarefas**. Entregues: o catálogo `/cursos` com indicadores e filtros na URL; a página do curso com regime vigente, quadro de avisos e as duas abas; o seletor de turma num componente só; cadastrar e editar curso; a **ficha da turma** (`/turmas/[turma]`, que **é** o formulário — não há `/editar`), a criação em `/cursos/[curso]/turmas/nova`, a **lista de salas** em `/admin/salas` e a **vigência de regime** na edição do curso. O botão **Limpar filtros** virou padrão de tela (23/09/2026). ✅ **A migration `20260923231815_vigencias_do_curso_para_a_tela.sql` foi APLICADA no remoto em 23/09/2026** (autorização de Bernardo depois do CI verde em `2e746f7`): **37 migrations dos dois lados**, a função `public.vigencias_do_curso` de pé (`SECURITY DEFINER`, `stable`, `anon` sem `execute`), e o privilégio que faltava **devolvido** — `authenticated` executa `app.recusar_se_ha_lancamento`, que era `false` e é `true`. Production respondendo como antes. Registro em `plano-de-aplicacao-no-remoto.md` §0.2. ⚠️ **E o remoto NÃO está mais vazio de dado de negócio.** Medido em **24/09/2026**, só de leitura: **24 cursos · 28 turmas · 29 vigências · 177 instrutores · 8 salas · 5 usuários · 1 conta no Auth · 37 migrations**. A anotação de *"0 cursos, 0 turmas, 0 instrutores, 1 usuário"*, de 22/09/2026, está **vencida** — é a carga daquele dia, confirmada por Bernardo em 24/09/2026. ⚠️ **O QUINTO USUÁRIO, identificado em 24/09/2026:** `USR-MUEF9CLK`, criado em **23/09/2026 15:13**, perfil `ajudante_administracao_academica`, escopo `geral`, **sem credencial** — e **sem linha em `auth.users`**, que tem **uma** conta só. **Veio do aplicativo**, por duas provas independentes: o código tem a forma do gerador da Server Action `convidar` (`USR-${Date.now().toString(36)}`) e **decodifica para 23/09/2026 15:13:57**, batendo com o `criado_em`; e `criado_por` está **preenchido**, apontando para o `auth_user_id` de `USR-ADMIN-001` — os outros quatro têm `criado_por` nulo (ETL e criação manual). É o estado que o cabeçalho de `convidar` descreve: **passo 1 gravou, passo 2 não emitiu o convite**. A saída é *"reenviar convite"*; **nada foi apagado**. ✅ **A `PEND-5a-7` foi diagnosticada e consertada em 23/09/2026** — não era lentidão de página: eram **três cópias não endurecidas** de dois auxiliares (`listUsers()` sem paginar e `supabase status` no carregamento do módulo, em `destino-do-login.spec.ts` e `convite.spec.ts`). Medido sem `retries`, em paralelo: 251/251/250 passados em três voltas. O que restava era prazo, e Bernardo decidiu a **opção (a)**: `expect` com **10 s** em `playwright.config.ts`. A otimização das telas lentas fica **não bloqueante**, para reavaliar depois da conferência no preview. **Falta só o PR (T209), que é de Bernardo, depois do teste amplo dele.** |
 | Épicos 5 a 13 | ⬜ Pendentes, **exceto a fatia (c) do Épico 5 e o PR 1 da fatia (a), acima**. O PR 2 da fatia (a), com as telas, **só nasce depois do merge do PR 1**. **A dívida de estilo está paga**: as cinco telas do Épico 3 ganharam o vocabulário visual na fatia (c), e o repositório inteiro mede **zero violações** da regra de cor em 91 arquivos. **Entra no Épico 3:** a Server Action de convite (primeiro consumidor real de `lib/supabase/admin.ts`) e `NEXT_PUBLIC_URL_APLICACAO`, deixada fora do Épico 0 por decisão de 07/09 |
 | **Decisão UE-1** | ✅ **Fechada em 26/08/2026 — rota (b)**: `registros_aula` no grão de **Unidade de Ensino**; disciplina é agregado derivado. Épico 1 **desbloqueado**. Ver documento 05 §9.1. **Origem do dado resolvida em 28/08/2026**: as UEs vêm dos **currículos oficiais da DEnsM**, não de linha sintética |
 | Numeração das specs | ✅ **Reiniciada em 26/08/2026.** As 39 specs herdadas da v2.0 vivem em `specs/heranca-v2.0/`; a v2.1 recomeça em `specs/001-…`. "Spec 001" **exige o diretório** para não ser ambíguo |
@@ -616,8 +732,9 @@ máximo. **É uma base pequena: priorize clareza de schema e manutenibilidade so
 | ~~**Q1.b**~~ | ✅ **Fechada em 08/09/2026.** O cruzamento com as 7 planilhas de planejamento da v1.0 recuperou a UE de **901 dos 1.566** lançamentos; os demais ficam **nulos**, amparados pela catraca `reg_aula_ue_so_nula_no_historico`. Bernardo ratificou os nulos: *"o ETL deve ser o retrato fiel da origem, sem preenchimentos inventados"*. ⚠️ **Emenda de 22/09/2026, sem reescrever o princípio** *(decisão de Bernardo Villas Boas)*: **a regra restringe o ETL, não o responsável pelo dado.** Bernardo pode corrigir a planilha da v2.0 onde souber o valor certo, e o ETL passa a transportar fielmente o valor corrigido. **O que segue proibido é a máquina inferir.** Critério, em uma linha: **corrige quem consegue nomear a origem da resposta; deixa vazio quem só tem palpite — e a catraca continua valendo para o vazio.** Toda correção fica registrada em `scripts/etl/dados/correcoes-de-origem.md` — data, o quê, valor antigo → novo, e de onde veio a resposta —, porque sem isso ninguém distingue correção de aparição | — |
 | ~~**UE-PUB**~~ | ✅ **Fechada em 30/08/2026 — pode ser público.** O catálogo de UE (572 unidades, 2.446 subunidades, ementa de 134 disciplinas) fica legível por qualquer pessoa no repositório. Decisão de Bernardo, na mesma linha da abertura do repositório em 26/08. `scripts/etl/dados/` permanece versionado | — |
 | ~~**AMBIENTE-1**~~ | ✅ **Decidida por Bernardo em 21/09/2026 — preview e production seguem no MESMO projeto Supabase por ora**, com a **separação agendada para o dia da virada**. Confirma a exceção do `FR-016.1` da spec 001 até lá: aplicar migration no remoto é aplicá-la **também na Production**, e o que a `main` roda passa a falar com o banco novo antes do merge | O plano de aplicação no remoto de cada PR de banco |
-| ~~**AMBIENTE-2**~~ | ✅ **Decidida por Bernardo em 21/09/2026 — a primeira carga no remoto é a ÚLTIMA**, e o script MUST **recusar `--primeira-carga` contra destino que já tenha dados**. ⚠️ **Ainda NÃO implementado — medido em 22/09/2026**: hoje `--primeira-carga` **só muda o texto final** (`scripts/etl/executar.py`, a própria ajuda diz *"muda o texto final, nao o comportamento"*). O que impede uma segunda carga hoje é **colisão de chave no meio da promoção** — transação desfeita, saída 3, mas por acidente e não por recusa declarada. **Amarrado por Bernardo em 22/09/2026, com estas palavras: *nenhuma carga é executada contra o remoto antes de o script recusar `--primeira-carga` contra destino com dados.* É PRÉ-REQUISITO DA CARGA, e não tarefa do PR que a acompanha.** Motivo: *hoje o que impede uma segunda carga é colisão de chave por acidente, e proteção acidental é o que a fatia (a) do Épico 5 inteira vem eliminando.* Não entra no PR 1 da spec 009. ⚠️ **E um segundo pré-requisito, com prazo** *(decisão de Bernardo Villas Boas, 22/09/2026)*: correção feita na planilha **antes** da carga no remoto entra **sem custo**; **depois** dela, a mesma correção exige a tela de turma ou de curso, que é do PR 2 da spec 009. **Portanto a carga no remoto só acontece depois de Bernardo dizer que terminou as correções de origem que sabe fazer** | **Toda carga contra o remoto** |
+| ~~**AMBIENTE-2**~~ | ✅ **Decidida por Bernardo em 21/09/2026 — a primeira carga no remoto é a ÚLTIMA**, e o script MUST **recusar `--primeira-carga` contra destino que já tenha dados**. ⚠️ **Ainda NÃO implementado — medido em 22/09/2026**: hoje `--primeira-carga` **só muda o texto final** (`scripts/etl/executar.py`, a própria ajuda diz *"muda o texto final, nao o comportamento"*). O que impedia uma segunda carga era **colisão de chave no meio da promoção** — transação desfeita, saída 3, mas por acidente e não por recusa declarada. ✅ **IMPLEMENTADO em 22/09/2026**, no ramo do PR 2 (`scripts/etl/carregar.py`, `dados_ja_carregados`): `--primeira-carga` contra destino que já tem dado **recusa antes de tocar no `staging`**, nomeando tabela e contagem. O critério é a **procedência** (`origem_migracao_v1`), não *"a tabela tem linha"* — o que a plataforma ou uma migration semeiam não conta, e um destino recém-migrado continua elegível. **Medido nos dois sentidos**: recusa contra a base carregada, passa depois do `db:reset`. **Amarrado por Bernardo em 22/09/2026, com estas palavras: *nenhuma carga é executada contra o remoto antes de o script recusar `--primeira-carga` contra destino com dados.* É PRÉ-REQUISITO DA CARGA, e não tarefa do PR que a acompanha.** Motivo: *hoje o que impede uma segunda carga é colisão de chave por acidente, e proteção acidental é o que a fatia (a) do Épico 5 inteira vem eliminando.* Não entra no PR 1 da spec 009. ⚠️ **E um segundo pré-requisito, com prazo** *(decisão de Bernardo Villas Boas, 22/09/2026)*: correção feita na planilha **antes** da carga no remoto entra **sem custo**; **depois** dela, a mesma correção exige a tela de turma ou de curso, que é do PR 2 da spec 009. **Portanto a carga no remoto só acontece depois de Bernardo dizer que terminou as correções de origem que sabe fazer** | **Toda carga contra o remoto** |
 | ~~**AMBIENTE-3**~~ | ✅ **Decidida por Bernardo em 21/09/2026 — levantar onde a chave `service_role` está configurada, só relatar, sem alterar.** **Levantado em 22/09/2026**, sem ler nenhum valor: (1) **Vercel**, `SUPABASE_SERVICE_ROLE_KEY` como *Secret* nos escopos **Production** (criada há 8 dias) e **Preview** (há 15); (2) **`.env.local`** desta máquina, com a chave **do projeto remoto** — fora do git (`.gitignore:34`), ⚠️ **mas dentro da pasta do OneDrive**, portanto **replicada na nuvem da Microsoft** e em todo aparelho que sincroniza a pasta; (3) **GitHub**: **nenhum** segredo no repositório, e o CI **não** a usa — as suítes leem a chave **local** do `supabase status`; (4) **código**: um consumidor só, `lib/supabase/admin.ts`, com `server-only`; `scripts/dev-local.mjs` e `scripts/manutencao/credencial_local.py` usam a chave **local**; (5) **19 arquivos versionados citam o nome** e **nenhum traz valor** — os dois que pareciam trazer são marcadores (`sb_secret_XXXX…` no `.env.local.example`, e o cabeçalho padrão de JWT seguido de `...` no documento 24) | — |
+| **VIRADA-1** ⛔ | **A carga final da planilha será SELETIVA — só lançamentos novos, casados por código, sem tocar em cadastro** *(decisão de Bernardo Villas Boas, 24/09/2026; **não implementar agora**)*. Desde que o remoto virou fonte da verdade dos cadastros, rodar o ETL como ele é hoje **sobrescreveria** o que os testadores editaram: ele carrega a planilha inteira, cadastro incluído. O que a virada precisa é de uma carga que **acrescente** o que os épicos de lançamento ainda não entregam — aula, avaliação e atividade —, casando pelo `codigo` da v2.0, e que **recuse tocar** em `cursos`, `turmas`, `instrutores` e `disciplinas`. ⚠️ **E ela herda os dois pré-requisitos da AMBIENTE-2**, que continuam valendo. ⚠️ **Enquanto não existir, nenhuma carga roda contra o remoto** — o que já era verdade, e agora tem um segundo motivo | **A virada** |
 | **LIQ-3** | Papel titular/reserva na atribuição | Épico 11 |
 | **LIQ-4** | Persistência da LIQ emitida | Épico 11 |
 

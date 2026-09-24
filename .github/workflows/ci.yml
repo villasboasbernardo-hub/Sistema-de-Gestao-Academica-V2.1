@@ -55,6 +55,19 @@ jobs:
   # ---------------------------------------------------------------------------------------------
   banco:
     runs-on: ubuntu-latest
+    # `packages: read` e o que o GITHUB_TOKEN precisa para puxar do ghcr.io autenticado.
+    # `contents: read` continua sendo o do checkout.
+    permissions:
+      contents: read
+      packages: read
+    # -----------------------------------------------------------------------------------------
+    # ⚠️ O REGISTRO VALE PARA O BLOCO INTEIRO, e nao so para o `supabase start` — medido em
+    #    23/09/2026, com o bloco vermelho. Declarado so naquele passo, o `pnpm db:tipos` seguinte
+    #    puxava por conta propria e ia parar em `public.ecr.aws`, onde caiu em
+    #    `toomanyrequests: Rate exceeded`. Qualquer passo que puxe imagem precisa do mesmo botao.
+    # -----------------------------------------------------------------------------------------
+    env:
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: docker.io
     steps:
       - uses: actions/checkout@v4
 
@@ -73,7 +86,54 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: supabase start
+      # -------------------------------------------------------------------------------------
+      # ⚠️ AUTENTICAR NO ghcr.io ANTES DE PUXAR IMAGEM — medido em 23/09/2026, com custo.
+      #
+      # O bloco morreu NOVE vezes seguidas, entre 18:30 e 20:12, sempre no mesmo ponto:
+      #   `toomanyrequests: allowed: 44000/minute` ao puxar `ghcr.io/supabase/edge-runtime` e
+      #   `ghcr.io/supabase/studio`.
+      # Puxada ANONIMA e estrangulada por IP do runner, que e compartilhado; autenticada, a
+      # cota passa a ser da conta. O `GITHUB_TOKEN` do proprio workflow basta, e nao e segredo
+      # a configurar.
+      # -------------------------------------------------------------------------------------
+      - name: Autenticar no ghcr.io
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      # -------------------------------------------------------------------------------------
+      # ⚠️ SO OS CONTEINERES QUE OS TESTES USAM — a segunda metade da correcao de 23/09/2026.
+      #
+      # Cada imagem a menos e uma puxada a menos, e o estrangulamento e por puxada. A lista foi
+      # MEDIDA, nao suposta: varredura por `.channel(`, `realtime`, `.storage`, `functions.invoke`
+      # e `supabase/functions` em `tests/`, `app/`, `lib/`, `components/` e `scripts/` devolveu
+      # ZERO ocorrencias.
+      #
+      # FICAM DE PE, e por que: `postgres` (pgTAP, migrations, `gen types`); `kong` (o `API_URL`
+      # que `conta-de-teste.ts` le do `supabase status`); `postgrest` (toda leitura e escrita das
+      # suites de RLS e de ponta a ponta); `gotrue` (sessao de verdade, `admin.createUser`, e o
+      # `config-auth-aplicado.test.ts`, que compara o `config.toml` com o conteiner); `mailpit`
+      # (o percurso do convite intercepta o e-mail nele).
+      #
+      # ⚠️ `postgres-meta` VOLTOU PARA A LISTA DOS QUE FICAM, e a linha anterior estava ERRADA.
+      # Ela dizia que ele "serve ao studio" e que `gen types --local` fala direto com o banco.
+      # MEDIDO em 23/09/2026, no run 35935232072: `pnpm db:tipos` sobe um `postgres-meta`
+      # EFEMERO, e com a imagem fora do stack a CLI a puxa na hora — de `public.ecr.aws`, onde o
+      # bloco morreu com `toomanyrequests: Rate exceeded`. Excluir o conteiner nao economizou
+      # puxada: trocou uma puxada no `start` por uma puxada pior, no meio do bloco.
+      #
+      # SAEM: `studio` (interface), `edge-runtime` (nao ha Edge Function no repositorio),
+      # `realtime`, `storage-api`, `imgproxy` (dependente de storage), `logflare` e `vector`
+      # (analitica, e saem em par), `supavisor` (o pooler; as suites usam a porta direta).
+      # -------------------------------------------------------------------------------------
+      # ⚠️ TERCEIRA METADE DA MESMA CORRECAO, e a que de fato destrava: TROCAR DE REGISTRO.
+      #    Com login e com nove conteineres a menos, a puxada ainda morria — agora no `mailpit`.
+      #    O estrangulamento e do ghcr.io, e a CLI escolhe o registro por variavel de ambiente
+      #    (`SUPABASE_INTERNAL_IMAGE_REGISTRY`, que o `setup-cli` fixa em `ghcr.io`). Apontando para
+      #    o Docker Hub, as mesmas imagens vem de outra cota. Nao e biblioteca nova: e um botao da
+      #    CLI que ja esta no projeto.
+      - name: Subir o stack local sem o que os testes nao usam
+        run: >
+          supabase start
+          -x studio,edge-runtime,realtime,storage-api,imgproxy,logflare,vector,supavisor
 
       # Prova que as migrations aplicam do zero, sem passo manual (FR-008).
       - run: supabase db reset

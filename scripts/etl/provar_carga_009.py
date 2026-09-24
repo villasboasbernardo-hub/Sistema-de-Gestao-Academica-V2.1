@@ -205,10 +205,17 @@ def provar_salas(con: psycopg.Connection) -> list[str]:
             print("  [ok] salas · nenhuma turma com sala fora do inventario")
 
         # O rastro: um evento `corrigido` por troca, e cada um descrevendo a troca real.
+        # ⚠️ `origem_tabela = 'Turmas_Ativas'` — e essa metade da condição é de 22/09/2026.
+        #    Desde a camada de correções de origem existe um SEGUNDO tipo de evento
+        #    `corrigido` sobre `turmas`: a correção declarada em `correcoes-de-origem.md`,
+        #    cuja `origem_tabela` é o arquivo. Sem nomear a origem, esta prova contava 10
+        #    onde as normalizações são 9 — o valor 9 estava certo, a amostra é que não
+        #    distinguia as duas coisas (declaração (b) da regra dos valores esperados).
         eventos = _uma(
             k,
-            "select count(*) from public.migracao_log "
-            "where acao = 'corrigido' and observacao is not null and destino_tabela = 'turmas'",
+            "select count(*) from public.migracao_log where acao = 'corrigido' "
+            "and observacao is not null and destino_tabela = 'turmas' "
+            "and origem_tabela = 'Turmas_Ativas'",
         )
         if eventos != 9:
             problemas.append(
@@ -224,7 +231,7 @@ def provar_salas(con: psycopg.Connection) -> list[str]:
               from public.migracao_log l
               left join public.turmas t on t.codigo = l.destino_chave
              where l.acao = 'corrigido' and l.observacao is not null
-               and l.destino_tabela = 'turmas'
+               and l.destino_tabela = 'turmas' and l.origem_tabela = 'Turmas_Ativas'
             """
         )
         for codigo, turma, antes, depois, atual in k.fetchall():
@@ -244,6 +251,67 @@ def provar_salas(con: psycopg.Connection) -> list[str]:
             )
         else:
             print(f"  [ok] migracao_log · {transportadas} linhas transportadas, intactas")
+    return problemas
+
+
+# =================================================================================
+# T109.2 — a camada de correções de origem (22/09/2026)
+# =================================================================================
+def provar_correcoes(con: psycopg.Connection) -> list[str]:
+    """As correções do arquivo chegaram ao banco, com rastro — e a podre aborta.
+
+    ⚠️ **A PROVA DA RECUSA É EM TRANSAÇÃO DESFEITA, com o `De` trocado em memória.** O
+    arquivo não é tocado: alterá-lo para provar deixaria a prova dependente de alguém
+    lembrar de desfazer, que é o modo de falha que o `setval` já cobrou desta suíte.
+    """
+    from . import correcoes
+
+    problemas: list[str] = []
+    declaradas = correcoes.ler()
+    if not declaradas:
+        return ["nenhuma correcao lida de correcoes-de-origem.md — a camada nao esta sendo exercida"]
+
+    # 1. cada correção chegou ao valor que declara, e tem UM evento citando a sua linha
+    with con.cursor() as k:
+        for c in declaradas:
+            k.execute(
+                f'select {c.coluna}::text from public.{c.tabela} where codigo = %s', (c.registro,)
+            )
+            linha = k.fetchone()
+            atual = None if linha is None else linha[0]
+            if atual != c.para:
+                problemas.append(f"{c}: o banco esta em {atual!r}")
+            k.execute(
+                "select count(*) from public.migracao_log "
+                "where observacao = %s and acao = 'corrigido'",
+                (f"correcoes-de-origem.md:{c.linha}",),
+            )
+            if int(k.fetchone()[0]) != 1:
+                problemas.append(f"{c}: nao ha exatamente 1 evento `corrigido` citando a linha")
+    if not problemas:
+        print(f"  [ok] correcoes · as {len(declaradas)} chegaram ao banco, cada uma com o seu evento")
+
+    # 2. ⚠️ O CASO QUE IMPORTA: correção que virou no-op ABORTA, e nomeia a linha.
+    podre = [
+        correcoes.Correcao(
+            linha=declaradas[0].linha, data=declaradas[0].data, tabela=declaradas[0].tabela,
+            registro=declaradas[0].registro, coluna=declaradas[0].coluna,
+            de="VALOR QUE NAO ESTA LA", para=declaradas[0].para, origem=declaradas[0].origem,
+        )
+    ]
+    with con.cursor() as k:
+        k.execute("savepoint prova_correcao_podre")
+    try:
+        correcoes.aplicar(con, podre)
+        problemas.append("uma correcao com o `De` trocado foi ACEITA — no-op silencioso")
+        print("  [x] correcao podre: passou sem reclamar")
+    except correcoes.CorrecaoObsoleta as erro:
+        if "correcoes-de-origem.md:" not in str(erro):
+            problemas.append("a recusa nao nomeia a linha do arquivo")
+        print(f"  [ok] correcao podre: ABORTOU, nomeando a linha — {str(erro).splitlines()[0][:96]}")
+    finally:
+        with con.cursor() as k:
+            k.execute("rollback to savepoint prova_correcao_podre")
     return problemas
 
 
@@ -277,6 +345,8 @@ def main() -> int:
             problemas.extend(provar_que_a_prova_pega(con))
             print()
             problemas.extend(provar_salas(con))
+            print()
+            problemas.extend(provar_correcoes(con))
             con.rollback()
         finally:
             con.rollback()

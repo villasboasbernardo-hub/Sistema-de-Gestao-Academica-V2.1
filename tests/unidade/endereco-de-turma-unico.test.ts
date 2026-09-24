@@ -20,6 +20,9 @@ const RAIZ = process.cwd();
 const PASTAS = ["app", "components", "lib"];
 const MODULO_AUTORIZADO = join("lib", "navegacao", "endereco-de-turma.ts");
 
+/** O registro de rotas: ele DECLARA o caminho, e nenhuma tela monta endereço a partir dele. */
+const CONTRATO_DE_ROTAS = join("lib", "navegacao", "contrato.ts");
+
 /** Todo `.ts`/`.tsx` sob as pastas varridas. */
 function arquivos(pasta: string): string[] {
   const achados: string[] = [];
@@ -83,6 +86,14 @@ describe("`FR-031.2` · ninguém monta endereço de turma fora do módulo", () =
     for (const arquivo of varridos) {
       const rel = relative(RAIZ, arquivo);
       if (rel === MODULO_AUTORIZADO) continue;
+      /*
+       * ⚠️ O CONTRATO DE ROTAS DECLARA O CAMINHO; ele não MONTA endereço.
+       *    `lib/navegacao/contrato.ts` registra a chave `/turmas/[turma]` — que é o lugar onde o
+       *    caminho TEM de aparecer, e por onde `lerParametros` valida o que chega. Acusá-lo faria a
+       *    guarda proibir a declaração da rota, e a saída seria não declará-la: o contrário do
+       *    `FR-001`. Medido em 23/09/2026, quando a rota entrou.
+       */
+      if (rel === CONTRATO_DE_ROTAS) continue;
       const codigo = codigoSemComentario(readFileSync(arquivo, "utf-8"));
       if (MONTA_CAMINHO.test(codigo)) violacoes.push(`${rel} monta o caminho /turmas/`);
       if (MONTA_PARAMETRO.test(codigo)) violacoes.push(`${rel} monta o parâmetro ?turma=`);
