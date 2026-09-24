@@ -2,7 +2,7 @@
 
 **Veredito: APROVADA**
 
-**Medido contra:** `aws-0-sa-east-1.pooler.supabase.com:5432/postgres` · **em** 23/09/2026 10:58 -0300
+**Medido contra:** `127.0.0.1:54322/postgres` · **em** 23/09/2026 22:12 -0300
 
 Relatório sem veredito não é aprovação (contrato reconciliacao C-1).
 
@@ -61,4 +61,4 @@ auditoria. Reexecutar a carga com a mesma origem tem de reproduzi-los.
 | `turma_disciplina` | `cf3132c4039000ffb819f0720d5e4bbe` |
 | `turmas` | `cb90d02fe5cbed4c92dcdd9a34ef3722` |
 | `usuario_curso` | `d41d8cd98f00b204e9800998ecf8427e` |
-| `usuarios` | `c46121a63a18bd25093b925f134d0710` |
+| `usuarios` | `0b85d61598bf9eb2754b40b06cc5813c` |

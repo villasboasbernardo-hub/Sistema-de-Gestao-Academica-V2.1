@@ -313,9 +313,39 @@ test.describe("`SC-011.1` · a rota atende DUAS permissões, e elas não andam j
     await expect(secao(page).locator("li[data-vigencia]").first()).toBeVisible();
     await expect(secao(page).locator('[data-slot="registrar-nova-vigencia"]')).toHaveCount(1);
 
-    // ⚠️ E ele NÃO recebe o formulário do curso, que é da outra permissão.
+    /*
+     * ⚠️ **OS CAMPOS DO CURSO NÃO EXISTEM PARA ELE — e a condição é esta** *(decisão de Bernardo
+     *    Villas Boas, 23/09/2026)*. Não basta o formulário estar ausente: o caso conta **cada campo**,
+     *    porque um formulário desmontado com um campo solto na página seria a mesma falha com outra
+     *    aparência. E o botão de gravar curso também não existe — sem ele, campo nenhum alcança o
+     *    banco, que de todo modo recusaria pela policy `cursos_editar`.
+     */
     await expect(page.locator('[data-slot="formulario-de-curso"]')).toHaveCount(0);
+    await expect(page.locator('[data-slot="gravar-curso"]')).toHaveCount(0);
+    for (const campo of [
+      "#curso-codigo",
+      "#curso-nome",
+      "#curso-classificacao",
+      "#curso-modalidade",
+      "#curso-dias",
+      "#curso-semanas",
+      "#curso-limite",
+      "#curso-proposito",
+    ]) {
+      await expect(page.locator(campo), `${campo} ficou editável para o Operador`).toHaveCount(0);
+    }
     await expect(page.locator('[data-slot="so-o-regime"]')).toBeVisible();
+
+    /*
+     * ⚠️ **E O OUTRO LADO DA MESMA CONDIÇÃO: a seção de regime É editável.** Sem esta metade, a tela
+     *    poderia ter barrado tudo e o caso passaria — provando que ele não edita curso e deixando de
+     *    provar que ele registra vigência, que é o que a policy `horarios.criar` lhe dá.
+     */
+    await secao(page).locator('[data-slot="registrar-nova-vigencia"] summary').click();
+    await expect(page.locator("#registrar-tipo")).toBeEnabled();
+    await page.locator("#registrar-tempos").fill("7");
+    await expect(page.locator("#registrar-tempos")).toHaveValue("7");
+    await expect(page.locator('[data-slot="registrar-vigencia"]')).toBeEnabled();
   });
 
   test("quem não tem nenhuma das duas não entra", async ({ page }) => {

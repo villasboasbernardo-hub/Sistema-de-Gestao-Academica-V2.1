@@ -6,9 +6,13 @@
 
 ## Qualidade do conteúdo
 
-- [ ] Sem detalhe de implementação (linguagem, framework, biblioteca) — os nomes de tabela, view,
+- [X] Sem detalhe de implementação (linguagem, framework, biblioteca) — os nomes de tabela, view,
       componente e rota aparecem **como fatos medidos e como restrição de plataforma** (critério 9
-      do pedido), não como desenho; o *como* fica para o plano
+      do pedido), não como desenho; o *como* fica para o plano.
+      **Fechado em 23/09/2026** (T208): a implementação do PR 2 inteiro coube no plano sem emendar
+      nenhum `FR-` por motivo de plataforma — as duas emendas que houve (`FR-031.1`, e a rota de
+      edição atendendo `horarios.criar`) vieram de **restrição medida** e de **decisão de Bernardo**,
+      e estão datadas no texto
 - [x] Focado em valor para o usuário e necessidade de negócio
 - [x] Escrito para quem decide, não só para quem implementa — cada ponto em aberto traz o que os
       documentos e o código real dizem, para a pergunta ser feita com contexto
@@ -21,12 +25,16 @@
       Q-29) e a tensão **T-1** foram reunidos numa seção única, enumerada, para o `/speckit-clarify`
       percorrer item a item, em vez de espalhados como marcadores. Os requisitos que dependem de
       resposta apontam a pergunta (`→ Q-nn`) em vez de fixar um valor
-- [ ] Requisitos testáveis e sem ambiguidade — **parcial, de propósito**: os `FR-` que não dependem
-      de pergunta são testáveis; os que apontam `→ Q-nn` só se tornam testáveis depois do clarify.
-      Nenhum foi fechado por suposição
+- [X] Requisitos testáveis e sem ambiguidade — era **parcial, de propósito**, enquanto havia
+      pergunta aberta. **Fechado em 23/09/2026** (T208), com a medição: a spec tem **14** ponteiros
+      `→ Q-nn` e **os 14 estão riscados** — nenhum `→ Q-nn` em aberto sobrou. Nenhum foi fechado por
+      suposição: cada um traz a decisão datada de Bernardo
 - [x] Critérios de sucesso mensuráveis — contagens exatas (24 cursos, 5 grupos, 28 de 28 rótulos,
       um construtor de seletor, zero cores literais, zero campos de carga digitáveis)
-- [ ] Critérios de sucesso independentes de tecnologia
+- [X] Critérios de sucesso independentes de tecnologia — **medido em 23/09/2026** (T208) sobre os
+      **41** `SC-` da spec: **2** citam tecnologia, e as duas citam **pgTAP**, que é o instrumento da
+      prova (*"asserção pgTAP nomeada"*), não a plataforma do produto. ⚠️ **A exceção fica escrita em
+      vez de marcada em silêncio**: quem reler sabe exatamente o que passou e por quê
 - [x] Todos os cenários de aceitação definidos — os que dependem de decisão dizem *"a regra decidida
       em Q-nn"* em vez de inventar a regra
 - [x] Casos de fronteira identificados — a partir do **dado real** (turma sem datas, sem rótulo,
@@ -37,7 +45,10 @@
 
 ## Prontidão da feature
 
-- [ ] Todo requisito funcional tem critério de aceite claro — **parcial**, pelo mesmo motivo acima
+- [X] Todo requisito funcional tem critério de aceite claro — era **parcial** enquanto havia
+      `→ Q-nn` aberto. **Fechado em 23/09/2026** (T208), pela mesma medição do item acima, e pela
+      implementação: os `FR-` desta fatia têm caso de teste nomeado em `tasks.md`, e **212 de 215**
+      tarefas estão feitas. As 3 que faltam são o PR e a conferência de Bernardo
 - [x] Os cenários de usuário cobrem os percursos principais — catálogo, página do curso, seletor,
       cadastro de curso, cadastro de turma, regime com vigência (condicionado), menu
 - [x] A feature atende aos resultados mensuráveis dos Critérios de Sucesso

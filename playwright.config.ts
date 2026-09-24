@@ -69,6 +69,26 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+
+  /*
+   * ⚠️ **10 SEGUNDOS, E NÃO OS 5 DO PADRÃO** *(decisão de Bernardo Villas Boas, 23/09/2026, opção (a)
+   *    da `PEND-5a-7`)*. Este é o prazo de cada `expect` — o tempo que ele reexecuta a asserção antes
+   *    de desistir —, e não o limite do caso, que continua em 30 s.
+   *
+   *    **O que foi medido**, sem `retries`, em paralelo, na base resetada: três execuções da suíte
+   *    inteira deram 251, 251 e 250 passados, e a única reprovação foi o **primeiro** `expect` de um
+   *    percurso de `/admin/salas` — tela que lê a lista de salas **e** todas as turmas para dizer quem
+   *    usa cada uma. Os passos seguintes do mesmo percurso já pediam 15 s e passavam. Com quatro
+   *    processos de trabalho, um servidor Next de produção e o stack do Supabase na mesma máquina,
+   *    **tela de gestão passa de 5 s** — e um prazo que reprova por carga da máquina não mede a tela.
+   *
+   * ⚠️ **ISTO NÃO ESCONDE LENTIDÃO REAL, E A DISTINÇÃO IMPORTA.** O que o prazo absorve é a variação
+   *    sob carga; uma tela que passe a levar 10 s continua reprovando. A otimização do que as torna
+   *    lentas — `vw_instrutor_carga_anual` a ~700 ms sob RLS, e a leitura de todas as turmas na tela de
+   *    salas — **fica registrada como não bloqueante**, para reavaliar se a conferência no preview
+   *    mostrar lentidão (opção (b) da mesma decisão).
+   */
+  expect: { timeout: 10_000 },
   reporter: process.env.CI ? "github" : "list",
   use: { baseURL: URL_BASE, trace: "on-first-retry" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
