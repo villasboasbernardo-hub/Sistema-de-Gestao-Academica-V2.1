@@ -717,7 +717,8 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 - **A-1** · `modo_atribuicao_padrao = 'simultaneo'` em **0 de 175**, e o documento 04 (`RN-MAT-05`) diz
   que o ETL marcaria três práticas de fim de curso. **Não marcou**; e **6 nomes perderam "FIM"** na
   origem (`LEVANTAMENTO HIDROGRÁFICO DE  DE CURSO`), o que faz o casamento por nome impossível **e** a
-  regra proíbe inferir. Quais marcar é **Q-02**.
+  regra proíbe inferir. ✅ **Decidido (Q-02, 24/09/2026): 3 linhas nomeadas na migration; o resto pela
+  tela** (`FR-040`).
 - **A-2** · A unicidade existe, mas **só entre ativas** (índice parcial + gatilho). A "duplicata"
   `C-Esp-ALH`/`ALH-II` é `ativo` × `inativo` — hoje **legal** pela regra do banco. Se desativar libera o
   código é a pergunta certa, não "como sanear" (**Q-04**).
