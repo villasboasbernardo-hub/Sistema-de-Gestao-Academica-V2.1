@@ -114,6 +114,22 @@ def executar(
         print(f"    (informa) {d.verificacao} · {d.tabela} · {d.linha}: {d.obtido}")
     print(f"  relatorio: {caminho}")
 
+    # ⚠️ A CONTA LOCAL VOLTA SOZINHA AO FIM DA CARGA — decisão de Bernardo Villas Boas,
+    #    24/09/2026. Depois da carga o banco tem 5.394 linhas e **nenhuma credencial**: sem
+    #    isto, conferir o dado na tela exige um passo manual que ninguém lembra de fazer, e
+    #    o custo é alguém deixar de conferir. Só no destino LOCAL, e o script tem porteiro
+    #    próprio — aqui a condição é para não tentar sequer.
+    if conexao == carregar.CONEXAO_LOCAL:
+        try:
+            from scripts.manutencao import conta_local
+
+            print()
+            conta_local.main([])
+        except SystemExit as erro:  # o porteiro do script, ou stack fora do ar
+            print(f"  (conta local nao criada: {erro})")
+        except Exception as erro:  # noqa: BLE001 — a carga passou; isto é conveniência
+            print(f"  (conta local nao criada: {erro})")
+
     if primeira_carga and v.aprovada:
         print(
             "\n  Primeira carga aprovada. O corte so acontece depois da conferencia "

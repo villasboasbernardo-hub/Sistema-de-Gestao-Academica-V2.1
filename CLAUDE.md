@@ -213,6 +213,27 @@ trocar uma pela outra faria a conta que abriu o ambiente voltar a bloquear. Prov
 carga do ETL para "atualizar" cadastro que alguém editou na tela. A carga final da planilha será
 **seletiva** — ver a pendência **VIRADA-1**, abaixo.
 
+⚠️ **E TODA APLICAÇÃO DE MIGRATION NO REMOTO É PRECEDIDA DE BACKUP** *(decisão de Bernardo Villas
+Boas, 24/09/2026)*. Antes de `supabase db push --linked`, roda-se
+
+```
+python -m scripts.manutencao.dado_do_remoto --somente-copia
+```
+
+e **o arquivo datado que ele imprime é citado no relatório da aplicação**. O modo `--somente-copia`
+existe exatamente para isto: ele guarda a cópia e **não toca no banco local** — sem ele, quem
+quisesse só o backup perderia a base local no `db reset` do modo completo.
+
+**Por que a regra nasce agora:** enquanto o remoto estava vazio de dado de negócio, uma migration
+que desse errado custava um `db push` de novo. Desde que ele virou **fonte da verdade dos
+cadastros**, ela custa o trabalho que os testadores fizeram na tela — e isso não está em lugar
+nenhum além dali. ⚠️ **O backup não é rede de segurança automática**: restaurá-lo no remoto seria
+escrita no remoto, que esta mesma seção proíbe sem decisão expressa. O que ele garante é que o
+dado **existe** para ser reposto quando a decisão vier.
+
+⚠️ **A CÓPIA NÃO TRAZ O SCHEMA `auth`** — credencial não é cadastro. Um remoto restaurado a partir
+dela teria os cadastros e nenhuma senha; as contas se refazem por convite.
+
 ## Convenções de banco
 
 - `snake_case` minúsculo, sem acento, sem aspas. **Tabelas no plural.**

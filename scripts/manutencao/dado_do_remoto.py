@@ -1,9 +1,19 @@
 """Traz os DADOS do projeto remoto para o banco LOCAL — e guarda uma cópia datada.
 
     python -m scripts.manutencao.dado_do_remoto
+    python -m scripts.manutencao.dado_do_remoto --somente-copia
 
 O QUÊ  : lê o remoto (só leitura), guarda o retrato num arquivo **fora do repositório**,
          recria o banco local pelas migrations e restaura ali os dados do remoto.
+
+         Com `--somente-copia`, ele **para depois de guardar o arquivo**: não toca no banco
+         local, não recria nada. É este o modo que a regra de **backup antes de aplicar
+         migration no remoto** usa — ver o `CLAUDE.md` e o
+         `specs/009-cursos-e-turmas/plano-de-aplicacao-no-remoto.md`.
+
+⚠️ **E É POR ISSO QUE O MODO EXISTE.** Sem ele, quem quisesse só o backup rodaria o script
+   inteiro e **perderia o banco local** no `db reset` — um efeito colateral que ninguém pediu,
+   no meio de um procedimento que já é delicado.
 
 PARA QUÊ: desde **24/09/2026** *(decisão de Bernardo Villas Boas)* o **remoto é a fonte da
          verdade dos cadastros** — cursos, turmas, instrutores, e disciplinas quando a fatia
@@ -119,8 +129,13 @@ def _psql(conteiner: str, sql: str) -> str:
     return r.stdout.strip()
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    somente_copia = "--somente-copia" in (argv if argv is not None else sys.argv[1:])
+
     # ---------------------------------------------------------------- o porteiro, primeiro
+    # ⚠️ ELE VALE NOS DOIS MODOS, e no `--somente-copia` isso é cinto e suspensório de
+    #    propósito: ali nada seria recriado, mas um porteiro que só aparece em alguns
+    #    caminhos é um porteiro que alguém vai esquecer de pôr no caminho seguinte.
     url = _do_cli("API_URL")
     if not url.startswith("http://127.0.0.1") and not url.startswith("http://localhost"):
         print(
@@ -128,7 +143,7 @@ def main() -> int:
             f"Este script RECRIA o banco de destino — so roda contra o Docker desta maquina."
         )
         return 3
-    conteiner = _conteiner_do_banco()
+    conteiner = "" if somente_copia else _conteiner_do_banco()
 
     pasta = _pasta_das_copias()
     pasta.mkdir(parents=True, exist_ok=True)
@@ -136,7 +151,7 @@ def main() -> int:
     copia = pasta / f"remoto-{carimbo}.sql"
 
     # ---------------------------------------------------------------- 1. ler o remoto
-    print(f"1/4  lendo o remoto (so leitura) -> {copia}")
+    print(f"1/5  lendo o remoto (so leitura) -> {copia}")
     exclusoes: list[str] = []
     for tabela in FORA_DA_COPIA:
         exclusoes += ["-x", tabela]
@@ -153,8 +168,13 @@ def main() -> int:
         return 4
     print(f"     copia guardada, {copia.stat().st_size // 1024} KB — fora do git, com dado pessoal")
 
+    if somente_copia:
+        print("\nPRONTO (--somente-copia). O banco local NAO foi tocado.")
+        print(f"        cite este arquivo no relatorio da aplicacao: {copia}")
+        return 0
+
     # ---------------------------------------------------------------- 2. estrutura do repo
-    print("2/4  recriando o banco LOCAL pelas migrations (`supabase db reset`)")
+    print("2/5  recriando o banco LOCAL pelas migrations (`supabase db reset`)")
     r = subprocess.run(
         ["supabase", "db", "reset"], capture_output=True, text=True, shell=True, check=False
     )
@@ -170,7 +190,7 @@ def main() -> int:
     # ⚠️ `session_replication_role = replica` desliga os gatilhos **desta sessão**, no banco
     #    LOCAL: é o mesmo recurso que o dump da própria plataforma usa para restaurar o
     #    retrato como ele é. Não é caminho de produção, e não existe fora daqui.
-    print("3/4  esvaziando o que as migrations semearam, para o retrato do remoto entrar inteiro")
+    print("3/5  esvaziando o que as migrations semearam, para o retrato do remoto entrar inteiro")
     _psql(
         conteiner,
         "set session_replication_role = replica; "
@@ -181,7 +201,7 @@ def main() -> int:
     )
 
     # ---------------------------------------------------------------- 4. restaurar
-    print("4/4  restaurando os dados do remoto no local")
+    print("4/5  restaurando os dados do remoto no local")
     with copia.open("rb") as arquivo:
         r = subprocess.run(
             ["docker", "exec", "-i", conteiner, "psql", "-U", "postgres", "-d", "postgres",
@@ -197,6 +217,28 @@ def main() -> int:
         print(f"           a copia do remoto continua em {copia} — nada se perdeu.")
         return 6
 
+    # ------------------------------------------------------- 5/5. fechar a coerência
+    # ⚠️ **A RESTAURAÇÃO DEIXA REFERÊNCIA ÓRFÃ, E ISSO FOI MEDIDO — 1 linha em 24/09/2026.**
+    #    `usuarios.auth_user_id` é FK para `auth.users`, e o dump da plataforma restaura com
+    #    `session_replication_role = replica`, que desliga **também a verificação de chave
+    #    estrangeira**. Como o schema `auth` **não vem de propósito** (credencial não é
+    #    cadastro), o `auth_user_id` que veio do remoto aponta para uma conta que não existe
+    #    aqui: um estado que o banco jamais aceitaria por escrita normal.
+    #
+    # ⚠️ **LIMPAR A COLUNA É O CONSERTO CERTO, e não apagar a linha.** O cadastro é o que se
+    #    veio buscar; o que não faz sentido no local é o vínculo com uma credencial de outro
+    #    ambiente. A pessoa recupera o acesso com `conta_local.py`, que religa.
+    orfaos = _psql(
+        conteiner,
+        "with limpos as ("
+        "  update public.usuarios u set auth_user_id = null "
+        "   where u.auth_user_id is not null "
+        "     and not exists (select 1 from auth.users a where a.id = u.auth_user_id) "
+        "  returning 1) select count(*) from limpos",
+    )
+    if orfaos and orfaos != "0":
+        print(f"     {orfaos} vinculo(s) com credencial de OUTRO ambiente foram desfeitos aqui")
+
     # ---------------------------------------------------------------- o retrato do que ficou
     retrato = _psql(
         conteiner,
@@ -208,9 +250,19 @@ def main() -> int:
         "||' salas='||(select count(*) from config_listas where lista='salas')"
         "||' registros_aula='||(select count(*) from registros_aula)",
     )
+    # ⚠️ E A CONTA LOCAL VOLTA AQUI TAMBÉM. O retrato traz os cadastros e **nenhuma
+    #    credencial**; sem este passo, quem acabou de trazer o dado não consegue abrir a tela
+    #    para olhá-lo — que é o motivo de ter trazido.
+    print()
+    try:
+        from scripts.manutencao import conta_local
+
+        conta_local.main([])
+    except SystemExit as erro:
+        print(f"  (conta local nao criada: {erro})")
+
     print(f"\nPRONTO. O local agora tem o retrato do remoto: {retrato}")
     print(f"        copia datada: {copia}")
-    print("        ⚠️ credencial NAO veio (schema `auth`): use `credencial_local.py` para entrar.")
     return 0
 
 

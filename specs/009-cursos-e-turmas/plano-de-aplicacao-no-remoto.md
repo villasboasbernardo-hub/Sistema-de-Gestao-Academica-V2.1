@@ -43,6 +43,7 @@ anteriores (AMBIENTE-1: o projeto serve Preview **e** Production).
 
 | # | Leitura | Resultado |
 |---|---|---|
+| 0 | *(o backup do §0.3 ainda não existia como regra — ela é de **24/09/2026**, e a aplicação foi em **23/09**)* | — |
 | 1 | `supabase migration list --linked`, **antes** | 36 dos dois lados, **1 só no local** — `20260923231815` |
 | 2 | `supabase db push --linked --dry-run` | **exatamente** aquela migration; `seeds: []`, `roles: []` |
 | 3 | `supabase db push --linked` | `Applying migration 20260923231815…`, saída **0** |
@@ -64,6 +65,39 @@ mesma conferência: **24 cursos, 28 turmas, 29 vigências, 177 instrutores, 5 us
 `CLAUDE.md` e este plano diziam *"0 cursos, 0 turmas, 0 instrutores, 1 usuário"*, medição de
 **22/09/2026** — **está vencida**. Nada disso veio desta aplicação: a migration só cria função e
 concede `execute`, e o `db push` reportou `seeds: []`.
+
+## 0.3. ⛔ PASSO ZERO, OBRIGATÓRIO A PARTIR DE 24/09/2026 — o backup
+
+*(decisão de Bernardo Villas Boas, 24/09/2026)*
+
+**Toda aplicação de migration no remoto é precedida de um backup dos dados do remoto**, feito pelo
+script de cópia, e **o arquivo datado é citado no relatório da aplicação**:
+
+```
+python -m scripts.manutencao.dado_do_remoto --somente-copia
+```
+
+| | |
+|---|---|
+| O que ele faz | lê o remoto (**só leitura**), grava o retrato de `public` num arquivo datado e **para** |
+| O que ele **não** faz | não toca no banco local — é para isso que serve o `--somente-copia` |
+| Onde o arquivo fica | **fora do repositório**: `%LOCALAPPDATA%/ciaara-11/copias-do-remoto/remoto-AAAAMMDD-HHMMSS.sql` |
+emoto-AAAAMMDD-HHMMSS.sql` |
+| Por que fora | ele carrega **dado pessoal** — 177 instrutores e os cadastros de usuário — e o repositório é **público** |
+| O que **não** vem | o schema `auth`. Credencial não é cadastro; um remoto restaurado a partir daqui teria os dados e nenhuma senha |
+
+⚠️ **POR QUE A REGRA NASCE AGORA, E NÃO NAS SETE PRIMEIRAS:** enquanto o remoto estava **vazio de
+dado de negócio** — 0 cursos, 0 turmas, 0 instrutores, medido em 22/09/2026 —, uma migration
+malsucedida custava um `db push` de novo. Desde que o remoto virou **fonte da verdade dos
+cadastros**, ela custa o trabalho que os testadores fizeram na tela, e esse trabalho **não existe
+em nenhum outro lugar**: a planilha da v2.0 não o tem, e o banco local é retrato dele, nunca fonte.
+
+⚠️ **O BACKUP NÃO É UMA REDE AUTOMÁTICA.** Restaurá-lo no remoto é **escrita no remoto**, que exige
+decisão expressa de Bernardo, como toda escrita lá. O que este passo garante é que o dado **existe
+para ser reposto** — não que será.
+
+⚠️ **E ELE NÃO SUBSTITUI NENHUMA DAS CONFERÊNCIAS DE LEITURA** das seções 1 e 4. É um passo a
+mais, antes de todos.
 
 ## 1. Antes de aplicar — tudo só de leitura
 
