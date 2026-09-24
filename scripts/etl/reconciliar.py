@@ -183,6 +183,41 @@ NASCEM_DA_PLATAFORMA: dict[str, str] = {
 }
 
 
+# =====================================================================================
+# LINHAS QUE O APLICATIVO CRIOU DEPOIS DA CARGA — a segunda isenção, e esta é GERAL
+#
+# ⚠️ DECISÃO DE BERNARDO VILLAS BOAS, 24/09/2026: *"o banco remoto passa a ser a fonte da
+#    verdade dos CADASTROS (cursos, turmas, instrutores; disciplinas quando a fatia (b) for
+#    mesclada). Testadores vão editar e completar esses dados pelo preview."* A partir daí,
+#    linha sem procedência deixa de ser sintoma de carga incompleta e passa a ser o registro
+#    normal do que **nasceu na tela** — exigir `origem_migracao_v1` dela seria exigir que
+#    declarasse uma migração que não houve.
+#
+# ⚠️ O QUE SEPARA AS DUAS POPULAÇÕES É A AUDITORIA, e ela não se preenche sozinha:
+#    `criado_por` vem do gatilho `app.set_auditoria()`, a partir de `auth.uid()` — isto é,
+#    **só existe quando houve sessão autenticada**. O ETL carrega pela `service_role`, sem
+#    sessão: tudo que ele grava sai com `criado_por` NULO. Logo:
+#
+#      sem procedência **e** COM auditoria  ->  nasceu no aplicativo, é legítima
+#      sem procedência **e** SEM auditoria  ->  continua BLOQUEANDO, como sempre
+#
+#    A segunda linha é o que mantém a regra viva: é o caso da linha migrada que perdeu a
+#    marca, e o do dado inserido à mão por fora do sistema.
+#
+# ⚠️ E ELA NÃO SUBSTITUI A ISENÇÃO DE `usuarios`, ACIMA — as duas convivem, por motivos
+#    diferentes e MEDIDOS. `USR-ADMIN-001`, a conta que abriu o ambiente, tem credencial do
+#    Auth e `criado_por` **nulo**; medido no projeto remoto em 24/09/2026, os quatro
+#    cadastros anteriores à decisão têm `criado_por` nulo e só o quinto — criado pela tela em
+#    23/09 — o tem preenchido. Trocar uma isenção pela outra faria a conta do Admin voltar a
+#    bloquear.
+#
+# ⚠️ A ISENÇÃO SÓ VALE ONDE A COLUNA EXISTE. Tabela sem `criado_por` não ganha nada: o
+#    recorte é montado a partir das colunas lidas do catálogo, e não de uma lista à mão.
+# =====================================================================================
+
+CRIADA_PELO_APLICATIVO = "criado_por is not null"
+
+
 def _uma(k, sql: str, args: tuple = ()) -> object:
     k.execute(sql, args)
     linha = k.fetchone()
@@ -495,8 +530,14 @@ def r05_identidade_e_procedencia(con: psycopg.Connection) -> list[Divergencia]:
                 # ⚠️ E OS PARÊNTESES NÃO SÃO ESTILO: `and` liga mais forte que `or`, então
                 #    sem eles o recorte se aplicaria só ao segundo lado do `or` e a
                 #    verificação mudaria de sentido calada.
+                # ⚠️ DUAS ISENÇÕES, LIGADAS POR `or`, cada uma com o seu motivo: a nominal
+                #    de `usuarios` (credencial do Auth, 23/09/2026) e a geral de quem nasceu
+                #    na tela (auditoria preenchida, 24/09/2026).
+                isencoes = [CRIADA_PELO_APLICATIVO] if "criado_por" in colunas else []
                 nascida_aqui = NASCEM_DA_PLATAFORMA.get(tabela)
-                recorte = f" and not ({nascida_aqui})" if nascida_aqui else ""
+                if nascida_aqui:
+                    isencoes.append(nascida_aqui)
+                recorte = f" and not ({' or '.join(isencoes)})" if isencoes else ""
                 sem = _uma(
                     k,
                     f"select count(*) from public.{tabela} where "

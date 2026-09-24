@@ -176,6 +176,43 @@ O teto é a **faixa**, nunca o número do regime (`RN-2027-06`).
 
 Regra prática: **se o Bernardo não usaria a palavra numa conversa, ela não entra no código.**
 
+## A fonte da verdade, e a direção em que as coisas andam
+
+*(decisão de **Bernardo Villas Boas**, **24/09/2026**)*
+
+> **O banco REMOTO é a fonte da verdade dos CADASTROS** — cursos, turmas, instrutores, e
+> disciplinas quando a fatia (b) for mesclada. **Quem testa edita e completa esses dados pelo
+> preview.** A planilha da v2.0 continua fonte **só dos lançamentos** — aulas, avaliações e
+> atividades — até os épicos que os implementam.
+
+⚠️ **A REGRA DE DIREÇÃO, e ela não tem exceção:**
+
+| O quê | De onde | Para onde |
+|---|---|---|
+| **Estrutura** (migrations, funções, policies) | do **repositório** | para os **dois** bancos |
+| **Dado** | do **remoto** | **só** para o **local** |
+| **Dado** | do **local** | **para lugar nenhum** |
+
+**Dado NUNCA vai do local para o remoto.** O que o banco local tem é resto de suíte, amostra de
+teste e experimento — empurrá-lo para o remoto apagaria o trabalho de quem está testando. O
+caminho autorizado, e o único que existe em código, é
+`python -m scripts.manutencao.dado_do_remoto`: ele lê o remoto, guarda uma cópia datada **fora do
+git**, recria o local pelas migrations e restaura ali o retrato. Ele **recusa** qualquer destino
+que não seja o Docker desta máquina — provado por `provar_porteiro_do_dado.py`, com três
+endereços não-locais recusados e o local aprovado.
+
+⚠️ **CONSEQUÊNCIA IMEDIATA NA R-05, e ela já está aplicada:** linha sem `origem_migracao_v1`
+deixou de ser sintoma de carga incompleta. A partir desta decisão, **sem procedência e COM
+auditoria** (`criado_por` preenchido, que só o gatilho põe quando há sessão) é o registro normal
+de quem **nasceu na tela**; **sem procedência e SEM auditoria** continua **bloqueando**. As duas
+isenções convivem: a nominal de `usuarios` (credencial do Auth, 23/09) e esta, geral (24/09) —
+trocar uma pela outra faria a conta que abriu o ambiente voltar a bloquear. Provado por
+`scripts/etl/provar_r05_auditoria.py`, com o caso que discrimina.
+
+⚠️ **O QUE ISSO NÃO AUTORIZA:** escrever no remoto por script, rodar suíte contra ele, ou usar a
+carga do ETL para "atualizar" cadastro que alguém editou na tela. A carga final da planilha será
+**seletiva** — ver a pendência **VIRADA-1**, abaixo.
+
 ## Convenções de banco
 
 - `snake_case` minúsculo, sem acento, sem aspas. **Tabelas no plural.**
@@ -626,6 +663,7 @@ máximo. **É uma base pequena: priorize clareza de schema e manutenibilidade so
 | ~~**AMBIENTE-1**~~ | ✅ **Decidida por Bernardo em 21/09/2026 — preview e production seguem no MESMO projeto Supabase por ora**, com a **separação agendada para o dia da virada**. Confirma a exceção do `FR-016.1` da spec 001 até lá: aplicar migration no remoto é aplicá-la **também na Production**, e o que a `main` roda passa a falar com o banco novo antes do merge | O plano de aplicação no remoto de cada PR de banco |
 | ~~**AMBIENTE-2**~~ | ✅ **Decidida por Bernardo em 21/09/2026 — a primeira carga no remoto é a ÚLTIMA**, e o script MUST **recusar `--primeira-carga` contra destino que já tenha dados**. ⚠️ **Ainda NÃO implementado — medido em 22/09/2026**: hoje `--primeira-carga` **só muda o texto final** (`scripts/etl/executar.py`, a própria ajuda diz *"muda o texto final, nao o comportamento"*). O que impedia uma segunda carga era **colisão de chave no meio da promoção** — transação desfeita, saída 3, mas por acidente e não por recusa declarada. ✅ **IMPLEMENTADO em 22/09/2026**, no ramo do PR 2 (`scripts/etl/carregar.py`, `dados_ja_carregados`): `--primeira-carga` contra destino que já tem dado **recusa antes de tocar no `staging`**, nomeando tabela e contagem. O critério é a **procedência** (`origem_migracao_v1`), não *"a tabela tem linha"* — o que a plataforma ou uma migration semeiam não conta, e um destino recém-migrado continua elegível. **Medido nos dois sentidos**: recusa contra a base carregada, passa depois do `db:reset`. **Amarrado por Bernardo em 22/09/2026, com estas palavras: *nenhuma carga é executada contra o remoto antes de o script recusar `--primeira-carga` contra destino com dados.* É PRÉ-REQUISITO DA CARGA, e não tarefa do PR que a acompanha.** Motivo: *hoje o que impede uma segunda carga é colisão de chave por acidente, e proteção acidental é o que a fatia (a) do Épico 5 inteira vem eliminando.* Não entra no PR 1 da spec 009. ⚠️ **E um segundo pré-requisito, com prazo** *(decisão de Bernardo Villas Boas, 22/09/2026)*: correção feita na planilha **antes** da carga no remoto entra **sem custo**; **depois** dela, a mesma correção exige a tela de turma ou de curso, que é do PR 2 da spec 009. **Portanto a carga no remoto só acontece depois de Bernardo dizer que terminou as correções de origem que sabe fazer** | **Toda carga contra o remoto** |
 | ~~**AMBIENTE-3**~~ | ✅ **Decidida por Bernardo em 21/09/2026 — levantar onde a chave `service_role` está configurada, só relatar, sem alterar.** **Levantado em 22/09/2026**, sem ler nenhum valor: (1) **Vercel**, `SUPABASE_SERVICE_ROLE_KEY` como *Secret* nos escopos **Production** (criada há 8 dias) e **Preview** (há 15); (2) **`.env.local`** desta máquina, com a chave **do projeto remoto** — fora do git (`.gitignore:34`), ⚠️ **mas dentro da pasta do OneDrive**, portanto **replicada na nuvem da Microsoft** e em todo aparelho que sincroniza a pasta; (3) **GitHub**: **nenhum** segredo no repositório, e o CI **não** a usa — as suítes leem a chave **local** do `supabase status`; (4) **código**: um consumidor só, `lib/supabase/admin.ts`, com `server-only`; `scripts/dev-local.mjs` e `scripts/manutencao/credencial_local.py` usam a chave **local**; (5) **19 arquivos versionados citam o nome** e **nenhum traz valor** — os dois que pareciam trazer são marcadores (`sb_secret_XXXX…` no `.env.local.example`, e o cabeçalho padrão de JWT seguido de `...` no documento 24) | — |
+| **VIRADA-1** ⛔ | **A carga final da planilha será SELETIVA — só lançamentos novos, casados por código, sem tocar em cadastro** *(decisão de Bernardo Villas Boas, 24/09/2026; **não implementar agora**)*. Desde que o remoto virou fonte da verdade dos cadastros, rodar o ETL como ele é hoje **sobrescreveria** o que os testadores editaram: ele carrega a planilha inteira, cadastro incluído. O que a virada precisa é de uma carga que **acrescente** o que os épicos de lançamento ainda não entregam — aula, avaliação e atividade —, casando pelo `codigo` da v2.0, e que **recuse tocar** em `cursos`, `turmas`, `instrutores` e `disciplinas`. ⚠️ **E ela herda os dois pré-requisitos da AMBIENTE-2**, que continuam valendo. ⚠️ **Enquanto não existir, nenhuma carga roda contra o remoto** — o que já era verdade, e agora tem um segundo motivo | **A virada** |
 | **LIQ-3** | Papel titular/reserva na atribuição | Épico 11 |
 | **LIQ-4** | Persistência da LIQ emitida | Épico 11 |
 

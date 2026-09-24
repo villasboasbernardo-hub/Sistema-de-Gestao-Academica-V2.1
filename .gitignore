@@ -87,3 +87,10 @@ venv/
 #
 # O local servido e `public/marca/`, e a procedencia vive ao lado dele.
 /images/
+
+# Copias do remoto guardadas por `scripts/manutencao/dado_do_remoto.py`.
+# Elas carregam DADO PESSOAL e vao para fora do repositorio por padrao
+# (%LOCALAPPDATA%/ciaara-11/copias-do-remoto). Esta linha existe para o caso de
+# alguem apontar CIAARA_COPIAS_DIR para dentro da arvore por engano.
+copias-do-remoto/
+remoto-*.sql
