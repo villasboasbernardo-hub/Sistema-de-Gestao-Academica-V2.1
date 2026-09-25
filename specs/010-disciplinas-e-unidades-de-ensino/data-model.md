@@ -18,7 +18,7 @@ Bernardo que a fixou.
 | `modo_atribuicao_padrao` | ENUM `modo_atribuicao` (`herdar`, `dividido`, `simultaneo`); `CHECK disciplinas_modo_padrao_concreto (<> 'herdar')` **já existe**; `simultaneo` em **0** | **3 linhas** viram `simultaneo` por `UPDATE` nomeado na migration (`53 - C-Ap-FR - XIII`, `41 - C-Ap-HN - XVIII`, `20 - CAHO - XVIII`), com `migracao_log` recebendo um evento por linha (regra 5: corrigir é logar evento novo). **Nenhum `CHECK` novo** | `FR-040`, Q-02, N-2 |
 | `instrutores_atribuidos` (`uuid[]`) | vazio nas 175; gatilho `trg_disciplinas_instrutores_fk` confere os elementos | **`[APOSENTADA — v2.1]`** no comentário da coluna; **sem `drop`**; o gatilho fica (inerte). A RPC de exclusão de instrutor continua a lê-la como impedimento — não muda (`FR-025`) | `FR-032`, Q-01 |
 | `sem_unidades_ensino` | não existe | **coluna nova** `boolean not null default false` — `true` só onde a conferência disse que o currículo **não lista UE para a disciplina** (as 5 `AMBIENTAÇÃO VIRTUAL` e a emprestada `C-Exp-Metoc-OF-SP IV`); preenchida pela carga (PR 2), editável por `disciplinas.editar` | `FR-063` |
-| gatilho novo `trg_disciplinas_nasce_nas_turmas` | não existe (o de `turmas` só age em turma nova) | `AFTER INSERT` em `disciplinas`: para cada turma do curso com `status in ('planejada','ativa')`, insere `turma_disciplina (turma_id, disciplina_id, origem_periodo = 'nao_informado')` — sem período, sem instrutor; `SECURITY DEFINER` com `revoke` de `public`/`anon`/`authenticated`, como o gatilho de nascimento da turma (R-6 da spec 009); **idempotente** pela unicidade `(turma_id, disciplina_id)` já existente | `FR-070`, Q-08, N-4 |
+| nascimento nas turmas | não existe (o de `turmas` só age em turma nova) | ⚠️ **RPC, não gatilho** (A-2, 25/09/2026): `public.criar_disciplina(jsonb)` e `public.reativar_disciplina(uuid)` inserem a disciplina / reativam **e** criam as linhas de `turma_disciplina` das turmas `planejada`/`ativa` **na mesma transação**, no molde de `criar_curso_com_regime`; **idempotentes** pela unicidade `(turma_id, disciplina_id)`. Gatilho `AFTER INSERT` foi **recusado**: colidiria com a ordem do ETL e com 4 amostras pgTAP | `FR-070`, `FR-070.1`, Q-08, N-4, A-2, A-2b |
 | desativar / reativar | `UPDATE status` pela policy `disciplinas_editar` | igual; reativar com código tomado é recusada por `uq_disciplinas_curso_cod_ativo` (`23505`) e traduzida | `FR-013`, Q-04 |
 
 ### `turma_disciplina` — 210 linhas
@@ -34,10 +34,10 @@ Bernardo que a fixou.
 
 | O quê | Hoje | Depois | Origem |
 |---|---|---|---|
-| `ch_prevista_tempos` | `NULL` nas 96 | **fica `NULL`** até alguém salvar a atribuição daquela turma; a leitura divide igualmente com aviso (`RN-DEG-01`) | `FR-043`, Q-03 |
+| `ch_prevista_tempos` | `numeric(6,2)`, `NULL` nas 96 — **0 valores fracionários**, medido em 25/09/2026 | **fica `NULL`** até alguém salvar a atribuição; a leitura divide igualmente com aviso (`RN-DEG-01`). Ganha `CHECK ch_prevista_inteira (ch_prevista_tempos = trunc(ch_prevista_tempos))` — **parcela sempre inteira** (`FR-041`, A-1). A coluna **não** muda de tipo: `numeric(6,2)` é o padrão de CH do schema, e mudar tipo de coluna com histórico não se faz | `FR-041.4`, `FR-043`, Q-03, A-1 |
 | `papel` | `NULL` nas 96 | intocado — LIQ-3 | fora de escopo |
 | escrita | policies `tdi_criar`/`tdi_editar` sobre `disciplinas.editar` + alcance + turma em oferta | **uma RPC** `public.definir_instrutores_da_turma(p_turma_disciplina_id uuid, p_instrutores jsonb)` (INVOKER — as policies existentes decidem) que **regrava por completo** a lista da turma: ativa/insere quem está na lista com a parcela calculada, desativa quem saiu (`status = 'inativo'`, nunca `DELETE`), numa transação só. Parcelas vêm da função pura de `lib/dominio/` **e são reconferidas pelo gatilho** | `FR-031`, `FR-041`, `FR-043` |
-| gatilho novo `trg_tdi_soma_do_rateio` | não existe | **constraint trigger `DEFERRABLE INITIALLY DEFERRED`**, `AFTER INSERT OR UPDATE`: ao fim da transação, para cada `turma_disciplina` tocada, lê `disciplinas.modo_atribuicao_padrao` e as linhas ativas: `dividido` → se **todas** as parcelas estão preenchidas, a soma MUST ser `= disciplinas.carga_horaria_tempos`; mistura de `NULL` com valor → recusa; `simultaneo` → cada parcela preenchida MUST ser `= carga_horaria_tempos`. Recusa `23514`, `hint = 'rateio_nao_fecha'`, `DETAIL` com soma e CH | `FR-043`, `FR-041`, `RN-MAT-05` |
+| gatilho novo `trg_tdi_soma_do_rateio` | não existe | **constraint trigger `DEFERRABLE INITIALLY DEFERRED`**, `AFTER INSERT OR UPDATE` em `turma_disciplina_instrutor` **e** em `turma_disciplina_unidade`: ao fim da transação, para cada `turma_disciplina` tocada — **caso 4** (parcela preenchida): soma MUST ser `= disciplinas.carga_horaria_tempos`, e mistura de `NULL` com valor recusa (`rateio_incompleto`); **caso 5** (há linha em `turma_disciplina_unidade`): **toda** UE ativa da disciplina MUST estar atribuída (`ue_sem_instrutor`) e `ch_prevista_tempos` MUST ser `NULL` nas parcelas (`rateio_por_ue_com_ta`, os casos 4 e 5 não coexistem); `simultaneo` → cada parcela preenchida MUST ser `= carga_horaria_tempos`. Recusa `23514` com `hint` próprio e `DETAIL` com os números | `FR-041.4`, `FR-041.5`, `FR-041.6`, `FR-043` |
 
 ### `unidades_ensino` — **0 linhas hoje**; **587** depois do PR 2 (582 do extrator + 5 do APOC — conferência §2, P-4)
 
@@ -48,6 +48,35 @@ Bernardo que a fixou.
 | `origem_migracao_v1` | anulável | a carga grava o **nome do arquivo** do currículo; UE criada no sistema fica `NULL` **com `criado_por`** — é assim que a tela distingue *do currículo* × *criada no sistema* (R-05, duas isenções) | `FR-061` |
 | `status` | `ativo` | desativar/reativar por `unidades_ensino_editar`; excluir pela RPC | `FR-060` |
 | soma × CH da disciplina | asserção pgTAP `FR-024` (spec 002) | **aviso na tela, nunca gatilho** (Q-06); a asserção pgTAP passa a ser sobre a **carga** (`050_grao_unidade_ensino.sql` já a tem — conferir que ela não vira bloqueio de edição) | `FR-062` |
+
+### `turma_disciplina_unidade` — **tabela nova** (A-1, caso 5)
+
+Quem ministra **cada UE** de uma disciplina **naquela turma**. É o que sustenta o rateio **por UE**, e
+a parcela do instrutor passa a ser a **soma da CH das UEs dele** — derivada, nunca gravada.
+
+| Coluna | Tipo | Nota |
+|---|---|---|
+| `id` | `uuid pk default gen_random_uuid()` | |
+| `codigo` | `text unique not null default app.proximo_codigo_turma_disciplina_unidade()` | `TDU-NNNNNN`, sequência em `app`, **na lista única** de `avancar_sequencias` (passa a **7**) |
+| `turma_disciplina_id` | `uuid not null` | FK `restrict` |
+| `disciplina_id` | `uuid not null` | redundante **de propósito**, para a FK composta abaixo — o mesmo padrão de `curso_id` em `unidades_ensino` (spec 002, `plan.md` §105) |
+| `unidade_ensino_id` | `uuid not null` | FK `restrict` |
+| `instrutor_id` | `uuid not null` | FK `restrict` |
+| `status`, `origem_migracao_v1`, quarteto de auditoria | como o resto do schema | |
+
+**Constraints** — a coerência é do motor, não de gatilho (`RN-MAT-01`):
+- `unique (turma_disciplina_id, unidade_ensino_id)` — **cada UE com exatamente um instrutor** naquela turma.
+- FK composta `(turma_disciplina_id, disciplina_id) → turma_disciplina (id, disciplina_id)` — exige a
+  unique nova `td_id_disciplina` em `turma_disciplina`.
+- FK composta `(unidade_ensino_id, disciplina_id) → unidades_ensino (id, disciplina_id)` — exige a
+  unique nova `ue_id_disciplina`. **Juntas, garantem que a UE é da disciplina daquela turma**, sem
+  gatilho.
+- FK composta `(turma_disciplina_id, instrutor_id) → turma_disciplina_instrutor (turma_disciplina_id,
+  instrutor_id)` (a unique `tdi_par_unico` já existe) — **só instrutor já atribuído àquela turma**
+  recebe UE.
+
+**RLS**: `ler` / `criar` / `editar` sobre `app.pode('disciplinas', …)` + alcance da turma + turma em
+oferta, espelhando `turma_disciplina_instrutor`. Sem policy nem privilégio de `DELETE`.
 
 ### `cursos` — 24 linhas
 
@@ -96,7 +125,8 @@ A RPC de instrutor **não** passa a gravar aqui nesta fatia (`FR-025`, `PEND-5b-
 | `app.impedimentos_de_exclusao_da_unidade_ensino(uuid)`, `app.excluir_unidade_ensino(uuid, text)` | idem | impedimento único: `aula_lancada` (as duas FKs de `registros_aula`) | `FR-022` |
 | `public.*` (4 espelhos) | INVOKER, `sql` | como `public.excluir_instrutor`; `grant execute to authenticated`, `revoke` de `public`/`anon` | mesmo desenho de `20260915140100` |
 | `public.definir_instrutores_da_turma(uuid, jsonb)` | INVOKER | regrava a lista da turma (§1) | `FR-031` |
-| `app.trg_disciplinas_nasce_nas_turmas()` | gatilho DEFINER | §1 | `FR-070` |
+| `public.criar_disciplina(jsonb)` / `public.reativar_disciplina(uuid)` | RPC INVOKER → `app.*` DEFINER | §1 — disciplina + linhas das turmas `planejada`/`ativa`, numa transação, idempotentes | `FR-070`, `FR-070.1`, A-2, A-2b |
+| `vw_instrutor_carga_prevista` **reescrita** | view | os 5 casos do `FR-041`; a divisão padrão usa `row_number() over (partition by turma_disciplina_id order by app.fn_antiguidade_ordem(instrutor_id))` para dar o resto aos mais antigos, **sem fração** | `FR-041.7` |
 | `app.trg_turma_disciplina_janela()` | gatilho | §1 | `FR-030.1` |
 | `app.trg_tdi_soma_do_rateio()` | constraint trigger deferred | §1 | `FR-043` |
 | `app.trg_exclusoes_imutaveis()` / `_sem_truncate()` | gatilhos de statement | §1 | Q-09 |

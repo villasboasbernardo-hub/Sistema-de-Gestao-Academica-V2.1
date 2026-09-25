@@ -167,6 +167,32 @@ propagada ao requisito que a citava; as medições pedidas estão ao lado da res
 - Q: N-3 — a tabela de destino por UE das disciplinas desdobradas? → A: **confirmada pela conferência
   (§4.2, com página) — aceita** (`FR-065`).
 
+*(Respostas ao lote do `/speckit-analyze`, mesmo dia.)*
+
+- Q: A-1 — a parcela do rateio é digitável, contra o critério 9 (*"CH do instrutor nunca é campo
+  digitável"*)? → A: **A parcela da disciplina entre os instrutores É digitável.** O critério 9 e o
+  `RF-INSTR-13` continuam valendo para a **CH TOTAL do instrutor**, que segue **sempre calculada a
+  partir das parcelas**. Por turma são **cinco casos** (`FR-041.1` a `FR-041.5`): **1.** um instrutor
+  só → CH integral e todas as UEs; **2.** simultâneo → cada um recebe a CH integral; **3.** dividido
+  **sem definição** (padrão) → divisão igual em **TA inteiros**, resto aos mais antigos pela
+  antiguidade do sistema (Q-03); **4.** dividido **por TA** → o usuário digita TA inteiros por
+  instrutor e **o banco recusa** se a soma diferir da CH da disciplina; **5.** dividido **por UE** → o
+  usuário atribui UEs a instrutores e a CH de cada um é a **soma da CH das suas UEs pelo currículo**,
+  com **cada UE em exatamente um instrutor e todas atribuídas**, só para disciplina que tem UE.
+  **Parcela sempre inteira.** Exige **tabela nova** para a atribuição UE → instrutor por turma, no
+  PR 1. A CH prevista do instrutor (`vw_instrutor_carga_prevista` e quem lê dela) passa a vir dessas
+  parcelas; **a função pura de `lib/dominio/` é a referência e a view é testada contra ela**.
+  *Medido em 25/09/2026, antes de escrever a regra:* `turma_disciplina_instrutor.ch_prevista_tempos`
+  é `numeric(6,2)` e tem **0 de 96** preenchidas — **nenhum valor fracionário a relatar**; e
+  `turma_disciplina.ch_prevista_por_instrutor`, **0** preenchidas.
+- Q: A-2 — o gatilho de nascimento colide com a ordem do ETL e com 4 amostras? → A: **(b) sem gatilho
+  de nascimento.** Uma **RPC `criar_disciplina`** insere a disciplina **e** as linhas de
+  `turma_disciplina` das turmas `planejada`/`ativa` **numa transação**, no molde de
+  `criar_curso_com_regime`. **ETL e amostras não mudam** (`FR-070`).
+- Q: A-2b — reativar disciplina com turma criada enquanto ela estava inativa? → A: **(a) a RPC de
+  reativar acrescenta as linhas que faltam** nas turmas `planejada`/`ativa`, **idempotente**
+  (`FR-070.1`).
+
 *(Lote 2 — respostas de **Bernardo Villas Boas**, 24/09/2026, no pedido do plan.)*
 
 - Q: N-1 — `fundamento_normativo` dos 8 currículos sem Ofício? → A: **(a)** *"Currículo `<sigla>` —
@@ -490,8 +516,11 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   MUST sair das opções de **nova** atribuição e da criação de linha em turma nova (`FR-032.3` da spec
   009) e MUST permanecer em todo histórico.
 - **FR-014**: Coluna derivada MUST NOT ser gravável por caminho nenhum (`RN-CRUD-02`) — CH cumprida,
-  `ta_executados`, `ta_saldo` vêm de `vw_disciplinas_execucao`; **nenhum** campo digitável de CH de
-  instrutor (critério 9).
+  `ta_executados`, `ta_saldo` vêm de `vw_disciplinas_execucao`. **A CH total do instrutor MUST ser
+  sempre calculada** a partir das parcelas, nunca digitada (critério 9, `RF-INSTR-13`). ⚠️ **A parcela
+  de uma disciplina numa turma É digitável** (`FR-041.4`, A-1 de 25/09/2026): o critério 9 fala da
+  grandeza do instrutor, não da repartição de uma disciplina — e a repartição digitada é recusada pelo
+  banco se não fechar.
 - **FR-015**: **Confirmação antes de salvar** MUST seguir a **lista fechada** de
   `lib/dominio/confirmacao-de-gravacao.ts`, estendida com as escritas desta fatia que alcançam o que já
   foi lançado: excluir (sempre), desativar disciplina/UE com histórico, mudar CH de disciplina com
@@ -578,24 +607,44 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   nesta fatia, o rateio lê sempre `disciplinas.modo_atribuicao_padrao`. **`herdar` é proibido nessa
   coluna pelo `CHECK` `disciplinas_modo_padrao_concreto`, que já existe** (N-2, 24/09/2026 — confirmado
   no banco; nenhum `CHECK` novo); a tela oferece só `dividido` e `simultaneo`.
-- **FR-041**: A função pura `lib/dominio/rateio-de-carga.ts` (nome proposto; o documento 04 cita
-  `distribuirCargaEntreInstrutores` em `carga-instrutor.ts` — o nome definitivo é do plano) MUST ser
-  a **referência**: recebe CH da disciplina, lista de instrutores **já ordenada por antiguidade** e
-  modo; devolve as parcelas. Dividido: soma **exata**; simultâneo: CH integral para cada um; 1 instrutor:
-  integral nos dois modos. **Vitest com 2 e 3 instrutores em cada modo** (documento 04).
+- **FR-041**: A função pura `lib/dominio/rateio-de-carga.ts` MUST ser a **referência** do rateio:
+  recebe CH da disciplina, lista de instrutores **já ordenada por antiguidade**, o modo e — quando
+  houver — as parcelas digitadas ou a atribuição de UEs; devolve as parcelas, **sempre inteiras**.
+  **Vitest com 2 e 3 instrutores em cada caso** (documento 04). Os **cinco casos** (A-1, 25/09/2026):
+- **FR-041.1**: **Um instrutor só** → CH **integral**, e todas as UEs são dele.
+- **FR-041.2**: **Simultâneo** → **cada** instrutor recebe a CH **integral** (`RN-MAT-05`).
+- **FR-041.3**: **Dividido sem definição** (o padrão) → divisão igual em **TA inteiros**, com o resto
+  distribuído **aos mais antigos, um TA cada**, pela ordem de antiguidade do sistema (Q-03). 10 TA
+  entre 3 → **4 + 3 + 3**. **Nunca produz fração.**
+- **FR-041.4**: **Dividido por TA** → a pessoa **digita** TA inteiros por instrutor, e **o banco
+  recusa** se a soma diferir da CH da disciplina. É a exceção deliberada ao critério 9, que continua
+  valendo para a **CH total** do instrutor — essa segue **calculada**, nunca digitada (`FR-014`).
+- **FR-041.5**: **Dividido por UE** → a pessoa atribui **UEs a instrutores**, e a CH de cada um é a
+  **soma da CH das suas UEs pelo currículo** — **derivada, nunca gravada**. Cada UE MUST ter
+  **exatamente um** instrutor e **todas** MUST estar atribuídas; o modo só é oferecido para disciplina
+  **com UE**. Exige a entidade nova **`turma_disciplina_unidade`** (data-model §1).
+- **FR-041.6**: **Qual caso vale numa turma se lê do dado, sem coluna de modo**: linhas em
+  `turma_disciplina_unidade` → caso 5; `ch_prevista_tempos` preenchida → caso 4; nenhum dos dois →
+  caso 3 (ou 1, se houver um instrutor só); `modo_atribuicao_padrao = 'simultaneo'` → caso 2. Os
+  casos 4 e 5 MUST NOT coexistir na mesma `turma_disciplina` — o banco recusa. **Nenhuma segunda
+  fonte de verdade**: no caso 5 a parcela é derivada e `ch_prevista_tempos` fica `NULL`.
+- **FR-041.7**: `vw_instrutor_carga_prevista` MUST implementar exatamente os cinco casos — hoje ela
+  divide `carga_horaria_tempos / instrutores_designados` e **produz fração** (medido: `round(…, 2)`),
+  o que contraria `FR-041.3`. A view MUST ser **testada contra a função pura**, com a mesma tabela de
+  casos, e a ordem de antiguidade MUST vir de `app.fn_antiguidade_ordem`, que já existe.
 - **FR-042**: Quando a CH não divide igualmente (10 tempos entre 3), a **divisão é inteira e o resto vai
   aos mais antigos, um tempo cada, pela ordem de antiguidade do sistema** (`lib/dominio/antiguidade.ts`,
   com `antiguidade_declarada` como desempate) — Q-03, 24/09/2026. Registrado: a v2.0 (spec 032,
   `FR-007`) punha o resto **no último da lista**; a regra muda de propósito, por decisão nominal.
   Exemplos obrigatórios no Vitest: 10 entre 3 → 4/3/3 (mais antigo primeiro); 11 entre 3 → 4/4/3;
   30 entre 3 → 10/10/10.
-- **FR-043**: A soma exata no modo dividido MUST ser **invariante do banco** (gatilho em
-  `turma_disciplina_instrutor`, recusa com chave própria traduzida), não só da tela. **`ch_prevista_tempos`
-  `NULL` significa "dividir igualmente" SÓ NA LEITURA — nunca é gravado por inferência** (Q-03,
-  24/09/2026): as 96 linhas migradas **ficam `NULL`** até alguém salvar a atribuição daquela turma; a
-  função pura recebe as parcelas gravadas e, se todas forem `NULL`, devolve a divisão igual **com
-  aviso** (`RN-DEG-01`). O gatilho só confere a soma quando **todas** as parcelas da disciplina na turma
-  estão preenchidas; mistura de `NULL` com valor é recusada.
+- **FR-043**: A soma exata MUST ser **invariante do banco** (gatilho adiado em
+  `turma_disciplina_instrutor` e em `turma_disciplina_unidade`, recusa com chave própria traduzida),
+  não só da tela: no **caso 4**, a soma das parcelas digitadas MUST ser igual à CH da disciplina; no
+  **caso 5**, **toda** UE da disciplina MUST estar atribuída e **cada uma a exatamente um** instrutor.
+  **`ch_prevista_tempos` `NULL` significa "dividir igualmente" SÓ NA LEITURA — nunca é gravado por
+  inferência** (Q-03): as 96 linhas migradas **ficam `NULL`** até alguém salvar a atribuição daquela
+  turma. Mistura de `NULL` com valor é recusada; e parcela **fracionária** é recusada (`FR-041`).
 - **FR-044**: A CH **cumprida** MUST NOT ser tocada por nada desta fatia — vem de `registros_aula`
   via `vw_disciplinas_execucao` / `vw_unidades_ensino_execucao` (spec 032, `FR-011`).
 
@@ -687,11 +736,18 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
 #### Fronteira herdada da spec 009
 
 - **FR-070**: `FR-032.4` da spec 009 — decidido (Q-08, 24/09/2026): **disciplina acrescentada à grade
-  nasce como `nao_informado` nas turmas não concluídas** do curso, por gatilho `AFTER INSERT` em
-  `disciplinas` (simétrico ao `trg_turmas_fazer_nascer_disciplinas`, que só age em turma nova);
-  **disciplina desativada continua nas turmas onde já está** — a linha de `turma_disciplina` fica, sai
-  das listas de nova atribuição e aparece como inativa. **"Não concluídas" = só `planejada` e `ativa`;
-  `cancelada` não recebe** (N-4, 24/09/2026).
+  nasce como `nao_informado` nas turmas `planejada` e `ativa`** do curso (`cancelada` e `concluida`
+  **não** recebem — N-4); **disciplina desativada continua nas turmas onde já está** — a linha de
+  `turma_disciplina` fica, sai das listas de nova atribuição e aparece como inativa.
+  ⚠️ **O mecanismo é RPC, não gatilho** (A-2, 25/09/2026): `public.criar_disciplina(jsonb)` insere a
+  disciplina **e** as linhas numa transação, no molde de `criar_curso_com_regime`. **Um gatilho
+  `AFTER INSERT` em `disciplinas` foi recusado** porque colidiria com a ordem do ETL (`turmas` →
+  `disciplinas` → `turma_disciplina`, medido em `scripts/etl/ordem.py`) e com as amostras `020`, `094`,
+  `097` e `098`, que inserem `turma_disciplina` explicitamente — **ETL e amostras não mudam**.
+- **FR-070.1**: **Reativar** disciplina MUST acrescentar, pela RPC `public.reativar_disciplina`, as
+  linhas que **faltam** nas turmas `planejada`/`ativa` — uma turma criada enquanto a disciplina estava
+  inativa não tem a linha (`FR-032.3` da spec 009 só cria para disciplina ativa). **Idempotente**
+  (A-2b, 25/09/2026).
 
 #### Transversal
 
