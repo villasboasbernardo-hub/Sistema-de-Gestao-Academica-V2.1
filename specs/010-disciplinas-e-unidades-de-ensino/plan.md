@@ -109,9 +109,9 @@ supabase/migrations/
 ├── <ts>_curriculo_modelo_e_parametro.sql        # PR 1 — M6: cursos.curriculo_modelo, disciplinas.sem_unidades_ensino, parâmetro
 └── <ts>_carga_unidades_ensino.sql               # PR 2 — gerada pelo script, revisada, idempotente
 supabase/tests/
-├── 101_sequencias_dis_ue.sql · 102_exclusao_com_rastro.sql · 103_atribuicao_aposentada.sql
-├── 104_periodo_e_nascimento.sql · 105_rateio_por_instrutor.sql · 106_curriculo_modelo_parametro.sql
-└── 107_carga_unidades_ensino.sql                # PR 2
+├── 106_sequencias_dis_ue.sql · 107_exclusao_com_rastro.sql · 108_atribuicao_aposentada.sql
+├── 109_periodo_e_rpc_disciplina.sql · 110_rateio_por_instrutor.sql · 111_curriculo_modelo_parametro.sql
+└── 112_carga_unidades_ensino.sql                # PR 2
 scripts/etl/
 ├── extrair_unidades_ensino.py                   # (corrigido: "DEENSINO"; PR 2: captura do fundamento)
 ├── carregar.py                                  # SEQUENCIAS_DE_CODIGO ganha DIS- e UE-

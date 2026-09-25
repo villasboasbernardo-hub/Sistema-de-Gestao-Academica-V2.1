@@ -78,7 +78,13 @@ select set_eq(
            ('registros_aula'), ('avaliacoes'), ('atividades_nao_letivas'), ('planejamento_anual'),
            ('config_listas'), ('config_parametros'), ('perfil_permissao'), ('feriados'),
            ('janelas_curso'), ('reservas_proens'), ('migracao_log'), ('arquivo_avaliacoes_v1'),
-           ('usuarios'), ('usuario_curso'), ('curso_sigla_historico')$$,
+           ('usuarios'), ('usuario_curso'), ('curso_sigla_historico'),
+           -- Fatia (b) do Epico 5, 25/09/2026. REGRA DOS VALORES ESPERADOS: (a) — o numero
+           -- novo e o correto, e o esperado passa a ser ele. As duas nascem de decisao
+           -- nominal de Bernardo Villas Boas: `exclusoes_registradas` e o rastro exigido
+           -- pela D-B1 (24/09) e `turma_disciplina_unidade` e o caso 5 do rateio (A-1,
+           -- 25/09). O BRIEF §2.1 e a autoridade de nomes, e as duas entram la junto.
+           ('exclusoes_registradas'), ('turma_disciplina_unidade')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

@@ -583,6 +583,15 @@ SEQUENCIAS_DE_CODIGO: tuple[tuple[str, str, str], ...] = (
      "case when codigo ~ '^VIN-[0-9]+$' then substring(codigo from 5)::bigint end"),
     ("app.instrutores_codigo_seq", "instrutores",
      "case when codigo ~ '^[0-9]+$' then codigo::bigint end"),
+    # As tres da fatia (b). ⚠️ `turma_disciplina_instrutor` NAO entra: o codigo dela e
+    # COMPOSTO (`<TDI-NNNNNN>#<codigo do instrutor>`), montado pelo ETL e pela RPC, e nao
+    # sai de sequencia nenhuma — por isso nao ha o que avancar.
+    ("app.disciplinas_codigo_seq", "disciplinas",
+     "case when codigo ~ '^DIS-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    ("app.unidades_ensino_codigo_seq", "unidades_ensino",
+     "case when codigo ~ '^UE-[0-9]+$' then substring(codigo from 4)::bigint end"),
+    ("app.turma_disciplina_unidade_codigo_seq", "turma_disciplina_unidade",
+     "case when codigo ~ '^TDU-[0-9]+$' then substring(codigo from 5)::bigint end"),
 )
 
 
