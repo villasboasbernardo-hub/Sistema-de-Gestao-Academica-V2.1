@@ -103,3 +103,29 @@ seis acrescentam: o menu continua com *Disciplinas* em `disponivel: false`, e as
 `DEFAULT`. A única mudança visível é a **view de CH prevista**, que a ficha do instrutor lê — e ela
 passa a mostrar números **inteiros que somam a CH**, no lugar de frações que somavam 9,99. É
 correção, não regressão, e está descrita no PR.
+
+---
+
+## ✅ APLICADO no remoto em 25/09/2026 — o que foi medido
+
+**Backup, passo zero**: `remoto-20260925-120457.sql`, 1.611 KB, em
+`%LOCALAPPDATA%\ciaara-11\copias-do-remoto\` — fora do git, com dado pessoal.
+
+**Dry-run**: listou **exatamente as seis** desta fatia, nenhuma a mais.
+**`pnpm db:push`**: saiu **0**, as seis na ordem do carimbo.
+
+**Conferido só por leitura, na hora:**
+
+| O quê | Resultado |
+|---|---|
+| migrations dos dois lados | **43 e 43**, nenhuma só de um |
+| impressão digital do catálogo de `public` + `app` | **`0462404a6a08fdb13236d85a8f7d3533`, 865 itens** — **igual** no local e no remoto, sem uma linha de diferença |
+| dado de negócio | **175** disciplinas · **210** `turma_disciplina` · **96** `turma_disciplina_instrutor` — **intactos**; a M3 não inventou nem perdeu nenhuma |
+| tabelas novas | `turma_disciplina_unidade` **0** · `exclusoes_registradas` **0** — nascem vazias |
+| **a prova que só no remoto prova** (`FR-032.1`) | **0** `instrutor_id` sem par ativo na junção, sobre as 210 linhas **reais**. Localmente essa asserção passa vazia; aqui ela mediu |
+| as 3 disciplinas `simultaneo` (Q-02) | **3** marcadas e **3** eventos em `migracao_log` — aqui a migration **aplicou**, porque o dado já estava |
+| parâmetro | `disciplinas.aviso_inicio_dias` = **30** |
+| `DELETE` | **0** policies e **0** privilégios para `authenticated` — a exceção não abriu porta |
+| RPCs de `public` | as **7** presentes |
+| Production | `/` **307** → login · `/login` **200** · `/cursos` **307** · `/instrutores` **307** — sem erro novo |
+
