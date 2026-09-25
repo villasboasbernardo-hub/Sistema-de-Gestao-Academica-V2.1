@@ -50,9 +50,10 @@ except ImportError:  # pragma: no cover
 # Padroes. Toleram as variacoes reais encontradas nos 24 curriculos:
 #   "LISTA DE UNIDADES", "LISTA DAS UNIDADES", "LISTAS DE UNIDADES", "LISTA DE UNIDADE"
 #   numeracao de secao "2)" ou "b)"
+#   "DEENSINO" sem espaco (TOPOGRAFIA de C-Ap-FR, medido em 24/09/2026 — spec 010)
 # ---------------------------------------------------------------------------------
 RE_LISTA_UE = re.compile(
-    r"^\s*(?:\d+|[a-z])\s*[)\-.]\s*LISTAS?\s+D[AE]S?\s+UNIDADES?\s+DE\s+ENSINO",
+    r"^\s*(?:\d+|[a-z])\s*[)\-.]\s*LISTAS?\s+D[AE]S?\s+UNIDADES?\s+DE\s*ENSINO",
     re.IGNORECASE,
 )
 

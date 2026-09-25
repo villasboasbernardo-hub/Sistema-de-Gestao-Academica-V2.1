@@ -146,6 +146,25 @@ propagada ao requisito que a citava; as medições pedidas estão ao lado da res
   (`FR-020`).
 - Q: A divisão em 3 PRs (banco → carga das UEs → telas)? → A: **Aprovada.**
 
+*(Lote 2 — respostas de **Bernardo Villas Boas**, 24/09/2026, no pedido do plan.)*
+
+- Q: N-1 — `fundamento_normativo` dos 8 currículos sem Ofício? → A: **(a)** *"Currículo `<sigla>` —
+  `<órgão da capa>`, `<ano>`"* (`FR-064`).
+- Q: N-2 — `herdar` gravado em `disciplinas.modo_atribuicao_padrao`? → A: **(a) proibido.** *"O `CHECK`
+  `disciplinas_modo_padrao_concreto` já existe na migration de 29/08 — confirme no banco e não crie
+  outro."* *Confirmado em 24/09/2026 no banco local:* `disciplinas_modo_padrao_concreto CHECK
+  ((modo_atribuicao_padrao <> 'herdar'))` existe. **Nenhum `CHECK` novo**; a tela oferece só
+  `dividido`/`simultaneo` (`FR-040`).
+- Q: N-3 — a tabela de destino por UE das desdobradas (`HN-2101` UEs 1–6 → `I`, UE 7 → `I-I`; `MATFIS`
+  UE 1 → `MAT`, UE 2 → `FIS`)? → A: **Verificada pela conferência por agentes da Fase 0 do plano
+  (`conferencia-dos-curriculos.md`). Se ela confirmar com página, está aceita; se divergir, vem para
+  Bernardo** (`FR-065`). ✅ **Confirmada com página em 25/09/2026** (conferência §4.2: `MATFIS` p. 8 e
+  72–73; `HN-2101` p. 6 e 8–9) — **aceita**.
+- Q: N-4 — "turmas não concluídas" da Q-08 inclui canceladas? → A: **(a) só `planejada` e `ativa`;
+  cancelada não recebe** (`FR-070`).
+- Q: N-5 — `DIS-` começa em `000001`? → A: **(a) sim, com asserção de que nenhum código legado usa o
+  prefixo** (`FR-012`).
+
 ---
 
 ## O que foi MEDIDO, e contra qual artefato
@@ -441,7 +460,9 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   **`DIS-NNNNNN`**, por **sequência em `app`** com `DEFAULT app.proximo_codigo_disciplina()` (mesmo
   desenho do `TDI-`, com o `grant execute` do gotcha 5.1), e **a sequência MUST entrar em
   `carregar.SEQUENCIAS_DE_CODIGO`**, coberta por `tests/unidade/sequencias-apos-restaurar.test.ts` e
-  pela prova `provar_sequencias_apos_copia.py` (P3 passa a exigir **5**) — Q-11, 24/09/2026. A tela
+  pela prova `provar_sequencias_apos_copia.py` (P3 passa a exigir **5**) — Q-11, 24/09/2026. **Começa
+  em `DIS-000001`, com asserção pgTAP de que nenhum `codigo` legado usa o prefixo** (N-5; medido: 0 de
+  175). A tela
   MUST NOT pedir que a pessoa digite; o `23505` desta coluna é *"erro interno de numeração"* (gotcha 9).
 - **FR-013**: **Desativar** e **reativar** MUST ser `UPDATE` de `status` (regra 4). Disciplina inativa
   MUST sair das opções de **nova** atribuição e da criação de linha em turma nova (`FR-032.3` da spec
@@ -532,8 +553,9 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   migration** (é decisão de Bernardo sobre linhas identificadas, não inferência por nome em tempo de
   execução); as demais, inclusive `82 - C-Espc-FR - MBFCFR-017`, Bernardo marca **pela tela**.
   **`herdar` significa "usar o modo padrão da disciplina", e nada mais** — sem coluna de modo por turma
-  nesta fatia, o rateio lê sempre `disciplinas.modo_atribuicao_padrao`; o que fazer com `herdar`
-  gravado **na própria** `disciplinas` é a pergunta **N-2**.
+  nesta fatia, o rateio lê sempre `disciplinas.modo_atribuicao_padrao`. **`herdar` é proibido nessa
+  coluna pelo `CHECK` `disciplinas_modo_padrao_concreto`, que já existe** (N-2, 24/09/2026 — confirmado
+  no banco; nenhum `CHECK` novo); a tela oferece só `dividido` e `simultaneo`.
 - **FR-041**: A função pura `lib/dominio/rateio-de-carga.ts` (nome proposto; o documento 04 cita
   `distribuirCargaEntreInstrutores` em `carga-instrutor.ts` — o nome definitivo é do plano) MUST ser
   a **referência**: recebe CH da disciplina, lista de instrutores **já ordenada por antiguidade** e
@@ -596,6 +618,10 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   "sem UE" — a distinção é dado (§2.1 da análise). **Decidido (Q-05, 24/09/2026): pendência
   `PEND-5b-3` — tentar OCR no PR 2; se o resultado não for confiável (invariante da soma não fecha, ou
   texto ilegível), o curso fica sem UE até transcrição humana**, sem bloquear a carga dos demais.
+  ✅ **Resolvido na Fase 0 do plano (25/09/2026)**: leitura das imagens por agente + segunda
+  verificação, legibilidade alta — 1 disciplina de 79 h, 5 UEs (9, 18, 9, 20, 24), soma 80 explicada
+  pelo próprio PDF (*tempo reserva 1 h*). As 5 UEs entram na carga marcadas *"transcrito de imagem"*
+  e `EST-QF-APOC` fica `curriculo_modelo = 'unidades_de_ensino'` (conferência §4.1, research R-3).
 - **FR-064**: A carga das UEs MUST vir **da extração existente** (`scripts/etl/extrair_unidades_ensino.py`,
   saída versionada `scripts/etl/dados/unidades_ensino.csv`, **idêntica** à reexecução de hoje), por
   `INSERT … SELECT` que resolve `disciplina_id` com a **tabela de pareamento explícita** da análise
@@ -603,8 +629,8 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   carga. **Toda linha carregada** MUST ter `fundamento_normativo` **capturado pelo extrator do texto
   do PDF** — *medido em 24/09/2026:* o Ofício da DEnsM é legível por máquina em **15 dos 24**
   (`Of nº 10-6/2025` etc.); nos **8** sem Ofício, a capa traz órgão e ano (*"Diretoria de Ensino da
-  Marinha, 2011"* / *"CIAARA, 2023–2026"*), que é o que se grava (formato em **N-1**); **leitura
-  humana dispensada** (decisão de 24/09/2026 — a fonte oficial é o arquivo, desde 28/08/2026). Nunca um
+  Marinha, 2011"* / *"CIAARA, 2023–2026"*), gravada como *"Currículo `<sigla>` — `<órgão da capa>`,
+  `<ano>`"* (N-1, 24/09/2026); **leitura humana dispensada** (decisão de 24/09/2026 — a fonte oficial é o arquivo, desde 28/08/2026). Nunca um
   Ofício inventado; `origem_migracao_v1` nomeia o arquivo. Nome de UE e tópico com a **grafia do
   currículo**. **CH: 1 TA = 1 hora, sem conversão** (Q-12, 24/09/2026).
 - **FR-065**: As **exceções medidas** têm tratamento decidido (Q-05, 24/09/2026 — *carga por UE, sem
@@ -634,7 +660,8 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   nasce como `nao_informado` nas turmas não concluídas** do curso, por gatilho `AFTER INSERT` em
   `disciplinas` (simétrico ao `trg_turmas_fazer_nascer_disciplinas`, que só age em turma nova);
   **disciplina desativada continua nas turmas onde já está** — a linha de `turma_disciplina` fica, sai
-  das listas de nova atribuição e aparece como inativa. Se "não concluídas" inclui `cancelada` é **N-4**.
+  das listas de nova atribuição e aparece como inativa. **"Não concluídas" = só `planejada` e `ativa`;
+  `cancelada` não recebe** (N-4, 24/09/2026).
 
 #### Transversal
 

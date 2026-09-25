@@ -1,5 +1,11 @@
 # Análise dos currículos × banco — insumo da fatia (b) do Épico 5
 
+> ⚠️ **Superada em parte pela conferência da Fase 0 do plano** ([conferencia-dos-curriculos.md](./conferencia-dos-curriculos.md),
+> 24–25/09/2026): leitura independente dos 24 PDFs por agentes, extrator corrigido (`DEENSINO`),
+> segunda verificação com página. Onde os dois documentos divergirem, **vale a conferência** — em
+> especial: TOPOGRAFIA tem 10 UEs; `MATFIS` tem 2 UEs; APOC tem 1 disciplina e 5 UEs legíveis; os
+> cursos por competências têm divergências de nome, código e CH que esta análise não podia ver.
+
 **Medido em 24/09/2026** *(regra 9.2 do `CLAUDE.md`: todo número nomeia o artefato)*. Esta análise
 é **documento**, não código: nada aqui escreveu no banco local nem no remoto.
 
