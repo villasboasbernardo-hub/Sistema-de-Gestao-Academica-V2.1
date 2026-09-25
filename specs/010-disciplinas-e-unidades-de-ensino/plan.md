@@ -104,8 +104,9 @@ supabase/migrations/
 ├── <ts>_sequencias_dis_e_ue.sql                 # PR 1 — M1
 ├── <ts>_exclusao_com_rastro.sql                 # PR 1 — M2: tabela + 8 funções + gatilhos de imutabilidade
 ├── <ts>_aposentar_colunas_de_atribuicao.sql     # PR 1 — M3: prova pgTAP ANTES (I-3) + 3 comentários + 3 linhas simultaneo
-├── <ts>_gatilhos_de_disciplina_por_turma.sql    # PR 1 — M4: janela, soma do rateio, nascimento em turmas
-├── <ts>_curriculo_modelo_e_parametro.sql        # PR 1 — M5: cursos.curriculo_modelo, disciplinas.sem_unidades_ensino, parâmetro
+├── <ts>_periodo_por_turma_e_nascimento.sql      # PR 1 — M4: gatilho da janela + disciplina nova nasce nas turmas
+├── <ts>_rateio_por_instrutor.sql                # PR 1 — M5: RPC de atribuição + constraint trigger da soma
+├── <ts>_curriculo_modelo_e_parametro.sql        # PR 1 — M6: cursos.curriculo_modelo, disciplinas.sem_unidades_ensino, parâmetro
 └── <ts>_carga_unidades_ensino.sql               # PR 2 — gerada pelo script, revisada, idempotente
 supabase/tests/
 ├── 101_sequencias_dis_ue.sql · 102_exclusao_com_rastro.sql · 103_atribuicao_aposentada.sql
@@ -168,9 +169,9 @@ agente** — o que os dois confirmaram entrou como *confirmada*, o resto como *i
 
 ## Entrega em três PRs — aprovada em 24/09/2026
 
-### PR 1 — banco (5 migrations, ~40 tarefas)
+### PR 1 — banco (6 migrations, 15 tarefas)
 
-Ordem das migrations (M1..M5 acima); **M3 abre com a asserção I-3** (79/79 na junção) **antes** de
+Ordem das migrations (M1..M6 acima); **M3 abre com a asserção I-3** (79/79 na junção) **antes** de
 aposentar. pgTAP `101`–`106`; RLS `disciplinas.test.ts` (operador é o caso que discrimina); Vitest de
 `sequencias-apos-restaurar` (6) e da tradução (chaves lidas do SQL); `pnpm db:tipos`; tipos mostram
 `codigo` opcional em `Insert` (gotcha 5.2). **Plano de aplicação no remoto** no molde da spec 009 §0.3:
@@ -178,7 +179,7 @@ aposentar. pgTAP `101`–`106`; RLS `disciplinas.test.ts` (operador é o caso qu
 autorização nominal → conferência só de leitura (contagem de migrations, `md5` do catálogo, Production
 respondendo). Reversão por migration no [data-model.md §4](./data-model.md).
 
-### PR 2 — carga das UEs (~20 tarefas)
+### PR 2 — carga das UEs (12 tarefas)
 
 Extrator: captura do `fundamento_normativo` (Ofício ou capa) — teste com os 24 (15 Ofício, 8 capa,
 1 ilegível). `pareamento_ue.csv` com as 8 siglas mapeadas, os pares de disciplina por nome/código e as
@@ -188,7 +189,7 @@ currículo. `conferir_unidades_ensino.py` (FR-067). APOC: as 5 UEs entram **só 
 confirmado, com `origem_migracao_v1 = '<arquivo> (transcrito de imagem)'`. Aplicação no remoto com
 backup, como o PR 1. Não toca em nome de disciplina (Q-13) nem em CH do banco (Q-06: aviso).
 
-### PR 3 — telas (~60 tarefas)
+### PR 3 — telas (17 tarefas)
 
 De dentro para fora: 7 funções puras com Vitest → 3 Zod → 3 ações + tradução → `contrato.ts` +
 `menu.ts` → página, consulta (`vw_disciplinas_execucao` + `turma_disciplina_instrutor` +
@@ -198,10 +199,11 @@ cliente → painéis → e2e por clique com os casos que discriminam → `verifi
 
 ## Tamanho, medido contra a fatia (a)
 
-A spec 009 fechou com 215 tarefas em dois PRs. Esta estimativa dá **~120** em três — menor porque o
-banco desta fatia é cirúrgico (nenhuma tabela de negócio nova, só a de rastro) e a cascata reaproveita
-o seletor de turma, o endereço de turma, a confirmação e os filtros da (a). O número final é do
-`/speckit-tasks`, que **não** foi rodado.
+A spec 009 fechou com 215 tarefas em dois PRs, no tamanho de micro-passo. Esta fatia saiu com **44 em
+três PRs** (15 · 12 · 17), no tamanho de **entrega verificável** — cada tarefa traz o teste que a prova
+*(decisão de Bernardo Villas Boas, 25/09/2026)*. A massa é menor porque o banco desta fatia é cirúrgico
+(nenhuma tabela de negócio nova, só a de rastro) e a cascata reaproveita o seletor de turma, o endereço
+de turma, a confirmação e os filtros da fatia (a). Ver [tasks.md](./tasks.md).
 
 ## Pendências nomeadas
 
@@ -210,21 +212,22 @@ disciplinas × currículo, Q-13) · `PEND-5b-3` (APOC — fechada se R-3 confirm
 `PEND-5b-5` (UEs da disciplina emprestada `C-Exp-Metoc-OF-SP IV`) · **novas da conferência** em
 [research §R-4](./research.md) — códigos e CH dos cursos por competências, ambientação, MetocOf.
 
-## Dúvidas acumuladas — em LOTE, com opções e recomendação (nenhuma decidida aqui)
+## Dúvidas do lote — ✅ TODAS RESPONDIDAS em 25/09/2026
 
-*(Nenhuma trava o plano: os três PRs estão desenhados sob a decisão Q-06 — a carga grava a CH do
-currículo nas UEs e a tela **avisa** onde a soma não fecha. As dúvidas são sobre o que fazer com o
-dado do banco que a conferência mostrou divergente **com página**.)*
+*(Registro do que foi perguntado e da decisão. O texto integral de cada resposta está em
+[spec.md › Clarifications › Session 2026-09-25](./spec.md).)*
 
-| # | Dúvida | Opções | Recomendação (não decisão) |
-|---|---|---|---|
-| **P-1** | CH de disciplina no banco divergente do currículo, **confirmada com página** em 9 casos: `C-Ap-FR III` 76×75 · `C-Exp-MetocOf I` 48×30 e `V` 40×50 · `C-Espc-FR TFM` 47×48 · `C-Espc-HN NAV I` 100×108 e `NAV II` 128×120 · AMBIENTAÇÃO 8×5 (`PCN`, `PrevMe`) e 8×10 (`OcOp`). O que fazer com a CH do banco? | (a) **nada nesta fatia** — o remoto é a fonte da verdade dos cadastros e a correção é do responsável, **pela tela de disciplina do PR 3**, com rastro de auditoria; até lá o aviso do Q-06 mostra a diferença; (b) migration registrada corrigindo as 9 (dado, não estrutura); (c) manter o banco e registrar como "CH operacional ≠ CH do currículo" sem aviso | **(a)** — é a regra de direção de 24/09 (quem testa completa o cadastro pelo preview) e a CH gravada alimenta rateio e LIQ; (b) escreve dado no remoto por script, que a mesma regra proíbe; (c) esconde o que a conferência achou |
-| **P-2** | `C-Exp-MetocOf`: o banco segue a grade do currículo **SP de 2025** (48/19/37/40) e não a do **OF de 2011** (30/19/37/18/50), salvo a `IV` (18, só no de 2011). Qual currículo vale para o `C-Exp-MetocOf`? | (a) o de 2011 (é o arquivo da sigla em `SIS11/Curriculos/`): as 27 UEs entram e a tela avisa as 2 CH; (b) o SP de 2025 vale para os dois cursos: carregar as 24 UEs do SP também no `C-Exp-MetocOf` (replicação = inferência, D-B4) e deixar a `IV` sem UE; (c) fora da carga até Bernardo dizer qual vigora | **(a)** — é o único que não infere; se o de 2011 estiver revogado, a resposta muda a carga e vira P-1 |
-| **P-3** | Quem lê `exclusoes_registradas`? | (a) `auditoria.ler` (hoje: admin, chefe_departamento_ensino, encarregado e ajudante da Divisão); (b) só `admin`; (c) recurso novo | **(a)** — é o recurso que existe para isso; nada na matriz muda |
-| **P-4** | As 5 UEs do `EST-QF-APOC` transcritas de imagem (dupla leitura, legibilidade alta, soma 80 explicada pelo PDF) entram **nesta** carga? | (a) sim, marcadas *"transcrito de imagem"*, com a asserção de soma excluindo-a nominalmente; (b) esperar transcrição humana (pendência) | **(a)** — Q-05 pediu OCR confiável e a conferência entregou mais do que isso |
+| # | Dúvida | Decisão de Bernardo Villas Boas, 25/09/2026 |
+|---|---|---|
+| **P-1** | CH de disciplina no banco divergente do currículo, confirmada com página em 9 casos | **(a) nenhuma CH é corrigida por script.** Ficam com o aviso da Q-06; a correção é **pela tela do PR 3**, com rastro |
+| **P-2** | Qual currículo vale para o `C-Exp-MetocOf`? | **São DOIS CURSOS DIFERENTES**: `C-Exp-MetocOf` **presencial** (currículo de 2011, 27 UEs) e `C-Exp-Metoc-OF-SP` **semipresencial** (SP de 2025, 24 UEs), com CH diferente por ser semipresencial. **Pareamento sempre curso ↔ o próprio currículo, nunca cruzado.** As CH do presencial que coincidem com as do SP são divergências da P-1, com a observação *"provavelmente copiadas do SP"* |
+| **P-3** | Quem lê `exclusoes_registradas`? | **(a) quem tem `auditoria.ler`** |
+| **P-4** | As 5 UEs do `EST-QF-APOC` transcritas de imagem | **(a) entram nesta carga**, marcadas *"transcrito de imagem"*, com a asserção de soma **excluindo o APOC nominalmente** |
+| **N-3** | Tabela de destino por UE das desdobradas | **Confirmada pela conferência (§4.2, com página) — aceita** |
 
-**Efeito de cada resposta**: P-1 e P-2 mudam **dado** (nunca a estrutura do PR 1); P-3 muda uma policy
-do PR 1; P-4 muda ~5 linhas do PR 2. Nenhuma muda o PR 3.
+⚠️ **Correção feita em 25/09/2026, por ordem de Bernardo**: a conferência (§4.3, §4.6) e este plano
+tratavam `C-Exp-MetocOf` e `C-Exp-Metoc-OF-SP` como se fossem o mesmo curso com dois currículos
+possíveis. **Não são**: são dois cursos, cada um com o seu. Os dois documentos foram emendados.
 
 ## Complexity Tracking
 

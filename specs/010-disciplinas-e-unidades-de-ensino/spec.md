@@ -146,6 +146,27 @@ propagada ao requisito que a citava; as medições pedidas estão ao lado da res
   (`FR-020`).
 - Q: A divisão em 3 PRs (banco → carga das UEs → telas)? → A: **Aprovada.**
 
+### Session 2026-09-25
+
+*(Respostas de **Bernardo Villas Boas**, 25/09/2026, ao lote do plan.)*
+
+- Q: P-1 — as 9 CH de disciplina divergentes do currículo, confirmadas com página? → A: **(a) nenhuma CH
+  é corrigida por script.** As divergências ficam com o **aviso da Q-06**, e Bernardo as corrige **pela
+  tela do PR 3, com rastro** (`FR-010`, `FR-062`, `FR-064`).
+- Q: P-2 — qual currículo vale para o `C-Exp-MetocOf`? → A: **`C-Exp-MetocOf` (presencial) e
+  `C-Exp-Metoc-OF-SP` (semipresencial) são DOIS CURSOS DIFERENTES, cada um com o seu currículo** — o
+  presencial com o de **2011**, o semipresencial com o **SP de 2025**, que tem CH levemente diferente
+  **por ser semipresencial**. **O pareamento é sempre curso ↔ o próprio currículo, nunca cruzado.** O
+  `C-Exp-MetocOf` carrega as **27 UEs** do currículo de 2011. As CH do presencial no banco que
+  coincidem com as do SP são divergências tratadas pela **P-1** (aviso na tela, correção de Bernardo),
+  com a observação **"provavelmente copiadas do SP"** (`FR-064`, `FR-065`).
+- Q: P-3 — quem lê `exclusoes_registradas`? → A: **(a) quem tem `auditoria.ler`** (`FR-024`).
+- Q: P-4 — as 5 UEs do `EST-QF-APOC` transcritas de imagem? → A: **(a) entram nesta carga**,
+  registradas no curso e marcadas **"transcrito de imagem"**, com a asserção de soma **excluindo o
+  APOC nominalmente** (`FR-063`, `FR-065`).
+- Q: N-3 — a tabela de destino por UE das disciplinas desdobradas? → A: **confirmada pela conferência
+  (§4.2, com página) — aceita** (`FR-065`).
+
 *(Lote 2 — respostas de **Bernardo Villas Boas**, 24/09/2026, no pedido do plan.)*
 
 - Q: N-1 — `fundamento_normativo` dos 8 currículos sem Ofício? → A: **(a)** *"Currículo `<sigla>` —
@@ -608,8 +629,12 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   **não fecha** — UE editada, UE criada no sistema, CH da disciplina alterada, ou as 3 divergências
   reais de CH da análise §4.1 — o sistema MUST **avisar, nunca recusar** (Q-06, 24/09/2026): aviso na
   linha da disciplina e no quadro, com a soma e a diferença à vista; a asserção pgTAP `FR-024` da spec
-  002 passa a valer **sobre a carga** (dado do currículo), não como gatilho sobre edição. **CH da
-  disciplina derivada da soma das UEs fica como pergunta para o plano**, não decidida aqui.
+  002 passa a valer **sobre a carga** (dado do currículo), não como gatilho sobre edição, **e exclui
+  nominalmente `EST-QF-APOC`**, cuja soma de 80 contra CH de 79 é divergência do próprio currículo
+  (P-4, 25/09/2026). **CH da disciplina derivada da soma das UEs fica como pergunta para o plano**, não
+  decidida aqui. ⚠️ **Nenhuma CH de disciplina é corrigida por script** (P-1, 25/09/2026): as 9
+  divergências confirmadas com página ficam com este aviso, e a correção é feita **na tela** por quem
+  responde pelo dado, com o rastro de auditoria que o gatilho `set_auditoria` já grava.
 - **FR-063**: **Cursos e disciplinas sem UE** MUST ser **dado**, não dedução: um marcador no curso
   (`cursos.sem_unidades_ensino`, ou equivalente decidido no plano) preenchido pela carga para
   `C-Espc-FR`, `C-Espc-HN` e `EST-QF-APOC`, e um estado por disciplina para as 5 `AMBIENTAÇÃO VIRTUAL` e
@@ -632,7 +657,11 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   Marinha, 2011"* / *"CIAARA, 2023–2026"*), gravada como *"Currículo `<sigla>` — `<órgão da capa>`,
   `<ano>`"* (N-1, 24/09/2026); **leitura humana dispensada** (decisão de 24/09/2026 — a fonte oficial é o arquivo, desde 28/08/2026). Nunca um
   Ofício inventado; `origem_migracao_v1` nomeia o arquivo. Nome de UE e tópico com a **grafia do
-  currículo**. **CH: 1 TA = 1 hora, sem conversão** (Q-12, 24/09/2026).
+  currículo**. **CH: 1 TA = 1 hora, sem conversão** (Q-12, 24/09/2026). ⚠️ **Cada curso é pareado com o
+  SEU currículo, nunca com o de outro** (P-2, 25/09/2026): `C-Exp-MetocOf` (presencial) carrega as
+  **27 UEs** do currículo de 2011; `C-Exp-Metoc-OF-SP` (semipresencial), as **24** do SP de 2025 — são
+  dois cursos, e a CH difere por ser um semipresencial. **A carga MUST NOT corrigir CH, nome nem código
+  de disciplina** (P-1).
 - **FR-065**: As **exceções medidas** têm tratamento decidido (Q-05, 24/09/2026 — *carga por UE, sem
   fundir linhas; exceção sem tratamento claro fica FORA da carga como pendência nomeada, sem bloquear o
   resto*):
@@ -640,7 +669,7 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   |---|---|
   | 7 UEs de `HN-2101-0621` (`C-Ap-HN`; banco tem `I` MATEMÁTICA 105 e `I-I` FÍSICA 21) | **carga por UE**, cada uma para a metade que o currículo indica. *Medido:* UE 7 *FÍSICA* = **21 h** = CH de `I-I`; UEs 1–6 (matemática, estatística, erros, incerteza, ajustamento) somam **105 h** = CH de `I`. A tabela de pareamento por UE é **revisada por Bernardo** antes da carga (**N-3**) |
   | UEs de `MATFIS` (`CAHO`; banco tem `MAT` 28 e `FIS` 28) — **são 2, não 3** (correção da análise §4.2) | **carga por UE**: UE 1 *EMPREGO DOS CONCEITOS DE MATEMÁTICA…* 28 h → `MAT`; UE 2 *…DE FÍSICA…* 28 h → `FIS` — revisada por Bernardo (**N-3**) |
-  | `C-Exp-Metoc-OF-SP` `IV` (emprestada de `C-Exp-MetocOf`) | **sem UE** nesta carga — pendência `PEND-5b-5`; replicar seria inferir |
+  | `C-Exp-Metoc-OF-SP` `IV` (linha do banco cujo nome carrega a sigla do **outro** curso) | **sem UE**: o pareamento é **curso ↔ o próprio currículo, nunca cruzado** (P-2, 25/09/2026), e o currículo SP não tem esta disciplina. A existência e a CH da linha são cadastro, corrigidos na tela (P-1) — `PEND-5b-5` |
   | TOPOGRAFIA de `C-Ap-FR` (`VIII`, 100) | **não é exceção do currículo — é defeito do extrator**: *medido em 24/09/2026 no PDF*, a seção existe com o cabeçalho grafado *"LISTA DE UNIDADES DEENSINO"* (sem espaço) e traz **10 UEs que somam 100 h**; o extrator, que procura *"UNIDADES DE ENSINO"*, não a viu. O PR 2 corrige o extrator (**uma** implementação) e o catálogo passa a **582 UEs em 135 disciplinas**, invariante 135/135 — número a **remedir** depois da correção |
   | Nome truncado (`C-Exp-MetocOf` `IV`) e "DE DE DADOS" (2 estágios) | corrigir/confirmar **no extrator**, contra o PDF, no PR 2; o nome gravado é o do PDF |
   | 5 `AMBIENTAÇÃO VIRTUAL` | **sem UE**, marcadas (`FR-063`) |

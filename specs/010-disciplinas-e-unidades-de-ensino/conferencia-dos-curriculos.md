@@ -60,8 +60,8 @@ que o banco diz. Tudo o que não é conforme está explicado em §4 com página.
 | `C-Esp-OpAP` | UE | 4 / 4 | 9 | Of nº 10-20/2025 | conforme |
 | `C-Exp-Ag-Mag` | UE | 2 / 2 | 6 | Of nº 10-24/2025 | conforme |
 | `C-Exp-BATI` | UE | 1 / 1 | 9 | Of nº 10-17/2025 | conforme |
-| `C-Exp-MetocOf` | UE | 5 / 5 | 27 | capa: DEnsM/DHN, 2011 | **divergência** — `I` 48 × 30, `V` 40 × 50 (§4.3) |
-| `C-Exp-Metoc-OF-SP` | UE | 4 / 6 | 24 | Of nº 10-16/2025 | **divergência** — ambientação (8 = 8) e a `IV` emprestada (§4.5, §4.6) |
+| `C-Exp-MetocOf` **(presencial)** | UE | 5 / 5 | 27 | capa: DEnsM/DHN, 2011 | **divergência** — `I` 48 × 30, `V` 40 × 50 (§4.3) |
+| `C-Exp-Metoc-OF-SP` **(semipresencial)** | UE | 4 / 6 | 24 | Of nº 10-16/2025 | **divergência** — ambientação (8 = 8) e a linha `IV` com a sigla do outro curso (§4.5, §4.6) |
 | `C-Exp-Obs-ME` | UE | 2 / 2 | 9 | capa: DEnsM/DHN, 2011 | conforme |
 | `EST-QF-APHID` | UE | 5 / 5 | 15 | capa: CIAARA, 2023 | conforme |
 | `EST-QF-APOC` | UE (imagem) | 1 / 1 | **5** | capa: CIAARA, 2021 | conforme (79 = 79; UEs somam 80, §4.1) |
@@ -109,10 +109,15 @@ O desdobramento é **escolha do banco**, não do currículo; as duas linhas fica
 | `C-Espc-HN` · NAVEGAÇÃO I (`HN-1106-0423`) | 100 | **108** TA | 7, 32 | confirmado — *"não estão trocados em fonte nenhuma"*: soma 228 nos dois lados, é **redistribuição** |
 | `C-Espc-HN` · NAVEGAÇÃO II (`HN-1107-1011`) | 128 | **120** TA | 7, 45 | confirmado |
 
-⚠️ **`C-Exp-MetocOf`, achado C2**: os 48 / 19 / 37 / 40 do banco **batem com o currículo do
-`C-Exp-Metoc-OF-SP` (2025)**, não com o do `C-EXP-METOC-OF` (2011, 30 / 19 / 37 / 18 / 50); e o **18**
-da `IV` só existe no de 2011 — *"o banco não é cópia integral de nenhum dos dois"*. Fica a dúvida
-**P-2** do lote.
+⚠️ **`C-Exp-MetocOf` e `C-Exp-Metoc-OF-SP` são DOIS CURSOS DIFERENTES** *(decisão de Bernardo Villas
+Boas, 25/09/2026, P-2)* — o primeiro **presencial**, com o currículo de **2011**; o segundo
+**semipresencial**, com o **SP de 2025**, cuja CH difere **por ser semipresencial**. **O pareamento é
+sempre curso ↔ o próprio currículo, nunca cruzado.** A leitura de que "o banco não é cópia integral de
+nenhum dos dois" descrevia o **dado do banco do presencial**, não uma dúvida sobre qual currículo vale:
+as CH do presencial no banco (48 e 40) coincidem com as do SP e **divergem do currículo dele** (30 e
+50) — *"provavelmente copiadas do SP"*. São divergências de **cadastro**, tratadas como as outras oito
+pela **P-1**: aviso na tela (Q-06) e correção de Bernardo, **nunca por script**. A carga do
+`C-Exp-MetocOf` leva as **27 UEs do currículo de 2011**.
 
 ### 4.4 Cursos por competências — o que nunca tinha sido comparado (D1–D5, E1–E3)
 
@@ -144,12 +149,16 @@ numeradas somam sempre a CH **sem** ela. O banco a modela como disciplina *AMBIE
 
 Para a carga: as 5 ficam `sem_unidades_ensino = true` (D-B3 por disciplina). A CH é dúvida **P-1**.
 
-### 4.6 Disciplina emprestada — `C-Exp-Metoc-OF-SP` `IV`
+### 4.6 A linha do banco com a sigla do outro curso — `C-Exp-Metoc-OF-SP` `IV`
 
 O currículo SP tem 4 disciplinas (Metoc-I 48, II 19, III 37, IV ESTÁGIO PRÁTICO 40; C1 confirmado,
 p. 3 e 6); o banco tem 6 — as 4, a AMBIENTAÇÃO e *`IV` EFEITOS ATMOSFÉRICOS SOBRE A PROPAGAÇÃO
-ELETROMAGNÉTICA / C-Exp-METOC-OF*, 18 tempos, que é a `IV` do currículo **de 2011** (B3, p. 4).
-Fica **sem UE** nesta carga (`PEND-5b-5`).
+ELETROMAGNÉTICA / C-Exp-METOC-OF*, 18 tempos, cujo nome carrega a sigla do **outro** curso e cuja CH é
+a da `IV` do currículo **de 2011** (B3, p. 4).
+
+**Decidido (P-2, 25/09/2026)**: como o pareamento **nunca é cruzado**, esta linha fica **sem UE** — o
+currículo do SP não a tem, e replicar a do presencial seria inferir (D-B4). Se a linha deve existir
+neste curso, e com que CH, é **cadastro**: corrige-se na tela (P-1). `PEND-5b-5` passa a ser só isso.
 
 ### 4.7 Confirmações que fecham achados do specify (H2, H3, A3, I3, I4)
 

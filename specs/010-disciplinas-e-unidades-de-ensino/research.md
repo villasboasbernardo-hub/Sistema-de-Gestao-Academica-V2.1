@@ -92,14 +92,15 @@ digitalizado. Contra o banco, apareceram divergências que a análise do specify
 | R-4.5 | `C-Espc-HN`: *NAVEGAÇÃO I* banco **100** × currículo **108**; *NAVEGAÇÃO II* **128** × **120** — não é troca (nenhuma fonte tem 100/128), é **redistribuição** com soma igual (E1, p. 32, 45, 7) | nada | dúvida **P-1** |
 | R-4.6 | `C-Espc-HN`: o próprio PDF diverge de si — *PRIMEIROS SOCORROS* `SN-1103-0506` (índice) × `HN-1113-0508` (plano, p. 94, com rodapé *"Of nº 10-12/2024 … B-94 de 128"* — página colada de versão anterior); *HIDROGRAFIA APLICADA* `HN-1114-0730` × `HN-1104-0730` (p. 98); *TOPOGRAFIA* com código em branco no plano (p. 73) (E2) | nada | registrado; o banco usa os do índice |
 | R-4.7 | **AMBIENTAÇÃO** aparece nos 5 currículos semipresenciais/EAD **só na composição da carga horária**, nunca no quadro de disciplinas (G1–G5): **8 / 5 / 5 / 10 / 8 h** (AuxNav, PCN, PrevMe, OcOp, Metoc-SP). O banco a modela como disciplina *AMBIENTAÇÃO VIRTUAL* de **8 tempos nos cinco** — diverge em **3** (PCN, PrevMe, OcOp) | `disciplinas.sem_unidades_ensino = true` nas 5 | dúvida **P-2** |
-| R-4.8 | `C-Exp-MetocOf` (OF 2011): banco `I` **48** × PDF **30** (B1); `V` **40** × **50** (B2). E os 48/19/37/40 do banco **batem com o currículo SP de 2025** (C1/C2, p. 3 e 6), enquanto o **18** da `IV` só existe no OF 2011 — o banco não é cópia integral de nenhum dos dois | UEs do OF 2011 entram como estão (o pareamento é por nome, as 5 pareiam); a divergência de CH vira **aviso** (Q-06) | dúvida **P-1** |
+| R-4.8 | `C-Exp-MetocOf` (presencial, OF 2011): banco `I` **48** × PDF **30** (B1); `V` **40** × **50** (B2) — e esses valores coincidem com os do currículo **SP de 2025** do **outro** curso (C1/C2) | ✅ **P-2 (25/09/2026): são dois cursos, cada um com o seu currículo, pareamento nunca cruzado.** As 27 UEs do OF 2011 entram no presencial; a CH do banco fica como está, com **aviso** (Q-06) e a observação *"provavelmente copiadas do SP"* | **P-1** (correção na tela) |
 | R-4.9 | `C-Ap-FR` `III` banco **76** × PDF **75** | idem | dúvida **P-1** |
 | R-4.10 | 2 tópicos de UE do `C-Ap-HN` saem do extrator com a **translineação com hífen quebrada** (*"PRÁTI CAS"*, *"AEROFOTOGRA METRIA"*, p. 34 e 54); os leitores reuniram | corrigir no extrator (PR 2): juntar `-\n` | achado do extrator |
 | R-4.11 | Divergências **internas** dos PDFs, sem efeito na carga: `C-Ap-HN` XVIII `HN-2118-0450` (quadro) × `HN-2118-1016` (sumário); AuxNav fase a distância 220 (p. 3) × 202 (p. 6); PCN *"FASE PRESENCIAL: 325"* num EAD; Metoc-SP 112 × 104; PGRS100 datas de aprovação 29/08 × 25/08 | nada | registradas na conferência |
 
 **Decisão**: a carga do PR 2 **não corrige CH, nome nem código** de disciplina — grava as UEs com a CH
-do currículo e deixa o aviso do Q-06 mostrar onde a soma não fecha (R-4.3, R-4.5, R-4.8, R-4.9 e o
-APOC). O que fazer com essas CH é de Bernardo (**P-1**).
+do currículo **do próprio curso** e deixa o aviso do Q-06 mostrar onde a soma não fecha (R-4.3, R-4.5,
+R-4.8, R-4.9 e o APOC). ✅ **Ratificado em 25/09/2026 (P-1)**: *"nenhuma CH é corrigida por script"* — a
+correção é feita **na tela do PR 3**, por quem responde pelo dado, com o rastro de auditoria.
 
 ---
 
