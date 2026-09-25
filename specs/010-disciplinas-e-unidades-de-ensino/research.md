@@ -161,8 +161,17 @@ recusa, paridade com a spec 029).
 **Decisão**: `trg_disciplinas_nasce_nas_turmas`, `AFTER INSERT`, espelho de
 `fazer_nascer_disciplinas_da_turma` (lido: insere por turma nova, período herdado se dentro da
 janela); aqui **sempre `nao_informado`** (Q-08) e só `status in ('planejada','ativa')` (N-4).
-DEFINER com `revoke` de quem grava (padrão R-6 da spec 009). Reativar disciplina **não** dispara
-(as linhas já existem; unicidade `(turma_id, disciplina_id)` garante).
+DEFINER com `revoke` de quem grava (padrão R-6 da spec 009).
+
+⚠️ **Duas correções do `/speckit-analyze` de 25/09/2026, e uma decisão pendente (A-2 do analyze):**
+(1) a frase *"reativar disciplina não dispara, as linhas já existem"* estava **errada** — uma turma
+criada **enquanto** a disciplina estava inativa **não** tem a linha (`FR-032.3` da spec 009 só cria
+para ativas); (2) **medido**: a ordem do ETL é `turmas` → `disciplinas` → `turma_disciplina`
+(`scripts/etl/ordem.py`), e **4** amostras pgTAP (`020`, `094`, `097`, `098`) inserem `turma_disciplina`
+explicitamente **depois** da disciplina — um gatilho `AFTER INSERT` **incondicional** em `disciplinas`
+criaria a linha antes e faria a carga do ETL e essas amostras **colidirem** na unicidade
+`(turma_id, disciplina_id)`. É a mesma classe do achado A-2 da spec 009. **O mecanismo (gatilho
+condicionado × RPC) está com Bernardo** — ver o lote do analyze.
 
 ---
 

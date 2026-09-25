@@ -20,6 +20,10 @@ pnpm test:invariantes                                # pgTAP — I-1 a I-11 do d
 python -m scripts.manutencao.dado_do_remoto          # de novo, agora COM as migrations novas
 pnpm test:invariantes                                # I-3 (79/79 na junção) só faz sentido povoado
 ```
+E a carga do ETL **continua passando por cima** das migrations novas (como o passo 1 da spec 009):
+```
+pnpm db:reset:limpo && python -m scripts.etl.executar     # saída 0, reconciliação APROVADA, 5.394 linhas
+```
 Espera-se: `codigo` de disciplina nova nasce `DIS-000001`; 3 linhas `simultaneo`; `exclusoes_registradas`
 recusa `UPDATE/DELETE/TRUNCATE` como `service_role`; período manual fora da janela recusado; rateio
 que não fecha recusado; **zero** policies/privilégio de `DELETE`. Fecha `FR-012`, `FR-020..024`,

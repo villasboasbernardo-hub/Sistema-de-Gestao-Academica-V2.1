@@ -39,7 +39,7 @@ Bernardo que a fixou.
 | escrita | policies `tdi_criar`/`tdi_editar` sobre `disciplinas.editar` + alcance + turma em oferta | **uma RPC** `public.definir_instrutores_da_turma(p_turma_disciplina_id uuid, p_instrutores jsonb)` (INVOKER — as policies existentes decidem) que **regrava por completo** a lista da turma: ativa/insere quem está na lista com a parcela calculada, desativa quem saiu (`status = 'inativo'`, nunca `DELETE`), numa transação só. Parcelas vêm da função pura de `lib/dominio/` **e são reconferidas pelo gatilho** | `FR-031`, `FR-041`, `FR-043` |
 | gatilho novo `trg_tdi_soma_do_rateio` | não existe | **constraint trigger `DEFERRABLE INITIALLY DEFERRED`**, `AFTER INSERT OR UPDATE`: ao fim da transação, para cada `turma_disciplina` tocada, lê `disciplinas.modo_atribuicao_padrao` e as linhas ativas: `dividido` → se **todas** as parcelas estão preenchidas, a soma MUST ser `= disciplinas.carga_horaria_tempos`; mistura de `NULL` com valor → recusa; `simultaneo` → cada parcela preenchida MUST ser `= carga_horaria_tempos`. Recusa `23514`, `hint = 'rateio_nao_fecha'`, `DETAIL` com soma e CH | `FR-043`, `FR-041`, `RN-MAT-05` |
 
-### `unidades_ensino` — **0 linhas hoje**; ~582 depois do PR 2 (número final na conferência)
+### `unidades_ensino` — **0 linhas hoje**; **587** depois do PR 2 (582 do extrator + 5 do APOC — conferência §2, P-4)
 
 | O quê | Hoje | Depois | Origem |
 |---|---|---|---|

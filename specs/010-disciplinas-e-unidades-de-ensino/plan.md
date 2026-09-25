@@ -48,12 +48,12 @@ shadcn/Radix (`components/ui/`), Recharts — **nenhuma biblioteca nova** (decis
 **Target Platform**: Vercel (preview por ramo; Production no **mesmo** projeto Supabase — AMBIENTE-1)
 **Project Type**: aplicação web (App Router, Server Components por padrão)
 **Performance Goals**: nenhum além dos existentes — base pequena (175 disciplinas, 210 linhas por
-turma, ~582 UEs); **uma** consulta com join por tela, `Promise.all` para as independentes
+turma, **587** UEs = 582 do extrator + 5 do APOC, P-4); **uma** consulta com join por tela, `Promise.all` para as independentes
 **Constraints**: nada é apagado salvo pelas RPCs com porteiro; nada escrito no remoto por script;
 nenhuma regra só na UI; `lib/dominio/` sem `supabase`/`next`/`react`; estado de tela na URL;
 `"use client"` só em folha; identificadores gerados, nunca fixos, amostras idempotentes (regra 9.1)
 **Scale/Scope**: 1 página nova, ~5 diálogos, 3 arquivos de ação, 3 de validação, ~7 funções puras
-novas, 1 tabela nova, 8 funções de banco + 4 gatilhos, 2 sequências, 1 migration de dados (~582 linhas)
+novas, 1 tabela nova, 8 funções de banco + 1 RPC de atribuição + 5 gatilhos, 2 sequências, 1 migration de dados (587 linhas)
 
 ## Verificação constitucional
 
@@ -110,7 +110,7 @@ supabase/migrations/
 └── <ts>_carga_unidades_ensino.sql               # PR 2 — gerada pelo script, revisada, idempotente
 supabase/tests/
 ├── 101_sequencias_dis_ue.sql · 102_exclusao_com_rastro.sql · 103_atribuicao_aposentada.sql
-├── 104_rateio_e_janela.sql · 105_disciplina_nasce_nas_turmas.sql · 106_curriculo_modelo_parametro.sql
+├── 104_periodo_e_nascimento.sql · 105_rateio_por_instrutor.sql · 106_curriculo_modelo_parametro.sql
 └── 107_carga_unidades_ensino.sql                # PR 2
 scripts/etl/
 ├── extrair_unidades_ensino.py                   # (corrigido: "DEENSINO"; PR 2: captura do fundamento)

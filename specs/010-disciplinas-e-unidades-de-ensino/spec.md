@@ -197,6 +197,7 @@ currículos. Detalhe completo, consultas e pareamento em [`analise-dos-curriculo
 | Medida | Valor | Por que importa aqui |
 |---|---|---|
 | currículos / com UE / UEs / disciplinas com UE | **24 / 21 / 572 / 134** — invariante *soma das UE = CH* fecha em **134 de 134** | é o insumo da carga (D-B4) |
+| ⚠️ **remedido em 25/09/2026**, extrator corrigido (`DEENSINO`) + conferência por agentes | **135 / 582** do extrator, invariante **135 de 135**; **+ 5** UEs do APOC lidas de imagem = **587 candidatas em 136 disciplinas** | [conferência §2](./conferencia-dos-curriculos.md) — vale sobre a linha acima |
 | disciplinas do banco com par no currículo | **134 de 175**; **565 de 572** UEs com destino inequívoco | a carga tem destino claro para 565; **7** UEs (`C-Ap-HN`) dependem de decisão |
 | disciplinas do banco **sem par** | **41**, explicadas inteiras: 32 em cursos sem UE · 5 `AMBIENTAÇÃO VIRTUAL` · 3 metades de desdobramento · 1 emprestada de outro curso | nenhuma sobra sem explicação |
 | CH divergente entre par | **4** (3 reais + 1 desdobramento) | Q-06, Q-12 |
@@ -670,7 +671,7 @@ UE e **zero** avisos; a mesma tela em `CAHO` mostra as UEs.
   | 7 UEs de `HN-2101-0621` (`C-Ap-HN`; banco tem `I` MATEMÁTICA 105 e `I-I` FÍSICA 21) | **carga por UE**, cada uma para a metade que o currículo indica. *Medido:* UE 7 *FÍSICA* = **21 h** = CH de `I-I`; UEs 1–6 (matemática, estatística, erros, incerteza, ajustamento) somam **105 h** = CH de `I`. A tabela de pareamento por UE é **revisada por Bernardo** antes da carga (**N-3**) |
   | UEs de `MATFIS` (`CAHO`; banco tem `MAT` 28 e `FIS` 28) — **são 2, não 3** (correção da análise §4.2) | **carga por UE**: UE 1 *EMPREGO DOS CONCEITOS DE MATEMÁTICA…* 28 h → `MAT`; UE 2 *…DE FÍSICA…* 28 h → `FIS` — revisada por Bernardo (**N-3**) |
   | `C-Exp-Metoc-OF-SP` `IV` (linha do banco cujo nome carrega a sigla do **outro** curso) | **sem UE**: o pareamento é **curso ↔ o próprio currículo, nunca cruzado** (P-2, 25/09/2026), e o currículo SP não tem esta disciplina. A existência e a CH da linha são cadastro, corrigidos na tela (P-1) — `PEND-5b-5` |
-  | TOPOGRAFIA de `C-Ap-FR` (`VIII`, 100) | **não é exceção do currículo — é defeito do extrator**: *medido em 24/09/2026 no PDF*, a seção existe com o cabeçalho grafado *"LISTA DE UNIDADES DEENSINO"* (sem espaço) e traz **10 UEs que somam 100 h**; o extrator, que procura *"UNIDADES DE ENSINO"*, não a viu. O PR 2 corrige o extrator (**uma** implementação) e o catálogo passa a **582 UEs em 135 disciplinas**, invariante 135/135 — número a **remedir** depois da correção |
+  | TOPOGRAFIA de `C-Ap-FR` (`VIII`, 100) | **não é exceção do currículo — é defeito do extrator**: *medido em 24/09/2026 no PDF*, a seção existe com o cabeçalho grafado *"LISTA DE UNIDADES DEENSINO"* (sem espaço) e traz **10 UEs que somam 100 h**; o extrator, que procura *"UNIDADES DE ENSINO"*, não a viu. O extrator foi corrigido em 24/09 (**uma** implementação) e **remedido**: **582 UEs em 135 disciplinas**, invariante 135/135 (conferência §2) |
   | Nome truncado (`C-Exp-MetocOf` `IV`) e "DE DE DADOS" (2 estágios) | corrigir/confirmar **no extrator**, contra o PDF, no PR 2; o nome gravado é o do PDF |
   | 5 `AMBIENTAÇÃO VIRTUAL` | **sem UE**, marcadas (`FR-063`) |
   | `EST-QF-APOC` | `FR-063` — OCR, senão pendência |
