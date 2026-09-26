@@ -134,8 +134,18 @@ describe("`SC-010` · as folhas de cliente de `app/**` são declaradas e contada
   });
 
   it("⚠️ e nenhuma declarada que deixou de existir — lista que envelhece não guarda nada", () => {
-    const declaradas = Object.keys(FOLHAS_DE_CLIENTE);
-    const sumidas = declaradas.filter((c) => !folhas().includes(c));
+    /*
+     * ⚠️ `folhas()` É CHAMADA UMA VEZ, e a forma anterior a chamava DENTRO do `filter` — uma
+     * varredura por folha declarada. Com 23 declaradas e 87 arquivos em `app/**`, isso relia e
+     * limpava de comentário os mesmos 87 arquivos 23 vezes, ~2.000 leituras para responder a uma
+     * pergunta. O teste estourava o prazo de 5 s **só na suíte inteira**, com os 71 arquivos em
+     * paralelo, e passava sozinho — o modo de falha que mais parece azar e não é.
+     * ⚠️ Medido em 26/09/2026: reprovou em DUAS execuções seguidas de `verificar:tudo` e passou
+     * nas duas execuções isoladas. O defeito é do teste, não da fronteira que ele mede, e a
+     * asserção não mudou — só o número de vezes que ela lê o disco.
+     */
+    const existentes = folhas();
+    const sumidas = Object.keys(FOLHAS_DE_CLIENTE).filter((c) => !existentes.includes(c));
     expect(sumidas, `declarada e sem marcador: ${sumidas.join(", ")}`).toEqual([]);
   });
 });
