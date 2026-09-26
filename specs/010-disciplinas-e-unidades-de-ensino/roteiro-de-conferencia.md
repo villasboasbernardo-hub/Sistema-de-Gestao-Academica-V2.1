@@ -32,4 +32,30 @@ python -m scripts.etl.executar
 
 ## Executado em 26/09/2026 — passo, esperado, obtido
 
-`[pendente — a tabela é preenchida pela execução, nunca por antecipação (regra 9.3)]`
+Base local recriada e carregada — `pnpm db:reset:limpo` · ETL saindo **0** · 175 disciplinas ·
+210 `turma_disciplina` · 96 atribuições · 44 migrations.
+
+| # | Passo | Esperado | Obtido | |
+|---|---|---|---|---|
+| 1 | migrations aplicadas | **44** | 44 | ✅ |
+| 2 | disciplina criada sem informar código | nasce `DIS-000001` | `DIS-000001` | ✅ |
+| 3 | excluir com o código ERRADO | `22023` — o código não confere | `22023` · *o codigo digitado nao confere com o da disciplina* | ✅ |
+| 4 | excluir com o código certo | some, e o rastro mostra quem, o quê, quando e o retrato | sobrou 0 · `disciplinas` / `DIS-000001` / com autor / com data / retrato com **26** campos | ✅ |
+| 5 | excluir uma disciplina REAL | `23503`, nomeando os impedimentos | `23503` · `disciplina_com_historico: linha_de_turma` | ✅ |
+| 6 | reescrever o rastro | recusado — `42501`, `hint = rastro_imutavel` | `42501` · hint `rastro_imutavel` | ✅ |
+| 7 | as disciplinas em modo simultâneo | as **3** nomeadas pela `RN-MAT-05` | 3 — `20 - CAHO - XVIII` · `41 - C-Ap-HN - XVIII` · `53 - C-Ap-FR - XIII` | ✅ |
+| 8 | a CH prevista das compartilhadas | **inteiros**, e a soma por `turma_disciplina` fecha com a CH | 17 linhas · **0** fracionárias · **0 de 5** não fecham | ✅ |
+| 9 | período fora da janela da turma | `23514`, `hint = periodo_fora_da_janela` | `23514` · hint `periodo_fora_da_janela` | ✅ |
+
+**9 de 9 como esperado.**
+
+⚠️ **A sessão dos passos 3 a 5 foi SIMULADA por `request.jwt.claims`, e isto fica declarado**: o
+porteiro daqueles passos é `app.pode(...)` **dentro de uma função**, que lê `auth.uid()`. Prova de
+**permissão** propriamente dita não mora aqui — mora em `tests/invariantes/rls/disciplinas.test.ts`,
+com sessão autenticada de verdade (DoD 4), onde o **Operador** é o caso que discrimina.
+
+⚠️ **E o primeiro executor deu veredito FALSO em quatro passos.** Ele lia o `hint` da exceção como
+se `pg_exception_hint` fosse coluna; o próprio tratador estourava com `42703`, e a tabela dizia
+*"(não recusou)"* para quatro recusas que o banco tinha feito corretamente. O `hint` sai por
+`get stacked diagnostics … = pg_exception_hint`. **Defeito do executor, não do banco** — e é o
+modo de falha mais caro que existe num roteiro de conferência, porque acusa o produto.
