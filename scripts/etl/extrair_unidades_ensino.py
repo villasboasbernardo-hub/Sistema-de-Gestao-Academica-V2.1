@@ -93,6 +93,51 @@ RE_SUE_SEM_NUMERO = re.compile(r"^\s*[-–—]\s*(\S.*?)\s*$")
 
 RE_SO_CH = re.compile(r"^[\s.…]*(\d{1,3})\s*HORAS?\b", re.IGNORECASE)
 
+# ---------------------------------------------------------------------------------
+# FUNDAMENTO NORMATIVO (`FR-064`, decisao N-1 de Bernardo Villas Boas, 25/09/2026)
+#
+# Toda UE carregada precisa dizer DE ONDE veio, e a resposta e o documento que aprovou o
+# curriculo. Ela sai de dois lugares, nesta ordem:
+#   1. o OFICIO citado no proprio texto — "Anexo do Of no 10-6/2025";
+#   2. na falta dele, a CAPA: "Curriculo <sigla> — <orgao>, <ano>".
+#
+# ⚠️ MEDIDO nos 24 curriculos de `SIS11/Curriculos/` em 26/09/2026, nao suposto: **15**
+#    trazem Oficio no texto · **8** ficam pela capa (todos com orgao "MARINHA DO BRASIL" e
+#    um unico ano na capa) · **1** (`EST-QF-APOC`) nao tem camada de texto nenhuma e fica
+#    SEM fundamento aqui — o dele entra pelo pareamento revisado, marcado "transcrito de
+#    imagem" (P-4).
+# ⚠️ E O OFICIO ESTAVA SENDO JOGADO FORA: `RE_RUIDO`, abaixo, casa "Anexo do Of" e descarta
+#    a linha como paginacao. Ele passou a ser lido do texto inteiro ANTES de a varredura
+#    linha a linha comecar, e por isso o descarte continua valendo sem custo nenhum.
+RE_OFICIO = re.compile(
+    r"Of[íi]?c?i?o?\s*n?[ºo°.]*\s*(\d{1,3})\s*[-/]\s*(\d{1,3})\s*/\s*(\d{4})",
+    re.IGNORECASE,
+)
+RE_ORGAO_DA_CAPA = re.compile(
+    r"^(MARINHA DO BRASIL|DIRETORIA DE ENSINO DA MARINHA)\s*$", re.IGNORECASE
+)
+RE_ANO = re.compile(r"\b(?:19|20)\d{2}\b")
+
+# ---------------------------------------------------------------------------------
+# TRANSLINEACAO COM HIFEN — `AEROFOTOGRA-` + `METRIA` e UMA palavra, nao duas
+#
+# ⚠️ MEDIDO nos 24 curriculos em 26/09/2026: **14** translineacoes com hifen caem DENTRO do
+#    bloco de UE, e **todas as 14 partem palavra** — `profundi-dade`, `mina-gem`,
+#    `para-metricas`, `desen-volvimento`, `solicitan-do`, `balizamen-tos`, `funciona-mento`
+#    (tres vezes), `levanta-mentos`, `PRATI-CAS`, `dese-jada`, `AEROFOTOGRA-METRIA` e
+#    `desenvol-vimento`. **Nenhuma** e composto legitimo.
+# ⚠️ POR QUE A REGRA E ESCOPADA AO BLOCO DE UE, e nao aplicada ao texto todo: FORA dele ha
+#    composto de verdade quebrado no proprio hifen — `Primeiro-Tenente`,
+#    `tecnico-profissionais`, `didatico-pedagogica`, `DGPM-101`, `sul-americanas`,
+#    `basear-se` — e URLs como `dados-do-segnav`. Colar aqueles produziria
+#    `PrimeiroTenente`. Sao **856** translineacoes no texto inteiro contra **14** dentro do
+#    bloco: a distancia entre as duas contas e exatamente a razao do recorte.
+# ⚠️ RISCO DECLARADO: um composto legitimo quebrado no proprio hifen DENTRO de um titulo de
+#    UE seria colado. Nao existe nenhum nos 24 curriculos de hoje, e
+#    `provar_extracao_de_unidades.py` e onde ele apareceria.
+RE_TRANSLINEACAO = re.compile(r"([A-Za-zÀ-ÿ])-$")
+RE_COMECA_COM_LETRA = re.compile(r"^[A-Za-zÀ-ÿ]")
+
 # Ruido de paginacao do PDF
 RE_RUIDO = re.compile(
     r"^\s*(?:Continuação do anexo|Anexo do Of|-\s*[A-Z]?-?\d+\s+de\s+\d+\s*-"
@@ -124,6 +169,8 @@ class Curriculo:
     paginas: int
     disciplinas: list[Disciplina] = field(default_factory=list)
     observacao: str | None = None     # motivo de nao ter UE, quando for o caso
+    fundamento_normativo: str | None = None   # o Oficio, ou a capa; None = sem texto
+    fundamento_origem: str = "sem_texto"      # "oficio" | "capa" | "sem_texto"
 
 
 def limpar(texto: str) -> str:
@@ -156,6 +203,54 @@ def extrair_sigla(linhas: list[str]) -> str | None:
     return None
 
 
+def ler_fundamento(texto: str, sigla: str | None, linhas: list[str]) -> tuple[str | None, str]:
+    """(fundamento, origem) — o Oficio do texto, senao a capa. Ver a nota de `RE_OFICIO`."""
+    m = RE_OFICIO.search(texto)
+    if m:
+        return (f"Of no {m.group(1)}-{m.group(2)}/{m.group(3)}", "oficio")
+
+    capa = [l.strip() for l in linhas[:60]]
+    orgao = next((l for l in capa if RE_ORGAO_DA_CAPA.match(l)), None)
+    ano = next(iter(RE_ANO.findall("\n".join(capa))), None)
+    if orgao and ano and sigla:
+        return (f"Curriculo {sigla.strip()} — {orgao.strip()}, {ano}", "capa")
+    # ⚠️ Nao inventa: sem Oficio, sem orgao, sem ano ou sem sigla, o fundamento fica VAZIO e
+    #    quem carrega tem de declara-lo no pareamento revisado. E o caso do APOC.
+    return (None, "sem_texto")
+
+
+def juntar_translineacao(linhas: list[str]) -> list[str]:
+    """Cola a palavra partida por hifen no fim da linha — SO dentro do bloco de UE.
+
+    Ver a nota de `RE_TRANSLINEACAO`: 14 casos nos 24 curriculos, todos partindo palavra;
+    fora do bloco ha composto legitimo, e por isso o recorte existe.
+    """
+    saida: list[str] = []
+    dentro = False
+    i = 0
+    while i < len(linhas):
+        linha = linhas[i]
+        nua = linha.strip()
+
+        if RE_LISTA_UE.match(nua):
+            dentro = True
+        elif dentro and RE_FIM_BLOCO.match(nua) and not RE_UE.match(nua):
+            dentro = False
+
+        if dentro and i + 1 < len(linhas):
+            m = RE_TRANSLINEACAO.search(linha.rstrip())
+            prox = linhas[i + 1].lstrip()
+            if m and RE_COMECA_COM_LETRA.match(prox):
+                # Sem espaco E sem o hifen: `AEROFOTOGRA-` + `METRIA…` -> `AEROFOTOGRAMETRIA…`
+                saida.append(linha.rstrip()[:-1] + prox)
+                i += 2
+                continue
+
+        saida.append(linha)
+        i += 1
+    return saida
+
+
 def processar(caminho: Path) -> Curriculo:
     doc = fitz.open(caminho)
     texto = "\n".join(doc[i].get_text() for i in range(doc.page_count))
@@ -163,8 +258,14 @@ def processar(caminho: Path) -> Curriculo:
     doc.close()
 
     linhas = [l.rstrip() for l in texto.splitlines()]
+    sigla = extrair_sigla(linhas)
+    fundamento, origem = ler_fundamento(texto, sigla, linhas)
     curriculo = Curriculo(
-        arquivo=caminho.name, curso_sigla=extrair_sigla(linhas), paginas=paginas
+        arquivo=caminho.name,
+        curso_sigla=sigla,
+        paginas=paginas,
+        fundamento_normativo=fundamento,
+        fundamento_origem=origem,
     )
 
     if not texto.strip():
@@ -172,6 +273,11 @@ def processar(caminho: Path) -> Curriculo:
             "PDF sem camada de texto (digitalizado). Exige OCR ou transcricao manual."
         )
         return curriculo
+
+    # A palavra partida por hifen e colada ANTES de qualquer casamento de padrao — senao
+    # `AEROFOTOGRA-` e `METRIA E BATIMETRIA…` chegam como duas linhas e o titulo sai com um
+    # espaco no meio da palavra (`AEROFOTOGRA METRIA`, medido antes desta correcao).
+    linhas = juntar_translineacao(linhas)
 
     disciplina_atual: Disciplina | None = None
     ordinal_pendente: str | None = None
@@ -362,6 +468,10 @@ def main(dir_pdf: Path, dir_saida: Path) -> int:
             "arquivo", "curso_sigla", "disciplina_ordinal", "disciplina_nome",
             "disciplina_ch_horas", "numero_ue", "topico", "ue_ch_horas",
             "qtd_subunidades", "subunidades",
+            # ⚠️ As duas colunas novas sao o que a carga do PR 2 le para preencher
+            # `unidades_ensino.fundamento_normativo` (`FR-064`). A ORIGEM viaja junto para
+            # que ninguem confunda "veio do Oficio" com "deduzi da capa".
+            "fundamento_normativo", "fundamento_origem",
         ])
         for c in curriculos:
             for d in c.disciplinas:
@@ -371,6 +481,7 @@ def main(dir_pdf: Path, dir_saida: Path) -> int:
                         d.ch_horas or "", u.numero_ue, u.topico,
                         u.ch_prevista_horas if u.ch_prevista_horas is not None else "",
                         len(u.subunidades), " | ".join(u.subunidades),
+                        c.fundamento_normativo or "", c.fundamento_origem,
                     ])
 
     # ----------------------------------------------------------------- relatorio

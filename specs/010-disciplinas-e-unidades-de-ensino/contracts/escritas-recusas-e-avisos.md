@@ -42,8 +42,18 @@ tradução MUST lê-las do SQL.
 | período fora da janela | `trg_turma_disciplina_janela` | `23514` | `hint = 'periodo_fora_da_janela'`, `DETAIL` `{"data_inicio","data_termino"}` | *"O período sai da janela da turma (dd/mm/aaaa a dd/mm/aaaa)."* |
 | rateio não fecha | `trg_tdi_soma_do_rateio` | `23514` | `hint = 'rateio_nao_fecha'`, `DETAIL` `{"soma","carga_horaria_tempos","modo"}` | *"As parcelas somam N tempos; a disciplina tem M."* / simultâneo: *"cada instrutor recebe a CH integral (M)."* |
 | mistura de parcela vazia e preenchida | idem | `23514` | `hint = 'rateio_incompleto'` | *"Preencha a parcela de todos os instrutores ou de nenhum."* |
+| UE sem instrutor no rateio por UE | `trg_tdu_soma_do_rateio` | `23514` | `hint = 'ue_sem_instrutor'`, `DETAIL` JSON `{"atribuidas","unidades"}` | *"Faltam N de M unidades de ensino sem instrutor. No rateio por unidade, todas precisam de um."* |
+| UE atribuída e nenhum instrutor ativo na turma | idem | `23514` | `hint = 'ue_sem_instrutor_ativo'` | *"Há unidade de ensino atribuída e nenhum instrutor ativo nesta turma."* |
+| rateio por UE e por TA ao mesmo tempo | idem | `23514` | `hint = 'rateio_por_ue_com_ta'`, `DETAIL` com a frase do banco | *"Escolha um dos dois: dividir por unidade de ensino ou digitar os tempos de cada instrutor."* |
 | `herdar` em disciplina | `disciplinas_modo_padrao_concreto` | `23514` | nome | *"Escolha dividido ou simultâneo."* (a tela nem oferece) |
 | curso fora do escopo / inativo | RLS (`alcanca_curso`, `curso_em_oferta`) | `42501` | — | a frase existente da spec 009 (`cursoInativo` lido antes) |
+
+⚠️ **AS TRÊS ÚLTIMAS LINHAS ENTRARAM EM 26/09/2026, e a falta delas era real.** A decisão **A-1**
+criou os casos 4 e 5 do rateio, e com eles três recusas que o gatilho adiado **levanta de verdade** —
+medidas no SQL de `20260925135054_rateio_por_instrutor.sql`, não supostas. Elas não estavam nesta
+tabela: quem atribuísse UEs deixando uma sem instrutor, ou misturasse os dois modos, veria **o erro
+cru do banco** numa tela em português. ⚠️ **As frases acima são propostas** — a chave, o `SQLSTATE` e
+o `DETAIL` são medidos; o texto ao usuário pode ser reescrito sem mexer no resto.
 
 ## 3. Os avisos — `lib/dominio/`, listas abertas, nunca bloqueio
 

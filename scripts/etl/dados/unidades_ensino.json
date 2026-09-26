@@ -1267,7 +1267,7 @@
               "Equipamentos e sistemas de medição de movimento",
               "Movimentos da embarcação e estabilização do feixe",
               "Identificação de erros de medição de profundidade e falhas de compensação de",
-              "Incertezas do posicionamento e impacto na qualidade da medição da profundi",
+              "Incertezas do posicionamento e impacto na qualidade da medição da profundidade",
               "O transdutor e parâmetros que definem a resolução espacial",
               "A modulação do pulso e resolução em distância",
               "Modulação do pulso",
@@ -1407,7 +1407,7 @@
               "Plano de Desenvolvimento do Programa Oceano (PLADEPO)",
               "Previsão Meteorológica Especial",
               "Cartas especiais para planejamento de operações de submarinos",
-              "Produtos especiais para apoio às operações de minagem e contramedidas de mina",
+              "Produtos especiais para apoio às operações de minagem e contramedidas de minagem",
               "Cartas especiais para planejamento de operações anfíbias",
               "Cartas especiais para planejamento de operações ribeirinhas; e",
               "Cartas temáticas de fatores físicos"
@@ -1618,7 +1618,7 @@
               "Operadores lineares: representação matricial, composição, transformações,",
               "Cálculo de diferencial e integral: funções reais e vetoriais, série, expansões de",
               "Equações diferenciais: solução geral, ordinárias lineares e equação não linear,",
-              "Geometria: seções cônicas, geometria da elipse e do elipsóide, equações para"
+              "Geometria: seções cônicas, geometria da elipse e do elipsóide, equações paramétricas de curvas e superfícies"
             ]
           },
           {
@@ -1638,7 +1638,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-6/2025",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "2._of-10-26-2022-densm-ciaara-an-c-apa-aux-nav-sp_0_0.pdf",
@@ -1723,7 +1725,7 @@
             "topico": "ORIENTAÇÃO DE FORMATAÇÃO, ESTRUTURAÇÃO E COMPOSIÇÃO DO TRABALHO DE FINAL DE CURSO",
             "ch_prevista_horas": 70,
             "subunidades": [
-              "Apresentação básica das partes que compõem o trabalho: introdução, desen",
+              "Apresentação básica das partes que compõem o trabalho: introdução, desenvolvimento (capítulos), considerações finais e recomendações (opcional)",
               "Orientações para elaboração do trabalho; e",
               "Pesquisa e desenvolvimento do trabalho"
             ]
@@ -1882,7 +1884,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-26/2022",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "2._of-10-31-densm-ciaara-an-capa-pcn-pr-ead_2.pdf",
@@ -2126,7 +2130,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-31/2022",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "4.-of-10-6-2025-densm-ciaara-anc-c-ap-fr.pdf",
@@ -2235,9 +2241,9 @@
               "Autorização para o estabelecimento, cancelamento ou alteração",
               "Procedimentos para o estabelecimento",
               "Procedimentos para o cancelamento",
-              "Procedimentos para o encaminhamento e tramitação de requerimento, solicitan",
+              "Procedimentos para o encaminhamento e tramitação de requerimento, solicitando estabelecimento, cancelamento ou alteração",
               "Aprovação do projeto para implantação",
-              "Procedimentos para alteração temporária em auxílios à navegação ou balizamen",
+              "Procedimentos para alteração temporária em auxílios à navegação ou balizamentos; e",
               "Requisitos para operação e manutenção de balizamento sob a responsabilidade"
             ]
           },
@@ -2501,7 +2507,115 @@
         "ordinal": "FR-2208-1010",
         "nome": "TOPOGRAFIA",
         "ch_horas": 100,
-        "unidades": []
+        "unidades": [
+          {
+            "numero_ue": 1,
+            "topico": "CONCEITOS MATEMÁTICOS NA REPRESENTAÇÃO DA TERRA E DA CARTA NÁUTICA",
+            "ch_prevista_horas": 4,
+            "subunidades": [
+              "Plano cartesiano",
+              "Distância entre dois pontos",
+              "Ponto médio de um segmento",
+              "Condição de alinhamento de três pontos; e",
+              "Reta"
+            ]
+          },
+          {
+            "numero_ue": 2,
+            "topico": "SEMELHANÇA DE TRIÂNGULOS NA NAVEGAÇÃO COSTEIRA",
+            "ch_prevista_horas": 4,
+            "subunidades": [
+              "Segmentos proporcionais; e",
+              "Semelhança de triângulos"
+            ]
+          },
+          {
+            "numero_ue": 3,
+            "topico": "GEOMETRIA MÉTRICA ESPACIAL APLICADA À TOPOGRAFIA",
+            "ch_prevista_horas": 3,
+            "subunidades": [
+              "Conceito",
+              "Volume; e",
+              "Fuso esférico"
+            ]
+          },
+          {
+            "numero_ue": 4,
+            "topico": "MEDIDA DE ÂNGULO",
+            "ch_prevista_horas": 10,
+            "subunidades": [
+              "De segmento",
+              "Horizontais; e",
+              "Verticais"
+            ]
+          },
+          {
+            "numero_ue": 5,
+            "topico": "TOPOGRAFIA",
+            "ch_prevista_horas": 5,
+            "subunidades": [
+              "Propósito e objetivos",
+              "Conceitos básicos; e",
+              "Operações topográficas"
+            ]
+          },
+          {
+            "numero_ue": 6,
+            "topico": "MEDIDA DE ÂNGULOS EM TOPOGRAFIA",
+            "ch_prevista_horas": 16,
+            "subunidades": [
+              "Conceitos básicos",
+              "Instrumentos de medição angular: teodolito e estação total",
+              "Medida de ângulos horizontais; e",
+              "Medida de ângulos verticais"
+            ]
+          },
+          {
+            "numero_ue": 7,
+            "topico": "MEDIDA DE DISTÂNCIAS",
+            "ch_prevista_horas": 10,
+            "subunidades": [
+              "Conceitos básicos",
+              "Instrumentos medidores de distâncias; e",
+              "Realização de medida de distâncias"
+            ]
+          },
+          {
+            "numero_ue": 8,
+            "topico": "ALTIMETRIA",
+            "ch_prevista_horas": 14,
+            "subunidades": [
+              "Conceitos básicos",
+              "Instrumentos utilizados para altimetria",
+              "Nivelamento geométrico; e",
+              "Nivelamento trigonométrico"
+            ]
+          },
+          {
+            "numero_ue": 9,
+            "topico": "SISTEMAS ORBITAIS (RASTREIO)",
+            "ch_prevista_horas": 20,
+            "subunidades": [
+              "Conceitos básicos",
+              "Tipos e métodos de rastreio",
+              "Posicionamento por satélites artificiais",
+              "Princípio geral do posicionamento por satélites",
+              "Classificação dos receptores",
+              "Erros inerentes ao sistema; e",
+              "Programas de processamentos"
+            ]
+          },
+          {
+            "numero_ue": 10,
+            "topico": "PLANIMETRIA",
+            "ch_prevista_horas": 14,
+            "subunidades": [
+              "Conceitos básicos",
+              "Métodos planimétricos; e",
+              "Programas de processamentos"
+            ]
+          }
+        ]
       },
       {
         "ordinal": "FR-2209-1011",
@@ -2694,9 +2808,9 @@
             "topico": "NAVEGAÇÃO ELETRÔNICA",
             "ch_prevista_horas": 14,
             "subunidades": [
-              "Global Positioning System (GPS): aplicações, limitações e princípio de funciona",
+              "Global Positioning System (GPS): aplicações, limitações e princípio de funcionamento",
               "Differential Global Positioning System (DGPS): correção da posição satélite",
-              "Serviço de Identificação Automático (AIS): aplicação e princípio de funcionamen",
+              "Serviço de Identificação Automático (AIS): aplicação e princípio de funcionamento; e",
               "RADAR: funcionamento e utilização do RADAR no posicionamento de Sinais"
             ]
           },
@@ -2705,7 +2819,7 @@
             "topico": "EQUIPAMENTOS E SISTEMAS ELETRÔNICOS DE AUXÍLIO À NAVEGAÇÃO",
             "ch_prevista_horas": 16,
             "subunidades": [
-              "Differential Global Navigation Satellite System (DGNSS): princípio de funciona",
+              "Differential Global Navigation Satellite System (DGNSS): princípio de funcionamento",
               "AIS AtoN: aplicação do AIS no posicionamento dos Auxílios à Navegação",
               "Serviço de Controle de Tráfego de Navios (VTS): normas e aplicação",
               "Respondedor RADAR (RACON BEACON): aplicação nos Auxílios à Navegação; e",
@@ -2774,7 +2888,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-6/2025",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "c-ap-hn.pdf",
@@ -2818,7 +2934,7 @@
             "ch_prevista_horas": 11,
             "subunidades": [
               "Erros em medições",
-              "Revisão de conceitos de estatística empregados como ferramentas em levanta",
+              "Revisão de conceitos de estatística empregados como ferramentas em levantamentos Hidrográficos",
               "Precisão de exatidão; e",
               "Critérios para avaliação de dados anormais (outliers)"
             ]
@@ -3574,7 +3690,7 @@
           },
           {
             "numero_ue": 11,
-            "topico": "OPERAÇÃO E MANUTENÇÃO DE EQUIPAMENTOS HIDROCEANOGRÁFICOS E PRÁTI CAS DE SEGURANÇA",
+            "topico": "OPERAÇÃO E MANUTENÇÃO DE EQUIPAMENTOS HIDROCEANOGRÁFICOS E PRÁTICAS DE SEGURANÇA",
             "ch_prevista_horas": 8,
             "subunidades": [
               "Procedimentos de emergência",
@@ -3908,13 +4024,13 @@
             "topico": "ELABORAÇÃO DA INSTRUÇÃO ESPECIAL DO LEVANTAMENTO HIDROGRÁFICO",
             "ch_prevista_horas": 10,
             "subunidades": [
-              "Análise das instruções especiais de levantamentos já realizados na região dese",
+              "Análise das instruções especiais de levantamentos já realizados na região desejada; e",
               "Elementos necessários para a elaboração das instruções especiais"
             ]
           },
           {
             "numero_ue": 4,
-            "topico": "TRABALHOS DE GEODÉSIA, TOPOGRAFIA, OCEANOGRAFIA, MARÉS, AEROFOTOGRA METRIA E BATIMETRIA",
+            "topico": "TRABALHOS DE GEODÉSIA, TOPOGRAFIA, OCEANOGRAFIA, MARÉS, AEROFOTOGRAMETRIA E BATIMETRIA",
             "ch_prevista_horas": 80,
             "subunidades": [
               "Técnicas de Posicionamento GNSS",
@@ -3994,7 +4110,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-6/2025",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "c-esp-alh.pdf",
@@ -4298,7 +4416,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-16/2020",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "c-esp-me.pdf",
@@ -5115,7 +5235,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-22/2025",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "c-esp-opap.pdf",
@@ -5250,7 +5372,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-20/2025",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "c-exp-agmag.pdf",
@@ -5335,7 +5459,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-24/2025",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "c-exp-bati.pdf",
@@ -5437,7 +5563,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-17/2025",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "c-exp-metocof_0.pdf",
@@ -5766,7 +5894,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Curriculo C-EXP-METOC-OF — MARINHA DO BRASIL, 2011",
+    "fundamento_origem": "capa"
   },
   {
     "arquivo": "c-exp-obs-me_0_0.pdf",
@@ -5896,7 +6026,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Curriculo C-EXP-OBS-ME — MARINHA DO BRASIL, 2011",
+    "fundamento_origem": "capa"
   },
   {
     "arquivo": "curriculo-ciaara-est-qf-aphid_presencial_mod2.pdf",
@@ -6133,7 +6265,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Curriculo EST - QF - APHID — MARINHA DO BRASIL, 2023",
+    "fundamento_origem": "capa"
   },
   {
     "arquivo": "curriculo-ciaara-est-qf-em2040phs.pdf",
@@ -6224,7 +6358,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Curriculo EST - QF -  EM2040PHS — MARINHA DO BRASIL, 2024",
+    "fundamento_origem": "capa"
   },
   {
     "arquivo": "curriculo-ciaara-est-qf-proc-mf-ead_mod3.pdf",
@@ -6260,7 +6396,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Curriculo EST - QF – PROC – MF - EAD — MARINHA DO BRASIL, 2024",
+    "fundamento_origem": "capa"
   },
   {
     "arquivo": "est-qf-mareflu.pdf",
@@ -6331,7 +6469,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Curriculo EST-QF-MAREFLU — MARINHA DO BRASIL, 2026",
+    "fundamento_origem": "capa"
   },
   {
     "arquivo": "est-qf-navflu-ead.pdf",
@@ -6431,7 +6571,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Curriculo EST - QF - NAVFLU - EAD — MARINHA DO BRASIL, 2026",
+    "fundamento_origem": "capa"
   },
   {
     "arquivo": "est-qf-pgrs100.pdf",
@@ -6577,14 +6719,18 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Curriculo EST - QF - PGRS100 — MARINHA DO BRASIL, 2025",
+    "fundamento_origem": "capa"
   },
   {
     "arquivo": "marinha_do_brasil_-_curriculo-do-est-qf-apoc.pdf",
     "curso_sigla": null,
     "paginas": 6,
     "disciplinas": [],
-    "observacao": "PDF sem camada de texto (digitalizado). Exige OCR ou transcricao manual."
+    "observacao": "PDF sem camada de texto (digitalizado). Exige OCR ou transcricao manual.",
+    "fundamento_normativo": null,
+    "fundamento_origem": "sem_texto"
   },
   {
     "arquivo": "of-10-16-2023-densm-ciaara-an-c-apa-ocop-pr-sp.pdf",
@@ -6927,7 +7073,7 @@
             "topico": "ORIENTAÇÃO DE FORMATAÇÃO, ESTRUTURAÇÃO E COMPOSIÇÃO DO TRABALHO DE FINAL DE CURSO",
             "ch_prevista_horas": 70,
             "subunidades": [
-              "Apresentação básica das partes que compõem o trabalho: introdução, desenvol",
+              "Apresentação básica das partes que compõem o trabalho: introdução, desenvolvimento (capítulos), considerações finais e recomendações (opcional)",
               "Orientações para elaboração do trabalho; e",
               "Pesquisa e desenvolvimento do Trabalho"
             ]
@@ -6935,7 +7081,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-16/2023",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "of-10-16-2025-densm-ciaara-an-c-exp-metoc-sp-512.2.01.pdf",
@@ -7230,7 +7378,9 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-16/2025",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "of-10-27-2022-densm-ciaara-an-c-apa-prevme-pr-ead_0_0.pdf",
@@ -7563,20 +7713,26 @@
         ]
       }
     ],
-    "observacao": null
+    "observacao": null,
+    "fundamento_normativo": "Of no 10-27/2022",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "of10-82-2024-densm-ana-c-espc-fr.pdf",
     "curso_sigla": "C-Espc-FR",
     "paginas": 127,
     "disciplinas": [],
-    "observacao": "Nenhuma 'LISTA DE UNIDADES DE ENSINO' encontrada. Curriculo provavelmente no modelo por competencias (COMPETENCIA TECNICA / INDICADORES), que nao declara UE."
+    "observacao": "Nenhuma 'LISTA DE UNIDADES DE ENSINO' encontrada. Curriculo provavelmente no modelo por competencias (COMPETENCIA TECNICA / INDICADORES), que nao declara UE.",
+    "fundamento_normativo": "Of no 10-82/2024",
+    "fundamento_origem": "oficio"
   },
   {
     "arquivo": "of10-82-2024-densm-anb-c-espc-hn.pdf",
     "curso_sigla": "C-Espc-HN",
     "paginas": 146,
     "disciplinas": [],
-    "observacao": "Nenhuma 'LISTA DE UNIDADES DE ENSINO' encontrada. Curriculo provavelmente no modelo por competencias (COMPETENCIA TECNICA / INDICADORES), que nao declara UE."
+    "observacao": "Nenhuma 'LISTA DE UNIDADES DE ENSINO' encontrada. Curriculo provavelmente no modelo por competencias (COMPETENCIA TECNICA / INDICADORES), que nao declara UE.",
+    "fundamento_normativo": "Of no 10-82/2024",
+    "fundamento_origem": "oficio"
   }
 ]
