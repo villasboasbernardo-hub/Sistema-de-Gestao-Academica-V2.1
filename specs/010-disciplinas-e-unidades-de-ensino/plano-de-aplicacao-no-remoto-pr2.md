@@ -118,4 +118,73 @@ código são mudança **proibida** (P-1, Q-13) e o md5 muda se qualquer um deles
 
 ## ✅ APLICADA no remoto em 26/09/2026 — o que foi medido
 
-`[pendente — preenchido pela execução, nunca por antecipação (regra 9.3)]`
+**Backup, passo zero**: `remoto-20260926-002924.sql`, **1.614 KB**, em
+`%LOCALAPPDATA%\ciaara-11\copias-do-remoto\` — fora do git, com dado pessoal.
+
+**CI**: verde nos três blocos sobre `f1917cf` (`qualidade`, `banco`, `build`).
+**Dry-run**: listou **só** `20260926024246_carga_unidades_ensino.sql`.
+**`pnpm db:push`**: saiu **0**, uma migration aplicada.
+
+### 1. Zero linhas pré-existentes alteradas — antes × depois
+
+| O quê | Antes | Depois | |
+|---|---|---|---|
+| cursos | 24 | **24** | igual |
+| turmas | 28 | **28** | igual |
+| instrutores | 177 | **177** | igual |
+| disciplinas | 175 | **175** | igual |
+| `turma_disciplina` | 210 | **210** | igual |
+| `turma_disciplina_instrutor` | 96 | **96** | igual |
+| soma da CH de **todas** as disciplinas | 9.963 | **9.963** | igual |
+| **impressão digital do conteúdo de `disciplinas`** | `f1df0fcf22fd7a932c0da3b4802f6546` | **`f1df0fcf22fd7a932c0da3b4802f6546`** | **idêntica** |
+
+⚠️ **A impressão digital idêntica é a prova**: ela cobre `codigo`, `carga_horaria_tempos` e
+`nome_disciplina` das **175** linhas. Se a carga tivesse tocado a CH de uma única disciplina — o
+que a **P-1** proíbe — o md5 mudaria. Contagem igual sem md5 igual provaria bem menos.
+
+### 2. O que a carga acrescentou, e nada além
+
+| O quê | Antes | Depois |
+|---|---|---|
+| `unidades_ensino` | 0 | **587** |
+| cursos por competências | 0 | **2** |
+| disciplinas com `sem_unidades_ensino` | 0 | **6** |
+| `migracao_log` | 957 | **979** (+22, um por currículo) |
+
+### 3. A carga por curso, no remoto
+
+| Curso | UEs | | Curso | UEs |
+|---|---:|---|---|---:|
+| `CAHO` | 132 | | `C-Exp-MetocOf` | 27 |
+| `C-Ap-HN` | 95 | | `C-ApA-OcOp-PR-SP` | 26 |
+| `C-Esp-ME` | 62 | | `C-ApA-PrevMe-PR-EAD` | 25 |
+| `C-Ap-FR` | 60 | | `C-Exp-Metoc-OF-SP` | 24 |
+| `C-Esp-ALH` | 21 | | `C-ApA-PCN-PR-EAD` | 18 |
+| `C-ApA-AuxNav-PR-SP` | 17 | | `EST-QF-APHID` | 15 |
+| `C-Esp-OpAP` | 9 | | `C-Exp-BATI` | 9 |
+| `C-Exp-Obs-ME` | 9 | | `EST-QF-PGRS100` | 9 |
+| `EST-QF-NAVFLU-EAD` | 7 | | `C-Exp-Ag-Mag` | 6 |
+| `EST-QF-EM2040PHS` | 6 | | `EST-QF-APOC` | 5 |
+| `EST-QF-MAREFLU` | 4 | | `EST-QF-PROC-MF-EAD` | 1 |
+| `C-Espc-FR` | **0** | | `C-Espc-HN` | **0** |
+
+**Soma: 587.** As 24 linhas batem **uma a uma** com a tabela do local e com as declaradas no
+pareamento. Os dois zeros são os cursos por competências, e são **dado**, não ausência.
+
+### 4. O resto da conferência, só por leitura
+
+| O quê | Resultado |
+|---|---|
+| migrations dos dois lados | **45 e 45**, nenhuma só de um |
+| UEs sem fundamento normativo | **0** |
+| fundamentos fora das duas formas declaradas | **0** |
+| UEs sem procedência (`origem_migracao_v1`) | **0** |
+| códigos fora da forma `UE-NNNNNN` | **0** |
+| sequência `UE-` | **587** — à frente da contagem, sem `setval` (gotcha 9) |
+| Production | `/` **307** → login · `/login` **200** · `/cursos` **307** · `/instrutores` **307** · `/disciplinas` **307** · `/inicio` **307** — sem erro novo |
+
+⚠️ **Um percalço de CI, e ele não era teste**: o run do evento `pull_request` reprovou com
+*"failed to bind host port for 0.0.0.0:54322: address already in use"* — os dois runs do mesmo
+commit (push e pull_request) subiram o stack do Supabase **ao mesmo tempo** no mesmo runner e
+colidiram na porta. O run de **push** passou nos três blocos. O `ci.yml` não tem grupo de
+concorrência; fica **reportado, não corrigido** — é higiene de CI e mexe em arquivo de outro PR.
