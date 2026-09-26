@@ -408,10 +408,16 @@ def main(argv: list[str]) -> int:
         if alvo is None:
             print(f"[NAO CONFERIDA] exclusao declarada nao existe no banco: {curso} · {nome}")
             return 1
+        # ⚠️ A linha excluida carrega o `disciplinas.codigo` do banco, e nao so o nome. A
+        #    migration precisa de uma chave que nao se repita: `EFEITOS ATMOSFERICOS SOBRE A
+        #    PROPAGACAO ELETROMAGNETICA / C-Exp-METOC-OF` existe com esse MESMO nome nos DOIS
+        #    cursos METOC (medido: `89 - C-Exp-MetocOf - IV` e `89 - C-Exp-Metoc-OF-SP - IV`), e
+        #    so a copia do SP e excluida — no presencial a disciplina e legitima e recebe 5 UEs.
+        #    Casar por nome marcaria a errada, ou as duas.
         linhas.append({
             "arquivo": "", "curso_codigo": curso, "curriculo_ordinal": "",
-            "curriculo_disciplina": nome, "curriculo_ch_horas": "", "numero_ue": "",
-            "topico": "", "ue_ch_horas": "", "destino_disciplina_codigo": "",
+            "curriculo_disciplina": alvo["nome"], "curriculo_ch_horas": "", "numero_ue": "",
+            "topico": "", "ue_ch_horas": "", "destino_disciplina_codigo": alvo["codigo"],
             "fundamento_normativo": "", "fundamento_origem": "",
             "observacao": "sem_unidades_ensino = true", "motivo_da_exclusao": motivo,
         })
@@ -420,7 +426,7 @@ def main(argv: list[str]) -> int:
             linhas.append({
                 "arquivo": "", "curso_codigo": curso, "curriculo_ordinal": d["cod_disciplina"],
                 "curriculo_disciplina": d["nome"], "curriculo_ch_horas": "", "numero_ue": "",
-                "topico": "", "ue_ch_horas": "", "destino_disciplina_codigo": "",
+                "topico": "", "ue_ch_horas": "", "destino_disciplina_codigo": d["codigo"],
                 "fundamento_normativo": "", "fundamento_origem": "",
                 "observacao": "curriculo_modelo = 'competencias'",
                 "motivo_da_exclusao": "Curso por COMPETENCIAS: nenhuma `LISTA DE UNIDADES DE "

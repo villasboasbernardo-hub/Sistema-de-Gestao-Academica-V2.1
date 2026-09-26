@@ -41,6 +41,8 @@ from __future__ import annotations
 import argparse
 import sys
 
+from pathlib import Path
+
 from . import carregar, correcoes, promover, reconciliar
 
 # ⚠️ O console do Windows abre em cp1252, e cp1252 não tem `→` (U+2192) — o programa
@@ -113,6 +115,53 @@ def executar(
     for d in v.informativos:
         print(f"    (informa) {d.verificacao} · {d.tabela} · {d.linha}: {d.obtido}")
     print(f"  relatorio: {caminho}")
+
+    # ⚠️ ETAPA 6 — AS UNIDADES DE ENSINO, e ela existe porque a migration da carga não pode
+    #    rodar no `db reset`. Toda migration é aplicada contra uma base VAZIA antes de o ETL
+    #    carregar, e ali nenhuma disciplina de destino existe: a migration se abstém, com
+    #    aviso. No banco REMOTO ela carrega, porque lá os cadastros já estão. No LOCAL, quem
+    #    carrega é esta etapa, aplicando **o mesmo arquivo de migration** logo depois do ETL.
+    #    ⚠️ NÃO há segunda cópia do dado — há uma segunda EXECUÇÃO do mesmo SQL. Foi a lição
+    #    da marcação `simultaneo` do PR 1 desta fatia, onde dois caminhos com dois textos
+    #    fariam local e remoto divergirem em silêncio.
+    #    ⚠️ O SQL é idempotente (`on conflict do nothing`, `where not exists`), então rodá-lo
+    #    duas vezes não duplica nada — e a asserção dele confere o resultado.
+    #    ⚠️ Só no destino LOCAL: contra preview ou produção a carga vem por `db push`, e a
+    #    regra de direção proíbe o ETL escrever no remoto (VIRADA-1).
+    if conexao == carregar.CONEXAO_LOCAL:
+        _linha("ETAPA 6 — unidades de ensino (a migration da carga, aplicada depois do ETL)")
+        cargas = sorted(
+            (Path(__file__).resolve().parents[2] / "supabase" / "migrations").glob(
+                "*_carga_unidades_ensino.sql"
+            )
+        )
+        if not cargas:
+            print("  (nenhuma migration de carga de UE encontrada — etapa pulada)")
+        else:
+            import psycopg
+
+            for arquivo in cargas:
+                try:
+                    with psycopg.connect(conexao, autocommit=False) as con:
+                        # ⚠️ Uma transação por arquivo: a asserção final da migration está
+                        #    DENTRO dela, então um número que não fecha desfaz a carga inteira
+                        #    em vez de deixar o banco pela metade.
+                        con.execute(arquivo.read_text(encoding="utf-8"))
+                        con.commit()
+                except Exception as erro:  # noqa: BLE001 — o motivo vai para o relatório
+                    print(f"[NAO CONFERIDA] a carga de UE falhou em {arquivo.name}: {erro}")
+                    return 2
+                print(f"  {arquivo.name}: aplicada")
+            with psycopg.connect(conexao) as con:
+                linhas = con.execute(
+                    "select count(*), count(distinct disciplina_id),"
+                    " count(*) filter (where fundamento_normativo is null)"
+                    " from public.unidades_ensino"
+                ).fetchone()
+            print(
+                f"  unidades_ensino: {linhas[0]} linhas em {linhas[1]} disciplinas, "
+                f"{linhas[2]} sem fundamento"
+            )
 
     # ⚠️ A CONTA LOCAL VOLTA SOZINHA AO FIM DA CARGA — decisão de Bernardo Villas Boas,
     #    24/09/2026. Depois da carga o banco tem 5.394 linhas e **nenhuma credencial**: sem

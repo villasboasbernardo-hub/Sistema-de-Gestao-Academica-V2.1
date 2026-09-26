@@ -74,11 +74,21 @@ select matches(
   'FR-061 · unidade de ensino inserida SEM codigo recebe UE-NNNNNN do banco'
 );
 
-select is(
-  (select count(*)::int from public.unidades_ensino
-    where codigo like 'UE-%' and id <> 'a6400000-0000-0000-0000-000000000001'),
-  0,
-  'FR-061 · nenhuma UE legada usa o prefixo UE- (a tabela esta vazia ate a carga do PR 2)'
+-- ⚠️ **EMENDADA EM 26/09/2026, PORQUE A CARGA DO PR 2 CHEGOU.** A forma anterior exigia
+--    ZERO UEs com o prefixo `UE-` e dizia, no proprio texto, *"a tabela esta vazia ate a carga
+--    do PR 2"* — ela media o ESTADO daquele momento, nao a regra. Com as 587 carregadas ela
+--    passou a reprovar (`have: 587, want: 0`), e reprovava CERTO: o estado mudou.
+--    A regra que importa e a inversa e permanente — **nenhuma UE tem codigo FORA da forma
+--    `UE-NNNNNN`**, porque todo codigo vem do gerador unico e nenhum e digitado (FR-012,
+--    FR-061, gotcha 9). Nesta forma ela vale na base vazia E na carregada, e reprova no caso
+--    que interessa: alguem inserindo UE com codigo proprio.
+--    Regra dos valores esperados, caso (a): o numero novo e o certo e passa a ser o esperado.
+--    ⚠️ A amostra deste arquivo e excluida nominalmente — ela existe para provar o `DEFAULT`.
+select is_empty(
+  $$select codigo from public.unidades_ensino
+     where codigo !~ '^UE-[0-9]{6}$'
+       and id <> 'a6400000-0000-0000-0000-000000000001'$$,
+  'FR-061 · toda UE tem codigo na forma UE-NNNNNN, do gerador unico — nenhum digitado'
 );
 
 -- -- 7 — o `DEFAULT` chama funcao, e quem insere precisa poder executa-la (gotcha 5.1)
