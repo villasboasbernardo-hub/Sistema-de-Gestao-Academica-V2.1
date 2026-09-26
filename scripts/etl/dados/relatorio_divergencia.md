@@ -2,7 +2,7 @@
 
 **Veredito: APROVADA**
 
-**Medido contra:** `127.0.0.1:54322/postgres` · **em** 23/09/2026 22:12 -0300
+**Medido contra:** `127.0.0.1:54322/postgres` · **em** 25/09/2026 22:28 -0300
 
 Relatório sem veredito não é aprovação (contrato reconciliacao C-1).
 
@@ -44,11 +44,11 @@ auditoria. Reexecutar a carga com a mesma origem tem de reproduzi-los.
 | `avaliacoes` | `f9210ca924fe6068b6f71a625e75ba8a` |
 | `avaliacoes_planejadas` | `3561143000e7fe590914feffd0d8a633` |
 | `config_listas` | `f90e67b17e595f535d2b51b0bc6a54ea` |
-| `config_parametros` | `710752274ab38b5c9483424778dbbdc3` |
+| `config_parametros` | `5b778ddb7cc729dcac455e54b5dac45c` |
 | `configuracoes_horario` | `b647c78e497c19b7a7a94c58f8e575b8` |
 | `curso_regime_historico` | `94f00d73debd016414ee487d29d1f4db` |
-| `cursos` | `738c4ffec0ce4915aea5e061feba5f74` |
-| `disciplinas` | `62695a39b2d67bde327004da06243b21` |
+| `cursos` | `721118dc9310fd86dc22244ce362b766` |
+| `disciplinas` | `51adf62f2db6c7e7c58ef2537124be74` |
 | `feriados` | `972cfa330000bde5b9e58ffeb1cbd955` |
 | `horarios_tempos_aula` | `0ade5a411c23711191e0cc35445e701c` |
 | `instrutor_disciplina` | `ad7c1e0115c6681c2aa983b644f0ef28` |

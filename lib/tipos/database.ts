@@ -892,6 +892,7 @@ export type Database = {
           codigo: string
           criado_em: string
           criado_por: string | null
+          curriculo_modelo: string
           duracao_dias: number
           duracao_semanas: number | null
           editado_em: string | null
@@ -911,6 +912,7 @@ export type Database = {
           codigo: string
           criado_em?: string
           criado_por?: string | null
+          curriculo_modelo?: string
           duracao_dias: number
           duracao_semanas?: number | null
           editado_em?: string | null
@@ -930,6 +932,7 @@ export type Database = {
           codigo?: string
           criado_em?: string
           criado_por?: string | null
+          curriculo_modelo?: string
           duracao_dias?: number
           duracao_semanas?: number | null
           editado_em?: string | null
@@ -970,6 +973,7 @@ export type Database = {
           previsao_inicio: string | null
           previsao_termino: string | null
           prioridade_alocacao_peso: number | null
+          sem_unidades_ensino: boolean
           semanas: number | null
           status: Database["public"]["Enums"]["status_registro"]
           tecnica_ensino_sugerida: string | null
@@ -978,7 +982,7 @@ export type Database = {
           carga_horaria_tempos: number
           ch_semanal?: number | null
           cod_disciplina: string
-          codigo: string
+          codigo?: string
           criado_em?: string
           criado_por?: string | null
           curso_id: string
@@ -997,6 +1001,7 @@ export type Database = {
           previsao_inicio?: string | null
           previsao_termino?: string | null
           prioridade_alocacao_peso?: number | null
+          sem_unidades_ensino?: boolean
           semanas?: number | null
           status?: Database["public"]["Enums"]["status_registro"]
           tecnica_ensino_sugerida?: string | null
@@ -1024,6 +1029,7 @@ export type Database = {
           previsao_inicio?: string | null
           previsao_termino?: string | null
           prioridade_alocacao_peso?: number | null
+          sem_unidades_ensino?: boolean
           semanas?: number | null
           status?: Database["public"]["Enums"]["status_registro"]
           tecnica_ensino_sugerida?: string | null
@@ -1044,6 +1050,36 @@ export type Database = {
             referencedColumns: ["curso_id"]
           },
         ]
+      }
+      exclusoes_registradas: {
+        Row: {
+          excluido_em: string
+          excluido_por: string
+          id: string
+          registro_codigo: string
+          registro_id: string
+          retrato: Json
+          tabela: string
+        }
+        Insert: {
+          excluido_em?: string
+          excluido_por: string
+          id?: string
+          registro_codigo: string
+          registro_id: string
+          retrato: Json
+          tabela: string
+        }
+        Update: {
+          excluido_em?: string
+          excluido_por?: string
+          id?: string
+          registro_codigo?: string
+          registro_id?: string
+          retrato?: Json
+          tabela?: string
+        }
+        Relationships: []
       }
       feriados: {
         Row: {
@@ -2330,6 +2366,87 @@ export type Database = {
           },
         ]
       }
+      turma_disciplina_unidade: {
+        Row: {
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          disciplina_id: string
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          instrutor_id: string
+          origem_migracao_v1: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          turma_disciplina_id: string
+          unidade_ensino_id: string
+        }
+        Insert: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          disciplina_id: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          instrutor_id: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_disciplina_id: string
+          unidade_ensino_id: string
+        }
+        Update: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          disciplina_id?: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          instrutor_id?: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_disciplina_id?: string
+          unidade_ensino_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tdu_da_turma_disciplina"
+            columns: ["turma_disciplina_id", "disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "turma_disciplina"
+            referencedColumns: ["id", "disciplina_id"]
+          },
+          {
+            foreignKeyName: "tdu_da_unidade_ensino"
+            columns: ["unidade_ensino_id", "disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "unidades_ensino"
+            referencedColumns: ["id", "disciplina_id"]
+          },
+          {
+            foreignKeyName: "tdu_da_unidade_ensino"
+            columns: ["unidade_ensino_id", "disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_unidades_ensino_execucao"
+            referencedColumns: ["unidade_ensino_id", "disciplina_id"]
+          },
+          {
+            foreignKeyName: "tdu_do_instrutor_atribuido"
+            columns: ["turma_disciplina_id", "instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "turma_disciplina_instrutor"
+            referencedColumns: ["turma_disciplina_id", "instrutor_id"]
+          },
+          {
+            foreignKeyName: "tdu_do_instrutor_atribuido"
+            columns: ["turma_disciplina_id", "instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["turma_disciplina_id", "instrutor_id"]
+          },
+        ]
+      }
       turmas: {
         Row: {
           alunos: number | null
@@ -2422,7 +2539,7 @@ export type Database = {
         }
         Insert: {
           ch_prevista_tempos: number
-          codigo: string
+          codigo?: string
           criado_em?: string
           criado_por?: string | null
           curso_id: string
@@ -3547,6 +3664,7 @@ export type Database = {
           codigo: string
           criado_em: string
           criado_por: string | null
+          curriculo_modelo: string
           duracao_dias: number
           duracao_semanas: number | null
           editado_em: string | null
@@ -3568,13 +3686,94 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      criar_disciplina: {
+        Args: { p_disciplina: Json }
+        Returns: {
+          carga_horaria_tempos: number
+          ch_semanal: number | null
+          cod_disciplina: string
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          curso_id: string
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          id_disciplina_legado: string | null
+          instrutores_atribuidos: string[]
+          instrutores_atribuidos_legado_v1: string | null
+          local_padrao: string | null
+          modo_atribuicao_padrao: Database["public"]["Enums"]["modo_atribuicao"]
+          nome_disciplina: string
+          nome_normalizado: string | null
+          ordem_sugerida: number | null
+          origem_migracao_v1: string | null
+          previsao_inicio: string | null
+          previsao_termino: string | null
+          prioridade_alocacao_peso: number | null
+          sem_unidades_ensino: boolean
+          semanas: number | null
+          status: Database["public"]["Enums"]["status_registro"]
+          tecnica_ensino_sugerida: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "disciplinas"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      definir_instrutores_da_turma: {
+        Args: {
+          p_instrutores: Json
+          p_turma_disciplina_id: string
+          p_unidades?: Json
+        }
+        Returns: {
+          ch_prevista_tempos: number | null
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          instrutor_id: string
+          observacao: string | null
+          origem_migracao_v1: string | null
+          papel: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          turma_disciplina_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "turma_disciplina_instrutor"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      excluir_disciplina: {
+        Args: { p_codigo_confirmacao: string; p_disciplina_id: string }
+        Returns: Json
+      }
       excluir_instrutor: {
         Args: { p_codigo_confirmacao: string; p_instrutor_id: string }
+        Returns: Json
+      }
+      excluir_unidade_ensino: {
+        Args: { p_codigo_confirmacao: string; p_unidade_id: string }
         Returns: Json
       }
       gravar_dados_pessoais_instrutor: {
         Args: { p_dados: Json; p_instrutor_id: string }
         Returns: undefined
+      }
+      impedimentos_de_exclusao_da_disciplina: {
+        Args: { p_disciplina_id: string }
+        Returns: string[]
+      }
+      impedimentos_de_exclusao_da_unidade_ensino: {
+        Args: { p_unidade_id: string }
+        Returns: string[]
       }
       impedimentos_de_exclusao_do_instrutor: {
         Args: { p_instrutor_id: string }
@@ -3590,6 +3789,43 @@ export type Database = {
           vigencia: string
           vigente_de: string
         }[]
+      }
+      reativar_disciplina: {
+        Args: { p_disciplina_id: string }
+        Returns: {
+          carga_horaria_tempos: number
+          ch_semanal: number | null
+          cod_disciplina: string
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          curso_id: string
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          id_disciplina_legado: string | null
+          instrutores_atribuidos: string[]
+          instrutores_atribuidos_legado_v1: string | null
+          local_padrao: string | null
+          modo_atribuicao_padrao: Database["public"]["Enums"]["modo_atribuicao"]
+          nome_disciplina: string
+          nome_normalizado: string | null
+          ordem_sugerida: number | null
+          origem_migracao_v1: string | null
+          previsao_inicio: string | null
+          previsao_termino: string | null
+          prioridade_alocacao_peso: number | null
+          sem_unidades_ensino: boolean
+          semanas: number | null
+          status: Database["public"]["Enums"]["status_registro"]
+          tecnica_ensino_sugerida: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "disciplinas"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       registrar_vigencia_regime: {
         Args: { p_curso_id: string; p_vigencia: Json }

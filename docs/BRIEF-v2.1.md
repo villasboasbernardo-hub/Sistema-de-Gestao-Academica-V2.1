@@ -209,6 +209,22 @@ garantia do motor. Cite-a quando precisar do exemplo.
   `instrutor_disciplina` no lugar foi o defeito de produção que a spec 034 corrigiu.
 - **`perfil_permissao`** — a matriz de autorização como dado (§3).
 
+> ### ✅ Emenda de 25/09/2026 — duas tabelas novas, da fatia (b) do Épico 5
+>
+> Entram no inventário de `public`, cada uma por **decisão nominal de Bernardo Villas Boas**:
+>
+> - **`exclusoes_registradas`** — o **rastro** das exclusões permanentes autorizadas pela exceção da
+>   regra 4 (decisão **D-B1**, 24/09/2026): quem, o quê e quando, com o retrato JSON da linha apagada.
+>   **Só de acréscimo**, com `UPDATE`, `DELETE` e `TRUNCATE` recusados por gatilho **inclusive para a
+>   `service_role`**; escrita apenas de dentro das funções `app.excluir_*`; leitura por quem tem
+>   `auditoria.ler`. Sem ela, a exigência *"rastro de quem, o quê e quando"* não teria onde morar.
+> - **`turma_disciplina_unidade`** — quem ministra **cada Unidade de Ensino** de uma disciplina
+>   **naquela turma**. É o **caso 5** do rateio (decisão **A-1**, 25/09/2026): a parcela do instrutor
+>   passa a ser a **soma da CH das UEs dele**, derivada e nunca gravada. Três FKs compostas garantem,
+>   pelo motor, que a UE é da disciplina daquela turma e que o instrutor já está atribuído a ela.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a

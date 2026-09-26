@@ -10,7 +10,7 @@
 -- inventario completo e as cinco guardas negativas do epico.
 -- =====================================================================================
 begin;
-select plan(20);
+select plan(22);
 
 -- ---------------------------------------------------------------------------- M1: base
 select has_schema('app', 'schema `app` existe — casa das funcoes auxiliares (BRIEF §3)');
@@ -78,7 +78,13 @@ select set_eq(
            ('registros_aula'), ('avaliacoes'), ('atividades_nao_letivas'), ('planejamento_anual'),
            ('config_listas'), ('config_parametros'), ('perfil_permissao'), ('feriados'),
            ('janelas_curso'), ('reservas_proens'), ('migracao_log'), ('arquivo_avaliacoes_v1'),
-           ('usuarios'), ('usuario_curso'), ('curso_sigla_historico')$$,
+           ('usuarios'), ('usuario_curso'), ('curso_sigla_historico'),
+           -- Fatia (b) do Epico 5, 25/09/2026. REGRA DOS VALORES ESPERADOS: (a) — o numero
+           -- novo e o correto, e o esperado passa a ser ele. As duas nascem de decisao
+           -- nominal de Bernardo Villas Boas: `exclusoes_registradas` e o rastro exigido
+           -- pela D-B1 (24/09) e `turma_disciplina_unidade` e o caso 5 do rateio (A-1,
+           -- 25/09). O BRIEF §2.1 e a autoridade de nomes, e as duas entram la junto.
+           ('exclusoes_registradas'), ('turma_disciplina_unidade')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 
@@ -169,6 +175,32 @@ select ok(
     where table_schema = 'public' and table_name = 'avaliacoes'
       and column_name in ('data_avaliacao', 'data_vista_prova', 'tempos_consumidos')) = 3,
   'RN-AVAL-02 · agendamento, aplicacao e vista convivem na MESMA linha de `avaliacoes`'
+);
+
+-- ============================ M7 de 26/09/2026 — OPCAO de view, nao so definicao
+-- ⚠️ ESTAS DUAS ASSERCOES NASCERAM DE UM DEFEITO REAL, E ELE PASSOU PELA SUITE INTEIRA.
+-- A PARTE F de `20260925135054_rateio_por_instrutor.sql` reescreveu
+-- `vw_instrutor_carga_prevista` com `create or replace view ... as`, SEM o `with (...)` — e
+-- `create or replace view` **nao preserva as reloptions**. A view perdeu `security_invoker`,
+-- passou a rodar com os direitos do dono (`postgres`, com `rolbypassrls = true`) e a RLS das
+-- tabelas de baixo deixou de valer para quem le. Ninguem viu porque a suite media DEFINICAO de
+-- view e nunca mediu OPCAO de view. A M7 repoe a opcao; estas assercoes impedem a volta.
+-- ⚠️ E A EXCECAO E NOMINAL, com controle positivo proprio na assercao seguinte: a view de PII
+-- TEM de ser de dono — RLS nao recorta coluna, e o porteiro dela mora no `where`.
+select is_empty(
+  $$select n.nspname || '.' || c.relname
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname in ('public', 'app') and c.relkind in ('v', 'm')
+       and c.relname <> 'vw_instrutor_dados_pessoais'
+       and not coalesce(c.reloptions, '{}'::text[]) @> array['security_invoker=true']$$,
+  'toda view de `public` e de `app` roda com os direitos de QUEM LE — a unica sem a opcao e a de PII, nominalmente'
+);
+select ok(
+  (select not coalesce(c.reloptions, '{}'::text[]) @> array['security_invoker=true']
+          and pg_get_viewdef(c.oid, true) like '%app.pode(''instrutores''::text, ''ler''::text)%'
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'vw_instrutor_dados_pessoais'),
+  'PII-1 · `vw_instrutor_dados_pessoais` e de DONO de proposito, e por isso carrega o porteiro no proprio `where`'
 );
 
 select * from finish();

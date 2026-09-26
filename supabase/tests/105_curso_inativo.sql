@@ -85,6 +85,10 @@ select * from (values
   ('reservas_proens',            'curso_em_oferta'),
   ('turma_disciplina',           'turma_em_oferta'),
   ('turma_disciplina_instrutor', 'turma_em_oferta'),
+  -- Fatia (b), 25/09/2026. REGRA DOS VALORES ESPERADOS: (a) — a tabela nova do caso 5 do
+  -- rateio (A-1) espelha as policies de `turma_disciplina_instrutor`, e por isso carrega a
+  -- mesma condicao de oferta. Nao declara-la aqui faria a assercao acusar policy legitima.
+  ('turma_disciplina_unidade',   'turma_em_oferta'),
   ('atividades_nao_letivas',     'turma_em_oferta'),
   ('instrutor_disciplina',       'disciplina_em_oferta')
 ) as v(tabela, chave);
@@ -119,8 +123,12 @@ select is(
   (select count(*)::int from pg_policy p
      join _protegidas t on t.tabela = (p.polrelid::regclass)::text
     where p.polcmd in ('a', 'w')),
-  30,
-  'FR-017.5 · sao 30 policies de escrita em 15 tabelas — duas por tabela, criar e editar'
+  -- REGRA DOS VALORES ESPERADOS: (a), 25/09/2026 — o numero novo e o correto. Entrou
+  -- `turma_disciplina_unidade` (caso 5 do rateio, A-1), com as suas DUAS policies de
+  -- escrita, espelhando `turma_disciplina_instrutor`: 30 + 2 = 32, em 16 tabelas. O que a
+  -- assercao prova continua o mesmo — duas por tabela protegida, criar e editar.
+  32,
+  'FR-017.5 · sao 32 policies de escrita em 16 tabelas — duas por tabela, criar e editar'
 );
 
 -- ---------------------------------------------------------------- a exclusao DECLARADA, nao ausente

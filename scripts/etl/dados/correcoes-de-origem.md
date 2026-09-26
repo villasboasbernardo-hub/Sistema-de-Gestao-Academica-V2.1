@@ -49,6 +49,9 @@ estar escrito. A extração e o `bruto/v20/` **não mudam**: eles continuam fié
 | 22/09/2026 | cursos | EST-QF-EM2040PHS | modalidade | (vazio) | presencial | conhecimento do responsável |
 | 22/09/2026 | cursos | EST-QF-PGRS100 | modalidade | (vazio) | presencial | conhecimento do responsável |
 | 22/09/2026 | cursos | EST-QF-MAREFLU | modalidade | (vazio) | presencial | conhecimento do responsável |
+| 25/09/2026 | disciplinas | 53 - C-Ap-FR - XIII | modo_atribuicao_padrao | dividido | simultaneo | RN-MAT-05 + decisão Q-02 de Bernardo Villas Boas, 24/09/2026 |
+| 25/09/2026 | disciplinas | 41 - C-Ap-HN - XVIII | modo_atribuicao_padrao | dividido | simultaneo | RN-MAT-05 + decisão Q-02 de Bernardo Villas Boas, 24/09/2026 |
+| 25/09/2026 | disciplinas | 20 - CAHO - XVIII | modo_atribuicao_padrao | dividido | simultaneo | RN-MAT-05 + decisão Q-02 de Bernardo Villas Boas, 24/09/2026 |
 
 **15 correções: 1 de sala, 1 de modalidade divergente e 13 de modalidade que a v2.0 deixou em
 branco.** As outras 10 modalidades da lista de 22/09/2026 **conferem com o que já está gravado** e
@@ -125,3 +128,21 @@ aqui até ele decidir; **nada foi preenchido** *(levantado em 22/09/2026)*.
 
 ⚠️ **O retrato local ainda não tem as correções.** `bruto/v20/` foi extraído em 08/09/2026, e nele a
 `C-Ap-HN 2026` está em `Sala 02`. Cada correção chega na próxima extração da planilha.
+
+> ### ⚠️ As três de 25/09/2026 existem em DOIS lugares, e não é descuido
+>
+> A `RN-MAT-05` nomeia três práticas de fim de curso que deveriam estar em modo `simultaneo`, e o
+> ETL **nunca as marcou** — medido em 24/09/2026: **0 de 175**. Bernardo decidiu marcá-las (Q-02),
+> identificando-as **pelo código**, porque a regra proíbe inferir pelo nome e o nome destas três
+> perdeu a palavra *"FIM"* na origem.
+>
+> A marcação precisa alcançar **dois caminhos diferentes**, e por isso está nos dois:
+>
+> - **aqui**, para a carga do ETL — que roda contra um banco recém-resetado, onde a migration da
+>   fatia (b) já passou **antes de existir disciplina alguma** e por isso não marcou nada;
+> - na migration `20260925135048_aposentar_colunas_de_atribuicao.sql`, para o **banco remoto**,
+>   que já tem as 175 linhas carregadas e onde o ETL **não roda** (VIRADA-1).
+>
+> As duas são **idempotentes** e não colidem: no fluxo local a migration é no-op (base vazia) e a
+> correção aplica; no remoto a migration aplica e o ETL não passa. ⚠️ **Mudar uma sem a outra faz
+> local e remoto divergirem em silêncio** — se um dia o modo de uma delas mudar, muda nos dois.
