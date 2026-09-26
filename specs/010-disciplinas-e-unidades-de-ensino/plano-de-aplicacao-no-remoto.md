@@ -129,3 +129,52 @@ correção, não regressão, e está descrita no PR.
 | RPCs de `public` | as **7** presentes |
 | Production | `/` **307** → login · `/login` **200** · `/cursos` **307** · `/instrutores` **307** — sem erro novo |
 
+
+---
+
+## M7 — a sétima migration, e por que ela existe
+
+`20260926005750_ch_prevista_com_security_invoker.sql`
+
+**O defeito**: a PARTE F da M5 reescreveu `vw_instrutor_carga_prevista` com
+`create or replace view … as`, sem o `with (security_invoker = true)` que a view tinha desde
+15/09/2026. **`create or replace view` não preserva as `reloptions`** — ele preserva o objeto, o dono,
+os privilégios e as dependências, e troca as opções pelas do comando. A view passou a rodar com os
+direitos do **dono**, `postgres`, que tem `rolbypassrls = true`: **a RLS das tabelas de baixo deixou de
+valer para quem lê**. E `vw_instrutor_carga_anual` lê dela, então o vazamento seguia para a ficha do
+instrutor.
+
+**Medido no banco local em 25/09/2026**, depois das seis:
+
+| view | `reloptions` |
+|---|---|
+| `vw_instrutor_carga_prevista` | **(nenhuma)** — era `{security_invoker=true}` |
+| `vw_instrutor_dados_pessoais` | **(nenhuma)** — **intencional**, é assim que o recorte de PII funciona (PII-1) |
+| as outras 11 views de `public` | `{security_invoker=true}` |
+
+**Quem pegou**: a prova de reversão da T010, comparando o `pg_dump` de antes das migrations com o de
+depois. Nenhuma asserção da suíte media **opção** de view — media definição, coluna, privilégio e
+policy. A M7 vem com as duas asserções que faltavam, em `supabase/tests/010_estrutura.sql`.
+
+**Por que uma migration nova, e não uma correção na M5**: a M5 **já está aplicada no remoto**. Editar
+migration aplicada é fazer os dois bancos divergirem em silêncio — a CLI não a reexecuta, e o arquivo
+passaria a descrever um estado que o remoto não tem.
+
+⚠️ **O remoto carrega o defeito desde 25/09/2026**, e por isso a M7 vai para lá **antes do merge**,
+sob as mesmas condições da primeira aplicação: CI verde, backup com `dado_do_remoto --somente-copia`
+citado aqui, `--dry-run` mostrando **só** ela, e conferência só por leitura depois.
+
+### ✅ APLICADA no remoto em 26/09/2026 — o que foi medido
+
+**Backup, passo zero**: `[pendente]`
+
+| O quê | Resultado |
+|---|---|
+| dry-run | `[pendente]` |
+| `pnpm db:push` | `[pendente]` |
+| migrations dos dois lados | `[pendente]` |
+| impressão digital do catálogo de `public` + `app` | `[pendente]` |
+| `reloptions` de `vw_instrutor_carga_prevista` no remoto | `[pendente]` |
+| a exceção nominal de PII, intacta | `[pendente]` |
+| dado de negócio | `[pendente]` |
+| Production | `[pendente]` |

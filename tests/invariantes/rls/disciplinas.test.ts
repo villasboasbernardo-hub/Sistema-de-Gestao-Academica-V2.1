@@ -99,17 +99,41 @@ async function criarUsuario(perfil: Perfil, escopo: string): Promise<void> {
 
 /** Deixa a base no estado inicial. Roda ANTES e DEPOIS — execução interrompida não inviabiliza a seguinte. */
 async function limpar(): Promise<void> {
-  const { data: contas } = await admin
-    .from("usuarios")
-    .select("auth_user_id")
-    .like("codigo", "USR-5B-%");
-  for (const c of contas ?? []) {
-    if (c.auth_user_id) await admin.auth.admin.deleteUser(c.auth_user_id).catch(() => undefined);
+  /*
+   * ⚠️ AS CONTAS DO AUTH SÃO VARRIDAS PELO DOMÍNIO, e não pelas linhas de `usuarios` — e a razão
+   * foi MEDIDA em 25/09/2026, na prova dos defeitos deliberados. Quando o `beforeAll` morre entre
+   * `createUser` e o `insert` em `usuarios`, a conta do Auth fica ÓRFÃ: `usuarios` não a conhece,
+   * a limpeza não a alcança, e a execução seguinte morre com *"A user with this email address has
+   * already been registered"* — em `beforeAll`, o que reporta **14 pulados** e nenhum reprovado.
+   * É a mesma classe do `_conta_do_auth` paginado de `conta_local.py`.
+   */
+  for (let pagina = 1; pagina <= 20; pagina += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page: pagina, perPage: 200 });
+    if (error || !data.users.length) break;
+    for (const u of data.users) {
+      if ((u.email ?? "").endsWith("@ciaara.teste5b")) {
+        await admin.auth.admin.deleteUser(u.id).catch(() => undefined);
+      }
+    }
+    if (data.users.length < 200) break;
   }
   await admin.from("usuarios").delete().like("codigo", "USR-5B-%");
-  // ⚠️ Curso NÃO é apagável (regra 9.1): o da amostra fica, como o de toda suíte. O selo no código
-  //    é o que impede a segunda execução de colidir com o da primeira.
   await admin.from("exclusoes_registradas").delete().like("registro_codigo", "5B-%");
+
+  /*
+   * ⚠️ E A TURMA DA AMOSTRA É APAGADA, o que não é zelo: `099_salas.sql` decide entre asserir e
+   * pular pela pergunta `count(turmas) > 0`, e uma turma deixada atrás faz aquele arquivo ACHAR
+   * que a base do ETL está carregada e reprovar duas asserções com os números da base real
+   * (medido: `have: 0, want: 9`). Turma É apagável — só curso não é (regra 9.1).
+   * ⚠️ `turma_disciplina` sai ANTES: a FK é `restrict`.
+   */
+  const { data: turmas } = await admin.from("turmas").select("id").like("codigo", "C-Exp-5B%");
+  for (const t of turmas ?? []) {
+    await admin.from("turma_disciplina_unidade").delete().eq("turma_disciplina_id", t.id);
+    await admin.from("turma_disciplina").delete().eq("turma_id", t.id);
+    await admin.from("turmas").delete().eq("id", t.id);
+  }
+  // O curso fica, como o de toda suíte: o selo no código impede a colisão da próxima execução.
 }
 
 beforeAll(async () => {

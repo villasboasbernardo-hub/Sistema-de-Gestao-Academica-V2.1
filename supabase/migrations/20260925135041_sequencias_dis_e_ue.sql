@@ -31,6 +31,11 @@
 --    drop function if exists app.proximo_codigo_unidade_ensino();
 --    drop sequence if exists app.disciplinas_codigo_seq;
 --    drop sequence if exists app.unidades_ensino_codigo_seq;
+--    ⚠️ E REPOR OS DOIS COMENTARIOS DE `codigo` que a PARTE C desta migration trocou (o texto
+--       anterior esta em `20260829233423_cadastro_e_unidades_ensino.sql`). Acrescentado em
+--       26/09/2026, depois de a T010 EXECUTAR este plano: sem eles a impressao digital da
+--       estrutura voltava com 4 linhas diferentes. **Comentario e estrutura** — ele esta no
+--       `pg_dump`, e plano de reversao que so larga objeto deixa rastro do que foi desfeito.
 --    As linhas criadas com codigo gerado FICAM com o codigo que receberam — e correto:
 --    o codigo e identidade de negocio, nao detalhe do mecanismo.
 -- =================================================================================

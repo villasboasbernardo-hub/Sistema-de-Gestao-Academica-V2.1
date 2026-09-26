@@ -150,6 +150,7 @@ A RPC de instrutor **não** passa a gravar aqui nesta fatia (`FR-025`, `PEND-5b-
 | I-10 | zero policies `FOR DELETE`; zero `DELETE`/`TRUNCATE` para `authenticated` em **todas** as tabelas, inclusive `exclusoes_registradas` | a asserção existente, com a lista estendida |
 | I-11 | `config_parametros.disciplinas.aviso_inicio_dias` existe, `operacional`, `30` | `results_eq` |
 | I-12 | depois da carga (PR 2): `count(unidades_ensino)` = o número da conferência; toda linha com `fundamento_normativo` e `origem_migracao_v1`; soma das UE = CH em **toda** disciplina carregada (a asserção `FR-024` da spec 002 deixa de passar vacuamente) | `050_grao_unidade_ensino.sql` + arquivo novo |
+| I-13 | **toda** view de `public` e de `app` tem `security_invoker = true`, com **uma** exceção nominal — `vw_instrutor_dados_pessoais`, que é de dono de propósito (PII-1) e carrega o porteiro no `where`. Nasceu do defeito da M5 achado pela T010: `create or replace view` não preserva as `reloptions`, e a view de CH prevista passou a rodar com `rolbypassrls` (gotcha 10) | `010_estrutura.sql`, duas asserções — a invariante e o controle positivo da exceção |
 
 **Prova de permissão NÃO mora aqui** (DoD 4): quem pode excluir/editar se prova em
 `tests/invariantes/rls/disciplinas.test.ts` com sessão real — negativo (**operador** tem

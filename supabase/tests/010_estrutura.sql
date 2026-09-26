@@ -10,7 +10,7 @@
 -- inventario completo e as cinco guardas negativas do epico.
 -- =====================================================================================
 begin;
-select plan(20);
+select plan(22);
 
 -- ---------------------------------------------------------------------------- M1: base
 select has_schema('app', 'schema `app` existe — casa das funcoes auxiliares (BRIEF §3)');
@@ -175,6 +175,32 @@ select ok(
     where table_schema = 'public' and table_name = 'avaliacoes'
       and column_name in ('data_avaliacao', 'data_vista_prova', 'tempos_consumidos')) = 3,
   'RN-AVAL-02 · agendamento, aplicacao e vista convivem na MESMA linha de `avaliacoes`'
+);
+
+-- ============================ M7 de 26/09/2026 — OPCAO de view, nao so definicao
+-- ⚠️ ESTAS DUAS ASSERCOES NASCERAM DE UM DEFEITO REAL, E ELE PASSOU PELA SUITE INTEIRA.
+-- A PARTE F de `20260925135054_rateio_por_instrutor.sql` reescreveu
+-- `vw_instrutor_carga_prevista` com `create or replace view ... as`, SEM o `with (...)` — e
+-- `create or replace view` **nao preserva as reloptions**. A view perdeu `security_invoker`,
+-- passou a rodar com os direitos do dono (`postgres`, com `rolbypassrls = true`) e a RLS das
+-- tabelas de baixo deixou de valer para quem le. Ninguem viu porque a suite media DEFINICAO de
+-- view e nunca mediu OPCAO de view. A M7 repoe a opcao; estas assercoes impedem a volta.
+-- ⚠️ E A EXCECAO E NOMINAL, com controle positivo proprio na assercao seguinte: a view de PII
+-- TEM de ser de dono — RLS nao recorta coluna, e o porteiro dela mora no `where`.
+select is_empty(
+  $$select n.nspname || '.' || c.relname
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname in ('public', 'app') and c.relkind in ('v', 'm')
+       and c.relname <> 'vw_instrutor_dados_pessoais'
+       and not coalesce(c.reloptions, '{}'::text[]) @> array['security_invoker=true']$$,
+  'toda view de `public` e de `app` roda com os direitos de QUEM LE — a unica sem a opcao e a de PII, nominalmente'
+);
+select ok(
+  (select not coalesce(c.reloptions, '{}'::text[]) @> array['security_invoker=true']
+          and pg_get_viewdef(c.oid, true) like '%app.pode(''instrutores''::text, ''ler''::text)%'
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'vw_instrutor_dados_pessoais'),
+  'PII-1 · `vw_instrutor_dados_pessoais` e de DONO de proposito, e por isso carrega o porteiro no proprio `where`'
 );
 
 select * from finish();

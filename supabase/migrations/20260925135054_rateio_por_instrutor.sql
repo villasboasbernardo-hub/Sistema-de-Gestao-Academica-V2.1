@@ -41,13 +41,20 @@
 --    drop function if exists public.definir_instrutores_da_turma(uuid, jsonb, jsonb);
 --    drop function if exists app.definir_instrutores_da_turma(uuid, jsonb, jsonb);
 --    alter table public.turma_disciplina_instrutor drop constraint tdi_ch_prevista_inteira;
+--    ⚠️ A VIEW VOLTA ANTES DA TABELA, e a ordem foi CORRIGIDA em 26/09/2026 depois de a T010
+--       executar o plano: a view NOVA le `turma_disciplina_unidade` (o caso 5), e por isso o
+--       `drop table` era recusado com *"cannot drop table ... because other objects depend on
+--       it"*. `drop ... cascade` levaria `vw_instrutor_carga_anual` embora — reversao que
+--       derruba objeto de outra fatia nao e reversao.
+--    recriar `vw_instrutor_carga_prevista` como estava — com o `with (security_invoker = true)`,
+--       porque `create or replace view` NAO preserva as reloptions (ver a M7,
+--       `20260926005750_ch_prevista_com_security_invoker.sql`). A definicao anterior, o comentario
+--       e os grants estao em `20260915084854_carga_prevista_por_instrutor.sql`;
 --    drop table if exists public.turma_disciplina_unidade;   -- so se vazia (regra 4)
 --    drop function if exists app.proximo_codigo_turma_disciplina_unidade();
 --    drop sequence if exists app.turma_disciplina_unidade_codigo_seq;
 --    alter table public.turma_disciplina drop constraint td_id_disciplina;
---    alter table public.unidades_ensino  drop constraint ue_id_disciplina;
---    e recriar `vw_instrutor_carga_prevista` como estava (a definicao anterior esta em
---    `20260915084854_carga_prevista_por_instrutor.sql`).
+--    alter table public.unidades_ensino  drop constraint ue_id_disciplina.
 -- =================================================================================
 
 -- ---------------------------------------------------------------------------------

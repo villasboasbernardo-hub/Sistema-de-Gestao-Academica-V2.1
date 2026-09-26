@@ -209,7 +209,11 @@ de turma, a confirmação e os filtros da fatia (a). Ver [tasks.md](./tasks.md).
 
 `PEND-5b-1` (D-B1 nos outros cadastros; rastro da RPC de instrutor) · `PEND-5b-2` (grafia das
 disciplinas × currículo, Q-13) · `PEND-5b-3` (APOC — fechada se R-3 confirmar; senão transcrição) ·
-`PEND-5b-5` (UEs da disciplina emprestada `C-Exp-Metoc-OF-SP IV`) · **novas da conferência** em
+`PEND-5b-5` (UEs da disciplina emprestada `C-Exp-Metoc-OF-SP IV`) · **`PEND-5b-6`** (a prova de
+COMPORTAMENTO do `security_invoker` da view de CH prevista: a invariante I-13 confere a **opção** no
+catálogo, que é o que pega o defeito da M5, mas não há caso lendo a view com sessão de alcance
+restrito e exigindo que ela **não** enxergue outro curso. Ela precisa de um usuário com alcance por
+curso, que só existe no PR 3 — **vai para a T033**) · **novas da conferência** em
 [research §R-4](./research.md) — códigos e CH dos cursos por competências, ambientação, MetocOf.
 
 ## Dúvidas do lote — ✅ TODAS RESPONDIDAS em 25/09/2026
