@@ -13,6 +13,22 @@
 --    os privilégios dos três papéis que a aplicação usa —, cada um reduzido a um md5 da definição.
 --
 -- ⚠️ SÓ `public` E `app`. `auth`, `storage` e o resto são da plataforma, e diferem por versão.
+--
+-- ⚠️ **O RETORNO DE CARRO (CR, \r) SAI ANTES DO md5, E ISSO NÃO É TOLERÂNCIA — É CORREÇÃO
+--    DE UM VEREDITO FALSO** *(medido em 26/09/2026, na aplicação da M7 da fatia (b))*. O corpo de
+--    função guardado no catálogo carrega o fim de linha com que o arquivo chegou àquele banco, e
+--    ele **difere entre os dois, nas duas direções**: medido no mesmo dia,
+--    `app.proximo_codigo_disciplina` tinha **2 CR no local e 0 no remoto** (81 × 79 caracteres), e
+--    `public.vigencias_do_curso` tinha **0 no local e 29 no remoto** (961 × 990). Descontado o CR,
+--    os dois lados são **idênticos caractere por caractere**. Sem este `replace`, sete funções
+--    apareciam divergentes e o resumo dava md5 diferente — **um "os bancos divergiram" que era fim
+--    de linha**, e o pior tipo de alarme falso: o que aparece exatamente quando alguém acabou de
+--    aplicar migration e vai acreditar nele.
+--    ⚠️ O checkout é Windows e os arquivos vivem em CRLF na cópia de trabalho; o caminho até o
+--    banco local (`db reset`, psql no contêiner) e até o remoto (`db push`, a CLI) não preservam o
+--    CR do mesmo jeito. CR não é comportamento, então não é estrutura.
+--    ⚠️ **E o valor do resumo MUDOU com esta correção** — comparar com um md5 anotado antes de
+--    26/09/2026 não vale; o que vale é medir os dois lados com a MESMA versão deste arquivo.
 -- =================================================================================
 with objetos(tipo, nome, definicao) as (
   -- colunas: tipo, nulidade e padrão
@@ -76,7 +92,9 @@ with objetos(tipo, nome, definicao) as (
    where n.nspname in ('public', 'app') and p.prokind in ('f', 'p')
 ),
 linhas as (
-  select tipo || '|' || nome || '|' || md5(coalesce(definicao, '')) as linha from objetos
+  -- ⚠️ `chr(13)` fora antes do md5 — ver a nota do cabeçalho. Fim de linha não é estrutura.
+  select tipo || '|' || nome || '|' || md5(replace(coalesce(definicao, ''), chr(13), '')) as linha
+    from objetos
 )
 select linha from linhas
 union all

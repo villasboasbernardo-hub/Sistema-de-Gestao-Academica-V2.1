@@ -166,15 +166,35 @@ citado aqui, `--dry-run` mostrando **só** ela, e conferência só por leitura d
 
 ### ✅ APLICADA no remoto em 26/09/2026 — o que foi medido
 
-**Backup, passo zero**: `[pendente]`
+**Backup, passo zero**: `remoto-20260925-223749.sql`, 1.614 KB, em
+`%LOCALAPPDATA%\ciaara-11\copias-do-remoto\` — fora do git, com dado pessoal.
 
 | O quê | Resultado |
 |---|---|
-| dry-run | `[pendente]` |
-| `pnpm db:push` | `[pendente]` |
-| migrations dos dois lados | `[pendente]` |
-| impressão digital do catálogo de `public` + `app` | `[pendente]` |
-| `reloptions` de `vw_instrutor_carga_prevista` no remoto | `[pendente]` |
-| a exceção nominal de PII, intacta | `[pendente]` |
-| dado de negócio | `[pendente]` |
-| Production | `[pendente]` |
+| dry-run | listou **só** `20260926005750_ch_prevista_com_security_invoker.sql` |
+| `pnpm db:push` | saiu **0**, uma migration aplicada |
+| migrations dos dois lados | **44 e 44**, nenhuma só de um |
+| impressão digital do catálogo de `public` + `app` | **`ec8079835946ca6e8aa88a719a6cf8e2`, 1.564 objetos** — **igual** nos dois, e o `diff` linha a linha vem **vazio** |
+| `reloptions` de `vw_instrutor_carga_prevista` no remoto | **`security_invoker=true`** — era `(nenhuma)` |
+| a exceção nominal de PII, intacta | `vw_instrutor_dados_pessoais` segue **sem** a opção, e é a **única** — as outras 12 views de `public` têm |
+| dado de negócio | **175** disciplinas · **210** `turma_disciplina` · **96** atribuições · 24 cursos · 28 turmas · 177 instrutores — **intactos**; `unidades_ensino`, `exclusoes_registradas` e `turma_disciplina_unidade` em **0**, como devem estar antes do PR 2 |
+| Production | `/` **307** → login · `/login` **200** · `/cursos` **307** · `/instrutores` **307** · `/disciplinas` **307** — sem erro novo |
+
+### ⚠️ A conferência da impressão digital acusou divergência, e a divergência era fim de linha
+
+Na primeira medição o resumo deu md5 **diferente** nos dois bancos, com **sete funções** divergentes.
+Medido em seguida, o motivo: o corpo guardado no catálogo carrega o **retorno de carro** com que o
+arquivo chegou àquele banco, e ele difere **nas duas direções** —
+`app.proximo_codigo_disciplina` tinha **2 CR no local e 0 no remoto** (81 × 79 caracteres), e
+`public.vigencias_do_curso`, da fatia (a), tinha **0 no local e 29 no remoto** (961 × 990).
+Descontado o CR, os dois lados são **idênticos caractere por caractere**.
+
+`scripts/provas/impressao_digital_do_esquema.sql` passou a tirar o CR **antes** do md5, com a razão
+no cabeçalho. ⚠️ **O valor do resumo mudou com isso**, então md5 anotado antes de 26/09/2026 não se
+compara com md5 de agora — o que vale é medir os dois lados com a **mesma versão** do arquivo.
+
+⚠️ **E isto corrige uma anotação desta própria página**: o `0462404a…` com **865 itens** de
+25/09/2026 **não saiu deste script** — ele mede **1.564** objetos, e a fatia (a) registrou **1.456**
+com ele em 22/09. Aquele número veio de uma consulta mais fraca, feita na hora, e por isso fechou.
+É exatamente o que a regra 9.2 do `CLAUDE.md` existe para impedir: **número sem o artefato nomeado
+ao lado**. A partir daqui, a impressão digital desta spec é a deste arquivo, e só ela.
