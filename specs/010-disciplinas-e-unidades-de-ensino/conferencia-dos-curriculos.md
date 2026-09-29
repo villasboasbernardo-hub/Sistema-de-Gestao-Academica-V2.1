@@ -92,11 +92,27 @@ que o banco diz. Tudo o que não é conforme está explicado em §4 com página.
 
 | Currículo | Página | Banco | Destino por UE | Veredito |
 |---|---|---|---|---|
-| `CAHO` · `XXI - MATFIS - NIVELAMENTO DE MATEMÁTICA E FÍSICA`, 56 h — **uma** disciplina | quadro p. 8; sumário p. 72–73 | `MAT` 28 + `FIS` 28 | UE 1 *EMPREGO DOS CONCEITOS DE MATEMÁTICA…* 28 → `20 - CAHO - MAT`; UE 2 *EMPREGO DOS CONHECIMENTOS DE FÍSICA…* 28 → `… - FIS` | **confirmado** (2 UEs, 28 + 28, 1 PM por UE) |
-| `C-Ap-HN` · `HN-2101-0621 MATEMÁTICA E FÍSICA APLICADAS À HIDROGRAFIA`, 126 h — **uma** disciplina, um sumário, um guia de estudos | quadro p. 6; sumário p. 8–9 | `I` 105 + `I-I` 21 | UEs 1–6 (48 + 21 + 11 + 7 + 3 + 15 = 105) → `41 - C-Ap-HN - I`; UE 7 *FÍSICA* 21 → `… - I-I` | **confirmado**; a UE 7 tem SUEs só de física (7.1–7.5) e PM própria, mas *"código, CH, objetivo, diretriz e guia são únicos — nada no PDF a chama de disciplina"* |
+| `CAHO` · `XXI - MATFIS - NIVELAMENTO DE MATEMÁTICA E FÍSICA`, 56 h — **uma** disciplina | quadro p. 8; sumário p. 72–73 | `MAT` 28 + `FIS` 28 | UE 1 *EMPREGO DOS CONCEITOS DE MATEMÁTICA…* 28 → `1 - CAHO - MAT`; UE 2 *EMPREGO DOS CONHECIMENTOS DE FÍSICA…* 28 → `2 - CAHO - FIS` | **confirmado** (2 UEs, 28 + 28, 1 PM por UE) |
+| `C-Ap-HN` · `HN-2101-0621 MATEMÁTICA E FÍSICA APLICADAS À HIDROGRAFIA`, 126 h — **uma** disciplina, um sumário, um guia de estudos | quadro p. 6; sumário p. 8–9 | `I` 105 + `I-I` 21 | UEs 1–6 (48 + 21 + 11 + 7 + 3 + 15 = 105) → `23 - C-Ap-HN - I`; UE 7 *FÍSICA* 21 → `24 - C-Ap-HN - I-I` | **confirmado**; a UE 7 tem SUEs só de física (7.1–7.5) e PM própria, mas *"código, CH, objetivo, diretriz e guia são únicos — nada no PDF a chama de disciplina"* |
 
 **A tabela da N-3 está confirmada com página → aceita** (decisão condicional de Bernardo, 24/09/2026).
 O desdobramento é **escolha do banco**, não do currículo; as duas linhas ficam (Q-05: sem fundir).
+
+⚠️ **OS QUATRO CÓDIGOS DE DESTINO ACIMA FORAM CORRIGIDOS EM 26/09/2026, e os quatro anteriores não
+existiam.** Esta tabela trazia `20 - CAHO - MAT`, `20 - CAHO - FIS`, `41 - C-Ap-HN - I` e
+`41 - C-Ap-HN - I-I`. Medido no retrato das disciplinas do remoto: os reais são
+**`1 - CAHO - MAT`** (28), **`2 - CAHO - FIS`** (28), **`23 - C-Ap-HN - I`** (105) e
+**`24 - C-Ap-HN - I-I`** (21) — o prefixo numérico é a linha do `ID_Grade` da v2.0, **um por
+disciplina**, e nunca se repete entre duas, o que por si já reprovava um `20 -` usado em duas.
+⚠️ **O que a segunda verificação confirmou com página foi QUAL UE VAI PARA QUAL DISCIPLINA** —
+MAT × FIS, `I` × `I-I` —, e isso continua de pé. A **grafia do código** era transcrição, e
+transcrição não foi medida. É a regra 9.2 outra vez: o número sem o artefato nomeado ao lado.
+⚠️ **E o erro chegou a produzir carga errada antes de ser pego**: a chave do desdobramento do `CAHO`
+foi escrita como o ordinal `XXI` (a posição no quadro) quando o extrator lê `MATFIS` (o `CÓDIGO:` do
+PDF); a exceção **nunca disparou** e as **duas** UEs foram para a linha de MATEMÁTICA, deixando
+`FIS` vazia. **Nenhuma contagem acusou** — o `CAHO` seguia com 132 UEs e o total com 587. As duas
+guardas de `gerar_pareamento_ue.py` nasceram daí: toda exceção declarada **tem** de casar
+exatamente uma disciplina, e todo código escrito à mão **tem** de existir no banco, naquele curso.
 
 ### 4.3 CH divergente entre banco e currículo — confirmadas (H1, B1, B2, D2, E1)
 

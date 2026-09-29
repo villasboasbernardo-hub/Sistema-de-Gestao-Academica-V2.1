@@ -58,10 +58,19 @@ select ok(
 );
 
 -- =========================================== FR-024 — a soma das UE fecha com a CH
--- Invariante conferida em 134 de 134 disciplinas na extracao dos curriculos.
--- PASSA VACUAMENTE enquanto a base estiver vazia — a carga e do Epico 2 — e passa DE
--- VERDADE quando o catalogo chegar. Esta escrita agora para que o dado ja encontre o
--- teste pronto, em vez de o teste ser escrito depois, contra o dado que ja entrou.
+-- Invariante conferida em 135 de 135 disciplinas na extracao dos curriculos.
+-- ⚠️ **ELA PASSAVA VACUAMENTE, E O CATALOGO CHEGOU EM 26/09/2026** (fatia (b), PR 2). Com
+--    `unidades_ensino` vazia, esta assercao so via a amostra de 3 UEs que ela mesma semeia
+--    logo abaixo: passava sem dizer nada sobre o catalogo real. Agora que as 587 UEs entram,
+--    ela passa a medir 138 disciplinas de verdade.
+-- ⚠️ **E FOI ESCOPADA PARA EXCLUIR AS QUATRO DECLARADAS**, senao reprovaria na base carregada:
+--    `44 - C-Ap-FR - III` (banco 76 x curriculo 75), `86 - C-Exp-MetocOf - I` (48 x 30),
+--    `90 - C-Exp-MetocOf - V` (40 x 50) e `150 - EST-QF-APOC - I` (79 x 80, divergencia
+--    INTERNA do PDF). As quatro estao confirmadas com pagina na
+--    `conferencia-dos-curriculos.md` §4.1 e §4.3, sao divergencia de CADASTRO e quem corrige e
+--    Bernardo, na tela (P-1, Q-06) — a carga nao toca CH de disciplina (Q-13).
+-- ⚠️ A lista nominal das quatro, e a assercao de que sao exatamente quatro, moram em
+--    `112_carga_unidades_ensino.sql`. Aqui elas saem da conta; la elas SAO a conta.
 insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, duracao_dias) values
   ('11111111-0000-0000-0000-0000000000e1', 'GRAO-A', 'Curso Grao', 'regular', 'presencial', 30);
 insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos) values
@@ -77,8 +86,10 @@ select is_empty(
       join public.unidades_ensino u on u.disciplina_id = d.id and u.status = 'ativo'
      where d.status = 'ativo'
      group by d.id, d.codigo, d.carga_horaria_tempos
-    having sum(u.ch_prevista_tempos) <> d.carga_horaria_tempos$$,
-  'FR-024 · para toda disciplina com unidades, a soma das CH das unidades e igual a CH da disciplina'
+    having sum(u.ch_prevista_tempos) <> d.carga_horaria_tempos
+       and d.codigo not in ('44 - C-Ap-FR - III', '86 - C-Exp-MetocOf - I',
+                            '90 - C-Exp-MetocOf - V', '150 - EST-QF-APOC - I')$$,
+  'FR-024 · para toda disciplina com unidades, a soma das CH das unidades e igual a CH da disciplina (fora as 4 declaradas em 112)'
 );
 
 -- ============================================== FR-025 — lacuna na numeracao e valida

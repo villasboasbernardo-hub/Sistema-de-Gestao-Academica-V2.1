@@ -56,8 +56,13 @@ sequências); `toda-tela-tem-caminho` (`/disciplinas` alcançável); regra de co
 ```
 python -m scripts.manutencao.provar_sequencias_apos_copia
 ```
-Espera-se: P1 reproduz o `23505` com as 6 sequências no início; P2 passa depois de `avancar_sequencias`;
-P3 conta **6 no banco, 6 declaradas**. Fecha Q-11 (a `DIS-` e a `UE-` entraram na lista única).
+Espera-se: P1 reproduz o `23505` com as 7 sequências no início; P2 passa depois de `avancar_sequencias`;
+P3 conta **7 no banco, 7 declaradas**. Fecha Q-11 (a `DIS-`, a `UE-` e a `TDU-` entraram na lista
+única). ⚠️ **Eram 6 quando este passo foi escrito**: a **A-1** criou `turma_disciplina_unidade`, e com
+ela a terceira sequência nova. Medido no `app` em 26/09/2026 — `curso_regime_historico`,
+`disciplinas`, `instrutor_disciplina`, `instrutores`, `turma_disciplina`, `turma_disciplina_unidade`,
+`unidades_ensino`. ⚠️ `turma_disciplina_instrutor` **não** entra: o código dela é **composto**
+(`<TDI-NNNNNN>#<código do instrutor>`) e não sai de sequência.
 
 ## Passo 5 — PR 2: a carga das UEs
 

@@ -169,7 +169,7 @@ agente** — o que os dois confirmaram entrou como *confirmada*, o resto como *i
 
 ## Entrega em três PRs — aprovada em 24/09/2026
 
-### PR 1 — banco (6 migrations, 15 tarefas)
+### PR 1 — banco (7 migrations, 16 linhas de tarefa: T001–T015 mais a T008.1)
 
 Ordem das migrations (M1..M6 acima); **M3 abre com a asserção I-3** (79/79 na junção) **antes** de
 aposentar. pgTAP `101`–`106`; RLS `disciplinas.test.ts` (operador é o caso que discrimina); Vitest de

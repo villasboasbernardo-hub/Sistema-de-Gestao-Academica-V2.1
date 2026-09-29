@@ -28,11 +28,24 @@ select throws_ok(
 select has_column('public', 'disciplinas', 'sem_unidades_ensino',
   'FR-063 · `disciplinas.sem_unidades_ensino` existe — as 5 AMBIENTACAO VIRTUAL dependem dela');
 
--- -- 4 — nenhum curso foi marcado aqui: quem marca e a carga do PR 2
-select is(
-  (select count(*)::int from public.cursos where curriculo_modelo <> 'unidades_de_ensino'),
-  0,
-  'FR-063 · esta migration nao marca curso nenhum — estrutura e dado sao PRs diferentes'
+-- -- 4 — quem e marcado por competencias, e a coerencia da marca
+-- ⚠️ **EMENDADA EM 26/09/2026, PORQUE A CARGA DO PR 2 CHEGOU.** A forma anterior exigia ZERO
+--    cursos marcados e dizia, no proprio texto, *"quem marca e a carga do PR 2"* — ela media o
+--    ESTADO daquele momento. Com `C-Espc-FR` e `C-Espc-HN` marcados ela passou a reprovar
+--    (`have: 2, want: 0`), e reprovava CERTO.
+--    A regra permanente e a COERENCIA da marca: curso por competencias **nao tem UE nenhuma**,
+--    e curso com UE **nao e** por competencias. Nesta forma ela vale nos dois estados da base e
+--    reprova no caso que interessa — um curso marcado por engano, ou uma UE carregada num curso
+--    por competencias, que e a contradicao que a D-B3 existe para impedir.
+--    A CONTAGEM (sao exatamente 2) mora em `112_carga_unidades_ensino.sql`, junto da carga que
+--    a produz. Regra dos valores esperados, caso (a).
+select is_empty(
+  $$select c.codigo, c.curriculo_modelo, count(u.id) as ues
+      from public.cursos c
+      left join public.unidades_ensino u on u.curso_id = c.id and u.status = 'ativo'
+     group by c.codigo, c.curriculo_modelo
+    having c.curriculo_modelo = 'competencias' and count(u.id) > 0$$,
+  'FR-063 / D-B3 · nenhum curso por competencias tem UE — a marca e coerente com o dado'
 );
 
 -- -- 5 e 6 — o parametro do aviso de inicio proximo
