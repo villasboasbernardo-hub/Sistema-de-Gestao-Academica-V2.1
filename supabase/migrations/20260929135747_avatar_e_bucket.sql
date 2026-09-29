@@ -1,5 +1,6 @@
 -- =================================================================================
--- M1 da spec 011 — a foto do avatar: a coluna, o bucket e as quatro policies
+-- M1 da spec 011 — a foto do avatar: a coluna, o bucket e TRES policies
+-- (eram quatro no rascunho; a de DELETE saiu — o porque esta escrito adiante, junto das policies)
 --
 -- O QUE  : (1) `usuarios.avatar_caminho`; (2) o bucket privado `avatares`, com o limite de
 --          2 MB e os dois tipos aceitos NA PROPRIA DEFINICAO; (3) TRES policies em
@@ -23,7 +24,7 @@
 --
 -- ⚠️ HOJE `storage.objects` TEM RLS LIGADA E **ZERO** POLICIES — medido antes desta migration.
 --    Tabela sem policy e inacessivel, e isso e intencional no projeto. Esta e a PRIMEIRA vez
---    que algo entra ali, e por isso as quatro sao restritas ao bucket `avatares`: uma policy
+--    que algo entra ali, e por isso as TRES sao restritas ao bucket `avatares`: uma policy
 --    sem o filtro de bucket abriria o Storage inteiro para o resto do sistema.
 --
 -- ⚠️ O CAMINHO DO ARQUIVO CARREGA O DONO, e e isso que torna a policy de escrita decidivel sem
@@ -88,7 +89,7 @@ create policy avatares_ler
     )
   );
 
--- ESCREVER, TROCAR e REMOVER: so o dono.
+-- ESCREVER e TROCAR: so o dono. (REMOVER nao tem policy — o porque esta no fim desta parte.)
 -- ⚠️ Nem o Admin escreve a foto de outra pessoa. Editar cadastro alheio e uma coisa; trocar a
 --    imagem que representa outra pessoa e outra, e ninguem pediu a segunda.
 create policy avatares_escrever

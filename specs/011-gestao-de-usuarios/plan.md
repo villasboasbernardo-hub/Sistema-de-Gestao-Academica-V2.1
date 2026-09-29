@@ -63,7 +63,7 @@ O que destrava o teste da fatia (b). **Uma migration** (a coluna do avatar, o bu
    o teste que compara a lista com o enum gerado, para não envelhecer.
 4. O menu do avatar no cabeçalho, ligando a `encerrarSessao()` **que já existe**.
 5. `/perfil` e `/perfil/senha`, com os caminhos clicáveis.
-6. M1 — `usuarios.avatar_caminho`, bucket `avatares` e as quatro policies.
+6. M1 — `usuarios.avatar_caminho`, bucket `avatares` e **três** policies. ⚠️ **Eram quatro neste plano, e a quarta era de `DELETE`.** Ela foi removida na implementação, em 29/09/2026: a asserção 13 de `supabase/tests/107_exclusao_com_rastro.sql`, que codifica a **regra 4**, conta policies de `DELETE` em **todo** o catálogo, sem filtro de schema — e reprovou. A guarda **não** foi emendada; a policy é que saiu, e `removerFoto` passou a **anular a coluna** sem chamar `remove()`. Se `storage.objects` deve ou não ser exceção à regra 4 é a pendência **STORAGE-1**, de Bernardo.
 
 **Merge quando**: `verificar:tudo` verde, M1 no remoto com backup, e a conferência de Bernardo.
 
