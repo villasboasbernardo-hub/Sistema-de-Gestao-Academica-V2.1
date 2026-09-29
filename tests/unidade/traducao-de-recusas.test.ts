@@ -161,13 +161,36 @@ describe("`FR-042` · cada linha do contrato §2 vira a mensagem de negócio del
       }
     });
 
-    it("campo que a pessoa digita: continua mandando escolher outro", () => {
+    it("⚠️ campo que a pessoa DIGITA: continua mandando escolher outro", () => {
+      /*
+       * ⚠️ **A AMOSTRA MUDOU EM 29/09/2026, e a antiga estava errada.** Este caso usava
+       * `disciplinas_codigo_key` como exemplo de "campo que a pessoa digita" — e `disciplinas.codigo`
+       * é **gerado pelo sistema** (`DIS-000123`, `DEFAULT app.proximo_codigo_*`). Enquanto a chave
+       * não estava traduzida, ela caía na frase genérica e mandava a pessoa **escolher outro valor
+       * que ela não escolhe**, que é exatamente o modo de falha do gotcha 9.
+       *
+       * O campo digitado é `cod_disciplina`, guardado por `uq_disciplinas_curso_cod_ativo` — índice
+       * único PARCIAL, `where status = 'ativo'`. É ele que faz a `Q-04` valer: desativar libera o
+       * código.
+       */
+      const mensagem = traduzirRecusa(
+        erro("23505", {
+          message:
+            'duplicate key value violates unique constraint "uq_disciplinas_curso_cod_ativo"',
+        }),
+      );
+      expect(mensagem).toContain("escolha outro");
+      expect(mensagem).not.toContain("Erro interno de numeração");
+    });
+
+    it("⚠️ e `disciplinas_codigo_key` passou para o lado da NUMERAÇÃO, onde sempre pertenceu", () => {
       const mensagem = traduzirRecusa(
         erro("23505", {
           message: 'duplicate key value violates unique constraint "disciplinas_codigo_key"',
         }),
       );
-      expect(mensagem).toBe("Já existe um registro com este valor. Escolha outro.");
+      expect(mensagem).toContain("Erro interno de numeração");
+      expect(mensagem).not.toContain("Escolha outro");
     });
 
     it("⚠️ e a colisão SEM constraint reconhecida continua na frase genérica", () => {

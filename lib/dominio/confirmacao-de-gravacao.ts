@@ -26,7 +26,14 @@
 
 import { mensagemDoDialogo, type AnoAcimaDoLimite } from "./limite-de-turmas";
 
-/** As 11 escritas da fatia — as mesmas do contrato de escritas §1. A lista é fechada. */
+/**
+ * As escritas que passam por aqui — as mesmas do contrato de escritas §1. A lista é **fechada**.
+ *
+ * ⚠️ **ERAM 11 E PASSARAM A 18 em 29/09/2026**, com a fatia (b) das disciplinas. As sete novas são
+ * todas do mesmo tipo: **difíceis de desfazer**. Excluir é permanente; desativar registro com
+ * histórico tira da vista algo que continua existindo; e mexer em CH, em modo de atribuição ou em
+ * instrutor com aula **recalcula a carga horária de gente** — que sai impressa na LIQ.
+ */
 export const TIPOS_DE_GRAVACAO = [
   "criar_curso",
   "editar_curso",
@@ -39,6 +46,14 @@ export const TIPOS_DE_GRAVACAO = [
   "acrescentar_sala",
   "desativar_sala",
   "reativar_sala",
+  // ── Fatia (b) do Épico 5, 29/09/2026 — disciplinas e unidades de ensino ──────────────────────
+  "excluir_disciplina",
+  "excluir_unidade_ensino",
+  "desativar_disciplina_com_historico",
+  "desativar_unidade_com_historico",
+  "alterar_ch_com_rateio",
+  "alterar_modo_com_instrutores",
+  "remover_instrutor_com_aula",
 ] as const;
 
 export type TipoDeGravacao = (typeof TIPOS_DE_GRAVACAO)[number];
@@ -75,6 +90,26 @@ export type ContextoDaGravacao = {
   /** Sala: o nome e as turmas que a referenciam. Vazio = não está em uso. */
   readonly sala?: string;
   readonly turmasQueUsamASala?: readonly string[];
+
+  // ── Fatia (b) — disciplinas e unidades de ensino ─────────────────────────────────────────────
+  /** O nome do que está sendo mexido, para o diálogo nomeá-lo. */
+  readonly nome?: string;
+  /** O código digitável, quando a confirmação exige digitá-lo (`FR-021`). */
+  readonly codigo?: string;
+  /** Quantas turmas usam a disciplina — o que a desativação tira da vista. */
+  readonly turmasQueUsam?: number;
+  /** Quantas UEs a disciplina tem, quando a desativação as arrasta junto. */
+  readonly unidadesAtivas?: number;
+  /** CH antiga e nova, quando a mudança refaz o rateio. */
+  readonly chAntiga?: number;
+  readonly chNova?: number;
+  /** Modo antigo e novo, quando a mudança refaz o rateio. */
+  readonly modoAntigo?: string;
+  readonly modoNovo?: string;
+  /** Quantos instrutores têm a CH recalculada pela mudança. */
+  readonly instrutoresAfetados?: number;
+  /** Quantas aulas o instrutor que se quer remover já lançou nesta turma-disciplina. */
+  readonly aulasLancadas?: number;
 };
 
 export type Confirmacao =
@@ -239,6 +274,123 @@ export function confirmacaoDaGravacao(
           "Elas continuam com a sala registrada; ela apenas deixa de aparecer para turmas novas.",
         ],
         rotuloConfirmar: "Desativar",
+      };
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    // Fatia (b) — disciplinas e unidades de ensino (`FR-015`, `FR-022`, `FR-063`, D-B1, D-B3)
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+
+    // ⚠️ **AS DUAS EXCLUSÕES SÃO AS ÚNICAS IRREVERSÍVEIS DO SISTEMA INTEIRO**, e por isso são as
+    //    únicas que pedem o **código digitado** além do clique. Tudo o mais que confirma aqui é
+    //    desfazível; estas não.
+    case "excluir_disciplina":
+    case "excluir_unidade_ensino": {
+      const eDisciplina = tipo === "excluir_disciplina";
+      const oQue = eDisciplina ? "a disciplina" : "a unidade de ensino";
+      const nome = contexto.nome ?? (eDisciplina ? "esta disciplina" : "esta unidade");
+      const mensagens = [
+        `Excluir ${oQue} ${nome} é PERMANENTE: a linha sai do banco e não há como desfazer.`,
+        "Fica um rastro de quem excluiu, o quê e quando — mas o registro não volta.",
+      ];
+      if (eDisciplina && (contexto.unidadesAtivas ?? 0) > 0) {
+        // Não deveria acontecer: a UE é impedimento. A frase existe para o dia em que a ordem
+        // mudar e alguém ver o aviso antes de a recusa do banco chegar.
+        mensagens.push(
+          `Esta disciplina tem ${contexto.unidadesAtivas} unidade(s) de ensino — o banco vai recusar.`,
+        );
+      }
+      if (contexto.codigo) {
+        mensagens.push(`Para confirmar, digite o código ${contexto.codigo}.`);
+      }
+      return { confirma: true, titulo: `Excluir ${nome}?`, mensagens, rotuloConfirmar: "Excluir" };
+    }
+
+    // ⚠️ **DESATIVAR SÓ CONFIRMA QUANDO HÁ HISTÓRICO.** Desativar um cadastro criado hoje, sem turma
+    //    nenhuma, é desfazível e barato — confirmar ali é o clique a mais que o A-9 decidiu evitar.
+    case "desativar_disciplina_com_historico": {
+      const turmas = contexto.turmasQueUsam ?? 0;
+      if (turmas === 0) return NAO;
+      const nome = contexto.nome ?? "esta disciplina";
+      return {
+        confirma: true,
+        titulo: `Desativar ${nome}?`,
+        mensagens: [
+          `${nome} está em ${turmas} turma(s). Elas continuam com a disciplina e com o que já foi ` +
+            `lançado — nada é apagado.`,
+          "Ela deixa de aparecer para atribuição nova e para turmas novas. A desativação é reversível.",
+        ],
+        rotuloConfirmar: "Desativar",
+      };
+    }
+
+    case "desativar_unidade_com_historico": {
+      const aulas = contexto.aulasLancadas ?? 0;
+      if (aulas === 0) return NAO;
+      const nome = contexto.nome ?? "esta unidade";
+      return {
+        confirma: true,
+        titulo: `Desativar ${nome}?`,
+        mensagens: [
+          `${nome} já tem ${aulas} aula(s) lançada(s). Elas continuam apontando para ela — nada é apagado.`,
+          "Ela sai da soma da carga horária da disciplina e deixa de aparecer para lançamento novo.",
+        ],
+        rotuloConfirmar: "Desativar",
+      };
+    }
+
+    // ⚠️ **AS TRÊS ABAIXO CONFIRMAM PORQUE RECALCULAM A CH DE GENTE**, e a CH do instrutor sai
+    //    impressa na LIQ e na ficha de docentes. Quem muda a CH de uma disciplina raramente pensa
+    //    que está mexendo na carga de três pessoas — o diálogo existe para dizer isso **antes**.
+    case "alterar_ch_com_rateio": {
+      const afetados = contexto.instrutoresAfetados ?? 0;
+      if (afetados === 0) return NAO;
+      const { chAntiga, chNova } = contexto;
+      const mudanca =
+        chAntiga !== undefined && chNova !== undefined
+          ? `de ${chAntiga} para ${chNova} tempos`
+          : "da carga horária";
+      return {
+        confirma: true,
+        titulo: "Alterar a carga horária desta disciplina?",
+        mensagens: [
+          `A mudança ${mudanca} refaz o rateio de ${afetados} instrutor(es) nas turmas em que ela está.`,
+          "A carga horária prevista de cada um é recalculada — ela sai impressa na LIQ e na ficha de docentes.",
+        ],
+        rotuloConfirmar: "Alterar",
+      };
+    }
+
+    case "alterar_modo_com_instrutores": {
+      const afetados = contexto.instrutoresAfetados ?? 0;
+      if (afetados === 0) return NAO;
+      const { modoAntigo, modoNovo } = contexto;
+      const mudanca =
+        modoAntigo && modoNovo ? `de ${modoAntigo} para ${modoNovo}` : "do modo de atribuição";
+      return {
+        confirma: true,
+        titulo: "Alterar o modo de atribuição?",
+        mensagens: [
+          `A mudança ${mudanca} refaz o rateio de ${afetados} instrutor(es).`,
+          "No modo simultâneo cada instrutor acumula a carga horária INTEGRAL; no dividido, eles a repartem.",
+        ],
+        rotuloConfirmar: "Alterar",
+      };
+    }
+
+    case "remover_instrutor_com_aula": {
+      const aulas = contexto.aulasLancadas ?? 0;
+      if (aulas === 0) return NAO;
+      const nome = contexto.nome ?? "este instrutor";
+      return {
+        confirma: true,
+        titulo: `Remover ${nome} desta disciplina?`,
+        mensagens: [
+          `${nome} já lançou ${aulas} aula(s) nesta turma. As aulas continuam registradas em nome ` +
+            `dele — nada é apagado.`,
+          "O que muda é a carga horária PREVISTA: ela é redistribuída entre quem ficar.",
+        ],
+        rotuloConfirmar: "Remover",
       };
     }
 
