@@ -32,6 +32,7 @@
 "use client";
 
 import * as React from "react";
+import { Fragment } from "react";
 import { cn } from "cn";
 import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon, SearchIcon } from "lucide-react";
 
@@ -104,6 +105,28 @@ export type TabelaDensaProps<T> = {
   /** O filtro textual, vindo de fora. Mesma regra: a presença decide quem manda. */
   readonly busca?: string;
   readonly aoBuscar?: (proxima: string) => void;
+
+  /**
+   * O detalhe de uma linha expandida (fatia (b) do Épico 5, 29/09/2026).
+   *
+   * ⚠️ **ELE ENTROU AQUI EM VEZ DE NUMA SEGUNDA TABELA, e a decisão tem custo conhecido.** A grade de
+   * disciplinas precisa de linha expansível; a alternativa era `tabela-com-detalhe.tsx`, que herdaria
+   * **por cópia** a navegação por teclado, a ordenação, o estado vazio que distingue *"não há"* de
+   * *"você não vê"* e a densidade. A terceira cópia de um componente é o terceiro a divergir — foi o
+   * que a decisão do botão *Limpar filtros* já resolveu noutro lugar.
+   *
+   * ⚠️ **QUEM ESTÁ ABERTA VEM DE FORA**, em `abertas`, porque na tela de disciplinas isso mora na
+   * **URL** (`FR-001`): o endereço da vista tem de reabrir a mesma linha. Estado interno aqui daria
+   * um link que abre a tabela fechada.
+   *
+   * ⚠️ **A LINHA DE DETALHE NÃO ENTRA NA GRADE NAVEGÁVEL.** Ela é um `tr` com um `td` de
+   * `colSpan`, fora da numeração de células: pôr conteúdo interativo dentro da grade quebraria a
+   * primeira frase do contrato de teclado — *"`Tab` entra na grade e sai dela em um passo"* —, que é
+   * exatamente o defeito que o cabeçalho ordenável produziu na fatia (b) do Épico 4.
+   */
+  readonly detalhe?: (linha: T) => React.ReactNode;
+  /** As chaves das linhas expandidas. Vazio = nenhuma. */
+  readonly abertas?: readonly string[];
 };
 
 const ALINHAMENTO = {
@@ -133,6 +156,8 @@ export function TabelaDensa<T>(props: TabelaDensaProps<T>) {
     aoAtivarLinha,
     motivoDoVazio = "sem-dado",
     className,
+    detalhe,
+    abertas,
   } = props;
 
   /*
@@ -327,35 +352,54 @@ export function TabelaDensa<T>(props: TabelaDensaProps<T>) {
               </tr>
             </thead>
             <tbody>
-              {visiveis.map((linha, indiceLinha) => (
-                <tr
-                  key={chaveLinha(linha)}
-                  className={cn(
-                    "border-borda hover:bg-muted/50 border-b",
-                    ALTURA_DA_LINHA[densidade],
-                  )}
-                >
-                  {colunas.map((coluna, indiceColuna) => (
-                    /* ⚠️ `+ 1`: a linha 0 é o cabeçalho, e é ele que torna a grade um único ponto
-                       de parada na ordem de tabulação. */
-                    <CelulaNavegavel
-                      key={coluna.chave}
-                      linha={indiceLinha + 1}
-                      coluna={indiceColuna}
+              {visiveis.map((linha, indiceLinha) => {
+                const chave = chaveLinha(linha);
+                const expandida = detalhe !== undefined && (abertas ?? []).includes(chave);
+                return (
+                  <Fragment key={chave}>
+                    <tr
+                      className={cn(
+                        "border-borda hover:bg-muted/50 border-b",
+                        ALTURA_DA_LINHA[densidade],
+                      )}
+                      aria-expanded={detalhe === undefined ? undefined : expandida}
                     >
-                      <td
-                        className={cn(
-                          "px-2 py-1 align-middle whitespace-nowrap",
-                          alinhamentoDe(coluna),
-                          coluna.numerica && "tabular-nums",
-                        )}
+                      {colunas.map((coluna, indiceColuna) => (
+                        /* ⚠️ `+ 1`: a linha 0 é o cabeçalho, e é ele que torna a grade um único ponto
+                           de parada na ordem de tabulação. */
+                        <CelulaNavegavel
+                          key={coluna.chave}
+                          linha={indiceLinha + 1}
+                          coluna={indiceColuna}
+                        >
+                          <td
+                            className={cn(
+                              "px-2 py-1 align-middle whitespace-nowrap",
+                              alinhamentoDe(coluna),
+                              coluna.numerica && "tabular-nums",
+                            )}
+                          >
+                            {coluna.celula(linha)}
+                          </td>
+                        </CelulaNavegavel>
+                      ))}
+                    </tr>
+
+                    {/* ⚠️ FORA DA GRADE NAVEGÁVEL — ver a propriedade `detalhe`. O `td` ocupa a
+                        largura inteira e o conteúdo dele é uma região com nome próprio. */}
+                    {expandida ? (
+                      <tr
+                        className="border-borda bg-superficie-2 border-b"
+                        data-slot="detalhe-da-linha"
                       >
-                        {coluna.celula(linha)}
-                      </td>
-                    </CelulaNavegavel>
-                  ))}
-                </tr>
-              ))}
+                        <td colSpan={colunas.length} className="px-2 py-3 align-top">
+                          {detalhe(linha)}
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         )}

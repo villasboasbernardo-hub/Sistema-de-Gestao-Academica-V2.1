@@ -169,6 +169,23 @@ export default async function FichaDaTurma({ params }: { params: Promise<{ turma
             </Link>
           </p>
         ) : null}
+
+        {/*
+          ⚠️ **O CAMINHO CLICÁVEL PARA A GRADE DE DISCIPLINAS DESTA TURMA** (fatia (b), 29/09/2026).
+             Ele leva com curso e turma já escolhidos — que é o percurso de quem está na ficha da
+             turma e quer ver o período e os instrutores de cada disciplina dela.
+        */}
+        {sigla ? (
+          <p className="text-sm">
+            <Link
+              href={`/disciplinas?curso=${encodeURIComponent(sigla)}&turma=${encodeURIComponent(turma.codigo as string)}`}
+              className="text-marca underline-offset-2 hover:underline"
+              data-slot="ir-para-disciplinas"
+            >
+              Ver as disciplinas desta turma
+            </Link>
+          </p>
+        ) : null}
       </header>
 
       <QuadroDeAvisosDaTurma avisos={avisos} />
