@@ -588,7 +588,8 @@ describe("`PEND-5b-6` · a view da CH prevista respeita o ALCANCE, e isso é com
       perfil: "operador",
       escopo_curso: CLASSIFICACAO_DO_ESCOPO,
     });
-    if (erroCadastro) throw new Error(`falha ao cadastrar a conta restrita: ${erroCadastro.message}`);
+    if (erroCadastro)
+      throw new Error(`falha ao cadastrar a conta restrita: ${erroCadastro.message}`);
 
     sessaoRestrita = createClient(URL_SUPABASE, CHAVE_ANON, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -636,7 +637,9 @@ describe("`PEND-5b-6` · a view da CH prevista respeita o ALCANCE, e isso é com
       .select("id")
       .eq("classificacao", CLASSIFICACAO_DE_FORA);
     const idsDeFora = new Set((deFora ?? []).map((c) => (c as { id: string }).id));
-    expect(idsDeFora.size, "não há curso fora do escopo na base — nada a provar").toBeGreaterThan(0);
+    expect(idsDeFora.size, "não há curso fora do escopo na base — nada a provar").toBeGreaterThan(
+      0,
+    );
 
     const { data, error } = await sessaoRestrita
       .from("vw_instrutor_carga_prevista")
