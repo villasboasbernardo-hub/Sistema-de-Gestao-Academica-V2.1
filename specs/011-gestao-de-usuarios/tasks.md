@@ -1,0 +1,125 @@
+# Tasks: Gestão de usuários — spec 011
+
+**Ramo**: `feat/EPICO-3-gestao-de-usuarios` · **Plano**: [plan.md](./plan.md) · **29/09/2026**
+
+**Leia antes**: [`estado-atual.md`](./estado-atual.md). Muita coisa desta fatia é **ligar o que já
+existe**, não escrever — e a tarefa que diz "escrever" o que está pronto é tarefa perdida.
+
+---
+
+## Como estas tarefas são escritas
+
+- **Tarefa é entrega verificável**, não micro-passo. "Escrever o arquivo X" não é tarefa; "a pessoa
+  sai pelo menu e volta à entrada, provado por clique" é.
+- **O teste vem junto da tarefa que ele prova**, com o **caso que discrimina** — aquele cujo veredito
+  vira. Teste que dá o mesmo resultado antes e depois não testa a mudança.
+- **Permissão se prova em `tests/invariantes/rls/`, com sessão real, e nunca em pgTAP** — que roda
+  como dono do schema, onde a RLS não se aplica.
+- **Toda migration vai ao remoto ANTES do merge do seu PR**, com backup por
+  `dado_do_remoto --somente-copia` e o arquivo datado citado.
+- **e2e chega por clique**, com `goto` só no ponto de partida.
+- 👤 marca tarefa que é de Bernardo.
+
+**Os três PRs**: **PR 1** — sair, avatar e o próprio cadastro (T001–T014) · **PR 2** — o Admin sobre
+outras contas (T015–T025) · **PR 3** — reativar e excluir (T026–T036).
+
+---
+
+# PR 1 — Sair, o avatar e o próprio cadastro
+
+**US1, US2, US3.** É o que destrava o teste da fatia (b): sem sair, não se testa com mais de uma
+pessoa. **Uma migration.**
+
+## Fase 1 — O domínio puro, antes de qualquer tela
+
+- [ ] T001 [PR1] Conferir o ponto de partida e **registrar os números na tarefa**: ramo nascido da `main` em `de1f1ac`, `pnpm verificar:tudo` saindo **0** com as contagens do dia, `storage.buckets` **vazia** e `storage.objects` com **zero** policies — é o retrato de antes, e sem ele "passou a ter quatro policies" não quer dizer nada (quickstart passo 0)
+- [ ] T002 [PR1] [P] [US2] Escrever `lib/dominio/iniciais-do-nome.ts` — **com** o Vitest: nome de duas palavras dá duas iniciais; **uma palavra dá UMA**, não a primeira letra repetida; preposição (`de`, `da`, `dos`, `e`) **não conta**, então *"Maria de Souza"* dá `MS` e não `MD`; nome vazio ou só espaço devolve vazio sem estourar; e o **caso que discrimina** — *"Ana"* e *"Ana Paula"* produzem coisas **diferentes**, senão a regra é só "primeira letra" (`FR-010`, `FR-011`)
+- [ ] T003 [PR1] [P] [US1] Escrever `lib/dominio/perfis.ts` — os **nove** em português, **agrupados por divisão** (CIAARA-10, CIAARA-11, CIAARA-12, operação e técnico) — **com** o Vitest que compara a lista com `Constants.public.Enums.perfil_usuario` do contrato gerado e **reprova se divergir nos dois sentidos**: perfil no enum e fora da lista, e perfil na lista e fora do enum. ⚠️ **A segunda metade é a que envelhece sem ela**: um perfil removido do enum ficaria traduzido para sempre (`FR-005`, `FR-040.1`, D-1)
+- [ ] T004 [PR1] [P] [US3] Escrever `lib/dominio/politica-de-senha.ts` — o que é senha aceitável **e a frase que explica a regra** — **com** o Vitest: 11 caracteres recusado, 12 aceito, e a explicação **não vazia** para o caso recusado. ⚠️ O mínimo é o **da plataforma**, já provado por `tests/invariantes/rls/politica-de-senha.test.ts`; este módulo existe para a tela **dizer a regra antes de errar**, não para substituir aquela prova (`FR-031`, `FR-032`)
+
+## Fase 2 — O banco, e o que ele passa a recusar sozinho
+
+- [ ] T005 [PR1] [US2] Escrever `supabase/migrations/<ts>_avatar_e_bucket.sql` — `usuarios.avatar_caminho text`; o bucket `avatares` em `storage.buckets` com `public = false`, `file_size_limit = 2097152` e `allowed_mime_types = {image/jpeg,image/png}`; e as **quatro** policies em `storage.objects`, todas restritas a esse bucket, com a escrita comparando a **primeira pasta do caminho** com `auth.uid()` — **com** `supabase/tests/113_avatar_e_bucket.sql`: o bucket é privado, tem o limite e os dois tipos; `storage.objects` passa de **zero** para **exatamente quatro** policies; e `usuarios` **não** ganhou nenhuma outra coluna. ⚠️ **O limite no bucket é o que torna a recusa do servidor ESTRUTURAL** — ela sobrevive a alguém apagar a conferência do código (`FR-012`, `FR-013`, I-4, I-5, R-3) ⛓ T001
+- [ ] T006 [PR1] [US2] Escrever `tests/invariantes/rls/avatar-no-storage.test.ts`, com **sessão real**: o dono envia no **próprio** caminho e consegue; o dono tenta enviar no caminho de **outra conta** e é recusado; quem pode ler aquele cadastro **lê** a foto; e o **caso que discrimina** — arquivo de **3 MB** e arquivo `image/gif` são recusados **pelo motor**, com a conferência do código fora do caminho. ⚠️ **Prova de permissão nunca em pgTAP** (`FR-013`, `FR-015`, SC-009) ⛓ T005
+
+## Fase 3 — Sair, que é o que motivou a fatia
+
+- [ ] T007 [PR1] [US1] Acrescentar `components/ui/avatar.tsx` e `components/ui/dropdown-menu.tsx`, copiados no padrão shadcn e versionados, e pôr o **menu do avatar** em `components/casca/cabecalho-do-app.tsx`, com a identificação (nome e e-mail), *Meu perfil* e *Sair* — ligando a `encerrarSessao()` de `lib/acoes/sessao.ts`, **que já existe e nunca teve consumidor** — **com** `tests/e2e/sair-e-perfil.spec.ts`: entrar, clicar no avatar, *Sair*, chegar à entrada, e **entrar com outra conta**, tudo **por clique**, com `goto` só no ponto de partida; e o **caso que discrimina** — depois de sair, o endereço de uma tela do sistema leva à **entrada**, não à tela. ⚠️ **Zero dependência nova**: os dois primitivos saem do pacote `radix-ui` já instalado (medido em R-2), e o teste de dependências existente **reprova** se um pacote entrar (`FR-001` a `FR-004`, US1, SC-001) ⛓ T003
+- [ ] T008 [PR1] [US1] Pôr o **perfil em português** em toda tela que o mostra — cabeçalho, menu, `/perfil` e `/admin/usuarios` —, por **um** módulo, nunca por três cópias — **com** a varredura que reprova se o valor cru do enum (`encarregado_administracao_academica` e os outros oito) aparecer em qualquer `app/**` ou `components/**` fora do módulo de tradução. ⚠️ **A varredura lê código SEM comentário** (regra 9.1.1): o cabeçalho desta fatia fala dos perfis para explicar a tradução, e contar a menção como uso ensinaria a apagar a documentação (`FR-005`, SC-002) ⛓ T003
+
+## Fase 4 — O próprio cadastro
+
+- [ ] T009 [PR1] [US2] Criar `app/(app)/perfil/page.tsx` e as folhas de cliente, declarar `/perfil` em `lib/navegacao/contrato.ts`, e escrever `lib/acoes/perfil.ts` com `editarProprioCadastro`, `enviarFoto` e `removerFoto` (`safeParse` do Zod na primeira linha; **sem** a chave privilegiada — a policy já deixa o próprio editar a própria linha e o bucket decide pelo caminho) — **com** o e2e **por clique** a partir do menu do avatar: trocar o **nome de exibição** e vê-lo no cabeçalho; enviar foto e vê-la no avatar; remover e ver **as iniciais** de volta; e `tests/unidade/toda-tela-tem-caminho.test.ts` **verde** com a rota nova. ⚠️ **O e-mail e o perfil aparecem somente para leitura, com a razão escrita** (`FR-014`, `FR-020` a `FR-023`, US2) ⛓ T002, T005, T007
+- [ ] T010 [PR1] [US3] Criar `app/(app)/perfil/senha/page.tsx` — **a tela única** de senha nova, no modo **voluntário** — e `trocarPropriaSenha` em `lib/acoes/perfil.ts` — **com** o e2e: trocar a senha, sair, entrar com a **nova**; e os **dois casos que discriminam** — senha curta é recusada **com a frase da regra**, não com "inválida", e as duas digitações diferentes são recusadas **antes** de qualquer envio. ⚠️ **A mesma tela serve ao modo obrigatório do PR 2** — construir duas seria construir duas (`FR-030` a `FR-032`, US3) ⛓ T004, T009
+
+## Fase 5 — Fechamento do PR 1
+
+- [ ] T011 [PR1] `pnpm db:tipos` e `pnpm db:tipos:conferir` saindo 0, com `usuarios.Insert.avatar_caminho` **opcional** (é coluna anulável, não tem `DEFAULT` nem gatilho — a conferência barata do gotcha 5.2); a carga do ETL **continua passando** por cima da migration; e `pnpm verificar:tudo` saindo **0** na porta **3100**, com o **CI dando o mesmo veredito sobre o mesmo commit**, contagem a contagem (`SC-005` da spec 009) ⛓ T006, T008, T010
+- [ ] T012 [PR1] 👤 **Backup e aplicação no remoto, antes do merge**: `python -m scripts.manutencao.dado_do_remoto --somente-copia` com o arquivo datado **citado no PR**; `supabase db push --linked --dry-run` mostrando **só** a migration deste PR; `pnpm db:push` **só com autorização nominal de Bernardo**, depois do CI verde. Conferir **só por leitura**: migrations dos dois lados iguais, o bucket privado com o limite e os dois tipos, `storage.objects` com as quatro policies, **zero linhas de `usuarios` alteradas** (impressão digital do conteúdo antes e depois), e Production sem erro novo (AMBIENTE-1) ⛓ T011
+- [ ] T013 [PR1] Atualizar *Estado atual e onde retomar* do `CLAUDE.md` com o PR 1 desta fatia, os números medidos, e **o achado que motivou a fatia**: `encerrarSessao()` existia desde o Épico 3 sem um único consumidor. Registrar também as **três divergências entre comentário e código** de `estado-atual.md` §3, que esta fatia **não** corrige ⛓ T012
+- [ ] T014 [PR1] 👤 **Conferência de Bernardo** — roteiro curto, local e preview, com o resultado esperado ao lado de cada passo: **(1)** entrar, clicar no avatar, *Sair*, e **entrar com outra conta**; **(2)** trocar o nome de exibição e vê-lo no cabeçalho; **(3)** enviar uma foto e vê-la; **(4)** remover e ver as iniciais; **(5)** tentar uma foto de 3 MB → recusada; **(6)** trocar a própria senha e entrar com ela. E **abrir o PR 1** depois do "de acordo" ⛓ T013
+
+**Critério de merge do PR 1**: T011 verde, T012 aplicada e conferida, T014 com o "de acordo".
+
+---
+
+# PR 2 — O Admin sobre outras contas
+
+**US4, US5.** **Uma migration.** Começa num ramo novo a partir da `main`, depois do merge do PR 1.
+
+- [ ] T015 [PR2] Criar o ramo a partir da `main` depois do merge do PR 1 e conferir o ponto de partida: `verificar:tudo` saindo 0, o bucket e as quatro policies **presentes nos dois bancos** ⛓ T014
+- [ ] T016 [PR2] [P] [US4] Escrever `lib/dominio/ultimo-admin.ts` — recebe a **lista** de admins ativos e o alvo, e responde se pode rebaixar, desativar ou excluir — **com** o Vitest e o **caso que discrimina**: com **um** admin ativo os três são recusados; com **dois**, os três são permitidos. ⚠️ **Ele NÃO substitui o gatilho do banco**, que é a garantia; ele existe para **não oferecer** a ação na tela, e porque hoje há **duas afirmações de que essa regra está no código e nenhuma implementação** (`estado-atual.md` §3.1, `FR-042`, `FR-043`)
+- [ ] T017 [PR2] [US4] Escrever `supabase/migrations/<ts>_auditoria_de_conta.sql` — a tabela com os **quatro** campos de conteúdo (autor, ação, conta alvo com o código legível, e quando), `CHECK` dos **seis** valores de ação, RLS com **uma** policy de leitura por `app.pode('auditoria','ler')`, `revoke` de escrita, os **dois** gatilhos de comando contra `update`/`delete` e `truncate`, e a função `SECURITY DEFINER` que grava lendo o autor de `auth.uid()` **dentro** dela — **com** `supabase/tests/114_auditoria_de_conta.sql`: a tabela é imutável **inclusive para a `service_role`** (`42501`, `hint = 'auditoria_imutavel'`), `acao` recusa o sétimo valor, e a policy é **uma só**. ⚠️ **`conta_alvo_id` NÃO é FK**: a conta excluída deixa de existir e o rastro tem de sobreviver a ela (`FR-047`, `FR-047.1`, `FR-047.2`, I-1 a I-3, D-2) ⛓ T015
+- [ ] T018 [PR2] [US4] Escrever `redefinirSenha` em `lib/acoes/usuarios.ts` — **onde a chave privilegiada já é permitida pelo lint, e é por isso que ela fica ali**: pôr noutro arquivo exigiria um terceiro furo na regra `no-restricted-imports`, que hoje tem **dois** nomes. A senha vem de `crypto.randomInt` sobre alfabeto **sem caracteres ambíguos**, com comprimento **acima** do mínimo — **com** o teste de unidade da geração: 1.000 senhas, todas passando na política, **nenhuma repetida**, e **nenhuma** com `O`, `0`, `l`, `1` ou `I`. ⚠️ **A senha MUST NOT aparecer em log, em endereço nem em nada que sobreviva à tela** (`FR-033`, `FR-034`, R-7) ⛓ T017
+- [ ] T019 [PR2] [US4] Marcar a obrigação de trocar senha em `app_metadata` na redefinição, e conferi-la em `lib/supabase/middleware.ts`, na `renovarSessao` **que já chama `auth.getUser()`** — custo **zero** de ida a mais. Quem está obrigado é devolvido a `/perfil/senha`; definida a senha, a marca sai — **com** o e2e **por clique** do percurso inteiro: redefinir → a senha aparece **uma vez** → reabrir a tela e ela **não** aparecer → entrar com a temporária → cair na troca → tentar **três** outras rotas e voltar → definir a nova → entrar com ela → e a temporária **recusada**. ⚠️ **O arquivo é `proxy.ts`, não `middleware.ts`** — o `next build` recusa os dois juntos (`FR-035` a `FR-037`, US4, SC-003, SC-004, R-4) ⛓ T018, T010
+- [ ] T020 [PR2] [US4] Provar que **redefinir derruba TODAS as sessões abertas** — **com** o teste de sessão real: **duas** sessões da conta alvo abertas **antes**, a redefinição, e as **duas renovações** recusadas depois. ⚠️ **Mede a RENOVAÇÃO, não a leitura**: o token de acesso é JWT e vale até expirar sem consultar nada, então medir logo depois passaria mesmo com a revogação funcionando. ⚠️ **Nada a implementar aqui**: a plataforma já revoga (medido em R-1) — a tarefa é a **prova** de que continua revogando (`FR-038`, SC-011) ⛓ T018
+- [ ] T021 [PR2] [US5] Ligar a edição de conta na `/admin/usuarios` — nome e **perfil**, com os **nove agrupados por divisão** —, estendendo a `editarPerfilEEscopo` **que já existe e nenhuma tela chama** — **com** o e2e por clique e os **dois casos que discriminam**: o perfil novo vale **na requisição seguinte** daquela pessoa, sem ela sair e entrar; e o Admin **não vê** a ação de mudar o próprio perfil, com a razão escrita (`FR-040`, `FR-040.1`, `FR-041`, US5) ⛓ T016, T017
+- [ ] T022 [PR2] [US4] [US5] Escrever `tests/invariantes/rls/gestao-de-usuarios.test.ts`, com **sessão real**: o **Operador** não redefine senha, não edita outra conta e não vê a trilha; o **Admin** faz as três — e a recusa é conferida pelo **código** `42501`, nunca por "deu erro". ⚠️ **O Operador é o caso que discrimina** porque ele tem `usuarios.ler` da própria linha e **não** tem `eh_admin` — um perfil sem nada passaria igual antes e depois (`FR-050`, SC-007) ⛓ T021
+- [ ] T023 [PR2] `pnpm verificar:tudo` saindo **0** na porta 3100 e o **CI com o mesmo veredito sobre o mesmo commit** ⛓ T022
+- [ ] T024 [PR2] 👤 **Backup e aplicação no remoto, antes do merge**, no mesmo rito da T012, conferindo também que a trilha nasce **vazia** e que `usuarios` segue **intacta** ⛓ T023
+- [ ] T025 [PR2] 👤 **Conferência de Bernardo** e **abrir o PR 2**: o percurso do passo 3 do quickstart, do início ao fim, por clique ⛓ T024
+
+**Critério de merge do PR 2**: T023 verde, T024 aplicada e conferida, T025 com o "de acordo".
+
+---
+
+# PR 3 — Reativar e excluir
+
+**US6.** **Uma migration.** Ramo novo a partir da `main`, depois do merge do PR 2.
+
+- [ ] T026 [PR3] Criar o ramo a partir da `main` e conferir o ponto de partida ⛓ T025
+- [ ] T027 [PR3] [P] [US6] Escrever `lib/dominio/impedimentos-de-conta.ts` — os rótulos dos **quatro** impedimentos e a frase da recusa, com chave desconhecida aparecendo **como está** (`RN-DEG-01`) — **com** o Vitest e o caso que discrimina: uma chave nova não quebra a tela, e o texto dela aparece (`FR-046`, D-5)
+- [ ] T028 [PR3] [US6] Escrever `supabase/migrations/<ts>_exclusao_de_conta.sql` — `app.impedimentos_de_exclusao_da_conta(uuid)` varrendo os **quatro**, `app.excluir_conta(uuid, text)` com porteiro **próprio** e código de confirmação, os invólucros de `public`, e o `CHECK` de `exclusoes_registradas` passando a aceitar `'usuarios'` — **com** `supabase/tests/115_exclusao_de_conta.sql`. ⚠️ **O quarto impedimento varre o CATÁLOGO, não uma lista à mão**: o quarteto de auditoria aponta para a conta em 21+ tabelas, e lista à mão envelhece a cada tabela nova, passando a **permitir** exclusão que deveria recusar. ⚠️ **As duas funções têm CADA UMA o seu porteiro**, como na fatia (b) — são duas defesas independentes (`FR-045`, `FR-046`, R-8) ⛓ T026
+- [ ] T029 [PR3] [US6] Ligar **reativar** na `/admin/usuarios`, sob `usuarios.desativar` — **a permissão que já existe para o inverso** — **com** o e2e: desativar, ver a pessoa perder o acesso **na requisição seguinte**, reativar, ver o acesso voltar. ⚠️ **Nenhuma linha entra na matriz, e a asserção de ZERO ações `reativar` em `103_permissoes.sql` fica INTACTA** — ela foi escrita para impedir que a matriz cresça sem decisão (`FR-044`, I-6, D-6) ⛓ T028
+- [ ] T030 [PR3] [US6] Ligar a **exclusão** na `/admin/usuarios` pelo diálogo único, com alerta de permanência e **código digitado** — **com** o e2e e os **três casos que discriminam**: um convite recém-criado **some** e deixa linha na trilha **e** retrato em `exclusoes_registradas`; uma conta que já usou o sistema é **recusada nomeando os impedimentos**; e o Admin **não vê** a ação sobre si mesmo (`FR-041`, `FR-045`, `FR-046`, SC-005) ⛓ T029
+- [ ] T031 [PR3] [US6] Estender `tests/invariantes/rls/gestao-de-usuarios.test.ts`: o Operador não exclui nem reativa; o Admin faz as duas; e **nenhum caminho** deixa o sistema com **zero** admins ativos — nem pela tela, nem por chamada direta (`FR-042`, SC-007, I-9) ⛓ T030
+- [ ] T032 [PR3] Plano de reversão no cabeçalho das **três** migrations da fatia, **executado numa base descartável**, com a impressão digital da estrutura voltando à de antes; declarar o que **não** volta (a trilha **com linha** fica; os arquivos já enviados ficam) ⛓ T031
+- [ ] T033 [PR3] **Três defeitos deliberados**, cada um plantado, visto reprovando **a suíte certa**, desfeito e registrado: **(1)** tirar uma tabela da varredura do quarto impedimento → a recusa de exclusão **some** e o `115` reprova; **(2)** tirar o porteiro de **uma** das duas funções de exclusão → ⚠️ **a suíte pode continuar verde, e isso é o achado** — como na fatia (b), são duas defesas, e o defeito precisa cair nas duas; **(3)** tirar a comparação de caminho da policy do bucket → o teste de sessão real do avatar reprova. Conferir a estrutura **byte a byte** antes e depois de cada um (DoD 8) ⛓ T032
+- [ ] T034 [PR3] `pnpm verificar:tudo` saindo **0** e o **CI com o mesmo veredito** ⛓ T033
+- [ ] T035 [PR3] 👤 **Backup e aplicação no remoto, antes do merge**, no mesmo rito ⛓ T034
+- [ ] T036 [PR3] 👤 **Conferência de Bernardo**, atualização do `CLAUDE.md` com a fatia fechada, e **abrir o PR 3** ⛓ T035
+
+**Critério de merge do PR 3**: T034 verde, T035 aplicada e conferida, T036 com o "de acordo".
+
+---
+
+## Dependências
+
+`T001 → T002, T003, T004` (independentes entre si) · `T005 → T006` · `T003 → T007 → T008` ·
+`T002, T005, T007 → T009 → T010` · `T006, T008, T010 → T011 → T012 → T013 → T014`.
+
+Entre PRs, a dependência é o **merge**: `T014 → T015`, `T025 → T026`.
+
+## Oportunidades de paralelo
+
+**PR 1**: T002, T003 e T004 são os três módulos puros, em arquivos diferentes, sem banco — os três ao
+mesmo tempo. **PR 2**: T016 com T017 (domínio e migration não se tocam). **PR 3**: T027 com T028.
+
+## Contagem
+
+| PR | Tarefas | Faixa |
+|---|---|---|
+| **PR 1** — sair, avatar e o próprio cadastro | **14** | T001–T014 |
+| **PR 2** — o Admin sobre outras contas | **11** | T015–T025 |
+| **PR 3** — reativar e excluir | **11** | T026–T036 |
+| **Total** | **36** | |
