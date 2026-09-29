@@ -85,19 +85,28 @@ convite pela tela `/admin/usuarios`.
 
 # PARTE 2 — PREVIEW (dado real; grava só o que é seu)
 
-Abra `https://sistema-de-gestao-academica-v2-1.vercel.app` — é a Production, que serve o preview por
-exceção registrada (`FR-016.1`), e ela roda a `main`. ⚠️ **Enquanto este PR não for mesclado, a
-`main` ainda não tem as telas** — o que já está lá é a **migration**. Portanto:
+**O endereço deste ramo na Vercel**, medido em 29/09/2026 e estável entre os pushes:
 
-- **P.0 a P.2** valem **agora**, contra o preview do PR (a URL que a Vercel publica para este ramo,
-  no comentário do PR).
-- **P.3 em diante** valem **no preview do ramo** também; repeti-los na Production depois do merge é
-  a conferência de que o merge não mudou nada.
+```
+https://sistema-de-gestao-academica-v2-1-git-feat-epic-c06a4c-ciaara-11.vercel.app
+```
+
+⚠️ **Ele pede o login da VERCEL antes do login da aplicação** — é a proteção de deploy, e responde
+`302` para `vercel.com/sso-api` a quem não estiver autenticado lá. No seu navegador, já logado na
+Vercel, ele abre direto.
+
+⚠️ **A Production — `https://sistema-de-gestao-academica-v2-1.vercel.app` — roda a `main`, que AINDA
+NÃO TEM AS TELAS deste PR.** O que já está lá é a **estrutura**: a coluna, o balde e as três
+policies, aplicados em 29/09/2026 (AMBIENTE-1: preview e Production são o mesmo banco). Portanto:
+
+- **P.1 e P.2** podem ser feitos nos **dois** endereços — na Production eles conferem que a
+  migration não mexeu em nada de quem já usa.
+- **P.3 em diante** só existem no **preview do ramo**, e é lá que a conferência acontece.
 
 | #   | Passo                                                                          | Resultado esperado                                                                                                                                       |
 | --- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | P.0 | Entrar com a **sua** conta                                                      | Entra como sempre. ⚠️ O remoto tem **5 usuários** e **1 credencial** — a sua                                                                                 |
-| P.1 | Abrir qualquer tela de cadastro (Cursos, Instrutores, Disciplinas) e **só olhar** | Tudo como antes da migration: **24 cursos · 28 turmas · 177 instrutores · 175 disciplinas · 587 UEs**. A coluna nova é **vazia** em todas as 5 contas        |
+| P.1 | Abrir qualquer tela de cadastro (Cursos, Instrutores, Disciplinas) e **só olhar** | Tudo como antes da migration. Medido no remoto em 29/09/2026, depois de aplicá-la: **24 cursos · 28 turmas · 177 instrutores · 175 disciplinas · 587 UEs · 210 linhas de `turma_disciplina` · 5 usuários**. A coluna nova é **nula** nas 5 contas, e o balde tem **zero** objetos |
 | P.2 | Olhar o cabeçalho                                                                | O botão do avatar mostra as **suas iniciais**. Ninguém tem foto ainda — o balde nasceu vazio                                                                 |
 | P.3 | Menu do avatar → **Sair** → entrar de novo                                       | Sai e volta. ⚠️ **É o defeito que originou esta spec**: até aqui não havia como sair sem limpar o navegador                                                  |
 | P.4 | **Meu perfil** → trocar o seu **nome de exibição** → **Gravar nome**              | *"Nome atualizado."* ⚠️ **Isto grava dado real, e é o certo**: o remoto é a fonte da verdade dos cadastros, e quem testa edita pelo preview                  |
