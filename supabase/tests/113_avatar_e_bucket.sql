@@ -1,6 +1,12 @@
 -- =====================================================================================
--- 112_avatar_e_bucket.sql — a coluna do avatar, o bucket e as TRES policies
+-- 113_avatar_e_bucket.sql — a coluna do avatar, o bucket e as TRES policies
 -- Epico 3 · spec 011-gestao-de-usuarios · T005
+--
+-- ⚠️ **ERA `112` E VIROU `113` NO REBASE DE 29/09/2026, e a colisao era SILENCIOSA.** Enquanto este
+--    ramo esteve aberto, o PR 2 da fatia (b) entrou na `main` com `112_carga_unidades_ensino.sql`.
+--    ⚠️ **O git NAO acusa**: sao arquivos com nomes diferentes, e o rebase junta os dois sem
+--       conflito — ficariam **dois 112** na pasta, e a ordem entre eles passaria a depender de como
+--       o `pg_prove` ordena o diretorio. Quem renomeia e quem le a pasta, nao a ferramenta.
 -- -------------------------------------------------------------------------------------
 -- ⚠️ **ESTE ARQUIVO PROVA ESTRUTURA, NAO PERMISSAO.** Ele roda como DONO do schema, e sob
 --    privilegio de dono a RLS nao se aplica: uma assercao de "o dono escreve e o outro nao"
