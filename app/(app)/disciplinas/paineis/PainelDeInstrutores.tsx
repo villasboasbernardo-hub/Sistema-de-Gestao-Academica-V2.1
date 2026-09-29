@@ -20,6 +20,7 @@
  * `rateio_por_ue_com_ta`.
  */
 import * as React from "react";
+import Link from "next/link";
 
 import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { Button } from "@/components/ui/button";
@@ -137,12 +138,12 @@ export function PainelDeInstrutores({
         <p className="text-texto-suave text-sm" data-slot="sem-habilitado">
           Nenhum instrutor habilitado nesta disciplina. A habilitação é feita na ficha do instrutor,
           no painel de disciplinas —{" "}
-          <a
+          <Link
             href="/instrutores"
             className="text-marca rounded-ciaara-sm underline focus-visible:ring-2 focus-visible:outline-none"
           >
             abrir a lista de instrutores
-          </a>
+          </Link>
           .
         </p>
       ) : (
