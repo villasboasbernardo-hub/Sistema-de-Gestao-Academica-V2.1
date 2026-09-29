@@ -498,6 +498,20 @@ const COLUNAS_DA_AMOSTRA: readonly Coluna<LinhaDaAmostra>[] = [
 
 export function AmostraTabelaDensa() {
   const [densidade, definirDensidade] = React.useState<Densidade>("padrao");
+  /*
+   * ⚠️ **A LINHA EXPANDIDA ENTROU NA VITRINE PORQUE ELA É PARTE DO VOCABULÁRIO** (invariante I-5).
+   * O portão reprovou com *"componentes declarados e AUSENTES da vitrine — nasceriam mortos:
+   * detalhe-da-linha"*, e ele está certo: um marcador que só existe numa tela é um marcador que
+   * ninguém mais vai encontrar quando precisar do mesmo desenho.
+   */
+  /*
+   * ⚠️ **A PRIMEIRA LINHA NASCE EXPANDIDA, e é por isso que ela cabe na vitrine.** A invariante I-5
+   * confere que todo marcador declarado está **visível** na vitrine; o mecanismo de
+   * `SO_QUANDO_ABERTO` depende de um **botão** que abre, e este detalhe abre clicando na linha.
+   * Começar expandido resolve os dois: o marcador existe, e quem chega na vitrine vê o componente
+   * sem precisar descobrir como abri-lo.
+   */
+  const [abertas, definirAbertas] = React.useState<readonly string[]>(["linha-1"]);
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -519,10 +533,23 @@ export function AmostraTabelaDensa() {
         rotulo="Registros da amostra"
         densidade={densidade}
         comBusca
+        abertas={abertas}
+        aoAtivarLinha={(l) => definirAbertas((atuais) => (atuais.includes(l.id) ? [] : [l.id]))}
+        detalhe={() => (
+          <div className="flex flex-col gap-1">
+            {/* veste: rótulo do detalhe; o valor ao lado é dado */}
+            <span className="text-texto-tenue text-2xs uppercase">Detalhe da linha</span>
+            <span className="text-texto text-sm">
+              A linha expandida vive DENTRO da mesma tabela — não há uma segunda. Ela fica fora da
+              grade navegável, para que <kbd>Tab</kbd> continue entrando e saindo em um passo.
+            </span>
+          </div>
+        )}
       />
       <p className="text-texto-suave text-xs">
         45 linhas, todas renderizadas. <kbd>Tab</kbd> entra e sai em um passo; as setas andam célula
-        a célula; <kbd>PageDown</kbd> salta 20 linhas e para na última.
+        a célula; <kbd>PageDown</kbd> salta 20 linhas e para na última. Clique numa linha para
+        expandir o detalhe.
       </p>
     </div>
   );

@@ -28,22 +28,45 @@ const admin: SupabaseClient = createClient(chaveLocal("API_URL"), chaveLocal("SE
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-/** O selo desta amostra. Tudo que ela cria carrega isto, e é por isto que ela apaga. */
-export const MARCA = "E2E-DISC";
-export const SIGLA_DO_CURSO = `Z-DISC-${MARCA}`;
-export const CODIGO_DA_TURMA_UM = `${SIGLA_DO_CURSO} T1 2026`;
-export const CODIGO_DA_TURMA_DOIS = `${SIGLA_DO_CURSO} T2 2026`;
+/**
+ * O selo desta amostra — **UM POR PROCESSO DE TRABALHO**, e isso custou uma execução inteira.
+ *
+ * ⚠️ **COM UM SELO SÓ, A SUÍTE PASSA SOZINHA E REPROVA EM CONJUNTO.** O `beforeAll` do Playwright
+ * roda **uma vez por processo**, não uma vez por suíte: com quatro processos, os quatro semeavam o
+ * **mesmo** curso e o `limparAmostraDaGrade` de um apagava, no meio da execução, o que os outros
+ * estavam usando. O sintoma foi `[data-slot="seletor-turma"]` **não existir** — que se lê como "a
+ * cascata não foi escrita" e era "a turma sumiu debaixo do teste". É a mesma família do achado 5 da
+ * fatia (c) do Épico 4, e a razão de `emailDeTeste` já receber o número do processo.
+ *
+ * ⚠️ **E o curso NÃO é apagável**, então cada processo deixa o seu para trás e o **reaproveita** na
+ * execução seguinte. Um curso por processo, e não um por execução.
+ */
+export function selo(processo: number): string {
+  return `E2E-DISC-${processo}`;
+}
+
+export const siglaDoCurso = (processo: number) => `Z-DISC-${selo(processo)}`;
+export const codigoDaTurmaUm = (processo: number) => `${siglaDoCurso(processo)} T1 2026`;
+export const codigoDaTurmaDois = (processo: number) => `${siglaDoCurso(processo)} T2 2026`;
 
 /** A disciplina **com** unidades de ensino — é nela que a seção de UE aparece. */
-export const DISCIPLINA_COM_UE = { cod: "DCU001", nome: `${MARCA} Navegação com unidades`, ch: 10 };
+export const disciplinaComUe = (processo: number) => ({
+  cod: "DCU001",
+  nome: `${selo(processo)} Navegação com unidades`,
+  ch: 10,
+});
 /** A disciplina **sem** unidade — nela a seção não aparece **nem avisa** (`FR-061`). */
-export const DISCIPLINA_SEM_UE = {
+export const disciplinaSemUe = (processo: number) => ({
   cod: "DSU001",
-  nome: `${MARCA} Disciplina sem unidades`,
+  nome: `${selo(processo)} Disciplina sem unidades`,
   ch: 12,
-};
+});
 /** A disciplina **limpa**, sem turma nenhuma — a única excluível (D-B1). */
-export const DISCIPLINA_LIMPA = { cod: "DLP001", nome: `${MARCA} Disciplina de amostra`, ch: 4 };
+export const disciplinaLimpa = (processo: number) => ({
+  cod: "DLP001",
+  nome: `${selo(processo)} Disciplina de amostra`,
+  ch: 4,
+});
 
 export type AmostraDaGrade = {
   readonly cursoId: string;
@@ -63,11 +86,12 @@ async function gravar(tabela: string, linha: Record<string, unknown>): Promise<s
 }
 
 /** Apaga o que é desta suíte. ⚠️ **O CURSO FICA** — ver o cabeçalho. */
-export async function limparAmostraDaGrade(): Promise<void> {
+export async function limparAmostraDaGrade(processo: number): Promise<void> {
+  const MARCA = selo(processo);
   const { data: curso } = await admin
     .from("cursos")
     .select("id")
-    .eq("codigo", SIGLA_DO_CURSO)
+    .eq("codigo", siglaDoCurso(processo))
     .maybeSingle();
   if (!curso) return;
   const cursoId = (curso as { id: string }).id;
@@ -97,8 +121,13 @@ export async function limparAmostraDaGrade(): Promise<void> {
   await admin.from("instrutores").delete().like("nome_completo", `${MARCA}%`);
 }
 
-export async function semearGradeDeDisciplinas(): Promise<AmostraDaGrade> {
-  await limparAmostraDaGrade();
+export async function semearGradeDeDisciplinas(processo: number): Promise<AmostraDaGrade> {
+  const MARCA = selo(processo);
+  const SIGLA_DO_CURSO = siglaDoCurso(processo);
+  const DISCIPLINA_COM_UE = disciplinaComUe(processo);
+  const DISCIPLINA_SEM_UE = disciplinaSemUe(processo);
+  const DISCIPLINA_LIMPA = disciplinaLimpa(processo);
+  await limparAmostraDaGrade(processo);
 
   // ── o curso, reaproveitado e criado pela RPC ────────────────────────────────────────────────
   const { data: existente } = await admin

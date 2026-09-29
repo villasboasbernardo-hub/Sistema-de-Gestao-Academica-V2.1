@@ -18,31 +18,53 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { criarConta, apagarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import {
-  CODIGO_DA_TURMA_DOIS,
-  CODIGO_DA_TURMA_UM,
+  codigoDaTurmaDois,
+  codigoDaTurmaUm,
   contarDisciplina,
-  DISCIPLINA_COM_UE,
-  DISCIPLINA_LIMPA,
-  DISCIPLINA_SEM_UE,
+  disciplinaComUe,
+  disciplinaLimpa,
+  disciplinaSemUe,
   lerGradeDaTurma,
   limparAmostraDaGrade,
   rastroDaExclusao,
   semearGradeDeDisciplinas,
-  SIGLA_DO_CURSO,
+  selo,
+  siglaDoCurso,
   type AmostraDaGrade,
 } from "./disciplinas-de-teste";
 
 let EMAIL = "";
 let amostra: AmostraDaGrade;
 
+/*
+ * ⚠️ **TUDO NESTA SUÍTE É POR PROCESSO DE TRABALHO.** O `beforeAll` roda uma vez por PROCESSO, e com
+ * um selo único os quatro processos semeavam o mesmo curso — e a limpeza de um apagava, no meio da
+ * execução, o que os outros usavam. Ver o cabeçalho de `disciplinas-de-teste.ts`.
+ */
+let PROCESSO = 0;
+let SIGLA_DO_CURSO = "";
+let CODIGO_DA_TURMA_UM = "";
+let CODIGO_DA_TURMA_DOIS = "";
+let DISCIPLINA_COM_UE = { cod: "", nome: "", ch: 0 };
+let DISCIPLINA_SEM_UE = { cod: "", nome: "", ch: 0 };
+let DISCIPLINA_LIMPA = { cod: "", nome: "", ch: 0 };
+
 test.beforeAll(async ({}, info) => {
-  EMAIL = emailDeTeste("disciplinas", info.workerIndex);
-  await criarConta(EMAIL, `USR-DISC-${info.workerIndex}`);
-  amostra = await semearGradeDeDisciplinas();
+  PROCESSO = info.workerIndex;
+  SIGLA_DO_CURSO = siglaDoCurso(PROCESSO);
+  CODIGO_DA_TURMA_UM = codigoDaTurmaUm(PROCESSO);
+  CODIGO_DA_TURMA_DOIS = codigoDaTurmaDois(PROCESSO);
+  DISCIPLINA_COM_UE = disciplinaComUe(PROCESSO);
+  DISCIPLINA_SEM_UE = disciplinaSemUe(PROCESSO);
+  DISCIPLINA_LIMPA = disciplinaLimpa(PROCESSO);
+
+  EMAIL = emailDeTeste("disciplinas", PROCESSO);
+  await criarConta(EMAIL, `USR-DISC-${PROCESSO}`);
+  amostra = await semearGradeDeDisciplinas(PROCESSO);
 });
 
 test.afterAll(async () => {
-  await limparAmostraDaGrade();
+  await limparAmostraDaGrade(PROCESSO);
   await apagarConta(EMAIL);
 });
 
@@ -310,7 +332,7 @@ test.describe("`FR-020` a `FR-024` · a exclusão, com código e rastro", () => 
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
 
     await page.locator('[data-slot="abrir-exclusao"]').first().click();
-    await page.locator('input[name="codigo_confirmacao"]').fill(`DIS-E2E-DISC-1`);
+    await page.locator('input[name="codigo_confirmacao"]').fill(`DIS-${selo(PROCESSO)}-1`);
     await page.locator('[data-slot="confirmar-exclusao"]').click();
 
     const recusa = page.locator('[data-slot="recusa-da-exclusao"]');
