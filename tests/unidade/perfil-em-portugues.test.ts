@@ -183,16 +183,39 @@ describe("⚠️ O CASO QUE DISCRIMINA · a tradução traduz, e é um módulo s
   });
 
   it("⚠️ a tradução mora em UM arquivo — três cópias divergiriam na primeira mudança", () => {
+    /*
+     * ⚠️ **A PRIMEIRA ESCRITA DESTA GUARDA ERA LARGA DEMAIS, e o rebase de 29/09/2026 mostrou.** Ela
+     * acusava qualquer arquivo com `rotulo: "…"` que mencionasse a palavra *perfil* em qualquer
+     * lugar — e a `main` trouxe dois assim, os dois inocentes: `GradeDeDisciplinas.tsx` tem rótulos
+     * de **filtro** e a palavra aparece uma vez, e `FichaEmLeitura.tsx` o mesmo. **Guarda que acusa
+     * quem não fez nada ensina a desligá-la.**
+     *
+     * ⚠️ **O QUE UMA SEGUNDA TABELA DE RÓTULOS DE PERFIL NECESSARIAMENTE TEM é um VALOR DO ENUM como
+     * chave** — não dá para traduzir `encarregado_administracao_academica` sem escrevê-lo. Então a
+     * condição precisa é: rótulo declarado **E** valor cru do enum no mesmo arquivo.
+     */
     const comTraducao = arquivos()
       .filter((caminho) => {
         const codigo = semComentario(readFileSync(caminho, "utf8"));
-        // Quem DECLARA rótulo põe o texto ao lado do valor; quem só CONSOME chama a função.
-        return /rotulo\s*:\s*"/.test(codigo) && /perfil/i.test(codigo);
+        const declaraRotulo = /rotulo\s*:\s*"/.test(codigo);
+        const temValorCru = VALORES_CRUS.some((v) => new RegExp(`["']${v}["']`).test(codigo));
+        return declaraRotulo && temValorCru;
       })
       .map(comBarraNormal);
     expect(
       comTraducao,
       "apareceu uma segunda tabela de rótulos de perfil fora de `lib/dominio/perfis.ts`",
     ).toEqual([]);
+  });
+
+  it("⚠️ controle positivo: a guarda PEGA uma segunda tabela — com fonte sintética", () => {
+    /*
+     * Sem isto, a condição estreitada acima poderia deixar de pegar qualquer coisa, e o caso
+     * anterior passaria por guarda perfeita. Aqui a tabela sintética tem as duas metades.
+     */
+    const sintetico = `const R = { "${VALORES_CRUS[0]}": { rotulo: "Um rótulo qualquer" } };`;
+    const declaraRotulo = /rotulo\s*:\s*"/.test(sintetico);
+    const temValorCru = VALORES_CRUS.some((v) => new RegExp(`["']${v}["']`).test(sintetico));
+    expect(declaraRotulo && temValorCru, "a guarda não pegaria uma segunda tabela").toBe(true);
   });
 });
