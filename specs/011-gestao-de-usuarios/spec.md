@@ -33,6 +33,36 @@ testar com várias pessoas exige trocar de usuário.
 
 ---
 
+## Clarifications
+
+### Session 2026-09-29
+
+Respostas de **Bernardo Villas Boas**, em **29/09/2026**, às oito dúvidas de
+[`duvidas.md`](./duvidas.md). **Nenhuma dúvida aberta trava o plano.**
+
+- **Q: D-1 — quais perfis o Admin pode escolher ao editar alguém?** → **A: os NOVE do enum,
+  agrupados por divisão.** Oferecer três deixaria seis perfis sem caminho de atribuição pela tela.
+  *(Propagado para `FR-005` e `FR-040.1`.)*
+- **Q: D-2 — onde fica o rastro das ações administrativas?** → **A: trilha NOVA e MÍNIMA**, com
+  quatro campos: **autor, ação, conta alvo e quando**. Nada além. *(Propagado para `FR-047` e
+  `FR-047.1`; entra em *Key Entities*.)*
+- **Q: D-3 — a foto fica em espaço público ou privado?** → **A: privado**, como já estava adotado.
+- **Q: D-4 — redefinir a senha derruba as sessões abertas?** → **A: SIM, derruba TODAS.** ⚠️ **Isto
+  REVERTE o padrão que a spec havia adotado** (*Assumption 4*, que dizia "não derruba"), e a
+  recomendação era esta. *(Propagado para `FR-038`, para o caso de borda e para `SC-011`.)*
+- **Q: D-5 — o que conta como dependente e impede excluir uma conta?** → **A: os quatro**, como já
+  estava adotado: credencial já usada, vínculo de curso, ficha de instrutor vinculada, e ter criado
+  ou editado qualquer registro.
+- **Q: D-6 — reativar é ação nova na matriz?** → **A: NÃO. Reativar usa a MESMA permissão de
+  desativar**, nenhuma ação nova entra na matriz, e a asserção existente de **zero** `reativar` fica
+  **intacta**. *(Propagado para `FR-044`; fecha a divergência §4, que deixa de ser conflito.)*
+- **Q: D-7 — a pessoa troca o próprio nome sem limite?** → **A: só `nome_exibicao`**, como já estava
+  adotado; o nome civil continua só com o Admin.
+- **Q: D-8 — a troca obrigatória bloqueia também as rotas abertas?** → **A: não**, como já estava
+  adotado: bloqueia as telas do sistema, e sair continua possível.
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — Sair do sistema (Priority: P1)
@@ -197,8 +227,9 @@ acesso voltar; e excluir um convite recém-criado que não tem nada ligado a ele
 
 - **Conta sem credencial** (convite gravado e e-mail não emitido): pode ser excluída, reativada e ter
   o nome corrigido; **não** pode ter a senha redefinida, porque não há credencial para redefinir.
-- **A pessoa está logada em outro dispositivo quando o Admin redefine a senha dela.** A sessão antiga
-  continua válida até expirar; a obrigação de trocar senha aparece para ela no próximo login.
+- **A pessoa está logada em outro dispositivo quando o Admin redefine a senha dela.** A sessão
+  antiga **cai** (`FR-038`): na requisição seguinte daquele dispositivo ela é levada à tela de
+  entrada, e ao entrar com a temporária cai na troca obrigatória.
 - **A pessoa é desativada enquanto navega.** A requisição seguinte a leva para a entrada.
 - **O nome tem uma palavra só**, ou tem preposição (`de`, `da`, `dos`): as iniciais precisam de regra
   escrita, não de "pegue a primeira letra de cada palavra".
@@ -263,10 +294,12 @@ acesso voltar; e excluir um convite recém-criado que não tem nada ligado a ele
   a pessoa é devolvida à tela de senha nova.
 - **FR-037**: Definida a senha nova, a obrigação MUST sumir, e a senha temporária MUST deixar de
   valer.
+- **FR-038**: A redefinição de senha pelo Admin MUST **encerrar todas as sessões abertas** daquela conta (D-4, 29/09/2026). ⚠️ **Isto reverte o padrão que a spec havia adotado.** Redefinição pelo Admin quase sempre significa *"perdi o acesso"* ou *"a senha vazou"*, e nos dois casos deixar a sessão antiga viva é deixar o problema vivo.
 
 ### O Admin sobre outras contas
 
 - **FR-040**: O Admin MUST poder editar o **nome** e o **perfil** de outra conta.
+- **FR-040.1**: A escolha de perfil MUST oferecer os **nove** do domínio, **agrupados por divisão** (D-1, 29/09/2026). ⚠️ Oferecer um subconjunto deixaria perfis **sem caminho de atribuição pela tela**, e quatro deles já têm permissões semeadas — inclusive de leitura de identificação civil.
 - **FR-041**: O Admin MUST NOT poder **excluir, desativar nem rebaixar a si mesmo**; a ação MUST NOT
   ser oferecida, com a razão escrita.
 - **FR-042**: O sistema MUST manter **pelo menos um Admin ativo**; a tentativa de deixar zero MUST
@@ -274,14 +307,16 @@ acesso voltar; e excluir um convite recém-criado que não tem nada ligado a ele
 - **FR-043**: A regra do último Admin MUST existir em **função pura**, além da que já existe no
   banco. ⚠️ Hoje existem **duas afirmações** de que ela está no código e **nenhuma implementação** —
   ver `estado-atual.md` §3.1.
-- **FR-044**: O Admin MUST poder **reativar** conta inativa.
+- **FR-044**: O Admin MUST poder **reativar** conta inativa, **sob a mesma permissão que desativa** (D-6, 29/09/2026). ⚠️ **Nenhuma ação nova entra na matriz de permissões**, e a asserção existente de que há **zero** ações `reativar` fica **intacta** — ela foi escrita para impedir que a matriz cresça sem decisão, e respeitá-la custa nada.
 - **FR-045**: O Admin MUST poder **excluir permanentemente** uma conta **sem nada ligado a ela**, no
   padrão da **D-B1**: confirmação explícita, alerta de que é permanente, e **rastro** de quem, o quê
   e quando.
 - **FR-046**: A exclusão de conta **com** dependente MUST ser recusada, e a recusa MUST **nomear o
   que impede** e oferecer desativar no lugar.
 - **FR-047**: Toda ação administrativa sobre conta — editar perfil, redefinir senha, desativar,
-  reativar, excluir — MUST gerar **registro de auditoria** com autor, alvo, ação e momento.
+  reativar, excluir — MUST gerar **registro de auditoria**.
+- **FR-047.1**: O registro MUST ter **exatamente quatro** informações — **quem** fez, **o quê** fez, **sobre qual conta**, e **quando** (D-2, 29/09/2026) — e MUST viver em trilha **própria**, **nova** e **mínima**. ⚠️ Ela é nova porque a tabela de exclusões existente aceita três tabelas e **não** aceita contas; e é mínima porque o que se quer responder é *"quem mexeu na conta de quem, e quando"*, não guardar retrato de tudo.
+- **FR-047.2**: A trilha MUST ser **somente de acréscimo**, e o registro já gravado MUST NOT ser alterável nem apagável por caminho nenhum.
 
 ### Como tudo isso é feito com segurança
 
@@ -312,6 +347,9 @@ acesso voltar; e excluir um convite recém-criado que não tem nada ligado a ele
 - **SC-009**: Arquivo fora do tipo ou acima de 2 MB é recusado **nos dois lados**, e a recusa do lado
   do servidor é medida com a do navegador desligada.
 - **SC-010**: Toda ação administrativa consultada no rastro diz **quem, o quê, sobre quem e quando**.
+- **SC-011**: Depois de o Admin redefinir a senha de alguém, **nenhuma** sessão daquela conta
+  continua servindo — medido a partir de uma sessão aberta em outro navegador **antes** da
+  redefinição.
 
 ---
 
@@ -323,15 +361,13 @@ acesso voltar; e excluir um convite recém-criado que não tem nada ligado a ele
   pode, pela matriz de permissões, que **não** é configurável nesta fatia.
 - **Foto de perfil** — imagem opcional ligada a uma conta.
 - **Obrigação de trocar senha** — marca que acompanha a credencial e é consultada a cada requisição.
-- **Rastro de ação administrativa** — quem fez, o quê, sobre quem, quando, e o retrato de antes
-  quando a ação é destrutiva.
+- **Rastro de ação administrativa** — trilha **própria, nova e mínima**, com **quatro** informações e nada além: **quem** fez, **o quê** fez, **sobre qual conta**, e **quando** (D-2). Somente de acréscimo. ⚠️ A exclusão de conta, por ser destrutiva, MUST também deixar o **retrato do que foi apagado**, no padrão da D-B1 — e esse retrato não cabe nos quatro campos, entao ele vive onde os retratos de exclusão já vivem.
 
 ---
 
 ## Assumptions
 
-Decisões tomadas por padrão razoável, para não travar a spec. Todas estão na lista de dúvidas ao
-final, e qualquer uma pode ser revertida sem reescrever a spec.
+✅ **As oito foram decididas por Bernardo Villas Boas em 29/09/2026** — ver *Clarifications*. Sete confirmaram o padrão adotado; a **quarta foi revertida**. Elas ficam aqui, com o registro de quando deixaram de ser suposição.
 
 1. **A tela do próprio cadastro edita `nome_exibicao`, não `nome`.** `nome` é o nome civil que veio
    do cadastro; `nome_exibicao` já existe na tabela, é opcional, é o que o cabeçalho lê primeiro e
@@ -340,8 +376,7 @@ final, e qualquer uma pode ser revertida sem reescrever a spec.
    semeia os nove; oferecer três esconderia seis perfis que já decidem permissão.
 3. **A foto vive num espaço privado**, alcançada por endereço temporário, e não por endereço público.
    Foto de pessoa identificável num repositório público pede o caminho mais restrito por padrão.
-4. **A redefinição de senha não derruba sessões já abertas.** Derrubar todas é comportamento de
-   segurança mais forte e muda o que a pessoa vê sem aviso.
+4. ~~A redefinição de senha não derruba sessões já abertas.~~ ✅ **REVERTIDA em 29/09/2026 pela D-4**: ela **derruba todas** (`FR-038`). Era a única suposição em que a recomendação divergia do padrão adotado, e a decisão ficou com a recomendação.
 5. **"Sem nada ligado a ela"**, para exclusão de conta, significa: sem credencial já usada, sem
    vínculo de curso, sem ter criado ou editado registro nenhum, e sem ficha de instrutor vinculada.
 6. **A senha gerada tem comprimento acima do mínimo da plataforma**, para não nascer no limite.
@@ -376,6 +411,4 @@ Registradas porque a regra 1 manda listar em vez de consertar.
 2. **O comentário de `usuarios.ultimo_acesso` diz que o middleware a escreve** — é a Server Action
    de acesso, uma vez por login.
 3. **`supabase.rpc("eh_admin")` sempre erra**, e o caminho real é o fallback.
-4. **A matriz tem zero ações `reativar`**, provado por asserção existente. A `FR-044` pede reativar,
-   e isso **conflita**: ou a ação entra na matriz e a asserção muda com a razão escrita, ou reativar
-   é tratado como editar. É a dúvida **D-6** da lista.
+4. ~~A matriz tem zero ações `reativar`, e a `FR-044` conflita com a asserção existente.~~ ✅ **RESOLVIDA em 29/09/2026 pela D-6, e não havia conflito a resolver**: reativar passa a usar a **mesma permissão de desativar**, nenhuma ação nova entra na matriz, e a asserção de **zero** `reativar` fica **intacta**.

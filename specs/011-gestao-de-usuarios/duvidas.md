@@ -1,8 +1,22 @@
 # Dúvidas em lote — spec 011, gestão de usuários
 
-**Levantadas em 29/09/2026**, ao escrever a spec sobre o estado medido. Cada uma tem **opções**, uma
-**recomendação** e o **padrão já adotado** na spec, para que ela seja executável sem resposta. Nenhuma
-bloqueia o `/speckit.plan`; as duas primeiras mudam o desenho, as demais mudam detalhe.
+**Levantadas em 29/09/2026** e ✅ **TODAS AS OITO DECIDIDAS no mesmo dia** por **Bernardo Villas
+Boas**. As respostas estão em [`spec.md` → *Clarifications* → *Session 2026-09-29*](./spec.md), e é
+de lá que elas valem — este arquivo guarda o **raciocinio** de cada uma, não a decisão.
+
+| Dúvida | Decisão | Bateu com a recomendação? |
+|---|---|---|
+| **D-1** perfis oferecidos | os **nove**, agrupados por divisão | sim |
+| **D-2** onde fica o rastro | **trilha nova e mínima**: autor, ação, conta alvo, quando | sim |
+| **D-3** foto pública ou privada | **privada** | sim |
+| **D-4** redefinir derruba sessões | **SIM, derruba todas** | sim — e **reverteu o padrão adotado** |
+| **D-5** o que impede excluir | os **quatro** | sim |
+| **D-6** reativar na matriz | **não**: mesma permissão de desativar, asserção intacta | sim |
+| **D-7** qual nome a pessoa edita | só `nome_exibicao` | sim |
+| **D-8** a troca obrigatória bloqueia as rotas abertas | **não** | sim |
+
+⚠️ **A D-4 é a única em que a spec mudou de ideia**, e é a única em que a recomendação divergia do
+padrão que eu havia adotado. Nenhuma dúvida aberta trava o plano.
 
 ---
 

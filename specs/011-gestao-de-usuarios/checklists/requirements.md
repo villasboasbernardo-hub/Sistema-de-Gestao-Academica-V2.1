@@ -31,21 +31,23 @@
 
 ## Notes
 
-⚠️ **Nenhum marcador `[NEEDS CLARIFICATION]` ficou no corpo da spec, e isso é escolha, não ausência
-de dúvida.** A instrução desta rodada foi **acumular as dúvidas e apresentá-las em lote ao final**,
-com opções e recomendação. As **oito** dúvidas estão em [`duvidas.md`](../duvidas.md), e cada uma tem
-um padrão adotado registrado em *Assumptions* — de modo que a spec é executável como está e qualquer
-resposta a reverte sem reescrevê-la.
+✅ **AS OITO DÚVIDAS FORAM DECIDIDAS em 29/09/2026** por Bernardo Villas Boas, e estão em
+*Clarifications → Session 2026-09-29*, com data e autoria. Sete confirmaram o padrão que a spec já
+havia adotado; a **D-4 reverteu o dela** — redefinir senha passa a **derrubar todas as sessões**
+(`FR-038`, `SC-011`). **Nenhuma dúvida aberta trava o plano.**
+
+⚠️ **Nenhum marcador `[NEEDS CLARIFICATION]` chegou a existir no corpo da spec, e isso foi escolha**:
+a instrução daquela rodada foi acumular as dúvidas e apresentá-las **em lote ao final**, com opções
+e recomendação, de modo que a spec fosse executável mesmo sem resposta.
 
 ⚠️ **Sobre "no implementation details": três nomes técnicos aparecem de propósito e são os únicos.**
 `nome_exibicao`, `perfil_permissao` e a distinção `proxy.ts` × `middleware.ts` estão citados porque
 esta spec **preserva** comportamento existente, e preservar exige nomear o que se preserva. Eles
 vivem em `estado-atual.md` e nas *Assumptions*, nunca nos requisitos `FR-` nem nos critérios `SC-`.
 
-⚠️ **Um conflito conhecido com asserção existente**, registrado em *Divergências* §4: a `FR-044` pede
-reativar conta e `supabase/tests/103_permissoes.sql` prova hoje que a matriz tem **zero** ações
-`reativar`. Isso não é ambiguidade da spec — é uma decisão que o plano precisa tomar, e está na
-dúvida **D-6**.
+✅ **O conflito com a asserção existente FOI RESOLVIDO, e não havia conflito**: pela **D-6**,
+reativar usa a **mesma permissão de desativar**, nenhuma ação nova entra na matriz, e a asserção de
+**zero** `reativar` em `supabase/tests/103_permissoes.sql` fica **intacta**.
 
 ⚠️ **`SC-002` e `SC-009` foram reescritos** depois da primeira validação. `SC-002` dizia "o perfil é
 legível", que não é medível; virou cobertura de 100% das telas que o mostram. `SC-009` dizia
