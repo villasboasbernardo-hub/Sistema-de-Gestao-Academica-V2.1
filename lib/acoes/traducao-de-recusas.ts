@@ -21,6 +21,12 @@
  * Origem: `specs/009-cursos-e-turmas/contracts/escritas-recusas-e-avisos.md` §2.
  */
 
+import {
+  chavesDaRecusa,
+  motivoDoImpedimento,
+  type TipoExcluivel,
+} from "@/lib/dominio/exclusao-de-disciplina";
+
 /** O formato do erro do PostgREST — e de qualquer coisa que o imite. */
 export type ErroDoBanco = {
   readonly code?: string | null;
@@ -302,13 +308,24 @@ function porChave(
     //    divergência era MUDA: a tradução simplesmente nunca disparava.
     // ══════════════════════════════════════════════════════════════════════════════════════════
 
-    case "registro_com_historico":
-      // A lista de impedimentos vem na mensagem e é lida por `lib/dominio/exclusao-de-disciplina.ts`.
-      // Aqui fica a frase de fundo, para quem não passou pelo diálogo.
+    case "registro_com_historico": {
+      /*
+       * ⚠️ **A LISTA DE IMPEDIMENTOS É NOMEADA AQUI, e não na tela.** A primeira escrita devolvia só
+       * a frase de fundo e deixava o diálogo extrair a lista — mas o diálogo recebe **esta** frase,
+       * já traduzida, e a lista tinha ficado para trás na mensagem do banco. O resultado era uma
+       * recusa correta que não dizia **o quê** prende o registro, que é a única informação útil ali
+       * (`FR-022`). Medido pelo e2e, em 29/09/2026.
+       */
+      const chaves = chavesDaRecusa(erro.message);
+      const tipo: TipoExcluivel = erro.message.startsWith("unidade_com_historico")
+        ? "unidade_de_ensino"
+        : "disciplina";
       return (
+        motivoDoImpedimento(chaves, tipo) ??
         "Este registro tem histórico e não pode ser excluído. " +
-        "Desative em vez de excluir — o histórico fica de pé e a desativação é reversível."
+          "Desative em vez de excluir — o histórico fica de pé e a desativação é reversível."
       );
+    }
 
     case "codigo_nao_confere":
       return "O código digitado não confere. Confira e digite de novo — a exclusão é permanente.";

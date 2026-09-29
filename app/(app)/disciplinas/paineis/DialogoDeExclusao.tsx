@@ -36,12 +36,7 @@ import { Label } from "@/components/ui/label";
 import { excluirDisciplina } from "@/lib/acoes/disciplina";
 import { excluirUnidadeEnsino } from "@/lib/acoes/unidade-ensino";
 import { confirmacaoDaGravacao } from "@/lib/dominio/confirmacao-de-gravacao";
-import {
-  chavesDaRecusa,
-  codigoConfere,
-  motivoDoImpedimento,
-  type TipoExcluivel,
-} from "@/lib/dominio/exclusao-de-disciplina";
+import { codigoConfere, type TipoExcluivel } from "@/lib/dominio/exclusao-de-disciplina";
 
 export function DialogoDeExclusao({
   tipo,
@@ -76,12 +71,12 @@ export function DialogoDeExclusao({
       setAberto(false);
       setDigitado("");
     } else {
-      // ⚠️ A lista de impedimentos vem NA MENSAGEM do banco. Quando ela existe, a frase nomeia o que
-      //    prende e manda desativar; quando não, fica a recusa traduzida como veio.
-      const chaves = chavesDaRecusa(resultado.erro);
-      setErro(
-        chaves.length > 0 ? (motivoDoImpedimento(chaves, tipo) ?? resultado.erro) : resultado.erro,
-      );
+      /*
+       * ⚠️ **A FRASE VEM PRONTA DA TRADUÇÃO, e este componente não a remonta.** Ela já nomeia os
+       * impedimentos e já oferece a saída (*desative em vez de excluir*) — remontá-la aqui seria a
+       * segunda redação da mesma recusa, e as duas divergiriam na primeira correção.
+       */
+      setErro(resultado.erro);
     }
     setExcluindo(false);
   }

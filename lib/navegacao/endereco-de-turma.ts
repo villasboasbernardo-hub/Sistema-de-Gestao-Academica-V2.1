@@ -81,6 +81,35 @@ export function enderecoDaTurmaNoCurso(sigla: string, codigo: string, aba?: stri
   return `${caminho}?${partes.join("&")}`;
 }
 
+/** A raiz da grade de disciplinas. Mudou de lugar? Mudou aqui, e só aqui. */
+const RAIZ_DE_DISCIPLINAS = "/disciplinas";
+
+/**
+ * A grade de disciplinas de um curso, e opcionalmente **de uma turma** (fatia (b), 29/09/2026).
+ *
+ * ⚠️ **ELA ENTROU AQUI PORQUE A GUARDA COBROU, e a guarda estava certa.** A primeira escrita montava
+ * `?curso=…&turma=…` à mão em dois lugares — a aba *Grade* do curso e a ficha da turma —, e
+ * `endereco-de-turma-unico.test.ts` reprovou: *"endereço de turma montado fora de
+ * `lib/navegacao/endereco-de-turma.ts`"*. É exatamente o defeito que o `FR-031.2` existe para
+ * impedir: o código da turma **contém espaços**, e um endereço montado à mão funciona na primeira
+ * tela e falha **em silêncio** na que esquecer de codificar.
+ *
+ * ⚠️ **A GRAFIA É A DA CONSULTA — `+` para espaço**, a mesma que o `nuqs` escreve (decisão de
+ * Bernardo Villas Boas, 23/09/2026, `PEND-5a-8`). Usar `%20` aqui daria **duas grafias** do mesmo
+ * endereço: a do link e a que o seletor escreve ao trocar de turma.
+ *
+ * @example enderecoDasDisciplinas("C-Ap-FR") → "/disciplinas?curso=C-Ap-FR"
+ * @example enderecoDasDisciplinas("C-Ap-FR", "C-Ap-FR T2 2026")
+ *          → "/disciplinas?curso=C-Ap-FR&turma=C-Ap-FR+T2+2026"
+ */
+export function enderecoDasDisciplinas(sigla: string, codigoDaTurma?: string): string {
+  const partes = [
+    `curso=${comoAConsultaEscreve(sigla)}`,
+    ...(codigoDaTurma ? [`turma=${comoAConsultaEscreve(codigoDaTurma)}`] : []),
+  ];
+  return `${RAIZ_DE_DISCIPLINAS}?${partes.join("&")}`;
+}
+
 /**
  * O endereço de criação de turma dentro de um curso.
  *

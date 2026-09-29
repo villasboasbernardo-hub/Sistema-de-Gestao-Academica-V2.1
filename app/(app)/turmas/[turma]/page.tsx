@@ -21,6 +21,7 @@ import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import type { JanelaDeTurma, VigenciaProtegida } from "@/lib/dominio/protecao-de-vigencia";
 import { salasParaEscolher, type Sala } from "@/lib/dominio/salas";
+import { enderecoDasDisciplinas } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../../cursos/consulta";
@@ -178,7 +179,7 @@ export default async function FichaDaTurma({ params }: { params: Promise<{ turma
         {sigla ? (
           <p className="text-sm">
             <Link
-              href={`/disciplinas?curso=${encodeURIComponent(sigla)}&turma=${encodeURIComponent(turma.codigo as string)}`}
+              href={enderecoDasDisciplinas(sigla, turma.codigo as string)}
               className="text-marca underline-offset-2 hover:underline"
               data-slot="ir-para-disciplinas"
             >

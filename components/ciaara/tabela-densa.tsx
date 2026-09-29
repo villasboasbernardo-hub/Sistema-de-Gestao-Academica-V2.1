@@ -373,10 +373,31 @@ export function TabelaDensa<T>(props: TabelaDensaProps<T>) {
                           coluna={indiceColuna}
                         >
                           <td
+                            /*
+                             * ⚠️ **O CLIQUE ATIVA A LINHA SÓ QUANDO HÁ DETALHE, e a restrição é
+                             *    deliberada.** `ListaNavegavel` ativa por **`Enter`/`Espaço`** e
+                             *    mais nada — clicar apenas move o foco. Medido em 29/09/2026: sem
+                             *    isto, quem usa **mouse não consegue abrir** a linha da grade de
+                             *    disciplinas, e o e2e reprovou em 13 casos com *"element(s) not
+                             *    found"*, que se lê como "o detalhe não existe" e era "o detalhe
+                             *    não abre".
+                             * ⚠️ **E SÓ COM `detalhe`**: as outras tabelas usam `aoAtivarLinha`
+                             *    para NAVEGAR — a ficha do instrutor, por exemplo. Ligar o clique
+                             *    nelas trocaria o comportamento de telas que ninguém pediu para
+                             *    mudar.
+                             * ⚠️ **NENHUMA PARADA DE TABULAÇÃO NOVA**: quem recebe o clique é a
+                             *    própria célula, que já é a parada. Um `<button>` dentro dela seria
+                             *    a nona parada numa tabela de oito colunas — o defeito que o
+                             *    cabeçalho ordenável produziu na fatia (b) do Épico 4.
+                             */
+                            {...(detalhe !== undefined && aoAtivarLinha
+                              ? { onClick: () => aoAtivarLinha(linha) }
+                              : {})}
                             className={cn(
                               "px-2 py-1 align-middle whitespace-nowrap",
                               alinhamentoDe(coluna),
                               coluna.numerica && "tabular-nums",
+                              detalhe !== undefined && "cursor-pointer",
                             )}
                           >
                             {coluna.celula(linha)}

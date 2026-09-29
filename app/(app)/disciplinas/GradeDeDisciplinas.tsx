@@ -92,7 +92,15 @@ export function GradeDeDisciplinas({
   const [, definirSituacaoTurma] = useParametro(ROTA, "situacao_turma");
   const [, definirSituacao] = useParametro(ROTA, "situacao");
   const [, definirBusca] = useParametro(ROTA, "busca");
-  const [, definirAberta] = useParametro(ROTA, "aberta");
+  /*
+   * ⚠️ **`aberta` É LIDA DO GANCHO, NÃO DA PROPRIEDADE DO SERVIDOR — e a distinção é o mecanismo.**
+   *    Ela é parâmetro **visual** (`avisaServidor: false`): mudá-la escreve na URL e **não** refaz a
+   *    leitura do servidor. Lendo de `parametros.aberta`, que vem do servidor, o valor nunca
+   *    chegaria de volta — e o detalhe **não abriria**, com a URL certa. Medido: o e2e reprovou em
+   *    13 casos com *"element(s) not found"*, que se lê como "o detalhe não existe".
+   * ⚠️ Os filtros são o contrário: eles avisam o servidor, e por isso vêm das propriedades.
+   */
+  const [abertaNaUrl, definirAberta] = useParametro(ROTA, "aberta");
 
   const porTurma = grade.turmaEscolhida !== null;
 
@@ -354,7 +362,8 @@ export function GradeDeDisciplinas({
     },
   ];
 
-  const abertas = parametros.aberta === "" ? [] : [parametros.aberta];
+  const aberta = String(abertaNaUrl);
+  const abertas = aberta === "" ? [] : [aberta];
 
   return (
     <div className="flex flex-col gap-4" data-slot="grade-de-disciplinas">

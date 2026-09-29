@@ -403,7 +403,19 @@ export async function lerGradeDeDisciplinas(filtro: {
     }
   }
 
-  const linhas: LinhaDaGradeDeDisciplinas[] = disciplinas.map((d) => {
+  /*
+   * ⚠️ **NA VISÃO POR TURMA, SÓ AS DISCIPLINAS DAQUELA TURMA.** A grade de uma turma é o que está
+   *    nela — e a primeira escrita listava **todas** as do curso, mostrando na `T1` uma disciplina
+   *    que a `T1` não tem. Na base real isso quase nunca apareceria: `criar_disciplina` cria a linha
+   *    de grade em toda turma ativa, então quase toda disciplina está em quase toda turma. É
+   *    justamente por quase nunca aparecer que o defeito passaria.
+   * ⚠️ E no CATÁLOGO ficam todas, inclusive a que não está em turma nenhuma: ali a pergunta é outra.
+   */
+  const visiveis = turmaEscolhida
+    ? disciplinas.filter((d) => porTurmaDisciplina.has(d.id))
+    : disciplinas;
+
+  const linhas: LinhaDaGradeDeDisciplinas[] = visiveis.map((d) => {
     const unidades = unidadesPorDisciplina.get(d.id) ?? [];
     const daTurma = porTurmaDisciplina.get(d.id);
     return {

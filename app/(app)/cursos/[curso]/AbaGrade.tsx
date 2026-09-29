@@ -29,7 +29,11 @@ import {
   ROTULO_DO_STATUS_DE_TURMA,
   rotuloDaTurma,
 } from "@/lib/dominio/seletor-de-turma";
-import { enderecoDaNovaTurma, enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+import {
+  enderecoDasDisciplinas,
+  enderecoDaNovaTurma,
+  enderecoDaTurma,
+} from "@/lib/navegacao/endereco-de-turma";
 
 import { SeletorDeTurmaNaUrl } from "./SeletorDeTurmaNaUrl";
 
@@ -118,11 +122,7 @@ export function AbaGrade({
   const botaoDeDisciplinas = (
     <Button asChild size="sm" variant="outline">
       <Link
-        href={
-          turmaAtual
-            ? `/disciplinas?curso=${encodeURIComponent(sigla)}&turma=${encodeURIComponent(turmaAtual.codigo)}`
-            : `/disciplinas?curso=${encodeURIComponent(sigla)}`
-        }
+        href={enderecoDasDisciplinas(sigla, turmaAtual?.codigo)}
         data-slot="ir-para-disciplinas"
       >
         Disciplinas
