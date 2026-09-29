@@ -57,6 +57,12 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/cursos/[curso]/editar/FormularioDeVigencia.tsx": "registrar e corrigir vigência",
   "app/(app)/turmas/FormularioDeTurma.tsx": "criar e editar turma, com o diálogo do limite",
   "app/(app)/admin/salas/FormularioDeSala.tsx": "acrescentar sala",
+  // Spec 011, 29/09/2026 — o próprio cadastro. Os dois são folha porque escolhem arquivo, mostram
+  // recusa e prévia; a página que os contém segue servidor.
+  "app/(app)/perfil/FormularioDaFoto.tsx": "enviar e remover a própria foto",
+  "app/(app)/perfil/FormularioDoNome.tsx": "editar o próprio nome de exibição",
+  "app/(app)/perfil/senha/FormularioDeSenhaNova.tsx":
+    "trocar a própria senha, com a recusa em português",
   "app/(app)/admin/salas/AcoesDeSala.tsx": "desativar e reativar sala, com o diálogo das turmas",
 
   // ── Épico 5 (b), PR 3: a grade de disciplinas ──────────────────────────────────────────────

@@ -28,13 +28,21 @@ export const ID_DO_CONTEUDO = "conteudo";
 
 export function CascaDoApp({
   nome,
+  email,
   perfil,
   caminho,
+  fotoUrl,
+  aoSair,
   children,
 }: {
   readonly nome: string;
+  readonly email: string;
   readonly perfil: string;
   readonly caminho: string;
+  readonly fotoUrl: string | null;
+  /** A Server Action que encerra a sessão — **chega pronta do layout**. A casca não a
+   *  importa: `@/lib/acoes/` é proibido em componente, e a proibição está certa. */
+  readonly aoSair: () => Promise<void>;
   readonly children: React.ReactNode;
 }) {
   return (
@@ -48,7 +56,7 @@ export function CascaDoApp({
 
       <FocoAoTrocarDeRota alvo={ID_DO_CONTEUDO} />
 
-      <CabecalhoDoApp nome={nome} perfil={perfil} />
+      <CabecalhoDoApp nome={nome} email={email} perfil={perfil} fotoUrl={fotoUrl} aoSair={aoSair} />
 
       <div className="flex flex-1 flex-col lg:flex-row">
         <NavegacaoLateral caminho={caminho} />

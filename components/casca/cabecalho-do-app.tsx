@@ -11,17 +11,32 @@
  *
  * ⚠️ **ELE SUBSTITUI O ALTERNADOR DE TEMA DA VITRINE** (`FR-018`) — substituição, não duplicação.
  * Dois alternadores é o resultado que o `CHK019` previu, e a vitrine perde o dela no mesmo commit.
+ *
+ * ⚠️ **O TEXTO SOLTO `nome · perfil` VIROU MENU EM 29/09/2026** (`FR-002` da spec 011), e é
+ * substituição, não acréscimo. Ele identificava quem estava dentro **e não oferecia saída nenhuma**:
+ * quem entrava pelo preview não conseguia sair, porque `encerrarSessao()` existia sem consumidor. O
+ * nome continua à vista em telas largas; o que mudou é que agora ele abre.
  */
 import Image from "next/image";
 
+import { MenuDoAvatar } from "@/components/casca/menu-do-avatar";
 import { SeletorDeTema } from "@/components/casca/seletor-de-tema";
+import { rotuloDoPerfil } from "@/lib/dominio/perfis";
 
 export function CabecalhoDoApp({
   nome,
+  email,
   perfil,
+  fotoUrl,
+  aoSair,
 }: {
   readonly nome: string;
+  readonly email: string;
   readonly perfil: string;
+  readonly fotoUrl: string | null;
+  /** A Server Action que encerra a sessão — **chega pronta do layout**. A casca não a
+   *  importa: `@/lib/acoes/` é proibido em componente, e a proibição está certa. */
+  readonly aoSair: () => Promise<void>;
 }) {
   return (
     <header
@@ -46,9 +61,10 @@ export function CabecalhoDoApp({
 
       <div className="flex items-center gap-4">
         <span className="text-texto-suave hidden text-sm sm:inline">
-          {nome} · {perfil}
+          {nome} · {rotuloDoPerfil(perfil)}
         </span>
         <SeletorDeTema />
+        <MenuDoAvatar nome={nome} email={email} perfil={perfil} fotoUrl={fotoUrl} aoSair={aoSair} />
       </div>
     </header>
   );

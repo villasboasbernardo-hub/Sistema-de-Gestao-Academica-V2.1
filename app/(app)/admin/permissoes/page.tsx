@@ -19,6 +19,7 @@
  * o dado mesmo com a matriz à vista.
  */
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import { rotuloDoPerfil } from "@/lib/dominio/perfis";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 const ACOES = ["ler", "criar", "editar", "desativar"] as const;
@@ -72,7 +73,7 @@ export default async function Permissoes() {
                   key={p}
                   className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left"
                 >
-                  {p}
+                  {rotuloDoPerfil(p)}
                 </th>
               ))}
             </tr>

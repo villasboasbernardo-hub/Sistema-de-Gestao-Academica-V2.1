@@ -6,10 +6,18 @@
  * ⚠️ Os perfis e escopos vêm de `Constants`, gerado do banco. Uma lista escrita à mão neste
  * `<select>` seria a segunda fonte de verdade que o FR-021 proíbe: o dia em que um perfil for
  * acrescentado ao ENUM, este formulário deixaria de oferecê-lo sem ninguém notar.
+ *
+ * ⚠️ **O PERFIL PASSOU A APARECER EM PORTUGUÊS E AGRUPADO POR DIVISÃO em 29/09/2026** (`FR-005` e
+ * `FR-040.1` da spec 011, decisão D-1 de Bernardo). Até aqui a lista oferecia
+ * `encarregado_administracao_academica` — o identificador do banco, cru, a quem estivesse
+ * convidando alguém. ⚠️ **A FONTE DA VERDADE NÃO MUDOU**: `perfisPorDivisao()` é montado sobre um
+ * `Record<Perfil, …>`, então perfil novo no ENUM faz o módulo **parar de compilar** em vez de sumir
+ * em silêncio — a mesma garantia que o cabeçalho acima descreve, agora com rótulo.
  */
 import { useState } from "react";
 
 import { convidar } from "@/lib/acoes/usuarios";
+import { perfisPorDivisao } from "@/lib/dominio/perfis";
 import { Constants } from "@/lib/tipos/database";
 
 export function FormularioDeConvite() {
@@ -56,10 +64,14 @@ export function FormularioDeConvite() {
           required
           className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
         >
-          {Constants.public.Enums.perfil_usuario.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
+          {perfisPorDivisao().map((grupo) => (
+            <optgroup key={grupo.divisao} label={grupo.divisao}>
+              {grupo.perfis.map((p) => (
+                <option key={p.valor} value={p.valor}>
+                  {p.rotulo}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
 

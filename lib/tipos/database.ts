@@ -2697,6 +2697,7 @@ export type Database = {
       usuarios: {
         Row: {
           auth_user_id: string | null
+          avatar_caminho: string | null
           codigo: string
           criado_em: string
           criado_por: string | null
@@ -2716,6 +2717,7 @@ export type Database = {
         }
         Insert: {
           auth_user_id?: string | null
+          avatar_caminho?: string | null
           codigo: string
           criado_em?: string
           criado_por?: string | null
@@ -2735,6 +2737,7 @@ export type Database = {
         }
         Update: {
           auth_user_id?: string | null
+          avatar_caminho?: string | null
           codigo?: string
           criado_em?: string
           criado_por?: string | null
