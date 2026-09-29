@@ -263,21 +263,38 @@ describe("⚠️ a metade que discrimina: nenhuma outra gravação confirma", ()
     ).toBe(false);
   });
 
-  it("⚠️ sem contexto nenhum, só as quatro do 'sempre' confirmam", () => {
+  it("⚠️ sem contexto nenhum, só as SEIS do 'sempre' confirmam", () => {
+    /*
+     * ⚠️ **ERAM QUATRO E PASSARAM A SEIS em 29/09/2026**, e o número novo é o certo: as duas
+     * exclusões da fatia (b) confirmam **sempre**, sem depender de contexto. As outras quatro da
+     * fatia nova — desativar com histórico, alterar CH, alterar modo, remover instrutor com aula —
+     * dependem de haver histórico, e por isso continuam fora desta lista: sem contexto, elas não
+     * confirmam, que é o comportamento do A-9 (confirmar só o que é difícil de desfazer).
+     */
     const sempre = TIPOS_DE_GRAVACAO.filter((t) => confirmacaoDaGravacao(t, {}).confirma);
     expect(sempre).toEqual([
       "desativar_curso",
       "reativar_curso",
       "registrar_vigencia",
       "corrigir_vigencia",
+      "excluir_disciplina",
+      "excluir_unidade_ensino",
     ]);
   });
 });
 
 describe("a lista de gravações é fechada — e não envelhece em silêncio", () => {
-  it("são as 11 escritas do contrato §1, e nenhuma a mais", () => {
+  it("são as 18 escritas do contrato §1 — 11 da fatia (a) e 7 da (b) —, e nenhuma a mais", () => {
+    /*
+     * ⚠️ **ERAM 11 E PASSARAM A 18 em 29/09/2026.** O número velho estava certo para a fatia (a) e
+     * ficou vencido com a (b): as sete novas são todas escritas **difíceis de desfazer** —
+     * excluir (permanente), desativar registro com histórico (tira da vista o que continua
+     * existindo) e as três que **recalculam a carga horária de gente**, que sai impressa na LIQ.
+     * Esta lista é o portão: acrescentar uma escrita sem decidir aqui não compila.
+     */
     expect([...TIPOS_DE_GRAVACAO].sort()).toEqual(
       [
+        // ── fatia (a) — cursos, turmas, salas e vigência ──────────────────────────────────────
         "acrescentar_sala",
         "corrigir_vigencia",
         "criar_curso",
@@ -289,6 +306,14 @@ describe("a lista de gravações é fechada — e não envelhece em silêncio", 
         "reativar_curso",
         "reativar_sala",
         "registrar_vigencia",
+        // ── fatia (b) — disciplinas e unidades de ensino ──────────────────────────────────────
+        "alterar_ch_com_rateio",
+        "alterar_modo_com_instrutores",
+        "desativar_disciplina_com_historico",
+        "desativar_unidade_com_historico",
+        "excluir_disciplina",
+        "excluir_unidade_ensino",
+        "remover_instrutor_com_aula",
       ].sort(),
     );
   });

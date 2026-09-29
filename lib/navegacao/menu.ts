@@ -70,7 +70,10 @@ export const MENU: readonly EntradaDeMenu[] = [
   { rotulo: "Cronograma", rota: "/cronograma", disponivel: false, entregaEm: "Épico 7" },
   { rotulo: "Atividades", rota: "/atividades", disponivel: false, entregaEm: "Épico 9" },
   { rotulo: "Instrutores", rota: "/instrutores", disponivel: true, entregaEm: "Épico 5 (c)" },
-  { rotulo: "Disciplinas", rota: "/disciplinas", disponivel: false, entregaEm: "Épico 5 (b)" },
+  // ⚠️ Passou a `disponivel: true` em 29/09/2026, com o PR 3 da fatia (b). Até aqui a entrada
+  //    existia marcada "em breve" (decisão MENU-2): o menu não cresce a cada épico, e ninguém
+  //    reaprende a navegação sete vezes.
+  { rotulo: "Disciplinas", rota: "/disciplinas", disponivel: true, entregaEm: "Épico 5 (b)" },
   { rotulo: "Administração", rota: "/admin/usuarios", disponivel: true, entregaEm: "Épico 3" },
 ];
 

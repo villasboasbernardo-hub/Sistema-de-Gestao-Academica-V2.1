@@ -441,3 +441,218 @@ describe("`FR-070` / A-2 · a disciplina nasce nas turmas pela RPC", () => {
     expect(error?.code, JSON.stringify(error)).toBe("42501");
   });
 });
+
+describe("⚠️ CRITÉRIO 4 DO ÉPICO 5 · o período é DAQUELA turma, e de mais nenhuma", () => {
+  /**
+   * ⚠️ **ESTE É O CASO CRÍTICO DA FATIA INTEIRA, e o modo de falha dele é MUDO.** Se a gravação do
+   * período filtrasse por `disciplina_id` em vez de pelo `id` da linha da turma, a turma editada
+   * ficaria **certa** — e todas as outras mudariam sem ninguém pedir. Quem confere a tela que acabou
+   * de editar não vê nada de errado; o estrago aparece semanas depois, na turma do lado.
+   *
+   * ⚠️ **A ASSERÇÃO É SOBRE `editado_em` DA OUTRA LINHA, e não sobre o valor da previsão.** Comparar
+   * só a data deixaria passar uma gravação que escrevesse **o mesmo valor** nas duas — o que é o caso
+   * quando as duas turmas começam com a previsão nula. O carimbo de edição prova que a linha **não
+   * foi tocada**, que é a pergunta de verdade.
+   *
+   * ⚠️ **E O CARIMBO É MEDIDO ANTES E COMPARADO DEPOIS, em vez de zerado.** A primeira escrita
+   * tentava pôr `editado_em = null` no preparo — e o gatilho `app.set_auditoria()` **reescreve o
+   * carimbo em todo `UPDATE`**, inclusive nesse. O teste reprovava medindo o próprio preparo.
+   */
+  let turmaDoisId = "";
+  let tdDaTurmaUmId = "";
+  let tdDaTurmaDoisId = "";
+  /** O carimbo de edição da T1 **antes** da gravação na T2 — é com ele que se compara. */
+  let carimboDaTurmaUmAntes: string | null = null;
+
+  beforeAll(async () => {
+    const { data: turma, error } = await admin
+      .from("turmas")
+      .insert({
+        curso_id: cursoId,
+        turma: "T2",
+        ano_letivo: 2026,
+        status: "planejada",
+        modalidade: "presencial",
+        data_inicio: "2026-03-02",
+        data_termino: "2026-06-30",
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`falha ao criar a T2: ${error.message}`);
+    turmaDoisId = (turma as { id: string }).id;
+
+    // ⚠️ A grade da T2 nasce com a turma, para toda disciplina ATIVA do curso (`FR-032.2` da spec
+    //    009). Aqui ela é LIDA — inserir de novo colidiria (achado A-2).
+    const { data: linhas, error: erroLinhas } = await admin
+      .from("turma_disciplina")
+      .select("id, turma_id")
+      .eq("disciplina_id", disciplinaComTurmaId);
+    if (erroLinhas) throw new Error(`falha ao ler a grade: ${erroLinhas.message}`);
+
+    for (const linha of linhas ?? []) {
+      const l = linha as { id: string; turma_id: string };
+      if (l.turma_id === turmaDoisId) tdDaTurmaDoisId = l.id;
+      if (l.turma_id === turmaId) tdDaTurmaUmId = l.id;
+    }
+
+    // As duas linhas voltam ao período vazio; o carimbo de edição NÃO é zerado (ver o cabeçalho).
+    await admin
+      .from("turma_disciplina")
+      .update({ previsao_inicio: null, previsao_termino: null, origem_periodo: "nao_informado" })
+      .in("id", [tdDaTurmaUmId, tdDaTurmaDoisId]);
+
+    const { data: antes } = await admin
+      .from("turma_disciplina")
+      .select("editado_em")
+      .eq("id", tdDaTurmaUmId)
+      .single();
+    carimboDaTurmaUmAntes = (antes as { editado_em: string | null }).editado_em;
+  }, 60_000);
+
+  it("a amostra tem as DUAS turmas com a mesma disciplina — controle positivo", () => {
+    expect(tdDaTurmaUmId, "a grade da T1 não foi achada").not.toBe("");
+    expect(tdDaTurmaDoisId, "a grade da T2 não nasceu com a turma").not.toBe("");
+    expect(tdDaTurmaUmId).not.toBe(tdDaTurmaDoisId);
+  });
+
+  it("⚠️ gravar na T2 altera EXATAMENTE 1 linha", async () => {
+    const { error, count } = await cliente("operador")
+      .from("turma_disciplina")
+      .update(
+        { previsao_inicio: "2026-03-10", previsao_termino: "2026-04-10", origem_periodo: "manual" },
+        { count: "exact" },
+      )
+      .eq("id", tdDaTurmaDoisId);
+
+    expect(error, JSON.stringify(error)).toBeNull();
+    expect(count, "a gravação alcançou mais de uma linha da grade").toBe(1);
+  });
+
+  it("⚠️ e a T1 tem o MESMO carimbo de edição de antes — ela não foi tocada", async () => {
+    const { data } = await admin
+      .from("turma_disciplina")
+      .select("previsao_inicio, editado_em, origem_periodo")
+      .eq("id", tdDaTurmaUmId)
+      .single();
+
+    const linha = data as {
+      previsao_inicio: string | null;
+      editado_em: string | null;
+      origem_periodo: string;
+    };
+    expect(
+      linha.editado_em,
+      "o carimbo de edição da T1 mudou — a gravação está filtrando por disciplina, não pela linha da turma",
+    ).toBe(carimboDaTurmaUmAntes);
+    // E o período dela continua vazio, que é o estado em que o preparo a deixou.
+    expect(linha.previsao_inicio).toBeNull();
+    expect(linha.origem_periodo).toBe("nao_informado");
+  });
+});
+
+describe("`PEND-5b-6` · a view da CH prevista respeita o ALCANCE, e isso é comportamento", () => {
+  /**
+   * ⚠️ **A INVARIANTE I-13 CONFERE O CATÁLOGO; ESTE CASO CONFERE O NÚMERO.** A M7 repôs
+   * `security_invoker = true` em `vw_instrutor_carga_prevista` depois de o `create or replace view`
+   * da M5 tê-la descartado em silêncio (gotcha 10) — e o efeito do descarte era o gotcha 4 **ao
+   * contrário**: em vez de negar em silêncio, a view **concedia** em silêncio, porque passava a rodar
+   * com os direitos do dono, que tem `rolbypassrls`.
+   *
+   * ⚠️ **Uma asserção sobre `reloptions` não pega isso.** Ela prova que a opção está lá; só a leitura
+   * com sessão de alcance restrito prova que a opção **faz efeito**.
+   *
+   * ⚠️ **E PRECISA DE UMA CONTA DE ESCOPO RESTRITO, criada aqui.** O `operador` da suíte tem escopo
+   * **`geral`** — medido em 29/09/2026 —, e para ele **ver todos os cursos está certo**. A primeira
+   * escrita deste bloco usava esse operador e acusava 96 linhas "fora do alcance" que estavam
+   * perfeitamente dentro dele: o teste media o escopo errado.
+   */
+  const EMAIL_RESTRITO = "5b-operador-regular@ciaara.teste5b";
+  let sessaoRestrita: SupabaseClient;
+  /** Uma classificação que a conta restrita **não** alcança, e que tem dado na base. */
+  const CLASSIFICACAO_DE_FORA = "expedito";
+  const CLASSIFICACAO_DO_ESCOPO = "regular";
+
+  beforeAll(async () => {
+    const { data: conta, error } = await admin.auth.admin.createUser({
+      email: EMAIL_RESTRITO,
+      password: SENHA,
+      email_confirm: true,
+    });
+    if (error) throw new Error(`falha ao criar a conta restrita: ${error.message}`);
+
+    const { error: erroCadastro } = await admin.from("usuarios").insert({
+      codigo: `USR-5B-REG-${SELO}`,
+      auth_user_id: conta.user.id,
+      email: EMAIL_RESTRITO,
+      nome: "Operador de escopo regular",
+      perfil: "operador",
+      escopo_curso: CLASSIFICACAO_DO_ESCOPO,
+    });
+    if (erroCadastro)
+      throw new Error(`falha ao cadastrar a conta restrita: ${erroCadastro.message}`);
+
+    sessaoRestrita = createClient(URL_SUPABASE, CHAVE_ANON, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { error: erroLogin } = await sessaoRestrita.auth.signInWithPassword({
+      email: EMAIL_RESTRITO,
+      password: SENHA,
+    });
+    if (erroLogin) throw new Error(`falha ao autenticar a conta restrita: ${erroLogin.message}`);
+  }, 60_000);
+
+  afterAll(async () => {
+    const { data: contas } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    for (const conta of contas?.users ?? []) {
+      if (conta.email === EMAIL_RESTRITO) {
+        await admin.from("usuarios").delete().eq("auth_user_id", conta.id);
+        await admin.auth.admin.deleteUser(conta.id);
+      }
+    }
+  });
+
+  it("⚠️ controle positivo: a conta restrita TRAZ o que está no escopo dela", async () => {
+    // ⚠️ Sem isto, uma view que devolvesse SEMPRE vazio — por policy quebrada, por exemplo — passaria
+    //    no caso negativo por não trazer nada, que é o modo de falha mais tranquilizador que existe.
+    const { data: haDado } = await admin
+      .from("vw_instrutor_carga_prevista")
+      .select("curso_id, cursos!inner(classificacao)")
+      .eq("cursos.classificacao", CLASSIFICACAO_DO_ESCOPO)
+      .limit(1);
+    if ((haDado ?? []).length === 0) return; // a base não tem atribuição em curso `regular`
+
+    const { data, error } = await sessaoRestrita
+      .from("vw_instrutor_carga_prevista")
+      .select("curso_id");
+    expect(error, JSON.stringify(error)).toBeNull();
+    expect(
+      (data ?? []).length,
+      "a view não trouxe NADA nem para o escopo da conta — ela está negando tudo",
+    ).toBeGreaterThan(0);
+  });
+
+  it("⚠️ e NÃO traz linha de curso FORA do escopo — é o que o `security_invoker` garante", async () => {
+    const { data: deFora } = await admin
+      .from("cursos")
+      .select("id")
+      .eq("classificacao", CLASSIFICACAO_DE_FORA);
+    const idsDeFora = new Set((deFora ?? []).map((c) => (c as { id: string }).id));
+    expect(idsDeFora.size, "não há curso fora do escopo na base — nada a provar").toBeGreaterThan(
+      0,
+    );
+
+    const { data, error } = await sessaoRestrita
+      .from("vw_instrutor_carga_prevista")
+      .select("curso_id, curso_codigo");
+    expect(error, JSON.stringify(error)).toBeNull();
+
+    const vazadas = (data ?? [])
+      .map((l) => l as { curso_id: string; curso_codigo: string })
+      .filter((l) => idsDeFora.has(l.curso_id));
+
+    expect(
+      [...new Set(vazadas.map((l) => l.curso_codigo))],
+      "a view trouxe curso fora do escopo — `security_invoker` não está fazendo efeito",
+    ).toEqual([]);
+  });
+});

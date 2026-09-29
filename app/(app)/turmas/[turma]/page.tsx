@@ -21,6 +21,7 @@ import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import type { JanelaDeTurma, VigenciaProtegida } from "@/lib/dominio/protecao-de-vigencia";
 import { salasParaEscolher, type Sala } from "@/lib/dominio/salas";
+import { enderecoDasDisciplinas } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../../cursos/consulta";
@@ -166,6 +167,23 @@ export default async function FichaDaTurma({ params }: { params: Promise<{ turma
               data-slot="voltar-ao-curso"
             >
               {sigla} — {cursoRes.data?.nome_curso as string}
+            </Link>
+          </p>
+        ) : null}
+
+        {/*
+          ⚠️ **O CAMINHO CLICÁVEL PARA A GRADE DE DISCIPLINAS DESTA TURMA** (fatia (b), 29/09/2026).
+             Ele leva com curso e turma já escolhidos — que é o percurso de quem está na ficha da
+             turma e quer ver o período e os instrutores de cada disciplina dela.
+        */}
+        {sigla ? (
+          <p className="text-sm">
+            <Link
+              href={enderecoDasDisciplinas(sigla, turma.codigo as string)}
+              className="text-marca underline-offset-2 hover:underline"
+              data-slot="ir-para-disciplinas"
+            >
+              Ver as disciplinas desta turma
             </Link>
           </p>
         ) : null}

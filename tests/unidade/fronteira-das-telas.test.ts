@@ -58,6 +58,14 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/turmas/FormularioDeTurma.tsx": "criar e editar turma, com o diálogo do limite",
   "app/(app)/admin/salas/FormularioDeSala.tsx": "acrescentar sala",
   "app/(app)/admin/salas/AcoesDeSala.tsx": "desativar e reativar sala, com o diálogo das turmas",
+
+  // ── Épico 5 (b), PR 3: a grade de disciplinas ──────────────────────────────────────────────
+  // ⚠️ SÃO DUAS FOLHAS, e os painéis abaixo delas NÃO levam marcador: o `"use client"` marca a
+  //    FRONTEIRA, e o que é importado a partir dela já vai para o navegador. Marcar cada painel
+  //    não mudaria o pacote e encheria esta lista com arquivos que não são fronteira de nada.
+  "app/(app)/disciplinas/GradeDeDisciplinas.tsx": "filtros, tabela com detalhe e painéis",
+  "app/(app)/disciplinas/CascataDeCursoETurma.tsx":
+    "a cascata curso → turma, em arquivo próprio para não construir escolha num arquivo que menciona instrutor (`SC-002`)",
 };
 
 function semComentario(fonte: string): string {

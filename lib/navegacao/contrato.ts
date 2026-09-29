@@ -120,6 +120,24 @@ export const CIRCULOS_HIERARQUICOS = ["oficiais", "pracas"] as const;
 export const SITUACOES_DE_CADASTRO = Constants.public.Enums.status_registro;
 
 /**
+ * As quatro situações de execução de uma disciplina numa turma (`FR-053`).
+ *
+ * ⚠️ **ELA NÃO VEM DE UM ENUM DO BANCO, porque NÃO HÁ enum: a situação é DERIVADA** da CH prevista,
+ * da cumprida e da data (`lib/dominio/indicadores-da-grade.ts`). Uma coluna `situacao` seria a
+ * segunda fonte de verdade que as convenções de banco proíbem — ela envelheceria em silêncio no dia
+ * em que alguém lançasse uma aula e ninguém a recalculasse.
+ *
+ * ⚠️ E a lista é fechada **aqui** de propósito: filtro é escolha, e escolha precisa de domínio. O
+ * teste de unidade do módulo de indicadores confere que as quatro são exatamente estas.
+ */
+export const SITUACOES_DE_EXECUCAO = [
+  "nao_iniciada",
+  "em_andamento",
+  "concluida",
+  "atrasada",
+] as const;
+
+/**
  * As ordenações de apresentação da listagem de instrutores.
  *
  * ⚠️ UM VALOR POR SENTIDO, E NÃO UMA GRAMÁTICA. `nome_desc` é uma opção inteira, validada contra a
@@ -312,6 +330,87 @@ export const CONTRATO = {
    * ver o que foi desativado exige `?situacao=inativo` — que é link compartilhável (`FR-017.2`).
    * Duas listas de situação divergiriam no dia em que uma delas mudasse.
    */
+  /*
+   * A grade de disciplinas (`RF-MATERIAS-01`, fatia (b) do Épico 5).
+   *
+   * ⚠️ **`curso` E `turma` SÃO NAVEGAÇÃO; OS OUTROS CINCO SÃO FILTRO.** A distinção decide duas
+   * coisas de uma vez: os dois primeiros **empilham** histórico — trocar de curso é ir a outro lugar,
+   * e quem aperta "voltar" espera desfazer um passo —, e são os únicos que o botão *Limpar filtros*
+   * **preserva** (`FR-054`). Limpar filtro e perder a turma em que se estava seria fazer o botão
+   * navegar.
+   *
+   * ⚠️ **`turma` É TEXTO, e carrega o `codigo`, nunca `uuid`** — o mesmo critério de
+   * `/cursos/[curso]`. O código tem espaços (`C-Ap-FR T2 2026`) e é codificado pela função única de
+   * `lib/navegacao/endereco-de-turma.ts`.
+   *
+   * ⚠️ **`instrutor` TAMBÉM É TEXTO, e pelo mesmo motivo de `om` em `/instrutores`:** o domínio é o
+   * dado — 177 instrutores hoje —, e uma lista fechada escrita aqui degradaria em silêncio o link
+   * que apontasse para quem foi cadastrado depois. ⚠️ E ele carrega o **código** do instrutor, não o
+   * `uuid`: a fatia (c) mediu que mandar identificadores na URL estoura o limite do endereço com 175
+   * deles.
+   *
+   * ⚠️ **`aberta` GUARDA A LINHA EXPANDIDA, e é por isso que ela SUBSTITUI.** Abrir o detalhe de uma
+   * disciplina é refinar a mesma vista; empilhar faria "voltar" fechar a linha em vez de sair da
+   * tela, que é o que a pessoa espera desfazer.
+   */
+  "/disciplinas": {
+    rota: "/disciplinas",
+    origem: "RF-MATERIAS-01",
+    parametros: {
+      curso: {
+        nome: "curso",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
+      turma: {
+        nome: "turma",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
+      instrutor: {
+        nome: "instrutor",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      situacao_turma: {
+        nome: "situacao_turma",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: SITUACOES_DE_EXECUCAO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      situacao: {
+        nome: "situacao",
+        tipo: "escolha",
+        padrao: "ativo",
+        opcoes: SITUACOES_DE_CADASTRO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      busca: {
+        nome: "busca",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
+      },
+      aberta: {
+        nome: "aberta",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: false,
+      },
+    },
+  },
   "/cursos": {
     rota: "/cursos",
     origem: "RF-CURSOS-01",

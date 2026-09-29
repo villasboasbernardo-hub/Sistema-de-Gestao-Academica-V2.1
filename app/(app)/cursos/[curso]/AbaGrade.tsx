@@ -29,7 +29,11 @@ import {
   ROTULO_DO_STATUS_DE_TURMA,
   rotuloDaTurma,
 } from "@/lib/dominio/seletor-de-turma";
-import { enderecoDaNovaTurma, enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+import {
+  enderecoDasDisciplinas,
+  enderecoDaNovaTurma,
+  enderecoDaTurma,
+} from "@/lib/navegacao/endereco-de-turma";
 
 import { SeletorDeTurmaNaUrl } from "./SeletorDeTurmaNaUrl";
 
@@ -106,6 +110,26 @@ export function AbaGrade({
       </Button>
     ) : null;
 
+  /*
+   * ⚠️ **O CAMINHO CLICÁVEL PARA A GRADE DE DISCIPLINAS** (fatia (b), 29/09/2026). *Tela sem caminho
+   *    clicável é tela NÃO ENTREGUE*: `/disciplinas` tem a entrada do menu, mas chegar lá **com o
+   *    curso e a turma já escolhidos** é o percurso que quem está olhando a grade da turma quer — e
+   *    sem ele a pessoa teria de reescolher os dois.
+   * ⚠️ **SEM PERMISSÃO PRÓPRIA:** o botão segue a permissão da página de DESTINO, que é a leitura de
+   *    disciplinas — a mesma que já deixou esta pessoa ver o curso. Uma regra própria aqui seria a
+   *    segunda a divergir.
+   */
+  const botaoDeDisciplinas = (
+    <Button asChild size="sm" variant="outline">
+      <Link
+        href={enderecoDasDisciplinas(sigla, turmaAtual?.codigo)}
+        data-slot="ir-para-disciplinas"
+      >
+        Disciplinas
+      </Link>
+    </Button>
+  );
+
   return (
     <div className="flex flex-col gap-4" data-slot="aba-grade">
       {avisoDaSelecao ? (
@@ -135,6 +159,7 @@ export function AbaGrade({
             selecionada={selecionada}
           />
         ) : null}
+        {botaoDeDisciplinas}
         {botaoDeNovaTurma}
       </div>
 

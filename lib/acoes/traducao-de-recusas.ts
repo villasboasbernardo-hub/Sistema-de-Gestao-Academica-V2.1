@@ -21,6 +21,12 @@
  * Origem: `specs/009-cursos-e-turmas/contracts/escritas-recusas-e-avisos.md` §2.
  */
 
+import {
+  chavesDaRecusa,
+  motivoDoImpedimento,
+  type TipoExcluivel,
+} from "@/lib/dominio/exclusao-de-disciplina";
+
 /** O formato do erro do PostgREST — e de qualquer coisa que o imite. */
 export type ErroDoBanco = {
   readonly code?: string | null;
@@ -146,6 +152,23 @@ const MENSAGEM_DA_RESTRICAO: Readonly<Record<string, string>> = {
   cursos_duracao_dias_positiva: "A duração em dias tem de ser maior que zero.",
   cursos_duracao_semanas_positiva: "A duração em semanas tem de ser maior que zero.",
   cursos_limite_turmas_positivo: "O limite de turmas por ano tem de ser maior que zero.",
+
+  // ── Fatia (b), 29/09/2026 — nomes LIDOS de `pg_constraint` e `pg_indexes` no banco local ──────
+  // ⚠️ `uq_disciplinas_curso_cod_ativo` é índice ÚNICO PARCIAL — `where status = 'ativo'`. É ele que
+  //    faz a `Q-04` valer: desativar uma disciplina LIBERA o código para outra no mesmo curso.
+  uq_disciplinas_curso_cod_ativo:
+    "Já existe uma disciplina ativa com este código neste curso — escolha outro.",
+  ue_unica_na_disciplina:
+    "Já existe uma unidade de ensino com este número nesta disciplina — escolha outro.",
+  tdu_ue_unica_na_turma:
+    "Esta unidade de ensino já está atribuída a um instrutor nesta turma. Cada unidade tem exatamente um.",
+  disciplinas_carga_positiva: "A carga horária da disciplina tem de ser maior que zero.",
+  disciplinas_janela_coerente: "A previsão de término não pode ser anterior à previsão de início.",
+  disciplinas_modo_padrao_concreto:
+    "O modo de atribuição da disciplina tem de ser dividido ou simultâneo.",
+  ue_ch_positiva: "A carga horária da unidade de ensino tem de ser maior que zero.",
+  ue_numero_positivo: "O número da unidade de ensino tem de ser maior que zero.",
+  ue_topico_nao_vazio: "Informe o tópico da unidade de ensino.",
 };
 
 /**
@@ -278,6 +301,109 @@ function porChave(
       );
     }
 
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    // Fatia (b) — disciplinas, unidades de ensino e rateio
+    // ⚠️ AS CHAVES FORAM LIDAS DE `pg_proc.prosrc` SEM COMENTÁRIO (regra 9.1.1), banco local,
+    //    29/09/2026 — não copiadas do contrato. O contrato §2 já divergiu do banco uma vez, e a
+    //    divergência era MUDA: a tradução simplesmente nunca disparava.
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+
+    case "registro_com_historico": {
+      /*
+       * ⚠️ **A LISTA DE IMPEDIMENTOS É NOMEADA AQUI, e não na tela.** A primeira escrita devolvia só
+       * a frase de fundo e deixava o diálogo extrair a lista — mas o diálogo recebe **esta** frase,
+       * já traduzida, e a lista tinha ficado para trás na mensagem do banco. O resultado era uma
+       * recusa correta que não dizia **o quê** prende o registro, que é a única informação útil ali
+       * (`FR-022`). Medido pelo e2e, em 29/09/2026.
+       */
+      const chaves = chavesDaRecusa(erro.message);
+      const tipo: TipoExcluivel = erro.message.startsWith("unidade_com_historico")
+        ? "unidade_de_ensino"
+        : "disciplina";
+      return (
+        motivoDoImpedimento(chaves, tipo) ??
+        "Este registro tem histórico e não pode ser excluído. " +
+          "Desative em vez de excluir — o histórico fica de pé e a desativação é reversível."
+      );
+    }
+
+    case "codigo_nao_confere":
+      return "O código digitado não confere. Confira e digite de novo — a exclusão é permanente.";
+
+    case "rastro_imutavel":
+      return (
+        "O rastro de exclusão não pode ser alterado nem apagado. " +
+        "Corrigir um rastro é registrar um evento novo, nunca reescrever o antigo."
+      );
+
+    case "periodo_fora_da_janela": {
+      const turma = typeof d?.["turma"] === "string" ? d["turma"] : undefined;
+      const inicio = typeof d?.["data_inicio"] === "string" ? d["data_inicio"] : undefined;
+      const termino = typeof d?.["data_termino"] === "string" ? d["data_termino"] : undefined;
+      // ⚠️ A frase traz A JANELA, e não só o veredito: quem está corrigindo a previsão precisa saber
+      //    entre que datas ela cabe, senão tenta de novo às cegas.
+      if (turma && inicio && termino) {
+        return (
+          `O período previsto tem de caber na janela da turma ${turma}, ` +
+          `de ${inicio} a ${termino}.`
+        );
+      }
+      return "O período previsto tem de caber na janela da turma.";
+    }
+
+    case "rateio_nao_fecha": {
+      const soma = d?.["soma"];
+      const ch = d?.["carga_horaria_tempos"];
+      const modo = d?.["modo"];
+      if (modo === "simultaneo" && typeof ch === "number") {
+        return (
+          `No modo simultâneo cada instrutor recebe a carga horária INTEGRAL da disciplina ` +
+          `(${ch} tempos) — as parcelas não são digitadas.`
+        );
+      }
+      if (typeof soma === "number" && typeof ch === "number") {
+        const diferenca = ch - soma;
+        return (
+          `As parcelas somam ${soma} tempos e a disciplina tem ${ch}. ` +
+          (diferenca > 0 ? `Faltam ${diferenca}.` : `Passam ${-diferenca}.`)
+        );
+      }
+      return "A soma das parcelas precisa ser igual à carga horária da disciplina.";
+    }
+
+    case "rateio_incompleto":
+      return (
+        "Informe a parcela de TODOS os instrutores, ou de nenhum. " +
+        "Deixar parte em branco não divide o resto — quem não tem parcela ficaria com zero."
+      );
+
+    case "ue_sem_instrutor": {
+      const atribuidas = d?.["atribuidas"];
+      const unidades = d?.["unidades"];
+      if (typeof atribuidas === "number" && typeof unidades === "number") {
+        return (
+          `Faltam unidades de ensino sem instrutor: ${atribuidas} de ${unidades} atribuídas. ` +
+          `No rateio por unidade, todas precisam estar atribuídas.`
+        );
+      }
+      return "No rateio por unidade de ensino, toda unidade precisa ter um instrutor.";
+    }
+
+    case "ue_sem_instrutor_ativo":
+      return (
+        "Há unidade de ensino atribuída a um instrutor que não está mais ativo nesta disciplina. " +
+        "Atribua a unidade a quem está na turma."
+      );
+
+    case "rateio_por_ue_com_ta":
+      return (
+        "Escolha um modo só: por unidade de ensino OU por tempos digitados. " +
+        "No rateio por unidade a carga de cada um é a soma das unidades dele, e não é digitada."
+      );
+
+    case "vigencia_inexistente":
+      return "Não há vigência de regime para esta data neste curso.";
+
     case "habilitacao_em_curso_inativo": {
       const nomes = lista(d.disciplinas);
       if (nomes.length === 0) {
@@ -348,6 +474,14 @@ const NUMERACAO_INTERNA: Readonly<Record<string, string>> = {
   turma_disciplina_codigo_key: "a numeração da grade da turma",
   instrutor_disciplina_codigo_key: "a numeração dos vínculos de instrutor",
   instrutores_codigo_key: "a numeração dos instrutores",
+  // ── Fatia (b) — os três códigos GERADOS desta fatia ──────────────────────────────────────────
+  // ⚠️ Estes são gerados pelo sistema (`DIS-`, `UE-`, `TDU-`): a frase é de **erro interno de
+  //    numeração**, pedindo o suporte, porque mandar a pessoa "escolher outro" é mandar fazer o
+  //    impossível (gotcha 9). O que ela escolhe — `cod_disciplina`, `numero_ue` — é traduzido pelo
+  //    nome da restrição, acima, com "escolha outro".
+  disciplinas_codigo_key: "a numeração das disciplinas",
+  unidades_ensino_codigo_key: "a numeração das unidades de ensino",
+  turma_disciplina_unidade_codigo_key: "a numeração da atribuição por unidade de ensino",
 };
 
 /** Qual numeração interna estourou, se foi uma delas. */
