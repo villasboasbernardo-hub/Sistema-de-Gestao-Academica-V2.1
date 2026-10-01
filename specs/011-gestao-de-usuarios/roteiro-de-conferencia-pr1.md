@@ -57,12 +57,17 @@ convite pela tela `/admin/usuarios`.
 | L.7  | No bloco **O que não muda aqui**, ler                                         | Mostra o **e-mail** e o **perfil de acesso**, em português (*"Administrador"*, não `admin`), e diz que o e-mail **não é editável por ninguém**      |
 | L.8  | Trocar o **nome de exibição** → **Gravar nome**                               | *"Nome atualizado."* — e o botão do cabeçalho passa a dizer **Conta de &lt;novo nome&gt;** na mesma hora, com as **iniciais novas**                 |
 | L.9  | Tentar gravar o nome **vazio**                                                | **Recusado**, com a razão em português. Nada é gravado                                                                                              |
-| L.10 | No bloco **Foto**, escolher um **JPG ou PNG** e clicar **Enviar foto**        | *"Foto atualizada."* e a foto aparece **no bloco e no cabeçalho**                                                                                   |
+| L.10 | No bloco **Foto**, clicar **Enviar foto** → a janela de arquivos abre → escolher um **JPG ou PNG** | *"Foto atualizada."* e a foto aparece **no bloco e no cabeçalho**                                                                                   |
 | L.11 | Enviar **outra** foto por cima                                                | Substitui. ⚠️ O arquivo vai sempre para o **mesmo caminho** (`<sua conta>/avatar`), então não há acúmulo — uma foto por conta, e só                 |
 | L.12 | Clicar **Remover foto**                                                       | A mensagem diz que **voltou às iniciais**, e o cabeçalho volta a mostrá-las                                                                          |
-| L.13 | **O caso que discrimina (tamanho):** escolher uma imagem de **3 MB**          | **Recusada**, com *"A foto passou de 2 MB."* — e a recusa aparece **antes de subir o arquivo**                                                       |
-| L.14 | **O caso que discrimina (tipo):** renomear um `.gif` para `.png` e enviar     | **Recusada**, com *"A foto precisa ser JPG ou PNG, de até 2 MB."* ⚠️ Quem recusa aqui é o **motor**, não o formulário — ver a nota abaixo            |
+| L.13 | **O caso que discrimina (tamanho):** escolher uma imagem de **3 MB**, e depois uma de **~1,5 MB** | A de 3 MB é **recusada** com *"A foto passou de 2 MB."*, **antes de subir o arquivo**; a de 1,5 MB **é aceita** — ⚠️ era ela que caía, pelo limite de corpo da Server Action (conserto de 30/09/2026)                                                       |
+| L.14 | **O caso que discrimina (tipo):** renomear um `.gif` para `.png` e escolhê-lo | **Recusada**, com *"A foto precisa ser JPG ou PNG, de até 2 MB."* ⚠️ Quem recusa aqui é o **motor**, não o formulário — ver a nota abaixo            |
 
+> ⚠️ **O GESTO MUDOU EM 30/09/2026, e é o conserto do defeito que você achou.** O botão
+> **Enviar foto** agora **abre a janela de arquivos do computador**, e **escolher já envia** — não há
+> mais um campo cinza ao lado dele. Antes, o botão enviava o formulário vazio e a única porta para a
+> janela era aquele campo, que ninguém lê como sendo o caminho.
+>
 > ⚠️ **Por que L.13 e L.14 são os casos que discriminam.** O limite de 2 MB e os dois tipos estão
 > escritos **três vezes**: no `accept` do campo (conveniência do navegador), na ação do servidor
 > (Zod) e — o que garante — **na definição do balde**, em `storage.buckets.file_size_limit` e
@@ -110,7 +115,7 @@ policies, aplicados em 29/09/2026 (AMBIENTE-1: preview e Production são o mesmo
 | P.2 | Olhar o cabeçalho                                                                | O botão do avatar mostra as **suas iniciais**. Ninguém tem foto ainda — o balde nasceu vazio                                                                 |
 | P.3 | Menu do avatar → **Sair** → entrar de novo                                       | Sai e volta. ⚠️ **É o defeito que originou esta spec**: até aqui não havia como sair sem limpar o navegador                                                  |
 | P.4 | **Meu perfil** → trocar o seu **nome de exibição** → **Gravar nome**              | *"Nome atualizado."* ⚠️ **Isto grava dado real, e é o certo**: o remoto é a fonte da verdade dos cadastros, e quem testa edita pelo preview                  |
-| P.5 | Enviar a **sua** foto → conferir no cabeçalho → **Remover foto** → conferir       | A foto aparece e some, e as iniciais voltam. ⚠️ **O arquivo permanece no balde**, invisível — ver a pendência **STORAGE-1** no fim deste roteiro             |
+| P.5 | **Enviar foto** → a janela abre → escolher a **sua** foto → conferir no cabeçalho → **Remover foto** | A foto aparece e some, e as iniciais voltam. ⚠️ **O arquivo permanece no balde**, invisível — ver a pendência **STORAGE-1** no fim deste roteiro             |
 | P.6 | **Trocar a sua senha** e entrar com ela                                           | Entra com a nova; a antiga é recusada. ⚠️ **Anote a nova antes**: é a credencial real da sua conta                                                           |
 | P.7 | Tentar abrir a foto de outra pessoa por endereço direto                          | Não há endereço a tentar: o balde é **privado** e o endereço de leitura é **temporário**, de 30 minutos, assinado com a **sua** sessão — nunca `service_role` |
 

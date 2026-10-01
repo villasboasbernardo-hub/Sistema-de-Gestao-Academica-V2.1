@@ -17,6 +17,8 @@
  * passaria em todos os outros casos — e deixaria a conta aberta para quem usasse a mesma máquina,
  * que é o cenário real de um computador de seção.
  */
+import { crc32 } from "node:zlib";
+
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
@@ -37,6 +39,43 @@ const PNG_DE_1X1 = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   "base64",
 );
+
+/**
+ * O **mesmo** PNG de 1×1, inflado até o peso pedido por um bloco `tEXt` de comentário.
+ *
+ * ⚠️ **PRECISA SER UM ARQUIVO DE VERDADE, NÃO BYTES SOLTOS.** O que está sob prova aqui é o
+ * caminho inteiro de um arquivo **entre 1 e 2 MB** — e ele atravessa o limite de corpo da Server
+ * Action e o `file_size_limit` do balde. Um `Buffer.alloc(1_500_000)` passaria pelos dois e
+ * reprovaria depois, na tela, porque o `Avatar` do Radix só troca o recuo pela imagem **quando ela
+ * carrega** (a lição que o `PNG_DE_1X1` acima já pagou).
+ *
+ * ⚠️ **O PESO VAI NUM BLOCO ANCILAR, e é de propósito.** `tEXt` é opcional pelo formato e todo
+ * decodificador o ignora, então a imagem continua decodificando — e o arquivo tem exatamente o
+ * tamanho pedido, sem depender de um codificador de PNG que o projeto não tem. O CRC sai de
+ * `zlib.crc32`, que é do Node (nenhuma dependência nova).
+ */
+function pngComPesoDe(bytes: number): Buffer {
+  const antesDoIend = PNG_DE_1X1.length - 12; // IEND ocupa 12 bytes: tamanho + tipo + CRC
+  const palavraChave = Buffer.from("Comment\0", "latin1");
+  const recheio = Math.max(0, bytes - PNG_DE_1X1.length - 12 - palavraChave.length);
+  const dados = Buffer.concat([palavraChave, Buffer.alloc(recheio, 0x20)]);
+  const tipo = Buffer.from("tEXt", "latin1");
+  const tamanho = Buffer.alloc(4);
+  tamanho.writeUInt32BE(dados.length, 0);
+  const verificacao = Buffer.alloc(4);
+  verificacao.writeUInt32BE(crc32(Buffer.concat([tipo, dados])), 0);
+  return Buffer.concat([
+    PNG_DE_1X1.subarray(0, antesDoIend),
+    tamanho,
+    tipo,
+    dados,
+    verificacao,
+    PNG_DE_1X1.subarray(antesDoIend),
+  ]);
+}
+
+/** Entre 1 e 2 MB — acima do limite padrão da Server Action, abaixo do limite do balde. */
+const PNG_DE_1_5_MB = pngComPesoDe(1_500_000);
 
 test.beforeAll(async ({}, info) => {
   EMAIL = emailDeTeste("sair-e-perfil", info.workerIndex);
@@ -228,7 +267,10 @@ test.describe("`FR-020` a `FR-023` · o próprio cadastro", () => {
       mimeType: "image/png",
       buffer: PNG_DE_1X1,
     });
-    await page.getByRole("button", { name: /enviar foto/i }).click();
+    // ⚠️ **NÃO HÁ CLIQUE EM "Enviar foto" AQUI, e a ausência é deliberada.** Desde o conserto de
+    //    30/09/2026 o botão ABRE a janela de arquivos, e escolher é que envia — então
+    //    `setInputFiles` já dispara o `change` e o envio. Um clique a mais abriria uma janela que
+    //    ninguém atende. Quem prova o caminho do clique é o caso do `filechooser`, adiante.
     await expect(secao(page, "Foto").getByRole("status")).toContainText("Foto atualizada.");
 
     // ⚠️ Com foto, o recuo das iniciais SAI do cabeçalho — é o que distingue "tem foto" de "não
@@ -259,12 +301,93 @@ test.describe("`FR-020` a `FR-023` · o próprio cadastro", () => {
       mimeType: "image/gif",
       buffer: Buffer.from("GIF89a"),
     });
-    await page.getByRole("button", { name: /enviar foto/i }).click();
+    // ⚠️ **NÃO HÁ CLIQUE EM "Enviar foto" AQUI, e a ausência é deliberada.** Desde o conserto de
+    //    30/09/2026 o botão ABRE a janela de arquivos, e escolher é que envia — então
+    //    `setInputFiles` já dispara o `change` e o envio. Um clique a mais abriria uma janela que
+    //    ninguém atende. Quem prova o caminho do clique é o caso do `filechooser`, adiante.
 
     await expect(secao(page, "Foto").getByRole("alert")).toContainText("JPG ou PNG");
     await expect(
       secao(page, "Foto").getByRole("status"),
       "recusou e ainda assim disse que atualizou",
+    ).toHaveCount(0);
+  });
+
+  /**
+   * ⚠️ **ESTE CASO NASCEU DE UM DEFEITO QUE A SUÍTE INTEIRA DEIXAVA PASSAR**, achado por Bernardo
+   * no preview em 30/09/2026: *"clicar em enviar foto NÃO abre a janela de arquivos do
+   * computador"*. **E a causa de a suíte não ver era a própria suíte**: os dois casos acima mandam
+   * o arquivo com `setInputFiles` **direto no `input`**, o que prova que o campo funciona — que
+   * nunca esteve em dúvida — e **nunca pergunta se alguém consegue abrir o seletor clicando**.
+   *
+   * É o mesmo erro de forma que criou esta spec: `encerrarSessao()` tinha teste e nenhum
+   * consumidor. Aqui o campo tinha teste e nenhum caminho de clique.
+   *
+   * ⚠️ **O QUE ELE MEDE É O EVENTO DO NAVEGADOR**, `filechooser`, que só dispara quando um
+   * `input type="file"` é de fato acionado. Nenhum atalho: se o botão não abrir o seletor, o
+   * `waitForEvent` estoura o prazo.
+   */
+  test("⚠️ O CASO QUE DISCRIMINA do caminho · o BOTÃO abre o seletor de arquivos do sistema", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL);
+    await irAoPerfilPorClique(page);
+
+    // ⚠️ **O NOME É EXATO, E A PRIMEIRA ESCRITA DESTE CASO ERRAVA AQUI.** Ela pedia `button` com
+    //    nome contendo "foto" e pegava o PRIMEIRO — que é o próprio `<input type="file">`: o
+    //    Chromium o expõe como **button**, com o nome vindo do `<label>` ("Escolher uma foto"), e
+    //    ele vem antes no DOM. Clicar nele abre o seletor por definição, então o caso **passaria
+    //    sem provar nada**. É a guarda cega de sempre; só o nome exato o faz medir o botão.
+    const botao = secao(page, "Foto").getByRole("button", { name: /^Enviar foto$/ });
+    await expect(botao).toBeVisible();
+
+    const seletor = page.waitForEvent("filechooser");
+    await botao.click();
+    const janela = await seletor;
+
+    // ⚠️ E o seletor precisa aceitar UM arquivo, não vários: a foto do avatar é uma só.
+    expect(janela.isMultiple(), "o seletor abriu pedindo vários arquivos").toBe(false);
+
+    // E escolher ali dentro tem de levar a foto à tela — abrir a janela e não gravar não entrega
+    // nada a quem clicou.
+    await janela.setFiles({ name: "retrato.png", mimeType: "image/png", buffer: PNG_DE_1X1 });
+    await expect(secao(page, "Foto").getByRole("status")).toContainText("Foto atualizada.");
+    await expect(page.locator('header [data-slot="avatar-imagem"]')).toBeVisible();
+  });
+
+  /**
+   * ⚠️ **O SEGUNDO DEFEITO DO MESMO RELATO, e ele é invisível no teste de 1×1.** A tela promete
+   * *"até 2 MB"* e o balde aceita 2.097.152 bytes — mas a **Server Action** tem limite de corpo
+   * próprio, e o padrão do Next 16.3.3 é **1 MB** (medido em
+   * `node_modules/next/dist/server/app-render/action-handler.js:519`, `1024 * 1024`, com recusa
+   * `413 Body exceeded 1mb limit`).
+   *
+   * ⚠️ **TODA foto de câmera de celular cai nessa faixa.** Os casos de 1×1 passam porque pesam 70
+   * bytes: eles exercitam o caminho e **não** exercitam o limite. Este caso é o único entre 1 e
+   * 2 MB, e é ele que separa a promessa da tela do que o servidor aceita.
+   */
+  test("⚠️ O CASO QUE DISCRIMINA do tamanho · uma foto de ~1,5 MB (entre 1 e 2 MB) é aceita", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL);
+    await irAoPerfilPorClique(page);
+
+    expect(PNG_DE_1_5_MB.length).toBe(1_500_000);
+
+    await page.locator('input[name="foto"]').setInputFiles({
+      name: "retrato-grande.png",
+      mimeType: "image/png",
+      buffer: PNG_DE_1_5_MB,
+    });
+
+    await expect(secao(page, "Foto").getByRole("status")).toContainText("Foto atualizada.");
+    await expect(page.locator('header [data-slot="avatar-imagem"]')).toBeVisible();
+
+    // ⚠️ E a recusa de 1 MB chega como erro GENÉRICO do servidor, não com a frase da regra — se
+    //    este trecho reprovar dizendo "passou de 2 MB", o limite que barrou foi outro.
+    await expect(
+      secao(page, "Foto").getByRole("alert"),
+      "a foto de 1,5 MB foi recusada, e a tela promete até 2 MB",
     ).toHaveCount(0);
   });
 });

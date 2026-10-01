@@ -15,6 +15,19 @@
  *
  * ⚠️ **A REGRA É DITA ANTES DE A PESSOA ESCOLHER.** Descobrir o formato aceito depois de escolher o
  * arquivo errado é a forma cara de aprender a regra.
+ *
+ * ⚠️ **O GESTO É UM SÓ: O BOTÃO ABRE A JANELA DE ARQUIVOS, E ESCOLHER JÁ ENVIA** *(conserto de
+ * 30/09/2026, defeito achado por Bernardo Villas Boas no preview)*. A primeira escrita tinha um
+ * `<input type="file">` **nativo e visível** ao lado de um botão `submit` chamado *"Enviar foto"*.
+ * Clicar no botão enviava o formulário **vazio** — a única porta para a janela de arquivos era o
+ * campo nativo, pequeno e sem destaque, que ninguém lê como sendo o caminho. O relato foi exato:
+ * *"clicar em enviar foto NÃO abre a janela de arquivos do computador"*.
+ *
+ * ⚠️ **E A SUÍTE NÃO VIA, PORQUE MANDAVA O ARQUIVO POR DENTRO.** Os casos de ponta a ponta usavam
+ * `setInputFiles` **direto no campo**, o que prova que o campo funciona — que nunca esteve em
+ * dúvida — e nunca pergunta se alguém **chega** nele clicando. É a mesma forma de erro que criou
+ * esta spec: `encerrarSessao()` tinha teste e nenhum consumidor. Agora há um caso que espera o
+ * evento `filechooser` do navegador, e ele reprova se o botão deixar de abrir a janela.
  */
 import { useRef, useState } from "react";
 
@@ -95,14 +108,29 @@ export function FormularioDaFoto({
         </Avatar>
 
         <div className="flex flex-col gap-1">
+          {/*
+            ⚠️ O rótulo aponta para o campo escondido, e isso NÃO é decoração: clicar num `<label>`
+               de campo de arquivo abre o seletor, então ele é um segundo caminho legítimo até a
+               mesma janela — e continua sendo o nome acessível do campo.
+          */}
           <Label htmlFor="foto">Escolher uma foto</Label>
+          {/*
+            ⚠️ **O CAMPO É ESCONDIDO E QUEM ABRE O SELETOR É O BOTÃO** — ver a nota no topo do
+               arquivo. Ele continua no formulário, com o mesmo `name`, porque é ele que carrega o
+               arquivo no `FormData`.
+          */}
           <input
             ref={campo}
             id="foto"
             name="foto"
             type="file"
             accept={TIPOS_DE_IMAGEM_ACEITOS.join(",")}
-            className="text-texto text-sm"
+            className="hidden"
+            onChange={(evento) => {
+              // Escolher JÁ envia: era o passo que faltava no relato de Bernardo — *"escolho
+              // JPG/PNG → a foto aparece"*. Sem isto, o arquivo fica escolhido e nada acontece.
+              if (evento.currentTarget.files?.length) evento.currentTarget.form?.requestSubmit();
+            }}
           />
           {/* veste: dica da regra de formato e tamanho, dita ANTES da escolha (FR-013) */}
           <span className="text-texto-tenue text-xs">{regraDaFotoEmPortugues()}</span>
@@ -110,7 +138,13 @@ export function FormularioDaFoto({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={ocupado}>
+        {/*
+          ⚠️ **`type="button"`, NÃO `submit`** — e é aqui que o defeito morava. Como `submit`, ele
+             enviava o formulário vazio e respondia *"Escolha um arquivo de imagem."*, enquanto a
+             única porta para a janela de arquivos era o campo nativo, cinza e sem destaque, ao lado
+             dele. Quem clicava no botão grande não tinha como chegar à foto.
+        */}
+        <Button type="button" onClick={() => campo.current?.click()} disabled={ocupado}>
           {ocupado ? "Enviando…" : "Enviar foto"}
         </Button>
 
