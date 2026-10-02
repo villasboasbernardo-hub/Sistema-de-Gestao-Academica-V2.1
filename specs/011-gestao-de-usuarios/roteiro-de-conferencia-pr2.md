@@ -12,7 +12,14 @@
 > LOCAL (`pnpm db:reset && pnpm dev:local`, porta 3000 — nunca a 3100, onde a suíte vive). Os passos 1
 > a 3, 7 e 8 são seguros no preview.
 
-**Onde:** o endereço do ramo sai no comentário do PR. Menu → **Administração**.
+**Onde**, medido em 03/10/2026 e estável entre os pushes:
+
+```
+https://sistema-de-gestao-academica-v2-1-git-feat-epic-35e53b-ciaara-11.vercel.app
+```
+
+⚠️ Ele pede o login da **Vercel** antes do login da aplicação (proteção de deploy). Depois de entrar:
+menu → **Administração**.
 
 | #  | Passo                                                                                      | Resultado esperado                                                                                                                                                           |
 | -- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
