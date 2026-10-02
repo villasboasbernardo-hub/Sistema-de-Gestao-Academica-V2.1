@@ -25,6 +25,7 @@ import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { rotuloDoPerfil } from "@/lib/dominio/perfis";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { AcoesDeUsuario } from "./AcoesDeUsuario";
@@ -152,7 +153,9 @@ export default async function Usuarios() {
                 <tr key={linha.id}>
                   <td className="border-borda text-texto border px-2 py-1">{linha.nome}</td>
                   <td className="border-borda text-texto border px-2 py-1">{linha.email}</td>
-                  <td className="border-borda text-texto border px-2 py-1">{linha.perfil}</td>
+                  <td className="border-borda text-texto border px-2 py-1">
+                    {rotuloDoPerfil(linha.perfil)}
+                  </td>
                   <td className="border-borda text-texto border px-2 py-1">
                     {linha.escopo_curso ?? "—"}
                   </td>

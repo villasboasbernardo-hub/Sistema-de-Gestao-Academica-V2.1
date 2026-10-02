@@ -144,6 +144,10 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
     "components/ciaara/provedor-de-tema.tsx",
     "components/ciaara/seletor-instrutor.tsx",
     "components/casca/foco-ao-trocar-de-rota.tsx",
+    // Entrou em 29/09/2026 (spec 011): o menu da conta, com a saída do sistema. O que abre,
+    // fecha e anda por teclado é interação — e a ação de sair chega por PROPRIEDADE, do layout,
+    // para não furar a proibição de `@/lib/acoes/` em componente.
+    "components/casca/menu-do-avatar.tsx",
     "components/casca/painel-retratil.tsx",
     "components/casca/seletor-de-tema.tsx",
     "components/ciaara/seletor-turma.tsx",

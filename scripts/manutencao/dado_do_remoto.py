@@ -3,6 +3,10 @@
     python -m scripts.manutencao.dado_do_remoto
     python -m scripts.manutencao.dado_do_remoto --somente-copia
 
+⚠️ **SÃO ESSAS DUAS, E MAIS NENHUMA.** Argumento que o script não conhece é **recusado**, e não
+   ignorado — inclusive `--help`, que ele não implementa. O porquê está em
+   `_conferir_argumentos`, e a prova em `provar_porteiro_do_dado.py` (P4).
+
 O QUÊ  : lê o remoto (só leitura), guarda o retrato num arquivo **fora do repositório**,
          recria o banco local pelas migrations e restaura ali os dados do remoto.
 
@@ -133,8 +137,42 @@ def _psql(conteiner: str, sql: str) -> str:
     return r.stdout.strip()
 
 
+#: Os únicos argumentos que este script entende. Tudo o mais é recusado — ver `_conferir_argumentos`.
+ARGUMENTOS_CONHECIDOS = frozenset({"--somente-copia"})
+
+AJUDA = """
+            Os unicos aceitos sao: --somente-copia
+            SEM BANDEIRA NENHUMA ele roda o MODO COMPLETO, que RECRIA o banco local.
+            Para so guardar a copia datada do remoto, use --somente-copia."""
+
+
+def _conferir_argumentos(argumentos: list[str]) -> None:
+    """Recusa argumento desconhecido em vez de ignorá-lo.
+
+    ⚠️ **NASCEU DE UM ERRO MEDIDO, em 29/09/2026.** Este script não usa `argparse`, e a leitura
+    era um `in` sobre a lista: qualquer palavra que não fosse `--somente-copia` — inclusive
+    `--help`, que é o que se digita primeiro para descobrir as opções — caía **no modo
+    completo**. Foi o que aconteceu: um `--help` leu o remoto, guardou a cópia e **recriou a
+    base local no meio de uma suíte que estava rodando**, invalidando-a.
+
+    ⚠️ **O MODO PERIGOSO É O PADRÃO, e é isso que torna o silêncio caro.** Um script cujo modo
+    destrutivo roda sem bandeira nenhuma não pode ignorar bandeira que não reconhece: o erro de
+    digitação de quem queria só o backup custa a base local inteira.
+
+    ⚠️ **O REMOTO NUNCA ESTEVE EM RISCO** — o porteiro de destino continua valendo, e a leitura
+    do remoto é só leitura. O que se perde é o banco local, e é o bastante.
+    """
+    desconhecidos = [a for a in argumentos if a not in ARGUMENTOS_CONHECIDOS]
+    if desconhecidos:
+        raise SystemExit(
+            "[RECUSADO] argumento(s) que este script nao conhece: " + " ".join(desconhecidos) + AJUDA
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
-    somente_copia = "--somente-copia" in (argv if argv is not None else sys.argv[1:])
+    argumentos = argv if argv is not None else sys.argv[1:]
+    _conferir_argumentos(argumentos)
+    somente_copia = "--somente-copia" in argumentos
 
     # ---------------------------------------------------------------- o porteiro, primeiro
     # ⚠️ ELE VALE NOS DOIS MODOS, e no `--somente-copia` isso é cinto e suspensório de

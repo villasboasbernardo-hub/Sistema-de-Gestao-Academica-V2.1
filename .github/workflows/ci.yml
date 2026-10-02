@@ -106,12 +106,16 @@ jobs:
       # MEDIDA, nao suposta: varredura por `.channel(`, `realtime`, `.storage`, `functions.invoke`
       # e `supabase/functions` em `tests/`, `app/`, `lib/`, `components/` e `scripts/` devolveu
       # ZERO ocorrencias.
+      # ⚠️ **A METADE DE `.storage` DESSA MEDICAO VENCEU EM 29/09/2026** — ver o paragrafo do fim
+      #    deste bloco. A spec 011 trouxe o primeiro consumidor de Storage do repositorio, e o que
+      #    era ausencia medida virou dependencia. O resto da varredura continua valendo.
       #
       # FICAM DE PE, e por que: `postgres` (pgTAP, migrations, `gen types`); `kong` (o `API_URL`
       # que `conta-de-teste.ts` le do `supabase status`); `postgrest` (toda leitura e escrita das
       # suites de RLS e de ponta a ponta); `gotrue` (sessao de verdade, `admin.createUser`, e o
       # `config-auth-aplicado.test.ts`, que compara o `config.toml` com o conteiner); `mailpit`
-      # (o percurso do convite intercepta o e-mail nele).
+      # (o percurso do convite intercepta o e-mail nele); e, desde 29/09/2026, `storage-api`
+      # (o balde `avatares` da spec 011 — ver o ultimo paragrafo deste bloco).
       #
       # ⚠️ `postgres-meta` VOLTOU PARA A LISTA DOS QUE FICAM, e a linha anterior estava ERRADA.
       # Ela dizia que ele "serve ao studio" e que `gen types --local` fala direto com o banco.
@@ -121,8 +125,8 @@ jobs:
       # puxada: trocou uma puxada no `start` por uma puxada pior, no meio do bloco.
       #
       # SAEM: `studio` (interface), `edge-runtime` (nao ha Edge Function no repositorio),
-      # `realtime`, `storage-api`, `imgproxy` (dependente de storage), `logflare` e `vector`
-      # (analitica, e saem em par), `supavisor` (o pooler; as suites usam a porta direta).
+      # `realtime`, `imgproxy` (transformacao de imagem, desligada no `config.toml`), `logflare` e
+      # `vector` (analitica, e saem em par), `supavisor` (o pooler; as suites usam a porta direta).
       # -------------------------------------------------------------------------------------
       # ⚠️ TERCEIRA METADE DA MESMA CORRECAO, e a que de fato destrava: TROCAR DE REGISTRO.
       #    Com login e com nove conteineres a menos, a puxada ainda morria — agora no `mailpit`.
@@ -130,10 +134,26 @@ jobs:
       #    (`SUPABASE_INTERNAL_IMAGE_REGISTRY`, que o `setup-cli` fixa em `ghcr.io`). Apontando para
       #    o Docker Hub, as mesmas imagens vem de outra cota. Nao e biblioteca nova: e um botao da
       #    CLI que ja esta no projeto.
+      # ⚠️ **`storage-api` SAIU DA LISTA DE EXCLUIDOS em 29/09/2026, e a mudanca
+      #    corrige um VERDE LOCAL COM VERMELHO NO CI** (`SC-005`). O nome deste passo dizia "sem o
+      #    que os testes nao usam", e isso era verdade ate a spec 011: desde ela,
+      #    `tests/invariantes/rls/avatar-no-storage.test.ts` fala com o Storage de verdade — e sem o
+      #    servico no ar ele responde `name resolution failed` e `503`, que se leem como defeito da
+      #    aplicacao e sao ausencia de container. Dez casos reprovaram assim.
+      #    ⚠️ **E `imgproxy` FICA EXCLUIDO — a primeira versao desta correcao o trouxe junto, por
+      #       suposicao, e a MEDICAO desmentiu.** Medido em 29/09/2026, no stack local desta
+      #       maquina, que sobe SEM exclusao nenhuma: `docker ps` lista `supabase_storage` e NAO
+      #       lista `imgproxy`, e o proprio `storage-api` carrega `ENABLE_IMAGE_TRANSFORMATION=false`
+      #       — porque `[storage.image_transformation]` esta comentada no `config.toml`. O Storage
+      #       sobe e responde sem ele, e e contra esse stack que os 11 casos do avatar passam aqui.
+      #       Traze-lo seria uma imagem a mais na puxada, que e exatamente o que esta lista evita.
+      #    ⚠️ **O CUSTO E TEMPO DE CI**, e ele e aceito: uma suite que fala com o Storage pertence ao
+      #       bloco que tem Storage — a mesma licao do Epico 3, quando a ponta a ponta saiu do bloco
+      #       `build` para o `banco` porque precisava de banco.
       - name: Subir o stack local sem o que os testes nao usam
         run: >
           supabase start
-          -x studio,edge-runtime,realtime,storage-api,imgproxy,logflare,vector,supavisor
+          -x studio,edge-runtime,realtime,imgproxy,logflare,vector,supavisor
 
       # Prova que as migrations aplicam do zero, sem passo manual (FR-008).
       - run: supabase db reset

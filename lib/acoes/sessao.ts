@@ -15,6 +15,7 @@
  * o login quebraria em silêncio.
  */
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -36,9 +37,25 @@ export async function registrarAcesso(): Promise<void> {
     .eq("auth_user_id", user.id);
 }
 
-/** Encerra a sessão (FR-004). */
+/**
+ * Encerra a sessão e leva de volta à entrada (`FR-004` da spec 003; `FR-002` a `FR-004` da 011).
+ *
+ * ⚠️ **ELA FICOU SEM CONSUMIDOR NENHUM DO ÉPICO 3 ATÉ 29/09/2026** — escrita, correta e
+ * inalcançável. Quem entrava pelo preview **não conseguia sair**. O consumidor é
+ * `components/casca/menu-do-avatar.tsx`.
+ *
+ * ⚠️ **O `redirect` É PARTE DA AÇÃO, e não da tela que a chama.** Sem ele, sair deixaria a pessoa
+ * na mesma rota, com a casca já renderizada, até a navegação seguinte — e "saí e continuo vendo o
+ * sistema" é indistinguível de "não saí". ⚠️ `redirect` funciona lançando: ele MUST ser a última
+ * linha, e nada depois dele executa.
+ *
+ * ⚠️ **`revalidatePath` VEM ANTES do `redirect`** porque a casca é servidor e fica em cache por
+ * requisição: sem invalidar, a tela de destino poderia ser montada com o retrato de quem acabou de
+ * sair.
+ */
 export async function encerrarSessao(): Promise<void> {
   const supabase = await criarClienteDeServidor();
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
+  redirect("/login");
 }

@@ -23,6 +23,8 @@ export type UsuarioDaSessao = {
   readonly nomeExibicao: string | null;
   readonly perfil: string;
   readonly escopoCurso: string | null;
+  /** Caminho DENTRO do balde privado — nunca uma URL. O endereço de leitura é temporário. */
+  readonly avatarCaminho: string | null;
 };
 
 /**
@@ -45,7 +47,7 @@ export async function usuarioDaSessao(): Promise<UsuarioDaSessao | null> {
   // A RLS já restringe a linha; o filtro por `auth_user_id` é o que a identifica.
   const { data } = await supabase
     .from("usuarios")
-    .select("id, codigo, email, nome, nome_exibicao, perfil, escopo_curso")
+    .select("id, codigo, email, nome, nome_exibicao, perfil, escopo_curso, avatar_caminho")
     .eq("auth_user_id", user.id)
     .eq("status", "ativo")
     .maybeSingle();
@@ -60,5 +62,6 @@ export async function usuarioDaSessao(): Promise<UsuarioDaSessao | null> {
     nomeExibicao: data.nome_exibicao,
     perfil: data.perfil,
     escopoCurso: data.escopo_curso,
+    avatarCaminho: data.avatar_caminho,
   };
 }

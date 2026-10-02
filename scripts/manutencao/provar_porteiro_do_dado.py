@@ -28,7 +28,7 @@ REMOTO = "https://cqhpfuaweoyglhtrckcp.supabase.co"
 LOCAL = "http://127.0.0.1:54321"
 
 
-def _rodar_com(url: str) -> tuple[int, list[str]]:
+def _rodar_com(url: str, argumentos: list[str] | None = None) -> tuple[int, list[str]]:
     """Roda `main()` com o `supabase status` respondendo `url`, sem deixar nada escrever."""
     tocou: list[str] = []
 
@@ -47,10 +47,13 @@ def _rodar_com(url: str) -> tuple[int, list[str]]:
             RuntimeError("passou do porteiro e foi procurar a pasta das copias")
         )
         try:
-            return alvo.main(), tocou
+            return alvo.main(argumentos or []), tocou
         except RuntimeError as erro:
             tocou.append(str(erro))
             return -1, tocou
+        except SystemExit as erro:
+            tocou.append(f"recusou o argumento: {str(erro).splitlines()[0]}")
+            return -2, tocou
     finally:
         for nome, funcao in original.items():
             setattr(alvo, nome, funcao)
@@ -90,9 +93,34 @@ def main() -> int:
         veredito.append(True)
         print("P3  tres enderecos nao-locais: os tres recusados  -> aprova")
 
+    # -- P4 — argumento desconhecido é recusado ANTES de qualquer coisa ----------------
+    # ⚠️ MEDIDO EM 29/09/2026: `--help` — que este script nao implementa — caia no MODO
+    #    COMPLETO e recriou o banco local no meio de uma suite. O modo destrutivo e o padrao,
+    #    entao ignorar bandeira desconhecida custa a base inteira.
+    # ⚠️ O CASO QUE DISCRIMINA e o par: `--help` recusado (P4a) E as duas invocacoes legitimas
+    #    seguindo (P4b). So o primeiro daria o mesmo veredito se o script recusasse TUDO.
+    codigo, tocou = _rodar_com(LOCAL, ["--help"])
+    ok4a = codigo == -2 and not [t for t in tocou if "recusou o argumento" not in t]
+    print(
+        f"P4a argumento `--help`: saida={codigo} (-2 = recusado)  "
+        f"{'-> RECUSOU sem tocar em nada' if ok4a else '-> DEIXOU PASSAR, e o modo padrao e o destrutivo'}"
+    )
+
+    legitimas = []
+    for argumentos in ([], ["--somente-copia"]):
+        codigo, tocou = _rodar_com(LOCAL, argumentos)
+        legitimas.append(codigo != -2 and any("passou do porteiro" in t for t in tocou))
+    ok4b = all(legitimas)
+    print(
+        f"P4b invocacoes legitimas (sem bandeira, e `--somente-copia`): as duas seguem = {ok4b}  "
+        f"{'-> aprova' if ok4b else '-> BARROU INVOCACAO LEGITIMA'}"
+    )
+    veredito.extend([ok4a, ok4b])
+
     print()
     if all(veredito):
-        print("PROVADO: o porteiro recusa destino que nao seja o Docker desta maquina.")
+        print("PROVADO: o porteiro recusa destino que nao seja o Docker desta maquina,")
+        print("         e argumento que o script nao conhece nao cai no modo completo.")
         return 0
     print("NAO PROVADO: ver os casos acima.")
     return 1
