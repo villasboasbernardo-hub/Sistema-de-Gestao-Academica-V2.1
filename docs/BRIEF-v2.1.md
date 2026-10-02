@@ -225,6 +225,21 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 02/10/2026 — uma tabela nova, do PR 2 da spec 011
+>
+> - **`auditoria_de_conta`** — a trilha das **ações administrativas sobre conta de usuário**
+>   (`FR-047`), por **decisão nominal de Bernardo Villas Boas** (**D-2**, 29/09/2026): **quatro**
+>   informações e nada além — **quem** fez, **o quê** fez, **sobre qual conta** e **quando**. Nenhum
+>   `valor_antes`/`valor_depois` e nenhum retrato: a pergunta que ela responde é *"quem mexeu na conta
+>   de quem"*; o retrato do que foi apagado é outro fato e mora em `exclusoes_registradas`.
+>   **Só de acréscimo**, no mesmo molde da tabela irmã — `UPDATE`, `DELETE` e `TRUNCATE` recusados por
+>   gatilho de **comando**, inclusive para a `service_role`; escrita apenas de dentro de
+>   `app.registrar_acao_em_conta` (`SECURITY DEFINER`); leitura por quem tem `auditoria.ler`.
+>   ⚠️ **`conta_alvo_id` NÃO é FK**: a conta excluída deixa de existir, e o rastro tem de sobreviver
+>   a ela — por isso há também `conta_alvo_codigo`, o código legível no momento do fato.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a

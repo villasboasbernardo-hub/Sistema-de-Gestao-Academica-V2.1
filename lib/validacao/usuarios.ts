@@ -43,7 +43,30 @@ export const esquemaDeEdicao = z.object({
   cursos: z.array(z.string().uuid()).default([]),
 });
 
+/**
+ * O NOME de outra conta (`FR-040`), em esquema próprio.
+ *
+ * ⚠️ **SEPARADO DE `esquemaDeEdicao` DE PROPÓSITO, porque são duas ações de auditoria distintas** —
+ * `editar_nome` e `editar_perfil` (`FR-047`). Um esquema só mandaria sempre os dois campos, e a
+ * trilha passaria a registrar troca de perfil em toda correção de grafia de nome.
+ *
+ * ⚠️ **É `nome_exibicao`, NÃO `nome`** — a mesma distinção do próprio cadastro: `nome` é o que o
+ * convite gravou e costuma ser o nome de registro; `nome_exibicao` é como a pessoa aparece na tela.
+ */
+export const esquemaDeEdicaoDeNome = z.object({
+  usuarioId: z.string().uuid(),
+  nomeExibicao: z
+    .string({ error: "Informe o nome de exibição." })
+    .trim()
+    .min(2, "O nome de exibição precisa ter pelo menos 2 caracteres.")
+    .max(120, "O nome de exibição passou de 120 caracteres."),
+});
+
+/** Redefinir a senha de outra conta (`FR-033`). Só o alvo — a senha é gerada no servidor. */
+export const esquemaDeRedefinicao = z.object({ usuarioId: z.string().uuid() });
+
 export const esquemaDeRecuperacao = z.object({ email });
 
 export type DadosDeConvite = z.infer<typeof esquemaDeConvite>;
 export type DadosDeEdicao = z.infer<typeof esquemaDeEdicao>;
+export type DadosDeEdicaoDeNome = z.infer<typeof esquemaDeEdicaoDeNome>;

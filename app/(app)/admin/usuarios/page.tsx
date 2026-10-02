@@ -82,7 +82,7 @@ export default async function Usuarios() {
   const { data, error } = await supabase
     .from("usuarios")
     .select(
-      "id, codigo, nome, email, perfil, escopo_curso, status, ultimo_acesso, auth_user_id, criado_em, instrutor:instrutores!usuarios_instrutor_id_fkey(id, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, status)",
+      "id, codigo, nome, nome_exibicao, email, perfil, escopo_curso, status, ultimo_acesso, auth_user_id, criado_em, instrutor:instrutores!usuarios_instrutor_id_fkey(id, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, status)",
     )
     .order("nome");
 
@@ -151,7 +151,14 @@ export default async function Usuarios() {
               const vinculado = instrutorVinculadoDe(linha.instrutor);
               return (
                 <tr key={linha.id}>
-                  <td className="border-borda text-texto border px-2 py-1">{linha.nome}</td>
+                  {/*
+                    ⚠️ O NOME DE EXIBIÇÃO VEM PRIMEIRO QUANDO EXISTE, e é o mesmo que o cabeçalho
+                       mostra desde a fatia (c) do Épico 4. Mostrar `nome` aqui e `nome_exibicao`
+                       lá faria a mesma conta parecer duas pessoas para quem administra.
+                  */}
+                  <td className="border-borda text-texto border px-2 py-1">
+                    {linha.nome_exibicao ?? linha.nome}
+                  </td>
                   <td className="border-borda text-texto border px-2 py-1">{linha.email}</td>
                   <td className="border-borda text-texto border px-2 py-1">
                     {rotuloDoPerfil(linha.perfil)}
@@ -196,6 +203,10 @@ export default async function Usuarios() {
                       usuarioId={linha.id}
                       temCredencial={Boolean(linha.auth_user_id)}
                       ativo={linha.status === "ativo"}
+                      nomeExibicao={linha.nome_exibicao ?? linha.nome ?? ""}
+                      perfil={linha.perfil}
+                      escopoCurso={linha.escopo_curso ?? "geral"}
+                      ehMinhaConta={linha.id === usuario?.id}
                     />
                   </td>
                 </tr>

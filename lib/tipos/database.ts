@@ -226,6 +226,33 @@ export type Database = {
           },
         ]
       }
+      auditoria_de_conta: {
+        Row: {
+          acao: string
+          autor_id: string
+          conta_alvo_codigo: string
+          conta_alvo_id: string
+          id: string
+          ocorrido_em: string
+        }
+        Insert: {
+          acao: string
+          autor_id: string
+          conta_alvo_codigo: string
+          conta_alvo_id: string
+          id?: string
+          ocorrido_em?: string
+        }
+        Update: {
+          acao?: string
+          autor_id?: string
+          conta_alvo_codigo?: string
+          conta_alvo_id?: string
+          id?: string
+          ocorrido_em?: string
+        }
+        Relationships: []
+      }
       avaliacoes: {
         Row: {
           codigo: string
@@ -3793,6 +3820,15 @@ export type Database = {
           vigente_de: string
         }[]
       }
+      rastro_da_conta: {
+        Args: { p_conta_alvo_id: string }
+        Returns: {
+          acao: string
+          autor_nome: string
+          conta_alvo_codigo: string
+          ocorrido_em: string
+        }[]
+      }
       reativar_disciplina: {
         Args: { p_disciplina_id: string }
         Returns: {
@@ -3829,6 +3865,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      registrar_acao_em_conta: {
+        Args: {
+          p_acao: string
+          p_conta_alvo_codigo?: string
+          p_conta_alvo_id: string
+        }
+        Returns: undefined
       }
       registrar_vigencia_regime: {
         Args: { p_curso_id: string; p_vigencia: Json }

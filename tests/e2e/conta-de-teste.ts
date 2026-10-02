@@ -194,6 +194,29 @@ export async function criarConta(
   if (erroUsuario) throw new Error(`falha ao cadastrar o usuario: ${erroUsuario.message}`);
 }
 
+/**
+ * Cria a linha de `usuarios` **sem credencial** — o estado legítimo do `FR-008`: o convite gravou a
+ * linha e a pessoa ainda não aceitou.
+ *
+ * ⚠️ **É PRÉ-CONDIÇÃO, NÃO PERCURSO, e a distinção importa.** O percurso do convite já tem suíte
+ * própria (`convite.spec.ts`), com o e-mail interceptado no Mailpit. Reconstituí-lo aqui só para
+ * chegar a este estado traria a dependência do e-mail — e do limite de envio por hora — para dentro
+ * de um caso que não trata de convite nenhum: ele pergunta se a tela **oferece** redefinir senha a
+ * quem não tem senha.
+ */
+export async function criarLinhaSemCredencial(email: string, codigo: string): Promise<void> {
+  await apagar(email);
+  const { error } = await admin().from("usuarios").insert({
+    codigo,
+    auth_user_id: null,
+    email,
+    nome: "Convite ainda nao aceito",
+    perfil: "operador",
+    escopo_curso: "geral",
+  });
+  if (error) throw new Error(`falha ao criar a linha sem credencial: ${error.message}`);
+}
+
 export const apagarConta = apagar;
 
 /**

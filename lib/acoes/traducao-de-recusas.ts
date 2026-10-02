@@ -336,6 +336,31 @@ function porChave(
         "Corrigir um rastro é registrar um evento novo, nunca reescrever o antigo."
       );
 
+    /*
+     * As quatro da trilha de contas (spec 011, PR 2). ⚠️ **As três últimas descrevem estados que a
+     * tela já evita** — a Server Action confere sessão e perfil Admin antes de chamar o banco —, e
+     * por isso elas chegariam aqui vindas de chamada direta. **Traduzi-las mesmo assim é o barato:**
+     * a alternativa é a frase genérica, que manda a pessoa adivinhar, e a guarda de cobertura existe
+     * justamente para que ninguém decida por nós que uma chave "nunca chega à tela".
+     */
+    case "auditoria_imutavel":
+      return (
+        "O registro de auditoria não pode ser alterado nem apagado. " +
+        "Corrigir um registro é gravar um evento novo, nunca reescrever o antigo."
+      );
+
+    case "auditoria_sem_autor":
+      return "Sua sessão expirou antes de o registro ser gravado. Entre de novo e repita a ação.";
+
+    case "auditoria_sem_permissao":
+      return "Registrar ação sobre conta é restrito ao perfil Administrador.";
+
+    case "auditoria_sem_codigo":
+      return (
+        "Esta conta não tem código legível, e o registro de auditoria depende dele para ser " +
+        "reconferível depois. Avise o suporte: a conta precisa de código antes da ação."
+      );
+
     case "periodo_fora_da_janela": {
       const turma = typeof d?.["turma"] === "string" ? d["turma"] : undefined;
       const inicio = typeof d?.["data_inicio"] === "string" ? d["data_inicio"] : undefined;
