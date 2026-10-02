@@ -75,4 +75,11 @@ vê-la na ficha da conta, é tarefa nova — diga e eu abro.
 
 ## Depois do seu "de acordo"
 
-Abro o PR 2. O PR 3 (reativar e excluir conta) **não** começou.
+Abro o PR 2. O PR 3 — **excluir conta** — não começou.
+
+⚠️ **UMA RESSALVA, e ela é minha:** o **Reativar** do passo A.8 estava listado no **PR 3** (T029), e eu
+o trouxe para cá. Vieram junto porque *Desativar* já estava na tela desde o Épico 3 e a lista mostrava
+**nenhuma** ação para conta inativa, e porque o `CHECK` da trilha deste PR já listava `reativar` entre
+as seis ações. **O que não veio é a outra metade da T029:** o percurso de ponta a ponta que vê a pessoa
+**perder o acesso** na requisição seguinte e vê-lo **voltar**. Se você preferir o recorte estrito, eu
+tiro o Reativar do PR 2 — diga, e isso custa um ciclo de verificação.
