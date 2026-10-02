@@ -15,19 +15,20 @@ import { randomInt } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
 
+import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
 import { urlDaAplicacao } from "@/lib/ambiente";
+import { conferirExigenciasDoPerfil } from "@/lib/dominio/exigencias-do-perfil";
 import { gerarSenhaTemporaria } from "@/lib/dominio/senha-gerada";
 import { vereditoSobreConta } from "@/lib/dominio/ultimo-admin";
 import { criarClienteAdministrativo } from "@/lib/supabase/admin";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
-  esquemaDeConvite,
+  esquemaDeCadastro,
   esquemaDeDesativacao,
   esquemaDeEdicao,
   esquemaDeEdicaoDeNome,
   esquemaDeRecuperacao,
   esquemaDeRedefinicao,
-  esquemaDeReenvio,
 } from "@/lib/validacao/usuarios";
 
 export type Resultado = { readonly ok: true } | { readonly ok: false; readonly erro: string };
@@ -137,84 +138,113 @@ async function adminsAtivos(): Promise<readonly { readonly id: string }[]> {
 }
 
 /**
- * Convida alguém. A ordem das duas escritas é o contrato, não preferência.
+ * Cadastra a conta **direto**, com senha temporária gerada no servidor (`FR-033`, `FR-035`).
  *
- * ⚠️ **1. INSERT em `usuarios`. 2. convite pela plataforma.** Nunca o inverso.
+ * ⚠️ **ELA SUBSTITUI `convidar`, E O CONVITE POR E-MAIL SAIU DO SISTEMA** *(decisão de Bernardo
+ * Villas Boas, 03/10/2026, reprovando a conferência do PR 2)*: *"Admin CADASTRA usuário direto (sem
+ * convite por e-mail) … o admin repassa em mãos."* Não há SMTP a configurar, não há link a expirar, e
+ * não há mais o estado *"cadastro sem credencial"* que o `FR-008` descrevia — a conta nasce inteira.
  *
- * A ordem inversa produz **credencial sem linha** — o único dos dois estados de inconsistência que
- * não alcança nada **e** não aparece na tela de usuários. Invisível é pior que incompleto.
+ * ⚠️ **A ORDEM É CREDENCIAL PRIMEIRO, CADASTRO DEPOIS — E ELA É O INVERSO DA DO `convidar`.** Aquela
+ * gravava a linha antes porque o passo 2 podia falhar e o estado resultante — *linha sem credencial* —
+ * era **legítimo e recuperável** por «reenviar convite». ⚠️ **Aqui esse estado deixou de ter saída**:
+ * sem convite, uma linha sem credencial é conta que ninguém consegue usar e que nenhuma tela conserta.
+ * Então a credencial vem primeiro, e se a linha falhar a credencial é **desfeita**.
  *
- * ⚠️ **A falha do passo 2 NÃO é compensada, e isso é desenho.** O estado resultante é "linha com
- * perfil, sem credencial", que é exatamente o estado legítimo do FR-008: a janela em que o Admin
- * ainda revisa. O caminho de saída já existe e é `reenviarConvite`. Compensar seria apagar linha,
- * contra a regra 4 do CLAUDE.md.
+ * ⚠️ **DESFAZER A CREDENCIAL NÃO É EXCEÇÃO À REGRA 4, e a distinção já está no `CLAUDE.md`:**
+ * *"A CÓPIA NÃO TRAZ O SCHEMA `auth` — credencial não é cadastro."* A regra 4 protege **registro do
+ * domínio acadêmico**; o que se apaga aqui é uma credencial criada há milissegundos, sem uma única
+ * linha de histórico por construção. **Nada em `public` é apagado em nenhum caminho desta função.**
+ *
+ * ⚠️ **A SENHA É DEVOLVIDA UMA VEZ E NÃO VAI PARA LUGAR NENHUM** (`FR-034`) — nem coluna, nem log,
+ * nem endereço. É o mesmo gerador de `redefinirSenha`, o mesmo alfabeto sem caracteres ambíguos e o
+ * mesmo comprimento: duplicar a geração aqui faria duas políticas de senha divergirem com o tempo.
+ *
+ * ⚠️ **E A CONTA NASCE OBRIGADA A TROCAR** (`FR-035`), com a marca em `app_metadata` — que o próprio
+ * usuário **não** escreve. O percurso do primeiro acesso é o **mesmo** do PR 2, sem uma linha nova:
+ * `renovarSessao` já devolve quem tem a marca para `/perfil/senha`, e `trocarPropriaSenha` já a limpa.
  */
-export async function convidar(dados: unknown): Promise<Resultado> {
-  const conferido = esquemaDeConvite.safeParse(dados);
+export async function cadastrarUsuario(
+  dados: unknown,
+): Promise<Resultado | { readonly ok: true; readonly senha: string; readonly usuarioId: string }> {
+  const conferido = esquemaDeCadastro.safeParse(dados);
   if (!conferido.success) return falha(conferido.error.issues[0]?.message ?? "Dados inválidos.");
 
   const permitido = await exigirAdmin();
   if (!permitido.ok) return permitido;
 
-  const { nome, email, perfil, escopoCurso, cursos } = conferido.data;
-  const supabase = await criarClienteDeServidor();
+  const { nome, email, perfil, escopoCurso, cursos, instrutorId } = conferido.data;
 
-  // FR-012: e-mail com conta ativa não recebe segundo convite, e não vira duplicata.
-  const { data: existente } = await supabase
-    .from("usuarios")
-    .select("id, auth_user_id, status")
-    .eq("email", email)
-    .maybeSingle();
-  if (existente?.status === "ativo" && existente.auth_user_id) {
-    return falha("Já existe conta ativa para este e-mail.");
-  }
-  if (existente) {
-    return falha("Já existe convite pendente para este e-mail. Use “reenviar convite”.");
-  }
+  // A exigência por perfil é do domínio, e ela impede a conta que nasce sem ver nada (gotcha 4).
+  const exigencia = conferirExigenciasDoPerfil(perfil, cursos.length);
+  if (!exigencia.atendida) return falha(exigencia.motivo);
 
-  // ---------------------------------------------------------------- passo 1
-  const { data: linha, error: erroLinha } = await supabase
+  const admin = criarClienteAdministrativo();
+
+  // ---------------------------------------------------------------- passo 1: a credencial
+  const senha = gerarSenhaTemporaria((n) => randomInt(n));
+  const { data: criada, error: erroDaCredencial } = await admin.auth.admin.createUser({
+    email,
+    password: senha,
+    // ⚠️ `email_confirm: true` porque NÃO HÁ e-mail de confirmação a mandar. Sem isto a pessoa
+    //    recebe a senha em mãos e o Auth recusa o login, dizendo que o e-mail não foi confirmado.
+    email_confirm: true,
+    app_metadata: { trocar_senha: true },
+  });
+  if (erroDaCredencial) return falha(erroDeAutenticacaoEmPortugues(erroDaCredencial));
+
+  // ---------------------------------------------------------------- passo 2: o cadastro
+  const { data: linha, error: erroDoCadastro } = await admin
     .from("usuarios")
     .insert({
       codigo: `USR-${Date.now().toString(36).toUpperCase()}`,
+      auth_user_id: criada.user.id,
       email,
       nome,
+      nome_exibicao: nome,
       perfil,
       escopo_curso: escopoCurso,
-      // auth_user_id fica NULO de propósito: é a janela do FR-008.
+      instrutor_id: instrutorId,
     })
     .select("id")
     .single();
-  if (erroLinha || !linha) return falha(erroLinha?.message ?? "Não foi possível cadastrar.");
 
+  if (erroDoCadastro) {
+    // Ver o cabeçalho: a credencial recém-criada é desfeita, porque sem cadastro ela não alcança
+    // nada e nenhuma tela a conserta. Nada de `public` é tocado.
+    await admin.auth.admin.deleteUser(criada.user.id);
+    return falha(`A conta não foi criada: ${traduzirRecusa(erroDoCadastro as ErroDoBanco)}`);
+  }
+
+  // ---------------------------------------------------------------- passo 3: os vínculos
   for (const cursoId of cursos) {
-    await supabase.from("usuario_curso").insert({
+    await admin.from("usuario_curso").insert({
       codigo: `UC-${linha.id.slice(0, 8)}-${cursoId.slice(0, 8)}`,
       usuario_id: linha.id,
       curso_id: cursoId,
     });
   }
 
-  // ---------------------------------------------------------------- passo 2
-  const admin = criarClienteAdministrativo();
-  const { error: erroConvite } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${urlDaAplicacao()}/convite`,
-  });
-  if (erroConvite) {
-    // Sem compensação. Ver o comentário do cabeçalho desta função.
-    return falha(
-      `Cadastro criado, mas o convite não pôde ser enviado: ${erroConvite.message}. ` +
-        "Use “reenviar convite” — o cadastro está lá, sem credencial, e não alcança nada.",
-    );
-  }
+  /*
+   * ⚠️ **A CRIAÇÃO NÃO ENTRA NA TRILHA `auditoria_de_conta`, E ISSO É DESENHO.** O `CHECK` dela tem
+   * **seis** valores, fixados pela decisão D-2, e nenhum é "cadastrar" — acrescentar um sétimo é
+   * decisão de Bernardo, não de quem escreve a ação. ⚠️ **E a criação já é auditável sem ela**: o
+   * gatilho `app.set_auditoria()` grava `criado_por` e `criado_em` **na própria linha**, a partir de
+   * `auth.uid()`. A trilha responde *"quem mexeu numa conta que já existia"*; quem criou está no
+   * quarteto de auditoria da linha criada.
+   */
 
   revalidatePath("/admin/usuarios");
-  return sucesso;
+  return { ok: true, senha, usuarioId: linha.id };
 }
 
 /**
  * Traduz o erro da API de autenticação para português (`RNF-USA-…`, e o padrão de mensagem do
  * resto deste arquivo).
+ *
+ * ⚠️ **ELA NASCEU PARA O CONVITE E FICOU, porque o caso que ela mais importa é o MESMO:**
+ * `email_exists`. O convite saiu em 03/10/2026; `createUser` devolve o mesmo código quando alguém
+ * cadastra um e-mail que já tem conta, e é o erro que de fato acontece na mesa de quem administra.
  *
  * ⚠️ **A MENSAGEM DA PLATAFORMA NÃO CHEGA MAIS À TELA.** Ela vem em inglês, fala de conceito da
  * plataforma e não do domínio — *"A user with this email address has already been registered"* não
@@ -228,7 +258,7 @@ export async function convidar(dados: unknown): Promise<Resultado> {
  * ⚠️ **O PADRÃO DEVOLVE TEXTO GENÉRICO DE PROPÓSITO, e o original vai para o log do servidor.**
  * Repassar a mensagem desconhecida seria o mesmo vazamento, só que com mais passos.
  */
-function erroDeConviteEmPortugues(erro: {
+function erroDeAutenticacaoEmPortugues(erro: {
   readonly code?: string | undefined;
   readonly message: string;
 }): string {
@@ -252,55 +282,9 @@ function erroDeConviteEmPortugues(erro: {
       return "Dados inválidos.";
     default:
       // O que a pessoa vê é português; o que a investigação precisa fica no log do servidor.
-      console.error("[reenviarConvite] erro não mapeado da API de autenticação:", erro);
+      console.error("[auth] erro não mapeado da API de autenticação:", erro);
       return "Não foi possível reenviar o convite. Tente de novo em alguns minutos.";
   }
-}
-
-/**
- * Reenvia o convite. O link anterior deixa de valer — quem emite o novo é a plataforma.
- *
- * ⚠️ **`inviteUserByEmail` É A ROTINA CERTA, E FOI MEDIDO.** A suspeita natural é que ela falhe
- * por tentar recriar quem já existe, e **não é isso**. Medido no stack local em 14/09/2026, para um
- * usuário já convidado e **ainda não confirmado** — que é o estado "convite enviado":
- *
- *   inviteUserByEmail            -> ok, e o e-mail CHEGA (a caixa vai de 1 para 2)
- *   generateLink({type:"invite"}) -> ok, devolve `action_link`, e NÃO ENVIA NADA (a caixa não muda)
- *
- * ⚠️ **TROCAR POR `generateLink` QUEBRARIA O REENVIO PARECENDO CONSERTÁ-LO:** a ação passaria a
- * devolver sucesso sem que e-mail nenhum saísse, e ninguém descobriria até alguém reclamar que o
- * convite não chegou. É o pior desfecho possível para esta correção.
- *
- * ⚠️ **O `email_exists` SÓ APARECE PARA USUÁRIO CONFIRMADO** — medido: com a conta confirmada,
- * tanto `inviteUserByEmail` quanto `generateLink({type:"invite"})` devolvem `422 email_exists`.
- * Quem chega aqui nesse estado passou pela guarda de `auth_user_id` porque **a coluna estava
- * vazia**, e é o defeito que o `FR-010` corrige à parte. Aqui a resposta deixa de ser a frase em
- * inglês da plataforma e passa a ser a mesma frase em português da guarda.
- */
-export async function reenviarConvite(dados: unknown): Promise<Resultado> {
-  const conferido = esquemaDeReenvio.safeParse(dados);
-  if (!conferido.success) return falha("Dados inválidos.");
-
-  const permitido = await exigirAdmin();
-  if (!permitido.ok) return permitido;
-
-  const supabase = await criarClienteDeServidor();
-  const { data: linha } = await supabase
-    .from("usuarios")
-    .select("email, auth_user_id")
-    .eq("id", conferido.data.usuarioId)
-    .maybeSingle();
-  if (!linha) return falha("Usuário não encontrado.");
-  if (linha.auth_user_id) return falha("Esta conta já tem credencial. Use recuperação de senha.");
-
-  const admin = criarClienteAdministrativo();
-  const { error } = await admin.auth.admin.inviteUserByEmail(linha.email, {
-    redirectTo: `${urlDaAplicacao()}/convite`,
-  });
-  if (error) return falha(erroDeConviteEmPortugues(error));
-
-  revalidatePath("/admin/usuarios");
-  return sucesso;
 }
 
 /**
@@ -378,8 +362,13 @@ export async function editarPerfilEEscopo(dados: unknown): Promise<Resultado> {
   const permitido = await exigirAdmin();
   if (!permitido.ok) return permitido;
 
-  const { usuarioId, perfil, escopoCurso, cursos } = conferido.data;
+  const { usuarioId, perfil, escopoCurso, cursos, instrutorId } = conferido.data;
   const supabase = await criarClienteDeServidor();
+
+  // A mesma exigência do cadastro: editar para `encarregado_curso` sem vínculo produziria a conta
+  // que entra e não vê nada — o mesmo defeito, pelo outro caminho.
+  const exigencia = conferirExigenciasDoPerfil(perfil, cursos.length);
+  if (!exigencia.atendida) return falha(exigencia.motivo);
 
   // ⚠️ **REBAIXAR É O CASO QUE A CONTAGEM SOZINHA NÃO PEGA.** Trocar o perfil de `admin` para
   //    qualquer outro deixa a conta ATIVA e o sistema sem Admin — uma regra escrita só sobre
@@ -394,9 +383,9 @@ export async function editarPerfilEEscopo(dados: unknown): Promise<Resultado> {
 
   const { error } = await supabase
     .from("usuarios")
-    .update({ perfil, escopo_curso: escopoCurso })
+    .update({ perfil, escopo_curso: escopoCurso, instrutor_id: instrutorId })
     .eq("id", usuarioId);
-  if (error) return falha(error.message);
+  if (error) return falha(traduzirRecusa(error as ErroDoBanco));
 
   // Vínculos: o conjunto informado passa a ser o conjunto vigente.
   await supabase.from("usuario_curso").delete().eq("usuario_id", usuarioId);

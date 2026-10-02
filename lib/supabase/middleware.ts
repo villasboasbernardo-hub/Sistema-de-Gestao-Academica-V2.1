@@ -27,7 +27,10 @@ import { conferirAmbiente } from "@/lib/ambiente";
  * sessão para ver uma paleta não protege nada e impede que a fatia seja conferida, porque até a
  * fatia (c) não há cabeçalho nem navegação por onde chegar nela depois de entrar.
  */
-const SEM_SESSAO = ["/login", "/convite", "/recuperar-senha", "/sem-configuracao", "/estilo"];
+// ⚠️ `/convite` SAIU em 03/10/2026, com o fluxo de convite: o Admin cadastra direto e a pessoa
+//    recebe a senha em mãos. Deixar a rota aberta sem página seria superfície de autenticação
+//    aberta para nada.
+const SEM_SESSAO = ["/login", "/recuperar-senha", "/sem-configuracao", "/estilo"];
 
 function ehRotaAberta(caminho: string): boolean {
   return SEM_SESSAO.some((r) => caminho === r || caminho.startsWith(`${r}/`));

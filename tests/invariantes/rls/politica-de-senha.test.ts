@@ -3,7 +3,7 @@
  * formulário (`FR-006` · documento 22 §4.5 · BRIEF §2).
  *
  * POR QUE ESTE ARQUIVO EXISTE. Até 09/09/2026 o 12 vivia só no navegador: os dois campos de
- * `app/(auth)/convite/FormularioDeSenha.tsx` traziam `minLength={12}` e `supabase/config.toml`
+ * `app/(auth)/recuperar-senha/FormularioDeSenha.tsx` traziam `minLength={12}` e `supabase/config.toml`
  * ficava no padrão do CLI, **6**. Era regra de negócio implementada apenas na UI — o que o
  * BRIEF §2 proíbe sem discussão — e o efeito era alcançável, não teórico: uma chamada direta a
  * `PUT /auth/v1/user`, sem passar pelo formulário, aceitava senha de seis caracteres.

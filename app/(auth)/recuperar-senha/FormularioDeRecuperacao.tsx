@@ -15,7 +15,7 @@
 import { useState } from "react";
 
 import { recuperarSenha } from "@/lib/acoes/usuarios";
-import { FormularioDeSenha } from "@/app/(auth)/convite/FormularioDeSenha";
+import { FormularioDeSenha } from "./FormularioDeSenha";
 import { criarClienteDeNavegador } from "@/lib/supabase/client";
 import { useEffect } from "react";
 

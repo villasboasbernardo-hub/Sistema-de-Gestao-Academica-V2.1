@@ -22,17 +22,31 @@ const email = z
   .email("Informe um e-mail válido.")
   .max(254, "E-mail longo demais.");
 
-export const esquemaDeConvite = z.object({
+/**
+ * Cadastrar conta **direto**, sem convite por e-mail *(decisão de Bernardo Villas Boas, 03/10/2026,
+ * reprovando a conferência do PR 2)*.
+ *
+ * ⚠️ **ELE SUBSTITUI `esquemaDeConvite`, que saiu junto com o fluxo de convite.** A diferença de
+ * conteúdo é **uma**: o vínculo de instrutor, que a tela de cadastro passou a oferecer. A diferença de
+ * comportamento é toda: o servidor **gera a senha** e a devolve uma vez, em vez de mandar e-mail.
+ *
+ * ⚠️ **`instrutorId` é OPCIONAL para os nove perfis, e isso foi medido** (03/10/2026): nenhuma policy
+ * e nenhuma função de autorização lê `usuarios.instrutor_id`. Ver `lib/dominio/exigencias-do-perfil.ts`.
+ */
+export const esquemaDeCadastro = z.object({
   nome: z.string().trim().min(3, "Informe o nome completo.").max(200),
   email,
   perfil: z.enum(PERFIS, { message: "Perfil fora do domínio." }),
   escopoCurso: z.enum(ESCOPOS, { message: "Escopo fora do domínio." }),
-  // Vínculos de curso: só fazem sentido para quem tem escopo restrito, mas a validação de
-  // coerência é do banco (a policy) — aqui só se garante que são identificadores.
+  // Vínculos de curso: a exigência por perfil é de `lib/dominio/exigencias-do-perfil.ts`; aqui só se
+  // garante que são identificadores.
   cursos: z.array(z.string().uuid()).default([]),
+  // ⚠️ Vazio vira `null`: o `<select>` manda `""` quando ninguém escolhe, e `""` não é uuid.
+  instrutorId: z
+    .union([z.string().uuid(), z.literal("")])
+    .optional()
+    .transform((v) => (v ? v : null)),
 });
-
-export const esquemaDeReenvio = z.object({ usuarioId: z.string().uuid() });
 
 export const esquemaDeDesativacao = z.object({ usuarioId: z.string().uuid() });
 
@@ -41,6 +55,10 @@ export const esquemaDeEdicao = z.object({
   perfil: z.enum(PERFIS, { message: "Perfil fora do domínio." }),
   escopoCurso: z.enum(ESCOPOS, { message: "Escopo fora do domínio." }),
   cursos: z.array(z.string().uuid()).default([]),
+  instrutorId: z
+    .union([z.string().uuid(), z.literal("")])
+    .optional()
+    .transform((v) => (v ? v : null)),
 });
 
 /**
@@ -67,6 +85,6 @@ export const esquemaDeRedefinicao = z.object({ usuarioId: z.string().uuid() });
 
 export const esquemaDeRecuperacao = z.object({ email });
 
-export type DadosDeConvite = z.infer<typeof esquemaDeConvite>;
+export type DadosDeCadastro = z.infer<typeof esquemaDeCadastro>;
 export type DadosDeEdicao = z.infer<typeof esquemaDeEdicao>;
 export type DadosDeEdicaoDeNome = z.infer<typeof esquemaDeEdicaoDeNome>;

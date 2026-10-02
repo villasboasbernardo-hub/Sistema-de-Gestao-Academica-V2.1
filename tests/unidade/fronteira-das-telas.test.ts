@@ -30,10 +30,21 @@ const RAIZ = process.cwd();
 const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   // ── Épico 3: autenticação ──────────────────────────────────────────────────────────────────
   "app/(auth)/login/FormularioDeLogin.tsx": "entrar: campo, envio e a recusa de credencial",
-  "app/(auth)/convite/FormularioDeSenha.tsx": "definir senha a partir do token do fragmento",
+  "app/(auth)/recuperar-senha/FormularioDeSenha.tsx":
+    "definir senha a partir do token do fragmento",
   "app/(auth)/recuperar-senha/FormularioDeRecuperacao.tsx": "pedir o link de recuperação",
-  "app/(app)/admin/usuarios/FormularioDeConvite.tsx": "convidar usuário",
-  "app/(app)/admin/usuarios/AcoesDeUsuario.tsx": "reenviar convite, desativar e reativar conta",
+  /*
+   * ⚠️ **O CONVITE SAIU DO SISTEMA em 03/10/2026** (decisão de Bernardo Villas Boas): o Admin cadastra
+   *    direto, com senha gerada no servidor. `FormularioDeConvite.tsx` e `AcoesDeUsuario.tsx` — que
+   *    reunia as ações numa célula da tabela — foram **apagados**, não desligados.
+   */
+  "app/(app)/admin/usuarios/BuscaDeUsuarios.tsx": "a busca da lista, escrita na URL",
+  "app/(app)/admin/usuarios/SelecoesDaConta.tsx": "perfil e escopo: as duas escolhas fechadas",
+  "app/(app)/admin/usuarios/CamposDaConta.tsx": "os campos comuns a cadastrar e editar",
+  "app/(app)/admin/usuarios/novo/FormularioDeCadastro.tsx":
+    "cadastrar conta e mostrar a senha uma vez",
+  "app/(app)/admin/usuarios/[id]/FormularioDaConta.tsx": "editar nome, perfil, escopo e vínculos",
+  "app/(app)/admin/usuarios/[id]/AcoesDaConta.tsx": "redefinir senha, desativar e reativar",
 
   // ── Épico 4: vitrine e panorama ────────────────────────────────────────────────────────────
   "app/estilo/amostras.tsx": "as amostras interativas da vitrine",
