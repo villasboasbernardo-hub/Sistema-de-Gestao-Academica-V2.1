@@ -14,8 +14,14 @@
 > ⚠️ **NUNCA REDEFINA A SENHA DA SUA PRÓPRIA CONTA.** A tela não oferece isso — e o passo **A.3**
 > existe para você conferir que ela não oferece.
 
-**Onde:** `https://sistema-de-gestao-academica-v2-1-git-feat-epic-...-ciaara-11.vercel.app` (o endereço
-exato sai no comentário do PR 2). Para o LOCAL: `pnpm db:reset && pnpm dev:local`, porta **3000**.
+**Onde**, medido em 02/10/2026 e estável entre os pushes:
+
+```
+https://sistema-de-gestao-academica-v2-1-git-feat-epic-35e53b-ciaara-11.vercel.app
+```
+
+⚠️ Ele pede o login da **Vercel** antes do login da aplicação (proteção de deploy). Para o LOCAL:
+`pnpm db:reset && pnpm dev:local`, porta **3000** — nunca a 3100, onde a suíte vive (gotcha 7).
 
 ---
 
