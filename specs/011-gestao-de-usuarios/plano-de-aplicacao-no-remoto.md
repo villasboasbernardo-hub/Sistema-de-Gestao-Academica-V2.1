@@ -116,3 +116,61 @@ alter table public.usuarios drop column if exists avatar_caminho;
 Com foto cadastrada, a convenção de banco manda virá-la comentário `[APOSENTADA]` e deixá-la.
 ⚠️ **E os arquivos já enviados não voltam**: apagar o balde com objeto dentro perderia dado que
 ninguém mandou apagar. Hoje o balde tem **zero** objetos.
+
+---
+
+# PR 2 — `20261002195248_auditoria_de_conta.sql` (T024)
+
+**Autorização:** Bernardo Villas Boas, nesta sessão: *"Siga direto para o PR 2 … na mesma sequência:
+implement → verificar:tudo → subir → CI verde → backup → dry-run → migration no remoto."* CI verde nos
+três blocos sobre `3b65a61` (run `37062800080`).
+
+| # | Passo | Resultado medido |
+|---|---|---|
+| 1 | **Backup**, `--somente-copia` | `remoto-20261002-175617.sql`, fora do git |
+| 2 | **Dry-run** | *"Would push: • 20261002195248_auditoria_de_conta.sql"* — **uma só**, sem `seed` nem `role` |
+| 3 | **Aplicação**, `pnpm db:push` | `Applying migration …` · saída **0** |
+| 4 | **Retrato depois** | `remoto-20261002-175711.sql` — é ele que sustenta a conferência 2 |
+
+## A conferência, só por leitura
+
+**1. Migrations:** **47 entradas, as 47 nos dois bancos**, nenhuma só de um lado; a última é
+`20261002195248`.
+
+**2. Zero linhas pré-existentes alteradas.** O `diff` dos dois retratos de dados traz **uma coisa só**,
+além do par de linhas de RESTRICT/UNRESTRICT que o `pg_dump` sorteia a cada execução: o **cabeçalho da
+tabela nova**, `-- Data for Name: auditoria_de_conta`, **sem nenhuma linha de dado**. `usuarios` não tem
+uma única diferença.
+
+⚠️ **Esta é a lição do gotcha 13 aplicada:** a conferência é o `diff` dos **dois retratos datados**, e
+não um md5 de conteúdo — que num banco vivo muda sozinho por carimbo de acesso, justamente enquanto a
+operação acontece.
+
+**3. Esquema, objeto a objeto:**
+
+| | Objetos | md5 do conjunto |
+|---|---|---|
+| Local | **1.589** | `1e5e35cc74c63257b72b1e609fd50204` |
+| Remoto | **1.589** | `1e5e35cc74c63257b72b1e609fd50204` |
+
+Comparação **linha a linha** das 1.590 linhas de saída: **diff vazio**.
+
+**4. A trilha nasce vazia e fechada:**
+
+| O quê | Medido no remoto |
+|---|---|
+| Linhas em `auditoria_de_conta` | **0** — ela nasce vazia |
+| Policies | **1**, e de `SELECT` |
+| `INSERT`/`UPDATE`/`DELETE`/`TRUNCATE` para `authenticated`/`anon` | **0** |
+| Gatilhos não internos | **2** — o de `update`/`delete` e o de `truncate` |
+| Policies de `DELETE` no **catálogo inteiro** | **0** — a regra 4 continua inteira |
+| Contas em `usuarios` | **5**, intactas |
+
+**5. Production respondendo como antes:** `/login` **200**; `/`, `/perfil`, `/admin/usuarios`,
+`/cursos` e `/disciplinas` **307** para o login. Nenhum erro novo.
+
+## Reversão
+
+No cabeçalho da migration. ⚠️ **`drop table` só se a tabela estiver VAZIA** — hoje está. Com linha
+dentro, apagar a tabela seria apagar rastro de ação que aconteceu, que é o que a regra 4 impede; a
+reversão então para na função e nos gatilhos, e a tabela fica.
