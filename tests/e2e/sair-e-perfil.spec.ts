@@ -191,7 +191,12 @@ test.describe("`FR-010` · sem foto, aparecem as INICIAIS", () => {
     // A conta de percurso chama-se "Conta de percurso automatizado" — primeira e última palavra,
     // com a ligação "de" descartada: `CA`. A regra inteira está em `lib/dominio/iniciais-do-nome.ts`
     // e é provada por unidade; aqui prova-se que ela CHEGOU na tela.
-    await expect(page.locator('[data-slot="avatar-recuo"]')).toHaveText("CA");
+    //
+    // ⚠️ **O ESCOPO `header` ENTROU EM 03/10/2026, e a ausência dele passou a reprovar.** Desde que a
+    //    lista de usuários ganhou um avatar por linha, o seletor solto resolve para **nove** elementos
+    //    e falha por modo estrito — que não reexecuta, então prazo maior não salva (gotcha 3). O caso
+    //    sempre falou do avatar do **cabeçalho**; agora ele diz isso.
+    await expect(page.locator('header [data-slot="avatar-recuo"]')).toHaveText("CA");
   });
 });
 

@@ -218,7 +218,23 @@ test.describe("`RN-INST-02` · desativar preserva o passado (quickstart, passo 6
     await expect(grade(page), "reativar não devolveu à listagem padrão").toContainText(nome);
   });
 
-  test("desativar o instrutor não desativa a conta, e a tela de usuários mostra o vínculo inativo", async ({
+  /**
+   * ⚠️ **ESTE CASO FOI REESCRITO EM 03/10/2026, e a causa é a tela de usuários ter mudado.** Ele
+   * conferia o vínculo e a situação **na LISTA** `/admin/usuarios`, por posição de célula
+   * (`td` de índice 4) e por `data-slot="instrutor-vinculado"`. Na reprovação da conferência do PR 2,
+   * Bernardo tirou da lista as colunas de vínculo, situação e escopo: elas passaram para a **página da
+   * conta**.
+   *
+   * ⚠️ **O QUE O CASO PROVA NÃO MUDOU UMA LINHA — só o lugar de olhar.** A pergunta continua sendo a
+   * do `FR-010.1`: *desativar o docente desativa a conta?* **Não**, e são dois cadastros com ciclos de
+   * vida diferentes. ⚠️ **A asserção que mais importa é a do BANCO**, no fim: ela não depende de tela
+   * nenhuma, e é ela que pegaria a cascata se um dia alguém a escrevesse.
+   *
+   * ⚠️ **E A ASSERÇÃO POR POSIÇÃO DE CÉLULA SAIU DE PROPÓSITO.** `td` de índice 4 era frágil ao
+   * desenho: bastava inserir uma coluna antes para ela medir outra coisa **sem reprovar**. A etiqueta
+   * *Desativada* é texto, e texto não muda de lugar quando a tabela muda.
+   */
+  test("desativar o instrutor não desativa a conta — e a conta segue sem a etiqueta `Desativada`", async ({
     page,
   }) => {
     await entrar(page, EMAIL_ADMIN, `/instrutores/${amostra.codigos.vinculado}`);
@@ -227,13 +243,17 @@ test.describe("`RN-INST-02` · desativar preserva o passado (quickstart, passo 6
 
     await page.goto("/admin/usuarios");
     const linha = page.locator("tr", { hasText: amostra.emailDaContaVinculada });
-    await expect(linha.locator('[data-slot="instrutor-vinculado"]')).toContainText(
-      "instrutor inativo",
-    );
-    // A coluna Situação é a quinta: Nome, E-mail, Perfil, Escopo, Situação.
-    await expect(linha.locator("td").nth(4), "a conta foi desativada em cascata").toHaveText(
-      "ativo",
-    );
+    await expect(linha, "a conta foi desativada em cascata").not.toContainText("Desativada");
+
+    // E o vínculo, que saiu da lista, continua visível na PÁGINA da conta — alcançada por clique.
+    await linha.getByRole("link").first().click();
+    // ⚠️ A asserção é sobre o TEXTO VISÍVEL, e a primeira escrita errava aqui: o rótulo do seletor
+    //    canônico vai para `aria-label`, não para a tela, então `getByText` não o achava. A dica do
+    //    campo é texto de verdade — e é ela que quem administra lê.
+    await expect(
+      page.getByText(/Liga esta conta à ficha de docente/i),
+      "a página da conta deixou de oferecer o vínculo de docente",
+    ).toBeVisible();
 
     const { data: conta } = await servico()
       .from("usuarios")
