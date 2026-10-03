@@ -245,15 +245,18 @@ test.describe("`RN-INST-02` · desativar preserva o passado (quickstart, passo 6
     const linha = page.locator("tr", { hasText: amostra.emailDaContaVinculada });
     await expect(linha, "a conta foi desativada em cascata").not.toContainText("Desativada");
 
-    // E o vínculo, que saiu da lista, continua visível na PÁGINA da conta — alcançada por clique.
-    await linha.getByRole("link").first().click();
-    // ⚠️ A asserção é sobre o TEXTO VISÍVEL, e a primeira escrita errava aqui: o rótulo do seletor
-    //    canônico vai para `aria-label`, não para a tela, então `getByText` não o achava. A dica do
-    //    campo é texto de verdade — e é ela que quem administra lê.
-    await expect(
-      page.getByText(/Liga esta conta à ficha de docente/i),
-      "a página da conta deixou de oferecer o vínculo de docente",
-    ).toBeVisible();
+    /*
+     * ⚠️ **AQUI HAVIA UMA ASSERÇÃO SOBRE O VÍNCULO NA PÁGINA DA CONTA, E ELA FOI REMOVIDA EM
+     *    03/10/2026.** Na rodada anterior ela tinha mudado de lugar — da lista para a página —, e
+     *    agora Bernardo tirou o campo da **tela inteira**: *"O vínculo de instrutor sai da tela
+     *    (nenhuma policy o lê)."*
+     * ⚠️ **NADA DO QUE ESTE CASO PROVA DEPENDIA DELA.** A pergunta do `FR-010.1` é se desativar o
+     *    docente desativa a conta, e quem responde é a asserção do BANCO, abaixo — a que não depende
+     *    de tela nenhuma. A asserção de tela que resta é a da etiqueta, que é a observável.
+     * ⚠️ **E A COLUNA DO BANCO CONTINUA LÁ**: `usuarios.instrutor_id` não foi tocado, e
+     *    `app.impedimentos_de_exclusao_do_instrutor` segue usando-o para impedir que se apague um
+     *    docente com conta ligada.
+     */
 
     const { data: conta } = await servico()
       .from("usuarios")
