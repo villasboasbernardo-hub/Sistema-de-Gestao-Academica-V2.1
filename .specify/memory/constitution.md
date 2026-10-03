@@ -142,7 +142,7 @@ plataforma" para justificar mudança de domínio está usando este princípio ao
 | Estilo | **Tailwind CSS v4**, configuração CSS-first via `@theme`. Substitui Bootstrap 5 e o CSS ad hoc por módulo |
 | Componentes | **shadcn/ui** (Radix + `cva`), copiado para `components/ui/` e versionado no repositório |
 | Banco | **Supabase PostgreSQL**. Projeto já criado pelo Bernardo |
-| Autenticação | **Supabase Auth — e-mail/senha, somente por convite do Admin.** Signup público desabilitado no painel |
+| Autenticação | **Supabase Auth — e-mail/senha. A conta é CRIADA PELO ADMIN, com senha temporária mostrada uma vez e troca obrigatória no primeiro acesso.** Signup público desabilitado (`[auth] enable_signup = false`). ⚠️ **Sem convite por e-mail, e sem envio de e-mail nenhum** — emenda de 03/10/2026, decisões **D-USR-1** e **D-USR-2**, logo abaixo ⚠️ *(Registro anterior, vencido: "**Supabase Auth — e-mail/senha, somente por convite do Admin.** Signup público desabilitado no painel")* |
 | Autorização | **RLS no banco** + matriz de permissões como dado (`perfil_permissao`) |
 | Acesso a dados | `@supabase/ssr` (servidor) e `@supabase/supabase-js` (cliente). **Sem ORM** |
 | Mutações | **Server Actions** + **Zod**, validação compartilhada cliente/servidor |
@@ -153,6 +153,49 @@ plataforma" para justificar mudança de domínio está usando este princípio ao
 | Hospedagem | **Vercel**, com preview por branch |
 | Repositório | **GitHub**, Conventional Commits |
 | ETL | **Python**, reaproveitando `migracao/*.py` da v2.0 |
+
+> ⚠️ **EMENDA DE 03/10/2026 — O CONVITE POR E-MAIL SAI DO REGIME VIGENTE DE ACESSO.**
+>
+> **Autorização nominal de Bernardo Villas Boas, 03/10/2026**, respondendo à pergunta *"cinco
+> documentos normativos ainda dizem «somente por convite» e eu NÃO os toquei; o que fazer?"*:
+> ***«Emendar os cinco agora.»*** ⚠️ **A autorização é citada aqui porque sem ela esta emenda seria
+> indistinguível de uma alteração não autorizada** — é o que o Princípio I e a regra 1 do `CLAUDE.md`
+> exigem de quem emenda documento normativo, e é exatamente o que a regra existe para impedir.
+>
+> **As seis decisões que esta emenda registra, todas de Bernardo Villas Boas, 03/10/2026:**
+>
+> - **D-USR-1** — convite por e-mail **PERMANENTEMENTE removido**; **nenhum envio de e-mail**.
+> - **D-USR-2** — cadastro pelo Admin com **senha temporária mostrada uma vez**; **troca obrigatória**
+>   no primeiro acesso.
+> - **D-USR-3** — o Admin **exclui permanentemente** qualquer conta, em qualquer estado, **menos a
+>   própria e o último Admin**; o e-mail é liberado para novo cadastro.
+> - **D-USR-4** — **confirmação simples**, sem digitar nada.
+> - **D-USR-5** — **editar em página própria**: nome, perfil e acessos.
+> - **D-USR-6** — em cada linha da lista: **Editar · Redefinir senha · Desativar/Reativar · Excluir**.
+>
+> **O que o código faz hoje — MEDIDO em 03/10/2026, não afirmado de memória** (Princípio VI; e a regra
+> 9.3 do `CLAUDE.md`: nenhuma afirmação de resultado entra em disco antes da medição que a sustenta): a
+> conta nasce de `auth.admin.createUser()` em `lib/acoes/usuarios.ts`, pela tela
+> `/admin/usuarios/novo`, com `email_confirm: true` — **porque não há e-mail de confirmação a mandar** —
+> e `app_metadata: { trocar_senha: true }`; a senha temporária é gerada no servidor e mostrada **uma**
+> vez; a troca obrigatória acontece em `/perfil/senha`. **Não existem** `/convite`,
+> `/recuperar-senha`, `inviteUserByEmail`, `resetPasswordForEmail` nem qualquer envio de e-mail no
+> repositório, e **há guarda que reprova se voltarem** —
+> `tests/unidade/sem-convite-nem-envio-de-email.test.ts`.
+>
+> ⚠️ **A DECISÃO D1, DE 25/08/2026, NÃO É APAGADA.** Ela recusou a conta Google e adotou e-mail/senha
+> por convite: é **história**, e registro datado fica. Ela continua na tabela de decisões da seção
+> *Governança*, **com a decisão nova acrescentada AO LADO dela, não no lugar dela**. O que esta emenda
+> encerra é a **vigência** do convite, não o registro de que ele foi decidido um dia.
+>
+> ⚠️ **ESTA EMENDA VIVE SÓ NO `.md`, E O `.docx` NÃO A RECEBEU.** Pela regra de 17/09/2026, o `.md`
+> **prevalece** e o `.docx` é o **documento original entregue**, preservado como tal — **nunca emendado
+> nem apagado**. Nenhum arquivo `.docx` foi aberto ou alterado nesta emenda.
+>
+> ⚠️ **E ESTA EMENDA FOI APLICADA NOS DOIS ENDEREÇOS DA CONSTITUTION** — `docs/vibe-coding/40-Constitution-v2.1.md`
+> e `.specify/memory/constitution.md` —, **pelo mesmo texto**, porque a pendência **CONST-1** mantém as
+> duas cópias vivas e emendar uma só é a divergência silenciosa que ela prevê. As divergências
+> **antigas** entre as duas continuam onde estavam: consolidar é decisão do Bernardo, não desta emenda.
 
 **Proibições permanentes da v2.1** (BRIEF §1), rejeitadas por padrão como as anteriores eram:
 
@@ -506,10 +549,22 @@ bundle (risco R-09). Três defesas em profundidade, todas obrigatórias:
 - regra de ESLint `no-restricted-imports` barrando o caminho em arquivos com `"use client"`, para o
   erro aparecer no editor antes do build.
 
-**Usos autorizados da `service_role`, e só estes três:** convite de usuário pelo Admin
-(`auth.admin.inviteUserByEmail()`, que a exige), carga do ETL no Épico 2, e script de manutenção
-versionado executado à mão. **Nunca por requisição de tela.** Qualquer quarto uso é decisão do
-Bernardo, registrada aqui.
+**Usos autorizados da `service_role`, e só estes três:** **gestão de conta pelo Admin**
+(`auth.admin.createUser()`, `auth.admin.updateUserById()` e `auth.admin.deleteUser()`, que a exigem),
+carga do ETL no Épico 2, e script de manutenção versionado executado à mão. **Nunca por requisição de
+tela.** Qualquer quarto uso é decisão do Bernardo, registrada aqui.
+
+⚠️ **A TRÍADE NÃO ENCOLHEU: CONTINUAM TRÊS USOS AUTORIZADOS.** O que a emenda de 03/10/2026 muda é o
+**verbo do primeiro** — de emitir convite para **administrar a conta** —, e a leitura fácil é supor que
+um uso saiu da lista. **Não saiu.** O Admin continua sendo o único caminho de entrada de uma conta no
+sistema, e continua precisando da `service_role` para isso; o que deixou de existir é o **e-mail**.
+*(Autorização nominal de Bernardo Villas Boas, 03/10/2026 — decisões **D-USR-1** e **D-USR-2**,
+registradas na seção III.b. Medido no código em 03/10/2026: `lib/acoes/usuarios.ts` é o consumidor de
+`lib/supabase/admin.ts`, e nele os três verbos são `createUser`, `updateUserById` e `deleteUser`;
+`inviteUserByEmail` não aparece em lugar nenhum do repositório.)*
+⚠️ *(Registro anterior, vencido: "convite de usuário pelo Admin (`auth.admin.inviteUserByEmail()`, que
+a exige)".)* ⚠️ **Emenda só no `.md`; o `.docx` não a recebeu**, e é preservado como o documento
+original entregue.
 
 **3. O `GRANT` que ninguém lembra.** RLS é filtro sobre privilégio que já existe — **ela não concede
 nada por si**. Sem `GRANT`, `authenticated` recebe `permission denied for table`, não a linha
@@ -610,6 +665,7 @@ escolha do agente. Divergência entre 5–6 e qualquer um acima resolve-se sempr
 | 2026-08-28 | **TURMA-1 — filtro de apresentação**: "Arquivada" não é valor do domínio de status de turma; é VIEW sobre turmas concluídas | Documento 05 §9.2 |
 | 2026-08-28 | **Origem do dado de UE**: as Unidades de Ensino vêm dos currículos oficiais da DEnsM (572 UEs, 134 disciplinas), não de linha sintética | BRIEF §2.2 · documento 05 §9.1 |
 | 2026-08-28 | **Matriz de permissões**: a CIAARA-11 escreve nas tabelas de fato; CIAARA-11 e Admin administram calendário e parâmetros (concessões `(a)` e `(b)` confirmadas) | Documento 22 §11, itens 2 e 3 |
+| 2026-10-03 | **Convite por e-mail removido**; conta criada pelo Admin com **senha temporária** (**D-USR-1**, **D-USR-2**). ⚠️ **A linha de 2026-08-25 FICA**: ela registra que o convite foi adotado, e esta encerra a **vigência** dele — registro datado não se apaga. Autorização nominal de Bernardo Villas Boas, 03/10/2026 | Princípio III.b |
 
 **Decisões pendentes que bloqueiam épicos** (nenhuma reaberta aqui; listadas para que ninguém as
 atropele): **LIQ-3** — papel titular/reserva, bloqueia o Épico 11; **LIQ-4** — persistência da LIQ
