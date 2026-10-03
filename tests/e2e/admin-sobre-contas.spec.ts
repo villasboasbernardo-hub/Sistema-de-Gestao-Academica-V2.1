@@ -348,6 +348,58 @@ test.describe("`FR-046` · as três ações da linha, e a exclusão permanente",
     await expect(linha()).not.toContainText("Desativada");
   });
 
+  /**
+   * ⚠️ **A METADE QUE FALTAVA DA T029, e ela é a que vale:** o caso acima prova que a LISTA muda;
+   * este prova que **o acesso muda**. Sem ele, "Desativada" podia ser uma etiqueta decorativa — e a
+   * promessa do diálogo (*"perde o acesso"*) ficaria sem nada que a sustentasse.
+   *
+   * ⚠️ **O QUE BARRA NÃO É A CREDENCIAL:** o Auth não sabe de `usuarios.status`, então o login
+   * **autentica** com a senha de sempre. Quem barra é o cadastro, e **medido em 03/10/2026 ele barra
+   * por DOIS caminhos independentes**: `usuarioDaSessao()` filtra `status = 'ativo'` em TypeScript, e
+   * no banco `app.usuario_atual()` e `app.perfil_atual()` filtram o mesmo — sem elas a policy
+   * `usuarios_ler` não casa e a linha nem volta.
+   *
+   * ⚠️ **E ISSO MUDOU COMO O DEFEITO DELIBERADO TEVE DE SER PLANTADO, que é o achado:** tirar **só** o
+   * filtro do TypeScript deixa o caso **VERDE**, e tirar **só** o do banco também — cada metade sozinha
+   * ainda nega. Ele só fica vermelho (`/inicio` onde se espera `/login`) com **as duas** fora. São duas
+   * defesas de verdade, não uma com cópia; é o mesmo formato da T033 da fatia (b), e quem concluísse
+   * *"o teste não discrimina"* depois de plantar uma metade estaria lendo o contrário do fato.
+   */
+  test("⚠️ O CASO QUE DISCRIMINA · desativar TIRA O ACESSO, e reativar o devolve sem recadastrar", async ({
+    page,
+    browser,
+  }, info) => {
+    const email = `acesso-${info.workerIndex}@ciaara.teste`;
+    await apagarConta(email);
+    await criarConta(email, `USR-ACS-${info.workerIndex}`, "operador");
+
+    // Controle positivo PRIMEIRO: ela entra. Sem isto, "não entrou" não distingue conta desativada
+    // de conta que nunca conseguiu entrar.
+    const contexto = await browser.newContext();
+    const pagina = await contexto.newPage();
+    await entrarComSenha(pagina, email, SENHA_DE_TESTE);
+
+    await entrar(page, EMAIL_ADMIN);
+    await linhaDa(page, email).getByRole("button", { name: "Desativar" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Desativar" }).click();
+    await expect(linhaDa(page, email)).toContainText("Desativada");
+
+    // ⚠️ **NA REQUISIÇÃO SEGUINTE, com o mesmo navegador e o mesmo cookie** — a autorização é lida
+    //    do banco a cada pedido, e não de uma afirmação guardada no token.
+    await pagina.goto("/inicio");
+    await expect.poll(() => new URL(pagina.url()).pathname, { timeout: 20_000 }).toBe("/login");
+
+    await linhaDa(page, email).getByRole("button", { name: "Reativar" }).click();
+    await expect(linhaDa(page, email)).not.toContainText("Desativada");
+
+    // E o acesso volta **sem recadastrar nem redefinir senha**: desativar guarda o cadastro.
+    await entrarComSenha(pagina, email, SENHA_DE_TESTE);
+    await expect.poll(() => new URL(pagina.url()).pathname, { timeout: 20_000 }).not.toBe("/login");
+
+    await contexto.close();
+    await apagarConta(email);
+  });
+
   /** A senha que o cadastro acabou de mostrar, lida do bloco de status. */
   async function senhaMostrada(page: Page): Promise<string> {
     const bloco = page.getByRole("status").filter({ hasText: "Senha temporária" });

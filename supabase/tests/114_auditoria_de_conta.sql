@@ -21,7 +21,7 @@
 --    tabela reaproveita essa linha; ela nao cria permissao nova.
 -- =====================================================================================
 begin;
-select plan(14);
+select plan(16);
 
 -- ============================================ a forma da tabela
 select has_table('public', 'auditoria_de_conta',
@@ -108,6 +108,37 @@ select throws_ok($$
   truncate public.auditoria_de_conta
 $$, '42501', null,
   'I-2 · TRUNCATE e recusado com 42501 — gatilho de comando proprio, nao o de linha');
+
+-- -------------------------------------------------------------------------------------
+-- I-3b — O PORTEIRO DE ADMIN NAO PODE FALHAR ABERTO (emenda de 03/10/2026)
+-- -------------------------------------------------------------------------------------
+-- ⚠️ **ESTA ASSERCAO E DISCRIMINANTE EXATAMENTE PORQUE O pgTAP RODA SEM SESSAO.** Ate
+--    03/10/2026, `app.eh_admin()` era `select app.perfil_atual() = 'admin'`, e sem sessao
+--    `perfil_atual()` devolve NULL — logo a funcao devolvia **NULL**, e esta assercao
+--    REPROVAVA. Hoje devolve `false`. O ator real nao e "sem sessao": e a **conta desativada**,
+--    que `perfil_atual()` tambem nao ve, porque ela filtra `status = 'ativo'`.
+-- ⚠️ E A CONSEQUENCIA ERA PORTEIRO INERTE: `if not NULL then raise` **nao entra no `if`**.
+--    A prova com sessao real mora em `tests/invariantes/rls/gestao-de-usuarios.test.ts`; esta
+--    aqui e a de BANCO, e e a que impede o valor de retorno de voltar a ser anulavel.
+select ok(app.eh_admin() is not null,
+  'I-3b · app.eh_admin() NUNCA devolve NULL — sem sessao ela vale false, nao nulo');
+
+-- ⚠️ E A FORMA PERIGOSA NAO VOLTA POR COPIA: zero funcoes de `public` e `app` escritas como
+--    `if not app.eh_admin()`. ⚠️ **O COMENTARIO SAI ANTES DE CONTAR** (regra 9.1.1): este
+--    proprio arquivo e as migrations explicam a forma errada em texto, e uso mencionado nao e
+--    uso — contar sem tirar comentario ensinaria a apagar a documentacao para ficar verde.
+-- ⚠️ `app.pode()` fica DE FORA de proposito: ela devolve `false` explicito quando nao ha perfil
+--    (medido), entao `if not app.pode(...)` e seguro e os 8 porteiros que a usam seguem como
+--    estao. Alargar a varredura para ela daria 8 reprovacoes sem defeito nenhum atras.
+select is(
+  (select count(*)::int
+     from pg_proc p
+     join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname in ('public', 'app')
+      and regexp_replace(p.prosrc, '--[^' || chr(10) || ']*', '', 'g')
+          ~ 'if\s+not\s+app\.eh_admin\s*\('),
+  0,
+  'I-3b · nenhuma funcao usa a forma `if not app.eh_admin()`, que falha ABERTO com NULL');
 
 select * from finish();
 rollback;

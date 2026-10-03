@@ -286,3 +286,142 @@ describe("`FR-038` · redefinir a senha derruba TODAS as sessões abertas (decis
     ).not.toBeNull();
   }, 60_000);
 });
+
+/**
+ * `FR-046` · a **exclusão permanente** de conta é só do Admin — provada com **sessão real**.
+ *
+ * ⚠️ **ESTE ARQUIVO É O ÚNICO LUGAR ONDE ISSO SE PROVA, e o pgTAP 115 não substitui.** Ele roda como
+ * **dono do schema** e, sobretudo, **sem sessão**: ali `app.eh_admin()` devolve `NULL`, e o que o 115
+ * prova é que o porteiro recusa **quem não tem sessão** — foi assim que o gotcha 15 apareceu. O que
+ * falta e mora aqui é a outra metade: **quem TEM sessão e não é Admin também é recusado.**
+ *
+ * ⚠️ **O OPERADOR É O DISCRIMINANTE pelo mesmo motivo do resto do arquivo:** ele tem `usuarios.ler` e
+ * `execute` na função — `authenticated` recebe o `grant` —, então chega **até dentro** do porteiro. Um
+ * perfil sem nada seria barrado antes, pelo privilégio, e a asserção passaria **sem exercitar a regra**.
+ */
+describe("`FR-046` · excluir conta é só do Admin", () => {
+  it("⚠️ O CASO QUE DISCRIMINA · o Operador chega à função e é recusado com `42501`", async () => {
+    const alvo = idDeUsuario.get("alvo")!;
+
+    const { error } = await sessao("operador").rpc("excluir_conta", { p_conta_id: alvo });
+
+    expect(error, "o Operador excluiu uma conta").not.toBeNull();
+    // ⚠️ **O CÓDIGO E O `hint`, nunca "deu erro":** sem conferir o `hint`, um `42501` de *privilégio
+    //    ausente na função* passaria por prova de autorização — e seria o oposto, porque significaria
+    //    que a sessão nem alcançou o porteiro que se quer medir.
+    expect(error!.code, JSON.stringify(error)).toBe("42501");
+    expect(error!.hint).toBe("conta_sem_permissao");
+
+    // E a conta continua **viva**: a recusa não deixou meio caminho feito.
+    const { data: ainda } = await servico
+      .from("usuarios")
+      .select("id, excluida_em")
+      .eq("id", alvo)
+      .maybeSingle();
+    expect(ainda?.excluida_em ?? null, "a conta foi marcada como excluída pela recusa").toBeNull();
+  }, 60_000);
+
+  it("controle positivo · o Admin exclui, e a conta sai da lista de vivas", async () => {
+    const alvo = idDeUsuario.get("alvo")!;
+
+    const { data: caminho, error } = await sessao("chefe").rpc("excluir_conta", {
+      p_conta_id: alvo,
+    });
+
+    expect(error, JSON.stringify(error)).toBeNull();
+    // ⚠️ **São dois caminhos legítimos, e qual deles vale depende do HISTÓRICO da conta** — por isso a
+    //    asserção é sobre o resultado comum aos dois: ela **deixa de estar viva**. Fixar `apagada`
+    //    aqui amarraria o teste a um detalhe do histórico que outra asserção pode mudar.
+    expect(["apagada", "anonimizada"]).toContain(caminho);
+
+    const { data: viva } = await servico
+      .from("usuarios")
+      .select("id")
+      .eq("id", alvo)
+      .is("excluida_em", null)
+      .maybeSingle();
+    expect(viva, "a conta continuou viva depois da exclusão pelo Admin").toBeNull();
+  }, 60_000);
+});
+
+/**
+ * `FR-050` · **o porteiro da trilha e a CONTA DESATIVADA** — o gotcha 15 no único lugar onde ele
+ * ainda estava vivo, achado em 03/10/2026 ao plantar o defeito deliberado do caso acima.
+ *
+ * ⚠️ **O ATOR NÃO É HIPOTÉTICO: é a conta que o próprio Admin acabou de desativar.** Desativar não
+ * toca a credencial — é de propósito, o cadastro fica —, então ela continua **autenticando**. E
+ * `app.perfil_atual()` filtra `status = 'ativo'`: para ela devolve **NULL**, logo
+ * `app.eh_admin()` devolve **NULL**, e um porteiro escrito `if not app.eh_admin() then raise` **não
+ * entra no `if`** (gotcha 15). O mesmo vale para credencial órfã — a que a exclusão deixa se o passo 2
+ * falhar.
+ *
+ * ⚠️ **O QUE ISSO CUSTARIA: linha FORJADA numa tabela que ninguém apaga.** A trilha é só de acréscimo
+ * e imutável **inclusive para a `service_role`** — então um registro falso ali é permanente, e a
+ * primeira coisa que alguém faz ao investigar uma conta é ler a trilha dela.
+ *
+ * ⚠️ **E `anon` NÃO alcança a função** (`revoke all … from public, anon`, medido no catálogo:
+ * `{postgres=X,authenticated=X,service_role=X}`): quem chega é **sessão autenticada**, e por isso este
+ * caso só existe aqui, com sessão de verdade.
+ */
+describe("`FR-050` · a conta DESATIVADA não grava na trilha", () => {
+  const emailDesativada = `gestao-desativada@${DOMINIO}`;
+
+  it("⚠️ O CASO QUE DISCRIMINA · credencial válida sem cadastro ATIVO é recusada com `42501`", async () => {
+    const { data: criada, error: erroAuth } = await servico.auth.admin.createUser({
+      email: emailDesativada,
+      password: SENHA,
+      email_confirm: true,
+    });
+    if (erroAuth) throw new Error(`falha ao criar a credencial: ${erroAuth.message}`);
+
+    const { data: linha, error: erroLinha } = await servico
+      .from("usuarios")
+      .insert({
+        codigo: "USR-GST-DESATIVADA",
+        auth_user_id: criada.user.id,
+        email: emailDesativada,
+        nome: "Prova Gestao desativada",
+        perfil: "admin",
+        escopo_curso: "geral",
+        status: "inativo",
+      })
+      .select("id")
+      .single();
+    if (erroLinha) throw new Error(`falha ao cadastrar: ${erroLinha.message}`);
+
+    /*
+     * ⚠️ **O PERFIL DELA É `admin` DE PROPÓSITO, e é isso que faz o caso discriminar.** Se ela fosse
+     *    `operador`, a recusa poderia vir de *"não é Admin"* e nada se saberia sobre o NULL. Sendo
+     *    `admin` **desativada**, o único motivo possível para passar é o porteiro ter falhado ABERTO.
+     */
+    const cliente = novoCliente();
+    const { error: erroEntrada } = await cliente.auth.signInWithPassword({
+      email: emailDesativada,
+      password: SENHA,
+    });
+    expect(
+      erroEntrada,
+      "a conta desativada não conseguiu nem autenticar — o caso perde o sentido",
+    ).toBeNull();
+
+    const { error } = await cliente.rpc("registrar_acao_em_conta", {
+      p_conta_alvo_id: idDeUsuario.get("chefe")!,
+      p_acao: "excluir",
+      p_conta_alvo_codigo: "USR-FORJADA",
+    });
+
+    expect(error, "a conta DESATIVADA gravou na trilha imutável").not.toBeNull();
+    expect(error!.code, JSON.stringify(error)).toBe("42501");
+    expect(error!.hint).toBe("auditoria_sem_permissao");
+
+    // E nada entrou: a recusa é antes da escrita, não um `rollback` depois dela.
+    const { data: forjadas } = await servico
+      .from("auditoria_de_conta")
+      .select("id")
+      .eq("conta_alvo_codigo", "USR-FORJADA");
+    expect(forjadas ?? [], "ficou linha forjada na trilha").toHaveLength(0);
+
+    await servico.from("usuarios").delete().eq("id", linha.id);
+    await servico.auth.admin.deleteUser(criada.user.id);
+  }, 60_000);
+});

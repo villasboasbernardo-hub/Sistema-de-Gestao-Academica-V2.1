@@ -230,3 +230,68 @@ Comparação **linha a linha** das 1.596 linhas: **diff vazio**.
 No cabeçalho da migration. ⚠️ **O `drop column` só é seguro enquanto nenhuma conta tiver sido
 excluída** — hoje são zero. Com linha anonimizada, perder a coluna faria a conta voltar a aparecer na
 lista como se estivesse viva, chamada *"Conta excluída"*, que é pior que o estado de antes.
+
+---
+
+# PR 2 (reconferência) — `20261003042704_porteiro_de_admin_nao_falha_aberto.sql`
+
+## ⛔ NÃO APLICADA. Espera a autorização de Bernardo Villas Boas.
+
+Este bloco está escrito **antes** da aplicação, de propósito: ele é o plano, e os números da
+conferência entram **depois**, nos marcadores — nunca por antecipação (regra 9.3).
+
+## Por que ela existe, e como apareceu
+
+⚠️ **Ela não saiu de conferência de tela nem de revisão: saiu de um defeito deliberado.** Ao deixar
+inerte o porteiro de `public.excluir_conta` para ver o caso novo de RLS reprovar, a recusa chegou de
+**outra** função — `public.registrar_acao_em_conta` —, e ler o porteiro dela mostrou a forma do
+**gotcha 15** ainda viva: `if not app.eh_admin() then raise`.
+
+⚠️ **O ator não é hipotético: é a conta que o Admin acabou de desativar.** Desativar **não toca a
+credencial** — é de propósito, o cadastro fica —, então ela continua autenticando;
+`app.perfil_atual()` filtra `status = 'ativo'` e a ignora; `app.eh_admin()` devolvia **NULL**; e
+`if not NULL` **não entra no `if`**. **Medido no banco local, com sessão real:** a conta desativada
+**gravou** uma linha na trilha, com `error: null`.
+
+⚠️ **O custo é permanente:** a trilha é só de acréscimo e imutável **inclusive para a
+`service_role`** — linha forjada ali não sai nunca, e a trilha é a primeira coisa que alguém lê ao
+investigar uma conta.
+
+⚠️ **A varredura do catálogo desmentiu o tamanho do problema:** dos **9** porteiros escritos
+`if not app.<fn>()`, **8** chamam `app.pode()`, que devolve `false` **explícito** quando não há
+perfil, e `app.impedir_autoescalonamento()` usa a forma **positiva**, que falha fechada. Era **uma**
+função.
+
+## O que ela muda, e o que não muda
+
+| Muda | Não muda |
+| --- | --- |
+| `app.eh_admin()` devolve `coalesce(…, false)` — **nunca mais NULL** | As **6** policies que a chamam: em posição de porteiro booleano, NULL e `false` dão o **mesmo** veredito |
+| O porteiro de `registrar_acao_em_conta` passa a `coalesce(…) is not true` | A assinatura, os privilégios e o corpo restante das duas funções |
+| — | **Nenhuma linha de dado.** Ela não lê nem escreve `usuarios`, a trilha, nem qualquer tabela |
+
+## O rito, quando a autorização vier
+
+1. `python -m scripts.manutencao.dado_do_remoto --somente-copia` — e **o nome do arquivo datado
+   entra aqui**: `[pendente]`.
+2. `supabase db push --linked --dry-run`, conferindo que a lista traz **só** esta migration.
+3. `supabase db push --linked`.
+4. A conferência abaixo, **só por leitura**.
+
+## A conferência, só por leitura — a executar
+
+| O que | Esperado | Medido |
+| --- | --- | --- |
+| Migrations dos dois lados | **49 e 49**, nenhuma só de um | `[pendente]` |
+| Impressão digital do esquema | **igual** nos dois bancos, `diff` vazio | `[pendente]` |
+| `app.eh_admin()` sem sessão | **`false`**, não NULL | `[pendente]` |
+| Funções com `if not app.eh_admin()` | **0** no catálogo | `[pendente]` |
+| Linhas em `auditoria_de_conta` | **as mesmas de antes** — a migration não grava | `[pendente]` |
+| Contas em `usuarios` | **5**, intactas | `[pendente]` |
+| Production | respondendo como antes | `[pendente]` |
+
+## Reversão
+
+Recriar as duas funções como estavam em `20260830000111` e `20261002195248`, cujo texto está no
+repositório. ⚠️ **Reverter reabre o buraco** — a reversão está escrita porque o DoD 6 a exige, não
+porque deva ser usada.

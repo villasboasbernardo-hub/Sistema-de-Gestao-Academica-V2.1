@@ -3,8 +3,16 @@
 > **Para Bernardo Villas Boas.** Doze passos, **só com contas de teste criadas aqui**. Nenhum passo
 > mexe nas cinco contas reais.
 >
-> ⚠️ **ESTA RODADA NÃO TEM MIGRATION.** Nada estrutural mudou — `excluida_em` e as duas funções já
-> foram ao remoto em 03/10/2026. **Local e remoto seguem idênticos**, reconferido.
+> ⚠️ **TEM UMA MIGRATION, E ELA NÃO ESTÁ NO REMOTO AINDA — por isso o preview que você vai conferir
+> roda sem ela, e os 12 passos abaixo valem igual.** Ela fecha um buraco que eu achei **plantando
+> defeito deliberado**, não conferindo tela: `registrar_acao_em_conta` tinha o porteiro na forma que
+> **falha aberto** quando `app.eh_admin()` devolve nulo — e ele devolve nulo justamente para a **conta
+> desativada**, que continua autenticando porque desativar não toca a credencial. Medido: ela
+> **gravou** linha na trilha imutável. Nenhum dos passos abaixo exercita isso; o que a migration muda
+> é invisível na tela, e **ela espera a sua palavra** (backup, dry-run só dela, conferência).
+>
+> ⚠️ **Nada mais estrutural mudou**: `excluida_em` e as duas funções da exclusão foram ao remoto em
+> 03/10/2026, e local e remoto estavam **idênticos** antes desta migration — reconferido.
 >
 > ⚠️ **O E-MAIL SAIU DO SISTEMA.** Não há envio em lugar nenhum do repositório, a rota
 > `/recuperar-senha` foi **removida** e o login agora diz *"Esqueceu a senha? Procure o administrador
