@@ -2732,6 +2732,7 @@ export type Database = {
           editado_por: string | null
           email: string
           escopo_curso: Database["public"]["Enums"]["escopo_curso"]
+          excluida_em: string | null
           id: string
           instrutor_id: string | null
           nome: string
@@ -2752,6 +2753,7 @@ export type Database = {
           editado_por?: string | null
           email: string
           escopo_curso?: Database["public"]["Enums"]["escopo_curso"]
+          excluida_em?: string | null
           id?: string
           instrutor_id?: string | null
           nome: string
@@ -2772,6 +2774,7 @@ export type Database = {
           editado_por?: string | null
           email?: string
           escopo_curso?: Database["public"]["Enums"]["escopo_curso"]
+          excluida_em?: string | null
           id?: string
           instrutor_id?: string | null
           nome?: string
@@ -3781,6 +3784,14 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      dependentes_da_conta: {
+        Args: { p_conta_id: string }
+        Returns: {
+          quantas: number
+          tabela: string
+        }[]
+      }
+      excluir_conta: { Args: { p_conta_id: string }; Returns: string }
       excluir_disciplina: {
         Args: { p_codigo_confirmacao: string; p_disciplina_id: string }
         Returns: Json

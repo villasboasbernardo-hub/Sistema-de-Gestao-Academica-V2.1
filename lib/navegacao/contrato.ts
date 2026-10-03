@@ -502,6 +502,22 @@ export const CONTRATO = {
     rota: "/admin/usuarios",
     origem: "RF-CRUD-01",
     parametros: {
+      /*
+       * ⚠️ **O AVISO DA EXCLUSÃO MORA NA URL, E A RAZÃO É UM DEFEITO MEDIDO em 03/10/2026.** A
+       * mensagem vivia no estado da própria linha — e a linha **desaparece** com a exclusão, levando
+       * a confirmação junto. Quem excluía não recebia resposta nenhuma: a conta sumia e pronto.
+       * ⚠️ **E o aviso precisa dizer QUAL dos dois caminhos aconteceu** — conta sem histórico sai
+       * inteira, conta com histórico fica como *"Conta excluída"* —, porque as duas são permanentes
+       * de maneiras diferentes. Na URL ele sobrevive ao `revalidatePath` e à remontagem da tabela.
+       */
+      excluida: {
+        nome: "excluida",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: ["", "apagada", "anonimizada"],
+        historico: "substitui",
+        avisaServidor: true,
+      },
       busca: {
         nome: "busca",
         tipo: "texto",

@@ -117,10 +117,7 @@ export default async function Conta({ params }: { params: Promise<{ readonly id:
             perfil={conta.perfil}
             escopo={conta.escopo_curso ?? "geral"}
             cursosVinculados={(vinculos.data ?? []).map((v) => v.curso_id)}
-            vinculoDeDocente={conta.instrutor_id ?? ""}
             cursos={apoio.cursos}
-            instrutores={apoio.instrutores}
-            escala={apoio.escala}
           />
 
           <AcoesDaConta

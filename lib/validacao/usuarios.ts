@@ -30,8 +30,12 @@ const email = z
  * conteúdo é **uma**: o vínculo de instrutor, que a tela de cadastro passou a oferecer. A diferença de
  * comportamento é toda: o servidor **gera a senha** e a devolve uma vez, em vez de mandar e-mail.
  *
- * ⚠️ **`instrutorId` é OPCIONAL para os nove perfis, e isso foi medido** (03/10/2026): nenhuma policy
- * e nenhuma função de autorização lê `usuarios.instrutor_id`. Ver `lib/dominio/exigencias-do-perfil.ts`.
+ * ⚠️ **ELE NÃO TEM `instrutorId`, E A AUSÊNCIA É DELIBERADA** *(decisão de Bernardo Villas Boas,
+ * 03/10/2026)*: o vínculo de docente saiu da tela, porque nenhuma policy e nenhuma função de
+ * autorização leem `usuarios.instrutor_id`. ⚠️ **E tirá-lo do ESQUEMA é o que impede uma perda de
+ * dado silenciosa:** com o campo aqui e sem o campo na tela, a ação receberia `undefined`, o
+ * `transform` o viraria `null`, e **toda gravação de perfil apagaria o vínculo existente** da conta.
+ * A coluna continua no banco, com o que já tem.
  */
 export const esquemaDeCadastro = z.object({
   nome: z.string().trim().min(3, "Informe o nome completo.").max(200),
@@ -41,11 +45,6 @@ export const esquemaDeCadastro = z.object({
   // Vínculos de curso: a exigência por perfil é de `lib/dominio/exigencias-do-perfil.ts`; aqui só se
   // garante que são identificadores.
   cursos: z.array(z.string().uuid()).default([]),
-  // ⚠️ Vazio vira `null`: o `<select>` manda `""` quando ninguém escolhe, e `""` não é uuid.
-  instrutorId: z
-    .union([z.string().uuid(), z.literal("")])
-    .optional()
-    .transform((v) => (v ? v : null)),
 });
 
 export const esquemaDeDesativacao = z.object({ usuarioId: z.string().uuid() });
@@ -55,10 +54,6 @@ export const esquemaDeEdicao = z.object({
   perfil: z.enum(PERFIS, { message: "Perfil fora do domínio." }),
   escopoCurso: z.enum(ESCOPOS, { message: "Escopo fora do domínio." }),
   cursos: z.array(z.string().uuid()).default([]),
-  instrutorId: z
-    .union([z.string().uuid(), z.literal("")])
-    .optional()
-    .transform((v) => (v ? v : null)),
 });
 
 /**
@@ -79,6 +74,9 @@ export const esquemaDeEdicaoDeNome = z.object({
     .min(2, "O nome de exibição precisa ter pelo menos 2 caracteres.")
     .max(120, "O nome de exibição passou de 120 caracteres."),
 });
+
+/** Excluir conta, permanentemente. Só o alvo: o caminho (apagar ou anonimizar) é do banco. */
+export const esquemaDeExclusao = z.object({ usuarioId: z.string().uuid() });
 
 /** Redefinir a senha de outra conta (`FR-033`). Só o alvo — a senha é gerada no servidor. */
 export const esquemaDeRedefinicao = z.object({ usuarioId: z.string().uuid() });

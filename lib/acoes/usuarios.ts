@@ -27,6 +27,7 @@ import {
   esquemaDeDesativacao,
   esquemaDeEdicao,
   esquemaDeEdicaoDeNome,
+  esquemaDeExclusao,
   esquemaDeRecuperacao,
   esquemaDeRedefinicao,
 } from "@/lib/validacao/usuarios";
@@ -173,7 +174,7 @@ export async function cadastrarUsuario(
   const permitido = await exigirAdmin();
   if (!permitido.ok) return permitido;
 
-  const { nome, email, perfil, escopoCurso, cursos, instrutorId } = conferido.data;
+  const { nome, email, perfil, escopoCurso, cursos } = conferido.data;
 
   // A exigência por perfil é do domínio, e ela impede a conta que nasce sem ver nada (gotcha 4).
   const exigencia = conferirExigenciasDoPerfil(perfil, cursos.length);
@@ -204,7 +205,6 @@ export async function cadastrarUsuario(
       nome_exibicao: nome,
       perfil,
       escopo_curso: escopoCurso,
-      instrutor_id: instrutorId,
     })
     .select("id")
     .single();
@@ -362,7 +362,7 @@ export async function editarPerfilEEscopo(dados: unknown): Promise<Resultado> {
   const permitido = await exigirAdmin();
   if (!permitido.ok) return permitido;
 
-  const { usuarioId, perfil, escopoCurso, cursos, instrutorId } = conferido.data;
+  const { usuarioId, perfil, escopoCurso, cursos } = conferido.data;
   const supabase = await criarClienteDeServidor();
 
   // A mesma exigência do cadastro: editar para `encarregado_curso` sem vínculo produziria a conta
@@ -383,7 +383,9 @@ export async function editarPerfilEEscopo(dados: unknown): Promise<Resultado> {
 
   const { error } = await supabase
     .from("usuarios")
-    .update({ perfil, escopo_curso: escopoCurso, instrutor_id: instrutorId })
+    // ⚠️ `instrutor_id` NÃO entra no `update`: a tela deixou de oferecer o vínculo, e mandá-lo
+    //    como `null` apagaria em silêncio o que a conta já tem.
+    .update({ perfil, escopo_curso: escopoCurso })
     .eq("id", usuarioId);
   if (error) return falha(traduzirRecusa(error as ErroDoBanco));
 
@@ -507,6 +509,116 @@ export async function redefinirSenha(
   if (erroDoRastro) return falha(`A senha foi redefinida, mas o rastro falhou: ${erroDoRastro}`);
 
   return { ok: true, senha };
+}
+
+/**
+ * Quais registros a conta carimbou — o que decide entre **apagar** e **anonimizar** (`FR-046`).
+ *
+ * ⚠️ **ELA EXISTE PARA O DIÁLOGO DIZER A VERDADE ANTES do clique.** Sem ela, o Admin leria sempre
+ * *"a exclusão é permanente"* e descobriria só depois se a conta sumiu ou virou *"Conta excluída"* —
+ * e as duas coisas são permanentes de maneiras diferentes.
+ */
+export async function dependentesDaConta(
+  dados: unknown,
+): Promise<Resultado | { readonly ok: true; readonly dependentes: readonly string[] }> {
+  const conferido = esquemaDeExclusao.safeParse(dados);
+  if (!conferido.success) return falha("Dados inválidos.");
+
+  const permitido = await exigirAdmin();
+  if (!permitido.ok) return permitido;
+
+  const supabase = await criarClienteDeServidor();
+  const { data, error } = await supabase.rpc(
+    "dependentes_da_conta" as never,
+    {
+      p_conta_id: conferido.data.usuarioId,
+    } as never,
+  );
+  if (error) return falha(traduzirRecusa(error as ErroDoBanco));
+
+  const linhas = (data ?? []) as readonly { tabela: string; quantas: number }[];
+  return { ok: true, dependentes: linhas.map((l) => `${l.tabela} (${l.quantas})`) };
+}
+
+/**
+ * Exclui a conta **permanentemente** (`FR-046`).
+ *
+ * > *"EXCLUIR usuário permanentemente (admin), com diálogo de confirmação: «A exclusão é
+ * > permanente.» Desativar continua existindo e é diferente: bloqueia o acesso, mantém cadastro e
+ * > perfil."* — decisão de Bernardo Villas Boas, 03/10/2026
+ *
+ * ⚠️ **ISTO É EMENDA NOMINAL À REGRA 4**, que até hoje cobria três tabelas e dizia *"nenhuma outra
+ * tabela ganha exceção"*. `usuarios` entra por decisão expressa desta data, e o registro está no
+ * `CLAUDE.md`. ⚠️ **Continua sem policy e sem privilégio de `DELETE`**: quem apaga é
+ * `public.excluir_conta`, `SECURITY DEFINER`, com porteiro dentro.
+ *
+ * ⚠️ **A ORDEM É CREDENCIAL PRIMEIRO, CADASTRO DEPOIS, e ela é o contrário da intuição.** Se a linha
+ * saísse antes e a credencial ficasse, a pessoa **autenticaria** e entraria num sistema que não a
+ * conhece — `app.usuario_atual()` não resolveria, e toda tela abriria vazia **sem erro**. No inverso,
+ * o pior caso é linha sem credencial: estado **visível na lista**, que o Admin repete. Incompleto é
+ * melhor que invisível, e é a mesma razão que ordenava o antigo `convidar`.
+ *
+ * ⚠️ **O CAMINHO QUEM DECIDE É O BANCO**, não esta ação: ele mede os dependentes **dentro da mesma
+ * transação** em que apaga ou anonimiza. Decidir aqui abriria a janela em que a conta ganha um
+ * registro entre a medição e a escrita — e aí a linha sairia levando a resolução do autor com ela.
+ */
+export async function excluirConta(
+  dados: unknown,
+): Promise<Resultado | { readonly ok: true; readonly caminho: string }> {
+  const conferido = esquemaDeExclusao.safeParse(dados);
+  if (!conferido.success) return falha("Dados inválidos.");
+
+  const permitido = await exigirAdmin();
+  if (!permitido.ok) return permitido;
+
+  const { usuarioId } = conferido.data;
+
+  // A regra pura antes de tudo: a mensagem legível vem daqui, e o banco repete a recusa por fora.
+  const eu = await minhaContaId();
+  if (!eu) return falha("Sua sessão expirou. Entre de novo.");
+  const veredito = vereditoSobreConta("excluir", usuarioId, eu, await adminsAtivos());
+  if (!veredito.permitido) return falha(veredito.motivo);
+
+  const admin = criarClienteAdministrativo();
+  const { data: alvo } = await admin
+    .from("usuarios")
+    .select("auth_user_id, email, excluida_em")
+    .eq("id", usuarioId)
+    .maybeSingle();
+
+  if (!alvo) return falha("Conta não encontrada.");
+  if (alvo.excluida_em) return falha("Esta conta já foi excluída.");
+
+  // ---------------------------------------------------------------- passo 1: o cadastro
+  // Aqui o porteiro do banco tem a última palavra, e a transação decide entre apagar a linha e
+  // anonimizá-la. Nos dois caminhos a referência a `auth.users` deixa de existir — e é isso que
+  // libera o passo 2.
+  const supabase = await criarClienteDeServidor();
+  const { data: caminho, error } = await supabase.rpc(
+    "excluir_conta" as never,
+    {
+      p_conta_id: usuarioId,
+    } as never,
+  );
+
+  if (error) return falha(traduzirRecusa(error as ErroDoBanco));
+
+  // ---------------------------------------------------------------- passo 2: a credencial
+  // ⚠️ `auth.users` é da plataforma: `excluir_conta` não a alcança, e é por isso que ela sai aqui.
+  if (alvo.auth_user_id) {
+    const { error: erroDaCredencial } = await admin.auth.admin.deleteUser(alvo.auth_user_id);
+    if (erroDaCredencial) {
+      revalidatePath("/admin/usuarios");
+      return falha(
+        `O cadastro foi excluído, mas a credencial de ${alvo.email} não: ` +
+          `${erroDaCredencial.message}. Ela não alcança dado nenhum — sem cadastro a RLS nega ` +
+          "tudo —, mas precisa ser removida no painel do Supabase, em Authentication › Users.",
+      );
+    }
+  }
+
+  revalidatePath("/admin/usuarios");
+  return { ok: true, caminho: String(caminho) };
 }
 
 /**

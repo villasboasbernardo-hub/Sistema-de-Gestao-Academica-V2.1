@@ -20,6 +20,11 @@
  * proíbem em `app/**`. Com cinco contas a diferença é imperceptível — a regra existe para o dia em
  * que forem cinquenta.
  *
+ * ⚠️ **AS TRÊS AÇÕES VOLTARAM À LINHA EM 03/10/2026** *(decisão de Bernardo Villas Boas)*: redefinir
+ * senha, desativar/reativar e excluir. O que ele recusou na rodada anterior era **formulário** dentro
+ * da linha — trocar perfil, editar nome —, e isso continua na página da conta. Botão com diálogo não é
+ * formulário. ⚠️ **A coluna de ações é a sexta**, e a lista segue sem vínculo, situação e escopo.
+ *
  * ⚠️ **A BUSCA FILTRA NO SERVIDOR, não na tela.** Ela é parâmetro do contrato com `avisaServidor`,
  * então o resultado é link compartilhável e o `Limpar filtros` nasce junto, pelo componente único.
  */
@@ -35,6 +40,7 @@ import { rotuloDoPerfil } from "@/lib/dominio/perfis";
 import { enderecoDaFoto } from "@/lib/supabase/avatar";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
+import { AcoesDaLinha } from "./AcoesDaLinha";
 import { BuscaDeUsuarios } from "./BuscaDeUsuarios";
 
 /** Uma célula de cabeçalho, para as oito classes não se repetirem cinco vezes. */
@@ -44,16 +50,25 @@ const TD = "border-borda text-texto border px-2 py-1";
 export default async function Usuarios({
   searchParams,
 }: {
-  searchParams: Promise<{ readonly busca?: string }>;
+  searchParams: Promise<{ readonly busca?: string; readonly excluida?: string }>;
 }) {
-  const { busca = "" } = await searchParams;
+  const { busca = "", excluida = "" } = await searchParams;
   const usuario = await usuarioDaSessao();
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
 
   const supabase = await criarClienteDeServidor();
+  /*
+   * ⚠️ **`excluida_em is null` NÃO É FILTRO DE CONVENIÊNCIA: é o que faz a conta excluída sair da
+   *    lista** (`FR-046`). A linha anonimizada continua existindo para `criado_por` resolver num
+   *    nome — *"Conta excluída"* —, e mostrá-la aqui faria a lista exibir contas que ninguém pode
+   *    usar, com e-mail sentinela `.invalid`, misturadas às vivas.
+   */
   let consulta = supabase
     .from("usuarios")
-    .select("id, codigo, nome, nome_exibicao, email, perfil, status, ultimo_acesso, avatar_caminho")
+    .select(
+      "id, codigo, nome, nome_exibicao, email, perfil, status, ultimo_acesso, avatar_caminho, auth_user_id",
+    )
+    .is("excluida_em", null)
     .order("nome");
 
   /*
@@ -111,6 +126,23 @@ export default async function Usuarios({
         apaga.
       </p>
 
+      {/*
+        ⚠️ **O AVISO DA EXCLUSÃO FICA AQUI, FORA DA TABELA.** Ele vem da URL porque a linha que
+           disparou a ação **não existe mais** — ver a nota no contrato de `/admin/usuarios`. As duas
+           frases são diferentes de propósito: as duas exclusões são permanentes, e só uma deixa
+           cadastro para trás.
+      */}
+      {excluida === "apagada" || excluida === "anonimizada" ? (
+        <p
+          role="status"
+          className="border-borda bg-superficie-2 rounded-ciaara text-texto mt-3 border p-2 text-sm"
+        >
+          {excluida === "apagada"
+            ? "Conta excluída. Ela não deixou registro nenhum no sistema, então saiu inteira, e o e-mail está livre para um novo cadastro."
+            : "Conta excluída. Ela registrou histórico, então o cadastro ficou como «Conta excluída» e saiu da lista, para os registros antigos continuarem tendo autor. O e-mail está livre para um novo cadastro."}
+        </p>
+      ) : null}
+
       <BuscaDeUsuarios />
 
       {contas.length === 0 ? (
@@ -137,6 +169,7 @@ export default async function Usuarios({
                 <th className={TH}>E-mail</th>
                 <th className={TH}>Perfil</th>
                 <th className={TH}>Último acesso</th>
+                <th className={TH}>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -174,6 +207,15 @@ export default async function Usuarios({
                       {linha.ultimo_acesso
                         ? new Date(linha.ultimo_acesso).toLocaleDateString("pt-BR")
                         : "nunca"}
+                    </td>
+                    <td className={TD}>
+                      <AcoesDaLinha
+                        usuarioId={linha.id}
+                        nome={nome}
+                        ativa={linha.status === "ativo"}
+                        temCredencial={Boolean(linha.auth_user_id)}
+                        ehMinhaConta={linha.id === usuario?.id}
+                      />
                     </td>
                   </tr>
                 );

@@ -15,8 +15,6 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { editarNomeDeConta, editarPerfilEEscopo } from "@/lib/acoes/usuarios";
-import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
-import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 
 import { CamposDaConta, type EstadoDaConta } from "../CamposDaConta";
 import type { CursoParaVincular } from "../dados-da-conta";
@@ -30,27 +28,20 @@ export function FormularioDaConta({
   perfil,
   escopo,
   cursosVinculados,
-  vinculoDeDocente,
   cursos,
-  instrutores,
-  escala,
 }: {
   readonly usuarioId: string;
   readonly nomeExibicao: string;
   readonly perfil: string;
   readonly escopo: string;
   readonly cursosVinculados: readonly string[];
-  readonly vinculoDeDocente: string;
   readonly cursos: readonly CursoParaVincular[];
-  readonly instrutores: readonly InstrutorParaExibir[];
-  readonly escala: EscalaDeAntiguidade;
 }) {
   const [nome, definirNome] = useState(nomeExibicao);
   const [estado, definirEstado] = useState<EstadoDaConta>({
     perfil,
     escopo,
     cursos: [...cursosVinculados],
-    vinculoDeDocente,
   });
   const [aviso, definirAviso] = useState<string | null>(null);
   const [erro, definirErro] = useState<string | null>(null);
@@ -100,13 +91,7 @@ export function FormularioDaConta({
         </div>
       </div>
 
-      <CamposDaConta
-        estado={estado}
-        aoMudar={definirEstado}
-        cursos={cursos}
-        instrutores={instrutores}
-        escala={escala}
-      />
+      <CamposDaConta estado={estado} aoMudar={definirEstado} cursos={cursos} />
 
       <div>
         <Button
@@ -120,7 +105,6 @@ export function FormularioDaConta({
                   perfil: estado.perfil,
                   escopoCurso: estado.escopo,
                   cursos: [...estado.cursos],
-                  instrutorId: estado.vinculoDeDocente,
                 }),
               "Perfil, escopo e vínculos atualizados.",
             )

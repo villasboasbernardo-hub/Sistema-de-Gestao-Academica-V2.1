@@ -103,6 +103,20 @@ diferente *(decisão de 17/09/2026)*. ⚠️ **Medido no histórico em
    policy e sem privilégio de DELETE; nenhuma outra tabela ganha exceção** (`FR-008.1` da spec 006;
    `FR-020` a `FR-025` da spec 010). Estender a cursos, turmas e salas é pendência `PEND-5b-1`, não
    escopo. Medido em 24/09/2026: **nenhuma** das 175 disciplinas reais é excluível (0 sem dependente).
+   **Emenda de 03/10/2026** *(decisão de Bernardo Villas Boas, na reconferência do PR 2 da spec 011)*:
+   **a exceção passa a cobrir uma QUARTA tabela — `usuarios`** —, com um desenho diferente das três
+   primeiras e por uma razão medida. *"EXCLUIR usuário permanentemente (admin) (…) conta SEM registros
+   dependentes → apaga a credencial e a linha; conta COM dependentes → apaga a credencial de vez e
+   anonimiza a linha."* ⚠️ **São DOIS caminhos porque `criado_por`/`editado_por` existem em 27 tabelas
+   e NÃO têm FK nenhuma** (medido em 03/10/2026): apagar a linha não viola restrição alguma, e o que
+   se perde é a **resolução do autor** — o histórico passaria a exibir `uuid` sem nome. Então conta que
+   **nunca carimbou nada** sai inteira (não há histórico a proteger, a mesma lógica da exceção de
+   instrutor), e conta que carimbou **fica anonimizada**: nome e nome de exibição viram
+   *"Conta excluída"*, a foto sai, `auth_user_id` vira nulo, `excluida_em` é marcada, e o e-mail vai
+   para um sentinela `.invalid` — **o que libera o endereço para um novo cadastro**, que é requisito.
+   **Continua sem policy e sem privilégio de `DELETE`**: quem apaga é `public.excluir_conta`,
+   `SECURITY DEFINER`, com porteiro de Admin, da própria conta e do último Admin ativo, e com rastro em
+   `auditoria_de_conta` gravado **antes** de a linha mudar. **Nenhuma outra tabela ganha exceção.**
 5. **`migracao_log` é append-only.** Nunca reescrever linha já gravada — corrigir é **logar evento
    novo**. Bloqueado por gatilho **inclusive para `service_role`** (Princípio IV).
    ⚠️ **Lacuna conhecida, anotada em 17/09/2026 — pendência `PEND-5a-3` (spec 009):** o gatilho
@@ -557,6 +571,20 @@ upload precisa de um caso **entre o limite de transporte e o limite da regra**. 
 transporte MUST ser mais FOLGADO que a regra** (aqui, `3mb` contra os 2 MB do balde): o corpo carrega
 o arquivo mais o envelope `multipart`, e com os dois iguais quem barraria a foto seria o transporte,
 com o 413 genérico, em vez da regra, com a frase em português.
+
+**15. PORTEIRO ESCRITO COM `if not funcao()` FALHA ABERTO QUANDO A FUNÇÃO DEVOLVE `NULL`**
+*(medido em 03/10/2026, na M3 da spec 011)*. `app.eh_admin()` é `app.perfil_atual() = 'admin'`, e
+**sem sessão ela devolve `NULL`, não `false`** — comparação com nulo dá nulo. Em PL/pgSQL,
+`if not NULL then … end if` **não entra**: o `raise` é pulado e a função segue em frente. O porteiro
+de `dependentes_da_conta` nasceu assim e **devolvia a lista de onde a conta agiu para quem não tinha
+sessão nenhuma**. ⚠️ **O modo de falha é o pior possível: a guarda existe, está escrita, parece certa
+e não barra ninguém.** ⚠️ **Quem pegou foi o pgTAP**, que roda **sem sessão** — e por isso toda função
+com porteiro MUST ter uma asserção ali, mesmo que a permissão "não se prove em pgTAP": o que se prova
+não é RLS, é que a função levanta exceção por conta própria. **A forma correta é
+`coalesce(app.eh_admin(), false) is not true`.** ⚠️ **E `registrar_acao_em_conta`, escrita um dia
+antes, tem o mesmo `if not` — ela é inofensiva POR ACIDENTE**, porque o `raise` de
+`auth.uid() is null` vem antes e barra o caminho. Depender da **ordem** de dois porteiros é o tipo de
+coisa que a próxima edição desfaz sem perceber: os dois foram corrigidos.
 
 ## Estado atual e onde retomar
 

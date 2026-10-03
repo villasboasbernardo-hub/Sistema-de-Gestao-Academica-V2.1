@@ -39,6 +39,8 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
    *    reunia as ações numa célula da tabela — foram **apagados**, não desligados.
    */
   "app/(app)/admin/usuarios/BuscaDeUsuarios.tsx": "a busca da lista, escrita na URL",
+  "app/(app)/admin/usuarios/AcoesDaLinha.tsx":
+    "redefinir senha, desativar/reativar e excluir, com diálogo, direto na linha",
   "app/(app)/admin/usuarios/SelecoesDaConta.tsx": "perfil e escopo: as duas escolhas fechadas",
   "app/(app)/admin/usuarios/CamposDaConta.tsx": "os campos comuns a cadastrar e editar",
   "app/(app)/admin/usuarios/novo/FormularioDeCadastro.tsx":

@@ -105,9 +105,11 @@ test.describe("`FR-014` · a lista limpa", () => {
   test("as CINCO colunas pedidas, e só elas", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN);
 
-    // Avatar (sem rótulo visível), Nome, E-mail, Perfil, Último acesso.
-    await expect(page.getByRole("columnheader")).toHaveCount(5);
-    for (const titulo of ["Nome", "E-mail", "Perfil", "Último acesso"]) {
+    // Avatar (sem rótulo visível), Nome, E-mail, Perfil, Último acesso, Ações.
+    // ⚠️ **ERAM CINCO ATÉ 03/10/2026**, quando Bernardo pediu as três ações de volta à linha.
+    //    A contagem subiu para SEIS, e as três colunas que ele tirou continuam fora.
+    await expect(page.getByRole("columnheader")).toHaveCount(6);
+    for (const titulo of ["Nome", "E-mail", "Perfil", "Último acesso", "Ações"]) {
       await expect(page.getByRole("columnheader", { name: titulo })).toBeVisible();
     }
 
@@ -295,6 +297,190 @@ test.describe("`FR-033` a `FR-037` · cadastrar conta e o primeiro acesso", () =
   });
 });
 
+test.describe("`FR-046` · as três ações da linha, e a exclusão permanente", () => {
+  /*
+   * ⚠️ **ESTE CASO AGE SOBRE O SEGUNDO ADMIN, E NÃO SOBRE O ALVO — e a troca é conserto de uma
+   *    interferência medida.** Ele redefinia a senha de `EMAIL_ALVO`, e o caso do perfil, adiante,
+   *    **entra** com aquela conta usando `SENHA_DE_TESTE`: a redefinição a invalidava, e o caso
+   *    seguinte reprovava por não conseguir autenticar. ⚠️ **O sintoma apontava para o lugar errado**
+   *    — parecia que a promoção de perfil tinha deixado de valer. Nenhuma conta deste arquivo entra
+   *    com a senha do segundo Admin, então aqui a redefinição não atravessa o caminho de ninguém.
+   */
+  test("redefinir senha PELA LISTA, com diálogo, e a senha aparece uma vez", async ({ page }) => {
+    await entrar(page, EMAIL_ADMIN);
+
+    const linha = linhaDa(page, EMAIL_SEGUNDO_ADMIN);
+    await linha.getByRole("button", { name: "Redefinir senha" }).click();
+
+    const dialogo = page.getByRole("alertdialog");
+    await expect(dialogo).toContainText("ENCERRA todas as sessões abertas");
+    await dialogo.getByRole("button", { name: "Redefinir senha" }).click();
+
+    const bloco = linhaDa(page, EMAIL_SEGUNDO_ADMIN)
+      .getByRole("status")
+      .filter({ hasText: "Senha temporária" });
+    await expect(bloco).toBeVisible();
+    const senha = (await bloco.locator("code").textContent())?.trim();
+    expect(senha!.length).toBeGreaterThanOrEqual(12);
+  });
+
+  test("desativar e reativar PELA LISTA — e o diálogo diz que NÃO é exclusão", async ({ page }) => {
+    await entrar(page, EMAIL_ADMIN);
+
+    const linha = () => linhaDa(page, EMAIL_SEGUNDO_ADMIN);
+    await linha().getByRole("button", { name: "Desativar" }).click();
+
+    const dialogo = page.getByRole("alertdialog");
+    await expect(dialogo).toContainText("perde o acesso");
+    // ⚠️ **A FRASE SEPARA AS DUAS AÇÕES, e é o pedido de Bernardo:** desativar bloqueia o acesso e
+    //    mantém cadastro e perfil; excluir não tem desfazer. O diálogo diz isso em voz alta.
+    await expect(dialogo).toContainText("NÃO é exclusão");
+    await dialogo.getByRole("button", { name: "Desativar" }).click();
+
+    await expect(linha()).toContainText("Desativada");
+
+    // ⚠️ Reativar NÃO pede confirmação — é desfazer, e não há consequência a avisar.
+    await linha().getByRole("button", { name: "Reativar" }).click();
+    await expect(resposta(page, "Conta reativada.")).toBeVisible();
+    await expect(linha()).not.toContainText("Desativada");
+  });
+
+  /** A senha que o cadastro acabou de mostrar, lida do bloco de status. */
+  async function senhaMostrada(page: Page): Promise<string> {
+    const bloco = page.getByRole("status").filter({ hasText: "Senha temporária" });
+    await expect(bloco).toBeVisible();
+    const valor = (await bloco.locator("code").textContent())?.trim();
+    expect(valor, "o cadastro não mostrou senha").toBeTruthy();
+    return valor!;
+  }
+
+  /** Cadastra uma conta **por clique**, do zero, e devolve a senha temporária. */
+  async function cadastrarPorClique(page: Page, email: string, nome: string): Promise<string> {
+    await page.goto("/admin/usuarios");
+    await page.getByRole("link", { name: "Cadastrar usuário" }).click();
+    await page.getByLabel("Nome completo").fill(nome);
+    await page.getByLabel("E-mail").fill(email);
+    await page.getByRole("button", { name: "Cadastrar usuário" }).click();
+    return senhaMostrada(page);
+  }
+
+  test("⚠️ O CASO QUE DISCRIMINA · conta SEM registro nenhum sai INTEIRA, e o e-mail volta a servir", async ({
+    page,
+    browser,
+  }, info) => {
+    const email = `excluir-sem-rastro-${info.workerIndex}@ciaara.teste`;
+    await apagarConta(email);
+
+    await entrar(page, EMAIL_ADMIN);
+    const senhaAntiga = await cadastrarPorClique(page, email, "Vai Sair Inteira");
+
+    await page.goto("/admin/usuarios");
+    await linhaDa(page, email).getByRole("button", { name: "Excluir" }).click();
+
+    const dialogo = page.getByRole("alertdialog");
+    await expect(dialogo).toContainText("A exclusão é permanente.");
+    // ⚠️ **ESTE É O DISCRIMINANTE**: a frase diz qual dos DOIS caminhos vai acontecer. Dizer só
+    //    "é permanente" seria verdade para os dois e não distinguiria nada.
+    await expect(dialogo).toContainText("não registrou nada");
+    await expect(dialogo).toContainText("sai inteiro");
+    await dialogo.getByRole("button", { name: "Excluir permanentemente" }).click();
+
+    // ⚠️ O aviso vem da URL, fora da tabela: a linha que disparou a ação já não existe.
+    await expect(resposta(page, "saiu inteira")).toBeVisible();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("excluida"), { timeout: 10_000 })
+      .toBe("apagada");
+    await expect(linhaDa(page, email)).toHaveCount(0);
+
+    // A credencial foi apagada: a senha que funcionava deixou de funcionar.
+    const contexto = await browser.newContext();
+    const pagina = await contexto.newPage();
+    await submeterLogin(pagina, email, senhaAntiga);
+    await expect.poll(() => new URL(pagina.url()).pathname, { timeout: 15_000 }).toBe("/login");
+    await contexto.close();
+
+    // ⚠️ **E O E-MAIL VOLTA A SERVIR** — é requisito, e é o que distingue excluir de desativar.
+    await cadastrarPorClique(page, email, "Mesmo E-mail De Novo");
+    await apagarConta(email);
+  });
+
+  test("⚠️ O CASO QUE DISCRIMINA · conta COM registro vira «Conta excluída», sai da lista e libera o e-mail", async ({
+    page,
+    browser,
+  }, info) => {
+    const email = `excluir-com-rastro-${info.workerIndex}@ciaara.teste`;
+    await apagarConta(email);
+
+    await entrar(page, EMAIL_ADMIN);
+    const temporaria = await cadastrarPorClique(page, email, "Vai Ficar Anonima");
+
+    /*
+     * ⚠️ **A CONTA PRECISA TER CARIMBADO ALGO, E ELA MESMA CARIMBA — não eu por fora.** Ela entra
+     *    com a temporária e define a senha nova; `trocarPropriaSenha` deixa `editado_por` na própria
+     *    linha. Montar o rastro por script provaria um caminho que não é o real.
+     */
+    const contexto = await browser.newContext();
+    const pagina = await contexto.newPage();
+    await submeterLogin(pagina, email, temporaria);
+    await expect
+      .poll(() => new URL(pagina.url()).pathname, { timeout: 20_000 })
+      .toBe("/perfil/senha");
+    const nova = `nova-senha-de-teste-${Date.now().toString(36)}`;
+    await pagina.locator('input[name="senha"]').fill(nova);
+    await pagina.locator('input[name="confirmacao"]').fill(nova);
+    await pagina.getByRole("button", { name: /trocar senha/i }).click();
+    await expect(secaoDaSenha(pagina).getByRole("status")).toContainText("Senha trocada");
+    await contexto.close();
+
+    // Agora ela carimbou — e o diálogo tem de dizer o OUTRO caminho.
+    await page.goto("/admin/usuarios");
+    await linhaDa(page, email).getByRole("button", { name: "Excluir" }).click();
+
+    const dialogo = page.getByRole("alertdialog");
+    await expect(dialogo).toContainText("A exclusão é permanente.");
+    await expect(dialogo).toContainText("registrou histórico");
+    await expect(dialogo).toContainText("Conta excluída");
+    await dialogo.getByRole("button", { name: "Excluir permanentemente" }).click();
+
+    await expect(resposta(page, "saiu da lista")).toBeVisible();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("excluida"), { timeout: 10_000 })
+      .toBe("anonimizada");
+    await expect(linhaDa(page, email), "a conta excluída continuou na lista").toHaveCount(0);
+
+    // ⚠️ E ela não entra mais: a credencial foi apagada de vez.
+    const outro = await browser.newContext();
+    const pagina2 = await outro.newPage();
+    await submeterLogin(pagina2, email, nova);
+    await expect.poll(() => new URL(pagina2.url()).pathname, { timeout: 15_000 }).toBe("/login");
+    await outro.close();
+
+    // ⚠️ **E O E-MAIL VOLTA A SERVIR, mesmo com a linha antiga ainda no banco** — é o que o
+    //    sentinela `.invalid` da anonimização existe para permitir.
+    await cadastrarPorClique(page, email, "Reaproveitou O E-mail");
+    await apagarConta(email);
+  });
+
+  test("a própria conta não tem ações na linha, e a razão está escrita", async ({ page }) => {
+    await entrar(page, EMAIL_ADMIN);
+
+    const minha = linhaDa(page, EMAIL_ADMIN);
+    for (const acao of ["Excluir", "Desativar", "Redefinir senha"]) {
+      await expect(
+        minha.getByRole("button", { name: acao }),
+        `a ação «${acao}» apareceu na própria linha`,
+      ).toHaveCount(0);
+    }
+    await expect(minha).toContainText("sua conta");
+
+    // Controle positivo: na linha de OUTRA conta, as três existem.
+    const outra = linhaDa(page, EMAIL_ALVO);
+    for (const acao of ["Excluir", "Desativar", "Redefinir senha"]) {
+      await expect(outra.getByRole("button", { name: acao })).toBeVisible();
+    }
+  });
+});
+
 test.describe("`FR-040` e `FR-041` · a página da conta", () => {
   test("editar nome pela PÁGINA, chegando por clique na lista", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN);
@@ -349,7 +535,9 @@ test.describe("`FR-040` e `FR-041` · a página da conta", () => {
     await abrirContaPorClique(page, EMAIL_ADMIN);
 
     // `FR-041`: *"a ação MUST NOT aparecer na tela"* — não é botão desabilitado, é botão ausente.
-    for (const acao of ["Gravar perfil e vínculos", "Desativar", "Redefinir senha"]) {
+    // ⚠️ As ações de ACESSO saíram desta página em 03/10/2026 e voltaram para a linha da lista;
+    //    o que resta aqui é o formulário, e é dele que este caso trata.
+    for (const acao of ["Gravar perfil e vínculos", "Gravar nome"]) {
       await expect(
         page.getByRole("button", { name: acao }),
         `a ação «${acao}» apareceu na própria conta`,
@@ -361,50 +549,8 @@ test.describe("`FR-040` e `FR-041` · a página da conta", () => {
     // Controle positivo: na página de OUTRA conta, as três existem.
     await page.goto("/admin/usuarios");
     await abrirContaPorClique(page, EMAIL_ALVO);
-    for (const acao of ["Gravar perfil e vínculos", "Desativar", "Redefinir senha"]) {
+    for (const acao of ["Gravar perfil e vínculos", "Gravar nome"]) {
       await expect(page.getByRole("button", { name: acao })).toBeVisible();
     }
-  });
-
-  test("desativar pede confirmação, a etiqueta aparece na lista, e reativar desfaz", async ({
-    page,
-  }) => {
-    await entrar(page, EMAIL_ADMIN);
-    await abrirContaPorClique(page, EMAIL_SEGUNDO_ADMIN);
-
-    await page.getByRole("button", { name: "Desativar" }).click();
-    // ⚠️ **DIÁLOGO SIMPLES, e ele diz a consequência** — desativar tira o acesso na requisição
-    //    seguinte, e isso não se vê na tela de quem clicou.
-    const dialogo = page.getByRole("alertdialog");
-    await expect(dialogo).toContainText("perde o acesso");
-    await expect(dialogo).toContainText("NADA é apagado");
-    await dialogo.getByRole("button", { name: "Desativar" }).click();
-    await expect(resposta(page, "Conta desativada.")).toBeVisible();
-
-    await page.goto("/admin/usuarios");
-    await expect(linhaDa(page, EMAIL_SEGUNDO_ADMIN)).toContainText("Desativada");
-
-    // ⚠️ **REATIVAR NÃO PEDE CONFIRMAÇÃO**: é desfazer, e não há consequência a avisar.
-    await abrirContaPorClique(page, EMAIL_SEGUNDO_ADMIN);
-    await page.getByRole("button", { name: "Reativar" }).click();
-    await expect(resposta(page, "Conta reativada.")).toBeVisible();
-
-    await page.goto("/admin/usuarios");
-    await expect(linhaDa(page, EMAIL_SEGUNDO_ADMIN)).not.toContainText("Desativada");
-  });
-
-  test("redefinir senha pede confirmação e mostra a senha uma vez", async ({ page }) => {
-    await entrar(page, EMAIL_ADMIN);
-    await abrirContaPorClique(page, EMAIL_ALVO);
-
-    await page.getByRole("button", { name: "Redefinir senha" }).click();
-    const dialogo = page.getByRole("alertdialog");
-    await expect(dialogo).toContainText("ENCERRA todas as sessões abertas");
-    await dialogo.getByRole("button", { name: "Redefinir senha" }).click();
-
-    const bloco = page.getByRole("status").filter({ hasText: "Senha temporária" });
-    await expect(bloco).toBeVisible();
-    const senha = (await bloco.locator("code").textContent())?.trim();
-    expect(senha!.length).toBeGreaterThanOrEqual(12);
   });
 });

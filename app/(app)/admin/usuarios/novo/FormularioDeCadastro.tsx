@@ -19,8 +19,6 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { cadastrarUsuario } from "@/lib/acoes/usuarios";
-import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
-import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { PERFIL_PADRAO_DE_CADASTRO } from "@/lib/dominio/perfis";
 
 import { CamposDaConta, ESCOPO_PADRAO_DE_CADASTRO, type EstadoDaConta } from "../CamposDaConta";
@@ -35,17 +33,12 @@ const INICIAL: EstadoDaConta = {
   perfil: PERFIL_PADRAO_DE_CADASTRO,
   escopo: ESCOPO_PADRAO_DE_CADASTRO,
   cursos: [],
-  vinculoDeDocente: "",
 };
 
 export function FormularioDeCadastro({
   cursos,
-  instrutores,
-  escala,
 }: {
   readonly cursos: readonly CursoParaVincular[];
-  readonly instrutores: readonly InstrutorParaExibir[];
-  readonly escala: EscalaDeAntiguidade;
 }) {
   const [estado, definirEstado] = useState<EstadoDaConta>(INICIAL);
   const [senha, definirSenha] = useState<string | null>(null);
@@ -62,7 +55,6 @@ export function FormularioDeCadastro({
       perfil: estado.perfil,
       escopoCurso: estado.escopo,
       cursos: [...estado.cursos],
-      instrutorId: estado.vinculoDeDocente,
     });
 
     if (resultado.ok && "senha" in resultado) definirSenha(resultado.senha);
@@ -132,13 +124,7 @@ export function FormularioDeCadastro({
         </span>
       </div>
 
-      <CamposDaConta
-        estado={estado}
-        aoMudar={definirEstado}
-        cursos={cursos}
-        instrutores={instrutores}
-        escala={escala}
-      />
+      <CamposDaConta estado={estado} aoMudar={definirEstado} cursos={cursos} />
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={ocupado}>

@@ -43,6 +43,13 @@ const VERBO: Record<AcaoSobreAdmin, string> = {
 };
 
 /**
+ * ⚠️ **`excluir` JÁ ESTAVA AQUI DESDE 02/10/2026, e é por isso que a exclusão de conta não precisou
+ * de regra nova.** As três ações têm o mesmo efeito sobre o chão da `FR-042` — tiram um Admin da
+ * lista de ativos —, e a diferença entre elas é o **desfazer**: rebaixar e desativar têm; excluir
+ * não. A regra é a mesma; o custo de errar é que muda.
+ */
+
+/**
  * Pode fazer `acao` com `contaAlvoId`, dado o conjunto de Admins **ativos**?
  *
  * ⚠️ **A LISTA É DE ADMINS ATIVOS, E É QUEM A CHAMA QUE A BUSCA.** Esta função não conhece banco

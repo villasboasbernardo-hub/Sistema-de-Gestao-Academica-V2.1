@@ -1,53 +1,69 @@
-# Reconferência — PR 2 da spec 011: cadastro direto, lista limpa e páginas próprias
+# Conferência do PR 2 — gestão de contas, de ponta a ponta
 
-> **Para Bernardo Villas Boas.** Oito passos, tudo em **Administração**.
+> **Para Bernardo Villas Boas.** Um roteiro só, cobrindo **cadastrar, redefinir senha, desativar,
+> reativar e excluir**. Tudo em **Administração**.
 >
-> ⚠️ **SEM MIGRATION NESTA RODADA.** Nada estrutural mudou — a trilha `auditoria_de_conta` já foi ao
-> remoto em 02/10/2026. **Local e remoto seguem idênticos**, e isso foi reconferido.
+> ⚠️ **ESTA RODADA TEM MIGRATION** — `20261003000205_exclusao_de_conta.sql` —, aplicada no remoto pelo
+> rito: backup antes, dry-run só com ela, conferência só de leitura depois. O registro está em
+> `plano-de-aplicacao-no-remoto.md`.
 >
-> ⚠️ **NÃO HÁ MAIS E-MAIL EM NENHUM PASSO.** Nem SMTP, nem link que expira. Você cadastra, o sistema
-> mostra a senha **uma vez**, e você a repassa em mãos.
+> ⚠️ **NÃO HÁ E-MAIL EM NENHUM PASSO.** Você cadastra, o sistema mostra a senha **uma vez**, e você a
+> repassa em mãos. As opções de envio por e-mail estão levantadas no relatório, sem nada implementado.
 >
-> ⚠️ **O PASSO 4 CRIA CONTA DE VERDADE no preview.** Use um e-mail seu, ou faça os passos 4 a 6 no
-> LOCAL (`pnpm db:reset && pnpm dev:local`, porta 3000 — nunca a 3100, onde a suíte vive). Os passos 1
-> a 3, 7 e 8 são seguros no preview.
+> ⚠️ **OS PASSOS 4 A 9 CRIAM E APAGAM CONTA DE VERDADE.** No preview, use e-mails seus; ou faça-os no
+> LOCAL (`pnpm db:reset && pnpm dev:local`, porta **3000** — nunca a 3100, onde a suíte vive).
+> **Nunca** exclua a sua própria conta: o passo 3 existe para você ver que a tela não oferece isso.
 
-**Onde**, medido em 03/10/2026 e estável entre os pushes:
+**Onde:** o endereço do ramo na Vercel sai no comentário do PR.
 
-```
-https://sistema-de-gestao-academica-v2-1-git-feat-epic-35e53b-ciaara-11.vercel.app
-```
+## A lista
 
-⚠️ Ele pede o login da **Vercel** antes do login da aplicação (proteção de deploy). Depois de entrar:
-menu → **Administração**.
+| #  | Passo                                                                | Resultado esperado                                                                                                                                       |
+| -- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1  | Menu → **Administração**                                              | **Seis colunas**: avatar, nome, e-mail, perfil **em português**, último acesso e **Ações**. ⚠️ Vínculo de instrutor, situação e escopo continuam **fora**     |
+| 2  | Olhar a coluna **Ações** de outra conta                               | **Redefinir senha · Desativar · Excluir**, visíveis direto. Clicar no **nome** abre a página da conta                                                       |
+| 3  | Olhar a **sua própria** linha                                         | **Nenhum** botão. No lugar: *"sua conta — peça a outro Administrador"*                                                                                     |
 
-| #  | Passo                                                                                      | Resultado esperado                                                                                                                                                           |
-| -- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1  | Olhar a lista                                                                               | **Cinco colunas**: avatar, nome, e-mail, perfil **em português**, último acesso. ⚠️ Vínculo de instrutor, situação e escopo **saíram** — moram na página da conta                 |
-| 2  | Procurar por parte de um nome e de um e-mail; depois **Limpar filtros**                     | A lista filtra, o endereço ganha `?busca=…` (link compartilhável) e o botão desfaz. ⚠️ O botão só aparece quando há filtro                                                      |
-| 3  | Procurar **Convidar** ou **Reenviar convite** em qualquer lugar                             | **Não existem.** No lugar, **Cadastrar usuário**. ⚠️ O endereço `/convite` responde **404**: a tela e o código foram removidos, não desligados                                  |
-| 4  | **Cadastrar usuário** → nome, e-mail, perfil **Operador** → *Cadastrar*                     | Abre uma **página**, não um formulário na lista. Ao salvar aparece **Senha temporária: XXXX** — 16 caracteres, sem `O`, `0`, `l`, `1` nem `I`. **Copie agora**                    |
-| 5  | Dar **F5** nessa tela                                                                       | A senha **não volta**. Ela não está em coluna, log nem endereço — quem perde usa *Redefinir senha* na página da conta                                                           |
-| 6  | Sair, entrar com o e-mail novo e a **senha temporária**; tentar ir a **Início** e **Cursos** | Cai direto em **Trocar a minha senha**, e as duas rotas **devolvem** para lá. Definida a nova, **Início abre**. A temporária passa a ser **recusada**; a nova funciona            |
-| 7  | Voltar como Admin e clicar no **nome** de outra conta na lista                              | Abre a **página da conta**. Ali estão nome, perfil, escopo, vínculos de curso, vínculo de docente, *Redefinir senha* e *Desativar* — tudo o que saiu da lista                    |
-| 8  | Nessa página, **Desativar** → confirmar; voltar à lista; abrir de novo e **Reativar**       | O diálogo diz que a pessoa **perde o acesso** e que **nada é apagado**. Na lista, a conta ganha a etiqueta **Desativada**. Reativar **não** pede confirmação — é desfazer         |
+## Cadastrar e o primeiro acesso
+
+| #  | Passo                                                                | Resultado esperado                                                                                                                                       |
+| -- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 4  | **Cadastrar usuário** → nome, e-mail, perfil **Operador** → salvar    | Abre **página própria**. Ao salvar, **Senha temporária: XXXX** — 16 caracteres, sem `O`, `0`, `l`, `1` nem `I`. **Copie.** Dar F5 a perde                   |
+| 5  | Trocar o perfil para **Encarregado de Curso** num cadastro novo       | A lista de **cursos vinculados** aparece — e **só** para esse perfil. Salvar sem marcar nenhum é **recusado**, com a razão                                 |
+| 6  | Sair, entrar com o e-mail novo e a **temporária**; tentar **Início**   | Cai em **Trocar a minha senha** e não sai de lá. Definida a nova, **Início abre**; a temporária passa a ser **recusada**                                   |
+
+## Desativar, reativar e excluir
+
+| #  | Passo                                                                | Resultado esperado                                                                                                                                       |
+| -- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7  | Numa conta, **Desativar** → ler o diálogo → confirmar                 | O diálogo diz que ela **perde o acesso**, que **nada é apagado** e que isto **NÃO é exclusão**. A linha ganha a etiqueta **Desativada** e fica na lista      |
+| 8  | **Reativar** a mesma conta                                            | Volta a ativa, **sem pedir confirmação** — é desfazer                                                                                                     |
+| 9  | Numa conta **recém-cadastrada que nunca usou o sistema**, **Excluir** | O diálogo começa com *"A exclusão é permanente."* e diz que ela **não registrou nada**, então o cadastro **sai inteiro** e o **e-mail fica livre**           |
+| 10 | Confirmar, e tentar cadastrar **o mesmo e-mail** de novo              | A conta sai da lista, com aviso acima da tabela. O e-mail **é aceito** num cadastro novo                                                                   |
+| 11 | Numa conta que **já trocou a senha** (ou gravou algo), **Excluir**    | O diálogo diz que ela **registrou histórico**, então o cadastro fica como **«Conta excluída»** e sai da lista — e o e-mail também fica livre                 |
+| 12 | Depois de confirmar, tentar **entrar** com a senha dessa conta        | **Recusado.** A credencial foi apagada nos dois caminhos                                                                                                  |
 
 ---
 
-## Dois pontos para olhar com atenção
+## As três coisas que valem olhar com atenção
 
-**O perfil `Encarregado de Curso` passou a exigir curso vinculado.** Medido em
-`app.cursos_do_usuario()`, não suposto: o alcance desse perfil vem **dos vínculos**, e sem nenhum a
-pessoa entra e **não vê curso algum** — sem mensagem de erro, o que se lê como sistema vazio. Tente
-cadastrar um sem marcar curso: a recusa diz exatamente isso. ⚠️ **`Operador` sem escopo é o
-contrário** — ele vê **tudo** —, então ali não há nada a exigir, e tratar os dois igual recusaria uma
-conta perfeitamente boa.
+**Desativar e excluir são diferentes, e os diálogos dizem isso.** Desativar **bloqueia o acesso e
+mantém cadastro e perfil**; excluir **não tem desfazer**. O diálogo de desativar diz, com estas
+palavras, que *não é exclusão*.
 
-**A sua própria conta não tem ações na página dela**, e a razão está escrita no lugar dos botões. Para
-o seu nome e foto, *Meu perfil*; para a sua senha, *Trocar a minha senha*.
+**A exclusão tem dois desfechos, e o diálogo pergunta ao servidor antes de abrir.** Conta que nunca
+registrou nada **sai inteira**. Conta que registrou **fica anonimizada** — nome *"Conta excluída"*,
+e-mail trocado por um sentinela, foto removida, fora da lista — para que `criado_por` dos registros
+antigos continue resolvendo num nome em vez de um identificador sem dono. ⚠️ **Nos dois casos o
+e-mail volta a estar livre**, que é o que você pediu.
+
+**O vínculo de instrutor saiu da tela.** Nenhuma policy e nenhuma função de autorização leem
+`usuarios.instrutor_id` — medido. ⚠️ **A coluna do banco não foi tocada** e nenhum vínculo existente
+foi desfeito: a tela deixou de oferecê-lo, e ele continua impedindo que se apague um docente com conta
+ligada.
 
 ---
 
 ## Depois do seu "de acordo"
 
-Abro o PR 2. A exclusão permanente de conta (PR 3) **não** começou.
+Abro o PR 2.

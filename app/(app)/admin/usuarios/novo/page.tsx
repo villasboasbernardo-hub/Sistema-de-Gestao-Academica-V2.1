@@ -47,11 +47,7 @@ export default async function NovaConta() {
         </p>
       </div>
 
-      <FormularioDeCadastro
-        cursos={apoio.cursos}
-        instrutores={apoio.instrutores}
-        escala={apoio.escala}
-      />
+      <FormularioDeCadastro cursos={apoio.cursos} />
     </section>
   );
 }
