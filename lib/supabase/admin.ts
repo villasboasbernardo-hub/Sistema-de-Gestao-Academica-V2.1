@@ -12,7 +12,9 @@ import "server-only";
  *   3. Regra ESLint `no-restricted-imports` sobre `@/lib/supabase/admin` (ver eslint.config.mjs).
  *
  * ─── USOS AUTORIZADOS, E SÓ ESTES TRÊS ────────────────────────────────────────────────────────
- *   1. Convite de usuário pelo Admin — `auth.admin.inviteUserByEmail()` (BRIEF §3);
+ *   1. Gestão de contas pelo Admin — criar, redefinir senha e apagar credencial (BRIEF §3).
+ *      ⚠️ **ERA «convite por e-mail» até 03/10/2026**, e o convite saiu do sistema: não há mais
+ *      `inviteUserByEmail` nem envio de e-mail em lugar nenhum do repositório.
  *   2. Carga do ETL Sheets → PostgreSQL (Épico 2);
  *   3. Script de manutenção versionado, executado à mão.
  *

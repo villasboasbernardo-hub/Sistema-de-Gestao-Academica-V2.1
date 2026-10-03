@@ -63,7 +63,7 @@ e ambiente de pré-visualização por branch.
 | Estilo | **Tailwind CSS v4** (CSS-first, `@theme`) | Substitui Bootstrap 5 e o CSS ad hoc por módulo |
 | Componentes | **shadcn/ui** (Radix + `cva`) | Copiados para `components/ui/`, versionados |
 | Banco | **Supabase PostgreSQL** | Projeto já criado pelo Bernardo |
-| Auth | **Supabase Auth — e-mail/senha, somente por convite do Admin** | Signup público desabilitado. **Login é a primeira tela** |
+| Auth | **Supabase Auth — e-mail/senha, conta criada pelo Admin com senha temporária** ⚠️ *(Registro anterior, vencido: "e-mail/senha, somente por convite do Admin")* | Signup público desabilitado. **Login é a primeira tela.** O convite por e-mail saiu em 03/10/2026 (**D-USR-1**) — ver a emenda no §3 |
 | Autorização | **RLS no banco** + matriz de permissões como dado | A UI oculta por conveniência; o banco é a fronteira real |
 | Acesso a dados | `@supabase/ssr` (servidor), `@supabase/supabase-js` (cliente) | Sem ORM |
 | Mutações | **Server Actions** + Zod na primeira linha | Validação compartilhada cliente/servidor |
@@ -225,6 +225,21 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 02/10/2026 — uma tabela nova, do PR 2 da spec 011
+>
+> - **`auditoria_de_conta`** — a trilha das **ações administrativas sobre conta de usuário**
+>   (`FR-047`), por **decisão nominal de Bernardo Villas Boas** (**D-2**, 29/09/2026): **quatro**
+>   informações e nada além — **quem** fez, **o quê** fez, **sobre qual conta** e **quando**. Nenhum
+>   `valor_antes`/`valor_depois` e nenhum retrato: a pergunta que ela responde é *"quem mexeu na conta
+>   de quem"*; o retrato do que foi apagado é outro fato e mora em `exclusoes_registradas`.
+>   **Só de acréscimo**, no mesmo molde da tabela irmã — `UPDATE`, `DELETE` e `TRUNCATE` recusados por
+>   gatilho de **comando**, inclusive para a `service_role`; escrita apenas de dentro de
+>   `app.registrar_acao_em_conta` (`SECURITY DEFINER`); leitura por quem tem `auditoria.ler`.
+>   ⚠️ **`conta_alvo_id` NÃO é FK**: a conta excluída deixa de existir, e o rastro tem de sobreviver
+>   a ela — por isso há também `conta_alvo_codigo`, o código legível no momento do fato.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a
@@ -307,17 +322,35 @@ v2.1 entrega a estrutura que a decisão exige, não a tela que ela viabiliza. Se
 
 ## 3. Autenticação e RBAC
 
-- **Somente e-mail/senha, criado por convite do Admin** (decisão do Bernardo, 25/08/2026).
-  Reverte a decisão D1 da v2.0, que dependia do runtime Apps Script.
+- **O acesso é por e-mail e senha** (decisão do Bernardo, **25/08/2026**), revertendo a decisão
+  **D1** da v2.0, que dependia do runtime Apps Script. **Esta metade da decisão segue vigente.**
+- **A conta é criada pelo Admin, com senha temporária**; o **convite por e-mail foi
+  permanentemente removido** em **03/10/2026** (**D-USR-1** — ver a emenda ao fim desta seção).
+  ⚠️ *(Registro anterior, vencido: "**Somente e-mail/senha, criado por convite do Admin**".)*
 - **A primeira tela do sistema é o Login.** Nenhuma rota de `(app)` ou `print` é acessível sem
   sessão; o middleware redireciona para `/login`.
-- Fluxo: Admin cadastra → Server Action com `service_role` chama `auth.admin.inviteUserByEmail()`
-  → usuário define senha em `/convite/[token]`. **Signup público desabilitado no painel Supabase**
-  (item de checklist do Épico 0, sem equivalente em código).
-- Senha: mínimo 12 caracteres, verificação contra vazamentos habilitada, sem expiração compulsória.
+- Fluxo: Admin cadastra em `/admin/usuarios/novo` → Server Action com `service_role` chama
+  `auth.admin.createUser()`, com `email_confirm: true` — **não há e-mail de confirmação a mandar**,
+  e sem isso o Auth recusaria o login de quem recebeu a senha em mãos — e com
+  `app_metadata: { trocar_senha: true }` → a **senha temporária é gerada no servidor e mostrada uma
+  única vez** ao Admin, que a entrega à pessoa → ela entra em `/login` e **troca a senha
+  obrigatoriamente** em `/perfil/senha` (**D-USR-2**). **Signup público desabilitado**, e agora
+  **versionado em código**: `[auth] enable_signup = false` em `supabase/config.toml`.
+  ⚠️ *(Registro anterior, vencido: "Admin cadastra → Server Action com `service_role` chama
+  `auth.admin.inviteUserByEmail()` → usuário define senha em `/convite/[token]`. **Signup público
+  desabilitado no painel Supabase** (item de checklist do Épico 0, sem equivalente em código)".)*
+- Senha: mínimo 12 caracteres, verificação contra vazamentos habilitada, sem expiração
+  compulsória — e, desde **03/10/2026**, com **troca obrigatória da senha temporária no primeiro
+  acesso** (**D-USR-2**). ⚠️ As duas coisas convivem: a troca obrigatória é obrigação de **uma
+  vez só**, de percurso, e **não** expiração periódica, que continua não existindo.
 - `usuarios.auth_user_id uuid unique references auth.users(id) on delete restrict` — 1:1 com o
-  Supabase Auth, **nulo entre o cadastro e o aceite do convite** (é a janela em que o Admin revisa
-  o perfil antes de a pessoa entrar).
+  Supabase Auth. **A coluna segue anulável, e a razão mudou:** o cadastro pelo Admin grava a
+  credencial **antes** da linha de `usuarios`, então **não há mais janela** entre cadastro e aceite.
+  O nulo fica para a linha migrada pelo ETL, para a conta **anonimizada** pela exclusão
+  (**D-USR-3**; a migration `20261003000205` anula a coluna) e para a conta que o convite gravou e
+  nunca emitiu (`USR-MUEF9CLK`, 23/09/2026).
+  ⚠️ *(Registro anterior, vencido: "**nulo entre o cadastro e o aceite do convite** (é a janela
+  em que o Admin revisa o perfil antes de a pessoa entrar)".)*
 - **Matriz de permissões como dado:** `perfil_permissao (perfil, recurso, acao, permitido)`.
   As policies consultam `app.pode()`; trocar uma permissão é `UPDATE`, não migration.
 - Funções auxiliares (schema `app`, `SECURITY DEFINER`, `STABLE`, `search_path` fixo):
@@ -325,6 +358,58 @@ v2.1 entrega a estrutura que a decisão exige, não a tela que ela viabiliza. Se
   `app.cursos_do_usuario()`, `app.alcanca_curso()`, `app.alcanca_turma()`,
   `app.alcanca_disciplina()`.
 - `RNF-SEG-02` deixa de ser disciplina de código e vira garantia do motor: **é RLS**.
+
+> ### ⚠️ Emenda de 03/10/2026 — o convite por e-mail sai; a conta nasce pelo Admin
+>
+> **AUTORIZAÇÃO NOMINAL DE BERNARDO VILLAS BOAS, 03/10/2026**, nesta sessão, respondendo à
+> pergunta *"cinco documentos normativos ainda dizem «somente por convite» e eu NÃO os toquei; o
+> que fazer?"*: **«Emendar os cinco agora.»** A citação fica aqui porque sem ela a emenda seria
+> **indistinguível de uma alteração não autorizada** deste contrato — que é exatamente o que a
+> regra 1 do `CLAUDE.md` existe para impedir.
+>
+> **Acréscimo, não reescrita.** A decisão **D1, de 25/08/2026** — recusar conta Google e adotar
+> e-mail/senha por convite — **é história e não se apaga**. O que esta emenda faz é registrar **ao
+> lado dela** o regime que passa a valer, e marcar como vencido **só o que afirmava vigência**. Onde
+> uma frase misturava as duas coisas, ela foi **partida**: a parte que narra o passado ficou, a que
+> prometia o convite levou a marca.
+>
+> | # | Decisão de **Bernardo Villas Boas**, 03/10/2026 |
+> |---|---|
+> | **D-USR-1** | Convite por e-mail **permanentemente removido**; **nenhum envio de e-mail** pelo sistema |
+> | **D-USR-2** | Cadastro pelo Admin com **senha temporária mostrada uma vez**; **troca obrigatória** no primeiro acesso |
+> | **D-USR-3** | O Admin **exclui permanentemente** qualquer conta — menos a própria e o último Admin —, em qualquer estado; o **e-mail é liberado** para novo cadastro |
+> | **D-USR-4** | **Confirmação simples**, sem digitar nada |
+> | **D-USR-5** | **Editar em página própria**: nome, perfil e acessos |
+> | **D-USR-6** | Em cada linha da lista: **Editar · Redefinir senha · Desativar/Reativar · Excluir** |
+>
+> ⚠️ **OS USOS AUTORIZADOS DA `service_role` CONTINUAM TRÊS — A TRÍADE NÃO ENCOLHEU.** O que muda
+> é o **verbo do primeiro**: onde se lia `auth.admin.inviteUserByEmail()` lê-se agora a **gestão de
+> conta pelo Admin** — `createUser()`, `updateUserById()` e `deleteUser()`. Os outros dois seguem
+> intactos: a **carga do ETL** e o **script de manutenção versionado rodado à mão**. **Nunca por
+> requisição de tela.** A leitura fácil é concluir que um uso saiu junto com o convite; **ele não
+> saiu — trocou de verbo**, e é por isso que esta frase está escrita.
+>
+> ⚠️ **NENHUM IDENTIFICADOR DE REQUISITO MUDA.** `RF-AUTH-02`, `RNF-SEG-01` e os demais, onde
+> quer que apareçam, **mantêm o identificador**; o que muda é o **texto**, com a marca de emenda ao
+> lado. Nada foi renumerado e **nenhuma linha de tabela foi apagada** — a linha da Auth no §1 e a do
+> Épico 3 no §8 continuam onde estavam, com o texto emendado.
+>
+> **Medido no código em 03/10/2026, antes de esta emenda ser escrita** (regra 9.3): a conta é criada
+> por `auth.admin.createUser()` em `lib/acoes/usuarios.ts`, pela tela
+> `app/(app)/admin/usuarios/novo/`, com `email_confirm: true` e `app_metadata: { trocar_senha: true }`;
+> a senha temporária é gerada no servidor e mostrada **uma** vez; a troca obrigatória acontece em
+> `app/(app)/perfil/senha/`; a edição tem **página própria** em `app/(app)/admin/usuarios/[id]/`
+> (**D-USR-5**); e as **quatro** ações de cada linha vivem em
+> `app/(app)/admin/usuarios/AcoesDaLinha.tsx` (**D-USR-6**), com **Reativar** sem confirmação,
+> porque é desfazer e não há consequência a avisar. **Não existem** `/convite`, `/recuperar-senha`,
+> `inviteUserByEmail`, `resetPasswordForEmail` nem qualquer envio de e-mail: as duas únicas
+> ocorrências desses nomes no repositório são um **comentário** em `lib/supabase/admin.ts` e a
+> **guarda** `tests/unidade/sem-convite-nem-envio-de-email.test.ts`, que **reprova se voltarem**. O
+> signup público segue desabilitado — `[auth] enable_signup = false` em `supabase/config.toml`.
+>
+> ⚠️ **O `.docx` correspondente NÃO recebeu esta emenda.** `BRIEF-v2.1.docx` é o original
+> entregue e é **preservado como tal — nunca emendado nem apagado**; pela regra de precedência
+> registrada no `CLAUDE.md` em 17/09/2026, **o `.md` prevalece** sempre que os dois divergirem.
 
 > ⚠️ **Pendência que afeta a policy do Operador — decidir antes do Épico 3.**
 > A policy pressupõe que `cursos.classificacao` e `usuarios.escopo_curso` compartilham domínio.
@@ -340,7 +425,7 @@ v2.1 entrega a estrutura que a decisão exige, não a tela que ela viabiliza. Se
 
 ```
 ├── app/
-│   ├── (auth)/login/ · convite/[token]/ · recuperar-senha/
+│   ├── (auth)/login/          # ⚠️ só o login — ver a nota após o bloco (emenda de 03/10/2026)
 │   ├── (app)/inicio/ · cursos/[curso]/ · turmas/[turma]/dsa/ · cronograma/
 │   │         avaliacoes/ · atividades/ · relatorio/ · instrutores/ · disciplinas/
 │   │         admin/usuarios/ · admin/parametros/ · admin/calendario/
@@ -360,6 +445,16 @@ v2.1 entrega a estrutura que a decisão exige, não a tela que ela viabiliza. Se
 ├── specs/                # Spec 00 + as 39 specs convertidas
 └── CLAUDE.md · AGENTS.md · .claude/
 ```
+
+> ⚠️ **Emenda de 03/10/2026 (D-USR-1) — o grupo `(auth)` tem SÓ `login/`.**
+> *(Registro anterior, vencido: `(auth)/login/ · convite/[token]/ · recuperar-senha/`.)* As duas
+> rotas apagadas **não existem mais no repositório** — medido em 03/10/2026 —, porque nenhuma
+> delas tem como funcionar sem envio de e-mail. O que ficou no lugar: a gestão de conta pelo Admin
+> em `(app)/admin/usuarios/` — `novo/` para **cadastrar** e `[id]/` para **editar em página
+> própria** (**D-USR-5**) — e a troca de senha em `(app)/perfil/senha/`, **a tela única de senha
+> nova**, que serve ao modo voluntário e ao obrigatório do primeiro acesso (**D-USR-2**). Quem
+> esqueceu a senha procura o administrador, e o `/login` diz isso na tela. ⚠️ O `.docx` **não**
+> recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
 **`lib/dominio/` é o item mais importante desta migração.** É onde as ~40 regras `RN-` viram
 funções TypeScript puras, sem acesso a banco: motor preditivo, distribuição semanal de carga
@@ -422,7 +517,7 @@ saída histórica de um curso — a CAHO 2026 foi rejeitada como padrão-ouro pe
 | 0 | Fundação: repo, Next.js, Supabase, CI, tipos gerados | novo (migração) |
 | 1 | Schema PostgreSQL + RLS + matriz de permissões | Épicos C e F |
 | 2 | ETL Sheets → PostgreSQL + reconciliação | Épico C |
-| 3 | Auth por convite, gestão de usuários, RBAC | Épico F |
+| 3 | Auth, gestão de usuários, RBAC ⚠️ *(Registro anterior, vencido: "Auth **por convite**" — **D-USR-1**, 03/10/2026; a linha e o número do épico não mudam)* | Épico F |
 | 4 | Design System + shell de navegação por URL | Épicos A, B e D |
 | 5 | Cadastros: cursos, turmas, disciplinas, instrutores | RF-CURSOS/MATERIAS/INSTR/CRUD |
 | 6 | Detalhe Semanal de Aula (lançamento + impressão) | RF-DSA |

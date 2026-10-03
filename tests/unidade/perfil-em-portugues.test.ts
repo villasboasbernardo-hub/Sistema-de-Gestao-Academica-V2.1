@@ -111,10 +111,25 @@ const RENDER_DE_PERFIL = /(^|[^=$])\{([^{}]*\bperfil\b[^{}]*)\}/gi;
  */
 const EH_CAMINHO_CRU = /^[A-Za-z_$][\w$]*(?:\??\.[\w$]+)*$/;
 
+/**
+ * O código sem as linhas de **importação**.
+ *
+ * ⚠️ **ELA NASCEU DE UM FALSO POSITIVO MEDIDO em 03/10/2026, e o terceiro desta guarda.**
+ * `import type { Perfil } from "@/lib/dominio/perfis"` casa com `RENDER_DE_PERFIL`: as chaves do
+ * import são chaves, e a expressão é insensível à caixa. **Um import não desenha nada** — acusá-lo
+ * mandaria renomear o tipo para enganar a varredura, que é o oposto do que esta guarda quer.
+ *
+ * ⚠️ **ELA NÃO AFROUXA A GUARDA, e o controle positivo prova:** a varredura continua achando as
+ * renderizações que existem, e o caso sintético abaixo continua sendo pego.
+ */
+function semImportacao(fonte: string): string {
+  return fonte.replace(/^\s*import\b[^;]*;?$/gm, " ");
+}
+
 function renderizacoesDePerfil(): { readonly arquivo: string; readonly expressao: string }[] {
   const achados: { arquivo: string; expressao: string }[] = [];
   for (const caminho of arquivos()) {
-    const codigo = semComentario(readFileSync(caminho, "utf8"));
+    const codigo = semImportacao(semComentario(readFileSync(caminho, "utf8")));
     for (const casamento of codigo.matchAll(RENDER_DE_PERFIL)) {
       achados.push({ arquivo: comBarraNormal(caminho), expressao: (casamento[2] ?? "").trim() });
     }
@@ -159,6 +174,18 @@ describe("⚠️ A SEGUNDA GUARDA · nenhum JSX desenha o perfil sem traduzir", 
       renderizacoesDePerfil().length,
       "a varredura não achou NENHUM `{…perfil}` desenhado — ela está medindo o vazio",
     ).toBeGreaterThan(0);
+  });
+
+  it("⚠️ O CASO QUE DISCRIMINA do recorte · `import type { Perfil }` não é renderização, e `{perfil}` é", () => {
+    const comImport = semImportacao('import type { Perfil } from "@/lib/dominio/perfis";');
+    expect(RENDER_DE_PERFIL.test(comImport), "a linha de import foi lida como renderização").toBe(
+      false,
+    );
+
+    // E o JSX de verdade continua sendo pego — sem isto, o recorte poderia ter apagado a guarda.
+    RENDER_DE_PERFIL.lastIndex = 0;
+    expect(RENDER_DE_PERFIL.test(semImportacao("<td>{linha.perfil}</td>"))).toBe(true);
+    RENDER_DE_PERFIL.lastIndex = 0;
   });
 
   it("nenhum caminho cru de perfil é desenhado — todo perfil à vista passa por `rotuloDoPerfil`", () => {

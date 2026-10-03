@@ -493,6 +493,76 @@ export const CONTRATO = {
     origem: "RF-CRUD-01",
     parametros: {},
   },
+  /*
+   * A gestão de contas (`FR-014` da spec 011). ⚠️ **ELA NÃO ESTAVA NO CONTRATO ATÉ 03/10/2026**, e
+   * não precisava: a tela não tinha parâmetro nenhum. Entrou com a **busca**, que é o único filtro
+   * que a lista passou a ter — e por isso ela também passou a ter o botão *Limpar filtros*.
+   */
+  "/admin/usuarios": {
+    rota: "/admin/usuarios",
+    origem: "RF-CRUD-01",
+    parametros: {
+      /*
+       * ⚠️ **O AVISO DA EXCLUSÃO MORA NA URL, E A RAZÃO É UM DEFEITO MEDIDO em 03/10/2026.** A
+       * mensagem vivia no estado da própria linha — e a linha **desaparece** com a exclusão, levando
+       * a confirmação junto. Quem excluía não recebia resposta nenhuma: a conta sumia e pronto.
+       * ⚠️ **E o aviso precisa dizer QUAL dos dois caminhos aconteceu** — conta sem histórico sai
+       * inteira, conta com histórico fica como *"Conta excluída"* —, porque as duas são permanentes
+       * de maneiras diferentes. Na URL ele sobrevive ao `revalidatePath` e à remontagem da tabela.
+       */
+      /*
+       * ⚠️ **O TERCEIRO VALOR EXISTE PARA A TELA NÃO MENTIR** *(03/10/2026)*. As duas primeiras
+       * frases afirmam que *"o e-mail está livre para um novo cadastro"*, e isso é verdade sempre
+       * que a credencial sai junto. **Há um caso em que ela não sai**: conta sem `auth_user_id` cujo
+       * e-mail pertence à credencial de **outra** conta — medido no remoto, é `USR-02`, cujo
+       * endereço é o login de `USR-ADMIN-001`. Apagar aquela credencial derrubaria o acesso de quem
+       * não pediu nada, então ela fica, e o aviso passa a dizer a verdade sobre o endereço.
+       */
+      excluida: {
+        nome: "excluida",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: [
+          "",
+          "apagada",
+          "anonimizada",
+          "apagada_email_em_uso",
+          // ⚠️ O QUINTO EXISTE PARA O AVISO NÃO AFIRMAR O QUE NINGUÉM OLHOU (03/10/2026): a
+          //    varredura de credencial órfa precisa da chave administrativa, e quando ela não
+          //    responde a exclusão conclui mesmo assim — o cadastro já saiu. Dizer "o e-mail está
+          //    livre" sem ter conferido seria a mesma classe de mentira que esta fatia vem
+          //    consertando.
+          "apagada_sem_conferir_credencial",
+        ],
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      busca: {
+        nome: "busca",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
+      },
+    },
+  },
+  /*
+   * ⚠️ **CADASTRAR E EDITAR SÃO PÁGINAS, NÃO DIÁLOGOS** *(decisão de Bernardo Villas Boas,
+   * 03/10/2026, reprovando a conferência do PR 2)*: *"Nada de diálogo sobre diálogo na lista."* A
+   * lista voltou a ser lista; formulário tem endereço próprio, e endereço próprio é link
+   * compartilhável e botão de voltar que funciona.
+   */
+  "/admin/usuarios/novo": {
+    rota: "/admin/usuarios/novo",
+    origem: "RF-CRUD-01",
+    parametros: {},
+  },
+  "/admin/usuarios/[id]": {
+    rota: "/admin/usuarios/[id]",
+    origem: "RF-CRUD-01",
+    parametros: {},
+  },
   "/cursos/novo": {
     rota: "/cursos/novo",
     origem: "RF-CURSOS-01",

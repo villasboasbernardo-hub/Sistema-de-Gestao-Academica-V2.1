@@ -129,9 +129,35 @@ demais abre a tela vazia **sem erro**, e o usuário conclui que não há cadastr
 **Rende** diálogo modal com foco preso e retorno de foco ao fechar.
 **Não faz** a ação.
 
-⚠️ **A consequência não é perda** — nada é apagado neste sistema (regra 4). Desativar é reversível
-no banco e consequente na tela, e é para a consequência que o `RNF-USA-03` pede confirmação. Achado
-P-4 do plano.
+⚠️ **A consequência é de DOIS tipos, e o contrato tem de dizer os dois** *(emenda de 03/10/2026 —
+decisão de Bernardo Villas Boas, **D-USR-3** e **D-USR-4**)*.
+
+**(1) Na maioria dos usos, a consequência não é perda.** Desativar um instrutor, uma sala, um curso ou
+uma conta é reversível no banco e **consequente na tela**: ele some das listagens, os vínculos param
+de aparecer, a LIQ muda. É para a **consequência** que o `RNF-USA-03` pede confirmação, não para a
+perda. Achado P-4 do plano.
+
+**(2) Mas *"nada é apagado neste sistema"* deixou de valer como frase absoluta, e este componente é um
+dos lugares onde isso aparece.** A **regra 4** do contrato do projeto ganhou **quatro exceções
+nominais**, todas delimitadas a registro **sem histórico** e todas por RPC com porteiro, sem policy e
+sem privilégio de `DELETE`: **`instrutores`** *(autorização de Bernardo Villas Boas, 15/09/2026)*,
+**`disciplinas`** e **`unidades_ensino`** *(emenda D-B1, 24/09/2026)* e **`usuarios`** *(emenda de
+03/10/2026)*. Onde a exclusão é permanente, **a consequência É perda**, e o texto que este componente
+recebe tem de dizer isso — não há desfazer.
+
+⚠️ **Medido no repositório em 03/10/2026, porque a distinção não é intuitiva:** das quatro exclusões
+permanentes, **só a de conta passa por este componente** —
+`app/(app)/admin/usuarios/AcoesDaLinha.tsx`, rótulo **"Excluir"** e consequência *"A exclusão é
+permanente."* As de **instrutor**, **disciplina** e **unidade de ensino** têm **diálogo próprio**, com
+campo para **digitar o código** antes de liberar o botão
+(`app/(app)/instrutores/[codigo]/ExcluirInstrutor.tsx` e
+`app/(app)/disciplinas/paineis/DialogoDeExclusao.tsx`), e **não** consomem `DialogoConfirmacao`.
+
+⚠️ **E ele NÃO TEM CAMPO PARA DIGITAR, o que é decisão e não falta** *(D-USR-4: "Confirmação simples,
+sem digitar nada")*. As props de corpo e de botão desabilitado **existiram por um dia**, para a
+exclusão de conta pedir o e-mail digitado, e **saíram com ela**. Quem for reintroduzir um corpo aqui
+precisa de **decisão nova**, não de conveniência — e as três exclusões do domínio acadêmico seguem
+pedindo o código **na tela delas**, que é onde a divergência foi escolhida.
 
 ### `CampoObrigatorio` — `IND-01` · sem marcador de cliente
 

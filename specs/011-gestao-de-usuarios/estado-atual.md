@@ -1,7 +1,14 @@
 # Estado atual — auth, usuários, perfis, convite e RLS
 
 **Medido em 29/09/2026**, no commit `de1f1ac` da `main`, por varredura do repositório. Este
-documento é o **retrato de antes**: ele não propõe nada. A spec ao lado só pode exigir o que aqui
+documento é o **retrato de antes**: ele não propõe nada.
+
+> ⚠️ **RETRATO DATADO, E O CONVITE QUE ELE DESCREVE NÃO EXISTE MAIS.** O título e várias seções
+> abaixo falam do fluxo de convite por e-mail porque ele **existia em 29/09/2026**. Ele foi
+> **permanentemente removido** em 03/10/2026 *(decisão D-USR-1 de Bernardo Villas Boas)*, junto com a
+> recuperação de senha por link e qualquer envio de e-mail. **Nada aqui foi reescrito, de propósito:**
+> um retrato corrigido depois deixa de ser retrato, e é contra ele que a spec se le. O fluxo vigente
+> está em `spec.md`, nas decisões D-USR-1 a D-USR-6. A spec ao lado só pode exigir o que aqui
 não existe, e só pode preservar o que aqui existe.
 
 ⚠️ **Ele foi escrito ANTES da spec, de propósito.** Especificar de memória sobre uma base de 45

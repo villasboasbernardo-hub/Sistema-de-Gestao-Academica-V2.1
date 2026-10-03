@@ -21,6 +21,9 @@
 import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
+// ⚠️ A limpeza da marca mora em `usuarios.ts` porque ela precisa da `service_role`, e o lint
+//    autoriza DOIS arquivos. Importar a AÇÃO, em vez da chave, é o que mantém a lista em dois.
+import { concluirObrigacaoDeTrocarSenha } from "@/lib/acoes/usuarios";
 import { conferirConfirmacao, regraDaSenhaEmPortugues } from "@/lib/dominio/politica-de-senha";
 import { BALDE_DE_AVATARES } from "@/lib/supabase/avatar";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
@@ -192,6 +195,27 @@ export async function trocarPropriaSenha(entrada: unknown): Promise<ResultadoDeP
     //    causa.
     if (/weak.?password|at least/i.test(error.message)) return falha(regraDaSenhaEmPortugues());
     return falha(`Não foi possível trocar a senha: ${error.message}`);
+  }
+
+  /*
+   * ⚠️ **A MARCA DA TROCA OBRIGATÓRIA SAI AQUI, E SÓ AQUI** (`FR-037`). Ela entrou em
+   * `app_metadata` na redefinição pelo Admin, e `app_metadata` **não é escrevível pelo próprio
+   * usuário** — se fosse, quem estivesse obrigado apagaria a obrigação por chamada direta à API de
+   * auth, que é exatamente a razão de ela não morar em `user_metadata`.
+   *
+   * ⚠️ **POR ISSO ESTA LIMPEZA PRECISA DA CHAVE PRIVILEGIADA**, e é o único ponto de
+   * `lib/acoes/perfil.ts` que a usa. Ela é o par obrigatório da marcação: sem ela, definir a senha
+   * nova deixaria a pessoa **presa na tela de senha para sempre**, trocando a senha a cada volta.
+   *
+   * ⚠️ **A FALHA DAQUI NÃO DESFAZ A TROCA, e a frase diz o que fazer.** A senha nova já vale; o que
+   * resta é a marca. Abortar faria a pessoa achar que a senha não mudou — e ela mudou.
+   */
+  const limpeza = await concluirObrigacaoDeTrocarSenha();
+  if (!limpeza.ok) {
+    return falha(
+      `A senha foi trocada, mas a obrigação de troca não saiu: ${limpeza.erro}. ` +
+        `Entre de novo; se a tela de senha voltar, avise o suporte.`,
+    );
   }
 
   return { ok: true };

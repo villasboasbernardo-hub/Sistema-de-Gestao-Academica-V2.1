@@ -39,6 +39,18 @@ atualizado para bater com a saída deixa de testar e fica verde para sempre."* O
 esperado muda, isso foi **medido**; se na execução algum mudar, a tarefa **para** e declara (a) ou (b) antes de
 seguir.
 
+⚠️ **NOTA DE LEITURA — `tests/e2e/convite.spec.ts` NÃO EXISTE MAIS, e os quatro registros que o citam
+FICAM** *(decisão de Bernardo Villas Boas, 03/10/2026, **D-USR-1**)*. Quatro lugares deste arquivo o
+nomeiam — a tabela da decomposição (*"a conferência de `convite.spec.ts`"*), o achado **A-1**, o
+**E-3b** e a **T059** —, e **nenhum deles é emendado**: são **medição datada de 17 e 18/09/2026**,
+feita quando o arquivo existia, e é a medição que torna a fatia reconferível. O que caducou não é a
+medição, é o **paradeiro** do arquivo: o **convite por e-mail foi PERMANENTEMENTE removido do sistema**
+(D-USR-1), e o arquivo foi apagado com o fluxo, no commit `c7822cb`. ⚠️ **Quem for reconferir aquelas
+quatro linhas procura o arquivo no histórico do git, não em disco** — e **nada nesta fatia depende
+dele**: a T059 fechou **sem edição** em 18/09/2026, e o que ela provou (credencial sem linha em
+`usuarios` alcança zero cursos, pelo primeiro ramo de `cursos_do_usuario()`) continua valendo, porque
+não era sobre o convite: era sobre o alcance.
+
 ---
 
 ## ⚠️ Medida honesta — a decomposição saiu maior que o plano (Restrição 4)

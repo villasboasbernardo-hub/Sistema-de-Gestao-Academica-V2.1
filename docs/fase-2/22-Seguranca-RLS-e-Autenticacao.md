@@ -10,6 +10,12 @@ version: "2.1"
 **Status:** Fase 2 — Arquitetura · **Precede:** Épico 1 (Schema + RLS) e Épico 3 (Auth + RBAC)
 **Artefato executável correspondente:** `docs/sql-referencia/05_rls_policies.sql`
 
+> ⚠️ **As emendas de 03/10/2026 (D-USR-1 a D-USR-6) estão SÓ NESTE `.md`.** O
+> `22-Seguranca-RLS-e-Autenticacao.docx` é o **documento original entregue** e **não foi emendado nem
+> apagado** — é assim que a regra 4 manda tratá-lo. **Na divergência, o `.md` prevalece** *(decisão de
+> Bernardo Villas Boas, 17/09/2026)*, e este documento passa a constar da lista dos que divergem do
+> `.docx`.
+
 ## Nota de migração (v2.1)
 
 Este documento não existia na v2.0, e a ausência não era descuido: na plataforma anterior não havia
@@ -26,8 +32,20 @@ de segurança mais significativa desta versão, e é o assunto deste documento.
 
 Uma decisão de produto muda junto: **a decisão D1 da v2.0 foi revertida em 25/08/2026**. A
 autenticação deixa de ser pela conta Google e passa a ser **e-mail e senha, com conta criada
-exclusivamente por convite do Administrador**. A seção 3 explica por quê, e o que se ganha e se
+exclusivamente pelo Administrador**. A seção 3 explica por quê, e o que se ganha e se
 perde nessa troca.
+
+> **Emenda de 03/10/2026** *(decisão de Bernardo Villas Boas, 03/10/2026, **D-USR-1** e
+> **D-USR-2**)*. ⚠️ *(Registro anterior, vencido: "e-mail e senha, com conta criada exclusivamente
+> **por convite** do Administrador".)*
+>
+> **O convite por e-mail foi removido permanentemente, e com ele todo envio de e-mail pelo
+> sistema.** ⚠️ **Isto não reabre a D1 e não toca nela:** o que se recusou em 25/08/2026 foi a
+> **conta Google**, e essa recusa continua integralmente em vigor — §3.1 e §3.2 a narram e **não
+> mudaram**. O que mudou é **o mecanismo pelo qual a conta nasce**: o Admin **cadastra** a conta, o
+> servidor **gera uma senha temporária**, a tela a mostra **uma única vez**, o Admin a repassa em
+> mãos e a pessoa é **obrigada a trocá-la no primeiro acesso**. Ver §3.3 (o fluxo), §4.1 (criação),
+> §4.2 (primeiro acesso) e §4.3 (o que existe no lugar da recuperação por e-mail).
 
 ---
 
@@ -142,7 +160,12 @@ Essa é a diferença entre disciplina e garantia, e é o motivo de a RLS valer o
 
 ---
 
-## 3. Autenticação por convite
+## 3. Autenticação por cadastro do Administrador
+
+⚠️ **Esta seção se chamava "Autenticação por convite" até 03/10/2026** *(decisão de Bernardo Villas
+Boas, 03/10/2026, **D-USR-1**)*. O título mudou porque o convite por e-mail saiu do sistema. ⚠️ **As
+§3.1 e §3.2 ficam exatamente como estavam**: elas narram a reversão da D1 em 25/08/2026 — a recusa
+da **conta Google** —, e essa decisão **não foi reaberta**. Quem procura o fluxo vigente lê a §3.3.
 
 ### 3.1 Por que a decisão D1 foi revertida
 
@@ -179,7 +202,24 @@ Auth suporta os dois métodos na mesma base de usuários. Se um dia o CIAARA pad
 institucionais para todos os perfis, acrescentar o provedor Google é configuração, não migração —
 `public.usuarios` continua igual, porque ela guarda perfil, não credencial.
 
-### 3.3 O fluxo de convite
+> **Emenda de 03/10/2026 — como ler as duas seções acima** *(decisão de Bernardo Villas Boas,
+> 03/10/2026, **D-USR-1**)*. **O texto de §3.1 e §3.2 não foi alterado**, porque o que ele narra —
+> por que a conta Google foi recusada — continua valendo. Duas de suas frases, porém, são
+> **vocabulário de 25/08/2026** e **não** descrevem o mecanismo de hoje:
+>
+> * *"um fluxo de convite que força o cadastro do perfil antes do primeiro acesso"* (§3.2) — **o
+>   ganho continua, e ficou mais forte.** O Admin decide nome, e-mail, perfil e escopo **na mesma
+>   ação** que cria a credencial, então o perfil já está definido quando a conta passa a existir;
+>   não há mais um aceite a esperar.
+> * *"o Supabase Auth gerencia hash, rotação e recuperação"* (§3.1) — **hash e rotação sim;
+>   recuperação por e-mail, não.** Ela saiu junto com o convite. Quem esquece a senha procura o
+>   Admin, que redefine (§4.3) — e é isso que a tela de login passa a dizer, com estas palavras:
+>   *"Esqueceu a senha? Procure o administrador do sistema."*
+
+### 3.3 O fluxo de cadastro pelo Admin
+
+*(decisão de Bernardo Villas Boas, 03/10/2026, **D-USR-1** e **D-USR-2**. Esta seção descrevia o
+fluxo de convite até essa data — ver o registro ao final dela.)*
 
 ```mermaid
 sequenceDiagram
@@ -187,27 +227,71 @@ sequenceDiagram
     participant App as Next.js (Server Action)
     participant SA as Supabase Auth
     participant BD as PostgreSQL
-    participant Usu as Convidado
+    participant Usu as Pessoa cadastrada
 
-    Adm->>App: cadastra nome, e-mail, perfil, escopo
+    Adm->>App: /admin/usuarios/novo — nome, e-mail, perfil, escopo, cursos
     App->>App: valida com Zod · confere app.eh_admin()
-    App->>BD: INSERT em public.usuarios (auth_user_id NULO)
-    Note over BD: A linha existe e já tem PERFIL,<br/>mas ainda não tem credencial
-    App->>SA: auth.admin.inviteUserByEmail() (service_role)
-    SA-->>Usu: e-mail com link de convite
-    Usu->>App: abre /convite/[token], define senha
-    App->>SA: valida token · cria credencial
-    SA->>BD: cria linha em auth.users
-    App->>BD: UPDATE usuarios SET auth_user_id = <id>
-    Note over BD: Espelho fechado.<br/>app.usuario_atual() passa a resolver
-    Usu->>App: primeiro acesso autenticado
+    App->>App: gera a senha temporária NO SERVIDOR
+    App->>SA: auth.admin.createUser() (service_role)
+    Note over SA: e-mail já confirmado (email_confirm = true),<br/>porque não há e-mail a confirmar<br/>marca trocar_senha = true em app_metadata
+    SA->>BD: cria a linha em auth.users
+    App->>BD: INSERT em public.usuarios (auth_user_id JÁ preenchido)
+    Note over BD: Espelho fechado na mesma ação.<br/>app.usuario_atual() já resolve
+    App-->>Adm: mostra a senha temporária UMA vez
+    Adm-->>Usu: repassa a senha em mãos (fora do sistema)
+    Usu->>App: primeiro acesso · é levada a /perfil/senha
+    Usu->>App: escolhe a senha definitiva · a obrigação é limpa
 ```
 
-**A janela entre o cadastro e o aceite é deliberada, não um efeito colateral.** Nela a linha existe
-em `public.usuarios` com perfil e escopo definidos, mas sem `auth_user_id` — logo
-`app.usuario_atual()` não resolve e a conta não alcança nada. É esse intervalo que permite ao Admin
-revisar, corrigir ou cancelar o perfil **antes** de a pessoa conseguir entrar. Uma conta nunca
-existe com poder indefinido.
+**Quatro pontos deste fluxo não são detalhe de implementação, e é por eles que ele é assim:**
+
+1. **Nenhum e-mail sai do sistema.** Não há SMTP a configurar, não há link a expirar, não há e-mail
+   que o provedor possa engolir. A senha temporária atravessa o mundo físico, na mão do Admin.
+2. **A senha é gerada no servidor e devolvida uma única vez** — não vai para coluna, nem para log,
+   nem para endereço. Quem a perder antes de entregar usa *Redefinir senha*, que gera outra.
+3. **A credencial nasce com o e-mail já confirmado** (`email_confirm: true`). Sem isso, a pessoa
+   receberia a senha em mãos e o Auth recusaria o login dizendo que o e-mail não foi confirmado — e
+   **não existe e-mail de confirmação a mandar**.
+4. **A conta nasce obrigada a trocar a senha**, e a marca vive em `app_metadata`, que o próprio
+   usuário **não** escreve. ⚠️ **Isto é guarda de percurso, não fronteira de autorização:** quem tem
+   a senha temporária já tem a conta inteira. O que a marca garante é que ninguém limpa a obrigação
+   de outra pessoa, nem a limpa pelo cliente.
+
+**A janela entre o cadastro e o primeiro acesso fechou, e o ganho que ela protegia ficou.** ⚠️
+*(Registro anterior, vencido: "A janela entre o cadastro e o aceite é deliberada, não um efeito
+colateral" — nela a linha existia em `public.usuarios` com perfil e escopo definidos e sem
+`auth_user_id`, e era esse intervalo que permitia ao Admin revisar o perfil antes de a pessoa
+conseguir entrar.)* Hoje perfil e escopo são decididos **antes** de a credencial existir, na mesma
+ação e na mesma tela: a revisão não precisa mais de um intervalo para acontecer, e **uma conta
+continua a nunca existir com poder indefinido**.
+
+⚠️ **O estado "linha sem credencial" continua possível, continua seguro e tem saída diferente.** Ele
+é onde param as contas herdadas do fluxo antigo: `app.usuario_atual()` não resolve, a RLS nega tudo
+(teste T-09) e nenhuma tela abre com dado. **O que mudou é o conserto** — não há mais *"reenviar
+convite"*, e não há senha a redefinir numa conta que nunca teve credencial; o caminho que funciona é
+**excluir a conta e cadastrar o mesmo e-mail de novo**, porque a exclusão libera o endereço (§4.6).
+É isso, com estas palavras, que a recusa de *Redefinir senha* diz nesse estado.
+
+> ⚠️ **Registro do fluxo que saiu — ele é histórico, não erro, e fica.** *(Registro anterior,
+> vencido: até 03/10/2026 esta seção trazia o **fluxo de convite** — a Server Action gravava
+> `public.usuarios` com `auth_user_id` **nulo**, chamava `auth.admin.inviteUserByEmail()` com
+> `service_role`, o Supabase mandava um e-mail com link, e a pessoa definia a senha em
+> `/convite/[token]`; o token era o do Supabase Auth, com validade padrão de 24 horas, e **convite
+> expirado era reenviado pelo Admin**, não renovado pelo próprio convidado.)*
+>
+> **Nada disso existe mais no repositório, e a ausência tem portão em vez de promessa:**
+> `tests/unidade/sem-convite-nem-envio-de-email.test.ts` varre `app/`, `lib/`, `components/` e
+> `scripts/` e reprova se `inviteUserByEmail`, `resetPasswordForEmail` ou qualquer envio de e-mail
+> voltar. ⚠️ **Ela lê código sem comentário** (regra 9.1.1 do `CLAUDE.md`): *uso mencionado não é
+> uso* — contar esta própria seção como violação ensinaria a **apagar a documentação para ficar
+> verde**, que é o contrário do que a decisão quer. ⚠️ **E ela tem controle positivo**, medindo um
+> padrão que **tem** de existir (`createUser`, o único caminho de criação de conta), porque uma
+> varredura que não acha nada passa igual quando o padrão está errado.
+>
+> **As duas rotas saíram em dias diferentes, e os dois estão no histórico do git:** `/convite` em
+> **02/10/2026** (`c7822cb`) e `/recuperar-senha` em **03/10/2026** (`908a23f`). Os seis destinos
+> `/convite` de `additional_redirect_urls` saíram no mesmo 03/10 — e **já apontavam para o vazio**
+> desde que a rota foi apagada.
 
 ### 3.4 Signup público desabilitado
 
@@ -254,26 +338,82 @@ superfície de ataque gratuita.
 ## 4. Ciclo de vida da conta
 
 ### 4.1 Criação
-Somente por convite do Admin, conforme §3.3. Não há autocadastro, não há importação em massa fora
-do ETL de migração.
+
+Somente **por cadastro do Admin**, conforme §3.3, em `/admin/usuarios/novo`. Não há autocadastro, não
+há convite, e não há importação em massa fora do ETL de migração.
+
+⚠️ *(Registro anterior, vencido: "Somente por convite do Admin, conforme §3.3".)* *(decisão de
+Bernardo Villas Boas, 03/10/2026, **D-USR-1** e **D-USR-2**)*
 
 ### 4.2 Primeiro acesso
-A pessoa define a senha em `/convite/[token]`. O token é o do Supabase Auth, com validade padrão de
-24 horas — configurável, e recomenda-se manter curto. Convite expirado é reenviado pelo Admin, não
-renovado pelo próprio convidado.
 
-### 4.3 Recuperação de senha
-Fluxo padrão do Supabase (`resetPasswordForEmail`), com uma restrição: **o e-mail só dispara se
-existir linha ativa em `public.usuarios`**. Isso evita que uma credencial órfã (conta desativada no
-domínio, mas ainda em `auth.users`) recupere acesso.
+A conta nasce com uma **senha temporária gerada no servidor**, que a tela do cadastro mostra ao Admin
+**uma única vez** e que ele repassa em mãos. No primeiro acesso a pessoa é **levada a `/perfil/senha`
+e obrigada a escolher a senha definitiva** antes de usar o sistema; só então a obrigação é limpa.
+`/perfil/senha` é a **única** tela de senha nova do sistema, e serve tanto ao caso obrigatório quanto
+à troca voluntária.
+
+⚠️ *(Registro anterior, vencido: "A pessoa define a senha em `/convite/[token]`. O token é o do
+Supabase Auth, com validade padrão de 24 horas — configurável, e recomenda-se manter curto. Convite
+expirado é reenviado pelo Admin, não renovado pelo próprio convidado.")* **Não há mais token, não há
+mais validade a expirar e não há mais convite a reenviar** *(decisão de Bernardo Villas Boas,
+03/10/2026, **D-USR-1** e **D-USR-2**)*.
+
+### 4.3 Senha esquecida — e o que existe no lugar da recuperação por e-mail
+
+**Não há recuperação de senha por e-mail.** O Admin usa *Redefinir senha* na linha da conta: o
+servidor gera outra senha temporária, mostra-a **uma vez**, marca a conta como **obrigada a trocar** e
+derruba as sessões abertas dela. A tela de login não oferece link de recuperação — ela diz o que
+fazer: *"Esqueceu a senha? Procure o administrador do sistema."*
+
+⚠️ *(Registro anterior, vencido: "Fluxo padrão do Supabase (`resetPasswordForEmail`), com uma
+restrição: **o e-mail só dispara se existir linha ativa em `public.usuarios`** …".)* A rota
+`/recuperar-senha` foi **apagada** em 03/10/2026 (`908a23f`), e `resetPasswordForEmail` **não existe
+mais no repositório** — a guarda de §3.3 reprova se ele voltar *(decisão de Bernardo Villas Boas,
+03/10/2026, **D-USR-1**)*.
+
+⚠️ **A restrição que o fluxo antigo tinha continua garantida, por outro mecanismo e de forma mais
+forte.** Ela existia para impedir que uma credencial órfã — conta desativada no domínio, ainda
+presente em `auth.users` — recuperasse acesso sozinha. Hoje **não há caminho que a pessoa percorra
+sem o Admin**, e a redefinição pelo Admin é recusada quando a conta **não tem credencial**, com a
+mensagem dizendo o que funciona (§3.3). ⚠️ **E o bloqueio de conta desativada é independente disto,
+por duas defesas**: o TypeScript filtra `status = 'ativo'` ao resolver a sessão, **e**
+`app.usuario_atual()` / `app.perfil_atual()` filtram o mesmo no banco — sem o que a policy
+`usuarios_ler` não casa. **Tirar só uma das duas não abre a porta.**
 
 ### 4.4 Desativação
+
+**A desativação continua sendo o caminho normal, e continua sendo o que se usa quando a pessoa sai da
+Divisão.** Ela bloqueia o acesso e **mantém cadastro, perfil e autoria**. ⚠️ **O que mudou em
+03/10/2026 é que ela deixou de ser o único caminho:** existe agora **exclusão permanente de conta**,
+exceção nominal à regra 4, descrita em §4.6 — *(decisão de Bernardo Villas Boas, 03/10/2026,
+**D-USR-3**)*. As duas coexistem e **não** são a mesma coisa: desativar bloqueia o acesso e preserva
+o registro; excluir é definitivo.
+
 `UPDATE public.usuarios SET status = 'inativo'` — **nunca DELETE**. Três motivos, nesta ordem:
 
 1. `criado_por` e `editado_por` de milhares de lançamentos referenciam a linha. Apagá-la orfanaria
    o histórico de autoria, violando `RNF-CONF-01` e `RNF-AUD-01`.
 2. A FK `auth_user_id → auth.users(id)` é `ON DELETE RESTRICT` — o banco recusaria de qualquer forma.
 3. É a convenção C-05 do sistema, sem exceção.
+
+> **Emenda de 03/10/2026 — os três motivos acima foram MEDIDOS, e dois deles diziam mais do que o
+> banco cumpre** *(decisão de Bernardo Villas Boas, 03/10/2026, **D-USR-3**)*. O texto fica como
+> está, porque a conclusão dele — *desativar é o caminho normal* — não mudou; o que se corrige é o
+> **mecanismo** que ele atribui ao banco:
+>
+> * **Motivo 1 é verdadeiro como consequência, não como restrição.** Medido em 03/10/2026:
+>   `criado_por` e `editado_por` existem em **27 tabelas** e **não têm FK nenhuma**. Apagar a linha
+>   **não viola restrição alguma** — o que se perde é a **resolução do autor**, e o histórico passaria
+>   a exibir `uuid` sem nome. É exatamente por isso que a exclusão de §4.6 tem **dois caminhos**.
+> * **Motivo 2 não impede apagar a linha de `public.usuarios`.** A FK é `restrict` na direção
+>   oposta: ela impede apagar a **credencial** em `auth.users` enquanto a linha de `usuarios` a
+>   referenciar. Medido no mesmo dia: `auth.admin.deleteUser` respondia *"Database error deleting
+>   user"* por `usuarios_auth_user_id_fkey`. É isso que fixa a ordem da exclusão — **cadastro
+>   primeiro, credencial depois**.
+> * **Motivo 3 continua inteiro**, com a exceção nominal de §4.6 anotada ao lado dele: ela não
+>   enfraquece a convenção C-05, porque **não há policy nem privilégio de `DELETE`** em lugar
+>   nenhum — quem apaga é uma função `SECURITY DEFINER` com porteiro dentro.
 
 O efeito é imediato e não depende de sessão: `app.usuario_atual()` filtra por `status = 'ativo'`,
 então o token que a pessoa já tem no navegador para de resolver na consulta seguinte. **Verificado
@@ -303,9 +443,76 @@ pelo teste T-11.**
 > tenta trocar a senha por uma de 11 caracteres pelo mesmo caminho da tela de convite e exige a
 > recusa, citando o número. Conferido por defeito deliberado — com o mínimo de volta em 6, reprova.
 
+> **Nota de 03/10/2026 sobre a emenda acima** *(decisão de Bernardo Villas Boas, 03/10/2026,
+> **D-USR-1**)*. **A emenda de 09/09/2026 é registro histórico com data e fica inteira**, inclusive o
+> caminho `app/(auth)/convite/FormularioDeSenha.tsx`, que era onde o defeito morava **naquele dia**.
+> Duas atualizações, para quem for conferir hoje:
+>
+> * **Aquele arquivo não existe mais.** A tela única de senha nova é `/perfil/senha`, e o formulário
+>   é `app/(app)/perfil/senha/FormularioDeSenhaNova.tsx`.
+> * **O teste continua medindo o caminho de produção**, e é o mesmo mecanismo: `auth.updateUser({
+>   password })`, que é literalmente o que `lib/acoes/perfil.ts` chama. ⚠️ **Só o nome da tela mudou;
+>   a política e a prova não.**
+
 As duas ausências são deliberadas e alinhadas à orientação corrente de segurança (NIST SP 800-63B):
 exigir símbolo e trocar senha a cada 90 dias produz senhas piores, previsíveis e anotadas em papel.
 Comprimento e verificação de vazamento defendem mais, e incomodam menos.
+
+### 4.6 Exclusão permanente de conta
+
+*(decisão de Bernardo Villas Boas, 03/10/2026, **D-USR-3** e **D-USR-4**)*
+
+> *"O admin exclui permanentemente qualquer conta (menos a própria e o último admin), em qualquer
+> estado; e-mail liberado."* — **D-USR-3**
+
+**Esta é uma emenda nominal à regra 4 do `CLAUDE.md`**, que até 03/10/2026 cobria três tabelas
+(`instrutores`, `disciplinas`, `unidades_ensino`) e dizia *"nenhuma outra tabela ganha exceção"*.
+`usuarios` entra por decisão expressa desta data, e o registro está no `CLAUDE.md`. ⚠️ **Continua sem
+policy e sem privilégio de `DELETE`:** quem apaga é `public.excluir_conta`, `SECURITY DEFINER`, com
+porteiro de Admin dentro, e o rastro vai para `auditoria_de_conta` **antes** de a linha mudar.
+
+**São dois caminhos, e a razão é medida, não estética:**
+
+| Estado da conta | O que acontece |
+|---|---|
+| **Nunca carimbou nada** (não é autora de registro algum) | A linha sai **inteira**, com a credencial. Não há histórico a proteger — a mesma lógica da exceção de instrutor |
+| **Carimbou algo** (é autora em qualquer tabela) | A linha **fica, anonimizada**: nome e nome de exibição viram *"Conta excluída"*, a foto sai, `auth_user_id` vira nulo, `excluida_em` é marcada, e a credencial é apagada de vez |
+
+⚠️ **Nos dois caminhos o e-mail é liberado para um novo cadastro**, que é requisito: no segundo, o
+endereço vai para um sentinela `.invalid`. ⚠️ **E quem decide o caminho é o banco, não a aplicação** —
+ele mede os dependentes **dentro da mesma transação** em que apaga ou anonimiza; decidir fora abriria
+a janela em que a conta ganha um registro entre a medição e a escrita.
+
+**A ordem é cadastro primeiro, credencial depois**, e ela é imposta pela FK `restrict` de §4.4: com a
+linha ainda referenciando `auth.users`, apagar a credencial é recusado pelo banco. O risco invertido
+está declarado: **credencial órfã não alcança dado nenhum, porque sem cadastro a RLS nega tudo.**
+
+**Dois porteiros, e eles são regras separadas de propósito** — o **chão de um Admin ativo** e a
+**própria conta**. Com dois Admins a contagem libera, e a própria conta continua intocável;
+confundi-las abriria o buraco de um Admin se excluindo por engano.
+
+**A confirmação é simples: a pessoa confirma, sem digitar nada** (**D-USR-4**). ⚠️ *(Registro
+anterior, vencido por um dia: a exclusão de conta pediu o **e-mail digitado** para liberar o botão,
+no padrão das outras três exclusões permanentes, que pedem o código.)* O rótulo é **«Excluir»**, não
+«Excluir permanentemente», e o que a exclusão significa está escrito no corpo do diálogo.
+
+### 4.7 Onde essas ações vivem na interface
+
+*(decisão de Bernardo Villas Boas, 03/10/2026, **D-USR-5** e **D-USR-6**)*
+
+Isto é desenho de tela, e está aqui porque **é o que torna o ciclo de vida das §4.1 a §4.6
+alcançável** — tela sem caminho clicável é tela não entregue.
+
+* **Em cada linha de `/admin/usuarios`, quatro ações:** **Editar** · **Redefinir senha** ·
+  **Desativar/Reativar** · **Excluir** (**D-USR-6**).
+* **Editar é página própria**, `/admin/usuarios/[id]`, com **nome, perfil e acessos** — escopo e
+  vínculos de curso (**D-USR-5**). ⚠️ **Não há diálogo sobre diálogo na lista**, e a lista volta a ser
+  lista: avatar, nome, e-mail, perfil e último acesso.
+* **O cadastro também é página própria**, `/admin/usuarios/novo` (§3.3).
+* ⚠️ **A resposta de toda ação é publicada ACIMA da tabela**, não dentro da linha. **O motivo é um
+  defeito medido em 02/10/2026:** a mensagem de falha vivia na linha, em texto de 11px, e *"a ação
+  falhou"* ficava indistinguível de *"não aconteceu nada"* — e a linha excluída desmonta, levando a
+  mensagem com ela.
 
 ---
 
@@ -524,10 +731,17 @@ Três defesas em profundidade, porque a A-5 é de probabilidade baixa e impacto 
 3. **Regra de ESLint** (`no-restricted-imports`) barrando o caminho em arquivos com `"use client"`,
    para que o erro apareça no editor antes do build.
 
-Detalhe do fluxo de convite: `auth.admin.inviteUserByEmail()` **exige** `service_role`. Ela roda
+Detalhe do fluxo de cadastro: `auth.admin.createUser()` **exige** `service_role`. Ela roda
 dentro de uma Server Action, que confere `app.eh_admin()` antes — a Server Action é o único lugar
 do sistema onde a chave é legitimamente usada, e é por isso que ela merece revisão linha a linha
 sempre que mudar (documento 41).
+
+⚠️ *(Registro anterior, vencido: "Detalhe do fluxo de convite: `auth.admin.inviteUserByEmail()`
+**exige** `service_role`".)* *(decisão de Bernardo Villas Boas, 03/10/2026, **D-USR-1**)* **A
+exigência não mudou — mudou a chamada.** O uso autorizado nº 1 da `service_role` passa a ser
+**cadastro de conta pelo Admin**, no lugar de *convite de usuário pelo Admin*; `createUser`,
+`updateUserById` (redefinir senha) e `deleteUser` (exclusão) vivem todas no mesmo lugar,
+`lib/acoes/usuarios.ts`, e em nenhum outro.
 
 ### 7.3 O `GRANT` que ninguém lembra e derruba tudo
 
@@ -709,7 +923,8 @@ as encontrou nomeado.
 ## Rastreabilidade
 
 **Requisitos e regras implementados por este documento:**
-`RNF-SEG-01` (revisado — e-mail/senha por convite) ·
+`RNF-SEG-01` (revisado — e-mail/senha com conta criada pelo Admin; ⚠️ *registro anterior, vencido:*
+*"e-mail/senha por convite"* — *decisão de Bernardo Villas Boas, 03/10/2026, **D-USR-1***) ·
 `RNF-SEG-02` **[ABSORVIDO PELA PLATAFORMA]** — vira RLS ·
 `RNF-SEG-03` (lock → transação PostgreSQL) ·
 `RNF-SEG-04` **[ABSORVIDO]** — não há como uma refatoração expor escrita sem policy ·

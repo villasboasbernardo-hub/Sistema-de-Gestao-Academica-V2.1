@@ -3,6 +3,102 @@
 **Diretório**: `specs/004-auth-convite-e-rbac` · **Criado**: 08/09/2026 · **Origem**: documento 06
 §Épico 3 · **Ramo**: `feat/EPICO-3-auth-convite-e-rbac`
 
+---
+
+## ⚠️ TARJA — O FLUXO QUE ESTA SPEC ESPECIFICA FOI SUPERADO, E ELA NÃO É REESCRITA
+
+*(decisões **D-USR-1** a **D-USR-6**, de **Bernardo Villas Boas**, **03/10/2026**, na reconferência do
+PR 2 da spec 011)*
+
+**O convite por e-mail foi PERMANENTEMENTE removido do sistema, e com ele a recuperação de senha por
+link.** Tudo o que esta spec escreve sobre convidar, reenviar convite, link de uso único, definição
+de senha pelo convidado e recuperação por e-mail é **registro histórico**: diz o que foi
+especificado, implementado e provado em 08 e 09/09/2026, e **não descreve o sistema de hoje**.
+
+⚠️ **E ela FICA inteira, por decisão.** Apagar o que ela diz perderia a razão das coisas — por que
+`usuarios.auth_user_id` é nulável, por que existem contas no estado *cadastro sem credencial*, e por
+que `NEXT_PUBLIC_URL_APLICACAO` nasceu. Quem lê daqui para baixo está lendo o **passado**; quem
+precisa do presente vai para o **fluxo vigente**, logo abaixo.
+
+### O fluxo vigente, e onde ele mora
+
+Especificação: **`specs/011-gestao-de-usuarios/`**. As seis decisões de 03/10/2026:
+
+| # | Decisão |
+|---|---|
+| **D-USR-1** | Convite por e-mail **permanentemente removido**; **nenhum envio de e-mail** |
+| **D-USR-2** | **Cadastro pelo Admin**, com **senha temporária mostrada uma vez**; troca **obrigatória** no primeiro acesso |
+| **D-USR-3** | O Admin **exclui permanentemente** qualquer conta — menos a própria e o último Admin —, **em qualquer estado**; o **e-mail é liberado** |
+| **D-USR-4** | **Confirmação simples**, sem digitar nada |
+| **D-USR-5** | **Editar em página própria**: nome, perfil e acessos |
+| **D-USR-6** | Em cada linha da lista: **Editar · Redefinir senha · Desativar/Reativar · Excluir** |
+
+**Medido no repositório em 03/10/2026**, para que ninguém precise redescobrir onde o fluxo vigente
+vive: o caminho **único** de criação de conta é `auth.admin.createUser()` — **uma única** chamada em
+`app/`, `lib/`, `components/` e `scripts/`, em `lib/acoes/usuarios.ts`, dentro de `cadastrarUsuario`
+—, pela tela `app/(app)/admin/usuarios/novo/`; a edição é `app/(app)/admin/usuarios/[id]/`; e
+`app/(auth)/` tem **`login/` e mais nada** — **`/convite` e `/recuperar-senha` não existem**.
+`inviteUserByEmail`, `resetPasswordForEmail` e qualquer chamada de envio de e-mail **não aparecem no
+repositório**, e há varredura que **reprova se voltarem**, em
+`tests/unidade/sem-convite-nem-envio-de-email.test.ts`.
+
+### O que desta spec passou a ser histórico, item por item
+
+A numeração abaixo é **sempre da spec 004** — cada spec reusa os mesmos números com conteúdo
+diferente.
+
+- **US1** inteira (*"O Admin convida, a pessoa entra"*) — **superada pela D-USR-2**: hoje o Admin
+  **cadastra** a conta e **entrega a senha temporária em mãos**, e ela é mostrada **uma vez**. O que a
+  US1 garantia — *"em nenhum momento o Admin conhece ou digita a senha de outra pessoa"* — **mudou de
+  forma**: o Admin vê a senha **temporária**, que serve uma vez, e a pessoa define a dela na troca
+  obrigatória do primeiro acesso.
+- **US4** inteira (*"A pessoa recupera o próprio acesso"*) — **superada, e sem sucessora de mesma
+  forma**: quem esquece a senha **procura o Admin**, que redefine (D-USR-6). A frase está na tela de
+  login, medida em `app/(auth)/login/page.tsx`: *"Esqueceu a senha? Procure o administrador do
+  sistema."*
+- **FR-007** a **FR-013** — **históricos** (início pelo Admin, linha antes da credencial, link de uso
+  único, fechamento do espelho no aceite, reenvio, recusa de duplicata, detecção de inconsistência).
+  ⚠️ **A janela que o `FR-008` chamava de deliberada DEIXOU DE TER SAÍDA**, e é por isso que a ordem
+  se inverteu: sem convite, *linha sem credencial* é conta que ninguém consegue usar e que nenhuma
+  tela conserta — hoje a **credencial vem primeiro** e, se o cadastro falhar, ela é **desfeita**.
+- **FR-014**, só no que pede **convidar** e **reenviar convite** na tela de gestão — **superado pela
+  D-USR-6**. O restante dele (**listar**, **editar perfil e escopo**, **vincular cursos** e
+  **desativar**) **continua vigente**, e a edição mudou de lugar, não de conteúdo: ela vai para
+  **página própria** (D-USR-5).
+- **FR-018** e **FR-019** (recuperação por link; disparo só para linha ativa) — **históricos**. Sem
+  envio de e-mail não há disparo a condicionar.
+- **FR-025.2** e **FR-025.3** (telas de definição de senha por convite e de recuperação) —
+  **históricos**: as rotas não existem. ⚠️ **O `FR-025.6` continua vigente**, agora para a **única**
+  tela sem sessão que restou — `/login` —, e a razão dele não mudou: agrupá-la com as autenticadas
+  faria o *middleware* exigir sessão para obter sessão. E as **cinco** telas que o `FR-025.1` a
+  `FR-025.7` contavam passaram a ser outro conjunto.
+- **FR-031**, **FR-031.1** e **SC-013** (reconstituir as contas da v2.0 **por convite**) —
+  **superados pela D-USR-3**: a conta sem credencial é **excluída e cadastrada de novo**, porque a
+  exclusão **libera o e-mail**. ⚠️ **E isso está escrito na tela**, na página da conta, onde o botão
+  de redefinir senha não aparece por não haver senha a redefinir —
+  `app/(app)/admin/usuarios/[id]/AcoesDaConta.tsx`.
+- **FR-033** (URL canônica da aplicação) — **continua existindo, com outra razão**: ela **não endereça
+  mais link de convite nem de recuperação**, porque não há nenhum.
+- **FR-036**, **SC-002** e **SC-010** — **sem objeto**. O percurso provado hoje é **cadastro → senha
+  temporária → primeiro acesso → troca obrigatória**, no caso *"O PERCURSO INTEIRO"* de
+  `tests/e2e/admin-sobre-contas.spec.ts`; a troca da própria senha fica em
+  `tests/e2e/senha-propria.spec.ts`.
+- **Premissa 3** (*"a plataforma de autenticação envia os e-mails"*) — **vencida**: não há e-mail a
+  enviar por nenhum caminho.
+- **Q3.b** (*"quem opera o convite no dia a dia?"*) — **sem objeto na forma em que foi escrita**. A
+  pergunta equivalente hoje é **quem cadastra e entrega a senha temporária**, e ela segue sendo do
+  perfil `admin`.
+
+⚠️ **O QUE A TARJA NÃO TOCA, e é a maior parte desta spec:** a **US2** (cada perfil alcança o seu), a
+**US3** (menos o reenvio), a **US5** (dado pessoal), o recorte de PII (`FR-028` a `FR-030`), a
+política de senha (`FR-006`), a sessão e o *middleware* (`FR-001` a `FR-005.2`), a autorização pela
+matriz (`FR-020` a `FR-025`), a auditoria (`FR-026` a `FR-027.1`) e os testes de segurança (`FR-034`,
+`FR-035`) **continuam vigentes**. O que saiu foi a **porta de entrada**, não o cofre — e o `FR-002`
+(*recusar criação de conta por qualquer caminho*) ficou **mais forte**, não mais fraco: não há mais
+link nenhum por onde entrar.
+
+---
+
 ## Contexto
 
 O Épico 1 entregou **toda a autorização no banco**: 23 funções `app.*`, a matriz `perfil_permissao`

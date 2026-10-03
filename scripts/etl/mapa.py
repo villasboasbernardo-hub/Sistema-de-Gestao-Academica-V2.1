@@ -407,7 +407,7 @@ USUARIOS = MapaDeTabela(
         C("ID_Instrutor_Link", "instrutor_id", T.FK_OPCIONAL, "instrutores — liga a conta ao cadastro docente"),
         C("Status", "status", T.STATUS, "⚠️ inativo faz app.usuario_atual() devolver NULL — PERDA DE ACESSO IMEDIATA (teste T-11)"),
         C("Ultimo_Acesso", "ultimo_acesso", T.INSTANTE),
-        C(None, "auth_user_id", T.LITERAL, "⚠️ NULL na carga. Preenchido pelo EPICO 3, no convite. NULL = 'credencial ainda nao criada', e a RLS nega tudo nesse estado, CORRETAMENTE (T-09)"),
+        C(None, "auth_user_id", T.LITERAL, "⚠️ NULL na carga. Preenchido quando o Admin CADASTRA a conta (D-USR-2; era 'no convite', e o convite saiu em 03/10/2026). NULL = 'conta sem credencial, que nao entra', e a RLS nega tudo nesse estado, CORRETAMENTE (T-09)"),
         C(None, "observacao", T.LITERAL, "NULL"),
         C("ID_Usuario", "origem_migracao_v1", T.PROCEDENCIA),
         # ⚠️ SEM colunas de auditoria: conferido em 08/09/2026, esta aba NAO tem

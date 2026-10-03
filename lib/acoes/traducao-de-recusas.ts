@@ -336,6 +336,60 @@ function porChave(
         "Corrigir um rastro é registrar um evento novo, nunca reescrever o antigo."
       );
 
+    /*
+     * As quatro da trilha de contas (spec 011, PR 2). ⚠️ **As três últimas descrevem estados que a
+     * tela já evita** — a Server Action confere sessão e perfil Admin antes de chamar o banco —, e
+     * por isso elas chegariam aqui vindas de chamada direta. **Traduzi-las mesmo assim é o barato:**
+     * a alternativa é a frase genérica, que manda a pessoa adivinhar, e a guarda de cobertura existe
+     * justamente para que ninguém decida por nós que uma chave "nunca chega à tela".
+     */
+    case "auditoria_imutavel":
+      return (
+        "O registro de auditoria não pode ser alterado nem apagado. " +
+        "Corrigir um registro é gravar um evento novo, nunca reescrever o antigo."
+      );
+
+    case "auditoria_sem_autor":
+      return "Sua sessão expirou antes de o registro ser gravado. Entre de novo e repita a ação.";
+
+    case "auditoria_sem_permissao":
+      return "Registrar ação sobre conta é restrito ao perfil Administrador.";
+
+    /*
+     * As seis da exclusão de conta (M3 da spec 011). ⚠️ **Elas chegam à tela de verdade**: o diálogo
+     * da lista chama a ação, e o porteiro do banco é a última palavra — a conferência da regra pura,
+     * que vem antes, existe para a frase ser legível, não para substituir esta.
+     */
+    case "conta_sem_sessao":
+      return "Sua sessão expirou antes de a exclusão acontecer. Entre de novo e repita.";
+
+    case "conta_sem_permissao":
+      return "Excluir conta é restrito ao perfil Administrador.";
+
+    case "conta_inexistente":
+      return "Esta conta não existe mais — alguém pode tê-la excluído antes. Recarregue a lista.";
+
+    case "conta_ja_excluida":
+      return "Esta conta já foi excluída.";
+
+    case "conta_propria":
+      return (
+        "Ninguém exclui a própria conta. Peça a outro Administrador — é o que evita que alguém " +
+        "se tranque fora do sistema sem perceber."
+      );
+
+    case "ultimo_admin":
+      return (
+        "Não é possível excluir esta conta: ela é o último Administrador ativo, e o sistema " +
+        "precisa de pelo menos um. Promova outra conta a Administrador antes."
+      );
+
+    case "auditoria_sem_codigo":
+      return (
+        "Esta conta não tem código legível, e o registro de auditoria depende dele para ser " +
+        "reconferível depois. Avise o suporte: a conta precisa de código antes da ação."
+      );
+
     case "periodo_fora_da_janela": {
       const turma = typeof d?.["turma"] === "string" ? d["turma"] : undefined;
       const inicio = typeof d?.["data_inicio"] === "string" ? d["data_inicio"] : undefined;

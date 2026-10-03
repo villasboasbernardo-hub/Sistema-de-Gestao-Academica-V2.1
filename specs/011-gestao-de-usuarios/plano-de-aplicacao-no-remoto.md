@@ -116,3 +116,285 @@ alter table public.usuarios drop column if exists avatar_caminho;
 Com foto cadastrada, a convenção de banco manda virá-la comentário `[APOSENTADA]` e deixá-la.
 ⚠️ **E os arquivos já enviados não voltam**: apagar o balde com objeto dentro perderia dado que
 ninguém mandou apagar. Hoje o balde tem **zero** objetos.
+
+---
+
+# PR 2 — `20261002195248_auditoria_de_conta.sql` (T024)
+
+**Autorização:** Bernardo Villas Boas, nesta sessão: *"Siga direto para o PR 2 … na mesma sequência:
+implement → verificar:tudo → subir → CI verde → backup → dry-run → migration no remoto."* CI verde nos
+três blocos sobre `3b65a61` (run `37062800080`).
+
+| # | Passo | Resultado medido |
+|---|---|---|
+| 1 | **Backup**, `--somente-copia` | `remoto-20261002-175617.sql`, fora do git |
+| 2 | **Dry-run** | *"Would push: • 20261002195248_auditoria_de_conta.sql"* — **uma só**, sem `seed` nem `role` |
+| 3 | **Aplicação**, `pnpm db:push` | `Applying migration …` · saída **0** |
+| 4 | **Retrato depois** | `remoto-20261002-175711.sql` — é ele que sustenta a conferência 2 |
+
+## A conferência, só por leitura
+
+**1. Migrations:** **47 entradas, as 47 nos dois bancos**, nenhuma só de um lado; a última é
+`20261002195248`.
+
+**2. Zero linhas pré-existentes alteradas.** O `diff` dos dois retratos de dados traz **uma coisa só**,
+além do par de linhas de RESTRICT/UNRESTRICT que o `pg_dump` sorteia a cada execução: o **cabeçalho da
+tabela nova**, `-- Data for Name: auditoria_de_conta`, **sem nenhuma linha de dado**. `usuarios` não tem
+uma única diferença.
+
+⚠️ **Esta é a lição do gotcha 13 aplicada:** a conferência é o `diff` dos **dois retratos datados**, e
+não um md5 de conteúdo — que num banco vivo muda sozinho por carimbo de acesso, justamente enquanto a
+operação acontece.
+
+**3. Esquema, objeto a objeto:**
+
+| | Objetos | md5 do conjunto |
+|---|---|---|
+| Local | **1.589** | `1e5e35cc74c63257b72b1e609fd50204` |
+| Remoto | **1.589** | `1e5e35cc74c63257b72b1e609fd50204` |
+
+Comparação **linha a linha** das 1.590 linhas de saída: **diff vazio**.
+
+**4. A trilha nasce vazia e fechada:**
+
+| O quê | Medido no remoto |
+|---|---|
+| Linhas em `auditoria_de_conta` | **0** — ela nasce vazia |
+| Policies | **1**, e de `SELECT` |
+| `INSERT`/`UPDATE`/`DELETE`/`TRUNCATE` para `authenticated`/`anon` | **0** |
+| Gatilhos não internos | **2** — o de `update`/`delete` e o de `truncate` |
+| Policies de `DELETE` no **catálogo inteiro** | **0** — a regra 4 continua inteira |
+| Contas em `usuarios` | **5**, intactas |
+
+**5. Production respondendo como antes:** `/login` **200**; `/`, `/perfil`, `/admin/usuarios`,
+`/cursos` e `/disciplinas` **307** para o login. Nenhum erro novo.
+
+## Reversão
+
+No cabeçalho da migration. ⚠️ **`drop table` só se a tabela estiver VAZIA** — hoje está. Com linha
+dentro, apagar a tabela seria apagar rastro de ação que aconteceu, que é o que a regra 4 impede; a
+reversão então para na função e nos gatilhos, e a tabela fica.
+
+---
+
+# PR 2 (reconferência) — `20261003000205_exclusao_de_conta.sql`
+
+**Autorização:** Bernardo Villas Boas, 03/10/2026: *"Se a anonimização exigir migration, faça com o
+rito (backup, dry-run só com ela, conferência)."* CI verde nos três blocos sobre `d742644`
+(run `37086988008`).
+
+| # | Passo | Resultado medido |
+|---|---|---|
+| 1 | **Backup**, `--somente-copia` | `remoto-20261002-224755.sql`, fora do git |
+| 2 | **Dry-run** | *"Would push: • 20261003000205_exclusao_de_conta.sql"* — **uma só**, sem `seed` nem `role` |
+| 3 | **Aplicação**, `pnpm db:push` | `Applying migration …` · saída **0** |
+| 4 | **Retrato depois** | `remoto-20261002-224823.sql` — é ele que sustenta a conferência 2 |
+
+## A conferência, só por leitura
+
+**1. Migrations:** **48 entradas, as 48 nos dois bancos**, nenhuma só de um lado.
+
+**2. Zero valores pré-existentes alterados.** O `diff` dos dois retratos de dados traz **uma coisa
+só**, além do par de linhas que o `pg_dump` sorteia: a coluna **`excluida_em`** entrando na lista do
+`INSERT` de `usuarios`, com **`NULL` nas cinco linhas**. Nenhum outro valor mudou — nem o nome de
+exibição, nem o caminho do avatar, nem a situação das duas contas que você desativou no preview.
+
+⚠️ **E ISSO É A LIÇÃO DO GOTCHA 13 APLICADA:** a conferência é o `diff` dos **dois retratos datados**,
+nunca um md5 de conteúdo — que num banco vivo muda sozinho por carimbo de acesso.
+
+**3. Esquema, objeto a objeto:**
+
+| | Objetos | md5 do conjunto |
+|---|---|---|
+| Local | **1.595** | `1a202cfc16af192f3e04ee64b682dda2` |
+| Remoto | **1.595** | `1a202cfc16af192f3e04ee64b682dda2` |
+
+Comparação **linha a linha** das 1.596 linhas: **diff vazio**.
+
+**4. A exclusão está de pé, e a regra 4 continua inteira:**
+
+| O quê | Medido no remoto |
+|---|---|
+| `usuarios.excluida_em` | existe, e está **nula** nas 5 contas |
+| Contas excluídas | **0** — a coluna nasce sem uso |
+| `excluir_conta` e `dependentes_da_conta` | as **2**, e as **2** são `SECURITY DEFINER` |
+| Policies de `DELETE` no **catálogo inteiro** | **0** — a emenda autorizou a FUNÇÃO, não uma policy |
+| Contas em `usuarios` | **5**, intactas |
+| Linhas em `auditoria_de_conta` | **4** — as suas ações no preview, preservadas |
+
+**5. Production respondendo como antes:** `/login` **200**; `/`, `/admin/usuarios` e `/perfil`
+**307** para o login.
+
+## Reversão
+
+No cabeçalho da migration. ⚠️ **O `drop column` só é seguro enquanto nenhuma conta tiver sido
+excluída** — hoje são zero. Com linha anonimizada, perder a coluna faria a conta voltar a aparecer na
+lista como se estivesse viva, chamada *"Conta excluída"*, que é pior que o estado de antes.
+
+---
+
+# PR 2 (reconferência) — `20261003042704_porteiro_de_admin_nao_falha_aberto.sql`
+
+## ✅ APLICADA NO REMOTO em 03/10/2026, com autorização de Bernardo Villas Boas na mesma sessão,
+depois do CI verde em `133504c`.
+
+Este bloco foi escrito **antes** da aplicação, de propósito: ele era o plano, e os números da
+conferência entraram **depois**, nos marcadores — nunca por antecipação (regra 9.3).
+
+## Por que ela existe, e como apareceu
+
+⚠️ **Ela não saiu de conferência de tela nem de revisão: saiu de um defeito deliberado.** Ao deixar
+inerte o porteiro de `public.excluir_conta` para ver o caso novo de RLS reprovar, a recusa chegou de
+**outra** função — `public.registrar_acao_em_conta` —, e ler o porteiro dela mostrou a forma do
+**gotcha 15** ainda viva: `if not app.eh_admin() then raise`.
+
+⚠️ **O ator não é hipotético: é a conta que o Admin acabou de desativar.** Desativar **não toca a
+credencial** — é de propósito, o cadastro fica —, então ela continua autenticando;
+`app.perfil_atual()` filtra `status = 'ativo'` e a ignora; `app.eh_admin()` devolvia **NULL**; e
+`if not NULL` **não entra no `if`**. **Medido no banco local, com sessão real:** a conta desativada
+**gravou** uma linha na trilha, com `error: null`.
+
+⚠️ **O custo é permanente:** a trilha é só de acréscimo e imutável **inclusive para a
+`service_role`** — linha forjada ali não sai nunca, e a trilha é a primeira coisa que alguém lê ao
+investigar uma conta.
+
+⚠️ **A varredura do catálogo desmentiu o tamanho do problema:** dos **9** porteiros escritos
+`if not app.<fn>()`, **8** chamam `app.pode()`, que devolve `false` **explícito** quando não há
+perfil, e `app.impedir_autoescalonamento()` usa a forma **positiva**, que falha fechada. Era **uma**
+função.
+
+## O que ela muda, e o que não muda
+
+| Muda | Não muda |
+| --- | --- |
+| `app.eh_admin()` devolve `coalesce(…, false)` — **nunca mais NULL** | As **6** policies que a chamam: em posição de porteiro booleano, NULL e `false` dão o **mesmo** veredito |
+| O porteiro de `registrar_acao_em_conta` passa a `coalesce(…) is not true` | A assinatura, os privilégios e o corpo restante das duas funções |
+| — | **Nenhuma linha de dado.** Ela não lê nem escreve `usuarios`, a trilha, nem qualquer tabela |
+
+## O rito, na ordem em que foi executado
+
+1. `python -m scripts.manutencao.dado_do_remoto --somente-copia` — e **o nome do arquivo datado
+   entra aqui**: **`remoto-20261003-023406.sql`** (1.795 KB, fora do git, com dado pessoal).
+2. `supabase db push --linked --dry-run` — a lista trouxe **só** esta migration, uma linha.
+3. `supabase db push --linked` — saiu **0**, uma migration aplicada.
+4. A conferência abaixo, **só por leitura**, feita na hora.
+
+## A conferência, só por leitura
+
+| O que | Esperado | Medido |
+| --- | --- | --- |
+| Migrations dos dois lados | **49 e 49**, nenhuma só de um | **49** no remoto ✅ |
+| Impressão digital do esquema | **igual** nos dois bancos, `diff` vazio | **`ed9de773…`, 1.595 objetos, idêntica**, `diff` vazio nas 1.596 linhas ✅ |
+| `app.eh_admin()` sem sessão | **`false`**, não NULL | **`false`** — era **NULL** antes do push ✅ |
+| Funções com `if not app.eh_admin()` | **0** no catálogo | **0** — era **1** antes do push ✅ |
+| Linhas em `auditoria_de_conta` | **as mesmas de antes** — a migration não grava | **4**, as mesmas ✅ |
+| Contas em `usuarios` | **5**, intactas | **5 vivas de 5**, **0** excluídas ✅ |
+| Production | respondendo como antes | `/login` **200**; `/`, `/admin/usuarios`, `/perfil` e `/instrutores` **307** ✅ |
+
+⚠️ **E DUAS LINHAS QUE NÃO ESTAVAM NO PLANO, medidas porque a primeira versão desta migration
+mexia em privilégio:** a ACL de `app.eh_admin()` no remoto ficou
+`{=X/postgres,postgres=X,authenticated=X}` — **idêntica à da irmã `app.pode()`**, portanto **nada
+mudou** ali; e as **6** policies que a chamam seguem as mesmas. **Zero** policies de `DELETE` no
+catálogo inteiro, como sempre.
+
+⚠️ **A IMPRESSÃO DIGITAL MUDOU DE VALOR, E ISSO ERA O ESPERADO:** ela era `1a202cfc…` antes e
+`ed9de773…` depois, porque **o corpo de duas funções mudou** — é o que a migration faz. O que importa
+é que mudou **do mesmo jeito nos dois bancos**: os dois medem `ed9de773…` com **1.595** objetos e
+`diff` vazio. **Número de objetos igual antes e depois** confirma que nada foi criado nem perdido.
+
+## Reversão
+
+Recriar as duas funções como estavam em `20260830000111` e `20261002195248`, cujo texto está no
+repositório. ⚠️ **Reverter reabre o buraco** — a reversão está escrita porque o DoD 6 a exige, não
+porque deva ser usada.
+
+---
+
+# PR 2 (3ª reconferência) — `20261003164335_ultimo_admin_conta_so_quem_entra.sql`
+
+## ✅ APLICADA NO REMOTO em 03/10/2026, com autorização de Bernardo Villas Boas na mesma sessão,
+
+depois do CI verde em `ef16473`.
+
+## Por que ela existe
+
+⚠️ **ERA UM BURACO ABERTO NO REMOTO, e ele é o oposto do que a `FR-042` promete.** Medido só por
+leitura: das cinco contas, **três** são `admin`/`ativo` e **uma** consegue entrar — `USR-01` e
+`USR-02` vieram do ETL e **não têm credencial nenhuma**. As duas guardas do chão (o gatilho de
+`UPDATE` e `public.excluir_conta`) contavam **linhas**, não pessoas: elas viam três Administradores.
+
+⚠️ **A consequência:** era possível rebaixar, desativar ou **excluir** o único Administrador que
+entra, e **não sobraria ninguém capaz de desfazer**. A guarda existia, estava escrita, parecia certa
+— e protegia um número.
+
+## O rito, na ordem em que foi executado
+
+1. `--somente-copia` → **`remoto-20261003-141140.sql`** (1.795 KB, fora do git).
+2. `db push --linked --dry-run` → **uma linha só**: `20261003164335`.
+3. `db push --linked` → **0**.
+4. A conferência abaixo, **só por leitura**, na hora.
+
+## A conferência, só por leitura
+
+| O que | Esperado | Medido |
+| --- | --- | --- |
+| Migrations dos dois lados | **51 e 51** | **51** ✅ |
+| Impressão digital | igual nos dois, `diff` vazio | **`ba7f116c…`, 1.595 objetos**, `diff` vazio nas 1.596 linhas ✅ |
+| Gatilho conta credencial | sim | `auth_user_id is not null` presente ✅ |
+| `excluir_conta` conta credencial | sim | `u.auth_user_id is not null` presente ✅ |
+| Admins ativos — contagem ingênua | **3** | **3** ✅ |
+| Admins ativos **que entram** | **1** | **1** ✅ — é a assimetria que a migration existe para enxergar |
+| Contas vivas · trilha · policies de `DELETE` | 5 · 4 · 0 | **5 · 4 · 0** ✅ |
+| Production | respondendo como antes | `/login` **200**; `/` e `/admin/usuarios` **307** ✅ |
+
+⚠️ **A IMPRESSÃO DIGITAL MUDOU DE VALOR, e era o esperado:** ela resume `prosrc`, e duas funções
+mudaram de corpo. O que importa é que mudou **do mesmo jeito nos dois bancos**, e que o **número de
+objetos ficou igual** — nada nasceu nem se perdeu.
+
+## Reversão
+
+Reaplicar `20260909020000` (o gatilho) e `20261003000205` (a função), que estão no repositório.
+Nenhuma linha de dado é tocada. ⚠️ **Reverter reabre o buraco.**
+
+---
+
+# PR 2 (registro que faltava) — `20261003105719_comentarios_de_catalogo_corrigidos.sql`
+
+## ✅ APLICADA NO REMOTO em 03/10/2026, com autorização de Bernardo Villas Boas na mesma sessão
+
+⚠️ **ESTE BLOCO NASCEU DE UMA FALTA, e a falta é o registro, não a aplicação.** A migration foi
+aplicada pelo rito completo e a conferência está na mensagem do commit `4ea4f4f` — mas **não entrou
+neste documento**, que é o lugar onde o rito se lê. Quem contasse as migrations do PR 2 por aqui
+acharia **quatro**, e o ramo carrega **cinco**; o salto de **49 para 51** entre os dois blocos
+vizinhos é o rastro de que ela passou.
+
+## O que ela faz
+
+Corrige **texto gravado no catálogo** do banco — nada de comportamento. Dois comentários diziam o
+contrário do código: `public.excluir_conta` afirmava que a credencial sai **ANTES** da chamada (a
+ordem medida é **depois**, forçada pela FK `restrict`), e o corpo de `public.dependentes_da_conta`
+afirmava que a mesma forma de porteiro em `registrar_acao_em_conta` era *"inofensiva por acidente"* —
+falso, e medido no mesmo dia: a conta desativada **gravou** linha na trilha imutável.
+
+## O rito, na ordem em que foi executado
+
+1. `--somente-copia` → **`remoto-20261003-075920.sql`**.
+2. `db push --linked --dry-run` → **uma linha só**: `20261003105719`.
+3. `db push --linked` → **0**.
+
+## A conferência, só por leitura
+
+| O que | Medido |
+| --- | --- |
+| Migrations dos dois lados | **50 e 50** ✅ |
+| Impressão digital | **`b9ef4e87…`, 1.595 objetos**, idêntica nos dois, `diff` vazio ✅ |
+| O comentário de `excluir_conta` | diz **DEPOIS** ✅ (dizia ANTES) |
+| O corpo de `dependentes_da_conta` | **sem** a afirmação falsa ✅ |
+| Contas vivas · trilha · policies de `DELETE` | **5 · 4 · 0** ✅ |
+| `app.eh_admin()` sem sessão | **`false`** ✅ |
+| Production | respondendo como antes ✅ |
+
+## Reversão
+
+Reaplicar os textos de `20261003000205`. Nenhuma linha de dado é tocada, nenhuma assinatura muda,
+nenhum privilégio muda.

@@ -12,6 +12,12 @@ origem: "BRIEF-v2.1 §1, §6 · documento 20 (Arquitetura Alvo) · documento 24 
 > Ele detalha o BRIEF §6 e pressupõe o documento 20 (fronteira servidor/cliente, fluxo de leitura,
 > fluxo de escrita, tradução de erro). O que já está lá **não é repetido aqui** — é citado.
 
+> ⚠️ **As emendas de 03/10/2026 (D-USR-1 a D-USR-6) estão SÓ NESTE `.md`.** O
+> `25-Camada-de-Dados-e-Estado.docx` é o **documento original entregue** e **não foi emendado nem
+> apagado** — é assim que a regra 4 manda tratá-lo. **Na divergência, o `.md` prevalece** *(decisão de
+> Bernardo Villas Boas, 17/09/2026)*, e este documento passa a constar da lista dos que divergem do
+> `.docx`.
+
 ## 0. O mapa de decisão em uma tabela
 
 A pergunta operacional é sempre a mesma: *"onde este estado mora?"*. Há quatro respostas possíveis,
@@ -465,11 +471,20 @@ no dia a dia:
 |---|---|---|---|---|
 | **navegador** | `lib/supabase/client.ts` | Client Components (login, upload, realtime) | sim | do usuário |
 | **servidor** | `lib/supabase/server.ts` | Server Components, Server Actions, Route Handlers | sim | do usuário |
-| **admin** | `lib/supabase/admin.ts` | 3 usos autorizados (convite, ETL, manutenção) | **não** | nulo |
+| **admin** | `lib/supabase/admin.ts` | 3 usos autorizados (cadastro e administração de conta, ETL, manutenção) | **não** | nulo |
 
 **Padrão: `server.ts` em 95% do código.** `client.ts` só quando a operação nasce de um evento do
 navegador que não pode virar Server Action (autenticação, upload direto ao Storage). `admin.ts`
 tem lista fechada de usos e regra de ESLint que a impõe (documento 24 §5.2).
+
+> **Emenda de 03/10/2026 — o primeiro uso autorizado mudou de nome** *(decisão de Bernardo Villas
+> Boas, 03/10/2026, **D-USR-1**)*. ⚠️ *(Registro anterior, vencido: "3 usos autorizados (**convite**,
+> ETL, manutenção)".)* **O convite por e-mail foi removido permanentemente**, e o que a `service_role`
+> faz no lugar dele é **cadastrar e administrar conta** — `createUser`, `updateUserById` (redefinir
+> senha) e `deleteUser` (exclusão permanente). ⚠️ **A lista continua fechada em três, e a regra de
+> ESLint ficou mais apertada do que "uma pasta":** medido em `eslint.config.mjs` nesta data, a exceção
+> é **nominal**, e `lib/acoes/usuarios.ts` é o **único** importador do cliente administrativo em
+> `app/`, `lib/` e `components/`.
 
 ### 4.2 Tipos gerados — o contrato que substituiu `_Meta_Colunas`
 
@@ -649,7 +664,18 @@ escrita **na Server Action**, ao lado da mutação, e não em cada view que por 
 | `salvarPlanejamento` (RPC) | RF-2027-04 | `/cronograma`, `/inicio` | `planejamento-<ano>` |
 | `atualizarParametroNormativo` | RNF-NORM-08 | — | **`config-parametros`** (atinge tudo) |
 | `atualizarCalendario` (feriado/janela/reserva) | RF-DADOS-04 | `/admin/calendario`, `/cronograma` | `calendario-<ano>` |
-| `convidarUsuario` / `atualizarUsuario` | RF-AUTH-05 | `/admin/usuarios` | `perfis-usuario` |
+| `cadastrarUsuario` · `editarNomeDeConta` · `editarPerfilEEscopo` · `redefinirSenha` · `desativar` / `reativar` · `excluirConta` | RF-AUTH-05 | `/admin/usuarios` (a lista, `/novo` e `/[id]`) | `perfis-usuario` |
+
+> **Emenda de 03/10/2026 — a linha das contas** *(decisão de Bernardo Villas Boas, 03/10/2026,
+> **D-USR-1** a **D-USR-6**)*. ⚠️ *(Registro anterior, vencido: "`convidarUsuario` /
+> `atualizarUsuario`".)* **`convidarUsuario` não existe mais** — o convite por e-mail foi removido
+> permanentemente —, e `atualizarUsuario` virou **duas** ações. ⚠️ **A divisão não é cosmética: ela é da
+> trilha de auditoria.** `editar_nome` e `editar_perfil` são eventos distintos em
+> `auditoria_de_conta`; um botão só mandaria sempre os dois, e **toda correção de grafia de nome
+> passaria a registrar troca de perfil**. ⚠️ **E a invalidação destas ações hoje é por CAMINHO, não por
+> etiqueta** — `revalidatePath("/admin/usuarios")`, medido em `lib/acoes/usuarios.ts` nesta data. A
+> etiqueta `perfis-usuario` fica na tabela como contrato de desenho para quando o perfil for lido fora
+> da Administração; a regra 4 abaixo é o motivo de ela não ser usada para dado recortado por RLS.
 
 Regras de uso:
 
@@ -816,9 +842,17 @@ defesa em profundidade sem o custo que a v2.0 pagava.
 | **Agendar avaliação** | Consome TA e disputa a mesma grade; e `RN-AVAL-02` tem transições de estado que só o servidor conhece |
 | **Fechar semana do DSA** | RPC multi-tabela (documento 20 §5.1a). Ou aconteceu inteiro, ou não aconteceu |
 | **Salvar planejamento anual** | Promoção `Rascunho`→`Salvo` com arquivamento da versão anterior. Invariante "no máximo 1 `Salvo` por ano" não admite estado intermediário na tela |
-| **Convidar usuário** | Efeito externo (e-mail enviado). Não se pode desfazer um e-mail |
+| **Cadastrar conta, redefinir senha ou excluir conta** | A senha temporária é **gerada no servidor** e mostrada **uma vez** — não há o que exibir antes da resposta, e uma tela otimista mostraria uma senha que talvez não exista. A exclusão é **definitiva**, e o caminho que o banco escolhe (apagar ou anonimizar) só se conhece depois da transação |
 | **Desativar instrutor** | `RN-INST-02` exige confirmação e tem efeito em cascata na exibição de vínculos |
 | **Qualquer escrita sujeita a RLS de alçada duvidosa** | Otimismo aqui mostra sucesso e reverte com "você não tinha permissão" — a pior mensagem possível |
+
+> **Emenda de 03/10/2026 — a linha de usuário** *(decisão de Bernardo Villas Boas, 03/10/2026,
+> **D-USR-1** a **D-USR-3**)*. ⚠️ *(Registro anterior, vencido: "**Convidar usuário** | Efeito externo
+> (e-mail enviado). Não se pode desfazer um e-mail".)* **Não há mais convite e não há mais e-mail**,
+> então o motivo precisava trocar — mas **a conclusão não mudou: estas operações continuam sem
+> otimismo.** ⚠️ **E há um motivo que a tabela não tinha, medido em 02/10/2026:** a resposta destas
+> ações é publicada **acima da tabela**, não dentro da linha, porque a linha excluída **desmonta** e
+> levava a mensagem com ela — *"a ação falhou"* ficava indistinguível de *"não aconteceu nada"*.
 
 **A regra prática, em uma frase:** *otimismo em operação que não disputa recurso.* Tudo que toca a
 ocupação de TA, instrutor ou sala espera a confirmação do servidor — porque a disputa é justamente

@@ -6,7 +6,7 @@
  * ⚠️ SERVER ACTION É ENDPOINT HTTP DE FATO. `safeParse` na primeira linha de cada uma, sem exceção —
  * quem chama pode ser a tela ou pode ser `curl`.
  *
- * ⚠️ NENHUMA DELAS USA `service_role`. Ela é para convite, ETL e manutenção, nunca por requisição de
+ * ⚠️ NENHUMA DELAS USA `service_role`. Ela é para cadastro de conta, ETL e manutenção, nunca por requisição de
  * tela. Quem decide se a escrita passa é a RLS, o privilégio de coluna e o porteiro da função de
  * dado pessoal — esta camada só recusa cedo e traduz o erro.
  *
@@ -86,7 +86,7 @@ const MENSAGEM_DO_CHECK: Readonly<Record<string, string>> = {
  * Traduz o erro do banco para quem está na tela.
  *
  * ⚠️ O DISCRIMINADOR É O CÓDIGO, e a mensagem desconhecida NÃO é repassada — ela vai para o log do
- * servidor. Repassar o texto cru seria o vazamento que o PR #13 corrigiu no reenvio de convite.
+ * servidor. Repassar o texto cru seria o vazamento que o PR #13 corrigiu no antigo reenvio de convite.
  */
 function traduzirErro(erro: ErroDoBanco): string {
   if (erro.code === "23514") {

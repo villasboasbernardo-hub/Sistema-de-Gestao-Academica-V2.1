@@ -27,10 +27,32 @@ import { conferirAmbiente } from "@/lib/ambiente";
  * sessão para ver uma paleta não protege nada e impede que a fatia seja conferida, porque até a
  * fatia (c) não há cabeçalho nem navegação por onde chegar nela depois de entrar.
  */
-const SEM_SESSAO = ["/login", "/convite", "/recuperar-senha", "/sem-configuracao", "/estilo"];
+// ⚠️ `/convite` SAIU em 03/10/2026, com o fluxo de convite: o Admin cadastra direto e a pessoa
+//    recebe a senha em mãos. Deixar a rota aberta sem página seria superfície de autenticação
+//    aberta para nada.
+// ⚠️ `/recuperar-senha` SAIU em 03/10/2026, junto com o e-mail: a recuperação por link não
+//    existe mais, e quem esqueceu a senha procura o Admin. Rota aberta sem página é
+//    superfície de autenticação exposta para nada.
+const SEM_SESSAO = ["/login", "/sem-configuracao", "/estilo"];
 
 function ehRotaAberta(caminho: string): boolean {
   return SEM_SESSAO.some((r) => caminho === r || caminho.startsWith(`${r}/`));
+}
+
+/** A tela única de senha nova — a mesma do modo voluntário (`FR-030` a `FR-032`). */
+const CAMINHO_DA_SENHA = "/perfil/senha";
+
+/**
+ * O que continua alcançável para quem está **obrigado** a trocar a senha (`FR-036`).
+ *
+ * ⚠️ **SÃO TRÊS COISAS, e cada uma por um motivo diferente:** a própria tela de senha (senão o
+ * desvio aponta para si mesmo e a requisição entra em laço); as rotas **sem sessão**, porque quem
+ * está obrigado continua podendo **sair** — trancar a saída deixaria a pessoa sem caminho nenhum; e
+ * nada além disso. ⚠️ `/perfil` **não** está aqui de propósito: trocar a foto não é mais urgente que
+ * trocar uma senha que o Admin acabou de gerar e mostrar na tela dele.
+ */
+function ehRotaLivreNaTrocaObrigatoria(caminho: string): boolean {
+  return caminho === CAMINHO_DA_SENHA || ehRotaAberta(caminho);
 }
 
 /**
@@ -102,6 +124,28 @@ export async function renovarSessao(requisicao: NextRequest) {
     destino.pathname = "/login";
     destino.search = "";
     destino.searchParams.set("destino", `${caminho}${requisicao.nextUrl.search}`);
+    return NextResponse.redirect(destino);
+  }
+
+  /*
+   * ⚠️ **A TROCA OBRIGATÓRIA DE SENHA, E ELA CUSTA ZERO IDA A MAIS** (`FR-035`, `FR-036`).
+   *
+   * A marca vem em `user.app_metadata`, que o `getUser()` logo acima já trouxe — **a conferência é
+   * uma leitura de objeto em memória**. Fazer isto numa página, ou numa consulta própria, custaria
+   * uma volta ao servidor de auth por requisição.
+   *
+   * ⚠️ **É `app_metadata`, NÃO `user_metadata`.** O segundo é escrevível pelo próprio usuário por
+   * chamada direta à API de auth — quem estivesse obrigado apagaria a própria obrigação, e a guarda
+   * continuaria parecendo funcionar.
+   *
+   * ⚠️ **A TELA DE SENHA FICA DE FORA DA GUARDA, senão o desvio aponta para si mesmo** e a
+   * requisição entra em laço. `/login` e as outras rotas abertas também: quem está obrigado continua
+   * podendo SAIR, e trancar a saída deixaria a pessoa sem nenhum caminho.
+   */
+  if (user?.app_metadata?.["trocar_senha"] === true && !ehRotaLivreNaTrocaObrigatoria(caminho)) {
+    const destino = requisicao.nextUrl.clone();
+    destino.pathname = CAMINHO_DA_SENHA;
+    destino.search = "";
     return NextResponse.redirect(destino);
   }
 

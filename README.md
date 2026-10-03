@@ -283,7 +283,7 @@ v2.1/
 ├── docs/fase-2/
 │   ├── 20-Arquitetura-Alvo            App Router, Server/Client Components, Server Actions, o papel de lib/dominio/
 │   ├── 21-Schema-Fisico-PostgreSQL    DDL comentado tabela a tabela: tipos, ENUM, constraints, índices, colunas geradas
-│   ├── 22-Seguranca-RLS-Autenticacao  Convite e sessão, perfil_permissao, funções app.*, policies e os testes negativos obrigatórios
+│   ├── 22-Seguranca-RLS-Autenticacao  Sessão e autenticação, perfil_permissao, funções app.*, policies e os testes negativos obrigatórios
 │   ├── 23-Design-System               Tokens CIAARA sob @theme, tema claro/noturno, components/ciaara/, rotas /print/*
 │   ├── 24-Estrutura-do-Repositorio    Árvore de pastas, nomenclatura, Conventional Commits, organização de testes
 │   └── 25-Camada-de-Dados-e-Estado    @supabase/ssr, URL como fonte de verdade (nuqs), revalidate*, degradação segura
@@ -305,6 +305,16 @@ v2.1/
     ├── 04-views-e-funcoes.sql         Funções app.*, trigger set_auditoria() e as VIEWs de compatibilidade com as abas da v2.0
     └── 05-policies-rls.sql            RLS em toda tabela, policies por operação e o seed de perfil_permissao
 ```
+
+> ⚠️ **Emenda de 03/10/2026 à descrição do documento 22** _(decisão de Bernardo Villas Boas, 03/10/2026, D-USR-1)_.
+> O **convite por e-mail foi permanentemente removido**, e **o sistema não envia e-mail nenhum**. Quem
+> cria conta é o **Admin**, na tela `/admin/usuarios/novo`, com **senha temporária gerada no servidor,
+> mostrada uma vez** e **troca obrigatória no primeiro acesso** (D-USR-2). Medido no repositório em
+> 03/10/2026: não existem as rotas `/convite` nem `/recuperar-senha`, `inviteUserByEmail` e
+> `resetPasswordForEmail` não aparecem em lugar nenhum, e `tests/unidade/sem-convite-nem-envio-de-email.test.ts`
+> reprova se voltarem. ⚠️ _(Registro anterior, vencido: a linha acima dizia "22-Seguranca-RLS-Autenticacao
+> — Convite e sessão, perfil_permissao, …".)_ ⚠️ **Esta emenda corrige apenas a descrição no índice**: o
+> documento 22 **em si** cita o convite em 14 lugares (medido em 03/10/2026) e é emendado à parte.
 
 ---
 

@@ -38,7 +38,7 @@ que virou o quê, está na seção 8.
 | **Framework** | **Next.js 15+, App Router**, React 19, TypeScript `strict` | é a decisão de plataforma da v2.1; App Router, não Pages Router |
 | **Visual** | **Tailwind CSS v4** (CSS-first, `@theme`) + **shadcn/ui** | substitui Bootstrap 5 e o objeto global `UI` da v2.0 |
 | **Banco de dados** | **Supabase PostgreSQL** | substitui Google Sheets |
-| **Autenticação** | **Supabase Auth** — e-mail e senha, conta criada **só por convite do Admin** | ver seção 3 |
+| **Autenticação** | **Supabase Auth** — e-mail e senha, conta criada **só pelo Admin**, com senha temporária *(emenda de 03/10/2026 — D-USR-1 e D-USR-2; ⚠️ registro anterior, vencido: "conta criada **só por convite do Admin**")* | ver seção 3 |
 | **Autorização** | **RLS no banco** + matriz `perfil_permissao` como dado | ver seção 4 |
 | **Acesso a dados** | `@supabase/ssr` no servidor, `@supabase/supabase-js` no cliente. **Sem ORM** | o SQL fica visível e revisável |
 | **Mutações** | **Server Actions**, com validação **Zod na primeira linha** | Server Action é endpoint HTTP de fato |
@@ -96,36 +96,76 @@ A primeira tela que qualquer pessoa vê ao abrir o sistema é a de **Login**.
 ```
 app/
 ├── (auth)/                      ← sem sessão; layout próprio, sem menu nem barra lateral
-│   ├── login/page.tsx           ← A PRIMEIRA TELA
-│   ├── convite/[token]/page.tsx ← definição de senha no primeiro acesso
-│   └── recuperar-senha/page.tsx
+│   └── login/page.tsx           ← A PRIMEIRA TELA, e a ÚNICA rota sem sessão
 ├── (app)/                       ← exige sessão; o middleware redireciona para /login
 │   ├── inicio/ · cursos/ · turmas/ · cronograma/ · avaliacoes/
 │   ├── atividades/ · relatorio/ · instrutores/ · disciplinas/
+│   ├── perfil/senha/            ← a senha nova: voluntária, e obrigatória no primeiro acesso
 │   └── admin/usuarios/ · admin/parametros/ · admin/calendario/
 └── print/                       ← exige sessão; sem shell, para impressão
 ```
+
+> ⚠️ **Emenda de 03/10/2026** *(decisão de Bernardo Villas Boas, 03/10/2026, D-USR-1)*. As rotas
+> `(auth)/convite/[token]/` e `(auth)/recuperar-senha/` **foram apagadas, não desligadas** — o convite
+> por e-mail saiu permanentemente e **o sistema não envia e-mail nenhum**. A senha do primeiro acesso é
+> definida em **`/perfil/senha`**, que exige sessão: a pessoa entra com a senha temporária que o Admin
+> lhe entregou e é levada para lá até trocá-la. ⚠️ *(Registro anterior, vencido: a árvore trazia
+> `│   ├── convite/[token]/page.tsx ← definição de senha no primeiro acesso` e
+> `│   └── recuperar-senha/page.tsx`.)* Medido no repositório em 03/10/2026: `app/(auth)/` tem **só**
+> `login/`, e `tests/unidade/sem-convite-nem-envio-de-email.test.ts` reprova se qualquer uma das duas
+> voltar.
 
 O middleware (`lib/supabase/middleware.ts`) valida a sessão em toda requisição a `(app)` e
 `print`, e redireciona para `/login` quando não houver. A raiz `/` redireciona para
 `/inicio` quando há sessão, e para `/login` quando não há.
 
-### 3.2 Conta por convite — não há autocadastro
+### 3.2 Conta cadastrada pelo Admin — não há autocadastro e não há e-mail
 
 **`Enable Sign Ups` fica DESLIGADO no painel do Supabase.** É item de checklist do Épico 0,
 verificável no painel, sem equivalente em código.
 
-O fluxo:
+⚠️ **Emenda de 03/10/2026** *(decisão de Bernardo Villas Boas, 03/10/2026, D-USR-1 e D-USR-2)*: **o
+convite por e-mail foi PERMANENTEMENTE removido**, e **nenhum e-mail é enviado pelo sistema**. O Admin
+**cadastra a conta direto**, e a senha do primeiro acesso é uma **senha temporária gerada no servidor,
+mostrada uma única vez** na tela de quem cadastra — quem a recebe é obrigado a trocá-la no primeiro
+acesso.
 
-1. O Admin cadastra nome, e-mail, perfil e escopo. Isso cria a linha em `public.usuarios`
-   **com `auth_user_id` nulo** — a pessoa já tem perfil definido e ainda não tem credencial.
-2. Uma Server Action com a chave `service_role` chama `auth.admin.inviteUserByEmail()`.
-3. A pessoa recebe o e-mail, abre `/convite/[token]` e define a senha.
-4. O Supabase cria a linha em `auth.users`; a aplicação preenche `usuarios.auth_user_id`.
-5. A partir daí `app.usuario_atual()` resolve, e só a partir daí a conta alcança dado.
+O fluxo, medido em `lib/acoes/usuarios.ts` e em `app/(app)/admin/usuarios/novo/` em 03/10/2026:
 
-**A janela do passo 1 ao 4 é deliberada.** É nela que o Admin revisa ou corrige o perfil
-antes de a pessoa conseguir entrar. **Uma conta nunca existe com poder indefinido.**
+1. O Admin abre **`/admin/usuarios/novo`** e preenche nome, e-mail, perfil, escopo e, quando o perfil
+   exige, os cursos.
+2. A Server Action `cadastrarUsuario`, com a chave `service_role`, chama
+   **`auth.admin.createUser()`** com a senha temporária que ela mesma gerou, `email_confirm: true` —
+   **não há e-mail de confirmação a mandar** — e a marca `app_metadata.trocar_senha = true`.
+3. A mesma ação grava a linha em `public.usuarios` **já com `auth_user_id` preenchido**, e em seguida
+   os vínculos de `usuario_curso`. ⚠️ **Se o cadastro falhar, a credencial recém-criada é desfeita**:
+   sem linha em `public.usuarios` a RLS nega tudo, e nenhuma tela consertaria uma credencial órfã.
+4. A tela mostra a **senha temporária uma vez**. Recarregar a página a perde; o caminho de quem
+   perdeu é **Redefinir senha** (D-USR-6), não um reenvio de e-mail.
+5. A pessoa entra em `/login` com essa senha, é levada a **`/perfil/senha`** pela marca de
+   `app_metadata`, e só sai de lá depois de definir a senha dela.
+
+⚠️ **A ORDEM INVERTEU, e a janela do desenho antigo deixou de existir.** Antes, a linha de
+`public.usuarios` nascia **com `auth_user_id` nulo** e a credencial vinha depois, pelo aceite do
+convite; hoje a credencial vem **primeiro** e a linha nasce completa. **O que a janela protegia
+continua protegido por outro meio**: perfil e escopo são escolhidos **no ato do cadastro**, antes de a
+conta existir — **uma conta nunca existe com poder indefinido**.
+
+⚠️ *(Registro anterior, vencido: "**A janela do passo 1 ao 4 é deliberada.** É nela que o Admin revisa
+ou corrige o perfil antes de a pessoa conseguir entrar." O fluxo antigo era: 1. o Admin cadastra e a
+linha nasce com `auth_user_id` nulo; 2. uma Server Action chama `auth.admin.inviteUserByEmail()`;
+3. a pessoa recebe o e-mail, abre `/convite/[token]` e define a senha; 4. o Supabase cria a linha em
+`auth.users` e a aplicação preenche `usuarios.auth_user_id`; 5. a partir daí `app.usuario_atual()`
+resolve.)*
+
+⚠️ **E o passo 5 do fluxo antigo continua valendo, porque não era do convite**: `app.usuario_atual()`
+só resolve quando há linha em `public.usuarios` casada com a sessão, e **só a partir daí a conta
+alcança dado**.
+
+⚠️ **O que o convite deixou atrás, e é registro histórico, não defeito:** em **23/09/2026** uma conta
+(`USR-MUEF9CLK`) foi gravada pelo passo 1 e **o passo 2 não emitiu o convite** — ela existe sem
+credencial, e nada foi apagado. É justamente esse modo de falha em dois passos que o cadastro direto
+elimina: hoje **ou os dois passos acontecem, ou nenhum fica**.
 
 ### 3.3 Política de senha
 
@@ -133,12 +173,41 @@ Mínimo de 12 caracteres; verificação contra vazamentos (HaveIBeenPwned, nativ
 **habilitada**; **sem** exigência de símbolo e **sem** expiração compulsória — as duas
 últimas produzem senhas piores e anotadas em papel. MFA opcional, recomendado para `admin`.
 
+**Acréscimo de 03/10/2026** *(decisão de Bernardo Villas Boas, 03/10/2026, D-USR-2)*: **a senha
+temporária é gerada pelo servidor**, nunca escolhida por quem cadastra, e **obriga à troca no primeiro
+acesso** — a marca mora em `app_metadata`, que o próprio usuário não escreve. Medido em
+`lib/dominio/politica-de-senha.ts` em 03/10/2026: mínimo de **12** caracteres (`MINIMO_DE_CARACTERES`,
+espelhando `minimum_password_length` do `supabase/config.toml`) e **16** para a senha gerada
+(`COMPRIMENTO_DA_SENHA_GERADA`). ⚠️ **Não há recuperação de senha por e-mail**: quem esquece a senha
+procura o Admin, que a redefine (D-USR-6).
+
 ### 3.4 Ciclo de vida da conta
 
 Desativar é `status = 'inativo'`, **nunca `DELETE`**: milhares de lançamentos referenciam a
 linha por `criado_por`/`editado_por`. O efeito é imediato e não depende da sessão —
 `app.usuario_atual()` filtra por `status = 'ativo'`, então o token que a pessoa já tem no
 navegador para de resolver na consulta seguinte.
+
+**Emenda de 03/10/2026 — o Admin também EXCLUI permanentemente** *(decisão de Bernardo Villas Boas,
+03/10/2026, D-USR-3 a D-USR-6)*. A frase acima continua valendo como **a regra**; a exclusão
+permanente de conta é **exceção nominal, delimitada e registrada**, e vive com ela:
+
+- **O que o Admin pode fazer com uma conta** — e são **quatro ações, em cada linha da lista**
+  (D-USR-6): **Editar** (nome, perfil e acessos, em **página própria** `/admin/usuarios/[id]` —
+  D-USR-5) · **Redefinir senha** · **Desativar/Reativar** · **Excluir**.
+- **A exclusão alcança qualquer conta, em qualquer estado** (D-USR-3), **menos duas**: a **própria**
+  conta e o **último Admin ativo**. O e-mail da conta excluída **fica livre** para um novo cadastro.
+- **São dois caminhos, e a razão é medida:** `criado_por`/`editado_por` existem em 27 tabelas e **não
+  têm FK nenhuma**. Conta que **nunca carimbou nada** sai inteira; conta que carimbou **fica
+  anonimizada** — nome e nome de exibição viram *"Conta excluída"*, `auth_user_id` vira nulo,
+  `excluida_em` é marcada e o e-mail vai para um sentinela `.invalid`. O que se preserva não é a
+  linha: é a **resolução do autor** no histórico.
+- **A confirmação é simples, sem digitar nada** (D-USR-4) — diálogo com a consequência escrita e o
+  rótulo da ação. ⚠️ **É diferente das outras três exclusões permanentes do sistema** (instrutor,
+  disciplina e unidade de ensino), que pedem o **código digitado**.
+- **Continua sem policy e sem privilégio de `DELETE`**: quem apaga é `public.excluir_conta`,
+  `SECURITY DEFINER`, com porteiro de Admin dentro, e com rastro em `auditoria_de_conta` gravado
+  **antes** de a linha mudar.
 
 ### 3.5 A decisão que mudou
 

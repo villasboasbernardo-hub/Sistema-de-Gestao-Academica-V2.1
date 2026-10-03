@@ -11,6 +11,14 @@
  *
  * ⚠️ ELE NÃO EXECUTA A AÇÃO. Recebe o que fazer e chama; quem sabe o que acontece é quem chama.
  * O texto da consequência é obrigatório justamente por isso: só quem chama sabe qual é.
+ *
+ * ⚠️ **ELE NÃO TEM CAMPO PARA DIGITAR, E ISSO É DECISÃO, NÃO FALTA** *(D-USR-4, de Bernardo Villas
+ * Boas, 03/10/2026: "Confirmação simples, sem digitar nada")*. As props `corpo` e
+ * `confirmacaoDesabilitada` existiram por um dia — nasceram para a exclusão de conta pedir o e-mail
+ * digitado — e saíram com ela. **As três exclusões permanentes do domínio acadêmico (instrutor,
+ * disciplina, unidade de ensino) continuam pedindo o código**, com campo próprio na tela delas; a de
+ * conta deixou de seguir esse padrão de propósito. Quem for reintroduzir um corpo aqui precisa de
+ * decisão nova, não de conveniência.
  */
 "use client";
 

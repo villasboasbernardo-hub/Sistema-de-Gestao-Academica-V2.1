@@ -47,8 +47,8 @@ export default function Raiz() {
       */}
       <section className="flex flex-col items-start gap-3">
         <p className="text-texto text-sm">
-          O panorama das turmas fica na tela Início. O acesso é <strong>somente por convite</strong>{" "}
-          do Admin.
+          O panorama das turmas fica na tela Início. O acesso é{" "}
+          <strong>somente por cadastro do Admin</strong>.
         </p>
         <Link
           href="/inicio"

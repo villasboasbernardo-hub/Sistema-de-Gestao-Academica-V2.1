@@ -17,8 +17,18 @@ sabe qual era o rótulo antigo.
 |---|---|
 | Ramo desta fatia | `git branch --show-current` → `feat/EPICO-4c-shell-e-estado-na-url` |
 | Fatia (b) presente | `/estilo` abre com os dezesseis componentes |
-| Stack local de pé | `pnpm db:start`, e o convite do Épico 3 continua passando |
+| Stack local de pé | `pnpm db:start`, e o percurso de **login** do Épico 3 continua passando (`tests/e2e/destino-do-login.spec.ts`) |
 | Duas contas com escopos diferentes | necessárias para o passo 4 |
+
+⚠️ **O pré-requisito do stack mudou de percurso, e o antigo não existe mais** *(decisão de Bernardo
+Villas Boas, 03/10/2026, **D-USR-1**: o convite por e-mail foi **permanentemente removido**, e com ele
+qualquer envio de e-mail)*. ⚠️ *(Registro anterior, vencido: "`pnpm db:start`, e o convite do Épico 3
+continua passando".)* Medido no repositório em 03/10/2026: **`/convite` e `/recuperar-senha` não
+existem**, e a suíte de convite saiu junto. O que esta fatia realmente precisa do Épico 3 é **sessão
+para alcançar `/inicio`** — e o percurso que prova isso, e que o **passo 1** desta validação exercita,
+é o do destino após o login. **As duas contas com escopos diferentes** nascem hoje por **cadastro do
+Admin**, com senha temporária mostrada uma vez, em `/admin/usuarios/novo` (**D-USR-2**) — não mais por
+convite.
 
 ## Passo 1 — A correção de segurança, antes de tudo
 

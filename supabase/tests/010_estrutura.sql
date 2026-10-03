@@ -84,7 +84,13 @@ select set_eq(
            -- nominal de Bernardo Villas Boas: `exclusoes_registradas` e o rastro exigido
            -- pela D-B1 (24/09) e `turma_disciplina_unidade` e o caso 5 do rateio (A-1,
            -- 25/09). O BRIEF §2.1 e a autoridade de nomes, e as duas entram la junto.
-           ('exclusoes_registradas'), ('turma_disciplina_unidade')$$,
+           ('exclusoes_registradas'), ('turma_disciplina_unidade'),
+           -- PR 2 da spec 011, 02/10/2026. REGRA DOS VALORES ESPERADOS: (a) — o conjunto novo
+           -- e o correto, e o esperado passa a ser ele. `auditoria_de_conta` e a trilha exigida
+           -- pela FR-047, com os quatro campos que a decisao D-2 (29/09/2026) fixou. Ela entrou
+           -- no BRIEF §2.1 ANTES de entrar aqui, que e a ordem que o cabecalho desta assercao
+           -- manda seguir.
+           ('auditoria_de_conta')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

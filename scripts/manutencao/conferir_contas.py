@@ -4,8 +4,15 @@
 
 ⚠️ POR QUE OS DOIS SENTIDOS, e por que um deles e mais grave:
 
-  · LINHA SEM CREDENCIAL  — `usuarios` com `auth_user_id` nulo. E VISIVEL na tela de usuarios e,
-    dentro da validade do convite, e o estado LEGITIMO do FR-008. So vira achado depois disso.
+  · LINHA SEM CREDENCIAL  — `usuarios` com `auth_user_id` nulo. E VISIVEL na tela de usuarios, e
+    desde 03/10/2026 ela NAO E MAIS UM ESTADO LEGITIMO: a conta nasce com credencial (D-USR-2, o
+    cadastro cria as duas coisas na mesma acao) e nao ha convite a esperar.
+    ⚠️ ERA "estado legitimo do FR-008 dentro da validade do convite", e a janela de 24 h vinha de la.
+       Com o convite fora do sistema (D-USR-1) essa janela perdeu o fundamento: o que sobra e a
+       janela da CRIACAO EM CURSO, de segundos, porque a credencial vem antes da linha.
+    ⚠️ MEDIDO NO REMOTO em 03/10/2026, so por leitura: **4 das 5 contas reais estao neste estado** —
+       vieram do ETL e do convite antigo, que gravava o cadastro e nao emitia o convite. Elas NAO
+       conseguem entrar, e a saida pela tela e excluir e cadastrar o mesmo e-mail de novo.
 
   · CREDENCIAL SEM LINHA  — conta em `auth.users` sem par em `usuarios`. NAO alcanca dado nenhum
     (o teste T-09 prova), mas tambem NAO APARECE em lugar nenhum. Invisivel e pior que incompleto:
@@ -23,14 +30,17 @@ import psycopg
 
 CONEXAO_LOCAL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 
-# Validade do convite na plataforma. Linha sem credencial mais nova que isto NAO e achado — e a
-# janela deliberada do FR-008, em que o Admin ainda revisa.
-VALIDADE_DO_CONVITE = timedelta(hours=24)
+# ⚠️ A JANELA ENCOLHEU DE 24 h PARA 5 min EM 03/10/2026, e a razao e a D-USR-1. As 24 h eram a
+#    VALIDADE DO CONVITE: enquanto o link podia ser aberto, linha sem credencial era espera, nao
+#    defeito. Sem convite nao ha espera — o cadastro cria credencial e linha na mesma acao, naquela
+#    ordem —, entao o unico estado transitorio legitimo e a criacao em curso, que dura segundos.
+#    ⚠️ Deixar 24 h aqui calaria por um dia inteiro a conta que nasceu quebrada.
+JANELA_DE_CRIACAO_EM_CURSO = timedelta(minutes=5)
 
 
 def conferir(conexao: str = CONEXAO_LOCAL) -> list[str]:
     achados: list[str] = []
-    corte = datetime.now(timezone.utc) - VALIDADE_DO_CONVITE
+    corte = datetime.now(timezone.utc) - JANELA_DE_CRIACAO_EM_CURSO
 
     with psycopg.connect(conexao) as con, con.cursor() as k:
         k.execute(

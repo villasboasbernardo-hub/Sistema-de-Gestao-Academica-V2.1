@@ -160,24 +160,20 @@ site_url = "http://127.0.0.1:3000"
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 # ⚠️ `localhost` E `127.0.0.1` SÃO ENDEREÇOS DIFERENTES para esta lista, que é de URLs EXATAS.
-# O Playwright usa `localhost:3000`; sem a entrada correspondente, o link de convite é recusado
-# no redirecionamento e o teste ponta a ponta falha sem dizer por quê.
+# ⚠️ OS SEIS DESTINOS `/convite` SAIRAM EM 03/10/2026 (D-USR-1), e eles ja apontavam para o vazio:
+#    a rota `/convite` foi apagada no dia anterior, e a lista continuou mandando para ela. Destino
+#    de redirecionamento para rota que nao existe e superficie de autenticacao apontando para nada.
+#    ⚠️ E o `CLAUDE.md` AFIRMAVA, como fato medido, que este arquivo estava "sem os destinos" — nao
+#       estava. Agora ha guarda: `tests/unidade/sem-convite-nem-envio-de-email.test.ts`.
+# ⚠️ AS ORIGENS FICAM. A porta 3100 e a da suite de ponta a ponta, separada da 3000 em 24/09/2026
+#    para nao disputar com o `pnpm dev:local` de quem confere na tela; o Auth IGNORA em silencio um
+#    destino fora desta lista e manda para a `site_url`.
 additional_redirect_urls = [
   "https://127.0.0.1:3000",
   "http://127.0.0.1:3000",
-  "http://127.0.0.1:3000/convite",
   "http://localhost:3000",
-  "http://localhost:3000/convite",
-  "http://localhost:3000/recuperar-senha",
-  # A porta da suite de ponta a ponta, separada da 3000 em 24/09/2026 para nao disputar com o
-  # `pnpm dev:local` de quem confere na tela. O Auth IGNORA em silencio um `redirectTo` que nao
-  # esteja nesta lista e manda para a `site_url` — o convite chegava, o link abria a porta errada,
-  # e a falha se lia como "a tela de convite nao carregou".
   "http://localhost:3100",
-  "http://localhost:3100/convite",
-  "http://localhost:3100/recuperar-senha",
   "http://127.0.0.1:3100",
-  "http://127.0.0.1:3100/convite",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
@@ -190,8 +186,10 @@ enable_refresh_token_rotation = true
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
-# ⚠️ DESLIGADO PELO FR-003, E NÃO É PREFERÊNCIA. O acesso ao sistema é SOMENTE POR CONVITE do
-# Admin (BRIEF §3). Com isto ligado, qualquer pessoa com o endereço da aplicação cria credencial:
+# ⚠️ DESLIGADO PELO FR-003, E NÃO É PREFERÊNCIA. O acesso ao sistema é SOMENTE POR CADASTRO do
+# Admin, que cria a credencial com senha temporária e a entrega em mãos (D-USR-1 e D-USR-2, de
+# 03/10/2026; era "somente por convite", e o convite saiu). Com isto ligado, qualquer pessoa com o
+# endereço da aplicação cria credencial:
 # ela não alcançaria dado nenhum — sem linha em `usuarios`, `app.usuario_atual()` devolve NULL e
 # nenhuma policy concede acesso a NULL, provado pelo teste T-09 — mas teria credencial válida no
 # projeto, o que é lixo desnecessário e superfície de ataque gratuita.

@@ -804,7 +804,7 @@ Decisão antes de 11: LIQ-3 · LIQ-4
 | **0** | Fundação | Repositório que compila, testa e implanta sozinho, com Supabase vinculado e tipos gerados | Os seis critérios de §6.8 verificados um a um, **inclusive o clone limpo** |
 | **1** | Schema + RLS + matriz | O modelo do documento 05 vira DDL executável, com integridade, vigência por `EXCLUDE` e RLS em toda tabela | `supabase db reset` reconstrói do zero; as sete regras de unicidade têm teste que **espera a falha**; trocar permissão é `UPDATE`, não migration |
 | **2** | ETL + reconciliação | 100% do histórico da planilha no PostgreSQL, verificável linha a linha | Contagens batem com o documento 05 §10; as três identidades aritméticas fecham; **zero FK órfã**; reexecutar produz base idêntica |
-| **3** | Auth por convite + RBAC | Só entra quem o Admin convidou; o que cada um faz é o que a matriz permite, **verificado pelo banco** | E-mail não convidado não cria conta por **nenhum** caminho; para cada perfil há teste que prova o banco **negando** leitura e escrita fora do escopo |
+| **3** | Auth com conta criada pelo Admin + RBAC | Só entra quem o Admin **cadastrou**; o que cada um faz é o que a matriz permite, **verificado pelo banco** | E-mail que o Admin não cadastrou não cria conta por **nenhum** caminho; **nenhum e-mail é enviado pelo sistema**, provado por varredura com controle positivo; para cada perfil há teste que prova o banco **negando** leitura e escrita fora do escopo |
 | **4** | Design System + shell por URL | Linguagem visual única e navegação em que **a URL é o estado** | `/cursos/[curso]?turma=T2&semana=34` numa aba nova reproduz a mesma tela; voltar/avançar funcionam; contraste AA nos dois temas |
 | **5** | Cadastros | Cursos, turmas, disciplinas e instrutores, com o refinamento acumulado em quinze specs | Ordenação por antiguidade em **toda** lista, filtro e seletor, verificada por teste em todas as ocorrências; CH do instrutor nunca digitável |
 | **6** | DSA | A tela mais usada: lançar a semana e imprimi-la | Impressão em **uma** página A4 paisagem com paridade contra o modelo da v2.0; DSA de março traz quem assinava em março |
@@ -815,6 +815,17 @@ Decisão antes de 11: LIQ-3 · LIQ-4
 | **11** | LIQ, OS de Instrutoria, Ficha | Os três documentos oficiais, por `/print/*` | LIQ de trimestre com segunda turma sai com o período **da T2**; coluna "Observação" sai **vazia**, verificada por teste |
 | **12** | Sugestão do DSA | Prévia semanal sugerida — **ajuda, nunca trava** | A etapa (ii), de validação contra semana real, é executada e registrada **antes** de qualquer trabalho da (iii) |
 | **13** | ROTA | Organizar o que o sistema já tem, para transcrição manual | **Não** gera nem submete a planilha; nenhum campo novo de cadastro criado para alimentá-la |
+
+⚠️ **Emenda de 03/10/2026 à linha do Épico 3** *(decisão de Bernardo Villas Boas, D-USR-1 e D-USR-2)*.
+*(Registro anterior, vencido: "**3** | Auth por convite + RBAC | Só entra quem o Admin convidou; … |
+E-mail não convidado não cria conta por **nenhum** caminho; …".)* O **convite por e-mail foi
+permanentemente removido** e **nenhum e-mail é enviado** pelo sistema: o Admin **cadastra** a conta,
+o sistema gera uma **senha temporária mostrada uma única vez**, ela é repassada em mãos e **trocada
+obrigatoriamente no primeiro acesso**. ⚠️ **O objetivo do ciclo não mudou** — *só entra quem o Admin
+autorizou* —, e o portão de saída **ficou mais forte**, porque passou a cobrar também a **ausência**
+de envio de e-mail, provada por varredura do repositório com controle positivo. ⚠️ **E ausência se
+prova por portão, não por promessa**: esta base já mediu duas vezes o custo de afirmar ausência sem
+varredura.
 
 **Duas notas de sequenciamento que valem repetir:**
 

@@ -10,6 +10,13 @@ par: "30-Plano-de-Migracao-ETL.md"
 
 # Mapa De-Para Coluna a Coluna — v2.0 → v2.1
 
+> ⚠️ **A emenda de 03/10/2026 (D-USR-1, D-USR-2 e D-USR-3, na §19) está SÓ NESTE `.md`.** O
+> `31-Mapa-De-Para-Sheets-PostgreSQL.docx` é o **documento original entregue** e **não foi emendado nem
+> apagado** — é assim que a regra 4 manda tratá-lo. **Na divergência, o `.md` prevalece** *(decisão de
+> Bernardo Villas Boas, 17/09/2026)*, e este documento passa a constar da lista dos que divergem do
+> `.docx`. ⚠️ **A emenda não altera transformação nenhuma deste mapa** — o que ela corrige é a frase
+> que dizia *como* `auth_user_id` deixa de ser nulo.
+
 ## Nota de migração (v2.1)
 
 Este é o **contrato de transporte** da migração de plataforma. O documento 30 diz *como* o ETL roda;
@@ -554,10 +561,30 @@ armadilha B** do documento 30 §3.2.
 | `ID_Instrutor_Link` | `instrutor_id` | `uuid` FK | `JOIN instrutores ON codigo` | Liga a conta ao cadastro docente |
 | `Status` | `status` | `status_registro` NOT NULL | vazio → `ativo` | ⚠️ `inativo` faz `app.usuario_atual()` devolver `NULL` — **perda de acesso imediata** (teste T-11) |
 | `Ultimo_Acesso` | `ultimo_acesso` | `timestamptz` | fuso | Auditoria de acesso |
-| — | `auth_user_id` | `uuid` UQ → `auth.users` | **`NULL` na carga** | ⚠️ **Preenchido pelo Épico 3**, quando o Admin enviar o convite. `NULL` aqui significa "credencial ainda não criada" — e a RLS nega tudo nesse estado, corretamente (T-09) |
+| — | `auth_user_id` | `uuid` UQ → `auth.users` | **`NULL` na carga** | ⚠️ `NULL` aqui significa "credencial ainda não criada" — e a RLS nega tudo nesse estado, corretamente (T-09). **Quem dá acesso é o Admin, pelo cadastro**; ver a emenda abaixo |
 | — | `observacao` | `text` | **`NULL`** | — |
 | — | `origem_migracao_v1` | `text` | `'Usuarios:<ID_Usuario>'` | **C-07** |
 | `Editado_Por` / `Timestamp_Edicao` | `editado_por` / `editado_em` | `uuid` / `timestamptz` | e-mail→uuid; fuso | — |
+
+> **Emenda de 03/10/2026 — como a linha migrada ganha credencial** *(decisão de Bernardo Villas Boas,
+> 03/10/2026, **D-USR-1**, **D-USR-2** e **D-USR-3**)*. ⚠️ *(Registro anterior, vencido: "Preenchido
+> pelo Épico 3, **quando o Admin enviar o convite**".)*
+>
+> **O convite por e-mail foi removido permanentemente, e o sistema não envia e-mail nenhum.** A carga
+> continua igual — `auth_user_id` nasce **`NULL`**, e isso não muda nada neste mapa. O que muda é o
+> **conserto desse estado**, e ele é diferente do que esta linha prometia:
+>
+> * **Não há mais "enviar convite" nem "reenviar convite".** A criação de conta é
+>   `auth.admin.createUser()`, numa ação só, que grava a linha **já com `auth_user_id`**.
+> * **Numa linha migrada, portanto, não há senha a redefinir** — a conta nunca conseguiu entrar. O
+>   caminho que funciona é **excluir a conta e cadastrar o mesmo e-mail de novo**: a exclusão libera o
+>   endereço, inclusive quando há credencial órfã presa nele, e o cadastro cria a credencial com senha
+>   temporária. É isso, com estas palavras, que a tela recusa e orienta.
+> * ⚠️ **Isto deixou de ser caso de borda.** **4 das 5 contas reais** estão nesse estado — elas vieram
+>   do ETL e do convite antigo, que gravava o cadastro e **não** emitia o convite. ⚠️ **A medição não é
+>   deste documento:** ela foi feita contra o banco **remoto** em 03/10/2026 e está registrada no
+>   cabeçalho de `redefinirSenha`, em `lib/acoes/usuarios.ts` — é de lá que este número sai, e é lá que
+>   se reconfere.
 
 ---
 

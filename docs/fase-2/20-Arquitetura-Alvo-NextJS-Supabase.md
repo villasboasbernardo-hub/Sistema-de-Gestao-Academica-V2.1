@@ -12,6 +12,12 @@ origem: "BRIEF-v2.1 §1, §4, §6, §7 · docs/arquitetura/02-modularizacao.md (
 > (estrutura do repositório) e 25 (camada de dados e estado) detalham o que este documento decide;
 > nenhum dos dois pode contradizê-lo, e nenhum dos três pode contradizer o `BRIEF-v2.1.md`.
 
+> ⚠️ **As emendas de 03/10/2026 (D-USR-1 e D-USR-2) estão SÓ NESTE `.md`.** O
+> `20-Arquitetura-Alvo-NextJS-Supabase.docx` é o **documento original entregue** e **não foi emendado
+> nem apagado** — é assim que a regra 4 manda tratá-lo. **Na divergência, o `.md` prevalece**
+> *(decisão de Bernardo Villas Boas, 17/09/2026)*, e este documento passa a constar da lista dos que
+> divergem do `.docx`.
+
 ## 0. O que esta arquitetura substitui — e o que ela não toca
 
 A v2.0 é um sistema **em produção**: Google Apps Script (V8) + Google Sheets + Vanilla JS/Bootstrap 5,
@@ -61,7 +67,7 @@ flowchart TB
     end
 
     subgraph SUPA["Supabase (PostgreSQL gerenciado)"]
-        AUTH["Auth<br/>e-mail/senha por convite"]
+        AUTH["Auth<br/>e-mail/senha · conta criada pelo Admin"]
         RLS["Row Level Security<br/>+ perfil_permissao (matriz como dado)"]
         TAB[("Tabelas<br/>cursos · turmas · disciplinas<br/>instrutores · registros_aula<br/>avaliacoes · planejamento_anual …")]
         RPC["Funções SQL / RPC<br/>operações atômicas multi-tabela"]
@@ -78,13 +84,23 @@ flowchart TB
     SA -->|"chama regra pura"| DOM
     RSC -->|"chama regra pura"| DOM
     SA -->|"operação atômica"| RPC
-    ADM -->|"convite de usuário · ETL · manutenção"| AUTH
+    ADM -->|"cadastro de conta pelo Admin · ETL · manutenção"| AUTH
     RLS --> TAB
     RPC --> TAB
     TRG --> TAB
     RSC -->|"HTML/RSC payload (streaming)"| HTML
     SA -->|"resultado tipado + revalidação"| CC
 ```
+
+> **Emenda de 03/10/2026 — dois rótulos do diagrama** *(decisão de Bernardo Villas Boas, 03/10/2026,
+> **D-USR-1** e **D-USR-2**)*. ⚠️ *(Registro anterior, vencido: o nó do Auth dizia "e-mail/senha **por
+> convite**" e a aresta da `service_role` dizia "**convite de usuário** · ETL · manutenção".)* **O
+> convite por e-mail foi removido permanentemente, e o sistema não envia e-mail nenhum.** A conta é
+> **cadastrada pelo Admin**, com senha temporária gerada no servidor, mostrada uma única vez e
+> repassada em mãos, e com **troca obrigatória no primeiro acesso**. O desenho da arquitetura **não
+> muda** — a `service_role` continua falando com o Auth a partir de uma Server Action, e continua
+> tendo três usos autorizados; o primeiro deles passa a ser *cadastro de conta pelo Admin*. Ver §8.4
+> e o documento 22 §3.3.
 
 ### 1.1 Onde cada responsabilidade mora — e por quê
 
@@ -1228,11 +1244,13 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const caminho = request.nextUrl.pathname;
+  // ⚠️ `/convite` e `/recuperar-senha` SAÍRAM desta lista em 03/10/2026, com o fluxo de convite
+  //    (D-USR-1). Rota aberta que aponta para tela apagada é superfície de autenticação sem nada
+  //    atrás dela. A lista implementada vive em `lib/supabase/middleware.ts` e tem estas três.
   const rotaPublica =
     caminho.startsWith("/login") ||
-    caminho.startsWith("/convite") ||
-    caminho.startsWith("/recuperar-senha") ||
-    caminho.startsWith("/auth");
+    caminho.startsWith("/sem-configuracao") ||
+    caminho.startsWith("/estilo");
 
   // Anônimo tentando rota protegida → login, guardando o destino para voltar depois de autenticar.
   if (!user && !rotaPublica) {
@@ -1257,6 +1275,14 @@ export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };
 ```
+
+> **Emenda de 03/10/2026 — a lista de rotas abertas** *(decisão de Bernardo Villas Boas, 03/10/2026,
+> **D-USR-1**)*. ⚠️ *(Registro anterior, vencido: a lista deste exemplo era `/login`, `/convite`,
+> `/recuperar-senha` e `/auth`.)* **As duas rotas do convite foram apagadas** — `/convite` em
+> **02/10/2026** (`c7822cb`) e `/recuperar-senha` em **03/10/2026** (`908a23f`) —, e `/auth` nunca
+> existiu como rota deste repositório. A lista que vale é a de `lib/supabase/middleware.ts`:
+> **`/login`, `/sem-configuracao` e `/estilo`**. ⚠️ **`/estilo` é aberta de propósito e isso está
+> registrado**: ela não exibe dado algum, e exigir login para ver uma paleta não protegeria nada.
 
 ### 8.2 O middleware protege a rota, não o dado
 
@@ -1287,7 +1313,9 @@ import type { Database } from "@/lib/tipos/database";
  *
  * O quê: cliente Supabase com a chave `service_role`.
  * Para quê: exatamente três usos autorizados, e nenhum outro:
- *           (1) convite de usuário pelo Admin — `auth.admin.inviteUserByEmail()` (BRIEF §3);
+ *           (1) cadastro de conta pelo Admin — `auth.admin.createUser()`, mais `updateUserById`
+ *               (redefinir senha) e `deleteUser` (exclusão permanente). ⚠️ ERA "convite de usuário
+ *               — inviteUserByEmail()" até 03/10/2026, quando o convite saiu (D-USR-1);
  *           (2) carga do ETL Sheets → PostgreSQL (Épico 2);
  *           (3) rotina de manutenção executada por script versionado, nunca por requisição de tela.
  * Como: chave lida de `SUPABASE_SERVICE_ROLE_KEY` — variável SEM prefixo `NEXT_PUBLIC_`,
@@ -1319,19 +1347,45 @@ Barreiras redundantes, todas ativas ao mesmo tempo (defesa em profundidade):
    `lib/acoes/**` e `scripts/**` (documento 24);
 4. revisão de PR: qualquer diff que toque `admin.ts` exige justificativa no corpo do PR.
 
-### 8.4 Fluxo de convite (BRIEF §3)
+> **Nota de 03/10/2026 sobre a barreira 3** *(medido em `eslint.config.mjs` nesta data)*. A regra está
+> mais apertada do que a frase acima descreve: a lista de exceções é **nominal, com dois arquivos** —
+> `lib/supabase/admin.ts` (ele mesmo) e `lib/acoes/usuarios.ts` —, e não uma pasta inteira. **Medido
+> no repositório na mesma data: `lib/acoes/usuarios.ts` é o único importador do cliente
+> administrativo em `app/`, `lib/` e `components/`.** A frase fica porque descreve a intenção;
+> **alargar a lista é decisão, não conveniência.**
+
+### 8.4 Fluxo de cadastro de conta pelo Admin
+
+*(decisão de Bernardo Villas Boas, 03/10/2026, **D-USR-1** e **D-USR-2** — esta seção se chamava
+"Fluxo de convite (BRIEF §3)" até esta data)*
 
 ```
-Admin preenche o cadastro em /admin/usuarios
-   → Server Action (única no sistema que usa criarClienteAdmin())
-   → auth.admin.inviteUserByEmail(email, { redirectTo: "/convite/[token]" })
+Admin preenche o cadastro em /admin/usuarios/novo
+   → Server Action (a única do sistema que usa o cliente administrativo)
+   → gera a senha temporária NO SERVIDOR
+   → auth.admin.createUser({ email, password, email_confirm: true,
+                             app_metadata: { trocar_senha: true } })
    → insert em `usuarios` com auth_user_id, perfil, escopo_curso
-   → usuário recebe e-mail, define senha (mín. 12 caracteres, verificada contra vazamentos)
-   → primeiro acesso; `usuarios.ultimo_acesso` atualizado por trigger
+   → a tela mostra a senha temporária UMA vez; o Admin a repassa em mãos
+   → primeiro acesso → /perfil/senha, troca obrigatória (mín. 12 caracteres,
+     verificada contra vazamentos) → a obrigação é limpa
+   → `usuarios.ultimo_acesso` atualizado por trigger
 ```
 
-Signup público **desabilitado no painel do Supabase** — não é código, é configuração, e precisa
-constar da lista de verificação de implantação do documento de migração.
+⚠️ *(Registro anterior, vencido: o fluxo chamava `auth.admin.inviteUserByEmail(email, { redirectTo:
+"/convite/[token]" })`, o usuário recebia um e-mail e definia a senha pelo link.)* **O convite por
+e-mail foi removido permanentemente e o sistema não envia e-mail nenhum** — não há SMTP a configurar,
+não há link a expirar e não há convite a reenviar. **A ordem dos dois primeiros passos é credencial
+primeiro, cadastro depois, e ela é o inverso da do convite:** o convite gravava a linha antes porque
+*linha sem credencial* era um estado recuperável por «reenviar convite»; sem convite esse estado não
+tem saída, então se o cadastro falhar a credencial recém-criada é **desfeita**. ⚠️ **Desfazer uma
+credencial de milissegundos não é exceção à regra 4** — credencial não é cadastro, e **nada em
+`public` é apagado nesse caminho**.
+
+Signup público **desabilitado**, e a divisão é esta: no stack local e de preview é
+`[auth] enable_signup = false` no `supabase/config.toml` **versionado**, portanto código; no projeto
+remoto é configuração de painel, que precisa constar da lista de verificação de implantação. Ver o
+documento 22 §3.4, que mede os dois lados.
 
 ---
 

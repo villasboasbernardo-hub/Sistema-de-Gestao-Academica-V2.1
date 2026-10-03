@@ -22,17 +22,30 @@ const email = z
   .email("Informe um e-mail válido.")
   .max(254, "E-mail longo demais.");
 
-export const esquemaDeConvite = z.object({
+/**
+ * Cadastrar conta **direto**, sem convite por e-mail *(decisão de Bernardo Villas Boas, 03/10/2026,
+ * reprovando a conferência do PR 2)*.
+ *
+ * ⚠️ **ELE SUBSTITUI `esquemaDeConvite`, que saiu junto com o fluxo de convite.** A diferença de
+ * conteúdo é **uma**: o vínculo de instrutor, que a tela de cadastro passou a oferecer. A diferença de
+ * comportamento é toda: o servidor **gera a senha** e a devolve uma vez, em vez de mandar e-mail.
+ *
+ * ⚠️ **ELE NÃO TEM `instrutorId`, E A AUSÊNCIA É DELIBERADA** *(decisão de Bernardo Villas Boas,
+ * 03/10/2026)*: o vínculo de docente saiu da tela, porque nenhuma policy e nenhuma função de
+ * autorização leem `usuarios.instrutor_id`. ⚠️ **E tirá-lo do ESQUEMA é o que impede uma perda de
+ * dado silenciosa:** com o campo aqui e sem o campo na tela, a ação receberia `undefined`, o
+ * `transform` o viraria `null`, e **toda gravação de perfil apagaria o vínculo existente** da conta.
+ * A coluna continua no banco, com o que já tem.
+ */
+export const esquemaDeCadastro = z.object({
   nome: z.string().trim().min(3, "Informe o nome completo.").max(200),
   email,
   perfil: z.enum(PERFIS, { message: "Perfil fora do domínio." }),
   escopoCurso: z.enum(ESCOPOS, { message: "Escopo fora do domínio." }),
-  // Vínculos de curso: só fazem sentido para quem tem escopo restrito, mas a validação de
-  // coerência é do banco (a policy) — aqui só se garante que são identificadores.
+  // Vínculos de curso: a exigência por perfil é de `lib/dominio/exigencias-do-perfil.ts`; aqui só se
+  // garante que são identificadores.
   cursos: z.array(z.string().uuid()).default([]),
 });
-
-export const esquemaDeReenvio = z.object({ usuarioId: z.string().uuid() });
 
 export const esquemaDeDesativacao = z.object({ usuarioId: z.string().uuid() });
 
@@ -43,7 +56,31 @@ export const esquemaDeEdicao = z.object({
   cursos: z.array(z.string().uuid()).default([]),
 });
 
-export const esquemaDeRecuperacao = z.object({ email });
+/**
+ * O NOME de outra conta (`FR-040`), em esquema próprio.
+ *
+ * ⚠️ **SEPARADO DE `esquemaDeEdicao` DE PROPÓSITO, porque são duas ações de auditoria distintas** —
+ * `editar_nome` e `editar_perfil` (`FR-047`). Um esquema só mandaria sempre os dois campos, e a
+ * trilha passaria a registrar troca de perfil em toda correção de grafia de nome.
+ *
+ * ⚠️ **É `nome_exibicao`, NÃO `nome`** — a mesma distinção do próprio cadastro: `nome` é o que o
+ * convite gravou e costuma ser o nome de registro; `nome_exibicao` é como a pessoa aparece na tela.
+ */
+export const esquemaDeEdicaoDeNome = z.object({
+  usuarioId: z.string().uuid(),
+  nomeExibicao: z
+    .string({ error: "Informe o nome de exibição." })
+    .trim()
+    .min(2, "O nome de exibição precisa ter pelo menos 2 caracteres.")
+    .max(120, "O nome de exibição passou de 120 caracteres."),
+});
 
-export type DadosDeConvite = z.infer<typeof esquemaDeConvite>;
+/** Excluir conta, permanentemente. Só o alvo: o caminho (apagar ou anonimizar) é do banco. */
+export const esquemaDeExclusao = z.object({ usuarioId: z.string().uuid() });
+
+/** Redefinir a senha de outra conta (`FR-033`). Só o alvo — a senha é gerada no servidor. */
+export const esquemaDeRedefinicao = z.object({ usuarioId: z.string().uuid() });
+
+export type DadosDeCadastro = z.infer<typeof esquemaDeCadastro>;
 export type DadosDeEdicao = z.infer<typeof esquemaDeEdicao>;
+export type DadosDeEdicaoDeNome = z.infer<typeof esquemaDeEdicaoDeNome>;

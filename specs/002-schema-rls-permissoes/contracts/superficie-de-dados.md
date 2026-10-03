@@ -15,7 +15,20 @@ Esta fatia não expõe rota HTTP nem componente. **A interface que ela publica �
 | Leitura em servidor | Cliente de servidor com a sessão do usuário. **A RLS se aplica** |
 | Leitura em cliente | Cliente do navegador com a chave publicável. **A RLS se aplica** |
 | Escrita | **Sempre** por Server Action, com validação na primeira linha |
-| Privilégio elevado | **Três usos autorizados, e só estes:** convite de usuário pelo Admin, carga do ETL, script de manutenção versionado rodado à mão. **Nunca por requisição de tela** |
+| Privilégio elevado | **Três usos autorizados, e só estes:** administração de contas pelo Admin, carga do ETL, script de manutenção versionado rodado à mão. **Nunca por requisição de tela** |
+
+> ⚠️ **Emenda de 03/10/2026 ao primeiro uso autorizado** *(decisão de Bernardo Villas Boas,
+> 03/10/2026, D-USR-1 a D-USR-3)*. ⚠️ *(Registro anterior, vencido: "convite de usuário pelo
+> Admin".)* **O convite por e-mail foi permanentemente removido, e o sistema não envia e-mail
+> nenhum.** O uso autorizado **não desapareceu — mudou de nome e cresceu**: é a **administração de
+> contas pelo Admin**. Medido em 03/10/2026, são **quatro** chamadas da chave elevada, todas em
+> **`lib/acoes/usuarios.ts`**, que é o **único** arquivo de `app/`, `lib/` e `components/` a importar
+> `lib/supabase/admin.ts`: **cadastrar** a conta com senha temporária (`auth.admin.createUser()`),
+> **redefinir senha**, **excluir** a credencial na exclusão permanente, e **dar baixa** na marca
+> `app_metadata.trocar_senha` quando a pessoa troca a senha obrigatória. ⚠️ **Continuam sendo três
+> usos, e a fronteira é a mesma**: nenhuma requisição comum de tela toca a chave — o
+> `no-restricted-imports` do `eslint.config.mjs` autoriza **dois** arquivos, e importar o cliente
+> administrativo de um componente de navegador **quebra o build**.
 
 **Tipos gerados são o contrato compilado.** `lib/tipos/database.ts` é gerado do schema; a verificação
 automática falha se divergir. **Campo que a aplicação conhece e o dado não é, quase sempre, campo

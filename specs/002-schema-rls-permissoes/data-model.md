@@ -201,9 +201,28 @@ Parcial e informativo não descontam nada.
 ## 6. Governança e acesso
 
 ### `usuarios`
-3 linhas. Ligação 1:1 com a conta de autenticação, **anulável entre o cadastro e o aceite do
-convite** — é a janela em que o Admin revisa o perfil antes de a pessoa entrar.
+3 linhas. Ligação 1:1 com a conta de autenticação, **e `auth_user_id` é anulável**.
 **Garante (FR-013):** `unique (auth_user_id)`.
+
+⚠️ **Emenda de 03/10/2026 — a coluna segue anulável, por OUTROS motivos** *(decisão de Bernardo Villas
+Boas, 03/10/2026, D-USR-1 a D-USR-3)*. ⚠️ *(Registro anterior, vencido: "**anulável entre o cadastro e
+o aceite do convite** — é a janela em que o Admin revisa o perfil antes de a pessoa entrar".)* **O
+convite por e-mail foi permanentemente removido e não há envio de e-mail**, logo **não há mais aceite,
+e a janela não existe**: o Admin cadastra a conta direto e a linha nasce **já com `auth_user_id`
+preenchido**, porque a credencial é criada **antes** dela (`auth.admin.createUser()`, medido em
+`lib/acoes/usuarios.ts` em 03/10/2026). **O que a janela protegia continua protegido**: perfil e
+escopo são escolhidos no ato do cadastro, antes de a conta existir.
+
+**Os dois motivos pelos quais `auth_user_id` continua anulável — e nenhum é o convite:**
+
+1. **A conta excluída com histórico fica anonimizada**, e a anonimização **anula `auth_user_id`**
+   (D-USR-3): o e-mail vai para um sentinela `.invalid`, nome e nome de exibição viram *"Conta
+   excluída"*, `excluida_em` é marcada e a credencial é apagada de vez. A linha fica para que
+   `criado_por`/`editado_por` **continuem resolvendo para um nome** em vez de um `uuid`. Medido em
+   `supabase/migrations/20261003000205_exclusao_de_conta.sql`.
+2. **O histórico da carga e o resíduo do convite.** Linha migrada pelo ETL nunca teve credencial — e
+   ⚠️ **registro de 23/09/2026, que fica**: a conta `USR-MUEF9CLK` foi gravada pelo passo 1 do convite
+   e **o passo 2 não emitiu o convite**; ela existe **sem credencial**, e nada foi apagado.
 **Garante (FR-037, `RN-RBAC-02`):** ninguém amplia o próprio perfil, escopo ou situação. **Por
 gatilho, não por policy** — a policy avalia a linha inteira e não sabe **o que mudou**; ela aprovaria
 a escalada. O gatilho libera explicitamente o contexto sem sessão autenticada, sob pena de bloquear a
@@ -219,6 +238,15 @@ Vínculo N:N — o Encarregado de Curso pode ter mais de um curso.
 este sistema não apaga nada.
 **Leitura aberta a qualquer sessão autenticada** (FR-039): a interface precisa saber quais ações
 oferecer, e a matriz é a definição pública das regras. Escondê-la seria obscuridade sem ganho.
+
+⚠️ **Nota de 03/10/2026 — a frase acima continua VERDADEIRA sobre a matriz, e é por isso que ela fica**
+*(decisão de Bernardo Villas Boas, 03/10/2026, D-USR-3)*. Medido em 03/10/2026: o `CHECK` de
+`perfil_permissao.acao` segue com **quatro** valores — `('ler', 'criar', 'editar', 'desativar')` — e
+**`excluir` não é um deles**. ⚠️ **O que mudou está FORA da matriz**: a exclusão permanente de conta é
+**exceção nominal** à regra de que nada é apagado, e **não passa pela matriz** — quem autoriza é o
+porteiro de Admin dentro de `public.excluir_conta`, e **nenhuma policy de `DELETE` foi criada**. O
+valor `excluir` existe apenas no `CHECK` da trilha `auditoria_de_conta`, que registra o que foi feito;
+ele **não** é permissão.
 
 **As três tabelas de fronteira** — `perfil_permissao`, `usuarios`, `usuario_curso` — são as únicas
 presas diretamente ao perfil de Administrador, e não à matriz (FR-038). **A matriz não pode ser a

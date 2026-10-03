@@ -69,6 +69,21 @@ const PERFIS: Readonly<Record<Perfil, Descricao>> = {
 };
 
 /** O rótulo em português. Valor desconhecido volta **como veio** (`RN-DEG-01`), nunca vazio. */
+/**
+ * O perfil que o formulário de cadastro oferece **já escolhido**.
+ *
+ * ⚠️ **ELE MORA AQUI, E NÃO NA TELA, POR CAUSA DA GUARDA DE `FR-005` — e a guarda está certa.** Um
+ * `"operador"` literal numa folha de cliente é valor cru do enum fora do módulo de tradução, e foi
+ * exatamente assim que `snake_case` apareceu no cabeçalho de toda tela até 29/09/2026. Aqui o literal
+ * é legítimo: este é o módulo que conhece os valores.
+ *
+ * ⚠️ **A ESCOLHA É `operador` por ser o MENOS PRIVILEGIADO ÚTIL**, não por ordem alfabética: um
+ * formulário que nascesse em `admin` transformaria um clique distraído em Administrador novo.
+ * `visualizacao` seria mais restrito ainda, e criaria conta que não faz nada — o padrão seria quase
+ * sempre trocado, e padrão que se troca sempre não é padrão.
+ */
+export const PERFIL_PADRAO_DE_CADASTRO: Perfil = "operador";
+
 export function rotuloDoPerfil(perfil: string | null | undefined): string {
   if (!perfil) return "—";
   return PERFIS[perfil as Perfil]?.rotulo ?? perfil;
