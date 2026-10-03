@@ -127,14 +127,26 @@ async function minhaContaId(): Promise<string | null> {
  * somada a `app.pode('usuarios','ler')`. Usar a `service_role` aqui funcionaria e esconderia o dia em
  * que a policy mudasse.
  */
-async function adminsAtivos(): Promise<readonly { readonly id: string }[]> {
+async function adminsAtivos(): Promise<
+  readonly { readonly id: string; readonly temCredencial: boolean }[]
+> {
   const supabase = await criarClienteDeServidor();
   const { data } = await supabase
     .from("usuarios")
-    .select("id")
+    .select("id, auth_user_id")
     .eq("perfil", "admin")
-    .eq("status", "ativo");
-  return data ?? [];
+    .eq("status", "ativo")
+    .is("excluida_em", null);
+  /*
+   * ⚠️ **A CREDENCIAL VEM JUNTO PORQUE A REGRA DEPENDE DELA** *(emenda de 03/10/2026, pedida por
+   *    Bernardo Villas Boas: "conte apenas admins ATIVOS COM CREDENCIAL")*. Medido no remoto, só
+   *    por leitura: **duas** das cinco contas são `admin`/`ativo` **sem credencial nenhuma** — e com
+   *    elas na contagem a guarda liberava mexer no único Admin que entra. A decisão de quem conta
+   *    mora em `lib/dominio/ultimo-admin.ts`; aqui só se entrega o dado que ela precisa.
+   * ⚠️ **E `excluida_em is null` entrou junto:** conta anonimizada mantém perfil `admin` e situação,
+   *    e contá-la seria o mesmo buraco por outro caminho.
+   */
+  return (data ?? []).map((a) => ({ id: a.id, temCredencial: a.auth_user_id !== null }));
 }
 
 /**
@@ -487,13 +499,25 @@ export async function redefinirSenha(
     );
   }
 
-  const admin = criarClienteAdministrativo();
-  const { data: alvo } = await admin
+  /*
+   * ⚠️ **MESMO CONSERTO DA EXCLUSÃO, e pelo mesmo motivo:** a leitura vai pela **sessão** (o Admin lê
+   *    `usuarios` pela policy) e o `error` **não é descartado**. Com o `error` no lixo, qualquer
+   *    falha da consulta aparecia como *"Conta não encontrada."* — uma frase que acusa o cadastro e
+   *    manda procurar no lugar errado.
+   */
+  const supabaseDaSessao = await criarClienteDeServidor();
+  const { data: alvo, error: erroDaLeitura } = await supabaseDaSessao
     .from("usuarios")
     .select("auth_user_id, codigo")
     .eq("id", usuarioId)
     .maybeSingle();
 
+  if (erroDaLeitura) {
+    return falha(
+      `Não foi possível ler esta conta antes de redefinir a senha: ${erroDaLeitura.message}. ` +
+        "A senha não foi trocada.",
+    );
+  }
   if (!alvo) return falha("Conta não encontrada.");
   /*
    * ⚠️ **SEM CREDENCIAL NÃO HÁ SENHA A REDEFINIR, e a recusa precisa dizer o que FUNCIONA.** Até
@@ -511,9 +535,18 @@ export async function redefinirSenha(
     );
   }
 
+  /*
+   * ⚠️ **AQUI A CHAVE ADMINISTRATIVA É INDISPENSÁVEL** — trocar senha de outra conta só a
+   *    `service_role` faz. A diferença em relação à exclusão é essa: lá ela era dependência
+   *    desnecessária; aqui ela é a própria operação. O que muda é que a falta dela virou **recusa
+   *    legível** em vez de exceção que derruba a tela.
+   */
+  const credencial = administrativoOuRecusa();
+  if (!credencial.ok) return falha(credencial.erro);
+
   const senha = gerarSenhaTemporaria((n) => randomInt(n));
 
-  const { error } = await admin.auth.admin.updateUserById(alvo.auth_user_id, {
+  const { error } = await credencial.admin.auth.admin.updateUserById(alvo.auth_user_id, {
     password: senha,
     app_metadata: { trocar_senha: true },
   });
@@ -524,6 +557,32 @@ export async function redefinirSenha(
   if (erroDoRastro) return falha(`A senha foi redefinida, mas o rastro falhou: ${erroDoRastro}`);
 
   return { ok: true, senha };
+}
+
+/**
+ * O cliente administrativo, **sem estourar** quando o ambiente não tem a chave.
+ *
+ * ⚠️ **`criarClienteAdministrativo()` LANÇA quando falta a variável**, e dentro de uma Server Action
+ * uma exceção não tratada derruba a tela inteira no `error.tsx` — a pessoa vê *"Algo falhou nesta
+ * tela"* e nada sobre a causa. Aqui ela vira **recusa legível**, que é o que o `RN-DEG-01` pede.
+ *
+ * ⚠️ **E ELA NOMEIA O AMBIENTE, porque é lá que o conserto fica.** A chave é segredo de implantação:
+ * quem lê a mensagem precisa saber que o problema não está no cadastro nem no clique.
+ */
+function administrativoOuRecusa():
+  | { readonly ok: true; readonly admin: ReturnType<typeof criarClienteAdministrativo> }
+  | { readonly ok: false; readonly erro: string } {
+  try {
+    return { ok: true, admin: criarClienteAdministrativo() };
+  } catch {
+    return {
+      ok: false,
+      erro:
+        "A chave administrativa não está configurada neste ambiente, então não é possível mexer " +
+        "em credencial aqui. Isto é configuração de implantação (`SUPABASE_SERVICE_ROLE_KEY`), " +
+        "não problema do cadastro.",
+    };
+  }
 }
 
 /**
@@ -551,27 +610,41 @@ export async function redefinirSenha(
 async function credencialPeloEmail(
   admin: ReturnType<typeof criarClienteAdministrativo>,
   email: string,
-): Promise<{ readonly id: string; readonly usadaPor: string | null } | null> {
+): Promise<
+  | { readonly estado: "achou"; readonly id: string; readonly usadaPor: string | null }
+  | { readonly estado: "nao_existe" }
+  | { readonly estado: "nao_consegui"; readonly motivo: string }
+> {
   const porPagina = 200;
   const alvo = email.trim().toLowerCase();
 
   for (let pagina = 1; ; pagina++) {
-    const { data } = await admin.auth.admin.listUsers({ page: pagina, perPage: porPagina });
+    const { data, error } = await admin.auth.admin.listUsers({ page: pagina, perPage: porPagina });
+    /*
+     * ⚠️ **«NÃO CONSEGUI OLHAR» NÃO É «NÃO EXISTE», e confundir os dois foi o defeito desta rodada.**
+     *    A versão anterior lia só `data` e devolvia `null` quando a API falhava — e `null` significa
+     *    *"não há credencial presa nesse e-mail"*. Uma chave administrativa recusada virava, assim,
+     *    a afirmação tranquila de que estava tudo limpo.
+     */
+    if (error) return { estado: "nao_consegui", motivo: error.message };
+
     const contas = data?.users ?? [];
 
     for (const u of contas) {
       if ((u.email ?? "").trim().toLowerCase() !== alvo) continue;
 
-      const { data: dona } = await admin
+      const { data: dona, error: erroDaDona } = await admin
         .from("usuarios")
         .select("codigo")
         .eq("auth_user_id", u.id)
         .maybeSingle();
 
-      return { id: u.id, usadaPor: dona?.codigo ?? null };
+      if (erroDaDona) return { estado: "nao_consegui", motivo: erroDaDona.message };
+
+      return { estado: "achou", id: u.id, usadaPor: dona?.codigo ?? null };
     }
 
-    if (contas.length < porPagina) return null;
+    if (contas.length < porPagina) return { estado: "nao_existe" };
   }
 }
 
@@ -614,13 +687,33 @@ export async function excluirConta(
   const veredito = vereditoSobreConta("excluir", usuarioId, eu, await adminsAtivos());
   if (!veredito.permitido) return falha(veredito.motivo);
 
-  const admin = criarClienteAdministrativo();
-  const { data: alvo } = await admin
+  /*
+   * ⚠️ **A LEITURA VAI PELA SESSÃO, NÃO PELA `service_role` — E ISTO É O CONSERTO DO DEFEITO QUE
+   *    BERNARDO ENCONTROU DUAS VEZES.** O Admin lê `usuarios` pela policy `usuarios_ler`; usar a
+   *    chave administrativa aqui era **dependência desnecessária**, e ela transformava um problema
+   *    de ambiente em *"Conta não encontrada."*. O Princípio XI diz o inverso: se uma tela precisou
+   *    da `service_role` para funcionar, a policy está errada — e aqui a policy estava certa.
+   * ⚠️ **E O `error` NÃO É MAIS DESCARTADO.** A versão anterior lia só `data`, então **qualquer**
+   *    falha da consulta — chave recusada, rede, privilégio — virava a frase *"Conta não
+   *    encontrada."*, que é **mentira**: a conta existe. Medido em 03/10/2026: o mesmo `select`,
+   *    com a chave desta máquina, acha as **cinco** contas reais; no preview a chave é a única
+   *    variável desatualizada (26 dias contra 19 das demais, lido no painel da Vercel).
+   * ⚠️ **ERRO DESCARTADO É PIOR QUE ERRO BRUTO:** ele não só esconde a causa, ele **inventa outra**,
+   *    e manda quem investiga procurar a conta em vez de procurar a credencial.
+   */
+  const supabase = await criarClienteDeServidor();
+  const { data: alvo, error: erroDaLeitura } = await supabase
     .from("usuarios")
     .select("auth_user_id, email, excluida_em")
     .eq("id", usuarioId)
     .maybeSingle();
 
+  if (erroDaLeitura) {
+    return falha(
+      `Não foi possível ler esta conta antes de excluir: ${erroDaLeitura.message}. ` +
+        "A conta não foi tocada.",
+    );
+  }
   if (!alvo) return falha("Conta não encontrada.");
   if (alvo.excluida_em) return falha("Esta conta já foi excluída.");
 
@@ -628,7 +721,6 @@ export async function excluirConta(
   // Aqui o porteiro do banco tem a última palavra, e a transação decide entre apagar a linha e
   // anonimizá-la. Nos dois caminhos a referência a `auth.users` deixa de existir — e é isso que
   // libera o passo 2.
-  const supabase = await criarClienteDeServidor();
   const { data: caminho, error } = await supabase.rpc(
     "excluir_conta" as never,
     {
@@ -638,10 +730,27 @@ export async function excluirConta(
 
   if (error) return falha(traduzirRecusa(error as ErroDoBanco));
 
-  // ---------------------------------------------------------------- passo 2: a credencial
-  // ⚠️ `auth.users` é da plataforma: `excluir_conta` não a alcança, e é por isso que ela sai aqui.
+  /*
+   * ---------------------------------------------------------------- passo 2: a credencial
+   * ⚠️ `auth.users` é da plataforma: `excluir_conta` não a alcança, e é por isso que ela sai aqui.
+   * ⚠️ **E O CLIENTE ADMINISTRATIVO SÓ NASCE AQUI DENTRO, quando há credencial de fato.** Criá-lo
+   *    antes fazia a exclusão de **conta sem credencial** depender de uma chave que ela não usa para
+   *    nada — e é exatamente o estado de **4 das 5 contas reais**, medido no remoto. Agora elas são
+   *    excluíveis mesmo num ambiente onde a chave administrativa esteja vencida.
+   */
   if (alvo.auth_user_id) {
-    const { error: erroDaCredencial } = await admin.auth.admin.deleteUser(alvo.auth_user_id);
+    const credencial = administrativoOuRecusa();
+    if (!credencial.ok) {
+      revalidatePath("/admin/usuarios");
+      return falha(
+        `O cadastro foi excluído, mas a credencial de ${alvo.email} não: ${credencial.erro} ` +
+          "Ela não alcança dado nenhum — sem cadastro a RLS nega tudo —, mas precisa ser removida " +
+          "no painel do Supabase, em Authentication › Users.",
+      );
+    }
+    const { error: erroDaCredencial } = await credencial.admin.auth.admin.deleteUser(
+      alvo.auth_user_id,
+    );
     if (erroDaCredencial) {
       revalidatePath("/admin/usuarios");
       return falha(
@@ -665,10 +774,32 @@ export async function excluirConta(
    *    que outra conta referencia derrubaria o acesso de quem não pediu nada — e no remoto esse é o
    *    caso de `USR-02`, cujo e-mail é o da credencial de `USR-ADMIN-001`.
    */
-  const presa = alvo.email ? await credencialPeloEmail(admin, alvo.email) : null;
+  const varredura = administrativoOuRecusa();
 
-  if (presa && presa.usadaPor === null) {
-    const { error: erroDaOrfa } = await admin.auth.admin.deleteUser(presa.id);
+  /*
+   * ⚠️ **AQUI A FALHA NÃO DESFAZ NADA E NÃO PODE DERRUBAR A AÇÃO: o cadastro JÁ SAIU.** A varredura
+   *    de credencial órfã é limpeza de melhor esforço, e tratá-la como obrigatória faria a exclusão
+   *    de uma conta sem credencial **falhar por causa de uma chave** que ela não precisava.
+   * ⚠️ **MAS O DESFECHO TEM DE DIZER QUE NÃO FOI POSSÍVEL CONFERIR.** Devolver o aviso normal
+   *    — *"o e-mail está livre para um novo cadastro"* — sem ter olhado seria a mesma classe de
+   *    mentira que esta rodada veio consertar.
+   */
+  if (!varredura.ok) {
+    revalidatePath("/admin/usuarios");
+    return { ok: true, caminho: "apagada_sem_conferir_credencial" };
+  }
+
+  const presa = alvo.email
+    ? await credencialPeloEmail(varredura.admin, alvo.email)
+    : ({ estado: "nao_existe" } as const);
+
+  if (presa.estado === "nao_consegui") {
+    revalidatePath("/admin/usuarios");
+    return { ok: true, caminho: "apagada_sem_conferir_credencial" };
+  }
+
+  if (presa.estado === "achou" && presa.usadaPor === null) {
+    const { error: erroDaOrfa } = await varredura.admin.auth.admin.deleteUser(presa.id);
     if (erroDaOrfa) {
       revalidatePath("/admin/usuarios");
       return falha(
@@ -686,7 +817,7 @@ export async function excluirConta(
    *    é falha; o que seria falha é a tela afirmar que o endereço está livre quando ele é o login de
    *    outra conta. O valor extra entra em `opcoes` do parâmetro `excluida` do contrato de navegação.
    */
-  if (presa && presa.usadaPor !== null) {
+  if (presa.estado === "achou" && presa.usadaPor !== null) {
     return { ok: true, caminho: "apagada_email_em_uso" };
   }
 

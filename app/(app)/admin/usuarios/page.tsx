@@ -139,7 +139,8 @@ export default async function Usuarios({
       */}
       {excluida === "apagada" ||
       excluida === "anonimizada" ||
-      excluida === "apagada_email_em_uso" ? (
+      excluida === "apagada_email_em_uso" ||
+      excluida === "apagada_sem_conferir_credencial" ? (
         <p
           role="status"
           className="border-borda bg-superficie-2 rounded-ciaara text-texto mt-3 border p-2 text-sm"
@@ -154,7 +155,15 @@ export default async function Usuarios({
                     não pediu nada. Dizer "o e-mail está livre" aqui faria o Admin tentar cadastrar e
                     bater num erro sem explicação.
                 */
-                "Conta excluída e removida da lista. ⚠️ O e-mail dela NÃO ficou livre: esse endereço é a credencial de outra conta do sistema, e ela foi preservada. Para reaproveitar o endereço, resolva primeiro a conta que o usa."}
+                excluida === "apagada_email_em_uso"
+                ? "Conta excluída e removida da lista. ⚠️ O e-mail dela NÃO ficou livre: esse endereço é a credencial de outra conta do sistema, e ela foi preservada. Para reaproveitar o endereço, resolva primeiro a conta que o usa."
+                : /*
+                   ⚠️ **A QUINTA FRASE DIZ O QUE NÃO FOI OLHADO.** A exclusão concluiu — o
+                      cadastro saiu —, mas a varredura de credencial órfã precisa da chave
+                      administrativa, e ela não respondeu. Afirmar que o e-mail está livre sem ter
+                      conferido seria inventar um resultado.
+                  */
+                  "Conta excluída e removida da lista. ⚠️ NÃO foi possível conferir se restou credencial presa no e-mail dela: a chave administrativa deste ambiente não respondeu. O cadastro saiu; o endereço pode continuar ocupado até que isso seja verificado."}
         </p>
       ) : null}
 

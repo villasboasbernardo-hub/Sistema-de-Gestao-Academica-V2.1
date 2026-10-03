@@ -18,7 +18,7 @@
 --    `usuario_curso.usuario_id`, com `restrict`.
 -- =====================================================================================
 begin;
-select plan(12);
+select plan(16);
 
 -- ============================================ o marcador
 select has_column('public', 'usuarios', 'excluida_em',
@@ -95,6 +95,58 @@ select lives_ok($$
           'excluida-00000000000000000000000000000001@ciaara11.invalid',
           'Conta excluída', 'visualizacao', 'geral')
 $$, 'M3 · o e-mail sentinela da anonimizacao passa no CHECK `usuarios_email_normalizado`');
+
+-- ============================================ o chao de um Admin conta so quem ENTRA
+-- ⚠️ **ESTE E O RETRATO DO REMOTO, MEDIDO EM 03/10/2026, so por leitura:** das cinco contas, DUAS
+--    sao `admin`/`ativo` SEM credencial nenhuma (vindas do ETL) e UMA entra de verdade. Com a
+--    contagem antiga — que olhava so `perfil` e `status` — o banco via TRES Administradores, e
+--    estas duas guardas LIBERAVAM rebaixar, desativar ou excluir o unico que consegue entrar.
+-- ⚠️ **NAO SOBRARIA NINGUEM PARA DESFAZER**, porque as outras duas nunca conseguiram entrar. A
+--    guarda existia, estava escrita, parecia certa — e protegia um numero, nao uma pessoa.
+-- ⚠️ **A SEMEADURA PRECISA DE LINHA EM `auth.users`**, porque `usuarios.auth_user_id` referencia
+--    `auth.users(id)` com `restrict`: sem credencial de verdade nao ha como montar o caso do
+--    admin que ENTRA. Tudo roda dentro da transacao desfeita deste arquivo.
+insert into auth.users (id, email)
+values ('aaaaaaaa-0000-4000-8000-000000000001', 'admin-real@ciaara11.invalid');
+
+insert into public.usuarios (codigo, email, nome, perfil, escopo_curso, status, auth_user_id)
+values ('USR-REAL-TESTE', 'admin-real@ciaara11.invalid', 'Admin Que Entra',
+        'admin', 'geral', 'ativo', 'aaaaaaaa-0000-4000-8000-000000000001');
+
+insert into public.usuarios (codigo, email, nome, perfil, escopo_curso, status)
+values ('USR-FANTASMA-TESTE', 'admin-fantasma@ciaara11.invalid', 'Admin Que Nunca Entrou',
+        'admin', 'geral', 'ativo');
+
+-- ⚠️ **A ASSERCAO QUE NOMEIA A ASSIMETRIA**: a contagem ingenua ve DOIS, a que vale ve UM. Sem
+--    ela, as duas asercoes de comportamento abaixo passariam sem que ninguem soubesse POR QUE.
+select is(
+  (select count(*)::int from public.usuarios u
+    where u.perfil = 'admin' and u.status = 'ativo' and u.excluida_em is null)
+  || ' ingenuos / ' ||
+  (select count(*)::int from public.usuarios u
+    where u.perfil = 'admin' and u.status = 'ativo' and u.excluida_em is null
+      and u.auth_user_id is not null) || ' que entram',
+  '2 ingenuos / 1 que entram',
+  'M4 · a contagem ingenua ve DOIS Admins ativos; a que vale ve UM — e a diferenca e o fantasma');
+
+-- ⚠️ **O CASO QUE DISCRIMINA**: com o fantasma presente, rebaixar o unico que entra e RECUSADO.
+--    Com a contagem antiga esta assercao reprova, porque o fantasma "substituia" o real.
+select throws_ok($$
+  update public.usuarios set perfil = 'operador' where codigo = 'USR-REAL-TESTE'
+$$, '42501', null,
+  'M4 · rebaixar o ultimo Admin COM ACESSO e recusado, mesmo com admin fantasma na lista');
+
+-- E desativar tem de ser recusado pelo mesmo motivo — sao dois caminhos para o mesmo chao.
+select throws_ok($$
+  update public.usuarios set status = 'inativo' where codigo = 'USR-REAL-TESTE'
+$$, '42501', null,
+  'M4 · desativar o ultimo Admin COM ACESSO e recusado, mesmo com admin fantasma na lista');
+
+-- ⚠️ **E O FANTASMA NAO E INDELEVEL**, que e a outra metade da regra: tira-lo do posto nao reduz
+--    quem administra, e trava-lo deixaria conta inutil e inalteravel na lista para sempre.
+select lives_ok($$
+  update public.usuarios set perfil = 'operador' where codigo = 'USR-FANTASMA-TESTE'
+$$, 'M4 · rebaixar um Admin SEM credencial e permitido — ele nao era o chao de nada');
 
 select * from finish();
 rollback;

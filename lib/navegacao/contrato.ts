@@ -522,7 +522,18 @@ export const CONTRATO = {
         nome: "excluida",
         tipo: "escolha",
         padrao: "",
-        opcoes: ["", "apagada", "anonimizada", "apagada_email_em_uso"],
+        opcoes: [
+          "",
+          "apagada",
+          "anonimizada",
+          "apagada_email_em_uso",
+          // ⚠️ O QUINTO EXISTE PARA O AVISO NÃO AFIRMAR O QUE NINGUÉM OLHOU (03/10/2026): a
+          //    varredura de credencial órfa precisa da chave administrativa, e quando ela não
+          //    responde a exclusão conclui mesmo assim — o cadastro já saiu. Dizer "o e-mail está
+          //    livre" sem ter conferido seria a mesma classe de mentira que esta fatia vem
+          //    consertando.
+          "apagada_sem_conferir_credencial",
+        ],
         historico: "substitui",
         avisaServidor: true,
       },

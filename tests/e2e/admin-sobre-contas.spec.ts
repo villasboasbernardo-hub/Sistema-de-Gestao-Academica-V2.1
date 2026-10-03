@@ -551,6 +551,86 @@ test.describe("`FR-046` e `D-USR-6` · as quatro ações da linha, e a exclusão
   });
 
   /**
+   * `D-USR-3` · **O RETRATO REAL: conta do ETL, perfil Admin, ativa, SEM credencial nenhuma.**
+   *
+   * ⚠️ **ESTE É O ESTADO DE 4 DAS 5 CONTAS REAIS**, medido no remoto em 03/10/2026, só por leitura —
+   * e é a conta em que Bernardo clicou em *Excluir* e recebeu **"Conta não encontrada."**, duas
+   * conferências seguidas. A frase era invenção do código: `excluirConta` lia a conta com o
+   * **cliente administrativo** e **descartava o `error`**, então qualquer falha daquela consulta
+   * virava *"não encontrada"* — sobre uma conta visível na lista.
+   *
+   * ⚠️ **O QUE ESTE CASO PROVA, e o que ele NÃO prova.** Ele prova que a exclusão de uma conta sem
+   * credencial conclui **por clique**, tira a linha da lista e libera o e-mail. Ele **não** é o caso
+   * que discrimina a correção: na máquina de quem desenvolve a chave administrativa funciona, então
+   * ele passava **antes e depois**. Quem discrimina é
+   * `tests/unidade/exclusao-sem-credencial.test.ts`, que mede a **ordem das dependências** — e
+   * reprova com o código de antes.
+   *
+   * ⚠️ **E ELE CARREGA O FANTASMA**: a conta é `admin`/`ativo` sem credencial, exatamente como
+   * `USR-01` e `USR-02`. Se a regra do último Admin contasse linha em vez de pessoa, este caso
+   * ainda passaria — mas a `115_exclusao_de_conta.sql` reprovaria, e é lá que a contagem se prova.
+   */
+  test("⚠️ O RETRATO REAL · conta do ETL, Admin, ativa e sem credencial é excluída por clique", async ({
+    page,
+  }, info) => {
+    const email = `etl-sem-credencial-${info.workerIndex}@ciaara.teste`;
+    const codigo = `USR-ETL-${info.workerIndex}`;
+
+    await apagarConta(email);
+    await servico.from("usuarios").delete().eq("codigo", codigo);
+
+    /*
+     * O estado de partida, igual ao do remoto: nenhuma credencial, procedência do ETL, perfil
+     * `admin` e situação `ativo`. Nenhuma tela produz isto — por isso ele vem por fora.
+     */
+    await servico.from("usuarios").insert({
+      codigo,
+      email,
+      nome: "Veio Do ETL",
+      perfil: "admin",
+      escopo_curso: "geral",
+      status: "ativo",
+      origem_migracao_v1: `Usuarios:${codigo}`,
+    });
+
+    await entrar(page, EMAIL_ADMIN);
+    const linha = linhaDa(page, email);
+
+    // ⚠️ A ausência de *Redefinir senha* tem razão ESCRITA no lugar dela — sem isso o Admin vê
+    //    três botões onde há quatro e não tem como saber por quê.
+    await expect(linha).toContainText("sem credencial");
+    await expect(linha.getByRole("button", { name: "Redefinir senha" })).toHaveCount(0);
+
+    // E as outras três estão lá: Editar, Desativar e Excluir.
+    await expect(linha.getByRole("link", { name: "Editar" })).toBeVisible();
+    await expect(linha.getByRole("button", { name: "Desativar" })).toBeVisible();
+
+    await linha.getByRole("button", { name: "Excluir" }).click();
+    const dialogo = page.getByRole("alertdialog");
+    await expect(dialogo).toContainText("Veio Do ETL");
+    await expect(dialogo).toContainText("A exclusão é permanente.");
+    await dialogo.getByRole("button", { name: "Excluir" }).click();
+
+    /*
+     * ⚠️ **A ASSERÇÃO QUE O RELATO DE BERNARDO PEDE:** a conta SAI da lista, e o aviso não é
+     *    "Conta não encontrada". Nada de credencial a apagar aqui — e por isso nada de chave
+     *    administrativa no caminho.
+     */
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("excluida"), { timeout: 15_000 })
+      .toBe("apagada");
+    await expect(linhaDa(page, email), "a conta sem credencial continuou na lista").toHaveCount(0);
+
+    const aviso = page.locator('[data-slot="aviso-da-lista"]');
+    await expect(aviso).toHaveCount(0);
+
+    // E o e-mail volta a servir — por clique.
+    await cadastrarPorClique(page, email, "Depois Do ETL");
+    await apagarConta(email);
+    await servico.from("usuarios").delete().eq("codigo", codigo);
+  });
+
+  /**
    * `D-USR-3` · **a credencial ÓRFÃ sai com a exclusão, e o endereço volta a servir.**
    *
    * ⚠️ **ESTE É O ESTADO DE 4 DAS 5 CONTAS REAIS**, medido no remoto em 03/10/2026, só por leitura:

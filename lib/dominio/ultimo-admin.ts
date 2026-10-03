@@ -23,9 +23,24 @@
  * ativa e o sistema sem Admin. Uma regra escrita só sobre `status` passaria por aí.
  */
 
-/** Uma conta com perfil Admin e situação ativa, como o banco a devolve. */
+/**
+ * Uma conta com perfil Admin e situação ativa, como o banco a devolve.
+ *
+ * ⚠️ **`temCredencial` NÃO É DETALHE DE INFRAESTRUTURA: É PARTE DA REGRA.** A `FR-042` protege a
+ * capacidade de **administrar o sistema**, e quem não tem credencial **não entra** — logo não
+ * administra nada. Contar essa conta como Admin ativo faz a regra proteger um número em vez de uma
+ * pessoa.
+ *
+ * ⚠️ **E O CASO É REAL, MEDIDO NO REMOTO EM 03/10/2026, só por leitura:** das cinco contas, **duas
+ * têm perfil `admin` e situação `ativo` e NENHUMA credencial** — vieram do ETL. Com elas na
+ * contagem, o sistema acreditava ter **três** Administradores quando **um** conseguia entrar: era
+ * possível rebaixar, desativar ou excluir o único Admin de verdade, e **ninguém sobraria para
+ * desfazer**. É o oposto do que a regra existe para impedir.
+ */
 export type AdminAtivo = {
   readonly id: string;
+  /** Tem linha em `auth.users`? Sem credencial a conta não entra, e Admin que não entra não conta. */
+  readonly temCredencial: boolean;
 };
 
 /** O que se quer fazer com a conta alvo. */
@@ -65,16 +80,26 @@ export function podeMexerNoAdmin(
   contaAlvoId: string,
   adminsAtivos: readonly AdminAtivo[],
 ): VeredictoDoUltimoAdmin {
-  const alvoEhAdminAtivo = adminsAtivos.some((a) => a.id === contaAlvoId);
-  if (!alvoEhAdminAtivo) return PERMITIDO;
+  /*
+   * ⚠️ **SÓ ADMIN COM CREDENCIAL CONTA, DOS DOIS LADOS DA REGRA** *(emenda de 03/10/2026, pedida
+   *    por Bernardo Villas Boas: "conte apenas admins ATIVOS COM CREDENCIAL")*. Vale como
+   *    **protegido** — tirar um Admin que nunca entrou não reduz quem administra — e como
+   *    **protetor** — ele não substitui ninguém. Contar os dois juntos é o que deixava a guarda
+   *    liberar a remoção do único Admin de verdade.
+   */
+  const quemAdministra = adminsAtivos.filter((a) => a.temCredencial);
 
-  if (adminsAtivos.length > 1) return PERMITIDO;
+  const alvoAdministra = quemAdministra.some((a) => a.id === contaAlvoId);
+  if (!alvoAdministra) return PERMITIDO;
+
+  if (quemAdministra.length > 1) return PERMITIDO;
 
   return {
     permitido: false,
     motivo:
-      `Não é possível ${VERBO[acao]} desta conta: ela é o último Administrador ativo, e o ` +
-      `sistema precisa de pelo menos um. Promova outra conta a Administrador antes.`,
+      `Não é possível ${VERBO[acao]} desta conta: ela é o último Administrador ativo **com ` +
+      `acesso**, e o sistema precisa de pelo menos um. Promova outra conta a Administrador e ` +
+      `garanta que ela consegue entrar antes.`,
   };
 }
 
