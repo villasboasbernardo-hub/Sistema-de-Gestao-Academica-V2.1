@@ -29,6 +29,46 @@
 > credencial** não tem senha a redefinir, e **4 das 5 contas reais estão nesse estado** — vieram do
 > ETL e do convite antigo. No lugar do botão aparece *"sem credencial — não entra"*.
 
+## ⚠️ ANTES DOS DOZE PASSOS — as quatro exclusões que você pediu
+
+> **O que mudou desde a última tentativa:** a exclusão **não passa mais pela chave administrativa**
+> quando a conta não tem credencial — e **nenhuma das quatro tem**. Era essa dependência que
+> produzia **"Conta não encontrada."** sobre uma conta visível na lista.
+
+| #   | Conta a excluir | Como ela aparece na lista                    | O que esperar                                                        |
+| --- | --------------- | -------------------------------------------- | -------------------------------------------------------------------- |
+| 1   | `USR-03`        | **1ºTen Izana**, gmail, *Desativada*          | Sai da lista. Aviso acima da tabela: **o e-mail está livre**          |
+| 2   | `USR-MUEF9CLK`  | **Marcela Nogueira de Souza**, marinha.mil.br, *Desativada* | Idem                                                   |
+| 3   | `USR-01`        | **CIAARA-11**, gmail, Admin                   | Idem — ela é Admin, mas **sem acesso**, então não é o chão de nada    |
+| 4   | `USR-02`        | **1T VILLAS**, gmail, Admin                   | Sai da lista, e o aviso diz que **o e-mail NÃO ficou livre**: aquele endereço é a credencial da **sua** conta |
+
+**Em cada uma:** clique **Excluir** na linha → leia o cartão (ele nomeia a conta e o e-mail) →
+**Excluir**. Não há campo para digitar.
+
+⚠️ **O QUE TEM DE SOBRAR NO FIM: só `USR-ADMIN-001`** — a sua. Ela aparece como *"sua conta — peça a
+outro Administrador"*, sem botão nenhum, e **não pode** ser excluída: é a sua própria conta **e** o
+último Administrador com acesso. Depois das quatro, entre e saia uma vez para confirmar que o seu
+acesso está intacto.
+
+⚠️ **E SE AINDA APARECER «Conta não encontrada»**, pare e me diga: significa que a causa é outra, e
+a frase agora é impossível de produzir por falha de consulta — ela só sai quando a linha realmente
+não está lá (alguém já a excluiu, por exemplo).
+
+### ⚠️ Duas ações podem falhar no preview, e a razão não é o cadastro
+
+Se a hipótese sobre o ambiente estiver certa, **cadastrar** e **redefinir senha** vão recusar no
+preview até a chave ser renovada — as duas **precisam** da chave administrativa, que a exclusão
+deixou de precisar. A recusa agora **diz isso**, nomeando `SUPABASE_SERVICE_ROLE_KEY`, em vez de
+estourar a tela ou culpar o cadastro.
+
+**O que eu medi, e o que não medi:** no painel da Vercel, essa variável no escopo **Preview** tem
+**26 dias**, e a de **Production 19** — como **todas** as outras variáveis dos dois escopos. **Não li
+o valor dela**, porque a decisão **AMBIENTE-3** manda só relatar. Se os passos **4, 5 e 8** dos doze
+abaixo recusarem com essa frase, é isso: **renove a chave do escopo Preview** no painel da Vercel e
+refaça o deploy.
+
+---
+
 ## Os doze passos
 
 | #   | Passo                                                                                       | Resultado esperado                                                                                                                                 |
@@ -58,7 +98,7 @@
 | `USR-01`        | Admin     | ativa    | **não** — sem credencial            | 0                             | **sim**, e o e-mail fica livre                            |
 | `USR-02`        | Admin     | ativa    | **não** — sem credencial            | 0                             | **sim**, mas o **e-mail NÃO fica livre** (ver abaixo)     |
 | `USR-03`        | Visualização | desativada | **não** — sem credencial         | 0                             | **sim**, e o e-mail fica livre                            |
-| `USR-ADMIN-001` | Admin     | ativa    | **sim** — é a **única** que entra   | **17**, em 7 tabelas          | **não** — é a **sua própria** conta (D-USR-3)             |
+| `USR-ADMIN-001` | Admin     | ativa    | **sim** — é a **única** que entra   | **17**, em 7 tabelas          | **não** — é a **sua própria** conta **e** o último Admin **com acesso** (D-USR-3) |
 | `USR-MUEF9CLK`  | Ajudante  | desativada | **não** — convite antigo, nunca emitido | 0                        | **sim**, e o e-mail fica livre                            |
 
 **Três coisas que essa tabela diz, e que vale ler devagar:**

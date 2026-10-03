@@ -307,3 +307,51 @@ catálogo inteiro, como sempre.
 Recriar as duas funções como estavam em `20260830000111` e `20261002195248`, cujo texto está no
 repositório. ⚠️ **Reverter reabre o buraco** — a reversão está escrita porque o DoD 6 a exige, não
 porque deva ser usada.
+
+---
+
+# PR 2 (3ª reconferência) — `20261003164335_ultimo_admin_conta_so_quem_entra.sql`
+
+## ✅ APLICADA NO REMOTO em 03/10/2026, com autorização de Bernardo Villas Boas na mesma sessão,
+
+depois do CI verde em `ef16473`.
+
+## Por que ela existe
+
+⚠️ **ERA UM BURACO ABERTO NO REMOTO, e ele é o oposto do que a `FR-042` promete.** Medido só por
+leitura: das cinco contas, **três** são `admin`/`ativo` e **uma** consegue entrar — `USR-01` e
+`USR-02` vieram do ETL e **não têm credencial nenhuma**. As duas guardas do chão (o gatilho de
+`UPDATE` e `public.excluir_conta`) contavam **linhas**, não pessoas: elas viam três Administradores.
+
+⚠️ **A consequência:** era possível rebaixar, desativar ou **excluir** o único Administrador que
+entra, e **não sobraria ninguém capaz de desfazer**. A guarda existia, estava escrita, parecia certa
+— e protegia um número.
+
+## O rito, na ordem em que foi executado
+
+1. `--somente-copia` → **`remoto-20261003-141140.sql`** (1.795 KB, fora do git).
+2. `db push --linked --dry-run` → **uma linha só**: `20261003164335`.
+3. `db push --linked` → **0**.
+4. A conferência abaixo, **só por leitura**, na hora.
+
+## A conferência, só por leitura
+
+| O que | Esperado | Medido |
+| --- | --- | --- |
+| Migrations dos dois lados | **51 e 51** | **51** ✅ |
+| Impressão digital | igual nos dois, `diff` vazio | **`ba7f116c…`, 1.595 objetos**, `diff` vazio nas 1.596 linhas ✅ |
+| Gatilho conta credencial | sim | `auth_user_id is not null` presente ✅ |
+| `excluir_conta` conta credencial | sim | `u.auth_user_id is not null` presente ✅ |
+| Admins ativos — contagem ingênua | **3** | **3** ✅ |
+| Admins ativos **que entram** | **1** | **1** ✅ — é a assimetria que a migration existe para enxergar |
+| Contas vivas · trilha · policies de `DELETE` | 5 · 4 · 0 | **5 · 4 · 0** ✅ |
+| Production | respondendo como antes | `/login` **200**; `/` e `/admin/usuarios` **307** ✅ |
+
+⚠️ **A IMPRESSÃO DIGITAL MUDOU DE VALOR, e era o esperado:** ela resume `prosrc`, e duas funções
+mudaram de corpo. O que importa é que mudou **do mesmo jeito nos dois bancos**, e que o **número de
+objetos ficou igual** — nada nasceu nem se perdeu.
+
+## Reversão
+
+Reaplicar `20260909020000` (o gatilho) e `20261003000205` (a função), que estão no repositório.
+Nenhuma linha de dado é tocada. ⚠️ **Reverter reabre o buraco.**
