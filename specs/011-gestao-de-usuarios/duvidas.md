@@ -109,6 +109,22 @@ exclusão sirva de faxina.
 
 **Padrão adotado na spec**: (a). *(Assumption 5.)*
 
+⚠️ **SUPERADA EM 03/10/2026 — A PERGUNTA DESTA DÚVIDA DEIXOU DE TER OBJETO** *(decisão de Bernardo
+Villas Boas, **D-USR-3**)*. ⚠️ **A deliberação acima FICA como está**: ela é o raciocínio de
+29/09/2026, e a opção **(a)** era o padrão adotado na spec naquele dia. O que mudou é a resposta:
+**nenhum dependente impede excluir**. O Admin exclui **qualquer conta, em qualquer estado**, menos a
+**própria** e o **último Admin ativo** — e o **e-mail fica liberado** para um novo cadastro.
+
+⚠️ **E o lugar dos quatro impedimentos não é mais "impedir": é ESCOLHER O CAMINHO.** Medido na
+migration `20261003000205_exclusao_de_conta.sql` em 03/10/2026: `public.excluir_conta` pergunta a
+`public.dependentes_da_conta` se **existe** algum, e com isso decide entre **apagar** a linha
+(`apagada`) e **anonimizá-la** (`anonimizada`) — na **mesma transação** em que escreve, para não abrir
+a janela em que a conta ganha um registro entre a medição e a escrita.
+
+⚠️ **E a menção da opção (c) ao *"convite criado por engano"* é HISTÓRICA**: o **convite por e-mail foi
+permanentemente removido** em 03/10/2026 (**D-USR-1**). O engano que a exclusão desfaz hoje é um
+**cadastro** criado pelo Admin em `/admin/usuarios/novo`, não um convite.
+
 ---
 
 ## D-6 — Reativar conta: ação nova na matriz, ou é "editar"?
@@ -145,7 +161,16 @@ nunca foi escrita por tela nenhuma** — ela foi criada exatamente para isto.
 
 ## D-8 — A troca obrigatória bloqueia também as rotas abertas?
 
-Hoje `/login`, `/convite`, `/recuperar-senha`, `/sem-configuracao` e `/estilo` passam sem sessão.
+**Medido em 29/09/2026**, quando esta dúvida foi levantada: `/login`, `/convite`,
+`/recuperar-senha`, `/sem-configuracao` e `/estilo` passavam sem sessão.
+
+⚠️ **EMENDA de 03/10/2026 — SÃO TRÊS, NÃO CINCO** *(decisão de Bernardo Villas Boas, **D-USR-1**)*. ⚠️
+*(Registro anterior, vencido: "Hoje `/login`, `/convite`, `/recuperar-senha`, `/sem-configuracao` e
+`/estilo` passam sem sessão.")* Com o **convite por e-mail permanentemente removido**, `/convite` e
+`/recuperar-senha` **foram apagadas** — não desligadas —, e `SEM_SESSAO`, em
+`lib/supabase/middleware.ts`, tem hoje **`/login`, `/sem-configuracao` e `/estilo`**. ⚠️ **A decisão da
+D-8 não muda com isso**: ela diz que a obrigação de trocar senha **não** bloqueia as rotas abertas, e o
+que a sustenta é a **saída** continuar alcançável — `/login` está entre as três.
 
 | Opção | O quê | O que implica |
 |---|---|---|

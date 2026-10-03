@@ -510,11 +510,19 @@ export const CONTRATO = {
        * inteira, conta com histórico fica como *"Conta excluída"* —, porque as duas são permanentes
        * de maneiras diferentes. Na URL ele sobrevive ao `revalidatePath` e à remontagem da tabela.
        */
+      /*
+       * ⚠️ **O TERCEIRO VALOR EXISTE PARA A TELA NÃO MENTIR** *(03/10/2026)*. As duas primeiras
+       * frases afirmam que *"o e-mail está livre para um novo cadastro"*, e isso é verdade sempre
+       * que a credencial sai junto. **Há um caso em que ela não sai**: conta sem `auth_user_id` cujo
+       * e-mail pertence à credencial de **outra** conta — medido no remoto, é `USR-02`, cujo
+       * endereço é o login de `USR-ADMIN-001`. Apagar aquela credencial derrubaria o acesso de quem
+       * não pediu nada, então ela fica, e o aviso passa a dizer a verdade sobre o endereço.
+       */
       excluida: {
         nome: "excluida",
         tipo: "escolha",
         padrao: "",
-        opcoes: ["", "apagada", "anonimizada"],
+        opcoes: ["", "apagada", "anonimizada", "apagada_email_em_uso"],
         historico: "substitui",
         avisaServidor: true,
       },

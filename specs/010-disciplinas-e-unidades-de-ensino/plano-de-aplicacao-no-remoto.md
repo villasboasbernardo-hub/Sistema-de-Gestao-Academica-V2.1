@@ -27,7 +27,12 @@ O arquivo datado que ele imprime **é citado no PR**. O modo `--somente-copia` g
 toca no banco local** — sem ele, quem quisesse só o backup perderia a base local no `db reset`.
 
 ⚠️ **A cópia NÃO traz o schema `auth`** — credencial não é cadastro. Um remoto restaurado a partir
-dela teria os cadastros e nenhuma senha; as contas se refazem por convite.
+dela teria os cadastros e nenhuma senha; as contas se refazem **pelo cadastro do Admin, com senha
+temporária entregue em mãos** *(decisão de Bernardo Villas Boas, 03/10/2026, **D-USR-1** e
+**D-USR-2**)*. ⚠️ *(Registro anterior, vencido: "as contas se refazem por convite.")* — o **convite
+por e-mail foi permanentemente removido** e **não há envio de e-mail nenhum** no sistema; quem refaz
+é o Admin, em `/admin/usuarios/novo`, e a senha temporária aparece **uma vez**, com **troca
+obrigatória no primeiro acesso**.
 
 ⚠️ **O backup não é rede de segurança automática**: restaurá-lo no remoto seria escrita no remoto, que
 a regra de direção proíbe sem decisão expressa. O que ele garante é que o dado **existe** para ser

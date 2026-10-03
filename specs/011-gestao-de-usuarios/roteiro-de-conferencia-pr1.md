@@ -12,8 +12,18 @@
 > as três policies.
 >
 > ⚠️ **A SUA SENHA DO PREVIEW MUDA DE VERDADE no passo P.6.** Ela é a credencial que você usa todo
-> dia. Anote a nova antes de trocar; não há "desfazer" e o e-mail de recuperação continua sendo o
-> caminho de volta.
+> dia. **Anote a nova antes de trocar; não há "desfazer".**
+>
+> ⚠️ **E NÃO HÁ MAIS E-MAIL DE RECUPERAÇÃO** *(decisão de Bernardo Villas Boas, 03/10/2026,
+> **D-USR-1**)*. ⚠️ *(Registro anterior, vencido: "o e-mail de recuperação continua sendo o caminho de
+> volta.")* A rota `/recuperar-senha` foi **apagada** e `resetPasswordForEmail` **não existe** no
+> repositório; a tela de entrada diz *"Esqueceu a senha? Procure o administrador do sistema."* O
+> caminho de volta passou a ser **outro Admin redefinir a sua senha** em `/admin/usuarios` — a senha
+> temporária aparece **uma vez** na tela dele e você a troca no primeiro acesso. ⚠️ **ANOTE A SENHA COM
+> MAIS CUIDADO POR CAUSA DISSO:** está registrado no `CLAUDE.md` e no cabeçalho de
+> `app/(app)/admin/usuarios/AcoesDaLinha.tsx`, medido no remoto em 03/10/2026, que **4 das 5 contas
+> reais não têm credencial** — então pode não haver, hoje, um segundo Admin capaz de redefinir por
+> você, e o último recurso seria o painel do Supabase, em *Authentication › Users*.
 
 ---
 
@@ -32,8 +42,17 @@ O `db:reset` imprime a conta no fim. Se quiser a base com **dado real** para olh
 local. ⚠️ **Sem bandeira nenhuma ele recria o banco local**; para só guardar a cópia, é
 `--somente-copia`.
 
-Para o passo L.5 você precisa de **duas contas**. A segunda sai de `pnpm conta:local` ou de um
-convite pela tela `/admin/usuarios`.
+Para o passo L.5 você precisa de **duas contas**. A segunda sai de `pnpm conta:local` ou do **cadastro
+pelo Admin**, em `/admin/usuarios/novo` — a tela mostra a **senha temporária uma única vez**, e é com
+ela que você entra no passo L.5 *(decisão de Bernardo Villas Boas, 03/10/2026, **D-USR-1** e
+**D-USR-2**)*.
+
+⚠️ *(Registro anterior, vencido: "A segunda sai de `pnpm conta:local` ou de um convite pela tela
+`/admin/usuarios`.")* O **convite por e-mail foi permanentemente removido** e **não há envio de e-mail
+nenhum** — não há link a abrir nem caixa de entrada a conferir. ⚠️ **E a conta nasce obrigada a trocar a
+senha**, então o primeiro acesso dela cai em `/perfil/senha`; **troque e siga para o L.5**, senão o
+resto do sistema fica inalcançável: enquanto a obrigação existe, a porta devolve toda rota do sistema
+para `/perfil/senha`, e só as rotas abertas — a **saída** entre elas — continuam passando.
 
 ---
 

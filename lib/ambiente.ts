@@ -56,7 +56,9 @@ function necessariasNoNavegador() {
       variavel: "NEXT_PUBLIC_URL_APLICACAO",
       valor: process.env.NEXT_PUBLIC_URL_APLICACAO,
       paraQueServe:
-        "URL canônica desta instância, usada nos links de convite e de recuperação de senha",
+        // ⚠️ Era "usada nos links de convite e de recuperacao de senha". Os dois sairam com o
+        //    e-mail em 03/10/2026 (D-USR-1); a variavel segue valendo para montar endereco absoluto.
+        "URL canônica desta instância, usada onde o sistema precisa de endereço absoluto",
     },
   ] as const;
 }
@@ -108,7 +110,11 @@ export function credenciaisPublicasDoSupabase(): { url: string; chaveAnonima: st
  * em que registrar aula não tem consequência.
  */
 /**
- * URL canônica desta instância, para montar links de convite e de recuperação.
+ * URL canônica desta instância, para montar endereço absoluto quando o sistema precisa de um.
+ *
+ * ⚠️ ELA EXISTIA PARA OS LINKS DE CONVITE E DE RECUPERAÇÃO, e os dois saíram em 03/10/2026
+ * (D-USR-1). A variável continua valendo — endereço absoluto é necessário em outros lugares —,
+ * mas o modo de falha abaixo deixou de ter o convite como caminho.
  *
  * ⚠️ POR QUE ELA É PERIGOSA QUANDO ERRADA: o fluxo inteiro FUNCIONA com o valor errado. O convite
  * sai, o e-mail chega, a pessoa clica, define a senha — no ambiente errado. Nenhum teste pega,

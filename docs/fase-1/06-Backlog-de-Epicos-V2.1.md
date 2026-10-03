@@ -220,9 +220,21 @@ Quatro épicos da v2.1 não têm épico correspondente na v2.0 porque cobrem fun
 
 ---
 
-### Épico 3 — Auth por convite, gestão de usuários, RBAC
+### Épico 3 — Auth com conta criada pelo Admin, gestão de usuários, RBAC
 
-**Objetivo e valor.** Quem entra no sistema é quem o Admin convidou, e o que cada um pode fazer é o que a matriz permite — verificado pelo banco. Valor: a partir daqui o dado migrado está protegido.
+> ⚠️ **EMENDA DE 03/10/2026, E ELA ATRAVESSA ESTE ÉPICO INTEIRO** *(decisões de Bernardo Villas Boas,
+> D-USR-1 a D-USR-6)*. O **convite por e-mail foi permanentemente removido** e **nenhum e-mail é
+> enviado** pelo sistema. ⚠️ *(Registro anterior, vencido no título: "Épico 3 — Auth por convite,
+> gestão de usuários, RBAC".)* Quem lê este épico para começar uma fatia precisa saber, antes do
+> resto: **o caminho único de criação de conta é `auth.admin.createUser()`**, pela tela
+> `/admin/usuarios/novo`, com **senha temporária mostrada uma única vez** e **troca obrigatória no
+> primeiro acesso**. As rotas `/convite` e `/recuperar-senha` **não existem**, e há guarda de unidade
+> que **reprova** se `inviteUserByEmail`, `resetPasswordForEmail` ou qualquer envio de e-mail voltarem
+> ao repositório (`tests/unidade/sem-convite-nem-envio-de-email.test.ts`) — medido em 03/10/2026.
+> ⚠️ **As linhas abaixo que narram o convite com data ficam**: elas contam o que foi construído e
+> por quê, e o Épico 3 foi de fato implementado com convite antes desta decisão.
+
+**Objetivo e valor.** Quem entra no sistema é quem o Admin **cadastrou**, e o que cada um pode fazer é o que a matriz permite — verificado pelo banco. Valor: a partir daqui o dado migrado está protegido. ⚠️ *(Registro anterior, vencido: "é quem o Admin convidou".)* *(D-USR-1, 03/10/2026)*
 
 **Origem v2.0.** Épico **F**. Spec `004-rbac-ampliado-usuarios`; parte de `038-hotfix-edicao-inline-datas-admin` (permissão de Admin).
 
@@ -230,25 +242,28 @@ Quatro épicos da v2.1 não têm épico correspondente na v2.0 porque cobrem fun
 
 | Item | Detalhe |
 |---|---|
-| Autenticação | Supabase Auth, **e-mail/senha somente por convite do Admin**; signup público desabilitado no painel |
-| Fluxo de convite | Admin cadastra → Server Action com `service_role` chama `auth.admin.inviteUserByEmail()` → `/convite/[token]` → definição de senha |
-| Senha | Mínimo 12 caracteres, verificação contra vazamentos (HaveIBeenPwned, nativo), **sem expiração compulsória** |
+| Autenticação | Supabase Auth, **e-mail/senha com a conta criada somente pelo Admin**; signup público desabilitado no painel. ⚠️ *(Registro anterior, vencido: "somente por convite do Admin".)* *(D-USR-1)* |
+| Fluxo de criação de conta *(era "Fluxo de convite" — D-USR-1, D-USR-2)* | Admin cadastra em `/admin/usuarios/novo` → Server Action com `service_role` chama **`auth.admin.createUser()`** com senha temporária gerada no servidor → a senha aparece **uma única vez** e o Admin a repassa em mãos → a pessoa entra em `/login` e é levada a `/perfil/senha` para trocá-la. **Nenhum e-mail é enviado.** ⚠️ *(Registro anterior, vencido: "Server Action … chama `auth.admin.inviteUserByEmail()` → `/convite/[token]` → definição de senha".)* |
+| Senha | Mínimo 12 caracteres, verificação contra vazamentos (HaveIBeenPwned, nativo), **sem expiração compulsória**. ⚠️ **Acrescentado em 03/10/2026** *(D-USR-2)*: **troca obrigatória no primeiro acesso**, marcada em `app_metadata` — acontece **uma vez**, e não é expiração periódica. A senha gerada tem **16 caracteres**, de alfabeto sem caracteres ambíguos, porque ela é **lida em voz alta** ao ser repassada |
 | Ligação | `usuarios.auth_user_id` 1:1 com `auth.users`, `on delete restrict` |
-| Telas | `/admin/usuarios`: listar, convidar, editar perfil e escopo, inativar, reenviar convite |
+| Telas | `/admin/usuarios`: listar e, em **cada linha**, **Editar · Redefinir senha · Desativar/Reativar · Excluir** *(D-USR-6)*. **`/admin/usuarios/novo`** cadastra (página, não diálogo) e **`/admin/usuarios/[id]`** edita nome, perfil e acessos em **página própria** *(D-USR-5)* — *"nada de diálogo sobre diálogo na lista"*. ⚠️ *(Registro anterior, vencido: "listar, convidar, editar perfil e escopo, inativar, reenviar convite".)* **«Reenviar convite» deixou de existir junto com o convite**, e o que substitui o caso de uso — pessoa sem senha utilizável — é **Redefinir senha** |
+| Exclusão permanente **[NOVO — D-USR-3, D-USR-4]** | O Admin exclui **qualquer** conta, em **qualquer estado**, menos a **própria** e o **último Admin ativo**, com **confirmação simples, sem digitar nada** *(D-USR-4)*. O **e-mail fica liberado** para cadastro novo. É **emenda nominal à regra 4** do `CLAUDE.md`, e continua **sem policy e sem privilégio de `DELETE`**: quem apaga é `public.excluir_conta`, `SECURITY DEFINER`, com rastro em `auditoria_de_conta` |
 | Perfis | Os ~12 perfis organizacionais do documento 01, com `escopo_curso` e `usuario_curso` (N:N) |
 | Matriz | Tela de leitura da matriz `perfil_permissao`; edição por Admin |
 | Sessão | Middleware de refresh de sessão; redirecionamento de rota protegida |
-| Recuperação | `/recuperar-senha` |
+| Recuperação | ⚠️ **SAIU DO SISTEMA em 03/10/2026** *(D-USR-1)*. ⚠️ *(Registro anterior, vencido: "`/recuperar-senha`".)* A rota foi apagada, `resetPasswordForEmail` não existe no repositório e a tela de login diz **"Esqueceu a senha? Procure o administrador do sistema."** Quem redefine é o Admin, por **Redefinir senha** na linha da conta |
 | Auditoria | `usuarios.ultimo_acesso`; `criado_por`/`editado_por` por trigger a partir de `auth.uid()` |
 
 **Fora de escopo.** SSO, MFA, federação com conta institucional — não pedidos e fora do escopo declarado. Auto-cadastro em qualquer forma.
 
-**RF-/RN- cobertos.** `RF-AUTH-02`, `RF-AUTH-03`, `RF-AUTH-04`, `RF-AUTH-05`, `RF-CRUD-04`; `RN-RBAC-02`; `RNF-SEG-01`, `RNF-SEG-02`, `RNF-SEG-03`, `RNF-AUD-02`. **[REVOGADO — v2.1]** `RF-AUTH-01` e `RN-RBAC-01` (autenticação exclusivamente por conta Google via `Session.getActiveUser()`, decisão D1 da v2.0): dependiam do runtime Apps Script. Substituídos por e-mail/senha por convite (BRIEF §3, decisão de Bernardo em 25/08/2026). O requisito subjacente — *só acessa quem o Admin cadastrou* — é **preservado integralmente**.
+**RF-/RN- cobertos.** `RF-AUTH-02`, `RF-AUTH-03`, `RF-AUTH-04`, `RF-AUTH-05`, `RF-CRUD-04`; `RN-RBAC-02`; `RNF-SEG-01`, `RNF-SEG-02`, `RNF-SEG-03`, `RNF-AUD-02`. **[REVOGADO — v2.1]** `RF-AUTH-01` e `RN-RBAC-01` (autenticação exclusivamente por conta Google via `Session.getActiveUser()`, decisão D1 da v2.0): dependiam do runtime Apps Script. Substituídos por e-mail/senha com a conta criada pelo Admin (BRIEF §3, decisão de Bernardo em 25/08/2026; mecanismo de criação emendado em 03/10/2026, D-USR-1 e D-USR-2). ⚠️ *(Registro anterior, vencido: "Substituídos por e-mail/senha por convite".)* O requisito subjacente — *só acessa quem o Admin cadastrou* — é **preservado integralmente**, e a emenda de 03/10/2026 o **reforça**: sem convite, a conta não existe sem um ato do Admin.
 
 **Critérios de aceite.**
 
-1. Um e-mail não convidado **não consegue** criar conta por nenhum caminho, inclusive chamando a API diretamente.
-2. Convite → definição de senha → primeiro acesso funciona ponta a ponta em ambiente de preview.
+1. Um e-mail que o Admin não cadastrou **não consegue** criar conta por nenhum caminho, inclusive chamando a API diretamente. ⚠️ *(Registro anterior, vencido: "Um e-mail não convidado".)* *(D-USR-1)*
+2. **Cadastro pelo Admin → senha temporária mostrada uma vez → primeiro acesso → troca obrigatória** funciona ponta a ponta em ambiente de preview. ⚠️ *(Registro anterior, vencido: "Convite → definição de senha → primeiro acesso".)* *(D-USR-1, D-USR-2)*
+   - **2.1 [NOVO — 03/10/2026, D-USR-1].** **Nenhum e-mail é enviado pelo sistema, por nenhum caminho** — provado por **varredura do repositório, com controle positivo**, e não por declaração.
+   - **2.2 [NOVO — 03/10/2026, D-USR-3, D-USR-4].** O Admin **exclui permanentemente** uma conta com **confirmação simples**, e o **e-mail volta a poder ser cadastrado**; a **própria conta** e o **último Admin ativo** são recusados.
 3. Senha com menos de 12 caracteres é recusada; senha em lista de vazamento conhecida é recusada.
 4. Para **cada** perfil existe um teste que prova que o banco **nega** ao menos uma leitura e uma escrita fora do seu escopo. Teste negativo é obrigatório.
 5. Encarregado de Curso com dois cursos em `usuario_curso` lê os dois e **não** lê um terceiro.
@@ -263,8 +278,8 @@ Quatro épicos da v2.1 não têm épico correspondente na v2.0 porque cobrem fun
 | Risco | Mitigação |
 |---|---|
 | `service_role` vazar para o cliente | `lib/supabase/admin.ts` só é importável de Server Actions; regra de lint + revisão |
-| Usuário órfão em `auth.users` sem linha em `usuarios` | Transação no convite; rotina de conferência no CI |
-| Mudança de mecanismo de auth confundir usuários acostumados à conta Google | Comunicação do Admin no convite; documentar em nota de versão |
+| Usuário órfão em `auth.users` sem linha em `usuarios` | ⚠️ **Mitigação emendada em 03/10/2026** *(D-USR-1)*. *(Registro anterior, vencido: "Transação no convite; rotina de conferência no CI".)* Sem convite, a **credencial é criada primeiro** e a linha depois; se a linha falhar, a **credencial recém-criada é desfeita** — porque *linha sem credencial* deixou de ter saída quando «reenviar convite» saiu. Rotina de conferência segue valendo (`scripts/manutencao/conferir_contas.py`) |
+| Mudança de mecanismo de auth confundir usuários acostumados à conta Google | ⚠️ *(Registro anterior, vencido: "Comunicação do Admin no convite".)* **Não há mais e-mail de convite onde comunicar** *(D-USR-1)*: a comunicação acontece **no ato de repassar a senha temporária em mãos**, que é presencial por construção. Documentar em nota de versão |
 
 **Esforço: M.**
 
@@ -866,7 +881,7 @@ Decisão antes de 11: LIQ-3 · LIQ-4
 | BRIEF §7 | Definition of Done, aplicada a toda fatia |
 | BRIEF §9 | Invariáveis citadas em cada épico onde incidem |
 
-**Requisitos revogados neste documento, com substituto nomeado:** `RNF-PLAT-01` a `RNF-PLAT-04` (proibição de framework, banco externo, bundler e CI/CD) → stack do BRIEF §1. `RF-AUTH-01` e `RN-RBAC-01` (conta Google via `Session.getActiveUser()`) → e-mail/senha por convite do Admin (BRIEF §3). `RF-MOD-04` (aviso de implantação parcial) → build atômico e deploy versionado; implantação parcial deixa de ser estado possível.
+**Requisitos revogados neste documento, com substituto nomeado:** `RNF-PLAT-01` a `RNF-PLAT-04` (proibição de framework, banco externo, bundler e CI/CD) → stack do BRIEF §1. `RF-AUTH-01` e `RN-RBAC-01` (conta Google via `Session.getActiveUser()`) → e-mail/senha com a conta criada pelo Admin (BRIEF §3) — ⚠️ *(Registro anterior, vencido: "→ e-mail/senha por convite do Admin".)* o convite por e-mail saiu em **03/10/2026** *(D-USR-1)*, e o substituto é o **cadastro pelo Admin com senha temporária** *(D-USR-2)*. `RF-MOD-04` (aviso de implantação parcial) → build atômico e deploy versionado; implantação parcial deixa de ser estado possível.
 
 **Requisitos absorvidos pela plataforma:** `RNF-SEG-02` (verificação no servidor) → RLS. `RF-CRUD-02` (reconhecimento automático de coluna nova) → tipos gerados + Zod. `RF-CRUD-03` (não sobrescrever coluna calculada) → `GENERATED` não é gravável. O contrato de coluna de `_Meta_Colunas` → `information_schema` + `lib/tipos/database.ts`.
 

@@ -12,6 +12,12 @@ origem: "BRIEF-v2.1 §1, §4, §7, §11 · documento 20 (Arquitetura Alvo) · do
 > chama** e **o que roda antes de um código entrar na `main`**. É o documento que um desenvolvedor
 > novo — ou uma sessão de vibe coding — lê antes de criar o primeiro arquivo.
 
+> ⚠️ **As emendas de 03/10/2026 (D-USR-1, D-USR-2, D-USR-5 e D-USR-6) estão SÓ NESTE `.md`.** O
+> `24-Estrutura-do-Repositorio-e-Convencoes.docx` é o **documento original entregue** e **não foi
+> emendado nem apagado** — é assim que a regra 4 manda tratá-lo. **Na divergência, o `.md` prevalece**
+> *(decisão de Bernardo Villas Boas, 17/09/2026)*, e este documento passa a constar da lista dos que
+> divergem do `.docx`.
+
 ## 0. O que muda em relação à v2.0
 
 Na v2.0 a modularização era uma conquista trabalhosa: o Apps Script compartilha **um único escopo
@@ -33,10 +39,10 @@ sem duplicar catálogo central) **[PRESERVADO]** vira a organização de pastas 
 ciaara-11/
 ├── app/                                   # ROTEAMENTO. Cada pasta = um segmento de URL.
 │   ├── (auth)/                            #   grupo de rotas SEM shell do app (sem menu, sem sidebar)
-│   │   ├── login/page.tsx                 #     /login
-│   │   ├── convite/[token]/page.tsx       #     /convite/<token> — define senha no 1º acesso (BRIEF §3)
-│   │   ├── recuperar-senha/page.tsx       #     /recuperar-senha
+│   │   ├── login/page.tsx                 #     /login — a ÚNICA tela sem sessão deste grupo
 │   │   └── layout.tsx                     #     casca mínima: brasão, card centralizado, nada mais
+│   │                                      #     ⚠️ /convite/[token] e /recuperar-senha SAÍRAM em
+│   │                                      #     02 e 03/10/2026, com o convite (D-USR-1)
 │   ├── (app)/                             #   grupo de rotas COM shell (menu lateral + cabeçalho)
 │   │   ├── layout.tsx                     #     shell: navegação, seletor de tema, usuário logado
 │   │   ├── inicio/page.tsx                #     /inicio — painel de entrada (RF-INI)
@@ -51,8 +57,14 @@ ciaara-11/
 │   │   ├── relatorio/page.tsx             #     /relatorio — RF-REL
 │   │   ├── instrutores/page.tsx           #     /instrutores
 │   │   ├── disciplinas/page.tsx           #     /disciplinas
+│   │   ├── perfil/page.tsx                #     /perfil — nome de exibição e foto da própria conta
+│   │   ├── perfil/senha/page.tsx          #     /perfil/senha — a ÚNICA tela de senha nova. Serve à
+│   │                                      #     troca voluntária E à obrigatória do 1º acesso
 │   │   └── admin/
-│   │       ├── usuarios/page.tsx          #     /admin/usuarios — convite e RBAC (RF-AUTH-05)
+│   │       ├── usuarios/page.tsx          #     /admin/usuarios — a lista e as 4 ações da linha
+│   │       ├── usuarios/novo/page.tsx     #     /admin/usuarios/novo — cadastro (D-USR-2)
+│   │       ├── usuarios/[id]/page.tsx     #     /admin/usuarios/<id> — editar nome, perfil, acessos
+│   │       ├── permissoes/page.tsx        #     /admin/permissoes — RBAC (RF-AUTH-05)
 │   │       ├── parametros/page.tsx        #     /admin/parametros — config_parametros (Princípio VII)
 │   │       └── calendario/page.tsx        #     /admin/calendario — feriados, janelas, reservas PROENS
 │   ├── print/                             #   ROTAS DE IMPRESSÃO — sem shell, servidor puro (RNF-COMP-01)
@@ -147,12 +159,25 @@ ciaara-11/
     └── pull_request_template.md
 ```
 
+> **Emenda de 03/10/2026 — as rotas de autenticação na árvore** *(decisão de Bernardo Villas Boas,
+> 03/10/2026, **D-USR-1**, **D-USR-2**, **D-USR-5** e **D-USR-6**)*. ⚠️ *(Registro anterior, vencido: a
+> árvore trazia `app/(auth)/convite/[token]/page.tsx` — "define senha no 1º acesso (BRIEF §3)" — e
+> `app/(auth)/recuperar-senha/page.tsx`, e descrevia `/admin/usuarios` como "convite e RBAC".)*
+>
+> **O convite por e-mail foi removido permanentemente, e o sistema não envia e-mail nenhum.** As duas
+> rotas foram **apagadas** — `/convite` em **02/10/2026** (`c7822cb`) e `/recuperar-senha` em
+> **03/10/2026** (`908a23f`) —, e `/login` passa a ser a única tela do grupo `(auth)`. A senha do
+> primeiro acesso é escolhida em **`/perfil/senha`**, que já é a tela única de senha nova. A gestão de
+> contas deixou de caber numa rota só: a **lista** com as quatro ações da linha (Editar · Redefinir
+> senha · Desativar/Reativar · Excluir), o **cadastro** em `/admin/usuarios/novo` e a **edição** em
+> `/admin/usuarios/[id]` — página própria, sem diálogo sobre diálogo na lista.
+
 ### 1.1 O que entra e o que **não** entra em cada pasta
 
 | Pasta | Entra | **Não** entra |
 |---|---|---|
 | `app/**` | `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `route.ts`, e componentes usados **por uma única rota** (colocação local) | regra de negócio; consulta reutilizável; componente usado por 2+ rotas (vai para `components/`) |
-| `app/(auth)/**` | telas sem sessão: login, convite, recuperação | qualquer coisa que exija usuário autenticado |
+| `app/(auth)/**` | telas sem sessão. Hoje **só o login** — convite e recuperação saíram em 02 e 03/10/2026 (D-USR-1) | qualquer coisa que exija usuário autenticado |
 | `app/(app)/**` | telas do sistema, todas atrás do middleware | rota pública |
 | `app/print/**` | rotas de impressão, **100% Server Component** | `"use client"`, `useEffect`, animação, menu, sidebar |
 | `components/ui/**` | shadcn/ui como veio (`npx shadcn add`), com ajuste de token | componente do CIAARA-11; consulta ao Supabase |
@@ -213,7 +238,7 @@ app/(app)/turmas/[turma]/dsa/
 | Arquivo especial do Next.js | nome reservado, minúsculo | `page.tsx`, `layout.tsx`, `error.tsx` |
 | Componente React | `PascalCase`, em português | `GradeDsa`, `CardKpi`, `AlertaConformidade` |
 | Função de domínio | `camelCase`, verbo no infinitivo, em português | `distribuirCargaHorariaSemanal`, `detectarConflitos` |
-| Server Action | `camelCase`, verbo de ação | `lancarAula`, `salvarPlanejamento`, `convidarUsuario` |
+| Server Action | `camelCase`, verbo de ação | `lancarAula`, `salvarPlanejamento`, `cadastrarUsuario` |
 | Função de consulta | `buscarX` (uma) / `listarX` (várias) / `contarX` | `buscarTurma`, `listarInstrutoresDoCurso` |
 | Schema Zod | `esquemaX` | `esquemaLancarAula`, `esquemaCadastroInstrutor` |
 | Tipo/interface | `PascalCase`, sem prefixo `I` | `BlocoOcupacao`, `ResultadoAcao<T>` |
@@ -607,7 +632,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...."
 #   ⚠️  NUNCA prefixe com NEXT_PUBLIC_.
 #   ⚠️  NUNCA importe `lib/supabase/admin.ts` de um Client Component (o `server-only` quebra o build).
 #   ⚠️  Usos autorizados, e só estes três:
-#        1. convite de usuário pelo Admin — auth.admin.inviteUserByEmail() (BRIEF §3)
+#        1. cadastro e administração de conta pelo Admin — auth.admin.createUser(),
+#           updateUserById() (redefinir senha) e deleteUser() (exclusão permanente).
+#           ⚠️ ERA "convite de usuário — inviteUserByEmail()" até 03/10/2026, quando o convite
+#           saiu em definitivo (D-USR-1). Hoje `lib/acoes/usuarios.ts` é o único importador.
 #        2. carga do ETL Sheets → PostgreSQL (Épico 2)
 #        3. script de manutenção versionado, executado à mão, nunca por requisição de tela
 #   ⚠️  Se vazar: rotacione IMEDIATAMENTE no painel do Supabase. Ela não expira sozinha.
@@ -621,8 +649,12 @@ DATABASE_URL="postgresql://postgres:SENHA@db.xxxxxxxxxxxx.supabase.co:5432/postg
 # APLICAÇÃO
 # ---------------------------------------------------------------------------------------------
 
-# URL canônica desta instância. Usada nos links de convite e de recuperação de senha —
-# se estiver errada, o e-mail de convite leva o usuário para o ambiente errado.
+# URL canônica desta instância, para montar endereço absoluto quando o sistema precisa de um.
+#   ⚠️ ELA NASCEU PARA OS LINKS DE CONVITE E DE RECUPERAÇÃO, e os dois saíram em 03/10/2026
+#      (D-USR-1). A variável CONTINUA VALENDO e continua conferida por `conferirAmbiente()`:
+#      ausente, o middleware nega a rota protegida (FR-005.1) em vez de montar link para lugar
+#      nenhum. O que deixou de existir é o modo de falha mais caro dela — o convite que saía,
+#      chegava e funcionava perfeitamente NO AMBIENTE ERRADO, sem nada falhar.
 # Local: http://localhost:3000  ·  Preview: a URL da Vercel  ·  Produção: o domínio institucional
 NEXT_PUBLIC_URL_APLICACAO="http://localhost:3000"
 

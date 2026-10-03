@@ -7,7 +7,8 @@
  * exceção — quem chama pode ser a tela ou pode ser `curl`.
  *
  * ⚠️ ESTE É O PRIMEIRO CONSUMIDOR REAL DE `lib/supabase/admin.ts` no projeto. A `service_role`
- * ignora a RLS inteira, e o convite é um dos três usos autorizados (BRIEF §3). Ela aparece aqui e
+ * ignora a RLS inteira, e o **cadastro de conta pelo Admin** é um dos três usos autorizados
+ * (BRIEF §3 — era "convite", e o convite saiu em 03/10/2026 pela D-USR-1). Ela aparece aqui e
  * em nenhum outro lugar desta fatia: se uma tela precisou dela para funcionar, a policy está
  * errada — conserte a policy (Princípio XI).
  */
@@ -39,7 +40,7 @@ const sucesso: Resultado = { ok: true };
  * Confere que quem chama é Admin — **perguntando ao banco**, não confiando no que a tela mandou.
  *
  * A RLS já protege cada tabela; esta conferência existe para que a ação recuse cedo, com mensagem
- * legível, em vez de deixar a `service_role` executar um convite que o perfil não podia pedir.
+ * legível, em vez de deixar a `service_role` executar um cadastro que o perfil não podia pedir.
  */
 async function exigirAdmin(): Promise<Resultado> {
   const supabase = await criarClienteDeServidor();
@@ -261,19 +262,26 @@ function erroDeAutenticacaoEmPortugues(erro: {
   readonly message: string;
 }): string {
   switch (erro.code) {
-    // O e-mail já tem credencial. É a MESMA frase da guarda por `auth_user_id` logo acima, e a
-    // repetição é intencional: os dois caminhos descrevem o mesmo estado para quem lê.
+    /*
+     * ⚠️ **ESTA FRASE ERA DUPLAMENTE FALSA ATÉ 03/10/2026**, e ela é a que o Admin vê ao tentar
+     *    cadastrar um e-mail que já está em `auth.users`. Ela dizia *"Esta conta já tem credencial.
+     *    Use recuperação de senha."* — e **não há recuperação de senha** desde que o e-mail saiu do
+     *    sistema (D-USR-1), nem necessariamente há "esta conta": o endereço pode estar preso numa
+     *    credencial de outra conta, ou órfã. A frase nova diz o estado e o caminho.
+     */
     case "email_exists":
-      return "Esta conta já tem credencial. Use recuperação de senha.";
-    case "over_email_send_rate_limit":
+      return (
+        "Este e-mail já tem credencial no sistema de autenticação, e pode ser o login de outra " +
+        "conta. Confira a lista: se houver uma conta com este endereço, exclua-a antes — a " +
+        "exclusão libera o e-mail. Se não houver nenhuma, a credencial está órfã e precisa ser " +
+        "removida no painel do Supabase, em Authentication › Users."
+      );
     case "over_request_rate_limit":
-      return "Muitos envios em pouco tempo. Aguarde alguns minutos e tente de novo.";
+      return "Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.";
     case "email_address_invalid":
-      return "O e-mail cadastrado não é válido. Corrija o cadastro antes de reenviar.";
+      return "O e-mail informado não é válido. Corrija-o e tente de novo.";
     case "email_address_not_authorized":
-      return "Este e-mail não é aceito pelo provedor de envio.";
-    case "email_provider_disabled":
-      return "O envio de e-mail está desligado neste ambiente.";
+      return "Este e-mail não é aceito pelo provedor de autenticação.";
     case "user_not_found":
       return "Usuário não encontrado.";
     case "validation_failed":
@@ -281,7 +289,7 @@ function erroDeAutenticacaoEmPortugues(erro: {
     default:
       // O que a pessoa vê é português; o que a investigação precisa fica no log do servidor.
       console.error("[auth] erro não mapeado da API de autenticação:", erro);
-      return "Não foi possível reenviar o convite. Tente de novo em alguns minutos.";
+      return "Não foi possível concluir a operação na autenticação. Tente de novo em alguns minutos.";
   }
 }
 
@@ -487,10 +495,19 @@ export async function redefinirSenha(
     .maybeSingle();
 
   if (!alvo) return falha("Conta não encontrada.");
+  /*
+   * ⚠️ **SEM CREDENCIAL NÃO HÁ SENHA A REDEFINIR, e a recusa precisa dizer o que FUNCIONA.** Até
+   *    03/10/2026 ela mandava usar «Reenviar convite» — ação que **não existe mais** (D-USR-1), o
+   *    que fazia a mensagem apontar para um botão inexistente em **4 das 5 contas reais**, medidas no
+   *    remoto: elas vieram do ETL e do convite antigo, que gravava o cadastro e não emitia o convite.
+   * ⚠️ **O caminho que funciona é excluir e cadastrar o mesmo e-mail**, porque a exclusão libera o
+   *    endereço — inclusive quando há credencial órfã presa nele (ver `credencialPeloEmail`).
+   */
   if (!alvo.auth_user_id) {
     return falha(
-      "Esta conta ainda não tem credencial — o convite não foi concluído. " +
-        "Use «Reenviar convite» em vez de redefinir a senha.",
+      "Esta conta não tem credencial, então não há senha a redefinir — ela nunca conseguiu entrar. " +
+        "Para dar acesso a ela, exclua-a e cadastre o mesmo e-mail de novo: a exclusão libera o " +
+        "endereço, e o cadastro cria a credencial com uma senha temporária.",
     );
   }
 
@@ -510,32 +527,52 @@ export async function redefinirSenha(
 }
 
 /**
- * Quais registros a conta carimbou — o que decide entre **apagar** e **anonimizar** (`FR-046`).
+ * A credencial de `auth.users` que ocupa este e-mail — e **quem a usa**, se alguém usar.
  *
- * ⚠️ **ELA EXISTE PARA O DIÁLOGO DIZER A VERDADE ANTES do clique.** Sem ela, o Admin leria sempre
- * *"a exclusão é permanente"* e descobriria só depois se a conta sumiu ou virou *"Conta excluída"* —
- * e as duas coisas são permanentes de maneiras diferentes.
+ * ⚠️ **ELA EXISTE PORQUE A EXCLUSÃO PROMETE LIBERAR O E-MAIL, e sem isto a promessa era falsa num
+ * caso real.** Medido no remoto em 03/10/2026, só por leitura: das **5** contas, **4 não têm
+ * `auth_user_id`** — vieram do ETL e do convite antigo, que gravava o cadastro e não emitia o
+ * convite. Para elas o passo 2 da exclusão **nunca rodava** (ele é guardado por `if
+ * (alvo.auth_user_id)`), e um e-mail preso em `auth.users` ficava preso para sempre: o cadastro novo
+ * do mesmo endereço reprova com `email_exists`, e o Admin não tem tela para destravar.
+ *
+ * ⚠️ **ELA DISTINGUE ÓRFÃ DE EM USO, e a distinção é a parte que protege.** Credencial que **nenhuma**
+ * linha de `usuarios` referencia é lixo, e sai. Credencial que **outra conta** referencia é o login
+ * de alguém — e apagá-la por causa de uma coincidência de e-mail derrubaria o acesso de quem não
+ * pediu nada. ⚠️ **O caso não é hipotético:** medido no remoto em 03/10/2026, `USR-02` traz **sem
+ * credencial** um e-mail que é justamente o da credencial de `USR-ADMIN-001` — a **única** que entra
+ * no sistema. ⚠️ **O endereço em si não é escrito aqui:** o repositório é público, e dado pessoal
+ * real não sobe nem no histórico. As contas se nomeiam pelo **código**.
+ *
+ * ⚠️ **`listUsers()` PAGINA, E O PADRÃO É 50.** A varredura por página é o mesmo conserto já medido
+ * no auxiliar da suíte em 23/09/2026: ler só a primeira página devolve *"não existe"* para conta que
+ * existe, e o erro aparece depois, em outro lugar, como se fosse corrida entre processos.
  */
-export async function dependentesDaConta(
-  dados: unknown,
-): Promise<Resultado | { readonly ok: true; readonly dependentes: readonly string[] }> {
-  const conferido = esquemaDeExclusao.safeParse(dados);
-  if (!conferido.success) return falha("Dados inválidos.");
+async function credencialPeloEmail(
+  admin: ReturnType<typeof criarClienteAdministrativo>,
+  email: string,
+): Promise<{ readonly id: string; readonly usadaPor: string | null } | null> {
+  const porPagina = 200;
+  const alvo = email.trim().toLowerCase();
 
-  const permitido = await exigirAdmin();
-  if (!permitido.ok) return permitido;
+  for (let pagina = 1; ; pagina++) {
+    const { data } = await admin.auth.admin.listUsers({ page: pagina, perPage: porPagina });
+    const contas = data?.users ?? [];
 
-  const supabase = await criarClienteDeServidor();
-  const { data, error } = await supabase.rpc(
-    "dependentes_da_conta" as never,
-    {
-      p_conta_id: conferido.data.usuarioId,
-    } as never,
-  );
-  if (error) return falha(traduzirRecusa(error as ErroDoBanco));
+    for (const u of contas) {
+      if ((u.email ?? "").trim().toLowerCase() !== alvo) continue;
 
-  const linhas = (data ?? []) as readonly { tabela: string; quantas: number }[];
-  return { ok: true, dependentes: linhas.map((l) => `${l.tabela} (${l.quantas})`) };
+      const { data: dona } = await admin
+        .from("usuarios")
+        .select("codigo")
+        .eq("auth_user_id", u.id)
+        .maybeSingle();
+
+      return { id: u.id, usadaPor: dona?.codigo ?? null };
+    }
+
+    if (contas.length < porPagina) return null;
+  }
 }
 
 /**
@@ -613,9 +650,46 @@ export async function excluirConta(
           "tudo —, mas precisa ser removida no painel do Supabase, em Authentication › Users.",
       );
     }
+    revalidatePath("/admin/usuarios");
+    return { ok: true, caminho: String(caminho) };
+  }
+
+  /*
+   * ---------------------------------------------------------------- passo 2b: o e-mail preso
+   * ⚠️ **SEM `auth_user_id` O PASSO 2 NÃO RODAVA, E O E-MAIL PODIA FICAR PRESO — defeito medido em
+   *    03/10/2026.** A tela promete *"o e-mail está livre para um novo cadastro"*, e para as 4 contas
+   *    reais sem credencial a promessa dependia de não haver nada em `auth.users` com aquele
+   *    endereço. Quando há, o cadastro novo reprova com `email_exists` e não existe tela que
+   *    destrave: o antigo caminho era o painel do Supabase.
+   * ⚠️ **ÓRFÃ SAI; EM USO FICA, E A TELA DIZ ISSO.** Ver `credencialPeloEmail`: apagar uma credencial
+   *    que outra conta referencia derrubaria o acesso de quem não pediu nada — e no remoto esse é o
+   *    caso de `USR-02`, cujo e-mail é o da credencial de `USR-ADMIN-001`.
+   */
+  const presa = alvo.email ? await credencialPeloEmail(admin, alvo.email) : null;
+
+  if (presa && presa.usadaPor === null) {
+    const { error: erroDaOrfa } = await admin.auth.admin.deleteUser(presa.id);
+    if (erroDaOrfa) {
+      revalidatePath("/admin/usuarios");
+      return falha(
+        `O cadastro foi excluído, mas a credencial órfã de ${alvo.email} não: ` +
+          `${erroDaOrfa.message}. Ela não alcança dado nenhum — sem cadastro a RLS nega tudo —, ` +
+          "mas prende o e-mail: remova-a no painel do Supabase, em Authentication › Users.",
+      );
+    }
   }
 
   revalidatePath("/admin/usuarios");
+
+  /*
+   * ⚠️ **O AVISO DA TELA MUDA QUANDO O E-MAIL NÃO FICOU LIVRE.** A exclusão deu certo, então isto não
+   *    é falha; o que seria falha é a tela afirmar que o endereço está livre quando ele é o login de
+   *    outra conta. O valor extra entra em `opcoes` do parâmetro `excluida` do contrato de navegação.
+   */
+  if (presa && presa.usadaPor !== null) {
+    return { ok: true, caminho: "apagada_email_em_uso" };
+  }
+
   return { ok: true, caminho: String(caminho) };
 }
 

@@ -55,7 +55,7 @@ const eslintConfig = defineConfig([
     files: ["**/*.ts", "**/*.tsx"],
     /*
      * ⚠️ A LISTA DE EXCEÇÕES É A LISTA DOS USOS AUTORIZADOS, e alargá-la é DECISÃO, não
-     * conveniência. O BRIEF §3 autoriza três usos da `service_role`, e só três: convite de
+     * conveniência. O BRIEF §3 autoriza três usos da `service_role`, e só três: cadastro de
      * usuário pelo Admin, carga do ETL, e script de manutenção versionado rodado à mão.
      *
      * `lib/acoes/usuarios.ts` entrou aqui no Épico 3 por ser o PRIMEIRO consumidor real — a

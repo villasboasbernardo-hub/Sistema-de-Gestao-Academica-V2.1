@@ -35,6 +35,36 @@ testar com várias pessoas exige trocar de usuário.
 
 ## Clarifications
 
+### Session 2026-10-03 — as seis decisões definitivas
+
+Decisões de **Bernardo Villas Boas**, em **03/10/2026**, depois de duas reconferências do PR 2.
+⚠️ **Elas são DEFINITIVAS e prevalecem sobre qualquer texto anterior desta spec**, inclusive sobre as
+respostas de 29/09 que aparecem abaixo. Onde um requisito foi emendado por elas, a emenda está
+marcada no próprio requisito, com o texto vencido ao lado.
+
+| # | A decisão, nas palavras dela |
+| --- | --- |
+| **D-USR-1** | Convite por e-mail **PERMANENTEMENTE removido**; **nenhum envio de e-mail**. |
+| **D-USR-2** | Cadastro pelo admin com **senha temporária mostrada uma vez**; **troca obrigatória** no primeiro acesso. |
+| **D-USR-3** | O admin **exclui permanentemente qualquer conta** (menos a própria e o último admin), **em qualquer estado**; **e-mail liberado**. |
+| **D-USR-4** | **Confirmação simples, sem digitar nada.** |
+| **D-USR-5** | **Editar em página própria**: nome, perfil e acessos. |
+| **D-USR-6** | Em cada linha: **Editar · Redefinir senha · Desativar/Reativar · Excluir**. |
+
+⚠️ **O QUE CADA UMA REVOGOU, dito de frente** — porque decisão que não diz o que substitui deixa as
+duas versões convivendo:
+
+- A **D-USR-1** revoga o fluxo de convite inteiro: a rota `/convite`, a ação `convidar`, o *reenviar
+  convite*, a recuperação de senha por link e qualquer configuração de SMTP. ⚠️ **E ela tem guarda**,
+  não só texto: `tests/unidade/sem-convite-nem-envio-de-email.test.ts` varre o repositório e reprova
+  se `inviteUserByEmail`, `resetPasswordForEmail`, `signInWithOtp`, `generateLink` ou envio direto
+  voltarem — com controle positivo, para a varredura não passar cega.
+- A **D-USR-3** revoga a recusa por dependente (`FR-045` e `FR-046` de origem) e o `SC-005` antigo.
+- A **D-USR-4** revoga a confirmação por e-mail digitado, que valeu por um dia, e com ela as props
+  `corpo` e `confirmacaoDesabilitada` do `DialogoConfirmacao`. ⚠️ **As outras três exclusões
+  permanentes do domínio acadêmico seguem pedindo o código do registro** — a divergência é escolhida.
+- A **D-USR-6** acrescenta **Editar** à linha; o nome continua sendo link para a mesma página.
+
 ### Session 2026-09-29
 
 Respostas de **Bernardo Villas Boas**, em **29/09/2026**, às oito dúvidas de
@@ -308,11 +338,30 @@ acesso voltar; e excluir um convite recém-criado que não tem nada ligado a ele
   banco. ⚠️ Hoje existem **duas afirmações** de que ela está no código e **nenhuma implementação** —
   ver `estado-atual.md` §3.1.
 - **FR-044**: O Admin MUST poder **reativar** conta inativa, **sob a mesma permissão que desativa** (D-6, 29/09/2026). ⚠️ **Nenhuma ação nova entra na matriz de permissões**, e a asserção existente de que há **zero** ações `reativar` fica **intacta** — ela foi escrita para impedir que a matriz cresça sem decisão, e respeitá-la custa nada.
-- **FR-045**: O Admin MUST poder **excluir permanentemente** uma conta **sem nada ligado a ela**, no
-  padrão da **D-B1**: confirmação explícita, alerta de que é permanente, e **rastro** de quem, o quê
-  e quando.
-- **FR-046**: A exclusão de conta **com** dependente MUST ser recusada, e a recusa MUST **nomear o
-  que impede** e oferecer desativar no lugar.
+- **FR-045**: O Admin MUST poder **excluir permanentemente qualquer conta**, em **qualquer estado**,
+  com **uma exceção**: a **própria** conta e a do **último Admin ativo**. A exclusão MUST pedir
+  confirmação, MUST dizer que é permanente, e MUST deixar **rastro** de quem, o quê e quando.
+  ⚠️ **[EMENDADO — 03/10/2026, decisão D-USR-3 de Bernardo Villas Boas]**
+  *(Registro anterior, vencido: "uma conta **sem nada ligado a ela**, no padrão da **D-B1**".)*
+  **A delimitação por ausência de dependente caiu**, e o motivo é medido: `criado_por`/`editado_por`
+  existem em **27 tabelas** e **não têm FK nenhuma**, então apagar a linha não viola restrição
+  alguma — o que se perderia é a **resolução do autor**, e o histórico passaria a exibir `uuid` sem
+  nome. Em vez de recusar, o sistema escolhe **o caminho** (ver `FR-046`).
+- **FR-046**: A exclusão MUST seguir **um de dois caminhos**, decidido **no banco, dentro da mesma
+  transação**: conta que **nunca carimbou nada** sai **inteira**; conta que **carimbou** fica
+  **anonimizada** — nome e nome de exibição viram *"Conta excluída"*, a foto sai, `auth_user_id`
+  vira nulo, `excluida_em` é marcada, e o e-mail vai para um sentinela `.invalid`. Nos **dois**
+  caminhos a conta **sai da lista** e **não consegue mais entrar**.
+  ⚠️ **[EMENDADO — 03/10/2026, decisão D-USR-3]** *(Registro anterior, vencido: "A exclusão de conta
+  **com** dependente MUST ser recusada, e a recusa MUST **nomear o que impede**".)* **Nada é
+  recusado por dependente**: a anonimização é o que permite excluir sem apagar a autoria do
+  histórico. ⚠️ **E a recusa que foi retirada daqui não desapareceu do sistema** — ela mudou de
+  assunto: o que se recusa é a **própria** conta e o **último Admin ativo** (`FR-041`, `FR-042`).
+- **FR-046.1**: A exclusão MUST **liberar o e-mail** para um cadastro novo. ⚠️ **Isto inclui apagar
+  credencial ÓRFÃ presa naquele endereço** — a que `auth_user_id` nulo deixava para trás —, e MUST
+  **preservar** a credencial que **outra conta** referencia, porque apagá-la por coincidência de
+  e-mail derrubaria o acesso de quem não pediu nada. Quando o endereço fica preso por esse motivo, a
+  tela MUST **dizer isso**, em vez de prometer que o e-mail está livre *(03/10/2026)*.
 - **FR-047**: Toda ação administrativa sobre conta — editar perfil, redefinir senha, desativar,
   reativar, excluir — MUST gerar **registro de auditoria**.
 - **FR-047.1**: O registro MUST ter **exatamente quatro** informações — **quem** fez, **o quê** fez, **sobre qual conta**, e **quando** (D-2, 29/09/2026) — e MUST viver em trilha **própria**, **nova** e **mínima**. ⚠️ Ela é nova porque a tabela de exclusões existente aceita três tabelas e **não** aceita contas; e é mínima porque o que se quer responder é *"quem mexeu na conta de quem, e quando"*, não guardar retrato de tudo.
@@ -338,8 +387,17 @@ acesso voltar; e excluir um convite recém-criado que não tem nada ligado a ele
   a nova** é percorrido **por clique**, do início ao fim, sem nenhum endereço digitado à mão.
 - **SC-004**: Enquanto a troca é obrigatória, **nenhuma** das demais telas é alcançável — medido
   tentando ao menos três delas.
-- **SC-005**: Tentar excluir conta com dependente devolve, em português, **quais** são os
-  dependentes, e a conta continua existindo.
+- **SC-005**: Excluir conta que **já registrou histórico** tira-a da lista e a deixa **anonimizada**,
+  com os registros antigos continuando a ter autor; excluir conta que **nunca registrou nada**
+  tira-a **inteira**; e nos dois casos o **e-mail volta a servir** para um cadastro novo.
+  ⚠️ **[EMENDADO — 03/10/2026, decisão D-USR-3]** *(Registro anterior, vencido: "Tentar excluir
+  conta com dependente devolve, em português, **quais** são os dependentes, e a conta continua
+  existindo".)* ⚠️ **O critério antigo exigia exatamente o que a decisão recusou**, e ficou
+  afirmando por um dia que o produto estava errado quando ele seguia a decisão — é o modo de falha
+  que a regra 9.3 descreve, do lado do requisito em vez do número.
+- **SC-005.1**: A confirmação da exclusão **não pede nada digitado**: o cartão nomeia a conta e o
+  e-mail na própria pergunta, diz que a exclusão é permanente, e traz **Cancelar** e **Excluir**
+  *(D-USR-4)*.
 - **SC-006**: A conta desativada perde o acesso **na requisição seguinte**, e não ao fim da sessão.
 - **SC-007**: Nenhuma tentativa de deixar o sistema **sem Admin ativo** tem sucesso, por nenhum
   caminho — nem pela tela, nem por chamada direta.

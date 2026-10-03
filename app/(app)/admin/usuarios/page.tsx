@@ -20,10 +20,14 @@
  * proíbem em `app/**`. Com cinco contas a diferença é imperceptível — a regra existe para o dia em
  * que forem cinquenta.
  *
- * ⚠️ **AS TRÊS AÇÕES VOLTARAM À LINHA EM 03/10/2026** *(decisão de Bernardo Villas Boas)*: redefinir
- * senha, desativar/reativar e excluir. O que ele recusou na rodada anterior era **formulário** dentro
- * da linha — trocar perfil, editar nome —, e isso continua na página da conta. Botão com diálogo não é
- * formulário. ⚠️ **A coluna de ações é a sexta**, e a lista segue sem vínculo, situação e escopo.
+ * ⚠️ **AS AÇÕES VIVEM NA LINHA, E SÃO QUATRO** *(D-USR-6, de Bernardo Villas Boas, 03/10/2026)*:
+ * **Editar**, **Redefinir senha**, **Desativar/Reativar** e **Excluir**. O que ele recusou foi
+ * **formulário** dentro da linha — trocar perfil, editar nome —, e isso continua na página da conta,
+ * onde o «Editar» leva. Botão com diálogo não é formulário.
+ * ⚠️ **A coluna de ações é a sexta**, e a lista segue sem vínculo, situação e escopo.
+ * ⚠️ **E UMA DAS QUATRO PODE FALTAR, com a razão escrita no lugar dela:** conta **sem credencial**
+ * não tem senha a redefinir. Medido no remoto em 03/10/2026, **4 das 5 contas reais** estão nesse
+ * estado — vieram do ETL e do convite antigo, que gravava o cadastro e não emitia o convite.
  *
  * ⚠️ **A BUSCA FILTRA NO SERVIDOR, não na tela.** Ela é parâmetro do contrato com `avisaServidor`,
  * então o resultado é link compartilhável e o `Limpar filtros` nasce junto, pelo componente único.
@@ -133,14 +137,24 @@ export default async function Usuarios({
            frases são diferentes de propósito: as duas exclusões são permanentes, e só uma deixa
            cadastro para trás.
       */}
-      {excluida === "apagada" || excluida === "anonimizada" ? (
+      {excluida === "apagada" ||
+      excluida === "anonimizada" ||
+      excluida === "apagada_email_em_uso" ? (
         <p
           role="status"
           className="border-borda bg-superficie-2 rounded-ciaara text-texto mt-3 border p-2 text-sm"
         >
           {excluida === "apagada"
             ? "Conta excluída. Ela não deixou registro nenhum no sistema, então saiu inteira, e o e-mail está livre para um novo cadastro."
-            : "Conta excluída. Ela registrou histórico, então o cadastro ficou como «Conta excluída» e saiu da lista, para os registros antigos continuarem tendo autor. O e-mail está livre para um novo cadastro."}
+            : excluida === "anonimizada"
+              ? "Conta excluída. Ela registrou histórico, então o cadastro ficou como «Conta excluída» e saiu da lista, para os registros antigos continuarem tendo autor. O e-mail está livre para um novo cadastro."
+              : /*
+                 ⚠️ **A TERCEIRA FRASE É A QUE EVITA UMA MENTIRA.** A conta saiu, mas o e-mail dela é
+                    o login de OUTRA conta — e apagar aquela credencial derrubaria o acesso de quem
+                    não pediu nada. Dizer "o e-mail está livre" aqui faria o Admin tentar cadastrar e
+                    bater num erro sem explicação.
+                */
+                "Conta excluída e removida da lista. ⚠️ O e-mail dela NÃO ficou livre: esse endereço é a credencial de outra conta do sistema, e ela foi preservada. Para reaproveitar o endereço, resolva primeiro a conta que o usa."}
         </p>
       ) : null}
 

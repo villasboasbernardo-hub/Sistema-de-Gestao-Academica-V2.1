@@ -75,7 +75,21 @@ export function AcoesDaConta({
               Redefinir senha
             </Button>
           </DialogoConfirmacao>
-        ) : null}
+        ) : (
+          /*
+            ⚠️ **A AUSÊNCIA PRECISA DIZER O QUE FUNCIONA, e não só faltar.** Medido no remoto em
+               03/10/2026, **4 das 5 contas reais** estão neste estado: vieram do ETL e do convite
+               antigo, que gravava o cadastro e não emitia o convite. Sem esta frase, o Admin vê
+               três botões onde devia haver quatro e não tem como saber por quê.
+          */
+          // veste: explicação do estado e do caminho — texto de apoio, não valor
+          <p className="text-texto-suave max-w-md text-xs">
+            Esta conta <strong>não tem credencial</strong>, então não há senha a redefinir — ela
+            nunca conseguiu entrar. Para dar acesso a ela,{" "}
+            <strong>exclua-a e cadastre o mesmo e-mail de novo</strong>: a exclusão libera o
+            endereço, e o cadastro cria a credencial com uma senha temporária.
+          </p>
+        )}
 
         {ativa ? (
           <DialogoConfirmacao

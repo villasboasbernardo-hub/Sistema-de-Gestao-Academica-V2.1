@@ -9,6 +9,42 @@
 
 ---
 
+## ⚠️ Emenda de 03/10/2026 — as seis decisões D-USR, e o que elas mudaram neste plano
+
+*(decisões de **Bernardo Villas Boas**, **03/10/2026**, nas duas reconferências do PR 2 —
+**definitivas**)*
+
+| # | Decisão |
+|---|---|
+| **D-USR-1** | **Convite por e-mail PERMANENTEMENTE removido; nenhum envio de e-mail** em parte alguma do sistema |
+| **D-USR-2** | **Cadastro pelo Admin**, com **senha temporária mostrada uma vez** e **troca obrigatória no primeiro acesso** |
+| **D-USR-3** | O Admin **exclui permanentemente qualquer conta** — menos a própria e o último Admin ativo —, **em qualquer estado**; o **e-mail fica liberado** para um novo cadastro |
+| **D-USR-4** | **Confirmação simples, sem digitar nada** |
+| **D-USR-5** | **Editar em página própria**: nome, perfil e acessos |
+| **D-USR-6** | **Em cada linha**: Editar · Redefinir senha · Desativar/Reativar · Excluir |
+
+⚠️ **ESTE PLANO FOI ESCRITO EM 29/09/2026, ANTES DELAS**, e por isso ele **não** descreve o caminho
+de criação de conta que vale hoje. O que a **D-USR-1** e a **D-USR-2** substituíram vivia fora deste
+arquivo — o convite por e-mail do Épico 3 —, e por isso **não há frase de convite a emendar aqui**;
+o que há são **três pontos do corpo que caducaram**, marcados onde estão, **não apagados**:
+
+1. a tela do **PR 2** (*"editar e redefinir na `/admin/usuarios`"*) → **página própria** (D-USR-5) e
+   **as quatro ações em cada linha** (D-USR-6);
+2. o diálogo do **PR 3** (*"exclusão com código digitado"*) → **confirmação simples** (D-USR-4);
+3. a **fronteira entre o PR 2 e o PR 3**: medido no repositório em 03/10/2026, no ramo
+   `feat/EPICO-3-admin-sobre-contas`, o que este plano reservava ao PR 3 já está **junto** — a
+   migration `20261003000205_exclusao_de_conta.sql`, a ação `excluirConta` em
+   `lib/acoes/usuarios.ts` e as quatro ações de `AcoesDaLinha.tsx` convivem com o PR 2.
+
+⚠️ **O caminho de criação de conta que vale HOJE, medido no repositório em 03/10/2026:** não existem
+`/convite` nem `/recuperar-senha`, e `inviteUserByEmail`, `resetPasswordForEmail` e qualquer envio de
+e-mail **não existem** em lugar nenhum — com guarda que reprova se voltarem
+(`tests/unidade/sem-convite-nem-envio-de-email.test.ts`). O caminho **único** é
+`auth.admin.createUser()` dentro de `cadastrarUsuario`, em `lib/acoes/usuarios.ts`, pela tela
+`app/(app)/admin/usuarios/novo/`.
+
+---
+
 ## Technical Context
 
 **Nada de novo na plataforma.** Next.js 16 + React 19 + Supabase, como está.
@@ -77,6 +113,13 @@ O que destrava o teste da fatia (b). **Uma migration** (a coluna do avatar, o bu
 3. `redefinirSenha` e `editarConta` em `lib/acoes/usuarios.ts` — **onde a chave já é permitida**.
 4. A obrigação de trocar senha na `renovarSessao`.
 5. A tela: editar e redefinir na `/admin/usuarios`, com o aviso de senha de uma vez só.
+   ⚠️ **EMENDADO em 03/10/2026** *(decisão de Bernardo Villas Boas, **D-USR-5** e **D-USR-6**)*:
+   editar passou a ter **página própria** — `/admin/usuarios/[id]`, com nome, perfil e acessos —, e a
+   lista ficou com **quatro ações em cada linha**: Editar · Redefinir senha · Desativar/Reativar ·
+   Excluir. ⚠️ *(Registro anterior, vencido: "editar e redefinir na `/admin/usuarios`".)* Nas palavras
+   dele, na reconferência: *"Editar usuário abre PÁGINA própria. (…) Nada de diálogo sobre diálogo na
+   lista."* **O aviso de senha de uma vez só não mudou** — ele continua na linha que pediu a
+   redefinição.
 
 **Merge quando**: o percurso do passo 3 do quickstart inteiro, M2 no remoto, e a conferência.
 
@@ -89,6 +132,16 @@ O que destrava o teste da fatia (b). **Uma migration** (a coluna do avatar, o bu
    `CHECK` de `exclusoes_registradas` aceitando `usuarios`.
 3. `reativar` e `excluirConta` nas ações.
 4. A tela: reativar, e o diálogo de exclusão com código digitado.
+   ⚠️ **EMENDADO em 03/10/2026** *(decisão de Bernardo Villas Boas, **D-USR-4**)*: a confirmação da
+   exclusão de conta é **simples, sem campo para digitar**. ⚠️ *(Registro anterior, vencido: "o
+   diálogo de exclusão com código digitado".)* A analogia com as **três** exclusões permanentes do
+   domínio acadêmico — instrutor, disciplina e UE, que pedem o código do registro — **foi recusada**:
+   aqui o cartão **nomeia a conta e o e-mail dentro da própria pergunta**, e é a pergunta que a pessoa
+   lê antes de clicar. ⚠️ **As outras três exclusões seguem com o código digitado**, e a divergência é
+   escolhida, não descuido. Medido em 03/10/2026: `public.excluir_conta(p_conta_id uuid)` recebe **só
+   o alvo**, e `esquemaDeExclusao` em `lib/validacao/usuarios.ts` tem **um** campo — o
+   `codigo_nao_confere` com `22023` continua existindo, mas **para disciplina e UE**, na migration
+   `20260925135044_exclusao_com_rastro.sql`.
 5. A reversão executada e os defeitos deliberados.
 
 **Merge quando**: `verificar:tudo` verde, M3 no remoto, e a conferência.

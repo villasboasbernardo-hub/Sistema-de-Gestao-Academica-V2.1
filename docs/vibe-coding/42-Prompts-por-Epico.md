@@ -297,54 +297,104 @@ zero** sobre o snapshot, com resultado idêntico.
 
 ---
 
-## Épico 3 — Auth por convite, gestão de usuários, RBAC
+## Épico 3 — Auth, gestão de usuários, RBAC
+
+⚠️ **ESTE BLOCO FOI REESCRITO EM 03/10/2026, E O PROMPT QUE ESTAVA AQUI MANDAVA CONSTRUIR O CONVITE
+POR E-MAIL** *(decisão de Bernardo Villas Boas, 03/10/2026, D-USR-1 a D-USR-6)*. O convite está
+**permanentemente removido** e **nenhum e-mail sai do sistema**; um prompt que ainda o pedisse mandaria
+construir justamente o que o repositório hoje tem uma guarda para reprovar
+(`tests/unidade/sem-convite-nem-envio-de-email.test.ts`). ⚠️ **E a versão com convite NÃO foi apagada:
+ela fica preservada em `specs/004-auth-convite-e-rbac/`** — spec, plano, tarefas e contratos —, como
+**registro** do que o Épico 3 pediu entre 25/08 e 03/10/2026. É ali que se lê o fluxo antigo, com data.
+⚠️ *(Registro anterior, vencido: "Épico 3 — Auth por convite, gestão de usuários, RBAC … Fluxo: Admin
+cadastra → Server Action com service_role chama auth.admin.inviteUserByEmail() → /convite/[token] →
+definição de senha → primeiro acesso … /admin/usuarios: listar, convidar, editar perfil e escopo,
+inativar, reenviar convite … /recuperar-senha.")*
+
+⚠️ **O documento 22 foi emendado pelas MESMAS decisões, na mesma data**, então o `§3` e o `§4`
+podem ser citados sem ressalva: o `§3.3` descreve o fluxo de **cadastro pelo Admin** e o `§4.3` diz o
+que existe **no lugar** da recuperação por e-mail. **As §3.1 e §3.2 continuam narrando a reversão da D1
+em 25/08/2026** — a recusa da conta Google —, que **não foi reaberta**. ⚠️ **Confira isso ao colar:**
+esta linha foi escrita em 03/10/2026, conferida contra o arquivo naquele dia, e um documento citado
+por título de seção envelhece sem avisar.
 
 **Comando:** `/speckit.specify` · **Esforço: M** · **Pré-requisito:** Épicos 1 e 2 (a ordem 2 antes
 de 3 é deliberada: sem dado migrado não há o que proteger).
 
 ```
-/speckit.specify Épico 3 da v2.1 — Autenticação por convite, gestão de usuários e RBAC.
+/speckit.specify Épico 3 da v2.1 — Autenticação, gestão de usuários e RBAC.
 
-Leia antes: docs/fase-2/22 (§3 convite, §4 ciclo de vida da conta, §5 permissão e alcance,
-§6 policies, §7 segredos, §10 testes de segurança);
+Leia antes: docs/fase-2/22 (§3 autenticação por cadastro do Administrador, §4 ciclo de vida
+da conta, §5 permissão e alcance, §6 policies, §7 segredos, §10 testes de segurança);
 docs/BRIEF-v2.1.md §3; docs/fase-1/01 (§2.2 matriz de perfis, §2.5 perfil × recurso ×
 ação); docs/fase-1/06 (Épico 3).
 
-OBJETIVO: quem entra é quem o Admin convidou, e o que cada um faz é o que a matriz
+OBJETIVO: quem entra é quem o Admin cadastrou, e o que cada um faz é o que a matriz
 permite — verificado PELO BANCO, não pela interface.
 
 ESCOPO:
-- Supabase Auth, e-mail/senha SOMENTE POR CONVITE DO ADMIN. Signup público desabilitado no
-  painel do Supabase (passo manual, documente-o).
-- Fluxo: Admin cadastra → Server Action com service_role chama
-  auth.admin.inviteUserByEmail() → /convite/[token] → definição de senha → primeiro acesso.
-- Senha: mínimo 12 caracteres, verificação contra vazamentos (HaveIBeenPwned, nativo no
-  Supabase), SEM expiração compulsória.
+- Supabase Auth, e-mail/senha. A conta é criada SOMENTE PELO ADMIN, pela tela. Auto-cadastro
+  público desabilitado no config.toml versionado ([auth] enable_signup = false).
+- NENHUM e-mail é enviado pelo sistema, em nenhuma forma: não há convite, não há link a
+  expirar, não há SMTP a configurar e não há /convite nem /recuperar-senha (D-USR-1).
+- Fluxo de criação (D-USR-2): /admin/usuarios/novo → Server Action com service_role chama
+  auth.admin.createUser(), com email_confirm: true porque não há e-mail de confirmação a
+  mandar → senha temporária gerada NO SERVIDOR e mostrada UMA VEZ na tela, para o Admin
+  repassar em mãos → a pessoa entra e é levada a /perfil/senha, a tela ÚNICA de senha, com
+  troca OBRIGATÓRIA no primeiro acesso, marcada em app_metadata (que o próprio usuário não
+  escreve).
+  A ordem é CREDENCIAL PRIMEIRO, CADASTRO DEPOIS, e se a linha de usuarios falhar a
+  credencial é desfeita — sem convite, "linha sem credencial" é conta que nenhuma tela
+  conserta.
+- Senha: mínimo 12 caracteres, imposto no config.toml (minimum_password_length) e não só no
+  formulário; verificação contra vazamentos (HaveIBeenPwned, nativo no Supabase); SEM
+  expiração compulsória.
 - usuarios.auth_user_id uuid unique references auth.users(id) on delete restrict.
-- /admin/usuarios: listar, convidar, editar perfil e escopo, inativar, reenviar convite.
-- Os ~12 perfis organizacionais do documento 01, com escopo_curso e usuario_curso (N:N)
-  para o Encarregado de Curso.
+- /admin/usuarios é LISTA — avatar, nome, e-mail, perfil, último acesso — com QUATRO ações
+  em cada linha: Editar · Redefinir senha · Desativar/Reativar · Excluir (D-USR-6). Nada de
+  diálogo sobre diálogo na lista.
+- Editar é PÁGINA PRÓPRIA, /admin/usuarios/[id]: nome de exibição, perfil, escopo e vínculos
+  de curso (D-USR-5).
+- Redefinir senha: senha nova gerada no servidor, mostrada uma vez, troca obrigatória no
+  próximo acesso. Ela derruba as sessões abertas da pessoa.
+- Desativar BLOQUEIA o acesso e MANTÉM cadastro e perfil. Reativar desfaz. Desativar e
+  excluir são coisas diferentes, e as duas existem.
+- Excluir é PERMANENTE e alcança QUALQUER conta em QUALQUER estado, menos a PRÓPRIA e o
+  ÚLTIMO ADMIN ativo; o e-mail volta a ficar livre para um cadastro novo (D-USR-3). A
+  confirmação é SIMPLES, sem digitar nada (D-USR-4). Quem apaga é a RPC public.excluir_conta,
+  SECURITY DEFINER com porteiro dentro: continua SEM policy e SEM privilégio de DELETE.
+- Trilha de auditoria da conta: só de acréscimo, imutável INCLUSIVE para a service_role, com
+  o rastro gravado ANTES de a linha mudar.
+- Os NOVE perfis de lib/dominio/perfis.ts, agrupados por divisão, com escopo_curso e
+  usuario_curso (N:N) para o Encarregado de Curso. O perfil NUNCA aparece em snake_case na
+  tela — a tradução é um módulo só.
 - Tela de leitura da matriz perfil_permissao; edição restrita ao Admin.
 - Middleware de refresh de sessão; redirecionamento de rota protegida.
-- /recuperar-senha.
+- Quem esqueceu a senha PROCURA O ADMIN, e é o que a tela de login diz com estas palavras:
+  "Esqueceu a senha? Procure o administrador do sistema."
 - usuarios.ultimo_acesso atualizado no login; criado_por/editado_por por trigger a partir
   de auth.uid().
 
 FORA DE ESCOPO: SSO, MFA, federação com conta institucional. Auto-cadastro em qualquer
-forma.
+forma. E QUALQUER envio de e-mail pelo sistema — convite, recuperação de senha, código de
+uso único ou notificação.
 
 DESTINO DOS REQUISITOS — declare isto na spec: RF-AUTH-01 e RN-RBAC-01 (autenticação
 exclusivamente por conta Google via Session.getActiveUser(), decisão D1 da v2.0) são
-[REVOGADO — v2.1]: dependiam do runtime Apps Script. Substituídos por e-mail/senha por
-convite (decisão de Bernardo em 25/08/2026). O requisito subjacente — só acessa quem o
-Admin cadastrou — é PRESERVADO INTEGRALMENTE. RNF-SEG-02 é [ABSORVIDO PELA PLATAFORMA]:
+[REVOGADO — v2.1]: dependiam do runtime Apps Script. Foram substituídos por e-mail/senha
+POR CONVITE do Admin (decisão de Bernardo em 25/08/2026) e, desde 03/10/2026, por
+e-mail/senha com a CONTA CRIADA PELO ADMIN e senha temporária entregue em mãos (D-USR-1 e
+D-USR-2, que revogam o convite). O requisito subjacente — só acessa quem o Admin cadastrou —
+é PRESERVADO INTEGRALMENTE pelas duas decisões. RNF-SEG-02 é [ABSORVIDO PELA PLATAFORMA]:
 deixa de ser disciplina de código e passa a ser RLS.
 
 CRITÉRIOS DE ACEITE (documento 06, Épico 3):
-1. Um e-mail não convidado NÃO consegue criar conta por NENHUM caminho, inclusive chamando
-   a API diretamente.
-2. Convite → definição de senha → primeiro acesso funciona ponta a ponta em preview.
-3. Senha com menos de 12 caracteres é recusada; senha em lista de vazamento é recusada.
+1. Um e-mail que o Admin NÃO cadastrou não consegue criar conta por NENHUM caminho,
+   inclusive chamando a API diretamente.
+2. Cadastro pelo Admin → senha temporária mostrada uma vez → primeiro acesso → troca
+   obrigatória da senha funciona ponta a ponta em preview.
+3. Senha com menos de 12 caracteres é recusada PELO CAMINHO REAL (a API de auth), não só
+   pelo formulário; senha em lista de vazamento é recusada.
 4. Para CADA perfil existe teste que prova que o banco NEGA ao menos uma leitura e uma
    escrita fora do seu escopo. Teste negativo é obrigatório.
 5. Encarregado de Curso com dois cursos em usuario_curso lê os dois e NÃO lê um terceiro.
@@ -352,25 +402,42 @@ CRITÉRIOS DE ACEITE (documento 06, Épico 3):
 7. Botão fora do escopo fica oculto na UI E a ação é negada pelo banco quando invocada
    diretamente.
 8. ultimo_acesso é atualizado no login.
+9. NENHUMA chamada de envio de e-mail existe no repositório — varredura sobre código SEM
+   COMENTÁRIO, com controle positivo, porque varredura que não acha nada passa igual
+   quando o padrão está errado.
+10. Excluir a PRÓPRIA conta e excluir o ÚLTIMO ADMIN ativo são recusados, e a recusa fica
+    VISÍVEL acima da tabela — não dentro da linha que não mudou.
 
 ARMADILHAS DESTE ÉPICO:
-- A Server Action de convite é o ÚNICO lugar legítimo de uso da service_role no fluxo de
+- A Server Action de cadastro é um dos lugares legítimos de uso da service_role no fluxo de
   tela. Ela confere app.eh_admin() ANTES. Revise-a linha a linha sempre que mudar.
 - service_role vazando para o cliente: lib/supabase/admin.ts só é importável de Server
   Action; import "server-only"; regra de lint; variável sem prefixo NEXT_PUBLIC_.
-- Usuário órfão em auth.users sem linha em usuarios: transação no convite + rotina de
-  conferência no CI.
+- Usuário órfão em auth.users sem linha em usuarios: a ordem credencial → cadastro, com a
+  credencial DESFEITA se o cadastro falhar, mais rotina de conferência no CI. E o estado
+  inverso — linha sem credencial — NÃO tem mais saída: era o "reenviar convite" que o
+  resolvia, e ele não existe.
 - perfil_permissao, usuarios e usuario_curso são as TRÊS TABELAS DE FRONTEIRA: presas a
   app.eh_admin(), não à matriz. A matriz não pode ser autoridade sobre quem edita a matriz.
 - A LEITURA de perfil_permissao é liberada a qualquer sessão autenticada — a UI precisa
   saber que botões mostrar, e esconder a matriz seria segurança por obscuridade.
+- Porteiro escrito com "if not funcao()" FALHA ABERTO quando a função devolve NULL: em
+  PL/pgSQL, "if not NULL" não entra, e o raise é pulado. Use
+  coalesce(app.eh_admin(), false) is not true.
+- [auth.email].enable_signup NÃO é o auto-cadastro: ele mapeia para
+  GOTRUE_EXTERNAL_EMAIL_ENABLED e desligá-lo derruba o LOGIN. Quem desliga o auto-cadastro é
+  o enable_signup da seção [auth].
+- Ação que falha sem a falha aparecer na tela é indistinguível de "não aconteceu nada", e o
+  diagnóstico vai para o lugar errado. A resposta de toda ação é publicada fora da linha.
 - Testar só o caminho feliz de RLS não prova nada.
 
 Se qualquer regra parecer errada, liste ao final em vez de corrigir. Se faltar
 informação, pergunte em vez de assumir.
 ```
 
-**Portão de saída:** a suíte T-01…T-10 do documento 22 §10 verde, **com os testes negativos**.
+**Portão de saída:** a suíte T-01…T-10 do documento 22 §10 verde, **com os testes negativos**, e a
+varredura que **reprova o retorno** do convite e de qualquer envio de e-mail
+*(D-USR-1, 03/10/2026)*.
 
 ---
 

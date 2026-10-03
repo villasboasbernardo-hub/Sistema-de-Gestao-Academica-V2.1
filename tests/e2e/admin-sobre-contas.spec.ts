@@ -6,6 +6,11 @@
  * e-mail saiu do sistema, cadastrar e editar passaram a ser **páginas**, e a lista voltou a ser lista.
  * A versão anterior media botões numa célula de tabela que já não existe.
  *
+ * ⚠️ **E AJUSTADA DE NOVO EM 03/10/2026, pelas decisões D-USR-1 a D-USR-6.** Duas mudanças de forma:
+ * a linha passou a ter **quatro** ações, começando por **Editar** (D-USR-6), e a confirmação da
+ * exclusão ficou **simples, sem campo para digitar** (D-USR-4). ⚠️ **O caso que provava o campo foi
+ * APAGADO, não reescrito** — ele existia para medir o contrário do que passou a valer.
+ *
  * ⚠️ **TUDO POR CLIQUE, com `goto` só no ponto de partida.** A fatia nasceu de uma ação correta e
  * inalcançável (`encerrarSessao()` tinha teste e zero consumidores), e o PR 1 repetiu a lição com o
  * botão da foto, que não abria a janela de arquivos porque **a suíte mandava o arquivo por dentro**.
@@ -17,7 +22,31 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 
-import { apagarConta, criarConta, emailDeTeste, entrar, SENHA_DE_TESTE } from "./conta-de-teste";
+import { createClient } from "@supabase/supabase-js";
+
+import {
+  apagarConta,
+  chaveLocal,
+  contasDoAuth,
+  criarConta,
+  emailDeTeste,
+  entrar,
+  SENHA_DE_TESTE,
+} from "./conta-de-teste";
+
+/**
+ * Cliente de privilégio elevado — **só para MONTAR estado de partida**, nunca para asserção.
+ *
+ * ⚠️ **ELE EXISTE PARA REPRODUZIR OS DOIS ESTADOS QUE O REMOTO TEM E A TELA NÃO SABE CRIAR:**
+ * cadastro **sem** `auth_user_id` com a credencial ainda em `auth.users` (o que o convite antigo
+ * deixava), e e-mail de uma conta que é a **credencial de outra**. Medidos no remoto em 03/10/2026:
+ * das 5 contas reais, **4 não têm credencial**, e o e-mail de `USR-02` é o login de `USR-ADMIN-001`.
+ * ⚠️ **O PERCURSO continua por clique** — o que vem por fora é só o estado de partida, que nenhuma
+ * tela produz.
+ */
+const servico = createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
 let EMAIL_ADMIN = "";
 let EMAIL_SEGUNDO_ADMIN = "";
@@ -297,7 +326,7 @@ test.describe("`FR-033` a `FR-037` · cadastrar conta e o primeiro acesso", () =
   });
 });
 
-test.describe("`FR-046` · as três ações da linha, e a exclusão permanente", () => {
+test.describe("`FR-046` e `D-USR-6` · as quatro ações da linha, e a exclusão permanente", () => {
   /*
    * ⚠️ **ESTE CASO AGE SOBRE O SEGUNDO ADMIN, E NÃO SOBRE O ALVO — e a troca é conserto de uma
    *    interferência medida.** Ele redefinia a senha de `EMAIL_ALVO`, e o caso do perfil, adiante,
@@ -433,13 +462,17 @@ test.describe("`FR-046` · as três ações da linha, e a exclusão permanente",
     await linhaDa(page, email).getByRole("button", { name: "Excluir" }).click();
 
     const dialogo = page.getByRole("alertdialog");
+    // ⚠️ **A PERGUNTA NOMEIA A CONTA E O E-MAIL** (D-USR-4), e é ela que faz o trabalho que o campo
+    //    digitado fazia: quem abriu na linha errada lê o nome errado na primeira linha do cartão.
+    await expect(dialogo).toContainText("Vai Sair Inteira");
+    await expect(dialogo).toContainText(email);
     await expect(dialogo).toContainText("A exclusão é permanente.");
-    // ⚠️ **ESTE É O DISCRIMINANTE**: a frase diz qual dos DOIS caminhos vai acontecer. Dizer só
-    //    "é permanente" seria verdade para os dois e não distinguiria nada.
-    await expect(dialogo).toContainText("não registrou nada");
-    await expect(dialogo).toContainText("sai inteiro");
-    await dialogo.getByLabel("Confirme o e-mail da conta").fill(email);
-    await dialogo.getByRole("button", { name: "Excluir permanentemente" }).click();
+    /*
+     * ⚠️ **O DISCRIMINANTE DOS DOIS CAMINHOS SAIU DO DIÁLOGO E FICOU NO AVISO** (D-USR-4: o cartão é
+     *    simples). Ele continua sendo provado, logo abaixo, por `?excluida=apagada` e pela frase
+     *    "saiu inteira" — o que mudou é ONDE a distinção aparece, não se ela existe.
+     */
+    await dialogo.getByRole("button", { name: "Excluir" }).click();
 
     // ⚠️ O aviso vem da URL, fora da tabela: a linha que disparou a ação já não existe.
     await expect(resposta(page, "saiu inteira")).toBeVisible();
@@ -488,16 +521,15 @@ test.describe("`FR-046` · as três ações da linha, e a exclusão permanente",
     await expect(secaoDaSenha(pagina).getByRole("status")).toContainText("Senha trocada");
     await contexto.close();
 
-    // Agora ela carimbou — e o diálogo tem de dizer o OUTRO caminho.
+    // Agora ela carimbou — e o aviso da exclusão tem de dizer o OUTRO caminho.
     await page.goto("/admin/usuarios");
     await linhaDa(page, email).getByRole("button", { name: "Excluir" }).click();
 
     const dialogo = page.getByRole("alertdialog");
+    await expect(dialogo).toContainText("Vai Ficar Anonima");
+    await expect(dialogo).toContainText(email);
     await expect(dialogo).toContainText("A exclusão é permanente.");
-    await expect(dialogo).toContainText("registrou histórico");
-    await expect(dialogo).toContainText("Conta excluída");
-    await dialogo.getByLabel("Confirme o e-mail da conta").fill(email);
-    await dialogo.getByRole("button", { name: "Excluir permanentemente" }).click();
+    await dialogo.getByRole("button", { name: "Excluir" }).click();
 
     await expect(resposta(page, "saiu da lista")).toBeVisible();
     await expect
@@ -518,6 +550,113 @@ test.describe("`FR-046` · as três ações da linha, e a exclusão permanente",
     await apagarConta(email);
   });
 
+  /**
+   * `D-USR-3` · **a credencial ÓRFÃ sai com a exclusão, e o endereço volta a servir.**
+   *
+   * ⚠️ **ESTE É O ESTADO DE 4 DAS 5 CONTAS REAIS**, medido no remoto em 03/10/2026, só por leitura:
+   * cadastro **sem** `auth_user_id`. Ele é o que o `convidar` removido deixava — passo 1 gravava a
+   * linha, passo 2 não emitia o convite — e é o que a própria exclusão deixa se o passo 2 falhar.
+   *
+   * ⚠️ **ERA AQUI QUE A TELA MENTIA.** O passo 2 da exclusão é guardado por `if (alvo.auth_user_id)`,
+   * então com a coluna nula ele **nunca rodava**: a credencial ficava em `auth.users` prendendo o
+   * e-mail, enquanto o aviso prometia que o endereço estava livre para um novo cadastro. O cadastro
+   * seguinte reprovava com `email_exists`, e **nenhuma tela destravava** — só o painel do Supabase.
+   */
+  test("⚠️ O CASO QUE DISCRIMINA · credencial ÓRFÃ presa no e-mail sai com a exclusão", async ({
+    page,
+  }, info) => {
+    const email = `orfa-${info.workerIndex}@ciaara.teste`;
+    await apagarConta(email);
+    await criarConta(email, `USR-ORF-${info.workerIndex}`, "visualizacao");
+
+    // O estado de partida: a linha perde o vínculo, e a credencial FICA.
+    await servico.from("usuarios").update({ auth_user_id: null }).eq("email", email);
+
+    // Controle positivo — sem ele, "zero credenciais no fim" não distingue conserto de ausência.
+    expect(await contasDoAuth(email), "a credencial não existia antes de excluir").toHaveLength(1);
+
+    await entrar(page, EMAIL_ADMIN);
+    await linhaDa(page, email).getByRole("button", { name: "Excluir" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Excluir" }).click();
+
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("excluida"), { timeout: 10_000 })
+      .toBe("apagada");
+
+    // ⚠️ **A ASSERÇÃO QUE ESTAVA VERMELHA ANTES DO CONSERTO.**
+    await expect.poll(async () => (await contasDoAuth(email)).length, { timeout: 15_000 }).toBe(0);
+
+    // E o endereço volta a servir de verdade — por clique, não por consulta.
+    await cadastrarPorClique(page, email, "Depois Da Orfa");
+    await apagarConta(email);
+  });
+
+  /**
+   * `D-USR-3` · **e-mail que é a credencial de OUTRA conta: a exclusão não o libera, e diz isso.**
+   *
+   * ⚠️ **ESTE É O ESTADO DE `USR-02` NO REMOTO**, medido em 03/10/2026: a linha dela traz **sem
+   * credencial** um e-mail que é o login de `USR-ADMIN-001` — cuja própria linha mostra um sentinela
+   * `@ciaara11.invalid`. É a **única** credencial que entra no sistema. ⚠️ **O endereço real não é
+   * escrito aqui:** o repositório é público, e as contas se nomeiam pelo **código**.
+   *
+   * ⚠️ **APAGAR AQUELA CREDENCIAL POR COINCIDÊNCIA DE E-MAIL DERRUBARIA O ACESSO DE QUEM NÃO PEDIU
+   * NADA**, e é por isso que `credencialPeloEmail` distingue órfã de em uso. O que a exclusão faz
+   * aqui é concluir **sem** liberar o endereço — e o aviso diz exatamente isso, em vez de prometer o
+   * contrário.
+   */
+  test("⚠️ O CASO QUE DISCRIMINA · credencial EM USO por outra conta é preservada, e o aviso avisa", async ({
+    page,
+  }, info) => {
+    const disputado = `disputado-${info.workerIndex}@ciaara.teste`;
+    const sentinela = `dona-da-credencial-${info.workerIndex}@ciaara.teste`;
+    const codigoDaDona = `USR-DON-${info.workerIndex}`;
+    const codigoDaOutra = `USR-OUT-${info.workerIndex}`;
+
+    await apagarConta(disputado);
+    await apagarConta(sentinela);
+    await servico.from("usuarios").delete().in("codigo", [codigoDaDona, codigoDaOutra]);
+
+    /*
+     * A dona nasce com o e-mail disputado — é ela que fica com a CREDENCIAL —, e depois a linha dela
+     * passa a mostrar outro endereço. É o retrato de `USR-ADMIN-001`: credencial num e-mail, linha
+     * noutro.
+     */
+    await criarConta(disputado, codigoDaDona, "visualizacao");
+    await servico.from("usuarios").update({ email: sentinela }).eq("codigo", codigoDaDona);
+
+    // E a segunda linha reivindica o endereço, sem credencial nenhuma. É o retrato de `USR-02`.
+    await servico.from("usuarios").insert({
+      codigo: codigoDaOutra,
+      email: disputado,
+      nome: "Reivindica O E-mail",
+      perfil: "visualizacao",
+      escopo_curso: "geral",
+    });
+
+    await entrar(page, EMAIL_ADMIN);
+    await linhaDa(page, disputado).getByRole("button", { name: "Excluir" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Excluir" }).click();
+
+    // ⚠️ A exclusão CONCLUI — ela não falha por isto —, e o aviso é o terceiro, não o primeiro.
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("excluida"), { timeout: 10_000 })
+      .toBe("apagada_email_em_uso");
+    await expect(resposta(page, "NÃO ficou livre")).toBeVisible();
+
+    // ⚠️ **E A CREDENCIAL DA OUTRA CONTA CONTINUA LÁ** — é o que protege o acesso de quem não pediu.
+    expect(
+      await contasDoAuth(disputado),
+      "a credencial de outra conta foi apagada por coincidência de e-mail",
+    ).toHaveLength(1);
+
+    // A dona continua na lista, com o endereço dela.
+    await expect(linhaDa(page, sentinela)).toBeVisible();
+
+    await apagarConta(disputado);
+    await apagarConta(sentinela);
+    await servico.from("usuarios").delete().in("codigo", [codigoDaDona, codigoDaOutra]);
+  });
+
   test("a própria conta não tem ações na linha, e a razão está escrita", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN);
 
@@ -528,13 +667,23 @@ test.describe("`FR-046` · as três ações da linha, e a exclusão permanente",
         `a ação «${acao}» apareceu na própria linha`,
       ).toHaveCount(0);
     }
+    /*
+     * ⚠️ **O «EDITAR» PRECISA DE ASSERÇÃO SEPARADA, porque ele é LINK e não botão.** O laço acima
+     *    varre `getByRole("button")` e passaria com o «Editar» de volta na própria linha — que é
+     *    exatamente o caminho para uma tela que recusa editar.
+     */
+    await expect(
+      minha.getByRole("link", { name: "Editar" }),
+      "o «Editar» apareceu na própria linha",
+    ).toHaveCount(0);
     await expect(minha).toContainText("sua conta");
 
-    // Controle positivo: na linha de OUTRA conta, as três existem.
+    // Controle positivo: na linha de OUTRA conta, as quatro existem.
     const outra = linhaDa(page, EMAIL_ALVO);
     for (const acao of ["Excluir", "Desativar", "Redefinir senha"]) {
       await expect(outra.getByRole("button", { name: acao })).toBeVisible();
     }
+    await expect(outra.getByRole("link", { name: "Editar" })).toBeVisible();
   });
 });
 
@@ -565,7 +714,6 @@ test.describe("`FR-046` · a falha de uma ação destrutiva é VISÍVEL", () => 
     await linha.getByRole("button", { name: "Excluir" }).click();
 
     const dialogo = page.getByRole("alertdialog");
-    await dialogo.getByLabel("Confirme o e-mail da conta").fill(email);
 
     /*
      * ⚠️ **A FALHA É REAL E DETERMINÍSTICA: a conta deixa de existir enquanto o diálogo está aberto.**
@@ -574,7 +722,7 @@ test.describe("`FR-046` · a falha de uma ação destrutiva é VISÍVEL", () => 
      *    sendo Admin, o alvo nunca é o último — eu tentei, e o cenário simplesmente não recusava.
      */
     await apagarConta(email);
-    await dialogo.getByRole("button", { name: "Excluir permanentemente" }).click();
+    await dialogo.getByRole("button", { name: "Excluir" }).click();
 
     /*
      * ⚠️ **ESTA É A ASSERÇÃO QUE ESTAVA VERMELHA ANTES DO CONSERTO.** Com a mensagem dentro da linha,
@@ -590,26 +738,88 @@ test.describe("`FR-046` · a falha de uma ação destrutiva é VISÍVEL", () => 
     await expect(aviso).toHaveAttribute("role", "alert");
   });
 
-  test("o e-mail digitado é o que libera o botão de excluir", async ({ page }) => {
+  /**
+   * `D-USR-4` · **a confirmação é simples: nenhum campo para digitar.**
+   *
+   * ⚠️ **ESTE CASO SUBSTITUI O QUE PROVAVA O CONTRÁRIO.** Até 03/10/2026 havia um caso chamado *"o
+   * e-mail digitado é o que libera o botão de excluir"*, e ele existia só para medir o campo que esta
+   * decisão removeu: *"D-USR-4. Confirmação simples, sem digitar nada."* Reescrevê-lo seria manter a
+   * forma e inverter o veredito; ele foi **apagado**, e este nasceu para medir o que passou a valer.
+   *
+   * ⚠️ **ELE DISCRIMINA PELOS DOIS LADOS:** com o campo de volta, o botão nasceria **desabilitado** e
+   * a primeira asserção reprovaria; e a ausência do campo é medida por contagem, não por aparência.
+   */
+  test("⚠️ O CASO QUE DISCRIMINA · o cartão não tem campo para digitar, e o botão já está liberado", async ({
+    page,
+  }) => {
     await entrar(page, EMAIL_ADMIN);
     await linhaDa(page, EMAIL_ALVO).getByRole("button", { name: "Excluir" }).click();
 
     const dialogo = page.getByRole("alertdialog");
-    const botao = dialogo.getByRole("button", { name: "Excluir permanentemente" });
 
-    // ⚠️ **DESABILITADO ENQUANTO O E-MAIL NÃO CASA** — é a mesma proteção das outras três exclusões
-    //    permanentes, que pedem o código do registro.
-    await expect(botao).toBeDisabled();
+    // A pergunta nomeia a conta e o e-mail — é o que identifica a linha certa.
+    await expect(dialogo).toContainText("Tem certeza que deseja excluir a conta");
+    await expect(dialogo).toContainText(EMAIL_ALVO);
+    await expect(dialogo).toContainText("A exclusão é permanente.");
 
-    await dialogo.getByLabel("Confirme o e-mail da conta").fill(`${EMAIL_ALVO}x`);
-    await expect(botao, "um e-mail PARECIDO liberou o botão").toBeDisabled();
+    // ⚠️ **NENHUM CAMPO**: nem o rótulo que havia, nem caixa de texto nenhuma dentro do cartão.
+    await expect(dialogo.getByLabel("Confirme o e-mail da conta")).toHaveCount(0);
+    await expect(dialogo.locator("input")).toHaveCount(0);
 
-    await dialogo.getByLabel("Confirme o e-mail da conta").fill(EMAIL_ALVO);
-    await expect(botao).toBeEnabled();
+    // ⚠️ **E O BOTÃO JÁ ESTÁ LIBERADO** — era ele que o campo mantinha desabilitado.
+    await expect(dialogo.getByRole("button", { name: "Excluir" })).toBeEnabled();
+    await expect(dialogo.getByRole("button", { name: "Cancelar" })).toBeVisible();
+
+    // Cancelar fecha sem excluir: a conta continua na lista.
+    await dialogo.getByRole("button", { name: "Cancelar" }).click();
+    await expect(linhaDa(page, EMAIL_ALVO)).toBeVisible();
   });
 });
 
 test.describe("`FR-040` e `FR-041` · a página da conta", () => {
+  /**
+   * `D-USR-6` · **«Editar» na linha leva à página da conta.**
+   *
+   * ⚠️ **SEM ESTE CASO O BOTÃO PODERIA NASCER E SUMIR COM A SUÍTE VERDE** — não havia asserção
+   * nenhuma sobre ele no repositório. O nome continua sendo link, e os dois caminhos levam ao mesmo
+   * endereço; o que este caso mede é o **verbo**, que é o que a decisão pediu.
+   */
+  test("⚠️ «Editar» na linha abre a página da conta — e o nome continua funcionando", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN);
+
+    await linhaDa(page, EMAIL_ALVO).getByRole("link", { name: "Editar" }).click();
+    await expect
+      .poll(() => new URL(page.url()).pathname, { timeout: 15_000 })
+      .toMatch(/^[/]admin[/]usuarios[/][0-9a-f-]+$/);
+    await expect(page.getByRole("button", { name: "Gravar nome" })).toBeVisible();
+
+    // Controle positivo do outro caminho: o nome leva ao MESMO lugar.
+    const porEditar = new URL(page.url()).pathname;
+    await page.goto("/admin/usuarios");
+    await abrirContaPorClique(page, EMAIL_ALVO);
+    expect(new URL(page.url()).pathname, "o nome e o Editar levam a páginas diferentes").toBe(
+      porEditar,
+    );
+
+    /*
+     * ⚠️ **DE VOLTA À LISTA ANTES DE MEDIR A AUSÊNCIA — e esquecer isto custou uma reprovação.** O
+     *    passo anterior deixa o navegador na PÁGINA da conta, onde não existe linha nenhuma: ali o
+     *    `toHaveCount(0)` do «Editar» passava **pelo motivo errado**, porque não havia tabela. Quem
+     *    pegou foi o controle positivo da linha seguinte, que exige a frase *"sua conta"* — asserção
+     *    negativa sem controle positivo ao lado é asserção que se satisfaz com a tela errada.
+     */
+    await page.goto("/admin/usuarios");
+
+    // ⚠️ E na PRÓPRIA linha não há «Editar» — a página dela recusa editar, e oferecer seria beco.
+    await expect(
+      linhaDa(page, EMAIL_ADMIN).getByRole("link", { name: "Editar" }),
+      "a própria conta ganhou um Editar que leva a uma tela que recusa",
+    ).toHaveCount(0);
+    await expect(linhaDa(page, EMAIL_ADMIN)).toContainText("sua conta");
+  });
+
   test("editar nome pela PÁGINA, chegando por clique na lista", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN);
     await abrirContaPorClique(page, EMAIL_ALVO);

@@ -138,7 +138,7 @@ ele escolhe o mais curto.
 | **Portar regra `RN-`** | `04` (a regra, texto integral) · `40` Princípio II · `24 §2.1` (onde o arquivo mora) |
 | **Escrever migration** | `21` (DDL da tabela) · `sql/*.sql` na ordem numérica · `05 §7` (unicidade e `CHECK`) · `40` Princípios IV e XI |
 | **Escrever policy RLS** | `22 §5` e `§6` (padrão e as três tabelas de fronteira) · `docs/sql-referencia/05_rls_policies.sql` · `40` Princípio XI |
-| **Auth, convite, sessão** | `22 §3` e `§4` · `BRIEF §3` · `06` Épico 3 |
+| **Auth, conta, sessão** | `22 §3.3` (o fluxo) e `§4` · `BRIEF §3` · `06` Épico 3 · `42` (Épico 3) |
 | **Tela nova** | `23` (tokens e componentes) · `25` (dados e estado) · `02` (o `RF-`) · `20 §4` (fronteira Server/Client) |
 | **Rota de impressão `/print/*`** | `23` (seção de impressão) · `RNF-COMP-01` no `03` · `06` do épico correspondente |
 | **Server Action / mutação** | `25` · `20 §5` (critério RPC × Server Action) · `40` Princípio XI |
@@ -149,6 +149,16 @@ ele escolhe o mais curto.
 | **Teste de invariante (pgTAP)** | `04` (classificação de risco) · `22 §10` (a suíte T-01…T-10) · `BRIEF §7` |
 | **Qualquer dúvida de vocabulário** | `07` Glossário, coluna *Equivalente na v2.0* |
 | **Qualquer dúvida de escopo** | `00 §7` (Matriz de Responsabilidades) · `40` Princípios IX e X |
+
+⚠️ **A linha de auth não fala mais de convite** *(decisão de Bernardo Villas Boas, 03/10/2026,
+D-USR-1)*. O convite por e-mail **saiu do sistema**, e um prompt de auth que o citasse mandaria o
+agente construir o que o repositório tem uma varredura para reprovar. Hoje a conta nasce
+**cadastrada pelo Admin**, com senha temporária mostrada uma vez e troca obrigatória no primeiro
+acesso (D-USR-2). O documento `22` foi emendado pela mesma decisão — o `§3` é o cadastro pelo
+Administrador e o `§4.3` diz o que existe no lugar da recuperação por e-mail —, e o bloco do Épico 3
+do documento `42` traz o escopo vigente; `specs/004-auth-convite-e-rbac/` preserva o antigo como
+registro. ⚠️ *(Registro anterior, vencido: “Auth, convite, sessão | `22 §3` e `§4` · `BRIEF §3` ·
+`06` Épico 3”.)*
 
 **Regra prática:** três documentos citados é bom; sete é o mesmo que zero. Escolha o que decide a
 questão, não tudo o que é adjacente.
@@ -403,10 +413,20 @@ Ela **ignora a RLS inteira**. É acesso administrativo ao banco, e vazá-la é o
 neste sistema — dado pessoal de 177 militares (nome completo, nome de guerra, NIP, posto/graduação,
 data de nascimento, OM) exposto.
 
-**Usos autorizados, e só estes três:** convite de usuário pelo Admin
-(`auth.admin.inviteUserByEmail()`, que a exige) · carga do ETL (Épico 2) · script de manutenção
-versionado, rodado à mão. **Nunca por requisição de tela.** Um quarto uso é decisão do Bernardo,
-registrada na constitution.
+**Usos autorizados, e só estes três:** **gestão de conta pelo Admin**
+(`auth.admin.createUser()`, `updateUserById()` e `deleteUser()`, que a exigem) · carga do ETL
+(Épico 2) · script de manutenção versionado, rodado à mão. **Nunca por requisição de tela.** Um
+quarto uso é decisão do Bernardo, registrada na constitution.
+
+⚠️ **O primeiro uso era o CONVITE, e ele não existe mais** *(decisão de Bernardo Villas Boas,
+03/10/2026, D-USR-1 e D-USR-2)*. O **número de usos autorizados não mudou — continua sendo três**;
+o que mudou é **qual chamada** ocupa o primeiro: a conta passou a nascer por `createUser()`, com
+senha temporária mostrada uma vez, e a `service_role` segue sendo o que torna isso possível, porque
+nenhuma sessão de usuário cria credencial, redefine a senha de outro nem apaga conta. ⚠️ **E
+`inviteUserByEmail()` passou de uso autorizado a uso PROIBIDO**: ele está numa varredura que
+reprova o repositório — `tests/unidade/sem-convite-nem-envio-de-email.test.ts` —, junto de
+`resetPasswordForEmail()`, `signInWithOtp()` e `generateLink()`. ⚠️ *(Registro anterior, vencido:
+“convite de usuário pelo Admin (`auth.admin.inviteUserByEmail()`, que a exige)”.)*
 
 **Leia procurando:** `import` de `lib/supabase/admin` fora de Server Action · falta de
 `import "server-only"` no topo de `admin.ts` · a variável ganhando prefixo `NEXT_PUBLIC_` · a chave

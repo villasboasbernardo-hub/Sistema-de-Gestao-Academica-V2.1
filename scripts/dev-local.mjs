@@ -69,7 +69,7 @@ const ambiente = {
   ...process.env,
   NEXT_PUBLIC_SUPABASE_URL: local.API_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: local.PUBLISHABLE_KEY,
-  // A chave de serviço LOCAL — sem esta linha, a ação de convite usaria a do remoto.
+  // A chave de serviço LOCAL — sem esta linha, o cadastro de conta usaria a do remoto.
   SUPABASE_SERVICE_ROLE_KEY: local.SECRET_KEY,
   DATABASE_URL: local.DB_URL,
   NEXT_PUBLIC_URL_APLICACAO: `http://localhost:${porta}`,

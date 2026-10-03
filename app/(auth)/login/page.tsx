@@ -26,9 +26,16 @@ export default async function Login({
 
       <FormularioDeLogin destino={destino ?? "/"} />
 
-      {/* veste: a dica de rodapé sobre o acesso por convite — texto fixo, nunca dado */}
-      <p className="mt-6 text-texto-tenue text-xs">
-        O acesso é <strong>somente por convite</strong> do Admin. Não há autocadastro.
+      {/*
+        ⚠️ **ELA DIZIA «somente por convite» ATÉ 03/10/2026**, e o convite foi removido
+           PERMANENTEMENTE do sistema (D-USR-1, decisão de Bernardo Villas Boas). Esta é a primeira
+           tela do sistema: deixá-la anunciando um fluxo que não existe mais ensinaria a procurar um
+           e-mail que nunca vai chegar.
+        veste: a dica de rodapé sobre como se consegue acesso — texto fixo, nunca dado
+      */}
+      <p className="text-texto-tenue mt-6 text-xs">
+        O acesso é <strong>somente por cadastro do Admin</strong>, que entrega a senha inicial em
+        mãos. Não há autocadastro nem convite por e-mail.
       </p>
       {/*
         ⚠️ **O E-MAIL SAIU DO SISTEMA em 03/10/2026** *(decisão de Bernardo Villas Boas)*, e com ele a

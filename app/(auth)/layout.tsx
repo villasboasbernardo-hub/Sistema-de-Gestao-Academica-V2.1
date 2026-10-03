@@ -1,7 +1,7 @@
 /**
  * Casca das rotas SEM sessão.
  *
- * Deliberadamente mínima: login, convite e recuperação não têm menu, não têm cabeçalho e não
+ * Deliberadamente mínima: o login não tem menu, não tem cabeçalho e não
  * mostram nada do sistema. Quem chega aqui ainda não é ninguém para o sistema.
  *
  * ⚠️ **ELA NÃO GANHA A CASCA DE NAVEGAÇÃO, e a ausência é a mesma decisão de sempre.** Um menu aqui

@@ -7,6 +7,15 @@ deixou, o ETL **aborta com saída 3** e nada é gravado. Medido em 26/09/2026.
 
 ⚠️ **Nada aqui toca o banco remoto.**
 
+⚠️ **DE ONDE SAEM AS CONTAS QUE ESTE ROTEIRO PEDE** *(decisões de Bernardo Villas Boas, 03/10/2026,
+**D-USR-1** e **D-USR-2**)*. Vários passos precisam de **duas contas**, e o caminho mudou: o **convite
+por e-mail foi PERMANENTEMENTE removido** e **não há envio de e-mail nenhum** — nem SMTP a configurar,
+nem Mailpit a conferir, nem link a expirar. As contas saem de **`pnpm conta:local`** ou do **cadastro
+pelo Admin**, em **`/admin/usuarios/novo`**, que mostra a **senha temporária uma única vez** e obriga a
+**trocá-la no primeiro acesso**. Medido no repositório em 03/10/2026: não existem `/convite` nem
+`/recuperar-senha`, `inviteUserByEmail` e `resetPasswordForEmail` não aparecem em lugar nenhum, e
+`tests/unidade/sem-convite-nem-envio-de-email.test.ts` reprova se voltarem.
+
 ---
 
 ## Passo 0 — o ponto de partida
@@ -87,14 +96,38 @@ limite está **no bucket**, e não só no código (`SC-009`).
 
 ---
 
-## Passo 5 — excluir, e a recusa com nome
+## Passo 5 — excluir: os dois caminhos, e a recusa com nome
+
+⚠️ **EMENDADO em 03/10/2026** *(decisões de Bernardo Villas Boas, **D-USR-1**, **D-USR-3** e
+**D-USR-4**)*. ⚠️ *(Registro anterior, vencido: "excluir um **convite recém-criado**, sem nada ligado
+a ele → some, com confirmação, alerta e **código digitado**" e "excluir uma conta **que já usou o
+sistema** → recusa em português, **nomeando** o que impede, e oferecendo desativar".)* **Não há mais
+convite a excluir** (D-USR-1), **não há código a digitar** (D-USR-4) e **ter histórico deixou de
+impedir** (D-USR-3): o Admin exclui **qualquer conta, em qualquer estado**, menos a **própria** e o
+**último Admin ativo**.
 
 Como Admin, em `/admin/usuarios`:
 
-- excluir um **convite recém-criado**, sem nada ligado a ele → some, com confirmação, alerta e
-  **código digitado**; e a trilha passa a ter a linha, com **quem, o quê, sobre quem e quando**;
-- excluir uma conta **que já usou o sistema** → recusa em português, **nomeando** o que impede, e
-  oferecendo desativar.
+- excluir uma conta **cadastrada agora, sem nada ligado a ela** → ela **sai da lista**, depois de uma
+  confirmação **simples, sem campo para digitar**, que **nomeia a conta e o e-mail dentro da própria
+  pergunta**; e a trilha passa a ter a linha, com **quem, o quê, sobre quem e quando**;
+- excluir uma conta **que já usou o sistema** → ela **também sai**, pelo **outro caminho**: a linha
+  **fica anonimizada** — nome e nome de exibição viram *"Conta excluída"*, a foto sai, `auth_user_id`
+  vira nulo, `excluida_em` é marcada e o e-mail vai para um sentinela `.invalid`. ⚠️ **Ela sai da lista
+  nos dois caminhos**, porque a consulta da tela filtra `excluida_em is null`;
+- nos dois casos o **e-mail fica liberado** para um novo cadastro — é para isso que o endereço vai ao
+  sentinela em vez de ficar na linha;
+- ⚠️ **E quem escolhe o caminho é o BANCO**, dentro da mesma transação em que escreve: `excluir_conta`
+  devolve `apagada` ou `anonimizada`. **São dois porque `criado_por`/`editado_por` não têm FK
+  nenhuma** — o que se perderia apagando a linha de quem já carimbou algo não é integridade, é a
+  **resolução do autor** no histórico.
+
+E a **recusa com nome** continua existindo, para o que a regra de fato protege — medido na migration
+`20261003000205_exclusao_de_conta.sql` e em `lib/acoes/traducao-de-recusas.ts`, onde os cinco `hint`
+têm frase em português: **a própria conta** (`conta_propria`), **o último Admin ativo**
+(`ultimo_admin`), **conta já excluída** (`conta_ja_excluida`), **sem perfil Admin**
+(`conta_sem_permissao`) e **sem sessão** (`conta_sem_sessao`). ⚠️ **O discriminador é o `hint`, nunca o
+texto da mensagem.**
 
 ---
 

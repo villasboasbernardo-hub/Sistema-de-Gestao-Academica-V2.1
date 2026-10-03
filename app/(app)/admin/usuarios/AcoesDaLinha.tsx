@@ -1,43 +1,48 @@
 "use client";
 
 /**
- * As três ações de cada linha da lista: **Redefinir senha**, **Desativar/Reativar** e **Excluir**.
+ * As **quatro** ações de cada linha da lista: **Editar**, **Redefinir senha**, **Desativar/Reativar**
+ * e **Excluir** *(D-USR-6, de Bernardo Villas Boas, 03/10/2026)*.
  *
- * ⚠️ **ELAS VOLTARAM À LISTA EM 03/10/2026, e a volta é decisão de Bernardo** na reconferência do
- * PR 2: *"Na LISTA, em cada linha, ações visíveis direto. Clicar no nome abre a página da conta com as
- * informações completas."* O que ele recusou na rodada anterior era **formulário** dentro da linha —
- * trocar perfil, editar nome — e isso continua na página. Botão com diálogo de confirmação não é
- * formulário: é a ação que se faz sem precisar abrir nada.
+ * ⚠️ **ELAS VIVEM NA LINHA, e isso é decisão de Bernardo** na reconferência do PR 2: *"Na LISTA, em
+ * cada linha, ações visíveis direto. Clicar no nome abre a página da conta com as informações
+ * completas."* O que ele recusou foi **formulário** dentro da linha — trocar perfil, editar nome —, e
+ * isso continua na página. Botão com diálogo de confirmação não é formulário.
  *
- * ⚠️ **AS TRÊS CONSEQUÊNCIAS SÃO INVISÍVEIS NA TELA DE QUEM CLICA, e é por isso que as três confirmam.**
- * Redefinir **derruba as sessões abertas** da pessoa; desativar **tira o acesso** na requisição
- * seguinte; excluir **não tem desfazer**. Reativar é o único que não pede nada, porque é o desfazer de
- * outro.
+ * ⚠️ **«EDITAR» É UM LINK, NÃO UM BOTÃO DE AÇÃO**, e é o quarto caminho clicável para
+ * `/admin/usuarios/[id]`: clicar no nome continua funcionando, e quem procura o verbo acha o verbo.
+ * Ele não confirma nada porque não muda nada — só navega.
  *
- * ⚠️ **O DIÁLOGO DA EXCLUSÃO DIZ QUAL DOS DOIS CAMINHOS VAI ACONTECER**, e ele pergunta ao servidor
- * antes de abrir. Dizer só *"é permanente"* seria verdade e insuficiente: conta que nunca registrou
- * nada **desaparece**, e conta que registrou **fica como «Conta excluída»** para o histórico continuar
- * tendo autor. As duas são permanentes de maneiras diferentes.
+ * ⚠️ **AS TRÊS AÇÕES QUE MUDAM ALGO TÊM CONSEQUÊNCIA INVISÍVEL NA TELA DE QUEM CLICA, e é por isso
+ * que as três confirmam.** Redefinir **derruba as sessões abertas** da pessoa; desativar **tira o
+ * acesso** na requisição seguinte; excluir **não tem desfazer**. Reativar é o único que não pede
+ * nada, porque é o desfazer de outro.
+ *
+ * ⚠️ **A CONFIRMAÇÃO DA EXCLUSÃO É SIMPLES, SEM CAMPO PARA DIGITAR** *(D-USR-4)*. Ela pedia o e-mail
+ * digitado por um dia, por analogia com as três exclusões permanentes do domínio acadêmico, que
+ * pedem o código do registro. **A analogia foi recusada:** aqui o cartão nomeia a conta e o e-mail
+ * dentro da própria pergunta, e é a pergunta que a pessoa lê antes de clicar.
+ *
+ * ⚠️ **E O CARTÃO NÃO DIZ MAIS QUAL DOS DOIS CAMINHOS VAI ACONTECER.** Ele dizia — conta sem
+ * histórico desaparece, conta com histórico fica como «Conta excluída» —, e para isso ele
+ * **consultava o servidor antes de abrir**. A consulta saiu junto com o texto: *"A exclusão é
+ * permanente"* é verdade nos dois caminhos, e era a frase que Bernardo pediu. **A diferença entre os
+ * caminhos continua existindo no banco e continua provada por teste**; ela só não é mais decisão de
+ * quem clica.
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { useAvisoDaLista } from "./AvisoDaLista";
-import {
-  dependentesDaConta,
-  desativar,
-  excluirConta,
-  reativar,
-  redefinirSenha,
-} from "@/lib/acoes/usuarios";
+import { desativar, excluirConta, reativar, redefinirSenha } from "@/lib/acoes/usuarios";
 
 type Resposta = {
   ok: boolean;
   erro?: string;
   senha?: string;
   caminho?: string;
-  dependentes?: readonly string[];
 };
 
 const BOTAO =
@@ -62,10 +67,8 @@ export function AcoesDaLinha({
   const [aviso, definirAviso] = useState<string | null>(null);
   const [erro, definirErro] = useState<string | null>(null);
   const [ocupado, definirOcupado] = useState(false);
-  const [dependentes, definirDependentes] = useState<readonly string[] | null>(null);
   const navegador = useRouter();
   const { avisar } = useAvisoDaLista();
-  const [emailDigitado, definirEmailDigitado] = useState("");
 
   async function executar(acao: () => Promise<Resposta>, sucesso: string): Promise<void> {
     definirAviso(null);
@@ -98,34 +101,13 @@ export function AcoesDaLinha({
     definirOcupado(false);
   }
 
-  /*
-   * ⚠️ **PERGUNTA AO SERVIDOR ANTES DE ABRIR O DIÁLOGO**, para a frase ser sobre esta conta e não
-   *    sobre contas em geral. Se a consulta falhar, o diálogo abre mesmo assim com a frase genérica:
-   *    impedir a exclusão porque a *explicação* falhou seria trocar um problema por outro.
-   */
-  async function medirDependentes(): Promise<void> {
-    const r = (await dependentesDaConta({ usuarioId })) as Resposta;
-    definirDependentes(r.ok ? (r.dependentes ?? []) : []);
-  }
-
-  /*
-   * ⚠️ **A FRASE É TEXTO, e não JSX, porque `consequencia` é `string` DE PROPÓSITO** no componente
-   *    canônico — o contrato dele exige dizer o que muda, e alargar o tipo para `ReactNode` só para
-   *    pôr negrito mexeria num componente que outras telas usam. A ênfase vem da ORDEM das frases: a
-   *    permanência é a primeira coisa que se lê.
-   */
-  function frase(): string {
-    const inicio = `A exclusão é permanente. A credencial de ${nome} é apagada e ela deixa de entrar no sistema — não há desfazer.`;
-    const meio =
-      dependentes === null
-        ? "O cadastro sai da lista."
-        : dependentes.length === 0
-          ? "Esta conta não registrou nada no sistema, então o cadastro sai inteiro, e o e-mail fica livre para um novo cadastro."
-          : `Esta conta registrou histórico (${dependentes.join(", ")}), então o cadastro fica como «Conta excluída», para os registros antigos continuarem tendo autor. Ele sai da lista, e o e-mail fica livre para um novo cadastro.`;
-    return `${inicio} ${meio} Para apenas bloquear o acesso mantendo cadastro e perfil, use Desativar.`;
-  }
-
   if (ehMinhaConta) {
+    /*
+     * ⚠️ **NEM «EDITAR» APARECE NA PRÓPRIA LINHA, e a ausência é deliberada:** a página da conta
+     *    própria não traz formulário nenhum — ela explica que é a sua conta e manda pedir a outro
+     *    Administrador. Um «Editar» aqui seria caminho para uma tela que recusa. **A página continua
+     *    alcançável pelo nome**, que é link em toda linha, então ninguém perde o acesso a ela.
+     */
     // veste: a razão de a própria conta não ter ações — texto explicativo, não valor
     return <span className="text-texto-tenue text-xs">sua conta — peça a outro Administrador</span>;
   }
@@ -133,6 +115,17 @@ export function AcoesDaLinha({
   return (
     <span className="flex flex-col gap-1">
       <span className="flex flex-wrap items-center gap-1">
+        <Link href={`/admin/usuarios/${usuarioId}`} className={BOTAO}>
+          Editar
+        </Link>
+
+        {/*
+          ⚠️ **SEM CREDENCIAL NÃO HÁ SENHA A REDEFINIR, e o botão NÃO APARECE em vez de recusar.**
+             Medido no remoto em 03/10/2026: **4 das 5 contas reais não têm credencial** — vieram do
+             ETL e do convite antigo, que gravava o cadastro e não emitia o convite. Para dar acesso a
+             uma delas, o caminho é excluir e cadastrar o mesmo e-mail de novo: a exclusão **libera o
+             endereço**, e o cadastro cria a credencial com senha temporária.
+        */}
         {temCredencial ? (
           <DialogoConfirmacao
             titulo="Redefinir a senha desta conta?"
@@ -149,7 +142,10 @@ export function AcoesDaLinha({
               Redefinir senha
             </button>
           </DialogoConfirmacao>
-        ) : null}
+        ) : (
+          // veste: a razão de faltar uma das quatro ações — texto explicativo, não valor
+          <span className="text-texto-tenue text-xs">sem credencial — não entra</span>
+        )}
 
         {ativa ? (
           <DialogoConfirmacao
@@ -175,42 +171,21 @@ export function AcoesDaLinha({
         )}
 
         {/*
-          ⚠️ **O E-MAIL DIGITADO HABILITA O BOTÃO**, como nas outras três exclusões permanentes do
-             sistema, que pedem o **código** do registro *(decisão de Bernardo Villas Boas,
-             03/10/2026)*. Aqui a chave é o e-mail porque é ele que o Admin tem diante dos olhos na
-             lista — pedir o `USR-…` obrigaria a abrir a conta só para copiar um código.
-          ⚠️ **A COMPARAÇÃO É EXATA**, sem `trim` nem caixa: o ponto do campo é obrigar a LER a linha
-             certa antes de apagar, e tolerância em comparação de confirmação é tolerância com o erro
-             que ela existe para impedir.
+          ⚠️ **A PERGUNTA NOMEIA A CONTA E O E-MAIL, e é ela que faz o trabalho que o campo digitado
+             fazia.** Quem abriu o diálogo na linha errada lê o nome errado na primeira linha do
+             cartão. ⚠️ **E o rótulo é «Excluir», não «Excluir permanentemente»** (D-USR-4) — as
+             exclusões de instrutor, disciplina e UE seguem com o rótulo longo e o código digitado,
+             e a divergência é escolhida, não descuido.
         */}
         <DialogoConfirmacao
-          titulo="Excluir esta conta?"
-          consequencia={frase()}
-          rotuloConfirmar="Excluir permanentemente"
-          confirmacaoDesabilitada={emailDigitado !== email}
-          corpo={
-            <label className="flex flex-col gap-1">
-              <span className="text-texto-suave text-xs">
-                Para liberar o botão, digite o e-mail da conta: <strong>{email}</strong>
-              </span>
-              <input
-                aria-label="Confirme o e-mail da conta"
-                value={emailDigitado}
-                onChange={(evento) => definirEmailDigitado(evento.target.value)}
-                className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
-              />
-            </label>
-          }
+          titulo={`Tem certeza que deseja excluir a conta ${nome} (${email})?`}
+          consequencia="A exclusão é permanente."
+          rotuloConfirmar="Excluir"
           aoConfirmar={() =>
             void executar(() => excluirConta({ usuarioId }) as Promise<Resposta>, "")
           }
         >
-          <button
-            type="button"
-            className={BOTAO}
-            disabled={ocupado}
-            onClick={() => void medirDependentes()}
-          >
+          <button type="button" className={BOTAO} disabled={ocupado}>
             Excluir
           </button>
         </DialogoConfirmacao>

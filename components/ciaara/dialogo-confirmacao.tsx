@@ -11,6 +11,14 @@
  *
  * ⚠️ ELE NÃO EXECUTA A AÇÃO. Recebe o que fazer e chama; quem sabe o que acontece é quem chama.
  * O texto da consequência é obrigatório justamente por isso: só quem chama sabe qual é.
+ *
+ * ⚠️ **ELE NÃO TEM CAMPO PARA DIGITAR, E ISSO É DECISÃO, NÃO FALTA** *(D-USR-4, de Bernardo Villas
+ * Boas, 03/10/2026: "Confirmação simples, sem digitar nada")*. As props `corpo` e
+ * `confirmacaoDesabilitada` existiram por um dia — nasceram para a exclusão de conta pedir o e-mail
+ * digitado — e saíram com ela. **As três exclusões permanentes do domínio acadêmico (instrutor,
+ * disciplina, unidade de ensino) continuam pedindo o código**, com campo próprio na tela delas; a de
+ * conta deixou de seguir esse padrão de propósito. Quem for reintroduzir um corpo aqui precisa de
+ * decisão nova, não de conveniência.
  */
 "use client";
 
@@ -34,15 +42,6 @@ export type DialogoConfirmacaoProps = {
   readonly consequencia: string;
   readonly rotuloConfirmar: string;
   readonly rotuloCancelar?: string;
-  /**
-   * ⚠️ **O CORPO EXISTE PARA A CONFIRMAÇÃO POR DIGITAÇÃO**, e nada mais. As três exclusões
-   * permanentes do domínio acadêmico pedem o **código** do registro antes de liberar o botão, e a de
-   * conta passou a pedir o **e-mail** *(decisão de Bernardo Villas Boas, 03/10/2026)*. Sem isto, cada
-   * tela construiria o seu campo — e a quarta cópia seria a que divergisse.
-   */
-  readonly corpo?: React.ReactNode;
-  /** Quando `true`, o botão de confirmar fica desabilitado. É o par do `corpo`. */
-  readonly confirmacaoDesabilitada?: boolean;
   readonly aoConfirmar: () => void;
   /** O que dispara o diálogo. Fica sob o controle de quem chama. */
   readonly children: React.ReactNode;
@@ -53,8 +52,6 @@ export function DialogoConfirmacao({
   consequencia,
   rotuloConfirmar,
   rotuloCancelar = "Cancelar",
-  corpo,
-  confirmacaoDesabilitada = false,
   aoConfirmar,
   children,
 }: DialogoConfirmacaoProps) {
@@ -66,12 +63,9 @@ export function DialogoConfirmacao({
           <AlertDialogTitle>{titulo}</AlertDialogTitle>
           <AlertDialogDescription>{consequencia}</AlertDialogDescription>
         </AlertDialogHeader>
-        {corpo ? <div className="py-2">{corpo}</div> : null}
         <AlertDialogFooter>
           <AlertDialogCancel>{rotuloCancelar}</AlertDialogCancel>
-          <AlertDialogAction onClick={aoConfirmar} disabled={confirmacaoDesabilitada}>
-            {rotuloConfirmar}
-          </AlertDialogAction>
+          <AlertDialogAction onClick={aoConfirmar}>{rotuloConfirmar}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -1,52 +1,87 @@
 # Conferência do PR 2 — as quatro ações sobre conta
 
 > **Para Bernardo Villas Boas.** Doze passos, **só com contas de teste criadas aqui**. Nenhum passo
-> mexe nas cinco contas reais.
+> mexe nas cinco contas reais — o estado delas está na tabela no fim deste arquivo.
 >
-> ⚠️ **A MIGRATION DESTA RODADA JÁ ESTÁ NO REMOTO** (`20261003042704`, aplicada em 03/10/2026 com a
-> sua autorização, depois do CI verde). Ela fecha um buraco que eu achei **plantando defeito
-> deliberado**, não conferindo tela: a **conta desativada** continuava autenticando — desativar não
-> toca a credencial —, `app.eh_admin()` devolvia nulo para ela, e o porteiro escrito `if not …`
-> **não barrava**: medido, ela **gravou** linha na trilha imutável. **Nenhum dos 12 passos abaixo
-> exercita isso**, e o que ela muda é invisível na tela; está aqui só para você saber que o preview
-> que vai conferir já roda com ela.
+> **Onde:** <https://sistema-de-gestao-academica-v2-1-git-feat-epic-35e53b-ciaara-11.vercel.app>
 >
-> ⚠️ **Local e remoto estão idênticos**: **49 e 49** migrations, impressão digital `ed9de773…` com
-> 1.595 objetos nos dois, `diff` vazio — reconferido depois da aplicação.
+> **Commit que esse endereço serve:** `[pendente-commit]`
 >
-> ⚠️ **O E-MAIL SAIU DO SISTEMA.** Não há envio em lugar nenhum do repositório, a rota
-> `/recuperar-senha` foi **removida** e o login agora diz *"Esqueceu a senha? Procure o administrador
-> do sistema."*
+> ⚠️ **O APELIDO É FIXO POR RAMO; o que muda é o build que ele serve.** Medido em 03/10/2026 com
+> `vercel inspect`: os deploys deste ramo compartilham esse endereço, e ele responde **302 para o
+> `sso-api` da Vercel** por proteção de deploy — é preciso estar autenticado na Vercel para abrir.
 >
-> ⚠️ **O QUE ESTAVA QUEBRADO ERA A VISIBILIDADE DA FALHA.** Medido no remoto, só por leitura: a trilha
-> não tem **nenhuma** linha `excluir` e `excluida_em` está **nulo nas cinco contas** — **nada foi
-> excluído**. A ação falhou e a falha era texto de 11px **dentro da linha que não mudou**. Agora a
-> resposta aparece **acima da tabela**: o passo 11 existe para você ver isso.
+> ⚠️ **AS SEIS DECISÕES D-USR ESTÃO APLICADAS.** As que mudam o que você vê: a confirmação da
+> exclusão **não pede nada digitado** (D-USR-4) e cada linha tem **quatro** ações, começando por
+> **Editar** (D-USR-6).
+>
+> ⚠️ **O CONVITE SAIU DA INTERFACE, E NÃO SÓ DOS DOCUMENTOS.** A tela de login dizia *"o acesso é
+> somente por convite do Admin"* — a primeira tela do sistema — e a recusa de *Redefinir senha*
+> mandava usar «Reenviar convite», que não existe mais. As duas foram corrigidas, e agora há
+> **guarda** que reprova se o convite ou qualquer envio de e-mail voltarem.
+>
+> ⚠️ **UMA DAS QUATRO AÇÕES PODE FALTAR, com a razão escrita no lugar dela.** Conta **sem
+> credencial** não tem senha a redefinir, e **4 das 5 contas reais estão nesse estado** — vieram do
+> ETL e do convite antigo. No lugar do botão aparece *"sem credencial — não entra"*.
 
-**Onde:** o endereço do ramo na Vercel sai no comentário do PR. Menu → **Administração**.
+## Os doze passos
 
-| #  | Passo                                                                                   | Resultado esperado                                                                                                                 |
-| -- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| 1  | Olhar a lista                                                                            | Seis colunas: avatar, nome, e-mail, perfil, último acesso e **Ações**. Em cada linha: **Redefinir senha · Desativar · Excluir**        |
-| 2  | Olhar a **sua própria** linha                                                             | Nenhum botão — *"sua conta — peça a outro Administrador"*                                                                            |
-| 3  | **Cadastrar usuário** → nome «Teste Um», e-mail `teste-um@ciaara.teste` → salvar           | **Senha temporária** de 16 caracteres, sem `O`, `0`, `l`, `1` nem `I`. **Copie.** Dar F5 a perde                                      |
-| 4  | Repetir para «Teste Dois», `teste-dois@ciaara.teste`                                      | Idem. Agora há duas contas de teste na lista                                                                                        |
-| 5  | Sair; entrar como **Teste Um** com a temporária; tentar ir a **Início**                   | Cai em **Trocar a minha senha** e não sai de lá. Definir a nova → **Início abre**                                                     |
-| 6  | Sair; tentar entrar como Teste Um com a **temporária** e depois com a **nova**             | A temporária é **recusada**; a nova entra                                                                                           |
-| 7  | Voltar como Admin → na linha de **Teste Dois**, **Redefinir senha** → confirmar            | O diálogo avisa que **encerra as sessões abertas**. Aparece outra temporária, uma vez                                                |
-| 8  | Na linha de **Teste Dois**, **Desativar** → confirmar                                      | O diálogo diz que ela **perde o acesso**, que **nada é apagado** e que **NÃO é exclusão**. A linha ganha **Desativada** e **fica**     |
-| 9  | **Reativar** Teste Dois                                                                   | Volta a ativa, **sem** pedir confirmação — é desfazer                                                                              |
-| 10 | Na linha de **Teste Um**, **Excluir** → ler o diálogo                                      | Começa com *"A exclusão é permanente."* e diz que ela **registrou histórico** (trocou a senha). O botão está **desabilitado**          |
-| 11 | Digitar o e-mail `teste-um@ciaara.teste` no campo e confirmar                               | O botão libera. A conta **sai da lista**, e **acima da tabela** aparece o que aconteceu. Entrar com ela: **recusado**                  |
-| 12 | **Cadastrar** de novo com `teste-um@ciaara.teste`; depois excluir **Teste Dois** do mesmo modo | O e-mail **é aceito** — ele ficou livre. Teste Dois nunca usou o sistema: o diálogo diz que o cadastro **sai inteiro**                |
+| #   | Passo                                                                                       | Resultado esperado                                                                                                                                 |
+| --- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Menu → **Administração** → olhar a lista                                                    | Seis colunas: avatar, nome, e-mail, perfil, último acesso e **Ações**. Em cada linha: **Editar · Redefinir senha · Desativar · Excluir**             |
+| 2   | Olhar a **sua própria** linha                                                               | Nenhum botão, **nem Editar** — *"sua conta — peça a outro Administrador"*. O **nome** continua clicável                                             |
+| 3   | Numa linha que não é a sua, clicar **Editar**; voltar e clicar no **nome**                   | Os dois abrem a **mesma** página da conta, com nome, perfil, escopo e as ações de acesso                                                           |
+| 4   | **Cadastrar usuário** → nome «Teste Um», e-mail `teste-um@ciaara.teste` → salvar             | **Senha temporária** de 16 caracteres, sem `O`, `0`, `l`, `1` nem `I`. **Copie.** Dar F5 a perde                                                    |
+| 5   | Repetir para «Teste Dois», `teste-dois@ciaara.teste`                                         | Idem. Agora há duas contas de teste na lista, as duas com as quatro ações                                                                           |
+| 6   | Sair; entrar como **Teste Um** com a temporária; tentar ir a **Início**                      | Cai em **Trocar a minha senha** e não sai de lá. Definir a nova → **Início abre**                                                                   |
+| 7   | Sair; tentar a **temporária** e depois a **nova**                                            | A temporária é **recusada**; a nova entra                                                                                                          |
+| 8   | Voltar como Admin → **Redefinir senha** na linha de **Teste Dois** → confirmar                | O diálogo avisa que **encerra as sessões abertas**. Aparece outra temporária, uma vez                                                               |
+| 9   | **Desativar** Teste Dois → confirmar; depois **Reativar**                                     | O diálogo diz que ela **perde o acesso**, que **nada é apagado** e que **NÃO é exclusão**. A linha ganha **Desativada** e **fica**. Reativar não pergunta nada |
+| 10  | **Excluir** na linha de **Teste Um** → **ler o cartão** e clicar em **Cancelar**               | *"Tem certeza que deseja excluir a conta Teste Um (teste-um@ciaara.teste)?"* e *"A exclusão é permanente."* Só **Cancelar** e **Excluir** — **nenhum campo para digitar**. Cancelar não muda nada |
+| 11  | **Excluir** outra vez e confirmar                                                             | A conta **sai da lista**, e **acima da tabela** aparece o que aconteceu. Entrar com ela: **recusado**                                               |
+| 12  | **Cadastrar** de novo `teste-um@ciaara.teste`; depois excluir **Teste Dois** do mesmo modo     | O e-mail **é aceito** — a exclusão liberou o endereço. Teste Dois nunca usou o sistema, e também sai                                                |
 
 ---
 
-## Duas coisas que valem olhar
+## As cinco contas reais — estado medido no remoto em 03/10/2026, **só por leitura**
 
-**O campo de confirmação é o e-mail**, como as outras três exclusões permanentes pedem o código do
-registro. A comparação é **exata**, sem tolerar espaço nem caixa: o ponto é obrigar a ler a linha certa
-antes de apagar.
+⚠️ **Nenhuma delas foi alterada.** O que segue é leitura: `public.usuarios`, `auth.users` e
+`public.dependentes_da_conta`.
 
-**A resposta de toda ação da lista aparece acima da tabela**, e falha vem em vermelho com borda. É o
-conserto do defeito que você encontrou: a linha pode desaparecer sem levar a mensagem com ela.
+| Código          | Perfil    | Situação | Entra?                              | Dependentes                   | Excluível pela tela?                                      |
+| --------------- | --------- | -------- | ----------------------------------- | ----------------------------- | --------------------------------------------------------- |
+| `USR-01`        | Admin     | ativa    | **não** — sem credencial            | 0                             | **sim**, e o e-mail fica livre                            |
+| `USR-02`        | Admin     | ativa    | **não** — sem credencial            | 0                             | **sim**, mas o **e-mail NÃO fica livre** (ver abaixo)     |
+| `USR-03`        | Visualização | desativada | **não** — sem credencial         | 0                             | **sim**, e o e-mail fica livre                            |
+| `USR-ADMIN-001` | Admin     | ativa    | **sim** — é a **única** que entra   | **17**, em 7 tabelas          | **não** — é a **sua própria** conta (D-USR-3)             |
+| `USR-MUEF9CLK`  | Ajudante  | desativada | **não** — convite antigo, nunca emitido | 0                        | **sim**, e o e-mail fica livre                            |
+
+**Três coisas que essa tabela diz, e que vale ler devagar:**
+
+**1. Só uma conta entra no sistema.** `USR-ADMIN-001` é a única com credencial, e é por ela que você
+está entrando. As outras quatro são cadastros que **nunca** conseguiram acessar — três do ETL e uma
+do convite que gravou a linha e não emitiu o convite.
+
+**2. `USR-02` e `USR-ADMIN-001` dividem o seu e-mail, e isso explica o resto.** O endereço que
+funciona é a **credencial** de `USR-ADMIN-001`, cuja **linha** mostra um sentinela
+`@ciaara11.invalid`; `USR-02` mostra o endereço de verdade na tela e **não tem credencial nenhuma**.
+Por isso excluir `USR-02` **não libera** aquele e-mail: ele é o login de outra conta, e apagá-lo
+derrubaria o seu acesso. ⚠️ **A tela diz isso agora** — antes ela prometia que o endereço ficaria
+livre. **Como juntar as duas é decisão sua**, e está na lista de dúvidas.
+
+**3. Os zeros de «Dependentes» são por construção, não por varredura.** Conta sem credencial nunca
+carimbou nada — o gatilho de auditoria lê `auth.uid()` —, então a função devolve vazio **de
+propósito**. O único número varrido de verdade é o **17** de `USR-ADMIN-001`:
+`auditoria_de_conta` (4), `usuarios.editado_por` (4), `instrutor_disciplina` (2),
+`instrutores.editado_por` (2), `turma_disciplina_instrutor` (2), `turma_disciplina.editado_por` (2)
+e `usuarios.criado_por` (1).
+
+---
+
+## Como dar acesso a uma das quatro contas sem credencial
+
+Não há botão para isso, e a razão está na tela: *Redefinir senha* só existe onde há senha. O caminho
+é **excluir a conta e cadastrar o mesmo e-mail de novo** — a exclusão libera o endereço, e o cadastro
+cria a credencial com senha temporária. ⚠️ **Para `USR-02` isso não funciona**, pelo motivo 2 acima.
+Se você preferir que *Redefinir senha* passe a **criar** a credencial quando ela não existe, é uma
+decisão de uma linha — está na lista de dúvidas.
