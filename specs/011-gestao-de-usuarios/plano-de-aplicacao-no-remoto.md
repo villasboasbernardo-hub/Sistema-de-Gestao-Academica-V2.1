@@ -235,10 +235,11 @@ lista como se estivesse viva, chamada *"Conta excluída"*, que é pior que o est
 
 # PR 2 (reconferência) — `20261003042704_porteiro_de_admin_nao_falha_aberto.sql`
 
-## ⛔ NÃO APLICADA. Espera a autorização de Bernardo Villas Boas.
+## ✅ APLICADA NO REMOTO em 03/10/2026, com autorização de Bernardo Villas Boas na mesma sessão,
+depois do CI verde em `133504c`.
 
-Este bloco está escrito **antes** da aplicação, de propósito: ele é o plano, e os números da
-conferência entram **depois**, nos marcadores — nunca por antecipação (regra 9.3).
+Este bloco foi escrito **antes** da aplicação, de propósito: ele era o plano, e os números da
+conferência entraram **depois**, nos marcadores — nunca por antecipação (regra 9.3).
 
 ## Por que ela existe, e como apareceu
 
@@ -270,25 +271,36 @@ função.
 | O porteiro de `registrar_acao_em_conta` passa a `coalesce(…) is not true` | A assinatura, os privilégios e o corpo restante das duas funções |
 | — | **Nenhuma linha de dado.** Ela não lê nem escreve `usuarios`, a trilha, nem qualquer tabela |
 
-## O rito, quando a autorização vier
+## O rito, na ordem em que foi executado
 
 1. `python -m scripts.manutencao.dado_do_remoto --somente-copia` — e **o nome do arquivo datado
-   entra aqui**: `[pendente]`.
-2. `supabase db push --linked --dry-run`, conferindo que a lista traz **só** esta migration.
-3. `supabase db push --linked`.
-4. A conferência abaixo, **só por leitura**.
+   entra aqui**: **`remoto-20261003-023406.sql`** (1.795 KB, fora do git, com dado pessoal).
+2. `supabase db push --linked --dry-run` — a lista trouxe **só** esta migration, uma linha.
+3. `supabase db push --linked` — saiu **0**, uma migration aplicada.
+4. A conferência abaixo, **só por leitura**, feita na hora.
 
-## A conferência, só por leitura — a executar
+## A conferência, só por leitura
 
 | O que | Esperado | Medido |
 | --- | --- | --- |
-| Migrations dos dois lados | **49 e 49**, nenhuma só de um | `[pendente]` |
-| Impressão digital do esquema | **igual** nos dois bancos, `diff` vazio | `[pendente]` |
-| `app.eh_admin()` sem sessão | **`false`**, não NULL | `[pendente]` |
-| Funções com `if not app.eh_admin()` | **0** no catálogo | `[pendente]` |
-| Linhas em `auditoria_de_conta` | **as mesmas de antes** — a migration não grava | `[pendente]` |
-| Contas em `usuarios` | **5**, intactas | `[pendente]` |
-| Production | respondendo como antes | `[pendente]` |
+| Migrations dos dois lados | **49 e 49**, nenhuma só de um | **49** no remoto ✅ |
+| Impressão digital do esquema | **igual** nos dois bancos, `diff` vazio | **`ed9de773…`, 1.595 objetos, idêntica**, `diff` vazio nas 1.596 linhas ✅ |
+| `app.eh_admin()` sem sessão | **`false`**, não NULL | **`false`** — era **NULL** antes do push ✅ |
+| Funções com `if not app.eh_admin()` | **0** no catálogo | **0** — era **1** antes do push ✅ |
+| Linhas em `auditoria_de_conta` | **as mesmas de antes** — a migration não grava | **4**, as mesmas ✅ |
+| Contas em `usuarios` | **5**, intactas | **5 vivas de 5**, **0** excluídas ✅ |
+| Production | respondendo como antes | `/login` **200**; `/`, `/admin/usuarios`, `/perfil` e `/instrutores` **307** ✅ |
+
+⚠️ **E DUAS LINHAS QUE NÃO ESTAVAM NO PLANO, medidas porque a primeira versão desta migration
+mexia em privilégio:** a ACL de `app.eh_admin()` no remoto ficou
+`{=X/postgres,postgres=X,authenticated=X}` — **idêntica à da irmã `app.pode()`**, portanto **nada
+mudou** ali; e as **6** policies que a chamam seguem as mesmas. **Zero** policies de `DELETE` no
+catálogo inteiro, como sempre.
+
+⚠️ **A IMPRESSÃO DIGITAL MUDOU DE VALOR, E ISSO ERA O ESPERADO:** ela era `1a202cfc…` antes e
+`ed9de773…` depois, porque **o corpo de duas funções mudou** — é o que a migration faz. O que importa
+é que mudou **do mesmo jeito nos dois bancos**: os dois medem `ed9de773…` com **1.595** objetos e
+`diff` vazio. **Número de objetos igual antes e depois** confirma que nada foi criado nem perdido.
 
 ## Reversão
 
