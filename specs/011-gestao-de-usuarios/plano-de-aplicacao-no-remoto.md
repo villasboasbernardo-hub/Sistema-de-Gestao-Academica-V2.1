@@ -174,3 +174,59 @@ Comparação **linha a linha** das 1.590 linhas de saída: **diff vazio**.
 No cabeçalho da migration. ⚠️ **`drop table` só se a tabela estiver VAZIA** — hoje está. Com linha
 dentro, apagar a tabela seria apagar rastro de ação que aconteceu, que é o que a regra 4 impede; a
 reversão então para na função e nos gatilhos, e a tabela fica.
+
+---
+
+# PR 2 (reconferência) — `20261003000205_exclusao_de_conta.sql`
+
+**Autorização:** Bernardo Villas Boas, 03/10/2026: *"Se a anonimização exigir migration, faça com o
+rito (backup, dry-run só com ela, conferência)."* CI verde nos três blocos sobre `d742644`
+(run `37086988008`).
+
+| # | Passo | Resultado medido |
+|---|---|---|
+| 1 | **Backup**, `--somente-copia` | `remoto-20261002-224755.sql`, fora do git |
+| 2 | **Dry-run** | *"Would push: • 20261003000205_exclusao_de_conta.sql"* — **uma só**, sem `seed` nem `role` |
+| 3 | **Aplicação**, `pnpm db:push` | `Applying migration …` · saída **0** |
+| 4 | **Retrato depois** | `remoto-20261002-224823.sql` — é ele que sustenta a conferência 2 |
+
+## A conferência, só por leitura
+
+**1. Migrations:** **48 entradas, as 48 nos dois bancos**, nenhuma só de um lado.
+
+**2. Zero valores pré-existentes alterados.** O `diff` dos dois retratos de dados traz **uma coisa
+só**, além do par de linhas que o `pg_dump` sorteia: a coluna **`excluida_em`** entrando na lista do
+`INSERT` de `usuarios`, com **`NULL` nas cinco linhas**. Nenhum outro valor mudou — nem o nome de
+exibição, nem o caminho do avatar, nem a situação das duas contas que você desativou no preview.
+
+⚠️ **E ISSO É A LIÇÃO DO GOTCHA 13 APLICADA:** a conferência é o `diff` dos **dois retratos datados**,
+nunca um md5 de conteúdo — que num banco vivo muda sozinho por carimbo de acesso.
+
+**3. Esquema, objeto a objeto:**
+
+| | Objetos | md5 do conjunto |
+|---|---|---|
+| Local | **1.595** | `1a202cfc16af192f3e04ee64b682dda2` |
+| Remoto | **1.595** | `1a202cfc16af192f3e04ee64b682dda2` |
+
+Comparação **linha a linha** das 1.596 linhas: **diff vazio**.
+
+**4. A exclusão está de pé, e a regra 4 continua inteira:**
+
+| O quê | Medido no remoto |
+|---|---|
+| `usuarios.excluida_em` | existe, e está **nula** nas 5 contas |
+| Contas excluídas | **0** — a coluna nasce sem uso |
+| `excluir_conta` e `dependentes_da_conta` | as **2**, e as **2** são `SECURITY DEFINER` |
+| Policies de `DELETE` no **catálogo inteiro** | **0** — a emenda autorizou a FUNÇÃO, não uma policy |
+| Contas em `usuarios` | **5**, intactas |
+| Linhas em `auditoria_de_conta` | **4** — as suas ações no preview, preservadas |
+
+**5. Production respondendo como antes:** `/login` **200**; `/`, `/admin/usuarios` e `/perfil`
+**307** para o login.
+
+## Reversão
+
+No cabeçalho da migration. ⚠️ **O `drop column` só é seguro enquanto nenhuma conta tiver sido
+excluída** — hoje são zero. Com linha anonimizada, perder a coluna faria a conta voltar a aparecer na
+lista como se estivesse viva, chamada *"Conta excluída"*, que é pior que o estado de antes.

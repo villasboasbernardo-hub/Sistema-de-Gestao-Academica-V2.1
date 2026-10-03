@@ -14,7 +14,13 @@
 > LOCAL (`pnpm db:reset && pnpm dev:local`, porta **3000** — nunca a 3100, onde a suíte vive).
 > **Nunca** exclua a sua própria conta: o passo 3 existe para você ver que a tela não oferece isso.
 
-**Onde:** o endereço do ramo na Vercel sai no comentário do PR.
+**Onde**, medido em 03/10/2026 e estável entre os pushes:
+
+```
+https://sistema-de-gestao-academica-v2-1-git-feat-epic-35e53b-ciaara-11.vercel.app
+```
+
+⚠️ Ele pede o login da **Vercel** antes do login da aplicação (proteção de deploy).
 
 ## A lista
 
