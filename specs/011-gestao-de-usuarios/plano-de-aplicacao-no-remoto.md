@@ -355,3 +355,46 @@ objetos ficou igual** — nada nasceu nem se perdeu.
 
 Reaplicar `20260909020000` (o gatilho) e `20261003000205` (a função), que estão no repositório.
 Nenhuma linha de dado é tocada. ⚠️ **Reverter reabre o buraco.**
+
+---
+
+# PR 2 (registro que faltava) — `20261003105719_comentarios_de_catalogo_corrigidos.sql`
+
+## ✅ APLICADA NO REMOTO em 03/10/2026, com autorização de Bernardo Villas Boas na mesma sessão
+
+⚠️ **ESTE BLOCO NASCEU DE UMA FALTA, e a falta é o registro, não a aplicação.** A migration foi
+aplicada pelo rito completo e a conferência está na mensagem do commit `4ea4f4f` — mas **não entrou
+neste documento**, que é o lugar onde o rito se lê. Quem contasse as migrations do PR 2 por aqui
+acharia **quatro**, e o ramo carrega **cinco**; o salto de **49 para 51** entre os dois blocos
+vizinhos é o rastro de que ela passou.
+
+## O que ela faz
+
+Corrige **texto gravado no catálogo** do banco — nada de comportamento. Dois comentários diziam o
+contrário do código: `public.excluir_conta` afirmava que a credencial sai **ANTES** da chamada (a
+ordem medida é **depois**, forçada pela FK `restrict`), e o corpo de `public.dependentes_da_conta`
+afirmava que a mesma forma de porteiro em `registrar_acao_em_conta` era *"inofensiva por acidente"* —
+falso, e medido no mesmo dia: a conta desativada **gravou** linha na trilha imutável.
+
+## O rito, na ordem em que foi executado
+
+1. `--somente-copia` → **`remoto-20261003-075920.sql`**.
+2. `db push --linked --dry-run` → **uma linha só**: `20261003105719`.
+3. `db push --linked` → **0**.
+
+## A conferência, só por leitura
+
+| O que | Medido |
+| --- | --- |
+| Migrations dos dois lados | **50 e 50** ✅ |
+| Impressão digital | **`b9ef4e87…`, 1.595 objetos**, idêntica nos dois, `diff` vazio ✅ |
+| O comentário de `excluir_conta` | diz **DEPOIS** ✅ (dizia ANTES) |
+| O corpo de `dependentes_da_conta` | **sem** a afirmação falsa ✅ |
+| Contas vivas · trilha · policies de `DELETE` | **5 · 4 · 0** ✅ |
+| `app.eh_admin()` sem sessão | **`false`** ✅ |
+| Production | respondendo como antes ✅ |
+
+## Reversão
+
+Reaplicar os textos de `20261003000205`. Nenhuma linha de dado é tocada, nenhuma assinatura muda,
+nenhum privilégio muda.
