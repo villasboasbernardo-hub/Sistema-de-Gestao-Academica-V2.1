@@ -81,8 +81,6 @@ export const esquemaDeExclusao = z.object({ usuarioId: z.string().uuid() });
 /** Redefinir a senha de outra conta (`FR-033`). Só o alvo — a senha é gerada no servidor. */
 export const esquemaDeRedefinicao = z.object({ usuarioId: z.string().uuid() });
 
-export const esquemaDeRecuperacao = z.object({ email });
-
 export type DadosDeCadastro = z.infer<typeof esquemaDeCadastro>;
 export type DadosDeEdicao = z.infer<typeof esquemaDeEdicao>;
 export type DadosDeEdicaoDeNome = z.infer<typeof esquemaDeEdicaoDeNome>;

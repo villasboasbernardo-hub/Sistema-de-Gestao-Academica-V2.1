@@ -30,7 +30,10 @@ import { conferirAmbiente } from "@/lib/ambiente";
 // ⚠️ `/convite` SAIU em 03/10/2026, com o fluxo de convite: o Admin cadastra direto e a pessoa
 //    recebe a senha em mãos. Deixar a rota aberta sem página seria superfície de autenticação
 //    aberta para nada.
-const SEM_SESSAO = ["/login", "/recuperar-senha", "/sem-configuracao", "/estilo"];
+// ⚠️ `/recuperar-senha` SAIU em 03/10/2026, junto com o e-mail: a recuperação por link não
+//    existe mais, e quem esqueceu a senha procura o Admin. Rota aberta sem página é
+//    superfície de autenticação exposta para nada.
+const SEM_SESSAO = ["/login", "/sem-configuracao", "/estilo"];
 
 function ehRotaAberta(caminho: string): boolean {
   return SEM_SESSAO.some((r) => caminho === r || caminho.startsWith(`${r}/`));

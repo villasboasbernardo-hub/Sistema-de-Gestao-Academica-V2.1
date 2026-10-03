@@ -23,6 +23,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
+import { useAvisoDaLista } from "./AvisoDaLista";
 import {
   dependentesDaConta,
   desativar,
@@ -45,12 +46,14 @@ const BOTAO =
 export function AcoesDaLinha({
   usuarioId,
   nome,
+  email,
   ativa,
   temCredencial,
   ehMinhaConta,
 }: {
   readonly usuarioId: string;
   readonly nome: string;
+  readonly email: string;
   readonly ativa: boolean;
   readonly temCredencial: boolean;
   readonly ehMinhaConta: boolean;
@@ -61,14 +64,25 @@ export function AcoesDaLinha({
   const [ocupado, definirOcupado] = useState(false);
   const [dependentes, definirDependentes] = useState<readonly string[] | null>(null);
   const navegador = useRouter();
+  const { avisar } = useAvisoDaLista();
+  const [emailDigitado, definirEmailDigitado] = useState("");
 
   async function executar(acao: () => Promise<Resposta>, sucesso: string): Promise<void> {
     definirAviso(null);
     definirErro(null);
     definirOcupado(true);
     const r = await acao();
-    if (!r.ok) definirErro(r.erro ?? "Não foi possível concluir.");
-    else if (r.senha) definirSenha(r.senha);
+    /*
+     * ⚠️ **A FALHA VAI PARA O AVISO DA LISTA, ACIMA DA TABELA — e é o conserto do defeito que
+     *    Bernardo encontrou.** Ela também fica na linha, para quem está olhando ali; mas o que
+     *    garante que ninguém a perde é o bloco de cima, que não desaparece quando a linha
+     *    desaparece. Ver a nota em `AvisoDaLista.tsx`.
+     */
+    if (!r.ok) {
+      const texto = r.erro ?? "Não foi possível concluir.";
+      definirErro(texto);
+      avisar({ tom: "erro", texto: `${nome}: ${texto}` });
+    } else if (r.senha) definirSenha(r.senha);
     else if (r.caminho) {
       /*
        * ⚠️ **O AVISO VAI PARA A URL, E NÃO PARA O ESTADO DESTA FOLHA — e isto é conserto de um
@@ -77,7 +91,10 @@ export function AcoesDaLinha({
        *    recebia resposta nenhuma — a conta sumia e pronto.
        */
       navegador.replace(`/admin/usuarios?excluida=${r.caminho}`);
-    } else definirAviso(sucesso);
+    } else {
+      definirAviso(sucesso);
+      avisar({ tom: "ok", texto: `${nome}: ${sucesso}` });
+    }
     definirOcupado(false);
   }
 
@@ -157,10 +174,33 @@ export function AcoesDaLinha({
           </button>
         )}
 
+        {/*
+          ⚠️ **O E-MAIL DIGITADO HABILITA O BOTÃO**, como nas outras três exclusões permanentes do
+             sistema, que pedem o **código** do registro *(decisão de Bernardo Villas Boas,
+             03/10/2026)*. Aqui a chave é o e-mail porque é ele que o Admin tem diante dos olhos na
+             lista — pedir o `USR-…` obrigaria a abrir a conta só para copiar um código.
+          ⚠️ **A COMPARAÇÃO É EXATA**, sem `trim` nem caixa: o ponto do campo é obrigar a LER a linha
+             certa antes de apagar, e tolerância em comparação de confirmação é tolerância com o erro
+             que ela existe para impedir.
+        */}
         <DialogoConfirmacao
           titulo="Excluir esta conta?"
           consequencia={frase()}
           rotuloConfirmar="Excluir permanentemente"
+          confirmacaoDesabilitada={emailDigitado !== email}
+          corpo={
+            <label className="flex flex-col gap-1">
+              <span className="text-texto-suave text-xs">
+                Para liberar o botão, digite o e-mail da conta: <strong>{email}</strong>
+              </span>
+              <input
+                aria-label="Confirme o e-mail da conta"
+                value={emailDigitado}
+                onChange={(evento) => definirEmailDigitado(evento.target.value)}
+                className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
+              />
+            </label>
+          }
           aoConfirmar={() =>
             void executar(() => excluirConta({ usuarioId }) as Promise<Resposta>, "")
           }

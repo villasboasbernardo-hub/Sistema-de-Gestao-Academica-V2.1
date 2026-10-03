@@ -34,6 +34,15 @@ export type DialogoConfirmacaoProps = {
   readonly consequencia: string;
   readonly rotuloConfirmar: string;
   readonly rotuloCancelar?: string;
+  /**
+   * ⚠️ **O CORPO EXISTE PARA A CONFIRMAÇÃO POR DIGITAÇÃO**, e nada mais. As três exclusões
+   * permanentes do domínio acadêmico pedem o **código** do registro antes de liberar o botão, e a de
+   * conta passou a pedir o **e-mail** *(decisão de Bernardo Villas Boas, 03/10/2026)*. Sem isto, cada
+   * tela construiria o seu campo — e a quarta cópia seria a que divergisse.
+   */
+  readonly corpo?: React.ReactNode;
+  /** Quando `true`, o botão de confirmar fica desabilitado. É o par do `corpo`. */
+  readonly confirmacaoDesabilitada?: boolean;
   readonly aoConfirmar: () => void;
   /** O que dispara o diálogo. Fica sob o controle de quem chama. */
   readonly children: React.ReactNode;
@@ -44,6 +53,8 @@ export function DialogoConfirmacao({
   consequencia,
   rotuloConfirmar,
   rotuloCancelar = "Cancelar",
+  corpo,
+  confirmacaoDesabilitada = false,
   aoConfirmar,
   children,
 }: DialogoConfirmacaoProps) {
@@ -55,9 +66,12 @@ export function DialogoConfirmacao({
           <AlertDialogTitle>{titulo}</AlertDialogTitle>
           <AlertDialogDescription>{consequencia}</AlertDialogDescription>
         </AlertDialogHeader>
+        {corpo ? <div className="py-2">{corpo}</div> : null}
         <AlertDialogFooter>
           <AlertDialogCancel>{rotuloCancelar}</AlertDialogCancel>
-          <AlertDialogAction onClick={aoConfirmar}>{rotuloConfirmar}</AlertDialogAction>
+          <AlertDialogAction onClick={aoConfirmar} disabled={confirmacaoDesabilitada}>
+            {rotuloConfirmar}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

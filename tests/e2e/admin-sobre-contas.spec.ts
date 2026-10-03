@@ -341,7 +341,10 @@ test.describe("`FR-046` · as três ações da linha, e a exclusão permanente",
 
     // ⚠️ Reativar NÃO pede confirmação — é desfazer, e não há consequência a avisar.
     await linha().getByRole("button", { name: "Reativar" }).click();
-    await expect(resposta(page, "Conta reativada.")).toBeVisible();
+    // ⚠️ **A RESPOSTA APARECE EM DOIS LUGARES desde 03/10/2026** — na linha e no bloco acima da
+    //    tabela —, então o seletor por papel resolve para dois e falha por modo estrito. A
+    //    asserção é sobre o bloco de cima, que é o que garante que ninguém perde a mensagem.
+    await expect(page.locator('[data-slot="aviso-da-lista"]')).toContainText("Conta reativada.");
     await expect(linha()).not.toContainText("Desativada");
   });
 
@@ -383,6 +386,7 @@ test.describe("`FR-046` · as três ações da linha, e a exclusão permanente",
     //    "é permanente" seria verdade para os dois e não distinguiria nada.
     await expect(dialogo).toContainText("não registrou nada");
     await expect(dialogo).toContainText("sai inteiro");
+    await dialogo.getByLabel("Confirme o e-mail da conta").fill(email);
     await dialogo.getByRole("button", { name: "Excluir permanentemente" }).click();
 
     // ⚠️ O aviso vem da URL, fora da tabela: a linha que disparou a ação já não existe.
@@ -440,6 +444,7 @@ test.describe("`FR-046` · as três ações da linha, e a exclusão permanente",
     await expect(dialogo).toContainText("A exclusão é permanente.");
     await expect(dialogo).toContainText("registrou histórico");
     await expect(dialogo).toContainText("Conta excluída");
+    await dialogo.getByLabel("Confirme o e-mail da conta").fill(email);
     await dialogo.getByRole("button", { name: "Excluir permanentemente" }).click();
 
     await expect(resposta(page, "saiu da lista")).toBeVisible();
@@ -478,6 +483,77 @@ test.describe("`FR-046` · as três ações da linha, e a exclusão permanente",
     for (const acao of ["Excluir", "Desativar", "Redefinir senha"]) {
       await expect(outra.getByRole("button", { name: acao })).toBeVisible();
     }
+  });
+});
+
+test.describe("`FR-046` · a falha de uma ação destrutiva é VISÍVEL", () => {
+  /**
+   * ⚠️ **ESTE CASO REPRODUZ O DEFEITO QUE BERNARDO ENCONTROU NO PREVIEW EM 03/10/2026:** ele clicou em
+   * *Excluir* e a conta não saiu da lista. Medido no remoto, só por leitura: **nenhuma linha `excluir`
+   * na trilha** — e `excluir_conta` grava o rastro **antes** de tocar na linha —, **`excluida_em` nulo
+   * nas cinco contas**, todas intactas. **Nada foi excluído**, então não era filtro de lista nem falta
+   * de revalidação: a ação falhou, e a falha ficou **invisível**.
+   *
+   * ⚠️ **ELE MEDE A VISIBILIDADE, e não o caminho felizizar.** A falha era texto de 11px **dentro da
+   * linha que não mudou** — que é exatamente o que "não aconteceu nada" parece. Agora a resposta
+   * aparece **acima da tabela**, onde a linha pode desaparecer sem levar a mensagem com ela.
+   *
+   * ⚠️ **A RECUSA ESCOLHIDA É REAL, não encenada:** excluir o **último Admin ativo** é recusado pela
+   * regra pura e pelo porteiro do banco. Qualquer outra falha da ação chega pelo mesmo caminho.
+   */
+  test("⚠️ O CASO QUE DISCRIMINA · a falha aparece ACIMA da tabela, não dentro da linha", async ({
+    page,
+  }, info) => {
+    const email = `falha-visivel-${info.workerIndex}@ciaara.teste`;
+    await apagarConta(email);
+    await criarConta(email, `USR-FAL-${info.workerIndex}`, "visualizacao");
+
+    await entrar(page, EMAIL_ADMIN);
+    const linha = linhaDa(page, email);
+    await linha.getByRole("button", { name: "Excluir" }).click();
+
+    const dialogo = page.getByRole("alertdialog");
+    await dialogo.getByLabel("Confirme o e-mail da conta").fill(email);
+
+    /*
+     * ⚠️ **A FALHA É REAL E DETERMINÍSTICA: a conta deixa de existir enquanto o diálogo está aberto.**
+     *    É a corrida de dois administradores na mesma lista, e é o caminho por onde **qualquer** falha
+     *    da ação chega à tela. Encenar a recusa do último Admin não serviria: com o operador também
+     *    sendo Admin, o alvo nunca é o último — eu tentei, e o cenário simplesmente não recusava.
+     */
+    await apagarConta(email);
+    await dialogo.getByRole("button", { name: "Excluir permanentemente" }).click();
+
+    /*
+     * ⚠️ **ESTA É A ASSERÇÃO QUE ESTAVA VERMELHA ANTES DO CONSERTO.** Com a mensagem dentro da linha,
+     *    `[data-slot="aviso-da-lista"]` não existia: uma ação destrutiva podia falhar sem nada visível
+     *    fora de uma célula de tabela de 11px, na linha que não mudou — que é exatamente o que "não
+     *    aconteceu nada" parece, e foi o que Bernardo viu no preview.
+     */
+    const aviso = page.locator('[data-slot="aviso-da-lista"]');
+    await expect(aviso, "a falha não apareceu acima da tabela").toBeVisible();
+    await expect(aviso).toContainText("não");
+
+    // E ela é anunciada como INTERRUPÇÃO, não como informação: `alert`, não `status`.
+    await expect(aviso).toHaveAttribute("role", "alert");
+  });
+
+  test("o e-mail digitado é o que libera o botão de excluir", async ({ page }) => {
+    await entrar(page, EMAIL_ADMIN);
+    await linhaDa(page, EMAIL_ALVO).getByRole("button", { name: "Excluir" }).click();
+
+    const dialogo = page.getByRole("alertdialog");
+    const botao = dialogo.getByRole("button", { name: "Excluir permanentemente" });
+
+    // ⚠️ **DESABILITADO ENQUANTO O E-MAIL NÃO CASA** — é a mesma proteção das outras três exclusões
+    //    permanentes, que pedem o código do registro.
+    await expect(botao).toBeDisabled();
+
+    await dialogo.getByLabel("Confirme o e-mail da conta").fill(`${EMAIL_ALVO}x`);
+    await expect(botao, "um e-mail PARECIDO liberou o botão").toBeDisabled();
+
+    await dialogo.getByLabel("Confirme o e-mail da conta").fill(EMAIL_ALVO);
+    await expect(botao).toBeEnabled();
   });
 });
 

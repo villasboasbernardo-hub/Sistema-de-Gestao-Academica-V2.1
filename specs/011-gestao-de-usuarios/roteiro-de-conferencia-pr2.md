@@ -1,75 +1,44 @@
-# Conferência do PR 2 — gestão de contas, de ponta a ponta
+# Conferência do PR 2 — as quatro ações sobre conta
 
-> **Para Bernardo Villas Boas.** Um roteiro só, cobrindo **cadastrar, redefinir senha, desativar,
-> reativar e excluir**. Tudo em **Administração**.
+> **Para Bernardo Villas Boas.** Doze passos, **só com contas de teste criadas aqui**. Nenhum passo
+> mexe nas cinco contas reais.
 >
-> ⚠️ **ESTA RODADA TEM MIGRATION** — `20261003000205_exclusao_de_conta.sql` —, aplicada no remoto pelo
-> rito: backup antes, dry-run só com ela, conferência só de leitura depois. O registro está em
-> `plano-de-aplicacao-no-remoto.md`.
+> ⚠️ **ESTA RODADA NÃO TEM MIGRATION.** Nada estrutural mudou — `excluida_em` e as duas funções já
+> foram ao remoto em 03/10/2026. **Local e remoto seguem idênticos**, reconferido.
 >
-> ⚠️ **NÃO HÁ E-MAIL EM NENHUM PASSO.** Você cadastra, o sistema mostra a senha **uma vez**, e você a
-> repassa em mãos. As opções de envio por e-mail estão levantadas no relatório, sem nada implementado.
+> ⚠️ **O E-MAIL SAIU DO SISTEMA.** Não há envio em lugar nenhum do repositório, a rota
+> `/recuperar-senha` foi **removida** e o login agora diz *"Esqueceu a senha? Procure o administrador
+> do sistema."*
 >
-> ⚠️ **OS PASSOS 4 A 9 CRIAM E APAGAM CONTA DE VERDADE.** No preview, use e-mails seus; ou faça-os no
-> LOCAL (`pnpm db:reset && pnpm dev:local`, porta **3000** — nunca a 3100, onde a suíte vive).
-> **Nunca** exclua a sua própria conta: o passo 3 existe para você ver que a tela não oferece isso.
+> ⚠️ **O QUE ESTAVA QUEBRADO ERA A VISIBILIDADE DA FALHA.** Medido no remoto, só por leitura: a trilha
+> não tem **nenhuma** linha `excluir` e `excluida_em` está **nulo nas cinco contas** — **nada foi
+> excluído**. A ação falhou e a falha era texto de 11px **dentro da linha que não mudou**. Agora a
+> resposta aparece **acima da tabela**: o passo 11 existe para você ver isso.
 
-**Onde**, medido em 03/10/2026 e estável entre os pushes:
+**Onde:** o endereço do ramo na Vercel sai no comentário do PR. Menu → **Administração**.
 
-```
-https://sistema-de-gestao-academica-v2-1-git-feat-epic-35e53b-ciaara-11.vercel.app
-```
-
-⚠️ Ele pede o login da **Vercel** antes do login da aplicação (proteção de deploy).
-
-## A lista
-
-| #  | Passo                                                                | Resultado esperado                                                                                                                                       |
-| -- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1  | Menu → **Administração**                                              | **Seis colunas**: avatar, nome, e-mail, perfil **em português**, último acesso e **Ações**. ⚠️ Vínculo de instrutor, situação e escopo continuam **fora**     |
-| 2  | Olhar a coluna **Ações** de outra conta                               | **Redefinir senha · Desativar · Excluir**, visíveis direto. Clicar no **nome** abre a página da conta                                                       |
-| 3  | Olhar a **sua própria** linha                                         | **Nenhum** botão. No lugar: *"sua conta — peça a outro Administrador"*                                                                                     |
-
-## Cadastrar e o primeiro acesso
-
-| #  | Passo                                                                | Resultado esperado                                                                                                                                       |
-| -- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 4  | **Cadastrar usuário** → nome, e-mail, perfil **Operador** → salvar    | Abre **página própria**. Ao salvar, **Senha temporária: XXXX** — 16 caracteres, sem `O`, `0`, `l`, `1` nem `I`. **Copie.** Dar F5 a perde                   |
-| 5  | Trocar o perfil para **Encarregado de Curso** num cadastro novo       | A lista de **cursos vinculados** aparece — e **só** para esse perfil. Salvar sem marcar nenhum é **recusado**, com a razão                                 |
-| 6  | Sair, entrar com o e-mail novo e a **temporária**; tentar **Início**   | Cai em **Trocar a minha senha** e não sai de lá. Definida a nova, **Início abre**; a temporária passa a ser **recusada**                                   |
-
-## Desativar, reativar e excluir
-
-| #  | Passo                                                                | Resultado esperado                                                                                                                                       |
-| -- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 7  | Numa conta, **Desativar** → ler o diálogo → confirmar                 | O diálogo diz que ela **perde o acesso**, que **nada é apagado** e que isto **NÃO é exclusão**. A linha ganha a etiqueta **Desativada** e fica na lista      |
-| 8  | **Reativar** a mesma conta                                            | Volta a ativa, **sem pedir confirmação** — é desfazer                                                                                                     |
-| 9  | Numa conta **recém-cadastrada que nunca usou o sistema**, **Excluir** | O diálogo começa com *"A exclusão é permanente."* e diz que ela **não registrou nada**, então o cadastro **sai inteiro** e o **e-mail fica livre**           |
-| 10 | Confirmar, e tentar cadastrar **o mesmo e-mail** de novo              | A conta sai da lista, com aviso acima da tabela. O e-mail **é aceito** num cadastro novo                                                                   |
-| 11 | Numa conta que **já trocou a senha** (ou gravou algo), **Excluir**    | O diálogo diz que ela **registrou histórico**, então o cadastro fica como **«Conta excluída»** e sai da lista — e o e-mail também fica livre                 |
-| 12 | Depois de confirmar, tentar **entrar** com a senha dessa conta        | **Recusado.** A credencial foi apagada nos dois caminhos                                                                                                  |
+| #  | Passo                                                                                   | Resultado esperado                                                                                                                 |
+| -- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 1  | Olhar a lista                                                                            | Seis colunas: avatar, nome, e-mail, perfil, último acesso e **Ações**. Em cada linha: **Redefinir senha · Desativar · Excluir**        |
+| 2  | Olhar a **sua própria** linha                                                             | Nenhum botão — *"sua conta — peça a outro Administrador"*                                                                            |
+| 3  | **Cadastrar usuário** → nome «Teste Um», e-mail `teste-um@ciaara.teste` → salvar           | **Senha temporária** de 16 caracteres, sem `O`, `0`, `l`, `1` nem `I`. **Copie.** Dar F5 a perde                                      |
+| 4  | Repetir para «Teste Dois», `teste-dois@ciaara.teste`                                      | Idem. Agora há duas contas de teste na lista                                                                                        |
+| 5  | Sair; entrar como **Teste Um** com a temporária; tentar ir a **Início**                   | Cai em **Trocar a minha senha** e não sai de lá. Definir a nova → **Início abre**                                                     |
+| 6  | Sair; tentar entrar como Teste Um com a **temporária** e depois com a **nova**             | A temporária é **recusada**; a nova entra                                                                                           |
+| 7  | Voltar como Admin → na linha de **Teste Dois**, **Redefinir senha** → confirmar            | O diálogo avisa que **encerra as sessões abertas**. Aparece outra temporária, uma vez                                                |
+| 8  | Na linha de **Teste Dois**, **Desativar** → confirmar                                      | O diálogo diz que ela **perde o acesso**, que **nada é apagado** e que **NÃO é exclusão**. A linha ganha **Desativada** e **fica**     |
+| 9  | **Reativar** Teste Dois                                                                   | Volta a ativa, **sem** pedir confirmação — é desfazer                                                                              |
+| 10 | Na linha de **Teste Um**, **Excluir** → ler o diálogo                                      | Começa com *"A exclusão é permanente."* e diz que ela **registrou histórico** (trocou a senha). O botão está **desabilitado**          |
+| 11 | Digitar o e-mail `teste-um@ciaara.teste` no campo e confirmar                               | O botão libera. A conta **sai da lista**, e **acima da tabela** aparece o que aconteceu. Entrar com ela: **recusado**                  |
+| 12 | **Cadastrar** de novo com `teste-um@ciaara.teste`; depois excluir **Teste Dois** do mesmo modo | O e-mail **é aceito** — ele ficou livre. Teste Dois nunca usou o sistema: o diálogo diz que o cadastro **sai inteiro**                |
 
 ---
 
-## As três coisas que valem olhar com atenção
+## Duas coisas que valem olhar
 
-**Desativar e excluir são diferentes, e os diálogos dizem isso.** Desativar **bloqueia o acesso e
-mantém cadastro e perfil**; excluir **não tem desfazer**. O diálogo de desativar diz, com estas
-palavras, que *não é exclusão*.
+**O campo de confirmação é o e-mail**, como as outras três exclusões permanentes pedem o código do
+registro. A comparação é **exata**, sem tolerar espaço nem caixa: o ponto é obrigar a ler a linha certa
+antes de apagar.
 
-**A exclusão tem dois desfechos, e o diálogo pergunta ao servidor antes de abrir.** Conta que nunca
-registrou nada **sai inteira**. Conta que registrou **fica anonimizada** — nome *"Conta excluída"*,
-e-mail trocado por um sentinela, foto removida, fora da lista — para que `criado_por` dos registros
-antigos continue resolvendo num nome em vez de um identificador sem dono. ⚠️ **Nos dois casos o
-e-mail volta a estar livre**, que é o que você pediu.
-
-**O vínculo de instrutor saiu da tela.** Nenhuma policy e nenhuma função de autorização leem
-`usuarios.instrutor_id` — medido. ⚠️ **A coluna do banco não foi tocada** e nenhum vínculo existente
-foi desfeito: a tela deixou de oferecê-lo, e ele continua impedindo que se apague um docente com conta
-ligada.
-
----
-
-## Depois do seu "de acordo"
-
-Abro o PR 2.
+**A resposta de toda ação da lista aparece acima da tabela**, e falha vem em vermelho com borda. É o
+conserto do defeito que você encontrou: a linha pode desaparecer sem levar a mensagem com ela.

@@ -35,7 +35,6 @@ const NAO_SAO_TELAS_DO_SISTEMA: Readonly<Record<string, string>> = {
   "/": "redireciona para /inicio ou /login — não é destino, é desvio",
   "/login": "alcançada sem sessão, pelo proxy",
 
-  "/recuperar-senha": "alcançada a partir de /login",
   "/estilo": "a vitrine, fora do grupo autenticado (`FR-038`)",
   "/sem-configuracao": "o desvio de ambiente incompleto — ninguém navega até ela",
 };

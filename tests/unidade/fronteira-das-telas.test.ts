@@ -30,15 +30,17 @@ const RAIZ = process.cwd();
 const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   // ── Épico 3: autenticação ──────────────────────────────────────────────────────────────────
   "app/(auth)/login/FormularioDeLogin.tsx": "entrar: campo, envio e a recusa de credencial",
-  "app/(auth)/recuperar-senha/FormularioDeSenha.tsx":
-    "definir senha a partir do token do fragmento",
-  "app/(auth)/recuperar-senha/FormularioDeRecuperacao.tsx": "pedir o link de recuperação",
   /*
    * ⚠️ **O CONVITE SAIU DO SISTEMA em 03/10/2026** (decisão de Bernardo Villas Boas): o Admin cadastra
    *    direto, com senha gerada no servidor. `FormularioDeConvite.tsx` e `AcoesDeUsuario.tsx` — que
    *    reunia as ações numa célula da tabela — foram **apagados**, não desligados.
    */
+  /*
+   * ⚠️ **A RECUPERAÇÃO DE SENHA SAIU em 03/10/2026**, com o e-mail: as duas folhas de
+   *    `app/(auth)/recuperar-senha/` foram **apagadas**, não desligadas.
+   */
   "app/(app)/admin/usuarios/BuscaDeUsuarios.tsx": "a busca da lista, escrita na URL",
+  "app/(app)/admin/usuarios/AvisoDaLista.tsx": "a resposta das ações da lista, acima da tabela",
   "app/(app)/admin/usuarios/AcoesDaLinha.tsx":
     "redefinir senha, desativar/reativar e excluir, com diálogo, direto na linha",
   "app/(app)/admin/usuarios/SelecoesDaConta.tsx": "perfil e escopo: as duas escolhas fechadas",

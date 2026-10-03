@@ -30,9 +30,17 @@ export default async function Login({
       <p className="mt-6 text-texto-tenue text-xs">
         O acesso é <strong>somente por convite</strong> do Admin. Não há autocadastro.
       </p>
-      <a className="mt-2 inline-block text-sm underline" href="/recuperar-senha">
-        Esqueci minha senha
-      </a>
+      {/*
+        ⚠️ **O E-MAIL SAIU DO SISTEMA em 03/10/2026** *(decisão de Bernardo Villas Boas)*, e com ele a
+           recuperação de senha por link: ela depende de e-mail para existir. No lugar do link fica a
+           frase que diz **o que fazer** — quem esqueceu a senha procura o Admin, que redefine pela
+           tela de usuários e entrega a temporária em mãos.
+        ⚠️ **NÃO É UM LINK DESABILITADO NEM UM BOTÃO QUE AVISA**: a rota `/recuperar-senha` deixou de
+           existir, e oferecer um caminho que não leva a nada é pior que não oferecer.
+      */}
+      <p className="text-texto-suave mt-2 text-sm">
+        Esqueceu a senha? Procure o administrador do sistema.
+      </p>
     </main>
   );
 }

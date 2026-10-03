@@ -16,7 +16,6 @@ import { randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
-import { urlDaAplicacao } from "@/lib/ambiente";
 import { conferirExigenciasDoPerfil } from "@/lib/dominio/exigencias-do-perfil";
 import { gerarSenhaTemporaria } from "@/lib/dominio/senha-gerada";
 import { vereditoSobreConta } from "@/lib/dominio/ultimo-admin";
@@ -28,7 +27,6 @@ import {
   esquemaDeEdicao,
   esquemaDeEdicaoDeNome,
   esquemaDeExclusao,
-  esquemaDeRecuperacao,
   esquemaDeRedefinicao,
 } from "@/lib/validacao/usuarios";
 
@@ -652,37 +650,5 @@ export async function concluirObrigacaoDeTrocarSenha(): Promise<Resultado> {
     app_metadata: { trocar_senha: false },
   });
   if (error) return falha(error.message);
-  return sucesso;
-}
-
-/**
- * Recuperação de senha.
- *
- * ⚠️ A RESPOSTA É A MESMA EXISTA OU NÃO A CONTA (FR-019). Se ela variasse, a tela viraria oráculo
- * de quem tem acesso ao sistema — bastaria testar endereços para levantar o quadro de pessoal.
- * O e-mail só sai para linha **ativa**: credencial órfã não recupera acesso.
- *
- * ⚠️ Por isso esta função devolve `sucesso` em TODOS os caminhos, inclusive quando não faz nada.
- * Não é descuido; é o requisito.
- */
-export async function recuperarSenha(dados: unknown): Promise<Resultado> {
-  const conferido = esquemaDeRecuperacao.safeParse(dados);
-  if (!conferido.success) return sucesso; // nem o formato do e-mail é revelado
-
-  const admin = criarClienteAdministrativo();
-  const { data: linha } = await admin
-    .from("usuarios")
-    .select("id")
-    .eq("email", conferido.data.email)
-    .eq("status", "ativo")
-    .not("auth_user_id", "is", null)
-    .maybeSingle();
-
-  if (linha) {
-    await admin.auth.resetPasswordForEmail(conferido.data.email, {
-      redirectTo: `${urlDaAplicacao()}/recuperar-senha`,
-    });
-  }
-
   return sucesso;
 }

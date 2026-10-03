@@ -41,6 +41,7 @@ import { enderecoDaFoto } from "@/lib/supabase/avatar";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { AcoesDaLinha } from "./AcoesDaLinha";
+import { AvisoDaLista } from "./AvisoDaLista";
 import { BuscaDeUsuarios } from "./BuscaDeUsuarios";
 
 /** Uma célula de cabeçalho, para as oito classes não se repetirem cinco vezes. */
@@ -143,87 +144,90 @@ export default async function Usuarios({
         </p>
       ) : null}
 
-      <BuscaDeUsuarios />
+      <AvisoDaLista>
+        <BuscaDeUsuarios />
 
-      {contas.length === 0 ? (
-        <div className="mt-6">
-          <EstadoVazio
-            motivo="sem-dado"
-            detalhe={
-              busca.trim()
-                ? `Nenhuma conta com «${busca.trim()}» no nome ou no e-mail.`
-                : "Nenhuma conta cadastrada."
-            }
-          />
-        </div>
-      ) : (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr>
-                {/* O avatar não tem rótulo visível: a coluna é a imagem, e um título ali seria ruído. */}
-                <th className={TH}>
-                  <span className="sr-only">Avatar</span>
-                </th>
-                <th className={TH}>Nome</th>
-                <th className={TH}>E-mail</th>
-                <th className={TH}>Perfil</th>
-                <th className={TH}>Último acesso</th>
-                <th className={TH}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contas.map((linha, indice) => {
-                const nome = linha.nome_exibicao ?? linha.nome ?? "";
-                return (
-                  <tr key={linha.id}>
-                    <td className={TD}>
-                      <Avatar className="size-8">
-                        {fotos[indice] ? <AvatarImagem src={fotos[indice]!} alt="" /> : null}
-                        <AvatarRecuo className="text-xs">{iniciaisDoNome(nome)}</AvatarRecuo>
-                      </Avatar>
-                    </td>
-                    <td className={TD}>
-                      {/*
+        {contas.length === 0 ? (
+          <div className="mt-6">
+            <EstadoVazio
+              motivo="sem-dado"
+              detalhe={
+                busca.trim()
+                  ? `Nenhuma conta com «${busca.trim()}» no nome ou no e-mail.`
+                  : "Nenhuma conta cadastrada."
+              }
+            />
+          </div>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr>
+                  {/* O avatar não tem rótulo visível: a coluna é a imagem, e um título ali seria ruído. */}
+                  <th className={TH}>
+                    <span className="sr-only">Avatar</span>
+                  </th>
+                  <th className={TH}>Nome</th>
+                  <th className={TH}>E-mail</th>
+                  <th className={TH}>Perfil</th>
+                  <th className={TH}>Último acesso</th>
+                  <th className={TH}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {contas.map((linha, indice) => {
+                  const nome = linha.nome_exibicao ?? linha.nome ?? "";
+                  return (
+                    <tr key={linha.id}>
+                      <td className={TD}>
+                        <Avatar className="size-8">
+                          {fotos[indice] ? <AvatarImagem src={fotos[indice]!} alt="" /> : null}
+                          <AvatarRecuo className="text-xs">{iniciaisDoNome(nome)}</AvatarRecuo>
+                        </Avatar>
+                      </td>
+                      <td className={TD}>
+                        {/*
                         ⚠️ O NOME É O LINK PARA A PÁGINA DA CONTA. É o caminho clicável de
                            `/admin/usuarios/[id]`, e põe a ação onde a pessoa já está olhando.
                       */}
-                      <span className="flex flex-wrap items-center gap-2">
-                        <Link
-                          href={`/admin/usuarios/${linha.id}`}
-                          className="text-marca rounded-ciaara-sm focus-visible:ring-marca underline focus-visible:ring-2 focus-visible:outline-none"
-                        >
-                          {nome}
-                        </Link>
-                        {/* A etiqueta só existe quando é má notícia — ver a nota do cabeçalho. */}
-                        {linha.status !== "ativo" ? (
-                          <BadgeStatus tom="inativo" rotulo="Desativada" />
-                        ) : null}
-                      </span>
-                    </td>
-                    <td className={TD}>{linha.email}</td>
-                    <td className={TD}>{rotuloDoPerfil(linha.perfil)}</td>
-                    <td className={TD}>
-                      {linha.ultimo_acesso
-                        ? new Date(linha.ultimo_acesso).toLocaleDateString("pt-BR")
-                        : "nunca"}
-                    </td>
-                    <td className={TD}>
-                      <AcoesDaLinha
-                        usuarioId={linha.id}
-                        nome={nome}
-                        ativa={linha.status === "ativo"}
-                        temCredencial={Boolean(linha.auth_user_id)}
-                        ehMinhaConta={linha.id === usuario?.id}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                        <span className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/admin/usuarios/${linha.id}`}
+                            className="text-marca rounded-ciaara-sm focus-visible:ring-marca underline focus-visible:ring-2 focus-visible:outline-none"
+                          >
+                            {nome}
+                          </Link>
+                          {/* A etiqueta só existe quando é má notícia — ver a nota do cabeçalho. */}
+                          {linha.status !== "ativo" ? (
+                            <BadgeStatus tom="inativo" rotulo="Desativada" />
+                          ) : null}
+                        </span>
+                      </td>
+                      <td className={TD}>{linha.email}</td>
+                      <td className={TD}>{rotuloDoPerfil(linha.perfil)}</td>
+                      <td className={TD}>
+                        {linha.ultimo_acesso
+                          ? new Date(linha.ultimo_acesso).toLocaleDateString("pt-BR")
+                          : "nunca"}
+                      </td>
+                      <td className={TD}>
+                        <AcoesDaLinha
+                          usuarioId={linha.id}
+                          nome={nome}
+                          email={linha.email ?? ""}
+                          ativa={linha.status === "ativo"}
+                          temCredencial={Boolean(linha.auth_user_id)}
+                          ehMinhaConta={linha.id === usuario?.id}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </AvisoDaLista>
     </section>
   );
 }

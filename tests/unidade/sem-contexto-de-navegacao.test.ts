@@ -55,7 +55,22 @@ describe("`SC-022` · zero contêiner de contexto como fonte de verdade de naveg
    * controle positivo abaixo é o que expôs o engano: ele exige que a varredura encontre o contêiner
    * que sabemos existir, e reprovou quando eu nomeei o arquivo errado.
    */
-  const ISENTOS = ["components/ciaara/lista-navegavel.tsx"];
+  /*
+   * ⚠️ **O SEGUNDO ISENTO ENTROU EM 03/10/2026, e ele passa no teste que esta guarda aplica.** A
+   *    pergunta dela é se o contêiner guarda **recorte, identidade ou posição** — o `AppState` da
+   *    v2.0 voltando pela janela. `AvisoDaLista` guarda **a resposta de uma ação**: *"a conta saiu"*,
+   *    *"não foi possível excluir"*. Isso não é recorte, não identifica registro e **não faz sentido
+   *    num link mandado para outra pessoa**.
+   * ⚠️ **E PÔ-LO NA URL SERIA O ERRO OPOSTO**: um link compartilhável de uma mensagem de erro, que
+   *    reaparece a cada `F5` e sobrevive ao motivo que o produziu.
+   * ⚠️ **ELE EXISTE PORQUE A ALTERNATIVA FALHOU NA PRÁTICA**: a mensagem vivia no estado da própria
+   *    linha, e a exclusão **desmonta a linha** — a falha desaparecia junto, e Bernardo viu uma
+   *    exclusão que "não fez nada". Ver a nota em `AvisoDaLista.tsx`.
+   */
+  const ISENTOS = [
+    "components/ciaara/lista-navegavel.tsx",
+    "app/(app)/admin/usuarios/AvisoDaLista.tsx",
+  ];
 
   it("nenhum `createContext` novo entrou para guardar recorte, identidade ou página", () => {
     const criadores = fontes()
