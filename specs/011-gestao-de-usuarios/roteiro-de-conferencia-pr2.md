@@ -5,7 +5,9 @@
 >
 > **Onde:** <https://sistema-de-gestao-academica-v2-1-git-feat-epic-35e53b-ciaara-11.vercel.app>
 >
-> **Commit que esse endereço serve:** `[pendente-commit]`
+> **Commit que esse endereço serve:** **`7c5c44a`** — deploy `J52nxB21dPwgYUiy65iTPCWKpyjm`, **Ready**, conferido com `vercel inspect` em 03/10/2026, e **CI verde nos três blocos** sobre ele (run `37104897958`).
+>
+> ⚠️ **O apelido serve sempre a PONTA do ramo**, então o commit de registro que vem depois deste o move — e aquele commit **só mexe em documento**, nenhuma linha de comportamento. Se quiser amarrar: `gh api repos/…/commits/<sha>/statuses` dá o deploy de um commit exato.
 >
 > ⚠️ **O APELIDO É FIXO POR RAMO; o que muda é o build que ele serve.** Medido em 03/10/2026 com
 > `vercel inspect`: os deploys deste ramo compartilham esse endereço, e ele responde **302 para o
