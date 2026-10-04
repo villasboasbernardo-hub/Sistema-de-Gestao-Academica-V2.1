@@ -31,6 +31,7 @@ export function CascaDoApp({
   email,
   perfil,
   caminho,
+  lateralFixada,
   fotoUrl,
   aoSair,
   children,
@@ -39,6 +40,12 @@ export function CascaDoApp({
   readonly email: string;
   readonly perfil: string;
   readonly caminho: string;
+  /**
+   * A lateral está fixada expandida? **Chega pronta do layout**, que a leu do cookie.
+   *
+   * ⚠️ É o que faz a primeira pintura já sair certa. A casca não lê cookie — ela enquadra.
+   */
+  readonly lateralFixada: boolean;
   readonly fotoUrl: string | null;
   /** A Server Action que encerra a sessão — **chega pronta do layout**. A casca não a
    *  importa: `@/lib/acoes/` é proibido em componente, e a proibição está certa. */
@@ -59,7 +66,7 @@ export function CascaDoApp({
       <CabecalhoDoApp nome={nome} email={email} perfil={perfil} fotoUrl={fotoUrl} aoSair={aoSair} />
 
       <div className="flex flex-1 flex-col lg:flex-row">
-        <NavegacaoLateral caminho={caminho} />
+        <NavegacaoLateral caminho={caminho} fixada={lateralFixada} />
         <main id={ID_DO_CONTEUDO} tabIndex={-1} className="flex-1 p-4 focus-visible:outline-none">
           {children}
         </main>

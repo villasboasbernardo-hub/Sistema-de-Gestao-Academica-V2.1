@@ -21,13 +21,20 @@ const PASTA = "components/casca";
  * ⚠️ `FocoAoTrocarDeRota` ENTROU DEPOIS DO CONTRATO, e a adição é declarada: ela nasceu de uma
  * medição — sem ela, navegar pelo menu deixava o foco preso na entrada clicada.
  *
+ * ⚠️ **A LISTA NÃO CRESCEU EM 04/10/2026, E ISSO FOI DESENHO.** A lateral recolhível precisava de
+ * estado num ancestral da lista, e `navegacao-lateral.tsx` **não pode** levar marcador — a proibição
+ * é nominal, três casos abaixo. Em vez de um arquivo novo, que exigiria entrada aqui **e** na lista
+ * de `fronteira-componentes`, o `<nav>` passou para `painel-retratil.tsx`, que já era folha. **O que
+ * mudou foi a justificativa dele**, e ela mudou porque o arquivo faz mais do que fazia.
+ *
  * ⚠️ `MenuDoAvatar` ENTROU EM 29/09/2026, e também por medição: `encerrarSessao()` existia desde o
  * Épico 3 **sem consumidor nenhum**, e quem entrava pelo preview não conseguia sair. Ele é folha de
  * cliente porque o menu abre, fecha e responde a teclado — e é arquivo PRÓPRIO justamente para que
  * o marcador não encoste em `cabecalho-do-app.tsx`, que envolve toda tela do sistema.
  */
 const COM_INTERACAO: Readonly<Record<string, string>> = {
-  "painel-retratil.tsx": "abrir e fechar o menu em tela estreita — estado efêmero de interface",
+  "painel-retratil.tsx":
+    "a gaveta em tela estreita e o fixar da lateral no desktop — estado efêmero e cookie de preferência",
   "foco-ao-trocar-de-rota.tsx": "mover o foco ao trocar de rota — não existe no servidor",
   "seletor-de-tema.tsx": "escolher e lembrar o tema — leitura e escrita no navegador",
   "menu-do-avatar.tsx": "abrir o menu da conta e disparar a saída — interação e foco por teclado",
