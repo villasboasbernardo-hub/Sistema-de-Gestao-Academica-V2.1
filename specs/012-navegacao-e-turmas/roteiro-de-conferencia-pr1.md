@@ -47,13 +47,40 @@ na tela que a suíte não pega é informação valiosa sobre a suíte, não só 
 | Item | Valor |
 |---|---|
 | Ramo | `feat/EPICO-5.5-navegacao-e-turmas` |
-| Commit servido | `[pendente]` |
-| Endereço do preview | `[pendente]` |
-| `pnpm verificar:tudo` | `[pendente]` |
-| CI (três blocos) | `[pendente]` |
+| **Commit servido** | **`250b941`** |
+| **Endereço do preview** | **`https://sistema-de-gestao-academica-v2-1-git-feat-epic-8c2007-ciaara-11.vercel.app`** |
+| Endereço só deste commit (imutável) | `https://sistema-de-gestao-academica-v2-1-cfh988m1a-ciaara-11.vercel.app` |
+| Deploy | `dpl_E683kfmw5R36PVaSyQUGJecT4f62` · `target: preview` · **Ready** |
+| CI | run **`37232033675`** — **`qualidade`, `banco` e `build` verdes** sobre `250b941` |
 
-⚠️ **Os `[pendente]` são trocados pela medição, nunca por estimativa** (regra 9.3) — eles existem
-para que este arquivo possa ser escrito antes de o número existir.
+**As quatro contagens, medidas localmente e confirmadas pelo CI:**
+
+| Bloco | Local | CI |
+|---|---|---|
+| Unidade | **1.148** em 86 arquivos | **1.148** em 86 |
+| pgTAP | **434** em 35 arquivos | **434** em 35 |
+| RLS e ambiente | **222** em 8 arquivos | **222** em 8 |
+| Ponta a ponta | **310** casos — 307 passados, 1 instável, 2 pulados | **307 passados + 1 instável + 2 pulados** |
+
+✅ **É o `SC-005` fechando: mesmo veredito, contagem a contagem, sobre o mesmo commit.** A ponta a
+ponta "divergir" de formato é esperado e já está registrado — o CI tem `retries: 2` e separa o
+instável; o local tem 0 e o conta como reprovação. **São os mesmos 310 casos.**
+
+⚠️ **DUAS RESSALVAS HONESTAS SOBRE A EXECUÇÃO LOCAL, e nenhuma delas é sobre o código:**
+
+1. **A ponta a ponta local rodou com `--workers=2`, não com a paralelização do `verificar:tudo`.** As
+   duas tentativas em paralelo cheio foram **mortas por falta de memória da máquina** — não por falha
+   de teste. Quem dá o veredito de paridade é o CI, e ele deu.
+2. **Numa das voltas, 231 casos reprovaram — e não era o código.** Havia um servidor meu remanescente
+   na porta 3100, e `reuseExistingServer` **não distingue qual** servidor ocupa a porta: ele o reusou
+   em vez de construir o novo, e aquele servidor era anterior ao `db:reset:limpo`, então **todo login
+   caía de volta em `/login`**. É o **gotcha 7**, que este repositório registra como já tendo custado
+   um dia — e a leitura fácil de novo era *"o meu ramo quebrou a vitrine"*. Prova de que era ambiente:
+   derrubado o processo, o **mesmo** arquivo deu 12 de 12. **Lição operacional: depois de qualquer
+   `test:e2e` interrompido, conferir a 3100 antes de concluir qualquer coisa sobre a suíte.**
+
+⚠️ **O endereço do preview responde `302` para `vercel.com/sso-api`** — é a proteção de implantação da
+Vercel, e é o comportamento esperado. Abra estando logado na Vercel; não é erro.
 
 ## Os dois defeitos deliberados, e o que eles revelaram
 
