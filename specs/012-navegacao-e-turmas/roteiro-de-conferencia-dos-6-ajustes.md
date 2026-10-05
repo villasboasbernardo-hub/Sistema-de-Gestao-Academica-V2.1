@@ -99,7 +99,7 @@ só sobre o produto.
 |---|---|
 | **Endereço para conferir** (alias do ramo, sempre o commit mais novo) | `https://sistema-de-gestao-academica-v2-1-git-feat-epic-8c2007-ciaara-11.vercel.app` |
 | Implantação exata por trás dele | `https://sistema-de-gestao-academica-v2-1-nds4c16c4-ciaara-11.vercel.app` |
-| **Commit servido** | `650f6ce` — *"os 6 ajustes da conferência — e o token de cor que não existia"* |
+| **O código que você confere** | `650f6ce` — *"os 6 ajustes da conferência — e o token de cor que não existia"*. ⚠️ O alias serve **sempre o commit mais novo do ramo**, e os commits depois deste são de documentação: `git diff 650f6ce..HEAD -- app lib components tests` sai **vazio**, medido. |
 | CI | run **`37271143180`**, **verde nos três blocos** (`qualidade`, `build`, `banco`) |
 | Ramo | `feat/EPICO-5.5-navegacao-e-turmas` — **sem PR e sem merge** |
 
