@@ -22,7 +22,7 @@
 | **Bloco** | **memória** (`bloco.ts`) | o contrato do Épico 12 (§4) |
 | **Grade da semana** | **memória** (`grade.ts`) | matriz `dia × TA`, faixa "Sem posição", sábado |
 | **Parâmetros** | `config_parametros` | `dsa.teto_tfm_semana` = 6 · `dsa.teto_recomendado_semana` = 25 · `dsa.sabado_tempos` = 5 (PR B, dados) |
-| **Técnicas de ensino** | `config_listas`, lista `tecnicas_de_ensino`, sigla em `metadados` | 10 linhas semeadas (PR B, dados) |
+| **Técnicas de ensino** | `config_listas`, lista `tecnicas_de_ensino`, sigla em `metadados` | **9** linhas semeadas (PR B, dados) — ⚠️ `PE` fica de fora até Bernardo confirmar o nome por extenso (`D-8`) |
 
 ---
 
@@ -161,15 +161,18 @@ insert into public.config_parametros (chave, valor, natureza, norma_origem, desc
   ('dsa.teto_recomendado_semana',  '25', 'normativo',   'RN-DIST-03 (c)', 'Teto recomendado por disciplina por semana'),
   ('dsa.sabado_tempos',            '5',  'operacional', 'Q-4 da spec 013', 'TA do sábado quando o operador o abre')
 on conflict (chave) do nothing;
+-- ⚠️ NOVE valores, não dez: `PE` fica de fora até Bernardo confirmar o nome por extenso (D-8).
+--    Medido: nenhum lançamento usa PE hoje (`tipo_avaliacao` tem Prova Escrita, Trabalho,
+--    Prova Prática, Prova Oral e a órfã), então a ausência não quebra legenda alguma.
 insert into public.config_listas (lista, valor, rotulo_exibicao, ordem, ativo, metadados, origem_migracao_v1)
 select 'tecnicas_de_ensino', v, r, o, true, jsonb_build_object('sigla', s), 'spec-013'
   from (values ('Exposição Oral','Exposição Oral',1,'EO'), ('Aula Prática','Aula Prática',2,'AP'),
                ('Estudo Individual','Estudo Individual',3,'EI'), ('Trabalho em Grupo','Trabalho em Grupo',4,'TG'),
                ('Trabalho Individual','Trabalho Individual',5,'TI'), ('Prova Prática','Prova Prática',6,'PP'),
                ('Prova Escrita','Prova Escrita',7,'PM'), ('Prova Oral','Prova Oral',8,'PO'),
-               ('Prova Especial','Prova Especial',9,'PE'), ('Outros Documentos','Outros Documentos',10,'OD'))
+               ('Outros Documentos','Outros Documentos',10,'OD'))
        as t(v, r, o, s)
-on conflict do nothing;   -- ⚠️ os nomes por extenso de PM/PE/OD são PROPOSTA — ver dúvida D-8 e a lista oficial da Q-10
+on conflict do nothing;
 ```
 
 ⚠️ **O que esta migration NÃO faz:** não apaga coluna (`disciplina_codigo_legado_v1` fica); não

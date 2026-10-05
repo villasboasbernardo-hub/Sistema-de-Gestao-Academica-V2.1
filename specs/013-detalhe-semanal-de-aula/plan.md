@@ -158,7 +158,7 @@ app/print/dsa/impressao.css       # PR 3 — @media print, A4 paisagem (hoje NÃ
 | **PR B** | a migration única: `disciplina_id`, o `CHECK` "UE ou disciplina com tópico", a isenção **nominal** da catraca, as duas views com `LEFT` + `security_invoker`, a atividade global na grade (`V-7`), o `CHECK` do EI (`V-5`), `responsavel_externo`, a função de conflito, `herdado` na view, as siglas das técnicas e os parâmetros | o tipo `Bloco` do PR 0, que a função de conflito espelha | **sim** |
 | **PR 1** | ver a semana — rota, contrato, `GradeAlocacao`+`GradeDsa`, feriado, "Sem posição", sábado, degradação, 3 caminhos clicáveis | **`vw_ocupacao_ta` já com `LEFT`, global e `herdado`** — por isso vem depois do PR B | nenhuma |
 | **PR 2** | lançar — aula (com e sem UE), avaliação/vista, AEC/TAD/TR, EI da semana num clique | a grade do PR 1 para escolher onde | nenhuma |
-| **PR 3** | imprimir — `/print/dsa`, A4 paisagem, assinaturas, Nº derivado | lançamentos do PR 2 para ter o que imprimir; **o relógio corrigido (§7) para conferir contra o PDF** | nenhuma |
+| **PR 3** | imprimir — `/print/dsa`, A4 paisagem, assinaturas, Nº derivado | lançamentos do PR 2; **as 10 linhas de relógio corrigidas (§7.2), gravadas por Bernardo e conferidas por leitura** | nenhuma |
 | **PR 4** | editar, mover (DnD + teclado), excluir; conflitos e alertas; posicionar o que está sem posição | a função de conflito do PR B; a grade do PR 1 | nenhuma |
 | **PR 5** | situação por disciplina e por UE; quadro de CH acumulada até a semana | `distribuicao-semanal.ts` do PR 0; `vw_disciplinas_execucao` do PR B | nenhuma |
 
@@ -271,32 +271,50 @@ para dia de calendário — texto → texto, como `lib/formato/data.ts`.
 > **conferir só por leitura** antes do PR 3. A alternativa — migration de dado com o rito — está na
 > dúvida **D-1** (§10).
 
-### 7.1 Os dois relógios, como vão ficar escritos na vigência
+### 7.1 Os dois relógios — o que muda em cada campo
+
+*(decisão de Bernardo, 05/10/2026: **mudam início, intervalos e duração do TA; a QUANTIDADE de TA só
+muda onde ele confirmar**, porque a planilha conta o Estudo Individual como tempo.)*
 
 | Campo da vigência | **G45** | **G50** | De onde vem |
 |---|---|---|---|
-| `tipo_regime` | `padrao` | `padrao` | — |
-| `regime_tempos` | **8** | **8** | `RF-HOR-03`: padrão de 8; ⚠️ os três G50 estão hoje com **7** |
-| `ta_duracao_min` | **45** | **50** | `praticas` §1.3; ⚠️ C-Ap-HN e C-Ap-FR estão hoje com **50** |
-| `intervalo_manha_min` | **5** | **10** | medido na grade real |
-| `intervalo_tarde_min` | **5** | **5** | medido — ⚠️ a G50 tem intervalos **diferentes** de manhã e à tarde, e a vigência suporta isso |
-| `hora_inicio_manha` | **07:50** | **08:10** | medido; hoje **08:00** em todos |
-| `hora_inicio_tarde` | **13:05** | **13:05** | medido; hoje 13:00 ou 13:05 |
-| `configuracao_horario_id` | **nulo** | **nulo** | o regime manda quando não aponta catálogo (`research.md` §2) |
-| manhã/tarde **derivadas** | **5 + 3** | **4 + 4** | `horario-do-bloco.ts`: cabe TA enquanto termina até 12:00 — G45 encerra 11:55, G50 encerra 12:00 (`RF-HOR-04`) |
-| 9º tempo (`excecao`) | `regime_tempos` **9**, mesmos demais campos → o 9º cai em **15:35–16:20** | **9** → o 9º cai em **16:45–17:35** | `RF-HOR-03` autoriza 9×45 para CAHO, C-Ap-HN, C-Ap-FR; ⚠️ para G50 é a dúvida **D-2** |
+| `hora_inicio_manha` | **07:50** | **08:10** | medido; hoje **08:00** nas **11** linhas ativas desses seis cursos |
+| `hora_inicio_tarde` | **13:05** | **13:05** | medido; hoje 13:00 em 6 linhas e 13:05 em 5 |
+| `intervalo_manha_min` | **5** | **10** (já está) | medido na grade real |
+| `intervalo_tarde_min` | **5** | **5** | medido; hoje **10** em todas as 11 |
+| `ta_duracao_min` | **45** | **50** (já está) | ⚠️ muda **só** no `padrao` do C-Ap-HN e do C-Ap-FR (50 → 45) |
+| `regime_tempos` | **inalterado** | **inalterado** | ⚠️ **nenhuma contagem muda** — ver 7.2 |
+| `configuracao_horario_id` | **nulo** | **nulo** | ⚠️ **sai nulo sozinho**, medido: o `esquemaDeVigencia` **não tem** esse campo, então a tela nunca o manda — e é isso que faz o regime vencer o catálogo (`research.md` §2). Hoje **todas as 11 linhas apontam** CFG-A..E, e é por isso que o 08:00 ganha hoje |
+| manhã / tarde | **derivadas** | **derivadas** | `horario-do-bloco.ts`: cabe TA enquanto termina até 12:00 (`RF-HOR-04`) — G45 dá 5 de manhã, G50 dá 4 |
 
-### 7.2 Curso a curso — o que proponho que você grave
+### 7.2 Curso a curso — as DEZ linhas que você grava (não cinco)
 
-| Curso | Grade | Hoje (medido no remoto) | **`vigente_de` mínimo** (último lançamento + 1, medido) | Exceção 9 TA |
-|---|---|---|---|---|
-| **CAHO** | G45 | 8×45, int 10/10, 08:00/13:00, CFG-C | **08/08/2026** | sim (`RF-HOR-03`) |
-| **C-Ap-HN** | G45 | 8×**50**, 10/10, 08:00/13:05, CFG-B | **08/08/2026** | sim |
-| **C-Ap-FR** | G45 | 8×**50**, 10/10, 08:00/13:05, CFG-B | **08/08/2026** | sim |
-| **C-Espc-HN** | G50 | **7**×50, 10/10, 08:00/13:00, CFG-A | **08/08/2026** | **D-2** |
-| **C-Espc-FR** | G50 | **7**×50, 10/10, 08:00/13:00, CFG-A | **15/08/2026** | **D-2** |
-| **C-Esp-ME** | G50 | **7**×50, 10/10, 08:00/13:00, CFG-A | **13/08/2026** | **D-2** |
-| os outros 18 | — | como estão | — | ⚠️ **não proponho valor**: não há planilha medida para eles (expeditos usam *"as duas grades conforme a turma"*, estágios e EAD não têm DSA). Ficam como estão — dúvida **D-3** |
+⚠️ **A MEDIÇÃO MUDOU A CONTA, e é o achado desta rodada:** há **11 linhas ativas** nesses seis cursos
+— um `padrao` **e** um `excecao` em cinco deles —, e **todas as 11 têm `hora_inicio_manha = 08:00` e
+intervalos 10/10**, inclusive as exceções. Corrigir só o `padrao` deixaria o dia de **9 TA** do
+C-Ap-HN começando às **08:00** enquanto o dia de **8 TA** do mesmo curso começa às **07:50**.
+**Então são 10 linhas**, duas por curso, menos o C-Esp-ME.
+
+| # | Curso | Tipo | Hoje (medido) | Passa a ser | O que muda |
+|---|---|---|---|---|---|
+| 1 | **CAHO** | `padrao` | 8×45 · 10/10 · 08:00/13:00 · CFG-C | 8×45 · **5/5** · **07:50/13:05** · cfg **nulo** | relógio só |
+| 2 | **CAHO** | `excecao` | 9×45 · 10/10 · 08:00/13:00 · CFG-D | 9×45 · **5/5** · **07:50/13:05** · cfg **nulo** | relógio só |
+| 3 | **C-Ap-HN** | `padrao` | 8×**50** · 10/10 · 08:00/13:05 · CFG-B | 8×**45** · **5/5** · **07:50**/13:05 · cfg **nulo** | **duração** + relógio |
+| 4 | **C-Ap-HN** | `excecao` | 9×45 · 10/10 · 08:00/13:00 · CFG-D | 9×45 · **5/5** · **07:50/13:05** · cfg **nulo** | relógio só |
+| 5 | **C-Ap-FR** | `padrao` | 8×**50** · 10/10 · 08:00/13:05 · CFG-B | 8×**45** · **5/5** · **07:50**/13:05 · cfg **nulo** | **duração** + relógio |
+| 6 | **C-Ap-FR** | `excecao` | 9×45 · 10/10 · 08:00/13:00 · CFG-D | 9×45 · **5/5** · **07:50/13:05** · cfg **nulo** | relógio só |
+| 7 | **C-Espc-HN** | `padrao` | 7×50 · 10/10 · 08:00/13:00 · CFG-A | 7×50 · **10/5** · **08:10/13:05** · cfg **nulo** | relógio só |
+| 8 | **C-Espc-HN** | `excecao` | 8×50 · 10/10 · 08:00/13:05 · CFG-B | 8×50 · **10/5** · **08:10**/13:05 · cfg **nulo** | relógio só |
+| 9 | **C-Espc-FR** | `padrao` | 7×50 · 10/10 · 08:00/13:00 · CFG-A | 7×50 · **10/5** · **08:10/13:05** · cfg **nulo** | relógio só |
+| 10 | **C-Espc-FR** | `excecao` | 8×50 · 10/10 · 08:00/13:05 · CFG-B | 8×50 · **10/5** · **08:10**/13:05 · cfg **nulo** | relógio só |
+| — | **C-Esp-ME** | `padrao` | 7×50 · 10/10 · 08:00/13:00 · CFG-A | ⚠️ **INTOCADO** | aguarda a sua confirmação |
+| — | os outros 18 | — | como estão | **intocados** | sem planilha medida (D-3) |
+
+⚠️ **E A SUA DECISÃO DE MANTER AS CONTAGENS SE CONFIRMOU CONTRA A PLANILHA, nos dois sentidos:** as
+exceções **já cadastradas** são exatamente as que faltariam — **9×45** nos três G45 e **8×50** nos
+dois G50 —, e é por elas que o C-Ap-HN tem *"9 TA em parte dos dias e 8 em outros"* e o C-Espc-HN tem
+*"7 TA … ou 8 TA"*. **Nenhuma exceção nova precisa nascer** (era a `D-2`) e **nenhuma contagem precisa
+mudar**.
 
 ⚠️ **O `vigente_de` é um piso, não uma escolha:** o gatilho `conferir_vigencia_nova` **recusa** data ≤ ao
 último lançamento do curso, com `vigencia_reinterpretaria_lancamento`. Você pode escolher qualquer
@@ -308,6 +326,27 @@ lançamentos de agosto a outubro — então, se a correção ficar para depois d
 (08:00, 10 min). É a `RN-2027-09` — *"o histórico é sempre lido com a configuração vigente na data do
 próprio registro"* — e é também por isso que o PR 3 confere a impressão contra o PDF numa **semana a
 partir do `vigente_de`**, não numa de março.
+
+### 7.3 ⚠️ A regra nova do Estudo Individual bate num curso e diverge em dois — medido
+
+*(decisão `D-4` de Bernardo, contra a minha recomendação: o EI ocupa o **slot seguinte ao último TA
+LANÇADO no dia**, com horário derivado pela mesma regra do relógio — não o slot fixo
+`regime_tempos + 1`.)*
+
+| Curso e caso | O que a regra dá | O que a planilha tem (medido) | Diferença |
+|---|---|---|---|
+| **C-Espc-HN**, 7 TA (`padrao`) | EI no slot 8 → **15:50–16:40** | **15:50–16:40** | ✅ **exato** |
+| **C-Espc-HN**, 8 TA (`excecao`) | EI no slot 9 → **16:45–17:35** | **16:45–17:35** | ✅ **exato** |
+| **CAHO**, 8 TA | EI no slot 9 → **15:35–16:20** | **15:40–16:25** | ⚠️ **+5 min** no início e no fim |
+| **C-Ap-HN**, 9 TA (`excecao`) | EI no slot 10 → **16:25–17:10** | **16:25–17:20** | ⚠️ início **igual**, fim **+10 min** |
+
+⚠️ **O exemplo que você me deu para o C-Ap-HN — «9 TA → EI 16:25–17:20» — tem o início que a regra
+produz e um fim 10 minutos maior.** A regra derivada dá **17:10**, porque o TA do C-Ap-HN é de **45
+minutos**; os 55 minutos da planilha não saem de campo nenhum da vigência. **Não implemento caso
+especial nem corrijo a planilha** (regra 1): a regra fica como você decidiu, as duas divergências
+ficam **listadas**, e a escolha entre elas é a dúvida **D-11**. ⚠️ **Nada fica impedido por isso** —
+o EI é linha fixa do documento e o horário dele é derivado; a diferença aparece no papel como 10
+minutos, não como erro.
 
 ---
 
@@ -349,16 +388,21 @@ de reversão com `pg_dump`** (VI, gotcha 10). E uma guarda nova no PR 0: `distri
 
 | # | Dúvida | Opções | **Recomendação** |
 |---|---|---|---|
-| **D-1** | **Quem grava a correção do relógio (§7)?** | (a) **você**, pela tela *Registrar nova vigência*, com a tabela 7.2, e eu confiro por leitura · (b) migration de **dado** com o rito do remoto, escrita por mim | **(a)** — são ≤ 12 linhas, a tela existe, o RPC encadeia, e eu não escrevo dado real no remoto. (b) só se você preferir rastro em migration |
-| **D-2** | **O 9º tempo nos cursos G50** (C-Espc-HN tem *"8 TA + EI 16:45–17:35"* medido) — a `RF-HOR-03` só nomeia 9×45 para CAHO, C-Ap-HN e C-Ap-FR | (a) registrar `excecao` 9×50 nos três G50, com `fundamento_curricular` que **você** nomeia · (b) sem exceção: o EI vai para o slot 9 **sem relógio** | **(a)** se o currículo autorizar; **(b)** se não — e aí o EI aparece sem hora, que é o que a `RN-DEG-01` manda |
+| **D-1** | **Quem grava a correção do relógio (§7)?** | (a) **você**, pela tela *Registrar nova vigência*, com a tabela 7.2, e eu confiro por leitura · (b) migration de **dado** com o rito do remoto, escrita por mim | **(a)** — são **10** linhas (§7.2), a tela existe, o RPC encadeia, e eu não escrevo dado real no remoto. (b) só se você preferir rastro em migration |
+| ~~**D-2**~~ ✅ **RESOLVIDA pela medição, sem decisão: nenhuma exceção nova.** As cinco que faltariam **já estão cadastradas** (9×45 nos G45, 8×50 nos G50) e Bernardo decidiu **não criar 9×50**. O que elas precisam é da **mesma correção de relógio** do `padrao` — §7.2, linhas 2, 4, 6, 8 e 10 | — | — |
+| ~~descartada~~ | ~~**O 9º tempo nos cursos G50** (C-Espc-HN tem *"8 TA + EI 16:45–17:35"* medido) — a `RF-HOR-03` só nomeia 9×45 para CAHO, C-Ap-HN e C-Ap-FR~~ | ~~as duas opções~~ | ~~vencida pela medição~~ |
 | **D-3** | **Os 18 cursos sem planilha medida** (expeditos *"as duas grades conforme a turma"*, estágios, EAD) | (a) ficam como estão até haver turma ativa com DSA · (b) você informa a grade de cada um agora | **(a)** — nenhum tem lançamento, e regime é por **curso**: um expedito cujas turmas alternam G45/G50 não cabe numa vigência, e isso é pergunta para quando a turma existir |
-| **D-4** | **Onde o Estudo Individual de um clique cai** (`Q-7`) | (a) sempre no slot `regime_tempos + 1` (o 9º) · (b) no primeiro TA livre depois do último lançamento do dia | **(a)** — é a linha **fixa** do documento e é determinístico; (b) muda de lugar quando alguém lança depois |
+| ~~**D-4**~~ ✅ **DECIDIDA por Bernardo:** o EI vai para o **slot seguinte ao último TA lançado no dia**, com horário derivado. ⚠️ A regra reproduz o C-Espc-HN **exatamente nos dois casos** medidos; CAHO e C-Ap-HN divergem — §7.3 e `D-11` | — | — |
+| ~~descartada~~ | ~~**Onde o Estudo Individual de um clique cai** (`Q-7`)~~ | ~~as duas opções~~ | ~~Bernardo escolheu a (b), adaptada~~ |
 | **D-5** | **Como o sábado "é adicionado por ação do operador"** (`Q-4`) | (a) parâmetro `sabado=sim` na URL (contrato), **e** automático quando há lançamento no sábado · (b) preferência persistida por turma | **(a)** — é estado de navegação (URL, Princípio do doc 25) e some sozinho quando o sábado está vazio e fechado |
 | **D-6** | **A marca `herdado` das avaliações** (`Q-12`) | (a) coluna `herdado` na própria `vw_ocupacao_ta` (PR B) · (b) a página lê `avaliacoes` à parte e cruza | **(a)** — uma coluna booleana na migration que já recria a view; (b) é uma leitura a mais em toda abertura de semana |
 | **D-7** | **O Nº do DSA de turma sem `data_inicio`** | (a) `Nº —` e aviso na tela antes de imprimir · (b) contar da primeira semana com lançamento | **(a)** — `data_inicio` é nulável e inventar o início é inventar o número |
-| **D-8** | **A lista de técnicas com sigla** (`Q-10`): quem semeia os 10 valores? | (a) no PR B, `insert … on conflict do nothing` em `config_listas`, com origem marcada · (b) você cadastra na tela de listas | **(a)** — não há tela de `config_listas` para técnicas hoje (medido: nenhum consumidor de `configuracoes_horario`/listas em `app/`), e o precedente é a semeadura dos 10 `tipo_atividade` do ETL |
+| ~~**D-8**~~ ✅ **DECIDIDA: a semeadura é do PR B**, com os nomes por extenso propostos — ⚠️ **menos `PE`, que fica de fora até você confirmar o nome**. Semeia **9** linhas; a sigla `PE` não é usada por lançamento nenhum hoje (medido em `tipo_avaliacao`), então a ausência não quebra legenda alguma | — | — |
+| ~~descartada~~ | ~~**A lista de técnicas com sigla** (`Q-10`): quem semeia os 10 valores?~~ | ~~as duas opções~~ | ~~adotada a (a), com PE de fora~~ |
 | **D-9** | **Alcance da função de conflito**: instrutor, fiscal **e** sala, na janela da semana | (a) os três, uma função · (b) só instrutor e fiscal; sala pela própria turma | **(a)** — a `RN-CONF-01` cita a sala, e "duas turmas de cursos diferentes na mesma sala" é exatamente o caso que a RLS esconderia |
 | **D-10** | **Quais disciplinas aceitam aula sem UE** (`Q-1`): a tela oferece o modo "sem UE" | (a) **só** quando `disciplina_sem_ue()` é verdadeiro, e o `CHECK` recusa fora disso · (b) sempre, e o banco recusa | **(a)** — a tela não oferece o que o banco vai recusar; a recusa fica como **segunda** defesa, não como interface |
+| ~~**D-11**~~ ✅ **DECIDIDA por Bernardo (05/10/2026): opção (a)** — o EI dura **um TA**, derivado pela regra, **sem parâmetro novo**; as diferenças do CAHO (+5 min) e do C-Ap-HN (+10 min no fim) ficam **registradas em §7.3 como diferença da planilha**, não corrigidas | — | — |
+| ~~descartada~~ | ~~**A duração do Estudo Individual**: a regra derivada dá 45 min no C-Ap-HN e a planilha mostra **55**; no CAHO a regra começa **5 min antes** | (a) o EI dura **um TA**, como a regra deriva, e as duas diferenças ficam registradas · (b) o EI ganha duração própria em `config_parametros` (`dsa.ei_duracao_min`, por curso) · (c) você confirma o horário do EI curso a curso, como dado | **(a)** — é o que a sua `D-4` decidiu, é derivado, e reproduz o C-Espc-HN **exatamente** nos dois casos; (b) acrescenta parâmetro por 10 minutos; (c) devolve horário escrito à mão, que é o `D-7` da planilha |
 
 ---
 

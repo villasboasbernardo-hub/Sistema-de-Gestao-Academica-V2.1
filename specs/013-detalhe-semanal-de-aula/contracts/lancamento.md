@@ -9,7 +9,7 @@
 | Ação | Entrada | Primeira linha | Grava em | Devolve |
 |---|---|---|---|---|
 | `lancar(bloco)` | `Bloco` | `esquemaDoBloco.safeParse` | `registros_aula` · `avaliacoes` · `atividades_nao_letivas` conforme `tipo`; `id` gerado **antes**, `insert` **sem `RETURNING`** | `{ ok: true, id, avisos: Aviso[] } \| { ok: false, mensagem, campo? }` |
-| `lancarEstudoIndividualDaSemana(turmaId, ano, semana)` | ids e a semana ISO | validação dos três | um `atividades_nao_letivas` por dia útil sem feriado `dia_inteiro` e sem EI, no slot `regime_tempos + 1`, **transação** | `{ ok: true, criados: number, pulados: string[] }` |
+| `lancarEstudoIndividualDaSemana(turmaId, ano, semana)` | ids e a semana ISO | validação dos três | um `atividades_nao_letivas` por dia útil sem feriado `dia_inteiro` e sem EI, no slot **seguinte ao último TA lançado naquele dia** (`D-4`; dia vazio → slot 1), **transação** | `{ ok: true, criados: number, pulados: string[] }` |
 | `mover(fatoId, origem, destino)` | `{ data, taInicial, tempos? }` | `safeParse` | `UPDATE` do **mesmo** `id`; `editado_*` carimbados | `{ ok, avisos }` |
 | `editar(fatoId, origem, bloco)` | `Bloco` parcial | `safeParse` | `UPDATE` do mesmo `id`; **não** toca catálogo | `{ ok, avisos }` |
 | `excluir(fatoId, origem)` | ids | validação | `status = 'inativo'` / `'cancelada'` | `{ ok }` |

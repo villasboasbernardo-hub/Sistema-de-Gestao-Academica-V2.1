@@ -44,6 +44,12 @@ grades reais sem parâmetro extra**: G45 (07:50, 45, 5) dá 5 TA (a 5ª termina 
 último TA dele — a `hora_fim` do catálogo não é recalculada, o que é o que a `R-2` quer dizer com
 "derivada, sem arredondar".
 
+⚠️ **E A PRECEDÊNCIA SÓ FUNCIONA PORQUE A TELA NÃO MANDA O CAMPO — medido:** `esquemaDeVigencia`
+**não tem** `configuracao_horario_id`, embora o RPC `registrar_vigencia_regime` o leia do `jsonb`. Logo
+toda vigência registrada **pela tela** nasce com `configuracao_horario_id` **nulo**, e o regime vence.
+⚠️ **As 11 linhas ativas de hoje APONTAM CFG-A..E** — é exatamente por isso que o 08:00 do catálogo
+ganha hoje, e é o que a correção da `Q-6` desfaz sem precisar de código.
+
 **Recusadas.** Criar duas configurações G45/G50 no catálogo: não há tela de `configuracoes_horario`
 (medido: nenhum consumidor em `app/` ou `lib/`), e seria uma segunda escrita de dado no remoto.
 Guardar a contagem da manhã num campo: não existe na vigência, e a derivação a torna redundante.
@@ -151,16 +157,28 @@ no dia certo. A `ALT` **não** aparece — aparecer errada seria pior.
 
 ---
 
-## 9. Estudo Individual num clique (`Q-7`): um lançamento por dia útil, no slot seguinte ao regime
+## 9. Estudo Individual num clique (`Q-7`): no slot seguinte ao ÚLTIMO TA LANÇADO do dia
 
-**Decisão.** `lancarEstudoIndividualDaSemana(turma, semana)` insere, numa transação, uma
-`atividades_nao_letivas` (`Estudo_Individual`, escopo `turma`, `tempos = 1`, `ta_inicial =
-regime_tempos + 1`) por dia útil da semana que **não** seja feriado `dia_inteiro` e que ainda não
-tenha EI. Idempotente por dia.
+**Decisão** *(de Bernardo, `D-4`, contra a minha recomendação)*. `lancarEstudoIndividualDaSemana(turma,
+ano, semana)` insere, numa transação, uma `atividades_nao_letivas` (`Estudo_Individual`, escopo
+`turma`, `tempos = 1`) por dia útil que **não** seja feriado `dia_inteiro` e que ainda não tenha EI,
+com `ta_inicial = (maior ta_final lançado naquele dia) + 1` — e **sem** lançamento no dia, no slot 1.
+O horário sai da **mesma** regra do relógio (`horario-do-bloco.ts`), estendida além de
+`regime_tempos`. Idempotente por dia.
 
-**Por quê.** É a linha **fixa** do documento (`praticas` §1.2) e o 9º tempo é onde a operação o
-lança (CAHO 15:40–16:25, C-Ap-HN 16:25–17:20). Determinístico — não muda de lugar quando alguém
-lança depois (D-4). O `compoe_cht` gerado já o deixa fora da fórmula.
+**Por quê.** É a linha **fixa** do documento (`praticas` §1.2), e o lugar dela **acompanha o dia**: o
+C-Ap-HN tem *"9 TA em parte dos dias e 8 em outros"*, e um slot fixo poria o EI **em cima** do 9º TA
+nos dias cheios. ⚠️ **A regra reproduz o C-Espc-HN EXATAMENTE nos dois casos medidos** — 7 TA → EI
+15:50–16:40; 8 TA → EI 16:45–17:35 —, e é a confirmação mais forte que esta pesquisa tem de que a
+derivação do relógio está certa. O `compoe_cht` gerado já deixa o EI fora da fórmula.
+
+⚠️ **E ela diverge em dois cursos, medido — listado, não corrigido** (`plan.md` §7.3): no **CAHO** a
+regra dá 15:35–16:20 e a planilha tem 15:40–16:25 (**+5 min**); no **C-Ap-HN** com 9 TA a regra dá
+16:25–**17:10** e a planilha tem 16:25–**17:20** (o início bate; o fim é 10 min maior, porque o TA de
+45 min não produz um bloco de 55). A escolha entre derivar e parametrizar é a dúvida **D-11**.
+
+**Recusadas.** Slot fixo `regime_tempos + 1` (minha recomendação): colide com o 9º TA nos dias de
+exceção. Horário do EI escrito à mão por curso: é o `D-7` da planilha de volta.
 
 ---
 

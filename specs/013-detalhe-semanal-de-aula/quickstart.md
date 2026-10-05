@@ -28,6 +28,7 @@ pnpm lint                                       # a FRONTEIRA 1 cobre a subpasta
 | G45 inteira: 9 TA nomeados | `07:50–08:35 … 11:10–11:55 \| 13:05–13:50 … 15:35–16:20`, **5** de manhã |
 | G50 inteira | `08:10–09:00 … 11:10–12:00 \| 13:05–13:55 … 15:50–16:40`, **4** de manhã |
 | as 5 configurações do catálogo (40 TA) | relógio idêntico ao `hora_inicio`/`hora_fim` armazenados, **sem** arredondar |
+| EI do C-Espc-HN: 7 TA e 8 TA | **15:50–16:40** e **16:45–17:35** — os dois **exatos** contra a planilha (`plan.md` §7.3) |
 | bloco de 4 TA no 3º tempo da G45 | `["09:30–11:55", "13:05–13:50"]` (`SC-011`) |
 | feriado `dia_inteiro` / `informativo` | desconta / não desconta (critério 6) |
 | TFM 7 TA · LHFC 40 · outra 26 · 9º TA | bloqueia · nada · alerta · alerta |
@@ -95,7 +96,7 @@ pnpm test:e2e -- tests/e2e/dsa-lancar.spec.ts
 | instrutor não habilitado · inativo | recusado com a frase · não aparece |
 | aula **sem UE** no C-Espc-HN com tópico · no C-Ap-HN | grava e aparece · **recusada** com a frase |
 | avaliação com fiscal **externo** | aceita; CHD da disciplina cresce (critério: `RN-EVT-03`) |
-| **"Estudo Individual da semana"** | 5 lançamentos (ou 4 com feriado), no slot `regime + 1`; segundo clique **não duplica** |
+| **"Estudo Individual da semana"** | 5 lançamentos (ou 4 com feriado), cada um no slot **seguinte ao último TA daquele dia** — num dia de 8 TA o EI é o 9º; num de 9 TA, o 10º (`D-4`); segundo clique **não duplica** |
 | TFM com 7 TA | **recusado** (`dsa_teto_tfm`); 26 TA de outra → grava com **alerta** |
 
 ---
