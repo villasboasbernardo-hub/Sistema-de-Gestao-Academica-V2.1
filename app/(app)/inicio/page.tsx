@@ -4,9 +4,14 @@
  * ⚠️ **SEM MARCADOR DE CLIENTE.** O filtro é folha, noutro arquivo. Um `"use client"` aqui mandaria
  * o panorama inteiro para o navegador, e o erro não aparece na checagem de tipos.
  *
- * ⚠️ **DUAS CONSULTAS INDEPENDENTES, EM PARALELO — NUNCA UMA POR TURMA.** O antipadrão de N leituras
+ * ⚠️ **SEIS CONSULTAS INDEPENDENTES, EM PARALELO — NUNCA UMA POR TURMA.** O antipadrão de N leituras
  * já foi combatido na v2.0 (spec 017), e o `RF-INI-01` escreve *"por VIEW ou consulta única"*. Os
- * volumes são 24 cursos e 29 turmas: a junção acontece em memória, numa passada.
+ * volumes são 24 cursos, 28 turmas e o calendário do ano: a junção acontece em memória, numa passada.
+ *
+ * ⚠️ **ERAM TRÊS ATÉ 04/10/2026, E AS TRÊS NOVAS SÃO O QUE FALTAVA PARA O VEREDITO EXISTIR**: a
+ * turma (pelo `data_termino` e pela `modalidade`, que a view de carga **não** tem), o regime vigente
+ * do curso (o TA/dia da `RN-MAT-04`) e os feriados de dia inteiro (`RN-EVT-02`). Sem elas o painel
+ * comparava previsto com executado e chamava o excesso de atraso.
  *
  * ⚠️ **O ESCOPO POR PERFIL NÃO É FILTRADO AQUI** (`RF-INI-02`). Quem nega é a **RLS**: o usuário fora
  * de escopo não recebe a linha, ainda que troque o parâmetro na URL à mão. Filtrar por disciplina de
@@ -30,10 +35,18 @@ import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 //    de voltar.
 import { enderecoDaTurmaNoCurso } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { FiltroDoPanorama } from "./FiltroDoPanorama";
-import { montarPanorama, totaisDo, type CargaDaTurma, type CursoDoRecorte } from "./panorama";
+import {
+  montarPanorama,
+  totaisDo,
+  type CargaDaTurma,
+  type CursoDoRecorte,
+  type RegimeDoCursoNoBanco,
+  type TurmaDoPanorama,
+} from "./panorama";
 
 /** O tom de cada status de turma. */
 const TOM_DA_TURMA = {
@@ -75,7 +88,14 @@ export default async function Inicio({
   if (classificacao !== "") consultaDeCursos = consultaDeCursos.eq("classificacao", classificacao);
   if (modalidade !== "") consultaDeCursos = consultaDeCursos.eq("modalidade", modalidade);
 
-  const [cursosRes, cargasRes, totalRes] = await Promise.all([
+  /*
+   * ⚠️ **O "HOJE" É LIDO UMA VEZ, ANTES DA RODADA, E ENTRA NA CONSULTA DOS FERIADOS.** É a mesma
+   *    função da ficha da turma e dos avisos (`hojeNaCiaara`): três fórmulas de "hoje" conviveram
+   *    neste repositório até 04/10/2026, e uma delas estava em UTC.
+   */
+  const hoje = hojeNaCiaara();
+
+  const [cursosRes, cargasRes, totalRes, turmasRes, regimesRes, feriadosRes] = await Promise.all([
     consultaDeCursos,
     supabase
       .from("vw_carga_horaria_turma")
@@ -95,6 +115,28 @@ export default async function Inicio({
      * por isso que só uma delas filtra.
      */
     supabase.from("cursos").select("id", { count: "exact", head: true }),
+    /*
+     * ⚠️ **AS TRÊS LEITURAS NOVAS NÃO FILTRAM PELO RECORTE, E É DE PROPÓSITO.** O recorte do filtro é
+     *    aplicado em memória, sobre `cursos`, e o alcance por perfil é aplicado pela **RLS** — pedir
+     *    `in(curso_id, …)` aqui exigiria esperar a consulta de cursos e transformaria uma rodada em
+     *    duas (`FR-012`). Os volumes mandam: 28 turmas, 24 regimes e o calendário de um ano.
+     */
+    supabase.from("turmas").select("id, data_termino, modalidade"),
+    supabase
+      .from("vw_cursos_regime_vigente")
+      .select("curso_id, regime_padrao_tempos, limite_diario_ead_horas"),
+    /*
+     * ⚠️ **SÓ FERIADO DE DIA INTEIRO E ATIVO DESCONTA CAPACIDADE** (`RN-EVT-02`, regra 4). E o limite
+     *    superior é **aberto**: ele seria o maior `data_termino` do recorte, que só se conhece depois
+     *    de ler as turmas — uma segunda rodada para cortar uma lista que tem dezenas de linhas. O
+     *    piso é `hoje`, que é o que elimina o calendário dos anos passados.
+     */
+    supabase
+      .from("feriados")
+      .select("data")
+      .eq("impacto", "dia_inteiro")
+      .eq("status", "ativo")
+      .gte("data", hoje),
   ]);
 
   /*
@@ -110,9 +152,19 @@ export default async function Inicio({
     );
   }
 
+  /*
+   * ⚠️ **ERRO NAS TRÊS LEITURAS NOVAS NÃO DERRUBA A TELA, E TAMBÉM NÃO INVENTA ALERTA** — ele cai no
+   *    `?? []`, e turma sem término sai *"sem capacidade calculada"*, sem veredito de atraso
+   *    (`RN-DEG-01`). Só `cursos` e a view de carga continuam sendo condição para a tela existir:
+   *    sem elas não há panorama nenhum a desenhar.
+   */
   const panorama = montarPanorama(
     (cargasRes.data ?? []) as unknown as CargaDaTurma[],
     (cursosRes.data ?? []) as unknown as CursoDoRecorte[],
+    (turmasRes.data ?? []) as unknown as TurmaDoPanorama[],
+    (regimesRes.data ?? []) as unknown as RegimeDoCursoNoBanco[],
+    (feriadosRes.data ?? []).map((f) => f.data as string),
+    hoje,
   );
   const totais = totaisDo(panorama);
   const temRecorte = classificacao !== "" || modalidade !== "";

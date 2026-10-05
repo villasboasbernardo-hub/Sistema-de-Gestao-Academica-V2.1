@@ -18,6 +18,7 @@ import {
   AmostraBotaoLimparFiltros,
   AmostraCampo,
   AmostraDialogoConfirmacao,
+  AmostraBarraDeProgresso,
   AmostraEmblemasDeStatus,
   AmostraEstadoNaUrl,
   AmostraEsqueleto,
@@ -315,6 +316,10 @@ export default function Vitrine() {
 
       <Secao titulo="Indicador — número grande, e ele não calcula nada">
         <AmostraIndicadores />
+      </Secao>
+
+      <Secao titulo="Barra de progresso — o número vai no atributo, nunca só na cor">
+        <AmostraBarraDeProgresso />
       </Secao>
 
       <Secao titulo="Emblema de status — os nove tons, cada um com rótulo textual obrigatório">

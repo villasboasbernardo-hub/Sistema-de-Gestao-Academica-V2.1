@@ -9,10 +9,22 @@
  * ⚠️ **`goto` SÓ NO PONTO DE PARTIDA** — e nos dois casos em que ele **é** a prova: reabrir um
  * endereço filtrado noutro contexto é o que demonstra que o recorte virou link.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { limparCursos, semearCursos, type CursosSemeados } from "./cursos-de-teste";
+/*
+ * ⚠️ **OS TRÊS AUXILIARES DE PERCURSO SAÍRAM DAQUI EM 04/10/2026, E O MOTIVO É A SEGUNDA SUÍTE.**
+ *    `andamento.spec.ts` precisa do mesmo caminho — menu, filtro, busca, clique — para abrir cinco
+ *    fichas; copiá-los seria a segunda redação do mesmo percurso, e a terceira é a que diverge.
+ */
+import {
+  abrirFiltros,
+  escolherNoFiltro,
+  FILTRO,
+  irAListaDeTurmas,
+  LISTA_DE_TURMAS as LISTA,
+} from "./navegar-turmas";
 
 let EMAIL = "";
 let SEMEADO: CursosSemeados;
@@ -32,56 +44,9 @@ test.afterAll(async () => {
   await apagarConta(EMAIL);
 });
 
-const LISTA = '[data-slot="lista-de-turmas"]';
-const FILTRO = '[data-slot="filtro-avancado"]';
-
-/** Entra e chega à lista **pelo menu** — nunca por endereço. */
-async function irALista(page: Page): Promise<void> {
-  await entrar(page, EMAIL, "/inicio");
-  await page
-    .getByRole("navigation", { name: "Navegação principal" })
-    .getByRole("link", { name: "Turmas", exact: true })
-    .click();
-  await expect.poll(() => new URL(page.url()).pathname).toBe("/turmas");
-  await expect(page.locator(LISTA)).toBeVisible();
-}
-
-/**
- * Preenche um campo do filtro avançado.
- *
- * ⚠️ **ABRE O PAINEL SÓ SE ELE ESTIVER FECHADO.** `FiltroAvancado` é um `Collapsible` e pode vir
- * aberto; um clique incondicional no gatilho o **fechava**, e o campo sumia — o sintoma era
- * `getByLabel` não achar nada, que se lê como "o filtro não foi escrito". É a lição do `SC-011`.
- */
-async function abrirFiltros(page: Page): Promise<void> {
-  const filtro = page.locator(FILTRO);
-  if (!(await filtro.getByLabel("Buscar pelo código").isVisible())) {
-    await filtro.getByRole("button", { name: "Filtros" }).click();
-  }
-}
-
-/**
- * Escolhe uma opção num campo de escolha do filtro.
- *
- * ⚠️ **O CAMPO DE ESCOLHA NÃO É UM `<select>` NATIVO, e medir isso custou um caso reprovado.** O
- * `FiltroAvancado` usa o `Select` do shadcn, que é um `<button role="combobox">` com a lista num
- * painel — `selectOption` responde *"Element is not a `<select>` element"*. O percurso é **clicar e
- * escolher**, que é também o que uma pessoa faz.
- *
- * ⚠️ **A LISTA É PROCURADA NA PÁGINA, E NÃO NO FILTRO:** o painel do Radix vai por `Portal`, fora da
- * árvore do campo. Procurá-lo dentro do filtro não acharia nada.
- */
-async function escolherNoFiltro(page: Page, rotulo: string, parteDaOpcao: string): Promise<void> {
-  await page.locator(FILTRO).getByLabel(rotulo).click();
-  await page
-    .getByRole("option", { name: new RegExp(parteDaOpcao, "i") })
-    .first()
-    .click();
-}
-
 test.describe("`SC-002` · do menu à ficha, sem passar pelo curso", () => {
   test("a lista mostra as turmas, e a linha leva à ficha", async ({ page }) => {
-    await irALista(page);
+    await irAListaDeTurmas(page, EMAIL);
 
     const codigo = SEMEADO.turmaJanelaCedo;
     await expect(page.getByRole("gridcell", { name: codigo, exact: false })).toBeVisible();
@@ -95,7 +60,7 @@ test.describe("`SC-002` · do menu à ficha, sem passar pelo curso", () => {
   });
 
   test("⚠️ o cabeçalho da ficha resume a turma, e o curso é link", async ({ page }) => {
-    await irALista(page);
+    await irAListaDeTurmas(page, EMAIL);
     await page.getByRole("link", { name: SEMEADO.turmaJanelaCedo }).first().click();
 
     // `FR-021`: situação, modalidade, início, término, sala e efetivo num lugar só.
@@ -112,7 +77,7 @@ test.describe("`FR-013`, `FR-014` · os filtros vão para a URL, e o botão os l
     page,
     context,
   }) => {
-    await irALista(page);
+    await irAListaDeTurmas(page, EMAIL);
     await abrirFiltros(page);
 
     const sigla = SEMEADO.porClassificacao.regular;
@@ -135,7 +100,7 @@ test.describe("`FR-013`, `FR-014` · os filtros vão para a URL, e o botão os l
   });
 
   test("⚠️ *Limpar filtros* aparece só com filtro, e devolve a lista inteira", async ({ page }) => {
-    await irALista(page);
+    await irAListaDeTurmas(page, EMAIL);
 
     // ⚠️ Sem filtro o botão NÃO existe — a regra de quando aparecer mora dentro dele.
     await expect(page.locator('[data-slot="limpar-filtros"]')).toHaveCount(0);
@@ -153,7 +118,7 @@ test.describe("`FR-013`, `FR-014` · os filtros vão para a URL, e o botão os l
   });
 
   test("⚠️ recorte sem resultado diz NÃO HÁ, e não 'sem permissão'", async ({ page }) => {
-    await irALista(page);
+    await irAListaDeTurmas(page, EMAIL);
     await abrirFiltros(page);
 
     await page.locator(FILTRO).getByLabel("Buscar pelo código").fill("ZZZ-NAO-EXISTE-ZZZ");

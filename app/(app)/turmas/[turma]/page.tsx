@@ -17,6 +17,7 @@ import Link from "next/link";
 
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
 import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import type { JanelaDeTurma, VigenciaProtegida } from "@/lib/dominio/protecao-de-vigencia";
@@ -36,28 +37,22 @@ import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { alcanceDoPerfil } from "../../cursos/consulta";
 import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
 import { DisciplinasDaTurma } from "./DisciplinasDaTurma";
+import { Rotulo } from "./Rotulo";
+import { SecaoDeAndamento } from "./SecaoDeAndamento";
 import { FormularioDeTurma } from "../FormularioDeTurma";
 import {
   codigoDaFicha,
+  COLUNAS_DA_CARGA_DA_TURMA,
   COLUNAS_DA_FICHA_DA_TURMA,
+  COLUNAS_DO_REGIME_DO_CURSO,
+  datasDeFeriado,
+  deveLerFeriados,
   deveLerProtecao,
   mensagemDeTurmaNaoEncontrada,
   protecoesDoBanco,
+  regimeDoBanco,
 } from "./consulta";
 import { QuadroDeAvisosDaTurma } from "./QuadroDeAvisosDaTurma";
-
-/**
- * O termo da ficha somente-leitura.
- *
- * ⚠️ **O TOKEN FICA NUM LUGAR SÓ, e é por isso que ele é componente.** `--texto-tenue` veste
- * **rótulo**, nunca valor (`FR-031`), e a invariante cobra a declaração **na linha de cima de cada
- * uso** — quatro `<dt>` soltos são quatro declarações a manter em dia. ⚠️ E ele **não** se renderiza:
- * o elemento aqui é `<dt>`, não `<Rotulo>`, que foi o defeito de recursão medido em 22/09/2026.
- */
-function Rotulo({ children }: { readonly children: React.ReactNode }) {
-  // veste: o rótulo do termo, à esquerda; o valor ao lado é dado
-  return <dt className="text-texto-tenue">{children}</dt>;
-}
 
 /*
  * ⚠️ **O "HOJE" LOCAL SAIU DAQUI EM 04/10/2026.** Havia TRÊS fórmulas no repositório: esta cópia,
@@ -116,26 +111,91 @@ export default async function FichaDaTurma({
     ? supabase.rpc("protecao_das_vigencias_por_atividade_global", { p_curso_id: cursoId })
     : null;
 
-  const [cursoRes, turmasRes, salasRes, protecaoRes] = await Promise.all([
-    supabase
-      .from("cursos")
-      .select("codigo, nome_curso, limite_turmas_ano")
-      .eq("id", cursoId)
-      .maybeSingle(),
-    supabase
-      .from("turmas")
-      .select("codigo, turma, ano_letivo, status, data_inicio, data_termino")
-      .eq("curso_id", cursoId),
-    supabase
-      .from("config_listas")
-      .select("valor, ativo, metadados")
-      .eq("lista", "salas")
-      .order("ordem"),
-    protecaoPromessa,
-  ]);
-
+  /*
+   * ⚠️ **O "HOJE" SUBIU PARA CÁ EM 04/10/2026, e não é arrumação: ele É UM LIMITE DA CONSULTA.** Os
+   *    feriados pedidos ao banco são os do intervalo `[hoje, término]`, e lê-lo depois obrigaria a
+   *    uma segunda rodada só por causa da data. Continua sendo `hojeNaCiaara()`, a fórmula única.
+   */
   const hoje = hojeNaCiaara();
+  const dataTermino = turma.data_termino as string | null;
+
+  /*
+   * ⚠️ **A CONSULTA DE FERIADOS É PROMESSA CONDICIONAL, PELO MESMO CRITÉRIO DA RPC** (`FR-012`): sem
+   *    data de término não há intervalo, a capacidade sai `sem_termino` e a lista seria descartada
+   *    pelo domínio. ⚠️ **E ela filtra `impacto` E `status`:** `RN-EVT-02` manda descontar **só**
+   *    feriado de dia inteiro, e feriado desativado é exclusão lógica (regra 4) — contá-lo tiraria
+   *    capacidade de um dia que voltou a ser útil.
+   */
+  const feriadosPromessa = deveLerFeriados(dataTermino)
+    ? supabase
+        .from("feriados")
+        .select("data")
+        .eq("impacto", "dia_inteiro")
+        .eq("status", "ativo")
+        .gte("data", hoje)
+        .lte("data", dataTermino as string)
+    : null;
+
+  const [cursoRes, turmasRes, salasRes, protecaoRes, cargaRes, regimeRes, feriadosRes] =
+    await Promise.all([
+      supabase
+        .from("cursos")
+        .select("codigo, nome_curso, limite_turmas_ano")
+        .eq("id", cursoId)
+        .maybeSingle(),
+      supabase
+        .from("turmas")
+        .select("codigo, turma, ano_letivo, status, data_inicio, data_termino")
+        .eq("curso_id", cursoId),
+      supabase
+        .from("config_listas")
+        .select("valor, ativo, metadados")
+        .eq("lista", "salas")
+        .order("ordem"),
+      protecaoPromessa,
+      /*
+       * ⚠️ **A CH EXECUTADA VEM DA MESMA VIEW QUE O `/inicio` LÊ** — `vw_carga_horaria_turma` —, e é
+       *    por isso que os dois números batem. Uma soma própria aqui seria a segunda fonte de verdade
+       *    de `chd_executada`, com a `RN-CRONOS-01` para honrar duas vezes.
+       */
+      supabase
+        .from("vw_carga_horaria_turma")
+        .select(COLUNAS_DA_CARGA_DA_TURMA)
+        .eq("turma_id", turma.id as string)
+        .maybeSingle(),
+      /*
+       * ⚠️ **O TA/DIA NÃO É PARÂMETRO NOVO: ele é o REGIME VIGENTE DO CURSO** (decisão de Bernardo,
+       *    04/10/2026, Q1 do clarify). `vw_cursos_regime_vigente` resolve a vigência de hoje, e a
+       *    escolha entre `regime_padrao_tempos` e `limite_diario_ead_horas` é da **modalidade da
+       *    turma** (`RN-MAT-04`), feita no módulo puro.
+       */
+      supabase
+        .from("vw_cursos_regime_vigente")
+        .select(COLUNAS_DO_REGIME_DO_CURSO)
+        .eq("curso_id", cursoId)
+        .maybeSingle(),
+      feriadosPromessa,
+    ]);
+
   const sigla = (cursoRes.data?.codigo as string | undefined) ?? "";
+
+  /*
+   * ⚠️ **ERRO DE LEITURA DEGRADA, NÃO ESTOURA** (`RN-DEG-01`): sem a linha da carga o andamento sai
+   *    com prevista e executada **zero**, que a seção já sabe dizer (*"o curso não tem carga
+   *    curricular lançada"*). A ficha continua editável — é o `FR-033`.
+   */
+  const andamento = andamentoDaTurma(
+    {
+      status: turma.status as string,
+      modalidade: turma.modalidade as string,
+      dataTermino,
+      prevista: Number(cargaRes.data?.chr_curricular ?? 0),
+      executada: Number(cargaRes.data?.chd_executada ?? 0),
+    },
+    regimeDoBanco(regimeRes.data ?? null),
+    datasDeFeriado(feriadosRes?.data ?? []),
+    hoje,
+  );
 
   /*
    * ⚠️ **A GRADE VEM NUMA SEGUNDA RODADA, E O CUSTO ESTÁ DECLARADO:** `lerGradeDeDisciplinas` é
@@ -295,6 +355,8 @@ export default async function FichaDaTurma({
         />
       ) : null}
 
+      <SecaoDeAndamento andamento={andamento} dataTermino={dataTermino} />
+
       {/*
         ⚠️ **A SEÇÃO DE DISCIPLINAS VEIO DE `/disciplinas?turma=` EM 04/10/2026** (`FR-018`), e o
            endereço antigo **redireciona para esta âncora**. O `id` é o destino do `#`, e é por isso
@@ -326,6 +388,7 @@ export default async function FichaDaTurma({
             avisoInicioDias={grade.avisoInicioDias}
             hoje={hoje}
             abertaNoEndereco={String(valores.aberta)}
+            executadaDaTurma={andamento.executada}
           />
         )}
       </section>

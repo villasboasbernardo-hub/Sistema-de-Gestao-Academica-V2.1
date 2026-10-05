@@ -17,8 +17,32 @@
  * ⚠️ **OS NÚMEROS SÃO ESCOLHIDOS PARA PRODUZIR OS DOIS LADOS DO `RF-INI-01`:** uma turma com saldo
  * **negativo** de capacidade, que é a definição de atraso, e uma com saldo positivo. Uma amostra em
  * que tudo vai bem não distingue a implementação certa da que nunca alerta.
+ *
+ * ⚠️ **ESTA SEMENTE FOI REFEITA EM 04/10/2026, E A REFAÇÃO É O CASO QUE DISCRIMINA (DoD 8).** Até
+ * aqui ela plantava *"12 executados contra 10 previstos"* e chamava aquilo de turma atrasada — e o
+ * `/inicio` concordava, porque media `previstos − executados < 0`. **Era o indicador invertido**:
+ * disparava no EXCESSO e nunca no atraso de verdade, que é *"a capacidade restante até o término não
+ * cobre a carga que falta"* (`RF-INI-01`). As três turmas abaixo fazem **dois vereditos virarem**:
+ *
+ * | Turma | Prevista | Executada | Término | TA/dia | Veredito antigo | Veredito novo |
+ * |---|---|---|---|---|---|---|
+ * | `turmaEmExcesso` (era `turmaAtrasada`) | 10 | 12 | +30 dias úteis | 8 | **em atraso** | **não** |
+ * | `turmaEmDia` | 50 | 10 | +30 dias úteis | 4 h (EAD) | não | não |
+ * | `turmaSemCapacidade` (**nova**) | 100 | 10 | +2 dias úteis | 8 | **não** | **em atraso** |
+ *
+ * ⚠️ **OS TÉRMINOS SÃO RELATIVOS A HOJE, E TÊM DE SER.** O veredito depende de quantos dias úteis
+ * faltam: uma data fixa no arquivo passaria a reprovar sozinha no dia em que ela ficasse no passado
+ * — teste que estraga com o calendário é pior que teste que não existe, porque reprova sem causa.
+ *
+ * ⚠️ **E OS NÚMEROS TÊM FOLGA DE PROPÓSITO, porque o banco local PODE TER FERIADOS.** `diasUteis`
+ * desconta feriado de dia inteiro (`RN-EVT-02`), e a base carregada pelo ETL tem o calendário do
+ * PROENS. Com 30 dias úteis a turma EAD precisaria de 10 para não acusar atraso, e a turma em excesso
+ * não acusa com nenhum número — o `restante` dela é **zero**. A apertada tem capacidade máxima de 16
+ * TA contra 90 de restante: feriado nenhum muda esses vereditos.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 
 import { chaveLocal } from "./conta-de-teste";
 
@@ -31,21 +55,70 @@ const admin = (): SupabaseClient =>
 export type PanoramaSemeado = {
   readonly cursoRegular: string;
   readonly cursoExpedito: string;
-  readonly turmaAtrasada: string;
+  /** O curso da turma que **não tem capacidade** de terminar — `regular`, presencial, 8 TA/dia. */
+  readonly cursoSemCapacidade: string;
+  /** Executou MAIS do que o previsto. O antigo `turmaAtrasada`, que nunca estava atrasada. */
+  readonly turmaEmExcesso: string;
   readonly turmaEmDia: string;
+  /** Falta muito e sobra pouco prazo: **esta** é a que o `RF-INI-01` manda sinalizar. */
+  readonly turmaSemCapacidade: string;
+  /** O término folgado, em `YYYY-MM-DD` — 30 dias úteis contados de hoje, inclusive. */
+  readonly terminoFolgado: string;
+  /** O término apertado — 2 dias úteis contados de hoje, inclusive. */
+  readonly terminoApertado: string;
 };
 
-/** Dois cursos de classificações e modalidades diferentes, com uma turma cada. */
+/**
+ * A data do enésimo dia útil contado de **hoje, inclusive**.
+ *
+ * ⚠️ **"INCLUSIVE" É A REGRA DA v1.0** (`diasUteis_`, `while d <= ate`, confirmada por Bernardo em
+ * 04/10/2026): pedir 2 numa terça devolve quarta, e `diasUteisEntre` conta as duas pontas. Contar de
+ * amanhã faria a semente e o domínio discordarem em um dia, e o caso reprovaria por aritmética.
+ *
+ * ⚠️ **O "HOJE" VEM DE `hojeNaCiaara()`, A MESMA FUNÇÃO QUE A TELA USA.** Um `new Date()` cru aqui
+ * leria o fuso da máquina e divergiria da aplicação entre 21h e a meia-noite — a terceira fórmula de
+ * "hoje" que esta fatia acabou de eliminar do código.
+ *
+ * ⚠️ **ELE NÃO DESCONTA FERIADO**, e não precisa: ver a folga declarada no cabeçalho.
+ */
+function diaUtilApartirDeHoje(diasUteis: number): string {
+  const dia = new Date(`${hojeNaCiaara()}T12:00:00`);
+  let contados = 0;
+  for (;;) {
+    const semana = dia.getDay();
+    if (semana !== 0 && semana !== 6) contados += 1;
+    if (contados >= diasUteis) break;
+    dia.setDate(dia.getDate() + 1);
+  }
+  const mes = String(dia.getMonth() + 1).padStart(2, "0");
+  const data = String(dia.getDate()).padStart(2, "0");
+  return `${dia.getFullYear()}-${mes}-${data}`;
+}
+
+/** Três cursos de classificações e modalidades diferentes, com uma turma cada. */
 export async function semearPanorama(processo: number): Promise<PanoramaSemeado> {
   const s = `E2E${processo}`;
   const semeado: PanoramaSemeado = {
     cursoRegular: `CUR-${s}-REG`,
-    cursoExpedito: `CUR-${s}-EXP`,
+    /*
+     * ⚠️ **A SIGLA DO CURSO EAD MUDOU DE `-EXP` PARA `-EAD` EM 04/10/2026, E ISSO NÃO É ENFEITE.** O
+     *    regime dele passou a declarar `limite_diario_ead_horas`, e **curso não é apagável** (regra
+     *    9.1): a semente é idempotente e REAPROVEITA o curso que já existe, então uma máquina que já
+     *    rodou a versão antiga ficaria com o regime velho — sem limite EAD — e o caso da capacidade
+     *    reprovaria **só no local**, passando no CI, que sempre nasce de um `db reset`. É o modo de
+     *    falha do gotcha 8, e trocar a sigla é o conserto honesto: o curso novo nasce com o regime
+     *    certo nos dois ambientes.
+     */
+    cursoExpedito: `CUR-${s}-EAD`,
+    cursoSemCapacidade: `CUR-${s}-CAP`,
     // ⚠️ O código da turma é `sigla [rótulo] ano` (`FR-025.1` da spec 009) — aqui sem rótulo, que é
     // ausência legítima em turma única. A partir da migration 3 daquela fatia o banco o GERA, e
     // recusa qualquer valor divergente; a amostra passa a escrever o mesmo que o banco escreveria.
-    turmaAtrasada: `CUR-${s}-REG 2026`,
-    turmaEmDia: `CUR-${s}-EXP 2026`,
+    turmaEmExcesso: `CUR-${s}-REG 2026`,
+    turmaEmDia: `CUR-${s}-EAD 2026`,
+    turmaSemCapacidade: `CUR-${s}-CAP 2026`,
+    terminoFolgado: diaUtilApartirDeHoje(30),
+    terminoApertado: diaUtilApartirDeHoje(2),
   };
 
   await limparPanorama(semeado);
@@ -77,6 +150,13 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
       modalidade: "ead",
       duracao_dias: 10,
     },
+    {
+      codigo: semeado.cursoSemCapacidade,
+      nome_curso: `Curso sem capacidade de percurso ${processo}`,
+      classificacao: "regular",
+      modalidade: "presencial",
+      duracao_dias: 60,
+    },
   ]) {
     const { data: existe } = await admin()
       .from("cursos")
@@ -84,11 +164,20 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
       .eq("codigo", linha.codigo)
       .maybeSingle();
     if (existe) continue;
+    /*
+     * ⚠️ **O REGIME EAD É OUTRO, E O BANCO O EXIGE ASSIM** (`CHECK` de `20260908085000`): curso a
+     *    distância não tem tempo de aula presencial, então `regime_tempos = 0` e `ta_duracao_min = 0`
+     *    **só** passam com `limite_diario_ead_horas` preenchido. É esse campo que vira a capacidade
+     *    diária da turma EAD (`RN-MAT-04`) — e é por ele que o `turmaEmDia` deixa de depender do
+     *    regime presencial que ela nunca usou.
+     */
+    const ead = linha.modalidade === "ead";
     const { error: erroCurso } = await admin().rpc("criar_curso_com_regime", {
       p_curso: linha,
       p_regime: {
-        regime_tempos: 8,
-        ta_duracao_min: 45,
+        regime_tempos: ead ? 0 : 8,
+        ta_duracao_min: ead ? 0 : 45,
+        limite_diario_ead_horas: ead ? 4 : null,
         intervalo_manha_min: 10,
         intervalo_tarde_min: 10,
         hora_inicio_manha: "07:30",
@@ -102,7 +191,7 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
   const { data: cursos } = await admin()
     .from("cursos")
     .select("id, codigo")
-    .in("codigo", [semeado.cursoRegular, semeado.cursoExpedito]);
+    .in("codigo", [semeado.cursoRegular, semeado.cursoExpedito, semeado.cursoSemCapacidade]);
 
   const id = (codigo: string) => cursos?.find((c) => c.codigo === codigo)?.id as string;
 
@@ -123,6 +212,19 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
         nome_disciplina: "Disciplina de percurso (expedito)",
         carga_horaria_tempos: 50,
       },
+      /*
+       * ⚠️ **100 TA PREVISTOS CONTRA 10 EXECUTADOS É O QUE FAZ A TERCEIRA TURMA ACUSAR ATRASO.** O
+       *    restante fica em 90, e a capacidade até o término apertado é de 16 TA (2 dias × 8).
+       *    Nenhuma dessas duas grandezas existia na semente antiga — o indicador velho olhava só
+       *    `previstos − executados`, e 90 positivos **não** o faziam disparar.
+       */
+      {
+        codigo: `DIS-${s}-CAP`,
+        curso_id: id(semeado.cursoSemCapacidade),
+        cod_disciplina: "PERC-03",
+        nome_disciplina: "Disciplina de percurso (sem capacidade)",
+        carga_horaria_tempos: 100,
+      },
     ])
     .select("id, codigo");
   if (erroDisciplinas) throw new Error(`falha ao semear disciplinas: ${erroDisciplinas.message}`);
@@ -130,7 +232,7 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
   const { data: disciplinas } = await admin()
     .from("disciplinas")
     .select("id, codigo, curso_id")
-    .in("codigo", [`DIS-${s}-REG`, `DIS-${s}-EXP`]);
+    .in("codigo", [`DIS-${s}-REG`, `DIS-${s}-EXP`, `DIS-${s}-CAP`]);
 
   /*
    * ⚠️ TRÊS CATRACAS DO ÉPICO 2 MORDEM AQUI, e nenhuma delas é lacuna:
@@ -182,6 +284,14 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
         topico: "Unidade de percurso (expedito)",
         ch_prevista_tempos: 50,
       },
+      {
+        codigo: `UE-${s}-CAP`,
+        disciplina_id: disciplina(`DIS-${s}-CAP`)?.id,
+        curso_id: id(semeado.cursoSemCapacidade),
+        numero_ue: 1,
+        topico: "Unidade de percurso (sem capacidade)",
+        ch_prevista_tempos: 100,
+      },
     ])
     .select("id, codigo");
   if (erroUnidades) throw new Error(`falha ao semear unidades: ${erroUnidades.message}`);
@@ -191,12 +301,20 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
   const { data: turmas, error: erroTurmas } = await admin()
     .from("turmas")
     .insert([
+      /*
+       * ⚠️ **A DATA DE TÉRMINO PASSOU A SER OBRIGATÓRIA NESTA SEMENTE, porque é dela que sai a
+       *    CAPACIDADE.** Turma sem término não tem intervalo, e o andamento sai `sem_termino` — sem
+       *    veredito de atraso nenhum (`FR-026.1`). Antes de 04/10/2026 as duas turmas nasciam sem
+       *    término e o painel ainda dizia *"em atraso"*: é a prova de que ele não lia a data.
+       */
       {
-        codigo: semeado.turmaAtrasada,
+        codigo: semeado.turmaEmExcesso,
         curso_id: id(semeado.cursoRegular),
         ano_letivo: 2026,
         status: "ativa",
         modalidade: "presencial",
+        data_inicio: "2026-03-02",
+        data_termino: semeado.terminoFolgado,
       },
       {
         codigo: semeado.turmaEmDia,
@@ -204,6 +322,17 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
         ano_letivo: 2026,
         status: "ativa",
         modalidade: "ead",
+        data_inicio: "2026-03-02",
+        data_termino: semeado.terminoFolgado,
+      },
+      {
+        codigo: semeado.turmaSemCapacidade,
+        curso_id: id(semeado.cursoSemCapacidade),
+        ano_letivo: 2026,
+        status: "ativa",
+        modalidade: "presencial",
+        data_inicio: "2026-03-02",
+        data_termino: semeado.terminoApertado,
       },
     ])
     .select("id, codigo, curso_id");
@@ -212,8 +341,11 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
   const turma = (codigo: string) => turmas?.find((t) => t.codigo === codigo);
 
   /*
-   * 12 tempos executados contra 10 previstos na turma regular: saldo NEGATIVO e turma ativa, que é
-   * a definição de atraso do `RF-INI-01`. E 10 contra 50 na expedita: saldo positivo.
+   * ⚠️ **12 EXECUTADOS CONTRA 10 PREVISTOS É EXCESSO, E NÃO ATRASO** — ver a tabela do cabeçalho. Os
+   *    três lançamentos abaixo produzem as três execuções: 12 TA na turma em excesso, 10 na EAD (de
+   *    50 previstos) e 10 na apertada (de 100 previstos).
+   * ⚠️ **NENHUM LANÇAMENTO PASSA DE 12 TEMPOS**, pela catraca `reg_aula_tempos_positivos`: não existe
+   *    lançamento de 120 tempos, e sim vários dias de aula.
    */
   const { error: erroRegistros } = await admin()
     .from("registros_aula")
@@ -221,8 +353,8 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
       {
         codigo: `REG-${s}-01`,
         data: "2026-03-02",
-        turma_id: turma(semeado.turmaAtrasada)?.id,
-        curso_id: turma(semeado.turmaAtrasada)?.curso_id,
+        turma_id: turma(semeado.turmaEmExcesso)?.id,
+        curso_id: turma(semeado.turmaEmExcesso)?.curso_id,
         instrutor_id: instrutor.id,
         unidade_ensino_id: unidade(`UE-${s}-REG`),
         tempos_consumidos: 6,
@@ -230,8 +362,8 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
       {
         codigo: `REG-${s}-02`,
         data: "2026-03-03",
-        turma_id: turma(semeado.turmaAtrasada)?.id,
-        curso_id: turma(semeado.turmaAtrasada)?.curso_id,
+        turma_id: turma(semeado.turmaEmExcesso)?.id,
+        curso_id: turma(semeado.turmaEmExcesso)?.curso_id,
         instrutor_id: instrutor.id,
         unidade_ensino_id: unidade(`UE-${s}-REG`),
         tempos_consumidos: 6,
@@ -243,6 +375,15 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
         curso_id: turma(semeado.turmaEmDia)?.curso_id,
         instrutor_id: instrutor.id,
         unidade_ensino_id: unidade(`UE-${s}-EXP`),
+        tempos_consumidos: 10,
+      },
+      {
+        codigo: `REG-${s}-04`,
+        data: "2026-03-04",
+        turma_id: turma(semeado.turmaSemCapacidade)?.id,
+        curso_id: turma(semeado.turmaSemCapacidade)?.curso_id,
+        instrutor_id: instrutor.id,
+        unidade_ensino_id: unidade(`UE-${s}-CAP`),
         tempos_consumidos: 10,
       },
     ]);
@@ -260,7 +401,18 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
  */
 export async function limparPanorama(semeado: PanoramaSemeado | undefined): Promise<void> {
   if (!semeado) return;
-  const codigos = [semeado.cursoRegular, semeado.cursoExpedito];
+  /*
+   * ⚠️ **A SIGLA ANTIGA ENTRA NA LIMPEZA, E NÃO NA SEMEADURA.** `CUR-…-EXP` foi o código do curso EAD
+   *    até 04/10/2026; numa máquina que rodou a versão anterior há turma, disciplina e lançamento
+   *    pendurados nele, e a turma velha apareceria no panorama ao lado das três novas. O curso em si
+   *    **fica** — ele não é apagável (regra 9.1) —, e vazio ele é inerte.
+   */
+  const codigos = [
+    semeado.cursoRegular,
+    semeado.cursoExpedito,
+    semeado.cursoSemCapacidade,
+    semeado.cursoExpedito.replace("-EAD", "-EXP"),
+  ];
   const { data: cursos } = await admin().from("cursos").select("id").in("codigo", codigos);
   const ids = (cursos ?? []).map((c) => c.id);
 

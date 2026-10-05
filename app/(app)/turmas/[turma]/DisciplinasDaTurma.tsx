@@ -26,6 +26,7 @@
 "use client";
 
 import { TabelaDensa, type Coluna } from "@/components/ciaara/tabela-densa";
+import { percentualExecutado } from "@/lib/dominio/andamento-da-turma";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import {
   indicadoresDaGrade,
@@ -99,6 +100,37 @@ function colunas(
       valor: (l) => l.cargaHorariaTempos,
       celula: (l) => l.cargaHorariaTempos,
     },
+    /*
+     * ⚠️ **AS DUAS COLUNAS NOVAS SÃO DO PR 3, E ELAS RESPONDEM A PERGUNTA QUE A GRADE NÃO RESPONDIA:**
+     *    *"quanto desta disciplina já foi dado nesta turma?"*. O número vem de `temposExecutados`,
+     *    que `vw_disciplinas_execucao` soma dos **lançamentos** (`RN-CRONOS-01`) — nada aqui planeja.
+     */
+    {
+      chave: "executada",
+      titulo: "CH executada (TA)",
+      numerica: true,
+      ordenavel: true,
+      valor: (l) => l.temposExecutados,
+      celula: (l) => l.temposExecutados,
+    },
+    {
+      chave: "percentual",
+      titulo: "%",
+      numerica: true,
+      ordenavel: true,
+      /*
+       * ⚠️ **SEM DENOMINADOR A ORDENAÇÃO PRECISA DE UM NÚMERO, E ELE É `-1` DE PROPÓSITO:** o
+       *    percentual **não existe** quando a CH prevista é zero, e `0` o faria ordenar junto com a
+       *    disciplina que tem previsão e não começou. `-1` o manda para o extremo, onde a ausência
+       *    fica visível em vez de se misturar com o zero.
+       */
+      valor: (l) => percentualExecutado(l.cargaHorariaTempos, l.temposExecutados) ?? -1,
+      celula: (l) => {
+        const pct = percentualExecutado(l.cargaHorariaTempos, l.temposExecutados);
+        /* veste: dica de ausência — a disciplina sem CH prevista não tem percentual, e não tem 0 % */
+        return pct === null ? <span className="text-texto-tenue">—</span> : `${pct} %`;
+      },
+    },
     {
       chave: "periodo",
       titulo: "Período previsto",
@@ -171,6 +203,7 @@ export function DisciplinasDaTurma({
   avisoInicioDias,
   hoje,
   abertaNoEndereco,
+  executadaDaTurma,
 }: {
   readonly linhas: readonly LinhaDaGradeDeDisciplinas[];
   readonly turmaCodigo: string;
@@ -180,6 +213,11 @@ export function DisciplinasDaTurma({
   readonly avisoInicioDias: number;
   readonly hoje: string;
   readonly abertaNoEndereco: string;
+  /**
+   * A CH executada da **turma inteira**, de `vw_carga_horaria_turma` — a mesma que a seção Andamento
+   * mostra. Ela entra aqui para o rodapé poder dizer **quanto não aparece** por disciplina.
+   */
+  readonly executadaDaTurma: number;
 }) {
   /*
    * ⚠️ **`aberta` VEM DO GANCHO, NUNCA DA PROPRIEDADE DO SERVIDOR, e isso foi medido na fatia (b):**
@@ -204,6 +242,13 @@ export function DisciplinasDaTurma({
     })),
     hoje,
   );
+
+  /*
+   * ⚠️ **A DIFERENÇA É SUBTRAÇÃO DE DUAS LEITURAS, E NÃO UMA REGRA**: o total da turma menos o que
+   *    as disciplinas conseguem explicar. Ela não mora em `lib/dominio/` porque não há regra a
+   *    preservar aqui — há duas views com grãos diferentes, e a tela diz qual é o resto.
+   */
+  const semUnidadeDeEnsino = Math.max(executadaDaTurma - indicadores.chCumpridaTempos, 0);
 
   return (
     <div className="flex flex-col gap-2">
@@ -267,6 +312,45 @@ export function DisciplinasDaTurma({
           )
         }
       />
+
+      {/*
+        ⚠️ **O RODAPÉ EXISTE PARA SER CONFERIDO CONTRA A SEÇÃO ANDAMENTO** (`SC-005`, cenário 7): as
+           duas partes da tela somam execução por caminhos diferentes, e quem olha tem direito de
+           comparar uma com a outra sem abrir o banco.
+        ⚠️ **ELAS PODEM NÃO FECHAR POR DOIS MOTIVOS DE DESENHO, E OS DOIS ESTÃO MEDIDOS** — nenhum
+           deles é defeito, e é por isso que o rótulo diz **«nesta grade»**:
+
+           | Diferença | Por quê |
+           |---|---|
+           | a **prevista** do Andamento é maior | `vw_carga_horaria_turma.chr_curricular` soma a CH de **todas as disciplinas ativas do CURSO** (medido na definição da view, 04/10/2026), e a grade desta turma pode não ter todas — a base real tem 210 linhas de `turma_disciplina` para 175 disciplinas em 28 turmas |
+           | a **executada** por disciplina é menor | `vw_disciplinas_execucao` soma por **unidade de ensino**, e lançamento com `unidade_ensino_id` nula entra no total da turma e **não** entra em disciplina nenhuma. As 1.566 linhas do ETL estão nesse estado, ratificado por Bernardo em 08/09/2026 (*"o ETL deve ser o retrato fiel da origem, sem preenchimentos inventados"*) |
+
+        ⚠️ **A SEGUNDA É DITA NA TELA, COM O NÚMERO; A PRIMEIRA, NO RÓTULO.** Preencher a UE é a
+           aplicação do cruzamento, pendência do Épico 2 — não desta fatia —, e inventar uma regra
+           para a primeira seria criar regra de negócio nova, que este épico não faz.
+        ⚠️ **A FRASE SÓ APARECE COM DIFERENÇA POSITIVA.** Diferença negativa seria soma por
+           disciplina maior que a da turma, que não é o caso conhecido; afirmar sobre ela aqui seria
+           inventar explicação para o que não foi medido.
+        ⚠️ **E O CASO POSITIVO DELA NÃO É SEMEÁVEL EM TESTE:** a catraca `reg_aula_ue_so_nula_no_historico`
+           **recusa** lançamento novo sem unidade de ensino, de propósito, e só as linhas migradas a
+           têm nula. Ele se observa no banco **local**, com a carga do ETL — está no roteiro de
+           conferência do PR 3.
+      */}
+      <p className="text-texto-suave text-sm" data-slot="rodape-das-disciplinas">
+        {/* veste: rótulo da soma; o número ao lado é dado */}
+        <span className="text-texto-tenue">Σ nesta grade — CH prevista:</span>{" "}
+        <span data-rodape="prevista">{indicadores.chPrevistaTempos}</span> TA
+        {" · "}
+        {/* veste: rótulo da soma; o número ao lado é dado */}
+        <span className="text-texto-tenue">CH executada:</span>{" "}
+        <span data-rodape="executada">{indicadores.chCumpridaTempos}</span> TA
+      </p>
+
+      {semUnidadeDeEnsino > 0 ? (
+        <p className="text-alerta text-sm" data-slot="lancamentos-sem-unidade">
+          {semUnidadeDeEnsino} TA lançados sem unidade de ensino não aparecem por disciplina.
+        </p>
+      ) : null}
     </div>
   );
 }

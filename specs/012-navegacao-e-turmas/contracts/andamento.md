@@ -71,19 +71,37 @@ Capacidade diária  8 TA/dia · 15 dias úteis até 20/11/2026   [data-andamento
 | `calculada`, saldo < 0, não ativa | tudo acima, **sem** badge (concluída/cancelada/planejada) |
 | `sem_termino` | prevista, executada, progresso; no lugar do saldo: *"Sem data de término — informe-a para calcular o saldo."* |
 | `sem_regime` | prevista, executada, progresso; no lugar do saldo: *"Sem dado de capacidade — o curso não tem regime vigente para a modalidade desta turma."* |
-| `semLancamentos` | *"Ainda sem lançamentos."* no lugar do progresso e do saldo; prevista presente |
+| `semLancamentos` | *"Ainda sem lançamentos."* no lugar do **progresso**; prevista, saldo e tarja presentes |
 | `percentual: null` | *"O curso não tem carga curricular lançada em disciplinas."* |
 
 Nenhum estado bloqueia a edição da ficha (`FR-033`).
 
+⚠️ **EMENDA DE 04/10/2026, NA IMPLEMENTAÇÃO DA T037:** a linha de `semLancamentos` dizia *"no lugar do
+progresso **e do saldo**"*, e o saldo ficou. O motivo é do desenho da própria fórmula: `saldo =
+capacidade − restante`, e `restante` é a **prevista inteira** quando nada foi lançado — ou seja, a
+turma que ainda não começou é precisamente a que pode já estar sem capacidade para terminar. Esconder
+o número e mostrar a tarja *"em atraso"* embaixo diria o veredito sem dizer de quanto. O progresso
+continua escondido: ali `0 %` seria afirmação sobre execução, e é o que o `FR-029` recusa.
+
 ## 3. A seção Disciplinas ganha duas colunas (PR 3)
 
 Por disciplina: **CH executada** (`temposExecutados`) e **%** (`round(100·exec/prev)`, `—` se prevista
-zero). Rodapé: Σ prevista e Σ executada **reconciliam** com a seção Andamento — `SC-005` cenário 7.
-⚠️ Elas podem **não** reconciliar por desenho quando há lançamento sem `unidade_ensino_id` (as 1.566
-linhas do ETL têm UE nula — `vw_disciplinas_execucao` soma por UE, `vw_carga_horaria_turma` soma por
-turma). A tela diz, nesse caso: *"N TA lançados sem unidade de ensino não aparecem por disciplina."*
-É reportado, não corrigido: preencher a UE é a aplicação do cruzamento, pendência do Épico 2.
+zero). Rodapé: Σ prevista e Σ executada **da grade desta turma**, para serem conferidas contra a seção
+Andamento — `SC-005` cenário 7.
+
+⚠️ **EMENDA DE 04/10/2026, NA IMPLEMENTAÇÃO DA T038.** Esta seção dizia que as somas *"reconciliam"*,
+e **elas podem divergir por DOIS motivos de desenho**, não um:
+
+| Diferença | Causa medida |
+|---|---|
+| a **prevista** do Andamento é maior | `chr_curricular` soma a CH de **todas as disciplinas ativas do CURSO** (lido na definição de `vw_carga_horaria_turma`), e a grade da turma pode não ter todas — 210 linhas de `turma_disciplina` para 175 disciplinas em 28 turmas |
+| a **executada** por disciplina é menor | `vw_disciplinas_execucao` soma por **unidade de ensino** e `vw_carga_horaria_turma` por **turma**: lançamento com `unidade_ensino_id` nula entra no total e não aparece por disciplina (as 1.566 linhas do ETL) |
+
+A segunda é dita na tela, com o número: *"N TA lançados sem unidade de ensino não aparecem por
+disciplina."* A primeira é dita no **rótulo** (*"Σ nesta grade"*). ⚠️ **O caso positivo da frase não é
+semeável:** a catraca `reg_aula_ue_so_nula_no_historico` recusa lançamento novo sem UE, então ele só
+se observa no banco **local**, com a carga do ETL — e está no roteiro de conferência do PR 3.
+Preencher a UE é a aplicação do cruzamento, pendência do Épico 2.
 
 ## 4. `/inicio` — o que muda e o que não muda
 

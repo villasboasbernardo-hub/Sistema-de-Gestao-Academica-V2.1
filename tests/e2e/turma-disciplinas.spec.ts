@@ -292,3 +292,64 @@ test.describe("`FR-041` · os cinco casos do rateio, na seção da turma", () =>
     await expect(page.getByRole("radio", { name: /unidades de ensino/ })).toHaveCount(0);
   });
 });
+
+test.describe("`FR-028`, `SC-005` · a execução POR DISCIPLINA, e o rodapé que se confere", () => {
+  /*
+   * ⚠️ **AS DUAS COLUNAS SÃO DO PR 3, E ELAS RESPONDEM A PERGUNTA QUE A GRADE NÃO RESPONDIA:**
+   *    *"quanto desta disciplina já foi dado NESTA turma?"*. A CH prevista já estava ali desde a
+   *    fatia (b); o que faltava era a executada ao lado dela, que é o que transforma a tabela em
+   *    acompanhamento.
+   * ⚠️ **ESTA AMOSTRA NÃO TEM LANÇAMENTO NENHUM, e é o que torna o caso útil:** as colunas existem
+   *    com zero, e o rodapé soma zero — o estado em que uma turma começa, e o estado em que uma
+   *    implementação que não lê execução **também** fica. O caso que distingue os dois é o da
+   *    `andamento.spec.ts` sobre `turmaJanelaCedo` (6 de 20 TA, 30 %), onde o número não é zero.
+   */
+  test("cada linha mostra CH executada e %, ao lado da prevista", async ({ page }) => {
+    await irASecaoDaTurma(page, CODIGO_DA_TURMA_UM);
+
+    const secao = page.locator(SECAO);
+    await expect(secao.getByRole("columnheader", { name: /CH prevista/ })).toBeVisible();
+    await expect(secao.getByRole("columnheader", { name: /CH executada/ })).toBeVisible();
+    /*
+     * ⚠️ **O NOME ACESSÍVEL DO CABEÇALHO NÃO É SÓ O TÍTULO, e `exact` reprovou por isso** (medido em
+     *    04/10/2026): coluna ordenável carrega um texto `sr-only` — *"ordenável: pressione Enter…"* —
+     *    que entra no nome, porque é ele que torna a ordenação audível. O casamento é pelo começo.
+     */
+    await expect(secao.getByRole("columnheader", { name: /^%/ })).toBeVisible();
+
+    /*
+     * ⚠️ **A LINHA É LIDA PELO NOME DA DISCIPLINA, e a célula pelo papel** — procurar o texto "0 %"
+     *    na seção casaria com qualquer linha e com o rodapé.
+     */
+    const linha = secao.getByRole("row", { name: new RegExp(DISCIPLINA_COM_UE.nome) });
+    await expect(linha).toContainText(String(DISCIPLINA_COM_UE.ch));
+    await expect(linha).toContainText("0 %");
+  });
+
+  test("⚠️ o rodapé soma A GRADE desta turma — e o rótulo diz isso", async ({ page }) => {
+    /*
+     * ⚠️ **A SOMA DO RODAPÉ NÃO É A CH PREVISTA DO ANDAMENTO, E A DIFERENÇA É DE DESENHO.** A grade
+     *    desta turma tem duas disciplinas (10 + 12 = 22 TA); o currículo do curso tem **três** — a
+     *    `DISCIPLINA_LIMPA`, de 4 TA, fica fora de turma nenhuma de propósito (é a única excluível).
+     *    E `chr_curricular` soma **o currículo do curso**, medido na definição da view: 26 TA.
+     *    Chamar isso de reconciliação, como o contrato chamava, era afirmar o que não se mede.
+     */
+    await irASecaoDaTurma(page, CODIGO_DA_TURMA_UM);
+
+    const rodape = page.locator('[data-slot="rodape-das-disciplinas"]');
+    await expect(rodape).toContainText("nesta grade");
+    await expect(rodape.locator('[data-rodape="prevista"]')).toHaveText(
+      String(DISCIPLINA_COM_UE.ch + DISCIPLINA_SEM_UE.ch),
+    );
+    await expect(rodape.locator('[data-rodape="executada"]')).toHaveText("0");
+
+    /*
+     * ⚠️ **O AVISO DOS LANÇAMENTOS SEM UNIDADE DE ENSINO NÃO APARECE AQUI, E NÃO PODERIA APARECER:**
+     *    a catraca `reg_aula_ue_so_nula_no_historico` **recusa** lançamento novo sem UE, então
+     *    nenhuma semente consegue produzir a diferença — só as 1.566 linhas migradas do ETL a têm
+     *    nula. O caso positivo dele está no roteiro de conferência do PR 3, sobre o banco local
+     *    carregado. **Afirmar aqui que ele aparece seria afirmar sobre o que não foi medido.**
+     */
+    await expect(page.locator('[data-slot="lancamentos-sem-unidade"]')).toHaveCount(0);
+  });
+});
