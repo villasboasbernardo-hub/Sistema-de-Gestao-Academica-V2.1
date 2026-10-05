@@ -528,22 +528,33 @@ $$, 'RNF-NORM-08 · todo parametro normativo do DSA nomeia a norma que o sustent
 select is(
   (select count(*)::int from public.config_listas
     where lista = 'metodologias' and metadados ? 'sigla'),
-  9,
-  'H1 · NOVE siglas na lista `metodologias` QUE JA EXISTIA — nenhuma lista nova, nenhuma segunda verdade'
+  10,
+  'H1 · DEZ siglas na lista `metodologias` QUE JA EXISTIA — nenhuma lista nova, nenhuma segunda verdade'
 );
 
 select results_eq($$
   select valor, metadados ->> 'sigla' from public.config_listas
-   where lista = 'metodologias' and metadados ->> 'sigla' in ('EO', 'AP', 'PP')
+   where lista = 'metodologias' and metadados ->> 'sigla' in ('EO', 'AP', 'PP', 'PE')
    order by metadados ->> 'sigla'
-$$, $$values ('Aula Prática', 'AP'), ('Exposição Oral', 'EO'), ('Prova Prática', 'PP')$$,
-  'H1 · as tres siglas que caem em linha JA EXISTENTE casam pelo valor COM ACENTO');
+$$, $$values ('Aula Prática', 'AP'), ('Exposição Oral', 'EO'), ('Prova Escrita', 'PE'),
+             ('Prova Prática', 'PP')$$,
+  'H1 · as QUATRO siglas que caem em linha JA EXISTENTE casam pelo valor COM ACENTO');
 
--- ⚠️ `PE` fica de fora por decisao de Bernardo, e esta assercao e o que impede alguem de
---    "completar" a lista sem a palavra dele.
-select is_empty($$
-  select valor from public.config_listas where lista = 'metodologias' and metadados ->> 'sigla' = 'PE'
-$$, 'H1 · `PE` NAO entra — fica de fora ate Bernardo confirmar o nome');
+-- ⚠️ **A ASSERCAO DO `PE` VIROU DE LADO EM 05/10/2026, e o registro e o que importa.** Ela era:
+--
+--        select is_empty($$ select valor from public.config_listas
+--          where lista = 'metodologias' and metadados ->> 'sigla' = 'PE' $$,
+--          'H1 · `PE` NAO entra — fica de fora ate Bernardo confirmar o nome');
+--
+--    Eu a escrevi com a justificativa de que *"nenhum lancamento a usa hoje"* — **e isso estava
+--    errado**: `Prova Escrita` tem **67 usos** na origem, o segundo valor mais usado de
+--    `Avaliacoes.Metodologia`. Bernardo confirmou o nome (F-4), e agora a assercao cobra o
+--    VINCULO, nao a ausencia: `PE` tem de estar em `Prova Escrita` e em mais nada.
+select results_eq($$
+  select valor from public.config_listas
+   where lista = 'metodologias' and metadados ->> 'sigla' = 'PE'
+$$, $$values ('Prova Escrita')$$,
+  'F-4 · `PE` e de `Prova Escrita`, e de nenhum outro valor — 67 usos na origem, decisao de 05/10/2026');
 
 select is(
   (select count(*)::int from public.config_listas

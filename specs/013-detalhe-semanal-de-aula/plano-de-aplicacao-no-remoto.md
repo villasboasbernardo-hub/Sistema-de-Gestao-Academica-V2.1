@@ -31,7 +31,7 @@ verdade* do `CLAUDE.md`). **É ela que diz se o push vai passar**, e o veredito 
 | **D** | atividades `Estudo_Individual` com escopo **diferente** de `turma` | **0** | ✅ o `CHECK` do V-5 passa sobre as **531** linhas de Estudo Individual |
 | **F** | atividades de escopo **global** hoje | **0** | ✅ a correção do V-7 não muda número nenhum **agora** — e é exatamente por isso que ela é barata hoje e caríssima depois da primeira global |
 | **K** | `registros_aula.disciplina_id` já existe? | **0** | ✅ a coluna é nova; não há conflito de nome |
-| **H** | `config_listas.metodologias` / com sigla | **16 / 0** | a semente fará **3 `update` + 6 `insert`** → 22, dos quais 9 com sigla e **13 sem** (o número que você fixou na H1) |
+| **H** | `config_listas.metodologias` / com sigla | **16 / 0** | a semente fará **4 `update` + 6 `insert`** → 22, dos quais **10 com sigla** e **12 sem**. ⚠️ Era 3+6 e 9/13 antes da **F-4**, que deu `PE` a `Prova Escrita` — o valor com **67 usos** na origem |
 | **I** | `config_listas.tipos_atividade` / com categoria | **13 / 0** | a semente fará **7 `update` + 3 `insert`** → 16, dos quais 10 com categoria |
 | **J** | `config_parametros` com chave `dsa.*` | **0** | os três parâmetros serão `insert` |
 | **L** | cursos `curriculo_modelo = 'competencias'` | **2** | a isenção alcança **2 de 24** cursos, como a spec diz |
@@ -75,7 +75,7 @@ credencial não é cadastro.
 | 7 | **Zero `DELETE`/`TRUNCATE` novos** | catálogo | **0** policies de `DELETE` no catálogo inteiro; `authenticated` sem `DELETE`/`TRUNCATE` nas duas views |
 | 8 | **A função de conflito** | catálogo | `public.conflitos_da_semana(uuid,date,date)` `SECURITY DEFINER`; `anon` **sem** `execute`; `authenticated` **com** |
 | 9 | **O dado INTACTO** | contagens | `registros_aula` **1.566**, `atividades_nao_letivas` **664**, `avaliacoes` **188**, e **`disciplina_id` nula nas 1.566** — a migration não preenche linha nenhuma |
-| 10 | **As sementes** | contagens | `metodologias` **22** (9 com sigla), `tipos_atividade` **16** (10 com categoria), `config_parametros dsa.*` **3** |
+| 10 | **As sementes** | contagens | `metodologias` **22** (**10** com sigla, `PE` em `Prova Escrita`), `tipos_atividade` **16** (10 com categoria), `config_parametros dsa.*` **3** |
 | 11 | **`Licença de Pagamento` sem categoria** | catálogo | **0** linhas — ela vem do calendário (Q-16), não do DSA |
 | 12 | **O comentário da E-1** | `obj_description` | contém *"NAO descontam nada"* e **não** contém *"`parcial` reduz;"* |
 | 13 | **Production respondendo** | HTTP | `/login` **200**, rotas protegidas **307** — como antes |

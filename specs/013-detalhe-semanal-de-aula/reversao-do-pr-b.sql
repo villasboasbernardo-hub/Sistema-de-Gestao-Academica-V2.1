@@ -16,7 +16,7 @@ delete from public.config_listas
         ('metodologias','Observação de Desempenho'), ('metodologias','Trabalho Individual'),
         ('metodologias','Trabalho em Grupo'), ('metodologias','Estudo Individual'),
         ('metodologias','Exposição Oral'), ('metodologias','Aula Prática'),
-        ('metodologias','Prova Prática'),
+        ('metodologias','Prova Prática'), ('metodologias','Prova Escrita'),
         ('tipos_atividade','Visita Técnica'), ('tipos_atividade','Estudo Individual'),
         ('tipos_atividade','Monitoria'), ('tipos_atividade','Palestra'),
         ('tipos_atividade','Atividade Extracurricular'), ('tipos_atividade','Orientação de TFM'),

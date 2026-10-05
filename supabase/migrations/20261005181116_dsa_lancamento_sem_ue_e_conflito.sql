@@ -82,7 +82,8 @@
 --      and (lista, valor) in (('metodologias','Prova Mista'), ('metodologias','Prova Objetiva'),
 --           ('metodologias','Observação de Desempenho'), ('metodologias','Trabalho Individual'),
 --           ('metodologias','Trabalho em Grupo'), ('metodologias','Estudo Individual'),
---           ('metodologias','Prova Prática'), ('metodologias','Exposição Oral'),
+--           ('metodologias','Prova Prática'), ('metodologias','Prova Escrita'),
+--           ('metodologias','Exposição Oral'),
 --           ('metodologias','Aula Prática'), ('tipos_atividade','Visita Técnica'),
 --           ('tipos_atividade','Estudo Individual'), ('tipos_atividade','Monitoria'),
 --           ('tipos_atividade','Palestra'), ('tipos_atividade','Atividade Extracurricular'),
@@ -586,15 +587,22 @@ select t.chave, t.valor, 'inteiro', t.natureza, t.fundamento, t.descricao
 --          e mostrou que `config_listas.metodologias` ja existe com 16 linhas e nenhuma
 --          sigla — a lista nova seria SEGUNDA FONTE DE VERDADE do mesmo conceito. Decisao
 --          de Bernardo: sem lista nova.
---       ⚠️ Treze das linhas ficam SEM sigla e imprimem o nome POR EXTENSO na coluna T/E
---          (RN-DEG-01). `PE` fica de fora ate Bernardo confirmar o nome, e nenhum
---          lancamento a usa hoje (medido em `tipo_avaliacao`).
+--       ⚠️ DOZE das linhas ficam SEM sigla e imprimem o nome POR EXTENSO na coluna T/E
+--          (RN-DEG-01).
+--       ⚠️ **`PE` = `Prova Escrita`, confirmado por Bernardo Villas Boas em 05/10/2026 (F-4).**
+--          A redacao anterior desta nota dizia que `PE` ficava de fora *"ate Bernardo confirmar
+--          o nome"* e que *"nenhum lancamento a usa hoje"* — **a segunda metade estava errada, e
+--          a medicao e o que decidiu o nome**: `Prova Escrita` tem **67 usos** na origem
+--          (`Avaliacoes.Metodologia` do retrato de 08/09/2026), e e o valor MAIS usado depois de
+--          `Vista de Prova`. Ela ja vive na lista, posta la pela semeadura de vocabulario do
+--          proprio ETL, e sem sigla sairia por extenso justamente na coluna T/E das 67.
 insert into public.config_listas (lista, valor, rotulo_exibicao, ordem, ativo, metadados)
 select 'metodologias', t.valor, t.valor, t.ordem, true, jsonb_build_object('sigla', t.sigla)
   from (values
     ('Exposição Oral',           901::smallint, 'EO'),
     ('Aula Prática',             902::smallint, 'AP'),
     ('Prova Prática',            903::smallint, 'PP'),
+    ('Prova Escrita',            910::smallint, 'PE'),
     ('Prova Mista',              904::smallint, 'PM'),
     ('Prova Objetiva',           905::smallint, 'PO'),
     ('Observação de Desempenho', 906::smallint, 'OD'),

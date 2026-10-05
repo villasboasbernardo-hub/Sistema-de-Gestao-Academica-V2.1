@@ -2,7 +2,7 @@
 
 **Veredito: APROVADA**
 
-**Medido contra:** `127.0.0.1:54322/postgres` · **em** 05/10/2026 15:50 -0300
+**Medido contra:** `127.0.0.1:54322/postgres` · **em** 05/10/2026 17:08 -0300
 
 Relatório sem veredito não é aprovação (contrato reconciliacao C-1).
 
@@ -43,7 +43,7 @@ auditoria. Reexecutar a carga com a mesma origem tem de reproduzi-los.
 | `atividades_nao_letivas` | `f270cf17a521c169f23103d69abf985b` |
 | `avaliacoes` | `f9210ca924fe6068b6f71a625e75ba8a` |
 | `avaliacoes_planejadas` | `3561143000e7fe590914feffd0d8a633` |
-| `config_listas` | `59aea6b7684a438b37178afd3be28483` |
+| `config_listas` | `2a9903ede0ff9e3c8954134ca2e07a79` |
 | `config_parametros` | `185ef776a0b78409e50e90826a9bcf45` |
 | `configuracoes_horario` | `b647c78e497c19b7a7a94c58f8e575b8` |
 | `curso_regime_historico` | `94f00d73debd016414ee487d29d1f4db` |
