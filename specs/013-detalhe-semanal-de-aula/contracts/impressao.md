@@ -16,12 +16,13 @@
 | coluna **`<n>` TA** | tempos do bloco | `tempos_consumidos` | número |
 | coluna **UNIDADES DE ENSINO E TÓPICOS** | `UE <numero_ue> — <topico>`, ou o `conteudo_resumo` quando sem UE; em avaliação, o tipo | `unidades_ensino` · `conteudo_resumo` | — |
 | coluna **LOCAL** | **por linha** (`Q-11`) | `registros_aula.local` · `avaliacoes.local`/`local_vista` · `atividades.local` | vazio quando nulo — **não** inventa sala |
-| coluna **T/E** | a **sigla** da técnica (`EO`, `AP`…); em avaliação, o **tipo** (`PM`, `PP`, `PO`, `PE`, `TI`, `TG`, `OD`) | `config_listas.tecnicas_de_ensino.metadados.sigla` · `tipo_avaliacao` | — |
+| coluna **T/E** | a **sigla** da técnica (`EO`, `AP`…); em avaliação, o **tipo** | **`config_listas.metodologias.metadados.sigla`** (a lista que já existe, `H1`) · `tipo_avaliacao` | ⚠️ **linha sem sigla imprime o nome POR EXTENSO** — 13 das 22 ficam assim por decisão, e a coluna é estreita mas legível (`RN-DEG-01`) |
 | coluna **INSTRUTOR/PROFESSOR** | `P/G Especialidade Nome Completo` pelo `NomeInstrutor` **único**; em avaliação, o nome seguido de **`(FISCAL)`**; fiscal externo: o `nome_fiscal_externo` + `(FISCAL)`; atividade: `responsavel_externo` ou o instrutor | `RF-INSTR-15` | nome de guerra em **negrito** |
 | **última linha de cada dia** | `ESTUDO INDIVIDUAL` · T/E `EI` · **sem instrutor** | o lançamento de EI do dia (ou a linha fixa, se não houver — D-4) | — |
 | **Rodapé — linha 1** | `Gerado em: <data hora>` | `instanteComHoraParaLeitura(now)` | `DD/MM/AAAA, HH:MM` |
 | **Rodapé — nota** | `*É FACULTADO AO ALUNO PERMANECER A BORDO PARA ESTUDO INDIVIDUAL.` | texto fixo (`Q-7`) | — |
 | **Rodapé — `ALT <n>`** | **não aparece** nesta fatia (`Q-3` no PR 6) | — | — |
+| **Rodapé — `OBSERVAÇÕES:`** | a linha, **em branco**, para escrever à mão | texto fixo | ⚠️ é o campo que o `RF-DSA-06` e o `RF-PDF-01` exigem **literalmente** e que **nenhum** PDF medido tem. Decisão de Bernardo (`H8`, opção **a**): sai **em branco** — satisfaz o requisito **[PRESERVADO]** sem inventar conteúdo |
 | **Rodapé — efetivo** | `<n> ALUNOS` | `turmas.alunos`; nulo → omitido com aviso **na tela** antes de imprimir | — |
 | **Rodapé — tabela de CH** | `CÓD. \| DISCIPLINA \| CH. PREVISTA \| CH. CUMPRIDA`, **só das disciplinas que aparecem naquela semana** (`SC-014`) | `vw_disciplinas_execucao` (prevista = `carga_horaria_tempos`; cumprida = `ta_executados` **sem corte de data**, `Q-2`) | — |
 | **Rodapé — legenda** | `TÉCNICAS DE ENSINO: EO — Exposição Oral; …`, **só as siglas usadas** (`SC-014`) | a lista | — |
@@ -32,8 +33,10 @@
 - Nenhuma cadeia técnica: `undefined`, `null`, `NaN`, `#REF!`, código de erro, `uuid` (`SC-013`).
 - Nenhum aviso: dado faltante vira aviso **na tela da grade**, ao lado do botão *Imprimir*, **antes**
   de abrir a impressão (`FR-039`). A rota de impressão recebe o que a tela já validou.
-- O **campo de observação** do `RF-DSA-06`/`RF-PDF-01`: **não aparece** — é a divergência listada em
-  `spec.md` §11 item 1 (os PDFs medidos não o têm), backlog por diretriz.
+- ⚠️ *(Vencido em 05/10/2026, pelo `H8` do analyze: o **campo de observação** passou a aparecer, em
+  branco, na linha `OBSERVAÇÕES:` do rodapé. A divergência do `spec.md` §11 item 1 — os PDFs medidos
+  não o têm — fica **registrada**, e a decisão de Bernardo foi satisfazer o requisito literal com uma
+  linha vazia.)*
 
 ## Página: as regras físicas
 

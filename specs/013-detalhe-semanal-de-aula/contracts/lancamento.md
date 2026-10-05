@@ -8,7 +8,7 @@
 
 | Ação | Entrada | Primeira linha | Grava em | Devolve |
 |---|---|---|---|---|
-| `lancar(bloco)` | `Bloco` | `esquemaDoBloco.safeParse` | `registros_aula` · `avaliacoes` · `atividades_nao_letivas` conforme `tipo`; `id` gerado **antes**, `insert` **sem `RETURNING`** | `{ ok: true, id, avisos: Aviso[] } \| { ok: false, mensagem, campo? }` |
+| `lancar(bloco)` | `Bloco` | `esquemaDoBloco.safeParse` | ⚠️ **`podeAtuar()` antes do `insert`** (ver §"O porteiro da habilitação"); depois `registros_aula` · `avaliacoes` · `atividades_nao_letivas` conforme `tipo`; `id` gerado **antes**, `insert` **sem `RETURNING`** | `{ ok: true, id, avisos: Aviso[] } \| { ok: false, mensagem, campo? }` |
 | `lancarEstudoIndividualDaSemana(turmaId, ano, semana)` | ids e a semana ISO | validação dos três | um `atividades_nao_letivas` por dia útil sem feriado `dia_inteiro` e sem EI, no slot **seguinte ao último TA lançado naquele dia** (`D-4`; dia vazio → slot 1), **transação** | `{ ok: true, criados: number, pulados: string[] }` |
 | `mover(fatoId, origem, destino)` | `{ data, taInicial, tempos? }` | `safeParse` | `UPDATE` do **mesmo** `id`; `editado_*` carimbados | `{ ok, avisos }` |
 | `editar(fatoId, origem, bloco)` | `Bloco` parcial | `safeParse` | `UPDATE` do mesmo `id`; **não** toca catálogo | `{ ok, avisos }` |
@@ -23,6 +23,7 @@ Todas: `revalidatePath` da rota do DSA, da ficha da turma e do `/inicio`; recusa
 | `reg_aula_ue_so_nula_no_historico` | *"Esta disciplina tem unidades de ensino: escolha uma."* |
 | `reg_aula_ue_xor_disciplina` | *"Informe a unidade de ensino **ou** a disciplina, não as duas."* |
 | `reg_aula_instrutor_obrigatorio` | *"Aula precisa de instrutor. Atribua um à disciplina nesta turma."* |
+| **`dsa_instrutor_nao_habilitado`** (recusa da Server Action, **não** do banco) | *"NOME não está habilitado em DISCIPLINA. Habilite-o na ficha do instrutor."* — ⚠️ **a Server Action é a ÚNICA defesa**: medido em 05/10/2026, não há FK nem gatilho de habilitação em `registros_aula`/`avaliacoes` (`RN-INST-01`, *Risco: Alto*) |
 | `vigencia_reinterpretaria_lancamento` | *"Esta data já tem lançamento sob outro regime."* |
 | `curso_em_oferta` / `turma_em_oferta` (na policy) | *"Esta turma está fechada para alteração — o curso não está em oferta."* |
 | `sem_alcance` (função de conflito) | `recusaPorAlcance()` — a frase que já existe |
@@ -52,17 +53,39 @@ export const esquemaDoBloco = z.discriminatedUnion("tipo", [
 
 Regras que ficam **no esquema** (não dependem do banco): faixa `1..12` de `taInicial` e `tempos`;
 `data` em `AAAA-MM-DD`; XOR UE/disciplina; fiscal interno XOR externo; EI sempre `escopo: turma`.
+⚠️ **E o `subtipo` é validado contra a lista `tipos_atividade` FILTRADA pela categoria escolhida**
+(`metadados.categoria`, `H2`) — oferecer a lista inteira poria *Aula Teórica* como subtipo de TAD e
+*Licença de Pagamento* como lançável, que a `Q-16` mandou para o calendário.
 Regras que ficam **no banco** (e chegam como recusa traduzida): habilitação (`RN-INST-01`), alcance,
 curso em oferta, a isenção da UE (`app.disciplina_sem_ue`), FKs compostas.
+
+## O porteiro da habilitação — a única defesa que existe
+
+`lancar`, `editar` e `mover` leem `instrutor_disciplina` da dupla (instrutor, disciplina) e chamam
+**`podeAtuar(atuacao, vinculos)`** de `lib/dominio/habilitacao.ts` — módulo que **já existia com zero
+consumidores**. A `EXIGE_HABILITACAO` dele distingue:
+
+| Atuação | Exige habilitação? | Por quê |
+|---|---|---|
+| `ministrar` | **sim** | `RN-INST-01` |
+| `responsavel` | **sim** | `RN-INST-01` |
+| `avaliacao` | **não** | `RN-INST-01` **delimitada** — o Oficial Fiscal é designado pela OM e não precisa ser docente (`RF-AVAL-06`) |
+| `vista_de_prova` | **não** | idem |
+
+⚠️ **Medido em 05/10/2026: o banco não recusa.** Não há FK para `instrutor_disciplina` nem gatilho em
+`registros_aula`/`avaliacoes` — o documento 04 declara *"FK composta"* como mecanismo e ela **não
+existe**. Então a Server Action é a **única** defesa, e o teste negativo prova **pelo valor no banco**
+que nada foi gravado. A FK fica em **backlog**, porque escrevê-la exige medir o histórico primeiro.
 
 ## O pré-preenchimento — `lib/dominio/dsa/pre-preenchimento.ts` (puro) + `consulta.ts`
 
 | Campo | Cascata | Quando cai vazio |
 |---|---|---|
 | `instrutorId` | `turma_disciplina_unidade` (por UE) → `turma_disciplina_instrutor` (por disciplina) → vazio | aviso *"esta disciplina não tem instrutor atribuído nesta turma"* + link |
-| `tecnica` | `unidades_ensino.tecnica_ensino_sugerida` casada com a lista | o seletor abre sem valor |
+| `tecnica` | `unidades_ensino.tecnica_ensino_sugerida` casada com a lista **`metodologias`** (a que já existe, `H1`) | o seletor abre sem valor |
 | `local` | `turmas.sala_alocada` | vazio, sem inventar sala |
 | `conteudo` | `unidades_ensino.topico` | aula sem UE: **obrigatório** digitar |
+| a **lista de UE** | `vw_unidades_ensino_execucao`: **prevista, lançada e restante** por UE (`FR-018`) | UE sem lançamento mostra restante = prevista |
 
 ⚠️ Medido: `turma_disciplina_unidade` tem **0 linhas** no remoto — o primeiro degrau está vazio hoje.
 

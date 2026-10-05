@@ -22,7 +22,8 @@
 | **Bloco** | **memória** (`bloco.ts`) | o contrato do Épico 12 (§4) |
 | **Grade da semana** | **memória** (`grade.ts`) | matriz `dia × TA`, faixa "Sem posição", sábado |
 | **Parâmetros** | `config_parametros` | `dsa.teto_tfm_semana` = 6 · `dsa.teto_recomendado_semana` = 25 · `dsa.sabado_tempos` = 5 (PR B, dados) |
-| **Técnicas de ensino** | `config_listas`, lista `tecnicas_de_ensino`, sigla em `metadados` | **9** linhas semeadas (PR B, dados) — ⚠️ `PE` fica de fora até Bernardo confirmar o nome por extenso (`D-8`) |
+| **Técnicas de ensino** | `config_listas`, lista **`metodologias`** — a que **já existe**, com 16 linhas medidas | ⚠️ **nenhuma lista nova** (`H1`): 3 ganham `metadados.sigla` (EO, AP, PP), **6** nascem com sigla (PM, PO, OD, TI, TG, EI), e as outras 13 ficam **sem** sigla, imprimindo por extenso |
+| **Subtipo de atividade** | `config_listas`, lista **`tipos_atividade`** — 13 linhas medidas | ⚠️ ganha `metadados.categoria` (`H2`): 7 recebem AEC/TAD/TR, **3** nascem (Visita Técnica, Estudo Individual, Monitoria), e *Licença de Pagamento* fica **sem** categoria — ela vem do calendário (`Q-16`) |
 
 ---
 
@@ -65,14 +66,19 @@ grant execute on function app.disciplina_sem_ue(uuid) to authenticated, service_
 
 -- 3.3  UE OU disciplina-com-tópico; e a catraca ganha UMA isenção nominal
 alter table public.registros_aula drop constraint reg_aula_ue_so_nula_no_historico;
+-- ⚠️ `coalesce(…, false)` NAO E ZELO: `CHECK` passa em NULL, e `app.disciplina_sem_ue` devolve
+--    NULL quando a linha nao e visivel. Sem o coalesce, o CHECK FALHA ABERTO — a classe do gotcha 15.
 alter table public.registros_aula add constraint reg_aula_ue_so_nula_no_historico check (
      unidade_ensino_id is not null
   or (origem_migracao_v1 is not null and editado_em is null)                 -- a catraca de sempre
-  or (disciplina_id is not null and app.disciplina_sem_ue(disciplina_id))    -- a isenção da Q-1
+  or (disciplina_id is not null
+      and coalesce(app.disciplina_sem_ue(disciplina_id), false))             -- a isenção da Q-1
 );
 alter table public.registros_aula add constraint reg_aula_ue_ou_disciplina check (
      unidade_ensino_id is not null
-  or (disciplina_id is not null and length(btrim(coalesce(conteudo_resumo, ''))) > 0)
+  or (disciplina_id is not null
+      and coalesce(app.disciplina_sem_ue(disciplina_id), false)
+      and length(btrim(coalesce(conteudo_resumo, ''))) > 0)
   or (origem_migracao_v1 is not null and editado_em is null)
 );
 alter table public.registros_aula add constraint reg_aula_ue_xor_disciplina check (
@@ -161,18 +167,41 @@ insert into public.config_parametros (chave, valor, natureza, norma_origem, desc
   ('dsa.teto_recomendado_semana',  '25', 'normativo',   'RN-DIST-03 (c)', 'Teto recomendado por disciplina por semana'),
   ('dsa.sabado_tempos',            '5',  'operacional', 'Q-4 da spec 013', 'TA do sábado quando o operador o abre')
 on conflict (chave) do nothing;
--- ⚠️ NOVE valores, não dez: `PE` fica de fora até Bernardo confirmar o nome por extenso (D-8).
---    Medido: nenhum lançamento usa PE hoje (`tipo_avaliacao` tem Prova Escrita, Trabalho,
---    Prova Prática, Prova Oral e a órfã), então a ausência não quebra legenda alguma.
+-- 3.10  A SIGLA vai para a lista QUE JA EXISTE — `metodologias`, 16 linhas medidas (H1).
+--       ⚠️ Eu havia proposto uma lista nova `tecnicas_de_ensino`; o analyze mediu o REMOTO e
+--          mostrou que seria SEGUNDA FONTE DE VERDADE do mesmo conceito. Decisao de Bernardo:
+--          sem lista nova. Tres existentes ganham sigla; seis nascem; as outras 13 ficam sem
+--          sigla e imprimem por extenso (RN-DEG-01). `PE` fica de fora.
+update public.config_listas c set metadados = coalesce(c.metadados, '{}'::jsonb) || jsonb_build_object('sigla', s.sigla)
+  from (values ('Exposição Oral','EO'), ('Aula Prática','AP'), ('Prova Prática','PP')) as s(valor, sigla)
+ where c.lista = 'metodologias' and c.valor = s.valor
+   and coalesce(c.metadados->>'sigla', '') <> s.sigla;
+
 insert into public.config_listas (lista, valor, rotulo_exibicao, ordem, ativo, metadados, origem_migracao_v1)
-select 'tecnicas_de_ensino', v, r, o, true, jsonb_build_object('sigla', s), 'spec-013'
-  from (values ('Exposição Oral','Exposição Oral',1,'EO'), ('Aula Prática','Aula Prática',2,'AP'),
-               ('Estudo Individual','Estudo Individual',3,'EI'), ('Trabalho em Grupo','Trabalho em Grupo',4,'TG'),
-               ('Trabalho Individual','Trabalho Individual',5,'TI'), ('Prova Prática','Prova Prática',6,'PP'),
-               ('Prova Escrita','Prova Escrita',7,'PM'), ('Prova Oral','Prova Oral',8,'PO'),
-               ('Outros Documentos','Outros Documentos',10,'OD'))
-       as t(v, r, o, s)
-on conflict do nothing;
+select 'metodologias', v, v, (select coalesce(max(ordem), 0) from public.config_listas where lista = 'metodologias') + n,
+       true, jsonb_build_object('sigla', s), 'spec-013'
+  from (values ('Prova Mista', 'PM', 1), ('Prova Objetiva', 'PO', 2),
+               ('Observação de Desempenho', 'OD', 3), ('Trabalho Individual', 'TI', 4),
+               ('Trabalho em Grupo', 'TG', 5), ('Estudo Individual', 'EI', 6)) as t(v, s, n)
+ where not exists (select 1 from public.config_listas x where x.lista = 'metodologias' and x.valor = t.v);
+
+-- 3.11  A CATEGORIA NORMATIVA de cada subtipo, na lista `tipos_atividade` (13 linhas medidas) — H2.
+--       ⚠️ Ela MISTURA aula com nao-letivo, e e por isso que o seletor de subtipo precisa filtrar:
+--          `Aula`, `Aula Teorica`, `Aula Pratica`, `Avaliacao` e `Vista de Prova` NAO recebem
+--          categoria nao letiva. `Licenca de Pagamento` fica SEM categoria — vem do calendario (Q-16).
+update public.config_listas c set metadados = coalesce(c.metadados, '{}'::jsonb) || jsonb_build_object('categoria', s.cat)
+  from (values ('Palestra','AEC'), ('Atividade Extracurricular','AEC'), ('Orientação de TFM','AEC'),
+               ('Evento/Cerimônia','TAD'), ('Administração','TAD'),
+               ('Tempo Reserva','TR'), ('Recuperação da Aprendizagem','TR')) as s(valor, cat)
+ where c.lista = 'tipos_atividade' and c.valor = s.valor
+   and coalesce(c.metadados->>'categoria', '') <> s.cat;
+
+insert into public.config_listas (lista, valor, rotulo_exibicao, ordem, ativo, metadados, origem_migracao_v1)
+select 'tipos_atividade', v, v, (select coalesce(max(ordem), 0) from public.config_listas where lista = 'tipos_atividade') + n,
+       true, jsonb_build_object('categoria', cat), 'spec-013'
+  from (values ('Visita Técnica', 'AEC', 1), ('Estudo Individual', 'Estudo_Individual', 2),
+               ('Monitoria', 'Estudo_Individual', 3)) as t(v, cat, n)
+ where not exists (select 1 from public.config_listas x where x.lista = 'tipos_atividade' and x.valor = t.v);
 ```
 
 ⚠️ **O que esta migration NÃO faz:** não apaga coluna (`disciplina_codigo_legado_v1` fica); não

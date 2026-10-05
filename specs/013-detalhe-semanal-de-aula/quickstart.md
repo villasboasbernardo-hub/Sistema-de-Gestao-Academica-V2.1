@@ -34,7 +34,8 @@ pnpm lint                                       # a FRONTEIRA 1 cobre a subpasta
 | TFM 7 TA · LHFC 40 · outra 26 · 9º TA | bloqueia · nada · alerta · alerta |
 | avaliação `herdado` + `ta_inicial = 1` · avaliação nova no TA 1 | sem posição · **posicionada** |
 | assinatura: linha do curso + GERAL | o curso vence; sem vigente → `null` |
-| **defeito deliberado**: `distribuicao-semanal` copiada para `dsa/` | `distribuicao-unica.test.ts` **reprova**, nomeando o arquivo |
+| **defeito deliberado 1**: `distribuicao-semanal` copiada para `dsa/` | `distribuicao-unica.test.ts` **reprova**, nomeando o arquivo |
+| **defeito deliberado 2**: `import … "@supabase/supabase-js"` em `lib/dominio/dsa/grade.ts` | ⚠️ **`pnpm lint` reprova pela FRONTEIRA 1** — é o que prova que o ESLint alcança a **primeira subpasta** de `lib/dominio/` (`SC-018`) |
 
 ---
 
@@ -54,6 +55,8 @@ pnpm test:rls                                   # sessão real
 | `116_dsa.sql` | coluna e FK existem; aula sem UE **e** sem disciplina → recusada; aula sem UE em curso `unidades_de_ensino` → **recusada**; em curso `competencias` com tópico → aceita; EI de escopo `global` → recusada; as duas views com `security_invoker=true`; **a função sem sessão levanta `42501`** |
 | `rls/dsa.test.ts` | os 5 perfis de leitura: `insert`/`update` nas 3 tabelas → `42501`, valor no banco **igual** antes e depois (`SC-016`); Operador recortado: `conflitos_da_semana` devolve a ocupação alheia **sem `turma_id`** e `select` direto na turma alheia devolve **0 linhas** — **no mesmo caso**; Admin: controle positivo |
 | **ordem certa (DoD 8)** | com a função **comentada**, o caso do Operador recortado **reprova** ("não viu o conflito"); descomentada, passa |
+| siglas e categorias (`T040`, `T040.1`) | `metodologias` com **9** linhas com `metadados.sigla` e **22** no total; `tipos_atividade` com **10** com `metadados.categoria` e *Licença de Pagamento* **sem** nenhuma; rodar a migration **duas vezes** não muda contagem (idempotente) |
+| **o `coalesce` do `H3`** | `insert` com `disciplina_id` **inexistente** → o `CHECK` **recusa**; ⚠️ sem o `coalesce` ele **passaria**, e é por isso que o caso existe |
 | **prova de reversão (DoD 6)** | numa base descartável: `pg_dump` → `up` → `down` → `pg_dump`; `diff` **vazio**, inclusive nas `reloptions` das duas views |
 | **o rito do remoto** | backup `--somente-copia` citado · dry-run só com ela · `db push` 0 depois da sua autorização · **N e N** migrations · impressão digital idêntica · 1.566/188/664 linhas intactas · 0 policies de `DELETE` · Production `/login` 200 |
 
@@ -73,6 +76,7 @@ pnpm test:e2e -- tests/e2e/dsa-ver.spec.ts
 | feriado `dia_inteiro` na quarta | quarta **bloqueada** com a descrição; `informativo` → aviso, não bloqueia |
 | turma do ETL com as 1.566 | tudo em **"Sem posição"**, sem quebra (`SC-015`) |
 | avaliação migrada (`ta_inicial = 1`) · avaliação nova no TA 1 | faixa · grade (`SC-017`) |
+| sala no cabeçalho | `sala_alocada` aparece **uma vez** no cabeçalho da semana; um bloco com `local` diferente sai **destacado**; os iguais, **não** (`FR-006`) |
 | curso sem regime | TA numerados **sem relógio** + aviso com link para a vigência |
 | EAD puro | a frase da `Q-13`, sem grade |
 | `?sabado=sim` · lançamento no sábado sem o parâmetro | coluna aparece nos dois casos |
@@ -90,10 +94,12 @@ pnpm test:e2e -- tests/e2e/dsa-lancar.spec.ts
 | Percurso | Esperado |
 |---|---|
 | clicar célula → disciplina → UE → 2 TA → gravar | **≤ 4** campos tocados (`SC-009`, contados); instrutor, técnica, local, conteúdo **já preenchidos** |
-| lista de UE | prevista, lançada, restante por UE |
+| lista de UE | prevista, lançada, restante por UE — de `vw_unidades_ensino_execucao` (`T068.1`) |
 | 45 TA de uma semana do C-Ap-HN | sem erro, sem recarregar (`SC-010`) |
 | trocar o instrutor **deste** lançamento | o outro lançamento e `turma_disciplina_instrutor` **iguais** no banco (`SC-012`) |
-| instrutor não habilitado · inativo | recusado com a frase · não aparece |
+| **instrutor não habilitado** | `lancar` **recusa** com `dsa_instrutor_nao_habilitado`, e o `select` depois mostra que **nada** foi gravado (`T065.2`); o habilitado grava — controle positivo; **avaliação não cobra habilitação** (`RN-INST-01` delimitada) |
+| instrutor **inativo** | não aparece no seletor |
+| a lista de UE | cada UE mostra **prevista, lançada e restante** (`FR-018`, `T068.1`) |
 | aula **sem UE** no C-Espc-HN com tópico · no C-Ap-HN | grava e aparece · **recusada** com a frase |
 | avaliação com fiscal **externo** | aceita; CHD da disciplina cresce (critério: `RN-EVT-03`) |
 | **"Estudo Individual da semana"** | 5 lançamentos (ou 4 com feriado), cada um no slot **seguinte ao último TA daquele dia** — num dia de 8 TA o EI é o 9º; num de 9 TA, o 10º (`D-4`); segundo clique **não duplica** |
@@ -119,6 +125,8 @@ pnpm test:e2e -- tests/e2e/dsa-imprimir.spec.ts
 | rodapé | tabela de CH e legenda só com o que aparece (`SC-014`) |
 | `page.content()` | nenhum `undefined`/`null`/`#REF!`/uuid (`SC-013`) |
 | semana sem TA | imprime, com o aviso **na tela** antes (`SC-015`) |
+| **a jornada do critério 8** | `dsa-jornada.spec.ts`: ficha → *Abrir o DSA* → lança → vê na grade → *Imprimir* → PDF de **1** página, **num percurso só** e **por clique** (`SC-008`) |
+| a linha `OBSERVAÇÕES:` | aparece **em branco** no rodapé (`H8`, `T082.1`) |
 | sem responsável vigente (semeado) | linha **em branco** |
 
 ---
