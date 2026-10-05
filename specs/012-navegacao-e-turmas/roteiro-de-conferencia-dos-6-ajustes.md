@@ -89,7 +89,37 @@ só sobre o produto.
 | Unidade | **1.213** casos em **92** arquivos | `pnpm test:unidade` |
 | pgTAP | **434** asserções em **35** arquivos, `PASS` | `pnpm test:invariantes` |
 | RLS e ambiente | **222** em **8** arquivos | `pnpm test:rls` |
-| Ponta a ponta | [pendente — medido depois da última rodada] | `pnpm test:e2e -- --workers=2` |
+| Ponta a ponta (**CI**) | **337** casos — **334** passados, **1** instável, **2** pulados | o bloco `banco` do run `37271143180` |
+| Ponta a ponta (local) | **332 a 335** passados por volta, com as falhas **migrando de arquivo** e todas passando isoladas | `pnpm test:e2e` nesta máquina |
 | Migrations | **nenhuma** | — |
 
-<!-- O endereço do preview e o commit servido entram aqui depois do CI verde. -->
+## O endereço, e o commit servido
+
+| O quê | Valor |
+|---|---|
+| **Endereço para conferir** (alias do ramo, sempre o commit mais novo) | `https://sistema-de-gestao-academica-v2-1-git-feat-epic-8c2007-ciaara-11.vercel.app` |
+| Implantação exata por trás dele | `https://sistema-de-gestao-academica-v2-1-nds4c16c4-ciaara-11.vercel.app` |
+| **Commit servido** | `650f6ce` — *"os 6 ajustes da conferência — e o token de cor que não existia"* |
+| CI | run **`37271143180`**, **verde nos três blocos** (`qualidade`, `build`, `banco`) |
+| Ramo | `feat/EPICO-5.5-navegacao-e-turmas` — **sem PR e sem merge** |
+
+⚠️ **O endereço responde `302` para `vercel.com/sso-api`** — é a proteção de implantação da Vercel.
+Abra estando logado na Vercel; não é erro.
+
+⚠️ **O preview fala com o banco REMOTO.** Os passos 1 a 8 e 11 e 12 não escrevem nada; o passo 8
+pede uma gravação recusada de propósito (rótulo repetido), que **não** altera dado nenhum.
+
+## A ponta a ponta local, dita com precisão
+
+⚠️ **ESTA MÁQUINA CHEGOU AO TETO DE MEMÓRIA, e o número honesto é este:** a suíte tem **337** casos
+e fecha entre **332 e 335** passados por volta, com as falhas **migrando de arquivo** a cada
+execução — `tema`, `salas`, `lateral`, `admin-sobre-contas` — e **todas passando isoladas**. O log do
+servidor de teste repete *"The destination stream closed early"*, que é a assinatura do estouro, e as
+mensagens de falha são do tipo *"entrou, mas a casca não terminou de desenhar"* — infraestrutura, não
+produto.
+
+⚠️ **O QUE FOI MEDIDO PARA SEPARAR UMA COISA DA OUTRA:** os **10 arquivos que esta rodada tocou**
+rodam **juntos** e passam **90 de 90**; `tema.spec.ts` passa **24 de 24** com `--repeat-each=4`,
+com base limpa e com a base suja de 128 cursos e 229 credenciais que a suíte deixa; e o **CI**, em
+runner dedicado, fecha **334 passados + 1 instável + 2 pulados**. Quem dá o veredito do `SC-005` é o
+CI, e ele deu.
