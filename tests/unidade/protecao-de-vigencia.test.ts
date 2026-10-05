@@ -154,7 +154,7 @@ describe("a mensagem do diálogo", () => {
     const m = mensagemDaProtecaoPerdida([GLOBAL]);
     expect(m).toContain("REG-000033");
     expect(m).toContain("AEC do Comando");
-    expect(m).toContain("2026-05-10");
+    expect(m).toContain("10/05/2026");
     expect(m).toContain("poderão ser corrigidas");
   });
 

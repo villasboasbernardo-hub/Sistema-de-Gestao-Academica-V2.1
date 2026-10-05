@@ -69,32 +69,66 @@ async function turmasNaTela(page: Page): Promise<number> {
 }
 
 test.describe("`RF-INI-01` · o panorama mostra previsto, executado e o que está em atraso", () => {
-  test("as duas turmas semeadas aparecem, com progresso", async ({ page }) => {
+  test("as três turmas semeadas aparecem, com progresso", async ({ page }) => {
     await entrar(page, EMAIL_GERAL, "/inicio");
 
-    const atrasada = page.locator(`[data-turma="${SEMEADO.turmaAtrasada}"]`);
+    const emExcesso = page.locator(`[data-turma="${SEMEADO.turmaEmExcesso}"]`);
     const emDia = page.locator(`[data-turma="${SEMEADO.turmaEmDia}"]`);
-    await expect(atrasada).toBeVisible();
+    const semCapacidade = page.locator(`[data-turma="${SEMEADO.turmaSemCapacidade}"]`);
+    await expect(emExcesso).toBeVisible();
     await expect(emDia).toBeVisible();
+    await expect(semCapacidade).toBeVisible();
 
-    // 12 tempos executados sobre 10 previstos, e 10 sobre 50.
-    await expect(atrasada.locator("[data-progresso]")).toHaveAttribute("data-progresso", "120");
+    // 12 tempos executados sobre 10 previstos, 10 sobre 50 e 10 sobre 100.
+    await expect(emExcesso.locator("[data-progresso]")).toHaveAttribute("data-progresso", "120");
     await expect(emDia.locator("[data-progresso]")).toHaveAttribute("data-progresso", "20");
+    await expect(semCapacidade.locator("[data-progresso]")).toHaveAttribute("data-progresso", "10");
   });
 
-  test("⚠️ só a turma com saldo NEGATIVO é sinalizada", async ({ page }) => {
+  test("⚠️ só a turma com saldo NEGATIVO DE CAPACIDADE é sinalizada — os dois vereditos virados", async ({
+    page,
+  }) => {
     /*
-     * O `RF-INI-01` escreve *"em andamento com saldo negativo de capacidade"*. Sinalizar as duas
-     * encheria a região de alertas de turmas que ninguém precisa olhar — ruído que ensina a ignorar
-     * a região inteira, que é o oposto do que o `RNF-USA-04` quer.
+     * ⚠️ **ESTE É O CASO QUE DISCRIMINA DO PR 3 (DoD 8), E ELE VIRA NOS DOIS SENTIDOS.** O
+     *    `RF-INI-01` escreve *"em andamento com saldo negativo DE CAPACIDADE"* — e capacidade é
+     *    `dias úteis até o término × TA/dia`, nada disso aparecia no painel antigo. Ele comparava
+     *    `previstos − executados` e chamava o resultado negativo de atraso, o que significa:
+     *
+     *    | Turma | O painel antigo dizia | A regra diz |
+     *    |---|---|---|
+     *    | `turmaEmExcesso` (12 de 10) | **em atraso** | não — ela não tem nada a executar |
+     *    | `turmaSemCapacidade` (10 de 100, 2 dias úteis) | nada | **em atraso** — 16 TA de capacidade contra 90 |
+     *
+     *    Com o `panorama.ts` de antes de 04/10/2026 as DUAS asserções abaixo reprovam, cada uma pelo
+     *    seu lado. É o que prova que o conserto mudou o veredito, e não só o código.
+     * ⚠️ **E SINALIZAR TODAS SERIA IGUALMENTE ERRADO:** ruído na região de alertas ensina a ignorar a
+     *    região inteira, que é o oposto do que o `RNF-USA-04` quer.
      */
     await entrar(page, EMAIL_GERAL, "/inicio");
-    await expect(
-      page.locator(`[data-turma="${SEMEADO.turmaAtrasada}"]`).getByText("em atraso"),
-    ).toBeVisible();
-    await expect(
-      page.locator(`[data-turma="${SEMEADO.turmaEmDia}"]`).getByText("em atraso"),
-    ).toHaveCount(0);
+
+    /*
+     * ⚠️ **AS TRÊS SÃO `expect.soft`, E A RAZÃO É A MEDIÇÃO DA T040.** Asserção dura para na primeira
+     *    que falha: rodado contra o painel antigo, o caso reprovaria só pela turma que **não** foi
+     *    sinalizada, e o outro sentido — a sinalizada por engano — ficaria sem ser medido naquela
+     *    execução. Com `soft` a mesma volta imprime **as duas** reprovações, que é exatamente o que
+     *    *"ver virar nos dois sentidos"* quer dizer. O caso continua reprovando: `soft` adia o
+     *    veredito até o fim, não o dispensa.
+     */
+    await expect
+      .soft(
+        page.locator(`[data-turma="${SEMEADO.turmaSemCapacidade}"]`).getByText("em atraso"),
+        "a turma que NÃO cabe no prazo não foi sinalizada: o painel não está lendo capacidade",
+      )
+      .toBeVisible();
+    await expect
+      .soft(
+        page.locator(`[data-turma="${SEMEADO.turmaEmExcesso}"]`).getByText("em atraso"),
+        "a turma que executou MAIS do que o previsto foi sinalizada: é o indicador invertido de volta",
+      )
+      .toHaveCount(0);
+    await expect
+      .soft(page.locator(`[data-turma="${SEMEADO.turmaEmDia}"]`).getByText("em atraso"))
+      .toHaveCount(0);
   });
 
   test("`RF-INI-04` · a região de alertas existe mesmo sem nada a alertar", async ({ page }) => {
@@ -112,7 +146,7 @@ test.describe("`FR-004.1` · o NÚMERO na tela muda ao trocar o filtro", () => {
      * sobre o conteúdo justamente por isso.
      */
     await entrar(page, EMAIL_GERAL, "/inicio");
-    const antes = await esperarTurmasNaTela(page, 2);
+    const antes = await esperarTurmasNaTela(page, 3);
 
     await page.selectOption("#filtro-classificacao", "expedito");
     await expect
@@ -123,7 +157,7 @@ test.describe("`FR-004.1` · o NÚMERO na tela muda ao trocar o filtro", () => {
       .toBeLessThan(antes);
 
     await expect(page.locator(`[data-turma="${SEMEADO.turmaEmDia}"]`)).toBeVisible();
-    await expect(page.locator(`[data-turma="${SEMEADO.turmaAtrasada}"]`)).toHaveCount(0);
+    await expect(page.locator(`[data-turma="${SEMEADO.turmaEmExcesso}"]`)).toHaveCount(0);
   });
 
   test("e o recorte fica no endereço, para o link carregá-lo", async ({ page }) => {
@@ -193,7 +227,7 @@ test.describe("`FR-025` · o link compartilhado, e quem nega é o banco", () => 
     const endereco = "/inicio";
 
     await entrar(page, EMAIL_GERAL, endereco);
-    const comEscopoGeral = await esperarTurmasNaTela(page, 2);
+    const comEscopoGeral = await esperarTurmasNaTela(page, 3);
 
     await page.context().clearCookies();
     await entrar(page, EMAIL_EXPEDITO, endereco);
@@ -213,7 +247,7 @@ test.describe("`FR-025` · o link compartilhado, e quem nega é o banco", () => 
       "o segundo perfil enxergou tanto quanto o primeiro: ou a RLS não recorta, ou a página filtra " +
         "por conta própria — e nos dois casos o link vaza",
     ).toBeLessThan(comEscopoGeral);
-    await expect(page.locator(`[data-turma="${SEMEADO.turmaAtrasada}"]`)).toHaveCount(0);
+    await expect(page.locator(`[data-turma="${SEMEADO.turmaEmExcesso}"]`)).toHaveCount(0);
   });
 });
 
@@ -251,7 +285,8 @@ test.describe("`FR-017.6` · curso inativo sai do panorama, e a contagem continu
    */
   async function desativar(...codigos: readonly string[]): Promise<void> {
     await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaEmDia, "concluida");
-    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaAtrasada, "concluida");
+    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaEmExcesso, "concluida");
+    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaSemCapacidade, "concluida");
     for (const codigo of codigos) {
       await mudarSituacaoDoCurso(EMAIL_GERAL, codigo, "inativo");
     }
@@ -261,8 +296,10 @@ test.describe("`FR-017.6` · curso inativo sai do panorama, e a contagem continu
     // ⚠️ CURSO PRIMEIRO: com ele inativo, escrever em `turmas` é recusado pela condicao de oferta.
     await mudarSituacaoDoCurso(EMAIL_GERAL, SEMEADO.cursoExpedito, "ativo");
     await mudarSituacaoDoCurso(EMAIL_GERAL, SEMEADO.cursoRegular, "ativo");
+    await mudarSituacaoDoCurso(EMAIL_GERAL, SEMEADO.cursoSemCapacidade, "ativo");
     await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaEmDia, "ativa");
-    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaAtrasada, "ativa");
+    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaEmExcesso, "ativa");
+    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaSemCapacidade, "ativa");
   });
 
   test("a turma do curso desativado some do panorama, e a do ativo fica", async ({ page }) => {
@@ -274,7 +311,7 @@ test.describe("`FR-017.6` · curso inativo sai do panorama, e a contagem continu
       "turma de curso INATIVO continua no panorama (FR-017.6)",
     ).toHaveCount(0);
     await expect(
-      page.locator(`[data-turma="${SEMEADO.turmaAtrasada}"]`),
+      page.locator(`[data-turma="${SEMEADO.turmaEmExcesso}"]`),
       "o filtro excedeu o alvo e levou junto a turma do curso ATIVO",
     ).toBeVisible();
   });
@@ -290,7 +327,12 @@ test.describe("`FR-017.6` · curso inativo sai do panorama, e a contagem continu
      * *"ainda não existe no sistema"* seria mentira, e é o que aparece se a contagem for filtrada
      * junto com o resto.
      */
-    await desativar(SEMEADO.cursoExpedito, SEMEADO.cursoRegular);
+    /*
+     * ⚠️ **O TERCEIRO CURSO ENTROU NESTA LISTA EM 04/10/2026, E ESQUECÊ-LO ESVAZIARIA O CASO.** Com
+     *    um curso ativo sobrando o panorama não fica vazio, nenhum estado vazio é desenhado, e a
+     *    asserção abaixo — que é sobre a AUSÊNCIA de uma frase — passaria sem provar nada.
+     */
+    await desativar(SEMEADO.cursoExpedito, SEMEADO.cursoRegular, SEMEADO.cursoSemCapacidade);
     await entrar(page, EMAIL_GERAL, "/inicio");
 
     await expect(
@@ -317,7 +359,7 @@ test.describe("`FR-031.2` · o link da turma sai codificado, e de uma funcao so"
     // ⚠️ `data-turma` fica NO PROPRIO `<Link>`, que renderiza como `<a>` — procurar um `a`
     //    DENTRO dele nao casa nada, e a reprovacao chega como estouro de prazo, que sugere
     //    lentidao e nao seletor errado. Medido em 18/09/2026.
-    const link = page.locator(`a[data-turma="${SEMEADO.turmaAtrasada}"]`);
+    const link = page.locator(`a[data-turma="${SEMEADO.turmaEmExcesso}"]`);
     const href = await link.getAttribute("href");
 
     expect(href, "a turma do panorama nao tem link").not.toBeNull();

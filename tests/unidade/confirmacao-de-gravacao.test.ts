@@ -83,7 +83,7 @@ describe("`FR-018.1` · as cinco da lista fechada confirmam", () => {
     expect(c.confirma).toBe(true);
     if (!c.confirma) return;
     const tudo = c.mensagens.join(" ");
-    expect(tudo).toContain("2027-01-01");
+    expect(tudo).toContain("01/01/2027");
     expect(tudo).toContain("lançamento");
   });
 

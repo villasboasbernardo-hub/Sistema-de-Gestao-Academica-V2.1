@@ -212,7 +212,7 @@ export function AcoesDaLinha({
         </span>
       ) : null}
       {erro ? (
-        <span role="alert" className="text-erro text-xs">
+        <span role="alert" className="text-conflito-tinta text-xs">
           {erro}
         </span>
       ) : null}

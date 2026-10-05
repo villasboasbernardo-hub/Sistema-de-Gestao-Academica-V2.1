@@ -23,6 +23,7 @@ import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { iniciaisDoNome } from "@/lib/dominio/iniciais-do-nome";
 import { rotuloDoPerfil } from "@/lib/dominio/perfis";
 import { enderecoDaFoto } from "@/lib/supabase/avatar";
+import { instanteComHoraParaLeitura } from "@/lib/formato/data";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { lerApoioDaConta } from "../dados-da-conta";
@@ -93,9 +94,9 @@ export default async function Conta({ params }: { params: Promise<{ readonly id:
             {/* veste: o carimbo de último acesso — unidade de leitura, não valor editável */}
             <p className="text-texto-tenue text-xs">
               Último acesso:{" "}
-              {conta.ultimo_acesso
-                ? new Date(conta.ultimo_acesso).toLocaleString("pt-BR")
-                : "nunca"}
+              {conta.ultimo_acesso === null
+                ? "nunca"
+                : instanteComHoraParaLeitura(conta.ultimo_acesso)}
             </p>
           </div>
         </div>

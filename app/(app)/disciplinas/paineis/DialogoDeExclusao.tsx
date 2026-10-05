@@ -113,7 +113,7 @@ export function DialogoDeExclusao({
         </div>
 
         {erro ? (
-          <p role="alert" className="text-erro text-sm" data-slot="recusa-da-exclusao">
+          <p role="alert" className="text-conflito-tinta text-sm" data-slot="recusa-da-exclusao">
             {erro}
           </p>
         ) : null}

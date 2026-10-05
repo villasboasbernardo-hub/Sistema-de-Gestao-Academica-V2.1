@@ -171,7 +171,7 @@ export function FormularioDeDisciplina({
         </p>
       ) : null}
       {erro ? (
-        <p role="alert" className="text-erro text-sm" data-slot="recusa-da-disciplina">
+        <p role="alert" className="text-conflito-tinta text-sm" data-slot="recusa-da-disciplina">
           {erro}
         </p>
       ) : null}

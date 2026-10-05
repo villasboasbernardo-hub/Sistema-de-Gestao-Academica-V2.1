@@ -14,6 +14,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirEdicaoDaTurma } from "./navegar-turmas";
 import { limparCursos, semearCursos, type CursosSemeados } from "./cursos-de-teste";
 
 let cliente: SupabaseClient | undefined;
@@ -167,6 +168,8 @@ test.describe("`FR-029.4` · desativar sala em uso avisa e deixa prosseguir", ()
      *    turma cuja sala foi desativada apagaria a sala **sem ninguém pedir**.
      */
     await page.goto(`/turmas/${encodeURIComponent(SEMEADO.turmaJanelaTarde)}`);
+    // ⚠️ A ficha abre recolhida desde 05/10/2026 — os campos só existem depois do clique.
+    await abrirEdicaoDaTurma(page);
     await expect(page.locator("#turma-sala")).toHaveValue(SEMEADO.salaDeTeste);
     await page.locator("#turma-alunos").fill("19");
     await page.locator('[data-slot="gravar-turma"]').click();

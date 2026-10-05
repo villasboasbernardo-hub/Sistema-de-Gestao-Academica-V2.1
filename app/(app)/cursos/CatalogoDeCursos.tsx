@@ -20,6 +20,7 @@
 import Link from "next/link";
 
 import { BadgeStatus } from "@/components/ciaara/badge-status";
+import { ROTULO_DA_MODALIDADE } from "@/lib/constantes/curso";
 import {
   CLASSIFICACOES_DE_CURSO,
   ROTULO_DA_CLASSIFICACAO,
@@ -37,11 +38,8 @@ export type CartaoDeCurso = {
   readonly ativo: boolean;
 };
 
-const ROTULO_DA_MODALIDADE: Readonly<Record<string, string>> = {
-  presencial: "Presencial",
-  ead: "EAD",
-  semipresencial: "Semipresencial",
-};
+/* ⚠️ O mapa saiu daqui em 04/10/2026 para `lib/constantes/curso.ts`: a ficha da turma pedia a
+   TERCEIRA cópia, e a terceira é a que diverge em silêncio. */
 
 /** A duração em palavras. Semanas quando há; dias sempre — `duracao_dias` não tem nulo. */
 function duracaoEmPalavras(curso: CartaoDeCurso): string {
@@ -84,7 +82,7 @@ export function CatalogoDeCursos({ cursos }: { readonly cursos: readonly CartaoD
                     href={`/cursos/${encodeURIComponent(curso.codigo)}`}
                     data-slot="cartao-de-curso"
                     data-curso={curso.codigo}
-                    className="border-borda bg-superficie-1 rounded-ciaara hover:border-borda-forte flex h-full flex-col gap-2 border p-3 transition-colors"
+                    className="border-borda bg-superficie rounded-ciaara hover:border-borda-forte flex h-full flex-col gap-2 border p-3 transition-colors"
                   >
                     <span className="flex items-start justify-between gap-2">
                       <span className="text-texto font-semibold">{curso.codigo}</span>

@@ -136,7 +136,7 @@ describe("`FR-021.4` · a recusa diz o que impede e qual é o caminho", () => {
   it("nomeia tipo, data e turma", () => {
     const m = mensagemDaTrava(trava());
     expect(m).toContain("aula");
-    expect(m).toContain("2026-03-02");
+    expect(m).toContain("02/03/2026");
     expect(m).toContain("C-Ap-FR T1 2026");
   });
 

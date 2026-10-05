@@ -21,6 +21,7 @@
  * Origem: `specs/009-cursos-e-turmas/contracts/escritas-recusas-e-avisos.md` §2.
  */
 
+import { dataIlegivel, dataParaLeitura } from "@/lib/formato/data";
 import {
   chavesDaRecusa,
   motivoDoImpedimento,
@@ -228,8 +229,16 @@ function porChave(
         );
       }
       const comNome = nome ? ` — ${nome} —` : "";
+      const ate = dataParaLeitura(deixada);
+      // ⚠️ Data ilegível cai no genérico acima, pelo mesmo critério das outras três frases.
+      if (dataIlegivel(ate)) {
+        return (
+          "A sigla já identificou outro curso e continua nos códigos das turmas dele. " +
+          "Escolha outra sigla."
+        );
+      }
       return (
-        `A sigla ${sigla} identificou o curso ${dono}${comNome} até ${deixada}, e continua nos ` +
+        `A sigla ${sigla} identificou o curso ${dono}${comNome} até ${ate}, e continua nos ` +
         `códigos das turmas dele. Escolha outra sigla.`
       );
     }
@@ -275,12 +284,19 @@ function porChave(
       const atividade = texto(d.atividade);
       const fim = "Para mudar o regime, registre nova vigência a partir de uma data.";
 
-      if (total === undefined || !data) {
+      /*
+       * ⚠️ **A DATA VEM DO `detail` DO BANCO, E NÃO É CONFIÁVEL COMO ISO** — ela sai de `JSON.parse`
+       *    de um erro, e uma RPC futura pode mandar outra coisa. `dataParaLeitura` devolve "—" nesse
+       *    caso, e *"a atividade X de —"* é pior que a frase genérica que já existe três linhas
+       *    acima: é `RN-DEG-01` ao contrário, afirmando o que não se sabe. Ilegível cai no genérico.
+       */
+      const dia = dataParaLeitura(data);
+      if (total === undefined || !data || dataIlegivel(dia)) {
         return `Esta vigência já tem lançamento que depende dela. ${fim}`;
       }
       const primeiro = atividade
-        ? `a atividade ${atividade} de ${data}${turma ? `, alcançada pela turma ${turma}` : ""}`
-        : `${tipo ?? "lançamento"} de ${data}${turma ? ` em ${turma}` : ""}`;
+        ? `a atividade ${atividade} de ${dia}${turma ? `, alcançada pela turma ${turma}` : ""}`
+        : `${tipo ?? "lançamento"} de ${dia}${turma ? ` em ${turma}` : ""}`;
       const ponta = pontaAusente(texto(d.ponta_ausente), turma);
       return `Esta vigência já tem ${total} lançamento(s) — o primeiro: ${primeiro}. ${ponta}${fim}`;
     }
@@ -289,15 +305,23 @@ function porChave(
       const desde = texto(d.vigente_de);
       const total = numero(d.total);
       const ultimo = texto(d.ultimo_lancamento);
-      if (!desde || total === undefined || !ultimo) {
+      const diaDesde = dataParaLeitura(desde);
+      const diaUltimo = dataParaLeitura(ultimo);
+      if (
+        !desde ||
+        total === undefined ||
+        !ultimo ||
+        dataIlegivel(diaDesde) ||
+        dataIlegivel(diaUltimo)
+      ) {
         return (
           "Uma vigência a partir desta data mudaria o horário de lançamentos já gravados. " +
           "Escolha uma data posterior."
         );
       }
       return (
-        `Uma vigência a partir de ${desde} mudaria o horário de ${total} lançamento(s) já ` +
-        `gravado(s) — o último em ${ultimo}. Escolha uma data posterior.`
+        `Uma vigência a partir de ${diaDesde} mudaria o horário de ${total} lançamento(s) já ` +
+        `gravado(s) — o último em ${diaUltimo}. Escolha uma data posterior.`
       );
     }
 
@@ -396,11 +420,10 @@ function porChave(
       const termino = typeof d?.["data_termino"] === "string" ? d["data_termino"] : undefined;
       // ⚠️ A frase traz A JANELA, e não só o veredito: quem está corrigindo a previsão precisa saber
       //    entre que datas ela cabe, senão tenta de novo às cegas.
-      if (turma && inicio && termino) {
-        return (
-          `O período previsto tem de caber na janela da turma ${turma}, ` +
-          `de ${inicio} a ${termino}.`
-        );
+      const de = dataParaLeitura(inicio);
+      const ate = dataParaLeitura(termino);
+      if (turma && inicio && termino && !dataIlegivel(de) && !dataIlegivel(ate)) {
+        return `O período previsto tem de caber na janela da turma ${turma}, de ${de} a ${ate}.`;
       }
       return "O período previsto tem de caber na janela da turma.";
     }

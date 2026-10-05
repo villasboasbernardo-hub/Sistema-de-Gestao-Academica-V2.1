@@ -103,10 +103,27 @@ test.describe("`FR-030` (a) · nome acessível em todo controle, tela por tela",
 
   test("controle positivo: a varredura enxerga controles de verdade", async ({ page }) => {
     await entrar(page, EMAIL, "/cursos");
-    const quantos = await page.evaluate(
-      () => document.querySelectorAll("main button, main a[href], main select").length,
-    );
-    expect(quantos, "a varredura está olhando o lugar errado").toBeGreaterThan(3);
+
+    /*
+     * ⚠️ **ESTE CASO DECIDIA POR TEMPO, E REPROVOU POR ISSO EM 04/10/2026** — sob a suíte inteira em
+     *    paralelo, contou **0** controles e acusou *"a varredura está olhando o lugar errado"*;
+     *    sozinho, passou três vezes seguidas. A causa não é a varredura: `entrar()` devolve quando a
+     *    **casca** está desenhada, e a casca chega antes do conteúdo — com streaming, o `main` ainda
+     *    pode estar no `loading.tsx`, que não tem botão nenhum. Uma leitura única nesse instante mede
+     *    o esqueleto.
+     * ⚠️ **`expect.poll` REEXECUTA; `page.evaluate` solto, não.** É o mesmo conserto do `V-4` do
+     *    Épico 3, e a asserção **não foi afrouxada**: continua exigindo mais de três controles.
+     *    O caso irmão, duas funções acima, já esperava o `h1` — este não esperava nada.
+     */
+    await expect
+      .poll(
+        () =>
+          page.evaluate(
+            () => document.querySelectorAll("main button, main a[href], main select").length,
+          ),
+        { message: "a varredura está olhando o lugar errado" },
+      )
+      .toBeGreaterThan(3);
   });
 });
 

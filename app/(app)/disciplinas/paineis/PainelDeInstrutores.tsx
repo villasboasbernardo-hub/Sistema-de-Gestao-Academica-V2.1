@@ -151,7 +151,9 @@ export function PainelDeInstrutores({
           {/* ── quem já está ─────────────────────────────────────────────────────────────────── */}
           <ul className="flex flex-col gap-1" data-slot="atribuidos">
             {emOrdem.length === 0 ? (
-              <li className="text-erro text-sm">Nenhum instrutor atribuído nesta turma.</li>
+              <li className="text-conflito-tinta text-sm">
+                Nenhum instrutor atribuído nesta turma.
+              </li>
             ) : (
               emOrdem.map((h) => (
                 <li key={h.instrutorId} className="flex flex-wrap items-center gap-2 text-sm">
@@ -266,7 +268,7 @@ export function PainelDeInstrutores({
             {cargaHorariaTempos} tempos.
           </p>
           {previsao.motivo !== null ? (
-            <p role="alert" className="text-erro text-xs" data-slot="rateio-nao-fecha">
+            <p role="alert" className="text-conflito-tinta text-xs" data-slot="rateio-nao-fecha">
               {previsao.motivo}
             </p>
           ) : null}
@@ -293,7 +295,7 @@ export function PainelDeInstrutores({
         </p>
       ) : null}
       {erro ? (
-        <p role="alert" className="text-erro text-sm">
+        <p role="alert" className="text-conflito-tinta text-sm">
           {erro}
         </p>
       ) : null}

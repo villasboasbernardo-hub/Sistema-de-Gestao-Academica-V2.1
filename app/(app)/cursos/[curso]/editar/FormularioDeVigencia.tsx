@@ -132,7 +132,7 @@ export function FormularioDeVigencia({
             name="tipo_regime"
             value={valores.tipo_regime}
             onChange={trocar("tipo_regime")}
-            className="border-borda bg-superficie-1 text-texto rounded-ciaara h-9 border px-2 text-sm"
+            className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
           >
             <option value="">Escolha o tipo</option>
             {TIPOS_DE_REGIME.map((t) => (
@@ -149,6 +149,7 @@ export function FormularioDeVigencia({
             {...propsDoControle(`${modo}-de`, true)}
             name="vigente_de"
             type="date"
+            lang="pt-BR"
             value={valores.vigente_de}
             onChange={trocar("vigente_de")}
           />

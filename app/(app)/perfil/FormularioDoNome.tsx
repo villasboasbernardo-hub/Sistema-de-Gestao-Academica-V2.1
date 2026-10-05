@@ -56,7 +56,7 @@ export function FormularioDoNome({ nomeExibicao }: { readonly nomeExibicao: stri
         </p>
       ) : null}
       {erro ? (
-        <p role="alert" className="text-erro w-full text-sm">
+        <p role="alert" className="text-conflito-tinta w-full text-sm">
           {erro}
         </p>
       ) : null}

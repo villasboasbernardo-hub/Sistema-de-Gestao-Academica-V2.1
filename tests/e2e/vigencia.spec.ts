@@ -13,6 +13,7 @@
  * oferecesse "Corrigir" a toda vigência ativa passaria no primeiro caso e reprovaria no segundo.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { dataParaLeitura } from "@/lib/formato/data";
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
@@ -180,7 +181,7 @@ test.describe("`FR-021.2` · a vigência com lançamento não se corrige", () =>
 
     const motivo = linha.locator('[data-slot="motivo-da-trava"]');
     await expect(motivo).toContainText("aula");
-    await expect(motivo).toContainText("2026-03-02");
+    await expect(motivo).toContainText("02/03/2026");
     await expect(motivo).toContainText(SEMEADO.turmaJanelaCedo);
     await expect(motivo).toContainText("registrar vigência nova");
 
@@ -234,6 +235,13 @@ test.describe("`FR-019` · registrar vigência nova a partir de uma data", () =>
   test("a vigência futura entra, e o histórico passa a mostrá-la", async ({ page }) => {
     const sigla = SEMEADO.porClassificacao.estagio_qualificacao;
     const quando = await diaSeguinteAUltimaVigencia(sigla);
+    /*
+     * ⚠️ **DUAS GRAFIAS DA MESMA DATA, E CADA UMA TEM O SEU LUGAR** (decisão de 05/10/2026): o
+     *    `#registrar-de` é `<input type="date">` e só aceita **ISO**; o diálogo e o histórico são
+     *    EXIBIÇÃO e saem em `DD/MM/AAAA`. Usar uma no lugar da outra é o erro que deixa o campo vazio
+     *    (e grava nulo) ou que faz a asserção procurar na tela um texto que não está lá.
+     */
+    const quandoNaTela = dataParaLeitura(quando);
 
     await entrar(page, EMAIL_ENCARREGADO, enderecoDaEdicao(sigla));
     await secao(page).locator('[data-slot="registrar-nova-vigencia"] summary').click();
@@ -254,10 +262,10 @@ test.describe("`FR-019` · registrar vigência nova a partir de uma data", () =>
     // ⚠️ REGISTRAR CONFIRMA SEMPRE, e o diálogo nomeia a data (`FR-018.1`).
     await page.locator('[data-slot="registrar-vigencia"]').click();
     await expect(dialogo(page)).toBeVisible();
-    await expect(dialogo(page)).toContainText(quando);
+    await expect(dialogo(page)).toContainText(quandoNaTela);
     await dialogo(page).getByRole("button", { name: "Registrar" }).click();
 
-    const nova = secao(page).locator(`li[data-status="ativo"]`).filter({ hasText: quando });
+    const nova = secao(page).locator(`li[data-status="ativo"]`).filter({ hasText: quandoNaTela });
     await expect(nova, "a vigência nova não apareceu no histórico").toHaveCount(1, {
       timeout: 15_000,
     });

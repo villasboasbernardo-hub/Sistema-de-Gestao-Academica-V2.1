@@ -49,7 +49,7 @@ export function AbasDoCurso({
             className={cn(
               "-mb-px border-b-2 px-3 py-2 text-sm",
               atual === a.valor
-                ? "border-acento text-texto font-semibold"
+                ? "border-marca text-texto font-semibold"
                 : "text-texto-suave hover:text-texto border-transparent",
             )}
           >

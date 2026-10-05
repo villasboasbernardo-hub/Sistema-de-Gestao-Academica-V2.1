@@ -21,6 +21,7 @@ import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BotaoLimparFiltros } from "@/components/ciaara/botao-limpar-filtros";
 import { BadgeTeto, type Teto } from "@/components/ciaara/badge-teto";
 import { CampoObrigatorio, propsDoControle } from "@/components/ciaara/campo-obrigatorio";
+import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { CardKpi } from "@/components/ciaara/card-kpi";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
@@ -100,6 +101,26 @@ export function AmostraIndicadores() {
         valor={13}
         variacao={{ texto: "+3 na semana", favoravel: false }}
       />
+    </div>
+  );
+}
+
+/**
+ * ⚠️ **A AMOSTRA NÃO É ENFEITE: ela é EXIGIDA.** `fronteira-componentes` cobra que todo componente de
+ * `components/ciaara/` seja alcançável por import a partir da vitrine — um componente que ninguém vê
+ * é um componente cujo desenho ninguém confere, e esta pasta é o vocabulário visual do sistema.
+ *
+ * ⚠️ **OS QUATRO CASOS SÃO OS QUE A FICHA DA TURMA PRODUZ**, inclusive os dois que surpreendem: a
+ * turma que **passou de 100%** (a faixa para na caixa, o número não) e a que **não tem percentual**
+ * (curso por competências — a barra não desenha nada, e quem chama diz a frase).
+ */
+export function AmostraBarraDeProgresso() {
+  return (
+    <div className="flex max-w-md flex-col gap-3">
+      <BarraDeProgresso valor={70} rotuloAcessivel="Carga executada da turma" />
+      <BarraDeProgresso valor={35} rotuloAcessivel="Carga executada da turma" tom="atrasado" />
+      <BarraDeProgresso valor={120} rotuloAcessivel="Carga executada acima do previsto" />
+      <BarraDeProgresso valor={null} rotuloAcessivel="Sem carga curricular lançada" />
     </div>
   );
 }

@@ -24,6 +24,8 @@
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
 
+import { dataParaLeitura } from "@/lib/formato/data";
+
 import { mensagemDoDialogo, type AnoAcimaDoLimite } from "./limite-de-turmas";
 
 /**
@@ -216,11 +218,11 @@ export function confirmacaoDaGravacao(
       return {
         confirma: true,
         titulo: contexto.vigenteDe
-          ? `Registrar a vigência a partir de ${contexto.vigenteDe}?`
+          ? `Registrar a vigência a partir de ${dataParaLeitura(contexto.vigenteDe)}?`
           : "Registrar esta vigência?",
         mensagens: [
           contexto.vigenteDe
-            ? `O regime passa a valer a partir de ${contexto.vigenteDe}.`
+            ? `O regime passa a valer a partir de ${dataParaLeitura(contexto.vigenteDe)}.`
             : "O regime passa a valer a partir da data informada.",
           "Depois que houver lançamento nesta vigência, ela não poderá mais ser corrigida: mudar o " +
             "regime passa a exigir uma vigência nova.",

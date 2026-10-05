@@ -83,7 +83,7 @@ describe("`FR-042` · cada linha do contrato §2 vira a mensagem de negócio del
     expect(m).toContain("C-Esp-ALH");
     expect(m).toContain("C-Esp-ALH-N");
     expect(m).toContain("Curso Especial de Alho");
-    expect(m).toContain("2024-02-01");
+    expect(m).toContain("01/02/2024");
     expect(m).toContain("Escolha outra sigla.");
   });
 
@@ -333,7 +333,7 @@ describe("`FR-042` · cada linha do contrato §2 vira a mensagem de negócio del
     );
     expect(m).toContain("14 lançamento(s)");
     expect(m).toContain("Aula Teórica");
-    expect(m).toContain("2026-03-02");
+    expect(m).toContain("02/03/2026");
     expect(m).toContain("C-Ap-FR 2026");
     expect(m).toContain("registre nova vigência");
   });
@@ -387,9 +387,9 @@ describe("`FR-042` · cada linha do contrato §2 vira a mensagem de negócio del
         ponta_ausente: null,
       }),
     );
-    expect(m).toContain("2026-01-01");
+    expect(m).toContain("01/01/2026");
     expect(m).toContain("31 lançamento(s)");
-    expect(m).toContain("2026-06-30");
+    expect(m).toContain("30/06/2026");
     expect(m).toContain("Escolha uma data posterior.");
   });
 

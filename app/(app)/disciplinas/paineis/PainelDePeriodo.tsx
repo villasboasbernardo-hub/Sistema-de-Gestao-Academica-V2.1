@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { definirPeriodoDaTurma } from "@/lib/acoes/disciplina";
+import { dataParaLeitura } from "@/lib/formato/data";
 
 export function PainelDePeriodo({
   turmaDisciplinaId,
@@ -59,9 +60,18 @@ export function PainelDePeriodo({
 
       {!podeEditar ? (
         <p className="text-texto-suave text-sm">
+          {/*
+            ⚠️ **AQUI É EXIBIÇÃO E MUDA; OS `defaultValue` DOS CAMPOS, QUINZE LINHAS ABAIXO, SÃO
+               VALOR E NÃO MUDAM.** `<input type="date">` só aceita `AAAA-MM-DD`: formatar o campo o
+               deixaria **vazio** na abertura, e gravar em seguida escreveria nulo sobre o período
+               que existia. Os dois usos do MESMO valor convivem neste arquivo de propósito, e é a
+               distinção mais fácil de errar da fatia.
+          */}
           {previsaoInicio === null
             ? "Não informado."
-            : `${previsaoInicio}${previsaoTermino ? ` a ${previsaoTermino}` : ""}`}{" "}
+            : `${dataParaLeitura(previsaoInicio)}${
+                previsaoTermino ? ` a ${dataParaLeitura(previsaoTermino)}` : ""
+              }`}{" "}
           {/* veste: dica de por que os campos não aparecem */}
           <span className="text-texto-tenue text-xs">
             O seu perfil não edita o período desta turma.
@@ -75,6 +85,7 @@ export function PainelDePeriodo({
               id={`inicio-${turmaDisciplinaId}`}
               name="previsao_inicio"
               type="date"
+              lang="pt-BR"
               defaultValue={previsaoInicio ?? ""}
             />
           </div>
@@ -84,6 +95,7 @@ export function PainelDePeriodo({
               id={`termino-${turmaDisciplinaId}`}
               name="previsao_termino"
               type="date"
+              lang="pt-BR"
               defaultValue={previsaoTermino ?? ""}
             />
           </div>
@@ -104,7 +116,7 @@ export function PainelDePeriodo({
         </p>
       ) : null}
       {erro ? (
-        <p role="alert" className="text-erro text-sm">
+        <p role="alert" className="text-conflito-tinta text-sm">
           {erro}
         </p>
       ) : null}

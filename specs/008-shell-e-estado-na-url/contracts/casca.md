@@ -199,3 +199,47 @@ o de não perguntar era um menu reorganizado em silêncio contra um requisito **
 
 ⚠️ **MUDAR QUALQUER LINHA DA LISTA EXIGE NOVA VALIDAÇÃO.** A paridade se mede contra o sistema em
 produção, não contra este documento, e é por isso que o registro tem data.
+
+---
+
+### Segunda validação — `D-NAV-1`, 04/10/2026 · **a vigente**
+
+> ⚠️ **ESTA SESSÃO SUBSTITUI A MENU-1 COMO VALIDAÇÃO EM VIGOR, E A DE 11/09 FICA ONDE ESTÁ.**
+> Decisão superada não se apaga: a tabela acima é o registro de que a ordem antiga foi conferida
+> contra a v2.0 em 11/09/2026, e é ela que explica por que a ordem era aquela.
+
+**Decisão de Bernardo Villas Boas, 04/10/2026** (spec `012-navegacao-e-turmas`, ratificada por ele no
+mesmo dia como *"a nova validação do menu"*): a ordem passa a ser
+
+| # | Rótulo | Rota | Mudança em relação à MENU-1 |
+|---|---|---|---|
+| 1 | Início | `/inicio` | — |
+| 2 | Cursos | `/cursos` | — |
+| 3 | **Turmas** | `/turmas` | **nova** — entra com a lista, no PR 2 da spec 012 |
+| 4 | Disciplinas | `/disciplinas` | sobe (era 6ª) |
+| 5 | Instrutores | `/instrutores` | sobe (era 5ª, mas agora depois de Disciplinas) |
+| 6 | Cronograma | `/cronograma` | desce (era 3ª) — segue *"em breve"* |
+| 7 | Atividades | `/atividades` | desce (era 4ª) — segue *"em breve"* |
+| 8 | Administração | `/admin/usuarios` | — |
+
+**O critério da ordem nova:** o que **tem tela** fica em cima e junto; o que ainda **não tem** desce.
+A MENU-1 punha Cronograma e Atividades em terceiro e quarto lugar — duas entradas *"em breve"* no meio
+do caminho de quem usa o sistema todo dia.
+
+⚠️ **POR QUE ISTO NÃO VIOLA O `RF-NAV-02`, que é [PRESERVADO].** O requisito proíbe **renomear
+entradas** e **remover pontos de entrada**; esta ordem **não renomeia nada e não remove nada** — ela
+insere uma entrada e reagrupa quatro. ⚠️ **E a autorização é nominal e datada**, que é o que a regra 1
+do `CLAUDE.md` exige de qualquer alteração nesta classe: sem ela, reordenar seria indistinguível de
+*"reorganizar sem perceber"*, o defeito que a MENU-1 existiu para impedir.
+
+⚠️ **O QUE ESTA SESSÃO NÃO REABRE:** a **MENU-2** segue valendo (entradas sem tela ficam **visíveis**,
+marcadas *"em breve"* — o menu não cresce a cada épico), o rótulo **"Disciplinas"** segue (P-14), e
+**Administração segue entrada única**. As duas rotas de `FORA_DO_MENU` (`/avaliacoes`, `/relatorio`)
+continuam fora, por `RF-CURSO-02`.
+
+| Item | Resposta | Data |
+|---|---|---|
+| Ordem | **Início · Cursos · Turmas · Disciplinas · Instrutores · Cronograma · Atividades · Administração** | 04/10/2026 |
+| *Turmas* no menu | **Sim** — com `disponivel: true` no mesmo commit da página (PR 2) | 04/10/2026 |
+| Entradas futuras visíveis | **Sim**, marcadas "em breve" (MENU-2 intacta) | 04/10/2026 |
+| Ícone por entrada | **Sim** — a lateral recolhida mostra só ícones, e o rótulo fica no DOM para leitor de tela | 04/10/2026 |

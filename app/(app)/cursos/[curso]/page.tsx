@@ -15,6 +15,7 @@
  * continua valendo — ela diz que o menu não as terá, não que esta página já as mostra.
  */
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { avisosDoCurso } from "@/lib/dominio/avisos-do-curso";
@@ -38,9 +39,8 @@ import {
 import { QuadroDeAvisosDoCurso } from "./QuadroDeAvisosDoCurso";
 
 /** Hoje em `yyyy-mm-dd`, no fuso de apresentação. Entra como argumento nas funções puras. */
-function hojeEmSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
-}
+/* ⚠️ A cópia local saiu em 04/10/2026: `hojeNaCiaara()` é a mesma conta, num lugar só. */
+const hojeEmSaoPaulo = hojeNaCiaara;
 
 export default async function PaginaDoCurso({
   params,

@@ -1,15 +1,16 @@
 /**
- * A grade de disciplinas, **por clique** (`FR-001` a `FR-006`, `FR-030` a `FR-063`, `SC-001`).
+ * O **catálogo de disciplinas do curso**, por clique (`FR-001` a `FR-006`, `FR-060` a `FR-063`).
+ *
+ * ⚠️ **ESTA TELA DEIXOU DE TER RECORTE POR TURMA EM 04/10/2026** (`FR-018` da spec 012), e os casos
+ * que o mediam **mudaram de arquivo, não desapareceram**: o critério 4 do período e os cinco do
+ * rateio vivem em `turma-disciplinas.spec.ts`, sobre a seção de disciplinas da ficha da turma.
+ * Apagá-los teria sido perder dois "casos que discriminam" de regras que já mudaram de veredito.
  *
  * ⚠️ **`goto` SÓ NO PONTO DE PARTIDA, e a regra tem história.** Os percursos da fatia (a) chegavam
  * às telas com `page.goto` — o que prova que a tela **funciona** e não prova que alguém **chega**
  * nela. `/cursos/novo` não tinha link nenhum e a única entrada de `/cursos/[curso]/editar` era um
  * link chamado *"histórico e correção"*: os dois passaram por uma suíte inteira. Aqui o percurso é
- * `goto('/inicio')` **uma vez**, e daí menu → curso → turma → linha → painéis.
- *
- * ⚠️ **O CASO CRÍTICO É O DO PERÍODO**, e ele mede a linha que **não** foi editada. Gravar por
- * `disciplina_id` em vez de pelo `id` da linha da turma deixaria a turma editada certa e mudaria
- * todas as outras — sintoma mudo, que só aparece semanas depois, na turma do lado.
+ * `goto('/inicio')` **uma vez**, e daí menu → curso → linha → painéis.
  *
  * ⚠️ **A AMOSTRA É IDEMPOTENTE** (regra 9.1): curso não é apagável, então ela o reaproveita. A prova
  * é rodar **duas vezes seguidas**.
@@ -18,13 +19,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { criarConta, apagarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import {
-  codigoDaTurmaDois,
-  codigoDaTurmaUm,
   contarDisciplina,
   disciplinaComUe,
   disciplinaLimpa,
   disciplinaSemUe,
-  lerGradeDaTurma,
   limparAmostraDaGrade,
   rastroDaExclusao,
   semearGradeDeDisciplinas,
@@ -43,8 +41,6 @@ let amostra: AmostraDaGrade;
  */
 let PROCESSO = 0;
 let SIGLA_DO_CURSO = "";
-let CODIGO_DA_TURMA_UM = "";
-let CODIGO_DA_TURMA_DOIS = "";
 let DISCIPLINA_COM_UE = { cod: "", nome: "", ch: 0 };
 let DISCIPLINA_SEM_UE = { cod: "", nome: "", ch: 0 };
 let DISCIPLINA_LIMPA = { cod: "", nome: "", ch: 0 };
@@ -52,8 +48,6 @@ let DISCIPLINA_LIMPA = { cod: "", nome: "", ch: 0 };
 test.beforeAll(async ({}, info) => {
   PROCESSO = info.workerIndex;
   SIGLA_DO_CURSO = siglaDoCurso(PROCESSO);
-  CODIGO_DA_TURMA_UM = codigoDaTurmaUm(PROCESSO);
-  CODIGO_DA_TURMA_DOIS = codigoDaTurmaDois(PROCESSO);
   DISCIPLINA_COM_UE = disciplinaComUe(PROCESSO);
   DISCIPLINA_SEM_UE = disciplinaSemUe(PROCESSO);
   DISCIPLINA_LIMPA = disciplinaLimpa(PROCESSO);
@@ -69,11 +63,15 @@ test.afterAll(async () => {
 });
 
 /**
- * **O percurso por clique**: entra, vai pelo MENU até a grade e escolhe curso e turma.
+ * **O percurso por clique**: entra, vai pelo MENU até a grade e escolhe o curso.
  *
  * ⚠️ O único `goto` da suíte está em `entrar`, e é o ponto de partida.
+ *
+ * ⚠️ **ELE PERDEU O PARÂMETRO `turma` EM 04/10/2026, e com ele a espera pelo seletor de turma** — que
+ * não existe mais nesta tela. A espera que ficou é pelo título: o `#curso` escreve na URL e avisa o
+ * servidor, então a tabela reentregue chega **depois** do endereço mudar.
  */
-async function irAGradePorClique(page: Page, turma?: string): Promise<void> {
+async function irAGradePorClique(page: Page): Promise<void> {
   await entrar(page, EMAIL, "/inicio");
 
   await page
@@ -83,24 +81,8 @@ async function irAGradePorClique(page: Page, turma?: string): Promise<void> {
   await expect(page.getByRole("heading", { name: "Disciplinas" })).toBeVisible();
 
   await page.locator("#curso").selectOption(SIGLA_DO_CURSO);
-  await expect(page.locator('[data-slot="seletor-turma"]')).toBeVisible();
-
-  if (turma) {
-    await page.locator('[data-slot="seletor-turma"]').click();
-    await page.getByRole("option", { name: turma }).click();
-    await expect.poll(() => new URL(page.url()).searchParams.get("turma")).toBe(turma);
-
-    /*
-     * ⚠️ **ESPERAR A URL NÃO BASTA, e foi isto que derrubou nove casos.** `turma` avisa o servidor
-     * (`shallow: false`): o endereço muda **na hora** e a tela reentregue chega **depois**. Clicar
-     * em seguida acertava a tabela do CATÁLOGO — quatro linhas em vez de duas, sem período nem
-     * instrutores —, e o sintoma era `input[name="previsao_inicio"]` não existir, que se lê como
-     * "o painel de período não foi escrito".
-     * ⚠️ O conserto é esperar pelo que **só a vista por turma tem**: a coluna de período. É a mesma
-     * lição do `abrirVitrine` e do `entrar` — esperar pelo que a página pronta tem, nunca por tempo.
-     */
-    await expect(page.getByRole("columnheader", { name: "Período previsto" })).toBeVisible();
-  }
+  // ⚠️ Espera pelo que só a tabela pronta tem — nunca por tempo (achado 9 do Épico 3).
+  await expect(page.getByRole("columnheader", { name: "CH" })).toBeVisible();
 }
 
 /** Abre o detalhe de uma disciplina clicando na célula do nome. */
@@ -109,49 +91,33 @@ async function abrirDetalhe(page: Page, nome: string): Promise<void> {
   await expect(page.locator('[data-slot="detalhe-da-disciplina"]')).toBeVisible();
 }
 
-/**
- * Acrescenta o **primeiro** instrutor ainda não atribuído, pelo seletor único.
- *
- * ⚠️ **A LISTA É PROCURADA DENTRO DO PAINEL FLUTUANTE, e não na página.** `getByRole("option")` no
- * escopo da página casa também com as `<option>` NATIVAS do seletor de curso — elas têm o mesmo
- * papel e ficam invisíveis, e o clique esperava 30 s por um elemento que nunca apareceria. É o
- * gotcha 3 da fatia (b) do Épico 4: seletor por papel é ambíguo, e ambiguidade não se resolve com
- * mais tempo, e sim com escopo.
- */
-async function acrescentarInstrutor(page: Page): Promise<void> {
-  // ⚠️ **ESCOPADO AO DETALHE, e o escopo é o conserto.** `<select>` nativo também tem papel
-  //    `combobox`: a página tem SEIS, entre a cascata e os filtros, e o `.first()` pegava um deles —
-  //    que não abre painel nenhum. É o gotcha 3 da fatia (b) do Épico 4, de novo.
-  const detalhe = page.locator('[data-slot="detalhe-da-disciplina"]');
-  await detalhe.locator('[data-slot="seletor-instrutor"]').first().click();
-  const painel = page.locator('[data-slot="popover-content"]');
-  await painel.getByRole("option").first().click();
-}
-
 test.describe("`FR-001` a `FR-006` · chegar, escolher e ver", () => {
-  test("o menu leva à grade, e a cascata curso → turma traz as disciplinas daquela turma", async ({
+  test("o menu leva à grade, e o curso escolhido traz TODAS as disciplinas dele", async ({
     page,
   }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
+    await irAGradePorClique(page);
 
     await expect(page.getByRole("gridcell", { name: DISCIPLINA_COM_UE.nome })).toBeVisible();
     await expect(page.getByRole("gridcell", { name: DISCIPLINA_SEM_UE.nome })).toBeVisible();
 
-    // ⚠️ A disciplina LIMPA não está em turma nenhuma: ela aparece no catálogo e **não** aqui.
-    await expect(page.getByRole("gridcell", { name: DISCIPLINA_LIMPA.nome })).toHaveCount(0);
+    /*
+     * ⚠️ **A DISCIPLINA LIMPA APARECE AQUI, E É O QUE DISTINGUE AS DUAS TELAS.** Ela não está em
+     *    turma nenhuma: o catálogo mostra todas as do curso, e a seção da ficha mostra só as da
+     *    grade daquela turma. Antes de 04/10/2026 as duas vistas moravam nesta tela.
+     */
+    await expect(page.getByRole("gridcell", { name: DISCIPLINA_LIMPA.nome })).toBeVisible();
   });
 
-  test("⚠️ sem turma, o que é POR TURMA degrada com aviso — nunca com zero", async ({ page }) => {
+  test("⚠️ o que é POR TURMA degrada com aviso — nunca com zero", async ({ page }) => {
     await irAGradePorClique(page);
 
-    // A disciplina limpa aparece: no catálogo estão todas as do curso.
-    await expect(page.getByRole("gridcell", { name: DISCIPLINA_LIMPA.nome })).toBeVisible();
-    // ⚠️ "0 sem instrutor" afirmaria que está tudo designado. A frase diz que isso é por turma.
+    // ⚠️ "0 sem instrutor" afirmaria que está tudo designado. A frase diz ONDE isso se decide.
     await expect(page.getByText(/são \s*por turma/i).first()).toBeVisible();
+    await expect(page.getByText(/ficha da turma/i).first()).toBeVisible();
   });
 
   test("⚠️ o endereço da vista reabre a MESMA tela, com a mesma linha aberta", async ({ page }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
+    await irAGradePorClique(page);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
 
     const endereco = page.url();
@@ -166,134 +132,11 @@ test.describe("`FR-001` a `FR-006` · chegar, escolher e ver", () => {
   });
 });
 
-test.describe("⚠️ CRITÉRIO 4 · o período é DAQUELA turma, e de mais nenhuma", () => {
-  test("gravar na T2 não toca na T1", async ({ page }) => {
-    const antes = await lerGradeDaTurma(amostra.turmaUmId, amostra.disciplinaComUeId);
-
-    await irAGradePorClique(page, CODIGO_DA_TURMA_DOIS);
-    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
-
-    await page.locator('input[name="previsao_inicio"]').fill("2026-03-10");
-    await page.locator('input[name="previsao_termino"]').fill("2026-04-10");
-    await page.locator('[data-slot="gravar-periodo"]').click();
-    await expect(page.getByRole("status").filter({ hasText: "Período gravado" })).toBeVisible();
-
-    const t2 = await lerGradeDaTurma(amostra.turmaDoisId, amostra.disciplinaComUeId);
-    expect(t2.previsaoInicio).toBe("2026-03-10");
-    expect(t2.origemPeriodo).toBe("manual");
-
-    const t1 = await lerGradeDaTurma(amostra.turmaUmId, amostra.disciplinaComUeId);
-    expect(
-      t1.previsaoInicio,
-      "a T1 recebeu a previsão da T2 — a gravação filtra por disciplina, não pela linha da turma",
-    ).toBeNull();
-    expect(t1.editadoEm, "o carimbo de edição da T1 mudou").toBe(antes.editadoEm);
-  });
-
-  test("⚠️ e período FORA da janela da turma é recusado pelo BANCO, com a janela na frase", async ({
-    page,
-  }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
-    await abrirDetalhe(page, DISCIPLINA_SEM_UE.nome);
-
-    // A janela da turma é 02/03 a 30/06. Janeiro está fora.
-    await page.locator('input[name="previsao_inicio"]').fill("2026-01-05");
-    await page.locator('input[name="previsao_termino"]').fill("2026-01-20");
-    await page.locator('[data-slot="gravar-periodo"]').click();
-
-    const recusa = page.getByRole("alert").filter({ hasText: "janela" });
-    await expect(recusa).toBeVisible();
-    // ⚠️ A frase traz AS DATAS da janela: sem elas, quem corrige tenta de novo às cegas.
-    await expect(recusa).toContainText("2026-03-02");
-    await expect(recusa).toContainText("2026-06-30");
-  });
-});
-
-test.describe("`FR-041` · os cinco casos do rateio, na tela", () => {
-  test("⚠️ divisão igual: 10 TA entre 3 dá 4/3/3 — o resto vai ao MAIS ANTIGO", async ({
-    page,
-  }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
-    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
-
-    // Acrescenta os três pelo seletor único, em ordem de antiguidade.
-    for (let i = 0; i < 3; i++) await acrescentarInstrutor(page);
-
-    const parcelas = page.locator('[data-slot="parcela"]');
-    await expect(parcelas).toHaveCount(3);
-    // ⚠️ **O CASO QUE DISCRIMINA A MUDANÇA DE REGRA**: a v2.0 daria 3/3/4.
-    await expect(parcelas.nth(0)).toHaveText("4 tempos");
-    await expect(parcelas.nth(1)).toHaveText("3 tempos");
-    await expect(parcelas.nth(2)).toHaveText("3 tempos");
-
-    await expect(page.locator('[data-slot="soma-do-rateio"]')).toContainText("10");
-  });
-
-  test("um instrutor só recebe a CH integral", async ({ page }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
-    await abrirDetalhe(page, DISCIPLINA_SEM_UE.nome);
-
-    await acrescentarInstrutor(page);
-
-    await expect(page.locator('[data-slot="parcela"]')).toHaveText("12 tempos");
-    await expect(page.locator('[data-slot="soma-do-rateio"]')).toContainText("integral");
-  });
-
-  test("⚠️ por TA digitados: a SOMA ERRADA é recusada, com os dois números", async ({ page }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
-    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
-
-    for (let i = 0; i < 2; i++) await acrescentarInstrutor(page);
-
-    await page.getByRole("radio", { name: /Informar os tempos/ }).check();
-    const campos = page.locator('input[type="number"]');
-    await campos.nth(0).fill("7");
-    await campos.nth(1).fill("2");
-
-    // ⚠️ A recusa aparece ANTES de gravar: a função pura antecipa o que o gatilho vai dizer.
-    const recusa = page.locator('[data-slot="rateio-nao-fecha"]');
-    await expect(recusa).toBeVisible();
-    await expect(recusa).toContainText("9");
-    await expect(recusa).toContainText("10");
-
-    // E a soma exata some com a recusa.
-    await campos.nth(1).fill("3");
-    await expect(recusa).toHaveCount(0);
-  });
-
-  test("⚠️ por unidade de ensino: a CH de cada um é a soma das unidades dele", async ({ page }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
-    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
-
-    for (let i = 0; i < 2; i++) await acrescentarInstrutor(page);
-
-    await page.getByRole("radio", { name: /unidades de ensino/ }).check();
-    await expect(page.locator('[data-slot="unidades-por-instrutor"] li')).toHaveCount(2);
-
-    // ⚠️ Enquanto nenhuma unidade tem dono, a recusa nomeia o que falta.
-    await expect(page.locator('[data-slot="rateio-nao-fecha"]')).toContainText(
-      "sem nenhuma unidade",
-    );
-  });
-
-  test("⚠️ o modo POR UNIDADE não é oferecido em disciplina sem unidade (`FR-041.5`)", async ({
-    page,
-  }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
-    await abrirDetalhe(page, DISCIPLINA_SEM_UE.nome);
-
-    await acrescentarInstrutor(page);
-
-    await expect(page.getByRole("radio", { name: /Informar os tempos/ })).toBeVisible();
-    await expect(page.getByRole("radio", { name: /unidades de ensino/ })).toHaveCount(0);
-  });
-});
-
 test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
   test("⚠️ O CASO QUE DISCRIMINA · com UE a seção aparece; sem UE não há NENHUMA menção", async ({
     page,
   }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
+    await irAGradePorClique(page);
 
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
     await expect(page.locator('[data-slot="lista-de-unidades"] li')).toHaveCount(2);
@@ -309,7 +152,7 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
   });
 
   test("a soma que não fecha AVISA, e não bloqueia", async ({ page }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
+    await irAGradePorClique(page);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
 
     // As duas unidades somam 10, igual à CH: nenhum aviso.
@@ -328,7 +171,7 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
 
 test.describe("`FR-020` a `FR-024` · a exclusão, com código e rastro", () => {
   test("⚠️ disciplina COM linha de turma é recusada, NOMEANDO o impedimento", async ({ page }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
+    await irAGradePorClique(page);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
 
     await page.locator('[data-slot="abrir-exclusao"]').first().click();
@@ -367,10 +210,8 @@ test.describe("`FR-020` a `FR-024` · a exclusão, com código e rastro", () => 
 });
 
 test.describe("`SC-011` · filtro, indicadores e gráfico refletem o MESMO subconjunto", () => {
-  test("⚠️ filtrar muda os três juntos, e *Limpar filtros* mantém curso e turma", async ({
-    page,
-  }) => {
-    await irAGradePorClique(page, CODIGO_DA_TURMA_UM);
+  test("⚠️ filtrar muda os três juntos, e *Limpar filtros* mantém o curso", async ({ page }) => {
+    await irAGradePorClique(page);
 
     const indicadorDeDisciplinas = page
       .locator('[data-slot="indicadores"] p')
@@ -397,9 +238,17 @@ test.describe("`SC-011` · filtro, indicadores e gráfico refletem o MESMO subco
     await page.locator('[data-slot="limpar-filtros"]').click();
 
     await expect(page.getByRole("gridcell", { name: DISCIPLINA_SEM_UE.nome })).toBeVisible();
-    // ⚠️ **CURSO E TURMA FICAM** — eles são navegação, não filtro (`FR-054`).
+    /*
+     * ⚠️ **O CURSO FICA — ele é navegação, não filtro** (`FR-054`). Limpar filtros e perder o curso em
+     *    que se estava faria o botão **navegar**, e quem clicou queria ver a lista inteira daquele
+     *    curso. ⚠️ A asserção da **turma** saiu daqui em 04/10/2026 junto com o parâmetro: ela não é
+     *    mais desta tela, e está coberta na seção da ficha.
+     */
     const endereco = new URL(page.url());
     expect(endereco.searchParams.get("curso")).toBe(SIGLA_DO_CURSO);
-    expect(endereco.searchParams.get("turma")).toBe(CODIGO_DA_TURMA_UM);
+    expect(
+      endereco.searchParams.get("turma"),
+      "a turma voltou ao endereço desta tela: o recorte por turma mora na ficha",
+    ).toBeNull();
   });
 });

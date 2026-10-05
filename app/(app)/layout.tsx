@@ -12,7 +12,7 @@
  * um único lugar para ir, e a única forma de alcançar outra tela era digitar a URL. É o que a
  * História 3 da fatia (c) corrige, e é substituição, não acréscimo.
  */
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { CascaDoApp } from "@/components/casca/casca-do-app";
@@ -20,6 +20,7 @@ import { encerrarSessao } from "@/lib/acoes/sessao";
 import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { CABECALHO_DO_CAMINHO, caminhoOuRaiz } from "@/lib/navegacao/caminho";
+import { COOKIE_DA_LATERAL, lateralFixadaNoCookie } from "@/lib/navegacao/lateral";
 import { enderecoDaFoto } from "@/lib/supabase/avatar";
 
 export default async function LayoutDoApp({ children }: { children: React.ReactNode }) {
@@ -30,16 +31,27 @@ export default async function LayoutDoApp({ children }: { children: React.ReactN
   // Ele não alcança dado nenhum pela RLS; aqui ele também não vê a casca.
   if (!usuario) redirect("/login");
 
-  // ⚠️ Três consultas INDEPENDENTES, em paralelo. Encadeá-las somaria as três esperas em toda
+  // ⚠️ Quatro leituras INDEPENDENTES, em paralelo. Encadeá-las somaria as esperas em toda
   //    tela do sistema, e a convenção de código proíbe `await` em laço justamente por isso.
   //    ⚠️ E a foto é a única que pode falhar sem consequência: `enderecoDaFoto` devolve `null`
   //       em qualquer erro, e a tela cai nas iniciais (`RN-DEG-01`).
-  const [permissoes, cabecalhos, fotoUrl] = await Promise.all([
+  const [permissoes, cabecalhos, armazemDeCookies, fotoUrl] = await Promise.all([
     permissoesDoPerfil(usuario.perfil),
     headers(),
+    cookies(),
     enderecoDaFoto(usuario.avatarCaminho),
   ]);
   const caminho = caminhoOuRaiz(cabecalhos.get(CABECALHO_DO_CAMINHO));
+
+  /*
+   * ⚠️ **O ESTADO DA LATERAL É DECIDIDO AQUI, NO SERVIDOR, E ISSO É O QUE ELIMINA O FLASH**
+   *    (`FR-005` da spec 012). A largura da lateral muda o layout do conteúdo inteiro: lido só no
+   *    navegador, a tela abriria recolhida e **saltaria** para expandida depois da hidratação.
+   *    ⚠️ **Não é o padrão do tema**, e a diferença é deliberada: o tema vive em `localStorage` e se
+   *       corrige com um script antes da pintura — o servidor não sabe qual é. Aqui ele sabe, porque
+   *       cookie viaja na requisição. É o mesmo gesto do cabeçalho do caminho, duas linhas acima.
+   */
+  const lateralFixada = lateralFixadaNoCookie(armazemDeCookies.get(COOKIE_DA_LATERAL)?.value);
 
   return (
     // ⚠️ `aoSair` DESCE DAQUI porque componente não importa `@/lib/acoes/` (Princípio XI,
@@ -51,6 +63,7 @@ export default async function LayoutDoApp({ children }: { children: React.ReactN
         email={usuario.email}
         perfil={usuario.perfil}
         caminho={caminho}
+        lateralFixada={lateralFixada}
         fotoUrl={fotoUrl}
         aoSair={encerrarSessao}
       >

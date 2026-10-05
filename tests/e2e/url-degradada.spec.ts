@@ -55,7 +55,7 @@ test.describe("`FR-006` · valor fora do domínio usa o padrão e preserva os de
     // um recorte que não aconteceu.
     await abrirInicioCom(page, "?classificacao=inexistente&modalidade=ead");
     await expect(page.locator(`[data-turma="${SEMEADO?.turmaEmDia}"]`)).toBeVisible();
-    await expect(page.locator(`[data-turma="${SEMEADO?.turmaAtrasada}"]`)).toHaveCount(0);
+    await expect(page.locator(`[data-turma="${SEMEADO?.turmaEmExcesso}"]`)).toHaveCount(0);
   });
 });
 
@@ -95,7 +95,7 @@ test.describe("`SC-008` · tudo inválido de uma vez, e a tela ainda abre", () =
     // Degradar para "nada" seria tecnicamente seguro e praticamente inútil: a pessoa concluiria que
     // o sistema perdeu os dados. O padrão é "todas", e é isso que precisa aparecer.
     await abrirInicioCom(page, "?classificacao=%3Cscript%3E&modalidade=%00");
-    await expect(page.locator(`[data-turma="${SEMEADO?.turmaAtrasada}"]`)).toBeVisible();
+    await expect(page.locator(`[data-turma="${SEMEADO?.turmaEmExcesso}"]`)).toBeVisible();
     await expect(page.locator(`[data-turma="${SEMEADO?.turmaEmDia}"]`)).toBeVisible();
   });
 });

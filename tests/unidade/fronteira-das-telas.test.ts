@@ -71,6 +71,19 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/cursos/[curso]/SeletorDeTurmaNaUrl.tsx": "escolher a turma escrevendo na URL",
   "app/(app)/cursos/[curso]/editar/FormularioDeVigencia.tsx": "registrar e corrigir vigência",
   "app/(app)/turmas/FormularioDeTurma.tsx": "criar e editar turma, com o diálogo do limite",
+  /*
+   * ⚠️ Ele existe porque o `Collapsible` é folha de cliente e a FICHA não pode ser: importá-lo em
+   *    `page.tsx` poria o marcador na página e contaminaria a subárvore. Ele recebe o formulário
+   *    por `children`, como o `PainelRetratil` faz com a lista do menu.
+   */
+  "app/(app)/turmas/[turma]/EdicaoDaTurma.tsx":
+    "recolher o formulário de edição atrás de «Editar turma» — estado efêmero de aberto/fechado",
+  "app/(app)/turmas/FiltrosDeTurmas.tsx":
+    "os quatro filtros da lista de turmas, escrevendo a URL por `useParametro`",
+  "app/(app)/turmas/TabelaDeTurmas.tsx":
+    "a tabela densa da lista: ordenar por cabeçalho e ativar a linha são comportamento de navegador",
+  "app/(app)/turmas/[turma]/DisciplinasDaTurma.tsx":
+    "a seção de disciplinas da ficha — linha expansível ligada a `?aberta=`, com os painéis de período e instrutores",
   "app/(app)/admin/salas/FormularioDeSala.tsx": "acrescentar sala",
   // Spec 011, 29/09/2026 — o próprio cadastro. Os dois são folha porque escolhem arquivo, mostram
   // recusa e prévia; a página que os contém segue servidor.

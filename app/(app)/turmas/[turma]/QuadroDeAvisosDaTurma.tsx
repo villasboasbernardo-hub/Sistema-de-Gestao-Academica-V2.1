@@ -17,7 +17,7 @@ export function QuadroDeAvisosDaTurma({ avisos }: { readonly avisos: readonly Av
     <section
       aria-labelledby="quadro-de-avisos-da-turma"
       data-slot="quadro-de-avisos-da-turma"
-      className="border-borda bg-superficie-1 rounded-ciaara flex flex-col gap-2 border p-3"
+      className="border-borda bg-superficie rounded-ciaara flex flex-col gap-2 border p-3"
     >
       <h2 id="quadro-de-avisos-da-turma" className="text-atrasado-tinta font-semibold">
         Avisos de qualidade de cadastro

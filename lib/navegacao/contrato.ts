@@ -120,6 +120,20 @@ export const CIRCULOS_HIERARQUICOS = ["oficiais", "pracas"] as const;
 export const SITUACOES_DE_CADASTRO = Constants.public.Enums.status_registro;
 
 /**
+ * As quatro situações de TURMA (`FR-012` da spec 012).
+ *
+ * ⚠️ **NÃO CONFUNDIR COM `SITUACOES_DE_CADASTRO`, e a confusão é fácil:** aquela é
+ * `status_registro` (`ativo` | `inativo`), que vale para curso, disciplina e instrutor. Turma tem
+ * ciclo de vida próprio — `planejada`, `ativa`, `concluida`, `cancelada` —, e filtrar a lista de
+ * turmas por `ativo` resolveria para turma nenhuma, **sem erro**, porque nenhum desses valores
+ * existe na coluna.
+ *
+ * Os rótulos de tela vivem num lugar só, `ROTULO_DO_STATUS_DE_TURMA` em
+ * `lib/dominio/seletor-de-turma.ts`.
+ */
+export const SITUACOES_DE_TURMA = Constants.public.Enums.status_turma;
+
+/**
  * As quatro situações de execução de uma disciplina numa turma (`FR-053`).
  *
  * ⚠️ **ELA NÃO VEM DE UM ENUM DO BANCO, porque NÃO HÁ enum: a situação é DERIVADA** da CH prevista,
@@ -364,26 +378,19 @@ export const CONTRATO = {
         historico: "empilha",
         avisaServidor: true,
       },
+      /*
+       * ⚠️ **`turma` SOBREVIVE AQUI COM UM PAPEL SÓ: SER O ENDEREÇO ANTIGO** (`FR-019` da spec 012,
+       *    decisão D5 de 04/10/2026). A partir do PR 2, `/disciplinas?curso=X&turma=Y` **redireciona**
+       *    para a seção de disciplinas da ficha da turma — o recorte por turma passou a morar lá.
+       * ⚠️ **TIRÁ-LO DO CONTRATO QUEBRARIA O REDIRECIONAMENTO**, e em silêncio: `lerParametros`
+       *    **descarta** o que não está declarado, então a página nunca saberia que havia turma no
+       *    endereço e serviria o catálogo do curso como se nada tivesse sido pedido.
+       */
       turma: {
         nome: "turma",
         tipo: "texto",
         padrao: "",
         historico: "empilha",
-        avisaServidor: true,
-      },
-      instrutor: {
-        nome: "instrutor",
-        tipo: "texto",
-        padrao: "",
-        historico: "substitui",
-        avisaServidor: true,
-      },
-      situacao_turma: {
-        nome: "situacao_turma",
-        tipo: "escolha",
-        padrao: "",
-        opcoes: SITUACOES_DE_EXECUCAO,
-        historico: "substitui",
         avisaServidor: true,
       },
       situacao: {
@@ -473,20 +480,92 @@ export const CONTRATO = {
    * ⚠️ **NENHUMA DAS TRÊS TEM PARÂMETRO DE CONSULTA.** A ficha da turma se identifica pelo CAMINHO —
    * `/turmas/<codigo>` —, e o rascunho do formulário não é estado compartilhável.
    *
-   * ⚠️ **NÃO EXISTE `/turmas` (lista global) NEM `/turmas/[turma]/dsa`** (`FR-031.7`). A turma se
-   * alcança pela página do curso; o lançamento diário é do Épico 6. Declarar rota que nenhuma tela
-   * entrega é declarar o que ninguém confere — e a guarda de ausência em
-   * `tests/unidade/contrato-de-parametros.test.ts` cobra as duas.
+   * ✅ **`/turmas` PASSOU A EXISTIR EM 04/10/2026** (`FR-012` da spec 012, decisão `D-NAV-1` de
+   * Bernardo Villas Boas). ⚠️ *Registro anterior, vencido: "NÃO EXISTE `/turmas` (lista global) (…) A
+   * turma se alcança pela página do curso."* Ela se alcança pela lista, pelo curso e pelo endereço
+   * antigo de disciplinas — e a guarda de `contrato-de-parametros.test.ts` foi **invertida**, de
+   * ausência para presença, em vez de apagada: o registro de por que a rota existe é o que ela passa
+   * a proteger.
+   *
+   * ⚠️ **`/turmas/[turma]/dsa` CONTINUA NÃO EXISTINDO** — o lançamento diário é do Épico 6, e a guarda
+   * de ausência dele fica de pé.
    */
+  /*
+   * A lista de turmas (`FR-012` a `FR-016` da spec 012).
+   *
+   * ⚠️ **`ano` É TEXTO, E NÃO `inteiro`, DE PROPÓSITO.** `inteiro` obrigaria a inventar mínimo e
+   * máximo — e o domínio é o **dado**: os anos que existem saem das turmas que a pessoa alcança,
+   * como `curso` já faz em `/instrutores`. Um teto escrito à mão envelheceria no primeiro ano novo.
+   *
+   * ⚠️ **`situacao` ABRE EM "TODAS", ao contrário de `/cursos` e `/instrutores`, que abrem em
+   *    `ativo`** (decisão **D4**, 04/10/2026). Uma lista de turmas é catálogo de vários anos: abrir
+   *    filtrada esconderia planejada e concluída **sem a pessoa ter escolhido**, e o recorte natural
+   *    aqui é o `ano`, não a situação.
+   *
+   * ⚠️ **TODOS OS QUATRO SUBSTITUEM, e nenhum empilha.** Filtrar é refinar a mesma vista; empilhar
+   * faria "voltar" desfazer filtro a filtro em vez de sair da tela.
+   */
+  "/turmas": {
+    rota: "/turmas",
+    origem: "RF-CURSO-01",
+    parametros: {
+      curso: {
+        nome: "curso",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      ano: {
+        nome: "ano",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      situacao: {
+        nome: "situacao",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: SITUACOES_DE_TURMA,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      busca: {
+        nome: "busca",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
+      },
+    },
+  },
   "/cursos/[curso]/turmas/nova": {
     rota: "/cursos/[curso]/turmas/nova",
     origem: "RF-CURSO-01",
     parametros: {},
   },
+  /*
+   * ⚠️ **A FICHA DEIXOU DE SER SEM PARÂMETRO EM 04/10/2026, e é a ÚNICA das três.** Ela recebeu a
+   *    seção de disciplinas que vinha de `/disciplinas?turma=`, e com ela a linha expansível — cujo
+   *    estado é `aberta`, o mesmo nome e o mesmo papel que tem lá.
+   * ⚠️ **`avisaServidor: false` porque é parâmetro VISUAL**: abrir o detalhe não muda o que o
+   *    servidor busca. Lido do servidor, o detalhe nunca abriria, com a URL certa — foi o achado do
+   *    PR 3 da fatia (b).
+   */
   "/turmas/[turma]": {
     rota: "/turmas/[turma]",
     origem: "RF-CURSO-01",
-    parametros: {},
+    parametros: {
+      aberta: {
+        nome: "aberta",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: false,
+      },
+    },
   },
   "/admin/salas": {
     rota: "/admin/salas",

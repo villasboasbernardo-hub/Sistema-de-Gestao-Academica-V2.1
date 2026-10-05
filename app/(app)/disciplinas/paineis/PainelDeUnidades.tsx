@@ -75,7 +75,7 @@ export function PainelDeUnidades({
 
       {avisoDaSoma !== null ? (
         /* ⚠️ Aviso, não bloqueio — ver o cabeçalho. */
-        <p className="text-alerta text-xs" data-slot="aviso-da-soma">
+        <p className="text-atrasado-tinta text-xs" data-slot="aviso-da-soma">
           {avisoDaSoma}
         </p>
       ) : null}
@@ -201,7 +201,7 @@ export function PainelDeUnidades({
         </p>
       ) : null}
       {erro ? (
-        <p role="alert" className="text-erro text-sm">
+        <p role="alert" className="text-conflito-tinta text-sm">
           {erro}
         </p>
       ) : null}

@@ -25,6 +25,8 @@ import {
   type VigenciaDoHistorico,
 } from "@/lib/dominio/vigencia-de-regime";
 
+import { dataParaLeitura } from "@/lib/formato/data";
+
 import { FormularioDeVigencia } from "./FormularioDeVigencia";
 
 /** O rótulo de um parâmetro no resumo da vigência. */
@@ -99,9 +101,12 @@ export function SecaoDeRegime({
                       <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         {/* veste: o rótulo do período; as datas ao lado são dado */}
                         <span className="text-texto-tenue">de</span>
-                        <span className="text-texto font-medium">{v.vigenteDe}</span>
+                        <span className="text-texto font-medium">
+                          {dataParaLeitura(v.vigenteDe)}
+                        </span>
+                        {/* veste: o rótulo do período; as datas ao lado são dado */}
                         <span className="text-texto-tenue">até</span>
-                        <span className="text-texto">{v.vigenteAte ?? "—"}</span>
+                        <span className="text-texto">{dataParaLeitura(v.vigenteAte)}</span>
                         {marca ? (
                           <span className="text-atrasado-tinta" data-slot="marca-da-cancelada">
                             {marca}

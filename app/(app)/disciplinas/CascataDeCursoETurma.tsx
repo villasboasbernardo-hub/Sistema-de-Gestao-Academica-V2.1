@@ -16,36 +16,21 @@
  */
 "use client";
 
-import { SeletorTurma } from "@/components/ciaara/seletor-turma";
 import { Label } from "@/components/ui/label";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
-import type { CursoDaCascata, TurmaDaCascata } from "./consulta";
+import type { CursoDaCascata } from "./consulta";
 
 const ROTA = "/disciplinas";
 
 export function CascataDeCursoETurma({
   cursos,
-  turmas,
-  cursoEscolhido,
   cursoNoEndereco,
-  turmaNoEndereco,
 }: {
   readonly cursos: readonly CursoDaCascata[];
-  readonly turmas: readonly TurmaDaCascata[];
-  readonly cursoEscolhido: CursoDaCascata | null;
   readonly cursoNoEndereco: string;
-  readonly turmaNoEndereco: string;
 }) {
   const [, definirCurso] = useParametro(ROTA, "curso");
-  const [, definirTurma] = useParametro(ROTA, "turma");
-
-  /*
-   * ⚠️ O `SeletorTurma` trabalha com `id`, e a URL carrega o **código** (`FR-031.2`): o código é
-   * legível, compartilhável e sobrevive a uma recarga; o `uuid` não diz nada a ninguém. A tradução
-   * acontece aqui, nas duas direções.
-   */
-  const turmaEscolhidaId = turmas.find((t) => t.codigo === turmaNoEndereco)?.id ?? "";
 
   return (
     <div className="flex flex-wrap items-end gap-3" data-slot="cascata">
@@ -55,10 +40,7 @@ export function CascataDeCursoETurma({
           id="curso"
           name="curso"
           value={cursoNoEndereco}
-          onChange={(e) => {
-            void definirTurma(null);
-            void definirCurso(e.target.value === "" ? null : e.target.value);
-          }}
+          onChange={(e) => void definirCurso(e.target.value === "" ? null : e.target.value)}
           className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
         >
           <option value="">Escolha o curso…</option>
@@ -69,25 +51,6 @@ export function CascataDeCursoETurma({
           ))}
         </select>
       </div>
-
-      {cursoEscolhido && turmas.length > 0 ? (
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="turma">Turma</Label>
-          <SeletorTurma
-            id="turma"
-            turmas={turmas.map((t) => ({ id: t.id, rotulo: t.codigo }))}
-            valor={turmaEscolhidaId}
-            aoMudar={(id) => {
-              const codigo = turmas.find((t) => t.id === id)?.codigo ?? "";
-              void definirTurma(codigo === "" ? null : codigo);
-            }}
-          />
-          {/* veste: dica de que a turma é opcional, e do que se perde sem ela */}
-          <span className="text-texto-tenue text-xs">
-            Sem turma, a tela mostra o catálogo do curso.
-          </span>
-        </div>
-      ) : null}
     </div>
   );
 }
