@@ -585,8 +585,58 @@ def montar_insert(
         f'from staging."{m.aba}" s\n'
         + ("\n".join(joins) if joins else "")
         + filtro
+        + _tolerancia_da_semente(nome)
     )
     return sql, fks
+
+
+def _tolerancia_da_semente(nome: str) -> str:
+    """A clausula de conflito das tabelas que o SCHEMA semeia antes de o ETL rodar.
+
+    ** ISTO NASCEU DE UM ABORTO MEDIDO, em 05/10/2026.** A migration do DSA
+    (`20261005181116`) passou a semear `config_listas` com siglas de tecnica de ensino e
+    categorias de subtipo -- decisoes H1 e H2 de Bernardo Villas Boas --, e **9 dos 19 valores
+    que ela semeia a planilha TAMBEM traz** (medido: `Exposicao Oral`, `Aula Pratica`,
+    `Palestra`, `Atividade Extracurricular`, `Orientacao de TFM`, `Evento/Cerimonia`,
+    `Administracao`, `Tempo Reserva`, `Recuperacao da Aprendizagem`). Numa base recriada a
+    migration roda ANTES do ETL, entao a promocao encontrava a linha ja la e abortava com
+    `duplicate key value violates unique constraint "config_listas_chave_natural"`.
+
+    ** E A TABELA JA ERA DECLARADAMENTE SEMEADA PELO SCHEMA** -- ela esta em
+    `reconciliar.SEMEADAS_PELO_SCHEMA` desde 24/09/2026, justamente para ser isenta da R-05.
+    O que faltava era a promocao **agir** sobre esse fato: ate aqui nenhuma lista semeada por
+    migration (`escala_antiguidade`, `salas`) colidia, porque a planilha nao as tem. A do DSA
+    e a primeira a semear uma lista que a planilha tambem possui.
+
+    ** QUEM GANHA O QUE, e e esta a linha de corte:** o **vocabulario e a ordem de exibicao
+    sao da PLANILHA** (ela e a fonte do dado, e sobrescrever a ordem dela faria a tela do
+    Admin mostrar a lista fora da sequencia que a operacao conhece); os **`metadados` sao do
+    SCHEMA** e por isso **NAO entram no `update`** -- se entrassem, a carga apagaria as siglas
+    que a migration acabou de gravar, e a coluna T/E do DSA impresso sairia por extenso.
+
+    ** A PROCEDENCIA ENTRA NO UPDATE, E ELA FOI O SEGUNDO ACHADO.** Sem ela a R-01 saiu
+    BLOQUEADA com *esperado 72, obtido 63* -- exatamente os 9 valores que a semente havia
+    pre-criado: a R-01 conta `config_listas` pela procedencia (`origem_migracao_v1 like
+    'Config_Listas:%'`, declarada no mapa como chave natural `<Lista>/<Valor>`), e a linha
+    pre-criada pela migration nasce com ela NULA. **As 9 linhas vieram da planilha de fato** --
+    a migration so chegou antes --, entao declarar a procedencia e o registro correto, nao uma
+    tolerancia. ** E isso NAO afrouxa o porteiro da AMBIENTE-2**: quem decide se o destino ja
+    tem dado e `carregar.dados_ja_carregados()`, e numa base que so recebeu a migration essas
+    linhas seguem sem procedencia -- o que o `116` assere sobre os valores que SO a migration
+    introduz.
+
+    ** NAO e `do nothing`**: com ele a linha semeada manteria a `ordem` artificial da
+    migration (901, 902...) e o rotulo dela, e a planilha deixaria de mandar no que e dela.
+    """
+    if nome != "config_listas":
+        return ""
+    return (
+        "\non conflict (lista, valor) do update set "
+        "rotulo_exibicao = excluded.rotulo_exibicao, "
+        "ordem = excluded.ordem, "
+        "ativo = excluded.ativo, "
+        "origem_migracao_v1 = excluded.origem_migracao_v1"
+    )
 
 
 # As quatro amarrações `coluna -> lista` que os gatilhos impõem (documento 31 §334,

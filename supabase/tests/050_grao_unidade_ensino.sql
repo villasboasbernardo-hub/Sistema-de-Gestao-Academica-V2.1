@@ -8,14 +8,50 @@
 -- acontecer.
 -- =====================================================================================
 begin;
-select plan(8);
+select plan(9);
 
 -- ============================================================== FR-020 — o grao
 select has_column('public', 'registros_aula', 'unidade_ensino_id',
   'FR-020 · registros_aula aponta para UNIDADE DE ENSINO');
 
-select hasnt_column('public', 'registros_aula', 'disciplina_id',
-  'FR-020 · registros_aula NAO guarda disciplina_id — guardar as duas seria a segunda fonte de verdade que a rota (b) elimina');
+-- ---------------------------------------------------------------------------------
+-- ⚠️ ASSERCAO ALTERADA EM 05/10/2026 — e, como a de 08/09 logo abaixo, a alteracao e o
+--    registro de que ela FUNCIONOU. Ela era:
+--
+--        select hasnt_column('public', 'registros_aula', 'disciplina_id',
+--          'FR-020 · registros_aula NAO guarda disciplina_id — guardar as duas seria a
+--           segunda fonte de verdade que a rota (b) elimina');
+--
+--    E ela REPROVOU na migration `20261005181116` do DSA, exatamente como o comentario do
+--    `091` prometia: *"se alguem, um dia, resolver «facilitar» criando a coluna, este teste
+--    quebra"*. Quebrou. O guarda fez o trabalho dele.
+--
+-- ⚠️ **O QUE AUTORIZA A MUDANCA E NOMINAL (regra 1): a decisao Q-1 de Bernardo Villas Boas,
+--    05/10/2026** — *"lancamento por disciplina sem UE nos cursos por competencias e nas 6
+--    disciplinas sem UE, com topico obrigatorio"*. Sem ela, esta linha NAO mudaria.
+--
+-- ⚠️ **E A PROPRIEDADE QUE A ASSERCAO PROTEGIA CONTINUA PROTEGIDA — e e por isso que ela virou
+--    POSITIVA em vez de sair.** O que a rota (b) elimina e a SEGUNDA FONTE DE VERDADE, nao a
+--    coluna: com `reg_aula_ue_xor_disciplina`, as duas colunas **nunca** estao preenchidas na
+--    mesma linha, logo a disciplina de uma aula tem sempre UMA origem — a UE quando ha UE, a
+--    coluna quando nao ha. Apagar a assercao deixaria de guardar qualquer coisa; esta forma
+--    guarda o MESMO que antes, pelo mecanismo novo.
+--
+-- ⚠️ POR QUE ISSO NAO E AFROUXAR A CATRACA PARA CABER O QUE EU QUERIA FAZER: a isencao e
+--    nominal e medida — 2 de 24 cursos (`curriculo_modelo = 'competencias'`) e 6 de 175
+--    disciplinas (`sem_unidades_ensino`) —, imposta por `app.disciplina_sem_ue`, e o `116`
+--    tem o caso que discrimina: disciplina NAO isenta sem UE segue recusada.
+-- ---------------------------------------------------------------------------------
+select has_column('public', 'registros_aula', 'disciplina_id',
+  'Q-1 · registros_aula ganhou `disciplina_id` para a aula SEM UE (decisao de Bernardo Villas Boas, 05/10/2026)');
+
+select ok(
+  exists (select 1 from pg_constraint
+           where conrelid = 'public.registros_aula'::regclass
+             and conname = 'reg_aula_ue_xor_disciplina'
+             and contype = 'c'),
+  'FR-020 · e a SEGUNDA FONTE DE VERDADE segue impossivel: UE e disciplina sao EXCLUSIVAS por CHECK'
+);
 
 -- ---------------------------------------------------------------------------------
 -- ⚠️ ASSERCAO ALTERADA EM 08/09/2026 — e a alteracao e o registro de que ela FUNCIONOU.
