@@ -13,7 +13,7 @@
 -- =================================================================================
 
 begin;
-select plan(6);
+select plan(7);
 
 -- ---------------------------------------------------------------------------------
 -- 1. A coluna aceita nulo — sem isso, os 17 cursos sem fonte não entram.
@@ -85,13 +85,43 @@ select has_column(
 );
 
 -- ---------------------------------------------------------------------------------
--- 6. NEGATIVO E INEGOCIAVEL — `disciplina_id` continua PROIBIDA.
---    A quarentena preserva evidencia; ela NAO reabre a rota (b). Se alguem, um dia,
---    resolver "facilitar" criando a coluna, este teste quebra.
+-- 6. ⚠️ **ESTA ASSERCAO QUEBROU EM 05/10/2026, COMO ELA MESMA PROMETIA — e o registro vale
+--    mais que a troca.** Ela era:
+--
+--        select hasnt_column('public', 'registros_aula', 'disciplina_id',
+--          'RN-UE-6 (NEGATIVO): disciplina_id SEGUE PROIBIDA — guardar as duas seria a
+--           segunda fonte de verdade que a rota (b) eliminou (FR-020)');
+--
+--    com o comentario *"se alguem, um dia, resolver «facilitar» criando a coluna, este teste
+--    quebra"*. A migration `20261005181116` criou a coluna e o teste quebrou. **Nao foi
+--    «facilitar»**: foi a decisao **Q-1 de Bernardo Villas Boas, 05/10/2026**, que e a
+--    autorizacao nominal que a regra 1 do `CLAUDE.md` exige — *"lancamento por disciplina sem
+--    UE nos cursos por competencias e nas 6 disciplinas sem UE, com topico obrigatorio"*.
+--
+-- ⚠️ **O MOTIVO MEDIDO, porque sem ele a decisao parece capricho:** `C-Espc-HN` e `C-Espc-FR`
+--    sao `curriculo_modelo = 'competencias'` e **nao tem UE nenhuma no catalogo da DEnsM** —
+--    sao dois dos cinco cursos regulares que mais lancam. Sem a coluna, a operacao deles nao
+--    tem onde dizer de que disciplina a aula e, e a CH por disciplina deles ficaria em zero
+--    para sempre.
+--
+-- ⚠️ **E O NEGATIVO NAO FOI APAGADO: ele MUDOU DE OBJETO.** O que a rota (b) proibe e a
+--    segunda fonte de verdade, e ela segue proibida — agora por `reg_aula_ue_xor_disciplina`,
+--    que recusa as duas colunas na mesma linha. A quarentena continua preservando evidencia e
+--    continua **nao** sendo o caminho de volta.
 -- ---------------------------------------------------------------------------------
-select hasnt_column(
+select ok(
+  exists (select 1 from pg_constraint
+           where conrelid = 'public.registros_aula'::regclass
+             and conname = 'reg_aula_ue_xor_disciplina'
+             and contype = 'c'),
+  'RN-UE-6 (NEGATIVO): guardar UE **e** disciplina na mesma linha SEGUE PROIBIDO — o CHECK recusa as duas juntas (FR-020)'
+);
+
+-- E o grao antigo nao voltou pela porta da frente: a coluna nova e ANULAVEL e so vale onde a
+-- isencao da Q-1 vale. Uma `disciplina_id` NOT NULL seria a rota (a) de volta.
+select col_is_null(
   'public', 'registros_aula', 'disciplina_id',
-  'RN-UE-6 (NEGATIVO): disciplina_id SEGUE PROIBIDA — guardar as duas seria a segunda fonte de verdade que a rota (b) eliminou (FR-020)'
+  'RN-UE-6: a coluna nova e ANULAVEL — o grao do sistema continua sendo a Unidade de Ensino'
 );
 
 select * from finish();

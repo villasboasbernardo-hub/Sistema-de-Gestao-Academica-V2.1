@@ -131,9 +131,11 @@ export type Database = {
           editado_por: string | null
           escopo: Database["public"]["Enums"]["escopo_atividade"]
           id: string
+          instrutor_id: string | null
           local: string | null
           observacoes: string | null
           origem_migracao_v1: string | null
+          responsavel_externo: string | null
           status: Database["public"]["Enums"]["status_registro"]
           subtipo: string | null
           ta_final: number | null
@@ -154,9 +156,11 @@ export type Database = {
           editado_por?: string | null
           escopo?: Database["public"]["Enums"]["escopo_atividade"]
           id?: string
+          instrutor_id?: string | null
           local?: string | null
           observacoes?: string | null
           origem_migracao_v1?: string | null
+          responsavel_externo?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
           subtipo?: string | null
           ta_final?: number | null
@@ -177,9 +181,11 @@ export type Database = {
           editado_por?: string | null
           escopo?: Database["public"]["Enums"]["escopo_atividade"]
           id?: string
+          instrutor_id?: string | null
           local?: string | null
           observacoes?: string | null
           origem_migracao_v1?: string | null
+          responsavel_externo?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
           subtipo?: string | null
           ta_final?: number | null
@@ -189,6 +195,34 @@ export type Database = {
           turma_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "atividades_nao_letivas_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "atividades_nao_letivas_turma_id_fkey"
             columns: ["turma_id"]
@@ -1778,6 +1812,7 @@ export type Database = {
           curso_id: string
           data: string
           disciplina_codigo_legado_v1: string | null
+          disciplina_id: string | null
           editado_em: string | null
           editado_por: string | null
           id: string
@@ -1803,6 +1838,7 @@ export type Database = {
           curso_id: string
           data: string
           disciplina_codigo_legado_v1?: string | null
+          disciplina_id?: string | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
@@ -1828,6 +1864,7 @@ export type Database = {
           curso_id?: string
           data?: string
           disciplina_codigo_legado_v1?: string | null
+          disciplina_id?: string | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
@@ -1845,6 +1882,27 @@ export type Database = {
           unidade_ensino_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "reg_aula_disciplina_do_curso"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id", "curso_id"]
+          },
+          {
+            foreignKeyName: "reg_aula_disciplina_do_curso"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id", "curso_id"]
+          },
+          {
+            foreignKeyName: "reg_aula_disciplina_do_curso"
+            columns: ["disciplina_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id", "curso_id"]
+          },
           {
             foreignKeyName: "reg_aula_turma_do_curso"
             columns: ["turma_id", "curso_id"]
@@ -3504,7 +3562,10 @@ export type Database = {
           data: string | null
           disciplina_id: string | null
           fato_id: string | null
+          fiscal_id: string | null
+          herdado: boolean | null
           instrutor_id: string | null
+          local: string | null
           origem: string | null
           ta_final: number | null
           ta_inicial: number | null
@@ -3657,6 +3718,17 @@ export type Database = {
       }
     }
     Functions: {
+      conflitos_da_semana: {
+        Args: { p_ate: string; p_de: string; p_turma_id: string }
+        Returns: {
+          data: string
+          fiscal_id: string
+          instrutor_id: string
+          local: string
+          ta_final: number
+          ta_inicial: number
+        }[]
+      }
       corrigir_vigencia_regime: {
         Args: { p_sucessora: Json; p_vigencia_id: string }
         Returns: {

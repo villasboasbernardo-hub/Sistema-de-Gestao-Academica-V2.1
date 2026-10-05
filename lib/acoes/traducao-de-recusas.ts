@@ -217,6 +217,21 @@ function porChave(
     case "situacao_sem_permissao":
       return "O seu perfil não desativa nem reativa curso.";
 
+    /*
+     * `public.conflitos_da_semana` (migration `20261005181116`, Q-17 da spec 013) levanta esta
+     * chave nos **dois** ramos do porteiro dela: sem `registros_aula.ler` e sem alcance para a
+     * turma. A frase é a mesma porque, para quem lê, as duas são a mesma coisa — e dizer qual
+     * das duas foi contaria ao visitante **que a turma existe**, que é o oposto do que a função
+     * faz (ela devolve o conflito sem o dado alheio).
+     *
+     * ⚠️ Ela NÃO vai para `SEM_FRASE_DE_TELA`: a função é consumida pela grade do DSA, então a
+     * recusa chega a uma tela de verdade. Sem o caso aqui, cairia na frase genérica de `42501`
+     * — *"o seu perfil não pode fazer esta alteração neste curso"* —, que fala de ALTERAÇÃO
+     * numa consulta e manda a pessoa procurar permissão de escrita que não é o problema.
+     */
+    case "sem_alcance":
+      return "O seu perfil não alcança esta turma.";
+
     case "sigla_de_outro_curso": {
       const sigla = texto(d.sigla) ?? contexto.sigla;
       const dono = texto(d.curso_sigla_atual);
