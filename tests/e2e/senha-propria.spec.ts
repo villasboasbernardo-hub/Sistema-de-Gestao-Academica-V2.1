@@ -87,11 +87,38 @@ test.describe("`FR-030` · a tela é alcançada por clique, e troca a senha", ()
   });
 });
 
+/**
+ * ⚠️ **ESTE BLOCO TEM CONTA PRÓPRIA, E A FALTA DELA ERA UM DEFEITO LATENTE — medido na `main` em
+ * 05/10/2026** (decisão F-3 de Bernardo Villas Boas, corrigida no PR 1 do Épico 6).
+ *
+ * O primeiro bloco do arquivo **TROCA a senha** da conta que usa, e não a restaura; `entrar()`
+ * entra com a senha fixa. Enquanto os dois blocos compartilhavam a conta, o segundo passava **só
+ * quando o Playwright os punha em workers diferentes** — e o e-mail deriva do `workerIndex`, então
+ * cada worker criava a sua. Com `fullyParallel: true` isso acontece quase sempre; com
+ * `--workers=1`, **nunca**: a reprovação era reprodutível na `main`, sem relação com fatia nenhuma.
+ *
+ * ⚠️ **O SINTOMA ERA O PIOR POSSÍVEL:** o caso falhava em `entrar()`, com *"credencial inválida"*
+ * sobre a tela de login — que se lê como defeito da AUTENTICAÇÃO, e era efeito colateral do teste
+ * anterior. É a mesma família que o cabeçalho deste arquivo já descreve, e que a separação de
+ * arquivos resolveu **entre** arquivos mas não **dentro** deste.
+ */
 test.describe("⚠️ OS DOIS CASOS QUE DISCRIMINAM · a recusa, e QUANDO ela acontece", () => {
+  let EMAIL_DA_RECUSA = "";
+
+  test.beforeAll(async ({}, info) => {
+    EMAIL_DA_RECUSA = emailDeTeste("senha-recusa", info.workerIndex);
+    // `operador`, não `admin`: um Admin a mais derruba 12 casos de `rls.test.ts` (gotcha 8).
+    await criarConta(EMAIL_DA_RECUSA, `USR-SREC-${info.workerIndex}`, "operador");
+  });
+
+  test.afterAll(async () => {
+    await apagarConta(EMAIL_DA_RECUSA);
+  });
+
   test("senha curta é recusada COM A FRASE DA REGRA, e não com a palavra `inválida`", async ({
     page,
   }) => {
-    await entrar(page, EMAIL);
+    await entrar(page, EMAIL_DA_RECUSA);
     await irAoTrocarSenhaPorClique(page);
 
     await page.locator('input[name="senha"]').fill("curta");
@@ -112,7 +139,7 @@ test.describe("⚠️ OS DOIS CASOS QUE DISCRIMINAM · a recusa, e QUANDO ela ac
   test("⚠️ duas digitações diferentes são recusadas ANTES de qualquer envio ao servidor", async ({
     page,
   }) => {
-    await entrar(page, EMAIL);
+    await entrar(page, EMAIL_DA_RECUSA);
     await irAoTrocarSenhaPorClique(page);
 
     // ⚠️ **O QUE SE MEDE É A AUSÊNCIA DE CHAMADA, não a presença da mensagem.** Uma tela que

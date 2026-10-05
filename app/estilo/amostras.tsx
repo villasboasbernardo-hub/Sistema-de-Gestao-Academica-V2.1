@@ -40,6 +40,10 @@ import {
   type Densidade,
   type Ordem,
 } from "@/components/ciaara/tabela-densa";
+import { GradeAlocacao } from "@/components/ciaara/grade-alocacao";
+import { GradeDsa } from "@/components/ciaara/grade-dsa";
+import { montarSemana } from "@/lib/dominio/dsa/grade";
+import { relogioDoRegime } from "@/lib/dominio/dsa/horario-do-bloco";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
 import { GraficoLinha } from "@/components/graficos/grafico-linha";
 import { GraficoPizza } from "@/components/graficos/grafico-pizza";
@@ -845,4 +849,128 @@ export function AmostraEstadoNaUrl() {
       </p>
     </div>
   );
+}
+
+/**
+ * `GradeAlocacao` — a matriz densa, **sem** domínio dentro.
+ *
+ * ⚠️ A amostra usa dia e tempo porque é o uso real (`GradeDsa` compõe sobre ela), mas a grade
+ * recebe **tudo pronto**: nenhuma regra de relógio, feriado ou conflito passa por aqui.
+ */
+export function AmostraGradeAlocacao() {
+  const colunas = [
+    { chave: "seg", rotulo: "SEG 06/04" },
+    { chave: "ter", rotulo: "TER 07/04", destacada: true },
+    { chave: "qua", rotulo: "QUA 08/04", bloqueio: "Nossa Senhora Aparecida" },
+    { chave: "qui", rotulo: "QUI 09/04", nota: "Dia do Servidor" },
+  ];
+  const linhas = [
+    { chave: "1", rotulo: "1 · 07:50" },
+    { chave: "2", rotulo: "2 · 08:40" },
+    { chave: "almoco", rotulo: "almoço", separadora: true },
+    { chave: "3", rotulo: "3 · 13:05" },
+  ];
+  const vazia = {};
+  const celulas = [
+    [
+      { conteudo: "II · Navegação", tom: "ocupada" as const, alturaEmLinhas: 2 },
+      { conteudo: "Palestra", tom: "nao_letivo" as const },
+      { tom: "bloqueada" as const },
+      vazia,
+    ],
+    [
+      { coberta: true },
+      { conteudo: "PM1", tom: "avaliacao" as const },
+      { tom: "bloqueada" as const },
+      vazia,
+    ],
+    [],
+    [
+      vazia,
+      { conteudo: "III · Meteorologia", tom: "conflito" as const },
+      { tom: "bloqueada" as const },
+      vazia,
+    ],
+  ];
+  return (
+    <GradeAlocacao
+      rotulo="Amostra da grade de alocação"
+      colunas={colunas}
+      linhas={linhas}
+      celulas={celulas}
+      cantoSuperior="TA"
+      rodapeDasColunas={["—", "1 avaliação sem posição", "—", "—"]}
+    />
+  );
+}
+
+/**
+ * `GradeDsa` — a semana inteira, montada pelo DOMÍNIO e só desenhada aqui.
+ *
+ * ⚠️ A amostra chama `montarSemana()` com a grade **G45 real** (TA de 45 min começando às 07:50,
+ * cinco de manhã) justamente para mostrar que o componente não inventa relógio: troque o regime e
+ * a grade muda sozinha. E ela traz os três casos que a tela precisa exibir — bloco que atravessa o
+ * almoço, feriado de dia inteiro e lançamento sem posição.
+ */
+export function AmostraGradeDsa() {
+  const relogio = relogioDoRegime({
+    regimeTempos: 8,
+    taDuracaoMin: 45,
+    intervaloManhaMin: 5,
+    intervaloTardeMin: 5,
+    horaInicioManha: "07:50",
+    horaInicioTarde: "13:05",
+    configuracaoHorarioId: null,
+  });
+  const semana = montarSemana({
+    dias: ["2026-04-06", "2026-04-07", "2026-04-08", "2026-04-09", "2026-04-10"],
+    relogio,
+    temposDeclarados: 8,
+    fatos: [
+      {
+        fatoId: "a1",
+        origem: "aula",
+        data: "2026-04-06",
+        taInicial: 3,
+        tempos: 4,
+        herdado: false,
+        disciplina: "II",
+        conteudo: "Navegação costeira — marcação e plotagem",
+        tecnica: "EO",
+        instrutor: "1ºTEN SILVA",
+        local: "SALA 3",
+      },
+      {
+        fatoId: "a2",
+        origem: "avaliacao",
+        data: "2026-04-07",
+        taInicial: 1,
+        tempos: 2,
+        herdado: false,
+        disciplina: "III",
+        conteudo: "Prova escrita",
+        tecnica: "PE",
+        instrutor: "CC SOUZA (FISCAL)",
+        local: "AUDITÓRIO",
+      },
+      {
+        fatoId: "a3",
+        origem: "aula",
+        data: "2026-04-09",
+        taInicial: null,
+        tempos: null,
+        herdado: true,
+        disciplina: "I",
+        conteudo: "Lançamento migrado da planilha",
+        tecnica: null,
+        instrutor: null,
+        local: null,
+      },
+    ],
+    feriados: [{ data: "2026-04-08", descricao: "Feriado de amostra", impacto: "dia_inteiro" }],
+    marcas: new Map(),
+    hoje: "2026-04-07",
+    sabadoAberto: false,
+  });
+  return <GradeDsa semana={semana} salaDaTurma="SALA 3" />;
 }

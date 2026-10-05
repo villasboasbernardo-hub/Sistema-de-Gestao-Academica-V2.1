@@ -129,9 +129,26 @@ function destinosEscritos(): { readonly rota: string; readonly onde: string }[] 
        * como o Next escreve o segmento dinâmico — assim `/cursos/${sigla}/editar` casa com
        * `/cursos/[curso]/editar` sem que a varredura precise saber o nome do parâmetro.
        */
+      /*
+       * ⚠️ **A DECLARAÇÃO DE ROTA NÃO É LINK, E ESTA EXCEÇÃO FECHA UM PONTO CEGO MEDIDO EM
+       *    05/10/2026.** `const ROTA_DO_DSA = "/turmas/[turma]/dsa"` existe para **tipar** o
+       *    parâmetro de URL, exatamente como as chaves de `contrato.ts` — que este arquivo já
+       *    ignora, e pelo mesmo motivo. Sem esta linha, **declarar a constante satisfazia a
+       *    varredura sem link nenhum**: a tela do DSA passaria por alcançável tendo zero botões, que
+       *    é precisamente o defeito que esta guarda existe para pegar.
+       * ⚠️ E ela não afrouxa nada: `/turmas/[turma]` tem `ROTA_DA_FICHA_DA_TURMA` **e** links de
+       *    verdade por `enderecoDaTurma`, então continua aprovada — pelos links, agora, e não pela
+       *    declaração.
+       */
+      const linhasDeDeclaracaoDeRota = new Set(
+        [...codigo.matchAll(/const\s+ROTA_[A-Z0-9_]*\s*=\s*["'`](\/[^"'`\s]*)["'`]/g)].map(
+          (m) => m[1] as string,
+        ),
+      );
       for (const achado of codigo.matchAll(/["'`](\/[^"'`\s]*)["'`]/g)) {
         const bruto = achado[1];
         if (!bruto || bruto.includes("://")) continue;
+        if (linhasDeDeclaracaoDeRota.has(bruto)) continue;
         const normalizado = bruto
           .replace(/\$\{[^}]*\}/g, "[param]")
           .replace(/\?.*$/, "")

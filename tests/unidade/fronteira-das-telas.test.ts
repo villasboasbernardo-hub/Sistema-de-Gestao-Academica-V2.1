@@ -56,6 +56,8 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
 
   // ── Épico 5 (c): instrutores ───────────────────────────────────────────────────────────────
   "app/(app)/instrutores/FiltrosDeInstrutores.tsx": "os filtros da listagem, na URL",
+  "app/(app)/turmas/[turma]/dsa/NavegacaoDaSemana.tsx":
+    "semana anterior/atual/próxima e a coluna de sábado — ela EMPILHA no histórico (`RF-NAV-04`), e empilhar é comportamento de navegador",
   "app/(app)/instrutores/TabelaDeInstrutores.tsx": "a grade navegável por teclado",
   "app/(app)/instrutores/EstatisticasRecolhiveis.tsx": "recolher o painel — estado efêmero",
   "app/(app)/instrutores/FormularioDeInstrutor.tsx": "cadastrar e editar instrutor",

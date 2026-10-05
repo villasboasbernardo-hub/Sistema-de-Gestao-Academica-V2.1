@@ -467,15 +467,64 @@ describe("⚠️ `FR-012` da spec 012 · a guarda INVERTIDA — a lista de turma
     ).toBe(true);
   });
 
-  it("a tela da lista existe, e a do DSA continua não existindo", () => {
+  /*
+   * ⚠️ **ESTA ASSERÇÃO FOI INVERTIDA EM 05/10/2026, NÃO APAGADA — e é a segunda vez que ela vira.**
+   * Ela era *"a tela da lista existe, e a do DSA continua não existindo"*, com
+   * `.toBe(false)` no diretório e `.not.toContain` na rota, e a razão escrita era *"o DSA é do
+   * Épico 6, e não desta fatia"*. **Ela era verdadeira, e deixou de ser**: o PR 1 do Épico 6
+   * (spec 013, `RF-DSA-01`) construiu a tela.
+   *
+   * ⚠️ Inverter em vez de apagar é o que a `/turmas` já fez em 04/10/2026: o registro de por que a
+   * rota existe passa a ser o que a asserção protege. Apagá-la deixaria de guardar qualquer coisa.
+   */
+  it("a tela da lista e a do DSA existem, as duas", () => {
     expect(
       existsSync(resolve(process.cwd(), "app/(app)/turmas/page.tsx")),
       "a lista de turmas não existe em `app/`, mas o menu a anuncia",
     ).toBe(true);
     expect(
-      existsSync(resolve(process.cwd(), "app/(app)/turmas/[turma]/dsa")),
-      "o DSA nasceu: ele é do Épico 6, e não desta fatia (`FR-031.7`)",
-    ).toBe(false);
-    expect(ROTAS, "o DSA é do Épico 6, e não desta fatia").not.toContain("/turmas/[turma]/dsa");
+      existsSync(resolve(process.cwd(), "app/(app)/turmas/[turma]/dsa/page.tsx")),
+      "a tela do DSA não existe em `app/`, e o contrato a declara (`RF-DSA-01`)",
+    ).toBe(true);
+    expect(ROTAS, "o DSA saiu do contrato de parâmetros").toContain("/turmas/[turma]/dsa");
+  });
+
+  /*
+   * O `RF-NAV-04` no contrato: *"navegar entre semanas usa o histórico do navegador"*.
+   *
+   * ⚠️ **SEM ESTA ASSERÇÃO, O DEFEITO SERIA SILENCIOSO** — o padrão da biblioteca é SUBSTITUIR, e
+   * com ele a URL fica correta, o link compartilhado abre na semana certa, e **o botão voltar sai
+   * da tela** em vez de voltar uma semana. É a mesma classe do `/inicio`, que já tem guarda.
+   */
+  it("`RF-NAV-04` · semana e ano EMPILHAM; o sábado SUBSTITUI", () => {
+    const dsa = parametrosDaRota("/turmas/[turma]/dsa");
+    const por = (n: string) => dsa.find((p) => p.nome === n);
+    expect(por("semana")?.historico, "voltar sairia da tela em vez de voltar uma semana").toBe(
+      "empilha",
+    );
+    expect(por("ano")?.historico, "a virada do ano precisa empilhar junto com a semana").toBe(
+      "empilha",
+    );
+    expect(por("sabado")?.historico, "abrir a coluna é refinar a MESMA semana").toBe("substitui");
+    // Os três alimentam consulta no servidor — é o campo cujo erro é silencioso (`FR-004.1`).
+    expect(dsa.every((p) => p.avisaServidor)).toBe(true);
+  });
+
+  /*
+   * ⚠️ **O PADRÃO `0` É SENTINELA, E ISTO É O QUE IMPEDE ALGUÉM DE "CONSERTÁ-LO" PARA `1`.**
+   * O padrão de verdade é a semana ISO de hoje, que é dinâmica. Com `padrao: 1`, a semana 1 — um
+   * valor legítimo — desapareceria da URL e o link compartilhado abriria na semana corrente em vez
+   * da primeira do ano. Zero não é semana ISO (1..53) nem ano, então não se confunde com dado.
+   */
+  it("o padrão de `semana` e `ano` é a sentinela 0, e as faixas são as normativas", () => {
+    const dsa = parametrosDaRota("/turmas/[turma]/dsa");
+    const semana = dsa.find((p) => p.nome === "semana");
+    const ano = dsa.find((p) => p.nome === "ano");
+    expect(semana?.padrao, "1 é semana legítima e não pode ser o padrão").toBe(0);
+    expect(ano?.padrao).toBe(0);
+    // ISO 8601: o ano tem 52 ou 53 semanas. Não é número escolhido à mão.
+    expect(semana?.tipo === "inteiro" && [semana.minimo, semana.maximo]).toEqual([1, 53]);
+    // A mesma faixa do `CHECK config_param_ano_valido` do banco (medido), não um palpite.
+    expect(ano?.tipo === "inteiro" && [ano.minimo, ano.maximo]).toEqual([2020, 2099]);
   });
 });

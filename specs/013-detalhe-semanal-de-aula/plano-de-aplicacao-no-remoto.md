@@ -1,9 +1,13 @@
 # Aplicação no remoto — spec 013, PR B (T047)
 
-> **PLANO, NÃO REGISTRO.** Nada abaixo foi executado. Este documento existe para você autorizar —
-> *"NÃO aplique no remoto: pare depois do PR aberto e me mostre o plano de aplicação (backup,
-> dry-run, reversão) para eu autorizar"* (Bernardo Villas Boas, 05/10/2026). Quando a autorização
-> vier, os resultados medidos entram nas colunas vazias e o documento passa a ser o registro.
+> ✅ **EXECUTADO em 05/10/2026, com autorização de Bernardo Villas Boas** — *"AUTORIZO a aplicação
+> do PR B no remoto seguindo o plano-de-aplicacao-no-remoto.md: reexecute a pré-conferência e PARE
+> se qualquer contagem sair de zero; backup; dry-run com exatamente uma migration; db push; as 13
+> conferências só de leitura"*. O CI estava **verde nos três blocos** sobre `003f382` (run
+> `37369152065`: `banco` 10m18s, `qualidade` 1m4s, `build` 44s) antes do push.
+>
+> **Veredito: aplicada, e as 13 conferências passam.** Os resultados medidos estão nas colunas
+> abaixo. *(Registro anterior, vencido: "PLANO, NÃO REGISTRO. Nada abaixo foi executado.")*
 
 > **Uma migration só**: `20261005181116_dsa_lancamento_sem_ue_e_conflito.sql`.
 
@@ -49,11 +53,11 @@ dos cadastros e está sendo usado na tela; se alguém editar uma aula entre esta
 
 | # | Passo | Comando | Resultado esperado | Medido |
 |---|---|---|---|---|
-| 0 | **Reexecutar a pré-conferência** | `supabase db query --linked -f <o arquivo acima>` | **B = 0** e **D = 0**. Se qualquer um for diferente de zero, **PARAR** e me chamar: há linha que o `CHECK` recusa, e o push falharia | — |
-| 1 | **Backup** | `python -m scripts.manutencao.dado_do_remoto --somente-copia` | um `remoto-AAAAMMDD-HHMMSS.sql` em `%LOCALAPPDATA%\ciaara-11\copias-do-remoto\`, fora do git, com o tamanho citado no relatório | — |
-| 2 | **Dry-run** | `supabase db push --linked --dry-run` | *"Would push these migrations: • 20261005181116_dsa_lancamento_sem_ue_e_conflito.sql"* — **uma só**, nenhum `seed`, nenhum `role` | — |
-| 3 | **Aplicação** | `pnpm db:push` | `Applying migration 20261005181116…` · saída **0** | — |
-| 4 | **Retrato depois** | `--somente-copia` de novo | o segundo arquivo datado, que sustenta a conferência de dado | — |
+| 0 | **Reexecutar a pré-conferência** | `supabase db query --linked -f …` | **B = 0** e **D = 0** | ✅ **B = 0, D = 0**, e as 14 linhas idênticas à leitura anterior — nada mudou no remoto entre as duas |
+| 1 | **Backup** | `dado_do_remoto --somente-copia` | arquivo datado fora do git | ✅ **`remoto-20261005-174701.sql`, 1.797 KB** |
+| 2 | **Dry-run** | `supabase db push --linked --dry-run` | **uma só**, nenhum `seed`, nenhum `role` | ✅ `"migrations":["20261005181116_…"],"seeds":[],"roles":[]` — exatamente uma |
+| 3 | **Aplicação** | `pnpm db:push` | saída **0** | ✅ `Applying migration 20261005181116…` · **EXIT=0** |
+| 4 | **Retrato depois** | `--somente-copia` de novo | o segundo arquivo datado | ✅ **`remoto-20261005-174805.sql`, 1.817 KB** |
 
 ⚠️ **O BACKUP NÃO É REDE DE SEGURANÇA AUTOMÁTICA.** Restaurá-lo no remoto seria **escrita no
 remoto**, que a seção da fonte da verdade proíbe sem decisão expressa sua. O que ele garante é que o
@@ -79,6 +83,46 @@ credencial não é cadastro.
 | 11 | **`Licença de Pagamento` sem categoria** | catálogo | **0** linhas — ela vem do calendário (Q-16), não do DSA |
 | 12 | **O comentário da E-1** | `obj_description` | contém *"NAO descontam nada"* e **não** contém *"`parcial` reduz;"* |
 | 13 | **Production respondendo** | HTTP | `/login` **200**, rotas protegidas **307** — como antes |
+
+### ✅ As 13 conferências, medidas em 05/10/2026 depois do push
+
+| # | Conferido | Medido |
+|---|---|---|
+| 1 | migrations dos dois lados | ✅ **52 e 52**, última `20261005181116` nos dois |
+| 2 | impressão digital do esquema | ✅ **1.612 objetos** e md5 **`799f8481015488863f4b2f2fc5eee034`** — **idêntico** nos dois bancos |
+| 3 | a coluna e a FK composta | ✅ `disciplina_id` **anulável**, `uuid`; FK `(disciplina_id, curso_id) → disciplinas(id, curso_id) ON DELETE RESTRICT` |
+| 4 | os três CHECK | ✅ os três presentes; a catraca **cita `disciplina_sem_ue` e `coalesce`**; e o **`COMMENT ON CONSTRAINT` foi reposto, citando a UE-1** — a conferência que a T046 criou |
+| 5 | o porteiro da isenção | ✅ **DEFINER / stable**; `execute` só para **`authenticated`**, `anon` fora |
+| 6 | ⚠️ `security_invoker` nas duas views | ✅ **SIM nas duas** — o gotcha 10 não se repetiu |
+| 7 | zero `DELETE` novo | ✅ **0** policies de `DELETE` no catálogo inteiro; **nenhum** `DELETE`/`TRUNCATE` nas duas views para `authenticated` |
+| 8 | a função de conflito | ✅ **DEFINER**; `execute` só para `authenticated` |
+| 9 | o dado INTACTO | ✅ **1.566** aulas · **664** atividades · **188** avaliações; `disciplina_id` preenchida em **0**; `responsavel_externo` em **0** |
+| 10 | as sementes | ✅ `metodologias` **22 / 10 com sigla**, **`PE` em `Prova Escrita`**; `tipos_atividade` **16 / 10 com categoria**; `config_parametros dsa.*` **3** |
+| 11 | `Licença de Pagamento` | ✅ **0** com categoria — ela vem do calendário |
+| 12 | o comentário da E-1 | ✅ **CORRIGIDO** — diz *"NAO descontam nada"* e não contém mais *"`parcial` reduz;"* |
+| 13 | Production | ✅ `/login` **200**, `/estilo` **200**, e `/`, `/turmas`, `/inicio`, `/cursos` **307** para o login — como antes |
+
+**E a procedência das 9 linhas que a semente tocou foi PRESERVADA**: **72** linhas de
+`config_listas` seguem com `origem_migracao_v1 like 'Config_Listas:%'`, que é o número que a R-01
+exige. Era esse o ponto do `origem_migracao_v1 = excluded.origem_migracao_v1` no conserto do ETL.
+
+### ✅ E o dado: ZERO linhas pré-existentes alteradas, provado pelos dois retratos
+
+O `diff` bruto dos dois arquivos datados tem **4.522 linhas** — e isso **não** é alarme: a migration
+acrescenta coluna a duas tabelas, então o `pg_dump` reescreve **toda** linha delas com a lista nova e
+os `NULL` extras. Ler esse número como *"a migration mexeu em 4.522 linhas"* seria a leitura fácil
+que o **gotcha 13** descreve. O que decide é a comparação **estruturada**, e ela é limpa:
+
+| O que foi medido nos dois retratos | Resultado |
+|---|---|
+| tabelas cuja **lista de colunas** mudou | **duas**: `atividades_nao_letivas` (+`responsavel_externo`, +`instrutor_id`) e `registros_aula` (+`disciplina_id`) — exatamente as três colunas da migration |
+| tabelas cuja lista de colunas **não** mudou | **22** |
+| tabelas cuja **contagem de linhas** mudou | **duas**: `config_listas` **104 → 113** (+9: 6 metodologias e 3 subtipos novos) e `config_parametros` **34 → 37** (+3) |
+| qualquer outra tabela com contagem diferente | **nenhuma** — `registros_aula`, `atividades_nao_letivas`, `avaliacoes`, `usuarios`, `cursos`, `turmas`, `instrutores` e `disciplinas` intactas |
+
+⚠️ **E `usuarios` NÃO mudou desta vez**, ao contrário do que o gotcha 13 registra da spec 011:
+ninguém estava usando o preview durante o push, então não houve carimbo de `ultimo_acesso` entre as
+duas leituras. A ausência da diferença é o caso fácil; o rito existe para o caso em que ela aparece.
 
 ⚠️ **A CONFERÊNCIA DE "ZERO LINHAS ALTERADAS" NÃO É md5 DE TABELA VIVA** (gotcha 13): `usuarios`
 carrega `ultimo_acesso` e `editado_em`, que mudam sozinhos enquanto alguém usa o preview, e ler isso

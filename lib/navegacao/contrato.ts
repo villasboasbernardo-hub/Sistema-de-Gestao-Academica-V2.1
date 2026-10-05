@@ -487,8 +487,10 @@ export const CONTRATO = {
    * ausência para presença, em vez de apagada: o registro de por que a rota existe é o que ela passa
    * a proteger.
    *
-   * ⚠️ **`/turmas/[turma]/dsa` CONTINUA NÃO EXISTINDO** — o lançamento diário é do Épico 6, e a guarda
-   * de ausência dele fica de pé.
+   * ✅ **`/turmas/[turma]/dsa` PASSOU A EXISTIR EM 05/10/2026** (`RF-DSA-01`, spec 013, PR 1 do
+   * Épico 6). ⚠️ *Registro anterior, vencido: "CONTINUA NÃO EXISTINDO — o lançamento diário é do
+   * Épico 6, e a guarda de ausência dele fica de pé."* A guarda foi **invertida**, de ausência para
+   * presença — ver a nota da própria entrada, abaixo.
    */
   /*
    * A lista de turmas (`FR-012` a `FR-016` da spec 012).
@@ -564,6 +566,71 @@ export const CONTRATO = {
         padrao: "",
         historico: "substitui",
         avisaServidor: false,
+      },
+    },
+  },
+  /*
+   * O Detalhe Semanal de Aula (`RF-DSA-01`, `RF-DSA-02`, `RF-NAV-04` · spec 013).
+   *
+   * ⚠️ **A GUARDA DE AUSÊNCIA DESTA ROTA FOI INVERTIDA, NÃO APAGADA.** Até 05/10/2026
+   * `contrato-de-parametros.test.ts` exigia que `/turmas/[turma]/dsa` **não** existisse — *"o DSA é
+   * do Épico 6, e não desta fatia"* —, e essa frase era verdadeira. Agora ela **é** desta fatia, e
+   * a asserção passou a cobrar **presença**, como a própria `/turmas` fez em 04/10/2026. O registro
+   * de por que a rota existe é o que ela passa a proteger.
+   *
+   * ⚠️ **`semana` E `ano` EMPILHAM, e é o `RF-NAV-04` literal**: *"navegar entre semanas usa o
+   * histórico do navegador"*. Com `substitui`, o botão voltar sairia da tela em vez de voltar uma
+   * semana — a URL ficaria certa e a navegação, errada.
+   *
+   * ⚠️ **O PADRÃO DOS DOIS É `0`, E ZERO NÃO É SEMANA NEM ANO — É SENTINELA DECLARADA.** O padrão
+   * de verdade é *"a semana ISO de `hojeNaCiaara()`"*, que é **dinâmico** e não cabe num literal
+   * estático. Usar `1` ou o ano corrente escrito à mão seria pior de dois modos: `1` faria a semana
+   * 1 desaparecer da URL (ela é um valor legítimo), e um ano fixo envelheceria em 1º de janeiro.
+   * Zero não é semana ISO válida (a faixa é 1..53) nem ano, então não se confunde com dado.
+   *
+   * ⚠️ **E A FAIXA 1..53 NÃO FOI INVENTADA**: é a norma ISO 8601 — o ano ISO tem 52 ou 53 semanas.
+   * A de `ano`, 2020..2099, é a **mesma** do `CHECK config_param_ano_valido` do banco (medido), e
+   * não um palpite.
+   */
+  "/turmas/[turma]/dsa": {
+    rota: "/turmas/[turma]/dsa",
+    origem: "RF-DSA-01",
+    parametros: {
+      semana: {
+        nome: "semana",
+        tipo: "inteiro",
+        padrao: 0,
+        minimo: 1,
+        maximo: 53,
+        historico: "empilha",
+        avisaServidor: true,
+      },
+      ano: {
+        nome: "ano",
+        tipo: "inteiro",
+        padrao: 0,
+        minimo: 2020,
+        maximo: 2099,
+        historico: "empilha",
+        avisaServidor: true,
+      },
+      /*
+       * O sábado (`Q-4`, decisão de Bernardo Villas Boas de 05/10/2026: *"sábado entra no núcleo,
+       * adicionado por ação do operador, 5 TA"*).
+       *
+       * ⚠️ **SUBSTITUI, não empilha**: abrir e fechar a coluna é refinar a MESMA semana, não trocar
+       * de contexto. Com `empilha`, voltar desfaria a coluna em vez de voltar a semana.
+       *
+       * ⚠️ **E A COLUNA APARECE TAMBÉM SEM O PARÂMETRO** quando há lançamento no sábado: esconder
+       * um lançamento gravado porque um parâmetro de tela está em `nao` seria esconder um fato.
+       */
+      sabado: {
+        nome: "sabado",
+        tipo: "escolha",
+        padrao: "nao",
+        opcoes: ["sim", "nao"],
+        historico: "substitui",
+        avisaServidor: true,
       },
     },
   },

@@ -33,7 +33,7 @@ import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 //    espaco cru, que o navegador aceita e o servidor recebe diferente. Defeito medido e
 //    corrigido em 18/09/2026; a varredura de `endereco-de-turma-unico.test.ts` o impede
 //    de voltar.
-import { enderecoDaTurmaNoCurso } from "@/lib/navegacao/endereco-de-turma";
+import { enderecoDaTurmaNoCurso, enderecoDoDsa } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
@@ -259,6 +259,24 @@ export default async function Inicio({
                   {t.emAtraso ? <BadgeStatus tom="atrasado" rotulo="em atraso" /> : null}
                 </span>
               </Link>
+              {/*
+                ⚠️ **O TERCEIRO DOS TRÊS CAMINHOS ATÉ O DSA** (`FR-011` da spec 013).
+                ⚠️ **ELE É IRMÃO DO BLOCO, E NÃO FILHO — porque o bloco JÁ É um `<Link>`.** Link
+                   dentro de link é HTML inválido, e o navegador o "conserta" movendo o elemento
+                   para fora em silêncio: o destino viraria imprevisível, e só em alguns casos.
+                ⚠️ **SEM `SePodeVer` AQUI, e é o Princípio XI**: o menu e o painel não escondem por
+                   permissão — quem recusa é a página de destino, com a frase. Esconder aqui faria
+                   a pessoa não encontrar o que ela de fato alcança.
+              */}
+              <p className="mt-1 pl-3 text-xs">
+                <Link
+                  href={enderecoDoDsa(t.turmaCodigo)}
+                  className="text-texto-suave underline-offset-2 hover:text-texto hover:underline"
+                  data-slot="dsa-da-semana"
+                >
+                  DSA da semana →
+                </Link>
+              </p>
             </li>
           ))}
         </ul>
