@@ -75,12 +75,24 @@
 --   update public.config_listas set metadados = metadados - 'categoria'
 --    where lista = 'tipos_atividade' and metadados ? 'categoria';
 --   -- ⚠️ COM ACENTO: `valor` e a chave natural, e 'Observacao' NAO casa com 'Observação'.
+--   -- ⚠️ E **SO A LINHA SEM PROCEDENCIA**, senao a reversao apaga DADO: no remoto, 9 dos 19
+--   --    valores da semente vieram da planilha e carregam `Config_Listas:…`.
 --   delete from public.config_listas
---    where (lista, valor) in (('metodologias','Prova Mista'), ('metodologias','Prova Objetiva'),
+--    where origem_migracao_v1 is null
+--      and (lista, valor) in (('metodologias','Prova Mista'), ('metodologias','Prova Objetiva'),
 --           ('metodologias','Observação de Desempenho'), ('metodologias','Trabalho Individual'),
 --           ('metodologias','Trabalho em Grupo'), ('metodologias','Estudo Individual'),
---           ('tipos_atividade','Visita Técnica'), ('tipos_atividade','Estudo Individual'),
---           ('tipos_atividade','Monitoria'));
+--           ('metodologias','Prova Prática'), ('metodologias','Exposição Oral'),
+--           ('metodologias','Aula Prática'), ('tipos_atividade','Visita Técnica'),
+--           ('tipos_atividade','Estudo Individual'), ('tipos_atividade','Monitoria'),
+--           ('tipos_atividade','Palestra'), ('tipos_atividade','Atividade Extracurricular'),
+--           ('tipos_atividade','Orientação de TFM'), ('tipos_atividade','Evento/Cerimônia'),
+--           ('tipos_atividade','Administração'), ('tipos_atividade','Tempo Reserva'),
+--           ('tipos_atividade','Recuperação da Aprendizagem'));
+--   -- ⚠️ E o `drop view` da reversao de `vw_ocupacao_ta` DEVOLVE privilegio a `anon` (medido na
+--   --    T046): depois de recria-la, `revoke all on public.vw_ocupacao_ta from anon`.
+--   -- ⚠️ E o `COMMENT ON CONSTRAINT` da catraca volta ao texto anterior — `drop constraint` o
+--   --    descarta em silencio, e foi o `diff` do `pg_dump` que acusou as 7 linhas perdidas.
 --   delete from public.config_parametros
 --    where chave in ('dsa.teto_tfm_semana','dsa.teto_recomendado_semana','dsa.sabado_tempos');
 --   comment on type public.impacto_feriado is
@@ -222,6 +234,23 @@ alter table public.registros_aula add constraint reg_aula_ue_ou_disciplina check
 alter table public.registros_aula add constraint reg_aula_ue_xor_disciplina check (
   not (unidade_ensino_id is not null and disciplina_id is not null)
 );
+
+-- ⚠️ **O COMENTARIO DA CATRACA E REPOSTO, E A PROVA DE REVERSAO (T046) E QUEM COBROU ISSO.**
+--    `drop constraint` + `add constraint` **descarta o `COMMENT ON CONSTRAINT`** em silencio, e o
+--    que estava escrito ali era a razao da catraca e a citacao da decisao UE-1 — exatamente o
+--    texto que a proxima pessoa le antes de mexer nela. O `diff` do `pg_dump` acusou as 7 linhas
+--    perdidas; sem a prova de reversao, a migration teria ido ao remoto apagando a explicacao.
+comment on constraint reg_aula_ue_so_nula_no_historico on public.registros_aula is
+  'A Unidade de Ensino so pode ser nula em linha MIGRADA e NUNCA EDITADA, ou em disciplina '
+  'ISENTA de UE. Dado novo continua obrigado a declarar a UE — a decisao UE-1 de 26/08/2026 '
+  'segue valendo onde importa. Editar uma linha historica passa a exigir a UE: e uma catraca. '
+  'Residual conhecido: um INSERT novo com origem_migracao_v1 preenchido escapa; fecha-lo exige '
+  'gatilho de sessao, Epico 3 (ver CHK023). '
+  '⚠️ ISENCAO ACRESCENTADA EM 05/10/2026 (Q-1 da spec 013, decisao de Bernardo Villas Boas): '
+  'curso `curriculo_modelo = ''competencias''` (2 de 24) ou disciplina `sem_unidades_ensino` '
+  '(6 de 175), por `app.disciplina_sem_ue`, SEMPRE com `disciplina_id` preenchido e topico em '
+  '`conteudo_resumo` (`reg_aula_ue_ou_disciplina`). A catraca NAO foi afrouxada em geral: '
+  'disciplina fora da isencao segue recusada, e o `116` tem o caso que discrimina.';
 
 
 -- =====================================================================================
