@@ -177,12 +177,20 @@ test.describe("`FR-025` · criar turma sob o curso do caminho", () => {
     await expect.poll(() => new URL(page.url()).pathname).toBe(enderecoDe(codigo));
     await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(codigo);
 
-    const volta = page.locator('[data-slot="voltar-ao-curso"]');
-    await expect(volta).toContainText(sigla);
-    await volta.click();
-    await expect
-      .poll(() => new URL(page.url()).pathname)
-      .toBe(`/cursos/${encodeURIComponent(sigla)}`);
+    /*
+     * ⚠️ **O CAMINHO DE VOLTA MUDOU EM 04/10/2026 (`D-NAV-3`), E OS DOIS DESTINOS SÃO MEDIDOS AQUI.**
+     *    A volta passou a ser a **lista** de turmas, e o `[data-slot="voltar-ao-curso"]` deixou de
+     *    existir — a emenda está no `FR-031.6` da spec 009, que dizia *"o caminho de volta é o
+     *    curso"*. Ela dizia certo enquanto a ficha só se alcançava por dentro dele.
+     * ⚠️ **O CURSO NÃO FICOU LONGE**, e este caso cobra isso: ele é a linha de baixo do cabeçalho, e
+     *    continua levando à página dele. Trocar um destino por outro sem medir o que sobrou é como
+     *    se perde um caminho clicável sem ninguém notar.
+     */
+    const curso = page.locator('[data-slot="curso-da-turma"]');
+    await expect(curso).toContainText(sigla);
+
+    await page.locator('[data-slot="voltar-a-lista"]').click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/turmas");
   });
 
   test("⚠️ o ano no limite pergunta com ano, contagem e limite — e o curso folgado NÃO", async ({

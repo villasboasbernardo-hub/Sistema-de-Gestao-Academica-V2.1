@@ -24,17 +24,15 @@ import {
   type EstadoDeFiltro,
 } from "@/components/ciaara/filtro-avancado";
 import { CLASSIFICACOES_DE_CURSO_NA_BARRA } from "@/lib/constantes/instrutor";
+import { ROTULO_DA_MODALIDADE } from "@/lib/constantes/curso";
 import { MODALIDADES } from "@/lib/navegacao/contrato";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 const ROTA = "/cursos";
 
 /** Os rótulos de tela da modalidade — o valor do banco é `snake_case`, a tela não é. */
-const ROTULO_DA_MODALIDADE: Readonly<Record<string, string>> = {
-  presencial: "Presencial",
-  ead: "EAD",
-  semipresencial: "Semipresencial",
-};
+/* ⚠️ O mapa saiu daqui em 04/10/2026 para `lib/constantes/curso.ts`: a ficha da turma pedia a
+   TERCEIRA cópia, e a terceira é a que diverge em silêncio. */
 
 export function FiltrosDoCatalogo() {
   const [classificacao, definirClassificacao] = useParametro(ROTA, "classificacao");

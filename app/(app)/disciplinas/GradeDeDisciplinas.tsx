@@ -37,13 +37,7 @@ import {
 } from "@/components/ciaara/filtro-avancado";
 import { TabelaDensa, type Coluna } from "@/components/ciaara/tabela-densa";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  indicadoresDaGrade,
-  ROTULO_DA_SITUACAO,
-  situacaoDaExecucao,
-  type SituacaoDeExecucao,
-} from "@/lib/dominio/indicadores-da-grade";
-import { sinaisDaDisciplina, severidadeDaLinha } from "@/lib/dominio/sinalizacao-de-disciplina";
+import { indicadoresDaGrade } from "@/lib/dominio/indicadores-da-grade";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 import { CascataDeCursoETurma } from "./CascataDeCursoETurma";
@@ -59,22 +53,20 @@ export type PermissoesDaGrade = {
   readonly desativar: boolean;
 };
 
+/*
+ * ⚠️ **ESTA TELA DEIXOU DE TER RECORTE POR TURMA EM 04/10/2026** (`FR-018` da spec 012). O que era
+ *    ligado por um `porTurma` — três colunas, dois filtros, dois indicadores, os painéis de período
+ *    e de instrutores e os sinais por linha — foi para a **ficha da turma**, que é o lugar da turma;
+ *    e `/disciplinas?turma=` **redireciona** para lá.
+ * ⚠️ **O `turma` SAIU DOS PARÂMETROS DESTA FOLHA, e não ficou como campo morto:** a página desvia
+ *    antes de montar a grade, então nenhum valor de turma chega aqui. Campo que não pode receber
+ *    valor é campo que a próxima edição tenta usar.
+ */
 export type ParametrosDaGrade = {
   readonly curso: string;
-  readonly turma: string;
-  readonly instrutor: string;
-  readonly situacaoTurma: string;
   readonly situacao: string;
   readonly busca: string;
   readonly aberta: string;
-};
-
-/** O destaque da linha por severidade — só tokens do tema, nenhuma cor literal. */
-const CLASSE_DA_SEVERIDADE: Readonly<Record<string, string>> = {
-  alerta: "text-erro",
-  atencao: "text-alerta",
-  // veste: dica de estado — "sem previsão de início" é observação sobre a linha, não dado dela
-  informativo: "text-texto-tenue",
 };
 
 export function GradeDeDisciplinas({
@@ -88,8 +80,6 @@ export function GradeDeDisciplinas({
   readonly permissoes: PermissoesDaGrade;
   readonly hoje: string;
 }) {
-  const [, definirInstrutor] = useParametro(ROTA, "instrutor");
-  const [, definirSituacaoTurma] = useParametro(ROTA, "situacao_turma");
   const [, definirSituacao] = useParametro(ROTA, "situacao");
   const [, definirBusca] = useParametro(ROTA, "busca");
   /*
@@ -102,8 +92,6 @@ export function GradeDeDisciplinas({
    */
   const [abertaNaUrl, definirAberta] = useParametro(ROTA, "aberta");
 
-  const porTurma = grade.turmaEscolhida !== null;
-
   /*
    * ⚠️ **AS LINHAS SÃO FILTRADAS UMA VEZ**, e tabela, indicadores e gráfico leem daqui. Ver o
    * cabeçalho: é isto que faz os três refletirem o mesmo subconjunto (`SC-011`).
@@ -114,22 +102,6 @@ export function GradeDeDisciplinas({
       if (parametros.situacao === "ativo" && !linha.ativa) return false;
       if (parametros.situacao === "inativo" && linha.ativa) return false;
 
-      if (parametros.instrutor !== "") {
-        if (!linha.instrutores.some((i) => i.codigo === parametros.instrutor)) return false;
-      }
-
-      if (parametros.situacaoTurma !== "" && porTurma) {
-        const situacao = situacaoDaExecucao(
-          {
-            previstos: linha.cargaHorariaTempos,
-            executados: linha.temposExecutados,
-            previsaoTermino: linha.previsaoTermino,
-          },
-          hoje,
-        );
-        if (situacao !== parametros.situacaoTurma) return false;
-      }
-
       if (busca !== "") {
         const alvo = `${linha.codDisciplina} ${linha.nomeDisciplina}`.toLocaleLowerCase("pt-BR");
         if (!alvo.includes(busca)) return false;
@@ -137,7 +109,7 @@ export function GradeDeDisciplinas({
 
       return true;
     });
-  }, [grade.linhas, parametros, porTurma, hoje]);
+  }, [grade.linhas, parametros]);
 
   const indicadores = React.useMemo(
     () =>
@@ -158,27 +130,12 @@ export function GradeDeDisciplinas({
    * são **navegação**, não filtro. Limpar filtros e perder a turma em que se estava faria o botão
    * navegar — e quem clicou queria ver a lista inteira **daquela** turma.
    */
-  const haFiltroAtivo =
-    parametros.instrutor !== "" ||
-    parametros.situacaoTurma !== "" ||
-    parametros.busca !== "" ||
-    parametros.situacao !== "ativo";
+  const haFiltroAtivo = parametros.busca !== "" || parametros.situacao !== "ativo";
 
   const limparFiltros = () => {
-    void definirInstrutor(null);
-    void definirSituacaoTurma(null);
     void definirBusca(null);
     void definirSituacao(null);
   };
-
-  /** Os instrutores que aparecem na lista de filtro — os que estão atribuídos nesta vista. */
-  const instrutoresParaFiltrar = React.useMemo(() => {
-    const mapa = new Map<string, string>();
-    for (const linha of grade.linhas) {
-      for (const i of linha.instrutores) if (i.codigo !== "") mapa.set(i.codigo, i.nome);
-    }
-    return [...mapa.entries()].sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
-  }, [grade.linhas]);
 
   /*
    * ⚠️ **OS FILTROS VÃO PELO `FiltroAvancado`, o mesmo de `/cursos` e `/instrutores`.** Ele é o
@@ -201,48 +158,19 @@ export function GradeDeDisciplinas({
         { valor: "inativo", rotulo: "Fora de oferta" },
       ],
     },
-    ...(porTurma
-      ? ([
-          {
-            chave: "situacao_turma",
-            rotulo: "Situação na turma",
-            tipo: "escolha",
-            opcoes: (
-              ["nao_iniciada", "em_andamento", "concluida", "atrasada"] as SituacaoDeExecucao[]
-            ).map((s) => ({ valor: s, rotulo: ROTULO_DA_SITUACAO[s] })),
-          },
-          {
-            chave: "instrutor",
-            rotulo: "Instrutor",
-            tipo: "escolha",
-            opcoes: instrutoresParaFiltrar.map(([codigo, nome]) => ({
-              valor: codigo,
-              rotulo: nome,
-            })),
-          },
-        ] as CampoDeFiltro[])
-      : []),
   ];
 
   const estadoDosFiltros: EstadoDeFiltro = {
     busca: parametros.busca === "" ? [] : [parametros.busca],
     situacao: [parametros.situacao],
-    situacao_turma: parametros.situacaoTurma === "" ? [] : [parametros.situacaoTurma],
-    instrutor: parametros.instrutor === "" ? [] : [parametros.instrutor],
   };
 
   const aoMudarFiltro = (proximo: EstadoDeFiltro) => {
     const escolha = (chave: string) => proximo[chave]?.[0] ?? null;
-    // ⚠️ Só escreve o que mudou: reescrever os quatro a cada clique faria três avisos inúteis ao
+    // ⚠️ Só escreve o que mudou: reescrever os dois a cada clique faria um aviso inútil ao
     //    servidor, e cada um é uma leitura do banco.
     if (escolha("busca") !== (parametros.busca || null)) void definirBusca(escolha("busca"));
     if (escolha("situacao") !== parametros.situacao) void definirSituacao(escolha("situacao"));
-    if (escolha("situacao_turma") !== (parametros.situacaoTurma || null)) {
-      void definirSituacaoTurma(escolha("situacao_turma"));
-    }
-    if (escolha("instrutor") !== (parametros.instrutor || null)) {
-      void definirInstrutor(escolha("instrutor"));
-    }
   };
 
   const colunas: readonly Coluna<LinhaDaGradeDeDisciplinas>[] = [
@@ -256,28 +184,21 @@ export function GradeDeDisciplinas({
       chave: "nome",
       titulo: "Disciplina",
       valor: (l) => l.nomeDisciplina,
-      celula: (l) => {
-        const sinais = sinaisDaDisciplina(
-          { instrutoresAtribuidos: l.instrutores.length, previsaoInicio: l.previsaoInicio },
-          grade.avisoInicioDias,
-          hoje,
-        );
-        const severidade = porTurma ? severidadeDaLinha(sinais) : null;
-        return (
-          <span className="flex flex-col">
-            <span className="text-texto whitespace-normal">{l.nomeDisciplina}</span>
-            {!l.ativa ? (
-              /* veste: rótulo de situação do cadastro */
-              <span className="text-texto-tenue text-2xs">Fora de oferta</span>
-            ) : null}
-            {severidade !== null ? (
-              <span className={`text-2xs ${CLASSE_DA_SEVERIDADE[severidade] ?? ""}`}>
-                {sinais.map((s) => s.texto).join(" ")}
-              </span>
-            ) : null}
-          </span>
-        );
-      },
+      /*
+       * ⚠️ **OS SINAIS POR LINHA — "sem instrutor", "sem previsão de início" — SAÍRAM DAQUI** e
+       *    foram para a ficha da turma. Eles só acendiam com turma escolhida (`porTurma`), porque é
+       *    por turma que se atribui instrutor e se marca período: no catálogo do curso eles seriam
+       *    uma afirmação sobre dado que a tela não tem.
+       */
+      celula: (l) => (
+        <span className="flex flex-col">
+          <span className="text-texto whitespace-normal">{l.nomeDisciplina}</span>
+          {!l.ativa ? (
+            /* veste: rótulo de situação do cadastro */
+            <span className="text-texto-tenue text-2xs">Fora de oferta</span>
+          ) : null}
+        </span>
+      ),
     },
     {
       chave: "ch",
@@ -286,68 +207,6 @@ export function GradeDeDisciplinas({
       valor: (l) => l.cargaHorariaTempos,
       celula: (l) => l.cargaHorariaTempos,
     },
-    ...(porTurma
-      ? ([
-          {
-            chave: "periodo",
-            titulo: "Período previsto",
-            valor: (l: LinhaDaGradeDeDisciplinas) => l.previsaoInicio ?? "",
-            celula: (l: LinhaDaGradeDeDisciplinas) =>
-              l.previsaoInicio === null ? (
-                /* veste: dica de ausência — "—" sozinho não distingue vazio de zero */
-                <span className="text-texto-tenue">não informado</span>
-              ) : (
-                <span>
-                  {l.previsaoInicio}
-                  {l.previsaoTermino ? ` a ${l.previsaoTermino}` : ""}
-                </span>
-              ),
-          },
-          {
-            chave: "instrutores",
-            titulo: "Instrutores",
-            valor: (l: LinhaDaGradeDeDisciplinas) => l.instrutores.length,
-            celula: (l: LinhaDaGradeDeDisciplinas) =>
-              l.instrutores.length === 0 ? (
-                <span className="text-erro text-xs">nenhum</span>
-              ) : (
-                <span className="text-xs whitespace-normal">
-                  {l.instrutores
-                    .map((i) =>
-                      i.temposPrevistos === null ? i.nome : `${i.nome} (${i.temposPrevistos})`,
-                    )
-                    .join(" · ")}
-                </span>
-              ),
-          },
-          {
-            chave: "situacao",
-            titulo: "Situação",
-            valor: (l: LinhaDaGradeDeDisciplinas) =>
-              ROTULO_DA_SITUACAO[
-                situacaoDaExecucao(
-                  {
-                    previstos: l.cargaHorariaTempos,
-                    executados: l.temposExecutados,
-                    previsaoTermino: l.previsaoTermino,
-                  },
-                  hoje,
-                )
-              ],
-            celula: (l: LinhaDaGradeDeDisciplinas) =>
-              ROTULO_DA_SITUACAO[
-                situacaoDaExecucao(
-                  {
-                    previstos: l.cargaHorariaTempos,
-                    executados: l.temposExecutados,
-                    previsaoTermino: l.previsaoTermino,
-                  },
-                  hoje,
-                )
-              ],
-          },
-        ] as Coluna<LinhaDaGradeDeDisciplinas>[])
-      : []),
     {
       chave: "unidades",
       titulo: "UEs",
@@ -367,13 +226,7 @@ export function GradeDeDisciplinas({
 
   return (
     <div className="flex flex-col gap-4" data-slot="grade-de-disciplinas">
-      <CascataDeCursoETurma
-        cursos={grade.cursos}
-        turmas={grade.turmas}
-        cursoEscolhido={grade.cursoEscolhido}
-        cursoNoEndereco={parametros.curso}
-        turmaNoEndereco={parametros.turma}
-      />
+      <CascataDeCursoETurma cursos={grade.cursos} cursoNoEndereco={parametros.curso} />
 
       {grade.cursoNaoAlcancado ? (
         <Alert data-slot="curso-fora-do-alcance">
@@ -389,7 +242,7 @@ export function GradeDeDisciplinas({
         <EstadoVazio
           motivo="sem-dado"
           titulo="Escolha um curso"
-          detalhe="A grade mostra as disciplinas de um curso. Escolha a turma depois, para ver o período previsto e os instrutores de cada uma."
+          detalhe="A grade mostra as disciplinas de um curso. O período previsto e os instrutores de cada turma ficam na ficha da turma."
         />
       ) : (
         <>
@@ -397,22 +250,15 @@ export function GradeDeDisciplinas({
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-slot="indicadores">
             <Indicador rotulo="Disciplinas" valor={indicadores.disciplinas} />
             <Indicador rotulo="CH prevista (tempos)" valor={indicadores.chPrevistaTempos} />
-            {porTurma ? (
-              <>
-                <Indicador rotulo="Sem instrutor" valor={indicadores.semInstrutor} />
-                <Indicador rotulo="CH cumprida (tempos)" valor={indicadores.chCumpridaTempos} />
-              </>
-            ) : (
-              /* ⚠️ **DEGRADA COM AVISO, não com zero** (`RN-DEG-01`, `FR-081`). "0 sem instrutor" no
-                 catálogo afirmaria que está tudo designado; o certo é dizer que isso se decide por
-                 turma. */
-              <div className="border-borda bg-superficie rounded-ciaara border p-3 sm:col-span-2">
-                <p className="text-texto-suave text-sm">
-                  Instrutores, período e execução são <strong>por turma</strong>. Escolha uma turma
-                  acima para vê-los.
-                </p>
-              </div>
-            )}
+            {/* ⚠️ **DEGRADA COM AVISO, não com zero** (`RN-DEG-01`, `FR-081`). "0 sem instrutor"
+                aqui afirmaria que está tudo designado; o certo é dizer onde isso se decide — e
+                desde 04/10/2026 o lugar é a ficha da turma. */}
+            <div className="border-borda bg-superficie rounded-ciaara border p-3 sm:col-span-2">
+              <p className="text-texto-suave text-sm">
+                Instrutores, período e execução são <strong>por turma</strong>, e ficam na{" "}
+                <strong>ficha da turma</strong>.
+              </p>
+            </div>
           </div>
 
           {/* ── filtros ───────────────────────────────────────────────────────────────────── */}
@@ -434,11 +280,7 @@ export function GradeDeDisciplinas({
             linhas={linhas}
             colunas={colunas}
             chaveLinha={(l) => l.codigo}
-            rotulo={
-              porTurma
-                ? `Disciplinas de ${grade.turmaEscolhida?.codigo}`
-                : `Disciplinas de ${grade.cursoEscolhido.codigo}`
-            }
+            rotulo={`Disciplinas de ${grade.cursoEscolhido.codigo}`}
             densidade="compacta"
             motivoDoVazio="sem-dado"
             aoAtivarLinha={(l) =>
@@ -448,10 +290,8 @@ export function GradeDeDisciplinas({
             detalhe={(l) => (
               <DetalheDaDisciplina
                 linha={l}
-                porTurma={porTurma}
                 permissoes={permissoes}
                 cursoId={grade.cursoEscolhido?.id ?? ""}
-                escala={grade.escalaDeAntiguidade}
               />
             )}
           />

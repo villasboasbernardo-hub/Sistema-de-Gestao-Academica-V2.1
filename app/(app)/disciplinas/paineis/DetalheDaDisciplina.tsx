@@ -16,31 +16,23 @@
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import { disciplinaTemCurriculo } from "@/lib/dominio/modelo-do-curriculo";
 
 import type { LinhaDaGradeDeDisciplinas } from "../consulta";
 import type { PermissoesDaGrade } from "../GradeDeDisciplinas";
 import { DialogoDeExclusao } from "./DialogoDeExclusao";
 import { FormularioDeDisciplina } from "./FormularioDeDisciplina";
-import { PainelDeInstrutores } from "./PainelDeInstrutores";
-import { PainelDePeriodo } from "./PainelDePeriodo";
 import { PainelDeUnidades } from "./PainelDeUnidades";
 import { SituacaoDaDisciplina } from "./SituacaoDaDisciplina";
 
 export function DetalheDaDisciplina({
   linha,
-  porTurma,
   permissoes,
   cursoId,
-  escala,
 }: {
   readonly linha: LinhaDaGradeDeDisciplinas;
-  readonly porTurma: boolean;
   readonly permissoes: PermissoesDaGrade;
   readonly cursoId: string;
-  /** A escala de antiguidade, de `config_listas` — o `SeletorInstrutor` a exige. */
-  readonly escala: EscalaDeAntiguidade;
 }) {
   const [editando, setEditando] = React.useState(false);
 
@@ -105,32 +97,14 @@ export function DetalheDaDisciplina({
       </section>
 
       {/* ── o que é por turma ─────────────────────────────────────────────────────────────── */}
-      {porTurma && linha.turmaDisciplinaId !== null ? (
-        <>
-          <PainelDePeriodo
-            turmaDisciplinaId={linha.turmaDisciplinaId}
-            previsaoInicio={linha.previsaoInicio}
-            previsaoTermino={linha.previsaoTermino}
-            podeEditar={permissoes.editar}
-          />
-
-          <PainelDeInstrutores
-            turmaDisciplinaId={linha.turmaDisciplinaId}
-            cargaHorariaTempos={linha.cargaHorariaTempos}
-            modoDaDisciplina={linha.modoAtribuicaoPadrao}
-            atribuidos={linha.instrutores}
-            habilitados={linha.habilitados}
-            unidades={linha.unidades}
-            escala={escala}
-            podeEditar={permissoes.editar}
-          />
-        </>
-      ) : (
-        <p className="text-texto-suave text-sm" data-slot="so-por-turma">
-          Período previsto e instrutores são <strong>por turma</strong>. Escolha uma turma acima
-          para editá-los.
-        </p>
-      )}
+      {/*
+        ⚠️ **PERÍODO E INSTRUTORES SAÍRAM DAQUI EM 04/10/2026** e foram para a seção de disciplinas
+           da **ficha da turma** (`FR-018` da spec 012). Eles são por turma, e esta tela é o
+           catálogo do curso: `/disciplinas?turma=` redireciona para lá.
+      */}
+      <p className="text-texto-suave text-sm" data-slot="so-por-turma">
+        Período previsto e instrutores são <strong>por turma</strong>, e ficam na ficha da turma.
+      </p>
 
       {/* ── unidades de ensino ────────────────────────────────────────────────────────────── */}
       {disciplinaTemCurriculo({

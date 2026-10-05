@@ -20,6 +20,7 @@ import {
   type Parametro,
   type Rota,
 } from "@/lib/navegacao/contrato";
+import { MENU } from "@/lib/navegacao/menu";
 import { Constants } from "@/lib/tipos/database";
 
 const ROTAS = Object.keys(CONTRATO) as Rota[];
@@ -397,43 +398,84 @@ describe("`FR-031` · turma e salas: identidade no caminho, nada na consulta", (
     );
   });
 
-  it("e nenhuma delas declara parâmetro", () => {
-    for (const rota of ["/cursos/[curso]/turmas/nova", "/turmas/[turma]", "/admin/salas"]) {
+  /*
+   * ⚠️ **A FICHA DA TURMA SAIU DESTA LISTA EM 04/10/2026, E É A ÚNICA DAS TRÊS.** Ela recebeu a seção
+   *    de disciplinas que vinha de `/disciplinas?turma=`, e com ela a linha expansível — cujo estado
+   *    é `aberta`, parâmetro **visual**. As outras duas continuam sem parâmetro: são formulários, e o
+   *    que a pessoa está digitando não é estado compartilhável.
+   */
+  it("e as duas rotas de formulário não declaram parâmetro", () => {
+    for (const rota of ["/cursos/[curso]/turmas/nova", "/admin/salas"]) {
       expect(parametrosDaRota(rota as Rota), rota).toEqual([]);
     }
   });
+
+  it("a ficha da turma declara `aberta`, e só ela", () => {
+    expect(parametrosDaRota("/turmas/[turma]").map((p) => p.nome)).toEqual(["aberta"]);
+  });
 });
 
-describe("⚠️ `FR-031.7` · a guarda de AUSÊNCIA — o que esta fatia NÃO entrega", () => {
+describe("⚠️ `FR-012` da spec 012 · a guarda INVERTIDA — a lista de turmas agora EXISTE", () => {
   /*
-   * ⚠️ AUSÊNCIA TAMBÉM SE VERIFICA. Sem estes casos, uma lista global de turmas ou uma rota de DSA
-   * poderiam nascer "de passagem" numa fatia futura, e ninguém notaria até a tela existir — que é
-   * tarde. A turma se alcança pela página do curso; o lançamento diário é do **Épico 6**.
+   * ⚠️ **ESTE BLOCO ERA A GUARDA DE AUSÊNCIA DO `FR-031.7`, E FOI INVERTIDO — NÃO APAGADO.** Até
+   * 03/10/2026 ele exigia que `/turmas` **não** existisse, que o menu **não** tivesse "Turmas" e que
+   * `app/(app)/turmas/page.tsx` **não** nascesse, citando a `MENU-1`. A **`D-NAV-1`, de 04/10/2026**
+   * (decisão de Bernardo Villas Boas, que **substitui** a MENU-1) manda o contrário: a turma deixa de
+   * se alcançar só pela página do curso e ganha lista própria, terceira no menu.
+   *
+   * ⚠️ **APAGAR OS CASOS TERIA SIDO MAIS FÁCIL E PIOR.** O que eles protegiam deixou de valer; o que
+   * eles **registravam** — que a existência da rota é decisão datada, e não descuido — continua
+   * valendo, e agora protege o estado novo. Guarda que vira é guarda; guarda que desaparece é lacuna.
+   *
+   * ⚠️ **O DSA SEGUE AUSENTE**, e o caso dele ficou de pé: ele é do **Épico 6**.
    */
-  it("não há rota `/turmas` (lista global) nem `/turmas/[turma]/dsa`", () => {
+  it("a rota `/turmas` existe, com os quatro filtros da `D4`", () => {
+    expect(ROTAS, "a lista de turmas sumiu do contrato — ver a `D-NAV-1` de 04/10/2026").toContain(
+      "/turmas",
+    );
     expect(
-      ROTAS,
-      "nasceu uma lista global de turmas — o FR-031.7 diz que a turma se alcança pelo curso",
-    ).not.toContain("/turmas");
-    expect(ROTAS, "o DSA é do Épico 6, e não desta fatia").not.toContain("/turmas/[turma]/dsa");
+      [...parametrosDaRota("/turmas").map((p) => p.nome)].sort(),
+      "os quatro filtros da lista de turmas mudaram sem decisão nova",
+    ).toEqual(["ano", "busca", "curso", "situacao"]);
   });
 
-  it("o menu não ganhou entrada 'Turmas'", () => {
+  it("⚠️ a situação de turma NÃO é a de cadastro — são enums diferentes", () => {
+    /*
+     * ⚠️ **O MODO DE FALHA QUE ESTE CASO IMPEDE É SILENCIOSO.** `SITUACOES_DE_CADASTRO` é
+     *    `status_registro` (`ativo` | `inativo`); turma tem `status_turma`. Filtrar a lista por
+     *    `ativo` não dá erro nenhum — devolve **zero turmas**, porque esse valor não existe na
+     *    coluna, e a tela diz "nenhuma turma neste recorte" sobre um banco cheio.
+     */
+    const opcoes = CONTRATO["/turmas"].parametros.situacao;
+    expect(opcoes.tipo).toBe("escolha");
+    if (opcoes.tipo !== "escolha") return;
+    expect([...opcoes.opcoes].sort()).toEqual(["ativa", "cancelada", "concluida", "planejada"]);
+  });
+
+  it("o menu tem a entrada 'Turmas', na terceira posição da `D-NAV-1`", () => {
     const doc = readFileSync(resolve(process.cwd(), "lib/navegacao/menu.ts"), "utf8");
     const semComentario = doc.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\r\n]*/g, " ");
 
     expect(
       semComentario,
-      'o menu ganhou entrada "Turmas" — o FR-031.7 e a MENU-1 dizem que ela não existe',
-    ).not.toMatch(/rotulo:\s*"Turmas"/);
+      'o menu perdeu a entrada "Turmas" — a `D-NAV-1` de 04/10/2026 a põe em terceiro lugar',
+    ).toMatch(/rotulo:\s*"Turmas"/);
+    expect(MENU.map((e) => e.rota).indexOf("/turmas"), "Turmas saiu do terceiro lugar").toBe(2);
+    expect(
+      MENU.find((e) => e.rota === "/turmas")?.disponivel,
+      'Turmas voltou a "em breve", e a tela existe — a guarda do `FR-017` reprova nos dois sentidos',
+    ).toBe(true);
   });
 
-  it("e as telas não existem em `app/`", () => {
-    for (const caminho of ["app/(app)/turmas/page.tsx", "app/(app)/turmas/[turma]/dsa"]) {
-      expect(
-        existsSync(resolve(process.cwd(), caminho)),
-        `${caminho} nasceu: a lista global de turmas e o DSA são do Épico 6 (FR-031.7)`,
-      ).toBe(false);
-    }
+  it("a tela da lista existe, e a do DSA continua não existindo", () => {
+    expect(
+      existsSync(resolve(process.cwd(), "app/(app)/turmas/page.tsx")),
+      "a lista de turmas não existe em `app/`, mas o menu a anuncia",
+    ).toBe(true);
+    expect(
+      existsSync(resolve(process.cwd(), "app/(app)/turmas/[turma]/dsa")),
+      "o DSA nasceu: ele é do Épico 6, e não desta fatia (`FR-031.7`)",
+    ).toBe(false);
+    expect(ROTAS, "o DSA é do Épico 6, e não desta fatia").not.toContain("/turmas/[turma]/dsa");
   });
 });

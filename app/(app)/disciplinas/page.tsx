@@ -15,7 +15,10 @@
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import { enderecoDaSecaoDeDisciplinas } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
+import { redirect } from "next/navigation";
 
 import { lerGradeDeDisciplinas } from "./consulta";
 import { GradeDeDisciplinas } from "./GradeDeDisciplinas";
@@ -31,12 +34,23 @@ export default async function Disciplinas({
    */
   const { valores } = lerParametros("/disciplinas", await searchParams);
 
+  /*
+   * ⚠️ **O RECORTE POR TURMA SAIU DESTA TELA EM 04/10/2026** (`FR-018`, `FR-019` da spec 012): ele
+   *    mora na ficha da turma, que é o lugar da turma. Este desvio existe para que **nenhum
+   *    endereço antigo quebre** — link salvo, favorito, mensagem trocada em setembro.
+   * ⚠️ **ELE VEM ANTES DE QUALQUER CONSULTA, e isso não é estilo:** buscar a grade para depois
+   *    desviar custaria duas idas ao banco por link antigo clicado.
+   * ⚠️ **E O DESTINO SAI DO MÓDULO ÚNICO DE ENDEREÇO.** Montá-lo aqui — `/turmas/${…}#disciplinas`
+   *    — reprovaria a guarda da `T070`, e com razão: o código da turma contém espaços, e um
+   *    caminho montado à mão falha **em silêncio** no primeiro que esquecer de codificar.
+   */
+  const turmaNoEndereco = String(valores.turma);
+  if (turmaNoEndereco !== "") redirect(enderecoDaSecaoDeDisciplinas(turmaNoEndereco));
+
   const [usuario, grade] = await Promise.all([
     usuarioDaSessao(),
-    lerGradeDeDisciplinas({
-      cursoCodigo: String(valores.curso),
-      turmaCodigo: String(valores.turma),
-    }),
+    // ⚠️ Daqui para baixo não há turma: o desvio acima garantiu isso.
+    lerGradeDeDisciplinas({ cursoCodigo: String(valores.curso), turmaCodigo: "" }),
   ]);
 
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
@@ -46,7 +60,7 @@ export default async function Disciplinas({
       <header className="flex flex-col gap-1">
         <h1 className="text-texto text-xl font-semibold">Disciplinas</h1>
         <p className="text-texto-suave text-sm">
-          A grade de um curso, e o período e os instrutores de cada turma.
+          A grade de um curso. O período e os instrutores de cada turma ficam na ficha da turma.
         </p>
       </header>
 
@@ -63,9 +77,6 @@ export default async function Disciplinas({
           grade={grade}
           parametros={{
             curso: String(valores.curso),
-            turma: String(valores.turma),
-            instrutor: String(valores.instrutor),
-            situacaoTurma: String(valores.situacao_turma),
             situacao: String(valores.situacao),
             busca: String(valores.busca),
             aberta: String(valores.aberta),
@@ -75,7 +86,9 @@ export default async function Disciplinas({
             editar: pode(permissoes, "disciplinas", "editar"),
             desativar: pode(permissoes, "disciplinas", "desativar"),
           }}
-          hoje={new Date().toISOString().slice(0, 10)}
+          /* ⚠️ Era `new Date().toISOString()` — UTC, que divergia das outras telas entre 21h e a
+             meia-noite. Agora é a mesma função do resto do sistema. */
+          hoje={hojeNaCiaara()}
         />
       )}
     </div>

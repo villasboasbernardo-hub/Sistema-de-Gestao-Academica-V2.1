@@ -21,10 +21,21 @@ import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import type { JanelaDeTurma, VigenciaProtegida } from "@/lib/dominio/protecao-de-vigencia";
 import { salasParaEscolher, type Sala } from "@/lib/dominio/salas";
-import { enderecoDasDisciplinas } from "@/lib/navegacao/endereco-de-turma";
+import { ROTULO_DO_STATUS_DE_TURMA, TOM_DO_STATUS_DE_TURMA } from "@/lib/dominio/seletor-de-turma";
+import { ROTULO_DA_MODALIDADE } from "@/lib/constantes/curso";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import {
+  ANCORA_DAS_DISCIPLINAS,
+  enderecoDasTurmas,
+  ROTA_DA_FICHA_DA_TURMA,
+} from "@/lib/navegacao/endereco-de-turma";
+import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
+import { BadgeStatus } from "@/components/ciaara/badge-status";
 
 import { alcanceDoPerfil } from "../../cursos/consulta";
+import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
+import { DisciplinasDaTurma } from "./DisciplinasDaTurma";
 import { FormularioDeTurma } from "../FormularioDeTurma";
 import {
   codigoDaFicha,
@@ -48,14 +59,27 @@ function Rotulo({ children }: { readonly children: React.ReactNode }) {
   return <dt className="text-texto-tenue">{children}</dt>;
 }
 
-/** Hoje em `yyyy-mm-dd`, no fuso de apresentação — argumento das funções puras. */
-function hojeEmSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
-}
+/*
+ * ⚠️ **O "HOJE" LOCAL SAIU DAQUI EM 04/10/2026.** Havia TRÊS fórmulas no repositório: esta cópia,
+ *    uma igual na página do curso e um `new Date().toISOString()` em `/disciplinas` — este último
+ *    em **UTC**, que divergia das outras duas entre 21h e a meia-noite. Agora todas chamam
+ *    `hojeNaCiaara()`, que já existia em `lib/formato/ano-corrente.ts` com um consumidor só.
+ */
 
-export default async function FichaDaTurma({ params }: { params: Promise<{ turma: string }> }) {
+export default async function FichaDaTurma({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ turma: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { turma: segmento } = await params;
   const codigo = codigoDaFicha(segmento);
+  /*
+   * ⚠️ **A FICHA PASSOU A TER PARÂMETRO, E É UM SÓ:** `aberta`, a linha expandida da seção de
+   *    disciplinas. Ele serve ao PRIMEIRO desenho; depois dele quem manda é o gancho na folha.
+   */
+  const { valores } = lerParametros(ROTA_DA_FICHA_DA_TURMA, await searchParams);
 
   const usuario = await usuarioDaSessao();
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
@@ -110,7 +134,20 @@ export default async function FichaDaTurma({ params }: { params: Promise<{ turma
     protecaoPromessa,
   ]);
 
-  const hoje = hojeEmSaoPaulo();
+  const hoje = hojeNaCiaara();
+  const sigla = (cursoRes.data?.codigo as string | undefined) ?? "";
+
+  /*
+   * ⚠️ **A GRADE VEM NUMA SEGUNDA RODADA, E O CUSTO ESTÁ DECLARADO:** `lerGradeDeDisciplinas` é
+   *    indexada pela **sigla** do curso, e a sigla só existe depois da leitura do curso. São duas
+   *    idas ao banco em vez de uma — e a alternativa seria uma consulta paralela por `curso_id`,
+   *    que duplicaria a função que a tela de disciplinas já usa. **Duplicar a leitura dos
+   *    instrutores é o que custa caro**: é ela que carrega o `.order("ordem_antiguidade")` que a
+   *    guarda da `RN-ANT-01` cobra, e uma segunda cópia é um lugar a mais onde esquecê-lo.
+   */
+  const grade = await lerGradeDeDisciplinas({ cursoCodigo: sigla, turmaCodigo: codigo });
+  const naGrade = grade.linhas.filter((l) => l.turmaDisciplinaId !== null);
+
   const avisos = avisosDaTurma(
     {
       status: turma.status as string,
@@ -118,8 +155,16 @@ export default async function FichaDaTurma({ params }: { params: Promise<{ turma
       dataTermino: turma.data_termino,
       sala: turma.sala_alocada,
       alunos: turma.alunos === null ? null : Number(turma.alunos),
-      // ⚠️ A grade da turma é do Épico 6 — declarar 1 mantém o aviso silencioso (ver `AbaGrade`).
-      disciplinasAtivas: 1,
+      /*
+       * ⚠️ **A CONTAGEM PASSOU A SER REAL EM 04/10/2026** (decisão **D6**). Até aqui era `1` fixo,
+       *    com o comentário *"a grade da turma é do Épico 6 — declarar 1 mantém o aviso
+       *    silencioso"*: a ficha não lia `turma_disciplina` e não tinha o número. Agora lê, e o
+       *    aviso `sem_disciplina` passa a **disparar de verdade** em turma sem grade — é mudança
+       *    visível, e é o aviso existente passando a dizer a verdade.
+       * ⚠️ **NA ABA GRADE DO CURSO O `1` FIXO CONTINUA**, e de propósito: o `FR-012` da spec 009
+       *    proíbe consulta por turma naquela lista, que mostra todas as turmas do curso.
+       */
+      disciplinasAtivas: naGrade.length,
     },
     hoje,
   );
@@ -151,7 +196,6 @@ export default async function FichaDaTurma({ params }: { params: Promise<{ turma
   const protegidas: VigenciaProtegida[] = protecoesDoBanco(protecaoRes?.data ?? []);
 
   const texto = (v: string | number | null) => (v === null ? "" : String(v));
-  const sigla = (cursoRes.data?.codigo as string | undefined) ?? "";
 
   return (
     <section className="flex flex-col gap-5">
@@ -159,12 +203,30 @@ export default async function FichaDaTurma({ params }: { params: Promise<{ turma
         <h1 className="text-texto text-xl font-semibold" data-slot="codigo-da-turma">
           {turma.codigo}
         </h1>
+        {/*
+          ⚠️ **O CAMINHO DE VOLTA É A LISTA, E NÃO O CURSO** (`D-NAV-3`, 04/10/2026). Isto **emenda o
+             `FR-031.6`** da spec 009, que escrevia *"o caminho de volta é o curso"* — e escrevia certo
+             enquanto a ficha só se alcançava por dentro dele. Agora ela se alcança pela lista, pelo
+             curso e pelo endereço antigo de disciplinas; voltar ao curso deixou de ser *o* caminho.
+          ⚠️ **E O CURSO NÃO FICOU LONGE:** ele é a linha de baixo, como link. O que mudou é qual dos
+             dois é "voltar".
+        */}
+        <p className="text-sm">
+          <Link
+            href={enderecoDasTurmas()}
+            className="text-marca underline-offset-2 hover:underline"
+            data-slot="voltar-a-lista"
+          >
+            ← Turmas
+          </Link>
+        </p>
+
         {sigla ? (
           <p className="text-texto-suave text-sm">
             <Link
               href={`/cursos/${encodeURIComponent(sigla)}`}
               className="text-texto underline-offset-2 hover:underline"
-              data-slot="voltar-ao-curso"
+              data-slot="curso-da-turma"
             >
               {sigla} — {cursoRes.data?.nome_curso as string}
             </Link>
@@ -172,21 +234,34 @@ export default async function FichaDaTurma({ params }: { params: Promise<{ turma
         ) : null}
 
         {/*
-          ⚠️ **O CAMINHO CLICÁVEL PARA A GRADE DE DISCIPLINAS DESTA TURMA** (fatia (b), 29/09/2026).
-             Ele leva com curso e turma já escolhidos — que é o percurso de quem está na ficha da
-             turma e quer ver o período e os instrutores de cada disciplina dela.
+          ⚠️ **O CABEÇALHO RESUME A TURMA NUM LUGAR SÓ** (`FR-021` da spec 012), e ele vale para quem
+             edita e para quem não edita. Antes, quem não editava via estes campos num `<dl>` de
+             somente-leitura e quem editava não via nenhum — o formulário mostra campos, não resumo.
         */}
-        {sigla ? (
-          <p className="text-sm">
-            <Link
-              href={enderecoDasDisciplinas(sigla, turma.codigo as string)}
-              className="text-marca underline-offset-2 hover:underline"
-              data-slot="ir-para-disciplinas"
-            >
-              Ver as disciplinas desta turma
-            </Link>
-          </p>
-        ) : null}
+        <dl
+          className="mt-1 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2"
+          data-slot="cabecalho-da-turma"
+        >
+          <Rotulo>Situação</Rotulo>
+          <dd>
+            <BadgeStatus
+              tom={TOM_DO_STATUS_DE_TURMA[turma.status as string] ?? "planejado"}
+              rotulo={ROTULO_DO_STATUS_DE_TURMA[turma.status as string] ?? (turma.status as string)}
+            />
+          </dd>
+          <Rotulo>Modalidade</Rotulo>
+          <dd className="text-texto">
+            {ROTULO_DA_MODALIDADE[turma.modalidade as string] ?? (turma.modalidade as string)}
+          </dd>
+          <Rotulo>Início</Rotulo>
+          <dd className="text-texto">{texto(turma.data_inicio) || "—"}</dd>
+          <Rotulo>Término</Rotulo>
+          <dd className="text-texto">{texto(turma.data_termino) || "—"}</dd>
+          <Rotulo>Sala</Rotulo>
+          <dd className="text-texto">{texto(turma.sala_alocada) || "—"}</dd>
+          <Rotulo>Efetivo</Rotulo>
+          <dd className="text-texto">{texto(turma.alunos) || "—"}</dd>
+        </dl>
       </header>
 
       <QuadroDeAvisosDaTurma avisos={avisos} />
@@ -218,21 +293,42 @@ export default async function FichaDaTurma({ params }: { params: Promise<{ turma
           vigenciasProtegidas={protegidas}
           janelasDoCurso={janelas}
         />
-      ) : (
-        <dl
-          className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2"
-          data-slot="ficha-somente-leitura"
-        >
-          <Rotulo>Ano letivo</Rotulo>
-          <dd className="text-texto">{texto(turma.ano_letivo)}</dd>
-          <Rotulo>Situação</Rotulo>
-          <dd className="text-texto">{turma.status as string}</dd>
-          <Rotulo>Sala</Rotulo>
-          <dd className="text-texto">{texto(turma.sala_alocada) || "—"}</dd>
-          <Rotulo>Efetivo</Rotulo>
-          <dd className="text-texto">{texto(turma.alunos) || "—"}</dd>
-        </dl>
-      )}
+      ) : null}
+
+      {/*
+        ⚠️ **A SEÇÃO DE DISCIPLINAS VEIO DE `/disciplinas?turma=` EM 04/10/2026** (`FR-018`), e o
+           endereço antigo **redireciona para esta âncora**. O `id` é o destino do `#`, e é por isso
+           que ele é fixo e sai do módulo de endereço: um `#disciplinas` escrito à mão aqui e lá
+           seriam duas grafias do mesmo destino.
+        ⚠️ **O `<dl>` DE SOMENTE-LEITURA SAIU**: o cabeçalho acima mostra os mesmos campos para todo
+           mundo, e manter os dois dava a mesma informação duas vezes na mesma tela para quem não
+           edita.
+      */}
+      <section
+        id={ANCORA_DAS_DISCIPLINAS}
+        aria-labelledby="titulo-das-disciplinas"
+        className="flex flex-col gap-2"
+        data-slot="disciplinas-da-turma"
+      >
+        <h2 id="titulo-das-disciplinas" className="text-texto text-base font-semibold">
+          Disciplinas
+        </h2>
+        {naGrade.length === 0 ? (
+          <p className="text-texto-suave text-sm" data-slot="turma-sem-grade">
+            Esta turma ainda não tem disciplinas na grade.
+          </p>
+        ) : (
+          <DisciplinasDaTurma
+            linhas={naGrade}
+            turmaCodigo={turma.codigo as string}
+            escala={grade.escalaDeAntiguidade}
+            podeEditar={pode(permissoes, "disciplinas", "editar")}
+            avisoInicioDias={grade.avisoInicioDias}
+            hoje={hoje}
+            abertaNoEndereco={String(valores.aberta)}
+          />
+        )}
+      </section>
     </section>
   );
 }

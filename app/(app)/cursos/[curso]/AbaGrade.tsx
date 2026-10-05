@@ -28,10 +28,13 @@ import {
   ordenarTurmasParaSeletor,
   ROTULO_DO_STATUS_DE_TURMA,
   rotuloDaTurma,
+  TOM_DO_STATUS_DE_TURMA,
 } from "@/lib/dominio/seletor-de-turma";
 import {
-  enderecoDasDisciplinas,
   enderecoDaNovaTurma,
+  enderecoDaSecaoDeDisciplinas,
+  enderecoDasDisciplinas,
+  enderecoDasTurmas,
   enderecoDaTurma,
 } from "@/lib/navegacao/endereco-de-turma";
 
@@ -43,14 +46,11 @@ export type TurmaDaGrade = TurmaParaAvisos & {
   readonly ano: number;
 };
 
-const TOM_DO_STATUS: Readonly<
-  Record<string, "planejado" | "executado" | "conformidade" | "inativo">
-> = {
-  planejada: "planejado",
-  ativa: "executado",
-  concluida: "conformidade",
-  cancelada: "inativo",
-};
+/*
+ * ⚠️ **O MAPA DE TONS SAIU DAQUI EM 04/10/2026 e foi para `lib/dominio/seletor-de-turma.ts`**, ao lado
+ *    dos rótulos, quando a lista de turmas passou a precisar dele. Copiá-lo seria o segundo lugar a
+ *    divergir — o mesmo erro do botão de limpar filtros, que nasceu solto numa tela.
+ */
 
 const traco = (v: string | null) => (v === null || v.trim() === "" ? "—" : v);
 
@@ -111,23 +111,48 @@ export function AbaGrade({
     ) : null;
 
   /*
-   * ⚠️ **O CAMINHO CLICÁVEL PARA A GRADE DE DISCIPLINAS** (fatia (b), 29/09/2026). *Tela sem caminho
-   *    clicável é tela NÃO ENTREGUE*: `/disciplinas` tem a entrada do menu, mas chegar lá **com o
-   *    curso e a turma já escolhidos** é o percurso que quem está olhando a grade da turma quer — e
-   *    sem ele a pessoa teria de reescolher os dois.
+   * ⚠️ **O CAMINHO CLICÁVEL PARA AS DISCIPLINAS** (fatia (b), 29/09/2026). *Tela sem caminho clicável
+   *    é tela NÃO ENTREGUE*: `/disciplinas` tem a entrada do menu, mas chegar lá **com o curso já
+   *    escolhido** é o percurso de quem está olhando a grade — e sem ele a pessoa reescolheria.
    * ⚠️ **SEM PERMISSÃO PRÓPRIA:** o botão segue a permissão da página de DESTINO, que é a leitura de
    *    disciplinas — a mesma que já deixou esta pessoa ver o curso. Uma regra própria aqui seria a
    *    segunda a divergir.
+   * ⚠️ **O DESTINO MUDOU EM 04/10/2026, e o botão não:** com turma escolhida ele leva à **seção de
+   *    disciplinas da ficha daquela turma**, porque o recorte por turma saiu de `/disciplinas` e
+   *    passou a morar lá (`FR-018` da spec 012). Sem turma, continua levando ao catálogo do curso.
+   *    Mandá-lo para `/disciplinas?turma=` funcionaria — aquele endereço redireciona — mas faria o
+   *    clique dar **dois saltos** e passar por um redirecionamento que existe para link antigo, não
+   *    para navegação nova.
    */
   const botaoDeDisciplinas = (
     <Button asChild size="sm" variant="outline">
       <Link
-        href={enderecoDasDisciplinas(sigla, turmaAtual?.codigo)}
+        href={
+          turmaAtual
+            ? enderecoDaSecaoDeDisciplinas(turmaAtual.codigo)
+            : enderecoDasDisciplinas(sigla)
+        }
         data-slot="ir-para-disciplinas"
       >
         Disciplinas
       </Link>
     </Button>
+  );
+
+  /*
+   * ⚠️ **"VER TODAS AS TURMAS" É O CAMINHO QUE FALTAVA NA DIREÇÃO CONTRÁRIA** (`FR-017` da spec 012).
+   *    A aba mostra as turmas **deste** curso; quem quer comparar com as de outro não tinha por onde
+   *    sair sem voltar ao menu. O link leva à lista **já recortada por este curso**, que é o estado
+   *    em que a pessoa está — e de lá ela afrouxa o filtro se quiser.
+   */
+  const linkDeTodasAsTurmas = (
+    <Link
+      href={enderecoDasTurmas(sigla)}
+      data-slot="ver-todas-as-turmas"
+      className="text-marca text-sm underline-offset-2 hover:underline"
+    >
+      Ver todas as turmas
+    </Link>
   );
 
   return (
@@ -161,6 +186,7 @@ export function AbaGrade({
         ) : null}
         {botaoDeDisciplinas}
         {botaoDeNovaTurma}
+        {linkDeTodasAsTurmas}
       </div>
 
       {turmaAtual ? (
@@ -242,7 +268,7 @@ export function AbaGrade({
                   <td className="text-texto py-1">{t.ano}</td>
                   <td className="py-1">
                     <BadgeStatus
-                      tom={TOM_DO_STATUS[t.status] ?? "planejado"}
+                      tom={TOM_DO_STATUS_DE_TURMA[t.status] ?? "planejado"}
                       rotulo={ROTULO_DO_STATUS_DE_TURMA[t.status] ?? t.status}
                     />
                   </td>

@@ -20,6 +20,7 @@
 import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
+import { ROTA_DA_FICHA_DA_TURMA } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { esquemaDeAtribuicao, esquemaDeRemocaoDeInstrutor } from "@/lib/validacao/atribuicao";
 
@@ -63,6 +64,16 @@ export async function definirInstrutoresDaTurma(entrada: unknown): Promise<Resul
 
   revalidatePath("/disciplinas");
   revalidatePath("/instrutores");
+  /*
+   * ⚠️ **A FICHA DA TURMA ENTROU NA REVALIDAÇÃO EM 04/10/2026, E A FALTA DELA SERIA SILENCIOSA.**
+   *    O período e os instrutores passaram a ser editados na seção de disciplinas da ficha
+   *    (`FR-018` da spec 012); sem esta linha, gravar ali deixaria a tela mostrando o valor
+   *    **velho**, sem erro nenhum — o gotcha 4 na forma de cache.
+   * ⚠️ **É O PADRÃO DE ROTA, NÃO UM ENDEREÇO**, e sai do módulo único: a ação conhece o
+   *    `turmaDisciplinaId`, não o código da turma, e descobri-lo custaria uma consulta a mais
+   *    só para revalidar uma tela (decisão **D12**).
+   */
+  revalidatePath(ROTA_DA_FICHA_DA_TURMA, "page");
   return { ok: true, instrutores: Array.isArray(data) ? data.length : a.instrutores.length };
 }
 

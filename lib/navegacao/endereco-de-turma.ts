@@ -42,6 +42,46 @@ export function enderecoDaTurma(codigo: string): string {
 }
 
 /**
+ * O padrão de rota da ficha — para `revalidatePath(ROTA_DA_FICHA_DA_TURMA, "page")`.
+ *
+ * ⚠️ **ELE MORA AQUI PORQUE A GUARDA COBRA, e a guarda está certa:** `endereco-de-turma-unico.test.ts`
+ * reprova **qualquer** texto `"/turmas/…"` fora deste módulo, e um `revalidatePath("/turmas/[turma]")`
+ * escrito dentro de `lib/acoes/` é exatamente isso. ⚠️ **E ela cobrou DE VERDADE em 04/10/2026**: a
+ * primeira escrita do PR 2 deixou o literal `"/turmas/[turma]"` em dois arquivos — a folha da seção de
+ * disciplinas e a página da ficha, que o usam como **chave de rota** em `useParametro` e
+ * `lerParametros` — e a varredura reprovou os dois. É o mesmo texto, com o mesmo risco: o dia em que
+ * a rota mudar de nome, quem não passa por aqui fica para trás.
+ *
+ * ⚠️ **E É PADRÃO, NÃO ENDEREÇO:** ele revalida a ficha de **todas** as turmas de uma vez, o que serve
+ * a quem grava período ou instrutores sabendo só o `turmaDisciplinaId` — descobrir o código da turma a
+ * partir dele custaria uma consulta a mais para revalidar uma tela (decisão **D12**, 04/10/2026).
+ *
+ * ⚠️ **ESCRITO COMO LITERAL `as const`, e não montado com a constante da raiz:** o tipo precisa ser a
+ * cadeia exata para satisfazer `Rota`, que é `keyof typeof CONTRATO`. Montado por template, o tipo
+ * seria `string` e nenhuma das duas funções o aceitaria.
+ */
+export const ROTA_DA_FICHA_DA_TURMA = "/turmas/[turma]" as const;
+
+/**
+ * A seção de disciplinas **dentro** da ficha da turma.
+ *
+ * ⚠️ **É O DESTINO DO ENDEREÇO ANTIGO** (`FR-019` da spec 012): `/disciplinas?curso=X&turma=Y` passou
+ * a redirecionar para cá. A âncora é o que faz a pessoa cair **na seção**, e não no topo de uma ficha
+ * que agora tem quatro.
+ *
+ * ⚠️ **A ÂNCORA É CONCATENADA DEPOIS, e isso não é estilo:** `#` dentro de um valor de consulta é
+ * escapado por `comoAConsultaEscreve`; aqui ele é separador de fragmento e precisa chegar cru.
+ *
+ * @example enderecoDaSecaoDeDisciplinas("C-Ap-FR T2 2026")
+ *          → "/turmas/C-Ap-FR%20T2%202026#disciplinas"
+ */
+export const ANCORA_DAS_DISCIPLINAS = "disciplinas";
+
+export function enderecoDaSecaoDeDisciplinas(codigo: string): string {
+  return `${enderecoDaTurma(codigo)}#${ANCORA_DAS_DISCIPLINAS}`;
+}
+
+/**
  * A página do curso com a turma já selecionada — o endereço que o Início passa a usar.
  *
  * ⚠️ **A ABA É OPCIONAL E VEM PRIMEIRO NA URL**, para que dois links da mesma turma em
@@ -108,6 +148,21 @@ export function enderecoDasDisciplinas(sigla: string, codigoDaTurma?: string): s
     ...(codigoDaTurma ? [`turma=${comoAConsultaEscreve(codigoDaTurma)}`] : []),
   ];
   return `${RAIZ_DE_DISCIPLINAS}?${partes.join("&")}`;
+}
+
+/**
+ * A lista de turmas, inteira ou recortada por curso (`FR-012`, `FR-017` da spec 012).
+ *
+ * ⚠️ **A GRAFIA DE `?curso=` É A DA CONSULTA — `+` para espaço**, a mesma que o `nuqs` escreve. A
+ * sigla de curso não tem espaço hoje (`C-Ap-FR`), mas escrever `%20` aqui criaria a **segunda
+ * grafia** do mesmo endereço no dia em que tiver — e é o `FR-031.1` que proíbe isso, não a prudência.
+ *
+ * @example enderecoDasTurmas() → "/turmas"
+ * @example enderecoDasTurmas("C-Ap-FR") → "/turmas?curso=C-Ap-FR"
+ */
+export function enderecoDasTurmas(sigla?: string): string {
+  if (sigla === undefined || sigla === "") return RAIZ_DE_TURMAS;
+  return `${RAIZ_DE_TURMAS}?curso=${comoAConsultaEscreve(sigla)}`;
 }
 
 /**

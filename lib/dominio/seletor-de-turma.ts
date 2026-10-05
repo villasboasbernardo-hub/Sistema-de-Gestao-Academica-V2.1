@@ -46,6 +46,31 @@ export const ROTULO_DO_STATUS_DE_TURMA: Readonly<Record<string, string>> = {
 };
 
 /**
+ * O tom da etiqueta de cada situação — **ao lado do rótulo, pelo mesmo motivo**.
+ *
+ * ⚠️ **ELE VIVIA DENTRO DE `AbaGrade.tsx` E SUBIU PARA CÁ EM 04/10/2026, quando a lista de turmas
+ * passou a precisar do mesmo mapa.** Copiá-lo seria o segundo lugar a divergir — exatamente o que
+ * aconteceu com o botão de limpar filtros, que nasceu solto numa tela e só virou componente na
+ * segunda que precisou dele. A terceira cópia é a que divergiria em silêncio: a tabela dizendo
+ * "concluída" em verde e a lista em cinza, para a mesma turma.
+ *
+ * ⚠️ **TOM NÃO É COR, e é por isso que um mapa de texto cabe num módulo puro.** O nome do tom resolve
+ * para token no componente de etiqueta; aqui não há cor literal nenhuma, e `lib/dominio/` segue sem
+ * saber que existe tela.
+ *
+ * ⚠️ **SITUAÇÃO DESCONHECIDA NÃO TEM TOM**, e quem chama degrada para `planejado` — a etiqueta aparece
+ * neutra em vez de desaparecer (`RN-DEG-01`).
+ */
+export const TOM_DO_STATUS_DE_TURMA: Readonly<
+  Record<string, "planejado" | "executado" | "conformidade" | "inativo">
+> = {
+  planejada: "planejado",
+  ativa: "executado",
+  concluida: "conformidade",
+  cancelada: "inativo",
+};
+
+/**
  * `código · Status` — o rótulo de uma opção do seletor.
  *
  * ⚠️ **ELE NUNCA SAI VAZIO.** É a razão inteira de a `vw_turmas_rotulo` ter sido recusada: ela

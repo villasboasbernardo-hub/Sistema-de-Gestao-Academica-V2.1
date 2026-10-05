@@ -108,8 +108,8 @@ export const MENU: readonly EntradaDeMenu[] = [
   /*
    * ⚠️ **A ORDEM ABAIXO É A DA `D-NAV-1` (04/10/2026), QUE SUBSTITUIU A MENU-1.** Ela aproxima o que
    *    tem tela — Início, Cursos, Turmas, Disciplinas, Instrutores — e afasta o que ainda não tem.
-   *    **Turmas entra no PR 2 desta fatia**, no MESMO commit em que `app/(app)/turmas/page.tsx`
-   *    nasce: a guarda do `FR-017` reprova nos dois sentidos, e foi ela que pegou `/cursos` em
+   *    ✅ **Turmas entrou em 04/10/2026, no MESMO commit em que `app/(app)/turmas/page.tsx` nasceu**,
+   *    porque a guarda do `FR-017` reprova nos dois sentidos — e foi ela que pegou `/cursos` em
    *    23/09/2026, quando a página existia e o menu ainda dizia "em breve".
    */
   {
@@ -125,6 +125,19 @@ export const MENU: readonly EntradaDeMenu[] = [
     icone: "cursos",
     disponivel: true,
     entregaEm: "Épico 5 (a)",
+  },
+  /*
+   * ⚠️ **"TURMAS" É A PRIMEIRA ENTRADA QUE NASCE JÁ DISPONÍVEL**, sem passar pelo estado "em breve",
+   *    e a razão não é pressa: a ficha `/turmas/[turma]` **já existia** desde a fatia (a) do Épico 5,
+   *    alcançável só por dentro do curso. O que faltava era a **lista** — e anunciar "em breve" uma
+   *    navegação cuja tela de destino já estava de pé seria dizer o contrário do fato.
+   */
+  {
+    rotulo: "Turmas",
+    rota: "/turmas",
+    icone: "turmas",
+    disponivel: true,
+    entregaEm: "Épico 5.5",
   },
   // ⚠️ Passou a `disponivel: true` em 29/09/2026, com o PR 3 da fatia (b). Até aqui a entrada
   //    existia marcada "em breve" (decisão MENU-2): o menu não cresce a cada épico, e ninguém
