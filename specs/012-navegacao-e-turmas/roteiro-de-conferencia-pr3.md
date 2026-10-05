@@ -1,35 +1,46 @@
 # Roteiro de conferência — PR 3 da spec 012: o andamento da turma
 
-> **Para Bernardo.** Oito passos. Os seis primeiros no **preview**; os dois últimos no **banco
-> local**, porque é lá que estão os 1.566 lançamentos do ETL — o preview tem cadastro, e cadastro
-> sem lançamento não tem andamento a mostrar.
+> **Para Bernardo.** Oito passos, **todos no preview** — o endereço está no fim, medido.
 >
-> ⚠️ **O endereço e o commit estão no fim, medidos.** E a conta à mão de uma turma real está na
-> §*A conta à mão*, com a data em que foi feita: o *"hoje"* muda o resultado, e refazê-la noutro dia
-> dá outro saldo — isso é a regra funcionando, não defeito.
+> ⚠️ **ESTA FRASE SUBSTITUI UMA ERRADA QUE EU ESCREVI AQUI, e o erro é exatamente o que a regra 9.3
+> existe para impedir.** A primeira redação dizia *"os dois últimos no banco local, porque é lá que
+> estão os 1.566 lançamentos — o preview tem cadastro, e cadastro sem lançamento não tem andamento a
+> mostrar"*. **Plausível e falso:** medido no remoto só por leitura, em 04/10/2026, ele tem
+> **1.566** lançamentos, **27** turmas com data de término e **7** turmas ativas — e a turma da conta
+> à mão tem **os mesmos números nos dois bancos**. Escrevi a frase antes de medir.
+>
+> ⚠️ **A conta à mão está na §*A conta à mão*, com a data em que foi feita**: o *"hoje"* muda o
+> resultado, e refazê-la noutro dia dá outro saldo — isso é a regra funcionando, não defeito.
+
+⚠️ **AS TURMAS ESTÃO NOMEADAS, E A ESCOLHA DE CADA UMA FOI MEDIDA NO REMOTO** (só leitura,
+04 e 05/10/2026). Não é para procurar: é para abrir.
 
 | # | O que fazer | O que tem de acontecer |
 |---|---|---|
-| 1 | Abrir uma turma pela lista (*Turmas* → clicar na linha) | Depois do formulário, a seção **Andamento**: CH prevista, CH executada, Progresso com a barra, **Saldo de capacidade (TA)** em TA e em dias, e a capacidade diária com os dias úteis até o término |
-| 2 | Olhar o **Progresso** | O número aparece **escrito** ao lado da barra, não só na cor. Numa turma que executou mais do que o previsto, a faixa para no fim da caixa e **o número passa de 100 %** |
-| 3 | Abrir uma turma **sem data de término** | No lugar do saldo: *"Sem data de término — informe-a para calcular o saldo."* A capacidade diária **não** aparece, e o formulário continua editável — é por ele que a data entra |
-| 4 | Abrir uma turma **EAD de um curso sem limite diário EAD** no regime | No lugar do saldo: *"Sem dado de capacidade — o curso não tem regime vigente para a modalidade desta turma."* **Nenhum número inventado**, e nenhum alerta de atraso |
-| 5 | Abrir uma turma **sem nenhum lançamento** | *"Ainda sem lançamentos."* no lugar do progresso — **não** `0 %`. A CH prevista e o saldo continuam à vista |
-| 6 | Ir ao **Início** e comparar | As turmas com a tarja *"em atraso"* são **as mesmas** que a ficha marca. ⚠️ **E o veredito mudou de lado**: turma que executou **mais** do que o previsto **deixou** de aparecer; turma com prazo curto demais **passou** a aparecer |
-| 7 | No banco **local** carregado, abrir `C-Ap-FR 2026` | Os nove números da §*A conta à mão* batem, um por um (refazendo a conta para o dia de hoje) |
-| 8 | Na mesma turma, olhar o **rodapé** da seção *Disciplinas* | *"N TA lançados sem unidade de ensino não aparecem por disciplina."* — com N > 0. ⚠️ É **esperado**: as 1.566 linhas do ETL têm a UE nula, e a tela **diz** a diferença em vez de esconder |
+| 1 | *Turmas* → abrir **`C-Ap-FR 2026`** pela linha da lista | Depois do formulário, a seção **Andamento**: CH prevista **1165 TA**, executada **518 TA**, Progresso **44 %** com a barra, **Saldo de capacidade (TA)** negativo em TA e em dias, e a capacidade diária **8 TA/dia** com os dias úteis até 15/12/2026 |
+| 2 | Olhar o **Progresso** dela | O número aparece **escrito** ao lado da barra — não só na cor, e não só na largura. ⚠️ **O caso acima de 100 % não existe no dado de hoje**: medido, as **6** turmas com lançamento vão de **44 %** a **86 %**, nenhuma em excesso. Quem cobre esse caso é a suíte (`andamento.spec.ts`, turma de 12 TA sobre 10) |
+| 3 | Abrir **`EST-QF-NAVFLU-EAD 2026`** (planejada, **sem data de término**) | No lugar do saldo: *"Sem data de término — informe-a para calcular o saldo."* A capacidade diária **não** aparece, e o formulário continua editável — é por ele que a data entra |
+| 4 | Abrir **`C-Exp-Obs-ME 2026`** (ativa, 115 TA previstos, **nenhum lançamento**) | *"Ainda sem lançamentos."* no lugar do progresso — **não** `0 %`. A CH prevista e o saldo continuam à vista |
+| 5 | *(opcional, e é uma edição que você desfaz)* numa turma de curso **presencial**, trocar a **modalidade** para **EAD** e salvar | No lugar do saldo: *"Sem dado de capacidade — o curso não tem regime vigente para a modalidade desta turma."* ⚠️ **Este estado não é alcançável com o dado de hoje** — medido: **todos** os cursos EAD do remoto têm `limite_diario_ead_horas` preenchido, e é por isso que ver este estado exige provocá-lo. Depois, **devolva a modalidade** |
+| 6 | Ir ao **Início** e comparar | ⚠️ **Você vai ver a mudança mais visível desta fatia: a região de alertas vai de ZERO para SEIS turmas.** O painel antigo só acusava quem executou **mais** do que o previsto, e **nenhuma** das 28 turmas está nesse caso; a regra verdadeira acusa quem **não cabe no prazo**, e são estas seis — `C-Ap-FR 2026`, `C-Ap-HN 2026`, `C-Esp-ME 2026`, `C-Espc-FR 2026`, `C-Espc-HN 2026` e `CAHO 2026`. A tarja de cada uma tem de bater com o saldo negativo na ficha dela |
+| 7 | Voltar a **`C-Ap-FR 2026`** e conferir número a número | Os nove da §*A conta à mão* batem — refazendo a contagem de dias úteis para o dia de hoje, que é o que muda |
+| 8 | Na mesma turma, olhar o **rodapé** da seção *Disciplinas* | *"N TA lançados sem unidade de ensino não aparecem por disciplina."* — com N > 0. ⚠️ É **esperado**: as 1.566 linhas do ETL têm a UE nula, e a tela **diz** a diferença em vez de esconder. ⚠️ **Nenhum teste automatizado consegue cobrir este caso**: a catraca `reg_aula_ue_so_nula_no_historico` recusa lançamento novo sem UE, então ele só existe no dado migrado |
 
-**Para o passo 7 e 8**, se o banco local estiver vazio de negócio:
+⚠️ **Se quiser conferir o mesmo no banco local**, ele dá os mesmos números — e nasce vazio depois de
+qualquer `verificar:tudo`, que o reseta por desenho:
 
 ```
 pnpm db:reset:limpo && python -m scripts.etl.executar --primeira-carga
 ```
 
-⚠️ **Rode isto depois de qualquer `verificar:tudo`**, que reseta o banco local por desenho.
-
 ## A conta à mão (`SC-005`) — `C-Ap-FR 2026`, medida em **04/10/2026**
 
-**Os insumos**, lidos do banco local só por leitura (`docker exec … psql`, dois `select`):
+⚠️ **OS INSUMOS SÃO OS MESMOS NO LOCAL E NO REMOTO, e isso foi medido nos dois** (04/10/2026): o
+local por `docker exec … psql` e o remoto por `supabase db query --linked`, **só leitura**, nenhuma
+escrita. Os dois feriados do intervalo também são os mesmos nos dois bancos. Então a tabela abaixo
+serve para conferir **no preview**.
+
+**Os insumos:**
 
 | Insumo | Valor | De onde |
 |---|---|---|
@@ -68,6 +79,30 @@ Público"* em **28/10** com impacto **dia inteiro**, sendo ponto facultativo. O 
 corrige** (`FR-003`), e os dois descontam capacidade hoje. Corrigir é na planilha, por você — o
 critério da Q1.b vale: *corrige quem consegue nomear a origem da resposta*.
 
+## As seis turmas que o Início passa a acusar — calculadas em **05/10/2026**
+
+Os mesmos insumos do quadro acima, para cada turma com lançamento no remoto, passados pelo módulo:
+
+| Turma | Prevista | Executada | % | Término | TA/dia | Dias úteis | Capacidade | Saldo | Em dias | Veredito ANTIGO | Veredito NOVO |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `C-Ap-FR 2026` | 1165 | 518 | 44 % | 15/12 | 8 | 50 | 400 | **−247** | −31 | não | **em atraso** |
+| `C-Ap-HN 2026` | 1257 | 562 | 45 % | 15/12 | 8 | 50 | 400 | **−295** | −37 | não | **em atraso** |
+| `C-Esp-ME 2026` | 545 | 470 | 86 % | 28/08 *(passado)* | 7 | 0 | 0 | **−75** | −11 | não | **em atraso** |
+| `C-Espc-FR 2026` | 1270 | 891 | 70 % | 12/11 | 7 | 27 | 189 | **−190** | −28 | não | **em atraso** |
+| `C-Espc-HN 2026` | 1216 | 820 | 67 % | 12/11 | 7 | 27 | 189 | **−207** | −30 | não | **em atraso** |
+| `CAHO 2026` | 1668 | 993 | 60 % | 16/12 | 8 | 51 | 408 | **−267** | −34 | não | **em atraso** |
+
+⚠️ **ZERO viram SEIS, e isso é o conserto, não um alarme novo.** O painel antigo exigia
+`previstos − executados < 0` para acusar — ou seja, **executar mais do que o previsto** —, e nenhuma
+turma real está nesse caso. As seis acima são turmas em andamento cuja capacidade restante **não
+cobre** a carga que falta, que é a definição do `RF-INI-01`. ⚠️ **Se você discordar do veredito de
+alguma, o lugar de olhar é o insumo**, e ele está na linha dela: as mais prováveis são a data de
+término (`C-Esp-ME 2026` já passou do término e segue `ativa`) e o TA/dia do regime vigente.
+
+⚠️ **A `C-Esp-ME 2026` é o caso que mais vale olhar:** término em **28/08**, ainda `ativa`, 86 %
+executados. Capacidade **zero** porque não há mais dia útil até o término, e restante **75 TA** —
+alerta legítimo, e o que ele diz é *"ou a turma encerra, ou a data muda"*.
+
 ## O que mudou de propósito, e você vai notar
 
 - **O indicador do Início estava invertido, e isto é o conserto.** Ele comparava previsto com
@@ -91,7 +126,7 @@ mesmo que editava antes.
 
 ## Se algum passo falhar
 
-Diga **o número do passo** e o que você viu. Os cinco estados do passo 1 ao 5 têm caso em
+Diga **o número do passo** e o que você viu. Os cinco estados dos passos 1 a 5 têm caso em
 `tests/e2e/andamento.spec.ts` (9 casos), o passo 6 em `tests/e2e/inicio.spec.ts` e a aritmética em
 `tests/unidade/andamento-da-turma.test.ts` (20 casos) — uma falha na tela que a suíte não pega é
 informação sobre a suíte, não só sobre o produto.
@@ -143,4 +178,18 @@ ou lógica?"*, que é o que de fato distingue decidir de repassar.
 ⚠️ **A ponta a ponta rodou com `--workers=2`**: o paralelo cheio é morto por memória nesta máquina. É
 caveat de ambiente, não de resultado — **quem dá o veredito de paridade do `SC-005` é o CI**.
 
-<!-- O endereço do preview e o commit servido entram aqui depois do CI verde. -->
+## O endereço, e o commit servido
+
+| O quê | Valor |
+|---|---|
+| **Endereço para conferir** (alias do ramo, sempre o commit mais novo) | `https://sistema-de-gestao-academica-v2-1-git-feat-epic-8c2007-ciaara-11.vercel.app` |
+| Implantação exata por trás dele | `https://sistema-de-gestao-academica-v2-1-jbjxdoe5g-ciaara-11.vercel.app` |
+| **Commit servido** | `2c9adaa` — o registro do fechamento; o código do PR 3 é o `18b42cd`, e entre os dois não há uma linha de `app/`, `lib/`, `components/` ou `tests/` |
+| CI | run **`37255981963`** (`18b42cd`) e run **`37256767738`** (`2c9adaa`), **verdes nos três blocos** nas duas |
+| Ramo | `feat/EPICO-5.5-navegacao-e-turmas` — **sem PR e sem merge**, como combinado |
+
+⚠️ **O endereço responde `302` para `vercel.com/sso-api`** — é a proteção de implantação da Vercel, e
+é o comportamento esperado. Abra estando logado na Vercel; não é erro.
+
+⚠️ **O preview fala com o banco REMOTO**, que é a fonte da verdade dos cadastros. Conferir aqui não
+escreve em lançamento nenhum: esta fatia só **lê** execução.
