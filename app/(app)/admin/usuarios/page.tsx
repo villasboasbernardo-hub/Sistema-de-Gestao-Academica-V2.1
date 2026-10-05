@@ -42,6 +42,7 @@ import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { iniciaisDoNome } from "@/lib/dominio/iniciais-do-nome";
 import { rotuloDoPerfil } from "@/lib/dominio/perfis";
 import { enderecoDaFoto } from "@/lib/supabase/avatar";
+import { instanteParaLeitura } from "@/lib/formato/data";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { AcoesDaLinha } from "./AcoesDaLinha";
@@ -229,9 +230,9 @@ export default async function Usuarios({
                       <td className={TD}>{linha.email}</td>
                       <td className={TD}>{rotuloDoPerfil(linha.perfil)}</td>
                       <td className={TD}>
-                        {linha.ultimo_acesso
-                          ? new Date(linha.ultimo_acesso).toLocaleDateString("pt-BR")
-                          : "nunca"}
+                        {linha.ultimo_acesso === null
+                          ? "nunca"
+                          : instanteParaLeitura(linha.ultimo_acesso)}
                       </td>
                       <td className={TD}>
                         <AcoesDaLinha

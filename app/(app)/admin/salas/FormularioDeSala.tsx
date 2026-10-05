@@ -77,7 +77,7 @@ export function FormularioDeSala() {
           name="natureza"
           value={natureza}
           onChange={(e) => definirNatureza(e.target.value)}
-          className="border-borda bg-superficie-1 text-texto rounded-ciaara h-9 border px-2 text-sm"
+          className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
         >
           <option value="">Escolha a natureza</option>
           {NATUREZAS.map((n) => (

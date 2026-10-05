@@ -215,6 +215,25 @@
  *
  * ⚠️ PAPEL DECLARADO FORA DO `inline` CONGELA NO TEMA CLARO. É a causa nº 1 de tema quebrado em
  * Tailwind v4, e é ERRO DE SINTAXE, não de gosto. */
+/* ⚠️ A `<option>` NÃO É ALCANÇADA PELO UTILITÁRIO DO `<select>`, e foi por aí que o tema escuro
+   vazou. O `preflight` do Tailwind dá a todo `select` `color: inherit` e
+   `background-color: transparent` — mas `option` **não está** na lista dele, e nenhum utilitário de
+   classe desce até ela. Enquanto `bg-superficie-1` (nome inventado, ver a invariante `I-4c`) não
+   pintava nada, a lista aberta ficava com o fundo da UA e o texto claro herdado: ilegível no escuro.
+   ⚠️ O conserto principal foi o token; esta regra é o cinto de segurança, e ela é dupla de
+   propósito — `color-scheme` (declarado nos dois temas, acima) faz o navegador pintar a lista
+   nativa, e isto garante a pintura mesmo onde ele não o faça. Declarado em 05/10/2026, na
+   conferência que achou o defeito.
+   ⚠️ **E ELA NÃO ALCANÇA O `select`, DE PROPÓSITO.** Pintar o campo aqui esconderia o próximo token
+   inventado: a classe continua sendo a dona do fundo do campo, e quem acusa nome que não existe é a
+   invariante `I-4c` mais o caso de ponta a ponta que exige fundo NÃO transparente no escuro. O cinto
+   de segurança cobre só o que classe nenhuma alcança. */
+option,
+optgroup {
+  background-color: var(--superficie);
+  color: var(--texto);
+}
+
 @theme inline {
   --color-fundo: var(--fundo);
   --color-superficie: var(--superficie);

@@ -22,6 +22,8 @@
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
 
+import { dataParaLeitura } from "@/lib/formato/data";
+
 /** Uma linha de `protecao_das_vigencias_por_atividade_global`, como a página a recebe. */
 export type VigenciaProtegida = {
   readonly vigencia: string;
@@ -115,6 +117,7 @@ export function mensagemDaProtecaoPerdida(perdidas: readonly VigenciaProtegida[]
 export function linhasDaProtecaoPerdida(perdidas: readonly VigenciaProtegida[]): readonly string[] {
   return perdidas.map(
     (p) =>
-      `vigência de ${p.vigenteDe} (${p.vigencia}) — travada pela atividade ${p.atividade} de ${p.dataAtividade}`,
+      `vigência de ${dataParaLeitura(p.vigenteDe)} (${p.vigencia}) — travada pela atividade ` +
+      `${p.atividade} de ${dataParaLeitura(p.dataAtividade)}`,
   );
 }

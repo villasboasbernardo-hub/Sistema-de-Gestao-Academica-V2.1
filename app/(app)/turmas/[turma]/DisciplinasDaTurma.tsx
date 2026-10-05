@@ -27,6 +27,7 @@
 
 import { TabelaDensa, type Coluna } from "@/components/ciaara/tabela-densa";
 import { percentualExecutado } from "@/lib/dominio/andamento-da-turma";
+import { dataParaLeitura } from "@/lib/formato/data";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import {
   indicadoresDaGrade,
@@ -49,8 +50,8 @@ import { PainelDePeriodo } from "../../disciplinas/paineis/PainelDePeriodo";
 
 /** O destaque da linha por severidade — só tokens do tema, nenhuma cor literal. */
 const CLASSE_DA_SEVERIDADE: Readonly<Record<string, string>> = {
-  alerta: "text-erro",
-  atencao: "text-alerta",
+  alerta: "text-conflito-tinta",
+  atencao: "text-atrasado-tinta",
   // veste: dica de estado — "sem previsão de início" é observação sobre a linha, não dado dela
   informativo: "text-texto-tenue",
 };
@@ -136,14 +137,19 @@ function colunas(
       titulo: "Período previsto",
       ordenavel: true,
       valor: (l) => l.previsaoInicio ?? "",
+      /*
+       * ⚠️ **O `valor` ACIMA É CHAVE DE ORDENAÇÃO E FICA EM ISO; a `celula` é EXIBIÇÃO e vira
+       *    `DD/MM/AAAA`.** Os dois leem o mesmo campo, a três linhas de distância: trocar o de cima
+       *    faria a tabela ordenar por DIA, sem erro nenhum e sem teste que acuse.
+       */
       celula: (l) =>
         l.previsaoInicio === null ? (
           /* veste: dica de ausência — "—" sozinho não distingue vazio de zero */
           <span className="text-texto-tenue">não informado</span>
         ) : (
           <span>
-            {l.previsaoInicio}
-            {l.previsaoTermino ? ` a ${l.previsaoTermino}` : ""}
+            {dataParaLeitura(l.previsaoInicio)}
+            {l.previsaoTermino ? ` a ${dataParaLeitura(l.previsaoTermino)}` : ""}
           </span>
         ),
     },
@@ -154,7 +160,7 @@ function colunas(
       valor: (l) => l.instrutores.length,
       celula: (l) =>
         l.instrutores.length === 0 ? (
-          <span className="text-erro text-xs">nenhum</span>
+          <span className="text-conflito-tinta text-xs">nenhum</span>
         ) : (
           <span className="text-xs whitespace-normal">
             {l.instrutores
@@ -259,7 +265,7 @@ export function DisciplinasDaTurma({
         {" · "}
         {/* veste: rótulo do indicador; o número ao lado é dado */}
         <span className="text-texto-tenue">sem instrutor:</span>{" "}
-        <span className={indicadores.semInstrutor > 0 ? "text-erro" : undefined}>
+        <span className={indicadores.semInstrutor > 0 ? "text-conflito-tinta" : undefined}>
           {indicadores.semInstrutor}
         </span>
         {" · "}
@@ -347,7 +353,7 @@ export function DisciplinasDaTurma({
       </p>
 
       {semUnidadeDeEnsino > 0 ? (
-        <p className="text-alerta text-sm" data-slot="lancamentos-sem-unidade">
+        <p className="text-atrasado-tinta text-sm" data-slot="lancamentos-sem-unidade">
           {semUnidadeDeEnsino} TA lançados sem unidade de ensino não aparecem por disciplina.
         </p>
       ) : null}

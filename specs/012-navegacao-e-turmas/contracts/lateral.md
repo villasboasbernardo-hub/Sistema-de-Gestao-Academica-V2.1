@@ -28,16 +28,35 @@ três.
 
 ## 3. Comportamento acima de `lg` (≥ 1024px)
 
+⚠️ **ESTA TABELA FOI EMENDADA EM 05/10/2026, na conferência de Bernardo.** O texto de 04/10 está
+abaixo dela, datado, porque é contra ele que a mudança se lê — e porque **duas das linhas antigas
+descreviam o defeito**, não o comportamento pretendido.
+
 | Situação | Largura | Rótulos | Mecanismo |
 |---|---|---|---|
 | Padrão (sem cookie, ou `recolhida`) | `w-14` | `sr-only` (no DOM, invisíveis) | classe estática |
-| Ponteiro sobre o `<nav>` | `w-56` | visíveis | `lg:hover:` — **CSS, sem JS** |
-| Foco dentro do `<nav>` (teclado) | `w-56` | visíveis | `lg:focus-within:` — **CSS** |
+| Ponteiro sobre o `<nav>`, **com o apontar livre** | `w-56` | visíveis | `lg:data-[apontar=livre]:hover:` — **CSS**, com porteiro |
+| Foco numa **ENTRADA** (teclado) | `w-56` | visíveis | `lg:has-[[data-entrada]:focus-visible]:` — **CSS** |
+| Foco no **botão de fixar** | fica `w-14` | somem | ele é legível recolhido, e expandir ao recebê-lo faria o `Tab` alargar o menu para atravessá-lo |
 | `data-fixada="true"` | `w-56` | visíveis | `data-[fixada=true]:` — e o cookie faz isto sobreviver à navegação |
-| Afastar o ponteiro / sair com `Tab` sem fixar | volta a `w-14` | somem | ausência de `:hover`/`:focus-within` |
+| **Desafixar com o ponteiro dentro** | volta a `w-14` **na hora** | somem | `apontarBloqueado` liga no clique e o `:hover` deixa de expandir |
+| Afastar o ponteiro | volta a `w-14`, e o apontar **rearma** | somem | `onPointerLeave` do `<nav>` desliga o bloqueio |
+
+**Altura e posição:** `lg:sticky lg:top-0 lg:h-dvh`, com `lg:overflow-x-hidden lg:overflow-y-auto`.
+Os ícones ficam na tela em qualquer rolagem; o eixo horizontal é recortado para o rótulo de 224 px
+não produzir barra na lateral de 56 px. O bloco contêiner do `sticky` é o `<div>` do painel, que
+**MUST** continuar sem `overflow` — um `overflow` ali prenderia a lateral à caixa dele, sem erro.
 
 Transição: `transition-[width] duration-150 motion-reduce:transition-none`. O conteúdo (`<main>`)
 ocupa o restante — o ganho de área útil do `SC-001` sai daqui.
+
+> **O texto de 04/10/2026, superado:** *ponteiro sobre o `<nav>` → `w-56` por `lg:hover:`; foco
+> **dentro** do `<nav>` → `w-56` por `lg:focus-within:`; afastar o ponteiro ou sair com `Tab` →
+> volta a `w-14` pela ausência de `:hover`/`:focus-within`; altura `lg:h-full`.* ⚠️ **As duas
+> primeiras linhas eram o defeito:** `:focus-within` casa com o **botão de fixar**, que vive no
+> mesmo `<nav>`, e um clique nele deixa `:hover` **e** foco verdadeiros — então desafixar não
+> recolhia. E `lg:h-full` é a altura da **linha** do flex, que numa página longa é a altura do
+> conteúdo: a lateral rolava para fora da tela.
 
 ## 4. Comportamento abaixo de `lg` (< 1024px)
 
@@ -55,7 +74,12 @@ não tem efeito.
 </button>
 ```
 
-- Vive **dentro** do `<nav>`, **depois** da lista, para não entrar na ordem de tabulação antes do atalho.
+- Vive **dentro** do `<nav>` e **antes** da lista, no **topo**, sempre visível *(decisão de
+  Bernardo, 05/10/2026)*. ⚠️ **O texto anterior dizia *"depois da lista, para não entrar na ordem de
+  tabulação antes do atalho"*, e a razão era falsa — medida no mesmo dia:** o atalho *"Pular para o
+  conteúdo"* é renderizado em `casca-do-app.tsx`, **fora e antes** do `<nav>`, e entre os dois ainda
+  há o cabeçalho com dois controles focáveis. O botão no topo é a primeira parada **dentro da
+  lateral**, nunca a primeira da aplicação — e é por isso que focá-lo **não** expande.
 - Único lugar com `Tooltip` (D3): o rótulo é um ícone. O `TooltipContent` vai por `Portal` — fora do
   `<nav>`, o que não afeta `getByRole("listitem")`.
 - Acionar: alterna `data-fixada` e `aria-pressed`, grava o cookie, **não navega e não recarrega**.

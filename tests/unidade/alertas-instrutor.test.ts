@@ -19,7 +19,7 @@ describe("`FR-016` · o alerta nomeia a semana fora da faixa", () => {
     ]);
     const alerta = alertaForaDaFaixa(semanasForaDaFaixa(quatorze, REGIME_20H), REGIME_20H);
     expect(alerta?.detalhes).toEqual([
-      "Semana 10/2026 (02/03 a 08/03): 14 h, acima da faixa de 8 a 12 h.",
+      "Semana 10/2026 (02/03/2026 a 08/03/2026): 14 h, acima da faixa de 8 a 12 h.",
     ]);
     expect(alertaForaDaFaixa(semanasForaDaFaixa(vinte, REGIME_40H), REGIME_40H)).toBeNull();
   });

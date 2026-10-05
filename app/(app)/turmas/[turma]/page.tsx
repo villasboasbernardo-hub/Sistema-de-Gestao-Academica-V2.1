@@ -25,6 +25,7 @@ import { salasParaEscolher, type Sala } from "@/lib/dominio/salas";
 import { ROTULO_DO_STATUS_DE_TURMA, TOM_DO_STATUS_DE_TURMA } from "@/lib/dominio/seletor-de-turma";
 import { ROTULO_DA_MODALIDADE } from "@/lib/constantes/curso";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import { dataParaLeitura } from "@/lib/formato/data";
 import {
   ANCORA_DAS_DISCIPLINAS,
   enderecoDasTurmas,
@@ -37,6 +38,7 @@ import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { alcanceDoPerfil } from "../../cursos/consulta";
 import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
 import { DisciplinasDaTurma } from "./DisciplinasDaTurma";
+import { EdicaoDaTurma } from "./EdicaoDaTurma";
 import { Rotulo } from "./Rotulo";
 import { SecaoDeAndamento } from "./SecaoDeAndamento";
 import { FormularioDeTurma } from "../FormularioDeTurma";
@@ -297,63 +299,54 @@ export default async function FichaDaTurma({
           ⚠️ **O CABEÇALHO RESUME A TURMA NUM LUGAR SÓ** (`FR-021` da spec 012), e ele vale para quem
              edita e para quem não edita. Antes, quem não editava via estes campos num `<dl>` de
              somente-leitura e quem editava não via nenhum — o formulário mostra campos, não resumo.
+          ⚠️ **ELE FICOU COMPACTO EM 05/10/2026** *(decisão de Bernardo, na conferência)*: era uma
+             grade de duas colunas e seis linhas, que empurrava o andamento para baixo da dobra.
+             Agora é **uma linha que quebra**, e **Início** e **Término** viraram um item só —
+             *Período* —, porque as duas datas são lidas juntas e separadas custavam duas linhas.
+          ⚠️ **AS DATAS SAEM EM `DD/MM/AAAA`** (decisão do mesmo dia): até aqui esta mesma ficha
+             mostrava ISO no cabeçalho e `DD/MM/AAAA` no Andamento, porque só o segundo chamava o
+             formatador. ⚠️ **E o `inicial` do formulário, mais abaixo, CONTINUA EM ISO** — ele é
+             valor de `<input type="date">`, não exibição, e formatá-lo abriria o campo vazio.
         */}
         <dl
-          className="mt-1 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2"
+          className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm"
           data-slot="cabecalho-da-turma"
         >
-          <Rotulo>Situação</Rotulo>
-          <dd>
-            <BadgeStatus
-              tom={TOM_DO_STATUS_DE_TURMA[turma.status as string] ?? "planejado"}
-              rotulo={ROTULO_DO_STATUS_DE_TURMA[turma.status as string] ?? (turma.status as string)}
-            />
-          </dd>
-          <Rotulo>Modalidade</Rotulo>
-          <dd className="text-texto">
-            {ROTULO_DA_MODALIDADE[turma.modalidade as string] ?? (turma.modalidade as string)}
-          </dd>
-          <Rotulo>Início</Rotulo>
-          <dd className="text-texto">{texto(turma.data_inicio) || "—"}</dd>
-          <Rotulo>Término</Rotulo>
-          <dd className="text-texto">{texto(turma.data_termino) || "—"}</dd>
-          <Rotulo>Sala</Rotulo>
-          <dd className="text-texto">{texto(turma.sala_alocada) || "—"}</dd>
-          <Rotulo>Efetivo</Rotulo>
-          <dd className="text-texto">{texto(turma.alunos) || "—"}</dd>
+          <span className="flex items-center gap-2">
+            <Rotulo>Situação</Rotulo>
+            <dd>
+              <BadgeStatus
+                tom={TOM_DO_STATUS_DE_TURMA[turma.status as string] ?? "planejado"}
+                rotulo={
+                  ROTULO_DO_STATUS_DE_TURMA[turma.status as string] ?? (turma.status as string)
+                }
+              />
+            </dd>
+          </span>
+          <span className="flex items-center gap-2">
+            <Rotulo>Modalidade</Rotulo>
+            <dd className="text-texto">
+              {ROTULO_DA_MODALIDADE[turma.modalidade as string] ?? (turma.modalidade as string)}
+            </dd>
+          </span>
+          <span className="flex items-center gap-2">
+            <Rotulo>Período</Rotulo>
+            <dd className="text-texto">
+              {dataParaLeitura(turma.data_inicio)} a {dataParaLeitura(dataTermino)}
+            </dd>
+          </span>
+          <span className="flex items-center gap-2">
+            <Rotulo>Sala</Rotulo>
+            <dd className="text-texto">{texto(turma.sala_alocada) || "—"}</dd>
+          </span>
+          <span className="flex items-center gap-2">
+            <Rotulo>Efetivo</Rotulo>
+            <dd className="text-texto">{texto(turma.alunos) || "—"}</dd>
+          </span>
         </dl>
       </header>
 
       <QuadroDeAvisosDaTurma avisos={avisos} />
-
-      {podeEditar ? (
-        <FormularioDeTurma
-          modo="edicao"
-          cursoId={cursoId}
-          codigoAtual={turma.codigo as string}
-          inicial={{
-            ano_letivo: texto(turma.ano_letivo),
-            status: turma.status as string,
-            modalidade: turma.modalidade as string,
-            turma: texto(turma.turma),
-            data_inicio: texto(turma.data_inicio),
-            data_termino: texto(turma.data_termino),
-            sala_alocada: texto(turma.sala_alocada),
-            alunos: texto(turma.alunos),
-          }}
-          salas={salas}
-          turmasDoCurso={outras}
-          limiteDoCurso={
-            cursoRes.data?.limite_turmas_ano === null ||
-            cursoRes.data?.limite_turmas_ano === undefined
-              ? null
-              : Number(cursoRes.data.limite_turmas_ano)
-          }
-          semRotuloNoAno={semRotuloNoAno}
-          vigenciasProtegidas={protegidas}
-          janelasDoCurso={janelas}
-        />
-      ) : null}
 
       <SecaoDeAndamento andamento={andamento} dataTermino={dataTermino} />
 
@@ -392,6 +385,50 @@ export default async function FichaDaTurma({
           />
         )}
       </section>
+
+      {/*
+        ⚠️ **O FORMULÁRIO DESCEU E FICOU RECOLHIDO EM 05/10/2026** *(decisão de Bernardo, na
+           conferência)*: a ficha abre para **ler** — cabeçalho, indicadores, andamento,
+           disciplinas — e editar é um ato deliberado, atrás de *"Editar turma"*.
+        ⚠️ **ELE CONTINUA SENDO A FICHA, e não uma rota `/editar`** (`FR-031.5` da spec 009): o
+           que mudou é que ele não disputa mais a primeira tela com o que se lê. Uma rota
+           separada faria navegar duas vezes para mudar um efetivo, que é o que aquele requisito
+           recusou.
+        ⚠️ **E O QUADRO DE AVISOS FICOU NO TOPO, não desceu com ele.** O cabeçalho de
+           `QuadroDeAvisosDaTurma` dizia que ele vinha *"acima do formulário porque a pessoa
+           precisa lê-lo antes de salvar"* — com o formulário no fim ele está acima de qualquer
+           jeito, e acima de **tudo**, que é onde uma região de alertas pertence (`RNF-USA-04`).
+      */}
+      {podeEditar ? (
+        <EdicaoDaTurma>
+          <FormularioDeTurma
+            modo="edicao"
+            cursoId={cursoId}
+            codigoAtual={turma.codigo as string}
+            inicial={{
+              ano_letivo: texto(turma.ano_letivo),
+              status: turma.status as string,
+              modalidade: turma.modalidade as string,
+              turma: texto(turma.turma),
+              data_inicio: texto(turma.data_inicio),
+              data_termino: texto(turma.data_termino),
+              sala_alocada: texto(turma.sala_alocada),
+              alunos: texto(turma.alunos),
+            }}
+            salas={salas}
+            turmasDoCurso={outras}
+            limiteDoCurso={
+              cursoRes.data?.limite_turmas_ano === null ||
+              cursoRes.data?.limite_turmas_ano === undefined
+                ? null
+                : Number(cursoRes.data.limite_turmas_ano)
+            }
+            semRotuloNoAno={semRotuloNoAno}
+            vigenciasProtegidas={protegidas}
+            janelasDoCurso={janelas}
+          />
+        </EdicaoDaTurma>
+      ) : null}
     </section>
   );
 }

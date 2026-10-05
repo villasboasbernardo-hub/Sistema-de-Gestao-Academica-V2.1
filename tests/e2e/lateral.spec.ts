@@ -165,6 +165,23 @@ test.describe("`FR-004`, `FR-005` · clicar fixa, e o fixado sobrevive", () => {
     await expect(nav).toHaveAttribute("data-fixada", "false");
     const soltou = (await context.cookies()).find((c) => c.name === "ciaara-lateral");
     expect(soltou?.value, "soltar não gravou a preferência").toBe("recolhida");
+
+    /*
+     * ⚠️ **ESTA ASSERÇÃO FALTAVA, E É POR ESSA FALTA QUE O DEFEITO DE 05/10/2026 PASSOU.** O caso
+     *    media o atributo e o cookie depois de desafixar, e **nunca a largura** — então ele ficava
+     *    verde com a lateral ainda expandida na tela. Bernardo viu o que o teste não media.
+     * ⚠️ **E ELA MEDE SEM MOVER O PONTEIRO, de propósito:** `click()` deixa o mouse SOBRE o botão,
+     *    que é a condição exata do defeito. Qualquer `hover`, `mouse.move` ou navegação entre o
+     *    clique e a medição reconstituiria o estado certo por acidente e a asserção passaria com o
+     *    defeito no lugar.
+     */
+    await expect
+      .poll(() => larguraDaLateral(page), {
+        message:
+          "desafixar não recolheu com o ponteiro ainda sobre a lateral: o `:hover` (ou o foco no " +
+          "próprio botão) continua expandindo, que é o defeito relatado em 05/10/2026",
+      })
+      .toBeLessThan(LARGURA_DE_CORTE);
   });
 
   test("⚠️ o estado fixado vem do SERVIDOR — nenhuma correção depois da hidratação", async ({
@@ -250,7 +267,14 @@ test.describe("`FR-008`, `FR-006` · teclado e tela estreita", () => {
     // Segue tabulando até cair dentro da lateral — o foco ali dentro expande, sem mouse nenhum.
     for (let i = 0; i < 12; i += 1) {
       await page.keyboard.press("Tab");
-      const dentro = await page.locator(`${NAV} :focus`).count();
+      /*
+       * ⚠️ **A PARADA É NUMA ENTRADA, E NÃO EM QUALQUER FOCÁVEL DO `<nav>`** — mudou em 05/10/2026,
+       *    com o botão de fixar subindo para o topo. Ele passou a ser o primeiro focável da lateral,
+       *    e focá-lo **não** expande (ele é legível recolhido); quem expande é o foco numa entrada,
+       *    que é o que o `FR-008` promete. Afrouxar a asserção de largura em vez de apertar o
+       *    seletor seria o conserto errado.
+       */
+      const dentro = await page.locator(`${NAV} [data-entrada]:focus`).count();
       if (dentro > 0) break;
     }
     await expect(page.locator(`${NAV} :focus`)).toHaveCount(1);
@@ -280,5 +304,138 @@ test.describe("`FR-008`, `FR-006` · teclado e tela estreita", () => {
       await larguraDaLateral(page),
       "apontar expandiu a gaveta: as regras de desktop escaparam do ponto de quebra",
     ).toBe(largura);
+  });
+});
+
+test.describe("`FR-003`, `FR-004` · desafixar recolhe NA HORA, e o apontar rearma", () => {
+  /*
+   * ⚠️ **ESTE BLOCO É O CASO QUE DISCRIMINA O DEFEITO DE 05/10/2026** (DoD 8). Antes do conserto, as
+   *    três condições de expansão eram irmãs — `fixada`, `:hover` e `:focus-within` — e um clique no
+   *    botão satisfazia as duas últimas: desafixar apagava uma e a lateral continuava larga.
+   */
+  test("⚠️ fixa, desafixa e recolhe sem nenhum outro clique, com o mouse ainda na lateral", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL);
+    const nav = page.locator(NAV);
+
+    await page.locator(FIXAR).click();
+    await expect.poll(() => larguraDaLateral(page)).toBeGreaterThan(LARGURA_DE_CORTE);
+
+    await page.locator(FIXAR).click();
+    await expect(nav).toHaveAttribute("data-fixada", "false");
+    await expect(nav).toHaveAttribute("data-apontar", "bloqueado");
+    await expect
+      .poll(() => larguraDaLateral(page), {
+        message: "desafixou e NÃO recolheu — o defeito de 05/10/2026 está de volta",
+      })
+      .toBeLessThan(LARGURA_DE_CORTE);
+  });
+
+  test("⚠️ e o apontar volta a expandir depois de SAIR e ENTRAR de novo", async ({ page }) => {
+    /*
+     * ⚠️ **É A SEGUNDA METADE DA DECISÃO, e sem ela o conserto seria pior que o defeito:** se o
+     *    bloqueio não rearmasse, a lateral deixaria de expandir ao apontar para sempre, e o
+     *    `FR-003` morreria em silêncio. O rearme é o `onPointerLeave` do `<nav>` — a mesma
+     *    fronteira que o `:hover` usa.
+     */
+    await entrar(page, EMAIL);
+    const nav = page.locator(NAV);
+
+    await page.locator(FIXAR).click();
+    await page.locator(FIXAR).click();
+    await expect(nav).toHaveAttribute("data-apontar", "bloqueado");
+
+    // Sai da lateral: o bloqueio cai.
+    await page.mouse.move(900, 400);
+    await expect(nav).toHaveAttribute("data-apontar", "livre");
+    await expect.poll(() => larguraDaLateral(page)).toBeLessThan(LARGURA_DE_CORTE);
+
+    // Entra de novo: apontar expande, como o `FR-003` promete.
+    await nav.hover();
+    await expect
+      .poll(() => larguraDaLateral(page), {
+        message:
+          "o bloqueio do apontar não rearmou: a lateral deixou de expandir ao passar o mouse, e " +
+          "o conserto do `FR-004` apagou o `FR-003`",
+      })
+      .toBeGreaterThan(LARGURA_DE_CORTE);
+  });
+
+  test("⚠️ o foco NO BOTÃO de fixar não expande; o foco numa ENTRADA expande", async ({ page }) => {
+    /*
+     * ⚠️ **`focus()` PROGRAMÁTICO NÃO SERVE PARA JULGAR `:focus-visible`** — é a armadilha 4 da
+     *    fatia (b) do Épico 4, já medida nesta base: o navegador não o aplica quando a última
+     *    interação foi de ponteiro. O percurso usa `Tab` de verdade.
+     */
+    await entrar(page, EMAIL);
+
+    // Tabula até o botão de fixar, que é o primeiro focável DENTRO da lateral.
+    for (let i = 0; i < 12; i += 1) {
+      await page.keyboard.press("Tab");
+      if ((await page.locator(`${NAV} [data-slot="fixar-lateral"]:focus`).count()) > 0) break;
+    }
+    await expect(page.locator(FIXAR)).toBeFocused();
+    await expect
+      .poll(() => larguraDaLateral(page), {
+        message:
+          "o foco no botão de fixar expandiu a lateral: voltou o `:focus-within`, que casa com " +
+          "qualquer descendente do `<nav>`",
+      })
+      .toBeLessThan(LARGURA_DE_CORTE);
+
+    // A parada seguinte é a primeira entrada do menu — e ela expande.
+    await page.keyboard.press("Tab");
+    await expect(page.locator(`${NAV} [data-entrada]:focus`)).toHaveCount(1);
+    await expect
+      .poll(() => larguraDaLateral(page), {
+        message:
+          "o foco numa entrada NÃO expandiu: o `FR-008` deixou de valer para quem usa teclado",
+      })
+      .toBeGreaterThan(LARGURA_DE_CORTE);
+  });
+});
+
+test.describe("`FR-002.1` · a lateral acompanha a rolagem", () => {
+  test("⚠️ os ícones continuam na tela com a página rolada até o fim", async ({ page }) => {
+    /*
+     * ⚠️ **NÃO HAVIA CASO NENHUM SOBRE ROLAGEM NESTE ARQUIVO, e é por isso que o defeito passou:** a
+     *    palavra não aparecia na suíte, e a lateral tinha `lg:h-full` — a altura da LINHA do flex,
+     *    que numa página longa é a altura do CONTEÚDO. Ela rolava para fora da tela junto com ele.
+     * ⚠️ **O CASO PRIMEIRO PROVA QUE A PÁGINA ROLA.** Numa tela curta ele passaria por cegueira:
+     *    sem rolagem, a lateral está na tela de qualquer jeito, e a asserção não mediria nada.
+     */
+    /*
+     * ⚠️ **A JANELA É BAIXA E LARGA DE PROPÓSITO, e isso NÃO é artifício:** a suíte roda contra uma
+     *    base semeada, de poucas linhas, e nenhuma tela dela é longa o bastante para rolar na janela
+     *    padrão — a primeira redação deste caso reprovou na própria guarda de cegueira, com a frase
+     *    *"a tela escolhida não rola o bastante"*. Uma janela de 1280×400 é um laptop com a janela
+     *    encostada, continua **acima** do ponto de quebra `lg` (onde a lateral é lateral, e não
+     *    gaveta) e produz rolagem com qualquer conteúdo.
+     */
+    await page.setViewportSize({ width: 1280, height: 400 });
+    await entrar(page, EMAIL, "/cursos/novo");
+    const nav = page.locator(NAV);
+    await expect(nav).toBeVisible();
+
+    const rola = await page.evaluate(
+      () => document.documentElement.scrollHeight > window.innerHeight + 200,
+    );
+    expect(
+      rola,
+      "a tela escolhida não rola o bastante para o caso significar algo — troque por uma mais longa",
+    ).toBe(true);
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+
+    await expect(
+      nav,
+      "a lateral saiu da tela ao rolar: ela voltou a ter a altura do conteúdo em vez da altura da tela",
+    ).toBeInViewport();
+    await expect(
+      page.locator(`${NAV} [data-entrada]`).first(),
+      "os ícones do menu saíram da tela com a rolagem",
+    ).toBeInViewport();
   });
 });

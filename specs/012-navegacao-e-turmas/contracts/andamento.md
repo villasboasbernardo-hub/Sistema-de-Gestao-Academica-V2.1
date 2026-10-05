@@ -76,6 +76,27 @@ Capacidade diária  8 TA/dia · 15 dias úteis até 20/11/2026   [data-andamento
 
 Nenhum estado bloqueia a edição da ficha (`FR-033`).
 
+⚠️ **EMENDA DE 05/10/2026 — A SEÇÃO GANHOU UMA FAIXA DE QUATRO INDICADORES** *(decisão de Bernardo na
+conferência: cabeçalho compacto, faixa, Andamento em destaque, disciplinas legíveis, formulário
+recolhido)*. O desenho passa a ser:
+
+| Onde | O que fica |
+|---|---|
+| título | *Andamento* e, ao lado, a tarja **em atraso** quando houver |
+| faixa (4 `CardKpi`) | CH prevista · CH executada · Progresso · **Saldo de capacidade (TA)** |
+| linhas de detalhe | a barra de progresso, o saldo **em dias** e a capacidade diária |
+
+⚠️ **O CARTÃO DO SALDO EXISTE SEMPRE, E É AÍ QUE A REGRA MORA:** sem término ou sem regime ele mostra
+**traço** com a razão curta (*"sem término"* / *"sem regime vigente"*), **nunca zero** — e a frase
+inteira, que diz **onde** se conserta cada uma das duas ausências, continua na linha de detalhe
+(`FR-026.1`, `FR-027`). Os casos de ponta a ponta trocaram `toHaveCount(0)` por *"tem traço e a razão,
+e não tem `0 TA`"*: o que o requisito proíbe não é o cartão, é o número inventado.
+
+⚠️ **E A FAIXA FICA DENTRO DA SEÇÃO, não acima dela** — os marcadores `data-andamento` são lidos
+dentro de `[data-slot="andamento-da-turma"]`, e duas cópias do mesmo marcador seriam violação de modo
+estrito (falha na hora, não reexecuta) ou o mesmo número escrito duas vezes na mesma tela, que é o
+defeito que esta ficha já consertou uma vez.
+
 ⚠️ **EMENDA DE 04/10/2026, NA IMPLEMENTAÇÃO DA T037:** a linha de `semLancamentos` dizia *"no lugar do
 progresso **e do saldo**"*, e o saldo ficou. O motivo é do desenho da própria fórmula: `saldo =
 capacidade − restante`, e `restante` é a **prevista inteira** quando nada foi lançado — ou seja, a

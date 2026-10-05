@@ -30,12 +30,20 @@ export type AlertaDoInstrutor = {
   readonly detalhes: readonly string[];
 };
 
+import { dataParaLeitura } from "@/lib/formato/data";
+
 const vazio = (texto: string | null): boolean => texto === null || texto.trim() === "";
 
-/** `AAAA-MM-DD` → `DD/MM`. */
-const diaMes = (data: string) => `${data.slice(8, 10)}/${data.slice(5, 7)}`;
-/** `AAAA-MM-DD` → `DD/MM/AAAA`. */
-const diaMesAno = (data: string) => `${diaMes(data)}/${data.slice(0, 4)}`;
+/*
+ * ⚠️ **ESTE MÓDULO TINHA DOIS FORMATADORES PRÓPRIOS ATÉ 05/10/2026** — `diaMes` (`DD/MM`, sem ano) e
+ *    `diaMesAno` —, e eles eram o TERCEIRO dono do formato de data no repositório. A decisão de
+ *    Bernardo daquele dia é explícita: **toda exibição** sai com quatro dígitos de ano. Os dois
+ *    saíram, e quem formata agora é `dataParaLeitura`, o ponto único.
+ * ⚠️ **O INTERVALO DA SEMANA FICOU MAIS LONGO, e isso é consequência aceita da regra, não descuido:**
+ *    *"Semana 10/2026 (02/03/2026 a 08/03/2026)"* repete o ano que já está no número da semana. A
+ *    alternativa era abrir exceção para um caso, e exceção de formato é o que faz o formato voltar a
+ *    divergir. Dois testes afirmavam o texto antigo e foram emendados junto.
+ */
 const horas = (n: number) => `${n.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} h`;
 
 /** `FR-016` · uma linha por semana fora da faixa, com a semana nomeada. */
@@ -50,7 +58,8 @@ export function alertaForaDaFaixa(
     titulo: "Carga semanal prevista fora da faixa do regime",
     detalhes: semanas.map(
       (s) =>
-        `Semana ${s.semana.numero}/${s.semana.ano} (${diaMes(s.semana.segunda)} a ${diaMes(s.semana.domingo)}): ` +
+        `Semana ${s.semana.numero}/${s.semana.ano} (${dataParaLeitura(s.semana.segunda)} a ` +
+        `${dataParaLeitura(s.semana.domingo)}): ` +
         `${horas(s.carga)}, ${s.situacao === "acima" ? "acima" : "abaixo"} da faixa de ${limites}.`,
     ),
   };
@@ -75,7 +84,7 @@ export function alertaSemCapacitacao(
     chave: "sem-capacitacao",
     titulo: "Docência há mais de um ano sem capacitação didática",
     detalhes: [
-      `Em docência no CIAARA desde ${diaMesAno(inicio)}, sem capacitação didática registrada.`,
+      `Em docência no CIAARA desde ${dataParaLeitura(inicio)}, sem capacitação didática registrada.`,
     ],
   };
 }

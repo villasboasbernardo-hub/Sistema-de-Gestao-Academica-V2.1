@@ -165,7 +165,7 @@ export function FormularioDaFoto({
         </p>
       ) : null}
       {erro ? (
-        <p role="alert" className="text-erro text-sm">
+        <p role="alert" className="text-conflito-tinta text-sm">
           {erro}
         </p>
       ) : null}

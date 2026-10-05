@@ -105,6 +105,7 @@ function Campo({
           {...controle}
           name={id}
           type={tipo === "data" ? "date" : tipo === "email" ? "email" : "text"}
+          {...(tipo === "data" ? { lang: "pt-BR" } : {})}
           defaultValue={valor}
           className={CAMPO}
           {...(mascara

@@ -24,6 +24,7 @@ import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { Button } from "@/components/ui/button";
 import { avisosDaTurma, type TurmaParaAvisos } from "@/lib/dominio/avisos-da-turma";
+import { dataParaLeitura } from "@/lib/formato/data";
 import {
   ordenarTurmasParaSeletor,
   ROTULO_DO_STATUS_DE_TURMA,
@@ -73,10 +74,15 @@ function Th({ children }: { readonly children: React.ReactNode }) {
   );
 }
 
-/** A janela em uma linha. Ponta ausente vira traço — nunca uma data inventada. */
+/**
+ * A janela em uma linha. Ponta ausente vira traço — nunca uma data inventada.
+ *
+ * ⚠️ `dataParaLeitura` JÁ DEVOLVE O TRAÇO para vazio e nulo, então encadeá-la com o `traco` local
+ *    seria redundante: ela sozinha faz as duas coisas (`DD/MM/AAAA` desde 05/10/2026).
+ */
 function janela(t: TurmaDaGrade): string {
   if (t.dataInicio === null && t.dataTermino === null) return "—";
-  return `${traco(t.dataInicio)} a ${traco(t.dataTermino)}`;
+  return `${dataParaLeitura(t.dataInicio)} a ${dataParaLeitura(t.dataTermino)}`;
 }
 
 export function AbaGrade({
@@ -194,7 +200,7 @@ export function AbaGrade({
           aria-label={`Turma ${turmaAtual.codigo}`}
           data-slot="turma-selecionada"
           data-turma={turmaAtual.codigo}
-          className="border-borda bg-superficie-1 rounded-ciaara flex flex-wrap gap-x-6 gap-y-2 border p-3"
+          className="border-borda bg-superficie rounded-ciaara flex flex-wrap gap-x-6 gap-y-2 border p-3"
         >
           <p className="text-sm">
             <Rotulo>Situação:</Rotulo>{" "}

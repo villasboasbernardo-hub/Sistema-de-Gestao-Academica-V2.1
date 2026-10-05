@@ -83,3 +83,22 @@ export async function irAFichaDaTurma(page: Page, email: string, codigo: string)
     .toBe(`/turmas/${encodeURIComponent(codigo)}`);
   await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(codigo);
 }
+
+/**
+ * Abre o formulário de edição da ficha, que desde 05/10/2026 nasce **recolhido**.
+ *
+ * ⚠️ **ELE EXISTE PORQUE QUATRO ARQUIVOS DE PONTA A PONTA AGIAM NOS CAMPOS SEM CLICAR EM NADA** —
+ * `turmas`, `salas`, `andamento` e `telas-acessiveis` —, e o `Collapsible` do Radix **desmonta** o
+ * conteúdo fechado: os campos deixam de **existir**, não só de estar visíveis. O sintoma no
+ * Playwright é *"locator resolved to 0 elements"*, que se lê como "o campo foi apagado" e não como
+ * "o painel está fechado".
+ *
+ * ⚠️ **E ELE É IDEMPOTENTE**: se o painel já estiver aberto, não clica — assim um caso pode
+ * chamá-lo duas vezes sem fechar o que acabou de abrir.
+ */
+export async function abrirEdicaoDaTurma(page: Page): Promise<void> {
+  const campo = page.locator("#turma-ano");
+  if (await campo.isVisible()) return;
+  await page.locator('[data-slot="abrir-edicao-da-turma"]').click();
+  await expect(campo).toBeVisible();
+}

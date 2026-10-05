@@ -34,17 +34,28 @@ const ID_DO_PAINEL = "navegacao-principal";
 /**
  * O rótulo que desaparece quando a lateral recolhe.
  *
- * ⚠️ **AS TRÊS CONDIÇÕES QUE O TRAZEM DE VOLTA SÃO IRMÃS, E A SEGUNDA É A DO TECLADO:** apontar
- * (`group-hover`), **entrar com `Tab`** (`group-focus-within`) e fixar (`group-data-[fixada=true]`).
- * Sem a do foco, quem navega por teclado atravessaria oito ícones sem rótulo visível — o `FR-008`
- * sai dela, de graça, sem uma linha de JavaScript.
+ * ⚠️ **AS TRÊS CONDIÇÕES QUE O TRAZEM DE VOLTA SÃO IRMÃS, E A SEGUNDA É A DO TECLADO:** apontar,
+ * **entrar com `Tab`** e fixar (`group-data-[fixada=true]`). Sem a do foco, quem navega por teclado
+ * atravessaria oito ícones sem rótulo visível — o `FR-008` sai dela, de graça, sem uma linha de
+ * JavaScript.
+ *
+ * ⚠️ **AS DUAS PRIMEIRAS MUDARAM DE FORMA EM 05/10/2026, E ELAS MUDAM EM PAR COM A LARGURA.** Quem
+ * decide a largura é `components/casca/painel-retratil.tsx`, e as condições de lá e as de cá MUST
+ * dizer a mesma coisa: se divergirem, a lateral fica larga com o rótulo apagado — ou estreita com o
+ * rótulo transbordando — e **nada acusa**, porque são dois arquivos e nenhum teste de tipo os liga.
+ *
+ * | Condição | Antes | Agora | Por quê |
+ * |---|---|---|---|
+ * | apontar | `group-hover` | `group-[[data-apontar=livre]:hover]` | depois de DESAFIXAR, o apontar fica bloqueado até o ponteiro sair — era o defeito de 05/10 |
+ * | foco | `group-focus-within` | `group-has-[[data-entrada]:focus-visible]` | `:focus-within` casava com o **botão de fixar**, que vive no mesmo `<nav>` |
  *
  * ⚠️ **TUDO COM `lg:`**: abaixo do ponto de quebra a navegação é gaveta, e ali o rótulo é visível
  * sempre. O `FR-006` sai da **ausência** da variante, não de uma condição em código.
  */
 const ROTULO = cn(
   "whitespace-nowrap transition-opacity motion-reduce:transition-none",
-  "lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100",
+  "lg:opacity-0 lg:group-[[data-apontar=livre]:hover]:opacity-100",
+  "lg:group-has-[[data-entrada]:focus-visible]:opacity-100",
   "lg:group-data-[fixada=true]:opacity-100",
 );
 

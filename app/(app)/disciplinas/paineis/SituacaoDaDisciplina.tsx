@@ -77,7 +77,7 @@ export function SituacaoDaDisciplina({
       )}
 
       {erro ? (
-        <span role="alert" className="text-erro text-xs" data-slot="recusa-da-situacao">
+        <span role="alert" className="text-conflito-tinta text-xs" data-slot="recusa-da-situacao">
           {erro}
         </span>
       ) : null}

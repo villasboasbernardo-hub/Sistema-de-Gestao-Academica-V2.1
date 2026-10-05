@@ -209,7 +209,7 @@ export function FormularioDeTurma({
             name="status"
             value={valores.status}
             onChange={trocar("status")}
-            className="border-borda bg-superficie-1 text-texto rounded-ciaara h-9 border px-2 text-sm"
+            className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
           >
             <option value="">Escolha a situação</option>
             {SITUACOES.map((s) => (
@@ -227,7 +227,7 @@ export function FormularioDeTurma({
             name="modalidade"
             value={valores.modalidade}
             onChange={trocar("modalidade")}
-            className="border-borda bg-superficie-1 text-texto rounded-ciaara h-9 border px-2 text-sm"
+            className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
           >
             <option value="">Escolha a modalidade</option>
             {MODALIDADES.map((m) => (
@@ -262,6 +262,7 @@ export function FormularioDeTurma({
             {...propsDoControle("turma-inicio", false)}
             name="data_inicio"
             type="date"
+            lang="pt-BR"
             value={valores.data_inicio}
             onChange={trocar("data_inicio")}
           />
@@ -273,6 +274,7 @@ export function FormularioDeTurma({
             {...propsDoControle("turma-termino", false)}
             name="data_termino"
             type="date"
+            lang="pt-BR"
             value={valores.data_termino}
             onChange={trocar("data_termino")}
           />
@@ -285,7 +287,7 @@ export function FormularioDeTurma({
             name="sala_alocada"
             value={valores.sala_alocada}
             onChange={trocar("sala_alocada")}
-            className="border-borda bg-superficie-1 text-texto rounded-ciaara h-9 border px-2 text-sm"
+            className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
           >
             <option value="">Sem sala</option>
             {salas.map((s) => (

@@ -141,6 +141,23 @@ export const PARES: readonly Par[] = [
     limite: 3,
     proposito: "traço que identifica o campo — borda INTERATIVA (FR-032)",
   },
+  // ⚠️ O PAR C-3 ENTROU EM 05/10/2026, na conferência de Bernardo que achou as listas de seleção
+  // ilegíveis no tema escuro. Ele audita o ITEM REALÇADO de toda lista de escolha — o `--accent` da
+  // reconciliação, que é `--marca-suave`, com `--texto` por cima (`select`, `dropdown-menu`,
+  // `popover`, e o realce do menu do avatar).
+  //
+  // ⚠️ **ELE NÃO TERIA PEGADO O DEFEITO DAQUELE DIA, e isso está escrito aqui de propósito.** A
+  // causa era um token INVENTADO (`bg-superficie-elevada`), e token que não existe não tem valor
+  // para auditar — razão pela qual nasceu junto a invariante `I-4c`
+  // (`tests/unidade/token-de-cor-existe.test.ts`), que mede EXISTÊNCIA, não contraste. Este par
+  // cobre a outra metade: o realce existe e é legível nos dois temas.
+  {
+    id: "C-3",
+    frente: "texto",
+    fundo: "marca-suave",
+    limite: 4.5,
+    proposito: "item realçado em lista de escolha — texto sobre o realce (`accent`)",
+  },
   // ⚠️ AS OITO SÉRIES ENTRARAM EM 10/09/2026, no saneamento normativo. Elas estavam declaradas no
   // ponto único, apareciam na vitrine e NÃO TINHAM PAR AUDITADO NENHUM — e o documento 23 §8.1
   // sempre exigiu 3:1 de ELEMENTO GRÁFICO. Não é requisito novo: é regra que a spec havia perdido.

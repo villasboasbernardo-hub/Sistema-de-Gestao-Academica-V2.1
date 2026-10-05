@@ -21,7 +21,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste } from "./conta-de-teste";
 import { limparCursos, semearCursos, type CursosSemeados } from "./cursos-de-teste";
-import { irAFichaDaTurma } from "./navegar-turmas";
+import { abrirEdicaoDaTurma, irAFichaDaTurma } from "./navegar-turmas";
 import { limparPanorama, semearPanorama, type PanoramaSemeado } from "./panorama-de-teste";
 
 let EMAIL = "";
@@ -55,9 +55,9 @@ test.describe("`FR-023`, `FR-024` · a turma que calcula — e o excesso NÃO é
     await irAFichaDaTurma(page, EMAIL, PANORAMA.turmaEmExcesso);
 
     await expect(page.locator(SECAO)).toBeVisible();
-    await expect(campo(page, "prevista")).toHaveText("10 TA");
-    await expect(campo(page, "executada")).toHaveText("12 TA");
-    await expect(campo(page, "percentual")).toHaveText("120 %");
+    await expect(campo(page, "prevista")).toContainText("10 TA");
+    await expect(campo(page, "executada")).toContainText("12 TA");
+    await expect(campo(page, "percentual")).toContainText("120 %");
 
     /*
      * ⚠️ **O NÚMERO VAI NO ATRIBUTO, E NÃO SÓ NA LARGURA DA FAIXA** (`FR-025`): barra colorida sem
@@ -102,7 +102,7 @@ test.describe("`FR-023`, `FR-024` · a turma que calcula — e o excesso NÃO é
      */
     await irAFichaDaTurma(page, EMAIL, PANORAMA.turmaSemCapacidade);
 
-    await expect(campo(page, "prevista")).toHaveText("100 TA");
+    await expect(campo(page, "prevista")).toContainText("100 TA");
     await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toBeVisible();
     await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toContainText(/em atraso/i);
     await expect(campo(page, "saldo")).toContainText("-");
@@ -120,7 +120,7 @@ test.describe("`FR-023`, `FR-024` · a turma que calcula — e o excesso NÃO é
      */
     await irAFichaDaTurma(page, EMAIL, CURSOS.turmaJanelaCedo);
 
-    await expect(campo(page, "percentual")).toHaveText("30 %");
+    await expect(campo(page, "percentual")).toContainText("30 %");
     await expect(campo(page, "saldo")).toContainText("-");
     await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toHaveCount(0);
   });
@@ -131,7 +131,20 @@ test.describe("`FR-026.1`, `FR-027` · a tela nomeia o que falta, e nunca respon
     await irAFichaDaTurma(page, EMAIL, CURSOS.turmaSemJanela);
 
     await expect(campo(page, "sem-termino")).toContainText(/sem data de término/i);
-    await expect(campo(page, "saldo")).toHaveCount(0);
+
+    /*
+     * ⚠️ **O CARTÃO DO SALDO EXISTE E NÃO INVENTA NÚMERO — mudou em 05/10/2026, com a faixa de
+     *    indicadores.** Antes a asserção era `toHaveCount(0)`: não havia cartão, e o saldo só
+     *    aparecia na linha de detalhe. Agora a faixa tem quatro cartões fixos, e o que o `FR-026.1`
+     *    proíbe não é o cartão: é o **zero**. Ele mostra traço com a razão curta, e a frase inteira
+     *    fica na linha de baixo — por isso as três asserções abaixo, e não a contagem.
+     */
+    await expect(campo(page, "saldo")).toContainText("—");
+    await expect(campo(page, "saldo")).toContainText(/sem término/i);
+    await expect(
+      campo(page, "saldo"),
+      "o cartão do saldo respondeu com número onde não há conta: é o gotcha 4 na forma de zero",
+    ).not.toContainText("0 TA");
     await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toHaveCount(0);
     // ⚠️ E a capacidade diária NÃO aparece: mostrar o insumo de uma conta que não foi feita engana.
     await expect(campo(page, "capacidade")).toHaveCount(0);
@@ -148,7 +161,7 @@ test.describe("`FR-026.1`, `FR-027` · a tela nomeia o que falta, e nunca respon
      */
     await irAFichaDaTurma(page, EMAIL, CURSOS.turmaSemJanela);
 
-    await expect(campo(page, "prevista")).toHaveText("0 TA");
+    await expect(campo(page, "prevista")).toContainText("0 TA");
     await expect(campo(page, "sem-prevista")).toContainText(/carga curricular/i);
     await expect(page.locator(`${SECAO} [role="progressbar"]`)).toHaveCount(0);
   });
@@ -164,7 +177,11 @@ test.describe("`FR-026.1`, `FR-027` · a tela nomeia o que falta, e nunca respon
     await irAFichaDaTurma(page, EMAIL, CURSOS.turmasCanceladas[0] as string);
 
     await expect(campo(page, "sem-regime")).toContainText(/regime vigente/i);
-    await expect(campo(page, "saldo")).toHaveCount(0);
+
+    // ⚠️ Mesma leitura do caso de cima: o cartão existe com TRAÇO e a razão curta, nunca com zero.
+    await expect(campo(page, "saldo")).toContainText("—");
+    await expect(campo(page, "saldo")).toContainText(/sem regime vigente/i);
+    await expect(campo(page, "saldo")).not.toContainText("0 TA");
     await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toHaveCount(0);
   });
 
@@ -179,8 +196,8 @@ test.describe("`FR-026.1`, `FR-027` · a tela nomeia o que falta, e nunca respon
      */
     await irAFichaDaTurma(page, EMAIL, CURSOS.turmaJanelaTarde);
 
-    await expect(campo(page, "prevista")).toHaveText("20 TA");
-    await expect(campo(page, "executada")).toHaveText("0 TA");
+    await expect(campo(page, "prevista")).toContainText("20 TA");
+    await expect(campo(page, "executada")).toContainText("0 TA");
     await expect(campo(page, "sem-lancamentos")).toContainText(/ainda sem lançamentos/i);
     await expect(page.locator(`${SECAO} [role="progressbar"]`)).toHaveCount(0);
     await expect(campo(page, "saldo")).toBeVisible();
@@ -199,6 +216,17 @@ test.describe("`FR-033` · nenhum estado do andamento bloqueia a edição da fic
     await irAFichaDaTurma(page, EMAIL, CURSOS.turmaSemJanela);
 
     await expect(campo(page, "sem-termino")).toBeVisible();
+
+    /*
+     * ⚠️ **O CONSERTO FICOU A UM CLIQUE, E O CASO MEDE ESSE CLIQUE** — desde 05/10/2026 o formulário
+     *    vive recolhido atrás de «Editar turma» (decisão de Bernardo). O que o `FR-033` proíbe é o
+     *    estado degradado **esconder** o conserto; um botão com o verbo escrito, na mesma tela, não
+     *    esconde nada. ⚠️ **Afrouxar este caso para ficar verde seria o modo de falha que o
+     *    `CLAUDE.md` nomeia duas vezes** — por isso ele continua exigindo o campo e o botão de
+     *    gravar, só depois de abrir.
+     */
+    await expect(page.locator('[data-slot="abrir-edicao-da-turma"]')).toBeVisible();
+    await abrirEdicaoDaTurma(page);
     await expect(page.getByLabel("Término")).toBeVisible();
     await expect(page.getByRole("button", { name: /salvar/i })).toBeVisible();
   });

@@ -780,7 +780,7 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     await expect(alerta).toBeVisible();
     await expect(
       alerta.getByText(
-        /^Semana \d+\/\d{4} \(\d{2}\/\d{2} a \d{2}\/\d{2}\): 14 h, acima da faixa de 8 a 12 h\.$/,
+        /^Semana \d+\/\d{4} \(\d{2}\/\d{2}\/\d{4} a \d{2}\/\d{2}\/\d{4}\): 14 h, acima da faixa de 8 a 12 h\.$/,
       ),
     ).toHaveCount(4);
 

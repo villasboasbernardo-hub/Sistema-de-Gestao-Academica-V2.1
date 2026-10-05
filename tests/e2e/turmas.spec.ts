@@ -17,6 +17,12 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { limparCursos, semearCursos, type CursosSemeados } from "./cursos-de-teste";
+/*
+ * ⚠️ **A FICHA ABRE RECOLHIDA DESDE 05/10/2026** (decisão de Bernardo): o formulário vive atrás
+ *    de «Editar turma», e os campos só existem depois do clique. O auxiliar é um só, em
+ *    `navegar-turmas.ts` — escrever o clique doze vezes aqui seria a terceira cópia que diverge.
+ */
+import { abrirEdicaoDaTurma } from "./navegar-turmas";
 
 let cliente: SupabaseClient | undefined;
 const admin = (): SupabaseClient =>
@@ -267,6 +273,7 @@ test.describe("`FR-026` · os quatro caminhos de colisão nomeiam quem ocupa", (
 
   test("editar para um rótulo ocupado", async ({ page }) => {
     await entrar(page, EMAIL_AJUDANTE, enderecoDe(TURMA_DE_EDICAO));
+    await abrirEdicaoDaTurma(page);
     await page.locator("#turma-ano").fill("2027");
     await page.locator("#turma-rotulo").fill("T1");
     await page.locator('[data-slot="gravar-turma"]').click();
@@ -278,6 +285,7 @@ test.describe("`FR-026` · os quatro caminhos de colisão nomeiam quem ocupa", (
 
   test("editar para SEM rótulo num ano que já tem uma sem rótulo", async ({ page }) => {
     await entrar(page, EMAIL_AJUDANTE, enderecoDe(TURMA_DE_EDICAO));
+    await abrirEdicaoDaTurma(page);
     await page.locator("#turma-ano").fill("2029");
     await page.locator("#turma-rotulo").fill("");
     await page.locator('[data-slot="gravar-turma"]').click();
@@ -291,6 +299,7 @@ test.describe("`FR-028` · editar a turma na própria ficha", () => {
     page,
   }) => {
     await entrar(page, EMAIL_AJUDANTE, enderecoDe(TURMA_DE_EDICAO));
+    await abrirEdicaoDaTurma(page);
     await expect(formulario(page)).toHaveAttribute("data-modo", "edicao");
     await expect(page.locator("#turma-situacao")).toHaveValue("planejada");
 
@@ -307,6 +316,7 @@ test.describe("`FR-028` · editar a turma na própria ficha", () => {
     page,
   }) => {
     await entrar(page, EMAIL_AJUDANTE, enderecoDe(TURMA_DE_EDICAO));
+    await abrirEdicaoDaTurma(page);
     await page.locator("#turma-alunos").fill("27");
     await page.locator('[data-slot="gravar-turma"]').click();
 
@@ -320,6 +330,7 @@ test.describe("`FR-028.1` · os avisos informam e não bloqueiam", () => {
     page,
   }) => {
     await entrar(page, EMAIL_AJUDANTE, enderecoDe(SEMEADO.turmaAtivaComTerminoPassado));
+    await abrirEdicaoDaTurma(page);
 
     const quadro = page.locator('[data-slot="quadro-de-avisos-da-turma"]');
     /*
@@ -336,6 +347,7 @@ test.describe("`FR-028.1` · os avisos informam e não bloqueiam", () => {
 
   test("⚠️ turma sem janela avisa a janela — e NÃO acusa incoerência de data", async ({ page }) => {
     await entrar(page, EMAIL_AJUDANTE, enderecoDe(SEMEADO.turmaSemJanela));
+    await abrirEdicaoDaTurma(page);
     const quadro = page.locator('[data-slot="quadro-de-avisos-da-turma"]');
     await quadro.getByRole("button", { name: "Exibir avisos" }).click();
 
@@ -353,6 +365,7 @@ test.describe("`FR-031.4` · não encontrada depende do perfil", () => {
   test("Admin: a turma não existe, e a frase não fala em alcance", async ({ page }) => {
     const inexistente = `${SEMEADO.porClassificacao.regular} T9 2035`;
     await entrar(page, EMAIL_ADMIN, enderecoDe(inexistente));
+    // ⚠️ SEM `abrirEdicaoDaTurma` aqui: esta tela NÃO tem formulário — é o que ela prova.
 
     const aviso = page.locator('[data-slot="turma-nao-encontrada"]');
     await expect(aviso).toContainText("não encontrada");
@@ -367,6 +380,7 @@ test.describe("`FR-031.4` · não encontrada depende do perfil", () => {
      *    existe" seria afirmar sobre o que a consulta dele não mediu, e a RLS não distingue os dois.
      */
     await entrar(page, EMAIL_OPERADOR, enderecoDe(SEMEADO.turmaJanelaCedo));
+    // ⚠️ SEM `abrirEdicaoDaTurma` aqui: esta tela NÃO tem formulário — é o que ela prova.
 
     const aviso = page.locator('[data-slot="turma-nao-encontrada"]');
     await expect(aviso).toContainText("fora do seu alcance");
@@ -386,6 +400,12 @@ test.describe("`SC-011.5` · o Operador de escopo estreito trabalha dentro dele"
     const codigo = `${expedito} T1 2032`;
     await expect.poll(() => new URL(page.url()).pathname).toBe(enderecoDe(codigo));
 
+    /*
+     * ⚠️ **GRAVAR A TURMA NOVA LEVA À FICHA, E A FICHA ABRE RECOLHIDA** desde 05/10/2026 — então
+     *    editar a situação logo em seguida exige o clique. Este caso chega aqui por REDIRECIONAMENTO,
+     *    e não por `entrar(…)`: foi o único que o ajuste em bloco não alcançou.
+     */
+    await abrirEdicaoDaTurma(page);
     await page.locator("#turma-situacao").selectOption("ativa");
     await page.locator('[data-slot="gravar-turma"]').click();
     await expect(page.locator("#turma-situacao")).toHaveValue("ativa", { timeout: 15_000 });
@@ -400,6 +420,7 @@ test.describe("`FR-021.8` · encurtar a janela avisa qual vigência perde prote�
      *    exatamente isso que o `FR-021.8` manda dizer antes de gravar.
      */
     await entrar(page, EMAIL_AJUDANTE, enderecoDe(SEMEADO.turmaAtivaComTerminoPassado));
+    await abrirEdicaoDaTurma(page);
     await expect(page.locator("#turma-termino")).toHaveValue("2026-06-30");
 
     await page.locator("#turma-termino").fill("2026-04-30");
@@ -411,7 +432,7 @@ test.describe("`FR-021.8` · encurtar a janela avisa qual vigência perde prote�
      * ⚠️ A FRASE NOMEIA A ATIVIDADE PELA DESCRIÇÃO E PELA DATA — que é o que a RPC devolve, e o que
      *    quem lê reconhece. O código `ANL-…` não aparece em tela nenhuma.
      */
-    await expect(dialogo(page)).toContainText("2026-05-10");
+    await expect(dialogo(page)).toContainText("10/05/2026");
 
     // ⚠️ E ELA APARECE UMA VEZ SÓ: o envoltório tem um dono, e a frase aninhada era defeito.
     expect((await dialogo(page).innerText()).match(/deixam de estar protegidas/g)?.length).toBe(1);

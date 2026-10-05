@@ -32,18 +32,27 @@ import {
   rotuloDaTurma,
   TOM_DO_STATUS_DE_TURMA,
 } from "@/lib/dominio/seletor-de-turma";
+import { dataIlegivel, dataParaLeitura } from "@/lib/formato/data";
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
 import type { TurmaNaLista } from "./consulta";
 
 const traco = (v: string | null) => (v === null || v.trim() === "" ? "—" : v);
 
-/** `C-Ap-FR T2 2026` → `01/02/2026 a 30/11/2026`, ou traço quando falta ponta. */
+/**
+ * `C-Ap-FR T2 2026` → `01/02/2026 a 30/11/2026`, ou traço quando falta ponta.
+ *
+ * ⚠️ **ELA MONTAVA O FORMATO POR CONTA PRÓPRIA ATÉ 05/10/2026, E ACERTAVA — era o pior caso.** Um
+ *    segundo dono do formato que produz o mesmo resultado não reprova em teste nenhum: ele só
+ *    diverge no dia em que um dos dois muda. É o caminho que o botão de limpar filtros percorreu
+ *    antes de virar componente, e a terceira cópia é a que se esquece.
+ * ⚠️ **A CHAVE DE ORDENAÇÃO DA COLUNA CONTINUA EM ISO** (ver `valor:` na coluna `janela`): ISO ordena
+ *    alfabeticamente igual a cronologicamente, e `DD/MM/AAAA` ordenaria por DIA.
+ */
 function janela(inicio: string | null, termino: string | null): string {
   const dia = (iso: string | null) => {
-    if (iso === null || iso === "") return null;
-    const [ano, mes, d] = iso.split("-");
-    return d === undefined ? null : `${d}/${mes}/${ano}`;
+    const lido = dataParaLeitura(iso);
+    return dataIlegivel(lido) ? null : lido;
   };
   const de = dia(inicio);
   const ate = dia(termino);

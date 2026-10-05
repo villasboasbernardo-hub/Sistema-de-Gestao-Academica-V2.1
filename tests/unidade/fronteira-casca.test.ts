@@ -34,7 +34,8 @@ const PASTA = "components/casca";
  */
 const COM_INTERACAO: Readonly<Record<string, string>> = {
   "painel-retratil.tsx":
-    "a gaveta em tela estreita e o fixar da lateral no desktop — estado efêmero e cookie de preferência",
+    "a gaveta em tela estreita, o fixar da lateral no desktop e o porteiro do apontar — " +
+    "estado efêmero, cookie de preferência e o bloqueio que faz desafixar recolher na hora",
   "foco-ao-trocar-de-rota.tsx": "mover o foco ao trocar de rota — não existe no servidor",
   "seletor-de-tema.tsx": "escolher e lembrar o tema — leitura e escrita no navegador",
   "menu-do-avatar.tsx": "abrir o menu da conta e disparar a saída — interação e foco por teclado",

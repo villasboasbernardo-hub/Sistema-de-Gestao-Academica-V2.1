@@ -229,7 +229,7 @@ export function FormularioDeCurso({
             name="classificacao"
             value={valores.classificacao}
             onChange={(e) => definirValores((v) => ({ ...v, classificacao: e.target.value }))}
-            className="border-borda bg-superficie-1 text-texto rounded-ciaara h-9 border px-2 text-sm"
+            className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
           >
             <option value="">Escolha a classificação</option>
             {CLASSIFICACOES_DE_CURSO.map((c) => (
@@ -247,7 +247,7 @@ export function FormularioDeCurso({
             name="modalidade"
             value={valores.modalidade}
             onChange={(e) => definirValores((v) => ({ ...v, modalidade: e.target.value }))}
-            className="border-borda bg-superficie-1 text-texto rounded-ciaara h-9 border px-2 text-sm"
+            className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
           >
             <option value="">Escolha a modalidade</option>
             {MODALIDADES.map((m) => (
@@ -340,6 +340,7 @@ export function FormularioDeCurso({
                 {...propsDoControle("regime-de", true)}
                 name="vigente_de"
                 type="date"
+                lang="pt-BR"
                 value={regime.vigente_de}
                 onChange={(e) => definirRegime((r) => ({ ...r, vigente_de: e.target.value }))}
               />

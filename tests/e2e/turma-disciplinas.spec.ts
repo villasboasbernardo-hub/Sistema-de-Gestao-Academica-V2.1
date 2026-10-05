@@ -189,8 +189,9 @@ test.describe("⚠️ CRITÉRIO 4 · o período é DAQUELA turma, e de mais nenh
     const recusa = page.getByRole("alert").filter({ hasText: "janela" });
     await expect(recusa).toBeVisible();
     // ⚠️ A frase traz AS DATAS da janela: sem elas, quem corrige tenta de novo às cegas.
-    await expect(recusa).toContainText("2026-03-02");
-    await expect(recusa).toContainText("2026-06-30");
+    // ⚠️ A frase vem do BANCO e passa pela tradução, que desde 05/10/2026 escreve DD/MM/AAAA.
+    await expect(recusa).toContainText("02/03/2026");
+    await expect(recusa).toContainText("30/06/2026");
   });
 
   test("⚠️ e gravar na seção REVALIDA a ficha — sem recarregar à mão", async ({ page }) => {
@@ -209,7 +210,8 @@ test.describe("⚠️ CRITÉRIO 4 · o período é DAQUELA turma, e de mais nenh
     await expect(page.getByRole("status").filter({ hasText: "Período gravado" })).toBeVisible();
 
     // A coluna da própria seção passa a mostrar o período, sem `reload`.
-    await expect(page.locator(SECAO)).toContainText("2026-04-01");
+    // ⚠️ A célula do período é EXIBIÇÃO: DD/MM/AAAA. O `fill` acima continua em ISO, que é o valor.
+    await expect(page.locator(SECAO)).toContainText("01/04/2026");
   });
 });
 

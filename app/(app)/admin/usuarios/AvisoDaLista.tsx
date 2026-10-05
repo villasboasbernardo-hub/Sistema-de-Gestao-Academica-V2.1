@@ -50,7 +50,7 @@ export function AvisoDaLista({ children }: { readonly children: ReactNode }) {
           data-slot="aviso-da-lista"
           className={
             aviso.tom === "erro"
-              ? "border-erro bg-superficie-2 text-erro rounded-ciaara mt-3 border-2 p-3 text-sm font-medium"
+              ? "border-conflito-tinta bg-superficie-2 text-conflito-tinta rounded-ciaara mt-3 border-2 p-3 text-sm font-medium"
               : "border-borda bg-superficie-2 text-texto rounded-ciaara mt-3 border p-3 text-sm"
           }
         >

@@ -25,6 +25,8 @@
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
 
+import { dataParaLeitura } from "@/lib/formato/data";
+
 /** Os dois tipos de regime que o `tipo_regime` do banco admite. */
 export const TIPOS_DE_REGIME = ["padrao", "excecao"] as const;
 export type TipoDeRegime = (typeof TIPOS_DE_REGIME)[number];
@@ -163,7 +165,8 @@ export function mensagemDaTrava(trava: TravaDaVigencia): string {
       : ` A turma está sem ${trava.pontaAusente === "inicio" ? "data de início" : "data de término"}, e por isso a atividade a alcança.`;
 
   return (
-    `Esta vigência não pode ser corrigida: já há ${tipo}${qual} de ${trava.data}${onde} que depende dela.` +
+    `Esta vigência não pode ser corrigida: já há ${tipo}${qual} de ${dataParaLeitura(trava.data)}${onde} ` +
+    `que depende dela.` +
     `${quantos}${ponta} O caminho é registrar vigência nova a partir de uma data posterior ao último lançamento.`
   );
 }
