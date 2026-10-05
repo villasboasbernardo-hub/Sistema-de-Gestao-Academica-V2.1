@@ -126,6 +126,14 @@ export type GradeAlocacaoProps = {
   readonly cantoSuperior?: React.ReactNode;
   /** Abaixo de cada coluna, fora da matriz — o DSA põe a faixa "Sem posição" do dia. */
   readonly rodapeDasColunas?: readonly React.ReactNode[];
+  /**
+   * A célula foi ativada — por **clique** ou por `Enter`/`Espaço`.
+   *
+   * ⚠️ **OS DOIS CAMINHOS, e não só o clique**: `ListaNavegavel` já ativa por teclado, e uma grade
+   * que só respondesse ao mouse deixaria quem navega por teclado sem como lançar. É a mesma lição
+   * da `ListaNavegavel`, que ganhou o clique depois de nascer só com teclado.
+   */
+  readonly aoAtivarCelula?: (linha: number, coluna: number) => void;
   readonly className?: string;
 };
 
@@ -146,6 +154,7 @@ export function GradeAlocacao({
   celulas,
   cantoSuperior,
   rodapeDasColunas,
+  aoAtivarCelula,
   className,
 }: GradeAlocacaoProps) {
   const navegaveis = linhasNavegaveis(linhas);
@@ -163,6 +172,9 @@ export function GradeAlocacao({
       colunas={colunas.length}
       rotulo={rotulo}
       papel="nenhum"
+      {...(aoAtivarCelula
+        ? { aoAtivar: (p: { linha: number; coluna: number }) => aoAtivarCelula(p.linha, p.coluna) }
+        : {})}
       className={cn("w-full", className)}
     >
       {/*
@@ -262,9 +274,15 @@ export function GradeAlocacao({
                             rowSpan={celula?.alturaEmLinhas ?? 1}
                             data-tom={tom}
                             aria-label={rotuloDaCelula}
+                            onClick={
+                              aoAtivarCelula
+                                ? () => aoAtivarCelula(navegavel ?? 0, iColuna)
+                                : undefined
+                            }
                             className={cn(
                               "border-l border-t border-borda p-1 align-top outline-none focus-visible:ring-2 focus-visible:ring-foco",
                               TINTA_DO_TOM[tom],
+                              aoAtivarCelula && "cursor-pointer hover:bg-marca-suave",
                             )}
                           >
                             {celula?.conteudo}

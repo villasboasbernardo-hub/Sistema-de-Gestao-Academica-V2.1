@@ -72,6 +72,16 @@ export type DsaSemeado = {
   readonly turmaSemRelogio: string;
   readonly turmaEad: string;
   readonly sala: string;
+  /** A disciplina comum, com unidade — o caminho normal do lançamento. */
+  readonly codDisciplina: string;
+  /** ⚠️ A disciplina **sem unidades**: é ela que faz o modo da `Q-1` aparecer. */
+  readonly codDisciplinaIsenta: string;
+  /** ⚠️ A de **TFM**: o único teto RÍGIDO do épico (`RN-DIST-03` (a)). */
+  readonly codDisciplinaTfm: string;
+  /** Quem TEM vínculo em `instrutor_disciplina` — o controle positivo da habilitação. */
+  readonly nomeHabilitado: string;
+  /** ⚠️ Quem **NÃO** tem vínculo: o negativo da `RN-INST-01`, que só a Server Action barra. */
+  readonly nomeSemHabilitacao: string;
 };
 
 export async function semearDsa(processo: number, emailOperador: string): Promise<DsaSemeado> {
@@ -92,6 +102,11 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
      * então existem na base recriada **e** na carregada.
      */
     sala: "Sala 03",
+    codDisciplina: `D${processo}`,
+    codDisciplinaIsenta: `I${processo}`,
+    codDisciplinaTfm: `T${processo}`,
+    nomeHabilitado: "Silva Do Percurso Do Dsa",
+    nomeSemHabilitacao: "Sem Vinculo Do Percurso",
   };
 
   await limparDsa(semeado);
@@ -323,7 +338,7 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
   if (!turmaId || !cursoId) throw new Error("a turma com relógio não nasceu");
 
   /* Uma disciplina com UE, para os lançamentos terem de onde sair. */
-  const codDisciplina = `D${processo}`;
+  const codDisciplina = semeado.codDisciplina;
   let disciplinaId = "";
   let ueId = "";
   {
@@ -407,6 +422,136 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
       instrutorId = (data as { id: string }).id;
     }
   }
+
+  /*
+   * ⚠️ **O SEGUNDO INSTRUTOR EXISTE PARA O NEGATIVO DA `RN-INST-01`**: ele é ativo, aparece no
+   * seletor, e **não tem linha em `instrutor_disciplina`**. Medido em 05/10/2026: o banco **não
+   * recusa** um instrutor não habilitado — não há FK nem gatilho —, então a Server Action é a
+   * ÚNICA defesa, e sem este instrutor não há como provar que ela defende.
+   */
+  let semVinculoId = "";
+  {
+    const { data: existe } = await admin()
+      .from("instrutores")
+      .select("id")
+      .eq("codigo", `DSA-${s}-SEMV`)
+      .maybeSingle();
+    if (existe) {
+      semVinculoId = (existe as { id: string }).id;
+    } else {
+      const { data, error } = await admin()
+        .from("instrutores")
+        .insert({
+          codigo: `DSA-${s}-SEMV`,
+          posto_graduacao: "CT",
+          esp_hab_obs: "-EF",
+          nome_completo: semeado.nomeSemHabilitacao,
+          categoria: "Militar",
+          om: "CIAARA",
+        })
+        .select("id")
+        .single();
+      if (error) throw new Error(`falha ao criar o instrutor sem vínculo: ${error.message}`);
+      semVinculoId = (data as { id: string }).id;
+    }
+  }
+
+  /* O VÍNCULO do primeiro — o controle positivo da habilitação. */
+  {
+    const { data: existe } = await admin()
+      .from("instrutor_disciplina")
+      .select("id")
+      .eq("instrutor_id", instrutorId)
+      .eq("disciplina_id", disciplinaId)
+      .maybeSingle();
+    if (!existe) {
+      const { error } = await admin()
+        .from("instrutor_disciplina")
+        .insert({
+          codigo: `DSA-${s}-VIN`,
+          instrutor_id: instrutorId,
+          disciplina_id: disciplinaId,
+          modo_atribuicao: "dividido",
+        });
+      if (error) throw new Error(`falha ao vincular o instrutor: ${error.message}`);
+    }
+  }
+
+  /*
+   * A disciplina **ISENTA** (`sem_unidades_ensino`) e a de **TFM**.
+   *
+   * ⚠️ A isenta é o que faz o modo *"Aula sem unidade"* aparecer: a tela só o oferece onde
+   * `app.disciplina_sem_ue` vale, e oferecê-lo sempre faria o banco recusar com `23514`.
+   * ⚠️ A de TFM existe para o **único bloqueio** do épico: o nome casa com o marcador `tfm` que
+   * `lib/dominio/dsa/tetos.ts` normaliza sem acento.
+   */
+  for (const d of [
+    { cod: semeado.codDisciplinaIsenta, nome: "Disciplina sem unidades do percurso", isenta: true },
+    { cod: semeado.codDisciplinaTfm, nome: "TFM do percurso", isenta: false },
+  ]) {
+    const { data: existe } = await admin()
+      .from("disciplinas")
+      .select("id")
+      .eq("curso_id", cursoId)
+      .eq("cod_disciplina", d.cod)
+      .maybeSingle();
+    let id = (existe as { id: string } | null)?.id ?? "";
+    if (id === "") {
+      const { data, error } = await admin()
+        .from("disciplinas")
+        .insert({
+          codigo: `DSA-${s}-${d.cod}`,
+          curso_id: cursoId,
+          cod_disciplina: d.cod,
+          nome_disciplina: d.nome,
+          carga_horaria_tempos: 40,
+          sem_unidades_ensino: d.isenta,
+        })
+        .select("id")
+        .single();
+      if (error) throw new Error(`falha ao criar a disciplina ${d.cod}: ${error.message}`);
+      id = (data as { id: string }).id;
+    }
+    /* As duas recebem vínculo do primeiro instrutor, senão o lançamento nelas seria barrado. */
+    const { data: temVinculo } = await admin()
+      .from("instrutor_disciplina")
+      .select("id")
+      .eq("instrutor_id", instrutorId)
+      .eq("disciplina_id", id)
+      .maybeSingle();
+    if (!temVinculo) {
+      await admin()
+        .from("instrutor_disciplina")
+        .insert({
+          codigo: `DSA-${s}-VIN-${d.cod}`,
+          instrutor_id: instrutorId,
+          disciplina_id: id,
+          modo_atribuicao: "dividido",
+        });
+    }
+    /* A de TFM precisa de uma unidade, para o lançamento normal poder apontar para ela. */
+    if (!d.isenta) {
+      const { data: ue } = await admin()
+        .from("unidades_ensino")
+        .select("id")
+        .eq("disciplina_id", id)
+        .eq("numero_ue", 1)
+        .maybeSingle();
+      if (!ue) {
+        await admin()
+          .from("unidades_ensino")
+          .insert({
+            codigo: `DSA-${s}-UE-${d.cod}`,
+            disciplina_id: id,
+            curso_id: cursoId,
+            numero_ue: 1,
+            topico: "Treinamento físico",
+            ch_prevista_tempos: 20,
+          });
+      }
+    }
+  }
+  void semVinculoId;
 
   /*
    * OS LANÇAMENTOS. ⚠️ `ta_final` **não** é escrita: ela é `GENERATED ALWAYS`, e o banco recusa
@@ -609,6 +754,7 @@ export async function limparDsa(semeado: DsaSemeado | undefined): Promise<void> 
    * por isso que a semente **pergunta** quantas vigências ativas existem antes de criar a segunda:
    * a segunda execução encontra as duas e não tenta de novo. É a mesma razão por que o curso fica.
    */
+  await admin().from("instrutor_disciplina").delete().like("codigo", `DSA-${s}-%`);
   await admin().from("unidades_ensino").delete().like("codigo", `DSA-${s}-%`);
   await admin().from("disciplinas").delete().like("codigo", `DSA-${s}-%`);
   await admin().from("instrutores").delete().like("codigo", `DSA-${s}-%`);

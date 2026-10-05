@@ -56,6 +56,18 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
 
   // ── Épico 5 (c): instrutores ───────────────────────────────────────────────────────────────
   "app/(app)/instrutores/FiltrosDeInstrutores.tsx": "os filtros da listagem, na URL",
+  /*
+   * ⚠️ **AS TRÊS FOLHAS DO LANÇAMENTO (spec 013, PR 2).** `EscolhaSimples` existe por causa da
+   * guarda `SC-002`: um arquivo com `<select` que também cite quem ministra conta como **segundo
+   * construtor de seletor**, e a `RN-ANT-01` é de *Risco: Alto* valendo por ponto único. O remédio
+   * é o do gotcha 12 — o campo de escolha comum vai para arquivo próprio.
+   */
+  "app/(app)/turmas/[turma]/dsa/EscolhaSimples.tsx":
+    "o campo de escolha dos domínios administráveis — separado para não virar um segundo construtor de seletor (`SC-002`)",
+  "app/(app)/turmas/[turma]/dsa/FormularioDeLancamento.tsx":
+    "o formulário do bloco: escolher, pré-preencher e gravar é interação; a ação chega por propriedade",
+  "app/(app)/turmas/[turma]/dsa/PainelDeLancamento.tsx":
+    "guarda só qual célula está escolhida — estado efêmero de tela, que o guia manda deixar fora da URL",
   "app/(app)/turmas/[turma]/dsa/NavegacaoDaSemana.tsx":
     "semana anterior/atual/próxima e a coluna de sábado — ela EMPILHA no histórico (`RF-NAV-04`), e empilhar é comportamento de navegador",
   "app/(app)/instrutores/TabelaDeInstrutores.tsx": "a grade navegável por teclado",

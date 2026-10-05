@@ -32,11 +32,13 @@ import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
-import { GradeDsa } from "@/components/ciaara/grade-dsa";
+import { lancar, lancarEstudoIndividualDaSemana } from "@/lib/acoes/dsa";
+import { escalaDeLinhas } from "@/lib/dominio/antiguidade";
 
 import { alcanceDoPerfil } from "../../../cursos/consulta";
 import { codigoDaFicha, mensagemDeTurmaNaoEncontrada } from "../consulta";
 import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
+import { PainelDeLancamento } from "./PainelDeLancamento";
 import {
   COLUNAS_DA_OCUPACAO,
   COLUNAS_DA_TURMA_DO_DSA,
@@ -159,7 +161,11 @@ export default async function SemanaDoDsa({
     atividadesRes,
     vigenciasRes,
     feriadosRes,
+    cursoRes,
     discRes,
+    ueExecRes,
+    listasRes,
+    atribRes,
     instrRes,
   ] = await Promise.all([
     /* ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`). */
@@ -203,7 +209,34 @@ export default async function SemanaDoDsa({
       .eq("curso_id", cursoId)
       .eq("status", "ativo"),
     supabase.from("feriados").select(COLUNAS_DO_FERIADO).gte("data", de).lte("data", ate),
-    supabase.from("disciplinas").select("id, cod_disciplina").eq("curso_id", cursoId),
+    supabase.from("cursos").select("codigo, curriculo_modelo").eq("id", cursoId).maybeSingle(),
+    supabase
+      .from("disciplinas")
+      .select("id, cod_disciplina, nome_disciplina, sem_unidades_ensino, status")
+      .eq("curso_id", cursoId),
+    /*
+     * O catálogo de **itens lançáveis** (`P-3` da planilha): as UEs com a CH prevista, a lançada e
+     * a restante. ⚠️ Os três números vêm de `vw_unidades_ensino_execucao`, que já os calcula — somar
+     * aqui seria a segunda fonte de verdade da CH executada.
+     */
+    supabase
+      .from("vw_unidades_ensino_execucao")
+      .select(
+        "unidade_ensino_id, disciplina_id, numero_ue, topico, ch_prevista_tempos, ta_executados, ta_saldo, turma_id",
+      )
+      .eq("turma_id", turmaId),
+    /* As listas administráveis: técnica, tipo de avaliação, subtipo e a escala de antiguidade. */
+    supabase
+      .from("config_listas")
+      .select("lista, valor, ordem, ativo, metadados")
+      .in("lista", ["metodologias", "tipos_avaliacao", "tipos_atividade", "escala_antiguidade"])
+      .eq("ativo", true)
+      .order("ordem"),
+    /* Quem está atribuído a esta turma, para o pré-preenchimento do instrutor. */
+    supabase
+      .from("turma_disciplina_unidade")
+      .select("unidade_ensino_id, instrutor_id, turma_id")
+      .eq("turma_id", turmaId),
     /*
      * ⚠️ Os 177 instrutores numa leitura só. Filtrar pelos ids em jogo exigiria **uma segunda
      * rodada** (os ids só se conhecem depois de ler a view), e a base é pequena por decisão
@@ -397,6 +430,113 @@ export default async function SemanaDoDsa({
   });
 
   const semRelogio = relogio === null;
+  const podeLancar = pode(permissoes, "registros_aula", "criar");
+
+  /*
+   * O CATÁLOGO DE ITENS LANÇÁVEIS, montado aqui e passado por propriedade.
+   *
+   * ⚠️ **AS LISTAS SAEM DE `config_listas`, nunca de constante de código** (`RNF-NORM-08`): a
+   * técnica, o tipo de avaliação e o subtipo são domínio **administrável**, e a `H2` do analyze pôs
+   * a categoria de cada subtipo em `metadados.categoria` — é por ela que o seletor filtra em vez de
+   * oferecer a lista inteira, que mistura tipo de aula com não-letivo.
+   */
+  const listas = (listasRes.data ?? []) as {
+    lista: string;
+    valor: string;
+    ordem: number;
+    metadados: Record<string, unknown> | null;
+  }[];
+  const daLista = (nome: string) => listas.filter((l) => l.lista === nome);
+  const tecnicas = daLista("metodologias").map((l) => l.valor);
+  const tiposDeAvaliacao = daLista("tipos_avaliacao").map((l) => l.valor);
+  const subtipos = daLista("tipos_atividade").map((l) => ({
+    valor: l.valor,
+    categoria: (l.metadados?.["categoria"] as string | undefined) ?? null,
+  }));
+  /* ⚠️ A escala de antiguidade é DADO (`RN-ANT-02`): o peso de cada P/G vive em `config_listas`. */
+  const escala = escalaDeLinhas(
+    /* `ativo` é obrigatório no tipo, e a consulta já filtra `ativo = true` — a escala administrável é a ativa. */
+    daLista("escala_antiguidade").map((l) => ({ valor: l.valor, ordem: l.ordem, ativo: true })),
+  );
+
+  const atribuicaoPorUe = new Map(
+    ((atribRes.data ?? []) as { unidade_ensino_id: string; instrutor_id: string | null }[]).map(
+      (a) => [a.unidade_ensino_id, a.instrutor_id],
+    ),
+  );
+  const disciplinasDoCurso = (discRes.data ?? []) as {
+    id: string;
+    cod_disciplina: string;
+    nome_disciplina: string;
+    sem_unidades_ensino: boolean | null;
+    status: string;
+  }[];
+  const codigoDaDisciplina = new Map(disciplinasDoCurso.map((d) => [d.id, d.cod_disciplina]));
+
+  const unidades = (
+    (ueExecRes.data ?? []) as {
+      unidade_ensino_id: string;
+      disciplina_id: string;
+      numero_ue: number;
+      topico: string;
+      ch_prevista_tempos: number;
+      ta_executados: number | null;
+      ta_saldo: number | null;
+    }[]
+  ).map((u) => ({
+    id: u.unidade_ensino_id,
+    disciplinaId: u.disciplina_id,
+    disciplinaCodigo: codigoDaDisciplina.get(u.disciplina_id) ?? "—",
+    numero: u.numero_ue,
+    topico: u.topico,
+    prevista: u.ch_prevista_tempos,
+    lancada: u.ta_executados ?? 0,
+    restante: u.ta_saldo ?? u.ch_prevista_tempos,
+    tecnicaSugerida: null,
+    atribuidoId: atribuicaoPorUe.get(u.unidade_ensino_id) ?? null,
+  }));
+
+  /*
+   * ⚠️ **AS DISCIPLINAS ISENTAS SÓ APARECEM ONDE A ISENÇÃO VALE** (`Q-1`, `D-10`): curso por
+   * competências **ou** disciplina marcada `sem_unidades_ensino`. É a MESMA condição de
+   * `app.disciplina_sem_ue`, e a tela a lê para **oferecer** o modo; quem **impõe** é o banco.
+   * Oferecê-lo sempre faria a pessoa tentar e receber `23514`.
+   */
+  /*
+   * ⚠️ **O MODELO DO CURRÍCULO É LIDO DO CURSO, e a primeira escrita disto era um `false` fixo** —
+   * um valor plausível e inventado, que faria a isenção da `Q-1` nunca aparecer nos dois cursos por
+   * competências, que são justamente os que mais precisam dela. O `curriculo_modelo` entra na
+   * leitura do curso, na mesma rodada.
+   */
+  const cursoPorCompetencias =
+    (cursoRes.data as { curriculo_modelo?: string } | null)?.curriculo_modelo === "competencias";
+  const disciplinasIsentas = disciplinasDoCurso
+    .filter((d) => d.status === "ativo" && (d.sem_unidades_ensino === true || cursoPorCompetencias))
+    .map((d) => ({
+      id: d.id,
+      codigo: d.cod_disciplina,
+      nome: d.nome_disciplina,
+    }));
+
+  /* ⚠️ Instrutor INATIVO não chega ao seletor (`RN-INST-02`). */
+  const instrutoresParaEscolher = (
+    (instrRes.data ?? []) as {
+      id: string;
+      posto_graduacao: string;
+      esp_hab_obs: string | null;
+      nome_completo: string;
+      nome_guerra: string | null;
+      status?: string;
+    }[]
+  )
+    .filter((i) => i.status === undefined || i.status === "ativo")
+    .map((i) => ({
+      id: i.id,
+      pg: i.posto_graduacao,
+      especialidade: i.esp_hab_obs,
+      nomeCompleto: i.nome_completo,
+      nomeDeGuerra: i.nome_guerra,
+    }));
 
   return (
     <section className="flex min-w-0 flex-col gap-3">
@@ -433,7 +573,24 @@ export default async function SemanaDoDsa({
         </p>
       ) : null}
 
-      <GradeDsa semana={semana} salaDaTurma={(turma.sala_alocada as string | null) ?? null} />
+      <PainelDeLancamento
+        semana={semana}
+        turmaId={turmaId}
+        cursoId={cursoId}
+        salaDaTurma={(turma.sala_alocada as string | null) ?? null}
+        ano={escolha.ano}
+        numeroDaSemana={escolha.numero}
+        podeLancar={podeLancar}
+        unidades={unidades}
+        disciplinasIsentas={disciplinasIsentas}
+        instrutores={instrutoresParaEscolher}
+        escala={escala}
+        tecnicas={tecnicas}
+        tiposDeAvaliacao={tiposDeAvaliacao}
+        subtipos={subtipos}
+        lancar={lancar}
+        lancarEstudoIndividual={lancarEstudoIndividualDaSemana}
+      />
     </section>
   );
 }
