@@ -113,7 +113,7 @@ número.
 - [X] T042 [P] [US4] `tests/unidade/andamento-unico.test.ts` (novo) — `emAtraso` só se **calcula** em `lib/dominio/andamento-da-turma.ts`; `panorama.ts` e a ficha o **importam**; controle positivo exigindo os dois imports (`SC-006`)
 - [X] T043 [P] [US4] `tests/unidade/vocabulario-proibido.test.ts` (novo) — zero `gordura` em código **sem comentário** de `app`, `lib`, `components`, `supabase` e `tests`, com este arquivo excluído da própria varredura e controle positivo exigindo *"Saldo de capacidade"* na ficha (`SC-007`). ⚠️ `vocabulario.test.ts` é o vocabulário **visual** e não serve
 - [X] T044 [US4] `tests/e2e/andamento.spec.ts` (novo) + `inicio.spec.ts` — os cinco estados da seção na ficha, e no Início os **dois vereditos virados**: `turmaEmExcesso` sem badge, `turmaSemCapacidade` com badge
-- [ ] T045 [US4] `pnpm verificar:tudo` → 0, push, **CI verde**, e `roteiro-de-conferencia-pr3.md` 👤 com o **caso calculado à mão** sobre uma turma real do banco **local** (`quickstart.md` §3), datado — o "hoje" muda o resultado
+- [X] T045 [US4] `pnpm verificar:tudo` → 0, push, **CI verde**, e `roteiro-de-conferencia-pr3.md` 👤 com o **caso calculado à mão** sobre uma turma real do banco **local** (`quickstart.md` §3), datado — o "hoje" muda o resultado
 
 **Critério de merge do PR 3**: T045 verde, a conta à mão batendo número a número, e o "de acordo".
 
@@ -121,8 +121,8 @@ número.
 
 ## Fase 7 — Polimento e fechamento
 
-- [ ] T046 Atualizar o `CLAUDE.md` com a fatia fechada: os três PRs, os commits, as quatro contagens medidas, o **achado do indicador invertido de `/inicio`**, a **D-NAV-1 substituindo a MENU-1**, e o Épico 5.5 na linha de estado
-- [ ] T047 Conferir que a estrutura do banco **não mudou**: `scripts/provas/impressao_digital_do_esquema.sql` com o mesmo resumo antes e depois dos três PRs — é o que prova *"sem migration"* em vez de afirmá-lo
+- [X] T046 Atualizar o `CLAUDE.md` com a fatia fechada: os três PRs, os commits, as quatro contagens medidas, o **achado do indicador invertido de `/inicio`**, a **D-NAV-1 substituindo a MENU-1**, e o Épico 5.5 na linha de estado
+- [X] T047 Conferir que a estrutura do banco **não mudou**: `scripts/provas/impressao_digital_do_esquema.sql` com o mesmo resumo antes e depois dos três PRs — é o que prova *"sem migration"* em vez de afirmá-lo
 
 ---
 
