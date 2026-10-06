@@ -82,3 +82,36 @@ function emInstante(valor: string | null | undefined): Date | null {
   const instante = new Date(texto);
   return Number.isNaN(instante.getTime()) ? null : instante;
 }
+
+/**
+ * O dia da semana abreviado, em maiúsculas, como o documento impresso o escreve.
+ *
+ * ⚠️ **A LISTA COMEÇA NO DOMINGO porque é o índice de `getUTCDay()`** — reordená-la para começar na
+ * segunda exigiria aritmética a mais para ganhar nada.
+ */
+const DIA_DA_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as const;
+
+/**
+ * `AAAA-MM-DD` → `SEG 06/04/2026` — a coluna **DIA** do DSA, na tela e no papel.
+ *
+ * ⚠️ **ELA SUBIU PARA CÁ NO PR 3 DA SPEC 013, e a razão é a de sempre: o SEGUNDO DONO.** Ela nasceu
+ * privada em `components/ciaara/grade-dsa.tsx`, e a rota de impressão precisava do **mesmo** rótulo
+ * — `praticas-da-planilha.md` §1.2 mede *"DIA (data e dia da semana, uma vez por dia)"* nos PDFs
+ * assinados. Copiá-la para o papel criaria o quinto dono do formato de data que a spec 012 reduziu a
+ * um, e a divergência apareceria no dia em que alguém mudasse a abreviação num dos dois.
+ *
+ * ⚠️ **`Date.UTC` E NÃO `new Date(iso)`, e a diferença não é estilo:** o segundo interpreta
+ * `aaaa-mm-dd` como UTC em alguns navegadores e como local em outros, e o dia da semana **saía
+ * errado na fronteira do fuso** — sem erro nenhum, só com a letra trocada.
+ *
+ * ⚠️ **A DATA SAI INTEIRA DE `dataParaLeitura`.** A primeira escrita fazia `.slice(0, 5)` para
+ * mostrar só `DD/MM`, e `formato-de-data.test.ts` reprovou, com razão. O dia completo é mais largo
+ * e não tem segundo dono.
+ */
+export function dataComDiaDaSemana(iso: string): string {
+  const legivel = dataParaLeitura(iso);
+  if (dataIlegivel(legivel)) return legivel;
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  const indice = new Date(Date.UTC(ano ?? 1970, (mes ?? 1) - 1, dia ?? 1)).getUTCDay();
+  return `${DIA_DA_SEMANA[indice]} ${legivel}`;
+}

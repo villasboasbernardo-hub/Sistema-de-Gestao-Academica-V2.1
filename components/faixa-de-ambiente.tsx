@@ -40,6 +40,15 @@ export function FaixaDeAmbiente() {
   return (
     <div
       role="status"
+      /*
+       * ⚠️ **O `data-slot` NÃO É DECORATIVO: é por ele que a ROTA DE IMPRESSÃO a esconde**
+       * (spec 013, PR 3). A faixa é desenhada pelo layout **raiz**, que um layout aninhado envolve
+       * em vez de substituir, e Server Component não conhece o caminho da requisição — então quem
+       * a tira do documento é uma regra no CSS **daquela rota**, que o Next carrega só quando ela é
+       * servida. O contrato da impressão é explícito: *"sem casca, sem menu, sem faixa de ambiente,
+       * sem botão: a rota é só o documento"*.
+       */
+      data-slot="faixa-de-ambiente"
       className={`px-4 py-1.5 text-center text-xs font-semibold tracking-wider ${aparencia.classe}`}
     >
       {aparencia.rotulo}

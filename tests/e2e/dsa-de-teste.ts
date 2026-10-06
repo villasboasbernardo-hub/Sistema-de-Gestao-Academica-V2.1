@@ -59,6 +59,17 @@ export const SABADO = "2026-04-11";
 export const TIPO_DE_AVALIACAO = "Prova Escrita";
 const MARCA_DA_SEMENTE = "semeado pela suite do DSA";
 
+/**
+ * Os nomes de guerra das duas vigências de assinatura — é por eles que o critério 3 se observa.
+ *
+ * ⚠️ **ELES SÃO «ABRIL» E «JULHO» DE PROPÓSITO:** a semana `SEMANA` (15) cai em abril e resolve
+ * pela primeira vigência; a `SEMANA_DE_JULHO` (28) resolve pela segunda. Um nome genérico faria o
+ * caso passar sem que se pudesse ler, na saída, **qual** vigência venceu.
+ */
+export const ASSINANTE_DE_ABRIL = "ABRIL";
+export const ASSINANTE_DE_JULHO = "JULHO";
+export const ASSINANTE_ENCARREGADO = "ENCARREGADO";
+
 export const SEMANA_DE_MAIO = 20;
 export const SEMANA_DE_JULHO = 28;
 
@@ -706,6 +717,90 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
     if (erroFer) throw new Error(`falha ao criar o feriado ${f.impacto}: ${erroFer.message}`);
   }
 
+  /*
+   * ⚠️ **AS DUAS VIGÊNCIAS DE ASSINATURA — e sem elas o critério 3 NÃO É DEMONSTRÁVEL** (`T086`).
+   *
+   * > *"Reimprimir hoje um DSA de março traz quem assinava em março, não quem assina hoje."*
+   * > — critério **3** do Épico 6, documento 06 da Fase 1
+   *
+   * ⚠️ **MEDIDO NO REMOTO EM 05/10/2026: há UMA SÓ vigência por papel**, e as duas linhas reais são
+   * **GERAL** (`curso_id` nulo) — `elaborador` em modo dinâmico e `encarregado_divisao` em modo
+   * fixo. Com uma vigência só, **qualquer** semana resolve para a mesma pessoa: o caso de abril e o
+   * de julho dariam o **mesmo veredito antes e depois** de a resolução por data existir, que é
+   * exatamente o que o DoD 8 proíbe chamar de teste.
+   *
+   * ⚠️ **A LINHA DO CURSO VENCE A GERAL** (`FR-036.1`), então estas quatro linhas **substituem** as
+   * duas reais na impressão desta turma, sem tocar nelas. É o mecanismo que o requisito descreve, e
+   * não um atalho da suíte.
+   *
+   * ⚠️ **AS VIGÊNCIAS NÃO SE SOBREPÕEM, e isso é exigência do banco**: `ex_assinatura_sem_sobreposicao`
+   * é uma `EXCLUDE` que **protege** a linha com `curso_id` preenchido (a nota do autor registra que
+   * ela **não** protege as GERAL, porque expressão nula não conflita com ninguém). Janelas
+   * sobrepostas aqui seriam recusadas com `23P01`.
+   *
+   * ⚠️ **O MODO É `fixo` NOS DOIS, e o `CHECK resp_fixo_tem_nominal` cobra `posto_graduacao` E
+   * `nome_guerra`** — medido no catálogo. O `nome_completo` é **nulável** no banco (divergência já
+   * reportada em `assinaturas.ts`), e é ele que o papel imprime: a semente manda os três.
+   */
+  const ASSINANTES = [
+    {
+      sufixo: "ELAB-1",
+      papel_assinatura: "elaborador",
+      vigente_de: "2026-01-01",
+      vigente_ate: "2026-05-31",
+      posto_graduacao: "1ºTEN",
+      nome_guerra: "ABRIL",
+      nome_completo: `ANTONIO DE ABRIL ${s}`,
+      funcao_descricao: "Auxiliar da Div. de Adm. Academica",
+    },
+    {
+      sufixo: "ELAB-2",
+      papel_assinatura: "elaborador",
+      vigente_de: "2026-06-01",
+      vigente_ate: null,
+      posto_graduacao: "CT",
+      nome_guerra: "JULHO",
+      nome_completo: `JOAQUIM DE JULHO ${s}`,
+      funcao_descricao: "Auxiliar da Div. de Adm. Academica",
+    },
+    {
+      sufixo: "ENC-1",
+      papel_assinatura: "encarregado_divisao",
+      vigente_de: "2026-01-01",
+      vigente_ate: null,
+      posto_graduacao: "CC",
+      nome_guerra: "ENCARREGADO",
+      nome_completo: `ERNESTO ENCARREGADO ${s}`,
+      funcao_descricao: "Encarregado da Div. de Adm. Academica",
+    },
+  ] as const;
+
+  for (const a of ASSINANTES) {
+    const { error: erroResp } = await admin()
+      .from("responsaveis_curso")
+      .upsert(
+        {
+          /* ⚠️ `codigo` é obrigatório e **sem `DEFAULT`** nesta tabela — medido no tipo gerado. */
+          codigo: `DSA-${s}-${a.sufixo}`,
+          curso_id: cursoId,
+          papel_assinatura: a.papel_assinatura,
+          preenchimento: "fixo",
+          vigente_de: a.vigente_de,
+          vigente_ate: a.vigente_ate,
+          exibir_no_dsa: true,
+          ordem: 1,
+          posto_graduacao: a.posto_graduacao,
+          nome_guerra: a.nome_guerra,
+          nome_completo: a.nome_completo,
+          funcao_descricao: a.funcao_descricao,
+        },
+        { onConflict: "codigo" },
+      );
+    if (erroResp) {
+      throw new Error(`falha ao criar o responsavel ${a.sufixo}: ${erroResp.message}`);
+    }
+  }
+
   return semeado;
 }
 
@@ -718,6 +813,7 @@ export async function limparDsa(semeado: DsaSemeado | undefined): Promise<void> 
     .replace(/-REL$/, "");
 
   await admin().from("feriados").delete().like("codigo", `DSA-${s}-%`);
+  await admin().from("responsaveis_curso").delete().like("codigo", `DSA-${s}-%`);
   /* A semente do vocabulário sai pela MARCA, nunca pelo valor — ele é dado real da planilha. */
   await admin()
     .from("config_listas")
