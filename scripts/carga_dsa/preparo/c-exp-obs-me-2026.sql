@@ -95,3 +95,17 @@ begin
     (select jsonb_agg(jsonb_build_object('unidade_ensino_id', u.id, 'instrutor_id', v_15) order by u.numero_ue)
        from public.unidades_ensino u where u.disciplina_id = v_d2 and u.status = 'ativo'));
 end $$;
+
+-- ── 4. HABILITACAO E NOME DE GUERRA ── autorizados por Bernardo Villas Boas em 06/10/2026, depois
+--    do primeiro ensaio: quem nao tinha habilitacao em Observacao Meteorologica I era o instrutor
+--    47 (a 127 ja tinha), e sem ela a RN-INST-01 recusava 9 blocos, 28 TA.
+--    ⚠️ O NOME DE GUERRA dos instrutores 47, 127 e 15 tambem foi preenchido, nos dois bancos, por
+--       `update` conferido por codigo + posto + nome. Os VALORES NAO ESTAO AQUI: nome de pessoa nao
+--       entra neste repositorio, que e publico.
+insert into public.instrutor_disciplina (instrutor_id, disciplina_id)
+select i.id, d.id
+  from public.instrutores i, public.disciplinas d
+ where i.codigo = '47' and i.posto_graduacao = 'CC'
+   and d.cod_disciplina = 'I' and d.status = 'ativo'
+   and d.curso_id = (select id from public.cursos where codigo = 'C-Exp-Obs-ME')
+   and not exists (select 1 from public.instrutor_disciplina v where v.instrutor_id = i.id and v.disciplina_id = d.id);

@@ -364,7 +364,9 @@ def montar(leitura: Leitura, ref: dict, decisoes: dict, arquivo: str, hoje: str)
                 "instrutor_responsavel_id": instrutor["id"],
                 "metodologia": tecnica_de(bloco),
                 "local": local_de(bloco),
-                "conteudo_resumo": decisoes.get("conteudo_da_avaliacao"),
+                # O titulo da prova e o da PLANILHA (decisao de Bernardo Villas Boas, 06/10/2026):
+                # a avaliacao nao aponta UE, entao nao ha topico de catalogo a preferir.
+                "conteudo_resumo": leitura.catalogo[bloco.chave].topico or None,
                 "data_vista_prova": None,
                 "ta_inicial_vista": None,
                 "tempos_consumidos_vista": None,
@@ -442,11 +444,59 @@ def montar(leitura: Leitura, ref: dict, decisoes: dict, arquivo: str, hoje: str)
         alvo["local_vista"] = local_de(bloco)
         alvo["observacoes"] += f" Vista: linhas {bloco.linha}–{bloco.linha + bloco.tempos - 1}."
 
+    _conferencias_internas(plano, leitura, decisoes, disciplina_por_cod)
     _avaliar_tetos(plano, ref, disciplina_por_id)
     _avaliar_calendario(plano, ref)
     _avaliar_conflitos(plano, ref)
     _avaliar_ja_existentes(plano, ref)
     return plano
+
+
+def _conferencias_internas(plano: Plano, leitura: Leitura, decisoes: dict, disciplina_por_cod: dict) -> None:
+    """As duas conferencias da planilha contra ela mesma — OBRIGATORIAS, com ou sem gabarito.
+
+    1. UE × CH do catalogo da planilha: o que foi lancado em cada UE fecha com a CH que a aba
+       BD DISCIPLINAS declara. Passar da CH e sempre recusa; ficar abaixo so e aceito (como
+       alerta) quando as decisoes declaram `turma_em_andamento`.
+    2. disciplina × aba CONTROLE: aulas + provas + vistas de cada disciplina fecham com a
+       «CH. CUMPRIDA» que a propria planilha conta por outro caminho (o ESPELHO).
+
+    ⚠️ O gabarito e opcional (decisao de Bernardo Villas Boas, 06/10/2026); estas duas nao sao.
+       Elas nao dependem de segunda leitura: usam contagens que a planilha ja traz.
+    """
+    em_andamento = bool(decisoes.get("turma_em_andamento"))
+
+    por_ue: dict[tuple[str, str], int] = {}
+    for a in plano.aulas:
+        chave = (a["disciplina"], str(a["numero_ue"]))
+        por_ue[chave] = por_ue.get(chave, 0) + a["tempos_consumidos"]
+    for (cod, ue), linha in sorted(leitura.catalogo.items()):
+        if cod not in disciplina_por_cod or not ue.isdigit() or linha.ch is None:
+            continue
+        lancado = por_ue.get((cod, ue), 0)
+        if lancado == linha.ch:
+            continue
+        frase = f"UE {cod}+{ue}: lancado {lancado} TA, e o catalogo da planilha declara {linha.ch}"
+        if lancado < linha.ch and em_andamento:
+            plano.alertas.append(frase + " (turma em andamento)")
+        else:
+            plano.recusas.append(frase)
+
+    for cod in sorted(disciplina_por_cod):
+        if cod not in leitura.controle:
+            plano.recusas.append(f"disciplina {cod}: nao esta na aba CONTROLE da planilha")
+            continue
+        _, cumprida = leitura.controle[cod]
+        total = sum(a["tempos_consumidos"] for a in plano.aulas if a["disciplina"] == cod) + sum(
+            a["tempos_consumidos"] + (a["tempos_consumidos_vista"] or 0)
+            for a in plano.avaliacoes
+            if a["disciplina"] == cod
+        )
+        if cumprida != total:
+            plano.recusas.append(
+                f"disciplina {cod}: o plano soma {total} TA (aulas + provas + vistas), e a aba CONTROLE "
+                f"conta {cumprida} de CH cumprida"
+            )
 
 
 def _avaliar_tetos(plano: Plano, ref: dict, disciplina_por_id: dict) -> None:

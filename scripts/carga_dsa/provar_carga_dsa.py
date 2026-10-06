@@ -71,6 +71,10 @@ def planilha_sintetica(pasta: Path) -> Path:
                 folha.cell(r, 4, tas[n][0])
                 folha.cell(r, 5, tas[n][1])
             r += 1
+    controle = livro.create_sheet(planilha.ABA_CONTROLE)
+    controle.append(["CÓD.", "DISCIPLINA", "CH. PREVISTA", "CH. CUMPRIDA"])
+    controle.append(["I", "DISCIPLINA UM", 10.0, 7])  # 3 de aula + 1 na UE 9 + 2 de prova + 1 de vista
+    controle.append(["T", "TFM", 40.0, 7])
     caminho = pasta / "sintetica.xlsx"
     livro.save(caminho)
     return caminho
@@ -155,7 +159,17 @@ def main() -> int:
     recusas = "\n".join(p.recusas)
     conferir("UE que o banco nao tem: recusa, e nao cria", "UE 9 da disciplina I NAO existe" in recusas, recusas)
     conferir("7 TA de TFM numa semana: recusa (RN-DIST-03)", "teto de TFM" in recusas, recusas)
-    conferir("so essas duas recusas", len(p.recusas) == 2, p.recusas)
+    conferir("UE × CH do catalogo da planilha: a UE 9, que nao entrou, nao fecha — recusa",
+             "UE I+9: lancado 0 TA" in recusas, recusas)
+    conferir("disciplina × CONTROLE: I soma 6 no plano e a planilha conta 7 — recusa",
+             "disciplina I: o plano soma 6 TA" in recusas, recusas)
+    conferir("controle positivo: T fecha com a UE (7) e com o CONTROLE (7), e nao e acusada",
+             "UE T+1" not in recusas and "disciplina T:" not in recusas, recusas)
+    conferir("so essas quatro recusas", len(p.recusas) == 4, p.recusas)
+    conferir("o titulo da prova vem da planilha", p.avaliacoes[0]["conteudo_resumo"] == "PROVA", p.avaliacoes[0])
+    andamento = plano.montar(leitura, retrato(), {**DECISOES, "turma_em_andamento": True}, "s.xlsx", "2026-03-10")
+    conferir("turma em andamento: UE abaixo da CH vira alerta, nao recusa",
+             not any(r.startswith("UE I+9") for r in andamento.recusas) and any("UE I+9" in x for x in andamento.alertas))
     conferir("o topico gravado e o do BANCO, nunca o da planilha",
              {a["conteudo_resumo"] for a in p.aulas if a["disciplina"] == "I"} == {"TOPICO DO CATALOGO DO BANCO"})
     conferir("a vista vai na MESMA linha da avaliacao (RN-AVAL-02)",

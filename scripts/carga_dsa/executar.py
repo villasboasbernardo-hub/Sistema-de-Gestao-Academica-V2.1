@@ -10,14 +10,20 @@
 
 A ORDEM, e ela nao tem atalho:
   1. le a planilha e monta os blocos;
-  2. com `--gabarito`, confere a extracao 1:1 contra a segunda leitura — divergiu, PARA;
+  2. com `--gabarito` (OPCIONAL), confere a extracao 1:1 contra a segunda leitura — divergiu, PARA;
   3. le o retrato do destino e resolve cada bloco (UE, instrutor, vocabulario);
-  4. aplica as validacoes do lancamento manual — houve recusa, PARA, sem tocar no banco;
-  5. ENSAIA: roda a transacao inteira e a desfaz;
-  6. so com `--gravar`: escreve, le de volta e confere linha a linha contra o plano.
+  4. aplica as validacoes do lancamento manual E as conferencias internas, que sao OBRIGATORIAS:
+     UE × CH do catalogo da planilha e disciplina × aba CONTROLE — houve recusa, PARA;
+  5. contra o remoto, resolve o MESMO plano contra o local e compara: divergiu, PARA;
+  6. ENSAIA: roda a transacao inteira e a desfaz;
+  7. so com `--gravar`: escreve, le de volta e confere linha a linha contra o plano.
 
 O CODIGO DE SAIDA E O VEREDITO: 0 passou · 2 planilha ou gabarito · 3 recusa de validacao ·
-4 recusa do banco · 5 a conferencia apos a escrita divergiu.
+4 recusa do banco · 5 a conferencia apos a escrita divergiu · 6 o plano do remoto nao e o do local.
+
+⚠️ O GABARITO E OPCIONAL (decisao de Bernardo Villas Boas, 06/10/2026): nem toda turma tera
+   segunda leitura. O que NAO e opcional sao as conferencias que a planilha permite contra si
+   mesma e a comparacao do plano entre os dois bancos.
 
 ⚠️ ESCREVER NO REMOTO EXIGE A EXCECAO ESCRITA NAS DECISOES DA TURMA (`excecao_virada_1`). A regra
    geral do projeto e que dado nao vai para o remoto por script; quem abre a excecao e Bernardo,
@@ -225,6 +231,7 @@ def main() -> int:
     argumentos.add_argument("--gabarito", type=Path, help="CSV da segunda leitura; divergiu, para")
     argumentos.add_argument("--destino", required=True, choices=sorted(banco.DESTINOS))
     argumentos.add_argument("--autor", required=True, help="codigo da conta (usuarios.codigo) que autoriza a carga")
+    argumentos.add_argument("--autor-local", help="a conta equivalente no banco local (para comparar o plano do remoto)")
     argumentos.add_argument("--gravar", action="store_true", help="sem isto, so ensaia")
     argumentos.add_argument("--plano-json", type=Path, help="grava o plano (chaves naturais, sem nomes) neste arquivo")
     a = argumentos.parse_args()
@@ -251,11 +258,8 @@ def main() -> int:
             print("\n".join(f"  ✗ {d}" for d in divergencias))
             return 2
         print(f"gabarito: {len(leitura.blocos)} blocos, 1:1 com {a.gabarito.name}")
-    elif a.gravar and a.destino == "remoto":
-        print("[RECUSADO] nao se escreve no remoto sem `--gabarito`: a extracao precisa de uma segunda leitura.")
-        return 2
     else:
-        print("gabarito: NAO INFORMADO — a extracao nao foi conferida contra a segunda leitura")
+        print("gabarito: nao informado (opcional) — valem as conferencias internas, que sao obrigatorias")
 
     de = min(b.data for b in leitura.blocos).isoformat()
     ate = max(b.data for b in leitura.blocos).isoformat()
@@ -278,6 +282,25 @@ def main() -> int:
     if p.recusas:
         print(f"\n[PARADO] {len(p.recusas)} recusa(s) de validacao. Nada foi enviado ao banco.")
         return 3
+
+    if a.destino == "remoto":
+        # ⚠️ OBRIGATORIA: o plano resolvido contra o remoto tem de ser o MESMO resolvido contra o
+        #    local, em chaves naturais. Se um cadastro difere entre os dois (uma habilitacao, uma
+        #    UE, um instrutor), a verificacao feita no local nao vale para o que vai ao remoto.
+        _titulo("Plano do remoto × plano do local")
+        try:
+            ref_local = banco.referencia("local", a.turma, a.autor_local or a.autor, de, ate)
+        except banco.RecusaDoBanco as erro:
+            print(f"  ✗ nao consegui ler o local para comparar: {erro}")
+            return 6
+        p_local = modulo_do_plano.montar(leitura, ref_local, decisoes, a.planilha.name, date.today().isoformat())
+        if p_local.recusas or p_local.impressao_digital() != p.impressao_digital():
+            print(f"  ✗ local {p_local.impressao_digital()} ({len(p_local.recusas)} recusa(s)) × remoto {p.impressao_digital()}")
+            for recusa in p_local.recusas:
+                print(f"    recusa no local: {recusa}")
+            print("[PARADO] o plano do remoto nao e o do local. Nada foi enviado ao banco.")
+            return 6
+        print(f"  iguais: {p.impressao_digital()} — {len(p.aulas)} aulas, {len(p.avaliacoes)} avaliacoes, {len(p.atividades)} atividades")
 
     _titulo("Ensaio (transacao inteira, desfeita)")
     try:

@@ -34,6 +34,7 @@ import openpyxl
 
 ABA_PREENCHIMENTO = "PREENCHIMENTO"
 ABA_CATALOGO = "BD DISCIPLINAS"
+ABA_CONTROLE = "CONTROLE"
 
 _TA = re.compile(r"^\s*(\d{1,2})\s*[ºo°]\s*$")
 
@@ -123,6 +124,8 @@ class Leitura:
     ignoradas: list[CelulaIgnorada] = field(default_factory=list)
     # Chaves repetidas no catalogo: valeu a primeira linha, como no PROCV da planilha.
     duplicadas: list[LinhaDoCatalogo] = field(default_factory=list)
+    # A aba CONTROLE: COD da disciplina → (CH prevista, CH cumprida), como a planilha as calcula.
+    controle: dict[str, tuple[int | None, int | None]] = field(default_factory=dict)
 
 
 def _abrir(caminho: Path):
@@ -246,6 +249,29 @@ def ler_preenchimento(pasta) -> tuple[str, str, list[LinhaDeTa], list[CelulaIgno
     return sigla, alunos, linhas, ignoradas
 
 
+def ler_controle(pasta) -> dict[str, tuple[int | None, int | None]]:
+    """A aba CONTROLE: por disciplina, a CH prevista e a CH cumprida que a PROPRIA planilha conta.
+
+    E a segunda contagem, independente da leitura dos blocos: a planilha soma as linhas do
+    ESPELHO por codigo de disciplina. Se o plano nao fechar com ela, a leitura errou — ou a
+    planilha tem linha que este modulo nao viu.
+    """
+    if ABA_CONTROLE not in pasta.sheetnames:
+        raise PlanilhaInvalida(f"a planilha nao tem a aba «{ABA_CONTROLE}»")
+    aba = pasta[ABA_CONTROLE]
+
+    def numero(valor: object) -> int | None:
+        return int(valor) if isinstance(valor, (int, float)) else None
+
+    controle: dict[str, tuple[int | None, int | None]] = {}
+    for r in range(2, aba.max_row + 1):
+        cod = texto(aba.cell(r, 1).value)
+        if cod == "":
+            continue
+        controle[cod] = (numero(aba.cell(r, 3).value), numero(aba.cell(r, 4).value))
+    return controle
+
+
 def montar_blocos(linhas: list[LinhaDeTa]) -> list[Bloco]:
     """Agrupa TA CONSECUTIVOS do mesmo dia com a mesma chave. Buraco no meio abre bloco novo."""
     blocos: list[Bloco] = []
@@ -289,6 +315,7 @@ def ler(caminho: Path) -> Leitura:
         blocos=blocos,
         ignoradas=ignoradas,
         duplicadas=duplicadas,
+        controle=ler_controle(pasta),
     )
 
 
