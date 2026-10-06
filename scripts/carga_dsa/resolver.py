@@ -111,7 +111,9 @@ class Resolvido:
         sem_id = lambda linhas: [{k: v for k, v in l.items() if not k.endswith("_id")} for l in linhas]  # noqa: E731
         corpo = json.dumps(
             {"aulas": sem_id(self.aulas), "avaliacoes": sem_id(self.avaliacoes),
-             "atividades": sem_id(self.atividades), "calendario": self.calendario,
+             "atividades": sem_id(self.atividades),
+             # `ja_no_banco` e ESTADO do destino, nao plano: no local o dia ja entrou, no remoto ainda nao.
+             "calendario": [{k: v for k, v in c.items() if k != "ja_no_banco"} for c in self.calendario],
              "pendencias": sorted(p.detalhe for p in self.pendencias if p.bloqueia)},
             sort_keys=True, ensure_ascii=False, default=str,
         )

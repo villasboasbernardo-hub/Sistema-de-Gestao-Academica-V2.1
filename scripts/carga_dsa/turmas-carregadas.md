@@ -5,10 +5,26 @@
 > v2.0 pode trazê-los de novo — duplicados e, no caso abaixo, com a disciplina errada.
 
 Cada linha é uma **exceção nominal à VIRADA-1**, autorizada por Bernardo Villas Boas turma a turma.
-O script (`python -m scripts.carga_dsa.executar`) só escreve no remoto se as decisões da turma
-trouxerem `excecao_virada_1`.
+O comando é `python -m scripts.carga_dsa.sincronizar` (o `executar` do piloto foi absorvido por ele); ele só
+toca turma listada em `fontes.json`, e o remoto só recebe o plano que bateu, linha a linha, com o do local.
 
-## C-Exp-Obs-ME 2026 — a "T2" da planilha de controle (14/09 a 09/10/2026)
+## Onda 1 — C-Esp-ME 2026 · C-Exp-MetocOf 2026 · C-Exp-Obs-ME 2026 · C-Exp-BATI T1 2026 · C-Exp-Ag-Mag 2026
+
+**Carga no remoto: CONCLUÍDA em 06/10/2026**, rodada `2026-10-06T1541` (exportação do Drive às 15:41), decisões
+de Bernardo Villas Boas em duas rodadas no mesmo dia (lote da onda 1 e D1–D5).
+
+| O quê                      | Valor                                                                                                                                                                                                                                                                                           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Migrations aplicadas antes | `20261006184558` (linha histórica inativa dispensa catraca) e `20261006210242` (só lançamento ativo trava a vigência) — backup `remoto-20261006-183510.sql`, 54 e 54                                                                                                                            |
+| Backup antes da carga      | `remoto-20261006-191504.sql`                                                                                                                                                                                                                                                                    |
+| Preparo de cadastro        | `preparo/onda-1-habilitacoes.sql` (10 pares) e `preparo/onda-1-decisoes.sql` (CFG-F, V do MetocOf sem UE, sala H11, turma MetocOf); nomes de guerra de 9 instrutores e o cadastro de uma 1ºTen rodados à mão, fora do repositório                                                               |
+| Relógio                    | 5 vigências canceladas e registradas de novo pela aba HORÁRIOS: C-Esp-ME e MetocOf 7×50 08:10 10/5 13:05; BATI 9×45 07:50 5/5 13:05; Ag-Mag 8×50 08:10 10/5 13:05 **com o catálogo CFG-F** (EI 16:50–17:30); OBS-ME já estava                                                                   |
+| Calendário global          | inativados 30/01, 02/06, 10/06, 11/06, 29/06 e 03/08 (dias «por curso»); incluído 04/09                                                                                                                                                                                                         |
+| O que entrou               | C-Esp-ME 198 aulas · 19 avaliações (19 vistas) · 95 atividades, ETL 172/25/77 substituído; MetocOf 59 · 3 · 4; BATI 12 · 2 · 2; Ag-Mag 35 · 2 · 12; OBS-ME 0 mudanças (igual ao piloto)                                                                                                         |
+| Prova                      | plano do remoto = plano do local nas 5 (impressão digital); segunda rodada com 0 mudanças; impressão digital do conteúdo das três tabelas, das vigências, do calendário e das 23 turmas não tocadas **idêntica** nos dois bancos (13 de 13); lançado = CONTROLE nas 5 turmas, 0 TA de diferença |
+| Fora                       | C-Exp-Obs-ME T1 (não há turma no banco)                                                                                                                                                                                                                                                         |
+
+## C-Exp-Obs-ME 2026 — a "T2" da planilha de controle (14/09 a 09/10/2026) — o piloto
 
 **Carga no remoto: CONCLUÍDA em 06/10/2026.**
 
