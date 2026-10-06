@@ -228,7 +228,18 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
       p_curso: {
         codigo: c.codigo,
         nome_curso: c.nome,
-        classificacao: "regular",
+        /*
+         * ⚠️ **O CURSO EAD NÃO PODE SER `regular`, e isso foi medido pela suíte inteira.**
+         * `url-degradada.spec.ts` prova o estado vazio do `/inicio` com o recorte
+         * `?classificacao=regular&modalidade=ead` — *"há turmas, só não com esta combinação"* —, e
+         * a turma EAD desta semente, num curso `regular`, **é exatamente essa combinação**. Com
+         * `fullyParallel` e seis arquivos do DSA semeando, a janela em que a turma existe passou a
+         * cobrir a execução daquele caso, e ele reprovava dizendo que a frase do vazio não
+         * apareceu — acusando a tela quando a causa era a amostra de outra suíte.
+         * ⚠️ **A classificação não é insumo de nenhum caso do DSA**, então mudá-la aqui não enfraquece
+         * nada; manter `regular` seria manter uma coincidência que só se paga em diagnóstico.
+         */
+        classificacao: c.modalidade === "ead" ? "especial" : "regular",
         modalidade: c.modalidade,
         duracao_dias: 60,
       },
@@ -718,6 +729,102 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
   }
 
   /*
+   * ⚠️ **A AULA HERDADA SEM UNIDADE DE ENSINO — a segunda metade da `Q-1`, e ela só existe porque
+   * os dois `CHECK` abrem essa porta POR ESCRITO.**
+   *
+   * > *"A Unidade de Ensino só pode ser nula em linha MIGRADA e NUNCA EDITADA, ou em disciplina
+   * > ISENTA de UE. […] Editar uma linha histórica passa a exigir a UE: é uma catraca."*
+   * > — `comment on constraint reg_aula_ue_so_nula_no_historico`, migration `20261005181116`
+   *
+   * ⚠️ **ELA TEM POSIÇÃO (TA 8 na quinta) E NÃO TEM UE NEM DISCIPLINA.** Medido nos dois `CHECK` do
+   * PR B: `unidade_ensino_id is not null OR (origem_migracao_v1 is not null and editado_em is null)
+   * OR (disciplina isenta…)` — o segundo ramo a aprova. ⚠️ **E MEXER NELA A REPROVA**, porque o
+   * gatilho de auditoria carimba `editado_em` e o segundo ramo deixa de valer: é exatamente o caso
+   * que a ação tem de antecipar, pedindo a unidade **no mesmo ato** em vez de deixar chegar `23514`.
+   *
+   * ⚠️ **ELA É DIFERENTE DA `SEMTA`:** aquela tem UE e **não** tem posição (é o estado das 1.566 do
+   * ETL); esta tem posição e **não** tem UE. As duas são histórico, e só a segunda exercita a
+   * catraca.
+   */
+  const { error: erroHerdada } = await admin()
+    .from("registros_aula")
+    .upsert(
+      {
+        codigo: `DSA-${s}-HERDSEMUE`,
+        data: QUINTA,
+        turma_id: turmaId,
+        curso_id: cursoId,
+        unidade_ensino_id: null,
+        disciplina_id: null,
+        instrutor_id: instrutorId,
+        ta_inicial: 8,
+        tempos_consumidos: 1,
+        conteudo_resumo: "Aula migrada sem unidade de ensino",
+        origem_migracao_v1: `Semente_DSA:${s}:HERDSEMUE`,
+      },
+      { onConflict: "codigo" },
+    );
+  if (erroHerdada) {
+    throw new Error(`falha ao lançar a aula herdada sem UE: ${erroHerdada.message}`);
+  }
+
+  /*
+   * ⚠️ **O CONFLITO ENTRE TURMAS — o critério 5, e ele NÃO É DEMONSTRÁVEL numa turma só.**
+   *
+   * > *"Mesmo instrutor (ou fiscal) com TA sobrepostos no mesmo dia em QUALQUER turma do sistema =
+   * > conflito primário; mesma sala = alerta secundário."*
+   * > — `RN-CONF-01`, história **H6** da spec 013
+   *
+   * ⚠️ **ELE É UMA ATIVIDADE NÃO LETIVA, E A ESCOLHA É MEDIDA:** `atividades_nao_letivas` ganhou
+   * `instrutor_id` no PR B e **não exige disciplina nem unidade de ensino** — então o conflito se
+   * semeia na SEGUNDA turma sem precisar criar currículo para o curso dela. Uma aula ali exigiria
+   * disciplina, UE, vínculo e período de turma, quatro linhas a mais para provar a mesma coisa.
+   *
+   * ⚠️ **A SOBREPOSIÇÃO É DELIBERADA: mesma data, mesmos TA, MESMO instrutor e MESMA sala.** Com o
+   * instrutor igual, o conflito é **primário**; com a sala igual, vem junto o alerta **secundário**
+   * — e é esse par que distingue a implementação que trata os dois como a mesma coisa.
+   *
+   * ⚠️ **O DIA É O SÁBADO, E A ESCOLHA FOI CORRIGIDA POR MEDIÇÃO — a primeira versão o punha na
+   * SEGUNDA e derrubou dois casos de OUTRA suíte.** Conflito muda o **tom** da célula de `ocupada`
+   * para `conflito` (é o que `tomDoBloco` faz, e está certo), e `dsa-ver.spec.ts` localiza o bloco
+   * que atravessa o almoço por `[data-tom="ocupada"]` — que também está certo. Pôr o conflito no
+   * bloco da segunda fazia a semente do PR 4 **invalidar a asserção do PR 1**, com um sintoma
+   * (*"elemento não encontrado"*) que não diz nada sobre a causa.
+   * ⚠️ **O sábado é o único dia cujo bloco nenhuma outra suíte mede pelo tom** — `dsa-ver` confere
+   * ali só o TEXTO (*"Aula de sábado"*, a `Q-4`), e a avaliação tem caso próprio por
+   * `[data-tom="avaliacao"]`, que o conflito também apagaria.
+   *
+   * ⚠️ **E ELE É INVISÍVEL PARA QUEM NÃO ALCANÇA A OUTRA TURMA, por desenho da `Q-17`**: quem lê a
+   * grade vê **que há conflito**, e `public.conflitos_da_semana` não devolve `turma_id` nem
+   * `fato_id` — o DSA alheio não vaza.
+   */
+  const turmaDoConflito = idDaTurma.get(semeado.turmaComVigenciaNova);
+  if (turmaDoConflito !== undefined && instrutorId !== "") {
+    const { error: erroConflito } = await admin()
+      .from("atividades_nao_letivas")
+      .upsert(
+        {
+          codigo: `DSA-${s}-CONFLITO`,
+          categoria_normativa: "AEC",
+          escopo: "turma",
+          turma_id: turmaDoConflito,
+          data: SABADO,
+          /* ⚠️ O subtipo sai da lista que a migration do PR B semeou, com a categoria `AEC`. */
+          subtipo: "Palestra",
+          descricao: `Palestra que conflita com a outra turma ${s}`,
+          ta_inicial: 1,
+          tempos_consumidos: 2,
+          local: semeado.sala,
+          instrutor_id: instrutorId,
+        },
+        { onConflict: "codigo" },
+      );
+    if (erroConflito) {
+      throw new Error(`falha ao semear o conflito entre turmas: ${erroConflito.message}`);
+    }
+  }
+
+  /*
    * ⚠️ **AS DUAS VIGÊNCIAS DE ASSINATURA — e sem elas o critério 3 NÃO É DEMONSTRÁVEL** (`T086`).
    *
    * > *"Reimprimir hoje um DSA de março traz quem assinava em março, não quem assina hoje."*
@@ -814,21 +921,19 @@ export async function limparDsa(semeado: DsaSemeado | undefined): Promise<void> 
 
   await admin().from("feriados").delete().like("codigo", `DSA-${s}-%`);
   await admin().from("responsaveis_curso").delete().like("codigo", `DSA-${s}-%`);
+  await admin().from("atividades_nao_letivas").delete().like("codigo", `DSA-${s}-%`);
   /*
-   * ⚠️ **O VALOR SEMEADO EM `config_listas` NÃO É APAGADO, e isso foi corrigido PELO CI.**
+   * ⚠️ **O VALOR SEMEADO EM `config_listas` NÃO É APAGADO, e isso foi corrigido por medição.**
    *
    * `playwright.config.ts` tem `fullyParallel: true`: os casos de um arquivo se espalham pelos
-   * processos, e **cinco** arquivos do DSA chamam `semearDsa`/`limparDsa`. `config_listas` é
+   * processos, e **seis** arquivos do DSA chamam `semearDsa`/`limparDsa`. `config_listas` é
    * **estado compartilhado por todos eles** — a lista não tem número de processo no valor, porque é
    * vocabulário do domínio, não amostra. Apagá-la no `afterAll` de um processo derrubava a semente
    * de outro **que ainda estava rodando**, com a mensagem *"O valor «Prova Escrita» não pertence à
    * lista tipos_avaliacao"* — que acusa a LISTA quando a causa é a ordem de limpeza.
-   * ⚠️ **MEDIDO NO CI em 06/10/2026: duas execuções sobre o MESMO commit, uma verde e uma
-   * vermelha** (runs `37395622272` e `37395617001` do PR #30) — o modo de falha que mais parece
-   * azar e não é.
-   * ⚠️ **É a terceira vez que esta forma aparece nesta base** (a segunda foi `rls.test.ts` apagando
-   * `tipos_atividade` inteira no meio da suíte, no PR 2), e a regra que ela ensina é: **amostra
-   * apaga o que carrega o número do processo; vocabulário compartilhado, não.**
+   * ⚠️ **É a terceira vez que esta forma aparece nesta base** (a segunda foi `rls.test.ts`
+   * apagando `tipos_atividade` inteira no meio da suíte, no PR 2), e a regra que ela ensina é:
+   * **amostra apaga o que carrega o número do processo; vocabulário compartilhado, não.**
    * ⚠️ **O que fica para trás é UMA linha marcada** (`observacao = MARCA_DA_SEMENTE`), e ela
    * desaparece no `db:reset` da verificação seguinte — que é como a suíte sempre começa.
    */

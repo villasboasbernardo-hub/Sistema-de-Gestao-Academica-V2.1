@@ -20,7 +20,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { lancar, lancarEstudoIndividualDaSemana } from "@/lib/acoes/dsa";
+import { editar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } from "@/lib/acoes/dsa";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { assinaturasDoDsa } from "@/lib/dominio/dsa/assinaturas";
@@ -268,6 +268,9 @@ export default async function SemanaDoDsa({
         subtipos={lida.subtipos}
         lancar={lancar}
         lancarEstudoIndividual={lancarEstudoIndividualDaSemana}
+        mover={mover}
+        editar={editar}
+        excluir={excluir}
       />
     </section>
   );

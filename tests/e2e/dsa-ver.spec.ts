@@ -301,26 +301,65 @@ test.describe("`Q-4` · o sábado, e `RNF-COMP-01` · a rolagem é da grade", ()
     await expect(page.locator(GRADE).locator("thead")).toContainText("SÁB");
   });
 
-  test("`RNF-COMP-01` · em 1280×600 a GRADE rola na horizontal, e a PÁGINA não", async ({
-    page,
-  }) => {
+  test("`RNF-COMP-01` · a GRADE rola na horizontal, e a PÁGINA não", async ({ page }) => {
+    /*
+     * ⚠️ **ESTE CASO CHEGA POR `goto`, e isso é deliberado — ele mede LAYOUT, não caminho.** Os
+     * outros casos deste arquivo provam que a tela é alcançável por clique; aqui, chegar clicando
+     * deixava **o ponteiro sobre a lateral**, que então expande ao apontar (`FR-004`) e muda a
+     * largura disponível. O veredito passava a depender de onde o mouse parou.
+     *
+     * ⚠️ **E AS DUAS METADES SÃO MEDIDAS EM LARGURAS DIFERENTES, por uma razão medida em
+     * 05/10/2026:** em **1280** a semana com sábado **cabe** (a tabela mede 1.074 px com o conteúdo
+     * da semente), então ali não há rolagem nenhuma a observar — o que se prova é que a **página**
+     * não rola. Em **900** a tabela não cabe, e é ali que se prova que quem rola é o **contêiner da
+     * grade**. Medir só a primeira deixava a promessa do `RNF-COMP-01` sem prova; medir só a
+     * segunda não cobre a tela de trabalho real.
+     */
+    await entrar(page, EMAIL);
     await page.setViewportSize({ width: 1280, height: 600 });
-    await abrirODsaPorClique(page, SEMEADO.turmaComRelogio);
     await page.goto(
       `/turmas/${encodeURIComponent(SEMEADO.turmaComRelogio)}/dsa?semana=${SEMANA}&ano=${ANO}&sabado=sim`,
     );
+    await expect(page.locator(GRADE)).toBeVisible();
 
     /*
      * ⚠️ **A PÁGINA NÃO PODE ROLAR LATERALMENTE**: isso arrasta o cabeçalho e o menu, e o operador
      * perde a referência de qual dia está olhando. Quem rola é o contêiner da grade.
      */
-    const pagina = await page.evaluate(() => ({
-      largura: document.body.scrollWidth,
-      visivel: document.body.clientWidth,
-    }));
-    expect(pagina.largura, "a página ganhou rolagem horizontal").toBeLessThanOrEqual(
-      pagina.visivel + 1,
-    );
+    /*
+     * ⚠️ **A MEDIÇÃO É POR `expect.poll`, E A LEITURA DIRETA FEZ ESTE CASO REPROVAR SÓ NA SUÍTE.**
+     * Medido em 05/10/2026: sozinho, `document.body.scrollWidth` dava **1280**; com dois processos,
+     * **1323** — e os elementos largos eram o `<main>` com **1267 px** (em vez de 1224), ou seja, a
+     * casca ainda **não havia assentado** a largura da lateral no instante da leitura. É o achado 9
+     * do Épico 3 na forma mais discreta: *"teste de ponta a ponta que decide por tempo não prova
+     * nada"* — `expect` reexecuta, leitura direta não.
+     *
+     * ⚠️ **A PÁGINA NÃO PODE ROLAR LATERALMENTE**: isso arrasta o cabeçalho e o menu, e o operador
+     * perde a referência de qual dia está olhando. Quem rola é o contêiner da grade.
+     */
+    const rolagemDaPagina = () =>
+      page.evaluate(() => document.body.scrollWidth - document.body.clientWidth);
+
+    await expect
+      .poll(rolagemDaPagina, { message: "a página ganhou rolagem horizontal em 1280" })
+      .toBeLessThanOrEqual(1);
+
+    /* Em 900 a tabela não cabe — e é a GRADE que rola, não a página. */
+    await page.setViewportSize({ width: 900, height: 600 });
+    await expect(page.locator(GRADE)).toBeVisible();
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const grade = document.querySelector('[data-slot="grade-alocacao"]');
+            return (grade?.scrollWidth ?? 0) - (grade?.clientWidth ?? 0);
+          }),
+        { message: "a grade NÃO rola: a tabela caberia, e aí não há o que medir" },
+      )
+      .toBeGreaterThan(0);
+    await expect
+      .poll(rolagemDaPagina, { message: "a página ganhou rolagem horizontal em 900" })
+      .toBeLessThanOrEqual(1);
   });
 });
 

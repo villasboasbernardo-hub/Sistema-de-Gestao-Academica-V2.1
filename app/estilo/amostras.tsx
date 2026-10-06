@@ -911,8 +911,15 @@ export function AmostraGradeAlocacao() {
  * cinco de manhã) justamente para mostrar que o componente não inventa relógio: troque o regime e
  * a grade muda sozinha. E ela traz os três casos que a tela precisa exibir — bloco que atravessa o
  * almoço, feriado de dia inteiro e lançamento sem posição.
+ *
+ * ⚠️ **ELA PASSA `aoEscolherFato` PORQUE A INVARIANTE `I-5` COBRA, e a cobrança está certa:** o
+ * marcador `posicionar-sem-posicao` é o botão que transforma a faixa "Sem posição" de lista de
+ * problemas em caminho para resolvê-los (`Q-12`), e sem o retorno a faixa sai como **texto**. A
+ * invariante reprova *"componente declarado e AUSENTE da vitrine — nasceria morto"*, que é
+ * exatamente o risco: um botão que ninguém vê na vitrine é um botão que ninguém confere.
  */
 export function AmostraGradeDsa() {
+  const [escolhido, definirEscolhido] = React.useState<string | null>(null);
   const relogio = relogioDoRegime({
     regimeTempos: 8,
     taDuracaoMin: 45,
@@ -972,5 +979,18 @@ export function AmostraGradeDsa() {
     hoje: "2026-04-07",
     sabadoAberto: false,
   });
-  return <GradeDsa semana={semana} salaDaTurma="SALA 3" />;
+  return (
+    <div className="flex flex-col gap-2">
+      <GradeDsa semana={semana} salaDaTurma="SALA 3" aoEscolherFato={definirEscolhido} />
+      {/*
+        A amostra **mostra o que o retorno recebe**, em vez de um manipulador vazio: a vitrine é
+        onde o comportamento se confere, e um `() => {}` ali provaria só que o botão existe.
+      */}
+      <p className="text-texto-suave text-xs">
+        {escolhido === null
+          ? "Clique num lançamento da grade, ou num item da faixa «Sem posição»."
+          : `Escolhido: ${escolhido}`}
+      </p>
+    </div>
+  );
 }

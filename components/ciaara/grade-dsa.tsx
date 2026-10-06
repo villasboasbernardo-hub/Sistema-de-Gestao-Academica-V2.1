@@ -34,6 +34,7 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "cn";
 
 import {
   GradeAlocacao,
@@ -63,6 +64,26 @@ export type GradeDsaProps = {
    * que a linha 3 é o TA 4 quando há um intervalo no meio — e um deles erraria.
    */
   readonly aoEscolherCelula?: (dia: string, ta: number) => void;
+  /**
+   * Um fato OCUPADO foi escolhido — por clique, por `Enter` na célula, ou na faixa "Sem posição".
+   *
+   * ⚠️ **ELE E `aoEscolherCelula` SÃO EXCLUDENTES POR CÉLULA, e a grade é quem decide qual chamar.**
+   * Célula livre abre o formulário de lançar; célula ocupada abre as ações do bloco. Deixar a
+   * decisão para quem chama obrigaria a página a descobrir **de novo** se há bloco naquele TA — e
+   * ela já passou a semana montada para cá.
+   *
+   * ⚠️ **A FAIXA «SEM POSIÇÃO» CHAMA O MESMO RETORNO** (`Q-12`, segunda metade): posicionar um
+   * lançamento sem TA é o **mesmo** mover, e um segundo caminho para isso seria uma segunda
+   * implementação da mesma ação.
+   */
+  readonly aoEscolherFato?: (fatoId: string) => void;
+  /**
+   * Um bloco foi **arrastado** até a célula de `dia`/`ta` (`RF-DSA-07`).
+   *
+   * ⚠️ **ARRASTAR É O CAMINHO SECUNDÁRIO.** O primário é o teclado, por `aoEscolherFato` →
+   * *Mover para…*: o `RF-DSA-07` pede **as duas** formas, e só a segunda funciona sem mouse.
+   */
+  readonly aoMoverBloco?: (fatoId: string, dia: string, ta: number) => void;
   readonly className?: string;
 };
 
@@ -143,8 +164,23 @@ function CorpoDoBloco({
   );
 }
 
-export function GradeDsa({ semana, salaDaTurma, aoEscolherCelula, className }: GradeDsaProps) {
+export function GradeDsa({
+  semana,
+  salaDaTurma,
+  aoEscolherCelula,
+  aoEscolherFato,
+  aoMoverBloco,
+  className,
+}: GradeDsaProps) {
   const { dias, relogio, linhas } = semana;
+
+  /*
+   * ⚠️ **O BLOCO ARRASTADO VIVE NUM `ref`, NÃO EM `useState`.** O `dragstart` e o `drop` acontecem
+   * no mesmo gesto, e um `setState` entre os dois **não** teria sido aplicado quando o `drop`
+   * dispara: o `drop` leria o valor anterior — nulo na primeira vez — e o movimento se perderia em
+   * silêncio, que é o pior sintoma possível para arrastar-e-soltar.
+   */
+  const arrastado = React.useRef<string | null>(null);
 
   const colunas: readonly ColunaDaGrade[] = dias.map((d) => ({
     chave: d.data,
@@ -209,6 +245,23 @@ export function GradeDsa({ semana, salaDaTurma, aoEscolherCelula, className }: G
            */
           alturaEmLinhas: Math.max(bloco.tempos ?? 1, 1),
           rotuloAcessivel: [bloco.disciplina, bloco.conteudo].filter(Boolean).join(" — "),
+          ...(aoMoverBloco ? { arrastavel: true } : {}),
+          /*
+           * ⚠️ **A MARCA VAI PARA O ATRIBUTO E PARA O RÓTULO ACESSÍVEL, não só para a cor**
+           * (`RNF-USA-05`). E `conflito de instrutor` e `mesma sala em outra turma` são coisas
+           * diferentes: a primeira é conflito **primário**, a segunda é alerta **secundário**
+           * (`RN-CONF-01`) — um atributo só com "conflito" apagaria a distinção que a regra faz.
+           */
+          ...(bloco.conflito !== null || bloco.alertaSala
+            ? {
+                marcaDeConflito: [
+                  bloco.conflito === null ? null : `conflito de ${bloco.conflito}`,
+                  bloco.alertaSala ? "mesma sala em outra turma" : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+              }
+            : {}),
         };
       }
       return { tom: TOM_DO_ESTADO[celula.estado] };
@@ -224,15 +277,35 @@ export function GradeDsa({ semana, salaDaTurma, aoEscolherCelula, className }: G
       </span>
     ) : (
       <ul key={dia.data} className="flex flex-col gap-1">
-        {dia.semPosicao.map(({ fato, motivo }) => (
-          <li key={fato.fatoId} className="leading-tight">
-            <span className="block">
-              {[fato.disciplina, fato.conteudo].filter(Boolean).join(" — ") || "Lançamento"}
-            </span>
-            {/* O MOTIVO é obrigatório: é ele que distingue "não há" de "não sei onde pôr". */}
-            <span className="block text-[10px] text-texto-suave">{motivo}</span>
-          </li>
-        ))}
+        {dia.semPosicao.map(({ fato, motivo }) => {
+          const descricao =
+            [fato.disciplina, fato.conteudo].filter(Boolean).join(" — ") || "Lançamento";
+          return (
+            <li key={fato.fatoId} className="leading-tight">
+              {/*
+                ⚠️ **ELE É UM BOTÃO QUANDO HÁ O QUE FAZER, e texto quando não há** (`Q-12`, segunda
+                   metade). Posicionar um lançamento da faixa é o **mesmo** mover — e sem o botão a
+                   faixa seria uma lista de problemas sem caminho para resolvê-los, que é o oposto
+                   da `RN-DEG-01`: degradar COM AVISO pressupõe poder consertar.
+              */}
+              {aoEscolherFato ? (
+                <button
+                  type="button"
+                  onClick={() => aoEscolherFato(fato.fatoId)}
+                  data-slot="posicionar-sem-posicao"
+                  data-fato={fato.fatoId}
+                  className="block text-left underline underline-offset-2 hover:text-texto"
+                >
+                  {descricao}
+                </button>
+              ) : (
+                <span className="block">{descricao}</span>
+              )}
+              {/* O MOTIVO é obrigatório: é ele que distingue "não há" de "não sei onde pôr". */}
+              <span className="block text-[10px] text-texto-suave">{motivo}</span>
+            </li>
+          );
+        })}
       </ul>
     ),
   );
@@ -244,7 +317,18 @@ export function GradeDsa({ semana, salaDaTurma, aoEscolherCelula, className }: G
   for (let ta = 1; ta <= linhas; ta += 1) taDaLinhaNavegavel.push(ta);
 
   return (
-    <div className={className}>
+    /*
+     * ⚠️ **`min-w-0` AQUI É O QUE FAZ A ROLAGEM SER DA GRADE, E A FALTA DELE FOI MEDIDA.** O
+     * contêiner interno tem `overflow-x-auto`, mas um item de flex **não encolhe abaixo do
+     * min-content** sem isto (`min-width: auto` é o padrão): a tabela larga empurrava este `div`,
+     * que empurrava a coluna, que empurrava a **página** — e o `RNF-COMP-01` diz o contrário, porque
+     * rolar a página lateralmente arrasta o cabeçalho e o menu e o operador perde a referência de
+     * qual dia está olhando.
+     * ⚠️ **O sintoma só aparecia com a grade CHEIA**: com dois processos, as suítes do DSA
+     * compartilham a semente por processo de trabalho, e os lançamentos de uma engordavam as células
+     * medidas pela outra. Passava sozinho e reprovava na suíte — o modo de falha que mais parece azar.
+     */
+    <div className={cn("min-w-0", className)}>
       <GradeAlocacao
         rotulo="Grade da semana"
         colunas={colunas}
@@ -259,12 +343,41 @@ export function GradeDsa({ semana, salaDaTurma, aoEscolherCelula, className }: G
           </span>
         }
         {...(algumSemPosicao ? { rodapeDasColunas: rodapes } : {})}
-        {...(aoEscolherCelula
+        {...(aoEscolherCelula || aoEscolherFato
           ? {
+              /*
+               * ⚠️ **A GRADE DECIDE QUAL DOS DOIS CHAMAR, pelo que há na célula.** Célula ocupada
+               * abre as AÇÕES do bloco; célula livre abre o formulário de LANÇAR. A `GradeAlocacao`
+               * entrega linha e coluna — a tradução para dia e TA mora aqui, e o bloco também.
+               */
               aoAtivarCelula: (linha: number, coluna: number) => {
                 const dia = dias[coluna]?.data;
                 const ta = taDaLinhaNavegavel[linha];
-                if (dia !== undefined && ta !== undefined) aoEscolherCelula(dia, ta);
+                if (dia === undefined || ta === undefined) return;
+                const bloco = dias[coluna]?.celulas[ta - 1]?.bloco ?? null;
+                if (bloco !== null && aoEscolherFato) {
+                  aoEscolherFato(bloco.fatoId);
+                  return;
+                }
+                if (bloco === null && aoEscolherCelula) aoEscolherCelula(dia, ta);
+              },
+            }
+          : {})}
+        {...(aoMoverBloco
+          ? {
+              aoArrastar: (linha: number, coluna: number) => {
+                const ta = taDaLinhaNavegavel[linha];
+                if (ta === undefined) return;
+                arrastado.current = dias[coluna]?.celulas[ta - 1]?.bloco?.fatoId ?? null;
+              },
+              aoSoltar: (linha: number, coluna: number) => {
+                const dia = dias[coluna]?.data;
+                const ta = taDaLinhaNavegavel[linha];
+                const fatoId = arrastado.current;
+                arrastado.current = null;
+                if (dia !== undefined && ta !== undefined && fatoId !== null) {
+                  aoMoverBloco(fatoId, dia, ta);
+                }
               },
             }
           : {})}

@@ -225,3 +225,101 @@ export const esquemaDoEstudoIndividualDaSemana = z.object({
   ano: z.number().int().min(2020).max(2099),
   semana: z.number().int().min(1).max(53),
 });
+
+/**
+ * A ORIGEM de um fato da grade — a tabela em que ele vive.
+ *
+ * ⚠️ **ELA É PARÂMETRO DE TODAS AS TRÊS AÇÕES DO PR 4 (mover, editar, excluir), e não dedução.**
+ * O `fatoId` é um `uuid` e **não diz** de que tabela veio: `registros_aula`, `avaliacoes` e
+ * `atividades_nao_letivas` são três tabelas, e a vista de prova é a **mesma linha** da avaliação
+ * com outras quatro colunas (`RN-AVAL-02`). Procurar o id nas três por tentativa custaria três
+ * consultas e, pior, daria o veredito errado no dia em que dois ids coincidissem. A grade **já
+ * sabe** a origem — ela vem de `vw_ocupacao_ta` — e a passa adiante.
+ */
+export const ORIGENS_DO_FATO = [
+  "aula",
+  "avaliacao",
+  "vista_prova",
+  "atividade_nao_letiva",
+] as const;
+
+const origem = z.enum(ORIGENS_DO_FATO, {
+  message: "Origem do lançamento desconhecida.",
+});
+
+export type OrigemDoFatoValidada = (typeof ORIGENS_DO_FATO)[number];
+
+/**
+ * **Mover** um fato: o mesmo registro, em outro dia e/ou outro Tempo de Aula (`RF-DSA-07`,
+ * `FR-030`, critério **7**).
+ *
+ * > *"Mover é `UPDATE` do mesmo registro, numa transação, preservando a auditoria."*
+ * > — `spec.md` §3, história **H5**
+ *
+ * ⚠️ **`tempos` É OPCIONAL, E A AUSÊNCIA SIGNIFICA «não mexa nisso».** Mover é trocar de lugar, não
+ * de tamanho: mandar o tamanho sempre obrigaria a tela a reenviá-lo, e um valor errado ali
+ * **encolheria o bloco em silêncio** no meio de um arrastar-e-soltar. Quem muda o tamanho é
+ * `editar`.
+ *
+ * ⚠️ **`unidadeEnsinoId` EXISTE AQUI POR CAUSA DA SEGUNDA METADE DA `Q-1`** (`FR-028`): a catraca
+ * `reg_aula_ue_so_nula_no_historico` aceita UE nula **só em linha migrada e NUNCA EDITADA**. Mover
+ * é editar — o gatilho carimba `editado_em` —, então a linha histórica sem UE **deixa de passar** no
+ * `CHECK` no instante em que se move. A tela pede a UE **no mesmo ato**; sem ela, a ação recusa com
+ * a frase da catraca em vez de deixar o banco responder `23514`.
+ */
+export const esquemaDoMovimento = z.object({
+  fatoId: uuid,
+  origem,
+  data,
+  taInicial: ta,
+  tempos: tempos.optional(),
+  unidadeEnsinoId: uuid.nullable().default(null),
+});
+
+export type Movimento = z.infer<typeof esquemaDoMovimento>;
+
+/**
+ * **Editar** um fato — e só o que a grade mostra (`FR-029`, `SC-012`).
+ *
+ * ⚠️ **O QUE ELE NÃO TOCA É O QUE IMPORTA: O CATÁLOGO** (`SC-012`). O `D-4` da planilha é
+ * exatamente isso — *"instrutor, local e técnica são atributo DO ITEM do catálogo, não do
+ * lançamento: trocar o instrutor de uma UE reescreve todo DSA passado"*. Aqui cada campo é **da
+ * linha**, e editar um lançamento de março não muda nenhum outro.
+ *
+ * ⚠️ **TODO CAMPO É OPCIONAL, e `undefined` é «não mandou».** `null` é valor — *"apague o local"* —,
+ * e um esquema que confundisse os dois **apagaria o que a tela não enviou**. É a mesma distinção que
+ * derrubou o vínculo de instrutor na spec 011: um campo fora da tela mandando `null` apagava o
+ * vínculo existente a cada gravação, e nenhuma tela mostrava isso na hora.
+ */
+export const esquemaDaEdicao = z.object({
+  fatoId: uuid,
+  origem,
+  tempos: tempos.optional(),
+  local: textoOuNulo.optional(),
+  conteudo: textoOuNulo.optional(),
+  tecnica: textoOuNulo.optional(),
+  instrutorId: uuid.nullable().optional(),
+  unidadeEnsinoId: uuid.nullable().optional(),
+});
+
+export type Edicao = z.infer<typeof esquemaDaEdicao>;
+
+/**
+ * **Excluir** um fato — e a exclusão é **lógica** (regra 4, `FR-031`).
+ *
+ * > *"Nada é apagado. Exclusão é LÓGICA (`status = 'inativo'`). Nenhuma tabela tem policy
+ * > `FOR DELETE`, e isso é regra de negócio, não lacuna."*
+ * > — `CLAUDE.md`, regra inviolável 4
+ *
+ * ⚠️ **NÃO HÁ `codigoDeConfirmacao` AQUI, e a diferença com a exclusão de instrutor é de NATUREZA.**
+ * Lá a exclusão é **permanente** e exige o código digitado, porque é irreversível; aqui ela é
+ * `status = 'inativo'`, e o lançamento volta reativando. A confirmação é a da **tela**, descrevendo
+ * o efeito (`RNF-USA-03`) — pedir um código para uma exclusão reversível treinaria a pessoa a
+ * digitar código sem ler.
+ */
+export const esquemaDaExclusao = z.object({
+  fatoId: uuid,
+  origem,
+});
+
+export type Exclusao = z.infer<typeof esquemaDaExclusao>;

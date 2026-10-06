@@ -67,7 +67,22 @@ export function CascaDoApp({
 
       <div className="flex flex-1 flex-col lg:flex-row">
         <NavegacaoLateral caminho={caminho} fixada={lateralFixada} />
-        <main id={ID_DO_CONTEUDO} tabIndex={-1} className="flex-1 p-4 focus-visible:outline-none">
+        {/*
+          ⚠️ **`min-w-0` NO `<main>` É O QUE IMPEDE A PÁGINA DE ROLAR LATERALMENTE** (`RNF-COMP-01`),
+             e a falta dele foi medida em 05/10/2026, na grade do DSA: um item de flex **não encolhe
+             abaixo do próprio min-content** sem isto (`min-width: auto` é o padrão), então uma tela
+             larga empurrava o `<main>` para **1267 px** dentro de uma linha de 1224 — e a página
+             inteira ganhava rolagem horizontal, arrastando o cabeçalho e o menu com ela.
+          ⚠️ **O sintoma aparecia só na suíte inteira**, porque depende de quanto conteúdo cai nas
+             células: passava sozinho e reprovava em paralelo, que é o modo de falha que mais parece
+             azar e não é. Quem rola é o contêiner de cada tela larga — a grade tem
+             `overflow-x-auto` própria —, e `min-w-0` aqui é o que dá a ela essa chance.
+        */}
+        <main
+          id={ID_DO_CONTEUDO}
+          tabIndex={-1}
+          className="min-w-0 flex-1 p-4 focus-visible:outline-none"
+        >
           {children}
         </main>
       </div>
