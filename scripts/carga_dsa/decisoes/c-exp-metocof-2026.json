@@ -37,6 +37,13 @@
   "provisorias": ["ues: II+3 (AREPS) → II UE 2 — de-para por topico, aguarda decisao"],
   "aprovadas": [
     "ues I+8..12 → IV+1..5: aprovado por Bernardo Villas Boas em 06/10/2026 (item 5 do lote da onda 1)",
-    "Estagio Pratico (V): NAO carregar por de-para (decisao de 06/10/2026: lancar por disciplina, sem UE, se o banco aceitar — o banco nao aceita sem marcar a disciplina; aguarda resposta)"
-  ]
+    "Estagio Pratico (V): disciplina marcada sem_unidades_ensino (D2, 06/10/2026); a aula entra por disciplina com o topico da planilha",
+    "OFICIAIS-MONITORES (D3, 06/10/2026): aula com instrutor = titular da disciplina na turma e observacao «OFICIAIS-MONITORES (conforme DSA)». ⚠️ A turma NAO tem titular de V em turma_disciplina_instrutor; valeu o instrutor com mais TA na V pela planilha (codigo 127) — listado no lote para ratificacao"
+  ],
+  "instrutor_por_texto": {
+    "OFICIAIS MONITORES": {
+      "codigo": "127",
+      "observacao": "OFICIAIS-MONITORES (conforme DSA)"
+    }
+  }
 }

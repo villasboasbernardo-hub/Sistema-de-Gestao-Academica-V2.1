@@ -39,7 +39,7 @@ from pathlib import Path
 
 from scripts.carga_dsa import banco, planilha, relogio
 from scripts.carga_dsa.banco import lit
-from scripts.carga_dsa.resolver import MARCA_DE_DEMAIS, Resolvido, classificar_pela_descricao, resolver, slug
+from scripts.carga_dsa.resolver import MARCA_DE_DEMAIS, Pendencia, Resolvido, classificar_pela_descricao, resolver, slug
 
 AQUI = Path(__file__).parent
 MARCA_DO_ETL = "[SUBSTITUIDO PELA PLANILHA DE CONTROLE]"
@@ -88,7 +88,7 @@ def _valores(linhas: list[list[object]]) -> str:
     return ",\n    ".join("(" + ", ".join(lit(v) for v in linha) + ")" for linha in linhas)
 
 
-def plano_do_relogio(leitura: planilha.Leitura, ref: dict, res: Resolvido, titulo_da_planilha: str) -> list[dict]:
+def plano_do_relogio(leitura: planilha.Leitura, ref: dict, res: Resolvido, titulo_da_planilha: str, decisao: dict | None = None) -> list[dict]:
     """Para cada vigencia ativa do curso no periodo da turma: o que muda para o relogio ser o da aba HORARIOS.
 
     Decisao de Bernardo Villas Boas, 06/10/2026 (item 3 do lote da onda 1): a fonte do relogio e a aba
@@ -101,7 +101,19 @@ def plano_do_relogio(leitura: planilha.Leitura, ref: dict, res: Resolvido, titul
         if regime is None:
             planos.append({"vigencia": vig, "novo": None, "criterio": criterio, "erros": []})
             continue
-        novo = relogio.correcao(vig, regime)
+        # D1 (06/10/2026): o EI fora da tabela HORARIOS vive num catalogo de horario que a decisao nomeia;
+        # a vigencia passa a apontar para ele, e o catalogo e conferido contra a tabela nos tempos dela.
+        catalogo_id = None
+        if decisao and decisao.get("catalogo"):
+            cat = ref.get("catalogos", {}).get(decisao["catalogo"])
+            if cat is None:
+                res.pendencias.append(Pendencia("catalogo_ausente", res.turma["codigo"], f"o catalogo {decisao['catalogo']} (D1) nao existe no destino: rode o preparo antes", 0, True, decisao["catalogo"]))
+                planos.append({"vigencia": vig, "novo": None, "criterio": f"catalogo {decisao['catalogo']} ausente no destino", "erros": []})
+                continue
+            catalogo_id = cat["id"]
+            for e in relogio.conferir_catalogo(cat["tempos"], regime):
+                res.erros_de_planilha.append(f"catalogo {decisao['catalogo']} x aba HORARIOS: {e}")
+        novo = relogio.correcao(vig, regime, catalogo_id)
         erros = [f"aba HORARIOS, tempo {t} x {q} TA: «{p}» na planilha; pelos cinco campos do relogio seria «{r}»" for t, q, p, r in regime.erros]
         for e in erros:
             if e not in res.erros_de_planilha:
@@ -462,7 +474,7 @@ def main() -> int:
             print(f"  [BANCO] {erro}")
             return 4
         res = resolver(leitura, ref, dec, titulos[turma], globais, arg.provisorio)
-        relogios = plano_do_relogio(leitura, ref, res, titulos[turma])
+        relogios = plano_do_relogio(leitura, ref, res, titulos[turma], dec.get("relogio"))
         dif = diferencas(res, ref["atuais"])
         relatar(res, leitura, ref, dif)
         for plano in relogios:
@@ -474,7 +486,7 @@ def main() -> int:
             else:
                 n_ = plano["novo"]
                 print(f"  relogio: {atual} → {n_['hora_inicio_manha']} {n_['intervalo_manha_min']}/{n_['intervalo_tarde_min']} {n_['hora_inicio_tarde']}"
-                      f" {n_['regime_tempos']}x{n_['ta_duracao_min']} sem catalogo ({plano['criterio']})")
+                      f" {n_['regime_tempos']}x{n_['ta_duracao_min']} {'+catalogo ' + dec['relogio']['catalogo'] if n_.get('configuracao_horario_id') else 'sem catalogo'} ({plano['criterio']})")
             for e in plano["erros"]:
                 print(f"    erro de planilha: {e}")
         if arg.relatorio is not None:

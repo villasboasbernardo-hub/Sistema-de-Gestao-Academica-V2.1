@@ -245,6 +245,14 @@ def resolver(
         partes = [p.strip() for p in bruto.split("/") if p.strip()]
         if not partes or bruto.strip() in VAZIOS:
             return None, "", bruto
+        # Texto que NAO e pessoa («OFICIAIS-MONITORES»): decisao D3 de 06/10/2026 — a aula entra com o
+        # instrutor que a decisao nomeia e a observacao «… (conforme DSA)»; a CH conta normalmente.
+        por_texto = decisoes.get("instrutor_por_texto", {}).get(normalizar(partes[0]))
+        if por_texto is not None:
+            achados = [i for i in ref["instrutores"] if i["codigo"] == str(por_texto["codigo"])]
+            if achados:
+                r.instrutores[" ".join(partes[0].split())] = achados[0]
+                return achados[0], por_texto.get("observacao", ""), bruto
         primeiro = casar(partes[0], bloco, obrigatorio=True)
         return primeiro, "; ".join(partes[1:]), bruto
 
@@ -429,7 +437,7 @@ def resolver(
             "conteudo_resumo": ue["topico"] if ue else topico_da_planilha,
             "metodologia": metodologia,
             "local": local_de(bloco),
-            "observacoes": procedencia(bloco) + (f"{MARCA_DE_DEMAIS}{demais}." if demais else ""),
+            "observacoes": procedencia(bloco) + ("" if not demais else f" {demais}" if demais.endswith("(conforme DSA)") else f"{MARCA_DE_DEMAIS}{demais}."),
         })
 
     _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura)

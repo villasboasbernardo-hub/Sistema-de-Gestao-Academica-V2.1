@@ -118,6 +118,10 @@ select jsonb_build_object(
        'data', f.data, 'descricao', f.descricao, 'impacto', f.impacto, 'codigo', f.codigo)), '[]')
        from public.feriados f where f.status = 'ativo' and f.data between {de}::date and {ate}::date),
   'regime', (select to_jsonb(v) from public.vw_cursos_regime_vigente v where v.curso_id = (select curso_id from t)),
+  'catalogos', (select coalesce(jsonb_object_agg(h.codigo, jsonb_build_object('id', h.id, 'tempos', (
+       select coalesce(jsonb_agg(jsonb_build_object('tempo_numero', t.tempo_numero, 'hora_inicio', t.hora_inicio, 'hora_fim', t.hora_fim,
+              'tipo_tempo', t.tipo_tempo) order by t.tempo_numero), '[]') from public.horarios_tempos_aula t where t.configuracao_id = h.id))), '{{}}')
+       from public.configuracoes_horario h where h.status = 'ativo'),
   'vigencias', (select coalesce(jsonb_agg(jsonb_build_object(
        'id', r.id, 'codigo', r.codigo, 'tipo_regime', r.tipo_regime, 'configuracao_horario_id', r.configuracao_horario_id,
        'regime_tempos', r.regime_tempos, 'ta_duracao_min', r.ta_duracao_min, 'intervalo_manha_min', r.intervalo_manha_min,

@@ -208,7 +208,9 @@ def conferir_semanas(turma: str, leitura: planilha.Leitura, plano: dict, dsa: di
                 tokens_s = normalizar(re.sub(r"\(\s*FISCAL\s*\)", "", linha["instrutor"], flags=re.IGNORECASE)).split()
                 if "/" in sem_fiscal:
                     dif(bloco, "DECISAO", "instrutor", f"dois instrutores na planilha («{instr_p}»); o primeiro e o instrutor e o segundo vai nas observacoes")
-                elif tokens_p and tokens_s and tokens_p[-1] == tokens_s[-1] and len(tokens_s) <= len(tokens_p) + 1:
+                elif normalizar(primeiro) in {normalizar(k) for k in decisoes.get("instrutor_por_texto", {})}:
+                    dif(bloco, "DECISAO", "instrutor", f"«{instr_p}» na planilha nao e pessoa; por decisao (D3) a aula leva o instrutor «{linha['instrutor']}» e a observacao «(conforme DSA)»")
+                elif tokens_p and tokens_s and tokens_p[-1] == tokens_s[-1]:
                     dif(bloco, "DADO", "instrutor", f"posto/especialidade escritos de outra forma («{instr_p}» × «{linha['instrutor']}»)")
                 elif tokens_p and set(tokens_p[1:]) <= set(tokens_s):
                     dif(bloco, "DADO", "instrutor", f"o cadastro nao tem nome de guerra: o sistema imprime o nome completo («{instr_p}» × «{linha['instrutor']}»)")
@@ -270,18 +272,25 @@ def main() -> int:
             soma = do_catalogo.setdefault(cod, [0, 0])
             soma[0] += linha.ch or 0
             soma[1] += linha.ch_concluida or 0
+        # O CONTROLE conta pelo codigo DA PLANILHA; quando ha de-para de disciplina (MetocOf: I+8..12 → IV),
+        # a comparacao honesta e por esse codigo — e o que o plano guarda em `cod_planilha`.
+        pela_planilha: dict[str, int] = {}
+        for a in plano.get("aulas", []) + plano.get("avaliacoes", []):
+            cod_p = a.get("cod_planilha") or a.get("disciplina")
+            pela_planilha[cod_p] = pela_planilha.get(cod_p, 0) + int(a.get("tempos_consumidos") or 0) + int(a.get("tempos_consumidos_vista") or 0)
         relatorio.append("### (a) Carga horária por disciplina\n")
-        relatorio.append("| Disc. | CH do banco | Sistema: lançado | Sistema: executado até hoje | CONTROLE: prevista | CONTROLE: cumprida | BD DISCIPLINAS: prevista | BD DISCIPLINAS: concluída | Lançado − CONTROLE |")
-        relatorio.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+        relatorio.append("| Disc. | CH do banco | Sistema: lançado | Sistema: executado até hoje | Lançado pelo cód. da planilha | CONTROLE: prevista | CONTROLE: cumprida | BD DISCIPLINAS: prevista | BD DISCIPLINAS: concluída | Lançado (cód. planilha) − CONTROLE |")
+        relatorio.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
         romano = {s: i for i, s in enumerate("I II III IV V VI VII VIII IX X XI XII XIII XIV XV XVI XVII XVIII XIX XX XXI XXII".split())}
         soma_dif = 0
         for cod in sorted(set(do_banco) | set(leitura.controle), key=lambda c: (romano.get(c, 99), c)):
             b = do_banco.get(cod, {"ch": None, "lancado": 0, "executado": 0})
             prev, cump = leitura.controle.get(cod, (None, None))
             cat = do_catalogo.get(cod, [None, None])
-            diferenca = None if cump is None else int(b["lancado"]) - cump
+            lanc_p = pela_planilha.get(cod, 0)
+            diferenca = None if cump is None else lanc_p - cump
             soma_dif += abs(diferenca or 0)
-            relatorio.append(f"| {cod} | {b['ch']} | {b['lancado']} | {b['executado']} | {prev} | {cump} | {cat[0]} | {cat[1]} | {'' if diferenca is None else f'{diferenca:+d}' if diferenca else '0'} |")
+            relatorio.append(f"| {cod} | {b['ch']} | {b['lancado']} | {b['executado']} | {lanc_p} | {prev} | {cump} | {cat[0]} | {cat[1]} | {'' if diferenca is None else f'{diferenca:+d}' if diferenca else '0'} |")
         relatorio.append(f"\nSoma das diferenças absolutas (lançado − CONTROLE): **{soma_dif} TA**.\n")
 
         # (b) turma × semana

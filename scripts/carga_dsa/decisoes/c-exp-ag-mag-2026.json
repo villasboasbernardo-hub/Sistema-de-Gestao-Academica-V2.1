@@ -34,5 +34,12 @@
       "responsavel_externo": "DOEP"
     }
   },
-  "provisorias": ["locais: «H11» entra como texto livre ate decisao (4 blocos, 24 TA)"]
+  "relogio": {
+    "catalogo": "CFG-F",
+    "motivo": "D1 (06/10/2026): a tabela HORARIOS vai ate o 8º tempo e a IMPRESSAO repete o EI em 16:50-17:30; o CFG-F e a tabela mais o EI como 9º tempo excepcional"
+  },
+  "aprovadas": [
+    "H11 cadastrado como sala (D5, 06/10/2026)",
+    "habilitacao do instrutor 13 em I (D4, 06/10/2026)"
+  ]
 }

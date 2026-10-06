@@ -166,7 +166,7 @@ def escolher(tabelas: list[TabelaDeHorarios], vigencia: dict) -> tuple[Regime | 
     return None, f"nenhuma tabela tem TA de {vigencia['ta_duracao_min']} min e ha {len(regimes)} tabelas: nao da para escolher sem decisao"
 
 
-def correcao(vigencia: dict, regime: Regime) -> dict | None:
+def correcao(vigencia: dict, regime: Regime, catalogo_id: str | None = None) -> dict | None:
     """O que muda na vigencia para o relogio ficar o da tabela — ou None se ja e o mesmo.
 
     `regime_tempos` so muda quando a duracao do TA do cadastro nao e a da tabela (cadastro = padrao
@@ -184,6 +184,23 @@ def correcao(vigencia: dict, regime: Regime) -> dict | None:
     if int(vigencia["ta_duracao_min"]) != regime.ta_duracao_min:
         novo["regime_tempos"] = regime.max_tempos
     atual = {k: (str(vigencia[k])[:5] if k.startswith("hora") else int(vigencia[k])) for k in novo}
-    if atual == novo and vigencia.get("configuracao_horario_id") is None:
+    if atual == novo and vigencia.get("configuracao_horario_id") == catalogo_id:
         return None
+    if catalogo_id is not None:
+        novo["configuracao_horario_id"] = catalogo_id
     return novo
+
+
+def conferir_catalogo(tempos_do_catalogo: list[dict], regime: Regime) -> list[str]:
+    """O catalogo (D1) tem de ser a tabela HORARIOS nos tempos que ela cobre; o que passa dela (o EI) e
+    o que a IMPRESSAO repete, e nao se confere aqui. Devolve as divergencias."""
+    esperados = reconstruir(regime, regime.max_tempos)
+    erros = []
+    por_numero = {int(t["tempo_numero"]): t for t in tempos_do_catalogo}
+    for n, (ini, fim) in enumerate(esperados, start=1):
+        t = por_numero.get(n)
+        if t is None:
+            erros.append(f"tempo {n} nao esta no catalogo")
+        elif (str(t["hora_inicio"])[:5], str(t["hora_fim"])[:5]) != (hora(ini), hora(fim)):
+            erros.append(f"tempo {n}: catalogo {str(t['hora_inicio'])[:5]}-{str(t['hora_fim'])[:5]} x tabela {hora(ini)}-{hora(fim)}")
+    return erros
