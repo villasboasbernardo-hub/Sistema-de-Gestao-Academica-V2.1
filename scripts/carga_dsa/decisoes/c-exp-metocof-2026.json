@@ -32,21 +32,11 @@
     "I+10": "IV+3",
     "I+11": "IV+4",
     "I+12": "IV+5",
-    "II+3": "II+2",
-    "V+2": "V+2",
-    "V+3": "V+1",
-    "V+4": "V+1",
-    "V+5": "V+1",
-    "V+6": "V+1",
-    "V+7": "V+1",
-    "V+8": "V+1",
-    "V+9": "V+1",
-    "V+10": "V+1",
-    "V+11": "V+1",
-    "V+12": "V+1"
+    "II+3": "II+2"
   },
-  "provisorias": [
-    "ues: I+8..12 da planilha sao as UE 1..5 da disciplina IV do banco (mesmos topicos) — a planilha lanca a IV como parte da I",
-    "ues: V+3..12 (topicos do estagio pratico) → V UE 1; V+2 → V UE 2; II+3 (AREPS) → II UE 2 — de-para proposto, aguarda decisao"
+  "provisorias": ["ues: II+3 (AREPS) → II UE 2 — de-para por topico, aguarda decisao"],
+  "aprovadas": [
+    "ues I+8..12 → IV+1..5: aprovado por Bernardo Villas Boas em 06/10/2026 (item 5 do lote da onda 1)",
+    "Estagio Pratico (V): NAO carregar por de-para (decisao de 06/10/2026: lancar por disciplina, sem UE, se o banco aceitar — o banco nao aceita sem marcar a disciplina; aguarda resposta)"
   ]
 }

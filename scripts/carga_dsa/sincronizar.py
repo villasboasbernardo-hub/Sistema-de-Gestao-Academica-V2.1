@@ -37,7 +37,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from scripts.carga_dsa import banco, planilha
+from scripts.carga_dsa import banco, planilha, relogio
 from scripts.carga_dsa.banco import lit
 from scripts.carga_dsa.resolver import MARCA_DE_DEMAIS, Resolvido, classificar_pela_descricao, resolver, slug
 
@@ -88,7 +88,75 @@ def _valores(linhas: list[list[object]]) -> str:
     return ",\n    ".join("(" + ", ".join(lit(v) for v in linha) + ")" for linha in linhas)
 
 
-def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | None, ensaio: bool) -> str:
+def plano_do_relogio(leitura: planilha.Leitura, ref: dict, res: Resolvido, titulo_da_planilha: str) -> list[dict]:
+    """Para cada vigencia ativa do curso no periodo da turma: o que muda para o relogio ser o da aba HORARIOS.
+
+    Decisao de Bernardo Villas Boas, 06/10/2026 (item 3 do lote da onda 1): a fonte do relogio e a aba
+    HORARIOS; o Estudo Individual e o tempo seguinte ao ultimo TA, com o horario desse tempo na tabela.
+    A celula da tabela que nao reconstroi com os cinco campos vai para a lista de erros de planilha.
+    """
+    planos: list[dict] = []
+    for vig in ref.get("vigencias", []):
+        regime, criterio = relogio.escolher(leitura.horarios, vig)
+        if regime is None:
+            planos.append({"vigencia": vig, "novo": None, "criterio": criterio, "erros": []})
+            continue
+        novo = relogio.correcao(vig, regime)
+        erros = [f"aba HORARIOS, tempo {t} x {q} TA: «{p}» na planilha; pelos cinco campos do relogio seria «{r}»" for t, q, p, r in regime.erros]
+        for e in erros:
+            if e not in res.erros_de_planilha:
+                res.erros_de_planilha.append(e)
+        if novo is not None:
+            novo["motivo"] = (
+                f"Relogio lido da aba HORARIOS da planilha de controle «{titulo_da_planilha}» ({criterio}). "
+                f"Substitui {vig['codigo']} ({str(vig['hora_inicio_manha'])[:5]}, {vig['intervalo_manha_min']}/{vig['intervalo_tarde_min']} min, "
+                f"{str(vig['hora_inicio_tarde'])[:5]}, {vig['regime_tempos']}x{vig['ta_duracao_min']} min"
+                + (", com catalogo" if vig.get("configuracao_horario_id") else "")
+                + "), cancelada com os lancamentos do ETL ja inativados. "
+                "Decisao de Bernardo Villas Boas, 06/10/2026 (VIRADA-1, lote da onda 1, item 3)."
+            )
+        planos.append({"vigencia": vig, "novo": novo, "criterio": criterio, "erros": erros})
+    return planos
+
+
+def sql_do_relogio(res: Resolvido, planos: list[dict], ensaio: bool) -> str:
+    """Entre inativar o ETL e carregar a planilha: cancela a vigencia e registra a certa, desde o inicio.
+
+    ⚠️ NO ENSAIO NAO SE REGISTRA — `registrar_vigencia_regime` consome `REG-` da sequencia, e sequencia
+       nao obedece a `ROLLBACK` (gotcha 6). O ensaio prova o que importa: que, com o ETL inativado,
+       nada mais trava a vigencia (emenda da RN-2027-09, migration 20261006210242).
+    """
+    c = lit(res.turma["curso_id"]) + "::uuid"
+    p: list[str] = []
+    for plano in planos:
+        vig, novo = plano["vigencia"], plano["novo"]
+        if novo is None:
+            continue
+        corpo = dict(novo)
+        corpo.update({
+            "tipo_regime": vig["tipo_regime"], "vigente_de": vig["vigente_de"], "vigente_ate": vig["vigente_ate"],
+            "limite_diario_ead_horas": vig["limite_diario_ead_horas"], "fundamento_curricular": vig["fundamento_curricular"],
+        })
+        v = lit(vig["id"]) + "::uuid"
+        de = lit(vig["vigente_de"]) + "::date"
+        p.append(f"""
+  perform 1 from public.curso_regime_historico where id = {v} and status = 'ativo'
+     and ta_duracao_min = {int(vig['ta_duracao_min'])} and regime_tempos = {int(vig['regime_tempos'])}
+     and hora_inicio_manha = {lit(str(vig['hora_inicio_manha'])[:5])}::time and hora_inicio_tarde = {lit(str(vig['hora_inicio_tarde'])[:5])}::time;
+  if not found then raise exception 'A vigencia % nao esta mais como o plano a leu: pare e confira.', {lit(vig['codigo'])}; end if;
+  if exists (select 1 from app.lancamentos_que_travam_vigencia({v}, {de})) then
+    raise exception 'A vigencia % ainda tem lancamento ativo que a trava depois de inativar o ETL: %', {lit(vig['codigo'])},
+      (select tipo || ' ' || data || ' ' || coalesce(turma, '') || ' (' || total || ')' from app.lancamentos_que_travam_vigencia({v}, {de}));
+  end if;""")
+        if not ensaio:
+            p.append(f"""
+  update public.curso_regime_historico set status = 'cancelado' where id = {v};
+  perform public.registrar_vigencia_regime({c}, {lit(json.dumps(corpo, default=str))}::jsonb);""")
+        p.append("\n  r := r + 1;")
+    return "".join(p)
+
+
+def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | None, ensaio: bool, relogios: list[dict] | None = None) -> str:
     """Um bloco `DO` por turma — atomico. No ensaio ele termina levantando a sentinela.
 
     ⚠️ NENHUM CODIGO SAI DE SEQUENCIA (gotcha 6: sequencia nao obedece a `ROLLBACK`): o ensaio nao
@@ -110,6 +178,10 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
          status = 'cancelada'
    where turma_id = {t} and origem_migracao_v1 is not null and status <> 'cancelada';
   get diagnostics n := row_count; k := k || jsonb_build_object('etl_avaliacoes', n);""")
+
+    # 1b. o relogio do curso: com o ETL ja fora do caminho e antes de a planilha entrar (ordem do item 3b)
+    p.append(sql_do_relogio(res, relogios or [], ensaio))
+    p.append("  k := k || jsonb_build_object('relogio_corrigido', r);")
 
     # 2. inserir o novo e atualizar o que mudou
     if res.aulas:
@@ -229,7 +301,7 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
 
     fim = f"  raise exception '{SENTINELA} %', k::text;" if ensaio else "  null;"
     return (
-        "do $carga$\ndeclare\n  n int := 0; m int := 0; f int := 0; k jsonb := '{}'::jsonb;\nbegin\n"
+        "do $carga$\ndeclare\n  n int := 0; m int := 0; f int := 0; r int := 0; k jsonb := '{}'::jsonb;\nbegin\n"
         f"  perform 1 from public.turmas where id = {t} and codigo = {lit(res.turma['codigo'])};\n"
         "  if not found then raise exception 'A turma do plano nao e a do destino.'; end if;\n"
         + "\n".join(p) + "\n\n" + fim + "\nend $carga$;\n"
@@ -366,10 +438,17 @@ def main() -> int:
     for f in por_curso:
         q = quadro.get(f["data"])
         print(f"  {f['codigo']} {f['data']} «{f['descricao']}» — " + (f"pararam {q['pararam']}" if q else "nenhuma turma parou nesse dia"))
-    if por_curso and arg.provisorio and arg.gravar:
+    # So o dia APROVADO nominalmente sai do calendario (fontes.json, `calendario_global.inativar`): a
+    # proposta e impressa para todos; a exclusao logica alcanca a lista e nada alem dela.
+    aprovados = set(fontes.get("calendario_global", {}).get("inativar", []))
+    inativar = [f for f in por_curso if str(f["data"])[:10] in aprovados]
+    sem_decisao = [f for f in por_curso if str(f["data"])[:10] not in aprovados]
+    if sem_decisao:
+        print(f"  [LOTE] {len(sem_decisao)} dia(s) sem decisao nominal: ficam como estao — {[str(f['data'])[:10] for f in sem_decisao]}")
+    if inativar and arg.gravar:
         banco.consultar(arg.destino, "update public.feriados set status = 'inativo' where codigo = any (array["
-                        + ", ".join(lit(f["codigo"]) for f in por_curso) + "]::text[])")
-        print(f"  [PROVISORIO, so no local] {len(por_curso)} dia(s) inativado(s) no calendario global.")
+                        + ", ".join(lit(f["codigo"]) for f in inativar) + "]::text[])")
+        print(f"  {len(inativar)} dia(s) inativado(s) no calendario global (decisao de 06/10/2026, item 7): {[str(f['data'])[:10] for f in inativar]}")
 
     veredito = 0
     resumo = []
@@ -383,8 +462,21 @@ def main() -> int:
             print(f"  [BANCO] {erro}")
             return 4
         res = resolver(leitura, ref, dec, titulos[turma], globais, arg.provisorio)
+        relogios = plano_do_relogio(leitura, ref, res, titulos[turma])
         dif = diferencas(res, ref["atuais"])
         relatar(res, leitura, ref, dif)
+        for plano in relogios:
+            vig = plano["vigencia"]
+            atual = (f"{vig['codigo']} {vig['tipo_regime']} {str(vig['hora_inicio_manha'])[:5]} {vig['intervalo_manha_min']}/{vig['intervalo_tarde_min']}"
+                     f" {str(vig['hora_inicio_tarde'])[:5]} {vig['regime_tempos']}x{vig['ta_duracao_min']}" + (" +catalogo" if vig.get("configuracao_horario_id") else ""))
+            if plano["novo"] is None:
+                print(f"  relogio: {atual} — " + ("ja e o da aba HORARIOS" if plano["criterio"].startswith(("tabela", "a unica", "2 ", "3 ")) else plano["criterio"]))
+            else:
+                n_ = plano["novo"]
+                print(f"  relogio: {atual} → {n_['hora_inicio_manha']} {n_['intervalo_manha_min']}/{n_['intervalo_tarde_min']} {n_['hora_inicio_tarde']}"
+                      f" {n_['regime_tempos']}x{n_['ta_duracao_min']} sem catalogo ({plano['criterio']})")
+            for e in plano["erros"]:
+                print(f"    erro de planilha: {e}")
         if arg.relatorio is not None:
             arg.relatorio.mkdir(parents=True, exist_ok=True)
             sem_id = lambda linhas: [{k: v for k, v in l.items() if not k.endswith("_id")} for l in linhas]  # noqa: E731
@@ -395,6 +487,7 @@ def main() -> int:
                 "digitadas_adotadas": res.digitadas_adotadas, "insumo_epico_8": res.insumo_epico_8,
                 "instrutores": {k: v["codigo"] for k, v in res.instrutores.items()},
                 "impressao_digital": res.impressao_digital(), "diferencas": dif, "etl": ref["etl"],
+                "relogio": [{"vigencia": p["vigencia"]["codigo"], "novo": p["novo"], "criterio": p["criterio"]} for p in relogios],
             }, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
 
         bloqueiam = [p for p in res.pendencias if p.bloqueia]
@@ -418,7 +511,7 @@ def main() -> int:
         incluir = bool(dec.get("incluir_dias_de_calendario_ausentes", True))
         abrangencia = dec.get("abrangencia_do_calendario", "Nacional/Institucional")
         try:
-            banco.consultar(arg.destino, sql_da_turma(res, incluir, abrangencia, ensaio=True))
+            banco.consultar(arg.destino, sql_da_turma(res, incluir, abrangencia, ensaio=True, relogios=relogios))
             print("  [ERRO] o ensaio nao levantou a sentinela. Confira o banco.")
             return 4
         except banco.RecusaDoBanco as erro:
@@ -435,7 +528,7 @@ def main() -> int:
         if not arg.gravar:
             continue
         try:
-            banco.consultar(arg.destino, sql_da_turma(res, incluir, abrangencia, ensaio=False))
+            banco.consultar(arg.destino, sql_da_turma(res, incluir, abrangencia, ensaio=False, relogios=relogios))
         except banco.RecusaDoBanco as erro:
             print(f"  ✗ o banco recusou a gravacao: {str(erro)[:600]}")
             veredito = max(veredito, 4)

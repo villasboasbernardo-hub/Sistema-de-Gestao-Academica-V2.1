@@ -1,6 +1,6 @@
 {
-  "turma": "C-Esp-ME 2026",
-  "planilha": "C-ESP-ME 2026",
+  "turma": "C-Exp-BATI T1 2026",
+  "planilha": "C-Exp-BATI T01/26",
   "turma_em_andamento": false,
   "locais": {
     "SALA 1": "Sala 01",
@@ -19,24 +19,18 @@
     "LAB. INFO": "Laboratório de Informática",
     "LAB DE INFORMÁTICA": "Laboratório de Informática",
     "EAD": "EAD",
-    "CHM": "CHM",
-    "AUDITÓRIO DHN": "Auditório DHN",
-    "ASSÍNCRONA": "Assíncrona"
+    "CHM": "CHM"
   },
   "excecao_virada_1": {
     "autorizada_por": "Bernardo Villas Boas",
     "em": "2026-10-06",
-    "alcance": "a forma da VIRADA-1 para os lancamentos: planilha de controle, por turma, reexecutavel"
+    "alcance": "planilha FORA da pasta-fonte, incluida por decisao nominal (item 8 do lote da onda 1)"
   },
-  "ues": {
-    "I+6": "I+8",
-    "I+7": "I+6",
-    "I+8": "I+7",
-    "VI+6": "VI+7",
-    "VI+7": "VI+9",
-    "VI+9": "VI+6"
-  },
-  "aprovadas": [
-    "ues (de-para por topico identico): aprovado por Bernardo Villas Boas em 06/10/2026 (item 5 do lote da onda 1)"
-  ]
+  "chaves": {
+    "II+1": {
+      "tipo": "aec",
+      "subtipo": "Palestra",
+      "responsavel_externo": "DOEP"
+    }
+  }
 }

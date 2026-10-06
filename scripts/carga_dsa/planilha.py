@@ -137,6 +137,8 @@ class Leitura:
     impressao: dict[int, dict[str, str]] = field(default_factory=dict)
     digitadas: dict[int, dict[str, str]] = field(default_factory=dict)
     impressao_alinhada: bool = False
+    # A aba HORARIOS: as tabelas de consulta de horario, de onde sai o relogio do curso (relogio.py).
+    horarios: list = field(default_factory=list)
 
 
 def _abrir(caminho: Path):
@@ -377,6 +379,14 @@ def montar_blocos(linhas: list[LinhaDeTa]) -> list[Bloco]:
     return blocos
 
 
+def ler_horarios(pasta) -> list:
+    """As tabelas da aba HORARIOS (a planilha nem sempre acentua o nome)."""
+    from scripts.carga_dsa import relogio
+
+    aba = next((n for n in pasta.sheetnames if n.strip().upper().startswith(("HORÁRIO", "HORARIO"))), None)
+    return [] if aba is None else relogio.ler_tabelas(pasta[aba])
+
+
 def ler(caminho: Path) -> Leitura:
     pasta = _abrir(caminho)
     catalogo, duplicadas = ler_catalogo(pasta)
@@ -403,6 +413,7 @@ def ler(caminho: Path) -> Leitura:
         siglas=siglas,
         impressao=impressao,
         digitadas=digitadas,
+        horarios=ler_horarios(pasta),
         impressao_alinhada=alinhada,
     )
 

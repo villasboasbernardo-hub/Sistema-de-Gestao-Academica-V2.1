@@ -450,9 +450,10 @@ def _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura) 
     for cod, sessoes in por_disciplina.items():
         sessoes.sort(key=lambda s: (s[0].data, s[0].ta_inicial))
         provas = sorted((a for a in r.avaliacoes if a["disciplina"] == cod), key=lambda a: (a["data_avaliacao"], a["ta_inicial"]))
-        sem_numero = [s for s in sessoes if _numero(s[0].ue) == ""]
-        # sem numero: as k sessoes casam com as ULTIMAS k provas, em ordem (a convencao do piloto)
-        alvo_sem_numero = dict(zip([id(s[0]) for s in sem_numero], provas[-len(sem_numero):])) if sem_numero and len(sem_numero) <= len(provas) else {}
+        # Sem numero: a sessao e a vista da ULTIMA prova aplicada ANTES dela (data e TA) que ainda nao tem
+        # vista. Medido na onda 1 (C-Exp-Ag-Mag, 06/10/2026): a convencao anterior — k sessoes casam com as
+        # ultimas k provas — mandava a vista de 24/03 para a prova de 31/03, e o banco recusava
+        # (`aval_vista_apos_aplicacao`). A vista nunca precede a prova; e essa a regra que decide.
         for bloco, _disciplina in sessoes:
             decisao = next((v for v in explicitas if v["disciplina"] == cod and v["data"] == bloco.data.isoformat()
                             and v.get("ta_inicial", bloco.ta_inicial) == bloco.ta_inicial), None)
@@ -462,7 +463,9 @@ def _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura) 
                 candidatas = [a for a in provas if _numero(a["chave_ue"]) == _numero(bloco.ue) and a["data_avaliacao"] <= bloco.data.isoformat()]
                 alvo = candidatas[-1] if candidatas else None
             else:
-                alvo = alvo_sem_numero.get(id(bloco)) or (provas[0] if len(provas) == 1 else None)
+                anteriores = [a for a in provas if (a["data_avaliacao"], a["ta_inicial"] or 0) < (bloco.data.isoformat(), bloco.ta_inicial)
+                              and a["data_vista_prova"] is None]
+                alvo = anteriores[-1] if anteriores else None
             if alvo is None:
                 pend("vista_sem_prova", f"vista {cod}+{bloco.ue} de {bloco.data:%d/%m/%Y} nao casa com nenhuma prova da disciplina", bloco.tempos, chave=f"{cod}+{bloco.ue}")
                 continue

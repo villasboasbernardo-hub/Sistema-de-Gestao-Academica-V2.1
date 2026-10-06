@@ -118,6 +118,14 @@ select jsonb_build_object(
        'data', f.data, 'descricao', f.descricao, 'impacto', f.impacto, 'codigo', f.codigo)), '[]')
        from public.feriados f where f.status = 'ativo' and f.data between {de}::date and {ate}::date),
   'regime', (select to_jsonb(v) from public.vw_cursos_regime_vigente v where v.curso_id = (select curso_id from t)),
+  'vigencias', (select coalesce(jsonb_agg(jsonb_build_object(
+       'id', r.id, 'codigo', r.codigo, 'tipo_regime', r.tipo_regime, 'configuracao_horario_id', r.configuracao_horario_id,
+       'regime_tempos', r.regime_tempos, 'ta_duracao_min', r.ta_duracao_min, 'intervalo_manha_min', r.intervalo_manha_min,
+       'intervalo_tarde_min', r.intervalo_tarde_min, 'hora_inicio_manha', r.hora_inicio_manha, 'hora_inicio_tarde', r.hora_inicio_tarde,
+       'limite_diario_ead_horas', r.limite_diario_ead_horas, 'vigente_de', r.vigente_de, 'vigente_ate', r.vigente_ate,
+       'fundamento_curricular', r.fundamento_curricular) order by r.vigente_de), '[]')
+       from public.curso_regime_historico r where r.curso_id = (select curso_id from t) and r.status = 'ativo'
+         and r.vigente_de <= {ate}::date and (r.vigente_ate is null or r.vigente_ate >= {de}::date)),
   'da_turma', (select coalesce(jsonb_agg(jsonb_build_object(
        'origem', o.origem, 'data', o.data, 'ta_inicial', o.ta_inicial, 'tempos', o.tempos_consumidos,
        'disciplina_id', o.disciplina_id, 'fato_id', o.fato_id)), '[]')

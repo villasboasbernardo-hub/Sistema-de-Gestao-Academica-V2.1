@@ -135,7 +135,13 @@ def conferir_semanas(turma: str, leitura: planilha.Leitura, plano: dict, dsa: di
         trechos = linha["trechos"]
         ini_s, fim_s = (trechos[0]["inicio"], trechos[-1]["fim"]) if trechos else ("", "")
         if (ini_p, fim_p) != (ini_s, fim_s):
-            dif(bloco, "DADO", "horario", f"relogio do curso no banco difere do da planilha («{esperado['horario']}» × «{ini_s} às {fim_s}»)")
+            # O relogio do sistema e o da aba HORARIOS (decisao de 06/10/2026, item 3): o que diverge na
+            # IMPRESSAO e erro de planilha — pontual, ou estavel a partir de uma semana (candidato a
+            # vigencia nova, apontado no resumo por semana).
+            if (ini_p, fim_p) == ("", ""):
+                dif(bloco, "PLANILHA", "horario", f"sem horario na IMPRESSAO; pela tabela HORARIOS e «{ini_s} às {fim_s}»")
+            else:
+                dif(bloco, "PLANILHA", "horario", f"IMPRESSAO «{esperado['horario']}» × tabela HORARIOS «{ini_s} às {fim_s}»")
         elif len(trechos) > 1:
             dif(bloco, "PLANILHA", "horario", "horario continuo atravessando o almoco; o sistema quebra em dois trechos")
 
@@ -146,8 +152,13 @@ def conferir_semanas(turma: str, leitura: planilha.Leitura, plano: dict, dsa: di
                 dif(bloco, "DECISAO", "disciplina", f"a planilha lanca sob «{esperado['disciplina']}» e o de-para aponta «{linha['disciplina']}»")
         if esperado["ta"] != str(linha["tempos"]):
             digitado = "ta" in leitura.digitadas.get(bloco.linha, {})
-            dif(bloco, "PLANILHA" if digitado else "SISTEMA", "TA",
-                f"«{esperado['ta']}» × «{linha['tempos']}»" + (" — numero digitado na IMPRESSAO por cima da formula" if digitado else ""))
+            # O horario impresso (inicio-fim) diz quantos TA o bloco ocupa; se ele fecha com o sistema e o
+            # numero impresso nao, a contradicao e da propria IMPRESSAO (medido no C-Exp-BATI, 10/03: «1» TA
+            # num bloco impresso «14:45 as 16:20», que sao dois TA de 45 min).
+            horario_fecha = (ini_p, fim_p) == (ini_s, fim_s) and bloco.tempos == linha["tempos"]
+            dif(bloco, "PLANILHA" if (digitado or horario_fecha) else "SISTEMA", "TA",
+                f"«{esperado['ta']}» × «{linha['tempos']}»" + (" — numero digitado na IMPRESSAO por cima da formula" if digitado
+                else " — o horario impresso e o PREENCHIMENTO dao o numero do sistema; o numero impresso contradiz os dois" if horario_fecha else ""))
 
         topico_p, topico_s = normalizar(_sem_prefixo(esperado["topico"])), normalizar(linha["conteudo"])
         if topico_p != topico_s:
@@ -193,7 +204,16 @@ def conferir_semanas(turma: str, leitura: planilha.Leitura, plano: dict, dsa: di
             elif "(FISCAL)" in instr_p.upper() and "(FISCAL)" not in linha["instrutor"].upper():
                 dif(bloco, "SISTEMA", "instrutor", "a aplicacao da prova imprime o responsavel, e a planilha imprime o FISCAL")
             elif primeiro in instrutor_do_texto or sem_fiscal in instrutor_do_texto:
-                dif(bloco, "SISTEMA", "instrutor", "o sistema imprime o NOME COMPLETO; o DSA assinado traz posto, especialidade e nome de guerra")
+                tokens_p = normalizar(sem_fiscal if "/" not in sem_fiscal else primeiro).split()
+                tokens_s = normalizar(re.sub(r"\(\s*FISCAL\s*\)", "", linha["instrutor"], flags=re.IGNORECASE)).split()
+                if "/" in sem_fiscal:
+                    dif(bloco, "DECISAO", "instrutor", f"dois instrutores na planilha («{instr_p}»); o primeiro e o instrutor e o segundo vai nas observacoes")
+                elif tokens_p and tokens_s and tokens_p[-1] == tokens_s[-1] and len(tokens_s) <= len(tokens_p) + 1:
+                    dif(bloco, "DADO", "instrutor", f"posto/especialidade escritos de outra forma («{instr_p}» × «{linha['instrutor']}»)")
+                elif tokens_p and set(tokens_p[1:]) <= set(tokens_s):
+                    dif(bloco, "DADO", "instrutor", f"o cadastro nao tem nome de guerra: o sistema imprime o nome completo («{instr_p}» × «{linha['instrutor']}»)")
+                else:
+                    dif(bloco, "SISTEMA", "instrutor", f"«{instr_p}» na planilha × «{linha['instrutor']}» no sistema")
             elif linha["instrutor"] == "" and (decisoes.get("chaves", {}).get(f"{bloco.cod}+{bloco.ue}") or {}).get("responsavel") == "em_branco":
                 dif(bloco, "DECISAO", "instrutor", f"«{instr_p}» na planilha; em branco no sistema, por decisao")
             elif linha["instrutor"] == "":
@@ -276,6 +296,17 @@ def main() -> int:
             relatorio.append("| --- | --- | --- | ---: |")
             for (classe, campo, texto), n in sorted(classes.items(), key=lambda x: (x[0][0], -x[1])):
                 relatorio.append(f"| {classe} | {campo} | {texto} | {n} |")
+            # Relogio por semana (item 3e da decisao de 06/10/2026): divergencia pontual e erro de planilha;
+            # a que se repete, estavel, a partir de uma semana, e candidata a vigencia nova — listada aqui.
+            por_semana: dict[str, Counter] = {}
+            for d in diferencas:
+                if d["campo"] == "horario" and "IMPRESSAO «" in d["diferenca"]:
+                    semana = date.fromisoformat(d["data"]).isocalendar()
+                    por_semana.setdefault(f"{semana[0]}-{semana[1]:02d}", Counter())[d["diferenca"]] += 1
+            if por_semana:
+                relatorio.append(f"\nHorário da IMPRESSÃO ≠ tabela HORÁRIOS, por semana ({len(por_semana)} semana(s)):")
+                for semana, c in sorted(por_semana.items()):
+                    relatorio.append(f"- semana {semana}: {sum(c.values())} bloco(s) — " + "; ".join(f"{k} ({v}×)" for k, v in c.most_common(3)))
             painel = painel_por_semana(caminho)
             divergem = []
             for chave_da_semana, semana in sorted(dsa[turma]["semanas"].items()):

@@ -1,6 +1,6 @@
 {
-  "turma": "C-Esp-ME 2026",
-  "planilha": "C-ESP-ME 2026",
+  "turma": "C-Exp-Ag-Mag 2026",
+  "planilha": "C-EXP-AG-MAG T01/26",
   "turma_em_andamento": false,
   "locais": {
     "SALA 1": "Sala 01",
@@ -20,23 +20,19 @@
     "LAB DE INFORMÁTICA": "Laboratório de Informática",
     "EAD": "EAD",
     "CHM": "CHM",
-    "AUDITÓRIO DHN": "Auditório DHN",
-    "ASSÍNCRONA": "Assíncrona"
+    "H11": "H11"
   },
   "excecao_virada_1": {
     "autorizada_por": "Bernardo Villas Boas",
     "em": "2026-10-06",
-    "alcance": "a forma da VIRADA-1 para os lancamentos: planilha de controle, por turma, reexecutavel"
+    "alcance": "planilha FORA da pasta-fonte, incluida por decisao nominal (item 8 do lote da onda 1)"
   },
-  "ues": {
-    "I+6": "I+8",
-    "I+7": "I+6",
-    "I+8": "I+7",
-    "VI+6": "VI+7",
-    "VI+7": "VI+9",
-    "VI+9": "VI+6"
+  "chaves": {
+    "DO+1": {
+      "tipo": "aec",
+      "subtipo": "Palestra",
+      "responsavel_externo": "DOEP"
+    }
   },
-  "aprovadas": [
-    "ues (de-para por topico identico): aprovado por Bernardo Villas Boas em 06/10/2026 (item 5 do lote da onda 1)"
-  ]
+  "provisorias": ["locais: «H11» entra como texto livre ate decisao (4 blocos, 24 TA)"]
 }

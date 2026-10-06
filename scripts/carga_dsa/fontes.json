@@ -1,7 +1,7 @@
 {
   "pasta_fonte": "https://drive.google.com/drive/folders/1RAuN1XIJ45TSyiQn6m3MMQjn5xyLyfLR",
   "decisao": "VIRADA-1: a fonte dos lancamentos e a planilha de controle de cada turma (Bernardo Villas Boas, 06/10/2026).",
-  "fora_da_fonte": "Planilha fora da pasta, copia, «EDITAVEL», «TESTE», «ambientacao» e a subpasta Cursos Regulares/2027 NAO sao fonte.",
+  "fora_da_fonte": "Planilha fora da pasta, copia, «EDITAVEL», «TESTE», «ambientacao» e a subpasta Cursos Regulares/2027 NAO sao fonte. Excecao nominal (Bernardo Villas Boas, 06/10/2026, item 8 do lote da onda 1): C-Exp-BATI T01/26 e C-EXP-AG-MAG T01/26, que estao fora da pasta, sao fonte.",
   "turmas": [
     {
       "turma": "CAHO 2026",
@@ -66,6 +66,34 @@
       "subpasta": "Cursos Expeditos",
       "onda": 1,
       "decisoes": "decisoes/c-exp-obs-me-2026.json"
+    },
+    {
+      "turma": "C-Exp-BATI T1 2026",
+      "planilha_id": "1cTAWX1Yule0HnFZLGC3ozh_pXH3Ze6YrKdxltajKdYM",
+      "titulo": "C-Exp-BATI T01/26",
+      "subpasta": "(fora da pasta — excecao de 06/10/2026)",
+      "onda": 1,
+      "decisoes": "decisoes/c-exp-bati-t1-2026.json"
+    },
+    {
+      "turma": "C-Exp-Ag-Mag 2026",
+      "planilha_id": "1GwYpo6T6eDJXdq5C-n0WxTLZK0SH-REd-V0E74BVMi0",
+      "titulo": "C-EXP-AG-MAG T01/26",
+      "subpasta": "(fora da pasta — excecao de 06/10/2026)",
+      "onda": 1,
+      "decisoes": "decisoes/c-exp-ag-mag-2026.json"
     }
-  ]
+  ],
+  "calendario_global": {
+    "decisao": "Bernardo Villas Boas, 06/10/2026, item 7 do lote da onda 1: dia parado so de alguns cursos vira TAD da turma; o calendario global fica com o que parou todas.",
+    "inativar": [
+      "2026-01-30",
+      "2026-06-02",
+      "2026-06-10",
+      "2026-06-11",
+      "2026-06-29",
+      "2026-08-03"
+    ],
+    "incluir": ["2026-09-04"]
+  }
 }
