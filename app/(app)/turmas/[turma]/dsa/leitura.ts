@@ -15,7 +15,7 @@
  *
  * ⚠️ **ELE É A FRONTEIRA, E NÃO TEM REGRA DENTRO.** Quem monta a grade é `montarSemana()`, quem
  * deriva o relógio é `relogioDaSemana()`, quem resolve a vigência é `vigenteEm()`, quem monta o
- * nome é `nomeEmTexto()`. Aqui só há `select`, mapa e `Promise.all`. O irmão `consulta.ts` declara
+ * nome é `nomeParaDsa()`. Aqui só há `select`, mapa e `Promise.all`. O irmão `consulta.ts` declara
  * as colunas e converte linha → tipo, **sem I/O** — é por isso que ele continua testável sem banco
  * e este arquivo não.
  *
@@ -36,7 +36,7 @@ import { relogioDaSemana, type Relogio } from "@/lib/dominio/dsa/horario-do-bloc
 import type { ExecucaoDaDisciplina, TecnicaDoCatalogo } from "@/lib/dominio/dsa/impressao";
 import { conteudoDaAvaliacao, tecnicaDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
 import type { ResponsavelDoCurso } from "@/lib/dominio/dsa/assinaturas";
-import { nomeEmTexto, type InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
+import { nomeParaDsa, type InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { dataParaLeitura } from "@/lib/formato/data";
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -319,8 +319,11 @@ export async function lerSemanaDoDsa(
   const instrutoresPorId = new Map(
     linhasDeInstrutor.map((i) => [
       i.id,
-      /* ⚠️ O formato é o do `RF-INSTR-15`, pela função ÚNICA — nunca montado à mão aqui. */
-      nomeEmTexto({
+      /*
+       * ⚠️ No DSA é o NOME DE GUERRA (`nomeParaDsa`, exceção nominal ao `RF-INSTR-15` decidida em
+       * 06/10/2026) — pela função ÚNICA, nunca montado à mão aqui.
+       */
+      nomeParaDsa({
         id: i.id,
         pg: i.posto_graduacao,
         especialidade: i.esp_hab_obs,
