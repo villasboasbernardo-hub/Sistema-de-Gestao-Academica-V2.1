@@ -39,6 +39,7 @@ import {
   NOTA_DO_ESTUDO_INDIVIDUAL,
   ROTULO_DE_OBSERVACOES,
   tabelaDeCh,
+  taLancadoAFrente,
   type DiaImpresso,
   type LinhaImpressa,
 } from "@/lib/dominio/dsa/impressao";
@@ -144,6 +145,7 @@ export default async function ImpressaoDoDsa({
   const quadroDeCh = tabelaDeCh(dias, extras.execucao);
   const legenda = legendaDeTecnicas(dias, lida.tecnicasComSigla);
   const alunos = (turma.alunos as number | null) ?? null;
+  const aFrente = taLancadoAFrente(dias);
 
   return (
     <main className="dsa-impresso" data-slot="dsa-impresso">
@@ -205,6 +207,19 @@ export default async function ImpressaoDoDsa({
              honesto, e a tela já avisou antes de imprimir (`FR-039`).
         */}
         {alunos === null ? null : <div data-slot="dsa-alunos">{alunos} ALUNOS</div>}
+
+        {/*
+          ⚠️ **O «LANÇADO À FRENTE» É CONTEÚDO DO DOCUMENTO, não aviso de tela** (`Q-2`,
+             `FR-028.1`). O DSA sai **antes** da semana — medido: em 05/10/2026 todas as planilhas
+             ativas já estavam preenchidas até 09 ou 10/10 —, então o papel quase sempre tem TA que
+             ainda não aconteceram. Dizer quantos é o que separa *previsto* de *cumprido*, que é
+             exatamente a confusão do `D-5`.
+        */}
+        {aFrente === 0 ? null : (
+          <div data-slot="dsa-a-frente">
+            {aFrente} TA desta semana estão lançados para datas que ainda não chegaram.
+          </div>
+        )}
 
         <div className="dsa-rodape-quadros">
           {/* ⚠️ **SÓ AS DISCIPLINAS DA SEMANA** (`SC-014`) — listar o currículo inteiro estoura a A4. */}

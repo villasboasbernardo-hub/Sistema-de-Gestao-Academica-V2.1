@@ -85,6 +85,14 @@ export type LinhaImpressa = {
   readonly te: string;
   readonly instrutor: string;
   readonly estudoIndividual: boolean;
+  /**
+   * `data > hoje` — o lançamento é de uma data que ainda não chegou (`Q-2`, `FR-028.1`).
+   *
+   * ⚠️ **ELE CONTA NA CH E POR ISSO TEM DE SER DITO.** O `D-5` da planilha é o avesso disto: *"a CH
+   * cumprida é COUNTIF sobre a aba inteira — conta semana futura já planejada como cumprida"*. Aqui
+   * o número é o mesmo, e a diferença é que o papel **declara** quanto dele ainda não aconteceu.
+   */
+  readonly lancadoAFrente: boolean;
 };
 
 /** Um dia do documento — ou a faixa única do feriado de dia inteiro (`Q-16`). */
@@ -175,6 +183,8 @@ function linhaFixaDoEstudoIndividual(
     te: SIGLA_DO_ESTUDO_INDIVIDUAL,
     instrutor: "",
     estudoIndividual: true,
+    /* A linha FIXA não é lançamento: ela não pode estar "à frente" de nada. */
+    lancadoAFrente: false,
   };
 }
 
@@ -222,6 +232,7 @@ export function diaImpresso(
       te: siglaOuExtenso(bloco.tecnica, entrada.tecnicas),
       instrutor: textoDoPapel(bloco.instrutor),
       estudoIndividual: ehEi,
+      lancadoAFrente: bloco.lancadoAFrente,
     };
 
     if (ehEi) {
@@ -319,6 +330,24 @@ export function legendaDeTecnicas(
     if (sigla !== "" && usadas.has(sigla)) itens.push({ sigla, nome: tecnica.nome });
   }
   return itens.slice().sort((a, b) => a.sigla.localeCompare(b.sigla, "pt-BR"));
+}
+
+/**
+ * Quantos TA da semana estão **lançados à frente** (`Q-2`, `FR-028.1`).
+ *
+ * ⚠️ **ELE VAI NO RODAPÉ IMPRESSO, e não é aviso de tela.** Avisos ficam na grade, antes de
+ * imprimir; isto é **conteúdo do documento**: quem assina a semana precisa saber quanto dela é
+ * planejamento. ⚠️ **ZERO NÃO IMPRIME NADA** — uma linha dizendo *"0 TA à frente"* ocuparia a
+ * largura que a tabela de CH precisa para dizer algo.
+ */
+export function taLancadoAFrente(dias: readonly DiaImpresso[]): number {
+  let total = 0;
+  for (const dia of dias) {
+    for (const linha of dia.linhas) {
+      if (linha.lancadoAFrente) total += linha.tempos ?? 0;
+    }
+  }
+  return total;
 }
 
 /**

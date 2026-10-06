@@ -54,6 +54,7 @@ import {
   type LinhaDeFeriado,
   type LinhaDeVigencia,
   type LinhaDoCatalogo,
+  type OcupacaoAcumulada,
 } from "./consulta";
 
 /** O cliente de servidor, como a rota o cria. Tipo emprestado para não reimplementá-lo. */
@@ -118,6 +119,14 @@ export type SemanaDoDsa = {
    * alcança.
    */
   readonly marcasDeConflito: ReadonlyMap<string, MarcaDeConflito>;
+  /**
+   * A ocupação da turma **de qualquer data até o fim da semana aberta** — o insumo do acumulado.
+   *
+   * ⚠️ **ELA NÃO É A OCUPAÇÃO DA SEMANA, e a diferença é a `RN-CRONOS-03`:** a CH acumulada é a de
+   * **todo** o período até o corte, e a semana aberta é só a janela que se desenha. Reaproveitar a
+   * leitura da semana daria um acumulado que recomeça do zero a cada navegação.
+   */
+  readonly ocupacaoAcumulada: readonly OcupacaoAcumulada[];
 };
 
 /**
@@ -161,6 +170,7 @@ export async function lerSemanaDoDsa(
     listasRes,
     atribRes,
     instrRes,
+    acumuladaRes,
   ] = await Promise.all([
     /* ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`). */
     supabase
@@ -233,6 +243,18 @@ export async function lerSemanaDoDsa(
       .from("vw_instrutores")
       .select("id, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, ordem_antiguidade")
       .order("ordem_antiguidade"),
+    /*
+     * ⚠️ **A OCUPAÇÃO ACUMULADA — `data <= ate`, SEM piso** (`RN-CRONOS-03`, `RF-DSA-05`). Ela entra
+     * na MESMA rodada de `Promise.all`: é independente das outras doze, e em sequência seria uma
+     * ida a mais ao banco por abertura de tela.
+     * ⚠️ **E ela NÃO filtra por `hoje`** — é a decisão da `Q-2`: o único corte é o da semana
+     * selecionada, e o lançamento futuro **conta**, marcado.
+     */
+    supabase
+      .from("vw_ocupacao_ta")
+      .select("fato_id, data, disciplina_id, tempos_consumidos")
+      .eq("turma_id", turmaId)
+      .lte("data", ate),
   ]);
 
   const vigencias = ((vigenciasRes.data ?? []) as unknown as LinhaDeVigencia[]).map(
@@ -521,6 +543,20 @@ export async function lerSemanaDoDsa(
     })),
     idsDeEstudoIndividual,
     marcasDeConflito,
+    ocupacaoAcumulada: (
+      (acumuladaRes.data ?? []) as {
+        fato_id: string;
+        data: string;
+        disciplina_id: string | null;
+        tempos_consumidos: number | null;
+      }[]
+    ).map((o) => ({
+      fatoId: o.fato_id,
+      data: o.data,
+      disciplinaId: o.disciplina_id,
+      /* ⚠️ `tempos` é nulo em linha histórica — `?? 0` é o padrão da pasta para o que não foi medido. */
+      ta: o.tempos_consumidos ?? 0,
+    })),
   };
 }
 
@@ -546,8 +582,11 @@ function fatoSemTa(
 }
 
 export type ExtrasDaImpressao = {
-  /** A CH prevista e a cumprida por disciplina — o rodapé corta pelas da semana (`SC-014`). */
-  readonly execucao: readonly ExecucaoDaDisciplina[];
+  /**
+   * A CH prevista e a cumprida por disciplina — o rodapé corta pelas da semana (`SC-014`), e o
+   * painel de situação usa as mesmas linhas (`RF-DSA-05`).
+   */
+  readonly execucao: readonly (ExecucaoDaDisciplina & { readonly disciplinaId: string })[];
   /** As linhas de `responsaveis_curso`, já filtradas por `status = 'ativo'`. */
   readonly responsaveis: readonly ResponsavelDoCurso[];
   /**
@@ -572,7 +611,10 @@ export async function lerExtrasDaImpressao(
   const [execRes, respRes, aulasRes, avalRes] = await Promise.all([
     supabase
       .from("vw_disciplinas_execucao")
-      .select("cod_disciplina, nome_disciplina, carga_horaria_tempos, ta_executados, turma_id")
+      /* ⚠️ `disciplina_id` entra para o quadro de situação casar a ocupação com a previsão. */
+      .select(
+        "disciplina_id, cod_disciplina, nome_disciplina, carga_horaria_tempos, ta_executados, turma_id",
+      )
       .eq("turma_id", entrada.turmaId),
     /*
      * ⚠️ **A LINHA GERAL (`curso_id` nulo) ENTRA, e é ela que existe de verdade** — medido no
@@ -602,12 +644,14 @@ export async function lerExtrasDaImpressao(
 
   const execucao = (
     (execRes.data ?? []) as {
+      disciplina_id: string | null;
       cod_disciplina: string | null;
       nome_disciplina: string | null;
       carga_horaria_tempos: number | null;
       ta_executados: number | null;
     }[]
   ).map((d) => ({
+    disciplinaId: d.disciplina_id ?? "",
     codigo: d.cod_disciplina ?? "",
     nome: d.nome_disciplina ?? "",
     prevista: d.carga_horaria_tempos ?? 0,

@@ -177,11 +177,11 @@ compararia o documento certo com o relógio errado em **quatro** eixos.
 **Meta**: o operador vê se a turma está no rumo.
 **Depende de**: PR 0 (`situacao.ts`, `distribuicao-semanal.ts`) e PR 2 (haver lançamento).
 
-- [ ] T096 O painel de situação ao lado da grade — por disciplina, com a CH **acumulada até a semana selecionada** (`RF-DSA-05`, `RN-CRONOS-03`)
-- [ ] T097 [P] O quadro por **UE** — prevista, lançada, restante, de `vw_unidades_ensino_execucao`
-- [ ] T098 A marca **lançado à frente** na grade, no quadro e no rodapé impresso — **sem** corte por data no cálculo (`Q-2`, `FR-028.1`)
-- [ ] T099 [P] Conferir, por medição, que `chd_executada` da ficha da turma e as turmas em atraso do `/inicio` **continuam com os mesmos valores** de antes desta fatia — a promessa da `Q-2`
-- [ ] T100 **Prova do PR 5** — o quadro do `quickstart.md` §"PR 5", e `pnpm verificar:tudo` **0** com o CI verde nos três blocos
+- [X] T096 O painel de situação ao lado da grade — por disciplina, com a CH **acumulada até a semana selecionada** (`RF-DSA-05`, `RN-CRONOS-03`)
+- [X] T097 [P] O quadro por **UE** — prevista, lançada, restante, de `vw_unidades_ensino_execucao`
+- [X] T098 A marca **lançado à frente** na grade, no quadro e no rodapé impresso — **sem** corte por data no cálculo (`Q-2`, `FR-028.1`)
+- [X] T099 [P] Conferir, por medição, que `chd_executada` da ficha da turma e as turmas em atraso do `/inicio` **continuam com os mesmos valores** de antes desta fatia — a promessa da `Q-2`
+- [X] T100 **Prova do PR 5** — o quadro do `quickstart.md` §"PR 5", e `pnpm verificar:tudo` **0** com o CI verde nos três blocos
 
 ---
 
