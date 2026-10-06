@@ -69,6 +69,8 @@ class LinhaDoCatalogo:
     local: str
     tecnica: str
     instrutor: str
+    # «CH CONCLUIDA»: quantos TA a PROPRIA planilha conta nesta chave (CONT.SE sobre o ESPELHO).
+    ch_concluida: int | None = None
 
     @property
     def chave(self) -> tuple[str, str]:
@@ -126,6 +128,15 @@ class Leitura:
     duplicadas: list[LinhaDoCatalogo] = field(default_factory=list)
     # A aba CONTROLE: COD da disciplina → (CH prevista, CH cumprida), como a planilha as calcula.
     controle: dict[str, tuple[int | None, int | None]] = field(default_factory=dict)
+    # Chaves usadas no PREENCHIMENTO que o catalogo nao tem: na IMPRESSAO da planilha saem como
+    # erro de PROCV. O bloco nao e carregado e vai para a lista de erros de planilha.
+    sem_catalogo: list[tuple[str, str]] = field(default_factory=list)
+    # A sigla de cada cabecalho de semana do PREENCHIMENTO, para a lista de erros de planilha.
+    siglas: list[str] = field(default_factory=list)
+    # A IMPRESSAO, linha a linha (o DSA assinado), e as celulas DIGITADAS por cima das formulas.
+    impressao: dict[int, dict[str, str]] = field(default_factory=dict)
+    digitadas: dict[int, dict[str, str]] = field(default_factory=dict)
+    impressao_alinhada: bool = False
 
 
 def _abrir(caminho: Path):
@@ -167,6 +178,9 @@ def ler_catalogo(pasta) -> tuple[dict[tuple[str, str], LinhaDoCatalogo], list[Li
             local=texto(aba.cell(r, 7).value),
             tecnica=texto(aba.cell(r, 8).value),
             instrutor=texto(aba.cell(r, 9).value),
+            ch_concluida=(
+                int(aba.cell(r, 10).value) if isinstance(aba.cell(r, 10).value, (int, float)) else None
+            ),
         )
         if linha.chave in catalogo:
             # O PROCV da planilha so enxerga a PRIMEIRA ocorrencia: a leitura faz o mesmo, e a
@@ -272,6 +286,71 @@ def ler_controle(pasta) -> dict[str, tuple[int | None, int | None]]:
     return controle
 
 
+ABA_IMPRESSAO = "IMPRESSÃO"
+
+# Os rotulos do cabecalho da IMPRESSAO → o campo. A coluna do nº de TA nao tem rotulo proprio:
+# e a vizinha a direita de DISCIPLINA.
+_ROTULOS_DA_IMPRESSAO = {
+    "HORÁRIO": "horario",
+    "DISCIPLINA": "disciplina",
+    "UNIDADES DE ENSINO E TÓPICOS": "topico",
+    "LOCAL": "local",
+    "T/E": "te",
+    "INSTRUTOR/PROFESSOR": "instrutor",
+}
+
+
+def ler_impressao(caminho: Path, pasta, blocos: list[Bloco]):
+    """A aba IMPRESSAO (o DSA assinado) nas linhas dos blocos, e o que foi DIGITADO nela.
+
+    ⚠️ SO VALE PARA PLANILHA «ALINHADA»: aquela em que a linha N da IMPRESSAO e a linha N do
+       PREENCHIMENTO. A conferencia e feita aqui — o bloco que comeca na linha N tem de aparecer
+       na IMPRESSAO, na mesma linha, com o mesmo codigo e o mesmo nº de TA. Planilha que nao
+       alinha devolve `alinhada = False` e nada mais: adivinhar a correspondencia seria comparar
+       o sistema com a linha errada do documento.
+
+    ⚠️ «DIGITADA» = celula de dado sem formula onde o modelo tem formula (PROCV sobre o catalogo).
+       E o operador corrigindo o DSA a mao: vale como o documento assinado, e vai para a lista.
+    """
+    if ABA_IMPRESSAO not in pasta.sheetnames:
+        return {}, {}, False
+    aba = pasta[ABA_IMPRESSAO]
+    colunas: dict[str, int] = {}
+    for r in range(1, min(aba.max_row, 12) + 1):
+        rotulos = {texto(aba.cell(r, c).value).upper(): c for c in range(1, aba.max_column + 1)}
+        if "HORÁRIO" in rotulos:
+            colunas = {campo: rotulos[rot] for rot, campo in _ROTULOS_DA_IMPRESSAO.items() if rot in rotulos}
+            break
+    if set(colunas) != set(_ROTULOS_DA_IMPRESSAO.values()):
+        return {}, {}, False
+    colunas["ta"] = colunas["disciplina"] + 1
+
+    impressao: dict[int, dict[str, str]] = {}
+    casam = 0
+    for b in blocos:
+        if b.linha > aba.max_row:
+            continue
+        linha = {campo: texto(aba.cell(b.linha, c).value) for campo, c in colunas.items()}
+        impressao[b.linha] = linha
+        if linha["disciplina"] == b.cod and linha["ta"] == str(b.tempos):
+            casam += 1
+    alinhada = bool(blocos) and casam >= 0.9 * len(blocos)
+    if not alinhada:
+        return {}, {}, False
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        formulas = openpyxl.load_workbook(caminho, data_only=False)[ABA_IMPRESSAO]
+    digitadas: dict[int, dict[str, str]] = {}
+    for b in blocos:
+        for campo in ("topico", "local", "te", "instrutor"):
+            bruto = formulas.cell(b.linha, colunas[campo]).value
+            if bruto is None or (isinstance(bruto, str) and (bruto.startswith("=") or bruto.strip() == "")):
+                continue
+            digitadas.setdefault(b.linha, {})[campo] = texto(bruto)
+    return impressao, digitadas, True
+
+
 def montar_blocos(linhas: list[LinhaDeTa]) -> list[Bloco]:
     """Agrupa TA CONSECUTIVOS do mesmo dia com a mesma chave. Buraco no meio abre bloco novo."""
     blocos: list[Bloco] = []
@@ -302,11 +381,13 @@ def ler(caminho: Path) -> Leitura:
     sigla, alunos, linhas, ignoradas = ler_preenchimento(pasta)
     blocos = montar_blocos(linhas)
     sem_catalogo = sorted({b.chave for b in blocos if b.chave not in catalogo})
-    if sem_catalogo:
-        raise PlanilhaInvalida(
-            "PREENCHIMENTO usa chave(s) que o catalogo nao tem: "
-            + ", ".join(f"{c}+{u}" for c, u in sem_catalogo)
-        )
+    aba = pasta[ABA_PREENCHIMENTO]
+    siglas = [
+        texto(aba.cell(r, 2).value)
+        for r in range(1, aba.max_row + 1)
+        if texto(aba.cell(r, 1).value).upper().startswith("SIGLA")
+    ]
+    impressao, digitadas, alinhada = ler_impressao(caminho, pasta, blocos)
     return Leitura(
         sigla=sigla,
         alunos=alunos,
@@ -316,6 +397,11 @@ def ler(caminho: Path) -> Leitura:
         ignoradas=ignoradas,
         duplicadas=duplicadas,
         controle=ler_controle(pasta),
+        sem_catalogo=sem_catalogo,
+        siglas=siglas,
+        impressao=impressao,
+        digitadas=digitadas,
+        impressao_alinhada=alinhada,
     )
 
 

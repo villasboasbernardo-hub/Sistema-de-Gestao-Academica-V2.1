@@ -81,7 +81,8 @@ def lit(valor: object) -> str:
 #    nome de guerra precisa deles) e NUNCA sao gravados em arquivo por este script.
 _REFERENCIA = """
 with t as (
-  select t.id, t.codigo, t.curso_id, c.codigo as curso, t.alunos, t.sala_alocada, t.data_inicio, t.data_termino
+  select t.id, t.codigo, t.curso_id, c.codigo as curso, t.alunos, t.sala_alocada, t.data_inicio, t.data_termino,
+         t.status, (c.curriculo_modelo = 'competencias') as por_competencias
     from public.turmas t join public.cursos c on c.id = t.curso_id
    where t.codigo = {turma}
 )
@@ -90,7 +91,8 @@ select jsonb_build_object(
   'autor', (select jsonb_build_object('codigo', u.codigo, 'auth_user_id', u.auth_user_id, 'status', u.status)
               from public.usuarios u where u.codigo = {autor}),
   'disciplinas', (select coalesce(jsonb_agg(jsonb_build_object(
-       'id', d.id, 'cod', d.cod_disciplina, 'nome', d.nome_disciplina, 'ch', d.carga_horaria_tempos)), '[]')
+       'id', d.id, 'cod', d.cod_disciplina, 'nome', d.nome_disciplina, 'ch', d.carga_horaria_tempos,
+       'sem_ue', d.sem_unidades_ensino)), '[]')
        from public.disciplinas d where d.curso_id = (select curso_id from t) and d.status = 'ativo'),
   'ues', (select coalesce(jsonb_agg(jsonb_build_object(
        'id', u.id, 'codigo', u.codigo, 'disciplina_id', u.disciplina_id, 'numero', u.numero_ue,
@@ -124,6 +126,43 @@ select jsonb_build_object(
        'registros_aula', (select coalesce(jsonb_agg(codigo), '[]') from public.registros_aula where turma_id = (select id from t)),
        'avaliacoes', (select coalesce(jsonb_agg(codigo), '[]') from public.avaliacoes where turma_id = (select id from t)),
        'atividades_nao_letivas', (select coalesce(jsonb_agg(codigo), '[]') from public.atividades_nao_letivas where turma_id = (select id from t))),
+  -- O que a carga das planilhas JA pos nesta turma, em chaves naturais: e contra isto que a
+  -- sincronizacao decide o que e novo, o que mudou e o que saiu da planilha.
+  'atuais', jsonb_build_object(
+    'aulas', (select coalesce(jsonb_agg(jsonb_build_object(
+        'codigo', r.codigo, 'data', r.data, 'ta_inicial', r.ta_inicial, 'tempos_consumidos', r.tempos_consumidos,
+        'ue', u.codigo, 'disciplina_sem_ue', d.cod_disciplina, 'instrutor', i.codigo, 'metodologia', r.metodologia,
+        'local', r.local, 'conteudo_resumo', r.conteudo_resumo, 'status', r.status,
+        'demais', split_part(coalesce(r.observacoes, ''), ' Demais instrutores: ', 2))), '[]')
+      from public.registros_aula r left join public.unidades_ensino u on u.id = r.unidade_ensino_id
+      left join public.disciplinas d on d.id = r.disciplina_id left join public.instrutores i on i.id = r.instrutor_id
+     where r.turma_id = (select id from t) and r.codigo like 'DSAP-%'),
+    'avaliacoes', (select coalesce(jsonb_agg(jsonb_build_object(
+        'codigo', a.codigo, 'disciplina', d.cod_disciplina, 'tipo_avaliacao', a.tipo_avaliacao,
+        'data_avaliacao', a.data_avaliacao, 'ta_inicial', a.ta_inicial, 'tempos_consumidos', a.tempos_consumidos,
+        'instrutor', i.codigo, 'fiscal', f.codigo, 'nome_fiscal_externo', a.nome_fiscal_externo,
+        'metodologia', a.metodologia, 'local', a.local, 'conteudo_resumo', a.conteudo_resumo,
+        'data_vista_prova', a.data_vista_prova, 'ta_inicial_vista', a.ta_inicial_vista,
+        'tempos_consumidos_vista', a.tempos_consumidos_vista, 'local_vista', a.local_vista,
+        'status', case when a.status = 'cancelada' then 'inativo' else 'ativo' end)), '[]')
+      from public.avaliacoes a join public.disciplinas d on d.id = a.disciplina_id
+      left join public.instrutores i on i.id = a.instrutor_responsavel_id left join public.instrutores f on f.id = a.fiscal_id
+     where a.turma_id = (select id from t) and a.codigo like 'DSAP-%'),
+    'atividades', (select coalesce(jsonb_agg(jsonb_build_object(
+        'codigo', n.codigo, 'categoria_normativa', n.categoria_normativa, 'data', n.data, 'subtipo', n.subtipo,
+        'descricao', n.descricao, 'ta_inicial', n.ta_inicial, 'tempos_consumidos', n.tempos_consumidos,
+        'local', n.local, 'instrutor', i.codigo, 'responsavel_externo', n.responsavel_externo, 'status', n.status)), '[]')
+      from public.atividades_nao_letivas n left join public.instrutores i on i.id = n.instrutor_id
+     where n.turma_id = (select id from t) and n.codigo like 'DSAP-%')),
+  -- O que veio do ETL e ainda esta ATIVO: e o que «substituir, nao somar» vai inativar.
+  'etl', jsonb_build_object(
+    'aulas', (select count(*) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo'),
+    'aulas_ta', (select coalesce(sum(tempos_consumidos), 0) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo'),
+    'avaliacoes', (select count(*) from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is not null and status <> 'cancelada'),
+    'atividades', (select count(*) from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo'),
+    'de_tela', (select count(*) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo')
+              + (select count(*) from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status <> 'cancelada')
+              + (select count(*) from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo')),
   'de_outras_turmas', (select coalesce(jsonb_agg(jsonb_build_object(
        'turma', x.codigo, 'origem', o.origem, 'data', o.data, 'ta_inicial', o.ta_inicial, 'ta_final', o.ta_final,
        'instrutor_id', o.instrutor_id, 'fiscal_id', o.fiscal_id, 'local', o.local)), '[]')

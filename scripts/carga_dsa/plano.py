@@ -99,6 +99,8 @@ def ler_instrutor(bruto: str) -> InstrutorDaPlanilha | None:
     limpo = re.sub(r"\(\s*FISCAL\s*\)", " ", bruto, flags=re.IGNORECASE).strip()
     if limpo in ("", "--", "-"):
         return None
+    # «1º SG-HN FULANO» e «1ºSG-HN FULANO» sao o mesmo posto: o espaco depois do ordinal e digitacao.
+    limpo = re.sub(r"^(\d+)\s*[ºo°]\s+(?=[A-Za-z])", r"\1º", limpo)
     parenteses = re.findall(r"\(([^)]*)\)", limpo)
     sem_parenteses = re.sub(r"\([^)]*\)", " ", limpo)
     partes = sem_parenteses.split()
@@ -114,6 +116,10 @@ def ler_instrutor(bruto: str) -> InstrutorDaPlanilha | None:
     )
 
 
+# Como a planilha escreve um posto que o cadastro guarda com outra sigla.
+POSTOS_EQUIVALENTES = {"PROF": "SC", "PROFA": "SC", "PROFO": "SC"}
+
+
 def casar_instrutor(lido: InstrutorDaPlanilha, instrutores: list[dict]) -> list[dict]:
     """Os instrutores ATIVOS do cadastro com o mesmo posto e o mesmo nome de guerra.
 
@@ -122,8 +128,10 @@ def casar_instrutor(lido: InstrutorDaPlanilha, instrutores: list[dict]) -> list[
     """
     palavras = lido.guerra.split()
     achados = []
+    # «PROFº»/«PROFª» na planilha e o servidor civil do cadastro (posto «SC»).
+    posto = POSTOS_EQUIVALENTES.get(lido.posto, lido.posto)
     for i in instrutores:
-        if normalizar(i["posto"]).replace(" ", "") != lido.posto:
+        if normalizar(i["posto"]).replace(" ", "") != posto:
             continue
         guerra = normalizar(i.get("guerra"))
         if guerra:

@@ -1,0 +1,71 @@
+{
+  "pasta_fonte": "https://drive.google.com/drive/folders/1RAuN1XIJ45TSyiQn6m3MMQjn5xyLyfLR",
+  "decisao": "VIRADA-1: a fonte dos lancamentos e a planilha de controle de cada turma (Bernardo Villas Boas, 06/10/2026).",
+  "fora_da_fonte": "Planilha fora da pasta, copia, «EDITAVEL», «TESTE», «ambientacao» e a subpasta Cursos Regulares/2027 NAO sao fonte.",
+  "turmas": [
+    {
+      "turma": "CAHO 2026",
+      "planilha_id": "1X2BY5P9p8zUEVgPWfyIIRFt4YaOO7t8AxGatijsqIH8",
+      "titulo": "CAHO_2026",
+      "subpasta": "Cursos Regulares",
+      "onda": 2,
+      "decisoes": "decisoes/caho-2026.json"
+    },
+    {
+      "turma": "C-Ap-HN 2026",
+      "planilha_id": "1BydKCFut_VSr7wZTo3IRrN-6ePqhUi6AdjLImkeJ2yo",
+      "titulo": "Cópia de C-AP-HN 2026 - Sabado",
+      "subpasta": "Cursos Regulares",
+      "onda": 2,
+      "decisoes": "decisoes/c-ap-hn-2026.json"
+    },
+    {
+      "turma": "C-Ap-FR 2026",
+      "planilha_id": "1L_L_AKTnW0QAnCSzdnZI_71eakqbUeJTmy2vzCPFEqo",
+      "titulo": "C-AP-FR 2026",
+      "subpasta": "Cursos Regulares",
+      "onda": 2,
+      "decisoes": "decisoes/c-ap-fr-2026.json"
+    },
+    {
+      "turma": "C-Espc-HN 2026",
+      "planilha_id": "1GxcEbD4WxQGUBSiB_Ycnk5d4e-bWNSUQMba5nrrwi1U",
+      "titulo": "C-ESPC-HN 2026",
+      "subpasta": "Cursos Regulares",
+      "onda": 2,
+      "decisoes": "decisoes/c-espc-hn-2026.json"
+    },
+    {
+      "turma": "C-Espc-FR 2026",
+      "planilha_id": "1wiTn_Ci1maATXtTxqp0MukID36B2qzpOhRYPrOciz8E",
+      "titulo": "C-Espc-FR 2026",
+      "subpasta": "Cursos Regulares",
+      "onda": 2,
+      "decisoes": "decisoes/c-espc-fr-2026.json"
+    },
+    {
+      "turma": "C-Esp-ME 2026",
+      "planilha_id": "11wdJN30UkfyI2qXcNHI4emsBa-RG9qLKJECIAgS4ibg",
+      "titulo": "C-ESP-ME 2026",
+      "subpasta": "Cursos Especiais",
+      "onda": 1,
+      "decisoes": "decisoes/c-esp-me-2026.json"
+    },
+    {
+      "turma": "C-Exp-MetocOf 2026",
+      "planilha_id": "1efpDMO3dqI9kz5oSzdXlVIXfEPDyAdFUMRq0HTsyJb4",
+      "titulo": "C-EXP-METOC-OF T01/26",
+      "subpasta": "Cursos Expeditos",
+      "onda": 1,
+      "decisoes": "decisoes/c-exp-metocof-2026.json"
+    },
+    {
+      "turma": "C-Exp-Obs-ME 2026",
+      "planilha_id": "19VKh6PA7w--RIr-iYKvRy4zLsmYhj176Ht0Wlo4pIRg",
+      "titulo": "C-EXP-OBS-ME T2/2026",
+      "subpasta": "Cursos Expeditos",
+      "onda": 1,
+      "decisoes": "decisoes/c-exp-obs-me-2026.json"
+    }
+  ]
+}
