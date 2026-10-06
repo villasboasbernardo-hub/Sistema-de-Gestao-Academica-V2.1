@@ -22,6 +22,7 @@ import {
   type TempoDoCatalogo,
 } from "@/lib/dominio/dsa/horario-do-bloco";
 import type { FatoDaSemana } from "@/lib/dominio/dsa/grade";
+import { responsavelDoFato, rotuloDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
 import type { FeriadoDaSemana } from "@/lib/dominio/dsa/capacidade";
 import { datasDaSemanaIso, semanaIsoDe, semanasDoAnoIso } from "@/lib/dominio/carga-semanal";
 import {
@@ -210,6 +211,25 @@ export type LinhaDaOcupacao = {
 };
 
 /**
+ * O que as três tabelas dizem de um fato e a view da ocupação não traz.
+ *
+ * ⚠️ **OS TRÊS ÚLTIMOS CAMPOS SÃO OPCIONAIS PORQUE SÓ UMA ORIGEM OS TEM:** `aplicadaEm` e
+ * `tecnicaDaVista` são da avaliação (servem à vista de prova, que divide a linha com a aplicação), e
+ * `externo` é da atividade não letiva (`responsavel_externo`, texto livre que a view não expõe por
+ * não participar de conflito).
+ */
+export type ConteudoDoFato = {
+  readonly conteudo: string | null;
+  readonly tecnica: string | null;
+  /** A data da APLICAÇÃO da prova, já em `DD/MM/AAAA` — a referência que o rótulo da vista leva. */
+  readonly aplicadaEm?: string | null | undefined;
+  /** O nome da técnica da vista (a do catálogo com sigla `EO`), ou nulo se o catálogo não a tem. */
+  readonly tecnicaDaVista?: string | null | undefined;
+  /** `atividades_nao_letivas.responsavel_externo`. */
+  readonly externo?: string | null | undefined;
+};
+
+/**
  * A linha da view virada `FatoDaSemana`.
  *
  * ⚠️ **OS NOMES LEGÍVEIS CHEGAM POR MAPA, não por junção na view.** `vw_ocupacao_ta` entrega
@@ -222,13 +242,17 @@ export function fatoDaOcupacao(
   nomes: {
     readonly disciplinas: ReadonlyMap<string, string>;
     readonly instrutores: ReadonlyMap<string, string>;
-    readonly conteudos: ReadonlyMap<
-      string,
-      { readonly conteudo: string | null; readonly tecnica: string | null }
-    >;
+    readonly conteudos: ReadonlyMap<string, ConteudoDoFato>;
   },
 ): FatoDaSemana {
   const extra = nomes.conteudos.get(linha.fato_id);
+  /*
+   * ⚠️ **A VISTA E A APLICAÇÃO SÃO A MESMA LINHA DE `avaliacoes`** (`RN-AVAL-02`): chegam com o
+   * mesmo `fato_id`, e portanto com o mesmo conteúdo e a mesma técnica. Quem as separa é a
+   * `origem` da ocupação — e sem usá-la aqui as duas saíam iguais na grade e no papel (medido em
+   * 06/10/2026: a vista imprimia *"Prova Escrita"*, T/E *"PM"*).
+   */
+  const ehVista = linha.origem === "vista_prova";
   /*
    * ⚠️ O FISCAL ENTRA NA COLUNA DO INSTRUTOR COM `(FISCAL)`, que é como o documento assinado o
    * escreve (`RF-INSTR-15`, medido nos PDFs). Sem a marca, a coluna diria um nome que não é o de
@@ -255,9 +279,12 @@ export function fatoDaOcupacao(
     herdado: linha.herdado,
     disciplina:
       linha.disciplina_id !== null ? (nomes.disciplinas.get(linha.disciplina_id) ?? null) : null,
-    conteudo: extra?.conteudo ?? null,
-    tecnica: extra?.tecnica ?? null,
-    instrutor: responsavel,
+    conteudo: ehVista
+      ? rotuloDaVistaDeProva({ prova: extra?.conteudo, aplicadaEm: extra?.aplicadaEm })
+      : (extra?.conteudo ?? null),
+    tecnica: ehVista ? (extra?.tecnicaDaVista ?? null) : (extra?.tecnica ?? null),
+    /* ⚠️ Sem instrutor, entra o responsável de fora do cadastro — ver `responsavelDoFato`. */
+    instrutor: responsavelDoFato(responsavel, extra?.externo),
     local: linha.local,
   };
 }
@@ -391,6 +418,48 @@ export function quadrosDaSemana(entrada: {
     }),
     codigo: d.codigo,
     nome: d.nome,
+  }));
+}
+
+/**
+ * A tabela de CH do **rodapé impresso**, com a cumprida **acumulada até a semana do documento**
+ * (`RN-CRONOS-03`, `RF-PDF-01`).
+ *
+ * ⚠️ **MEDIDO EM 06/10/2026, na carga piloto do `C-Exp-Obs-ME 2026`:** o papel imprimia o
+ * `ta_executados` da view — o **total** da turma — em toda semana (50 e 65 nas quatro), enquanto o
+ * painel da grade, na mesma semana, dizia 18 e 15. Um DSA da primeira semana reimpresso depois saía
+ * dizendo que a disciplina estava concluída.
+ *
+ * ⚠️ **ELA NÃO CALCULA: REPASSA.** O acumulado é o de `quadrosDaSemana` — o MESMO número do painel
+ * de situação —, que por sua vez sai de `quadroDaDisciplina`. O rodapé e a tela deixam de poder
+ * discordar porque deixam de ter contas separadas.
+ *
+ * ⚠️ **O CORTE É O FIM DA SEMANA DO DOCUMENTO, NUNCA «HOJE»** (`Q-2`): o lançamento futuro dentro
+ * da semana **conta**, e o rodapé já declara quantos TA estão à frente.
+ */
+export function execucaoAteASemana(entrada: {
+  readonly execucao: readonly ExecucaoParaQuadro[];
+  readonly ocupacao: readonly OcupacaoAcumulada[];
+  /** O último dia da semana do documento. */
+  readonly ateODia: string;
+}): readonly {
+  readonly codigo: string;
+  readonly nome: string;
+  readonly prevista: number;
+  readonly cumprida: number;
+}[] {
+  return quadrosDaSemana({
+    execucao: entrada.execucao,
+    ocupacao: entrada.ocupacao,
+    /* O rodapé não desenha conflito nem «à frente»: os dois campos não entram no que ele usa. */
+    emConflito: new Set<string>(),
+    ateODia: entrada.ateODia,
+    hoje: entrada.ateODia,
+  }).map((q) => ({
+    codigo: q.codigo,
+    nome: q.nome,
+    prevista: q.chPrevista,
+    cumprida: q.chAcumulada,
   }));
 }
 

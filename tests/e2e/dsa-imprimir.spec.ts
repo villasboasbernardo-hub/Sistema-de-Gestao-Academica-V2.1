@@ -22,13 +22,16 @@ import { expect, test, type Page } from "@playwright/test";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import {
   ANO,
+  ANO_A_FRENTE,
   ASSINANTE_DE_ABRIL,
   ASSINANTE_DE_JULHO,
   ASSINANTE_ENCARREGADO,
   limparDsa,
   SEMANA,
+  SEMANA_A_FRENTE,
   SEMANA_DE_JULHO,
   semearDsa,
+  TA_A_FRENTE,
   type DsaSemeado,
 } from "./dsa-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
@@ -199,6 +202,50 @@ test.describe("a linha fixa do Estudo Individual e o dia de feriado", () => {
     const bloqueado = page.locator('[data-slot="dsa-dia-bloqueado"]');
     await expect(bloqueado).toHaveCount(1);
     await expect(bloqueado).toContainText("Feriado de dia inteiro");
+  });
+
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA** (decisão de Bernardo Villas Boas, 06/10/2026). A semente lança uma
+   * aula na quarta, que é feriado de dia inteiro. Até esta correção o dia saía como a faixa do
+   * bloqueio **e mais nada**: a aula existia no banco, contava na CH e não estava no papel — foi o
+   * que aconteceu com o Estudo Individual de 02/10 na carga piloto do `C-Exp-Obs-ME 2026`.
+   */
+  test("⚠️ o dia bloqueado imprime TAMBÉM o que foi lançado nele, abaixo da faixa", async ({
+    page,
+  }) => {
+    await abrirAImpressao(page, SEMANA);
+    const noFeriado = page.locator(`${DOCUMENTO} tr[data-dia-bloqueado="sim"]`);
+    await expect(noFeriado).toHaveCount(1);
+    await expect(noFeriado).toContainText("Aula no dia do feriado");
+    /* ⚠️ E a linha FIXA de Estudo Individual continua fora do dia sem expediente. */
+    await expect(noFeriado.locator("td.dsa-te")).not.toHaveText("EI");
+  });
+});
+
+test.describe("⚠️ `RN-CRONOS-03` · a CH cumprida do rodapé é a ACUMULADA ATÉ A SEMANA", () => {
+  /** A «CH. cumprida» que o rodapé de uma semana imprime para a disciplina comum da semente. */
+  async function cumpridaNoRodape(page: Page, semana: number, ano: number): Promise<number> {
+    await abrirAImpressao(page, semana, ano);
+    const linha = page.locator('[data-slot="dsa-quadro-de-ch"] tbody tr').filter({
+      has: page.locator("td:first-child", {
+        hasText: new RegExp(`^${SEMEADO.codDisciplina}$`),
+      }),
+    });
+    await expect(linha).toHaveCount(1);
+    return Number(await linha.locator("td").nth(3).innerText());
+  }
+
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA** — medido na carga piloto do `C-Exp-Obs-ME 2026` em 06/10/2026: o
+   * rodapé imprimia o TOTAL da turma em toda semana (50 e 65 nas quatro), e o painel da grade, na
+   * mesma semana, dizia 18 e 15. A semente tem uma aula numa semana QUE AINDA NÃO CHEGOU: o DSA de
+   * abril não pode contá-la, e o da semana dela tem de contar.
+   */
+  test("o DSA de abril não conta a aula lançada para uma semana posterior", async ({ page }) => {
+    const emAbril = await cumpridaNoRodape(page, SEMANA, ANO);
+    const naSemanaAFrente = await cumpridaNoRodape(page, SEMANA_A_FRENTE, ANO_A_FRENTE);
+    expect(emAbril).toBeGreaterThan(0);
+    expect(naSemanaAFrente - emAbril).toBeGreaterThanOrEqual(TA_A_FRENTE);
   });
 });
 

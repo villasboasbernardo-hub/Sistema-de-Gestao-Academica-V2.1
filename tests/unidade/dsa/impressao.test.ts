@@ -175,6 +175,109 @@ describe("a linha fixa `ESTUDO INDIVIDUAL · EI` — `praticas-da-planilha.md` �
     expect(impresso.bloqueio).toBe("Dia das Crianças");
     expect(impresso.linhas).toHaveLength(0);
   });
+
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA, medido na carga piloto do `C-Exp-Obs-ME 2026` em 06/10/2026.** O
+   * dia 02/10 é licença de pagamento (dia inteiro) **e** tem um Estudo Individual lançado no 8º
+   * tempo. A grade o mostrava; o papel devolvia **zero linhas** para o dia e o lançamento sumia sem
+   * aviso nenhum — existia no banco, contava na CH e não estava no documento assinado.
+   */
+  it("dia bloqueado COM lançamento imprime o lançamento, abaixo da faixa do bloqueio", () => {
+    const semana = montar({
+      feriados: [{ data: "2026-10-05", descricao: "Licença de pagamento", impacto: "dia_inteiro" }],
+      fatos: [
+        fato({ fatoId: "aula-no-feriado", taInicial: 1, tempos: 2 }),
+        fato({
+          fatoId: "ei-no-feriado",
+          origem: "atividade_nao_letiva",
+          taInicial: 8,
+          tempos: 1,
+          disciplina: null,
+          conteudo: "ESTUDO INDIVIDUAL",
+          tecnica: "Estudo Individual",
+          instrutor: null,
+        }),
+      ],
+    });
+    const dia = semana.dias[0];
+    if (dia === undefined) throw new Error("a semana saiu sem dias");
+    const impresso = diaImpresso(dia, {
+      relogio: semana.relogio,
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: new Set(["ei-no-feriado"]),
+    });
+    expect(impresso.bloqueio).toBe("Licença de pagamento");
+    expect(impresso.linhas.map((l) => l.chave)).toEqual(["aula-no-feriado", "ei-no-feriado"]);
+    expect(impresso.linhas[1]?.estudoIndividual).toBe(true);
+    expect(impresso.linhas[1]?.te).toBe(SIGLA_DO_ESTUDO_INDIVIDUAL);
+  });
+
+  /* ⚠️ O controle: só o que foi LANÇADO sai — a linha FIXA de EI continua fora do dia bloqueado. */
+  it("dia bloqueado com lançamento e SEM Estudo Individual lançado não ganha a linha fixa", () => {
+    const semana = montar({
+      feriados: [{ data: "2026-10-05", descricao: "Licença de pagamento", impacto: "dia_inteiro" }],
+      fatos: [fato({ fatoId: "aula-no-feriado", taInicial: 1, tempos: 2 })],
+    });
+    const dia = semana.dias[0];
+    if (dia === undefined) throw new Error("a semana saiu sem dias");
+    const impresso = diaImpresso(dia, {
+      relogio: semana.relogio,
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: SEM_EI,
+    });
+    expect(impresso.linhas.map((l) => l.chave)).toEqual(["aula-no-feriado"]);
+  });
+});
+
+describe("a coluna T/E da atividade não letiva — o subtipo não é técnica de ensino", () => {
+  /*
+   * ⚠️ **MEDIDO EM 06/10/2026:** a leitura entrega o SUBTIPO da atividade no campo da técnica (é o
+   * rótulo que a grade mostra na célula), e o papel o imprimia na coluna T/E por extenso —
+   * *"Administração"*, *"Palestra"*, *"Visita Técnica"*. `atividades_nao_letivas` não tem técnica de
+   * ensino; o que a coluna comporta é a sigla **EI** no Estudo Individual, e vazio no resto.
+   */
+  it("atividade não letiva que não é Estudo Individual sai com T/E VAZIA", () => {
+    const dia = primeiroDia({
+      fatos: [
+        fato({
+          fatoId: "palestra",
+          origem: "atividade_nao_letiva",
+          disciplina: null,
+          conteudo: "DOEP",
+          tecnica: "Palestra",
+          instrutor: "DOEP",
+        }),
+      ],
+    });
+    expect(dia.linhas[0]?.chave).toBe("palestra");
+    expect(dia.linhas[0]?.te).toBe("");
+    expect(dia.linhas[0]?.conteudo).toBe("DOEP");
+  });
+
+  /* ⚠️ E o subtipo não vaza para a legenda, que só traduz sigla usada na coluna. */
+  it("o subtipo não entra na legenda, mesmo quando coincide com o nome de uma técnica", () => {
+    const dias = documentoImpresso(
+      montar({
+        fatos: [
+          fato({
+            fatoId: "visita",
+            origem: "atividade_nao_letiva",
+            disciplina: null,
+            conteudo: "VISITA",
+            tecnica: "Aula Prática",
+          }),
+        ],
+      }),
+      { tecnicas: TECNICAS, idsDeEstudoIndividual: SEM_EI },
+    );
+    expect(legendaDeTecnicas(dias, TECNICAS).map((i) => i.sigla)).toEqual(["EI"]);
+  });
+
+  /* ⚠️ O controle positivo: a AULA continua imprimindo a sigla da técnica dela. */
+  it("a aula não é afetada: continua com a sigla da técnica", () => {
+    const dia = primeiroDia({ fatos: [fato({ tecnica: "Exposição Oral" })] });
+    expect(dia.linhas[0]?.te).toBe("EO");
+  });
 });
 
 describe("`SC-013` · nenhuma cadeia técnica chega ao papel", () => {

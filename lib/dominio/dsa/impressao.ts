@@ -95,12 +95,16 @@ export type LinhaImpressa = {
   readonly lancadoAFrente: boolean;
 };
 
-/** Um dia do documento — ou a faixa única do feriado de dia inteiro (`Q-16`). */
+/** Um dia do documento — com a faixa do feriado de dia inteiro, quando houver (`Q-16`). */
 export type DiaImpresso = {
   /** `aaaa-mm-dd` — quem formata é `dataParaLeitura` (ponto único). */
   readonly data: string;
-  /** A descrição do feriado de dia inteiro; o dia sai como **uma** linha com ela. */
+  /** A descrição do feriado de dia inteiro: a **primeira** linha do dia, em faixa. */
   readonly bloqueio: string | null;
+  /**
+   * Num dia bloqueado, **só o que foi lançado** — vazio quando nada foi; a linha fixa de Estudo
+   * Individual **não** entra. Nos demais dias, os blocos e a linha de EI no fim.
+   */
   readonly linhas: readonly LinhaImpressa[];
 };
 
@@ -111,12 +115,19 @@ export type TecnicaDoCatalogo = {
   readonly sigla: string | null;
 };
 
-/** Uma linha da tabela de CH do rodapé — de `vw_disciplinas_execucao`. */
+/** Uma linha da tabela de CH do rodapé. */
 export type ExecucaoDaDisciplina = {
   readonly codigo: string;
   readonly nome: string;
   readonly prevista: number;
-  /** ⚠️ **SEM corte por data** (`Q-2`) — é o `ta_executados` da view, como ele é. */
+  /**
+   * A CH cumprida **acumulada até o fim da semana do documento** (`RN-CRONOS-03`).
+   *
+   * ⚠️ **O CORTE É O DA SEMANA, NUNCA «HOJE»** (`Q-2`): o lançamento futuro dentro dela conta, e o
+   * rodapé declara à parte quantos TA estão à frente. Quem entrega este número é
+   * `execucaoAteASemana`, que repassa o MESMO acumulado do painel de situação da grade — até
+   * 06/10/2026 vinha aqui o **total** da turma, igual em toda semana.
+   */
   readonly cumprida: number;
 };
 
@@ -196,9 +207,21 @@ function linhaFixaDoEstudoIndividual(
  * vive em `atividades_nao_letivas` e **não** está em `FatoDaSemana`, que é tipo de exibição.
  * Adivinhá-la pelo subtipo seria inventar: o subtipo é lista administrável.
  *
- * ⚠️ **FERIADO DE DIA INTEIRO DEVOLVE ZERO LINHAS e o `bloqueio` preenchido** (`Q-16`): o dia sai
- * como **uma** faixa com a descrição, e **sem** a linha de EI — não há Estudo Individual em dia que
- * não houve expediente.
+ * ⚠️ **FERIADO DE DIA INTEIRO DEVOLVE O `bloqueio` PREENCHIDO E SÓ O QUE FOI LANÇADO** (`Q-16`): o
+ * dia sai como **uma** faixa com a descrição e **sem** a linha FIXA de EI — não há Estudo Individual
+ * a oferecer em dia que não houve expediente.
+ *
+ * ⚠️ **MAS O QUE EXISTE NAQUELE DIA É IMPRESSO, abaixo da faixa** *(decisão de Bernardo Villas
+ * Boas, 06/10/2026)*. Medido na carga piloto do `C-Exp-Obs-ME 2026`: 02/10 era licença de pagamento
+ * **e** tinha um Estudo Individual lançado no 8º tempo. A grade o mostrava; o papel devolvia zero
+ * linhas e o lançamento **sumia sem aviso** — estava no banco, contava na CH e não estava no
+ * documento. Esconder dado que existe é pior que contradizer o calendário: quem assina vê as duas
+ * coisas e decide.
+ *
+ * ⚠️ **A T/E DA ATIVIDADE NÃO LETIVA NÃO É O SUBTIPO.** A leitura entrega o subtipo no campo da
+ * técnica (é o rótulo da célula na grade), e `atividades_nao_letivas` não tem técnica de ensino:
+ * a coluna leva **EI** no Estudo Individual e fica **vazia** no resto. Até 06/10/2026 saía
+ * *"Administração"*, *"Palestra"* e *"Visita Técnica"* por extenso.
  */
 export function diaImpresso(
   dia: DiaDaGrade,
@@ -208,10 +231,6 @@ export function diaImpresso(
     readonly idsDeEstudoIndividual: ReadonlySet<string>;
   },
 ): DiaImpresso {
-  if (dia.bloqueio !== null) {
-    return { data: dia.data, bloqueio: dia.bloqueio, linhas: [] };
-  }
-
   const comuns: LinhaImpressa[] = [];
   let doEi: LinhaImpressa | null = null;
   let ultimoTa: number | null = null;
@@ -229,7 +248,12 @@ export function diaImpresso(
       disciplina: textoDoPapel(bloco.disciplina),
       conteudo: textoDoPapel(bloco.conteudo),
       local: textoDoPapel(bloco.local),
-      te: siglaOuExtenso(bloco.tecnica, entrada.tecnicas),
+      te:
+        bloco.origem === "atividade_nao_letiva"
+          ? ehEi
+            ? SIGLA_DO_ESTUDO_INDIVIDUAL
+            : ""
+          : siglaOuExtenso(bloco.tecnica, entrada.tecnicas),
       instrutor: textoDoPapel(bloco.instrutor),
       estudoIndividual: ehEi,
       lancadoAFrente: bloco.lancadoAFrente,
@@ -252,6 +276,15 @@ export function diaImpresso(
       const fim = bloco.taInicial + Math.max(1, bloco.tempos ?? 1) - 1;
       ultimoTa = ultimoTa === null ? fim : Math.max(ultimoTa, fim);
     }
+  }
+
+  if (dia.bloqueio !== null) {
+    /* ⚠️ Só o que foi LANÇADO: a linha fixa de EI não nasce em dia sem expediente. */
+    return {
+      data: dia.data,
+      bloqueio: dia.bloqueio,
+      linhas: doEi === null ? comuns : [...comuns, doEi],
+    };
   }
 
   const ei = doEi ?? linhaFixaDoEstudoIndividual(dia.data, ultimoTa, entrada.relogio);
