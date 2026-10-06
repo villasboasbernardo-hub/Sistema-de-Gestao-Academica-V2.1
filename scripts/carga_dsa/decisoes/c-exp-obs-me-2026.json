@@ -1,0 +1,52 @@
+{
+  "turma": "C-Exp-Obs-ME 2026",
+  "planilha": "C-EXP-OBS-ME T2/2026 (14/09 a 09/10/2026)",
+  "excecao_virada_1": {
+    "autorizada_por": "Bernardo Villas Boas",
+    "em": "2026-10-06",
+    "alcance": "somente esta turma; a carga final da planilha da v2.0 deve PULA-LA"
+  },
+
+  "locais": {
+    "SALA 2": "Sala 02",
+    "LAB INFO": "Laboratório de Informática"
+  },
+
+  "tipo_avaliacao": "Prova Escrita",
+  "padrao_ue_de_avaliacao": "PE[0-9]+",
+  "padrao_ue_de_vista": "VP",
+
+  "chaves": {
+    "AD+4": { "tipo": "estudo_individual", "local": "Laboratório de Informática" },
+    "30+1": {
+      "tipo": "tad",
+      "subtipo": "Administração",
+      "responsavel_externo": "MONITORIA / DOEP"
+    },
+    "TR+2": { "tipo": "aec", "subtipo": "Palestra", "responsavel_externo": "DOEP" },
+    "AE+1": { "tipo": "aec", "subtipo": "Visita Técnica", "local": "CEFET" },
+    "FE+1": { "tipo": "calendario", "descricao": "Dia do Hidrógrafo" },
+    "LP+1": { "tipo": "calendario", "descricao": "Licença de pagamento" }
+  },
+
+  "vistas": [
+    { "disciplina": "I", "data": "2026-10-08", "da_prova_de": "2026-09-24" },
+    { "disciplina": "I", "data": "2026-10-09", "da_prova_de": "2026-10-07" },
+    { "disciplina": "II", "data": "2026-10-09", "da_prova_de": "2026-10-08" }
+  ],
+
+  "ajustes": [
+    {
+      "quando": { "data": "2026-09-21", "cod": "II", "ue": "3", "ta_inicial": 1 },
+      "local": "CHM",
+      "porque": "IMPRESSAO!N64 foi digitada a mao por cima da formula: a aula foi no CHM"
+    }
+  ],
+  "celulas_digitadas_nao_adotadas": {
+    "IMPRESSAO!O184": "«PM» digitado em 05/10 foi erro: vale a tecnica do catalogo (EO)",
+    "PREENCHIMENTO!D183:E183": "«LP 1» na linha de cabecalho da semana 3: nao e TA"
+  },
+
+  "incluir_dias_de_calendario_ausentes": true,
+  "abrangencia_do_calendario": "Nacional/Institucional"
+}

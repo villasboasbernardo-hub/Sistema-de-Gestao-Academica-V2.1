@@ -60,6 +60,11 @@ next-env.d.ts
 /Cursos Especiais*/
 /C-EXP-METOC-OF*.xlsx
 
+# Planilhas de controle por turma (modelo PREENCHIMENTO / BD DISCIPLINAS / IMPRESSAO) e os
+# gabaritos extraidos delas — fonte da carga do DSA (scripts/carga_dsa/). Dado real da MB:
+# nome de instrutor, horario e local de aula. NUNCA versionadas (o repositorio e publico).
+/planilhas-de-origem/
+
 # Python — o ETL do Epico 2 (scripts/etl/). Bytecode e ambiente nunca sao versionados.
 __pycache__/
 *.py[cod]
