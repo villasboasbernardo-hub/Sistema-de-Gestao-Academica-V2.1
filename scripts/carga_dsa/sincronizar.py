@@ -520,8 +520,12 @@ def main() -> int:
                 print(f"  ✗ o banco recusou o ensaio: {mensagem[:600]}")
                 veredito = max(veredito, 4)
                 continue
-            inicio = mensagem.index("{", mensagem.index(SENTINELA))
-            contagem = json.loads(mensagem[inicio : mensagem.rindex("}") + 1].replace('\\"', '"'))
+            # ⚠️ No remoto a recusa chega EMBRULHADA em outro JSON ({"message": "... ENSAIO_DESFEITO {...}"}),
+            #    e o ultimo "}" e o do envelope: o objeto da sentinela e lido por `raw_decode`, que para no
+            #    fechamento certo. Medido em 06/10/2026, no primeiro ensaio remoto da onda 1.
+            texto = mensagem.replace('\\"', '"')
+            inicio = texto.index("{", texto.index(SENTINELA))
+            contagem = json.JSONDecoder().raw_decode(texto, inicio)[0]
         mudancas = sum(v for v in contagem.values())
         print(f"  ensaio: {contagem} → {mudancas} mudanca(s)")
         resumo.append((turma, contagem, mudancas))
