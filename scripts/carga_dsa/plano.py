@@ -107,17 +107,24 @@ def ler_instrutor(bruto: str) -> InstrutorDaPlanilha | None:
     if len(partes) < 2:
         return None
     posto, _, sufixo = partes[0].partition("-")
+    nome = partes[1:]
+    # «3SG EP FULANO»: a especialidade solta depois do posto, sem hifen (onda 2, CAHO). Uma sigla de
+    # 2 ou 3 letras maiusculas antes do nome e especialidade, nao nome de guerra.
+    if not sufixo and len(nome) >= 2 and re.fullmatch(r"[A-Z]{2,3}", nome[0]):
+        sufixo, nome = nome[0], nome[1:]
     especialidade = " ".join(([sufixo] if sufixo else []) + parenteses)
     return InstrutorDaPlanilha(
         texto=bruto,
         posto=normalizar(posto).replace(" ", ""),
         especialidade=especialidade.strip(),
-        guerra=normalizar(" ".join(partes[1:])),
+        guerra=normalizar(" ".join(nome)),
     )
 
 
 # Como a planilha escreve um posto que o cadastro guarda com outra sigla.
-POSTOS_EQUIVALENTES = {"PROF": "SC", "PROFA": "SC", "PROFO": "SC"}
+POSTOS_EQUIVALENTES = {"PROF": "SC", "PROFA": "SC", "PROFO": "SC",
+                       # «1T»/«2T» e «1TEN»/«2TEN» sao o mesmo posto (medido na onda 2: C-Espc-FR)
+                       "1T": "1TEN", "2T": "2TEN", "CT": "CT", "GM": "GM"}
 
 
 def casar_instrutor(lido: InstrutorDaPlanilha, instrutores: list[dict]) -> list[dict]:
@@ -141,6 +148,13 @@ def casar_instrutor(lido: InstrutorDaPlanilha, instrutores: list[dict]) -> list[
         nome = normalizar(i["nome"]).split()
         if all(p in nome for p in palavras):
             achados.append(i)
+    # Dois do mesmo posto e nome de guerra: a ESPECIALIDADE da planilha desempata, quando ela a traz
+    # («2º SG-HN FULANO»: um -HN e um -GC no cadastro; medido na onda 2, C-Espc-HN).
+    if len(achados) > 1 and lido.especialidade:
+        esp = normalizar(lido.especialidade).replace(" ", "")
+        com_esp = [i for i in achados if esp and esp in normalizar(i.get("esp") or "").replace(" ", "")]
+        if len(com_esp) == 1:
+            return com_esp
     return achados
 
 

@@ -139,6 +139,12 @@ class Leitura:
     impressao_alinhada: bool = False
     # A aba HORARIOS: as tabelas de consulta de horario, de onde sai o relogio do curso (relogio.py).
     horarios: list = field(default_factory=list)
+    # Curso regular: o Estudo Individual que a IMPRESSAO imprime por dia (nao vem do PREENCHIMENTO) e os
+    # dias em que a IMPRESSAO e o PREENCHIMENTO nao tem o mesmo numero de blocos.
+    impressao_ei: dict = field(default_factory=dict)
+    # A aba DATAS AVALIACOES dos regulares: qual vista e de qual prova, com as datas (e insumo do Epico 8).
+    datas_avaliacoes: list = field(default_factory=list)
+    dias_desalinhados: list = field(default_factory=list)
 
 
 def _abrir(caminho: Path):
@@ -265,6 +271,54 @@ def ler_preenchimento(pasta) -> tuple[str, str, list[LinhaDeTa], list[CelulaIgno
     return sigla, alunos, linhas, ignoradas
 
 
+def ler_datas_avaliacoes(pasta) -> list[dict]:
+    """A aba DATAS AVALIACOES (ou CONTROLE DATAS AVALIACOES) dos cursos regulares: por avaliacao, a chave da
+    prova, a chave da vista e as duas datas. E a tabela da propria planilha que diz QUAL vista e de QUAL
+    prova — vale mais que qualquer regra por numero. Tambem e insumo do Epico 8 (prazo de 7 dias)."""
+    aba = next((n for n in pasta.sheetnames if "DATAS AVALIA" in n.upper()), None)
+    if aba is None:
+        return []
+    ws = pasta[aba]
+    colunas: dict[str, int] = {}
+    linhas: list[dict] = []
+    for r in range(1, ws.max_row + 1):
+        rotulos = {texto(ws.cell(r, c).value).upper(): c for c in range(1, min(ws.max_column, 12) + 1)}
+        if not colunas:
+            if "CHAVE AVALIAÇÃO" in rotulos or "CHAVE AVALIACAO" in rotulos:
+                for rot, c in rotulos.items():
+                    if rot.startswith("CÓD") or rot.startswith("COD"):
+                        colunas["cod"] = c
+                    elif rot.startswith("TIPO DE AVALIA"):
+                        colunas["tipo"] = c
+                    elif rot.startswith("CHAVE AVALIA"):
+                        colunas["chave_prova"] = c
+                    elif rot.startswith("CHAVE VISTA"):
+                        colunas["chave_vista"] = c
+                    elif rot.startswith("DATA DA AVALIA"):
+                        colunas["data_prova"] = c
+                    elif rot.startswith("DATA DA VISTA"):
+                        colunas["data_vista"] = c
+                    elif rot.startswith("SITUA"):
+                        colunas["situacao"] = c
+            continue
+        cod = texto(ws.cell(r, colunas.get("cod", 0)).value) if "cod" in colunas else ""
+        if not cod:
+            continue
+        def como_data(c):
+            v = ws.cell(r, c).value if c else None
+            return v.date() if isinstance(v, datetime) else v if isinstance(v, date) else None
+        linhas.append({
+            "cod": cod,
+            "tipo": texto(ws.cell(r, colunas["tipo"]).value) if "tipo" in colunas else "",
+            "chave_prova": texto(ws.cell(r, colunas["chave_prova"]).value),
+            "chave_vista": texto(ws.cell(r, colunas["chave_vista"]).value) if "chave_vista" in colunas else "",
+            "data_prova": como_data(colunas.get("data_prova")),
+            "data_vista": como_data(colunas.get("data_vista")),
+            "situacao": texto(ws.cell(r, colunas["situacao"]).value) if "situacao" in colunas else "",
+        })
+    return linhas
+
+
 def ler_controle(pasta) -> dict[str, tuple[int | None, int | None]]:
     """A aba CONTROLE: por disciplina, a CH prevista e a CH cumprida que a PROPRIA planilha conta.
 
@@ -355,6 +409,131 @@ def ler_impressao(caminho: Path, pasta, blocos: list[Bloco]):
     return impressao, digitadas, True
 
 
+def ler_impressao_paginada(caminho: Path, pasta, blocos: list[Bloco]):
+    """A IMPRESSAO dos cursos regulares: UMA PAGINA POR SEMANA, e as linhas nao se alinham com o PREENCHIMENTO.
+
+    Cada pagina tem cabecalho («DIA | HORARIO | DISCIPLINA … | LOCAL | T/E | INSTRUTOR/PROFESSOR»), os dias
+    em sequencia e o rodape («Gerado em:»). O dia NAO tem fronteira explicita: a data e a sigla do dia
+    (SEG…SAB) ficam numa celula no meio das linhas do dia. A fronteira que vale e o relogio — quando o
+    horario de inicio de uma linha e MENOR que o da anterior, comecou outro dia; a linha sem horario
+    (o Estudo Individual «---» de alguns cursos) continua o dia em curso. As datas da pagina sao
+    atribuidas aos dias na ordem em que aparecem, e a pagina so vale se os dois numeros batem.
+
+    O alinhamento com o PREENCHIMENTO e POR DIA: os blocos do dia (em ordem de TA) e as linhas de
+    bloco da IMPRESSAO (em ordem de horario) casam posicao a posicao quando as contagens sao iguais;
+    o dia em que nao sao vai para `dias_desalinhados`, e seus blocos ficam sem `esperado`.
+
+    Devolve (impressao por linha do PREENCHIMENTO, digitadas, alinhada, ei_por_dia, dias_desalinhados, paginas_invalidas).
+    """
+    vazio = ({}, {}, False, {}, [], [])
+    if ABA_IMPRESSAO not in pasta.sheetnames:
+        return vazio
+    aba = pasta[ABA_IMPRESSAO]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        formulas = openpyxl.load_workbook(caminho, data_only=False)[ABA_IMPRESSAO]
+
+    def ler_linha(r: int, colunas: dict[str, int]) -> dict[str, str]:
+        return {campo: texto(aba.cell(r, c).value) for campo, c in colunas.items()}
+
+    def inicio_em_minutos(horario: str) -> int | None:
+        m = re.search(r"(\d{1,2}):(\d{2})", horario)
+        return None if m is None else int(m.group(1)) * 60 + int(m.group(2))
+
+    por_dia: dict[date, list[tuple[int, dict[str, str]]]] = {}
+    ei_por_dia: dict[date, dict[str, str]] = {}
+    colunas: dict[str, int] = {}
+    pagina_rows: list[tuple[int, dict[str, str] | None]] = []
+    datas_da_pagina: list[tuple[int, date]] = []
+    paginas_invalidas: list[str] = []
+
+    LINHAS_POR_DIA = 9  # o modelo da IMPRESSAO reserva nove linhas por dia, em toda pagina (medido nas cinco planilhas)
+
+    def fechar_pagina() -> None:
+        """Fecha a pagina: cada dia ocupa NOVE linhas do modelo, e a data fica dentro das nove do seu dia."""
+        if not pagina_rows:
+            return
+        primeira = pagina_rows[0][0] if pagina_rows[0][1] is None else pagina_rows[0][0]
+        por_faixa: dict[int, list[tuple[int, dict[str, str]]]] = {}
+        for r, linha in pagina_rows:
+            if linha is None:
+                continue
+            por_faixa.setdefault((r - primeira) // LINHAS_POR_DIA, []).append((r, linha))
+        datas_por_faixa = {(r - primeira) // LINHAS_POR_DIA: d for r, d in datas_da_pagina}
+        for faixa, linhas in por_faixa.items():
+            data_do_dia = datas_por_faixa.get(faixa)
+            if data_do_dia is None:
+                paginas_invalidas.append(f"linhas {linhas[0][0]}-{linhas[-1][0]} da IMPRESSAO sem data no seu bloco de {LINHAS_POR_DIA} linhas")
+                continue
+            for r, linha in linhas:
+                eh_ei = linha["disciplina"] == "" and "ESTUDO" in linha["topico"].upper()
+                if eh_ei:
+                    ei_por_dia[data_do_dia] = {**linha, "linha_impressao": str(r)}
+                else:
+                    por_dia.setdefault(data_do_dia, []).append((r, linha))
+        pagina_rows.clear()
+        datas_da_pagina.clear()
+
+    for r in range(1, aba.max_row + 1):
+        rotulos = {texto(aba.cell(r, c).value).upper(): c for c in range(1, aba.max_column + 1)}
+        if "HORÁRIO" in rotulos and "DISCIPLINA" in rotulos:
+            fechar_pagina()
+            colunas = {campo: rotulos[rot] for rot, campo in _ROTULOS_DA_IMPRESSAO.items() if rot in rotulos}
+            colunas["ta"] = colunas["disciplina"] + 1
+            pagina_rows.append((r + 1, None))  # marca a primeira linha da pagina
+            continue
+        if not colunas:
+            continue
+        a1 = aba.cell(r, 1).value
+        if isinstance(a1, datetime):
+            datas_da_pagina.append((r, a1.date()))
+        elif isinstance(a1, date):
+            datas_da_pagina.append((r, a1))
+        if texto(a1).upper().startswith("GERADO EM"):
+            fechar_pagina()
+            colunas = {}
+            continue
+        linha = ler_linha(r, colunas)
+        if linha["disciplina"] or (linha["horario"] and linha["topico"]) or "ESTUDO" in linha["topico"].upper():
+            pagina_rows.append((r, linha))
+    fechar_pagina()
+
+    blocos_por_dia: dict[date, list[Bloco]] = {}
+    for b in blocos:
+        blocos_por_dia.setdefault(b.data, []).append(b)
+    impressao: dict[int, dict[str, str]] = {}
+    digitadas: dict[int, dict[str, str]] = {}
+    desalinhados: list[tuple[date, int, int]] = []
+    for dia_, bs in blocos_por_dia.items():
+        linhas = por_dia.get(dia_, [])
+        bs = sorted(bs, key=lambda b: b.ta_inicial)
+        if len(linhas) != len(bs):
+            desalinhados.append((dia_, len(linhas), len(bs)))
+            continue
+        for b, (r, linha) in zip(bs, linhas):
+            impressao[b.linha] = {**linha, "linha_impressao": str(r)}
+    # As celulas digitadas sao lidas pelas colunas do cabecalho MAIS PROXIMO acima da linha.
+    cabecalhos: list[tuple[int, dict[str, int]]] = []
+    for r in range(1, aba.max_row + 1):
+        rotulos = {texto(aba.cell(r, c).value).upper(): c for c in range(1, aba.max_column + 1)}
+        if "HORÁRIO" in rotulos and "DISCIPLINA" in rotulos:
+            cols = {campo: rotulos[rot] for rot, campo in _ROTULOS_DA_IMPRESSAO.items() if rot in rotulos}
+            cols["ta"] = cols["disciplina"] + 1
+            cabecalhos.append((r, cols))
+    for linha_preench, linha in impressao.items():
+        r = int(linha["linha_impressao"])
+        cols = next((c for rr, c in reversed(cabecalhos) if rr < r), None)
+        if cols is None:
+            continue
+        for campo in ("topico", "local", "te", "instrutor", "ta"):
+            bruto = formulas.cell(r, cols[campo]).value
+            if bruto is None or (isinstance(bruto, str) and (bruto.startswith("=") or bruto.strip() == "")):
+                continue
+            digitadas.setdefault(linha_preench, {})[campo] = texto(bruto)
+    alinhada = bool(blocos) and len(impressao) >= 0.9 * len(blocos)
+    return impressao, digitadas, alinhada, ei_por_dia, desalinhados, paginas_invalidas
+
+
 def montar_blocos(linhas: list[LinhaDeTa]) -> list[Bloco]:
     """Agrupa TA CONSECUTIVOS do mesmo dia com a mesma chave. Buraco no meio abre bloco novo."""
     blocos: list[Bloco] = []
@@ -400,6 +579,12 @@ def ler(caminho: Path) -> Leitura:
         if texto(aba.cell(r, 1).value).upper().startswith("SIGLA")
     ]
     impressao, digitadas, alinhada = ler_impressao(caminho, pasta, blocos)
+    ei_por_dia: dict = {}
+    dias_desalinhados: list = []
+    if not alinhada:
+        # Planilha de curso regular: uma pagina por semana, alinhamento por dia.
+        impressao, digitadas, alinhada, ei_por_dia, dias_desalinhados, paginas = ler_impressao_paginada(caminho, pasta, blocos)
+        dias_desalinhados = dias_desalinhados + [(p, 0, 0) for p in paginas]
     return Leitura(
         sigla=sigla,
         alunos=alunos,
@@ -414,6 +599,9 @@ def ler(caminho: Path) -> Leitura:
         impressao=impressao,
         digitadas=digitadas,
         horarios=ler_horarios(pasta),
+        impressao_ei=ei_por_dia,
+        datas_avaliacoes=ler_datas_avaliacoes(pasta),
+        dias_desalinhados=dias_desalinhados,
         impressao_alinhada=alinhada,
     )
 

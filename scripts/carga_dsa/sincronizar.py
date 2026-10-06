@@ -104,15 +104,20 @@ def plano_do_relogio(leitura: planilha.Leitura, ref: dict, res: Resolvido, titul
         # D1 (06/10/2026): o EI fora da tabela HORARIOS vive num catalogo de horario que a decisao nomeia;
         # a vigencia passa a apontar para ele, e o catalogo e conferido contra a tabela nos tempos dela.
         catalogo_id = None
-        if decisao and decisao.get("catalogo"):
-            cat = ref.get("catalogos", {}).get(decisao["catalogo"])
+        # `catalogo` e um codigo (vale para toda vigencia) ou um dicionario por tipo_regime (`{"excecao": "CFG-G"}`):
+        # nos cursos regulares a padrao e a excecao convivem, e o DSA usa a excecao quando as duas cobrem o dia.
+        pedido = decisao.get("catalogo") if decisao else None
+        if isinstance(pedido, dict):
+            pedido = pedido.get(vig["tipo_regime"])
+        if pedido:
+            cat = ref.get("catalogos", {}).get(pedido)
             if cat is None:
-                res.pendencias.append(Pendencia("catalogo_ausente", res.turma["codigo"], f"o catalogo {decisao['catalogo']} (D1) nao existe no destino: rode o preparo antes", 0, True, decisao["catalogo"]))
-                planos.append({"vigencia": vig, "novo": None, "criterio": f"catalogo {decisao['catalogo']} ausente no destino", "erros": []})
+                res.pendencias.append(Pendencia("catalogo_ausente", res.turma["codigo"], f"o catalogo {pedido} (D1) nao existe no destino: rode o preparo antes", 0, True, pedido))
+                planos.append({"vigencia": vig, "novo": None, "criterio": f"catalogo {pedido} ausente no destino", "erros": []})
                 continue
             catalogo_id = cat["id"]
             for e in relogio.conferir_catalogo(cat["tempos"], regime):
-                res.erros_de_planilha.append(f"catalogo {decisao['catalogo']} x aba HORARIOS: {e}")
+                res.erros_de_planilha.append(f"catalogo {pedido} x aba HORARIOS: {e}")
         novo = relogio.correcao(vig, regime, catalogo_id)
         erros = [f"aba HORARIOS, tempo {t} x {q} TA: «{p}» na planilha; pelos cinco campos do relogio seria «{r}»" for t, q, p, r in regime.erros]
         for e in erros:
@@ -486,7 +491,7 @@ def main() -> int:
             else:
                 n_ = plano["novo"]
                 print(f"  relogio: {atual} → {n_['hora_inicio_manha']} {n_['intervalo_manha_min']}/{n_['intervalo_tarde_min']} {n_['hora_inicio_tarde']}"
-                      f" {n_['regime_tempos']}x{n_['ta_duracao_min']} {'+catalogo ' + dec['relogio']['catalogo'] if n_.get('configuracao_horario_id') else 'sem catalogo'} ({plano['criterio']})")
+                      f" {n_['regime_tempos']}x{n_['ta_duracao_min']} {'+catalogo' if n_.get('configuracao_horario_id') else 'sem catalogo'} ({plano['criterio']})")
             for e in plano["erros"]:
                 print(f"    erro de planilha: {e}")
         if arg.relatorio is not None:

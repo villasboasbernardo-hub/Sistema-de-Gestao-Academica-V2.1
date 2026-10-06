@@ -58,6 +58,8 @@ _REGRAS_POR_DESCRICAO: tuple[tuple[tuple[str, ...], str, str | None], ...] = (
     (("TEMPO RESERVA",), "tr", "Tempo Reserva"),
     (("EXTRA CLASSE", "EXTRACLASSE", "ASSINCRONA"), "aec", "Atividade Extracurricular"),
     (("MONITORIA", "RECEPCAO", "ADMINISTRACAO", "DEPARTAMENTO DE ALUNOS"), "tad", "Administração"),
+    # DOEP (decisao do piloto, generalizada na onda 2): palestra/oficina do Departamento de Orientacao.
+    (("DOEP", "OFICINA"), "aec", "Palestra"),
 )
 
 MARCA_DE_DEMAIS = " Demais instrutores: "
@@ -215,6 +217,10 @@ def resolver(
                 sigla = leitura.catalogo[bloco.chave].tecnica
         if sigla.strip() in VAZIOS:
             return None, ""
+        if "/" in sigla:
+            # «EO/AP», «TG/TI»: duas tecnicas numa celula; vale a PRIMEIRA, como no instrutor (onda 2, CAHO).
+            r.alertas.append(f"L{bloco.linha} {bloco.data:%d/%m} {bloco.cod}+{bloco.ue}: T/E «{sigla}» traz duas tecnicas; valeu a primeira")
+            sigla = sigla.split("/")[0]
         valor = metodologia_por_sigla.get(normalizar(sigla))
         if valor is None:
             pend("tecnica_desconhecida", f"T/E «{sigla}» nao e sigla de metodologia do banco", bloco.tempos, chave=normalizar(sigla))
@@ -452,7 +458,14 @@ def resolver(
 
 def _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura) -> None:
     """A vista vai na MESMA linha da avaliacao (`RN-AVAL-02`). Uma linha guarda UMA sessao de vista."""
-    explicitas = decisoes.get("vistas", [])
+    explicitas = list(decisoes.get("vistas", []))
+    # A aba DATAS AVALIACOES, quando existe, diz QUAL vista e de QUAL prova (chave a chave, com as datas):
+    # vale como decisao explicita, antes de qualquer regra por numero (onda 2, C-Ap-HN e C-Espc-HN).
+    mapa = decisoes.get("disciplinas", {})
+    for d in getattr(leitura, "datas_avaliacoes", []):
+        if d["data_vista"] and d["data_prova"] and d["chave_vista"]:
+            explicitas.append({"disciplina": mapa.get(d["cod"], d["cod"]), "data": d["data_vista"].isoformat(),
+                               "da_prova_de": d["data_prova"].isoformat(), "origem": "DATAS AVALIACOES"})
     por_disciplina: dict[str, list[tuple[Bloco, dict]]] = {}
     for bloco, disciplina in blocos_de_vista:
         por_disciplina.setdefault(disciplina["cod"], []).append((bloco, disciplina))
@@ -469,10 +482,12 @@ def _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura) 
                             and v.get("ta_inicial", bloco.ta_inicial) == bloco.ta_inicial), None)
             if decisao is not None:
                 alvo = next((a for a in provas if a["data_avaliacao"] == decisao["da_prova_de"]), None)
-            elif _numero(bloco.ue):
+            elif _numero(bloco.ue) and any(_numero(a["chave_ue"]) == _numero(bloco.ue) for a in provas):
                 candidatas = [a for a in provas if _numero(a["chave_ue"]) == _numero(bloco.ue) and a["data_avaliacao"] <= bloco.data.isoformat()]
                 alvo = candidatas[-1] if candidatas else None
             else:
+                # Sem numero — ou com numero que nenhuma prova da disciplina tem (C-Espc-HN: provas «PM», vistas
+                # «VP1/VP2/VP3»): a sessao e a vista da ultima prova aplicada antes dela que ainda nao tem vista.
                 anteriores = [a for a in provas if (a["data_avaliacao"], a["ta_inicial"] or 0) < (bloco.data.isoformat(), bloco.ta_inicial)
                               and a["data_vista_prova"] is None]
                 alvo = anteriores[-1] if anteriores else None
@@ -594,7 +609,8 @@ def _tetos(r, ref, pend) -> None:
             continue
         if eh_tfm(nome):
             if ta > tfm:
-                pend("teto_de_tfm", f"semana {semana}/{ano}: «{nome}» teria {ta} TA; o teto de TFM e {tfm:g} (RN-DIST-03)", ta)
+                # Regra 6 do projeto: regra normativa vira ALERTA, nunca bloqueio (RN-DEG-02) — e a tela tambem so avisa.
+                r.alertas.append(f"semana {semana}/{ano}: «{nome}» tem {ta} TA; o teto de TFM e {tfm:g} (RN-DIST-03 — alerta, nao bloqueio)")
         elif ta > recomendado:
             r.alertas.append(f"semana {semana}/{ano}: «{nome}» tem {ta} TA; o recomendado e {recomendado:g} (alerta, nao bloqueio)")
 

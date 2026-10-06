@@ -17,11 +17,46 @@
     "LAB INFO": "Laboratório de Informática",
     "LABORATÓRIO DE INFORMÁTICA": "Laboratório de Informática",
     "LAB. INFO": "Laboratório de Informática",
-    "LAB DE INFORMÁTICA": "Laboratório de Informática"
+    "LAB DE INFORMÁTICA": "Laboratório de Informática",
+    "EAD": "EAD",
+    "CHM": "CHM",
+    "SALA DO CAHO": "Sala CAHO",
+    "CIAARA": "CIAARA",
+    "CNPA": "CNPA",
+    "---": "",
+    "-": "",
+    "MOODLE": "Moodle",
+    "SALA 05": "Sala 05",
+    "CAMR": "CAMR",
+    "CIAA": "CIAA",
+    "CN": "CN",
+    "AUDITÓRIO DHN": "Auditório DHN",
+    "AUDITÓRIO": "Auditório",
+    "PORTO DO AÇU": "Porto do Açu",
+    "BFNIF": "BFNIF",
+    "BNIF": "BFNIF",
+    "H36": "H36",
+    "H-36": "H36",
+    "H38": "H38",
+    "ASSÍNCRONA": "Assíncrona",
+    "CMOpM": "CMOpM",
+    "SALA 00": "Sala 00",
+    "DHN": "DHN",
+    "FAB": "FAB",
+    "NAS": "NAS",
+    "PÁTIO": "Pátio",
+    "BIBLIOTECA": "Biblioteca",
+    "AUDITORIO": "Auditório",
+    "AUDITÓRIO CIAARA": "Auditório",
+    "QUADRA": "Quadra",
+    "SALA DE AULA": ""
   },
   "excecao_virada_1": {
     "autorizada_por": "Bernardo Villas Boas",
     "em": "2026-10-06",
-    "alcance": "a forma da VIRADA-1 para os lancamentos: planilha de controle, por turma, reexecutavel"
-  }
+    "alcance": "a forma da VIRADA-1 para os lancamentos: planilha de controle, por turma, reexecutavel (onda 2)"
+  },
+  "provisorias": [
+    "locais fora do inventario de salas entram como TEXTO (Sala 05, CAMR, CIAA, CN, Auditorio DHN, BFNIF, H36, H38, CMOpM, Sala 00, DHN, FAB, NAS, Patio, Biblioteca, Porto do Acu) — cadastrar como sala e decisao do lote"
+  ]
 }

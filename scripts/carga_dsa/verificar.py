@@ -183,7 +183,9 @@ def conferir_semanas(turma: str, leitura: planilha.Leitura, plano: dict, dsa: di
         te_p = esperado["te"].strip()
         te_p = "" if te_p in ("-", "--", "---") else te_p
         if te_p != linha["te"]:
-            if linha["estudoIndividual"]:
+            if "/" in te_p and te_p.split("/")[0].strip().upper() == linha["te"].upper():
+                dif(bloco, "DECISAO", "T/E", f"«{te_p}» traz duas tecnicas; valeu a primeira («{linha['te']}»)")
+            elif linha["estudoIndividual"]:
                 dif(bloco, "DECISAO", "T/E", f"Estudo Individual: «{te_p}» na planilha, «EI» no sistema")
             elif linha["disciplina"] == "":
                 dif(bloco, "DECISAO", "T/E", f"atividade nao letiva: «{te_p}» na planilha, vazio no sistema")
@@ -204,7 +206,9 @@ def conferir_semanas(turma: str, leitura: planilha.Leitura, plano: dict, dsa: di
             elif "(FISCAL)" in instr_p.upper() and "(FISCAL)" not in linha["instrutor"].upper():
                 dif(bloco, "SISTEMA", "instrutor", "a aplicacao da prova imprime o responsavel, e a planilha imprime o FISCAL")
             elif primeiro in instrutor_do_texto or sem_fiscal in instrutor_do_texto:
-                tokens_p = normalizar(sem_fiscal if "/" not in sem_fiscal else primeiro).split()
+                # «CT (RM2-T) FULANA (EN)»: a OM entre parenteses DEPOIS do nome nao e nome — sai antes de comparar.
+                sem_om = re.sub(r"\s*\([^)]*\)\s*$", "", sem_fiscal if "/" not in sem_fiscal else primeiro)
+                tokens_p = normalizar(sem_om).split()
                 tokens_s = normalizar(re.sub(r"\(\s*FISCAL\s*\)", "", linha["instrutor"], flags=re.IGNORECASE)).split()
                 if "/" in sem_fiscal:
                     dif(bloco, "DECISAO", "instrutor", f"dois instrutores na planilha («{instr_p}»); o primeiro e o instrutor e o segundo vai nas observacoes")
