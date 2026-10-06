@@ -227,6 +227,8 @@ export type ConteudoDoFato = {
   readonly tecnicaDaVista?: string | null | undefined;
   /** `atividades_nao_letivas.responsavel_externo`. */
   readonly externo?: string | null | undefined;
+  /** `avaliacoes.nome_fiscal_externo` — o fiscal que não é do cadastro (`RN-INST-01`). */
+  readonly fiscalExterno?: string | null | undefined;
 };
 
 /**
@@ -257,13 +259,20 @@ export function fatoDaOcupacao(
    * ⚠️ O FISCAL ENTRA NA COLUNA DO INSTRUTOR COM `(FISCAL)`, que é como o documento assinado o
    * escreve (`RF-INSTR-15`, medido nos PDFs). Sem a marca, a coluna diria um nome que não é o de
    * quem ministrou.
+   *
+   * ⚠️ **NA APLICAÇÃO DA PROVA O FISCAL VEM PRIMEIRO; NA VISTA, O RESPONSÁVEL** — medido em
+   * 06/10/2026 nas 19 provas do `C-Esp-ME 2026`: o DSA assinado traz o fiscal na linha da aplicação
+   * e quem conduz a vista na linha da vista. As duas são a MESMA linha de `avaliacoes`, e o fiscal
+   * só aparecia quando não havia responsável — ou seja, sumia de toda prova com os dois cadastrados.
+   * Fora da aplicação a ordem não muda: quem ministra, e o fiscal só na falta dele.
    */
+  const doCadastro = (id: string | null): string | null =>
+    id === null ? null : (nomes.instrutores.get(id) ?? null);
+  const nomeDoFiscal = doCadastro(linha.fiscal_id) ?? (extra?.fiscalExterno?.trim() || null);
+  const fiscal = nomeDoFiscal === null ? null : `${nomeDoFiscal} (FISCAL)`;
+  const ministrante = doCadastro(linha.instrutor_id);
   const responsavel =
-    linha.instrutor_id !== null
-      ? (nomes.instrutores.get(linha.instrutor_id) ?? null)
-      : linha.fiscal_id !== null
-        ? `${nomes.instrutores.get(linha.fiscal_id) ?? ""} (FISCAL)`.trim()
-        : null;
+    linha.origem === "avaliacao" ? (fiscal ?? ministrante) : (ministrante ?? fiscal);
   return {
     fatoId: linha.fato_id,
     origem:

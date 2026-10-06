@@ -192,7 +192,7 @@ export async function lerSemanaDoDsa(
     supabase
       .from("avaliacoes")
       .select(
-        "id, data_avaliacao, data_vista_prova, ta_inicial, ta_inicial_vista, tipo_avaliacao, conteudo_resumo, metodologia, status",
+        "id, data_avaliacao, data_vista_prova, ta_inicial, ta_inicial_vista, tipo_avaliacao, conteudo_resumo, metodologia, nome_fiscal_externo, status",
       )
       .eq("turma_id", turmaId)
       .neq("status", "cancelada")
@@ -217,7 +217,17 @@ export async function lerSemanaDoDsa(
       .select(COLUNAS_DA_VIGENCIA)
       .eq("curso_id", cursoId)
       .eq("status", "ativo"),
-    supabase.from("feriados").select(COLUNAS_DO_FERIADO).gte("data", de).lte("data", ate),
+    /*
+     * ⚠️ **SÓ O FERIADO ATIVO** (regra 4: exclusão é lógica). Medido em 06/10/2026: um dia
+     * inativado no calendário continuava bloqueando a grade e o papel, porque esta leitura não
+     * olhava o `status` — e nada na tela dizia por quê.
+     */
+    supabase
+      .from("feriados")
+      .select(COLUNAS_DO_FERIADO)
+      .eq("status", "ativo")
+      .gte("data", de)
+      .lte("data", ate),
     supabase.from("cursos").select("codigo, curriculo_modelo").eq("id", cursoId).maybeSingle(),
     supabase
       .from("disciplinas")
@@ -353,8 +363,11 @@ export async function lerSemanaDoDsa(
     tipo_avaliacao: string | null;
     conteudo_resumo: string | null;
     metodologia: string | null;
+    nome_fiscal_externo: string | null;
   }[]) {
     conteudos.set(a.id, {
+      /* O fiscal de fora do cadastro: a view da ocupação só traz o `fiscal_id`. */
+      fiscalExterno: a.nome_fiscal_externo,
       /* ⚠️ O título gravado quando há; senão o tipo — a regra é de `conteudoDaAvaliacao`. */
       conteudo: conteudoDaAvaliacao(a.conteudo_resumo, a.tipo_avaliacao),
       tecnica: a.metodologia,

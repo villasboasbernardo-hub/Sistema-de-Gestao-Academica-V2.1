@@ -233,6 +233,8 @@ export function diaImpresso(
 ): DiaImpresso {
   const comuns: LinhaImpressa[] = [];
   let doEi: LinhaImpressa | null = null;
+  /* Onde o EI guardado entraria em `comuns`, se outro EI aparecer depois dele no mesmo dia. */
+  let posicaoDoEi = 0;
   let ultimoTa: number | null = null;
 
   for (const celula of dia.celulas) {
@@ -260,6 +262,13 @@ export function diaImpresso(
     };
 
     if (ehEi) {
+      /*
+       * ⚠️ **DOIS ESTUDOS INDIVIDUAIS NO MESMO DIA SAEM OS DOIS** — medido em 06/10/2026 na carga do
+       * `C-Esp-ME 2026`: em 04/08 houve EI do 1º ao 4º tempo e no 8º, e o papel guardava só o
+       * último lido. O anterior volta para o corpo, NA POSIÇÃO DELE; o último continua sendo o pé.
+       */
+      if (doEi !== null) comuns.splice(posicaoDoEi, 0, doEi);
+      posicaoDoEi = comuns.length;
       /* ⚠️ O EI lançado **substitui** a linha fixa, e sai do corpo: ele é o pé do dia. */
       doEi = {
         ...linha,

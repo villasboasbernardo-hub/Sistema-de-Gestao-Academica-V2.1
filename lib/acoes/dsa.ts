@@ -459,6 +459,8 @@ export async function lancarEstudoIndividualDaSemana(
       .from("feriados")
       .select("data, impacto")
       .eq("impacto", "dia_inteiro")
+      /* ⚠️ Só o feriado ATIVO bloqueia (regra 4) — o inativado deixava o dia sem Estudo Individual. */
+      .eq("status", "ativo")
       .gte("data", de)
       .lte("data", ate),
     supabase

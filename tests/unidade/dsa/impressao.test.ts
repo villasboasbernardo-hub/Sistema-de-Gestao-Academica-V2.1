@@ -212,6 +212,54 @@ describe("a linha fixa `ESTUDO INDIVIDUAL · EI` — `praticas-da-planilha.md` �
     expect(impresso.linhas[1]?.te).toBe(SIGLA_DO_ESTUDO_INDIVIDUAL);
   });
 
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA, medido em 06/10/2026 na carga do `C-Esp-ME 2026`.** Em 04/08 a
+   * turma teve Estudo Individual do 1º ao 4º tempo E no 8º. O papel guardava UM Estudo Individual
+   * por dia — o último lido — e o da manhã sumia: 4 TA lançados, contados e fora do documento.
+   */
+  it("⚠️ dois Estudos Individuais no mesmo dia saem os DOIS, e o último continua no pé", () => {
+    const semana = montar({
+      fatos: [
+        fato({
+          fatoId: "ei-da-manha",
+          origem: "atividade_nao_letiva",
+          taInicial: 1,
+          tempos: 4,
+          disciplina: null,
+          conteudo: "ESTUDO INDIVIDUAL",
+          tecnica: "Estudo Individual",
+          instrutor: null,
+        }),
+        fato({ fatoId: "aula-da-tarde", taInicial: 6, tempos: 2 }),
+        fato({
+          fatoId: "ei-do-fim",
+          origem: "atividade_nao_letiva",
+          taInicial: 8,
+          tempos: 1,
+          disciplina: null,
+          conteudo: "ESTUDO INDIVIDUAL",
+          tecnica: "Estudo Individual",
+          instrutor: null,
+        }),
+      ],
+    });
+    const dia = semana.dias[0];
+    if (dia === undefined) throw new Error("a semana saiu sem dias");
+    const impresso = diaImpresso(dia, {
+      relogio: semana.relogio,
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: new Set(["ei-da-manha", "ei-do-fim"]),
+    });
+    expect(impresso.linhas.map((l) => l.chave)).toEqual([
+      "ei-da-manha",
+      "aula-da-tarde",
+      "ei-do-fim",
+    ]);
+    expect(impresso.linhas[0]?.tempos).toBe(4);
+    expect(impresso.linhas[0]?.te).toBe(SIGLA_DO_ESTUDO_INDIVIDUAL);
+    expect(impresso.linhas[0]?.estudoIndividual).toBe(true);
+  });
+
   /* ⚠️ O controle: só o que foi LANÇADO sai — a linha FIXA de EI continua fora do dia bloqueado. */
   it("dia bloqueado com lançamento e SEM Estudo Individual lançado não ganha a linha fixa", () => {
     const semana = montar({

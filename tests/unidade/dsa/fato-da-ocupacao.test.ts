@@ -215,3 +215,60 @@ describe("a CH cumprida do rodapé é a ACUMULADA ATÉ A SEMANA — `RN-CRONOS-0
     expect(ate.map((d) => d.cumprida)).toEqual([35, 65]);
   });
 });
+
+describe("na APLICAÇÃO da prova quem aparece é o FISCAL; na VISTA, quem a conduz", () => {
+  /*
+   * ⚠️ **MEDIDO EM 06/10/2026, na carga do `C-Esp-ME 2026`: 19 provas.** O DSA assinado traz, na
+   * linha da aplicação, o fiscal — *"SO-ME (RM1) FULANO (FISCAL)"* —, e na linha da vista, o
+   * instrutor que a conduz. As duas são a MESMA linha de `avaliacoes`, com um responsável e um
+   * fiscal; o mapeador punha o responsável nas duas, e o fiscal só aparecia quando não havia
+   * responsável nenhum.
+   */
+  const COM_FISCAL = {
+    ...NOMES,
+    instrutores: new Map([
+      ["instr-1", "1ºTen (RM2-T) FULANA DE TAL"],
+      ["fiscal-1", "SO (RM1-ME) BELTRANO DE TAL"],
+    ]),
+  };
+
+  it("⚠️ a aplicação com responsável E fiscal mostra o fiscal, com a marca", () => {
+    const aplicacao = fatoDaOcupacao(
+      linha({ origem: "avaliacao", instrutor_id: "instr-1", fiscal_id: "fiscal-1" }),
+      COM_FISCAL,
+    );
+    expect(aplicacao.instrutor).toBe("SO (RM1-ME) BELTRANO DE TAL (FISCAL)");
+  });
+
+  it("a vista da MESMA avaliação mostra o responsável, sem a marca", () => {
+    const vista = fatoDaOcupacao(
+      linha({ origem: "vista_prova", instrutor_id: "instr-1", fiscal_id: "fiscal-1" }),
+      COM_FISCAL,
+    );
+    expect(vista.instrutor).toBe("1ºTen (RM2-T) FULANA DE TAL");
+  });
+
+  /* ⚠️ O fiscal pode não ser instrutor (`RN-INST-01`): o de fora do cadastro vem pelo mapa. */
+  it("fiscal de fora do cadastro aparece na aplicação, com a marca", () => {
+    const nomes = {
+      ...COM_FISCAL,
+      conteudos: new Map([
+        ["aval-1", { conteudo: PROVA, tecnica: "Prova Mista", fiscalExterno: "CT CICRANO" }],
+      ]),
+    };
+    const aplicacao = fatoDaOcupacao(
+      linha({ origem: "avaliacao", instrutor_id: "instr-1", fiscal_id: null }),
+      nomes,
+    );
+    expect(aplicacao.instrutor).toBe("CT CICRANO (FISCAL)");
+  });
+
+  /* O controle: sem fiscal, a aplicação continua mostrando o responsável. */
+  it("sem fiscal nenhum, a aplicação mostra o responsável", () => {
+    const aplicacao = fatoDaOcupacao(
+      linha({ origem: "avaliacao", instrutor_id: "instr-1", fiscal_id: null }),
+      COM_FISCAL,
+    );
+    expect(aplicacao.instrutor).toBe("1ºTen (RM2-T) FULANA DE TAL");
+  });
+});
