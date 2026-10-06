@@ -302,6 +302,11 @@ export function trechosDoBloco(
  * `16:25–17:20` onde a regra dá `16:25–17:10` — o início bate, e o fim difere 10 min porque o TA de
  * 45 minutos não produz um bloco de 55. **A `D-11` decidiu: o EI dura um TA, derivado, sem parâmetro
  * novo.**
+ *
+ * ⚠️ **D1 DA VIRADA-1** *(decisão de Bernardo Villas Boas, 06/10/2026)*: onde o EI tem horário que o
+ * regime não produz (Ag-Mag `16:50–17:30`, C-Ap-HN `16:25–17:20`), ele vive no **catálogo** como tempo
+ * `excepcional` depois do último TA do regime, e a vigência aponta para esse catálogo. A regra do slot
+ * não muda: o que muda é a fonte do horário, que o catálogo entrega lido, nunca recalculado.
  */
 export function slotDoEstudoIndividual(ultimoTaLancado: number | null): number | null {
   if (ultimoTaLancado === null) return 1;
