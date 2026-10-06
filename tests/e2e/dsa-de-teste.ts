@@ -814,12 +814,24 @@ export async function limparDsa(semeado: DsaSemeado | undefined): Promise<void> 
 
   await admin().from("feriados").delete().like("codigo", `DSA-${s}-%`);
   await admin().from("responsaveis_curso").delete().like("codigo", `DSA-${s}-%`);
-  /* A semente do vocabulário sai pela MARCA, nunca pelo valor — ele é dado real da planilha. */
-  await admin()
-    .from("config_listas")
-    .delete()
-    .eq("lista", "tipos_avaliacao")
-    .eq("observacao", MARCA_DA_SEMENTE);
+  /*
+   * ⚠️ **O VALOR SEMEADO EM `config_listas` NÃO É APAGADO, e isso foi corrigido PELO CI.**
+   *
+   * `playwright.config.ts` tem `fullyParallel: true`: os casos de um arquivo se espalham pelos
+   * processos, e **cinco** arquivos do DSA chamam `semearDsa`/`limparDsa`. `config_listas` é
+   * **estado compartilhado por todos eles** — a lista não tem número de processo no valor, porque é
+   * vocabulário do domínio, não amostra. Apagá-la no `afterAll` de um processo derrubava a semente
+   * de outro **que ainda estava rodando**, com a mensagem *"O valor «Prova Escrita» não pertence à
+   * lista tipos_avaliacao"* — que acusa a LISTA quando a causa é a ordem de limpeza.
+   * ⚠️ **MEDIDO NO CI em 06/10/2026: duas execuções sobre o MESMO commit, uma verde e uma
+   * vermelha** (runs `37395622272` e `37395617001` do PR #30) — o modo de falha que mais parece
+   * azar e não é.
+   * ⚠️ **É a terceira vez que esta forma aparece nesta base** (a segunda foi `rls.test.ts` apagando
+   * `tipos_atividade` inteira no meio da suíte, no PR 2), e a regra que ela ensina é: **amostra
+   * apaga o que carrega o número do processo; vocabulário compartilhado, não.**
+   * ⚠️ **O que fica para trás é UMA linha marcada** (`observacao = MARCA_DA_SEMENTE`), e ela
+   * desaparece no `db:reset` da verificação seguinte — que é como a suíte sempre começa.
+   */
   await admin().from("avaliacoes").delete().like("codigo", `DSA-${s}-%`);
   await admin().from("registros_aula").delete().like("codigo", `DSA-${s}-%`);
 
