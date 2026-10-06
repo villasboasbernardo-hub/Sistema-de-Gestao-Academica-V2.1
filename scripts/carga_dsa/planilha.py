@@ -343,7 +343,9 @@ def ler_impressao(caminho: Path, pasta, blocos: list[Bloco]):
         formulas = openpyxl.load_workbook(caminho, data_only=False)[ABA_IMPRESSAO]
     digitadas: dict[int, dict[str, str]] = {}
     for b in blocos:
-        for campo in ("topico", "local", "te", "instrutor"):
+        # `ta` e so LISTADO: quem conta TA e o PREENCHIMENTO, e um numero digitado na IMPRESSAO
+        # que discorda dele e erro de planilha (e desloca o painel de CH da semana em diante).
+        for campo in ("topico", "local", "te", "instrutor", "ta"):
             bruto = formulas.cell(b.linha, colunas[campo]).value
             if bruto is None or (isinstance(bruto, str) and (bruto.startswith("=") or bruto.strip() == "")):
                 continue

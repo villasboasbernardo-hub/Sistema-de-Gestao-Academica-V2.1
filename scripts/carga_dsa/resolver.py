@@ -273,6 +273,13 @@ def resolver(
 
     blocos_de_vista: list[tuple[Bloco, dict]] = []
     dias_parados: dict[str, list[tuple[Bloco, dict]]] = {}
+    for linha_digitada, campos in sorted(leitura.digitadas.items()):
+        bloco_digitado = next((b for b in leitura.blocos if b.linha == linha_digitada), None)
+        if "ta" in campos and bloco_digitado is not None and campos["ta"] != str(bloco_digitado.tempos):
+            r.erros_de_planilha.append(
+                f"IMPRESSAO linha {linha_digitada} ({bloco_digitado.data:%d/%m/%Y}): nº de TA digitado «{campos['ta']}» por cima da formula, "
+                f"e o PREENCHIMENTO tem {bloco_digitado.tempos} TA nesse bloco — o painel de CH da planilha fica deslocado dali em diante"
+            )
 
     for bloco in leitura.blocos:
         if bloco.chave not in leitura.catalogo:
@@ -427,7 +434,7 @@ def resolver(
 
     _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura)
     _resolver_dias_parados(r, dias_parados, dias_globais, leitura, codigo, procedencia, categoria_do_subtipo)
-    _conferencias_internas(r, leitura, decisoes, pend)
+    _conferencias_internas(r, leitura, decisoes, pend, set(disciplina_por_cod))
     _tetos(r, ref, pend)
     _calendario_do_banco(r, ref)
     return r
@@ -497,7 +504,7 @@ def _resolver_dias_parados(r, dias_parados, dias_globais, leitura, codigo, proce
             })
 
 
-def _conferencias_internas(r, leitura, decisoes, pend) -> None:
+def _conferencias_internas(r, leitura, decisoes, pend, disciplinas_do_curso) -> None:
     """As conferencias da planilha contra ela mesma — OBRIGATORIAS (o gabarito e opcional).
 
     1. chave × «CH CONCLUIDA»: o que o leitor contou em cada chave fecha com o que a PROPRIA
@@ -539,6 +546,8 @@ def _conferencias_internas(r, leitura, decisoes, pend) -> None:
     for chave, linha in sorted(leitura.catalogo.items()):
         if linha.ch is None or not chave[1].isdigit() or chave not in lido:
             continue
+        if decisoes.get("disciplinas", {}).get(chave[0], chave[0]) not in disciplinas_do_curso:
+            continue  # so UE de disciplina: licenca, feriado e afins nao tem carga prevista a cumprir
         if lido[chave] != linha.ch and not (em_andamento and lido[chave] < linha.ch):
             estado = "PASSOU" if lido[chave] > linha.ch else "FALTA"
             r.erros_de_planilha.append(f"UE {chave[0]}+{chave[1]}: {lido[chave]} TA lancados e {linha.ch} previstos no catalogo ({estado})")

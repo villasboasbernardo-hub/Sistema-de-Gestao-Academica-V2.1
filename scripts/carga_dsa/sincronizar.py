@@ -354,6 +354,23 @@ def main() -> int:
     for dia, q in quadro.items():
         print(f"  {dia} {'GLOBAL ' if q['global'] else 'parcial'} pararam {len(q['pararam'])} de {len(q['cobrem'])}" + ("" if q["global"] else f" — seguiram: {sorted(set(q['cobrem']) - set(q['pararam']))}"))
 
+    # O calendario global so fica com o que parou TODAS as turmas. O que esta la «por curso» e
+    # proposta do lote; no modo provisorio (local) ela e aplicada, para a verificacao nao acusar
+    # como bloqueado um dia em que a turma teve expediente.
+    cobertura = sorted(d for l in leituras.values() for d in (min(b.data for b in l.blocos).isoformat(), max(b.data for b in l.blocos).isoformat()))
+    por_curso = banco.consultar(arg.destino, f"""
+        select codigo, data, descricao from public.feriados
+         where status = 'ativo' and impacto = 'dia_inteiro' and data between {lit(cobertura[0])}::date and {lit(cobertura[-1])}::date
+           and not (data = any (array[{', '.join(lit(d) for d in sorted(globais)) or "null"}]::date[])) order by data""")
+    titulo("Calendario global: dias que estao la e NAO pararam todas as turmas (proposta: inativar)")
+    for f in por_curso:
+        q = quadro.get(f["data"])
+        print(f"  {f['codigo']} {f['data']} «{f['descricao']}» — " + (f"pararam {q['pararam']}" if q else "nenhuma turma parou nesse dia"))
+    if por_curso and arg.provisorio and arg.gravar:
+        banco.consultar(arg.destino, "update public.feriados set status = 'inativo' where codigo = any (array["
+                        + ", ".join(lit(f["codigo"]) for f in por_curso) + "]::text[])")
+        print(f"  [PROVISORIO, so no local] {len(por_curso)} dia(s) inativado(s) no calendario global.")
+
     veredito = 0
     resumo = []
     for turma in pedidas:
