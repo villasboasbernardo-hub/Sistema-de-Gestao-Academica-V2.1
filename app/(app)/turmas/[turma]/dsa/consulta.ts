@@ -34,7 +34,7 @@ import { enderecoDoDsa, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 
 /** Nunca `select *`. */
 export const COLUNAS_DA_TURMA_DO_DSA =
-  "id, codigo, turma, ano_letivo, status, modalidade, sala_alocada, alunos, curso_id";
+  "id, codigo, turma, ano_letivo, status, modalidade, sala_alocada, alunos, curso_id, data_inicio";
 
 export const COLUNAS_DA_OCUPACAO =
   "turma_id, data, ta_inicial, ta_final, tempos_consumidos, origem, fato_id, disciplina_id, instrutor_id, fiscal_id, local, herdado";

@@ -1,0 +1,252 @@
+/*
+ * O CSS da impressão do DSA — **o primeiro `@media print` do repositório** (`RF-PDF-01`, `T079`).
+ *
+ * ⚠️ **A COR ESCRITA À MÃO AQUI É A ÚNICA EXCEÇÃO AUTORIZADA DO PROJETO, e ela foi PREVISTA POR
+ * ESCRITO antes de existir.** `eslint.config.mjs`, no comentário da regra de cor: *"EXCEÇÃO
+ * AUTORIZADA, UMA SÓ: o CSS de impressão, para a normalização preto-no-branco. Ela ainda NÃO
+ * EXISTE […] e fica prevista aqui para não ser negociada às pressas no dia em que aparecer, que é
+ * como exceção vira regra."* O dia chegou, e a exceção está onde foi prometida.
+ *
+ * ⚠️ **E A RAZÃO DELA É FÍSICA, não estética: PAPEL NÃO TEM TEMA.** Os tokens do `@theme` têm dois
+ * valores — claro e noturno —, e `prefers-color-scheme: dark` **não muda** quando se manda
+ * imprimir: o documento sairia com fundo escuro, gastando tinta e ilegível em fotocópia. Um
+ * documento oficial da Marinha, assinado e arquivado, é preto no branco. ⚠️ **A regra do ESLint não
+ * alcança `.css`** (ela mira `*.ts`/`*.tsx`), então o que impede isto de virar precedente não é a
+ * ferramenta: é este arquivo ser **um só** e estar nomeado na exceção.
+ *
+ * ⚠️ **A FONTE É A RAWLINE AUTO-HOSPEDADA, e isso é requisito, não preferência** (`FR-015`): na
+ * v2.0 ela vinha por CDN, e *"dependência externa quebraria a impressão, que não pode depender de
+ * rede no momento em que alguém manda imprimir"*. A classe da raiz vem do `app/layout.tsx`.
+ */
+
+/*
+ * ⚠️ **A4 PAISAGEM COM 10 mm DE MARGEM, e caber em UMA página é ASSERÇÃO** (`SC-001`): o
+ * `dsa-imprimir.spec.ts` mede `page.pdf({ format: "A4", landscape: true })` e exige contagem de
+ * páginas **= 1** para a semana cheia (45 TA + sábado). Recomendação não se verifica; asserção sim.
+ */
+@page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+/*
+ * ⚠️ **A FAIXA DE AMBIENTE SAI DA ROTA INTEIRA, não só do papel.** O contrato da impressão é
+ * explícito: *"sem casca, sem menu, sem faixa de ambiente, sem botão: a rota é só o documento"*.
+ * ⚠️ **E ELA NÃO PODIA SAIR PELO SERVIDOR:** a faixa é desenhada por `app/layout.tsx`, que é o
+ * layout **raiz** — um layout aninhado o envolve, não o substitui, e Server Component não conhece o
+ * caminho da requisição. As alternativas eram criar um segundo layout raiz (exige mover **todas** as
+ * rotas para grupos) ou ler `headers()` no layout raiz (tornaria **toda** rota dinâmica, inclusive
+ * `/estilo` e `/login`, que hoje não são). Esta regra vive no CSS **desta rota**, que o Next carrega
+ * só quando ela é servida.
+ */
+[data-slot="faixa-de-ambiente"] {
+  display: none;
+}
+
+.dsa-impresso {
+  /* Preto no branco, independentemente do tema — ver a nota do topo. */
+  background: #ffffff;
+  color: #000000;
+  font-size: 9pt;
+  line-height: 1.15;
+  /* Nenhum espaço fora da margem da página: o `@page` já reservou os 10 mm. */
+  margin: 0;
+  padding: 0;
+}
+
+.dsa-impresso * {
+  box-sizing: border-box;
+}
+
+/* ⚠️ O cabeçalho institucional é **texto fixo do documento oficial** (`praticas-da-planilha.md` §1.2). */
+.dsa-impresso .dsa-cabecalho {
+  text-align: center;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.dsa-impresso .dsa-identificacao {
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+  margin-top: 1.5mm;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dsa-impresso table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-top: 2mm;
+}
+
+.dsa-impresso th,
+.dsa-impresso td {
+  border: 0.3mm solid #000000;
+  padding: 0.6mm 1mm;
+  vertical-align: top;
+  /*
+   * ⚠️ **`word-break` É O QUE IMPEDE A COLUNA DE EMPURRAR A PÁGINA.** O tópico de uma UE chega com
+   * 80 caracteres sem espaço em alguns currículos, e sem isto a tabela estoura a largura da folha —
+   * que é exatamente o `SC-001` falhando por um dado, não por desenho.
+   */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.dsa-impresso thead th {
+  font-size: 7pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+  /* Fundo levíssimo: o documento assinado destaca o cabeçalho, e cinza claro fotocopia bem. */
+  background: #eeeeee;
+}
+
+/* As oito colunas, na largura em que o documento assinado as traz (`contracts/impressao.md`). */
+.dsa-impresso col.dsa-col-dia {
+  width: 9%;
+}
+.dsa-impresso col.dsa-col-horario {
+  width: 11%;
+}
+.dsa-impresso col.dsa-col-disciplina {
+  width: 7%;
+}
+.dsa-impresso col.dsa-col-ta {
+  width: 4%;
+}
+.dsa-impresso col.dsa-col-conteudo {
+  width: 33%;
+}
+.dsa-impresso col.dsa-col-local {
+  width: 10%;
+}
+.dsa-impresso col.dsa-col-te {
+  width: 7%;
+}
+.dsa-impresso col.dsa-col-instrutor {
+  width: 19%;
+}
+
+.dsa-impresso td.dsa-dia {
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 7.5pt;
+}
+
+.dsa-impresso td.dsa-ta,
+.dsa-impresso td.dsa-horario {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-size: 8pt;
+}
+
+/* ⚠️ Os dois trechos do bloco que atravessa o almoço, **um por linha** (`SC-011`, o `D-3`). */
+.dsa-impresso .dsa-trecho {
+  display: block;
+}
+
+.dsa-impresso td.dsa-te {
+  text-align: center;
+  font-weight: 600;
+}
+
+.dsa-impresso tr.dsa-linha-ei td {
+  font-weight: 600;
+}
+
+.dsa-impresso td.dsa-bloqueio {
+  text-align: center;
+  font-style: italic;
+}
+
+.dsa-impresso .dsa-nome-de-guerra {
+  font-weight: 700;
+}
+
+.dsa-impresso .dsa-rodape {
+  margin-top: 2mm;
+  font-size: 7pt;
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+}
+
+.dsa-impresso .dsa-rodape-quadros {
+  display: flex;
+  gap: 4mm;
+  align-items: flex-start;
+}
+
+.dsa-impresso .dsa-rodape-quadros table {
+  margin-top: 0;
+  width: auto;
+  table-layout: auto;
+}
+
+.dsa-impresso .dsa-rodape-quadros th,
+.dsa-impresso .dsa-rodape-quadros td {
+  font-size: 6.5pt;
+  padding: 0.4mm 1.2mm;
+}
+
+.dsa-impresso .dsa-observacoes {
+  /*
+   * ⚠️ **A LINHA SAI EM BRANCO, PARA ESCREVER À MÃO** (`H8`, opção **a**, decisão de Bernardo
+   * Villas Boas de 05/10/2026). Nenhum dos PDFs medidos tem este campo, e o `RF-DSA-06` e o
+   * `RF-PDF-01` o exigem **literalmente** — a linha vazia satisfaz o requisito **[PRESERVADO]** sem
+   * inventar conteúdo nem contrariar o documento assinado.
+   */
+  border-bottom: 0.2mm solid #000000;
+  min-height: 6mm;
+  margin-top: 1mm;
+}
+
+.dsa-impresso .dsa-assinaturas {
+  display: flex;
+  justify-content: space-between;
+  gap: 10mm;
+  margin-top: 4mm;
+  font-size: 7.5pt;
+  text-align: center;
+}
+
+.dsa-impresso .dsa-assinatura {
+  flex: 1;
+}
+
+/* A linha onde se assina — ela existe **mesmo sem responsável vigente** (`FR-036`, `RN-DEG-01`). */
+.dsa-impresso .dsa-rubrica {
+  border-top: 0.2mm solid #000000;
+  margin-top: 8mm;
+  padding-top: 0.8mm;
+  min-height: 3mm;
+}
+
+/*
+ * ⚠️ **O QUE O `@media print` ACRESCENTA É SÓ O QUE DEPENDE DE IMPRIMIR.** O preto-no-branco e as
+ * larguras valem **na tela também**, de propósito: quem confere o papel antes de mandar imprimir
+ * precisa ver o papel, não uma versão de tela dele. É o que o `D-2` ensina — a planilha imprimia
+ * `#REF!` porque ninguém olhava a aba IMPRESSÃO antes.
+ */
+@media print {
+  /* Nenhuma linha cortada no meio por quebra de página. */
+  .dsa-impresso tr,
+  .dsa-impresso .dsa-assinaturas,
+  .dsa-impresso .dsa-rodape {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* O cabeçalho da tabela se repete se houver quebra — que não deve haver (`SC-001`). */
+  .dsa-impresso thead {
+    display: table-header-group;
+  }
+}

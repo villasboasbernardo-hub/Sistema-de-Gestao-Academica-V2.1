@@ -112,6 +112,48 @@ export function enderecoDoDsa(
 
 export const ROTA_DO_DSA = "/turmas/[turma]/dsa" as const;
 
+/** A rota da impressão do DSA — **fora** de `(app)`, sem casca (`RF-PDF-01`). */
+export const ROTA_DA_IMPRESSAO_DO_DSA = "/print/dsa" as const;
+
+/**
+ * O endereço da impressão do DSA — `/print/dsa?turma=&semana=&ano=&sabado=` (`RF-PDF-01`).
+ *
+ * ⚠️ **ELE MORA AQUI PORQUE A GUARDA COBRA, e a guarda está certa:**
+ * `endereco-de-turma-unico.test.ts` reprova **qualquer** arquivo que monte `?turma=` fora deste
+ * módulo (`MONTA_PARAMETRO`), e o `FR-031.2` é o motivo — o código da turma **contém espaços**, e
+ * montá-lo à mão funciona na primeira tela e falha **em silêncio** na que esquecer de codificar.
+ *
+ * ⚠️ **AQUI A TURMA VAI NA CONSULTA, não no caminho, e a diferença é do documento 25 §1.3 item 2:**
+ * a rota de impressão vive **fora** do segmento dinâmico `/turmas/[turma]` porque está **fora** do
+ * grupo `(app)` — ela não tem casca, não tem menu e não tem faixa de ambiente. Herdar os
+ * parâmetros *"sem tradução"* é o que faz o papel sair da **mesma** semana que a tela mostra.
+ *
+ * ⚠️ **A GRAFIA DO VALOR É A DA CONSULTA — `+` para espaço**, a mesma de
+ * `enderecoDaTurmaNoCurso` e `enderecoDasDisciplinas` (decisão de Bernardo Villas Boas,
+ * 23/09/2026, `PEND-5a-8`). ⚠️ **E aqui não há segundo escritor**: a rota de impressão não está no
+ * contrato do `nuqs`, então quem escreve este endereço é **só** esta função — a razão de manter a
+ * grafia é não ter duas convenções de consulta no mesmo módulo, e `+` é lido como espaço por
+ * `URLSearchParams`, que é o que o servidor usa para montar `searchParams`.
+ *
+ * ⚠️ **`semana` e `ano` VÃO SEMPRE, ao contrário de `enderecoDoDsa`.** Lá o valor no padrão fica
+ * fora da URL, para que o endereço da semana corrente seja favoritável. Aqui o padrão **não
+ * existe**: o papel é de uma semana determinada, e um `/print/dsa?turma=X` sem semana imprimiria a
+ * semana de **hoje** no dia em que alguém reabrisse o link — que é o `D-8` da planilha ("a `DSA
+ * C-ESPC-HN 2027` ainda tem as datas de 2026") pelo avesso.
+ */
+export function enderecoDaImpressaoDoDsa(
+  codigo: string,
+  recorte: { readonly semana: number; readonly ano: number; readonly sabado?: boolean },
+): string {
+  const partes = [
+    `turma=${comoAConsultaEscreve(codigo)}`,
+    `semana=${String(recorte.semana)}`,
+    `ano=${String(recorte.ano)}`,
+    ...(recorte.sabado ? ["sabado=sim"] : []),
+  ];
+  return `${ROTA_DA_IMPRESSAO_DO_DSA}?${partes.join("&")}`;
+}
+
 export const ANCORA_DAS_DISCIPLINAS = "disciplinas";
 
 export function enderecoDaSecaoDeDisciplinas(codigo: string): string {

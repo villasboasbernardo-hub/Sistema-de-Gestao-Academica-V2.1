@@ -1,0 +1,308 @@
+/**
+ * `RF-PDF-01` · `RF-DSA-06` · `SC-011` · `SC-013` · `SC-014` · `FR-039` — o documento impresso.
+ *
+ * ⚠️ **ESTE ARQUIVO PROVA AS QUATRO REGRAS DO PAPEL SEM SUBIR NAVEGADOR, e é por isso que o módulo
+ * existe separado da rota.** Três delas são defeitos medidos na planilha (`D-2`, `D-3`, `D-5`), e um
+ * teste de ponta a ponta sobre o PDF diria *"cabe em uma página"* sem dizer **por quê**.
+ *
+ * ⚠️ **A SEMANA VEM DE `montarSemana` COM A G45 REAL, não de um `DiaDaGrade` escrito à mão.** O
+ * bloco que atravessa o almoço só existe se a quebra vier de `trechosDoBloco` — montar o dia à mão
+ * provaria que o módulo copia dois trechos, não que a quebra acontece.
+ */
+
+import { describe, expect, it } from "vitest";
+
+import type { MarcaDeConflito } from "@/lib/dominio/dsa/conflitos";
+import { montarSemana, type FatoDaSemana } from "@/lib/dominio/dsa/grade";
+import { relogioDoRegime } from "@/lib/dominio/dsa/horario-do-bloco";
+import {
+  avisosAntesDeImprimir,
+  diaImpresso,
+  documentoImpresso,
+  legendaDeTecnicas,
+  siglaOuExtenso,
+  tabelaDeCh,
+  textoDoPapel,
+  SIGLA_DO_ESTUDO_INDIVIDUAL,
+  TEXTO_DO_ESTUDO_INDIVIDUAL,
+  type TecnicaDoCatalogo,
+} from "@/lib/dominio/dsa/impressao";
+
+import { G45 } from "./relogio-real";
+
+const SEMANA = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"] as const;
+const HOJE = "2026-10-06";
+const SEM_MARCAS: ReadonlyMap<string, MarcaDeConflito> = new Map();
+const SEM_EI: ReadonlySet<string> = new Set();
+
+/** O catálogo como `config_listas.metodologias` o entrega: 3 com sigla, 1 sem (`T040`). */
+const TECNICAS: readonly TecnicaDoCatalogo[] = [
+  { nome: "Exposição Oral", sigla: "EO" },
+  { nome: "Aula Prática", sigla: "AP" },
+  { nome: "Estudo Individual", sigla: SIGLA_DO_ESTUDO_INDIVIDUAL },
+  { nome: "Estudo Dirigido", sigla: null },
+];
+
+function fato(ajustes: Partial<FatoDaSemana> = {}): FatoDaSemana {
+  return {
+    fatoId: "fato-1",
+    origem: "aula",
+    data: "2026-10-05",
+    taInicial: 1,
+    tempos: 2,
+    herdado: false,
+    disciplina: "II",
+    conteudo: "UE 3 — Navegação costeira",
+    tecnica: "Exposição Oral",
+    instrutor: "1ºTEN SILVA",
+    local: "Sala 03",
+    ...ajustes,
+  };
+}
+
+function montar(ajustes: Partial<Parameters<typeof montarSemana>[0]> = {}) {
+  return montarSemana({
+    dias: [...SEMANA],
+    relogio: relogioDoRegime(G45),
+    temposDeclarados: G45.regimeTempos,
+    fatos: [],
+    feriados: [],
+    marcas: SEM_MARCAS,
+    hoje: HOJE,
+    sabadoAberto: false,
+    ...ajustes,
+  });
+}
+
+function primeiroDia(ajustes: Partial<Parameters<typeof montarSemana>[0]> = {}) {
+  const semana = montar(ajustes);
+  const dia = semana.dias[0];
+  if (dia === undefined) throw new Error("a semana saiu sem dias");
+  return diaImpresso(dia, {
+    relogio: semana.relogio,
+    tecnicas: TECNICAS,
+    idsDeEstudoIndividual: SEM_EI,
+  });
+}
+
+describe("`SC-011` · o bloco que atravessa o almoço — o `D-3` da planilha", () => {
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA.** Na G45 o almoço fica entre o 5º e o 6º TA; um bloco de 4 TA a
+   * partir do 4º atravessa. A planilha imprimia *"09:30 as 13:50"*, um horário contínuo que inclui
+   * o almoço — 64 ocorrências no CAHO e 50 no C-Espc-FR.
+   */
+  it("sai com DUAS linhas de HORÁRIO, e o almoço não entra em nenhuma", () => {
+    const dia = primeiroDia({ fatos: [fato({ taInicial: 4, tempos: 4 })] });
+    const linha = dia.linhas[0];
+    expect(linha?.trechos).toHaveLength(2);
+    expect(linha?.trechos[0]).toEqual({ inicio: "10:20", fim: "11:55", periodo: "manha" });
+    expect(linha?.trechos[1]).toEqual({ inicio: "13:05", fim: "14:40", periodo: "tarde" });
+  });
+
+  it("bloco que não atravessa sai com UMA linha só", () => {
+    const dia = primeiroDia({ fatos: [fato({ taInicial: 1, tempos: 3 })] });
+    expect(dia.linhas[0]?.trechos).toHaveLength(1);
+    expect(dia.linhas[0]?.trechos[0]).toEqual({ inicio: "07:50", fim: "10:15", periodo: "manha" });
+  });
+});
+
+describe("a linha fixa `ESTUDO INDIVIDUAL · EI` — `praticas-da-planilha.md` §1.2", () => {
+  it("é a ÚLTIMA linha do dia, sem instrutor, mesmo num dia sem lançamento nenhum", () => {
+    const dia = primeiroDia();
+    expect(dia.linhas).toHaveLength(1);
+    const ei = dia.linhas[0];
+    expect(ei?.conteudo).toBe(TEXTO_DO_ESTUDO_INDIVIDUAL);
+    expect(ei?.te).toBe(SIGLA_DO_ESTUDO_INDIVIDUAL);
+    expect(ei?.instrutor).toBe("");
+    expect(ei?.estudoIndividual).toBe(true);
+  });
+
+  it("ocupa o TA seguinte ao último lançado, com o horário do relógio — `D-11`", () => {
+    const dia = primeiroDia({ fatos: [fato({ taInicial: 1, tempos: 4 })] });
+    const ei = dia.linhas[dia.linhas.length - 1];
+    expect(ei?.taInicial).toBe(5);
+    expect(ei?.trechos[0]).toEqual({ inicio: "11:10", fim: "11:55", periodo: "manha" });
+  });
+
+  /*
+   * ⚠️ **ESTE É O CASO QUE JUSTIFICA O `idsDeEstudoIndividual`.** Sem ele o EI lançado apareceria
+   * como linha comum **e** a linha fixa sairia depois: o dia teria Estudo Individual duas vezes, e
+   * o papel somaria um TA que não existe.
+   */
+  it("o EI LANÇADO vira a linha fixa, em vez de somar-se a ela", () => {
+    const semana = montar({
+      fatos: [
+        fato({ taInicial: 1, tempos: 4 }),
+        fato({
+          fatoId: "ei-lancado",
+          origem: "atividade_nao_letiva",
+          taInicial: 5,
+          tempos: 1,
+          disciplina: null,
+          conteudo: "Estudo Individual",
+          tecnica: "Estudo Individual",
+          instrutor: "1ºTEN SILVA",
+          local: "Sala 03",
+        }),
+      ],
+    });
+    const dia = semana.dias[0];
+    if (dia === undefined) throw new Error("a semana saiu sem dias");
+    const impresso = diaImpresso(dia, {
+      relogio: semana.relogio,
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: new Set(["ei-lancado"]),
+    });
+    expect(impresso.linhas).toHaveLength(2);
+    const ei = impresso.linhas[1];
+    expect(ei?.chave).toBe("ei-lancado");
+    expect(ei?.conteudo).toBe(TEXTO_DO_ESTUDO_INDIVIDUAL);
+    /* ⚠️ O lançamento TEM instrutor, e o papel não o imprime — o documento assinado é assim. */
+    expect(ei?.instrutor).toBe("");
+  });
+
+  it("`Q-16` · dia de feriado de dia inteiro sai como UMA faixa, e SEM a linha de EI", () => {
+    const semana = montar({
+      feriados: [{ data: "2026-10-05", descricao: "Dia das Crianças", impacto: "dia_inteiro" }],
+    });
+    const dia = semana.dias[0];
+    if (dia === undefined) throw new Error("a semana saiu sem dias");
+    const impresso = diaImpresso(dia, {
+      relogio: semana.relogio,
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: SEM_EI,
+    });
+    expect(impresso.bloqueio).toBe("Dia das Crianças");
+    expect(impresso.linhas).toHaveLength(0);
+  });
+});
+
+describe("`SC-013` · nenhuma cadeia técnica chega ao papel", () => {
+  it("`null`, `undefined`, `NaN` e vazio viram célula VAZIA", () => {
+    expect(textoDoPapel(null)).toBe("");
+    expect(textoDoPapel(undefined)).toBe("");
+    expect(textoDoPapel("   ")).toBe("");
+    /* ⚠️ As três que escapam de um `?? ""` ingênuo, porque já são texto. */
+    expect(textoDoPapel("null")).toBe("");
+    expect(textoDoPapel("undefined")).toBe("");
+    expect(textoDoPapel("NaN")).toBe("");
+    /* ⚠️ E a numérica: `String(NaN)` dá `"NaN"` — a família do `D-1`, 10.842 erros em cascata. */
+    expect(textoDoPapel(Number.NaN)).toBe("");
+    expect(textoDoPapel(Number.POSITIVE_INFINITY)).toBe("");
+    expect(textoDoPapel(0)).toBe("0");
+  });
+
+  it("o fato sem disciplina, sem local e sem instrutor sai com as três células vazias", () => {
+    const dia = primeiroDia({
+      fatos: [fato({ disciplina: null, local: null, instrutor: null, conteudo: null })],
+    });
+    const linha = dia.linhas[0];
+    expect(linha?.disciplina).toBe("");
+    expect(linha?.local).toBe("");
+    expect(linha?.instrutor).toBe("");
+    expect(linha?.conteudo).toBe("");
+  });
+});
+
+describe("`T040` · a sigla da T/E, e o nome por extenso quando não há sigla", () => {
+  it("usa a sigla cadastrada", () => {
+    expect(siglaOuExtenso("Exposição Oral", TECNICAS)).toBe("EO");
+  });
+
+  /* ⚠️ 13 das 22 ficam assim por decisão (§3.9) — inventar sigla é pior que uma coluna larga. */
+  it("sem sigla, imprime o nome POR EXTENSO — `RN-DEG-01`", () => {
+    expect(siglaOuExtenso("Estudo Dirigido", TECNICAS)).toBe("Estudo Dirigido");
+  });
+
+  it("técnica fora do catálogo imprime o que veio, não um vazio", () => {
+    expect(siglaOuExtenso("Palestra da DOEP", TECNICAS)).toBe("Palestra da DOEP");
+  });
+
+  it("sem técnica, célula vazia", () => {
+    expect(siglaOuExtenso(null, TECNICAS)).toBe("");
+  });
+});
+
+describe("`SC-014` · o rodapé traz SÓ o que aparece na semana", () => {
+  const EXECUCAO = [
+    { codigo: "I", nome: "Navegação", prevista: 80, cumprida: 40 },
+    { codigo: "II", nome: "Hidrografia", prevista: 60, cumprida: 12 },
+    { codigo: "III", nome: "Meteorologia", prevista: 40, cumprida: 0 },
+  ] as const;
+
+  it("a tabela de CH lista as disciplinas da semana, e nenhuma outra", () => {
+    const dias = documentoImpresso(montar({ fatos: [fato({ disciplina: "II" })] }), {
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: SEM_EI,
+    });
+    const tabela = tabelaDeCh(dias, EXECUCAO);
+    expect(tabela.map((d) => d.codigo)).toEqual(["II"]);
+    expect(tabela[0]?.cumprida).toBe(12);
+  });
+
+  /* ⚠️ Vazio é vazio, e não é "todas" — o gotcha 4 aplicado ao papel. */
+  it("semana sem lançamento devolve tabela VAZIA", () => {
+    const dias = documentoImpresso(montar(), { tecnicas: TECNICAS, idsDeEstudoIndividual: SEM_EI });
+    expect(tabelaDeCh(dias, EXECUCAO)).toHaveLength(0);
+  });
+
+  it("a legenda traz só as siglas usadas — e o EI entra, porque a linha fixa o usa", () => {
+    const dias = documentoImpresso(montar({ fatos: [fato()] }), {
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: SEM_EI,
+    });
+    expect(legendaDeTecnicas(dias, TECNICAS).map((i) => i.sigla)).toEqual(["EI", "EO"]);
+  });
+
+  it("a técnica que imprimiu por extenso NÃO entra na legenda", () => {
+    const dias = documentoImpresso(montar({ fatos: [fato({ tecnica: "Estudo Dirigido" })] }), {
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: SEM_EI,
+    });
+    expect(legendaDeTecnicas(dias, TECNICAS).map((i) => i.sigla)).toEqual(["EI"]);
+  });
+});
+
+describe("`FR-039` e `SC-015` · os avisos ficam na TELA, antes de imprimir", () => {
+  const SEM_FALTA = {
+    numeroDoDsa: 7,
+    motivoDoNumeroAusente: null,
+    alunos: 24,
+    semRelogio: false,
+    semAssinaturaEsquerda: false,
+    semAssinaturaDireita: false,
+    linhasImpressas: 32,
+  } as const;
+
+  it("com tudo no lugar, nenhum aviso", () => {
+    expect(avisosAntesDeImprimir(SEM_FALTA)).toHaveLength(0);
+  });
+
+  it("nomeia cada falta, e o motivo do número ausente vai na frase — `D-7`", () => {
+    const avisos = avisosAntesDeImprimir({
+      ...SEM_FALTA,
+      numeroDoDsa: null,
+      motivoDoNumeroAusente: "a turma não tem data de início cadastrada.",
+      alunos: null,
+      semRelogio: true,
+      linhasImpressas: 0,
+    });
+    expect(avisos).toHaveLength(4);
+    expect(avisos[0]).toContain("data de início");
+    expect(avisos.join(" ")).toContain("efetivo da turma");
+    expect(avisos.join(" ")).toContain("HORÁRIO sai em branco");
+  });
+
+  it("um lado sem assinatura nomeia QUAL lado; os dois saem numa frase só", () => {
+    const esquerda = avisosAntesDeImprimir({ ...SEM_FALTA, semAssinaturaEsquerda: true });
+    expect(esquerda).toHaveLength(1);
+    expect(esquerda[0]).toContain("da esquerda");
+    const ambas = avisosAntesDeImprimir({
+      ...SEM_FALTA,
+      semAssinaturaEsquerda: true,
+      semAssinaturaDireita: true,
+    });
+    expect(ambas).toHaveLength(1);
+    expect(ambas[0]).toContain("duas linhas");
+  });
+});

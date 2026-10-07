@@ -141,18 +141,18 @@ compararia o documento certo com o relógio errado em **quatro** eixos.
 **Meta**: uma página A4 paisagem com paridade contra o documento assinado.
 **Depende de**: PR 2 (ter o que imprimir) e T076 (o relógio conferido).
 
-- [ ] T078 `app/print/dsa/page.tsx` — Server Component **fora** de `(app)`: sem casca; herda `?turma=&semana=&ano=&sabado=` **sem tradução**; `not-found` sem `turma`
-- [ ] T079 `app/print/dsa/impressao.css` — `@page { size: A4 landscape; margin: 10mm }` e `@media print`; ⚠️ é o **primeiro** `@media print` do repositório, e nasce num arquivo só
-- [ ] T080 O cabeçalho e as oito colunas conforme `contracts/impressao.md`, com **LOCAL por linha** e o bloco que atravessa o almoço em **duas** linhas de HORÁRIO
-- [ ] T081 [P] A linha fixa **`ESTUDO INDIVIDUAL · EI`** por dia, sem instrutor; e o dia de feriado como **uma linha** com a descrição (`Q-16`)
-- [ ] T082 O rodapé: `Gerado em` (`instanteComHoraParaLeitura`), a nota do EI, `<n> ALUNOS`, a tabela de CH **só das disciplinas da semana** e a legenda de T/E **só das siglas usadas** (`SC-014`); **sem** `ALT`
-- [ ] T082.1 [P] A linha **`OBSERVAÇÕES:`** em branco no rodapé — ⚠️ é o campo que o `RF-DSA-06` e o `RF-PDF-01` exigem **literalmente** e que **nenhum** dos PDFs medidos tem. Decisão de Bernardo (`H8`, opção **a**): a linha sai **em branco, para escrever à mão**, o que satisfaz o requisito **[PRESERVADO]** sem inventar conteúdo e sem contrariar o documento assinado
-- [ ] T083 As **duas assinaturas** por `assinaturas.ts`, com o modo `dinamico_usuario_logado` resolvido pela sessão da rota; sem vigente → **linha em branco** (`FR-036`, `FR-036.1`)
-- [ ] T084 [P] O nome do instrutor pelo `NomeInstrutor` **único**, e `(FISCAL)` em avaliação (`RF-INSTR-15`, `FR-038`)
-- [ ] T085 O botão **Imprimir** na grade, levando os mesmos parâmetros; e os **avisos de dado faltante na TELA, antes** de imprimir (`FR-039`)
-- [ ] T086 [P] Semear, no `dsa-de-teste.ts`, uma **segunda vigência de responsável** para o critério **3** — ⚠️ medido: há **uma só** vigência por papel no remoto, então sem semear o critério não é demonstrável (`SC-003`)
-- [ ] T086.1 ⚠️ **A jornada do critério 8, que não existia**: `tests/e2e/dsa-jornada.spec.ts` cobre **lançar → visualizar → imprimir** num **único** percurso, **chegando por clique** — ficha da turma → *Abrir o DSA* → lança um bloco → vê na grade → *Imprimir* → o PDF de **uma** página. Os três `spec.ts` separados (`T062`, `T074`, `T087`) provam as partes; **só este prova a jornada** (`SC-008`, critério **8** do documento 06)
-- [ ] T087 **Prova do PR 3** — `tests/e2e/dsa-imprimir.spec.ts` cobrindo o quadro do `quickstart.md` §"PR 3", incluindo **`page.pdf` com contagem de páginas = 1** (`SC-001`) e a varredura de cadeias técnicas (`SC-013`), e `pnpm verificar:tudo` **0**
+- [X] T078 `app/print/dsa/page.tsx` — Server Component **fora** de `(app)`: sem casca; herda `?turma=&semana=&ano=&sabado=` **sem tradução**; `not-found` sem `turma`
+- [X] T079 `app/print/dsa/impressao.css` — `@page { size: A4 landscape; margin: 10mm }` e `@media print`; ⚠️ é o **primeiro** `@media print` do repositório, e nasce num arquivo só
+- [X] T080 O cabeçalho e as oito colunas conforme `contracts/impressao.md`, com **LOCAL por linha** e o bloco que atravessa o almoço em **duas** linhas de HORÁRIO
+- [X] T081 [P] A linha fixa **`ESTUDO INDIVIDUAL · EI`** por dia, sem instrutor; e o dia de feriado como **uma linha** com a descrição (`Q-16`)
+- [X] T082 O rodapé: `Gerado em` (`instanteComHoraParaLeitura`), a nota do EI, `<n> ALUNOS`, a tabela de CH **só das disciplinas da semana** e a legenda de T/E **só das siglas usadas** (`SC-014`); **sem** `ALT`
+- [X] T082.1 [P] A linha **`OBSERVAÇÕES:`** em branco no rodapé — ⚠️ é o campo que o `RF-DSA-06` e o `RF-PDF-01` exigem **literalmente** e que **nenhum** dos PDFs medidos tem. Decisão de Bernardo (`H8`, opção **a**): a linha sai **em branco, para escrever à mão**, o que satisfaz o requisito **[PRESERVADO]** sem inventar conteúdo e sem contrariar o documento assinado
+- [X] T083 As **duas assinaturas** por `assinaturas.ts`, com o modo `dinamico_usuario_logado` resolvido pela sessão da rota; sem vigente → **linha em branco** (`FR-036`, `FR-036.1`)
+- [X] T084 [P] O nome do instrutor pelo `NomeInstrutor` **único**, e `(FISCAL)` em avaliação (`RF-INSTR-15`, `FR-038`)
+- [X] T085 O botão **Imprimir** na grade, levando os mesmos parâmetros; e os **avisos de dado faltante na TELA, antes** de imprimir (`FR-039`)
+- [X] T086 [P] Semear, no `dsa-de-teste.ts`, uma **segunda vigência de responsável** para o critério **3** — ⚠️ medido: há **uma só** vigência por papel no remoto, então sem semear o critério não é demonstrável (`SC-003`)
+- [X] T086.1 ⚠️ **A jornada do critério 8, que não existia**: `tests/e2e/dsa-jornada.spec.ts` cobre **lançar → visualizar → imprimir** num **único** percurso, **chegando por clique** — ficha da turma → *Abrir o DSA* → lança um bloco → vê na grade → *Imprimir* → o PDF de **uma** página. Os três `spec.ts` separados (`T062`, `T074`, `T087`) provam as partes; **só este prova a jornada** (`SC-008`, critério **8** do documento 06)
+- [X] T087 **Prova do PR 3** — `tests/e2e/dsa-imprimir.spec.ts` cobrindo o quadro do `quickstart.md` §"PR 3", incluindo **`page.pdf` com contagem de páginas = 1** (`SC-001`) e a varredura de cadeias técnicas (`SC-013`), e `pnpm verificar:tudo` **0**
 
 ---
 

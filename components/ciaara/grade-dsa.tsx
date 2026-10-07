@@ -43,10 +43,7 @@ import {
   type TomDaCelula,
 } from "@/components/ciaara/grade-alocacao";
 import type { BlocoNaGrade, Celula, Semana } from "@/lib/dominio/dsa/grade";
-import { dataParaLeitura } from "@/lib/formato/data";
-
-/** O dia da semana abreviado, em maiúsculas, como o documento impresso o escreve. */
-const DIA_DA_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as const;
+import { dataComDiaDaSemana } from "@/lib/formato/data";
 
 export type GradeDsaProps = {
   readonly semana: Semana;
@@ -68,22 +65,6 @@ export type GradeDsaProps = {
   readonly aoEscolherCelula?: (dia: string, ta: number) => void;
   readonly className?: string;
 };
-
-/**
- * O rótulo do dia: `SEG 06/04/2026`.
- *
- * ⚠️ **A DATA SAI INTEIRA DE `dataParaLeitura`, O PONTO ÚNICO.** A primeira versão disto fazia
- * `.slice(0, 5)` para mostrar só `DD/MM`, e `formato-de-data.test.ts` reprovou — com razão: a spec
- * 012 reduziu **quatro** donos do formato de data a um, e recortar a saída dele aqui é ser o
- * quinto. O dia completo é mais largo e não tem segundo dono.
- */
-function rotuloDoDia(iso: string): string {
-  const [ano, mes, dia] = iso.split("-").map(Number);
-  // `Date.UTC` e não `new Date(iso)`: o segundo interpreta `aaaa-mm-dd` como UTC em alguns
-  // navegadores e como local em outros, e o dia da semana saía errado na fronteira do fuso.
-  const indice = new Date(Date.UTC(ano ?? 1970, (mes ?? 1) - 1, dia ?? 1)).getUTCDay();
-  return `${DIA_DA_SEMANA[indice]} ${dataParaLeitura(iso)}`;
-}
 
 /** O tom de uma célula ocupada, pela origem do fato e pelo conflito. */
 function tomDoBloco(bloco: BlocoNaGrade): TomDaCelula {
@@ -167,7 +148,7 @@ export function GradeDsa({ semana, salaDaTurma, aoEscolherCelula, className }: G
 
   const colunas: readonly ColunaDaGrade[] = dias.map((d) => ({
     chave: d.data,
-    rotulo: rotuloDoDia(d.data),
+    rotulo: dataComDiaDaSemana(d.data),
     ...(d.bloqueio ? { bloqueio: d.bloqueio } : {}),
     ...(d.avisos.length > 0 ? { nota: d.avisos.join(" · ") } : {}),
   }));

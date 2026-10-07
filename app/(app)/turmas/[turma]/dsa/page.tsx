@@ -1,66 +1,48 @@
 /**
  * A semana do Detalhe Semanal de Aula (`RF-DSA-01`, `RF-DSA-02`, `RF-HOR-04`, `RF-HOR-06`,
- * `RN-2027-09`, `RN-EVT-02`, `RN-DEG-01`, `RF-NAV-04` · spec 013, PR 1).
+ * `RN-2027-09`, `RN-EVT-02`, `RN-DEG-01`, `RF-NAV-04` · spec 013, PR 1, PR 2 e PR 3).
  *
- * ⚠️ **SEM MARCADOR DE CLIENTE.** Só a navegação da semana é folha (`NavegacaoDaSemana`), e a
+ * ⚠️ **SEM MARCADOR DE CLIENTE.** Só a navegação da semana e o painel de lançamento são folhas; a
  * grade é servidor — uma semana do `C-Ap-HN` tem 9 TA × 6 dias com blocos dentro, e levar isso ao
  * bundle seria o gotcha 1 com o maior conteúdo da aplicação.
  *
- * ⚠️ **UMA RODADA DE `Promise.all`, E NENHUM `await` DENTRO DE LAÇO.** As oito leituras saem juntas.
- * A única exceção é o catálogo de horários, que **depende** de qual vigência venceu — ele é um
- * `await` a mais, **fora de laço**, e só acontece quando a vigência aponta para uma configuração.
- * Medido em 05/10/2026: **nenhuma** das vigências reais aponta, então hoje esse caminho não roda.
+ * ⚠️ **A LEITURA SAIU DAQUI NO PR 3, e a razão é a razão de ser da spec.** Ela vive agora em
+ * `leitura.ts`, **compartilhada com a rota de impressão**: o papel precisa da **mesma** semana que
+ * a tela mostra. Com dois leitores, a primeira divergência entre tela e papel seria **invisível** —
+ * é o `D-5` e o `D-6` da planilha, onde o ESPELHO e a IMPRESSÃO liam linhas diferentes do mesmo
+ * dado e ninguém via, até a inspeção da CAC contar 11.918 erros.
  *
- * ⚠️ **AS TRÊS TABELAS SÃO LIDAS INTEIRAS DA SEMANA, não só o que está «sem posição»**, e isso
- * economiza três leituras: a `vw_ocupacao_ta` entrega *onde* cada fato está, mas não o tópico nem a
- * técnica — e são as mesmas linhas que alimentam a faixa. Duas leituras por tabela diriam a mesma
- * coisa duas vezes.
- *
- * ⚠️ **A ATIVIDADE DE ESCOPO GLOBAL ENTRA PELO FILTRO `turma_id is null`** (`V-7`, e é o que o PR B
- * abriu na view): ela vale para **toda** turma ativa, então a semana de cada uma a mostra. Filtrar
- * só pela turma a esconderia, que é o defeito que a `RF-EXTRA-03` cobrava.
+ * ⚠️ **OS AVISOS DE DADO FALTANTE SÃO DESTA TELA, NÃO DO PAPEL** (`FR-039`, `SC-015`): *"dado
+ * faltante vira aviso na tela, ao lado do botão Imprimir, ANTES de abrir a impressão"*. O que
+ * acontece quando o aviso vai junto está medido: *"VERIFICAR Nº DE TA"* saiu **impresso** em 10 das
+ * 15 planilhas (`D-2`).
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { lancar, lancarEstudoIndividualDaSemana } from "@/lib/acoes/dsa";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { montarSemana, type FatoDaSemana } from "@/lib/dominio/dsa/grade";
-import { relogioDaSemana } from "@/lib/dominio/dsa/horario-do-bloco";
-import { nomeEmTexto } from "@/lib/dominio/nome-instrutor";
+import { assinaturasDoDsa } from "@/lib/dominio/dsa/assinaturas";
+import { avisosAntesDeImprimir, documentoImpresso } from "@/lib/dominio/dsa/impressao";
+import { motivoDoNumeroAusente, numeroDoDsa } from "@/lib/dominio/dsa/numero-do-dsa";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
-import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+import { enderecoDaImpressaoDoDsa, enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
-import { lancar, lancarEstudoIndividualDaSemana } from "@/lib/acoes/dsa";
-import { escalaDeLinhas } from "@/lib/dominio/antiguidade";
 
 import { alcanceDoPerfil } from "../../../cursos/consulta";
 import { codigoDaFicha, mensagemDeTurmaNaoEncontrada } from "../consulta";
-import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
-import { PainelDeLancamento } from "./PainelDeLancamento";
 import {
-  COLUNAS_DA_OCUPACAO,
   COLUNAS_DA_TURMA_DO_DSA,
-  COLUNAS_DA_VIGENCIA,
-  COLUNAS_DO_CATALOGO,
-  COLUNAS_DO_FERIADO,
-  diasDaTela,
   ehEadPuro,
-  fatoDaOcupacao,
-  feriadoDoBanco,
-  regimeParaRelogio,
   rotuloDaSemana,
   ROTA_DO_DSA,
   semanaEscolhida,
-  tempoDoCatalogo,
-  vigenciaDaSemana,
-  vigenciaDoBanco,
-  type LinhaDaOcupacao,
-  type LinhaDeFeriado,
-  type LinhaDeVigencia,
-  type LinhaDoCatalogo,
 } from "./consulta";
+import { lerExtrasDaImpressao, lerSemanaDoDsa } from "./leitura";
+import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
+import { PainelDeLancamento } from "./PainelDeLancamento";
 
 export default async function SemanaDoDsa({
   params,
@@ -138,415 +120,65 @@ export default async function SemanaDoDsa({
     );
   }
 
-  /*
-   * A janela de datas da CONSULTA: **sempre os seis dias**, com o sábado incluído.
-   * ⚠️ A consulta não pode depender de `?sabado=`: é justamente lendo o sábado que se descobre se
-   * há lançamento nele — e, se houver, a coluna aparece mesmo sem o parâmetro (`Q-4`).
-   */
-  const todosOsSeis = diasDaTela({
-    ano: escolha.ano,
-    numero: escolha.numero,
-    sabadoPedido: true,
-    datasComLancamento: [],
-  }).dias;
-  const de = todosOsSeis[0] ?? hoje;
-  const ate = todosOsSeis[todosOsSeis.length - 1] ?? hoje;
   const turmaId = turma.id as string;
   const cursoId = turma.curso_id as string;
 
-  const [
-    ocupacaoRes,
-    aulasRes,
-    avaliacoesRes,
-    atividadesRes,
-    vigenciasRes,
-    feriadosRes,
-    cursoRes,
-    discRes,
-    ueExecRes,
-    listasRes,
-    atribRes,
-    instrRes,
-  ] = await Promise.all([
-    /* ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`). */
-    supabase
-      .from("vw_ocupacao_ta")
-      .select(COLUNAS_DA_OCUPACAO)
-      .or(`turma_id.eq.${turmaId},turma_id.is.null`)
-      .gte("data", de)
-      .lte("data", ate),
-    supabase
-      .from("registros_aula")
-      .select("id, data, ta_inicial, tempos_consumidos, conteudo_resumo, metodologia, status")
-      .eq("turma_id", turmaId)
-      .eq("status", "ativo")
-      .gte("data", de)
-      .lte("data", ate),
-    supabase
-      .from("avaliacoes")
-      .select(
-        "id, data_avaliacao, data_vista_prova, ta_inicial, ta_inicial_vista, tipo_avaliacao, conteudo_resumo, metodologia, status",
-      )
-      .eq("turma_id", turmaId)
-      .neq("status", "cancelada")
-      .or(
-        `and(data_avaliacao.gte.${de},data_avaliacao.lte.${ate}),and(data_vista_prova.gte.${de},data_vista_prova.lte.${ate})`,
-      ),
-    supabase
-      .from("atividades_nao_letivas")
-      .select("id, data, ta_inicial, categoria_normativa, subtipo, descricao, status, turma_id")
-      .or(`turma_id.eq.${turmaId},turma_id.is.null`)
-      .eq("status", "ativo")
-      .gte("data", de)
-      .lte("data", ate),
-    /*
-     * ⚠️ TODAS as vigências do curso, e quem escolhe é `vigenteEm` na DATA DA SEMANA
-     * (`RN-2027-09`) — ver a nota de `consulta.ts` sobre por que não é a função do banco.
-     */
-    supabase
-      .from("curso_regime_historico")
-      .select(COLUNAS_DA_VIGENCIA)
-      .eq("curso_id", cursoId)
-      .eq("status", "ativo"),
-    supabase.from("feriados").select(COLUNAS_DO_FERIADO).gte("data", de).lte("data", ate),
-    supabase.from("cursos").select("codigo, curriculo_modelo").eq("id", cursoId).maybeSingle(),
-    supabase
-      .from("disciplinas")
-      .select("id, cod_disciplina, nome_disciplina, sem_unidades_ensino, status")
-      .eq("curso_id", cursoId),
-    /*
-     * O catálogo de **itens lançáveis** (`P-3` da planilha): as UEs com a CH prevista, a lançada e
-     * a restante. ⚠️ Os três números vêm de `vw_unidades_ensino_execucao`, que já os calcula — somar
-     * aqui seria a segunda fonte de verdade da CH executada.
-     */
-    supabase
-      .from("vw_unidades_ensino_execucao")
-      .select(
-        "unidade_ensino_id, disciplina_id, numero_ue, topico, ch_prevista_tempos, ta_executados, ta_saldo, turma_id",
-      )
-      .eq("turma_id", turmaId),
-    /* As listas administráveis: técnica, tipo de avaliação, subtipo e a escala de antiguidade. */
-    supabase
-      .from("config_listas")
-      .select("lista, valor, ordem, ativo, metadados")
-      .in("lista", ["metodologias", "tipos_avaliacao", "tipos_atividade", "escala_antiguidade"])
-      .eq("ativo", true)
-      .order("ordem"),
-    /* Quem está atribuído a esta turma, para o pré-preenchimento do instrutor. */
-    supabase
-      .from("turma_disciplina_unidade")
-      .select("unidade_ensino_id, instrutor_id, turma_id")
-      .eq("turma_id", turmaId),
-    /*
-     * ⚠️ Os 177 instrutores numa leitura só. Filtrar pelos ids em jogo exigiria **uma segunda
-     * rodada** (os ids só se conhecem depois de ler a view), e a base é pequena por decisão
-     * registrada no `CLAUDE.md` — clareza antes de desempenho.
-     *
-     * ⚠️ **A LEITURA VEM DE `vw_instrutores` E PEDE `ordem_antiguidade` AO BANCO** (`SC-002.1`,
-     * `RN-ANT-01`, *Risco: Alto*). Eu havia lido `instrutores` sem ordem, e
-     * `ordenacao-de-instrutor.test.ts` reprovou — a guarda é **ampla de propósito** (gotcha 12):
-     * ela cobra a ordem de **toda** leitura de lista de instrutor, mesmo quando a tela só monta
-     * um mapa de nomes, porque "esquecer numa tela nova" é exatamente o que ela existe para
-     * impedir. Aqui a ordem não muda o mapa; o que ela impede é a próxima tela esquecer.
-     */
-    supabase
-      .from("vw_instrutores")
-      .select("id, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, ordem_antiguidade")
-      .order("ordem_antiguidade"),
+  /* ⚠️ As duas leituras são independentes: uma rodada só, nenhum `await` em sequência inútil. */
+  const [lida, extras] = await Promise.all([
+    lerSemanaDoDsa(supabase, {
+      turmaId,
+      cursoId,
+      ano: escolha.ano,
+      numero: escolha.numero,
+      sabadoPedido: valores.sabado === "sim",
+      hoje,
+    }),
+    lerExtrasDaImpressao(supabase, { turmaId, cursoId }),
   ]);
 
-  const vigencias = ((vigenciasRes.data ?? []) as unknown as LinhaDeVigencia[]).map(
-    vigenciaDoBanco,
-  );
-  const primeiroDia = todosOsSeis[0] ?? hoje;
-  const excecao = vigenciaDaSemana(vigencias, "excecao", primeiroDia);
-  const padrao = vigenciaDaSemana(vigencias, "padrao", primeiroDia);
-  /* A exceção vence a padrão quando as duas cobrem a data — é o desenho de `tipo_regime`. */
-  const vigente = excecao ?? padrao;
-  /*
-   * A vigência mais recente do curso, de qualquer data — serve **só** para numerar os TA quando
-   * nenhuma cobre a semana. `vigenteEm` já ordena por `vigente_de` decrescente.
-   */
-  const maisRecente = [...vigencias]
-    .filter((v) => v.tipo === "padrao")
-    .sort((a, b) => b.vigenteDe.localeCompare(a.vigenteDe))[0];
-
-  /*
-   * O catálogo, **só** quando a vigência aponta para uma configuração. É um `await` a mais e fora
-   * de laço; medido em 05/10/2026, nenhuma vigência real aponta, então ele não roda hoje.
-   */
-  let catalogo: readonly LinhaDoCatalogo[] = [];
-  if (vigente?.configuracaoHorarioId) {
-    const { data } = await supabase
-      .from("horarios_tempos_aula")
-      .select(COLUNAS_DO_CATALOGO)
-      .eq("configuracao_id", vigente.configuracaoHorarioId)
-      .order("tempo_numero");
-    catalogo = (data ?? []) as unknown as LinhaDoCatalogo[];
-  }
-
-  const relogio = relogioDaSemana({
-    regime: vigente ? regimeParaRelogio(vigente) : null,
-    catalogo: catalogo.map(tempoDoCatalogo),
-  });
-
-  /* Os nomes legíveis, por mapa — a view entrega identificadores. */
-  const disciplinas = new Map(
-    ((discRes.data ?? []) as { id: string; cod_disciplina: string }[]).map((d) => [
-      d.id,
-      d.cod_disciplina,
-    ]),
-  );
-  const instrutores = new Map(
-    (
-      (instrRes.data ?? []) as {
-        id: string;
-        posto_graduacao: string;
-        esp_hab_obs: string | null;
-        nome_completo: string;
-        nome_guerra: string | null;
-      }[]
-    ).map((i) => [
-      i.id,
-      /* ⚠️ O formato é o do `RF-INSTR-15`, pela função ÚNICA — nunca montado à mão aqui. */
-      nomeEmTexto({
-        id: i.id,
-        pg: i.posto_graduacao,
-        especialidade: i.esp_hab_obs,
-        nomeCompleto: i.nome_completo,
-        nomeDeGuerra: i.nome_guerra,
-      }),
-    ]),
-  );
-
-  /* O tópico e a técnica de cada fato, pelas três tabelas. */
-  const conteudos = new Map<string, { conteudo: string | null; tecnica: string | null }>();
-  for (const a of (aulasRes.data ?? []) as {
-    id: string;
-    conteudo_resumo: string | null;
-    metodologia: string | null;
-  }[]) {
-    conteudos.set(a.id, { conteudo: a.conteudo_resumo, tecnica: a.metodologia });
-  }
-  for (const a of (avaliacoesRes.data ?? []) as {
-    id: string;
-    tipo_avaliacao: string | null;
-    conteudo_resumo: string | null;
-    metodologia: string | null;
-  }[]) {
-    conteudos.set(a.id, {
-      conteudo: a.conteudo_resumo ?? a.tipo_avaliacao,
-      tecnica: a.metodologia,
-    });
-  }
-  for (const n of (atividadesRes.data ?? []) as {
-    id: string;
-    descricao: string | null;
-    subtipo: string | null;
-  }[]) {
-    conteudos.set(n.id, { conteudo: n.descricao, tecnica: n.subtipo });
-  }
-
-  const nomes = { disciplinas, instrutores, conteudos };
-  const ocupacao = (ocupacaoRes.data ?? []) as unknown as LinhaDaOcupacao[];
-  const posicionados: FatoDaSemana[] = ocupacao.map((l) => fatoDaOcupacao(l, nomes));
-
-  /*
-   * ⚠️ **A FAIXA "SEM POSIÇÃO" SAI DAS TRÊS TABELAS, não da view** — a view filtra
-   * `ta_inicial is not null`, de propósito (ela é a grade de ocupação). As 1.566 linhas do ETL
-   * estão todas sem TA (medido), e é por aqui que elas aparecem em vez de desaparecer.
-   */
-  const semPosicao: FatoDaSemana[] = [];
-  for (const a of (aulasRes.data ?? []) as {
-    id: string;
-    data: string;
-    ta_inicial: number | null;
-  }[]) {
-    if (a.ta_inicial === null) {
-      semPosicao.push({
-        fatoId: a.id,
-        origem: "aula",
-        data: a.data,
-        taInicial: null,
-        tempos: null,
-        herdado: false,
-        disciplina: null,
-        conteudo: conteudos.get(a.id)?.conteudo ?? null,
-        tecnica: conteudos.get(a.id)?.tecnica ?? null,
-        instrutor: null,
-        local: null,
-      });
-    }
-  }
-  for (const n of (atividadesRes.data ?? []) as {
-    id: string;
-    data: string;
-    ta_inicial: number | null;
-  }[]) {
-    if (n.ta_inicial === null) {
-      semPosicao.push({
-        fatoId: n.id,
-        origem: "atividade_nao_letiva",
-        data: n.data,
-        taInicial: null,
-        tempos: null,
-        herdado: false,
-        disciplina: null,
-        conteudo: conteudos.get(n.id)?.conteudo ?? null,
-        tecnica: conteudos.get(n.id)?.tecnica ?? null,
-        instrutor: null,
-        local: null,
-      });
-    }
-  }
-
-  const fatos = [...posicionados, ...semPosicao];
-  const datasComLancamento = fatos.map((f) => f.data);
-  const janela = diasDaTela({
-    ano: escolha.ano,
-    numero: escolha.numero,
-    sabadoPedido: valores.sabado === "sim",
-    datasComLancamento,
-  });
-
-  const semana = montarSemana({
-    dias: janela.dias,
-    relogio,
-    /*
-     * ⚠️ **SEM VIGÊNCIA NA SEMANA, OS TA AINDA SÃO NUMERADOS — pelo regime mais recente do CURSO.**
-     * Medido: com `temposDeclarados: null` o domínio devolve **zero linhas** (e está certo: ele não
-     * inventa TA que ninguém declarou). Mas a tela ficaria sem grade nenhuma, e o quickstart pede
-     * *"TA numerados, sem relógio"*. O número de TA por dia é propriedade do CURSO, não da semana:
-     * usá-lo para **numerar** é honesto, e o aviso acima diz que o RELÓGIO não se aplica àquela
-     * semana. Inventar horário seria o que não se pode.
-     */
-    temposDeclarados: vigente?.regimeTempos ?? maisRecente?.regimeTempos ?? null,
-    fatos,
-    feriados: ((feriadosRes.data ?? []) as unknown as LinhaDeFeriado[]).map(feriadoDoBanco),
-    /* ⚠️ Vazio no PR 1: o conflito entre turmas é do PR 4, e ele chega PRONTO (`RN-CONF-01`). */
-    marcas: new Map(),
-    hoje,
-    sabadoAberto: janela.sabadoAberto,
-  });
-
-  const semRelogio = relogio === null;
+  const semRelogio = lida.relogio === null;
   const podeLancar = pode(permissoes, "registros_aula", "criar");
 
   /*
-   * O CATÁLOGO DE ITENS LANÇÁVEIS, montado aqui e passado por propriedade.
-   *
-   * ⚠️ **AS LISTAS SAEM DE `config_listas`, nunca de constante de código** (`RNF-NORM-08`): a
-   * técnica, o tipo de avaliação e o subtipo são domínio **administrável**, e a `H2` do analyze pôs
-   * a categoria de cada subtipo em `metadados.categoria` — é por ela que o seletor filtra em vez de
-   * oferecer a lista inteira, que mistura tipo de aula com não-letivo.
+   * ⚠️ **OS AVISOS SÃO CALCULADOS COM AS MESMAS FUNÇÕES QUE O PAPEL USA.** O número do DSA, as
+   * assinaturas e as linhas impressas saem de `lib/dominio/dsa/`, e é por isso que o aviso diz a
+   * verdade sobre o que **vai** sair — e não um palpite sobre o que talvez saia.
    */
-  const listas = (listasRes.data ?? []) as {
-    lista: string;
-    valor: string;
-    ordem: number;
-    metadados: Record<string, unknown> | null;
-  }[];
-  const daLista = (nome: string) => listas.filter((l) => l.lista === nome);
-  const tecnicas = daLista("metodologias").map((l) => l.valor);
-  const tiposDeAvaliacao = daLista("tipos_avaliacao").map((l) => l.valor);
-  const subtipos = daLista("tipos_atividade").map((l) => ({
-    valor: l.valor,
-    categoria: (l.metadados?.["categoria"] as string | undefined) ?? null,
-  }));
-  /* ⚠️ A escala de antiguidade é DADO (`RN-ANT-02`): o peso de cada P/G vive em `config_listas`. */
-  const escala = escalaDeLinhas(
-    /* `ativo` é obrigatório no tipo, e a consulta já filtra `ativo = true` — a escala administrável é a ativa. */
-    daLista("escala_antiguidade").map((l) => ({ valor: l.valor, ordem: l.ordem, ativo: true })),
+  const primeiroDia = lida.dias[0] ?? hoje;
+  const entradaDoNumero = {
+    datasComLancamento: extras.datasComLancamentoDaTurma,
+    dataInicio: (turma.data_inicio as string | null) ?? null,
+    semana: { ano: escolha.ano, numero: escolha.numero },
+  };
+  const assinaturas = assinaturasDoDsa(extras.responsaveis, { cursoId, data: primeiroDia });
+  const impresso = documentoImpresso(lida.semana, {
+    tecnicas: lida.tecnicasComSigla,
+    idsDeEstudoIndividual: lida.idsDeEstudoIndividual,
+  });
+  /* ⚠️ As linhas de Estudo Individual não contam: elas existem mesmo na semana vazia. */
+  const linhasImpressas = impresso.reduce(
+    (total, dia) => total + dia.linhas.filter((l) => !l.estudoIndividual).length,
+    0,
   );
-
-  const atribuicaoPorUe = new Map(
-    ((atribRes.data ?? []) as { unidade_ensino_id: string; instrutor_id: string | null }[]).map(
-      (a) => [a.unidade_ensino_id, a.instrutor_id],
-    ),
-  );
-  const disciplinasDoCurso = (discRes.data ?? []) as {
-    id: string;
-    cod_disciplina: string;
-    nome_disciplina: string;
-    sem_unidades_ensino: boolean | null;
-    status: string;
-  }[];
-  const codigoDaDisciplina = new Map(disciplinasDoCurso.map((d) => [d.id, d.cod_disciplina]));
-
-  const unidades = (
-    (ueExecRes.data ?? []) as {
-      unidade_ensino_id: string;
-      disciplina_id: string;
-      numero_ue: number;
-      topico: string;
-      ch_prevista_tempos: number;
-      ta_executados: number | null;
-      ta_saldo: number | null;
-    }[]
-  ).map((u) => ({
-    id: u.unidade_ensino_id,
-    disciplinaId: u.disciplina_id,
-    disciplinaCodigo: codigoDaDisciplina.get(u.disciplina_id) ?? "—",
-    numero: u.numero_ue,
-    topico: u.topico,
-    prevista: u.ch_prevista_tempos,
-    lancada: u.ta_executados ?? 0,
-    restante: u.ta_saldo ?? u.ch_prevista_tempos,
-    tecnicaSugerida: null,
-    atribuidoId: atribuicaoPorUe.get(u.unidade_ensino_id) ?? null,
-  }));
-
-  /*
-   * ⚠️ **AS DISCIPLINAS ISENTAS SÓ APARECEM ONDE A ISENÇÃO VALE** (`Q-1`, `D-10`): curso por
-   * competências **ou** disciplina marcada `sem_unidades_ensino`. É a MESMA condição de
-   * `app.disciplina_sem_ue`, e a tela a lê para **oferecer** o modo; quem **impõe** é o banco.
-   * Oferecê-lo sempre faria a pessoa tentar e receber `23514`.
-   */
-  /*
-   * ⚠️ **O MODELO DO CURRÍCULO É LIDO DO CURSO, e a primeira escrita disto era um `false` fixo** —
-   * um valor plausível e inventado, que faria a isenção da `Q-1` nunca aparecer nos dois cursos por
-   * competências, que são justamente os que mais precisam dela. O `curriculo_modelo` entra na
-   * leitura do curso, na mesma rodada.
-   */
-  const cursoPorCompetencias =
-    (cursoRes.data as { curriculo_modelo?: string } | null)?.curriculo_modelo === "competencias";
-  const disciplinasIsentas = disciplinasDoCurso
-    .filter((d) => d.status === "ativo" && (d.sem_unidades_ensino === true || cursoPorCompetencias))
-    .map((d) => ({
-      id: d.id,
-      codigo: d.cod_disciplina,
-      nome: d.nome_disciplina,
-    }));
-
-  /* ⚠️ Instrutor INATIVO não chega ao seletor (`RN-INST-02`). */
-  const instrutoresParaEscolher = (
-    (instrRes.data ?? []) as {
-      id: string;
-      posto_graduacao: string;
-      esp_hab_obs: string | null;
-      nome_completo: string;
-      nome_guerra: string | null;
-      status?: string;
-    }[]
-  )
-    .filter((i) => i.status === undefined || i.status === "ativo")
-    .map((i) => ({
-      id: i.id,
-      pg: i.posto_graduacao,
-      especialidade: i.esp_hab_obs,
-      nomeCompleto: i.nome_completo,
-      nomeDeGuerra: i.nome_guerra,
-    }));
+  const avisosDaImpressao = avisosAntesDeImprimir({
+    numeroDoDsa: numeroDoDsa(entradaDoNumero),
+    motivoDoNumeroAusente: motivoDoNumeroAusente(entradaDoNumero),
+    alunos: (turma.alunos as number | null) ?? null,
+    semRelogio,
+    semAssinaturaEsquerda: assinaturas.esquerda === null,
+    semAssinaturaDireita: assinaturas.direita === null,
+    linhasImpressas,
+  });
 
   return (
     <section className="flex min-w-0 flex-col gap-3">
-      <CabecalhoDoDsa codigo={codigo} rotulo={rotuloDaSemana(janela.dias)} ano={escolha.ano} />
+      <CabecalhoDoDsa codigo={codigo} rotulo={rotuloDaSemana(lida.dias)} ano={escolha.ano} />
 
       <NavegacaoDaSemana
         codigo={codigo}
         ano={escolha.ano}
         semana={escolha.numero}
-        sabadoAberto={janela.sabadoAberto}
+        sabadoAberto={lida.sabadoAberto}
       />
 
       {aviso ? (
@@ -573,21 +205,67 @@ export default async function SemanaDoDsa({
         </p>
       ) : null}
 
+      {/*
+       * ⚠️ **O BOTÃO É UM LINK, e `window.print()` é de quem imprime, não da tela.** Abrir a
+       * caixa de impressão sozinha tiraria da pessoa a chance de conferir o papel antes — e é
+       * conferir antes que o `D-2` da planilha ensina a fazer.
+       */}
+      <div
+        className="rounded-ciaara border-borda bg-superficie flex flex-col gap-2 border p-3"
+        data-slot="barra-de-impressao"
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href={enderecoDaImpressaoDoDsa(codigo, {
+              semana: escolha.numero,
+              ano: escolha.ano,
+              ...(lida.sabadoAberto ? { sabado: true } : {}),
+            })}
+            className="rounded-ciaara border-borda-forte bg-superficie-2 text-texto hover:bg-marca-suave border px-3 py-1.5 text-sm font-medium"
+            data-slot="imprimir-dsa"
+          >
+            Imprimir
+          </Link>
+          <span className="text-xs text-texto-suave">
+            Uma página A4 paisagem, com as assinaturas da data desta semana.
+          </span>
+        </div>
+
+        {/*
+         * ⚠️ **NENHUM DELES BLOQUEIA O BOTÃO** (`RN-DEG-02`): *"regra normativa vira alerta, nunca
+         * bloqueio"*. Quem precisa do papel hoje imprime com o traço no cabeçalho e corrige o
+         * cadastro depois.
+         */}
+        {avisosDaImpressao.length > 0 ? (
+          <div role="status" data-slot="avisos-da-impressao" className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-atrasado-tinta">
+              O papel sai assim ({avisosDaImpressao.length} aviso
+              {avisosDaImpressao.length > 1 ? "s" : ""}):
+            </p>
+            <ul className="list-disc pl-5 text-sm text-atrasado-tinta">
+              {avisosDaImpressao.map((texto) => (
+                <li key={texto}>{texto}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+
       <PainelDeLancamento
-        semana={semana}
+        semana={lida.semana}
         turmaId={turmaId}
         cursoId={cursoId}
         salaDaTurma={(turma.sala_alocada as string | null) ?? null}
         ano={escolha.ano}
         numeroDaSemana={escolha.numero}
         podeLancar={podeLancar}
-        unidades={unidades}
-        disciplinasIsentas={disciplinasIsentas}
-        instrutores={instrutoresParaEscolher}
-        escala={escala}
-        tecnicas={tecnicas}
-        tiposDeAvaliacao={tiposDeAvaliacao}
-        subtipos={subtipos}
+        unidades={lida.unidades}
+        disciplinasIsentas={lida.disciplinasIsentas}
+        instrutores={lida.instrutores}
+        escala={lida.escala}
+        tecnicas={lida.tecnicas}
+        tiposDeAvaliacao={lida.tiposDeAvaliacao}
+        subtipos={lida.subtipos}
         lancar={lancar}
         lancarEstudoIndividual={lancarEstudoIndividualDaSemana}
       />
