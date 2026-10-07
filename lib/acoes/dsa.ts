@@ -31,6 +31,7 @@ import { podeAtuar, type Atuacao, type VinculoDeHabilitacao } from "@/lib/domini
 import { avaliarODia, avaliarTetosDaSemana, type TetosDoDsa } from "@/lib/dominio/dsa/tetos";
 import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import { slotDoEstudoIndividual } from "@/lib/dominio/dsa/horario-do-bloco";
+import { camposDoEstudoIndividual } from "@/lib/dominio/dsa/rotulos";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
@@ -503,14 +504,9 @@ export async function lancarEstudoIndividualDaSemana(
     linhas.push({
       id: randomUUID(),
       codigo: `${marca}-EI-${dia}`,
-      categoria_normativa: "Estudo_Individual",
-      escopo: "turma",
       turma_id: turmaId,
-      data: dia,
-      subtipo: "Estudo Individual",
-      descricao: "ESTUDO INDIVIDUAL",
-      ta_inicial: slot,
-      tempos_consumidos: 1,
+      /* ⚠️ O local é sempre a Biblioteca (decisão de 07/10/2026) — pela função pura, nunca escrito aqui. */
+      ...camposDoEstudoIndividual(dia, slot),
     });
   }
 

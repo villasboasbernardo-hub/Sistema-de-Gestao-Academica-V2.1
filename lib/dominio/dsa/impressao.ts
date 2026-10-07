@@ -42,6 +42,7 @@
 
 import type { DiaDaGrade, Semana } from "./grade";
 import { slotDoEstudoIndividual, tempoDeAula, type Relogio, type Trecho } from "./horario-do-bloco";
+import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "./rotulos";
 
 /** O texto fixo da última linha de cada dia, como o documento assinado o escreve. */
 export const TEXTO_DO_ESTUDO_INDIVIDUAL = "ESTUDO INDIVIDUAL";
@@ -169,18 +170,23 @@ export function siglaOuExtenso(
 /**
  * A linha fixa do Estudo Individual, para o dia que **não** tem EI lançado (`D-4`).
  *
- * ⚠️ **ELA APARECE MESMO SEM HORÁRIO, e isso é paridade.** O `D-9` da planilha registra *"linha do
- * 9º tempo sem horário no CAHO"* como defeito do documento histórico — aqui a ausência de relógio
- * (ou de TA lançado) deixa a célula de HORÁRIO **vazia**, e a linha continua, porque é ela que
- * carrega a promessa impressa no rodapé: *"é facultado ao aluno permanecer a bordo"*.
+ * ⚠️ **SEM RELÓGIO NENHUM ela aparece sem horário** (degradação, `RN-DEG-01`): a célula de HORÁRIO
+ * fica vazia e a linha continua, porque é ela que carrega a promessa do rodapé.
+ *
+ * ⚠️ **COM RELÓGIO, ELA NUNCA SAI SEM HORÁRIO** *(conferência visual de Bernardo Villas Boas,
+ * 07/10/2026)*. Quando o relógio não tem o tempo seguinte ao último TA — o catálogo CFG-H do CAHO tem
+ * 9 tempos, e nos dias com os 9 ocupados o slot caía no 10º —, não há tempo livre para Estudo
+ * Individual, e a linha **não nasce** (`null`). É o que o DSA assinado desses dias traz: nenhum EI.
+ * Medido no ano inteiro: 38 linhas sem horário, todas no CAHO; depois, zero.
  */
 function linhaFixaDoEstudoIndividual(
   data: string,
   ultimoTa: number | null,
   relogio: Relogio | null,
-): LinhaImpressa {
+): LinhaImpressa | null {
   const slot = slotDoEstudoIndividual(ultimoTa);
   const tempo = relogio !== null && slot !== null ? tempoDeAula(relogio, slot) : undefined;
+  if (relogio !== null && tempo === undefined) return null;
   const trechos: readonly Trecho[] =
     tempo === undefined ? [] : [{ inicio: tempo.inicio, fim: tempo.fim, periodo: tempo.periodo }];
   return {
@@ -190,7 +196,8 @@ function linhaFixaDoEstudoIndividual(
     tempos: tempo === undefined ? null : 1,
     disciplina: "",
     conteudo: TEXTO_DO_ESTUDO_INDIVIDUAL,
-    local: "",
+    /* O local do EI é sempre a Biblioteca (decisão de Bernardo Villas Boas, 07/10/2026). */
+    local: LOCAL_DO_ESTUDO_INDIVIDUAL,
     te: SIGLA_DO_ESTUDO_INDIVIDUAL,
     instrutor: "",
     estudoIndividual: true,
@@ -297,7 +304,7 @@ export function diaImpresso(
   }
 
   const ei = doEi ?? linhaFixaDoEstudoIndividual(dia.data, ultimoTa, entrada.relogio);
-  return { data: dia.data, bloqueio: null, linhas: [...comuns, ei] };
+  return { data: dia.data, bloqueio: null, linhas: ei === null ? comuns : [...comuns, ei] };
 }
 
 /** O corpo do documento: os dias da semana, na ordem, já impressos. */

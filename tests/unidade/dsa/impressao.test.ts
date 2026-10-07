@@ -14,7 +14,8 @@ import { describe, expect, it } from "vitest";
 
 import type { MarcaDeConflito } from "@/lib/dominio/dsa/conflitos";
 import { montarSemana, type FatoDaSemana } from "@/lib/dominio/dsa/grade";
-import { relogioDoRegime } from "@/lib/dominio/dsa/horario-do-bloco";
+import { relogioDoCatalogo, relogioDoRegime } from "@/lib/dominio/dsa/horario-do-bloco";
+import { camposDoEstudoIndividual, LOCAL_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/rotulos";
 import {
   avisosAntesDeImprimir,
   diaImpresso,
@@ -455,5 +456,71 @@ describe("`FR-039` e `SC-015` · os avisos ficam na TELA, antes de imprimir", ()
     });
     expect(ambas).toHaveLength(1);
     expect(ambas[0]).toContain("duas linhas");
+  });
+});
+
+/**
+ * ⚠️ **O EI NUNCA SAI SEM HORÁRIO QUANDO HÁ RELÓGIO** *(conferência visual de Bernardo Villas Boas,
+ * 07/10/2026)*. Medido no CAHO 2026, semana 20–24/07: o catálogo CFG-H tem 9 tempos e, nos dias com
+ * os 9 ocupados (palestra ou vista no 9º), a linha fixa ia para o 10º — que o catálogo não tem — e o
+ * papel imprimia «ESTUDO INDIVIDUAL» sem horário. Varredura do ano inteiro: 38 linhas, todas no CAHO.
+ * O DSA assinado desses dias NÃO traz Estudo Individual: sem tempo livre depois do último TA, não há EI
+ * a oferecer, e a linha fixa não nasce.
+ */
+describe("a linha fixa de EI quando o relógio não tem o tempo seguinte", () => {
+  const CATALOGO_9 = Array.from({ length: 9 }, (_, i) => ({
+    tempoNumero: i + 1,
+    periodo: (i < 5 ? "manha" : "tarde") as "manha" | "tarde",
+    tipoTempo: "normal" as const,
+    horaInicio: `${String(8 + i).padStart(2, "0")}:00`,
+    horaFim: `${String(8 + i).padStart(2, "0")}:45`,
+  }));
+
+  it("⚠️ com os 9 tempos ocupados, o dia NÃO ganha um EI sem horário", () => {
+    const dia = primeiroDia({
+      relogio: relogioDoCatalogo(CATALOGO_9, 9),
+      temposDeclarados: 9,
+      fatos: [fato({ taInicial: 1, tempos: 9 })],
+    });
+    expect(dia.linhas.some((l) => l.estudoIndividual && l.trechos.length === 0)).toBe(false);
+    expect(dia.linhas.some((l) => l.estudoIndividual)).toBe(false);
+  });
+
+  it("com o 9º livre, o EI nasce no 9º, com o horário do catálogo", () => {
+    const dia = primeiroDia({
+      relogio: relogioDoCatalogo(CATALOGO_9, 9),
+      temposDeclarados: 9,
+      fatos: [fato({ taInicial: 1, tempos: 8 })],
+    });
+    const ei = dia.linhas.at(-1);
+    expect(ei?.estudoIndividual).toBe(true);
+    expect(ei?.trechos).toEqual([{ inicio: "16:00", fim: "16:45", periodo: "tarde" }]);
+  });
+});
+
+/**
+ * ⚠️ **O LOCAL DO ESTUDO INDIVIDUAL É «Biblioteca»**, em todos os cursos e turmas *(decisão de
+ * Bernardo Villas Boas, 07/10/2026, na conferência visual)* — no EI lançado pela planilha, no EI da
+ * semana em um clique (`Q-7`) e na linha fixa que o papel imprime.
+ */
+describe("o local do Estudo Individual é a Biblioteca", () => {
+  it("a constante é a da decisão", () => {
+    expect(LOCAL_DO_ESTUDO_INDIVIDUAL).toBe("Biblioteca");
+  });
+
+  it("a linha fixa do EI sai com o local «Biblioteca»", () => {
+    const ei = primeiroDia().linhas.at(-1);
+    expect(ei?.estudoIndividual).toBe(true);
+    expect(ei?.local).toBe("Biblioteca");
+  });
+
+  it("o EI da semana em um clique nasce com o local «Biblioteca»", () => {
+    expect(camposDoEstudoIndividual("2026-10-05", 9)).toMatchObject({
+      data: "2026-10-05",
+      ta_inicial: 9,
+      tempos_consumidos: 1,
+      local: "Biblioteca",
+      categoria_normativa: "Estudo_Individual",
+    });
   });
 });

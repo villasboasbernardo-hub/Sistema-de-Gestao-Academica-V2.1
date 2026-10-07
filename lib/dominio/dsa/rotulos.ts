@@ -113,3 +113,28 @@ export function responsavelDoFato(
   const externo = limpo(responsavelExterno);
   return externo === "" ? null : externo;
 }
+
+/**
+ * O local do Estudo Individual — **«Biblioteca», em todos os cursos e turmas** *(decisão de Bernardo
+ * Villas Boas, 07/10/2026, na conferência visual do DSA)*. Vale para a linha fixa do papel, para o EI
+ * da semana em um clique (`Q-7`) e para a carga das planilhas de controle, que ignora o local da
+ * planilha no EI (`scripts/carga_dsa`, regra global `local_do_estudo_individual`).
+ */
+export const LOCAL_DO_ESTUDO_INDIVIDUAL = "Biblioteca";
+
+/**
+ * Os campos de um Estudo Individual lançado pelo sistema num dia, no tempo `slot` — o EI da semana em
+ * um clique (`Q-7`, `D-4`). Puro: quem grava é a Server Action, que só acrescenta id, código e turma.
+ */
+export function camposDoEstudoIndividual(dia: string, slot: number) {
+  return {
+    categoria_normativa: "Estudo_Individual" as const,
+    escopo: "turma" as const,
+    data: dia,
+    subtipo: "Estudo Individual",
+    descricao: "ESTUDO INDIVIDUAL",
+    ta_inicial: slot,
+    tempos_consumidos: 1,
+    local: LOCAL_DO_ESTUDO_INDIVIDUAL,
+  };
+}
