@@ -58,6 +58,14 @@ export type GradeDsaProps = {
    * divergência.
    */
   readonly salaDaTurma: string | null;
+  /**
+   * A célula escolhida, já em **dia e TA** — não em linha e coluna.
+   *
+   * ⚠️ **A TRADUÇÃO MORA AQUI, e não em quem chama.** A grade genérica fala em linha e coluna; o
+   * DSA fala em dia e Tempo de Aula. Deixar a conversão para a página faria dois lugares saberem
+   * que a linha 3 é o TA 4 quando há um intervalo no meio — e um deles erraria.
+   */
+  readonly aoEscolherCelula?: (dia: string, ta: number) => void;
   readonly className?: string;
 };
 
@@ -154,7 +162,7 @@ function CorpoDoBloco({
   );
 }
 
-export function GradeDsa({ semana, salaDaTurma, className }: GradeDsaProps) {
+export function GradeDsa({ semana, salaDaTurma, aoEscolherCelula, className }: GradeDsaProps) {
   const { dias, relogio, linhas } = semana;
 
   const colunas: readonly ColunaDaGrade[] = dias.map((d) => ({
@@ -250,6 +258,10 @@ export function GradeDsa({ semana, salaDaTurma, className }: GradeDsaProps) {
 
   const algumSemPosicao = dias.some((d) => d.semPosicao.length > 0);
 
+  /* O TA de cada linha navegável — o inverso de `indiceDaLinhaPorTa`, sem as separadoras. */
+  const taDaLinhaNavegavel: number[] = [];
+  for (let ta = 1; ta <= linhas; ta += 1) taDaLinhaNavegavel.push(ta);
+
   return (
     <div className={className}>
       <GradeAlocacao
@@ -266,6 +278,15 @@ export function GradeDsa({ semana, salaDaTurma, className }: GradeDsaProps) {
           </span>
         }
         {...(algumSemPosicao ? { rodapeDasColunas: rodapes } : {})}
+        {...(aoEscolherCelula
+          ? {
+              aoAtivarCelula: (linha: number, coluna: number) => {
+                const dia = dias[coluna]?.data;
+                const ta = taDaLinhaNavegavel[linha];
+                if (dia !== undefined && ta !== undefined) aoEscolherCelula(dia, ta);
+              },
+            }
+          : {})}
       />
     </div>
   );

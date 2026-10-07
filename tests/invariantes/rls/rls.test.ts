@@ -121,7 +121,22 @@ async function limpar(): Promise<void> {
   await admin.from("usuarios").delete().like("email", "%@ciaara.teste");
   await admin.from("registros_aula").delete().like("codigo", "REG-%T02");
   await admin.from("instrutores").delete().eq("codigo", "RLS-INS-BASE");
-  await admin.from("config_listas").delete().in("lista", ["tipos_atividade", "metodologias"]);
+  /*
+   * ⚠️ **A LIMPEZA APAGAVA AS LISTAS INTEIRAS, E DESDE 05/10/2026 ISSO DESTRÓI A SEMENTE DA
+   * MIGRATION.** Ela era `.in("lista", ["tipos_atividade", "metodologias"])` — e estava correta
+   * enquanto **só este arquivo** criava aquelas linhas. O PR B da spec 013 passou a semeá-las por
+   * migration (9 siglas em `metodologias`, 10 categorias em `tipos_atividade`), e o `delete` amplo
+   * levava as duas listas embora **no meio da suíte**.
+   *
+   * ⚠️ **O SINTOMA ERA EM OUTRO ARQUIVO, E ISSO É O CARO:** o percurso do DSA reprovava com o
+   * seletor de subtipo **vazio** — *"Escolha o subtipo…"* e nada mais —, e o pgTAP passava, porque
+   * ele roda **antes** deste. Um teste que apaga dado de outro é a forma de interferência mais
+   * difícil de ler, porque o arquivo que falha não é o que causou.
+   *
+   * ⚠️ **AGORA ELA APAGA SÓ O QUE ESTE ARQUIVO CRIA:** `tipos_atividade/Aula`, que a migration
+   * **não** semeia. `metodologias/Exposição Oral` **é** da migration (medido) e fica.
+   */
+  await admin.from("config_listas").delete().eq("lista", "tipos_atividade").eq("valor", "Aula");
   await admin.from("unidades_ensino").delete().eq("codigo", "RLS-UE-EXP");
   await admin.from("disciplinas").delete().eq("codigo", "RLS-DISC-EXP");
   await admin.from("turmas").delete().in("id", [TURMA_REGULAR, TURMA_EXPEDITA]);
@@ -241,16 +256,24 @@ beforeAll(async () => {
   // tipo de atividade nascem VAZIAS. Sem esta fixture, todo insert em `registros_aula` falha com
   // "o valor nao pertence a lista", e o teste NEGATIVO de escopo passaria por esse motivo, nao
   // pela RLS. Foi o controle positivo que revelou.
-  await admin.from("config_listas").insert([
-    { lista: "tipos_atividade", valor: "Aula", rotulo_exibicao: "Aula", ordem: 1, ativo: true },
-    {
-      lista: "metodologias",
-      valor: "Exposição Oral",
-      rotulo_exibicao: "Exposição Oral",
-      ordem: 1,
-      ativo: true,
-    },
-  ]);
+  /*
+   * ⚠️ **É `upsert` TOLERANTE, e não `insert`, desde 05/10/2026:** `metodologias/Exposição Oral`
+   * passou a ser semeada pela migration do DSA, e um `insert` cru colidiria com a restrição única
+   * `(lista, valor)` — `23505`, que numa amostra parece recusa de permissão e não é.
+   */
+  await admin.from("config_listas").upsert(
+    [
+      { lista: "tipos_atividade", valor: "Aula", rotulo_exibicao: "Aula", ordem: 1, ativo: true },
+      {
+        lista: "metodologias",
+        valor: "Exposição Oral",
+        rotulo_exibicao: "Exposição Oral",
+        ordem: 1,
+        ativo: true,
+      },
+    ],
+    { onConflict: "lista,valor", ignoreDuplicates: true },
+  );
 
   await admin.from("instrutores").insert({
     id: INSTRUTOR_TESTE,

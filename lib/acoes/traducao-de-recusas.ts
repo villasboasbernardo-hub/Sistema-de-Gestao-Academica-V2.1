@@ -170,6 +170,25 @@ const MENSAGEM_DA_RESTRICAO: Readonly<Record<string, string>> = {
   ue_ch_positiva: "A carga horária da unidade de ensino tem de ser maior que zero.",
   ue_numero_positivo: "O número da unidade de ensino tem de ser maior que zero.",
   ue_topico_nao_vazio: "Informe o tópico da unidade de ensino.",
+
+  // ── Spec 013, PR 2 (05/10/2026) — os nomes das restrições que o PR B criou ───────────────────
+  // ⚠️ **SEM ESTAS FRASES, A RECUSA CHEGA COMO «violação de restrição»** e a pessoa não descobre o
+  //    que fazer. Cada uma tem irmã no `116_dsa.sql`: lá se prova que o banco recusa; aqui, que a
+  //    tela explica. Os nomes foram LIDOS de `pg_constraint`, não escritos de memória.
+  reg_aula_ue_ou_disciplina: "Aula sem unidade de ensino precisa do tópico escrito.",
+  reg_aula_ue_so_nula_no_historico: "Esta disciplina tem unidades de ensino: escolha uma.",
+  reg_aula_ue_xor_disciplina: "Informe a unidade de ensino ou a disciplina, não as duas.",
+  reg_aula_instrutor_obrigatorio:
+    "Aula precisa de instrutor. Atribua um à disciplina nesta turma antes de lançar.",
+  reg_aula_disciplina_do_curso: "Esta disciplina não é do curso desta turma.",
+  reg_aula_ta_valido: "O Tempo de Aula vai de 1 a 12.",
+  reg_aula_tempos_positivos: "O bloco tem de ter de 1 a 12 tempos.",
+  ativ_estudo_individual_de_turma: "Estudo Individual é sempre de uma turma, nunca global.",
+  ativ_responsavel_exclusivo:
+    "Escolha um instrutor do cadastro ou escreva o responsável de fora, não os dois.",
+  ativ_escopo_coerente: "Atividade de turma precisa da turma; a global não aceita turma.",
+  ativ_ta_valido: "O Tempo de Aula vai de 1 a 12.",
+  ativ_tempos_positivos: "A atividade tem de ter de 1 a 12 tempos.",
 };
 
 /**
