@@ -43,7 +43,9 @@ import {
 import { GradeAlocacao } from "@/components/ciaara/grade-alocacao";
 import { GradeDsa } from "@/components/ciaara/grade-dsa";
 import { montarSemana } from "@/lib/dominio/dsa/grade";
+import { gradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import { relogioDoRegime } from "@/lib/dominio/dsa/horario-do-bloco";
+import { documentoImpresso } from "@/lib/dominio/dsa/impressao";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
 import { GraficoLinha } from "@/components/graficos/grafico-linha";
 import { GraficoPizza } from "@/components/graficos/grafico-pizza";
@@ -981,7 +983,21 @@ export function AmostraGradeDsa() {
   });
   return (
     <div className="flex flex-col gap-2">
-      <GradeDsa semana={semana} salaDaTurma="SALA 3" aoEscolherFato={definirEscolhido} />
+      {/*
+        ⚠️ A grade da TELA é a do modelo v4: a mesma montagem do papel (`documentoImpresso` →
+        `gradeDoPapel`), com cartões, intervalo na régua e o almoço dividindo o bloco.
+      */}
+      <GradeDsa
+        semana={semana}
+        grade={gradeDoPapel(
+          documentoImpresso(semana, { tecnicas: [], idsDeEstudoIndividual: new Set() }),
+          semana.relogio,
+          { minimoDeTempos: semana.linhas },
+        )}
+        nomesDasDisciplinas={new Map([["II", "Navegação"]])}
+        salaDaTurma="SALA 3"
+        aoEscolherFato={definirEscolhido}
+      />
       {/*
         A amostra **mostra o que o retorno recebe**, em vez de um manipulador vazio: a vitrine é
         onde o comportamento se confere, e um `() => {}` ali provaria só que o botão existe.

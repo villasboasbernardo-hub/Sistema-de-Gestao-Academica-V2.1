@@ -110,14 +110,17 @@ for (const s of SEMANAS) {
     writeFileSync(`${SAIDA}/${s.nome}.pdf`, pdf);
     expect(paginasDoPdf(pdf), "passou de uma folha A4 paisagem").toBe(1);
 
-    /* ⚠️ A MESMA montagem na tela da turma: o mesmo número de cartões, a mesma folha. */
+    /*
+     * ⚠️ A MESMA montagem na tela da turma: a grade de edição tem os mesmos dias e os mesmos
+     * cartões do papel (`montarDocumentoDoDsa` → `gradeDoPapel`).
+     */
     const cartoesNoPapel = await page.locator('[data-slot="dsa-cartao"]').count();
     await page.goto(enderecoDoDsa(s.turma, recorte));
-    const naTela = page.locator(
-      '[data-slot="documento-do-dsa-na-tela"] [data-slot="dsa-impresso"]',
-    );
+    const naTela = page.locator('[data-slot="grade-da-semana"][data-modelo="v4"]');
     await expect(naTela).toBeVisible({ timeout: 60_000 });
     await expect(naTela.locator('[data-slot="dsa-cartao"]')).toHaveCount(cartoesNoPapel);
+    await expect(naTela.locator("thead th")).toHaveCount(s.dias + 1);
+    await page.setViewportSize({ width: 1600, height: 1000 });
     await naTela.screenshot({ path: `${SAIDA}/${s.nome}-tela.png` });
   });
 }

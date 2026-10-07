@@ -54,6 +54,8 @@ export function montarDocumentoDoDsa(entrada: {
   readonly lida: SemanaLida;
   readonly extras: Extras;
   readonly hoje: string;
+  /** A tela pede as linhas da semana inteira; o papel não passa nada (`gradeDoPapel`). */
+  readonly minimoDeTempos?: number;
 }): DadosDoDocumento {
   const { lida, extras, escolha, hoje, cursoId } = entrada;
   const dias = documentoImpresso(lida.semana, {
@@ -74,7 +76,11 @@ export function montarDocumentoDoDsa(entrada: {
     ultimo,
     alunos: (entrada.turma.alunos as number | null | undefined) ?? null,
     dias,
-    grade: gradeDoPapel(dias, lida.relogio),
+    grade: gradeDoPapel(
+      dias,
+      lida.relogio,
+      entrada.minimoDeTempos === undefined ? {} : { minimoDeTempos: entrada.minimoDeTempos },
+    ),
     /*
      * ⚠️ A CH cumprida é a ACUMULADA ATÉ ESTA SEMANA (`RN-CRONOS-03`), pelo mesmo cálculo do painel
      * de situação da tela.

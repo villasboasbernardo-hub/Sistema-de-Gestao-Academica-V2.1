@@ -107,6 +107,13 @@ function tipoDoCartao(linha: LinhaImpressa): TipoDeCartao {
 export function gradeDoPapel(
   dias: readonly DiaImpresso[],
   relogio: Relogio | null,
+  opcoes: {
+    /**
+     * Linhas mínimas — a TELA passa as linhas da semana (`Semana.linhas`, que inclui os TA
+     * declarados do curso), para que se possa lançar num tempo que o papel ainda não mostra.
+     */
+    readonly minimoDeTempos?: number;
+  } = {},
 ): GradeDoPapel | null {
   if (relogio === null || relogio.tempos.length === 0) return null;
 
@@ -117,7 +124,10 @@ export function gradeDoPapel(
     }
     return maior;
   }, 0);
-  const quantos = Math.min(relogio.tempos.length, Math.max(relogio.temposDoRegime, ultimoOcupado));
+  const quantos = Math.min(
+    relogio.tempos.length,
+    Math.max(relogio.temposDoRegime, ultimoOcupado, opcoes.minimoDeTempos ?? 0),
+  );
   const tempos = [...relogio.tempos].sort((a, b) => a.numero - b.numero).slice(0, quantos);
 
   const faixas: FaixaDaGrade[] = [];
