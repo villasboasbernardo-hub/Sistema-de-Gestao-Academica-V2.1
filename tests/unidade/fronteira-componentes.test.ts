@@ -140,6 +140,21 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
     "components/ciaara/badge-teto.tsx",
     "components/ciaara/dialogo-confirmacao.tsx",
     "components/ciaara/filtro-avancado.tsx",
+    /*
+     * ⚠️ **AS DUAS GRADES DO DSA ENTRARAM EM 05/10/2026 (spec 013, PR 1), E NÃO POR PRECAUÇÃO — o
+     * `next build` provou que elas NÃO PODEM ser de servidor.** Eu as escrevi sem marcador, porque
+     * o plano pedia assim; a tela caía no `error.tsx` com *"Minified React error #130"* (*element
+     * type is invalid: got undefined*) **só em produção** — `next dev` servia a rota com 200 e a
+     * vitrine renderizava a grade sem queixa.
+     * ⚠️ **A CAUSA É `CelulaNavegavel`**, que clona o filho no cliente para lhe pôr `ref` e
+     * `tabIndex`: com a grade no servidor, o `<td>` chega como nó serializado do RSC e
+     * `cloneElement` devolve tipo `undefined`. É a mesma razão por que `tabela-densa.tsx` — que usa
+     * as MESMAS duas primitivas — está nesta lista desde a fatia (b) do Épico 4.
+     * ⚠️ **E o dado continua no servidor:** a página lê o banco, chama `montarSemana()` e passa o
+     * `Semana` pronto por propriedade. O que vai ao pacote é o desenho, não a consulta.
+     */
+    "components/ciaara/grade-alocacao.tsx",
+    "components/ciaara/grade-dsa.tsx",
     "components/ciaara/lista-navegavel.tsx",
     "components/ciaara/provedor-de-tema.tsx",
     "components/ciaara/seletor-instrutor.tsx",

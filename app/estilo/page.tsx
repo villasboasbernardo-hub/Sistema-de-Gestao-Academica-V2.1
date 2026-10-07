@@ -20,6 +20,8 @@ import {
   AmostraDialogoConfirmacao,
   AmostraBarraDeProgresso,
   AmostraEmblemasDeStatus,
+  AmostraGradeAlocacao,
+  AmostraGradeDsa,
   AmostraEstadoNaUrl,
   AmostraEsqueleto,
   AmostraEstadoVazio,
@@ -324,6 +326,14 @@ export default function Vitrine() {
 
       <Secao titulo="Emblema de status — os nove tons, cada um com rótulo textual obrigatório">
         <AmostraEmblemasDeStatus />
+      </Secao>
+
+      <Secao titulo="Grade de alocação — a matriz densa, e ela não sabe o que é um Tempo de Aula">
+        <AmostraGradeAlocacao />
+      </Secao>
+
+      <Secao titulo="Grade do DSA — a semana montada pelo domínio, com almoço, feriado e «Sem posição»">
+        <AmostraGradeDsa />
       </Secao>
 
       <Secao titulo="Campo obrigatório — o traço é `--texto-tenue`, e a obrigatoriedade vai no atributo">

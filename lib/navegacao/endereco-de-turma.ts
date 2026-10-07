@@ -75,6 +75,43 @@ export const ROTA_DA_FICHA_DA_TURMA = "/turmas/[turma]" as const;
  * @example enderecoDaSecaoDeDisciplinas("C-Ap-FR T2 2026")
  *          → "/turmas/C-Ap-FR%20T2%202026#disciplinas"
  */
+/**
+ * O endereço da semana do DSA, com o recorte (`RF-DSA-01`, spec 013).
+ *
+ * ⚠️ **ELE MORA AQUI, E NÃO NA PASTA DA TELA, PORQUE A GUARDA ESTÁ CERTA.** Eu o escrevi primeiro
+ * em `app/(app)/turmas/[turma]/dsa/consulta.ts`, e `endereco-de-turma-unico.test.ts` reprovou: o
+ * `FR-031.2` manda que **ninguém** monte `/turmas/` fora deste módulo. O motivo é medido (gotcha
+ * 12): o código da turma contém espaços, e montá-lo à mão funciona na primeira tela e falha **em
+ * silêncio** na que esquecer de codificar.
+ *
+ * ⚠️ **VALOR NO PADRÃO NÃO VAI NA URL** — é o que mantém o endereço da semana corrente favoritável,
+ * e o que faz `?semana=` aparecer só quando alguém navegou de propósito.
+ */
+export function enderecoDoDsa(
+  codigo: string,
+  recorte?: { readonly semana?: number; readonly ano?: number; readonly sabado?: boolean },
+): string {
+  /*
+   * ⚠️ **O CAMINHO SAI DA CONSTANTE, E NÃO DE `enderecoDaTurma(codigo)`, POR UMA RAZÃO MEDIDA.**
+   * A primeira escrita era `` `${enderecoDaTurma(codigo)}/dsa` `` — mais curta e com um dono só —,
+   * e `toda-tela-tem-caminho.test.ts` passou a acusar a tela do DSA como **órfã**: a varredura
+   * resolve `${CONSTANTE}`, e **não** resolve chamada de função, então o destino que ela via era
+   * `[param]/dsa`, que não casa com `/turmas/[param]/dsa`. Os três links existiam; a guarda não os
+   * enxergava.
+   * ⚠️ **E isto não quebra a regra do dono único**: `RAIZ_DE_TURMAS` e `encodeURIComponent` são
+   * deste mesmo módulo, que é justamente o único autorizado a montar `/turmas/…` (`FR-031.2`).
+   */
+  const base = `${RAIZ_DE_TURMAS}/${encodeURIComponent(codigo)}/dsa`;
+  const busca = new URLSearchParams();
+  if (recorte?.semana) busca.set("semana", String(recorte.semana));
+  if (recorte?.ano) busca.set("ano", String(recorte.ano));
+  if (recorte?.sabado) busca.set("sabado", "sim");
+  const sufixo = busca.toString();
+  return sufixo === "" ? base : `${base}?${sufixo}`;
+}
+
+export const ROTA_DO_DSA = "/turmas/[turma]/dsa" as const;
+
 export const ANCORA_DAS_DISCIPLINAS = "disciplinas";
 
 export function enderecoDaSecaoDeDisciplinas(codigo: string): string {

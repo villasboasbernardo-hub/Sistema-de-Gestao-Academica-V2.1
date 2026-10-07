@@ -29,11 +29,13 @@ import { dataParaLeitura } from "@/lib/formato/data";
 import {
   ANCORA_DAS_DISCIPLINAS,
   enderecoDasTurmas,
+  enderecoDoDsa,
   ROTA_DA_FICHA_DA_TURMA,
 } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
+import { SePodeVer } from "@/components/ciaara/SePodeVer";
 
 import { alcanceDoPerfil } from "../../cursos/consulta";
 import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
@@ -262,9 +264,27 @@ export default async function FichaDaTurma({
   return (
     <section className="flex flex-col gap-5">
       <header className="flex flex-col gap-1">
-        <h1 className="text-texto text-xl font-semibold" data-slot="codigo-da-turma">
-          {turma.codigo}
-        </h1>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h1 className="text-texto text-xl font-semibold" data-slot="codigo-da-turma">
+            {turma.codigo}
+          </h1>
+          {/*
+            ⚠️ **O PRIMEIRO DOS TRÊS CAMINHOS ATÉ O DSA** (`FR-011` da spec 013, e a regra
+               *"tela sem caminho clicável é tela não entregue"*). Os outros dois são a ação de
+               linha em `/turmas` e o bloco da turma no `/inicio`.
+            ⚠️ **E O BOTÃO SEGUE A PERMISSÃO DA PÁGINA DE DESTINO, nunca uma regra própria**: o DSA
+               pede `registros_aula.ler`, que é o que `SePodeVer` confere aqui.
+          */}
+          <SePodeVer permissoes={permissoes} recurso="registros_aula" acao="ler">
+            <Link
+              href={enderecoDoDsa(turma.codigo as string)}
+              className="border-borda rounded-ciaara hover:bg-marca-suave border px-3 py-1.5 text-sm font-medium"
+              data-slot="abrir-o-dsa"
+            >
+              Abrir o DSA
+            </Link>
+          </SePodeVer>
+        </div>
         {/*
           ⚠️ **O CAMINHO DE VOLTA É A LISTA, E NÃO O CURSO** (`D-NAV-3`, 04/10/2026). Isto **emenda o
              `FR-031.6`** da spec 009, que escrevia *"o caminho de volta é o curso"* — e escrevia certo

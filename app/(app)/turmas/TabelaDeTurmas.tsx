@@ -33,7 +33,7 @@ import {
   TOM_DO_STATUS_DE_TURMA,
 } from "@/lib/dominio/seletor-de-turma";
 import { dataIlegivel, dataParaLeitura } from "@/lib/formato/data";
-import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+import { enderecoDaTurma, enderecoDoDsa } from "@/lib/navegacao/endereco-de-turma";
 
 import type { TurmaNaLista } from "./consulta";
 
@@ -81,6 +81,30 @@ const COLUNAS: readonly Coluna<TurmaNaLista>[] = [
         className="text-texto underline-offset-2 hover:underline"
       >
         {traco(l.codigo)}
+      </Link>
+    ),
+  },
+  /*
+   * ⚠️ **O SEGUNDO DOS TRÊS CAMINHOS ATÉ O DSA** (`FR-011` da spec 013). Ele é ação de LINHA, e não
+   *    um link no código da turma: o código já leva à ficha, e dois destinos na mesma célula fazem
+   *    a pessoa descobrir qual é qual por tentativa.
+   * ⚠️ **`tabIndex={-1}` como as outras células**: a parada de tabulação é da célula da grade, pelo
+   *    *roving tabindex* — dar `0` ao link faria a tabela de 28 turmas ter 28 paradas a mais.
+   */
+  {
+    chave: "dsa",
+    titulo: "DSA",
+    ordenavel: false,
+    valor: (l) => l.codigo,
+    celula: (l) => (
+      <Link
+        href={enderecoDoDsa(l.codigo)}
+        tabIndex={-1}
+        aria-label={`Abrir o DSA da turma ${l.codigo}`}
+        className="text-marca underline-offset-2 hover:underline"
+        data-slot="dsa-da-linha"
+      >
+        DSA
       </Link>
     ),
   },

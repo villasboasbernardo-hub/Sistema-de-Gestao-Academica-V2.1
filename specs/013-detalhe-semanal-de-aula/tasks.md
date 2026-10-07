@@ -84,20 +84,20 @@
 **Meta**: qualquer perfil com leitura abre a semana da turma e navega por ela.
 **Depende de**: PR 0 (todo o domínio) e **PR B** (a view já com `LEFT`, global e `herdado`).
 
-- [ ] T049 Acrescentar `"/turmas/[turma]/dsa"` ao `CONTRATO` de `lib/navegacao/contrato.ts` com `semana`, `ano` e `sabado`, conforme `contracts/parametros-dsa.md`
-- [ ] T050 [P] `tests/unidade/contrato-de-parametros.test.ts` — os três parâmetros, tipos, padrões e política de histórico; parâmetro fora do contrato **não compila**
-- [ ] T051 `components/ciaara/grade-alocacao.tsx` — o primitivo denso: matriz `linha × coluna`, cabeçalhos fixos, **rolagem horizontal própria**, navegação bidimensional por teclado reaproveitando `proximaPosicao`/`ListaNavegavel`, tokens do tema, **sem `"use client"`**, **sem** regra `RN-` dentro (doc 23 §3.2/§3.3)
-- [ ] T052 [P] Acrescentar `GradeAlocacao` à vitrine `/estilo` — exigência de alcançabilidade de `components/ciaara/` (`fronteira-componentes.test.ts`)
-- [ ] T053 `components/ciaara/grade-dsa.tsx` — composição sobre `GradeAlocacao`: colunas = dias (5 ou 6), linhas = TA do regime + o excepcional, blocos com `rowSpan`, intervalos e almoço como linhas finas, faixa **"Sem posição"** ao pé de cada dia. ⚠️ **E a SALA no cabeçalho**: `turmas.sala_alocada` aparece **uma vez** no cabeçalho da semana, e **só o bloco cujo `local` difere dela** é destacado — é o `RF-DSA-03` literal (`FR-006`), e é o oposto do papel, que traz LOCAL **por linha**
-- [ ] T054 `app/(app)/turmas/[turma]/dsa/consulta.ts` — **uma** rodada de `Promise.all`: `vw_ocupacao_ta` da semana · os **três** `select … where ta_inicial is null` da faixa · `app.fn_regime_vigente` (`padrao` e `excecao`) · feriados do intervalo · a turma · `turma_disciplina`. ⚠️ **Nenhum `await` em laço**
-- [ ] T055 `app/(app)/turmas/[turma]/dsa/page.tsx` — Server Component montando a `Semana` pelo domínio e passando ao `GradeDsa`; turma pelo código via `endereco-de-turma.ts`
-- [ ] T056 [P] `loading.tsx` e `error.tsx` do segmento (`RN-DEG-01`, `error.tsx` + `loading.tsx` por segmento)
-- [ ] T057 `NavegacaoDaSemana.tsx` — folha de cliente: anterior/próxima/hoje escrevendo a URL, com a virada do ano; **declarar** em `fronteira-das-telas.test.ts` com o motivo
-- [ ] T058 Degradação: curso **sem regime** → grade com TA numerados sem relógio e aviso com link para *Editar curso → Registrar nova vigência*; **EAD puro** → a frase da `Q-13`, sem grade
-- [ ] T059 Os **três caminhos clicáveis**: botão **"Abrir o DSA"** no cabeçalho da ficha da turma, ação de linha **"DSA"** em `/turmas`, e o link **"DSA da semana"** no bloco da turma do `/inicio` (`FR-011`)
-- [ ] T060 [P] `tests/unidade/toda-tela-tem-caminho.test.ts` — cobrar o `href` de `/turmas/[turma]/dsa` em outro arquivo
-- [ ] T061 `tests/e2e/dsa-de-teste.ts` — semente para a semana: turma com regime, uma com vigência mudada no meio, feriados dos três impactos, uma turma com os lançamentos sem TA e uma avaliação **herdada** no TA 1; **idempotente**, provada rodando **duas vezes seguidas** (regra 9.1)
-- [ ] T062 **Prova do PR 1** — `tests/e2e/dsa-ver.spec.ts` cobrindo o quadro do `quickstart.md` §"PR 1" inteiro, **chegando por clique**, e `pnpm verificar:tudo` **0**
+- [X] T049 Acrescentar `"/turmas/[turma]/dsa"` ao `CONTRATO` de `lib/navegacao/contrato.ts` com `semana`, `ano` e `sabado`, conforme `contracts/parametros-dsa.md`
+- [X] T050 [P] `tests/unidade/contrato-de-parametros.test.ts` — os três parâmetros, tipos, padrões e política de histórico; parâmetro fora do contrato **não compila**
+- [X] T051 `components/ciaara/grade-alocacao.tsx` — o primitivo denso: matriz `linha × coluna`, cabeçalhos fixos, **rolagem horizontal própria**, navegação bidimensional por teclado reaproveitando `proximaPosicao`/`ListaNavegavel`, tokens do tema, **sem `"use client"`**, **sem** regra `RN-` dentro (doc 23 §3.2/§3.3)
+- [X] T052 [P] Acrescentar `GradeAlocacao` à vitrine `/estilo` — exigência de alcançabilidade de `components/ciaara/` (`fronteira-componentes.test.ts`)
+- [X] T053 `components/ciaara/grade-dsa.tsx` — composição sobre `GradeAlocacao`: colunas = dias (5 ou 6), linhas = TA do regime + o excepcional, blocos com `rowSpan`, intervalos e almoço como linhas finas, faixa **"Sem posição"** ao pé de cada dia. ⚠️ **E a SALA no cabeçalho**: `turmas.sala_alocada` aparece **uma vez** no cabeçalho da semana, e **só o bloco cujo `local` difere dela** é destacado — é o `RF-DSA-03` literal (`FR-006`), e é o oposto do papel, que traz LOCAL **por linha**
+- [X] T054 `app/(app)/turmas/[turma]/dsa/consulta.ts` — **uma** rodada de `Promise.all`: `vw_ocupacao_ta` da semana · os **três** `select … where ta_inicial is null` da faixa · `app.fn_regime_vigente` (`padrao` e `excecao`) · feriados do intervalo · a turma · `turma_disciplina`. ⚠️ **Nenhum `await` em laço**
+- [X] T055 `app/(app)/turmas/[turma]/dsa/page.tsx` — Server Component montando a `Semana` pelo domínio e passando ao `GradeDsa`; turma pelo código via `endereco-de-turma.ts`
+- [X] T056 [P] `loading.tsx` e `error.tsx` do segmento (`RN-DEG-01`, `error.tsx` + `loading.tsx` por segmento)
+- [X] T057 `NavegacaoDaSemana.tsx` — folha de cliente: anterior/próxima/hoje escrevendo a URL, com a virada do ano; **declarar** em `fronteira-das-telas.test.ts` com o motivo
+- [X] T058 Degradação: curso **sem regime** → grade com TA numerados sem relógio e aviso com link para *Editar curso → Registrar nova vigência*; **EAD puro** → a frase da `Q-13`, sem grade
+- [X] T059 Os **três caminhos clicáveis**: botão **"Abrir o DSA"** no cabeçalho da ficha da turma, ação de linha **"DSA"** em `/turmas`, e o link **"DSA da semana"** no bloco da turma do `/inicio` (`FR-011`)
+- [X] T060 [P] `tests/unidade/toda-tela-tem-caminho.test.ts` — cobrar o `href` de `/turmas/[turma]/dsa` em outro arquivo
+- [X] T061 `tests/e2e/dsa-de-teste.ts` — semente para a semana: turma com regime, uma com vigência mudada no meio, feriados dos três impactos, uma turma com os lançamentos sem TA e uma avaliação **herdada** no TA 1; **idempotente**, provada rodando **duas vezes seguidas** (regra 9.1)
+- [X] T062 **Prova do PR 1** — `tests/e2e/dsa-ver.spec.ts` cobrindo o quadro do `quickstart.md` §"PR 1" inteiro, **chegando por clique**, e `pnpm verificar:tudo` **0**
 
 ---
 

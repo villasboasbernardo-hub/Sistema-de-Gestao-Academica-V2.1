@@ -49,7 +49,17 @@ test.describe("`SC-002` · do menu à ficha, sem passar pelo curso", () => {
     await irAListaDeTurmas(page, EMAIL);
 
     const codigo = SEMEADO.turmaJanelaCedo;
-    await expect(page.getByRole("gridcell", { name: codigo, exact: false })).toBeVisible();
+    /*
+     * ⚠️ **A ASSERÇÃO GANHOU ESCOPO EM 05/10/2026, E A AMBIGUIDADE FOI CAUSADA POR UMA COLUNA
+     * NOVA.** O PR 1 do Épico 6 acrescentou a ação **DSA** na linha, cujo link traz
+     * `aria-label="Abrir o DSA da turma <código>"` — e `getByRole("gridcell", { name: codigo })`
+     * passou a resolver **duas** células, com a mensagem *"strict mode violation"*.
+     * ⚠️ **O RÓTULO NÃO FOI ENCURTADO, e isso é decisão:** quem navega por leitor de tela precisa
+     * saber de QUAL turma é aquele "DSA", e tirar o código do rótulo pioraria a tela para resolver
+     * um problema do teste. É a lição do gotcha 3 do `CLAUDE.md`: *"ambiguidade não se resolve com
+     * mais tempo — a correção é escopo"*. A célula que interessa é a **primeira** da linha.
+     */
+    await expect(page.getByRole("gridcell", { name: codigo, exact: false }).first()).toBeVisible();
     await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText("turma");
 
     await page.getByRole("link", { name: codigo }).first().click();

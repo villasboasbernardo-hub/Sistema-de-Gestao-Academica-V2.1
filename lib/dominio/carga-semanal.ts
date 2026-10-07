@@ -120,6 +120,43 @@ export function limitesDoAnoIso(ano: number): { readonly inicio: string; readonl
   };
 }
 
+/**
+ * As datas de uma semana ISO, de **segunda a sábado**, `AAAA-MM-DD` (`RF-DSA-01`, spec 013).
+ *
+ * ⚠️ **ELA MORA AQUI, E NÃO EM `lib/dominio/dsa/`, DE PROPÓSITO.** Este módulo já é o **único**
+ * dono da aritmética de semana ISO — `semanaIsoDe` e `limitesDoAnoIso` são dele —, e a volta
+ * (semana → datas) escrita em outro arquivo faria **duas** contas de calendário ISO no
+ * repositório, que divergiriam na virada do ano antes de qualquer outra coisa.
+ *
+ * ⚠️ **A SEGUNDA DA SEMANA 1 VEM DE `limitesDoAnoIso`, não de 1º de janeiro.** A semana ISO 1 é a
+ * que contém 04/01, e pode começar em dezembro do ano anterior: `2026-W01` começa em
+ * **29/12/2025**. Contar a partir de 1º de janeiro erraria o ano inteiro por alguns dias, e o erro
+ * apareceria como *"a semana 1 mostra os lançamentos da semana 2"* — sem erro nenhum na tela.
+ *
+ * ⚠️ **DEVOLVE SEIS DATAS, SEMPRE.** Quem decide se o sábado entra é a tela (`Q-4`), e ela corta a
+ * lista; devolver cinco aqui obrigaria um segundo cálculo para achar o sábado.
+ */
+export function datasDaSemanaIso(ano: number, numero: number): readonly string[] {
+  const segundaDaSemanaUm = paraDia(limitesDoAnoIso(ano).inicio);
+  if (segundaDaSemanaUm === null) return [];
+  const inicio = segundaDaSemanaUm + (numero - 1) * 7;
+  return [0, 1, 2, 3, 4, 5].map((d) => paraData(inicio + d));
+}
+
+/**
+ * Quantas semanas ISO o ano tem — **52 ou 53**, nunca um número escrito à mão.
+ *
+ * ⚠️ É o que impede a navegação de passar da última semana para uma que não existe: 2026 tem 53,
+ * e um `52` fixo esconderia a última semana do ano inteiro.
+ */
+export function semanasDoAnoIso(ano: number): number {
+  const { inicio, fim } = limitesDoAnoIso(ano);
+  const de = paraDia(inicio);
+  const ate = paraDia(fim);
+  if (de === null || ate === null) return 52;
+  return Math.round((ate + 1 - de) / 7);
+}
+
 /** Arredonda a centésimos: a soma de médias em ponto flutuante não pode errar o limite exato. */
 const centesimos = (n: number) => Math.round(n * 100) / 100;
 
