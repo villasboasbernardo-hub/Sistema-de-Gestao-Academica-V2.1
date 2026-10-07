@@ -352,7 +352,8 @@ def resolver(
                 "descricao": "ESTUDO INDIVIDUAL" if tipo == "estudo_individual" else (regra.get("descricao") or " ".join(linha_do_catalogo.topico.split())),
                 "ta_inicial": bloco.ta_inicial,
                 "tempos_consumidos": bloco.tempos,
-                "local": local_de(bloco, regra),
+                # O local do EI e sempre o da regra global (Biblioteca, 07/10/2026): o da planilha e ignorado.
+                "local": (decisoes.get("local_do_estudo_individual") or local_de(bloco, regra)) if tipo == "estudo_individual" else local_de(bloco, regra),
                 "instrutor": instrutor["codigo"] if instrutor else None,
                 "instrutor_id": instrutor["id"] if instrutor else None,
                 "responsavel_externo": externo,
