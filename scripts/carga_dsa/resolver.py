@@ -232,7 +232,7 @@ def resolver(
     def casar(texto_bruto: str, bloco: Bloco, obrigatorio: bool) -> dict | None:
         """Um instrutor do cadastro para um texto «POSTO (ESP) NOME DE GUERRA». Exige exatamente um."""
         lido = ler_instrutor(texto_bruto)
-        achados = casar_instrutor(lido, ref["instrutores"]) if lido is not None else []
+        achados = casar_instrutor(lido, ref["instrutores"], decisoes.get("postos_aceitos_por_codigo")) if lido is not None else []
         if len(achados) > 1:
             # Texto que casa com DOIS do cadastro: o desempate e decisao nominal, versionada POR CODIGO
             # (fontes.json, `desempate_de_instrutor`: «55|58» → «55»), para a sincronizacao semanal aplicar sempre.

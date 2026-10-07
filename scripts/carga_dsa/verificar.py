@@ -219,7 +219,9 @@ def conferir_semanas(turma: str, leitura: planilha.Leitura, plano: dict, dsa: di
                 elif tokens_p and set(tokens_p[1:]) <= set(tokens_s):
                     dif(bloco, "DADO", "instrutor", f"o cadastro nao tem nome de guerra: o sistema imprime o nome completo («{instr_p}» × «{linha['instrutor']}»)")
                 else:
-                    dif(bloco, "SISTEMA", "instrutor", f"«{instr_p}» na planilha × «{linha['instrutor']}» no sistema")
+                    # O texto casou com o instrutor do cadastro (o plano o resolveu); o que difere e a FORMA que a
+                    # planilha escreve — outro nome de guerra, outra especialidade. E da planilha, nao do sistema.
+                    dif(bloco, "PLANILHA", "instrutor", f"a planilha escreve «{instr_p}»; o cadastro imprime «{linha['instrutor']}»")
             elif linha["instrutor"] == "" and (decisoes.get("chaves", {}).get(f"{bloco.cod}+{bloco.ue}") or {}).get("responsavel") == "em_branco":
                 dif(bloco, "DECISAO", "instrutor", f"«{instr_p}» na planilha; em branco no sistema, por decisao")
             elif linha["instrutor"] == "":

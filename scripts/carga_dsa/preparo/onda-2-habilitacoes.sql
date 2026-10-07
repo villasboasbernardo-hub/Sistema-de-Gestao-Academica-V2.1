@@ -1,6 +1,6 @@
 -- Preparo da onda 2 da VIRADA-1: as HABILITACOES que as cinco planilhas regulares exigem e o cadastro nao tinha.
 --
--- O QUE  : 29 pares (24 + 5 do codigo 55, a quem a decisao de 06/10/2026 atribui todo «CC ALVES») instrutor x disciplina — instrutor que deu aula na turma sem vinculo com a disciplina
+-- O QUE  : 31 pares (24 + 5 do codigo 55 + 2 das promocoes, a quem a decisao de 06/10/2026 atribui todo «CC ALVES») instrutor x disciplina — instrutor que deu aula na turma sem vinculo com a disciplina
 --          (RN-INST-01). Aprovados por Bernardo Villas Boas em 06/10/2026 (lote da onda 2, item 2), com a lista
 --          por posto + nome de guerra mostrada antes de aplicar no remoto. Idempotente; sem nome de pessoa.
 --          O instrutor e casado por CODIGO da v2.0 e pelo POSTO do cadastro (conferido na execucao).
@@ -33,7 +33,10 @@ with pares (curso, instrutor, disciplina) as (values
   ('C-Ap-HN', '55', 'XIV'),
   ('C-Espc-HN', '55', 'HN-1110-0815'),
   ('C-Espc-HN', '55', 'HN-1105-0243'),
-  ('C-Espc-HN', '55', 'HN-1114-0730')
+  ('C-Espc-HN', '55', 'HN-1114-0730'),
+  -- + dois pares (06/10/2026, item 4): o 144 onde deu aula sem habilitacao e o 173 em Fisica no C-Espc-FR
+  ('C-Ap-FR', '144', 'IX'),
+  ('C-Espc-FR', '173', 'HN-1104-0506')
 )
 insert into public.instrutor_disciplina (instrutor_id, disciplina_id)
 select i.id, d.id
@@ -42,3 +45,4 @@ select i.id, d.id
   join public.instrutores i on i.codigo = p.instrutor and i.status = 'ativo'
   join public.disciplinas d on d.curso_id = c.id and d.cod_disciplina = p.disciplina and d.status = 'ativo'
  where not exists (select 1 from public.instrutor_disciplina v where v.instrutor_id = i.id and v.disciplina_id = d.id);
+

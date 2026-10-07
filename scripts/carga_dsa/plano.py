@@ -127,7 +127,7 @@ POSTOS_EQUIVALENTES = {"PROF": "SC", "PROFA": "SC", "PROFO": "SC",
                        "1T": "1TEN", "2T": "2TEN", "CT": "CT", "GM": "GM"}
 
 
-def casar_instrutor(lido: InstrutorDaPlanilha, instrutores: list[dict]) -> list[dict]:
+def casar_instrutor(lido: InstrutorDaPlanilha, instrutores: list[dict], postos_por_codigo: dict | None = None) -> list[dict]:
     """Os instrutores ATIVOS do cadastro com o mesmo posto e o mesmo nome de guerra.
 
     Com `nome_guerra` preenchido, vale a igualdade. Vazio (o caso de quase toda a base hoje), o
@@ -138,14 +138,19 @@ def casar_instrutor(lido: InstrutorDaPlanilha, instrutores: list[dict]) -> list[
     # «PROFº»/«PROFª» na planilha e o servidor civil do cadastro (posto «SC»).
     posto = POSTOS_EQUIVALENTES.get(lido.posto, lido.posto)
     for i in instrutores:
-        if normalizar(i["posto"]).replace(" ", "") != posto:
+        # `postos_por_codigo`: o posto que a planilha ainda (ou ja) escreve para aquele instrutor — promocao.
+        # Decisao nominal versionada POR CODIGO (fontes.json, `postos_aceitos_por_codigo`), sem nome de pessoa.
+        aceitos = {normalizar(i["posto"]).replace(" ", "")} | set((postos_por_codigo or {}).get(str(i["codigo"]), []))
+        if posto not in aceitos:
             continue
         guerra = normalizar(i.get("guerra"))
-        if guerra:
-            if guerra == lido.guerra:
-                achados.append(i)
-            continue
         nome = normalizar(i["nome"]).split()
+        if guerra and guerra == lido.guerra:
+            achados.append(i)
+            continue
+        # Com nome de guerra no cadastro e texto DIFERENTE dele («FULANO SICRANO» × «SICRANO BELTRANO»): ainda vale o
+        # nome completo, palavra por palavra inteira — o nome de guerra preenchido nao pode fazer a planilha
+        # que escreve outra forma deixar de casar (medido na onda 2, 06/10/2026). Homonimo continua acusado.
         if all(p in nome for p in palavras):
             achados.append(i)
     # Dois do mesmo posto e nome de guerra: a ESPECIALIDADE da planilha desempata, quando ela a traz
