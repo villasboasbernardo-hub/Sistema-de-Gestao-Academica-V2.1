@@ -49,7 +49,13 @@
     "AUDITORIO": "Auditório",
     "AUDITÓRIO CIAARA": "Auditório",
     "QUADRA": "Quadra",
-    "SALA DE AULA": ""
+    "SALA DE AULA": "",
+    "MACAÉ": "MACAÉ",
+    "BNRJ": "BNRJ",
+    "BHMN": "BHMN",
+    "BENFICA": "BENFICA",
+    "AVB POLLUX": "AVB POLLUX",
+    "SIMULADOR": "SIMULADOR"
   },
   "excecao_virada_1": {
     "autorizada_por": "Bernardo Villas Boas",
@@ -78,5 +84,8 @@
   "provisorias": [
     "disciplinas: de-para por NOME (curso por competencias): XV «PRIMEIROS SOCORROS EM FAROIS» → SN-1103-0506 «PRIMEIROS SOCORROS»; VII «FIS. APLICADA AOS AUX. A NAV.» → HN-1104-0506 «FISICA APLICADA A HIDROGRAFIA» — os dois por aproximacao, aguardam ratificacao",
     "locais fora do inventario de salas entram como TEXTO (Sala 05, CAMR, CIAA, CN, Auditorio DHN, BFNIF, H36, H38, CMOpM, Sala 00, DHN, FAB, NAS, Patio, Biblioteca, Porto do Acu) — cadastrar como sala e decisao do lote"
+  ],
+  "aprovadas": [
+    "locais externos (MACAÉ, BNRJ, BHMN, BENFICA, AVB POLLUX, SIMULADOR) como texto livre — conferencia de 07/10/2026 (Bernardo Villas Boas: aplicar a recomendacao de cada caso)"
   ]
 }

@@ -460,7 +460,7 @@ def resolver(
             "observacoes": procedencia(bloco) + ("" if not demais else f" {demais}" if demais.endswith("(conforme DSA)") else f"{MARCA_DE_DEMAIS}{demais}."),
         })
 
-    _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura)
+    _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura, codigo=codigo, procedencia=procedencia)
     _resolver_dias_parados(r, dias_parados, dias_globais, leitura, codigo, procedencia, categoria_do_subtipo)
     _conferencias_internas(r, leitura, decisoes, pend, set(disciplina_por_cod))
     _tetos(r, ref, pend)
@@ -468,7 +468,7 @@ def resolver(
     return r
 
 
-def _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura) -> None:
+def _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura, codigo=None, procedencia=None) -> None:
     """A vista vai na MESMA linha da avaliacao (`RN-AVAL-02`). Uma linha guarda UMA sessao de vista."""
     explicitas = list(decisoes.get("vistas", []))
     # A aba DATAS AVALIACOES, quando existe, diz QUAL vista e de QUAL prova (chave a chave, com as datas):
@@ -505,6 +505,18 @@ def _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura) 
                 alvo = anteriores[-1] if anteriores else None
             if alvo is None:
                 pend("vista_sem_prova", f"vista {cod}+{bloco.ue} de {bloco.data:%d/%m/%Y} nao casa com nenhuma prova da disciplina", bloco.tempos, chave=f"{cod}+{bloco.ue}")
+                continue
+            if alvo["data_vista_prova"] is not None and decisoes.get("vista_extra_como_aec") and codigo is not None:
+                # Decisao de 07/10/2026 (conferencia, C06): a segunda sessao de vista da mesma prova entra como AEC —
+                # a linha da avaliacao guarda uma sessao so, e a sessao aconteceu.
+                r.atividades.append({
+                    "codigo": codigo(bloco, "N"), "categoria_normativa": "AEC", "data": bloco.data.isoformat(),
+                    "subtipo": "Atividade Extracurricular",
+                    "descricao": f"VISTA DE PROVA (2ª sessão) — {cod} {alvo['chave_ue']} aplicada em {alvo['data_avaliacao']}",
+                    "ta_inicial": bloco.ta_inicial, "tempos_consumidos": bloco.tempos, "local": local_de(bloco),
+                    "instrutor": alvo.get("instrutor"), "instrutor_id": alvo.get("instrutor_responsavel_id"),
+                    "responsavel_externo": None, "observacoes": procedencia(bloco),
+                })
                 continue
             if alvo["data_vista_prova"] is not None:
                 pend("vista_em_mais_de_uma_sessao",

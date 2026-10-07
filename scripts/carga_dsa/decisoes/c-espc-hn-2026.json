@@ -49,7 +49,8 @@
     "AUDITORIO": "Auditório",
     "AUDITÓRIO CIAARA": "Auditório",
     "QUADRA": "Quadra",
-    "SALA DE AULA": ""
+    "SALA DE AULA": "",
+    "5ºCGEO": "5ºCGEO"
   },
   "excecao_virada_1": {
     "autorizada_por": "Bernardo Villas Boas",
@@ -75,5 +76,15 @@
   "provisorias": [
     "disciplinas: de-para do codigo da planilha (romano) para o cod_disciplina do banco, por NOME do catalogo da planilha x nome da disciplina no banco (curso por competencias) — aguarda ratificacao",
     "locais fora do inventario de salas entram como TEXTO (Sala 05, CAMR, CIAA, CN, Auditorio DHN, BFNIF, H36, H38, CMOpM, Sala 00, DHN, FAB, NAS, Patio, Biblioteca, Porto do Acu) — cadastrar como sala e decisao do lote"
+  ],
+  "chaves": {
+    "BDF+1": {
+      "tipo": "aec",
+      "subtipo": "Atividade Extracurricular"
+    }
+  },
+  "vista_extra_como_aec": true,
+  "aprovadas": [
+    "BDF «AULA DE REFORCO» = AEC; 2ª sessao de vista = AEC; 5ºCGEO como texto — conferencia de 07/10/2026 (Bernardo Villas Boas: aplicar a recomendacao de cada caso)"
   ]
 }
