@@ -95,5 +95,11 @@
       "2026-08-03"
     ],
     "incluir": ["2026-09-04"]
+  },
+  "regras_globais": {
+    "desempate_de_instrutor": {
+      "55|58": "55",
+      "_decisao": "Bernardo Villas Boas, 06/10/2026 (lote da onda 2, item 2): o texto de instrutor que casa com os codigos 55 e 58 e SEMPRE o 55, em toda turma; o 58 nao da disciplina — nao habilitar nem atribuir"
+    }
   }
 }

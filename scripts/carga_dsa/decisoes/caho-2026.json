@@ -69,6 +69,24 @@
     "XXI+PM1": "MAT+PM1",
     "XXI+VP1": "MAT+VP1",
     "XXI+PM2": "FIS+PM2",
-    "XXI+VP2": "FIS+VP2"
-  }
+    "XXI+VP2": "FIS+VP2",
+    "XIX+3": "XIX+1"
+  },
+  "relogio": {
+    "catalogo": {
+      "excecao": "CFG-H"
+    },
+    "motivo": "D2-1 (06/10/2026): o 8º tempo do CAHO e 14:50-15:35 e o EI 15:40-16:25 — a propria aba HORARIOS e 38 das 41 semanas da IMPRESSAO; o CFG-H e esse relogio, apontado pela excecao"
+  },
+  "instrutor_por_texto": {
+    "ORIENTADORES": {
+      "codigo": "18",
+      "observacao": "ORIENTADORES (conforme DSA)"
+    }
+  },
+  "aprovadas": [
+    "CFG-H (D2-1, 06/10/2026)",
+    "ORIENTADORES → titular da XX na turma (codigo 18) com observacao «ORIENTADORES (conforme DSA)» (item 3, 06/10/2026)",
+    "XIX+3 «CORRIDA / PRE-TAF» → XIX UE 1 «CORRIDA» (topico bate; item 4, 06/10/2026)"
+  ]
 }

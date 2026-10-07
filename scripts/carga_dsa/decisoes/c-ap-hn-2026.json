@@ -64,5 +64,8 @@
   },
   "provisorias": [
     "locais fora do inventario de salas entram como TEXTO (Sala 05, CAMR, CIAA, CN, Auditorio DHN, BFNIF, H36, H38, CMOpM, Sala 00, DHN, FAB, NAS, Patio, Biblioteca, Porto do Acu) — cadastrar como sala e decisao do lote"
+  ],
+  "aprovadas": [
+    "UE 7 da I («7 – FISICA») e UE 6 da XVI («PRATICA DE OCEANOGRAFIA») nao batem com UE existente: ficam FORA e vao para a lista (item 4, 06/10/2026)"
   ]
 }

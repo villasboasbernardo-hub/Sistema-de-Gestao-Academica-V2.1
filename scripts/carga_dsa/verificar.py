@@ -287,7 +287,10 @@ def main() -> int:
         relatorio.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
         romano = {s: i for i, s in enumerate("I II III IV V VI VII VIII IX X XI XII XIII XIV XV XVI XVII XVIII XIX XX XXI XXII".split())}
         soma_dif = 0
+        mapa_disc = decisoes.get("disciplinas", {})
         for cod in sorted(set(do_banco) | set(leitura.controle), key=lambda c: (romano.get(c, 99), c)):
+            if cod not in do_banco and mapa_disc.get(cod, cod) not in do_banco:
+                continue  # AD, FE, PL, TR… no CONTROLE do CAHO sao atividade, nao disciplina
             b = do_banco.get(cod, {"ch": None, "lancado": 0, "executado": 0})
             prev, cump = leitura.controle.get(cod, (None, None))
             cat = do_catalogo.get(cod, [None, None])

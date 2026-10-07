@@ -435,6 +435,9 @@ def main() -> int:
             print(f"[PLANILHA] {fonte['turma']}: {erro}")
             return 2
         decisoes[fonte["turma"]] = json.loads((AQUI / fonte["decisoes"]).read_text(encoding="utf-8"))
+        # Regras que valem para TODA turma (fontes.json, `regras_globais`): hoje, o desempate de instrutor por codigo.
+        for chave, valor in fontes.get("regras_globais", {}).items():
+            decisoes[fonte["turma"]].setdefault(chave, valor)
         titulos[fonte["turma"]] = m["titulo_no_drive"]
     globais, quadro = dias_globais_de(leituras, decisoes)
 

@@ -49,7 +49,10 @@ VAZIOS = {"", "-", "--", "---"}
 # (palavras da descricao, tipo, subtipo) — a PRIMEIRA que casar vale. «VISITA» vem antes de
 # «FERIADO» de proposito: ha planilha que cadastra a visita sob a sigla dos feriados.
 _REGRAS_POR_DESCRICAO: tuple[tuple[tuple[str, ...], str, str | None], ...] = (
-    (("ESTUDO INDIVIDUAL",), "estudo_individual", "Estudo Individual"),
+    (("ESTUDO INDIVIDUAL", "TEMPO PARA ESTUDO"), "estudo_individual", "Estudo Individual"),
+    # APOINST (apoio a instrucao: pratica de navegacao, posicionamento de sinais) sob a sigla de tempo reserva —
+    # pela descricao do catalogo da planilha (decisao de 06/10/2026, item 4 do lote da onda 2).
+    (("APOINST", "APOIO A INSTRUCAO"), "aec", "Atividade Extracurricular"),
     (("VISITA",), "aec", "Visita Técnica"),
     (("FERIADO", "LICENCA", "ROTINA DE DOMINGO", "RECESSO", "PONTO FACULTATIVO"), "dia_parado", None),
     (("PALESTRA", "COLOQUIO", "SEMINARIO", "INSTRUCAO"), "aec", "Palestra"),
@@ -230,6 +233,12 @@ def resolver(
         """Um instrutor do cadastro para um texto «POSTO (ESP) NOME DE GUERRA». Exige exatamente um."""
         lido = ler_instrutor(texto_bruto)
         achados = casar_instrutor(lido, ref["instrutores"]) if lido is not None else []
+        if len(achados) > 1:
+            # Texto que casa com DOIS do cadastro: o desempate e decisao nominal, versionada POR CODIGO
+            # (fontes.json, `desempate_de_instrutor`: «55|58» → «55»), para a sincronizacao semanal aplicar sempre.
+            escolhido = decisoes.get("desempate_de_instrutor", {}).get("|".join(sorted(a["codigo"] for a in achados)))
+            if escolhido is not None:
+                achados = [a for a in achados if a["codigo"] == str(escolhido)]
         if len(achados) == 1:
             r.instrutores[" ".join(texto_bruto.split())] = achados[0]
             return achados[0]
@@ -269,13 +278,15 @@ def resolver(
         regra = chaves.get(f"{bloco.cod}+{bloco.ue}") or chaves.get(bloco.cod)
         if regra is not None:
             return regra["tipo"], regra
-        cod_do_banco = mapa_de_disciplinas.get(bloco.cod, bloco.cod)
+        # O de-para de chave («XXI+PM1» → «MAT+PM1») vale tambem para prova e vista, nao so para aula.
+        cod_mapeado, ue_mapeada = (decisoes.get("ues", {}).get(f"{bloco.cod}+{bloco.ue}") or f"{bloco.cod}+{bloco.ue}").split("+", 1)
+        cod_do_banco = mapa_de_disciplinas.get(cod_mapeado, cod_mapeado)
         if cod_do_banco in disciplina_por_cod:
-            if padrao_vista.fullmatch(bloco.ue):
+            if padrao_vista.fullmatch(ue_mapeada):
                 return "vista", {}
-            if padrao_avaliacao.fullmatch(bloco.ue):
+            if padrao_avaliacao.fullmatch(ue_mapeada):
                 return "avaliacao", {}
-            if bloco.ue.isdigit() or padrao_primeira.fullmatch(bloco.ue):
+            if ue_mapeada.isdigit() or padrao_primeira.fullmatch(ue_mapeada):
                 return "aula", {}
         linha = leitura.catalogo[bloco.chave]
         achado = classificar_pela_descricao(linha.disciplina, linha.topico)
@@ -349,7 +360,8 @@ def resolver(
             })
             continue
 
-        disciplina = disciplina_por_cod[mapa_de_disciplinas.get(bloco.cod, bloco.cod)]
+        cod_mapeado, ue_mapeada = (decisoes.get("ues", {}).get(f"{bloco.cod}+{bloco.ue}") or f"{bloco.cod}+{bloco.ue}").split("+", 1)
+        disciplina = disciplina_por_cod[mapa_de_disciplinas.get(cod_mapeado, cod_mapeado)]
         if tipo == "vista":
             blocos_de_vista.append((bloco, disciplina))
             continue
@@ -372,7 +384,7 @@ def resolver(
                 pend("instrutor_nao_casado", f"«{limpo}» nao esta no cadastro (responsavel de avaliacao)", bloco.tempos, chave=normalizar(limpo), bloqueia=False)
             r.avaliacoes.append({
                 "codigo": codigo(bloco, "V"),
-                "chave_ue": bloco.ue,
+                "chave_ue": ue_mapeada,
                 "cod_planilha": bloco.cod,
                 "disciplina": disciplina["cod"],
                 "disciplina_id": disciplina["id"],
@@ -562,6 +574,10 @@ def _conferencias_internas(r, leitura, decisoes, pend, disciplinas_do_curso) -> 
         carregado[a["cod_planilha"]] = carregado.get(a["cod_planilha"], 0) + a["tempos_consumidos"] + (a["tempos_consumidos_vista"] or 0)
     for cod_planilha, (_prevista, cumprida) in sorted(leitura.controle.items()):
         if cumprida is None:
+            continue
+        # O CONTROLE de alguns cursos (CAHO) lista tambem AD, FE, PL, TR — siglas de atividade, nao de
+        # disciplina; o fechamento e por disciplina, e so por ela.
+        if decisoes.get("disciplinas", {}).get(cod_planilha, cod_planilha) not in disciplinas_do_curso:
             continue
         no_plano = carregado.get(cod_planilha, 0)
         if no_plano != cumprida:

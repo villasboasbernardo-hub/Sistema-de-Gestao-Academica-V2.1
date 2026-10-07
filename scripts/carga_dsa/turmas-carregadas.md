@@ -8,6 +8,19 @@ Cada linha é uma **exceção nominal à VIRADA-1**, autorizada por Bernardo Vil
 O comando é `python -m scripts.carga_dsa.sincronizar` (o `executar` do piloto foi absorvido por ele); ele só
 toca turma listada em `fontes.json`, e o remoto só recebe o plano que bateu, linha a linha, com o do local.
 
+## Decisões nominais que a sincronização aplica sempre (regras por código, sem nome de pessoa)
+
+| Decisão                                                                                                                                                                                                                   | Onde está no código                                                                                        | Quem, quando                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| O texto de instrutor que casa com os códigos **55 e 58** é **sempre o 55**, em toda turma; o 58 não dá disciplina — não habilitar nem atribuir nada a ele                                                                 | `fontes.json` → `regras_globais.desempate_de_instrutor` (`"55\|58": "55"`), aplicado em `resolver.casar()` | Bernardo Villas Boas, 06/10/2026 (lote da onda 2, item 2) |
+| Texto que não é pessoa (`OFICIAIS-MONITORES`, `ORIENTADORES`) vira aula do titular da disciplina na turma, com a observação «… (conforme DSA)»; sem titular, o instrutor com mais TA na disciplina pela planilha, listado | `decisoes/<turma>.json` → `instrutor_por_texto`                                                            | 06/10/2026 (D3 da onda 1; item 3 da onda 2)               |
+| EI fora da tabela HORÁRIOS vive num catálogo de horário (CFG-F Ag-Mag, CFG-G C-Ap-HN, CFG-H CAHO), apontado pela vigência que o DSA usa                                                                                   | `decisoes/<turma>.json` → `relogio.catalogo`; `preparo/onda-*-decisoes.sql`                                | D1 (06/10/2026) e D2-1                                    |
+
+⚠️ **`python -m scripts.manutencao.dado_do_remoto` só funciona a partir de um ramo que tenha as migrations
+`20261006184558`, `20261006210242` e `20261006225009`** — o remoto já carrega linhas que só passam pelas catracas
+emendadas, e o `db reset` do ramo `main` as recusa na restauração (medido em 06/10/2026). Até o PR #33 ser mesclado,
+rode-o do ramo do PR.
+
 ## Onda 1 — C-Esp-ME 2026 · C-Exp-MetocOf 2026 · C-Exp-Obs-ME 2026 · C-Exp-BATI T1 2026 · C-Exp-Ag-Mag 2026
 
 **Carga no remoto: CONCLUÍDA em 06/10/2026**, rodada `2026-10-06T1541` (exportação do Drive às 15:41), decisões
