@@ -1,0 +1,110 @@
+{
+  "pasta_fonte": "https://drive.google.com/drive/folders/1RAuN1XIJ45TSyiQn6m3MMQjn5xyLyfLR",
+  "decisao": "VIRADA-1: a fonte dos lancamentos e a planilha de controle de cada turma (Bernardo Villas Boas, 06/10/2026).",
+  "fora_da_fonte": "Planilha fora da pasta, copia, «EDITAVEL», «TESTE», «ambientacao» e a subpasta Cursos Regulares/2027 NAO sao fonte. Excecao nominal (Bernardo Villas Boas, 06/10/2026, item 8 do lote da onda 1): C-Exp-BATI T01/26 e C-EXP-AG-MAG T01/26, que estao fora da pasta, sao fonte.",
+  "turmas": [
+    {
+      "turma": "CAHO 2026",
+      "planilha_id": "1X2BY5P9p8zUEVgPWfyIIRFt4YaOO7t8AxGatijsqIH8",
+      "titulo": "CAHO_2026",
+      "subpasta": "Cursos Regulares",
+      "onda": 2,
+      "decisoes": "decisoes/caho-2026.json"
+    },
+    {
+      "turma": "C-Ap-HN 2026",
+      "planilha_id": "1BydKCFut_VSr7wZTo3IRrN-6ePqhUi6AdjLImkeJ2yo",
+      "titulo": "Cópia de C-AP-HN 2026 - Sabado",
+      "subpasta": "Cursos Regulares",
+      "onda": 2,
+      "decisoes": "decisoes/c-ap-hn-2026.json"
+    },
+    {
+      "turma": "C-Ap-FR 2026",
+      "planilha_id": "1L_L_AKTnW0QAnCSzdnZI_71eakqbUeJTmy2vzCPFEqo",
+      "titulo": "C-AP-FR 2026",
+      "subpasta": "Cursos Regulares",
+      "onda": 2,
+      "decisoes": "decisoes/c-ap-fr-2026.json"
+    },
+    {
+      "turma": "C-Espc-HN 2026",
+      "planilha_id": "1GxcEbD4WxQGUBSiB_Ycnk5d4e-bWNSUQMba5nrrwi1U",
+      "titulo": "C-ESPC-HN 2026",
+      "subpasta": "Cursos Regulares",
+      "onda": 2,
+      "decisoes": "decisoes/c-espc-hn-2026.json"
+    },
+    {
+      "turma": "C-Espc-FR 2026",
+      "planilha_id": "1wiTn_Ci1maATXtTxqp0MukID36B2qzpOhRYPrOciz8E",
+      "titulo": "C-Espc-FR 2026",
+      "subpasta": "Cursos Regulares",
+      "onda": 2,
+      "decisoes": "decisoes/c-espc-fr-2026.json"
+    },
+    {
+      "turma": "C-Esp-ME 2026",
+      "planilha_id": "11wdJN30UkfyI2qXcNHI4emsBa-RG9qLKJECIAgS4ibg",
+      "titulo": "C-ESP-ME 2026",
+      "subpasta": "Cursos Especiais",
+      "onda": 1,
+      "decisoes": "decisoes/c-esp-me-2026.json"
+    },
+    {
+      "turma": "C-Exp-MetocOf 2026",
+      "planilha_id": "1efpDMO3dqI9kz5oSzdXlVIXfEPDyAdFUMRq0HTsyJb4",
+      "titulo": "C-EXP-METOC-OF T01/26",
+      "subpasta": "Cursos Expeditos",
+      "onda": 1,
+      "decisoes": "decisoes/c-exp-metocof-2026.json"
+    },
+    {
+      "turma": "C-Exp-Obs-ME 2026",
+      "planilha_id": "19VKh6PA7w--RIr-iYKvRy4zLsmYhj176Ht0Wlo4pIRg",
+      "titulo": "C-EXP-OBS-ME T2/2026",
+      "subpasta": "Cursos Expeditos",
+      "onda": 1,
+      "decisoes": "decisoes/c-exp-obs-me-2026.json"
+    },
+    {
+      "turma": "C-Exp-BATI T1 2026",
+      "planilha_id": "1cTAWX1Yule0HnFZLGC3ozh_pXH3Ze6YrKdxltajKdYM",
+      "titulo": "C-Exp-BATI T01/26",
+      "subpasta": "(fora da pasta — excecao de 06/10/2026)",
+      "onda": 1,
+      "decisoes": "decisoes/c-exp-bati-t1-2026.json"
+    },
+    {
+      "turma": "C-Exp-Ag-Mag 2026",
+      "planilha_id": "1GwYpo6T6eDJXdq5C-n0WxTLZK0SH-REd-V0E74BVMi0",
+      "titulo": "C-EXP-AG-MAG T01/26",
+      "subpasta": "(fora da pasta — excecao de 06/10/2026)",
+      "onda": 1,
+      "decisoes": "decisoes/c-exp-ag-mag-2026.json"
+    }
+  ],
+  "calendario_global": {
+    "decisao": "Bernardo Villas Boas, 06/10/2026, item 7 do lote da onda 1: dia parado so de alguns cursos vira TAD da turma; o calendario global fica com o que parou todas.",
+    "inativar": [
+      "2026-01-30",
+      "2026-06-02",
+      "2026-06-10",
+      "2026-06-11",
+      "2026-06-29",
+      "2026-08-03"
+    ],
+    "incluir": ["2026-09-04"]
+  },
+  "regras_globais": {
+    "desempate_de_instrutor": {
+      "55|58": "55",
+      "_decisao": "Bernardo Villas Boas, 06/10/2026 (lote da onda 2, item 2): o texto de instrutor que casa com os codigos 55 e 58 e SEMPRE o 55, em toda turma; o 58 nao da disciplina — nao habilitar nem atribuir"
+    },
+    "postos_aceitos_por_codigo": {
+      "144": ["1SG"],
+      "173": ["GM"],
+      "_decisao": "Bernardo Villas Boas, 06/10/2026 (respostas ao lote da onda 2, item 4): o 144 foi PROMOVIDO de 1ºSG a SO (efetivo no primeiro DSA em que aparece como SO, 01/06/2026) e o texto com o posto antigo e dele; o 173 foi promovido de GM a 2ºTen e o texto «GM … » e dele. Postos normalizados (sem «º» nem espaco)."
+    }
+  }
+}

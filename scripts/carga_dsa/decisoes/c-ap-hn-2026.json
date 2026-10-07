@@ -1,0 +1,71 @@
+{
+  "turma": "C-Ap-HN 2026",
+  "planilha": "Cópia de C-AP-HN 2026 - Sabado",
+  "turma_em_andamento": true,
+  "locais": {
+    "SALA 1": "Sala 01",
+    "SALA 01": "Sala 01",
+    "SALA 2": "Sala 02",
+    "SALA 02": "Sala 02",
+    "SALA 3": "Sala 03",
+    "SALA 03": "Sala 03",
+    "SALA 4": "Sala 04",
+    "SALA 04": "Sala 04",
+    "SALA 6": "Sala 06",
+    "SALA 06": "Sala 06",
+    "SALA CAHO": "Sala CAHO",
+    "LAB INFO": "Laboratório de Informática",
+    "LABORATÓRIO DE INFORMÁTICA": "Laboratório de Informática",
+    "LAB. INFO": "Laboratório de Informática",
+    "LAB DE INFORMÁTICA": "Laboratório de Informática",
+    "EAD": "EAD",
+    "CHM": "CHM",
+    "SALA DO CAHO": "Sala CAHO",
+    "CIAARA": "CIAARA",
+    "CNPA": "CNPA",
+    "---": "",
+    "-": "",
+    "MOODLE": "Moodle",
+    "SALA 05": "Sala 05",
+    "CAMR": "CAMR",
+    "CIAA": "CIAA",
+    "CN": "CN",
+    "AUDITÓRIO DHN": "Auditório DHN",
+    "AUDITÓRIO": "Auditório",
+    "PORTO DO AÇU": "Porto do Açu",
+    "BFNIF": "BFNIF",
+    "BNIF": "BFNIF",
+    "H36": "H36",
+    "H-36": "H36",
+    "H38": "H38",
+    "ASSÍNCRONA": "Assíncrona",
+    "CMOpM": "CMOpM",
+    "SALA 00": "Sala 00",
+    "DHN": "DHN",
+    "FAB": "FAB",
+    "NAS": "NAS",
+    "PÁTIO": "Pátio",
+    "BIBLIOTECA": "Biblioteca",
+    "AUDITORIO": "Auditório",
+    "AUDITÓRIO CIAARA": "Auditório",
+    "QUADRA": "Quadra",
+    "SALA DE AULA": ""
+  },
+  "excecao_virada_1": {
+    "autorizada_por": "Bernardo Villas Boas",
+    "em": "2026-10-06",
+    "alcance": "a forma da VIRADA-1 para os lancamentos: planilha de controle, por turma, reexecutavel (onda 2)"
+  },
+  "relogio": {
+    "catalogo": {
+      "excecao": "CFG-G"
+    },
+    "motivo": "D1 (06/10/2026): a tabela HORARIOS vai ate o 9º tempo (16:20) e a IMPRESSAO repete o EI em 16:25-17:20; o CFG-G e a tabela de 9x45 mais o EI como 10º tempo excepcional"
+  },
+  "provisorias": [
+    "locais fora do inventario de salas entram como TEXTO (Sala 05, CAMR, CIAA, CN, Auditorio DHN, BFNIF, H36, H38, CMOpM, Sala 00, DHN, FAB, NAS, Patio, Biblioteca, Porto do Acu) — cadastrar como sala e decisao do lote"
+  ],
+  "aprovadas": [
+    "UE 7 da I («7 – FISICA») e UE 6 da XVI («PRATICA DE OCEANOGRAFIA») nao batem com UE existente: ficam FORA e vao para a lista (item 4, 06/10/2026)"
+  ]
+}

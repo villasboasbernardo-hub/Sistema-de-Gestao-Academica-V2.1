@@ -1,0 +1,49 @@
+{
+  "turma": "C-Exp-MetocOf 2026",
+  "planilha": "C-EXP-METOC-OF T01/26",
+  "turma_em_andamento": false,
+  "locais": {
+    "SALA 1": "Sala 01",
+    "SALA 01": "Sala 01",
+    "SALA 2": "Sala 02",
+    "SALA 02": "Sala 02",
+    "SALA 3": "Sala 03",
+    "SALA 03": "Sala 03",
+    "SALA 4": "Sala 04",
+    "SALA 04": "Sala 04",
+    "SALA 6": "Sala 06",
+    "SALA 06": "Sala 06",
+    "SALA CAHO": "Sala CAHO",
+    "LAB INFO": "Laboratório de Informática",
+    "LABORATÓRIO DE INFORMÁTICA": "Laboratório de Informática",
+    "LAB. INFO": "Laboratório de Informática",
+    "LAB DE INFORMÁTICA": "Laboratório de Informática",
+    "EAD": "EAD",
+    "CHM": "CHM"
+  },
+  "excecao_virada_1": {
+    "autorizada_por": "Bernardo Villas Boas",
+    "em": "2026-10-06",
+    "alcance": "a forma da VIRADA-1 para os lancamentos: planilha de controle, por turma, reexecutavel"
+  },
+  "ues": {
+    "I+8": "IV+1",
+    "I+9": "IV+2",
+    "I+10": "IV+3",
+    "I+11": "IV+4",
+    "I+12": "IV+5",
+    "II+3": "II+2"
+  },
+  "provisorias": ["ues: II+3 (AREPS) → II UE 2 — de-para por topico, aguarda decisao"],
+  "aprovadas": [
+    "ues I+8..12 → IV+1..5: aprovado por Bernardo Villas Boas em 06/10/2026 (item 5 do lote da onda 1)",
+    "Estagio Pratico (V): disciplina marcada sem_unidades_ensino (D2, 06/10/2026); a aula entra por disciplina com o topico da planilha",
+    "OFICIAIS-MONITORES (D3, 06/10/2026): aula com instrutor = titular da disciplina na turma e observacao «OFICIAIS-MONITORES (conforme DSA)». ⚠️ A turma NAO tem titular de V em turma_disciplina_instrutor; valeu o instrutor com mais TA na V pela planilha (codigo 127) — listado no lote para ratificacao"
+  ],
+  "instrutor_por_texto": {
+    "OFICIAIS MONITORES": {
+      "codigo": "127",
+      "observacao": "OFICIAIS-MONITORES (conforme DSA)"
+    }
+  }
+}

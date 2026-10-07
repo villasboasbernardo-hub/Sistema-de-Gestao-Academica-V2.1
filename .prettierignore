@@ -31,3 +31,6 @@ blob-report/
 # Formatar aqui produziria diff ruidoso a cada reextracao e nao traz ganho de leitura:
 # o arquivo e conferido pela invariante do proprio extrator, nao pelo olho.
 scripts/etl/dados/
+
+# Planilhas de controle e artefatos da carga do DSA: pasta local, fora do git (dado real).
+planilhas-de-origem/

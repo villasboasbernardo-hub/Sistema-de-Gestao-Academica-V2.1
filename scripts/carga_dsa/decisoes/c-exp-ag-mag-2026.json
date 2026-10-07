@@ -1,0 +1,45 @@
+{
+  "turma": "C-Exp-Ag-Mag 2026",
+  "planilha": "C-EXP-AG-MAG T01/26",
+  "turma_em_andamento": false,
+  "locais": {
+    "SALA 1": "Sala 01",
+    "SALA 01": "Sala 01",
+    "SALA 2": "Sala 02",
+    "SALA 02": "Sala 02",
+    "SALA 3": "Sala 03",
+    "SALA 03": "Sala 03",
+    "SALA 4": "Sala 04",
+    "SALA 04": "Sala 04",
+    "SALA 6": "Sala 06",
+    "SALA 06": "Sala 06",
+    "SALA CAHO": "Sala CAHO",
+    "LAB INFO": "Laboratório de Informática",
+    "LABORATÓRIO DE INFORMÁTICA": "Laboratório de Informática",
+    "LAB. INFO": "Laboratório de Informática",
+    "LAB DE INFORMÁTICA": "Laboratório de Informática",
+    "EAD": "EAD",
+    "CHM": "CHM",
+    "H11": "H11"
+  },
+  "excecao_virada_1": {
+    "autorizada_por": "Bernardo Villas Boas",
+    "em": "2026-10-06",
+    "alcance": "planilha FORA da pasta-fonte, incluida por decisao nominal (item 8 do lote da onda 1)"
+  },
+  "chaves": {
+    "DO+1": {
+      "tipo": "aec",
+      "subtipo": "Palestra",
+      "responsavel_externo": "DOEP"
+    }
+  },
+  "relogio": {
+    "catalogo": "CFG-F",
+    "motivo": "D1 (06/10/2026): a tabela HORARIOS vai ate o 8º tempo e a IMPRESSAO repete o EI em 16:50-17:30; o CFG-F e a tabela mais o EI como 9º tempo excepcional"
+  },
+  "aprovadas": [
+    "H11 cadastrado como sala (D5, 06/10/2026)",
+    "habilitacao do instrutor 13 em I (D4, 06/10/2026)"
+  ]
+}
