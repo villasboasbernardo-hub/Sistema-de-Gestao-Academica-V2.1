@@ -98,6 +98,11 @@ test("⚠️ critério 8 · ficha → DSA → lançar → ver na grade → impri
 
   /* ── 5. Imprimir, pelo botão ─────────────────────────────────────────────────────────────── */
   await page.locator('[data-slot="imprimir-dsa"]').click();
+  /*
+   * ⚠️ A TELA TAMBÉM MOSTRA O DOCUMENTO (modelo v4, mesma montagem): sem esperar a URL, a asserção
+   * seguinte passaria ainda na tela, e o PDF seria o da tela inteira.
+   */
+  await page.waitForURL(/\/print\/dsa/);
   await expect(page.locator(DOCUMENTO)).toBeVisible();
 
   /*

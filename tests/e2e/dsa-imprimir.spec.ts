@@ -119,9 +119,8 @@ test.describe("`RF-PDF-01` · do botão ao papel, por clique", () => {
     await expect(documento).toContainText(
       "CENTRO DE INSTRUÇÃO E ADESTRAMENTO ALMIRANTE RADLER DE AQUINO",
     );
-    await expect(page.locator('[data-slot="dsa-numero"]')).toContainText(
-      "DETALHE SEMANAL DE AULAS Nº",
-    );
+    await expect(documento).toContainText("Detalhe Semanal de Aulas");
+    await expect(page.locator('[data-slot="dsa-numero"]')).toContainText("Nº");
     /*
      * ⚠️ **O INTERVALO VAI ATÉ SÁBADO, E ISSO É A `Q-4` FUNCIONANDO — não um erro de conta.** A
      * semente lança um bloco em **11/04**, e a coluna de sábado abre **por haver lançamento nele**,
@@ -130,7 +129,7 @@ test.describe("`RF-PDF-01` · do botão ao papel, por clique", () => {
      * lançados (medido), e é esse o caso real.
      */
     await expect(page.locator('[data-slot="dsa-intervalo"]')).toContainText(
-      "SEMANA DE 06/04/2026 A 11/04/2026",
+      "06/04/2026 a 11/04/2026",
     );
   });
 });
@@ -157,34 +156,41 @@ test.describe("`SC-001` · cabe em UMA página A4 paisagem", () => {
   });
 });
 
-test.describe("`SC-011` · o bloco que atravessa o almoço sai em DUAS linhas de HORÁRIO", () => {
+test.describe("`SC-011` · o bloco que atravessa o almoço sai em DOIS cartões", () => {
   /*
    * ⚠️ **É A CORREÇÃO DO `D-3`, medido 64 vezes no CAHO e 50 no C-Espc-FR**: a planilha imprimia
    * *"09:30 as 13:50"* para 4 TA que atravessam o almoço — um horário contínuo que inclui o
-   * intervalo. A semente lança 4 TA a partir do 3º na G45, cujo almoço fica entre o 5º e o 6º.
+   * intervalo. A semente lança 4 TA a partir do 3º na G45, cujo almoço fica entre o 5º e o 6º: na
+   * grade do modelo v4 isso são **dois cartões**, 3 TA de manhã e 1 à tarde, com o almoço entre eles.
    */
-  test("o horário do bloco de 4 TA tem dois trechos, e o almoço não está em nenhum", async ({
-    page,
-  }) => {
+  test("o bloco de 4 TA vira dois cartões, um de cada lado do almoço", async ({ page }) => {
     await abrirAImpressao(page, SEMANA);
-    const comDoisTrechos = page.locator(`${DOCUMENTO} td.dsa-horario`).filter({
-      has: page.locator("span.dsa-trecho:nth-child(2)"),
-    });
-    await expect(comDoisTrechos.first()).toBeVisible();
+    const manha = page.locator(
+      `${DOCUMENTO} [data-slot="dsa-cartao"][data-partes="2"][data-parte="1"]`,
+    );
+    const tarde = page.locator(
+      `${DOCUMENTO} [data-slot="dsa-cartao"][data-partes="2"][data-parte="2"]`,
+    );
+    await expect(manha.first()).toBeVisible();
+    await expect(manha.first()).toContainText("3 TA");
+    await expect(tarde.first()).toContainText("1 TA");
 
-    const trechos = await comDoisTrechos.first().locator("span.dsa-trecho").allInnerTexts();
-    expect(trechos).toHaveLength(2);
-    /* O primeiro acaba na manhã e o segundo começa depois do almoço — nunca uma faixa só. */
-    expect(trechos[0]).toContain("09:30");
-    expect(trechos[0]).toContain("11:55");
-    expect(trechos[1]).toContain("13:05");
+    const almoco = await page.locator(`${DOCUMENTO} .dsa4-almoco`).boundingBox();
+    const caixaDaManha = await manha.first().boundingBox();
+    const caixaDaTarde = await tarde.first().boundingBox();
+    expect(almoco && caixaDaManha && caixaDaTarde, "não consegui medir a grade").toBeTruthy();
+    /* O primeiro acaba antes do almoço e o segundo começa depois dele — nunca um cartão só. */
+    expect((caixaDaManha?.y ?? 0) + (caixaDaManha?.height ?? 0)).toBeLessThanOrEqual(
+      almoco?.y ?? 0,
+    );
+    expect(caixaDaTarde?.y ?? 0).toBeGreaterThanOrEqual((almoco?.y ?? 0) + (almoco?.height ?? 0));
   });
 });
 
 test.describe("a linha fixa do Estudo Individual e o dia de feriado", () => {
-  test("cada dia termina em ESTUDO INDIVIDUAL · EI, sem instrutor", async ({ page }) => {
+  test("cada dia tem o cartão de ESTUDO INDIVIDUAL · EI, sem instrutor", async ({ page }) => {
     await abrirAImpressao(page, SEMANA);
-    const linhasDeEi = page.locator(`${DOCUMENTO} tr.dsa-linha-ei`);
+    const linhasDeEi = page.locator(`${DOCUMENTO} [data-slot="dsa-cartao"][data-tipo="estudo"]`);
     /*
      * ⚠️ **SEIS DIAS (o sábado abre por ter lançamento, `Q-4`) MENOS O FERIADO DE DIA INTEIRO = 5.**
      * A quarta-feira é feriado `dia_inteiro` e sai como **uma** faixa com a descrição, **sem** linha
@@ -192,10 +198,10 @@ test.describe("a linha fixa do Estudo Individual e o dia de feriado", () => {
      */
     await expect(linhasDeEi).toHaveCount(5);
     await expect(linhasDeEi.first()).toContainText("ESTUDO INDIVIDUAL");
-    await expect(linhasDeEi.first().locator("td.dsa-te")).toHaveText("EI");
+    await expect(linhasDeEi.first().locator(".dsa-te")).toHaveText("EI");
   });
 
-  test("`Q-16` · o dia de feriado de dia inteiro sai como UMA linha com a descrição", async ({
+  test("`Q-16` · o dia de feriado de dia inteiro sai como UMA faixa com a descrição", async ({
     page,
   }) => {
     await abrirAImpressao(page, SEMANA);
@@ -210,15 +216,17 @@ test.describe("a linha fixa do Estudo Individual e o dia de feriado", () => {
    * bloqueio **e mais nada**: a aula existia no banco, contava na CH e não estava no papel — foi o
    * que aconteceu com o Estudo Individual de 02/10 na carga piloto do `C-Exp-Obs-ME 2026`.
    */
-  test("⚠️ o dia bloqueado imprime TAMBÉM o que foi lançado nele, abaixo da faixa", async ({
+  test("⚠️ o dia bloqueado imprime TAMBÉM o que foi lançado nele, sobre a faixa", async ({
     page,
   }) => {
     await abrirAImpressao(page, SEMANA);
-    const noFeriado = page.locator(`${DOCUMENTO} tr[data-dia-bloqueado="sim"]`);
+    const noFeriado = page.locator(
+      `${DOCUMENTO} [data-slot="dsa-cartao"][data-dia-bloqueado="sim"]`,
+    );
     await expect(noFeriado).toHaveCount(1);
     await expect(noFeriado).toContainText("Aula no dia do feriado");
     /* ⚠️ E a linha FIXA de Estudo Individual continua fora do dia sem expediente. */
-    await expect(noFeriado.locator("td.dsa-te")).not.toHaveText("EI");
+    await expect(noFeriado.locator(".dsa-te")).not.toHaveText("EI");
   });
 });
 
@@ -360,9 +368,13 @@ test.describe("`SC-015` · a semana sem lançamento imprime, com o aviso NA TELA
     await expect(avisos).toContainText("Nenhum Tempo de Aula está lançado nesta semana");
     /* ⚠️ **O AVISO NÃO BLOQUEIA** (`RN-DEG-02`): o botão continua clicável. */
     await page.locator('[data-slot="imprimir-dsa"]').click();
+    /* ⚠️ A tela também mostra o documento: só a URL prova que se chegou ao papel. */
+    await page.waitForURL(/\/print\/dsa/);
     await expect(page.locator(DOCUMENTO)).toBeVisible();
-    /* E o papel sai com os dias e só as linhas de Estudo Individual. */
-    await expect(page.locator(`${DOCUMENTO} tr.dsa-linha-ei`).first()).toBeVisible();
+    /* E o papel sai com os dias e só os cartões de Estudo Individual. */
+    await expect(
+      page.locator(`${DOCUMENTO} [data-slot="dsa-cartao"][data-tipo="estudo"]`).first(),
+    ).toBeVisible();
   });
 
   test("⚠️ e o aviso NÃO vai para o papel — ele é da tela", async ({ page }) => {

@@ -148,6 +148,16 @@ function emHora(minutos: number): string {
  * nula. ⚠️ **`null` é estado de tela, nunca zero** (`RN-DEG-01`): a grade abre com os TA numerados e
  * sem horário, e diz onde se cadastra a vigência.
  */
+/**
+ * Os minutos entre o fim de um tempo e o início do seguinte — o intervalo que a grade do papel
+ * desenha (`grade-do-papel.ts`). Hora ilegível dá `0`: o intervalo some, o tempo não.
+ */
+export function minutosEntre(fim: string, inicio: string): number {
+  const a = emMinutos(fim);
+  const b = emMinutos(inicio);
+  return a === null || b === null ? 0 : Math.max(0, b - a);
+}
+
 export function relogioDoRegime(regime: RegimeParaRelogio): Relogio | null {
   const inicioManha = regime.horaInicioManha === null ? null : emMinutos(regime.horaInicioManha);
   const inicioTarde = regime.horaInicioTarde === null ? null : emMinutos(regime.horaInicioTarde);

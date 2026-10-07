@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#e8e9ee;}
+body{font-family:'Barlow',system-ui,sans-serif;color:#1c2136;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+a{color:#050f41;text-decoration:underline;}a:hover{color:#3b4366;}
+@page{size:A4 landscape;margin:0;}
+@media print{html,body{background:#fff;}[data-page]{box-shadow:none!important;margin:0!important;}}
+</style>
+</helmet>
+<div data-page="dsa" data-screen-label="DSA" style="width:1123px;height:794px;box-sizing:border-box;margin:32px auto;background:#ffffff;box-shadow:0 1px 3px rgba(5,15,65,.12),0 8px 28px rgba(5,15,65,.08);padding:30px 40px 22px;display:flex;flex-direction:column;font-variant-numeric:tabular-nums;overflow:hidden;">
+
+  <div style="margin:-30px -40px 16px;height:5px;flex:none;background:linear-gradient(90deg,#009444 0,#009444 70%,#fab932 70%,#fab932 100%);"></div>
+  <header style="display:grid;grid-template-columns:96px minmax(0,1fr) 96px;align-items:center;gap:20px;padding-bottom:9px;">
+    <div style="display:flex;justify-content:flex-start;">
+      <img src="assets/marinha-do-brasil-vertical.png" alt="Marinha do Brasil" style="height:60px;width:auto;display:block;">
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;min-width:0;">
+      <div style="display:flex;align-items:baseline;justify-content:center;gap:8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#4a5170;">
+        <span>{{ d.organizacao }}</span>
+      </div>
+      <h1 style="margin:0;font-size:27px;line-height:1.1;font-weight:600;letter-spacing:.01em;color:#050f41;">{{ d.curso }}</h1>
+    </div>
+    <div style="display:flex;justify-content:flex-end;">
+      <img src="assets/brasao-ciaara.png" alt="Brasão do CIAARA" style="height:60px;width:auto;display:block;">
+    </div>
+  </header>
+
+  <div style="height:3px;flex:none;background:linear-gradient(90deg,#050f41 0,#050f41 calc(100% - 180px),#009444 calc(100% - 180px),#009444 calc(100% - 60px),#fab932 calc(100% - 60px),#fab932 100%);"></div>
+  <div style="display:grid;grid-template-columns:1.3fr 0.8fr 1.4fr 0.8fr 0.8fr;border-bottom:1px solid #c9cddb;">
+    <div style="padding:5px 12px 5px 0;display:flex;flex-direction:column;gap:1px;">
+      <span style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#4a5170;">Semana</span>
+      <span style="font-size:14px;font-weight:600;color:#050f41;white-space:nowrap;">{{ d.semana }}</span>
+    </div>
+    <div style="padding:5px 12px;display:flex;flex-direction:column;gap:1px;border-left:1px solid #dfe2ea;">
+      <span style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#4a5170;">DSA</span>
+      <span style="font-size:14px;font-weight:600;color:#050f41;">Nº {{ d.dsaNumero }}</span>
+    </div>
+    <div style="padding:5px 12px;display:flex;flex-direction:column;gap:1px;border-left:1px solid #dfe2ea;">
+      <span style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#4a5170;">Período</span>
+      <span style="font-size:14px;font-weight:600;color:#050f41;white-space:nowrap;">{{ d.inicio }} a {{ d.fim }}</span>
+    </div>
+    <div style="padding:5px 12px;display:flex;flex-direction:column;gap:1px;border-left:1px solid #dfe2ea;">
+      <span style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#4a5170;">Alteração</span>
+      <span style="font-size:14px;font-weight:600;color:#050f41;">ALT {{ d.alteracao }}</span>
+    </div>
+    <div style="padding:5px 12px;display:flex;flex-direction:column;gap:1px;border-left:1px solid #dfe2ea;">
+      <span style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#4a5170;">Alunos</span>
+      <span style="font-size:14px;font-weight:600;color:#050f41;">{{ d.alunos }}</span>
+    </div>
+  </div>
+
+  <section style="margin-top:10px;flex:1 1 0;min-height:0;display:grid;grid-template-columns:72px;grid-auto-columns:minmax(0,1fr);grid-template-rows:30px auto 10px auto 10px auto 10px auto 18px auto 10px auto 10px auto 10px auto;border-bottom:2px solid #050f41;">
+    <div style="grid-column:{{ colTudo }};grid-row:1 / 2;background:#050f41;"></div>
+    <div style="grid-column:1 / 2;grid-row:1 / 2;z-index:1;display:flex;align-items:center;padding:0 8px;font-size:9.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#aab2cc;">Horário</div>
+    <sc-for list="{{ cabDias }}" as="c" hint-placeholder-count="5">
+      <div style="grid-column:{{ c.col }};grid-row:1 / 2;z-index:1;display:flex;align-items:center;gap:7px;padding:0 9px;border-left:1px solid #26305f;">
+        <span style="font-size:13px;font-weight:700;letter-spacing:.06em;color:#ffffff;">{{ c.sigla }}</span>
+        <span style="font-size:12px;font-weight:500;color:#aab2cc;">{{ c.data }}</span>
+      </div>
+    </sc-for>
+
+    <sc-for list="{{ cabDias }}" as="c" hint-placeholder-count="5">
+      <div style="grid-column:{{ c.col }};grid-row:2 / 17;background:{{ c.bg }};border-left:1px solid #c9cddb;"></div>
+    </sc-for>
+    <sc-for list="{{ cabTempos }}" as="h" hint-placeholder-count="8">
+      <div style="grid-column:1 / 2;grid-row:{{ h.row }};background:#eef0f5;display:flex;align-items:center;gap:7px;padding:2px 8px;">
+        <span style="min-width:18px;font-size:13px;font-weight:700;color:#050f41;">{{ h.n }}</span>
+        <span style="display:flex;flex-direction:column;font-size:11px;line-height:13px;">
+          <span style="font-weight:600;color:#050f41;">{{ h.inicio }}</span>
+          <span style="color:#4a5170;">{{ h.fim }}</span>
+        </span>
+      </div>
+    </sc-for>
+    <sc-for list="{{ intervalos }}" as="iv" hint-placeholder-count="6">
+      <div style="grid-column:1 / 2;grid-row:{{ iv.row }};display:flex;align-items:center;padding:0 8px;font-size:9px;line-height:10px;font-weight:600;color:#4a5170;">{{ iv.dur }}</div>
+    </sc-for>
+    <sc-for list="{{ intervalos }}" as="iv" hint-placeholder-count="6">
+      <div style="grid-column:{{ faixaDias }};grid-row:{{ iv.row }};z-index:1;background:repeating-linear-gradient(135deg,#d5d9e3 0 1px,transparent 1px 6px);"></div>
+    </sc-for>
+    <div style="grid-column:1 / 2;grid-row:9 / 10;z-index:1;background:#fab932;display:flex;align-items:center;padding:0 8px;font-size:9.5px;font-weight:700;color:#050f41;white-space:nowrap;">{{ almoco.inicio }}–{{ almoco.fim }}</div>
+    <div style="grid-column:{{ faixaDias }};grid-row:9 / 10;z-index:1;background:#fdf3dc;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:#050f41;">Almoço</div>
+
+    <sc-for list="{{ blocos }}" as="b" hint-placeholder-count="14">
+      <div style="grid-column:{{ b.col }};grid-row:{{ b.row }};z-index:2;margin:2px 3px;background:{{ b.fundo }};border-width:1px;border-color:{{ b.bordaCor }};border-style:{{ b.estilo }};display:flex;flex-direction:column;min-width:0;overflow:hidden;">
+        <div style="height:3px;flex:none;background:{{ b.barra }};"></div>
+        <div style="padding:3px 5px 4px;display:flex;flex-direction:column;gap:1px;min-width:0;">
+          <div style="display:flex;gap:5px;align-items:baseline;font-size:11px;line-height:13px;font-weight:700;color:{{ b.corTitulo }};">
+            <span style="flex:none;">{{ b.cod }}</span>
+            <span style="min-width:0;text-transform:{{ tt }};">{{ b.disciplina }}</span>
+          </div>
+          <div style="font-size:11.5px;line-height:14px;font-weight:{{ b.fw }};color:#1c2136;text-transform:{{ tt }};text-wrap:pretty;">{{ b.ue }}</div>
+          <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:0 6px;font-size:10px;line-height:12px;color:#4a5170;">
+            <span style="text-transform:{{ tt }};">{{ b.instrutor }}</span>
+            <span style="display:flex;gap:5px;align-items:baseline;margin-left:auto;"><span>{{ b.ta }} TA</span><span style="text-transform:{{ tt }};">{{ b.local }}</span><span style="font-weight:700;color:#050f41;">{{ b.te }}</span></span>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </section>
+
+  <div style="margin-top:8px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 24px;font-size:11px;line-height:15px;color:#3b4366;">
+    <span style="display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#00803b;"><span style="width:10px;height:10px;background:#fab932;flex:none;"></span>Carga horária</span>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:2px 22px;">
+      <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#050f41;">Técnicas de ensino</span>
+        <sc-for list="{{ d.tecnicas }}" as="t" hint-placeholder-count="2">
+          <span style="display:flex;gap:5px;align-items:baseline;"><span style="font-weight:700;color:#050f41;">{{ t.sigla }}</span><span style="text-transform:{{ tt }};">{{ t.nome }}</span></span>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#050f41;">Legenda</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="width:18px;height:10px;box-sizing:border-box;background:#ffffff;border:1px solid #c9cddb;border-top:3px solid #050f41;"></span>Aula</span>
+        <sc-if value="{{ destacar }}" hint-placeholder-val="{{ true }}">
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:18px;height:10px;box-sizing:border-box;background:#e6f4ec;border:1px solid #009444;border-top:3px solid #009444;"></span>Avaliação</span>
+        </sc-if>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="width:18px;height:10px;box-sizing:border-box;border:1px dashed #8f96b0;"></span>Facultativo *</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:10px;box-sizing:border-box;border:1px solid #dfe2ea;background:repeating-linear-gradient(135deg,#aab2cc 0 1px,transparent 1px 4px);"></span>Intervalo</span>
+      </div>
+    </div>
+  </div>
+
+  <section style="margin-top:7px;display:grid;grid-template-columns:minmax(0,1fr) 230px 230px;gap:24px;align-items:end;">
+    <div style="border-bottom:1px solid #8f96b0;font-size:12.5px;min-width:0;">
+      <div style="height:2px;background:linear-gradient(90deg,#009444 0,#009444 70%,#fab932 70%,#fab932 100%);"></div>
+      <div style="display:grid;grid-template-columns:36px minmax(0,1fr) 64px 64px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#4a5170;border-bottom:1px solid #dfe2ea;">
+        <div style="padding:5px 6px;">Cód.</div>
+        <div style="padding:5px 6px;">Disciplina</div>
+        <div style="padding:5px 6px;text-align:right;">Prevista</div>
+        <div style="padding:5px 6px;text-align:right;">Cumprida</div>
+      </div>
+      <sc-for list="{{ cards }}" as="c" hint-placeholder-count="2">
+        <div style="display:grid;grid-template-columns:36px minmax(0,1fr) 64px 64px;border-top:{{ c.borda }};">
+          <div style="padding:5px 6px;font-weight:700;color:#050f41;">{{ c.cod }}</div>
+          <div style="padding:5px 6px;text-transform:{{ tt }};">{{ c.nome }}</div>
+          <div style="padding:5px 6px;text-align:right;">{{ c.prevista }}</div>
+          <div style="padding:5px 6px;text-align:right;font-weight:700;color:#00803b;">{{ c.cumprida }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <sc-for list="{{ d.assinaturas }}" as="s" hint-placeholder-count="2">
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:1px;padding-top:6px;border-top:1px solid #050f41;font-size:12px;line-height:1.35;">
+        <span style="font-weight:600;font-size:12.5px;color:#050f41;text-transform:{{ tt }};">{{ s.nome }}</span>
+        <span>{{ s.posto }}</span>
+        <span style="color:#4a5170;">{{ s.funcao }}</span>
+      </div>
+    </sc-for>
+  </section>
+
+  <div style="margin-top:10px;height:2px;flex:none;background:linear-gradient(90deg,#009444 0,#009444 120px,#fab932 120px,#fab932 180px,#dfe2ea 180px,#dfe2ea 100%);"></div>
+  <footer style="padding-top:6px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 16px;font-size:10.5px;color:#4a5170;">
+    <span style="color:#3b4366;">* {{ d.observacao }}</span>
+    <span>Gerado em {{ d.geradoEm }} · Marinha do Brasil · {{ d.sigla }} · {{ d.curso }} · DSA Nº {{ d.dsaNumero }} · ALT {{ d.alteracao }}</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1190,&quot;height&quot;:860},&quot;destacarAvaliacoes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Apresentação&quot;},&quot;listras&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Apresentação&quot;},&quot;maiusculas&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Apresentação&quot;},&quot;dados&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;DSA&quot;,&quot;default&quot;:null}}">
+class Component extends DCLogic {
+  // Prop "dados": { organizacao, sigla, curso, dsaNumero, semana, inicio, fim, alteracao, alunos,
+  //   tempos: [{inicio, fim}] x8 (almoço entre o 4º e o 5º), almoco: {inicio, fim},
+  //   dias: [{sigla, data, aulas: [{inicio, fim, cod, ta, ue, local, te, instrutor, facultativo}]}],
+  //   disciplinas: [{cod, nome, prevista, cumprida}], tecnicas: [{sigla, nome}],
+  //   observacao, assinaturas: [{nome, posto, funcao}], geradoEm }
+  dadosPadrao() {
+    const ei = () => ({ inicio: '15:50', fim: '16:40', cod: 'AD', ta: 1, ue: 'Estudo individual', facultativo: true, local: 'Lab. Info', te: 'EO', instrutor: '' });
+    const ant = 'SO-ME (RM1) INSTRUTOR A', iza = '1TEN (RM2-T) INSTRUTOR B';
+    return {
+      sigla: 'CIAARA',
+      organizacao: 'Centro de Instrução e Adestramento Almirante Radler de Aquino',
+      curso: 'C-Exp-METOC-OF',
+      dsaNumero: 3, semana: 3, inicio: '05/10/2026', fim: '09/10/2026', alteracao: 1, alunos: 6,
+      tempos: [
+        { inicio: '08:10', fim: '09:00' }, { inicio: '09:10', fim: '10:00' },
+        { inicio: '10:10', fim: '11:00' }, { inicio: '11:10', fim: '12:00' },
+        { inicio: '13:05', fim: '13:55' }, { inicio: '14:00', fim: '14:50' },
+        { inicio: '14:55', fim: '15:45' }, { inicio: '15:50', fim: '16:40' }
+      ],
+      almoco: { inicio: '12:00', fim: '13:05' },
+      dias: [
+        { sigla: 'SEG', data: '05/10', aulas: [
+          { inicio: '08:10', fim: '15:45', cod: 'II', ta: 7, ue: '3 – Observações meteorológicas', local: 'Sala 2', te: 'PM', instrutor: ant },
+          ei() ] },
+        { sigla: 'TER', data: '06/10', aulas: [
+          { inicio: '08:10', fim: '12:00', cod: 'II', ta: 4, ue: '3 – Observações meteorológicas', local: 'Sala 2', te: 'EO', instrutor: ant },
+          { inicio: '13:05', fim: '15:45', cod: 'II', ta: 3, ue: '4 – Observação em altitude', local: 'Sala 2', te: 'EO', instrutor: ant },
+          ei() ] },
+        { sigla: 'QUA', data: '07/10', aulas: [
+          { inicio: '08:10', fim: '12:00', cod: 'II', ta: 4, ue: '3 – Observações meteorológicas', local: 'Sala 2', te: 'EO', instrutor: ant },
+          { inicio: '13:05', fim: '15:45', cod: 'I', ta: 3, ue: 'Prova escrita objetiva de Observação Meteorológica I', local: 'Sala 2', te: 'PM', instrutor: iza },
+          ei() ] },
+        { sigla: 'QUI', data: '08/10', aulas: [
+          { inicio: '08:10', fim: '12:00', cod: 'II', ta: 4, ue: 'Prova escrita objetiva de Observação Meteorológica II', local: 'Sala 2', te: 'PM', instrutor: ant },
+          { inicio: '13:05', fim: '13:55', cod: 'I', ta: 1, ue: 'Vista da prova de Meteorologia', local: 'Sala 2', te: 'EO', instrutor: iza },
+          { inicio: '14:00', fim: '14:50', cod: 'I', ta: 1, ue: 'Vista da prova de Meteorologia', local: 'Sala 2', te: 'EO', instrutor: iza },
+          { inicio: '14:55', fim: '15:45', cod: 'II', ta: 1, ue: '4 – Observação em altitude', local: 'Sala 2', te: 'EO', instrutor: ant },
+          ei() ] },
+        { sigla: 'SEX', data: '09/10', aulas: [
+          { inicio: '08:10', fim: '10:00', cod: 'II', ta: 2, ue: 'Vista da prova de Oceanografia', local: 'Sala 2', te: 'EO', instrutor: ant },
+          ei() ] }
+      ],
+      disciplinas: [
+        { cod: 'I', nome: 'Observação Meteorológica I', prevista: 50, cumprida: 50 },
+        { cod: 'II', nome: 'Observação Meteorológica II', prevista: 65, cumprida: 65 }
+      ],
+      tecnicas: [
+        { sigla: 'EO', nome: 'Exposição oral' },
+        { sigla: 'PM', nome: 'Prova mista' }
+      ],
+      observacao: 'É facultado ao aluno permanecer a bordo para estudo individual.',
+      assinaturas: [
+        { nome: 'Nome do Auxiliar', posto: 'Segundo-Sargento (FR)', funcao: 'Aux. da Div. de Adm. Acadêmica' },
+        { nome: 'Nome do Encarregado', posto: 'Capitão-Tenente', funcao: 'Enc. da Div. de Adm. Acadêmica' }
+      ],
+      geradoEm: '05/10/2026 às 07:34'
+    };
+  }
+  renderVals() {
+    const d = this.props.dados ?? this.dadosPadrao();
+    const listras = this.props.listras ?? true;
+    const destacar = this.props.destacarAvaliacoes ?? true;
+    const tt = (this.props.maiusculas ?? false) ? 'uppercase' : 'none';
+    const tempos = d.tempos || this.dadosPadrao().tempos;
+    const almoco = d.almoco || { inicio: '12:00', fim: '13:05' };
+    const ALM = 4;
+    const min = s => { const [h, m] = String(s).split(':').map(Number); return h * 60 + m; };
+    const dias = d.dias || [];
+    const nCols = dias.length + 2;
+    const cabTempos = tempos.map((t, i) => ({ row: `${2 * (i + 1)} / ${2 * (i + 1) + 1}`, n: `${i + 1}º`, inicio: t.inicio, fim: t.fim }));
+    const intervalos = [];
+    for (let k = 1; k < tempos.length; k++) if (k !== ALM) intervalos.push({ row: `${2 * k + 1} / ${2 * k + 2}`, dur: `${min(tempos[k].inicio) - min(tempos[k - 1].fim)} min` });
+    const cabDias = dias.map((dia, i) => ({ col: `${i + 2} / ${i + 3}`, sigla: dia.sigla, data: dia.data, bg: listras && i % 2 ? '#f8f9fb' : '#ffffff' }));
+    const iniT = h => { const i = tempos.findIndex(t => min(t.fim) > min(h)); return i < 0 ? tempos.length : i + 1; };
+    const fimT = h => { let i = 0; tempos.forEach((t, j) => { if (min(t.inicio) < min(h)) i = j + 1; }); return i || 1; };
+    const aval = te => ['PM', 'PO', 'PP'].includes(te);
+    const discs = d.disciplinas || (d.cargaHoraria || []).map(c => ({ ...c, nome: c.disciplina }));
+    const nomes = Object.fromEntries(discs.map(c => [c.cod, c.nome]));
+    const blocos = [];
+    dias.forEach((dia, i) => (dia.aulas || []).forEach(a => {
+      const x0 = iniT(a.inicio), y0 = fimT(a.fim);
+      const segs = x0 <= ALM && y0 > ALM ? [[x0, ALM], [ALM + 1, y0]] : [[x0, y0]];
+      segs.forEach(([x, y]) => {
+        const n = Math.max(1, y - x + 1);
+        const prova = destacar && aval(a.te);
+        blocos.push({
+          ...a,
+          col: `${i + 2} / ${i + 3}`,
+          row: `${2 * x} / ${2 * y + 1}`,
+          ta: segs.length > 1 ? n : (a.ta ?? n),
+          ue: a.ue + (a.facultativo ? ' *' : ''),
+          disciplina: nomes[a.cod] || '',
+          fundo: prova ? '#e6f4ec' : '#ffffff',
+          bordaCor: prova ? '#009444' : (a.facultativo ? '#8f96b0' : '#c9cddb'),
+          corTitulo: prova ? '#006b31' : '#050f41',
+          barra: a.facultativo ? '#8f96b0' : (prova ? '#009444' : '#050f41'),
+          estilo: a.facultativo ? 'dashed' : 'solid',
+          fw: aval(a.te) ? 600 : 400
+        });
+      });
+    }));
+    const todas = dias.flatMap(x => x.aulas || []);
+    const cards = discs.map((c, i) => {
+      const aulas = todas.filter(a => a.cod === c.cod);
+      const p = c.prevista ? Math.min(100, Math.round((c.cumprida / c.prevista) * 100)) : 0;
+      return {
+        ...c,
+        semana: aulas.reduce((s, a) => s + (Number(a.ta) || 0), 0),
+        instrutores: [...new Set(aulas.map(a => a.instrutor).filter(Boolean))].join(' · '),
+        pct: p + '%',
+        borda: i ? '1px solid #e4e6ee' : '0'
+      };
+    });
+    return { d, tt, destacar, almoco, cabTempos, intervalos, cabDias, blocos, cards, colTudo: `1 / ${nCols}`, faixaDias: `2 / ${nCols}` };
+  }
+}
+</script>
+</body>
+</html>
