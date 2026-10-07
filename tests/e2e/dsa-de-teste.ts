@@ -31,6 +31,9 @@
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+
 import { chaveLocal } from "./conta-de-teste";
 import { sessaoDe } from "./curso-de-teste";
 
@@ -69,6 +72,31 @@ const MARCA_DA_SEMENTE = "semeado pela suite do DSA";
 export const ASSINANTE_DE_ABRIL = "ABRIL";
 export const ASSINANTE_DE_JULHO = "JULHO";
 export const ASSINANTE_ENCARREGADO = "ENCARREGADO";
+
+/**
+ * A semana **à frente de hoje** — e ela é a ÚNICA data relativa desta semente, por necessidade.
+ *
+ * ⚠️ **AS DEMAIS DATAS SÃO FIXAS EM 2026 DE PROPÓSITO** (ver o cabeçalho): a grade mostra *a semana
+ * que a URL pede*, e datas relativas fariam o número do percurso ter de ser calculado. ⚠️ **O
+ * «lançado à frente» é a exceção porque o veredito dele É uma comparação com HOJE** (`data > hoje`,
+ * `Q-2`): numa data fixa de abril de 2026, ele seria `false` para sempre a partir de maio — o caso
+ * daria o **mesmo veredito antes e depois** da marca existir, que é o que o DoD 8 proíbe.
+ *
+ * ⚠️ **A DATA É A SEGUNDA-FEIRA DAQUELA SEMANA, não «hoje + 14 dias»:** a grade do DSA tem seis dias
+ * (segunda a sábado), e um domingo cairia **fora** dela — a suíte passaria de segunda a sábado e
+ * reprovaria no domingo, pelo pior motivo possível.
+ */
+const DUAS_SEMANAS_EM_MS = 14 * 24 * 60 * 60 * 1000;
+const semanaAFrente = semanaIsoDe(
+  new Date(new Date(`${hojeNaCiaara()}T12:00:00Z`).getTime() + DUAS_SEMANAS_EM_MS)
+    .toISOString()
+    .slice(0, 10),
+);
+export const ANO_A_FRENTE = semanaAFrente?.ano ?? ANO;
+export const SEMANA_A_FRENTE = semanaAFrente?.numero ?? 1;
+export const DATA_A_FRENTE = semanaAFrente?.segunda ?? SEGUNDA;
+/** Quantos TA a semente lança à frente — o número que a marca tem de dizer. */
+export const TA_A_FRENTE = 2;
 
 export const SEMANA_DE_MAIO = 20;
 export const SEMANA_DE_JULHO = 28;
@@ -726,6 +754,39 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
         { onConflict: "codigo" },
       );
     if (erroFer) throw new Error(`falha ao criar o feriado ${f.impacto}: ${erroFer.message}`);
+  }
+
+  /*
+   * ⚠️ **O LANÇAMENTO À FRENTE — e ele conta na CH, de propósito** (`Q-2`, `FR-028.1`).
+   *
+   * > *"Lançamento com data futura CONTA e aparece marcado «lançado à frente»; `chd_executada` da
+   * > ficha IGUAL à de antes."*
+   * > — `quickstart.md` §"PR 5"
+   *
+   * ⚠️ **ELE NÃO É UM ERRO DE OPERAÇÃO: É A PRÁTICA.** O `P-4` da planilha mediu que *"o DSA é
+   * emitido ANTES da semana"* — em 05/10/2026 todas as planilhas ativas já estavam preenchidas até
+   * 09 ou 10/10. Cortar o acumulado por hoje faria o número da ficha da turma **mudar sozinho**, da
+   * noite para o dia, sem ninguém ter lançado nada.
+   */
+  const { error: erroAFrente } = await admin()
+    .from("registros_aula")
+    .upsert(
+      {
+        codigo: `DSA-${s}-AFRENTE`,
+        data: DATA_A_FRENTE,
+        turma_id: turmaId,
+        curso_id: cursoId,
+        unidade_ensino_id: ueId,
+        instrutor_id: instrutorId,
+        ta_inicial: 1,
+        tempos_consumidos: TA_A_FRENTE,
+        conteudo_resumo: "Aula planejada para uma data que ainda não chegou",
+        local: semeado.sala,
+      },
+      { onConflict: "codigo" },
+    );
+  if (erroAFrente) {
+    throw new Error(`falha ao lançar a aula à frente: ${erroAFrente.message}`);
   }
 
   /*

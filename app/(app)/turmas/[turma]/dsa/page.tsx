@@ -36,6 +36,7 @@ import { codigoDaFicha, mensagemDeTurmaNaoEncontrada } from "../consulta";
 import {
   COLUNAS_DA_TURMA_DO_DSA,
   ehEadPuro,
+  quadrosDaSemana,
   rotuloDaSemana,
   ROTA_DO_DSA,
   semanaEscolhida,
@@ -43,6 +44,7 @@ import {
 import { lerExtrasDaImpressao, lerSemanaDoDsa } from "./leitura";
 import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
 import { PainelDeLancamento } from "./PainelDeLancamento";
+import { PainelDeSituacao } from "./PainelDeSituacao";
 
 export default async function SemanaDoDsa({
   params,
@@ -160,6 +162,25 @@ export default async function SemanaDoDsa({
     (total, dia) => total + dia.linhas.filter((l) => !l.estudoIndividual).length,
     0,
   );
+  /*
+   * ⚠️ **SÓ O CONFLITO DE PESSOA FAZ A DISCIPLINA «CONFLITAR»; o alerta de SALA não** — a
+   * `RN-CONF-01` separa os dois, e `marcasDeConflito` traz os dois juntos. Contar o alerta de sala
+   * aqui marcaria *"Conflitou"* numa disciplina cujo instrutor não tem conflito nenhum, e a tela
+   * mandaria procurar o que não existe.
+   */
+  const emConflito = new Set(
+    [...lida.marcasDeConflito.entries()].filter(([, m]) => m.conflito !== null).map(([id]) => id),
+  );
+  const ultimoDia = lida.dias[lida.dias.length - 1] ?? hoje;
+  const quadros = quadrosDaSemana({
+    execucao: extras.execucao,
+    ocupacao: lida.ocupacaoAcumulada,
+    emConflito,
+    /* ⚠️ O corte é o FIM da semana selecionada, não hoje (`RN-CRONOS-03`, `Q-2`). */
+    ateODia: ultimoDia,
+    hoje,
+  });
+
   const avisosDaImpressao = avisosAntesDeImprimir({
     numeroDoDsa: numeroDoDsa(entradaDoNumero),
     motivoDoNumeroAusente: motivoDoNumeroAusente(entradaDoNumero),
@@ -251,27 +272,44 @@ export default async function SemanaDoDsa({
         ) : null}
       </div>
 
-      <PainelDeLancamento
-        semana={lida.semana}
-        turmaId={turmaId}
-        cursoId={cursoId}
-        salaDaTurma={(turma.sala_alocada as string | null) ?? null}
-        ano={escolha.ano}
-        numeroDaSemana={escolha.numero}
-        podeLancar={podeLancar}
-        unidades={lida.unidades}
-        disciplinasIsentas={lida.disciplinasIsentas}
-        instrutores={lida.instrutores}
-        escala={lida.escala}
-        tecnicas={lida.tecnicas}
-        tiposDeAvaliacao={lida.tiposDeAvaliacao}
-        subtipos={lida.subtipos}
-        lancar={lancar}
-        lancarEstudoIndividual={lancarEstudoIndividualDaSemana}
-        mover={mover}
-        editar={editar}
-        excluir={excluir}
-      />
+      {/*
+        ⚠️ **O PAINEL FICA AO LADO DA GRADE a partir de `xl`, e EMBAIXO nas telas estreitas.** A
+           grade tem rolagem horizontal própria (`min-w-0`), e pôr o painel ao lado num monitor de
+           1280 px empurraria a semana com sábado para fora — quem confere perde a referência de
+           qual dia está olhando, que é o motivo pelo qual a rolagem é do contêiner e não da página.
+      */}
+      <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <PainelDeLancamento
+            semana={lida.semana}
+            turmaId={turmaId}
+            cursoId={cursoId}
+            salaDaTurma={(turma.sala_alocada as string | null) ?? null}
+            ano={escolha.ano}
+            numeroDaSemana={escolha.numero}
+            podeLancar={podeLancar}
+            unidades={lida.unidades}
+            disciplinasIsentas={lida.disciplinasIsentas}
+            instrutores={lida.instrutores}
+            escala={lida.escala}
+            tecnicas={lida.tecnicas}
+            tiposDeAvaliacao={lida.tiposDeAvaliacao}
+            subtipos={lida.subtipos}
+            lancar={lancar}
+            lancarEstudoIndividual={lancarEstudoIndividualDaSemana}
+            mover={mover}
+            editar={editar}
+            excluir={excluir}
+          />
+        </div>
+        <div className="min-w-0 xl:w-96 xl:shrink-0">
+          <PainelDeSituacao
+            quadros={quadros}
+            unidades={lida.unidades}
+            rotuloDaSemana={rotuloDaSemana(lida.dias)}
+          />
+        </div>
+      </div>
     </section>
   );
 }

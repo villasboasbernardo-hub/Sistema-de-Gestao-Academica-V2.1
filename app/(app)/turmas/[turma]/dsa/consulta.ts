@@ -29,6 +29,11 @@ import {
   type TipoDeRegime,
   type VigenciaDoHistorico,
 } from "@/lib/dominio/vigencia-de-regime";
+import {
+  quadroDaDisciplina,
+  type LancamentoParaSituacao,
+  type QuadroDaDisciplina,
+} from "@/lib/dominio/dsa/situacao";
 import { dataParaLeitura } from "@/lib/formato/data";
 import { enderecoDoDsa, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 
@@ -321,6 +326,72 @@ export function rotuloDaSemana(dias: readonly string[]): string {
   const ultimo = dias[dias.length - 1];
   if (primeiro === undefined || ultimo === undefined) return "";
   return `${dataParaLeitura(primeiro)} a ${dataParaLeitura(ultimo)}`;
+}
+
+/** Uma linha de `vw_disciplinas_execucao`, no mínimo que o quadro precisa. */
+export type ExecucaoParaQuadro = {
+  readonly disciplinaId: string;
+  readonly codigo: string;
+  readonly nome: string;
+  readonly prevista: number;
+};
+
+/** Um Tempo de Aula ocupado, de `vw_ocupacao_ta`, **de qualquer data até o corte**. */
+export type OcupacaoAcumulada = {
+  readonly fatoId: string;
+  readonly data: string;
+  readonly disciplinaId: string | null;
+  readonly ta: number;
+};
+
+/**
+ * Os quadros de situação da semana — **composição, sem regra nova** (`RF-DSA-05`, `RN-CRONOS-03`).
+ *
+ * ⚠️ **QUEM DECIDE A SITUAÇÃO, O ACUMULADO E O «À FRENTE» É `quadroDaDisciplina`**, em
+ * `lib/dominio/dsa/situacao.ts`, com teste ao lado. Aqui só se agrupa a ocupação por disciplina e
+ * se repassa o corte. Reescrever a precedência dos quatro degraus faria a `RF-DSA-05` ter duas
+ * implementações, e a segunda esqueceria que **conflitou vence concluída**.
+ *
+ * ⚠️ **A DISCIPLINA DE UM FATO VEM DA VIEW, que já a resolve pela UE** — `vw_ocupacao_ta` entrega
+ * `disciplina_id` preenchido mesmo quando a coluna da aula é nula, porque a UE **é** a disciplina.
+ * Resolver isso aqui seria a segunda tradução do mesmo caminho.
+ *
+ * ⚠️ **`emConflito` É O CONJUNTO DOS FATOS MARCADOS NA SEMANA ABERTA, e esse limite é DECLARADO:**
+ * o conflito se calcula contra a ocupação das **outras turmas**, que `conflitos_da_semana` entrega
+ * por janela de datas. Pedi-la para o período inteiro da turma seria comparar as 1.566 linhas da
+ * base com alguns milhares de alheias **a cada abertura de tela** — e um conflito de março que
+ * ninguém tratou não é mais acionável. Fica como dúvida registrada para o Bernardo.
+ */
+export function quadrosDaSemana(entrada: {
+  readonly execucao: readonly ExecucaoParaQuadro[];
+  readonly ocupacao: readonly OcupacaoAcumulada[];
+  readonly emConflito: ReadonlySet<string>;
+  /** O último dia da semana selecionada — o corte do acumulado. */
+  readonly ateODia: string;
+  /** Hoje — **só** marca o lançado à frente; não corta o cálculo (`Q-2`). */
+  readonly hoje: string;
+}): readonly (QuadroDaDisciplina & { readonly codigo: string; readonly nome: string })[] {
+  const porDisciplina = new Map<string, LancamentoParaSituacao[]>();
+  for (const o of entrada.ocupacao) {
+    if (o.disciplinaId === null) continue;
+    const lista = porDisciplina.get(o.disciplinaId) ?? [];
+    lista.push({ data: o.data, ta: o.ta, temConflito: entrada.emConflito.has(o.fatoId) });
+    porDisciplina.set(o.disciplinaId, lista);
+  }
+
+  return entrada.execucao.map((d) => ({
+    ...quadroDaDisciplina({
+      disciplina: {
+        disciplinaId: d.disciplinaId,
+        chPrevistaTempos: d.prevista,
+        lancamentos: porDisciplina.get(d.disciplinaId) ?? [],
+      },
+      ateODia: entrada.ateODia,
+      hoje: entrada.hoje,
+    }),
+    codigo: d.codigo,
+    nome: d.nome,
+  }));
 }
 
 /** Reexportados: quem monta endereço de turma é `lib/navegacao/endereco-de-turma.ts`, sempre. */
