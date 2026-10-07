@@ -402,6 +402,8 @@ def main() -> int:
     a.add_argument("--turmas", help="codigos separados por virgula; sem isto, todas as de fontes.json")
     a.add_argument("--provisorio", action="store_true", help="so contra o local: carrega o que da e lista o resto")
     a.add_argument("--gravar", action="store_true", help="sem isto, so ensaia")
+    a.add_argument("--adiar", default="", help="tipos de pendencia que NAO bloqueiam (o que eles cobrem fica FORA e e listado): "
+                   "decisao nominal, ex. pessoa fora do cadastro e UE ausente que aguardam resposta")
     a.add_argument("--relatorio", type=Path, help="pasta onde gravar o plano de cada turma (JSON, sem nomes)")
     arg = a.parse_args()
 
@@ -510,7 +512,12 @@ def main() -> int:
                 "relogio": [{"vigencia": p["vigencia"]["codigo"], "novo": p["novo"], "criterio": p["criterio"]} for p in relogios],
             }, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
 
-        bloqueiam = [p for p in res.pendencias if p.bloqueia]
+        # `--adiar`: pendencia decidida como «fica fora ate a resposta» (06/10/2026, onda 2) — o bloco nao entra,
+        # o resto da turma entra, e o plano (com essas pendencias) continua tendo de ser identico ao do local.
+        adiadas = {t.strip() for t in arg.adiar.split(",") if t.strip()}
+        bloqueiam = [p for p in res.pendencias if p.bloqueia and p.tipo not in adiadas]
+        if adiadas and any(p.tipo in adiadas for p in res.pendencias):
+            print(f"  [ADIADO] {sum(p.ta for p in res.pendencias if p.tipo in adiadas)} TA ficam fora por decisao: {sorted({p.tipo for p in res.pendencias if p.tipo in adiadas})}")
         if ref["etl"]["de_tela"]:
             print(f"  [PARADO] a turma tem {ref['etl']['de_tela']} lancamento(s) feito(s) na tela: quem decide o que fazer e gente.")
             veredito = max(veredito, 3)
