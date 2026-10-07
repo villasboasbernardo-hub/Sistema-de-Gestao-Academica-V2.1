@@ -65,6 +65,19 @@ async function abrirASemana(page: Page): Promise<void> {
  * `7` é a última linha navegável (TA 8) da G45 de 8 tempos, e nenhum lançamento da semente a ocupa.
  */
 const TA_LIVRE_NA_SEGUNDA = "7:0";
+/**
+ * O TA 8 da **sexta** — a célula do caso que GRAVA, e ela é separada por uma razão medida.
+ *
+ * ⚠️ **`playwright.config.ts` tem `fullyParallel: true`: os casos de um arquivo se espalham pelos
+ * processos, e a ORDEM entre eles não é a da declaração.** Com o caso do alerta e o controle
+ * positivo gravando na **mesma** célula da segunda, uma ordem possível era: o alerta lança 4 TA
+ * (ficando 8 no dia) e o controle positivo lança 1, chegando a **9** — que passa dos 8 do regime e
+ * **gera alerta**, mantendo o formulário aberto, corretamente. O caso media *"o formulário
+ * fechou"* e lia a tela certa como erro: ele passava sozinho e reprovava na suíte.
+ * ⚠️ **A sexta-feira está VAZIA na semente**, então o controle positivo deixa de depender do que
+ * outro caso fez antes dele.
+ */
+const TA_LIVRE_NA_SEXTA = "7:4";
 const TA_LIVRE_NA_TERCA = "7:1";
 const OUTRO_TA_LIVRE_NA_TERCA = "6:1";
 
@@ -182,7 +195,7 @@ test.describe("⚠️ `RN-INST-01` · a habilitação, e a Server Action é a Ú
     await abrirASemana(page);
     const antes = await quantasAulas();
 
-    await clicarCelulaLivre(page, TA_LIVRE_NA_SEGUNDA);
+    await clicarCelulaLivre(page, TA_LIVRE_NA_SEXTA);
     await page.locator("#dsa-unidade").selectOption({ index: 1 });
     /*
      * ⚠️ **QUEM MINISTRA É ESCOLHIDO EXPLICITAMENTE, e a primeira redação contava com o
@@ -232,7 +245,16 @@ test.describe("`RN-DEG-02` · o alerta acompanha a gravação, e NÃO a impede",
      */
     const avisos = page.locator('[data-slot="avisos-do-lancamento"]');
     await expect(avisos).toBeVisible();
-    await expect(avisos).toContainText("regime prevê");
+    /*
+     * ⚠️ **SÃO DOIS ALERTAS DA MESMA FAMÍLIA, e qual deles sai depende de quanto o DIA já tem** —
+     * por isso a asserção aceita os dois. *"O regime prevê N tempos"* sai quando a **soma do dia**
+     * passa do regime; *"usa o tempo de aula excepcional"* sai quando o **fim do bloco** passa dele.
+     * Aqui o bloco vai do 8º ao 11º TA, então o segundo sai sempre; o primeiro depende do que mais
+     * foi lançado naquele dia — e **os casos de um arquivo não rodam na ordem da declaração**
+     * (`fullyParallel`), então fixar um dos dois fazia o caso reprovar por ordem, não por regra.
+     * ⚠️ **O que ele mede é o que importa: o teto normativo VIRA ALERTA e a gravação ACONTECE.**
+     */
+    await expect(avisos).toContainText(/regime prevê|excepcional/);
     expect(await quantasAulas(), "o alerta impediu a gravação").toBe(antes + 1);
   });
 });

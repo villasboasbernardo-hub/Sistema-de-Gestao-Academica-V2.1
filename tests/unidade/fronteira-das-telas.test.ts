@@ -68,6 +68,13 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
     "o formulário do bloco: escolher, pré-preencher e gravar é interação; a ação chega por propriedade",
   "app/(app)/turmas/[turma]/dsa/PainelDeLancamento.tsx":
     "guarda só qual célula está escolhida — estado efêmero de tela, que o guia manda deixar fora da URL",
+  /*
+   * ⚠️ **A FOLHA DO PR 4.** Mover por teclado, editar e excluir são interação de formulário, e as
+   * três ações **chegam por propriedade** — nunca por `import` de `@/lib/acoes/`, que é a proibição
+   * do Princípio XI.
+   */
+  "app/(app)/turmas/[turma]/dsa/AcoesDoBloco.tsx":
+    "mover (dia e tempo), editar e excluir um lançamento já na grade — o caminho de TECLADO do `RF-DSA-07`",
   "app/(app)/turmas/[turma]/dsa/NavegacaoDaSemana.tsx":
     "semana anterior/atual/próxima e a coluna de sábado — ela EMPILHA no histórico (`RF-NAV-04`), e empilhar é comportamento de navegador",
   "app/(app)/instrutores/TabelaDeInstrutores.tsx": "a grade navegável por teclado",

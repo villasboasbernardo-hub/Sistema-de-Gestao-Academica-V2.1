@@ -161,14 +161,14 @@ compararia o documento certo com o relógio errado em **quatro** eixos.
 **Meta**: a semana muda sem excluir e recriar, e o conflito aparece sem vazar o DSA alheio.
 **Depende de**: PR 2 (as ações) e PR B (a função de conflito).
 
-- [ ] T088 `mover(fatoId, origem, destino)` — `UPDATE` do **mesmo** registro, `id` e `criado_por` intactos, `editado_*` carimbados; **TFM recusa também no mover** (`FR-030`, `FR-024`); e o **porteiro de habilitação de `T065.1`** vale aqui (mover não troca o instrutor, mas editar+mover compartilham o caminho)
-- [ ] T089 `editar(fatoId, origem, bloco)` — sem tocar catálogo (`SC-012`); o **porteiro de habilitação de `T065.1`** na troca de instrutor; e **mover/editar linha histórica sem UE** em curso que exige UE **pede a UE no mesmo ato** (`Q-1`, segunda metade)
-- [ ] T090 `excluir(fatoId, origem)` — `status = 'inativo'` / `'cancelada'`, com `DialogoConfirmacao` descrevendo o efeito (`RNF-USA-03`); **zero** `DELETE`
-- [ ] T091 `ArrastarBloco.tsx` — folha de cliente: DnD **nativo** (`draggable`/`dragstart`/`drop`) **e** a alternativa por **teclado/menu como caminho primário** (`Enter` → *Mover para…*); **declarar** em `fronteira-das-telas.test.ts`
-- [ ] T092 Posicionar o que está na faixa **"Sem posição"** — é o mesmo `mover` (`Q-12`, segunda metade)
-- [ ] T093 A página chama `conflitos_da_semana` e passa o resultado a `conflitos.ts`; `GradeAlocacao` **pinta** com o número no atributo, **nunca só na cor**
-- [ ] T094 [P] A frase de **curso fora de oferta** nas três ações — a policy recusa e a tela explica em português, não com o `42501` cru (`FR-032`)
-- [ ] T095 **Prova do PR 4** — `tests/e2e/dsa-mover.spec.ts` e `dsa-conflito.spec.ts` cobrindo o quadro do `quickstart.md` §"PR 4", incluindo **mover só pelo teclado** e a auditoria preservada (critério **7**), e `pnpm verificar:tudo` **0**
+- [X] T088 `mover(fatoId, origem, destino)` — `UPDATE` do **mesmo** registro, `id` e `criado_por` intactos, `editado_*` carimbados; **TFM recusa também no mover** (`FR-030`, `FR-024`); e o **porteiro de habilitação de `T065.1`** vale aqui (mover não troca o instrutor, mas editar+mover compartilham o caminho)
+- [X] T089 `editar(fatoId, origem, bloco)` — sem tocar catálogo (`SC-012`); o **porteiro de habilitação de `T065.1`** na troca de instrutor; e **mover/editar linha histórica sem UE** em curso que exige UE **pede a UE no mesmo ato** (`Q-1`, segunda metade)
+- [X] T090 `excluir(fatoId, origem)` — `status = 'inativo'` / `'cancelada'`, com `DialogoConfirmacao` descrevendo o efeito (`RNF-USA-03`); **zero** `DELETE`
+- [X] T091 `ArrastarBloco.tsx` — folha de cliente: DnD **nativo** (`draggable`/`dragstart`/`drop`) **e** a alternativa por **teclado/menu como caminho primário** (`Enter` → *Mover para…*); **declarar** em `fronteira-das-telas.test.ts`
+- [X] T092 Posicionar o que está na faixa **"Sem posição"** — é o mesmo `mover` (`Q-12`, segunda metade)
+- [X] T093 A página chama `conflitos_da_semana` e passa o resultado a `conflitos.ts`; `GradeAlocacao` **pinta** com o número no atributo, **nunca só na cor**
+- [X] T094 [P] A frase de **curso fora de oferta** nas três ações — a policy recusa e a tela explica em português, não com o `42501` cru (`FR-032`)
+- [X] T095 **Prova do PR 4** — `tests/e2e/dsa-mover.spec.ts` e `dsa-conflito.spec.ts` cobrindo o quadro do `quickstart.md` §"PR 4", incluindo **mover só pelo teclado** e a auditoria preservada (critério **7**), e `pnpm verificar:tudo` **0**
 
 ---
 

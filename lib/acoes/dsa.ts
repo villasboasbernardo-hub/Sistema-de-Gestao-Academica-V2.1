@@ -2,7 +2,7 @@
 
 /**
  * Server Actions do DSA — **lançar** (`RF-DSA-04`, `RF-AVAL-04` a `06`, `RF-EXTRA-01`, `Q-1`, `Q-7`,
- * `Q-8` · spec 013, PR 2). Editar, mover e excluir são do PR 4.
+ * `Q-8` · PR 2) e **mover, editar e excluir** (`RF-DSA-07`, `FR-029` a `FR-032`, `Q-12` · PR 4).
  *
  * ⚠️ **`safeParse` NA PRIMEIRA LINHA, SEM EXCEÇÃO.** Server Action é endpoint HTTP de fato.
  *
@@ -22,7 +22,11 @@ import { randomUUID } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
 
-import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
+import {
+  recusaPorAlcance,
+  traduzirRecusa,
+  type ErroDoBanco,
+} from "@/lib/acoes/traducao-de-recusas";
 import { podeAtuar, type Atuacao, type VinculoDeHabilitacao } from "@/lib/dominio/habilitacao";
 import { avaliarODia, avaliarTetosDaSemana, type TetosDoDsa } from "@/lib/dominio/dsa/tetos";
 import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
@@ -30,7 +34,15 @@ import { slotDoEstudoIndividual } from "@/lib/dominio/dsa/horario-do-bloco";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
-import { esquemaDoBloco, esquemaDoEstudoIndividualDaSemana, type Bloco } from "@/lib/validacao/dsa";
+import {
+  esquemaDaEdicao,
+  esquemaDaExclusao,
+  esquemaDoBloco,
+  esquemaDoEstudoIndividualDaSemana,
+  esquemaDoMovimento,
+  type Bloco,
+  type OrigemDoFatoValidada,
+} from "@/lib/validacao/dsa";
 
 /** Um aviso que **não** bloqueia (`RN-DEG-02`). */
 export type Aviso = { readonly codigo: string; readonly texto: string };
@@ -164,19 +176,32 @@ async function vereditoDosTetos(
     readonly taInicial: number;
     readonly tempos: number;
     readonly disciplinaId: string | null;
+    /**
+     * O fato a **desconsiderar** na contagem — o próprio, quando se está MOVENDO.
+     *
+     * ⚠️ **SEM ELE, MOVER UM BLOCO DENTRO DA MESMA SEMANA CONTA O BLOCO DUAS VEZES**, e um TFM de
+     * 6 TA movido de terça para quinta viraria 12 na conta: a ação recusaria o movimento com a
+     * frase do teto, dizendo que a pessoa passou de um limite que ela não passou. A `RN-DIST-03`
+     * (a) é o único bloqueio do épico, e um bloqueio por conta errada é pior que bloqueio nenhum.
+     */
+    readonly ignorarFatoId?: string;
   },
 ): Promise<{ readonly bloqueios: readonly string[]; readonly alertas: readonly string[] }> {
   const tetos = await tetosDoBanco(supabase);
   const semana = semanaIsoDe(entrada.data);
   if (tetos === null || semana === null) return { bloqueios: [], alertas: [] };
 
+  const ocupacaoDaSemana = supabase
+    .from("vw_ocupacao_ta")
+    .select("data, disciplina_id, tempos_consumidos, ta_final")
+    .eq("turma_id", entrada.turmaId)
+    .gte("data", semana.segunda)
+    .lte("data", semana.domingo);
+
   const [ocupacaoRes, discRes, regimeRes] = await Promise.all([
-    supabase
-      .from("vw_ocupacao_ta")
-      .select("data, disciplina_id, tempos_consumidos, ta_final")
-      .eq("turma_id", entrada.turmaId)
-      .gte("data", semana.segunda)
-      .lte("data", semana.domingo),
+    entrada.ignorarFatoId === undefined
+      ? ocupacaoDaSemana
+      : ocupacaoDaSemana.neq("fato_id", entrada.ignorarFatoId),
     entrada.disciplinaId === null
       ? Promise.resolve({ data: null })
       : supabase
@@ -498,4 +523,539 @@ export async function lancarEstudoIndividualDaSemana(
   }
   revalidar();
   return { ok: true, criados: linhas.length, pulados };
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════════════════════
+ * PR 4 — MOVER, EDITAR E EXCLUIR (`RF-DSA-07`, `FR-029` a `FR-032`, `Q-1`, `Q-12`, critério 7)
+ * ═════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * O retrato do fato antes de mexer nele — **lido pela ORIGEM, nunca procurado nas três tabelas**.
+ *
+ * ⚠️ **TRÊS TABELAS, E A VISTA É A MESMA LINHA DA AVALIAÇÃO** (`RN-AVAL-02`): aplicação e vista são
+ * o **mesmo fato**, em quatro colunas diferentes. Procurar o `fatoId` por tentativa custaria três
+ * consultas e daria o veredito errado no dia em que dois identificadores coincidissem.
+ *
+ * ⚠️ **`origem_migracao_v1` E `editado_em` VÊM JUNTOS, e é por eles que a catraca se antecipa**: a
+ * `reg_aula_ue_so_nula_no_historico` aceita UE nula **só** em linha migrada e **nunca editada**.
+ */
+type FatoDoBanco = {
+  readonly data: string | null;
+  readonly taInicial: number | null;
+  readonly tempos: number | null;
+  readonly turmaId: string | null;
+  readonly cursoId: string | null;
+  readonly disciplinaId: string | null;
+  readonly unidadeEnsinoId: string | null;
+  readonly herdado: boolean;
+};
+
+async function lerFato(
+  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+  origem: OrigemDoFatoValidada,
+  fatoId: string,
+): Promise<FatoDoBanco | null> {
+  if (origem === "aula") {
+    const { data } = await supabase
+      .from("registros_aula")
+      .select(
+        "data, ta_inicial, tempos_consumidos, turma_id, curso_id, disciplina_id, unidade_ensino_id, origem_migracao_v1, editado_em",
+      )
+      .eq("id", fatoId)
+      .maybeSingle();
+    if (!data) return null;
+    const l = data as {
+      data: string;
+      ta_inicial: number | null;
+      tempos_consumidos: number | null;
+      turma_id: string | null;
+      curso_id: string | null;
+      disciplina_id: string | null;
+      unidade_ensino_id: string | null;
+      origem_migracao_v1: string | null;
+      editado_em: string | null;
+    };
+    /*
+     * ⚠️ **A DISCIPLINA DE UMA AULA COM UE NÃO ESTÁ NA COLUNA `disciplina_id` — ELA ESTÁ NA UE, e a
+     * primeira escrita disto não resolvia isso: o PORTEIRO DA HABILITAÇÃO FICAVA INERTE.** O
+     * `CHECK reg_aula_ue_xor_disciplina` proíbe as duas juntas (*"uma fonte só"*), então **toda**
+     * aula normal tem `disciplina_id` **nulo** — e com ele nulo o `editar` pulava
+     * `conferirHabilitacao` e deixava trocar por quem não é habilitado.
+     * ⚠️ **QUEM PEGOU FOI O CASO NEGATIVO DA PONTA A PONTA**, que esperava a frase de recusa e não
+     * achou nenhuma: a troca tinha sido **gravada**. O banco não recusa — não há FK nem gatilho de
+     * habilitação (medido) —, então a Server Action era a única defesa e estava desligada
+     * justamente no caminho comum. É a mesma resolução que `disciplinaDoBloco` faz no `lancar`.
+     */
+    let disciplinaId = l.disciplina_id;
+    if (disciplinaId === null && l.unidade_ensino_id !== null) {
+      const { data: ue } = await supabase
+        .from("unidades_ensino")
+        .select("disciplina_id")
+        .eq("id", l.unidade_ensino_id)
+        .maybeSingle();
+      disciplinaId = (ue as { disciplina_id?: string } | null)?.disciplina_id ?? null;
+    }
+
+    return {
+      data: l.data,
+      taInicial: l.ta_inicial,
+      tempos: l.tempos_consumidos,
+      turmaId: l.turma_id,
+      cursoId: l.curso_id,
+      disciplinaId,
+      unidadeEnsinoId: l.unidade_ensino_id,
+      herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
+    };
+  }
+
+  if (origem === "avaliacao" || origem === "vista_prova") {
+    const { data } = await supabase
+      .from("avaliacoes")
+      .select(
+        "data_avaliacao, data_vista_prova, ta_inicial, ta_inicial_vista, tempos_consumidos, tempos_consumidos_vista, turma_id, curso_id, disciplina_id, origem_migracao_v1, editado_em",
+      )
+      .eq("id", fatoId)
+      .maybeSingle();
+    if (!data) return null;
+    const l = data as {
+      data_avaliacao: string;
+      data_vista_prova: string | null;
+      ta_inicial: number | null;
+      ta_inicial_vista: number | null;
+      tempos_consumidos: number | null;
+      tempos_consumidos_vista: number | null;
+      turma_id: string | null;
+      curso_id: string | null;
+      disciplina_id: string | null;
+      origem_migracao_v1: string | null;
+      editado_em: string | null;
+    };
+    const ehVista = origem === "vista_prova";
+    return {
+      data: ehVista ? l.data_vista_prova : l.data_avaliacao,
+      taInicial: ehVista ? l.ta_inicial_vista : l.ta_inicial,
+      tempos: ehVista ? l.tempos_consumidos_vista : l.tempos_consumidos,
+      turmaId: l.turma_id,
+      cursoId: l.curso_id,
+      disciplinaId: l.disciplina_id,
+      unidadeEnsinoId: null,
+      herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
+    };
+  }
+
+  const { data } = await supabase
+    .from("atividades_nao_letivas")
+    .select("data, ta_inicial, tempos_consumidos, turma_id, origem_migracao_v1, editado_em")
+    .eq("id", fatoId)
+    .maybeSingle();
+  if (!data) return null;
+  const l = data as {
+    data: string;
+    ta_inicial: number | null;
+    tempos_consumidos: number | null;
+    turma_id: string | null;
+    origem_migracao_v1: string | null;
+    editado_em: string | null;
+  };
+  return {
+    data: l.data,
+    taInicial: l.ta_inicial,
+    tempos: l.tempos_consumidos,
+    turmaId: l.turma_id,
+    /* ⚠️ Atividade não letiva **não tem** `curso_id` nem disciplina: ela é de turma ou global. */
+    cursoId: null,
+    disciplinaId: null,
+    unidadeEnsinoId: null,
+    herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
+  };
+}
+
+/**
+ * O contexto da recusa por alcance — o que faz a frase dizer **curso fora de oferta** (`FR-032`).
+ *
+ * ⚠️ **SEM ELE, A RECUSA DE RLS CHEGA COMO «o seu perfil não pode fazer esta alteração neste
+ * curso», que é a frase ERRADA quando o problema é o CURSO estar inativo.** `recusaPorAlcance` já
+ * sabe dizer a certa — ela só precisa saber que o curso está inativo e qual é a sigla. Deixar o
+ * `42501` cru chegar à tela é o que o `FR-032` proíbe nominalmente.
+ */
+async function contextoDoCurso(
+  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+  cursoId: string | null,
+  oQueNaoRecebe: string,
+): Promise<{ cursoInativo?: boolean; sigla?: string; oQueNaoRecebe: string }> {
+  if (cursoId === null) return { oQueNaoRecebe };
+  const { data } = await supabase
+    .from("cursos")
+    .select("codigo, status")
+    .eq("id", cursoId)
+    .maybeSingle();
+  const c = data as { codigo?: string; status?: string } | null;
+  if (!c?.codigo) return { oQueNaoRecebe };
+  return { cursoInativo: c.status !== "ativo", sigla: c.codigo, oQueNaoRecebe };
+}
+
+/**
+ * A segunda metade da `Q-1`: **mover ou editar linha histórica sem UE pede a UE no mesmo ato**
+ * (`FR-028`).
+ *
+ * > *"A Unidade de Ensino só pode ser nula em linha MIGRADA e NUNCA EDITADA, ou em disciplina
+ * > ISENTA de UE."*
+ * > — `comment on constraint reg_aula_ue_so_nula_no_historico`, migration `20261005181116`
+ *
+ * ⚠️ **MOVER É EDITAR, E O GATILHO CARIMBA `editado_em`.** No instante em que a linha migrada se
+ * move, ela **deixa de ser "nunca editada"** e o `CHECK` passa a cobrar a UE — a gravação seria
+ * recusada com `23514`, que na tela é *"o banco recusou: um campo não atende à regra"*. A ação
+ * antecipa isso e **pede a unidade**, com a frase que diz o que fazer.
+ *
+ * ⚠️ **E A ISENÇÃO DA `Q-1` CONTINUA VALENDO:** disciplina marcada `sem_unidades_ensino` (ou curso
+ * por competências) **não** precisa de UE, e a condição é a mesma que o `CHECK` usa. ⚠️ **A função
+ * `app.disciplina_sem_ue` vive no schema `app`, que o PostgREST NÃO expõe** (medido na spec 011:
+ * `PGRST202`, que se lê como *"a função não existe"* e significa *"não é alcançável pela interface
+ * de dados"*), então a condição é remontada com uma leitura de `disciplinas` e `cursos` — o **mesmo**
+ * dado, e o banco continua sendo quem impõe.
+ */
+async function faltaAUnidadeDaCatraca(
+  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+  origem: OrigemDoFatoValidada,
+  fato: FatoDoBanco,
+  unidadeMandada: string | null,
+): Promise<string | null> {
+  /*
+   * ⚠️ **A CATRACA É DE `registros_aula`, E SÓ DELA — e a primeira escrita disto a aplicava às
+   * QUATRO origens, com uma recusa falsa.** `avaliacoes` e `atividades_nao_letivas` **não têm**
+   * coluna de unidade de ensino, e `lerFato` devolve `unidadeEnsinoId: null` para elas por
+   * construção. Sem este porteiro, **posicionar uma AVALIAÇÃO herdada** da faixa "Sem posição" era
+   * recusado com a frase da `UE-1` — um pedido impossível (não há campo a preencher) sobre uma
+   * regra que não se aplica.
+   * ⚠️ **Quem pegou foi o percurso da `Q-12`**, cujo primeiro item da faixa é justamente a
+   * avaliação herdada; e ele só nomeou a causa depois de a espera passar a imprimir a frase da
+   * recusa em vez de um `Expected: 0, Received: 1`.
+   */
+  if (origem !== "aula") return null;
+  if (fato.unidadeEnsinoId !== null || unidadeMandada !== null) return null;
+  if (!fato.herdado) return null;
+
+  if (fato.disciplinaId !== null) {
+    const { data } = await supabase
+      .from("disciplinas")
+      .select("sem_unidades_ensino, curso_id")
+      .eq("id", fato.disciplinaId)
+      .maybeSingle();
+    const d = data as { sem_unidades_ensino?: boolean | null; curso_id?: string } | null;
+    if (d?.sem_unidades_ensino === true) return null;
+    if (d?.curso_id) {
+      const { data: curso } = await supabase
+        .from("cursos")
+        .select("curriculo_modelo")
+        .eq("id", d.curso_id)
+        .maybeSingle();
+      if ((curso as { curriculo_modelo?: string } | null)?.curriculo_modelo === "competencias") {
+        return null;
+      }
+    }
+  }
+
+  return (
+    "Esta aula veio da migração sem unidade de ensino, e mexer nela passa a exigi-la " +
+    "(decisão UE-1). Escolha a unidade de ensino no mesmo ato."
+  );
+}
+
+/** As colunas de posição de cada origem — é só aqui que a vista difere da aplicação. */
+function posicaoPara(
+  origem: OrigemDoFatoValidada,
+  movimento: { data: string; taInicial: number; tempos?: number | undefined },
+): Record<string, string | number> {
+  if (origem === "vista_prova") {
+    return {
+      data_vista_prova: movimento.data,
+      ta_inicial_vista: movimento.taInicial,
+      ...(movimento.tempos === undefined ? {} : { tempos_consumidos_vista: movimento.tempos }),
+    };
+  }
+  const coluna = origem === "avaliacao" ? "data_avaliacao" : "data";
+  return {
+    [coluna]: movimento.data,
+    ta_inicial: movimento.taInicial,
+    ...(movimento.tempos === undefined ? {} : { tempos_consumidos: movimento.tempos }),
+  };
+}
+
+/** A tabela de cada origem. A vista divide a linha com a aplicação (`RN-AVAL-02`). */
+const TABELA_DA_ORIGEM: Readonly<Record<OrigemDoFatoValidada, string>> = {
+  aula: "registros_aula",
+  avaliacao: "avaliacoes",
+  vista_prova: "avaliacoes",
+  atividade_nao_letiva: "atividades_nao_letivas",
+};
+
+/**
+ * O `UPDATE`, com as **duas** recusas tratadas — devolve a mensagem quando falha, `true` quando grava.
+ *
+ * ⚠️ **AS DUAS SÃO DIFERENTES E AS DUAS CHEGAM COMO «nada aconteceu»:** o erro do banco vem com
+ * código e vira frase por `traduzirRecusa`; a policy de `UPDATE` cujo `USING` não casa responde
+ * **sucesso com zero linhas**. Tratar só a primeira faria a tela dizer *"movido"* sobre uma grade
+ * que não mudou — e é exatamente a forma do defeito da spec 011, em que a falha ficou invisível e
+ * duas conferências seguidas procuraram no lugar errado.
+ *
+ * ⚠️ **`UPDATE … RETURNING` AQUI É SEGURO, ao contrário do `INSERT`** (gotcha 4.1): o problema de lá
+ * é que `app.alcanca_turma` é `STABLE` e **não enxerga a linha recém-inserida** dentro do mesmo
+ * comando. A linha que se atualiza **já existe** antes do comando, então a policy de `SELECT` a
+ * alcança — e é justamente por isso que a lista vazia aqui significa **recusa**, não invisibilidade.
+ */
+async function gravarNoFato(
+  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+  origem: OrigemDoFatoValidada,
+  fatoId: string,
+  cursoId: string | null,
+  campos: Record<string, string | number | null>,
+): Promise<true | string> {
+  const { data, error } = await supabase
+    .from(TABELA_DA_ORIGEM[origem])
+    .update(campos)
+    .eq("id", fatoId)
+    .select("id");
+
+  if (error) {
+    return traduzirRecusa(
+      error as ErroDoBanco,
+      await contextoDoCurso(supabase, cursoId, "lançamento"),
+    );
+  }
+  if ((data ?? []).length === 0) {
+    return recusaPorAlcance(await contextoDoCurso(supabase, cursoId, "lançamento"));
+  }
+  return true;
+}
+
+/**
+ * **Mover** um fato para outro dia e/ou outro Tempo de Aula (`RF-DSA-07`, `FR-030`, critério **7**).
+ *
+ * ⚠️ **É `UPDATE` DO MESMO REGISTRO, e é isso que o critério 7 cobra:** *"o `id` continua o mesmo,
+ * `criado_por` intacto, `editado_*` carimbado"*. Excluir e recriar daria um identificador novo,
+ * perderia `criado_por` e **quebraria a vista de prova**, que é a mesma linha da avaliação.
+ *
+ * ⚠️ **O TETO DE TFM VALE TAMBÉM NO MOVER** (`FR-024`, `RN-DIST-03` (a)): mover 6 TA de TFM para uma
+ * semana que já tem 4 estouraria o teto **sem passar por `lancar`**. É o único bloqueio do épico, e
+ * ele não tem porta de serviço.
+ *
+ * ⚠️ **E O PRÓPRIO BLOCO SAI DA CONTA DO TETO** — ver a nota de `ignorarFatoId`: sem isso, mover
+ * dentro da mesma semana contaria o bloco duas vezes e a ação recusaria dizendo que a pessoa passou
+ * de um limite que ela não passou.
+ */
+export async function mover(entrada: unknown): Promise<ResultadoDoLancamento> {
+  const conferido = esquemaDoMovimento.safeParse(entrada);
+  if (!conferido.success) {
+    const { mensagem, campo } = primeira(conferido.error.issues);
+    return falha(mensagem, campo);
+  }
+  const movimento = conferido.data;
+  const supabase = await criarClienteDeServidor();
+
+  const fato = await lerFato(supabase, movimento.origem, movimento.fatoId);
+  if (fato === null) return falha("Não encontrei este lançamento.");
+
+  const pedeUnidade = await faltaAUnidadeDaCatraca(
+    supabase,
+    movimento.origem,
+    fato,
+    movimento.unidadeEnsinoId,
+  );
+  if (pedeUnidade !== null) return falha(pedeUnidade, "unidadeEnsinoId");
+
+  /*
+   * ⚠️ **O `tempos` É SEMPRE ESCRITO, E ISSO FOI CORRIGIDO POR MEDIÇÃO — há uma SEGUNDA catraca no
+   * histórico, irmã da da UE.** `reg_aula_tempos_so_nulo_no_historico` aceita `tempos_consumidos`
+   * nulo **só** em linha migrada e nunca editada; posicionar um lançamento da faixa "Sem posição"
+   * carimba `editado_em`, e o `CHECK` passa a cobrar o valor. Sem escrever o tempo, o movimento era
+   * recusado com `23514` **exatamente no caso que a `Q-12` criou** — o do histórico sem posição.
+   * ⚠️ **E escrever `fato.tempos` quando nada muda é inofensivo** (é o mesmo valor); o `1` só entra
+   * onde não havia duração nenhuma, que é o mínimo honesto para um lançamento que ganha lugar.
+   */
+  const posicao: Record<string, string | number | null> = {
+    ...posicaoPara(movimento.origem, {
+      ...movimento,
+      tempos: movimento.tempos ?? fato.tempos ?? 1,
+    }),
+    ...(movimento.unidadeEnsinoId === null ? {} : { unidade_ensino_id: movimento.unidadeEnsinoId }),
+  };
+
+  /*
+   * ⚠️ **ATIVIDADE GLOBAL NÃO TEM TURMA NEM CURSO, logo não há teto DE TURMA a avaliar** — e isso
+   * não é isenção: a `RN-DIST-03` fala da carga **da turma** na semana, e uma atividade que vale
+   * para todas não pertence a nenhuma. Ela continua passando pelas duas recusas de `gravarNoFato`.
+   */
+  if (fato.turmaId === null || fato.cursoId === null) {
+    const alterado = await gravarNoFato(
+      supabase,
+      movimento.origem,
+      movimento.fatoId,
+      fato.cursoId,
+      posicao,
+    );
+    if (typeof alterado === "string") return falha(alterado);
+    revalidar();
+    return { ok: true, id: movimento.fatoId, avisos: [] };
+  }
+
+  const veredito = await vereditoDosTetos(supabase, {
+    turmaId: fato.turmaId,
+    cursoId: fato.cursoId,
+    data: movimento.data,
+    taInicial: movimento.taInicial,
+    tempos: movimento.tempos ?? fato.tempos ?? 1,
+    disciplinaId: fato.disciplinaId,
+    ignorarFatoId: movimento.fatoId,
+  });
+  const bloqueio = veredito.bloqueios[0];
+  if (bloqueio !== undefined) return falha(bloqueio);
+
+  const alterado = await gravarNoFato(
+    supabase,
+    movimento.origem,
+    movimento.fatoId,
+    fato.cursoId,
+    posicao,
+  );
+  if (typeof alterado === "string") return falha(alterado);
+  revalidar();
+  return {
+    ok: true,
+    id: movimento.fatoId,
+    avisos: veredito.alertas.map((texto, i) => ({ codigo: `alerta-${i}`, texto })),
+  };
+}
+
+/**
+ * **Editar** um fato pela grade — sem tocar o catálogo (`FR-029`, `SC-012`).
+ *
+ * ⚠️ **O QUE ELE NÃO TOCA É O QUE IMPORTA: O CATÁLOGO.** O `D-4` da planilha é exatamente isto —
+ * *"instrutor, local e técnica são atributo DO ITEM do catálogo, não do lançamento: trocar o
+ * instrutor de uma UE reescreve todo DSA passado"*. Aqui cada campo é **da linha**, e editar um
+ * lançamento de março não muda nenhum outro.
+ *
+ * ⚠️ **A TROCA DE INSTRUTOR PASSA PELO PORTEIRO DE HABILITAÇÃO** (`RN-INST-01`, *Risco: Alto*). Sem
+ * isto haveria **uma porta lateral**: lançar com quem é habilitado e depois trocar por quem não é.
+ * A Server Action é a **única** defesa — não há FK nem gatilho, medido —, e `editar` é o segundo
+ * lugar por onde um instrutor entra numa aula.
+ *
+ * ⚠️ **CAMPO NÃO MANDADO NÃO É TOCADO.** `undefined` é *"não mandou"* e `null` é *"apague"*: um
+ * esquema que confundisse os dois apagaria o que a tela não enviou — o defeito medido na spec 011,
+ * em que um campo fora da tela mandando `null` apagava o vínculo a cada gravação.
+ */
+export async function editar(entrada: unknown): Promise<ResultadoDoLancamento> {
+  const conferido = esquemaDaEdicao.safeParse(entrada);
+  if (!conferido.success) {
+    const { mensagem, campo } = primeira(conferido.error.issues);
+    return falha(mensagem, campo);
+  }
+  const edicao = conferido.data;
+  const supabase = await criarClienteDeServidor();
+
+  const fato = await lerFato(supabase, edicao.origem, edicao.fatoId);
+  if (fato === null) return falha("Não encontrei este lançamento.");
+
+  const pedeUnidade = await faltaAUnidadeDaCatraca(
+    supabase,
+    edicao.origem,
+    fato,
+    edicao.unidadeEnsinoId ?? null,
+  );
+  if (pedeUnidade !== null) return falha(pedeUnidade, "unidadeEnsinoId");
+
+  if (edicao.instrutorId != null && fato.disciplinaId !== null) {
+    const atuacao: Atuacao = edicao.origem === "aula" ? "ministrar" : "avaliacao";
+    const recusa = await conferirHabilitacao(
+      supabase,
+      atuacao,
+      edicao.instrutorId,
+      fato.disciplinaId,
+    );
+    if (recusa !== null) return falha(recusa, "instrutorId");
+  }
+
+  /*
+   * ⚠️ **OS NOMES DE COLUNA DIFEREM ENTRE AS TRÊS TABELAS, e mandar o errado dá `42703`** —
+   * *"coluna não existe"* —, que na tela se lê como defeito do sistema.
+   * `atividades_nao_letivas` guarda `descricao` (não `conteudo_resumo`) e não tem `metodologia`;
+   * `avaliacoes` guarda `instrutor_responsavel_id` (não `instrutor_id`); e a **vista** usa
+   * `local_vista` e `tempos_consumidos_vista`, porque divide a linha com a aplicação.
+   */
+  const campos: Record<string, string | number | null> = {};
+  if (edicao.local !== undefined) {
+    campos[edicao.origem === "vista_prova" ? "local_vista" : "local"] = edicao.local;
+  }
+  if (edicao.tempos !== undefined) {
+    campos[edicao.origem === "vista_prova" ? "tempos_consumidos_vista" : "tempos_consumidos"] =
+      edicao.tempos;
+  }
+  if (edicao.unidadeEnsinoId !== undefined && edicao.origem === "aula") {
+    campos["unidade_ensino_id"] = edicao.unidadeEnsinoId;
+  }
+  if (edicao.origem === "aula") {
+    if (edicao.conteudo !== undefined) campos["conteudo_resumo"] = edicao.conteudo;
+    if (edicao.tecnica !== undefined) campos["metodologia"] = edicao.tecnica;
+    if (edicao.instrutorId !== undefined) campos["instrutor_id"] = edicao.instrutorId;
+  } else if (edicao.origem === "avaliacao") {
+    if (edicao.conteudo !== undefined) campos["conteudo_resumo"] = edicao.conteudo;
+    if (edicao.tecnica !== undefined) campos["metodologia"] = edicao.tecnica;
+    if (edicao.instrutorId !== undefined) campos["instrutor_responsavel_id"] = edicao.instrutorId;
+  } else if (edicao.origem === "atividade_nao_letiva") {
+    if (edicao.conteudo !== undefined) campos["descricao"] = edicao.conteudo;
+    if (edicao.instrutorId !== undefined) campos["instrutor_id"] = edicao.instrutorId;
+  }
+
+  if (Object.keys(campos).length === 0) {
+    return falha("Nada mudou: nenhum campo foi alterado.");
+  }
+
+  const alterado = await gravarNoFato(supabase, edicao.origem, edicao.fatoId, fato.cursoId, campos);
+  if (typeof alterado === "string") return falha(alterado);
+  revalidar();
+  return { ok: true, id: edicao.fatoId, avisos: [] };
+}
+
+/**
+ * **Excluir** um fato — e a exclusão é **lógica** (regra 4, `FR-031`).
+ *
+ * ⚠️ **ZERO `DELETE`, E A GUARDA CONTA ISSO NO CATÁLOGO INTEIRO.** A asserção de pgTAP que conta
+ * `pg_policy.polcmd = 'd'` segue em **zero**, e a regra 4 diz que *"PR que acrescenta `for delete`
+ * é rejeitado sem discussão"*. Aqui o que muda é a coluna de situação.
+ *
+ * ⚠️ **AVALIAÇÃO USA `cancelada`, NÃO `inativo`, e isso não é inconsistência:** `avaliacoes.status`
+ * é um ENUM próprio (`status_avaliacao`), medido no tipo gerado — mandar `inativo` ali daria
+ * `22P02`, *valor inválido para o enum*.
+ *
+ * ⚠️ **E EXCLUIR A VISTA NÃO CANCELA A AVALIAÇÃO:** aplicação e vista são o **mesmo fato**
+ * (`RN-AVAL-02`), então *"excluir a vista"* é **apagar a segunda data**, não cancelar a prova que
+ * já aconteceu. Cancelar a linha inteira apagaria da CHD uma avaliação que foi aplicada.
+ */
+export async function excluir(entrada: unknown): Promise<ResultadoDoLancamento> {
+  const conferido = esquemaDaExclusao.safeParse(entrada);
+  if (!conferido.success) {
+    const { mensagem, campo } = primeira(conferido.error.issues);
+    return falha(mensagem, campo);
+  }
+  const { fatoId, origem } = conferido.data;
+  const supabase = await criarClienteDeServidor();
+
+  const fato = await lerFato(supabase, origem, fatoId);
+  if (fato === null) return falha("Não encontrei este lançamento.");
+
+  const campos: Record<string, string | number | null> =
+    origem === "vista_prova"
+      ? {
+          data_vista_prova: null,
+          ta_inicial_vista: null,
+          tempos_consumidos_vista: null,
+          local_vista: null,
+        }
+      : origem === "avaliacao"
+        ? { status: "cancelada" }
+        : { status: "inativo" };
+
+  const alterado = await gravarNoFato(supabase, origem, fatoId, fato.cursoId, campos);
+  if (typeof alterado === "string") return falha(alterado);
+  revalidar();
+  return { ok: true, id: fatoId, avisos: [] };
 }

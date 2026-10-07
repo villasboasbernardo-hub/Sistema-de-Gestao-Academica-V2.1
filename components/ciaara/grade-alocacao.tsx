@@ -114,6 +114,27 @@ export type CelulaDaGrade = {
   readonly coberta?: boolean;
   /** O que quem usa leitor de tela ouve antes do tom. */
   readonly rotuloAcessivel?: string;
+  /**
+   * A célula pode ser **arrastada** (`RF-DSA-07`).
+   *
+   * ⚠️ **ARRASTAR É O CAMINHO SECUNDÁRIO, NUNCA O ÚNICO.** O primário é o teclado: `Enter` na
+   * célula ativa o bloco e abre *Mover para…*. Uma grade que só se reorganizasse por arrastar
+   * deixaria de fora quem navega por teclado — e o `RF-DSA-07` pede **as duas** formas.
+   */
+  readonly arrastavel?: boolean;
+  /**
+   * A marca de conflito, **em texto** — vai para `data-conflito` e para o rótulo acessível.
+   *
+   * ⚠️ **O ESTADO VAI NO ATRIBUTO, NUNCA SÓ NA COR** (`RNF-USA-05`, e a lição da barra de progresso
+   * do Épico 5.5): a célula em conflito é tingida **e** nomeada. Quem não distingue as cores lê a
+   * mesma informação.
+   *
+   * ⚠️ **ELA NÃO TRAZ CONTAGEM, e isso é deliberado:** `detectarConflitos` devolve **qual** é o
+   * conflito (instrutor ou fiscal) e se há disputa de sala — **não** quantos. Inventar um número
+   * aqui seria uma segunda fonte de verdade sobre a `RN-CONF-01`, e o número apareceria na tela
+   * sem nada no domínio que o sustentasse.
+   */
+  readonly marcaDeConflito?: string;
 };
 
 export type GradeAlocacaoProps = {
@@ -134,6 +155,16 @@ export type GradeAlocacaoProps = {
    * da `ListaNavegavel`, que ganhou o clique depois de nascer só com teclado.
    */
   readonly aoAtivarCelula?: (linha: number, coluna: number) => void;
+  /**
+   * Começou a arrastar a célula de `linha`/`coluna`.
+   *
+   * ⚠️ **A GRADE NÃO SABE O QUE ESTÁ SENDO ARRASTADO — ela diz DE ONDE.** Quem traduz posição em
+   * `fatoId` é `GradeDsa`, e quem grava é a Server Action. Guardar o bloco aqui faria a grade
+   * genérica conhecer o domínio, que é o que o requisito dela proíbe.
+   */
+  readonly aoArrastar?: (linha: number, coluna: number) => void;
+  /** Soltou sobre a célula de `linha`/`coluna`. */
+  readonly aoSoltar?: (linha: number, coluna: number) => void;
   readonly className?: string;
 };
 
@@ -155,6 +186,8 @@ export function GradeAlocacao({
   cantoSuperior,
   rodapeDasColunas,
   aoAtivarCelula,
+  aoArrastar,
+  aoSoltar,
   className,
 }: GradeAlocacaoProps) {
   const navegaveis = linhasNavegaveis(linhas);
@@ -263,26 +296,52 @@ export function GradeAlocacao({
                       const rotuloDaCelula = [
                         celula?.rotuloAcessivel,
                         NOME_DO_TOM[tom],
+                        celula?.marcaDeConflito,
                         typeof linha.chave === "string" ? linha.chave : undefined,
                         coluna.chave,
                       ]
                         .filter(Boolean)
                         .join(" · ");
+                      const iNavegavel = navegavel ?? 0;
                       return (
                         <CelulaNavegavel key={coluna.chave} linha={navegavel ?? 0} coluna={iColuna}>
                           <td
                             rowSpan={celula?.alturaEmLinhas ?? 1}
                             data-tom={tom}
+                            data-conflito={celula?.marcaDeConflito}
                             aria-label={rotuloDaCelula}
                             onClick={
-                              aoAtivarCelula
-                                ? () => aoAtivarCelula(navegavel ?? 0, iColuna)
+                              aoAtivarCelula ? () => aoAtivarCelula(iNavegavel, iColuna) : undefined
+                            }
+                            draggable={celula?.arrastavel === true && aoArrastar ? true : undefined}
+                            onDragStart={
+                              aoArrastar ? () => aoArrastar(iNavegavel, iColuna) : undefined
+                            }
+                            /*
+                             * ⚠️ **`preventDefault` NO `dragover` É O QUE PERMITE SOLTAR.** Sem ele
+                             * o navegador **recusa o alvo em silêncio**: o cursor mostra o ícone de
+                             * "não pode", `drop` nunca dispara, e o sintoma é *"arrastar não faz
+                             * nada"* — que se lê como defeito da ação, não do alvo.
+                             */
+                            onDragOver={
+                              aoSoltar
+                                ? (evento: React.DragEvent<HTMLTableCellElement>) =>
+                                    evento.preventDefault()
+                                : undefined
+                            }
+                            onDrop={
+                              aoSoltar
+                                ? (evento: React.DragEvent<HTMLTableCellElement>) => {
+                                    evento.preventDefault();
+                                    aoSoltar(iNavegavel, iColuna);
+                                  }
                                 : undefined
                             }
                             className={cn(
                               "border-l border-t border-borda p-1 align-top outline-none focus-visible:ring-2 focus-visible:ring-foco",
                               TINTA_DO_TOM[tom],
                               aoAtivarCelula && "cursor-pointer hover:bg-marca-suave",
+                              celula?.arrastavel === true && aoArrastar && "cursor-grab",
                             )}
                           >
                             {celula?.conteudo}

@@ -1,16 +1,20 @@
 /**
- * O painel que junta a grade ao formulário (`RF-DSA-04`, `Q-7` · spec 013, PR 2).
+ * O painel que junta a grade ao formulário e às ações do bloco (`RF-DSA-04`, `RF-DSA-07`, `Q-7`,
+ * `Q-12` · spec 013, PR 2 e PR 4).
  *
- * ⚠️ **FOLHA DE CLIENTE, DECLARADA.** Ele guarda **só** qual célula está escolhida — estado efêmero
- * de tela, que o guia de estado na URL manda deixar fora dela: a célula selecionada não é recorte
- * compartilhável, e pô-la no endereço faria um link abrir um formulário.
+ * ⚠️ **FOLHA DE CLIENTE, DECLARADA.** Ele guarda **só** o que está escolhido — célula livre ou
+ * fato — , estado efêmero de tela que o guia manda deixar fora da URL: a célula selecionada não é
+ * recorte compartilhável, e pô-la no endereço faria um link abrir um formulário.
  *
- * ⚠️ **A GRADE CONTINUA RECEBENDO A `Semana` PRONTA.** Este painel não lê banco e não calcula
- * nada: a página montou a semana no servidor e passou por propriedade. O que ele acrescenta é o
- * clique.
+ * ⚠️ **A GRADE CONTINUA RECEBENDO A `Semana` PRONTA.** Este painel não lê banco e não calcula nada:
+ * a página montou a semana no servidor e passou por propriedade. O que ele acrescenta é o clique.
  *
- * ⚠️ **AS DUAS AÇÕES CHEGAM POR PROPRIEDADE**, nunca por `import` de `@/lib/acoes/` — é a proibição
- * do Princípio XI, que as guardas de fronteira impõem.
+ * ⚠️ **AS CINCO AÇÕES CHEGAM POR PROPRIEDADE**, nunca por `import` de `@/lib/acoes/` — é a
+ * proibição do Princípio XI, que as guardas de fronteira impõem.
+ *
+ * ⚠️ **ARRASTAR E O TECLADO CHEGAM À MESMA `mover`** (`RF-DSA-07`): o arrastar passa pela grade e o
+ * teclado pelo painel de ações, e os dois chamam a **mesma** Server Action. Dois caminhos de
+ * gravação seriam duas regras de teto, e uma delas esqueceria o TFM.
  */
 "use client";
 
@@ -22,6 +26,7 @@ import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import type { Semana } from "@/lib/dominio/dsa/grade";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 
+import { AcoesDoBloco, type FatoEscolhido } from "./AcoesDoBloco";
 import {
   FormularioDeLancamento,
   type DisciplinaIsenta,
@@ -50,7 +55,61 @@ export type PainelDeLancamentoProps = {
   readonly subtipos: readonly { readonly valor: string; readonly categoria: string | null }[];
   readonly lancar: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly lancarEstudoIndividual: (entrada: unknown) => Promise<ResultadoDoEstudoIndividual>;
+  /** As três do PR 4 — ausentes, a grade fica só de leitura. */
+  readonly mover?: (entrada: unknown) => Promise<ResultadoDaAcao>;
+  readonly editar?: (entrada: unknown) => Promise<ResultadoDaAcao>;
+  readonly excluir?: (entrada: unknown) => Promise<ResultadoDaAcao>;
 };
+
+/**
+ * Acha o fato na semana, pelo identificador — nas células **e** na faixa "Sem posição".
+ *
+ * ⚠️ **ELE PROCURA NOS DOIS LUGARES, e a faixa é metade do ponto** (`Q-12`): as 1.566 linhas do ETL
+ * estão todas sem TA, então a faixa é onde o histórico mora. Procurar só nas células faria
+ * *"posicionar"* não achar nada justamente no caso que a decisão criou.
+ */
+function fatoDaSemana(semana: Semana, fatoId: string): FatoEscolhido | null {
+  for (const dia of semana.dias) {
+    for (const celula of dia.celulas) {
+      const bloco = celula.bloco;
+      if (bloco && bloco.fatoId === fatoId) {
+        return {
+          fatoId: bloco.fatoId,
+          origem: bloco.origem,
+          data: bloco.data,
+          taInicial: bloco.taInicial,
+          tempos: bloco.tempos,
+          disciplina: bloco.disciplina,
+          conteudo: bloco.conteudo,
+          local: bloco.local,
+          tecnica: bloco.tecnica,
+          instrutor: bloco.instrutor,
+          herdado: bloco.herdado,
+          semPosicao: false,
+        };
+      }
+    }
+    for (const { fato } of dia.semPosicao) {
+      if (fato.fatoId === fatoId) {
+        return {
+          fatoId: fato.fatoId,
+          origem: fato.origem,
+          data: fato.data,
+          taInicial: fato.taInicial,
+          tempos: fato.tempos,
+          disciplina: fato.disciplina,
+          conteudo: fato.conteudo,
+          local: fato.local,
+          tecnica: fato.tecnica,
+          instrutor: fato.instrutor,
+          herdado: fato.herdado,
+          semPosicao: true,
+        };
+      }
+    }
+  }
+  return null;
+}
 
 export function PainelDeLancamento({
   semana,
@@ -69,10 +128,19 @@ export function PainelDeLancamento({
   subtipos,
   lancar,
   lancarEstudoIndividual,
+  mover,
+  editar,
+  excluir,
 }: PainelDeLancamentoProps) {
   const [celula, definirCelula] = React.useState<{ dia: string; ta: number } | null>(null);
+  const [fatoId, definirFato] = React.useState<string | null>(null);
   const [respostaDoEi, definirRespostaDoEi] = React.useState<string | null>(null);
+  const [respostaDoArraste, definirRespostaDoArraste] = React.useState<string | null>(null);
   const [lancandoEi, definirLancandoEi] = React.useState(false);
+
+  const podeMexer =
+    podeLancar && mover !== undefined && editar !== undefined && excluir !== undefined;
+  const fato = fatoId === null ? null : fatoDaSemana(semana, fatoId);
 
   async function lancarEi(): Promise<void> {
     definirRespostaDoEi(null);
@@ -98,6 +166,34 @@ export function PainelDeLancamento({
     );
   }
 
+  /**
+   * O arrastar-e-soltar — **o caminho secundário**, que chega à mesma `mover`.
+   *
+   * ⚠️ **A RESPOSTA É PUBLICADA ACIMA DA GRADE, e não dentro da célula.** O bloco que se move
+   * **sai do lugar** onde a mensagem estaria: é o defeito da spec 011, em que *"a mensagem de
+   * sucesso morria com a linha"* e duas conferências seguidas leram a falha como *"não aconteceu
+   * nada"*.
+   */
+  async function moverArrastando(id: string, dia: string, ta: number): Promise<void> {
+    if (mover === undefined) return;
+    definirRespostaDoArraste(null);
+    const resposta = await mover({
+      fatoId: id,
+      origem: fatoDaSemana(semana, id)?.origem,
+      data: dia,
+      taInicial: ta,
+    });
+    if (!resposta.ok) {
+      definirRespostaDoArraste(resposta.mensagem);
+      return;
+    }
+    definirRespostaDoArraste(
+      resposta.avisos.length === 0
+        ? "Lançamento movido."
+        : `Lançamento movido, com aviso: ${resposta.avisos.map((a) => a.texto).join(" ")}`,
+    );
+  }
+
   return (
     <div className="flex min-w-0 flex-col gap-3">
       {podeLancar ? (
@@ -117,7 +213,9 @@ export function PainelDeLancamento({
             {lancandoEi ? "Lançando…" : "Lançar o Estudo Individual da semana"}
           </Button>
           <span className="text-xs text-texto-suave">
-            Clique numa célula livre da grade para lançar nela.
+            {podeMexer
+              ? "Clique numa célula livre para lançar, ou num lançamento para mover, editar e excluir."
+              : "Clique numa célula livre da grade para lançar nela."}
           </span>
         </div>
       ) : null}
@@ -128,13 +226,51 @@ export function PainelDeLancamento({
         </p>
       ) : null}
 
+      {respostaDoArraste ? (
+        <p role="status" className="text-sm text-texto" data-slot="resposta-do-movimento">
+          {respostaDoArraste}
+        </p>
+      ) : null}
+
       <GradeDsa
         semana={semana}
         salaDaTurma={salaDaTurma}
         {...(podeLancar
-          ? { aoEscolherCelula: (dia: string, ta: number) => definirCelula({ dia, ta }) }
+          ? {
+              aoEscolherCelula: (dia: string, ta: number) => {
+                definirFato(null);
+                definirCelula({ dia, ta });
+              },
+            }
+          : {})}
+        {...(podeMexer
+          ? {
+              aoEscolherFato: (id: string) => {
+                definirCelula(null);
+                definirFato(id);
+              },
+              aoMoverBloco: (id: string, dia: string, ta: number) => {
+                void moverArrastando(id, dia, ta);
+              },
+            }
           : {})}
       />
+
+      {fato !== null && mover && editar && excluir ? (
+        <AcoesDoBloco
+          fato={fato}
+          dias={semana.dias.map((d) => d.data)}
+          linhas={semana.linhas}
+          unidades={unidades}
+          instrutores={instrutores}
+          escala={escala}
+          tecnicas={tecnicas}
+          mover={mover}
+          editar={editar}
+          excluir={excluir}
+          aoFechar={() => definirFato(null)}
+        />
+      ) : null}
 
       {celula ? (
         <FormularioDeLancamento

@@ -12,7 +12,13 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { esquemaDoBloco, esquemaDoEstudoIndividualDaSemana } from "@/lib/validacao/dsa";
+import {
+  esquemaDaEdicao,
+  esquemaDaExclusao,
+  esquemaDoBloco,
+  esquemaDoEstudoIndividualDaSemana,
+  esquemaDoMovimento,
+} from "@/lib/validacao/dsa";
 
 const ID = "11111111-1111-4111-8111-111111111111";
 const OUTRO = "22222222-2222-4222-8222-222222222222";
@@ -36,6 +42,12 @@ const aulaBase = {
 /** A primeira mensagem, que é a que a tela mostra. */
 function recusa(entrada: unknown): string | null {
   const r = esquemaDoBloco.safeParse(entrada);
+  return r.success ? null : (r.error.issues[0]?.message ?? "");
+}
+
+/** A primeira mensagem do esquema do movimento. */
+function recusaDoMovimento(entrada: unknown): string | null {
+  const r = esquemaDoMovimento.safeParse(entrada);
   return r.success ? null : (r.error.issues[0]?.message ?? "");
 }
 
@@ -270,5 +282,76 @@ describe("⚠️ a união é DISCRIMINADA, e é isso que impede combinação imp
         nomeFiscalExterno: null,
       }),
     ).not.toBeNull();
+  });
+});
+
+describe("`RF-DSA-07` · mover, editar e excluir — os esquemas do PR 4", () => {
+  const MOVIMENTO = {
+    fatoId: ID,
+    origem: "aula" as const,
+    data: "2026-04-09",
+    taInicial: 5,
+  };
+
+  it("o movimento pede o fato, a ORIGEM, o dia e o tempo", () => {
+    const r = esquemaDoMovimento.safeParse(MOVIMENTO);
+    expect(r.success).toBe(true);
+    /* ⚠️ `tempos` AUSENTE significa «não mexa no tamanho» — mover é trocar de lugar. */
+    expect(r.success && r.data.tempos).toBeUndefined();
+    expect(r.success && r.data.unidadeEnsinoId).toBeNull();
+  });
+
+  /*
+   * ⚠️ **A ORIGEM É OBRIGATÓRIA PORQUE O IDENTIFICADOR NÃO DIZ DE QUE TABELA VEIO.** São três
+   * tabelas, e a vista de prova é a MESMA linha da avaliação em outras quatro colunas
+   * (`RN-AVAL-02`) — sem a origem, a ação teria de procurar nas três por tentativa.
+   */
+  it("origem desconhecida é recusada, com a frase e não com um `42703` depois", () => {
+    expect(recusaDoMovimento({ ...MOVIMENTO, origem: "reposicao" })).toContain("Origem");
+  });
+
+  it("as quatro origens reais são aceitas", () => {
+    for (const origem of ["aula", "avaliacao", "vista_prova", "atividade_nao_letiva"]) {
+      expect(esquemaDoMovimento.safeParse({ ...MOVIMENTO, origem }).success, origem).toBe(true);
+    }
+  });
+
+  it("o destino respeita a faixa de TA do banco, e a data o formato ISO", () => {
+    expect(recusaDoMovimento({ ...MOVIMENTO, taInicial: 13 })).toContain("até 12");
+    expect(recusaDoMovimento({ ...MOVIMENTO, data: "09/04/2026" })).toContain("AAAA-MM-DD");
+  });
+
+  it("`Q-1` · a unidade de ensino pode vir no mesmo ato — é a catraca da linha histórica", () => {
+    const r = esquemaDoMovimento.safeParse({ ...MOVIMENTO, unidadeEnsinoId: OUTRO });
+    expect(r.success && r.data.unidadeEnsinoId).toBe(OUTRO);
+  });
+
+  /*
+   * ⚠️ **ESTE É O CASO QUE A SPEC 011 PAGOU CARO:** `undefined` é *"não mandou"* e `null` é
+   * *"apague"*. Um esquema que os confundisse apagaria o que a tela não enviou — lá, um campo fora
+   * da tela mandando `null` apagava o vínculo de instrutor **a cada gravação de perfil**, e nenhuma
+   * tela mostrava isso na hora.
+   */
+  it("na edição, campo AUSENTE é diferente de campo NULO", () => {
+    const soLocal = esquemaDaEdicao.safeParse({
+      fatoId: ID,
+      origem: "aula",
+      local: "Sala 03",
+    });
+    expect(soLocal.success).toBe(true);
+    expect(soLocal.success && "instrutorId" in soLocal.data).toBe(false);
+
+    const apagaLocal = esquemaDaEdicao.safeParse({ fatoId: ID, origem: "aula", local: "   " });
+    /* Texto em branco vira AUSÊNCIA de valor — a convenção do banco, e aqui ela é `null`. */
+    expect(apagaLocal.success && apagaLocal.data.local).toBeNull();
+  });
+
+  it("a edição aceita só o fato e a origem — e a ação é quem recusa «nada mudou»", () => {
+    expect(esquemaDaEdicao.safeParse({ fatoId: ID, origem: "aula" }).success).toBe(true);
+  });
+
+  it("a exclusão pede o fato e a origem, e NADA mais", () => {
+    expect(esquemaDaExclusao.safeParse({ fatoId: ID, origem: "avaliacao" }).success).toBe(true);
+    expect(esquemaDaExclusao.safeParse({ origem: "avaliacao" }).success).toBe(false);
   });
 });

@@ -25,6 +25,12 @@
  * vigências reais aponta, então hoje esse caminho não roda.
  */
 import { escalaDeLinhas, type EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import {
+  detectarConflitos,
+  type MarcaDeConflito,
+  type OcupacaoDeTa,
+  type OcupacaoPropria,
+} from "@/lib/dominio/dsa/conflitos";
 import { montarSemana, type FatoDaSemana, type Semana } from "@/lib/dominio/dsa/grade";
 import { relogioDaSemana, type Relogio } from "@/lib/dominio/dsa/horario-do-bloco";
 import type { ExecucaoDaDisciplina, TecnicaDoCatalogo } from "@/lib/dominio/dsa/impressao";
@@ -102,6 +108,16 @@ export type SemanaDoDsa = {
    * porque o subtipo é lista administrável.
    */
   readonly idsDeEstudoIndividual: ReadonlySet<string>;
+  /**
+   * As marcas de conflito, por `fatoId` — **já prontas** (`RN-CONF-01`, `Q-17`).
+   *
+   * ⚠️ **O CONFLITO É CALCULADO EM MEMÓRIA, SEM TABELA DE CONFLITOS**, e o dado alheio **não** chega
+   * aqui: `public.conflitos_da_semana` é `SECURITY DEFINER` e devolve **só** a ocupação (data, TA,
+   * instrutor, fiscal, sala) das outras turmas — sem `turma_id` e sem `fato_id`. É o desenho da
+   * `Q-17`: o Operador de alcance restrito **vê que há conflito** sem ler o DSA de um curso que não
+   * alcança.
+   */
+  readonly marcasDeConflito: ReadonlyMap<string, MarcaDeConflito>;
 };
 
 /**
@@ -338,6 +354,60 @@ export async function lerSemanaDoDsa(
     }
   }
 
+  /*
+   * ⚠️ **O CONFLITO ENTRE TURMAS VEM DO BANCO, pela função com porteiro** (`Q-17`, `T093`). Ela é
+   * `SECURITY DEFINER` porque a RLS **esconderia** a turma alheia — e é justamente a existência da
+   * sobreposição que precisa ser vista. O que ela **não** devolve é de quem é a aula.
+   *
+   * ⚠️ **ERRO AQUI DEGRADA PARA «sem marcas», NUNCA PARA EXCEÇÃO** (`RN-DEG-01`): a grade continua
+   * desenhada, sem a sinalização. ⚠️ **E isso é um risco DECLARADO, não esquecido:** um conflito
+   * deixaria de aparecer em silêncio. Ele é aceitável porque o conflito é **sinalização e nunca
+   * bloqueio** (`RN-CONF-01`) — nada depende dele para gravar —, e porque o porteiro da função
+   * recusa pelas mesmas duas condições que a página já conferiu antes de chegar aqui.
+   */
+  const conflitosRes = await supabase.rpc("conflitos_da_semana", {
+    p_turma_id: turmaId,
+    p_de: de,
+    p_ate: ate,
+  });
+  const alheios: OcupacaoDeTa[] = (
+    (conflitosRes.data ?? []) as {
+      data: string;
+      ta_inicial: number;
+      ta_final: number;
+      instrutor_id: string | null;
+      fiscal_id: string | null;
+      local: string | null;
+    }[]
+  ).map((o) => ({
+    data: o.data,
+    taInicial: o.ta_inicial,
+    taFinal: o.ta_final,
+    instrutorId: o.instrutor_id,
+    fiscalId: o.fiscal_id,
+    local: o.local,
+  }));
+
+  /*
+   * ⚠️ **A OCUPAÇÃO PRÓPRIA SAI DA VIEW, com o `ta_final` que ELA calcula** — `ta_final` é
+   * `GENERATED ALWAYS` no banco (medido: escrevê-lo dá `428C9`). Recalcular `ta_inicial + tempos - 1`
+   * aqui seria a segunda fonte de verdade do fim do bloco, e as duas discordariam na primeira linha
+   * histórica com `tempos` nulo.
+   */
+  const meus: OcupacaoPropria[] = ocupacao
+    .filter((l) => l.ta_inicial !== null)
+    .map((l) => ({
+      fatoId: l.fato_id,
+      data: l.data,
+      taInicial: l.ta_inicial as number,
+      taFinal: (l as unknown as { ta_final: number | null }).ta_final ?? (l.ta_inicial as number),
+      instrutorId: l.instrutor_id,
+      fiscalId: l.fiscal_id,
+      local: l.local,
+    }));
+
+  const marcasDeConflito = detectarConflitos(meus, alheios);
+
   const fatos = [...posicionados, ...semPosicao];
   const datasComLancamento = fatos.map((f) => f.data);
   const janela = diasDaTela({
@@ -359,8 +429,8 @@ export async function lerSemanaDoDsa(
     temposDeclarados: vigente?.regimeTempos ?? maisRecente?.regimeTempos ?? null,
     fatos,
     feriados: ((feriadosRes.data ?? []) as unknown as LinhaDeFeriado[]).map(feriadoDoBanco),
-    /* ⚠️ Vazio até o PR 4: o conflito entre turmas chega PRONTO (`RN-CONF-01`). */
-    marcas: new Map(),
+    /* ⚠️ Ele chega PRONTO, de `detectarConflitos` — a grade não calcula nada (`RN-CONF-01`). */
+    marcas: marcasDeConflito,
     hoje: entrada.hoje,
     sabadoAberto: janela.sabadoAberto,
   });
@@ -450,6 +520,7 @@ export async function lerSemanaDoDsa(
       categoria: (l.metadados?.["categoria"] as string | undefined) ?? null,
     })),
     idsDeEstudoIndividual,
+    marcasDeConflito,
   };
 }
 
