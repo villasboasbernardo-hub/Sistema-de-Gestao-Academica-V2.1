@@ -21,6 +21,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "lib/tipos/database.ts", // gerado por `pnpm db:tipos` — nunca editado à mão (FR-009)
     "supabase/.temp/**",
+    // Referência visual do modelo v4 do DSA, como veio do Drive — não é código da aplicação.
+    "docs/referencias/**",
     /*
      * T020 — ISENÇÃO DELIBERADA E ESTREITA.
      * Os fixtures VIOLAM as fronteiras de propósito: são o insumo do teste que prova as regras
