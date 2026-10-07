@@ -14,7 +14,8 @@ import { describe, expect, it } from "vitest";
 
 import type { MarcaDeConflito } from "@/lib/dominio/dsa/conflitos";
 import { montarSemana, type FatoDaSemana } from "@/lib/dominio/dsa/grade";
-import { relogioDoRegime } from "@/lib/dominio/dsa/horario-do-bloco";
+import { relogioDoCatalogo, relogioDoRegime } from "@/lib/dominio/dsa/horario-do-bloco";
+import { camposDoEstudoIndividual, LOCAL_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/rotulos";
 import {
   avisosAntesDeImprimir,
   diaImpresso,
@@ -175,6 +176,157 @@ describe("a linha fixa `ESTUDO INDIVIDUAL · EI` — `praticas-da-planilha.md` �
     expect(impresso.bloqueio).toBe("Dia das Crianças");
     expect(impresso.linhas).toHaveLength(0);
   });
+
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA, medido na carga piloto do `C-Exp-Obs-ME 2026` em 06/10/2026.** O
+   * dia 02/10 é licença de pagamento (dia inteiro) **e** tem um Estudo Individual lançado no 8º
+   * tempo. A grade o mostrava; o papel devolvia **zero linhas** para o dia e o lançamento sumia sem
+   * aviso nenhum — existia no banco, contava na CH e não estava no documento assinado.
+   */
+  it("dia bloqueado COM lançamento imprime o lançamento, abaixo da faixa do bloqueio", () => {
+    const semana = montar({
+      feriados: [{ data: "2026-10-05", descricao: "Licença de pagamento", impacto: "dia_inteiro" }],
+      fatos: [
+        fato({ fatoId: "aula-no-feriado", taInicial: 1, tempos: 2 }),
+        fato({
+          fatoId: "ei-no-feriado",
+          origem: "atividade_nao_letiva",
+          taInicial: 8,
+          tempos: 1,
+          disciplina: null,
+          conteudo: "ESTUDO INDIVIDUAL",
+          tecnica: "Estudo Individual",
+          instrutor: null,
+        }),
+      ],
+    });
+    const dia = semana.dias[0];
+    if (dia === undefined) throw new Error("a semana saiu sem dias");
+    const impresso = diaImpresso(dia, {
+      relogio: semana.relogio,
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: new Set(["ei-no-feriado"]),
+    });
+    expect(impresso.bloqueio).toBe("Licença de pagamento");
+    expect(impresso.linhas.map((l) => l.chave)).toEqual(["aula-no-feriado", "ei-no-feriado"]);
+    expect(impresso.linhas[1]?.estudoIndividual).toBe(true);
+    expect(impresso.linhas[1]?.te).toBe(SIGLA_DO_ESTUDO_INDIVIDUAL);
+  });
+
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA, medido em 06/10/2026 na carga do `C-Esp-ME 2026`.** Em 04/08 a
+   * turma teve Estudo Individual do 1º ao 4º tempo E no 8º. O papel guardava UM Estudo Individual
+   * por dia — o último lido — e o da manhã sumia: 4 TA lançados, contados e fora do documento.
+   */
+  it("⚠️ dois Estudos Individuais no mesmo dia saem os DOIS, e o último continua no pé", () => {
+    const semana = montar({
+      fatos: [
+        fato({
+          fatoId: "ei-da-manha",
+          origem: "atividade_nao_letiva",
+          taInicial: 1,
+          tempos: 4,
+          disciplina: null,
+          conteudo: "ESTUDO INDIVIDUAL",
+          tecnica: "Estudo Individual",
+          instrutor: null,
+        }),
+        fato({ fatoId: "aula-da-tarde", taInicial: 6, tempos: 2 }),
+        fato({
+          fatoId: "ei-do-fim",
+          origem: "atividade_nao_letiva",
+          taInicial: 8,
+          tempos: 1,
+          disciplina: null,
+          conteudo: "ESTUDO INDIVIDUAL",
+          tecnica: "Estudo Individual",
+          instrutor: null,
+        }),
+      ],
+    });
+    const dia = semana.dias[0];
+    if (dia === undefined) throw new Error("a semana saiu sem dias");
+    const impresso = diaImpresso(dia, {
+      relogio: semana.relogio,
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: new Set(["ei-da-manha", "ei-do-fim"]),
+    });
+    expect(impresso.linhas.map((l) => l.chave)).toEqual([
+      "ei-da-manha",
+      "aula-da-tarde",
+      "ei-do-fim",
+    ]);
+    expect(impresso.linhas[0]?.tempos).toBe(4);
+    expect(impresso.linhas[0]?.te).toBe(SIGLA_DO_ESTUDO_INDIVIDUAL);
+    expect(impresso.linhas[0]?.estudoIndividual).toBe(true);
+  });
+
+  /* ⚠️ O controle: só o que foi LANÇADO sai — a linha FIXA de EI continua fora do dia bloqueado. */
+  it("dia bloqueado com lançamento e SEM Estudo Individual lançado não ganha a linha fixa", () => {
+    const semana = montar({
+      feriados: [{ data: "2026-10-05", descricao: "Licença de pagamento", impacto: "dia_inteiro" }],
+      fatos: [fato({ fatoId: "aula-no-feriado", taInicial: 1, tempos: 2 })],
+    });
+    const dia = semana.dias[0];
+    if (dia === undefined) throw new Error("a semana saiu sem dias");
+    const impresso = diaImpresso(dia, {
+      relogio: semana.relogio,
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: SEM_EI,
+    });
+    expect(impresso.linhas.map((l) => l.chave)).toEqual(["aula-no-feriado"]);
+  });
+});
+
+describe("a coluna T/E da atividade não letiva — o subtipo não é técnica de ensino", () => {
+  /*
+   * ⚠️ **MEDIDO EM 06/10/2026:** a leitura entrega o SUBTIPO da atividade no campo da técnica (é o
+   * rótulo que a grade mostra na célula), e o papel o imprimia na coluna T/E por extenso —
+   * *"Administração"*, *"Palestra"*, *"Visita Técnica"*. `atividades_nao_letivas` não tem técnica de
+   * ensino; o que a coluna comporta é a sigla **EI** no Estudo Individual, e vazio no resto.
+   */
+  it("atividade não letiva que não é Estudo Individual sai com T/E VAZIA", () => {
+    const dia = primeiroDia({
+      fatos: [
+        fato({
+          fatoId: "palestra",
+          origem: "atividade_nao_letiva",
+          disciplina: null,
+          conteudo: "DOEP",
+          tecnica: "Palestra",
+          instrutor: "DOEP",
+        }),
+      ],
+    });
+    expect(dia.linhas[0]?.chave).toBe("palestra");
+    expect(dia.linhas[0]?.te).toBe("");
+    expect(dia.linhas[0]?.conteudo).toBe("DOEP");
+  });
+
+  /* ⚠️ E o subtipo não vaza para a legenda, que só traduz sigla usada na coluna. */
+  it("o subtipo não entra na legenda, mesmo quando coincide com o nome de uma técnica", () => {
+    const dias = documentoImpresso(
+      montar({
+        fatos: [
+          fato({
+            fatoId: "visita",
+            origem: "atividade_nao_letiva",
+            disciplina: null,
+            conteudo: "VISITA",
+            tecnica: "Aula Prática",
+          }),
+        ],
+      }),
+      { tecnicas: TECNICAS, idsDeEstudoIndividual: SEM_EI },
+    );
+    expect(legendaDeTecnicas(dias, TECNICAS).map((i) => i.sigla)).toEqual(["EI"]);
+  });
+
+  /* ⚠️ O controle positivo: a AULA continua imprimindo a sigla da técnica dela. */
+  it("a aula não é afetada: continua com a sigla da técnica", () => {
+    const dia = primeiroDia({ fatos: [fato({ tecnica: "Exposição Oral" })] });
+    expect(dia.linhas[0]?.te).toBe("EO");
+  });
 });
 
 describe("`SC-013` · nenhuma cadeia técnica chega ao papel", () => {
@@ -304,5 +456,71 @@ describe("`FR-039` e `SC-015` · os avisos ficam na TELA, antes de imprimir", ()
     });
     expect(ambas).toHaveLength(1);
     expect(ambas[0]).toContain("duas linhas");
+  });
+});
+
+/**
+ * ⚠️ **O EI NUNCA SAI SEM HORÁRIO QUANDO HÁ RELÓGIO** *(conferência visual de Bernardo Villas Boas,
+ * 07/10/2026)*. Medido no CAHO 2026, semana 20–24/07: o catálogo CFG-H tem 9 tempos e, nos dias com
+ * os 9 ocupados (palestra ou vista no 9º), a linha fixa ia para o 10º — que o catálogo não tem — e o
+ * papel imprimia «ESTUDO INDIVIDUAL» sem horário. Varredura do ano inteiro: 38 linhas, todas no CAHO.
+ * O DSA assinado desses dias NÃO traz Estudo Individual: sem tempo livre depois do último TA, não há EI
+ * a oferecer, e a linha fixa não nasce.
+ */
+describe("a linha fixa de EI quando o relógio não tem o tempo seguinte", () => {
+  const CATALOGO_9 = Array.from({ length: 9 }, (_, i) => ({
+    tempoNumero: i + 1,
+    periodo: (i < 5 ? "manha" : "tarde") as "manha" | "tarde",
+    tipoTempo: "normal" as const,
+    horaInicio: `${String(8 + i).padStart(2, "0")}:00`,
+    horaFim: `${String(8 + i).padStart(2, "0")}:45`,
+  }));
+
+  it("⚠️ com os 9 tempos ocupados, o dia NÃO ganha um EI sem horário", () => {
+    const dia = primeiroDia({
+      relogio: relogioDoCatalogo(CATALOGO_9, 9),
+      temposDeclarados: 9,
+      fatos: [fato({ taInicial: 1, tempos: 9 })],
+    });
+    expect(dia.linhas.some((l) => l.estudoIndividual && l.trechos.length === 0)).toBe(false);
+    expect(dia.linhas.some((l) => l.estudoIndividual)).toBe(false);
+  });
+
+  it("com o 9º livre, o EI nasce no 9º, com o horário do catálogo", () => {
+    const dia = primeiroDia({
+      relogio: relogioDoCatalogo(CATALOGO_9, 9),
+      temposDeclarados: 9,
+      fatos: [fato({ taInicial: 1, tempos: 8 })],
+    });
+    const ei = dia.linhas.at(-1);
+    expect(ei?.estudoIndividual).toBe(true);
+    expect(ei?.trechos).toEqual([{ inicio: "16:00", fim: "16:45", periodo: "tarde" }]);
+  });
+});
+
+/**
+ * ⚠️ **O LOCAL DO ESTUDO INDIVIDUAL É «Biblioteca»**, em todos os cursos e turmas *(decisão de
+ * Bernardo Villas Boas, 07/10/2026, na conferência visual)* — no EI lançado pela planilha, no EI da
+ * semana em um clique (`Q-7`) e na linha fixa que o papel imprime.
+ */
+describe("o local do Estudo Individual é a Biblioteca", () => {
+  it("a constante é a da decisão", () => {
+    expect(LOCAL_DO_ESTUDO_INDIVIDUAL).toBe("Biblioteca");
+  });
+
+  it("a linha fixa do EI sai com o local «Biblioteca»", () => {
+    const ei = primeiroDia().linhas.at(-1);
+    expect(ei?.estudoIndividual).toBe(true);
+    expect(ei?.local).toBe("Biblioteca");
+  });
+
+  it("o EI da semana em um clique nasce com o local «Biblioteca»", () => {
+    expect(camposDoEstudoIndividual("2026-10-05", 9)).toMatchObject({
+      data: "2026-10-05",
+      ta_inicial: 9,
+      tempos_consumidos: 1,
+      local: "Biblioteca",
+      categoria_normativa: "Estudo_Individual",
+    });
   });
 });

@@ -15,7 +15,7 @@
  *
  * ⚠️ **ELE É A FRONTEIRA, E NÃO TEM REGRA DENTRO.** Quem monta a grade é `montarSemana()`, quem
  * deriva o relógio é `relogioDaSemana()`, quem resolve a vigência é `vigenteEm()`, quem monta o
- * nome é `nomeEmTexto()`. Aqui só há `select`, mapa e `Promise.all`. O irmão `consulta.ts` declara
+ * nome é `nomeParaDsa()`. Aqui só há `select`, mapa e `Promise.all`. O irmão `consulta.ts` declara
  * as colunas e converte linha → tipo, **sem I/O** — é por isso que ele continua testável sem banco
  * e este arquivo não.
  *
@@ -34,8 +34,10 @@ import {
 import { montarSemana, type FatoDaSemana, type Semana } from "@/lib/dominio/dsa/grade";
 import { relogioDaSemana, type Relogio } from "@/lib/dominio/dsa/horario-do-bloco";
 import type { ExecucaoDaDisciplina, TecnicaDoCatalogo } from "@/lib/dominio/dsa/impressao";
+import { conteudoDaAvaliacao, tecnicaDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
 import type { ResponsavelDoCurso } from "@/lib/dominio/dsa/assinaturas";
-import { nomeEmTexto, type InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
+import { nomeParaDsa, type InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
+import { dataParaLeitura } from "@/lib/formato/data";
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import {
@@ -50,6 +52,7 @@ import {
   tempoDoCatalogo,
   vigenciaDaSemana,
   vigenciaDoBanco,
+  type ConteudoDoFato,
   type LinhaDaOcupacao,
   type LinhaDeFeriado,
   type LinhaDeVigencia,
@@ -189,7 +192,7 @@ export async function lerSemanaDoDsa(
     supabase
       .from("avaliacoes")
       .select(
-        "id, data_avaliacao, data_vista_prova, ta_inicial, ta_inicial_vista, tipo_avaliacao, conteudo_resumo, metodologia, status",
+        "id, data_avaliacao, data_vista_prova, ta_inicial, ta_inicial_vista, tipo_avaliacao, conteudo_resumo, metodologia, nome_fiscal_externo, status",
       )
       .eq("turma_id", turmaId)
       .neq("status", "cancelada")
@@ -198,7 +201,9 @@ export async function lerSemanaDoDsa(
       ),
     supabase
       .from("atividades_nao_letivas")
-      .select("id, data, ta_inicial, categoria_normativa, subtipo, descricao, status, turma_id")
+      .select(
+        "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id",
+      )
       .or(`turma_id.eq.${turmaId},turma_id.is.null`)
       .eq("status", "ativo")
       .gte("data", de)
@@ -212,7 +217,17 @@ export async function lerSemanaDoDsa(
       .select(COLUNAS_DA_VIGENCIA)
       .eq("curso_id", cursoId)
       .eq("status", "ativo"),
-    supabase.from("feriados").select(COLUNAS_DO_FERIADO).gte("data", de).lte("data", ate),
+    /*
+     * ⚠️ **SÓ O FERIADO ATIVO** (regra 4: exclusão é lógica). Medido em 06/10/2026: um dia
+     * inativado no calendário continuava bloqueando a grade e o papel, porque esta leitura não
+     * olhava o `status` — e nada na tela dizia por quê.
+     */
+    supabase
+      .from("feriados")
+      .select(COLUNAS_DO_FERIADO)
+      .eq("status", "ativo")
+      .gte("data", de)
+      .lte("data", ate),
     supabase.from("cursos").select("codigo, curriculo_modelo").eq("id", cursoId).maybeSingle(),
     supabase
       .from("disciplinas")
@@ -304,8 +319,11 @@ export async function lerSemanaDoDsa(
   const instrutoresPorId = new Map(
     linhasDeInstrutor.map((i) => [
       i.id,
-      /* ⚠️ O formato é o do `RF-INSTR-15`, pela função ÚNICA — nunca montado à mão aqui. */
-      nomeEmTexto({
+      /*
+       * ⚠️ No DSA é o NOME DE GUERRA (`nomeParaDsa`, exceção nominal ao `RF-INSTR-15` decidida em
+       * 06/10/2026) — pela função ÚNICA, nunca montado à mão aqui.
+       */
+      nomeParaDsa({
         id: i.id,
         pg: i.posto_graduacao,
         especialidade: i.esp_hab_obs,
@@ -315,8 +333,26 @@ export async function lerSemanaDoDsa(
     ]),
   );
 
+  /*
+   * ⚠️ **O CATÁLOGO DE TÉCNICAS É LIDO ANTES DOS FATOS** porque a vista de prova precisa dele: a
+   * técnica dela é a do catálogo cuja sigla é `EO`, e não a da aplicação, com quem divide a linha.
+   */
+  const listas = (listasRes.data ?? []) as {
+    lista: string;
+    valor: string;
+    ordem: number;
+    metadados: Record<string, unknown> | null;
+  }[];
+  const daLista = (nome: string) => listas.filter((l) => l.lista === nome);
+  const metodologias = daLista("metodologias");
+  const tecnicasComSigla: readonly TecnicaDoCatalogo[] = metodologias.map((l) => ({
+    nome: l.valor,
+    sigla: (l.metadados?.["sigla"] as string | undefined) ?? null,
+  }));
+  const tecnicaDaVista = tecnicaDaVistaDeProva(tecnicasComSigla);
+
   /* O tópico e a técnica de cada fato, pelas três tabelas. */
-  const conteudos = new Map<string, { conteudo: string | null; tecnica: string | null }>();
+  const conteudos = new Map<string, ConteudoDoFato>();
   for (const a of (aulasRes.data ?? []) as {
     id: string;
     conteudo_resumo: string | null;
@@ -326,13 +362,21 @@ export async function lerSemanaDoDsa(
   }
   for (const a of (avaliacoesRes.data ?? []) as {
     id: string;
+    data_avaliacao: string | null;
     tipo_avaliacao: string | null;
     conteudo_resumo: string | null;
     metodologia: string | null;
+    nome_fiscal_externo: string | null;
   }[]) {
     conteudos.set(a.id, {
-      conteudo: a.conteudo_resumo ?? a.tipo_avaliacao,
+      /* O fiscal de fora do cadastro: a view da ocupação só traz o `fiscal_id`. */
+      fiscalExterno: a.nome_fiscal_externo,
+      /* ⚠️ O título gravado quando há; senão o tipo — a regra é de `conteudoDaAvaliacao`. */
+      conteudo: conteudoDaAvaliacao(a.conteudo_resumo, a.tipo_avaliacao),
       tecnica: a.metodologia,
+      /* A vista de prova divide esta linha: leva a data da aplicação como referência, e a EO. */
+      aplicadaEm: a.data_avaliacao === null ? null : dataParaLeitura(a.data_avaliacao),
+      tecnicaDaVista,
     });
   }
   const atividades = (atividadesRes.data ?? []) as {
@@ -342,9 +386,18 @@ export async function lerSemanaDoDsa(
     categoria_normativa: string | null;
     subtipo: string | null;
     descricao: string | null;
+    responsavel_externo: string | null;
   }[];
   for (const n of atividades) {
-    conteudos.set(n.id, { conteudo: n.descricao, tecnica: n.subtipo });
+    /*
+     * ⚠️ O SUBTIPO vai no campo da técnica porque é o rótulo que a GRADE mostra na célula. O papel
+     * não o imprime na coluna T/E — ver `diaImpresso`, que trata a origem não letiva à parte.
+     */
+    conteudos.set(n.id, {
+      conteudo: n.descricao,
+      tecnica: n.subtipo,
+      externo: n.responsavel_externo,
+    });
   }
 
   const idsDeEstudoIndividual = new Set(
@@ -457,15 +510,6 @@ export async function lerSemanaDoDsa(
     sabadoAberto: janela.sabadoAberto,
   });
 
-  const listas = (listasRes.data ?? []) as {
-    lista: string;
-    valor: string;
-    ordem: number;
-    metadados: Record<string, unknown> | null;
-  }[];
-  const daLista = (nome: string) => listas.filter((l) => l.lista === nome);
-  const metodologias = daLista("metodologias");
-
   const atribuicaoPorUe = new Map(
     ((atribRes.data ?? []) as { unidade_ensino_id: string; instrutor_id: string | null }[]).map(
       (a) => [a.unidade_ensino_id, a.instrutor_id],
@@ -532,10 +576,7 @@ export async function lerSemanaDoDsa(
       daLista("escala_antiguidade").map((l) => ({ valor: l.valor, ordem: l.ordem, ativo: true })),
     ),
     tecnicas: metodologias.map((l) => l.valor),
-    tecnicasComSigla: metodologias.map((l) => ({
-      nome: l.valor,
-      sigla: (l.metadados?.["sigla"] as string | undefined) ?? null,
-    })),
+    tecnicasComSigla,
     tiposDeAvaliacao: daLista("tipos_avaliacao").map((l) => l.valor),
     subtipos: daLista("tipos_atividade").map((l) => ({
       valor: l.valor,
@@ -564,7 +605,7 @@ function fatoSemTa(
   id: string,
   origem: FatoDaSemana["origem"],
   data: string,
-  conteudos: ReadonlyMap<string, { conteudo: string | null; tecnica: string | null }>,
+  conteudos: ReadonlyMap<string, ConteudoDoFato>,
 ): FatoDaSemana {
   return {
     fatoId: id,

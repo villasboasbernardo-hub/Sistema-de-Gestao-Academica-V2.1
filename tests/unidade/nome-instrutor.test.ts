@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   fragmentosDoNome,
   nomeEmTexto,
+  nomeParaDsa,
   type InstrutorParaExibir,
 } from "@/lib/dominio/nome-instrutor";
 
@@ -146,5 +147,57 @@ describe("a soma dos fragmentos é sempre o nome inteiro", () => {
   it.each(casos)("reconstrói $nomeCompleto sem perder nem repetir", (i) => {
     const prefixo = [i.pg, i.especialidade?.trim()].filter(Boolean).join(" ");
     expect(nomeEmTexto(i)).toBe(`${prefixo} ${i.nomeCompleto}`);
+  });
+});
+
+/**
+ * ⚠️ EXCEÇÃO NOMINAL AO `RF-INSTR-15`, DELIMITADA AO DSA *(decisão de Bernardo Villas Boas,
+ * 06/10/2026)*: no DSA o instrutor sai como no documento assinado — posto, especialidade e NOME DE
+ * GUERRA. Medido na onda 1 da VIRADA-1: 333 blocos divergiam só por isso.
+ */
+describe("o nome no DSA — P/G Especialidade Nome de GUERRA (exceção nominal de 06/10/2026)", () => {
+  it("com nome de guerra, é o que o DSA assinado traz", () => {
+    expect(
+      nomeParaDsa({
+        id: "1",
+        pg: "CC",
+        especialidade: "(T)",
+        nomeCompleto: "Rodrigo Barreto Da Amostra",
+        nomeDeGuerra: "RODRIGO BARRETO",
+      }),
+    ).toBe("CC (T) RODRIGO BARRETO");
+  });
+
+  it("⚠️ sem nome de guerra no cadastro sai o nome completo — nunca vazio", () => {
+    expect(
+      nomeParaDsa({
+        id: "2",
+        pg: "1ºSG",
+        especialidade: "-HN",
+        nomeCompleto: "Márcio Da Amostra",
+        nomeDeGuerra: null,
+      }),
+    ).toBe("1ºSG -HN Márcio Da Amostra");
+    expect(
+      nomeParaDsa({
+        id: "3",
+        pg: "CT",
+        especialidade: null,
+        nomeCompleto: "Ana Da Amostra",
+        nomeDeGuerra: "  ",
+      }),
+    ).toBe("CT Ana Da Amostra");
+  });
+
+  it("o resto do sistema continua no RF-INSTR-15 — as duas funções divergem de propósito", () => {
+    const i = {
+      id: "4",
+      pg: "CF",
+      especialidade: "(T)",
+      nomeCompleto: "Pedro Paulo Da Amostra",
+      nomeDeGuerra: "PAULO",
+    };
+    expect(nomeEmTexto(i)).toBe("CF (T) Pedro Paulo Da Amostra");
+    expect(nomeParaDsa(i)).toBe("CF (T) PAULO");
   });
 });

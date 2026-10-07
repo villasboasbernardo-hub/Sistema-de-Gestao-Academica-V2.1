@@ -13,8 +13,10 @@ import {
   relogioDoCatalogo,
   relogioDoRegime,
   slotDoEstudoIndividual,
+  tempoDeAula,
   trechosDoBloco,
   type RegimeParaRelogio,
+  type Relogio,
 } from "@/lib/dominio/dsa/horario-do-bloco";
 import {
   CATALOGO,
@@ -247,5 +249,88 @@ describe("`D-4` · o Estudo Individual vai para o slot seguinte ao último TA la
   it("dia já cheio até o 12º: `null`, e a tela não inventa um 13º", () => {
     expect(slotDoEstudoIndividual(12)).toBeNull();
     expect(slotDoEstudoIndividual(0)).toBeNull();
+  });
+});
+
+/**
+ * ⚠️ **D1 DA VIRADA-1** *(decisão de Bernardo Villas Boas, 06/10/2026)*: quando o Estudo Individual
+ * da turma tem um horário que a tabela HORÁRIOS da planilha não cobre e o regime não representa
+ * (C-Exp-Ag-Mag: `16:50–17:30`, um tempo de 40 min; C-Ap-HN: `16:25–17:20`), o horário vive no
+ * **catálogo**, como tempo `excepcional` depois do último TA do regime — e o catálogo é **lido,
+ * nunca recalculado**. O `CFG-F` é o primeiro: a tabela da planilha mais o EI como 9º tempo.
+ * Medido na onda 1: 8 blocos de EI do C-Exp-Ag-Mag divergiam da IMPRESSÃO; com o CFG-F, zero.
+ */
+describe("D1 · o Estudo Individual fora da tabela HORÁRIOS vem do catálogo, como tempo excepcional", () => {
+  const CFG_F = [
+    ...[
+      ["08:10", "09:00"],
+      ["09:10", "10:00"],
+      ["10:10", "11:00"],
+      ["11:10", "12:00"],
+    ].map(([inicio, fim], i) => ({
+      tempoNumero: i + 1,
+      periodo: "manha" as const,
+      tipoTempo: "normal" as const,
+      horaInicio: inicio as string,
+      horaFim: fim as string,
+    })),
+    ...[
+      ["13:05", "13:55"],
+      ["14:00", "14:50"],
+      ["14:55", "15:45"],
+      ["15:50", "16:40"],
+    ].map(([inicio, fim], i) => ({
+      tempoNumero: i + 5,
+      periodo: "tarde" as const,
+      tipoTempo: "normal" as const,
+      horaInicio: inicio as string,
+      horaFim: fim as string,
+    })),
+    {
+      tempoNumero: 9,
+      periodo: "tarde" as const,
+      tipoTempo: "excepcional" as const,
+      horaInicio: "16:50",
+      horaFim: "17:30",
+    },
+  ];
+
+  it("com 8 TA lançados, o EI cai no 9º e sai com o horário do catálogo — 16:50–17:30, não 16:45–17:35", () => {
+    const relogio = relogioDoCatalogo(CFG_F, 8);
+    expect(relogio).not.toBeNull();
+    const slot = slotDoEstudoIndividual(8);
+    expect(slot).toBe(9);
+    const ei = tempoDeAula(relogio as Relogio, slot as number);
+    expect(ei).toMatchObject({ inicio: "16:50", fim: "17:30", tipo: "excepcional" });
+  });
+
+  it("⚠️ o caso que discrimina: o mesmo regime SEM catálogo deriva 16:45–17:35 — é por isso que o catálogo existe", () => {
+    const derivado = relogioDoRegime({
+      regimeTempos: 8,
+      taDuracaoMin: 50,
+      intervaloManhaMin: 10,
+      intervaloTardeMin: 5,
+      horaInicioManha: "08:10",
+      horaInicioTarde: "13:05",
+      configuracaoHorarioId: null,
+    });
+    expect(tempoDeAula(derivado as Relogio, 9)).toMatchObject({ inicio: "16:45", fim: "17:35" });
+  });
+
+  it("os oito tempos do catálogo são os da tabela HORÁRIOS da planilha, tempo a tempo", () => {
+    const relogio = relogioDoCatalogo(CFG_F, 8) as Relogio;
+    expect(relogio.tempos.slice(0, 8).map((t) => `${t.inicio}-${t.fim}`)).toEqual(
+      relogioDoRegime({
+        regimeTempos: 8,
+        taDuracaoMin: 50,
+        intervaloManhaMin: 10,
+        intervaloTardeMin: 5,
+        horaInicioManha: "08:10",
+        horaInicioTarde: "13:05",
+        configuracaoHorarioId: null,
+      })
+        ?.tempos.slice(0, 8)
+        .map((t) => `${t.inicio}-${t.fim}`),
+    );
   });
 });

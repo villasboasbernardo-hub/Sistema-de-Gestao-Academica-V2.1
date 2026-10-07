@@ -163,3 +163,23 @@ export function nomeEmTexto(instrutor: InstrutorParaExibir): string {
     .map((f) => f.texto)
     .join("");
 }
+
+/**
+ * O nome como o **DSA** o traz — `P/G Especialidade/Habilitação Nome de Guerra`.
+ *
+ * ⚠️ **É EXCEÇÃO NOMINAL AO `RF-INSTR-15`, DELIMITADA AO DSA** *(decisão de Bernardo Villas Boas,
+ * 06/10/2026, nas respostas ao lote da onda 1 da VIRADA-1: "Instrutor no DSA: imprimir posto + nome
+ * de guerra, como no DSA assinado")*. O DSA é o documento que a turma recebe e assina, e nele o
+ * instrutor sempre foi identificado pelo nome de guerra — medido na carga das planilhas de
+ * controle: **333 blocos** nas três turmas da onda 1 divergiam só por isso. Toda outra tela e
+ * documento continua no `RF-INSTR-15`, com o nome completo e o de guerra destacado.
+ *
+ * ⚠️ **SEM NOME DE GUERRA NO CADASTRO, SAI O NOME COMPLETO** — nunca um nome vazio. É o caso de
+ * 7 dos 10 instrutores da onda 1, e a diferença que sobra no papel aponta o cadastro, não o código.
+ */
+export function nomeParaDsa(instrutor: InstrutorParaExibir): string {
+  const guerra = instrutor.nomeDeGuerra?.trim() ?? "";
+  return [prefixo(instrutor), guerra || instrutor.nomeCompleto.trim()]
+    .filter((parte) => parte.length > 0)
+    .join(" ");
+}

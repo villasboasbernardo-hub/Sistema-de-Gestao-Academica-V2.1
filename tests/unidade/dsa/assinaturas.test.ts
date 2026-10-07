@@ -600,3 +600,48 @@ describe("critério 2 do Épico 6 · o par do rodapé sai preenchido para QUALQU
     ).toBe("NÃO É DO RODAPÉ DO DSA");
   });
 });
+
+/**
+ * ⚠️ **AS DUAS ASSINATURAS SEMPRE, MESMO COM 1º RESPONSÁVEL PRÓPRIO DO CURSO** *(conferência visual de
+ * Bernardo Villas Boas, 07/10/2026: CAHO 20–24/07 e C-Espc-HN 13–17/07 saíam sem o Encarregado)*.
+ * A hipótese era de código — "com linha do curso, a GERAL deixa de ser buscada" — e este caso prova que
+ * NÃO: a resolução é POR PAPEL, e a linha do curso só tira de cena a GERAL do MESMO papel. A causa era
+ * de DADO: a linha GERAL do Encarregado vigia só desde 02/08/2026 (data da migração). Corrigida com a
+ * vigência de 05/01 a 01/08/2026, provada pelo rodapé dos DSA assinados
+ * (`scripts/carga_dsa/preparo/encarregado-antes-de-agosto.sql`); varredura: 143 semanas sem a 2ª
+ * assinatura antes, 0 depois.
+ */
+describe("o Auxiliar do curso não esconde o Encarregado GERAL", () => {
+  const LINHAS: readonly ResponsavelDoCurso[] = [
+    linha({
+      papel: "elaborador",
+      cursoId: CURSO_CAHO,
+      vigenteDe: "2026-01-05",
+      nomeCompleto: "AUXILIAR DO CURSO",
+    }),
+    linha({
+      papel: "encarregado_divisao",
+      cursoId: null,
+      vigenteDe: "2026-01-05",
+      vigenteAte: "2026-08-01",
+      nomeCompleto: "ENCARREGADO ATÉ AGOSTO",
+    }),
+    linha({
+      papel: "encarregado_divisao",
+      cursoId: null,
+      vigenteDe: "2026-08-02",
+      nomeCompleto: "ENCARREGADO DESDE AGOSTO",
+    }),
+  ];
+
+  it("em julho: Auxiliar do curso à esquerda e o Encarregado GERAL à direita", () => {
+    const a = assinaturasDoDsa(LINHAS, { cursoId: CURSO_CAHO, data: "2026-07-20" });
+    expect(a.esquerda?.nomeCompleto).toBe("AUXILIAR DO CURSO");
+    expect(a.direita?.nomeCompleto).toBe("ENCARREGADO ATÉ AGOSTO");
+  });
+
+  it("em setembro, o Encarregado da vigência de setembro", () => {
+    const a = assinaturasDoDsa(LINHAS, { cursoId: CURSO_CAHO, data: "2026-09-14" });
+    expect(a.direita?.nomeCompleto).toBe("ENCARREGADO DESDE AGOSTO");
+  });
+});

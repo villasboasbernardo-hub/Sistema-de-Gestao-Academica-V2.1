@@ -42,6 +42,7 @@
 
 import type { DiaDaGrade, Semana } from "./grade";
 import { slotDoEstudoIndividual, tempoDeAula, type Relogio, type Trecho } from "./horario-do-bloco";
+import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "./rotulos";
 
 /** O texto fixo da última linha de cada dia, como o documento assinado o escreve. */
 export const TEXTO_DO_ESTUDO_INDIVIDUAL = "ESTUDO INDIVIDUAL";
@@ -95,12 +96,16 @@ export type LinhaImpressa = {
   readonly lancadoAFrente: boolean;
 };
 
-/** Um dia do documento — ou a faixa única do feriado de dia inteiro (`Q-16`). */
+/** Um dia do documento — com a faixa do feriado de dia inteiro, quando houver (`Q-16`). */
 export type DiaImpresso = {
   /** `aaaa-mm-dd` — quem formata é `dataParaLeitura` (ponto único). */
   readonly data: string;
-  /** A descrição do feriado de dia inteiro; o dia sai como **uma** linha com ela. */
+  /** A descrição do feriado de dia inteiro: a **primeira** linha do dia, em faixa. */
   readonly bloqueio: string | null;
+  /**
+   * Num dia bloqueado, **só o que foi lançado** — vazio quando nada foi; a linha fixa de Estudo
+   * Individual **não** entra. Nos demais dias, os blocos e a linha de EI no fim.
+   */
   readonly linhas: readonly LinhaImpressa[];
 };
 
@@ -111,12 +116,19 @@ export type TecnicaDoCatalogo = {
   readonly sigla: string | null;
 };
 
-/** Uma linha da tabela de CH do rodapé — de `vw_disciplinas_execucao`. */
+/** Uma linha da tabela de CH do rodapé. */
 export type ExecucaoDaDisciplina = {
   readonly codigo: string;
   readonly nome: string;
   readonly prevista: number;
-  /** ⚠️ **SEM corte por data** (`Q-2`) — é o `ta_executados` da view, como ele é. */
+  /**
+   * A CH cumprida **acumulada até o fim da semana do documento** (`RN-CRONOS-03`).
+   *
+   * ⚠️ **O CORTE É O DA SEMANA, NUNCA «HOJE»** (`Q-2`): o lançamento futuro dentro dela conta, e o
+   * rodapé declara à parte quantos TA estão à frente. Quem entrega este número é
+   * `execucaoAteASemana`, que repassa o MESMO acumulado do painel de situação da grade — até
+   * 06/10/2026 vinha aqui o **total** da turma, igual em toda semana.
+   */
   readonly cumprida: number;
 };
 
@@ -158,18 +170,23 @@ export function siglaOuExtenso(
 /**
  * A linha fixa do Estudo Individual, para o dia que **não** tem EI lançado (`D-4`).
  *
- * ⚠️ **ELA APARECE MESMO SEM HORÁRIO, e isso é paridade.** O `D-9` da planilha registra *"linha do
- * 9º tempo sem horário no CAHO"* como defeito do documento histórico — aqui a ausência de relógio
- * (ou de TA lançado) deixa a célula de HORÁRIO **vazia**, e a linha continua, porque é ela que
- * carrega a promessa impressa no rodapé: *"é facultado ao aluno permanecer a bordo"*.
+ * ⚠️ **SEM RELÓGIO NENHUM ela aparece sem horário** (degradação, `RN-DEG-01`): a célula de HORÁRIO
+ * fica vazia e a linha continua, porque é ela que carrega a promessa do rodapé.
+ *
+ * ⚠️ **COM RELÓGIO, ELA NUNCA SAI SEM HORÁRIO** *(conferência visual de Bernardo Villas Boas,
+ * 07/10/2026)*. Quando o relógio não tem o tempo seguinte ao último TA — o catálogo CFG-H do CAHO tem
+ * 9 tempos, e nos dias com os 9 ocupados o slot caía no 10º —, não há tempo livre para Estudo
+ * Individual, e a linha **não nasce** (`null`). É o que o DSA assinado desses dias traz: nenhum EI.
+ * Medido no ano inteiro: 38 linhas sem horário, todas no CAHO; depois, zero.
  */
 function linhaFixaDoEstudoIndividual(
   data: string,
   ultimoTa: number | null,
   relogio: Relogio | null,
-): LinhaImpressa {
+): LinhaImpressa | null {
   const slot = slotDoEstudoIndividual(ultimoTa);
   const tempo = relogio !== null && slot !== null ? tempoDeAula(relogio, slot) : undefined;
+  if (relogio !== null && tempo === undefined) return null;
   const trechos: readonly Trecho[] =
     tempo === undefined ? [] : [{ inicio: tempo.inicio, fim: tempo.fim, periodo: tempo.periodo }];
   return {
@@ -179,7 +196,8 @@ function linhaFixaDoEstudoIndividual(
     tempos: tempo === undefined ? null : 1,
     disciplina: "",
     conteudo: TEXTO_DO_ESTUDO_INDIVIDUAL,
-    local: "",
+    /* O local do EI é sempre a Biblioteca (decisão de Bernardo Villas Boas, 07/10/2026). */
+    local: LOCAL_DO_ESTUDO_INDIVIDUAL,
     te: SIGLA_DO_ESTUDO_INDIVIDUAL,
     instrutor: "",
     estudoIndividual: true,
@@ -196,9 +214,21 @@ function linhaFixaDoEstudoIndividual(
  * vive em `atividades_nao_letivas` e **não** está em `FatoDaSemana`, que é tipo de exibição.
  * Adivinhá-la pelo subtipo seria inventar: o subtipo é lista administrável.
  *
- * ⚠️ **FERIADO DE DIA INTEIRO DEVOLVE ZERO LINHAS e o `bloqueio` preenchido** (`Q-16`): o dia sai
- * como **uma** faixa com a descrição, e **sem** a linha de EI — não há Estudo Individual em dia que
- * não houve expediente.
+ * ⚠️ **FERIADO DE DIA INTEIRO DEVOLVE O `bloqueio` PREENCHIDO E SÓ O QUE FOI LANÇADO** (`Q-16`): o
+ * dia sai como **uma** faixa com a descrição e **sem** a linha FIXA de EI — não há Estudo Individual
+ * a oferecer em dia que não houve expediente.
+ *
+ * ⚠️ **MAS O QUE EXISTE NAQUELE DIA É IMPRESSO, abaixo da faixa** *(decisão de Bernardo Villas
+ * Boas, 06/10/2026)*. Medido na carga piloto do `C-Exp-Obs-ME 2026`: 02/10 era licença de pagamento
+ * **e** tinha um Estudo Individual lançado no 8º tempo. A grade o mostrava; o papel devolvia zero
+ * linhas e o lançamento **sumia sem aviso** — estava no banco, contava na CH e não estava no
+ * documento. Esconder dado que existe é pior que contradizer o calendário: quem assina vê as duas
+ * coisas e decide.
+ *
+ * ⚠️ **A T/E DA ATIVIDADE NÃO LETIVA NÃO É O SUBTIPO.** A leitura entrega o subtipo no campo da
+ * técnica (é o rótulo da célula na grade), e `atividades_nao_letivas` não tem técnica de ensino:
+ * a coluna leva **EI** no Estudo Individual e fica **vazia** no resto. Até 06/10/2026 saía
+ * *"Administração"*, *"Palestra"* e *"Visita Técnica"* por extenso.
  */
 export function diaImpresso(
   dia: DiaDaGrade,
@@ -208,12 +238,10 @@ export function diaImpresso(
     readonly idsDeEstudoIndividual: ReadonlySet<string>;
   },
 ): DiaImpresso {
-  if (dia.bloqueio !== null) {
-    return { data: dia.data, bloqueio: dia.bloqueio, linhas: [] };
-  }
-
   const comuns: LinhaImpressa[] = [];
   let doEi: LinhaImpressa | null = null;
+  /* Onde o EI guardado entraria em `comuns`, se outro EI aparecer depois dele no mesmo dia. */
+  let posicaoDoEi = 0;
   let ultimoTa: number | null = null;
 
   for (const celula of dia.celulas) {
@@ -229,13 +257,25 @@ export function diaImpresso(
       disciplina: textoDoPapel(bloco.disciplina),
       conteudo: textoDoPapel(bloco.conteudo),
       local: textoDoPapel(bloco.local),
-      te: siglaOuExtenso(bloco.tecnica, entrada.tecnicas),
+      te:
+        bloco.origem === "atividade_nao_letiva"
+          ? ehEi
+            ? SIGLA_DO_ESTUDO_INDIVIDUAL
+            : ""
+          : siglaOuExtenso(bloco.tecnica, entrada.tecnicas),
       instrutor: textoDoPapel(bloco.instrutor),
       estudoIndividual: ehEi,
       lancadoAFrente: bloco.lancadoAFrente,
     };
 
     if (ehEi) {
+      /*
+       * ⚠️ **DOIS ESTUDOS INDIVIDUAIS NO MESMO DIA SAEM OS DOIS** — medido em 06/10/2026 na carga do
+       * `C-Esp-ME 2026`: em 04/08 houve EI do 1º ao 4º tempo e no 8º, e o papel guardava só o
+       * último lido. O anterior volta para o corpo, NA POSIÇÃO DELE; o último continua sendo o pé.
+       */
+      if (doEi !== null) comuns.splice(posicaoDoEi, 0, doEi);
+      posicaoDoEi = comuns.length;
       /* ⚠️ O EI lançado **substitui** a linha fixa, e sai do corpo: ele é o pé do dia. */
       doEi = {
         ...linha,
@@ -254,8 +294,17 @@ export function diaImpresso(
     }
   }
 
+  if (dia.bloqueio !== null) {
+    /* ⚠️ Só o que foi LANÇADO: a linha fixa de EI não nasce em dia sem expediente. */
+    return {
+      data: dia.data,
+      bloqueio: dia.bloqueio,
+      linhas: doEi === null ? comuns : [...comuns, doEi],
+    };
+  }
+
   const ei = doEi ?? linhaFixaDoEstudoIndividual(dia.data, ultimoTa, entrada.relogio);
-  return { data: dia.data, bloqueio: null, linhas: [...comuns, ei] };
+  return { data: dia.data, bloqueio: null, linhas: ei === null ? comuns : [...comuns, ei] };
 }
 
 /** O corpo do documento: os dias da semana, na ordem, já impressos. */

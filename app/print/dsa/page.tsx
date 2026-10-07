@@ -55,6 +55,7 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
   COLUNAS_DA_TURMA_DO_DSA,
   ehEadPuro,
+  execucaoAteASemana,
   semanaEscolhida,
 } from "../../(app)/turmas/[turma]/dsa/consulta";
 import { lerExtrasDaImpressao, lerSemanaDoDsa } from "../../(app)/turmas/[turma]/dsa/leitura";
@@ -142,7 +143,20 @@ export default async function ImpressaoDoDsa({
    * assinatura errada, **sem erro nenhum**.
    */
   const assinaturas = assinaturasDoDsa(extras.responsaveis, { cursoId, data: primeiro });
-  const quadroDeCh = tabelaDeCh(dias, extras.execucao);
+  /*
+   * ⚠️ **A CH CUMPRIDA DO RODAPÉ É A ACUMULADA ATÉ ESTA SEMANA, não o total da turma**
+   * (`RN-CRONOS-03`). `execucaoAteASemana` repassa o acumulado do painel de situação da grade — o
+   * MESMO cálculo —, então o papel e a tela não têm mais como discordar. Até 06/10/2026 entrava
+   * aqui o `ta_executados` da view, e um DSA da primeira semana saía com a disciplina concluída.
+   */
+  const quadroDeCh = tabelaDeCh(
+    dias,
+    execucaoAteASemana({
+      execucao: extras.execucao,
+      ocupacao: lida.ocupacaoAcumulada,
+      ateODia: ultimo,
+    }),
+  );
   const legenda = legendaDeTecnicas(dias, lida.tecnicasComSigla);
   const alunos = (turma.alunos as number | null) ?? null;
   const aFrente = taLancadoAFrente(dias);
@@ -287,20 +301,38 @@ export default async function ImpressaoDoDsa({
 /**
  * Um dia do documento — as linhas, com `DIA` escrito **uma vez** (`rowSpan`).
  *
- * ⚠️ **O FERIADO DE DIA INTEIRO SAI COMO UMA LINHA COM A DESCRIÇÃO** (`Q-16`), e **sem** a linha de
- * Estudo Individual: não há estudo individual em dia que não houve expediente.
+ * ⚠️ **O FERIADO DE DIA INTEIRO SAI COMO UMA FAIXA COM A DESCRIÇÃO** (`Q-16`), e **sem** a linha
+ * FIXA de Estudo Individual: não há estudo individual a oferecer em dia que não houve expediente.
+ *
+ * ⚠️ **O QUE FOI LANÇADO NAQUELE DIA SAI ABAIXO DA FAIXA** *(decisão de Bernardo Villas Boas,
+ * 06/10/2026)* — `diaImpresso` devolve essas linhas, e só elas. O `DIA` continua escrito uma vez,
+ * cobrindo a faixa e os lançamentos.
  */
 function FaixaDoDia({ dia }: { readonly dia: DiaImpresso }) {
   const rotulo = dataComDiaDaSemana(dia.data);
 
   if (dia.bloqueio !== null) {
     return (
-      <tr data-slot="dsa-dia-bloqueado">
-        <td className="dsa-dia">{rotulo}</td>
-        <td className="dsa-bloqueio" colSpan={7}>
-          {dia.bloqueio}
-        </td>
-      </tr>
+      <>
+        <tr data-slot="dsa-dia-bloqueado">
+          <td className="dsa-dia" rowSpan={dia.linhas.length + 1}>
+            {rotulo}
+          </td>
+          <td className="dsa-bloqueio" colSpan={7}>
+            {dia.bloqueio}
+          </td>
+        </tr>
+        {dia.linhas.map((linha) => (
+          <tr
+            key={linha.chave}
+            data-slot="dsa-linha"
+            data-dia-bloqueado="sim"
+            className={linha.estudoIndividual ? "dsa-linha-ei" : undefined}
+          >
+            <CelulasDaLinha linha={linha} />
+          </tr>
+        ))}
+      </>
     );
   }
 
