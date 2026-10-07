@@ -70,7 +70,8 @@
     "XXI+VP1": "MAT+VP1",
     "XXI+PM2": "FIS+PM2",
     "XXI+VP2": "FIS+VP2",
-    "XIX+3": "XIX+1"
+    "XIX+3": "XIX+1",
+    "TR+T": "III+T"
   },
   "relogio": {
     "catalogo": {
@@ -87,6 +88,7 @@
   "aprovadas": [
     "CFG-H (D2-1, 06/10/2026)",
     "ORIENTADORES → titular da XX na turma (codigo 18) com observacao «ORIENTADORES (conforme DSA)» (item 3, 06/10/2026)",
-    "XIX+3 «CORRIDA / PRE-TAF» → XIX UE 1 «CORRIDA» (topico bate; item 4, 06/10/2026)"
+    "XIX+3 «CORRIDA / PRE-TAF» → XIX UE 1 «CORRIDA» (topico bate; item 4, 06/10/2026)",
+    "TR+T «ESTATISTICA – TRABALHO» = avaliacao (trabalho) da III — conferencia de 07/10/2026 (Bernardo Villas Boas: aplicar a recomendacao de cada caso)"
   ]
 }
