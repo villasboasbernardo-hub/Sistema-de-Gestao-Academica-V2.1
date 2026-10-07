@@ -105,6 +105,8 @@
       "144": ["1SG"],
       "173": ["GM"],
       "_decisao": "Bernardo Villas Boas, 06/10/2026 (respostas ao lote da onda 2, item 4): o 144 foi PROMOVIDO de 1ºSG a SO (efetivo no primeiro DSA em que aparece como SO, 01/06/2026) e o texto com o posto antigo e dele; o 173 foi promovido de GM a 2ºTen e o texto «GM … » e dele. Postos normalizados (sem «º» nem espaco)."
-    }
+    },
+    "local_do_estudo_individual": "Biblioteca",
+    "_local_do_estudo_individual": "Bernardo Villas Boas, 07/10/2026 (conferencia visual): o local do Estudo Individual e «Biblioteca» em todos os cursos e turmas; o local da planilha no EI e ignorado"
   }
 }
