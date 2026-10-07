@@ -23,14 +23,15 @@ import { notFound } from "next/navigation";
 import { editar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } from "@/lib/acoes/dsa";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { assinaturasDoDsa } from "@/lib/dominio/dsa/assinaturas";
-import { avisosAntesDeImprimir, documentoImpresso } from "@/lib/dominio/dsa/impressao";
+import { avisosAntesDeImprimir } from "@/lib/dominio/dsa/impressao";
 import { motivoDoNumeroAusente, numeroDoDsa } from "@/lib/dominio/dsa/numero-do-dsa";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { enderecoDaImpressaoDoDsa, enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
+import { montarDocumentoDoDsa } from "../../../../print/dsa/documento";
+import { DocumentoDoDsa } from "../../../../print/dsa/DocumentoDoDsa";
 import { alcanceDoPerfil } from "../../../cursos/consulta";
 import { codigoDaFicha, mensagemDeTurmaNaoEncontrada } from "../consulta";
 import {
@@ -146,17 +147,23 @@ export default async function SemanaDoDsa({
    * assinaturas e as linhas impressas saem de `lib/dominio/dsa/`, e é por isso que o aviso diz a
    * verdade sobre o que **vai** sair — e não um palpite sobre o que talvez saia.
    */
-  const primeiroDia = lida.dias[0] ?? hoje;
   const entradaDoNumero = {
     datasComLancamento: extras.datasComLancamentoDaTurma,
     dataInicio: (turma.data_inicio as string | null) ?? null,
     semana: { ano: escolha.ano, numero: escolha.numero },
   };
-  const assinaturas = assinaturasDoDsa(extras.responsaveis, { cursoId, data: primeiroDia });
-  const impresso = documentoImpresso(lida.semana, {
-    tecnicas: lida.tecnicasComSigla,
-    idsDeEstudoIndividual: lida.idsDeEstudoIndividual,
+  /* ⚠️ A MESMA montagem da rota `/print/dsa` — a grade da tela e a do papel saem do mesmo objeto. */
+  const documento = montarDocumentoDoDsa({
+    codigoDaTurma: codigo,
+    turma,
+    cursoId,
+    escolha,
+    lida,
+    extras,
+    hoje,
   });
+  const assinaturas = documento.assinaturas;
+  const impresso = documento.dias;
   /* ⚠️ As linhas de Estudo Individual não contam: elas existem mesmo na semana vazia. */
   const linhasImpressas = impresso.reduce(
     (total, dia) => total + dia.linhas.filter((l) => !l.estudoIndividual).length,
@@ -310,6 +317,27 @@ export default async function SemanaDoDsa({
           />
         </div>
       </div>
+
+      {/*
+        ⚠️ **O DOCUMENTO DA SEMANA, COMO VAI SAIR NO PAPEL** (modelo v4): o mesmo componente e o
+           mesmo objeto da rota `/print/dsa`, numa folha A4 em escala real — quem confere vê o
+           papel antes de imprimir, que é a lição do `D-2` da planilha.
+      */}
+      <section aria-labelledby="titulo-documento-do-dsa" className="flex min-w-0 flex-col gap-2">
+        <h2 id="titulo-documento-do-dsa" className="text-sm font-semibold text-texto">
+          O documento desta semana
+        </h2>
+        <div
+          className="rounded-ciaara border-borda bg-superficie-2 overflow-x-auto border p-3"
+          data-slot="documento-do-dsa-na-tela"
+        >
+          <DocumentoDoDsa
+            dados={documento}
+            nomeDeQuemImprime={usuario?.nome ?? null}
+            geradoEm={new Date().toISOString()}
+          />
+        </div>
+      </section>
     </section>
   );
 }

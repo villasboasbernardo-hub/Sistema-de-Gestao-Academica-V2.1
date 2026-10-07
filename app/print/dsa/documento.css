@@ -1,0 +1,663 @@
+/*
+ * O documento do DSA no modelo v4 (`RF-PDF-01`) — o mesmo CSS na tela da turma e no papel.
+ *
+ * ⚠️ **A COR ESCRITA À MÃO AQUI É A EXCEÇÃO AUTORIZADA DO PROJETO PARA O DOCUMENTO IMPRESSO**
+ * (`eslint.config.mjs`, comentário da regra de cor: *"EXCEÇÃO AUTORIZADA, UMA SÓ: o CSS de
+ * impressão"*). **PAPEL NÃO TEM TEMA**: os tokens do `@theme` têm valor claro e noturno, e o
+ * documento oficial sai igual nos dois. As cores são as do modelo v4 — azul-marinho, verde e
+ * amarelo da faixa institucional.
+ *
+ * ⚠️ **TUDO EM MILÍMETRO**: a folha é A4 paisagem (297 × 210 mm) na tela e no papel, para que quem
+ * confere veja exatamente o que vai sair. Caber em UMA página é asserção (`SC-001`).
+ */
+
+.dsa4 {
+  --dsa4-marinho: #050f41;
+  --dsa4-verde: #009444;
+  --dsa4-amarelo: #fab932;
+  --dsa4-texto: #1c2136;
+  --dsa4-suave: #4a5170;
+  --dsa4-borda: #c9cddb;
+  --dsa4-divisa: #dfe2ea;
+  --dsa4-regua-fundo: #eef0f5;
+
+  --dsa4-regua: 15mm;
+  --dsa4-cabeca: 6.5mm;
+  --dsa4-tempo-min: 8mm;
+  --dsa4-intervalo: 1.6mm;
+  --dsa4-almoco: 3.6mm;
+  --dsa4-letra: 7.6pt;
+
+  box-sizing: border-box;
+  width: 297mm;
+  /*
+   * ⚠️ ALTURA FIXA, MAS SEM `overflow: hidden`: o que não couber TRANSBORDA, e o PDF ganha uma
+   * segunda página — que o `SC-001` reprova. Esconder o excesso seria cortar conteúdo calado.
+   */
+  height: 210mm;
+  padding: 6mm 9mm 4mm;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  color: var(--dsa4-texto);
+  font-size: var(--dsa4-letra);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Nove tempos ou sábado: a mesma folha, com letra e espaço menores — nunca conteúdo cortado. */
+.dsa4.dsa4-compacto {
+  --dsa4-tempo-min: 6.5mm;
+  --dsa4-letra: 6.8pt;
+  --dsa4-cabeca: 5.5mm;
+  --dsa4-intervalo: 1.2mm;
+  --dsa4-almoco: 3mm;
+}
+
+.dsa4 * {
+  box-sizing: border-box;
+}
+
+.dsa4-faixa-topo {
+  margin: -6mm -9mm 3mm;
+  height: 1.3mm;
+  flex: none;
+  background: linear-gradient(90deg, var(--dsa4-verde) 0 70%, var(--dsa4-amarelo) 70% 100%);
+}
+
+.dsa4-cabecalho {
+  display: grid;
+  grid-template-columns: 22mm minmax(0, 1fr) 22mm;
+  align-items: center;
+  gap: 4mm;
+  padding-bottom: 1.5mm;
+  flex: none;
+}
+
+.dsa4 .dsa4-logo {
+  height: 13mm;
+  width: auto;
+}
+
+.dsa4 .dsa4-logo-direita {
+  justify-self: end;
+}
+
+.dsa4-titulo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6mm;
+  text-align: center;
+  min-width: 0;
+}
+
+.dsa4-organizacao {
+  font-size: 8pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dsa4-suave);
+}
+
+.dsa4 h1 {
+  margin: 0;
+  font-size: 17pt;
+  line-height: 1.1;
+  font-weight: 600;
+  color: var(--dsa4-marinho);
+}
+
+.dsa4-subtitulo {
+  font-size: 7.5pt;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dsa4-verde);
+}
+
+.dsa4-faixa-cabecalho {
+  height: 0.8mm;
+  flex: none;
+  background: linear-gradient(
+    90deg,
+    var(--dsa4-marinho) 0 calc(100% - 48mm),
+    var(--dsa4-verde) calc(100% - 48mm) calc(100% - 16mm),
+    var(--dsa4-amarelo) calc(100% - 16mm) 100%
+  );
+}
+
+.dsa4-identificacao {
+  display: grid;
+  grid-template-columns: 1fr 0.8fr 1.4fr 0.8fr 0.8fr;
+  border-bottom: 0.25mm solid var(--dsa4-borda);
+  flex: none;
+}
+
+.dsa4-campo {
+  display: flex;
+  flex-direction: column;
+  padding: 1mm 3mm;
+  border-left: 0.25mm solid var(--dsa4-divisa);
+}
+
+.dsa4-campo:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.dsa4-campo-rotulo {
+  font-size: 6.5pt;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dsa4-suave);
+}
+
+.dsa4-campo-valor {
+  font-size: 10pt;
+  font-weight: 600;
+  color: var(--dsa4-marinho);
+  white-space: nowrap;
+}
+
+/* ── A grade ─────────────────────────────────────────────────────────────── */
+
+.dsa4-grade {
+  margin-top: 2mm;
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  border-bottom: 0.5mm solid var(--dsa4-marinho);
+}
+
+.dsa4-cabeca-fundo {
+  background: var(--dsa4-marinho);
+}
+
+.dsa4-cabeca-horario {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 2mm;
+  font-size: 6.5pt;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #aab2cc;
+}
+
+.dsa4-cabeca-dia {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  padding: 0 2.2mm;
+  border-left: 0.25mm solid #26305f;
+  color: #aab2cc;
+}
+
+.dsa4-cabeca-dia b {
+  font-size: 9pt;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+}
+
+.dsa4-coluna {
+  background: #ffffff;
+  border-left: 0.25mm solid var(--dsa4-borda);
+}
+
+.dsa4-coluna-par {
+  background: #f8f9fb;
+}
+
+.dsa4-tempo {
+  min-height: var(--dsa4-tempo-min);
+  display: flex;
+  align-items: center;
+  gap: 1.5mm;
+  padding: 0.3mm 1.6mm;
+  background: var(--dsa4-regua-fundo);
+  color: var(--dsa4-marinho);
+}
+
+.dsa4-tempo b {
+  min-width: 4mm;
+  font-size: 8.5pt;
+}
+
+.dsa4-tempo > span {
+  display: flex;
+  flex-direction: column;
+  font-size: 7pt;
+  line-height: 1.15;
+  color: var(--dsa4-suave);
+}
+
+.dsa4-tempo .dsa4-tempo-inicio {
+  font-weight: 600;
+  color: var(--dsa4-marinho);
+}
+
+/* O tempo além do regime (o 9º, o EI do catálogo): mesma régua, marcado. */
+.dsa4-tempo-excepcional {
+  background: #fdf3dc;
+}
+
+.dsa4-intervalo-regua {
+  display: flex;
+  align-items: center;
+  padding: 0 1.6mm;
+  font-size: 5pt;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--dsa4-suave);
+  overflow: hidden;
+}
+
+.dsa4-intervalo {
+  z-index: 1;
+  background: repeating-linear-gradient(135deg, #d5d9e3 0 0.25mm, transparent 0.25mm 1.5mm);
+}
+
+.dsa4-almoco-regua {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 1.6mm;
+  background: var(--dsa4-amarelo);
+  font-size: 6pt;
+  font-weight: 700;
+  color: var(--dsa4-marinho);
+  white-space: nowrap;
+}
+
+.dsa4-almoco {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fdf3dc;
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--dsa4-marinho);
+}
+
+.dsa4-bloqueio {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2mm;
+  background: repeating-linear-gradient(135deg, #eef0f5 0 0.4mm, #ffffff 0.4mm 2.4mm);
+  text-align: center;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--dsa4-marinho);
+}
+
+/* ── O cartão ────────────────────────────────────────────────────────────── */
+
+.dsa4-cartao {
+  z-index: 2;
+  margin: 0.35mm 0.6mm;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #ffffff;
+  border: 0.25mm solid var(--dsa4-borda);
+}
+
+.dsa4-cartao-barra {
+  height: 0.7mm;
+  flex: none;
+  background: var(--dsa4-marinho);
+}
+
+.dsa4-cartao-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2mm;
+  padding: 0.5mm 1.1mm 0.6mm;
+  min-width: 0;
+}
+
+.dsa4-cartao-titulo {
+  display: flex;
+  gap: 1.2mm;
+  align-items: baseline;
+  font-weight: 700;
+  color: var(--dsa4-marinho);
+  line-height: 1.15;
+}
+
+.dsa4-cartao-titulo > span:first-child {
+  flex: none;
+}
+
+.dsa4-cartao-disciplina {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dsa4-cartao-conteudo {
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.dsa4-cartao-pe {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0 1.2mm;
+  font-size: 0.9em;
+  color: var(--dsa4-suave);
+}
+
+.dsa4-cartao-dados {
+  display: flex;
+  gap: 1.1mm;
+  align-items: baseline;
+  margin-left: auto;
+}
+
+.dsa4-cartao-dados b {
+  color: var(--dsa4-marinho);
+}
+
+.dsa4-cartao-avaliacao {
+  background: #e6f4ec;
+  border-color: var(--dsa4-verde);
+}
+
+.dsa4-cartao-avaliacao .dsa4-cartao-barra {
+  background: var(--dsa4-verde);
+}
+
+.dsa4-cartao-avaliacao .dsa4-cartao-titulo {
+  color: #006b31;
+}
+
+.dsa4-cartao-avaliacao .dsa4-cartao-conteudo {
+  font-weight: 600;
+}
+
+.dsa4-cartao-estudo {
+  border: 0.25mm dashed #8f96b0;
+}
+
+.dsa4-cartao-estudo .dsa4-cartao-barra {
+  background: #8f96b0;
+}
+
+.dsa4-cartao-estudo .dsa4-cartao-conteudo {
+  font-weight: 600;
+}
+
+.dsa4-cartao-atividade .dsa4-cartao-barra {
+  background: var(--dsa4-amarelo);
+}
+
+/* ── Sem relógio e fora da grade ─────────────────────────────────────────── */
+
+.dsa4-lista {
+  margin-top: 2mm;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+}
+
+.dsa4-lista ul,
+.dsa4-fora {
+  margin: 0;
+  padding-left: 4mm;
+}
+
+.dsa4-fora {
+  margin-top: 1mm;
+  font-size: 0.9em;
+  flex: none;
+}
+
+/* ── Legendas, quadro de CH e assinaturas ────────────────────────────────── */
+
+.dsa4-legendas {
+  margin-top: 1.5mm;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5mm 6mm;
+  color: #3b4366;
+  flex: none;
+}
+
+.dsa4-marca-ch {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #00803b;
+}
+
+.dsa4-marca-ch::before {
+  content: "";
+  width: 2.5mm;
+  height: 2.5mm;
+  background: var(--dsa4-amarelo);
+}
+
+.dsa4-legendas-direita {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5mm 5mm;
+}
+
+.dsa4-tecnicas,
+.dsa4-tipos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5mm 2.5mm;
+}
+
+.dsa4-tecnicas strong,
+.dsa4-tipos strong {
+  font-size: 6.5pt;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dsa4-marinho);
+}
+
+.dsa4-tecnicas b {
+  color: var(--dsa4-marinho);
+}
+
+.dsa4-tipos span {
+  display: flex;
+  align-items: center;
+  gap: 1.2mm;
+}
+
+.dsa4-amostra {
+  display: inline-block;
+  width: 4.5mm;
+  height: 2.5mm;
+  border: 0.25mm solid var(--dsa4-borda);
+}
+
+.dsa4-amostra-aula {
+  border-top: 0.7mm solid var(--dsa4-marinho);
+}
+
+.dsa4-amostra-avaliacao {
+  background: #e6f4ec;
+  border-color: var(--dsa4-verde);
+  border-top: 0.7mm solid var(--dsa4-verde);
+}
+
+.dsa4-amostra-estudo {
+  border: 0.25mm dashed #8f96b0;
+}
+
+.dsa4-amostra-intervalo {
+  background: repeating-linear-gradient(135deg, #aab2cc 0 0.25mm, transparent 0.25mm 1mm);
+}
+
+.dsa4-rodape {
+  margin-top: 1.5mm;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 104mm;
+  gap: 6mm;
+  align-items: end;
+  flex: none;
+}
+
+.dsa4-quadro-colunas {
+  display: flex;
+  gap: 4mm;
+  align-items: flex-start;
+}
+
+.dsa4-quadro table {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 0.92em;
+  border-collapse: collapse;
+  border-top: 0.5mm solid var(--dsa4-verde);
+  border-bottom: 0.25mm solid #8f96b0;
+}
+
+.dsa4-quadro th {
+  padding: 0.4mm 1.2mm;
+  white-space: nowrap;
+  font-size: 6.2pt;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--dsa4-suave);
+  border-bottom: 0.25mm solid var(--dsa4-divisa);
+}
+
+.dsa4-quadro td {
+  padding: 0.2mm 1.2mm;
+  line-height: 1.15;
+  border-top: 0.2mm solid #e4e6ee;
+}
+
+.dsa4-quadro td:first-child {
+  font-weight: 700;
+  color: var(--dsa4-marinho);
+  white-space: nowrap;
+  width: 1%;
+}
+
+.dsa4-quadro th:nth-child(n + 3),
+.dsa4 .dsa4-num {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.dsa4 .dsa4-cumprida {
+  font-weight: 700;
+  color: #00803b;
+}
+
+.dsa4-observacoes {
+  margin-top: 1mm;
+  display: flex;
+  align-items: flex-end;
+  gap: 2mm;
+}
+
+.dsa4-observacoes strong {
+  font-size: 6.5pt;
+  letter-spacing: 0.08em;
+  color: var(--dsa4-marinho);
+}
+
+/* ⚠️ A linha de observações sai EM BRANCO, para escrever à mão (`H8`, opção a). */
+.dsa4-observacoes .dsa-observacoes {
+  flex: 1;
+  border-bottom: 0.25mm solid var(--dsa4-marinho);
+  min-height: 4mm;
+}
+
+.dsa4-assinaturas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6mm;
+}
+
+.dsa4-assinatura {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.2mm;
+  line-height: 1.3;
+}
+
+/* A linha onde se assina — existe mesmo sem responsável vigente (`FR-036`, `RN-DEG-01`). */
+.dsa4 .dsa-rubrica {
+  align-self: stretch;
+  margin-top: 9mm;
+  border-top: 0.25mm solid var(--dsa4-marinho);
+  padding-top: 0.6mm;
+}
+
+.dsa4-assinatura-nome {
+  font-weight: 600;
+  color: var(--dsa4-marinho);
+}
+
+.dsa4-assinatura-funcao {
+  color: var(--dsa4-suave);
+}
+
+.dsa4-faixa-rodape {
+  margin-top: 1.5mm;
+  height: 0.5mm;
+  flex: none;
+  background: linear-gradient(
+    90deg,
+    var(--dsa4-verde) 0 32mm,
+    var(--dsa4-amarelo) 32mm 48mm,
+    var(--dsa4-divisa) 48mm 100%
+  );
+}
+
+.dsa4-pe {
+  padding-top: 1mm;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.3mm 4mm;
+  font-size: 6.5pt;
+  color: var(--dsa4-suave);
+  flex: none;
+}
+
+.dsa4-pe [data-slot="dsa-nota-do-ei"] {
+  color: #3b4366;
+}
+
+@media print {
+  .dsa4 {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
