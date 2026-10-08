@@ -78,6 +78,17 @@ describe("as linhas da grade saem do relógio vigente", () => {
     expect(tempos.at(-1)).toMatchObject({ numero: 10, excepcional: true });
   });
 
+  it("a tela pede mais linhas (`minimoDeTempos`) para lançar num tempo que o papel ainda não mostra", () => {
+    const relogio = relogioDoRegime(G45);
+    const papel = gradeDoPapel([dia("2026-10-05", [linha()])], relogio);
+    const tela = gradeDoPapel([dia("2026-10-05", [linha()])], relogio, {
+      minimoDeTempos: G45.regimeTempos + 2,
+    });
+    const contar = (g: typeof papel) => g?.faixas.filter((f) => f.tipo === "tempo").length;
+    expect(contar(papel)).toBe(G45.regimeTempos);
+    expect(contar(tela)).toBe(G45.regimeTempos + 2);
+  });
+
   it("sem relógio, não há grade (quem chama degrada para a lista)", () => {
     expect(gradeDoPapel([dia("2026-10-05", [])], null)).toBeNull();
   });

@@ -31,7 +31,6 @@ import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { montarDocumentoDoDsa } from "../../../../print/dsa/documento";
-import { DocumentoDoDsa } from "../../../../print/dsa/DocumentoDoDsa";
 import { alcanceDoPerfil } from "../../../cursos/consulta";
 import { codigoDaFicha, mensagemDeTurmaNaoEncontrada } from "../consulta";
 import {
@@ -43,6 +42,7 @@ import {
   semanaEscolhida,
 } from "./consulta";
 import { lerExtrasDaImpressao, lerSemanaDoDsa } from "./leitura";
+import { CabecalhoDaSemana, RodapeDaSemana } from "./DocumentoNaTela";
 import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
 import { PainelDeLancamento } from "./PainelDeLancamento";
 import { PainelDeSituacao } from "./PainelDeSituacao";
@@ -161,6 +161,8 @@ export default async function SemanaDoDsa({
     lida,
     extras,
     hoje,
+    /* A tela mostra todas as linhas da semana, para que se possa lançar num tempo que o papel ainda não tem. */
+    minimoDeTempos: lida.semana.linhas,
   });
   const assinaturas = documento.assinaturas;
   const impresso = documento.dias;
@@ -287,8 +289,14 @@ export default async function SemanaDoDsa({
       */}
       <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <CabecalhoDaSemana dados={documento} />
           <PainelDeLancamento
             semana={lida.semana}
+            grade={documento.grade}
+            disciplinasDaSemana={documento.quadroDeCh.map((d) => ({
+              codigo: d.codigo,
+              nome: d.nome,
+            }))}
             turmaId={turmaId}
             cursoId={cursoId}
             salaDaTurma={(turma.sala_alocada as string | null) ?? null}
@@ -319,25 +327,10 @@ export default async function SemanaDoDsa({
       </div>
 
       {/*
-        ⚠️ **O DOCUMENTO DA SEMANA, COMO VAI SAIR NO PAPEL** (modelo v4): o mesmo componente e o
-           mesmo objeto da rota `/print/dsa`, numa folha A4 em escala real — quem confere vê o
-           papel antes de imprimir, que é a lição do `D-2` da planilha.
+        ⚠️ **O RODAPÉ DO PAPEL, NA TELA** — carga horária acumulada, técnicas e as assinaturas da
+           data da semana, do MESMO objeto do `/print/dsa`, no visual do sistema.
       */}
-      <section aria-labelledby="titulo-documento-do-dsa" className="flex min-w-0 flex-col gap-2">
-        <h2 id="titulo-documento-do-dsa" className="text-sm font-semibold text-texto">
-          O documento desta semana
-        </h2>
-        <div
-          className="rounded-ciaara border-borda bg-superficie-2 overflow-x-auto border p-3"
-          data-slot="documento-do-dsa-na-tela"
-        >
-          <DocumentoDoDsa
-            dados={documento}
-            nomeDeQuemImprime={usuario?.nome ?? null}
-            geradoEm={new Date().toISOString()}
-          />
-        </div>
-      </section>
+      <RodapeDaSemana dados={documento} nomeDeQuemImprime={usuario?.nome ?? null} />
     </section>
   );
 }

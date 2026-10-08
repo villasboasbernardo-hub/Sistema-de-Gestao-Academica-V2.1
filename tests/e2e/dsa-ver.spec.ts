@@ -88,18 +88,30 @@ test.describe("`RF-DSA-01` · a grade da semana, alcançada por clique", () => {
     await expect(grade).toContainText("13:05");
   });
 
-  test("`SC-011` · o bloco que atravessa o almoço mostra os DOIS trechos", async ({ page }) => {
+  test("`SC-011` · o bloco que atravessa o almoço vira DOIS cartões, um de cada lado", async ({
+    page,
+  }) => {
     await abrirODsaPorClique(page, SEMEADO.turmaComRelogio);
     await page.goto(
       `/turmas/${encodeURIComponent(SEMEADO.turmaComRelogio)}/dsa?semana=${SEMANA}&ano=${ANO}`,
     );
     /*
      * ⚠️ O `D-3` da planilha imprimia "09:30 as 13:50" para 4 TA — **um** horário contínuo, em 64
-     * ocorrências do CAHO. Aqui os dois trechos saem separados, e é o bloco que os carrega.
+     * ocorrências do CAHO. Na grade do modelo v4 (a mesma do papel) o bloco vira dois cartões: 3 TA
+     * de manhã, a partir do 3º tempo (09:30), e 1 TA à tarde, no 6º (13:05).
      */
-    const bloco = page.locator('[data-tom="ocupada"]').filter({ hasText: "atravessa o almoço" });
-    await expect(bloco).toContainText("09:30");
-    await expect(bloco).toContainText("13:05");
+    const partes = page
+      .locator('[data-slot="grade-da-semana"] td[data-tom="ocupada"]')
+      .filter({ hasText: "atravessa o almoço" });
+    await expect(partes).toHaveCount(2);
+    await expect(partes.nth(0)).toContainText("3 TA");
+    await expect(partes.nth(0)).toContainText("parte 1 de 2");
+    await expect(partes.nth(1)).toContainText("1 TA");
+    await expect(partes.nth(1)).toContainText("parte 2 de 2");
+    /* E a régua diz as horas dos tempos onde cada cartão começa. */
+    const grade = page.locator('[data-slot="grade-da-semana"]');
+    await expect(grade).toContainText("09:30");
+    await expect(grade).toContainText("13:05");
   });
 
   test("`RN-EVT-02` · dia inteiro bloqueia; parcial e informativo só avisam", async ({ page }) => {
@@ -153,7 +165,9 @@ test.describe("`RF-DSA-01` · a grade da semana, alcançada por clique", () => {
     await expect(grade).toContainText("Laboratório de Informática");
     /* ⚠️ O bloco que está NA sala da turma NÃO é destacado: sem isto, destacar tudo passaria. */
     const naSala = grade.locator('[data-tom="ocupada"]').filter({ hasText: "atravessa o almoço" });
-    await expect(naSala).not.toContainText("fora da sala");
+    await expect(naSala).toHaveCount(2);
+    await expect(naSala.nth(0)).not.toContainText("fora da sala");
+    await expect(naSala.nth(1)).not.toContainText("fora da sala");
   });
 });
 

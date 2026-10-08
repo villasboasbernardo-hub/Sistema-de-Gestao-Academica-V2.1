@@ -30,7 +30,8 @@
  * as marcas e `hoje` chegam por parâmetro.
  */
 
-import { capacidadeDaSemana, type CapacidadeDaSemana, type FeriadoDaSemana } from "./capacidade";
+import { capacidadeDaSemana, type CapacidadeDaSemana } from "./capacidade";
+import { motivoDoBloqueio, type FeriadoDoCalendario } from "./dia-bloqueado";
 import type { MarcaDeConflito } from "./conflitos";
 import { tempoDeAula, trechosDoBloco, type Relogio, type Trecho } from "./horario-do-bloco";
 import { motivoDaFaltaDePosicao, semPosicao, type OrigemDoFato } from "./posicao-herdada";
@@ -109,7 +110,7 @@ export function montarSemana(entrada: {
   /** TA que o regime declara, para numerar as linhas quando não há relógio. */
   readonly temposDeclarados: number | null;
   readonly fatos: readonly FatoDaSemana[];
-  readonly feriados: readonly FeriadoDaSemana[];
+  readonly feriados: readonly FeriadoDoCalendario[];
   /** De `detectarConflitos` — vem pronto (`RN-CONF-01`). */
   readonly marcas: ReadonlyMap<string, MarcaDeConflito>;
   /** `aaaa-mm-dd` no fuso da CIAARA-11. */
@@ -118,16 +119,18 @@ export function montarSemana(entrada: {
 }): Semana {
   const { relogio, fatos, feriados, marcas, hoje } = entrada;
 
-  const bloqueados = new Map<string, string>();
+  /*
+   * ⚠️ **QUAL DIA ESTÁ BLOQUEADO NÃO SE DECIDE AQUI** (`RN-EVT-04`): é `motivoDoBloqueio`, a mesma
+   * função que faz `lancar` e `mover` recusarem aula no dia — a grade pinta exatamente o dia que a
+   * Server Action recusa. Aqui só se juntam os AVISOS (impacto que não bloqueia, `RN-EVT-02`).
+   */
   const avisosPorDia = new Map<string, string[]>();
   for (const feriado of feriados) {
-    if (feriado.impacto === "dia_inteiro") {
-      if (!bloqueados.has(feriado.data)) bloqueados.set(feriado.data, feriado.descricao);
-    } else {
-      const lista = avisosPorDia.get(feriado.data) ?? [];
-      lista.push(feriado.descricao);
-      avisosPorDia.set(feriado.data, lista);
-    }
+    if (feriado.impacto === "dia_inteiro") continue;
+    if (feriado.status !== undefined && feriado.status !== "ativo") continue;
+    const lista = avisosPorDia.get(feriado.data) ?? [];
+    lista.push(feriado.descricao);
+    avisosPorDia.set(feriado.data, lista);
   }
 
   const posicionados: BlocoNaGrade[] = [];
@@ -160,7 +163,7 @@ export function montarSemana(entrada: {
   const linhas = quantasLinhas(relogio, entrada.temposDeclarados, posicionados);
 
   const dias = entrada.dias.map((data): DiaDaGrade => {
-    const bloqueio = bloqueados.get(data) ?? null;
+    const bloqueio = motivoDoBloqueio(data, feriados);
     const doDia = posicionados.filter((b) => b.data === data);
     const celulas: Celula[] = [];
 

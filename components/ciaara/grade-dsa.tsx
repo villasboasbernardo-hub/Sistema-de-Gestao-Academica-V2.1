@@ -44,10 +44,21 @@ import {
   type TomDaCelula,
 } from "@/components/ciaara/grade-alocacao";
 import type { BlocoNaGrade, Celula, Semana } from "@/lib/dominio/dsa/grade";
+import type { CartaoDaGrade, GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import { dataComDiaDaSemana } from "@/lib/formato/data";
 
 export type GradeDsaProps = {
   readonly semana: Semana;
+  /**
+   * A grade do MODELO v4, montada por `gradeDoPapel` — **a mesma montagem do `/print/dsa`**.
+   *
+   * ⚠️ Com ela, as linhas são os tempos do relógio (com o intervalo e o almoço reais) e cada
+   * lançamento é um cartão com as informações do papel. Sem ela (`null`, sem relógio), a grade sai
+   * com os TA numerados, que é a degradação da `RN-DEG-01`.
+   */
+  readonly grade?: GradeDoPapel | null;
+  /** `cod_disciplina` → nome, do quadro de CH do documento — para o título do cartão. */
+  readonly nomesDasDisciplinas?: ReadonlyMap<string, string>;
   /**
    * `turmas.sala_alocada` — aparece **uma vez**, no cabeçalho.
    *
@@ -164,7 +175,393 @@ function CorpoDoBloco({
   );
 }
 
-export function GradeDsa({
+export function GradeDsa(props: GradeDsaProps) {
+  return props.grade ? (
+    <GradeDoModelo {...props} grade={props.grade} />
+  ) : (
+    <GradeNumerada {...props} />
+  );
+}
+
+/** O tom de um cartão do modelo — pela origem do fato e pelo conflito, como o da grade numerada. */
+function tomDoCartao(cartao: CartaoDaGrade, bloco: BlocoNaGrade | undefined): TomDaCelula {
+  if (bloco) return tomDoBloco(bloco);
+  if (cartao.tipo === "estudo" || cartao.tipo === "atividade") return "nao_letivo";
+  if (cartao.tipo === "avaliacao") return "avaliacao";
+  return "ocupada";
+}
+
+/**
+ * O corpo do cartão — **as mesmas informações do papel** (disciplina, UE/tópico, TA, local, T/E,
+ * instrutor), mais as marcas que só a tela tem: conflito, sala e «lançado à frente».
+ */
+function CorpoDoCartao({
+  cartao,
+  bloco,
+  nome,
+  salaDaTurma,
+}: {
+  readonly cartao: CartaoDaGrade;
+  readonly bloco: BlocoNaGrade | undefined;
+  readonly nome: string;
+  readonly salaDaTurma: string | null;
+}) {
+  const { linha } = cartao;
+  const normal = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
+  const foraDaSala =
+    bloco?.local != null && salaDaTurma != null && normal(bloco.local) !== normal(salaDaTurma);
+  return (
+    <div
+      className="flex flex-col gap-0.5 leading-tight"
+      data-slot="dsa-cartao"
+      data-tipo={cartao.tipo}
+      data-parte={cartao.parte}
+      data-partes={cartao.partes}
+      data-lancado={bloco ? "sim" : "nao"}
+    >
+      {linha.disciplina === "" ? null : (
+        <span className="flex items-baseline gap-1 font-semibold">
+          <span>{linha.disciplina}</span>
+          {nome === "" ? null : <span className="font-normal">{nome}</span>}
+        </span>
+      )}
+      <span className={cn("line-clamp-3", cartao.tipo !== "aula" && "font-medium")}>
+        {linha.conteudo}
+        {cartao.tipo === "estudo" ? " *" : ""}
+      </span>
+      {linha.instrutor === "" ? null : (
+        <span className="truncate text-[10px]">{linha.instrutor}</span>
+      )}
+      <span className="flex flex-wrap items-center gap-x-1.5 text-[10px] tabular-nums">
+        <span>{cartao.ta} TA</span>
+        {linha.local === "" ? null : <span>{linha.local}</span>}
+        {linha.te === "" ? null : <strong className="font-semibold">{linha.te}</strong>}
+        {cartao.partes > 1 ? (
+          <span>
+            · parte {cartao.parte} de {cartao.partes}
+          </span>
+        ) : null}
+      </span>
+      {bloco === undefined && cartao.tipo === "estudo" ? (
+        <span className="w-fit text-[10px] text-texto-suave">no papel, sem lançamento</span>
+      ) : null}
+      {/* ⚠️ As marcas vão como TEXTO, nunca só como cor (`RNF-USA-05`). */}
+      {foraDaSala ? (
+        <span className="w-fit rounded bg-conflito-fundo px-1 text-[10px] text-conflito-tinta">
+          fora da sala · {bloco?.local}
+        </span>
+      ) : null}
+      {bloco?.conflito ? (
+        <span className="w-fit rounded bg-conflito-fundo px-1 text-[10px] font-medium text-conflito-tinta">
+          conflito de {bloco.conflito === "instrutor" ? "instrutor" : "fiscal"}
+        </span>
+      ) : null}
+      {bloco?.alertaSala ? (
+        <span className="w-fit rounded bg-atrasado-fundo px-1 text-[10px] text-atrasado-tinta">
+          mesma sala em outra turma
+        </span>
+      ) : null}
+      {bloco?.lancadoAFrente ? (
+        <span className="w-fit rounded bg-planejado-fundo px-1 text-[10px] text-planejado-tinta">
+          lançado à frente
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+type ForaDaGrade = {
+  readonly coluna: number;
+  readonly linha: {
+    readonly chave: string;
+    readonly disciplina: string;
+    readonly conteudo: string;
+  };
+};
+
+/**
+ * A grade da tela no **modelo v4** — linhas e cartões de `gradeDoPapel`, a montagem do papel.
+ *
+ * ⚠️ **SÓ A APRESENTAÇÃO MUDA.** Quem diz onde cada cartão vai é `gradeDoPapel`; quem diz se a
+ * célula livre está bloqueada pelo calendário é `montarSemana` (`Semana`); quem grava é a Server
+ * Action. Aqui só se casa um com o outro, pela chave do lançamento.
+ *
+ * ⚠️ **O INTERVALO NÃO É LINHA DA TABELA**: uma linha de separação no meio quebraria o `rowSpan` do
+ * cartão de vários tempos. Ele vai escrito na régua (*"intervalo 5 min"*), sobre o tempo que vem
+ * depois dele; o **almoço** é linha de separação, porque o cartão já se divide nele (`SC-011`).
+ */
+function GradeDoModelo({
+  semana,
+  grade,
+  nomesDasDisciplinas,
+  salaDaTurma,
+  aoEscolherCelula,
+  aoEscolherFato,
+  aoMoverBloco,
+  className,
+}: GradeDsaProps & { readonly grade: GradeDoPapel }) {
+  const { dias } = semana;
+  const arrastado = React.useRef<string | null>(null);
+
+  const blocos = new Map<string, BlocoNaGrade>();
+  for (const dia of dias) {
+    for (const c of dia.celulas) if (c.bloco) blocos.set(c.bloco.fatoId, c.bloco);
+  }
+
+  const colunas: readonly ColunaDaGrade[] = grade.colunas.map((c, i) => {
+    const dia = dias[i];
+    return {
+      chave: c.data,
+      rotulo: dataComDiaDaSemana(c.data),
+      ...(c.bloqueio ? { bloqueio: c.bloqueio } : {}),
+      ...(dia && dia.avisos.length > 0 ? { nota: dia.avisos.join(" · ") } : {}),
+    };
+  });
+
+  /* As linhas: um tempo por linha, o almoço como separadora; o intervalo vai na régua. */
+  const linhasDaGrade: LinhaDaGrade[] = [];
+  const tempos: number[] = [];
+  let intervalo: number | null = null;
+  for (const f of grade.faixas) {
+    if (f.tipo === "intervalo") {
+      intervalo = f.minutos;
+      continue;
+    }
+    if (f.tipo === "almoco") {
+      intervalo = null;
+      linhasDaGrade.push({
+        chave: `almoco-${f.inicio}`,
+        rotulo: `almoço ${f.inicio}–${f.fim}`,
+        separadora: true,
+      });
+      continue;
+    }
+    tempos.push(f.numero);
+    linhasDaGrade.push({
+      chave: String(f.numero),
+      rotulo: (
+        <span className="flex flex-col leading-tight" data-tempo="sim">
+          {intervalo !== null && intervalo > 0 ? (
+            // veste: o intervalo é RÓTULO da régua, não dado do lançamento.
+            <span className="text-[9px] text-texto-tenue">intervalo {intervalo} min</span>
+          ) : null}
+          <span className="font-medium tabular-nums">{f.numero}º</span>
+          <span className="text-[10px] tabular-nums text-texto-suave">
+            {f.inicio}–{f.fim}
+          </span>
+          {f.excepcional ? (
+            <span className="text-[10px] text-atrasado-tinta">excepcional</span>
+          ) : null}
+        </span>
+      ),
+    });
+    intervalo = null;
+  }
+
+  /* Onde cada cartão começa e o que ele cobre — por coluna e número do tempo. */
+  const inicio = new Map<string, CartaoDaGrade>();
+  const coberto = new Set<string>();
+  const foraDaGrade: ForaDaGrade[] = [...grade.foraDaGrade];
+  for (const cartao of grade.cartoes) {
+    const primeiro = grade.faixas[cartao.faixaInicial];
+    if (primeiro?.tipo !== "tempo") continue;
+    const chaves = Array.from(
+      { length: cartao.ta },
+      (_, k) => `${cartao.coluna}:${primeiro.numero + k}`,
+    );
+    if (chaves.some((k) => inicio.has(k) || coberto.has(k))) {
+      foraDaGrade.push({ coluna: cartao.coluna, linha: cartao.linha });
+      continue;
+    }
+    inicio.set(chaves[0] as string, cartao);
+    for (const k of chaves.slice(1)) coberto.add(k);
+  }
+
+  const celulas: CelulaDaGrade[][] = linhasDaGrade.map((l) => {
+    if (l.separadora) return [];
+    const ta = Number(l.chave);
+    return grade.colunas.map((_, coluna): CelulaDaGrade => {
+      const chave = `${coluna}:${ta}`;
+      if (coberto.has(chave)) return { coberta: true };
+      const cartao = inicio.get(chave);
+      if (cartao) {
+        const bloco = blocos.get(cartao.linha.chave);
+        return {
+          conteudo: (
+            <CorpoDoCartao
+              cartao={cartao}
+              bloco={bloco}
+              nome={nomesDasDisciplinas?.get(cartao.linha.disciplina) ?? ""}
+              salaDaTurma={salaDaTurma}
+            />
+          ),
+          tom: tomDoCartao(cartao, bloco),
+          alturaEmLinhas: cartao.ta,
+          rotuloAcessivel: [cartao.linha.disciplina, cartao.linha.conteudo]
+            .filter(Boolean)
+            .join(" — "),
+          ...(bloco && aoMoverBloco ? { arrastavel: true } : {}),
+          ...(bloco && (bloco.conflito !== null || bloco.alertaSala)
+            ? {
+                marcaDeConflito: [
+                  bloco.conflito === null ? null : `conflito de ${bloco.conflito}`,
+                  bloco.alertaSala ? "mesma sala em outra turma" : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+              }
+            : {}),
+        };
+      }
+      const celula = dias[coluna]?.celulas[ta - 1];
+      if (!celula) return { tom: "sem_relogio" };
+      return { tom: TOM_DO_ESTADO[celula.estado] };
+    });
+  });
+
+  const rodapes = rodapesSemPosicao(dias, aoEscolherFato, foraDaGrade);
+
+  return (
+    <div className={cn("min-w-0", className)} data-slot="grade-da-semana" data-modelo="v4">
+      <GradeAlocacao
+        rotulo="Grade da semana"
+        colunas={colunas}
+        linhas={linhasDaGrade}
+        celulas={celulas}
+        cantoSuperior={
+          <span className="flex flex-col leading-tight">
+            <span>Horário</span>
+            {salaDaTurma ? (
+              <span className="text-[10px] font-normal text-texto-suave">{salaDaTurma}</span>
+            ) : null}
+          </span>
+        }
+        {...(rodapes !== null ? { rodapeDasColunas: rodapes } : {})}
+        {...(aoEscolherCelula || aoEscolherFato
+          ? {
+              /*
+               * ⚠️ **CARTÃO DE LANÇAMENTO ABRE AS AÇÕES; TEMPO VAZIO ABRE O FORMULÁRIO** — e o cartão
+               * de Estudo Individual que só existe no papel (sem lançamento) é tempo vazio: clicar
+               * nele lança ali, com o dia e o tempo já preenchidos.
+               */
+              aoAtivarCelula: (linha: number, coluna: number) => {
+                const dia = grade.colunas[coluna]?.data;
+                const ta = tempos[linha];
+                if (dia === undefined || ta === undefined) return;
+                const cartao = inicio.get(`${coluna}:${ta}`);
+                const bloco = cartao ? blocos.get(cartao.linha.chave) : undefined;
+                if (bloco && aoEscolherFato) {
+                  aoEscolherFato(bloco.fatoId);
+                  return;
+                }
+                const naSemana = dias[coluna]?.celulas[ta - 1]?.bloco ?? null;
+                if (naSemana !== null && aoEscolherFato) {
+                  aoEscolherFato(naSemana.fatoId);
+                  return;
+                }
+                if (naSemana === null && aoEscolherCelula) aoEscolherCelula(dia, ta);
+              },
+            }
+          : {})}
+        {...(aoMoverBloco
+          ? {
+              aoArrastar: (linha: number, coluna: number) => {
+                const ta = tempos[linha];
+                const cartao = ta === undefined ? undefined : inicio.get(`${coluna}:${ta}`);
+                arrastado.current =
+                  cartao && blocos.has(cartao.linha.chave) ? cartao.linha.chave : null;
+              },
+              aoSoltar: (linha: number, coluna: number) => {
+                const dia = grade.colunas[coluna]?.data;
+                const ta = tempos[linha];
+                const fatoId = arrastado.current;
+                arrastado.current = null;
+                if (dia !== undefined && ta !== undefined && fatoId !== null) {
+                  aoMoverBloco(fatoId, dia, ta);
+                }
+              },
+            }
+          : {})}
+      />
+    </div>
+  );
+}
+
+/**
+ * A faixa "Sem posição", por dia — e, no modelo, também o que ficou fora do relógio.
+ * `null` quando não há nada em dia nenhum.
+ *
+ * ⚠️ **ELE É UM BOTÃO QUANDO HÁ O QUE FAZER, e texto quando não há** (`Q-12`, segunda metade).
+ * Posicionar um lançamento da faixa é o **mesmo** mover; e o MOTIVO é obrigatório — é ele que
+ * distingue "não há" de "não sei onde pôr".
+ */
+function rodapesSemPosicao(
+  dias: Semana["dias"],
+  aoEscolherFato: ((fatoId: string) => void) | undefined,
+  foraDaGrade: readonly ForaDaGrade[] = [],
+): React.ReactNode[] | null {
+  const algum = dias.some((d) => d.semPosicao.length > 0) || foraDaGrade.length > 0;
+  if (!algum) return null;
+  return dias.map((dia, i) => {
+    const fora = foraDaGrade.filter((f) => f.coluna === i);
+    if (dia.semPosicao.length === 0 && fora.length === 0) {
+      return (
+        // veste: o placeholder de faixa vazia — o travessão não é dado, é ausência dele.
+        <span key={dia.data} className="text-[10px] text-texto-tenue">
+          —
+        </span>
+      );
+    }
+    return (
+      <ul key={dia.data} className="flex flex-col gap-1">
+        {dia.semPosicao.map(({ fato, motivo }) => {
+          const descricao =
+            [fato.disciplina, fato.conteudo].filter(Boolean).join(" — ") || "Lançamento";
+          return (
+            <li key={fato.fatoId} className="leading-tight">
+              {aoEscolherFato ? (
+                <button
+                  type="button"
+                  onClick={() => aoEscolherFato(fato.fatoId)}
+                  data-slot="posicionar-sem-posicao"
+                  data-fato={fato.fatoId}
+                  className="block text-left underline underline-offset-2 hover:text-texto"
+                >
+                  {descricao}
+                </button>
+              ) : (
+                <span className="block">{descricao}</span>
+              )}
+              <span className="block text-[10px] text-texto-suave">{motivo}</span>
+            </li>
+          );
+        })}
+        {fora.map(({ linha }) => {
+          const descricao = [linha.disciplina, linha.conteudo].filter(Boolean).join(" — ");
+          return (
+            <li key={linha.chave} className="leading-tight" data-fora-da-grade="sim">
+              {aoEscolherFato && !linha.chave.startsWith("ei-") ? (
+                <button
+                  type="button"
+                  onClick={() => aoEscolherFato(linha.chave)}
+                  className="block text-left underline underline-offset-2 hover:text-texto"
+                >
+                  {descricao}
+                </button>
+              ) : (
+                <span className="block">{descricao}</span>
+              )}
+              <span className="block text-[10px] text-texto-suave">fora dos tempos do relógio</span>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  });
+}
+
+/** A grade sem relógio — os TA numerados, sem horário (`RN-DEG-01`). */
+function GradeNumerada({
   semana,
   salaDaTurma,
   aoEscolherCelula,
@@ -268,49 +665,7 @@ export function GradeDsa({
     });
   }
 
-  /* A faixa "Sem posição", por dia. */
-  const rodapes = dias.map((dia) =>
-    dia.semPosicao.length === 0 ? (
-      // veste: o placeholder de faixa vazia — o travessão não é dado, é ausência dele.
-      <span key={dia.data} className="text-[10px] text-texto-tenue">
-        —
-      </span>
-    ) : (
-      <ul key={dia.data} className="flex flex-col gap-1">
-        {dia.semPosicao.map(({ fato, motivo }) => {
-          const descricao =
-            [fato.disciplina, fato.conteudo].filter(Boolean).join(" — ") || "Lançamento";
-          return (
-            <li key={fato.fatoId} className="leading-tight">
-              {/*
-                ⚠️ **ELE É UM BOTÃO QUANDO HÁ O QUE FAZER, e texto quando não há** (`Q-12`, segunda
-                   metade). Posicionar um lançamento da faixa é o **mesmo** mover — e sem o botão a
-                   faixa seria uma lista de problemas sem caminho para resolvê-los, que é o oposto
-                   da `RN-DEG-01`: degradar COM AVISO pressupõe poder consertar.
-              */}
-              {aoEscolherFato ? (
-                <button
-                  type="button"
-                  onClick={() => aoEscolherFato(fato.fatoId)}
-                  data-slot="posicionar-sem-posicao"
-                  data-fato={fato.fatoId}
-                  className="block text-left underline underline-offset-2 hover:text-texto"
-                >
-                  {descricao}
-                </button>
-              ) : (
-                <span className="block">{descricao}</span>
-              )}
-              {/* O MOTIVO é obrigatório: é ele que distingue "não há" de "não sei onde pôr". */}
-              <span className="block text-[10px] text-texto-suave">{motivo}</span>
-            </li>
-          );
-        })}
-      </ul>
-    ),
-  );
-
-  const algumSemPosicao = dias.some((d) => d.semPosicao.length > 0);
+  const rodapes = rodapesSemPosicao(dias, aoEscolherFato);
 
   /* O TA de cada linha navegável — o inverso de `indiceDaLinhaPorTa`, sem as separadoras. */
   const taDaLinhaNavegavel: number[] = [];
@@ -342,7 +697,7 @@ export function GradeDsa({
             ) : null}
           </span>
         }
-        {...(algumSemPosicao ? { rodapeDasColunas: rodapes } : {})}
+        {...(rodapes !== null ? { rodapeDasColunas: rodapes } : {})}
         {...(aoEscolherCelula || aoEscolherFato
           ? {
               /*

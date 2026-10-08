@@ -448,7 +448,8 @@ export function FormularioDeLancamento({
       {/*
         ⚠️ **OS AVISOS NÃO BLOQUEIAM** (`RN-DEG-02`): o lançamento JÁ foi gravado quando eles
            aparecem. Transformá-los em impedimento mudaria a regra de negócio — os tetos AEC/TAD/TR
-           e o 9º TA são alerta, e o único bloqueio é o TFM.
+           e o 9º TA são alerta. Os dois bloqueios — o teto de TFM e o dia bloqueado no calendário
+           (`RN-EVT-04`) — chegam como recusa, ANTES de gravar, e não aqui.
       */}
       {avisos.length > 0 ? (
         <div role="status" data-slot="avisos-do-lancamento" className="flex flex-col gap-1">

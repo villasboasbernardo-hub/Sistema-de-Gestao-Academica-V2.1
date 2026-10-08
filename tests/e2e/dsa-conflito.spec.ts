@@ -117,8 +117,8 @@ test.describe("⚠️ critério 5 · o mesmo instrutor em DUAS turmas no mesmo T
 
 test.describe("`RN-CONF-01` e `RN-DEG-02` · o conflito NÃO impede a gravação", () => {
   /*
-   * ⚠️ **ESTE É O CASO QUE SEPARA SINALIZAR DE BLOQUEAR.** O único bloqueio do épico é o TFM
-   * (`RN-DIST-03` (a)); transformar o conflito em impedimento mudaria a regra de negócio, que é o
+   * ⚠️ **ESTE É O CASO QUE SEPARA SINALIZAR DE BLOQUEAR.** Os dois bloqueios do épico são o teto
+   * de TFM (`RN-DIST-03` (a)) e o dia bloqueado no calendário (`RN-EVT-04`); transformar o conflito em impedimento mudaria a regra de negócio, que é o
    * que a regra inviolável 6 proíbe: *"regra normativa vira alerta, nunca bloqueio"*.
    */
   test("lançar em cima de um conflito GRAVA, e a contagem no banco prova", async ({ page }) => {

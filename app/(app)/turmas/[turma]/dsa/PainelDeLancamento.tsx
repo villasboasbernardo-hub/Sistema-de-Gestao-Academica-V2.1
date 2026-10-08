@@ -24,6 +24,7 @@ import { GradeDsa } from "@/components/ciaara/grade-dsa";
 import { Button } from "@/components/ui/button";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import type { Semana } from "@/lib/dominio/dsa/grade";
+import type { GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 
 import { AcoesDoBloco, type FatoEscolhido } from "./AcoesDoBloco";
@@ -40,6 +41,10 @@ export type ResultadoDoEstudoIndividual =
 
 export type PainelDeLancamentoProps = {
   readonly semana: Semana;
+  /** A grade do modelo v4 — a MESMA montagem do `/print/dsa` (`montarDocumentoDoDsa`). */
+  readonly grade: GradeDoPapel | null;
+  /** As disciplinas do quadro de CH, para o nome no título do cartão. */
+  readonly disciplinasDaSemana: readonly { readonly codigo: string; readonly nome: string }[];
   readonly turmaId: string;
   readonly cursoId: string;
   readonly salaDaTurma: string | null;
@@ -113,6 +118,8 @@ function fatoDaSemana(semana: Semana, fatoId: string): FatoEscolhido | null {
 
 export function PainelDeLancamento({
   semana,
+  grade,
+  disciplinasDaSemana,
   turmaId,
   cursoId,
   salaDaTurma,
@@ -214,8 +221,8 @@ export function PainelDeLancamento({
           </Button>
           <span className="text-xs text-texto-suave">
             {podeMexer
-              ? "Clique numa célula livre para lançar, ou num lançamento para mover, editar e excluir."
-              : "Clique numa célula livre da grade para lançar nela."}
+              ? "Clique num tempo vazio para lançar, ou num cartão para mover, editar e excluir."
+              : "Clique num tempo vazio da grade para lançar nele."}
           </span>
         </div>
       ) : null}
@@ -234,6 +241,8 @@ export function PainelDeLancamento({
 
       <GradeDsa
         semana={semana}
+        grade={grade}
+        nomesDasDisciplinas={new Map(disciplinasDaSemana.map((d) => [d.codigo, d.nome] as const))}
         salaDaTurma={salaDaTurma}
         {...(podeLancar
           ? {

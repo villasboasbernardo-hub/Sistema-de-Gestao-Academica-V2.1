@@ -240,7 +240,8 @@ test.describe("`RN-DEG-02` · o alerta acompanha a gravação, e NÃO a impede",
 
     /*
      * ⚠️ **O LANÇAMENTO ACONTECEU.** Os tetos AEC/TAD/TR e o TA excepcional são **alerta**
-     * (`RN-DEG-02`), e o único bloqueio do épico é o TFM (`RN-DIST-03` (a)). Transformar este aviso
+     * (`RN-DEG-02`), e os dois bloqueios do épico são o teto de TFM (`RN-DIST-03` (a)) e o dia
+     * bloqueado no calendário (`RN-EVT-04`). Transformar este aviso
      * em impedimento mudaria a regra de negócio.
      */
     const avisos = page.locator('[data-slot="avisos-do-lancamento"]');
