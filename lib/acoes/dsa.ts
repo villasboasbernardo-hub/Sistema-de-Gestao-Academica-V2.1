@@ -32,6 +32,11 @@ import { avaliarODia, avaliarTetosDaSemana, type TetosDoDsa } from "@/lib/domini
 import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import { slotDoEstudoIndividual } from "@/lib/dominio/dsa/horario-do-bloco";
 import { camposDoEstudoIndividual } from "@/lib/dominio/dsa/rotulos";
+import {
+  motivoDoBloqueio,
+  recusaDeAulaNoDia,
+  type FeriadoDoCalendario,
+} from "@/lib/dominio/dsa/dia-bloqueado";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
@@ -159,7 +164,9 @@ async function tetosDoBanco(
 }
 
 /**
- * O veredito dos tetos para um lançamento de aula — **o único bloqueio do DSA** (`RN-DIST-03` (a)).
+ * O veredito dos tetos para um lançamento de aula — **o único bloqueio de TETO do DSA**
+ * (`RN-DIST-03` (a)). O outro bloqueio do DSA não é teto: é o dia bloqueado no calendário
+ * (`RN-EVT-04`, `recusaDoCalendario`).
  *
  * ⚠️ **A CONTA INCLUI O QUE ESTÁ SENDO GRAVADO**, e o módulo puro diz isso no tipo
  * (*"TA já lançados nesta semana, **incluindo** o que está sendo gravado"*). Avaliar só o que já
@@ -183,7 +190,7 @@ async function vereditoDosTetos(
      * ⚠️ **SEM ELE, MOVER UM BLOCO DENTRO DA MESMA SEMANA CONTA O BLOCO DUAS VEZES**, e um TFM de
      * 6 TA movido de terça para quinta viraria 12 na conta: a ação recusaria o movimento com a
      * frase do teto, dizendo que a pessoa passou de um limite que ela não passou. A `RN-DIST-03`
-     * (a) é o único bloqueio do épico, e um bloqueio por conta errada é pior que bloqueio nenhum.
+     * (a) é o único teto rígido do épico, e um bloqueio por conta errada é pior que bloqueio nenhum.
      */
     readonly ignorarFatoId?: string;
   },
@@ -270,6 +277,35 @@ async function disciplinaDoBloco(
 }
 
 /**
+ * O porteiro do calendário (`RN-EVT-04`, decisão de Bernardo Villas Boas de 07/10/2026): aula não
+ * entra em dia de feriado de dia inteiro **ativo**.
+ *
+ * ⚠️ **QUEM DECIDE QUAL DIA ESTÁ BLOQUEADO É `motivoDoBloqueio`** — a mesma função que pinta o dia na
+ * grade. Aqui só se lê o calendário daquela data; o `status` vem junto e a função o confere, para
+ * que o feriado inativado (regra 4) não recuse nada.
+ *
+ * ⚠️ **A SERVER ACTION É A DEFESA, NÃO A TELA.** A grade marca o dia e abre o formulário mesmo assim:
+ * a recusa chega daqui, com a frase da decisão. Não há `CHECK` nem gatilho, de propósito — a carga das
+ * planilhas e o histórico podem ter aula num dia que o calendário só bloqueou depois (ver a regra).
+ */
+async function recusaDoCalendario(
+  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+  data: string,
+  dataAtual: string | null = null,
+): Promise<string | null> {
+  const { data: linhas } = await supabase
+    .from("feriados")
+    .select("data, descricao, impacto, status")
+    .eq("data", data)
+    .eq("status", "ativo");
+  return recusaDeAulaNoDia({
+    data,
+    dataAtual,
+    feriados: (linhas ?? []) as FeriadoDoCalendario[],
+  });
+}
+
+/**
  * Grava um bloco (`RF-DSA-04`).
  *
  * ⚠️ **ELA É O CONTRATO DO ÉPICO 12:** o motor de prévia produz `Bloco` por função pura e chama
@@ -287,6 +323,10 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
   const marca = `DSA-${Date.now().toString(36).toUpperCase()}`;
 
   if (bloco.tipo === "aula") {
+    /* ⚠️ `RN-EVT-04`: o dia vem antes de tudo — se o calendário o bloqueia, nada mais importa. */
+    const doCalendario = await recusaDoCalendario(supabase, bloco.data);
+    if (doCalendario !== null) return falha(doCalendario);
+
     const disciplinaId = await disciplinaDoBloco(supabase, bloco);
     if (disciplinaId === null) return falha("Não identifiquei a disciplina da aula.");
     const recusa = await conferirHabilitacao(
@@ -298,8 +338,8 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     if (recusa !== null) return falha(recusa, "instrutorId");
 
     /*
-     * ⚠️ **O TETO DE TFM É O ÚNICO BLOQUEIO DO ÉPICO** (`RN-DIST-03` (a)), e ele é conferido
-     * **antes** de gravar. Os demais — teto recomendado, dia além do regime, TA excepcional — são
+     * ⚠️ **O TETO DE TFM É O ÚNICO TETO QUE BLOQUEIA** (`RN-DIST-03` (a)), e ele é conferido
+     * **antes** de gravar — como o dia bloqueado no calendário, acima (`RN-EVT-04`). Os demais — teto recomendado, dia além do regime, TA excepcional — são
      * ALERTA, e acompanham a gravação (`RN-DEG-02`): transformá-los em impedimento mudaria a regra.
      */
     const veredito = await vereditoDosTetos(supabase, {
@@ -458,8 +498,7 @@ export async function lancarEstudoIndividualDaSemana(
       .lte("data", ate),
     supabase
       .from("feriados")
-      .select("data, impacto")
-      .eq("impacto", "dia_inteiro")
+      .select("data, descricao, impacto, status")
       /* ⚠️ Só o feriado ATIVO bloqueia (regra 4) — o inativado deixava o dia sem Estudo Individual. */
       .eq("status", "ativo")
       .gte("data", de)
@@ -474,7 +513,8 @@ export async function lancarEstudoIndividualDaSemana(
       .lte("data", ate),
   ]);
 
-  const bloqueados = new Set(((feriadosRes.data ?? []) as { data: string }[]).map((f) => f.data));
+  /* ⚠️ O dia bloqueado é o da MESMA função da grade e da recusa de aula (`RN-EVT-04`). */
+  const feriados = (feriadosRes.data ?? []) as FeriadoDoCalendario[];
   const jaTem = new Set(((eiRes.data ?? []) as { data: string }[]).map((e) => e.data));
 
   const ultimoTaDoDia = new Map<string, number>();
@@ -488,7 +528,7 @@ export async function lancarEstudoIndividualDaSemana(
   const linhas: Record<string, unknown>[] = [];
   const pulados: string[] = [];
   for (const dia of uteis) {
-    if (bloqueados.has(dia)) {
+    if (motivoDoBloqueio(dia, feriados) !== null) {
       pulados.push(dia);
       continue;
     }
@@ -834,8 +874,12 @@ async function gravarNoFato(
  * perderia `criado_por` e **quebraria a vista de prova**, que é a mesma linha da avaliação.
  *
  * ⚠️ **O TETO DE TFM VALE TAMBÉM NO MOVER** (`FR-024`, `RN-DIST-03` (a)): mover 6 TA de TFM para uma
- * semana que já tem 4 estouraria o teto **sem passar por `lancar`**. É o único bloqueio do épico, e
+ * semana que já tem 4 estouraria o teto **sem passar por `lancar`**. É o único teto que bloqueia, e
  * ele não tem porta de serviço.
+ *
+ * ⚠️ **O DIA BLOQUEADO NO CALENDÁRIO TAMBÉM VALE NO MOVER** (`RN-EVT-04`): sem isso bastaria lançar a
+ * aula na véspera e arrastá-la para o feriado. Reposicionar **dentro** do próprio dia não é recusado
+ * — a aula já está lá, e recusar impediria corrigir o tempo de um lançamento existente.
  *
  * ⚠️ **E O PRÓPRIO BLOCO SAI DA CONTA DO TETO** — ver a nota de `ignorarFatoId`: sem isso, mover
  * dentro da mesma semana contaria o bloco duas vezes e a ação recusaria dizendo que a pessoa passou
@@ -852,6 +896,11 @@ export async function mover(entrada: unknown): Promise<ResultadoDoLancamento> {
 
   const fato = await lerFato(supabase, movimento.origem, movimento.fatoId);
   if (fato === null) return falha("Não encontrei este lançamento.");
+
+  if (movimento.origem === "aula") {
+    const doCalendario = await recusaDoCalendario(supabase, movimento.data, fato.data);
+    if (doCalendario !== null) return falha(doCalendario);
+  }
 
   const pedeUnidade = await faltaAUnidadeDaCatraca(
     supabase,

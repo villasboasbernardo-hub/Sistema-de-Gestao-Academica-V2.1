@@ -144,7 +144,14 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
     codDisciplina: `D${processo}`,
     codDisciplinaIsenta: `I${processo}`,
     codDisciplinaTfm: `T${processo}`,
-    nomeHabilitado: "Silva Do Percurso Do Dsa",
+    /*
+     * ⚠️ **O NOME LEVA O SUFIXO DO PROCESSO, e sem ele o seletor escolhia o instrutor ERRADO.** Cada
+     * processo grava o seu instrutor habilitado na SUA disciplina; com o mesmo nome nos dois, o
+     * `.first()` da busca pegava o do outro processo, e a gravação era recusada pela `RN-INST-01`
+     * (*"não está habilitado em D0"*, medido em 07/10/2026 com dois processos) — um caso que passa
+     * sozinho e reprova na suíte, que é a classe `e2e-instrutores-fragil-sob-carga`.
+     */
+    nomeHabilitado: `Silva Do Percurso Do Dsa ${s}`,
     nomeSemHabilitacao: "Sem Vinculo Do Percurso",
   };
 
@@ -455,6 +462,12 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
       .maybeSingle();
     if (existe) {
       instrutorId = (existe as { id: string }).id;
+      /* A linha de uma rodada anterior pode ter o nome antigo, sem o sufixo: ele é reposto. */
+      const { error: erroNome } = await admin()
+        .from("instrutores")
+        .update({ nome_completo: semeado.nomeHabilitado })
+        .eq("id", instrutorId);
+      if (erroNome) throw new Error(`falha ao repor o nome do instrutor: ${erroNome.message}`);
     } else {
       const { data, error } = await admin()
         .from("instrutores")
@@ -462,7 +475,7 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
           codigo: `DSA-${s}-INS`,
           posto_graduacao: "1ºTEN",
           esp_hab_obs: "-EF",
-          nome_completo: "Silva Do Percurso Do Dsa",
+          nome_completo: semeado.nomeHabilitado,
           categoria: "Militar",
           om: "CIAARA",
         })
@@ -532,7 +545,7 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
    *
    * ⚠️ A isenta é o que faz o modo *"Aula sem unidade"* aparecer: a tela só o oferece onde
    * `app.disciplina_sem_ue` vale, e oferecê-lo sempre faria o banco recusar com `23514`.
-   * ⚠️ A de TFM existe para o **único bloqueio** do épico: o nome casa com o marcador `tfm` que
+   * ⚠️ A de TFM existe para o **único teto que bloqueia** no épico: o nome casa com o marcador `tfm` que
    * `lib/dominio/dsa/tetos.ts` normaliza sem acento.
    */
   for (const d of [
@@ -635,7 +648,17 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
       conteudo_resumo: "Aula de sábado",
       local: semeado.sala,
     },
-    /* Uma aula gravada no dia do feriado de DIA INTEIRO: ela continua VISÍVEL. */
+    /*
+     * Uma aula gravada no dia do feriado de DIA INTEIRO: ela continua VISÍVEL.
+     *
+     * ⚠️ **PELA TELA ESTA AULA NÃO NASCE MAIS** (`RN-EVT-04`, decisão de Bernardo Villas Boas de
+     * 07/10/2026): `lancar` e `mover` recusam aula em dia bloqueado no calendário. Ela continua na
+     * semente porque continua existindo no mundo real — pelos dois caminhos que não passam pela
+     * tela: o calendário ajustado **depois** do lançamento (é a ordem desta semente: as aulas são
+     * gravadas antes dos feriados, mais abaixo) e a carga das planilhas de controle. E a decisão de
+     * 06/10/2026 manda MOSTRAR o que existe no dia — é o que `dsa-ver`, `dsa-imprimir` e `dsa-mover`
+     * conferem com ela. Ela entra direto no banco, como a carga, e por isso a recusa não a alcança.
+     */
     {
       codigo: `DSA-${s}-A4`,
       data: QUARTA,
@@ -734,7 +757,12 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
     if (erroAv) throw new Error(`falha ao criar a avaliação ${av.codigo}: ${erroAv.message}`);
   }
 
-  /* Os TRÊS impactos de feriado, na mesma semana (`RN-EVT-02`). */
+  /*
+   * Os TRÊS impactos de feriado, na mesma semana (`RN-EVT-02`) — gravados DEPOIS das aulas, que é a
+   * ordem em que uma aula passa a existir num dia bloqueado sem passar pela recusa (`RN-EVT-04`).
+   * ⚠️ O feriado é **nacional** e cada processo grava o seu na MESMA quarta: com dois processos, a
+   * quarta tem dois feriados de dia inteiro, e o motivo exibido pode ser o do outro processo.
+   */
   for (const f of [
     { data: QUARTA, descricao: `Feriado de dia inteiro ${s}`, impacto: "dia_inteiro" },
     { data: QUINTA, descricao: `Ponto facultativo ${s}`, impacto: "parcial" },

@@ -8,18 +8,18 @@
  *   · clicar no cartão → editar o tópico → o cartão muda;
  *   · clicar no cartão → excluir → o cartão some, e a linha fica `inativo` (regra 4);
  *   · o dia de feriado de DIA INTEIRO sai bloqueado na grade, com o motivo, e o EI da semana em um
- *     clique não lança nele (`RN-EVT-02`, `Q-7`).
+ *     clique não lança nele (`RN-EVT-02`, `Q-7`);
+ *   · ⚠️ **LANÇAR OU MOVER UMA AULA PARA ESSE DIA É RECUSADO** (`RN-EVT-04`, decisão de Bernardo Villas
+ *     Boas de 07/10/2026), com a frase da decisão — e a contagem no banco não muda.
  *
- * ⚠️ **O BLOQUEIO DO FERIADO É O QUE JÁ EXISTE, nem mais nem menos.** Hoje a Server Action `lancar`
- * NÃO recusa aula em feriado de dia inteiro (a semente tem "Aula no dia do feriado", e o
- * `dsa-ver.spec.ts` exige que ela continue visível); quem respeita o calendário é o EI da semana. A
- * grade marca o dia; recusar a aula seria regra nova, fora do escopo desta tela.
+ * ⚠️ **A TELA NÃO BLOQUEIA NADA SOZINHA, e é isso que faz o caso provar a Server Action:** a grade
+ * marca o dia e abre o formulário mesmo assim; a recusa só pode ter vindo de `lancar`/`mover`.
  */
 import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
-import { ANO, limparDsa, QUARTA, SEMANA, semearDsa, type DsaSemeado } from "./dsa-de-teste";
+import { ANO, limparDsa, QUARTA, SEMANA, semearDsa, TERCA, type DsaSemeado } from "./dsa-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
 
 let EMAIL = "";
@@ -54,6 +54,31 @@ async function abrirASemana(page: Page): Promise<void> {
     `/turmas/${encodeURIComponent(SEMEADO.turmaComRelogio)}/dsa?semana=${SEMANA}&ano=${ANO}`,
   );
   await expect(page.locator(GRADE)).toBeVisible();
+}
+
+/**
+ * A frase da `RN-EVT-04`, com o motivo de QUALQUER processo: o feriado da semente é nacional e cada
+ * processo grava o seu na mesma quarta, então o motivo pode ser o de outro processo.
+ */
+const RECUSA_DO_CALENDARIO =
+  /Dia bloqueado no calendário: Feriado de dia inteiro \S+\. Para lançar, ajuste o calendário\./;
+
+async function idDaTurma(): Promise<string> {
+  const { data } = await banco()
+    .from("turmas")
+    .select("id")
+    .eq("codigo", SEMEADO.turmaComRelogio)
+    .maybeSingle();
+  return (data as { id: string } | null)?.id ?? "";
+}
+
+async function aulasNaQuarta(): Promise<number> {
+  const { count } = await banco()
+    .from("registros_aula")
+    .select("id", { count: "exact", head: true })
+    .eq("turma_id", await idDaTurma())
+    .eq("data", QUARTA);
+  return count ?? -1;
 }
 
 async function situacaoDaAula(topico: string): Promise<string | null> {
@@ -170,18 +195,76 @@ test.describe("`RN-EVT-02` · o dia de feriado de DIA INTEIRO na grade", () => {
     await expect(page.locator('[data-slot="resposta-do-estudo-individual"]')).toBeVisible({
       timeout: 30_000,
     });
-    const { data: turma } = await banco()
-      .from("turmas")
-      .select("id")
-      .eq("codigo", SEMEADO.turmaComRelogio)
-      .maybeSingle();
     const { count } = await banco()
       .from("atividades_nao_letivas")
       .select("id", { count: "exact", head: true })
-      .eq("turma_id", (turma as { id: string } | null)?.id ?? "")
+      .eq("turma_id", await idDaTurma())
       .eq("data", QUARTA)
       .eq("categoria_normativa", "Estudo_Individual")
       .eq("status", "ativo");
     expect(count ?? 0, "o feriado de dia inteiro recebeu Estudo Individual").toBe(0);
+  });
+});
+
+test.describe("⚠️ `RN-EVT-04` · aula não entra em dia de feriado de DIA INTEIRO", () => {
+  test("LANÇAR pela grade no dia bloqueado é recusado pela Server Action, com o motivo", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const antes = await aulasNaQuarta();
+    expect(antes, "não li as aulas da quarta no banco").toBeGreaterThanOrEqual(0);
+    await abrirASemana(page);
+
+    /* 6º tempo da quarta (coluna 2): vazio e bloqueado — e a tela abre o formulário mesmo assim. */
+    const celula = page.locator(`${GRADE} td[data-celula="5:2"]`);
+    await expect(celula).toHaveAttribute("data-tom", "bloqueada");
+    await celula.click();
+    await expect(page.locator(FORMULARIO)).toBeVisible();
+    await expect(page.locator('[data-slot="alvo-do-lancamento"]')).toContainText(QUARTA);
+
+    await page.locator("#dsa-unidade").selectOption({ index: 1 });
+    await page.locator('[data-slot="seletor-instrutor"]').first().click();
+    await page
+      .locator('[data-slot="popover-content"]')
+      .getByRole("option", { name: new RegExp(SEMEADO.nomeHabilitado, "i") })
+      .first()
+      .click();
+    await page.locator("#dsa-conteudo").fill("Aula que o calendário recusa");
+    await page.locator("#dsa-tempos").fill("1");
+    await page.locator('[data-slot="gravar-lancamento"]').click();
+
+    const recusa = page.locator('[data-slot="recusa-do-lancamento"]');
+    await expect(recusa).toBeVisible({ timeout: 60_000 });
+    await expect(recusa).toHaveText(RECUSA_DO_CALENDARIO);
+    /* ⚠️ A prova é o banco: nenhuma aula nova na quarta. */
+    expect(await aulasNaQuarta(), "a aula entrou no dia bloqueado").toBe(antes);
+  });
+
+  test("MOVER uma aula de outro dia PARA o dia bloqueado também é recusado", async ({ page }) => {
+    test.setTimeout(120_000);
+    /* A aula do laboratório (`A2`) — mesmo cálculo de sufixo de `dsa-mover.spec.ts`. */
+    const sufixo = SEMEADO.turmaComRelogio
+      .replace(/^CUR-/, "")
+      .replace(/ 2026$/, "")
+      .replace(/-REL$/, "");
+    const codigo = `DSA-${sufixo}-A2`;
+    await abrirASemana(page);
+
+    /* A aula do laboratório, na terça, 1º tempo (coluna 1) → tentar levá-la à quarta, 6º tempo. */
+    await page.locator(`${GRADE} td[data-celula="0:1"]`).click();
+    await expect(page.locator(ACOES)).toBeVisible();
+    await page.locator("#dsa-mover-dia").selectOption(QUARTA);
+    await page.locator("#dsa-mover-ta").selectOption("6");
+    await page.locator('[data-slot="confirmar-movimento"]').click();
+
+    const recusa = page.locator('[data-slot="recusa-da-acao"]');
+    await expect(recusa).toBeVisible({ timeout: 60_000 });
+    await expect(recusa).toHaveText(RECUSA_DO_CALENDARIO);
+    const { data } = await banco()
+      .from("registros_aula")
+      .select("data")
+      .eq("codigo", codigo)
+      .maybeSingle();
+    expect((data as { data: string } | null)?.data, "a aula foi movida para o feriado").toBe(TERCA);
   });
 });

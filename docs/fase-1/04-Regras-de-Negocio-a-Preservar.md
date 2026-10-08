@@ -99,12 +99,15 @@ A maioria das regras usa **mais de uma camada**. A coluna "camada principal" ind
 | `RN-EVT-03` | **Alto** | ✅ | View / coluna gerada | Constraint | CHD incluindo avaliação e vista |
 | `RN-AVAL-02` | **Alto** | ✅ | Constraint | Server Action (transação) | `avaliacoes` como fato único |
 | `RN-EVT-02` | Médio | — | Domínio TS puro | Constraint | `impacto_feriado` ENUM |
+| `RN-EVT-04` | Médio | — | Server Action | Domínio TS puro | `lancar`/`mover` em `lib/acoes/dsa.ts` · `lib/dominio/dsa/dia-bloqueado.ts` **[NOVA — 07/10/2026]** |
 | `RN-DEG-01` | **Alto** | — | Princípio geral | Domínio TS · App Router | `error.tsx` · retorno neutro com avisos |
 | `RN-DEG-02` | Médio | ✅ | Princípio geral | Server Action · UI | `AlertaConformidade` · campo de justificativa |
 
 **Contagem por camada principal:** Domínio TS puro — 14 regras (todas as de cálculo); Constraint — 10; View — 6; RLS — 2; Server Action — 1; Trigger — 1; princípios gerais — 2; absorvidas/históricas — 2.
 
 **Contagem por risco:** Alto — 21 regras; Médio — 17; Baixo — 2. As 21 de risco Alto são exatamente as que exigem **asserção nomeada na suíte de invariantes** pela Definition of Done (BRIEF §7.3), mesmo que inicialmente como *stub* explicitamente pendente.
+
+> ⚠️ **As duas contagens acima são de ANTES da `RN-EVT-04`** (acrescentada em 07/10/2026, camada principal Server Action, risco Médio) e não foram refeitas: recontar a tabela inteira para mudar dois números é o tipo de afirmação que a regra 9.3 do `CLAUDE.md` manda medir antes de escrever, e a medição não era o objeto desta emenda.
 
 ---
 
@@ -361,6 +364,14 @@ Fórmula normativa: **CHT = CHD + AEC + TAD + TR** (Estudo Individual não integ
 **RN-EVT-02.** Um evento global (feriado) só desconta capacidade de cálculo quando seu impacto está marcado como "Dia Inteiro"; impacto parcial ou informativo não desconta nada. **Risco: Médio.**
 
 > **Implementação v2.1:** **Domínio TS puro + constraint.** `impacto_feriado` é ENUM nativo (domínio normativo fechado), `NOT NULL`, na tabela `feriados` — o que elimina o caso, possível no Sheets, de célula vazia sendo interpretada como "Dia Inteiro" por engano. A regra de desconto vive em `lib/dominio/calendario.ts` e é consumida pelo motor preditivo (`RN-2027-02`) e pelo Cronograma. **Teste:** Vitest com os três valores de impacto, verificando que apenas "Dia Inteiro" reduz a capacidade e que os demais não alteram o cálculo.
+
+**RN-EVT-04. [NOVA — v2.1, 07/10/2026]** Não se lança aula em dia de feriado de dia inteiro do calendário ativo. A recusa vale para toda gravação que ponha uma aula nesse dia — lançar, ou mover de outro dia para ele — e diz o motivo com estas palavras: *"Dia bloqueado no calendário: <motivo>. Para lançar, ajuste o calendário."* O que já estiver gravado no dia continua visível e contando. **Risco: Médio.** *Origem: decisão do responsável de 07/10/2026, na conferência do PR #38 (tela do DSA em grade).*
+
+> ⚠️ **REGRA NOVA, COM AUTORIZAÇÃO NOMINAL** — é o que a regra 1 do `CLAUDE.md` exige para tocar este documento. *(**Autorização de Bernardo Villas Boas, 07/10/2026:** «uma regra nova minha: BLOQUEAR LANÇAMENTO DE AULA EM DIA DE FERIADO DE DIA INTEIRO (calendário ativo), com mensagem clara ("Dia bloqueado no calendário: <motivo>. Para lançar, ajuste o calendário."). Vale na Server Action (não só na tela), com teste; ajuste a semente que tem "Aula no dia do feriado". Registre como RN nova no documento de regras.»)* Nenhuma regra existente muda: a `RN-EVT-02` continua dizendo o que o dia de impacto «Dia Inteiro» **desconta**; esta diz o que ele **recusa**.
+>
+> **Implementação v2.1:** **Domínio TS puro + Server Action.** O motivo do bloqueio sai de `motivoDoBloqueio(data, feriados)`, em `lib/dominio/dsa/dia-bloqueado.ts` — **a mesma função** que marca o dia bloqueado na grade do DSA (`montarSemana`) e que faz o *EI da semana em um clique* pular o dia (`Q-7`), para que a tela, a recusa e o EI nunca discordem sobre qual dia está bloqueado. As Server Actions `lancar` e `mover` (`lib/acoes/dsa.ts`) leem os feriados **ativos** da data e recusam **antes** de gravar. **Delimitação, tal como a decisão foi escrita:** (i) vale para **aula** (`registros_aula`) — avaliação e atividade não letiva não são recusadas por esta regra; (ii) «calendário ativo» é `feriados.status = 'ativo'` — o feriado inativado não bloqueia (regra 4); (iii) só o impacto `dia_inteiro` bloqueia — `parcial` e `informativo` continuam sendo aviso (`RN-EVT-02`); (iv) **mover** uma aula **para** o dia bloqueado é recusado, porque sem isso bastaria lançar na véspera e arrastar; **reposicionar** dentro do próprio dia, não — a aula já está lá, e recusar impediria corrigir o tempo de um lançamento existente. ⚠️ **NÃO É `CHECK` NEM GATILHO, e de propósito:** o histórico e a carga das planilhas de controle podem trazer aula num dia que o calendário só bloqueou **depois** (medido na carga piloto do `C-Exp-Obs-ME 2026`, em 06/10/2026: um lançamento em 02/10, dia de licença), e a decisão de 06/10/2026 manda **mostrar** o que existe nesse dia, não escondê-lo. Um bloqueio no banco faria a próxima sincronização falhar sobre um fato real. ⚠️ **E não contraria a `RN-DEG-02`:** aquela trata de regra derivada de **norma externa** cujo descumprimento não se verifica com certeza (9º TA, capacitação didática); esta é um **fato do calendário**, decidido pelo responsável, e o próprio texto da recusa diz como resolvê-la. **Teste:** Vitest nomeado `RN-EVT-04` com os três impactos, o feriado inativo, a data de outro dia e a data com carimbo de hora; e2e que lança e que move uma aula para o dia bloqueado pela grade e confere a recusa **e** a contagem intacta no banco — a tela não bloqueia nada sozinha, então a recusa só pode ter vindo da Server Action.
+>
+> ⚠️ **Esta regra vai SÓ no `.md`, e o `.md` é o que prevalece.** Pela regra do projeto de 17/09/2026, o `.docx` é o documento original entregue e **não é emendado**: o `.docx` deste documento **não recebeu** a `RN-EVT-04`, e a divergência é esperada e está registrada aqui.
 
 ---
 

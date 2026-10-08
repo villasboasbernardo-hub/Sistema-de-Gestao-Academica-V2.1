@@ -25,7 +25,7 @@ import {
 /** Os valores de `config_parametros` (spec 013, `data-model.md` §3.9). */
 const TETOS: TetosDoDsa = { tfmSemana: 6, recomendadoSemana: 25 };
 
-describe("`RN-DIST-03` (a) · TFM tem teto RÍGIDO, e é o único bloqueio do sistema", () => {
+describe("`RN-DIST-03` (a) · TFM tem teto RÍGIDO, e é o único TETO que bloqueia", () => {
   it("TFM com 7 TA na semana BLOQUEIA", () => {
     const veredito = avaliarTetosDaSemana([{ nome: "TFM", taNaSemana: 7 }], TETOS);
 
