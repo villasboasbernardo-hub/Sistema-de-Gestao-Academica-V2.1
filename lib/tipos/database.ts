@@ -3910,6 +3910,10 @@ export type Database = {
         Args: { p_dados: Json; p_instrutor_id: string }
         Returns: undefined
       }
+      gravar_lancamentos_em_transacao: {
+        Args: { p_operacoes: Json }
+        Returns: number
+      }
       impedimentos_de_exclusao_da_disciplina: {
         Args: { p_disciplina_id: string }
         Returns: string[]
