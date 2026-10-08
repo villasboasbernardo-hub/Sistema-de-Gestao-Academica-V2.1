@@ -18,8 +18,9 @@
  * medir **o papel**, que é o que eles existem para medir.
  */
 import { expect, test, type Page } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 
-import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import {
   ANO,
   ANO_A_FRENTE,
@@ -28,6 +29,7 @@ import {
   ASSINANTE_ENCARREGADO,
   CONTEUDO_A_FRENTE,
   limparDsa,
+  SEGUNDA,
   SEMANA,
   SEMANA_A_FRENTE,
   SEMANA_DE_JULHO,
@@ -36,6 +38,7 @@ import {
   type DsaSemeado,
 } from "./dsa-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
+import { irParaASemanaDoDia } from "./percurso-do-dsa";
 
 let EMAIL = "";
 let SEMEADO: DsaSemeado;
@@ -355,6 +358,16 @@ test.describe("⚠️ item 7 · a ASSINATURA traz o posto POR EXTENSO; a coluna 
     await expect(assinaturasNaTela).not.toContainText(/1º\s*ten/i);
     await expect(assinaturasNaTela).not.toContainText(/\bCC\b/);
 
+    /*
+     * ⚠️ **ITEM 3 DA CONFERÊNCIA DO PR #40 (08/10/2026): o «lançado à frente» SAIU DA TELA** — nem
+     * marca no cartão, nem frase no rodapé. É esta a semana que tem aula à frente, então é aqui que a
+     * ausência discrimina. O papel continua com a frase (abaixo).
+     */
+    await expect(cartaoNaTela).not.toContainText("lançado à frente");
+    await expect(page.locator('[data-slot="rodape-da-semana"]')).not.toContainText(
+      "ainda não chegaram",
+    );
+
     /* ── 2. No papel, pelo botão Imprimir ─────────────────────────────────────────────────── */
     await page.locator('[data-slot="imprimir-dsa"]').click();
     /* ⚠️ A tela também tem cartões: sem esperar a URL, as asserções seguintes leriam a tela. */
@@ -372,6 +385,8 @@ test.describe("⚠️ item 7 · a ASSINATURA traz o posto POR EXTENSO; a coluna 
     await expect(cartaoNoPapel).toHaveCount(1);
     await expect(cartaoNoPapel).toContainText("1ºTEN");
     await expect(cartaoNoPapel).not.toContainText("Primeiro-Tenente");
+    /* ⚠️ O papel NÃO mudou no item 3: a frase do «lançado à frente» continua nele. */
+    await expect(page.locator('[data-slot="dsa-a-frente"]')).toContainText(`${TA_A_FRENTE} TA`);
   });
 
   test("sem quadro cadastrado, nada entre parênteses — abril sai só `Primeiro-Tenente`", async ({
@@ -379,6 +394,98 @@ test.describe("⚠️ item 7 · a ASSINATURA traz o posto POR EXTENSO; a coluna 
   }) => {
     await abrirAImpressao(page, SEMANA);
     await expect(page.locator(POSTO_DA_ESQUERDA)).toHaveText("Primeiro-Tenente");
+  });
+});
+
+/**
+ * ⚠️ **ITEM 4 DA CONFERÊNCIA DO PR #40** *(decisão de Bernardo Villas Boas, 08/10/2026)*: *"os campos
+ * das duas assinaturas vêm preenchidos com o resolvido hoje e podem ser EDITADOS antes de imprimir
+ * (alguém assina no lugar de outro, ou a pessoa não está cadastrada). O que foi editado vai para a
+ * IMPRESSÃO. NÃO grava no cadastro nem no banco («imprimiu, imprimiu»)."*
+ *
+ * ⚠️ **AS DUAS METADES SÃO MEDIDAS, e só as duas juntas provam o pedido**: o papel traz o editado
+ * **e** `responsaveis_curso` sai do percurso idêntico ao que entrou — lido pelo cliente de serviço,
+ * que enxerga a linha sem depender de RLS. Uma edição que gravasse no cadastro passaria na primeira
+ * metade e reprovaria na segunda.
+ */
+test.describe("⚠️ item 4 · assinatura editada na tela vai para o papel, e o banco não muda", () => {
+  const servico = () =>
+    createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+  /** A linha do Encarregado semeada por `semearDsa` para este processo. */
+  async function linhaDoEncarregado() {
+    const { data, error } = await servico()
+      .from("responsaveis_curso")
+      .select("codigo, nome_completo, posto_graduacao, especialidade, funcao_descricao, editado_em")
+      .eq("codigo", `DSA-E2D${PROCESSO}-ENC-1`)
+      .single();
+    if (error) throw new Error(`não li o responsável semeado: ${error.message}`);
+    return data as {
+      readonly codigo: string;
+      readonly nome_completo: string | null;
+      readonly posto_graduacao: string | null;
+      readonly especialidade: string | null;
+      readonly funcao_descricao: string;
+      readonly editado_em: string | null;
+    };
+  }
+
+  test("ficha → Abrir o DSA → semana pela data → Editar → Imprimir → papel com o editado", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const antes = await linhaDoEncarregado();
+
+    await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
+    await page.locator('[data-slot="abrir-o-dsa"]').click();
+    await expect(page.getByRole("heading", { name: "Detalhe Semanal de Aula" })).toBeVisible();
+    await irParaASemanaDoDia(page, SEGUNDA, SEMANA, ANO);
+
+    /* ── 1. Na tela: vem preenchido com o resolvido, e se edita ──────────────────────────── */
+    const direita = page.locator('[data-slot="tela-assinatura-direita"]');
+    await expect(direita).toContainText(`Capitão de Corveta ${antes.nome_completo ?? ""}`);
+    await direita.locator('[data-acao="editar-assinatura-direita"]').click();
+
+    const nome = page.getByLabel("Nome — assinatura à direita");
+    const posto = page.getByLabel("Posto/graduação, por extenso — assinatura à direita");
+    await expect(nome).toHaveValue(antes.nome_completo ?? "");
+    await expect(posto).toHaveValue("Capitão de Corveta");
+
+    await nome.fill("SUBSTITUTO DO ENCARREGADO");
+    await posto.fill("Capitão-Tenente");
+    /* A prévia acompanha, e diz que a edição é só desta impressão. */
+    await expect(direita).toContainText("Capitão-Tenente SUBSTITUTO DO ENCARREGADO");
+    await expect(direita.locator('[data-slot="tela-assinatura-aviso"]')).toBeVisible();
+    await expect(page.locator('[data-slot="imprimir-dsa"]')).toHaveAttribute(
+      "data-assinatura-editada",
+      "sim",
+    );
+
+    /* ── 2. No papel, pelo botão Imprimir ─────────────────────────────────────────────────── */
+    await page.locator('[data-slot="imprimir-dsa"]').click();
+    await page.waitForURL(/\/print\/dsa/);
+    const url = new URL(page.url());
+    expect(url.searchParams.get("semana")).toBe(String(SEMANA));
+    expect(url.searchParams.get("dir_nome")).toBe("SUBSTITUTO DO ENCARREGADO");
+    /* Só o editado viaja: a função e o lado esquerdo não entraram no endereço. */
+    expect(url.searchParams.has("dir_funcao")).toBe(false);
+    expect(url.searchParams.has("esq_nome")).toBe(false);
+
+    await expect(page.locator(DOCUMENTO)).toBeVisible();
+    const papel = page.locator('[data-slot="dsa-assinatura-direita"]');
+    await expect(papel).toContainText("SUBSTITUTO DO ENCARREGADO");
+    await expect(papel.locator('[data-slot="dsa-assinatura-posto"]')).toHaveText("Capitão-Tenente");
+    await expect(papel).toContainText("Encarregado da Div. de Adm. Academica");
+    await expect(papel).not.toContainText(antes.nome_completo ?? "?");
+    /* O lado que ninguém editou continua o resolvido pela data. */
+    await expect(page.locator('[data-slot="dsa-assinatura-esquerda"]')).toContainText(
+      ASSINANTE_DE_ABRIL,
+    );
+
+    /* ── 3. E o banco não mudou: «imprimiu, imprimiu» ─────────────────────────────────────── */
+    expect(await linhaDoEncarregado()).toEqual(antes);
   });
 });
 

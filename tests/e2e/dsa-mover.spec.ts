@@ -164,7 +164,7 @@ test.describe("⚠️ critério 7 · mover é UPDATE do mesmo registro", () => {
      * *"o formulário de lançar não abriu"*, que não diz nada sobre a causa.
      */
     await page.locator("#dsa-mover-dia").selectOption("2026-04-10");
-    await page.locator('[data-slot="confirmar-movimento"]').click();
+    await page.locator('[data-slot="gravar-edicao"]').click();
     expect(await aguardarAcao(page)).toBe("fechou");
 
     const depois = await retratoDaAula(codigo);
@@ -231,11 +231,14 @@ test.describe("⚠️ `Q-1` · mover linha histórica SEM unidade de ensino pede
     await page.locator(`${GRADE} td[data-celula="7:3"]`).click();
     await expect(page.locator(ACOES)).toBeVisible();
 
-    /* ⚠️ O campo da unidade **aparece**, e só aqui: é a linha que a catraca alcança. */
-    await expect(page.locator("#dsa-unidade-da-catraca")).toBeVisible();
+    /*
+     * ⚠️ **NO CARTÃO ÚNICO (ajuste 1 do PR #40) A CATRACA É ATENDIDA PELOS CAMPOS DE SEMPRE**: a linha
+     * herdada não tem disciplina nem UE gravadas, e o campo da disciplina nasce VAZIO — o valor gravado.
+     */
+    await expect(page.locator("#dsa-editar-disciplina")).toHaveValue("");
 
     await page.locator("#dsa-mover-dia").selectOption("2026-04-07");
-    await page.locator('[data-slot="confirmar-movimento"]').click();
+    await page.locator('[data-slot="gravar-edicao"]').click();
 
     const recusa = page.locator('[data-slot="recusa-da-acao"]');
     await expect(recusa).toBeVisible();
@@ -253,9 +256,15 @@ test.describe("⚠️ `Q-1` · mover linha histórica SEM unidade de ensino pede
 
     await page.locator(`${GRADE} td[data-celula="7:3"]`).click();
     await expect(page.locator(ACOES)).toBeVisible();
-    await page.locator("#dsa-unidade-da-catraca").selectOption({ index: 1 });
+    const opcao = page
+      .locator("#dsa-editar-disciplina option")
+      .filter({ hasText: new RegExp(`^${SEMEADO.codDisciplina} — `) });
+    await page
+      .locator("#dsa-editar-disciplina")
+      .selectOption((await opcao.getAttribute("value")) ?? "");
+    await page.locator("#dsa-editar-unidade").selectOption({ index: 1 });
     await page.locator("#dsa-mover-dia").selectOption("2026-04-07");
-    await page.locator('[data-slot="confirmar-movimento"]').click();
+    await page.locator('[data-slot="gravar-edicao"]').click();
     expect(await aguardarAcao(page)).toBe("fechou");
 
     const depois = await retratoDaAula(codigo);
@@ -285,11 +294,10 @@ test.describe("`SC-012` · editar não toca o catálogo", () => {
     /* `A2` está na terça-feira (coluna 1), TA 1 — a primeira linha navegável. */
     await page.locator(`${GRADE} td[data-celula="0:1"]`).click();
     await expect(page.locator(ACOES)).toBeVisible();
-    await page.locator('[data-aba="editar"]').click();
 
     await page.locator("#dsa-editar-local").fill("Sala 04");
     await page.locator("#dsa-editar-conteudo").fill("Tópico trocado só nesta aula");
-    await page.locator('[data-slot="confirmar-edicao"]').click();
+    await page.locator('[data-slot="gravar-edicao"]').click();
     expect(await aguardarAcao(page)).toBe("fechou");
 
     const depois = await retratoDaAula(codigo);
@@ -329,14 +337,13 @@ test.describe("`SC-012` · editar não toca o catálogo", () => {
       .maybeSingle();
 
     await page.locator(`${GRADE} td[data-celula="0:1"]`).click();
-    await page.locator('[data-aba="editar"]').click();
     await page.locator('[data-slot="seletor-instrutor"]').first().click();
     await page
       .locator('[data-slot="popover-content"]')
       .getByRole("option", { name: new RegExp(SEMEADO.nomeSemHabilitacao, "i") })
       .first()
       .click();
-    await page.locator('[data-slot="confirmar-edicao"]').click();
+    await page.locator('[data-slot="gravar-edicao"]').click();
 
     const recusa = page.locator('[data-slot="recusa-da-acao"]');
     await expect(recusa).toBeVisible();
@@ -423,11 +430,11 @@ test.describe("`Q-12` · posicionar o que está na faixa «Sem posição» é o 
     await naFaixa.click();
 
     await expect(page.locator(ACOES)).toBeVisible();
-    /* ⚠️ O botão diz **Posicionar**, não "Mover": é a mesma ação, com o nome do que se está fazendo. */
-    await expect(page.locator('[data-slot="confirmar-movimento"]')).toContainText("Posicionar");
+    /* ⚠️ O cartão diz que o lançamento está **sem posição** — e posicionar é escolher o tempo e gravar. */
+    await expect(page.locator('[data-slot="bloco-escolhido"]')).toContainText("sem posição");
 
     await page.locator("#dsa-mover-ta").selectOption("7");
-    await page.locator('[data-slot="confirmar-movimento"]').click();
+    await page.locator('[data-slot="gravar-edicao"]').click();
     expect(await aguardarAcao(page)).toBe("fechou");
 
     const depois = await retratoDaAula(codigo);

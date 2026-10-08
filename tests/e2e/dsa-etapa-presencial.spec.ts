@@ -137,6 +137,11 @@ test.describe("⚠️ `D-DSA-2` · a turma semipresencial só tem DSA na etapa p
 
     /* ── 1. Sem a etapa cadastrada: o DSA abre como sempre, e AVISA (`RN-DEG-01`) ────────── */
     await irAFichaDaTurma(page, EMAIL, TURMA);
+    /*
+     * ⚠️ **SEMIPRESENCIAL MANTÉM O BOTÃO** (item 9 da conferência do PR #40, 08/10/2026): só a turma
+     * EAD puro troca o botão pelo aviso. É o controle positivo do caso `Q-13` de `dsa-ver.spec.ts`.
+     */
+    await expect(page.locator('[data-slot="dsa-turma-ead"]')).toHaveCount(0);
     await page.locator('[data-slot="abrir-o-dsa"]').click();
     const semEtapa = page.locator('[data-slot="dsa-sem-etapa-presencial"]');
     await expect(semEtapa).toBeVisible();

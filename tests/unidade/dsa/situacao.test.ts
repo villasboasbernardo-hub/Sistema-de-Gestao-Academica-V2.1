@@ -14,6 +14,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  estaAtrasada,
   quadroDaDisciplina,
   quadroDaUnidade,
   situacaoDaDisciplina,
@@ -209,7 +210,7 @@ describe("`RN-DEG-01` · prevista 0 degrada para `null`, nunca para zero", () =>
 
 describe("`RF-DSA-05` · a precedência isolada, sem a soma", () => {
   it("os quatro degraus saem na ordem escrita", () => {
-    const base = { chPrevista: 30, chAcumulada: 30, temConflito: false };
+    const base = { chPrevista: 30, chAcumulada: 30, temConflito: false, atrasada: false };
 
     expect(situacaoDaDisciplina({ ...base, temLancamento: false })).toBe("aguardando_inicio");
     expect(situacaoDaDisciplina({ ...base, temLancamento: true, temConflito: true })).toBe(
@@ -227,9 +228,217 @@ describe("`RF-DSA-05` · a precedência isolada, sem a soma", () => {
       temConflito: true,
       chPrevista: 30,
       chAcumulada: 0,
+      atrasada: false,
     });
 
     expect(s).toBe("aguardando_inicio");
+  });
+});
+
+/*
+ * ⚠️ **`atrasada` — item 8 da conferência do PR #40** (decisão de Bernardo Villas Boas, 08/10/2026):
+ * *"já deveria ter iniciado e não iniciou […] OU já deveria ter terminado e não concluiu […]. Sem
+ * datas de previsão: não marca atrasada (RN-DEG-01). Só na disciplina, NÃO na cascata por UE."*
+ *
+ * ⚠️ **AS DATAS SÃO AS DA SEMANA 20 DE 2026**, as mesmas do resto do arquivo: o corte é o domingo
+ * 17/05 e "hoje" é a terça 12/05 quando o caso precisa de hoje dentro da semana.
+ */
+describe("item 8 · `estaAtrasada` — as duas metades da regra, cada uma com a sua data", () => {
+  const base = {
+    previsaoInicio: null,
+    previsaoTermino: null,
+    referencia: TERCA_DA_SEMANA_20,
+    chPrevista: 30,
+  };
+
+  it("NÃO INICIOU: previsão de início passou e nada lançado → atrasada", () => {
+    expect(estaAtrasada({ ...base, previsaoInicio: "2026-05-04", chAcumulada: 0 })).toBe(true);
+  });
+
+  it("CONTROLE — previsão de início passou mas JÁ lançou → não atrasada pelo início", () => {
+    expect(estaAtrasada({ ...base, previsaoInicio: "2026-05-04", chAcumulada: 1 })).toBe(false);
+  });
+
+  it("NÃO CONCLUIU: previsão de término passou e lançada < prevista → atrasada", () => {
+    expect(estaAtrasada({ ...base, previsaoTermino: "2026-05-08", chAcumulada: 29 })).toBe(true);
+  });
+
+  it("CONTROLE — término passou com a prevista cumprida (ou passada) → não atrasada", () => {
+    expect(estaAtrasada({ ...base, previsaoTermino: "2026-05-08", chAcumulada: 30 })).toBe(false);
+    expect(estaAtrasada({ ...base, previsaoTermino: "2026-05-08", chAcumulada: 34 })).toBe(false);
+  });
+
+  it("«já passou» é ESTRITO: no próprio dia da previsão ainda não é atraso", () => {
+    expect(estaAtrasada({ ...base, previsaoInicio: TERCA_DA_SEMANA_20, chAcumulada: 0 })).toBe(
+      false,
+    );
+    expect(estaAtrasada({ ...base, previsaoTermino: TERCA_DA_SEMANA_20, chAcumulada: 10 })).toBe(
+      false,
+    );
+  });
+
+  it("previsão no FUTURO não é atraso, nas duas metades", () => {
+    expect(
+      estaAtrasada({
+        ...base,
+        previsaoInicio: "2026-06-01",
+        previsaoTermino: "2026-07-01",
+        chAcumulada: 0,
+      }),
+    ).toBe(false);
+  });
+
+  it("`RN-DEG-01` — SEM DATAS não marca, nem com nada lançado nem com quase tudo", () => {
+    expect(estaAtrasada({ ...base, chAcumulada: 0 })).toBe(false);
+    expect(estaAtrasada({ ...base, chAcumulada: 29 })).toBe(false);
+    // Texto vazio vale como ausência — e `undefined` também (campo opcional na entrada).
+    expect(estaAtrasada({ ...base, previsaoInicio: "", previsaoTermino: "", chAcumulada: 0 })).toBe(
+      false,
+    );
+    expect(
+      estaAtrasada({
+        ...base,
+        previsaoInicio: undefined,
+        previsaoTermino: undefined,
+        chAcumulada: 0,
+      }),
+    ).toBe(false);
+  });
+
+  it("uma data ausente não desliga a outra metade", () => {
+    // Só término, e ele passou com a disciplina por terminar.
+    expect(
+      estaAtrasada({
+        ...base,
+        previsaoInicio: null,
+        previsaoTermino: "2026-05-08",
+        chAcumulada: 5,
+      }),
+    ).toBe(true);
+    // Só início, e ele passou sem lançamento.
+    expect(
+      estaAtrasada({
+        ...base,
+        previsaoInicio: "2026-05-04",
+        previsaoTermino: null,
+        chAcumulada: 0,
+      }),
+    ).toBe(true);
+  });
+
+  it("prevista 0 (competências): o término nunca atrasa — não há o que faltar", () => {
+    expect(
+      estaAtrasada({ ...base, chPrevista: 0, previsaoTermino: "2026-05-08", chAcumulada: 0 }),
+    ).toBe(false);
+  });
+});
+
+describe("item 8 · a PRECEDÊNCIA da `atrasada` entre as cinco situações", () => {
+  const base = { chPrevista: 30, temConflito: false };
+
+  it("sem lançamento e atrasada → `atrasada` (não `aguardando_inicio`)", () => {
+    expect(
+      situacaoDaDisciplina({ ...base, temLancamento: false, chAcumulada: 0, atrasada: true }),
+    ).toBe("atrasada");
+  });
+
+  it("com lançamento, em andamento e atrasada → `atrasada` vence `em_andamento`", () => {
+    expect(
+      situacaoDaDisciplina({ ...base, temLancamento: true, chAcumulada: 10, atrasada: true }),
+    ).toBe("atrasada");
+  });
+
+  it("⚠️ `conflitou` CONTINUA vencendo, inclusive a atrasada", () => {
+    expect(
+      situacaoDaDisciplina({
+        ...base,
+        temLancamento: true,
+        temConflito: true,
+        chAcumulada: 10,
+        atrasada: true,
+      }),
+    ).toBe("conflitou");
+  });
+
+  it("⚠️ CONCLUÍDA NUNCA É ATRASADA — mesmo se alguém mandar `atrasada: true`", () => {
+    expect(
+      situacaoDaDisciplina({ ...base, temLancamento: true, chAcumulada: 30, atrasada: true }),
+    ).toBe("concluida");
+  });
+});
+
+describe("item 8 · o quadro da disciplina, com as datas de previsão", () => {
+  function comPrevisao(
+    lancamentos: readonly LancamentoParaSituacao[],
+    previsaoInicio: string | null,
+    previsaoTermino: string | null,
+  ): DisciplinaParaSituacao {
+    return { ...disciplina(30, lancamentos), previsaoInicio, previsaoTermino };
+  }
+
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA** (DoD 8): a MESMA disciplina, os MESMOS lançamentos e a MESMA semana,
+   * com e sem a previsão de término. Sem a regra nova as duas saem `em_andamento`; com ela, a que tem
+   * o término no passado sai `atrasada` e a outra continua `em_andamento`.
+   */
+  it("o par: término passado → `atrasada`; sem datas → `em_andamento`", () => {
+    const lancamentos = [lancamento("2026-05-11", 8)];
+
+    const comData = quadro(
+      comPrevisao(lancamentos, "2026-04-01", "2026-05-08"),
+      TERCA_DA_SEMANA_20,
+    );
+    const semData = quadro(comPrevisao(lancamentos, null, null), TERCA_DA_SEMANA_20);
+
+    expect(comData.situacao).toBe("atrasada");
+    expect(semData.situacao).toBe("em_andamento");
+    // O atraso não mexe em número nenhum (`RN-DEG-02`: alerta, nunca bloqueio).
+    expect(comData.chAcumulada).toBe(semData.chAcumulada);
+    expect(comData.percentual).toBe(semData.percentual);
+  });
+
+  it("não iniciou: início passado e nada lançado até o corte → `atrasada`", () => {
+    const q = quadro(comPrevisao([], "2026-05-04", "2026-06-30"), TERCA_DA_SEMANA_20);
+
+    expect(q.situacao).toBe("atrasada");
+  });
+
+  it("disciplina concluída com o término passado continua `concluida`", () => {
+    const q = quadro(
+      comPrevisao([lancamento("2026-05-11", 30)], "2026-04-01", "2026-05-08"),
+      TERCA_DA_SEMANA_20,
+    );
+
+    expect(q.situacao).toBe("concluida");
+  });
+
+  it("conflito com término passado sai `conflitou`", () => {
+    const q = quadro(
+      comPrevisao([lancamento("2026-05-11", 8, true)], "2026-04-01", "2026-05-08"),
+      TERCA_DA_SEMANA_20,
+    );
+
+    expect(q.situacao).toBe("conflitou");
+  });
+
+  /*
+   * ⚠️ **A REFERÊNCIA É `min(hoje, ateODia)`.** Numa semana PASSADA, a previsão é comparada com o fim
+   * daquela semana — a situação da semana 20 é a que a semana 20 tinha; numa semana FUTURA, com hoje.
+   */
+  it("semana PASSADA: uma previsão posterior ao fim da semana não acusa atraso naquela semana", () => {
+    // Hoje é 01/06; a previsão de início era 25/05 — depois do fim da semana 20 (17/05).
+    const d = comPrevisao([], "2026-05-25", "2026-06-30");
+
+    expect(quadro(d, "2026-06-01").situacao).toBe("aguardando_inicio");
+    // CONTROLE — na semana 22 (até 31/05), a mesma previsão já passou, e a disciplina está atrasada.
+    expect(quadro(d, "2026-06-01", "2026-05-31").situacao).toBe("atrasada");
+  });
+
+  it("semana FUTURA: quem decide é HOJE, não o fim da semana aberta", () => {
+    // Hoje é 12/05; a semana aberta vai até 31/05; o término previsto é 20/05 — ainda não passou HOJE.
+    const d = comPrevisao([lancamento("2026-05-11", 8)], "2026-04-01", "2026-05-20");
+
+    expect(quadro(d, TERCA_DA_SEMANA_20, "2026-05-31").situacao).toBe("em_andamento");
   });
 });
 
@@ -304,6 +513,7 @@ describe("`RF-DSA-05` · a UE reaproveita a precedência da disciplina, sem o co
           temConflito: false,
           chPrevista: prevista,
           chAcumulada: lancada,
+          atrasada: false,
         }),
       );
     }
@@ -322,6 +532,8 @@ describe("`RF-DSA-05` · a UE reaproveita a precedência da disciplina, sem o co
 
     expect(situacoes).toEqual(["aguardando_inicio", "em_andamento", "concluida", "passou"]);
     expect(situacoes).not.toContain("conflitou");
+    // ⚠️ E nunca `atrasada` (item 8: "só na disciplina, NÃO na cascata por UE").
+    expect(situacoes).not.toContain("atrasada");
   });
 });
 

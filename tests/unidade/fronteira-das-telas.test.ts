@@ -82,6 +82,13 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
    * do comando de correções do DSA) mudou a conta: as colunas da tabela única são funções, e abrir a
    * linha é interação — o estado de qual está aberta é efêmero, e fica no componente.
    */
+  /*
+   * ⚠️ **ITEM 4 DA CONFERÊNCIA DO PR #40 (08/10/2026).** Editar as assinaturas antes de imprimir é
+   * estado efêmero de formulário, e o *Imprimir* precisa lê-lo para montar o endereço do papel —
+   * sem Server Action e sem banco: *"imprimiu, imprimiu"*.
+   */
+  "app/(app)/turmas/[turma]/dsa/AssinaturasEditaveis.tsx":
+    "editar as assinaturas só para a impressão, e o botão Imprimir que leva a edição no endereço",
   "app/(app)/turmas/[turma]/dsa/PainelDeSituacao.tsx":
     "a situação por disciplina, com a cascata das unidades de ensino — abrir e fechar a linha da tabela única é interação",
   "app/(app)/instrutores/TabelaDeInstrutores.tsx": "a grade navegável por teclado",

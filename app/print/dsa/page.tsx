@@ -1,5 +1,6 @@
 /**
  * O Detalhe Semanal de Aula **impresso**, no **modelo v4** (grade de dias × tempos) — `/print/dsa?turma=&semana=&ano=&sabado=`
+ * (e, quando a tela editou as assinaturas, `esq_nome`/`esq_posto`/`esq_funcao`/`dir_…`)
  * (`RF-PDF-01`, `RF-DSA-06`, `RF-INSTR-15`, `FR-036`, `FR-036.1`, `RNF-COMP-01` · spec 013, PR 3).
  *
  * ⚠️ **ELA VIVE FORA DE `(app)`, E ISSO É O DESENHO: SEM CASCA, SEM MENU, SEM BOTÃO.** O contrato
@@ -35,6 +36,7 @@ import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import { etapaDaSemana, TEXTO_DA_ETAPA_A_DISTANCIA } from "@/lib/dominio/dsa/etapa-presencial";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import { edicaoDaImpressaoDoDsa } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import {
@@ -141,6 +143,12 @@ export default async function ImpressaoDoDsa({
         dados={dados}
         nomeDeQuemImprime={usuario?.nome ?? null}
         geradoEm={new Date().toISOString()}
+        /*
+         * ⚠️ **A ASSINATURA EDITADA NA TELA CHEGA PELA CONSULTA** (item 4 da conferência do PR #40,
+         * 08/10/2026): texto livre, limpo e limitado por `edicaoDaImpressaoDoDsa`, escapado pelo
+         * React. Vale só para este papel — nada é gravado.
+         */
+        assinaturasEditadas={edicaoDaImpressaoDoDsa(busca)}
       />
     </main>
   );

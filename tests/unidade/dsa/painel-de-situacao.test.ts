@@ -121,19 +121,131 @@ describe("`RF-DSA-05` · a situação por disciplina é a tabela ÚNICA, com a c
     expect(html).not.toContain('data-slot="quadro-por-unidade"');
   });
 
-  it("a linha da disciplina continua dizendo situação, os números e o lançado à frente", () => {
+  it("a linha da disciplina continua dizendo situação e os números", () => {
     const html = painel();
 
     expect(html).toContain("Conflitou");
     expect(html).toContain("Aguardando início");
     expect(html).toContain("33 %");
-    // ⚠️ O número do «à frente» vai no ATRIBUTO (`RNF-USA-05`), e só aparece onde há.
-    expect(html.match(/data-slot="lancado-a-frente"/g) ?? []).toHaveLength(1);
-    expect(html).toContain('data-ta="2"');
     // ⚠️ O corte é DITO (`RN-CRONOS-03`).
     expect(html).toContain("Carga horária acumulada até a semana de 06/04/2026 a 11/04/2026");
   });
 
+  /*
+   * ⚠️ **ITEM 3 DA CONFERÊNCIA DO PR #40 (08/10/2026): a marca saiu da SITUAÇÃO.** O quadro `I` tem
+   * `taLancadoAFrente: 2` — o cálculo continua —, e o painel não o desenha mais. Antes desta mudança
+   * este caso reprovava: havia um `lancado-a-frente` com `data-ta="2"`.
+   */
+  it("⚠️ o «lançado à frente» NÃO aparece mais na situação, mesmo havendo TA à frente", () => {
+    const html = painel();
+
+    expect(html).not.toContain('data-slot="lancado-a-frente"');
+    expect(html).not.toContain("lançado(s) à frente");
+  });
+});
+
+/** Um quadro sintético, com o que o caso quiser mudar. */
+function quadroCom(parcial: Partial<QuadroParaExibir> & { codigo: string }): QuadroParaExibir {
+  return {
+    disciplinaId: `dis-${parcial.codigo}`,
+    nome: `Disciplina ${parcial.codigo}`,
+    situacao: "em_andamento",
+    chPrevista: 40,
+    chAcumulada: 10,
+    chRestante: 30,
+    percentual: 25,
+    taLancadoAFrente: 0,
+    ...parcial,
+  };
+}
+
+describe("item 5 · a situação sai em ORDEM NATURAL do código", () => {
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA: `D10` chega antes de `D2`.** Na ordem de chegada (a da view) ou na
+   * ordem de texto pura, `D10` ficaria antes; na natural, `D2` vem primeiro.
+   */
+  it("`D2` antes de `D10`, e `D10` antes de `E1`, qualquer que seja a ordem de chegada", () => {
+    const html = painel(
+      [quadroCom({ codigo: "E1" }), quadroCom({ codigo: "D10" }), quadroCom({ codigo: "D2" })],
+      [],
+    );
+    const onde = ["D2", "D10", "E1"].map((c) => html.indexOf(`data-disciplina="${c}"`));
+
+    expect(onde.every((i) => i >= 0)).toBe(true);
+    expect(onde).toEqual([...onde].sort((a, b) => a - b));
+  });
+});
+
+describe("item 6 · as cores da situação saem dos tons EXISTENTES, com o texto junto", () => {
+  /** O tom do emblema da linha de uma disciplina. */
+  function tomDa(html: string, codigo: string): string | undefined {
+    const linha = html.split("<tr").find((t) => t.includes(`data-disciplina="${codigo}"`)) ?? "";
+    return linha.match(/data-slot="badge-status" data-tom="([^"]+)"/)?.[1];
+  }
+
+  const html = painel(
+    [
+      quadroCom({ codigo: "A", situacao: "concluida" }),
+      quadroCom({ codigo: "B", situacao: "em_andamento" }),
+      quadroCom({ codigo: "C", situacao: "aguardando_inicio" }),
+      quadroCom({ codigo: "D", situacao: "atrasada" }),
+      quadroCom({ codigo: "E", situacao: "conflitou" }),
+    ],
+    [],
+  );
+
+  it("Concluída verde · Em andamento azul · Aguardando amarelo · Atrasada vermelho", () => {
+    expect(tomDa(html, "A")).toBe("executado");
+    expect(tomDa(html, "B")).toBe("planejado");
+    expect(tomDa(html, "C")).toBe("atrasado");
+    expect(tomDa(html, "D")).toBe("conflito");
+    // Conflitou continua no tom da grade.
+    expect(tomDa(html, "E")).toBe("conflito");
+  });
+
+  it("cor nunca sozinha: o texto e a situação no atributo continuam", () => {
+    for (const texto of [
+      "Concluída",
+      "Em andamento",
+      "Aguardando início",
+      "Atrasada",
+      "Conflitou",
+    ]) {
+      expect(html).toContain(texto);
+    }
+    expect(html).toContain('data-situacao="atrasada"');
+  });
+});
+
+describe("item 7 · a barra de progresso, sempre verde, com o percentual ao lado", () => {
+  it("cada disciplina com percentual tem a barra do componente único, no tom verde", () => {
+    const html = painel(
+      [
+        quadroCom({ codigo: "A", situacao: "atrasada", percentual: 25 }),
+        quadroCom({ codigo: "B", situacao: "conflitou", percentual: 60 }),
+      ],
+      [],
+    );
+
+    const barras = html.match(/data-slot="barra-de-progresso"[^>]*/g) ?? [];
+    expect(barras).toHaveLength(2);
+    // ⚠️ SEMPRE verde: nem a atrasada nem a que conflitou mudam o tom da barra.
+    for (const b of barras) expect(b).toContain('data-tom="executado"');
+    expect(html).toContain('aria-valuenow="25"');
+    expect(html).toContain('data-percentual="60"');
+    expect(html).toContain("25 %");
+    expect(html).toContain("60 %");
+  });
+
+  it("`RN-DEG-01` — sem percentual (prevista 0) não há barra, e o traço continua", () => {
+    const html = painel([quadroCom({ codigo: "A", chPrevista: 0, percentual: null })], []);
+
+    expect(html).not.toContain('data-slot="barra-de-progresso"');
+    expect(html).toContain("—");
+  });
+});
+
+describe("`RN-DEG-01` · o painel vazio", () => {
   it("turma sem disciplina: o vazio é dito, e não há tabela", () => {
     const html = painel([], []);
 

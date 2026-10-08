@@ -30,10 +30,12 @@ import {
   SEMANA,
   SEMANA_A_FRENTE,
   semearDsa,
+  SEGUNDA,
   TA_A_FRENTE,
   type DsaSemeado,
 } from "./dsa-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
+import { irParaASemanaDoDia } from "./percurso-do-dsa";
 
 let EMAIL = "";
 let SEMEADO: DsaSemeado;
@@ -267,28 +269,35 @@ test.describe("⚠️ `FR-018` · as UEs vivem NA CASCATA da disciplina, e chega
   });
 });
 
-test.describe("⚠️ `Q-2` e `FR-028.1` · o lançado à frente CONTA, e é dito", () => {
+test.describe("⚠️ `Q-2` e `FR-028.1` · o lançado à frente CONTA, e é dito — fora da SITUAÇÃO", () => {
   /*
    * ⚠️ **A DECISÃO É CONTAR, e a marca é o que torna isso honesto.** O `D-5` da planilha é o avesso:
    * *"a CH cumprida é COUNTIF sobre a aba inteira — conta semana futura já planejada como
-   * cumprida"*. Aqui o número é o mesmo **e** a tela declara quanto dele ainda não aconteceu.
+   * cumprida"*. Aqui o número é o mesmo **e** a grade e o papel declaram quanto dele ainda não
+   * aconteceu.
+   * ⚠️ **DESDE 08/10/2026 A MARCA SAIU DO PAINEL DE SITUAÇÃO** (item 3 da conferência do PR #40,
+   * decisão de Bernardo Villas Boas). O caso abaixo era o que a procurava ali; agora ele prova que
+   * ela NÃO está lá — na semana que TEM TA à frente, que é onde a ausência discrimina.
    */
-  test("o painel marca os TA lançados à frente, com o número", async ({ page }) => {
+  test("na semana com TA à frente, a SITUAÇÃO não traz mais a marca", async ({ page }) => {
     await entrar(page, EMAIL);
     await abrirSemana(page, SEMANA_A_FRENTE, ANO_A_FRENTE);
 
-    const marca = page.locator('[data-slot="lancado-a-frente"]').first();
-    await expect(marca).toBeVisible();
-    /* ⚠️ O número vai no ATRIBUTO, não só no texto (`RNF-USA-05`). */
-    await expect(marca).toHaveAttribute("data-ta", String(TA_A_FRENTE));
-    await expect(marca).toContainText("lançado(s) à frente");
+    const painel = page.locator(PAINEL);
+    await expect(painel.locator('[data-slot="lancado-a-frente"]')).toHaveCount(0);
+    await expect(painel).not.toContainText("lançado(s) à frente");
+    /* ⚠️ E a GRADE da tela também não (item 3: grade, situação e rodapé). O controle positivo é o papel, abaixo. */
+    await expect(page.locator('[data-slot="grade-alocacao"]')).not.toContainText(
+      "lançado à frente",
+    );
+    expect(TA_A_FRENTE).toBeGreaterThan(0);
   });
 
-  test("a grade também marca o bloco, e o PAPEL diz quantos TA são", async ({ page }) => {
+  test("CONTROLE POSITIVO · o PAPEL continua dizendo quantos TA estão à frente", async ({
+    page,
+  }) => {
     await entrar(page, EMAIL);
     await abrirSemana(page, SEMANA_A_FRENTE, ANO_A_FRENTE);
-    /* A marca na célula vem do PR 1; aqui o que se confere é que ela continua. */
-    await expect(page.locator('[data-slot="grade-alocacao"]')).toContainText("lançado à frente");
 
     await page.locator('[data-slot="imprimir-dsa"]').click();
     const documento = page.locator('[data-slot="dsa-impresso"]');
@@ -307,5 +316,94 @@ test.describe("⚠️ `Q-2` e `FR-028.1` · o lançado à frente CONTA, e é dit
     await expect(page.locator('[data-slot="grade-alocacao"]')).not.toContainText(
       "lançado à frente",
     );
+  });
+});
+
+/*
+ * ⚠️ **OS AJUSTES DA CONFERÊNCIA DO PR #40 (08/10/2026), CHEGANDO POR CLIQUE** — ficha da turma →
+ * *Abrir o DSA* → o campo *"Ir para a semana do dia"*. `goto` só para entrar (o ponto de partida).
+ *
+ * ⚠️ **A `atrasada` NÃO TEM CASO AQUI, e é de propósito:** a semente (`dsa-de-teste.ts`) não grava
+ * previsão de início nem de término em disciplina nenhuma, e as disciplinas dela são **partilhadas**
+ * por todos os arquivos do mesmo processo (a semente é idempotente, por código). Gravar uma previsão
+ * aqui mudaria a situação da `T` — que este mesmo arquivo exige *Aguardando início* — e a de quem mais
+ * a lê. A regra, a precedência e o caso que discrimina estão em `tests/unidade/dsa/situacao.test.ts`.
+ */
+test.describe("conferência do PR #40 · ordem, cores e barra na situação, por clique", () => {
+  async function chegarPelaFicha(page: Page): Promise<void> {
+    await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
+    await page.locator('[data-slot="abrir-o-dsa"]').click();
+    await expect(page.locator(PAINEL)).toBeVisible();
+    await irParaASemanaDoDia(page, SEGUNDA, SEMANA, ANO);
+    await expect(linhaDaDisciplina(page, SEMEADO.codDisciplina)).toBeVisible();
+  }
+
+  /*
+   * ⚠️ **ITEM 5 — ORDEM NATURAL DO CÓDIGO.** A semente põe `D<n>`, `I<n>` e `T<n>` no curso (o mesmo
+   * `<n>` nas três), então a ordem esperada é D, I, T. O caso que separa *natural* de *texto puro*
+   * (`2` antes de `10`) está no teste de unidade do painel; aqui se prova que a ordem chega à tela.
+   */
+  test("item 5 · as disciplinas saem em ordem do código", async ({ page }) => {
+    await chegarPelaFicha(page);
+
+    const codigos = await page
+      .locator(`${POR_DISCIPLINA} [data-disciplina]`)
+      .evaluateAll((els) => els.map((e) => e.getAttribute("data-disciplina") ?? ""));
+    const daSemente = [
+      SEMEADO.codDisciplina,
+      SEMEADO.codDisciplinaIsenta,
+      SEMEADO.codDisciplinaTfm,
+    ].map((c) => codigos.indexOf(c));
+
+    expect(
+      daSemente.every((i) => i >= 0),
+      `faltam disciplinas da semente: ${codigos.join(", ")}`,
+    ).toBe(true);
+    expect(daSemente, `ordem na tela: ${codigos.join(", ")}`).toEqual(
+      [...daSemente].sort((a, b) => a - b),
+    );
+  });
+
+  /*
+   * ⚠️ **ITEM 6 — A COR É O TOM, E O TOM ESTÁ NO ATRIBUTO** (`data-tom` do emblema único). A `T` não
+   * tem lançamento nenhum: *Aguardando início*, amarelo (`atrasado`). A `D`, na semana 15, conflitou:
+   * vermelho (`conflito`). O texto vai junto — cor nunca sozinha.
+   */
+  test("item 6 · Aguardando início em amarelo e Conflitou em vermelho, com o texto", async ({
+    page,
+  }) => {
+    await chegarPelaFicha(page);
+
+    const tfm = linhaDaDisciplina(page, SEMEADO.codDisciplinaTfm);
+    await expect(tfm.locator('[data-slot="situacao-da-disciplina"]')).toHaveAttribute(
+      "data-situacao",
+      "aguardando_inicio",
+    );
+    await expect(tfm.locator('[data-slot="badge-status"]')).toHaveAttribute("data-tom", "atrasado");
+    await expect(tfm).toContainText("Aguardando início");
+
+    const d = linhaDaDisciplina(page, SEMEADO.codDisciplina);
+    await expect(d.locator('[data-slot="badge-status"]')).toHaveAttribute("data-tom", "conflito");
+    await expect(d).toContainText("Conflitou");
+  });
+
+  /*
+   * ⚠️ **ITEM 7 — A BARRA, SEMPRE VERDE, COM O PERCENTUAL AO LADO.** A `D` conflitou na semana 15 e a
+   * barra dela continua `executado` (o verde): o tom da barra não acompanha a situação. O número vai
+   * no atributo (`aria-valuenow`, `data-percentual`) e em texto.
+   */
+  test("item 7 · a barra de progresso é verde e traz o percentual", async ({ page }) => {
+    await chegarPelaFicha(page);
+
+    const d = linhaDaDisciplina(page, SEMEADO.codDisciplina);
+    const progresso = d.locator('[data-slot="progresso-da-disciplina"]');
+    await expect(progresso).toBeVisible();
+    const percentual = await progresso.getAttribute("data-percentual");
+    expect(percentual, "o percentual não está no atributo").not.toBeNull();
+
+    const barra = progresso.locator('[data-slot="barra-de-progresso"]');
+    await expect(barra).toHaveAttribute("data-tom", "executado");
+    await expect(barra).toHaveAttribute("aria-valuenow", String(percentual));
+    await expect(progresso).toContainText(`${percentual} %`);
   });
 });

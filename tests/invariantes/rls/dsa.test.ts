@@ -866,3 +866,79 @@ describe("`V-7` · a atividade de escopo global na grade de quem lê", () => {
     expect(juntos.error?.code, JSON.stringify(juntos.error)).toBe("23514");
   });
 });
+
+describe("⚠️ `D-DSA-3` · a transação do empurrão respeita o alcance de QUEM CHAMA", () => {
+  /*
+   * ⚠️ **ESTA É A ASSERÇÃO QUE O pgTAP NÃO PODE DAR**: `gravar_lancamentos_em_transacao` é
+   * `SECURITY INVOKER`, e só uma sessão real mostra que ela não alcança o que a sessão não alcança.
+   * ⚠️ **E O CASO É O PIOR**: a primeira operação é legítima (a turma DO Operador) e a segunda é a
+   * turma ALHEIA. Sem a transação, a primeira ficaria gravada; sem o `42501` do `UPDATE` sem linha,
+   * a segunda seria pulada em silêncio.
+   */
+  async function idDe(codigo: string): Promise<string> {
+    const { data } = await servico
+      .from("registros_aula")
+      .select("id")
+      .eq("codigo", codigo)
+      .single();
+    return (data as { id: string }).id;
+  }
+
+  it("operação na turma alheia recusa com `42501`, e a operação legítima da mesma chamada é desfeita", async () => {
+    const propria = await idDe(`DSA-REG-PROPRIA-${SELO}`);
+    const { error } = await sessao("operador").rpc("gravar_lancamentos_em_transacao", {
+      p_operacoes: [
+        {
+          acao: "atualizar",
+          tabela: "registros_aula",
+          id: propria,
+          campos: { conteudo_resumo: "Tópico que NÃO pode ficar gravado" },
+        },
+        {
+          acao: "atualizar",
+          tabela: "registros_aula",
+          id: aulaDaTurmaAlheiaId,
+          campos: { ta_inicial: 5 },
+        },
+      ],
+    });
+    expect(error?.code, JSON.stringify(error)).toBe("42501");
+
+    const { data } = await servico
+      .from("registros_aula")
+      .select("codigo, conteudo_resumo, ta_inicial")
+      .in("id", [propria, aulaDaTurmaAlheiaId]);
+    const linhas = (data ?? []) as {
+      codigo: string;
+      conteudo_resumo: string | null;
+      ta_inicial: number;
+    }[];
+    expect(linhas.find((l) => l.codigo.includes("PROPRIA"))?.conteudo_resumo).not.toBe(
+      "Tópico que NÃO pode ficar gravado",
+    );
+    expect(linhas.find((l) => l.codigo.includes("ALHEIA"))?.ta_inicial).toBe(1);
+  });
+
+  it("controle positivo · a mesma sessão grava na turma que ela alcança", async () => {
+    const propria = await idDe(`DSA-REG-PROPRIA-${SELO}`);
+    const { error } = await sessao("operador").rpc("gravar_lancamentos_em_transacao", {
+      p_operacoes: [
+        {
+          acao: "atualizar",
+          tabela: "registros_aula",
+          id: propria,
+          campos: { conteudo_resumo: "Tópico gravado pela transação" },
+        },
+      ],
+    });
+    expect(error, JSON.stringify(error)).toBeNull();
+    const { data } = await servico
+      .from("registros_aula")
+      .select("conteudo_resumo")
+      .eq("id", propria)
+      .single();
+    expect((data as { conteudo_resumo: string | null }).conteudo_resumo).toBe(
+      "Tópico gravado pela transação",
+    );
+  });
+});

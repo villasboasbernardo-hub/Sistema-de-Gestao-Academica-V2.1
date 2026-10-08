@@ -319,6 +319,28 @@ export const esquemaDaEdicao = z.object({
 export type Edicao = z.infer<typeof esquemaDaEdicao>;
 
 /**
+ * **Atualizar** um fato de uma vez — o cartão único (ajuste 1 do PR #40, Bernardo Villas Boas,
+ * 08/10/2026): dia, tempo inicial, quantos tempos, disciplina/UE, tópico, quem ministra, técnica e
+ * local, com **um** botão Gravar. É a edição mais o movimento, no mesmo esquema e na mesma transação.
+ *
+ * ⚠️ **AS MESMAS REGRAS DE `undefined`**: o que não foi mandado não é tocado; `null` apaga.
+ * ⚠️ **UE E DISCIPLINA, UMA FONTE SÓ** (`reg_aula_ue_xor_disciplina`): com UE a disciplina é a dela;
+ * sem UE, a da coluna, com o tópico obrigatório (`D-DSA-1`) — o banco confere o tópico.
+ */
+export const esquemaDaAtualizacao = esquemaDaEdicao
+  .extend({
+    data: data.optional(),
+    taInicial: ta.optional(),
+    disciplinaId: uuid.nullable().optional(),
+  })
+  .refine((e) => !(e.unidadeEnsinoId != null && e.disciplinaId != null), {
+    message: "Escolha a unidade de ensino OU só a disciplina, não as duas.",
+    path: ["disciplinaId"],
+  });
+
+export type Atualizacao = z.infer<typeof esquemaDaAtualizacao>;
+
+/**
  * **Excluir** um fato — e a exclusão é **lógica** (regra 4, `FR-031`).
  *
  * > *"Nada é apagado. Exclusão é LÓGICA (`status = 'inativo'`). Nenhuma tabela tem policy

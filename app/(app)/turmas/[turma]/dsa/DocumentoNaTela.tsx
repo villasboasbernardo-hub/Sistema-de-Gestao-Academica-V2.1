@@ -6,13 +6,18 @@
  * ⚠️ **O DADO É O MESMO OBJETO DO PAPEL** (`montarDocumentoDoDsa`): número do DSA, período, alunos,
  * quadro de CH acumulada, técnicas usadas e as assinaturas pela data da semana. Aqui não se calcula
  * nada — só se escreve.
+ *
+ * ⚠️ **AS ASSINATURAS SÃO EDITÁVEIS, E SÓ PARA A IMPRESSÃO** (item 4 da conferência do PR #40,
+ * 08/10/2026): a rubrica é a folha `RubricaEditavel`, e o que se edita vai para o `/print/dsa` pelo
+ * endereço do botão *Imprimir* — nunca para o banco. Ver `AssinaturasEditaveis.tsx`.
  */
-import type { Assinatura } from "@/lib/dominio/dsa/assinaturas";
+import { rubricaResolvida } from "@/lib/dominio/dsa/assinatura-editada";
 import { NOTA_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/impressao";
 import { NUMERO_AUSENTE_NO_CABECALHO } from "@/lib/dominio/dsa/numero-do-dsa";
 import { dataParaLeitura } from "@/lib/formato/data";
 
 import type { DadosDoDocumento } from "../../../../print/dsa/documento";
+import { RubricaEditavel } from "./AssinaturasEditaveis";
 
 export function CabecalhoDaSemana({ dados }: { readonly dados: DadosDoDocumento }) {
   const campos: readonly { rotulo: string; valor: string; slot: string }[] = [
@@ -105,48 +110,26 @@ export function RodapeDaSemana({
             </p>
           ) : null}
           <p className="text-xs text-texto-suave">{NOTA_DO_ESTUDO_INDIVIDUAL}</p>
-          {dados.aFrente === 0 ? null : (
-            <p className="text-xs text-texto-suave">
-              {dados.aFrente} TA desta semana estão lançados para datas que ainda não chegaram.
-            </p>
-          )}
+          {/*
+            ⚠️ **O «LANÇADO À FRENTE» SAIU DO RODAPÉ DA TELA** (item 3 da conferência do PR #40,
+               decisão de Bernardo Villas Boas, 08/10/2026). O cálculo (`taLancadoAFrente`) não mudou
+               e o papel (`/print/dsa`) continua dizendo a frase; só a tela deixou de repeti-la aqui.
+          */}
         </div>
         <div className="flex min-w-0 flex-col gap-2" data-slot="tela-assinaturas">
           <h2 className="text-sm font-semibold text-texto">Assinaturas</h2>
-          <Rubrica assinatura={dados.assinaturas.esquerda} nomeDeQuemImprime={nomeDeQuemImprime} />
-          <Rubrica assinatura={dados.assinaturas.direita} nomeDeQuemImprime={nomeDeQuemImprime} />
+          <RubricaEditavel
+            lado="esquerda"
+            titulo="assinatura à esquerda"
+            resolvida={rubricaResolvida(dados.assinaturas.esquerda, nomeDeQuemImprime)}
+          />
+          <RubricaEditavel
+            lado="direita"
+            titulo="assinatura à direita"
+            resolvida={rubricaResolvida(dados.assinaturas.direita, nomeDeQuemImprime)}
+          />
         </div>
       </div>
     </section>
-  );
-}
-
-/**
- * ⚠️ Mesma resolução do papel: modo dinâmico assina quem imprime, sem posto (`Q-14`), e o posto é
- * `postoPorExtenso` — por extenso, com o quadro —, nunca a sigla *(item 7 de 08/10/2026)*.
- */
-function Rubrica({
-  assinatura,
-  nomeDeQuemImprime,
-}: {
-  readonly assinatura: Assinatura | null;
-  readonly nomeDeQuemImprime: string | null;
-}) {
-  if (assinatura === null) {
-    return (
-      <p className="text-sm text-atrasado-tinta">
-        Sem responsável vigente nesta data — a linha sai em branco no papel.
-      </p>
-    );
-  }
-  const nome = assinatura.resolvePeloUsuarioLogado
-    ? (nomeDeQuemImprime ?? "")
-    : (assinatura.nomeCompleto ?? "");
-  const posto = assinatura.resolvePeloUsuarioLogado ? "" : assinatura.postoPorExtenso;
-  return (
-    <div className="flex flex-col border-t border-borda pt-1 text-sm">
-      <span className="font-semibold text-texto">{[posto, nome].filter(Boolean).join(" ")}</span>
-      <span className="text-xs text-texto-suave">{assinatura.funcaoDescricao}</span>
-    </div>
   );
 }

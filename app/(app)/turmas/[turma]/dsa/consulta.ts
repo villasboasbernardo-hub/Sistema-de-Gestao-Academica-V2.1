@@ -24,7 +24,7 @@ import {
 import type { FatoDaSemana } from "@/lib/dominio/dsa/grade";
 import { responsavelDoFato, rotuloDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
 import type { FeriadoDaSemana } from "@/lib/dominio/dsa/capacidade";
-import { datasDaSemanaIso, semanaIsoDe, semanasDoAnoIso } from "@/lib/dominio/carga-semanal";
+import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import {
   vigenteEm,
   type TipoDeRegime,
@@ -53,45 +53,14 @@ export const COLUNAS_DO_FERIADO = "data, descricao, impacto";
 /** ⚠️ As colunas reais de `horarios_tempos_aula`, medidas: `tempo_numero`, não `numero_ta`. */
 export const COLUNAS_DO_CATALOGO = "tempo_numero, periodo, tipo_tempo, hora_inicio, hora_fim";
 
-/**
- * A semana que a tela vai mostrar.
- *
- * ⚠️ **O `0` DOS DOIS PARÂMETROS É SENTINELA, E É AQUI QUE ELE VIRA DATA.** O contrato declara
- * `padrao: 0` porque *"a semana corrente"* é dinâmica e não cabe num literal — ver a nota da rota
- * em `lib/navegacao/contrato.ts`. Zero não é semana ISO (1..53) nem ano, então não se confunde com
- * valor digitado.
- *
- * ⚠️ **FORA DA FAIXA VOLTA AO PADRÃO **COM AVISO**, nunca em silêncio** (`RN-DEG-01`): a semana 60
- * de um ano de 52 não existe, e abrir a semana corrente sem dizer nada faria a pessoa achar que o
- * link estava certo. O número de semanas do ano sai de `semanasDoAnoIso` — **52 ou 53**, medido, e
- * não um `52` escrito à mão que esconderia a última semana de 2026 inteira.
+/*
+ * ⚠️ **A ESCOLHA DA SEMANA E A REGRA DO EAD PURO MORAM EM `lib/dominio/dsa/` DESDE 08/10/2026**
+ * (conferência do PR #40). A escolha passou a escrever o aviso inteiro — o que a página colava à mão
+ * (*"Abrimos a semana corrente"*) mentia quando o ano era trocado e a semana mantida —, e o EAD puro
+ * ganhou a frase que quatro telas mostram. Reexportadas aqui para quem já as importava desta rota.
  */
-export function semanaEscolhida(entrada: {
-  readonly semana: number;
-  readonly ano: number;
-  /** `aaaa-mm-dd` no fuso da CIAARA-11. */
-  readonly hoje: string;
-}): {
-  readonly ano: number;
-  readonly numero: number;
-  readonly aviso: string | null;
-} {
-  const corrente = semanaIsoDe(entrada.hoje);
-  const anoBase = entrada.ano === 0 ? (corrente?.ano ?? 0) : entrada.ano;
-  const total = semanasDoAnoIso(anoBase);
-
-  if (entrada.semana === 0) {
-    return { ano: anoBase, numero: corrente?.numero ?? 1, aviso: null };
-  }
-  if (entrada.semana > total) {
-    return {
-      ano: anoBase,
-      numero: corrente?.ano === anoBase ? (corrente?.numero ?? 1) : 1,
-      aviso: `O ano ISO de ${anoBase} tem ${total} semanas; a ${entrada.semana} não existe.`,
-    };
-  }
-  return { ano: anoBase, numero: entrada.semana, aviso: null };
-}
+export { semanaEscolhida } from "@/lib/dominio/dsa/semana-escolhida";
+export { ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 
 /**
  * Os dias da semana na tela — cinco, ou **seis com o sábado**.
@@ -235,6 +204,12 @@ export type ConteudoDoFato = {
    * disciplina da view alimenta o teto e a CH por disciplina, e AEC não é CHD.
    */
   readonly disciplinaId?: string | null | undefined;
+  /** `registros_aula.unidade_ensino_id` — para o cartão único reabrir com a UE gravada. */
+  readonly unidadeEnsinoId?: string | null | undefined;
+  /** `registros_aula.disciplina_id`, a da COLUNA (aula sem UE, `D-DSA-1`). */
+  readonly disciplinaColuna?: string | null | undefined;
+  /** O tópico GRAVADO, cru — o `conteudo` acima pode ser o tipo da avaliação, para exibir. */
+  readonly conteudoGravado?: string | null | undefined;
 };
 
 /**
@@ -304,6 +279,16 @@ export function fatoDaOcupacao(
     /* ⚠️ Sem instrutor, entra o responsável de fora do cadastro — ver `responsavelDoFato`. */
     instrutor: responsavelDoFato(responsavel, extra?.externo),
     local: linha.local,
+    /* ⚠️ O GRAVADO, CRU — é dele que o cartão único se preenche (ajuste 2 do PR #40). */
+    gravado: {
+      instrutorId: linha.instrutor_id,
+      unidadeEnsinoId: extra?.unidadeEnsinoId ?? null,
+      disciplinaId: extra?.disciplinaColuna ?? extra?.disciplinaId ?? null,
+      conteudo:
+        extra?.conteudoGravado !== undefined ? extra.conteudoGravado : (extra?.conteudo ?? null),
+      tecnica: extra?.tecnica ?? null,
+      local: linha.local,
+    },
   };
 }
 
@@ -323,16 +308,6 @@ export function feriadoDoBanco(linha: LinhaDeFeriado): FeriadoDaSemana {
         ? linha.impacto
         : "informativo",
   };
-}
-
-/**
- * A turma é de **EAD puro**? (`Q-13`)
- *
- * ⚠️ Decisão de Bernardo Villas Boas, 05/10/2026: *"DSA não se aplica a EAD puro"*. Semipresencial
- * **tem** DSA — ele cobre só a semana presencial (`C-ApA-OcOp-PR-SP`, medido na planilha).
- */
-export function ehEadPuro(modalidade: string | null): boolean {
-  return modalidade === "ead";
 }
 
 /** O catálogo de horários da configuração, quando a vigência aponta para uma. */
@@ -379,6 +354,13 @@ export type ExecucaoParaQuadro = {
   readonly codigo: string;
   readonly nome: string;
   readonly prevista: number;
+  /**
+   * `previsao_inicio_efetiva` / `previsao_termino_efetiva` da view — insumo da situação `atrasada`
+   * (item 8 da conferência do PR #40, 08/10/2026). **Opcionais**: o rodapé do papel não as usa, e
+   * sem elas a disciplina simplesmente não é marcada atrasada (`RN-DEG-01`).
+   */
+  readonly previsaoInicio?: string | null;
+  readonly previsaoTermino?: string | null;
 };
 
 /** Um Tempo de Aula ocupado, de `vw_ocupacao_ta`, **de qualquer data até o corte**. */
@@ -394,8 +376,13 @@ export type OcupacaoAcumulada = {
  *
  * ⚠️ **QUEM DECIDE A SITUAÇÃO, O ACUMULADO E O «À FRENTE» É `quadroDaDisciplina`**, em
  * `lib/dominio/dsa/situacao.ts`, com teste ao lado. Aqui só se agrupa a ocupação por disciplina e
- * se repassa o corte. Reescrever a precedência dos quatro degraus faria a `RF-DSA-05` ter duas
- * implementações, e a segunda esqueceria que **conflitou vence concluída**.
+ * se repassa o corte e as previsões. Reescrever a precedência dos degraus faria a `RF-DSA-05` ter duas
+ * implementações, e a segunda esqueceria que **conflitou vence concluída** — ou que concluída nunca é
+ * atrasada.
+ *
+ * ⚠️ **A ORDEM DE SAÍDA É A DA VIEW, e não é aqui que se ordena**: o rodapé do papel também passa por
+ * esta função (`execucaoAteASemana`), e a ordem natural do código pedida em 08/10/2026 vale para o
+ * PAINEL — quem ordena é `PainelDeSituacao`. Ordenar aqui mudaria o papel em silêncio.
  *
  * ⚠️ **A DISCIPLINA DE UM FATO VEM DA VIEW, que já a resolve pela UE** — `vw_ocupacao_ta` entrega
  * `disciplina_id` preenchido mesmo quando a coluna da aula é nula, porque a UE **é** a disciplina.
@@ -413,7 +400,9 @@ export function quadrosDaSemana(entrada: {
   readonly emConflito: ReadonlySet<string>;
   /** O último dia da semana selecionada — o corte do acumulado. */
   readonly ateODia: string;
-  /** Hoje — **só** marca o lançado à frente; não corta o cálculo (`Q-2`). */
+  /**
+   * Hoje — marca o lançado à frente e é a referência do atraso; **não corta o cálculo** (`Q-2`).
+   */
   readonly hoje: string;
 }): readonly (QuadroDaDisciplina & { readonly codigo: string; readonly nome: string })[] {
   const porDisciplina = new Map<string, LancamentoParaSituacao[]>();
@@ -430,6 +419,8 @@ export function quadrosDaSemana(entrada: {
         disciplinaId: d.disciplinaId,
         chPrevistaTempos: d.prevista,
         lancamentos: porDisciplina.get(d.disciplinaId) ?? [],
+        previsaoInicio: d.previsaoInicio ?? null,
+        previsaoTermino: d.previsaoTermino ?? null,
       },
       ateODia: entrada.ateODia,
       hoje: entrada.hoje,

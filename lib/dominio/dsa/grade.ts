@@ -56,6 +56,25 @@ export type FatoDaSemana = {
   readonly tecnica: string | null;
   readonly instrutor: string | null;
   readonly local: string | null;
+  /**
+   * O que está GRAVADO na linha, cru — é daqui que o cartão único se preenche (ajuste 2 do PR #40).
+   *
+   * ⚠️ **OS CAMPOS ACIMA SÃO DE EXIBIÇÃO, e reabrir o editor com eles regravava o que se mostra no
+   * lugar do que se gravou**: na avaliação o tópico mostrado é o tipo quando o tópico está vazio, e
+   * quem aparece é o fiscal antes do responsável. Opcional porque só a grade de edição o usa.
+   */
+  readonly gravado?: ValoresGravados;
+};
+
+/** Os valores gravados de um lançamento, sem nenhuma resolução para exibir. */
+export type ValoresGravados = {
+  readonly instrutorId: string | null;
+  readonly unidadeEnsinoId: string | null;
+  /** A da COLUNA `disciplina_id` (aula sem UE, AEC) — não a resolvida pela UE. */
+  readonly disciplinaId: string | null;
+  readonly conteudo: string | null;
+  readonly tecnica: string | null;
+  readonly local: string | null;
 };
 
 export type BlocoNaGrade = FatoDaSemana & {

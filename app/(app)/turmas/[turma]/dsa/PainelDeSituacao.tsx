@@ -26,10 +26,21 @@
  * não há requisito nenhum, e um `?aberta=` mudaria o contrato da rota do DSA — cuja guarda, em
  * `contrato-de-parametros.test.ts`, exige hoje que **todo** parâmetro dela avise o servidor.
  *
- * ⚠️ **ELE NÃO CALCULA NADA.** A situação, o acumulado, o restante, o percentual e o *lançado à frente*
- * da disciplina chegam prontos de `quadroDaDisciplina`; os da UE saem de `quadroDaUnidade` — as duas
- * em `lib/dominio/dsa/situacao.ts`, com teste ao lado. Aqui só se agrupa a UE pela disciplina e se
- * desenha.
+ * ⚠️ **ELE NÃO CALCULA NADA.** A situação, o acumulado, o restante e o percentual da disciplina chegam
+ * prontos de `quadroDaDisciplina`; os da UE saem de `quadroDaUnidade` — as duas em
+ * `lib/dominio/dsa/situacao.ts`, com teste ao lado. Aqui só se ordena, se agrupa a UE pela disciplina
+ * e se desenha.
+ *
+ * ⚠️ **AJUSTES DA CONFERÊNCIA DO PR #40, 08/10/2026** *(decisões de Bernardo Villas Boas)*:
+ *   · **o «lançado à frente» SAIU desta tela** (item 3) — o cálculo continua em `quadroDaDisciplina`,
+ *     e a grade e o papel continuam a dizê-lo; aqui a marca não aparece mais;
+ *   · **as disciplinas saem em ORDEM NATURAL DO CÓDIGO** (item 5), pelo comparador único de
+ *     `lib/dominio/ordem-natural.ts`. A ordem é aplicada AQUI e não em `quadrosDaSemana`, porque o
+ *     rodapé do papel também passa por lá e não muda;
+ *   · **as cores da situação** (item 6): Concluída verde, Em andamento azul, Aguardando início amarelo,
+ *     Atrasada vermelho — ver `APARENCIA`;
+ *   · **a barra de progresso, sempre verde, com o percentual ao lado** (item 7), pelo componente único;
+ *   · **a situação `atrasada`** (item 8), decidida no domínio.
  *
  * ⚠️ **A DISCIPLINA E A UE TÊM O MESMO CORTE: o fim da semana selecionada** (`RN-CRONOS-03`, `Q-2`).
  * A primeira versão da cascata usava o lançado de `vw_unidades_ensino_execucao`, que soma a turma
@@ -44,6 +55,7 @@ import { cn } from "cn";
 import { ChevronRightIcon } from "lucide-react";
 
 import { BadgeStatus } from "@/components/ciaara/badge-status";
+import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { TabelaDensa, type Coluna } from "@/components/ciaara/tabela-densa";
 import type { Tom } from "@/lib/design/vocabulario";
 import {
@@ -51,6 +63,7 @@ import {
   type QuadroDaDisciplina,
   type SituacaoDaUnidade,
 } from "@/lib/dominio/dsa/situacao";
+import { emOrdemNaturalDoCodigo } from "@/lib/dominio/ordem-natural";
 
 /** O quadro de uma disciplina, com o que a tela precisa para nomeá-la. */
 export type QuadroParaExibir = QuadroDaDisciplina & {
@@ -81,18 +94,29 @@ type Aparencia = { readonly rotulo: string; readonly tom: Tom };
 /**
  * O rótulo e o tom de cada situação da disciplina.
  *
- * ⚠️ **`conflitou` USA O TOM DE CONFLITO — o mesmo que a grade usa na célula.** Dois tons para a
- * mesma coisa faria a tela dizer que são coisas diferentes.
+ * ⚠️ **AS CORES SÃO AS QUE BERNARDO PEDIU EM 08/10/2026** (item 6 da conferência do PR #40), e saem dos
+ * nove tons que JÁ EXISTEM (`lib/design/vocabulario.ts`, `app/globals.css`) — nenhum token novo:
+ *   · **Concluída → `executado`**, o verde do tema (`--executado-*`);
+ *   · **Em andamento → `planejado`**, o azul (`--planejado-*`);
+ *   · **Aguardando início → `atrasado`**, o amarelo (`--atrasado-*`);
+ *   · **Atrasada → `conflito`**, o vermelho (`--conflito-*`) — o único vermelho do tema.
+ * Os valores de cada um, nos dois temas, estão em `app/globals.css`; repeti-los aqui seria a segunda
+ * fonte, e ela envelheceria.
+ * ⚠️ **O NOME DO TOM NÃO É O NOME DA SITUAÇÃO, e isso fica dito:** *Aguardando início* sai no tom
+ * `atrasado` e *Atrasada* no tom `conflito`, porque o pedido é por COR e o tema só tem um amarelo e um
+ * vermelho. O texto do status continua, e é ele que distingue — cor nunca sozinha (`FR-025`).
  *
- * ⚠️ **`concluida` USA `conformidade`, E NÃO UM TOM NOVO:** o vocabulário do tema tem nove tons
- * declarados (`lib/design/vocabulario.ts`), e um nome inventado aqui **não compilaria para cor
- * nenhuma** — é o defeito dos cinco tokens inexistentes de 05/10/2026, que a invariante `I-4c`
- * passou a guardar.
+ * ⚠️ **`conflitou` CONTINUA NO TOM DE CONFLITO — o mesmo que a grade usa na célula**, e por isso divide o
+ * vermelho com `atrasada`. As duas pedem ação; a palavra diz qual.
+ *
+ * ⚠️ **NENHUM TOM INVENTADO:** um nome fora dos nove **não compilaria para cor nenhuma** — é o defeito
+ * dos cinco tokens inexistentes de 05/10/2026, que a invariante `I-4c` passou a guardar.
  */
 const APARENCIA: Readonly<Record<QuadroDaDisciplina["situacao"], Aparencia>> = {
-  aguardando_inicio: { rotulo: "Aguardando início", tom: "planejado" },
-  em_andamento: { rotulo: "Em andamento", tom: "executado" },
-  concluida: { rotulo: "Concluída", tom: "conformidade" },
+  aguardando_inicio: { rotulo: "Aguardando início", tom: "atrasado" },
+  em_andamento: { rotulo: "Em andamento", tom: "planejado" },
+  concluida: { rotulo: "Concluída", tom: "executado" },
+  atrasada: { rotulo: "Atrasada", tom: "conflito" },
   conflitou: { rotulo: "Conflitou", tom: "conflito" },
 };
 
@@ -100,7 +124,9 @@ const APARENCIA: Readonly<Record<QuadroDaDisciplina["situacao"], Aparencia>> = {
  * O rótulo e o tom de cada situação da UE.
  *
  * ⚠️ **OS TRÊS DEGRAUS QUE A UE DIVIDE COM A DISCIPLINA TÊM A MESMA PALAVRA E O MESMO TOM** — a UE
- * fica logo embaixo da linha dela, e *"Em andamento"* lá e *"Falta"* aqui pareceriam duas coisas.
+ * fica logo embaixo da linha dela, e *"Em andamento"* lá e *"Falta"* aqui pareceriam duas coisas. Por
+ * isso as cores de 08/10/2026 (item 6) vieram para cá também: verde, azul e amarelo, como na linha de
+ * cima. Não há `atrasada` na UE (item 8: *"só na disciplina"*).
  *
  * ⚠️ **`passou` É `adiantado`, PELO NOME DO DOMÍNIO, NUNCA PELA COR** (`FR-003` da spec 005): o
  * documento 23 define o tom como *"executado acima do previsto"*, que é exatamente o `PASSOU` do
@@ -108,9 +134,9 @@ const APARENCIA: Readonly<Record<QuadroDaDisciplina["situacao"], Aparencia>> = {
  * aprovação.
  */
 const APARENCIA_DA_UNIDADE: Readonly<Record<SituacaoDaUnidade, Aparencia>> = {
-  aguardando_inicio: { rotulo: "Aguardando início", tom: "planejado" },
-  em_andamento: { rotulo: "Em andamento", tom: "executado" },
-  concluida: { rotulo: "Concluída", tom: "conformidade" },
+  aguardando_inicio: { rotulo: "Aguardando início", tom: "atrasado" },
+  em_andamento: { rotulo: "Em andamento", tom: "planejado" },
+  concluida: { rotulo: "Concluída", tom: "executado" },
   passou: { rotulo: "Passou da prevista", tom: "adiantado" },
 };
 
@@ -143,6 +169,8 @@ export function PainelDeSituacao({
    */
   const [abertas, definirAbertas] = React.useState<readonly string[]>([]);
   const unidadesPorDisciplina = React.useMemo(() => agruparPorDisciplina(unidades), [unidades]);
+  /* ⚠️ Ordem natural do código (item 5, 08/10/2026): `D2` antes de `D10`, pelo comparador único. */
+  const emOrdem = React.useMemo(() => emOrdemNaturalDoCodigo(quadros, (q) => q.codigo), [quadros]);
 
   function alternar(q: QuadroParaExibir): void {
     definirAbertas((atuais) =>
@@ -169,27 +197,14 @@ export function PainelDeSituacao({
               abertas.includes(q.disciplinaId) && "rotate-90",
             )}
           />
-          <span className="flex flex-col">
-            <span>
-              <span className="text-texto font-medium">{q.codigo}</span>{" "}
-              <span className="text-texto-suave">{q.nome}</span>
-            </span>
-            {/*
-              ⚠️ **O «LANÇADO À FRENTE» É DITO EM TEXTO, COM O NÚMERO NO ATRIBUTO** (`FR-028.1`,
-                 `RNF-USA-05`). Ele **conta** no acumulado — é a decisão da `Q-2` —, e por isso
-                 precisa aparecer: sem a marca, a pessoa leria execução onde há planejamento, que é o
-                 `D-5` da planilha (*"a CH cumprida conta semana futura já planejada como cumprida"*)
-                 com a diferença de que aqui está **escrito**.
-            */}
-            {q.taLancadoAFrente > 0 ? (
-              <span
-                data-slot="lancado-a-frente"
-                data-ta={q.taLancadoAFrente}
-                className="bg-planejado-fundo text-planejado-tinta mt-0.5 block w-fit rounded px-1 text-[10px]"
-              >
-                {q.taLancadoAFrente} TA lançado(s) à frente
-              </span>
-            ) : null}
+          {/*
+            ⚠️ **O «LANÇADO À FRENTE» SAIU DAQUI em 08/10/2026** (item 3 da conferência do PR #40,
+               decisão de Bernardo Villas Boas). Ele continua **contando** no acumulado (`Q-2`) e
+               continua dito na grade e no papel; nesta tela, a marca deixou de aparecer.
+          */}
+          <span>
+            <span className="text-texto font-medium">{q.codigo}</span>{" "}
+            <span className="text-texto-suave">{q.nome}</span>
           </span>
         </span>
       ),
@@ -208,14 +223,35 @@ export function PainelDeSituacao({
     },
     {
       chave: "percentual",
-      titulo: "%",
-      numerica: true,
+      titulo: "Progresso",
       /*
        * ⚠️ **PERCENTUAL `null` NÃO É `0 %`** (`RN-DEG-01`): os dois cursos por competências têm
        *    `chPrevista` **zero**, e `0 %` ali seria uma afirmação sobre execução em vez da ausência de
-       *    denominador.
+       *    denominador. Sem percentual, a barra também não se desenha — `BarraDeProgresso` devolve
+       *    nada para `null`.
+       * ⚠️ **A BARRA É SEMPRE VERDE** (item 7, 08/10/2026): `tom="executado"` é o verde do tema, e o
+       *    tom NÃO acompanha a situação — quem diz atraso ou conflito é a coluna ao lado, em texto. A
+       *    barra é o componente único de `components/ciaara/`, e o número vai ao lado, em texto
+       *    (`FR-025`: cor nunca sozinha), e no atributo.
        */
-      celula: (q) => (q.percentual === null ? "—" : `${q.percentual} %`),
+      celula: (q) =>
+        q.percentual === null ? (
+          "—"
+        ) : (
+          <span
+            className="flex items-center justify-end gap-2"
+            data-slot="progresso-da-disciplina"
+            data-percentual={q.percentual}
+          >
+            <BarraDeProgresso
+              valor={q.percentual}
+              tom="executado"
+              rotuloAcessivel={`Progresso de ${q.codigo}: ${q.percentual}% da carga prevista`}
+              className="w-24"
+            />
+            <span className="w-12 text-right tabular-nums">{q.percentual} %</span>
+          </span>
+        ),
     },
     {
       chave: "resta",
@@ -226,8 +262,11 @@ export function PainelDeSituacao({
     {
       chave: "situacao",
       titulo: "Situação",
+      /* ⚠️ A situação vai também no ATRIBUTO (`RNF-USA-05`), como na linha da UE. */
       celula: (q) => (
-        <BadgeStatus tom={APARENCIA[q.situacao].tom} rotulo={APARENCIA[q.situacao].rotulo} />
+        <span data-slot="situacao-da-disciplina" data-situacao={q.situacao}>
+          <BadgeStatus tom={APARENCIA[q.situacao].tom} rotulo={APARENCIA[q.situacao].rotulo} />
+        </span>
       ),
     },
   ];
@@ -259,7 +298,7 @@ export function PainelDeSituacao({
       ) : (
         <div data-slot="quadro-por-disciplina" className="min-w-0">
           <TabelaDensa
-            linhas={quadros}
+            linhas={emOrdem}
             colunas={colunas}
             chaveLinha={(q) => q.disciplinaId}
             rotulo="Situação por disciplina"

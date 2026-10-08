@@ -37,6 +37,7 @@ import type { ExecucaoDaDisciplina, TecnicaDoCatalogo } from "@/lib/dominio/dsa/
 import { conteudoDaAvaliacao, tecnicaDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
 import type { ResponsavelDoCurso } from "@/lib/dominio/dsa/assinaturas";
 import { nomeParaDsa, type InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
+import { emOrdemNaturalDoCodigo } from "@/lib/dominio/ordem-natural";
 import { dataParaLeitura } from "@/lib/formato/data";
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -216,7 +217,9 @@ export async function lerSemanaDoDsa(
       .lte("data", ate),
     supabase
       .from("registros_aula")
-      .select("id, data, ta_inicial, tempos_consumidos, conteudo_resumo, metodologia, status")
+      .select(
+        "id, data, ta_inicial, tempos_consumidos, conteudo_resumo, metodologia, status, unidade_ensino_id, disciplina_id",
+      )
       .eq("turma_id", turmaId)
       .eq("status", "ativo")
       .gte("data", de)
@@ -418,8 +421,15 @@ export async function lerSemanaDoDsa(
     id: string;
     conteudo_resumo: string | null;
     metodologia: string | null;
+    unidade_ensino_id: string | null;
+    disciplina_id: string | null;
   }[]) {
-    conteudos.set(a.id, { conteudo: a.conteudo_resumo, tecnica: a.metodologia });
+    conteudos.set(a.id, {
+      conteudo: a.conteudo_resumo,
+      tecnica: a.metodologia,
+      unidadeEnsinoId: a.unidade_ensino_id,
+      disciplinaColuna: a.disciplina_id,
+    });
   }
   for (const a of (avaliacoesRes.data ?? []) as {
     id: string;
@@ -434,6 +444,8 @@ export async function lerSemanaDoDsa(
       fiscalExterno: a.nome_fiscal_externo,
       /* ⚠️ O título gravado quando há; senão o tipo — a regra é de `conteudoDaAvaliacao`. */
       conteudo: conteudoDaAvaliacao(a.conteudo_resumo, a.tipo_avaliacao),
+      /* ⚠️ O cru, para o editor: reabrir com o tipo e gravar de novo era o achado do lote. */
+      conteudoGravado: a.conteudo_resumo,
       tecnica: a.metodologia,
       /* A vista de prova divide esta linha: leva a data da aplicação como referência, e a EO. */
       aplicadaEm: a.data_avaliacao === null ? null : dataParaLeitura(a.data_avaliacao),
@@ -637,9 +649,13 @@ export async function lerSemanaDoDsa(
      * ⚠️ **TODAS AS DISCIPLINAS ATIVAS, e não só as isentas de UE** — a `D-DSA-1` (08/10/2026) abriu a
      * aula sem UE para qualquer disciplina, e o formulário pede a disciplina antes da unidade.
      */
-    disciplinas: disciplinasDoCurso
-      .filter((d) => d.status === "ativo")
-      .map((d) => ({ id: d.id, codigo: d.cod_disciplina, nome: d.nome_disciplina })),
+    /* ⚠️ Ordem alfabética NATURAL do código (2 antes de 10) — ajuste 5 do PR #40, o mesmo comparador da situação. */
+    disciplinas: emOrdemNaturalDoCodigo(
+      disciplinasDoCurso
+        .filter((d) => d.status === "ativo")
+        .map((d) => ({ id: d.id, codigo: d.cod_disciplina, nome: d.nome_disciplina })),
+      (d) => d.codigo,
+    ),
     avaliacoesParaVista: (
       (paraVistaRes.data ?? []) as {
         id: string;
@@ -723,7 +739,13 @@ export type ExtrasDaImpressao = {
    * A CH prevista e a cumprida por disciplina — o rodapé corta pelas da semana (`SC-014`), e o
    * painel de situação usa as mesmas linhas (`RF-DSA-05`).
    */
-  readonly execucao: readonly (ExecucaoDaDisciplina & { readonly disciplinaId: string })[];
+  readonly execucao: readonly (ExecucaoDaDisciplina & {
+    readonly disciplinaId: string;
+    /** `previsao_inicio_efetiva` — insumo da situação `atrasada` (item 8, 08/10/2026). */
+    readonly previsaoInicio: string | null;
+    /** `previsao_termino_efetiva` — idem. */
+    readonly previsaoTermino: string | null;
+  })[];
   /** As linhas de `responsaveis_curso`, já filtradas por `status = 'ativo'`. */
   readonly responsaveis: readonly ResponsavelDoCurso[];
   /**
@@ -748,9 +770,13 @@ export async function lerExtrasDaImpressao(
   const [execRes, respRes, aulasRes, avalRes] = await Promise.all([
     supabase
       .from("vw_disciplinas_execucao")
-      /* ⚠️ `disciplina_id` entra para o quadro de situação casar a ocupação com a previsão. */
+      /*
+       * ⚠️ `disciplina_id` entra para o quadro de situação casar a ocupação com a previsão.
+       * ⚠️ As duas `previsao_*_efetiva` entraram em 08/10/2026 (item 8): são a previsão da turma, ou a
+       *    padrão da grade, já resolvidas pela view — resolvê-las aqui seria a segunda tradução.
+       */
       .select(
-        "disciplina_id, cod_disciplina, nome_disciplina, carga_horaria_tempos, ta_executados, turma_id",
+        "disciplina_id, cod_disciplina, nome_disciplina, carga_horaria_tempos, ta_executados, turma_id, previsao_inicio_efetiva, previsao_termino_efetiva",
       )
       .eq("turma_id", entrada.turmaId),
     /*
@@ -790,6 +816,8 @@ export async function lerExtrasDaImpressao(
       nome_disciplina: string | null;
       carga_horaria_tempos: number | null;
       ta_executados: number | null;
+      previsao_inicio_efetiva: string | null;
+      previsao_termino_efetiva: string | null;
     }[]
   ).map((d) => ({
     disciplinaId: d.disciplina_id ?? "",
@@ -798,6 +826,8 @@ export async function lerExtrasDaImpressao(
     prevista: d.carga_horaria_tempos ?? 0,
     /* ⚠️ **SEM corte por data** (`Q-2`) — é o `ta_executados` da view, como ele é. */
     cumprida: d.ta_executados ?? 0,
+    previsaoInicio: d.previsao_inicio_efetiva,
+    previsaoTermino: d.previsao_termino_efetiva,
   }));
 
   const responsaveis = (

@@ -168,9 +168,8 @@ test.describe("criar, editar e excluir uma aula pela grade", () => {
     /* ── 3. Clicar no cartão → editar o tópico ──────────────────────────────────────────── */
     await cartao.click();
     await expect(page.locator(ACOES)).toBeVisible();
-    await page.locator('[data-aba="editar"]').click();
     await page.locator("#dsa-editar-conteudo").fill(editado);
-    await page.locator('[data-slot="confirmar-edicao"]').click();
+    await page.locator('[data-slot="gravar-edicao"]').click();
     await expect(page.locator(ACOES)).toHaveCount(0, { timeout: 30_000 });
     const cartaoEditado = page.locator(`${GRADE} td`).filter({ hasText: editado });
     await expect(cartaoEditado).toHaveCount(1, { timeout: 30_000 });
@@ -244,10 +243,9 @@ test.describe("criar, editar e excluir uma aula pela grade", () => {
     /* ── 2. Clicar no cartão → o painel abre À VISTA → Editar → Quantos tempos = 2 ───────── */
     await cartao.click();
     await expect(page.locator(ACOES)).toBeInViewport();
-    await page.locator('[data-aba="editar"]').click();
     await expect(page.locator("#dsa-editar-tempos")).toBeInViewport();
     await page.locator("#dsa-editar-tempos").fill("2");
-    await page.locator('[data-slot="confirmar-edicao"]').click();
+    await page.locator('[data-slot="gravar-edicao"]').click();
 
     const desfecho = async (): Promise<string> => {
       if ((await page.locator('[data-slot="recusa-da-acao"]').count()) > 0) {
@@ -354,7 +352,7 @@ test.describe("⚠️ `RN-EVT-04` · aula não entra em dia de feriado de DIA IN
     await expect(page.locator(ACOES)).toBeVisible();
     await page.locator("#dsa-mover-dia").selectOption(QUARTA);
     await page.locator("#dsa-mover-ta").selectOption("6");
-    await page.locator('[data-slot="confirmar-movimento"]').click();
+    await page.locator('[data-slot="gravar-edicao"]').click();
 
     const recusa = page.locator('[data-slot="recusa-da-acao"]');
     await expect(recusa).toBeVisible({ timeout: 60_000 });

@@ -28,6 +28,7 @@ import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { CardKpi } from "@/components/ciaara/card-kpi";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
 // ⚠️ O ENDERECO DE TURMA VEM DO MODULO, E NAO DE UM TEMPLATE AQUI (`FR-031.2`). O codigo da
 //    turma e `sigla [rotulo] ano` e CONTEM ESPACO — montar a mao produzia um `href` com
 //    espaco cru, que o navegador aceita e o servidor recebe diferente. Defeito medido e
@@ -268,15 +269,26 @@ export default async function Inicio({
                    permissão — quem recusa é a página de destino, com a frase. Esconder aqui faria
                    a pessoa não encontrar o que ela de fato alcança.
               */}
-              <p className="mt-1 pl-3 text-xs">
-                <Link
-                  href={enderecoDoDsa(t.turmaCodigo)}
-                  className="text-texto-suave underline-offset-2 hover:text-texto hover:underline"
-                  data-slot="dsa-da-semana"
-                >
-                  DSA da semana →
-                </Link>
-              </p>
+              {/*
+                ⚠️ **TURMA EAD PURO: O AVISO NO LUGAR DO LINK** (item 9 da conferência do PR #40,
+                   08/10/2026) — a regra e a frase de `lib/dominio/dsa/ead-puro.ts`, as mesmas da
+                   ficha, da lista e da rota do DSA. Semipresencial mantém o link (`D-DSA-2`).
+              */}
+              {t.eadPuro ? (
+                <p className="text-texto-suave mt-1 pl-3 text-xs" data-slot="dsa-turma-ead">
+                  {AVISO_DE_TURMA_EAD}
+                </p>
+              ) : (
+                <p className="mt-1 pl-3 text-xs">
+                  <Link
+                    href={enderecoDoDsa(t.turmaCodigo)}
+                    className="text-texto-suave underline-offset-2 hover:text-texto hover:underline"
+                    data-slot="dsa-da-semana"
+                  >
+                    DSA da semana →
+                  </Link>
+                </p>
+              )}
             </li>
           ))}
         </ul>

@@ -81,7 +81,8 @@ export type PainelDeLancamentoProps = {
   readonly lancarEstudoIndividual: (entrada: unknown) => Promise<ResultadoDoEstudoIndividual>;
   /** As três do PR 4 — ausentes, a grade fica só de leitura. */
   readonly mover?: (entrada: unknown) => Promise<ResultadoDaAcao>;
-  readonly editar?: (entrada: unknown) => Promise<ResultadoDaAcao>;
+  /** O cartão único (ajuste 1 do PR #40): tudo de um lançamento, numa gravação. */
+  readonly atualizar?: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly excluir?: (entrada: unknown) => Promise<ResultadoDaAcao>;
 };
 
@@ -109,6 +110,7 @@ function fatoDaSemana(semana: Semana, fatoId: string): FatoEscolhido | null {
           tecnica: bloco.tecnica,
           instrutor: bloco.instrutor,
           herdado: bloco.herdado,
+          gravado: bloco.gravado,
           semPosicao: false,
         };
       }
@@ -127,6 +129,7 @@ function fatoDaSemana(semana: Semana, fatoId: string): FatoEscolhido | null {
           tecnica: fato.tecnica,
           instrutor: fato.instrutor,
           herdado: fato.herdado,
+          gravado: fato.gravado,
           semPosicao: true,
         };
       }
@@ -156,7 +159,7 @@ export function PainelDeLancamento({
   lancar,
   lancarEstudoIndividual,
   mover,
-  editar,
+  atualizar,
   excluir,
 }: PainelDeLancamentoProps) {
   const [celula, definirCelula] = React.useState<{ dia: string; ta: number } | null>(null);
@@ -166,7 +169,7 @@ export function PainelDeLancamento({
   const [lancandoEi, definirLancandoEi] = React.useState(false);
 
   const podeMexer =
-    podeLancar && mover !== undefined && editar !== undefined && excluir !== undefined;
+    podeLancar && mover !== undefined && atualizar !== undefined && excluir !== undefined;
   const fato = fatoId === null ? null : fatoDaSemana(semana, fatoId);
 
   /*
@@ -313,7 +316,7 @@ export function PainelDeLancamento({
            volta à célula de onde a pessoa saiu — por `devolverOFoco`, e NÃO pelo padrão do Radix.
       */}
       <Dialog
-        open={fato !== null && mover !== undefined && editar !== undefined && excluir !== undefined}
+        open={fato !== null && atualizar !== undefined && excluir !== undefined}
         onOpenChange={(aberto) => {
           if (!aberto) definirFato(null);
         }}
@@ -324,19 +327,19 @@ export function PainelDeLancamento({
         >
           <DialogHeader>
             <DialogTitle>Lançamento</DialogTitle>
-            <DialogDescription>Mover, editar ou excluir este lançamento.</DialogDescription>
+            <DialogDescription>Edite tudo de uma vez e grave, ou exclua.</DialogDescription>
           </DialogHeader>
-          {fato !== null && mover && editar && excluir ? (
+          {fato !== null && atualizar && excluir ? (
             <AcoesDoBloco
               fato={fato}
-              dias={semana.dias.map((d) => d.data)}
+              diasDaSemana={semana.dias}
               linhas={semana.linhas}
               unidades={unidades}
+              disciplinas={disciplinas}
               instrutores={instrutores}
               escala={escala}
               tecnicas={tecnicas}
-              mover={mover}
-              editar={editar}
+              atualizar={atualizar}
               excluir={excluir}
               aoFechar={() => definirFato(null)}
             />

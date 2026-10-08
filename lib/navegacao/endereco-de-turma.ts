@@ -26,6 +26,14 @@
  * dá escolha sobre quem escreve. **O que o `%20` original protegia continua protegido**: o defeito
  * de 18/09/2026 era **espaço cru** no `href` (`FR-031.2`), e `+` não é espaço cru.
  */
+import {
+  CAMPOS_DA_RUBRICA,
+  LADOS_DA_ASSINATURA,
+  limparCampo,
+  type CampoDaRubrica,
+  type EdicaoDasAssinaturas,
+  type LadoDaAssinatura,
+} from "@/lib/dominio/dsa/assinatura-editada";
 
 /** O prefixo das rotas de turma. Mudou de lugar? Mudou aqui, e só aqui. */
 const RAIZ_DE_TURMAS = "/turmas";
@@ -143,15 +151,71 @@ export const ROTA_DA_IMPRESSAO_DO_DSA = "/print/dsa" as const;
  */
 export function enderecoDaImpressaoDoDsa(
   codigo: string,
-  recorte: { readonly semana: number; readonly ano: number; readonly sabado?: boolean },
+  recorte: {
+    readonly semana: number;
+    readonly ano: number;
+    readonly sabado?: boolean;
+    /** As assinaturas editadas na tela antes de imprimir — só o que foi editado (item 4 de 08/10/2026). */
+    readonly assinaturas?: EdicaoDasAssinaturas;
+  },
 ): string {
   const partes = [
     `turma=${comoAConsultaEscreve(codigo)}`,
     `semana=${String(recorte.semana)}`,
     `ano=${String(recorte.ano)}`,
     ...(recorte.sabado ? ["sabado=sim"] : []),
+    ...LADOS_DA_ASSINATURA.flatMap((lado) =>
+      CAMPOS_DA_RUBRICA.flatMap((campo) => {
+        const valor = recorte.assinaturas?.[lado]?.[campo];
+        return valor === undefined
+          ? []
+          : [`${PARAMETRO_DA_ASSINATURA[lado][campo]}=${comoAConsultaEscreve(valor)}`];
+      }),
+    ),
   ];
   return `${ROTA_DA_IMPRESSAO_DO_DSA}?${partes.join("&")}`;
+}
+
+/**
+ * Os parâmetros da assinatura editada na impressão do DSA (item 4 das correções de 08/10/2026,
+ * decisão de Bernardo Villas Boas: *"o que foi editado vai para a IMPRESSÃO; NÃO grava no cadastro
+ * nem no banco"*).
+ *
+ * ⚠️ **ELES NÃO ESTÃO NO `CONTRATO` DE `contrato.ts`, e não é esquecimento — é a guarda do `FR-035`**:
+ * `opcoes-de-parametro.test.ts` reprova qualquer rota `/print` declarada ali (*"a rota de impressão
+ * herda, e nenhuma existe ainda"*). A impressão do DSA já vivia fora do contrato, com o endereço
+ * escrito **só** por esta função; os parâmetros novos seguem o mesmo dono, e quem os lê é
+ * `edicaoDaImpressaoDoDsa`, logo abaixo — um nome só para escrever e para ler.
+ *
+ * ⚠️ **PRESENÇA É EDIÇÃO.** Parâmetro ausente = vale o resolvido; presente e vazio = o campo sai
+ * vazio, porque apagar um campo também é editar.
+ */
+export const PARAMETRO_DA_ASSINATURA: Readonly<
+  Record<LadoDaAssinatura, Readonly<Record<CampoDaRubrica, string>>>
+> = {
+  esquerda: { nome: "esq_nome", posto: "esq_posto", funcao: "esq_funcao" },
+  direita: { nome: "dir_nome", posto: "dir_posto", funcao: "dir_funcao" },
+};
+
+/**
+ * A edição das assinaturas, lida da consulta de `/print/dsa`.
+ *
+ * ⚠️ **TEXTO LIVRE, DE QUEM QUER QUE TENHA MONTADO O ENDEREÇO**: cada valor passa por `limparCampo`
+ * (pontas e `LIMITE_DO_CAMPO`), e o React escapa ao desenhar. Repetido, vale o primeiro.
+ */
+export function edicaoDaImpressaoDoDsa(
+  busca: Readonly<Record<string, string | readonly string[] | undefined>>,
+): EdicaoDasAssinaturas {
+  const edicao: Partial<Record<LadoDaAssinatura, Partial<Record<CampoDaRubrica, string>>>> = {};
+  for (const lado of LADOS_DA_ASSINATURA) {
+    for (const campo of CAMPOS_DA_RUBRICA) {
+      const bruto = busca[PARAMETRO_DA_ASSINATURA[lado][campo]];
+      const valor = typeof bruto === "string" ? bruto : bruto?.[0];
+      if (valor === undefined) continue;
+      (edicao[lado] ??= {})[campo] = limparCampo(valor);
+    }
+  }
+  return edicao;
 }
 
 export const ANCORA_DAS_DISCIPLINAS = "disciplinas";

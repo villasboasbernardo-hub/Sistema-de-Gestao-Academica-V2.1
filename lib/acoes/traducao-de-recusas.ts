@@ -385,6 +385,17 @@ function porChave(
       );
     }
 
+    /*
+     * As duas de `public.gravar_lancamentos_em_transacao` (D-DSA-3, 08/10/2026). ⚠️ A primeira é
+     * estado que a Server Action evita — ela monta as operações —, então chegar aqui é defeito, e a
+     * frase pede o suporte em vez de mandar a pessoa tentar outra coisa.
+     */
+    case "operacoes_invalidas":
+      return "Erro interno ao gravar o lançamento e os que ele empurra: nada foi gravado. Avise o suporte.";
+
+    case "lancamento_fora_do_alcance":
+      return "Um dos lançamentos que seriam empurrados está fora do seu alcance, então nada foi gravado.";
+
     case "codigo_nao_confere":
       return "O código digitado não confere. Confira e digite de novo — a exclusão é permanente.";
 

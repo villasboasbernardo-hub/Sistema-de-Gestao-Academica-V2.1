@@ -46,6 +46,17 @@
  * do DSA, decisão de Bernardo Villas Boas): a situação por disciplina passou a abrir, em cascata, as
  * UEs dela — com prevista, lançada, restante **e a situação da UE**. A regra está em
  * `situacaoDaUnidade`, no fim deste arquivo, e reaproveita a da disciplina em vez de reescrevê-la.
+ *
+ * ⚠️ **E A DISCIPLINA GANHOU UMA QUINTA SITUAÇÃO, `atrasada`, em 08/10/2026** (item 8 da conferência
+ * do PR #40, decisão de Bernardo Villas Boas):
+ *
+ * > *"STATUS «ATRASADA» na disciplina: já deveria ter iniciado e não iniciou (previsão de início da
+ * > turma_disciplina já passou em relação a HOJE e CH lançada = 0) OU já deveria ter terminado e não
+ * > concluiu (previsão de término passou e lançada < prevista). Sem datas de previsão: não marca
+ * > atrasada (RN-DEG-01). Só na disciplina, NÃO na cascata por UE."*
+ *
+ * A regra está em `estaAtrasada`, e a precedência em `situacaoDaDisciplina`. ⚠️ **ALERTA, NUNCA
+ * BLOQUEIO** (`RN-DEG-02`): ela só muda a palavra da situação, e nada no lançamento a consulta.
  */
 
 import { percentualExecutado } from "@/lib/dominio/andamento-da-turma";
@@ -57,8 +68,13 @@ import { avaliarAUnidade } from "@/lib/dominio/dsa/tetos";
  * ⚠️ **`conflitou` NÃO É UM QUINTO DEGRAU DE PROGRESSO: ela ATRAVESSA os outros três** — uma
  * disciplina pode estar concluída **e** ter conflitado. O requisito pede **uma** palavra por
  * disciplina, então a precedência fica escrita em `situacaoDaDisciplina`, e não deduzida na tela.
+ *
+ * ⚠️ **`atrasada` TAMBÉM ATRAVESSA**: ela é uma pergunta de CALENDÁRIO (a previsão já passou?) sobre
+ * um fato de PROGRESSO (não começou / não terminou), e pode cair sobre *aguardando* ou *em andamento*
+ * — nunca sobre *concluída*. A precedência das cinco está em `situacaoDaDisciplina`.
  */
-export type SituacaoDaDisciplina = "aguardando_inicio" | "em_andamento" | "concluida" | "conflitou";
+export type SituacaoDaDisciplina =
+  "aguardando_inicio" | "em_andamento" | "concluida" | "conflitou" | "atrasada";
 
 /** Um lançamento, no mínimo que a situação precisa saber dele. */
 export type LancamentoParaSituacao = {
@@ -81,6 +97,14 @@ export type DisciplinaParaSituacao = {
   /** CH prevista da disciplina na turma, em TA. `0` em currículo por competências. */
   readonly chPrevistaTempos: number;
   readonly lancamentos: readonly LancamentoParaSituacao[];
+  /**
+   * `aaaa-mm-dd` — a previsão de início **efetiva** da disciplina na turma
+   * (`vw_disciplinas_execucao.previsao_inicio_efetiva`: a da turma, ou a padrão da grade). Ausente ou
+   * nula, a regra do atraso não tem do que partir e **não marca** (`RN-DEG-01`).
+   */
+  readonly previsaoInicio?: string | null;
+  /** `aaaa-mm-dd` — a previsão de término efetiva (`previsao_termino_efetiva`). Mesma degradação. */
+  readonly previsaoTermino?: string | null;
 };
 
 export type QuadroDaDisciplina = {
@@ -99,20 +123,66 @@ export type QuadroDaDisciplina = {
    * ⚠️ **É SEMPRE UM SUBCONJUNTO DE `chAcumulada`, nunca um número à parte** — lançamento depois do
    * corte da semana não entra no acumulado e **também não** é marcado aqui. Contá-lo faria a tela
    * marcar como "à frente" um TA que o número ao lado dele não inclui.
+   *
+   * ⚠️ **DESDE 08/10/2026 O PAINEL DE SITUAÇÃO NÃO O DESENHA** (item 3 da conferência do PR #40,
+   * decisão de Bernardo Villas Boas): a marca saiu da tela da situação, e **o cálculo ficou** — a
+   * grade e o papel continuam dizendo o lançado à frente pelos caminhos deles.
    */
   readonly taLancadoAFrente: number;
 };
 
 /**
- * A situação de uma disciplina, na precedência do `RF-DSA-05`.
+ * Se a disciplina está **atrasada** em relação ao calendário previsto (item 8 da conferência do PR
+ * #40, 08/10/2026).
  *
- * ⚠️ **A ORDEM DOS QUATRO DEGRAUS É A REGRA, e cada um tem razão:**
- * 1. **`aguardando_inicio`** — nenhum lançamento até o corte. Vem primeiro porque é **ausência de
- *    dado**, e não um progresso de 0 % (`RN-DEG-01`): a disciplina pode nem ter começado.
- * 2. **`conflitou`** — algum lançamento até o corte em conflito. **Vence as outras**, porque é o que
- *    exige ação de quem olha; esconder conflito atrás de *"Concluída"* é o pior dos dois erros.
- * 3. **`concluida`** — acumulada `>=` prevista.
- * 4. **`em_andamento`** — o resto.
+ * > *"já deveria ter iniciado e não iniciou (previsão de início […] já passou […] e CH lançada = 0)
+ * > OU já deveria ter terminado e não concluiu (previsão de término passou e lançada < prevista).
+ * > Sem datas de previsão: não marca atrasada (RN-DEG-01)."* — Bernardo Villas Boas, 08/10/2026
+ *
+ * ⚠️ **«JÁ PASSOU» É ESTRITO (`previsão < referência`).** No próprio dia da previsão de início a
+ * disciplina ainda pode começar, e no dia do término ainda pode terminar: marcá-las ali acusaria
+ * quem está exatamente no prazo.
+ * ⚠️ **SEM DATA, A METADE DAQUELA DATA NÃO DISPARA — e a outra continua valendo.** Previsão de início
+ * nula não impede o atraso de término, e vice-versa: são duas perguntas, cada uma com a sua data.
+ * Texto vazio vale como nulo (o PostgREST não o produz numa coluna `date`, mas a entrada é texto).
+ * ⚠️ **A CONTA DO TÉRMINO É `acumulada < prevista`, e por isso CONCLUÍDA NUNCA É ATRASADA** — a mesma
+ * comparação que decide `concluida`, com o sinal invertido. Com prevista 0 (currículo por
+ * competências) o atraso de término não dispara nunca: não há o que faltar.
+ */
+export function estaAtrasada(entrada: {
+  readonly previsaoInicio: string | null | undefined;
+  readonly previsaoTermino: string | null | undefined;
+  /** `aaaa-mm-dd` — o dia contra o qual a previsão é comparada (ver `quadroDaDisciplina`). */
+  readonly referencia: string;
+  readonly chPrevista: number;
+  readonly chAcumulada: number;
+}): boolean {
+  const inicio = entrada.previsaoInicio || null;
+  const termino = entrada.previsaoTermino || null;
+  const naoIniciou = inicio !== null && inicio < entrada.referencia && entrada.chAcumulada === 0;
+  const naoConcluiu =
+    termino !== null && termino < entrada.referencia && entrada.chAcumulada < entrada.chPrevista;
+  return naoIniciou || naoConcluiu;
+}
+
+/**
+ * A situação de uma disciplina, na precedência do `RF-DSA-05` — com a `atrasada` de 08/10/2026.
+ *
+ * ⚠️ **A ORDEM DOS DEGRAUS É A REGRA, e cada um tem razão:**
+ * 1. **sem lançamento até o corte** — `atrasada` se a previsão de início já passou, senão
+ *    **`aguardando_inicio`**. Ausência de dado vem antes de progresso de 0 % (`RN-DEG-01`), e o
+ *    conflito não se aplica: sem lançamento não há o que conflitar.
+ * 2. **`conflitou`** — algum lançamento até o corte em conflito. **Continua vencendo todas**, inclusive
+ *    `atrasada`, porque é o que exige ação **sobre um lançamento** — o atraso se resolve lançando, o
+ *    conflito se resolve desfazendo, e esconder o segundo atrás do primeiro manda fazer a coisa
+ *    errada.
+ * 3. **`concluida`** — acumulada `>=` prevista. **Vem antes de `atrasada`**, e é redundância
+ *    deliberada: `estaAtrasada` já não dispara com a prevista cumprida, e esta ordem garante a regra
+ *    *"concluída nunca é atrasada"* mesmo para quem chamar com `atrasada: true` à mão.
+ * 4. **`atrasada`** — a previsão de início ou de término já passou sem o progresso correspondente.
+ *    **Vence `em_andamento`**: *"em andamento"* sobre uma disciplina cujo término passou diria que
+ *    está tudo bem.
+ * 5. **`em_andamento`** — o resto.
  *
  * ⚠️ **Ela é exportada para que o controle negativo do teste consiga isolar a precedência** — a
  * mesma entrada sem conflito tem de dar `concluida`, e sem isso *"conflitou vence"* não se observa.
@@ -122,10 +192,13 @@ export function situacaoDaDisciplina(entrada: {
   readonly temConflito: boolean;
   readonly chPrevista: number;
   readonly chAcumulada: number;
+  /** O veredito de `estaAtrasada`. A UE passa sempre `false`: o atraso é só da disciplina. */
+  readonly atrasada: boolean;
 }): SituacaoDaDisciplina {
-  if (!entrada.temLancamento) return "aguardando_inicio";
+  if (!entrada.temLancamento) return entrada.atrasada ? "atrasada" : "aguardando_inicio";
   if (entrada.temConflito) return "conflitou";
   if (entrada.chAcumulada >= entrada.chPrevista) return "concluida";
+  if (entrada.atrasada) return "atrasada";
   return "em_andamento";
 }
 
@@ -144,12 +217,23 @@ export function situacaoDaDisciplina(entrada: {
  * (`C-Espc-HN` e `C-Espc-FR`). O que diz à tela que não há denominador é o `percentual` **`null`**,
  * e por isso ele não é `0`: `0 %` ali seria afirmação sobre execução, e não ausência de medida
  * (`RN-DEG-01`).
+ *
+ * ⚠️ **A REFERÊNCIA DO ATRASO É O MENOR ENTRE `hoje` E `ateODia`** (item 8, 08/10/2026). Atraso é
+ * fato do presente, e por isso na semana corrente e nas futuras a referência é **hoje** — abrir a
+ * semana de dezembro não pode acusar de atraso uma disciplina cujo término é em novembro e que ainda
+ * tem tempo. Mas numa semana **passada** o acumulado é o daquela semana (`RN-CRONOS-03`), e compará-lo
+ * com a previsão contra *hoje* diria que a disciplina estava atrasada em março por uma previsão de
+ * abril: a situação da semana 10 tem de ser a que a semana 10 tinha. O mínimo dá as duas coisas com
+ * uma regra só, e **não corta o acumulado** — o único corte continua sendo `ateODia` (`Q-2`).
  */
 export function quadroDaDisciplina(entrada: {
   readonly disciplina: DisciplinaParaSituacao;
   /** O último dia da semana selecionada, `aaaa-mm-dd` — o corte do **acumulado**. */
   readonly ateODia: string;
-  /** Hoje, `aaaa-mm-dd` — só para **marcar** o lançado à frente; não corta o cálculo. */
+  /**
+   * Hoje, `aaaa-mm-dd` — marca o lançado à frente e é a referência do atraso (limitada por
+   * `ateODia`); **não corta o cálculo**.
+   */
   readonly hoje: string;
 }): QuadroDaDisciplina {
   const { disciplina, ateODia, hoje } = entrada;
@@ -176,9 +260,23 @@ export function quadroDaDisciplina(entrada: {
     if (lancamento.data > hoje) taLancadoAFrente += ta;
   }
 
+  const atrasada = estaAtrasada({
+    previsaoInicio: disciplina.previsaoInicio,
+    previsaoTermino: disciplina.previsaoTermino,
+    referencia: hoje < ateODia ? hoje : ateODia,
+    chPrevista,
+    chAcumulada,
+  });
+
   return {
     disciplinaId: disciplina.disciplinaId,
-    situacao: situacaoDaDisciplina({ temLancamento, temConflito, chPrevista, chAcumulada }),
+    situacao: situacaoDaDisciplina({
+      temLancamento,
+      temConflito,
+      chPrevista,
+      chAcumulada,
+      atrasada,
+    }),
     chPrevista,
     chAcumulada,
     chRestante: restanteNuncaNegativo(chPrevista, chAcumulada),
@@ -273,6 +371,8 @@ export function situacaoDaUnidade(entrada: {
     temConflito: false,
     chPrevista,
     chAcumulada: chLancada,
+    /* ⚠️ O atraso é SÓ da disciplina (item 8, 08/10/2026): a UE não tem previsão de calendário. */
+    atrasada: false,
   });
   if (comoDisciplina === "aguardando_inicio" || comoDisciplina === "em_andamento") {
     return comoDisciplina;

@@ -20,7 +20,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { editar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } from "@/lib/acoes/dsa";
+import { atualizar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } from "@/lib/acoes/dsa";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
@@ -30,11 +30,13 @@ import {
   TEXTO_DA_ETAPA_A_DISTANCIA,
   type TurmaParaEtapa,
 } from "@/lib/dominio/dsa/etapa-presencial";
+import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
 import { avisosAntesDeImprimir } from "@/lib/dominio/dsa/impressao";
 import { motivoDoNumeroAusente, numeroDoDsa } from "@/lib/dominio/dsa/numero-do-dsa";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
-import { enderecoDaImpressaoDoDsa, enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+import { CONTRATO } from "@/lib/navegacao/contrato";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -50,6 +52,7 @@ import {
   semanaEscolhida,
 } from "./consulta";
 import { lerExtrasDaImpressao, lerSemanaDoDsa } from "./leitura";
+import { BotaoImprimir, EdicaoDasAssinaturasNaTela } from "./AssinaturasEditaveis";
 import { CabecalhoDaSemana, RodapeDaSemana } from "./DocumentoNaTela";
 import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
 import { PainelDeLancamento } from "./PainelDeLancamento";
@@ -99,33 +102,33 @@ export default async function SemanaDoDsa({
   }
 
   const hoje = hojeNaCiaara();
+  /*
+   * O que o contrato descartou, dito em português — é o aviso da `RN-DEG-01`. ⚠️ **O AVISO INTEIRO
+   * SAI DA ESCOLHA, inclusive a consequência** (conferência do PR #40, 08/10/2026): a página colava
+   * *"Abrimos a semana corrente"* a qualquer descarte, e `?semana=22&ano=2019` abria a semana 22.
+   */
   const escolha = semanaEscolhida({
     semana: Number(valores.semana ?? 0),
     ano: Number(valores.ano ?? 0),
     hoje,
+    descartes,
+    faixas: CONTRATO[ROTA_DO_DSA].parametros,
   });
-  /* O que o contrato descartou, dito em português — é o aviso da `RN-DEG-01`. */
-  const descartado = descartes.find((d) => d.parametro === "semana" || d.parametro === "ano");
-  const aviso =
-    escolha.aviso ??
-    (descartado
-      ? `O valor "${descartado.recebido}" não serve para ${descartado.parametro}: ` +
-        `a semana vai de 1 a 53 e o ano de 2020 a 2099.`
-      : null);
+  const aviso = escolha.aviso;
 
   /*
    * ⚠️ **O DSA NÃO SE APLICA A EAD PURO** (`Q-13`, decisão de Bernardo Villas Boas de 05/10/2026).
    * Semipresencial **tem** DSA — ele cobre a semana presencial. A tela diz isso e para aqui, em vez
    * de desenhar uma grade de nove tempos para uma turma que não tem TA presencial nenhum.
+   * ⚠️ **A FRASE É A MESMA DA FICHA, DA LISTA E DO `/inicio`** (item 9 da conferência do PR #40,
+   * 08/10/2026): elas já não oferecem o botão, e quem chega pelo endereço lê o mesmo aviso.
    */
   if (ehEadPuro(turma.modalidade as string | null)) {
     return (
       <section className="flex flex-col gap-3">
         <CabecalhoDoDsa codigo={codigo} rotulo={null} ano={escolha.ano} />
         <p role="status" className="max-w-prose text-texto" data-slot="dsa-nao-se-aplica">
-          Esta turma é de <strong>EAD puro</strong>, e o Detalhe Semanal de Aula não se aplica a
-          ela: não há Tempo de Aula presencial a detalhar. Turma semipresencial tem DSA — ele cobre
-          a semana presencial.
+          {AVISO_DE_TURMA_EAD}
         </p>
       </section>
     );
@@ -257,8 +260,17 @@ export default async function SemanaDoDsa({
     linhasImpressas,
   });
 
+  /*
+   * ⚠️ **A SEÇÃO É A FOLHA QUE GUARDA A EDIÇÃO DAS ASSINATURAS** (item 4 da conferência do PR #40,
+   * 08/10/2026) — o *Imprimir* e o rodapé leem a mesma edição. A `key` zera o que foi editado ao
+   * trocar de semana: o Next reaproveitaria o estado, e a edição de uma semana iria para o papel da
+   * outra. O conteúdo continua servidor, por `children`.
+   */
   return (
-    <section className="flex min-w-0 flex-col gap-3">
+    <EdicaoDasAssinaturasNaTela
+      key={`${escolha.ano}-${escolha.numero}`}
+      className="flex min-w-0 flex-col gap-3"
+    >
       <CabecalhoDoDsa codigo={codigo} rotulo={rotuloDaSemana(lida.dias)} ano={escolha.ano} />
 
       <NavegacaoDaSemana
@@ -270,7 +282,7 @@ export default async function SemanaDoDsa({
 
       {aviso ? (
         <p role="status" className="text-sm text-atrasado-tinta" data-slot="aviso-de-semana">
-          {aviso} Abrimos a semana corrente.
+          {aviso}
         </p>
       ) : null}
 
@@ -331,17 +343,13 @@ export default async function SemanaDoDsa({
         data-slot="barra-de-impressao"
       >
         <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href={enderecoDaImpressaoDoDsa(codigo, {
-              semana: escolha.numero,
-              ano: escolha.ano,
-              ...(lida.sabadoAberto ? { sabado: true } : {}),
-            })}
-            className="rounded-ciaara border-borda-forte bg-superficie-2 text-texto hover:bg-marca-suave border px-3 py-1.5 text-sm font-medium"
-            data-slot="imprimir-dsa"
-          >
-            Imprimir
-          </Link>
+          {/* ⚠️ Folha de cliente: o endereço leva as assinaturas editadas no rodapé (item 4, 08/10/2026). */}
+          <BotaoImprimir
+            codigo={codigo}
+            semana={escolha.numero}
+            ano={escolha.ano}
+            sabado={lida.sabadoAberto}
+          />
           <span className="text-xs text-texto-suave">
             Uma página A4 paisagem, com as assinaturas da data desta semana.
           </span>
@@ -393,7 +401,7 @@ export default async function SemanaDoDsa({
           lancar={lancar}
           lancarEstudoIndividual={lancarEstudoIndividualDaSemana}
           mover={mover}
-          editar={editar}
+          atualizar={atualizar}
           excluir={excluir}
         />
       </div>
@@ -416,7 +424,7 @@ export default async function SemanaDoDsa({
            data da semana, do MESMO objeto do `/print/dsa`, no visual do sistema.
       */}
       <RodapeDaSemana dados={documento} nomeDeQuemImprime={usuario?.nome ?? null} />
-    </section>
+    </EdicaoDasAssinaturasNaTela>
   );
 }
 

@@ -67,9 +67,20 @@ describe("`SC-022` · zero contêiner de contexto como fonte de verdade de naveg
    *    linha, e a exclusão **desmonta a linha** — a falha desaparecia junto, e Bernardo viu uma
    *    exclusão que "não fez nada". Ver a nota em `AvisoDaLista.tsx`.
    */
+  /*
+   * ⚠️ **O TERCEIRO ISENTO ENTROU EM 08/10/2026** (item 4 da conferência do PR #40, decisão de
+   *    Bernardo Villas Boas: assinaturas editáveis na tela, *"imprimiu, imprimiu"*). Ele guarda o
+   *    **rascunho das duas rubricas** para UMA impressão — texto de formulário, não recorte, não
+   *    identidade e não posição. A pergunta do `FR-010` dá *não*: a tela do DSA mandada a outra
+   *    pessoa não deve abrir com a assinatura que alguém digitou. O contêiner só existe porque o
+   *    *Imprimir* (no alto) e os campos (no rodapé) leem a mesma edição; o que viaja para o papel
+   *    vai no endereço do botão, montado pelo dono único (`enderecoDaImpressaoDoDsa`). A `key` por
+   *    semana na página impede que ele sobreviva à troca de semana.
+   */
   const ISENTOS = [
     "components/ciaara/lista-navegavel.tsx",
     "app/(app)/admin/usuarios/AvisoDaLista.tsx",
+    "app/(app)/turmas/[turma]/dsa/AssinaturasEditaveis.tsx",
   ];
 
   it("nenhum `createContext` novo entrou para guardar recorte, identidade ou página", () => {

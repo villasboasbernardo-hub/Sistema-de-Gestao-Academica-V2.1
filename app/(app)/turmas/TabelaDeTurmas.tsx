@@ -32,6 +32,7 @@ import {
   rotuloDaTurma,
   TOM_DO_STATUS_DE_TURMA,
 } from "@/lib/dominio/seletor-de-turma";
+import { AVISO_DE_TURMA_EAD, ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 import { dataIlegivel, dataParaLeitura } from "@/lib/formato/data";
 import { enderecoDaTurma, enderecoDoDsa } from "@/lib/navegacao/endereco-de-turma";
 
@@ -96,17 +97,30 @@ const COLUNAS: readonly Coluna<TurmaNaLista>[] = [
     titulo: "DSA",
     ordenavel: false,
     valor: (l) => l.codigo,
-    celula: (l) => (
-      <Link
-        href={enderecoDoDsa(l.codigo)}
-        tabIndex={-1}
-        aria-label={`Abrir o DSA da turma ${l.codigo}`}
-        className="text-marca underline-offset-2 hover:underline"
-        data-slot="dsa-da-linha"
-      >
-        DSA
-      </Link>
-    ),
+    /*
+     * ⚠️ **TURMA EAD PURO: O AVISO NO LUGAR DO LINK** (item 9 da conferência do PR #40, 08/10/2026).
+     *    A regra e a frase são de `lib/dominio/dsa/ead-puro.ts`, as mesmas da ficha, do `/inicio` e
+     *    da rota do DSA. Semipresencial mantém o link (`D-DSA-2`).
+     */
+    celula: (l) =>
+      ehEadPuro(l.modalidade) ? (
+        <span
+          className="text-texto-suave block max-w-72 text-xs whitespace-normal"
+          data-slot="dsa-turma-ead"
+        >
+          {AVISO_DE_TURMA_EAD}
+        </span>
+      ) : (
+        <Link
+          href={enderecoDoDsa(l.codigo)}
+          tabIndex={-1}
+          aria-label={`Abrir o DSA da turma ${l.codigo}`}
+          className="text-marca underline-offset-2 hover:underline"
+          data-slot="dsa-da-linha"
+        >
+          DSA
+        </Link>
+      ),
   },
   {
     chave: "curso",
