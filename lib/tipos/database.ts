@@ -127,6 +127,7 @@ export type Database = {
           criado_por: string | null
           data: string
           descricao: string
+          disciplina_id: string | null
           editado_em: string | null
           editado_por: string | null
           escopo: Database["public"]["Enums"]["escopo_atividade"]
@@ -152,6 +153,7 @@ export type Database = {
           criado_por?: string | null
           data: string
           descricao: string
+          disciplina_id?: string | null
           editado_em?: string | null
           editado_por?: string | null
           escopo?: Database["public"]["Enums"]["escopo_atividade"]
@@ -177,6 +179,7 @@ export type Database = {
           criado_por?: string | null
           data?: string
           descricao?: string
+          disciplina_id?: string | null
           editado_em?: string | null
           editado_por?: string | null
           escopo?: Database["public"]["Enums"]["escopo_atividade"]
@@ -195,6 +198,27 @@ export type Database = {
           turma_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "atividades_nao_letivas_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id"]
+          },
           {
             foreignKeyName: "atividades_nao_letivas_instrutor_id_fkey"
             columns: ["instrutor_id"]
@@ -2545,10 +2569,12 @@ export type Database = {
           editado_em: string | null
           editado_por: string | null
           id: string
+          inicio_etapa_presencial: string | null
           modalidade: Database["public"]["Enums"]["modalidade_ensino"]
           origem_migracao_v1: string | null
           sala_alocada: string | null
           status: Database["public"]["Enums"]["status_turma"]
+          termino_etapa_presencial: string | null
           turma: string | null
         }
         Insert: {
@@ -2563,10 +2589,12 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           id?: string
+          inicio_etapa_presencial?: string | null
           modalidade: Database["public"]["Enums"]["modalidade_ensino"]
           origem_migracao_v1?: string | null
           sala_alocada?: string | null
           status: Database["public"]["Enums"]["status_turma"]
+          termino_etapa_presencial?: string | null
           turma?: string | null
         }
         Update: {
@@ -2581,10 +2609,12 @@ export type Database = {
           editado_em?: string | null
           editado_por?: string | null
           id?: string
+          inicio_etapa_presencial?: string | null
           modalidade?: Database["public"]["Enums"]["modalidade_ensino"]
           origem_migracao_v1?: string | null
           sala_alocada?: string | null
           status?: Database["public"]["Enums"]["status_turma"]
+          termino_etapa_presencial?: string | null
           turma?: string | null
         }
         Relationships: [
