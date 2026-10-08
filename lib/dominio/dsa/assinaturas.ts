@@ -59,6 +59,13 @@
  * `RN-ANT-01` por perto) tem ponto único em `lib/dominio/nome-instrutor.ts`; aqui os campos **passam
  * adiante** como chegaram. Duas montagens do mesmo nome divergiriam na primeira abreviação nova.
  *
+ * ⚠️ **O POSTO DA ASSINATURA SAI POR EXTENSO, COM O QUADRO — e é derivado AQUI, uma vez** *(item 7 das
+ * correções de 08/10/2026, decisão de Bernardo Villas Boas)*. Quem sabe o por extenso é
+ * `lib/dominio/posto-por-extenso.ts`; este módulo só o chama, para que a rubrica da tela e a do papel
+ * imprimam o **mesmo** campo (`postoPorExtenso`) e nenhuma das duas volte a ler a sigla. Os campos
+ * crus (`postoGraduacao`, `especialidade`) continuam transportados. ⚠️ **Até esta correção a leitura
+ * nem trazia `especialidade`**: o quadro nunca chegava ao rodapé.
+ *
  * ⚠️ **DIVERGÊNCIA REPORTADA, NÃO CORRIGIDA (regra 1):** o `CHECK resp_fixo_tem_nominal` exige, no
  * modo `fixo`, **`posto_graduacao` e `nome_guerra`** — e **não** `nome_completo`, que é **nulável**.
  * Então uma linha `fixo` perfeitamente válida pode chegar aqui com `nomeCompleto` **nulo**, e o
@@ -76,6 +83,7 @@
  * As linhas, o curso e a data chegam **por parâmetro** — é o que permite provar a vigência com casos
  * sintéticos, sem subir banco, e é o que faz o caso de março existir.
  */
+import { postoParaAssinatura } from "@/lib/dominio/posto-por-extenso";
 
 /** O `public.papel_assinatura` do banco — ENUM nativo, `not null`, medido em 05/10/2026. */
 export type PapelDeAssinatura =
@@ -103,6 +111,11 @@ export type ResponsavelDoCurso = {
   readonly ordem: number;
   readonly nomeCompleto: string | null;
   readonly postoGraduacao: string | null;
+  /**
+   * O quadro/especialidade (`responsaveis_curso.especialidade`), como veio — `FR`, `(T)`, `(RM2-T)`.
+   * Quem o põe entre parênteses é `postoParaAssinatura`.
+   */
+  readonly especialidade: string | null;
   /** `not null` no banco — a linha impressa ABAIXO da rubrica. Vale nos DOIS modos. */
   readonly funcaoDescricao: string;
 };
@@ -119,7 +132,14 @@ export type Assinatura = {
   readonly funcaoDescricao: string;
   /** `null` no modo dinâmico: quem assina é quem imprime, e a ROTA resolve isso. */
   readonly nomeCompleto: string | null;
+  /** A sigla, crua (`1ºTen`). ⚠️ **A rubrica não a imprime** — imprime `postoPorExtenso`. */
   readonly postoGraduacao: string | null;
+  readonly especialidade: string | null;
+  /**
+   * **O que a rubrica imprime** — `Primeiro-Tenente (RM2-T)`, `Capitão de Corveta` (item 7 de
+   * 08/10/2026). `""` sem posto, e sempre `""` no modo dinâmico (`usuarios` não tem posto).
+   */
+  readonly postoPorExtenso: string;
   readonly resolvePeloUsuarioLogado: boolean;
 };
 
@@ -217,19 +237,23 @@ export function resolverAssinatura(
   if (escolhida === null) return null;
 
   const dinamico = escolhida.preenchimento === "dinamico_usuario_logado";
+  /*
+   * ⚠️ **NO MODO DINÂMICO OS NOMINAIS SAEM `null`, E NÃO "o que estiver na linha".** A linha
+   *    dinâmica guarda `email_usuario`/`usuario_id` como chave de resolução, e pode ter nominal
+   *    antigo esquecido ali — imprimi-lo faria o rodapé mostrar **quem não está imprimindo**, com
+   *    cara de dado correto. `null` + `resolvePeloUsuarioLogado` obriga a rota a resolver, ou a
+   *    deixar em branco. O posto por extenso sai dos campos JÁ anulados, então também sai vazio.
+   */
+  const postoGraduacao = dinamico ? null : escolhida.postoGraduacao;
+  const especialidade = dinamico ? null : escolhida.especialidade;
 
   return {
     papel: escolhida.papel,
     funcaoDescricao: escolhida.funcaoDescricao,
-    /*
-     * ⚠️ **NO MODO DINÂMICO OS DOIS NOMINAIS SAEM `null`, E NÃO "o que estiver na linha".** A linha
-     *    dinâmica guarda `email_usuario`/`usuario_id` como chave de resolução, e pode ter nominal
-     *    antigo esquecido ali — imprimi-lo faria o rodapé mostrar **quem não está imprimindo**, com
-     *    cara de dado correto. `null` + `resolvePeloUsuarioLogado` obriga a rota a resolver, ou a
-     *    deixar em branco.
-     */
     nomeCompleto: dinamico ? null : escolhida.nomeCompleto,
-    postoGraduacao: dinamico ? null : escolhida.postoGraduacao,
+    postoGraduacao,
+    especialidade,
+    postoPorExtenso: postoParaAssinatura(postoGraduacao, especialidade),
     resolvePeloUsuarioLogado: dinamico,
   };
 }

@@ -19,7 +19,17 @@ import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
-import { ANO, limparDsa, QUARTA, SEMANA, semearDsa, TERCA, type DsaSemeado } from "./dsa-de-teste";
+import {
+  ANO,
+  limparDsa,
+  QUARTA,
+  SEGUNDA,
+  SEMANA,
+  semearDsa,
+  TERCA,
+  type DsaSemeado,
+} from "./dsa-de-teste";
+import { escolherDisciplinaEUnidade, irParaASemanaDoDia } from "./percurso-do-dsa";
 import { irAFichaDaTurma } from "./navegar-turmas";
 
 let EMAIL = "";
@@ -46,13 +56,11 @@ test.afterAll(async () => {
   await apagarConta(EMAIL);
 });
 
-/** Ficha da turma → *Abrir o DSA* (por clique) → a semana de referência. */
+/** Ficha da turma → *Abrir o DSA* → o dia no calendário (item 4) → a semana de referência. */
 async function abrirASemana(page: Page): Promise<void> {
   await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
   await page.locator('[data-slot="abrir-o-dsa"]').click();
-  await page.goto(
-    `/turmas/${encodeURIComponent(SEMEADO.turmaComRelogio)}/dsa?semana=${SEMANA}&ano=${ANO}`,
-  );
+  await irParaASemanaDoDia(page, SEGUNDA, SEMANA, ANO);
   await expect(page.locator(GRADE)).toBeVisible();
 }
 
@@ -116,11 +124,11 @@ test.describe("criar, editar e excluir uma aula pela grade", () => {
     /* ── 1. Tempo vazio da sexta, 8º tempo → o formulário já sabe o dia e o tempo ──────────── */
     await page.locator(`${GRADE} td[data-celula="7:4"]`).click();
     await expect(page.locator(FORMULARIO)).toBeVisible();
-    const alvo = page.locator('[data-slot="alvo-do-lancamento"]');
-    await expect(alvo).toContainText("2026-04-10");
-    await expect(alvo).toContainText("8");
+    /* O dia em DD/MM/AAAA, e o tempo PRÉ-SELECIONADO no campo — que continua editável (item 1d). */
+    await expect(page.locator('[data-slot="alvo-do-lancamento"]')).toContainText("10/04/2026");
+    await expect(page.locator("#dsa-ta-inicial")).toHaveValue("8");
 
-    await page.locator("#dsa-unidade").selectOption({ index: 1 });
+    await escolherDisciplinaEUnidade(page, SEMEADO.codDisciplina);
     await page.locator('[data-slot="seletor-instrutor"]').first().click();
     await page
       .locator('[data-slot="popover-content"]')
@@ -180,6 +188,97 @@ test.describe("criar, editar e excluir uma aula pela grade", () => {
     /* ⚠️ Regra 4: a linha não some do banco, fica inativa. */
     await expect.poll(() => situacaoDaAula(editado)).toBe("inativo");
   });
+
+  /*
+   * ⚠️ **O DEFEITO DE 08/10/2026** *(teste de Bernardo Villas Boas)*: *"não consigo editar o total de
+   * TA de uma disciplina no dia"*. Nenhum caso editava `tempos` — os percursos editavam tópico, local
+   * e instrutor —, e é por isso que ele passou. Este chega CLICANDO no cartão e confere o BANCO.
+   *
+   * ⚠️ **A AÇÃO GRAVAVA CERTO, e o defeito era de TELA** (medido na `main` em 08/10/2026): o painel de
+   * ações era desenhado ABAIXO da grade inteira — na grade v4, de doze linhas, fora da área visível
+   * de quem clicou no cartão. O Playwright rola sozinho até o campo, e por isso o percurso antigo
+   * passava: **`toBeInViewport` é a asserção que discrimina**, porque não rola.
+   * ⚠️ **E O TEMPO ESCOLHIDO NÃO ATRAVESSA O ALMOÇO, de propósito:** a primeira redação usava o 5º
+   * tempo, e o bloco de 2 que nascia ali saía em duas partes de "1 TA" (`SC-011`, por desenho) — o
+   * outro motivo de quem edita achar que nada mudou, que a tela agora diz com «bloco de N TA».
+   */
+  test("⚠️ editar «Quantos tempos» pela grade grava o novo tamanho no banco e no cartão", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const topico = `Tempos editados ${Date.now().toString(36)}`;
+    await abrirASemana(page);
+
+    /* ── 1. Sexta, 1º tempo (vazio na semente): um bloco de 1 TA ─────────────────────────── */
+    await page.locator(`${GRADE} td[data-celula="0:4"]`).click();
+    await expect(page.locator(FORMULARIO)).toBeInViewport();
+    await escolherDisciplinaEUnidade(page, SEMEADO.codDisciplina);
+    await page.locator('[data-slot="seletor-instrutor"]').first().click();
+    await page
+      .locator('[data-slot="popover-content"]')
+      .getByRole("option", { name: new RegExp(SEMEADO.nomeHabilitado, "i") })
+      .first()
+      .click();
+    await page.locator("#dsa-conteudo").fill(topico);
+    await page.locator("#dsa-tempos").fill("1");
+    await page.locator('[data-slot="gravar-lancamento"]').click();
+    /* Alerta mantém o formulário aberto e GRAVOU (`RN-DEG-02`); só a recusa reprova. */
+    const desfechoDoLancamento = async (): Promise<string> => {
+      if ((await page.locator('[data-slot="recusa-do-lancamento"]').count()) > 0) {
+        return `recusou: ${await page.locator('[data-slot="recusa-do-lancamento"]').innerText()}`;
+      }
+      if ((await page.locator(FORMULARIO).count()) === 0) return "fechou";
+      if ((await page.locator('[data-slot="avisos-do-lancamento"]').count()) > 0) return "avisou";
+      return "em curso";
+    };
+    await expect.poll(desfechoDoLancamento, { timeout: 60_000 }).not.toBe("em curso");
+    expect(await desfechoDoLancamento(), "o lançamento foi recusado").not.toMatch(/^recusou/);
+    if ((await page.locator(FORMULARIO).count()) > 0) {
+      await page.locator(FORMULARIO).getByRole("button", { name: "Cancelar" }).click();
+    }
+
+    const cartao = page.locator(`${GRADE} td`).filter({ hasText: topico });
+    await expect(cartao).toHaveCount(1, { timeout: 30_000 });
+    await expect(cartao).toContainText("1 TA");
+
+    /* ── 2. Clicar no cartão → o painel abre À VISTA → Editar → Quantos tempos = 2 ───────── */
+    await cartao.click();
+    await expect(page.locator(ACOES)).toBeInViewport();
+    await page.locator('[data-aba="editar"]').click();
+    await expect(page.locator("#dsa-editar-tempos")).toBeInViewport();
+    await page.locator("#dsa-editar-tempos").fill("2");
+    await page.locator('[data-slot="confirmar-edicao"]').click();
+
+    const desfecho = async (): Promise<string> => {
+      if ((await page.locator('[data-slot="recusa-da-acao"]').count()) > 0) {
+        return `recusou: ${await page.locator('[data-slot="recusa-da-acao"]').innerText()}`;
+      }
+      if ((await page.locator(ACOES).count()) === 0) return "fechou";
+      if ((await page.locator('[data-slot="avisos-da-acao"]').count()) > 0) return "avisou";
+      return "em curso";
+    };
+    await expect.poll(desfecho, { timeout: 60_000 }).not.toBe("em curso");
+    expect(await desfecho(), "a edição dos tempos foi recusada").not.toMatch(/^recusou/);
+
+    /* ── 3. A prova é o BANCO: 2 tempos, e o fim do bloco no 2º TA ─────────────────────────── */
+    await expect
+      .poll(async () => {
+        const { data } = await banco()
+          .from("registros_aula")
+          .select("tempos_consumidos, ta_final")
+          .eq("conteudo_resumo", topico)
+          .eq("status", "ativo")
+          .maybeSingle();
+        const l = data as { tempos_consumidos: number; ta_final: number } | null;
+        return l === null ? "sem linha" : `${l.tempos_consumidos}/${l.ta_final}`;
+      })
+      .toBe("2/2");
+
+    /* ── 4. E a grade mostra UM cartão com o bloco novo, sem recarregar à mão ──────────────── */
+    const editado = page.locator(`${GRADE} td`).filter({ hasText: topico });
+    await expect(editado).toHaveCount(1, { timeout: 30_000 });
+    await expect(editado).toContainText("2 TA");
+  });
 });
 
 test.describe("`RN-EVT-02` · o dia de feriado de DIA INTEIRO na grade", () => {
@@ -220,9 +319,9 @@ test.describe("⚠️ `RN-EVT-04` · aula não entra em dia de feriado de DIA IN
     await expect(celula).toHaveAttribute("data-tom", "bloqueada");
     await celula.click();
     await expect(page.locator(FORMULARIO)).toBeVisible();
-    await expect(page.locator('[data-slot="alvo-do-lancamento"]')).toContainText(QUARTA);
+    await expect(page.locator('[data-slot="alvo-do-lancamento"]')).toContainText("08/04/2026");
 
-    await page.locator("#dsa-unidade").selectOption({ index: 1 });
+    await escolherDisciplinaEUnidade(page, SEMEADO.codDisciplina);
     await page.locator('[data-slot="seletor-instrutor"]').first().click();
     await page
       .locator('[data-slot="popover-content"]')

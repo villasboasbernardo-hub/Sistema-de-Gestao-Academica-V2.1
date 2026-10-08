@@ -32,6 +32,8 @@ import { notFound } from "next/navigation";
 
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
+import { etapaDaSemana, TEXTO_DA_ETAPA_A_DISTANCIA } from "@/lib/dominio/dsa/etapa-presencial";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -88,6 +90,27 @@ export default async function ImpressaoDoDsa({
 
   const turmaId = turma.id as string;
   const cursoId = turma.curso_id as string;
+
+  /*
+   * ⚠️ **`D-DSA-2` TAMBÉM NO PAPEL**: a semana da etapa a distância da turma semipresencial não tem
+   * DSA, e imprimir uma grade vazia com assinaturas seria um documento falso. A tela não oferece o
+   * botão nessa semana; quem chega pelo endereço lê a mesma frase da tela, pela mesma regra.
+   */
+  const etapa = etapaDaSemana(
+    {
+      modalidade: (turma.modalidade as string | null) ?? null,
+      inicioEtapaPresencial: (turma.inicio_etapa_presencial as string | null) ?? null,
+      terminoEtapaPresencial: (turma.termino_etapa_presencial as string | null) ?? null,
+    },
+    datasDaSemanaIso(escolha.ano, escolha.numero).slice(0, 6),
+  );
+  if (etapa.tipo === "fora") {
+    return (
+      <main className="dsa-impressao" data-slot="dsa-etapa-a-distancia">
+        <p>{TEXTO_DA_ETAPA_A_DISTANCIA}</p>
+      </main>
+    );
+  }
 
   /* ⚠️ As duas leituras são independentes: uma rodada só de banco por impressão. */
   const [lida, extras] = await Promise.all([

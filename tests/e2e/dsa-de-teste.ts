@@ -97,6 +97,12 @@ export const SEMANA_A_FRENTE = semanaAFrente?.numero ?? 1;
 export const DATA_A_FRENTE = semanaAFrente?.segunda ?? SEGUNDA;
 /** Quantos TA a semente lança à frente — o número que a marca tem de dizer. */
 export const TA_A_FRENTE = 2;
+/**
+ * O tópico da aula à frente — é por ele que o percurso da assinatura acha o cartão (item 7 de
+ * 08/10/2026): a semana dela é a única que se alcança **por clique** a partir de hoje, com duas
+ * vezes *Próxima semana*.
+ */
+export const CONTEUDO_A_FRENTE = "Aula planejada para uma data que ainda não chegou";
 
 export const SEMANA_DE_MAIO = 20;
 export const SEMANA_DE_JULHO = 28;
@@ -808,7 +814,7 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
         instrutor_id: instrutorId,
         ta_inicial: 1,
         tempos_consumidos: TA_A_FRENTE,
-        conteudo_resumo: "Aula planejada para uma data que ainda não chegou",
+        conteudo_resumo: CONTEUDO_A_FRENTE,
         local: semeado.sala,
       },
       { onConflict: "codigo" },
@@ -937,6 +943,12 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
    * ⚠️ **O MODO É `fixo` NOS DOIS, e o `CHECK resp_fixo_tem_nominal` cobra `posto_graduacao` E
    * `nome_guerra`** — medido no catálogo. O `nome_completo` é **nulável** no banco (divergência já
    * reportada em `assinaturas.ts`), e é ele que o papel imprime: a semente manda os três.
+   *
+   * ⚠️ **O POSTO DA ASSINATURA SAI POR EXTENSO** (item 7 de 08/10/2026), e os três casos estão aqui:
+   * `1ºTEN` sem quadro (abril) → `Primeiro-Tenente`; `1ºTen` com o quadro `(RM2-T)` (julho) →
+   * `Primeiro-Tenente (RM2-T)`; `CC` sem quadro → `Capitão de Corveta`. ⚠️ **O instrutor da grade
+   * também é `1ºTEN`** — é o par que prova que só a assinatura muda: a mesma sigla sai por extenso
+   * no rodapé e abreviada no cartão.
    */
   const ASSINANTES = [
     {
@@ -945,6 +957,7 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
       vigente_de: "2026-01-01",
       vigente_ate: "2026-05-31",
       posto_graduacao: "1ºTEN",
+      especialidade: null,
       nome_guerra: "ABRIL",
       nome_completo: `ANTONIO DE ABRIL ${s}`,
       funcao_descricao: "Auxiliar da Div. de Adm. Academica",
@@ -954,7 +967,8 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
       papel_assinatura: "elaborador",
       vigente_de: "2026-06-01",
       vigente_ate: null,
-      posto_graduacao: "CT",
+      posto_graduacao: "1ºTen",
+      especialidade: "(RM2-T)",
       nome_guerra: "JULHO",
       nome_completo: `JOAQUIM DE JULHO ${s}`,
       funcao_descricao: "Auxiliar da Div. de Adm. Academica",
@@ -965,6 +979,7 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
       vigente_de: "2026-01-01",
       vigente_ate: null,
       posto_graduacao: "CC",
+      especialidade: null,
       nome_guerra: "ENCARREGADO",
       nome_completo: `ERNESTO ENCARREGADO ${s}`,
       funcao_descricao: "Encarregado da Div. de Adm. Academica",
@@ -986,6 +1001,7 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
           exibir_no_dsa: true,
           ordem: 1,
           posto_graduacao: a.posto_graduacao,
+          especialidade: a.especialidade,
           nome_guerra: a.nome_guerra,
           nome_completo: a.nome_completo,
           funcao_descricao: a.funcao_descricao,

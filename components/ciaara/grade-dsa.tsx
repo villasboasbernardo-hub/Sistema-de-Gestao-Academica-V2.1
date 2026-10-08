@@ -237,8 +237,15 @@ function CorpoDoCartao({
         {linha.local === "" ? null : <span>{linha.local}</span>}
         {linha.te === "" ? null : <strong className="font-semibold">{linha.te}</strong>}
         {cartao.partes > 1 ? (
+          /*
+           * ⚠️ **O TOTAL DO BLOCO VAI JUNTO DA PARTE** (item 2 do comando de 08/10/2026). O bloco que
+           * atravessa o almoço sai em duas partes (`SC-011`), cada uma com o TA DELA — e quem acabava
+           * de editar «Quantos tempos» para 2 via "1 TA" e "1 TA" e concluía que a edição não pegou.
+           * Só a tela ganha o total: o papel continua com o TA de cada linha, como o documento assinado.
+           */
           <span>
             · parte {cartao.parte} de {cartao.partes}
+            {bloco?.tempos != null ? ` · bloco de ${bloco.tempos} TA` : ""}
           </span>
         ) : null}
       </span>

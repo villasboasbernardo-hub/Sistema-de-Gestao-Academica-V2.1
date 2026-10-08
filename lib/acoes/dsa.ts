@@ -37,6 +37,8 @@ import {
   recusaDeAulaNoDia,
   type FeriadoDoCalendario,
 } from "@/lib/dominio/dsa/dia-bloqueado";
+import { recusaForaDaEtapa } from "@/lib/dominio/dsa/etapa-presencial";
+import { avisoDeSobreposicao, type OcupacaoDaTurma } from "@/lib/dominio/dsa/sobreposicao";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
@@ -306,6 +308,96 @@ async function recusaDoCalendario(
 }
 
 /**
+ * O porteiro da etapa presencial (`D-DSA-2`, decisão de Bernardo Villas Boas de 08/10/2026): turma
+ * semipresencial não recebe lançamento em dia fora da etapa presencial cadastrada.
+ *
+ * ⚠️ **QUEM DECIDE É `recusaForaDaEtapa`** — a mesma função que faz a tela trocar a grade pela frase
+ * *"Etapa a distância — sem DSA nesta semana"*. Aqui só se lê a turma.
+ *
+ * ⚠️ **SEM JANELA NÃO RECUSA** (`RN-DEG-01`): a decisão manda avisar e não bloquear, e quem avisa é a
+ * tela. ⚠️ **E TURMA ILEGÍVEL TAMBÉM NÃO**: sem a linha não há modalidade, e a gravação seguinte é
+ * quem esbarra na RLS — inventar uma recusa de etapa ali diria uma coisa falsa.
+ */
+async function recusaDaEtapa(
+  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+  turmaId: string | null,
+  data: string,
+): Promise<string | null> {
+  if (turmaId === null) return null;
+  const { data: turma } = await supabase
+    .from("turmas")
+    .select("modalidade, inicio_etapa_presencial, termino_etapa_presencial")
+    .eq("id", turmaId)
+    .maybeSingle();
+  if (!turma) return null;
+  return recusaForaDaEtapa(
+    {
+      modalidade: (turma.modalidade as string | null) ?? null,
+      inicioEtapaPresencial: (turma.inicio_etapa_presencial as string | null) ?? null,
+      terminoEtapaPresencial: (turma.termino_etapa_presencial as string | null) ?? null,
+    },
+    data,
+  );
+}
+
+/**
+ * O aviso de sobreposição **dentro da turma** (item 2 do comando de 08/10/2026) — ALERTA, nunca
+ * recusa. Ver o cabeçalho de `lib/dominio/dsa/sobreposicao.ts` para o porquê, medido no remoto.
+ *
+ * ⚠️ **SÓ AS OCUPAÇÕES DESTA TURMA** (`turma_id = …`), sem a atividade global: é a grade DESTA turma
+ * que não desenha dois cartões na mesma célula.
+ */
+async function avisoDaTurma(
+  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+  nova: {
+    readonly turmaId: string | null;
+    readonly data: string;
+    readonly taInicial: number;
+    readonly tempos: number;
+    readonly fatoId?: string;
+  },
+): Promise<string | null> {
+  if (nova.turmaId === null) return null;
+  const { data } = await supabase
+    .from("vw_ocupacao_ta")
+    .select("fato_id, data, ta_inicial, ta_final")
+    .eq("turma_id", nova.turmaId)
+    .eq("data", nova.data);
+  const ocupacoes: OcupacaoDaTurma[] = (
+    (data ?? []) as {
+      fato_id: string;
+      data: string;
+      ta_inicial: number | null;
+      ta_final: number | null;
+    }[]
+  )
+    .filter((o) => o.ta_inicial !== null && o.ta_final !== null)
+    .map((o) => ({
+      fatoId: o.fato_id,
+      data: o.data,
+      taInicial: o.ta_inicial as number,
+      taFinal: o.ta_final as number,
+    }));
+  return avisoDeSobreposicao(
+    {
+      data: nova.data,
+      taInicial: nova.taInicial,
+      tempos: nova.tempos,
+      ...(nova.fatoId === undefined ? {} : { fatoId: nova.fatoId }),
+    },
+    ocupacoes,
+  );
+}
+
+/** Os alertas de sempre, mais o da sobreposição, no formato que a tela lê. */
+function comAviso(alertas: readonly string[], sobreposicao: string | null): readonly Aviso[] {
+  return [...alertas, ...(sobreposicao === null ? [] : [sobreposicao])].map((texto, i) => ({
+    codigo: `alerta-${i}`,
+    texto,
+  }));
+}
+
+/**
  * Grava um bloco (`RF-DSA-04`).
  *
  * ⚠️ **ELA É O CONTRATO DO ÉPICO 12:** o motor de prévia produz `Bloco` por função pura e chama
@@ -321,6 +413,23 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
   const supabase = await criarClienteDeServidor();
   const id = randomUUID();
   const marca = `DSA-${Date.now().toString(36).toUpperCase()}`;
+
+  /*
+   * ⚠️ **`D-DSA-2`: O DIA FORA DA ETAPA PRESENCIAL VEM ANTES DE TUDO, PARA TODO TIPO DE BLOCO.** A
+   * semana da etapa a distância não tem DSA — nem aula, nem avaliação, nem atividade —, e a tela
+   * que esconde a grade não é a defesa: esta ação é endpoint HTTP de fato.
+   */
+  const daEtapa = await recusaDaEtapa(supabase, bloco.turmaId, bloco.data);
+  if (daEtapa !== null) return falha(daEtapa);
+
+  /* O aviso de sobreposição dentro da turma — alerta, nunca recusa (item 2, 08/10/2026). */
+  const sobreposicao = await avisoDaTurma(supabase, {
+    turmaId: bloco.turmaId,
+    data: bloco.data,
+    taInicial: bloco.taInicial,
+    tempos: bloco.tempos,
+    ...(bloco.tipo === "vista_prova" ? { fatoId: bloco.avaliacaoId } : {}),
+  });
 
   if (bloco.tipo === "aula") {
     /* ⚠️ `RN-EVT-04`: o dia vem antes de tudo — se o calendário o bloqueia, nada mais importa. */
@@ -370,11 +479,7 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     });
     if (error) return falha(traduzirRecusa(error as ErroDoBanco));
     revalidar();
-    return {
-      ok: true,
-      id,
-      avisos: veredito.alertas.map((texto, i) => ({ codigo: `alerta-${i}`, texto })),
-    };
+    return { ok: true, id, avisos: comAviso(veredito.alertas, sobreposicao) };
   }
 
   if (bloco.tipo === "avaliacao") {
@@ -410,7 +515,7 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     });
     if (error) return falha(traduzirRecusa(error as ErroDoBanco));
     revalidar();
-    return { ok: true, id, avisos: [] };
+    return { ok: true, id, avisos: comAviso([], sobreposicao) };
   }
 
   if (bloco.tipo === "vista_prova") {
@@ -429,7 +534,7 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
       .eq("id", bloco.avaliacaoId);
     if (error) return falha(traduzirRecusa(error as ErroDoBanco));
     revalidar();
-    return { ok: true, id: bloco.avaliacaoId, avisos: [] };
+    return { ok: true, id: bloco.avaliacaoId, avisos: comAviso([], sobreposicao) };
   }
 
   const { error } = await supabase.from("atividades_nao_letivas").insert({
@@ -446,10 +551,12 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     local: bloco.local,
     instrutor_id: bloco.instrutorId,
     responsavel_externo: bloco.responsavelExterno,
+    /* A disciplina OPCIONAL da AEC (item 1b, 08/10/2026); o banco confere que é do curso da turma. */
+    disciplina_id: bloco.disciplinaId,
   });
   if (error) return falha(traduzirRecusa(error as ErroDoBanco));
   revalidar();
-  return { ok: true, id, avisos: [] };
+  return { ok: true, id, avisos: comAviso([], sobreposicao) };
 }
 
 export type ResultadoDoEstudoIndividual =
@@ -489,7 +596,7 @@ export async function lancarEstudoIndividualDaSemana(
   }
 
   /* ⚠️ Uma rodada só: nenhum `await` dentro de laço. */
-  const [ocupacaoRes, feriadosRes, eiRes] = await Promise.all([
+  const [ocupacaoRes, feriadosRes, eiRes, turmaRes] = await Promise.all([
     supabase
       .from("vw_ocupacao_ta")
       .select("data, ta_final")
@@ -511,10 +618,26 @@ export async function lancarEstudoIndividualDaSemana(
       .eq("status", "ativo")
       .gte("data", de)
       .lte("data", ate),
+    supabase
+      .from("turmas")
+      .select("modalidade, inicio_etapa_presencial, termino_etapa_presencial")
+      .eq("id", turmaId)
+      .maybeSingle(),
   ]);
 
   /* ⚠️ O dia bloqueado é o da MESMA função da grade e da recusa de aula (`RN-EVT-04`). */
   const feriados = (feriadosRes.data ?? []) as FeriadoDoCalendario[];
+  /*
+   * ⚠️ **E O DIA DA ETAPA A DISTÂNCIA TAMBÉM É PULADO** (`D-DSA-2`): a semana que a janela corta ao
+   * meio tem DSA, mas o dia de fora não — pela mesma função que recusa o lançamento um a um.
+   */
+  const turmaDaEtapa = turmaRes.data
+    ? {
+        modalidade: (turmaRes.data.modalidade as string | null) ?? null,
+        inicioEtapaPresencial: (turmaRes.data.inicio_etapa_presencial as string | null) ?? null,
+        terminoEtapaPresencial: (turmaRes.data.termino_etapa_presencial as string | null) ?? null,
+      }
+    : null;
   const jaTem = new Set(((eiRes.data ?? []) as { data: string }[]).map((e) => e.data));
 
   const ultimoTaDoDia = new Map<string, number>();
@@ -529,6 +652,10 @@ export async function lancarEstudoIndividualDaSemana(
   const pulados: string[] = [];
   for (const dia of uteis) {
     if (motivoDoBloqueio(dia, feriados) !== null) {
+      pulados.push(dia);
+      continue;
+    }
+    if (turmaDaEtapa !== null && recusaForaDaEtapa(turmaDaEtapa, dia) !== null) {
       pulados.push(dia);
       continue;
     }
@@ -745,19 +872,17 @@ async function contextoDoCurso(
  * recusada com `23514`, que na tela é *"o banco recusou: um campo não atende à regra"*. A ação
  * antecipa isso e **pede a unidade**, com a frase que diz o que fazer.
  *
- * ⚠️ **E A ISENÇÃO DA `Q-1` CONTINUA VALENDO:** disciplina marcada `sem_unidades_ensino` (ou curso
- * por competências) **não** precisa de UE, e a condição é a mesma que o `CHECK` usa. ⚠️ **A função
- * `app.disciplina_sem_ue` vive no schema `app`, que o PostgREST NÃO expõe** (medido na spec 011:
- * `PGRST202`, que se lê como *"a função não existe"* e significa *"não é alcançável pela interface
- * de dados"*), então a condição é remontada com uma leitura de `disciplinas` e `cursos` — o **mesmo**
- * dado, e o banco continua sendo quem impõe.
+ * ⚠️ **DESDE A `D-DSA-1` (08/10/2026) A ISENÇÃO DA `Q-1` É REGRA GERAL:** a linha que aponta a
+ * disciplina na coluna não precisa de UE, em curso nenhum — é o que o `CHECK` emendado em
+ * `20261008164612` aceita. A condição deixou de depender de `app.disciplina_sem_ue`, e a função
+ * deixou de ler `disciplinas` e `cursos` para remontá-la. Sem UE **e** sem disciplina — o estado das
+ * 1.566 linhas do ETL —, a catraca continua pedindo a unidade.
  */
-async function faltaAUnidadeDaCatraca(
-  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+function faltaAUnidadeDaCatraca(
   origem: OrigemDoFatoValidada,
   fato: FatoDoBanco,
   unidadeMandada: string | null,
-): Promise<string | null> {
+): string | null {
   /*
    * ⚠️ **A CATRACA É DE `registros_aula`, E SÓ DELA — e a primeira escrita disto a aplicava às
    * QUATRO origens, com uma recusa falsa.** `avaliacoes` e `atividades_nao_letivas` **não têm**
@@ -773,25 +898,15 @@ async function faltaAUnidadeDaCatraca(
   if (fato.unidadeEnsinoId !== null || unidadeMandada !== null) return null;
   if (!fato.herdado) return null;
 
-  if (fato.disciplinaId !== null) {
-    const { data } = await supabase
-      .from("disciplinas")
-      .select("sem_unidades_ensino, curso_id")
-      .eq("id", fato.disciplinaId)
-      .maybeSingle();
-    const d = data as { sem_unidades_ensino?: boolean | null; curso_id?: string } | null;
-    if (d?.sem_unidades_ensino === true) return null;
-    if (d?.curso_id) {
-      const { data: curso } = await supabase
-        .from("cursos")
-        .select("curriculo_modelo")
-        .eq("id", d.curso_id)
-        .maybeSingle();
-      if ((curso as { curriculo_modelo?: string } | null)?.curriculo_modelo === "competencias") {
-        return null;
-      }
-    }
-  }
+  /*
+   * ⚠️ **DESDE A `D-DSA-1` (08/10/2026) A LINHA QUE APONTA A DISCIPLINA NÃO PRECISA DE UE, em
+   * disciplina NENHUMA** — a isenção da `Q-1` virou regra geral, e o `CHECK` passou a aceitar
+   * `disciplina_id` com tópico em qualquer curso. Até ali esta função remontava a isenção lendo
+   * `disciplinas` e `cursos`; as duas leituras saíram junto com a condição. Sem UE **e** sem
+   * disciplina, a catraca continua pedindo a unidade.
+   * ⚠️ Como a UE é nula aqui, `fato.disciplinaId` só pode ter vindo da COLUNA — é ela que o `CHECK` lê.
+   */
+  if (fato.disciplinaId !== null) return null;
 
   return (
     "Esta aula veio da migração sem unidade de ensino, e mexer nela passa a exigi-la " +
@@ -902,13 +1017,26 @@ export async function mover(entrada: unknown): Promise<ResultadoDoLancamento> {
     if (doCalendario !== null) return falha(doCalendario);
   }
 
-  const pedeUnidade = await faltaAUnidadeDaCatraca(
-    supabase,
-    movimento.origem,
-    fato,
-    movimento.unidadeEnsinoId,
-  );
+  /*
+   * ⚠️ **`D-DSA-2` TAMBÉM NO MOVER**: sem isto bastaria lançar na semana presencial e arrastar para a
+   * etapa a distância. Como no calendário, reposicionar **dentro do próprio dia** não é recusado — o
+   * lançamento já está lá, e recusar impediria corrigir o tempo de um lançamento existente.
+   */
+  if (movimento.data !== fato.data) {
+    const daEtapa = await recusaDaEtapa(supabase, fato.turmaId, movimento.data);
+    if (daEtapa !== null) return falha(daEtapa);
+  }
+
+  const pedeUnidade = faltaAUnidadeDaCatraca(movimento.origem, fato, movimento.unidadeEnsinoId);
   if (pedeUnidade !== null) return falha(pedeUnidade, "unidadeEnsinoId");
+
+  const sobreposicao = await avisoDaTurma(supabase, {
+    turmaId: fato.turmaId,
+    data: movimento.data,
+    taInicial: movimento.taInicial,
+    tempos: movimento.tempos ?? fato.tempos ?? 1,
+    fatoId: movimento.fatoId,
+  });
 
   /*
    * ⚠️ **O `tempos` É SEMPRE ESCRITO, E ISSO FOI CORRIGIDO POR MEDIÇÃO — há uma SEGUNDA catraca no
@@ -942,7 +1070,7 @@ export async function mover(entrada: unknown): Promise<ResultadoDoLancamento> {
     );
     if (typeof alterado === "string") return falha(alterado);
     revalidar();
-    return { ok: true, id: movimento.fatoId, avisos: [] };
+    return { ok: true, id: movimento.fatoId, avisos: comAviso([], sobreposicao) };
   }
 
   const veredito = await vereditoDosTetos(supabase, {
@@ -966,11 +1094,7 @@ export async function mover(entrada: unknown): Promise<ResultadoDoLancamento> {
   );
   if (typeof alterado === "string") return falha(alterado);
   revalidar();
-  return {
-    ok: true,
-    id: movimento.fatoId,
-    avisos: veredito.alertas.map((texto, i) => ({ codigo: `alerta-${i}`, texto })),
-  };
+  return { ok: true, id: movimento.fatoId, avisos: comAviso(veredito.alertas, sobreposicao) };
 }
 
 /**
@@ -1002,12 +1126,7 @@ export async function editar(entrada: unknown): Promise<ResultadoDoLancamento> {
   const fato = await lerFato(supabase, edicao.origem, edicao.fatoId);
   if (fato === null) return falha("Não encontrei este lançamento.");
 
-  const pedeUnidade = await faltaAUnidadeDaCatraca(
-    supabase,
-    edicao.origem,
-    fato,
-    edicao.unidadeEnsinoId ?? null,
-  );
+  const pedeUnidade = faltaAUnidadeDaCatraca(edicao.origem, fato, edicao.unidadeEnsinoId ?? null);
   if (pedeUnidade !== null) return falha(pedeUnidade, "unidadeEnsinoId");
 
   if (edicao.instrutorId != null && fato.disciplinaId !== null) {
@@ -1056,10 +1175,29 @@ export async function editar(entrada: unknown): Promise<ResultadoDoLancamento> {
     return falha("Nada mudou: nenhum campo foi alterado.");
   }
 
+  /*
+   * ⚠️ **O AVISO DE SOBREPOSIÇÃO SÓ QUANDO O TAMANHO MUDA** (item 2, 08/10/2026): é aumentar os
+   * tempos que leva o bloco para dentro do vizinho — e é o caso que a tela não explicava, porque o
+   * vizinho simplesmente saía da grade. Editar só o tópico não muda lugar nenhum e não avisa nada.
+   */
+  const sobreposicao =
+    edicao.tempos !== undefined &&
+    edicao.tempos !== fato.tempos &&
+    fato.data !== null &&
+    fato.taInicial !== null
+      ? await avisoDaTurma(supabase, {
+          turmaId: fato.turmaId,
+          data: fato.data,
+          taInicial: fato.taInicial,
+          tempos: edicao.tempos,
+          fatoId: edicao.fatoId,
+        })
+      : null;
+
   const alterado = await gravarNoFato(supabase, edicao.origem, edicao.fatoId, fato.cursoId, campos);
   if (typeof alterado === "string") return falha(alterado);
   revalidar();
-  return { ok: true, id: edicao.fatoId, avisos: [] };
+  return { ok: true, id: edicao.fatoId, avisos: comAviso([], sobreposicao) };
 }
 
 /**

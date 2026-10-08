@@ -181,7 +181,7 @@ export function AcoesDoBloco({
           textoVazio="Escolha a unidade…"
           valor={unidade}
           aoMudar={definirUnidade}
-          ajuda="Esta aula veio da migração sem unidade. A decisão UE-1 exige a unidade em toda linha editada."
+          ajuda="Esta aula veio da migração sem unidade de ensino nem disciplina. Para mexer nela, escolha a unidade — é ela que diz de que disciplina a aula é."
           opcoes={unidades.map((u) => ({
             valor: u.id,
             rotulo: `${u.disciplinaCodigo} · UE ${u.numero} — ${u.topico}`,

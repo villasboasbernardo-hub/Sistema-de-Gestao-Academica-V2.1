@@ -1,6 +1,12 @@
 /**
- * Situação por disciplina, quadro por unidade e o **lançado à frente** (`RF-DSA-05`,
- * `RN-CRONOS-03`, `Q-2`, `FR-028.1`, `FR-029` · spec 013, PR 5).
+ * Situação por disciplina, a **cascata das unidades de ensino** e o **lançado à frente**
+ * (`RF-DSA-05`, `RN-CRONOS-03`, `Q-2`, `FR-018`, `FR-028.1` · spec 013, PR 5, e item 3 do comando de
+ * correções do DSA de 08/10/2026).
+ *
+ * ⚠️ **O DESENHO MUDOU EM 08/10/2026** *(decisão de Bernardo Villas Boas)*: a situação saiu do lado da
+ * grade e foi para **baixo dela, em largura total**; cada disciplina é uma linha que **abre em
+ * cascata** as UEs dela, e o quadro *"Por unidade de ensino"* separado **deixou de existir**. Os casos
+ * do PR 5 continuam valendo sobre a linha da disciplina; os novos chegam às UEs **clicando**.
  *
  * ⚠️ **DOIS CASOS DISCRIMINAM, e sem eles a implementação errada passaria:**
  *   · **a mesma disciplina em DUAS semanas** — na 10 ela está *Aguardando início* com acumulada
@@ -35,6 +41,7 @@ let PROCESSO = 0;
 
 const PAINEL = '[data-slot="painel-de-situacao"]';
 const POR_DISCIPLINA = '[data-slot="quadro-por-disciplina"]';
+const GRADE = '[data-slot="grade-da-semana"][data-modelo="v4"]';
 
 test.beforeAll(async ({}, info) => {
   PROCESSO = info.workerIndex;
@@ -48,7 +55,7 @@ test.afterAll(async () => {
   await apagarConta(EMAIL);
 });
 
-/** Abre a semana pedida da turma com relógio. */
+/** Abre a semana pedida da turma com relógio — o ponto de partida, não o percurso. */
 async function abrirSemana(page: Page, semana: number, ano = ANO): Promise<void> {
   await page.goto(
     `/turmas/${encodeURIComponent(SEMEADO.turmaComRelogio)}/dsa?semana=${semana}&ano=${ano}`,
@@ -56,22 +63,70 @@ async function abrirSemana(page: Page, semana: number, ano = ANO): Promise<void>
   await expect(page.locator(PAINEL)).toBeVisible();
 }
 
-/** A linha do quadro de uma disciplina, pelo código. */
+/**
+ * A linha de uma disciplina na tabela da situação, pelo código.
+ *
+ * ⚠️ **O `tr` É DA TABELA ÚNICA, e por isso o marcador mora DENTRO dele** (`data-disciplina`, na célula
+ * do nome) — quem desenha a linha é `tabela-densa.tsx`. ⚠️ E o `:has()` casa **só** a linha da
+ * disciplina: a linha de detalhe e as das UEs, que também são `tr` dentro do quadro, não levam esse
+ * marcador — sem isso, a linha aberta casaria duas vezes e o modo estrito reprovaria.
+ */
 function linhaDaDisciplina(page: Page, codigo: string) {
-  return page.locator(`${POR_DISCIPLINA} tr[data-disciplina="${codigo}"]`);
+  return page.locator(`${POR_DISCIPLINA} tr:has([data-disciplina="${codigo}"])`);
+}
+
+/** A cascata de uma disciplina — só existe com a linha aberta. */
+function cascataDa(page: Page, codigo: string) {
+  return page.locator(`${PAINEL} [data-slot="ues-da-disciplina"][data-unidades-de="${codigo}"]`);
 }
 
 test.describe("`RF-DSA-05` · o painel chega por clique, junto com a grade", () => {
-  test("da ficha ao DSA, e o painel está lá com os dois quadros", async ({ page }) => {
+  test("da ficha ao DSA, e o painel está lá, sem o quadro separado por unidade", async ({
+    page,
+  }) => {
     await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
     await page.locator('[data-slot="abrir-o-dsa"]').click();
 
     const painel = page.locator(PAINEL);
     await expect(painel).toBeVisible();
     await expect(painel).toContainText("Situação por disciplina");
-    await expect(painel).toContainText("Por unidade de ensino");
     /* ⚠️ O corte é DITO na tela: sem a frase, o acumulado de uma semana passada se leria como o de hoje. */
     await expect(painel).toContainText("Carga horária acumulada até a semana de");
+    /* ⚠️ O quadro «Por unidade de ensino» SAIU (08/10/2026): as UEs vivem dentro da cascata. */
+    await expect(painel.getByRole("heading", { name: "Por unidade de ensino" })).toHaveCount(0);
+  });
+});
+
+test.describe("item 3 do comando de 08/10/2026 · o painel fica ABAIXO da grade, em largura total", () => {
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA O DESENHO NOVO DO ANTIGO** (DoD 8). O viewport do projeto é o *Desktop
+   * Chrome*, 1280 px — exatamente o ponto `xl` em que o desenho antigo punha o painel AO LADO, com
+   * 384 px (`xl:w-96`). Ali, o topo do painel ficava na altura do cabeçalho da semana e a largura era
+   * uma fração da barra de impressão: as duas asserções abaixo reprovam o desenho antigo e passam no
+   * novo.
+   * ⚠️ **A RÉGUA DA LARGURA É A BARRA DE IMPRESSÃO**, que é filha direta da página e ocupa a coluna
+   * inteira: comparar com o viewport dependeria da largura da lateral, que é preferência de quem olha
+   * (`D-NAV-2`).
+   */
+  test("a situação começa depois do fim da grade e tem a largura da página", async ({ page }) => {
+    await entrar(page, EMAIL);
+    await abrirSemana(page, SEMANA);
+
+    const grade = await page.locator(GRADE).boundingBox();
+    const painel = await page.locator(PAINEL).boundingBox();
+    const barra = await page.locator('[data-slot="barra-de-impressao"]').boundingBox();
+    expect(grade, "a grade da semana não está na tela").not.toBeNull();
+    expect(painel, "o painel de situação não está na tela").not.toBeNull();
+    expect(barra, "a barra de impressão não está na tela").not.toBeNull();
+    if (grade === null || painel === null || barra === null) return;
+
+    expect(painel.y, "o painel não está ABAIXO da grade").toBeGreaterThanOrEqual(
+      grade.y + grade.height - 1,
+    );
+    expect(
+      Math.abs(painel.width - barra.width),
+      `o painel tem ${painel.width}px e a página ${barra.width}px: ele não está em largura total`,
+    ).toBeLessThanOrEqual(2);
   });
 });
 
@@ -125,17 +180,90 @@ test.describe("⚠️ `RF-DSA-05` · conflitou VENCE as outras situações", () 
   });
 });
 
-test.describe("`FR-029` · o quadro por unidade de ensino", () => {
-  test("traz lançada, prevista e resta de cada unidade", async ({ page }) => {
+test.describe("⚠️ `FR-018` · as UEs vivem NA CASCATA da disciplina, e chega-se a elas CLICANDO", () => {
+  /*
+   * ⚠️ **OS QUATRO NÚMEROS SAEM DA SEMENTE, e a conta está aqui para ser conferida** (regra 9.2 —
+   *    artefato: `tests/e2e/dsa-de-teste.ts`):
+   *   · **prevista 20** — o `ch_prevista_tempos` da UE 1 de `codDisciplina`;
+   *   · **lançada 9** — as aulas daquela UE na turma com relógio ATÉ O FIM DA SEMANA 15: `A1` (4) +
+   *     `A2` (2) + `A3` (2) + `A4` (1). O `AFRENTE` (2, duas semanas depois de hoje) fica de fora do
+   *     corte; a `SEMTA` tem tempo NULO, a `HERDSEMUE` não tem UE, e as avaliações não apontam UE;
+   *   · **resta 11** — 20 − 9; **situação *Em andamento*** — lançou, e menos que a CH (`P-3`).
+   * ⚠️ **A LANÇADA DA UE TEM O MESMO CORTE DA DISCIPLINA: o fim da semana aberta.** A primeira versão
+   *    da cascata usava o total da turma (`vw_unidades_ensino_execucao`, sem data), e dava **11**.
+   */
+  test("clicar na disciplina abre as UEs com prevista, lançada, resta e situação", async ({
+    page,
+  }) => {
     await entrar(page, EMAIL);
     await abrirSemana(page, SEMANA);
-    const porUnidade = page.locator('[data-slot="quadro-por-unidade"]');
-    await expect(porUnidade).toBeVisible();
-    await expect(porUnidade).toContainText("Lançada");
-    await expect(porUnidade).toContainText("Prevista");
-    await expect(porUnidade).toContainText("Resta");
-    /* ⚠️ Os três números por UE são o `P-3` da planilha, que o operador acompanha no grão de UE. */
-    await expect(porUnidade.locator("tr[data-unidade]").first()).toBeVisible();
+
+    const linha = linhaDaDisciplina(page, SEMEADO.codDisciplina);
+    const cascata = cascataDa(page, SEMEADO.codDisciplina);
+
+    /* ⚠️ Fechada, a cascata não existe — e nenhuma UE aparece solta no painel: o quadro separado saiu. */
+    await expect(linha).toHaveAttribute("aria-expanded", "false");
+    await expect(cascata).toHaveCount(0);
+    await expect(page.locator(`${PAINEL} tr[data-unidade]`)).toHaveCount(0);
+
+    await linha.locator("[data-disciplina]").click();
+
+    await expect(linha).toHaveAttribute("aria-expanded", "true");
+    await expect(cascata).toBeVisible();
+    const ue1 = cascata.locator('tr[data-unidade="1"]');
+    /* ⚠️ Os números vão no ATRIBUTO, não só no texto (`RNF-USA-05`). */
+    await expect(ue1).toHaveAttribute("data-prevista", "20");
+    await expect(ue1).toHaveAttribute("data-lancada", "9");
+    await expect(ue1).toHaveAttribute("data-restante", "11");
+    await expect(ue1).toHaveAttribute("data-situacao", "em_andamento");
+    await expect(ue1).toContainText("Navegação costeira");
+    await expect(ue1).toContainText("Em andamento");
+    /* ⚠️ O corte da UE é DITO: é o mesmo da linha de cima. */
+    await expect(cascata).toContainText("acumuladas até a mesma semana");
+  });
+
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA A LEITURA DAS UNIDADES** (medido no catálogo em 08/10/2026): a lista
+   * vinha de `vw_unidades_ensino_execucao` filtrada pela turma, e a view agrupa por `r.turma_id` de um
+   * `LEFT JOIN` — a UE que a turma não deu saía com `turma_id` nulo e era descartada. A de TFM da
+   * semente nunca tem aula: com a leitura antiga a cascata dela dizia *"sem unidades"*.
+   */
+  test("⚠️ a UE que a turma AINDA NÃO DEU aparece, aguardando início", async ({ page }) => {
+    await entrar(page, EMAIL);
+    await abrirSemana(page, SEMANA);
+
+    const linha = linhaDaDisciplina(page, SEMEADO.codDisciplinaTfm);
+    await linha.locator("[data-disciplina]").click();
+    const cascata = cascataDa(page, SEMEADO.codDisciplinaTfm);
+    await expect(cascata).toBeVisible();
+    await expect(cascata.locator('[data-slot="sem-unidades"]')).toHaveCount(0);
+    const ue1 = cascata.locator('tr[data-unidade="1"]');
+    await expect(ue1).toHaveAttribute("data-lancada", "0");
+    await expect(ue1).toHaveAttribute("data-restante", "20");
+    await expect(ue1).toHaveAttribute("data-situacao", "aguardando_inicio");
+  });
+
+  test("⚠️ com ENTER também: a mesma tecla fecha e reabre a cascata", async ({ page }) => {
+    await entrar(page, EMAIL);
+    await abrirSemana(page, SEMANA);
+
+    const linha = linhaDaDisciplina(page, SEMEADO.codDisciplina);
+    const cascata = cascataDa(page, SEMEADO.codDisciplina);
+
+    /*
+     * O clique abre **e** deixa o foco na célula — é a parada da grade de teclado (`ListaNavegavel`).
+     * Dali em diante, só teclado: é o caminho de quem não usa mouse (`RNF-USA-06`).
+     */
+    await linha.locator("[data-disciplina]").click();
+    await expect(cascata).toBeVisible();
+
+    await page.keyboard.press("Enter");
+    await expect(cascata).toHaveCount(0);
+    await expect(linha).toHaveAttribute("aria-expanded", "false");
+
+    await page.keyboard.press("Enter");
+    await expect(cascata).toBeVisible();
+    await expect(cascata.locator('tr[data-unidade="1"]')).toHaveAttribute("data-lancada", "9");
   });
 });
 

@@ -18,10 +18,15 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 
+import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import {
   ANO,
   limparDsa,
+  QUARTA,
+  SEGUNDA,
   SEMANA,
   SEMANA_DE_JULHO,
   SEMANA_DE_MAIO,
@@ -258,6 +263,58 @@ test.describe("`RF-NAV-04` · a navegação empilha, e a vigência resolve pela 
       .toBe(String(SEMANA + 1));
   });
 
+  /*
+   * ⚠️ **O CAMPO DE DATA** (item 4 das correções do DSA, decisão de Bernardo Villas Boas de
+   * 08/10/2026): *"escolhida uma data, abre o DSA da semana que a contém. A URL continua sendo a
+   * dona (?semana=&ano=)"*. Ele chega CLICANDO, como os outros casos, e é achado PELO RÓTULO — o que
+   * prova, de quebra, que o `<label>` está ligado ao campo.
+   *
+   * ⚠️ **CADA PASSO PEGA UMA IMPLEMENTAÇÃO ERRADA DIFERENTE:**
+   *   · uma QUARTA, e não uma segunda — pega quem abre «a semana que começa na data»;
+   *   · o sábado aberto ANTES da escolha — pega quem monta o endereço sem passar pelo `ir()` dos
+   *     botões, que é quem leva o `?sabado=sim` junto;
+   *   · 01/01/2027, que é da semana 53 de **2026** — pega quem põe na URL o ano do calendário;
+   *   · o voltar do navegador — pega o `replace` no lugar do `push` (`RF-NAV-04`).
+   */
+  test("o campo de DATA abre a semana que a contém, leva o sábado e empilha no histórico", async ({
+    page,
+  }) => {
+    await abrirODsaPorClique(page, SEMEADO.turmaComRelogio);
+    const campo = page.getByLabel("Ir para a semana do dia");
+    const parametro = (nome: string) => new URL(page.url()).searchParams.get(nome);
+
+    /* Sem escolha nenhuma, o campo mostra a segunda-feira da semana aberta — aqui, a corrente. */
+    await expect(campo).toHaveValue(semanaIsoDe(hojeNaCiaara())?.segunda ?? "");
+
+    await page.locator('[data-acao="alternar-sabado"]').click();
+    await expect.poll(() => parametro("sabado")).toBe("sim");
+
+    /* ── Uma quarta: abre a semana 15 inteira, que começa na segunda 06/04 ──────────────────── */
+    await campo.fill(QUARTA);
+    await expect.poll(() => parametro("semana")).toBe(String(SEMANA));
+    expect(parametro("ano")).toBe(String(ANO));
+    expect(parametro("sabado"), "o sábado aberto se perdeu na escolha da data").toBe("sim");
+    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText(`${SEMANA}/${ANO}`);
+    await expect(page.locator('[data-slot="tela-periodo"]')).toContainText("06/04/2026");
+
+    /* ── ⚠️ A virada do ano ISO: 01/01/2027 é da semana 53 de 2026 ──────────────────────────── */
+    await campo.fill("2027-01-01");
+    await expect.poll(() => parametro("semana")).toBe("53");
+    expect(parametro("ano"), "o ano da URL é o ISO, não o do calendário").toBe("2026");
+    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText("53/2026");
+    await expect(page.locator('[data-slot="tela-periodo"]')).toContainText("28/12/2026");
+
+    /* Saindo do campo, ele volta a mostrar a segunda-feira da semana aberta. */
+    await campo.blur();
+    await expect(campo).toHaveValue("2026-12-28");
+
+    /* ⚠️ `RF-NAV-04`: escolher pela data também EMPILHA — voltar retorna à semana da quarta. */
+    await page.goBack();
+    await expect.poll(() => parametro("semana")).toBe(String(SEMANA));
+    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText(`${SEMANA}/${ANO}`);
+    await expect(campo).toHaveValue(SEGUNDA);
+  });
+
   test("⚠️ O CASO QUE DISCRIMINA · maio e julho da MESMA turma saem com relógios diferentes", async ({
     page,
   }) => {
@@ -428,7 +485,16 @@ test.describe("`FR-011` · os três caminhos clicáveis até o DSA", () => {
     await expect(origem).toHaveAttribute("tabindex", "0");
     await expect(destino).toHaveAttribute("tabindex", "-1");
 
+    /*
+     * ⚠️ **O CLIQUE NA CÉLULA VAZIA ABRE O LANÇAMENTO NUM DIÁLOGO** (item 2 das correções de
+     * 08/10/2026), e o diálogo PRENDE o foco — é o que ele deve fazer. `Escape` o fecha e o foco VOLTA
+     * à célula, e é dali que a seta anda: o caminho de quem clicou e segue pelo teclado. Sem o
+     * `Escape`, a seta caía dentro do diálogo e o caso lia a grade parada.
+     */
     await origem.click();
+    await expect(page.locator('[data-slot="formulario-de-lancamento"]')).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator('[data-slot="formulario-de-lancamento"]')).toHaveCount(0);
     await page.keyboard.press("ArrowRight");
 
     /* A parada de tabulação andou uma coluna — sem `proximaPosicao`, a seta rolaria a página. */

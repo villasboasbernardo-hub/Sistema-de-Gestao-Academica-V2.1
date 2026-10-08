@@ -58,6 +58,9 @@ export type TurmaNoFormulario = {
   readonly data_termino: string;
   readonly sala_alocada: string;
   readonly alunos: string;
+  /** A janela da etapa presencial (`D-DSA-2`) — só aparece, e só vale, em turma semipresencial. */
+  readonly inicio_etapa_presencial: string;
+  readonly termino_etapa_presencial: string;
 };
 
 const VAZIO: TurmaNoFormulario = {
@@ -69,6 +72,8 @@ const VAZIO: TurmaNoFormulario = {
   data_termino: "",
   sala_alocada: "",
   alunos: "",
+  inicio_etapa_presencial: "",
+  termino_etapa_presencial: "",
 };
 
 export type FormularioDeTurmaProps = {
@@ -122,6 +127,9 @@ export function FormularioDeTurma({
     data_termino: valores.data_termino,
     sala_alocada: valores.sala_alocada,
     alunos: valores.alunos === "" ? undefined : Number(valores.alunos),
+    /* ⚠️ Fora de semipresencial o esquema as grava vazias — ver `lib/validacao/turma.ts`. */
+    inicio_etapa_presencial: valores.inicio_etapa_presencial,
+    termino_etapa_presencial: valores.termino_etapa_presencial,
   };
 
   /*
@@ -309,6 +317,45 @@ export function FormularioDeTurma({
             onChange={trocar("alunos")}
           />
         </div>
+
+        {/*
+          ⚠️ **A ETAPA PRESENCIAL SÓ EXISTE NA SEMIPRESENCIAL** (`D-DSA-2`, decisão de Bernardo Villas
+             Boas de 08/10/2026): é ela que decide em que semanas a turma tem DSA. Fora dessa
+             modalidade os dois campos somem, e o esquema grava a janela vazia.
+        */}
+        {valores.modalidade === "semipresencial" ? (
+          <div
+            className="grid gap-3 sm:col-span-2 sm:grid-cols-2"
+            data-slot="etapa-presencial-da-turma"
+          >
+            <p className="text-texto-suave text-xs sm:col-span-2">
+              Etapa presencial: o DSA só existe nas semanas que tocam esta janela. Sem ela, todas as
+              semanas mostram o DSA, com aviso.
+            </p>
+            <div className="flex flex-col gap-1">
+              <CampoObrigatorio para="turma-etapa-inicio" rotulo="Início da etapa presencial" />
+              <Input
+                {...propsDoControle("turma-etapa-inicio", false)}
+                name="inicio_etapa_presencial"
+                type="date"
+                lang="pt-BR"
+                value={valores.inicio_etapa_presencial}
+                onChange={trocar("inicio_etapa_presencial")}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <CampoObrigatorio para="turma-etapa-termino" rotulo="Término da etapa presencial" />
+              <Input
+                {...propsDoControle("turma-etapa-termino", false)}
+                name="termino_etapa_presencial"
+                type="date"
+                lang="pt-BR"
+                value={valores.termino_etapa_presencial}
+                onChange={trocar("termino_etapa_presencial")}
+              />
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div data-slot="rodape-do-formulario">

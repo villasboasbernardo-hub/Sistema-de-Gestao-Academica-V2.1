@@ -26,6 +26,7 @@ import {
   ASSINANTE_DE_ABRIL,
   ASSINANTE_DE_JULHO,
   ASSINANTE_ENCARREGADO,
+  CONTEUDO_A_FRENTE,
   limparDsa,
   SEMANA,
   SEMANA_A_FRENTE,
@@ -265,6 +266,10 @@ test.describe("⚠️ `FR-036` · as assinaturas são as da DATA DA SEMANA — o
     const assinaturas = page.locator('[data-slot="dsa-assinaturas"]');
     await expect(assinaturas).toContainText(ASSINANTE_ENCARREGADO);
     await expect(assinaturas).toContainText("Encarregado da Div. de Adm. Academica");
+    /* ⚠️ E o posto sai POR EXTENSO (item 7 de 08/10/2026): a semente grava `CC`. */
+    await expect(
+      page.locator('[data-slot="dsa-assinatura-direita"] [data-slot="dsa-assinatura-posto"]'),
+    ).toHaveText("Capitão de Corveta");
   });
 
   test("⚠️ O CASO QUE DISCRIMINA · abril traz quem assinava em abril; julho, quem assina em julho", async ({
@@ -294,6 +299,86 @@ test.describe("⚠️ `FR-036` · as assinaturas são as da DATA DA SEMANA — o
     await expect(esquerda).not.toContainText(ASSINANTE_DE_JULHO);
     /* A linha onde se assina continua existindo — é ela que se assina à mão. */
     await expect(esquerda.locator(".dsa-rubrica")).toBeVisible();
+  });
+});
+
+/**
+ * ⚠️ **ITEM 7 DAS CORREÇÕES DE 08/10/2026** *(decisão de Bernardo Villas Boas)*: *"no campo de
+ * assinatura do DSA (tela e /print/dsa), o posto/graduação sai POR EXTENSO, não abreviado […]; o
+ * quadro entre parênteses continua. Só a assinatura muda; a coluna de instrutor da grade continua
+ * como está."*
+ *
+ * ⚠️ **O PAR QUE DISCRIMINA É A MESMA SIGLA NOS DOIS LUGARES DA MESMA PÁGINA.** O instrutor da
+ * semente é `1ºTEN`, e o Auxiliar de julho é `1ºTen` com o quadro `(RM2-T)`: o rodapé tem de dizer
+ * `Primeiro-Tenente (RM2-T)` e o cartão, `1ºTEN`. A troca aplicada no lugar errado — no nome do
+ * instrutor, ou em lugar nenhum — reprova uma das duas metades.
+ *
+ * ⚠️ **TUDO POR CLIQUE, e a semana é a da aula lançada à frente por isso**: é a única com aula do
+ * instrutor que se alcança a partir de hoje sem dezenas de cliques — duas vezes *Próxima semana*.
+ */
+test.describe("⚠️ item 7 · a ASSINATURA traz o posto POR EXTENSO; a coluna de instrutor, a sigla", () => {
+  const POSTO_DA_ESQUERDA =
+    '[data-slot="dsa-assinatura-esquerda"] [data-slot="dsa-assinatura-posto"]';
+  const POSTO_DA_DIREITA =
+    '[data-slot="dsa-assinatura-direita"] [data-slot="dsa-assinatura-posto"]';
+
+  test("ficha → Abrir o DSA → duas semanas à frente → tela → Imprimir → papel", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
+    await page.locator('[data-slot="abrir-o-dsa"]').click();
+    await expect(page.getByRole("heading", { name: "Detalhe Semanal de Aula" })).toBeVisible();
+
+    /*
+     * ⚠️ **ESPERAR A SEMANA MUDAR ANTES DO SEGUNDO CLIQUE**: o botão navega e não espera — clicado de
+     * novo cedo demais, ele leva à MESMA semana seguinte, e o caso abriria a semana errada.
+     */
+    const semanaNaTela = page.locator('[data-slot="semana-atual"]');
+    const deHoje = await semanaNaTela.innerText();
+    await page.locator('[data-acao="semana-proxima"]').click();
+    await expect(semanaNaTela).not.toHaveText(deHoje);
+    await page.locator('[data-acao="semana-proxima"]').click();
+    await expect(semanaNaTela).toHaveText(`semana ${SEMANA_A_FRENTE} de ${ANO_A_FRENTE}`);
+
+    /* ── 1. Na tela: a grade com a sigla, o rodapé por extenso ───────────────────────────── */
+    const cartaoNaTela = page
+      .locator('[data-slot="grade-da-semana"] [data-slot="dsa-cartao"]')
+      .filter({ hasText: CONTEUDO_A_FRENTE });
+    await expect(cartaoNaTela).toHaveCount(1);
+    await expect(cartaoNaTela).toContainText("1ºTEN");
+    await expect(cartaoNaTela).not.toContainText("Primeiro-Tenente");
+
+    const assinaturasNaTela = page.locator('[data-slot="tela-assinaturas"]');
+    await expect(assinaturasNaTela).toContainText("Primeiro-Tenente (RM2-T) JOAQUIM DE JULHO");
+    await expect(assinaturasNaTela).toContainText("Capitão de Corveta ERNESTO ENCARREGADO");
+    await expect(assinaturasNaTela).not.toContainText(/1º\s*ten/i);
+    await expect(assinaturasNaTela).not.toContainText(/\bCC\b/);
+
+    /* ── 2. No papel, pelo botão Imprimir ─────────────────────────────────────────────────── */
+    await page.locator('[data-slot="imprimir-dsa"]').click();
+    /* ⚠️ A tela também tem cartões: sem esperar a URL, as asserções seguintes leriam a tela. */
+    await page.waitForURL(/\/print\/dsa/);
+    expect(new URL(page.url()).searchParams.get("semana")).toBe(String(SEMANA_A_FRENTE));
+    const documento = page.locator(DOCUMENTO);
+    await expect(documento).toBeVisible();
+
+    await expect(page.locator(POSTO_DA_ESQUERDA)).toHaveText("Primeiro-Tenente (RM2-T)");
+    await expect(page.locator(POSTO_DA_DIREITA)).toHaveText("Capitão de Corveta");
+
+    const cartaoNoPapel = documento
+      .locator('[data-slot="dsa-cartao"]')
+      .filter({ hasText: CONTEUDO_A_FRENTE });
+    await expect(cartaoNoPapel).toHaveCount(1);
+    await expect(cartaoNoPapel).toContainText("1ºTEN");
+    await expect(cartaoNoPapel).not.toContainText("Primeiro-Tenente");
+  });
+
+  test("sem quadro cadastrado, nada entre parênteses — abril sai só `Primeiro-Tenente`", async ({
+    page,
+  }) => {
+    await abrirAImpressao(page, SEMANA);
+    await expect(page.locator(POSTO_DA_ESQUERDA)).toHaveText("Primeiro-Tenente");
   });
 });
 

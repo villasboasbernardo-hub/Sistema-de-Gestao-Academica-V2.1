@@ -459,11 +459,13 @@ function ListaSemRelogio({ dias }: { readonly dias: readonly DiaImpresso[] }) {
 }
 
 /**
- * Uma rubrica — nome completo, posto/graduação e a função.
+ * Uma rubrica — nome completo, posto/graduação **por extenso** com o quadro, e a função.
  *
  * ⚠️ **SEM RESPONSÁVEL VIGENTE, A LINHA SAI EM BRANCO — NUNCA UM ERRO** (`FR-036`, `RN-DEG-01`).
  * ⚠️ **NO MODO `dinamico_usuario_logado` QUEM ASSINA É QUEM IMPRIME, e a FUNÇÃO vem da LINHA**
  * (`Q-14`); o posto sai vazio, porque `usuarios` não tem posto.
+ * ⚠️ **O POSTO É `postoPorExtenso`, NUNCA A SIGLA** *(item 7 de 08/10/2026)*: `Primeiro-Tenente
+ * (RM2-T)`, como no modelo v4. A coluna de instrutor dos cartões continua com a sigla.
  */
 function Rubrica({
   lado,
@@ -484,12 +486,12 @@ function Rubrica({
   const nome = assinatura.resolvePeloUsuarioLogado
     ? (nomeDeQuemImprime ?? "")
     : (assinatura.nomeCompleto ?? "");
-  const posto = assinatura.resolvePeloUsuarioLogado ? "" : (assinatura.postoGraduacao ?? "");
+  const posto = assinatura.resolvePeloUsuarioLogado ? "" : assinatura.postoPorExtenso;
   return (
     <div className="dsa4-assinatura" data-slot={`dsa-assinatura-${lado}`}>
       <div className="dsa-rubrica" />
       <span className="dsa4-assinatura-nome">{nome}</span>
-      {posto === "" ? null : <span>{posto}</span>}
+      {posto === "" ? null : <span data-slot="dsa-assinatura-posto">{posto}</span>}
       <span className="dsa4-assinatura-funcao">{assinatura.funcaoDescricao}</span>
     </div>
   );

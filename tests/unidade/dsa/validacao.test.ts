@@ -33,7 +33,6 @@ const aulaBase = {
   local: "Sala 03",
   unidadeEnsinoId: ID,
   disciplinaId: null,
-  disciplinaSemUe: false,
   conteudo: "Navegação costeira",
   tecnica: "EO",
   instrutorId: ID,
@@ -60,35 +59,22 @@ describe("`RF-DSA-04` · a aula", () => {
     expect(recusa({ ...aulaBase, disciplinaId: OUTRO })).toContain("não as duas");
   });
 
-  it("sem UE e sem disciplina é recusado", () => {
-    expect(recusa({ ...aulaBase, unidadeEnsinoId: null })).toContain("Escolha a unidade de ensino");
+  it("sem UE e sem disciplina é recusado — e a frase pede a disciplina, a primeira escolha", () => {
+    expect(recusa({ ...aulaBase, unidadeEnsinoId: null })).toBe("Escolha a disciplina da aula.");
   });
 
   /*
-   * ⚠️ **O CASO QUE DISCRIMINA A DELIMITAÇÃO DA `Q-1`**, e o irmão dele no `116` também discrimina:
-   * sem a conferência de `disciplinaSemUe`, a tela aceitaria lançar sem UE em QUALQUER disciplina e
-   * a recusa viria do banco, como `23514`.
+   * ⚠️ **O CASO QUE DISCRIMINA A `D-DSA-1` — E O VEREDITO VIROU EM 08/10/2026**, junto com o irmão no
+   * `116` (DoD 8). Até ali ele era RECUSADO: sem UE só valia em disciplina isenta da `Q-1`, e a tela
+   * mandava um `disciplinaSemUe` para dizer quando. A isenção virou regra geral e o campo saiu.
    */
-  it("sem UE em disciplina que TEM unidades é recusado, mesmo com tópico", () => {
-    expect(
-      recusa({
-        ...aulaBase,
-        unidadeEnsinoId: null,
-        disciplinaId: OUTRO,
-        disciplinaSemUe: false,
-        conteudo: "Tem tópico",
-      }),
-    ).toContain("tem unidades de ensino");
-  });
-
-  it("`Q-1` · sem UE em disciplina ISENTA, com tópico, é aceita", () => {
+  it("`D-DSA-1` · sem UE em QUALQUER disciplina, com tópico, é aceita", () => {
     expect(
       esquemaDoBloco.safeParse({
         ...aulaBase,
         unidadeEnsinoId: null,
         disciplinaId: OUTRO,
-        disciplinaSemUe: true,
-        conteudo: "Competência X",
+        conteudo: "Tem tópico",
       }).success,
     ).toBe(true);
   });
@@ -99,10 +85,13 @@ describe("`RF-DSA-04` · a aula", () => {
         ...aulaBase,
         unidadeEnsinoId: null,
         disciplinaId: OUTRO,
-        disciplinaSemUe: true,
         conteudo: "",
       }),
     ).toContain("tópico");
+  });
+
+  it("sem quem ministra, a frase diz o que escolher — e não «identificador inválido»", () => {
+    expect(recusa({ ...aulaBase, instrutorId: "" })).toBe("Escolha quem ministra a aula.");
   });
 
   it("o TA vai de 1 a 12, e a faixa é a do `CHECK` do banco", () => {
@@ -235,6 +224,28 @@ describe("`RF-EXTRA-01` e `Q-8` · a atividade não letiva", () => {
   it("categoria fora do ENUM é recusada — nenhuma sigla de duas letras entra", () => {
     expect(recusa({ ...atividadeBase, categoria: "AD" })).not.toBeNull();
     expect(recusa({ ...atividadeBase, subtipo: "" })).toContain("subtipo");
+  });
+
+  /*
+   * ⚠️ **A DISCIPLINA DA AEC (item 1b, 08/10/2026)** — as três condições do `CHECK`
+   * `ativ_disciplina_so_aec_da_turma`, repetidas para a recusa chegar como frase. A terceira (do
+   * curso da turma) só o banco sabe: o irmão está no `121`.
+   */
+  it("AEC de turma COM disciplina é aceita — e sem ela também, porque é opcional", () => {
+    expect(esquemaDoBloco.safeParse({ ...atividadeBase, disciplinaId: OUTRO }).success).toBe(true);
+    expect(esquemaDoBloco.safeParse(atividadeBase).success).toBe(true);
+  });
+
+  it("disciplina em TAD é recusada — só a AEC leva disciplina", () => {
+    expect(recusa({ ...atividadeBase, categoria: "TAD", disciplinaId: OUTRO })).toBe(
+      "Só a AEC leva disciplina.",
+    );
+  });
+
+  it("AEC GLOBAL com disciplina é recusada — ela vale para todas as turmas", () => {
+    expect(recusa({ ...atividadeBase, turmaId: null, disciplinaId: OUTRO })).toBe(
+      "Atividade de todas as turmas não leva disciplina.",
+    );
   });
 });
 

@@ -16,7 +16,12 @@ import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
-import { ANO, limparDsa, SEMANA, semearDsa, type DsaSemeado } from "./dsa-de-teste";
+import { ANO, limparDsa, SEGUNDA, SEMANA, semearDsa, type DsaSemeado } from "./dsa-de-teste";
+import {
+  escolherDisciplina,
+  escolherDisciplinaEUnidade,
+  irParaASemanaDoDia,
+} from "./percurso-do-dsa";
 import { irAFichaDaTurma } from "./navegar-turmas";
 
 let EMAIL = "";
@@ -45,13 +50,11 @@ test.afterAll(async () => {
   await apagarConta(EMAIL);
 });
 
-/** Ficha da turma → *Abrir o DSA* → a semana de referência. */
+/** Ficha da turma → *Abrir o DSA* → o dia no calendário (item 4) → a semana de referência. */
 async function abrirASemana(page: Page): Promise<void> {
   await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
   await page.locator('[data-slot="abrir-o-dsa"]').click();
-  await page.goto(
-    `/turmas/${encodeURIComponent(SEMEADO.turmaComRelogio)}/dsa?semana=${SEMANA}&ano=${ANO}`,
-  );
+  await irParaASemanaDoDia(page, SEGUNDA, SEMANA, ANO);
   await expect(page.locator(GRADE)).toBeVisible();
 }
 
@@ -120,28 +123,71 @@ async function quantasAulas(): Promise<number> {
   return count ?? 0;
 }
 
+/** O `id` de uma disciplina do curso da turma, pelo código — para conferir no BANCO o que gravou. */
+async function idDaDisciplina(cod: string): Promise<string> {
+  const { data: turma } = await banco()
+    .from("turmas")
+    .select("curso_id")
+    .eq("codigo", SEMEADO.turmaComRelogio)
+    .maybeSingle();
+  const { data } = await banco()
+    .from("disciplinas")
+    .select("id")
+    .eq("curso_id", (turma as { curso_id: string } | null)?.curso_id ?? "")
+    .eq("cod_disciplina", cod)
+    .maybeSingle();
+  return (data as { id: string } | null)?.id ?? "";
+}
+
+/**
+ * Espera o desfecho do «Lançar» e reprova só a RECUSA. ⚠️ Alerta mantém o formulário aberto e o
+ * lançamento GRAVOU (`RN-DEG-02`) — com dois processos, o instrutor da semente pode estar no mesmo
+ * tempo em outra turma, e o aviso de conflito sai.
+ */
+async function lancarEConferirQueGravou(page: Page): Promise<void> {
+  await page.locator('[data-slot="gravar-lancamento"]').click();
+  const desfecho = async (): Promise<string> => {
+    if ((await page.locator('[data-slot="recusa-do-lancamento"]').count()) > 0) {
+      return `recusou: ${await page.locator('[data-slot="recusa-do-lancamento"]').innerText()}`;
+    }
+    if ((await page.locator(FORMULARIO).count()) === 0) return "fechou";
+    if ((await page.locator('[data-slot="avisos-do-lancamento"]').count()) > 0) return "avisou";
+    return "em curso";
+  };
+  await expect.poll(desfecho, { timeout: 60_000 }).not.toBe("em curso");
+  expect(await desfecho(), "o lançamento foi recusado").not.toMatch(/^recusou/);
+}
+
 test.describe("`SC-009` · o esforço é o da planilha, ou menos", () => {
-  test("clicar numa célula abre o formulário com o dia e o TA JÁ fixados", async ({ page }) => {
+  test("clicar numa célula abre o formulário com o dia FIXO e o tempo PRÉ-SELECIONADO", async ({
+    page,
+  }) => {
     await abrirASemana(page);
-    /* A linha navegável 4 é o TA 5; a coluna 0 é a segunda-feira. */
+    /* A linha navegável 7 é o TA 8; a coluna 0 é a segunda-feira. */
     await clicarCelulaLivre(page, TA_LIVRE_NA_SEGUNDA);
     /*
-     * ⚠️ **AS DUAS DECISÕES QUE O OPERADOR NÃO TOMA.** Elas vêm do clique, e o formulário as
-     * MOSTRA em vez de pedir — é o que faz o esforço cair para duas escolhas (`P-2` da planilha:
-     * duas células por bloco).
+     * ⚠️ **O DIA CONTINUA MOSTRADO, NÃO PEDIDO; O TEMPO PASSOU A SER ESCOLHA JÁ FEITA, E EDITÁVEL**
+     * (item 1d das correções de 08/10/2026, decisão de Bernardo Villas Boas). Até ali o TA vinha só
+     * da célula e não havia campo para ele — este caso afirmava `#dsa-ta-inicial` com contagem ZERO,
+     * e o veredito virou de propósito.
      */
-    const alvo = page.locator('[data-slot="alvo-do-lancamento"]');
-    await expect(alvo).toContainText("2026-04-06");
-    await expect(alvo).toContainText("8");
-    /* E não há campo de dia nem de tempo inicial para preencher. */
+    await expect(page.locator('[data-slot="alvo-do-lancamento"]')).toContainText("06/04/2026");
     await expect(page.locator("#dsa-dia")).toHaveCount(0);
-    await expect(page.locator("#dsa-ta-inicial")).toHaveCount(0);
+    const tempo = page.locator("#dsa-ta-inicial");
+    await expect(tempo).toHaveValue("8");
+    /* Cada opção traz o horário do tempo, que a planilha escreve ao lado do TA. */
+    await expect(tempo.locator('option[value="8"]')).toHaveText(
+      /^8º tempo · \d{2}:\d{2}–\d{2}:\d{2}/,
+    );
   });
 
   test("o pré-preenchimento vem da unidade, e os campos continuam EDITÁVEIS", async ({ page }) => {
     await abrirASemana(page);
     await clicarCelulaLivre(page, TA_LIVRE_NA_SEGUNDA);
 
+    /* ⚠️ A unidade só aparece DEPOIS da disciplina (item 1b → 1c). */
+    await expect(page.locator("#dsa-unidade")).toHaveCount(0);
+    await escolherDisciplina(page, SEMEADO.codDisciplina);
     const unidade = page.locator("#dsa-unidade");
     /* ⚠️ Os TRÊS números por unidade (`FR-018`): lançada, prevista e restante. */
     await expect(unidade).toContainText("TA, restam");
@@ -167,7 +213,7 @@ test.describe("⚠️ `RN-INST-01` · a habilitação, e a Server Action é a Ú
     expect(antes, "não li a contagem de aulas no banco").toBeGreaterThanOrEqual(0);
 
     await clicarCelulaLivre(page, TA_LIVRE_NA_SEGUNDA);
-    await page.locator("#dsa-unidade").selectOption({ index: 1 });
+    await escolherDisciplinaEUnidade(page, SEMEADO.codDisciplina);
     /*
      * ⚠️ Escolher **quem não tem vínculo** pelo seletor canônico. Ele aparece na lista porque está
      * ATIVO — o que falta é a habilitação naquela disciplina, e é isso que a regra cobra.
@@ -196,7 +242,7 @@ test.describe("⚠️ `RN-INST-01` · a habilitação, e a Server Action é a Ú
     const antes = await quantasAulas();
 
     await clicarCelulaLivre(page, TA_LIVRE_NA_SEXTA);
-    await page.locator("#dsa-unidade").selectOption({ index: 1 });
+    await escolherDisciplinaEUnidade(page, SEMEADO.codDisciplina);
     /*
      * ⚠️ **QUEM MINISTRA É ESCOLHIDO EXPLICITAMENTE, e a primeira redação contava com o
      * pré-preenchimento.** Ele vem de `turma_disciplina_unidade`, que a semente **não** preenche —
@@ -231,7 +277,7 @@ test.describe("`RN-DEG-02` · o alerta acompanha a gravação, e NÃO a impede",
     const antes = await quantasAulas();
 
     await clicarCelulaLivre(page, TA_LIVRE_NA_SEGUNDA);
-    await page.locator("#dsa-unidade").selectOption({ index: 1 });
+    await escolherDisciplinaEUnidade(page, SEMEADO.codDisciplina);
     await escolherNoSeletor(page, SEMEADO.nomeHabilitado);
     await page.locator("#dsa-conteudo").fill("Aula que passa do regime");
     /* TA 8 + 4 tempos = até o 11º, e o regime prevê 8: é alerta, nunca bloqueio. */
@@ -260,20 +306,175 @@ test.describe("`RN-DEG-02` · o alerta acompanha a gravação, e NÃO a impede",
   });
 });
 
-test.describe("`Q-1` · o modo sem unidade só aparece onde a isenção vale", () => {
-  test("o botão «Aula sem unidade» existe, e exige o tópico", async ({ page }) => {
+test.describe("⚠️ `D-DSA-1` · aula SEM unidade em QUALQUER disciplina: alerta, tópico, e GRAVA", () => {
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA (DoD 8): a disciplina é a COMUM, que TEM unidades.** Até 08/10/2026 o
+   * modo sem unidade só existia em disciplina isenta (`Q-1`), num botão próprio — e esta mesma
+   * gravação era recusada pelo banco com `23514`. A `D-DSA-1` *(decisão de Bernardo Villas Boas)*
+   * abriu o caminho para qualquer disciplina, com o tópico obrigatório e um ALERTA, nunca bloqueio.
+   */
+  test("o alerta aparece, o tópico vira obrigatório, e a aula entra com a disciplina e sem UE", async ({
+    page,
+  }) => {
+    const topico = `Aula sem UE da D-DSA-1 ${Date.now().toString(36)}`;
     await abrirASemana(page);
     await clicarCelulaLivre(page, TA_LIVRE_NA_TERCA);
 
-    /* A turma tem uma disciplina `sem_unidades_ensino`, então o modo é oferecido. */
-    const botao = page.locator('[data-modo="aula_sem_ue"]');
-    await expect(botao).toBeVisible();
-    await botao.click();
-
-    await expect(page.locator("#dsa-disciplina-isenta")).toBeVisible();
-    /* ⚠️ A ajuda do campo diz POR QUE o tópico é obrigatório — não só que é. */
-    await expect(page.locator("#dsa-disciplina-isenta-ajuda")).toContainText("tópico");
+    await escolherDisciplina(page, SEMEADO.codDisciplina);
+    /* Sem escolher unidade: o alerta, com as palavras do comando, e o tópico passa a ser exigido. */
+    await expect(page.locator("#dsa-unidade")).toHaveValue("");
+    const alerta = page.locator('[data-slot="alerta-sem-unidade"]');
+    await expect(alerta).toBeVisible();
+    await expect(alerta).toContainText("a CH desta aula não entra no controle por UE");
     await expect(page.locator('label[for="dsa-conteudo"]')).toContainText("obrigatório");
+
+    await escolherNoSeletor(page, SEMEADO.nomeHabilitado);
+    await page.locator("#dsa-conteudo").fill(topico);
+    await page.locator("#dsa-tempos").fill("1");
+    await lancarEConferirQueGravou(page);
+
+    /* ⚠️ A prova é o BANCO: a disciplina preenchida, a UE nula. */
+    const esperada = await idDaDisciplina(SEMEADO.codDisciplina);
+    await expect
+      .poll(async () => {
+        const { data } = await banco()
+          .from("registros_aula")
+          .select("unidade_ensino_id, disciplina_id")
+          .eq("conteudo_resumo", topico)
+          .maybeSingle();
+        const l = data as { unidade_ensino_id: string | null; disciplina_id: string | null } | null;
+        if (l === null) return "sem linha";
+        return `${l.unidade_ensino_id === null ? "sem UE" : "com UE"}/${l.disciplina_id === esperada ? "disciplina certa" : l.disciplina_id}`;
+      })
+      .toBe("sem UE/disciplina certa");
+  });
+
+  /*
+   * ⚠️ **A UE QUE A TURMA AINDA NÃO DEU É OFERECIDA** (medido no catálogo em 08/10/2026): a lista vinha
+   * de `vw_unidades_ensino_execucao` filtrada pela turma, e a view agrupa por `r.turma_id` de um
+   * `LEFT JOIN` — numa turma nova o formulário não oferecia unidade nenhuma. A UE de TFM da semente
+   * nunca tem aula: com a leitura antiga, a opção não existia.
+   */
+  test("a UE sem aula na turma aparece no campo, com zero lançado e a prevista inteira", async ({
+    page,
+  }) => {
+    await abrirASemana(page);
+    /* ⚠️ Outra célula: o caso de cima GRAVA no 8º tempo da terça, e ele vira cartão. */
+    await clicarCelulaLivre(page, OUTRO_TA_LIVRE_NA_TERCA);
+    await escolherDisciplina(page, SEMEADO.codDisciplinaTfm);
+    await expect(page.locator("#dsa-unidade")).toContainText(
+      "UE 1 — Treinamento físico (0/20 TA, restam 20)",
+    );
+  });
+});
+
+test.describe("item 1 · o tempo inicial, a vista de prova e a AEC com disciplina", () => {
+  test("o tempo pré-selecionado pela célula pode ser TROCADO, e o banco grava o escolhido", async ({
+    page,
+  }) => {
+    const topico = `Aula com tempo trocado ${Date.now().toString(36)}`;
+    await abrirASemana(page);
+    /* Sexta, 3º tempo (linha 2) — e a aula vai começar no 4º. */
+    await clicarCelulaLivre(page, "2:4");
+    await expect(page.locator("#dsa-ta-inicial")).toHaveValue("3");
+    await page.locator("#dsa-ta-inicial").selectOption("4");
+
+    await escolherDisciplinaEUnidade(page, SEMEADO.codDisciplina);
+    await escolherNoSeletor(page, SEMEADO.nomeHabilitado);
+    await page.locator("#dsa-conteudo").fill(topico);
+    await page.locator("#dsa-tempos").fill("1");
+    await lancarEConferirQueGravou(page);
+
+    await expect
+      .poll(async () => {
+        const { data } = await banco()
+          .from("registros_aula")
+          .select("data, ta_inicial")
+          .eq("conteudo_resumo", topico)
+          .maybeSingle();
+        const l = data as { data: string; ta_inicial: number } | null;
+        return l === null ? "sem linha" : `${l.data}/${l.ta_inicial}`;
+      })
+      .toBe("2026-04-10/4");
+  });
+
+  /*
+   * ⚠️ **A VISTA DE PROVA É A SEGUNDA DATA DA MESMA AVALIAÇÃO** (`RN-AVAL-02`): ela não cria prova
+   * nova, e a prova disso é a linha `AVNOVA` da semente — aplicada na quinta — ganhar a data da vista.
+   */
+  test("a vista de prova escolhe a avaliação da disciplina, e grava a data NA avaliação", async ({
+    page,
+  }) => {
+    await abrirASemana(page);
+    /* Sexta, 6º tempo (linha 5). */
+    await clicarCelulaLivre(page, "5:4");
+    await page.locator('[data-tipo="vista_prova"]').click();
+    await escolherDisciplina(page, SEMEADO.codDisciplina);
+
+    const campo = page.locator("#dsa-avaliacao-da-vista");
+    const opcao = campo.locator("option").filter({ hasText: "de 09/04/2026" });
+    await expect(opcao).toHaveCount(1);
+    await campo.selectOption((await opcao.getAttribute("value")) ?? "");
+    await page.locator("#dsa-tempos").fill("1");
+    await lancarEConferirQueGravou(page);
+
+    const turma = await banco()
+      .from("turmas")
+      .select("id")
+      .eq("codigo", SEMEADO.turmaComRelogio)
+      .maybeSingle();
+    await expect
+      .poll(async () => {
+        const { data } = await banco()
+          .from("avaliacoes")
+          .select("data_vista_prova, ta_inicial_vista, tempos_consumidos_vista")
+          .eq("turma_id", (turma.data as { id: string } | null)?.id ?? "")
+          .eq("data_avaliacao", "2026-04-09")
+          .maybeSingle();
+        const l = data as {
+          data_vista_prova: string | null;
+          ta_inicial_vista: number | null;
+          tempos_consumidos_vista: number | null;
+        } | null;
+        return l === null
+          ? "sem linha"
+          : `${l.data_vista_prova}/${l.ta_inicial_vista}/${l.tempos_consumidos_vista}`;
+      })
+      .toBe("2026-04-10/6/1");
+  });
+
+  /*
+   * ⚠️ **A AEC PODE APONTAR A DISCIPLINA, E SÓ ELA** (item 1b, autorizado por Bernardo Villas Boas em
+   * 08/10/2026, na mesma migration). O banco confere, por porteiro, que a disciplina é do curso da
+   * turma; aqui se prova o caminho da tela até a coluna.
+   */
+  test("a AEC com disciplina grava a disciplina na atividade", async ({ page }) => {
+    const descricao = `Visita técnica da disciplina ${Date.now().toString(36)}`;
+    await abrirASemana(page);
+    /* Sexta, 5º tempo (linha 4). */
+    await clicarCelulaLivre(page, "4:4");
+    await page.locator('[data-tipo="AEC"]').click();
+    await page.locator("#dsa-subtipo").selectOption("Palestra");
+    /* A disciplina da AEC é OPCIONAL — o campo diz isso no rótulo. */
+    await expect(page.locator('label[for="dsa-disciplina"]')).toContainText("opcional");
+    await escolherDisciplina(page, SEMEADO.codDisciplina);
+    await page.locator("#dsa-descricao").fill(descricao);
+    await page.locator("#dsa-tempos").fill("1");
+    await lancarEConferirQueGravou(page);
+
+    const esperada = await idDaDisciplina(SEMEADO.codDisciplina);
+    await expect
+      .poll(async () => {
+        const { data } = await banco()
+          .from("atividades_nao_letivas")
+          .select("categoria_normativa, disciplina_id")
+          .eq("descricao", descricao)
+          .maybeSingle();
+        const l = data as { categoria_normativa: string; disciplina_id: string | null } | null;
+        if (l === null) return "sem linha";
+        return `${l.categoria_normativa}/${l.disciplina_id === esperada ? "disciplina certa" : l.disciplina_id}`;
+      })
+      .toBe("AEC/disciplina certa");
   });
 });
 
@@ -339,7 +540,8 @@ test.describe("`RF-EXTRA-01` e `Q-8` · a atividade não letiva", () => {
   test("o subtipo filtra pela categoria, e o responsável pode ser de fora", async ({ page }) => {
     await abrirASemana(page);
     await clicarCelulaLivre(page, OUTRO_TA_LIVRE_NA_TERCA);
-    await page.locator('[data-modo="atividade"]').click();
+    /* ⚠️ A categoria é o TIPO, a primeira escolha do formulário (item 1a de 08/10/2026). */
+    await page.locator('[data-tipo="AEC"]').click();
 
     /*
      * ⚠️ **O SUBTIPO FILTRA POR CATEGORIA** — é a `H2` do analyze em funcionamento. A lista
@@ -350,9 +552,11 @@ test.describe("`RF-EXTRA-01` e `Q-8` · a atividade não letiva", () => {
     await expect(subtipo).toContainText("Palestra");
     await expect(subtipo).not.toContainText("Vista de Prova");
 
-    await page.locator("#dsa-categoria").selectOption("TAD");
+    await page.locator('[data-tipo="TAD"]').click();
     await expect(subtipo).toContainText("Administração");
     await expect(subtipo).not.toContainText("Palestra");
+    /* E só a AEC oferece disciplina. */
+    await expect(page.locator("#dsa-disciplina")).toHaveCount(0);
 
     /* E o responsável de fora do cadastro tem campo próprio (`Q-8`). */
     await expect(page.locator("#dsa-responsavel-externo")).toBeVisible();

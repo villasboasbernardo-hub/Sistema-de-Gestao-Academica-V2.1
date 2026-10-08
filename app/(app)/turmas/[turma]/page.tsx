@@ -434,6 +434,8 @@ export default async function FichaDaTurma({
               data_termino: texto(turma.data_termino),
               sala_alocada: texto(turma.sala_alocada),
               alunos: texto(turma.alunos),
+              inicio_etapa_presencial: texto(turma.inicio_etapa_presencial),
+              termino_etapa_presencial: texto(turma.termino_etapa_presencial),
             }}
             salas={salas}
             turmasDoCurso={outras}

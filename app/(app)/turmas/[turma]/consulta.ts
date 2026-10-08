@@ -19,7 +19,7 @@ import type { Database } from "@/lib/tipos/database";
 
 /** As colunas da turma que a ficha consome. Nunca `select *`. */
 export const COLUNAS_DA_FICHA_DA_TURMA =
-  "id, codigo, turma, ano_letivo, status, modalidade, data_inicio, data_termino, sala_alocada, alunos, curso_id";
+  "id, codigo, turma, ano_letivo, status, modalidade, data_inicio, data_termino, sala_alocada, alunos, curso_id, inicio_etapa_presencial, termino_etapa_presencial";
 
 /** O código gravado, a partir do que a rota entregou. */
 export function codigoDaFicha(segmento: string): string {

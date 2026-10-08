@@ -77,6 +77,13 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
     "mover (dia e tempo), editar e excluir um lançamento já na grade — o caminho de TECLADO do `RF-DSA-07`",
   "app/(app)/turmas/[turma]/dsa/NavegacaoDaSemana.tsx":
     "semana anterior/atual/próxima e a coluna de sábado — ela EMPILHA no histórico (`RF-NAV-04`), e empilhar é comportamento de navegador",
+  /*
+   * ⚠️ **ELA ERA SERVIDOR ATÉ 08/10/2026**, e o cabeçalho dela dizia por quê. A cascata das UEs (item 3
+   * do comando de correções do DSA) mudou a conta: as colunas da tabela única são funções, e abrir a
+   * linha é interação — o estado de qual está aberta é efêmero, e fica no componente.
+   */
+  "app/(app)/turmas/[turma]/dsa/PainelDeSituacao.tsx":
+    "a situação por disciplina, com a cascata das unidades de ensino — abrir e fechar a linha da tabela única é interação",
   "app/(app)/instrutores/TabelaDeInstrutores.tsx": "a grade navegável por teclado",
   "app/(app)/instrutores/EstatisticasRecolhiveis.tsx": "recolher o painel — estado efêmero",
   "app/(app)/instrutores/FormularioDeInstrutor.tsx": "cadastrar e editar instrutor",

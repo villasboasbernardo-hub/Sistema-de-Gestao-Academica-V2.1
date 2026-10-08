@@ -15,6 +15,14 @@
  * ⚠️ **ARRASTAR E O TECLADO CHEGAM À MESMA `mover`** (`RF-DSA-07`): o arrastar passa pela grade e o
  * teclado pelo painel de ações, e os dois chamam a **mesma** Server Action. Dois caminhos de
  * gravação seriam duas regras de teto, e uma delas esqueceria o TFM.
+ *
+ * ⚠️ **O EDITOR E O FORMULÁRIO ABREM NUM DIÁLOGO, e é ESTA a correção do item 2 de 08/10/2026**
+ * *(«não consigo editar o total de TA de uma disciplina no dia»)*. Medido pela tela: a edição GRAVAVA
+ * — o banco ficava certo —, mas o painel era desenhado ABAIXO da grade inteira, e na grade do modelo
+ * v4 (nove tempos, cartões de várias linhas) ele abria fora da área visível: quem clicava num cartão
+ * do alto não via nada acontecer. ⚠️ **O teste não via porque o Playwright rola sozinho** até o
+ * elemento antes de agir; o caso novo confere `toBeInViewport`. Num diálogo o painel aparece onde a
+ * pessoa está, e ao fechar o cartão atualizado está no mesmo lugar em que ela clicou.
  */
 "use client";
 
@@ -22,15 +30,25 @@ import * as React from "react";
 
 import { GradeDsa } from "@/components/ciaara/grade-dsa";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import type { Semana } from "@/lib/dominio/dsa/grade";
 import type { GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
+import { temposParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
+import { dataComDiaDaSemana } from "@/lib/formato/data";
 
 import { AcoesDoBloco, type FatoEscolhido } from "./AcoesDoBloco";
 import {
   FormularioDeLancamento,
-  type DisciplinaIsenta,
+  type AvaliacaoOferecida,
+  type DisciplinaOferecida,
   type ResultadoDaAcao,
   type UnidadeOferecida,
 } from "./FormularioDeLancamento";
@@ -52,7 +70,8 @@ export type PainelDeLancamentoProps = {
   readonly numeroDaSemana: number;
   readonly podeLancar: boolean;
   readonly unidades: readonly UnidadeOferecida[];
-  readonly disciplinasIsentas: readonly DisciplinaIsenta[];
+  readonly disciplinas: readonly DisciplinaOferecida[];
+  readonly avaliacoesParaVista: readonly AvaliacaoOferecida[];
   readonly instrutores: readonly InstrutorParaExibir[];
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
@@ -127,7 +146,8 @@ export function PainelDeLancamento({
   numeroDaSemana,
   podeLancar,
   unidades,
-  disciplinasIsentas,
+  disciplinas,
+  avaliacoesParaVista,
   instrutores,
   escala,
   tecnicas,
@@ -148,6 +168,26 @@ export function PainelDeLancamento({
   const podeMexer =
     podeLancar && mover !== undefined && editar !== undefined && excluir !== undefined;
   const fato = fatoId === null ? null : fatoDaSemana(semana, fatoId);
+
+  /*
+   * ⚠️ **QUEM ABRIU O DIÁLOGO, PARA O FOCO VOLTAR A ELE AO FECHAR** — e a primeira redação dizia que
+   * o Radix fazia isso sozinho, e não faz (medido em 08/10/2026 pelo caso de teclado de
+   * `dsa-ver.spec.ts`). Sem `DialogTrigger`, o Radix devolve o foco a um gatilho que não existe e ele
+   * cai no `body`: quem fechou com `Esc` perdia o lugar na grade, e a seta não andava mais. Os
+   * diálogos daqui são abertos pela CÉLULA, então é ela que se lembra.
+   */
+  const quemAbriu = React.useRef<HTMLElement | null>(null);
+  const lembrarQuemAbriu = (): void => {
+    quemAbriu.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  };
+  const devolverOFoco = (evento: Event): void => {
+    evento.preventDefault();
+    const alvo = quemAbriu.current;
+    quemAbriu.current = null;
+    /* A grade pode ter sido redesenhada depois de gravar: célula que saiu da página não recebe foco. */
+    if (alvo?.isConnected) alvo.focus();
+  };
 
   async function lancarEi(): Promise<void> {
     definirRespostaDoEi(null);
@@ -247,6 +287,7 @@ export function PainelDeLancamento({
         {...(podeLancar
           ? {
               aoEscolherCelula: (dia: string, ta: number) => {
+                lembrarQuemAbriu();
                 definirFato(null);
                 definirCelula({ dia, ta });
               },
@@ -255,6 +296,7 @@ export function PainelDeLancamento({
         {...(podeMexer
           ? {
               aoEscolherFato: (id: string) => {
+                lembrarQuemAbriu();
                 definirCelula(null);
                 definirFato(id);
               },
@@ -265,40 +307,84 @@ export function PainelDeLancamento({
           : {})}
       />
 
-      {fato !== null && mover && editar && excluir ? (
-        <AcoesDoBloco
-          fato={fato}
-          dias={semana.dias.map((d) => d.data)}
-          linhas={semana.linhas}
-          unidades={unidades}
-          instrutores={instrutores}
-          escala={escala}
-          tecnicas={tecnicas}
-          mover={mover}
-          editar={editar}
-          excluir={excluir}
-          aoFechar={() => definirFato(null)}
-        />
-      ) : null}
+      {/*
+        ⚠️ **UM DIÁLOGO PARA CADA, E NUNCA OS DOIS ABERTOS**: escolher célula limpa o fato e vice-versa
+           (ver `aoEscolherCelula` e `aoEscolherFato` acima). `Esc` e o clique fora fecham, e o foco
+           volta à célula de onde a pessoa saiu — por `devolverOFoco`, e NÃO pelo padrão do Radix.
+      */}
+      <Dialog
+        open={fato !== null && mover !== undefined && editar !== undefined && excluir !== undefined}
+        onOpenChange={(aberto) => {
+          if (!aberto) definirFato(null);
+        }}
+      >
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto sm:max-w-xl"
+          onCloseAutoFocus={devolverOFoco}
+        >
+          <DialogHeader>
+            <DialogTitle>Lançamento</DialogTitle>
+            <DialogDescription>Mover, editar ou excluir este lançamento.</DialogDescription>
+          </DialogHeader>
+          {fato !== null && mover && editar && excluir ? (
+            <AcoesDoBloco
+              fato={fato}
+              dias={semana.dias.map((d) => d.data)}
+              linhas={semana.linhas}
+              unidades={unidades}
+              instrutores={instrutores}
+              escala={escala}
+              tecnicas={tecnicas}
+              mover={mover}
+              editar={editar}
+              excluir={excluir}
+              aoFechar={() => definirFato(null)}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
-      {celula ? (
-        <FormularioDeLancamento
-          turmaId={turmaId}
-          cursoId={cursoId}
-          salaDaTurma={salaDaTurma}
-          dia={celula.dia}
-          taInicial={celula.ta}
-          unidades={unidades}
-          disciplinasIsentas={disciplinasIsentas}
-          instrutores={instrutores}
-          escala={escala}
-          tecnicas={tecnicas}
-          tiposDeAvaliacao={tiposDeAvaliacao}
-          subtipos={subtipos}
-          lancar={lancar}
-          aoFechar={() => definirCelula(null)}
-        />
-      ) : null}
+      <Dialog
+        open={celula !== null}
+        onOpenChange={(aberto) => {
+          if (!aberto) definirCelula(null);
+        }}
+      >
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto sm:max-w-xl"
+          onCloseAutoFocus={devolverOFoco}
+        >
+          <DialogHeader>
+            <DialogTitle>Lançar</DialogTitle>
+            <DialogDescription>
+              {celula ? `No dia ${dataComDiaDaSemana(celula.dia)}.` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {celula ? (
+            <FormularioDeLancamento
+              turmaId={turmaId}
+              cursoId={cursoId}
+              salaDaTurma={salaDaTurma}
+              dia={celula.dia}
+              taInicial={celula.ta}
+              temposDoDia={temposParaEscolher(
+                semana.dias.find((d) => d.data === celula.dia),
+                semana.linhas,
+              )}
+              unidades={unidades}
+              disciplinas={disciplinas}
+              avaliacoesParaVista={avaliacoesParaVista}
+              instrutores={instrutores}
+              escala={escala}
+              tecnicas={tecnicas}
+              tiposDeAvaliacao={tiposDeAvaliacao}
+              subtipos={subtipos}
+              lancar={lancar}
+              aoFechar={() => definirCelula(null)}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

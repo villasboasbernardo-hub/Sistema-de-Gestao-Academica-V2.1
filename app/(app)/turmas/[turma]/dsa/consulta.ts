@@ -40,7 +40,7 @@ import { enderecoDoDsa, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 
 /** Nunca `select *`. */
 export const COLUNAS_DA_TURMA_DO_DSA =
-  "id, codigo, turma, ano_letivo, status, modalidade, sala_alocada, alunos, curso_id, data_inicio";
+  "id, codigo, turma, ano_letivo, status, modalidade, sala_alocada, alunos, curso_id, data_inicio, inicio_etapa_presencial, termino_etapa_presencial";
 
 export const COLUNAS_DA_OCUPACAO =
   "turma_id, data, ta_inicial, ta_final, tempos_consumidos, origem, fato_id, disciplina_id, instrutor_id, fiscal_id, local, herdado";
@@ -229,6 +229,12 @@ export type ConteudoDoFato = {
   readonly externo?: string | null | undefined;
   /** `avaliacoes.nome_fiscal_externo` — o fiscal que não é do cadastro (`RN-INST-01`). */
   readonly fiscalExterno?: string | null | undefined;
+  /**
+   * `atividades_nao_letivas.disciplina_id` — a disciplina OPCIONAL da AEC (item 1b, 08/10/2026).
+   * ⚠️ Ela vem da TABELA, e não da view: `vw_ocupacao_ta` não a expõe de propósito, porque a
+   * disciplina da view alimenta o teto e a CH por disciplina, e AEC não é CHD.
+   */
+  readonly disciplinaId?: string | null | undefined;
 };
 
 /**
@@ -286,8 +292,11 @@ export function fatoDaOcupacao(
     taInicial: linha.ta_inicial,
     tempos: linha.tempos_consumidos,
     herdado: linha.herdado,
-    disciplina:
-      linha.disciplina_id !== null ? (nomes.disciplinas.get(linha.disciplina_id) ?? null) : null,
+    disciplina: (() => {
+      /* A da view (aula, avaliação, vista); na falta, a da AEC, que só a tabela tem. */
+      const id = linha.disciplina_id ?? extra?.disciplinaId ?? null;
+      return id !== null ? (nomes.disciplinas.get(id) ?? null) : null;
+    })(),
     conteudo: ehVista
       ? rotuloDaVistaDeProva({ prova: extra?.conteudo, aplicadaEm: extra?.aplicadaEm })
       : (extra?.conteudo ?? null),
@@ -470,6 +479,72 @@ export function execucaoAteASemana(entrada: {
     prevista: q.chPrevista,
     cumprida: q.chAcumulada,
   }));
+}
+
+/** Uma UE do currículo do curso — `unidades_ensino`, só as ativas. */
+export type UnidadeDoCurriculo = {
+  readonly id: string;
+  readonly disciplinaId: string;
+  readonly numero: number;
+  readonly topico: string;
+  readonly prevista: number;
+};
+
+/** O que a turma já lançou na UE, como `vw_unidades_ensino_execucao` o soma (sem data). */
+export type ExecucaoDaUnidade = {
+  readonly unidadeId: string;
+  readonly lancada: number;
+  /** `ta_saldo` da view — fica NEGATIVO quando a UE passa da prevista. */
+  readonly saldo: number;
+};
+
+/** Uma aula ativa da turma, de qualquer data até o fim da semana aberta. */
+export type AulaDaUnidade = {
+  readonly unidadeId: string | null;
+  /** Nulo em linha histórica — conta zero, o padrão da pasta para o que não foi medido. */
+  readonly tempos: number | null;
+};
+
+/**
+ * As unidades de ensino da turma — **todas as do currículo**, com dois números de lançado.
+ *
+ * ⚠️ **A LISTA PARTE DO CURRÍCULO, E A VIEW SÓ COMPLETA OS NÚMEROS** (medido no catálogo do banco
+ * local em 08/10/2026, na definição de `vw_unidades_ensino_execucao`). A view agrupa por `r.turma_id`
+ * de um `LEFT JOIN`: a UE que a turma ainda não deu sai com `turma_id` NULO, e a leitura filtrada pela
+ * turma a descartava. Numa turma nova, o formulário não oferecia unidade NENHUMA, e a cascata do item 3
+ * sairia vazia justamente na disciplina que ainda não começou.
+ *
+ * ⚠️ **SÃO DOIS LANÇADOS, E CADA TELA USA O SEU:**
+ *   · `lancada`/`restante` — o da turma inteira, **sem data**: é o que o formulário mostra ao lado de
+ *     cada UE, porque quem lança quer saber quanto resta dela, e não quanto restava na semana aberta;
+ *   · `lancadaAteASemana` — o acumulado **até o fim da semana aberta**, o MESMO corte da linha da
+ *     disciplina no painel de situação (`RN-CRONOS-03`, `Q-2`). Com cortes diferentes na mesma tabela,
+ *     a semana 10 mostraria a disciplina *Aguardando início* com uma UE dela *Em andamento*.
+ */
+export function unidadesDaTurma(entrada: {
+  readonly curriculo: readonly UnidadeDoCurriculo[];
+  readonly execucao: readonly ExecucaoDaUnidade[];
+  readonly aulasAteASemana: readonly AulaDaUnidade[];
+}): readonly (UnidadeDoCurriculo & {
+  readonly lancada: number;
+  readonly restante: number;
+  readonly lancadaAteASemana: number;
+})[] {
+  const execucao = new Map(entrada.execucao.map((e) => [e.unidadeId, e]));
+  const ateASemana = new Map<string, number>();
+  for (const a of entrada.aulasAteASemana) {
+    if (a.unidadeId === null) continue;
+    ateASemana.set(a.unidadeId, (ateASemana.get(a.unidadeId) ?? 0) + (a.tempos ?? 0));
+  }
+  return entrada.curriculo.map((u) => {
+    const e = execucao.get(u.id);
+    return {
+      ...u,
+      lancada: e?.lancada ?? 0,
+      restante: e?.saldo ?? u.prevista,
+      lancadaAteASemana: ateASemana.get(u.id) ?? 0,
+    };
+  });
 }
 
 /** Reexportados: quem monta endereço de turma é `lib/navegacao/endereco-de-turma.ts`, sempre. */

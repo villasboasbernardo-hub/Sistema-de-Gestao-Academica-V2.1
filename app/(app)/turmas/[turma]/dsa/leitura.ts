@@ -50,6 +50,7 @@ import {
   feriadoDoBanco,
   regimeParaRelogio,
   tempoDoCatalogo,
+  unidadesDaTurma,
   vigenciaDaSemana,
   vigenciaDoBanco,
   type ConteudoDoFato,
@@ -71,17 +72,43 @@ export type UnidadeLida = {
   readonly numero: number;
   readonly topico: string;
   readonly prevista: number;
+  /** Lançada pela turma inteira, sem data — o número do formulário. */
   readonly lancada: number;
   readonly restante: number;
+  /** Lançada até o fim da semana aberta — o número da cascata do painel de situação. */
+  readonly lancadaAteASemana: number;
   readonly tecnicaSugerida: string | null;
   readonly atribuidoId: string | null;
 };
 
-/** Uma disciplina em que a aula pode ser lançada **sem** unidade de ensino (`Q-1`). */
-export type DisciplinaIsentaLida = {
+/**
+ * Uma disciplina da turma, para o formulário de lançamento.
+ *
+ * ⚠️ **ATÉ 08/10/2026 ESTE TIPO ERA SÓ DA DISCIPLINA ISENTA DE UE** (`Q-1`), a única em que a aula
+ * podia ser lançada sem unidade. A `D-DSA-1` abriu o caminho para **qualquer** disciplina, e o
+ * formulário passou a pedir a disciplina **antes** da unidade (item 1 do comando de correções).
+ */
+export type DisciplinaLida = {
   readonly id: string;
   readonly codigo: string;
   readonly nome: string;
+};
+
+/**
+ * Uma avaliação da turma que pode receber a VISTA DE PROVA (`RF-AVAL-05`, `RN-AVAL-02`).
+ *
+ * ⚠️ **ELA NÃO É DA SEMANA**: a vista costuma cair dias depois da aplicação, e muitas vezes em outra
+ * semana. Por isso a leitura é da turma inteira, e não da janela da grade.
+ */
+export type AvaliacaoParaVista = {
+  readonly id: string;
+  readonly disciplinaId: string;
+  readonly tipo: string;
+  /** `aaaa-mm-dd`. */
+  readonly aplicadaEm: string | null;
+  readonly titulo: string | null;
+  /** `aaaa-mm-dd` quando a vista já foi lançada — escolher de novo a reposiciona. */
+  readonly vistaEm: string | null;
 };
 
 export type SemanaDoDsa = {
@@ -94,7 +121,9 @@ export type SemanaDoDsa = {
   readonly cursoCodigo: string | null;
   readonly cursoPorCompetencias: boolean;
   readonly unidades: readonly UnidadeLida[];
-  readonly disciplinasIsentas: readonly DisciplinaIsentaLida[];
+  /** As disciplinas ATIVAS do curso da turma — a segunda escolha do formulário, depois do tipo. */
+  readonly disciplinas: readonly DisciplinaLida[];
+  readonly avaliacoesParaVista: readonly AvaliacaoParaVista[];
   readonly instrutores: readonly InstrutorParaExibir[];
   readonly escala: EscalaDeAntiguidade;
   /** Os nomes das técnicas, para o seletor. */
@@ -174,6 +203,9 @@ export async function lerSemanaDoDsa(
     atribRes,
     instrRes,
     acumuladaRes,
+    paraVistaRes,
+    curriculoRes,
+    aulasPorUeRes,
   ] = await Promise.all([
     /* ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`). */
     supabase
@@ -202,7 +234,7 @@ export async function lerSemanaDoDsa(
     supabase
       .from("atividades_nao_letivas")
       .select(
-        "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id",
+        "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id",
       )
       .or(`turma_id.eq.${turmaId},turma_id.is.null`)
       .eq("status", "ativo")
@@ -232,7 +264,9 @@ export async function lerSemanaDoDsa(
     supabase
       .from("disciplinas")
       .select("id, cod_disciplina, nome_disciplina, sem_unidades_ensino, status")
-      .eq("curso_id", cursoId),
+      .eq("curso_id", cursoId)
+      /* A ordem do campo «Disciplina» do lançamento é a da página do curso. */
+      .order("cod_disciplina", { ascending: true }),
     supabase
       .from("vw_unidades_ensino_execucao")
       .select(
@@ -269,6 +303,33 @@ export async function lerSemanaDoDsa(
       .from("vw_ocupacao_ta")
       .select("fato_id, data, disciplina_id, tempos_consumidos")
       .eq("turma_id", turmaId)
+      .lte("data", ate),
+    /* As avaliações da turma inteira, para o tipo «Vista de prova» do formulário (item 1). */
+    supabase
+      .from("avaliacoes")
+      .select(
+        "id, disciplina_id, tipo_avaliacao, data_avaliacao, conteudo_resumo, data_vista_prova",
+      )
+      .eq("turma_id", turmaId)
+      .neq("status", "cancelada")
+      .order("data_avaliacao"),
+    /*
+     * ⚠️ **AS UNIDADES PARTEM DO CURRÍCULO DO CURSO** — a view de execução, filtrada pela turma,
+     * descartava a UE que a turma ainda não deu (ver `unidadesDaTurma`).
+     */
+    supabase
+      .from("unidades_ensino")
+      .select("id, disciplina_id, numero_ue, topico, ch_prevista_tempos")
+      .eq("curso_id", cursoId)
+      .eq("status", "ativo")
+      .order("numero_ue", { ascending: true }),
+    /* As aulas da turma com UE, até o fim da semana aberta — o corte da cascata do painel (item 3). */
+    supabase
+      .from("registros_aula")
+      .select("unidade_ensino_id, tempos_consumidos")
+      .eq("turma_id", turmaId)
+      .eq("status", "ativo")
+      .not("unidade_ensino_id", "is", null)
       .lte("data", ate),
   ]);
 
@@ -387,6 +448,7 @@ export async function lerSemanaDoDsa(
     subtipo: string | null;
     descricao: string | null;
     responsavel_externo: string | null;
+    disciplina_id: string | null;
   }[];
   for (const n of atividades) {
     /*
@@ -397,6 +459,8 @@ export async function lerSemanaDoDsa(
       conteudo: n.descricao,
       tecnica: n.subtipo,
       externo: n.responsavel_externo,
+      /* A disciplina OPCIONAL da AEC (item 1b): só para exibir — ela não entra na CH da disciplina. */
+      disciplinaId: n.disciplina_id,
     });
   }
 
@@ -516,34 +580,47 @@ export async function lerSemanaDoDsa(
     ),
   );
 
-  const unidades = (
-    (ueExecRes.data ?? []) as {
-      unidade_ensino_id: string;
-      disciplina_id: string;
-      numero_ue: number;
-      topico: string;
-      ch_prevista_tempos: number;
-      ta_executados: number | null;
-      ta_saldo: number | null;
-    }[]
-  ).map((u) => ({
-    id: u.unidade_ensino_id,
-    disciplinaId: u.disciplina_id,
-    disciplinaCodigo: disciplinas.get(u.disciplina_id) ?? "—",
-    numero: u.numero_ue,
-    topico: u.topico,
-    prevista: u.ch_prevista_tempos,
-    lancada: u.ta_executados ?? 0,
-    restante: u.ta_saldo ?? u.ch_prevista_tempos,
+  const unidades = unidadesDaTurma({
+    curriculo: (
+      (curriculoRes.data ?? []) as {
+        id: string;
+        disciplina_id: string;
+        numero_ue: number;
+        topico: string;
+        ch_prevista_tempos: number;
+      }[]
+    ).map((u) => ({
+      id: u.id,
+      disciplinaId: u.disciplina_id,
+      numero: u.numero_ue,
+      topico: u.topico,
+      prevista: u.ch_prevista_tempos,
+    })),
+    execucao: (
+      (ueExecRes.data ?? []) as {
+        unidade_ensino_id: string;
+        ch_prevista_tempos: number;
+        ta_executados: number | null;
+        ta_saldo: number | null;
+      }[]
+    ).map((e) => ({
+      unidadeId: e.unidade_ensino_id,
+      lancada: e.ta_executados ?? 0,
+      saldo: e.ta_saldo ?? e.ch_prevista_tempos,
+    })),
+    aulasAteASemana: (
+      (aulasPorUeRes.data ?? []) as {
+        unidade_ensino_id: string | null;
+        tempos_consumidos: number | null;
+      }[]
+    ).map((a) => ({ unidadeId: a.unidade_ensino_id, tempos: a.tempos_consumidos })),
+  }).map((u) => ({
+    ...u,
+    disciplinaCodigo: disciplinas.get(u.disciplinaId) ?? "—",
     tecnicaSugerida: null,
-    atribuidoId: atribuicaoPorUe.get(u.unidade_ensino_id) ?? null,
+    atribuidoId: atribuicaoPorUe.get(u.id) ?? null,
   }));
 
-  /*
-   * ⚠️ **AS DISCIPLINAS ISENTAS SÓ APARECEM ONDE A ISENÇÃO VALE** (`Q-1`, `D-10`): curso por
-   * competências **ou** disciplina marcada `sem_unidades_ensino`. É a MESMA condição de
-   * `app.disciplina_sem_ue`, e a tela a lê para **oferecer** o modo; quem **impõe** é o banco.
-   */
   const cursoPorCompetencias =
     (cursoRes.data as { curriculo_modelo?: string } | null)?.curriculo_modelo === "competencias";
 
@@ -556,11 +633,30 @@ export async function lerSemanaDoDsa(
     cursoCodigo: (cursoRes.data as { codigo?: string } | null)?.codigo ?? null,
     cursoPorCompetencias,
     unidades,
-    disciplinasIsentas: disciplinasDoCurso
-      .filter(
-        (d) => d.status === "ativo" && (d.sem_unidades_ensino === true || cursoPorCompetencias),
-      )
+    /*
+     * ⚠️ **TODAS AS DISCIPLINAS ATIVAS, e não só as isentas de UE** — a `D-DSA-1` (08/10/2026) abriu a
+     * aula sem UE para qualquer disciplina, e o formulário pede a disciplina antes da unidade.
+     */
+    disciplinas: disciplinasDoCurso
+      .filter((d) => d.status === "ativo")
       .map((d) => ({ id: d.id, codigo: d.cod_disciplina, nome: d.nome_disciplina })),
+    avaliacoesParaVista: (
+      (paraVistaRes.data ?? []) as {
+        id: string;
+        disciplina_id: string;
+        tipo_avaliacao: string | null;
+        data_avaliacao: string | null;
+        conteudo_resumo: string | null;
+        data_vista_prova: string | null;
+      }[]
+    ).map((a) => ({
+      id: a.id,
+      disciplinaId: a.disciplina_id,
+      tipo: a.tipo_avaliacao ?? "Avaliação",
+      aplicadaEm: a.data_avaliacao,
+      titulo: a.conteudo_resumo,
+      vistaEm: a.data_vista_prova,
+    })),
     /* ⚠️ Instrutor INATIVO não chega ao seletor (`RN-INST-02`). */
     instrutores: linhasDeInstrutor
       .filter((i) => i.status === undefined || i.status === "ativo")
@@ -665,7 +761,11 @@ export async function lerExtrasDaImpressao(
     supabase
       .from("responsaveis_curso")
       .select(
-        "papel_assinatura, preenchimento, curso_id, vigente_de, vigente_ate, exibir_no_dsa, ordem, nome_completo, posto_graduacao, funcao_descricao",
+        /*
+         * ⚠️ `especialidade` entrou em 08/10/2026 (item 7): é o quadro que a assinatura imprime
+         * entre parênteses, e até aqui ele não chegava ao rodapé.
+         */
+        "papel_assinatura, preenchimento, curso_id, vigente_de, vigente_ate, exibir_no_dsa, ordem, nome_completo, posto_graduacao, especialidade, funcao_descricao",
       )
       .or(`curso_id.eq.${entrada.cursoId},curso_id.is.null`)
       .eq("status", "ativo"),
@@ -711,6 +811,7 @@ export async function lerExtrasDaImpressao(
       ordem: number | null;
       nome_completo: string | null;
       posto_graduacao: string | null;
+      especialidade: string | null;
       funcao_descricao: string | null;
     }[]
   ).map((r) => ({
@@ -732,6 +833,7 @@ export async function lerExtrasDaImpressao(
     ordem: r.ordem ?? 1,
     nomeCompleto: r.nome_completo,
     postoGraduacao: r.posto_graduacao,
+    especialidade: r.especialidade,
     funcaoDescricao: r.funcao_descricao ?? "",
   }));
 

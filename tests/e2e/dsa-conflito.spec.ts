@@ -22,6 +22,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
 import { ANO, limparDsa, SEMANA, semearDsa, type DsaSemeado } from "./dsa-de-teste";
+import { escolherDisciplinaEUnidade } from "./percurso-do-dsa";
 import { irAFichaDaTurma } from "./navegar-turmas";
 
 let EMAIL = "";
@@ -145,7 +146,7 @@ test.describe("`RN-CONF-01` e `RN-DEG-02` · o conflito NÃO impede a gravação
      * bloqueio do épico é o TFM.
      */
     await page.locator(`${GRADE} td[data-celula="7:0"]`).click();
-    await page.locator("#dsa-unidade").selectOption({ index: 1 });
+    await escolherDisciplinaEUnidade(page, SEMEADO.codDisciplina);
     await page.locator('[data-slot="seletor-instrutor"]').first().click();
     await page
       .locator('[data-slot="popover-content"]')

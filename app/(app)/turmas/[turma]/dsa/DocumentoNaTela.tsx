@@ -121,7 +121,10 @@ export function RodapeDaSemana({
   );
 }
 
-/** ⚠️ Mesma resolução do papel: modo dinâmico assina quem imprime, sem posto (`Q-14`). */
+/**
+ * ⚠️ Mesma resolução do papel: modo dinâmico assina quem imprime, sem posto (`Q-14`), e o posto é
+ * `postoPorExtenso` — por extenso, com o quadro —, nunca a sigla *(item 7 de 08/10/2026)*.
+ */
 function Rubrica({
   assinatura,
   nomeDeQuemImprime,
@@ -139,7 +142,7 @@ function Rubrica({
   const nome = assinatura.resolvePeloUsuarioLogado
     ? (nomeDeQuemImprime ?? "")
     : (assinatura.nomeCompleto ?? "");
-  const posto = assinatura.resolvePeloUsuarioLogado ? "" : (assinatura.postoGraduacao ?? "");
+  const posto = assinatura.resolvePeloUsuarioLogado ? "" : assinatura.postoPorExtenso;
   return (
     <div className="flex flex-col border-t border-borda pt-1 text-sm">
       <span className="font-semibold text-texto">{[posto, nome].filter(Boolean).join(" ")}</span>

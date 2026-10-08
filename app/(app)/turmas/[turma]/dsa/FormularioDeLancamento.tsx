@@ -1,23 +1,29 @@
 /**
- * O formulário de lançamento — **no máximo quatro decisões** (`RF-DSA-04`, `RF-AVAL-04` a `06`,
- * `RF-EXTRA-01`, `Q-1`, `Q-8`, `SC-009` · spec 013, PR 2).
+ * O formulário de lançamento (`RF-DSA-04`, `RF-AVAL-04` a `06`, `RF-EXTRA-01`, `Q-1`, `Q-8`,
+ * `D-DSA-1` · spec 013, PR 2 e correções de 08/10/2026).
  *
  * ⚠️ **FOLHA DE CLIENTE, DECLARADA.** Abrir, escolher e gravar é interação; a grade e a leitura do
  * banco continuam no servidor.
  *
- * ⚠️ **O ESFORÇO A IGUALAR É O DA PLANILHA: DUAS CÉLULAS POR BLOCO** (`P-2`, medido em 15
- * planilhas). O dia e o TA inicial vêm da **célula clicada** — zero decisões. Sobram **duas**: o
- * que lançar (a unidade, que já traz a disciplina) e quantos tempos. Técnica, local e quem ministra
- * chegam **pré-preenchidos** e podem ser trocados **naquele** lançamento sem tocar o cadastro — é o
- * conserto do `D-4`, em que trocar um atributo do catálogo reescrevia todo DSA passado.
+ * ⚠️ **A ORDEM DAS ESCOLHAS É A DO COMANDO DE 08/10/2026** *(decisão de Bernardo Villas Boas, item 1)*:
+ *   a) **tipo** primeiro — Aula · Avaliação · Vista de prova · AEC · TAD · TR · Estudo Individual
+ *      (os não letivos com o subtipo da lista);
+ *   b) **disciplina** da turma — obrigatória em aula, avaliação e vista; opcional na AEC;
+ *   c) **unidade de ensino** da disciplina escolhida — OPCIONAL, com a CH prevista, a lançada e a
+ *      restante de cada uma. Sem unidade, um ALERTA visível e o tópico obrigatório; grava assim
+ *      mesmo (`RN-DEG-02`: alerta, não bloqueio — e a `D-DSA-1` é o que o banco passou a aceitar);
+ *   d) **em qual tempo começa** — os TA do dia com o horário, pré-selecionado pela célula clicada;
+ *   e) **quantos tempos**.
+ * Até ali o formulário pulava direto para a unidade, e o TA inicial vinha só da célula clicada.
  *
- * ⚠️ **A AÇÃO CHEGA POR PROPRIEDADE, não por `import`.** `fronteira-componentes` e `fronteira-casca`
- * proíbem `@/lib/acoes/` dentro de componente — *"o componente recebe dado por propriedade e não
- * conhece origem"* (Princípio XI). Server Action atravessa a fronteira porque é serializável.
+ * ⚠️ **TÉCNICA, LOCAL E QUEM MINISTRA CHEGAM PRÉ-PREENCHIDOS E CONTINUAM EDITÁVEIS** — trocar um deles
+ * vale **naquele** lançamento e não toca o cadastro, que é o conserto do `D-4` da planilha.
  *
- * ⚠️ **TODO CAMPO DE ESCOLHA VEM DE `EscolhaSimples`, E NENHUM `<select>` É ESCRITO AQUI.** A razão
- * é a guarda `SC-002`, que reprova arquivo com `<select` que também cite quem ministra: a
- * `RN-ANT-01` é de *Risco: Alto* e vale por **ponto único**. Ver o cabeçalho de `EscolhaSimples`.
+ * ⚠️ **A AÇÃO CHEGA POR PROPRIEDADE, não por `import`** (Princípio XI): `fronteira-componentes` e
+ * `fronteira-casca` proíbem `@/lib/acoes/` dentro de componente.
+ *
+ * ⚠️ **TODO CAMPO DE ESCOLHA VEM DE `EscolhaSimples`**: a guarda `SC-002` reprova arquivo que cite quem
+ * ministra e escreva o elemento de escolha nativo à mão (`RN-ANT-01`, *Risco: Alto*, ponto único).
  */
 "use client";
 
@@ -28,8 +34,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/rotulos";
+import type { TempoParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
-import { CATEGORIAS_NAO_LETIVAS } from "@/lib/validacao/dsa";
+import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
 
 import { EscolhaSimples } from "./EscolhaSimples";
 
@@ -49,11 +57,21 @@ export type UnidadeOferecida = {
   readonly atribuidoId: string | null;
 };
 
-/** Uma disciplina sem unidades, oferecida **só** onde a isenção da `Q-1` vale. */
-export type DisciplinaIsenta = {
+/** Uma disciplina da turma (todas as ativas do curso — `D-DSA-1`). */
+export type DisciplinaOferecida = {
   readonly id: string;
   readonly codigo: string;
   readonly nome: string;
+};
+
+/** Uma avaliação da turma que pode receber a vista (`RN-AVAL-02`: a vista é a mesma linha). */
+export type AvaliacaoOferecida = {
+  readonly id: string;
+  readonly disciplinaId: string;
+  readonly tipo: string;
+  readonly aplicadaEm: string | null;
+  readonly titulo: string | null;
+  readonly vistaEm: string | null;
 };
 
 export type ResultadoDaAcao =
@@ -68,11 +86,15 @@ export type FormularioDeLancamentoProps = {
   readonly turmaId: string;
   readonly cursoId: string;
   readonly salaDaTurma: string | null;
-  /** O dia e o TA que a célula clicada fixou — **as duas decisões que já foram tomadas**. */
+  /** O dia que a célula clicada fixou. */
   readonly dia: string;
+  /** O TA da célula clicada — o PONTO DE PARTIDA da escolha do tempo, que continua editável. */
   readonly taInicial: number;
+  /** Os TA do dia, com o horário de cada um (`temposParaEscolher`). */
+  readonly temposDoDia: readonly TempoParaEscolher[];
   readonly unidades: readonly UnidadeOferecida[];
-  readonly disciplinasIsentas: readonly DisciplinaIsenta[];
+  readonly disciplinas: readonly DisciplinaOferecida[];
+  readonly avaliacoesParaVista: readonly AvaliacaoOferecida[];
   readonly instrutores: readonly InstrutorParaExibir[];
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
@@ -82,14 +104,23 @@ export type FormularioDeLancamentoProps = {
   readonly aoFechar: () => void;
 };
 
-type Modo = "aula" | "aula_sem_ue" | "avaliacao" | "atividade";
+type Tipo = "aula" | "avaliacao" | "vista_prova" | "AEC" | "TAD" | "TR" | "Estudo_Individual";
 
-const ROTULO_DA_CATEGORIA: Readonly<Record<string, string>> = {
-  AEC: "AEC — atividade extraclasse",
-  TAD: "TAD — tempo administrativo",
-  TR: "TR — tempo reserva",
-  Estudo_Individual: "Estudo Individual",
-};
+const TIPOS: readonly (readonly [Tipo, string])[] = [
+  ["aula", "Aula"],
+  ["avaliacao", "Avaliação"],
+  ["vista_prova", "Vista de prova"],
+  ["AEC", "AEC"],
+  ["TAD", "TAD"],
+  ["TR", "TR"],
+  ["Estudo_Individual", "Estudo Individual"],
+];
+
+const NAO_LETIVOS: ReadonlySet<Tipo> = new Set<Tipo>(["AEC", "TAD", "TR", "Estudo_Individual"]);
+
+/** O alerta do item 1c, com as palavras do comando de 08/10/2026. */
+export const ALERTA_SEM_UNIDADE =
+  "Sem unidade de ensino escolhida — a CH desta aula não entra no controle por UE. O tópico passa a ser obrigatório.";
 
 export function FormularioDeLancamento({
   turmaId,
@@ -97,8 +128,10 @@ export function FormularioDeLancamento({
   salaDaTurma,
   dia,
   taInicial,
+  temposDoDia,
   unidades,
-  disciplinasIsentas,
+  disciplinas,
+  avaliacoesParaVista,
   instrutores,
   escala,
   tecnicas,
@@ -107,18 +140,20 @@ export function FormularioDeLancamento({
   lancar,
   aoFechar,
 }: FormularioDeLancamentoProps) {
-  const [modo, definirModo] = React.useState<Modo>("aula");
+  const [tipo, definirTipo] = React.useState<Tipo>("aula");
+  const [disciplinaId, definirDisciplina] = React.useState("");
   const [unidadeId, definirUnidade] = React.useState("");
-  const [disciplinaIsentaId, definirDisciplinaIsenta] = React.useState("");
+  const [avaliacaoId, definirAvaliacao] = React.useState("");
+  const [ta, definirTa] = React.useState(String(taInicial));
   const [tempos, definirTempos] = React.useState(1);
   const [quemMinistra, definirQuemMinistra] = React.useState("");
   const [tecnica, definirTecnica] = React.useState("");
   const [local, definirLocal] = React.useState(salaDaTurma ?? "");
+  /* O local só acompanha o tipo enquanto ninguém o editou — depois, é escolha da pessoa. */
+  const [localEditado, definirLocalEditado] = React.useState(false);
   const [conteudo, definirConteudo] = React.useState("");
   const [tipoAvaliacao, definirTipoAvaliacao] = React.useState("");
   const [nomeFiscalExterno, definirFiscalExterno] = React.useState("");
-  const [categoria, definirCategoria] =
-    React.useState<(typeof CATEGORIAS_NAO_LETIVAS)[number]>("AEC");
   const [subtipo, definirSubtipo] = React.useState("");
   const [descricao, definirDescricao] = React.useState("");
   const [responsavelExterno, definirResponsavelExterno] = React.useState("");
@@ -126,13 +161,37 @@ export function FormularioDeLancamento({
   const [avisos, definirAvisos] = React.useState<readonly { codigo: string; texto: string }[]>([]);
   const [gravando, definirGravando] = React.useState(false);
 
-  const unidadeEscolhida = unidades.find((u) => u.id === unidadeId);
+  const naoLetivo = NAO_LETIVOS.has(tipo);
+  const unidadesDaDisciplina = unidades.filter((u) => u.disciplinaId === disciplinaId);
+  const avaliacoesDaDisciplina = avaliacoesParaVista.filter((a) => a.disciplinaId === disciplinaId);
+  /* ⚠️ O alerta do item 1c: aula, com disciplina, e SEM unidade. */
+  const semUnidade = tipo === "aula" && disciplinaId !== "" && unidadeId === "";
+
+  function escolherTipo(novo: Tipo): void {
+    definirTipo(novo);
+    definirSubtipo("");
+    definirUnidade("");
+    definirAvaliacao("");
+    /* Disciplina só existe em aula, avaliação, vista e AEC. */
+    if (NAO_LETIVOS.has(novo) && novo !== "AEC") definirDisciplina("");
+    /*
+     * ⚠️ **O ESTUDO INDIVIDUAL É NA BIBLIOTECA** (decisão de 07/10/2026) — pelo MESMO texto que o
+     * lançamento da semana em um clique usa, nunca escrito aqui. Só enquanto ninguém editou o local.
+     */
+    if (!localEditado) {
+      definirLocal(novo === "Estudo_Individual" ? LOCAL_DO_ESTUDO_INDIVIDUAL : (salaDaTurma ?? ""));
+    }
+  }
+
+  function escolherDisciplina(id: string): void {
+    definirDisciplina(id);
+    definirUnidade("");
+    definirAvaliacao("");
+  }
 
   /*
-   * ⚠️ **O PRÉ-PREENCHIMENTO ACONTECE AO ESCOLHER, e cada campo que ele toca continua EDITÁVEL.**
-   * É a diferença entre pré-preencher e impor: a planilha impunha, e trocar um atributo do catálogo
-   * reescrevia o passado (`D-4`). Aqui o valor sugerido entra no campo e pode ser trocado
-   * **naquele** lançamento.
+   * ⚠️ **O PRÉ-PREENCHIMENTO ACONTECE AO ESCOLHER A UNIDADE, e cada campo que ele toca continua
+   * EDITÁVEL.** É a diferença entre pré-preencher e impor: a planilha impunha (`D-4`).
    */
   function escolherUnidade(id: string): void {
     definirUnidade(id);
@@ -146,37 +205,35 @@ export function FormularioDeLancamento({
   }
 
   const texto = (v: string) => (v.trim() === "" ? null : v.trim());
+  const nulo = (v: string) => (v === "" ? null : v);
 
   function montarBloco(): unknown {
-    if (modo === "aula" || modo === "aula_sem_ue") {
+    const comum = {
+      turmaId,
+      data: dia,
+      taInicial: Number(ta),
+      tempos,
+      local: texto(local),
+    };
+    if (tipo === "aula") {
       return {
         tipo: "aula",
-        turmaId,
+        ...comum,
         cursoId,
-        data: dia,
-        taInicial,
-        tempos,
-        local: texto(local),
-        unidadeEnsinoId: modo === "aula" ? (unidadeId === "" ? null : unidadeId) : null,
-        disciplinaId:
-          modo === "aula_sem_ue" ? (disciplinaIsentaId === "" ? null : disciplinaIsentaId) : null,
-        /* ⚠️ Só é `true` no modo que a tela ofereceu — e a tela só o oferece quando o banco permite. */
-        disciplinaSemUe: modo === "aula_sem_ue",
+        /* ⚠️ UMA FONTE SÓ: com unidade, a disciplina é a dela; sem unidade, a da coluna (`D-DSA-1`). */
+        unidadeEnsinoId: nulo(unidadeId),
+        disciplinaId: unidadeId === "" ? nulo(disciplinaId) : null,
         conteudo: texto(conteudo),
         tecnica: texto(tecnica),
         instrutorId: quemMinistra,
       };
     }
-    if (modo === "avaliacao") {
+    if (tipo === "avaliacao") {
       return {
         tipo: "avaliacao",
-        turmaId,
+        ...comum,
         cursoId,
-        data: dia,
-        taInicial,
-        tempos,
-        local: texto(local),
-        disciplinaId: unidadeEscolhida?.disciplinaId ?? disciplinaIsentaId,
+        disciplinaId,
         tipoAvaliacao,
         instrutorId: quemMinistra,
         conteudo: texto(conteudo),
@@ -185,18 +242,19 @@ export function FormularioDeLancamento({
         nomeFiscalExterno: texto(nomeFiscalExterno),
       };
     }
+    if (tipo === "vista_prova") {
+      return { tipo: "vista_prova", ...comum, avaliacaoId };
+    }
     return {
       tipo: "atividade",
-      turmaId,
-      data: dia,
-      taInicial,
-      tempos,
-      local: texto(local),
-      categoria,
+      ...comum,
+      categoria: tipo,
       subtipo,
       descricao,
-      instrutorId: quemMinistra === "" ? null : quemMinistra,
+      instrutorId: nulo(quemMinistra),
       responsavelExterno: texto(responsavelExterno),
+      /* A disciplina da AEC é opcional, e só da AEC (item 1b). */
+      disciplinaId: tipo === "AEC" ? nulo(disciplinaId) : null,
     };
   }
 
@@ -217,173 +275,143 @@ export function FormularioDeLancamento({
   }
 
   /* Os subtipos filtram por categoria — é o que a `H2` do analyze pôs em `metadados.categoria`. */
-  const subtiposDaCategoria = subtipos.filter((s) => s.categoria === categoria);
-
-  const modos: readonly (readonly [Modo, string])[] = [
-    ["aula", "Aula"],
-    ...(disciplinasIsentas.length > 0
-      ? ([["aula_sem_ue", "Aula sem unidade"]] as readonly (readonly [Modo, string])[])
-      : []),
-    ["avaliacao", "Avaliação"],
-    ["atividade", "Não letiva"],
-  ];
+  const subtiposDoTipo = subtipos.filter((s) => s.categoria === tipo);
 
   return (
     <form
       onSubmit={gravar}
       data-slot="formulario-de-lancamento"
-      className="rounded-ciaara border-borda bg-superficie flex flex-col gap-3 border p-3"
-      aria-label={`Lançar no dia ${dia}, tempo ${taInicial}`}
+      className="flex flex-col gap-3"
+      aria-label={`Lançar em ${dataParaLeitura(dia)}`}
     >
-      {/*
-        ⚠️ O DIA E O TA SÃO MOSTRADOS, NÃO PEDIDOS: eles vêm da célula clicada, e são as duas
-           decisões já tomadas. Pedi-los de novo seria o esforço da planilha mais um.
-      */}
+      {/* O DIA É MOSTRADO, NÃO PEDIDO: ele vem da célula clicada. */}
       <p className="text-texto-suave text-sm" data-slot="alvo-do-lancamento">
-        Dia <strong className="text-texto">{dia}</strong> · a partir do tempo{" "}
-        <strong className="text-texto tabular-nums">{taInicial}</strong>
+        Dia <strong className="text-texto">{dataComDiaDaSemana(dia)}</strong>
       </p>
 
+      {/* a) O TIPO, primeiro. */}
       <div className="flex flex-wrap gap-1" role="group" aria-label="O que lançar">
-        {modos.map(([valor, rotulo]) => (
+        {TIPOS.map(([valor, rotulo]) => (
           <Button
             key={valor}
             type="button"
             size="sm"
-            variant={modo === valor ? "default" : "outline"}
-            aria-pressed={modo === valor}
-            onClick={() => definirModo(valor)}
-            data-modo={valor}
+            variant={tipo === valor ? "default" : "outline"}
+            aria-pressed={tipo === valor}
+            onClick={() => escolherTipo(valor)}
+            data-tipo={valor}
           >
             {rotulo}
           </Button>
         ))}
       </div>
 
-      {modo === "aula" ? (
+      {naoLetivo ? (
+        /*
+         * ⚠️ **O SUBTIPO VEM DA LISTA ADMINISTRÁVEL, FILTRADA PELA CATEGORIA** (`H2`), e nenhuma sigla
+         * de duas letras entra: a planilha usa `AD`, `TR`, `FR` com sentidos que mudam entre cursos.
+         */
         <EscolhaSimples
-          id="dsa-unidade"
-          rotulo="Unidade de ensino"
+          id="dsa-subtipo"
+          rotulo="Subtipo"
           obrigatorio
-          textoVazio="Escolha a unidade…"
-          valor={unidadeId}
-          aoMudar={escolherUnidade}
-          ajuda="Cada opção traz a carga lançada, a prevista e o quanto resta."
-          opcoes={unidades.map((u) => ({
-            valor: u.id,
-            rotulo: `${u.disciplinaCodigo} · UE ${u.numero} — ${u.topico} (${u.lancada}/${u.prevista} TA, restam ${u.restante})`,
-          }))}
+          textoVazio="Escolha o subtipo…"
+          valor={subtipo}
+          aoMudar={definirSubtipo}
+          opcoes={subtiposDoTipo.map((s) => ({ valor: s.valor, rotulo: s.valor }))}
         />
       ) : null}
 
-      {modo === "aula_sem_ue" ? (
+      {/* b) A DISCIPLINA — obrigatória em aula, avaliação e vista; opcional na AEC. */}
+      {!naoLetivo || tipo === "AEC" ? (
         <EscolhaSimples
-          id="dsa-disciplina-isenta"
-          rotulo="Disciplina"
-          obrigatorio
-          textoVazio="Escolha a disciplina…"
-          valor={disciplinaIsentaId}
-          aoMudar={definirDisciplinaIsenta}
-          ajuda="Esta disciplina não tem unidades de ensino, então o tópico é obrigatório: é ele que registra o que foi dado."
-          opcoes={disciplinasIsentas.map((d) => ({
-            valor: d.id,
-            rotulo: `${d.codigo} — ${d.nome}`,
-          }))}
+          id="dsa-disciplina"
+          rotulo={tipo === "AEC" ? "Disciplina (opcional)" : "Disciplina"}
+          obrigatorio={tipo !== "AEC"}
+          textoVazio={tipo === "AEC" ? "Sem disciplina" : "Escolha a disciplina…"}
+          valor={disciplinaId}
+          aoMudar={escolherDisciplina}
+          opcoes={disciplinas.map((d) => ({ valor: d.id, rotulo: `${d.codigo} — ${d.nome}` }))}
         />
       ) : null}
 
-      {modo === "avaliacao" ? (
+      {/* c) A UNIDADE DE ENSINO da disciplina — OPCIONAL, com os três números. */}
+      {tipo === "aula" && disciplinaId !== "" ? (
         <>
           <EscolhaSimples
-            id="dsa-tipo-avaliacao"
-            rotulo="Tipo da avaliação"
-            obrigatorio
-            textoVazio="Escolha o tipo…"
-            valor={tipoAvaliacao}
-            aoMudar={definirTipoAvaliacao}
-            opcoes={tiposDeAvaliacao.map((t) => ({ valor: t, rotulo: t }))}
-          />
-          <EscolhaSimples
-            id="dsa-unidade-avaliacao"
-            rotulo="Disciplina (pela unidade)"
-            obrigatorio
-            textoVazio="Escolha…"
+            id="dsa-unidade"
+            rotulo="Unidade de ensino (opcional)"
+            textoVazio="Sem unidade de ensino"
             valor={unidadeId}
-            aoMudar={definirUnidade}
-            opcoes={unidades.map((u) => ({
+            aoMudar={escolherUnidade}
+            ajuda={
+              unidadesDaDisciplina.length === 0
+                ? "Esta disciplina não tem unidades de ensino cadastradas."
+                : "Cada opção traz a carga lançada, a prevista e o quanto resta."
+            }
+            opcoes={unidadesDaDisciplina.map((u) => ({
               valor: u.id,
-              rotulo: `${u.disciplinaCodigo} · UE ${u.numero}`,
+              rotulo: `UE ${u.numero} — ${u.topico} (${u.lancada}/${u.prevista} TA, restam ${u.restante})`,
             }))}
           />
-          <div className="flex flex-col gap-1">
-            {/*
-              ⚠️ **QUEM FISCALIZA PODE SER DE FORA DO CADASTRO** (`RF-AVAL-06`), e é o desenho que
-                 `avaliacoes` já tem: `fiscal_id` × `nome_fiscal_externo`, exclusivos.
-            */}
-            <Label htmlFor="dsa-fiscal-externo">Fiscal de fora do cadastro (opcional)</Label>
-            <Input
-              id="dsa-fiscal-externo"
-              value={nomeFiscalExterno}
-              onChange={(e) => definirFiscalExterno(e.target.value)}
-              placeholder="Posto e nome, como no documento"
-            />
-          </div>
+          {semUnidade ? (
+            <p
+              role="status"
+              data-slot="alerta-sem-unidade"
+              className="rounded-ciaara border-atrasado-borda bg-atrasado-fundo text-atrasado-tinta border px-2 py-1 text-sm"
+            >
+              {ALERTA_SEM_UNIDADE}
+            </p>
+          ) : null}
         </>
       ) : null}
 
-      {modo === "atividade" ? (
-        <>
-          <EscolhaSimples
-            id="dsa-categoria"
-            rotulo="Categoria normativa"
-            valor={categoria}
-            aoMudar={(v) => {
-              definirCategoria(v as typeof categoria);
-              definirSubtipo("");
-            }}
-            opcoes={CATEGORIAS_NAO_LETIVAS.map((c) => ({
-              valor: c,
-              rotulo: ROTULO_DA_CATEGORIA[c] ?? c,
-            }))}
-          />
-          {/*
-            ⚠️ **O SUBTIPO VEM DA LISTA ADMINISTRÁVEL, FILTRADA PELA CATEGORIA** — é a `H2` do
-               analyze em funcionamento. Oferecer a lista inteira misturaria tipo de aula com
-               não-letivo, que é como `tipos_atividade` está no banco. E **nenhuma sigla de duas
-               letras entra**: a planilha usa `AD`, `TR`, `FR` com sentidos que mudam entre cursos,
-               e é isso que esta tela elimina.
-          */}
-          <EscolhaSimples
-            id="dsa-subtipo"
-            rotulo="Subtipo"
-            obrigatorio
-            textoVazio="Escolha o subtipo…"
-            valor={subtipo}
-            aoMudar={definirSubtipo}
-            opcoes={subtiposDaCategoria.map((s) => ({ valor: s.valor, rotulo: s.valor }))}
-          />
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="dsa-descricao">O que é</Label>
-            <Input
-              id="dsa-descricao"
-              required
-              value={descricao}
-              onChange={(e) => definirDescricao(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            {/* ⚠️ `Q-8`: a coluna da planilha traz entidade (`DOEP`, `NAS`) e palestrante externo. */}
-            <Label htmlFor="dsa-responsavel-externo">Responsável de fora (opcional)</Label>
-            <Input
-              id="dsa-responsavel-externo"
-              value={responsavelExterno}
-              onChange={(e) => definirResponsavelExterno(e.target.value)}
-              placeholder="DOEP, CIAARA-30, palestrante…"
-            />
-          </div>
-        </>
+      {tipo === "vista_prova" && disciplinaId !== "" ? (
+        <EscolhaSimples
+          id="dsa-avaliacao-da-vista"
+          rotulo="De qual avaliação é a vista"
+          obrigatorio
+          textoVazio={
+            avaliacoesDaDisciplina.length === 0
+              ? "Nenhuma avaliação desta disciplina"
+              : "Escolha a avaliação…"
+          }
+          valor={avaliacaoId}
+          aoMudar={definirAvaliacao}
+          ajuda="A vista é a segunda data da mesma avaliação: ela não cria prova nova."
+          opcoes={avaliacoesDaDisciplina.map((a) => ({
+            valor: a.id,
+            rotulo:
+              `${a.tipo}${a.aplicadaEm ? ` de ${dataParaLeitura(a.aplicadaEm)}` : ""}` +
+              (a.titulo ? ` — ${a.titulo}` : "") +
+              (a.vistaEm ? ` (vista já em ${dataParaLeitura(a.vistaEm)})` : ""),
+          }))}
+        />
       ) : null}
 
+      {tipo === "avaliacao" ? (
+        <EscolhaSimples
+          id="dsa-tipo-avaliacao"
+          rotulo="Tipo da avaliação"
+          obrigatorio
+          textoVazio="Escolha o tipo…"
+          valor={tipoAvaliacao}
+          aoMudar={definirTipoAvaliacao}
+          opcoes={tiposDeAvaliacao.map((t) => ({ valor: t, rotulo: t }))}
+        />
+      ) : null}
+
+      {/* d) EM QUAL TEMPO COMEÇA — pré-selecionado pela célula clicada, e editável. */}
+      <EscolhaSimples
+        id="dsa-ta-inicial"
+        rotulo="Em qual tempo começa"
+        obrigatorio
+        valor={ta}
+        aoMudar={definirTa}
+        opcoes={temposDoDia.map((t) => ({ valor: String(t.ta), rotulo: t.rotulo }))}
+      />
+
+      {/* e) QUANTOS TEMPOS. */}
       <div className="flex flex-col gap-1">
         <Label htmlFor="dsa-tempos">Quantos tempos</Label>
         <Input
@@ -398,15 +426,25 @@ export function FormularioDeLancamento({
         />
       </div>
 
-      {modo !== "atividade" ? (
+      {naoLetivo ? (
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="dsa-descricao">O que é</Label>
+          <Input
+            id="dsa-descricao"
+            required
+            value={descricao}
+            onChange={(e) => definirDescricao(e.target.value)}
+          />
+        </div>
+      ) : null}
+
+      {tipo === "aula" || tipo === "avaliacao" ? (
         <>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="dsa-conteudo">
-              Tópico{modo === "aula_sem_ue" ? " (obrigatório)" : ""}
-            </Label>
+            <Label htmlFor="dsa-conteudo">Tópico{semUnidade ? " (obrigatório)" : ""}</Label>
             <Input
               id="dsa-conteudo"
-              required={modo === "aula_sem_ue"}
+              required={semUnidade}
               value={conteudo}
               onChange={(e) => definirConteudo(e.target.value)}
             />
@@ -424,19 +462,54 @@ export function FormularioDeLancamento({
 
       {/*
         ⚠️ O SELETOR É O CANÔNICO, e ele reordena por ANTIGUIDADE a lista que recebe (`RN-ANT-01`).
-           Quem está inativo não chega aqui: a página o filtra (`RN-INST-02`).
+           A vista de prova não leva quem ministra: ela é conduzida pelo responsável da avaliação.
       */}
-      <SeletorInstrutor
-        instrutores={instrutores}
-        escala={escala}
-        valor={quemMinistra}
-        aoMudar={definirQuemMinistra}
-        rotulo={modo === "avaliacao" ? "Responsável pela avaliação" : "Quem ministra"}
-      />
+      {tipo !== "vista_prova" ? (
+        <SeletorInstrutor
+          instrutores={instrutores}
+          escala={escala}
+          valor={quemMinistra}
+          aoMudar={definirQuemMinistra}
+          rotulo={tipo === "avaliacao" ? "Responsável pela avaliação" : "Quem ministra"}
+        />
+      ) : null}
+
+      {tipo === "avaliacao" ? (
+        <div className="flex flex-col gap-1">
+          {/* `RF-AVAL-06`: quem fiscaliza pode ser de fora do cadastro (`fiscal_id` × nome). */}
+          <Label htmlFor="dsa-fiscal-externo">Fiscal de fora do cadastro (opcional)</Label>
+          <Input
+            id="dsa-fiscal-externo"
+            value={nomeFiscalExterno}
+            onChange={(e) => definirFiscalExterno(e.target.value)}
+            placeholder="Posto e nome, como no documento"
+          />
+        </div>
+      ) : null}
+
+      {naoLetivo ? (
+        <div className="flex flex-col gap-1">
+          {/* ⚠️ `Q-8`: a coluna da planilha traz entidade (`DOEP`, `NAS`) e palestrante externo. */}
+          <Label htmlFor="dsa-responsavel-externo">Responsável de fora (opcional)</Label>
+          <Input
+            id="dsa-responsavel-externo"
+            value={responsavelExterno}
+            onChange={(e) => definirResponsavelExterno(e.target.value)}
+            placeholder="DOEP, CIAARA-30, palestrante…"
+          />
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="dsa-local">Local</Label>
-        <Input id="dsa-local" value={local} onChange={(e) => definirLocal(e.target.value)} />
+        <Input
+          id="dsa-local"
+          value={local}
+          onChange={(e) => {
+            definirLocalEditado(true);
+            definirLocal(e.target.value);
+          }}
+        />
       </div>
 
       {recusa ? (
@@ -446,10 +519,9 @@ export function FormularioDeLancamento({
       ) : null}
 
       {/*
-        ⚠️ **OS AVISOS NÃO BLOQUEIAM** (`RN-DEG-02`): o lançamento JÁ foi gravado quando eles
-           aparecem. Transformá-los em impedimento mudaria a regra de negócio — os tetos AEC/TAD/TR
-           e o 9º TA são alerta. Os dois bloqueios — o teto de TFM e o dia bloqueado no calendário
-           (`RN-EVT-04`) — chegam como recusa, ANTES de gravar, e não aqui.
+        ⚠️ **OS AVISOS NÃO BLOQUEIAM** (`RN-DEG-02`): o lançamento JÁ foi gravado quando eles aparecem.
+           Os bloqueios — o teto de TFM, o dia bloqueado no calendário (`RN-EVT-04`) e o dia fora da
+           etapa presencial (`D-DSA-2`) — chegam como recusa, ANTES de gravar, e não aqui.
       */}
       {avisos.length > 0 ? (
         <div role="status" data-slot="avisos-do-lancamento" className="flex flex-col gap-1">

@@ -23,6 +23,7 @@ import { describe, expect, it } from "vitest";
 import {
   execucaoAteASemana,
   fatoDaOcupacao,
+  unidadesDaTurma,
   type LinhaDaOcupacao,
 } from "@/app/(app)/turmas/[turma]/dsa/consulta";
 import {
@@ -270,5 +271,61 @@ describe("na APLICAÇÃO da prova quem aparece é o FISCAL; na VISTA, quem a con
       COM_FISCAL,
     );
     expect(aplicacao.instrutor).toBe("1ºTen (RM2-T) FULANA DE TAL");
+  });
+});
+
+/*
+ * ⚠️ **A UE QUE A TURMA AINDA NÃO DEU ENTRA, COM ZERO** (medido no catálogo em 08/10/2026):
+ * `vw_unidades_ensino_execucao` agrupa por `r.turma_id` de um `LEFT JOIN`, e a leitura filtrada pela
+ * turma descartava a UE sem aula. O caso que discrimina é o primeiro: com a lista vinda da view, ele
+ * sai com UMA unidade, e não com as duas do currículo.
+ */
+describe("as unidades da turma partem do CURRÍCULO, e a view só completa os números", () => {
+  const curriculo = [
+    { id: "ue-1", disciplinaId: "d-1", numero: 1, topico: "Primeira", prevista: 20 },
+    { id: "ue-2", disciplinaId: "d-1", numero: 2, topico: "Segunda", prevista: 10 },
+  ];
+
+  it("a UE sem aula na turma ENTRA, com zero lançado e a prevista inteira por fazer", () => {
+    const unidades = unidadesDaTurma({
+      curriculo,
+      execucao: [{ unidadeId: "ue-1", lancada: 11, saldo: 9 }],
+      aulasAteASemana: [],
+    });
+    expect(unidades.map((u) => u.id)).toEqual(["ue-1", "ue-2"]);
+    expect(unidades[1]).toMatchObject({ lancada: 0, restante: 10, lancadaAteASemana: 0 });
+  });
+
+  it("o lançado da turma é o da view — e o saldo negativo passa como veio", () => {
+    const [u] = unidadesDaTurma({
+      curriculo: [curriculo[0]!],
+      execucao: [{ unidadeId: "ue-1", lancada: 23, saldo: -3 }],
+      aulasAteASemana: [],
+    });
+    expect(u).toMatchObject({ lancada: 23, restante: -3 });
+  });
+
+  it("o lançado ATÉ A SEMANA soma só as aulas daquela UE, e a linha histórica sem tempos conta zero", () => {
+    const unidades = unidadesDaTurma({
+      curriculo,
+      execucao: [{ unidadeId: "ue-1", lancada: 11, saldo: 9 }],
+      aulasAteASemana: [
+        { unidadeId: "ue-1", tempos: 4 },
+        { unidadeId: "ue-1", tempos: 5 },
+        { unidadeId: "ue-1", tempos: null },
+        { unidadeId: "ue-2", tempos: 2 },
+        { unidadeId: null, tempos: 3 },
+      ],
+    });
+    expect(unidades.map((u) => u.lancadaAteASemana)).toEqual([9, 2]);
+  });
+
+  it("UE de fora do currículo (inativa) não entra, mesmo com execução na view", () => {
+    const unidades = unidadesDaTurma({
+      curriculo: [curriculo[0]!],
+      execucao: [{ unidadeId: "ue-velha", lancada: 4, saldo: 0 }],
+      aulasAteASemana: [{ unidadeId: "ue-velha", tempos: 4 }],
+    });
+    expect(unidades.map((u) => u.id)).toEqual(["ue-1"]);
   });
 });

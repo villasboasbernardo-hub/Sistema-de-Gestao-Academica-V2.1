@@ -41,9 +41,15 @@
  * ⚠️ **TypeScript puro: sem `next`, sem `react`, sem `supabase`** (Princípio II). O corte da semana,
  * `hoje` e os lançamentos chegam **por parâmetro**, que é o que permite provar as contas com casos
  * sintéticos, sem subir banco.
+ *
+ * ⚠️ **E A UNIDADE DE ENSINO TAMBÉM TEM SITUAÇÃO, desde 08/10/2026** (item 3 do comando de correções
+ * do DSA, decisão de Bernardo Villas Boas): a situação por disciplina passou a abrir, em cascata, as
+ * UEs dela — com prevista, lançada, restante **e a situação da UE**. A regra está em
+ * `situacaoDaUnidade`, no fim deste arquivo, e reaproveita a da disciplina em vez de reescrevê-la.
  */
 
 import { percentualExecutado } from "@/lib/dominio/andamento-da-turma";
+import { avaliarAUnidade } from "@/lib/dominio/dsa/tetos";
 
 /**
  * As quatro situações do `RF-DSA-05`.
@@ -175,7 +181,7 @@ export function quadroDaDisciplina(entrada: {
     situacao: situacaoDaDisciplina({ temLancamento, temConflito, chPrevista, chAcumulada }),
     chPrevista,
     chAcumulada,
-    chRestante: Math.max(chPrevista - chAcumulada, 0),
+    chRestante: restanteNuncaNegativo(chPrevista, chAcumulada),
     /*
      * ⚠️ **A FÓRMULA DO PERCENTUAL É IMPORTADA, NÃO REESCRITA.** `percentualExecutado` já é o ponto
      * único dos três grãos — a turma, a disciplina da grade e o painel do `/inicio` —, e o cabeçalho
@@ -184,5 +190,114 @@ export function quadroDaDisciplina(entrada: {
      */
     percentual: percentualExecutado(chPrevista, chAcumulada),
     taLancadoAFrente,
+  };
+}
+
+/**
+ * O que falta da prevista — **nunca negativo**: excesso não é "restante negativo".
+ *
+ * ⚠️ **UMA CONTA, DOIS GRÃOS.** A disciplina e a unidade de ensino a fazem igual, e é por isso que ela
+ * tem nome: duas cópias de `max(…, 0)` passariam sem ninguém notar até o dia em que uma delas
+ * deixasse o `−4` aparecer — que se lê como atraso onde há adiantamento.
+ */
+function restanteNuncaNegativo(prevista: number, feita: number): number {
+  return Math.max(prevista - feita, 0);
+}
+
+// =================================================================================================
+// A UNIDADE DE ENSINO — a cascata da situação por disciplina (item 3 do comando de 08/10/2026)
+// =================================================================================================
+
+/**
+ * As quatro situações de uma **unidade de ensino**, na turma.
+ *
+ * > *"BD DISCIPLINAS é, por turma, o catálogo de itens lançáveis […]. Cada item tem CH, LOCAL, T/E e
+ * > INSTRUTOR, mais CH CONCLUÍDA, CH RESTANTE e uma situação **por item**: **AGUARDANDO INÍCIO**,
+ * > **FALTA** (lançou menos que a CH), **CONCLUÍDO** (igual) e **PASSOU** (lançou mais). O operador
+ * > acompanha a execução **no grão de UE**, não só no de disciplina."*
+ * > — `P-3`, `specs/013-detalhe-semanal-de-aula/praticas-da-planilha.md`
+ *
+ * ⚠️ **A REGRA NÃO FOI INVENTADA: ELA É A DA PLANILHA DE CONTROLE** (`P-3`), que é a prática que o
+ * operador já tem. O comando de 08/10/2026 pede *"a situação da UE"* sem defini-la; nos documentos da
+ * spec 013, é no `P-3` que ela está escrita.
+ *
+ * ⚠️ **«FALTA» SAI COMO `em_andamento`, E A TROCA É SÓ DE PALAVRA.** As duas dizem *"lançou, e menos
+ * que a CH"*. A UE aparece na cascata **embaixo** da linha da disciplina, que já diz *Em andamento*
+ * para o mesmo fato (`RF-DSA-05`) — duas palavras para a mesma coisa no mesmo quadro diriam que são
+ * coisas diferentes, a mesma razão pela qual `conflitou` usa o tom da grade.
+ *
+ * ⚠️ **`passou` É O QUE A UE TEM E A DISCIPLINA NÃO.** Na disciplina, *"acumulada ≥ prevista"* é
+ * `concluida` inteira; o `P-3` separa o **igual** do **lançou mais** — e é o mesmo fato do alerta
+ * `ue_passou` da `RN-DIST-03`, que `avaliarAUnidade` já decide. Alerta, nunca bloqueio (`RN-DEG-02`).
+ *
+ * ⚠️ **NÃO HÁ `conflitou` NA UE, e a ausência é do DADO, não da regra.** Conflito é marca de
+ * **lançamento** (`RN-CONF-01`), e a ocupação que o painel recebe não diz em qual UE cada lançamento
+ * caiu. O conflito continua dito na linha da disciplina, logo acima da cascata.
+ */
+export type SituacaoDaUnidade = "aguardando_inicio" | "em_andamento" | "concluida" | "passou";
+
+/** O quadro de uma UE na cascata — prevista, lançada, restante e situação (`FR-018`, `P-3`). */
+export type QuadroDaUnidade = {
+  readonly situacao: SituacaoDaUnidade;
+  readonly chPrevista: number;
+  readonly chLancada: number;
+  /** `max(prevista − lançada, 0)` — a mesma conta da disciplina. Quem diz o excesso é `passou`. */
+  readonly chRestante: number;
+};
+
+/**
+ * A situação de uma unidade de ensino, na precedência do `P-3`.
+ *
+ * ⚠️ **ELA NÃO REESCREVE A PRECEDÊNCIA: ELA A REAPROVEITA.** Os três degraus que a UE divide com a
+ * disciplina — *aguardando*, *em andamento*, *concluída* — saem de `situacaoDaDisciplina`, com
+ * `temConflito: false` (ver o tipo). O que se acrescenta é **só** o corte entre o igual e o que
+ * passou, e quem decide que passou é `avaliarAUnidade` — o mesmo que alerta no lançamento. Escrever
+ * `lancada > prevista` aqui seria a segunda implementação do `PASSOU`, e as duas divergiriam no dia em
+ * que uma ganhasse tolerância.
+ *
+ * ⚠️ **SEM TA LANÇADO É `aguardando_inicio`, mesmo havendo lançamento com tempo nulo** — linha
+ * migrada com UE e sem `tempos_consumidos` existe (é o estado que a semente do DSA reproduz no
+ * `SEMTA`), e uma UE que só tem essa não começou no que a CH mede. É o `RN-DEG-01` da disciplina:
+ * ausência de dado vem antes de progresso de 0 %.
+ */
+export function situacaoDaUnidade(entrada: {
+  readonly chPrevista: number;
+  readonly chLancada: number;
+}): SituacaoDaUnidade {
+  /* `Number(…) || 0`, o padrão da pasta: a entrada vem do PostgREST, com `null` e texto possíveis. */
+  const chPrevista = Number(entrada.chPrevista) || 0;
+  const chLancada = Number(entrada.chLancada) || 0;
+
+  const comoDisciplina = situacaoDaDisciplina({
+    temLancamento: chLancada > 0,
+    temConflito: false,
+    chPrevista,
+    chAcumulada: chLancada,
+  });
+  if (comoDisciplina === "aguardando_inicio" || comoDisciplina === "em_andamento") {
+    return comoDisciplina;
+  }
+  return avaliarAUnidade({ chPrevista, chLancada }).alertas.length > 0 ? "passou" : "concluida";
+}
+
+/**
+ * O quadro de uma unidade de ensino.
+ *
+ * ⚠️ **O `chLancada` É O QUE QUEM CHAMA ENTREGAR, e o corte é dele.** Este módulo não decide se a
+ * lançada é a da turma inteira ou a acumulada até a semana — recebe o número pronto, como a
+ * disciplina recebe o `ateODia`. Hoje a tela entrega o total da turma (`vw_unidades_ensino_execucao`,
+ * sem data), e é a tela que o diz.
+ */
+export function quadroDaUnidade(entrada: {
+  readonly chPrevista: number;
+  readonly chLancada: number;
+}): QuadroDaUnidade {
+  const chPrevista = Number(entrada.chPrevista) || 0;
+  const chLancada = Number(entrada.chLancada) || 0;
+  return {
+    situacao: situacaoDaUnidade({ chPrevista, chLancada }),
+    chPrevista,
+    chLancada,
+    chRestante: restanteNuncaNegativo(chPrevista, chLancada),
   };
 }
