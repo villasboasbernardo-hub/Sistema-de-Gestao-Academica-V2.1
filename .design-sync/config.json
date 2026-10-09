@@ -1,0 +1,82 @@
+{
+  "projectId": "4131f7ff-555c-4ac8-ab19-442f800064c5",
+  "shape": "package",
+  "pkg": "ciaara-11-ds",
+  "globalName": "CIAARA",
+  "buildCmd": "node .design-sync/pacote/compilar-css.mjs",
+  "srcDir": "../../components",
+  "tsconfig": "../../tsconfig.json",
+  "cssEntry": "ciaara.css",
+  "extraFonts": ["fontes.css"],
+  "overrides": {
+    "TabelaDensa": {
+      "cardMode": "column",
+      "viewport": "1200x520"
+    },
+    "GradeAlocacao": {
+      "cardMode": "column",
+      "viewport": "1200x520"
+    },
+    "GradeDsa": {
+      "cardMode": "column",
+      "viewport": "1200x520"
+    },
+    "EsqueletoTabela": {
+      "cardMode": "column",
+      "viewport": "1200x520"
+    },
+    "Dialog": {
+      "cardMode": "single",
+      "viewport": "900x620"
+    },
+    "AlertDialog": {
+      "cardMode": "single",
+      "viewport": "900x620"
+    },
+    "DropdownMenu": {
+      "cardMode": "single",
+      "viewport": "900x620"
+    },
+    "Popover": {
+      "cardMode": "single",
+      "viewport": "900x620"
+    },
+    "Tooltip": {
+      "cardMode": "single",
+      "viewport": "900x620"
+    },
+    "DialogoConfirmacao": {
+      "cardMode": "single",
+      "viewport": "900x620"
+    },
+    "Table": {
+      "cardMode": "column",
+      "viewport": "1200x520"
+    },
+    "SeletorTurma": {
+      "cardMode": "single",
+      "viewport": "900x620",
+      "primaryStory": "Aberta"
+    },
+    "BadgeTeto": {
+      "cardMode": "single",
+      "primaryStory": "TetosDaTurma"
+    },
+    "FiltroAvancado": {
+      "cardMode": "single",
+      "primaryStory": "Padrao"
+    },
+    "SeletorInstrutor": {
+      "cardMode": "single",
+      "primaryStory": "AbertoEmAntiguidade"
+    },
+    "Select": {
+      "cardMode": "single",
+      "primaryStory": "Padrao"
+    },
+    "ListaNavegavel": {
+      "cardMode": "column"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}

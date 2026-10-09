@@ -1,0 +1,6 @@
+{
+  "name": "ciaara-11-ds",
+  "private": true,
+  "type": "module",
+  "types": "index.ts"
+}
