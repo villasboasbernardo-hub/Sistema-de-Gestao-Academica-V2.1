@@ -102,6 +102,11 @@ export type Pasta = {
     /** Instante ISO da geração. */
     readonly criadaEm: string;
   };
+  /**
+   * O dia da geração (`aaaa-mm-dd`), que o avaliador usa como `TODAY()`. ⚠️ O programa de planilha
+   * recalcula o `TODAY()` ao abrir; o cache só precisa dizer o que ele valia quando o arquivo nasceu.
+   */
+  readonly dataDeHoje?: string;
 };
 
 export function novaAba(nome: string): Aba {
@@ -159,6 +164,7 @@ export function avaliador(
   const porNome = new Map(pasta.abas.map((a) => [a.nome, a]));
   const nomes = new Map(pasta.nomes.map((n) => [n.nome, n]));
   const memoria = new Map<string, Valor>(conhecidos);
+  const hoje = pasta.dataDeHoje === undefined ? undefined : serieDaData(pasta.dataDeHoje);
   const emCurso = new Set<string>();
 
   const valorDe = (nomeDaAba: string, linha: number, coluna: number): Valor => {
@@ -179,6 +185,7 @@ export function avaliador(
         aba: nomeDaAba,
         valorDe,
         nome: (n) => nomes.get(n),
+        ...(hoje === undefined ? {} : { hoje }),
       });
       emCurso.delete(chave);
     } else if (celula.data !== undefined) valor = serieDaData(celula.data);

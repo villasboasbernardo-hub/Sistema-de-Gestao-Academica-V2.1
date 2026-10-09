@@ -132,6 +132,13 @@ export type InsumoDaPlanilha = {
   };
   /** Instante ISO da geração (`FR-005`). */
   readonly geradaEm: string;
+  /** O dia da geração no fuso da CIAARA-11 (`aaaa-mm-dd`) — o `TODAY()` do cache. */
+  readonly hoje: string;
+  /**
+   * *Atrasada* e *Conflitou* de cada disciplina, pelo painel de situação do sistema na semana corrente
+   * (`FR-025`): o código da disciplina → o que o painel dizia. Só essas duas; as outras três são conta.
+   */
+  readonly retrato: ReadonlyMap<string, "atrasada" | "conflitou">;
   /** Quem gerou — o mesmo nome que o `/print/dsa` imprime. */
   readonly geradaPor: string;
   readonly semanas: readonly SemanaDoInsumo[];

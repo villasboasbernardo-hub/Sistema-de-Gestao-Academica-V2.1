@@ -8,8 +8,8 @@
  *
  * ⚠️ **ESTA FUNÇÃO SÓ ARRANJA.** O papel de cada semana chega pronto do domínio do DSA (o mesmo do
  * `/print/dsa`); o catálogo sai de `preencherLancamento`; o relógio, de `relogioDaSemana`. Aqui ele vira
- * abas, na ordem do contrato — PREENCHIMENTO · IMPRESSÃO · BD DISCIPLINAS · HORÁRIOS —, com a entrada
- * ativa e rolada até a semana inicial.
+ * abas, na ordem do contrato — PREENCHIMENTO · IMPRESSÃO · BD DISCIPLINAS · HORÁRIOS · CONTROLE ·
+ * CRONOS —, com a entrada ativa e rolada até a semana inicial.
  *
  * ⚠️ **TypeScript puro** (regra 9): devolve o modelo da pasta; quem escreve o `.xlsx` é
  * `lib/planilha/ooxml.ts`, chamado pela rota.
@@ -28,6 +28,8 @@ import {
   relogiosDaPasta,
   temposDaGrade,
 } from "./planilha/horarios";
+import { abaDeControle } from "./planilha/controle";
+import { abaDeCronos } from "./planilha/cronos";
 import {
   abaDeImpressao,
   geometriaDaImpressao,
@@ -118,7 +120,14 @@ export function montarPlanilhaComGeometria(insumo: InsumoDaPlanilha): {
 
   return {
     pasta: {
-      abas: [entrada, impressao, catalogoDaPasta.aba, horarios.aba],
+      abas: [
+        entrada,
+        impressao,
+        catalogoDaPasta.aba,
+        horarios.aba,
+        abaDeControle(insumo, geometria),
+        abaDeCronos(insumo, geometria),
+      ],
       nomes: [...catalogoDaPasta.nomes, ...horarios.nomes],
       abaAtiva: 0,
       propriedades: {
@@ -126,6 +135,8 @@ export function montarPlanilhaComGeometria(insumo: InsumoDaPlanilha): {
         autor: insumo.geradaPor,
         criadaEm: insumo.geradaEm,
       },
+      /* O `TODAY()` da data de referência da CONTROLE, no cache. */
+      dataDeHoje: insumo.hoje,
     },
     entrada: geometria,
     impressao: geometriaDoPapel,

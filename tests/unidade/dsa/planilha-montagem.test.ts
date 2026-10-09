@@ -29,12 +29,14 @@ const duracao = performance.now() - inicio;
 const lida = lerXlsx(arquivo);
 
 describe("a ordem e a forma da pasta", () => {
-  it("quatro abas, na ordem do contrato, a entrada ativa", () => {
+  it("seis abas, na ordem do contrato, a entrada ativa", () => {
     expect(lida.abas.map((a) => a.nome)).toEqual([
       ABA.preenchimento,
       ABA.impressao,
       ABA.catalogo,
       ABA.horarios,
+      ABA.controle,
+      ABA.cronos,
     ]);
     expect(pasta.abaAtiva).toBe(0);
   });
