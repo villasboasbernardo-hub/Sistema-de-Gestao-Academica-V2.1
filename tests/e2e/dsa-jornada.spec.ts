@@ -21,6 +21,7 @@ import { expect, test } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste } from "./conta-de-teste";
 import { ANO, limparDsa, SEMANA, semearDsa, type DsaSemeado } from "./dsa-de-teste";
+import { escolherDisciplinaEUnidade } from "./percurso-do-dsa";
 import { irAFichaDaTurma } from "./navegar-turmas";
 
 let EMAIL = "";
@@ -76,7 +77,7 @@ test("⚠️ critério 8 · ficha → DSA → lançar → ver na grade → impri
   await page.locator(`${GRADE} td[data-celula="7:1"]`).click();
   await expect(page.locator(FORMULARIO)).toBeVisible();
 
-  await page.locator("#dsa-unidade").selectOption({ index: 1 });
+  await escolherDisciplinaEUnidade(page, SEMEADO.codDisciplina);
   await page.locator('[data-slot="seletor-instrutor"]').first().click();
   await page
     .locator('[data-slot="popover-content"]')

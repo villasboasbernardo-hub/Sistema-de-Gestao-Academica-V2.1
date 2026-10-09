@@ -32,6 +32,11 @@ import {
   rotuloDaTurma,
   TOM_DO_STATUS_DE_TURMA,
 } from "@/lib/dominio/seletor-de-turma";
+import {
+  AVISO_DE_TURMA_EAD,
+  ehEadPuro,
+  ROTULO_CURTO_DE_TURMA_EAD,
+} from "@/lib/dominio/dsa/ead-puro";
 import { dataIlegivel, dataParaLeitura } from "@/lib/formato/data";
 import { enderecoDaTurma, enderecoDoDsa } from "@/lib/navegacao/endereco-de-turma";
 
@@ -96,17 +101,43 @@ const COLUNAS: readonly Coluna<TurmaNaLista>[] = [
     titulo: "DSA",
     ordenavel: false,
     valor: (l) => l.codigo,
-    celula: (l) => (
-      <Link
-        href={enderecoDoDsa(l.codigo)}
-        tabIndex={-1}
-        aria-label={`Abrir o DSA da turma ${l.codigo}`}
-        className="text-marca underline-offset-2 hover:underline"
-        data-slot="dsa-da-linha"
-      >
-        DSA
-      </Link>
-    ),
+    /*
+     * ⚠️ **TURMA EAD PURO: O AVISO NO LUGAR DO LINK** (item 9 da conferência do PR #40, 08/10/2026).
+     *    A regra e a frase são de `lib/dominio/dsa/ead-puro.ts`, as mesmas da ficha, do `/inicio` e
+     *    da rota do DSA. Semipresencial mantém o link (`D-DSA-2`).
+     */
+    celula: (l) =>
+      ehEadPuro(l.modalidade) ? (
+        /*
+         * ⚠️ **CURTO NA CÉLULA, A FRASE INTEIRA AO APONTAR OU AO FOCAR** (dúvida 7 do PR #40). O foco
+         *    é o da CÉLULA — a tabela navega por célula —, e por isso a frase abre com `in-focus`
+         *    (algum ancestral focado) e não com um gatilho focável próprio, que daria à grade uma
+         *    segunda parada de `Tab`. Leitor de tela recebe a frase inteira, sempre.
+         */
+        <span className="group relative inline-block" data-slot="dsa-turma-ead">
+          <span aria-hidden="true" className="text-texto-suave text-xs">
+            {ROTULO_CURTO_DE_TURMA_EAD}
+          </span>
+          <span className="sr-only">{AVISO_DE_TURMA_EAD}</span>
+          <span
+            aria-hidden="true"
+            data-slot="dsa-turma-ead-completo"
+            className="rounded-ciaara border-borda bg-superficie text-texto absolute top-full left-0 z-10 mt-1 hidden w-64 border p-2 text-xs whitespace-normal shadow-sm group-hover:block in-focus:block"
+          >
+            {AVISO_DE_TURMA_EAD}
+          </span>
+        </span>
+      ) : (
+        <Link
+          href={enderecoDoDsa(l.codigo)}
+          tabIndex={-1}
+          aria-label={`Abrir o DSA da turma ${l.codigo}`}
+          className="text-marca underline-offset-2 hover:underline"
+          data-slot="dsa-da-linha"
+        >
+          DSA
+        </Link>
+      ),
   },
   {
     chave: "curso",

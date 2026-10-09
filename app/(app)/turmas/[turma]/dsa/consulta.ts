@@ -24,7 +24,7 @@ import {
 import type { FatoDaSemana } from "@/lib/dominio/dsa/grade";
 import { responsavelDoFato, rotuloDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
 import type { FeriadoDaSemana } from "@/lib/dominio/dsa/capacidade";
-import { datasDaSemanaIso, semanaIsoDe, semanasDoAnoIso } from "@/lib/dominio/carga-semanal";
+import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import {
   vigenteEm,
   type TipoDeRegime,
@@ -40,7 +40,7 @@ import { enderecoDoDsa, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 
 /** Nunca `select *`. */
 export const COLUNAS_DA_TURMA_DO_DSA =
-  "id, codigo, turma, ano_letivo, status, modalidade, sala_alocada, alunos, curso_id, data_inicio";
+  "id, codigo, turma, ano_letivo, status, modalidade, sala_alocada, alunos, curso_id, data_inicio, inicio_etapa_presencial, termino_etapa_presencial";
 
 export const COLUNAS_DA_OCUPACAO =
   "turma_id, data, ta_inicial, ta_final, tempos_consumidos, origem, fato_id, disciplina_id, instrutor_id, fiscal_id, local, herdado";
@@ -53,45 +53,14 @@ export const COLUNAS_DO_FERIADO = "data, descricao, impacto";
 /** ⚠️ As colunas reais de `horarios_tempos_aula`, medidas: `tempo_numero`, não `numero_ta`. */
 export const COLUNAS_DO_CATALOGO = "tempo_numero, periodo, tipo_tempo, hora_inicio, hora_fim";
 
-/**
- * A semana que a tela vai mostrar.
- *
- * ⚠️ **O `0` DOS DOIS PARÂMETROS É SENTINELA, E É AQUI QUE ELE VIRA DATA.** O contrato declara
- * `padrao: 0` porque *"a semana corrente"* é dinâmica e não cabe num literal — ver a nota da rota
- * em `lib/navegacao/contrato.ts`. Zero não é semana ISO (1..53) nem ano, então não se confunde com
- * valor digitado.
- *
- * ⚠️ **FORA DA FAIXA VOLTA AO PADRÃO **COM AVISO**, nunca em silêncio** (`RN-DEG-01`): a semana 60
- * de um ano de 52 não existe, e abrir a semana corrente sem dizer nada faria a pessoa achar que o
- * link estava certo. O número de semanas do ano sai de `semanasDoAnoIso` — **52 ou 53**, medido, e
- * não um `52` escrito à mão que esconderia a última semana de 2026 inteira.
+/*
+ * ⚠️ **A ESCOLHA DA SEMANA E A REGRA DO EAD PURO MORAM EM `lib/dominio/dsa/` DESDE 08/10/2026**
+ * (conferência do PR #40). A escolha passou a escrever o aviso inteiro — o que a página colava à mão
+ * (*"Abrimos a semana corrente"*) mentia quando o ano era trocado e a semana mantida —, e o EAD puro
+ * ganhou a frase que quatro telas mostram. Reexportadas aqui para quem já as importava desta rota.
  */
-export function semanaEscolhida(entrada: {
-  readonly semana: number;
-  readonly ano: number;
-  /** `aaaa-mm-dd` no fuso da CIAARA-11. */
-  readonly hoje: string;
-}): {
-  readonly ano: number;
-  readonly numero: number;
-  readonly aviso: string | null;
-} {
-  const corrente = semanaIsoDe(entrada.hoje);
-  const anoBase = entrada.ano === 0 ? (corrente?.ano ?? 0) : entrada.ano;
-  const total = semanasDoAnoIso(anoBase);
-
-  if (entrada.semana === 0) {
-    return { ano: anoBase, numero: corrente?.numero ?? 1, aviso: null };
-  }
-  if (entrada.semana > total) {
-    return {
-      ano: anoBase,
-      numero: corrente?.ano === anoBase ? (corrente?.numero ?? 1) : 1,
-      aviso: `O ano ISO de ${anoBase} tem ${total} semanas; a ${entrada.semana} não existe.`,
-    };
-  }
-  return { ano: anoBase, numero: entrada.semana, aviso: null };
-}
+export { semanaEscolhida } from "@/lib/dominio/dsa/semana-escolhida";
+export { ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 
 /**
  * Os dias da semana na tela — cinco, ou **seis com o sábado**.
@@ -229,6 +198,18 @@ export type ConteudoDoFato = {
   readonly externo?: string | null | undefined;
   /** `avaliacoes.nome_fiscal_externo` — o fiscal que não é do cadastro (`RN-INST-01`). */
   readonly fiscalExterno?: string | null | undefined;
+  /**
+   * `atividades_nao_letivas.disciplina_id` — a disciplina OPCIONAL da AEC (item 1b, 08/10/2026).
+   * ⚠️ Ela vem da TABELA, e não da view: `vw_ocupacao_ta` não a expõe de propósito, porque a
+   * disciplina da view alimenta o teto e a CH por disciplina, e AEC não é CHD.
+   */
+  readonly disciplinaId?: string | null | undefined;
+  /** `registros_aula.unidade_ensino_id` — para o cartão único reabrir com a UE gravada. */
+  readonly unidadeEnsinoId?: string | null | undefined;
+  /** `registros_aula.disciplina_id`, a da COLUNA (aula sem UE, `D-DSA-1`). */
+  readonly disciplinaColuna?: string | null | undefined;
+  /** O tópico GRAVADO, cru — o `conteudo` acima pode ser o tipo da avaliação, para exibir. */
+  readonly conteudoGravado?: string | null | undefined;
 };
 
 /**
@@ -286,8 +267,11 @@ export function fatoDaOcupacao(
     taInicial: linha.ta_inicial,
     tempos: linha.tempos_consumidos,
     herdado: linha.herdado,
-    disciplina:
-      linha.disciplina_id !== null ? (nomes.disciplinas.get(linha.disciplina_id) ?? null) : null,
+    disciplina: (() => {
+      /* A da view (aula, avaliação, vista); na falta, a da AEC, que só a tabela tem. */
+      const id = linha.disciplina_id ?? extra?.disciplinaId ?? null;
+      return id !== null ? (nomes.disciplinas.get(id) ?? null) : null;
+    })(),
     conteudo: ehVista
       ? rotuloDaVistaDeProva({ prova: extra?.conteudo, aplicadaEm: extra?.aplicadaEm })
       : (extra?.conteudo ?? null),
@@ -295,6 +279,16 @@ export function fatoDaOcupacao(
     /* ⚠️ Sem instrutor, entra o responsável de fora do cadastro — ver `responsavelDoFato`. */
     instrutor: responsavelDoFato(responsavel, extra?.externo),
     local: linha.local,
+    /* ⚠️ O GRAVADO, CRU — é dele que o cartão único se preenche (ajuste 2 do PR #40). */
+    gravado: {
+      instrutorId: linha.instrutor_id,
+      unidadeEnsinoId: extra?.unidadeEnsinoId ?? null,
+      disciplinaId: extra?.disciplinaColuna ?? extra?.disciplinaId ?? null,
+      conteudo:
+        extra?.conteudoGravado !== undefined ? extra.conteudoGravado : (extra?.conteudo ?? null),
+      tecnica: extra?.tecnica ?? null,
+      local: linha.local,
+    },
   };
 }
 
@@ -314,16 +308,6 @@ export function feriadoDoBanco(linha: LinhaDeFeriado): FeriadoDaSemana {
         ? linha.impacto
         : "informativo",
   };
-}
-
-/**
- * A turma é de **EAD puro**? (`Q-13`)
- *
- * ⚠️ Decisão de Bernardo Villas Boas, 05/10/2026: *"DSA não se aplica a EAD puro"*. Semipresencial
- * **tem** DSA — ele cobre só a semana presencial (`C-ApA-OcOp-PR-SP`, medido na planilha).
- */
-export function ehEadPuro(modalidade: string | null): boolean {
-  return modalidade === "ead";
 }
 
 /** O catálogo de horários da configuração, quando a vigência aponta para uma. */
@@ -370,6 +354,13 @@ export type ExecucaoParaQuadro = {
   readonly codigo: string;
   readonly nome: string;
   readonly prevista: number;
+  /**
+   * `previsao_inicio_efetiva` / `previsao_termino_efetiva` da view — insumo da situação `atrasada`
+   * (item 8 da conferência do PR #40, 08/10/2026). **Opcionais**: o rodapé do papel não as usa, e
+   * sem elas a disciplina simplesmente não é marcada atrasada (`RN-DEG-01`).
+   */
+  readonly previsaoInicio?: string | null;
+  readonly previsaoTermino?: string | null;
 };
 
 /** Um Tempo de Aula ocupado, de `vw_ocupacao_ta`, **de qualquer data até o corte**. */
@@ -385,8 +376,13 @@ export type OcupacaoAcumulada = {
  *
  * ⚠️ **QUEM DECIDE A SITUAÇÃO, O ACUMULADO E O «À FRENTE» É `quadroDaDisciplina`**, em
  * `lib/dominio/dsa/situacao.ts`, com teste ao lado. Aqui só se agrupa a ocupação por disciplina e
- * se repassa o corte. Reescrever a precedência dos quatro degraus faria a `RF-DSA-05` ter duas
- * implementações, e a segunda esqueceria que **conflitou vence concluída**.
+ * se repassa o corte e as previsões. Reescrever a precedência dos degraus faria a `RF-DSA-05` ter duas
+ * implementações, e a segunda esqueceria que **conflitou vence concluída** — ou que concluída nunca é
+ * atrasada.
+ *
+ * ⚠️ **A ORDEM DE SAÍDA É A DA VIEW, e não é aqui que se ordena**: o rodapé do papel também passa por
+ * esta função (`execucaoAteASemana`), e a ordem natural do código pedida em 08/10/2026 vale para o
+ * PAINEL — quem ordena é `PainelDeSituacao`. Ordenar aqui mudaria o papel em silêncio.
  *
  * ⚠️ **A DISCIPLINA DE UM FATO VEM DA VIEW, que já a resolve pela UE** — `vw_ocupacao_ta` entrega
  * `disciplina_id` preenchido mesmo quando a coluna da aula é nula, porque a UE **é** a disciplina.
@@ -404,7 +400,9 @@ export function quadrosDaSemana(entrada: {
   readonly emConflito: ReadonlySet<string>;
   /** O último dia da semana selecionada — o corte do acumulado. */
   readonly ateODia: string;
-  /** Hoje — **só** marca o lançado à frente; não corta o cálculo (`Q-2`). */
+  /**
+   * Hoje — marca o lançado à frente e é a referência do atraso; **não corta o cálculo** (`Q-2`).
+   */
   readonly hoje: string;
 }): readonly (QuadroDaDisciplina & { readonly codigo: string; readonly nome: string })[] {
   const porDisciplina = new Map<string, LancamentoParaSituacao[]>();
@@ -421,6 +419,8 @@ export function quadrosDaSemana(entrada: {
         disciplinaId: d.disciplinaId,
         chPrevistaTempos: d.prevista,
         lancamentos: porDisciplina.get(d.disciplinaId) ?? [],
+        previsaoInicio: d.previsaoInicio ?? null,
+        previsaoTermino: d.previsaoTermino ?? null,
       },
       ateODia: entrada.ateODia,
       hoje: entrada.hoje,
@@ -470,6 +470,72 @@ export function execucaoAteASemana(entrada: {
     prevista: q.chPrevista,
     cumprida: q.chAcumulada,
   }));
+}
+
+/** Uma UE do currículo do curso — `unidades_ensino`, só as ativas. */
+export type UnidadeDoCurriculo = {
+  readonly id: string;
+  readonly disciplinaId: string;
+  readonly numero: number;
+  readonly topico: string;
+  readonly prevista: number;
+};
+
+/** O que a turma já lançou na UE, como `vw_unidades_ensino_execucao` o soma (sem data). */
+export type ExecucaoDaUnidade = {
+  readonly unidadeId: string;
+  readonly lancada: number;
+  /** `ta_saldo` da view — fica NEGATIVO quando a UE passa da prevista. */
+  readonly saldo: number;
+};
+
+/** Uma aula ativa da turma, de qualquer data até o fim da semana aberta. */
+export type AulaDaUnidade = {
+  readonly unidadeId: string | null;
+  /** Nulo em linha histórica — conta zero, o padrão da pasta para o que não foi medido. */
+  readonly tempos: number | null;
+};
+
+/**
+ * As unidades de ensino da turma — **todas as do currículo**, com dois números de lançado.
+ *
+ * ⚠️ **A LISTA PARTE DO CURRÍCULO, E A VIEW SÓ COMPLETA OS NÚMEROS** (medido no catálogo do banco
+ * local em 08/10/2026, na definição de `vw_unidades_ensino_execucao`). A view agrupa por `r.turma_id`
+ * de um `LEFT JOIN`: a UE que a turma ainda não deu sai com `turma_id` NULO, e a leitura filtrada pela
+ * turma a descartava. Numa turma nova, o formulário não oferecia unidade NENHUMA, e a cascata do item 3
+ * sairia vazia justamente na disciplina que ainda não começou.
+ *
+ * ⚠️ **SÃO DOIS LANÇADOS, E CADA TELA USA O SEU:**
+ *   · `lancada`/`restante` — o da turma inteira, **sem data**: é o que o formulário mostra ao lado de
+ *     cada UE, porque quem lança quer saber quanto resta dela, e não quanto restava na semana aberta;
+ *   · `lancadaAteASemana` — o acumulado **até o fim da semana aberta**, o MESMO corte da linha da
+ *     disciplina no painel de situação (`RN-CRONOS-03`, `Q-2`). Com cortes diferentes na mesma tabela,
+ *     a semana 10 mostraria a disciplina *Aguardando início* com uma UE dela *Em andamento*.
+ */
+export function unidadesDaTurma(entrada: {
+  readonly curriculo: readonly UnidadeDoCurriculo[];
+  readonly execucao: readonly ExecucaoDaUnidade[];
+  readonly aulasAteASemana: readonly AulaDaUnidade[];
+}): readonly (UnidadeDoCurriculo & {
+  readonly lancada: number;
+  readonly restante: number;
+  readonly lancadaAteASemana: number;
+})[] {
+  const execucao = new Map(entrada.execucao.map((e) => [e.unidadeId, e]));
+  const ateASemana = new Map<string, number>();
+  for (const a of entrada.aulasAteASemana) {
+    if (a.unidadeId === null) continue;
+    ateASemana.set(a.unidadeId, (ateASemana.get(a.unidadeId) ?? 0) + (a.tempos ?? 0));
+  }
+  return entrada.curriculo.map((u) => {
+    const e = execucao.get(u.id);
+    return {
+      ...u,
+      lancada: e?.lancada ?? 0,
+      restante: e?.saldo ?? u.prevista,
+      lancadaAteASemana: ateASemana.get(u.id) ?? 0,
+    };
+  });
 }
 
 /** Reexportados: quem monta endereço de turma é `lib/navegacao/endereco-de-turma.ts`, sempre. */

@@ -1,26 +1,69 @@
 /**
- * O painel de **situação e carga horária** da turma, ao lado da grade (`RF-DSA-05`, `RN-CRONOS-03`,
- * `Q-2`, `FR-028.1` · spec 013, PR 5).
+ * O painel de **situação e carga horária** da turma, **abaixo da grade e em largura total**
+ * (`RF-DSA-05`, `RN-CRONOS-03`, `Q-2`, `FR-018`, `FR-028.1` · spec 013, PR 5 e item 3 do comando de
+ * correções de 08/10/2026).
  *
- * ⚠️ **SERVER COMPONENT, SEM MARCADOR DE CLIENTE.** Ele não tem interação nenhuma: recebe os
- * quadros **já calculados** e desenha. Um `"use client"` aqui levaria duas tabelas ao pacote do
- * navegador para ganhar nada (gotcha 1).
+ * *(decisão de Bernardo Villas Boas, 08/10/2026: "Cada disciplina vira uma linha que, ao clicar, abre
+ * em CASCATA as suas UEs (prevista, lançada, restante, situação da UE). O quadro «Por unidade de
+ * ensino» separado deixa de existir: ele vive dentro da cascata.")*
  *
- * ⚠️ **ELE NÃO CALCULA NADA.** A situação, o acumulado, o restante, o percentual e o *lançado à
- * frente* saem de `quadroDaDisciplina`, em `lib/dominio/dsa/situacao.ts`, com teste ao lado. A
- * `RN-CRONOS-03` tem **uma** implementação, e o percentual tem **um** dono (`percentualExecutado`)
- * — uma quarta cópia da conta de uma linha passaria sem ninguém notar até o dia em que uma delas
- * arredondasse para o outro lado.
+ * ⚠️ **A TABELA É A ÚNICA DO SISTEMA, `components/ciaara/tabela-densa.tsx`, COM A LINHA EXPANSÍVEL QUE
+ * ELA JÁ TEM** (`detalhe`/`abertas`, o mesmo mecanismo de `/disciplinas` e da ficha da turma). Uma
+ * tabela com cascata escrita aqui herdaria por cópia o teclado, o foco e o estado vazio — a terceira
+ * cópia de um componente é o terceiro a divergir.
  *
- * ⚠️ **O ACUMULADO É ATÉ A SEMANA SELECIONADA, NÃO ATÉ HOJE** (`RN-CRONOS-03`, `Q-2`): abrir a
- * semana 20 mostra a CH acumulada **até a 20**. E esse é o **único** corte que existe: lançamento
- * com data futura **conta** e aparece **marcado**, porque a `Q-2` decidiu que `chd_executada` não
- * muda de valor — cortar por hoje mudaria o número da ficha da turma e o atraso do `/inicio` sem
- * que ninguém tivesse lançado nada.
+ * ⚠️ **AGORA É FOLHA DE CLIENTE, e até 08/10/2026 não era.** Ele era só desenho sobre quadros prontos,
+ * e um marcador de cliente teria levado duas tabelas ao pacote do navegador para ganhar nada (gotcha
+ * 1). A cascata mudou a conta: abrir e fechar a linha é interação, a tabela única já é de cliente, e as
+ * colunas dela são **funções** — que não atravessam a fronteira servidor → cliente. Declarado em
+ * `tests/unidade/fronteira-das-telas.test.ts`.
+ *
+ * ⚠️ **QUAIS LINHAS ESTÃO ABERTAS FICA NO COMPONENTE, E NÃO NA URL.** É a pergunta do guia de estado
+ * na URL: *"este estado faz sentido num link que eu mando para outra pessoa?"* — e a semana do DSA faz
+ * (ela já está lá), a cascata aberta não: é seção recolhida ou aberta, o contraexemplo nomeado do
+ * documento 25 §3.3 e do `FR-013` da spec 008. Na grade de disciplinas a linha aberta vai para a URL
+ * porque um requisito daquela tela (`FR-002` da spec 010) põe a *"linha expandida"* no recorte; aqui
+ * não há requisito nenhum, e um `?aberta=` mudaria o contrato da rota do DSA — cuja guarda, em
+ * `contrato-de-parametros.test.ts`, exige hoje que **todo** parâmetro dela avise o servidor.
+ *
+ * ⚠️ **ELE NÃO CALCULA NADA.** A situação, o acumulado, o restante e o percentual da disciplina chegam
+ * prontos de `quadroDaDisciplina`; os da UE saem de `quadroDaUnidade` — as duas em
+ * `lib/dominio/dsa/situacao.ts`, com teste ao lado. Aqui só se ordena, se agrupa a UE pela disciplina
+ * e se desenha.
+ *
+ * ⚠️ **AJUSTES DA CONFERÊNCIA DO PR #40, 08/10/2026** *(decisões de Bernardo Villas Boas)*:
+ *   · **o «lançado à frente» SAIU desta tela** (item 3) — o cálculo continua em `quadroDaDisciplina`,
+ *     e a grade e o papel continuam a dizê-lo; aqui a marca não aparece mais;
+ *   · **as disciplinas saem em ORDEM NATURAL DO CÓDIGO** (item 5), pelo comparador único de
+ *     `lib/dominio/ordem-natural.ts`. A ordem é aplicada AQUI e não em `quadrosDaSemana`, porque o
+ *     rodapé do papel também passa por lá e não muda;
+ *   · **as cores da situação** (item 6): Concluída verde, Em andamento azul, Aguardando início amarelo,
+ *     Atrasada vermelho — ver `APARENCIA`;
+ *   · **a barra de progresso, sempre verde, com o percentual ao lado** (item 7), pelo componente único;
+ *   · **a situação `atrasada`** (item 8), decidida no domínio.
+ *
+ * ⚠️ **A DISCIPLINA E A UE TÊM O MESMO CORTE: o fim da semana selecionada** (`RN-CRONOS-03`, `Q-2`).
+ * A primeira versão da cascata usava o lançado de `vw_unidades_ensino_execucao`, que soma a turma
+ * **sem data** — e a semana 10 mostraria a disciplina *Aguardando início* com uma UE dela *Em
+ * andamento*. Quem calcula os dois lançados da UE é `unidadesDaTurma`, em `consulta.ts`; a página
+ * entrega aqui o da semana.
  */
+"use client";
+
+import * as React from "react";
+import { cn } from "cn";
+import { ChevronRightIcon } from "lucide-react";
+
 import { BadgeStatus } from "@/components/ciaara/badge-status";
+import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
+import { TabelaDensa, type Coluna } from "@/components/ciaara/tabela-densa";
 import type { Tom } from "@/lib/design/vocabulario";
-import type { QuadroDaDisciplina } from "@/lib/dominio/dsa/situacao";
+import {
+  quadroDaUnidade,
+  type QuadroDaDisciplina,
+  type SituacaoDaUnidade,
+} from "@/lib/dominio/dsa/situacao";
+import { emOrdemNaturalDoCodigo } from "@/lib/dominio/ordem-natural";
 
 /** O quadro de uma disciplina, com o que a tela precisa para nomeá-la. */
 export type QuadroParaExibir = QuadroDaDisciplina & {
@@ -28,36 +71,87 @@ export type QuadroParaExibir = QuadroDaDisciplina & {
   readonly nome: string;
 };
 
-/** Uma unidade de ensino no quadro — prevista, lançada e restante (`P-3` da planilha). */
+/**
+ * Uma unidade de ensino na cascata — o mínimo que ela precisa (`P-3` da planilha).
+ *
+ * ⚠️ **`disciplinaId` É O QUE PENDURA A UE NA LINHA CERTA**, e não o código: o código é único só entre
+ * as disciplinas ativas do curso, e o `id` é o mesmo que o quadro da disciplina carrega.
+ * ⚠️ **NÃO HÁ `restante` AQUI, DE PROPÓSITO:** o `ta_saldo` da view fica **negativo** quando a UE
+ * passa da prevista, e o da cascata sai de `quadroDaUnidade`, que nunca é negativo — como o da
+ * disciplina, na linha de cima. O excesso é dito pela situação *Passou da prevista*.
+ */
 export type UnidadeNoQuadro = {
   readonly id: string;
-  readonly disciplinaCodigo: string;
+  readonly disciplinaId: string;
   readonly numero: number;
   readonly topico: string;
   readonly prevista: number;
   readonly lancada: number;
-  readonly restante: number;
+};
+
+type Aparencia = { readonly rotulo: string; readonly tom: Tom };
+
+/**
+ * O rótulo e o tom de cada situação da disciplina.
+ *
+ * ⚠️ **AS CORES SÃO AS QUE BERNARDO PEDIU EM 08/10/2026** (item 6 da conferência do PR #40), e saem dos
+ * nove tons que JÁ EXISTEM (`lib/design/vocabulario.ts`, `app/globals.css`) — nenhum token novo:
+ *   · **Concluída → `executado`**, o verde do tema (`--executado-*`);
+ *   · **Em andamento → `planejado`**, o azul (`--planejado-*`);
+ *   · **Aguardando início → `atrasado`**, o amarelo (`--atrasado-*`);
+ *   · **Atrasada → `conflito`**, o vermelho (`--conflito-*`) — o único vermelho do tema.
+ * Os valores de cada um, nos dois temas, estão em `app/globals.css`; repeti-los aqui seria a segunda
+ * fonte, e ela envelheceria.
+ * ⚠️ **O NOME DO TOM NÃO É O NOME DA SITUAÇÃO, e isso fica dito:** *Aguardando início* sai no tom
+ * `atrasado` e *Atrasada* no tom `conflito`, porque o pedido é por COR e o tema só tem um amarelo e um
+ * vermelho. O texto do status continua, e é ele que distingue — cor nunca sozinha (`FR-025`).
+ *
+ * ⚠️ **`conflitou` CONTINUA NO TOM DE CONFLITO — o mesmo que a grade usa na célula**, e por isso divide o
+ * vermelho com `atrasada`. As duas pedem ação; a palavra diz qual.
+ *
+ * ⚠️ **NENHUM TOM INVENTADO:** um nome fora dos nove **não compilaria para cor nenhuma** — é o defeito
+ * dos cinco tokens inexistentes de 05/10/2026, que a invariante `I-4c` passou a guardar.
+ */
+const APARENCIA: Readonly<Record<QuadroDaDisciplina["situacao"], Aparencia>> = {
+  aguardando_inicio: { rotulo: "Aguardando início", tom: "atrasado" },
+  em_andamento: { rotulo: "Em andamento", tom: "planejado" },
+  concluida: { rotulo: "Concluída", tom: "executado" },
+  atrasada: { rotulo: "Atrasada", tom: "conflito" },
+  conflitou: { rotulo: "Conflitou", tom: "conflito" },
 };
 
 /**
- * O rótulo e o tom de cada situação.
+ * O rótulo e o tom de cada situação da UE.
  *
- * ⚠️ **`conflitou` USA O TOM DE CONFLITO — o mesmo que a grade usa na célula.** Dois tons para a
- * mesma coisa faria a tela dizer que são coisas diferentes.
+ * ⚠️ **OS TRÊS DEGRAUS QUE A UE DIVIDE COM A DISCIPLINA TÊM A MESMA PALAVRA E O MESMO TOM** — a UE
+ * fica logo embaixo da linha dela, e *"Em andamento"* lá e *"Falta"* aqui pareceriam duas coisas. Por
+ * isso as cores de 08/10/2026 (item 6) vieram para cá também: verde, azul e amarelo, como na linha de
+ * cima. Não há `atrasada` na UE (item 8: *"só na disciplina"*).
  *
- * ⚠️ **`concluida` USA `conformidade`, E NÃO UM TOM NOVO:** o vocabulário do tema tem nove tons
- * declarados (`lib/design/vocabulario.ts`), e um nome inventado aqui **não compilaria para cor
- * nenhuma** — é o defeito dos cinco tokens inexistentes de 05/10/2026, que a invariante `I-4c`
- * passou a guardar.
+ * ⚠️ **`passou` É `adiantado`, PELO NOME DO DOMÍNIO, NUNCA PELA COR** (`FR-003` da spec 005): o
+ * documento 23 define o tom como *"executado acima do previsto"*, que é exatamente o `PASSOU` do
+ * `P-3`. O rótulo diz *da prevista* porque *"Passou"* sozinho, num sistema de ensino, se lê como
+ * aprovação.
  */
-const APARENCIA: Readonly<
-  Record<QuadroDaDisciplina["situacao"], { readonly rotulo: string; readonly tom: Tom }>
-> = {
-  aguardando_inicio: { rotulo: "Aguardando início", tom: "planejado" },
-  em_andamento: { rotulo: "Em andamento", tom: "executado" },
-  concluida: { rotulo: "Concluída", tom: "conformidade" },
-  conflitou: { rotulo: "Conflitou", tom: "conflito" },
+const APARENCIA_DA_UNIDADE: Readonly<Record<SituacaoDaUnidade, Aparencia>> = {
+  aguardando_inicio: { rotulo: "Aguardando início", tom: "atrasado" },
+  em_andamento: { rotulo: "Em andamento", tom: "planejado" },
+  concluida: { rotulo: "Concluída", tom: "executado" },
+  passou: { rotulo: "Passou da prevista", tom: "adiantado" },
 };
+
+/** As UEs de cada disciplina, pelo `id` dela. A ordem é a de chegada; quem ordena é a cascata. */
+function agruparPorDisciplina(
+  unidades: readonly UnidadeNoQuadro[],
+): ReadonlyMap<string, readonly UnidadeNoQuadro[]> {
+  const grupos = new Map<string, UnidadeNoQuadro[]>();
+  for (const u of unidades) {
+    const lista = grupos.get(u.disciplinaId) ?? [];
+    lista.push(u);
+    grupos.set(u.disciplinaId, lista);
+  }
+  return grupos;
+}
 
 export function PainelDeSituacao({
   quadros,
@@ -68,6 +162,115 @@ export function PainelDeSituacao({
   readonly unidades: readonly UnidadeNoQuadro[];
   readonly rotuloDaSemana: string;
 }) {
+  /*
+   * ⚠️ **MAIS DE UMA PODE FICAR ABERTA**, ao contrário da grade de disciplinas: lá a linha aberta é
+   *    um parâmetro de URL de valor único; aqui comparar as UEs de duas disciplinas lado a lado é o
+   *    uso natural, e não há endereço a preservar.
+   */
+  const [abertas, definirAbertas] = React.useState<readonly string[]>([]);
+  const unidadesPorDisciplina = React.useMemo(() => agruparPorDisciplina(unidades), [unidades]);
+  /* ⚠️ Ordem natural do código (item 5, 08/10/2026): `D2` antes de `D10`, pelo comparador único. */
+  const emOrdem = React.useMemo(() => emOrdemNaturalDoCodigo(quadros, (q) => q.codigo), [quadros]);
+
+  function alternar(q: QuadroParaExibir): void {
+    definirAbertas((atuais) =>
+      atuais.includes(q.disciplinaId)
+        ? atuais.filter((id) => id !== q.disciplinaId)
+        : [...atuais, q.disciplinaId],
+    );
+  }
+
+  const colunas: readonly Coluna<QuadroParaExibir>[] = [
+    {
+      chave: "disciplina",
+      titulo: "Disciplina",
+      celula: (q) => (
+        <span className="flex items-start gap-1.5 whitespace-normal" data-disciplina={q.codigo}>
+          {/*
+            ⚠️ A SETA NÃO É O ESTADO: quem anuncia aberto/fechado é o `aria-expanded` que a tabela
+               única põe na linha. A seta só o repete para quem vê.
+          */}
+          <ChevronRightIcon
+            aria-hidden="true"
+            className={cn(
+              "text-texto-suave mt-0.5 size-3.5 shrink-0 transition-transform motion-reduce:transition-none",
+              abertas.includes(q.disciplinaId) && "rotate-90",
+            )}
+          />
+          {/*
+            ⚠️ **O «LANÇADO À FRENTE» SAIU DAQUI em 08/10/2026** (item 3 da conferência do PR #40,
+               decisão de Bernardo Villas Boas). Ele continua **contando** no acumulado (`Q-2`) e
+               continua dito na grade e no papel; nesta tela, a marca deixou de aparecer.
+          */}
+          <span>
+            <span className="text-texto font-medium">{q.codigo}</span>{" "}
+            <span className="text-texto-suave">{q.nome}</span>
+          </span>
+        </span>
+      ),
+    },
+    {
+      chave: "prevista",
+      titulo: "Prevista (TA)",
+      numerica: true,
+      celula: (q) => (q.chPrevista === 0 ? "—" : q.chPrevista),
+    },
+    {
+      chave: "acumulada",
+      titulo: "Acumulada (TA)",
+      numerica: true,
+      celula: (q) => q.chAcumulada,
+    },
+    {
+      chave: "percentual",
+      titulo: "Progresso",
+      /*
+       * ⚠️ **PERCENTUAL `null` NÃO É `0 %`** (`RN-DEG-01`): os dois cursos por competências têm
+       *    `chPrevista` **zero**, e `0 %` ali seria uma afirmação sobre execução em vez da ausência de
+       *    denominador. Sem percentual, a barra também não se desenha — `BarraDeProgresso` devolve
+       *    nada para `null`.
+       * ⚠️ **A BARRA É SEMPRE VERDE** (item 7, 08/10/2026): `tom="executado"` é o verde do tema, e o
+       *    tom NÃO acompanha a situação — quem diz atraso ou conflito é a coluna ao lado, em texto. A
+       *    barra é o componente único de `components/ciaara/`, e o número vai ao lado, em texto
+       *    (`FR-025`: cor nunca sozinha), e no atributo.
+       */
+      celula: (q) =>
+        q.percentual === null ? (
+          "—"
+        ) : (
+          <span
+            className="flex items-center justify-end gap-2"
+            data-slot="progresso-da-disciplina"
+            data-percentual={q.percentual}
+          >
+            <BarraDeProgresso
+              valor={q.percentual}
+              tom="executado"
+              rotuloAcessivel={`Progresso de ${q.codigo}: ${q.percentual}% da carga prevista`}
+              className="w-24"
+            />
+            <span className="w-12 text-right tabular-nums">{q.percentual} %</span>
+          </span>
+        ),
+    },
+    {
+      chave: "resta",
+      titulo: "Resta (TA)",
+      numerica: true,
+      celula: (q) => (q.chPrevista === 0 ? "—" : q.chRestante),
+    },
+    {
+      chave: "situacao",
+      titulo: "Situação",
+      /* ⚠️ A situação vai também no ATRIBUTO (`RNF-USA-05`), como na linha da UE. */
+      celula: (q) => (
+        <span data-slot="situacao-da-disciplina" data-situacao={q.situacao}>
+          <BadgeStatus tom={APARENCIA[q.situacao].tom} rotulo={APARENCIA[q.situacao].rotulo} />
+        </span>
+      ),
+    },
+  ];
+
   return (
     <section
       data-slot="painel-de-situacao"
@@ -82,7 +285,8 @@ export function PainelDeSituacao({
              `RN-CRONOS-03` existe para preservar.
         */}
         <p className="text-texto-suave text-xs">
-          Carga horária acumulada até a semana de {rotuloDaSemana}.
+          Carga horária acumulada até a semana de {rotuloDaSemana}. Clique numa disciplina — ou
+          tecle Enter sobre ela — para abrir as unidades de ensino.
         </p>
       </header>
 
@@ -92,126 +296,125 @@ export function PainelDeSituacao({
           Esta turma não tem disciplina com carga horária prevista na grade.
         </p>
       ) : (
-        <table className="w-full border-collapse text-xs" data-slot="quadro-por-disciplina">
-          <thead>
-            <tr className="text-texto-suave">
-              <th scope="col" className="border-borda border-b p-1 text-left font-medium">
-                Disciplina
-              </th>
-              <th scope="col" className="border-borda border-b p-1 text-left font-medium">
-                Situação
-              </th>
-              <th scope="col" className="border-borda border-b p-1 text-right font-medium">
-                Acumulada
-              </th>
-              <th scope="col" className="border-borda border-b p-1 text-right font-medium">
-                Prevista
-              </th>
-              <th scope="col" className="border-borda border-b p-1 text-right font-medium">
-                Resta
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {quadros.map((q) => (
-              <tr key={q.disciplinaId} data-disciplina={q.codigo}>
-                <th scope="row" className="border-borda border-b p-1 text-left font-normal">
-                  <span className="text-texto font-medium">{q.codigo}</span>
-                  <span className="text-texto-suave block">{q.nome}</span>
-                  {/*
-                    ⚠️ **O «LANÇADO À FRENTE» É DITO EM TEXTO, COM O NÚMERO NO ATRIBUTO**
-                       (`FR-028.1`, `RNF-USA-05`). Ele **conta** no acumulado — é a decisão da `Q-2`
-                       —, e por isso precisa aparecer: sem a marca, a pessoa leria execução onde há
-                       planejamento, que é o `D-5` da planilha (*"a CH cumprida conta semana futura
-                       já planejada como cumprida"*) com a diferença de que aqui está **escrito**.
-                  */}
-                  {q.taLancadoAFrente > 0 ? (
-                    <span
-                      data-slot="lancado-a-frente"
-                      data-ta={q.taLancadoAFrente}
-                      className="bg-planejado-fundo text-planejado-tinta mt-0.5 block w-fit rounded px-1 text-[10px]"
-                    >
-                      {q.taLancadoAFrente} TA lançado(s) à frente
-                    </span>
-                  ) : null}
-                </th>
-                <td className="border-borda border-b p-1 align-top">
-                  <BadgeStatus
-                    tom={APARENCIA[q.situacao].tom}
-                    rotulo={APARENCIA[q.situacao].rotulo}
-                  />
-                </td>
-                <td className="border-borda border-b p-1 text-right align-top tabular-nums">
-                  {q.chAcumulada}
-                  {/*
-                    ⚠️ **PERCENTUAL `null` NÃO É `0 %`** (`RN-DEG-01`): os dois cursos por
-                       competências têm `chPrevista` **zero**, e `0 %` ali seria uma afirmação sobre
-                       execução em vez da ausência de denominador.
-                  */}
-                  {q.percentual === null ? null : (
-                    <span className="text-texto-suave block text-[10px]">{q.percentual}%</span>
-                  )}
-                </td>
-                <td className="border-borda border-b p-1 text-right align-top tabular-nums">
-                  {q.chPrevista === 0 ? "—" : q.chPrevista}
-                </td>
-                <td className="border-borda border-b p-1 text-right align-top tabular-nums">
-                  {q.chPrevista === 0 ? "—" : q.chRestante}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div data-slot="quadro-por-disciplina" className="min-w-0">
+          <TabelaDensa
+            linhas={emOrdem}
+            colunas={colunas}
+            chaveLinha={(q) => q.disciplinaId}
+            rotulo="Situação por disciplina"
+            densidade="compacta"
+            aoAtivarLinha={alternar}
+            abertas={abertas}
+            detalhe={(q) => (
+              <UnidadesDaDisciplina
+                codigo={q.codigo}
+                unidades={unidadesPorDisciplina.get(q.disciplinaId) ?? []}
+              />
+            )}
+          />
+        </div>
       )}
+    </section>
+  );
+}
 
-      <div className="flex flex-col gap-1">
-        <h2 className="text-texto text-sm font-semibold">Por unidade de ensino</h2>
-        {unidades.length === 0 ? (
-          <p role="status" className="text-texto-suave text-sm" data-slot="sem-unidades">
-            Nenhuma unidade de ensino oferecida a esta turma.
+/**
+ * A cascata de uma disciplina: as UEs dela, com prevista, lançada, restante e situação.
+ *
+ * ⚠️ **EXPORTADA PARA SER DESENHADA NO TESTE DE UNIDADE**: dentro do painel ela só existe com a linha
+ * aberta, e abrir é clique — que se prova no navegador (`tests/e2e/dsa-situacao.spec.ts`).
+ *
+ * ⚠️ **A TABELA DE DENTRO É SÓ LEITURA, SEM CÉLULA NAVEGÁVEL**, e é por isso que ela não é uma
+ * segunda `TabelaDensa`: a linha de detalhe fica **fora** da grade de teclado da tabela única, e
+ * conteúdo navegável ali dentro quebraria o *"`Tab` entra na grade e sai dela em um passo"*.
+ */
+export function UnidadesDaDisciplina({
+  codigo,
+  unidades,
+}: {
+  readonly codigo: string;
+  readonly unidades: readonly UnidadeNoQuadro[];
+}) {
+  /* A ordem do currículo: UE 1, 2, 3… A view não garante ordem nenhuma. */
+  const emOrdem = [...unidades].sort((a, b) => a.numero - b.numero);
+
+  return (
+    <div data-slot="ues-da-disciplina" data-unidades-de={codigo} className="flex flex-col gap-2">
+      {emOrdem.length === 0 ? (
+        <p role="status" className="text-texto-suave text-xs" data-slot="sem-unidades">
+          {codigo} não tem unidades de ensino cadastradas.
+        </p>
+      ) : (
+        <>
+          {/*
+            ⚠️ **O LIMITE DA UE, DITO ONDE ELA APARECE.** A soma das UEs não fecha com a disciplina
+               por desenho: a avaliação não aponta UE e a aula sem UE da `D-DSA-1` não tem onde cair —
+               a `PEND-E8-1` registra o primeiro.
+          */}
+          <p className="text-texto-suave text-xs">
+            Unidades de ensino de {codigo}, acumuladas até a mesma semana. Avaliação e aula sem
+            unidade de ensino contam só na disciplina.
           </p>
-        ) : (
-          <table className="w-full border-collapse text-xs" data-slot="quadro-por-unidade">
+          <table data-slot="quadro-por-unidade" className="w-full border-collapse text-xs">
             <thead>
               <tr className="text-texto-suave">
                 <th scope="col" className="border-borda border-b p-1 text-left font-medium">
-                  Unidade
+                  Unidade de ensino
                 </th>
                 <th scope="col" className="border-borda border-b p-1 text-right font-medium">
-                  Lançada
+                  Prevista (TA)
                 </th>
                 <th scope="col" className="border-borda border-b p-1 text-right font-medium">
-                  Prevista
+                  Lançada (TA)
                 </th>
                 <th scope="col" className="border-borda border-b p-1 text-right font-medium">
-                  Resta
+                  Resta (TA)
+                </th>
+                <th scope="col" className="border-borda border-b p-1 text-left font-medium">
+                  Situação
                 </th>
               </tr>
             </thead>
             <tbody>
-              {unidades.map((u) => (
-                <tr key={u.id} data-unidade={u.numero}>
-                  <th scope="row" className="border-borda border-b p-1 text-left font-normal">
-                    <span className="text-texto font-medium">
-                      {u.disciplinaCodigo} · UE {u.numero}
-                    </span>
-                    <span className="text-texto-suave block">{u.topico}</span>
-                  </th>
-                  <td className="border-borda border-b p-1 text-right align-top tabular-nums">
-                    {u.lancada}
-                  </td>
-                  <td className="border-borda border-b p-1 text-right align-top tabular-nums">
-                    {u.prevista}
-                  </td>
-                  <td className="border-borda border-b p-1 text-right align-top tabular-nums">
-                    {u.restante}
-                  </td>
-                </tr>
-              ))}
+              {emOrdem.map((u) => {
+                const q = quadroDaUnidade({ chPrevista: u.prevista, chLancada: u.lancada });
+                const aparencia = APARENCIA_DA_UNIDADE[q.situacao];
+                return (
+                  /* ⚠️ Os números vão também no ATRIBUTO, não só no texto (`RNF-USA-05`). */
+                  <tr
+                    key={u.id}
+                    data-unidade={u.numero}
+                    data-prevista={q.chPrevista}
+                    data-lancada={q.chLancada}
+                    data-restante={q.chRestante}
+                    data-situacao={q.situacao}
+                  >
+                    <th
+                      scope="row"
+                      className="border-borda border-b p-1 text-left font-normal whitespace-normal"
+                    >
+                      <span className="text-texto font-medium">UE {u.numero}</span>
+                      <span className="text-texto-suave block">{u.topico}</span>
+                    </th>
+                    <td className="border-borda border-b p-1 text-right align-top tabular-nums">
+                      {q.chPrevista}
+                    </td>
+                    <td className="border-borda border-b p-1 text-right align-top tabular-nums">
+                      {q.chLancada}
+                    </td>
+                    <td className="border-borda border-b p-1 text-right align-top tabular-nums">
+                      {q.chRestante}
+                    </td>
+                    <td className="border-borda border-b p-1 align-top">
+                      <BadgeStatus tom={aparencia.tom} rotulo={aparencia.rotulo} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-        )}
-      </div>
-    </section>
+        </>
+      )}
+    </div>
   );
 }

@@ -20,13 +20,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { editar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } from "@/lib/acoes/dsa";
+import { atualizar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } from "@/lib/acoes/dsa";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
+import {
+  diasForaDaEtapa,
+  etapaDaSemana,
+  TEXTO_DA_ETAPA_A_DISTANCIA,
+  type TurmaParaEtapa,
+} from "@/lib/dominio/dsa/etapa-presencial";
+import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
 import { avisosAntesDeImprimir } from "@/lib/dominio/dsa/impressao";
 import { motivoDoNumeroAusente, numeroDoDsa } from "@/lib/dominio/dsa/numero-do-dsa";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
-import { enderecoDaImpressaoDoDsa, enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
+import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+import { CONTRATO } from "@/lib/navegacao/contrato";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -42,6 +52,7 @@ import {
   semanaEscolhida,
 } from "./consulta";
 import { lerExtrasDaImpressao, lerSemanaDoDsa } from "./leitura";
+import { BotaoImprimir, EdicaoDasAssinaturasNaTela } from "./AssinaturasEditaveis";
 import { CabecalhoDaSemana, RodapeDaSemana } from "./DocumentoNaTela";
 import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
 import { PainelDeLancamento } from "./PainelDeLancamento";
@@ -91,33 +102,33 @@ export default async function SemanaDoDsa({
   }
 
   const hoje = hojeNaCiaara();
+  /*
+   * O que o contrato descartou, dito em português — é o aviso da `RN-DEG-01`. ⚠️ **O AVISO INTEIRO
+   * SAI DA ESCOLHA, inclusive a consequência** (conferência do PR #40, 08/10/2026): a página colava
+   * *"Abrimos a semana corrente"* a qualquer descarte, e `?semana=22&ano=2019` abria a semana 22.
+   */
   const escolha = semanaEscolhida({
     semana: Number(valores.semana ?? 0),
     ano: Number(valores.ano ?? 0),
     hoje,
+    descartes,
+    faixas: CONTRATO[ROTA_DO_DSA].parametros,
   });
-  /* O que o contrato descartou, dito em português — é o aviso da `RN-DEG-01`. */
-  const descartado = descartes.find((d) => d.parametro === "semana" || d.parametro === "ano");
-  const aviso =
-    escolha.aviso ??
-    (descartado
-      ? `O valor "${descartado.recebido}" não serve para ${descartado.parametro}: ` +
-        `a semana vai de 1 a 53 e o ano de 2020 a 2099.`
-      : null);
+  const aviso = escolha.aviso;
 
   /*
    * ⚠️ **O DSA NÃO SE APLICA A EAD PURO** (`Q-13`, decisão de Bernardo Villas Boas de 05/10/2026).
    * Semipresencial **tem** DSA — ele cobre a semana presencial. A tela diz isso e para aqui, em vez
    * de desenhar uma grade de nove tempos para uma turma que não tem TA presencial nenhum.
+   * ⚠️ **A FRASE É A MESMA DA FICHA, DA LISTA E DO `/inicio`** (item 9 da conferência do PR #40,
+   * 08/10/2026): elas já não oferecem o botão, e quem chega pelo endereço lê o mesmo aviso.
    */
   if (ehEadPuro(turma.modalidade as string | null)) {
     return (
       <section className="flex flex-col gap-3">
         <CabecalhoDoDsa codigo={codigo} rotulo={null} ano={escolha.ano} />
         <p role="status" className="max-w-prose text-texto" data-slot="dsa-nao-se-aplica">
-          Esta turma é de <strong>EAD puro</strong>, e o Detalhe Semanal de Aula não se aplica a
-          ela: não há Tempo de Aula presencial a detalhar. Turma semipresencial tem DSA — ele cobre
-          a semana presencial.
+          {AVISO_DE_TURMA_EAD}
         </p>
       </section>
     );
@@ -125,6 +136,55 @@ export default async function SemanaDoDsa({
 
   const turmaId = turma.id as string;
   const cursoId = turma.curso_id as string;
+
+  /*
+   * ⚠️ **`D-DSA-2`: A TURMA SEMIPRESENCIAL SÓ TEM DSA NA ETAPA PRESENCIAL** (decisão de Bernardo Villas
+   * Boas, 08/10/2026). Semana sem nenhum dia na janela não tem DSA — a tela diz e para aqui, mas
+   * MANTÉM a navegação, para se chegar às semanas que têm. ⚠️ Quem decide é `etapaDaSemana`, a mesma
+   * regra da Server Action e do papel; os dias são os seis da semana ISO (o sábado entra).
+   */
+  const paraEtapa: TurmaParaEtapa = {
+    modalidade: (turma.modalidade as string | null) ?? null,
+    inicioEtapaPresencial: (turma.inicio_etapa_presencial as string | null) ?? null,
+    terminoEtapaPresencial: (turma.termino_etapa_presencial as string | null) ?? null,
+  };
+  const diasDaSemanaIso = datasDaSemanaIso(escolha.ano, escolha.numero).slice(0, 6);
+  const etapa = etapaDaSemana(paraEtapa, diasDaSemanaIso);
+  if (etapa.tipo === "fora") {
+    return (
+      <section className="flex min-w-0 flex-col gap-3">
+        <CabecalhoDoDsa
+          codigo={codigo}
+          rotulo={rotuloDaSemana(diasDaSemanaIso)}
+          ano={escolha.ano}
+        />
+        <NavegacaoDaSemana
+          codigo={codigo}
+          ano={escolha.ano}
+          semana={escolha.numero}
+          sabadoAberto={false}
+        />
+        <div
+          role="status"
+          className="rounded-ciaara border-borda bg-superficie flex max-w-prose flex-col gap-1 border p-3"
+          data-slot="dsa-etapa-a-distancia"
+        >
+          <p className="font-medium text-texto">{TEXTO_DA_ETAPA_A_DISTANCIA}</p>
+          <p className="text-sm text-texto-suave">
+            A etapa presencial desta turma vai de {dataParaLeitura(etapa.janela.inicio)} a{" "}
+            {dataParaLeitura(etapa.janela.termino)}. Fora dela não se lança no DSA.{" "}
+            <Link
+              href={enderecoDaTurma(codigo)}
+              className="underline underline-offset-2 hover:text-texto"
+            >
+              Ajustar a etapa presencial na ficha da turma.
+            </Link>
+          </p>
+        </div>
+      </section>
+    );
+  }
+  const diasADistancia = diasForaDaEtapa(paraEtapa, diasDaSemanaIso);
 
   /* ⚠️ As duas leituras são independentes: uma rodada só, nenhum `await` em sequência inútil. */
   const [lida, extras] = await Promise.all([
@@ -200,8 +260,17 @@ export default async function SemanaDoDsa({
     linhasImpressas,
   });
 
+  /*
+   * ⚠️ **A SEÇÃO É A FOLHA QUE GUARDA A EDIÇÃO DAS ASSINATURAS** (item 4 da conferência do PR #40,
+   * 08/10/2026) — o *Imprimir* e o rodapé leem a mesma edição. A `key` zera o que foi editado ao
+   * trocar de semana: o Next reaproveitaria o estado, e a edição de uma semana iria para o papel da
+   * outra. O conteúdo continua servidor, por `children`.
+   */
   return (
-    <section className="flex min-w-0 flex-col gap-3">
+    <EdicaoDasAssinaturasNaTela
+      key={`${escolha.ano}-${escolha.numero}`}
+      className="flex min-w-0 flex-col gap-3"
+    >
       <CabecalhoDoDsa codigo={codigo} rotulo={rotuloDaSemana(lida.dias)} ano={escolha.ano} />
 
       <NavegacaoDaSemana
@@ -213,7 +282,36 @@ export default async function SemanaDoDsa({
 
       {aviso ? (
         <p role="status" className="text-sm text-atrasado-tinta" data-slot="aviso-de-semana">
-          {aviso} Abrimos a semana corrente.
+          {aviso}
+        </p>
+      ) : null}
+
+      {/*
+        ⚠️ **SEMIPRESENCIAL SEM JANELA: AVISO, SEM BLOQUEIO** (`D-DSA-2`, `RN-DEG-01`). A tela não
+           inventa a etapa — mostra o DSA como sempre e diz onde cadastrar.
+      */}
+      {etapa.tipo === "sem_janela" ? (
+        <p
+          role="status"
+          className="text-sm text-atrasado-tinta"
+          data-slot="dsa-sem-etapa-presencial"
+        >
+          Esta turma é semipresencial e não tem a etapa presencial cadastrada, então todas as
+          semanas mostram o DSA.{" "}
+          <Link
+            href={enderecoDaTurma(codigo)}
+            className="underline underline-offset-2 hover:text-texto"
+          >
+            Cadastre o início e o término da etapa presencial em «Editar turma».
+          </Link>
+        </p>
+      ) : null}
+
+      {/* A semana que a janela corta ao meio: o DSA abre, e os dias de fora são ditos. */}
+      {diasADistancia.length > 0 ? (
+        <p role="status" className="text-sm text-atrasado-tinta" data-slot="dsa-dias-a-distancia">
+          Nesta semana, {diasADistancia.map((d) => dataComDiaDaSemana(d)).join(", ")}{" "}
+          {diasADistancia.length === 1 ? "é" : "são"} da etapa a distância: neles não se lança.
         </p>
       ) : null}
 
@@ -245,17 +343,13 @@ export default async function SemanaDoDsa({
         data-slot="barra-de-impressao"
       >
         <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href={enderecoDaImpressaoDoDsa(codigo, {
-              semana: escolha.numero,
-              ano: escolha.ano,
-              ...(lida.sabadoAberto ? { sabado: true } : {}),
-            })}
-            className="rounded-ciaara border-borda-forte bg-superficie-2 text-texto hover:bg-marca-suave border px-3 py-1.5 text-sm font-medium"
-            data-slot="imprimir-dsa"
-          >
-            Imprimir
-          </Link>
+          {/* ⚠️ Folha de cliente: o endereço leva as assinaturas editadas no rodapé (item 4, 08/10/2026). */}
+          <BotaoImprimir
+            codigo={codigo}
+            semana={escolha.numero}
+            ano={escolha.ano}
+            sabado={lida.sabadoAberto}
+          />
           <span className="text-xs text-texto-suave">
             Uma página A4 paisagem, com as assinaturas da data desta semana.
           </span>
@@ -281,57 +375,56 @@ export default async function SemanaDoDsa({
         ) : null}
       </div>
 
-      {/*
-        ⚠️ **O PAINEL FICA AO LADO DA GRADE a partir de `xl`, e EMBAIXO nas telas estreitas.** A
-           grade tem rolagem horizontal própria (`min-w-0`), e pôr o painel ao lado num monitor de
-           1280 px empurraria a semana com sábado para fora — quem confere perde a referência de
-           qual dia está olhando, que é o motivo pelo qual a rolagem é do contêiner e não da página.
-      */}
-      <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-start">
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
-          <CabecalhoDaSemana dados={documento} />
-          <PainelDeLancamento
-            semana={lida.semana}
-            grade={documento.grade}
-            disciplinasDaSemana={documento.quadroDeCh.map((d) => ({
-              codigo: d.codigo,
-              nome: d.nome,
-            }))}
-            turmaId={turmaId}
-            cursoId={cursoId}
-            salaDaTurma={(turma.sala_alocada as string | null) ?? null}
-            ano={escolha.ano}
-            numeroDaSemana={escolha.numero}
-            podeLancar={podeLancar}
-            unidades={lida.unidades}
-            disciplinasIsentas={lida.disciplinasIsentas}
-            instrutores={lida.instrutores}
-            escala={lida.escala}
-            tecnicas={lida.tecnicas}
-            tiposDeAvaliacao={lida.tiposDeAvaliacao}
-            subtipos={lida.subtipos}
-            lancar={lancar}
-            lancarEstudoIndividual={lancarEstudoIndividualDaSemana}
-            mover={mover}
-            editar={editar}
-            excluir={excluir}
-          />
-        </div>
-        <div className="min-w-0 xl:w-96 xl:shrink-0">
-          <PainelDeSituacao
-            quadros={quadros}
-            unidades={lida.unidades}
-            rotuloDaSemana={rotuloDaSemana(lida.dias)}
-          />
-        </div>
+      <div className="flex min-w-0 flex-col gap-3">
+        <CabecalhoDaSemana dados={documento} />
+        <PainelDeLancamento
+          semana={lida.semana}
+          grade={documento.grade}
+          disciplinasDaSemana={documento.quadroDeCh.map((d) => ({
+            codigo: d.codigo,
+            nome: d.nome,
+          }))}
+          turmaId={turmaId}
+          cursoId={cursoId}
+          salaDaTurma={(turma.sala_alocada as string | null) ?? null}
+          ano={escolha.ano}
+          numeroDaSemana={escolha.numero}
+          podeLancar={podeLancar}
+          unidades={lida.unidades}
+          disciplinas={lida.disciplinas}
+          avaliacoesParaVista={lida.avaliacoesParaVista}
+          instrutores={lida.instrutores}
+          escala={lida.escala}
+          tecnicas={lida.tecnicas}
+          tiposDeAvaliacao={lida.tiposDeAvaliacao}
+          subtipos={lida.subtipos}
+          lancar={lancar}
+          lancarEstudoIndividual={lancarEstudoIndividualDaSemana}
+          mover={mover}
+          atualizar={atualizar}
+          excluir={excluir}
+        />
       </div>
+
+      {/*
+        ⚠️ **O PAINEL FICA ABAIXO DA GRADE, EM LARGURA TOTAL** *(item 3 das correções de 08/10/2026,
+           decisão de Bernardo Villas Boas)*. Até ali ele ficava ao lado a partir de `xl`, numa coluna
+           de 384 px que apertava a grade v4 e cortava os nomes das disciplinas.
+        ⚠️ **A CASCATA USA O LANÇADO ATÉ A SEMANA**, o mesmo corte da linha da disciplina — e não o
+           lançado da turma inteira, que é o do formulário (`unidadesDaTurma`).
+      */}
+      <PainelDeSituacao
+        quadros={quadros}
+        unidades={lida.unidades.map((u) => ({ ...u, lancada: u.lancadaAteASemana }))}
+        rotuloDaSemana={rotuloDaSemana(lida.dias)}
+      />
 
       {/*
         ⚠️ **O RODAPÉ DO PAPEL, NA TELA** — carga horária acumulada, técnicas e as assinaturas da
            data da semana, do MESMO objeto do `/print/dsa`, no visual do sistema.
       */}
       <RodapeDaSemana dados={documento} nomeDeQuemImprime={usuario?.nome ?? null} />
-    </section>
+    </EdicaoDasAssinaturasNaTela>
   );
 }
 

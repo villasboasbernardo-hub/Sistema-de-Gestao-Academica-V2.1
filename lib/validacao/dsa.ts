@@ -60,16 +60,18 @@ const comum = {
 };
 
 /**
- * A aula (`RF-DSA-04`, `Q-1`).
+ * A aula (`RF-DSA-04`, `Q-1`, `D-DSA-1`).
  *
  * ⚠️ **UE **OU** DISCIPLINA-COM-TÓPICO, nunca as duas — e o esquema diz o MESMO que os três
- * `CHECK` do PR B.** Sem isto, a tela mandaria as duas e o banco recusaria com `23514`: a pessoa
+ * `CHECK` do banco.** Sem isto, a tela mandaria as duas e o banco recusaria com `23514`: a pessoa
  * veria *"violação de restrição"* em vez de *"informe a unidade de ensino ou a disciplina"*.
  *
- * ⚠️ **`disciplinaSemUe` CHEGA DA TELA PORQUE QUEM DECIDE É O BANCO.** A isenção vale só para curso
- * por competências ou disciplina marcada `sem_unidades_ensino`, e isso é `app.disciplina_sem_ue` —
- * a tela **lê** essa marca para oferecer o modo, e o banco é quem **impõe**. O campo aqui serve
- * para o esquema exigir o tópico no modo certo; ele **não** é a autoridade.
+ * ⚠️ **SEM UE, EM QUALQUER DISCIPLINA, DESDE A `D-DSA-1`** *(decisão de Bernardo Villas Boas,
+ * 08/10/2026)*. Até ali o caminho sem UE valia só para a disciplina isenta da `Q-1`
+ * (`app.disciplina_sem_ue`), e o esquema carregava um `disciplinaSemUe` vindo da tela para saber
+ * quando aceitar. A isenção virou regra geral, o campo saiu, e o que sobra é o que o banco confere:
+ * sem UE, a aula aponta a disciplina **e** traz o tópico. A UE continua sendo o caminho que alimenta
+ * o controle por UE — a tela avisa quando ela falta (`RN-DEG-02`: alerta, não bloqueio).
  */
 const aula = z
   .object({
@@ -77,10 +79,10 @@ const aula = z
     ...comum,
     unidadeEnsinoId: uuid.nullable(),
     disciplinaId: uuid.nullable(),
-    disciplinaSemUe: z.boolean().default(false),
     conteudo: textoOuNulo,
     tecnica: textoOuNulo,
-    instrutorId: uuid,
+    /* ⚠️ Campo vazio chega como texto vazio: a frase diz o que escolher, e não "identificador". */
+    instrutorId: z.string().uuid("Escolha quem ministra a aula."),
   })
   .superRefine((v, ctx) => {
     const temUe = v.unidadeEnsinoId !== null;
@@ -96,20 +98,12 @@ const aula = z
     if (!temUe && !temDisciplina) {
       ctx.addIssue({
         code: "custom",
-        path: ["unidadeEnsinoId"],
-        message: "Escolha a unidade de ensino da aula.",
+        path: ["disciplinaId"],
+        message: "Escolha a disciplina da aula.",
       });
       return;
     }
-    if (temDisciplina && !v.disciplinaSemUe) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["unidadeEnsinoId"],
-        message: "Esta disciplina tem unidades de ensino: escolha uma.",
-      });
-      return;
-    }
-    /* Sem UE, o tópico é o único lugar que diz o que foi dado (`Q-1`). */
+    /* Sem UE, o tópico é o único lugar que diz o que foi dado (`Q-1`, `D-DSA-1`). */
     if (temDisciplina && (v.conteudo === null || v.conteudo.trim() === "")) {
       ctx.addIssue({
         code: "custom",
@@ -135,9 +129,9 @@ const avaliacao = z
   .object({
     tipo: z.literal("avaliacao"),
     ...comum,
-    disciplinaId: uuid,
+    disciplinaId: z.string().uuid("Escolha a disciplina da avaliação."),
     tipoAvaliacao: z.string().trim().min(1, "Escolha o tipo da avaliação."),
-    instrutorId: uuid,
+    instrutorId: z.string().uuid("Escolha o responsável pela avaliação."),
     conteudo: textoOuNulo,
     tecnica: textoOuNulo,
     fiscalId: uuid.nullable(),
@@ -162,7 +156,7 @@ const avaliacao = z
  */
 const vistaProva = z.object({
   tipo: z.literal("vista_prova"),
-  avaliacaoId: uuid,
+  avaliacaoId: z.string().uuid("Escolha a avaliação desta vista."),
   turmaId: uuid,
   data,
   taInicial: ta,
@@ -187,8 +181,28 @@ const atividade = z
     descricao: z.string().trim().min(1, "Escreva o que é a atividade."),
     instrutorId: uuid.nullable(),
     responsavelExterno: textoOuNulo,
+    /*
+     * ⚠️ **A DISCIPLINA DA AEC É OPCIONAL, E SÓ DA AEC** (item 1b do comando de 08/10/2026,
+     * autorizado por Bernardo Villas Boas). O banco impõe as três condições pelo `CHECK`
+     * `ativ_disciplina_so_aec_da_turma`; o esquema as repete para a recusa chegar como frase.
+     */
+    disciplinaId: uuid.nullable().default(null),
   })
   .superRefine((v, ctx) => {
+    if (v.disciplinaId !== null && v.categoria !== "AEC") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["disciplinaId"],
+        message: "Só a AEC leva disciplina.",
+      });
+    }
+    if (v.disciplinaId !== null && v.turmaId === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["disciplinaId"],
+        message: "Atividade de todas as turmas não leva disciplina.",
+      });
+    }
     if (v.instrutorId !== null && v.responsavelExterno !== null) {
       ctx.addIssue({
         code: "custom",
@@ -303,6 +317,28 @@ export const esquemaDaEdicao = z.object({
 });
 
 export type Edicao = z.infer<typeof esquemaDaEdicao>;
+
+/**
+ * **Atualizar** um fato de uma vez — o cartão único (ajuste 1 do PR #40, Bernardo Villas Boas,
+ * 08/10/2026): dia, tempo inicial, quantos tempos, disciplina/UE, tópico, quem ministra, técnica e
+ * local, com **um** botão Gravar. É a edição mais o movimento, no mesmo esquema e na mesma transação.
+ *
+ * ⚠️ **AS MESMAS REGRAS DE `undefined`**: o que não foi mandado não é tocado; `null` apaga.
+ * ⚠️ **UE E DISCIPLINA, UMA FONTE SÓ** (`reg_aula_ue_xor_disciplina`): com UE a disciplina é a dela;
+ * sem UE, a da coluna, com o tópico obrigatório (`D-DSA-1`) — o banco confere o tópico.
+ */
+export const esquemaDaAtualizacao = esquemaDaEdicao
+  .extend({
+    data: data.optional(),
+    taInicial: ta.optional(),
+    disciplinaId: uuid.nullable().optional(),
+  })
+  .refine((e) => !(e.unidadeEnsinoId != null && e.disciplinaId != null), {
+    message: "Escolha a unidade de ensino OU só a disciplina, não as duas.",
+    path: ["disciplinaId"],
+  });
+
+export type Atualizacao = z.infer<typeof esquemaDaAtualizacao>;
 
 /**
  * **Excluir** um fato — e a exclusão é **lógica** (regra 4, `FR-031`).

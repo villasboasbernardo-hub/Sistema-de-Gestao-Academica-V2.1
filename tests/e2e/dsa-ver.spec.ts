@@ -18,17 +18,29 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 
+import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
+import { AVISO_DE_TURMA_EAD, ROTULO_CURTO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import {
   ANO,
   limparDsa,
+  QUARTA,
+  SEGUNDA,
   SEMANA,
   SEMANA_DE_JULHO,
   SEMANA_DE_MAIO,
   semearDsa,
   type DsaSemeado,
 } from "./dsa-de-teste";
-import { irAFichaDaTurma } from "./navegar-turmas";
+import {
+  abrirFiltros,
+  FILTRO,
+  irAFichaDaTurma,
+  irAListaDeTurmas,
+  LISTA_DE_TURMAS,
+} from "./navegar-turmas";
 
 let EMAIL = "";
 let SEMEADO: DsaSemeado;
@@ -223,9 +235,29 @@ test.describe("`RN-DEG-01` · a faixa «Sem posição» e a degradação", () =>
     await expect(page.locator('[data-slot="sem-relogio"]').getByRole("link")).toBeVisible();
   });
 
-  test("`Q-13` · EAD puro não tem DSA, e a tela diz por quê", async ({ page }) => {
-    await abrirODsaPorClique(page, SEMEADO.turmaEad);
-    await expect(page.locator('[data-slot="dsa-nao-se-aplica"]')).toContainText("EAD puro");
+  /*
+   * ⚠️ **TURMA EAD PURO NÃO TEM BOTÃO DE DSA** (item 9 da conferência do PR #40, decisão de Bernardo
+   * Villas Boas de 08/10/2026). A ficha troca *Abrir o DSA* pelo aviso; o controle positivo é a turma
+   * presencial deste arquivo (todo `abrirODsaPorClique` clica no botão) e a semipresencial de
+   * `dsa-etapa-presencial.spec.ts`, que também mantém o botão.
+   */
+  test("`Q-13` · a ficha da turma EAD puro não oferece o DSA, e diz por quê", async ({ page }) => {
+    await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaEad);
+    await expect(page.locator('[data-slot="abrir-o-dsa"]')).toHaveCount(0);
+    await expect(page.locator('[data-slot="dsa-turma-ead"]')).toHaveText(AVISO_DE_TURMA_EAD);
+  });
+
+  test("`Q-13` · o endereço direto do DSA da turma EAD mostra o MESMO aviso, sem grade", async ({
+    page,
+  }) => {
+    /*
+     * ⚠️ **AQUI O `goto` É O PRÓPRIO CASO**: o que se prova é o endereço colado, que não tem botão
+     * nenhum até ele — a ficha acima já não o oferece. Chega-se à ficha por clique antes, para que a
+     * sessão e o ponto de partida sejam os dos outros casos.
+     */
+    await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaEad);
+    await page.goto(`/turmas/${encodeURIComponent(SEMEADO.turmaEad)}/dsa`);
+    await expect(page.locator('[data-slot="dsa-nao-se-aplica"]')).toHaveText(AVISO_DE_TURMA_EAD);
     /* Sem grade: desenhar nove tempos para quem não tem TA presencial seria inventar. */
     await expect(page.locator(GRADE)).toHaveCount(0);
   });
@@ -258,6 +290,58 @@ test.describe("`RF-NAV-04` · a navegação empilha, e a vigência resolve pela 
       .toBe(String(SEMANA + 1));
   });
 
+  /*
+   * ⚠️ **O CAMPO DE DATA** (item 4 das correções do DSA, decisão de Bernardo Villas Boas de
+   * 08/10/2026): *"escolhida uma data, abre o DSA da semana que a contém. A URL continua sendo a
+   * dona (?semana=&ano=)"*. Ele chega CLICANDO, como os outros casos, e é achado PELO RÓTULO — o que
+   * prova, de quebra, que o `<label>` está ligado ao campo.
+   *
+   * ⚠️ **CADA PASSO PEGA UMA IMPLEMENTAÇÃO ERRADA DIFERENTE:**
+   *   · uma QUARTA, e não uma segunda — pega quem abre «a semana que começa na data»;
+   *   · o sábado aberto ANTES da escolha — pega quem monta o endereço sem passar pelo `ir()` dos
+   *     botões, que é quem leva o `?sabado=sim` junto;
+   *   · 01/01/2027, que é da semana 53 de **2026** — pega quem põe na URL o ano do calendário;
+   *   · o voltar do navegador — pega o `replace` no lugar do `push` (`RF-NAV-04`).
+   */
+  test("o campo de DATA abre a semana que a contém, leva o sábado e empilha no histórico", async ({
+    page,
+  }) => {
+    await abrirODsaPorClique(page, SEMEADO.turmaComRelogio);
+    const campo = page.getByLabel("Ir para a semana do dia");
+    const parametro = (nome: string) => new URL(page.url()).searchParams.get(nome);
+
+    /* Sem escolha nenhuma, o campo mostra a segunda-feira da semana aberta — aqui, a corrente. */
+    await expect(campo).toHaveValue(semanaIsoDe(hojeNaCiaara())?.segunda ?? "");
+
+    await page.locator('[data-acao="alternar-sabado"]').click();
+    await expect.poll(() => parametro("sabado")).toBe("sim");
+
+    /* ── Uma quarta: abre a semana 15 inteira, que começa na segunda 06/04 ──────────────────── */
+    await campo.fill(QUARTA);
+    await expect.poll(() => parametro("semana")).toBe(String(SEMANA));
+    expect(parametro("ano")).toBe(String(ANO));
+    expect(parametro("sabado"), "o sábado aberto se perdeu na escolha da data").toBe("sim");
+    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText(`${SEMANA}/${ANO}`);
+    await expect(page.locator('[data-slot="tela-periodo"]')).toContainText("06/04/2026");
+
+    /* ── ⚠️ A virada do ano ISO: 01/01/2027 é da semana 53 de 2026 ──────────────────────────── */
+    await campo.fill("2027-01-01");
+    await expect.poll(() => parametro("semana")).toBe("53");
+    expect(parametro("ano"), "o ano da URL é o ISO, não o do calendário").toBe("2026");
+    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText("53/2026");
+    await expect(page.locator('[data-slot="tela-periodo"]')).toContainText("28/12/2026");
+
+    /* Saindo do campo, ele volta a mostrar a segunda-feira da semana aberta. */
+    await campo.blur();
+    await expect(campo).toHaveValue("2026-12-28");
+
+    /* ⚠️ `RF-NAV-04`: escolher pela data também EMPILHA — voltar retorna à semana da quarta. */
+    await page.goBack();
+    await expect.poll(() => parametro("semana")).toBe(String(SEMANA));
+    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText(`${SEMANA}/${ANO}`);
+    await expect(campo).toHaveValue(SEGUNDA);
+  });
+
   test("⚠️ O CASO QUE DISCRIMINA · maio e julho da MESMA turma saem com relógios diferentes", async ({
     page,
   }) => {
@@ -285,6 +369,26 @@ test.describe("`RF-NAV-04` · a navegação empilha, e a vigência resolve pela 
     );
     await expect(page.locator('[data-slot="aviso-de-semana"]')).toBeVisible();
     await expect(page.locator(GRADE)).toBeVisible();
+  });
+
+  /*
+   * ⚠️ **O AVISO DIZ O QUE ACONTECEU** (achado da conferência do PR #40, 08/10/2026): com o ano fora
+   * da faixa, a tela troca o ANO e MANTÉM a semana — e o aviso antigo dizia *"Abrimos a semana
+   * corrente"*. Os dois lados são medidos: a semana aberta (22 do ano corrente) e a frase.
+   */
+  test("ano fora da faixa troca o ANO, mantém a semana, e o aviso diz isso", async ({ page }) => {
+    const anoCorrente = semanaIsoDe(hojeNaCiaara())?.ano ?? ANO;
+    await abrirODsaPorClique(page, SEMEADO.turmaComRelogio);
+    await page.goto(
+      `/turmas/${encodeURIComponent(SEMEADO.turmaComRelogio)}/dsa?semana=22&ano=2019`,
+    );
+    const aviso = page.locator('[data-slot="aviso-de-semana"]');
+    await expect(aviso).toContainText('"2019"');
+    await expect(aviso).toContainText(
+      `Trocamos o ano pelo corrente, ${anoCorrente}, e mantivemos a semana 22.`,
+    );
+    await expect(aviso).not.toContainText("semana corrente");
+    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText(`22/${anoCorrente}`);
   });
 });
 
@@ -401,6 +505,58 @@ test.describe("`FR-011` · os três caminhos clicáveis até o DSA", () => {
     await expect.poll(() => new URL(page.url()).pathname).toContain("/dsa");
   });
 
+  /*
+   * ⚠️ **NA LISTA E NO `/inicio`, A TURMA EAD PURO TROCA O LINK PELO AVISO** (item 9 da conferência
+   * do PR #40, 08/10/2026). Cada caso mede as DUAS turmas na mesma tela: a EAD sem o link e com o
+   * aviso, e a presencial COM o link — sem a segunda metade, esconder o DSA de todas passaria.
+   */
+  test("`Q-13` · na lista `/turmas`, a turma EAD tem o aviso no lugar da ação DSA", async ({
+    page,
+  }) => {
+    await irAListaDeTurmas(page, EMAIL);
+    await abrirFiltros(page);
+    const lista = page.locator(LISTA_DE_TURMAS);
+    const linhaDe = (codigo: string) => lista.locator("tr").filter({ hasText: codigo });
+
+    await page.locator(FILTRO).getByLabel("Buscar pelo código").fill(SEMEADO.turmaEad);
+    const ead = linhaDe(SEMEADO.turmaEad);
+    await expect(ead).toHaveCount(1);
+    await expect(ead.locator('[data-slot="dsa-da-linha"]')).toHaveCount(0);
+    /* ⚠️ Dúvida 7 do PR #40: curto na célula, a frase inteira ao apontar. */
+    const celulaEad = ead.locator('[data-slot="dsa-turma-ead"]');
+    await expect(celulaEad).toContainText(ROTULO_CURTO_DE_TURMA_EAD);
+    const completa = ead.locator('[data-slot="dsa-turma-ead-completo"]');
+    await expect(completa).toBeHidden();
+    await celulaEad.hover();
+    await expect(completa).toBeVisible();
+    await expect(completa).toHaveText(AVISO_DE_TURMA_EAD);
+
+    await page.locator(FILTRO).getByLabel("Buscar pelo código").fill(SEMEADO.turmaComRelogio);
+    const presencial = linhaDe(SEMEADO.turmaComRelogio);
+    await expect(presencial).toHaveCount(1);
+    await expect(presencial.locator('[data-slot="dsa-da-linha"]')).toBeVisible();
+    await expect(presencial.locator('[data-slot="dsa-turma-ead"]')).toHaveCount(0);
+  });
+
+  test("`Q-13` · no `/inicio`, o bloco da turma EAD tem o aviso no lugar do link", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL, "/inicio");
+    const bloco = (codigo: string) =>
+      page
+        .locator('[data-slot="panorama-de-turmas"] > li')
+        .filter({ has: page.locator(`[data-turma="${codigo}"]`) });
+
+    const ead = bloco(SEMEADO.turmaEad);
+    await expect(ead, "a turma EAD da semente não apareceu no `/inicio`").toHaveCount(1);
+    await expect(ead.locator('[data-slot="dsa-da-semana"]')).toHaveCount(0);
+    await expect(ead.locator('[data-slot="dsa-turma-ead"]')).toHaveText(AVISO_DE_TURMA_EAD);
+
+    const presencial = bloco(SEMEADO.turmaComRelogio);
+    await expect(presencial.locator('[data-slot="dsa-da-semana"]')).toBeVisible();
+    await expect(presencial.locator('[data-slot="dsa-turma-ead"]')).toHaveCount(0);
+  });
+
   test("⚠️ a grade é navegável por TECLADO, e entra e sai da tabulação em um passo", async ({
     page,
   }) => {
@@ -428,7 +584,16 @@ test.describe("`FR-011` · os três caminhos clicáveis até o DSA", () => {
     await expect(origem).toHaveAttribute("tabindex", "0");
     await expect(destino).toHaveAttribute("tabindex", "-1");
 
+    /*
+     * ⚠️ **O CLIQUE NA CÉLULA VAZIA ABRE O LANÇAMENTO NUM DIÁLOGO** (item 2 das correções de
+     * 08/10/2026), e o diálogo PRENDE o foco — é o que ele deve fazer. `Escape` o fecha e o foco VOLTA
+     * à célula, e é dali que a seta anda: o caminho de quem clicou e segue pelo teclado. Sem o
+     * `Escape`, a seta caía dentro do diálogo e o caso lia a grade parada.
+     */
     await origem.click();
+    await expect(page.locator('[data-slot="formulario-de-lancamento"]')).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator('[data-slot="formulario-de-lancamento"]')).toHaveCount(0);
     await page.keyboard.press("ArrowRight");
 
     /* A parada de tabulação andou uma coluna — sem `proximaPosicao`, a seta rolaria a página. */

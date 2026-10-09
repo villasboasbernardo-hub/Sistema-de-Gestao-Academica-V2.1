@@ -19,6 +19,7 @@ import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
 import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
+import { AVISO_DE_TURMA_EAD, ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import type { JanelaDeTurma, VigenciaProtegida } from "@/lib/dominio/protecao-de-vigencia";
 import { salasParaEscolher, type Sala } from "@/lib/dominio/salas";
@@ -275,15 +276,27 @@ export default async function FichaDaTurma({
             ⚠️ **E O BOTÃO SEGUE A PERMISSÃO DA PÁGINA DE DESTINO, nunca uma regra própria**: o DSA
                pede `registros_aula.ler`, que é o que `SePodeVer` confere aqui.
           */}
-          <SePodeVer permissoes={permissoes} recurso="registros_aula" acao="ler">
-            <Link
-              href={enderecoDoDsa(turma.codigo as string)}
-              className="border-borda rounded-ciaara hover:bg-marca-suave border px-3 py-1.5 text-sm font-medium"
-              data-slot="abrir-o-dsa"
-            >
-              Abrir o DSA
-            </Link>
-          </SePodeVer>
+          {/*
+            ⚠️ **TURMA EAD PURO NÃO TEM O BOTÃO, E SIM O AVISO** (item 9 da conferência do PR #40,
+               decisão de Bernardo Villas Boas de 08/10/2026). A regra e a frase são de
+               `lib/dominio/dsa/ead-puro.ts` — as mesmas da lista, do `/inicio` e da própria rota do
+               DSA. Semipresencial **mantém** o botão: tem DSA na etapa presencial (`D-DSA-2`).
+          */}
+          {ehEadPuro(turma.modalidade as string | null) ? (
+            <p className="text-texto-suave max-w-prose text-sm" data-slot="dsa-turma-ead">
+              {AVISO_DE_TURMA_EAD}
+            </p>
+          ) : (
+            <SePodeVer permissoes={permissoes} recurso="registros_aula" acao="ler">
+              <Link
+                href={enderecoDoDsa(turma.codigo as string)}
+                className="border-borda rounded-ciaara hover:bg-marca-suave border px-3 py-1.5 text-sm font-medium"
+                data-slot="abrir-o-dsa"
+              >
+                Abrir o DSA
+              </Link>
+            </SePodeVer>
+          )}
         </div>
         {/*
           ⚠️ **O CAMINHO DE VOLTA É A LISTA, E NÃO O CURSO** (`D-NAV-3`, 04/10/2026). Isto **emenda o
@@ -434,6 +447,8 @@ export default async function FichaDaTurma({
               data_termino: texto(turma.data_termino),
               sala_alocada: texto(turma.sala_alocada),
               alunos: texto(turma.alunos),
+              inicio_etapa_presencial: texto(turma.inicio_etapa_presencial),
+              termino_etapa_presencial: texto(turma.termino_etapa_presencial),
             }}
             salas={salas}
             turmasDoCurso={outras}

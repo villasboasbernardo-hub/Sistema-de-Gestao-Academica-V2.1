@@ -18,15 +18,18 @@
  * medir **o papel**, que é o que eles existem para medir.
  */
 import { expect, test, type Page } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 
-import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import {
   ANO,
   ANO_A_FRENTE,
   ASSINANTE_DE_ABRIL,
   ASSINANTE_DE_JULHO,
   ASSINANTE_ENCARREGADO,
+  CONTEUDO_A_FRENTE,
   limparDsa,
+  SEGUNDA,
   SEMANA,
   SEMANA_A_FRENTE,
   SEMANA_DE_JULHO,
@@ -35,6 +38,7 @@ import {
   type DsaSemeado,
 } from "./dsa-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
+import { irParaASemanaDoDia } from "./percurso-do-dsa";
 
 let EMAIL = "";
 let SEMEADO: DsaSemeado;
@@ -265,6 +269,10 @@ test.describe("⚠️ `FR-036` · as assinaturas são as da DATA DA SEMANA — o
     const assinaturas = page.locator('[data-slot="dsa-assinaturas"]');
     await expect(assinaturas).toContainText(ASSINANTE_ENCARREGADO);
     await expect(assinaturas).toContainText("Encarregado da Div. de Adm. Academica");
+    /* ⚠️ E o posto sai POR EXTENSO (item 7 de 08/10/2026): a semente grava `CC`. */
+    await expect(
+      page.locator('[data-slot="dsa-assinatura-direita"] [data-slot="dsa-assinatura-posto"]'),
+    ).toHaveText("Capitão de Corveta");
   });
 
   test("⚠️ O CASO QUE DISCRIMINA · abril traz quem assinava em abril; julho, quem assina em julho", async ({
@@ -294,6 +302,190 @@ test.describe("⚠️ `FR-036` · as assinaturas são as da DATA DA SEMANA — o
     await expect(esquerda).not.toContainText(ASSINANTE_DE_JULHO);
     /* A linha onde se assina continua existindo — é ela que se assina à mão. */
     await expect(esquerda.locator(".dsa-rubrica")).toBeVisible();
+  });
+});
+
+/**
+ * ⚠️ **ITEM 7 DAS CORREÇÕES DE 08/10/2026** *(decisão de Bernardo Villas Boas)*: *"no campo de
+ * assinatura do DSA (tela e /print/dsa), o posto/graduação sai POR EXTENSO, não abreviado […]; o
+ * quadro entre parênteses continua. Só a assinatura muda; a coluna de instrutor da grade continua
+ * como está."*
+ *
+ * ⚠️ **O PAR QUE DISCRIMINA É A MESMA SIGLA NOS DOIS LUGARES DA MESMA PÁGINA.** O instrutor da
+ * semente é `1ºTEN`, e o Auxiliar de julho é `1ºTen` com o quadro `(RM2-T)`: o rodapé tem de dizer
+ * `Primeiro-Tenente (RM2-T)` e o cartão, `1ºTEN`. A troca aplicada no lugar errado — no nome do
+ * instrutor, ou em lugar nenhum — reprova uma das duas metades.
+ *
+ * ⚠️ **TUDO POR CLIQUE, e a semana é a da aula lançada à frente por isso**: é a única com aula do
+ * instrutor que se alcança a partir de hoje sem dezenas de cliques — duas vezes *Próxima semana*.
+ */
+test.describe("⚠️ item 7 · a ASSINATURA traz o posto POR EXTENSO; a coluna de instrutor, a sigla", () => {
+  const POSTO_DA_ESQUERDA =
+    '[data-slot="dsa-assinatura-esquerda"] [data-slot="dsa-assinatura-posto"]';
+  const POSTO_DA_DIREITA =
+    '[data-slot="dsa-assinatura-direita"] [data-slot="dsa-assinatura-posto"]';
+
+  test("ficha → Abrir o DSA → duas semanas à frente → tela → Imprimir → papel", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
+    await page.locator('[data-slot="abrir-o-dsa"]').click();
+    await expect(page.getByRole("heading", { name: "Detalhe Semanal de Aula" })).toBeVisible();
+
+    /*
+     * ⚠️ **ESPERAR A SEMANA MUDAR ANTES DO SEGUNDO CLIQUE**: o botão navega e não espera — clicado de
+     * novo cedo demais, ele leva à MESMA semana seguinte, e o caso abriria a semana errada.
+     */
+    const semanaNaTela = page.locator('[data-slot="semana-atual"]');
+    const deHoje = await semanaNaTela.innerText();
+    await page.locator('[data-acao="semana-proxima"]').click();
+    await expect(semanaNaTela).not.toHaveText(deHoje);
+    await page.locator('[data-acao="semana-proxima"]').click();
+    await expect(semanaNaTela).toHaveText(`semana ${SEMANA_A_FRENTE} de ${ANO_A_FRENTE}`);
+
+    /* ── 1. Na tela: a grade com a sigla, o rodapé por extenso ───────────────────────────── */
+    const cartaoNaTela = page
+      .locator('[data-slot="grade-da-semana"] [data-slot="dsa-cartao"]')
+      .filter({ hasText: CONTEUDO_A_FRENTE });
+    await expect(cartaoNaTela).toHaveCount(1);
+    await expect(cartaoNaTela).toContainText("1ºTEN");
+    await expect(cartaoNaTela).not.toContainText("Primeiro-Tenente");
+
+    const assinaturasNaTela = page.locator('[data-slot="tela-assinaturas"]');
+    await expect(assinaturasNaTela).toContainText("Primeiro-Tenente (RM2-T) JOAQUIM DE JULHO");
+    await expect(assinaturasNaTela).toContainText("Capitão de Corveta ERNESTO ENCARREGADO");
+    await expect(assinaturasNaTela).not.toContainText(/1º\s*ten/i);
+    await expect(assinaturasNaTela).not.toContainText(/\bCC\b/);
+
+    /*
+     * ⚠️ **ITEM 3 DA CONFERÊNCIA DO PR #40 (08/10/2026): o «lançado à frente» SAIU DA TELA** — nem
+     * marca no cartão, nem frase no rodapé. É esta a semana que tem aula à frente, então é aqui que a
+     * ausência discrimina. E o papel também não a traz (dúvida 2, abaixo).
+     */
+    await expect(cartaoNaTela).not.toContainText("lançado à frente");
+    await expect(page.locator('[data-slot="rodape-da-semana"]')).not.toContainText(
+      "ainda não chegaram",
+    );
+
+    /* ── 2. No papel, pelo botão Imprimir ─────────────────────────────────────────────────── */
+    await page.locator('[data-slot="imprimir-dsa"]').click();
+    /* ⚠️ A tela também tem cartões: sem esperar a URL, as asserções seguintes leriam a tela. */
+    await page.waitForURL(/\/print\/dsa/);
+    expect(new URL(page.url()).searchParams.get("semana")).toBe(String(SEMANA_A_FRENTE));
+    const documento = page.locator(DOCUMENTO);
+    await expect(documento).toBeVisible();
+
+    await expect(page.locator(POSTO_DA_ESQUERDA)).toHaveText("Primeiro-Tenente (RM2-T)");
+    await expect(page.locator(POSTO_DA_DIREITA)).toHaveText("Capitão de Corveta");
+
+    const cartaoNoPapel = documento
+      .locator('[data-slot="dsa-cartao"]')
+      .filter({ hasText: CONTEUDO_A_FRENTE });
+    await expect(cartaoNoPapel).toHaveCount(1);
+    await expect(cartaoNoPapel).toContainText("1ºTEN");
+    await expect(cartaoNoPapel).not.toContainText("Primeiro-Tenente");
+    /* ⚠️ Tela e papel iguais (dúvida 2 do PR #40): a frase do «lançado à frente» saiu do papel também. */
+    await expect(page.locator('[data-slot="dsa-a-frente"]')).toHaveCount(0);
+  });
+
+  test("sem quadro cadastrado, nada entre parênteses — abril sai só `Primeiro-Tenente`", async ({
+    page,
+  }) => {
+    await abrirAImpressao(page, SEMANA);
+    await expect(page.locator(POSTO_DA_ESQUERDA)).toHaveText("Primeiro-Tenente");
+  });
+});
+
+/**
+ * ⚠️ **ITEM 4 DA CONFERÊNCIA DO PR #40** *(decisão de Bernardo Villas Boas, 08/10/2026)*: *"os campos
+ * das duas assinaturas vêm preenchidos com o resolvido hoje e podem ser EDITADOS antes de imprimir
+ * (alguém assina no lugar de outro, ou a pessoa não está cadastrada). O que foi editado vai para a
+ * IMPRESSÃO. NÃO grava no cadastro nem no banco («imprimiu, imprimiu»)."*
+ *
+ * ⚠️ **AS DUAS METADES SÃO MEDIDAS, e só as duas juntas provam o pedido**: o papel traz o editado
+ * **e** `responsaveis_curso` sai do percurso idêntico ao que entrou — lido pelo cliente de serviço,
+ * que enxerga a linha sem depender de RLS. Uma edição que gravasse no cadastro passaria na primeira
+ * metade e reprovaria na segunda.
+ */
+test.describe("⚠️ item 4 · assinatura editada na tela vai para o papel, e o banco não muda", () => {
+  const servico = () =>
+    createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+  /** A linha do Encarregado semeada por `semearDsa` para este processo. */
+  async function linhaDoEncarregado() {
+    const { data, error } = await servico()
+      .from("responsaveis_curso")
+      .select("codigo, nome_completo, posto_graduacao, especialidade, funcao_descricao, editado_em")
+      .eq("codigo", `DSA-E2D${PROCESSO}-ENC-1`)
+      .single();
+    if (error) throw new Error(`não li o responsável semeado: ${error.message}`);
+    return data as {
+      readonly codigo: string;
+      readonly nome_completo: string | null;
+      readonly posto_graduacao: string | null;
+      readonly especialidade: string | null;
+      readonly funcao_descricao: string;
+      readonly editado_em: string | null;
+    };
+  }
+
+  test("ficha → Abrir o DSA → semana pela data → Editar → Imprimir → papel com o editado", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const antes = await linhaDoEncarregado();
+
+    await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
+    await page.locator('[data-slot="abrir-o-dsa"]').click();
+    await expect(page.getByRole("heading", { name: "Detalhe Semanal de Aula" })).toBeVisible();
+    await irParaASemanaDoDia(page, SEGUNDA, SEMANA, ANO);
+
+    /* ── 1. Na tela: vem preenchido com o resolvido, e se edita ──────────────────────────── */
+    const direita = page.locator('[data-slot="tela-assinatura-direita"]');
+    await expect(direita).toContainText(`Capitão de Corveta ${antes.nome_completo ?? ""}`);
+    await direita.locator('[data-acao="editar-assinatura-direita"]').click();
+
+    const nome = page.getByLabel("Nome — assinatura à direita");
+    const posto = page.getByLabel("Posto/graduação, por extenso — assinatura à direita");
+    await expect(nome).toHaveValue(antes.nome_completo ?? "");
+    await expect(posto).toHaveValue("Capitão de Corveta");
+
+    await nome.fill("SUBSTITUTO DO ENCARREGADO");
+    await posto.fill("Capitão-Tenente");
+    /* A prévia acompanha, e diz que a edição é só desta impressão. */
+    await expect(direita).toContainText("Capitão-Tenente SUBSTITUTO DO ENCARREGADO");
+    await expect(direita.locator('[data-slot="tela-assinatura-aviso"]')).toBeVisible();
+    await expect(page.locator('[data-slot="imprimir-dsa"]')).toHaveAttribute(
+      "data-assinatura-editada",
+      "sim",
+    );
+
+    /* ── 2. No papel, pelo botão Imprimir ─────────────────────────────────────────────────── */
+    await page.locator('[data-slot="imprimir-dsa"]').click();
+    await page.waitForURL(/\/print\/dsa/);
+    const url = new URL(page.url());
+    expect(url.searchParams.get("semana")).toBe(String(SEMANA));
+    expect(url.searchParams.get("dir_nome")).toBe("SUBSTITUTO DO ENCARREGADO");
+    /* Só o editado viaja: a função e o lado esquerdo não entraram no endereço. */
+    expect(url.searchParams.has("dir_funcao")).toBe(false);
+    expect(url.searchParams.has("esq_nome")).toBe(false);
+
+    await expect(page.locator(DOCUMENTO)).toBeVisible();
+    const papel = page.locator('[data-slot="dsa-assinatura-direita"]');
+    await expect(papel).toContainText("SUBSTITUTO DO ENCARREGADO");
+    await expect(papel.locator('[data-slot="dsa-assinatura-posto"]')).toHaveText("Capitão-Tenente");
+    await expect(papel).toContainText("Encarregado da Div. de Adm. Academica");
+    await expect(papel).not.toContainText(antes.nome_completo ?? "?");
+    /* O lado que ninguém editou continua o resolvido pela data. */
+    await expect(page.locator('[data-slot="dsa-assinatura-esquerda"]')).toContainText(
+      ASSINANTE_DE_ABRIL,
+    );
+
+    /* ── 3. E o banco não mudou: «imprimiu, imprimiu» ─────────────────────────────────────── */
+    expect(await linhaDoEncarregado()).toEqual(antes);
   });
 });
 

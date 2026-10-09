@@ -121,3 +121,76 @@ describe("⚠️ `SC-007` · não há campo de código, e ele não entra nem se 
     if (r.success) expect(Object.keys(r.data)).not.toContain("carga_horaria_total");
   });
 });
+
+/*
+ * ⚠️ **`D-DSA-2` · A ETAPA PRESENCIAL DA TURMA SEMIPRESENCIAL** (item 6 das correções de 08/10/2026,
+ * decisão de Bernardo Villas Boas). As três frases são as do `CHECK turmas_etapa_presencial_coerente`
+ * repetidas no esquema, para a recusa chegar em português e não como `23514`; o irmão está no `121`.
+ */
+describe("`D-DSA-2` · a etapa presencial: as duas pontas ou nenhuma, dentro do período", () => {
+  const SEMI = {
+    modalidade: "semipresencial",
+    data_inicio: "2026-03-02",
+    data_termino: "2026-11-30",
+  };
+
+  it("semipresencial com a etapa inteira e dentro do período passa, e grava as duas", () => {
+    const r = parse({
+      ...SEMI,
+      inicio_etapa_presencial: "2026-05-04",
+      termino_etapa_presencial: "2026-05-29",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.inicio_etapa_presencial).toBe("2026-05-04");
+      expect(r.data.termino_etapa_presencial).toBe("2026-05-29");
+    }
+  });
+
+  it("sem etapa passa — é o estado «não cadastrada», que o DSA avisa sem bloquear", () => {
+    expect(parse(SEMI).success).toBe(true);
+  });
+
+  it("uma ponta só é recusada", () => {
+    expect(erro(parse({ ...SEMI, inicio_etapa_presencial: "2026-05-04" }))).toBe(
+      "Informe o início e o término da etapa presencial, ou deixe os dois vazios.",
+    );
+  });
+
+  it("término antes do início é recusado", () => {
+    expect(
+      erro(
+        parse({
+          ...SEMI,
+          inicio_etapa_presencial: "2026-05-29",
+          termino_etapa_presencial: "2026-05-04",
+        }),
+      ),
+    ).toBe("O término da etapa presencial não pode ser anterior ao início.");
+  });
+
+  it("etapa fora do período da turma é recusada", () => {
+    expect(
+      erro(
+        parse({
+          ...SEMI,
+          inicio_etapa_presencial: "2026-02-01",
+          termino_etapa_presencial: "2026-05-29",
+        }),
+      ),
+    ).toBe("A etapa presencial precisa caber dentro do período da turma.");
+  });
+
+  it("⚠️ fora de semipresencial a etapa é DESCARTADA — dado sem efeito escondido seria segunda verdade", () => {
+    const r = parse({
+      modalidade: "presencial",
+      inicio_etapa_presencial: "2026-05-04",
+      termino_etapa_presencial: "2026-05-29",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.inicio_etapa_presencial).toBeNull();
+      expect(r.data.termino_etapa_presencial).toBeNull();
+    }
+  });
+});

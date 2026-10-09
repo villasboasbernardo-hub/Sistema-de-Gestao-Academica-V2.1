@@ -227,7 +227,12 @@ test.describe("`FR-033` · nenhum estado do andamento bloqueia a edição da fic
      */
     await expect(page.locator('[data-slot="abrir-edicao-da-turma"]')).toBeVisible();
     await abrirEdicaoDaTurma(page);
-    await expect(page.getByLabel("Término")).toBeVisible();
+    /*
+     * ⚠️ **RÓTULO EXATO** (08/10/2026): a turma da amostra é semipresencial, e desde a `D-DSA-2` a
+     *    ficha dela tem também «Término da etapa presencial» — o `getByLabel` por substring casava os
+     *    dois e reprovava por modo estrito. O campo que o `FR-033` exige continua sendo o do período.
+     */
+    await expect(page.getByLabel("Término", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /salvar/i })).toBeVisible();
   });
 });

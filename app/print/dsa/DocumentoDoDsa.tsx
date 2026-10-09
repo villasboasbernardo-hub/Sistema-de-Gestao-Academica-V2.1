@@ -15,6 +15,12 @@
 import Image from "next/image";
 import { Barlow } from "next/font/google";
 
+import {
+  rubricaComEdicao,
+  rubricaResolvida,
+  type EdicaoDasAssinaturas,
+  type LadoDaAssinatura,
+} from "@/lib/dominio/dsa/assinatura-editada";
 import type { Assinatura } from "@/lib/dominio/dsa/assinaturas";
 import type { CartaoDaGrade, GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import type { DiaImpresso, LinhaImpressa } from "@/lib/dominio/dsa/impressao";
@@ -45,11 +51,17 @@ export function DocumentoDoDsa({
   dados,
   nomeDeQuemImprime,
   geradoEm,
+  assinaturasEditadas = {},
 }: {
   readonly dados: DadosDoDocumento;
   readonly nomeDeQuemImprime: string | null;
   /** Instante ISO — vem de quem desenha, para a tela e o papel não divergirem por relógio. */
   readonly geradoEm: string;
+  /**
+   * O que foi editado na tela antes de imprimir (item 4 da conferência do PR #40, 08/10/2026). Vale
+   * só para este papel — `responsaveis_curso` não muda. Sem edição, sai o resolvido pela vigência.
+   */
+  readonly assinaturasEditadas?: EdicaoDasAssinaturas;
 }) {
   const { grade } = dados;
   const nomes = new Map(dados.quadroDeCh.map((d) => [d.codigo, d.nome] as const));
@@ -193,11 +205,13 @@ export function DocumentoDoDsa({
             lado="esquerda"
             assinatura={dados.assinaturas.esquerda}
             nomeDeQuemImprime={nomeDeQuemImprime}
+            edicao={assinaturasEditadas}
           />
           <Rubrica
             lado="direita"
             assinatura={dados.assinaturas.direita}
             nomeDeQuemImprime={nomeDeQuemImprime}
+            edicao={assinaturasEditadas}
           />
         </div>
       </section>
@@ -206,14 +220,10 @@ export function DocumentoDoDsa({
       <footer className="dsa4-pe">
         <span data-slot="dsa-nota-do-ei">{NOTA_DO_ESTUDO_INDIVIDUAL}</span>
         {/*
-          ⚠️ **O «LANÇADO À FRENTE» É CONTEÚDO DO DOCUMENTO** (`Q-2`, `FR-028.1`): o DSA sai antes
-             da semana, e dizer quantos TA ainda não aconteceram separa previsto de cumprido.
+          ⚠️ **SEM A FRASE DO «LANÇADO À FRENTE», COMO NA TELA** (dúvida 2 do PR #40, decisão de
+             Bernardo Villas Boas, 08/10/2026: "tela e papel iguais"). O cálculo continua no
+             documento; só a frase saiu.
         */}
-        {dados.aFrente === 0 ? null : (
-          <span data-slot="dsa-a-frente">
-            {dados.aFrente} TA desta semana estão lançados para datas que ainda não chegaram.
-          </span>
-        )}
         <span data-slot="dsa-gerado-em">
           Gerado em: {instanteComHoraParaLeitura(geradoEm)} · Marinha do Brasil ·{" "}
           {SIGLA_DA_ORGANIZACAO} · {dados.curso} · DSA Nº {numero}
@@ -459,38 +469,41 @@ function ListaSemRelogio({ dias }: { readonly dias: readonly DiaImpresso[] }) {
 }
 
 /**
- * Uma rubrica — nome completo, posto/graduação e a função.
+ * Uma rubrica — nome completo, posto/graduação **por extenso** com o quadro, e a função.
  *
  * ⚠️ **SEM RESPONSÁVEL VIGENTE, A LINHA SAI EM BRANCO — NUNCA UM ERRO** (`FR-036`, `RN-DEG-01`).
  * ⚠️ **NO MODO `dinamico_usuario_logado` QUEM ASSINA É QUEM IMPRIME, e a FUNÇÃO vem da LINHA**
  * (`Q-14`); o posto sai vazio, porque `usuarios` não tem posto.
+ * ⚠️ **O POSTO É `postoPorExtenso`, NUNCA A SIGLA** *(item 7 de 08/10/2026)*: `Primeiro-Tenente
+ * (RM2-T)`, como no modelo v4. A coluna de instrutor dos cartões continua com a sigla.
+ * ⚠️ **A EDIÇÃO DA TELA VAI POR CIMA, CAMPO A CAMPO** (item 4 de 08/10/2026), pela mesma função que
+ * a prévia da tela usa (`rubricaComEdicao`) — e é só do papel: nada volta para o cadastro.
  */
 function Rubrica({
   lado,
   assinatura,
   nomeDeQuemImprime,
+  edicao,
 }: {
-  readonly lado: "esquerda" | "direita";
+  readonly lado: LadoDaAssinatura;
   readonly assinatura: Assinatura | null;
   readonly nomeDeQuemImprime: string | null;
+  readonly edicao: EdicaoDasAssinaturas;
 }) {
-  if (assinatura === null) {
+  const rubrica = rubricaComEdicao(rubricaResolvida(assinatura, nomeDeQuemImprime), edicao[lado]);
+  if (rubrica === null) {
     return (
       <div className="dsa4-assinatura" data-slot={`dsa-assinatura-${lado}`}>
         <div className="dsa-rubrica" />
       </div>
     );
   }
-  const nome = assinatura.resolvePeloUsuarioLogado
-    ? (nomeDeQuemImprime ?? "")
-    : (assinatura.nomeCompleto ?? "");
-  const posto = assinatura.resolvePeloUsuarioLogado ? "" : (assinatura.postoGraduacao ?? "");
   return (
     <div className="dsa4-assinatura" data-slot={`dsa-assinatura-${lado}`}>
       <div className="dsa-rubrica" />
-      <span className="dsa4-assinatura-nome">{nome}</span>
-      {posto === "" ? null : <span>{posto}</span>}
-      <span className="dsa4-assinatura-funcao">{assinatura.funcaoDescricao}</span>
+      <span className="dsa4-assinatura-nome">{rubrica.nome}</span>
+      {rubrica.posto === "" ? null : <span data-slot="dsa-assinatura-posto">{rubrica.posto}</span>}
+      <span className="dsa4-assinatura-funcao">{rubrica.funcao}</span>
     </div>
   );
 }

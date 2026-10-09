@@ -166,16 +166,20 @@ select is(app.disciplina_sem_ue('00000000-0000-0000-0000-0000000000ff'), null,
 -- C · UE **OU** DISCIPLINA-COM-TOPICO, e a catraca com UMA isencao delimitada
 -- ═══════════════════════════════════════════════════════════════════════════════════════
 
+-- ⚠️ **AS DUAS ASSERCOES ABAIXO VIRARAM EM 08/10/2026, E ISSO E A D-DSA-1** (decisao de Bernardo
+--    Villas Boas): a isencao da Q-1 virou REGRA GERAL — aula sem UE e aceita em QUALQUER
+--    disciplina, com `disciplina_id` e topico. A catraca deixou de chamar `app.disciplina_sem_ue`,
+--    e por isso deixou de ter o NULL que o `coalesce` segurava.
 select ok(
-  (select pg_get_constraintdef(oid) ~ 'disciplina_sem_ue' from pg_constraint
+  (select pg_get_constraintdef(oid) !~ 'disciplina_sem_ue' from pg_constraint
     where conrelid = 'public.registros_aula'::regclass and conname = 'reg_aula_ue_so_nula_no_historico'),
-  'Q-1 · a catraca ganhou a isencao por `app.disciplina_sem_ue` — e NAO foi afrouxada em geral'
+  'D-DSA-1 · a catraca NAO depende mais de `app.disciplina_sem_ue` — a isencao virou regra geral'
 );
 
 select ok(
-  (select pg_get_constraintdef(oid) ~* 'coalesce' from pg_constraint
+  (select pg_get_constraintdef(oid) !~ 'app\.' from pg_constraint
     where conrelid = 'public.registros_aula'::regclass and conname = 'reg_aula_ue_so_nula_no_historico'),
-  'H3 · a catraca envolve a funcao em `coalesce(..., false)` — CHECK passa em NULL'
+  'D-DSA-1 · a catraca nao chama funcao nenhuma — sem funcao nao ha o NULL do gotcha 15 a segurar'
 );
 
 select ok(
@@ -230,18 +234,18 @@ select throws_ok($$
 $$, '23514', null,
   'Q-1 · topico so com espaco e RECUSADO — `btrim` antes de medir');
 
--- ⚠️⚠️ **O CASO QUE DISCRIMINA A DELIMITACAO DA ISENCAO.** Sem ele, a isencao valeria para
---      todo curso e a catraca da regra 4 estaria afrouxada em geral.
-select throws_ok($$
+-- ⚠️⚠️ **O CASO QUE DISCRIMINA A D-DSA-1 — E O VEREDITO VIROU EM 08/10/2026** (DoD 8). Ate ali
+--      ele era `throws_ok`: disciplina NAO isenta sem UE era recusada mesmo com topico, e era ele
+--      que provava a isencao delimitada da Q-1. A D-DSA-1 (decisao de Bernardo Villas Boas) abriu o
+--      caminho para QUALQUER disciplina — e e esta mesma linha que prova que a regra MUDOU.
+select lives_ok($$
   insert into public.registros_aula
     (codigo, data, turma_id, curso_id, disciplina_id, instrutor_id, tempos_consumidos,
      ta_inicial, conteudo_resumo)
   values ('T116-REG-005', '2026-03-06', 'd1165000-0000-0000-0000-000000000001',
           'd1160000-0000-0000-0000-000000000001', 'd1163000-0000-0000-0000-000000000001',
-          'd1161000-0000-0000-0000-000000000001', 2, 3, 'Tem topico, mas nao e isenta')
-$$, '23514', null,
-  'Q-1 · disciplina NAO isenta sem UE e RECUSADA, mesmo com topico — a isencao e SO competencias/sem_unidades_ensino'
-);
+          'd1161000-0000-0000-0000-000000000001', 2, 3, 'Tem topico, e nao e isenta')
+$$, 'D-DSA-1 · disciplina NAO isenta sem UE, COM topico, e ACEITA — a isencao virou regra geral');
 
 -- UE e disciplina juntas: a exclusividade.
 select throws_ok($$
@@ -282,6 +286,10 @@ $$, 'regra 4 · a linha HISTORICA sem UE continua aceita — e o que mantem as 1
 --    passa a ser a FK, com `23503`. A linha e recusada nos dois casos; o que muda e QUAL
 --    restricao a recusa, e um CHECK que aprova disciplina inexistente e um CHECK que mente
 --    sobre o que confere.
+-- ⚠️ **E A RECUSA TROCOU DE RESTRICAO EM 08/10/2026, como a nota acima previa.** Com a D-DSA-1 o
+--    CHECK nao le mais a disciplina — ele so exige `disciplina_id` e topico —, entao a disciplina
+--    inexistente passa por ele e quem recusa e a FK COMPOSTA `reg_aula_disciplina_do_curso`, com
+--    `23503`. A linha continua recusada; o que mudou foi quem a recusa, e por que.
 select throws_ok($$
   insert into public.registros_aula
     (codigo, data, turma_id, curso_id, disciplina_id, instrutor_id, tempos_consumidos,
@@ -289,8 +297,8 @@ select throws_ok($$
   values ('T116-REG-009', '2026-03-12', 'd1165000-0000-0000-0000-000000000001',
           'd1160000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000ff',
           'd1161000-0000-0000-0000-000000000001', 2, 5, 'Disciplina que nao existe')
-$$, '23514', null,
-  'H3 · disciplina inexistente e recusada pelo CHECK (`23514`) — ele roda ANTES da FK, e o `coalesce` e o que o faz recusar');
+$$, '23503', null,
+  'D-DSA-1 · disciplina inexistente e recusada pela FK composta (`23503`) — o CHECK nao le mais a disciplina');
 
 -- ═══════════════════════════════════════════════════════════════════════════════════════
 -- D · O CHECK QUE A `RF-EXTRA-02` AFIRMAVA E QUE NAO EXISTIA (V-5)
@@ -447,21 +455,25 @@ select is(
   'Q-1 · a CH por disciplina CONTA a aula sem UE — sem isso o curso por competencias ficava em zero'
 );
 
+-- ⚠️ **OS DOIS NUMEROS ABAIXO PASSARAM DE 2 PARA 4 EM 08/10/2026, e e a D-DSA-1 que os move**: a
+--    `T116-REG-005` (sem UE, COM disciplina e topico, na disciplina comum) deixou de ser recusada e
+--    entra na CH da disciplina — que e exatamente o que se quer: sem UE a aula nao entra no
+--    controle POR UE, mas continua contando na CH DA DISCIPLINA. 2 da `REG-001` + 2 da `REG-005`.
 select is(
   (select ta_executados::int from public.vw_disciplinas_execucao
     where disciplina_id = 'd1163000-0000-0000-0000-000000000001'
       and turma_id = 'd1165000-0000-0000-0000-000000000001'),
-  2,
-  'Q-1 · a CH da disciplina COM UE segue contando pela UE — nao regressao do Epico 5.5'
+  4,
+  'D-DSA-1 · a CH da disciplina soma a aula COM UE e a aula SEM UE da mesma disciplina'
 );
 
--- ⚠️ E A LINHA HISTORICA SEM UE CONTINUA FORA DE DISCIPLINA NENHUMA, que e o numero que a
---    ficha da turma explica na tela. Se isto mudar, o rodape de `/turmas/[turma]` passa a
---    mentir sem que nada acuse.
+-- ⚠️ E A LINHA HISTORICA SEM UE E SEM DISCIPLINA CONTINUA FORA DE DISCIPLINA NENHUMA, que e o
+--    numero que a ficha da turma explica na tela. Se isto mudar, o rodape de `/turmas/[turma]`
+--    passa a mentir sem que nada acuse. (A `REG-008` ainda nao entra: 4 = REG-001 + REG-005.)
 select is(
   (select coalesce(sum(ta_executados), 0)::int from public.vw_disciplinas_execucao
     where turma_id = 'd1165000-0000-0000-0000-000000000001'),
-  2,
+  4,
   'nao regressao · o lancamento historico com UE e disciplina NULAS nao entra em disciplina alguma'
 );
 

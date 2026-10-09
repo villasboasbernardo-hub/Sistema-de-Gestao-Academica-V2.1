@@ -21,6 +21,7 @@
  */
 
 import { andamentoDaTurma, type RegimeDoCurso } from "@/lib/dominio/andamento-da-turma";
+import { ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 
 export type CargaDaTurma = {
   readonly turma_id: string;
@@ -84,6 +85,12 @@ export type TurmaNoPanorama = {
    * que ninguém pode mais consertar — ruído que ensina a ignorar a região de alertas inteira.
    */
   readonly emAtraso: boolean;
+  /**
+   * A turma é EAD puro — o bloco não oferece o DSA, e mostra o aviso (`Q-13`; item 9 da conferência
+   * do PR #40, 08/10/2026). ⚠️ Sem a linha da turma, `false`: o link aparece e a rota do DSA, que lê
+   * a modalidade de novo, decide — o lado seguro é não esconder o caminho.
+   */
+  readonly eadPuro: boolean;
 };
 
 /**
@@ -153,6 +160,8 @@ export function montarPanorama(
          */
         percentual: andamento.percentual ?? 0,
         emAtraso: andamento.emAtraso,
+        /* ⚠️ A modalidade da TURMA, como a capacidade acima — nunca a do curso (`RN-MAT-04`). */
+        eadPuro: ehEadPuro(daTabela?.modalidade),
       };
     })
     .sort((a, b) => a.cursoCodigo.localeCompare(b.cursoCodigo, "pt-BR", { numeric: true }));

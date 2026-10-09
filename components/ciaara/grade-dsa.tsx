@@ -166,11 +166,11 @@ function CorpoDoBloco({
           mesma sala em outra turma
         </span>
       ) : null}
-      {bloco.lancadoAFrente ? (
-        <span className="w-fit rounded bg-planejado-fundo px-1 text-[10px] text-planejado-tinta">
-          lançado à frente
-        </span>
-      ) : null}
+      {/*
+       * ⚠️ **A MARCA «LANÇADO À FRENTE» SAIU DA GRADE** (item 3 da conferência do PR #40, decisão de
+       * Bernardo Villas Boas, 08/10/2026). `bloco.lancadoAFrente` continua sendo calculado; só a
+       * tela deixou de escrevê-lo na célula.
+       */}
     </div>
   );
 }
@@ -193,7 +193,8 @@ function tomDoCartao(cartao: CartaoDaGrade, bloco: BlocoNaGrade | undefined): To
 
 /**
  * O corpo do cartão — **as mesmas informações do papel** (disciplina, UE/tópico, TA, local, T/E,
- * instrutor), mais as marcas que só a tela tem: conflito, sala e «lançado à frente».
+ * instrutor), mais as marcas que só a tela tem: conflito e sala. ⚠️ O «lançado à frente» saiu da
+ * grade no item 3 da conferência do PR #40 (08/10/2026) — o cálculo continua, a marca não.
  */
 function CorpoDoCartao({
   cartao,
@@ -237,8 +238,15 @@ function CorpoDoCartao({
         {linha.local === "" ? null : <span>{linha.local}</span>}
         {linha.te === "" ? null : <strong className="font-semibold">{linha.te}</strong>}
         {cartao.partes > 1 ? (
+          /*
+           * ⚠️ **O TOTAL DO BLOCO VAI JUNTO DA PARTE** (item 2 do comando de 08/10/2026). O bloco que
+           * atravessa o almoço sai em duas partes (`SC-011`), cada uma com o TA DELA — e quem acabava
+           * de editar «Quantos tempos» para 2 via "1 TA" e "1 TA" e concluía que a edição não pegou.
+           * Só a tela ganha o total: o papel continua com o TA de cada linha, como o documento assinado.
+           */
           <span>
             · parte {cartao.parte} de {cartao.partes}
+            {bloco?.tempos != null ? ` · bloco de ${bloco.tempos} TA` : ""}
           </span>
         ) : null}
       </span>
@@ -259,11 +267,6 @@ function CorpoDoCartao({
       {bloco?.alertaSala ? (
         <span className="w-fit rounded bg-atrasado-fundo px-1 text-[10px] text-atrasado-tinta">
           mesma sala em outra turma
-        </span>
-      ) : null}
-      {bloco?.lancadoAFrente ? (
-        <span className="w-fit rounded bg-planejado-fundo px-1 text-[10px] text-planejado-tinta">
-          lançado à frente
         </span>
       ) : null}
     </div>

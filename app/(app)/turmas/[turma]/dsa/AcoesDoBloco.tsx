@@ -1,23 +1,22 @@
 /**
- * As ações de um lançamento já na grade — **mover, editar e excluir** (`RF-DSA-07`, `FR-029` a
- * `FR-032`, `RNF-USA-03`, `Q-1`, `Q-12` · spec 013, PR 4).
+ * O CARTÃO ÚNICO de um lançamento já na grade — editar tudo de uma vez, e excluir (`RF-DSA-07`,
+ * `FR-029` a `FR-032`, `RNF-USA-03`, `Q-1`, `Q-12` · spec 013; ajustes 1 e 2 do PR #40).
  *
- * ⚠️ **O CAMINHO PRIMÁRIO É O TECLADO, E ISSO É REQUISITO, não preferência.** O `RF-DSA-07` pede
- * mover *"por arrastar-e-soltar **E** por uma alternativa de teclado/menu"* — e a alternativa não é
- * consolo: `Enter` na célula abre este painel, e daqui se move escolhendo **dia** e **tempo** em
- * dois campos e acionando *Mover*. Arrastar vive na grade e chega ao **mesmo** `mover`.
+ * > *"UM CARTÃO SÓ. Clicar no cartão de um lançamento abre UM diálogo onde se edita tudo de uma vez:
+ * > dia, tempo inicial, quantos tempos, disciplina/UE, tópico, quem ministra, técnica, local. (…) Um
+ * > só botão Gravar, uma só Server Action. Excluir continua no mesmo diálogo, com confirmação."*
+ * > — Bernardo Villas Boas, 08/10/2026
  *
- * ⚠️ **FOLHA DE CLIENTE, DECLARADA.** Ela guarda o que está sendo digitado antes de gravar — que
- * não existe no servidor — e as três ações **chegam por propriedade**, nunca por `import` de
- * `@/lib/acoes/` (Princípio XI, imposto pelas guardas de fronteira).
+ * ⚠️ **TODO CAMPO NASCE COM O VALOR GRAVADO NAQUELE LANÇAMENTO, NUNCA COM O DO CADASTRO** (ajuste 2).
+ * O pré-preenchimento é só do lançamento NOVO (`FormularioDeLancamento`). Os valores vêm de
+ * `fato.gravado`, cru — e não dos campos de exibição, que na avaliação mostram o tipo no lugar do
+ * tópico vazio e o fiscal antes do responsável: reabrir com eles e gravar reescrevia o lançamento.
  *
- * ⚠️ **ELA NÃO LÊ BANCO E NÃO CALCULA NADA.** O dia, o tempo, as unidades e os instrutores chegam
- * prontos; quem decide se o movimento é possível é a Server Action, e quem impõe é o banco. Uma
- * conferência de teto escrita aqui seria a segunda implementação da `RN-DIST-03`.
+ * ⚠️ **O GRAVAR MANDA SÓ O QUE MUDOU.** Campo que a pessoa não tocou não viaja, e por isso não pode
+ * ser reescrito por engano — é a mesma distinção `undefined`/`null` da Server Action.
  *
- * ⚠️ **A EXCLUSÃO DESCREVE O EFEITO ANTES DE ACONTECER** (`RNF-USA-03`), e o `DialogoConfirmacao`
- * cobra isso no tipo: `consequencia` é **obrigatória**, porque *"sem isto o diálogo só atrasa o
- * clique"*. E ela diz a verdade: exclusão é **lógica** (regra 4), e o lançamento volta reativando.
+ * ⚠️ **FOLHA DE CLIENTE, DECLARADA.** As ações chegam por propriedade (Princípio XI); quem decide é a
+ * Server Action (`atualizar`), e quem impõe é o banco.
  */
 "use client";
 
@@ -29,14 +28,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import type { DiaDaGrade, ValoresGravados } from "@/lib/dominio/dsa/grade";
 import type { OrigemDoFato } from "@/lib/dominio/dsa/posicao-herdada";
+import { temposParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { dataComDiaDaSemana } from "@/lib/formato/data";
 
 import { EscolhaSimples } from "./EscolhaSimples";
-import type { ResultadoDaAcao, UnidadeOferecida } from "./FormularioDeLancamento";
+import {
+  ALERTA_SEM_UNIDADE,
+  type DisciplinaOferecida,
+  type ResultadoDaAcao,
+  type UnidadeOferecida,
+} from "./FormularioDeLancamento";
 
-/** O fato escolhido, como a grade o conhece — **de exibição**, nunca de gravação. */
+/** O fato escolhido, como a grade o conhece. */
 export type FatoEscolhido = {
   readonly fatoId: string;
   readonly origem: OrigemDoFato;
@@ -52,56 +58,75 @@ export type FatoEscolhido = {
   readonly herdado: boolean;
   /** `true` quando o fato está na faixa "Sem posição" (`Q-12`). */
   readonly semPosicao: boolean;
+  /** O GRAVADO, cru — a fonte de todo campo deste cartão (ajuste 2). */
+  readonly gravado: ValoresGravados | undefined;
 };
 
 export type AcoesDoBlocoProps = {
   readonly fato: FatoEscolhido;
-  /** Os dias da semana aberta — o destino possível do movimento. */
-  readonly dias: readonly string[];
+  /** Os dias da semana aberta, com o relógio — o destino possível e os tempos de cada um. */
+  readonly diasDaSemana: readonly DiaDaGrade[];
   /** Quantos Tempos de Aula a grade tem. */
   readonly linhas: number;
   readonly unidades: readonly UnidadeOferecida[];
+  readonly disciplinas: readonly DisciplinaOferecida[];
   readonly instrutores: readonly InstrutorParaExibir[];
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
-  readonly mover: (entrada: unknown) => Promise<ResultadoDaAcao>;
-  readonly editar: (entrada: unknown) => Promise<ResultadoDaAcao>;
+  readonly atualizar: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly excluir: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly aoFechar: () => void;
 };
 
-type Aba = "mover" | "editar";
+const texto = (v: string): string | null => (v.trim() === "" ? null : v.trim());
 
 export function AcoesDoBloco({
   fato,
-  dias,
+  diasDaSemana,
   linhas,
   unidades,
+  disciplinas,
   instrutores,
   escala,
   tecnicas,
-  mover,
-  editar,
+  atualizar,
   excluir,
   aoFechar,
 }: AcoesDoBlocoProps) {
-  const [aba, definirAba] = React.useState<Aba>("mover");
-  /*
-   * ⚠️ **O DESTINO NASCE NO LUGAR ATUAL, e isso evita um movimento acidental de um clique.** Um
-   * destino vazio obrigaria a escolher duas coisas para mover um TA ao lado; nascendo no lugar
-   * atual, mover é trocar **um** campo.
-   */
+  const g: ValoresGravados = fato.gravado ?? {
+    instrutorId: null,
+    unidadeEnsinoId: null,
+    disciplinaId: null,
+    conteudo: fato.conteudo,
+    tecnica: fato.tecnica,
+    local: fato.local,
+  };
+  const ehAula = fato.origem === "aula";
+  const temTopico = fato.origem === "aula" || fato.origem === "avaliacao";
+  const temQuemMinistra = fato.origem !== "vista_prova";
+
+  /* A disciplina gravada: a da UE, quando há UE; senão a da coluna. */
+  const disciplinaGravada =
+    (g.unidadeEnsinoId === null
+      ? null
+      : (unidades.find((u) => u.id === g.unidadeEnsinoId)?.disciplinaId ?? null)) ?? g.disciplinaId;
+
   const [dia, definirDia] = React.useState(fato.data);
   const [ta, definirTa] = React.useState(String(fato.taInicial ?? 1));
-  const [unidade, definirUnidade] = React.useState("");
   const [tempos, definirTempos] = React.useState(String(fato.tempos ?? 1));
-  const [local, definirLocal] = React.useState(fato.local ?? "");
-  const [conteudo, definirConteudo] = React.useState(fato.conteudo ?? "");
-  const [tecnica, definirTecnica] = React.useState(fato.tecnica ?? "");
-  const [instrutorId, definirInstrutor] = React.useState("");
+  const [disciplinaId, definirDisciplina] = React.useState(disciplinaGravada ?? "");
+  const [unidadeId, definirUnidade] = React.useState(g.unidadeEnsinoId ?? "");
+  const [conteudo, definirConteudo] = React.useState(g.conteudo ?? "");
+  const [tecnica, definirTecnica] = React.useState(g.tecnica ?? "");
+  const [instrutorId, definirInstrutor] = React.useState(g.instrutorId ?? "");
+  const [local, definirLocal] = React.useState(g.local ?? "");
   const [recusa, definirRecusa] = React.useState<string | null>(null);
   const [avisos, definirAvisos] = React.useState<readonly { codigo: string; texto: string }[]>([]);
   const [agindo, definirAgindo] = React.useState(false);
+
+  const unidadesDaDisciplina = unidades.filter((u) => u.disciplinaId === disciplinaId);
+  const semUnidade = ehAula && disciplinaId !== "" && unidadeId === "";
+  const diaEscolhido = diasDaSemana.find((d) => d.data === dia);
 
   async function executar(acao: () => Promise<ResultadoDaAcao>): Promise<void> {
     definirRecusa(null);
@@ -114,217 +139,172 @@ export function AcoesDoBloco({
       return;
     }
     definirAvisos(resposta.avisos);
-    /* Sem aviso, o painel fecha; com aviso, ele fica para a pessoa LER (`RN-DEG-02`). */
+    /* Sem aviso, o cartão fecha; com aviso, ele fica para a pessoa LER (`RN-DEG-02`). */
     if (resposta.avisos.length === 0) aoFechar();
   }
 
-  const unidadeEscolhida = unidade === "" ? null : unidade;
+  /** Só o que mudou em relação ao GRAVADO. */
+  function mudancas(): Record<string, unknown> {
+    const m: Record<string, unknown> = {};
+    if (dia !== fato.data) m["data"] = dia;
+    if (Number(ta) !== fato.taInicial) m["taInicial"] = Number(ta);
+    if (Number(tempos) !== fato.tempos) m["tempos"] = Number(tempos);
+    if (texto(local) !== g.local) m["local"] = texto(local);
+    if (ehAula) {
+      const novaUe = unidadeId === "" ? null : unidadeId;
+      if (novaUe !== g.unidadeEnsinoId) m["unidadeEnsinoId"] = novaUe;
+      const novaDisciplina = novaUe === null && disciplinaId !== "" ? disciplinaId : null;
+      if (novaUe === null && novaDisciplina !== g.disciplinaId) m["disciplinaId"] = novaDisciplina;
+    }
+    if (temTopico || fato.origem === "atividade_nao_letiva") {
+      if (texto(conteudo) !== g.conteudo) m["conteudo"] = texto(conteudo);
+    }
+    if (temTopico && texto(tecnica) !== g.tecnica) m["tecnica"] = texto(tecnica);
+    /* Quem ministra não se apaga por aqui: vazio é "não mexi". */
+    if (temQuemMinistra && instrutorId !== "" && instrutorId !== g.instrutorId) {
+      m["instrutorId"] = instrutorId;
+    }
+    return m;
+  }
 
   const titulo = [fato.disciplina, fato.conteudo].filter(Boolean).join(" — ") || "Lançamento";
 
   return (
     <section
       data-slot="acoes-do-bloco"
-      aria-label={`Ações de ${titulo}`}
-      className="rounded-ciaara border-borda bg-superficie flex flex-col gap-3 border p-3"
+      aria-label={`Lançamento: ${titulo}`}
+      className="flex flex-col gap-3"
     >
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <div className="flex flex-col">
-          <strong className="text-sm text-texto" data-slot="bloco-escolhido">
-            {titulo}
-          </strong>
-          <span className="text-xs text-texto-suave">
-            {/*
-              ⚠️ O estado é dito em **texto**: *"sem posição"* não é uma cor na faixa, é a palavra.
-            */}
-            {fato.semPosicao
-              ? `${dataComDiaDaSemana(fato.data)} · sem posição`
-              : `${dataComDiaDaSemana(fato.data)} · a partir do tempo ${fato.taInicial ?? "—"}`}
-          </span>
-        </div>
-        <Button type="button" size="sm" variant="ghost" onClick={aoFechar}>
-          Fechar
-        </Button>
-      </header>
+      <p className="text-sm text-texto" data-slot="bloco-escolhido">
+        <strong>{titulo}</strong>
+        <span className="block text-xs text-texto-suave">
+          {fato.semPosicao
+            ? `${dataComDiaDaSemana(fato.data)} · sem posição`
+            : `${dataComDiaDaSemana(fato.data)} · a partir do tempo ${fato.taInicial ?? "—"}`}
+        </span>
+      </p>
 
-      <div className="flex flex-wrap gap-1" role="group" aria-label="O que fazer">
-        {(
-          [
-            ["mover", fato.semPosicao ? "Posicionar" : "Mover para…"],
-            ["editar", "Editar"],
-          ] as readonly (readonly [Aba, string])[]
-        ).map(([valor, rotulo]) => (
-          <Button
-            key={valor}
-            type="button"
-            size="sm"
-            variant={aba === valor ? "default" : "outline"}
-            aria-pressed={aba === valor}
-            onClick={() => definirAba(valor)}
-            data-aba={valor}
-          >
-            {rotulo}
-          </Button>
-        ))}
+      <div className="flex flex-wrap items-end gap-2">
+        <EscolhaSimples
+          id="dsa-mover-dia"
+          rotulo="Dia"
+          valor={dia}
+          aoMudar={definirDia}
+          opcoes={diasDaSemana.map((d) => ({ valor: d.data, rotulo: dataComDiaDaSemana(d.data) }))}
+        />
+        <EscolhaSimples
+          id="dsa-mover-ta"
+          rotulo="Em qual tempo começa"
+          valor={ta}
+          aoMudar={definirTa}
+          opcoes={temposParaEscolher(diaEscolhido, Math.max(linhas, 1)).map((t) => ({
+            valor: String(t.ta),
+            rotulo: t.rotulo,
+          }))}
+        />
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="dsa-editar-tempos">Quantos tempos</Label>
+          <Input
+            id="dsa-editar-tempos"
+            type="number"
+            min={1}
+            max={12}
+            value={tempos}
+            onChange={(e) => definirTempos(e.target.value)}
+            className="w-24 tabular-nums"
+          />
+        </div>
       </div>
 
-      {/*
-        ⚠️ **A UNIDADE SÓ É PEDIDA ONDE A CATRACA A EXIGE** (`Q-1`, segunda metade, `FR-028`): linha
-           **migrada e nunca editada** que não tem UE. Mover é editar — o gatilho carimba
-           `editado_em` —, e naquele instante o `CHECK` passa a cobrar a unidade. Oferecer o campo
-           sempre faria a pessoa achar que precisa trocar a UE a cada movimento.
-      */}
-      {fato.herdado && fato.origem === "aula" ? (
-        <EscolhaSimples
-          id="dsa-unidade-da-catraca"
-          rotulo="Unidade de ensino (exigida para mexer nesta linha)"
-          textoVazio="Escolha a unidade…"
-          valor={unidade}
-          aoMudar={definirUnidade}
-          ajuda="Esta aula veio da migração sem unidade. A decisão UE-1 exige a unidade em toda linha editada."
-          opcoes={unidades.map((u) => ({
-            valor: u.id,
-            rotulo: `${u.disciplinaCodigo} · UE ${u.numero} — ${u.topico}`,
-          }))}
+      {ehAula ? (
+        <>
+          {/*
+            ⚠️ **DISCIPLINA E UE, COMO NO LANÇAMENTO** (`D-DSA-1`): a UE é opcional; sem ela, o alerta e o
+               tópico obrigatório. É também o que satisfaz a catraca da linha histórica sem UE (`Q-1`).
+          */}
+          <EscolhaSimples
+            id="dsa-editar-disciplina"
+            rotulo="Disciplina"
+            textoVazio="Escolha a disciplina…"
+            valor={disciplinaId}
+            aoMudar={(v) => {
+              definirDisciplina(v);
+              definirUnidade("");
+            }}
+            opcoes={disciplinas.map((d) => ({ valor: d.id, rotulo: `${d.codigo} — ${d.nome}` }))}
+          />
+          {disciplinaId !== "" ? (
+            <EscolhaSimples
+              id="dsa-editar-unidade"
+              rotulo="Unidade de ensino (opcional)"
+              textoVazio="Sem unidade de ensino"
+              valor={unidadeId}
+              aoMudar={definirUnidade}
+              opcoes={unidadesDaDisciplina.map((u) => ({
+                valor: u.id,
+                rotulo: `UE ${u.numero} — ${u.topico} (${u.lancada}/${u.prevista} TA, restam ${u.restante})`,
+              }))}
+            />
+          ) : null}
+          {semUnidade ? (
+            <p
+              role="status"
+              data-slot="alerta-sem-unidade"
+              className="rounded-ciaara border-atrasado-borda bg-atrasado-fundo text-atrasado-tinta border px-2 py-1 text-sm"
+            >
+              {ALERTA_SEM_UNIDADE}
+            </p>
+          ) : null}
+        </>
+      ) : null}
+
+      {temTopico ? (
+        <>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="dsa-editar-conteudo">Tópico{semUnidade ? " (obrigatório)" : ""}</Label>
+            <Input
+              id="dsa-editar-conteudo"
+              value={conteudo}
+              onChange={(e) => definirConteudo(e.target.value)}
+            />
+          </div>
+          <EscolhaSimples
+            id="dsa-editar-tecnica"
+            rotulo="Técnica de ensino"
+            textoVazio="—"
+            valor={tecnica}
+            aoMudar={definirTecnica}
+            opcoes={tecnicas.map((t) => ({ valor: t, rotulo: t }))}
+          />
+        </>
+      ) : null}
+
+      {fato.origem === "atividade_nao_letiva" ? (
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="dsa-editar-conteudo">O que é</Label>
+          <Input
+            id="dsa-editar-conteudo"
+            value={conteudo}
+            onChange={(e) => definirConteudo(e.target.value)}
+          />
+        </div>
+      ) : null}
+
+      {temQuemMinistra ? (
+        /* ⚠️ Trocar quem ministra passa pelo porteiro da habilitação (`RN-INST-01`, Risco: Alto). */
+        <SeletorInstrutor
+          instrutores={instrutores}
+          escala={escala}
+          valor={instrutorId}
+          aoMudar={definirInstrutor}
+          rotulo={fato.origem === "avaliacao" ? "Responsável pela avaliação" : "Quem ministra"}
         />
       ) : null}
 
-      {aba === "mover" ? (
-        <div className="flex flex-wrap items-end gap-2">
-          <EscolhaSimples
-            id="dsa-mover-dia"
-            rotulo="Dia"
-            valor={dia}
-            aoMudar={definirDia}
-            opcoes={dias.map((d) => ({ valor: d, rotulo: dataComDiaDaSemana(d) }))}
-          />
-          <EscolhaSimples
-            id="dsa-mover-ta"
-            rotulo="Tempo de Aula"
-            valor={ta}
-            aoMudar={definirTa}
-            opcoes={Array.from({ length: Math.max(linhas, 1) }, (_, i) => ({
-              valor: String(i + 1),
-              rotulo: String(i + 1),
-            }))}
-          />
-          <Button
-            type="button"
-            size="sm"
-            disabled={agindo}
-            data-slot="confirmar-movimento"
-            onClick={() =>
-              executar(() =>
-                mover({
-                  fatoId: fato.fatoId,
-                  origem: fato.origem,
-                  data: dia,
-                  taInicial: Number(ta),
-                  unidadeEnsinoId: unidadeEscolhida,
-                }),
-              )
-            }
-          >
-            {agindo ? "Movendo…" : fato.semPosicao ? "Posicionar" : "Mover"}
-          </Button>
-        </div>
-      ) : null}
-
-      {aba === "editar" ? (
-        <div className="flex flex-col gap-2">
-          {/*
-            ⚠️ **NENHUM DESTES CAMPOS TOCA O CATÁLOGO** (`SC-012`). É a correção do `D-4`: na
-               planilha, instrutor, local e técnica eram atributo **do item do catálogo**, e trocar
-               o instrutor de uma UE **reescrevia todo DSA passado**. Aqui o valor é da LINHA.
-          */}
-          <div className="flex flex-wrap gap-2">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="dsa-editar-tempos">Quantos tempos</Label>
-              <Input
-                id="dsa-editar-tempos"
-                type="number"
-                min={1}
-                max={12}
-                value={tempos}
-                onChange={(e) => definirTempos(e.target.value)}
-                className="w-24 tabular-nums"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="dsa-editar-local">Local</Label>
-              <Input
-                id="dsa-editar-local"
-                value={local}
-                onChange={(e) => definirLocal(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {fato.origem === "aula" || fato.origem === "avaliacao" ? (
-            <>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="dsa-editar-conteudo">Tópico</Label>
-                <Input
-                  id="dsa-editar-conteudo"
-                  value={conteudo}
-                  onChange={(e) => definirConteudo(e.target.value)}
-                />
-              </div>
-              <EscolhaSimples
-                id="dsa-editar-tecnica"
-                rotulo="Técnica de ensino"
-                textoVazio="—"
-                valor={tecnica}
-                aoMudar={definirTecnica}
-                opcoes={tecnicas.map((t) => ({ valor: t, rotulo: t }))}
-              />
-              {/*
-                ⚠️ **TROCAR O INSTRUTOR PASSA PELO PORTEIRO DA HABILITAÇÃO** (`RN-INST-01`, *Risco:
-                   Alto*). Sem isso haveria **uma porta lateral**: lançar com quem é habilitado e
-                   depois trocar por quem não é. A recusa chega como frase, abaixo.
-              */}
-              <SeletorInstrutor
-                instrutores={instrutores}
-                escala={escala}
-                valor={instrutorId}
-                aoMudar={definirInstrutor}
-                rotulo="Trocar quem ministra (opcional)"
-              />
-            </>
-          ) : null}
-
-          <div>
-            <Button
-              type="button"
-              size="sm"
-              disabled={agindo}
-              data-slot="confirmar-edicao"
-              onClick={() =>
-                executar(() =>
-                  editar({
-                    fatoId: fato.fatoId,
-                    origem: fato.origem,
-                    tempos: Number(tempos),
-                    local,
-                    ...(fato.origem === "aula" || fato.origem === "avaliacao"
-                      ? { conteudo, tecnica }
-                      : {}),
-                    /*
-                     * ⚠️ **CAMPO VAZIO NÃO É MANDADO, e a distinção é a que a spec 011 pagou
-                     * caro**: `undefined` é *"não mexi nisso"* e `null` é *"apague"*. Mandar o
-                     * instrutor vazio **apagaria** quem ministra a aula, sem nenhuma tela dizendo.
-                     */
-                    ...(instrutorId === "" ? {} : { instrutorId }),
-                    ...(unidadeEscolhida === null ? {} : { unidadeEnsinoId: unidadeEscolhida }),
-                  }),
-                )
-              }
-            >
-              {agindo ? "Gravando…" : "Gravar as mudanças"}
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="dsa-editar-local">Local</Label>
+        <Input id="dsa-editar-local" value={local} onChange={(e) => definirLocal(e.target.value)} />
+      </div>
 
       {recusa ? (
         <p role="alert" className="text-conflito-tinta text-sm" data-slot="recusa-da-acao">
@@ -335,7 +315,7 @@ export function AcoesDoBloco({
       {avisos.length > 0 ? (
         <div role="status" data-slot="avisos-da-acao" className="flex flex-col gap-1">
           <p className="text-sm font-medium text-atrasado-tinta">
-            Feito, com {avisos.length} aviso(s):
+            Gravado, com {avisos.length} aviso(s):
           </p>
           <ul className="list-disc pl-5 text-sm text-atrasado-tinta">
             {avisos.map((a) => (
@@ -348,13 +328,26 @@ export function AcoesDoBloco({
         </div>
       ) : null}
 
-      <footer className="border-borda flex border-t pt-2">
+      <div className="border-borda flex flex-wrap items-center gap-2 border-t pt-2">
+        <Button
+          type="button"
+          size="sm"
+          disabled={agindo}
+          data-slot="gravar-edicao"
+          onClick={() =>
+            executar(() => atualizar({ fatoId: fato.fatoId, origem: fato.origem, ...mudancas() }))
+          }
+        >
+          {agindo ? "Gravando…" : "Gravar"}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={aoFechar}>
+          Cancelar
+        </Button>
+        <span className="flex-1" />
         <DialogoConfirmacao
           titulo="Excluir este lançamento?"
           /*
            * ⚠️ **A CONSEQUÊNCIA DIZ A VERDADE, e a verdade é que a exclusão é LÓGICA** (regra 4).
-           * *"Será apagado para sempre"* seria falso aqui — e treinar a pessoa a ler consequência
-           * falsa é pior que não mostrar diálogo.
            */
           consequencia={
             fato.origem === "vista_prova"
@@ -370,7 +363,7 @@ export function AcoesDoBloco({
             Excluir
           </Button>
         </DialogoConfirmacao>
-      </footer>
+      </div>
     </section>
   );
 }

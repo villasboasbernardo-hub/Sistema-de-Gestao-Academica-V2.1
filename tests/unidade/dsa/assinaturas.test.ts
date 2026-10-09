@@ -46,6 +46,7 @@ function linha(partes: Partial<ResponsavelDoCurso>): ResponsavelDoCurso {
     ordem: partes.ordem ?? 1,
     nomeCompleto: partes.nomeCompleto ?? null,
     postoGraduacao: partes.postoGraduacao ?? null,
+    especialidade: partes.especialidade ?? null,
     funcaoDescricao: partes.funcaoDescricao ?? "Função não informada",
   };
 }
@@ -643,5 +644,81 @@ describe("o Auxiliar do curso não esconde o Encarregado GERAL", () => {
   it("em setembro, o Encarregado da vigência de setembro", () => {
     const a = assinaturasDoDsa(LINHAS, { cursoId: CURSO_CAHO, data: "2026-09-14" });
     expect(a.direita?.nomeCompleto).toBe("ENCARREGADO DESDE AGOSTO");
+  });
+});
+
+/**
+ * ⚠️ **O POSTO DA ASSINATURA SAI POR EXTENSO, COM O QUADRO** *(item 7 das correções de 08/10/2026,
+ * decisão de Bernardo Villas Boas)*. O mapa é de `lib/dominio/posto-por-extenso.ts`; o que se prova
+ * aqui é que a resolução o aplica UMA vez, no campo que as duas rubricas imprimem, e que a sigla crua
+ * continua transportada.
+ */
+describe("item 7 · a rubrica imprime o posto POR EXTENSO, e a sigla continua transportada", () => {
+  it("fixo com quadro: `1ºTEN` + `(RM2-T)` → `Primeiro-Tenente (RM2-T)`", () => {
+    const assinatura = resolverAssinatura(
+      [
+        linha({
+          papel: "encarregado_divisao",
+          postoGraduacao: "1ºTEN",
+          especialidade: "(RM2-T)",
+          nomeCompleto: "NOMINAL SINTÉTICO",
+        }),
+      ],
+      { papel: "encarregado_divisao", cursoId: CURSO_CAHO, data: SEMANA_DE_SETEMBRO },
+    );
+
+    expect(assinatura?.postoPorExtenso).toBe("Primeiro-Tenente (RM2-T)");
+    expect(assinatura?.postoGraduacao).toBe("1ºTEN");
+    expect(assinatura?.especialidade).toBe("(RM2-T)");
+  });
+
+  it("praça com a especialidade sem parênteses, como as linhas por curso do remoto: `(FR)`", () => {
+    const assinatura = resolverAssinatura(
+      [linha({ papel: "elaborador", postoGraduacao: "2ºSG", especialidade: "FR" })],
+      { papel: "elaborador", cursoId: CURSO_CAHO, data: SEMANA_DE_SETEMBRO },
+    );
+
+    expect(assinatura?.postoPorExtenso).toBe("Segundo-Sargento (FR)");
+  });
+
+  it("sem quadro, nada entre parênteses — o par de hoje sai `Capitão de Fragata`", () => {
+    const par = assinaturasDoDsa(AS_DUAS_DE_HOJE, {
+      cursoId: CURSO_CAHO,
+      data: SEMANA_DE_SETEMBRO,
+    });
+
+    expect(par.direita?.postoPorExtenso).toBe("Capitão de Fragata");
+  });
+
+  /* ⚠️ **CONTROLE NEGATIVO: no dinâmico a sobra da linha não vira posto impresso.** */
+  it("no dinâmico o posto por extenso sai VAZIO, mesmo com posto e quadro esquecidos na linha", () => {
+    const assinatura = resolverAssinatura(
+      [
+        linha({
+          papel: "elaborador",
+          preenchimento: "dinamico_usuario_logado",
+          postoGraduacao: "CT",
+          especialidade: "(T)",
+        }),
+      ],
+      { papel: "elaborador", cursoId: CURSO_CAHO, data: SEMANA_DE_SETEMBRO },
+    );
+
+    expect(assinatura?.postoPorExtenso).toBe("");
+    expect(assinatura?.postoGraduacao).toBeNull();
+    expect(assinatura?.especialidade).toBeNull();
+  });
+
+  it("sigla desconhecida chega à rubrica como veio, nunca vazia (`RN-DEG-01`)", () => {
+    const assinatura = resolverAssinatura(
+      [linha({ papel: "elaborador", postoGraduacao: "XPTO" })],
+      {
+        papel: "elaborador",
+        cursoId: CURSO_CAHO,
+        data: SEMANA_DE_SETEMBRO,
+      },
+    );
+
+    expect(assinatura?.postoPorExtenso).toBe("XPTO");
   });
 });

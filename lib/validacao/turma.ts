@@ -62,6 +62,13 @@ export const esquemaDeTurma = z
       .min(0, "O efetivo não pode ser negativo.")
       .nullish()
       .transform((v) => v ?? null),
+    /*
+     * ⚠️ **A JANELA DA ETAPA PRESENCIAL** (`D-DSA-2`, decisão de Bernardo Villas Boas, 08/10/2026):
+     * só vale para turma semipresencial, e é ela que decide em que semanas há DSA. O `CHECK`
+     * `turmas_etapa_presencial_coerente` impõe as mesmas três condições que o esquema repete abaixo.
+     */
+    inicio_etapa_presencial: dataOpcional,
+    termino_etapa_presencial: dataOpcional,
   })
   .refine(
     (t) => t.data_inicio === null || t.data_termino === null || t.data_termino >= t.data_inicio,
@@ -69,6 +76,47 @@ export const esquemaDeTurma = z
       message: "A data de término não pode ser anterior à data de início.",
       path: ["data_termino"],
     },
-  );
+  )
+  /*
+   * ⚠️ **FORA DE SEMIPRESENCIAL A JANELA É GRAVADA VAZIA**, e isso é escolha, não descuido: o
+   * formulário só a oferece nessa modalidade, e um par de datas que nenhuma regra lê seria dado sem
+   * sentido esperando a próxima troca de modalidade para voltar a valer de surpresa.
+   */
+  .transform((t) =>
+    t.modalidade === "semipresencial"
+      ? t
+      : { ...t, inicio_etapa_presencial: null, termino_etapa_presencial: null },
+  )
+  .superRefine((t, ctx) => {
+    const inicio = t.inicio_etapa_presencial;
+    const termino = t.termino_etapa_presencial;
+    if ((inicio === null) !== (termino === null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [inicio === null ? "inicio_etapa_presencial" : "termino_etapa_presencial"],
+        message: "Informe o início e o término da etapa presencial, ou deixe os dois vazios.",
+      });
+      return;
+    }
+    if (inicio === null || termino === null) return;
+    if (termino < inicio) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["termino_etapa_presencial"],
+        message: "O término da etapa presencial não pode ser anterior ao início.",
+      });
+      return;
+    }
+    if (
+      (t.data_inicio !== null && inicio < t.data_inicio) ||
+      (t.data_termino !== null && termino > t.data_termino)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["inicio_etapa_presencial"],
+        message: "A etapa presencial precisa caber dentro do período da turma.",
+      });
+    }
+  });
 
 export type TurmaParaGravar = z.infer<typeof esquemaDeTurma>;

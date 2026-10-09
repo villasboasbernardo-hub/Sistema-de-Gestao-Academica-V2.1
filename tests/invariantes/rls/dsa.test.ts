@@ -571,12 +571,12 @@ describe("`DoD 4` · o teste negativo por perfil: os cinco que SÓ LEEM", () => 
   });
 });
 
-describe("`Q-1` · o lançamento sem UE, pela sessão de quem lança", () => {
+describe("`Q-1` e `D-DSA-1` · o lançamento sem UE, pela sessão de quem lança", () => {
   /*
-   * ⚠️ **ESTA É A ASSERÇÃO QUE O pgTAP NÃO PODE DAR.** Ela exercita o `grant execute` de
-   * `app.disciplina_sem_ue` (gotcha 5.1): a expressão do `CHECK` é avaliada com os direitos de
-   * QUEM GRAVA. Sem o grant, isto falha com `42501`/`permission denied for function` — e o pgTAP,
-   * que grava como dono, passaria verde.
+   * ⚠️ **ATÉ 08/10/2026 ESTA ERA A ASSERÇÃO DO `grant execute` DE `app.disciplina_sem_ue`** (gotcha
+   * 5.1). A `D-DSA-1` *(decisão de Bernardo Villas Boas)* tirou a função dos dois `CHECK` — a isenção
+   * virou regra geral —, e o gotcha 5.1 passou a valer para o porteiro NOVO, o da disciplina da AEC,
+   * que tem caso próprio abaixo.
    */
   it("o Operador lança aula SEM UE em curso por competências, com tópico", async () => {
     const { error } = await sessao("operador")
@@ -604,7 +604,12 @@ describe("`Q-1` · o lançamento sem UE, pela sessão de quem lança", () => {
     expect(linha?.unidade_ensino_id).toBeNull();
   });
 
-  it("⚠️ e a MESMA ação em disciplina NÃO isenta é recusada — `23514`, não `42501`", async () => {
+  /*
+   * ⚠️⚠️ **O CASO QUE DISCRIMINA A `D-DSA-1` — E O VEREDITO VIROU EM 08/10/2026** (DoD 8). Até ali
+   *      a MESMA ação, em disciplina NÃO isenta, era recusada com `23514`, e era este caso que provava
+   *      a isenção delimitada. Agora ela é aceita, com sessão real — o irmão está no `116`.
+   */
+  it("⚠️ `D-DSA-1` · a MESMA ação em disciplina NÃO isenta passa a ser ACEITA, com tópico", async () => {
     const { error } = await sessao("operador")
       .from("registros_aula")
       .insert({
@@ -616,21 +621,103 @@ describe("`Q-1` · o lançamento sem UE, pela sessão de quem lança", () => {
         instrutor_id: instrutorId,
         tempos_consumidos: 2,
         ta_inicial: 3,
-        conteudo_resumo: "Tem tópico, mas a disciplina não é isenta",
+        conteudo_resumo: "Tem tópico, e a disciplina não é isenta",
+      });
+    expect(error, `a aula sem UE foi recusada: ${JSON.stringify(error)}`).toBeNull();
+
+    const { data } = await servico
+      .from("registros_aula")
+      .select("disciplina_id, unidade_ensino_id")
+      .eq("codigo", `DSA-REG-NAOISENTA-${SELO}`)
+      .single();
+    const linha = data as { disciplina_id: string; unidade_ensino_id: string | null } | null;
+    expect(linha?.disciplina_id).toBe(disciplinaComumId);
+    expect(linha?.unidade_ensino_id).toBeNull();
+  });
+
+  it("⚠️ e SEM tópico continua recusada — `23514` da regra, não `42501` de permissão", async () => {
+    const { error } = await sessao("operador")
+      .from("registros_aula")
+      .insert({
+        codigo: `DSA-REG-SEMTOPICO-${SELO}`,
+        data: DIA,
+        turma_id: turmaRegularId,
+        curso_id: cursoRegularId,
+        disciplina_id: disciplinaComumId,
+        instrutor_id: instrutorId,
+        tempos_consumidos: 1,
+        ta_inicial: 6,
       });
 
-    expect(error, "a isenção vazou para disciplina comum").not.toBeNull();
+    expect(error, "a aula sem UE e sem tópico entrou").not.toBeNull();
     /*
      * ⚠️ O CÓDIGO DISTINGUE AS DUAS COISAS, e é por isso que ele é conferido: `23514` é a REGRA
-     * recusando (o `CHECK` da catraca), e `42501` seria PERMISSÃO. Se este caso passasse a dar
-     * `42501`, a isenção estaria certa e o lançamento legítimo do caso anterior estaria quebrado.
+     * recusando (o tópico substitui a UE), e `42501` seria PERMISSÃO — o caso de cima, com a MESMA
+     * sessão, mostra que ela existe.
      */
     expect(error?.code, JSON.stringify(error)).toBe("23514");
 
     const { count } = await servico
       .from("registros_aula")
       .select("id", { count: "exact", head: true })
-      .eq("codigo", `DSA-REG-NAOISENTA-${SELO}`);
+      .eq("codigo", `DSA-REG-SEMTOPICO-${SELO}`);
+    expect(count).toBe(0);
+  });
+});
+
+describe("item 1b · a disciplina da AEC, pela sessão de quem lança", () => {
+  /*
+   * ⚠️ **ESTA É A ASSERÇÃO QUE O pgTAP NÃO PODE DAR** — o gotcha 5.1 no porteiro novo. O `CHECK`
+   * `ativ_disciplina_so_aec_da_turma` chama `app.disciplina_e_da_turma`, e a expressão é avaliada
+   * com os direitos de QUEM GRAVA: sem o `grant execute`, a AEC com disciplina falharia com `42501`
+   * para todo usuário da tela — e o pgTAP, que grava como dono, passaria verde.
+   */
+  it("o Encarregado grava AEC de turma com disciplina do curso da turma", async () => {
+    const { error } = await sessao("encarregado_administracao_academica")
+      .from("atividades_nao_letivas")
+      .insert({
+        codigo: `DSA-ATV-AECDISC-${SELO}`,
+        categoria_normativa: "AEC",
+        escopo: "turma",
+        turma_id: turmaRegularId,
+        data: DIA,
+        descricao: "Visita técnica da disciplina",
+        tempos_consumidos: 1,
+        ta_inicial: 7,
+        disciplina_id: disciplinaComumId,
+      });
+    expect(error, `a AEC com disciplina foi recusada: ${JSON.stringify(error)}`).toBeNull();
+
+    const { data } = await servico
+      .from("atividades_nao_letivas")
+      .select("disciplina_id")
+      .eq("codigo", `DSA-ATV-AECDISC-${SELO}`)
+      .single();
+    expect((data as { disciplina_id: string | null } | null)?.disciplina_id).toBe(
+      disciplinaComumId,
+    );
+  });
+
+  it("⚠️ e a disciplina de OUTRO curso é recusada pelo porteiro — `23514`, não `42501`", async () => {
+    const { error } = await sessao("encarregado_administracao_academica")
+      .from("atividades_nao_letivas")
+      .insert({
+        codigo: `DSA-ATV-AECOUTRA-${SELO}`,
+        categoria_normativa: "AEC",
+        escopo: "turma",
+        turma_id: turmaRegularId,
+        data: DIA,
+        descricao: "AEC com disciplina do curso por competências",
+        tempos_consumidos: 1,
+        ta_inicial: 8,
+        disciplina_id: disciplinaIsentaId,
+      });
+    expect(error?.code, JSON.stringify(error)).toBe("23514");
+
+    const { count } = await servico
+      .from("atividades_nao_letivas")
+      .select("id", { count: "exact", head: true })
+      .eq("codigo", `DSA-ATV-AECOUTRA-${SELO}`);
     expect(count).toBe(0);
   });
 });
@@ -777,5 +864,81 @@ describe("`V-7` · a atividade de escopo global na grade de quem lê", () => {
       });
     // `23514`, da regra — não `42501`, de permissão: quem recusa é o CHECK da exclusividade.
     expect(juntos.error?.code, JSON.stringify(juntos.error)).toBe("23514");
+  });
+});
+
+describe("⚠️ `D-DSA-3` · a transação do empurrão respeita o alcance de QUEM CHAMA", () => {
+  /*
+   * ⚠️ **ESTA É A ASSERÇÃO QUE O pgTAP NÃO PODE DAR**: `gravar_lancamentos_em_transacao` é
+   * `SECURITY INVOKER`, e só uma sessão real mostra que ela não alcança o que a sessão não alcança.
+   * ⚠️ **E O CASO É O PIOR**: a primeira operação é legítima (a turma DO Operador) e a segunda é a
+   * turma ALHEIA. Sem a transação, a primeira ficaria gravada; sem o `42501` do `UPDATE` sem linha,
+   * a segunda seria pulada em silêncio.
+   */
+  async function idDe(codigo: string): Promise<string> {
+    const { data } = await servico
+      .from("registros_aula")
+      .select("id")
+      .eq("codigo", codigo)
+      .single();
+    return (data as { id: string }).id;
+  }
+
+  it("operação na turma alheia recusa com `42501`, e a operação legítima da mesma chamada é desfeita", async () => {
+    const propria = await idDe(`DSA-REG-PROPRIA-${SELO}`);
+    const { error } = await sessao("operador").rpc("gravar_lancamentos_em_transacao", {
+      p_operacoes: [
+        {
+          acao: "atualizar",
+          tabela: "registros_aula",
+          id: propria,
+          campos: { conteudo_resumo: "Tópico que NÃO pode ficar gravado" },
+        },
+        {
+          acao: "atualizar",
+          tabela: "registros_aula",
+          id: aulaDaTurmaAlheiaId,
+          campos: { ta_inicial: 5 },
+        },
+      ],
+    });
+    expect(error?.code, JSON.stringify(error)).toBe("42501");
+
+    const { data } = await servico
+      .from("registros_aula")
+      .select("codigo, conteudo_resumo, ta_inicial")
+      .in("id", [propria, aulaDaTurmaAlheiaId]);
+    const linhas = (data ?? []) as {
+      codigo: string;
+      conteudo_resumo: string | null;
+      ta_inicial: number;
+    }[];
+    expect(linhas.find((l) => l.codigo.includes("PROPRIA"))?.conteudo_resumo).not.toBe(
+      "Tópico que NÃO pode ficar gravado",
+    );
+    expect(linhas.find((l) => l.codigo.includes("ALHEIA"))?.ta_inicial).toBe(1);
+  });
+
+  it("controle positivo · a mesma sessão grava na turma que ela alcança", async () => {
+    const propria = await idDe(`DSA-REG-PROPRIA-${SELO}`);
+    const { error } = await sessao("operador").rpc("gravar_lancamentos_em_transacao", {
+      p_operacoes: [
+        {
+          acao: "atualizar",
+          tabela: "registros_aula",
+          id: propria,
+          campos: { conteudo_resumo: "Tópico gravado pela transação" },
+        },
+      ],
+    });
+    expect(error, JSON.stringify(error)).toBeNull();
+    const { data } = await servico
+      .from("registros_aula")
+      .select("conteudo_resumo")
+      .eq("id", propria)
+      .single();
+    expect((data as { conteudo_resumo: string | null }).conteudo_resumo).toBe(
+      "Tópico gravado pela transação",
+    );
   });
 });
