@@ -173,3 +173,14 @@ Contra esta lista o grupo (a) prova que **nenhuma asserção mudou** (`git hash-
     `MOD(5.2)` e deu `#N/A`. **O `.xlsx` não passa por isso**: a fórmula do OOXML é sempre em inglês e
     com vírgula, e o programa a traduz para o idioma de quem abre. A segunda rodada trocou a vírgula
     entre argumentos por ponto e vírgula, só na sonda.
+- **T055 — o fechamento do PR 1, sobre `e84334d`** (09/10/2026):
+  - `pnpm verificar` saiu **0**: **2.042** casos de unidade em **137** arquivos, tipos, lint, formatação e
+    build;
+  - o resto do `verificar:tudo` sobre base limpa (`db:reset:limpo`) saiu **0**: pgTAP **585** asserções em
+    **42** arquivos, invariantes e RLS **266** casos em **13** arquivos, ponta a ponta **437 passados e 6
+    pulados** com 2 processos, em 11,3 min;
+  - **sem migration**: `git diff main -- supabase/` vazio, e a impressão digital do esquema no banco local
+    é a da T002 — **1.623 objetos, `3650c6c2e34c1710de6e63a02e192ec4`**;
+  - **CI verde nos três blocos** (run `37942014394`): pgTAP 585, ponta a ponta **436 passados, 1 instável e
+    6 pulados** — os mesmos **443** casos do local; o instável foi `salas.spec.ts:126`, que esta spec não
+    toca (a classe *frágil sob carga*, com `retries: 2` no CI).
