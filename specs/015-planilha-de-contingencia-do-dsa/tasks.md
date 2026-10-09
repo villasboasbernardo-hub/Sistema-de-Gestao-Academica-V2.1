@@ -219,7 +219,7 @@ desce na CONTROLE e na CRONOS; um lançamento depois da data de referência não
 
 ## Fase final — Encerramento
 
-- [ ] T069 Depois da palavra de Bernardo e do merge de cada PR: registrar em `CLAUDE.md` (seção *Estado atual*) a planilha de contingência — PRs, commits, runs do CI, as respostas `DP-1` a `DP-5` e os *Achados* —, marcar o `Status` de `specs/015-planilha-de-contingencia-do-dsa/spec.md`, e apagar o ramo mesclado, local e remoto, conferindo pela lista de PRs mesclados (`gh pr list --state merged`), nunca por `git merge-base --is-ancestor`; e lembrar a `PEND-DSA-SUGESTAO` como o próximo PR
+- [X] T069 Depois da palavra de Bernardo e do merge de cada PR: registrar em `CLAUDE.md` (seção *Estado atual*) a planilha de contingência — PRs, commits, runs do CI, as respostas `DP-1` a `DP-5` e os *Achados* —, marcar o `Status` de `specs/015-planilha-de-contingencia-do-dsa/spec.md`, e apagar o ramo mesclado, local e remoto, conferindo pela lista de PRs mesclados (`gh pr list --state merged`), nunca por `git merge-base --is-ancestor`; e lembrar a `PEND-DSA-SUGESTAO` como o próximo PR
 
 ---
 

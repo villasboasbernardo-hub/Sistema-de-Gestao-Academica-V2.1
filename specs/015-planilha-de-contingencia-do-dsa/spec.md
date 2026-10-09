@@ -4,7 +4,7 @@
 
 **Created**: 09/10/2026
 
-**Status**: Draft — **clarify em 09/10/2026** (as 7 perguntas do lote, §10, respondidas por Bernardo, todas pela recomendação) · **plan e tasks aprovados em 09/10/2026**
+**Status**: **Encerrada em 09/10/2026** — conferência aprovada por Bernardo no preview; mesclada na `main` por squash em `d57d505` (PR #42) e `8389a91` (PR #43) · clarify em 09/10/2026 (as 7 perguntas do lote, §10, respondidas por Bernardo, todas pela recomendação) · plan e tasks aprovados em 09/10/2026
 
 **Input**: Pedido de Bernardo Villas Boas em 08/10/2026 — *"o DSA é usado todo dia. Se o sistema
 falhar, quebrar ou tiver um defeito que impeça o DSA da semana, o operador precisa de um «estepe»:
