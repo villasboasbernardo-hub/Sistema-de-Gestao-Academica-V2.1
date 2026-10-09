@@ -184,3 +184,52 @@ Contra esta lista o grupo (a) prova que **nenhuma asserção mudou** (`git hash-
   - **CI verde nos três blocos** (run `37942014394`): pgTAP 585, ponta a ponta **436 passados, 1 instável e
     6 pulados** — os mesmos **443** casos do local; o instável foi `salas.spec.ts:126`, que esta spec não
     toca (a classe *frágil sob carga*, com `retries: 2` no CI).
+
+## Grupo (c) — PR 2: CONTROLE e CRONOS
+
+- **`TODAY` entrou no vocabulário com o dia vindo do modelo** (`Pasta.dataDeHoje`): o cache diz o que o
+  `TODAY()` valia no dia da geração, e sem o dia a árvore devolve `#N/A` — nunca a data do relógio da
+  máquina que roda o teste.
+- **CONTROLE e CRONOS contra a regra do sistema, na turma sintética** (`tests/unidade/dsa/planilha-controle.test.ts`
+  e `planilha-cronos.test.ts`): a CH lançada é a de todo fato com TA e disciplina até a data de
+  referência, nas duas referências testadas (o dia da geração e 30/04/2026); a situação é a de
+  `situacaoDaDisciplina` sem conflito e sem atraso, inclusive a prevista zero; e as palavras são as do
+  painel de situação do DSA, conferidas no arquivo dele. **Defeito deliberado:** o corte `<=` trocado por
+  `<` — **2 de 8 reprovaram** (a CH na própria data de referência e o lançamento offline), e o arquivo
+  foi restaurado.
+- **T062 — a CONTROLE contra o painel de situação do sistema, no banco local** (`tests/invariantes/planilha-igual-ao-papel.test.ts`,
+  semente `E2D95`): com a referência posta no mesmo corte do painel (o fim da semana corrente), a CH
+  lançada de cada disciplina é a acumulada do painel, a situação em três degraus é a de
+  `situacaoDaDisciplina` sem conflito e sem atraso, e a coluna de retrato é a do painel — **7 de 7**.
+  ⚠️ **A primeira rodada não discriminava o retrato:** o painel da semente não dizia *Atrasada* nem
+  *Conflitou* em disciplina nenhuma (medido: *Em andamento* e duas *Aguardando início*), e a coluna se
+  comparava vazia com vazia. A prova passou a pôr a previsão de início de uma disciplina sem aula no
+  passado — o painel diz *Atrasada* — e exige isso. **Defeito deliberado:** a leitura sem o retrato
+  reprovou com *"I95: retrato null × Atrasada"*. As duas turmas da semente sem disciplina saem com a
+  CONTROLE e a CRONOS vazias, sem erro de fórmula.
+- **T064/T065 — o arquivo de conferência do PR 2 nos dois Excel** (semente `E2D96`, 50 semanas, 682
+  lançamentos, **67.400 fórmulas, 1.262.701 bytes**, a CONTROLE com a referência fixa em 30/06/2026):
+
+  | Excel | Fórmulas | IMPRESSÃO (3 semanas) | CONTROLE na referência fixa | Lançamento offline pela automação | Veredito |
+  |---|---|---|---|---|---|
+  | 16.0 | 67.400 | 0 diferenças | 9 células, 0 diferenças | CH lançada 0 → 1, restante 40 → 39, CRONOS 0 → 1 nas duas semanas | **APROVADO** |
+  | 12.0 (2007) | 67.400 | 0 diferenças | 9 células, 0 diferenças | o mesmo | **APROVADO** |
+
+  Dos dois TA lançados pela automação, só o de antes da referência contou na CONTROLE (`D-5`); os dois
+  contaram na CRONOS, cada um na sua semana. ⚠️ **A primeira rodada não mostrava o −1 da restante:** a
+  disciplina escolhida tinha 673 TA lançados contra 40 previstos, e a restante, que nunca fica negativa,
+  ficou em 0; o gabarito passou a escolher uma disciplina com restante. **Defeito deliberado, à mão no
+  arquivo:** o corte `<=` da CONTROLE trocado por `<` (9 fórmulas) — **REPROVADO**, `CONTROLE D4:
+  Excel=[667] gabarito=[673]`, saída 1.
+- ⚠️ **ACHADO — a geração não é idêntica entre duas sementes, por herança do DSA:** o total de fórmulas da
+  entrada alternou entre 66.535 e 66.533 em rodadas seguidas. A causa: a aula *planejada para uma data que
+  ainda não chegou* da semente cai no mesmo TA de uma aula sintética, e quando dois lançamentos dividem o
+  TA o domínio do DSA põe um na grade e o outro em *sem posição* pela ordem do `fato_id` — um uuid novo a
+  cada semente. A planilha espelha a escolha, e duas células mudam de sugeridas para escritas. **Não
+  corrigido:** a tela do DSA tem o mesmo comportamento, e a tela não muda nesta spec; o gabarito sai da
+  mesma rodada que o arquivo, então a prova não depende disso.
+- **T066 — a sonda de semântica no Google, com as formas novas** (`TODAY()`, `MAX(0; prevista −
+  lançada)`, a situação em três degraus e o critério de data com `TODAY()`): **31 de 31 iguais à árvore**
+  — o `TODAY()` voltou formatado como data (09/10/2026), que é a série 46304 da árvore. Pasta própria
+  na conta conectada, **movida para a lixeira no fim**.
+- **T068 — `verificar:tudo` e CI:** `[pendente]`
