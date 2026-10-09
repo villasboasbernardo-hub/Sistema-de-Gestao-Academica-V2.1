@@ -149,6 +149,22 @@ export const ROTA_DA_IMPRESSAO_DO_DSA = "/print/dsa" as const;
  * semana de **hoje** no dia em que alguém reabrisse o link — que é o `D-8` da planilha ("a `DSA
  * C-ESPC-HN 2027` ainda tem as datas de 2026") pelo avesso.
  */
+/**
+ * O caminho do download da planilha de contingência da turma (`contracts/rota-de-download.md` da
+ * spec 015).
+ *
+ * ⚠️ **SEM PARÂMETRO DE BUSCA, DE PROPÓSITO**: a planilha é sempre do ano inteiro (`FR-030`), e a
+ * semana que abre selecionada é decidida no servidor (`FR-022`).
+ * ⚠️ **O CAMINHO SAI DA CONSTANTE**, como o do DSA — a guarda de caminho resolve `${CONSTANTE}` e não
+ * resolve chamada de função (ver `enderecoDoDsa`).
+ *
+ * @example enderecoDaPlanilhaDeContingencia("C-ApA-PCN-PR-EAD T2 2026")
+ *          → "/turmas/C-ApA-PCN-PR-EAD%20T2%202026/dsa/planilha"
+ */
+export function enderecoDaPlanilhaDeContingencia(codigo: string): string {
+  return `${RAIZ_DE_TURMAS}/${encodeURIComponent(codigo)}/dsa/planilha`;
+}
+
 export function enderecoDaImpressaoDoDsa(
   codigo: string,
   recorte: {

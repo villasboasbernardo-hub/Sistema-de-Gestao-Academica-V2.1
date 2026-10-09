@@ -133,8 +133,16 @@ const eslintConfig = defineConfig([
      * ⚠️ EXCEÇÃO AUTORIZADA, UMA SÓ: o CSS de impressão, para a normalização preto-no-branco.
      * Ela ainda NÃO EXISTE — a rota de impressão é dos épicos 10 e 11 — e fica prevista aqui para
      * não ser negociada às pressas no dia em que aparecer, que é como exceção vira regra.
+     *
+     * ⚠️ SEGUNDA EXCEÇÃO, NOMINAL E DE UM ARQUIVO SÓ: `lib/planilha/cores.ts`. "(a) — exceção nominal
+     * só para lib/planilha/cores.ts, ao lado da exceção do CSS de impressão" — Bernardo Villas Boas,
+     * dúvida 1 do analyze da spec 015, 09/10/2026. O `.xlsx` exige a cor como valor dentro do arquivo
+     * (`FFRRGGBB`), e não há token numa planilha. A fonte continua sendo uma: as cores são as do papel,
+     * `app/print/dsa/documento.css`, e `tests/unidade/planilha-cores.test.ts` reprova se divergirem —
+     * e reprova cor em QUALQUER outro arquivo de `lib/planilha/`, com `#` ou sem.
      */
     files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+    ignores: ["lib/planilha/cores.ts"],
     rules: {
       "no-restricted-syntax": [
         "error",

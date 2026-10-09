@@ -35,7 +35,10 @@ import { avisosAntesDeImprimir } from "@/lib/dominio/dsa/impressao";
 import { motivoDoNumeroAusente, numeroDoDsa } from "@/lib/dominio/dsa/numero-do-dsa";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
-import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+import {
+  enderecoDaPlanilhaDeContingencia,
+  enderecoDaTurma,
+} from "@/lib/navegacao/endereco-de-turma";
 import { CONTRATO } from "@/lib/navegacao/contrato";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
@@ -55,6 +58,7 @@ import { lerExtrasDaImpressao, lerSemanaDoDsa } from "./leitura";
 import { BotaoImprimir, EdicaoDasAssinaturasNaTela } from "./AssinaturasEditaveis";
 import { CabecalhoDaSemana, RodapeDaSemana } from "./DocumentoNaTela";
 import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
+import { podeBaixarPlanilhaDeContingencia } from "./planilha/acesso";
 import { PainelDeLancamento } from "./PainelDeLancamento";
 import { PainelDeSituacao } from "./PainelDeSituacao";
 
@@ -353,7 +357,27 @@ export default async function SemanaDoDsa({
           <span className="text-xs text-texto-suave">
             Uma página A4 paisagem, com as assinaturas da data desta semana.
           </span>
+          {/*
+            ⚠️ **O «ESTEPE» DO DSA** (spec 015, `FR-001`): o ano inteiro da turma num `.xlsx`, para
+               fazer o DSA fora do sistema se ele falhar. Link comum, SEM `download` (R-10): a rota
+               decide o nome do arquivo, e a recusa volta para cá com o aviso abaixo.
+          */}
+          {podeBaixarPlanilhaDeContingencia(permissoes, turma.modalidade as string | null) ? (
+            <a
+              href={enderecoDaPlanilhaDeContingencia(codigo)}
+              className="text-sm underline underline-offset-2 hover:text-texto"
+              data-slot="baixar-planilha-de-contingencia"
+            >
+              Baixar planilha de contingência
+            </a>
+          ) : null}
         </div>
+        {valores.planilha === "falhou" ? (
+          <p role="alert" className="text-sm text-conflito-tinta" data-slot="planilha-falhou">
+            A planilha de contingência não pôde ser gerada agora. Tente de novo em instantes; se
+            continuar, avise o administrador do sistema.
+          </p>
+        ) : null}
 
         {/*
          * ⚠️ **NENHUM DELES BLOQUEIA O BOTÃO** (`RN-DEG-02`): *"regra normativa vira alerta, nunca

@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 import {
   codigoDaTurmaNoSegmento,
   enderecoDaNovaTurma,
+  enderecoDaPlanilhaDeContingencia,
   enderecoDaTurma,
   enderecoDaTurmaNoCurso,
 } from "@/lib/navegacao/endereco-de-turma";
@@ -108,5 +109,21 @@ describe("`codigoDaTurmaNoSegmento` decodifica UMA VEZ SÓ", () => {
 
   it("sequência de escape malformada degrada para o texto recebido, sem estourar", () => {
     expect(codigoDaTurmaNoSegmento("C-Ap-FR%2026%")).toBe("C-Ap-FR%2026%");
+  });
+});
+
+describe("spec 015 · o endereço da planilha de contingência", () => {
+  it("o exemplo do contrato: código com espaço vira %20 e volta idêntico", () => {
+    const endereco = enderecoDaPlanilhaDeContingencia("C-ApA-PCN-PR-EAD T2 2026");
+    expect(endereco).toBe("/turmas/C-ApA-PCN-PR-EAD%20T2%202026/dsa/planilha");
+    const segmento = endereco.split("/")[2] as string;
+    expect(codigoDaTurmaNoSegmento(segmento)).toBe("C-ApA-PCN-PR-EAD T2 2026");
+  });
+
+  it("cada um dos 28 códigos reais volta IDÊNTICO do endereço da planilha", () => {
+    for (const codigo of TURMAS) {
+      const segmento = enderecoDaPlanilhaDeContingencia(codigo).split("/")[2] as string;
+      expect(codigoDaTurmaNoSegmento(segmento)).toBe(codigo);
+    }
   });
 });
