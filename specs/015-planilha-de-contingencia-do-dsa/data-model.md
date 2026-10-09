@@ -142,4 +142,4 @@ operação binária, ou chamada de **uma das funções do vocabulário fechado**
   6 dias × 9 TA + sem posição) ≈ **3.000 linhas**. As planilhas de hoje têm 1.260 a 2.760 na mesma aba
   (`estado-atual.md` §3).
 - **Fórmulas:** a IMPRESSÃO passa a ter as de **uma** semana (o seletor), contra 7.693 a 16.856 hoje
-  (`estado-atual.md` §3). Contagem real e tamanho do arquivo: **[pendente — PR 1]**.
+  (`estado-atual.md` §3). Medido na T050 (turma sintética de 50 semanas, 682 lançamentos, banco local, 09/10/2026): **67.255 fórmulas** e **1.258.196 bytes** — a grade da semente saiu com 9 TA por dia. ⚠️ O dimensionamento acima supunha 9 TA; com o relógio derivado do regime, que chega com os 12 do teto, a grade corta no regime + 1 ou no último TA já ocupado (`temposDaGrade`).

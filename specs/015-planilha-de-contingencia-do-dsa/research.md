@@ -188,8 +188,9 @@ está na própria planilha:
   2 TA junta conteúdo e pé na 2ª; bloco de 1 TA leva as três, com quebra de linha e fonte menor.
 - **Por quê:** uma célula não transborda para a de baixo. Tudo na primeira célula seria cortado em
   bloco de 1 a 2 TA; repetir em toda célula poluiria o papel.
-- A altura das linhas e o corpo de letra que cabem numa página A4 paisagem saem da medição no PR 1:
-  **[pendente]**. A conferência de Bernardo julga a legibilidade no papel (`quickstart.md` §5).
+- A altura das linhas e o corpo de letra: **34 pt** na linha de TA (três linhas de texto em corpo 8) e
+  **11 pt** na linha de intervalo ou almoço, com a página ajustada a 1 × 1 — o que coube na prova do Excel
+  (T052). Se a letra fica legível no papel impresso é julgamento da conferência de Bernardo. A conferência de Bernardo julga a legibilidade no papel (`quickstart.md` §5).
 
 ## R-9 — O catálogo sugere pela função do domínio, `preencherLancamento`
 

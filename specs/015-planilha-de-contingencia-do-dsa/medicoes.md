@@ -98,4 +98,78 @@ Contra esta lista o grupo (a) prova que **nenhuma asserção mudou** (`git hash-
   | `montarSemanaDoDsa` sem o recorte da ocupação à semana | `leitura-do-periodo` (semana 2, nas 2 turmas com lançamento) | — |
   | `lerTodasAsPaginas` devolvendo só a 1ª página | `paginacao` (6 de 15) e `leitura-paginada` (nº 26 × 30, CH 1.006 × 1.114) | — |
   | acumulado sem a própria semana | `leitura-paginada` (rodapé e painel 1.113 × 1.114) | `leitura-do-periodo` — **por desenho**: o defeito está na montagem, que os dois lados usam |
-- T013, idempotência e CI: `[pendente]`
+- **T013 — o commit do grupo (a) é `f72d1ec`**, empurrado para o ramo, e o **CI deu verde nos três
+  blocos** sobre ele (run `37931046489`: `qualidade`, `build` e `banco` com `success`). A idempotência
+  das amostras novas se provou pela forma delas: `PAG-93-*` e as linhas da semente entram por `upsert`
+  pelo código, e a segunda rodada da T007 regravou as mesmas 1.101 aulas sem colidir.
+
+## Grupo (b) — PR 1
+
+- **Os defeitos que a prova contra o banco achou, e que os testes de unidade não podiam ver**
+  (`tests/invariantes/planilha-igual-ao-papel.test.ts`, banco local, 09/10/2026, semente do DSA `E2D95`):
+
+  | O que a invariante mostrou | A causa | O conserto |
+  |---|---|---|
+  | toda aula da turma com relógio saía como *atividade*, sem título nem disciplina | a aula com UE tem `registros_aula.disciplina_id` **nulo** — a disciplina é a da UE, e `vw_ocupacao_ta` resolve com `coalesce(ue.disciplina_id, r.disciplina_id)`; a leitura da planilha olhava só a coluna | a leitura resolve pela UE primeiro, a mesma regra da view |
+  | a CH cumprida do rodapé ficava **2 TA abaixo** da do papel, da semana 15 em diante | a avaliação de **posição herdada** da carga (`DSA-E2D95-AVHERD`, 07/04): a tela a mostra *sem posição* e o papel não a imprime — mas ela tem TA gravado, está em `vw_ocupacao_ta` e conta na CH | a lista *sem posição* separa "não imprime" de "não conta": a de posição herdada conta na CH e no nº, sem ir para a grade |
+
+  Depois dos dois, **as três turmas semeadas passaram em todas as semanas com lançamento** (I-P5): a
+  presencial com sábado (`REL`), a semipresencial com a etapa cadastrada (`VIG` — a pasta trouxe só as semanas da etapa, menos de 50, como a prova exige) e a
+  sem relógio (`SEM`) — e a contagem de **todas as tabelas de `public`** ficou igual antes e depois de
+  ler, montar e escrever (`FR-004`, `SC-009`).
+- **Os três defeitos deliberados da IMPRESSÃO acenderam a guarda certa** (`tests/unidade/dsa/planilha-impressao.test.ts`,
+  arquivo restaurado depois de cada um):
+
+  | Defeito plantado | Reprovou |
+  |---|---|
+  | o início de bloco sem o período (o bloco atravessaria o almoço) | os cartões e o tom (2 de 27) |
+  | o Estudo Individual dois TA depois do último lançado | os cartões, o tom e o lugar do EI (6 de 27) |
+  | a CH cumprida sem o corte da semana | o rodapé (1 de 27) |
+- **T050 — o arquivo de conferência, pelo caminho real** (banco local → leitura da rota → montagem →
+  escritor; turma `E2D96` da semente com 676 aulas sintéticas, 09/10/2026): **50 semanas, 682
+  lançamentos, 67.246 fórmulas, 1.257.961 bytes** (o limite de corpo de uma função da Vercel é 4,5 MB),
+  leitura em **2,5 s** e montagem com escrita em **1,4 s** — números da rodada final, depois do conserto
+  da guarda de horário abaixo (a primeira rodada mediu 67.255 fórmulas e 1.258.196 bytes). **`SC-002` (emendado): zero erro de fórmula**
+  em todas as abas da semente sintética.
+- **T052 — o mesmo arquivo nos dois Excel desta máquina**, por `scripts/provas/planilha_no_excel.ps1`:
+
+  | Excel | Fórmulas conferidas | Erros | IMPRESSÃO nas semanas 15, 20 e 41 | Veredito |
+  |---|---|---|---|---|
+  | 16.0 (Microsoft 365) | 67.246 | 0 | 152 + 152 + 152 células, 0 diferenças | **APROVADO** |
+  | 12.0 (Excel 2007, `DP-2`) | 67.246 | 0 | 152 + 152 + 152 células, 0 diferenças | **APROVADO** |
+
+  As duas rodadas — antes e depois do conserto da guarda de horário — deram APROVADO nos dois Excel.
+
+  ⚠️ **Três obstáculos medidos na automação, e o script carrega o conserto de cada um:** (1) o acesso
+  tipado ao Excel falhava com *"Interface não registrada (0x80040155)"* — os dois Office instalados
+  juntos deixam registrada a biblioteca de tipos de outra versão —, e o script passou a usar só
+  `IDispatch` (`InvokeMember`); (2) a ProgID `Excel.Application.12` é **redirecionada para o Excel 16**
+  com o Microsoft 365 instalado, então o 2007 se alcança abrindo o `EXCEL.EXE` do Office12 com o arquivo
+  e se ligando à pasta aberta por ele; (3) o Windows PowerShell 5.1 lê `.ps1` sem BOM como ANSI, e o
+  script é gravado em UTF-8 com BOM.
+  **Defeito deliberado:** um intervalo da IMPRESSÃO deslocado em UMA linha, à mão, dentro do arquivo
+  (54 fórmulas) — **REPROVADO, 49 falhas, saída 1**: o Excel recalculou com o intervalo errado e a grade
+  divergiu do gabarito célula a célula.
+- ⚠️ **A GUARDA DE HORÁRIO NUM LUGAR SÓ PEGOU UM SEGUNDO CÁLCULO** (`tests/unidade/horario-unico.test.ts`,
+  no primeiro `pnpm verificar`): a HORÁRIOS convertia `HH:MM` em minutos para a IMPRESSÃO subtrair o
+  intervalo entre dois TA. Agora ela grava o intervalo pronto, por `minutosEntre` — a mesma função que
+  `gradeDoPapel` usa para desenhar o intervalo do papel —, e a IMPRESSÃO só o lê.
+- **T053 — Google Planilhas, pelo conector do Drive** (pasta própria na conta conectada, dado sintético,
+  **movida para a lixeira no fim** — a ferramenta não apaga em definitivo, e a lixeira esvazia sozinha
+  em 30 dias):
+  - ⚠️ **O arquivo `.xlsx` não foi enviado, e a razão é medida:** nesta máquina não há sincronização do
+    Google Drive, e o conector só recebe o arquivo dentro da chamada, em base64. A amostra de uma semana
+    tem 37.214 bytes (49.620 em base64); o base64 sai a ~1,6 token por caractere — perto de **59 mil
+    tokens numa chamada**, e um caractere copiado errado corrompe o ZIP. O arquivo de verdade no Google
+    é passo da conferência de Bernardo (`roteiro-de-conferencia-pr1.md`).
+  - **O que se provou: a semântica das fórmulas no motor do Google**, por uma sonda em CSV
+    (`tests/unidade/planilha-sonda-google.test.ts`) com **27 casos** — cada função do vocabulário e cada
+    armadilha que a planilha usa (vazio contra `""`, número concatenado, critério com operador
+    concatenado, `MATCH` sem diferenciar maiúscula, `INDEX` com linha calculada, data por
+    `DAY`/`MONTH`/`YEAR`, `CHAR(10)`, `MOD`), escritas pelo mesmo `escrever()` da planilha e com o
+    esperado da árvore: **27 de 27 iguais**.
+  - ⚠️ **ACHADO da primeira rodada: o CSV é lido no idioma da planilha.** Na conta em pt-BR a vírgula é
+    o separador decimal, e toda fórmula com vírgula entre argumentos voltou `#ERROR!` — `MOD(5,2)` virou
+    `MOD(5.2)` e deu `#N/A`. **O `.xlsx` não passa por isso**: a fórmula do OOXML é sempre em inglês e
+    com vírgula, e o programa a traduz para o idioma de quem abre. A segunda rodada trocou a vírgula
+    entre argumentos por ponto e vírgula, só na sonda.
