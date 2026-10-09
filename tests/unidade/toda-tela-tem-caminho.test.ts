@@ -226,3 +226,88 @@ describe("`SC-003` · toda tela do sistema tem caminho clicável até ela", () =
     ).toEqual([]);
   });
 });
+
+/*
+ * ⚠️ **A ROTA DE DOWNLOAD TAMBÉM PRECISA DE CAMINHO CLICÁVEL** (spec 015, T037). O primeiro Route
+ *    Handler do repositório é `/turmas/[turma]/dsa/planilha`, e a varredura acima lê só `page.tsx`.
+ * ⚠️ **E AQUI O AJUDANTE NÃO CONTA COMO LINK**: `enderecoDaPlanilhaDeContingencia` monta o caminho em
+ *    `lib/navegacao/`, e aceitá-lo como destino faria a rota parecer alcançável com zero botões — é
+ *    o ponto cego que a varredura de telas aceita por desenho. O que conta é a CHAMADA do ajudante
+ *    (ou o caminho escrito) num arquivo de `app/` ou `components/` que não seja a própria rota.
+ */
+describe("spec 015 · toda rota de download tem caminho clicável", () => {
+  const rotasDeDownload = arquivosDe("app")
+    .filter((c) => c.endsWith("/route.ts"))
+    .map((c) => ({ arquivo: c, rota: rotaDoArquivo(c.replace(/\/route\.ts$/, "/page.tsx")) }));
+
+  /** Os ajudantes de `lib/navegacao/` que montam cada rota — pelo template, constantes resolvidas. */
+  function ajudantesDa(rota: string): string[] {
+    const constantes = new Map<string, string>();
+    const fontes = arquivosDe("lib/navegacao").map((a) =>
+      semComentario(readFileSync(resolve(RAIZ, a), "utf8")),
+    );
+    for (const fonte of fontes) {
+      for (const m of fonte.matchAll(/const\s+([A-Z_][A-Z0-9_]*)\s*=\s*"(\/[^"]*)"/g)) {
+        constantes.set(m[1] as string, m[2] as string);
+      }
+    }
+    const nomes: string[] = [];
+    for (const fonte of fontes) {
+      for (const m of fonte.matchAll(/export function (\w+)\([^)]*\)[^{]*\{([\s\S]*?)\n\}/g)) {
+        const corpo = (m[2] as string).replace(
+          /\$\{([A-Z_][A-Z0-9_]*)\}/g,
+          (inteiro, n: string) => constantes.get(n) ?? inteiro,
+        );
+        for (const t of corpo.matchAll(/`(\/[^`]*)`/g)) {
+          const normal = (t[1] as string).replace(/\$\{[^}]*\}/g, "[param]").replace(/\?.*$/, "");
+          if (normalizar(normal) === normalizar(rota)) nomes.push(m[1] as string);
+        }
+      }
+    }
+    return nomes;
+  }
+
+  function quemDaLink(rota: string, arquivoDaRota: string, fora: ReadonlySet<string> = new Set()) {
+    const ajudantes = ajudantesDa(rota);
+    const pasta = arquivoDaRota.replace(/\/route\.ts$/, "/");
+    return ["app", "components"]
+      .flatMap((p) => arquivosDe(p))
+      .filter((a) => !a.startsWith(pasta) && !fora.has(a))
+      .filter((a) => {
+        const codigo = semComentario(readFileSync(resolve(RAIZ, a), "utf8"));
+        return ajudantes.some((n) => new RegExp(`\\b${n}\\(`).test(codigo));
+      });
+  }
+
+  it("há rota de download para varrer, e o ajudante dela é achado — controle positivo", () => {
+    expect(rotasDeDownload.map((r) => r.rota)).toContain("/turmas/[turma]/dsa/planilha");
+    expect(ajudantesDa("/turmas/[turma]/dsa/planilha")).toEqual([
+      "enderecoDaPlanilhaDeContingencia",
+    ]);
+  });
+
+  it("⚠️ nenhuma rota de download é alcançável SÓ digitando o endereço", () => {
+    const orfas = rotasDeDownload.filter((r) => quemDaLink(r.rota, r.arquivo).length === 0);
+    expect(orfas.map((r) => r.rota)).toEqual([]);
+  });
+
+  it("a planilha de contingência tem o botão na tela do DSA E na ficha da turma", () => {
+    const r = rotasDeDownload.find((x) => x.rota === "/turmas/[turma]/dsa/planilha");
+    const daLink = r === undefined ? [] : quemDaLink(r.rota, r.arquivo);
+    expect(daLink).toEqual(
+      expect.arrayContaining([
+        "app/(app)/turmas/[turma]/dsa/page.tsx",
+        "app/(app)/turmas/[turma]/page.tsx",
+      ]),
+    );
+  });
+
+  it("⚠️ e sem os dois botões a guarda fica vermelha — controle positivo", () => {
+    const r = rotasDeDownload.find((x) => x.rota === "/turmas/[turma]/dsa/planilha");
+    const semOsBotoes = new Set([
+      "app/(app)/turmas/[turma]/dsa/page.tsx",
+      "app/(app)/turmas/[turma]/page.tsx",
+    ]);
+    expect(r === undefined ? ["?"] : quemDaLink(r.rota, r.arquivo, semOsBotoes)).toEqual([]);
+  });
+});

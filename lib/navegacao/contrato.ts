@@ -632,6 +632,18 @@ export const CONTRATO = {
         historico: "substitui",
         avisaServidor: true,
       },
+      /*
+       * A planilha de contingência não pôde ser gerada (`FR-006`, spec 015): a rota de download
+       * volta para cá com o aviso, em vez de entregar um arquivo pela metade.
+       */
+      planilha: {
+        nome: "planilha",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: ["", "falhou"],
+        historico: "substitui",
+        avisaServidor: true,
+      },
     },
   },
   "/admin/salas": {

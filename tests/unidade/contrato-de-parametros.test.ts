@@ -527,4 +527,15 @@ describe("⚠️ `FR-012` da spec 012 · a guarda INVERTIDA — a lista de turma
     // A mesma faixa do `CHECK config_param_ano_valido` do banco (medido), não um palpite.
     expect(ano?.tipo === "inteiro" && [ano.minimo, ano.maximo]).toEqual([2020, 2099]);
   });
+
+  /*
+   * A rota de download da planilha de contingência volta ao DSA com este aviso quando a geração
+   * falha (`FR-006`, spec 015) — nunca com um arquivo pela metade.
+   */
+  it("spec 015 · o aviso de falha da planilha de contingência é parâmetro declarado", () => {
+    const planilha = parametrosDaRota("/turmas/[turma]/dsa").find((p) => p.nome === "planilha");
+    expect(planilha?.tipo === "escolha" && planilha.opcoes).toEqual(["", "falhou"]);
+    expect(planilha?.padrao).toBe("");
+    expect(planilha?.historico, "o aviso não é um passo da navegação").toBe("substitui");
+  });
 });

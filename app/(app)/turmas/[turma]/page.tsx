@@ -30,6 +30,7 @@ import { dataParaLeitura } from "@/lib/formato/data";
 import {
   ANCORA_DAS_DISCIPLINAS,
   enderecoDasTurmas,
+  enderecoDaPlanilhaDeContingencia,
   enderecoDoDsa,
   ROTA_DA_FICHA_DA_TURMA,
 } from "@/lib/navegacao/endereco-de-turma";
@@ -41,6 +42,7 @@ import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { alcanceDoPerfil } from "../../cursos/consulta";
 import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
 import { DisciplinasDaTurma } from "./DisciplinasDaTurma";
+import { podeBaixarPlanilhaDeContingencia } from "./dsa/planilha/acesso";
 import { EdicaoDaTurma } from "./EdicaoDaTurma";
 import { Rotulo } from "./Rotulo";
 import { SecaoDeAndamento } from "./SecaoDeAndamento";
@@ -297,6 +299,20 @@ export default async function FichaDaTurma({
               </Link>
             </SePodeVer>
           )}
+          {/*
+            ⚠️ **O MESMO «ESTEPE» DA TELA DO DSA** (spec 015, `FR-001`): pela MESMA condição da rota
+               (`podeBaixarPlanilhaDeContingencia`) — quem não lança e a turma EAD não veem o botão.
+               Daqui ele vale mais que lá: é o caminho que sobra quando a tela do DSA não abre.
+          */}
+          {podeBaixarPlanilhaDeContingencia(permissoes, turma.modalidade as string | null) ? (
+            <a
+              href={enderecoDaPlanilhaDeContingencia(turma.codigo as string)}
+              className="border-borda rounded-ciaara hover:bg-marca-suave border px-3 py-1.5 text-sm"
+              data-slot="baixar-planilha-de-contingencia"
+            >
+              Baixar planilha de contingência
+            </a>
+          ) : null}
         </div>
         {/*
           ⚠️ **O CAMINHO DE VOLTA É A LISTA, E NÃO O CURSO** (`D-NAV-3`, 04/10/2026). Isto **emenda o
