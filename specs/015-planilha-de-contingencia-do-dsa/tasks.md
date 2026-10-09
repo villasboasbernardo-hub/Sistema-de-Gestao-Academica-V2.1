@@ -211,7 +211,7 @@ desce na CONTROLE e na CRONOS; um lançamento depois da data de referência não
 - [X] T065 Estender `scripts/provas/planilha_no_excel.ps1` e rodar no Excel desta máquina: preencher COD e ITEM num TA vazio pela automação, recalcular e conferir +1 na CH lançada e −1 na restante da CONTROLE e +1 na semana da CRONOS; um lançamento depois da data de referência não conta; um defeito deliberado no critério de data tem de reprovar, e é desfeito. Anotar em `specs/015-planilha-de-contingencia-do-dsa/medicoes.md`
 - [X] T066 Conferir o arquivo do PR 2 no Google Planilhas pelo conector, como na T053 — pasta própria, dado sintético, **apagada no fim** —, e anotar em `specs/015-planilha-de-contingencia-do-dsa/medicoes.md` — ⚠️ *feita pela sonda de semântica, como a T053 (31 de 31); razão em `medicoes.md`*
 - [X] T067 Escrever `specs/015-planilha-de-contingencia-do-dsa/roteiro-de-conferencia-pr2.md` — o teste independente da US4 feito à mão nos dois programas
-- [ ] T068 Fechar o PR 2: `pnpm verificar` **0** e `pnpm verificar:tudo` **0** sobre base limpa; sem migration (impressão digital igual à da T002, `git diff main -- supabase/` vazio); push, **CI verde nos três blocos**, PR 2 aberto com o template inteiro. **Sem merge** sem a palavra de Bernardo
+- [X] T068 Fechar o PR 2: `pnpm verificar` **0** e `pnpm verificar:tudo` **0** sobre base limpa; sem migration (impressão digital igual à da T002, `git diff main -- supabase/` vazio); push, **CI verde nos três blocos**, PR 2 aberto com o template inteiro. **Sem merge** sem a palavra de Bernardo
 
 **Checkpoint (c)**: as seis abas da spec entregues.
 

@@ -232,4 +232,26 @@ Contra esta lista o grupo (a) prova que **nenhuma asserção mudou** (`git hash-
   lançada)`, a situação em três degraus e o critério de data com `TODAY()`): **31 de 31 iguais à árvore**
   — o `TODAY()` voltou formatado como data (09/10/2026), que é a série 46304 da árvore. Pasta própria
   na conta conectada, **movida para a lixeira no fim**.
-- **T068 — `verificar:tudo` e CI:** `[pendente]`
+- **T068 — o fechamento do PR 2, sobre `b6c9639`** (09/10/2026, rebaseado sobre o `df75074` do PR 1):
+  - ⚠️ **O primeiro `pnpm verificar` REPROVOU na guarda da distribuição semanal num lugar só**
+    (`tests/unidade/distribuicao-unica.test.ts`, `RN-DIST-01`): a CRONOS achava a coluna da última semana
+    com `semanas.length - 1`, que é o sinal de quem manda o resto da CH para a última semana. A CRONOS não
+    reparte a prevista — conta os TA lançados —, e a coluna passou a ser a de antes da *Distribuída*; com
+    uma semana ou mais as duas expressões dão a mesma coluna, e com zero semanas a soma já não existia. A
+    guarda não foi excepcionada;
+  - `pnpm verificar` saiu **0**: **2.057** casos de unidade em **139** arquivos, tipos, lint, formatação e
+    build;
+  - o resto do `verificar:tudo` sobre base limpa (`db:reset:limpo`) saiu **0**: os tipos gerados iguais
+    aos commitados, pgTAP **585** asserções em **42** arquivos, invariantes e RLS **269** casos em **13**
+    arquivos, ponta a ponta **437 passados e 6 pulados** com 2 processos, em 10,9 min;
+  - **sem migration**: `git diff main -- supabase/` vazio, e a impressão digital do esquema no banco local
+    é a da T002 — **1.623 objetos, `3650c6c2e34c1710de6e63a02e192ec4`**;
+  - **CI verde nos três blocos** (run `37946393070`) e **a mesma contagem do local, caso a caso**: 2.057 de
+    unidade, pgTAP 585, invariantes e RLS 269, ponta a ponta **437 passados e 6 pulados**, sem instável;
+  - **PR #43 aberto**, com base no ramo do PR 1 (PR #42) e o template inteiro.
+  - ⚠️ **O roteiro de conferência mudou depois da medição, e a razão é do painel:** ele dizia que a CH
+    lançada da CONTROLE é *"a acumulada do painel até hoje"*, e o painel de situação do DSA acumula **até o
+    último dia da semana mostrada** (`quadroDaDisciplina`, `ateODia`), não até hoje. Com a referência em
+    hoje, a aula da semana corrente lançada no sistema para depois de hoje conta no painel e ainda não na
+    CONTROLE — e a conferência leria isso como divergência. O passo 2 passou a pôr a referência no último
+    dia da semana antes de comparar, que é o corte que a T062 usou.
