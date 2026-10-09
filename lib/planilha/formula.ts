@@ -63,6 +63,8 @@ export const FUNCOES = [
   "RIGHT",
   "ISNUMBER",
   "MOD",
+  /* PR 2: a data de referência da CONTROLE (*adotado*, item 8 das tasks). Excel 2007 e Google têm. */
+  "TODAY",
 ] as const;
 export type NomeDaFuncao = (typeof FUNCOES)[number];
 
@@ -204,6 +206,8 @@ export function escrever(f: Formula): string {
 /* ------------------------------------------------------------------ avaliar */
 
 export type ContextoDeAvaliacao = {
+  /** O `TODAY()` da avaliação, como número de série — vem do modelo, para o cache não depender do dia. */
+  readonly hoje?: number;
   /** A aba da célula que contém a fórmula — onde a referência sem aba é resolvida. */
   readonly aba: string;
   readonly valorDe: (aba: string, linha: number, coluna: number) => Valor;
@@ -475,6 +479,8 @@ function avaliarFuncao(f: Extract<Formula, { tipo: "funcao" }>, ctx: ContextoDeA
     }
     case "ISNUMBER":
       return typeof v(0) === "number";
+    case "TODAY":
+      return ctx.hoje ?? NA;
     case "MOD": {
       const n = comoNumero(v(0));
       if (ehErro(n)) return n;

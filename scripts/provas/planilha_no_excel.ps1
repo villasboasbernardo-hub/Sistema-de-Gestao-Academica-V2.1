@@ -9,7 +9,11 @@
 
     1. cada fórmula de cada aba contra o valor do gabarito — o que a árvore da planilha avaliou;
     2. que nenhuma célula de aba nenhuma ficou com valor de erro (#REF!, #N/A, #VALUE!…, FR-023);
-    3. a IMPRESSÃO com o seletor posto em cada semana do gabarito (FR-022, I-P5).
+    3. a IMPRESSÃO com o seletor posto em cada semana do gabarito (FR-022, I-P5);
+    4. (PR 2) a CONTROLE com a data de referência numa data FIXA — o TODAY() que o Excel recalcula não
+       pode decidir o resultado —, e um lançamento offline pela automação: dois TA da mesma disciplina,
+       um antes e outro depois da referência, que têm de dar +1 na CH lançada, −1 na restante e +1 em
+       cada semana da CRONOS — e o de depois da referência não pode contar na CONTROLE (D-5).
 
   ⚠️ O ARQUIVO É SINTÉTICO (dúvida 2 do analyze, opção c): nenhum dado real passa por aqui.
   ⚠️ NADA É GRAVADO: o arquivo abre só para leitura e fecha sem salvar.
@@ -171,6 +175,45 @@ try {
     }
     if ($diferentes -gt 5) { $falhas.Add("IMPRESSÃO [$($semana.rotulo)]: mais $($diferentes - 5) diferença(s)") }
     Write-Output ("  IMPRESSÃO {0}: {1} células, {2} diferença(s)" -f $semana.rotulo, $semana.celulas.Count, $diferentes)
+  }
+  if ($null -ne $gabarito.controle) {
+    $controle = Ler $planilhas "Item" @("CONTROLE")
+    $cronos = Ler $planilhas "Item" @("CRONOS")
+    $entrada = Ler $planilhas "Item" @("PREENCHIMENTO")
+    Gravar (Ler $controle "Range" @("B2")) "Value2" ([double]$gabarito.controle.referencia)
+    [void](Chamar $excel "Calculate")
+    $lida = LerAba $controle
+    $diferentes = 0
+    foreach ($par in $gabarito.controle.celulas) {
+      $obtido = ValorEm $lida $par[0]
+      if ($obtido -is [int32] -or -not (Igual $obtido $par[1])) {
+        $diferentes++
+        if ($diferentes -le 5) { $falhas.Add("CONTROLE $($par[0]) : Excel=[$obtido] gabarito=[$($par[1])]") }
+      }
+    }
+    Write-Output ("  CONTROLE com a referência fixa: {0} células, {1} diferença(s)" -f $gabarito.controle.celulas.Count, $diferentes)
+
+    $o = $gabarito.controle.offline
+    Gravar (Ler $entrada "Range" @($o.antes)) "Value2" ([string]$o.cod)
+    Gravar (Ler $entrada "Range" @($o.antesItem)) "Value2" ($(if ($o.item -is [string]) { [string]$o.item } else { [double]$o.item }))
+    Gravar (Ler $entrada "Range" @($o.depois)) "Value2" ([string]$o.cod)
+    Gravar (Ler $entrada "Range" @($o.depoisItem)) "Value2" ($(if ($o.item -is [string]) { [string]$o.item } else { [double]$o.item }))
+    [void](Chamar $excel "Calculate")
+    $verificacoes = @(
+      @("CH lançada", $controle, $o.lancada, $o.com.lancada),
+      @("CH restante", $controle, $o.restante, $o.com.restante),
+      @("CRONOS, semana do TA antes da referência", $cronos, $o.semanaAntes, $o.com.semanaAntes),
+      @("CRONOS, semana do TA depois da referência", $cronos, $o.semanaDepois, $o.com.semanaDepois)
+    )
+    foreach ($v in $verificacoes) {
+      $obtido = Ler (Ler $v[1] "Range" @($v[2])) "Value2"
+      if (-not (Igual $obtido $v[3])) { $falhas.Add("lançamento offline — $($v[0]) $($v[2]): Excel=[$obtido] esperado=[$($v[3])]") }
+    }
+    Write-Output ("  Lançamento offline: CH lançada {0} → {1}, restante {2} → {3}, CRONOS {4} → {5} e {6} → {7}" -f `
+      $o.sem.lancada, (Ler (Ler $controle "Range" @($o.lancada)) "Value2"), `
+      $o.sem.restante, (Ler (Ler $controle "Range" @($o.restante)) "Value2"), `
+      $o.sem.semanaAntes, (Ler (Ler $cronos "Range" @($o.semanaAntes)) "Value2"), `
+      $o.sem.semanaDepois, (Ler (Ler $cronos "Range" @($o.semanaDepois)) "Value2"))
   }
   [void](Chamar $pastaDeTrabalho "Close" @($false))
 }

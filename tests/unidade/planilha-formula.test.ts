@@ -97,11 +97,18 @@ describe("R-4 · escrever: o texto que vai para o OOXML", () => {
         "RIGHT",
         "SUM",
         "SUMIFS",
+        "TODAY",
         "YEAR",
       ].sort(),
     );
     // @ts-expect-error — `XLOOKUP` não existe no Excel 2007: montá-la não compila.
     expect(() => fn("XLOOKUP", num(1))).toThrow(/fora do vocabulário/);
+  });
+
+  it("`TODAY` vem do contexto do modelo — sem ele, `#N/A`, nunca a data do relógio da máquina", () => {
+    expect(avaliar(fn("TODAY"), { ...ctx, hoje: 46304 })).toBe(46304);
+    expect(avaliar(fn("TODAY"), ctx)).toEqual({ erro: "#N/A" });
+    expect(escrever(fn("TODAY"))).toBe("TODAY()");
   });
 
   it.each(["I*", "UE?", "A~B"])("chave com curinga do MATCH (%s) é recusada na montagem", (c) => {

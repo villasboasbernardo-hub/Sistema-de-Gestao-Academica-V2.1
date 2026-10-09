@@ -27,10 +27,27 @@ import {
 import type { lerSemanaDoDsa } from "@/app/(app)/turmas/[turma]/dsa/leitura";
 import { datasDaSemanaIso, semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import { montarPlanilhaComGeometria } from "@/lib/dominio/dsa/planilha-de-contingencia";
-import { ABA } from "@/lib/dominio/dsa/planilha/layout";
+import {
+  ABA,
+  C,
+  C_PRIMEIRA_LINHA,
+  C_REFERENCIA,
+  ITEM,
+  K,
+  K_PRIMEIRA_LINHA,
+  P,
+} from "@/lib/dominio/dsa/planilha/layout";
+import { linhaDoTa } from "@/lib/dominio/dsa/planilha/preenchimento";
+import { emOrdemNaturalDoCodigo } from "@/lib/dominio/ordem-natural";
 import { letrasDaColuna, type Valor } from "@/lib/planilha/formula";
 import { escreverXlsx } from "@/lib/planilha/ooxml";
-import { avaliador, calcularCaches, celulasComErro, chaveDaCelula } from "@/lib/planilha/pasta";
+import {
+  avaliador,
+  calcularCaches,
+  celulasComErro,
+  chaveDaCelula,
+  serieDaData,
+} from "@/lib/planilha/pasta";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "../e2e/conta-de-teste";
 import { sessaoDe } from "../e2e/curso-de-teste";
@@ -42,6 +59,8 @@ const HOJE = "2026-10-09";
 const ANO = 2026;
 /** O volume da maior turma medida (`research.md` §0). */
 const LANCAMENTOS = 676;
+/** A data de referência fixa da CONTROLE no gabarito — o gabarito não pode depender do dia em que roda (T064). */
+const REFERENCIA_FIXA = "2026-06-30";
 /** O limite de corpo de resposta de uma função da Vercel — 4,5 MB (documentação da Vercel, *Functions limits*). */
 const LIMITE_DA_VERCEL = 4.5 * 1024 * 1024;
 export const PASTA_DE_CONFERENCIA = join(tmpdir(), "ciaara-planilha-de-conferencia");
@@ -153,17 +172,20 @@ describe("T050 · o arquivo de conferência, pelo caminho real", () => {
     expect(arquivo.length, "abaixo do limite de corpo da Vercel").toBeLessThan(LIMITE_DA_VERCEL);
 
     /* O gabarito: o valor de cada fórmula, e a IMPRESSÃO em três semanas com aula. */
-    const abas = pasta.abas.map((a) => ({
-      nome: a.nome,
-      celulas: [...a.celulas].flatMap(([linha, cs]) =>
-        [...cs]
-          .filter(([, c]) => c.formula !== undefined)
-          .map(([coluna]) => [
-            `${letrasDaColuna(coluna)}${linha}`,
-            normal(caches.get(chaveDaCelula(a.nome, linha, coluna)) ?? null),
-          ]),
-      ),
-    }));
+    /* ⚠️ A CONTROLE fica FORA da conferência geral: a referência dela é `TODAY()`, que o Excel recalcula. */
+    const abas = pasta.abas
+      .filter((a) => a.nome !== ABA.controle)
+      .map((a) => ({
+        nome: a.nome,
+        celulas: [...a.celulas].flatMap(([linha, cs]) =>
+          [...cs]
+            .filter(([, c]) => c.formula !== undefined)
+            .map(([coluna]) => [
+              `${letrasDaColuna(coluna)}${linha}`,
+              normal(caches.get(chaveDaCelula(a.nome, linha, coluna)) ?? null),
+            ]),
+        ),
+      }));
     const conhecidos = precalcular(pasta);
     const corrente = semanaIsoDe(HOJE)?.numero ?? 41;
     const semanas = insumo.semanas.filter((s) => [15, 20, corrente].includes(s.semana.numero));
@@ -189,6 +211,100 @@ describe("T050 · o arquivo de conferência, pelo caminho real", () => {
     });
     expect(impressao).toHaveLength(3);
 
+    /* T064 · a CONTROLE com a referência numa data fixa, e o lançamento offline da T065. */
+    const comReferencia = (trocas: [string, number, number, Valor][]) =>
+      avaliador(
+        pasta,
+        new Map([
+          [
+            chaveDaCelula(ABA.controle, C_REFERENCIA.linha, C_REFERENCIA.coluna),
+            serieDaData(REFERENCIA_FIXA),
+          ],
+          ...trocas.map(([aba, l, c, v]) => [chaveDaCelula(aba, l, c), v] as [string, Valor]),
+        ]),
+      ).valorDe;
+    const daControle = pasta.abas.find((a) => a.nome === ABA.controle);
+    const celulasDaControle = (valorDe: ReturnType<typeof comReferencia>) =>
+      [...(daControle?.celulas ?? [])].flatMap(([linha, cs]) =>
+        [...cs]
+          .filter(
+            ([, c]) =>
+              c.formula !== undefined &&
+              !(linha === C_REFERENCIA.linha && c.formula.tipo === "funcao"),
+          )
+          .map(([coluna]) => [
+            `${letrasDaColuna(coluna)}${linha}`,
+            normal(valorDe(ABA.controle, linha, coluna)),
+          ]),
+      );
+    /*
+     * ⚠️ A disciplina do lançamento offline tem de ter lançada ABAIXO da prevista na referência — senão a
+     * restante, que nunca fica negativa, não mostra o −1 (medido na primeira rodada: 673 lançados contra
+     * 40 previstos, e a restante presa em 0).
+     */
+    const naOrdem = emOrdemNaturalDoCodigo(insumo.disciplinas, (d) => d.codigo);
+    const posicao = naOrdem.findIndex(
+      (_, i) => Number(comReferencia([])(ABA.controle, C_PRIMEIRA_LINHA + i, C.restante)) > 0,
+    );
+    expect(posicao, "uma disciplina com restante para descontar").toBeGreaterThanOrEqual(0);
+    const disciplina = naOrdem[posicao];
+    const linhaDaControle = C_PRIMEIRA_LINHA + posicao;
+    const linhaDoCronos = K_PRIMEIRA_LINHA + posicao;
+    /* Um TA vazio ANTES da referência (semana 10, segunda, 8º TA) e outro DEPOIS (semana 30, segunda, 8º TA). */
+    const indice = (numero: number) => insumo.semanas.findIndex((s) => s.semana.numero === numero);
+    const antes = linhaDoTa(entrada, indice(10), 0, 8);
+    const depois = linhaDoTa(entrada, indice(30), 0, 8);
+    /* Sem UE: o item que toda disciplina tem no catálogo (`D-DSA-1`). */
+    const item = ITEM.semUe;
+    const comOffline = comReferencia([
+      [ABA.preenchimento, antes, P.cod, disciplina?.codigo ?? ""],
+      [ABA.preenchimento, antes, P.item, item],
+      [ABA.preenchimento, depois, P.cod, disciplina?.codigo ?? ""],
+      [ABA.preenchimento, depois, P.item, item],
+    ]);
+    const semOffline = comReferencia([]);
+    const controle = {
+      referencia: serieDaData(REFERENCIA_FIXA),
+      celulas: celulasDaControle(semOffline),
+      offline: {
+        cod: disciplina?.codigo ?? "",
+        item,
+        antes: `${letrasDaColuna(P.cod)}${antes}`,
+        antesItem: `${letrasDaColuna(P.item)}${antes}`,
+        depois: `${letrasDaColuna(P.cod)}${depois}`,
+        depoisItem: `${letrasDaColuna(P.item)}${depois}`,
+        lancada: `${letrasDaColuna(C.lancada)}${linhaDaControle}`,
+        restante: `${letrasDaColuna(C.restante)}${linhaDaControle}`,
+        semanaAntes: `${letrasDaColuna(K.primeiraSemana + indice(10))}${linhaDoCronos}`,
+        semanaDepois: `${letrasDaColuna(K.primeiraSemana + indice(30))}${linhaDoCronos}`,
+        sem: {
+          lancada: normal(semOffline(ABA.controle, linhaDaControle, C.lancada)),
+          restante: normal(semOffline(ABA.controle, linhaDaControle, C.restante)),
+          semanaAntes: normal(semOffline(ABA.cronos, linhaDoCronos, K.primeiraSemana + indice(10))),
+          semanaDepois: normal(
+            semOffline(ABA.cronos, linhaDoCronos, K.primeiraSemana + indice(30)),
+          ),
+        },
+        com: {
+          lancada: normal(comOffline(ABA.controle, linhaDaControle, C.lancada)),
+          restante: normal(comOffline(ABA.controle, linhaDaControle, C.restante)),
+          semanaAntes: normal(comOffline(ABA.cronos, linhaDoCronos, K.primeiraSemana + indice(10))),
+          semanaDepois: normal(
+            comOffline(ABA.cronos, linhaDoCronos, K.primeiraSemana + indice(30)),
+          ),
+        },
+      },
+    };
+    /* A prova da T065 só vale se o lançamento offline mexe no que tem de mexer — e só nisso. */
+    expect(Number(controle.offline.com.lancada)).toBe(Number(controle.offline.sem.lancada) + 1);
+    expect(Number(controle.offline.com.restante)).toBe(Number(controle.offline.sem.restante) - 1);
+    expect(Number(controle.offline.com.semanaAntes)).toBe(
+      Number(controle.offline.sem.semanaAntes) + 1,
+    );
+    expect(Number(controle.offline.com.semanaDepois)).toBe(
+      Number(controle.offline.sem.semanaDepois) + 1,
+    );
+
     mkdirSync(PASTA_DE_CONFERENCIA, { recursive: true });
     writeFileSync(join(PASTA_DE_CONFERENCIA, "planilha.xlsx"), arquivo);
     const formulas = abas.reduce((n, a) => n + a.celulas.length, 0);
@@ -208,6 +324,7 @@ describe("T050 · o arquivo de conferência, pelo caminho real", () => {
           },
           abas,
           impressao,
+          controle,
         },
         null,
         0,

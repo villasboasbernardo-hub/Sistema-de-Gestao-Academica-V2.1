@@ -19,13 +19,24 @@ import {
   lerDadosDaPlanilha,
   type TurmaDaPlanilha,
 } from "@/app/(app)/turmas/[turma]/dsa/planilha/leitura";
+import { quadrosDaSemana } from "@/app/(app)/turmas/[turma]/dsa/consulta";
 import { lerExtrasDaImpressao, lerSemanaDoDsa } from "@/app/(app)/turmas/[turma]/dsa/leitura";
 import { montarDocumentoDoDsa } from "@/app/print/dsa/documento";
-import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
+import { datasDaSemanaIso, semanaIsoDe } from "@/lib/dominio/carga-semanal";
+import { situacaoDaDisciplina } from "@/lib/dominio/dsa/situacao";
+import { PALAVRA_DA_SITUACAO } from "@/lib/dominio/dsa/planilha/controle";
+import { ABA, C, C_PRIMEIRA_LINHA, C_REFERENCIA } from "@/lib/dominio/dsa/planilha/layout";
+import { emOrdemNaturalDoCodigo } from "@/lib/dominio/ordem-natural";
 import { rubricaResolvida } from "@/lib/dominio/dsa/assinatura-editada";
 import { montarPlanilhaComGeometria } from "@/lib/dominio/dsa/planilha-de-contingencia";
 import { escreverXlsx } from "@/lib/planilha/ooxml";
-import { calcularCaches, celulasComErro } from "@/lib/planilha/pasta";
+import {
+  avaliador,
+  calcularCaches,
+  celulasComErro,
+  chaveDaCelula,
+  serieDaData,
+} from "@/lib/planilha/pasta";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "../e2e/conta-de-teste";
 import { sessaoDe } from "../e2e/curso-de-teste";
@@ -122,6 +133,43 @@ beforeAll(async () => {
             { onConflict: "codigo" },
           );
     if (error) throw new Error(`lançamentos extras em ${codigo}: ${error.message}`);
+  }
+
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA O RETRATO** (DoD 8): sem ele, o painel da semente não diz *Atrasada* nem
+   * *Conflitou* em disciplina nenhuma (medido em 09/10/2026), e a coluna de retrato se compararia vazia
+   * com vazia. A previsão de início de uma disciplina SEM lançamento no passado faz o painel dizer
+   * *Atrasada* (`estaAtrasada`: não iniciou e a previsão já passou).
+   */
+  {
+    const { data: t } = await admin
+      .from("turmas")
+      .select("id, curso_id")
+      .eq("codigo", semeado.turmaComRelogio)
+      .single();
+    const turma = t as { id: string; curso_id: string };
+    const { data: doCurso } = await admin
+      .from("disciplinas")
+      .select("id")
+      .eq("curso_id", turma.curso_id)
+      .eq("status", "ativo")
+      .order("codigo");
+    const { data: comAula } = await admin
+      .from("vw_ocupacao_ta")
+      .select("disciplina_id")
+      .eq("turma_id", turma.id);
+    const usadas = new Set(
+      ((comAula ?? []) as { disciplina_id: string | null }[]).map((o) => o.disciplina_id),
+    );
+    const semAula = ((doCurso ?? []) as { id: string }[]).find((d) => !usadas.has(d.id));
+    if (semAula === undefined)
+      throw new Error("a semente não tem disciplina sem aula para atrasar");
+    /* A previsão efetiva é `coalesce(turma_disciplina, disciplina)` — a desta vem da própria disciplina. */
+    const { error: erroPrevisao } = await admin
+      .from("disciplinas")
+      .update({ previsao_inicio: "2026-03-02", previsao_termino: "2026-06-30" })
+      .eq("id", semAula.id);
+    if (erroPrevisao) throw new Error(`previsão da disciplina atrasada: ${erroPrevisao.message}`);
   }
 
   /* Uma turma semipresencial com a etapa cadastrada, cobrindo as semanas com aula (`FR-014`). */
@@ -245,6 +293,114 @@ describe.each(QUAIS)(
         }
       }
       expect(divergencias).toEqual([]);
+    }, 240_000);
+  },
+);
+
+/*
+ * ⚠️ **SÓ A TURMA COM RELÓGIO TEM DISCIPLINA NA SEMENTE** — as outras duas são de cursos sem currículo,
+ * e a CONTROLE delas sai vazia (conferido abaixo, sem erro de fórmula). A prova da situação é nesta.
+ */
+describe.each(["turmaComRelogio"] as const)(
+  "%s · a CONTROLE contra o painel de situação do sistema (`DP-1`, item 6)",
+  (qual) => {
+    it("a situação em três degraus é a de `situacaoDaDisciplina`, e o retrato é o do painel", async () => {
+      const turma = await turmaDe((semeado as DsaSemeado)[qual]);
+      const insumo = await lerDadosDaPlanilha(sessao as unknown as Cliente, turma, {
+        hoje: HOJE,
+        geradaEm: "2026-10-09T13:00:00.000Z",
+        geradaPor: GERADA_POR,
+      });
+      const { pasta } = montarPlanilhaComGeometria(insumo);
+      const corrente = semanaIsoDe(HOJE);
+      const lida = await lerSemanaDoDsa(sessao as unknown as Cliente, {
+        turmaId: turma.id,
+        cursoId: turma.curso_id,
+        ano: corrente?.ano ?? ANO,
+        numero: corrente?.numero ?? 41,
+        sabadoPedido: false,
+        hoje: HOJE,
+      });
+      const extras = await lerExtrasDaImpressao(sessao as unknown as Cliente, {
+        turmaId: turma.id,
+        cursoId: turma.curso_id,
+      });
+      const ateODia = lida.dias[lida.dias.length - 1] ?? HOJE;
+      const emConflito = new Set(
+        [...lida.marcasDeConflito.entries()]
+          .filter(([, m]) => m.conflito !== null)
+          .map(([id]) => id),
+      );
+      const quadros = quadrosDaSemana({
+        execucao: extras.execucao,
+        ocupacao: lida.ocupacaoAcumulada,
+        emConflito,
+        ateODia,
+        hoje: HOJE,
+      });
+      /* A referência da CONTROLE posta no MESMO corte do painel — o fim da semana corrente. */
+      const { valorDe } = avaliador(
+        pasta,
+        new Map([
+          [
+            chaveDaCelula(ABA.controle, C_REFERENCIA.linha, C_REFERENCIA.coluna),
+            serieDaData(ateODia),
+          ],
+        ]),
+      );
+      const ordem = emOrdemNaturalDoCodigo(insumo.disciplinas, (d) => d.codigo);
+      expect(ordem.length).toBeGreaterThan(0);
+      /* O caso que discrimina: o painel tem de dizer *Atrasada* em pelo menos uma disciplina. */
+      expect(quadros.some((q) => q.situacao === "atrasada")).toBe(true);
+      const divergencias: string[] = [];
+      ordem.forEach((d, i) => {
+        const l = C_PRIMEIRA_LINHA + i;
+        const q = quadros.find((x) => x.codigo === d.codigo);
+        if (q === undefined) return void divergencias.push(`${d.codigo}: sem quadro no painel`);
+        const lancada = valorDe(ABA.controle, l, C.lancada);
+        if (lancada !== q.chAcumulada)
+          divergencias.push(`${d.codigo}: lançada ${String(lancada)} × ${q.chAcumulada}`);
+        const esperada =
+          PALAVRA_DA_SITUACAO[
+            situacaoDaDisciplina({
+              temLancamento: q.chAcumulada > 0,
+              temConflito: false,
+              chPrevista: q.chPrevista,
+              chAcumulada: q.chAcumulada,
+              atrasada: false,
+            })
+          ];
+        const situacao = valorDe(ABA.controle, l, C.situacao);
+        if (situacao !== esperada)
+          divergencias.push(`${d.codigo}: situação ${String(situacao)} × ${esperada}`);
+        const retrato = valorDe(ABA.controle, l, C.retrato);
+        const doPainel =
+          q.situacao === "atrasada" || q.situacao === "conflitou"
+            ? PALAVRA_DA_SITUACAO[q.situacao]
+            : null;
+        if (retrato !== doPainel)
+          divergencias.push(`${d.codigo}: retrato ${String(retrato)} × ${String(doPainel)}`);
+      });
+      expect(divergencias).toEqual([]);
+    }, 240_000);
+  },
+);
+
+describe.each(["turmaComVigenciaNova", "turmaSemRelogio"] as const)(
+  "%s · turma sem disciplina: a CONTROLE e a CRONOS saem vazias, sem erro",
+  (qual) => {
+    it("nenhuma linha de disciplina, e nenhuma fórmula com erro", async () => {
+      const turma = await turmaDe((semeado as DsaSemeado)[qual]);
+      const insumo = await lerDadosDaPlanilha(sessao as unknown as Cliente, turma, {
+        hoje: HOJE,
+        geradaEm: "2026-10-09T13:00:00.000Z",
+        geradaPor: GERADA_POR,
+      });
+      expect(insumo.disciplinas).toEqual([]);
+      const { pasta } = montarPlanilhaComGeometria(insumo);
+      const controle = pasta.abas.find((a) => a.nome === ABA.controle);
+      expect(controle?.celulas.has(C_PRIMEIRA_LINHA)).toBe(false);
+      expect(celulasComErro(calcularCaches(pasta))).toEqual([]);
     }, 240_000);
   },
 );

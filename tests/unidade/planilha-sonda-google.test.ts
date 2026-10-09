@@ -29,6 +29,7 @@ import {
   type Formula,
 } from "@/lib/planilha/formula";
 import { avaliador, definir, novaAba, serieDaData, type Pasta } from "@/lib/planilha/pasta";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 
 export const PASTA_DA_SONDA = join(tmpdir(), "ciaara-planilha-google");
 
@@ -121,6 +122,25 @@ const CASOS: readonly [string, Formula][] = [
     "MATCH de número não casa texto",
     fn("IFERROR", fn("MATCH", num(1), faixa(C, 1, 6), num(0)), txt("não casa")),
   ],
+  /* PR 2 — as formas da CONTROLE e da CRONOS. */
+  ["TODAY() é o dia de hoje, como série", fn("TODAY")],
+  [
+    "restante nunca negativo: MAX(0; prevista − lançada)",
+    fn("MAX", num(0), op(ref(2, B), "-", ref(5, B))),
+  ],
+  [
+    "situação em três degraus",
+    fn(
+      "IF",
+      op(ref(1, B), "=", num(0)),
+      txt("Aguardando início"),
+      fn("IF", op(ref(1, B), ">=", ref(6, B)), txt("Concluída"), txt("Em andamento")),
+    ),
+  ],
+  [
+    "COUNTIFS com a data de hoje no critério",
+    fn("COUNTIFS", faixa(D, 1, 6), concat(txt("<="), fn("TODAY"))),
+  ],
 ];
 
 function pastaDaSonda(): Pasta {
@@ -136,6 +156,8 @@ function pastaDaSonda(): Pasta {
     nomes: [],
     abaAtiva: 0,
     propriedades: { titulo: "sonda", autor: "teste", criadaEm: "2026-10-09T00:00:00Z" },
+    /* O dia em que a sonda roda, no fuso da CIAARA-11 — o Google recalcula o TODAY() ao abrir. */
+    dataDeHoje: hojeNaCiaara(),
   };
 }
 

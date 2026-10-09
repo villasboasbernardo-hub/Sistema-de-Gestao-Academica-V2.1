@@ -40,7 +40,13 @@ import {
 import { contagemNaPrimeira, lerTodasAsPaginas, type ListaLida } from "@/lib/supabase/paginacao";
 
 import { montarDocumentoDoDsa } from "../../../../../print/dsa/documento";
-import { lerExtrasDaImpressao, lerPeriodoDoDsa, montarSemanaDoDsa } from "../leitura";
+import { quadrosDaSemana } from "../consulta";
+import {
+  lerExtrasDaImpressao,
+  lerPeriodoDoDsa,
+  lerSemanaDoDsa,
+  montarSemanaDoDsa,
+} from "../leitura";
 
 type Cliente = Awaited<ReturnType<typeof criarClienteDeServidor>>;
 
@@ -133,11 +139,23 @@ export async function lerDadosDaPlanilha(
         .range(f.de, f.ate),
     ),
     lerExtrasDaImpressao(supabase, { turmaId, cursoId }),
+    /*
+     * ⚠️ **A SEMANA CORRENTE PELA LEITURA DA TELA, COM CONFLITOS** (`FR-025`, T056): é dela que o
+     * painel de situação tira *Atrasada* e *Conflitou*, e a CONTROLE os traz como retrato.
+     */
+    lerSemanaDoDsa(supabase, {
+      turmaId,
+      cursoId,
+      ano: semanaIsoDe(contexto.hoje)?.ano ?? 2026,
+      numero: semanaIsoDe(contexto.hoje)?.numero ?? 1,
+      sabadoPedido: false,
+      hoje: contexto.hoje,
+    }),
   ]);
 
   /* O período: o cadastrado; sem ele, o das datas com lançamento (`Edge Cases`). */
   const periodoConhecido = turma.data_inicio !== null && turma.data_termino !== null;
-  const [tdu, tdi, ues, extras] = await extrasDoCatalogo;
+  const [tdu, tdi, ues, extras, semanaCorrente] = await extrasDoCatalogo;
   const {
     semanas: semanasDaPasta,
     inicial,
@@ -411,7 +429,27 @@ export async function lerDadosDaPlanilha(
     aulasLidas.map((a) => a.unidade_ensino_id).filter((x): x is string => x !== null),
   );
 
+  /* O retrato do painel de situação (`quadrosDaSemana`, o MESMO cálculo da tela do DSA). */
+  const emConflito = new Set(
+    [...semanaCorrente.marcasDeConflito.entries()]
+      .filter(([, m]) => m.conflito !== null)
+      .map(([id]) => id),
+  );
+  const quadros = quadrosDaSemana({
+    execucao: extras.execucao,
+    ocupacao: semanaCorrente.ocupacaoAcumulada,
+    emConflito,
+    ateODia: semanaCorrente.dias[semanaCorrente.dias.length - 1] ?? contexto.hoje,
+    hoje: contexto.hoje,
+  });
+  const retrato = new Map<string, "atrasada" | "conflitou">();
+  for (const q of quadros) {
+    if (q.situacao === "atrasada" || q.situacao === "conflitou") retrato.set(q.codigo, q.situacao);
+  }
+
   return {
+    hoje: contexto.hoje,
+    retrato,
     turma: {
       codigo: turma.codigo,
       curso: referencia.cursoCodigo ?? turma.codigo,

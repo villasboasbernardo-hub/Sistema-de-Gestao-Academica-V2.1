@@ -168,6 +168,34 @@ export const H = {
 export const H_LINHA_DOS_TITULOS = 2;
 export const H_PRIMEIRA_LINHA = 3;
 
+/* ------------------------------------------------------------ CONTROLE (PR 2) */
+
+export const C = {
+  cod: 1,
+  disciplina: 2,
+  prevista: 3,
+  lancada: 4,
+  restante: 5,
+  situacao: 6,
+  retrato: 7,
+} as const;
+/** A data de referência da CONTROLE: `TODAY()`, editável (`FR-025`). */
+export const C_REFERENCIA = { linha: 2, coluna: 2 } as const;
+export const C_LINHA_DOS_TITULOS = 3;
+export const C_PRIMEIRA_LINHA = 4;
+
+/* ------------------------------------------------------------ CRONOS (PR 2) */
+
+export const K = {
+  cod: 1,
+  disciplina: 2,
+  prevista: 3,
+  primeiraSemana: 4,
+} as const;
+export const K_LINHA_DOS_TITULOS = 2;
+export const K_LINHA_DAS_DATAS = 3;
+export const K_PRIMEIRA_LINHA = 4;
+
 /* ------------------------------------------------------------ nomes definidos */
 
 export const NOME = {

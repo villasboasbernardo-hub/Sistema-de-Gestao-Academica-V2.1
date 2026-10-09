@@ -66,11 +66,14 @@ test.describe("`FR-001` · quem lança baixa a planilha, do DSA e da ficha", () 
     await expect(page.getByRole("heading", { name: "Detalhe Semanal de Aula" })).toBeVisible();
     const pasta = await baixar(page);
 
+    /* As seis abas, na ordem do contrato (PR 2: CONTROLE e CRONOS). */
     expect(pasta.abas.map((a) => a.nome)).toEqual([
       "PREENCHIMENTO",
       "IMPRESSÃO",
       "BD DISCIPLINAS",
       "HORÁRIOS",
+      "CONTROLE",
+      "CRONOS",
     ]);
     expect(textoDaCelula(pasta, "PREENCHIMENTO", "A1")).toBe(
       `PLANILHA DE CONTINGÊNCIA DO DSA — ${SEMEADO.turmaComRelogio}`,
@@ -91,7 +94,7 @@ test.describe("`FR-001` · quem lança baixa a planilha, do DSA e da ficha", () 
   test("da ficha da turma: o mesmo botão, o mesmo arquivo", async ({ page }) => {
     await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
     const pasta = await baixar(page);
-    expect(pasta.abas).toHaveLength(4);
+    expect(pasta.abas).toHaveLength(6);
   });
 });
 

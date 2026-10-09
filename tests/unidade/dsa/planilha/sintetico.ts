@@ -403,6 +403,9 @@ export function insumoSintetico(opcoes: { readonly temSabado?: boolean } = {}): 
       salaAlocada: "Sala 1",
     },
     geradaEm: "2026-04-08T15:30:00.000Z",
+    hoje: HOJE,
+    /* O painel do sistema dizia «Atrasada» para II no dia da geração. */
+    retrato: new Map([["II", "atrasada" as const]]),
     geradaPor: "Operador de Teste",
     semanas,
     semanaInicial: inicial,
