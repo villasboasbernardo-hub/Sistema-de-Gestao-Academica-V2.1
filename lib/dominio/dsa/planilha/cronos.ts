@@ -93,7 +93,8 @@ export function abaDeCronos(insumo: InsumoDaPlanilha, g: GeometriaDaEntrada): Ab
         estilo: { horizontal: "center" },
       });
     });
-    const ultimaSemana = K.primeiraSemana + Math.max(0, semanas.length - 1);
+    /* A última coluna de semana é a de antes da Distribuída — a CRONOS conta o LANÇADO, não reparte a prevista (`RN-DIST-01` é de `distribuicao-semanal.ts`). */
+    const ultimaSemana = distribuida - 1;
     definir(aba, l, distribuida, {
       formula: op(
         semanas.length === 0
