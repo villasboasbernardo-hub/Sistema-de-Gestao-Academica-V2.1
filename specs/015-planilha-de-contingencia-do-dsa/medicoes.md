@@ -60,7 +60,42 @@ Contra esta lista o grupo (a) prova que **nenhuma asserção mudou** (`git hash-
 
 ## Grupo (a)
 
-- T007, antes da paginação: `[pendente]`
-- T011, suíte do DSA: `[pendente]`
-- T012, defeitos deliberados: `[pendente]`
+- **T007, antes da paginação — REPROVOU, como tinha de reprovar** (`tests/invariantes/leitura-paginada.test.ts`, banco local, 09/10/2026, turma `E2D93` da semente do DSA com 1.100 aulas a mais e uma aula sozinha na semana 40, inserida por último):
+
+  | O quê | A leitura de antes | A contagem direta | Diferença |
+  |---|---|---|---|
+  | Nº do DSA da semana 40 | 26 na 1ª rodada, 27 na 2ª | 30 | 3 a 4 semanas perdidas no corte das datas |
+  | CH cumprida do rodapé da disciplina `D93` | 1.004 | 1.114 | 110 TA |
+  | CH acumulada do painel da mesma disciplina | 1.004 | 1.114 | 110 TA |
+
+  ⚠️ **O nº do DSA mudou de uma rodada para a outra com o MESMO dado**: a segunda rodada regravou as
+  linhas (`upsert`), a ordem física mudou, e o corte das mil pegou outras datas. É o pior modo de falha
+  do teto: além de errado, o número **não é estável**.
+- **T008/T009 — a equivalência passou** nas três turmas da semente (`E2D94`: com relógio, com vigência
+  nova, sem relógio), **todas as semanas do período** (2026-01-05 a 2026-12-19), com e sem sábado pedido.
+  ⚠️ **Na primeira rodada ela reprovou na semana 15, e a causa era a PROVA:** vinte leituras de semana em
+  paralelo faziam alguma consulta falhar sob a carga do banco local, e a semana degradava para «sem
+  marca de conflito» — o comportamento certo da tela. Sondado: a RPC devolve a mesma linha de conflito
+  nas duas janelas. A prova passou a ler uma semana de cada vez e a exigir que o único erro seja o
+  conhecido.
+- ⚠️ **ACHADO da T009 — uma consulta que SEMPRE falhou:** expor os erros da leitura mostrou
+  `column turma_disciplina_unidade.turma_id does not exist` em toda leitura. A tabela se liga à turma por
+  `turma_disciplina_id`; a consulta entrou assim em 07/10/2026 (`9c62669`). Não corrigida (a tela não
+  muda nesta spec); registrada na `PEND-DSA-SUGESTAO`.
+- **T011 — a suíte do DSA passou SEM MUDAR UMA ASSERÇÃO** (09/10/2026, banco local, ramo com a refatoração):
+  - unidade: **1.832** casos em 123 arquivos — 1.830 de primeira e os 2 de lint (`fronteiras`,
+    `regra-de-cor`) que estouraram o prazo de 30 s com o ESLint frio sob carga; sozinhos, 9 de 9 (a
+    instabilidade registrada no Épico 4, fatia (b), achado 6);
+  - invariantes e RLS (`pnpm test:rls`): **261 de 261** em 11 arquivos, já com os dois novos;
+  - ponta a ponta do DSA (`tests/e2e/dsa-*.spec.ts`, 2 processos, build de produção): **97 passados e 4
+    pulados**, saída 0, em 4,4 min;
+  - **os 39 arquivos do inventário com o MESMO `git hash-object` da T003** — 39 iguais, 0 mudados.
+- **T012 — os três defeitos deliberados acenderam cada um a sua guarda**, e foram desfeitos (arquivo
+  restaurado byte a byte, `cmp`):
+
+  | Defeito plantado | Reprovou | Ficou verde |
+  |---|---|---|
+  | `montarSemanaDoDsa` sem o recorte da ocupação à semana | `leitura-do-periodo` (semana 2, nas 2 turmas com lançamento) | — |
+  | `lerTodasAsPaginas` devolvendo só a 1ª página | `paginacao` (6 de 15) e `leitura-paginada` (nº 26 × 30, CH 1.006 × 1.114) | — |
+  | acumulado sem a própria semana | `leitura-paginada` (rodapé e painel 1.113 × 1.114) | `leitura-do-periodo` — **por desenho**: o defeito está na montagem, que os dois lados usam |
 - T013, idempotência e CI: `[pendente]`

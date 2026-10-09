@@ -33,9 +33,11 @@
 | **Suíte do DSA inteira** | verde **sem mudar uma asserção** — é a prova de que a refatoração da R-2 não mudou a tela |
 | **Ponta a ponta** | os casos de `contracts/rota-de-download.md` §*Como se prova*, chegando à rota **por clique** a partir do DSA e da ficha |
 
-⚠️ **O caso que discrimina da refatoração** (DoD 8): plantar um defeito deliberado só em
-`montarSemanaDoDsa` — trocar a ordem de dois fatos, por exemplo — tem de reprovar **as duas** provas,
-a da tela e a da equivalência. Se reprovar só uma, uma das duas está cega.
+⚠️ **O caso que discrimina da refatoração** (DoD 8), corrigido na execução: as duas leituras passam
+pela **mesma** montagem, então a equivalência **não** enxerga defeito na montagem — ela guarda o
+**recorte** do período à semana. Por isso são dois defeitos para duas guardas: tirar o recorte da
+ocupação reprova a equivalência; tirar a própria semana do acumulado reprova a prova das mais de
+1.000 linhas. Um defeito que não acende a guarda dele quer dizer guarda cega.
 
 ## 3. Sem migration, provado
 

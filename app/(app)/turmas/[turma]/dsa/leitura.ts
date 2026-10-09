@@ -23,6 +23,18 @@
  * de horários, que **depende** de qual vigência venceu: ele é um `await` a mais, **fora de laço**, e
  * só acontece quando a vigência aponta para uma configuração. Medido em 05/10/2026: **nenhuma** das
  * vigências reais aponta, então hoje esse caminho não roda.
+ *
+ * ⚠️ **DESDE A SPEC 015 A LEITURA TEM DUAS METADES** (R-2): `lerPeriodoDoDsa` faz as consultas com a
+ * janela de um período inteiro, e `montarSemanaDoDsa` recorta dele a semana e monta a grade. A tela e
+ * o papel continuam chamando `lerSemanaDoDsa`, que é as duas metades com a janela de uma semana; a
+ * planilha de contingência lê o ano uma vez e monta cada semana pela MESMA função. Não há segunda
+ * montagem — e um invariante (`tests/invariantes/leitura-do-periodo.test.ts`) prova, semana a semana,
+ * que a semana recortada do período é a semana lida sozinha.
+ *
+ * ⚠️ **E TODA LISTA VEM EM PÁGINAS ATÉ ACABAR** (`DP-5`, `lib/supabase/paginacao.ts`), com ordem total
+ * — a que a consulta já tinha, mais o `codigo` (ou outra chave única) de desempate. Medido em
+ * 09/10/2026: com 1.114 TA numa turma, o teto de 1.000 linhas fazia o rodapé e o painel dizerem 1.004
+ * e o nº do DSA errar em 3 a 4 semanas — sem erro nenhum na tela.
  */
 import { escalaDeLinhas, type EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import {
@@ -39,6 +51,7 @@ import type { ResponsavelDoCurso } from "@/lib/dominio/dsa/assinaturas";
 import { nomeParaDsa, type InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { emOrdemNaturalDoCodigo } from "@/lib/dominio/ordem-natural";
 import { dataParaLeitura } from "@/lib/formato/data";
+import { contagemNaPrimeira, lerTodasAsPaginas } from "@/lib/supabase/paginacao";
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import {
@@ -163,32 +176,80 @@ export type SemanaDoDsa = {
 };
 
 /**
- * Lê a semana inteira e devolve a grade montada mais o catálogo de itens lançáveis.
+ * O dado CRU de um período, tal como as consultas o devolvem — sem regra nenhuma (R-2 da spec 015).
  *
- * ⚠️ **A JANELA DA CONSULTA É SEMPRE OS SEIS DIAS, com o sábado incluído** — a consulta **não**
- * pode depender de `?sabado=`: é justamente lendo o sábado que se descobre se há lançamento nele,
- * e, se houver, a coluna aparece mesmo sem o parâmetro (`Q-4`).
+ * ⚠️ **AS LISTAS FICAM `unknown[]` DE PROPÓSITO**: o molde de cada linha continua onde sempre esteve,
+ * na montagem. Tipá-las aqui seria reescrever a leitura, e esta refatoração não muda comportamento.
  */
-export async function lerSemanaDoDsa(
+export type DadosDoPeriodo = {
+  readonly ocupacao: readonly unknown[];
+  readonly aulas: readonly unknown[];
+  readonly avaliacoes: readonly unknown[];
+  readonly atividades: readonly unknown[];
+  readonly vigencias: readonly unknown[];
+  readonly feriados: readonly unknown[];
+  readonly curso: unknown;
+  readonly disciplinas: readonly unknown[];
+  readonly ueExecucao: readonly unknown[];
+  readonly listas: readonly unknown[];
+  readonly atribuicoes: readonly unknown[];
+  readonly instrutores: readonly unknown[];
+  readonly acumulada: readonly unknown[];
+  readonly paraVista: readonly unknown[];
+  readonly curriculo: readonly unknown[];
+  readonly aulasPorUe: readonly unknown[];
+  /** `horarios_tempos_aula` de TODA configuração que alguma vigência do curso aponta. */
+  readonly catalogo: readonly unknown[];
+  /** Vazio quando não se pediu (`comConflitos: false`) — a grade sai sem marca, como no erro. */
+  readonly conflitos: readonly unknown[];
+  /**
+   * As consultas que falharam, pelo nome da lista. ⚠️ **A TELA IGNORA, COMO SEMPRE IGNOROU** — consulta
+   * que falha vira lista vazia e a tela degrada (`RN-DEG-01`). Quem precisa recusar, como a planilha
+   * (`FR-006` da spec 015), olha aqui.
+   *
+   * ⚠️ **E HÁ UM ERRO QUE ACONTECE SEMPRE, medido em 09/10/2026 ao expor esta lista:** a consulta das
+   * atribuições por UE pede `turma_disciplina_unidade.turma_id`, coluna que **não existe** (a tabela se
+   * liga à turma por `turma_disciplina_id`). Ela entrou assim em 07/10/2026 (`9c62669`) e falha calada
+   * desde então — é por isso que a tela nunca sugere instrutor por UE. **Não foi corrigida aqui**: a
+   * spec 015 não muda a tela do DSA, e o conserto é da pendência `PEND-DSA-SUGESTAO`.
+   */
+  readonly erros: readonly { readonly lista: string; readonly mensagem: string }[];
+};
+
+/** A lista lida, ou vazia — e a mensagem guardada, quando falhou. */
+function listaOuVazia(
+  resposta: {
+    readonly data: unknown[] | null;
+    readonly error: { readonly message: string } | null;
+  },
+  erros: { lista: string; mensagem: string }[],
+  lista: string,
+): readonly unknown[] {
+  if (resposta.error) erros.push({ lista, mensagem: resposta.error.message });
+  return resposta.data ?? [];
+}
+
+/**
+ * Lê um período inteiro numa rodada — as mesmas consultas que a semana sempre fez, com a janela do
+ * período (`de..ate` nas da semana, `≤ ate` nas acumuladas), e TODA lista em páginas até acabar
+ * (`DP-5`). O catálogo de horários é a única leitura dependente: ele precisa saber quais
+ * configurações as vigências apontam, e por isso vem numa segunda ida, fora de laço.
+ *
+ * ⚠️ **A JANELA DA CONSULTA DA SEMANA É SEMPRE OS SEIS DIAS, com o sábado incluído** — quem chama por
+ * `lerSemanaDoDsa` não depende de `?sabado=`: é justamente lendo o sábado que se descobre se há
+ * lançamento nele, e, se houver, a coluna aparece mesmo sem o parâmetro (`Q-4`).
+ */
+export async function lerPeriodoDoDsa(
   supabase: ClienteDeServidor,
   entrada: {
     readonly turmaId: string;
     readonly cursoId: string;
-    readonly ano: number;
-    readonly numero: number;
-    readonly sabadoPedido: boolean;
-    readonly hoje: string;
+    readonly de: string;
+    readonly ate: string;
+    readonly comConflitos: boolean;
   },
-): Promise<SemanaDoDsa> {
-  const todosOsSeis = diasDaTela({
-    ano: entrada.ano,
-    numero: entrada.numero,
-    sabadoPedido: true,
-    datasComLancamento: [],
-  }).dias;
-  const de = todosOsSeis[0] ?? entrada.hoje;
-  const ate = todosOsSeis[todosOsSeis.length - 1] ?? entrada.hoje;
-  const { turmaId, cursoId } = entrada;
+): Promise<DadosDoPeriodo> {
+  const { turmaId, cursoId, de, ate } = entrada;
 
   const [
     ocupacaoRes,
@@ -207,134 +268,349 @@ export async function lerSemanaDoDsa(
     paraVistaRes,
     curriculoRes,
     aulasPorUeRes,
+    conflitosRes,
   ] = await Promise.all([
     /* ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`). */
-    supabase
-      .from("vw_ocupacao_ta")
-      .select(COLUNAS_DA_OCUPACAO)
-      .or(`turma_id.eq.${turmaId},turma_id.is.null`)
-      .gte("data", de)
-      .lte("data", ate),
-    supabase
-      .from("registros_aula")
-      .select(
-        "id, data, ta_inicial, tempos_consumidos, conteudo_resumo, metodologia, status, unidade_ensino_id, disciplina_id",
-      )
-      .eq("turma_id", turmaId)
-      .eq("status", "ativo")
-      .gte("data", de)
-      .lte("data", ate),
-    supabase
-      .from("avaliacoes")
-      .select(
-        "id, data_avaliacao, data_vista_prova, ta_inicial, ta_inicial_vista, tipo_avaliacao, conteudo_resumo, metodologia, nome_fiscal_externo, status",
-      )
-      .eq("turma_id", turmaId)
-      .neq("status", "cancelada")
-      .or(
-        `and(data_avaliacao.gte.${de},data_avaliacao.lte.${ate}),and(data_vista_prova.gte.${de},data_vista_prova.lte.${ate})`,
-      ),
-    supabase
-      .from("atividades_nao_letivas")
-      .select(
-        "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id",
-      )
-      .or(`turma_id.eq.${turmaId},turma_id.is.null`)
-      .eq("status", "ativo")
-      .gte("data", de)
-      .lte("data", ate),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("vw_ocupacao_ta")
+        .select(COLUNAS_DA_OCUPACAO, contagemNaPrimeira(f))
+        .or(`turma_id.eq.${turmaId},turma_id.is.null`)
+        .gte("data", de)
+        .lte("data", ate)
+        .order("data")
+        .order("fato_id")
+        .order("origem")
+        .range(f.de, f.ate),
+    ),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("registros_aula")
+        .select(
+          "id, data, ta_inicial, tempos_consumidos, conteudo_resumo, metodologia, status, unidade_ensino_id, disciplina_id",
+          contagemNaPrimeira(f),
+        )
+        .eq("turma_id", turmaId)
+        .eq("status", "ativo")
+        .gte("data", de)
+        .lte("data", ate)
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("avaliacoes")
+        .select(
+          "id, data_avaliacao, data_vista_prova, ta_inicial, ta_inicial_vista, tipo_avaliacao, conteudo_resumo, metodologia, nome_fiscal_externo, status",
+          contagemNaPrimeira(f),
+        )
+        .eq("turma_id", turmaId)
+        .neq("status", "cancelada")
+        .or(
+          `and(data_avaliacao.gte.${de},data_avaliacao.lte.${ate}),and(data_vista_prova.gte.${de},data_vista_prova.lte.${ate})`,
+        )
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("atividades_nao_letivas")
+        .select(
+          "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id",
+          contagemNaPrimeira(f),
+        )
+        .or(`turma_id.eq.${turmaId},turma_id.is.null`)
+        .eq("status", "ativo")
+        .gte("data", de)
+        .lte("data", ate)
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
     /*
      * ⚠️ TODAS as vigências do curso, e quem escolhe é `vigenteEm` na DATA DA SEMANA
      * (`RN-2027-09`) — ver a nota de `consulta.ts` sobre por que não é a função do banco.
      */
-    supabase
-      .from("curso_regime_historico")
-      .select(COLUNAS_DA_VIGENCIA)
-      .eq("curso_id", cursoId)
-      .eq("status", "ativo"),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("curso_regime_historico")
+        .select(COLUNAS_DA_VIGENCIA, contagemNaPrimeira(f))
+        .eq("curso_id", cursoId)
+        .eq("status", "ativo")
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
     /*
      * ⚠️ **SÓ O FERIADO ATIVO** (regra 4: exclusão é lógica). Medido em 06/10/2026: um dia
      * inativado no calendário continuava bloqueando a grade e o papel, porque esta leitura não
      * olhava o `status` — e nada na tela dizia por quê.
      */
-    supabase
-      .from("feriados")
-      .select(COLUNAS_DO_FERIADO)
-      .eq("status", "ativo")
-      .gte("data", de)
-      .lte("data", ate),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("feriados")
+        .select(COLUNAS_DO_FERIADO, contagemNaPrimeira(f))
+        .eq("status", "ativo")
+        .gte("data", de)
+        .lte("data", ate)
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
     supabase.from("cursos").select("codigo, curriculo_modelo").eq("id", cursoId).maybeSingle(),
-    supabase
-      .from("disciplinas")
-      .select("id, cod_disciplina, nome_disciplina, sem_unidades_ensino, status")
-      .eq("curso_id", cursoId)
-      /* A ordem do campo «Disciplina» do lançamento é a da página do curso. */
-      .order("cod_disciplina", { ascending: true }),
-    supabase
-      .from("vw_unidades_ensino_execucao")
-      .select(
-        "unidade_ensino_id, disciplina_id, numero_ue, topico, ch_prevista_tempos, ta_executados, ta_saldo, turma_id",
-      )
-      .eq("turma_id", turmaId),
-    supabase
-      .from("config_listas")
-      .select("lista, valor, ordem, ativo, metadados")
-      .in("lista", ["metodologias", "tipos_avaliacao", "tipos_atividade", "escala_antiguidade"])
-      .eq("ativo", true)
-      .order("ordem"),
-    supabase
-      .from("turma_disciplina_unidade")
-      .select("unidade_ensino_id, instrutor_id, turma_id")
-      .eq("turma_id", turmaId),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("disciplinas")
+        .select(
+          "id, cod_disciplina, nome_disciplina, sem_unidades_ensino, status",
+          contagemNaPrimeira(f),
+        )
+        .eq("curso_id", cursoId)
+        /* A ordem do campo «Disciplina» do lançamento é a da página do curso. */
+        .order("cod_disciplina", { ascending: true })
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("vw_unidades_ensino_execucao")
+        .select(
+          "unidade_ensino_id, disciplina_id, numero_ue, topico, ch_prevista_tempos, ta_executados, ta_saldo, turma_id",
+          contagemNaPrimeira(f),
+        )
+        .eq("turma_id", turmaId)
+        .order("unidade_ensino_id")
+        .range(f.de, f.ate),
+    ),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("config_listas")
+        .select("lista, valor, ordem, ativo, metadados", contagemNaPrimeira(f))
+        .in("lista", ["metodologias", "tipos_avaliacao", "tipos_atividade", "escala_antiguidade"])
+        .eq("ativo", true)
+        .order("ordem")
+        .order("id")
+        .range(f.de, f.ate),
+    ),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("turma_disciplina_unidade")
+        .select("unidade_ensino_id, instrutor_id, turma_id", contagemNaPrimeira(f))
+        .eq("turma_id", turmaId)
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
     /*
      * ⚠️ **A LEITURA VEM DE `vw_instrutores` E PEDE `ordem_antiguidade` AO BANCO** (`SC-002.1`,
      * `RN-ANT-01`, *Risco: Alto*). A guarda é **ampla de propósito** (gotcha 12): ela cobra a ordem
      * de **toda** leitura de lista de instrutor, mesmo quando a tela só monta um mapa de nomes.
      */
-    supabase
-      .from("vw_instrutores")
-      .select("id, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, ordem_antiguidade")
-      .order("ordem_antiguidade"),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("vw_instrutores")
+        .select(
+          "id, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, ordem_antiguidade",
+          contagemNaPrimeira(f),
+        )
+        .order("ordem_antiguidade")
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
     /*
      * ⚠️ **A OCUPAÇÃO ACUMULADA — `data <= ate`, SEM piso** (`RN-CRONOS-03`, `RF-DSA-05`). Ela entra
      * na MESMA rodada de `Promise.all`: é independente das outras doze, e em sequência seria uma
      * ida a mais ao banco por abertura de tela.
      * ⚠️ **E ela NÃO filtra por `hoje`** — é a decisão da `Q-2`: o único corte é o da semana
      * selecionada, e o lançamento futuro **conta**, marcado.
+     * ⚠️ **E É A LISTA QUE O TETO DE 1.000 CORTAVA PRIMEIRO** — ela cresce com a turma inteira (`DP-5`).
      */
-    supabase
-      .from("vw_ocupacao_ta")
-      .select("fato_id, data, disciplina_id, tempos_consumidos")
-      .eq("turma_id", turmaId)
-      .lte("data", ate),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("vw_ocupacao_ta")
+        .select("fato_id, data, disciplina_id, tempos_consumidos", contagemNaPrimeira(f))
+        .eq("turma_id", turmaId)
+        .lte("data", ate)
+        .order("data")
+        .order("fato_id")
+        .order("origem")
+        .range(f.de, f.ate),
+    ),
     /* As avaliações da turma inteira, para o tipo «Vista de prova» do formulário (item 1). */
-    supabase
-      .from("avaliacoes")
-      .select(
-        "id, disciplina_id, tipo_avaliacao, data_avaliacao, conteudo_resumo, data_vista_prova",
-      )
-      .eq("turma_id", turmaId)
-      .neq("status", "cancelada")
-      .order("data_avaliacao"),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("avaliacoes")
+        .select(
+          "id, disciplina_id, tipo_avaliacao, data_avaliacao, conteudo_resumo, data_vista_prova",
+          contagemNaPrimeira(f),
+        )
+        .eq("turma_id", turmaId)
+        .neq("status", "cancelada")
+        .order("data_avaliacao")
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
     /*
      * ⚠️ **AS UNIDADES PARTEM DO CURRÍCULO DO CURSO** — a view de execução, filtrada pela turma,
      * descartava a UE que a turma ainda não deu (ver `unidadesDaTurma`).
      */
-    supabase
-      .from("unidades_ensino")
-      .select("id, disciplina_id, numero_ue, topico, ch_prevista_tempos")
-      .eq("curso_id", cursoId)
-      .eq("status", "ativo")
-      .order("numero_ue", { ascending: true }),
-    /* As aulas da turma com UE, até o fim da semana aberta — o corte da cascata do painel (item 3). */
-    supabase
-      .from("registros_aula")
-      .select("unidade_ensino_id, tempos_consumidos")
-      .eq("turma_id", turmaId)
-      .eq("status", "ativo")
-      .not("unidade_ensino_id", "is", null)
-      .lte("data", ate),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("unidades_ensino")
+        .select("id, disciplina_id, numero_ue, topico, ch_prevista_tempos", contagemNaPrimeira(f))
+        .eq("curso_id", cursoId)
+        .eq("status", "ativo")
+        .order("numero_ue", { ascending: true })
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
+    /*
+     * As aulas da turma com UE, até o fim da semana aberta — o corte da cascata do painel (item 3).
+     * ⚠️ A `data` vem junto desde a spec 015: é por ela que a montagem recorta o período à semana.
+     */
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("registros_aula")
+        .select("unidade_ensino_id, tempos_consumidos, data", contagemNaPrimeira(f))
+        .eq("turma_id", turmaId)
+        .eq("status", "ativo")
+        .not("unidade_ensino_id", "is", null)
+        .lte("data", ate)
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
+    /*
+     * ⚠️ **O CONFLITO ENTRE TURMAS VEM DO BANCO, pela função com porteiro** (`Q-17`, `T093`). Ela é
+     * `SECURITY DEFINER` porque a RLS **esconderia** a turma alheia — e é justamente a existência da
+     * sobreposição que precisa ser vista. O que ela **não** devolve é de quem é a aula.
+     *
+     * ⚠️ **ERRO AQUI DEGRADA PARA «sem marcas», NUNCA PARA EXCEÇÃO** (`RN-DEG-01`): a grade continua
+     * desenhada, sem a sinalização. ⚠️ **E isso é um risco DECLARADO, não esquecido:** um conflito
+     * deixaria de aparecer em silêncio. Ele é aceitável porque o conflito é **sinalização e nunca
+     * bloqueio** (`RN-CONF-01`) — nada depende dele para gravar —, e porque o porteiro da função
+     * recusa pelas mesmas duas condições que a página já conferiu antes de chegar aqui.
+     *
+     * ⚠️ **Desde a spec 015 ela sai na MESMA rodada** — não depende de nada lido antes — e também em
+     * páginas: ela devolve a ocupação das OUTRAS turmas, e o teto de 1.000 vale para ela igual.
+     */
+    entrada.comConflitos
+      ? lerTodasAsPaginas((f) =>
+          supabase
+            .rpc(
+              "conflitos_da_semana",
+              { p_turma_id: turmaId, p_de: de, p_ate: ate },
+              contagemNaPrimeira(f),
+            )
+            .order("data")
+            .order("ta_inicial")
+            .order("ta_final")
+            .order("instrutor_id")
+            .order("fiscal_id")
+            .order("local")
+            .range(f.de, f.ate),
+        )
+      : Promise.resolve({ data: [], error: null }),
   ]);
+
+  const erros: { lista: string; mensagem: string }[] = [];
+  const vigencias = listaOuVazia(vigenciasRes, erros, "vigências");
+  const configuracoes = [
+    ...new Set(
+      (vigencias as unknown as LinhaDeVigencia[])
+        .map((v) => vigenciaDoBanco(v).configuracaoHorarioId)
+        .filter((id): id is string => typeof id === "string" && id !== ""),
+    ),
+  ];
+  const catalogoRes =
+    configuracoes.length === 0
+      ? { data: [], error: null }
+      : await lerTodasAsPaginas((f) =>
+          supabase
+            .from("horarios_tempos_aula")
+            .select(`${COLUNAS_DO_CATALOGO}, configuracao_id`, contagemNaPrimeira(f))
+            .in("configuracao_id", configuracoes)
+            .order("configuracao_id")
+            .order("tempo_numero")
+            .order("id")
+            .range(f.de, f.ate),
+        );
+
+  return {
+    ocupacao: listaOuVazia(ocupacaoRes, erros, "ocupação"),
+    aulas: listaOuVazia(aulasRes, erros, "aulas"),
+    avaliacoes: listaOuVazia(avaliacoesRes, erros, "avaliações"),
+    atividades: listaOuVazia(atividadesRes, erros, "atividades"),
+    vigencias,
+    feriados: listaOuVazia(feriadosRes, erros, "feriados"),
+    curso: cursoRes.error
+      ? (erros.push({ lista: "curso", mensagem: cursoRes.error.message }), null)
+      : cursoRes.data,
+    disciplinas: listaOuVazia(discRes, erros, "disciplinas"),
+    ueExecucao: listaOuVazia(ueExecRes, erros, "unidades da turma"),
+    listas: listaOuVazia(listasRes, erros, "listas"),
+    atribuicoes: listaOuVazia(atribRes, erros, "atribuições por UE"),
+    instrutores: listaOuVazia(instrRes, erros, "instrutores"),
+    acumulada: listaOuVazia(acumuladaRes, erros, "ocupação acumulada"),
+    paraVista: listaOuVazia(paraVistaRes, erros, "avaliações para vista"),
+    curriculo: listaOuVazia(curriculoRes, erros, "currículo"),
+    aulasPorUe: listaOuVazia(aulasPorUeRes, erros, "aulas por UE"),
+    catalogo: listaOuVazia(catalogoRes, erros, "catálogo de horários"),
+    conflitos: listaOuVazia(conflitosRes, erros, "conflitos"),
+    erros,
+  };
+}
+
+/** O campo de uma linha crua, para o recorte por data. */
+function campo(linha: unknown, nome: string): unknown {
+  return (linha as Record<string, unknown>)[nome];
+}
+
+/**
+ * Monta a semana a partir dos dados de um período que a contém — **a mesma montagem** para a tela, o
+ * papel e a planilha de contingência (R-2 da spec 015).
+ *
+ * ⚠️ **O RECORTE É O QUE A CONSULTA DA SEMANA FAZIA**: a semana nos seis dias (as consultas que tinham
+ * `de..ate`), e tudo até o fim da semana nas acumuladas (as que tinham só `≤ ate`). O resto é o texto
+ * de antes, sem uma linha de regra nova.
+ */
+export function montarSemanaDoDsa(
+  dados: DadosDoPeriodo,
+  entrada: {
+    readonly ano: number;
+    readonly numero: number;
+    readonly sabadoPedido: boolean;
+    readonly hoje: string;
+  },
+): SemanaDoDsa {
+  const todosOsSeis = diasDaTela({
+    ano: entrada.ano,
+    numero: entrada.numero,
+    sabadoPedido: true,
+    datasComLancamento: [],
+  }).dias;
+  const de = todosOsSeis[0] ?? entrada.hoje;
+  const ate = todosOsSeis[todosOsSeis.length - 1] ?? entrada.hoje;
+  const naSemana = (data: unknown) => typeof data === "string" && data >= de && data <= ate;
+  const ateOFim = (data: unknown) => typeof data === "string" && data <= ate;
+
+  /* As mesmas respostas que a rodada da semana devolvia — recortadas do período. */
+  const ocupacaoRes = { data: dados.ocupacao.filter((l) => naSemana(campo(l, "data"))) };
+  const aulasRes = { data: dados.aulas.filter((l) => naSemana(campo(l, "data"))) };
+  const avaliacoesRes = {
+    data: dados.avaliacoes.filter(
+      (l) => naSemana(campo(l, "data_avaliacao")) || naSemana(campo(l, "data_vista_prova")),
+    ),
+  };
+  const atividadesRes = { data: dados.atividades.filter((l) => naSemana(campo(l, "data"))) };
+  const vigenciasRes = { data: dados.vigencias };
+  const feriadosRes = { data: dados.feriados.filter((l) => naSemana(campo(l, "data"))) };
+  const cursoRes = { data: dados.curso };
+  const discRes = { data: dados.disciplinas };
+  const ueExecRes = { data: dados.ueExecucao };
+  const listasRes = { data: dados.listas };
+  const atribRes = { data: dados.atribuicoes };
+  const instrRes = { data: dados.instrutores };
+  const acumuladaRes = { data: dados.acumulada.filter((l) => ateOFim(campo(l, "data"))) };
+  const paraVistaRes = { data: dados.paraVista };
+  const curriculoRes = { data: dados.curriculo };
+  const aulasPorUeRes = { data: dados.aulasPorUe.filter((l) => ateOFim(campo(l, "data"))) };
+  const conflitosRes = { data: dados.conflitos.filter((l) => naSemana(campo(l, "data"))) };
 
   const vigencias = ((vigenciasRes.data ?? []) as unknown as LinhaDeVigencia[]).map(
     vigenciaDoBanco,
@@ -348,14 +624,15 @@ export async function lerSemanaDoDsa(
     .filter((v) => v.tipo === "padrao")
     .sort((a, b) => b.vigenteDe.localeCompare(a.vigenteDe))[0];
 
+  /*
+   * ⚠️ O catálogo de horários do período inteiro já veio lido (`lerPeriodoDoDsa`): aqui só se separa
+   * o da configuração que a vigência da semana aponta, na mesma ordem de `tempo_numero`.
+   */
   let catalogo: readonly LinhaDoCatalogo[] = [];
   if (vigente?.configuracaoHorarioId) {
-    const { data } = await supabase
-      .from("horarios_tempos_aula")
-      .select(COLUNAS_DO_CATALOGO)
-      .eq("configuracao_id", vigente.configuracaoHorarioId)
-      .order("tempo_numero");
-    catalogo = (data ?? []) as unknown as LinhaDoCatalogo[];
+    catalogo = dados.catalogo.filter(
+      (l) => (l as { configuracao_id?: unknown }).configuracao_id === vigente.configuracaoHorarioId,
+    ) as unknown as LinhaDoCatalogo[];
   }
 
   const relogio = relogioDaSemana({
@@ -505,22 +782,7 @@ export async function lerSemanaDoDsa(
     }
   }
 
-  /*
-   * ⚠️ **O CONFLITO ENTRE TURMAS VEM DO BANCO, pela função com porteiro** (`Q-17`, `T093`). Ela é
-   * `SECURITY DEFINER` porque a RLS **esconderia** a turma alheia — e é justamente a existência da
-   * sobreposição que precisa ser vista. O que ela **não** devolve é de quem é a aula.
-   *
-   * ⚠️ **ERRO AQUI DEGRADA PARA «sem marcas», NUNCA PARA EXCEÇÃO** (`RN-DEG-01`): a grade continua
-   * desenhada, sem a sinalização. ⚠️ **E isso é um risco DECLARADO, não esquecido:** um conflito
-   * deixaria de aparecer em silêncio. Ele é aceitável porque o conflito é **sinalização e nunca
-   * bloqueio** (`RN-CONF-01`) — nada depende dele para gravar —, e porque o porteiro da função
-   * recusa pelas mesmas duas condições que a página já conferiu antes de chegar aqui.
-   */
-  const conflitosRes = await supabase.rpc("conflitos_da_semana", {
-    p_turma_id: turmaId,
-    p_de: de,
-    p_ate: ate,
-  });
+  /* ⚠️ A RPC é lida em `lerPeriodoDoDsa`, junto com o resto; aqui chega recortada à semana. */
   const alheios: OcupacaoDeTa[] = (
     (conflitosRes.data ?? []) as {
       data: string;
@@ -713,6 +975,37 @@ export async function lerSemanaDoDsa(
   };
 }
 
+/**
+ * Lê a semana inteira e devolve a grade montada mais o catálogo de itens lançáveis — as duas metades
+ * com a janela dos seis dias da semana.
+ */
+export async function lerSemanaDoDsa(
+  supabase: ClienteDeServidor,
+  entrada: {
+    readonly turmaId: string;
+    readonly cursoId: string;
+    readonly ano: number;
+    readonly numero: number;
+    readonly sabadoPedido: boolean;
+    readonly hoje: string;
+  },
+): Promise<SemanaDoDsa> {
+  const todosOsSeis = diasDaTela({
+    ano: entrada.ano,
+    numero: entrada.numero,
+    sabadoPedido: true,
+    datasComLancamento: [],
+  }).dias;
+  const dados = await lerPeriodoDoDsa(supabase, {
+    turmaId: entrada.turmaId,
+    cursoId: entrada.cursoId,
+    de: todosOsSeis[0] ?? entrada.hoje,
+    ate: todosOsSeis[todosOsSeis.length - 1] ?? entrada.hoje,
+    comConflitos: true,
+  });
+  return montarSemanaDoDsa(dados, entrada);
+}
+
 function fatoSemTa(
   id: string,
   origem: FatoDaSemana["origem"],
@@ -767,46 +1060,65 @@ export async function lerExtrasDaImpressao(
   supabase: ClienteDeServidor,
   entrada: { readonly turmaId: string; readonly cursoId: string },
 ): Promise<ExtrasDaImpressao> {
+  /* ⚠️ As quatro em páginas até acabar (`DP-5`): as datas do nº do DSA são as que o teto cortava. */
   const [execRes, respRes, aulasRes, avalRes] = await Promise.all([
-    supabase
-      .from("vw_disciplinas_execucao")
-      /*
-       * ⚠️ `disciplina_id` entra para o quadro de situação casar a ocupação com a previsão.
-       * ⚠️ As duas `previsao_*_efetiva` entraram em 08/10/2026 (item 8): são a previsão da turma, ou a
-       *    padrão da grade, já resolvidas pela view — resolvê-las aqui seria a segunda tradução.
-       */
-      .select(
-        "disciplina_id, cod_disciplina, nome_disciplina, carga_horaria_tempos, ta_executados, turma_id, previsao_inicio_efetiva, previsao_termino_efetiva",
-      )
-      .eq("turma_id", entrada.turmaId),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("vw_disciplinas_execucao")
+        /*
+         * ⚠️ `disciplina_id` entra para o quadro de situação casar a ocupação com a previsão.
+         * ⚠️ As duas `previsao_*_efetiva` entraram em 08/10/2026 (item 8): são a previsão da turma, ou a
+         *    padrão da grade, já resolvidas pela view — resolvê-las aqui seria a segunda tradução.
+         */
+        .select(
+          "disciplina_id, cod_disciplina, nome_disciplina, carga_horaria_tempos, ta_executados, turma_id, previsao_inicio_efetiva, previsao_termino_efetiva",
+          contagemNaPrimeira(f),
+        )
+        .eq("turma_id", entrada.turmaId)
+        .order("disciplina_id")
+        .range(f.de, f.ate),
+    ),
     /*
      * ⚠️ **A LINHA GERAL (`curso_id` nulo) ENTRA, e é ela que existe de verdade** — medido no
      * remoto em 05/10/2026: as **duas** linhas de `responsaveis_curso` são GERAL. Filtrar só pelo
      * curso deixaria o rodapé **sem assinatura nenhuma**, com cara de "não há responsável".
      */
-    supabase
-      .from("responsaveis_curso")
-      .select(
-        /*
-         * ⚠️ `especialidade` entrou em 08/10/2026 (item 7): é o quadro que a assinatura imprime
-         * entre parênteses, e até aqui ele não chegava ao rodapé.
-         */
-        "papel_assinatura, preenchimento, curso_id, vigente_de, vigente_ate, exibir_no_dsa, ordem, nome_completo, posto_graduacao, especialidade, funcao_descricao",
-      )
-      .or(`curso_id.eq.${entrada.cursoId},curso_id.is.null`)
-      .eq("status", "ativo"),
-    supabase
-      .from("registros_aula")
-      .select("data")
-      .eq("turma_id", entrada.turmaId)
-      .eq("status", "ativo")
-      .not("ta_inicial", "is", null),
-    supabase
-      .from("avaliacoes")
-      .select("data_avaliacao")
-      .eq("turma_id", entrada.turmaId)
-      .neq("status", "cancelada")
-      .not("ta_inicial", "is", null),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("responsaveis_curso")
+        .select(
+          /*
+           * ⚠️ `especialidade` entrou em 08/10/2026 (item 7): é o quadro que a assinatura imprime
+           * entre parênteses, e até aqui ele não chegava ao rodapé.
+           */
+          "papel_assinatura, preenchimento, curso_id, vigente_de, vigente_ate, exibir_no_dsa, ordem, nome_completo, posto_graduacao, especialidade, funcao_descricao",
+          contagemNaPrimeira(f),
+        )
+        .or(`curso_id.eq.${entrada.cursoId},curso_id.is.null`)
+        .eq("status", "ativo")
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("registros_aula")
+        .select("data", contagemNaPrimeira(f))
+        .eq("turma_id", entrada.turmaId)
+        .eq("status", "ativo")
+        .not("ta_inicial", "is", null)
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("avaliacoes")
+        .select("data_avaliacao", contagemNaPrimeira(f))
+        .eq("turma_id", entrada.turmaId)
+        .neq("status", "cancelada")
+        .not("ta_inicial", "is", null)
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
   ]);
 
   const execucao = (
