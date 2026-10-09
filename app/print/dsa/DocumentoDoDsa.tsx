@@ -220,14 +220,10 @@ export function DocumentoDoDsa({
       <footer className="dsa4-pe">
         <span data-slot="dsa-nota-do-ei">{NOTA_DO_ESTUDO_INDIVIDUAL}</span>
         {/*
-          ⚠️ **O «LANÇADO À FRENTE» É CONTEÚDO DO DOCUMENTO** (`Q-2`, `FR-028.1`): o DSA sai antes
-             da semana, e dizer quantos TA ainda não aconteceram separa previsto de cumprido.
+          ⚠️ **SEM A FRASE DO «LANÇADO À FRENTE», COMO NA TELA** (dúvida 2 do PR #40, decisão de
+             Bernardo Villas Boas, 08/10/2026: "tela e papel iguais"). O cálculo continua no
+             documento; só a frase saiu.
         */}
-        {dados.aFrente === 0 ? null : (
-          <span data-slot="dsa-a-frente">
-            {dados.aFrente} TA desta semana estão lançados para datas que ainda não chegaram.
-          </span>
-        )}
         <span data-slot="dsa-gerado-em">
           Gerado em: {instanteComHoraParaLeitura(geradoEm)} · Marinha do Brasil ·{" "}
           {SIGLA_DA_ORGANIZACAO} · {dados.curso} · DSA Nº {numero}

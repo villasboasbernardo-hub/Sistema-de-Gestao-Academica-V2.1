@@ -19,7 +19,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
-import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
+import { AVISO_DE_TURMA_EAD, ROTULO_CURTO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
@@ -522,7 +522,14 @@ test.describe("`FR-011` · os três caminhos clicáveis até o DSA", () => {
     const ead = linhaDe(SEMEADO.turmaEad);
     await expect(ead).toHaveCount(1);
     await expect(ead.locator('[data-slot="dsa-da-linha"]')).toHaveCount(0);
-    await expect(ead.locator('[data-slot="dsa-turma-ead"]')).toHaveText(AVISO_DE_TURMA_EAD);
+    /* ⚠️ Dúvida 7 do PR #40: curto na célula, a frase inteira ao apontar. */
+    const celulaEad = ead.locator('[data-slot="dsa-turma-ead"]');
+    await expect(celulaEad).toContainText(ROTULO_CURTO_DE_TURMA_EAD);
+    const completa = ead.locator('[data-slot="dsa-turma-ead-completo"]');
+    await expect(completa).toBeHidden();
+    await celulaEad.hover();
+    await expect(completa).toBeVisible();
+    await expect(completa).toHaveText(AVISO_DE_TURMA_EAD);
 
     await page.locator(FILTRO).getByLabel("Buscar pelo código").fill(SEMEADO.turmaComRelogio);
     const presencial = linhaDe(SEMEADO.turmaComRelogio);

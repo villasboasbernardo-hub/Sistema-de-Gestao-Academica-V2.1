@@ -32,3 +32,10 @@ export function ehEadPuro(modalidade: string | null | undefined): boolean {
 /** O aviso que toma o lugar do DSA em toda tela — o texto de Bernardo, literal. */
 export const AVISO_DE_TURMA_EAD =
   "Turma EAD: o andamento é controlado pela Divisão de Ensino a Distância, em sistema próprio.";
+
+/**
+ * O rótulo curto da LISTA de turmas (dúvida 7 do PR #40, Bernardo Villas Boas, 08/10/2026): *"célula
+ * curta «EAD — sem DSA», com a frase completa ao passar o mouse/foco"*. Na ficha e no endereço
+ * direto vale a frase completa.
+ */
+export const ROTULO_CURTO_DE_TURMA_EAD = "EAD — sem DSA";

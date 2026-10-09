@@ -361,7 +361,7 @@ test.describe("⚠️ item 7 · a ASSINATURA traz o posto POR EXTENSO; a coluna 
     /*
      * ⚠️ **ITEM 3 DA CONFERÊNCIA DO PR #40 (08/10/2026): o «lançado à frente» SAIU DA TELA** — nem
      * marca no cartão, nem frase no rodapé. É esta a semana que tem aula à frente, então é aqui que a
-     * ausência discrimina. O papel continua com a frase (abaixo).
+     * ausência discrimina. E o papel também não a traz (dúvida 2, abaixo).
      */
     await expect(cartaoNaTela).not.toContainText("lançado à frente");
     await expect(page.locator('[data-slot="rodape-da-semana"]')).not.toContainText(
@@ -385,8 +385,8 @@ test.describe("⚠️ item 7 · a ASSINATURA traz o posto POR EXTENSO; a coluna 
     await expect(cartaoNoPapel).toHaveCount(1);
     await expect(cartaoNoPapel).toContainText("1ºTEN");
     await expect(cartaoNoPapel).not.toContainText("Primeiro-Tenente");
-    /* ⚠️ O papel NÃO mudou no item 3: a frase do «lançado à frente» continua nele. */
-    await expect(page.locator('[data-slot="dsa-a-frente"]')).toContainText(`${TA_A_FRENTE} TA`);
+    /* ⚠️ Tela e papel iguais (dúvida 2 do PR #40): a frase do «lançado à frente» saiu do papel também. */
+    await expect(page.locator('[data-slot="dsa-a-frente"]')).toHaveCount(0);
   });
 
   test("sem quadro cadastrado, nada entre parênteses — abril sai só `Primeiro-Tenente`", async ({

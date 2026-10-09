@@ -293,18 +293,16 @@ test.describe("⚠️ `Q-2` e `FR-028.1` · o lançado à frente CONTA, e é dit
     expect(TA_A_FRENTE).toBeGreaterThan(0);
   });
 
-  test("CONTROLE POSITIVO · o PAPEL continua dizendo quantos TA estão à frente", async ({
-    page,
-  }) => {
+  /* ⚠️ Desde a dúvida 2 do PR #40 (08/10/2026) o papel também não traz a frase: tela e papel iguais. */
+  test("o PAPEL também não traz mais a frase do lançado à frente", async ({ page }) => {
     await entrar(page, EMAIL);
     await abrirSemana(page, SEMANA_A_FRENTE, ANO_A_FRENTE);
 
     await page.locator('[data-slot="imprimir-dsa"]').click();
     const documento = page.locator('[data-slot="dsa-impresso"]');
     await expect(documento).toBeVisible();
-    const aFrente = page.locator('[data-slot="dsa-a-frente"]');
-    await expect(aFrente).toBeVisible();
-    await expect(aFrente).toContainText("ainda não chegaram");
+    await expect(page.locator('[data-slot="dsa-a-frente"]')).toHaveCount(0);
+    await expect(documento).not.toContainText("ainda não chegaram");
   });
 
   test("na semana só de datas passadas, a marca NÃO aparece — ela não é decorativa", async ({

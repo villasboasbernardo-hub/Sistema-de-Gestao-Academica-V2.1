@@ -180,7 +180,7 @@ describe("a folha da tela, desenhada", () => {
   });
 });
 
-describe("item 3 · o «lançado à frente» saiu da TELA, e o papel o mantém", () => {
+describe("item 3 · o «lançado à frente» saiu da TELA e do PAPEL", () => {
   const semComentario = (fonte: string) =>
     fonte.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
   const ler = (caminho: string) =>
@@ -195,7 +195,11 @@ describe("item 3 · o «lançado à frente» saiu da TELA, e o papel o mantém",
     );
   });
 
-  it("controle positivo: o papel continua com a frase", () => {
-    expect(ler("app/print/dsa/DocumentoDoDsa.tsx")).toContain('data-slot="dsa-a-frente"');
+  it("⚠️ e o papel também não — tela e papel iguais (dúvida 2 do PR #40)", () => {
+    expect(ler("app/print/dsa/DocumentoDoDsa.tsx")).not.toMatch(/dsa-a-frente|ainda não chegaram/);
+  });
+
+  it("controle positivo: a varredura enxerga o arquivo — ele escreve a nota do Estudo Individual", () => {
+    expect(ler("app/print/dsa/DocumentoDoDsa.tsx")).toContain('data-slot="dsa-nota-do-ei"');
   });
 });
