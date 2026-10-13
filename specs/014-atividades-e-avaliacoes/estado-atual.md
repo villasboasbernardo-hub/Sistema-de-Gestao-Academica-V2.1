@@ -6,6 +6,16 @@
 >
 > **Escrito em:** 07/10/2026, contra `main` em `92b33bc`.
 >
+> **Reconferido em:** 12/10/2026, contra `main` em `adeb991`. Toda afirmação sobre código, linha, rota, view,
+> consumidor ou comportamento do DSA foi relida contra essa `main` (entraram `a919a6c`, `d0a899a`, `c957ba7`,
+> `4600a95`, `d57d505`, `8389a91` e `adeb991`: a tela do DSA editável, as correções de 08/10 com as decisões
+> D-DSA-1 a 3 e as migrations `20261008164612` e `20261008223717`, e a planilha de contingência da spec 015).
+> Linhas e caminhos foram atualizados no lugar; o que mudou de sentido leva o registro do texto vencido. O que
+> mudou está listado na **§6**. ⚠️ **As medições do remoto (§0, §2.2, §3 e §4) continuam sendo as de 07/10/2026 e
+> NÃO foram refeitas** — o remoto não foi consultado nesta reconferência, e desde então a tela do DSA editável e as
+> correções de 08/10 chegaram à Production, então os números podem ter mudado. Onde um número do remoto aparece,
+> ele vale como retrato de 07/10/2026.
+>
 > **O que não muda:** nenhum código, migration ou teste. Nenhum dado foi escrito em banco nenhum.
 >
 > **Nomes:** pessoas aparecem só por código. O único nome próprio é Bernardo Villas Boas, como decisor.
@@ -24,19 +34,19 @@
    - Não compara contra a CHD executada.
    - As três chaves de parâmetro chamam-se `teto.*_percentual_chr`.
    - Os documentos divergem entre si sobre a base do teto de AEC (§1.6).
-   - Com a base do banco, **6 das 10 turmas com lançamento excedem o teto de TAD**. Nenhuma excede o de AEC nem o de TR (§4.3).
+   - Com a base do banco, **5 das 10 turmas com lançamento excedem o teto de TAD** *(Registro anterior, vencido em 12/10/2026: "6 das 10" — a própria tabela da §4.3 marca 5; erro de contagem do texto)*. Nenhuma excede o de AEC nem o de TR (§4.3).
 2. **Nenhuma tela lê `vw_conformidade_tetos`.**
    - Medido por varredura de `app/`, `lib/` e `components/` (o único uso é o tipo gerado).
    - O alerta de teto que a `RF-EXTRA-04` exige **não existe para quem usa o sistema**.
 3. **A situação da vista está quebrada no dado real.**
    - `app.fn_status_vista` só devolve `realizada` quando `status = 'concluida'`.
-   - **Nenhum caminho de escrita grava `concluida`**: nem a carga das planilhas, nem o DSA.
+   - **Nenhum caminho de escrita grava `concluida`**: nem a carga das planilhas, nem o DSA. *(Reconferido em 12/10/2026: continua verdade — o DSA só grava `status` ao excluir, e grava `cancelada`, `lib/acoes/dsa.ts:1343`.)*
    - Medido no remoto, as **188 avaliações vivas estão `pendente`**:
      - **134 têm vista registrada** e aparecem como vista "pendente";
      - **45 aparecem "atrasada"**.
    - As 188 linhas canceladas do ETL tinham **165 `concluida`** como status anterior. A substituição pela planilha **apagou a informação de execução**.
 4. **A carga das planilhas classifica Monitoria e Português como TAD, e a regra diz Estudo Individual.**
-   - A `RN-EVT-01` diz, com estas palavras: *"Inclui também Monitoria e Português para Estrangeiros"*, dentro de Estudo Individual. Fonte: `docs/fase-1/04…md:347`.
+   - A `RN-EVT-01` diz, com estas palavras: *"Inclui também Monitoria e Português para Estrangeiros"*, dentro de Estudo Individual. Fonte: `docs/fase-1/04…md:350` (era 347 em `92b33bc`; o documento ganhou a `RN-EVT-04` e uma nota acima).
    - `resolver.py:63` manda `MONITORIA` para **TAD/Administração**.
    - O próprio `config_listas` diz `Monitoria=Estudo_Individual`.
    - Medido no remoto: **20 linhas ativas, 46 TA**, que hoje inflam o TAD (§3.9).
@@ -46,6 +56,7 @@
    - Isso contradiz o critério 5 do Épico 9.
    - Hoje o efeito é zero: há **0** linhas `global` no remoto.
    - Mas a carga **nunca** usa `global`. Ela grava evento coletivo como **uma linha por turma**: **21 eventos em 46 linhas** (§3.5).
+   - *(Reconferido em 12/10/2026)* A tela do DSA também não cria global: a Server Action aceita `turmaId` nulo (`lib/validacao/dsa.ts:173`, `lib/acoes/dsa.ts:668`), mas o formulário manda sempre a turma da página (`app/(app)/turmas/[turma]/dsa/FormularioDeLancamento.tsx:212`).
 6. **"Agendar avaliação consome TA?"** Os documentos se contradizem (§1.6, item 1). O schema escolheu **não**: a aplicação fica com o TA vazio até o lançamento no DSA.
 
 ---
@@ -76,16 +87,17 @@ O documento não tem coluna "Destino na v2.1" em tabela. O destino é a marca no
 
 | Regra | Linha | Risco | Texto (curto) |
 |---|---|---|---|
-| **RN-EVT-01** | 341–351 | **Alto** | Cinco categorias.<br>AEC: "Não contam para a CHD… Teto normativo: 10% do somatório das CHD do curso".<br>TAD: "5% da CHR".<br>TR: "10% da CHR".<br>Estudo Individual: "fora da fórmula de CHT… Inclui também Monitoria e Português para Estrangeiros".<br>**CHT = CHD + AEC + TAD + TR**.<br>"Excedente de teto é alerta, não bloqueio" |
-| **RN-EVT-03** | 353 | **Alto** | "Avaliações e vistas de prova consomem tempos de aula e contam para a carga horária da disciplina" |
-| **RN-AVAL-02** | 357 | **Alto** | "um único fato… agendar uma avaliação já produz o consumo de tempos de aula correspondente"; uma linha só |
-| RN-AVAL-01 | 333 | Médio | Casamento planejada × agendada por "nome normalizado… nunca por um identificador rígido 1:1". `Formula_MF`/`Carater` só informativos. Vista > 7 dias sem registro de realizada = Atrasada |
-| RN-INST-01 | 187 | Alto | A habilitação "não se aplica ao papel de fiscal de avaliação" |
-| RN-MAT-01 | 215 | Alto | Aula ou avaliação só para disciplina do curso da turma |
-| RN-2027-03 | 281 | Alto | Reservas de TAD e TR do PROENS por curso (`reservas_proens`) |
-| RN-2027-04 | 285 | Alto | Prova Mista = 3 TA contíguos; "Revisão obrigatória de 1 tempo de aula… em até 7 dias" |
-| RN-EVT-02 | 361 | Médio | Só feriado "Dia Inteiro" desconta capacidade |
-| **RN-DEG-02** | 375–377 | Médio | "alerta com exigência de registro de justificativa, nunca como bloqueio". "não se cria `CHECK` bloqueante…". O excedente de teto "sinaliza, não impede" |
+| **RN-EVT-01** | 344–354 | **Alto** | Cinco categorias.<br>AEC: "Não contam para a CHD… Teto normativo: 10% do somatório das CHD do curso".<br>TAD: "5% da CHR".<br>TR: "10% da CHR".<br>Estudo Individual: "fora da fórmula de CHT… Inclui também Monitoria e Português para Estrangeiros".<br>**CHT = CHD + AEC + TAD + TR**.<br>"Excedente de teto é alerta, não bloqueio" |
+| **RN-EVT-03** | 356 | **Alto** | "Avaliações e vistas de prova consomem tempos de aula e contam para a carga horária da disciplina" |
+| **RN-AVAL-02** | 360 | **Alto** | "um único fato… agendar uma avaliação já produz o consumo de tempos de aula correspondente"; uma linha só |
+| RN-AVAL-01 | 336 | Médio | Casamento planejada × agendada por "nome normalizado… nunca por um identificador rígido 1:1". `Formula_MF`/`Carater` só informativos. Vista > 7 dias sem registro de realizada = Atrasada |
+| RN-INST-01 | 190 | Alto | A habilitação "não se aplica ao papel de fiscal de avaliação" |
+| RN-MAT-01 | 218 | Alto | Aula ou avaliação só para disciplina do curso da turma |
+| RN-2027-03 | 284 | Alto | Reservas de TAD e TR do PROENS por curso (`reservas_proens`) |
+| RN-2027-04 | 288 | Alto | Prova Mista = 3 TA contíguos; "Revisão obrigatória de 1 tempo de aula… em até 7 dias" |
+| RN-EVT-02 | 364 | Médio | Só feriado "Dia Inteiro" desconta capacidade |
+| RN-EVT-04 | 368–374 | Médio | **[NOVA — 07/10/2026, entrou na `main` depois de `92b33bc`]** "Não se lança aula em dia de feriado de dia inteiro do calendário ativo". Delimitada a **aula**: "avaliação e atividade não letiva não são recusadas por esta regra" (372) |
+| **RN-DEG-02** | 386–388 | Médio | "alerta com exigência de registro de justificativa, nunca como bloqueio". "não se cria `CHECK` bloqueante…". O excedente de teto "sinaliza, não impede" |
 
 ### 1.3 `docs/fase-1/06-Backlog-de-Epicos-V2.1.md` §3
 
@@ -153,7 +165,7 @@ O documento não tem coluna "Destino na v2.1" em tabela. O destino é a marca no
 ### 1.6 Contradições entre documentos que a spec terá de resolver
 
 1. **Agendar consome TA?**
-   - **Sim:** RF-AVAL-04 (02:210), RF-AVAL-05 (02:212) e RN-AVAL-02 (04:357).
+   - **Sim:** RF-AVAL-04 (02:210), RF-AVAL-05 (02:212) e RN-AVAL-02 (04:360; era 04:357 em `92b33bc`).
    - **Não:** 06:500/516, 42:753, 05:285/292, 21:498 e o comentário da tabela (*"RN-AVAL-02 revisada, Épico I"*). **Mas não há texto "RN-AVAL-02 revisada" no documento 04.**
 2. **Base do teto de AEC.**
    - "somatório das **CHD**": RF-EXTRA-04, RN-EVT-01, Glossário.
@@ -172,7 +184,7 @@ O documento não tem coluna "Destino na v2.1" em tabela. O destino é a marca no
    - Com FK: RF-EXTRA-01 e 05:310.
    - Sem FK: 21:529 e o banco.
 7. **Estudo Individual 20%/10%.** É referência informativa em três documentos, mas **não tem chave** em `config_parametros` e não tem view (Princípio VII).
-8. **Contagens.** EI aparece como 512 (04:347) e como 531. TAD aparece como 59 e como 60. O total aparece como 663 e como 664. A diferença é Monitoria e Português contados em EI.
+8. **Contagens.** EI aparece como 512 (04:350; era 04:347) e como 531. TAD aparece como 59 e como 60. O total aparece como 663 e como 664. A diferença é Monitoria e Português contados em EI.
 
 ---
 
@@ -207,6 +219,7 @@ O documento não tem coluna "Destino na v2.1" em tabela. O destino é a marca no
   - `ativ_estudo_individual_de_turma` (266): o CHECK que a RF-EXTRA-02 prometia e que não existia;
   - **`instrutor_id` + `responsavel_externo`**, mutuamente exclusivos (`ativ_responsavel_exclusivo`, 278–284; decisão Q-8 da spec 013).
 - Catraca `ativ_tempos_so_nulo_no_historico`: `20260908084000…:150`, reescrita em `20261006184558…:118`, que dispensa a linha histórica inativa.
+- **Acréscimo de `20261008164612…sql` (08/10/2026, depois deste levantamento):** **`disciplina_id` opcional, só em AEC de turma** e só disciplina do curso da turma (coluna em 121–122; CHECK `ativ_disciplina_so_aec_da_turma` em 166–171, com o porteiro `app.disciplina_e_da_turma`, 142–156). ⚠️ Ela **não** entra em `vw_ocupacao_ta` (cabeçalho, 19–23): AEC não é CHD, e a disciplina da view alimenta teto e CH por disciplina.
 
 **Outras:**
 - `avaliacoes_planejadas`: catálogo do "dever-ser" (**118** linhas no remoto).
@@ -247,18 +260,19 @@ Os valores foram semeados em `20260829235410…sql:577–619`. **Não existe par
   - avaliação conta se `status <> 'cancelada'`;
   - atividade conta se `status = 'ativo'` **e `turma_id is not null`**, então a global fica de fora;
   - `chr_curricular` = soma da CH das disciplinas ativas do **curso**.
-  - Consumida por `/inicio` e pela ficha da turma.
+  - Consumida por `/inicio` (`app/(app)/inicio/page.tsx:102`) e pela ficha da turma (`app/(app)/turmas/[turma]/page.tsx:169`). Reconferido em 12/10/2026; a view não foi redefinida depois de `92b33bc`.
 - **`vw_conformidade_tetos`** (`…235731…sql:696–733`):
   - tetos lidos por `app.fn_parametro_numerico(…, ano_letivo)`, base `chr_curricular`;
   - booleanos `*_excedido`;
   - reserva do PROENS de TAD e TR ao lado;
-  - **não tem consumidor** em `app/`, `lib/` nem `components/`.
-- **`vw_avaliacoes_situacao` + `app.fn_status_vista`** (`…235731…sql:399–421`, `819–833`): `realizada` exige vista **e** `status = 'concluida'`. **Também não tem consumidor.**
+  - **não tem consumidor** em `app/`, `lib/` nem `components/` (reconferido em 12/10/2026 contra `adeb991`, varredura sem comentário: zero fora de `lib/tipos/database.ts`).
+- **`vw_avaliacoes_situacao` + `app.fn_status_vista`** (`…235731…sql:399–421`, `819–833`): `realizada` exige vista **e** `status = 'concluida'`. **Também não tem consumidor** (idem, 12/10/2026). ⚠️ O "Atrasada" que a tela do DSA passou a mostrar desde 08/10 é situação **da disciplina** (`lib/dominio/dsa/situacao.ts:198–201`, `PainelDeSituacao.tsx:119`), não da vista de prova.
 - **`vw_instrutor_carga_anual`** (`…235731…sql:753–807`):
   - soma aplicação + vista ao **responsável**;
   - soma a aplicação, em coluna própria, ao **fiscal**;
   - a vista não é creditada a quem a conduz, porque essa pessoa não tem coluna.
-- **`vw_ocupacao_ta`** (reescrita em `20261005181116…sql`): grade do DSA com aula, aplicação, vista e atividade, **inclusive global** (V-7).
+- **`vw_ocupacao_ta`** (reescrita em `20261005181116…sql`): grade do DSA com aula, aplicação, vista e atividade, **inclusive global** (V-7). Não foi redefinida depois; a disciplina da AEC (§2.1) fica **fora** dela de propósito.
+- **`public.gravar_lancamentos_em_transacao(jsonb)`** (`20261008223717…sql:39–115`, **nova**, D-DSA-3): aplica numa transação uma lista de `inserir`/`atualizar` sobre `registros_aula`, `avaliacoes` e `atividades_nao_letivas`; `SECURITY INVOKER` (RLS de quem chama); `UPDATE` sem linha vira `42501` (103–105). Não decide nada: a cascata é `lib/dominio/dsa/empurrar.ts`.
 
 ### 2.4 RLS (matriz `perfil_permissao`, lida no remoto)
 
@@ -271,17 +285,18 @@ Os valores foram semeados em `20260829235410…sql:577–619`. **Não existe par
 
 ### 2.5 Código
 
-- **`lib/acoes/dsa.ts`:**
-  - `lancar` (278 a 413): insere avaliação (`-V`), **vista como `UPDATE` da mesma linha** (376 a 393) e atividade (`-N`, global se `turmaId` nulo).
-  - `lancarEstudoIndividualDaSemana` (433 a 524): um EI por dia útil, no slot seguinte ao último TA, idempotente, local Biblioteca.
-  - `mover`, `editar` e `excluir` (844 a 1059). **Excluir avaliação = `status = 'cancelada'`** (1052). Excluir vista = anular as quatro colunas. Excluir atividade = `inativo`.
-  - A avaliação **não exige habilitação** (340 a 352, `RN-INST-01` delimitada).
-- **`lib/dominio/dsa/tetos.ts`:** tetos **semanais** da `RN-DIST-03`. TFM é o único bloqueio; o resto é alerta. **Não trata AEC, TAD nem TR.**
+- **`lib/acoes/dsa.ts`** *(linhas reconferidas em 12/10/2026, contra `adeb991`)*:
+  - `lancar` (494 a 684): insere avaliação (`-V`, 622 a 638), **vista como `UPDATE` da mesma linha** (644 a 662) e atividade (`-N`, global se `turmaId` nulo, 664 a 683). Desde 08/10, antes de gravar: recusa dia fora da etapa presencial para **todo** tipo (D-DSA-2, 510–511) e calcula a cascata do dia (D-DSA-3, 518–527); com empurrados, grava tudo por `gravar_lancamentos_em_transacao` (`gravarBloco`, 530–555).
+  - `lancarEstudoIndividualDaSemana` (704 a 815): um EI por dia útil, no slot seguinte ao último TA, idempotente, local Biblioteca (agora pela função pura `camposDoEstudoIndividual`, `lib/dominio/dsa/rotulos.ts:129–140`). Pula também o dia de feriado `dia_inteiro` ativo e, desde 08/10, o dia fora da etapa presencial (777–789).
+  - `atualizar` (o **cartão único**, 1267), `mover` (1280) e `editar` (1298) delegam todos a `aplicarAtualizacao` (1127 a 1264); `excluir` (1322 a 1350). **Excluir avaliação = `status = 'cancelada'`** (1343). Excluir vista = anular as quatro colunas (1335–1341). Excluir atividade = `inativo` (1344).
+  - A avaliação **não exige habilitação** (608 a 620, `RN-INST-01` delimitada).
+  - *(Registro anterior, vencido em 12/10/2026: "`lancar` (278 a 413) … vista … (376 a 393) … `lancarEstudoIndividualDaSemana` (433 a 524) … `mover`, `editar` e `excluir` (844 a 1059) … `cancelada` (1052) … (340 a 352)".)*
+- **`lib/dominio/dsa/tetos.ts`:** tetos **semanais** da `RN-DIST-03`. TFM é o único bloqueio **de teto**; o resto é alerta. **Não trata AEC, TAD nem TR.** Desde 07–08/10 o DSA tem outros três bloqueios que não são teto: aula em feriado `dia_inteiro` ativo (`RN-EVT-04`, `lib/acoes/dsa.ts:296–311`), lançamento fora da etapa presencial (D-DSA-2, 324–344) e cascata que não cabe até o último tempo (D-DSA-3, 448). *(Registro anterior, vencido em 12/10/2026: "TFM é o único bloqueio; o resto é alerta.")*
 - **Não existem:** `lib/dominio/tetos-normativos.ts` (que RN-EVT-01 nomeia) e `lib/dominio/casamento-avaliacoes.ts` (RN-AVAL-01).
 - **Rotas:**
-  - `/atividades` existe no menu como *"em breve"* (`lib/navegacao/menu.ts:167`).
-  - **Não há** `app/(app)/cursos/[curso]/avaliacoes/`, embora a RF-CURSO-02 a nomeie.
-  - **Nenhum código grava `status = 'concluida'`, `em_andamento` ou `atrasada` em avaliação.**
+  - `/atividades` existe no menu como *"em breve"* (`lib/navegacao/menu.ts:167–171`, `disponivel: false`, `entregaEm: "Épico 9"`). Reconferido em 12/10/2026: o arquivo não mudou desde `92b33bc`.
+  - **Não há** `app/(app)/cursos/[curso]/avaliacoes/`, embora a RF-CURSO-02 a nomeie (reconferido em 12/10/2026; `/avaliacoes` aparece só como rota declarada em `lib/navegacao/menu.ts:87`).
+  - **Nenhum código grava `status = 'concluida'`, `em_andamento` ou `atrasada` em avaliação.** Reconferido em 12/10/2026: os únicos escritores de `avaliacoes` em `app/` e `lib/` estão em `lib/acoes/dsa.ts`, e o único `status` que eles gravam é `cancelada` (1343).
 
 ---
 
@@ -402,7 +417,7 @@ Cada item traz: o que a carga faz, o risco de virar regra sem decisão e a recom
   - **0** com a marca "saiu";
   - **1** cancelada sem marca nenhuma (código `DSAP-`, turma `C-Exp-Obs-ME 2026`), com origem não identificada nesta leitura.
 - **Risco:**
-  - `cancelada` passa a significar três coisas: **cancelada de fato**, **excluída na tela** (`lib/acoes/dsa.ts:1052`) e **substituída pela carga**.
+  - `cancelada` passa a significar três coisas: **cancelada de fato**, **excluída na tela** (`lib/acoes/dsa.ts:1343`; era 1052 em `92b33bc`) e **substituída pela carga**.
   - O motivo vive em texto livre, e o status anterior está num parêntese.
   - O painel do Épico 8 contaria as substituídas como "canceladas".
 - **Recomendação:** ver **P-9**.
@@ -422,7 +437,7 @@ Cada item traz: o que a carga faz, o risco de virar regra sem decisão e a recom
 
   As linhas do ETL que a carga substituiu classificavam Monitoria e Português como **Estudo_Individual**, que é o que a RN-EVT-01 manda. **É a divergência de maior peso deste levantamento**, porque altera o teto de TAD que §4.3 mede.
 - **TFM:**
-  - O teto semanal é alerta no `resolver` (`639–642`) e **recusa** no piloto (`plano.py:565–569`). `lib/dominio/dsa/tetos.ts` diz que TFM é o **único bloqueio**.
+  - O teto semanal é alerta no `resolver` (`639–642`) e **recusa** no piloto (`plano.py:565–569`). `lib/dominio/dsa/tetos.ts:17` diz que TFM é o **único bloqueio**; desde 07–08/10 é o único bloqueio **de teto** do DSA (ver §2.5).
   - A atividade AEC "Orientação de TFM" **não** entra nesse teto (comentário em `tetos.ts`).
 - **`origem_migracao_v1` nula nas linhas `DSAP-`, de propósito** (`plano.py:24–28`). Quem as identifica é o prefixo do código.
 
@@ -518,10 +533,10 @@ Cada item traz: o que a carga faz, o risco de virar regra sem decisão e a recom
 | CAHO 2026 | 1668 | 1353 | 3,4 / 4,2 | 40 (83,40) 2,4 / 3,0 | 1,8 / 2,2 | 6 / 121 |
 
 **Leitura:**
-- Com a base do banco (CHR), excedem o teto de **TAD 6 turmas**, marcadas ⚠️. Nenhuma excede AEC ou TR.
+- Com a base do banco (CHR), excedem o teto de **TAD 5 turmas**, marcadas ⚠️ *(era "6", vencido em 12/10/2026: a tabela marca 5)*. Nenhuma excede AEC ou TR.
 - Com a base CHD executada, **C-Espc-FR passaria a exceder AEC** (12,0%), C-Esp-ME deixaria de exceder TAD (4,9%), e a lista de TAD mudaria.
 - **A base muda o veredito.** Por isso a P-1 vem primeiro.
-- Os 46 TA de Monitoria e Português (§3.9), se reclassificados para EI como manda a RN-EVT-01, saem do TAD. **Quanto disso cai em cada turma [pendente]**: não foi medido por turma neste levantamento, e só essa medição diz quais das 6 turmas deixam de exceder.
+- Os 46 TA de Monitoria e Português (§3.9), se reclassificados para EI como manda a RN-EVT-01, saem do TAD. **Medido em 12/10/2026** (`medicao-2026-10-12.md` M-5, sobre a cópia `remoto-20261009-085410.sql`): tirando Monitoria, Português, BDA e BDF, **C-Esp-ME e C-Espc-HN deixam de exceder**; C-Ap-FR, C-Ap-HN e MetocOf continuam.
 - **Nenhum desses alertas aparece hoje em tela** (achado 2).
 
 ---
@@ -632,3 +647,86 @@ Cada item traz: o que a carga faz, o risco de virar regra sem decisão e a recom
   - (a) Épico 9 antes do 8 (doc 06:832);
   - (b) Épico 8 antes.
 - **Recomendação: (a)**, com a P-10 resolvida antes. Ela é pequena e conserta um indicador que o DSA já publica errado.
+
+---
+
+## 6. Reconferência de 12/10/2026
+
+*Contra `main` em `adeb991`. Só código e documentos foram relidos; **o remoto não foi consultado** e as medições
+de 07/10/2026 seguem como retrato daquele dia. O que não está nesta tabela foi relido e continua valendo. Em
+particular, **`scripts/carga_dsa/` e os documentos 02, 06, 42, 21, 07 e o BRIEF não mudaram** entre `92b33bc` e
+`adeb991` (`git diff` vazio), então as citações da §1 a esses documentos e toda a §3 continuam com as mesmas linhas.*
+
+### 6.1 O que ficou velho e foi corrigido no texto
+
+| § / linha antiga | O que estava escrito (curto) | O que vale hoje | Evidência |
+|---|---|---|---|
+| §0 item 4; §1.2; §1.6 itens 1 e 8 | linhas do documento 04: RN-EVT-01 341–351, "Monitoria" 347, RN-EVT-03 353, RN-AVAL-02 357, RN-AVAL-01 333, RN-INST-01 187, RN-MAT-01 215, RN-2027-03 281, RN-2027-04 285, RN-EVT-02 361, RN-DEG-02 375–377 | +3 até a RN-EVT-02 e +11 na RN-DEG-02: 344–354, 350, 356, 360, 336, 190, 218, 284, 288, 364, 386–388 | o documento 04 ganhou a nota de contagem (`04:110`) e a `RN-EVT-04` (`04:368–374`) |
+| §1.2 (ausente) | — | **`RN-EVT-04`** (nova, 07/10/2026): aula não entra em feriado `dia_inteiro` ativo; **avaliação e atividade não são recusadas por ela** | `docs/fase-1/04…md:368–374`; `lib/acoes/dsa.ts:296–311`, `557–560`, `1142–1145` |
+| §2.1 `atividades_nao_letivas` | sem coluna de disciplina | **`disciplina_id` opcional, só AEC de turma, só do curso da turma**; fora de `vw_ocupacao_ta` | `20261008164612…sql:121–171`, `19–23` |
+| §2.3 (ausente) | — | `public.gravar_lancamentos_em_transacao(jsonb)`, `SECURITY INVOKER`, só as três tabelas do DSA | `20261008223717…sql:39–125` |
+| §2.5 `lancar` | 278–413; vista 376–393 | 494–684; avaliação 622–638; vista 644–662; atividade 664–683 | `lib/acoes/dsa.ts` |
+| §2.5 EI da semana | 433–524 | 704–815; pula também o dia fora da etapa presencial | `lib/acoes/dsa.ts:777–789` |
+| §2.5 mover/editar/excluir | 844–1059; `cancelada` em 1052 | `aplicarAtualizacao` 1127–1264 (núcleo de `atualizar` 1267, `mover` 1280, `editar` 1298); `excluir` 1322–1350; `cancelada` em 1343 | `lib/acoes/dsa.ts` |
+| §2.5 habilitação | 340–352 | 608–620 (lançar) e 1171–1175 (atualizar: `avaliacao` não exige) | `lib/acoes/dsa.ts` |
+| §2.5 e §3.9 `tetos.ts` | "TFM é o único bloqueio" | é o único bloqueio **de teto**; o DSA ganhou mais três bloqueios (feriado, etapa, cascata) | `lib/acoes/dsa.ts:296–311`, `324–344`, `448` |
+| §3.8 | excluída na tela em `lib/acoes/dsa.ts:1052` | `:1343` | `lib/acoes/dsa.ts:1342–1343` |
+| §2.3 situação | — | o "Atrasada" da tela do DSA é da **disciplina**, não da vista | `lib/dominio/dsa/situacao.ts:198–201` |
+
+**Continuam verdade, reconferidos:** zero consumidor de `vw_conformidade_tetos`, `vw_avaliacoes_situacao` e
+`fn_status_vista` em `app/`, `lib/`, `components/` (varredura sem comentário, fora o tipo gerado); nenhum código
+grava `concluida`/`em_andamento`/`atrasada` em avaliação; `/atividades` "em breve" (`lib/navegacao/menu.ts:167–171`);
+sem rota `cursos/[curso]/avaliacoes`; `vw_carga_horaria_turma` consumida só por `/inicio` e pela ficha da turma; e
+nenhuma das views da §2.3 foi redefinida depois de `92b33bc`.
+
+### 6.2 O que o DSA grava hoje, e que pesa nos Épicos 8 e 9
+
+- **Avaliação** (`lib/acoes/dsa.ts:608–642`): `INSERT` em `avaliacoes` com `codigo DSA-<marca>-V`, turma, curso,
+  disciplina, `tipo_avaliacao`, `data_avaliacao`, `ta_inicial`, `tempos_consumidos`, `instrutor_responsavel_id`,
+  `fiscal_id`, `nome_fiscal_externo`, `conteudo_resumo`, `metodologia`, `local`. **Não informa `status`** (vale o
+  padrão `pendente`). ⚠️ **A tela manda sempre `fiscalId: null`** e oferece só o fiscal **de fora do cadastro**
+  (`FormularioDeLancamento.tsx:241`, `479–482`): o fiscal do cadastro só chega por chamada direta à Server Action.
+  O cartão único **não edita** fiscal nem tipo da avaliação (`lib/validacao/dsa.ts:308–339`; `lib/acoes/dsa.ts:1237–1240`
+  só troca tópico, técnica, responsável, local e posição).
+- **Vista** (`lib/acoes/dsa.ts:644–662`): **`UPDATE` da mesma linha**, com `data_vista_prova`, `ta_inicial_vista`,
+  `tempos_consumidos_vista` e `local_vista`. Uma sessão só. Não toca `status`, então `fn_status_vista` continua sem
+  ver a vista como `realizada` (achado 3). Excluir a vista anula as quatro colunas (1335–1341).
+- **Atividade não letiva** (`lib/acoes/dsa.ts:664–683`): `INSERT` com `codigo -N`, `categoria_normativa`, `escopo`
+  (`global` se `turmaId` nulo), `turma_id`, `data`, `subtipo`, `descricao`, TA, `local`, `instrutor_id` ×
+  `responsavel_externo`, e `disciplina_id` (só AEC). A tela filtra o subtipo pela categoria escolhida
+  (`FormularioDeLancamento.tsx:278`, `metadados.categoria` de `tipos_atividade`). Excluir = `status = 'inativo'` (1344).
+  O cartão único edita só `descricao` e `instrutor_id` da atividade (1241–1244), não categoria, subtipo nem disciplina.
+- **Global:** a Server Action aceita (`lib/validacao/dsa.ts:173`, `lib/acoes/dsa.ts:668`) e não confere a permissão
+  `atividades_globais.criar` em código (fica com a RLS); **a tela nunca a envia** (`FormularioDeLancamento.tsx:86`,
+  `212`: `turmaId` é a turma da página). A global não é empurrada pela cascata (`lib/acoes/dsa.ts:370`, `391`). A
+  leitura do DSA e a planilha a **mostram** (`dsa/leitura.ts:317–324`, `dsa/planilha/leitura.ts:196–205`).
+- **EI da semana** (`lib/acoes/dsa.ts:704–815`): um `INSERT` com até cinco linhas (uma transação), `Estudo_Individual`,
+  `escopo turma`, subtipo "Estudo Individual", 1 TA no slot seguinte ao último do dia, local Biblioteca
+  (`lib/dominio/dsa/rotulos.ts:129–140`); idempotente; pula feriado `dia_inteiro` ativo, dia fora da etapa
+  presencial e dia já com EI.
+- **Feriado, licença e dia parado:** **não há caminho de tela que os grave.** `feriados` só é **lido** em `app/` e
+  `lib/` (`inicio/page.tsx:136`, `turmas/[turma]/page.tsx:138`, `dsa/leitura.ts:349`, `lib/acoes/dsa.ts:302` e `731`);
+  nenhum `insert`/`update`. Pela Q-16 da spec 013 (`spec.md:58`, `141`), feriado **e licença** vêm do calendário, sem
+  lançamento TA a TA; o calendário hoje é alimentado pela carga (`sincronizar.py:328–357`, §3.5). Na tela, o dia
+  `dia_inteiro` aparece bloqueado e recusa **aula** (`RN-EVT-04`), mas **aceita avaliação e atividade**. Dia parado
+  de só algumas turmas, pela tela, só existe como atividade TAD lançada à mão.
+- **Etapa presencial (D-DSA-2):** `turmas.inicio_etapa_presencial`/`termino_etapa_presencial`
+  (`20261008164612…sql:190–209`); fora da janela, `lancar` recusa **todo** tipo (`lib/acoes/dsa.ts:505–511`) e
+  `atualizar` recusa quando o dia muda (1146–1149). **Turma EAD puro não tem DSA** (`lib/dominio/dsa/ead-puro.ts:28`).
+- **D-DSA-1:** aula sem UE, com `disciplina_id` e tópico, em qualquer disciplina (`20261008164612…sql:71–86`). Não
+  toca avaliação (que já não tinha UE): a `PEND-E8-1` e a P-4 seguem como estavam.
+- **D-DSA-3 e a transação:** o bloco que entra ou cresce empurra os seguintes da **mesma turma no mesmo dia**,
+  **inclusive avaliação, vista e atividade** (`lib/acoes/dsa.ts:450–457`; vista empurrada move `ta_inicial_vista`).
+  Não cabendo, recusa (448). Com empurrados, tudo vai por `gravar_lancamentos_em_transacao` (463–478); sem
+  empurrados, `insert`/`update` direto (535–544, 1250–1252).
+- **Planilha de contingência (spec 015):** **lê** avaliações (não canceladas) e atividades (ativas, inclusive
+  global), em `app/(app)/turmas/[turma]/dsa/planilha/leitura.ts:186–205`, e as põe no catálogo como itens de
+  avaliação, vista, AEC, TAD, TR e EI (`lib/dominio/dsa/planilha/catalogo.ts:66–72`, `210`, `237–249`). É **só de
+  ida** (Q-1 da spec 015): não grava nada no banco, e não calcula teto de AEC/TAD/TR.
+
+### 6.3 As perguntas da §5
+
+Nenhuma das P-1 a P-14 foi respondida por decisão **registrada** em `specs/013-detalhe-semanal-de-aula/` ou no
+`CLAUDE.md` até `adeb991`. As decisões novas (D-DSA-1 a 3, `RN-EVT-04`, Q-16) tocam o mesmo terreno sem decidir as
+perguntas: a D-DSA-1 é de **aula** (não de avaliação, P-4), e a Q-16 trata feriado e licença como calendário, o que
+não classifica Monitoria, Recepção nem Apoio à Instrução (P-12).
