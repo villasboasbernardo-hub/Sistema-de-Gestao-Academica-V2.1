@@ -4,7 +4,7 @@
 
 **Created**: 12/10/2026
 
-**Status**: **Clarify encerrado em 13/10/2026.** As Q-1 a Q-15 foram respondidas por Bernardo em 12 e 13/10/2026 (*Clarifications*). A Q-1 foi **substituída** pela decisão D-CUR-1, e a Q-1b caiu junto. O lote banco × currículo (§11-A) foi **aprovado em bloco**, com o impacto mostrado caso a caso antes de cada aplicação; a lista planilha × currículo (§11-B) vai para os operadores. Seguem para aprovação de Bernardo, na implementação, o texto da emenda da `RN-AVAL-01` (§12) e as emendas de texto (§13). **Nenhuma trava restante para os Épicos 9 e 8.**
+**Status**: **Em clarify (13/10/2026).** As Q-1 a Q-15 foram respondidas por Bernardo em 12 e 13/10/2026 (*Clarifications*). A Q-1 foi **substituída** pela decisão D-CUR-1, e a Q-1b caiu junto. O lote banco × currículo (§11-A) foi **aprovado em bloco**, com o impacto mostrado caso a caso antes de cada aplicação; a lista planilha × currículo (§11-B) vai para os operadores. Seguem para aprovação de Bernardo, na implementação, o texto da emenda da `RN-AVAL-01` (§12) e as emendas de texto (§13). As Q-1 a Q-15 não travam mais os Épicos 9 e 8. ⚠️ **Reaberto em 13/10/2026 para os acréscimos de Bernardo** (D-CUR-2 e os cards, §2.3). Medições na §15 e duas perguntas de modelagem na §16 (Q-16 e Q-17).
 
 **Input**: pedido de Bernardo Villas Boas de 12/10/2026: *"Épicos 8 e 9 da v2.1 — Avaliações e Atividades."* Ele veio com **15 decisões já tomadas**, registradas na §2 como requisito e não reabertas como pergunta.
 
@@ -45,6 +45,18 @@ O DSA já lança avaliação, vista e atividade, mas há quatro lacunas:
 | D-AA-15 | **Fora desta spec:** agendamento de avaliação × consumo de TA. O consumo acontece só ao registrar no DSA. Vai para o backlog | §8 |
 
 **Telas que o pedido nomeia:** alerta de teto por turma e situação das avaliações (hoje invisíveis).
+
+### 2.3 Acréscimos de 13/10/2026 — requisito, não pergunta
+
+*(Decisões de Bernardo Villas Boas, na fase de clarify, antes do plan. Não se reabrem.)*
+
+| # | Decisão | Onde vira requisito |
+|---|---|---|
+| **D-CUR-2** | **Previsto de avaliação com origem.** Toda disciplina mostra a CH do currículo dividida em **aula** e **avaliação** (provas, trabalhos e vistas): 120 = 116 aula + 4 avaliação. A CH oficial **nunca** muda; o tempo de avaliação sai de **dentro** dela. Cada previsto (**quantidade** e **tempo**) tem **origem**: **"currículo"**, quando o currículo informa (na UE, se ele diz a UE; senão na disciplina), ou **"arbitrado"**, quando o currículo é mudo, definido pelo Encarregado ou Admin por disciplina do curso, herdado pelas turmas e ajustável por turma, exibido com *"não consta do currículo — definido pela Divisão"*. Ponto de partida do arbitrado: os valores das planilhas, como *"arbitrado — sugestão da planilha, a confirmar"*, **só** onde o currículo é mudo. Sem previsto: *"tempo de avaliação não definido"*. Painel com **alerta de projeção**. Trabalho tem o mesmo tratamento que prova. **Substitui a resposta da Q-12 e complementa a Q-11** | FR-031.4, FR-031.6 a FR-031.11, FR-034 |
+| **D-AV-1** | **Cards de avaliações:** na página da turma, *"Avaliações — N aplicadas de M previstas no currículo"*, com barra, levando à aba *Avaliações* da turma; na disciplina, *"X de Y avaliações aplicadas"* e a lista dos itens com a situação. **Prova e trabalho contam; vista não** (indicador próprio, *"vistas realizadas A de B"*). *Aplicada* = aplicação lançada no DSA | FR-055 a FR-057 |
+| **D-AV-2** | **Aba *Avaliações* na página da turma**, como a do curso: por disciplina, os itens previstos com a origem, aplicados, vistas, situação, os três papéis e o alerta de projeção. Aba e filtros na URL | FR-058 |
+| **D-TETO-1** | **Cards de AEC, TAD e TR na página da turma, com TRÊS valores:** **cumprido** (o lançado no DSA; Apoio Individualizado e dias parados fora), **previsto no PROENS** (por turma e ano, editável por Admin, Encarregado e Ajudante da Divisão, Operador não; quem e quando registrados; acima do máximo, aviso sem bloqueio) e **limite máximo** (do currículo e das regras da DEnsM, só informativo). Ex.: *"TAD — 5 cumpridos · 5 previstos (PROENS) · máximo 25"*. Alertas informativos: cumprido > previsto e cumprido > máximo. A linha "dias parados" ao lado | FR-004, FR-008 a FR-008.3 |
+| **D-TETO-2** | **Página do curso:** os **limites máximos** de AEC, TAD e TR do currículo de cada curso, como referência, sem cumprido nem previsto | FR-009 |
 
 ### 2.1 Paridade ou novidade (Princípio X)
 
@@ -105,12 +117,14 @@ O DSA já lança avaliação, vista e atividade, mas há quatro lacunas:
   - **Licença NÃO prevista:** ao lançar, o operador pode marcar **"consome Tempo Reserva"**, e os tempos daquele dia e turma contam como **TR**, entrando no percentual informativo de TR. Licença ou feriado **previsto no calendário NÃO consome TR**.
   - **Desfazer** a parada devolve o dia e o TR consumido (decisão D-PAR-1).
 - Q: O currículo dá o tempo da avaliação, mas não diz de qual UE ele sai. Como registrar? → A: **Avaliação no nível da disciplina**, dentro da CH dela, **com aviso no painel**, até Bernardo nomear a UE (Q-11).
-- Q: O currículo não dá o TA da avaliação. Com quantos TA ela entra? → A: **Registrada sem tempo previsto.** Não se inventa número; **a planilha não é fonte** (Q-12).
+- Q: O currículo não dá o TA da avaliação. Com quantos TA ela entra? → A: ~~Registrada sem tempo previsto. Não se inventa número; a planilha não é fonte (Q-12).~~ **SUBSTITUÍDA no mesmo dia pela D-CUR-2:** o tempo é **arbitrado** pela Divisão, com a origem à vista; a planilha entra só como **sugestão a confirmar**.
 - Q: Licença NÃO prevista de todas as turmas, que consome TR, é gravada como? → A: **TR global bloqueante** dos tempos. Não vai para o calendário (Q-13).
 - Q: Feriado e licença PREVISTOS contam no teto de TAD? → A: **NÃO** (Q-14, decisão de Bernardo, contra a recomendação). Feriado e licença **previstos** (FR, LA, LP, NT…) **não contam no teto de TAD**: nesses dias não há aula e não se conta tempo de aula. Ficam numa **linha própria "dias parados"**, por turma, **informativa**, separada de AEC, TAD e TR, como nas planilhas, que têm linhas próprias para FR, LA, LP e NT. **Só a licença NÃO prevista marcada "consome Tempo Reserva" entra no TR.**
 - Q: Igualar a quantidade de disciplinas ao currículo obriga a desfazer os desdobramentos? → A: **Unificar** C-Ap-HN I + I-I e CAHO MAT + FIS em **uma disciplina cada**, conforme o currículo, **movendo os lançamentos por migration de dado**: nenhum lançamento perdido, CH conferida antes e depois. A **Ambientação** dos C-ApA fica **para depois** (sem turma carregada em 2026), como pendência nomeada `PEND-014-3` (Q-15).
 - Q: O lote banco × currículo (§11-A) está aprovado? → A: **Aprovado em bloco pela regra D-CUR-1.** Na implementação, cada correção vira migration de dado com o rito do remoto, e **antes de aplicar** Bernardo vê o impacto **caso a caso**: lançamentos que mudam de disciplina e CH antes e depois. Inclui a reativação e a correção do código da disciplina III do C-Esp-ALH.
 - Q: E a lista planilha × currículo (§11-B)? → A: **Vira a lista de erros de planilha para os operadores.** Nada a aplicar no banco.
+- Q: (acréscimo de 13/10/2026) Como o sistema sabe quantos tempos uma avaliação dura quando o currículo não diz? → A: **D-CUR-2** (§2.3): previsto com **origem** "currículo" ou "arbitrado"; o arbitrado é definido pela Divisão, parte da sugestão da planilha só onde o currículo é mudo, e o painel projeta o estouro. **Substitui a resposta da Q-12** (que deixava a avaliação sem tempo) e complementa a Q-11.
+- Q: (acréscimo de 13/10/2026) Que cards a turma e o curso ganham? → A: **D-AV-1, D-AV-2, D-TETO-1 e D-TETO-2** (§2.3).
 - Q: O que fica fora da spec? → A: (1) A avaliação `DSAP-C-EXP-OBS-ME-2026-L206-V`, cancelada e relançada como `DSA-MUYK0RFD-V` **sem a vista**: correção de dado e possível **bug** "excluir e relançar a prova no DSA perde a vista". Vai para o **backlog do DSA** (`PEND-DSA-VISTA`), para o próximo lote de correções. (2) Das 11 divergências entre documentos da §9, **as que conflitam com decisões de Bernardo entram como emenda de texto nesta spec** (§13); as demais ficam listadas.
 
 ---
@@ -121,11 +135,13 @@ As histórias seguem a ordem das levas (D-AA-1): **leva 1 = Épico 9** (US1 a US
 
 ### User Story 1 — Ver o teto de AEC, TAD e TR de cada turma (Priority: **P1**, leva 1)
 
-O Encarregado abre a ficha da turma e vê, para AEC, TAD e TR:
-- o executado;
-- o teto;
-- o percentual;
-- um alerta quando passa do teto.
+O Encarregado abre a página da turma e vê um **card** para AEC (Atividades Extraclasse), TAD e TR, cada um com **três valores** (D-TETO-1):
+- o **cumprido**: o lançado no DSA, sem Apoio Individualizado e sem dias parados;
+- o **previsto no PROENS** para aquela turma e ano, que ele edita;
+- o **limite máximo** do currículo e das regras da DEnsM;
+- e os alertas, que nunca bloqueiam: cumprido acima do previsto, cumprido acima do máximo.
+
+Na página do curso, ele vê os **limites máximos** de AEC, TAD e TR do currículo, como referência (D-TETO-2).
 
 Ao lado, sem teto e sem alerta, a linha informativa **"dias parados"**, por tipo (FR, LA, LP, NT…), fora da CHT (Q-14).
 
@@ -133,11 +149,15 @@ O `/inicio` lista as turmas com teto excedido.
 
 **Por que esta prioridade:** é o alerta que a `RF-EXTRA-04` exige e que não existe para quem usa o sistema. Medido na cópia de 09/10: **5 turmas** excedem o teto de TAD sem que ninguém veja.
 
-**Teste independente:** abrir, por clique, a ficha de uma turma com TAD acima de 5% da CH curricular e ver o alerta. Lançar mais um TAD e ver que a gravação **não** foi impedida.
+**Teste independente:** abrir, por clique, a página de uma turma com TAD acima do máximo e ver o alerta. Lançar mais um TAD e ver que a gravação **não** foi impedida. Editar o previsto do PROENS como Ajudante e ver quem e quando; tentar como Operador e ser recusado.
 
 **Acceptance Scenarios:**
 1. **Dado** uma turma com CH curricular 545 e 29 TA de TAD, **quando** abro a ficha, **então** vejo *"TAD 29 de 27,25 (5,3 %) — acima do teto"* como alerta, sem bloqueio.
 2. **Dado** o teto de TAD alterado em `config_parametros`, **quando** recarrego, **então** o alerta usa o novo valor sem redeploy.
+2.1. **Dado** uma turma com TAD cumprido 5, previsto no PROENS 5 e máximo 25, **então** o card diz *"TAD — 5 cumpridos · 5 previstos (PROENS) · máximo 25"*, sem alerta. Com 6 cumpridos, alerta *"acima do previsto"*; com 26, também *"acima do máximo"*. Nenhum dos dois bloqueia.
+2.2. **Dado** o Ajudante da Divisão, **quando** grava previsto de TR 130 numa turma cujo máximo é 126, **então** a gravação acontece, o aviso *"previsto acima do limite máximo"* aparece, e o card mostra quem alterou e quando. **Dado** um Operador, **então** a gravação é recusada pela Server Action e com `42501` do banco.
+2.3. **Dado** uma turma sem previsto cadastrado, **então** o card mostra *"previsto não cadastrado"* (`RN-DEG-01`), e não zero.
+2.4. **Dado** a página do curso, **então** ela mostra os limites máximos de AEC, TAD e TR do currículo do curso, com a origem, e nenhum cumprido nem previsto.
 3. **Dado** um lançamento de TAD que leva a turma acima do teto, **quando** gravo no DSA, **então** a gravação acontece e o alerta aparece.
 4. **Dado** uma turma EAD, **então** a ficha mostra a frase da spec 013 e **não** mostra tetos.
 
@@ -284,6 +304,40 @@ As 188 avaliações do ETL que a planilha substituiu passam a ter o estado **"su
 
 ---
 
+### User Story 9 — Tempo de avaliação com origem e alerta de projeção (Priority: **P1**, leva 2)
+
+O Encarregado abre uma disciplina e vê a CH do currículo dividida em **aula** e **avaliação**, como *"120 = 116 aula + 4 avaliação"*. Cada avaliação prevista mostra a **quantidade** e o **tempo**, cada um com a sua **origem**: *currículo* ou *arbitrado*. O painel projeta quanto sobra para aula (D-CUR-2).
+
+**Por que esta prioridade:** sem isso, quem vê "120 TA" planeja 120 de aula e descobre no fim que faltam 4 para prova e vista.
+
+**Teste independente:** numa disciplina do C-Exp-Obs-ME (currículo mudo quanto ao tempo), confirmar o arbitrado sugerido pela planilha e ver a disciplina passar de *"tempo de avaliação não definido"* para *"aula + avaliação"*, com a marca *"não consta do currículo — definido pela Divisão"*.
+
+**Acceptance Scenarios:**
+1. **Dado** C-Ap-HN, UE 7 Física (currículo: PM 2 + vista 1, computados na UE 7), **então** a origem é *currículo*, o item fica na UE 7, e a UE mostra 18 aula + 3 avaliação = 21.
+2. **Dado** C-Exp-MetocOf, disciplina com *"PM de 3 TA … e 1 TA para a vista"* sem UE, **então** a origem é *currículo*, os 4 TA ficam na disciplina, e o painel avisa *"o currículo não diz de qual UE sai"* (Q-11).
+3. **Dado** C-Exp-Obs-ME, disciplina DHN-0225 (currículo: duas PE, sem tempo), **então** a **quantidade** 2 tem origem *currículo* e o **tempo** nasce *"arbitrado — sugestão da planilha, a confirmar"*. Confirmado pelo Encarregado, passa a *arbitrado*.
+4. **Dado** uma disciplina sem previsto de tempo nenhum, **então** ela mostra *"tempo de avaliação não definido"*, e o total da turma **não** é escondido.
+5. **Dado** uma disciplina de 120 TA com 116 de aula previstos, 100 cumpridos e 2 avaliações de 2 TA ainda por aplicar, **então** o painel diz *"restam 20 TA; faltam 2 avaliações (4 TA) → sobram 16 TA para aula"*. Com 118 cumpridos, *"restam 2 TA; faltam 2 avaliações (4 TA) → sobram −2 TA para aula"*, em alerta de estouro, sem bloquear.
+6. **Dado** o arbitrado do curso, **quando** o Encarregado o ajusta só para uma turma, **então** as outras turmas continuam com o do curso, e a da turma mostra que foi ajustada.
+7. **Dado** um Operador, **então** ele vê o arbitrado e não o edita.
+
+---
+
+### User Story 10 — Cards de avaliações e a aba *Avaliações* da turma (Priority: **P1**, leva 2)
+
+Na página da turma, junto aos cards de CH e progresso, o card *"Avaliações — N aplicadas de M previstas no currículo"*, com barra. Clicar leva à aba **Avaliações** da turma, que mostra, por disciplina, os itens previstos com a origem, os aplicados, as vistas, a situação, o aplicador, o fiscal, quem conduz a vista e o alerta de projeção (D-AV-1, D-AV-2).
+
+**Teste independente:** chegar à aba por clique no card e ver, numa disciplina, *"Prova 1 ✔ dd/mm · Trabalho 1 ✔ dd/mm · Prova 2 pendente"* e *"vistas realizadas 1 de 2"*.
+
+**Acceptance Scenarios:**
+1. **Dado** uma turma com 30 avaliações previstas (provas e trabalhos) e 12 aplicadas no DSA, **então** o card diz *"Avaliações — 12 aplicadas de 30 previstas no currículo"*, e a barra marca 40 %.
+2. **Dado** uma vista aplicada, **então** ela **não** soma no "N de M"; soma em *"vistas realizadas A de B"*.
+3. **Dado** uma disciplina cuja quantidade o currículo não dá e a Divisão arbitrou, **então** ela entra no M com a marca *arbitrado*. Sem nenhuma das duas, ela aparece *"não definido"* e o card diz quantas disciplinas estão assim.
+4. **Dado** a aba *Avaliações* da turma filtrada por disciplina, **quando** copio o endereço e abro noutra janela, **então** a mesma aba e o mesmo filtro abrem (URL dona do estado).
+5. **Dado** o painel do DSA, **ao** escolher a disciplina, **então** aparece *"X de Y avaliações aplicadas"* com a lista dos itens.
+
+---
+
 ### Edge Cases
 
 - **Turma sem lançamento:** os tetos aparecem com 0 % e sem alerta. Turma sem disciplina ativa: *"sem CH curricular — teto não calculável"* (`RN-DEG-01`), nunca divisão por zero.
@@ -293,7 +347,10 @@ As 188 avaliações do ETL que a planilha substituiu passam a ter o estado **"su
 - **Vista lançada antes da aplicação:** recusada, como já é hoje (`aval_vista_apos_aplicacao`), para **cada** sessão.
 - **Prova lançada além do previsto do item:** alerta, como a CH da UE (`FR-025 da spec 013`), nunca bloqueio.
 - **Currículo que dá o tempo da avaliação mas não diz de que UE ele sai** (C-Exp-MetocOf 2011, C-Esp-ALH, parte dos C-ApA): a avaliação fica **no nível da disciplina**, dentro da CH dela, e o painel avisa *"o currículo não diz de qual UE sai"*, até Bernardo nomear a UE (Q-11, FR-031.3).
-- **Currículo que não dá o TA da avaliação** (C-Exp-Obs-ME; EST-QF por frequência, relatório ou conceito): a avaliação é registrada **sem tempo previsto**; nada é inventado e a planilha não é fonte (Q-12, FR-031.4).
+- **Currículo que não dá o TA da avaliação** (C-Exp-Obs-ME, C-Esp-ALH quanto à vista, CAHO XX quanto à vista): o tempo é **arbitrado** pela Divisão, com a marca à vista; a planilha é só **sugestão a confirmar** (D-CUR-2, FR-031.4). Os EST-QF que aprovam por frequência não têm avaliação a prever.
+- **Arbitrado acima do que cabe:** se a soma dos tempos arbitrados passa da CH da disciplina, o painel avisa e mostra quanto sobra para aula (negativo), sem bloquear e sem mudar a CH.
+- **Previsto do PROENS acima do limite máximo:** grava, com aviso (D-TETO-1).
+- **Turma sem previsto do PROENS:** *"previsto não cadastrado"*, nunca zero (`RN-DEG-01`).
 - **Currículo por competências** (C-Espc-FR, C-Espc-HN, sem UE): a avaliação fica no nível da disciplina, com a "CH DA AVALIAÇÃO" que o currículo declara, dentro da CH da disciplina.
 - **Parada sobre um dia que já tem aula gravada:** o que existe continua visível e contando (`RN-EVT-04`); a regra "não se contabiliza TA de aula" vale para o que se lança **depois** da parada. A tela avisa quantos lançamentos o dia tem antes de confirmar.
 - **Desfazer uma parada:** a global inativa a linha do calendário, o dia parado global ou o TR global, e a da turma inativa o dia parado ou o TR. O dia volta a aceitar aula, e o TR consumido sai da conta. Nada é apagado (regra 4).
@@ -312,9 +369,14 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **FR-001** [banco + domínio] O teto de AEC, TAD e TR MUST ser calculado **por turma**, sobre a **CH curricular** (a soma da CH das disciplinas ativas do curso da turma). O percentual MUST vir de `config_parametros` para o ano letivo. A regra MUST morar numa função pura de `lib/dominio/` nomeada pela `RN-EVT-01`.
 - **FR-002** [domínio] O retorno MUST separar `{ chd, aec, tad, tr, cht, estudoIndividual, apoioIndividualizado, diasParados }`, com a `cht` derivada **só** dos quatro primeiros. Somar EI, Apoio Individualizado ou dias parados à CHT MUST ser erro de tipo.
 - **FR-003** Exceder um teto MUST ser **alerta**, nunca bloqueio nem `CHECK` (`RN-DEG-02`, regra 6).
-- **FR-004** [tela] A ficha da turma MUST mostrar, para AEC, TAD e TR, o executado, o teto, o percentual e o alerta. A reserva do PROENS de TAD e TR fica ao lado, quando houver. Ao lado, a linha informativa **"dias parados"**, por tipo, sem teto e sem alerta (Q-14, FR-025.4).
+- **FR-004** [tela] A página da turma MUST mostrar um **card** para AEC (com o nome por extenso do Glossário, *Atividades Extraclasse*), TAD e TR, cada um com **três valores** (D-TETO-1): **cumprido** (FR-002, sem Apoio Individualizado e sem dias parados), **previsto no PROENS** (FR-008) e **limite máximo** (FR-001, Q-16), com o percentual do cumprido sobre o máximo. Alertas **informativos**: cumprido > previsto; cumprido > máximo. Ao lado, a linha informativa **"dias parados"**, por tipo, sem teto e sem alerta (Q-14, FR-025.4).
 - **FR-005** [tela] O `/inicio` MUST listar as turmas com teto excedido entre os alertas (`RF-INI-04`). A página do curso MUST sinalizar as turmas do curso que excedem (`RF-CURSO-06`).
 - **FR-006** [tela] Turma EAD MUST NOT mostrar tetos (D-DSA da spec 013). Turma semipresencial conta só o que foi lançado.
+- **FR-008** [banco] O **previsto no PROENS** de AEC, TAD e TR MUST ser guardado **por turma e ano**. Hoje `reservas_proens` guarda **por curso**, só TAD e TR (M-8). A migration MUST levar cada reserva atual à turma do mesmo curso e ano, preservando a origem, e deixar AEC **sem valor** onde o PROENS não o deu. A reserva genérica da `RN-2027-03` continua como **sugestão** para turma sem valor, nunca como previsto gravado. Emenda E-7 (§13).
+- **FR-008.1** [banco] Editar o previsto MUST ser permitido a **Admin, Encarregado e Ajudante da Divisão de Administração Acadêmica**, e recusado ao **Operador** e aos demais, pelo banco (`42501`). Hoje a escrita em `reservas_proens` exige `calendario.criar`/`editar`; a permissão nova MUST ser recurso próprio, com o **caso que discrimina** (DoD 8): o Ajudante passa a poder.
+- **FR-008.2** [banco] Toda alteração do previsto MUST registrar **quem e quando** (auditoria da linha), e a tela MUST mostrá-los.
+- **FR-008.3** [ação] Previsto acima do limite máximo MUST gravar com **aviso**, nunca recusa (`RN-DEG-02`).
+- **FR-009** [tela] A página do curso MUST mostrar os **limites máximos** de AEC, TAD e TR do currículo do curso, com a origem (número do currículo ou percentual normativo, Q-16), sem cumprido e sem previsto (D-TETO-2).
 - **FR-007** [banco + tela] A referência de Estudo Individual (20 % com Estudo Obrigatório, 10 % sem) MUST ser parâmetro em `config_parametros` e aparecer como **indicador informativo**, sem alerta de teto e sem cor de excesso. Mostra as **duas** referências, 20 % e 10 %, lado a lado (Q-6).
 
 **Classificação pelo tipo (D-AA-3)**
@@ -383,11 +445,18 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **FR-031.1** [banco] As divergências **banco × currículo** (§11-A), **aprovadas em bloco em 13/10/2026**, MUST ser corrigidas **no banco**, por migration de dado com o rito do remoto. **Antes de aplicar cada uma**, o impacto MUST ser mostrado a Bernardo caso a caso: os lançamentos que mudam de disciplina e a CH antes e depois. Inclui a reativação e a correção do código da disciplina III do C-Esp-ALH (B-5).
 - **FR-031.2** [domínio] A regra "conteúdo + avaliações = CH" MUST ser verificada por função pura e por asserção de banco **sobre o catálogo**, nunca sobre o lançamento. O lançamento acima do previsto continua alerta (`FR-025 da spec 013`).
 - **FR-031.3** [banco + tela] Avaliação cujo tempo o currículo dá **sem dizer de qual UE sai** MUST ficar **no nível da disciplina**, dentro da CH dela. O conteúdo da disciplina é a soma das UEs menos essas avaliações, e o painel MUST avisar *"o currículo não diz de qual UE sai"*. Quando Bernardo nomear a UE, a avaliação desce para ela, com a origem *"decisão CIAARA-11, dd/mm/aaaa"* (Q-11).
-- **FR-031.4** [banco + tela] Avaliação cujo TA o currículo **não dá** MUST ser registrada com o instrumento e as UEs abordadas e **sem tempo previsto**. Nenhum número é inventado, e a planilha não é fonte (Q-12). O lançamento dela no DSA consome o tempo das UEs abordadas, como conteúdo. Os EST-QF que avaliam por frequência, relatório ou conceito ficam sem avaliação de tempo no catálogo.
+- **FR-031.4** [banco + tela] Avaliação cuja **quantidade** ou **tempo** o currículo **não dá** MUST ter o valor **arbitrado** pela Divisão (D-CUR-2, que substitui a Q-12). Enquanto não houver, a disciplina mostra *"tempo de avaliação não definido"*. Os EST-QF que aprovam por frequência ficam sem avaliação a prever.
+- **FR-031.6** [banco] Cada previsto de avaliação MUST guardar **quantidade** e **tempo** (aplicação e vista), **cada um com a sua origem**: `currículo` (com arquivo e página) ou `arbitrado` (com quem e quando). Um item pode ter quantidade do currículo e tempo arbitrado (C-Exp-Obs-ME).
+- **FR-031.7** [banco] O arbitrado MUST ser definido **por disciplina do curso** e **herdado** pelas turmas, com ajuste **por turma** que não altera o do curso. Editam: **Encarregado e Admin**. A CH da disciplina e da UE **nunca** muda: o arbitrado sai de dentro dela.
+- **FR-031.8** [banco + carga] O ponto de partida do arbitrado MUST ser a planilha, gravado como *"arbitrado — sugestão da planilha, a confirmar"*, **só** onde o currículo é mudo (M-7). Sugestão não confirmada aparece marcada e conta na projeção. A sincronização MUST NOT sobrescrever arbitrado confirmado.
+- **FR-031.9** [tela] O arbitrado MUST aparecer **em destaque**, com *"não consta do currículo — definido pela Divisão"*.
+- **FR-031.10** [domínio] A divisão **aula + avaliação = CH do currículo** MUST ser calculada por função pura: avaliação = soma dos tempos previstos (currículo + arbitrado); aula = CH − avaliação.
+- **FR-031.11** [domínio] O **alerta de projeção** MUST ser *"restam X TA; faltam N avaliações (Y TA) → sobram Z TA para aula"*, com X = CH − cumprido, Y = tempo previsto das avaliações ainda não aplicadas e Z = X − Y. **Z negativo é alerta de estouro**, nunca bloqueio. Avaliação sem tempo definido entra em N e não em Y, e o texto diz quantas.
+- **FR-031.12** **Trabalho** (TG, TI, estudo de caso, projeto, monografia) MUST ter o mesmo tratamento que prova: item, quantidade, tempo, origem, vista e situação.
 - **FR-031.5** [banco] Os desdobramentos MUST ser **unificados** conforme o currículo (Q-15): C-Ap-HN I + I-I numa disciplina **HN-2101** de 126, e CAHO MAT + FIS numa disciplina **MATFIS** de 56. A disciplina extra é **inativada** (regra 4), as UEs passam à unificada e os lançamentos dela são **movidos** por migration de dado. **Nenhum lançamento perdido**: a contagem de aulas, avaliações e atividades e a CH executada por turma MUST ser iguais antes e depois, conferidas no relatório da aplicação. A Ambientação dos C-ApA fica fora (`PEND-014-3`, §8).
 - **FR-032** [tela] No DSA, escolhida a disciplina, MUST aparecer a lista de UEs (conteúdo) e de avaliações do currículo (prova e vista). Lançar prova ou vista MUST apontar a avaliação e consumir o TA dela, dentro da UE em que o currículo a computa.
 - **FR-033** [tela] A prova lançada MUST aceitar a faixa de UEs coberta (*"U.E. 3 a 6"*) como informação opcional, que **não** consome TA de UE.
-- **FR-034** [tela] O painel da disciplina (aba do curso e ficha da turma) MUST mostrar, por UE, o previsto e o cumprido de **conteúdo**, de **prova** e de **vista**, e o total da UE e da disciplina, sempre com os números do currículo.
+- **FR-034** [tela] O painel da disciplina (aba do curso, aba *Avaliações* da turma e painel do DSA) MUST mostrar: **CH do currículo · previsto de aula · previsto de avaliação, por item e com a origem · cumprido de cada · alerta de projeção** (FR-031.11). Por UE, quando o currículo dá a UE: conteúdo, prova e vista.
 - **FR-035** [banco] A CHD MUST continuar vindo de um caminho único que soma aula, aplicação e **todas** as sessões de vista (`RN-EVT-03`).
 - **FR-036** [carga] A sincronização MUST ligar cada prova e vista da planilha à avaliação do currículo correspondente, casando por instrumento e número **dentro da disciplina**. Ela MUST NOT alterar CH de disciplina, UE ou avaliação (D-CUR-1).
 - **FR-036.1** [carga] Toda diferença entre a planilha e o currículo MUST virar item da **lista de erros de planilha** da rodada, por turma, para os operadores. Entram na lista: CH de disciplina, CH de UE, prova ou vista a mais ou a menos, TA de prova diferente, e linha sem correspondente no currículo, como `XX RECON`. O **lançamento** entra mesmo assim, como fato, sem avaliação ligada quando não casa.
@@ -433,6 +502,13 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **FR-053** [tela] A aba *Avaliações* da página do curso MUST existir (`RF-CURSO-02`), sem entrada própria no menu, com a lista por turma, disciplina e situação, e filtros na URL.
 - **FR-054** [tela] A ficha da turma e o `/inicio` MUST mostrar as vistas atrasadas e as que vencem nos próximos 2 dias (`RF-INI-04`). *[premissa A-5]*
 
+**Cards e aba da turma (D-AV-1, D-AV-2)**
+
+- **FR-055** [tela] A página da turma MUST ter o card *"Avaliações — N aplicadas de M previstas no currículo"*, com barra, junto aos cards de CH e progresso. Clicar MUST levar à aba *Avaliações* da turma.
+- **FR-056** [domínio] **N** = avaliações (prova e trabalho) com aplicação lançada no DSA. **M** = soma, por disciplina, da quantidade prevista: a do currículo; sem ela, a arbitrada; sem nenhuma, a disciplina fica *"não definido"* e o card diz quantas, **sem esconder o total**. **Vista não conta** em N nem em M: indicador separado *"vistas realizadas A de B"*. Substituída e cancelada ficam fora (FR-048).
+- **FR-057** [tela] Na disciplina (aba *Avaliações* da turma e painel do DSA), MUST aparecer *"X de Y avaliações aplicadas"* e a lista dos itens com a situação calculada (FR-050): *"Prova 1 ✔ dd/mm · Trabalho 1 ✔ dd/mm · Prova 2 pendente"*.
+- **FR-058** [tela] A página da turma MUST ganhar a aba **Avaliações**, como a do curso (FR-053): por disciplina, os itens previstos com a origem, aplicados, vistas, situação, aplicador, fiscal, quem conduz a vista e o alerta de projeção. Aba e filtros na URL (`searchParams`).
+
 ### 4.3 Transversais
 
 - **FR-060** [docs] O Glossário (`docs/fase-1/07-Glossario.md`, só o `.md`) MUST ser emendado:
@@ -452,7 +528,9 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
   As demais regras do 04 MUST NOT mudar.
 - **FR-062** Nenhuma tela, cálculo ou consulta MUST ler `formula_mf` ou `carater`, nem expor nota, média ou aprovação (critérios 1 e 7 do Épico 8, `RNF-NORM-06`).
 - **FR-063** Toda tela nova MUST ter caminho clicável:
-  - o painel de tetos pela ficha da turma;
+  - os cards de AEC, TAD e TR e o de avaliações pela página da turma;
+  - a aba *Avaliações* da turma pelo card e pela barra de abas;
+  - os limites máximos pela página do curso;
   - as avaliações pela página do curso;
   - a parada pelo DSA;
   - `/atividades` pelo menu, deixando de ser *"em breve"*.
@@ -473,6 +551,9 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **Tipo de parada** (`config_listas`). Novo. FR, LA, LP, NT… Cada tipo diz se pode ser global e se aceita "consome Tempo Reserva" (só na não prevista).
 - **Dia parado.** Novo. Classe própria, fora da CHT e dos tetos (Q-14): tipo, motivo, alcance (turma ou global), dia e tempos, prevista ou não. Alimenta a linha "dias parados" da turma. A não prevista com "consome Tempo Reserva" **não** é dia parado: é TR.
 - **Parâmetro** (`config_parametros`). Os tetos já existem. Nasce a referência de EI.
+- **Previsto de avaliação.** Por disciplina do curso, com ajuste por turma: instrumento, quantidade e tempos de aplicação e de vista, **cada um com origem** (`currículo` com página; `arbitrado` com quem e quando; *sugestão da planilha a confirmar*).
+- **Previsto do PROENS.** Por **turma** e ano: AEC, TAD e TR, com quem e quando. Hoje `reservas_proens`, por curso, só TAD e TR.
+- **Limite máximo.** Por curso: AEC, TAD e TR, do currículo ou do percentual normativo (Q-16), com a origem.
 
 ---
 
@@ -496,6 +577,12 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **SC-009** Lançar aula num tempo parado é recusado pela Server Action, tanto para parada global quanto para parada da turma, e a contagem no banco fica intacta.
 - **SC-010** Os percursos de ponta a ponta chegam a cada tela nova por clique, a partir do menu.
 - **SC-011** Busca no código sem comentário: zero leitura de `formula_mf` e `carater`, e zero coluna de nota.
+- **SC-014** Toda disciplina dos 24 cursos mostra *aula + avaliação = CH do currículo* ou *"tempo de avaliação não definido"*; nenhuma CH muda ao definir ou alterar um arbitrado (impressão digital do catálogo antes e depois).
+- **SC-015** Todo previsto de avaliação exibido traz a origem; nenhum arbitrado aparece sem a marca *"não consta do currículo"*.
+- **SC-016** O alerta de projeção vira estouro exatamente quando Z < 0 (Vitest com os casos de fronteira Z = 0 e Z = −1).
+- **SC-017** O card *"N aplicadas de M"* não conta vista, substituída nem cancelada (Vitest e e2e).
+- **SC-018** O previsto do PROENS é gravável por Admin, Encarregado e Ajudante, e recusado com `42501` ao Operador, com o caso que discrimina do Ajudante.
+- **SC-019** As 12 linhas atuais de `reservas_proens` (M-8) chegam às turmas do mesmo curso e ano com o mesmo valor, conferidas antes e depois.
 
 ---
 
@@ -516,10 +603,11 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 | Leva | PR | Conteúdo | Banco? |
 |---|---|---|---|
 | **1 · Épico 9** | PR 1 | 5ª categoria Apoio Individualizado, tipos de parada e a marca bloqueante, a classe **dia parado** fora da CHT, TR por licença não prevista (da turma e global), categoria obrigatória e FK do tipo, marca de parada, global somando por turma com DSA, parâmetro de EI, reclassificação da lista | **Migration**, com o rito do remoto |
-| | PR 2 | Tetos na ficha, no `/inicio` e no curso; `/atividades`; tipo → categoria no DSA; global pela tela; dia parado no DSA e no papel | Só tela e ação |
+| | PR 1.1 | **Previsto do PROENS por turma** (AEC, TAD, TR), permissão nova com o Ajudante, migração das 12 reservas | **Migration**, com o rito do remoto |
+| | PR 2 | Cards de AEC, TAD e TR com os três valores na página da turma; limites máximos na página do curso; tetos no `/inicio`; `/atividades`; tipo → categoria no DSA; global pela tela; dia parado no DSA e no papel | Só tela e ação |
 | | PR 3 | Carga: Monitoria e afins, FR/LA/LP/NT previstos como dia parado, global, responsável externo como pendência | Só `scripts/carga_dsa` |
-| **2 · Épico 8** | PR 4 | Avaliações do currículo (das 24 fontes), correção banco × currículo aprovada (§11-A, impacto caso a caso antes), unificação HN-2101 e MATFIS (Q-15), sessões de vista, três papéis, demais instrutores, estado "substituída" e migration das 188 | **Migration**, com o rito do remoto |
-| | PR 5 | DSA oferecendo os itens, painel por item, aba *Avaliações* do curso, situação calculada, alertas de vista | Só tela e ação |
+| **2 · Épico 8** | PR 4 | Avaliações do currículo (das 24 fontes), correção banco × currículo aprovada (§11-A, impacto caso a caso antes), unificação HN-2101 e MATFIS (Q-15), **previsto de avaliação com origem e o arbitrado herdado e por turma (D-CUR-2), com as sugestões das planilhas**, sessões de vista, três papéis, demais instrutores, estado "substituída" e migration das 188 | **Migration**, com o rito do remoto |
+| | PR 5 | DSA oferecendo os itens, painel por item com aula + avaliação e alerta de projeção, card de avaliações e aba *Avaliações* da turma, aba *Avaliações* do curso, situação calculada, alertas de vista | Só tela e ação |
 | | PR 6 | Carga: prova e vista ligadas às avaliações do currículo, lista de erros de planilha, N sessões, "(FISCAL)" no papel certo | Só `scripts/carga_dsa` |
 
 ## 8. O que NÃO entra nesta spec
@@ -764,6 +852,8 @@ Pela decisão de 13/10/2026, as divergências da §9 que **conflitam com decisã
 | **E-5** | 02 · `RF-EXTRA-04` (L228) | *"…calcular e sinalizar, por curso, o cumprimento dos tetos normativos: AEC ≤ 10% do somatório das CHD das disciplinas do curso; TAD ≤ 5% e TR ≤ 10% da Carga Horária Real (CHR) do curso."* | *"…calcular e sinalizar, **por turma**, o cumprimento dos tetos normativos, **todos sobre a CH curricular** do curso da turma: AEC ≤ 10%, TAD ≤ 5% e TR ≤ 10%. **A sinalização é informativa e nunca bloqueia**; a página do curso agrega as turmas."* | D-AA-2 |
 | **E-6** | 42 · portão de saída do Épico 8 (L794–795) | *"avaliação agendada aparecendo no DSA e somando na CHD."* | *"avaliação **registrada no DSA** aparecendo no DSA e somando na CHD; agendada sem registro não soma."* | D-AA-15 |
 
+| **E-7** | 04 · `RN-2027-03` (L284) | *"As reservas de Administração e Tempo Reserva por curso são valores fixos por curso, extraídos diretamente do PROENS do ano corrente (…); cursos sem essas reservas detalhadas no PROENS usam um valor de reserva genérico."* | *"As reservas de **Atividades Extraclasse, Administração e Tempo Reserva** são valores **por turma e por ano**, extraídos do PROENS e **editáveis** por Admin, Encarregado e Ajudante da Divisão, com registro de quem e quando; turmas sem essas reservas no PROENS usam o valor genérico **como sugestão**."* O resto (posição dos blocos no motor preditivo) fica igual | D-TETO-1 |
+
 **Também emendados, pelas decisões desta spec:**
 - `RN-EVT-01` e Glossário: Apoio Individualizado (Q-3);
 - `RN-EVT-04`: parada (D-AA-13);
@@ -847,3 +937,108 @@ São **três** casos medidos (§11-A):
 | (c) Unificar HN-2101 e MATFIS, e decidir a Ambientação à parte | Separa o que é desdobramento do que é fase | Dois movimentos |
 
 **Recomendação: (c).** Os dois desdobramentos são exatamente o que a D-CUR-1 proíbe, e a unificação tem regra clara. A Ambientação é outra coisa: o currículo a trata como **fase do curso, com horas**. Ela pede a sua palavra sobre onde essas horas ficam: TAD, AEC ou uma disciplina que o currículo não chama assim.
+
+---
+
+## 15. Medições de 13/10/2026 para os acréscimos (D-CUR-2 e D-TETO-1)
+
+**Artefatos (regra 9.2):**
+- os **24 PDFs** dos currículos (`…\Documentos\SIS11\Curriculos\`, fora do git), seção *"AVALIAÇÃO DA APRENDIZAGEM"* de cada disciplina e quadro final de carga horária;
+- a cópia `remoto-20261009-085410.sql` (tabelas `reservas_proens` e `config_parametros`);
+- as planilhas de `planilhas-de-origem/rodadas/2026-10-06T1541/`, aba **CRONOS**.
+
+### M-7. Avaliações previstas no currículo, por curso e por caso
+
+⚠️ **As contagens são de um leitor heurístico** do texto das seções de avaliação, com as correções feitas à mão onde o texto foi relido (ALH, MetocOf, Obs-ME, as OD). Os números marcados **≈** podem variar de uma ou duas unidades. **A contagem oficial é a da transcrição do PR 4** (FR-037), que traz a página de cada item.
+
+| Curso | Como o currículo informa | Avaliações (prova + trabalho) | Tempo de aplicação | Vistas | Tempo de vista | O que fica para arbitrar |
+|---|---|---|---|---|---|---|
+| CAHO | por UE em 16 de 21; o resto só por disciplina | ≈ 48 | ≈ 152 TA | ≈ 44 | ≈ 44 TA | a vista dos 2 trabalhos da XX (*"será alocado tempo"*, sem número). A XVIII (LHFC) é OD, sem tempo (Q-17) |
+| C-Ap-FR | por UE em 12 de 13 | ≈ 25 | ≈ 71 TA | ≈ 24 | ≈ 24 TA | nada; a XIII é OD + 1 TA de comentários (Q-17) |
+| C-Ap-HN | por UE em 17 de 18 | ≈ 38 | ≈ 110 TA | ≈ 37 | ≈ 37 TA | nada; a XVIII é OD + 1 TA de comentários (Q-17) |
+| C-Esp-ME | por UE em 12 de 12 | ≈ 19 | ≈ 51 TA | ≈ 19 | ≈ 19 TA | nada |
+| C-Esp-OpAP | por UE em 3 de 4; a IV só por disciplina | 5 | 8 TA | 4 | 4 TA | nada |
+| C-Exp-Ag-Mag | por UE | 3 | 6 TA | 3 | 3 TA | nada |
+| C-Exp-BATI | por UE | 2 | 6 TA | 2 | 2 TA | nada |
+| C-Espc-FR | por competência: "CH da avaliação" por disciplina | 15 disciplinas avaliadas | 91 TA | — | 25 TA | as 2 disciplinas sem CH de avaliação (`PREVACFR-008`, `MFMFR-003`) |
+| C-Espc-HN | idem | 14 disciplinas avaliadas | 86 TA | — | 26 TA | `HN-1104-0730` (quantidade sem tempo) |
+| C-Exp-MetocOf | só por disciplina (currículo de 2011) | 4 PM | 10 TA | 4 | 4 TA | nada; a V é OD em apresentação (Q-17) |
+| C-Exp-Metoc-OF-SP | por UE em 3 de 4 | 3 | 7 TA | 0 | — | as vistas; a IV é OD (Q-17) |
+| C-Esp-ALH | só por disciplina | **12** (II tem 3; VIII tem 2; IX tem PE + estudo de caso) | **26 TA** em 11; o estudo de caso sem tempo | **0** | — | **todas as vistas** e o tempo do estudo de caso |
+| C-Exp-Obs-ME | **quantidade sem tempo** | **4 PE** (2 por disciplina) | **mudo** | **mudo** | **mudo** | **tudo**. Sugestão da planilha: DHN-0225 prova 5 + vista 2; DHN-0513 prova 6 + vista 2 (TA por disciplina) |
+| C-ApA-AuxNav, OcOp, PCN, PrevMe | parcial; as disciplinas finais são entrega de trabalho no AVA | ≈ 8, 13, 6, 7 | ≈ 8, 28, 12, 14 TA | ≈ 3, 4, 0, 0 | — | sem turma em 2026 e EAD sem DSA; fica para quando houver |
+| EST-QF APHID, EM2040PHS, MAREFLU, PGRS100, PROC-MF-EAD | aprovação por **frequência** | 0 | — | 0 | — | nada a prever |
+| EST-QF-NAVFLU-EAD | por UE | 1 | 2 TA | 0 | — | EAD, sem DSA |
+| EST-QF-APOC | PDF digitalizado | **[pendente]** | | | | |
+
+**Sugestão da planilha para o grupo a arbitrar:** só o **C-Exp-Obs-ME** tem turma com planilha em 2026. Os outros mudos (ALH, CAHO XX quanto à vista, C-Espc quanto aos sem CH) **não têm sugestão** e começam *"não definido"*.
+
+### M-8. Onde está hoje o previsto do PROENS, e os limites máximos
+
+**O previsto do PROENS, hoje:**
+- **Banco:** `reservas_proens`, **por curso e ano**, só **TAD** ("Administração") e **TR**; o tipo `tipo_reserva` aceita só esses dois. São **12 linhas**, todas de 2026, origem `RESERVAS_PROENS (Versao 1.0/Codigo.gs)`: CAHO 6/121, C-Ap-HN 5/16, C-Ap-FR 5/89, C-Espc-HN 3/100, C-Espc-FR 0/7, e a **genérica** (sem curso) 2/0, que a `RN-2027-03` manda usar para curso sem reserva própria. **Não há AEC.** A escrita exige `calendario.criar`/`editar`.
+- **Planilhas:** a aba **CRONOS** de cada turma traz uma coluna *"carga horária prevista"* por bloco, mas **com rótulos diferentes por planilha** ("TOTAL RESERVA", "TEMPO RESERVA", "ADMINISTRAÇÃO", "TOTAL EXTRA-CLASSE", "NONO TEMPO"). Exemplos: CAHO, reserva 166 e extraclasse 149; C-Ap-HN, reserva 78 e extraclasse 65; C-Esp-ME, reserva 63 e extraclasse 22.
+- ⚠️ **As planilhas não contam feriado e licença do mesmo jeito:**
+  - no C-Esp-ME, feriado e licença de pagamento estão **dentro** da reserva (63 = 35 + 28);
+  - no C-Ap-HN, estão num bloco "nono tempo", **fora** dos 1.400.
+
+  A Q-14 já decidiu como o sistema conta. A diferença vai para a lista dos operadores (§11-B).
+- **Documento PROENS:** não está no repositório.
+
+**Os limites máximos: o currículo declara um número, e ele nem sempre é o percentual.** O quadro final de cada currículo diz *"CARGA HORÁRIA REAL · ATIVIDADES EXTRACLASSE · TEMPO RESERVA · CARGA HORÁRIA TOTAL"*. Os C-Espc dizem também o TAD. A CH real é a soma das disciplinas, e o total fecha: no CAHO, 1.668 + 166 + 166 = 2.000. O percentual normativo vem de `config_parametros`: `teto.aec_percentual_chr` 10, `teto.tad_percentual_chr` 5 e `teto.tr_percentual_chr` 10.
+
+| Curso | CH real | AEC no currículo (10 %) | TR no currículo (10 %) | TAD no currículo (5 %) |
+|---|---|---|---|---|
+| CAHO | 1.668 | 166 (166,8) | 166 (166,8) | — (83,4) |
+| C-Ap-FR | 1.164 | 110 (116,4) | **126 (116,4) ↑** | — (58,2) |
+| C-Ap-HN | 1.257 | 65 (125,7) | 78 (125,7) | — (62,85) |
+| C-Esp-ME | 545 | 43 (54,5) | 42 (54,5) | — (27,25) |
+| C-Esp-ALH | 470 | 30 (47) | 20 (47) | — (23,5) |
+| C-Esp-OpAP | 77 | 1 (7,7) | 2 (7,7) | — (3,85) |
+| C-Exp-Ag-Mag | 140 | 10 (14) | 10 (14) | — (7) |
+| C-Exp-BATI | 42 | 3 (4,2) | 4 (4,2) | — (2,1) |
+| C-Exp-MetocOf | 154 | 6 (15,4) | 15 (15,4) | — (7,7) |
+| C-Exp-Obs-ME | 115 | 5 (11,5) | **20 (11,5) ↑** | — (5,75) |
+| C-Espc-FR | 1.271 | 80 (127,1) | 57 (127,1) | 62 (63,55) |
+| C-Espc-HN | 1.216 | 80 (121,6) | 112 (121,6) | **62 (60,8) ↑** |
+| EST-QF APHID / EM2040PHS / MAREFLU / PGRS100 | 72 / 20 / 60 / 30 | — | **8 ↑ / 4 ↑** / 4 / **5 ↑** (7,2 / 2 / 6 / 3) | — |
+| C-ApA, C-Exp-Metoc-OF-SP, EST-QF EAD | — | não declaram; o quadro traz só ambientação e fases | | |
+
+↑ = o currículo declara **mais** que o percentual. Em todos os outros casos declara **menos**, às vezes bem menos: a AEC do C-Ap-HN é 65 contra 125,7. **É a Q-16.**
+
+---
+
+## 16. Perguntas de modelagem dos acréscimos — lote de 13/10/2026
+
+### Q-16 — O "limite máximo" do card é o número que o currículo declara ou o percentual da norma?
+
+**Por que importa:** os dois divergem em todos os cursos medidos (M-8), e o card mostra um número só.
+- **C-Ap-HN, AEC:** o currículo declara 65, e 10 % da CH real dá 125,7.
+- **C-Ap-FR, TR:** o currículo declara 126, e o percentual dá 116,4.
+- **C-Espc-HN, TAD:** o currículo declara 62, e o percentual dá 60,8.
+
+| Opção | O que significa | Implicação |
+|---|---|---|
+| **(a)** O **número do currículo**, quando ele declara. O **percentual**, quando não declara: TAD fora dos C-Espc, e cursos sem quadro. A origem aparece no card | Coerente com a D-CUR-1, porque o currículo é a fonte | Em 3 casos o máximo fica **acima** do percentual da `RN-EVT-01`. A norma vira só o padrão |
+| (b) **Sempre o percentual**, com o número do currículo ao lado, como referência | A `RN-EVT-01` fica intacta como teto | Mostra um "máximo" que o próprio currículo contradiz, e a AEC do C-Ap-HN aparece com 125,7 de folga quando o currículo dá 65 |
+| (c) **O menor dos dois** | Nunca permite mais que nenhuma das duas fontes | Mistura origens, e o operador não sabe de onde veio o número sem ler a origem |
+
+**Recomendação: (a).** Exige transcrever o quadro final dos 24 currículos (dado, migration do PR 1) e ajustar o texto da E-4.
+
+### Q-17 — Observação de desempenho (OD) conta como avaliação no "N aplicadas de M"?
+
+**Por que importa:** o card conta prova e trabalho (D-AV-1). A OD não é nenhum dos dois, e em algumas disciplinas ela é a **única** avaliação.
+
+**Exemplos reais:**
+- **CAHO XVIII:** LHFC, 200 TA, *"1 (uma) OD durante a realização das tarefas"*.
+- **C-Ap-FR XIII e C-Ap-HN XVIII:** práticas de fim de curso, só OD, com *"1 TA para os comentários"*.
+- **C-Exp-MetocOf V e C-Exp-Metoc-OF-SP IV:** OD nas apresentações.
+- **CAHO V e VI:** a OD entra na média, junto com as provas.
+
+| Opção | O que significa | Implicação |
+|---|---|---|
+| **(a)** A OD **não** entra no "N de M". Aparece na lista da disciplina como *"avaliação contínua (OD)"*, sem tempo próprio, porque o currículo diz que ocorre **durante** as tarefas. Os comentários da OD, quando o currículo dá tempo (1 TA), contam em *"vistas realizadas"* | Literal com a D-AV-1. Não inventa tempo nem lançamento | Disciplinas só com OD mostram *"0 de 0 provas e trabalhos · avaliação contínua (OD)"* |
+| (b) A OD **entra** no "N de M", com tempo 0, e é "aplicada" quando o operador a marca no DSA | Toda disciplina avaliada aparece no card | Pede um lançamento novo sem tempo, que o DSA hoje não tem |
+| (c) A OD entra, com tempo **arbitrado** | Card completo | Arbitra tempo para algo que o currículo diz acontecer dentro da aula |
+
+**Recomendação: (a).** O **estudo de caso** do C-Esp-ALH IX é tratado como **trabalho** (FR-031.12), não como OD.
