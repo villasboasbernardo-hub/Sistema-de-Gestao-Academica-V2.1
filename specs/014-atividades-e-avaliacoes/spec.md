@@ -4,7 +4,7 @@
 
 **Created**: 12/10/2026
 
-**Status**: **Em clarify (13/10/2026).** As Q-1 a Q-15 foram respondidas por Bernardo em 12 e 13/10/2026 (*Clarifications*). A Q-1 foi **substituída** pela decisão D-CUR-1, e a Q-1b caiu junto. O lote banco × currículo (§11-A) foi **aprovado em bloco**, com o impacto mostrado caso a caso antes de cada aplicação; a lista planilha × currículo (§11-B) vai para os operadores. Seguem para aprovação de Bernardo, na implementação, o texto da emenda da `RN-AVAL-01` (§12) e as emendas de texto (§13). As Q-1 a Q-15 não travam mais os Épicos 9 e 8. ⚠️ **Reaberto em 13/10/2026 para os acréscimos de Bernardo** (D-CUR-2 e os cards, §2.3). Medições na §15 e duas perguntas de modelagem na §16 (Q-16 e Q-17).
+**Status**: **Clarify encerrado em 13/10/2026.** As Q-1 a Q-17 foram respondidas por Bernardo em 12 e 13/10/2026 (*Clarifications*). A Q-1 foi **substituída** pela decisão D-CUR-1, e a Q-1b caiu junto. O lote banco × currículo (§11-A) foi **aprovado em bloco**, com o impacto mostrado caso a caso antes de cada aplicação; a lista planilha × currículo (§11-B) vai para os operadores. Seguem para aprovação de Bernardo, na implementação, o texto da emenda da `RN-AVAL-01` (§12) e as emendas de texto (§13). Os acréscimos de Bernardo (D-CUR-2 e os cards, §2.3) foram medidos (§15), e as duas perguntas que geraram (Q-16 e Q-17, §16) estão respondidas. A emenda E-7 da `RN-2027-03` está **aprovada** para a implementação. **Nenhuma trava restante para os Épicos 9 e 8.**
 
 **Input**: pedido de Bernardo Villas Boas de 12/10/2026: *"Épicos 8 e 9 da v2.1 — Avaliações e Atividades."* Ele veio com **15 decisões já tomadas**, registradas na §2 como requisito e não reabertas como pergunta.
 
@@ -125,6 +125,8 @@ O DSA já lança avaliação, vista e atividade, mas há quatro lacunas:
 - Q: E a lista planilha × currículo (§11-B)? → A: **Vira a lista de erros de planilha para os operadores.** Nada a aplicar no banco.
 - Q: (acréscimo de 13/10/2026) Como o sistema sabe quantos tempos uma avaliação dura quando o currículo não diz? → A: **D-CUR-2** (§2.3): previsto com **origem** "currículo" ou "arbitrado"; o arbitrado é definido pela Divisão, parte da sugestão da planilha só onde o currículo é mudo, e o painel projeta o estouro. **Substitui a resposta da Q-12** (que deixava a avaliação sem tempo) e complementa a Q-11.
 - Q: (acréscimo de 13/10/2026) Que cards a turma e o curso ganham? → A: **D-AV-1, D-AV-2, D-TETO-1 e D-TETO-2** (§2.3).
+- Q: O "limite máximo" do card é o número que o currículo declara ou o percentual da norma? → A: **O número do CURRÍCULO, quando ele declara; o percentual da norma DEnsM, quando não declara.** O card mostra a origem, *"currículo"* ou *"norma"*. É coerente com a D-CUR-1. A **emenda E-7** da `RN-2027-03` (previsto do PROENS por turma, AEC incluída) está **aprovada** para a implementação (Q-16).
+- Q: A Observação de Desempenho (OD) conta no "N aplicadas de M"? → A: **Não.** Aparece na lista da disciplina como *"avaliação contínua (OD)"*, sem tempo próprio; o TA de comentários, quando o currículo o dá, conta em *"vistas realizadas"*. **Complemento:** o card de avaliações da turma mostra, logo abaixo do número principal, *"+ K avaliações contínuas (OD)"*; cada OD fica **"em andamento"** enquanto a disciplina corre e **"concluída"** quando a disciplina é concluída (Q-17).
 - Q: O que fica fora da spec? → A: (1) A avaliação `DSAP-C-EXP-OBS-ME-2026-L206-V`, cancelada e relançada como `DSA-MUYK0RFD-V` **sem a vista**: correção de dado e possível **bug** "excluir e relançar a prova no DSA perde a vista". Vai para o **backlog do DSA** (`PEND-DSA-VISTA`), para o próximo lote de correções. (2) Das 11 divergências entre documentos da §9, **as que conflitam com decisões de Bernardo entram como emenda de texto nesta spec** (§13); as demais ficam listadas.
 
 ---
@@ -367,6 +369,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 **Tetos (D-AA-2, D-AA-14)**
 
 - **FR-001** [banco + domínio] O teto de AEC, TAD e TR MUST ser calculado **por turma**, sobre a **CH curricular** (a soma da CH das disciplinas ativas do curso da turma). O percentual MUST vir de `config_parametros` para o ano letivo. A regra MUST morar numa função pura de `lib/dominio/` nomeada pela `RN-EVT-01`.
+- **FR-001.1** [banco + domínio] O **limite máximo** de AEC, TAD e TR MUST ser o **número que o currículo do curso declara** no quadro final (*"ATIVIDADES EXTRACLASSE"*, *"TEMPO RESERVA"* e, nos C-Espc, *"TEMPO PARA ADMINISTRAÇÃO"*). Quando o currículo não declara, MUST ser o **percentual da norma** (FR-001) sobre a CH curricular. O resultado MUST trazer a **origem**, `currículo` ou `norma`, e a tela MUST mostrá-la (Q-16). Os números do quadro final dos 24 currículos MUST ser transcritos como **dado**, com arquivo e página, por migration com o rito (PR 1). Nos casos em que o currículo declara mais que o percentual (C-Ap-FR TR, C-Exp-Obs-ME TR, C-Espc-HN TAD e quatro EST-QF, M-8), vale o do currículo.
 - **FR-002** [domínio] O retorno MUST separar `{ chd, aec, tad, tr, cht, estudoIndividual, apoioIndividualizado, diasParados }`, com a `cht` derivada **só** dos quatro primeiros. Somar EI, Apoio Individualizado ou dias parados à CHT MUST ser erro de tipo.
 - **FR-003** Exceder um teto MUST ser **alerta**, nunca bloqueio nem `CHECK` (`RN-DEG-02`, regra 6).
 - **FR-004** [tela] A página da turma MUST mostrar um **card** para AEC (com o nome por extenso do Glossário, *Atividades Extraclasse*), TAD e TR, cada um com **três valores** (D-TETO-1): **cumprido** (FR-002, sem Apoio Individualizado e sem dias parados), **previsto no PROENS** (FR-008) e **limite máximo** (FR-001, Q-16), com o percentual do cumprido sobre o máximo. Alertas **informativos**: cumprido > previsto; cumprido > máximo. Ao lado, a linha informativa **"dias parados"**, por tipo, sem teto e sem alerta (Q-14, FR-025.4).
@@ -376,7 +379,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **FR-008.1** [banco] Editar o previsto MUST ser permitido a **Admin, Encarregado e Ajudante da Divisão de Administração Acadêmica**, e recusado ao **Operador** e aos demais, pelo banco (`42501`). Hoje a escrita em `reservas_proens` exige `calendario.criar`/`editar`; a permissão nova MUST ser recurso próprio, com o **caso que discrimina** (DoD 8): o Ajudante passa a poder.
 - **FR-008.2** [banco] Toda alteração do previsto MUST registrar **quem e quando** (auditoria da linha), e a tela MUST mostrá-los.
 - **FR-008.3** [ação] Previsto acima do limite máximo MUST gravar com **aviso**, nunca recusa (`RN-DEG-02`).
-- **FR-009** [tela] A página do curso MUST mostrar os **limites máximos** de AEC, TAD e TR do currículo do curso, com a origem (número do currículo ou percentual normativo, Q-16), sem cumprido e sem previsto (D-TETO-2).
+- **FR-009** [tela] A página do curso MUST mostrar os **limites máximos** de AEC, TAD e TR do currículo do curso, com a origem *"currículo"* ou *"norma"* (FR-001.1), sem cumprido e sem previsto (D-TETO-2).
 - **FR-007** [banco + tela] A referência de Estudo Individual (20 % com Estudo Obrigatório, 10 % sem) MUST ser parâmetro em `config_parametros` e aparecer como **indicador informativo**, sem alerta de teto e sem cor de excesso. Mostra as **duas** referências, 20 % e 10 %, lado a lado (Q-6).
 
 **Classificação pelo tipo (D-AA-3)**
@@ -496,6 +499,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 | **Em andamento** | aplicada, sem vista, dentro do prazo |
 | **Atrasada** | aplicada, sem vista, há **mais de** 7 dias corridos. O 8º dia é Atrasada; o 7º, não |
 | **Pendente** | item do currículo ou avaliação agendada ainda não aplicada |
+| **OD: em andamento / concluída** | a avaliação contínua (OD) **não** tem aplicação própria: fica **em andamento** enquanto a disciplina corre na turma e **concluída** quando a disciplina é concluída, pelo mesmo critério de conclusão do painel da disciplina. Antes do primeiro lançamento da disciplina, **pendente** (Q-17) |
 | **Sem correspondência** | avaliação do currículo sem lançamento ligado depois do término do curso da turma; ou, no histórico, planejada da v2.0 sem avaliação que case por nome (`RN-AVAL-01`). Sempre visível, nunca descartado |
 
 - **FR-052** O prazo MUST contar da **aplicação registrada**, não da data prevista. Isso fecha a contradição 4 da §1.6 do `estado-atual.md`.
@@ -505,7 +509,8 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 **Cards e aba da turma (D-AV-1, D-AV-2)**
 
 - **FR-055** [tela] A página da turma MUST ter o card *"Avaliações — N aplicadas de M previstas no currículo"*, com barra, junto aos cards de CH e progresso. Clicar MUST levar à aba *Avaliações* da turma.
-- **FR-056** [domínio] **N** = avaliações (prova e trabalho) com aplicação lançada no DSA. **M** = soma, por disciplina, da quantidade prevista: a do currículo; sem ela, a arbitrada; sem nenhuma, a disciplina fica *"não definido"* e o card diz quantas, **sem esconder o total**. **Vista não conta** em N nem em M: indicador separado *"vistas realizadas A de B"*. Substituída e cancelada ficam fora (FR-048).
+- **FR-056** [domínio] **N** = avaliações (prova e trabalho) com aplicação lançada no DSA. **M** = soma, por disciplina, da quantidade prevista: a do currículo; sem ela, a arbitrada; sem nenhuma, a disciplina fica *"não definido"* e o card diz quantas, **sem esconder o total**. **Vista não conta** em N nem em M: indicador separado *"vistas realizadas A de B"*. Substituída e cancelada ficam fora (FR-048). A **OD não entra** em N nem em M (Q-17): o card mostra, logo abaixo do número principal, *"+ K avaliações contínuas (OD)"*, com K = as OD previstas no currículo das disciplinas da turma. O TA de comentários da OD, quando o currículo o dá, entra em *"vistas realizadas"*.
+- **FR-056.1** [tela] Na lista da disciplina, a OD MUST aparecer como *"avaliação contínua (OD)"*, sem tempo próprio, com a situação da FR-051.
 - **FR-057** [tela] Na disciplina (aba *Avaliações* da turma e painel do DSA), MUST aparecer *"X de Y avaliações aplicadas"* e a lista dos itens com a situação calculada (FR-050): *"Prova 1 ✔ dd/mm · Trabalho 1 ✔ dd/mm · Prova 2 pendente"*.
 - **FR-058** [tela] A página da turma MUST ganhar a aba **Avaliações**, como a do curso (FR-053): por disciplina, os itens previstos com a origem, aplicados, vistas, situação, aplicador, fiscal, quem conduz a vista e o alerta de projeção. Aba e filtros na URL (`searchParams`).
 
@@ -553,7 +558,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **Parâmetro** (`config_parametros`). Os tetos já existem. Nasce a referência de EI.
 - **Previsto de avaliação.** Por disciplina do curso, com ajuste por turma: instrumento, quantidade e tempos de aplicação e de vista, **cada um com origem** (`currículo` com página; `arbitrado` com quem e quando; *sugestão da planilha a confirmar*).
 - **Previsto do PROENS.** Por **turma** e ano: AEC, TAD e TR, com quem e quando. Hoje `reservas_proens`, por curso, só TAD e TR.
-- **Limite máximo.** Por curso: AEC, TAD e TR, do currículo ou do percentual normativo (Q-16), com a origem.
+- **Limite máximo.** Por curso: AEC, TAD e TR, o número do quadro final do currículo ou, sem ele, o percentual da norma, com a origem `currículo` ou `norma` (Q-16).
 
 ---
 
@@ -848,11 +853,11 @@ Pela decisão de 13/10/2026, as divergências da §9 que **conflitam com decisã
 | **E-1** | 04 · `RN-AVAL-02` (L360) | *"…agendar uma avaliação já produz o consumo de tempos de aula correspondente (`RN-EVT-03`), e atualizar seu status de execução não exige um segundo lançamento independente."* | *"…o registro da avaliação no Detalhe Semanal de Aula produz o consumo de tempos de aula correspondente (`RN-EVT-03`) na mesma linha, sem segundo cadastro. **Agendar, sem lançar no DSA, não consome TA** (decisão de 12/10/2026, spec 014, D-AA-15).* E atualizar seu status de execução não exige um segundo lançamento independente." | D-AA-15 |
 | **E-2** | 02 · `RF-AVAL-04` (L210) | *"Toda avaliação e vista de prova agendada deve consumir tempos de aula e refletir no Detalhe Semanal de Aula e no Cronograma…"* | *"Toda avaliação e vista de prova **registrada no Detalhe Semanal de Aula** deve consumir tempos de aula e refletir no Detalhe Semanal de Aula e no Cronograma…"*. O resto fica igual | D-AA-15 |
 | **E-3** | 02 · `RF-AVAL-05` (L212) | *"…agendar uma avaliação deve produzir o correspondente consumo de tempos de aula, sem exigir um segundo lançamento manual."* | *"…**registrar a avaliação no Detalhe Semanal de Aula** produz o correspondente consumo de tempos de aula na mesma linha, sem exigir um segundo lançamento manual. Agendar sem registrar não consome TA (D-AA-15)."* | D-AA-15 |
-| **E-4** | 04 · `RN-EVT-01`, AEC (L347) | *"Teto normativo: 10% do somatório das CHD do curso."* | *"Teto normativo: 10% da **CH curricular** (somatório das cargas horárias das disciplinas do currículo), **calculado por turma e apenas informativo**."* E, no mesmo item, TAD e TR passam a dizer *"da CH curricular, por turma, informativo"* | D-AA-2 |
-| **E-5** | 02 · `RF-EXTRA-04` (L228) | *"…calcular e sinalizar, por curso, o cumprimento dos tetos normativos: AEC ≤ 10% do somatório das CHD das disciplinas do curso; TAD ≤ 5% e TR ≤ 10% da Carga Horária Real (CHR) do curso."* | *"…calcular e sinalizar, **por turma**, o cumprimento dos tetos normativos, **todos sobre a CH curricular** do curso da turma: AEC ≤ 10%, TAD ≤ 5% e TR ≤ 10%. **A sinalização é informativa e nunca bloqueia**; a página do curso agrega as turmas."* | D-AA-2 |
+| **E-4** | 04 · `RN-EVT-01`, AEC (L347) | *"Teto normativo: 10% do somatório das CHD do curso."* | *"Teto: **o número declarado no currículo do curso**; quando o currículo não declara, 10% da **CH curricular** (somatório das cargas horárias das disciplinas do currículo). **Calculado por turma e apenas informativo**."* E, no mesmo item, TAD e TR passam a dizer o mesmo, com 5% e 10% | D-AA-2, Q-16 |
+| **E-5** | 02 · `RF-EXTRA-04` (L228) | *"…calcular e sinalizar, por curso, o cumprimento dos tetos normativos: AEC ≤ 10% do somatório das CHD das disciplinas do curso; TAD ≤ 5% e TR ≤ 10% da Carga Horária Real (CHR) do curso."* | *"…calcular e sinalizar, **por turma**, o cumprimento dos tetos: **o número que o currículo do curso declara**, ou, quando não declara, o percentual **sobre a CH curricular**: AEC ≤ 10%, TAD ≤ 5% e TR ≤ 10%. **A sinalização é informativa e nunca bloqueia**; a página do curso agrega as turmas."* | D-AA-2 |
 | **E-6** | 42 · portão de saída do Épico 8 (L794–795) | *"avaliação agendada aparecendo no DSA e somando na CHD."* | *"avaliação **registrada no DSA** aparecendo no DSA e somando na CHD; agendada sem registro não soma."* | D-AA-15 |
 
-| **E-7** | 04 · `RN-2027-03` (L284) | *"As reservas de Administração e Tempo Reserva por curso são valores fixos por curso, extraídos diretamente do PROENS do ano corrente (…); cursos sem essas reservas detalhadas no PROENS usam um valor de reserva genérico."* | *"As reservas de **Atividades Extraclasse, Administração e Tempo Reserva** são valores **por turma e por ano**, extraídos do PROENS e **editáveis** por Admin, Encarregado e Ajudante da Divisão, com registro de quem e quando; turmas sem essas reservas no PROENS usam o valor genérico **como sugestão**."* O resto (posição dos blocos no motor preditivo) fica igual | D-TETO-1 |
+| **E-7** | 04 · `RN-2027-03` (L284) | *"As reservas de Administração e Tempo Reserva por curso são valores fixos por curso, extraídos diretamente do PROENS do ano corrente (…); cursos sem essas reservas detalhadas no PROENS usam um valor de reserva genérico."* | *"As reservas de **Atividades Extraclasse, Administração e Tempo Reserva** são valores **por turma e por ano**, extraídos do PROENS e **editáveis** por Admin, Encarregado e Ajudante da Divisão, com registro de quem e quando; turmas sem essas reservas no PROENS usam o valor genérico **como sugestão**."* O resto (posição dos blocos no motor preditivo) fica igual. ✅ **Aprovada** por Bernardo em 13/10/2026 | D-TETO-1, Q-16 |
 
 **Também emendados, pelas decisões desta spec:**
 - `RN-EVT-01` e Glossário: Apoio Individualizado (Q-3);
@@ -1008,9 +1013,9 @@ São **três** casos medidos (§11-A):
 
 ---
 
-## 16. Perguntas de modelagem dos acréscimos — lote de 13/10/2026
+## 16. Perguntas de modelagem dos acréscimos — lote de 13/10/2026 — ✅ AS 2 RESPONDIDAS (13/10/2026)
 
-### Q-16 — O "limite máximo" do card é o número que o currículo declara ou o percentual da norma?
+### Q-16 — O "limite máximo" do card é o número que o currículo declara ou o percentual da norma? · ✅ **RESPONDIDA: (a)**, com a origem *"currículo"* ou *"norma"* no card (FR-001.1); E-7 aprovada
 
 **Por que importa:** os dois divergem em todos os cursos medidos (M-8), e o card mostra um número só.
 - **C-Ap-HN, AEC:** o currículo declara 65, e 10 % da CH real dá 125,7.
@@ -1025,7 +1030,7 @@ São **três** casos medidos (§11-A):
 
 **Recomendação: (a).** Exige transcrever o quadro final dos 24 currículos (dado, migration do PR 1) e ajustar o texto da E-4.
 
-### Q-17 — Observação de desempenho (OD) conta como avaliação no "N aplicadas de M"?
+### Q-17 — Observação de desempenho (OD) conta como avaliação no "N aplicadas de M"? · ✅ **RESPONDIDA: (a)**, com o complemento *"+ K avaliações contínuas (OD)"* e a situação em andamento / concluída (FR-051, FR-056, FR-056.1)
 
 **Por que importa:** o card conta prova e trabalho (D-AV-1). A OD não é nenhum dos dois, e em algumas disciplinas ela é a **única** avaliação.
 

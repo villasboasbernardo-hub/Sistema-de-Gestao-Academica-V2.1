@@ -39,6 +39,9 @@
   - cards de AEC, TAD e TR com cumprido, previsto no PROENS e limite máximo (D-TETO-1);
   - limites máximos na página do curso (D-TETO-2).
 
-  Medições M-7 e M-8 na §15. **Abertas Q-16 e Q-17** (§16), sem marcador no corpo:
-  - a **Q-16** (o limite máximo: número do currículo ou percentual) trava os cards da **leva 1** e a FR-009;
-  - a **Q-17** (a OD conta no "N de M"?) trava só o card de avaliações da **leva 2**.
+  Medições M-7 e M-8 na §15.
+- 13/10/2026, **clarify encerrado**: as Q-16 e Q-17 (§16) estão respondidas e aplicadas:
+  - limite máximo = número do currículo, ou percentual da norma quando o currículo não declara, com a origem à vista (FR-001.1);
+  - OD fora do "N de M", com a linha *"+ K avaliações contínuas (OD)"* e a situação em andamento / concluída (FR-056, FR-056.1).
+
+  A E-7 está aprovada. **Nenhuma trava restante para os Épicos 9 e 8.**
