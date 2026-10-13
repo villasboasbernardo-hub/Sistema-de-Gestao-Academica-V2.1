@@ -45,4 +45,4 @@ fato**, sem item quando não casa. `sincronizar.py` imprime o caminho do arquivo
 
 Rodar a mesma rodada duas vezes dá **zero mudança**, inclusive em `dias_parados`,
 `vistas_de_avaliacao` e `avaliacoes_curriculo_turma` (sugestão não confirmada é idempotente;
-confirmada não é tocada). Provado em `provar_carga_dsa.py`.
+confirmada não é tocada). Provado no banco por `provar_sincronizacao_no_banco.py` (Docker local); `provar_carga_dsa.py` fica com as recusas em memória. *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*.

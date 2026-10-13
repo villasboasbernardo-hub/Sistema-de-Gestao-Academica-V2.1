@@ -490,7 +490,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 
 **Situação (D-AA-11)**
 
-- **FR-050** [domínio] A situação MUST ser **calculada na leitura** por função pura, a partir de data prevista, aplicação registrada, sessões de vista e prazo de vista (`config_parametros`, 7 dias). Nenhum caminho de escrita grava situação.
+- **FR-050** [domínio] A situação MUST ser **calculada na leitura** por função pura, a partir de data prevista, aplicação registrada, sessões de vista e prazo de vista (`config_parametros`, 7 dias). A situação não é gravada: o `status` guarda o estado de registro, e `pendente`, gravado por padrão pelo DSA e pela sincronização, é ignorado pela leitura (R-7). *(Emendado em 13/10/2026, na revisão do `tasks.md`; dizia "Nenhum caminho de escrita grava situação", e o valor padrão `pendente` é gravado.)*
 - **FR-051** As regras de situação:
 
 | Situação | Quando |
@@ -566,7 +566,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 
 ### Measurable Outcomes
 
-- **SC-001** Todas as turmas com DSA mostram AEC, TAD e TR com percentual sobre a CH curricular, e a linha "dias parados" à parte. Na cópia de 09/10, só com a reclassificação de D-AA-12, as turmas acima do teto de TAD eram **C-Ap-FR, C-Ap-HN e C-Exp-MetocOf** (M-5). Com a saída do feriado e da licença previstos do TAD (Q-14), a lista é **[pendente]**: remedida no PR 1, sobre a mesma cópia.
+- **SC-001** Todas as turmas com DSA mostram AEC, TAD e TR com percentual sobre a CH curricular, e a linha "dias parados" à parte. Na cópia de 09/10, só com a reclassificação de D-AA-12, as turmas acima do teto de TAD eram **C-Ap-FR, C-Ap-HN e C-Exp-MetocOf** (M-5). Com a saída do feriado e da licença previstos do TAD (Q-14), a lista é **[pendente]**: remedida no **PR 3**, depois da rodada que tira as linhas do TAD — no PR 1 nada as move. *(Corrigido em 13/10/2026, na revisão do `tasks.md`; dizia "no PR 1".)*
 - **SC-002** Alterar um teto em `config_parametros` muda o alerta na próxima leitura, sem redeploy (critério 3 do Épico 9).
 - **SC-003** Nenhum lançamento é recusado por teto excedido. Prova: e2e que lança acima do teto e confere a linha no banco.
 - **SC-004** O Estudo Individual e o Apoio Individualizado **nunca** entram na CHT (invariante pgTAP e Vitest).
@@ -602,7 +602,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **A-7** "Departamento de Alunos" (Ap-FR 4 linhas/6 TA, Espc-FR 1/1) fica em TAD/Administração, porque não veio regra para ele. Ver a Q-7.
 - **A-8** Parada da turma: a permissão é a de lançar atividade (`atividades_nao_letivas.criar`), Operador incluído. Parada global: `calendario.criar`, que é só de Encarregado e Admin (Q-8).
 - **A-9** A migration das 188 substituídas e das colunas de vista roda no remoto pelo rito: backup `--somente-copia`, dry-run só com ela, conferência só de leitura e o arquivo datado citado.
-- **A-10** *(acrescentada no plan, 13/10/2026)* O quadro final do currículo declara AEC, TR e TAD em **horas**; o sistema conta **TA**. Vale a equivalência já adotada para as UEs (1 h = 1 TA, decisão T011 da spec 006): o limite máximo de 65 horas é 65 TA.
+- **A-10** *(acrescentada no plan, 13/10/2026; ✅ **confirmada por Bernardo** no mesmo dia)* O quadro final do currículo declara AEC, TR e TAD em **horas**; o sistema conta **TA**. Vale a equivalência já adotada para as UEs (1 h = 1 TA, decisão T011 da spec 006): o limite máximo de 65 horas é 65 TA.
 
 ## 7. Entrega em levas (D-AA-1) — banco separado de tela
 

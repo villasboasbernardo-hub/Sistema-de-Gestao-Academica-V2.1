@@ -25,7 +25,7 @@ com a cópia datada do remoto). ⚠️ Com a cópia no local, a ponta a ponta pr
 tipos).
 
 ```bash
-pnpm db:reset:limpo && pnpm test:pgtap          # 123_*.sql a 125_*.sql verdes
+pnpm db:reset:limpo && pnpm test:invariantes    # pgTAP: 123_*.sql a 125_*.sql verdes
 pnpm test:rls                                    # dias_parados: Operador cria de turma, 42501 em global
 pnpm verificar
 ```
@@ -44,7 +44,7 @@ pnpm verificar
 ## PR 1.1 — banco do previsto por turma (estrutura + D-3)
 
 ```bash
-pnpm db:reset:limpo && pnpm test:pgtap          # 126_previsto_proens.sql
+pnpm db:reset:limpo && pnpm test:invariantes    # pgTAP: 126_previsto_proens.sql
 pnpm test:rls                                    # o caso que discrimina: Ajudante grava; Operador 42501
 ```
 
@@ -93,7 +93,8 @@ pnpm test:e2e -- dsa-parar-dia.spec.ts dsa-global.spec.ts dsa-tipo.spec.ts dsa-i
 ## PR 3 — carga da leva 1
 
 ```bash
-python -m scripts.carga_dsa.provar_carga_dsa     # inclui: duas rodadas = zero mudança; impressão digital do catálogo intacta
+python -m scripts.carga_dsa.provar_carga_dsa                 # recusas, em memória
+python -m scripts.carga_dsa.provar_sincronizacao_no_banco     # no Docker local: duas rodadas = zero mudança; catálogo intacto
 ```
 
 | Prova | Esperado |
@@ -107,7 +108,7 @@ python -m scripts.carga_dsa.provar_carga_dsa     # inclui: duas rodadas = zero m
 ## PR 4 — banco da leva 2 (estrutura + D-4 a D-8)
 
 ```bash
-pnpm db:reset:limpo && pnpm test:pgtap          # 127_* a 130_*
+pnpm db:reset:limpo && pnpm test:invariantes    # pgTAP: 127_* a 130_*
 pnpm test:rls
 python -m scripts.etl.conferir_avaliacoes_curriculo   # Σ TA de avaliação ≤ CH em toda disciplina; itens com página
 ```
@@ -152,7 +153,7 @@ pnpm test:e2e -- dsa-avaliacao-item.spec.ts dsa-vista-sessoes.spec.ts dsa-papeis
 |---|---|
 | DSA → disciplina HN-2101 → lançar *PM 1 (UE 7)* 2 TA | painel: PM 2/2 na UE 7; CHD + 2; item marcado aplicado na lista |
 | lançar vista da PM 1, sessão 1; depois sessão 2 | duas sessões, as duas na CHD; situação *Concluída* após a 1ª |
-| fiscal externo + aplicador sem habilitação | fiscal aceito; aplicador recusado (`RN-INST-01`) |
+| fiscal externo + aplicador sem habilitação | fiscal aceito; aplicador conforme a resposta de Bernardo sobre a `RN-INST-01` (lote da Fase 0 do `tasks.md`): recusado se a mudança for aprovada, aceito se não |
 | `fiscal_id` + `nome_fiscal_externo` | recusado pelo banco |
 | faixa *"U.E. 3 a 6"* | no papel e na lista; nenhuma UE consome |
 
@@ -160,6 +161,7 @@ pnpm test:e2e -- dsa-avaliacao-item.spec.ts dsa-vista-sessoes.spec.ts dsa-papeis
 
 ```bash
 python -m scripts.carga_dsa.provar_carga_dsa
+python -m scripts.carga_dsa.provar_sincronizacao_no_banco
 ```
 
 | Prova | Esperado |

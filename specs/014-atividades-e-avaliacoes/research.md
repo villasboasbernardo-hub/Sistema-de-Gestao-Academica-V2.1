@@ -77,11 +77,18 @@ FK composta exigiria uma coluna constante `'tipos_atividade'` na tabela de fato;
 que o resto do sistema usa. A categoria continua **gravada** porque três views e a planilha de
 contingência a leem por coluna, e o gatilho a torna **derivada de fato** (D-AA-3): trocar a
 categoria de um tipo em `config_listas` muda a contagem na próxima leitura **só se** a view ler pela
-junção — e é por isso que `vw_carga_horaria_turma` passa a ler `metadados ->> 'categoria'` do tipo
-quando houver tipo, e a coluna quando não houver (histórico). Cenário 4 da US2.
+junção. ⚠️ *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*: em vez de a view ler pela junção, um segundo gatilho,
+`app.recategorizar_pelo_tipo()` em `config_listas`, regrava a categoria das linhas **ativas com aquele
+tipo** quando a categoria do tipo muda — e `compoe_cht`, que é gerada da coluna, acompanha. A view lê a
+coluna, que fica sendo uma fonte só. As históricas sem tipo nunca são tocadas (catracas). Cenário 4 da US2.
+O preenchimento do tipo pelo `subtipo` vale só para as linhas sem `origem_migracao_v1`, e um `UPDATE` só de
+`subtipo` recalcula o tipo.
 
-`config_listas` ganha gatilho de validação para `lista = 'tipos_atividade'`: `metadados ->>
-'categoria'` obrigatório e dentro do enum. Padrão da migration `20260917210558` (salas).
+`config_listas` ganha gatilho de validação para `lista = 'tipos_atividade'`: recusa a categoria
+**presente e fora do enum** e um `uso` presente diferente de `'aula'`. ⚠️ *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*: a primeira
+redação exigia a categoria em todo tipo, o que o ETL (que grava tipos de aula sem categoria) e
+`semear_vocabulario_usado` violariam; a recusa de tipo sem categoria fica no gatilho de
+`atividades_nao_letivas` e no filtro de oferta. Padrão da migration `20260917210558` (salas).
 
 ## R-4. Avaliações do currículo — uma linha por item, origem por campo
 
@@ -122,7 +129,11 @@ antigas fica inerte; a regra "sessão posterior à aplicação" vira **gatilho**
 
 ## R-6. Papéis e o 2º instrutor
 
-- **Aplicador** = `instrutor_responsavel_id` (existe; `RN-INST-01` continua exigindo habilitação).
+- **Aplicador** = `instrutor_responsavel_id` (existe). ⚠️ *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*: a primeira redação dizia
+  *"`RN-INST-01` continua exigindo habilitação"*, e é falso — `lib/dominio/habilitacao.ts` tem
+  `EXIGE_HABILITACAO.avaliacao = false`. Exigir a habilitação do aplicador, como pedem a FR-043 e o
+  cenário 2 da US7, é **mudar** a regra (documento 04, L190 e L346), e isso foi para o lote de
+  aprovação da Fase 0 do `tasks.md` (regra 1).
 - **Fiscal** = `fiscal_id` xor `nome_fiscal_externo` (existe, `ativ_…`/`aval_…` `CHECK` já recusa os
   dois juntos — critério 5 do Épico 8).
 - **Quem conduz a vista** = por sessão, `conduz_instrutor_id` xor `conduz_nome_externo` (R-5).
@@ -140,8 +151,11 @@ mesmo vale para `Apoio_Individualizado` em `categoria_normativa` (R-3 × D-2).
 
 O `status` continua sendo o **estado de registro** (`ativa` é o que não é cancelada nem
 substituída); os quatro valores de execução (`pendente`, `em_andamento`, `concluida`, `atrasada`)
-ficam no enum **só para o histórico migrado** — nenhum caminho de escrita os grava, e toda leitura
-calcula a situação (R-8). Fica escrito no `comment on type`.
+ficam no enum para o histórico migrado, e `pendente` **continua sendo o valor gravado por padrão** no
+registro ativo pelo DSA e pela sincronização; a leitura o ignora e calcula a situação (R-8). Fica
+escrito no `comment on type`. ⚠️ *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*: a primeira redação dizia que nenhum caminho de
+escrita gravava esses valores. A leitura de avaliação viva passa a ser por **lista positiva** dos
+quatro valores (`.in("status", [...])`), que vale antes e depois de o valor novo existir.
 
 ## R-8. Situação calculada na leitura — função pura, e a função SQL vira espelho dela
 

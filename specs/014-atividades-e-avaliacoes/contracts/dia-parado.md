@@ -47,7 +47,7 @@ TR **e** bloqueado. A cascata (D-DSA-3) trata os três como parede: recusa e nom
 ## A recusa de aula (FR-026) — `recusaDeAulaNoDia` estendida
 
 ```ts
-recusaDeAulaNoDia({ data, taInicial, tempos, feriados, diasParados, atividadesBloqueantes, turmaId })
+recusaDeAulaNoDia({ dataAtual, data, taInicial, tempos, feriados, diasParados, atividadesBloqueantes, turmaId })   // dataAtual já existe hoje e fica
   → null | { motivo, origem: "calendario" | "dia_parado" | "tempo_reserva", frase }   // frase da RN-EVT-04
 ```
 
