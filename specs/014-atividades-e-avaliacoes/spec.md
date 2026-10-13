@@ -4,7 +4,7 @@
 
 **Created**: 12/10/2026
 
-**Status**: Rascunho em clarify. As Q-1 a Q-10 foram respondidas por Bernardo em 12 e 13/10/2026 (*Clarifications*). A Q-1 foi **substituída por decisão dele em 13/10/2026**, e a Q-1b caiu junto. Para aprovação dele: o lote banco × currículo e a lista planilha × currículo (§11), a emenda da `RN-AVAL-01` (§12) e as emendas de texto (§13). As perguntas Q-11 a Q-15 (§14) aguardam resposta.
+**Status**: **Clarify encerrado em 13/10/2026.** As Q-1 a Q-15 foram respondidas por Bernardo em 12 e 13/10/2026 (*Clarifications*). A Q-1 foi **substituída** pela decisão D-CUR-1, e a Q-1b caiu junto. O lote banco × currículo (§11-A) foi **aprovado em bloco**, com o impacto mostrado caso a caso antes de cada aplicação; a lista planilha × currículo (§11-B) vai para os operadores. Seguem para aprovação de Bernardo, na implementação, o texto da emenda da `RN-AVAL-01` (§12) e as emendas de texto (§13). **Nenhuma trava restante para os Épicos 9 e 8.**
 
 **Input**: pedido de Bernardo Villas Boas de 12/10/2026: *"Épicos 8 e 9 da v2.1 — Avaliações e Atividades."* Ele veio com **15 decisões já tomadas**, registradas na §2 como requisito e não reabertas como pergunta.
 
@@ -40,7 +40,7 @@ O DSA já lança avaliação, vista e atividade, mas há quatro lacunas:
 | D-AA-10 | Não há avaliação cancelada de verdade. As "canceladas" são as do ETL substituídas pela planilha. **Estado próprio "substituída pela planilha"**, fora de toda contagem. Listar a única cancelada sem marca, sem mexer | FR-047 a FR-049; `medicao` M-3 |
 | D-AA-11 | Situação da avaliação **calculada na leitura** (data prevista × aplicação × vista registrada) | FR-050 a FR-054 |
 | D-AA-12 | MONITORIA, PORTUGUÊS, BDA e BDF são **atividade de alunos específicos**, a 5ª categoria **Apoio Individualizado** (Q-3): fora da CH da turma, dos tetos e do EI, marcadas "alunos específicos" no DSA. **Emenda à RN-EVT-01.** Recepção aos alunos → TAD/Administração; Apoio à Instrução → AEC | FR-018 a FR-022; `medicao` M-5 |
-| D-AA-13 | **Lançar dia parado no DSA**: parada de todas as turmas vai para o calendário global (com permissão), parada de uma turma vira TAD dela; o dia aparece bloqueado na grade e no papel, com o motivo | FR-023 a FR-028 |
+| D-AA-13 | **Lançar dia parado no DSA**: parada de todas as turmas vai para o calendário global (com permissão), parada de uma turma vira TAD dela; o dia aparece bloqueado na grade e no papel, com o motivo. ⚠️ **Ajustada pela Q-14 (13/10/2026):** a parada **prevista** não é TAD; vai para a linha própria **"dias parados"** | FR-023 a FR-028.1 |
 | D-AA-14 | Estudo Individual 20%/10% como **parâmetro, só informativo** | FR-007 |
 | D-AA-15 | **Fora desta spec:** agendamento de avaliação × consumo de TA. O consumo acontece só ao registrar no DSA. Vai para o backlog | §8 |
 
@@ -83,7 +83,7 @@ O DSA já lança avaliação, vista e atividade, mas há quatro lacunas:
 - Q: De onde vem a carga horária de disciplina, UE e avaliação? → A: ~~Opção (a), "previsto planejado" da planilha ao lado da CH DEnsM~~ **(resposta de 12/10/2026, SUBSTITUÍDA em 13/10/2026 pela decisão abaixo; a Q-1b, que dela dependia, não se aplica mais).**
 - Q: Os itens de prova substituem `avaliacoes_planejadas` e o casamento por nome? → A: **Opção (a).** A ligação entre a prova aplicada e o item de prova da disciplina é **explícita**, sempre que houver item. O casamento por nome fica **só para o histórico**. A emenda da regra que hoje proíbe vínculo rígido vai **proposta** com texto antes e depois (Q-2; a proposta está na §12).
 - Q: Como se chama e como se guarda a classe de Monitoria, Português, BDA e BDF? → A: **5ª categoria do domínio normativo, fora da CHT, chamada "Apoio Individualizado"**, sem sigla nova. Ela abrange Monitoria, Português para Estrangeiros, BDA e BDF (Q-3).
-- Q: Como fica a parada de todas as turmas em só parte do dia? → A: **Como recomendado:** vira **TAD global bloqueante** dos tempos indicados (Q-4).
+- Q: Como fica a parada de todas as turmas em só parte do dia? → A: **Como recomendado:** vira **TAD global bloqueante** dos tempos indicados (Q-4). ⚠️ **Ajustada pela Q-14 de 13/10/2026:** o registro continua **um só, global e bloqueante**, mas, sendo parada prevista, conta na linha **"dias parados"** de cada turma, e **não** no TAD.
 
 ### Session 2026-10-13
 
@@ -104,6 +104,13 @@ O DSA já lança avaliação, vista e atividade, mas há quatro lacunas:
   - Nesses dias e tempos **não há aula e não se contabiliza TA de aula**. O dia aparece bloqueado na grade e no papel, com o motivo.
   - **Licença NÃO prevista:** ao lançar, o operador pode marcar **"consome Tempo Reserva"**, e os tempos daquele dia e turma contam como **TR**, entrando no percentual informativo de TR. Licença ou feriado **previsto no calendário NÃO consome TR**.
   - **Desfazer** a parada devolve o dia e o TR consumido (decisão D-PAR-1).
+- Q: O currículo dá o tempo da avaliação, mas não diz de qual UE ele sai. Como registrar? → A: **Avaliação no nível da disciplina**, dentro da CH dela, **com aviso no painel**, até Bernardo nomear a UE (Q-11).
+- Q: O currículo não dá o TA da avaliação. Com quantos TA ela entra? → A: **Registrada sem tempo previsto.** Não se inventa número; **a planilha não é fonte** (Q-12).
+- Q: Licença NÃO prevista de todas as turmas, que consome TR, é gravada como? → A: **TR global bloqueante** dos tempos. Não vai para o calendário (Q-13).
+- Q: Feriado e licença PREVISTOS contam no teto de TAD? → A: **NÃO** (Q-14, decisão de Bernardo, contra a recomendação). Feriado e licença **previstos** (FR, LA, LP, NT…) **não contam no teto de TAD**: nesses dias não há aula e não se conta tempo de aula. Ficam numa **linha própria "dias parados"**, por turma, **informativa**, separada de AEC, TAD e TR, como nas planilhas, que têm linhas próprias para FR, LA, LP e NT. **Só a licença NÃO prevista marcada "consome Tempo Reserva" entra no TR.**
+- Q: Igualar a quantidade de disciplinas ao currículo obriga a desfazer os desdobramentos? → A: **Unificar** C-Ap-HN I + I-I e CAHO MAT + FIS em **uma disciplina cada**, conforme o currículo, **movendo os lançamentos por migration de dado**: nenhum lançamento perdido, CH conferida antes e depois. A **Ambientação** dos C-ApA fica **para depois** (sem turma carregada em 2026), como pendência nomeada `PEND-014-3` (Q-15).
+- Q: O lote banco × currículo (§11-A) está aprovado? → A: **Aprovado em bloco pela regra D-CUR-1.** Na implementação, cada correção vira migration de dado com o rito do remoto, e **antes de aplicar** Bernardo vê o impacto **caso a caso**: lançamentos que mudam de disciplina e CH antes e depois. Inclui a reativação e a correção do código da disciplina III do C-Esp-ALH.
+- Q: E a lista planilha × currículo (§11-B)? → A: **Vira a lista de erros de planilha para os operadores.** Nada a aplicar no banco.
 - Q: O que fica fora da spec? → A: (1) A avaliação `DSAP-C-EXP-OBS-ME-2026-L206-V`, cancelada e relançada como `DSA-MUYK0RFD-V` **sem a vista**: correção de dado e possível **bug** "excluir e relançar a prova no DSA perde a vista". Vai para o **backlog do DSA** (`PEND-DSA-VISTA`), para o próximo lote de correções. (2) Das 11 divergências entre documentos da §9, **as que conflitam com decisões de Bernardo entram como emenda de texto nesta spec** (§13); as demais ficam listadas.
 
 ---
@@ -119,6 +126,8 @@ O Encarregado abre a ficha da turma e vê, para AEC, TAD e TR:
 - o teto;
 - o percentual;
 - um alerta quando passa do teto.
+
+Ao lado, sem teto e sem alerta, a linha informativa **"dias parados"**, por tipo (FR, LA, LP, NT…), fora da CHT (Q-14).
 
 O `/inicio` lista as turmas com teto excedido.
 
@@ -179,10 +188,13 @@ As paradas se registram assim:
 | Alcance | Prevista no calendário? | Onde vai | Quem pode lançar |
 |---|---|---|---|
 | **Todas as turmas, dia inteiro** | sim | **calendário global** (impacto de dia inteiro) | Encarregado e Admin |
-| **Todas as turmas, parte do dia** | sim | **TAD global bloqueante** dos tempos (Q-4) | Encarregado e Admin |
-| **Todas as turmas, não prevista, consome TR** | não | ver **Q-13** | Encarregado e Admin |
-| **Só esta turma** | sim | **TAD da turma**, bloqueante | quem lança atividade, Operador incluído |
+| **Todas as turmas, parte do dia** | sim | **dia parado global**, bloqueante, nos tempos (Q-4 ajustada pela Q-14); **fora do TAD** | Encarregado e Admin |
+| **Todas as turmas, não prevista, consome TR** | não | **TR global**, bloqueante (Q-13); **não** vai para o calendário | Encarregado e Admin |
+| **Só esta turma** | sim | **dia parado da turma**, bloqueante; **fora do TAD** (Q-14) | quem lança atividade, Operador incluído |
+| **Só esta turma, não prevista, sem a marca** | não | **dia parado da turma**, bloqueante; fora do TAD | quem lança atividade, Operador incluído |
 | **Só esta turma, não prevista, "consome TR"** | não | **TR da turma**, bloqueante | quem lança atividade, Operador incluído |
+
+**Dia parado** (Q-14): não é AEC, TAD, TR, EI nem Apoio Individualizado. Fica **fora da CHT e dos tetos**, e aparece numa **linha própria "dias parados"** da turma, informativa, por tipo, como as linhas FR, LA, LP e NT das planilhas. O feriado de dia inteiro do calendário também entra nessa linha, em cada turma que teria DSA na data.
 
 **Em qualquer caso:**
 - não há aula, e não se contabiliza TA de aula;
@@ -197,13 +209,14 @@ As paradas se registram assim:
 **Acceptance Scenarios:**
 1. **Dado** um Feriado de todas as turmas e de dia inteiro, lançado pelo Encarregado, **então** ele vira linha do calendário com impacto de dia inteiro, e o DSA de toda turma com DSA na data mostra o dia bloqueado com o motivo.
 2. **Dado** um Operador, **quando** tenta uma parada de **todas as turmas**, **então** a recusa nomeia a permissão que falta, pela Server Action e com `42501` vindo do banco. A parada **só da turma** continua disponível para ele.
-3. **Dado** uma Licença Administrativa só da turma, **prevista**, nos tempos 1 a 4 de 20/10, **então** nasce um TAD bloqueante de 4 TA; lançar aula no tempo 2 recebe *"Dia bloqueado: <motivo>…"*, e nada é gravado.
-4. **Dado** a mesma licença marcada **"não prevista — consome Tempo Reserva"**, **então** os 4 TA contam como **TR** da turma e entram no percentual de TR, e o TAD **não** sobe.
+3. **Dado** uma Licença Administrativa só da turma, **prevista**, nos tempos 1 a 4 de 20/10, **então** nasce um **dia parado** da turma, bloqueante, de 4 tempos; a linha "dias parados" mostra 4 tempos de LA e o **TAD não sobe**; lançar aula no tempo 2 recebe *"Dia bloqueado: <motivo>…"*, e nada é gravado.
+4. **Dado** a mesma licença marcada **"não prevista — consome Tempo Reserva"**, **então** os 4 TA contam como **TR** da turma e entram no percentual de TR; o TAD e a linha "dias parados" **não** sobem.
 5. **Dado** um Feriado **já no calendário**, **então** a opção "consome Tempo Reserva" não é oferecida: o previsto nunca consome TR.
 6. **Dado** uma parada que consumiu 4 TA de TR, **quando** o operador a desfaz, **então** o dia volta a aceitar aula e o TR da turma desce 4. A linha fica inativa, e nada é apagado.
 7. **Dado** uma aula crescendo em cascata (D-DSA-3) sobre um tempo parado, **então** a cascata **não** empurra a parada; ela recusa e nomeia o bloqueio.
-8. **Dado** uma parada de todas as turmas nos tempos 5 a 8 de 22/10, **então** nasce **uma** atividade TAD global bloqueante, o TAD de cada turma com DSA na data sobe 4, e lançar aula no tempo 6 é recusado.
+8. **Dado** uma parada de todas as turmas nos tempos 5 a 8 de 22/10, **então** nasce **um** dia parado global bloqueante; a linha "dias parados" de cada turma com DSA na data mostra 4 tempos, o **TAD não muda**, e lançar aula no tempo 6 é recusado.
 9. **Dado** o papel do DSA da semana, **então** o dia ou os tempos parados saem com o tipo e o motivo.
+10. **Dado** uma licença administrativa **não prevista** de todas as turmas em 23/10, marcada "consome Tempo Reserva" pelo Encarregado, **então** nasce **uma** atividade **TR global** bloqueante nos tempos do dia, o TR de cada turma com DSA na data sobe, e **nenhuma** linha nasce no calendário (Q-13).
 
 ---
 
@@ -279,11 +292,11 @@ As 188 avaliações do ETL que a planilha substituiu passam a ter o estado **"su
 - **Apoio Individualizado no mesmo tempo de uma aula da turma:** é legítimo, porque alunos diferentes estão em atividades diferentes. A grade mostra os dois, e o Apoio Individualizado **não** conta como conflito de ocupação. *[premissa A-6]*
 - **Vista lançada antes da aplicação:** recusada, como já é hoje (`aval_vista_apos_aplicacao`), para **cada** sessão.
 - **Prova lançada além do previsto do item:** alerta, como a CH da UE (`FR-025 da spec 013`), nunca bloqueio.
-- **Currículo que dá o tempo da avaliação mas não diz de que UE ele sai** (C-Exp-MetocOf 2011, C-Esp-ALH, parte dos C-ApA): ver **Q-11**.
-- **Currículo que não dá o TA da avaliação** (C-Exp-Obs-ME; EST-QF por frequência, relatório ou conceito): ver **Q-12**.
+- **Currículo que dá o tempo da avaliação mas não diz de que UE ele sai** (C-Exp-MetocOf 2011, C-Esp-ALH, parte dos C-ApA): a avaliação fica **no nível da disciplina**, dentro da CH dela, e o painel avisa *"o currículo não diz de qual UE sai"*, até Bernardo nomear a UE (Q-11, FR-031.3).
+- **Currículo que não dá o TA da avaliação** (C-Exp-Obs-ME; EST-QF por frequência, relatório ou conceito): a avaliação é registrada **sem tempo previsto**; nada é inventado e a planilha não é fonte (Q-12, FR-031.4).
 - **Currículo por competências** (C-Espc-FR, C-Espc-HN, sem UE): a avaliação fica no nível da disciplina, com a "CH DA AVALIAÇÃO" que o currículo declara, dentro da CH da disciplina.
 - **Parada sobre um dia que já tem aula gravada:** o que existe continua visível e contando (`RN-EVT-04`); a regra "não se contabiliza TA de aula" vale para o que se lança **depois** da parada. A tela avisa quantos lançamentos o dia tem antes de confirmar.
-- **Desfazer uma parada:** a global inativa a linha do calendário ou a atividade global, e a da turma inativa o TAD ou o TR. O dia volta a aceitar aula, e o TR consumido sai da conta. Nada é apagado (regra 4).
+- **Desfazer uma parada:** a global inativa a linha do calendário, o dia parado global ou o TR global, e a da turma inativa o dia parado ou o TR. O dia volta a aceitar aula, e o TR consumido sai da conta. Nada é apagado (regra 4).
 - **A única cancelada sem marca** (`DSAP-C-EXP-OBS-ME-2026-L206-V`): não é tocada por migration nem pela carga. Continua `cancelada` (D-AA-10).
 
 ---
@@ -297,9 +310,9 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 **Tetos (D-AA-2, D-AA-14)**
 
 - **FR-001** [banco + domínio] O teto de AEC, TAD e TR MUST ser calculado **por turma**, sobre a **CH curricular** (a soma da CH das disciplinas ativas do curso da turma). O percentual MUST vir de `config_parametros` para o ano letivo. A regra MUST morar numa função pura de `lib/dominio/` nomeada pela `RN-EVT-01`.
-- **FR-002** [domínio] O retorno MUST separar `{ chd, aec, tad, tr, cht, estudoIndividual, apoioIndividualizado }`, com a `cht` derivada **só** dos quatro primeiros. Somar EI ou Apoio Individualizado à CHT MUST ser erro de tipo.
+- **FR-002** [domínio] O retorno MUST separar `{ chd, aec, tad, tr, cht, estudoIndividual, apoioIndividualizado, diasParados }`, com a `cht` derivada **só** dos quatro primeiros. Somar EI, Apoio Individualizado ou dias parados à CHT MUST ser erro de tipo.
 - **FR-003** Exceder um teto MUST ser **alerta**, nunca bloqueio nem `CHECK` (`RN-DEG-02`, regra 6).
-- **FR-004** [tela] A ficha da turma MUST mostrar, para AEC, TAD e TR, o executado, o teto, o percentual e o alerta. A reserva do PROENS de TAD e TR fica ao lado, quando houver.
+- **FR-004** [tela] A ficha da turma MUST mostrar, para AEC, TAD e TR, o executado, o teto, o percentual e o alerta. A reserva do PROENS de TAD e TR fica ao lado, quando houver. Ao lado, a linha informativa **"dias parados"**, por tipo, sem teto e sem alerta (Q-14, FR-025.4).
 - **FR-005** [tela] O `/inicio` MUST listar as turmas com teto excedido entre os alertas (`RF-INI-04`). A página do curso MUST sinalizar as turmas do curso que excedem (`RF-CURSO-06`).
 - **FR-006** [tela] Turma EAD MUST NOT mostrar tetos (D-DSA da spec 013). Turma semipresencial conta só o que foi lançado.
 - **FR-007** [banco + tela] A referência de Estudo Individual (20 % com Estudo Obrigatório, 10 % sem) MUST ser parâmetro em `config_parametros` e aparecer como **indicador informativo**, sem alerta de teto e sem cor de excesso. Mostra as **duas** referências, 20 % e 10 %, lado a lado (Q-6).
@@ -340,14 +353,17 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
   - **alcance**: todas as turmas ou só esta turma;
   - a marca **"não prevista — consome Tempo Reserva"**.
 - **FR-024** [banco] Parada de **todas as turmas**, de **dia inteiro**, **prevista** MUST gravar uma linha em `feriados` com impacto `dia_inteiro`, com o tipo e o motivo na descrição (é dado, não schema: Q-16 da spec 013). Só **Encarregado e Admin** (`calendario.criar`, que a matriz já dá só a esses dois) (Q-8).
-- **FR-024.1** [banco] Parada de **todas as turmas** em **parte do dia** MUST gravar **uma** atividade **TAD global**, de tipo de parada **bloqueante**, nos tempos indicados (Q-4). Ela soma no TAD de cada turma com DSA na data (FR-013). **Só Encarregado e Admin** (Q-8). A permissão de atividade global, que hoje inclui o Ajudante, **não basta** para parada. O calendário não muda, e a `RN-EVT-02` também não.
-- **FR-025** [banco] Parada **só da turma**, **prevista**, MUST gravar uma atividade **TAD** da turma, bloqueante, nos tempos indicados (no dia inteiro, todos os tempos do regime da turma naquele dia). Pode lançá-la **quem lança atividade na turma, Operador incluído** (Q-8).
-- **FR-025.1** [banco] Parada **não prevista** marcada **"consome Tempo Reserva"** MUST gravar a atividade como **TR**, bloqueante, e não como TAD. Os tempos entram no percentual informativo de TR. Para a de todas as turmas, ver **Q-13**.
+- **FR-024.1** [banco] Parada de **todas as turmas** em **parte do dia**, **prevista**, MUST gravar **um** registro **global** de **dia parado**, bloqueante, nos tempos indicados (Q-4, ajustada pela Q-14). Ele aparece na linha "dias parados" de cada turma com DSA na data e **não** soma no TAD. **Só Encarregado e Admin** (Q-8). A permissão de atividade global, que hoje inclui o Ajudante, **não basta** para parada. O calendário não muda, e a `RN-EVT-02` também não.
+- **FR-025** [banco] Parada **só da turma**, **prevista** ou **não prevista sem a marca "consome Tempo Reserva"**, MUST gravar um **dia parado** da turma, bloqueante, nos tempos indicados (no dia inteiro, todos os tempos do regime da turma naquele dia). Ele **não** soma no TAD (Q-14). Pode lançá-la **quem lança atividade na turma, Operador incluído** (Q-8).
+- **FR-025.1** [banco] Parada **não prevista** marcada **"consome Tempo Reserva"** MUST gravar a atividade como **TR**, bloqueante, e não como TAD. Os tempos entram no percentual informativo de TR. A de **todas as turmas** MUST ser **uma** atividade **TR global** bloqueante, que soma no TR de cada turma com DSA na data e **não** grava linha no calendário (Q-13). Só Encarregado e Admin.
 - **FR-025.2** Parada **prevista** (dia que já está no calendário) MUST NOT consumir TR. A tela MUST NOT oferecer a marca quando o dia já está bloqueado no calendário.
+- **FR-025.3** [banco] O **dia parado** MUST ser uma classe própria, **fora da CHT, dos tetos, do Estudo Individual e do Apoio Individualizado** (Q-14). Somá-lo a AEC, TAD, TR ou CHT MUST ser impossível no banco e no tipo. A forma de guardar (valor novo do domínio de categorias ou registro próprio) é decisão do plano; o comportamento não.
+- **FR-025.4** [domínio + tela] A turma MUST ter a linha informativa **"dias parados"**, por tipo (FR, LA, LP, NT…), em tempos e em dias, somando: o feriado de dia inteiro do calendário em dia em que a turma teria DSA, o dia parado global e o da turma. Sem teto e sem alerta.
+- **FR-025.5** [carga] A sincronização MUST gravar as linhas de feriado e licença **previstos** das planilhas (FR, LA, LP, NT) como **dia parado**, e não mais como TAD "Administração" (`resolver.py:539–557`). As linhas já gravadas MUST ser reclassificadas pela própria sincronização, como na FR-022.
 - **FR-026** [domínio + ação] Aula MUST ser recusada em dia ou tempo coberto por parada, global ou da turma, com o tipo, o motivo e a frase da `RN-EVT-04`, no lançar, no mover e na cascata (D-DSA-3). A recusa MUST vir da Server Action, e não só da tela. **Emenda à `RN-EVT-04`** (autorizada por D-AA-13): o bloqueio passa a valer também para a parada de tempos, da turma ou global, de qualquer tipo de parada. Nenhum TA de aula se contabiliza nesses tempos.
 - **FR-027** [tela] A grade e o papel MUST mostrar o dia ou os tempos parados com o tipo e o motivo, nos dois alcances.
 - **FR-028** A cascata MUST NOT mover uma parada, e a parada MUST NOT ser empurrada por outro lançamento.
-- **FR-028.1** **Desfazer** uma parada MUST inativar a linha do calendário ou a atividade (regra 4). Isso devolve o dia para a aula e tira da conta o TAD ou o TR que a parada tinha somado. Quem desfaz precisa da mesma permissão de quem lança aquele alcance.
+- **FR-028.1** **Desfazer** uma parada MUST inativar a linha do calendário ou a atividade (regra 4). Isso devolve o dia para a aula e tira da linha "dias parados", ou do TR, o que a parada tinha somado. Quem desfaz precisa da mesma permissão de quem lança aquele alcance.
 
 ### 4.2 Leva 2, Épico 8: avaliações
 
@@ -364,8 +380,11 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
   - quando o currículo computa a avaliação numa UE, o **conteúdo** daquela UE é a CH dela menos as avaliações computadas nela;
   - **UEs (conteúdo) + provas + vistas = CH da disciplina do currículo, sempre.**
   Exemplo real: UE 7 Física do C-Ap-HN, 21 = 18 + 2 + 1.
-- **FR-031.1** [banco] As divergências **banco × currículo** (§11-A) MUST ser corrigidas **no banco**, por migration de dado com o rito do remoto, **só depois da aprovação** de Bernardo, caso a caso.
+- **FR-031.1** [banco] As divergências **banco × currículo** (§11-A), **aprovadas em bloco em 13/10/2026**, MUST ser corrigidas **no banco**, por migration de dado com o rito do remoto. **Antes de aplicar cada uma**, o impacto MUST ser mostrado a Bernardo caso a caso: os lançamentos que mudam de disciplina e a CH antes e depois. Inclui a reativação e a correção do código da disciplina III do C-Esp-ALH (B-5).
 - **FR-031.2** [domínio] A regra "conteúdo + avaliações = CH" MUST ser verificada por função pura e por asserção de banco **sobre o catálogo**, nunca sobre o lançamento. O lançamento acima do previsto continua alerta (`FR-025 da spec 013`).
+- **FR-031.3** [banco + tela] Avaliação cujo tempo o currículo dá **sem dizer de qual UE sai** MUST ficar **no nível da disciplina**, dentro da CH dela. O conteúdo da disciplina é a soma das UEs menos essas avaliações, e o painel MUST avisar *"o currículo não diz de qual UE sai"*. Quando Bernardo nomear a UE, a avaliação desce para ela, com a origem *"decisão CIAARA-11, dd/mm/aaaa"* (Q-11).
+- **FR-031.4** [banco + tela] Avaliação cujo TA o currículo **não dá** MUST ser registrada com o instrumento e as UEs abordadas e **sem tempo previsto**. Nenhum número é inventado, e a planilha não é fonte (Q-12). O lançamento dela no DSA consome o tempo das UEs abordadas, como conteúdo. Os EST-QF que avaliam por frequência, relatório ou conceito ficam sem avaliação de tempo no catálogo.
+- **FR-031.5** [banco] Os desdobramentos MUST ser **unificados** conforme o currículo (Q-15): C-Ap-HN I + I-I numa disciplina **HN-2101** de 126, e CAHO MAT + FIS numa disciplina **MATFIS** de 56. A disciplina extra é **inativada** (regra 4), as UEs passam à unificada e os lançamentos dela são **movidos** por migration de dado. **Nenhum lançamento perdido**: a contagem de aulas, avaliações e atividades e a CH executada por turma MUST ser iguais antes e depois, conferidas no relatório da aplicação. A Ambientação dos C-ApA fica fora (`PEND-014-3`, §8).
 - **FR-032** [tela] No DSA, escolhida a disciplina, MUST aparecer a lista de UEs (conteúdo) e de avaliações do currículo (prova e vista). Lançar prova ou vista MUST apontar a avaliação e consumir o TA dela, dentro da UE em que o currículo a computa.
 - **FR-033** [tela] A prova lançada MUST aceitar a faixa de UEs coberta (*"U.E. 3 a 6"*) como informação opcional, que **não** consome TA de UE.
 - **FR-034** [tela] O painel da disciplina (aba do curso e ficha da turma) MUST mostrar, por UE, o previsto e o cumprido de **conteúdo**, de **prova** e de **vista**, e o total da UE e da disciplina, sempre com os números do currículo.
@@ -422,10 +441,11 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
   - novo verbete **Apoio Individualizado** (5ª categoria, fora da CHT: Monitoria, Português para Estrangeiros, BDA e BDF);
   - o verbete **Estudo Individual** deixa de dizer que inclui Monitoria e Português;
   - o verbete **CHD** passa a dizer que a avaliação e a vista estão **dentro** da CH da disciplina e da UE em que o currículo as computa (D-CUR-1);
-  - os verbetes **Licença Administrativa (LA)** e **Licença de Pagamento (LP)**, como tipos de parada, e o uso do **Tempo Reserva** para licença não prevista.
+  - os verbetes **Licença Administrativa (LA)** e **Licença de Pagamento (LP)**, como tipos de parada, e o uso do **Tempo Reserva** para licença não prevista;
+  - novo verbete **Dia parado**: feriado ou licença previstos, sem aula, fora da CHT e dos tetos, na linha "dias parados" da turma (Q-14).
   Cada emenda leva o registro de que o `.docx` não a recebeu.
 - **FR-061** [docs] O documento 04 (`.md`) MUST receber, com a autorização nominal de 12/10/2026 citada:
-  - a emenda da `RN-EVT-01` (D-AA-12 e Q-3): a 5ª categoria Apoio Individualizado, e a frase *"Inclui também Monitoria e Português para Estrangeiros"* sai do Estudo Individual;
+  - a emenda da `RN-EVT-01` (D-AA-12 e Q-3): a 5ª categoria Apoio Individualizado, e a frase *"Inclui também Monitoria e Português para Estrangeiros"* sai do Estudo Individual; e o **dia parado** fora da CHT (Q-14);
   - a extensão da `RN-EVT-04` (D-AA-13 e Q-4);
   - a emenda da `RN-AVAL-01`, **só** com o texto aprovado da §12;
   - as emendas de texto da §13, que alinham os documentos às decisões de Bernardo.
@@ -450,7 +470,8 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **Atividade não letiva.** Já existe. Passa a ter a classe derivada do tipo, incluindo **Apoio Individualizado**, os demais instrutores, a quantidade de alunos opcional, a marca de **parada** bloqueante e o tipo de parada.
 - **Linha do calendário** (`feriados`). Já existe. Passa a ser gravável pelo DSA, com o motivo da parada.
 - **Tipo de atividade** (`config_listas.tipos_atividade`). Já existe. A categoria em `metadados` passa a ser **obrigatória e a fonte única**, e ganha a marca de **parada bloqueante**.
-- **Tipo de parada** (`config_listas`). Novo. FR, LA, LP… Cada tipo diz se pode ser global e se aceita "consome Tempo Reserva".
+- **Tipo de parada** (`config_listas`). Novo. FR, LA, LP, NT… Cada tipo diz se pode ser global e se aceita "consome Tempo Reserva" (só na não prevista).
+- **Dia parado.** Novo. Classe própria, fora da CHT e dos tetos (Q-14): tipo, motivo, alcance (turma ou global), dia e tempos, prevista ou não. Alimenta a linha "dias parados" da turma. A não prevista com "consome Tempo Reserva" **não** é dia parado: é TR.
 - **Parâmetro** (`config_parametros`). Os tetos já existem. Nasce a referência de EI.
 
 ---
@@ -459,7 +480,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 
 ### Measurable Outcomes
 
-- **SC-001** Todas as turmas com DSA mostram AEC, TAD e TR com percentual sobre a CH curricular. Na cópia de 09/10, com a reclassificação de D-AA-12, as turmas acima do teto de TAD são exatamente **C-Ap-FR, C-Ap-HN e C-Exp-MetocOf** (M-5).
+- **SC-001** Todas as turmas com DSA mostram AEC, TAD e TR com percentual sobre a CH curricular, e a linha "dias parados" à parte. Na cópia de 09/10, só com a reclassificação de D-AA-12, as turmas acima do teto de TAD eram **C-Ap-FR, C-Ap-HN e C-Exp-MetocOf** (M-5). Com a saída do feriado e da licença previstos do TAD (Q-14), a lista é **[pendente]**: remedida no PR 1, sobre a mesma cópia.
 - **SC-002** Alterar um teto em `config_parametros` muda o alerta na próxima leitura, sem redeploy (critério 3 do Épico 9).
 - **SC-003** Nenhum lançamento é recusado por teto excedido. Prova: e2e que lança acima do teto e confere a linha no banco.
 - **SC-004** O Estudo Individual e o Apoio Individualizado **nunca** entram na CHT (invariante pgTAP e Vitest).
@@ -467,7 +488,9 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **SC-006** Das 188 avaliações vivas da cópia, **zero** aparecem "pendente" tendo vista registrada (hoje são 135). A situação Atrasada vira exatamente no 8º dia.
 - **SC-007** As 188 substituídas saem de toda contagem. As vivas continuam 188, e a única cancelada sem marca continua `cancelada`.
 - **SC-008** No C-Ap-HN, a UE 7 Física mostra **18 + PM 2 + vista 1 = 21**, e a disciplina HN-2101 fecha em **126**. Uma rodada da sincronização **não altera** CH nenhuma do catálogo, provado pela impressão digital do catálogo antes e depois.
-- **SC-008.1** Depois da migration aprovada do §11-A, a comparação banco × currículo dá **zero divergência** de CH nos 24 cursos.
+- **SC-008.1** Depois da migration aprovada do §11-A, a comparação banco × currículo dá **zero divergência** de CH nos 24 cursos, e a quantidade de disciplinas ativas do C-Ap-HN e do CAHO iguala a do currículo. A Ambientação dos C-ApA fica fora até a `PEND-014-3`.
+- **SC-008.3** A unificação da Q-15 preserva, por turma, a contagem de aulas, avaliações e atividades e a CH executada, idênticas antes e depois.
+- **SC-013** Um feriado ou licença previstos **não** mudam o TAD nem a CHT da turma; aparecem só na linha "dias parados".
 - **SC-008.2** A lista de erros de planilha da rodada traz, no mínimo, os casos do §11-B que a medição de 13/10/2026 encontrou.
 - **SC-012** Uma parada "consome Tempo Reserva" de 4 TA sobe o TR da turma em 4. Desfeita, o TR volta ao valor anterior.
 - **SC-009** Lançar aula num tempo parado é recusado pela Server Action, tanto para parada global quanto para parada da turma, e a contagem no banco fica intacta.
@@ -479,7 +502,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 ## 6. Assumptions
 
 - **A-1** O escopo "**todas as turmas**" da parada global e da atividade global é: todas as turmas **com DSA na data** (ativas, não EAD e, se semipresenciais, na etapa presencial).
-- **A-2** A parada prevista da turma é TAD, como manda a Q-16 da spec 013 para licença. A não prevista com "consome TR" é TR (13/10/2026). Ver a Q-14 sobre a prevista contar no teto de TAD.
+- **A-2** ~~A parada prevista da turma é TAD, como manda a Q-16 da spec 013 para licença.~~ **Vencida pela Q-14 (13/10/2026):** feriado e licença previstos são **dia parado**, fora do TAD e da CHT. A não prevista com "consome TR" é TR. A Q-16 da spec 013 fica superada nesse ponto, e isso entra no §9.
 - **A-3** O prazo de vista continua sendo `avaliacao.prazo_vista_dias = 7`.
 - **A-4** **Não** se cria cadastro de alunos (regra 2). A indicação de alunos é só a quantidade, opcional, sem nome. Nome de aluno seria dado pessoal de corpo discente, que é de outra divisão.
 - **A-5** "Vence em breve" = 2 dias, como parâmetro em `config_parametros`. O número é proposta, ajustável por dado.
@@ -492,10 +515,10 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 
 | Leva | PR | Conteúdo | Banco? |
 |---|---|---|---|
-| **1 · Épico 9** | PR 1 | 5ª categoria Apoio Individualizado, tipos de parada e a marca bloqueante, TR por licença não prevista, categoria obrigatória e FK do tipo, marca de parada, global somando por turma com DSA, parâmetro de EI, reclassificação da lista | **Migration**, com o rito do remoto |
+| **1 · Épico 9** | PR 1 | 5ª categoria Apoio Individualizado, tipos de parada e a marca bloqueante, a classe **dia parado** fora da CHT, TR por licença não prevista (da turma e global), categoria obrigatória e FK do tipo, marca de parada, global somando por turma com DSA, parâmetro de EI, reclassificação da lista | **Migration**, com o rito do remoto |
 | | PR 2 | Tetos na ficha, no `/inicio` e no curso; `/atividades`; tipo → categoria no DSA; global pela tela; dia parado no DSA e no papel | Só tela e ação |
-| | PR 3 | Carga: Monitoria e afins, global, responsável externo como pendência | Só `scripts/carga_dsa` |
-| **2 · Épico 8** | PR 4 | Avaliações do currículo (das 24 fontes), correção banco × currículo aprovada (§11-A), sessões de vista, três papéis, demais instrutores, estado "substituída" e migration das 188 | **Migration**, com o rito do remoto |
+| | PR 3 | Carga: Monitoria e afins, FR/LA/LP/NT previstos como dia parado, global, responsável externo como pendência | Só `scripts/carga_dsa` |
+| **2 · Épico 8** | PR 4 | Avaliações do currículo (das 24 fontes), correção banco × currículo aprovada (§11-A, impacto caso a caso antes), unificação HN-2101 e MATFIS (Q-15), sessões de vista, três papéis, demais instrutores, estado "substituída" e migration das 188 | **Migration**, com o rito do remoto |
 | | PR 5 | DSA oferecendo os itens, painel por item, aba *Avaliações* do curso, situação calculada, alertas de vista | Só tela e ação |
 | | PR 6 | Carga: prova e vista ligadas às avaliações do currículo, lista de erros de planilha, N sessões, "(FISCAL)" no papel certo | Só `scripts/carga_dsa` |
 
@@ -503,6 +526,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 
 - **D-AA-15:** consumir TA ao **agendar** avaliação. Consome só ao registrar no DSA. Vai para o backlog como **`PEND-014-2`**, com a contradição `RF-AVAL-04`/`05` × documento 06 anotada.
 - **`PEND-014-1`:** tabela de junção instrutor × lançamento, com rateio de carga (D-AA-7).
+- **`PEND-014-3`:** a **Ambientação** dos C-ApA (AuxNav, OcOp, PCN, PrevMe), que o banco tem como disciplina de 8 TA e o currículo trata como **fase** de 8 / 10 / 5 / 5 h (B-11). Fica para depois: não há turma desses cursos carregada em 2026 (decisão de 13/10/2026, Q-15).
 - **Cadastro de alunos** e identificação nominal de aluno (regra 2).
 - **`/admin/calendario`**, janelas de curso e reservas do PROENS: Épico 7 (`RF-DADOS-04`).
 - Relatório do curso (Épico 10), Cronograma (Épico 7), LIQ e OS (Épico 11).
@@ -668,14 +692,14 @@ O currículo informa a avaliação na seção *"AVALIAÇÃO DA APRENDIZAGEM"* de
 | B-6 | C-Espc-FR · XVI (TFM) | CH 47 | **48** | Σ do curso 1270 × 1271 | Corrigir para **48** |
 | B-7 | C-Espc-FR · VII e outra | códigos e nomes do HN (`HN-1104-0506` "Física aplicada à Hidrografia"; `SN-1103-0506`) | `FAANFR-005` (física aplicada aos aux. à navegação), `PSFFR-014` (primeiros socorros em faróis) | CH igual (30 e 40) | Corrigir **código e nome** |
 | B-8 | C-Espc-HN · NAV I e NAV II | 100 e 128 | **108 e 120** | Σ igual (1216); a planilha segue o currículo | Corrigir as duas |
-| B-9 | C-Ap-HN · HN-2101 | **duas** disciplinas: I (105) + I-I (21) | **uma**, 126 | Desdobramento N-3 da carga de UEs | Ver **Q-15** |
-| B-10 | CAHO · MATFIS | **duas**: MAT (28) + FIS (28) | **uma**, 56 | Desdobramento | Ver **Q-15** |
-| B-11 | C-ApA-AuxNav / OcOp / PCN / PrevMe | AMBIENTAÇÃO como **disciplina** (8 TA cada) | **fase**, de 8 / 10 / 5 / 5 h | +1 disciplina em cada; nas três últimas a CH também diverge | Ver **Q-15** |
+| B-9 | C-Ap-HN · HN-2101 | **duas** disciplinas: I (105) + I-I (21) | **uma**, 126 | Desdobramento N-3 da carga de UEs | **Unificar** (Q-15) |
+| B-10 | CAHO · MATFIS | **duas**: MAT (28) + FIS (28) | **uma**, 56 | Desdobramento | **Unificar** (Q-15) |
+| B-11 | C-ApA-AuxNav / OcOp / PCN / PrevMe | AMBIENTAÇÃO como **disciplina** (8 TA cada) | **fase**, de 8 / 10 / 5 / 5 h | +1 disciplina em cada; nas três últimas a CH também diverge | **Depois**: `PEND-014-3` (Q-15) |
 | B-12 | C-Exp-Metoc-OF-SP | Ambientação (8 = 8) e a IV "EFEITOS ATMOSFÉRICOS…" (18 TA) | a IV **não existe** no currículo do SP | 6 × 4 disciplinas | **Conferir**: a IV parece trazida do MetocOf. Se confirmado, **inativar** (regra 4) |
 
 **Conformes:** C-Esp-ME, C-Esp-OpAP, Ag-Mag, BATI, Obs-ME e os EST-QF APHID, EM2040PHS, MAREFLU, NAVFLU-EAD, PGRS100 e PROC-MF-EAD.
 
-⚠️ **Nenhuma linha é corrigida antes da sua aprovação, caso a caso.** A correção é uma migration de dado com backup, dry-run, conferência só de leitura e plano de reversão (FR-031.1).
+✅ **APROVADAS EM BLOCO por Bernardo em 13/10/2026, pela regra D-CUR-1** (B-11 adiada para a `PEND-014-3`). Na implementação, cada correção é uma migration de dado com backup, dry-run, conferência só de leitura e plano de reversão, e **antes de aplicar** Bernardo vê o impacto **caso a caso**: lançamentos que mudam de disciplina e CH antes e depois (FR-031.1). Os casos marcados "conferir" (B-4, B-5 no código, B-12) são conferidos no PDF nesse mesmo momento, e o resultado vai junto do impacto.
 
 ### 11-B. Planilha × currículo — lista para os operadores (a planilha está errada onde diverge)
 
@@ -688,7 +712,7 @@ O currículo informa a avaliação na seção *"AVALIAÇÃO DA APRENDIZAGEM"* de
 | C-Espc-FR 2026 | 15 de 17 | V 88 × 80 (8 TA de visita APOINST); XI (BALTO) sem CH × 113 | CH da avaliação: III 17 × 18; XIII 11 × 15; XVI (TFM) 7 × 6; XI 0 × 8 |
 | C-Espc-HN 2026 | 14 de 14 | — | I 3 × 5; IV (TFM) 5 × 6; IX 13 × 19 |
 | C-Exp-MetocOf 2026 | 3 de 5 | I 48 × 30 (12 UEs × 7); V 49 × 50 | Prova e vista iguais. UE 2 da II: 11 × 15; UE 11 da III: 2 × 5 |
-| C-Exp-Obs-ME 2026 | 2 de 2 | — | O currículo não dá TA. A planilha separa prova 5 e vista 2 (I), 6 e 2 (II), tiradas das UEs 3–5 e 3–4 (ver Q-12) |
+| C-Exp-Obs-ME 2026 | 2 de 2 | — | O currículo não dá TA. A planilha separa prova 5 e vista 2 (I), 6 e 2 (II), tiradas das UEs 3–5 e 3–4. No catálogo, sem tempo previsto (Q-12) |
 | C-Exp-Ag-Mag 2026 | 2 de 2 | — | II: o currículo pede TG de 2 TA + 1 de comentários, e a planilha não tem linha de avaliação. I: UE 5 só na planilha (1 TA) |
 | C-Exp-BATI T1 2026 | 1 de 1 | — | Igual |
 
@@ -696,6 +720,8 @@ O currículo informa a avaliação na seção *"AVALIAÇÃO DA APRENDIZAGEM"* de
 - As divergências de **total** e de **prova/vista** foram conferidas no texto do PDF.
 - As divergências **por UE** são indício. Usam a conta "UE da planilha = UE do currículo − avaliação computada nela" com um leitor heurístico.
 - A lista oficial é a que a sincronização emitir (FR-036.1).
+
+✅ **Decisão de 13/10/2026:** esta tabela **é a lista de erros de planilha para os operadores**. Nada a aplicar no banco.
 
 ---
 
@@ -741,16 +767,17 @@ Pela decisão de 13/10/2026, as divergências da §9 que **conflitam com decisã
 **Também emendados, pelas decisões desta spec:**
 - `RN-EVT-01` e Glossário: Apoio Individualizado (Q-3);
 - `RN-EVT-04`: parada (D-AA-13);
+- `RN-EVT-01`: dia parado fora da CHT (Q-14);
 - `RN-AVAL-01`: §12;
 - Glossário: FR-060.
 
 ---
 
-## 14. Perguntas restantes — lote de 13/10/2026 (dúvidas reais depois das decisões)
+## 14. Perguntas restantes — lote de 13/10/2026 — ✅ AS 5 RESPONDIDAS (13/10/2026)
 
-*Cada uma traz exemplos reais da medição do §11 e uma recomendação. Nenhuma reabre decisão tomada.*
+*As respostas estão em* Clarifications *e aplicadas no corpo. As opções ficam como registro.*
 
-### Q-11 — O currículo dá o tempo da avaliação, mas não diz de qual UE ele sai. Como o sistema registra?
+### Q-11 — O currículo dá o tempo da avaliação, mas não diz de qual UE ele sai. Como o sistema registra? · ✅ **RESPONDIDA: (a), com aviso no painel (FR-031.3)**
 
 **Exemplos reais:**
 - **C-Exp-MetocOf 2011:** *"Prova Mista (PM) com duração de três (03) TA, abordando todas as UE; e … um (01) TA para a vista"*. Os 4 TA estão dentro da CH da disciplina, mas o currículo não diz de qual UE saem.
@@ -765,7 +792,7 @@ Pela decisão de 13/10/2026, as divergências da §9 que **conflitam com decisã
 
 **Recomendação: (a)**, com (b) disponível a qualquer tempo: se você nomear a UE de uma delas, ela desce para a UE.
 
-### Q-12 — O currículo não dá o TA da avaliação. Ela entra no catálogo com quantos TA?
+### Q-12 — O currículo não dá o TA da avaliação. Ela entra no catálogo com quantos TA? · ✅ **RESPONDIDA: (a), sem tempo previsto (FR-031.4)**
 
 **Exemplos reais:**
 - **C-Exp-Obs-ME:** *"uma Prova Escrita Objetiva (PE) sobre as UE 1 a 4; e … (PE) sobre a UE 5"*, sem TA e sem vista. A planilha usa 5 + 2 e 6 + 2.
@@ -779,7 +806,7 @@ Pela decisão de 13/10/2026, as divergências da §9 que **conflitam com decisã
 
 **Recomendação: (a).** Os EST-QF que avaliam por frequência ou conceito ficam **sem** avaliação de TA no catálogo, porque não há prova com tempo.
 
-### Q-13 — Uma licença NÃO prevista de TODAS as turmas, que "consome Tempo Reserva", é gravada como?
+### Q-13 — Uma licença NÃO prevista de TODAS as turmas, que "consome Tempo Reserva", é gravada como? · ✅ **RESPONDIDA: (a), TR global bloqueante (FR-025.1)**
 
 O calendário (`feriados`) não tem categoria nem tempos. Hoje ele só diz "dia inteiro / parcial / informativo", e o que entra nele **não** consome TR (decisão de 13/10).
 
@@ -793,7 +820,7 @@ O calendário (`feriados`) não tem categoria nem tempos. Hoje ele só diz "dia 
 
 **Recomendação: (a).**
 
-### Q-14 — A parada PREVISTA de uma turma (licença administrativa, licença de pagamento) conta no teto de TAD?
+### Q-14 — A parada PREVISTA de uma turma (licença administrativa, licença de pagamento) conta no teto de TAD? · ✅ **RESPONDIDA: NÃO.** Decisão de Bernardo, **contra a recomendação (a)**: feriado e licença previstos ficam na linha própria "dias parados", fora do TAD e da CHT (FR-025.3 a FR-025.5)
 
 **Exemplo real:**
 - No C-Ap-FR 2026 o TAD é **89 TA** contra um teto de 58,25 (M-5). Uma LA de um dia inteiro, com 8 TA de regime, soma mais 8 TA de TAD.
@@ -806,7 +833,7 @@ O calendário (`feriados`) não tem categoria nem tempos. Hoje ele só diz "dia 
 
 **Recomendação: (a).** O teto é informativo, e o subtipo separado deixa ver quanto do TAD é licença.
 
-### Q-15 — "Quantidade de disciplinas idêntica ao currículo" obriga a desfazer os desdobramentos que o banco tem?
+### Q-15 — "Quantidade de disciplinas idêntica ao currículo" obriga a desfazer os desdobramentos que o banco tem? · ✅ **RESPONDIDA: (c)**: unificar HN-2101 e MATFIS por migration (FR-031.5); Ambientação para depois (`PEND-014-3`)
 
 São **três** casos medidos (§11-A):
 - **B-9 · C-Ap-HN HN-2101:** no banco, I (105) + I-I (21); no currículo, **uma** disciplina de 126. É o desdobramento N-3, que a carga de UEs fez para a Física.

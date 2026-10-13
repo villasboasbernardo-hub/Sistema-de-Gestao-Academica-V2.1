@@ -31,6 +31,5 @@
 
 ## Notes
 
-- 13/10/2026: as 10 perguntas do primeiro lote estão respondidas, e a Q-1 foi substituída pela D-CUR-1 (o currículo da DEnsM é a única fonte de CH). Seguem abertas as Q-11 a Q-15 (§14 da spec), em lote e com recomendação, sem marcador no corpo:
-  - a **leva 1** (Épico 9) depende só da **Q-13** e da **Q-14**;
-  - a **leva 2** (Épico 8) depende das **Q-11, Q-12 e Q-15** e da aprovação do lote §11-A.
+- 13/10/2026: as 10 perguntas do primeiro lote estão respondidas, e a Q-1 foi substituída pela D-CUR-1 (o currículo da DEnsM é a única fonte de CH).
+- 13/10/2026, **clarify encerrado**: as Q-11 a Q-15 (§14 da spec) estão respondidas e aplicadas. A Q-14 foi decidida **contra a recomendação**: feriado e licença previstos viram **dia parado**, fora do TAD e da CHT (FR-025.3 a FR-025.5). O lote §11-A foi **aprovado em bloco**, com o impacto mostrado caso a caso antes de cada aplicação; a B-11 (Ambientação) foi para a `PEND-014-3`. O §11-B é a lista de erros de planilha para os operadores. **Nenhuma trava restante para os Épicos 9 e 8.** O texto da `RN-AVAL-01` (§12) e as emendas da §13 se aprovam na implementação, e não travam o plan.
