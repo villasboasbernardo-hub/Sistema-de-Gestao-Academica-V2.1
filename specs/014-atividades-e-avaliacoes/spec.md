@@ -602,6 +602,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **A-7** "Departamento de Alunos" (Ap-FR 4 linhas/6 TA, Espc-FR 1/1) fica em TAD/Administração, porque não veio regra para ele. Ver a Q-7.
 - **A-8** Parada da turma: a permissão é a de lançar atividade (`atividades_nao_letivas.criar`), Operador incluído. Parada global: `calendario.criar`, que é só de Encarregado e Admin (Q-8).
 - **A-9** A migration das 188 substituídas e das colunas de vista roda no remoto pelo rito: backup `--somente-copia`, dry-run só com ela, conferência só de leitura e o arquivo datado citado.
+- **A-10** *(acrescentada no plan, 13/10/2026)* O quadro final do currículo declara AEC, TR e TAD em **horas**; o sistema conta **TA**. Vale a equivalência já adotada para as UEs (1 h = 1 TA, decisão T011 da spec 006): o limite máximo de 65 horas é 65 TA.
 
 ## 7. Entrega em levas (D-AA-1) — banco separado de tela
 
