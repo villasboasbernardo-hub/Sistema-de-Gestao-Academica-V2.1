@@ -22,9 +22,11 @@ tetosDaTurma({
 }
 type Card = {
   cumprido: number,
-  previsto: number | "nao_cadastrado",
+  previsto: number | "nao_definido",                 // "previsto não definido" (D-TETO-3)
   maximo: { valor: number, origem: "currículo" | "norma" } | "sem_ch_curricular",
-  percentualDoMaximo: number | null,
+  percentualDoPrevisto: number | null,               // cumprido ÷ previsto; null = previsto não definido  (1º, D-TETO-3)
+  percentualDoMaximo: number | null,                 // cumprido ÷ máximo; null sem CH curricular        (2º)
+  barra: { maximo: number, marcadorDoPrevisto: number | null } | null,   // de 0 ao máximo, com o marcador do previsto
   alertas: Array<"acima_do_previsto" | "acima_do_maximo">,          // informativos
 }
 ```
@@ -35,8 +37,10 @@ chCurricular × percentual / 100, origem: "norma" }`; sem CH → `"sem_ch_curric
 
 ## Texto do card (D-TETO-1)
 
-`TAD — 5 cumpridos · 5 previstos (PROENS) · máximo 25 (currículo)` · percentual do cumprido sobre o
-máximo · alertas em `role="status"`, nunca bloqueio · *"previsto não cadastrado"* quando não há linha
+`TAD — 5 de 5 previstos (100 %) · 5 de 25 máximos (20 %)` — **os dois percentuais, nesta ordem**, e a
+origem do máximo (*currículo* ou *norma*) ao lado; **nunca** percentual sobre a CH (D-TETO-3, 13/10/2026) ·
+barra de 0 ao máximo com o marcador do previsto, com o número no atributo e nunca só na cor · alertas em
+`role="status"`, nunca bloqueio · *"previsto não definido"* no lugar do primeiro percentual quando não há linha
 (`RN-DEG-01`) · *"sem CH curricular — máximo não calculável"* quando a turma não tem disciplina
 ativa · turma EAD: a frase da spec 013, sem cards.
 

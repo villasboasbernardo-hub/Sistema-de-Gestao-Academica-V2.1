@@ -64,7 +64,7 @@ pnpm test:e2e -- tetos-da-turma.spec.ts previsto-proens.spec.ts limites-do-curso
 
 | Percurso (por clique) | Esperado |
 |---|---|
-| menu *Turmas* → turma → cards | `TAD — n cumpridos · n previstos (PROENS) · máximo n (currículo)`; linha "Dias parados"; EI com 20 %/10 % |
+| menu *Turmas* → turma → cards | `TAD — n de n previstos (x %) · n de n máximos (y %)` com a origem do máximo, barra até o máximo com o marcador do previsto (D-TETO-3); sem previsto, *"previsto não definido"*; linha "Dias parados"; EI com 20 %/10 % |
 | *Editar previsto* como Ajudante → 130 numa turma de máximo 126 | grava, aviso *acima do limite máximo*, "alterado por … em …" |
 | o mesmo como Operador | botão ausente **e** Server Action recusada (`42501`) |
 | menu *Cursos* → curso → bloco *Limites máximos* | três linhas com origem e página; sem cumprido |
@@ -153,7 +153,7 @@ pnpm test:e2e -- dsa-avaliacao-item.spec.ts dsa-vista-sessoes.spec.ts dsa-papeis
 |---|---|
 | DSA → disciplina HN-2101 → lançar *PM 1 (UE 7)* 2 TA | painel: PM 2/2 na UE 7; CHD + 2; item marcado aplicado na lista |
 | lançar vista da PM 1, sessão 1; depois sessão 2 | duas sessões, as duas na CHD; situação *Concluída* após a 1ª |
-| fiscal externo + aplicador sem habilitação | fiscal aceito; aplicador conforme a resposta de Bernardo sobre a `RN-INST-01` (lote da Fase 0 do `tasks.md`): recusado se a mudança for aprovada, aceito se não |
+| fiscal externo + aplicador sem habilitação | fiscal aceito; aplicador **aceito com aviso**, gravado (D-AV-3, 13/10/2026; a `RN-INST-01` não muda) |
 | `fiscal_id` + `nome_fiscal_externo` | recusado pelo banco |
 | faixa *"U.E. 3 a 6"* | no papel e na lista; nenhuma UE consome |
 

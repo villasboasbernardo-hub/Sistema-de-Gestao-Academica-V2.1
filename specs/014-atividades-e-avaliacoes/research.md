@@ -133,7 +133,8 @@ antigas fica inerte; a regra "sessão posterior à aplicação" vira **gatilho**
   *"`RN-INST-01` continua exigindo habilitação"*, e é falso — `lib/dominio/habilitacao.ts` tem
   `EXIGE_HABILITACAO.avaliacao = false`. Exigir a habilitação do aplicador, como pedem a FR-043 e o
   cenário 2 da US7, é **mudar** a regra (documento 04, L190 e L346), e isso foi para o lote de
-  aprovação da Fase 0 do `tasks.md` (regra 1).
+  aprovação da Fase 0 do `tasks.md` (regra 1). **Resposta de Bernardo, 13/10/2026 (D-AV-3): aviso, sem recusa;
+  fiscal e quem conduz sem exigência; a `RN-INST-01` não muda.**
 - **Fiscal** = `fiscal_id` xor `nome_fiscal_externo` (existe, `ativ_…`/`aval_…` `CHECK` já recusa os
   dois juntos — critério 5 do Épico 8).
 - **Quem conduz a vista** = por sessão, `conduz_instrutor_id` xor `conduz_nome_externo` (R-5).
