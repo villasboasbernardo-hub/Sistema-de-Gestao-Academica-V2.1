@@ -49,6 +49,9 @@ import { EdicaoDaTurma } from "./EdicaoDaTurma";
 import { Rotulo } from "./Rotulo";
 import { SecaoDeAndamento } from "./SecaoDeAndamento";
 import { CardsDeTetos, type AutoriaDoPrevisto } from "./CardsDeTetos";
+import { CardDeAvaliacoes } from "./CardDeAvaliacoes";
+import { AvaliacoesDaTurma } from "./AvaliacoesDaTurma";
+import { lerAvaliacoesDaTurma } from "./consulta-de-avaliacoes";
 import { EdicaoDoPrevisto } from "./EdicaoDoPrevisto";
 import {
   CHAVES_DOS_PARAMETROS_DOS_TETOS,
@@ -374,6 +377,16 @@ export default async function FichaDaTurma({
 
   const texto = (v: string | number | null) => (v === null ? "" : String(v));
 
+  // Spec 014, PR 5 (FR-055 a FR-058): o quadro de avaliações. Turma EAD puro não tem DSA nem avaliação lançada.
+  const avaliacoes = ehEadPuro(turma.modalidade as string | null)
+    ? null
+    : await lerAvaliacoesDaTurma({
+        turmaId: turma.id as string,
+        cursoId,
+        hoje,
+        terminoDaTurma: dataTermino,
+      });
+
   return (
     <section className="flex flex-col gap-5">
       <header className="flex flex-col gap-1">
@@ -516,6 +529,12 @@ export default async function FichaDaTurma({
       <CardsDeTetos tetos={tetos} ano={ano} autoria={autoria} {...(edicao ? { edicao } : {})} />
 
       {/*
+        ⚠️ **O CARD DE AVALIAÇÕES FECHA A FAIXA DOS CARDS** (R-12): N de M, a OD e as vistas, com o clique
+           levando à seção de avaliações. (A barra de abas da R-12 fica para a T177 — decisão D5.1.)
+      */}
+      {avaliacoes?.quadro ? <CardDeAvaliacoes contagem={avaliacoes.quadro.contagem} /> : null}
+
+      {/*
         ⚠️ **A SEÇÃO DE DISCIPLINAS VEIO DE `/disciplinas?turma=` EM 04/10/2026** (`FR-018`), e o
            endereço antigo **redireciona para esta âncora**. O `id` é o destino do `#`, e é por isso
            que ele é fixo e sai do módulo de endereço: um `#disciplinas` escrito à mão aqui e lá
@@ -550,6 +569,10 @@ export default async function FichaDaTurma({
           />
         )}
       </section>
+
+      {avaliacoes ? (
+        <AvaliacoesDaTurma quadro={avaliacoes.quadro} aviso={avaliacoes.aviso} />
+      ) : null}
 
       {/*
         ⚠️ **O FORMULÁRIO DESCEU E FICOU RECOLHIDO EM 05/10/2026** *(decisão de Bernardo, na

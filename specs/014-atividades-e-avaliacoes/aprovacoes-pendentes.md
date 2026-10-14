@@ -391,3 +391,10 @@ palavra dele.
 - **D4.6 (PR 4) — O palestrante externo aceito entra no lote como resumo SHA-256 do texto normalizado**, e não como
   texto, porque o texto é nome de pessoa e o repositório é público. O resolver aceita o texto se ele OU o resumo
   dele estiver no lote. Para mudar: guardar o lote de palestrantes fora do git.
+- **D5.1 (PR 5) — ❌ RECUSADA por Bernardo Villas Boas em 14/10/2026.** A primeira parte do PR 5 levava o card a uma
+  seção da ficha; a decisão manda uma **aba "Avaliações" de verdade**, com a barra de abas na página da turma e a URL
+  dona do estado (`?aba=avaliacoes`), e o card levando a ela. Feito na segunda parte do PR 5 (T175, T177).
+- **D5.2 (PR 5) — A avaliação APLICADA sem item do currículo ligado consome um item pendente na projeção**, e a
+  lista mostra as duas coisas: o item (pendente, até o vínculo existir) e a avaliação lançada. O vínculo explícito
+  (FR-039) chega pelo DSA no PR 5.1 e pela carga no PR 6. Sem esse desconto, a disciplina com a prova feita acusaria
+  estouro falso (medido na C-Ap-HN 2026, no TFM). ✅ Aceita em 14/10/2026.

@@ -102,6 +102,7 @@ export function previstoDaDisciplina(entrada: {
   unidades: readonly UnidadeDoCurriculo[];
   itens: readonly ItemDoCurriculo[];
 }): PrevistoDaDisciplina {
+  const rotuloDaUe = new Map(entrada.unidades.map((u) => [u.id, u.rotulo] as const));
   const itens: ItemPrevisto[] = entrada.itens.map((item) => {
     const ajuste = item.ajusteDaTurma ?? null;
     const taAplicacao = ajuste?.taAplicacao ?? item.taAplicacao;
@@ -114,9 +115,11 @@ export function previstoDaDisciplina(entrada: {
       origemDaUe:
         item.unidadeEnsinoId === null
           ? null
-          : item.origemUe === "decisao_ciaara" && item.ueDecididaEm
-            ? `decisão CIAARA-11, ${dataParaLeitura(item.ueDecididaEm)}`
-            : "currículo",
+          : `${rotuloDaUe.get(item.unidadeEnsinoId) ?? "UE"} · ${
+              item.origemUe === "decisao_ciaara" && item.ueDecididaEm
+                ? `decisão CIAARA-11, ${dataParaLeitura(item.ueDecididaEm)}`
+                : "currículo"
+            }`,
       taAplicacao,
       taVista,
       tempo: semTempo ? null : (taAplicacao ?? 0) + (taVista ?? 0),

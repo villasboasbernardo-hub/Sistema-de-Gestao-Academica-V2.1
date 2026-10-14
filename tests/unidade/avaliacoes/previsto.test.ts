@@ -50,7 +50,7 @@ describe("previstoDaDisciplina", () => {
       ],
     });
     expect(p.porUnidade).toEqual([{ id: "ue7", rotulo: "UE 7", ch: 21, avaliacao: 3, aula: 18 }]);
-    expect(p.itens[0]!.origemDaUe).toBe("currículo");
+    expect(p.itens[0]!.origemDaUe).toBe("UE 7 · currículo");
   });
 
   it("item sem tempo → «tempo de avaliação não definido», fora da soma", () => {
@@ -130,7 +130,7 @@ describe("previstoDaDisciplina", () => {
         }),
       ],
     });
-    expect(p.itens[0]!.origemDaUe).toBe("decisão CIAARA-11, 14/10/2026");
+    expect(p.itens[0]!.origemDaUe).toBe("UE 1 · decisão CIAARA-11, 14/10/2026");
     expect(p.avisos).not.toContain(AVISO_SEM_UE);
   });
 
