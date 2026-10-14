@@ -21,6 +21,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { atualizar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } from "@/lib/acoes/dsa";
+import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
@@ -59,6 +60,7 @@ import { BotaoImprimir, EdicaoDasAssinaturasNaTela } from "./AssinaturasEditavei
 import { CabecalhoDaSemana, RodapeDaSemana } from "./DocumentoNaTela";
 import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
 import { podeBaixarPlanilhaDeContingencia } from "./planilha/acesso";
+import { ControleDeParadas, type ParadaNaSemana, type TipoDeParada } from "./ControleDeParadas";
 import { PainelDeLancamento } from "./PainelDeLancamento";
 import { PainelDeSituacao } from "./PainelDeSituacao";
 
@@ -191,7 +193,7 @@ export default async function SemanaDoDsa({
   const diasADistancia = diasForaDaEtapa(paraEtapa, diasDaSemanaIso);
 
   /* ⚠️ As duas leituras são independentes: uma rodada só, nenhum `await` em sequência inútil. */
-  const [lida, extras] = await Promise.all([
+  const [lida, extras, tiposDeParadaRes] = await Promise.all([
     lerSemanaDoDsa(supabase, {
       turmaId,
       cursoId,
@@ -201,7 +203,38 @@ export default async function SemanaDoDsa({
       hoje,
     }),
     lerExtrasDaImpressao(supabase, { turmaId, cursoId }),
+    /* Spec 014: os tipos de parada (FR, LA, LP, NT, RC, PF) para «Parar dia». */
+    supabase
+      .from("config_listas")
+      .select("id, valor, rotulo_exibicao, metadados")
+      .eq("lista", "tipos_parada")
+      .eq("ativo", true)
+      .order("ordem"),
   ]);
+  const tiposDeParada: TipoDeParada[] = (tiposDeParadaRes.data ?? []).map((t) => {
+    const m = (t.metadados ?? {}) as { pode_global?: boolean; aceita_tr?: boolean };
+    return {
+      id: t.id as string,
+      valor: t.valor as string,
+      rotulo: (t.rotulo_exibicao as string | null) ?? (t.valor as string),
+      podeGlobal: m.pode_global !== false,
+      aceitaTr: m.aceita_tr === true,
+    };
+  });
+  const paradasDaSemana: ParadaNaSemana[] = lida.semana.dias.flatMap((d) =>
+    d.paradas
+      .filter((p) => p.codigo !== undefined && p.destino !== undefined)
+      .map((p) => ({
+        data: p.data,
+        tipo: p.tipo,
+        motivo: p.motivo,
+        global: p.turmaId === null,
+        taInicial: p.taInicial,
+        tempos: p.tempos,
+        destino: p.destino as ParadaNaSemana["destino"],
+        codigo: p.codigo as string,
+      })),
+  );
 
   const semRelogio = lida.relogio === null;
   const podeLancar = pode(permissoes, "registros_aula", "criar");
@@ -401,6 +434,17 @@ export default async function SemanaDoDsa({
 
       <div className="flex min-w-0 flex-col gap-3">
         <CabecalhoDaSemana dados={documento} />
+        {podeLancar && tiposDeParada.length > 0 ? (
+          <ControleDeParadas
+            turmaId={turmaId}
+            dias={lida.semana.dias.map((d) => d.data)}
+            tipos={tiposDeParada}
+            podeGlobal={pode(permissoes, "calendario", "criar")}
+            paradas={paradasDaSemana}
+            pararDia={pararDia}
+            desfazerParada={desfazerParada}
+          />
+        ) : null}
         <PainelDeLancamento
           semana={lida.semana}
           grade={documento.grade}

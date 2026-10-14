@@ -118,3 +118,95 @@ describe("RN-EVT-04 · a grade e a recusa dizem o mesmo dia", () => {
     expect(semana.dias.find((d) => d.data === "2026-04-09")?.bloqueio).toBeNull();
   });
 });
+
+describe("spec 014 · a recusa de aula em tempo parado (emenda D-AA-13)", async () => {
+  const { paradaQueCobre, recusaDeAulaNoTempo, mensagemDeTempoParado } =
+    await import("@/lib/dominio/dsa/dia-bloqueado");
+  const T = "turma-a";
+  const parte = {
+    data: "2026-04-08",
+    turmaId: T,
+    taInicial: 3,
+    tempos: 2,
+    tipo: "LA",
+    motivo: "Licença da turma",
+  };
+  const global = {
+    data: "2026-04-09",
+    turmaId: null,
+    taInicial: 1,
+    tempos: 4,
+    tipo: "LP",
+    motivo: "Pagamento",
+  };
+  const inteiro = {
+    data: "2026-04-10",
+    turmaId: T,
+    taInicial: null,
+    tempos: null,
+    tipo: "NT",
+    motivo: "Treinamento",
+  };
+
+  it("a parada de parte do dia cobre só os tempos dela (4 recusado, 5 livre)", () => {
+    expect(
+      paradaQueCobre([parte], { data: "2026-04-08", turmaId: T, taInicial: 4, tempos: 1 }),
+    ).toEqual(parte);
+    expect(
+      paradaQueCobre([parte], { data: "2026-04-08", turmaId: T, taInicial: 5, tempos: 2 }),
+    ).toBeNull();
+    expect(
+      paradaQueCobre([parte], { data: "2026-04-08", turmaId: T, taInicial: 1, tempos: 2 }),
+    ).toBeNull();
+  });
+
+  it("a global vale para toda turma; a da turma, só para ela", () => {
+    expect(
+      paradaQueCobre([global], { data: "2026-04-09", turmaId: "outra", taInicial: 2 }),
+    ).toEqual(global);
+    expect(
+      paradaQueCobre([parte], { data: "2026-04-08", turmaId: "outra", taInicial: 3 }),
+    ).toBeNull();
+  });
+
+  it("o dia inteiro cobre qualquer tempo; a linha inativa não bloqueia", () => {
+    expect(paradaQueCobre([inteiro], { data: "2026-04-10", turmaId: T, taInicial: 8 })).toEqual(
+      inteiro,
+    );
+    expect(
+      paradaQueCobre([{ ...inteiro, status: "inativo" }], {
+        data: "2026-04-10",
+        turmaId: T,
+        taInicial: 8,
+      }),
+    ).toBeNull();
+  });
+
+  it("a frase traz o tipo e o motivo", () => {
+    expect(mensagemDeTempoParado(parte)).toBe(
+      "Dia bloqueado: LA — Licença da turma. Para lançar, desfaça a parada ou ajuste o calendário.",
+    );
+    expect(mensagemDeTempoParado(inteiro)).toContain("Dia bloqueado: NT — Treinamento");
+  });
+
+  it("sem paradas, é a recusa do calendário (controle)", () => {
+    expect(
+      recusaDeAulaNoTempo({
+        data: "2026-04-08",
+        feriados: [],
+        paradas: [],
+        turmaId: T,
+        taInicial: 3,
+      }),
+    ).toBeNull();
+    expect(
+      recusaDeAulaNoTempo({
+        data: "2026-04-08",
+        feriados: [],
+        paradas: [parte],
+        turmaId: T,
+        taInicial: 3,
+      }),
+    ).toContain("LA — Licença da turma");
+  });
+});

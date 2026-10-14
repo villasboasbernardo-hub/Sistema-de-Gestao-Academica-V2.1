@@ -58,6 +58,8 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/turmas/[turma]/EdicaoDoPrevisto.tsx":
     "editar o previsto do PROENS de um card: abrir, digitar e gravar é interação; a ação chega por propriedade",
   "app/(app)/atividades/FiltrosDeAtividades.tsx": "os filtros de /atividades, na URL",
+  "app/(app)/turmas/[turma]/dsa/ControleDeParadas.tsx":
+    "«Parar dia» e «Desfazer»: formulário e confirmação são interação; as ações chegam por propriedade",
 
   // ── Épico 5 (c): instrutores ───────────────────────────────────────────────────────────────
   "app/(app)/instrutores/FiltrosDeInstrutores.tsx": "os filtros da listagem, na URL",

@@ -36,6 +36,7 @@
  * 09/10/2026: com 1.114 TA numa turma, o teto de 1.000 linhas fazia o rodapé e o painel dizerem 1.004
  * e o nº do DSA errar em 3 a 4 semanas — sem erro nenhum na tela.
  */
+import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
 import { escalaDeLinhas, type EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import {
   detectarConflitos,
@@ -188,6 +189,10 @@ export type DadosDoPeriodo = {
   readonly atividades: readonly unknown[];
   readonly vigencias: readonly unknown[];
   readonly feriados: readonly unknown[];
+  /** Spec 014: os dias parados (da turma e globais) e os TR bloqueantes do período. */
+  readonly diasParados?: readonly unknown[];
+  readonly trsBloqueantes?: readonly unknown[];
+  readonly turmaId?: string;
   readonly curso: unknown;
   readonly disciplinas: readonly unknown[];
   readonly ueExecucao: readonly unknown[];
@@ -269,6 +274,8 @@ export async function lerPeriodoDoDsa(
     curriculoRes,
     aulasPorUeRes,
     conflitosRes,
+    diasParadosRes,
+    trsBloqueantesRes,
   ] = await Promise.all([
     /* ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`). */
     lerTodasAsPaginas((f) =>
@@ -305,7 +312,7 @@ export async function lerPeriodoDoDsa(
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
-        .neq("status", "cancelada")
+        .in("status", [...STATUS_DE_AVALIACAO_VIVA])
         .or(
           `and(data_avaliacao.gte.${de},data_avaliacao.lte.${ate}),and(data_vista_prova.gte.${de},data_vista_prova.lte.${ate})`,
         )
@@ -441,7 +448,7 @@ export async function lerPeriodoDoDsa(
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
-        .neq("status", "cancelada")
+        .in("status", [...STATUS_DE_AVALIACAO_VIVA])
         .order("data_avaliacao")
         .order("codigo")
         .range(f.de, f.ate),
@@ -506,6 +513,27 @@ export async function lerPeriodoDoDsa(
             .range(f.de, f.ate),
         )
       : Promise.resolve({ data: [], error: null }),
+    /*
+     * ⚠️ **SPEC 014 (emenda D-AA-13): AS PARADAS DA SEMANA** — os dias parados da turma e os globais
+     *    (`turma_id` nulo) e os TR com `bloqueia_aula`. A grade os marca; a Server Action recusa aula.
+     */
+    supabase
+      .from("dias_parados")
+      .select(
+        "codigo, data, turma_id, ta_inicial, tempos, motivo, status, tipo:config_listas!dias_parados_tipo_parada_id_fkey(valor)",
+      )
+      .eq("status", "ativo")
+      .or(`turma_id.eq.${turmaId},turma_id.is.null`)
+      .gte("data", de)
+      .lte("data", ate),
+    supabase
+      .from("atividades_nao_letivas")
+      .select("codigo, data, turma_id, ta_inicial, tempos_consumidos, descricao, status")
+      .eq("status", "ativo")
+      .eq("bloqueia_aula", true)
+      .or(`turma_id.eq.${turmaId},turma_id.is.null`)
+      .gte("data", de)
+      .lte("data", ate),
   ]);
 
   const erros: { lista: string; mensagem: string }[] = [];
@@ -552,6 +580,9 @@ export async function lerPeriodoDoDsa(
     aulasPorUe: listaOuVazia(aulasPorUeRes, erros, "aulas por UE"),
     catalogo: listaOuVazia(catalogoRes, erros, "catálogo de horários"),
     conflitos: listaOuVazia(conflitosRes, erros, "conflitos"),
+    diasParados: listaOuVazia(diasParadosRes, erros, "dias parados"),
+    trsBloqueantes: listaOuVazia(trsBloqueantesRes, erros, "TR bloqueantes"),
+    turmaId,
     erros,
   };
 }
@@ -846,6 +877,11 @@ export function montarSemanaDoDsa(
     marcas: marcasDeConflito,
     hoje: entrada.hoje,
     sabadoAberto: janela.sabadoAberto,
+    ...(dados.turmaId ? { turmaId: dados.turmaId } : {}),
+    paradas: paradasDaSemana(
+      (dados.diasParados ?? []).filter((l) => naSemana(campo(l, "data"))),
+      (dados.trsBloqueantes ?? []).filter((l) => naSemana(campo(l, "data"))),
+    ),
   });
 
   const atribuicaoPorUe = new Map(
@@ -1114,7 +1150,7 @@ export async function lerExtrasDaImpressao(
         .from("avaliacoes")
         .select("data_avaliacao", contagemNaPrimeira(f))
         .eq("turma_id", entrada.turmaId)
-        .neq("status", "cancelada")
+        .in("status", [...STATUS_DE_AVALIACAO_VIVA])
         .not("ta_inicial", "is", null)
         .order("codigo")
         .range(f.de, f.ate),
@@ -1185,4 +1221,54 @@ export async function lerExtrasDaImpressao(
   ];
 
   return { execucao, responsaveis, datasComLancamentoDaTurma: datas };
+}
+
+/** As paradas da semana no formato do domínio (spec 014). Só tira coluna de linha. */
+function paradasDaSemana(
+  dias: readonly unknown[],
+  trs: readonly unknown[],
+): import("@/lib/dominio/dsa/dia-bloqueado").ParadaDoDia[] {
+  type D = {
+    codigo: string;
+    data: string;
+    turma_id: string | null;
+    ta_inicial: number | null;
+    tempos: number | null;
+    motivo: string;
+    status: string;
+    tipo: { valor: string } | null;
+  };
+  type T = {
+    codigo: string;
+    data: string;
+    turma_id: string | null;
+    ta_inicial: number | null;
+    tempos_consumidos: number | null;
+    descricao: string;
+    status: string;
+  };
+  return [
+    ...(dias as D[]).map((d) => ({
+      data: d.data,
+      turmaId: d.turma_id,
+      taInicial: d.ta_inicial,
+      tempos: d.tempos,
+      tipo: d.tipo?.valor ?? "NT",
+      motivo: d.motivo,
+      status: d.status,
+      destino: "dia_parado" as const,
+      codigo: d.codigo,
+    })),
+    ...(trs as T[]).map((t) => ({
+      data: t.data,
+      turmaId: t.turma_id,
+      taInicial: t.ta_inicial,
+      tempos: t.tempos_consumidos,
+      tipo: "TR",
+      motivo: t.descricao,
+      status: t.status,
+      destino: "atividade" as const,
+      codigo: t.codigo,
+    })),
+  ];
 }

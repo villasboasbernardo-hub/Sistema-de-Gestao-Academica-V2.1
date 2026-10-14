@@ -31,7 +31,12 @@
  */
 
 import { capacidadeDaSemana, type CapacidadeDaSemana } from "./capacidade";
-import { motivoDoBloqueio, type FeriadoDoCalendario } from "./dia-bloqueado";
+import {
+  motivoDoBloqueio,
+  paradaQueCobre,
+  type FeriadoDoCalendario,
+  type ParadaDoDia,
+} from "./dia-bloqueado";
 import type { MarcaDeConflito } from "./conflitos";
 import { tempoDeAula, trechosDoBloco, type Relogio, type Trecho } from "./horario-do-bloco";
 import { motivoDaFaltaDePosicao, semPosicao, type OrigemDoFato } from "./posicao-herdada";
@@ -108,6 +113,8 @@ export type DiaDaGrade = {
   readonly data: string;
   /** A descrição do feriado de dia inteiro, ou `null`. */
   readonly bloqueio: string | null;
+  /** As paradas ativas do dia para esta turma (spec 014): para mostrar e para «Desfazer». */
+  readonly paradas: readonly ParadaDoDia[];
   /** Feriado de impacto parcial ou informativo — aviso que **não** bloqueia (`RN-EVT-02`). */
   readonly avisos: readonly string[];
   readonly celulas: readonly Celula[];
@@ -135,6 +142,9 @@ export function montarSemana(entrada: {
   /** `aaaa-mm-dd` no fuso da CIAARA-11. */
   readonly hoje: string;
   readonly sabadoAberto: boolean;
+  /** Spec 014: os dias parados e os TR bloqueantes; ausente = nenhum (as telas antigas). */
+  readonly paradas?: readonly ParadaDoDia[];
+  readonly turmaId?: string;
 }): Semana {
   const { relogio, fatos, feriados, marcas, hoje } = entrada;
 
@@ -182,7 +192,23 @@ export function montarSemana(entrada: {
   const linhas = quantasLinhas(relogio, entrada.temposDeclarados, posicionados);
 
   const dias = entrada.dias.map((data): DiaDaGrade => {
-    const bloqueio = motivoDoBloqueio(data, feriados);
+    /*
+     * ⚠️ **SPEC 014 (emenda D-AA-13): A PARADA TAMBÉM BLOQUEIA.** O dia parado inteiro bloqueia o dia,
+     *    com tipo e motivo; a parada de parte do dia bloqueia só as células dos tempos dela. Qual parada
+     *    cobre é decisão de `paradaQueCobre`, a mesma da recusa na Server Action.
+     */
+    const paradasDoDia = (entrada.paradas ?? []).filter(
+      (p) =>
+        p.data.slice(0, 10) === data &&
+        (p.status === undefined || p.status === "ativo") &&
+        (p.turmaId === null || p.turmaId === entrada.turmaId),
+    );
+    const paradaDoDiaInteiro = paradasDoDia.find((p) => p.taInicial === null || p.tempos === null);
+    const bloqueio =
+      motivoDoBloqueio(data, feriados) ??
+      (paradaDoDiaInteiro
+        ? `Parado — ${paradaDoDiaInteiro.tipo}: ${paradaDoDiaInteiro.motivo}`
+        : null);
     const doDia = posicionados.filter((b) => b.data === data);
     const celulas: Celula[] = [];
 
@@ -200,7 +226,22 @@ export function montarSemana(entrada: {
       celulas.push({
         dia: data,
         ta,
-        estado: estadoDa({ relogio, bloqueio, inicia, cobre }),
+        estado: estadoDa({
+          relogio,
+          bloqueio:
+            bloqueio ??
+            (entrada.turmaId !== undefined &&
+            paradaQueCobre(paradasDoDia, {
+              data,
+              turmaId: entrada.turmaId,
+              taInicial: ta,
+              tempos: 1,
+            })
+              ? "parado"
+              : null),
+          inicia,
+          cobre,
+        }),
         bloco: inicia ?? null,
         horario:
           taDoRelogio === undefined
@@ -212,7 +253,16 @@ export function montarSemana(entrada: {
     return {
       data,
       bloqueio,
-      avisos: avisosPorDia.get(data) ?? [],
+      paradas: paradasDoDia,
+      avisos: [
+        ...(avisosPorDia.get(data) ?? []),
+        ...paradasDoDia
+          .filter((p) => p !== paradaDoDiaInteiro)
+          .map(
+            (p) =>
+              `Parado — ${p.tipo}: ${p.motivo} (tempos ${p.taInicial} a ${(p.taInicial ?? 0) + (p.tempos ?? 1) - 1})`,
+          ),
+      ],
       celulas,
       semPosicao: faixaPorDia.get(data) ?? [],
     };

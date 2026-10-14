@@ -22,6 +22,11 @@
  * dia — a recusa sumiria em silêncio.
  *
  * ⚠️ **TypeScript puro: sem `next`, sem `react`, sem `supabase`.** Os feriados chegam por parâmetro.
+ *
+ * ⚠️ **EMENDA D-AA-13 (spec 014, PR 2.1): A RECUSA PASSA A TER TRÊS ORIGENS** — o feriado de dia
+ *    inteiro do calendário, o **dia parado** (`dias_parados`: da turma ou global de parte do dia) e o
+ *    **TR global bloqueante** (`atividades_nao_letivas.bloqueia_aula`). A parada de PARTE do dia cobre
+ *    só os tempos dela. **Só AULA é recusada**: avaliação e atividade continuam aceitas (`RN-EVT-04`).
  */
 import type { FeriadoDaSemana } from "./capacidade";
 
@@ -78,4 +83,71 @@ export function recusaDeAulaNoDia(entrada: {
   if (dataAtual != null && soData(dataAtual) === soData(data)) return null;
   const motivo = motivoDoBloqueio(data, feriados);
   return motivo === null ? null : mensagemDeDiaBloqueado(motivo);
+}
+
+/**
+ * Uma parada que bloqueia aula: uma linha de `dias_parados` ou um TR com `bloqueia_aula` (spec 014).
+ * `turmaId` nulo = de todas as turmas; `taInicial` nulo = o dia inteiro.
+ */
+export type ParadaDoDia = {
+  readonly data: string;
+  readonly turmaId: string | null;
+  readonly taInicial: number | null;
+  readonly tempos: number | null;
+  /** A sigla do tipo de parada (FR, LA, LP, NT, RC, PF) — ou `TR` no TR bloqueante. */
+  readonly tipo: string;
+  readonly motivo: string;
+  readonly status?: string;
+  /** Para «Desfazer»: onde a parada mora e o código dela. */
+  readonly destino?: "feriado" | "dia_parado" | "atividade";
+  readonly codigo?: string;
+};
+
+/** A parada que cobre o dia (e, se informados, os tempos) desta turma — ou `null`. */
+export function paradaQueCobre(
+  paradas: readonly ParadaDoDia[],
+  alvo: {
+    readonly data: string;
+    readonly turmaId: string;
+    readonly taInicial?: number | null;
+    readonly tempos?: number | null;
+  },
+): ParadaDoDia | null {
+  const dia = soData(alvo.data);
+  for (const p of paradas) {
+    if (p.status !== undefined && p.status !== "ativo") continue;
+    if (soData(p.data) !== dia) continue;
+    if (p.turmaId !== null && p.turmaId !== alvo.turmaId) continue;
+    if (p.taInicial === null || p.tempos === null) return p;
+    if (alvo.taInicial === null || alvo.taInicial === undefined) return p;
+    const fimParada = p.taInicial + p.tempos - 1;
+    const fimAlvo = alvo.taInicial + (alvo.tempos ?? 1) - 1;
+    if (alvo.taInicial <= fimParada && fimAlvo >= p.taInicial) return p;
+  }
+  return null;
+}
+
+/** A frase da recusa de aula em tempo parado, com o tipo e o motivo (`RN-EVT-04`, emenda D-AA-13). */
+export function mensagemDeTempoParado(p: ParadaDoDia): string {
+  // A frase da emenda E-8 da `RN-EVT-04` (spec 014 §13), literal.
+  const limpo = p.motivo.trim().replace(/[.\s]+$/u, "");
+  return `Dia bloqueado: ${p.tipo} — ${limpo}. Para lançar, desfaça a parada ou ajuste o calendário.`;
+}
+
+/**
+ * A recusa de AULA considerando as três origens. Com `paradas` vazio, é exatamente `recusaDeAulaNoDia`.
+ */
+export function recusaDeAulaNoTempo(entrada: {
+  readonly data: string;
+  readonly feriados: readonly FeriadoDoCalendario[];
+  readonly paradas: readonly ParadaDoDia[];
+  readonly turmaId: string;
+  readonly taInicial?: number | null;
+  readonly tempos?: number | null;
+  readonly dataAtual?: string | null;
+}): string | null {
+  const doCalendario = recusaDeAulaNoDia(entrada);
+  if (doCalendario !== null) return doCalendario;
+  const parada = paradaQueCobre(entrada.paradas, entrada);
+  return parada === null ? null : mensagemDeTempoParado(parada);
 }

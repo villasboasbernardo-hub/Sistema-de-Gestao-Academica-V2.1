@@ -98,6 +98,15 @@
   onde o cálculo foi. **Aprovação:** [pendente]
 - **A2.2 — Capturas no banco local:** `C:/Users/VILLAS BOAS/AppData/Local/ciaara-11/capturas-014/pr2-*.png`.
 
+## PR 2.1 — DSA: parar dia, desfazer e avaliação viva (PARCIAL)
+
+- **A2.1.1 — Texto final da emenda E-8 (`RN-EVT-04`).** Aplicada só no `.md` do documento 04, com o
+  antes literal e o registro do `.docx`. ⚠️ A frase do **feriado** continua a de 07/10/2026 no código (as
+  suítes a afirmam); a frase nova da E-8 vale para a **parada**: *"Dia bloqueado: <tipo> — <motivo>. Para
+  lançar, desfaça a parada ou ajuste o calendário."* Para unificar as duas, é decisão sua. **Aprovação:**
+  [pendente]
+- **A2.1.2 — Capturas no banco local:** `C:/Users/VILLAS BOAS/AppData/Local/ciaara-11/capturas-014/pr2.1-*.png`.
+
 ## Decisões tomadas sozinho durante a implementação
 
 *(formato: decidi X porque Y; para mudar: Z)*
@@ -138,4 +147,19 @@
   nome. Para mudar: escrever "carga do sistema" quando o autor for nulo.
 - **D2.4 (PR 2) — A suíte de tetos roda em série.** A sugestão da reserva genérica é parâmetro do
   sistema inteiro, e dois processos semeando-a colidem. Para mudar: nada a decidir.
+- **D2.1.1 (PR 2.1) — As ações da parada moram em `lib/acoes/dia-parado.ts`**, e não em
+  `lib/acoes/dsa.ts` como a T087 dizia, porque `dsa.ts` já tem mais de 1.300 linhas. A recusa de aula em
+  tempo parado ficou em `dsa.ts` (`recusaDoCalendario`), onde já estava a do feriado. Para mudar: mover o
+  arquivo.
+- **D2.1.2 (PR 2.1) — TR de dia inteiro conta os tempos do regime do curso.** A licença não prevista de
+  dia inteiro que consome TR grava `ta_inicial = 1` e os tempos do regime vigente (8 se não houver), porque
+  o TR é contado em TA. Para mudar: pedir os tempos na tela.
+- **D2.1.3 (PR 2.1) — A guarda de feriado inativo passou a olhar só leitura (`.select(`).** «Parar dia»
+  grava em `feriados`, e um `insert` sem `select` não devolve feriado. Para mudar: voltar a guarda e
+  gravar o feriado por RPC.
+- **D2.1.4 (PR 2.1) — O PR 2.1 foi aberto PARCIAL.** O que ficou de fora está na lista do PR e em
+  `progresso-implement.md`: a parede da cascata (T082), o rótulo do Apoio, do TR bloqueante e da parada
+  no papel e nos conflitos (T083, T093), o tipo e a atividade global no formulário (T086, T089, T090 em
+  parte, T091), a planilha de contingência (T094), as traduções (T095) e os casos de ponta a ponta de tipo,
+  global e impressão (T096 a T098, T100). Para mudar: nada a decidir; é o ponto de retomada.
 
