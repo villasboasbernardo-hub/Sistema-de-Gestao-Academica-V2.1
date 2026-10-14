@@ -27,8 +27,11 @@ rode-o do ramo do PR.
 
 ## Spec 014 — a rodada da leva 1 (PR 3): dia parado, Apoio Individualizado e responsável pelo lote
 
-**No LOCAL em 14/10/2026; no remoto [pendente]** (T121, depois das decisões A3.1 a A3.5 de
-`specs/014-atividades-e-avaliacoes/aprovacoes-pendentes.md`).
+**No REMOTO em 14/10/2026** (T121), com a exportação `2026-10-14T1149`, backup `remoto-20261014-124318.sql`, plano
+igual ao do local, segunda rodada com zero mudança e os dados das nove turmas iguais nos dois bancos
+(`specs/014-atividades-e-avaliacoes/antes-depois/rodada-do-pr3-no-remoto.md`). TAD depois da rodada: CAHO 17,
+C-Ap-HN 54, C-Ap-FR 65, C-Espc-HN 41, C-Espc-FR 28, C-Esp-ME 14, MetocOf 2, BATI 2, Ag-Mag 1; acima do máximo, só
+C-Ap-FR 2026.
 
 - **D-SYNC-1** _(Bernardo Villas Boas, 13/10/2026)_: a `C-Exp-Obs-ME 2026`, encerrada em 09/10/2026 e com os
   dados conferidos, fica **fora** da rodada do PR 3. A `DSA-MUYK0RFD-V`, relançada pela tela, faria

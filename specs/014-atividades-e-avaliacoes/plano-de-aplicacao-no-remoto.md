@@ -71,7 +71,11 @@ linha dele). Desfeito: 19 de 19.
 
 ## PR 3 — rodada da sincronização no remoto
 
-[pendente] — fora da fase construir. Medida no local em 14/10/2026: `antes-depois/rodada-do-pr3-no-local.md`.
+✅ **APLICADA NO REMOTO em 14/10/2026**, com as decisões A3.1 a A3.5 de Bernardo Villas Boas e a exportação nova
+`2026-10-14T1149`. Backup imediatamente antes: **`remoto-20261014-124318.sql`**. Plano do remoto = plano do local
+nas nove turmas; 1ª rodada 127 mudanças, 2ª **0**; catálogo igual; dados das nove turmas **iguais** no local e no
+remoto. Sem migration. Relatório: `antes-depois/rodada-do-pr3-no-remoto.md`. A medida anterior, só no local e com a
+exportação de 06/10, fica em `antes-depois/rodada-do-pr3-no-local.md`.
 
 Pré-requisitos, nesta ordem:
 
