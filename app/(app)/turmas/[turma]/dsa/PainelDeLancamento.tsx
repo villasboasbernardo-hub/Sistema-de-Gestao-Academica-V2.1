@@ -50,6 +50,7 @@ import { AcoesDoBloco, type FatoEscolhido } from "./AcoesDoBloco";
 import {
   FormularioDeLancamento,
   type AvaliacaoOferecida,
+  type ItemDoCurriculoOferecido,
   type DisciplinaOferecida,
   type ResultadoDaAcao,
   type UnidadeOferecida,
@@ -74,6 +75,7 @@ export type PainelDeLancamentoProps = {
   readonly unidades: readonly UnidadeOferecida[];
   readonly disciplinas: readonly DisciplinaOferecida[];
   readonly avaliacoesParaVista: readonly AvaliacaoOferecida[];
+  readonly avaliacoesDoCurriculo?: readonly ItemDoCurriculoOferecido[];
   readonly instrutores: readonly InstrutorParaExibir[];
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
@@ -155,6 +157,7 @@ export function PainelDeLancamento({
   unidades,
   disciplinas,
   avaliacoesParaVista,
+  avaliacoesDoCurriculo = [],
   instrutores,
   escala,
   tecnicas,
@@ -382,6 +385,7 @@ export function PainelDeLancamento({
               unidades={unidades}
               disciplinas={disciplinas}
               avaliacoesParaVista={avaliacoesParaVista}
+              avaliacoesDoCurriculo={avaliacoesDoCurriculo}
               instrutores={instrutores}
               escala={escala}
               tecnicas={tecnicas}

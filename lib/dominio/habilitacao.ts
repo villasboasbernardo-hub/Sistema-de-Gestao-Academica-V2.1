@@ -60,3 +60,25 @@ export function podeAtuar(
   if (!EXIGE_HABILITACAO[atuacao]) return true;
   return estaHabilitado(instrutorId, disciplinaId, vinculos);
 }
+
+/**
+ * O **aviso** de habilitação do aplicador da avaliação (spec 014, D-AV-3 de 13/10/2026, FR-043).
+ *
+ * > *"Regra normativa vira alerta, nunca bloqueio."* — `RN-DEG-02`
+ *
+ * ⚠️ **A `RN-INST-01` NÃO MUDA**: ela exige habilitação para **ministrar** (e para ser responsável), e
+ *    `EXIGE_HABILITACAO` continua dizendo `avaliacao: false`. O que a D-AV-3 acrescenta é só o AVISO: quem aplica
+ *    a prova sem estar habilitado na disciplina é registrado, e a tela diz. Para `vista_de_prova` (quem conduz) e
+ *    para o fiscal, nem aviso.
+ */
+export function avisoDeHabilitacao(
+  atuacao: Atuacao,
+  instrutorId: string,
+  disciplinaId: string,
+  vinculos: readonly VinculoDeHabilitacao[],
+  nomes: { readonly instrutor: string; readonly disciplina: string },
+): string | null {
+  if (atuacao !== "avaliacao") return null;
+  if (estaHabilitado(instrutorId, disciplinaId, vinculos)) return null;
+  return `${nomes.instrutor} não está habilitado em ${nomes.disciplina}`;
+}

@@ -3,7 +3,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { EXIGE_HABILITACAO, podeAtuar, type VinculoDeHabilitacao } from "@/lib/dominio/habilitacao";
+import {
+  EXIGE_HABILITACAO,
+  podeAtuar,
+  type VinculoDeHabilitacao,
+  avisoDeHabilitacao,
+} from "@/lib/dominio/habilitacao";
 
 const VINCULOS: readonly VinculoDeHabilitacao[] = [
   { instrutorId: "habilitado", disciplinaId: "D1", status: "ativo" },
@@ -43,5 +48,22 @@ describe("`FR-021` · a delimitação — avaliação e vista de prova NÃO exig
       avaliacao: false,
       vista_de_prova: false,
     });
+  });
+});
+
+describe("D-AV-3 · o aplicador sem habilitação recebe AVISO, nunca recusa", () => {
+  const V = [{ instrutorId: "x", disciplinaId: "d", status: "ativo" }];
+  const N = { instrutor: "CT Fulano", disciplina: "D1 — Navegação" };
+  it("avaliação: aviso para quem não está habilitado, nada para quem está", () => {
+    expect(avisoDeHabilitacao("avaliacao", "y", "d", V, N)).toBe(
+      "CT Fulano não está habilitado em D1 — Navegação",
+    );
+    expect(avisoDeHabilitacao("avaliacao", "x", "d", V, N)).toBeNull();
+  });
+  it("vista de prova e ministrar: nunca aviso (a recusa de ministrar continua em `podeAtuar`)", () => {
+    expect(avisoDeHabilitacao("vista_de_prova", "y", "d", V, N)).toBeNull();
+    expect(avisoDeHabilitacao("ministrar", "y", "d", V, N)).toBeNull();
+    expect(podeAtuar("avaliacao", "y", "d", V)).toBe(true);
+    expect(podeAtuar("ministrar", "y", "d", V)).toBe(false);
   });
 });

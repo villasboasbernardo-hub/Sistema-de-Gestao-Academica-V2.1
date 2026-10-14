@@ -258,6 +258,11 @@ export async function lerDadosDaPlanilha(
   const daAula = new Map(aulasLidas.map((a) => [a.id, a]));
   const daAvaliacao = new Map(avaliacoesLidas.map((a) => [a.id, a]));
   const daAtividade = new Map(atividadesLidas.map((a) => [a.id, a]));
+  const avaliacaoDaSessao = new Map(
+    ((dados.sessoes ?? []) as { id: string; avaliacao_id: string }[]).map(
+      (v) => [v.id, v.avaliacao_id] as const,
+    ),
+  );
   const fatoDoInsumo = (fatoId: string, origem: FatoDoInsumo["origem"]): FatoDoInsumo => {
     if (origem === "aula") {
       const a = daAula.get(fatoId);
@@ -280,7 +285,10 @@ export async function lerDadosDaPlanilha(
       };
     }
     if (origem === "avaliacao" || origem === "vista_prova") {
-      const a = daAvaliacao.get(fatoId);
+      /* Spec 014, FR-041: o fato da vista é a SESSÃO; a avaliação (código, disciplina, tipo) é a dela. */
+      const a = daAvaliacao.get(
+        origem === "vista_prova" ? (avaliacaoDaSessao.get(fatoId) ?? fatoId) : fatoId,
+      );
       return {
         origem,
         codigo: a?.codigo ?? null,

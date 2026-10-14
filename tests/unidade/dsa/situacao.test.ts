@@ -21,6 +21,7 @@ import {
   situacaoDaUnidade,
   type DisciplinaParaSituacao,
   type LancamentoParaSituacao,
+  quadroDaUnidadeComPartes,
 } from "@/lib/dominio/dsa/situacao";
 import { avaliarAUnidade } from "@/lib/dominio/dsa/tetos";
 
@@ -549,5 +550,33 @@ describe("`RN-DEG-01` · a entrada da UE vem do PostgREST, e degrada para neutro
     expect(q.chPrevista).toBe(20);
     expect(q.chLancada).toBe(0);
     expect(q.chRestante).toBe(20);
+  });
+});
+
+describe("PEND-E8-1 · a UE em conteúdo · prova · vista (spec 014, T202)", () => {
+  it("UE 7 = 18 + 2 + 1: com a PM 1 lançada, conteúdo 0 de 18, prova 2 de 2, vista 0 de 1 — em andamento", () => {
+    const q = quadroDaUnidadeComPartes({
+      conteudo: { prevista: 18, lancada: 0 },
+      prova: { prevista: 2, lancada: 2 },
+      vista: { prevista: 1, lancada: 0 },
+    });
+    expect([q.chPrevista, q.chLancada, q.chRestante, q.situacao]).toEqual([
+      21,
+      2,
+      19,
+      "em_andamento",
+    ]);
+  });
+
+  it("⚠️ tudo lançado: a UE CONCLUI, sem «resta» — o que a contagem só da aula não conseguia", () => {
+    const q = quadroDaUnidadeComPartes({
+      conteudo: { prevista: 18, lancada: 18 },
+      prova: { prevista: 2, lancada: 2 },
+      vista: { prevista: 1, lancada: 1 },
+    });
+    expect([q.chRestante, q.situacao]).toEqual([0, "concluida"]);
+    // Controle: contando só a aula (o defeito da PEND-E8-1), a mesma UE ficava em andamento com 3 a fazer.
+    const soAula = quadroDaUnidade({ chPrevista: 21, chLancada: 18 });
+    expect([soAula.chRestante, soAula.situacao]).toEqual([3, "em_andamento"]);
   });
 });
