@@ -66,14 +66,28 @@ export type DisciplinaOferecida = {
   readonly nome: string;
 };
 
-/** Uma avaliação da turma que pode receber a vista (`RN-AVAL-02`: a vista é a mesma linha). */
+/**
+ * Uma avaliação da turma que pode receber a vista — a vista é uma SESSÃO dela (spec 014, FR-040): a próxima abre o
+ * número seguinte ao maior ativo.
+ */
 export type AvaliacaoOferecida = {
   readonly id: string;
   readonly disciplinaId: string;
   readonly tipo: string;
   readonly aplicadaEm: string | null;
   readonly titulo: string | null;
-  readonly vistaEm: string | null;
+  readonly sessoes: readonly number[];
+  readonly proximaSessao: number;
+  readonly rotulo: string;
+};
+
+/** Uma avaliação do currículo oferecida, por disciplina (spec 014, FR-032 — `ofertaDaDisciplina`). */
+export type ItemDoCurriculoOferecido = {
+  readonly disciplinaId: string;
+  readonly itemId: string;
+  readonly rotulo: string;
+  readonly tempo: number | null;
+  readonly aplicada: boolean;
 };
 
 export type ResultadoDaAcao =
@@ -97,6 +111,7 @@ export type FormularioDeLancamentoProps = {
   readonly unidades: readonly UnidadeOferecida[];
   readonly disciplinas: readonly DisciplinaOferecida[];
   readonly avaliacoesParaVista: readonly AvaliacaoOferecida[];
+  readonly avaliacoesDoCurriculo?: readonly ItemDoCurriculoOferecido[];
   readonly instrutores: readonly InstrutorParaExibir[];
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
@@ -106,6 +121,14 @@ export type FormularioDeLancamentoProps = {
   readonly lancar: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly aoFechar: () => void;
 };
+
+/** Os demais instrutores, escritos como no documento — *"1ºTen B. / SO C."* — viram a lista (FR-046). */
+function listaDeOutros(texto: string): string[] {
+  return texto
+    .split("/")
+    .map((n) => n.trim())
+    .filter((n) => n !== "");
+}
 
 type Tipo =
   | "aula"
@@ -159,6 +182,7 @@ export function FormularioDeLancamento({
   unidades,
   disciplinas,
   avaliacoesParaVista,
+  avaliacoesDoCurriculo = [],
   instrutores,
   escala,
   tecnicas,
@@ -187,6 +211,13 @@ export function FormularioDeLancamento({
   const [responsavelExterno, definirResponsavelExterno] = React.useState("");
   const [todasAsTurmas, definirTodasAsTurmas] = React.useState(false);
   const [quantidadeAlunos, definirQuantidadeAlunos] = React.useState("");
+  /* Spec 014: o item do currículo (FR-039), a faixa de UEs (FR-033), os demais instrutores (FR-046) e quem conduz
+     a sessão de vista (FR-043). */
+  const [itemId, definirItem] = React.useState("");
+  const [uesAbordadas, definirUesAbordadas] = React.useState("");
+  const [outros, definirOutros] = React.useState("");
+  const [quemConduz, definirQuemConduz] = React.useState("");
+  const [conduzExterno, definirConduzExterno] = React.useState("");
   const [recusa, definirRecusa] = React.useState<string | null>(null);
   const [avisos, definirAvisos] = React.useState<readonly { codigo: string; texto: string }[]>([]);
   const [gravando, definirGravando] = React.useState(false);
@@ -194,6 +225,7 @@ export function FormularioDeLancamento({
   const naoLetivo = NAO_LETIVOS.has(tipo);
   const unidadesDaDisciplina = unidades.filter((u) => u.disciplinaId === disciplinaId);
   const avaliacoesDaDisciplina = avaliacoesParaVista.filter((a) => a.disciplinaId === disciplinaId);
+  const itensDaDisciplina = avaliacoesDoCurriculo.filter((i) => i.disciplinaId === disciplinaId);
   /* ⚠️ O alerta do item 1c: aula, com disciplina, e SEM unidade. */
   const semUnidade = tipo === "aula" && disciplinaId !== "" && unidadeId === "";
 
@@ -218,6 +250,14 @@ export function FormularioDeLancamento({
     definirDisciplina(id);
     definirUnidade("");
     definirAvaliacao("");
+    definirItem("");
+  }
+
+  /* O tempo do item é o palpite dos tempos — editável, como todo pré-preenchimento. */
+  function escolherItem(id: string): void {
+    definirItem(id);
+    const i = avaliacoesDoCurriculo.find((x) => x.itemId === id);
+    if (i?.tempo) definirTempos(i.tempo);
   }
 
   /*
@@ -257,6 +297,7 @@ export function FormularioDeLancamento({
         conteudo: texto(conteudo),
         tecnica: texto(tecnica),
         instrutorId: quemMinistra,
+        outrosInstrutores: listaDeOutros(outros),
       };
     }
     if (tipo === "avaliacao") {
@@ -271,10 +312,19 @@ export function FormularioDeLancamento({
         tecnica: texto(tecnica),
         fiscalId: null,
         nomeFiscalExterno: texto(nomeFiscalExterno),
+        avaliacaoCurriculoId: nulo(itemId),
+        uesAbordadas: texto(uesAbordadas),
+        outrosInstrutores: listaDeOutros(outros),
       };
     }
     if (tipo === "vista_prova") {
-      return { tipo: "vista_prova", ...comum, avaliacaoId };
+      return {
+        tipo: "vista_prova",
+        ...comum,
+        avaliacaoId,
+        conduzInstrutorId: nulo(quemConduz),
+        conduzNomeExterno: quemConduz === "" ? texto(conduzExterno) : null,
+      };
     }
     const global = podeAtividadeGlobal && todasAsTurmas && tipo !== "Estudo_Individual";
     return {
@@ -294,6 +344,7 @@ export function FormularioDeLancamento({
         tipo === "Apoio_Individualizado" && quantidadeAlunos.trim() !== ""
           ? Number(quantidadeAlunos)
           : null,
+      outrosInstrutores: listaDeOutros(outros),
     };
   }
 
@@ -450,13 +501,32 @@ export function FormularioDeLancamento({
           }
           valor={avaliacaoId}
           aoMudar={definirAvaliacao}
-          ajuda="A vista é a segunda data da mesma avaliação: ela não cria prova nova."
+          ajuda="A vista é uma sessão da mesma avaliação: ela não cria prova nova, e pode ter várias sessões."
           opcoes={avaliacoesDaDisciplina.map((a) => ({
             valor: a.id,
             rotulo:
-              `${a.tipo}${a.aplicadaEm ? ` de ${dataParaLeitura(a.aplicadaEm)}` : ""}` +
+              `${a.rotulo}${a.aplicadaEm ? ` de ${dataParaLeitura(a.aplicadaEm)}` : ""}` +
               (a.titulo ? ` — ${a.titulo}` : "") +
-              (a.vistaEm ? ` (vista já em ${dataParaLeitura(a.vistaEm)})` : ""),
+              ` · sessão ${a.proximaSessao}`,
+          }))}
+        />
+      ) : null}
+
+      {/* Spec 014, FR-032 e FR-039: a avaliação do currículo que esta prova cumpre — obrigatória se a disciplina tem item. */}
+      {tipo === "avaliacao" && disciplinaId !== "" && itensDaDisciplina.length > 0 ? (
+        <EscolhaSimples
+          id="dsa-item-do-curriculo"
+          rotulo="Avaliação do currículo"
+          obrigatorio
+          textoVazio="Escolha a avaliação do currículo…"
+          valor={itemId}
+          aoMudar={escolherItem}
+          ajuda="Lançar uma avaliação já aplicada é permitido, com aviso: passa do previsto do currículo."
+          opcoes={itensDaDisciplina.map((i) => ({
+            valor: i.itemId,
+            rotulo:
+              `${i.rotulo}${i.tempo ? ` — ${i.tempo} TA` : " — tempo não definido"}` +
+              (i.aplicada ? " (já aplicada)" : ""),
           }))}
         />
       ) : null}
@@ -544,6 +614,58 @@ export function FormularioDeLancamento({
           aoMudar={definirQuemMinistra}
           rotulo={tipo === "avaliacao" ? "Responsável pela avaliação" : "Quem ministra"}
         />
+      ) : null}
+
+      {tipo === "vista_prova" ? (
+        <>
+          {/* Spec 014, FR-043: quem CONDUZ a sessão — do cadastro, pelo seletor canônico, ou de fora. */}
+          <SeletorInstrutor
+            instrutores={instrutores}
+            escala={escala}
+            valor={quemConduz}
+            aoMudar={definirQuemConduz}
+            rotulo="Quem conduz a vista (opcional — sem ele, o responsável da avaliação)"
+          />
+          {quemConduz === "" ? (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="dsa-conduz-externo">
+                Quem conduz, de fora do cadastro (opcional)
+              </Label>
+              <Input
+                id="dsa-conduz-externo"
+                value={conduzExterno}
+                onChange={(e) => definirConduzExterno(e.target.value)}
+                placeholder="Posto e nome, como no documento"
+              />
+            </div>
+          ) : null}
+        </>
+      ) : null}
+
+      {tipo === "avaliacao" ? (
+        <div className="flex flex-col gap-1">
+          {/* Spec 014, FR-033: a faixa de UEs abordadas, texto, sem consumir TA de UE. */}
+          <Label htmlFor="dsa-ues-abordadas">U.E. abordadas (opcional)</Label>
+          <Input
+            id="dsa-ues-abordadas"
+            value={uesAbordadas}
+            onChange={(e) => definirUesAbordadas(e.target.value)}
+            placeholder="U.E. 3 a 6"
+          />
+        </div>
+      ) : null}
+
+      {tipo !== "vista_prova" ? (
+        <div className="flex flex-col gap-1">
+          {/* Spec 014, FR-046: o 2º nome, como no documento; nada vai para observações. */}
+          <Label htmlFor="dsa-outros-instrutores">Demais instrutores (opcional)</Label>
+          <Input
+            id="dsa-outros-instrutores"
+            value={outros}
+            onChange={(e) => definirOutros(e.target.value)}
+            placeholder="1ºTen B. / SO C."
+          />
+        </div>
       ) : null}
 
       {tipo === "avaliacao" ? (

@@ -65,6 +65,13 @@ import { contagemNaPrimeira, lerTodasAsPaginas } from "@/lib/supabase/paginacao"
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import {
+  ofertaDaDisciplina,
+  rotuloDoItem,
+  type ItemOferecido,
+  type ItemParaOferta,
+} from "@/lib/dominio/dsa/itens-da-disciplina";
+import type { NaturezaDaAvaliacao } from "@/lib/dominio/avaliacoes/situacao";
+import {
   COLUNAS_DA_OCUPACAO,
   COLUNAS_DA_VIGENCIA,
   COLUNAS_DO_CATALOGO,
@@ -138,9 +145,16 @@ export type AvaliacaoParaVista = {
   /** `aaaa-mm-dd`. */
   readonly aplicadaEm: string | null;
   readonly titulo: string | null;
-  /** `aaaa-mm-dd` quando a vista já foi lançada — escolher de novo a reposiciona. */
-  readonly vistaEm: string | null;
+  /** Os números das sessões de vista ATIVAS (spec 014, FR-040). */
+  readonly sessoes: readonly number[];
+  /** O número da sessão que um lançamento novo abre — o seguinte ao maior ativo. */
+  readonly proximaSessao: number;
+  /** O rótulo da vista, com a avaliação do currículo quando ligada (`ofertaDaDisciplina`). */
+  readonly rotulo: string;
 };
+
+/** Uma avaliação do currículo oferecida ao formulário, por disciplina (spec 014, FR-032). */
+export type AvaliacaoDoCurriculoOferecida = ItemOferecido & { readonly disciplinaId: string };
 
 export type SemanaDoDsa = {
   readonly semana: Semana;
@@ -155,6 +169,8 @@ export type SemanaDoDsa = {
   /** As disciplinas ATIVAS do curso da turma — a segunda escolha do formulário, depois do tipo. */
   readonly disciplinas: readonly DisciplinaLida[];
   readonly avaliacoesParaVista: readonly AvaliacaoParaVista[];
+  /** As avaliações do currículo de cada disciplina — a oferta do formulário (FR-032, `ofertaDaDisciplina`). */
+  readonly avaliacoesDoCurriculo: readonly AvaliacaoDoCurriculoOferecida[];
   readonly instrutores: readonly InstrutorParaExibir[];
   readonly escala: EscalaDeAntiguidade;
   /** Os nomes das técnicas, para o seletor. */
@@ -227,6 +243,9 @@ export type DadosDoPeriodo = {
   readonly catalogo: readonly unknown[];
   /** Vazio quando não se pediu (`comConflitos: false`) — a grade sai sem marca, como no erro. */
   readonly conflitos: readonly unknown[];
+  /** Spec 014: as sessões de vista ativas da turma no período (FR-040) e os itens do currículo do curso. */
+  readonly sessoes?: readonly unknown[];
+  readonly itensDoCurriculo?: readonly unknown[];
   /**
    * As consultas que falharam, pelo nome da lista. ⚠️ **A TELA IGNORA, COMO SEMPRE IGNOROU** — consulta
    * que falha vira lista vazia e a tela degrada (`RN-DEG-01`). Quem precisa recusar, como a planilha
@@ -296,6 +315,8 @@ export async function lerPeriodoDoDsa(
     conflitosRes,
     diasParadosRes,
     trsBloqueantesRes,
+    sessoesRes,
+    itensRes,
   ] = await Promise.all([
     /* ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`). */
     lerTodasAsPaginas((f) =>
@@ -314,7 +335,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("registros_aula")
         .select(
-          "id, data, ta_inicial, tempos_consumidos, conteudo_resumo, metodologia, status, unidade_ensino_id, disciplina_id",
+          "id, data, ta_inicial, tempos_consumidos, conteudo_resumo, metodologia, status, unidade_ensino_id, disciplina_id, outros_instrutores",
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
@@ -328,14 +349,16 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("avaliacoes")
         .select(
-          "id, data_avaliacao, data_vista_prova, ta_inicial, ta_inicial_vista, tipo_avaliacao, conteudo_resumo, metodologia, nome_fiscal_externo, status",
+          "id, data_avaliacao, ta_inicial, tipo_avaliacao, conteudo_resumo, metodologia, nome_fiscal_externo, status, avaliacao_curriculo_id, ues_abordadas, outros_instrutores",
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
         .in("status", [...STATUS_DE_AVALIACAO_VIVA])
-        .or(
-          `and(data_avaliacao.gte.${de},data_avaliacao.lte.${ate}),and(data_vista_prova.gte.${de},data_vista_prova.lte.${ate})`,
-        )
+        /*
+         * ⚠️ Spec 014, FR-040: a vista é SESSÃO, e uma sessão da semana pode ser de prova aplicada semanas antes.
+         *    Toda avaliação viva até o fim do período (a vista nunca vem antes da aplicação); a montagem recorta.
+         */
+        .lte("data_avaliacao", ate)
         .order("codigo")
         .range(f.de, f.ate),
     ),
@@ -343,7 +366,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("atividades_nao_letivas")
         .select(
-          "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id, bloqueia_aula",
+          "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id, bloqueia_aula, outros_instrutores",
           contagemNaPrimeira(f),
         )
         .or(`turma_id.eq.${turmaId},turma_id.is.null`)
@@ -464,7 +487,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("avaliacoes")
         .select(
-          "id, disciplina_id, tipo_avaliacao, data_avaliacao, conteudo_resumo, data_vista_prova",
+          "id, disciplina_id, tipo_avaliacao, data_avaliacao, conteudo_resumo, avaliacao_curriculo_id, vistas_de_avaliacao(numero, status)",
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
@@ -554,6 +577,39 @@ export async function lerPeriodoDoDsa(
       .or(`turma_id.eq.${turmaId},turma_id.is.null`)
       .gte("data", de)
       .lte("data", ate),
+    /*
+     * Spec 014, FR-040 e FR-043: as SESSÕES de vista da turma no período, com quem conduz de fora do cadastro (a
+     * view da ocupação traz o `instrutor_id` de quem conduz, não o nome externo).
+     */
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("vistas_de_avaliacao")
+        .select(
+          "id, avaliacao_id, numero, data, conduz_nome_externo, avaliacao:avaliacoes!vistas_de_avaliacao_avaliacao_id_fkey!inner(turma_id)",
+          contagemNaPrimeira(f),
+        )
+        .eq("avaliacao.turma_id", turmaId)
+        .eq("status", "ativo")
+        .gte("data", de)
+        .lte("data", ate)
+        .order("data")
+        .order("id")
+        .range(f.de, f.ate),
+    ),
+    /* Spec 014, FR-032: as avaliações do currículo do curso — a oferta do formulário, por disciplina. */
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("avaliacoes_curriculo")
+        .select(
+          "id, disciplina_id, ordem, numero, ta_aplicacao, ta_vista, unidade:unidades_ensino!avaliacoes_curriculo_unidade_ensino_id_fkey(numero_ue), instrumento:config_listas!avaliacoes_curriculo_instrumento_id_fkey(valor, metadados)",
+          contagemNaPrimeira(f),
+        )
+        .eq("curso_id", cursoId)
+        .eq("status", "ativo")
+        .order("disciplina_id")
+        .order("ordem")
+        .range(f.de, f.ate),
+    ),
   ]);
 
   const erros: { lista: string; mensagem: string }[] = [];
@@ -596,6 +652,8 @@ export async function lerPeriodoDoDsa(
     instrutores: listaOuVazia(instrRes, erros, "instrutores"),
     acumulada: listaOuVazia(acumuladaRes, erros, "ocupação acumulada"),
     paraVista: listaOuVazia(paraVistaRes, erros, "avaliações para vista"),
+    sessoes: listaOuVazia(sessoesRes, erros, "sessões de vista"),
+    itensDoCurriculo: listaOuVazia(itensRes, erros, "avaliações do currículo"),
     curriculo: listaOuVazia(curriculoRes, erros, "currículo"),
     aulasPorUe: listaOuVazia(aulasPorUeRes, erros, "aulas por UE"),
     catalogo: listaOuVazia(catalogoRes, erros, "catálogo de horários"),
@@ -643,9 +701,17 @@ export function montarSemanaDoDsa(
   /* As mesmas respostas que a rodada da semana devolvia — recortadas do período. */
   const ocupacaoRes = { data: dados.ocupacao.filter((l) => naSemana(campo(l, "data"))) };
   const aulasRes = { data: dados.aulas.filter((l) => naSemana(campo(l, "data"))) };
+  /* Spec 014, FR-040: a avaliação entra na semana pela aplicação OU por uma sessão de vista na semana. */
+  const sessoesDaSemana = (dados.sessoes ?? []).filter((l) => naSemana(campo(l, "data"))) as {
+    id: string;
+    avaliacao_id: string;
+    numero: number;
+    conduz_nome_externo: string | null;
+  }[];
+  const comSessaoNaSemana = new Set(sessoesDaSemana.map((v) => v.avaliacao_id));
   const avaliacoesRes = {
     data: dados.avaliacoes.filter(
-      (l) => naSemana(campo(l, "data_avaliacao")) || naSemana(campo(l, "data_vista_prova")),
+      (l) => naSemana(campo(l, "data_avaliacao")) || comSessaoNaSemana.has(String(campo(l, "id"))),
     ),
   };
   const atividadesRes = { data: dados.atividades.filter((l) => naSemana(campo(l, "data"))) };
@@ -752,12 +818,14 @@ export function montarSemanaDoDsa(
     metodologia: string | null;
     unidade_ensino_id: string | null;
     disciplina_id: string | null;
+    outros_instrutores?: string[] | null;
   }[]) {
     conteudos.set(a.id, {
       conteudo: a.conteudo_resumo,
       tecnica: a.metodologia,
       unidadeEnsinoId: a.unidade_ensino_id,
       disciplinaColuna: a.disciplina_id,
+      outros: a.outros_instrutores ?? [],
     });
   }
   for (const a of (avaliacoesRes.data ?? []) as {
@@ -767,8 +835,12 @@ export function montarSemanaDoDsa(
     conteudo_resumo: string | null;
     metodologia: string | null;
     nome_fiscal_externo: string | null;
+    ues_abordadas?: string | null;
+    outros_instrutores?: string[] | null;
   }[]) {
     conteudos.set(a.id, {
+      outros: a.outros_instrutores ?? [],
+      uesAbordadas: a.ues_abordadas ?? null,
       /* O fiscal de fora do cadastro: a view da ocupação só traz o `fiscal_id`. */
       fiscalExterno: a.nome_fiscal_externo,
       /* ⚠️ O título gravado quando há; senão o tipo — a regra é de `conteudoDaAvaliacao`. */
@@ -781,6 +853,18 @@ export function montarSemanaDoDsa(
       tecnicaDaVista,
     });
   }
+  /*
+   * Spec 014, FR-040 e FR-043: cada SESSÃO de vista tem o seu conteúdo — o da avaliação, mais quem conduz de fora do
+   * cadastro. A grade a identifica pelo id da sessão (`fatoDaOcupacao`).
+   */
+  for (const v of sessoesDaSemana) {
+    const daAvaliacao = conteudos.get(v.avaliacao_id);
+    conteudos.set(v.id, {
+      ...(daAvaliacao ?? { conteudo: null, tecnica: null }),
+      conduzExterno: v.conduz_nome_externo,
+      outros: [],
+    });
+  }
   const atividades = (atividadesRes.data ?? []) as {
     id: string;
     data: string;
@@ -791,6 +875,7 @@ export function montarSemanaDoDsa(
     responsavel_externo: string | null;
     disciplina_id: string | null;
     bloqueia_aula: boolean | null;
+    outros_instrutores?: string[] | null;
   }[];
   for (const n of atividades) {
     /*
@@ -810,6 +895,7 @@ export function montarSemanaDoDsa(
       externo: n.responsavel_externo,
       /* A disciplina OPCIONAL da AEC (item 1b): só para exibir — ela não entra na CH da disciplina. */
       disciplinaId: n.disciplina_id,
+      outros: n.outros_instrutores ?? [],
     });
   }
 
@@ -960,6 +1046,69 @@ export function montarSemanaDoDsa(
     atribuidoId: atribuicaoPorUe.get(u.id) ?? null,
   }));
 
+  /*
+   * Spec 014, FR-032 e FR-040: a oferta do formulário por disciplina — quem decide é `ofertaDaDisciplina`, aqui só se
+   * traduz o dado. As avaliações vivas da turma (com as sessões ativas) servem às duas coisas: marcam o item
+   * aplicado e dão a próxima sessão da vista.
+   */
+  const itensPorDisciplina = new Map<string, ItemParaOferta[]>();
+  for (const i of (dados.itensDoCurriculo ?? []) as {
+    id: string;
+    disciplina_id: string;
+    numero: number;
+    ta_aplicacao: number | null;
+    ta_vista: number | null;
+    unidade: { numero_ue: number } | null;
+    instrumento: { valor?: string; metadados?: { natureza?: string } } | null;
+  }[]) {
+    const lista = itensPorDisciplina.get(i.disciplina_id) ?? [];
+    lista.push({
+      id: i.id,
+      rotulo: `${i.instrumento?.valor ?? "?"} ${i.numero}`,
+      natureza: (i.instrumento?.metadados?.natureza ?? "prova") as NaturezaDaAvaliacao,
+      ueNumero: i.unidade?.numero_ue ?? null,
+      taAplicacao: i.ta_aplicacao,
+      taVista: i.ta_vista,
+    });
+    itensPorDisciplina.set(i.disciplina_id, lista);
+  }
+  const itemPorId = new Map([...itensPorDisciplina.values()].flat().map((i) => [i.id, i] as const));
+  const paraVistaDaTurma = (
+    (paraVistaRes.data ?? []) as {
+      id: string;
+      disciplina_id: string;
+      tipo_avaliacao: string | null;
+      data_avaliacao: string | null;
+      conteudo_resumo: string | null;
+      avaliacao_curriculo_id: string | null;
+      vistas_de_avaliacao: { numero: number; status: string }[] | null;
+    }[]
+  ).map((a) => {
+    const item = a.avaliacao_curriculo_id ? itemPorId.get(a.avaliacao_curriculo_id) : undefined;
+    return {
+      ...a,
+      sessoes: (a.vistas_de_avaliacao ?? [])
+        .filter((v) => v.status === "ativo")
+        .map((v) => v.numero),
+      rotulo: item ? rotuloDoItem(item) : (a.tipo_avaliacao ?? "Avaliação"),
+    };
+  });
+  const ofertas = [...itensPorDisciplina.entries()].map(([disciplinaId, itens]) => ({
+    disciplinaId,
+    oferta: ofertaDaDisciplina({
+      itens,
+      avaliacoes: paraVistaDaTurma
+        .filter((a) => a.disciplina_id === disciplinaId && a.data_avaliacao !== null)
+        .map((a) => ({
+          id: a.id,
+          itemId: a.avaliacao_curriculo_id,
+          tipo: a.tipo_avaliacao ?? "Avaliação",
+          aplicacao: a.data_avaliacao as string,
+          sessoes: a.sessoes,
+        })),
+    }),
+  }));
+
   const cursoPorCompetencias =
     (cursoRes.data as { curriculo_modelo?: string } | null)?.curriculo_modelo === "competencias";
 
@@ -983,23 +1132,19 @@ export function montarSemanaDoDsa(
         .map((d) => ({ id: d.id, codigo: d.cod_disciplina, nome: d.nome_disciplina })),
       (d) => d.codigo,
     ),
-    avaliacoesParaVista: (
-      (paraVistaRes.data ?? []) as {
-        id: string;
-        disciplina_id: string;
-        tipo_avaliacao: string | null;
-        data_avaliacao: string | null;
-        conteudo_resumo: string | null;
-        data_vista_prova: string | null;
-      }[]
-    ).map((a) => ({
+    avaliacoesParaVista: paraVistaDaTurma.map((a) => ({
       id: a.id,
       disciplinaId: a.disciplina_id,
       tipo: a.tipo_avaliacao ?? "Avaliação",
       aplicadaEm: a.data_avaliacao,
       titulo: a.conteudo_resumo,
-      vistaEm: a.data_vista_prova,
+      sessoes: a.sessoes,
+      proximaSessao: a.sessoes.reduce((m, n) => Math.max(m, n), 0) + 1,
+      rotulo: a.rotulo,
     })),
+    avaliacoesDoCurriculo: ofertas.flatMap(({ disciplinaId, oferta }) =>
+      oferta.avaliacoes.map((o) => ({ ...o, disciplinaId })),
+    ),
     /* ⚠️ Instrutor INATIVO não chega ao seletor (`RN-INST-02`). */
     instrutores: linhasDeInstrutor
       .filter((i) => i.status === undefined || i.status === "ativo")

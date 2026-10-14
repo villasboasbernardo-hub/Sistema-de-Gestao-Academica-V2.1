@@ -461,6 +461,7 @@ export default async function SemanaDoDsa({
           unidades={lida.unidades}
           disciplinas={lida.disciplinas}
           avaliacoesParaVista={lida.avaliacoesParaVista}
+          avaliacoesDoCurriculo={lida.avaliacoesDoCurriculo}
           instrutores={lida.instrutores}
           escala={lida.escala}
           tecnicas={lida.tecnicas}

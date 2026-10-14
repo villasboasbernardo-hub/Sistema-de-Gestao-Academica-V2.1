@@ -43,7 +43,7 @@ export const COLUNAS_DA_TURMA_DO_DSA =
   "id, codigo, turma, ano_letivo, status, modalidade, sala_alocada, alunos, curso_id, data_inicio, inicio_etapa_presencial, termino_etapa_presencial";
 
 export const COLUNAS_DA_OCUPACAO =
-  "turma_id, data, ta_inicial, ta_final, tempos_consumidos, origem, fato_id, disciplina_id, instrutor_id, fiscal_id, local, herdado";
+  "turma_id, data, ta_inicial, ta_final, tempos_consumidos, origem, fato_id, disciplina_id, instrutor_id, fiscal_id, local, herdado, sessao_id, numero_sessao";
 
 export const COLUNAS_DA_VIGENCIA =
   "id, codigo, tipo_regime, status, vigente_de, vigente_ate, regime_tempos, ta_duracao_min, intervalo_manha_min, intervalo_tarde_min, hora_inicio_manha, hora_inicio_tarde, limite_diario_ead_horas, fundamento_curricular, motivo, configuracao_horario_id";
@@ -177,6 +177,9 @@ export type LinhaDaOcupacao = {
   readonly fiscal_id: string | null;
   readonly local: string | null;
   readonly herdado: boolean;
+  /** Spec 014 (E-5): a sessão de vista — só nas linhas `vista_prova`. */
+  readonly sessao_id?: string | null;
+  readonly numero_sessao?: number | null;
 };
 
 /**
@@ -212,6 +215,12 @@ export type ConteudoDoFato = {
   readonly apoio?: boolean | undefined;
   /** O tópico GRAVADO, cru — o `conteudo` acima pode ser o tipo da avaliação, para exibir. */
   readonly conteudoGravado?: string | null | undefined;
+  /** Spec 014, FR-046: os demais instrutores, como vieram — o 2º nome de *"CC A. / 1ºTen B."*. */
+  readonly outros?: readonly string[] | undefined;
+  /** Spec 014, FR-043: quem conduz a sessão de vista, quando é de fora do cadastro. */
+  readonly conduzExterno?: string | null | undefined;
+  /** Spec 014, FR-033: a faixa *"U.E. 3 a 6"* da avaliação, que não consome TA de UE. */
+  readonly uesAbordadas?: string | null | undefined;
 };
 
 /**
@@ -230,7 +239,14 @@ export function fatoDaOcupacao(
     readonly conteudos: ReadonlyMap<string, ConteudoDoFato>;
   },
 ): FatoDaSemana {
-  const extra = nomes.conteudos.get(linha.fato_id);
+  /*
+   * ⚠️ **A VISTA SE IDENTIFICA PELA SESSÃO** (spec 014, FR-041): com N sessões, várias linhas têm o mesmo `fato_id`
+   *    (o da avaliação). O id do fato é o da sessão — é ele que as ações recebem —, e o conteúdo é o da sessão
+   *    (que leva o da avaliação, mais quem conduz de fora).
+   */
+  const idDoFato =
+    linha.origem === "vista_prova" && linha.sessao_id ? linha.sessao_id : linha.fato_id;
+  const extra = nomes.conteudos.get(idDoFato) ?? nomes.conteudos.get(linha.fato_id);
   /*
    * ⚠️ **A VISTA E A APLICAÇÃO SÃO A MESMA LINHA DE `avaliacoes`** (`RN-AVAL-02`): chegam com o
    * mesmo `fato_id`, e portanto com o mesmo conteúdo e a mesma técnica. Quem as separa é a
@@ -253,11 +269,16 @@ export function fatoDaOcupacao(
     id === null ? null : (nomes.instrutores.get(id) ?? null);
   const nomeDoFiscal = doCadastro(linha.fiscal_id) ?? (extra?.fiscalExterno?.trim() || null);
   const fiscal = nomeDoFiscal === null ? null : `${nomeDoFiscal} (FISCAL)`;
-  const ministrante = doCadastro(linha.instrutor_id);
-  const responsavel =
+  const ministrante =
+    doCadastro(linha.instrutor_id) ?? (ehVista ? extra?.conduzExterno?.trim() || null : null);
+  const principal =
     linha.origem === "avaliacao" ? (fiscal ?? ministrante) : (ministrante ?? fiscal);
+  /* Spec 014, FR-046: o 2º nome aparece onde o 1º aparece — *"CC A. / 1ºTen B."*. */
+  const outros = (extra?.outros ?? []).filter((n) => n.trim() !== "");
+  const responsavel =
+    principal === null || outros.length === 0 ? principal : [principal, ...outros].join(" / ");
   return {
-    fatoId: linha.fato_id,
+    fatoId: idDoFato,
     origem:
       linha.origem === "aula" ||
       linha.origem === "avaliacao" ||
@@ -275,8 +296,12 @@ export function fatoDaOcupacao(
       return id !== null ? (nomes.disciplinas.get(id) ?? null) : null;
     })(),
     conteudo: ehVista
-      ? rotuloDaVistaDeProva({ prova: extra?.conteudo, aplicadaEm: extra?.aplicadaEm })
-      : (extra?.conteudo ?? null),
+      ? `${rotuloDaVistaDeProva({ prova: extra?.conteudo, aplicadaEm: extra?.aplicadaEm })}${
+          (linha.numero_sessao ?? 1) > 1 ? ` — sessão ${linha.numero_sessao}` : ""
+        }`
+      : linha.origem === "avaliacao" && extra?.uesAbordadas
+        ? `${extra?.conteudo ?? ""} (${extra.uesAbordadas})`
+        : (extra?.conteudo ?? null),
     tecnica: ehVista ? (extra?.tecnicaDaVista ?? null) : (extra?.tecnica ?? null),
     /* ⚠️ Sem instrutor, entra o responsável de fora do cadastro — ver `responsavelDoFato`. */
     instrutor: responsavelDoFato(responsavel, extra?.externo),

@@ -50,6 +50,15 @@ const textoOuNulo = z
   .transform((v) => (v === "" ? null : v))
   .nullable();
 
+/**
+ * Os **demais instrutores** do lançamento (spec 014, FR-046): o 2º nome de *"CC A. / 1ºTen B."*, como veio —
+ * texto, porque nem todo segundo nome é do cadastro. Nada vai para `observacoes`.
+ */
+const outrosInstrutores = z
+  .array(z.string().trim().min(1, "O nome do outro instrutor não pode ficar vazio.").max(120))
+  .max(5, "Até cinco outros instrutores.")
+  .default([]);
+
 const comum = {
   turmaId: uuid,
   cursoId: uuid,
@@ -83,6 +92,7 @@ const aula = z
     tecnica: textoOuNulo,
     /* ⚠️ Campo vazio chega como texto vazio: a frase diz o que escolher, e não "identificador". */
     instrutorId: z.string().uuid("Escolha quem ministra a aula."),
+    outrosInstrutores,
   })
   .superRefine((v, ctx) => {
     const temUe = v.unidadeEnsinoId !== null;
@@ -136,6 +146,14 @@ const avaliacao = z
     tecnica: textoOuNulo,
     fiscalId: uuid.nullable(),
     nomeFiscalExterno: textoOuNulo,
+    /*
+     * Spec 014, FR-039: a avaliação do currículo que esta cumpre. OBRIGATÓRIA quando a disciplina tem item — e isso
+     * a ação confere no banco (o esquema não sabe se a disciplina tem item). As UEs abordadas, a faixa
+     * *"U.E. 3 a 6"*, são texto e não consomem TA de UE (FR-033).
+     */
+    avaliacaoCurriculoId: uuid.nullable().default(null),
+    uesAbordadas: textoOuNulo.default(null),
+    outrosInstrutores,
   })
   .superRefine((v, ctx) => {
     if (v.fiscalId !== null && v.nomeFiscalExterno !== null) {
@@ -154,15 +172,31 @@ const avaliacao = z
  * vista na mesma linha (`RN-AVAL-02`), então a vista chega com o `avaliacaoId` e só posiciona as
  * colunas `*_vista`. Criar outra linha faria a CHD contar duas vezes.
  */
-const vistaProva = z.object({
-  tipo: z.literal("vista_prova"),
-  avaliacaoId: z.string().uuid("Escolha a avaliação desta vista."),
-  turmaId: uuid,
-  data,
-  taInicial: ta,
-  tempos,
-  local: textoOuNulo,
-});
+const vistaProva = z
+  .object({
+    tipo: z.literal("vista_prova"),
+    avaliacaoId: z.string().uuid("Escolha a avaliação desta vista."),
+    turmaId: uuid,
+    data,
+    taInicial: ta,
+    tempos,
+    local: textoOuNulo,
+    /*
+     * Spec 014, FR-040 e FR-043: quem CONDUZ esta sessão — do cadastro ou de fora, não os dois. O NÚMERO da sessão
+     * não vem da tela: a ação o calcula (o seguinte ao maior ativo), para duas abas não abrirem a mesma sessão.
+     */
+    conduzInstrutorId: uuid.nullable().default(null),
+    conduzNomeExterno: textoOuNulo.default(null),
+  })
+  .superRefine((v, ctx) => {
+    if (v.conduzInstrutorId !== null && v.conduzNomeExterno !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["conduzNomeExterno"],
+        message: "Escolha quem conduz do cadastro ou escreva o nome de fora, não os dois.",
+      });
+    }
+  });
 
 const atividade = z
   .object({
@@ -195,6 +229,7 @@ const atividade = z
       .max(999, "A quantidade de alunos vai até 999.")
       .nullable()
       .default(null),
+    outrosInstrutores,
   })
   .superRefine((v, ctx) => {
     if (v.disciplinaId !== null && v.turmaId === null) {
@@ -303,6 +338,8 @@ export const esquemaDaEdicao = z.object({
   tecnica: textoOuNulo.optional(),
   instrutorId: uuid.nullable().optional(),
   unidadeEnsinoId: uuid.nullable().optional(),
+  /* Spec 014, FR-046: os demais instrutores; `undefined` não mexe. */
+  outrosInstrutores: z.array(z.string().trim().min(1).max(120)).max(5).optional(),
 });
 
 export type Edicao = z.infer<typeof esquemaDaEdicao>;
