@@ -19,6 +19,8 @@ import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
 import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
+import { tetosDaTurma, type Categoria } from "@/lib/dominio/tetos-da-turma";
+import { gravarPrevistoProens } from "@/lib/acoes/previsto-proens";
 import { AVISO_DE_TURMA_EAD, ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import type { JanelaDeTurma, VigenciaProtegida } from "@/lib/dominio/protecao-de-vigencia";
@@ -46,6 +48,14 @@ import { podeBaixarPlanilhaDeContingencia } from "./dsa/planilha/acesso";
 import { EdicaoDaTurma } from "./EdicaoDaTurma";
 import { Rotulo } from "./Rotulo";
 import { SecaoDeAndamento } from "./SecaoDeAndamento";
+import { CardsDeTetos, type AutoriaDoPrevisto } from "./CardsDeTetos";
+import { EdicaoDoPrevisto } from "./EdicaoDoPrevisto";
+import {
+  CHAVES_DOS_PARAMETROS_DOS_TETOS,
+  COLUNAS_DO_PREVISTO,
+  entradaDosTetos,
+  parametroDoAno,
+} from "./tetos";
 import { FormularioDeTurma } from "../FormularioDeTurma";
 import {
   codigoDaFicha,
@@ -143,46 +153,78 @@ export default async function FichaDaTurma({
         .lte("data", dataTermino as string)
     : null;
 
-  const [cursoRes, turmasRes, salasRes, protecaoRes, cargaRes, regimeRes, feriadosRes] =
-    await Promise.all([
-      supabase
-        .from("cursos")
-        .select("codigo, nome_curso, limite_turmas_ano")
-        .eq("id", cursoId)
-        .maybeSingle(),
-      supabase
-        .from("turmas")
-        .select("codigo, turma, ano_letivo, status, data_inicio, data_termino")
-        .eq("curso_id", cursoId),
-      supabase
-        .from("config_listas")
-        .select("valor, ativo, metadados")
-        .eq("lista", "salas")
-        .order("ordem"),
-      protecaoPromessa,
-      /*
-       * ⚠️ **A CH EXECUTADA VEM DA MESMA VIEW QUE O `/inicio` LÊ** — `vw_carga_horaria_turma` —, e é
-       *    por isso que os dois números batem. Uma soma própria aqui seria a segunda fonte de verdade
-       *    de `chd_executada`, com a `RN-CRONOS-01` para honrar duas vezes.
-       */
-      supabase
-        .from("vw_carga_horaria_turma")
-        .select(COLUNAS_DA_CARGA_DA_TURMA)
-        .eq("turma_id", turma.id as string)
-        .maybeSingle(),
-      /*
-       * ⚠️ **O TA/DIA NÃO É PARÂMETRO NOVO: ele é o REGIME VIGENTE DO CURSO** (decisão de Bernardo,
-       *    04/10/2026, Q1 do clarify). `vw_cursos_regime_vigente` resolve a vigência de hoje, e a
-       *    escolha entre `regime_padrao_tempos` e `limite_diario_ead_horas` é da **modalidade da
-       *    turma** (`RN-MAT-04`), feita no módulo puro.
-       */
-      supabase
-        .from("vw_cursos_regime_vigente")
-        .select(COLUNAS_DO_REGIME_DO_CURSO)
-        .eq("curso_id", cursoId)
-        .maybeSingle(),
-      feriadosPromessa,
-    ]);
+  const turmaId = turma.id as string;
+  const [
+    cursoRes,
+    turmasRes,
+    salasRes,
+    protecaoRes,
+    cargaRes,
+    regimeRes,
+    feriadosRes,
+    diasParadosRes,
+    previstosRes,
+    conformidadeRes,
+    parametrosRes,
+  ] = await Promise.all([
+    supabase
+      .from("cursos")
+      .select("codigo, nome_curso, limite_turmas_ano")
+      .eq("id", cursoId)
+      .maybeSingle(),
+    supabase
+      .from("turmas")
+      .select("codigo, turma, ano_letivo, status, data_inicio, data_termino")
+      .eq("curso_id", cursoId),
+    supabase
+      .from("config_listas")
+      .select("valor, ativo, metadados")
+      .eq("lista", "salas")
+      .order("ordem"),
+    protecaoPromessa,
+    /*
+     * ⚠️ **A CH EXECUTADA VEM DA MESMA VIEW QUE O `/inicio` LÊ** — `vw_carga_horaria_turma` —, e é
+     *    por isso que os dois números batem. Uma soma própria aqui seria a segunda fonte de verdade
+     *    de `chd_executada`, com a `RN-CRONOS-01` para honrar duas vezes.
+     */
+    supabase
+      .from("vw_carga_horaria_turma")
+      .select(COLUNAS_DA_CARGA_DA_TURMA)
+      .eq("turma_id", turma.id as string)
+      .maybeSingle(),
+    /*
+     * ⚠️ **O TA/DIA NÃO É PARÂMETRO NOVO: ele é o REGIME VIGENTE DO CURSO** (decisão de Bernardo,
+     *    04/10/2026, Q1 do clarify). `vw_cursos_regime_vigente` resolve a vigência de hoje, e a
+     *    escolha entre `regime_padrao_tempos` e `limite_diario_ead_horas` é da **modalidade da
+     *    turma** (`RN-MAT-04`), feita no módulo puro.
+     */
+    supabase
+      .from("vw_cursos_regime_vigente")
+      .select(COLUNAS_DO_REGIME_DO_CURSO)
+      .eq("curso_id", cursoId)
+      .maybeSingle(),
+    feriadosPromessa,
+    /*
+     * ⚠️ **OS CARDS DE AEC, TAD E TR** (spec 014, PR 2): dias parados por tipo, o previsto do
+     *    PROENS da turma, os números crus de `vw_conformidade_tetos` (limite declarado e percentual
+     *    do ano) e os parâmetros — tudo na MESMA rodada, nenhum `await` em laço.
+     */
+    supabase.from("vw_dias_parados_turma").select("tipo, tempos, dias").eq("turma_id", turmaId),
+    supabase
+      .from("previstos_proens_turma")
+      .select(COLUNAS_DO_PREVISTO)
+      .eq("turma_id", turmaId)
+      .eq("status", "ativo"),
+    supabase
+      .from("vw_conformidade_tetos")
+      .select("categoria, limite_declarado, percentual_norma, ch_curricular")
+      .eq("turma_id", turmaId),
+    supabase
+      .from("config_parametros")
+      .select("chave, valor, ano_vigencia")
+      .in("chave", [...CHAVES_DOS_PARAMETROS_DOS_TETOS])
+      .eq("status", "ativo"),
+  ]);
 
   const sigla = (cursoRes.data?.codigo as string | undefined) ?? "";
 
@@ -261,6 +303,74 @@ export default async function FichaDaTurma({
   const salas = salasParaEscolher(todasAsSalas, turma.sala_alocada);
 
   const protegidas: VigenciaProtegida[] = protecoesDoBanco(protecaoRes?.data ?? []);
+
+  /*
+   * ⚠️ **OS CARDS SAEM DE `tetosDaTurma`, O ÚNICO LUGAR QUE DECIDE TETO** (SC-003). A turma EAD não
+   *    tem cards (`FR-006`): a frase da spec 013 já está no cabeçalho.
+   */
+  const ano = Number(turma.ano_letivo);
+  const parametros = parametrosRes.data ?? [];
+  const previstos = previstosRes.data ?? [];
+  const tetos = tetosDaTurma(
+    entradaDosTetos({
+      carga: (cargaRes.data as Record<string, unknown> | null) ?? null,
+      diasParados: diasParadosRes.data ?? [],
+      previstos,
+      conformidade: conformidadeRes.data ?? [],
+      referenciaEi: {
+        comEstudoObrigatorio: parametroDoAno(parametros, "estudo_obrig_com_regime_pct", ano),
+        semEstudoObrigatorio: parametroDoAno(parametros, "estudo_obrig_sem_regime_pct", ano),
+      },
+      ead: ehEadPuro(turma.modalidade as string | null),
+    }),
+  );
+  /*
+   * ⚠️ **O NOME DE QUEM ALTEROU É UMA LEITURA A MAIS, E SÓ QUANDO HÁ PREVISTO** — os ids só existem
+   *    depois da leitura do previsto. Uma consulta, com `in`, nunca uma por card.
+   */
+  const autores = [
+    ...new Set(previstos.map((p) => p.editado_por ?? p.criado_por).filter((x): x is string => !!x)),
+  ];
+  const { data: nomes } = autores.length
+    ? await supabase
+        .from("usuarios")
+        .select("auth_user_id, nome_exibicao, nome")
+        .in("auth_user_id", autores)
+    : { data: [] as { auth_user_id: string | null; nome_exibicao: string | null; nome: string }[] };
+  const autoria = Object.fromEntries(
+    (["aec", "tad", "tr"] as const).map((c) => {
+      const p = previstos.find((x) => x.categoria.toLowerCase() === c);
+      const id = p?.editado_por ?? p?.criado_por ?? null;
+      const quem = (nomes ?? []).find((u) => u.auth_user_id === id);
+      const linha: AutoriaDoPrevisto = p
+        ? {
+            nome: quem?.nome_exibicao || quem?.nome || "outra conta",
+            em: (p.editado_em ?? p.criado_em) as string,
+          }
+        : null;
+      return [c, linha];
+    }),
+  ) as Record<Categoria, AutoriaDoPrevisto>;
+  const podeEditarPrevisto = pode(permissoes, "previsto_proens", "editar");
+  const edicao = podeEditarPrevisto
+    ? Object.fromEntries(
+        (["aec", "tad", "tr"] as const).map((c) => {
+          const atual =
+            previstos.find((x) => x.categoria.toLowerCase() === c)?.tempos_previstos ?? null;
+          return [
+            c,
+            <EdicaoDoPrevisto
+              key={c}
+              turmaId={turmaId}
+              categoria={c.toUpperCase() as "AEC" | "TAD" | "TR"}
+              atual={atual === null ? null : Number(atual)}
+              sugestao={parametroDoAno(parametros, `proens.reserva_generica_${c}`, ano)}
+              gravar={gravarPrevistoProens}
+            />,
+          ];
+        }),
+      )
+    : undefined;
 
   const texto = (v: string | number | null) => (v === null ? "" : String(v));
 
@@ -398,6 +508,12 @@ export default async function FichaDaTurma({
       <QuadroDeAvisosDaTurma avisos={avisos} />
 
       <SecaoDeAndamento andamento={andamento} dataTermino={dataTermino} />
+
+      {/*
+        ⚠️ **A FAIXA DOS CARDS FICA LOGO ABAIXO DO ANDAMENTO** (comentário de Bernardo no protótipo da
+           ficha, 13/10/2026): Progresso · Saldo em dias · Capacidade diária acima; AEC, TAD e TR aqui.
+      */}
+      <CardsDeTetos tetos={tetos} ano={ano} autoria={autoria} {...(edicao ? { edicao } : {})} />
 
       {/*
         ⚠️ **A SEÇÃO DE DISCIPLINAS VEIO DE `/disciplinas?turma=` EM 04/10/2026** (`FR-018`), e o

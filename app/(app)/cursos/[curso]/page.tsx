@@ -37,6 +37,15 @@ import {
   resolverTurmaSelecionada,
 } from "./consulta";
 import { QuadroDeAvisosDoCurso } from "./QuadroDeAvisosDoCurso";
+import { BlocoDeLimites, type LinhaDoLimite } from "./BlocoDeLimites";
+import { limiteMaximo } from "@/lib/dominio/limite-maximo";
+import {
+  COLUNAS_DA_CONFORMIDADE,
+  tetosExcedidos,
+  type LinhaDaConformidade,
+  type LinhaDoPrevisto,
+} from "../../turmas/tetos-excedidos";
+import { parametroDoAno } from "../../turmas/[turma]/tetos";
 
 /** Hoje em `yyyy-mm-dd`, no fuso de apresentação. Entra como argumento nas funções puras. */
 /* ⚠️ A cópia local saiu em 04/10/2026: `hojeNaCiaara()` é a mesma conta, num lugar só. */
@@ -79,7 +88,17 @@ export default async function PaginaDoCurso({
     );
   }
 
-  const [turmasRes, regimeRes, disciplinasRes, avaliacoesRes, permissoes] = await Promise.all([
+  const [
+    turmasRes,
+    regimeRes,
+    disciplinasRes,
+    avaliacoesRes,
+    permissoes,
+    limitesRes,
+    parametrosRes,
+    conformidadeRes,
+    previstosRes,
+  ] = await Promise.all([
     supabase
       .from("turmas")
       .select(COLUNAS_DAS_TURMAS_DO_CURSO)
@@ -107,6 +126,29 @@ export default async function PaginaDoCurso({
       .eq("status", "ativo")
       .order("nome_disciplina", { ascending: true }),
     permissoesDoPerfil(usuario?.perfil ?? null),
+    /*
+     * ⚠️ **OS LIMITES DO CURSO E AS TURMAS EXCEDIDAS** (spec 014, PR 2, `FR-009`, `FR-005`): quatro
+     *    leituras na MESMA rodada; o veredito de cada turma sai de `tetosDaTurma`, em memória.
+     */
+    supabase
+      .from("limites_curriculo")
+      .select("categoria, tempos, fonte_pagina")
+      .eq("curso_id", curso.id as string)
+      .eq("status", "ativo"),
+    supabase
+      .from("config_parametros")
+      .select("chave, valor, ano_vigencia")
+      .in("chave", ["teto.aec_percentual_chr", "teto.tad_percentual_chr", "teto.tr_percentual_chr"])
+      .eq("status", "ativo"),
+    supabase
+      .from("vw_conformidade_tetos")
+      .select(COLUNAS_DA_CONFORMIDADE)
+      .eq("curso_id", curso.id as string),
+    supabase
+      .from("previstos_proens_turma")
+      .select("turma_id, categoria, tempos_previstos, turmas!inner(curso_id)")
+      .eq("turmas.curso_id", curso.id as string)
+      .eq("status", "ativo"),
   ]);
 
   const hoje = hojeEmSaoPaulo();
@@ -184,6 +226,37 @@ export default async function PaginaDoCurso({
 
   const cursoAtivo = curso.status === "ativo";
 
+  /*
+   * ⚠️ **A CH CURRICULAR DO CURSO É A SOMA DAS DISCIPLINAS ATIVAS** que esta página já lê — a mesma
+   *    base de `vw_carga_horaria_turma.chr_curricular`; o ano do percentual é o de hoje.
+   */
+  const anoDosLimites = Number(hoje.slice(0, 4));
+  const chCurricular = disciplinas.reduce((s, d) => s + (d.cargaHorariaTempos ?? 0), 0) || null;
+  const linhasDosLimites: LinhaDoLimite[] = (["AEC", "TAD", "TR"] as const).map((sigla) => {
+    const declarado = (limitesRes.data ?? []).find((l) => l.categoria === sigla);
+    const percentual = parametroDoAno(
+      parametrosRes.data ?? [],
+      `teto.${sigla.toLowerCase()}_percentual_chr`,
+      anoDosLimites,
+    );
+    return {
+      sigla,
+      limite: limiteMaximo({
+        declarado: declarado ? Number(declarado.tempos) : null,
+        chCurricular,
+        percentual,
+      }),
+      pagina: declarado?.fonte_pagina ?? null,
+      percentual,
+      chCurricular,
+    };
+  });
+  const excedidos = tetosExcedidos(
+    (conformidadeRes.data ?? []) as LinhaDaConformidade[],
+    (previstosRes.data ?? []) as unknown as LinhaDoPrevisto[],
+    new Map((turmasRes.data ?? []).map((t) => [t.id as string, t.modalidade as string | null])),
+  );
+
   return (
     <section className="flex flex-col gap-5">
       <CabecalhoDoCurso
@@ -207,6 +280,9 @@ export default async function PaginaDoCurso({
 
       {/* ⚠️ ACIMA DAS ABAS, fora de qualquer uma (`FR-010.1`) */}
       <QuadroDeAvisosDoCurso avisos={avisos} />
+
+      {/* ⚠️ ACIMA DAS ABAS também (spec 014, `FR-009`): o limite é do curso, não de uma aba */}
+      <BlocoDeLimites linhas={linhasDosLimites} ano={anoDosLimites} excedidos={excedidos} />
 
       {/* ⚠️ OCULTO para quem não tem a permissão — e o banco recusa de qualquer forma (`FR-017.8`) */}
       <SePodeVer permissoes={permissoes} recurso="cursos" acao="desativar">

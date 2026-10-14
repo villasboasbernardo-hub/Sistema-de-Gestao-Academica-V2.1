@@ -85,6 +85,19 @@
 - **A1.1.2 — Emenda do BRIEF §2.1** com `previstos_proens_turma` e `previstos_proens_alteracoes`, só
   no `.md`. Conferir a redação.
 
+## PR 2 — cards de AEC, TAD e TR; limites no curso; `/inicio`; `/atividades`
+
+- **A2.1 — Texto final das emendas E-4, E-5, E-7, E-9 e do Glossário.** Aplicadas só nos `.md` dos
+  documentos 04 (`RN-EVT-01`, `RN-2027-03` e a tabela de artefatos), 02 (`RF-EXTRA-04`) e 07 (CHR, CHD,
+  AEC, TAD, TR, Estudo Individual, LP e os verbetes novos Apoio Individualizado, Dia parado e LA), cada
+  uma com o registro de que o `.docx` não a recebeu. Conferir no diff do PR. Onde o texto da §13 não
+  casou com o documento: o negrito dos percentuais na `RF-EXTRA-04`, o exemplo abreviado da
+  `RN-2027-03`, a contagem dentro do verbete Estudo Individual, o verbete LA (não existia; criado das
+  decisões Q-8, Q-13 e Q-14) e o LP (frase acrescentada ao verbete). O parágrafo de implementação da
+  `RN-EVT-01` ainda cita `lib/dominio/tetos-normativos.ts`; a §13 não o emenda, e a nota nova diz para
+  onde o cálculo foi. **Aprovação:** [pendente]
+- **A2.2 — Capturas no banco local:** `C:/Users/VILLAS BOAS/AppData/Local/ciaara-11/capturas-014/pr2-*.png`.
+
 ## Decisões tomadas sozinho durante a implementação
 
 *(formato: decidi X porque Y; para mudar: Z)*
@@ -114,4 +127,15 @@
 - **D1.1.3 (PR 1.1) — Sem caso de RLS para o Admin.** O teste não cria conta `admin` (gotcha 8: um
   Admin a mais derruba `rls.test.ts`); o Admin grava pela mesma permissão do Encarregado, que está
   provado. Para mudar: criar a conta Admin num arquivo isolado.
+- **D2.1 (PR 2) — Semente própria para o ponta a ponta dos tetos.** Decidi criar
+  `tests/e2e/tetos-de-teste.ts` em vez de estender `panorama-de-teste.ts` e `cursos-de-teste.ts`, como a
+  T065 dizia, porque turmas a mais naquelas sementes mudariam as contagens que as suítes delas afirmam.
+  Para mudar: mover as três turmas para as sementes antigas e ajustar as contagens.
+- **D2.2 (PR 2) — `/atividades` é só leitura, com 500 linhas por consulta.** O lançamento continua no
+  DSA; a tela diz quando a lista bate no teto. Para mudar: paginação na tela.
+- **D2.3 (PR 2) — Quem gravou o previsto sem sessão aparece como "outra conta".** É o caso da carga
+  (D-3) e das sementes, que gravam com o cliente administrativo; quem grava pela tela aparece pelo
+  nome. Para mudar: escrever "carga do sistema" quando o autor for nulo.
+- **D2.4 (PR 2) — A suíte de tetos roda em série.** A sugestão da reserva genérica é parâmetro do
+  sistema inteiro, e dois processos semeando-a colidem. Para mudar: nada a decidir.
 

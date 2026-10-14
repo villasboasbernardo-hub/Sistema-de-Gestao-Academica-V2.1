@@ -54,6 +54,11 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/estilo/amostras.tsx": "as amostras interativas da vitrine",
   "app/(app)/inicio/FiltroDoPanorama.tsx": "o recorte do panorama, escrito na URL",
 
+  // ── Spec 014, PR 2: os cards de AEC, TAD e TR ───────────────────────────────────────────────
+  "app/(app)/turmas/[turma]/EdicaoDoPrevisto.tsx":
+    "editar o previsto do PROENS de um card: abrir, digitar e gravar é interação; a ação chega por propriedade",
+  "app/(app)/atividades/FiltrosDeAtividades.tsx": "os filtros de /atividades, na URL",
+
   // ── Épico 5 (c): instrutores ───────────────────────────────────────────────────────────────
   "app/(app)/instrutores/FiltrosDeInstrutores.tsx": "os filtros da listagem, na URL",
   /*
