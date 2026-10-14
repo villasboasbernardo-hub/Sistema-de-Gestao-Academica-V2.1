@@ -47,6 +47,7 @@ export function AvaliacoesDaTurma({
 }: {
   readonly quadro: QuadroDeAvaliacoes | null;
   readonly aviso: string | null;
+  /** Vazio = a aba Avaliações do CURSO sem turma: só o previsto, sem projeção nem situação. */
   readonly turmaId: string;
   /** As ações do arbitrado — montadas pela página SÓ para quem tem `avaliacoes_curriculo_arbitrado.editar`. */
   readonly arbitrado?: { readonly definir: Acao; readonly confirmar: Acao; readonly nomear: Acao };
@@ -179,18 +180,20 @@ export function AvaliacoesDaTurma({
                   </ul>
                 </div>
               ) : null}
-              <p
-                className={
-                  projecao.estouro
-                    ? "text-atrasado-tinta text-xs font-medium"
-                    : "text-texto-suave text-xs"
-                }
-                {...(projecao.estouro ? { role: "status" } : {})}
-                data-avaliacoes="projecao"
-                data-estouro={projecao.estouro}
-              >
-                {projecao.frase}
-              </p>
+              {turmaId === "" ? null : (
+                <p
+                  className={
+                    projecao.estouro
+                      ? "text-atrasado-tinta text-xs font-medium"
+                      : "text-texto-suave text-xs"
+                  }
+                  {...(projecao.estouro ? { role: "status" } : {})}
+                  data-avaliacoes="projecao"
+                  data-estouro={projecao.estouro}
+                >
+                  {projecao.frase}
+                </p>
+              )}
             </div>
           </details>
         ),

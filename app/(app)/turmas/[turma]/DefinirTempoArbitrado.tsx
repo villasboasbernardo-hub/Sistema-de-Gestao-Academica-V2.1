@@ -28,6 +28,7 @@ export function DefinirTempoArbitrado({
   nomear,
 }: {
   readonly itemId: string;
+  /** Vazio = a aba do CURSO sem turma escolhida: só o alcance de curso. */
   readonly turmaId: string;
   /** O tempo do item é do currículo: no curso não se arbitra; só a turma. */
   readonly tempoDeCurriculo: boolean;
@@ -42,7 +43,9 @@ export function DefinirTempoArbitrado({
   const [aberto, setAberto] = useState(false);
   const [aplicacao, setAplicacao] = useState("");
   const [vista, setVista] = useState("");
-  const [alcance, setAlcance] = useState<"curso" | "turma">(tempoDeCurriculo ? "turma" : "curso");
+  const [alcance, setAlcance] = useState<"curso" | "turma">(
+    tempoDeCurriculo && turmaId !== "" ? "turma" : "curso",
+  );
   const [ue, setUe] = useState("");
   const [resposta, setResposta] = useState<Resultado | null>(null);
   const [gravando, iniciar] = useTransition();
@@ -59,7 +62,7 @@ export function DefinirTempoArbitrado({
 
   return (
     <span className="inline-flex flex-wrap items-center gap-2" data-slot="acoes-do-arbitrado">
-      {!aberto ? (
+      {turmaId === "" && tempoDeCurriculo ? null : !aberto ? (
         <button
           type="button"
           onClick={() => setAberto(true)}
@@ -115,7 +118,7 @@ export function DefinirTempoArbitrado({
               aria-label="Alcance do arbitrado"
             >
               {tempoDeCurriculo ? null : <option value="curso">o curso</option>}
-              <option value="turma">só esta turma</option>
+              {turmaId === "" ? null : <option value="turma">só esta turma</option>}
             </select>
           </label>
           <button

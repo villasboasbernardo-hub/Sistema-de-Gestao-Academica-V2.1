@@ -116,14 +116,12 @@ export async function definirTempoArbitrado(entrada: unknown): Promise<Resultado
       if (error) return recusa(error);
       if (!data || data.length === 0) return { ok: false, erro: SEM_PERMISSAO };
     } else {
-      const { error } = await supabase
-        .from("avaliacoes_curriculo_turma")
-        .insert({
-          id: randomUUID(),
-          avaliacao_curriculo_id: itemId,
-          turma_id: turmaId as string,
-          ...valores,
-        });
+      const { error } = await supabase.from("avaliacoes_curriculo_turma").insert({
+        id: randomUUID(),
+        avaliacao_curriculo_id: itemId,
+        turma_id: turmaId as string,
+        ...valores,
+      });
       if (error) return recusa(error);
     }
   }

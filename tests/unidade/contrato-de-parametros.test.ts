@@ -352,10 +352,12 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
     expect(parametrosDaRota("/cursos/[curso]").map((p) => p.nome)).toEqual(["aba", "turma"]);
   });
 
-  it("`aba` é escolha entre duas, com padrão `grade`", () => {
+  it("`aba` é escolha entre TRÊS, com padrão `grade`", () => {
+    // ⚠️ Eram duas (Q-02 da spec 009); a spec 014 (FR-053, `RF-CURSO-02`) trouxe «Avaliações». A guarda foi
+    //    INVERTIDA, não apagada: Relatório continua fora.
     const aba = daPagina("aba");
     expect(aba.tipo).toBe("escolha");
-    if (aba.tipo === "escolha") expect([...aba.opcoes]).toEqual(["grade", "sobre"]);
+    if (aba.tipo === "escolha") expect([...aba.opcoes]).toEqual(["grade", "sobre", "avaliacoes"]);
     expect(aba.padrao).toBe("grade");
   });
 

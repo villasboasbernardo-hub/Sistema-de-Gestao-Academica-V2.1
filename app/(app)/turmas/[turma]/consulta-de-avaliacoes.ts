@@ -4,6 +4,8 @@
  *
  * ⚠️ UMA RODADA, `Promise.all`, nenhum `await` em laço (convenção de `app/**`).
  * ⚠️ A conta é toda de `quadroDeAvaliacoesDaTurma` (`lib/dominio/avaliacoes/`); aqui só se lê e se traduz.
+ * ⚠️ SEM TURMA (a aba do curso), as consultas da turma usam o uuid nulo, que não casa com linha nenhuma: o quadro
+ *    sai só com o previsto do currículo.
  * ⚠️ DEGRADAÇÃO SEGURA (`RN-DEG-01`): falha de leitura devolve quadro vazio com aviso, nunca exceção.
  */
 import "server-only";
@@ -24,7 +26,8 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 type Linha = Record<string, unknown>;
 
 export async function lerAvaliacoesDaTurma(entrada: {
-  readonly turmaId: string;
+  /** `null` = só o currículo do curso (a aba Avaliações do curso sem turma escolhida). */
+  readonly turmaId: string | null;
   readonly cursoId: string;
   readonly hoje: string;
   readonly terminoDaTurma: string | null;
@@ -51,19 +54,19 @@ export async function lerAvaliacoesDaTurma(entrada: {
     supabase
       .from("avaliacoes_curriculo_turma")
       .select("avaliacao_curriculo_id, ta_aplicacao, ta_vista, origem, confirmado_em")
-      .eq("turma_id", entrada.turmaId)
+      .eq("turma_id", entrada.turmaId ?? "00000000-0000-0000-0000-000000000000")
       .eq("status", "ativo"),
     supabase
       .from("avaliacoes")
       .select(
         "id, disciplina_id, avaliacao_curriculo_id, tipo_avaliacao, data_avaliacao, status, vistas_de_avaliacao(data, status)",
       )
-      .eq("turma_id", entrada.turmaId)
+      .eq("turma_id", entrada.turmaId ?? "00000000-0000-0000-0000-000000000000")
       .in("status", [...STATUS_DE_AVALIACAO_VIVA]),
     supabase
       .from("vw_disciplinas_execucao")
       .select("disciplina_id, ta_executados, data_real_inicio")
-      .eq("turma_id", entrada.turmaId),
+      .eq("turma_id", entrada.turmaId ?? "00000000-0000-0000-0000-000000000000"),
     supabase
       .from("config_parametros")
       .select("valor")
@@ -170,4 +173,35 @@ export async function lerAvaliacoesDaTurma(entrada: {
     }),
     aviso: null,
   };
+}
+
+/**
+ * A aba Avaliações do CURSO (spec 014, FR-053, T181): o previsto por disciplina e, com uma turma escolhida, o
+ * quadro dela. A mesma leitura da turma — nenhuma segunda conta.
+ */
+export async function lerAvaliacoesDoCurso(entrada: {
+  readonly cursoId: string;
+  readonly turmaCodigo: string | null;
+  readonly hoje: string;
+}): Promise<{ quadro: QuadroDeAvaliacoes | null; aviso: string | null; turmaId: string | null }> {
+  let turmaId: string | null = null;
+  let termino: string | null = null;
+  if (entrada.turmaCodigo) {
+    const supabase = await criarClienteDeServidor();
+    const { data } = await supabase
+      .from("turmas")
+      .select("id, data_termino")
+      .eq("codigo", entrada.turmaCodigo)
+      .eq("curso_id", entrada.cursoId)
+      .maybeSingle();
+    turmaId = (data?.id as string | undefined) ?? null;
+    termino = (data?.data_termino as string | null | undefined) ?? null;
+  }
+  const lido = await lerAvaliacoesDaTurma({
+    turmaId,
+    cursoId: entrada.cursoId,
+    hoje: entrada.hoje,
+    terminoDaTurma: termino,
+  });
+  return { ...lido, turmaId };
 }

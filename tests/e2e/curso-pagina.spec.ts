@@ -49,18 +49,19 @@ const url = (sigla: string, consulta = "") =>
 const abas = (page: Page) => page.locator('[data-slot="abas-do-curso"] [role="tab"]');
 const turmaSelecionada = (page: Page) => page.locator('[data-slot="turma-selecionada"]');
 
-test.describe("`FR-006.2` · exatamente duas abas, e elas moram na URL", () => {
-  test("são duas, e a padrão é a Grade", async ({ page }) => {
+test.describe("`FR-006.2` · três abas, e elas moram na URL", () => {
+  test("são três, e a padrão é a Grade (spec 014, FR-053: «Avaliações» entrou)", async ({
+    page,
+  }) => {
     await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular));
-    await expect(abas(page)).toHaveCount(2);
+    await expect(abas(page)).toHaveCount(3);
     await expect(abas(page).nth(0)).toHaveAttribute("data-aba", "grade");
     await expect(abas(page).nth(1)).toHaveAttribute("data-aba", "sobre");
+    await expect(abas(page).nth(2)).toHaveAttribute("data-aba", "avaliacoes");
     await expect(abas(page).nth(0)).toHaveAttribute("aria-selected", "true");
   });
 
-  test("⚠️ nem Avaliações nem Relatório aparecem — a tela não anuncia o que não entrega", async ({
-    page,
-  }) => {
+  test("⚠️ Relatório não aparece — a tela não anuncia o que não entrega", async ({ page }) => {
     /*
      * ⚠️ A ASSERÇÃO É SOBRE ACESSO, E DENTRO DA PÁGINA — não sobre a palavra, e não no documento
      * inteiro. Duas medições erradas vieram antes desta: varrer o documento pega o "em breve" do
@@ -74,10 +75,10 @@ test.describe("`FR-006.2` · exatamente duas abas, e elas moram na URL", () => {
       .locator("xpath=ancestor::section[1]");
     await expect(pagina).toBeVisible();
 
-    await expect(pagina.locator('a[href*="/avaliacoes"]')).toHaveCount(0);
+    // ⚠️ Spec 014 (FR-053): «Avaliações» ENTROU como aba, porque a tela passou a entregá-la; Relatório segue fora.
     await expect(pagina.locator('a[href*="/relatorio"]')).toHaveCount(0);
     await expect(pagina.getByText("em breve", { exact: false })).toHaveCount(0);
-    await expect(abas(page).filter({ hasText: /Avaliaç|Relatório/ })).toHaveCount(0);
+    await expect(abas(page).filter({ hasText: /Relatório/ })).toHaveCount(0);
   });
 
   test("colar a URL com `?aba=sobre` numa aba nova reproduz a mesma vista, e o F5 também", async ({

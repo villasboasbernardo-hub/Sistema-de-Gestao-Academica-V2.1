@@ -795,7 +795,8 @@ export const CONTRATO = {
         nome: "aba",
         tipo: "escolha",
         padrao: "grade",
-        opcoes: ["grade", "sobre"],
+        // Spec 014 (FR-053): a terceira aba, «Avaliações», cedeu a Q-02 da spec 009 ao `RF-CURSO-02`.
+        opcoes: ["grade", "sobre", "avaliacoes"],
         historico: "empilha",
         avisaServidor: true,
       },

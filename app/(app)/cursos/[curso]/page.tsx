@@ -28,7 +28,14 @@ import { alcanceDoPerfil } from "../consulta";
 import { AbaGrade, type TurmaDaGrade } from "./AbaGrade";
 import { AcoesDeSituacao } from "./AcoesDeSituacao";
 import { AbaSobre, type AvaliacaoPrevista, type DisciplinaDaGrade } from "./AbaSobre";
+import { AbaAvaliacoes } from "./AbaAvaliacoes";
 import { AbasDoCurso } from "./AbasDoCurso";
+import { lerAvaliacoesDoCurso } from "../../turmas/[turma]/consulta-de-avaliacoes";
+import {
+  confirmarSugestao,
+  definirTempoArbitrado,
+  nomearUe,
+} from "@/lib/acoes/avaliacoes-do-curriculo";
 import { CabecalhoDoCurso } from "./CabecalhoDoCurso";
 import {
   COLUNAS_DAS_TURMAS_DO_CURSO,
@@ -182,6 +189,19 @@ export default async function PaginaDoCurso({
     hoje,
   );
 
+  /*
+   * A aba Avaliações (spec 014, FR-053) só é lida quando é ela a aberta: as outras duas não pagam a consulta.
+   * A turma é a da Grade (`selecao`), e a leitura é a mesma da ficha da turma.
+   */
+  const avaliacoesDoCurso =
+    String(valores.aba) === "avaliacoes"
+      ? await lerAvaliacoesDoCurso({
+          cursoId: curso.id as string,
+          turmaCodigo: selecao.codigo,
+          hoje,
+        })
+      : { quadro: null, aviso: null, turmaId: null };
+
   const paraLimite: TurmaParaLimite[] = turmas.map((t) => ({ ano: t.ano, status: t.status }));
   const avisos = avisosDoCurso(
     {
@@ -318,6 +338,23 @@ export default async function PaginaDoCurso({
             disciplinas={disciplinas}
             avaliacoes={avaliacoes}
             avaliacoesLegiveis={!avaliacoesRes.error}
+          />
+        }
+        avaliacoes={
+          <AbaAvaliacoes
+            quadro={avaliacoesDoCurso.quadro}
+            aviso={avaliacoesDoCurso.aviso}
+            turmaCodigo={avaliacoesDoCurso.turmaId ? selecao.codigo : null}
+            turmaId={avaliacoesDoCurso.turmaId}
+            {...(pode(permissoes, "avaliacoes_curriculo_arbitrado", "editar")
+              ? {
+                  arbitrado: {
+                    definir: definirTempoArbitrado,
+                    confirmar: confirmarSugestao,
+                    nomear: nomearUe,
+                  },
+                }
+              : {})}
           />
         }
       />
