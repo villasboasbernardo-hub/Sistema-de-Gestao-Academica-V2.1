@@ -468,7 +468,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("vw_instrutores")
         .select(
-          "id, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, ordem_antiguidade",
+          "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, ordem_antiguidade",
           contagemNaPrimeira(f),
         )
         .order("ordem_antiguidade")
@@ -780,6 +780,7 @@ export function montarSemanaDoDsa(
 
   const linhasDeInstrutor = (instrRes.data ?? []) as {
     id: string;
+    codigo?: string | number;
     posto_graduacao: string;
     esp_hab_obs: string | null;
     nome_completo: string;
@@ -802,6 +803,19 @@ export function montarSemanaDoDsa(
       }),
     ]),
   );
+
+  /*
+   * ⚠️ **OS DEMAIS INSTRUTORES (FR-046) VÊM POR CÓDIGO em aula e avaliação** (é o que a sincronização grava — a D-8 os
+   *    tirou de `observacoes` pelo código) e **como vieram** na atividade e no que se digita no formulário. O código
+   *    vira o nome do DSA pela mesma `nomeParaDsa`; o que não é código aparece como veio.
+   */
+  const nomePorCodigo = new Map(
+    linhasDeInstrutor
+      .filter((i) => i.codigo !== undefined && i.codigo !== null)
+      .map((i) => [String(i.codigo), instrutoresPorId.get(i.id) ?? ""] as const),
+  );
+  const nomesDosOutros = (valores: readonly string[] | null | undefined): string[] =>
+    (valores ?? []).map((v) => nomePorCodigo.get(String(v).trim()) || v);
 
   /*
    * ⚠️ **O CATÁLOGO DE TÉCNICAS É LIDO ANTES DOS FATOS** porque a vista de prova precisa dele: a
@@ -837,7 +851,7 @@ export function montarSemanaDoDsa(
       tecnica: a.metodologia,
       unidadeEnsinoId: a.unidade_ensino_id,
       disciplinaColuna: a.disciplina_id,
-      outros: a.outros_instrutores ?? [],
+      outros: nomesDosOutros(a.outros_instrutores),
     });
   }
   for (const a of (avaliacoesRes.data ?? []) as {
@@ -851,7 +865,7 @@ export function montarSemanaDoDsa(
     outros_instrutores?: string[] | null;
   }[]) {
     conteudos.set(a.id, {
-      outros: a.outros_instrutores ?? [],
+      outros: nomesDosOutros(a.outros_instrutores),
       uesAbordadas: a.ues_abordadas ?? null,
       /* O fiscal de fora do cadastro: a view da ocupação só traz o `fiscal_id`. */
       fiscalExterno: a.nome_fiscal_externo,
@@ -907,7 +921,7 @@ export function montarSemanaDoDsa(
       externo: n.responsavel_externo,
       /* A disciplina OPCIONAL da AEC (item 1b): só para exibir — ela não entra na CH da disciplina. */
       disciplinaId: n.disciplina_id,
-      outros: n.outros_instrutores ?? [],
+      outros: nomesDosOutros(n.outros_instrutores),
     });
   }
 
