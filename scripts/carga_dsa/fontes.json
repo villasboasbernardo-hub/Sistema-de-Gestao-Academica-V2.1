@@ -9,7 +9,8 @@
       "titulo": "CAHO_2026",
       "subpasta": "Cursos Regulares",
       "onda": 2,
-      "decisoes": "decisoes/caho-2026.json"
+      "decisoes": "decisoes/caho-2026.json",
+      "virada": "2026-10-13"
     },
     {
       "turma": "C-Ap-HN 2026",
@@ -17,7 +18,8 @@
       "titulo": "Cópia de C-AP-HN 2026 - Sabado",
       "subpasta": "Cursos Regulares",
       "onda": 2,
-      "decisoes": "decisoes/c-ap-hn-2026.json"
+      "decisoes": "decisoes/c-ap-hn-2026.json",
+      "virada": "2026-10-13"
     },
     {
       "turma": "C-Ap-FR 2026",
@@ -25,7 +27,8 @@
       "titulo": "C-AP-FR 2026",
       "subpasta": "Cursos Regulares",
       "onda": 2,
-      "decisoes": "decisoes/c-ap-fr-2026.json"
+      "decisoes": "decisoes/c-ap-fr-2026.json",
+      "virada": "2026-10-13"
     },
     {
       "turma": "C-Espc-HN 2026",
@@ -108,5 +111,6 @@
     },
     "local_do_estudo_individual": "Biblioteca",
     "_local_do_estudo_individual": "Bernardo Villas Boas, 07/10/2026 (conferencia visual): o local do Estudo Individual e «Biblioteca» em todos os cursos e turmas; o local da planilha no EI e ignorado"
-  }
+  },
+  "virada_por_turma": "A3.3 (Bernardo Villas Boas, 14/10/2026): a turma com `virada` tem o SISTEMA como fonte a partir dessa data. A sincronizacao cobre so as datas anteriores e nao toca em nada dali em diante. As demais seguem pela planilha ate a virada de cada uma."
 }

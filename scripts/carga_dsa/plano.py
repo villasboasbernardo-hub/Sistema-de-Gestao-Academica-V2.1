@@ -40,7 +40,8 @@ from datetime import date
 from scripts.carga_dsa.banco import lit
 from scripts.carga_dsa.planilha import Bloco, Leitura
 
-CATEGORIAS = {"aec": "AEC", "tad": "TAD", "tr": "TR", "estudo_individual": "Estudo_Individual"}
+# "apoio" nasce na spec 014 (FR-021, D-AA-12): Monitoria, Portugues, BDA e BDF sao Apoio Individualizado.
+CATEGORIAS = {"aec": "AEC", "tad": "TAD", "tr": "TR", "estudo_individual": "Estudo_Individual", "apoio": "Apoio_Individualizado"}
 SENTINELA_DO_ENSAIO = "ENSAIO_DESFEITO"
 
 
@@ -712,12 +713,11 @@ def sql(plano: Plano, decisoes: dict, ensaio: bool) -> str:
             partes.append(
                 "  if not exists (select 1 from public.feriados where data = " + lit(c["data"]) + "::date\n"
                 "                    and impacto = 'dia_inteiro' and status = 'ativo') then\n"
-                "    insert into public.feriados (codigo, ano, data, descricao, impacto, abrangencia, criado_por)\n"
-                "    select 'FER-' || lpad((coalesce(max(substring(codigo from '^FER-(\\d+)$')::int), 0) + 1)::text, 6, '0'),\n"
-                "           extract(year from " + lit(c["data"]) + "::date)::smallint, " + lit(c["data"]) + "::date,\n"
+                "    -- Spec 014 (E-2): o codigo sai do DEFAULT da sequencia de feriados, nunca de max + 1.\n"
+                "    insert into public.feriados (ano, data, descricao, impacto, abrangencia, criado_por)\n"
+                "    values (extract(year from " + lit(c["data"]) + "::date)::smallint, " + lit(c["data"]) + "::date,\n"
                 "           " + lit(c["descricao"]) + ", 'dia_inteiro', " + lit(decisoes.get("abrangencia_do_calendario")) + ",\n"
-                "           " + lit(autor) + "::uuid\n"
-                "      from public.feriados;\n"
+                "           " + lit(autor) + "::uuid);\n"
                 "    n_feriados := n_feriados + 1;\n"
                 "  end if;"
             )

@@ -12,7 +12,12 @@ outras planilhas trouxeram *(decisoes de Bernardo Villas Boas, 06/10/2026)*:
 - **a vista** casa com a prova pelo numero da chave (VP1 ↔ AV1/PM1); sem numero, as sessoes casam
   com as ultimas provas da disciplina, em ordem — a convencao do piloto;
 - **dia parado** (feriado, licenca) so e CALENDARIO GLOBAL quando parou todas as turmas; parado so
-  de algumas, vira TAD da turma;
+  de algumas, vira DIA PARADO da turma (`dias_parados`, previsto) — ate a spec 014 virava TAD
+  (FR-024, FR-025, FR-025.5; a linha TAD antiga sai na rodada com a marca de reclassificacao);
+- **Apoio Individualizado** (spec 014, FR-021, D-AA-12): Monitoria, Portugues para Estrangeiros, BDA e
+  BDF; Recepcao e TAD com o tipo *Recepcao aos alunos*; APOINST e AEC com o tipo *Apoio a Instrucao*;
+- **responsavel que nao casa com o cadastro** vira PENDENCIA do lote (FR-016), nunca texto livre
+  gravado em silencio;
 - **celula digitada por cima da formula na IMPRESSAO** e o DSA assinado: vale, salvo as que as
   decisoes da turma recusam;
 - **curso por competencias**: aula por disciplina, sem UE, com o topico da planilha.
@@ -52,7 +57,14 @@ _REGRAS_POR_DESCRICAO: tuple[tuple[tuple[str, ...], str, str | None], ...] = (
     (("ESTUDO INDIVIDUAL", "TEMPO PARA ESTUDO"), "estudo_individual", "Estudo Individual"),
     # APOINST (apoio a instrucao: pratica de navegacao, posicionamento de sinais) sob a sigla de tempo reserva —
     # pela descricao do catalogo da planilha (decisao de 06/10/2026, item 4 do lote da onda 2).
-    (("APOINST", "APOIO A INSTRUCAO"), "aec", "Atividade Extracurricular"),
+    # Spec 014 (FR-021, D-2): o tipo passa a ser «Apoio à Instrução», da mesma categoria AEC.
+    (("APOINST", "APOIO A INSTRUCAO"), "aec", "Apoio à Instrução"),
+    # Spec 014 (FR-021, D-AA-12): Apoio Individualizado — alunos especificos, fora da CHT. Vem ANTES de
+    # «INSTRUCAO» (palestra) e de «ADMINISTRACAO», que antes engoliam a Monitoria como TAD.
+    (("MONITORIA",), "apoio", "Monitoria"),
+    (("PORTUGUES PARA ESTRANGEIRO", "PORTUGUES"), "apoio", "Português para Estrangeiros"),
+    (("BDA",), "apoio", "BDA"),
+    (("BDF",), "apoio", "BDF"),
     (("VISITA",), "aec", "Visita Técnica"),
     (("FERIADO", "LICENCA", "ROTINA DE DOMINGO", "RECESSO", "PONTO FACULTATIVO"), "dia_parado", None),
     (("PALESTRA", "COLOQUIO", "SEMINARIO", "INSTRUCAO"), "aec", "Palestra"),
@@ -60,12 +72,33 @@ _REGRAS_POR_DESCRICAO: tuple[tuple[tuple[str, ...], str, str | None], ...] = (
     (("CERIMONIA", "FORMATURA", "SOLENIDADE"), "tad", "Evento/Cerimônia"),
     (("TEMPO RESERVA",), "tr", "Tempo Reserva"),
     (("EXTRA CLASSE", "EXTRACLASSE", "ASSINCRONA"), "aec", "Atividade Extracurricular"),
-    (("MONITORIA", "RECEPCAO", "ADMINISTRACAO", "DEPARTAMENTO DE ALUNOS"), "tad", "Administração"),
+    # Spec 014 (FR-021, Q-7): Recepcao sai da tupla da Monitoria e ganha tipo proprio; Departamento de
+    # Alunos continua Administracao.
+    (("RECEPCAO",), "tad", "Recepção aos alunos"),
+    (("ADMINISTRACAO", "DEPARTAMENTO DE ALUNOS"), "tad", "Administração"),
     # DOEP (decisao do piloto, generalizada na onda 2): palestra/oficina do Departamento de Orientacao.
     (("DOEP", "OFICINA"), "aec", "Palestra"),
 )
 
 MARCA_DE_DEMAIS = " Demais instrutores: "
+
+# Spec 014 (FR-024): a descricao do dia parado decide o TIPO de parada (`config_listas.tipos_parada`).
+# A primeira que casar vale; o que nao casar e NT (parada de turma por outro motivo).
+_TIPO_DE_PARADA_POR_DESCRICAO: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("LICENCA DE PAGAMENTO", "LICENCA PAGAMENTO"), "LP"),
+    (("LICENCA",), "LA"),
+    (("FERIADO",), "FR"),
+    (("RECESSO",), "RC"),
+    (("PONTO FACULTATIVO",), "PF"),
+)
+
+
+def tipo_de_parada(descricao: str) -> str:
+    texto = normalizar(descricao)
+    for palavras, sigla in _TIPO_DE_PARADA_POR_DESCRICAO:
+        if any(p in texto for p in palavras):
+            return sigla
+    return "NT"
 
 
 def classificar_pela_descricao(disciplina: str, topico: str) -> tuple[str, str | None] | None:
@@ -97,26 +130,35 @@ class Resolvido:
     avaliacoes: list[dict] = field(default_factory=list)
     atividades: list[dict] = field(default_factory=list)
     calendario: list[dict] = field(default_factory=list)
+    # Spec 014 (FR-024): o dia parado so desta turma — `dias_parados`, previsto, codigo DSAP-…-P.
+    dias_parados: list[dict] = field(default_factory=list)
     pendencias: list[Pendencia] = field(default_factory=list)
     alertas: list[str] = field(default_factory=list)
     erros_de_planilha: list[str] = field(default_factory=list)
+    # Spec 014 (FR-036.1, §11-B): os erros com as cinco colunas da lista entregue aos operadores —
+    # disciplina · o que diverge · planilha · curriculo · o que o sistema fez.
+    erros_tabelados: list[dict] = field(default_factory=list)
     classificadas: dict[str, str] = field(default_factory=dict)  # chave → como foi classificada
     digitadas_adotadas: list[str] = field(default_factory=list)
     instrutores: dict[str, dict] = field(default_factory=dict)
     insumo_epico_8: list[str] = field(default_factory=list)
+    # A3.2 (14/10/2026): o codigo da linha que ficou FORA por pendencia de responsavel. Se ela ja esta no
+    # banco, a rodada nao a toca (nem atualiza, nem inativa) ate a decisao.
+    pendentes: set[str] = field(default_factory=set)
 
     def codigos(self) -> dict[str, list[str]]:
         return {
             "registros_aula": [a["codigo"] for a in self.aulas],
             "avaliacoes": [a["codigo"] for a in self.avaliacoes],
             "atividades_nao_letivas": [a["codigo"] for a in self.atividades],
+            "dias_parados": [d["codigo"] for d in self.dias_parados],
         }
 
     def impressao_digital(self) -> str:
         sem_id = lambda linhas: [{k: v for k, v in l.items() if not k.endswith("_id")} for l in linhas]  # noqa: E731
         corpo = json.dumps(
             {"aulas": sem_id(self.aulas), "avaliacoes": sem_id(self.avaliacoes),
-             "atividades": sem_id(self.atividades),
+             "atividades": sem_id(self.atividades), "dias_parados": self.dias_parados,
              # `ja_no_banco` e ESTADO do destino, nao plano: no local o dia ja entrou, no remoto ainda nao.
              "calendario": [{k: v for k, v in c.items() if k != "ja_no_banco"} for c in self.calendario],
              "pendencias": sorted(p.detalhe for p in self.pendencias if p.bloqueia)},
@@ -343,7 +385,23 @@ def resolver(
                 if bruto.strip() not in VAZIOS:
                     instrutor = casar(bruto.split("/")[0], bloco, obrigatorio=False)
                     if instrutor is None:
-                        externo = " ".join(bruto.split())
+                        texto = " ".join(bruto.split())
+                        # Spec 014, FR-016: o texto que nao casa com o cadastro NAO e gravado como externo em
+                        # silencio. Ou o lote ja decidiu (`responsavel_externo_aceito`: entidade ou palestrante),
+                        # ou vira PENDENCIA com as tres saidas (casar com instrutor, externo, cadastrar).
+                        if normalizar(texto) in {normalizar(t) for t in decisoes.get("responsavel_externo_aceito", [])}:
+                            externo = texto
+                        else:
+                            # Decisao A3.2 (Bernardo Villas Boas, 14/10/2026): a pendencia trava SO A LINHA. A
+                            # atividade fica fora do plano e e listada; o resto da turma entra. Vale nos dois
+                            # bancos — no local tambem —, para o ensaio do local ser o plano do remoto.
+                            pend("responsavel_sem_decisao",
+                                 f"responsavel «{texto}» da atividade {bloco.cod}+{bloco.ue} nao casa com o cadastro: "
+                                 "decidir no lote — casar com instrutor (`instrutor_por_texto`), aceitar como entidade ou "
+                                 "palestrante externo (`responsavel_externo_aceito`) ou cadastrar a pessoa",
+                                 bloco.tempos, bloqueia=False, chave=normalizar(texto))
+                            r.pendentes.add(codigo(bloco, "N"))
+                            continue
             r.atividades.append({
                 "codigo": codigo(bloco, "N"),
                 "categoria_normativa": CATEGORIAS[tipo],
@@ -463,6 +521,8 @@ def resolver(
 
     _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura, codigo=codigo, procedencia=procedencia)
     _resolver_dias_parados(r, dias_parados, dias_globais, leitura, codigo, procedencia, categoria_do_subtipo)
+    _aula_em_dia_parado(r)
+    _ch_contra_o_curriculo(r, leitura, decisoes, ref)
     _conferencias_internas(r, leitura, decisoes, pend, set(disciplina_por_cod))
     _tetos(r, ref, pend)
     _calendario_do_banco(r, ref)
@@ -537,24 +597,48 @@ def _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura, 
 
 
 def _resolver_dias_parados(r, dias_parados, dias_globais, leitura, codigo, procedencia, categoria_do_subtipo) -> None:
-    """Dia parado de TODAS as turmas e calendario global; so de algumas, vira TAD da turma."""
+    """Dia parado de TODAS as turmas e calendario global; so de algumas, vira DIA PARADO da turma.
+
+    ⚠️ SPEC 014 (FR-024, FR-025, FR-025.5, D-3 do plan): ate aqui o dia parado so desta turma virava
+       TAD — e inflava o TAD (D-AA-12). Agora vai para `dias_parados`, PREVISTO (a planilha o planejou),
+       com o codigo estavel `DSAP-<turma>-L<linha>-P` e o tipo de parada pela descricao. A linha TAD
+       antiga (`…-N`) sai pela regra de «saiu da planilha», com a marca de reclassificacao.
+    """
     for dia, blocos in sorted(dias_parados.items()):
         descricao = blocos[0][1]["descricao"]
         if dia in dias_globais or any(regra.get("forcar") for _b, regra in blocos):
             r.calendario.append({"data": dia, "descricao": descricao, "tempos": sum(b.tempos for b, _ in blocos)})
             continue
         for bloco, regra in blocos:
-            r.atividades.append({
-                "codigo": codigo(bloco, "N"),
-                "categoria_normativa": "TAD",
+            r.dias_parados.append({
+                "codigo": codigo(bloco, "P"),
                 "data": dia,
-                "subtipo": regra.get("subtipo") or "Administração",
-                "descricao": regra["descricao"],
                 "ta_inicial": bloco.ta_inicial,
-                "tempos_consumidos": bloco.tempos,
-                "local": None, "instrutor": None, "instrutor_id": None, "responsavel_externo": None,
-                "observacoes": procedencia(bloco) + " Dia parado so desta turma: nao e calendario global.",
+                "tempos": bloco.tempos,
+                "tipo_parada": regra.get("tipo_parada") or tipo_de_parada(regra["descricao"]),
+                "motivo": regra["descricao"],
+                "prevista": True,
             })
+
+
+def _aula_em_dia_parado(r) -> None:
+    """FR-036.1 (spec 014, §11-B): aula no MESMO DIA que a planilha marcou parado entra como FATO (a
+    planilha manda) e vai para a lista de erros de planilha — sem abortar a carga.
+
+    ⚠️ E POR DIA, NAO POR TEMPO: uma celula da planilha tem uma chave so, entao aula e parada nunca dividem
+       o mesmo TA; o erro que a §11-B descreve e o dia marcado parado que ainda assim teve aula."""
+    for a in r.aulas:
+        fim = a["ta_inicial"] + a["tempos_consumidos"] - 1
+        for p in r.dias_parados:
+            if p["data"] == a["data"]:
+                r.erros_tabelados.append({
+                    "disciplina": a["disciplina"],
+                    "diverge": f"aula em {a['data']} nos tempos {a['ta_inicial']}–{fim}, no dia que a mesma planilha marca parado",
+                    "planilha": f"aula {a.get('ue') or a['disciplina']} e parada {p['tipo_parada']} — {p['motivo']} (tempos {p['ta_inicial']}–{p['ta_inicial'] + p['tempos'] - 1})",
+                    "curriculo": "—",
+                    "fez": "a aula entrou como fato; a parada tambem",
+                })
+                break
 
 
 def _conferencias_internas(r, leitura, decisoes, pend, disciplinas_do_curso) -> None:
@@ -651,3 +735,40 @@ def _calendario_do_banco(r, ref) -> None:
     dias = {a["data"] for a in r.aulas} | {a["data_avaliacao"] for a in r.avaliacoes} | {a["data"] for a in r.atividades if a["categoria_normativa"] != "Estudo_Individual"}
     for dia in sorted(dias & set(bloqueados)):
         r.alertas.append(f"{dia}: ha lancamento num dia que o calendario do banco marca como dia inteiro («{bloqueados[dia]['descricao']}»)")
+
+
+def _ch_contra_o_curriculo(r, leitura, decisoes, ref) -> None:
+    """FR-036.1 (spec 014, §11-B): a CH PREVISTA da planilha (CONTROLE, por disciplina; BD DISCIPLINAS, por
+    UE) contra a do CURRICULO no banco. Diverge = erro de planilha; o sistema NAO muda o catalogo (D-CUR-1)."""
+    mapa = decisoes.get("disciplinas", {})
+    por_cod = {d["cod"]: d for d in ref["disciplinas"]}
+    for cod_planilha, (prevista, _cumprida) in sorted(leitura.controle.items()):
+        disciplina = por_cod.get(mapa.get(cod_planilha, cod_planilha))
+        if disciplina is None or prevista is None or disciplina.get("ch") is None:
+            continue
+        if int(prevista) != int(disciplina["ch"]):
+            r.erros_tabelados.append({
+                "disciplina": disciplina["cod"],
+                "diverge": "CH da disciplina",
+                "planilha": f"{int(prevista)} TA (CONTROLE)",
+                "curriculo": f"{int(disciplina['ch'])} TA",
+                "fez": "nada no catalogo (D-CUR-1); os lancamentos entraram como estao",
+            })
+    ue_por = {(u["disciplina_id"], str(u["numero"])): u for u in ref["ues"]}
+    for (cod, ue), linha in sorted(leitura.catalogo.items()):
+        if linha.ch is None or not ue.isdigit():
+            continue
+        disciplina = por_cod.get(mapa.get(cod, cod))
+        if disciplina is None:
+            continue
+        u = ue_por.get((disciplina["id"], ue))
+        if u is None or u.get("ch") is None:
+            continue
+        if int(linha.ch) != int(u["ch"]):
+            r.erros_tabelados.append({
+                "disciplina": disciplina["cod"],
+                "diverge": f"CH da UE {ue}",
+                "planilha": f"{int(linha.ch)} TA (BD DISCIPLINAS)",
+                "curriculo": f"{int(u['ch'])} TA",
+                "fez": "nada no catalogo (D-CUR-1)",
+            })

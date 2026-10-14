@@ -27,7 +27,8 @@
 | CI verde | `7c86a05` (PR #46), três blocos |
 | Aprovação de Bernardo | ✅ 14/10/2026 (A1.1 e A1.2) |
 | Backup | `remoto-20261014-082019.sql` (3.667 KB) |
-| Passo 4 — backup × cópia do antes/depois | `diff` com `remoto-20261014-021627.sql`: **só** a linha `estrict` do `pg_dump` (chave aleatória da sessão); nenhuma linha de dado. O antes/depois aprovado vale |
+| Passo 4 — backup × cópia do antes/depois | `diff` com `remoto-20261014-021627.sql`: **só** a linha `
+estrict` do `pg_dump` (chave aleatória da sessão); nenhuma linha de dado. O antes/depois aprovado vale |
 | Dry-run | só as quatro, a partir do ramo `db/EPICO-9-banco-da-leva-1` (que não tem as do PR 1.1) |
 | Push | `supabase db push --linked`, saída 0, as quatro na ordem |
 | Migrations dos dois lados | 61 no remoto, as quatro novas com `remote` preenchido |
@@ -70,7 +71,26 @@ linha dele). Desfeito: 19 de 19.
 
 ## PR 3 — rodada da sincronização no remoto
 
-[pendente] — proibida na implementação noturna.
+✅ **APLICADA NO REMOTO em 14/10/2026**, com as decisões A3.1 a A3.5 de Bernardo Villas Boas e a exportação nova
+`2026-10-14T1149`. Backup imediatamente antes: **`remoto-20261014-124318.sql`**. Plano do remoto = plano do local
+nas nove turmas; 1ª rodada 127 mudanças, 2ª **0**; catálogo igual; dados das nove turmas **iguais** no local e no
+remoto. Sem migration. Relatório: `antes-depois/rodada-do-pr3-no-remoto.md`. A medida anterior, só no local e com a
+exportação de 06/10, fica em `antes-depois/rodada-do-pr3-no-local.md`.
+
+Pré-requisitos, nesta ordem:
+
+1. As decisões **A3.1 a A3.5** de `aprovacoes-pendentes.md`. Sem a A3.2 (os 43 textos de responsável), a
+   rodada para **todas** as nove turmas. Sem a A3.3, para CAHO, C-Ap-FR e C-Ap-HN, que têm lançamento
+   feito na tela.
+2. O PR 3 com CI verde (o código da rodada é o do ramo, não o da `main`).
+3. A exportação **nova** das planilhas de `fontes.json` para `planilhas-de-origem/rodadas/<carimbo>/`.
+4. O ensaio no **local**, recriado por `dado_do_remoto`, com a exportação nova e `--turmas` nas nove
+   (sem a C-Exp-Obs-ME, D-SYNC-1); depois, a impressão digital do plano.
+5. O backup `--somente-copia`, citado aqui.
+6. A rodada no remoto: plano idêntico ao do local, gravação, leitura de volta, segunda rodada com zero
+   mudança, catálogo igual (o próprio script sai com 7 se mudar).
+7. Registrar aqui e em `scripts/carga_dsa/turmas-carregadas.md` o TAD de cada turma antes → depois e a
+   SC-001 remedida.
 
 ## Leva 2 — E-4, E-5, D-5, D-6, D-4, D-7 e a rodada do PR 6
 

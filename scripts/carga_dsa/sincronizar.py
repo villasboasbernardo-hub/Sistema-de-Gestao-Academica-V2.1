@@ -22,28 +22,39 @@ O QUE UMA RODADA FAZ, por turma, numa transacao so:
    o remoto, qualquer pendencia que bloqueia PARA a turma inteira: cadastro so entra pelo lote de
    decisoes aprovado.
 
-⚠️ LANCAMENTO FEITO NA TELA, NUMA TURMA SINCRONIZADA, PARA A TURMA. Ate a virada ninguem lanca no
-   sistema nas turmas da lista; se houver linha que nao e do ETL nem desta carga, quem decide e gente.
+⚠️ O QUE A TELA FEZ VENCE A PLANILHA *(decisoes A3.3 e A3.4 de Bernardo Villas Boas, 14/10/2026)*:
+   - VIRADA POR TURMA: `fontes.json` pode trazer `virada` (AAAA-MM-DD) na turma. Dali em diante o SISTEMA
+     e a fonte dela: a rodada so cobre as datas ANTERIORES, e nao toca em nada da virada para frente.
+   - A linha da planilha EDITADA NA TELA (`editado_por` preenchido — so a sessao o carimba; a carga roda
+     sem sessao) e a avaliacao CANCELADA na tela nao sao desfeitas: saem do plano e vao para a lista
+     «planilha diverge do sistema», na pasta da rodada (fora do git), para os operadores.
+   - O lancamento NASCIDO na tela fica como esta; a linha da planilha no mesmo tempo sai do plano e vai
+     para a mesma lista. Ele ja NAO para a turma.
+   - A pendencia de responsavel (A3.2) trava SO A LINHA: ela fica fora e listada, o resto entra.
 
 SAIDA: 0 passou · 2 planilha ou rodada · 3 pendencia que bloqueia · 4 recusa do banco ·
-5 a conferencia apos a escrita divergiu · 6 o plano do remoto nao e o do local.
+5 a conferencia apos a escrita divergiu · 6 o plano do remoto nao e o do local ·
+7 o catalogo (CH de disciplina ou UE) mudou durante a execucao (spec 014, SC-008).
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import date
 from pathlib import Path
 
 from scripts.carga_dsa import banco, planilha, relogio
 from scripts.carga_dsa.banco import lit
-from scripts.carga_dsa.resolver import MARCA_DE_DEMAIS, Pendencia, Resolvido, classificar_pela_descricao, resolver, slug
+from scripts.carga_dsa.resolver import MARCA_DE_DEMAIS, Pendencia, Resolvido, classificar_pela_descricao, normalizar, resolver, slug
 
 AQUI = Path(__file__).parent
 MARCA_DO_ETL = "[SUBSTITUIDO PELA PLANILHA DE CONTROLE]"
 MARCA_DE_SAIDA = "[SAIU DA PLANILHA DE CONTROLE]"
+# Spec 014 (FR-022, D-3 do plan): a linha TAD que era dia parado sai com esta marca e entra em `dias_parados`.
+MARCA_DE_RECLASSIFICACAO = "[RECLASSIFICADO PELA SPEC 014]"
 SENTINELA = "ENSAIO_DESFEITO"
 
 # Os campos COMPARADOS de cada tabela, em chaves naturais. `observacoes` fica de fora de proposito:
@@ -54,6 +65,7 @@ CAMPOS = {
                    "nome_fiscal_externo", "metodologia", "local", "conteudo_resumo", "data_vista_prova", "ta_inicial_vista",
                    "tempos_consumidos_vista", "local_vista"),
     "atividades": ("categoria_normativa", "data", "subtipo", "descricao", "ta_inicial", "tempos_consumidos", "local", "instrutor", "responsavel_externo"),
+    "dias_parados": ("data", "ta_inicial", "tempos", "tipo_parada", "motivo", "prevista"),
 }
 
 
@@ -61,25 +73,127 @@ def _demais(linha: dict) -> str:
     return linha["observacoes"].split(MARCA_DE_DEMAIS, 1)[1] if MARCA_DE_DEMAIS in linha.get("observacoes", "") else ""
 
 
-def diferencas(res: Resolvido, atuais: dict) -> dict:
-    """Plano × o que ja esta no banco: novas, mudadas (campo a campo), reativadas e as que saem."""
+DATA_DE = {"aulas": "data", "avaliacoes": "data_avaliacao", "atividades": "data", "dias_parados": "data"}
+TABELA_DE = {"aulas": "registros_aula", "avaliacoes": "avaliacoes", "atividades": "atividades_nao_letivas", "dias_parados": "dias_parados"}
+
+
+def _campos_que_diferem(nome: str, atual: dict, linha: dict) -> list[tuple[str, object, object]]:
+    esperado = {**linha, "demais": _demais(linha)} if nome == "aulas" else linha
+    return [(c, atual.get(c), esperado.get(c)) for c in CAMPOS[nome] if (atual.get(c) or None) != (esperado.get(c) or None)]
+
+
+def _faixa(data: object, ta: object, tempos: object) -> tuple[str, int, int]:
+    """(dia, primeiro TA, ultimo TA); sem TA, o dia inteiro."""
+    if ta is None:
+        return str(data)[:10], 1, 99
+    return str(data)[:10], int(ta), int(ta) + max(int(tempos or 1), 1) - 1
+
+
+def proteger(res: Resolvido, ref: dict, virada: str | None) -> tuple[dict[str, set[str]], list[dict]]:
+    """Decisoes A3.3 e A3.4 (Bernardo Villas Boas, 14/10/2026): o que a sincronizacao NAO toca.
+
+    Tira do plano, NO LUGAR, o que e da virada para frente, o que foi editado ou cancelado na tela e o que
+    cai no mesmo tempo de um lancamento nascido na tela. Devolve, por tabela, os codigos que o banco ja
+    tem e que a rodada nao pode atualizar nem inativar, e a lista «planilha diverge do sistema».
+    """
+    atuais = ref["atuais"]
+    planos = {"aulas": res.aulas, "avaliacoes": res.avaliacoes, "atividades": res.atividades, "dias_parados": res.dias_parados}
+    protegidas: dict[str, set[str]] = {nome: set() for nome in planos}
+    diverge: list[dict] = []
+
+    def anotar(nome: str, codigo: str, data: object, motivo: str, campos: list | None = None) -> None:
+        diverge.append({"tabela": TABELA_DE[nome], "codigo": codigo, "data": str(data)[:10], "motivo": motivo,
+                        "campos": "; ".join(f"{c}: sistema «{a}» × planilha «{n}»" for c, a, n in (campos or []))})
+
+    # 1. A virada: da data para frente o sistema e a fonte; nada da planilha entra, nada do banco sai.
+    if virada:
+        for nome, plano in planos.items():
+            plano[:] = [l for l in plano if str(l[DATA_DE[nome]])[:10] < virada]
+            protegidas[nome] |= {a["codigo"] for a in atuais.get(nome, []) if str(a[DATA_DE[nome]])[:10] >= virada}
+        ja = {a["codigo"] for a in atuais.get("avaliacoes", [])}
+        for a in list(res.avaliacoes):
+            if a.get("data_vista_prova") and str(a["data_vista_prova"])[:10] >= virada:
+                if a["codigo"] in ja:  # prova antes, vista depois: a linha ja existe e fica com o sistema
+                    protegidas["avaliacoes"].add(a["codigo"])
+                    res.avaliacoes.remove(a)
+                else:  # prova nova antes da virada: entra sem a vista, que e do sistema
+                    a.update(data_vista_prova=None, ta_inicial_vista=None, tempos_consumidos_vista=None, local_vista=None)
+
+    # 1b. A linha que ficou FORA por pendencia de responsavel (A3.2) e ja esta no banco: intocada ate a decisao.
+    protegidas["atividades"] |= {a["codigo"] for a in atuais.get("atividades", []) if a["codigo"] in getattr(res, "pendentes", set())}
+
+    # 2. Editada na tela (A3.4) ou avaliacao cancelada na tela (FR-049): vence a planilha.
+    for nome, plano in planos.items():
+        por_codigo = {a["codigo"]: a for a in atuais.get(nome, [])}
+        protegidas[nome] |= {c for c, a in por_codigo.items() if a.get("na_tela") or a.get("status") == "cancelada_na_tela"}
+        for linha in list(plano):
+            atual = por_codigo.get(linha["codigo"])
+            if atual is None or linha["codigo"] not in protegidas[nome]:
+                continue
+            plano.remove(linha)
+            if atual.get("status") == "cancelada_na_tela":
+                anotar(nome, linha["codigo"], linha[DATA_DE[nome]], "a planilha tem a avaliacao; o sistema a CANCELOU na tela")
+            elif atual.get("status") != "ativo":
+                anotar(nome, linha["codigo"], linha[DATA_DE[nome]], "a planilha tem a linha; o sistema a INATIVOU na tela")
+            else:
+                campos = _campos_que_diferem(nome, atual, linha)
+                if campos:
+                    anotar(nome, linha["codigo"], linha[DATA_DE[nome]], "linha EDITADA na tela; o sistema manteve o valor dele", campos)
+
+    # 3. O dia parado cuja linha TAD antiga (…-N) foi editada na tela: a TAD fica, o dia parado nao entra.
+    for d in list(res.dias_parados):
+        if d["codigo"][:-1] + "N" in protegidas["atividades"]:
+            res.dias_parados.remove(d)
+            anotar("dias_parados", d["codigo"], d["data"], "a planilha marca o dia parado; a linha da atividade foi editada na tela e fica")
+
+    # 4. Lancamento NASCIDO na tela antes da virada: a linha da planilha no mesmo tempo sai do plano.
+    ocupado = [(_faixa(l["data"], l["ta_inicial"], l["tempos"]), l["codigo"]) for l in ref.get("de_tela_linhas", []) if l.get("data")]
+    if ocupado:
+        for nome, plano in planos.items():
+            for linha in list(plano):
+                if nome == "dias_parados":
+                    faixas = [_faixa(linha["data"], linha["ta_inicial"], linha["tempos"])]
+                elif nome == "avaliacoes":
+                    faixas = [_faixa(linha["data_avaliacao"], linha["ta_inicial"], linha["tempos_consumidos"])]
+                    if linha.get("data_vista_prova"):
+                        faixas.append(_faixa(linha["data_vista_prova"], linha["ta_inicial_vista"], linha["tempos_consumidos_vista"]))
+                else:
+                    faixas = [_faixa(linha["data"], linha["ta_inicial"], linha["tempos_consumidos"])]
+                choque = [c for (dia, i, f), c in ocupado for (d2, i2, f2) in faixas if dia == d2 and i <= f2 and i2 <= f]
+                if choque:
+                    plano.remove(linha)
+                    protegidas[nome].add(linha["codigo"])
+                    anotar(nome, linha["codigo"], linha[DATA_DE[nome]],
+                           f"no mesmo tempo ha lancamento feito na tela ({', '.join(sorted(set(choque)))}); fica o do sistema")
+    return protegidas, diverge
+
+
+def diferencas(res: Resolvido, atuais: dict, protegidas: dict[str, set[str]] | None = None) -> dict:
+    """Plano × o que ja esta no banco: novas, mudadas (campo a campo), reativadas e as que saem.
+
+    `protegidas` (A3.3/A3.4): o que a rodada nao toca nunca entra em «saem»."""
+    protegidas = protegidas or {}
     saida = {}
-    for nome, plano in (("aulas", res.aulas), ("avaliacoes", res.avaliacoes), ("atividades", res.atividades)):
-        por_codigo = {a["codigo"]: a for a in atuais[nome]}
+    for nome, plano in (("aulas", res.aulas), ("avaliacoes", res.avaliacoes), ("atividades", res.atividades),
+                        ("dias_parados", res.dias_parados)):
+        por_codigo = {a["codigo"]: a for a in atuais.get(nome, [])}
         novas, mudadas, reativadas = [], [], []
         for linha in plano:
             atual = por_codigo.get(linha["codigo"])
             if atual is None:
                 novas.append(linha["codigo"])
                 continue
-            esperado = {**linha, "demais": _demais(linha)} if nome == "aulas" else linha
-            campos = [(c, atual.get(c), esperado.get(c)) for c in CAMPOS[nome] if (atual.get(c) or None) != (esperado.get(c) or None)]
+            campos = _campos_que_diferem(nome, atual, linha)
             if campos:
                 mudadas.append((linha["codigo"], campos))
+            elif atual["status"] == "cancelada_na_tela":
+                # Spec 014, FR-049 e D-AA-10: a cancelada pela TELA continua cancelada — nao e reativada.
+                continue
             elif atual["status"] != "ativo":
                 reativadas.append(linha["codigo"])
         do_plano = {l["codigo"] for l in plano}
-        saem = sorted(c for c, a in por_codigo.items() if c not in do_plano and a["status"] == "ativo")
+        saem = sorted(c for c, a in por_codigo.items()
+                      if c not in do_plano and a["status"] == "ativo" and c not in protegidas.get(nome, set()))
         saida[nome] = {"novas": novas, "mudadas": mudadas, "reativadas": reativadas, "saem": saem}
     return saida
 
@@ -173,27 +287,33 @@ def sql_do_relogio(res: Resolvido, planos: list[dict], ensaio: bool) -> str:
     return "".join(p)
 
 
-def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | None, ensaio: bool, relogios: list[dict] | None = None) -> str:
+def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | None, ensaio: bool, relogios: list[dict] | None = None,
+                 virada: str | None = None, protegidas: dict[str, set[str]] | None = None) -> str:
     """Um bloco `DO` por turma — atomico. No ensaio ele termina levantando a sentinela.
 
     ⚠️ NENHUM CODIGO SAI DE SEQUENCIA (gotcha 6: sequencia nao obedece a `ROLLBACK`): o ensaio nao
-       consome numero. A unica excecao e `feriados.codigo`, calculado por `max + 1` dentro do bloco.
+       consome numero. A unica excecao e `feriados.codigo`, que desde a spec 014 (E-2) sai do DEFAULT
+       `FER-` — o ensaio pode consumir um numero da sequencia, o que so deixa buraco, nunca colisao.
     """
     t, c, autor = lit(res.turma["id"]) + "::uuid", lit(res.turma["curso_id"]) + "::uuid", lit(res.autor["auth_user_id"]) + "::uuid"
     prefixo = f"DSAP-{slug(res.turma['codigo'])}-L"
     p: list[str] = []
+    # A3.3: o ETL so sai ANTES da virada; da virada para frente nada e tocado.
+    antes = (lambda col: f" and {col} < {lit(virada)}::date") if virada else (lambda col: "")  # noqa: E731
+    protegidas = protegidas or {}
+    intocadas = lambda nome: "array[" + ", ".join(lit(x) for x in sorted(protegidas.get(nome, set()))) + "]::text[]"  # noqa: E731
 
     # 1. substituir, nao somar
     p.append(f"""
   update public.registros_aula set status = 'inativo', observacoes = concat_ws(' ', {lit(MARCA_DO_ETL)}, observacoes)
-   where turma_id = {t} and origem_migracao_v1 is not null and status = 'ativo';
+   where turma_id = {t} and origem_migracao_v1 is not null and status = 'ativo'{antes('data')};
   get diagnostics n := row_count; k := k || jsonb_build_object('etl_aulas', n);
   update public.atividades_nao_letivas set status = 'inativo', observacoes = concat_ws(' ', {lit(MARCA_DO_ETL)}, observacoes)
-   where turma_id = {t} and origem_migracao_v1 is not null and status = 'ativo';
+   where turma_id = {t} and origem_migracao_v1 is not null and status = 'ativo'{antes('data')};
   get diagnostics n := row_count; k := k || jsonb_build_object('etl_atividades', n);
   update public.avaliacoes set observacoes = concat_ws(' ', {lit(MARCA_DO_ETL)} || ' (status anterior: ' || status::text || ')', observacoes),
          status = 'cancelada'
-   where turma_id = {t} and origem_migracao_v1 is not null and status <> 'cancelada';
+   where turma_id = {t} and origem_migracao_v1 is not null and status <> 'cancelada'{antes('data_avaliacao')};
   get diagnostics n := row_count; k := k || jsonb_build_object('etl_avaliacoes', n);""")
 
     # 1b. o relogio do curso: com o ETL ja fora do caminho e antes de a planilha entrar (ordem do item 3b)
@@ -250,10 +370,14 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
        metodologia = excluded.metodologia, local = excluded.local, data_vista_prova = excluded.data_vista_prova,
        ta_inicial_vista = excluded.ta_inicial_vista, tempos_consumidos_vista = excluded.tempos_consumidos_vista,
        local_vista = excluded.local_vista, observacoes = excluded.observacoes,
-       status = case when r.status = 'cancelada' then 'pendente' else r.status end
+       -- Spec 014 (FR-049, D-AA-10): so volta a `pendente` a que a PROPRIA sincronizacao tirou; a cancelada
+       -- pela tela continua cancelada (era o defeito da `DSAP-C-EXP-OBS-ME-2026-L206-V`).
+       status = case when r.status = 'cancelada' and coalesce(r.observacoes, '') like {lit('%' + MARCA_DE_SAIDA + '%')}
+                     then 'pendente' else r.status end
      where (r.disciplina_id, r.tipo_avaliacao, r.data_avaliacao, r.ta_inicial, r.tempos_consumidos, r.instrutor_responsavel_id,
             r.fiscal_id, r.nome_fiscal_externo, r.conteudo_resumo, r.metodologia, r.local, r.data_vista_prova,
-            r.ta_inicial_vista, r.tempos_consumidos_vista, r.local_vista, r.status = 'cancelada')
+            r.ta_inicial_vista, r.tempos_consumidos_vista, r.local_vista,
+            r.status = 'cancelada' and coalesce(r.observacoes, '') like {lit('%' + MARCA_DE_SAIDA + '%')})
        is distinct from
            (excluded.disciplina_id, excluded.tipo_avaliacao, excluded.data_avaliacao, excluded.ta_inicial, excluded.tempos_consumidos,
             excluded.instrutor_responsavel_id, excluded.fiscal_id, excluded.nome_fiscal_externo, excluded.conteudo_resumo,
@@ -288,30 +412,66 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
   ) select count(*) filter (where nova), count(*) filter (where not nova) into n, m from gravadas;
   k := k || jsonb_build_object('atividades_novas', n, 'atividades_atualizadas', m);""")
 
+    if res.dias_parados:
+        p.append(f"""
+  with dados(codigo, data, ta, tempos, tipo, motivo, prevista) as (values
+    {_valores([[d["codigo"], d["data"], d["ta_inicial"], d["tempos"], d["tipo_parada"], d["motivo"], d["prevista"]] for d in res.dias_parados])}
+  ), gravadas as (
+    insert into public.dias_parados as r (codigo, turma_id, data, ta_inicial, tempos, tipo_parada_id, motivo, prevista, criado_por)
+    select d.codigo, {t}, d.data::date, d.ta::smallint, d.tempos::smallint, c.id, d.motivo, d.prevista::boolean, {autor}
+      from dados d join public.config_listas c on c.lista = 'tipos_parada' and c.valor = d.tipo
+    on conflict (codigo) do update set
+       data = excluded.data, ta_inicial = excluded.ta_inicial, tempos = excluded.tempos,
+       tipo_parada_id = excluded.tipo_parada_id, motivo = excluded.motivo, prevista = excluded.prevista, status = 'ativo'
+     where (r.data, r.ta_inicial, r.tempos, r.tipo_parada_id, r.motivo, r.prevista, r.status::text)
+       is distinct from
+           (excluded.data, excluded.ta_inicial, excluded.tempos, excluded.tipo_parada_id, excluded.motivo, excluded.prevista, 'ativo')
+    returning (xmax = 0) as nova
+  ) select count(*) filter (where nova), count(*) filter (where not nova) into n, m from gravadas;
+  if (select count(*) from (values {', '.join('(' + lit(d['tipo_parada']) + ')' for d in res.dias_parados)}) as v(tipo)
+       where not exists (select 1 from public.config_listas c where c.lista = 'tipos_parada' and c.valor = v.tipo)) > 0 then
+    raise exception 'Tipo de parada fora de config_listas.tipos_parada no plano da turma.';
+  end if;
+  k := k || jsonb_build_object('dias_parados_novos', n, 'dias_parados_atualizados', m);""")
+
     # 3. inativar o que saiu da planilha
     codigos = res.codigos()
-    for tabela, chave, comando in (
-        ("registros_aula", "aulas_que_sairam", "status = 'inativo'"),
-        ("atividades_nao_letivas", "atividades_que_sairam", "status = 'inativo'"),
-        ("avaliacoes", "avaliacoes_que_sairam", "status = 'cancelada'"),
+    # Spec 014 (FR-022): a atividade TAD da mesma linha que agora e dia parado sai com a marca de reclassificacao.
+    reclassificadas = [c[:-1] + "N" for c in codigos["dias_parados"]]
+    if reclassificadas:
+        p.append(f"""
+  update public.atividades_nao_letivas set status = 'inativo', observacoes = concat_ws(' ', {lit(MARCA_DE_RECLASSIFICACAO)}, observacoes)
+   where turma_id = {t} and status = 'ativo' and codigo = any (array[{", ".join(lit(x) for x in reclassificadas)}]::text[])
+     and not (codigo = any ({intocadas('atividades')}));
+  get diagnostics n := row_count; k := k || jsonb_build_object('reclassificadas_para_dia_parado', n);""")
+    for tabela, nome, chave, comando in (
+        ("registros_aula", "aulas", "aulas_que_sairam", "status = 'inativo'"),
+        ("atividades_nao_letivas", "atividades", "atividades_que_sairam", "status = 'inativo'"),
+        ("avaliacoes", "avaliacoes", "avaliacoes_que_sairam", "status = 'cancelada'"),
     ):
         ativa = "status <> 'cancelada'" if tabela == "avaliacoes" else "status = 'ativo'"
         lista = "array[" + ", ".join(lit(x) for x in codigos[tabela]) + "]::text[]"
         p.append(f"""
   update public.{tabela} set {comando}, observacoes = concat_ws(' ', {lit(MARCA_DE_SAIDA)}, observacoes)
-   where turma_id = {t} and codigo like {lit(prefixo + '%')} and {ativa} and not (codigo = any ({lista}));
+   where turma_id = {t} and codigo like {lit(prefixo + '%')} and {ativa} and not (codigo = any ({lista}))
+     and not (codigo = any ({intocadas(nome)})){antes('data_avaliacao' if tabela == 'avaliacoes' else 'data')};
   get diagnostics n := row_count; k := k || jsonb_build_object({lit(chave)}, n);""")
+    lista_p = "array[" + ", ".join(lit(x) for x in codigos["dias_parados"]) + "]::text[]"
+    p.append(f"""
+  update public.dias_parados set status = 'inativo'
+   where turma_id = {t} and codigo like {lit(prefixo + '%')} and status = 'ativo' and not (codigo = any ({lista_p}))
+     and not (codigo = any ({intocadas('dias_parados')})){antes('data')};
+  get diagnostics n := row_count; k := k || jsonb_build_object('dias_parados_que_sairam', n);""")
 
     # 4. o calendario global: so o dia que parou TODAS as turmas, e so se ainda nao estiver la
     if incluir_calendario:
         for dia in res.calendario:
             p.append(f"""
   if not exists (select 1 from public.feriados where data = {lit(dia["data"])}::date and impacto = 'dia_inteiro' and status = 'ativo') then
-    insert into public.feriados (codigo, ano, data, descricao, impacto, abrangencia, criado_por)
-    select 'FER-' || lpad((coalesce(max(substring(codigo from '^FER-([0-9]+)$')::int), 0) + 1)::text, 6, '0'),
-           extract(year from {lit(dia["data"])}::date)::smallint, {lit(dia["data"])}::date, {lit(dia["descricao"])}, 'dia_inteiro',
-           {lit(abrangencia)}, {autor}
-      from public.feriados;
+    -- Spec 014 (E-2): o codigo sai do DEFAULT `FER-` da sequencia, nunca de `max + 1`.
+    insert into public.feriados (ano, data, descricao, impacto, abrangencia, criado_por)
+    values (extract(year from {lit(dia["data"])}::date)::smallint, {lit(dia["data"])}::date, {lit(dia["descricao"])}, 'dia_inteiro',
+            {lit(abrangencia)}, {autor});
     f := f + 1;
   end if;""")
     p.append("  k := k || jsonb_build_object('feriados_novos', f);")
@@ -355,6 +515,108 @@ def dias_globais_de(leituras: dict[str, planilha.Leitura], decisoes: dict[str, d
         pararam = sorted(t for t in cobrem if dia in por_turma[t][1])
         quadro[dia] = {"cobrem": cobrem, "pararam": pararam, "global": bool(cobrem) and cobrem == pararam}
     return {d for d, q in quadro.items() if q["global"]}, quadro
+
+
+def _celula(texto: object) -> str:
+    return " ".join(str(texto).split()).replace("|", "/")
+
+
+def escrever_erros_de_planilha(pasta: Path, por_turma: list[tuple[str, Resolvido]]) -> Path:
+    """FR-036.1 (spec 014, §11-B): `erros-de-planilha.md` na pasta da RODADA (fora do git), uma tabela
+    por turma — disciplina · o que diverge · planilha · curriculo · o que o sistema fez. Os erros antigos,
+    em texto livre, entram na coluna «o que diverge»."""
+    linhas = [
+        "# Erros de planilha — rodada " + pasta.name, "",
+        "> Gerado por `python -m scripts.carga_dsa.sincronizar`. O lancamento entra como FATO mesmo quando a",
+        "> planilha diverge (a planilha manda); o catalogo NUNCA muda por rodada (D-CUR-1). Corrigir na planilha.", "",
+    ]
+    for turma, res in por_turma:
+        linhas += [f"## {turma}", "", "| disciplina | o que diverge | planilha | curriculo | o que o sistema fez |", "|---|---|---|---|---|"]
+        for e in res.erros_tabelados:
+            linhas.append("| " + " | ".join(_celula(e[c]) for c in ("disciplina", "diverge", "planilha", "curriculo", "fez")) + " |")
+        for texto in res.erros_de_planilha:
+            linhas.append(f"| — | {_celula(texto)} | — | — | registrado; a carga seguiu |")
+        if not res.erros_tabelados and not res.erros_de_planilha:
+            linhas.append("| — | nenhum erro | — | — | — |")
+        linhas.append("")
+    arquivo = pasta / "erros-de-planilha.md"
+    arquivo.write_text("\n".join(linhas), encoding="utf-8", newline="\n")
+    return arquivo
+
+
+def escrever_divergencias(pasta: Path, por_turma: list[tuple[str, list[dict]]], viradas: dict[str, str | None]) -> Path:
+    """A3.4 (14/10/2026): a lista «planilha diverge do sistema», para os operadores. Fora do git — o
+    valor de um campo pode trazer nome de pessoa. O que esta aqui o SISTEMA manteve; corrige-se na planilha
+    (ou na tela, se a planilha estiver certa)."""
+    linhas = [
+        "# Planilha diverge do sistema — rodada " + pasta.name, "",
+        "> Gerado por `python -m scripts.carga_dsa.sincronizar`. Regra (A3.4, 14/10/2026): a linha editada na tela",
+        "> e o lancamento feito na tela VENCEM a planilha; a sincronizacao nunca os desfaz. Da data de virada da",
+        "> turma em diante (A3.3), o sistema e a fonte e a rodada nao toca em nada.", "",
+    ]
+    for turma, lista in por_turma:
+        virada = viradas.get(turma)
+        linhas += [f"## {turma}" + (f" — virada em {virada}" if virada else ""), "",
+                   "| tabela | codigo | data | por que o sistema manteve | campos (sistema × planilha) |", "|---|---|---|---|---|"]
+        for d in lista:
+            linhas.append("| " + " | ".join(_celula(d[c]) or "—" for c in ("tabela", "codigo", "data", "motivo", "campos")) + " |")
+        if not lista:
+            linhas.append("| — | — | — | nenhuma divergencia | — |")
+        linhas.append("")
+    arquivo = pasta / "planilha-diverge-do-sistema.md"
+    arquivo.write_text("\n".join(linhas), encoding="utf-8", newline="\n")
+    return arquivo
+
+
+# Postos e graduacoes da MB, como aparecem no texto livre da planilha (para a PROPOSTA de classificacao).
+_POSTO = re.compile(r"\b(ALTE|CALTE|VALTE|CMG|CF|CC|CT|1[ºO°]?\s*TEN|2[ºO°]?\s*TEN|TEN|GM|SO|[123][ºO°]?\s*SG|SG|CB|MN|SD|CAP|MAJ|CEL)\b")
+_ENTIDADE = re.compile(r"\b(CIAA|CIAARA|CAPELANIA|CAPELAO|DIVISAO|DEPARTAMENTO|SECAO|SETOR|COMANDO|DHN|DPC|DENSM|MARINHA|HOSPITAL|POLICLINICA|"
+                       r"BIBLIOTECA|ESCOLA|CENTRO|BASE|GRUPAMENTO|SERVICO|OM|EQUIPE|BANDA|PREFEITURA|UNIVERSIDADE|CLUBE)\b|-\d+\b")
+
+
+def classificar_responsavel(texto: str, guerras: set[str]) -> str:
+    """Proposta (A3.2), nunca aplicada sozinha: pessoa cadastrada provavel · entidade · palestrante externo."""
+    t = normalizar(texto)
+    if not re.search(r"[A-Z]", t):
+        return "sem responsavel (so tracos) — proposta: deixar em branco"
+    if _ENTIDADE.search(t) and not _POSTO.search(t):
+        return "entidade"
+    if _POSTO.search(t):
+        palavras = set(re.findall(r"[A-Z]{3,}", t))
+        if palavras & guerras:
+            return "pessoa cadastrada provavel (casar pelo codigo)"
+        return "pessoa (militar) fora do cadastro provavel — palestrante externo ou cadastrar"
+    return "palestrante externo"
+
+
+def escrever_pendencias_de_responsavel(pasta: Path, resolvidos: list[tuple[str, Resolvido]], guerras: set[str] | None = None) -> Path:
+    """A3.2 (14/10/2026): a lista dos textos de responsavel sem decisao, com a classificacao PROPOSTA, para
+    Bernardo revisar. Fora do git (o texto e nome de pessoa). Nada aqui e aplicado sem o OK dele."""
+    por_texto: dict[str, dict] = {}
+    for turma, res in resolvidos:
+        guerras = guerras if guerras is not None else set()
+        guerras |= getattr(res, "nomes_de_guerra", set())
+        for pd in res.pendencias:
+            if pd.tipo != "responsavel_sem_decisao":
+                continue
+            texto = pd.detalhe.split("«", 1)[1].split("»", 1)[0]
+            item = por_texto.setdefault(texto, {"turmas": set(), "ta": 0})
+            item["turmas"].add(turma)
+            item["ta"] += pd.ta
+    linhas = [
+        "# Pendencias do lote — responsavel que nao casa com o cadastro (spec 014, FR-016, A3.2)", "",
+        "> Fora do git: os textos podem ter nome de pessoa. A LINHA fica fora da rodada ate a decisao; o resto da",
+        "> turma entra (A3.2, 14/10/2026). A coluna «proposta» e so PROPOSTA: nada e aplicado sem o OK de Bernardo.",
+        f"> Rodada `{pasta.name}`.", "",
+        "| # | texto da planilha | turmas | TA | proposta |", "|---|---|---|---|---|",
+    ]
+    for n, (texto, item) in enumerate(sorted(por_texto.items()), 1):
+        linhas.append(f"| {n} | {_celula(texto)} | {', '.join(sorted(item['turmas']))} | {item['ta']} | {classificar_responsavel(texto, guerras or set())} |")
+    linhas.append("")
+    linhas.append(f"Total: {len(por_texto)} texto(s), {sum(i['ta'] for i in por_texto.values())} TA.")
+    arquivo = pasta / "pendencias-de-responsavel.md"
+    arquivo.write_text("\n".join(linhas), encoding="utf-8", newline="\n")
+    return arquivo
 
 
 def titulo(texto: str) -> None:
@@ -426,6 +688,8 @@ def main() -> int:
     leituras: dict[str, planilha.Leitura] = {}
     decisoes: dict[str, dict] = {}
     titulos: dict[str, str] = {}
+    # A3.3 (14/10/2026): a data a partir da qual o SISTEMA e a fonte da turma — versionada em fontes.json.
+    viradas: dict[str, str | None] = {f["turma"]: f.get("virada") for f in fontes["turmas"]}
     for fonte in fontes["turmas"]:
         m = manifesto.get(fonte["planilha_id"])
         if m is None:
@@ -474,19 +738,31 @@ def main() -> int:
 
     veredito = 0
     resumo = []
+    resolvidos: list[tuple[str, Resolvido]] = []
+    divergencias: list[tuple[str, list[dict]]] = []
+    # Spec 014 (SC-008, D-CUR-1): o retrato do catalogo ANTES da primeira escrita desta execucao.
+    catalogo_antes = banco.retrato_do_catalogo(arg.destino)
     for turma in pedidas:
         leitura, dec = leituras[turma], decisoes[turma]
-        titulo(f"{turma} ← «{titulos[turma]}»")
+        virada = viradas.get(turma)
+        titulo(f"{turma} ← «{titulos[turma]}»" + (f" · VIRADA em {virada}: so as datas anteriores" if virada else ""))
         de, ate = min(b.data for b in leitura.blocos).isoformat(), max(b.data for b in leitura.blocos).isoformat()
         try:
-            ref = banco.referencia(arg.destino, turma, arg.autor, de, ate)
+            ref = banco.referencia(arg.destino, turma, arg.autor, de, ate, virada)
         except banco.RecusaDoBanco as erro:
             print(f"  [BANCO] {erro}")
             return 4
         res = resolver(leitura, ref, dec, titulos[turma], globais, arg.provisorio)
+        protegidas, diverge = proteger(res, ref, virada)
+        res.nomes_de_guerra = {normalizar(i["guerra"]) for i in ref["instrutores"] if i.get("guerra")}  # type: ignore[attr-defined]
+        resolvidos.append((turma, res))
+        divergencias.append((turma, diverge))
         relogios = plano_do_relogio(leitura, ref, res, titulos[turma], dec.get("relogio"))
-        dif = diferencas(res, ref["atuais"])
+        dif = diferencas(res, ref["atuais"], protegidas)
         relatar(res, leitura, ref, dif)
+        intocadas = sum(len(v) for v in protegidas.values())
+        if intocadas or diverge:
+            print(f"  [A SISTEMA VENCE] {intocadas} linha(s) do banco que a rodada nao toca · {len(diverge)} divergencia(s) planilha × sistema")
         for plano in relogios:
             vig = plano["vigencia"]
             atual = (f"{vig['codigo']} {vig['tipo_regime']} {str(vig['hora_inicio_manha'])[:5]} {vig['intervalo_manha_min']}/{vig['intervalo_tarde_min']}"
@@ -518,17 +794,19 @@ def main() -> int:
         bloqueiam = [p for p in res.pendencias if p.bloqueia and p.tipo not in adiadas]
         if adiadas and any(p.tipo in adiadas for p in res.pendencias):
             print(f"  [ADIADO] {sum(p.ta for p in res.pendencias if p.tipo in adiadas)} TA ficam fora por decisao: {sorted({p.tipo for p in res.pendencias if p.tipo in adiadas})}")
-        if ref["etl"]["de_tela"]:
-            print(f"  [PARADO] a turma tem {ref['etl']['de_tela']} lancamento(s) feito(s) na tela: quem decide o que fazer e gente.")
-            veredito = max(veredito, 3)
-            continue
+        if ref["etl"]["de_tela"] or ref["etl"].get("de_tela_depois_da_virada"):
+            # A3.3/A3.4: o lancamento da tela ja nao para a turma — fica como esta, e o que a planilha tem
+            # no mesmo tempo vai para a lista de divergencias.
+            print(f"  [TELA] {ref['etl']['de_tela']} lancamento(s) feito(s) na tela antes da virada e "
+                  f"{ref['etl'].get('de_tela_depois_da_virada', 0)} depois: ficam como estao.")
         if bloqueiam and not arg.provisorio:
             print(f"  [PARADO] {len(bloqueiam)} pendencia(s) que bloqueiam. Nada foi enviado ao banco para esta turma.")
             veredito = max(veredito, 3)
             continue
         if arg.destino == "remoto":
-            ref_local = banco.referencia("local", turma, arg.autor_local or arg.autor, de, ate)
+            ref_local = banco.referencia("local", turma, arg.autor_local or arg.autor, de, ate, virada)
             res_local = resolver(leitura, ref_local, dec, titulos[turma], globais, False)
+            proteger(res_local, ref_local, virada)
             if res_local.impressao_digital() != res.impressao_digital():
                 print(f"  [PARADO] plano do local {res_local.impressao_digital()} × remoto {res.impressao_digital()}: nao e o mesmo plano.")
                 veredito = max(veredito, 6)
@@ -538,7 +816,8 @@ def main() -> int:
         incluir = bool(dec.get("incluir_dias_de_calendario_ausentes", True))
         abrangencia = dec.get("abrangencia_do_calendario", "Nacional/Institucional")
         try:
-            banco.consultar(arg.destino, sql_da_turma(res, incluir, abrangencia, ensaio=True, relogios=relogios))
+            banco.consultar(arg.destino, sql_da_turma(res, incluir, abrangencia, ensaio=True, relogios=relogios,
+                                                      virada=virada, protegidas=protegidas))
             print("  [ERRO] o ensaio nao levantou a sentinela. Confira o banco.")
             return 4
         except banco.RecusaDoBanco as erro:
@@ -559,19 +838,35 @@ def main() -> int:
         if not arg.gravar:
             continue
         try:
-            banco.consultar(arg.destino, sql_da_turma(res, incluir, abrangencia, ensaio=False, relogios=relogios))
+            banco.consultar(arg.destino, sql_da_turma(res, incluir, abrangencia, ensaio=False, relogios=relogios,
+                                                      virada=virada, protegidas=protegidas))
         except banco.RecusaDoBanco as erro:
             print(f"  ✗ o banco recusou a gravacao: {str(erro)[:600]}")
             veredito = max(veredito, 4)
             continue
-        depois = banco.referencia(arg.destino, turma, arg.autor, de, ate)
-        resto = diferencas(res, depois["atuais"])
+        depois = banco.referencia(arg.destino, turma, arg.autor, de, ate, virada)
+        resto = diferencas(res, depois["atuais"], protegidas)
         sobra = sum(len(d["novas"]) + len(d["mudadas"]) + len(d["reativadas"]) + len(d["saem"]) for d in resto.values())
         if sobra or depois["etl"]["aulas"] or depois["etl"]["avaliacoes"] or depois["etl"]["atividades"]:
             print(f"  ✗ depois da gravacao ainda ha {sobra} diferenca(s) e ETL ativo {depois['etl']}: o banco nao e o plano.")
             veredito = max(veredito, 5)
             continue
         print("  gravado; lido de volta: o banco e o plano, linha a linha, e nao sobrou ETL ativo.")
+
+    catalogo_depois = banco.retrato_do_catalogo(arg.destino)
+    titulo("Catalogo (D-CUR-1): a CH de disciplinas e UEs antes e depois desta execucao")
+    print(f"  antes  {catalogo_antes}")
+    print(f"  depois {catalogo_depois}")
+    if catalogo_antes != catalogo_depois:
+        print("  ✗ O CATALOGO MUDOU durante a sincronizacao — a rodada nunca altera CH (SC-008).")
+        veredito = max(veredito, 7)
+
+    arquivo = escrever_erros_de_planilha(arg.rodada, resolvidos)
+    print(f"  lista de erros de planilha: {arquivo}")
+    arquivo = escrever_divergencias(arg.rodada, divergencias, viradas)
+    print(f"  lista «planilha diverge do sistema»: {arquivo}")
+    arquivo = escrever_pendencias_de_responsavel(arg.rodada, resolvidos)
+    print(f"  pendencias de responsavel (com a classificacao proposta): {arquivo}")
 
     titulo("Resumo da rodada")
     for turma, contagem, mudancas in resumo:

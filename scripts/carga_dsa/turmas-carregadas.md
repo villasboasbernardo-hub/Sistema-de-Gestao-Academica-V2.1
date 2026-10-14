@@ -25,6 +25,54 @@ toca turma listada em `fontes.json`, e o remoto só recebe o plano que bateu, li
 emendadas, e o `db reset` do ramo `main` as recusa na restauração (medido em 06/10/2026). Até o PR #33 ser mesclado,
 rode-o do ramo do PR.
 
+## Spec 014 — a rodada da leva 1 (PR 3): dia parado, Apoio Individualizado e responsável pelo lote
+
+**No REMOTO em 14/10/2026** (T121), com a exportação `2026-10-14T1149`, backup `remoto-20261014-124318.sql`, plano
+igual ao do local, segunda rodada com zero mudança e os dados das nove turmas iguais nos dois bancos
+(`specs/014-atividades-e-avaliacoes/antes-depois/rodada-do-pr3-no-remoto.md`). TAD depois da rodada: CAHO 17,
+C-Ap-HN 54, C-Ap-FR 65, C-Espc-HN 41, C-Espc-FR 28, C-Esp-ME 14, MetocOf 2, BATI 2, Ag-Mag 1; acima do máximo, só
+C-Ap-FR 2026.
+
+- **D-SYNC-1** _(Bernardo Villas Boas, 13/10/2026)_: a `C-Exp-Obs-ME 2026`, encerrada em 09/10/2026 e com os
+  dados conferidos, fica **fora** da rodada do PR 3. A `DSA-MUYK0RFD-V`, relançada pela tela, faria
+  `de_tela` diferente de zero e pararia a turma. A vista é recriada pela `PEND-DSA-VISTA`, com antes/depois
+  para aprovação e fora da spec 014. A turma **volta** na rodada do PR 6. A exclusão é por `--turmas`,
+  **sem** tirar a turma de `fontes.json`.
+- **O que a rodada passa a fazer:**
+  - o dia parado só da turma vai para `dias_parados` (`DSAP-…-L<linha>-P`, previsto, com o tipo de parada
+    pela descrição), e a linha TAD antiga sai com a marca _"[RECLASSIFICADO PELA SPEC 014]"_;
+  - Monitoria, Português, BDA e BDF são Apoio Individualizado;
+  - Recepção e APOINST ganham os tipos _Recepção aos alunos_ e _Apoio à Instrução_;
+  - o responsável que não casa vira pendência do lote;
+  - a avaliação cancelada pela tela continua cancelada;
+  - o código de feriado sai do `DEFAULT FER-`;
+  - o catálogo é conferido antes e depois (saída 7 se mudar);
+  - a lista `erros-de-planilha.md` é escrita na pasta da rodada.
+- **Medido no local** (cópia `remoto-20261014-085612.sql`, rodada `2026-10-06T1541`, 9 turmas): a primeira
+  rodada fez 95 mudanças, a segunda **0**; catálogo igual antes e depois. Antes/depois do TAD de cada turma
+  em `specs/014-atividades-e-avaliacoes/antes-depois/rodada-do-pr3-no-local.md`.
+- ~~⚠️ **Três das nove têm lançamento feito na tela no remoto** (CAHO, C-Ap-FR e C-Ap-HN, semana de 13/10) e
+  **parariam** na rodada do remoto. É o portão A3.3.~~ Resolvido pela virada por turma, abaixo.
+
+## Virada por turma — a data a partir da qual o SISTEMA é a fonte
+
+_(decisão A3.3 de Bernardo Villas Boas, 14/10/2026)_ A sincronização de uma turma com virada cobre **só as
+datas anteriores** a ela; da virada em diante **não toca nada** — nem insere, nem atualiza, nem inativa, nem
+substitui ETL. A data mora em `fontes.json` (`virada`, por turma), que é o que a sincronização semanal lê.
+As demais turmas seguem pela planilha até a virada de cada uma.
+
+| Turma        | Virada (o sistema é a fonte a partir de) | A sincronização cobre | Decisão                                |
+| ------------ | ---------------------------------------- | --------------------- | -------------------------------------- |
+| CAHO 2026    | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026 |
+| C-Ap-FR 2026 | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026 |
+| C-Ap-HN 2026 | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026 |
+
+**E, em TODA turma, o que a tela fez vence a planilha** _(A3.4, 14/10/2026)_: a linha da planilha editada na
+tela (`editado_por` preenchido — D3.7), a avaliação cancelada na tela e o lançamento nascido na tela não são
+desfeitos; o que a planilha tem de diferente vai para `planilha-diverge-do-sistema.md`, na pasta da rodada
+(fora do git), para os operadores. **A pendência de responsável trava só a linha** _(A3.2)_: ela fica fora,
+listada em `pendencias-de-responsavel.md` com a classificação proposta, e o resto da turma entra.
+
 ## Onda 1 — C-Esp-ME 2026 · C-Exp-MetocOf 2026 · C-Exp-Obs-ME 2026 · C-Exp-BATI T1 2026 · C-Exp-Ag-Mag 2026
 
 **Carga no remoto: CONCLUÍDA em 06/10/2026**, rodada `2026-10-06T1541` (exportação do Drive às 15:41), decisões
