@@ -17,8 +17,10 @@
  * - aula negativa (o arbitrado passou da CH) é **aviso**, nunca bloqueio (`RN-DEG-02`). A CH nunca muda aqui.
  *
  * ⚠️ TypeScript puro (Princípio II). A data chega em ISO e sai em `dd/mm/aaaa` pelo ponto único de formato
- * de data — aqui só se monta o texto da origem, com a mesma regra, sem `Date`.
+ * de data (`lib/formato/data.ts`).
  */
+
+import { dataParaLeitura } from "@/lib/formato/data";
 
 import type { NaturezaDaAvaliacao } from "./situacao";
 
@@ -81,11 +83,6 @@ export const AVISO_SEM_TEMPO = "tempo de avaliação não definido";
 export const AVISO_SEM_UE = "o currículo não diz de qual UE sai";
 export const MARCA_ARBITRADO = "não consta do currículo — definido pela Divisão";
 export const MARCA_SUGESTAO = "arbitrado — sugestão da planilha, a confirmar";
-
-function dataParaLeitura(iso: string): string {
-  const [a, m, d] = iso.split("-");
-  return `${d}/${m}/${a}`;
-}
 
 function marcaDe(
   origens: (OrigemDoTempo | null)[],

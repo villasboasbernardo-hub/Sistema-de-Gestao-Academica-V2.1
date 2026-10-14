@@ -7,7 +7,7 @@
 -- ⚠️ pgTAP de dado nunca pula: na base limpa, o valor que prova a abstenção da D-4 (0 itens com a procedência).
 -- =================================================================================
 begin;
-select plan(22);
+select plan(23);
 
 insert into auth.users (id, email, aud, role) values
   ('a0000000-0000-0000-0000-000000000127', 't127-admin@ciaara.teste', 'authenticated', 'authenticated');
@@ -33,6 +33,9 @@ insert into public.unidades_ensino (id, codigo, curso_id, disciplina_id, numero_
 insert into public.turmas (id, curso_id, turma, ano_letivo, status, modalidade, data_inicio, data_termino) values
   ('50270000-0000-0000-0000-000000000001', (select curso_id from _t127), 'T1', 2045,
    'ativa', 'presencial', '2045-01-05', '2045-11-30');
+
+insert into public.instrutores (id, codigo, posto_graduacao, esp_hab_obs, nome_completo, categoria, om) values
+  ('27279999-0000-0000-0000-000000000001', 'T127-INS', 'CT', '-EF', 'Instrutor T127', 'Militar', 'CIAARA');
 
 -- ── estrutura ──
 select ok(
@@ -122,7 +125,7 @@ select is((select count(*)::int from public.avaliacoes where id = '27272222-0000
   1, 'RN-AVAL-02 · as sessões são filhas: continua UM fato por avaliação');
 select throws_ok(
   $$insert into public.vistas_de_avaliacao (avaliacao_id, numero, data, conduz_instrutor_id, conduz_nome_externo)
-    select '27272222-0000-0000-0000-000000000001', 3, '2045-04-15', id, 'Fulano' from public.instrutores limit 1$$,
+    values ('27272222-0000-0000-0000-000000000001', 3, '2045-04-15', '27279999-0000-0000-0000-000000000001', 'Externo T127')$$,
   '23514', null, 'vst_conduz_exclusivo · instrutor e nome externo juntos recusa');
 select matches((select min(codigo) from public.vistas_de_avaliacao where avaliacao_id = '27272222-0000-0000-0000-000000000001'),
   '^VST-[0-9]{6}$', 'FR-040 · a sessão ganha código VST- pela sequência');

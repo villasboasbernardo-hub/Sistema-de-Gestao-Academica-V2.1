@@ -77,7 +77,12 @@ select * from (values
   ('responsaveis_curso',         'curso_em_oferta'),
   ('disciplinas',                'curso_em_oferta'),
   ('unidades_ensino',            'curso_em_oferta'),
-  ('avaliacoes_planejadas',      'curso_em_oferta'),
+  -- Spec 014, PR 4: `avaliacoes_planejadas` SAIU (só leitura, sem policy de escrita, FR-039.1) e entram as
+  -- três tabelas da E-4: o item do currículo (curso), o ajuste por turma (turma) e a sessão de vista (curso
+  -- da avaliação-mãe).
+  ('avaliacoes_curriculo',       'curso_em_oferta'),
+  ('avaliacoes_curriculo_turma', 'turma_em_oferta'),
+  ('vistas_de_avaliacao',        'curso_em_oferta'),
   ('registros_aula',             'curso_em_oferta'),
   ('avaliacoes',                 'curso_em_oferta'),
   ('janelas_curso',              'curso_em_oferta'),
@@ -135,8 +140,9 @@ select is(
   -- assercao prova continua o mesmo — duas por tabela protegida, criar e editar.
   -- Spec 014, PR 1: + `dias_parados` e `limites_curriculo`, duas cada — 32 + 4 = 36, em 18 tabelas.
   -- PR 1.1: − `reservas_proens` (só leitura) + `previstos_proens_turma` — continua 36, em 18.
-  36,
-  'FR-017.5 · sao 36 policies de escrita em 18 tabelas — duas por tabela, criar e editar'
+  -- PR 4: − `avaliacoes_planejadas` (só leitura) + as três da E-4 — 36 − 2 + 6 = 40, em 20.
+  40,
+  'FR-017.5 · sao 40 policies de escrita em 20 tabelas — duas por tabela, criar e editar'
 );
 
 -- ---------------------------------------------------------------- a exclusao DECLARADA, nao ausente

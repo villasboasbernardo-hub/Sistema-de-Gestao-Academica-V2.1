@@ -92,10 +92,12 @@ create table public.avaliacoes_curriculo (
   constraint avc_fonte_se_curriculo check (origem_item <> 'curriculo' or (fonte_arquivo is not null and fonte_pagina is not null)),
   constraint avc_ta_com_origem check ((ta_aplicacao is null) = (origem_ta_aplicacao is null)
                                        and (ta_vista is null) = (origem_ta_vista is null)),
-  constraint avc_origem_ue_coerente check (
+  -- ⚠️ `is not distinct from`, nunca `=`: com `origem_ue` nula, `=` dá NULL, e CHECK com NULL PASSA.
+  constraint avc_origem_ue_coerente check (coalesce(
     (unidade_ensino_id is null and origem_ue is null and ue_decidida_em is null)
-    or (unidade_ensino_id is not null and origem_ue = 'curriculo' and ue_decidida_em is null)
-    or (unidade_ensino_id is not null and origem_ue = 'decisao_ciaara' and ue_decidida_em is not null))
+    or (unidade_ensino_id is not null and origem_ue is not distinct from 'curriculo' and ue_decidida_em is null)
+    or (unidade_ensino_id is not null and origem_ue is not distinct from 'decisao_ciaara' and ue_decidida_em is not null),
+    false))
 );
 
 comment on table public.avaliacoes_curriculo is

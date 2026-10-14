@@ -96,7 +96,10 @@ select set_eq(
            ('dias_parados'), ('limites_curriculo'),
            -- PR 1.1 da spec 014, 14/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entraram no BRIEF §2.1
            -- (emenda de 14/10/2026) antes de entrar aqui.
-           ('previstos_proens_turma'), ('previstos_proens_alteracoes')$$,
+           ('previstos_proens_turma'), ('previstos_proens_alteracoes'),
+           -- PR 4 da spec 014, 14/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entraram no BRIEF §2.1
+           -- (emenda PROPOSTA de 14/10/2026, portão A4.1) antes de entrar aqui.
+           ('avaliacoes_curriculo'), ('avaliacoes_curriculo_turma'), ('vistas_de_avaliacao')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

@@ -159,7 +159,7 @@ create or replace view public.vw_carga_horaria_turma with (security_invoker = tr
          SELECT v.turma_id,
             sum(COALESCE(v.tempos_consumidos::integer, 0)) AS ta_aplicacao,
             sum((SELECT COALESCE(sum(s.tempos_consumidos), 0) FROM vistas_de_avaliacao s
-                  WHERE s.avaliacao_id = v.id AND s.status = 'ativo'::status_registro)) AS ta_vista
+                  WHERE s.avaliacao_id = v.id AND s.status = 'ativo'::status_registro))::bigint AS ta_vista
            FROM vivas v
           GROUP BY v.turma_id
         ), linhas_nao_letivas AS (
@@ -328,7 +328,7 @@ create or replace view public.vw_disciplinas_execucao with (security_invoker = t
             a.turma_id,
             min(a.data_avaliacao) AS primeira_data,
             GREATEST(max(a.data_avaliacao), max(se.ultima_vista)) AS ultima_data,
-            sum(COALESCE(a.tempos_consumidos::integer, 0) + COALESCE(se.ta_vista, 0)) AS ta
+            sum(COALESCE(a.tempos_consumidos::integer, 0) + COALESCE(se.ta_vista, 0))::bigint AS ta
            FROM avaliacoes a
              LEFT JOIN sessoes se ON se.avaliacao_id = a.id
           WHERE a.status = ANY (ARRAY['pendente'::status_avaliacao, 'em_andamento'::status_avaliacao,
