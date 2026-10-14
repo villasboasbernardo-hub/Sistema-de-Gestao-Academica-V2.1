@@ -10,15 +10,16 @@
 | PR 3 | `feat/EPICO-9-carga-da-leva-1` | [#50](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/50) | verde (`68d492e`) | 18/19 | ✅ **rodada no remoto** em 14/10/2026 (backup `remoto-20261014-124318.sql`, dados iguais local × remoto) e **mesclado** em `91ed061`; deploy de Production `success` |
 | PR 4 | `db/EPICO-8-banco-da-leva-2` | [#51](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/51) | verde (`24a7c69`, run `38605247216`) | 27/40 | ✅ **no remoto** em 14/10/2026 (backup `remoto-20261014-144657.sql`; 69 e 69; `129d83d4…`, 1.904 objetos, igual; dado idêntico ao ensaio) e **mesclado** em `4180de9` |
 | PR 5 | `feat/EPICO-8-avaliacoes-nas-telas` | [#52](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/52) (rascunho, sobre a `main`) | verde (`1904510`, run `38616398020`) | 33/35 | aba Avaliações da turma e do curso, ações do arbitrado, alertas de vista recolhíveis, avaliações do currículo em `/disciplinas`, emendas §12/E-1/E-2/E-3/E-6; capturas `pr5-01` a `pr5-07`; falta a conferência (T198) e a T189 (projeção na ponta a ponta) |
-| PR 5.1 | `feat/EPICO-8-dsa-itens-sessoes-e-papeis` | [pendente] | [pendente] | 15/23 | DSA com o item do currículo, a vista em sessões (`vistas_de_avaliacao`), quem conduz, o 2º instrutor, a faixa de UEs, o aviso do aplicador sem habilitação e a UE em conteúdo · prova · vista (fecha a PEND-E8-1) |
+| PR 5.1 | `feat/EPICO-8-dsa-itens-sessoes-e-papeis` | [#53](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/53) (rascunho, sobre o #52) | verde (`727829b`) | 19/23 | DSA com o item do currículo, a vista em sessões, quem conduz, o 2º instrutor, a faixa de UEs, o aviso do aplicador sem habilitação e a UE em conteúdo · prova · vista (fecha a PEND-E8-1); capturas `pr51-01` a `pr51-03`; falta a conferência (T221), a T208/T212/T213 em parte e a T218 |
+| PR 6 | `feat/EPICO-8-carga-da-leva-2` | [#54](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/54) (rascunho, sobre o #53) | [pendente] | 9/14 | a sincronização liga a prova ao item pela descrição (sem inferência), grava a vista em sessões `…-S`, a faixa de UEs, o 2º instrutor e as sugestões; ensaio no local (6ª rodada com zero mudança, catálogo igual); `PEND-DSA-VISTA` com antes/depois; **nada no remoto** (A6.1, A6.2) |
 
 **Remoto (14/10/2026, depois do PR 4):** 69 e 69 migrations; impressão digital `129d83d4…`, 1.904 objetos,
 igual no local e no remoto. Registro em `plano-de-aplicacao-no-remoto.md`.
 
-**Tarefa atual:** PR 5 (#52) — painel de `/disciplinas`, guardas e ponta a ponta; depois PR 5.1 e PR 6.
+**Tarefa atual:** os PRs 5, 5.1 e 6 estão construídos no local e esperam a conferência de Bernardo e as aprovações A4.7, A6.1 e A6.2.
 **Abertas:** PR 1 — T004, T034 (conferência). PR 1.1 — T050 (conferência). PR 2 — T076 (conferência no
 preview). PR 3 — T123 (conferência sobre o remoto sincronizado); portão A3.6 (classificação dos 43 textos de responsável).
-**Próximos passos (retomada):** PR 4 — só a T163 (roteiro de conferência); PR 5 → PR 5.1 → PR 6.
+**Próximos passos (retomada):** depois da conferência, mesclar #52 → #53 → #54 (cada um rebaseado na `main`); a A6.1 e a rodada no remoto (T232, T233), pelo rito da T121; depois o fechamento (T236, T237).
 
 **Capturas de tela (fora do git):** `C:\Users\VILLAS BOAS\AppData\Local\ciaara-11\capturas-014\`.
 

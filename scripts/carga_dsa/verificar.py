@@ -99,7 +99,9 @@ def conferir_semanas(turma: str, leitura: planilha.Leitura, plano: dict, dsa: di
     for grupo in ("aulas", "avaliacoes", "atividades"):
         for l in plano[grupo]:
             codigo_por_linha[int(re.search(r"-L([0-9]+)-", l["codigo"]).group(1))] = (grupo, l)
-    vistas = {(a["data_vista_prova"], a["ta_inicial_vista"]) for a in plano["avaliacoes"] if a["data_vista_prova"]}
+    # Spec 014 (PR 6): a vista e SESSAO (`sessoes`); o plano antigo (colunas de vista unica) continua lido.
+    vistas = {(v["data"], v["ta_inicial"]) for a in plano["avaliacoes"] for v in a.get("sessoes", [])} | {
+        (a["data_vista_prova"], a["ta_inicial_vista"]) for a in plano["avaliacoes"] if a.get("data_vista_prova")}
     calendario = {c["data"] for c in plano["calendario"]}
     instrutor_do_texto = plano.get("instrutores", {})
 
@@ -283,7 +285,9 @@ def main() -> int:
         pela_planilha: dict[str, int] = {}
         for a in plano.get("aulas", []) + plano.get("avaliacoes", []):
             cod_p = a.get("cod_planilha") or a.get("disciplina")
-            pela_planilha[cod_p] = pela_planilha.get(cod_p, 0) + int(a.get("tempos_consumidos") or 0) + int(a.get("tempos_consumidos_vista") or 0)
+            pela_planilha[cod_p] = (pela_planilha.get(cod_p, 0) + int(a.get("tempos_consumidos") or 0)
+                                    + int(a.get("tempos_consumidos_vista") or 0)
+                                    + sum(int(v.get("tempos_consumidos") or 0) for v in a.get("sessoes", [])))
         relatorio.append("### (a) Carga horária por disciplina\n")
         relatorio.append("| Disc. | CH do banco | Sistema: lançado | Sistema: executado até hoje | Lançado pelo cód. da planilha | CONTROLE: prevista | CONTROLE: cumprida | BD DISCIPLINAS: prevista | BD DISCIPLINAS: concluída | Lançado (cód. planilha) − CONTROLE |")
         relatorio.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")

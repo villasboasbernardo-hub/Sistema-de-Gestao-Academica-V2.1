@@ -110,6 +110,24 @@ def main() -> int:
         conferir("a linha TAD antiga da mesma linha esta INATIVA, com a marca de reclassificacao (nada apagado)",
                  linhas and all(l["status"] == "inativo" and "[RECLASSIFICADO PELA SPEC 014]" in (l["observacoes"] or "") for l in linhas),
                  linhas)
+    # Spec 014, PR 6 (T223): a vista e SESSAO `…-S`, a prova liga ao item, e a 2ª vista nao e mais AEC.
+    sess = banco.consultar("local", f"""
+      select count(*) as n, count(*) filter (where s.codigo !~ '-S$') as fora,
+             count(distinct (s.avaliacao_id, s.numero)) as distintas
+        from public.vistas_de_avaliacao s join public.avaliacoes a on a.id = s.avaliacao_id
+       where a.codigo like {lit(prefixo + '%')} and s.status = 'ativo' and a.status in ('pendente', 'em_andamento', 'concluida', 'atrasada')""")[0]
+    conferir("T226 · toda sessao ativa de avaliacao da planilha tem o codigo `…-S` (a espelhada saiu), sem numero repetido",
+             int(sess["fora"]) == 0 and int(sess["n"]) == int(sess["distintas"]), sess)
+    aec = banco.consultar("local", "select count(*) as n from public.atividades_nao_letivas "
+                                   f"where codigo like {lit(prefixo + '%')} and status = 'ativo' and descricao like 'VISTA DE PROVA (2%'")[0]
+    conferir("T225 · nenhuma AEC «VISTA DE PROVA (2ª sessão)» ativa", int(aec["n"]) == 0, aec)
+    item = banco.consultar("local", f"""
+      select count(*) filter (where a.avaliacao_curriculo_id is not null) as com_item, count(*) as n,
+             (select count(*) from public.avaliacoes_curriculo c join public.turmas t on t.curso_id = c.curso_id
+               where t.codigo = {lit(arg.turma)} and c.status = 'ativo') as itens
+        from public.avaliacoes a where a.codigo like {lit(prefixo + '%')} and a.status in ('pendente', 'em_andamento', 'concluida', 'atrasada')""")[0]
+    conferir("T224 · com itens no curriculo, alguma prova da planilha aponta o item",
+             int(item["itens"]) == 0 or int(item["com_item"]) > 0, item)
     fer = banco.consultar("local", "select count(*) as n, count(*) filter (where codigo !~ '^FER-[0-9]{6}$') as fora, "
                                    "count(distinct codigo) as distintos from public.feriados")[0]
     conferir("todo `feriados.codigo` e `FER-NNNNNN`, sem repetir", int(fer["fora"]) == 0 and int(fer["n"]) == int(fer["distintos"]), fer)

@@ -122,6 +122,58 @@ def planilha_da_leva_1(pasta: Path) -> Path:
     return caminho
 
 
+def planilha_da_leva_2(pasta: Path) -> Path:
+    """Spec 014, PR 6 (T223): duas provas mistas e uma de recuperacao, a vista da PM 1 em DUAS sessoes, o fiscal e o
+    2º instrutor. Nomes ficticios."""
+    livro = openpyxl.Workbook()
+    catalogo = livro.active
+    catalogo.title = planilha.ABA_CATALOGO
+    catalogo.append([None])
+    catalogo.append(["CÓD", "DISCIPLINA", "Nº UE", "CONCATENADO", "UNIDADES DE ENSINO E TÓPICOS", "CH", "LOCAL", "T/E", "INSTRUTOR/PROFESSOR"])
+    for linha in (
+        ["I", "DISCIPLINA UM", 1.0, "I1", "1 – TOPICO DA PLANILHA", 3.0, "SALA 2", "EO", "CC (T) FULANO SILVA"],
+        ["I", "DISCIPLINA UM", "PM1", "IPM1", "PROVA MISTA 1", 3.0, "SALA 2", "PM", "CC (T) FULANO SILVA / SR. AUXILIAR DE FORA"],
+        ["I", "DISCIPLINA UM", "PM2", "IPM2", "PROVA MISTA 2", 2.0, "SALA 2", "PM", "CC (T) FULANO SILVA (FISCAL)"],
+        ["I", "DISCIPLINA UM", "RECON", "IRECON", "PROVA DE RECUPERACAO", 1.0, "SALA 2", "PM", "CC (T) FULANO SILVA"],
+        ["I", "DISCIPLINA UM", "VP1", "IVP1", "VISTA DA PROVA", 1.0, "SALA 2", "EO", "CC (T) FULANO SILVA"],
+        ["I", "DISCIPLINA UM", "PP1", "IPP1", "PROVA PRÁTICA", 1.0, "SALA 2", "PP", "CC (T) FULANO SILVA"],
+    ):
+        catalogo.append(linha)
+    folha = livro.create_sheet(planilha.ABA_PREENCHIMENTO)
+    folha["A1"], folha["B1"] = "SIGLA DO CURSO:", "C-Exp-QUALQUER"
+    folha["A2"], folha["B2"] = "Nº DE ALUNOS:", 6
+    dias = {
+        date(2026, 4, 6): {1: ("I", 1.0), 2: ("I", 1.0), 3: ("I", 1.0), 4: ("I", "PM1"), 5: ("I", "PM1"), 6: ("I", "PM1")},
+        date(2026, 4, 7): {1: ("I", "VP1")},
+        date(2026, 4, 8): {1: ("I", "VP1"), 3: ("I", "PM2"), 4: ("I", "PM2")},
+        date(2026, 4, 9): {1: ("I", "RECON"), 3: ("I", "PP1")},
+    }
+    r = 4
+    for dia, tas in dias.items():
+        for n in range(1, 10):
+            folha.cell(r, 3, f"{n}º")
+            if n == 3:
+                folha.cell(r, 2, datetime(dia.year, dia.month, dia.day))
+            if n in tas:
+                folha.cell(r, 4, tas[n][0])
+                folha.cell(r, 5, tas[n][1])
+            r += 1
+    controle = livro.create_sheet(planilha.ABA_CONTROLE)
+    controle.append(["CÓD.", "DISCIPLINA", "CH. PREVISTA", "CH. CUMPRIDA"])
+    controle.append(["I", "DISCIPLINA UM", 10.0, 12])  # 3 de aula + 3 PM1 + 2 vistas + 2 PM2 + 1 RECON + 1 PP1
+    caminho = pasta / "leva2.xlsx"
+    livro.save(caminho)
+    return caminho
+
+
+ITENS_DA_LEVA_2 = [
+    {"id": "av-1", "disciplina_id": "d-1", "numero": 1, "instrumento": "PM", "instrumento_nome": "Prova Mista",
+     "ta_aplicacao": 2, "origem_ta_aplicacao": "curriculo", "ta_vista": 1, "origem_ta_vista": "curriculo"},
+    {"id": "av-2", "disciplina_id": "d-1", "numero": 2, "instrumento": "PM", "instrumento_nome": "Prova Mista",
+     "ta_aplicacao": None, "origem_ta_aplicacao": None, "ta_vista": None, "origem_ta_vista": None},
+]
+
+
 def retrato(habilitado: str = "ativo") -> dict:
     """O banco em memoria. Dois «FULANO SILVA» em postos diferentes: o caso que discrimina."""
     return {
@@ -357,6 +409,88 @@ def main() -> int:
              sincronizar.classificar_responsavel("CIAARA-10", set()) == "entidade"
              and sincronizar.classificar_responsavel("1ºTEN FULANO", {"FULANO"}).startswith("pessoa cadastrada")
              and sincronizar.classificar_responsavel("SR. CICRANO DE FORA", set()) == "palestrante externo")
+
+    print("SPEC 014 — LEVA 2 (o item, as sessoes, os papeis e as sugestoes)")
+    with tempfile.TemporaryDirectory() as pasta:
+        leva2 = planilha.ler(planilha_da_leva_2(Path(pasta)))
+    ref2 = retrato()
+    ref2["tipos_avaliacao"] = ["Prova Escrita", "Prova Mista", "Prova Prática"]
+    ref2["itens_curriculo"] = ITENS_DA_LEVA_2
+    ref2["ajustes"] = []
+    dec2 = {"turma": "TURMA SINTETICA 2026", "locais": {"SALA 2": "Sala 02"}, "chaves": {},
+            "padrao_ue_de_avaliacao": "(PM|PP)[0-9]+|RECON", "padrao_ue_de_vista": "VP[0-9]*",
+            "tipo_avaliacao_por_tecnica": {"PM": "Prova Mista", "PP": "Prova Prática"}, "vista_extra_como_aec": True}
+    res2 = resolver(leva2, ref2, dec2, "leva2.xlsx", set(), True)
+    prova = {a["chave_ue"]: a for a in res2.avaliacoes}
+    conferir("FR-039 · a PM 1 da planilha aponta o item do curriculo (instrumento e numero)",
+             prova.get("PM1", {}).get("avaliacao_curriculo_id") == "av-1", res2.avaliacoes)
+    conferir("FR-039 · a PM 2 aponta o item 2", prova.get("PM2", {}).get("avaliacao_curriculo_id") == "av-2")
+    conferir("FR-036.1 · TA da PM 1 (3) diferente do curriculo (2): erro de planilha, e a prova entra com o da planilha",
+             any("TA de prova diferente" in e and "PM 1" in e for e in res2.erros_de_planilha)
+             and prova["PM1"]["tempos_consumidos"] == 3, res2.erros_de_planilha)
+    conferir("FR-036.1 · a linha RECON entra SEM item e vai para a lista",
+             prova.get("RECON", {}).get("avaliacao_curriculo_id") is None
+             and any("RECON" in e for e in res2.erros_de_planilha), res2.erros_de_planilha)
+    conferir("FR-036 · a PROVA PRÁTICA numa disciplina que so preve PM NAO se liga a nada (sem inferencia) e vai para a lista",
+             prova.get("PP1", {}).get("avaliacao_curriculo_id") is None
+             and any("PP1" in e and "nao casa" in e for e in res2.erros_de_planilha), res2.erros_de_planilha)
+    from scripts.carga_dsa.resolver import Resolvido, _ligar_itens
+    ordem = Resolvido(turma={}, autor={}, titulo="x")
+    base = {"disciplina": "I", "disciplina_id": "d-1", "chave_ue": "AV", "tipo_avaliacao": "Prova Escrita",
+            "tempos_consumidos": 2, "ta_inicial": 1, "avaliacao_curriculo_id": None, "item": None}
+    ordem.avaliacoes = [{**base, "data_avaliacao": "2026-04-01", "descricao": "PM2 – ESTATISTICA (U.E. 2)"},
+                        {**base, "data_avaliacao": "2026-04-20", "descricao": "PM1 – MATEMATICA (U.E. 1)"}]
+    _ligar_itens(ordem, {"itens_curriculo": ITENS_DA_LEVA_2})
+    conferir("FR-036 · o numero ESCRITO na descricao («PM2 –») vence a ordem de aplicacao: a PM 2 aplicada antes liga ao item 2",
+             [a["avaliacao_curriculo_id"] for a in ordem.avaliacoes] == ["av-2", "av-1"], ordem.avaliacoes)
+    # 14/10/2026 (Bernardo Villas Boas): a prova sem item nao some da lista — a da disciplina sem avaliacao do
+    # curriculo carregada, e a vista nao lancada de prova sem item (que o alerta do sistema deixou de contar).
+    from datetime import date as _date
+    from scripts.carga_dsa.resolver import _vista_de_prova_sem_item
+    sem = Resolvido(turma={}, autor={}, titulo="x")
+    sem.avaliacoes = [{**base, "disciplina": "IX", "disciplina_id": "d-9", "data_avaliacao": "2026-04-01",
+                       "descricao": "PROVA ESCRITA", "sessoes": []}]
+    _ligar_itens(sem, {"itens_curriculo": ITENS_DA_LEVA_2})
+    conferir("A4.7 · a prova da disciplina SEM avaliacao do curriculo carregada vai para a lista (antes, sumia)",
+             any("IX AV" in e and "nao tem avaliacao do curriculo carregada" in e for e in sem.erros_de_planilha),
+             sem.erros_de_planilha)
+    _vista_de_prova_sem_item(sem, _date(2026, 4, 9))
+    conferir("vista · a prova sem item, sem vista, no 8º dia vai para a lista", any("vista nao lancada" in e for e in sem.erros_de_planilha),
+             sem.erros_de_planilha)
+    cedo = Resolvido(turma={}, autor={}, titulo="x")
+    cedo.avaliacoes = [dict(sem.avaliacoes[0])]
+    _vista_de_prova_sem_item(cedo, _date(2026, 4, 8))
+    ligada = Resolvido(turma={}, autor={}, titulo="x")
+    ligada.avaliacoes = [{**sem.avaliacoes[0], "avaliacao_curriculo_id": "av-1"}]
+    _vista_de_prova_sem_item(ligada, _date(2026, 4, 30))
+    conferir("controle: no 7º dia, ou com item ligado (o alerta do sistema cobre), nao vai para a lista",
+             cedo.erros_de_planilha == [] and ligada.erros_de_planilha == [], (cedo.erros_de_planilha, ligada.erros_de_planilha))
+    sessoes = prova["PM1"]["sessoes"]
+    conferir("FR-042 · a vista da PM 1 em DUAS sessoes, numeradas 1 e 2, cada uma no seu dia",
+             [(v["numero"], v["data"]) for v in sessoes] == [(1, "2026-04-07"), (2, "2026-04-08")], sessoes)
+    conferir("FR-042 · e nenhuma AEC «vista_extra_como_aec» (a chave fica sem efeito)",
+             not any("VISTA DE PROVA" in (a.get("descricao") or "") for a in res2.atividades), res2.atividades)
+    conferir("T226 · as colunas de vista unica ficam NULAS (a vista e sessao)",
+             all(a["data_vista_prova"] is None for a in res2.avaliacoes))
+    conferir("FR-045 · «(FISCAL)» preenche o fiscal, e o fiscal nao vira o aplicador",
+             prova["PM2"]["fiscal"] == "1" and prova["PM2"]["instrutor"] != "1", prova["PM2"])
+    conferir("FR-046 · «A / B» guarda o 2º como veio quando nao casa com o cadastro",
+             prova["PM1"]["outros_instrutores"] == ["SR. AUXILIAR DE FORA"], prova["PM1"]["outros_instrutores"])
+    conferir("FR-031.8 · o curriculo mudo sobre a PM 2: o tempo da planilha vira SUGESTAO para a turma",
+             [(g["avaliacao_curriculo_id"], g["ta_aplicacao"]) for g in res2.sugestoes] == [("av-2", 2)], res2.sugestoes)
+    confirmado = {**ref2, "ajustes": [{"avaliacao_curriculo_id": "av-2", "origem": "arbitrado", "confirmado": True, "status": "ativo"}]}
+    conferir("FR-031.8 · com o arbitrado confirmado, nenhuma sugestao (a confirmada nao e tocada)",
+             resolver(leva2, confirmado, dec2, "l.xlsx", set(), True).sugestoes == [])
+    sql2 = sincronizar.sql_da_turma(res2, False, None, ensaio=False)
+    conferir("T226 · o SQL grava as sessoes em `vistas_de_avaliacao`, por codigo, e as sugestoes no ajuste da turma",
+             "insert into public.vistas_de_avaliacao" in sql2 and "'sugestao_planilha'" in sql2 and "-S'" in sql2)
+    atuais = {"aulas": [], "atividades": [], "dias_parados": [],
+              "avaliacoes": [{**a, "instrutor": a["instrutor"], "status": "ativo", "na_tela": False} for a in res2.avaliacoes]}
+    dif2 = sincronizar.diferencas(res2, atuais)["avaliacoes"]
+    conferir("duas rodadas: o mesmo plano sobre o que ja esta no banco da ZERO mudanca", not any(dif2.values()), dif2)
+    outra = [{**a, "sessoes": a["sessoes"][:1]} if a["chave_ue"] == "PM1" else a for a in atuais["avaliacoes"]]
+    conferir("controle: faltando a sessao 2 no banco, a PM 1 muda (o teste discrimina)",
+             sincronizar.diferencas(res2, {**atuais, "avaliacoes": outra})["avaliacoes"]["mudadas"] != [])
 
     print(f"\n{'TODAS AS PROVAS PASSARAM' if not FALHAS else f'{len(FALHAS)} PROVA(S) FALHARAM'}")
     return 1 if FALHAS else 0

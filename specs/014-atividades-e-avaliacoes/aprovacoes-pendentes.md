@@ -229,7 +229,8 @@ iguais antes e depois.** Os quatro relatórios estão em `antes-depois/`.
   (`TDI-000042` sem par ativo na junção).
 - **A4.7 — Os 90 itens da extração que ficaram FORA da D-4**, cada um com UMA recomendação (destino provável, tipo,
   TA e página do PDF): `medicoes/d4-fora-recomendacoes.md`. Enquanto não decididos, a disciplina mostra *"tempo de
-  avaliação não definido"*. **Aprovação:** [pendente], em lote.
+  avaliação não definido"*. **Aprovação:** [pendente], em lote. ⏳ *Bernardo Villas Boas, 14/10/2026: "continua PENDENTE
+  comigo; não bloqueia a publicação."* Registrada como pendência nomeada **PEND-014-6** no `CLAUDE.md`.
 
 ## Decisões tomadas sozinho durante a implementação
 
@@ -238,8 +239,11 @@ iguais antes e depois.** Os quatro relatórios estão em `antes-depois/`.
 14/10/2026**, na mesma conferência que decidiu A3.1 a A3.5 (a D3.2 e a D3.3 foram superadas pelas decisões
 A3.3 e A3.2). ✅ **D3.7 a D3.10, D4.1 a D4.5 e D5.2 ACEITAS por Bernardo Villas Boas em 14/10/2026.** ❌ **A D5.1 foi
 RECUSADA**: *"a turma tem de ter uma ABA «Avaliações» de verdade (barra de abas na página da turma, URL dona do
-estado), como pedi; o card leva para essa aba"* — feito no PR 5. As de número maior nasceram depois e esperam a
-palavra dele.
+estado), como pedi; o card leva para essa aba"* — feito no PR 5. ✅ **D5.4 a D5.6 e D6.1 a D6.3 ACEITAS por Bernardo
+Villas Boas em 14/10/2026** (segunda conferência do dia). ✅ **A D5.3 foi ACEITA COM CONDIÇÃO**: *"desde que a trilha de
+auditoria registre quem arbitrou, quando e o valor anterior"* — medido antes: o arbitrado guardava quem e quando
+(`editado_por`/`editado_em`), mas **não** o valor anterior; a condição foi cumprida no PR 5 pela trilha
+`avaliacoes_curriculo_arbitragens` (migration `20261014223818`), detalhe na D5.3.
 
 *(formato: decidi X porque Y; para mudar: Z)*
 
@@ -402,7 +406,14 @@ palavra dele.
   nenhuma tarefa cria essa ação, e o arbitrado grava com quem e quando (a trilha é a auditoria do gatilho). Escolhi
   **não** inventar uma ação de remover ajuste agora: o roteiro manda conferir com **"só esta turma"**, numa turma fora
   de `fontes.json`, e o ajuste fica registrado. **Recomendação:** se quiser o desfazer, ele vira *Remover ajuste da
-  turma* (status `inativo` em `avaliacoes_curriculo_turma`, regra 4), no PR 5.1. — aguarda sua palavra.
+  turma* (status `inativo` em `avaliacoes_curriculo_turma`, regra 4), no PR 5.1.
+  ✅ **ACEITA por Bernardo Villas Boas em 14/10/2026, COM CONDIÇÃO:** *"desde que a trilha de auditoria registre quem
+  arbitrou, quando e o valor anterior"*. **Cumprida no PR 5**: a migration `20261014223818_trilha_do_arbitrado` cria
+  `avaliacoes_curriculo_arbitragens`, só de acréscimo (UPDATE, DELETE e TRUNCATE recusados inclusive para a
+  `service_role`), alimentada por gatilho no item do curso e no ajuste por turma: **antes** e **depois** (JSON dos
+  campos do arbitrado), **autor** (`auth.uid()`; nulo = carga sem sessão) e **instante**. Provada por pgTAP (131, 14
+  asserções), por RLS com sessão real (o Encarregado arbitra e a trilha tem a linha dele com o valor anterior; as
+  tentativas recusadas do Operador e do Ajudante não deixam linha) e por reversão (1.935 → 1.904 objetos, `129d83d4…`).
 - **D5.4 (PR 5) — A aba Avaliações do curso usa a turma da Grade** (`?turma=`, com a pré-seleção pela janela), em vez
   de um segundo seletor de turma na aba: um parâmetro só, e a mesma turma nas duas abas. Os filtros `disciplina` e
   `situacao` da T175 **não** entraram (o quadro é recolhível por disciplina e mostra a situação por item); ficam para
@@ -415,3 +426,45 @@ palavra dele.
   **sem** item ligado (o histórico e a sincronização da leva 1), que por isso exigem vista, e muitas *Prova Prática*. O
   vínculo ao item, no PR 6, deve tirar da lista as provas cujo item não prevê vista. Usei o `AvisosRecolhiveis` dos
   quadros de avisos (`RNF-USA-04`). Captura: `pr5-06-inicio-vistas.png` (antes de recolher).
+  ✅ **Aceita em 14/10/2026, com a separação pedida por Bernardo Villas Boas** (*"se (b) for a maioria, o alerta conta só
+  (a) e (b) vai para a lista de erros de planilha"*). Medido no ensaio da rodada da leva 2 (cópia
+  `remoto-20261014-191624.sql` + exportação `2026-10-14T1916`): das **44** vistas que o `/inicio` daria por atrasadas,
+  **(a) 6** são de prova ligada a item com tempo de vista — atrasadas de verdade — e **(b) 38** de prova **sem** item.
+  (b) é a maioria: **o alerta passou a contar só a prova ligada a item** (`alertasDeVista`, PR 5), e a sincronização
+  lista as de (b) em `erros-de-planilha.md` como *"vista não lançada na planilha, e a prova não tem avaliação do
+  currículo que diga se há vista"* (PR 6).
+
+## PR 6 — a sincronização da leva 2
+
+- **A6.1 — A correção da `PEND-DSA-VISTA` (D-SYNC-2).** Reativar a `DSAP-C-EXP-OBS-ME-2026-L206-V` (a sessão de vista
+  dela já existe) e cancelar a relançada `DSA-MUYK0RFD-V`. Ensaiada no local: CHD da turma 113 → **114**, vista 3 →
+  **4**, uma avaliação viva no dia, e o `de_tela` da turma a zero. Relatório: `antes-depois/pend-dsa-vista.md`; SQL:
+  `antes-depois/pend-dsa-vista.sql`. **Aguarda sua aprovação** para o remoto (é pré-requisito da T233).
+  ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026** (*"A6.1 (PEND-DSA-VISTA, CHD Obs-ME 113 → 114):
+  APROVADO"*).
+- **A6.2 — Rodar a sincronização da leva 2 no REMOTO (T233)**, pelo rito da T121, nas **dez** turmas (a Obs-ME volta,
+  D-SYNC-1), depois da A6.1 e do CI verde. Ensaio no local: `antes-depois/rodada-do-pr6-no-local.md`. A 6ª rodada dá
+  zero mudança e o catálogo fica igual. **Aguarda sua autorização.**
+  ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026**, *"com o rito completo e as condições"*: depois do
+  merge e do deploy de #52, #53 e #54, cada um conferido em Production; backup, ensaio numa cópia nova, o antes/depois da
+  CHT por turma (com a lista das 17 linhas que viram Apoio Individualizado) e da A6.1, a sincronização, a segunda rodada
+  com zero mudança e a impressão digital local × remoto. **Se o remoto divergir do ensaio, PARAR.**
+- **D6.1 (PR 6) — A prova liga ao item SEM inferência.** O instrumento e o número saem da DESCRIÇÃO da linha
+  (*"PM4 – …"*, a forma que as planilhas usam) ou do nome do instrumento na descrição ou no tipo. Retirei um recurso que
+  eu tinha escrito — *"a disciplina só tem um instrumento, então é ele"* — porque ligava Prova Prática e OD a itens PM
+  (medido na 1ª rodada local). Resultado: **75 de 188** provas ligadas; **86** não casam e vão para a lista de erros de
+  planilha. **Recomendação:** o operador corrige a descrição na planilha (*"PM1 – …"*), ou você decide um de-para por
+  turma no lote de decisões (`"itens": {"<linha>": "PM 1"}`) — não implementado, para não inventar a regra.
+- **D6.2 (PR 6) — A CHT cai em sete turmas por causa da A3.6, não da leva 2.** 17 Monitorias estavam no remoto como
+  TAD/Administração (travadas pela pendência de responsável desde 06/10); com a A3.6, viram **Apoio Individualizado**
+  (D-AA-12), fora da CHT. Ex.: C-Esp-ME 617 → 603. É o efeito das duas decisões aprovadas, dito para não ser lido como
+  perda.
+- **D6.3 (PR 6) — Quem conduz a vista vem da linha da vista na planilha**, e a vista conta para ele na carga do
+  instrutor (`vw_instrutor_carga_anual`, E-5). Antes, a sessão ficava sem condutor, e a vista contava para o
+  responsável da avaliação.
+
+## Conferências de Bernardo — 14/10/2026 (segunda)
+
+- **Roteiros de conferência** dos PRs 4, 5, 5.1 e 6: *"farei pelo preview, só leitura."*
+- **Testes instáveis sob carga** (`tema`, `dsa-tipo-e-global` e outros): registrados como pendência nomeada
+  **PEND-014-7** no `CLAUDE.md`.
