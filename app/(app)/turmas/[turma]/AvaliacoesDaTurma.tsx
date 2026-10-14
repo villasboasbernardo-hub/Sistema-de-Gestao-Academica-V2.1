@@ -14,8 +14,6 @@ import { ROTULO_DA_SITUACAO, type SituacaoDaAvaliacao } from "@/lib/dominio/aval
 import { dataParaLeitura } from "@/lib/formato/data";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 
-import { ANCORA_DAS_AVALIACOES } from "./CardDeAvaliacoes";
-
 const TOM: Record<
   SituacaoDaAvaliacao,
   "executado" | "planejado" | "atrasado" | "conflito" | "adiantado"
@@ -41,7 +39,6 @@ export function AvaliacoesDaTurma({
 }) {
   return (
     <section
-      id={ANCORA_DAS_AVALIACOES}
       aria-labelledby="titulo-das-avaliacoes"
       className="flex flex-col gap-2"
       data-slot="avaliacoes-da-turma"

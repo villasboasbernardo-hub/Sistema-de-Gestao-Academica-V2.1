@@ -5,14 +5,22 @@
  * ⚠️ **A OD E A VISTA FICAM FORA DE N E DE M** (Q-17): a OD é *"+ K avaliações contínuas (OD)"* logo abaixo, e a
  *    vista é *"vistas realizadas A de B"*. A disciplina sem previsto definido é contada à parte, sem esconder o total.
  * ⚠️ O número vai no texto e nos atributos da barra — nunca só na cor.
- * ⚠️ SEM MARCADOR DE CLIENTE: o clique é um link para a seção de avaliações (`#avaliacoes`).
+ * ⚠️ SEM MARCADOR DE CLIENTE: o clique é um link para a ABA «Avaliações» (`?aba=avaliacoes`, R-12), pelo módulo único
+ *    de endereço da turma (gotcha 12: o código tem espaço).
  */
+import Link from "next/link";
+
 import type { ContagemDeAvaliacoes } from "@/lib/dominio/avaliacoes/contagem";
+import { enderecoDasAvaliacoesDaTurma } from "@/lib/navegacao/endereco-de-turma";
 import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 
-export const ANCORA_DAS_AVALIACOES = "avaliacoes";
-
-export function CardDeAvaliacoes({ contagem }: { readonly contagem: ContagemDeAvaliacoes }) {
+export function CardDeAvaliacoes({
+  contagem,
+  turmaCodigo,
+}: {
+  readonly contagem: ContagemDeAvaliacoes;
+  readonly turmaCodigo: string;
+}) {
   const {
     aplicadas,
     previstas,
@@ -24,8 +32,8 @@ export function CardDeAvaliacoes({ contagem }: { readonly contagem: ContagemDeAv
   } = contagem;
   const percentual = previstas > 0 ? Math.round((aplicadas / previstas) * 100) : null;
   return (
-    <a
-      href={`#${ANCORA_DAS_AVALIACOES}`}
+    <Link
+      href={enderecoDasAvaliacoesDaTurma(turmaCodigo)}
       className="border-borda bg-superficie rounded-ciaara hover:bg-marca-suave flex flex-col gap-2 border p-3 md:max-w-md"
       data-slot="card-de-avaliacoes"
       data-aplicadas={aplicadas}
@@ -64,6 +72,6 @@ export function CardDeAvaliacoes({ contagem }: { readonly contagem: ContagemDeAv
           sem previsto definido
         </p>
       ) : null}
-    </a>
+    </Link>
   );
 }

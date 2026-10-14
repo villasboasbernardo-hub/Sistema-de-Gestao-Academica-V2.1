@@ -51,6 +51,7 @@ import { SecaoDeAndamento } from "./SecaoDeAndamento";
 import { CardsDeTetos, type AutoriaDoPrevisto } from "./CardsDeTetos";
 import { CardDeAvaliacoes } from "./CardDeAvaliacoes";
 import { AvaliacoesDaTurma } from "./AvaliacoesDaTurma";
+import { AbasDaTurma } from "./AbasDaTurma";
 import { lerAvaliacoesDaTurma } from "./consulta-de-avaliacoes";
 import { EdicaoDoPrevisto } from "./EdicaoDoPrevisto";
 import {
@@ -530,11 +531,33 @@ export default async function FichaDaTurma({
 
       {/*
         ⚠️ **O CARD DE AVALIAÇÕES FECHA A FAIXA DOS CARDS** (R-12): N de M, a OD e as vistas, com o clique
-           levando à seção de avaliações. (A barra de abas da R-12 fica para a T177 — decisão D5.1.)
+           levando à ABA «Avaliações» (`?aba=avaliacoes`) — decisão de Bernardo Villas Boas, 14/10/2026.
       */}
-      {avaliacoes?.quadro ? <CardDeAvaliacoes contagem={avaliacoes.quadro.contagem} /> : null}
+      {avaliacoes?.quadro ? (
+        <CardDeAvaliacoes
+          contagem={avaliacoes.quadro.contagem}
+          turmaCodigo={turma.codigo as string}
+        />
+      ) : null}
 
       {/*
+        ⚠️ **AS ABAS FICAM ABAIXO DA FAIXA DOS CARDS** (R-12): acima delas, o que se lê de toda turma —
+           cabeçalho, avisos, Andamento e cards. A aba *Ficha* tem o conteúdo de antes (disciplinas e
+           edição); a aba *Avaliações*, o quadro por disciplina. A URL é dona da aba (`aba`).
+      */}
+      <AbasDaTurma
+        avaliacoes={
+          avaliacoes ? (
+            <AvaliacoesDaTurma quadro={avaliacoes.quadro} aviso={avaliacoes.aviso} />
+          ) : (
+            <p className="text-texto-suave text-sm" data-slot="avaliacoes-turma-ead">
+              Turma EAD: sem avaliações lançadas no DSA.
+            </p>
+          )
+        }
+        ficha={
+          <>
+            {/*
         ⚠️ **A SEÇÃO DE DISCIPLINAS VEIO DE `/disciplinas?turma=` EM 04/10/2026** (`FR-018`), e o
            endereço antigo **redireciona para esta âncora**. O `id` é o destino do `#`, e é por isso
            que ele é fixo e sai do módulo de endereço: um `#disciplinas` escrito à mão aqui e lá
@@ -543,38 +566,34 @@ export default async function FichaDaTurma({
            mundo, e manter os dois dava a mesma informação duas vezes na mesma tela para quem não
            edita.
       */}
-      <section
-        id={ANCORA_DAS_DISCIPLINAS}
-        aria-labelledby="titulo-das-disciplinas"
-        className="flex flex-col gap-2"
-        data-slot="disciplinas-da-turma"
-      >
-        <h2 id="titulo-das-disciplinas" className="text-texto text-base font-semibold">
-          Disciplinas
-        </h2>
-        {naGrade.length === 0 ? (
-          <p className="text-texto-suave text-sm" data-slot="turma-sem-grade">
-            Esta turma ainda não tem disciplinas na grade.
-          </p>
-        ) : (
-          <DisciplinasDaTurma
-            linhas={naGrade}
-            turmaCodigo={turma.codigo as string}
-            escala={grade.escalaDeAntiguidade}
-            podeEditar={pode(permissoes, "disciplinas", "editar")}
-            avisoInicioDias={grade.avisoInicioDias}
-            hoje={hoje}
-            abertaNoEndereco={String(valores.aberta)}
-            executadaDaTurma={andamento.executada}
-          />
-        )}
-      </section>
+            <section
+              id={ANCORA_DAS_DISCIPLINAS}
+              aria-labelledby="titulo-das-disciplinas"
+              className="flex flex-col gap-2"
+              data-slot="disciplinas-da-turma"
+            >
+              <h2 id="titulo-das-disciplinas" className="text-texto text-base font-semibold">
+                Disciplinas
+              </h2>
+              {naGrade.length === 0 ? (
+                <p className="text-texto-suave text-sm" data-slot="turma-sem-grade">
+                  Esta turma ainda não tem disciplinas na grade.
+                </p>
+              ) : (
+                <DisciplinasDaTurma
+                  linhas={naGrade}
+                  turmaCodigo={turma.codigo as string}
+                  escala={grade.escalaDeAntiguidade}
+                  podeEditar={pode(permissoes, "disciplinas", "editar")}
+                  avisoInicioDias={grade.avisoInicioDias}
+                  hoje={hoje}
+                  abertaNoEndereco={String(valores.aberta)}
+                  executadaDaTurma={andamento.executada}
+                />
+              )}
+            </section>
 
-      {avaliacoes ? (
-        <AvaliacoesDaTurma quadro={avaliacoes.quadro} aviso={avaliacoes.aviso} />
-      ) : null}
-
-      {/*
+            {/*
         ⚠️ **O FORMULÁRIO DESCEU E FICOU RECOLHIDO EM 05/10/2026** *(decisão de Bernardo, na
            conferência)*: a ficha abre para **ler** — cabeçalho, indicadores, andamento,
            disciplinas — e editar é um ato deliberado, atrás de *"Editar turma"*.
@@ -587,38 +606,41 @@ export default async function FichaDaTurma({
            precisa lê-lo antes de salvar"* — com o formulário no fim ele está acima de qualquer
            jeito, e acima de **tudo**, que é onde uma região de alertas pertence (`RNF-USA-04`).
       */}
-      {podeEditar ? (
-        <EdicaoDaTurma>
-          <FormularioDeTurma
-            modo="edicao"
-            cursoId={cursoId}
-            codigoAtual={turma.codigo as string}
-            inicial={{
-              ano_letivo: texto(turma.ano_letivo),
-              status: turma.status as string,
-              modalidade: turma.modalidade as string,
-              turma: texto(turma.turma),
-              data_inicio: texto(turma.data_inicio),
-              data_termino: texto(turma.data_termino),
-              sala_alocada: texto(turma.sala_alocada),
-              alunos: texto(turma.alunos),
-              inicio_etapa_presencial: texto(turma.inicio_etapa_presencial),
-              termino_etapa_presencial: texto(turma.termino_etapa_presencial),
-            }}
-            salas={salas}
-            turmasDoCurso={outras}
-            limiteDoCurso={
-              cursoRes.data?.limite_turmas_ano === null ||
-              cursoRes.data?.limite_turmas_ano === undefined
-                ? null
-                : Number(cursoRes.data.limite_turmas_ano)
-            }
-            semRotuloNoAno={semRotuloNoAno}
-            vigenciasProtegidas={protegidas}
-            janelasDoCurso={janelas}
-          />
-        </EdicaoDaTurma>
-      ) : null}
+            {podeEditar ? (
+              <EdicaoDaTurma>
+                <FormularioDeTurma
+                  modo="edicao"
+                  cursoId={cursoId}
+                  codigoAtual={turma.codigo as string}
+                  inicial={{
+                    ano_letivo: texto(turma.ano_letivo),
+                    status: turma.status as string,
+                    modalidade: turma.modalidade as string,
+                    turma: texto(turma.turma),
+                    data_inicio: texto(turma.data_inicio),
+                    data_termino: texto(turma.data_termino),
+                    sala_alocada: texto(turma.sala_alocada),
+                    alunos: texto(turma.alunos),
+                    inicio_etapa_presencial: texto(turma.inicio_etapa_presencial),
+                    termino_etapa_presencial: texto(turma.termino_etapa_presencial),
+                  }}
+                  salas={salas}
+                  turmasDoCurso={outras}
+                  limiteDoCurso={
+                    cursoRes.data?.limite_turmas_ano === null ||
+                    cursoRes.data?.limite_turmas_ano === undefined
+                      ? null
+                      : Number(cursoRes.data.limite_turmas_ano)
+                  }
+                  semRotuloNoAno={semRotuloNoAno}
+                  vigenciasProtegidas={protegidas}
+                  janelasDoCurso={janelas}
+                />
+              </EdicaoDaTurma>
+            ) : null}
+          </>
+        }
+      />
     </section>
   );
 }

@@ -95,6 +95,14 @@ export const ROTA_DA_FICHA_DA_TURMA = "/turmas/[turma]" as const;
  * ⚠️ **VALOR NO PADRÃO NÃO VAI NA URL** — é o que mantém o endereço da semana corrente favoritável,
  * e o que faz `?semana=` aparecer só quando alguém navegou de propósito.
  */
+/**
+ * A aba «Avaliações» da ficha da turma (spec 014, PR 5, R-12). O código da turma tem espaço: ele passa por
+ * `enderecoDaTurma`, que o codifica — nunca montado à mão (gotcha 12).
+ */
+export function enderecoDasAvaliacoesDaTurma(codigo: string): string {
+  return `${enderecoDaTurma(codigo)}?aba=avaliacoes`;
+}
+
 export function enderecoDoDsa(
   codigo: string,
   recorte?: { readonly semana?: number; readonly ano?: number; readonly sabado?: boolean },

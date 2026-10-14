@@ -603,6 +603,19 @@ export const CONTRATO = {
     rota: "/turmas/[turma]",
     origem: "RF-CURSO-01",
     parametros: {
+      /*
+       * Spec 014, PR 5 (R-12, T175; decisão de Bernardo Villas Boas de 14/10/2026, que recusou a D5.1): a turma tem
+       * a aba «Avaliações» DE VERDADE, e a URL é dona dela. Trocar de aba é navegação — empilha histórico, como na
+       * página do curso.
+       */
+      aba: {
+        nome: "aba",
+        tipo: "escolha",
+        padrao: "ficha",
+        opcoes: ["ficha", "avaliacoes"],
+        historico: "empilha",
+        avisaServidor: true,
+      },
       aberta: {
         nome: "aberta",
         tipo: "texto",
