@@ -171,6 +171,7 @@ export function PainelDeSituacao({
     readonly disciplinaId: string;
     readonly aplicadas: number;
     readonly previstas: number;
+    readonly semItem: number;
   }[];
 }) {
   /*
@@ -347,21 +348,33 @@ export function UnidadesDaDisciplina({
 }: {
   readonly codigo: string;
   readonly unidades: readonly UnidadeNoQuadro[];
-  readonly avaliacoes?: { readonly aplicadas: number; readonly previstas: number } | undefined;
+  readonly avaliacoes?:
+    | { readonly aplicadas: number; readonly previstas: number; readonly semItem: number }
+    | undefined;
 }) {
   /* A ordem do currículo: UE 1, 2, 3… A view não garante ordem nenhuma. */
   const emOrdem = [...unidades].sort((a, b) => a.numero - b.numero);
 
   return (
     <div data-slot="ues-da-disciplina" data-unidades-de={codigo} className="flex flex-col gap-2">
-      {avaliacoes && avaliacoes.previstas > 0 ? (
+      {avaliacoes && (avaliacoes.previstas > 0 || avaliacoes.semItem > 0) ? (
         <p
           className="text-texto text-xs"
           data-slot="avaliacoes-aplicadas"
           data-aplicadas={avaliacoes.aplicadas}
           data-previstas={avaliacoes.previstas}
+          data-sem-item={avaliacoes.semItem}
         >
-          {avaliacoes.aplicadas} de {avaliacoes.previstas} avaliações do currículo aplicadas
+          {/*
+            ⚠️ A AVALIAÇÃO SEM ITEM NÃO SOME DA CONTA (14/10/2026): ela não cumpre item nenhum, então fica fora
+               do «X de Y» e é contada ao lado — inclusive quando o currículo carregado não tem avaliação.
+          */}
+          {avaliacoes.previstas > 0
+            ? `${avaliacoes.aplicadas} de ${avaliacoes.previstas} avaliações do currículo aplicadas`
+            : "Sem avaliação do currículo carregada"}
+          {avaliacoes.semItem > 0
+            ? ` · ${avaliacoes.semItem} ${avaliacoes.semItem === 1 ? "lançada" : "lançadas"} sem item do currículo`
+            : ""}
         </p>
       ) : null}
       {emOrdem.length === 0 ? (

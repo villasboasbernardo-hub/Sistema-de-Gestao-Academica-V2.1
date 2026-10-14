@@ -115,3 +115,36 @@ export function alertaDeItemJaAplicado(
     ? `${item.rotulo} já tem avaliação lançada: este lançamento passa do previsto do currículo.`
     : null;
 }
+
+/**
+ * O *"X de Y avaliações do currículo aplicadas"* de uma disciplina, ACUMULADO ATÉ A SEMANA (FR-057), e quantas
+ * avaliações foram lançadas SEM item do currículo até ali.
+ *
+ * ⚠️ **A PROVA SEM ITEM NÃO SOME DA CONTA** *(decisão de Bernardo Villas Boas, 14/10/2026)*: ela não cumpre item
+ *    nenhum — o vínculo é explícito (FR-039), nunca inferido —, então fica fora do X e aparece ao lado, contada.
+ *    Vale também para a disciplina cujo currículo carregado não tem avaliação (Y = 0).
+ * ⚠️ A OD é contínua (Q-17): não entra em X, Y nem nas sem item.
+ */
+export function avaliacoesAteASemana(entrada: {
+  readonly oferta: OfertaDaDisciplina;
+  readonly avaliacoes: readonly {
+    readonly itemId: string | null;
+    readonly natureza: NaturezaDaAvaliacao;
+    readonly aplicacao: string | null;
+  }[];
+  /** A data ISO do último dia da semana mostrada. */
+  readonly ate: string;
+}): { aplicadas: number; previstas: number; semItem: number } {
+  const doCurriculo = new Set(entrada.oferta.avaliacoes.map((a) => a.itemId));
+  const ateASemana = entrada.avaliacoes.filter(
+    (a) => a.natureza !== "od" && a.aplicacao !== null && a.aplicacao <= entrada.ate,
+  );
+  const ligados = new Set(
+    ateASemana.map((a) => a.itemId).filter((i): i is string => i !== null && doCurriculo.has(i)),
+  );
+  return {
+    aplicadas: ligados.size,
+    previstas: entrada.oferta.avaliacoes.length,
+    semItem: ateASemana.filter((a) => a.itemId === null || !doCurriculo.has(a.itemId)).length,
+  };
+}

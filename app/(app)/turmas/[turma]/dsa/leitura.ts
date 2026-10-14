@@ -65,11 +65,13 @@ import { contagemNaPrimeira, lerTodasAsPaginas } from "@/lib/supabase/paginacao"
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import {
+  avaliacoesAteASemana,
   ofertaDaDisciplina,
   rotuloDoItem,
   type ItemOferecido,
   type ItemParaOferta,
 } from "@/lib/dominio/dsa/itens-da-disciplina";
+import { naturezaPeloTipo } from "@/lib/dominio/avaliacoes/quadro-da-turma";
 import type { NaturezaDaAvaliacao } from "@/lib/dominio/avaliacoes/situacao";
 import {
   COLUNAS_DA_OCUPACAO,
@@ -182,6 +184,8 @@ export type SemanaDoDsa = {
     readonly disciplinaId: string;
     readonly aplicadas: number;
     readonly previstas: number;
+    /** Avaliações lançadas SEM item do currículo até a semana: não somem da conta (14/10/2026). */
+    readonly semItem: number;
   }[];
   readonly instrutores: readonly InstrutorParaExibir[];
   readonly escala: EscalaDeAntiguidade;
@@ -1226,20 +1230,31 @@ export function montarSemanaDoDsa(
     /*
      * ⚠️ «X de Y aplicadas» é ACUMULADO ATÉ A SEMANA, como todo o painel — medido na captura de 14/10/2026: contando o
      *    ano inteiro, a semana 21 dizia «4 de 4» com só a PM 4 aplicada. O mesmo critério de «aplicada» da oferta (uma
-     *    avaliação viva ligada ao item), cortado na data.
+     *    avaliação viva ligada ao item), cortado na data. ⚠️ A avaliação SEM item não some: vai contada ao lado
+     *    (`avaliacoesAteASemana`), inclusive na disciplina cujo currículo carregado não tem avaliação.
      */
-    avaliacoesPorDisciplina: ofertas.map(({ disciplinaId, oferta }) => {
-      const ateASemana = new Set(
-        paraVistaDaTurma
-          .filter((x) => x.disciplina_id === disciplinaId && ateOFim(x.data_avaliacao))
-          .map((x) => x.avaliacao_curriculo_id)
-          .filter((x): x is string => x !== null),
-      );
-      return {
-        disciplinaId,
-        aplicadas: oferta.avaliacoes.filter((x) => ateASemana.has(x.itemId)).length,
-        previstas: oferta.avaliacoes.length,
+    avaliacoesPorDisciplina: [
+      ...new Set([
+        ...ofertas.map((o) => o.disciplinaId),
+        ...paraVistaDaTurma.map((a) => a.disciplina_id),
+      ]),
+    ].flatMap((disciplinaId) => {
+      const oferta = ofertas.find((o) => o.disciplinaId === disciplinaId)?.oferta ?? {
+        avaliacoes: [],
+        vistas: [],
       };
+      const conta = avaliacoesAteASemana({
+        oferta,
+        avaliacoes: paraVistaDaTurma
+          .filter((x) => x.disciplina_id === disciplinaId)
+          .map((x) => ({
+            itemId: x.avaliacao_curriculo_id,
+            natureza: naturezaPeloTipo(x.tipo_avaliacao ?? ""),
+            aplicacao: ateOFim(x.data_avaliacao) ? x.data_avaliacao : null,
+          })),
+        ate,
+      });
+      return conta.previstas > 0 || conta.semItem > 0 ? [{ disciplinaId, ...conta }] : [];
     }),
     /* ⚠️ Instrutor INATIVO não chega ao seletor (`RN-INST-02`). */
     instrutores: linhasDeInstrutor

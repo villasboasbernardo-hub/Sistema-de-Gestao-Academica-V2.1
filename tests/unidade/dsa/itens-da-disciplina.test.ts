@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   alertaDeItemJaAplicado,
+  avaliacoesAteASemana,
   ofertaDaDisciplina,
   type ItemParaOferta,
 } from "@/lib/dominio/dsa/itens-da-disciplina";
@@ -82,5 +83,51 @@ describe("FR-032 · a oferta da disciplina", () => {
     expect(alertaDeItemJaAplicado(o, "i1")).toMatch(/passa do previsto/);
     expect(alertaDeItemJaAplicado(o, "i2")).toBeNull();
     expect(alertaDeItemJaAplicado(o, null)).toBeNull();
+  });
+});
+
+describe("FR-057 · «X de Y» até a semana — a avaliação sem item não some da conta (14/10/2026)", () => {
+  const oferta = ofertaDaDisciplina({ itens: [PM1, PM2, TG1, OD], avaliacoes: [] });
+
+  it("a sem item fica fora do X e é contada ao lado; a OD não entra; o que passa da semana não conta", () => {
+    expect(
+      avaliacoesAteASemana({
+        oferta,
+        ate: "2026-05-10",
+        avaliacoes: [
+          { itemId: "i1", natureza: "prova", aplicacao: "2026-05-07" },
+          { itemId: null, natureza: "prova", aplicacao: "2026-05-08" },
+          { itemId: null, natureza: "od", aplicacao: "2026-05-08" },
+          { itemId: "i2", natureza: "prova", aplicacao: "2026-06-01" },
+          { itemId: null, natureza: "trabalho", aplicacao: "2026-06-01" },
+        ],
+      }),
+    ).toEqual({ aplicadas: 1, previstas: 3, semItem: 1 });
+  });
+
+  it("a disciplina sem avaliação no currículo carregado: Y = 0, e as lançadas aparecem", () => {
+    expect(
+      avaliacoesAteASemana({
+        oferta: { avaliacoes: [], vistas: [] },
+        ate: "2026-12-31",
+        avaliacoes: [
+          { itemId: null, natureza: "prova", aplicacao: "2026-03-01" },
+          { itemId: null, natureza: "trabalho", aplicacao: "2026-04-01" },
+        ],
+      }),
+    ).toEqual({ aplicadas: 0, previstas: 0, semItem: 2 });
+  });
+
+  it("o mesmo item aplicado duas vezes conta uma no X (o vínculo é ao item)", () => {
+    expect(
+      avaliacoesAteASemana({
+        oferta,
+        ate: "2026-12-31",
+        avaliacoes: [
+          { itemId: "i1", natureza: "prova", aplicacao: "2026-03-01" },
+          { itemId: "i1", natureza: "prova", aplicacao: "2026-03-08" },
+        ],
+      }),
+    ).toEqual({ aplicadas: 1, previstas: 3, semItem: 0 });
   });
 });
