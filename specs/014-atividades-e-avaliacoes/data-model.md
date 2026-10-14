@@ -19,7 +19,7 @@
 | situação da avaliação e da OD | **cálculo** (FR-050/051) | `lib/dominio/avaliacoes/situacao.ts` ↔ `app.fn_status_vista` |
 | "N aplicadas de M", "+ K OD", "vistas A de B" | **cálculo** (FR-056) | `lib/dominio/avaliacoes/contagem.ts` |
 | cumprido de AEC/TAD/TR, dias parados | **cálculo** | `vw_carga_horaria_turma` (reescrita) + `lib/dominio/tetos-da-turma.ts` |
-| previsto do PROENS | **dado**, por turma e ano | `previsto_proens_turma` |
+| previsto do PROENS | **dado**, por turma e ano | `previstos_proens_turma` |
 | limite máximo | **dado** (currículo) **ou cálculo** (norma) | `limites_curriculo` + `limiteMaximo()` |
 | categoria da atividade | **derivada do tipo** por gatilho, gravada por compatibilidade | `config_listas.metadados.categoria` → `atividades_nao_letivas.categoria_normativa` |
 | dia parado | **dado** | `dias_parados`, `feriados`, `atividades_nao_letivas` (TR bloqueante) |
@@ -33,35 +33,45 @@ alter type public.categoria_normativa add value 'Apoio_Individualizado';
 -- uso do valor só a partir do PRÓXIMO arquivo (R-7)
 ```
 
-### 2.2 `atividades_nao_letivas` **[E] (PR 1)**
+### 2.2 `atividades_nao_letivas` **[E-1 e E-2] (PR 1)** — dois arquivos, por causa do enum (R-7)
+
+**[E-1]** — nada aqui cita `Apoio_Individualizado` fora de corpo de função:
 
 ```sql
--- R-2: a coluna gerada é recriada com a expressão nova (exceção nominal, dúvida D-1)
-alter table public.atividades_nao_letivas drop column compoe_cht;
-alter table public.atividades_nao_letivas add column compoe_cht boolean
-  generated always as (categoria_normativa not in ('Estudo_Individual', 'Apoio_Individualizado')) stored;
-
 alter table public.atividades_nao_letivas
   add column tipo_atividade_id   uuid references public.config_listas(id) on delete restrict,
   add column bloqueia_aula       boolean not null default false,          -- TR por licença não prevista (FR-025.1)
-  add column tipo_parada         text,                                     -- valor de config_listas.tipos_parada
+  add column tipo_parada_id      uuid references public.config_listas(id) on delete restrict,  -- tipos_parada, FK (FR-012 vale aqui também)
   add column quantidade_alunos   smallint check (quantidade_alunos > 0),   -- FR-020, só Apoio Individualizado
   add column outros_instrutores  text[] not null default '{}';             -- FR-046
 
+-- preenchimento do tipo pelo subtipo SÓ nas linhas sem origem_migracao_v1 (DSAP- e da tela);
+-- a histórica do ETL fica sem tipo, e não é preenchida nem recusada, mesmo com subtipo casável
 -- catraca: linha nova exige tipo; a histórica sem tipo casável fica como está
 alter table public.atividades_nao_letivas add constraint ativ_tipo_obrigatorio check (
   tipo_atividade_id is not null or origem_migracao_v1 is not null
 );
--- a carga das planilhas (`DSAP-`) passa a mandar o tipo (contracts/sincronizacao.md); só o ETL da v2.0 é histórico
--- bloqueia_aula só em TR com tipo_parada; quantidade_alunos só em Apoio_Individualizado
+-- bloqueia_aula só em TR com tipo de parada
 alter table public.atividades_nao_letivas add constraint ativ_bloqueio_so_tr check (
-  not bloqueia_aula or (categoria_normativa = 'TR' and tipo_parada is not null)
+  not bloqueia_aula or (categoria_normativa = 'TR' and tipo_parada_id is not null)
 );
+-- gatilho app.categoria_pelo_tipo(): BEFORE INSERT OR UPDATE — tipo pelo subtipo quando nulo (e recalculado
+-- quando só o subtipo muda); categoria_normativa e subtipo pelo tipo; recusa tipo sem categoria ou com uso = 'aula';
+-- não toca linha histórica sem tipo (R-3). security definer, search_path fixo, revoke de public/anon/authenticated.
+```
+
+**[E-2]** — usa o valor novo (arquivo seguinte):
+
+```sql
+-- R-2: a coluna gerada é recriada com a expressão nova (decisão D-1 do plan, aceita em 13/10/2026),
+-- com as dependentes recriadas no mesmo arquivo e a contagem de `true` por categoria conferida antes e depois
+alter table public.atividades_nao_letivas drop column compoe_cht;
+alter table public.atividades_nao_letivas add column compoe_cht boolean
+  generated always as (categoria_normativa not in ('Estudo_Individual', 'Apoio_Individualizado')) stored;
+-- quantidade_alunos só em Apoio_Individualizado
 alter table public.atividades_nao_letivas add constraint ativ_alunos_so_apoio check (
   quantidade_alunos is null or categoria_normativa = 'Apoio_Individualizado'
 );
--- gatilho app.categoria_pelo_tipo(): BEFORE INSERT OR UPDATE — lê metadados->>'categoria' do tipo,
--- grava categoria_normativa e subtipo; recusa tipo sem categoria (R-3)
 ```
 
 ⚠️ `ativ_estudo_individual_de_turma` (EI sempre de turma) ganha o Apoio Individualizado: **também
@@ -73,7 +83,9 @@ sempre de turma** (é de alunos específicos de uma turma).
   'categoria'` **presente e fora do enum** e `uso` presente diferente de `'aula'`; tipo sem categoria é
   aceito (o ETL grava tipos de aula assim). ⚠️ *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*.
 - Gatilho `app.recategorizar_pelo_tipo()`: quando a categoria de um tipo muda, regrava a categoria das
-  linhas **ativas** de `atividades_nao_letivas` com aquele `tipo_atividade_id` (cenário 4 da US2).
+  linhas **ativas** de `atividades_nao_letivas` com aquele `tipo_atividade_id` (cenário 4 da US2). Escreve em
+  outra tabela com RLS: `security definer`, `set search_path = pg_catalog, public`, `revoke all … from public, anon,
+  authenticated` (Princípio XI.1) *(analyze de 14/10/2026)*.
 - Lista **`tipos_parada`** `[D]`: `FR` Feriado · `LA` Licença Administrativa · `LP` Licença de
   Pagamento · `NT` Treinamento (nome por extenso conforme as planilhas) · `RC` Recesso · `PF` Ponto
   facultativo; `metadados = { "pode_global": bool, "aceita_tr": bool }`.
@@ -81,7 +93,7 @@ sempre de turma** (é de alunos específicos de uma turma).
   Instrução* → `AEC`; *Monitoria*, *Português para Estrangeiros*, *BDA*, *BDF* →
   `Apoio_Individualizado` (criados se não existirem). Os tipos **sem** categoria hoje (`Aula`,
   `Avaliação`, `Vista de Prova`, `Licença de Pagamento`, `Aula Teórica`, `Aula Prática` — medido em
-  `config_listas`) não são de atividade: os cinco de aula e avaliação recebem `metadados.uso = 'aula'`, e
+  `config_listas` da cópia `remoto-20261009-085410.sql`) não são de atividade: os cinco de aula e avaliação recebem `metadados.uso = 'aula'`, e
   *Licença de Pagamento* fica `ativo = false` na lista de atividade, porque passa a ser o `LP` de
   `tipos_parada`; a FR-010 não os oferece. ⚠️ *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*.
 
@@ -95,7 +107,7 @@ create table public.dias_parados (
   data                date not null,
   ta_inicial          smallint,                                                      -- nulo = dia inteiro
   tempos              smallint,                                                      -- nulo = dia inteiro
-  tipo_parada         text not null,                                                 -- config_listas.tipos_parada
+  tipo_parada_id      uuid not null references public.config_listas(id) on delete restrict,  -- tipos_parada, FK (como R-3)
   motivo              text not null,
   prevista            boolean not null default true,
   status              public.status_registro not null default 'ativo',
@@ -147,7 +159,7 @@ Contagem oficial sai do CSV revisado (R-13).
 `vw_carga_horaria_turma` reescrita (com `security_invoker = true`, gotcha 10):
 - `nao_letivas` passa a incluir as **globais** (`turma_id is null`) em cada turma que **tem DSA na
   data** (ativa, não EAD, e dentro da etapa presencial se semipresencial — FR-013, A-1);
-- a categoria vem da **coluna**, mantida pelos dois gatilhos do tipo (R-3); ⚠️ *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*: a primeira
+- a categoria vem da **coluna**, mantida pelos dois gatilhos do tipo (R-3); a linha "dias parados" lê o **tipo** do feriado do calendário pela sigla do prefixo `<sigla> — ` da descrição quando ela casa com um valor de `tipos_parada`, e `FR` quando não casa (feriado histórico sem prefixo) *(analyze de 14/10/2026)*; ⚠️ *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*: a primeira
   redação lia pela junção com o tipo, o que deixaria `compoe_cht` desatualizada;
 - as colunas novas entram **no fim** (o `create or replace view` não reordena, e `vw_conformidade_tetos`
   depende dela); e nasce a view irmã `vw_dias_parados_turma`, por tipo, em tempos e em dias;
@@ -156,16 +168,16 @@ Contagem oficial sai do CSV revisado (R-13).
 - `ta_vista_prova` passa a somar `vistas_de_avaliacao` (PR 4; até lá, as colunas antigas).
 
 `vw_conformidade_tetos` reescrita (PR 1.1): `limite_maximo` e `origem_limite` por `limites_curriculo`
-ou percentual; `previsto_proens` por `previsto_proens_turma`; `cumprido`. **Sem** os alertas, que moram
+ou percentual — ⚠️ *(analyze de 14/10/2026)*: a view devolve só **números crus** (`cumprido`, `previsto`, `limite_declarado`, `ch_curricular`, `percentual_norma`); limite, origem e alerta são decididos em `limiteMaximo()`/`tetosDaTurma()`, para não haver segunda implementação da regra em SQL —; `previsto` por `previstos_proens_turma`. **Sem** os alertas, que moram
 só em `tetosDaTurma` (ponto único). ⚠️ *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*.
 
 A E-2 cria também a sequência `FER-` como `DEFAULT` de `feriados.codigo`, no lugar do `max + 1` que a
 sincronização usa hoje, porque *Parar dia* passa a gravar feriado pela tela.
 
-### 2.8 `previsto_proens_turma` + trilha **[E] + [D-3] (PR 1.1)** — R-10
+### 2.8 `previstos_proens_turma` + trilha **[E] + [D-3] (PR 1.1)** — R-10
 
 ```sql
-create table public.previsto_proens_turma (
+create table public.previstos_proens_turma (
   id uuid primary key default gen_random_uuid(),
   turma_id        uuid not null references public.turmas(id) on delete restrict,
   categoria       public.categoria_normativa not null check (categoria in ('AEC','TAD','TR')),
@@ -176,9 +188,11 @@ create table public.previsto_proens_turma (
   constraint previsto_unico unique (turma_id, categoria)
   -- ⚠️ na migration: índice único PARCIAL (`where status = 'ativo'`), para inativar e recriar o mesmo par; o `on conflict` usa o predicado
 );
-create table public.previsto_proens_alteracoes (  -- só de acréscimo; UPDATE/DELETE/TRUNCATE recusados por gatilho, inclusive service_role
+create table public.previstos_proens_alteracoes (  -- só de acréscimo; UPDATE/DELETE/TRUNCATE recusados por gatilho, inclusive service_role;
+  -- RLS ligada, UMA policy (select, por app.alcanca_turma via o previsto), revoke insert/update/delete/truncate de authenticated;
+  -- sem quarteto (é só de acréscimo, como auditoria_de_conta); o gatilho que a alimenta é security definer com search_path fixo e revoke
   id uuid primary key default gen_random_uuid(),
-  previsto_id uuid not null references public.previsto_proens_turma(id),
+  previsto_id uuid not null references public.previstos_proens_turma(id),
   tempos_antes integer, tempos_depois integer not null,
   autor_id uuid, registrado_em timestamptz not null default now()
 );
@@ -191,9 +205,9 @@ create table public.previsto_proens_alteracoes (  -- só de acréscimo; UPDATE/D
 medido); `origem_proens` preservada; a genérica → `config_parametros`. `reservas_proens` fica,
 comentada como aposentada, com policies de escrita **revogadas** (só leitura).
 
-### 2.9 Permissões **[D] (PR 1)**
+### 2.9 Permissões
 
-- `previsto_proens.editar` (acima).
+- `previsto_proens.editar` (acima) — **[E] (PR 1.1, migration E-3)**.
 - Nada muda em `calendario.*` (só Encarregado e Admin) nem em `atividades_globais.criar` (inclui o
   Ajudante): a parada global **não** usa `atividades_globais` — usa `calendario` (R-1).
 
@@ -222,7 +236,7 @@ create table public.avaliacoes_curriculo (
   curso_id            uuid not null references public.cursos(id) on delete restrict,
   ordem               smallint not null,
   instrumento_id      uuid not null references public.config_listas(id) on delete restrict,
-  numero              smallint not null,                 -- "Prova 1", "Trabalho 2": numeração por natureza dentro da disciplina
+  numero              smallint not null,                 -- numeração por INSTRUMENTO dentro da disciplina (é a unique); rótulo "<sigla> <numero>": PM 1, TG 1
   unidade_ensino_id   uuid references public.unidades_ensino(id) on delete restrict,  -- onde o currículo computa; nulo = disciplina (Q-11)
   ues_abordadas       text,                              -- "UE 1 a 4", informativo
   ta_aplicacao        smallint check (ta_aplicacao >= 0),
@@ -255,7 +269,7 @@ create table public.avaliacoes_curriculo_turma (   -- ajuste por turma (FR-031.7
   -- ⚠️ na migration: índice único PARCIAL (`where status = 'ativo'`), para inativar e recriar o mesmo par; o `on conflict` usa o predicado
 );
 -- ler: alcance do curso; criar/editar: disciplinas.editar (mesma permissão das UEs, FR-038);
--- o arbitrado (curso e turma, tempo e quantidade): recurso NOVO `avaliacoes_curriculo_arbitrado.editar`
+-- o arbitrado (tempo: curso e turma; quantidade: só curso, criando o item): recurso NOVO `avaliacoes_curriculo_arbitrado.editar`
 --   (Admin e Encarregado), porque o Operador e o Ajudante JÁ têm `avaliacoes.editar` e `disciplinas.editar`
 --   (20260830000111, L1083, L1092, L1134, L1141); guardado pelo gatilho `app.proteger_arbitrado()` nas duas
 --   tabelas, que cobre também NOMEAR A UE (pôr `origem_ue = 'decisao_ciaara'` ou mudar a UE dessa origem); nas duas
@@ -321,7 +335,7 @@ alter table public.registros_aula add column outros_instrutores text[] not null 
 Reescrita para ler `vistas_de_avaliacao`, com **assinatura nova** (`p_avaliacao_id`, `p_hoje`,
 `p_prazo_dias`), por `drop view vw_avaliacoes_situacao` + `drop function` + `create` dos dois, a view com
 `security_invoker`. Mesmo veredito da função TS para prova e trabalho (R-8); a OD vive só na TS.
-`lib/planilha/` lê a situação pela função SQL.
+A tela **e a planilha de contingência** (`lib/dominio/dsa/planilha/`) leem a situação pela função TS, com `hoje = hojeNaCiaara()`; a SQL é espelho para a view e para o pgTAP cruzado, chamada com `p_hoje` explícito *(analyze de 14/10/2026)*. A E-5 estende também `public.gravar_lancamentos_em_transacao` a `vistas_de_avaliacao` e reescreve `app.lancamentos_que_travam_vigencia` pelas sessões.
 
 **Transição, enquanto houver escritor das colunas antigas** (o DSA até o PR 5.1, a sincronização até o
 PR 6): o gatilho `app.espelhar_vista_na_sessao_1()` mantém a sessão 1 igual às colunas de vista da mãe
@@ -335,6 +349,8 @@ com `fato_id` = id da avaliação (o que o DSA resolve hoje) e as colunas novas 
 
 ### 3.8 Migrations de **dado** da leva 2 — cada uma com antes/depois (PR 4)
 
+**Ordem de aplicação: E-4 → E-5 → D-5 → D-6 → D-4 → D-7.** A D-4 vem depois da D-6 porque os itens apontam para a disciplina já unificada; o bloco D-7b anda junto da E-5.
+
 | # | O quê | Antes/depois que Bernardo vê |
 |---|---|---|
 | **D-4** | Transcrição das avaliações dos 24 currículos (R-13): linhas em `avaliacoes_curriculo` | por curso e disciplina: itens, Σ TA aplicação, Σ TA vista, e a conferência **Σ ≤ CH** |
@@ -346,8 +362,9 @@ com `fato_id` = id da avaliação (o que o DSA resolve hoje) e as colunas novas 
 
 ## 4. Identidade, unicidade e ciclo de vida
 
-- Sequências novas em `app`: `proximo_codigo_dia_parado` (`DPA-`), `proximo_codigo_avaliacao_curriculo`
-  (`AVC-`), `proximo_codigo_vista` (`VST-`), todas com `grant execute` a `authenticated` e
+- Sequências novas em `app`: `proximo_codigo_dia_parado` (`DPA-`), `proximo_codigo_feriado` (`FER-`, com
+  `setval` no maior `^FER-([0-9]+)$` já em `feriados`, porque o remoto já tem códigos do ETL e da sincronização —
+  gotcha 9), `proximo_codigo_avaliacao_curriculo` (`AVC-`), `proximo_codigo_vista` (`VST-`), todas com `grant execute` a `authenticated` e
   `service_role` (gotcha 5.1) e registradas em `carregar.avancar_sequencias` (gotcha 9).
 - Nada ganha policy de `DELETE`. Desfazer parada = `status = 'inativo'` (FR-028.1). Substituída é
   estado, não exclusão.
@@ -364,7 +381,8 @@ com `fato_id` = id da avaliação (o que o DSA resolve hoje) e as colunas novas 
 | `vw_disciplinas_execucao` | vista nas colunas da mãe (`20261005181116`, L394 e L412) | vista pelas sessões |
 | `vw_instrutor_carga_anual` | vista nas colunas da mãe | vista pelas sessões |
 | `vw_ocupacao_ta` / grade do DSA | aula, avaliação, atividade; vista nas colunas da mãe | + dias parados e TR bloqueante como **bloqueio**, não ocupação; vista **pelas sessões** (`sessao_id`, `numero_sessao`) |
-| planilha de contingência (`lib/planilha/`) | vista única | N sessões; situação pela função única; dias parados na CONTROLE |
+| planilha de contingência (`lib/dominio/dsa/planilha/`) | vista única | N sessões; situação pela função TS única; dias parados na CONTROLE |
+| `app.lancamentos_que_travam_vigencia` | vista nas colunas da mãe | vista pelas sessões |
 
 ## 6. Volumes (dimensionar, não otimizar)
 

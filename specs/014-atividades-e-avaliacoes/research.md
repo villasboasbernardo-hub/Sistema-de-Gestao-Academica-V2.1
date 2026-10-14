@@ -95,7 +95,7 @@ redação exigia a categoria em todo tipo, o que o ETL (que grava tipos de aula 
 **Decisão:** tabela `avaliacoes_curriculo`, **uma linha por avaliação prevista** (prova, trabalho
 ou OD), por disciplina. A **quantidade** é a contagem de linhas; a origem da quantidade é a origem
 da linha (`origem_item`). O **tempo** tem origem própria por campo: `ta_aplicacao` +
-`origem_ta_aplicacao`, `ta_vista` + `origem_ta_vista`. Origem ∈ `currículo | arbitrado |
+`origem_ta_aplicacao`, `ta_vista` + `origem_ta_vista`. Origem ∈ `curriculo | arbitrado |
 sugestao_planilha`, em `text` com `CHECK` (não é lista administrável nem domínio normativo da MB —
 é decisão D-CUR-2 —, e `ENUM` fechado cedo é migration para desfazer).
 
@@ -164,8 +164,10 @@ quatro valores (`.in("status", [...])`), que vale antes e depois de o valor novo
 da OD (Q-17), a partir de `{ dataPrevista, aplicacao, sessoesDeVista, temItemDeVista, prazoDias,
 hoje, disciplinaConcluida }`. `app.fn_status_vista` é reescrita para ler `vistas_de_avaliacao` e
 devolver o **mesmo** veredito, com pgTAP comparando os dois nos casos de fronteira (7º e 8º dia),
-porque a planilha de contingência e a `vw_*` leem a SQL e a tela lê a TS — duas implementações da
-mesma regra exigem o teste cruzado (Princípio VI).
+porque `vw_avaliacoes_situacao` lê a SQL e a tela **e a planilha de contingência** leem a TS, com
+`hoje = hojeNaCiaara()` — duas implementações da mesma regra exigem o teste cruzado (Princípio VI).
+⚠️ *(analyze de 14/10/2026)*: a primeira redação dizia que a planilha lia a SQL; a regra fica em TS (Princípio II), e a
+função SQL é só espelho para a view e para o pgTAP, chamada sempre com `p_hoje` explícito (D20).
 
 **OD:** `pendente` antes do primeiro lançamento da disciplina na turma; `em_andamento` enquanto a
 disciplina corre; `concluida` pelo **mesmo critério** do painel da disciplina (cumprido ≥ previsto
@@ -185,9 +187,9 @@ Princípio XI também diz que o que pode ser gatilho vive no banco; a recomenda�
 
 ## R-10. Previsto do PROENS — por turma, com trilha de alterações só de acréscimo
 
-**Decisão:** tabela `previsto_proens_turma` (`turma_id`, `categoria` ∈ AEC/TAD/TR por `CHECK`
+**Decisão:** tabela `previstos_proens_turma` (`turma_id`, `categoria` ∈ AEC/TAD/TR por `CHECK`
 sobre `categoria_normativa`, `tempos_previstos`, `origem_proens`, `status`, auditoria), `unique
-(turma_id, categoria)`. Trilha `previsto_proens_alteracoes` (só de acréscimo, imutável como
+(turma_id, categoria)`. Trilha `previstos_proens_alteracoes` (só de acréscimo, imutável como
 `auditoria_de_conta`), alimentada por gatilho `AFTER INSERT OR UPDATE` com valor anterior, novo,
 autor e instante. A tela mostra o último (FR-008.2) e a trilha fica para a `PEND-011-2` ampliar.
 
@@ -196,8 +198,7 @@ Permissão: recurso novo **`previsto_proens`**, ação `editar`, `true` para `ad
 é o **caso que discrimina** (DoD 8): o Ajudante **não** tem `calendario.editar` e **passa** a poder.
 
 `reservas_proens` **fica**, só de leitura, marcada aposentada; as 10 linhas com curso vão para a
-turma de 2026 do mesmo curso (medido: cada um dos 5 cursos tem **exatamente 1** turma em 2026,
-`db2.pkl`), e a **genérica** (`curso_id` nulo, TAD 2 / TR 0) vira dois parâmetros de
+turma de 2026 do mesmo curso (medido na cópia `remoto-20261009-085410.sql`: cada um dos 5 cursos tem **exatamente 1** turma em 2026), e a **genérica** (`curso_id` nulo, TAD 2 / TR 0) vira dois parâmetros de
 `config_parametros` (`proens.reserva_generica_tad`, `proens.reserva_generica_tr`, natureza
 normativa), que a tela oferece como **sugestão** em turma sem previsto. `vw_conformidade_tetos` é
 reescrita sobre a tabela nova. Emenda E-7 aprovada.
@@ -206,7 +207,7 @@ reescrita sobre a tabela nova. Emenda E-7 aprovada.
 
 **Decisão:** tabela `limites_curriculo` (`curso_id`, `categoria` ∈ AEC/TAD/TR, `tempos`,
 `fonte_arquivo`, `fonte_pagina`, `status`), `unique (curso_id, categoria)`. Função pura
-`limiteMaximo({ declarado, chCurricular, percentual })` → `{ valor, origem: "currículo" | "norma" }`
+`limiteMaximo({ declarado, chCurricular, percentual })` → `{ valor, origem: "curriculo" | "norma" }` (literais sem acento, como no banco; a forma acentuada só no rótulo de tela)
 (FR-001.1). A transcrição do quadro final dos 24 currículos é **migration de dado** (D-1 do plan),
 uma linha por par declarado; curso sem quadro não tem linha, e cai na norma.
 
@@ -237,13 +238,13 @@ a migration de dado é **gerada** do CSV, como `20260926024246` foi. A contagem 
 |---|---|---|
 | FR, LA, LP, NT, RECESSO, PONTO FACULTATIVO | global dia inteiro → `feriados`; só da turma → **TAD** "Administração" (L539–557) | global dia inteiro → `feriados`; só da turma, ou global parte do dia → **`dias_parados`** (FR-025.5). Linhas TAD já gravadas por isso → inativadas com marca e regravadas como dia parado |
 | MONITORIA, PORTUGUÊS, BDA, BDF | TAD (L63) / outros | **Apoio_Individualizado** (FR-022) |
-| RECEPÇÃO | TAD | TAD (fica) |
-| APOINST | AEC | AEC (fica) |
+| RECEPÇÃO | TAD, subtipo *Administração* | TAD; o tipo passa a *Recepção aos alunos* (D-2, FR-021) |
+| APOINST | AEC, subtipo *Atividade Extracurricular* | AEC; o tipo passa a *Apoio à Instrução* (D-2, FR-021) |
 | prova e vista | `avaliacoes` sem item | `avaliacoes.avaliacao_curriculo_id` casado por **instrumento + número dentro da disciplina**; não casou → sem item + erro de planilha (FR-036/036.1) |
 | 2ª sessão de vista | AEC `vista_extra_como_aec` (L511–514) | sessão 2 em `vistas_de_avaliacao` (FR-042) |
 | "(FISCAL)" | troca aplicador | `fiscal_id` (FR-045) |
 | "A / B" | 2º nome em `observacoes` | `outros_instrutores` (FR-046) |
-| CH de disciplina, UE, avaliação | nunca alterou | **nunca altera** — guarda: impressão digital do catálogo antes e depois da rodada, no `verificar.py` (SC-008) |
+| CH de disciplina, UE, avaliação | nunca alterou | **nunca altera** — guarda: impressão digital do catálogo antes da primeira escrita e depois da última, na mesma execução de `sincronizar.py`, que aborta se mudar; `verificar.py` a relata (SC-008) |
 | tempo de prova/vista onde o currículo é **mudo** | — | `avaliacoes_curriculo_turma` com `origem = 'sugestao_planilha'`, **só** se o item não tem tempo do currículo e não há arbitrado confirmado (FR-031.8) |
 | erros de planilha | — | `erros-de-planilha.md` na pasta da rodada (fora do git), por turma, com os dois valores (FR-036.1) |
 
@@ -251,9 +252,9 @@ a migration de dado é **gerada** do CSV, como `20260926024246` foi. A contagem 
 
 Toda migration deste plan segue: backup `python -m scripts.manutencao.dado_do_remoto
 --somente-copia` com o arquivo datado citado · `supabase db push --linked --dry-run` listando **só**
-ela · `db push` · conferência só de leitura (contagem de migrations dos dois lados, impressão
+as migrations do PR, na ordem (um dry-run e um `db push` por PR de banco) · `db push` · conferência só de leitura (contagem de migrations dos dois lados, impressão
 digital do esquema `scripts/provas/impressao_digital_do_esquema.sql`, e as contagens de dado que a
 própria migration declara) · Production respondendo. Migration de **dado** acrescenta: o relatório
 **antes/depois** (as contagens nomeadas na própria migration), mostrado a Bernardo **antes** do
-`db push`, e a reversão escrita como SQL em `reversao-<nome>.sql` ao lado da spec, provada numa base
+`db push`, e a reversão escrita como SQL em `reversao-<pr>.sql` ao lado da spec (um arquivo por PR de banco, uma seção por migration na ordem inversa), provada numa base
 descartável com a impressão digital voltando (T010/T011 da spec 010 como modelo).

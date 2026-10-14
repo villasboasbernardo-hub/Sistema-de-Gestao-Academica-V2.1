@@ -9,9 +9,11 @@
   alcance: "turma" | "todas",
   diaInteiro: boolean,
   taInicial?: number, tempos?: number,   // obrigatórios quando !diaInteiro
-  tipoParada: string,                    // valor de config_listas.tipos_parada, ativo
+  tipoParadaId: string,                  // id de config_listas.tipos_parada, ativo (FK no banco)
   motivo: string,                        // 3..200
-  consomeTempoReserva: boolean           // só aceito quando o tipo tem aceita_tr e o dia NÃO está no calendário
+  prevista: boolean,                     // true por padrão; a coluna dias_parados.prevista recebe este valor
+  consomeTempoReserva: boolean,          // só aceito quando !prevista, o tipo tem aceita_tr e o dia NÃO está no calendário
+  confirmado?: boolean                   // obrigatório quando o dia já tem lançamentos: sem ele a ação devolve { ok: false, erro: "confirmar", lancamentosNoDia } e não grava
 }
 ```
 
@@ -25,6 +27,8 @@
 | `turma` + !TR | `dias_parados` da turma | `42501` sem `atividades_nao_letivas.criar` na turma |
 | `turma` + TR | `atividades_nao_letivas` TR da turma, `bloqueia_aula` | idem |
 | dia já bloqueado no calendário + `consomeTempoReserva` | — | `"o dia já está parado no calendário; parada prevista não consome Tempo Reserva"` (FR-025.2) |
+| `prevista` + `consomeTempoReserva` | — | `"parada prevista não consome Tempo Reserva"` (FR-025.2) |
+| `todas` + `diaInteiro` + `!prevista` + !TR | `feriados` (`dia_inteiro`): entrar no calendário a torna prevista | — |
 | tipo com `pode_global = false` + `todas` | — | `"este tipo de parada é só de turma"` |
 | data com aula gravada | grava, **depois** do aviso de confirmação com a contagem (edge case) | — |
 
@@ -34,6 +38,10 @@
 ou `{ ok: false, erro, campo? }` traduzido por `traducao-de-recusas.ts`.
 
 ## Desfazer (`desfazerParada`)
+
+```ts
+{ turmaId, destino: "calendario" | "dia_parado" | "tempo_reserva", codigo }  → { ok: true, codigo } | { ok: false, erro }
+```
 
 Inativa a linha do destino (`status = 'inativo'`). Mesma permissão do alcance. Devolve o dia à aula e
 tira da linha "dias parados" ou do TR o que a parada somou. Nada é apagado.

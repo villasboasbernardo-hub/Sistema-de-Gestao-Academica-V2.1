@@ -5,25 +5,27 @@
 ```ts
 tetosDaTurma({
   chCurricular: number | null,                            // Σ CH das disciplinas ativas do curso
-  cumprido: { aec, tad, tr, estudoIndividual, apoioIndividualizado, diasParados },   // da view
+  cumprido: { chd, aec, tad, tr, estudoIndividual, apoioIndividualizado },            // da view
+  diasParados: Array<{ tipo: string, tempos: number, dias: number }>,                   // vw_dias_parados_turma (FR-025.4)
   previstoProens: { aec?: number, tad?: number, tr?: number },                       // por turma
   limitesDoCurriculo: { aec?: number, tad?: number, tr?: number },                   // limites_curriculo
-  percentuais: { aec: number, tad: number, tr: number },                             // config_parametros
+  percentuais: { aec: number | null, tad: number | null, tr: number | null },         // config_parametros; null = não cadastrado no ano
   referenciaEi: { comEstudoObrigatorio: number, semEstudoObrigatorio: number },
   ead: boolean,
 }) → {
   ead: true } | {
   ead: false,
+  chd: number, aec: number, tad: number, tr: number,
   cht: number,                                            // = chd + aec + tad + tr — nunca soma EI, Apoio, dias parados (tipo impede)
   cards: { aec: Card, tad: Card, tr: Card },
   estudoIndividual: { cumprido, referencias: [20 %, 10 %] },
   apoioIndividualizado: number,
-  diasParados: { total: number, porTipo: Record<string, number> },
+  diasParados: { tempos: number, dias: number, porTipo: Record<string, { tempos: number, dias: number }> },
 }
 type Card = {
   cumprido: number,
   previsto: number | "nao_definido",                 // "previsto não definido" (D-TETO-3)
-  maximo: { valor: number, origem: "currículo" | "norma" } | "sem_ch_curricular",
+  maximo: { valor: number, origem: "curriculo" | "norma" } | "sem_ch_curricular" | "parametro_nao_cadastrado",   // literais sem acento, como no banco
   percentualDoPrevisto: number | null,               // cumprido ÷ previsto; null = previsto não definido  (1º, D-TETO-3)
   percentualDoMaximo: number | null,                 // cumprido ÷ máximo; null sem CH curricular        (2º)
   barra: { maximo: number, marcadorDoPrevisto: number | null } | null,   // de 0 ao máximo, com o marcador do previsto
@@ -32,8 +34,10 @@ type Card = {
 ```
 
 `limiteMaximo({ declarado, chCurricular, percentual })` é função própria, testada à parte
-(FR-001.1): com `declarado` → `{ valor: declarado, origem: "currículo" }`; sem → `{ valor:
-chCurricular × percentual / 100, origem: "norma" }`; sem CH → `"sem_ch_curricular"`.
+(FR-001.1): com `declarado` → `{ valor: declarado, origem: "curriculo" }`; sem → `{ valor:
+chCurricular × percentual / 100, origem: "norma" }`; sem CH → `"sem_ch_curricular"`; sem percentual no ano →
+`"parametro_nao_cadastrado"` (aviso *"parâmetro não cadastrado para <ano>"*). A `vw_conformidade_tetos` entrega só os
+números crus; limite e origem são decididos **só aqui** (ponto único).
 
 ## Texto do card (D-TETO-1)
 
@@ -58,7 +62,7 @@ Individual"** com as duas referências; **"Apoio Individualizado"** só a contag
   Operador **não** (`42501`). O botão *Editar previsto* segue a permissão da ação.
 - Acima do máximo: **grava e avisa** (FR-008.3).
 - O card mostra *"alterado por <nome> em dd/mm/aaaa hh:mm"* (FR-008.2), lido da auditoria da linha; a
-  trilha completa fica em `previsto_proens_alteracoes`.
+  trilha completa fica em `previstos_proens_alteracoes`.
 - Turma sem previsto: o formulário abre com a **sugestão** da reserva genérica
   (`config_parametros`), marcada como sugestão, e só grava se a pessoa gravar.
 

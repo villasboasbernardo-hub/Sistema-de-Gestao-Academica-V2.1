@@ -50,10 +50,11 @@ pnpm test:rls                                    # o caso que discrimina: Ajudan
 
 | Prova | Esperado |
 |---|---|
-| as 10 reservas com curso | 10 linhas em `previsto_proens_turma`, nas 5 turmas de 2026, mesmo valor; a genérica em `config_parametros` |
-| `UPDATE` do previsto | linha nova em `previsto_proens_alteracoes` com antes/depois/autor; `UPDATE` na trilha recusado inclusive como `service_role` |
+| as 10 reservas com curso | 10 linhas em `previstos_proens_turma`, nas 5 turmas de 2026, mesmo valor; a genérica em `config_parametros` |
+| `UPDATE` do previsto | linha nova em `previstos_proens_alteracoes` com antes/depois/autor; `UPDATE` na trilha recusado inclusive como `service_role` |
 | `reservas_proens` | escrita recusada para `authenticated`; leitura intacta |
-| `vw_conformidade_tetos` | `limite_maximo` + `origem_limite`; C-Ap-HN AEC = 65 `currículo`; TAD = 62,85 `norma` |
+| `vw_conformidade_tetos` | só números crus: C-Ap-HN AEC `limite_declarado` 65, `ch_curricular` 1.257, `percentual_norma` 10; TAD sem declarado, percentual 5 (62,85 e a origem saem de `limiteMaximo()`) |
+| **defeito deliberado**: a policy do previsto lendo `calendario.editar` | a RLS reprova no Ajudante |
 
 ## PR 2 — cards de AEC/TAD/TR, limites no curso, `/inicio`, `/atividades`
 
@@ -107,6 +108,8 @@ python -m scripts.carga_dsa.provar_sincronizacao_no_banco     # no Docker local:
 
 ## PR 4 — banco da leva 2 (estrutura + D-4 a D-8)
 
+⚠️ **Ordem de aplicação: E-4 → E-5 → D-5 → D-6 → D-4 → D-7.** E o `db push` só depois de o PR 2.1 estar na `main` (lista positiva de status em Production); sem isso as 188 substituídas voltam ao DSA ao rodar a D-7.
+
 ```bash
 pnpm db:reset:limpo && pnpm test:invariantes    # pgTAP: 127_* a 130_*
 pnpm test:rls
@@ -135,7 +138,7 @@ pnpm test:e2e -- avaliacoes-da-turma.spec.ts avaliacoes-do-curso.spec.ts card-de
 |---|---|
 | turma → card *Avaliações* | *"12 aplicadas de 30"*, barra, *"+ 3 OD"*, *"vistas 9 de 27"*; clique abre `?aba=avaliacoes` |
 | aba → disciplina de 120 com 100 cumpridos e 2 provas de 2 TA por aplicar | *"restam 20 TA; faltam 2 avaliações (4 TA) → sobram 16"*; com 118, **estouro** sem bloqueio |
-| Obs-ME, DHN-0225 | *"arbitrado — sugestão da planilha, a confirmar"*; Encarregado confirma → *"definido pela Divisão"*; Operador não vê o botão e a ação recusa |
+| disciplina da semente com `sugestao_planilha` (como Obs-ME, DHN-0225) | *"arbitrado — sugestão da planilha, a confirmar"*; Encarregado confirma → *"definido pela Divisão"*; Operador não vê o botão e a ação recusa |
 | MetocOf | 4 TA na disciplina, aviso *"o currículo não diz de qual UE sai"* |
 | prova aplicada há 8 dias sem vista | *Atrasada*; há 7, *Em andamento* |
 | OD do LHFC antes do 1º lançamento · correndo · concluída | pendente · em andamento · concluída |
@@ -167,7 +170,7 @@ python -m scripts.carga_dsa.provar_sincronizacao_no_banco
 | Prova | Esperado |
 |---|---|
 | prova da planilha com item casável | `avaliacao_curriculo_id` preenchido |
-| TFM do C-Ap-HN, prova 7 × 4 | lançamento entra sem item; `erros-de-planilha.md` traz a linha |
+| TFM do C-Ap-HN, prova 7 × 4 | casa por instrumento e número: entra **com** item, e `erros-de-planilha.md` traz "TA de prova diferente"; a linha `XX RECON` entra **sem** item e também na lista |
 | 2ª vista | sessão 2, nenhuma AEC `vista_extra_como_aec` |
 | `(FISCAL)` | `fiscal_id`, aplicador intacto |
 | Obs-ME | `avaliacoes_curriculo_turma` com `sugestao_planilha`; rodar de novo: zero mudança; confirmada não é tocada |
