@@ -37,6 +37,9 @@
     "VI+9": "VI+6"
   },
   "aprovadas": [
-    "ues (de-para por topico identico): aprovado por Bernardo Villas Boas em 06/10/2026 (item 5 do lote da onda 1)"
-  ]
+    "ues (de-para por topico identico): aprovado por Bernardo Villas Boas em 06/10/2026 (item 5 do lote da onda 1)",
+    "responsavel_externo_aceito: entidades e palestrantes externos da lista de pendencias de responsavel — decisao A3.6 de Bernardo Villas Boas (14/10/2026); o palestrante entra como SHA-256 do texto normalizado (nome de pessoa, repositorio publico)"
+  ],
+  "responsavel_externo_aceito": ["CIAARA-30"],
+  "responsavel_externo_aceito_sha256": []
 }

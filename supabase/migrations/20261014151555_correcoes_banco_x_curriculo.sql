@@ -14,8 +14,16 @@
 --   B-8  C-Espc-HN · HN-1106-0423 (NAV I) ......... CH 100 → 108 (PDF, p. 32)
 --        C-Espc-HN · HN-1107-1011 (NAV II) ........ CH 128 → 120 (PDF, p. 45)
 --
--- ⚠️ FORA DESTA MIGRATION, por decisão pendente (T129): B-4 (EST-QF-APOC I, 79 × 80, PDF digitalizado) e B-12
---    (C-Exp-Metoc-OF-SP IV). B-9 e B-10 são da D-6; B-11 é a `PEND-014-3`.
+--   B-12 C-Exp-Metoc-OF-SP · IV «EFEITOS ATMOSFÉRICOS SOBRE A PROPAGAÇÃO ELETROMAGNÉTICA…» (18 TA) — INATIVADA: o
+--        currículo do SP tem quatro disciplinas, I Meteorologia, II Técnicas de Previsão do Tempo, III Oceanografia
+--        e IV Estágio Prático (índice, p. 2 de `of-10-16-2025-densm-ciaara-an-c-exp-metoc-sp-512.2.01.pdf`); a do
+--        banco foi trazida do C-Exp-MetocOf. Nenhum lançamento aponta para ela (conferido aqui dentro).
+--        Conferida no PDF por decisão de Bernardo Villas Boas (A4.2, 14/10/2026: «se o PDF confirmar, inclua»).
+--
+-- ⚠️ FORA DESTA MIGRATION: B-4 (EST-QF-APOC I). O PDF NÃO confirma correção: a disciplina tem CH 79 no próprio
+--    currículo (p. 4, «3) DISCIPLINA E CARGA HORÁRIA … 79 HORAS»; p. 5, «CÓDIGO: I · CARGA HORÁRIA: 79 HORAS»), que é
+--    o que o banco tem; quem soma 80 são as UEs (9+18+9+20+24, p. 5–6), com o TR de 1 h listado à parte (p. 4).
+--    B-9 e B-10 são da D-6; B-11 é a `PEND-014-3`.
 -- ⚠️ Cada caso confere o VALOR ANTIGO antes de mudar: se a disciplina não estiver como o lote a mediu, a
 --    migration ABORTA nomeando o caso — nunca corrige às cegas. Idempotente: o caso já corrigido é pulado.
 -- ⚠️ A contagem de lançamentos por disciplina é conferida INTACTA dentro da transação (nenhum lançamento muda
@@ -94,6 +102,28 @@ begin
      where id = v_id;
     v_feitos := v_feitos + 1;
   end loop;
+
+  -- B-12: inativar a disciplina que o currículo do SP não tem (regra 4: nada é apagado).
+  select d.id into v_id from public.disciplinas d join public.cursos k on k.id = d.curso_id
+   where k.codigo = 'C-Exp-Metoc-OF-SP' and d.cod_disciplina = 'IV' and d.nome_disciplina like 'EFEITOS ATMOSF%'
+     and d.carga_horaria_tempos = 18 and d.status = 'ativo';
+  if v_id is not null then
+    if exists (select 1 from public.registros_aula r left join public.unidades_ensino u on u.id = r.unidade_ensino_id
+                where coalesce(u.disciplina_id, r.disciplina_id) = v_id)
+       or exists (select 1 from public.avaliacoes a where a.disciplina_id = v_id) then
+      raise exception 'D-5 B-12: há lançamento na disciplina IV do C-Exp-Metoc-OF-SP — pare e confira antes de inativar.';
+    end if;
+    insert into public.migracao_log (codigo, origem_tabela, origem_chave, destino_tabela, destino_chave,
+                                     acao, regra_aplicada, valor_antes, valor_depois, observacao)
+    select 'MLOG-014-D5-' || v_carimbo || '-B-12', 'disciplinas', d.codigo, 'disciplinas', d.codigo,
+           'arquivado'::public.acao_migracao, 'FR-031.1 / D-CUR-1 (spec 014, B-12)',
+           format('cod=%s; nome=%s; ch=%s; status=ativo', d.cod_disciplina, d.nome_disciplina, d.carga_horaria_tempos),
+           'status=inativo', 'O currículo do C-Exp-Metoc-OF-SP não tem esta disciplina (índice, p. 2).'
+      from public.disciplinas d where d.id = v_id;
+    update public.turma_disciplina set status = 'inativo' where disciplina_id = v_id and status = 'ativo';
+    update public.disciplinas set status = 'inativo' where id = v_id;
+    v_feitos := v_feitos + 1;
+  end if;
 
   select (select count(*) from public.registros_aula) + (select count(*) from public.avaliacoes)
        + (select count(*) from public.atividades_nao_letivas) into v_lanc_depois;

@@ -403,7 +403,10 @@ def resolver(
                         # Spec 014, FR-016: o texto que nao casa com o cadastro NAO e gravado como externo em
                         # silencio. Ou o lote ja decidiu (`responsavel_externo_aceito`: entidade ou palestrante),
                         # ou vira PENDENCIA com as tres saidas (casar com instrutor, externo, cadastrar).
-                        if normalizar(texto) in {normalizar(t) for t in decisoes.get("responsavel_externo_aceito", [])}:
+                        # A3.6 (14/10/2026): o palestrante (nome de pessoa) vem como SHA-256 do texto normalizado (D4.6).
+                        aceitos_sha = set(decisoes.get("responsavel_externo_aceito_sha256", []))
+                        if (normalizar(texto) in {normalizar(t) for t in decisoes.get("responsavel_externo_aceito", [])}
+                                or hashlib.sha256(normalizar(texto).encode("utf-8")).hexdigest() in aceitos_sha):
                             externo = texto
                         else:
                             # Decisao A3.2 (Bernardo Villas Boas, 14/10/2026): a pendencia trava SO A LINHA. A

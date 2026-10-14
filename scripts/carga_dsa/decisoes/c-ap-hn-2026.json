@@ -67,9 +67,16 @@
   ],
   "aprovadas": [
     "UE 7 da I («7 – FISICA») e UE 6 da XVI («PRATICA DE OCEANOGRAFIA») nao batem com UE existente: ficam FORA e vao para a lista (item 4, 06/10/2026)",
-    "I+7 «FISICA» → I-I UE 7 (o curriculo da DEnsM tem a UE 7 FISICA na disciplina; o banco a carregou na I-I) — conferencia de 07/10/2026 (Bernardo Villas Boas: aplicar a recomendacao de cada caso). Desde a D-6 da spec 014 (14/10/2026) a UE 7 voltou a I (HN-2101): o de-para e a propria I+7"
+    "I+7 «FISICA» → I-I UE 7 (o curriculo da DEnsM tem a UE 7 FISICA na disciplina; o banco a carregou na I-I) — conferencia de 07/10/2026 (Bernardo Villas Boas: aplicar a recomendacao de cada caso). Desde a D-6 da spec 014 (14/10/2026) a UE 7 voltou a I (HN-2101): o de-para e a propria I+7",
+    "responsavel_externo_aceito: entidades e palestrantes externos da lista de pendencias de responsavel — decisao A3.6 de Bernardo Villas Boas (14/10/2026); o palestrante entra como SHA-256 do texto normalizado (nome de pessoa, repositorio publico)"
   ],
   "ues": {
     "I+7": "I+7"
-  }
+  },
+  "responsavel_externo_aceito": ["CIAARA-11", "CIAARA-30", "DEnsM"],
+  "responsavel_externo_aceito_sha256": [
+    "bcb0f7a53148904e89300ae921bdd07eb65c1250cb0b6e52f86e37b89abf080d",
+    "dbb0001aa83fb70bb4cc47566c0e71f67e1dbe84fca9f1d8c6787dcd06b3dbc8",
+    "ef0d1931f1feb8d8ea5e7466fd70443125b064632c80d570048c2d2b6f1ed501"
+  ]
 }

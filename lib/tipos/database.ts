@@ -342,7 +342,6 @@ export type Database = {
       }
       avaliacoes: {
         Row: {
-          avaliacao_curriculo_id: string | null
           codigo: string
           conciliacao_migracao:
             | Database["public"]["Enums"]["conciliacao_migracao"]
@@ -367,11 +366,7 @@ export type Database = {
           observacoes: string | null
           origem_execucao_v1: string | null
           origem_migracao_v1: string | null
-          outros_instrutores: string[]
           status: Database["public"]["Enums"]["status_avaliacao"]
-          status_anterior:
-            | Database["public"]["Enums"]["status_avaliacao"]
-            | null
           ta_final: number | null
           ta_final_vista: number | null
           ta_inicial: number | null
@@ -380,10 +375,8 @@ export type Database = {
           tempos_consumidos_vista: number | null
           tipo_avaliacao: string | null
           turma_id: string
-          ues_abordadas: string | null
         }
         Insert: {
-          avaliacao_curriculo_id?: string | null
           codigo: string
           conciliacao_migracao?:
             | Database["public"]["Enums"]["conciliacao_migracao"]
@@ -408,11 +401,7 @@ export type Database = {
           observacoes?: string | null
           origem_execucao_v1?: string | null
           origem_migracao_v1?: string | null
-          outros_instrutores?: string[]
           status?: Database["public"]["Enums"]["status_avaliacao"]
-          status_anterior?:
-            | Database["public"]["Enums"]["status_avaliacao"]
-            | null
           ta_final?: number | null
           ta_final_vista?: number | null
           ta_inicial?: number | null
@@ -421,10 +410,8 @@ export type Database = {
           tempos_consumidos_vista?: number | null
           tipo_avaliacao?: string | null
           turma_id: string
-          ues_abordadas?: string | null
         }
         Update: {
-          avaliacao_curriculo_id?: string | null
           codigo?: string
           conciliacao_migracao?:
             | Database["public"]["Enums"]["conciliacao_migracao"]
@@ -449,11 +436,7 @@ export type Database = {
           observacoes?: string | null
           origem_execucao_v1?: string | null
           origem_migracao_v1?: string | null
-          outros_instrutores?: string[]
           status?: Database["public"]["Enums"]["status_avaliacao"]
-          status_anterior?:
-            | Database["public"]["Enums"]["status_avaliacao"]
-            | null
           ta_final?: number | null
           ta_final_vista?: number | null
           ta_inicial?: number | null
@@ -462,7 +445,6 @@ export type Database = {
           tempos_consumidos_vista?: number | null
           tipo_avaliacao?: string | null
           turma_id?: string
-          ues_abordadas?: string | null
         }
         Relationships: [
           {
@@ -604,13 +586,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_instrutores"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_item_da_disciplina"
-            columns: ["avaliacao_curriculo_id", "disciplina_id"]
-            isOneToOne: false
-            referencedRelation: "avaliacoes_curriculo"
-            referencedColumns: ["id", "disciplina_id"]
           },
           {
             foreignKeyName: "avaliacoes_item_planejado_id_fkey"
@@ -649,270 +624,6 @@ export type Database = {
           },
           {
             foreignKeyName: "avaliacoes_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "vw_turmas_rotulo"
-            referencedColumns: ["turma_id"]
-          },
-        ]
-      }
-      avaliacoes_curriculo: {
-        Row: {
-          codigo: string
-          criado_em: string
-          criado_por: string | null
-          curso_id: string
-          disciplina_id: string
-          editado_em: string | null
-          editado_por: string | null
-          fonte_arquivo: string | null
-          fonte_pagina: number | null
-          id: string
-          instrumento_id: string
-          numero: number
-          ordem: number
-          origem_item: string
-          origem_migracao_v1: string | null
-          origem_ta_aplicacao: string | null
-          origem_ta_vista: string | null
-          origem_ue: string | null
-          status: Database["public"]["Enums"]["status_registro"]
-          ta_aplicacao: number | null
-          ta_vista: number | null
-          ue_decidida_em: string | null
-          ues_abordadas: string | null
-          unidade_ensino_id: string | null
-        }
-        Insert: {
-          codigo?: string
-          criado_em?: string
-          criado_por?: string | null
-          curso_id: string
-          disciplina_id: string
-          editado_em?: string | null
-          editado_por?: string | null
-          fonte_arquivo?: string | null
-          fonte_pagina?: number | null
-          id?: string
-          instrumento_id: string
-          numero: number
-          ordem: number
-          origem_item: string
-          origem_migracao_v1?: string | null
-          origem_ta_aplicacao?: string | null
-          origem_ta_vista?: string | null
-          origem_ue?: string | null
-          status?: Database["public"]["Enums"]["status_registro"]
-          ta_aplicacao?: number | null
-          ta_vista?: number | null
-          ue_decidida_em?: string | null
-          ues_abordadas?: string | null
-          unidade_ensino_id?: string | null
-        }
-        Update: {
-          codigo?: string
-          criado_em?: string
-          criado_por?: string | null
-          curso_id?: string
-          disciplina_id?: string
-          editado_em?: string | null
-          editado_por?: string | null
-          fonte_arquivo?: string | null
-          fonte_pagina?: number | null
-          id?: string
-          instrumento_id?: string
-          numero?: number
-          ordem?: number
-          origem_item?: string
-          origem_migracao_v1?: string | null
-          origem_ta_aplicacao?: string | null
-          origem_ta_vista?: string | null
-          origem_ue?: string | null
-          status?: Database["public"]["Enums"]["status_registro"]
-          ta_aplicacao?: number | null
-          ta_vista?: number | null
-          ue_decidida_em?: string | null
-          ues_abordadas?: string | null
-          unidade_ensino_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "avaliacoes_curriculo_curso_id_fkey"
-            columns: ["curso_id"]
-            isOneToOne: false
-            referencedRelation: "cursos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_curso_id_fkey"
-            columns: ["curso_id"]
-            isOneToOne: false
-            referencedRelation: "vw_cursos_regime_vigente"
-            referencedColumns: ["curso_id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_disciplina_id_fkey"
-            columns: ["disciplina_id"]
-            isOneToOne: false
-            referencedRelation: "disciplinas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_disciplina_id_fkey"
-            columns: ["disciplina_id"]
-            isOneToOne: false
-            referencedRelation: "vw_disciplinas_execucao"
-            referencedColumns: ["disciplina_id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_disciplina_id_fkey"
-            columns: ["disciplina_id"]
-            isOneToOne: false
-            referencedRelation: "vw_instrutor_carga_prevista"
-            referencedColumns: ["disciplina_id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_instrumento_id_fkey"
-            columns: ["instrumento_id"]
-            isOneToOne: false
-            referencedRelation: "config_listas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_unidade_ensino_id_fkey"
-            columns: ["unidade_ensino_id"]
-            isOneToOne: false
-            referencedRelation: "unidades_ensino"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_unidade_ensino_id_fkey"
-            columns: ["unidade_ensino_id"]
-            isOneToOne: false
-            referencedRelation: "vw_unidades_ensino_execucao"
-            referencedColumns: ["unidade_ensino_id"]
-          },
-          {
-            foreignKeyName: "avc_disciplina_do_curso"
-            columns: ["disciplina_id", "curso_id"]
-            isOneToOne: false
-            referencedRelation: "disciplinas"
-            referencedColumns: ["id", "curso_id"]
-          },
-          {
-            foreignKeyName: "avc_disciplina_do_curso"
-            columns: ["disciplina_id", "curso_id"]
-            isOneToOne: false
-            referencedRelation: "vw_disciplinas_execucao"
-            referencedColumns: ["disciplina_id", "curso_id"]
-          },
-          {
-            foreignKeyName: "avc_disciplina_do_curso"
-            columns: ["disciplina_id", "curso_id"]
-            isOneToOne: false
-            referencedRelation: "vw_instrutor_carga_prevista"
-            referencedColumns: ["disciplina_id", "curso_id"]
-          },
-          {
-            foreignKeyName: "avc_ue_da_disciplina"
-            columns: ["unidade_ensino_id", "disciplina_id"]
-            isOneToOne: false
-            referencedRelation: "unidades_ensino"
-            referencedColumns: ["id", "disciplina_id"]
-          },
-          {
-            foreignKeyName: "avc_ue_da_disciplina"
-            columns: ["unidade_ensino_id", "disciplina_id"]
-            isOneToOne: false
-            referencedRelation: "vw_unidades_ensino_execucao"
-            referencedColumns: ["unidade_ensino_id", "disciplina_id"]
-          },
-        ]
-      }
-      avaliacoes_curriculo_turma: {
-        Row: {
-          avaliacao_curriculo_id: string
-          confirmado_em: string | null
-          criado_em: string
-          criado_por: string | null
-          editado_em: string | null
-          editado_por: string | null
-          id: string
-          origem: string
-          origem_migracao_v1: string | null
-          status: Database["public"]["Enums"]["status_registro"]
-          ta_aplicacao: number | null
-          ta_vista: number | null
-          turma_id: string
-        }
-        Insert: {
-          avaliacao_curriculo_id: string
-          confirmado_em?: string | null
-          criado_em?: string
-          criado_por?: string | null
-          editado_em?: string | null
-          editado_por?: string | null
-          id?: string
-          origem: string
-          origem_migracao_v1?: string | null
-          status?: Database["public"]["Enums"]["status_registro"]
-          ta_aplicacao?: number | null
-          ta_vista?: number | null
-          turma_id: string
-        }
-        Update: {
-          avaliacao_curriculo_id?: string
-          confirmado_em?: string | null
-          criado_em?: string
-          criado_por?: string | null
-          editado_em?: string | null
-          editado_por?: string | null
-          id?: string
-          origem?: string
-          origem_migracao_v1?: string | null
-          status?: Database["public"]["Enums"]["status_registro"]
-          ta_aplicacao?: number | null
-          ta_vista?: number | null
-          turma_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "avaliacoes_curriculo_turma_avaliacao_curriculo_id_fkey"
-            columns: ["avaliacao_curriculo_id"]
-            isOneToOne: false
-            referencedRelation: "avaliacoes_curriculo"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_turma_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_turma_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "vw_carga_horaria_turma"
-            referencedColumns: ["turma_id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_turma_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "vw_conformidade_tetos"
-            referencedColumns: ["turma_id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_turma_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "vw_disciplinas_execucao"
-            referencedColumns: ["turma_id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_curriculo_turma_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "vw_turmas_rotulo"
@@ -2431,7 +2142,6 @@ export type Database = {
           metodologia: string | null
           observacoes: string | null
           origem_migracao_v1: string | null
-          outros_instrutores: string[]
           status: Database["public"]["Enums"]["status_registro"]
           ta_final: number | null
           ta_inicial: number | null
@@ -2458,7 +2168,6 @@ export type Database = {
           metodologia?: string | null
           observacoes?: string | null
           origem_migracao_v1?: string | null
-          outros_instrutores?: string[]
           status?: Database["public"]["Enums"]["status_registro"]
           ta_final?: number | null
           ta_inicial?: number | null
@@ -2485,7 +2194,6 @@ export type Database = {
           metodologia?: string | null
           observacoes?: string | null
           origem_migracao_v1?: string | null
-          outros_instrutores?: string[]
           status?: Database["public"]["Enums"]["status_registro"]
           ta_final?: number | null
           ta_inicial?: number | null
@@ -3493,121 +3201,21 @@ export type Database = {
           },
         ]
       }
-      vistas_de_avaliacao: {
-        Row: {
-          avaliacao_id: string
-          codigo: string
-          conduz_instrutor_id: string | null
-          conduz_nome_externo: string | null
-          criado_em: string
-          criado_por: string | null
-          data: string
-          editado_em: string | null
-          editado_por: string | null
-          id: string
-          local: string | null
-          numero: number
-          origem_migracao_v1: string | null
-          status: Database["public"]["Enums"]["status_registro"]
-          ta_final: number | null
-          ta_inicial: number | null
-          tempos_consumidos: number | null
-        }
-        Insert: {
-          avaliacao_id: string
-          codigo?: string
-          conduz_instrutor_id?: string | null
-          conduz_nome_externo?: string | null
-          criado_em?: string
-          criado_por?: string | null
-          data: string
-          editado_em?: string | null
-          editado_por?: string | null
-          id?: string
-          local?: string | null
-          numero: number
-          origem_migracao_v1?: string | null
-          status?: Database["public"]["Enums"]["status_registro"]
-          ta_final?: number | null
-          ta_inicial?: number | null
-          tempos_consumidos?: number | null
-        }
-        Update: {
-          avaliacao_id?: string
-          codigo?: string
-          conduz_instrutor_id?: string | null
-          conduz_nome_externo?: string | null
-          criado_em?: string
-          criado_por?: string | null
-          data?: string
-          editado_em?: string | null
-          editado_por?: string | null
-          id?: string
-          local?: string | null
-          numero?: number
-          origem_migracao_v1?: string | null
-          status?: Database["public"]["Enums"]["status_registro"]
-          ta_final?: number | null
-          ta_inicial?: number | null
-          tempos_consumidos?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vistas_de_avaliacao_avaliacao_id_fkey"
-            columns: ["avaliacao_id"]
-            isOneToOne: false
-            referencedRelation: "avaliacoes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vistas_de_avaliacao_avaliacao_id_fkey"
-            columns: ["avaliacao_id"]
-            isOneToOne: false
-            referencedRelation: "vw_avaliacoes_situacao"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vistas_de_avaliacao_conduz_instrutor_id_fkey"
-            columns: ["conduz_instrutor_id"]
-            isOneToOne: false
-            referencedRelation: "instrutores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vistas_de_avaliacao_conduz_instrutor_id_fkey"
-            columns: ["conduz_instrutor_id"]
-            isOneToOne: false
-            referencedRelation: "vw_instrutor_carga_anual"
-            referencedColumns: ["instrutor_id"]
-          },
-          {
-            foreignKeyName: "vistas_de_avaliacao_conduz_instrutor_id_fkey"
-            columns: ["conduz_instrutor_id"]
-            isOneToOne: false
-            referencedRelation: "vw_instrutor_dados_pessoais"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vistas_de_avaliacao_conduz_instrutor_id_fkey"
-            columns: ["conduz_instrutor_id"]
-            isOneToOne: false
-            referencedRelation: "vw_instrutores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       vw_avaliacoes_situacao: {
         Row: {
-          avaliacao_curriculo_id: string | null
           cod_disciplina: string | null
           codigo: string | null
+          conciliacao_migracao:
+            | Database["public"]["Enums"]["conciliacao_migracao"]
+            | null
           conteudo_resumo: string | null
           criado_em: string | null
           criado_por: string | null
           curso_id: string | null
           data_avaliacao: string | null
+          data_vista_prova: string | null
           disciplina_id: string | null
           editado_em: string | null
           editado_por: string | null
@@ -3616,19 +3224,21 @@ export type Database = {
           instrutor_responsavel_id: string | null
           item_planejado_id: string | null
           local: string | null
+          local_vista: string | null
           metodologia: string | null
           nome_disciplina: string | null
           nome_fiscal_externo: string | null
           observacoes: string | null
+          origem_execucao_v1: string | null
           origem_migracao_v1: string | null
-          situacao: string | null
+          situacao_vista: Database["public"]["Enums"]["status_vista"] | null
           status: Database["public"]["Enums"]["status_avaliacao"] | null
-          status_anterior:
-            | Database["public"]["Enums"]["status_avaliacao"]
-            | null
           ta_final: number | null
+          ta_final_vista: number | null
           ta_inicial: number | null
+          ta_inicial_vista: number | null
           tempos_consumidos: number | null
+          tempos_consumidos_vista: number | null
           tipo_avaliacao: string | null
           turma_codigo: string | null
           turma_id: string | null
@@ -3773,13 +3383,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_instrutores"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avaliacoes_item_da_disciplina"
-            columns: ["avaliacao_curriculo_id", "disciplina_id"]
-            isOneToOne: false
-            referencedRelation: "avaliacoes_curriculo"
-            referencedColumns: ["id", "disciplina_id"]
           },
           {
             foreignKeyName: "avaliacoes_item_planejado_id_fkey"
@@ -4292,9 +3895,7 @@ export type Database = {
           herdado: boolean | null
           instrutor_id: string | null
           local: string | null
-          numero_sessao: number | null
           origem: string | null
-          sessao_id: string | null
           ta_final: number | null
           ta_inicial: number | null
           tempos_consumidos: number | null

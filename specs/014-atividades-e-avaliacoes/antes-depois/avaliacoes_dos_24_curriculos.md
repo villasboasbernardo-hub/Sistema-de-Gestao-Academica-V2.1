@@ -6,7 +6,7 @@ foram aplicadas à mão, na ordem do `db push` (E-4 → E-5 → D-5 → D-6 → 
 **Por turma, nas 28 turmas: aulas, avaliações, atividades, CHD, aplicação, vista e CHT iguais antes e depois
 das seis** (0 turmas com diferença).
 
-**Aprovação de Bernardo:** [pendente]
+**Aprovação de Bernardo:** ✅ 14/10/2026 (A4.4)
 
 **Antes:** 0 itens. **Depois:** 194 itens em 105 disciplinas de 15 cursos, todos de origem currículo,
 com arquivo e página. **Σ (aplicação + vista) ≤ CH em toda disciplina** (FR-031.2; a migration aborta se não). A lista
@@ -149,4 +149,4 @@ portão **A4.4**.
 | CAHO | XVII TEORIA DOS ERROS. | 60 | 2 | 8 | 2 | sim | PM 1 (UE 4), TI 1 (UE 4) |
 | CAHO | XVIII LEVANTAMENTO HIDROGRÁFICO DE  DE CURSO. | 200 | 1 | 0 | 0 | sim | OD 1 |
 
-**Resposta de Bernardo:** [pendente]
+**Resposta de Bernardo:** ✅ aprovado, 14/10/2026

@@ -69,6 +69,26 @@ comment on function app.fn_status_vista(uuid, date, integer) is
 revoke all on function app.fn_status_vista(uuid, date, integer) from public, anon;
 grant execute on function app.fn_status_vista(uuid, date, integer) to authenticated, service_role;
 
+-- A porta de leitura da situação pela interface de dados (o PostgREST não expõe `app`): repassa à função do `app`
+-- com os direitos de QUEM CHAMA (`security invoker`), e por isso só alcança a avaliação que a RLS deixa ler. É ela
+-- que a prova cruzada SQL × TS (`tests/invariantes/situacao-sql-igual-ts.test.ts`) chama, com `p_hoje` explícito.
+create or replace function public.situacao_da_avaliacao(p_avaliacao_id uuid, p_hoje date)
+returns text
+language sql
+stable
+security invoker
+set search_path = pg_catalog, public
+as $$
+  select app.fn_status_vista(a.id, p_hoje) from public.avaliacoes a where a.id = p_avaliacao_id;
+$$;
+
+comment on function public.situacao_da_avaliacao(uuid, date) is
+  'Spec 014, R-8: a situação de uma avaliação que a sessão alcança, pela função espelho `app.fn_status_vista`. '
+  'SECURITY INVOKER: a RLS de `avaliacoes` decide o que se lê.';
+
+revoke all on function public.situacao_da_avaliacao(uuid, date) from public, anon;
+grant execute on function public.situacao_da_avaliacao(uuid, date) to authenticated, service_role;
+
 create view public.vw_avaliacoes_situacao with (security_invoker = true) as
 select a.id, a.codigo, a.turma_id, a.disciplina_id, a.curso_id, a.avaliacao_curriculo_id, a.tipo_avaliacao,
        a.data_avaliacao, a.local, a.ta_inicial, a.tempos_consumidos, a.ta_final,

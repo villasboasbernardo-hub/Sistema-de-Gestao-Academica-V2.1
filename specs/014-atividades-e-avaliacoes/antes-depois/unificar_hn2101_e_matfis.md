@@ -6,7 +6,7 @@ foram aplicadas à mão, na ordem do `db push` (E-4 → E-5 → D-5 → D-6 → 
 **Por turma, nas 28 turmas: aulas, avaliações, atividades, CHD, aplicação, vista e CHT iguais antes e depois
 das seis** (0 turmas com diferença).
 
-**Aprovação de Bernardo:** [pendente]
+**Aprovação de Bernardo:** ✅ 14/10/2026 (A4.3)
 
 ## As disciplinas
 
@@ -41,4 +41,4 @@ As linhas históricas ativas reapontadas **preservam `editado_em` nulo** (D-UNIF
 desligados só dentro da transação da D-6. O mapa `id antigo → id novo` e as contagens estão em `migracao_log`
 (`MLOG-014-D6-…`), com o evento de referência por turma (antes = depois).
 
-**Resposta de Bernardo:** [pendente]
+**Resposta de Bernardo:** ✅ aprovado, 14/10/2026

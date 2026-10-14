@@ -6,7 +6,7 @@ foram aplicadas à mão, na ordem do `db push` (E-4 → E-5 → D-5 → D-6 → 
 **Por turma, nas 28 turmas: aulas, avaliações, atividades, CHD, aplicação, vista e CHT iguais antes e depois
 das seis** (0 turmas com diferença).
 
-**Aprovação de Bernardo:** [pendente]
+**Aprovação de Bernardo:** ✅ 14/10/2026 (A4.5)
 
 Três blocos, cada um com resposta própria (FR-041, FR-046, FR-047, FR-049).
 
@@ -23,7 +23,7 @@ Três blocos, cada um com resposta própria (FR-041, FR-046, FR-047, FR-049).
 As canceladas sem marca são `DSAP-C-EXP-OBS-ME-2026-L206-V`, `DSAP-C-AP-HN-2026-L1555-V`, `DSAP-C-AP-FR-2026-L1531-V`, `DSAP-C-ESPC-FR-2026-L2320-V`. A `L206-V` (PEND-DSA-VISTA) continua cancelada,
 intocada; as outras três saíram da planilha («[SAIU DA PLANILHA DE CONTROLE]») e também ficam como estão.
 
-**Resposta:** [pendente]
+**Resposta:** ✅ aprovado, 14/10/2026
 
 ## D-7b — as vistas viram a sessão 1
 
@@ -35,7 +35,7 @@ intocada; as outras três saíram da planilha («[SAIU DA PLANILHA DE CONTROLE]�
 
 ⚠️ Anda junto da E-5: recusado, saem do `db push` a E-5 e a D-7.
 
-**Resposta:** [pendente]
+**Resposta:** ✅ aprovado, 14/10/2026
 
 ## D-8 — o 2º instrutor das aulas
 
@@ -48,4 +48,4 @@ As 15 casaram pelo nome de guerra com UM instrutor do cadastro. **Uma não casou
 (`DSAP-C-ESPC-HN-2026-L1582-A`): o texto fica em `observacoes`, sem vetor — a migration não inventa. O texto antigo
 de cada uma está em `migracao_log` (`MLOG-014-D8-…`), para a volta.
 
-**Resposta:** [pendente]
+**Resposta:** ✅ aprovado, 14/10/2026

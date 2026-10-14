@@ -6,7 +6,7 @@
 -- ⚠️ pgTAP de dado nunca pula.
 -- =================================================================================
 begin;
-select plan(12);
+select plan(13);
 
 create temporary table _d as
 select c.codigo as curso, d.cod_disciplina as cod, d.nome_disciplina as nome, d.carga_horaria_tempos as ch, d.status::text as status, d.id
@@ -26,6 +26,9 @@ select is((select array_agg(ch order by cod) from _d where curso = 'C-Espc-HN' a
   case when (select sim from _carregada) then array[108, 120] end, 'D-5 B-8 · NAV I e NAV II = 108 e 120');
 select is((select status from _d where curso = 'C-Esp-ALH' and cod = 'ALH-III'),
   case when (select sim from _carregada) then 'ativo' end, 'D-5 B-5 · C-Esp-ALH III ativa, com o código do currículo');
+
+select is((select count(*)::int from _d where curso = 'C-Exp-Metoc-OF-SP' and nome like 'EFEITOS ATMOSF%' and status = 'ativo'),
+  0, 'D-5 B-12 · a IV «Efeitos atmosféricos» do C-Exp-Metoc-OF-SP não está ativa (o currículo do SP não a tem)');
 
 -- ── D-6 ──
 select is((select (cod, ch)::text from _d where curso = 'C-Ap-HN' and nome = 'MATEMÁTICA E FÍSICA APLICADAS À HIDROGRAFIA.' and status = 'ativo'),
