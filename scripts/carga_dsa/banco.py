@@ -106,6 +106,18 @@ select jsonb_build_object(
        'instrutor_id', h.instrutor_id, 'disciplina_id', h.disciplina_id, 'status', h.status)), '[]')
        from public.instrutor_disciplina h
       where h.disciplina_id in (select id from public.disciplinas where curso_id = (select curso_id from t))),
+  -- Spec 014 (PR 6, FR-036, FR-039): os itens do curriculo do curso, com o instrumento, e os ajustes desta turma.
+  'itens_curriculo', (select coalesce(jsonb_agg(jsonb_build_object(
+       'id', c.id, 'disciplina_id', c.disciplina_id, 'numero', c.numero, 'instrumento', l.valor,
+       'instrumento_nome', l.rotulo_exibicao, 'natureza', l.metadados ->> 'natureza',
+       'ta_aplicacao', c.ta_aplicacao, 'origem_ta_aplicacao', c.origem_ta_aplicacao,
+       'ta_vista', c.ta_vista, 'origem_ta_vista', c.origem_ta_vista) order by c.disciplina_id, c.ordem), '[]')
+       from public.avaliacoes_curriculo c join public.config_listas l on l.id = c.instrumento_id
+      where c.curso_id = (select curso_id from t) and c.status = 'ativo' and (l.metadados ->> 'natureza') <> 'od'),
+  'ajustes', (select coalesce(jsonb_agg(jsonb_build_object(
+       'avaliacao_curriculo_id', x.avaliacao_curriculo_id, 'origem', x.origem, 'confirmado', x.confirmado_em is not null,
+       'ta_aplicacao', x.ta_aplicacao, 'ta_vista', x.ta_vista, 'status', x.status)), '[]')
+       from public.avaliacoes_curriculo_turma x where x.turma_id = (select id from t) and x.status = 'ativo'),
   'metodologias', (select coalesce(jsonb_agg(jsonb_build_object('valor', valor, 'sigla', metadados ->> 'sigla')), '[]')
        from public.config_listas where lista = 'metodologias' and ativo),
   'tipos_atividade', (select coalesce(jsonb_agg(jsonb_build_object('valor', valor, 'categoria', metadados ->> 'categoria')), '[]')
@@ -156,8 +168,17 @@ select jsonb_build_object(
         'data_avaliacao', a.data_avaliacao, 'ta_inicial', a.ta_inicial, 'tempos_consumidos', a.tempos_consumidos,
         'instrutor', i.codigo, 'fiscal', f.codigo, 'nome_fiscal_externo', a.nome_fiscal_externo,
         'metodologia', a.metodologia, 'local', a.local, 'conteudo_resumo', a.conteudo_resumo,
-        'data_vista_prova', a.data_vista_prova, 'ta_inicial_vista', a.ta_inicial_vista,
-        'tempos_consumidos_vista', a.tempos_consumidos_vista, 'local_vista', a.local_vista, 'na_tela', a.editado_por is not null,
+        -- Spec 014 (PR 6): o item (pelo rotulo «PM 1», que e o mesmo nos dois bancos), o 2º instrutor e as SESSOES.
+        'item', (select l.valor || ' ' || c.numero from public.avaliacoes_curriculo c
+                   join public.config_listas l on l.id = c.instrumento_id where c.id = a.avaliacao_curriculo_id),
+        'outros_instrutores', to_jsonb(a.outros_instrutores),
+        'sessoes', (select coalesce(jsonb_agg(jsonb_build_object(
+            'codigo', s.codigo, 'numero', s.numero, 'data', s.data, 'ta_inicial', s.ta_inicial,
+            'tempos_consumidos', s.tempos_consumidos, 'local', s.local, 'conduz', ci.codigo::text,
+            'conduz_nome_externo', s.conduz_nome_externo) order by s.numero), '[]')
+            from public.vistas_de_avaliacao s left join public.instrutores ci on ci.id = s.conduz_instrutor_id
+           where s.avaliacao_id = a.id and s.status = 'ativo'),
+        'na_tela', a.editado_por is not null,
         'status', case when a.status in ('pendente', 'em_andamento', 'concluida', 'atrasada') then 'ativo'
                        when coalesce(a.observacoes, '') like '%[SAIU DA PLANILHA DE CONTROLE]%' then 'inativo'
                        else 'cancelada_na_tela' end)), '[]')
@@ -199,8 +220,11 @@ select jsonb_build_object(
        select jsonb_build_object('tabela', 'avaliacoes', 'codigo', codigo, 'data', data_avaliacao, 'ta_inicial', ta_inicial, 'tempos', tempos_consumidos)
          from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status in ('pendente', 'em_andamento', 'concluida', 'atrasada') and data_avaliacao < {virada}::date
        union all
-       select jsonb_build_object('tabela', 'avaliacoes', 'codigo', codigo || ' (vista)', 'data', data_vista_prova, 'ta_inicial', ta_inicial_vista, 'tempos', tempos_consumidos_vista)
-         from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status in ('pendente', 'em_andamento', 'concluida', 'atrasada') and data_vista_prova < {virada}::date
+       -- Spec 014 (PR 6): a vista feita na tela e SESSAO — cada uma ocupa o seu tempo.
+       select jsonb_build_object('tabela', 'avaliacoes', 'codigo', a.codigo || ' (vista ' || s.numero || ')', 'data', s.data, 'ta_inicial', s.ta_inicial, 'tempos', s.tempos_consumidos)
+         from public.vistas_de_avaliacao s join public.avaliacoes a on a.id = s.avaliacao_id
+        where a.turma_id = (select id from t) and a.origem_migracao_v1 is null and a.codigo not like 'DSAP-%' and s.status = 'ativo'
+          and a.status in ('pendente', 'em_andamento', 'concluida', 'atrasada') and s.data < {virada}::date
        union all
        select jsonb_build_object('tabela', 'atividades', 'codigo', codigo, 'data', data, 'ta_inicial', ta_inicial, 'tempos', tempos_consumidos)
          from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo' and data < {virada}::date) s),
@@ -227,13 +251,19 @@ def referencia(destino: str, turma: str, autor: str, de: str, ate: str, virada: 
 
 # Spec 014, SC-008 e D-CUR-1: a sincronizacao NUNCA muda o catalogo. O retrato e o md5 da CH de toda
 # disciplina e de toda UE, ordenados por codigo, tirado antes da primeira escrita e depois da ultima.
+# ⚠️ Desde o PR 6 (T228) ele inclui as AVALIACOES DO CURRICULO de origem `curriculo` (tempos e situacao) e a
+#    quantidade de itens: a sugestao da planilha vai para o AJUSTE da turma, nunca para o item.
 _RETRATO_DO_CATALOGO = """
 select md5(coalesce((select string_agg(codigo || ':' || coalesce(carga_horaria_tempos::text, '-') || ':' || status::text, '|' order by codigo)
                        from public.disciplinas), '')) as disciplinas,
        md5(coalesce((select string_agg(codigo || ':' || coalesce(ch_prevista_tempos::text, '-') || ':' || status::text, '|' order by codigo)
                        from public.unidades_ensino), '')) as unidades,
+       md5(coalesce((select string_agg(codigo || ':' || coalesce(ta_aplicacao::text, '-') || ':' || coalesce(ta_vista::text, '-')
+                                       || ':' || status::text, '|' order by codigo)
+                       from public.avaliacoes_curriculo where origem_item = 'curriculo'), '')) as avaliacoes_do_curriculo,
        (select count(*) from public.disciplinas) as n_disciplinas,
-       (select count(*) from public.unidades_ensino) as n_unidades
+       (select count(*) from public.unidades_ensino) as n_unidades,
+       (select count(*) from public.avaliacoes_curriculo) as n_avaliacoes_do_curriculo
 """
 
 

@@ -10,7 +10,11 @@ outras planilhas trouxeram *(decisoes de Bernardo Villas Boas, 06/10/2026)*:
 - **aula com dois instrutores**: o primeiro e o instrutor, os demais vao em observacoes;
 - **«1P»** (primeira aula) e a UE 1;
 - **a vista** casa com a prova pelo numero da chave (VP1 ↔ AV1/PM1); sem numero, as sessoes casam
-  com as ultimas provas da disciplina, em ordem — a convencao do piloto;
+  com as ultimas provas da disciplina, em ordem — a convencao do piloto. Desde a spec 014 (PR 6, FR-042) cada
+  vista e uma SESSAO da prova (`vistas_de_avaliacao`): a 2ª vista da mesma prova e a sessao 2, e nao mais AEC;
+- **a prova liga ao item do curriculo** (spec 014, FR-036, FR-039): pelo INSTRUMENTO (a descricao e o tipo; a sigla
+  da chave nao decide) e pelo numero de ordem dentro da disciplina. Nao casou: entra sem item, e vai para a lista
+  de erros de planilha — nada e inventado;
 - **dia parado** (feriado, licenca) so e CALENDARIO GLOBAL quando parou todas as turmas; parado so
   de algumas, vira DIA PARADO da turma (`dias_parados`, previsto) — ate a spec 014 virava TAD
   (FR-024, FR-025, FR-025.5; a linha TAD antiga sai na rodada com a marca de reclassificacao);
@@ -145,6 +149,9 @@ class Resolvido:
     # A3.2 (14/10/2026): o codigo da linha que ficou FORA por pendencia de responsavel. Se ela ja esta no
     # banco, a rodada nao a toca (nem atualiza, nem inativa) ate a decisao.
     pendentes: set[str] = field(default_factory=set)
+    # Spec 014 (FR-031.8, T227): o tempo da prova e da vista onde o curriculo e mudo, como SUGESTAO da planilha
+    # para a turma (`avaliacoes_curriculo_turma`, origem `sugestao_planilha`) — nunca sobre arbitrado confirmado.
+    sugestoes: list[dict] = field(default_factory=list)
 
     def codigos(self) -> dict[str, list[str]]:
         return {
@@ -458,6 +465,11 @@ def resolver(
                 )
             if not eh_fiscal and pessoa is None and limpo not in VAZIOS:
                 pend("instrutor_nao_casado", f"«{limpo}» nao esta no cadastro (responsavel de avaliacao)", bloco.tempos, chave=normalizar(limpo), bloqueia=False)
+            # Spec 014, FR-046: os demais («A / B»), pelo codigo quando casam; o que nao casa vai como veio.
+            outros_da_prova = []
+            for parte in [x.strip() for x in limpo.split("/")[1:] if x.strip()]:
+                achado = casar(parte, bloco, obrigatorio=False)
+                outros_da_prova.append(str(achado["codigo"]) if achado else parte)
             r.avaliacoes.append({
                 "codigo": codigo(bloco, "V"),
                 "chave_ue": ue_mapeada,
@@ -477,8 +489,15 @@ def resolver(
                 "metodologia": metodologia,
                 "local": local_de(bloco),
                 "conteudo_resumo": " ".join(linha_do_catalogo.topico.split()) or None,
+                # Spec 014 (FR-041, T226): as colunas de vista unica ficam NULAS — a vista e sessao, em `sessoes`.
                 "data_vista_prova": None, "ta_inicial_vista": None, "tempos_consumidos_vista": None, "local_vista": None,
                 "observacoes": procedencia(bloco),
+                "avaliacao_curriculo_id": None,
+                "item": None,
+                "descricao": " ".join(linha_do_catalogo.topico.split()),
+                "linha": bloco.linha,
+                "outros_instrutores": outros_da_prova,
+                "sessoes": [],
             })
             faixa = re.search(r"\(\s*U\.?\s*E\.?[^)]*\)", linha_do_catalogo.topico, flags=re.IGNORECASE)
             if faixa:
@@ -538,7 +557,9 @@ def resolver(
             "outros_instrutores": outros,
         })
 
+    _ligar_itens(r, ref)
     _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura, codigo=codigo, procedencia=procedencia)
+    _sugestoes(r, ref)
     _resolver_dias_parados(r, dias_parados, dias_globais, leitura, codigo, procedencia, categoria_do_subtipo)
     _aula_em_dia_parado(r)
     _ch_contra_o_curriculo(r, leitura, decisoes, ref)
@@ -546,6 +567,92 @@ def resolver(
     _tetos(r, ref, pend)
     _calendario_do_banco(r, ref)
     return r
+
+
+def _instrumento(prova: dict, itens: list[dict]) -> str | None:
+    """O instrumento da prova (FR-036): a DESCRICAO da linha do catalogo, depois o tipo da avaliacao; a sigla da chave
+    nao decide (a planilha usa «PE»/«PM» com sentidos que mudam entre cursos). So os instrumentos que a disciplina tem."""
+    da_disciplina = {i["instrumento"]: i for i in itens}
+    descricao = normalizar(prova.get("descricao") or "")
+    for valor, item in da_disciplina.items():
+        nome = normalizar(item.get("instrumento_nome") or "")
+        if nome and nome in descricao:
+            return valor
+    tipo = normalizar(prova.get("tipo_avaliacao") or "")
+    for valor, item in da_disciplina.items():
+        if normalizar(item.get("instrumento_nome") or "") == tipo:
+            return valor
+    return next(iter(da_disciplina)) if len(da_disciplina) == 1 else None
+
+
+def _ligar_itens(r: Resolvido, ref: dict) -> None:
+    """Spec 014 (FR-036, FR-036.1, FR-039, T224): a prova da planilha aponta o item do curriculo pelo instrumento e
+    pelo numero de ordem dentro da disciplina. Nao casou — linha `RECON`, instrumento que a disciplina nao tem, ou
+    prova a mais que os itens —, entra SEM item, como fato, e vai para a lista de erros de planilha. O TA diferente do
+    curriculo tambem vai para a lista; a prova entra com o TA da planilha (o DSA assinado)."""
+    itens = ref.get("itens_curriculo") or []
+    if not itens:
+        return
+    por_disciplina: dict[str, list[dict]] = {}
+    for i in itens:
+        por_disciplina.setdefault(i["disciplina_id"], []).append(i)
+    ajuste = {a["avaliacao_curriculo_id"]: a for a in ref.get("ajustes") or [] if a.get("status", "ativo") == "ativo"}
+    contagem: dict[tuple[str, str], int] = {}
+    for prova in sorted(r.avaliacoes, key=lambda a: (a["disciplina"], a["data_avaliacao"], a["ta_inicial"] or 0)):
+        da_disciplina = por_disciplina.get(prova["disciplina_id"], [])
+        if not da_disciplina:
+            continue
+        rotulo = f"{prova['disciplina']} {prova['chave_ue']} de {prova['data_avaliacao']}"
+        if "RECON" in normalizar(prova.get("chave_ue") or "") or "RECON" in normalizar(prova.get("descricao") or ""):
+            r.erros_de_planilha.append(f"{rotulo}: linha sem correspondente no curriculo (RECON) — entra sem avaliacao do curriculo")
+            continue
+        instrumento = _instrumento(prova, da_disciplina)
+        if instrumento is None:
+            r.erros_de_planilha.append(f"{rotulo}: a prova nao casa com nenhuma avaliacao do curriculo da disciplina")
+            continue
+        contagem[(prova["disciplina_id"], instrumento)] = contagem.get((prova["disciplina_id"], instrumento), 0) + 1
+        numero = contagem[(prova["disciplina_id"], instrumento)]
+        item = next((i for i in da_disciplina if i["instrumento"] == instrumento and int(i["numero"]) == numero), None)
+        if item is None:
+            r.erros_de_planilha.append(f"{rotulo}: prova a mais — o curriculo preve {sum(1 for i in da_disciplina if i['instrumento'] == instrumento)} {instrumento}")
+            continue
+        prova["avaliacao_curriculo_id"] = item["id"]
+        prova["item"] = f"{instrumento} {numero}"
+        previsto = (ajuste.get(item["id"]) or {}).get("ta_aplicacao") or item.get("ta_aplicacao")
+        if previsto is not None and int(previsto) != int(prova["tempos_consumidos"] or 0):
+            r.erros_de_planilha.append(
+                f"{rotulo}: TA de prova diferente — planilha {prova['tempos_consumidos']}, curriculo {previsto} ({instrumento} {numero})")
+    for (disciplina_id, instrumento), n in contagem.items():
+        previstos = sum(1 for i in por_disciplina.get(disciplina_id, []) if i["instrumento"] == instrumento)
+        if n < previstos:
+            cod = next((a["disciplina"] for a in r.avaliacoes if a["disciplina_id"] == disciplina_id), "?")
+            r.alertas.append(f"{cod}: a planilha tem {n} {instrumento} de {previstos} previstas no curriculo (ainda nao aplicadas, ou faltando)")
+
+
+def _sugestoes(r: Resolvido, ref: dict) -> None:
+    """Spec 014 (FR-031.8, T227): onde o curriculo e MUDO sobre o tempo, o da planilha vira sugestao para a turma —
+    so se o item nao tem tempo do curriculo e nao ha arbitrado confirmado. Idempotente: a mesma sugestao, zero mudanca."""
+    itens = {i["id"]: i for i in ref.get("itens_curriculo") or []}
+    confirmados = {a["avaliacao_curriculo_id"] for a in ref.get("ajustes") or []
+                   if a.get("status", "ativo") == "ativo" and (a.get("origem") == "arbitrado" or a.get("confirmado"))}
+    vistos: set[str] = set()
+    for prova in r.avaliacoes:
+        item = itens.get(prova.get("avaliacao_curriculo_id") or "")
+        if item is None or item["id"] in confirmados or item["id"] in vistos:
+            continue
+        sem_aplicacao = item.get("origem_ta_aplicacao") is None
+        sem_vista = item.get("origem_ta_vista") is None
+        if not (sem_aplicacao or sem_vista):
+            continue
+        vista = sum(v["tempos_consumidos"] or 0 for v in prova.get("sessoes", [])) or None
+        r.sugestoes.append({
+            "avaliacao_curriculo_id": item["id"],
+            "item": prova.get("item"),
+            "disciplina": prova["disciplina"],
+            "ta_aplicacao": prova["tempos_consumidos"] if sem_aplicacao else None,
+            "ta_vista": vista if sem_vista else None,
+        })
+        vistos.add(item["id"])
 
 
 def _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura, codigo=None, procedencia=None) -> None:
@@ -581,38 +688,34 @@ def _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura, 
                 # Sem numero — ou com numero que nenhuma prova da disciplina tem (C-Espc-HN: provas «PM», vistas
                 # «VP1/VP2/VP3»): a sessao e a vista da ultima prova aplicada antes dela que ainda nao tem vista.
                 anteriores = [a for a in provas if (a["data_avaliacao"], a["ta_inicial"] or 0) < (bloco.data.isoformat(), bloco.ta_inicial)
-                              and a["data_vista_prova"] is None]
+                              and not a["sessoes"]]
+                if not anteriores:
+                    # Toda prova anterior ja tem sessao: a vista e a SESSAO SEGUINTE da prova mais recente (FR-042).
+                    anteriores = [a for a in provas if (a["data_avaliacao"], a["ta_inicial"] or 0) < (bloco.data.isoformat(), bloco.ta_inicial)]
                 alvo = anteriores[-1] if anteriores else None
             if alvo is None:
                 pend("vista_sem_prova", f"vista {cod}+{bloco.ue} de {bloco.data:%d/%m/%Y} nao casa com nenhuma prova da disciplina", bloco.tempos, chave=f"{cod}+{bloco.ue}")
                 continue
-            if alvo["data_vista_prova"] is not None and decisoes.get("vista_extra_como_aec") and codigo is not None:
-                # Decisao de 07/10/2026 (conferencia, C06): a segunda sessao de vista da mesma prova entra como AEC —
-                # a linha da avaliacao guarda uma sessao so, e a sessao aconteceu.
-                r.atividades.append({
-                    "codigo": codigo(bloco, "N"), "categoria_normativa": "AEC", "data": bloco.data.isoformat(),
-                    "subtipo": "Atividade Extracurricular",
-                    "descricao": f"VISTA DE PROVA (2ª sessão) — {cod} {alvo['chave_ue']} aplicada em {alvo['data_avaliacao']}",
-                    "ta_inicial": bloco.ta_inicial, "tempos_consumidos": bloco.tempos, "local": local_de(bloco),
-                    "instrutor": alvo.get("instrutor"), "instrutor_id": alvo.get("instrutor_responsavel_id"),
-                    "responsavel_externo": None, "observacoes": procedencia(bloco),
-                })
-                continue
-            if alvo["data_vista_prova"] is not None:
-                pend("vista_em_mais_de_uma_sessao",
-                     f"a prova {cod} {alvo['chave_ue']} de {alvo['data_avaliacao']} ja tem vista em {alvo['data_vista_prova']}; "
-                     f"a sessao de {bloco.data:%d/%m/%Y} ({bloco.tempos} TA) nao cabe na mesma linha", bloco.tempos, chave=f"{cod}+{bloco.ue}")
-                continue
-            alvo["data_vista_prova"] = bloco.data.isoformat()
-            alvo["ta_inicial_vista"] = bloco.ta_inicial
-            alvo["tempos_consumidos_vista"] = bloco.tempos
-            alvo["local_vista"] = local_de(bloco)
+            # ⚠️ Spec 014 (FR-042, T225): a 2ª vista da mesma prova e a SESSAO 2 — a chave `vista_extra_como_aec` do lote
+            #    de decisoes (07/10/2026, C06) fica SEM EFEITO: ela existia porque a linha da avaliacao guardava uma
+            #    sessao so. A AEC antiga sai pela rodada (ela deixa de estar no plano) e volta como sessao.
+            # Quem CONDUZ a sessao (FR-043): o instrutor da linha da vista; sem casar, o texto como veio.
+            bruto = leitura.digitadas.get(bloco.linha, {}).get("instrutor") or leitura.catalogo[bloco.chave].instrutor
+            limpo_vista = " ".join(re.sub(r"\(\s*FISCAL\s*\)", "", bruto, flags=re.IGNORECASE).split())
+            pessoa = casar(limpo_vista.split("/")[0], bloco, obrigatorio=False) if limpo_vista.strip() not in VAZIOS else None
+            alvo["sessoes"].append({
+                "codigo": codigo(bloco, "S") if codigo is not None else f"S{bloco.linha}",
+                "numero": len(alvo["sessoes"]) + 1,
+                "data": bloco.data.isoformat(),
+                "ta_inicial": bloco.ta_inicial,
+                "tempos_consumidos": bloco.tempos,
+                "local": local_de(bloco),
+                "conduz": pessoa["codigo"] if pessoa else None,
+                "conduz_nome_externo": None if pessoa or limpo_vista.strip() in VAZIOS else limpo_vista.split("/")[0].strip(),
+            })
             # quem conduz a vista e o responsavel pela avaliacao, quando a prova so trazia o fiscal
-            if alvo["instrutor_responsavel_id"] is None:
-                bruto = leitura.digitadas.get(bloco.linha, {}).get("instrutor") or leitura.catalogo[bloco.chave].instrutor
-                pessoa = casar(bruto.split("/")[0], bloco, obrigatorio=False) if bruto.strip() not in VAZIOS else None
-                if pessoa is not None:
-                    alvo["instrutor"], alvo["instrutor_responsavel_id"] = pessoa["codigo"], pessoa["id"]
+            if alvo["instrutor_responsavel_id"] is None and pessoa is not None:
+                alvo["instrutor"], alvo["instrutor_responsavel_id"] = pessoa["codigo"], pessoa["id"]
 
 
 def _resolver_dias_parados(r, dias_parados, dias_globais, leitura, codigo, procedencia, categoria_do_subtipo) -> None:
@@ -687,7 +790,8 @@ def _conferencias_internas(r, leitura, decisoes, pend, disciplinas_do_curso) -> 
     for a in r.aulas:
         carregado[a["cod_planilha"]] = carregado.get(a["cod_planilha"], 0) + a["tempos_consumidos"]
     for a in r.avaliacoes:
-        carregado[a["cod_planilha"]] = carregado.get(a["cod_planilha"], 0) + a["tempos_consumidos"] + (a["tempos_consumidos_vista"] or 0)
+        carregado[a["cod_planilha"]] = carregado.get(a["cod_planilha"], 0) + a["tempos_consumidos"] + sum(
+            v["tempos_consumidos"] or 0 for v in a.get("sessoes", []))
     for cod_planilha, (_prevista, cumprida) in sorted(leitura.controle.items()):
         if cumprida is None:
             continue
@@ -734,7 +838,8 @@ def _tetos(r, ref, pend) -> None:
         somar(a["data"], a["disciplina"], a["tempos_consumidos"])
     for a in r.avaliacoes:
         somar(a["data_avaliacao"], a["disciplina"], a["tempos_consumidos"])
-        somar(a["data_vista_prova"], a["disciplina"], a["tempos_consumidos_vista"])
+        for v in a.get("sessoes", []):
+            somar(v["data"], a["disciplina"], v["tempos_consumidos"])
     for ((ano, semana), cod), ta in sorted(soma.items()):
         nome = nome_por_cod.get(cod, cod)
         if sem_teto_algum(nome):

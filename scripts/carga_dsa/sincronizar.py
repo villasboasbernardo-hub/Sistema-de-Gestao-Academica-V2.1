@@ -63,9 +63,10 @@ SENTINELA = "ENSAIO_DESFEITO"
 CAMPOS = {
     "aulas": ("data", "ta_inicial", "tempos_consumidos", "ue", "disciplina_sem_ue", "instrutor", "metodologia", "local", "conteudo_resumo", "demais",
               "outros_instrutores"),
+    # Spec 014 (PR 6): a vista e SESSAO (`sessoes`, comparada pela lista normalizada); o item do curriculo e o 2º
+    # instrutor entram na comparacao. As colunas de vista unica sairam: a sincronizacao as grava nulas.
     "avaliacoes": ("disciplina", "tipo_avaliacao", "data_avaliacao", "ta_inicial", "tempos_consumidos", "instrutor", "fiscal",
-                   "nome_fiscal_externo", "metodologia", "local", "conteudo_resumo", "data_vista_prova", "ta_inicial_vista",
-                   "tempos_consumidos_vista", "local_vista"),
+                   "nome_fiscal_externo", "metodologia", "local", "conteudo_resumo", "item", "outros_instrutores", "sessoes"),
     "atividades": ("categoria_normativa", "data", "subtipo", "descricao", "ta_inicial", "tempos_consumidos", "local", "instrutor", "responsavel_externo"),
     "dias_parados": ("data", "ta_inicial", "tempos", "tipo_parada", "motivo", "prevista"),
 }
@@ -79,9 +80,29 @@ DATA_DE = {"aulas": "data", "avaliacoes": "data_avaliacao", "atividades": "data"
 TABELA_DE = {"aulas": "registros_aula", "avaliacoes": "avaliacoes", "atividades": "atividades_nao_letivas", "dias_parados": "dias_parados"}
 
 
+CAMPOS_DA_SESSAO = ("codigo", "numero", "data", "ta_inicial", "tempos_consumidos", "local", "conduz", "conduz_nome_externo")
+
+
+def _sessoes(valor: object) -> list[tuple] | None:
+    """As sessoes de vista como lista comparavel: as do banco e as do plano, com as mesmas chaves e em ordem."""
+    if not valor:
+        return None
+    return sorted(tuple(str(v.get(c))[:10] if c == "data" and v.get(c) else (str(v.get(c)) if v.get(c) is not None else None)
+                        for c in CAMPOS_DA_SESSAO) for v in valor)  # type: ignore[union-attr]
+
+
+def _comparavel(campo: str, valor: object) -> object:
+    if campo == "sessoes":
+        return _sessoes(valor)
+    if campo == "outros_instrutores":
+        return sorted(str(x) for x in valor) or None if isinstance(valor, list) else (valor or None)
+    return valor or None
+
+
 def _campos_que_diferem(nome: str, atual: dict, linha: dict) -> list[tuple[str, object, object]]:
     esperado = {**linha, "demais": _demais(linha)} if nome == "aulas" else linha
-    return [(c, atual.get(c), esperado.get(c)) for c in CAMPOS[nome] if (atual.get(c) or None) != (esperado.get(c) or None)]
+    return [(c, atual.get(c), esperado.get(c)) for c in CAMPOS[nome]
+            if _comparavel(c, atual.get(c)) != _comparavel(c, esperado.get(c))]
 
 
 def _faixa(data: object, ta: object, tempos: object) -> tuple[str, int, int]:
@@ -114,12 +135,13 @@ def proteger(res: Resolvido, ref: dict, virada: str | None) -> tuple[dict[str, s
             protegidas[nome] |= {a["codigo"] for a in atuais.get(nome, []) if str(a[DATA_DE[nome]])[:10] >= virada}
         ja = {a["codigo"] for a in atuais.get("avaliacoes", [])}
         for a in list(res.avaliacoes):
-            if a.get("data_vista_prova") and str(a["data_vista_prova"])[:10] >= virada:
+            depois = [v for v in a.get("sessoes", []) if str(v["data"])[:10] >= virada]
+            if depois:
                 if a["codigo"] in ja:  # prova antes, vista depois: a linha ja existe e fica com o sistema
                     protegidas["avaliacoes"].add(a["codigo"])
                     res.avaliacoes.remove(a)
-                else:  # prova nova antes da virada: entra sem a vista, que e do sistema
-                    a.update(data_vista_prova=None, ta_inicial_vista=None, tempos_consumidos_vista=None, local_vista=None)
+                else:  # prova nova antes da virada: entra so com as sessoes de antes; as de depois sao do sistema
+                    a["sessoes"] = [v for v in a["sessoes"] if str(v["data"])[:10] < virada]
 
     # 1b. A linha que ficou FORA por pendencia de responsavel (A3.2) e ja esta no banco: intocada ate a decisao.
     protegidas["atividades"] |= {a["codigo"] for a in atuais.get("atividades", []) if a["codigo"] in getattr(res, "pendentes", set())}
@@ -157,8 +179,7 @@ def proteger(res: Resolvido, ref: dict, virada: str | None) -> tuple[dict[str, s
                     faixas = [_faixa(linha["data"], linha["ta_inicial"], linha["tempos"])]
                 elif nome == "avaliacoes":
                     faixas = [_faixa(linha["data_avaliacao"], linha["ta_inicial"], linha["tempos_consumidos"])]
-                    if linha.get("data_vista_prova"):
-                        faixas.append(_faixa(linha["data_vista_prova"], linha["ta_inicial_vista"], linha["tempos_consumidos_vista"]))
+                    faixas += [_faixa(v["data"], v["ta_inicial"], v["tempos_consumidos"]) for v in linha.get("sessoes", [])]
                 else:
                     faixas = [_faixa(linha["data"], linha["ta_inicial"], linha["tempos_consumidos"])]
                 choque = [c for (dia, i, f), c in ocupado for (d2, i2, f2) in faixas if dia == d2 and i <= f2 and i2 <= f]
@@ -356,41 +377,103 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
     if res.avaliacoes:
         p.append(f"""
   with dados(codigo, disciplina, tipo, data, ta, tempos, instrutor, fiscal, fiscal_externo, conteudo, metodologia, local,
-             data_vista, ta_vista, tempos_vista, local_vista, obs) as (values
-    {_valores([[a["codigo"], a["disciplina_id"], a["tipo_avaliacao"], a["data_avaliacao"], a["ta_inicial"], a["tempos_consumidos"], a["instrutor_responsavel_id"], a["fiscal_id"], a["nome_fiscal_externo"], a["conteudo_resumo"], a["metodologia"], a["local"], a["data_vista_prova"], a["ta_inicial_vista"], a["tempos_consumidos_vista"], a["local_vista"], a["observacoes"]] for a in res.avaliacoes])}
+             item, outros, obs) as (values
+    {_valores([[a["codigo"], a["disciplina_id"], a["tipo_avaliacao"], a["data_avaliacao"], a["ta_inicial"], a["tempos_consumidos"], a["instrutor_responsavel_id"], a["fiscal_id"], a["nome_fiscal_externo"], a["conteudo_resumo"], a["metodologia"], a["local"], a.get("avaliacao_curriculo_id"), ",".join(a.get("outros_instrutores") or []), a["observacoes"]] for a in res.avaliacoes])}
   ), gravadas as (
+    -- Spec 014 (PR 6): as colunas de vista unica vao NULAS (a vista e sessao, gravada abaixo); na linha que as tinha,
+    -- o espelho da E-5 inativa a sessao 1 espelhada, e a sessao da planilha a substitui com o codigo `…-S`.
     insert into public.avaliacoes as r
       (codigo, turma_id, curso_id, disciplina_id, tipo_avaliacao, data_avaliacao, ta_inicial, tempos_consumidos,
        instrutor_responsavel_id, fiscal_id, nome_fiscal_externo, conteudo_resumo, metodologia, local,
-       data_vista_prova, ta_inicial_vista, tempos_consumidos_vista, local_vista, observacoes, criado_por)
+       data_vista_prova, ta_inicial_vista, tempos_consumidos_vista, local_vista, avaliacao_curriculo_id, outros_instrutores,
+       observacoes, criado_por)
     select d.codigo, {t}, {c}, d.disciplina::uuid, d.tipo, d.data::date, d.ta::smallint, d.tempos::smallint,
            d.instrutor::uuid, d.fiscal::uuid, d.fiscal_externo, d.conteudo, d.metodologia, d.local,
-           d.data_vista::date, d.ta_vista::smallint, d.tempos_vista::smallint, d.local_vista, d.obs, {autor}
+           null, null, null, null, d.item::uuid, coalesce(string_to_array(nullif(d.outros, ''), ','), '{{}}'::text[]),
+           d.obs, {autor}
       from dados d
     on conflict (codigo) do update set
        disciplina_id = excluded.disciplina_id, tipo_avaliacao = excluded.tipo_avaliacao, data_avaliacao = excluded.data_avaliacao,
        ta_inicial = excluded.ta_inicial, tempos_consumidos = excluded.tempos_consumidos,
        instrutor_responsavel_id = excluded.instrutor_responsavel_id, fiscal_id = excluded.fiscal_id,
        nome_fiscal_externo = excluded.nome_fiscal_externo, conteudo_resumo = excluded.conteudo_resumo,
-       metodologia = excluded.metodologia, local = excluded.local, data_vista_prova = excluded.data_vista_prova,
-       ta_inicial_vista = excluded.ta_inicial_vista, tempos_consumidos_vista = excluded.tempos_consumidos_vista,
-       local_vista = excluded.local_vista, observacoes = excluded.observacoes,
+       metodologia = excluded.metodologia, local = excluded.local, data_vista_prova = null,
+       ta_inicial_vista = null, tempos_consumidos_vista = null, local_vista = null,
+       avaliacao_curriculo_id = excluded.avaliacao_curriculo_id, outros_instrutores = excluded.outros_instrutores,
+       observacoes = excluded.observacoes,
        -- Spec 014 (FR-049, D-AA-10): so volta a `pendente` a que a PROPRIA sincronizacao tirou; a cancelada
        -- pela tela continua cancelada (era o defeito da `DSAP-C-EXP-OBS-ME-2026-L206-V`).
        status = case when r.status = 'cancelada' and coalesce(r.observacoes, '') like {lit('%' + MARCA_DE_SAIDA + '%')}
                      then 'pendente' else r.status end
      where (r.disciplina_id, r.tipo_avaliacao, r.data_avaliacao, r.ta_inicial, r.tempos_consumidos, r.instrutor_responsavel_id,
             r.fiscal_id, r.nome_fiscal_externo, r.conteudo_resumo, r.metodologia, r.local, r.data_vista_prova,
-            r.ta_inicial_vista, r.tempos_consumidos_vista, r.local_vista,
+            r.ta_inicial_vista, r.tempos_consumidos_vista, r.local_vista, r.avaliacao_curriculo_id, r.outros_instrutores,
             r.status = 'cancelada' and coalesce(r.observacoes, '') like {lit('%' + MARCA_DE_SAIDA + '%')})
        is distinct from
            (excluded.disciplina_id, excluded.tipo_avaliacao, excluded.data_avaliacao, excluded.ta_inicial, excluded.tempos_consumidos,
             excluded.instrutor_responsavel_id, excluded.fiscal_id, excluded.nome_fiscal_externo, excluded.conteudo_resumo,
-            excluded.metodologia, excluded.local, excluded.data_vista_prova, excluded.ta_inicial_vista,
-            excluded.tempos_consumidos_vista, excluded.local_vista, false)
+            excluded.metodologia, excluded.local, null::date, null::smallint, null::smallint, null::text,
+            excluded.avaliacao_curriculo_id, excluded.outros_instrutores, false)
     returning (xmax = 0) as nova
   ) select count(*) filter (where nova), count(*) filter (where not nova) into n, m from gravadas;
   k := k || jsonb_build_object('avaliacoes_novas', n, 'avaliacoes_atualizadas', m);""")
+
+    # 2b. as SESSOES de vista (spec 014, FR-041, FR-042, T226): primeiro sai a sessao ATIVA de avaliacao da planilha que
+    #     nao esta no plano (inclusive a sessao 1 que o espelho da E-5 criou com codigo proprio); depois entram/mudam as
+    #     da planilha, pelo codigo `…-S`. A avaliacao protegida (virada, tela) nao e tocada.
+    sessoes = [(a["codigo"], v) for a in res.avaliacoes for v in a.get("sessoes", [])]
+    p.append(f"""
+  update public.vistas_de_avaliacao s set status = 'inativo'
+    from public.avaliacoes a
+   where a.id = s.avaliacao_id and a.turma_id = {t} and a.codigo like {lit(prefixo + '%')} and s.status = 'ativo'
+     and not (s.codigo = any (array[{", ".join(lit(v["codigo"]) for _c, v in sessoes)}]::text[]))
+     and not (a.codigo = any ({intocadas('avaliacoes')})){antes('a.data_avaliacao')};
+  get diagnostics n := row_count; k := k || jsonb_build_object('sessoes_que_sairam', n);""")
+    if sessoes:
+        p.append(f"""
+  with dados(avaliacao, codigo, numero, data, ta, tempos, local, conduz, conduz_externo) as (values
+    {_valores([[c, v["codigo"], v["numero"], v["data"], v["ta_inicial"], v["tempos_consumidos"], v["local"], v["conduz"], v["conduz_nome_externo"]] for c, v in sessoes])}
+  ), gravadas as (
+    insert into public.vistas_de_avaliacao as r
+      (codigo, avaliacao_id, numero, data, ta_inicial, tempos_consumidos, local, conduz_instrutor_id, conduz_nome_externo, criado_por)
+    select d.codigo, a.id, d.numero::smallint, d.data::date, d.ta::smallint, d.tempos::smallint, d.local, i.id, d.conduz_externo, {autor}
+      from dados d join public.avaliacoes a on a.codigo = d.avaliacao
+      left join public.instrutores i on i.codigo::text = d.conduz
+    on conflict (codigo) do update set
+       avaliacao_id = excluded.avaliacao_id, numero = excluded.numero, data = excluded.data, ta_inicial = excluded.ta_inicial,
+       tempos_consumidos = excluded.tempos_consumidos, local = excluded.local, conduz_instrutor_id = excluded.conduz_instrutor_id,
+       conduz_nome_externo = excluded.conduz_nome_externo, status = 'ativo'
+     where (r.avaliacao_id, r.numero, r.data, r.ta_inicial, r.tempos_consumidos, r.local, r.conduz_instrutor_id,
+            r.conduz_nome_externo, r.status::text)
+       is distinct from
+           (excluded.avaliacao_id, excluded.numero, excluded.data, excluded.ta_inicial, excluded.tempos_consumidos,
+            excluded.local, excluded.conduz_instrutor_id, excluded.conduz_nome_externo, 'ativo')
+    returning (xmax = 0) as nova
+  ) select count(*) filter (where nova), count(*) filter (where not nova) into n, m from gravadas;
+  k := k || jsonb_build_object('sessoes_novas', n, 'sessoes_atualizadas', m);""")
+
+    # 2c. as SUGESTOES da planilha (spec 014, FR-031.8, T227): so onde nao ha ajuste ativo, ou o ajuste e sugestao ainda
+    #     nao confirmada; o arbitrado e a sugestao confirmada nunca sao tocados.
+    if getattr(res, "sugestoes", None):
+        p.append(f"""
+  with dados(item, ta, vista) as (values
+    {_valores([[g["avaliacao_curriculo_id"], g["ta_aplicacao"], g["ta_vista"]] for g in res.sugestoes])}
+  ), novas as (
+    insert into public.avaliacoes_curriculo_turma (avaliacao_curriculo_id, turma_id, ta_aplicacao, ta_vista, origem, criado_por)
+    select d.item::uuid, {t}, d.ta::smallint, d.vista::smallint, 'sugestao_planilha', {autor}
+      from dados d
+     where not exists (select 1 from public.avaliacoes_curriculo_turma x
+                        where x.avaliacao_curriculo_id = d.item::uuid and x.turma_id = {t} and x.status = 'ativo')
+    returning 1
+  ), mudadas as (
+    update public.avaliacoes_curriculo_turma x set ta_aplicacao = d.ta::smallint, ta_vista = d.vista::smallint
+      from dados d
+     where x.avaliacao_curriculo_id = d.item::uuid and x.turma_id = {t} and x.status = 'ativo'
+       and x.origem = 'sugestao_planilha' and x.confirmado_em is null
+       and (x.ta_aplicacao, x.ta_vista) is distinct from (d.ta::smallint, d.vista::smallint)
+    returning 1
+  ) select (select count(*) from novas), (select count(*) from mudadas) into n, m;
+  k := k || jsonb_build_object('sugestoes_novas', n, 'sugestoes_atualizadas', m);""")
 
     if res.atividades:
         p.append(f"""
@@ -630,7 +713,8 @@ def titulo(texto: str) -> None:
 
 def relatar(res: Resolvido, leitura: planilha.Leitura, ref: dict, dif: dict) -> None:
     ta = lambda linhas, campo="tempos_consumidos": sum(l[campo] or 0 for l in linhas)  # noqa: E731
-    vistas = [a for a in res.avaliacoes if a["data_vista_prova"]]
+    # Spec 014 (PR 6): a vista e SESSAO — as sessoes de todas as provas.
+    vistas = [v for a in res.avaliacoes for v in a.get("sessoes", [])]
     ei = [a for a in res.atividades if a["categoria_normativa"] == "Estudo_Individual"]
     outras = [a for a in res.atividades if a["categoria_normativa"] != "Estudo_Individual"]
     print(f"  planilha: {len(leitura.blocos)} blocos em {len(leitura.linhas)} TA · siglas do cabecalho: {sorted(set(leitura.siglas))} · alunos: {leitura.alunos}")
