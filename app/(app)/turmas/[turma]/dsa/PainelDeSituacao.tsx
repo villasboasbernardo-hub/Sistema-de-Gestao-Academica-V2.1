@@ -60,6 +60,7 @@ import { TabelaDensa, type Coluna } from "@/components/ciaara/tabela-densa";
 import type { Tom } from "@/lib/design/vocabulario";
 import {
   quadroDaUnidade,
+  quadroDaUnidadeComPartes,
   type QuadroDaDisciplina,
   type SituacaoDaUnidade,
 } from "@/lib/dominio/dsa/situacao";
@@ -87,6 +88,9 @@ export type UnidadeNoQuadro = {
   readonly topico: string;
   readonly prevista: number;
   readonly lancada: number;
+  /** Spec 014, FR-034: a prova e a vista DENTRO da CH da UE — o conteúdo é o que sobra delas. */
+  readonly prova?: { readonly prevista: number; readonly lancada: number };
+  readonly vista?: { readonly prevista: number; readonly lancada: number };
 };
 
 type Aparencia = { readonly rotulo: string; readonly tom: Tom };
@@ -157,10 +161,17 @@ export function PainelDeSituacao({
   quadros,
   unidades,
   rotuloDaSemana,
+  avaliacoesPorDisciplina = [],
 }: {
   readonly quadros: readonly QuadroParaExibir[];
   readonly unidades: readonly UnidadeNoQuadro[];
   readonly rotuloDaSemana: string;
+  /** Spec 014, FR-057: *"X de Y avaliações aplicadas"*, por disciplina — contado pela oferta, não aqui. */
+  readonly avaliacoesPorDisciplina?: readonly {
+    readonly disciplinaId: string;
+    readonly aplicadas: number;
+    readonly previstas: number;
+  }[];
 }) {
   /*
    * ⚠️ **MAIS DE UMA PODE FICAR ABERTA**, ao contrário da grade de disciplinas: lá a linha aberta é
@@ -309,6 +320,7 @@ export function PainelDeSituacao({
               <UnidadesDaDisciplina
                 codigo={q.codigo}
                 unidades={unidadesPorDisciplina.get(q.disciplinaId) ?? []}
+                avaliacoes={avaliacoesPorDisciplina.find((a) => a.disciplinaId === q.disciplinaId)}
               />
             )}
           />
@@ -331,15 +343,27 @@ export function PainelDeSituacao({
 export function UnidadesDaDisciplina({
   codigo,
   unidades,
+  avaliacoes,
 }: {
   readonly codigo: string;
   readonly unidades: readonly UnidadeNoQuadro[];
+  readonly avaliacoes?: { readonly aplicadas: number; readonly previstas: number } | undefined;
 }) {
   /* A ordem do currículo: UE 1, 2, 3… A view não garante ordem nenhuma. */
   const emOrdem = [...unidades].sort((a, b) => a.numero - b.numero);
 
   return (
     <div data-slot="ues-da-disciplina" data-unidades-de={codigo} className="flex flex-col gap-2">
+      {avaliacoes && avaliacoes.previstas > 0 ? (
+        <p
+          className="text-texto text-xs"
+          data-slot="avaliacoes-aplicadas"
+          data-aplicadas={avaliacoes.aplicadas}
+          data-previstas={avaliacoes.previstas}
+        >
+          {avaliacoes.aplicadas} de {avaliacoes.previstas} avaliações do currículo aplicadas
+        </p>
+      ) : null}
       {emOrdem.length === 0 ? (
         <p role="status" className="text-texto-suave text-xs" data-slot="sem-unidades">
           {codigo} não tem unidades de ensino cadastradas.
@@ -377,7 +401,25 @@ export function UnidadesDaDisciplina({
             </thead>
             <tbody>
               {emOrdem.map((u) => {
-                const q = quadroDaUnidade({ chPrevista: u.prevista, chLancada: u.lancada });
+                /*
+                 * ⚠️ Spec 014 (PEND-E8-1): com a avaliação da UE, o quadro é de conteúdo · prova · vista, e a situação é
+                 *    sobre o total — a UE com tudo lançado conclui. Sem item na UE, é o quadro de sempre.
+                 */
+                const prova = u.prova ?? { prevista: 0, lancada: 0 };
+                const vista = u.vista ?? { prevista: 0, lancada: 0 };
+                const comAvaliacao = prova.prevista + vista.prevista > 0;
+                const partes = comAvaliacao
+                  ? quadroDaUnidadeComPartes({
+                      conteudo: {
+                        prevista: Math.max(u.prevista - prova.prevista - vista.prevista, 0),
+                        lancada: u.lancada,
+                      },
+                      prova,
+                      vista,
+                    })
+                  : null;
+                const q =
+                  partes ?? quadroDaUnidade({ chPrevista: u.prevista, chLancada: u.lancada });
                 const aparencia = APARENCIA_DA_UNIDADE[q.situacao];
                 return (
                   /* ⚠️ Os números vão também no ATRIBUTO, não só no texto (`RNF-USA-05`). */
@@ -395,6 +437,19 @@ export function UnidadesDaDisciplina({
                     >
                       <span className="text-texto font-medium">UE {u.numero}</span>
                       <span className="text-texto-suave block">{u.topico}</span>
+                      {partes ? (
+                        <span
+                          className="text-texto-suave block"
+                          data-slot="partes-da-unidade"
+                          data-conteudo={`${partes.conteudo.lancada}/${partes.conteudo.prevista}`}
+                          data-prova={`${partes.prova.lancada}/${partes.prova.prevista}`}
+                          data-vista={`${partes.vista.lancada}/${partes.vista.prevista}`}
+                        >
+                          conteúdo {partes.conteudo.lancada} de {partes.conteudo.prevista} · prova{" "}
+                          {partes.prova.lancada} de {partes.prova.prevista} · vista{" "}
+                          {partes.vista.lancada} de {partes.vista.prevista}
+                        </span>
+                      ) : null}
                     </th>
                     <td className="border-borda border-b p-1 text-right align-top tabular-nums">
                       {q.chPrevista}

@@ -486,6 +486,7 @@ export default async function SemanaDoDsa({
       <PainelDeSituacao
         quadros={quadros}
         unidades={lida.unidades.map((u) => ({ ...u, lancada: u.lancadaAteASemana }))}
+        avaliacoesPorDisciplina={lida.avaliacoesPorDisciplina}
         rotuloDaSemana={rotuloDaSemana(lida.dias)}
       />
 

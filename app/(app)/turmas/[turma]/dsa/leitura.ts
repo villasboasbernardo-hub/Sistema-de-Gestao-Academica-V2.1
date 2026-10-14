@@ -117,6 +117,12 @@ export type UnidadeLida = {
   readonly lancadaAteASemana: number;
   readonly tecnicaSugerida: string | null;
   readonly atribuidoId: string | null;
+  /**
+   * Spec 014, FR-034 (PEND-E8-1): a avaliação prevista e lançada NA UE, até a semana — a prova e a vista que o
+   * currículo computa nela. Sem item na UE, as duas ficam em zero.
+   */
+  readonly prova: { readonly prevista: number; readonly lancada: number };
+  readonly vista: { readonly prevista: number; readonly lancada: number };
 };
 
 /**
@@ -171,6 +177,12 @@ export type SemanaDoDsa = {
   readonly avaliacoesParaVista: readonly AvaliacaoParaVista[];
   /** As avaliações do currículo de cada disciplina — a oferta do formulário (FR-032, `ofertaDaDisciplina`). */
   readonly avaliacoesDoCurriculo: readonly AvaliacaoDoCurriculoOferecida[];
+  /** Spec 014, FR-057: *"X de Y avaliações aplicadas"* por disciplina, da mesma oferta (prova e trabalho). */
+  readonly avaliacoesPorDisciplina: readonly {
+    readonly disciplinaId: string;
+    readonly aplicadas: number;
+    readonly previstas: number;
+  }[];
   readonly instrutores: readonly InstrutorParaExibir[];
   readonly escala: EscalaDeAntiguidade;
   /** Os nomes das técnicas, para o seletor. */
@@ -487,7 +499,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("avaliacoes")
         .select(
-          "id, disciplina_id, tipo_avaliacao, data_avaliacao, conteudo_resumo, avaliacao_curriculo_id, vistas_de_avaliacao(numero, status)",
+          "id, disciplina_id, tipo_avaliacao, data_avaliacao, conteudo_resumo, avaliacao_curriculo_id, tempos_consumidos, vistas_de_avaliacao(numero, status, data, tempos_consumidos)",
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
@@ -601,7 +613,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("avaliacoes_curriculo")
         .select(
-          "id, disciplina_id, ordem, numero, ta_aplicacao, ta_vista, unidade:unidades_ensino!avaliacoes_curriculo_unidade_ensino_id_fkey(numero_ue), instrumento:config_listas!avaliacoes_curriculo_instrumento_id_fkey(valor, metadados)",
+          "id, disciplina_id, ordem, numero, ta_aplicacao, ta_vista, unidade_ensino_id, unidade:unidades_ensino!avaliacoes_curriculo_unidade_ensino_id_fkey(numero_ue), instrumento:config_listas!avaliacoes_curriculo_instrumento_id_fkey(valor, metadados)",
           contagemNaPrimeira(f),
         )
         .eq("curso_id", cursoId)
@@ -999,6 +1011,57 @@ export function montarSemanaDoDsa(
     ),
   });
 
+  /*
+   * Spec 014, FR-034 (PEND-E8-1): a prova e a vista previstas e lançadas em cada UE, até o fim da semana. O
+   * previsto vem dos itens com UE (`ta_aplicacao`, `ta_vista`); o lançado, das avaliações vivas ligadas a eles e das
+   * sessões de vista delas. O quadro e a situação são de `quadroDaUnidadeComPartes` (ponto único).
+   */
+  const itensDaUe = new Map<
+    string,
+    { id: string; ta_aplicacao: number | null; ta_vista: number | null }[]
+  >();
+  for (const i of (dados.itensDoCurriculo ?? []) as {
+    id: string;
+    unidade_ensino_id: string | null;
+    ta_aplicacao: number | null;
+    ta_vista: number | null;
+  }[]) {
+    if (i.unidade_ensino_id === null) continue;
+    const lista = itensDaUe.get(i.unidade_ensino_id) ?? [];
+    lista.push(i);
+    itensDaUe.set(i.unidade_ensino_id, lista);
+  }
+  const vivasPorItem = new Map<string, { prova: number; vista: number }>();
+  for (const a of (paraVistaRes.data ?? []) as {
+    avaliacao_curriculo_id: string | null;
+    data_avaliacao: string | null;
+    tempos_consumidos: number | null;
+    vistas_de_avaliacao:
+      { status: string; data: string; tempos_consumidos: number | null }[] | null;
+  }[]) {
+    if (a.avaliacao_curriculo_id === null || !ateOFim(a.data_avaliacao)) continue;
+    const atual = vivasPorItem.get(a.avaliacao_curriculo_id) ?? { prova: 0, vista: 0 };
+    atual.prova += a.tempos_consumidos ?? 0;
+    atual.vista += (a.vistas_de_avaliacao ?? [])
+      .filter((v) => v.status === "ativo" && ateOFim(v.data))
+      .reduce((s, v) => s + (v.tempos_consumidos ?? 0), 0);
+    vivasPorItem.set(a.avaliacao_curriculo_id, atual);
+  }
+  const avaliacaoNaUe = (ueId: string) => {
+    const itens = itensDaUe.get(ueId) ?? [];
+    const lancado = itens.map((i) => vivasPorItem.get(i.id) ?? { prova: 0, vista: 0 });
+    return {
+      prova: {
+        prevista: itens.reduce((s, i) => s + (i.ta_aplicacao ?? 0), 0),
+        lancada: lancado.reduce((s, l) => s + l.prova, 0),
+      },
+      vista: {
+        prevista: itens.reduce((s, i) => s + (i.ta_vista ?? 0), 0),
+        lancada: lancado.reduce((s, l) => s + l.vista, 0),
+      },
+    };
+  };
+
   const atribuicaoPorUe = new Map(
     ((atribRes.data ?? []) as { unidade_ensino_id: string; instrutor_id: string | null }[]).map(
       (a) => [a.unidade_ensino_id, a.instrutor_id],
@@ -1044,6 +1107,7 @@ export function montarSemanaDoDsa(
     disciplinaCodigo: disciplinas.get(u.disciplinaId) ?? "—",
     tecnicaSugerida: null,
     atribuidoId: atribuicaoPorUe.get(u.id) ?? null,
+    ...avaliacaoNaUe(u.id),
   }));
 
   /*
@@ -1145,6 +1209,11 @@ export function montarSemanaDoDsa(
     avaliacoesDoCurriculo: ofertas.flatMap(({ disciplinaId, oferta }) =>
       oferta.avaliacoes.map((o) => ({ ...o, disciplinaId })),
     ),
+    avaliacoesPorDisciplina: ofertas.map(({ disciplinaId, oferta }) => ({
+      disciplinaId,
+      aplicadas: oferta.avaliacoes.filter((a) => a.aplicada).length,
+      previstas: oferta.avaliacoes.length,
+    })),
     /* ⚠️ Instrutor INATIVO não chega ao seletor (`RN-INST-02`). */
     instrutores: linhasDeInstrutor
       .filter((i) => i.status === undefined || i.status === "ativo")

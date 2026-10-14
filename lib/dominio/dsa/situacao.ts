@@ -401,3 +401,40 @@ export function quadroDaUnidade(entrada: {
     chRestante: restanteNuncaNegativo(chPrevista, chLancada),
   };
 }
+
+/** Uma parte da CH da UE: o previsto e o lançado (spec 014, FR-034, PEND-E8-1). */
+export type ParteDaUnidade = { readonly prevista: number; readonly lancada: number };
+
+/** O quadro da UE com as três partes — conteúdo · prova · vista — e a situação sobre o total. */
+export type QuadroDaUnidadeComPartes = QuadroDaUnidade & {
+  readonly conteudo: ParteDaUnidade;
+  readonly prova: ParteDaUnidade;
+  readonly vista: ParteDaUnidade;
+};
+
+/**
+ * O quadro da UE separado em **conteúdo · prova · vista** (spec 014, FR-034, T203 — fecha a `PEND-E8-1`).
+ *
+ * > *"UE 7 = 18 + 2 + 1"* — o currículo computa a prova e a vista DENTRO da CH da UE (D-CUR-1).
+ *
+ * ⚠️ **A SITUAÇÃO É SOBRE O TOTAL**, pela MESMA `quadroDaUnidade` (ponto único): a UE cuja aula, prova e vista foram
+ *    todas lançadas fica concluída, sem o *"resta"* que aparecia quando só a aula contava (a `PEND-E8-1`).
+ * ⚠️ O conteúdo previsto é o que sobra da CH da UE depois da avaliação prevista nela — nunca negativo.
+ */
+export function quadroDaUnidadeComPartes(entrada: {
+  readonly conteudo: ParteDaUnidade;
+  readonly prova: ParteDaUnidade;
+  readonly vista: ParteDaUnidade;
+}): QuadroDaUnidadeComPartes {
+  const n = (v: number) => Number(v) || 0;
+  const partes = {
+    conteudo: { prevista: n(entrada.conteudo.prevista), lancada: n(entrada.conteudo.lancada) },
+    prova: { prevista: n(entrada.prova.prevista), lancada: n(entrada.prova.lancada) },
+    vista: { prevista: n(entrada.vista.prevista), lancada: n(entrada.vista.lancada) },
+  };
+  const total = quadroDaUnidade({
+    chPrevista: partes.conteudo.prevista + partes.prova.prevista + partes.vista.prevista,
+    chLancada: partes.conteudo.lancada + partes.prova.lancada + partes.vista.lancada,
+  });
+  return { ...total, ...partes };
+}
