@@ -132,6 +132,17 @@ O DSA já lança avaliação, vista e atividade, mas há quatro lacunas:
 - Q: (lote da Fase 0, 13/10/2026) O aplicador de avaliação sem habilitação na disciplina é recusado? → A: **Não: AVISO, sem recusa** (**D-AV-3**). Fiscal e quem conduz a vista: sem exigência. **A `RN-INST-01` NÃO muda.** A FR-043 e o cenário 2 da US7 foram ajustados.
 - Q: (lote da Fase 0, 13/10/2026) A `C-Exp-Obs-ME 2026` entra na rodada de sincronização do PR 3, com a prova relançada pela tela? → A: **Fica FORA da rodada do PR 3** (**D-SYNC-1**): a turma encerrou em 09/10/2026 e os dados já foram conferidos. O caso da prova relançada fica na `PEND-DSA-VISTA` — recriar a vista na `DSA-MUYK0RFD-V`, com antes/depois para aprovação —, e a turma **volta na rodada do PR 6**.
 
+### Session 2026-10-14
+
+*(Respostas de Bernardo Villas Boas ao lote do `/speckit-analyze`. Decisões; não se reabrem.)*
+
+- Q: Como se lança o TA de comentários da OD? → A: **Opção (a)** (**D-OD-1**): o DSA oferece *"Comentários (OD)"* como **sessão de vista de uma linha-mãe do item OD**, criada no mesmo lançamento, **sem tempos de aplicação** (`ta_inicial` e `tempos_consumidos` nulos, `data_avaliacao` preenchida). Entra antes da migration E-4.
+- Q: Como a `C-Exp-Obs-ME 2026` volta à sincronização? → A: **Opção (a)** (**D-SYNC-2**): a correção da `PEND-DSA-VISTA` **reativa a prova original** (`DSAP-C-EXP-OBS-ME-2026-L206-V`) com a vista e **cancela a relançada** (`DSA-MUYK0RFD-V`), com antes/depois para aprovação; a turma volta pela regra geral na rodada do PR 6.
+- Q: A exceção ao Princípio VI está aprovada? → A: **Sim** (**D-CONST-VI**): *"Aprovo em 14/10/2026 a exceção ao Princípio VI para a spec 014: 12 migrations em 3 PRs de banco (5 de estrutura e 7 de dado), justificadas pela separação estrutura × dado e pela limitação do PostgreSQL com valor novo de enum. — Bernardo"*.
+- Q: As emendas §12 e E-1 a E-9 estão aprovadas? → A: **O CONTEÚDO está aprovado** (reflete decisões dele). **O TEXTO FINAL** de cada uma é conferido por ele no relatório da implementação (`aprovacoes-pendentes.md`).
+- Q: Como a D-6 trata as linhas históricas ativas reapontadas? → A: **Preserva `editado_em` nulo** nessas linhas — é reclassificação, não edição —, com pgTAP provando; **nenhuma emenda de catraca** (**D-UNIF-1**).
+- Q: O cenário 4 da US2 (troca de categoria de um tipo) tem tela? → A: **Não, por dado** (migration ou script de manutenção versionado), decisão rotineira aceita.
+
 ---
 
 ## 3. User Scenarios & Testing *(mandatory)*
