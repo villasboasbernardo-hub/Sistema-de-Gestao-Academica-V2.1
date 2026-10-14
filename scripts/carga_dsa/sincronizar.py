@@ -119,6 +119,9 @@ def proteger(res: Resolvido, ref: dict, virada: str | None) -> tuple[dict[str, s
                 else:  # prova nova antes da virada: entra sem a vista, que e do sistema
                     a.update(data_vista_prova=None, ta_inicial_vista=None, tempos_consumidos_vista=None, local_vista=None)
 
+    # 1b. A linha que ficou FORA por pendencia de responsavel (A3.2) e ja esta no banco: intocada ate a decisao.
+    protegidas["atividades"] |= {a["codigo"] for a in atuais.get("atividades", []) if a["codigo"] in getattr(res, "pendentes", set())}
+
     # 2. Editada na tela (A3.4) ou avaliacao cancelada na tela (FR-049): vence a planilha.
     for nome, plano in planos.items():
         por_codigo = {a["codigo"]: a for a in atuais.get(nome, [])}

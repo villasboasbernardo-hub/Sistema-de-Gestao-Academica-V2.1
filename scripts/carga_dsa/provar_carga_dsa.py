@@ -342,6 +342,17 @@ def main() -> int:
     conferir("A3.4 · o lancamento NASCIDO na tela fica; a linha da planilha no mesmo tempo sai e e listada, a vizinha entra",
              [a["codigo"] for a in r.aulas] == ["G"] and div and "DSA-X" in div[0]["motivo"], (r.aulas, div))
 
+    r = plano_de()
+    r.pendentes = {"P-N"}
+    vazio_ativ = {c: None for c in sincronizar.CAMPOS["atividades"]}
+    rf = {"atuais": {"aulas": [], "avaliacoes": [], "dias_parados": [],
+                     "atividades": [{**vazio_ativ, "codigo": "P-N", "data": "2026-10-05", "status": "ativo", "na_tela": False},
+                                    {**vazio_ativ, "codigo": "Q-N", "data": "2026-10-05", "status": "ativo", "na_tela": False}]},
+          "de_tela_linhas": []}
+    prot, _d = sincronizar.proteger(r, rf, None)
+    conferir("A3.2 · a linha que ficou fora por pendencia de responsavel e JA esta no banco nao «sai»; a que saiu da planilha sai",
+             sincronizar.diferencas(r, rf["atuais"], prot)["atividades"]["saem"] == ["Q-N"], prot)
+
     conferir("A3.2 · proposta de classificacao do responsavel (entidade · pessoa · palestrante)",
              sincronizar.classificar_responsavel("CIAARA-10", set()) == "entidade"
              and sincronizar.classificar_responsavel("1ºTEN FULANO", {"FULANO"}).startswith("pessoa cadastrada")

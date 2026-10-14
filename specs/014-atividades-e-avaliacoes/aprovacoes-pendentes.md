@@ -305,3 +305,18 @@ A3.3 e A3.2). As de número maior nasceram depois e esperam a palavra dele.
   avaliação cancelada na tela também vai para a lista. A prova que começa antes da virada e tem a vista
   depois dela fica com o sistema se já existe; se é nova, entra sem a vista. Para mudar: voltar a parar a
   turma quando houver lançamento da tela antes da virada.
+- **D3.9 (PR 3) — A rodada do remoto usa a MESMA lista `--adiar` da carga de 06/10/2026, mais um tipo.** A
+  exportação nova (`2026-10-14T1149`) traz, nas cinco turmas regulares, as mesmas pendências que a carga da
+  onda 2 deixou de fora por decisão (C10-018 da conferência de 07/10/2026: *"ficam FORA até a resposta e não
+  travam a carga"*): `aula_sem_instrutor`, `chave_sem_catalogo`, `chave_sem_regra`, `contagem_diverge`,
+  `controle_diverge`, `instrutor_nao_casado`, `local_sem_traducao`, `ue_inexistente`,
+  `vista_em_mais_de_uma_sessao` e `vista_sem_prova`. **Acrescentei `tecnica_desconhecida`** (1 bloco de 3 TA no
+  C-Ap-FR, uma sigla de T/E que não está no banco), que é da mesma natureza: a linha fica fora e é listada, e o
+  resto da turma entra — o mesmo princípio da A3.2. Sem isso, a C-Ap-FR pararia inteira por 3 TA. Para mudar:
+  tirar o tipo da lista e decidir a sigla no lote (`metodologias`).
+- **D3.10 (PR 3) — "Fica fora" (A3.2) é NÃO TOCAR, e não inativar.** A linha com responsável sem decisão que
+  **já está no banco** (veio da carga de 06/10, gravada com o texto como externo) fica como está até a
+  decisão — nem atualizada nem inativada. Sem isso, medido no local em 14/10/2026 sobre
+  `remoto-20261014-115453.sql`, a rodada inativava essas linhas como se tivessem saído da planilha, e o TAD
+  da C-Ap-FR caía de 89 para **5** (e não por reclassificação: por apagamento lógico de TAD legítimo).
+  A linha nova com a pendência não entra. Para mudar: inativar a linha pendente que já existe.

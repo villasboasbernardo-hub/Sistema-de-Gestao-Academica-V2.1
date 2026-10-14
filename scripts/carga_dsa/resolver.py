@@ -142,6 +142,9 @@ class Resolvido:
     digitadas_adotadas: list[str] = field(default_factory=list)
     instrutores: dict[str, dict] = field(default_factory=dict)
     insumo_epico_8: list[str] = field(default_factory=list)
+    # A3.2 (14/10/2026): o codigo da linha que ficou FORA por pendencia de responsavel. Se ela ja esta no
+    # banco, a rodada nao a toca (nem atualiza, nem inativa) ate a decisao.
+    pendentes: set[str] = field(default_factory=set)
 
     def codigos(self) -> dict[str, list[str]]:
         return {
@@ -397,6 +400,7 @@ def resolver(
                                  "decidir no lote — casar com instrutor (`instrutor_por_texto`), aceitar como entidade ou "
                                  "palestrante externo (`responsavel_externo_aceito`) ou cadastrar a pessoa",
                                  bloco.tempos, bloqueia=False, chave=normalizar(texto))
+                            r.pendentes.add(codigo(bloco, "N"))
                             continue
             r.atividades.append({
                 "codigo": codigo(bloco, "N"),
