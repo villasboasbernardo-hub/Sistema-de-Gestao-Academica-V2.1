@@ -171,7 +171,7 @@ select jsonb_build_object(
         -- Spec 014 (PR 6): o item (pelo rotulo «PM 1», que e o mesmo nos dois bancos), o 2º instrutor e as SESSOES.
         'item', (select l.valor || ' ' || c.numero from public.avaliacoes_curriculo c
                    join public.config_listas l on l.id = c.instrumento_id where c.id = a.avaliacao_curriculo_id),
-        'outros_instrutores', to_jsonb(a.outros_instrutores),
+        'outros_instrutores', to_jsonb(a.outros_instrutores), 'ues_abordadas', a.ues_abordadas,
         'sessoes', (select coalesce(jsonb_agg(jsonb_build_object(
             'codigo', s.codigo, 'numero', s.numero, 'data', s.data, 'ta_inicial', s.ta_inicial,
             'tempos_consumidos', s.tempos_consumidos, 'local', s.local, 'conduz', ci.codigo::text,

@@ -66,7 +66,7 @@ CAMPOS = {
     # Spec 014 (PR 6): a vista e SESSAO (`sessoes`, comparada pela lista normalizada); o item do curriculo e o 2º
     # instrutor entram na comparacao. As colunas de vista unica sairam: a sincronizacao as grava nulas.
     "avaliacoes": ("disciplina", "tipo_avaliacao", "data_avaliacao", "ta_inicial", "tempos_consumidos", "instrutor", "fiscal",
-                   "nome_fiscal_externo", "metodologia", "local", "conteudo_resumo", "item", "outros_instrutores", "sessoes"),
+                   "nome_fiscal_externo", "metodologia", "local", "conteudo_resumo", "item", "ues_abordadas", "outros_instrutores", "sessoes"),
     "atividades": ("categoria_normativa", "data", "subtipo", "descricao", "ta_inicial", "tempos_consumidos", "local", "instrutor", "responsavel_externo"),
     "dias_parados": ("data", "ta_inicial", "tempos", "tipo_parada", "motivo", "prevista"),
 }
@@ -377,19 +377,19 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
     if res.avaliacoes:
         p.append(f"""
   with dados(codigo, disciplina, tipo, data, ta, tempos, instrutor, fiscal, fiscal_externo, conteudo, metodologia, local,
-             item, outros, obs) as (values
-    {_valores([[a["codigo"], a["disciplina_id"], a["tipo_avaliacao"], a["data_avaliacao"], a["ta_inicial"], a["tempos_consumidos"], a["instrutor_responsavel_id"], a["fiscal_id"], a["nome_fiscal_externo"], a["conteudo_resumo"], a["metodologia"], a["local"], a.get("avaliacao_curriculo_id"), ",".join(a.get("outros_instrutores") or []), a["observacoes"]] for a in res.avaliacoes])}
+             item, ues, outros, obs) as (values
+    {_valores([[a["codigo"], a["disciplina_id"], a["tipo_avaliacao"], a["data_avaliacao"], a["ta_inicial"], a["tempos_consumidos"], a["instrutor_responsavel_id"], a["fiscal_id"], a["nome_fiscal_externo"], a["conteudo_resumo"], a["metodologia"], a["local"], a.get("avaliacao_curriculo_id"), a.get("ues_abordadas"), ",".join(a.get("outros_instrutores") or []), a["observacoes"]] for a in res.avaliacoes])}
   ), gravadas as (
     -- Spec 014 (PR 6): as colunas de vista unica vao NULAS (a vista e sessao, gravada abaixo); na linha que as tinha,
     -- o espelho da E-5 inativa a sessao 1 espelhada, e a sessao da planilha a substitui com o codigo `…-S`.
     insert into public.avaliacoes as r
       (codigo, turma_id, curso_id, disciplina_id, tipo_avaliacao, data_avaliacao, ta_inicial, tempos_consumidos,
        instrutor_responsavel_id, fiscal_id, nome_fiscal_externo, conteudo_resumo, metodologia, local,
-       data_vista_prova, ta_inicial_vista, tempos_consumidos_vista, local_vista, avaliacao_curriculo_id, outros_instrutores,
-       observacoes, criado_por)
+       data_vista_prova, ta_inicial_vista, tempos_consumidos_vista, local_vista, avaliacao_curriculo_id, ues_abordadas,
+       outros_instrutores, observacoes, criado_por)
     select d.codigo, {t}, {c}, d.disciplina::uuid, d.tipo, d.data::date, d.ta::smallint, d.tempos::smallint,
            d.instrutor::uuid, d.fiscal::uuid, d.fiscal_externo, d.conteudo, d.metodologia, d.local,
-           null, null, null, null, d.item::uuid, coalesce(string_to_array(nullif(d.outros, ''), ','), '{{}}'::text[]),
+           null, null, null, null, d.item::uuid, d.ues, coalesce(string_to_array(nullif(d.outros, ''), ','), '{{}}'::text[]),
            d.obs, {autor}
       from dados d
     on conflict (codigo) do update set
@@ -399,7 +399,8 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
        nome_fiscal_externo = excluded.nome_fiscal_externo, conteudo_resumo = excluded.conteudo_resumo,
        metodologia = excluded.metodologia, local = excluded.local, data_vista_prova = null,
        ta_inicial_vista = null, tempos_consumidos_vista = null, local_vista = null,
-       avaliacao_curriculo_id = excluded.avaliacao_curriculo_id, outros_instrutores = excluded.outros_instrutores,
+       avaliacao_curriculo_id = excluded.avaliacao_curriculo_id, ues_abordadas = excluded.ues_abordadas,
+       outros_instrutores = excluded.outros_instrutores,
        observacoes = excluded.observacoes,
        -- Spec 014 (FR-049, D-AA-10): so volta a `pendente` a que a PROPRIA sincronizacao tirou; a cancelada
        -- pela tela continua cancelada (era o defeito da `DSAP-C-EXP-OBS-ME-2026-L206-V`).
@@ -407,13 +408,13 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
                      then 'pendente' else r.status end
      where (r.disciplina_id, r.tipo_avaliacao, r.data_avaliacao, r.ta_inicial, r.tempos_consumidos, r.instrutor_responsavel_id,
             r.fiscal_id, r.nome_fiscal_externo, r.conteudo_resumo, r.metodologia, r.local, r.data_vista_prova,
-            r.ta_inicial_vista, r.tempos_consumidos_vista, r.local_vista, r.avaliacao_curriculo_id, r.outros_instrutores,
+            r.ta_inicial_vista, r.tempos_consumidos_vista, r.local_vista, r.avaliacao_curriculo_id, r.ues_abordadas, r.outros_instrutores,
             r.status = 'cancelada' and coalesce(r.observacoes, '') like {lit('%' + MARCA_DE_SAIDA + '%')})
        is distinct from
            (excluded.disciplina_id, excluded.tipo_avaliacao, excluded.data_avaliacao, excluded.ta_inicial, excluded.tempos_consumidos,
             excluded.instrutor_responsavel_id, excluded.fiscal_id, excluded.nome_fiscal_externo, excluded.conteudo_resumo,
             excluded.metodologia, excluded.local, null::date, null::smallint, null::smallint, null::text,
-            excluded.avaliacao_curriculo_id, excluded.outros_instrutores, false)
+            excluded.avaliacao_curriculo_id, excluded.ues_abordadas, excluded.outros_instrutores, false)
     returning (xmax = 0) as nova
   ) select count(*) filter (where nova), count(*) filter (where not nova) into n, m from gravadas;
   k := k || jsonb_build_object('avaliacoes_novas', n, 'avaliacoes_atualizadas', m);""")
@@ -720,7 +721,7 @@ def relatar(res: Resolvido, leitura: planilha.Leitura, ref: dict, dif: dict) -> 
     print(f"  planilha: {len(leitura.blocos)} blocos em {len(leitura.linhas)} TA · siglas do cabecalho: {sorted(set(leitura.siglas))} · alunos: {leitura.alunos}")
     print(f"  banco:    alunos {ref['turma'].get('alunos')} · sala {ref['turma'].get('sala_alocada')} · situacao {ref['turma'].get('status')}")
     print(f"  aulas {len(res.aulas)} ({ta(res.aulas)} TA) · avaliacoes {len(res.avaliacoes)} ({ta(res.avaliacoes)} TA) · vistas {len(vistas)} "
-          f"({ta(vistas, 'tempos_consumidos_vista')} TA) · EI {len(ei)} ({ta(ei)} TA) · outras atividades {len(outras)} ({ta(outras)} TA) · "
+          f"({ta(vistas)} TA) · EI {len(ei)} ({ta(ei)} TA) · outras atividades {len(outras)} ({ta(outras)} TA) · "
           f"dias de calendario {len(res.calendario)}")
     print(f"  ETL ativo a substituir: {ref['etl']['aulas']} aulas ({ref['etl']['aulas_ta']} TA), {ref['etl']['avaliacoes']} avaliacoes, {ref['etl']['atividades']} atividades · lancado na tela: {ref['etl']['de_tela']}")
     for nome, d in dif.items():

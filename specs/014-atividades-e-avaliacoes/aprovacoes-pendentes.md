@@ -415,3 +415,27 @@ palavra dele.
   **sem** item ligado (o histórico e a sincronização da leva 1), que por isso exigem vista, e muitas *Prova Prática*. O
   vínculo ao item, no PR 6, deve tirar da lista as provas cujo item não prevê vista. Usei o `AvisosRecolhiveis` dos
   quadros de avisos (`RNF-USA-04`). Captura: `pr5-06-inicio-vistas.png` (antes de recolher).
+
+## PR 6 — a sincronização da leva 2
+
+- **A6.1 — A correção da `PEND-DSA-VISTA` (D-SYNC-2).** Reativar a `DSAP-C-EXP-OBS-ME-2026-L206-V` (a sessão de vista
+  dela já existe) e cancelar a relançada `DSA-MUYK0RFD-V`. Ensaiada no local: CHD da turma 113 → **114**, vista 3 →
+  **4**, uma avaliação viva no dia, e o `de_tela` da turma a zero. Relatório: `antes-depois/pend-dsa-vista.md`; SQL:
+  `antes-depois/pend-dsa-vista.sql`. **Aguarda sua aprovação** para o remoto (é pré-requisito da T233).
+- **A6.2 — Rodar a sincronização da leva 2 no REMOTO (T233)**, pelo rito da T121, nas **dez** turmas (a Obs-ME volta,
+  D-SYNC-1), depois da A6.1 e do CI verde. Ensaio no local: `antes-depois/rodada-do-pr6-no-local.md`. A 6ª rodada dá
+  zero mudança e o catálogo fica igual. **Aguarda sua autorização.**
+- **D6.1 (PR 6) — A prova liga ao item SEM inferência.** O instrumento e o número saem da DESCRIÇÃO da linha
+  (*"PM4 – …"*, a forma que as planilhas usam) ou do nome do instrumento na descrição ou no tipo. Retirei um recurso que
+  eu tinha escrito — *"a disciplina só tem um instrumento, então é ele"* — porque ligava Prova Prática e OD a itens PM
+  (medido na 1ª rodada local). Resultado: **75 de 188** provas ligadas; **86** não casam e vão para a lista de erros de
+  planilha. **Recomendação:** o operador corrige a descrição na planilha (*"PM1 – …"*), ou você decide um de-para por
+  turma no lote de decisões (`"itens": {"<linha>": "PM 1"}`) — não implementado, para não inventar a regra.
+- **D6.2 (PR 6) — A CHT cai em sete turmas por causa da A3.6, não da leva 2.** 17 Monitorias estavam no remoto como
+  TAD/Administração (travadas pela pendência de responsável desde 06/10); com a A3.6, viram **Apoio Individualizado**
+  (D-AA-12), fora da CHT. Ex.: C-Esp-ME 617 → 603. É o efeito das duas decisões aprovadas, dito para não ser lido como
+  perda.
+- **D6.3 (PR 6) — Quem conduz a vista vem da linha da vista na planilha**, e a vista conta para ele na carga do
+  instrutor (`vw_instrutor_carga_anual`, E-5). Antes, a sessão ficava sem condutor, e a vista contava para o
+  responsável da avaliação.
+

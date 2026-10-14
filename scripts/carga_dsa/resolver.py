@@ -500,6 +500,8 @@ def resolver(
                 "sessoes": [],
             })
             faixa = re.search(r"\(\s*U\.?\s*E\.?[^)]*\)", linha_do_catalogo.topico, flags=re.IGNORECASE)
+            # Spec 014, FR-033: a faixa «U.E. 3 a 6» vai para `ues_abordadas` — texto, sem consumir TA de UE.
+            r.avaliacoes[-1]["ues_abordadas"] = " ".join(faixa.group(0).strip("() ").split()) if faixa else None
             if faixa:
                 r.insumo_epico_8.append(f"{disciplina['cod']} {bloco.ue} ({bloco.data:%d/%m/%Y}): {faixa.group(0)}")
             continue
@@ -569,10 +571,26 @@ def resolver(
     return r
 
 
+_PREFIXO_DA_DESCRICAO = re.compile(r"^\s*([A-Z]{2,3})\s*([0-9]*)\s*[–—-]")
+
+
+def _da_descricao(prova: dict, itens: list[dict]) -> tuple[str, int | None] | None:
+    """O instrumento e o numero escritos NA DESCRICAO da linha — «PM4 – FISICA … (U.E. 7)», «TI1 – …», «PM – …» —,
+    so se o instrumento for um dos que a disciplina tem. Medido em 14/10/2026: e assim que as planilhas escrevem."""
+    # A descricao CRUA, em maiusculas: `normalizar` tira o travessao, que e o que separa o prefixo do titulo.
+    achado = _PREFIXO_DA_DESCRICAO.match((prova.get("descricao") or "").upper())
+    if achado is None or achado.group(1) not in {i["instrumento"] for i in itens}:
+        return None
+    return achado.group(1), (int(achado.group(2)) if achado.group(2) else None)
+
+
 def _instrumento(prova: dict, itens: list[dict]) -> str | None:
     """O instrumento da prova (FR-036): a DESCRICAO da linha do catalogo, depois o tipo da avaliacao; a sigla da chave
     nao decide (a planilha usa «PE»/«PM» com sentidos que mudam entre cursos). So os instrumentos que a disciplina tem."""
     da_disciplina = {i["instrumento"]: i for i in itens}
+    prefixo = _da_descricao(prova, itens)
+    if prefixo is not None:
+        return prefixo[0]
     descricao = normalizar(prova.get("descricao") or "")
     for valor, item in da_disciplina.items():
         nome = normalizar(item.get("instrumento_nome") or "")
@@ -582,7 +600,9 @@ def _instrumento(prova: dict, itens: list[dict]) -> str | None:
     for valor, item in da_disciplina.items():
         if normalizar(item.get("instrumento_nome") or "") == tipo:
             return valor
-    return next(iter(da_disciplina)) if len(da_disciplina) == 1 else None
+    # ⚠️ SEM RECURSO A «o unico instrumento da disciplina»: medido na rodada local de 14/10/2026, ele ligava Prova
+    #    Pratica e OD a itens PM — inferencia, que a regra do ETL proibe. Sem descricao nem tipo que nomeie, nao casa.
+    return None
 
 
 def _ligar_itens(r: Resolvido, ref: dict) -> None:
@@ -603,6 +623,10 @@ def _ligar_itens(r: Resolvido, ref: dict) -> None:
         if not da_disciplina:
             continue
         rotulo = f"{prova['disciplina']} {prova['chave_ue']} de {prova['data_avaliacao']}"
+        # A OD e continua (Q-17): nao tem item de aplicacao a ligar, e nao e erro de planilha.
+        if normalizar(prova.get("chave_ue") or "").startswith("OD") or "OBSERVACAO DE DESEMPENHO" in normalizar(
+                prova.get("descricao") or ""):
+            continue
         if "RECON" in normalizar(prova.get("chave_ue") or "") or "RECON" in normalizar(prova.get("descricao") or ""):
             r.erros_de_planilha.append(f"{rotulo}: linha sem correspondente no curriculo (RECON) — entra sem avaliacao do curriculo")
             continue
@@ -611,7 +635,9 @@ def _ligar_itens(r: Resolvido, ref: dict) -> None:
             r.erros_de_planilha.append(f"{rotulo}: a prova nao casa com nenhuma avaliacao do curriculo da disciplina")
             continue
         contagem[(prova["disciplina_id"], instrumento)] = contagem.get((prova["disciplina_id"], instrumento), 0) + 1
-        numero = contagem[(prova["disciplina_id"], instrumento)]
+        # O numero ESCRITO na descricao («PM4») vence a ordem de aplicacao: a planilha aplica a PM 4 antes da PM 1.
+        prefixo = _da_descricao(prova, da_disciplina)
+        numero = prefixo[1] if prefixo and prefixo[1] is not None else contagem[(prova["disciplina_id"], instrumento)]
         item = next((i for i in da_disciplina if i["instrumento"] == instrumento and int(i["numero"]) == numero), None)
         if item is None:
             r.erros_de_planilha.append(f"{rotulo}: prova a mais — o curriculo preve {sum(1 for i in da_disciplina if i['instrumento'] == instrumento)} {instrumento}")

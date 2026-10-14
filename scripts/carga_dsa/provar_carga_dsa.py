@@ -136,6 +136,7 @@ def planilha_da_leva_2(pasta: Path) -> Path:
         ["I", "DISCIPLINA UM", "PM2", "IPM2", "PROVA MISTA 2", 2.0, "SALA 2", "PM", "CC (T) FULANO SILVA (FISCAL)"],
         ["I", "DISCIPLINA UM", "RECON", "IRECON", "PROVA DE RECUPERACAO", 1.0, "SALA 2", "PM", "CC (T) FULANO SILVA"],
         ["I", "DISCIPLINA UM", "VP1", "IVP1", "VISTA DA PROVA", 1.0, "SALA 2", "EO", "CC (T) FULANO SILVA"],
+        ["I", "DISCIPLINA UM", "PP1", "IPP1", "PROVA PRÁTICA", 1.0, "SALA 2", "PP", "CC (T) FULANO SILVA"],
     ):
         catalogo.append(linha)
     folha = livro.create_sheet(planilha.ABA_PREENCHIMENTO)
@@ -145,7 +146,7 @@ def planilha_da_leva_2(pasta: Path) -> Path:
         date(2026, 4, 6): {1: ("I", 1.0), 2: ("I", 1.0), 3: ("I", 1.0), 4: ("I", "PM1"), 5: ("I", "PM1"), 6: ("I", "PM1")},
         date(2026, 4, 7): {1: ("I", "VP1")},
         date(2026, 4, 8): {1: ("I", "VP1"), 3: ("I", "PM2"), 4: ("I", "PM2")},
-        date(2026, 4, 9): {1: ("I", "RECON")},
+        date(2026, 4, 9): {1: ("I", "RECON"), 3: ("I", "PP1")},
     }
     r = 4
     for dia, tas in dias.items():
@@ -159,7 +160,7 @@ def planilha_da_leva_2(pasta: Path) -> Path:
             r += 1
     controle = livro.create_sheet(planilha.ABA_CONTROLE)
     controle.append(["CÓD.", "DISCIPLINA", "CH. PREVISTA", "CH. CUMPRIDA"])
-    controle.append(["I", "DISCIPLINA UM", 10.0, 11])  # 3 de aula + 3 PM1 + 2 vistas + 2 PM2 + 1 RECON
+    controle.append(["I", "DISCIPLINA UM", 10.0, 12])  # 3 de aula + 3 PM1 + 2 vistas + 2 PM2 + 1 RECON + 1 PP1
     caminho = pasta / "leva2.xlsx"
     livro.save(caminho)
     return caminho
@@ -413,12 +414,12 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as pasta:
         leva2 = planilha.ler(planilha_da_leva_2(Path(pasta)))
     ref2 = retrato()
-    ref2["tipos_avaliacao"] = ["Prova Escrita", "Prova Mista"]
+    ref2["tipos_avaliacao"] = ["Prova Escrita", "Prova Mista", "Prova Prática"]
     ref2["itens_curriculo"] = ITENS_DA_LEVA_2
     ref2["ajustes"] = []
     dec2 = {"turma": "TURMA SINTETICA 2026", "locais": {"SALA 2": "Sala 02"}, "chaves": {},
-            "padrao_ue_de_avaliacao": "PM[0-9]+|RECON", "padrao_ue_de_vista": "VP[0-9]*",
-            "tipo_avaliacao_por_tecnica": {"PM": "Prova Mista"}, "vista_extra_como_aec": True}
+            "padrao_ue_de_avaliacao": "(PM|PP)[0-9]+|RECON", "padrao_ue_de_vista": "VP[0-9]*",
+            "tipo_avaliacao_por_tecnica": {"PM": "Prova Mista", "PP": "Prova Prática"}, "vista_extra_como_aec": True}
     res2 = resolver(leva2, ref2, dec2, "leva2.xlsx", set(), True)
     prova = {a["chave_ue"]: a for a in res2.avaliacoes}
     conferir("FR-039 · a PM 1 da planilha aponta o item do curriculo (instrumento e numero)",
@@ -430,6 +431,18 @@ def main() -> int:
     conferir("FR-036.1 · a linha RECON entra SEM item e vai para a lista",
              prova.get("RECON", {}).get("avaliacao_curriculo_id") is None
              and any("RECON" in e for e in res2.erros_de_planilha), res2.erros_de_planilha)
+    conferir("FR-036 · a PROVA PRÁTICA numa disciplina que so preve PM NAO se liga a nada (sem inferencia) e vai para a lista",
+             prova.get("PP1", {}).get("avaliacao_curriculo_id") is None
+             and any("PP1" in e and "nao casa" in e for e in res2.erros_de_planilha), res2.erros_de_planilha)
+    from scripts.carga_dsa.resolver import Resolvido, _ligar_itens
+    ordem = Resolvido(turma={}, autor={}, titulo="x")
+    base = {"disciplina": "I", "disciplina_id": "d-1", "chave_ue": "AV", "tipo_avaliacao": "Prova Escrita",
+            "tempos_consumidos": 2, "ta_inicial": 1, "avaliacao_curriculo_id": None, "item": None}
+    ordem.avaliacoes = [{**base, "data_avaliacao": "2026-04-01", "descricao": "PM2 – ESTATISTICA (U.E. 2)"},
+                        {**base, "data_avaliacao": "2026-04-20", "descricao": "PM1 – MATEMATICA (U.E. 1)"}]
+    _ligar_itens(ordem, {"itens_curriculo": ITENS_DA_LEVA_2})
+    conferir("FR-036 · o numero ESCRITO na descricao («PM2 –») vence a ordem de aplicacao: a PM 2 aplicada antes liga ao item 2",
+             [a["avaliacao_curriculo_id"] for a in ordem.avaliacoes] == ["av-2", "av-1"], ordem.avaliacoes)
     sessoes = prova["PM1"]["sessoes"]
     conferir("FR-042 · a vista da PM 1 em DUAS sessoes, numeradas 1 e 2, cada uma no seu dia",
              [(v["numero"], v["data"]) for v in sessoes] == [(1, "2026-04-07"), (2, "2026-04-08")], sessoes)
