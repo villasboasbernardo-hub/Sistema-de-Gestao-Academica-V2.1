@@ -269,8 +269,12 @@ export function fatoDaOcupacao(
     id === null ? null : (nomes.instrutores.get(id) ?? null);
   const nomeDoFiscal = doCadastro(linha.fiscal_id) ?? (extra?.fiscalExterno?.trim() || null);
   const fiscal = nomeDoFiscal === null ? null : `${nomeDoFiscal} (FISCAL)`;
+  /*
+   * ⚠️ Na VISTA, quem conduz de FORA do cadastro vem primeiro: a view entrega `coalesce(quem conduz, responsável)`
+   *    como `instrutor_id`, e sem esta ordem o responsável da avaliação apagaria o nome externo da sessão (FR-043).
+   */
   const ministrante =
-    doCadastro(linha.instrutor_id) ?? (ehVista ? extra?.conduzExterno?.trim() || null : null);
+    (ehVista ? extra?.conduzExterno?.trim() || null : null) ?? doCadastro(linha.instrutor_id);
   const principal =
     linha.origem === "avaliacao" ? (fiscal ?? ministrante) : (ministrante ?? fiscal);
   /* Spec 014, FR-046: o 2º nome aparece onde o 1º aparece — *"CC A. / 1ºTen B."*. */

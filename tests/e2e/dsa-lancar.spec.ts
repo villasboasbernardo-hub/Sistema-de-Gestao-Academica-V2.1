@@ -399,10 +399,10 @@ test.describe("item 1 · o tempo inicial, a vista de prova e a AEC com disciplin
   });
 
   /*
-   * ⚠️ **A VISTA DE PROVA É A SEGUNDA DATA DA MESMA AVALIAÇÃO** (`RN-AVAL-02`): ela não cria prova
-   * nova, e a prova disso é a linha `AVNOVA` da semente — aplicada na quinta — ganhar a data da vista.
+   * ⚠️ **A VISTA DE PROVA É UMA SESSÃO DA MESMA AVALIAÇÃO** (`RN-AVAL-02`; spec 014, FR-040): ela não cria prova
+   * nova, e a prova disso é a linha `AVNOVA` da semente — aplicada na quinta — ganhar a sessão 1.
    */
-  test("a vista de prova escolhe a avaliação da disciplina, e grava a data NA avaliação", async ({
+  test("a vista de prova escolhe a avaliação da disciplina, e grava a SESSÃO 1 dela", async ({
     page,
   }) => {
     await abrirASemana(page);
@@ -423,24 +423,34 @@ test.describe("item 1 · o tempo inicial, a vista de prova e a AEC com disciplin
       .select("id")
       .eq("codigo", SEMEADO.turmaComRelogio)
       .maybeSingle();
+    /*
+     * ⚠️ Spec 014, PR 5.1 (FR-040, T207): a vista é a SESSÃO 1 em `vistas_de_avaliacao`, apontando a avaliação — e
+     *    não mais as colunas de vista única de `avaliacoes`, que o DSA deixou de escrever.
+     */
     await expect
       .poll(async () => {
-        const { data } = await banco()
+        const { data: av } = await banco()
           .from("avaliacoes")
-          .select("data_vista_prova, ta_inicial_vista, tempos_consumidos_vista")
+          .select("id")
           .eq("turma_id", (turma.data as { id: string } | null)?.id ?? "")
           .eq("data_avaliacao", "2026-04-09")
           .maybeSingle();
-        const l = data as {
-          data_vista_prova: string | null;
-          ta_inicial_vista: number | null;
-          tempos_consumidos_vista: number | null;
-        } | null;
-        return l === null
-          ? "sem linha"
-          : `${l.data_vista_prova}/${l.ta_inicial_vista}/${l.tempos_consumidos_vista}`;
+        const { data } = await banco()
+          .from("vistas_de_avaliacao")
+          .select("numero, data, ta_inicial, tempos_consumidos")
+          .eq("avaliacao_id", (av as { id: string } | null)?.id ?? "")
+          .eq("status", "ativo");
+        const l = (data ?? []) as {
+          numero: number;
+          data: string;
+          ta_inicial: number;
+          tempos_consumidos: number;
+        }[];
+        return l
+          .map((v) => `${v.numero}:${v.data}/${v.ta_inicial}/${v.tempos_consumidos}`)
+          .join(",");
       })
-      .toBe("2026-04-10/6/1");
+      .toBe("1:2026-04-10/6/1");
   });
 
   /*
