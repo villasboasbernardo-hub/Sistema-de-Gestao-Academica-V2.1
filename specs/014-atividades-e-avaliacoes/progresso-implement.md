@@ -8,12 +8,13 @@
 | PR 2 | `feat/EPICO-9-cards-de-tetos` | [#48](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/48) | verde (três blocos) | 25/26 | ✅ **mesclado** em `1f64cbc` |
 | PR 2.1 | `feat/EPICO-9-dsa-tipo-global-e-dia-parado` | [#49](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/49) | verde (três blocos) | 27/28 | ✅ **mesclado** em `d4add3a` (14/10/2026), conferência aprovada |
 | PR 3 | `feat/EPICO-9-carga-da-leva-1` | [#50](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/50) | verde (`68d492e`) | 18/19 | ✅ **rodada no remoto** em 14/10/2026 (backup `remoto-20261014-124318.sql`, dados iguais local × remoto) e **mesclado** em `91ed061`; deploy de Production `success` |
-| PR 4 | `db/EPICO-8-banco-da-leva-2` | [pendente] | [pendente] | 23/40 | 6 migrations (E-4, E-5, D-5, D-6, D-4, D-7) de pé na base limpa e na cópia `remoto-20261014-130529.sql`; antes/depois para aprovação (A4.1–A4.6); **nada no remoto** |
+| PR 4 | `db/EPICO-8-banco-da-leva-2` | [#51](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/51) (rascunho) | [pendente] | 24/40 | 6 migrations (E-4, E-5, D-5, D-6, D-4, D-7) de pé na base limpa e na cópia `remoto-20261014-130529.sql`; antes/depois para aprovação (A4.1–A4.6); **nada no remoto** |
+| PR 5 | `feat/EPICO-8-avaliacoes-nas-telas` | [#52](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/52) (rascunho, sobre o #51) | [pendente] | parte 1 | card N de M + OD e o quadro por disciplina com projeção; capturas `pr5-*.png`; faltam abas, ações do arbitrado, aba do curso, alertas, e2e |
 
 **Remoto (14/10/2026, fase publicar):** 63 e 63 migrations; impressão digital `9acfa39d…`, 1.760 objetos,
 igual no local e no remoto. Registro em `plano-de-aplicacao-no-remoto.md`.
 
-**Tarefa atual:** PR 4 — CI e os portões A4.1 a A4.6; depois, o PR 5.
+**Tarefa atual:** PR 4 (#51) — CI e os portões A4.1 a A4.6; PR 5 (#52) — o resto das telas; depois PR 5.1 e PR 6.
 **Abertas:** PR 1 — T004, T034 (conferência). PR 1.1 — T050 (conferência). PR 2 — T076 (conferência no
 preview). PR 3 — T123 (conferência sobre o remoto sincronizado); portão A3.6 (classificação dos 43 textos de responsável).
 **Próximos passos (retomada):** PR 4 (falta T127, T128, T129, T139, T142, T153–T155, T160–T163); PR 5 → PR 5.1 → PR 6.
