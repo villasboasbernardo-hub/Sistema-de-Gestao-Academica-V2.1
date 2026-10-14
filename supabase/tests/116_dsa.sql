@@ -313,16 +313,16 @@ select ok(
 
 select throws_ok($$
   insert into public.atividades_nao_letivas
-    (codigo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial)
-  values ('T116-ATV-001', 'Estudo_Individual', 'global', null, '2026-03-03',
+    (codigo, subtipo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial)
+  values ('T116-ATV-001', 'Estudo Individual', 'Estudo_Individual', 'global', null, '2026-03-03',
           'Estudo individual global', 1, 9)
 $$, '23514', null,
   'V-5 · Estudo Individual de escopo GLOBAL e recusado pelo banco — nao e alerta, e regra estrutural');
 
 select lives_ok($$
   insert into public.atividades_nao_letivas
-    (codigo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial)
-  values ('T116-ATV-002', 'Estudo_Individual', 'turma', 'd1165000-0000-0000-0000-000000000001',
+    (codigo, subtipo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial)
+  values ('T116-ATV-002', 'Estudo Individual', 'Estudo_Individual', 'turma', 'd1165000-0000-0000-0000-000000000001',
           '2026-03-03', 'Estudo individual da turma', 1, 9)
 $$, 'V-5 · Estudo Individual de TURMA e aceito — o caso normal, que e o da planilha');
 
@@ -330,8 +330,8 @@ $$, 'V-5 · Estudo Individual de TURMA e aceito — o caso normal, que e o da pl
 --    escrito largo demais (proibindo toda atividade global) passaria igual.
 select lives_ok($$
   insert into public.atividades_nao_letivas
-    (codigo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial)
-  values ('T116-ATV-003', 'TAD', 'global', null, '2026-03-04', 'Cerimonia global', 2, 1)
+    (codigo, subtipo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial)
+  values ('T116-ATV-003', 'Administração', 'TAD', 'global', null, '2026-03-04', 'Cerimonia global', 2, 1)
 $$, 'V-5 · atividade TAD global continua aceita — a regra e do Estudo Individual, nao do escopo global');
 
 -- ═══════════════════════════════════════════════════════════════════════════════════════
@@ -354,9 +354,9 @@ select is(
 
 select throws_ok($$
   insert into public.atividades_nao_letivas
-    (codigo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos,
+    (codigo, subtipo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos,
      ta_inicial, instrutor_id, responsavel_externo)
-  values ('T116-ATV-004', 'AEC', 'turma', 'd1165000-0000-0000-0000-000000000001', '2026-03-05',
+  values ('T116-ATV-004', 'Palestra', 'AEC', 'turma', 'd1165000-0000-0000-0000-000000000001', '2026-03-05',
           'Palestra com dois responsaveis', 2, 1,
           'd1161000-0000-0000-0000-000000000001', 'DOEP')
 $$, '23514', null,
@@ -364,9 +364,9 @@ $$, '23514', null,
 
 select lives_ok($$
   insert into public.atividades_nao_letivas
-    (codigo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos,
+    (codigo, subtipo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos,
      ta_inicial, responsavel_externo)
-  values ('T116-ATV-005', 'AEC', 'turma', 'd1165000-0000-0000-0000-000000000001', '2026-03-06',
+  values ('T116-ATV-005', 'Palestra', 'AEC', 'turma', 'd1165000-0000-0000-0000-000000000001', '2026-03-06',
           'Palestra da DOEP', 2, 1, 'DOEP')
 $$, 'Q-8 · responsavel em TEXTO LIVRE e aceito — e o que a planilha tem em `CIAARA-30`, `DOEP`, `NAS`');
 
@@ -571,16 +571,16 @@ $$, $$values ('Prova Escrita')$$,
 select is(
   (select count(*)::int from public.config_listas
     where lista = 'tipos_atividade' and metadados ? 'categoria'),
-  10,
-  'H2 · DEZ subtipos com categoria normativa — e por ela que o seletor filtra em vez de oferecer a lista inteira'
+  15,
+  'H2 · QUINZE subtipos com categoria normativa (os dez da semente + os cinco da D-2 da spec 014) — e por ela que o seletor filtra'
 );
 
 select results_eq($$
   select metadados ->> 'categoria', count(*)::int from public.config_listas
    where lista = 'tipos_atividade' and metadados ? 'categoria'
    group by 1 order by 1
-$$, $$values ('AEC', 4), ('Estudo_Individual', 2), ('TAD', 2), ('TR', 2)$$,
-  'H2 · a reparticao e 4 AEC, 2 TAD, 2 TR e 2 Estudo Individual — a `CHT = CHD + AEC + TAD + TR`');
+$$, $$values ('AEC', 5), ('Apoio_Individualizado', 4), ('Estudo_Individual', 1), ('TAD', 3), ('TR', 2)$$,
+  'H2 · a reparticao e 5 AEC, 3 TAD, 2 TR, 1 Estudo Individual e 4 Apoio Individualizado — Monitoria saiu do EI para o Apoio (spec 014, D-2)');
 
 -- ⚠️ `Licença de Pagamento` fica SEM categoria: ela vem do calendario (Q-16), como o feriado.
 select is_empty($$

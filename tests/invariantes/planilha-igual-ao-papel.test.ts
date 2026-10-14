@@ -122,6 +122,7 @@ beforeAll(async () => {
             lugares.map((l) => ({
               codigo: `PLA-${PROCESSO}-${qual}-${l.sufixo}`,
               categoria_normativa: "TAD",
+              subtipo: "Administração",
               escopo: "turma",
               turma_id: turmaId,
               data: l.data,

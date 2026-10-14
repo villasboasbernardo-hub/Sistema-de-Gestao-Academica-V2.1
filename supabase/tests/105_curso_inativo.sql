@@ -90,6 +90,10 @@ select * from (values
   -- mesma condicao de oferta. Nao declara-la aqui faria a assercao acusar policy legitima.
   ('turma_disciplina_unidade',   'turma_em_oferta'),
   ('atividades_nao_letivas',     'turma_em_oferta'),
+  -- Spec 014, PR 1 (14/10/2026). REGRA DOS VALORES ESPERADOS: (a) — as duas tabelas novas recebem a
+  -- mesma condição: o dia parado espelha a atividade da turma, e o limite é dado do curso.
+  ('dias_parados',               'turma_em_oferta'),
+  ('limites_curriculo',          'curso_em_oferta'),
   ('instrutor_disciplina',       'disciplina_em_oferta')
 ) as v(tabela, chave);
 
@@ -127,8 +131,9 @@ select is(
   -- `turma_disciplina_unidade` (caso 5 do rateio, A-1), com as suas DUAS policies de
   -- escrita, espelhando `turma_disciplina_instrutor`: 30 + 2 = 32, em 16 tabelas. O que a
   -- assercao prova continua o mesmo — duas por tabela protegida, criar e editar.
-  32,
-  'FR-017.5 · sao 32 policies de escrita em 16 tabelas — duas por tabela, criar e editar'
+  -- Spec 014, PR 1: + `dias_parados` e `limites_curriculo`, duas cada — 32 + 4 = 36, em 18 tabelas.
+  36,
+  'FR-017.5 · sao 36 policies de escrita em 18 tabelas — duas por tabela, criar e editar'
 );
 
 -- ---------------------------------------------------------------- a exclusao DECLARADA, nao ausente

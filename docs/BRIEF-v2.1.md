@@ -240,6 +240,21 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 14/10/2026 — duas tabelas novas, do PR 1 da spec 014
+>
+> Entram no inventário de `public`, pelas decisões da spec 014 aprovadas por **Bernardo Villas Boas**
+> (Q-14, Q-16, R-1 e R-11; exceção ao Princípio VI aprovada em 14/10/2026, **D-CONST-VI**):
+>
+> - **`dias_parados`** — o **dia parado** de uma turma, ou a parada **global em parte do dia**: data,
+>   tempos, tipo (FR, LA, LP, NT, RC, PF, de `config_listas.tipos_parada`), motivo e se era **prevista**.
+>   Fica **fora da CHT** (Q-14); a parada global de **dia inteiro** continua em `feriados`. Desfazer é
+>   exclusão lógica. Escrita da turma por quem lança atividade; a global, por quem tem `calendario.criar`.
+> - **`limites_curriculo`** — o **limite máximo** de AEC, TAD e TR que o quadro final do currículo da
+>   DEnsM declara, em TA, **com arquivo e página** (`FR-001.1`, Q-16). Só informativo: **nunca** vira
+>   `CHECK` (regra 6). Escrita por quem tem `cursos.editar`.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a

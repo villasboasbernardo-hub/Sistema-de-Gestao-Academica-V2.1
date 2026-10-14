@@ -1414,6 +1414,10 @@ select d.codigo, d.nome_disciplina,
 -- =====================================================================================
 -- V-GEN-02 · `compoe_cht` reproduz a fórmula `Compoe_CHT` da v2.0
 -- REGRA  : Estudo_Individual fica FORA da soma CHT = CHD + AEC + TAD + TR (RN-EVT-01).
+--          ⚠️ Emenda de 14/10/2026 (spec 014, E-1/E-2): o Apoio_Individualizado também fica fora;
+--          a expressão passou a `categoria not in ('Estudo_Individual', 'Apoio_Individualizado')`.
+--          Nas linhas da v2.0 nada muda (nenhuma é Apoio), e o aceite continua 0 linhas.
+--          O `.docx` NÃO recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 -- ACEITE : 0 linhas.
 -- =====================================================================================
 select e.codigo, e.categoria_normativa, s.compoe_cht_formula, e.compoe_cht

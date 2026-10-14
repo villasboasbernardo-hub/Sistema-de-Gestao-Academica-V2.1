@@ -90,7 +90,10 @@ select set_eq(
            -- pela FR-047, com os quatro campos que a decisao D-2 (29/09/2026) fixou. Ela entrou
            -- no BRIEF §2.1 ANTES de entrar aqui, que e a ordem que o cabecalho desta assercao
            -- manda seguir.
-           ('auditoria_de_conta')$$,
+           ('auditoria_de_conta'),
+           -- PR 1 da spec 014, 14/10/2026. REGRA DOS VALORES ESPERADOS: (a). As duas entraram no
+           -- BRIEF §2.1 (emenda de 14/10/2026) antes de entrar aqui.
+           ('dias_parados'), ('limites_curriculo')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

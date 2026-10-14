@@ -2,7 +2,7 @@
 
 **Veredito: APROVADA**
 
-**Medido contra:** `127.0.0.1:54322/postgres` · **em** 05/10/2026 17:08 -0300
+**Medido contra:** `127.0.0.1:54322/postgres` · **em** 14/10/2026 02:42 -0300
 
 Relatório sem veredito não é aprovação (contrato reconciliacao C-1).
 
@@ -40,11 +40,11 @@ auditoria. Reexecutar a carga com a mesma origem tem de reproduzi-los.
 | tabela | md5 |
 | --- | --- |
 | `arquivo_avaliacoes_v1` | `b5ba85d350e63587e0db7027f7f9a1c5` |
-| `atividades_nao_letivas` | `f270cf17a521c169f23103d69abf985b` |
+| `atividades_nao_letivas` | `09c8ef59646b8ba822309d84efaade12` |
 | `avaliacoes` | `f9210ca924fe6068b6f71a625e75ba8a` |
 | `avaliacoes_planejadas` | `3561143000e7fe590914feffd0d8a633` |
-| `config_listas` | `2a9903ede0ff9e3c8954134ca2e07a79` |
-| `config_parametros` | `185ef776a0b78409e50e90826a9bcf45` |
+| `config_listas` | `9854b5f098aefb548c79914186445eb8` |
+| `config_parametros` | `dc1a5cdadc079ed8099fc4d29ecbf34a` |
 | `configuracoes_horario` | `b647c78e497c19b7a7a94c58f8e575b8` |
 | `curso_regime_historico` | `94f00d73debd016414ee487d29d1f4db` |
 | `cursos` | `721118dc9310fd86dc22244ce362b766` |
@@ -59,6 +59,6 @@ auditoria. Reexecutar a carga com a mesma origem tem de reproduzi-los.
 | `reservas_proens` | `ee386f349489b09de1ec40232cfb82f3` |
 | `responsaveis_curso` | `9af18c376b74b4e056f6fa55bde802a3` |
 | `turma_disciplina` | `cf3132c4039000ffb819f0720d5e4bbe` |
-| `turmas` | `cb90d02fe5cbed4c92dcdd9a34ef3722` |
+| `turmas` | `4dcc76baf6465d57f33700e6c3260eb6` |
 | `usuario_curso` | `d41d8cd98f00b204e9800998ecf8427e` |
 | `usuarios` | `619566603d94da4e30d07628fc7d1c59` |

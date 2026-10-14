@@ -120,6 +120,7 @@ export type Database = {
       }
       atividades_nao_letivas: {
         Row: {
+          bloqueia_aula: boolean
           categoria_normativa: Database["public"]["Enums"]["categoria_normativa"]
           codigo: string
           compoe_cht: boolean | null
@@ -136,16 +137,21 @@ export type Database = {
           local: string | null
           observacoes: string | null
           origem_migracao_v1: string | null
+          outros_instrutores: string[]
+          quantidade_alunos: number | null
           responsavel_externo: string | null
           status: Database["public"]["Enums"]["status_registro"]
           subtipo: string | null
           ta_final: number | null
           ta_inicial: number | null
           tempos_consumidos: number | null
+          tipo_atividade_id: string | null
           tipo_legado_v1: string | null
+          tipo_parada_id: string | null
           turma_id: string | null
         }
         Insert: {
+          bloqueia_aula?: boolean
           categoria_normativa: Database["public"]["Enums"]["categoria_normativa"]
           codigo: string
           compoe_cht?: boolean | null
@@ -162,16 +168,21 @@ export type Database = {
           local?: string | null
           observacoes?: string | null
           origem_migracao_v1?: string | null
+          outros_instrutores?: string[]
+          quantidade_alunos?: number | null
           responsavel_externo?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
           subtipo?: string | null
           ta_final?: number | null
           ta_inicial?: number | null
           tempos_consumidos?: number | null
+          tipo_atividade_id?: string | null
           tipo_legado_v1?: string | null
+          tipo_parada_id?: string | null
           turma_id?: string | null
         }
         Update: {
+          bloqueia_aula?: boolean
           categoria_normativa?: Database["public"]["Enums"]["categoria_normativa"]
           codigo?: string
           compoe_cht?: boolean | null
@@ -188,13 +199,17 @@ export type Database = {
           local?: string | null
           observacoes?: string | null
           origem_migracao_v1?: string | null
+          outros_instrutores?: string[]
+          quantidade_alunos?: number | null
           responsavel_externo?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
           subtipo?: string | null
           ta_final?: number | null
           ta_inicial?: number | null
           tempos_consumidos?: number | null
+          tipo_atividade_id?: string | null
           tipo_legado_v1?: string | null
+          tipo_parada_id?: string | null
           turma_id?: string | null
         }
         Relationships: [
@@ -245,6 +260,20 @@ export type Database = {
             columns: ["instrutor_id"]
             isOneToOne: false
             referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_tipo_atividade_id_fkey"
+            columns: ["tipo_atividade_id"]
+            isOneToOne: false
+            referencedRelation: "config_listas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_tipo_parada_id_fkey"
+            columns: ["tipo_parada_id"]
+            isOneToOne: false
+            referencedRelation: "config_listas"
             referencedColumns: ["id"]
           },
           {
@@ -1034,6 +1063,103 @@ export type Database = {
         }
         Relationships: []
       }
+      dias_parados: {
+        Row: {
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          data: string
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          motivo: string
+          origem_migracao_v1: string | null
+          prevista: boolean
+          status: Database["public"]["Enums"]["status_registro"]
+          ta_inicial: number | null
+          tempos: number | null
+          tipo_parada_id: string
+          turma_id: string | null
+        }
+        Insert: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          data: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          motivo: string
+          origem_migracao_v1?: string | null
+          prevista?: boolean
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_inicial?: number | null
+          tempos?: number | null
+          tipo_parada_id: string
+          turma_id?: string | null
+        }
+        Update: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          data?: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          motivo?: string
+          origem_migracao_v1?: string | null
+          prevista?: boolean
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_inicial?: number | null
+          tempos?: number | null
+          tipo_parada_id?: string
+          turma_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dias_parados_tipo_parada_id_fkey"
+            columns: ["tipo_parada_id"]
+            isOneToOne: false
+            referencedRelation: "config_listas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dias_parados_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dias_parados_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dias_parados_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dias_parados_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dias_parados_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+        ]
+      }
       disciplinas: {
         Row: {
           carga_horaria_tempos: number
@@ -1186,7 +1312,7 @@ export type Database = {
         Insert: {
           abrangencia?: string | null
           ano: number
-          codigo: string
+          codigo?: string
           criado_em?: string
           criado_por?: string | null
           data: string
@@ -1574,6 +1700,66 @@ export type Database = {
           },
           {
             foreignKeyName: "janelas_curso_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+        ]
+      }
+      limites_curriculo: {
+        Row: {
+          categoria: Database["public"]["Enums"]["categoria_normativa"]
+          criado_em: string
+          criado_por: string | null
+          curso_id: string
+          editado_em: string | null
+          editado_por: string | null
+          fonte_arquivo: string
+          fonte_pagina: number
+          id: string
+          origem_migracao_v1: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          tempos: number
+        }
+        Insert: {
+          categoria: Database["public"]["Enums"]["categoria_normativa"]
+          criado_em?: string
+          criado_por?: string | null
+          curso_id: string
+          editado_em?: string | null
+          editado_por?: string | null
+          fonte_arquivo: string
+          fonte_pagina: number
+          id?: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          tempos: number
+        }
+        Update: {
+          categoria?: Database["public"]["Enums"]["categoria_normativa"]
+          criado_em?: string
+          criado_por?: string | null
+          curso_id?: string
+          editado_em?: string | null
+          editado_por?: string | null
+          fonte_arquivo?: string
+          fonte_pagina?: number
+          id?: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          tempos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "limites_curriculo_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "limites_curriculo_curso_id_fkey"
             columns: ["curso_id"]
             isOneToOne: false
             referencedRelation: "vw_cursos_regime_vigente"
@@ -3142,8 +3328,10 @@ export type Database = {
           nome_curso: string | null
           status_turma: Database["public"]["Enums"]["status_turma"] | null
           ta_aec: number | null
+          ta_apoio_individualizado: number | null
           ta_aula: number | null
           ta_avaliacao: number | null
+          ta_dias_parados: number | null
           ta_estudo_individual: number | null
           ta_extraclasse: number | null
           ta_tad: number | null
@@ -3230,6 +3418,15 @@ export type Database = {
           status: Database["public"]["Enums"]["status_registro"] | null
           ta_excecao_duracao_min: number | null
           ta_padrao_duracao_min: number | null
+        }
+        Relationships: []
+      }
+      vw_dias_parados_turma: {
+        Row: {
+          dias: number | null
+          tempos: number | null
+          tipo: string | null
+          turma_id: string | null
         }
         Relationships: []
       }
@@ -4065,7 +4262,12 @@ export type Database = {
         | "corrigido"
         | "adicionado"
         | "descartado"
-      categoria_normativa: "AEC" | "TAD" | "TR" | "Estudo_Individual"
+      categoria_normativa:
+        | "AEC"
+        | "TAD"
+        | "TR"
+        | "Estudo_Individual"
+        | "Apoio_Individualizado"
       categoria_registro_aula: "aula" | "atividade_extraclasse"
       conciliacao_migracao:
         | "par_exato"
@@ -4268,7 +4470,13 @@ export const Constants = {
         "adicionado",
         "descartado",
       ],
-      categoria_normativa: ["AEC", "TAD", "TR", "Estudo_Individual"],
+      categoria_normativa: [
+        "AEC",
+        "TAD",
+        "TR",
+        "Estudo_Individual",
+        "Apoio_Individualizado",
+      ],
       categoria_registro_aula: ["aula", "atividade_extraclasse"],
       conciliacao_migracao: [
         "par_exato",

@@ -56,6 +56,13 @@ if hasattr(sys.stdout, "reconfigure"):
 AMBIENTES = ("local", "preview", "producao")
 
 
+
+# Spec 014 — as migrations de DADO aplicadas pela ETAPA 6b, NA ORDEM DO PLAN. Lista declarada.
+MIGRATIONS_DE_DADO_SPEC_014: tuple[str, ...] = (
+    "limites_dos_24_curriculos",        # D-1, PR 1
+    "reclassificar_tipos_de_atividade", # D-2, PR 1
+)
+
 def _linha(titulo: str) -> None:
     print(f"\n{'=' * 74}\n{titulo}\n{'=' * 74}")
 
@@ -162,6 +169,28 @@ def executar(
                 f"  unidades_ensino: {linhas[0]} linhas em {linhas[1]} disciplinas, "
                 f"{linhas[2]} sem fundamento"
             )
+
+        # ⚠️ AS MIGRATIONS DE DADO DA SPEC 014, pelo mesmo motivo e pelo mesmo caminho: as que
+        #    dependem de cadastro se ABSTÊM no `db reset` e só carregam aqui, depois do ETL. A lista
+        #    é DECLARADA, nunca glob, e segue a ordem do plan (D-1, D-2; D-3, D-5, D-6, D-4 e D-7
+        #    entram nos PRs delas). Arquivo ausente é erro, não etapa pulada: a lista é o contrato.
+        _linha("ETAPA 6b — migrations de dado da spec 014 (lista declarada)")
+        import psycopg
+
+        pasta = Path(__file__).resolve().parents[2] / "supabase" / "migrations"
+        for sufixo in MIGRATIONS_DE_DADO_SPEC_014:
+            achados = sorted(pasta.glob(f"*_{sufixo}.sql"))
+            if len(achados) != 1:
+                print(f"[NAO CONFERIDA] esperava UMA migration *_{sufixo}.sql, ha {len(achados)}")
+                return 2
+            try:
+                with psycopg.connect(conexao, autocommit=False) as con:
+                    con.execute(achados[0].read_text(encoding="utf-8"))
+                    con.commit()
+            except Exception as erro:  # noqa: BLE001 — o motivo vai para o relatório
+                print(f"[NAO CONFERIDA] a migration de dado {achados[0].name} falhou: {erro}")
+                return 2
+            print(f"  {achados[0].name}: aplicada")
 
     # ⚠️ A CONTA LOCAL VOLTA SOZINHA AO FIM DA CARGA — decisão de Bernardo Villas Boas,
     #    24/09/2026. Depois da carga o banco tem 5.394 linhas e **nenhuma credencial**: sem

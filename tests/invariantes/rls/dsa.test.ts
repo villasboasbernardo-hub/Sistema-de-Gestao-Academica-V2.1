@@ -521,6 +521,7 @@ describe("`DoD 4` · o teste negativo por perfil: os cinco que SÓ LEEM", () => 
         .insert({
           codigo: `DSA-ATV-NEG-${papel}-${SELO}`,
           categoria_normativa: "AEC",
+          subtipo: "Palestra",
           escopo: "turma",
           turma_id: turmaRegularId,
           data: DIA,
@@ -678,6 +679,7 @@ describe("item 1b · a disciplina da AEC, pela sessão de quem lança", () => {
       .insert({
         codigo: `DSA-ATV-AECDISC-${SELO}`,
         categoria_normativa: "AEC",
+        subtipo: "Palestra",
         escopo: "turma",
         turma_id: turmaRegularId,
         data: DIA,
@@ -704,6 +706,7 @@ describe("item 1b · a disciplina da AEC, pela sessão de quem lança", () => {
       .insert({
         codigo: `DSA-ATV-AECOUTRA-${SELO}`,
         categoria_normativa: "AEC",
+        subtipo: "Palestra",
         escopo: "turma",
         turma_id: turmaRegularId,
         data: DIA,
@@ -792,6 +795,7 @@ describe("`V-7` · a atividade de escopo global na grade de quem lê", () => {
       .insert({
         codigo: `DSA-ATV-GLOBAL-NEG-${SELO}`,
         categoria_normativa: "TAD",
+        subtipo: "Administração",
         escopo: "global",
         turma_id: null,
         data: DIA,
@@ -806,6 +810,7 @@ describe("`V-7` · a atividade de escopo global na grade de quem lê", () => {
       .insert({
         codigo: `DSA-ATV-GLOBAL-${SELO}`,
         categoria_normativa: "TAD",
+        subtipo: "Administração",
         escopo: "global",
         turma_id: null,
         data: DIA,
@@ -838,6 +843,7 @@ describe("`V-7` · a atividade de escopo global na grade de quem lê", () => {
       .insert({
         codigo: `DSA-ATV-EXTERNO-${SELO}`,
         categoria_normativa: "AEC",
+        subtipo: "Palestra",
         escopo: "turma",
         turma_id: turmaRegularId,
         data: DIA,
@@ -853,6 +859,7 @@ describe("`V-7` · a atividade de escopo global na grade de quem lê", () => {
       .insert({
         codigo: `DSA-ATV-DOIS-${SELO}`,
         categoria_normativa: "AEC",
+        subtipo: "Palestra",
         escopo: "turma",
         turma_id: turmaRegularId,
         data: DIA,

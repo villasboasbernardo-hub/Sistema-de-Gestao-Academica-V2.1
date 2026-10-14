@@ -603,7 +603,7 @@ ATIVIDADES_NAO_LETIVAS = MapaDeTabela(
         C("TA_Inicial", "ta_inicial", T.INTEIRO, "nasceu vazia na v2.0 (achado (c)). Degradacao segura no DSA: faixa de rodape"),
         C(None, "ta_final", T.GERADA),
         C("Local", "local", T.TEXTO_OU_NULO, "coluna nova da v2.0, majoritariamente vazia"),
-        C("Compoe_CHT", "compoe_cht", T.GERADA, "conferida por V-GEN-02. categoria != 'Estudo_Individual' — MANTEM Estudo Individual FORA de CHT = CHD+AEC+TAD+TR"),
+        C("Compoe_CHT", "compoe_cht", T.GERADA, "conferida por V-GEN-02. categoria not in ('Estudo_Individual', 'Apoio_Individualizado') desde a E-1/E-2 da spec 014 (14/10/2026) — Estudo Individual e Apoio Individualizado FORA de CHT = CHD+AEC+TAD+TR. Nas linhas da v2.0 o resultado e o mesmo: nenhuma e Apoio"),
         C("Observacoes", "observacoes", T.TEXTO_OU_NULO),
         C("Status", "status", T.STATUS),
         *_AUD_CRIA, *_AUD_EDIT,

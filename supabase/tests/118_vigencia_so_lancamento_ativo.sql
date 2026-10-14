@@ -108,15 +108,15 @@ select is(pg_temp.trava(), 'avaliacao:2', 'avaliação de volta a pendente volta
 update public.avaliacoes set status = 'cancelada' where codigo = 'T118-AVA-1';
 
 -- ------------------------------------------------------------------ atividade da turma
-insert into public.atividades_nao_letivas (codigo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id) values
-  ('T118-ATV-1', 'AEC', '2042-06-10', 'Atividade da turma T118', 2, 'turma', '50180000-0000-0000-0000-000000000001');
+insert into public.atividades_nao_letivas (codigo, subtipo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id) values
+  ('T118-ATV-1', 'Palestra', 'AEC', '2042-06-10', 'Atividade da turma T118', 2, 'turma', '50180000-0000-0000-0000-000000000001');
 select is(pg_temp.trava(), 'atividade:1', 'negativo · atividade da turma ATIVA trava');
 update public.atividades_nao_letivas set status = 'inativo' where codigo = 'T118-ATV-1';
 select is(pg_temp.trava(), 'livre', '⚠️ atividade da turma INATIVA não trava');
 
 -- ------------------------------------------------------------------ atividade global
-insert into public.atividades_nao_letivas (codigo, categoria_normativa, data, descricao, tempos_consumidos, escopo) values
-  ('T118-GLOB-1', 'TAD', '2042-07-15', 'Formatura do Centro', 4, 'global');
+insert into public.atividades_nao_letivas (codigo, subtipo, categoria_normativa, data, descricao, tempos_consumidos, escopo) values
+  ('T118-GLOB-1', 'Administração', 'TAD', '2042-07-15', 'Formatura do Centro', 4, 'global');
 select is(pg_temp.trava(), 'atividade_global:1', 'negativo · atividade GLOBAL ativa alcança o curso pela janela da turma (FR-021.5)');
 update public.atividades_nao_letivas set status = 'inativo' where codigo = 'T118-GLOB-1';
 select is(pg_temp.trava(), 'livre', '⚠️ atividade GLOBAL inativa não alcança');
