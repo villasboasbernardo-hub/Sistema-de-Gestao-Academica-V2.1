@@ -11,7 +11,8 @@ nome — todo resultado sai de uma exportacao que fica guardada, e por isso se r
 O QUE UMA RODADA FAZ, por turma, numa transacao so:
   1. SUBSTITUI, NAO SOMA — o que veio do ETL sai por exclusao LOGICA, com a marca
      «[SUBSTITUIDO PELA PLANILHA DE CONTROLE]». Em `avaliacoes`, que nao tem ativo/inativo, a forma
-     e `status = cancelada`, com o status anterior escrito na marca. Nada e apagado (regra 4).
+     e `status = substituida_pela_planilha`, com o status anterior em `status_anterior` e na marca
+     (spec 014, FR-047, desde a D-7). Nada e apagado (regra 4).
   2. INSERE o que e novo, ATUALIZA o que mudou e INATIVA o que saiu da planilha. O codigo de cada
      linha e derivado da turma e da LINHA da planilha em que o bloco comeca: a mesma celula da o
      mesmo codigo em toda rodada.
@@ -60,7 +61,8 @@ SENTINELA = "ENSAIO_DESFEITO"
 # Os campos COMPARADOS de cada tabela, em chaves naturais. `observacoes` fica de fora de proposito:
 # guarda a procedencia de quando a linha entrou, e so e regravada quando outro campo muda.
 CAMPOS = {
-    "aulas": ("data", "ta_inicial", "tempos_consumidos", "ue", "disciplina_sem_ue", "instrutor", "metodologia", "local", "conteudo_resumo", "demais"),
+    "aulas": ("data", "ta_inicial", "tempos_consumidos", "ue", "disciplina_sem_ue", "instrutor", "metodologia", "local", "conteudo_resumo", "demais",
+              "outros_instrutores"),
     "avaliacoes": ("disciplina", "tipo_avaliacao", "data_avaliacao", "ta_inicial", "tempos_consumidos", "instrutor", "fiscal",
                    "nome_fiscal_externo", "metodologia", "local", "conteudo_resumo", "data_vista_prova", "ta_inicial_vista",
                    "tempos_consumidos_vista", "local_vista"),
@@ -311,9 +313,11 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
   update public.atividades_nao_letivas set status = 'inativo', observacoes = concat_ws(' ', {lit(MARCA_DO_ETL)}, observacoes)
    where turma_id = {t} and origem_migracao_v1 is not null and status = 'ativo'{antes('data')};
   get diagnostics n := row_count; k := k || jsonb_build_object('etl_atividades', n);
+  -- Spec 014 (FR-047, D-7): a avaliacao do ETL substituida pela planilha vai para o estado proprio, com o
+  -- status anterior guardado — nunca mais `cancelada`, que e o que a TELA faz (FR-049).
   update public.avaliacoes set observacoes = concat_ws(' ', {lit(MARCA_DO_ETL)} || ' (status anterior: ' || status::text || ')', observacoes),
-         status = 'cancelada'
-   where turma_id = {t} and origem_migracao_v1 is not null and status <> 'cancelada'{antes('data_avaliacao')};
+         status_anterior = status, status = 'substituida_pela_planilha'
+   where turma_id = {t} and origem_migracao_v1 is not null and status in ('pendente', 'em_andamento', 'concluida', 'atrasada'){antes('data_avaliacao')};
   get diagnostics n := row_count; k := k || jsonb_build_object('etl_avaliacoes', n);""")
 
     # 1b. o relogio do curso: com o ETL ja fora do caminho e antes de a planilha entrar (ordem do item 3b)
@@ -323,27 +327,28 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
     # 2. inserir o novo e atualizar o que mudou
     if res.aulas:
         p.append(f"""
-  with dados(codigo, data, ue, disciplina, instrutor, ta, tempos, conteudo, metodologia, local, obs) as (values
-    {_valores([[a["codigo"], a["data"], a["unidade_ensino_id"], a["disciplina_id"], a["instrutor_id"], a["ta_inicial"], a["tempos_consumidos"], a["conteudo_resumo"], a["metodologia"], a["local"], a["observacoes"]] for a in res.aulas])}
+  with dados(codigo, data, ue, disciplina, instrutor, ta, tempos, conteudo, metodologia, local, obs, outros) as (values
+    {_valores([[a["codigo"], a["data"], a["unidade_ensino_id"], a["disciplina_id"], a["instrutor_id"], a["ta_inicial"], a["tempos_consumidos"], a["conteudo_resumo"], a["metodologia"], a["local"], a["observacoes"], ",".join(a.get("outros_instrutores") or [])] for a in res.aulas])}
   ), gravadas as (
     insert into public.registros_aula as r
       (codigo, data, turma_id, curso_id, unidade_ensino_id, disciplina_id, instrutor_id, ta_inicial,
-       tempos_consumidos, conteudo_resumo, metodologia, local, observacoes, criado_por)
+       tempos_consumidos, conteudo_resumo, metodologia, local, observacoes, outros_instrutores, criado_por)
     select d.codigo, d.data::date, {t}, {c}, d.ue::uuid, d.disciplina::uuid, d.instrutor::uuid, d.ta::smallint,
-           d.tempos::smallint, d.conteudo, d.metodologia, d.local, d.obs, {autor}
+           d.tempos::smallint, d.conteudo, d.metodologia, d.local, d.obs,
+           coalesce(string_to_array(nullif(d.outros, ''), ','), '{{}}'::text[]), {autor}
       from dados d
     on conflict (codigo) do update set
        data = excluded.data, unidade_ensino_id = excluded.unidade_ensino_id, disciplina_id = excluded.disciplina_id,
        instrutor_id = excluded.instrutor_id, ta_inicial = excluded.ta_inicial, tempos_consumidos = excluded.tempos_consumidos,
        conteudo_resumo = excluded.conteudo_resumo, metodologia = excluded.metodologia, local = excluded.local,
-       observacoes = excluded.observacoes, status = 'ativo'
+       observacoes = excluded.observacoes, outros_instrutores = excluded.outros_instrutores, status = 'ativo'
      where (r.data, r.unidade_ensino_id, r.disciplina_id, r.instrutor_id, r.ta_inicial, r.tempos_consumidos,
             r.conteudo_resumo, r.metodologia, r.local, r.status::text,
-            split_part(coalesce(r.observacoes, ''), {lit(MARCA_DE_DEMAIS)}, 2))
+            split_part(coalesce(r.observacoes, ''), {lit(MARCA_DE_DEMAIS)}, 2), r.outros_instrutores)
        is distinct from
            (excluded.data, excluded.unidade_ensino_id, excluded.disciplina_id, excluded.instrutor_id, excluded.ta_inicial,
             excluded.tempos_consumidos, excluded.conteudo_resumo, excluded.metodologia, excluded.local, 'ativo',
-            split_part(coalesce(excluded.observacoes, ''), {lit(MARCA_DE_DEMAIS)}, 2))
+            split_part(coalesce(excluded.observacoes, ''), {lit(MARCA_DE_DEMAIS)}, 2), excluded.outros_instrutores)
     returning (xmax = 0) as nova
   ) select count(*) filter (where nova), count(*) filter (where not nova) into n, m from gravadas;
   k := k || jsonb_build_object('aulas_novas', n, 'aulas_atualizadas', m);""")
