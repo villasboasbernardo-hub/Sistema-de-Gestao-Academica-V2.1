@@ -2,7 +2,7 @@
 
 **Veredito: APROVADA**
 
-**Medido contra:** `127.0.0.1:54322/postgres` · **em** 14/10/2026 02:42 -0300
+**Medido contra:** `127.0.0.1:54322/postgres` · **em** 14/10/2026 03:10 -0300
 
 Relatório sem veredito não é aprovação (contrato reconciliacao C-1).
 

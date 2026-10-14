@@ -93,7 +93,10 @@ select set_eq(
            ('auditoria_de_conta'),
            -- PR 1 da spec 014, 14/10/2026. REGRA DOS VALORES ESPERADOS: (a). As duas entraram no
            -- BRIEF §2.1 (emenda de 14/10/2026) antes de entrar aqui.
-           ('dias_parados'), ('limites_curriculo')$$,
+           ('dias_parados'), ('limites_curriculo'),
+           -- PR 1.1 da spec 014, 14/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entraram no BRIEF §2.1
+           -- (emenda de 14/10/2026) antes de entrar aqui.
+           ('previstos_proens_turma'), ('previstos_proens_alteracoes')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

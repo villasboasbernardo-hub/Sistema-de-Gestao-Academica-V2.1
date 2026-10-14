@@ -165,6 +165,7 @@ async function limpar(): Promise<void> {
     const id = (t as { id: string }).id;
     await servico.from("atividades_nao_letivas").delete().eq("turma_id", id);
     await servico.from("dias_parados").delete().eq("turma_id", id);
+    await servico.from("previstos_proens_turma").delete().eq("turma_id", id);
     await servico.from("turmas").delete().eq("id", id);
   }
   await servico.from("atividades_nao_letivas").delete().like("codigo", "AAV-%");
@@ -382,5 +383,110 @@ describe("limites do currículo (FR-001.1, R-11)", () => {
       .eq("curso_id", cursoExpeditoId);
     expect((proprio ?? []).length).toBeGreaterThan(0);
     expect(alheio ?? []).toHaveLength(0);
+  });
+});
+
+describe("previsto do PROENS por turma (FR-008.1, SC-018) — PR 1.1", () => {
+  const linha = (turmaId: string, categoria: string, tempos: number) => ({
+    turma_id: turmaId,
+    categoria,
+    tempos_previstos: tempos,
+    origem_proens: "AAV PROENS de teste",
+  });
+
+  it("o Ajudante GRAVA o previsto — o caso que discrimina (não tem calendario.criar)", async () => {
+    const { error } = await sessao("ajudante_administracao_academica")
+      .from("previstos_proens_turma")
+      .insert(linha(turmaRegularId, "TAD", 5));
+    expect(error).toBeNull();
+  });
+
+  it("o Operador recebe 42501 no INSERT, com a linha completa", async () => {
+    const { error } = await sessao("operador")
+      .from("previstos_proens_turma")
+      .insert(linha(turmaRegularId, "TR", 9));
+    expect(error?.code).toBe("42501");
+  });
+
+  it("o UPDATE do Operador volta vazio e o valor fica; o Encarregado grava", async () => {
+    const { data: antes } = await servico
+      .from("previstos_proens_turma")
+      .select("id, tempos_previstos")
+      .eq("turma_id", turmaRegularId)
+      .eq("categoria", "TAD")
+      .eq("status", "ativo")
+      .single();
+    const id = (antes as { id: string }).id;
+    const { data: nada } = await sessao("operador")
+      .from("previstos_proens_turma")
+      .update({ tempos_previstos: 99 })
+      .eq("id", id)
+      .select("id");
+    expect(nada ?? []).toHaveLength(0);
+    const { data: intacto } = await servico
+      .from("previstos_proens_turma")
+      .select("tempos_previstos")
+      .eq("id", id)
+      .single();
+    expect((intacto as { tempos_previstos: number }).tempos_previstos).toBe(5);
+
+    const { data: gravou, error } = await sessao("encarregado_administracao_academica")
+      .from("previstos_proens_turma")
+      .update({ tempos_previstos: 6 })
+      .eq("id", id)
+      .select("id");
+    expect(error).toBeNull();
+    expect(gravou).toHaveLength(1);
+  });
+
+  it("leitura por alcance: o Operador lê o da turma regular e não o da expedita", async () => {
+    await servico.from("previstos_proens_turma").insert(linha(turmaExpeditaId, "TAD", 3));
+    const { data: proprio } = await sessao("operador")
+      .from("previstos_proens_turma")
+      .select("id")
+      .eq("turma_id", turmaRegularId);
+    const { data: alheio } = await sessao("operador")
+      .from("previstos_proens_turma")
+      .select("id")
+      .eq("turma_id", turmaExpeditaId);
+    expect((proprio ?? []).length).toBeGreaterThan(0);
+    expect(alheio ?? []).toHaveLength(0);
+  });
+
+  it("a trilha registra a alteração com o autor, e ninguém escreve nela direto", async () => {
+    const { data: trilha } = await sessao("encarregado_administracao_academica")
+      .from("previstos_proens_alteracoes")
+      .select("tempos_antes, tempos_depois, autor_id")
+      .eq("turma_id", turmaRegularId)
+      .order("registrado_em");
+    expect((trilha ?? []).map((t) => [t.tempos_antes, t.tempos_depois])).toEqual([
+      [null, 5],
+      [5, 6],
+    ]);
+    expect((trilha ?? []).every((t) => t.autor_id !== null)).toBe(true);
+
+    const { error } = await sessao("encarregado_administracao_academica")
+      .from("previstos_proens_alteracoes")
+      .insert({
+        previsto_id: crypto.randomUUID(),
+        turma_id: turmaRegularId,
+        categoria: "TAD",
+        tempos_antes: 1,
+        tempos_depois: 2,
+      });
+    expect(error?.code).toBe("42501");
+  });
+
+  it("reservas_proens ficou só de leitura: o Encarregado recebe 42501 no INSERT", async () => {
+    const { error } = await sessao("encarregado_administracao_academica")
+      .from("reservas_proens")
+      .insert({
+        codigo: `AAV-RES-${SELO}`,
+        ano: 2026,
+        curso_id: cursoRegularId,
+        tipo_reserva: "TAD",
+        tempos_reservados: 1,
+      });
+    expect(error?.code).toBe("42501");
   });
 });

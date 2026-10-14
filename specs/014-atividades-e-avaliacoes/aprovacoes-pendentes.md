@@ -63,6 +63,28 @@
 - **A1.4 — Emenda do BRIEF §2.1** com as duas tabelas novas (`dias_parados`, `limites_curriculo`),
   só no `.md`. Conferir a redação.
 
+## PR 1.1 — previsto do PROENS por turma
+
+- **A1.1.1 — Antes/depois da migration D-3 (reservas do PROENS para as turmas).** Relatório:
+  `antes-depois/reservas_do_proens_para_as_turmas.md`, sobre `remoto-20261014-021627.sql`.
+  **Antes:** 12 reservas por curso em `reservas_proens` e nenhum previsto por turma. **Depois:** 10
+  previstos, um por reserva com curso, cada um na **única** turma de 2026 do curso, com o mesmo valor;
+  a reserva genérica vira dois parâmetros (`proens.reserva_generica_tad = 2`, `_tr = 0`, ano 2026).
+  AEC não ganha previsto (o PROENS não deu valor). 1 evento em `migracao_log`.
+
+  | Turma | TAD | TR |
+  |---|---|---|
+  | CAHO 2026 | 6 | 121 |
+  | C-Ap-HN 2026 | 5 | 16 |
+  | C-Ap-FR 2026 | 5 | 89 |
+  | C-Espc-HN 2026 | 3 | 100 |
+  | C-Espc-FR 2026 | 0 | 7 |
+
+  **Aprovação:** [pendente]
+
+- **A1.1.2 — Emenda do BRIEF §2.1** com `previstos_proens_turma` e `previstos_proens_alteracoes`, só
+  no `.md`. Conferir a redação.
+
 ## Decisões tomadas sozinho durante a implementação
 
 *(formato: decidi X porque Y; para mudar: Z)*
@@ -82,4 +104,14 @@
 - **D1.4 (PR 1) — O ponta a ponta local não foi rodado antes do PR.** Rodei unidade, pgTAP (base limpa
   e base carregada) e invariantes; o ponta a ponta inteiro leva cerca de 70 minutos e fica com o CI do
   PR. Para mudar: rodar `pnpm verificar:tudo` antes da fase publicar.
+- **D1.1.1 (PR 1.1) — A trilha do previsto não tem FK para o previsto.** Decidi guardar `previsto_id`,
+  `turma_id` e `categoria` sem FK, como `auditoria_de_conta.conta_alvo_id`, porque uma trilha imutável
+  com FK impede que a linha descrita deixe de existir — e a suíte apaga a turma de amostra no fim, o que
+  com FK ficaria impossível para sempre (a trilha recusa `DELETE` inclusive para a `service_role`).
+  Para mudar: pôr a FK de volta e fazer a suíte deixar a turma de amostra para trás.
+- **D1.1.2 (PR 1.1) — A nova `vw_conformidade_tetos` só concede `SELECT`.** A anterior tinha o
+  `INSERT`/`UPDATE` inerte do Épico 1 (R-8); a nova nasce sem ele. Para mudar: nada a decidir.
+- **D1.1.3 (PR 1.1) — Sem caso de RLS para o Admin.** O teste não cria conta `admin` (gotcha 8: um
+  Admin a mais derruba `rls.test.ts`); o Admin grava pela mesma permissão do Encarregado, que está
+  provado. Para mudar: criar a conta Admin num arquivo isolado.
 

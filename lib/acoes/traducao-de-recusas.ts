@@ -204,6 +204,9 @@ const MENSAGEM_DA_RESTRICAO: Readonly<Record<string, string>> = {
   dias_parados_motivo_check: "Escreva o motivo da parada (ao menos três letras).",
   limite_unico:
     "Este curso já tem limite ativo para esta categoria. Edite o existente em vez de criar outro.",
+  // Spec 014, PR 1.1 (E-3).
+  previsto_unico:
+    "Esta turma já tem previsto do PROENS para esta categoria. Edite o existente em vez de criar outro.",
 };
 
 /**
@@ -309,6 +312,9 @@ function porChave(
       return "A categoria escolhida não é AEC, TAD, TR, Estudo Individual nem Apoio Individualizado.";
     case "uso_de_tipo_invalido":
       return "O uso do tipo não é reconhecido.";
+    // Spec 014, PR 1.1 (E-3): a trilha do previsto não se reescreve.
+    case "trilha_do_previsto_imutavel":
+      return "O histórico do previsto não se altera. Para corrigir, grave o valor novo no previsto.";
 
     case "codigo_de_turma_divergente":
     case "codigo_de_turma_imutavel":

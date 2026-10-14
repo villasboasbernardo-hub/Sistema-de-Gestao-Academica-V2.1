@@ -42,7 +42,17 @@
 
 ## PR 1.1 — E-3, D-3
 
-[pendente]
+| Campo | Valor |
+|---|---|
+| Migrations | `20261014060055` (E-3) · `20261014060056` (D-3) |
+| Antes/depois | `antes-depois/reservas_do_proens_para_as_turmas.md`, sobre `remoto-20261014-021627.sql` |
+| Aprovação de Bernardo | [pendente] |
+| Backup · dry-run · push · conferência | [pendente] |
+| Reversão | `reversao-pr1-1.sql`, provada em base descartável em 14/10/2026: volta a `58d13d0a…`, 1.722 objetos (a impressão do PR 1), `diff` vazio |
+
+Defeito deliberado (T043), medido em 14/10/2026: a policy de criar o previsto lendo `calendario.editar`
+→ `atividades-e-avaliacoes.test.ts` reprova no caso do Ajudante (e nos três seguintes, que dependem da
+linha dele). Desfeito: 19 de 19.
 
 ## PR 2 — rodada da sincronização: não há (a sincronização no remoto é do PR 3)
 
