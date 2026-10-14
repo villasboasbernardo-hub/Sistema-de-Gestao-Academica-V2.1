@@ -8,7 +8,7 @@
 
 - **A0.1 — Texto final das emendas §12 e E-1 a E-9.** O conteúdo foi aprovado em 14/10/2026; o
   texto final está na spec §12 e §13 e é aplicado nos `.md` dos documentos 02, 04, 07 e 42 nos PRs
-  2, 2.1 e 5. Conferir no diff de cada PR.
+  2, 2.1 e 5. Conferir no diff de cada PR. ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.**
 
 ## PR 1 — banco da leva 1
 
@@ -40,7 +40,7 @@
   **Conferência no PDF:** a extração é automática do texto do PDF (`extrair_avaliacoes_curriculo.py`)
   e bate com a medição M-8 da spec nos 30 pares; a prova `provar_extracao_de_limites.py` saiu
   APROVADA. Bernardo confere três ou quatro linhas no PDF, pela página da tabela.
-  **Aprovação:** [pendente]
+  **Aprovação:** ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.** Aplicada no remoto no mesmo dia (`plano-de-aplicacao-no-remoto.md`).
 
 - **A1.2 — Antes/depois da migration D-2 (tipos de parada e reclassificação).** Relatório:
   `antes-depois/reclassificar_tipos_de_atividade.md`, mesma cópia.
@@ -55,13 +55,14 @@
   - **Totais por turma: AEC, TAD, TR, EI e Apoio IGUAIS antes e depois em todas as turmas ativas.**
     Nenhuma atividade ativa usa o subtipo Monitoria na cópia (0 antes, 0 depois); a mudança das
     monitorias gravadas como "Administração" pela sincronização é da rodada do PR 3.
-  **Aprovação:** [pendente]
+  **Aprovação:** ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.** *"lista de paradas e tipos novos; reclassificação das linhas antigas
+  só na rodada do PR 3"*. Aplicada no remoto no mesmo dia.
 
 - **A1.3 — Exceção D-1 registrada no CLAUDE.md** (coluna gerada recriada). Texto em *Convenções de
-  banco*. Conferir a redação.
+  banco*. Conferir a redação. ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.**
 
 - **A1.4 — Emenda do BRIEF §2.1** com as duas tabelas novas (`dias_parados`, `limites_curriculo`),
-  só no `.md`. Conferir a redação.
+  só no `.md`. Conferir a redação. ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.**
 
 ## PR 1.1 — previsto do PROENS por turma
 
@@ -80,10 +81,10 @@
   | C-Espc-HN 2026 | 3 | 100 |
   | C-Espc-FR 2026 | 0 | 7 |
 
-  **Aprovação:** [pendente]
+  **Aprovação:** ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.** Aplicada no remoto no mesmo dia.
 
 - **A1.1.2 — Emenda do BRIEF §2.1** com `previstos_proens_turma` e `previstos_proens_alteracoes`, só
-  no `.md`. Conferir a redação.
+  no `.md`. Conferir a redação. ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.**
 
 ## PR 2 — cards de AEC, TAD e TR; limites no curso; `/inicio`; `/atividades`
 
@@ -95,8 +96,9 @@
   `RN-2027-03`, a contagem dentro do verbete Estudo Individual, o verbete LA (não existia; criado das
   decisões Q-8, Q-13 e Q-14) e o LP (frase acrescentada ao verbete). O parágrafo de implementação da
   `RN-EVT-01` ainda cita `lib/dominio/tetos-normativos.ts`; a §13 não o emenda, e a nota nova diz para
-  onde o cálculo foi. **Aprovação:** [pendente]
+  onde o cálculo foi. **Aprovação:** ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.**
 - **A2.2 — Capturas no banco local:** `C:/Users/VILLAS BOAS/AppData/Local/ciaara-11/capturas-014/pr2-*.png`.
+  ✅ **RESOLVIDO — CONFERIDAS E APROVADAS por Bernardo Villas Boas em 14/10/2026.**
 
 ## PR 2.1 — DSA: parar dia, desfazer e avaliação viva (PARCIAL)
 
@@ -104,10 +106,19 @@
   antes literal e o registro do `.docx`. ⚠️ A frase do **feriado** continua a de 07/10/2026 no código (as
   suítes a afirmam); a frase nova da E-8 vale para a **parada**: *"Dia bloqueado: <tipo> — <motivo>. Para
   lançar, desfaça a parada ou ajuste o calendário."* Para unificar as duas, é decisão sua. **Aprovação:**
-  [pendente]
+  ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.** **Com a unificação:** *"Na E-8, UNIFIQUE a mensagem do feriado e da parada
+  numa frase só: «Dia bloqueado: <motivo>. Para lançar, desfaça a parada ou ajuste o calendário.»
+  (tempo parado: «Tempo bloqueado: <motivo>…»)."* Feito no PR 2.1: `mensagemDeDiaBloqueado` é a frase
+  única, a parada de parte do dia diz *"Tempo bloqueado"*, e o motivo da parada é *"<tipo> —
+  <motivo>"* (decisão D2.1.5, abaixo). O documento 04 foi emendado de novo e os testes que afirmavam a
+  frase antiga (`dia-bloqueado.test.ts`, `dsa-grade.spec.ts`) foram ajustados.
 - **A2.1.2 — Capturas no banco local:** `C:/Users/VILLAS BOAS/AppData/Local/ciaara-11/capturas-014/pr2.1-*.png`.
+  ✅ **RESOLVIDO — CONFERIDAS E APROVADAS por Bernardo Villas Boas em 14/10/2026.**
 
 ## Decisões tomadas sozinho durante a implementação
+
+✅ **D1.1 a D2.1.4 ACEITAS por Bernardo Villas Boas em 14/10/2026** (*"Decisões que você tomou sozinho
+(relatório §3): todas aceitas."*). As de número maior nasceram depois e esperam a palavra dele.
 
 *(formato: decidi X porque Y; para mudar: Z)*
 
@@ -163,3 +174,6 @@
   parte, T091), a planilha de contingência (T094), as traduções (T095) e os casos de ponta a ponta de tipo,
   global e impressão (T096 a T098, T100). Para mudar: nada a decidir; é o ponto de retomada.
 
+- **D2.1.5 (PR 2.1) — Na frase unificada da E-8, o `<motivo>` da parada é `<tipo> — <motivo>`**
+  (*"Dia bloqueado: LA — Licença da turma. …"*), e o do feriado é a descrição dele, como antes. A sigla
+  diz de onde a parada vem, que é o que se desfaz. Para mudar: tirar o tipo em `mensagemDeTempoParado`.

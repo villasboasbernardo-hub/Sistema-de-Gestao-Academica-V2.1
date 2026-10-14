@@ -60,13 +60,13 @@ describe("RN-EVT-04 · qual dia está bloqueado", () => {
 describe("RN-EVT-04 · a frase da recusa", () => {
   it("diz o motivo e como resolver, com as palavras da decisão", () => {
     expect(mensagemDeDiaBloqueado("Data Magna")).toBe(
-      "Dia bloqueado no calendário: Data Magna. Para lançar, ajuste o calendário.",
+      "Dia bloqueado: Data Magna. Para lançar, desfaça a parada ou ajuste o calendário.",
     );
   });
 
   it("o ponto final do motivo não vira ponto duplo", () => {
     expect(mensagemDeDiaBloqueado("Licença de pagamento.")).toBe(
-      "Dia bloqueado no calendário: Licença de pagamento. Para lançar, ajuste o calendário.",
+      "Dia bloqueado: Licença de pagamento. Para lançar, desfaça a parada ou ajuste o calendário.",
     );
   });
 });
@@ -74,7 +74,7 @@ describe("RN-EVT-04 · a frase da recusa", () => {
 describe("RN-EVT-04 · lançar e mover uma aula", () => {
   it("lançar no dia bloqueado é recusado; em dia livre, não", () => {
     expect(recusaDeAulaNoDia({ data: QUARTA, feriados: [feriado()] })).toBe(
-      "Dia bloqueado no calendário: Data Magna. Para lançar, ajuste o calendário.",
+      "Dia bloqueado: Data Magna. Para lançar, desfaça a parada ou ajuste o calendário.",
     );
     expect(recusaDeAulaNoDia({ data: "2026-04-07", feriados: [feriado()] })).toBeNull();
   });
@@ -184,7 +184,7 @@ describe("spec 014 · a recusa de aula em tempo parado (emenda D-AA-13)", async 
 
   it("a frase traz o tipo e o motivo", () => {
     expect(mensagemDeTempoParado(parte)).toBe(
-      "Dia bloqueado: LA — Licença da turma. Para lançar, desfaça a parada ou ajuste o calendário.",
+      "Tempo bloqueado: LA — Licença da turma. Para lançar, desfaça a parada ou ajuste o calendário.",
     );
     expect(mensagemDeTempoParado(inteiro)).toContain("Dia bloqueado: NT — Treinamento");
   });

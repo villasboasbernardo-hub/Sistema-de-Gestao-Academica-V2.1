@@ -3,9 +3,9 @@
  *
  * > **RN-EVT-04. [NOVA — v2.1, 07/10/2026]** Não se lança aula em dia de feriado de dia inteiro do
  * > calendário ativo. A recusa vale para toda gravação que ponha uma aula nesse dia — lançar, ou
- * > mover de outro dia para ele — e diz o motivo com estas palavras: *"Dia bloqueado no calendário:
- * > <motivo>. Para lançar, ajuste o calendário."* O que já estiver gravado no dia continua visível e
- * > contando. **Risco: Médio.**
+ * > mover de outro dia para ele — e diz o motivo com estas palavras: *"Dia bloqueado: <motivo>. Para
+ * > lançar, desfaça a parada ou ajuste o calendário."* O que já estiver gravado no dia continua
+ * > visível e contando. **Risco: Médio.**
  * > — `docs/fase-1/04-Regras-de-Negocio-a-Preservar.md` *(decisão de Bernardo Villas Boas, 07/10/2026)*
  *
  * ⚠️ **UM LUGAR SÓ DIZ QUAL DIA ESTÁ BLOQUEADO.** `motivoDoBloqueio` é chamada pela grade do DSA
@@ -55,15 +55,21 @@ export function motivoDoBloqueio(
   return null;
 }
 
+/** O que fica bloqueado: o dia inteiro, ou só alguns tempos dele. */
+export type Alcance = "dia" | "tempo";
+
 /**
- * A frase da recusa — **com as palavras da decisão** (`RN-EVT-04`).
+ * A frase da recusa — **uma só para o feriado e para a parada** (`RN-EVT-04`, emenda E-8 com a
+ * unificação de Bernardo Villas Boas, 14/10/2026): *"Dia bloqueado: <motivo>. Para lançar, desfaça a
+ * parada ou ajuste o calendário."*, e *"Tempo bloqueado: …"* quando a parada cobre só parte do dia.
  *
  * ⚠️ O ponto final do motivo sai antes de entrar na frase: *"Licença de pagamento."* daria
  * *"…pagamento.. Para lançar"*.
  */
-export function mensagemDeDiaBloqueado(motivo: string): string {
+export function mensagemDeDiaBloqueado(motivo: string, alcance: Alcance = "dia"): string {
   const limpo = motivo.trim().replace(/[.\s]+$/u, "");
-  return `Dia bloqueado no calendário: ${limpo}. Para lançar, ajuste o calendário.`;
+  const sujeito = alcance === "dia" ? "Dia bloqueado" : "Tempo bloqueado";
+  return `${sujeito}: ${limpo}. Para lançar, desfaça a parada ou ajuste o calendário.`;
 }
 
 /**
@@ -127,11 +133,14 @@ export function paradaQueCobre(
   return null;
 }
 
-/** A frase da recusa de aula em tempo parado, com o tipo e o motivo (`RN-EVT-04`, emenda D-AA-13). */
+/**
+ * A frase da recusa de aula na parada: a mesma do feriado, com o motivo `<tipo> — <motivo>` e
+ * *"Tempo bloqueado"* quando a parada cobre só parte do dia (`RN-EVT-04`, emenda E-8).
+ */
 export function mensagemDeTempoParado(p: ParadaDoDia): string {
-  // A frase da emenda E-8 da `RN-EVT-04` (spec 014 §13), literal.
   const limpo = p.motivo.trim().replace(/[.\s]+$/u, "");
-  return `Dia bloqueado: ${p.tipo} — ${limpo}. Para lançar, desfaça a parada ou ajuste o calendário.`;
+  const parteDoDia = p.taInicial !== null && p.tempos !== null;
+  return mensagemDeDiaBloqueado(`${p.tipo} — ${limpo}`, parteDoDia ? "tempo" : "dia");
 }
 
 /**
