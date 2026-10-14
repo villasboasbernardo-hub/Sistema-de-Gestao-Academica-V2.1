@@ -22,25 +22,25 @@ insert into public.instrutores (id, codigo, posto_graduacao, esp_hab_obs, nome_c
 -- Turma e obrigatoria SE E SOMENTE SE o escopo for de turma. O evento global vale para
 -- todas as turmas ativas na data; amarra-lo a uma so seria mudar a regra.
 select lives_ok(
-  $$insert into public.atividades_nao_letivas (codigo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id)
-    values ('ATV-COND-1', 'AEC', '2026-05-04', 'Palestra da turma', 2, 'turma', '33333333-0000-0000-0000-0000000000c1')$$,
+  $$insert into public.atividades_nao_letivas (codigo, subtipo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id)
+    values ('ATV-COND-1', 'Palestra', 'AEC', '2026-05-04', 'Palestra da turma', 2, 'turma', '33333333-0000-0000-0000-0000000000c1')$$,
   'FR-014 · escopo de turma COM turma e aceito'
 );
 select throws_ok(
-  $$insert into public.atividades_nao_letivas (codigo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id)
-    values ('ATV-COND-2', 'AEC', '2026-05-05', 'Palestra sem turma', 2, 'turma', null)$$,
+  $$insert into public.atividades_nao_letivas (codigo, subtipo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id)
+    values ('ATV-COND-2', 'Palestra', 'AEC', '2026-05-05', 'Palestra sem turma', 2, 'turma', null)$$,
   '23514',
   null,
   'FR-014 · escopo de turma SEM turma e recusado'
 );
 select lives_ok(
-  $$insert into public.atividades_nao_letivas (codigo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id)
-    values ('ATV-COND-3', 'TAD', '2026-05-06', 'Formatura do Centro', 4, 'global', null)$$,
+  $$insert into public.atividades_nao_letivas (codigo, subtipo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id)
+    values ('ATV-COND-3', 'Administração', 'TAD', '2026-05-06', 'Formatura do Centro', 4, 'global', null)$$,
   'FR-014 · escopo global SEM turma e aceito'
 );
 select throws_ok(
-  $$insert into public.atividades_nao_letivas (codigo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id)
-    values ('ATV-COND-4', 'TAD', '2026-05-07', 'Formatura com turma', 4, 'global', '33333333-0000-0000-0000-0000000000c1')$$,
+  $$insert into public.atividades_nao_letivas (codigo, subtipo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id)
+    values ('ATV-COND-4', 'Administração', 'TAD', '2026-05-07', 'Formatura com turma', 4, 'global', '33333333-0000-0000-0000-0000000000c1')$$,
   '23514',
   null,
   'FR-014 · escopo global COM turma e recusado — o evento global nao pertence a uma turma'

@@ -123,4 +123,27 @@ describe("toda restauração em massa avança as sequências de código", () => 
         `lugar só — uma segunda cópia diverge no dia em que uma sequência nova nascer.`,
     ).toEqual([]);
   });
+
+  it("⚠️ toda sequência de código criada por migration está em `SEQUENCIAS_DE_CODIGO` (spec 014, T018)", () => {
+    /*
+     * ⚠️ O gotcha 9 volta a cada sequência nova: a que nasce numa migration e não entra na lista não é
+     *    avançada depois de restaurar, e a primeira criação na tela colide com 23505. Lida SEM comentário.
+     */
+    const pasta = resolve(RAIZ, "supabase/migrations");
+    const criadas = new Set(
+      readdirSync(pasta)
+        .filter((n) => n.endsWith(".sql"))
+        .flatMap((n) =>
+          [
+            ...readFileSync(join(pasta, n), "utf8")
+              .replace(/--[^\n]*/g, " ")
+              .matchAll(/create\s+sequence\s+(?:if\s+not\s+exists\s+)?(app\.[a-z_]+)/gi),
+          ].map((m) => m[1]!),
+        ),
+    );
+    expect(criadas.size, "a varredura não achou sequência nenhuma").toBeGreaterThan(5);
+    const lista = semComentario(readFileSync(resolve(RAIZ, "scripts/etl/carregar.py"), "utf8"));
+    const fora = [...criadas].filter((seq) => !lista.includes(`"${seq}"`));
+    expect(fora, `sequência sem lugar em SEQUENCIAS_DE_CODIGO: ${fora.join(", ")}`).toEqual([]);
+  });
 });

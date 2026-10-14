@@ -592,6 +592,12 @@ SEQUENCIAS_DE_CODIGO: tuple[tuple[str, str, str], ...] = (
      "case when codigo ~ '^UE-[0-9]+$' then substring(codigo from 4)::bigint end"),
     ("app.turma_disciplina_unidade_codigo_seq", "turma_disciplina_unidade",
      "case when codigo ~ '^TDU-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    # As duas da spec 014 (E-2, 14/10/2026): o dia parado e o feriado, que até ali recebia o código
+    # do ETL e da sincronização e passou a ter DEFAULT para o lançamento pelo DSA.
+    ("app.dias_parados_codigo_seq", "dias_parados",
+     "case when codigo ~ '^DPA-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    ("app.feriados_codigo_seq", "feriados",
+     "case when codigo ~ '^FER-[0-9]+$' then substring(codigo from 5)::bigint end"),
 )
 
 

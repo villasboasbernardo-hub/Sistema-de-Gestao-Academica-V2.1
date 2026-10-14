@@ -359,6 +359,7 @@ export async function semearCursos(processo: number, emailAdmin: string): Promis
     .insert({
       codigo: atividadeGlobal,
       categoria_normativa: "AEC",
+      subtipo: "Palestra",
       escopo: "global",
       turma_id: null,
       data: "2026-05-10",

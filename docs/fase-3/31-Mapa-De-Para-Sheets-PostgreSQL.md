@@ -431,7 +431,7 @@ quatro. Distribuição: Estudo Individual 531 · AEC 62 · TAD 60 · TR 11.
 | `TA_Inicial` | `ta_inicial` | `smallint` | `::int` | Nasceu vazia na v2.0 (achado (c)). Degradação segura no DSA: faixa de rodapé (RN-DEG-01) |
 | — | `ta_final` | `smallint` GEN | — | **[NOVO]** |
 | `Local` | `local` | `text` | `nullif` | Coluna nova da v2.0, majoritariamente vazia |
-| `Compoe_CHT` | `compoe_cht` | `boolean` GEN | **não escrita** — conferida por `V-GEN-02` | `FORMULA` → coluna gerada: `categoria_normativa <> 'Estudo_Individual'`. Mantém Estudo Individual **fora** de CHT = CHD+AEC+TAD+TR |
+| `Compoe_CHT` | `compoe_cht` | `boolean` GEN | **não escrita** — conferida por `V-GEN-02` | `FORMULA` → coluna gerada: `categoria_normativa not in ('Estudo_Individual', 'Apoio_Individualizado')` *(emenda de 14/10/2026, spec 014; era `<> 'Estudo_Individual'`; o `.docx` não a recebeu)*. Mantém Estudo Individual e Apoio Individualizado **fora** de CHT = CHD+AEC+TAD+TR |
 | `Observacoes` | `observacoes` | `text` | `nullif` | — |
 | `Status` | `status` | `status_registro` NOT NULL | vazio → `ativo` | — |
 | `Registrado_Por` / `Timestamp_Registro` | `criado_por` / `criado_em` | `uuid` / `timestamptz` | e-mail→uuid; fuso | — |

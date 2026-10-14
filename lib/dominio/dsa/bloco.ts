@@ -36,7 +36,8 @@
  * ⚠️ **ELAS NÃO SÃO UMA LISTA LIVRE: são as cinco categorias da `RN-EVT-01` abertas em sete.** A CHD
  * se parte em `aula`, `avaliacao` e `vista_prova` porque as três gravam em lugares diferentes
  * (`registros_aula` e `avaliacoes`), e `estudo_individual` fica **fora** da fórmula
- * `CHT = CHD + AEC + TAD + TR` — o que o banco já garante por coluna gerada (`compoe_cht`).
+ * `CHT = CHD + AEC + TAD + TR` — o que o banco já garante por coluna gerada (`compoe_cht`), que
+ * desde a spec 014 (E-2, 14/10/2026) deixa fora também o Apoio Individualizado.
  */
 export type TipoDeBloco =
   "aula" | "avaliacao" | "vista_prova" | "aec" | "tad" | "tr" | "estudo_individual";

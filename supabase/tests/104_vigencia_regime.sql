@@ -260,8 +260,8 @@ select is(
 );
 
 update public.avaliacoes set data_vista_prova = null where codigo = 'T104-AVA-1';
-insert into public.atividades_nao_letivas (codigo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id) values
-  ('T104-ATV-1', 'AEC', '2041-06-10', 'Atividade da turma T104', 2, 'turma', '50400000-0000-0000-0000-000000000001');
+insert into public.atividades_nao_letivas (codigo, subtipo, categoria_normativa, data, descricao, tempos_consumidos, escopo, turma_id) values
+  ('T104-ATV-1', 'Palestra', 'AEC', '2041-06-10', 'Atividade da turma T104', 2, 'turma', '50400000-0000-0000-0000-000000000001');
 select is(
   (pg_temp.recusa($$select public.corrigir_vigencia_regime((select id from _vig), '{"regime_tempos":5}'::jsonb)$$)
    ->> 'hint'),
@@ -271,8 +271,8 @@ select is(
 
 -- ------------------------------------------------- FR-021.5 — a atividade GLOBAL, nos quatro resultados
 delete from public.atividades_nao_letivas where codigo = 'T104-ATV-1';
-insert into public.atividades_nao_letivas (codigo, categoria_normativa, data, descricao, tempos_consumidos, escopo) values
-  ('T104-GLOB-1', 'TAD', '2041-07-15', 'Formatura do Centro', 4, 'global');
+insert into public.atividades_nao_letivas (codigo, subtipo, categoria_normativa, data, descricao, tempos_consumidos, escopo) values
+  ('T104-GLOB-1', 'Administração', 'TAD', '2041-07-15', 'Formatura do Centro', 4, 'global');
 
 select results_eq(
   $$select r -> 'detail' ->> 'tipo', r -> 'detail' ->> 'turma', r -> 'detail' ->> 'atividade'
@@ -365,8 +365,8 @@ select is(
 );
 
 -- ------------------------------------------------- FR-021.8 — a leitura da proteção
-insert into public.atividades_nao_letivas (codigo, categoria_normativa, data, descricao, tempos_consumidos, escopo) values
-  ('T104-GLOB-2', 'TAD', '2041-08-20', 'Segunda formatura', 4, 'global');
+insert into public.atividades_nao_letivas (codigo, subtipo, categoria_normativa, data, descricao, tempos_consumidos, escopo) values
+  ('T104-GLOB-2', 'Administração', 'TAD', '2041-08-20', 'Segunda formatura', 4, 'global');
 -- ⚠️ A avaliação sai daqui, e é o que torna esta asserção útil: com ela no lugar, as vigências
 --    estariam travadas por lançamento PRÓPRIO, e o aviso do `FR-021.8` diria que encurtar a janela
 --    não desprotege nada. Sem ela, a única coisa que as trava é a atividade global — que é

@@ -60,42 +60,42 @@ select ok(
 -- ⚠️ O CASO QUE DISCRIMINA: AEC de turma, com disciplina do curso da turma.
 select lives_ok($$
   insert into public.atividades_nao_letivas
-    (codigo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial,
+    (codigo, subtipo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial,
      disciplina_id)
-  values ('T121-ATV-001', 'AEC', 'turma', 'd1215000-0000-0000-0000-000000000001', '2026-04-06',
+  values ('T121-ATV-001', 'Palestra', 'AEC', 'turma', 'd1215000-0000-0000-0000-000000000001', '2026-04-06',
           'Visita tecnica da disciplina I', 2, 1, 'd1213000-0000-0000-0000-000000000001')
 $$, 'AEC · AEC de turma com disciplina do curso da turma e ACEITA — o lancamento que a coluna abre');
 
 select lives_ok($$
   insert into public.atividades_nao_letivas
-    (codigo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial)
-  values ('T121-ATV-002', 'AEC', 'turma', 'd1215000-0000-0000-0000-000000000001', '2026-04-07',
+    (codigo, subtipo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial)
+  values ('T121-ATV-002', 'Palestra', 'AEC', 'turma', 'd1215000-0000-0000-0000-000000000001', '2026-04-07',
           'Palestra sem disciplina', 2, 1)
 $$, 'AEC · AEC SEM disciplina continua aceita — a disciplina e opcional');
 
 select throws_ok($$
   insert into public.atividades_nao_letivas
-    (codigo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial,
+    (codigo, subtipo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial,
      disciplina_id)
-  values ('T121-ATV-003', 'AEC', 'turma', 'd1215000-0000-0000-0000-000000000001', '2026-04-08',
+  values ('T121-ATV-003', 'Palestra', 'AEC', 'turma', 'd1215000-0000-0000-0000-000000000001', '2026-04-08',
           'AEC com disciplina de OUTRO curso', 2, 1, 'd1213000-0000-0000-0000-000000000002')
 $$, '23514', null,
   'AEC · disciplina de OUTRO curso e recusada — o porteiro confere o curso da turma');
 
 select throws_ok($$
   insert into public.atividades_nao_letivas
-    (codigo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial,
+    (codigo, subtipo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial,
      disciplina_id)
-  values ('T121-ATV-004', 'TAD', 'turma', 'd1215000-0000-0000-0000-000000000001', '2026-04-09',
+  values ('T121-ATV-004', 'Administração', 'TAD', 'turma', 'd1215000-0000-0000-0000-000000000001', '2026-04-09',
           'TAD com disciplina', 1, 1, 'd1213000-0000-0000-0000-000000000001')
 $$, '23514', null,
   'AEC · so a AEC leva disciplina — TAD com disciplina e recusada');
 
 select throws_ok($$
   insert into public.atividades_nao_letivas
-    (codigo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial,
+    (codigo, subtipo, categoria_normativa, escopo, turma_id, data, descricao, tempos_consumidos, ta_inicial,
      disciplina_id)
-  values ('T121-ATV-005', 'AEC', 'global', null, '2026-04-10',
+  values ('T121-ATV-005', 'Palestra', 'AEC', 'global', null, '2026-04-10',
           'AEC global com disciplina', 1, 1, 'd1213000-0000-0000-0000-000000000001')
 $$, '23514', null,
   'AEC · atividade GLOBAL nao leva disciplina — ela vale para todas as turmas e nao e de curso nenhum');

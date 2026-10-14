@@ -189,6 +189,21 @@ const MENSAGEM_DA_RESTRICAO: Readonly<Record<string, string>> = {
   ativ_escopo_coerente: "Atividade de turma precisa da turma; a global não aceita turma.",
   ativ_ta_valido: "O Tempo de Aula vai de 1 a 12.",
   ativ_tempos_positivos: "A atividade tem de ter de 1 a 12 tempos.",
+  // ── Spec 014, PR 1 (14/10/2026) — nomes LIDOS de `pg_constraint`/`pg_indexes` no banco local ──
+  ativ_tipo_obrigatorio: "Escolha o tipo da atividade na lista.",
+  ativ_bloqueio_so_tr:
+    "Só o Tempo Reserva com o tipo de parada informado pode bloquear os tempos de aula.",
+  ativ_alunos_so_apoio: "A quantidade de alunos só se informa no Apoio Individualizado.",
+  ativ_quantidade_alunos_positiva: "A quantidade de alunos tem de ser maior que zero.",
+  atividades_nao_letivas_tipo_parada_id_fkey: "O tipo de parada escolhido não está na lista.",
+  atividades_nao_letivas_tipo_atividade_id_fkey: "O tipo de atividade escolhido não está na lista.",
+  dpa_global_so_parte_do_dia:
+    "Parada de todas as turmas o dia inteiro é feriado: registre no calendário.",
+  dpa_tempos_coerentes: "Informe o primeiro tempo e quantos tempos param, ou nenhum dos dois.",
+  dias_parados_tipo_parada_id_fkey: "O tipo de parada escolhido não está na lista.",
+  dias_parados_motivo_check: "Escreva o motivo da parada (ao menos três letras).",
+  limite_unico:
+    "Este curso já tem limite ativo para esta categoria. Edite o existente em vez de criar outro.",
 };
 
 /**
@@ -281,6 +296,19 @@ function porChave(
       return contexto.cancelandoVigencia
         ? "Esta é a única vigência padrão do curso; registre a que a substitui."
         : "Todo curso tem regime de horário. Informe o regime padrão junto com o curso.";
+
+    // Spec 014, PR 1 (E-1): o tipo da atividade é da lista, e só os tipos com categoria servem.
+    case "tipo_de_atividade_inexistente":
+      return "O tipo de atividade escolhido não está na lista. Escolha um tipo da lista.";
+    case "tipo_de_atividade_sem_categoria":
+      return (
+        "Este tipo não é de atividade: aula, avaliação e vista se lançam como aula. " +
+        "Escolha um tipo de atividade."
+      );
+    case "categoria_de_tipo_invalida":
+      return "A categoria escolhida não é AEC, TAD, TR, Estudo Individual nem Apoio Individualizado.";
+    case "uso_de_tipo_invalido":
+      return "O uso do tipo não é reconhecido.";
 
     case "codigo_de_turma_divergente":
     case "codigo_de_turma_imutavel":
@@ -604,6 +632,9 @@ const NUMERACAO_INTERNA: Readonly<Record<string, string>> = {
   disciplinas_codigo_key: "a numeração das disciplinas",
   unidades_ensino_codigo_key: "a numeração das unidades de ensino",
   turma_disciplina_unidade_codigo_key: "a numeração da atribuição por unidade de ensino",
+  // Spec 014, PR 1: os dois códigos GERADOS da E-2 (`DPA-`, `FER-`).
+  dias_parados_codigo_key: "a numeração dos dias parados",
+  feriados_codigo_key: "a numeração do calendário",
 };
 
 /** Qual numeração interna estourou, se foi uma delas. */
