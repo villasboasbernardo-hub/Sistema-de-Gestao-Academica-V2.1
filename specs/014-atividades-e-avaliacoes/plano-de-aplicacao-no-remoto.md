@@ -94,4 +94,31 @@ Pré-requisitos, nesta ordem:
 
 ## Leva 2 — E-4, E-5, D-5, D-6, D-4, D-7 e a rodada do PR 6
 
+### As seis migrations do PR 4 (#51)
+
+✅ **APLICADAS NO REMOTO em 14/10/2026**, com as aprovações A4.1 a A4.6 de Bernardo Villas Boas
+(14/10/2026), e **mescladas na `main` por squash em `4180de9`** logo depois da conferência (congelamento T161: nenhuma
+rodada de sincronização entre o push e o merge).
+
+| Passo | Medido |
+|---|---|
+| CI do ramo | verde nos três blocos sobre `24a7c69` (run `38605247216`) |
+| `verificar:tudo` local | unidade **2.167** (151) · pgTAP **710** (50) · invariantes e RLS **305** (15) · ponta a ponta 454 casos: **445** passados, 6 pulados e 3 reprovados sob carga (`dsa-parar-dia`, `dsa-tipo-e-global`, `tema`) — os três **passam isolados**, o de tema em base limpa (6 de 6) |
+| Prova cruzada SQL × TS (T139) | 10 casos, duas vezes seguidas; o defeito plantado (`>=` no prazo) reprova no 7º dia |
+| Reversão (T154) | numa base descartável: `129d83d4…` (1.904) → `reversao-pr4.sql` → `9acfa39d…` (1.760), diff vazio contra a `main` |
+| «Antes» | cópia `remoto-20261014-144518.sql`, restaurada no local pela `main`, medida por `medir_leva2.sql` |
+| Ensaio | as seis, na ordem, sobre essa cópia: NOTICEs **D-5 10** (com a B-12) · **D-6 2** · **D-4 194** · **D-7 188 / 241 / 15 / 1 sem casamento**; as **28 turmas iguais** antes e depois; impressão digital `129d83d4…`, 1.904 objetos |
+| Backup imediatamente antes | **`remoto-20261014-144657.sql`** |
+| Dry-run | só as seis, na ordem E-4, E-5, D-5, D-6, D-4, D-7 |
+| `db push --linked` | saída **0** |
+| Migrations | **69 e 69**, nenhuma só de um lado |
+| Impressão digital | **`129d83d4ea6ba0629d5345342a860a6a`, 1.904 objetos, igual no local e no remoto** |
+| Dado depois (`remoto-20261014-144808.sql`) | **idêntico ao ensaio**, campo a campo do `medir_leva2`; as **28 turmas iguais ao antes**; 194 itens ativos; 241 sessões de vista; avaliações 192 pendentes · 188 `substituida_pela_planilha` · 4 canceladas; **0** policies de `DELETE` |
+| Production | `/login` e `/estilo` 200, as protegidas 307, antes e depois do push |
+
+⚠️ **O código da `main` antes do merge continuou compatível com o esquema novo**, medido antes de mesclar: ele lê
+`avaliacoes.data_vista_prova`, que a leva 2 **mantém** (a vista passou às sessões, e a coluna fica).
+
+### A rodada do PR 6
+
 [pendente]
