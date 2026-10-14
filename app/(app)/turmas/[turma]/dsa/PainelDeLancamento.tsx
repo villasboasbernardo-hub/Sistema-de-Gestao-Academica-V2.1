@@ -28,6 +28,8 @@
 
 import * as React from "react";
 
+import type { TipoOferecido } from "./leitura";
+
 import { GradeDsa } from "@/components/ciaara/grade-dsa";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,7 +78,9 @@ export type PainelDeLancamentoProps = {
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   readonly tiposDeAvaliacao: readonly string[];
-  readonly subtipos: readonly { readonly valor: string; readonly categoria: string | null }[];
+  readonly subtipos: readonly TipoOferecido[];
+  /** Quem tem `atividades_globais.criar` vê a caixa «todas as turmas» (spec 014, FR-014). */
+  readonly podeAtividadeGlobal?: boolean;
   readonly lancar: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly lancarEstudoIndividual: (entrada: unknown) => Promise<ResultadoDoEstudoIndividual>;
   /** As três do PR 4 — ausentes, a grade fica só de leitura. */
@@ -156,6 +160,7 @@ export function PainelDeLancamento({
   tecnicas,
   tiposDeAvaliacao,
   subtipos,
+  podeAtividadeGlobal = false,
   lancar,
   lancarEstudoIndividual,
   mover,
@@ -382,6 +387,7 @@ export function PainelDeLancamento({
               tecnicas={tecnicas}
               tiposDeAvaliacao={tiposDeAvaliacao}
               subtipos={subtipos}
+              podeAtividadeGlobal={podeAtividadeGlobal}
               lancar={lancar}
               aoFechar={() => definirCelula(null)}
             />

@@ -69,7 +69,7 @@ async function abrirASemana(page: Page): Promise<void> {
  * processo grava o seu na mesma quarta, então o motivo pode ser o de outro processo.
  */
 const RECUSA_DO_CALENDARIO =
-  /Dia bloqueado no calendário: Feriado de dia inteiro \S+\. Para lançar, ajuste o calendário\./;
+  /Dia bloqueado: Feriado de dia inteiro \S+\. Para lançar, desfaça a parada ou ajuste o calendário\./;
 
 async function idDaTurma(): Promise<string> {
   const { data } = await banco()

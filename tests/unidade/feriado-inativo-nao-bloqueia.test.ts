@@ -69,7 +69,12 @@ describe("regra 4 · toda leitura de `feriados` filtra o que está ativo", () =>
   });
 
   it("⚠️ nenhuma leitura devolve feriado inativo", () => {
+    /*
+     * ⚠️ Spec 014 (PR 2.1): «Parar dia» GRAVA em `feriados`. Um `.insert(` sem `.select(` não é leitura
+     *    — não devolve feriado nenhum —, e por isso só conta o que tem `.select(`.
+     */
     const semFiltro = leituras
+      .filter((l) => l.consulta.includes(".select("))
       .filter((l) => !/\.eq\(\s*"status"\s*,\s*"ativo"\s*\)/.test(l.consulta))
       .map((l) => l.arquivo.replaceAll("\\", "/"));
     expect(semFiltro, 'leitura de `feriados` sem `.eq("status", "ativo")`').toEqual([]);

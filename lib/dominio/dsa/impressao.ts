@@ -40,7 +40,7 @@
  * ESLint). A semana, o relógio, as siglas e a execução chegam **por parâmetro**.
  */
 
-import type { DiaDaGrade, Semana } from "./grade";
+import { rotuloDaParadaParcial, type DiaDaGrade, type Semana } from "./grade";
 import { slotDoEstudoIndividual, tempoDeAula, type Relogio, type Trecho } from "./horario-do-bloco";
 import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "./rotulos";
 
@@ -107,6 +107,18 @@ export type DiaImpresso = {
    * Individual **não** entra. Nos demais dias, os blocos e a linha de EI no fim.
    */
   readonly linhas: readonly LinhaImpressa[];
+  /**
+   * As paradas de PARTE do dia (spec 014, `FR-027`): os tempos delas saem marcados no papel com o
+   * tipo e o motivo, como na tela. A de dia inteiro já é o `bloqueio`.
+   */
+  readonly paradas?: readonly ParadaImpressa[];
+};
+
+/** Uma parada de parte do dia, no papel. */
+export type ParadaImpressa = {
+  readonly taInicial: number;
+  readonly tempos: number;
+  readonly rotulo: string;
 };
 
 /** Uma técnica de ensino do catálogo — `config_listas.metodologias`, com a sigla dos `metadados`. */
@@ -304,7 +316,17 @@ export function diaImpresso(
   }
 
   const ei = doEi ?? linhaFixaDoEstudoIndividual(dia.data, ultimoTa, entrada.relogio);
-  return { data: dia.data, bloqueio: null, linhas: ei === null ? comuns : [...comuns, ei] };
+  const paradas: ParadaImpressa[] = [];
+  for (const p of dia.paradas) {
+    if (p.taInicial === null || p.tempos === null) continue;
+    paradas.push({ taInicial: p.taInicial, tempos: p.tempos, rotulo: rotuloDaParadaParcial(p) });
+  }
+  return {
+    data: dia.data,
+    bloqueio: null,
+    linhas: ei === null ? comuns : [...comuns, ei],
+    ...(paradas.length === 0 ? {} : { paradas }),
+  };
 }
 
 /** O corpo do documento: os dias da semana, na ordem, já impressos. */

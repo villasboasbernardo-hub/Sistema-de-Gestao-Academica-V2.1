@@ -35,9 +35,19 @@ import { camposDoEstudoIndividual } from "@/lib/dominio/dsa/rotulos";
 import {
   motivoDoBloqueio,
   recusaDeAulaNoDia,
+  recusaDeAulaNoTempo,
+  paradaQueCobre,
+  rotuloDaParada,
+  type ParadaDoDia,
   type FeriadoDoCalendario,
 } from "@/lib/dominio/dsa/dia-bloqueado";
 import { recusaForaDaEtapa } from "@/lib/dominio/dsa/etapa-presencial";
+import {
+  categoriaPeloTipo,
+  recusaPelaCategoria,
+  type CategoriaDeAtividade,
+  type TipoDeAtividade,
+} from "@/lib/dominio/categoria-pelo-tipo";
 import { avisoDoEmpurrao, empurrarEmCascata, ultimoTempoDoDia } from "@/lib/dominio/dsa/empurrar";
 import type { Json } from "@/lib/tipos/database";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
@@ -297,18 +307,88 @@ async function recusaDoCalendario(
   supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
   data: string,
   dataAtual: string | null = null,
+  alvo: { turmaId: string; taInicial: number | null; tempos: number | null } | null = null,
 ): Promise<string | null> {
-  const { data: linhas } = await supabase
-    .from("feriados")
-    .select("data, descricao, impacto, status")
-    .eq("data", data)
-    .eq("status", "ativo");
-  return recusaDeAulaNoDia({
-    data,
-    dataAtual,
-    feriados: (linhas ?? []) as FeriadoDoCalendario[],
-  });
+  const [{ data: linhas }, paradas] = await Promise.all([
+    supabase
+      .from("feriados")
+      .select("data, descricao, impacto, status")
+      .eq("data", data)
+      .eq("status", "ativo"),
+    alvo === null ? Promise.resolve([] as ParadaDoDia[]) : paradasDoPeriodo(supabase, data, data),
+  ]);
+  const feriados = (linhas ?? []) as FeriadoDoCalendario[];
+  if (alvo === null) return recusaDeAulaNoDia({ data, dataAtual, feriados });
+  return recusaDeAulaNoTempo({ data, dataAtual, feriados, paradas, ...alvo });
 }
+
+/**
+ * As paradas que bloqueiam aula no período (spec 014, emenda D-AA-13): os dias parados ativos (da
+ * turma ou globais) e os TR com `bloqueia_aula`. A RLS recorta as da turma ao alcance de quem lê.
+ */
+async function paradasDoPeriodo(
+  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+  de: string,
+  ate: string,
+): Promise<ParadaDoDia[]> {
+  const [dias, trs] = await Promise.all([
+    supabase
+      .from("dias_parados")
+      .select(
+        "data, turma_id, ta_inicial, tempos, motivo, status, tipo:config_listas!dias_parados_tipo_parada_id_fkey(valor)",
+      )
+      .eq("status", "ativo")
+      .gte("data", de)
+      .lte("data", ate),
+    supabase
+      .from("atividades_nao_letivas")
+      .select("id, data, turma_id, ta_inicial, tempos_consumidos, descricao, status")
+      .eq("status", "ativo")
+      .eq("bloqueia_aula", true)
+      .gte("data", de)
+      .lte("data", ate),
+  ]);
+  return [
+    ...((dias.data ?? []) as unknown as LinhaDeDiaParado[]).map((d) => ({
+      data: d.data,
+      turmaId: d.turma_id,
+      taInicial: d.ta_inicial,
+      tempos: d.tempos,
+      tipo: d.tipo?.valor ?? "NT",
+      motivo: d.motivo,
+      status: d.status,
+    })),
+    ...((trs.data ?? []) as unknown as LinhaDeTrBloqueante[]).map((t) => ({
+      data: t.data,
+      turmaId: t.turma_id,
+      taInicial: t.ta_inicial,
+      tempos: t.tempos_consumidos,
+      tipo: "TR",
+      motivo: t.descricao,
+      status: t.status,
+      fatoId: t.id,
+    })),
+  ];
+}
+
+type LinhaDeDiaParado = {
+  data: string;
+  turma_id: string | null;
+  ta_inicial: number | null;
+  tempos: number | null;
+  motivo: string;
+  status: string;
+  tipo: { valor: string } | null;
+};
+type LinhaDeTrBloqueante = {
+  id: string;
+  data: string;
+  turma_id: string | null;
+  ta_inicial: number | null;
+  tempos_consumidos: number | null;
+  descricao: string;
+  status: string;
+};
 
 /**
  * O porteiro da etapa presencial (`D-DSA-2`, decisão de Bernardo Villas Boas de 08/10/2026): turma
@@ -384,7 +464,8 @@ async function cascataDaTurma(
   | { readonly ok: false; readonly mensagem: string }
 > {
   if (entrada.turmaId === null) return { ok: true, operacoes: [], aviso: null };
-  const [ocupacaoRes, regimeRes] = await Promise.all([
+  const turmaId = entrada.turmaId;
+  const [ocupacaoRes, regimeRes, paradas, apoiosRes] = await Promise.all([
     supabase
       .from("vw_ocupacao_ta")
       .select("fato_id, origem, ta_inicial, tempos_consumidos, disciplina_id")
@@ -397,7 +478,25 @@ async function cascataDaTurma(
           .select("regime_padrao_tempos")
           .eq("curso_id", entrada.cursoId)
           .maybeSingle(),
+    paradasDoPeriodo(supabase, entrada.data, entrada.data),
+    supabase
+      .from("atividades_nao_letivas")
+      .select("id")
+      .eq("turma_id", turmaId)
+      .eq("data", entrada.data)
+      .eq("categoria_normativa", "Apoio_Individualizado")
+      .eq("status", "ativo"),
   ]);
+  /*
+   * ⚠️ O APOIO INDIVIDUALIZADO CONVIVE COM A AULA NO MESMO TEMPO (spec 014, A-6): não empurra e não é
+   *    empurrado — alunos diferentes, atividades diferentes.
+   */
+  const apoios = new Set(((apoiosRes.data ?? []) as { id: string }[]).map((a) => a.id));
+  if (entrada.fatoId !== undefined && apoios.has(entrada.fatoId))
+    return { ok: true, operacoes: [], aviso: null };
+  // O tempo parado é PAREDE (spec 014, FR-028): a parada da turma ou global não se empurra.
+  const daTurma = paradas.filter((p) => p.turmaId === null || p.turmaId === turmaId);
+  const naoEmpurraveis = new Set(daTurma.map((p) => p.fatoId).filter((f) => f !== undefined));
   const linhas = (
     (ocupacaoRes.data ?? []) as {
       fato_id: string;
@@ -406,7 +505,13 @@ async function cascataDaTurma(
       tempos_consumidos: number | null;
       disciplina_id: string | null;
     }[]
-  ).filter((l) => l.ta_inicial !== null && l.fato_id !== entrada.fatoId);
+  ).filter(
+    (l) =>
+      l.ta_inicial !== null &&
+      l.fato_id !== entrada.fatoId &&
+      !naoEmpurraveis.has(l.fato_id) &&
+      !apoios.has(l.fato_id),
+  );
 
   const ids = [
     ...new Set(linhas.map((l) => l.disciplina_id).filter((d): d is string => d !== null)),
@@ -444,6 +549,11 @@ async function cascataDaTurma(
         null,
     ),
     data: entrada.data,
+    paredes: daTurma.map((p) => ({
+      rotulo: rotuloDaParada(p),
+      taInicial: p.taInicial,
+      tempos: p.tempos,
+    })),
   });
   if (resultado.tipo === "recusa") return { ok: false, mensagem: resultado.mensagem };
 
@@ -511,12 +621,41 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
   if (daEtapa !== null) return falha(daEtapa);
 
   /*
+   * ⚠️ **SPEC 014, FR-011: A CATEGORIA DA ATIVIDADE SAI DO TIPO.** Lê o tipo escolhido, deriva a
+   * categoria pela mesma regra do banco e confere as regras que dependem dela antes de gravar.
+   */
+  let categoriaDaAtividade: CategoriaDeAtividade | null = null;
+  if (bloco.tipo === "atividade") {
+    const { data: tipoLido } = await supabase
+      .from("config_listas")
+      .select("id, valor, ativo, metadados")
+      .eq("id", bloco.tipoAtividadeId)
+      .eq("lista", "tipos_atividade")
+      .maybeSingle();
+    categoriaDaAtividade =
+      tipoLido === null || tipoLido.ativo === false
+        ? null
+        : categoriaPeloTipo(tipoLido as unknown as TipoDeAtividade);
+    if (categoriaDaAtividade === null) {
+      return falha("Escolha um tipo de atividade da lista.", "tipoAtividadeId");
+    }
+    const recusa = recusaPelaCategoria({
+      categoria: categoriaDaAtividade,
+      turmaId: bloco.turmaId,
+      disciplinaId: bloco.disciplinaId,
+      quantidadeAlunos: bloco.quantidadeAlunos,
+    });
+    if (recusa !== null) return falha(recusa.mensagem, recusa.campo);
+  }
+
+  /*
    * ⚠️ **`D-DSA-3`: O BLOCO NOVO EMPURRA OS SEGUINTES** (decisão de Bernardo Villas Boas, 08/10/2026,
    * no lugar do aviso de sobreposição). Não cabendo, recusa ANTES de gravar qualquer coisa; cabendo, o
    * lançamento e os empurrados vão numa transação só (`gravarBloco`).
    */
   const cascata = await cascataDaTurma(supabase, {
-    turmaId: bloco.turmaId,
+    /* O Apoio convive com a aula no mesmo tempo (A-6): não empurra ninguém. */
+    turmaId: categoriaDaAtividade === "Apoio_Individualizado" ? null : bloco.turmaId,
     cursoId: "cursoId" in bloco ? bloco.cursoId : null,
     data: bloco.data,
     taInicial: bloco.taInicial,
@@ -556,7 +695,11 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
 
   if (bloco.tipo === "aula") {
     /* ⚠️ `RN-EVT-04`: o dia vem antes de tudo — se o calendário o bloqueia, nada mais importa. */
-    const doCalendario = await recusaDoCalendario(supabase, bloco.data);
+    const doCalendario = await recusaDoCalendario(supabase, bloco.data, null, {
+      turmaId: bloco.turmaId,
+      taInicial: bloco.taInicial,
+      tempos: bloco.tempos,
+    });
     if (doCalendario !== null) return falha(doCalendario);
 
     const disciplinaId = await disciplinaDoBloco(supabase, bloco);
@@ -664,11 +807,12 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
   const erro = await gravarBloco("atividades_nao_letivas", {
     id,
     codigo: `${marca}-N`,
-    categoria_normativa: bloco.categoria,
+    /* O banco deriva de novo pelo tipo (`app.categoria_pelo_tipo`); aqui vai a mesma. */
+    categoria_normativa: categoriaDaAtividade,
+    tipo_atividade_id: bloco.tipoAtividadeId,
     escopo: bloco.turmaId === null ? "global" : "turma",
     turma_id: bloco.turmaId,
     data: bloco.data,
-    subtipo: bloco.subtipo,
     descricao: bloco.descricao,
     ta_inicial: bloco.taInicial,
     tempos_consumidos: bloco.tempos,
@@ -677,6 +821,7 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     responsavel_externo: bloco.responsavelExterno,
     /* A disciplina OPCIONAL da AEC (item 1b, 08/10/2026); o banco confere que é do curso da turma. */
     disciplina_id: bloco.disciplinaId,
+    quantidade_alunos: bloco.quantidadeAlunos,
   });
   if (erro !== null) return falha(erro);
   revalidar();
@@ -720,7 +865,7 @@ export async function lancarEstudoIndividualDaSemana(
   }
 
   /* ⚠️ Uma rodada só: nenhum `await` dentro de laço. */
-  const [ocupacaoRes, feriadosRes, eiRes, turmaRes] = await Promise.all([
+  const [ocupacaoRes, feriadosRes, eiRes, turmaRes, paradas] = await Promise.all([
     supabase
       .from("vw_ocupacao_ta")
       .select("data, ta_final")
@@ -747,6 +892,7 @@ export async function lancarEstudoIndividualDaSemana(
       .select("modalidade, inicio_etapa_presencial, termino_etapa_presencial")
       .eq("id", turmaId)
       .maybeSingle(),
+    paradasDoPeriodo(supabase, de, ate),
   ]);
 
   /* ⚠️ O dia bloqueado é o da MESMA função da grade e da recusa de aula (`RN-EVT-04`). */
@@ -789,6 +935,11 @@ export async function lancarEstudoIndividualDaSemana(
     }
     const slot = slotDoEstudoIndividual(ultimoTaDoDia.get(dia) ?? null);
     if (slot === null) {
+      pulados.push(dia);
+      continue;
+    }
+    // ⚠️ Spec 014: o EI automático não cai em tempo parado (dia parado ou TR bloqueante).
+    if (paradaQueCobre(paradas, { data: dia, turmaId, taInicial: slot, tempos: 1 }) !== null) {
       pulados.push(dia);
       continue;
     }
@@ -1140,7 +1291,11 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
   const mudouTamanho = tempos !== fato.tempos;
 
   if (a.origem === "aula") {
-    const doCalendario = await recusaDoCalendario(supabase, data, fato.data);
+    const doCalendario = await recusaDoCalendario(supabase, data, fato.data, {
+      turmaId: fato.turmaId ?? "",
+      taInicial,
+      tempos,
+    });
     if (doCalendario !== null) return falha(doCalendario);
   }
   if (mudouDia) {

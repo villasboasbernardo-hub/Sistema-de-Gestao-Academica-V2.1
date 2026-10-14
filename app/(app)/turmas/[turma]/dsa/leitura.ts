@@ -36,6 +36,7 @@
  * 09/10/2026: com 1.114 TA numa turma, o teto de 1.000 linhas fazia o rodapé e o painel dizerem 1.004
  * e o nº do DSA errar em 3 a 4 semanas — sem erro nenhum na tela.
  */
+import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
 import { escalaDeLinhas, type EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import {
   detectarConflitos,
@@ -43,10 +44,19 @@ import {
   type OcupacaoDeTa,
   type OcupacaoPropria,
 } from "@/lib/dominio/dsa/conflitos";
+import {
+  categoriaPeloTipo,
+  tiposOferecidos,
+  type TipoDeAtividade,
+} from "@/lib/dominio/categoria-pelo-tipo";
 import { montarSemana, type FatoDaSemana, type Semana } from "@/lib/dominio/dsa/grade";
 import { relogioDaSemana, type Relogio } from "@/lib/dominio/dsa/horario-do-bloco";
 import type { ExecucaoDaDisciplina, TecnicaDoCatalogo } from "@/lib/dominio/dsa/impressao";
-import { conteudoDaAvaliacao, tecnicaDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
+import {
+  conteudoDaAtividade,
+  conteudoDaAvaliacao,
+  tecnicaDaVistaDeProva,
+} from "@/lib/dominio/dsa/rotulos";
 import type { ResponsavelDoCurso } from "@/lib/dominio/dsa/assinaturas";
 import { nomeParaDsa, type InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { emOrdemNaturalDoCodigo } from "@/lib/dominio/ordem-natural";
@@ -79,6 +89,13 @@ import {
 type ClienteDeServidor = Awaited<ReturnType<typeof criarClienteDeServidor>>;
 
 /** Uma unidade de ensino oferecida à turma, com a CH prevista, a lançada e a restante (`P-3`). */
+/** Um tipo de atividade oferecido, com a categoria que ele dá (spec 014, FR-011). */
+export type TipoOferecido = {
+  readonly id: string;
+  readonly valor: string;
+  readonly categoria: string;
+};
+
 export type UnidadeLida = {
   readonly id: string;
   readonly disciplinaId: string;
@@ -145,7 +162,11 @@ export type SemanaDoDsa = {
   /** As técnicas **com a sigla** dos `metadados` — o que a coluna T/E do papel usa (`T040`). */
   readonly tecnicasComSigla: readonly TecnicaDoCatalogo[];
   readonly tiposDeAvaliacao: readonly string[];
-  readonly subtipos: readonly { readonly valor: string; readonly categoria: string | null }[];
+  /**
+   * Os TIPOS de atividade que o formulário oferece (spec 014, FR-011): ativos e com categoria, pela
+   * mesma regra do banco (`categoriaPeloTipo`). A categoria vem do tipo, nunca o contrário.
+   */
+  readonly subtipos: readonly TipoOferecido[];
   /**
    * Os fatos que são **Estudo Individual**, por `id`.
    *
@@ -188,6 +209,10 @@ export type DadosDoPeriodo = {
   readonly atividades: readonly unknown[];
   readonly vigencias: readonly unknown[];
   readonly feriados: readonly unknown[];
+  /** Spec 014: os dias parados (da turma e globais) e os TR bloqueantes do período. */
+  readonly diasParados?: readonly unknown[];
+  readonly trsBloqueantes?: readonly unknown[];
+  readonly turmaId?: string;
   readonly curso: unknown;
   readonly disciplinas: readonly unknown[];
   readonly ueExecucao: readonly unknown[];
@@ -269,6 +294,8 @@ export async function lerPeriodoDoDsa(
     curriculoRes,
     aulasPorUeRes,
     conflitosRes,
+    diasParadosRes,
+    trsBloqueantesRes,
   ] = await Promise.all([
     /* ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`). */
     lerTodasAsPaginas((f) =>
@@ -305,7 +332,7 @@ export async function lerPeriodoDoDsa(
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
-        .neq("status", "cancelada")
+        .in("status", [...STATUS_DE_AVALIACAO_VIVA])
         .or(
           `and(data_avaliacao.gte.${de},data_avaliacao.lte.${ate}),and(data_vista_prova.gte.${de},data_vista_prova.lte.${ate})`,
         )
@@ -316,7 +343,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("atividades_nao_letivas")
         .select(
-          "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id",
+          "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id, bloqueia_aula",
           contagemNaPrimeira(f),
         )
         .or(`turma_id.eq.${turmaId},turma_id.is.null`)
@@ -382,7 +409,7 @@ export async function lerPeriodoDoDsa(
     lerTodasAsPaginas((f) =>
       supabase
         .from("config_listas")
-        .select("lista, valor, ordem, ativo, metadados", contagemNaPrimeira(f))
+        .select("id, lista, valor, ordem, ativo, metadados", contagemNaPrimeira(f))
         .in("lista", ["metodologias", "tipos_avaliacao", "tipos_atividade", "escala_antiguidade"])
         .eq("ativo", true)
         .order("ordem")
@@ -441,7 +468,7 @@ export async function lerPeriodoDoDsa(
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
-        .neq("status", "cancelada")
+        .in("status", [...STATUS_DE_AVALIACAO_VIVA])
         .order("data_avaliacao")
         .order("codigo")
         .range(f.de, f.ate),
@@ -506,6 +533,27 @@ export async function lerPeriodoDoDsa(
             .range(f.de, f.ate),
         )
       : Promise.resolve({ data: [], error: null }),
+    /*
+     * ⚠️ **SPEC 014 (emenda D-AA-13): AS PARADAS DA SEMANA** — os dias parados da turma e os globais
+     *    (`turma_id` nulo) e os TR com `bloqueia_aula`. A grade os marca; a Server Action recusa aula.
+     */
+    supabase
+      .from("dias_parados")
+      .select(
+        "codigo, data, turma_id, ta_inicial, tempos, motivo, status, tipo:config_listas!dias_parados_tipo_parada_id_fkey(valor)",
+      )
+      .eq("status", "ativo")
+      .or(`turma_id.eq.${turmaId},turma_id.is.null`)
+      .gte("data", de)
+      .lte("data", ate),
+    supabase
+      .from("atividades_nao_letivas")
+      .select("codigo, data, turma_id, ta_inicial, tempos_consumidos, descricao, status")
+      .eq("status", "ativo")
+      .eq("bloqueia_aula", true)
+      .or(`turma_id.eq.${turmaId},turma_id.is.null`)
+      .gte("data", de)
+      .lte("data", ate),
   ]);
 
   const erros: { lista: string; mensagem: string }[] = [];
@@ -552,6 +600,9 @@ export async function lerPeriodoDoDsa(
     aulasPorUe: listaOuVazia(aulasPorUeRes, erros, "aulas por UE"),
     catalogo: listaOuVazia(catalogoRes, erros, "catálogo de horários"),
     conflitos: listaOuVazia(conflitosRes, erros, "conflitos"),
+    diasParados: listaOuVazia(diasParadosRes, erros, "dias parados"),
+    trsBloqueantes: listaOuVazia(trsBloqueantesRes, erros, "TR bloqueantes"),
+    turmaId,
     erros,
   };
 }
@@ -679,6 +730,7 @@ export function montarSemanaDoDsa(
    * técnica dela é a do catálogo cuja sigla é `EO`, e não a da aplicação, com quem divide a linha.
    */
   const listas = (listasRes.data ?? []) as {
+    id: string;
     lista: string;
     valor: string;
     ordem: number;
@@ -738,6 +790,7 @@ export function montarSemanaDoDsa(
     descricao: string | null;
     responsavel_externo: string | null;
     disciplina_id: string | null;
+    bloqueia_aula: boolean | null;
   }[];
   for (const n of atividades) {
     /*
@@ -745,7 +798,14 @@ export function montarSemanaDoDsa(
      * não o imprime na coluna T/E — ver `diaImpresso`, que trata a origem não letiva à parte.
      */
     conteudos.set(n.id, {
-      conteudo: n.descricao,
+      /* ⚠️ O Apoio e o TR bloqueante saem MARCADOS (spec 014, FR-019 e FR-027); o editor, com o gravado. */
+      conteudo: conteudoDaAtividade({
+        descricao: n.descricao,
+        categoria: n.categoria_normativa,
+        bloqueiaAula: n.bloqueia_aula,
+      }),
+      conteudoGravado: n.descricao,
+      apoio: n.categoria_normativa === "Apoio_Individualizado",
       tecnica: n.subtipo,
       externo: n.responsavel_externo,
       /* A disciplina OPCIONAL da AEC (item 1b): só para exibir — ela não entra na CH da disciplina. */
@@ -846,6 +906,11 @@ export function montarSemanaDoDsa(
     marcas: marcasDeConflito,
     hoje: entrada.hoje,
     sabadoAberto: janela.sabadoAberto,
+    ...(dados.turmaId ? { turmaId: dados.turmaId } : {}),
+    paradas: paradasDaSemana(
+      (dados.diasParados ?? []).filter((l) => naSemana(campo(l, "data"))),
+      (dados.trsBloqueantes ?? []).filter((l) => naSemana(campo(l, "data"))),
+    ),
   });
 
   const atribuicaoPorUe = new Map(
@@ -952,10 +1017,14 @@ export function montarSemanaDoDsa(
     tecnicas: metodologias.map((l) => l.valor),
     tecnicasComSigla,
     tiposDeAvaliacao: daLista("tipos_avaliacao").map((l) => l.valor),
-    subtipos: daLista("tipos_atividade").map((l) => ({
-      valor: l.valor,
-      categoria: (l.metadados?.["categoria"] as string | undefined) ?? null,
-    })),
+    subtipos: tiposOferecidos(
+      daLista("tipos_atividade").map((l) => ({
+        id: l.id,
+        valor: l.valor,
+        ativo: true,
+        metadados: (l.metadados ?? null) as TipoDeAtividade["metadados"],
+      })),
+    ).map((t) => ({ id: t.id, valor: t.valor, categoria: categoriaPeloTipo(t) as string })),
     idsDeEstudoIndividual,
     marcasDeConflito,
     ocupacaoAcumulada: (
@@ -1114,7 +1183,7 @@ export async function lerExtrasDaImpressao(
         .from("avaliacoes")
         .select("data_avaliacao", contagemNaPrimeira(f))
         .eq("turma_id", entrada.turmaId)
-        .neq("status", "cancelada")
+        .in("status", [...STATUS_DE_AVALIACAO_VIVA])
         .not("ta_inicial", "is", null)
         .order("codigo")
         .range(f.de, f.ate),
@@ -1185,4 +1254,54 @@ export async function lerExtrasDaImpressao(
   ];
 
   return { execucao, responsaveis, datasComLancamentoDaTurma: datas };
+}
+
+/** As paradas da semana no formato do domínio (spec 014). Só tira coluna de linha. */
+function paradasDaSemana(
+  dias: readonly unknown[],
+  trs: readonly unknown[],
+): import("@/lib/dominio/dsa/dia-bloqueado").ParadaDoDia[] {
+  type D = {
+    codigo: string;
+    data: string;
+    turma_id: string | null;
+    ta_inicial: number | null;
+    tempos: number | null;
+    motivo: string;
+    status: string;
+    tipo: { valor: string } | null;
+  };
+  type T = {
+    codigo: string;
+    data: string;
+    turma_id: string | null;
+    ta_inicial: number | null;
+    tempos_consumidos: number | null;
+    descricao: string;
+    status: string;
+  };
+  return [
+    ...(dias as D[]).map((d) => ({
+      data: d.data,
+      turmaId: d.turma_id,
+      taInicial: d.ta_inicial,
+      tempos: d.tempos,
+      tipo: d.tipo?.valor ?? "NT",
+      motivo: d.motivo,
+      status: d.status,
+      destino: "dia_parado" as const,
+      codigo: d.codigo,
+    })),
+    ...(trs as T[]).map((t) => ({
+      data: t.data,
+      turmaId: t.turma_id,
+      taInicial: t.ta_inicial,
+      tempos: t.tempos_consumidos,
+      tipo: "TR",
+      motivo: t.descricao,
+      status: t.status,
+      destino: "atividade" as const,
+      codigo: t.codigo,
+    })),
+  ];
 }

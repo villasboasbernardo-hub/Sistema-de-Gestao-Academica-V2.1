@@ -164,9 +164,6 @@ const vistaProva = z.object({
   local: textoOuNulo,
 });
 
-/** As quatro categorias normativas, como o ENUM do banco as escreve. */
-export const CATEGORIAS_NAO_LETIVAS = ["AEC", "TAD", "TR", "Estudo_Individual"] as const;
-
 const atividade = z
   .object({
     tipo: z.literal("atividade"),
@@ -175,9 +172,12 @@ const atividade = z
     taInicial: ta,
     tempos,
     local: textoOuNulo,
-    categoria: z.enum(CATEGORIAS_NAO_LETIVAS),
-    /* O subtipo vem da lista administrável — **nunca** sigla de duas letras digitada (`P-1.3`). */
-    subtipo: z.string().trim().min(1, "Escolha o subtipo da atividade."),
+    /*
+     * ⚠️ **O TIPO, E NÃO A CATEGORIA** (spec 014, FR-011, `RF-EXTRA-01` emendada): o tipo vem da lista
+     * administrável e a categoria sai dele, no banco (`app.categoria_pelo_tipo`) e na ação
+     * (`categoriaPeloTipo`). As regras que dependem da categoria moram em `recusaPelaCategoria`.
+     */
+    tipoAtividadeId: z.string().uuid("Escolha o tipo da atividade."),
     descricao: z.string().trim().min(1, "Escreva o que é a atividade."),
     instrutorId: uuid.nullable(),
     responsavelExterno: textoOuNulo,
@@ -187,15 +187,16 @@ const atividade = z
      * `ativ_disciplina_so_aec_da_turma`; o esquema as repete para a recusa chegar como frase.
      */
     disciplinaId: uuid.nullable().default(null),
+    /* Spec 014, FR-020: a quantidade de alunos do Apoio, opcional (não há cadastro de alunos). */
+    quantidadeAlunos: z
+      .number()
+      .int("A quantidade de alunos é um número inteiro.")
+      .min(1, "A quantidade de alunos é ao menos 1.")
+      .max(999, "A quantidade de alunos vai até 999.")
+      .nullable()
+      .default(null),
   })
   .superRefine((v, ctx) => {
-    if (v.disciplinaId !== null && v.categoria !== "AEC") {
-      ctx.addIssue({
-        code: "custom",
-        path: ["disciplinaId"],
-        message: "Só a AEC leva disciplina.",
-      });
-    }
     if (v.disciplinaId !== null && v.turmaId === null) {
       ctx.addIssue({
         code: "custom",
@@ -208,18 +209,6 @@ const atividade = z
         code: "custom",
         path: ["responsavelExterno"],
         message: "Escolha um instrutor do cadastro ou escreva o responsável de fora, não os dois.",
-      });
-    }
-    /*
-     * ⚠️ **ESTUDO INDIVIDUAL É SEMPRE DE TURMA** (`V-5`): o banco tem o `CHECK`
-     * `ativ_estudo_individual_de_turma` desde o PR B, e o esquema o repete para a recusa chegar
-     * como frase em vez de `23514`.
-     */
-    if (v.categoria === "Estudo_Individual" && v.turmaId === null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["turmaId"],
-        message: "Estudo Individual é sempre de uma turma.",
       });
     }
   });

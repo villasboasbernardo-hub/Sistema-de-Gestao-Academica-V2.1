@@ -29,6 +29,8 @@
 
 import * as React from "react";
 
+import type { TipoOferecido } from "./leitura";
+
 import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,12 +101,21 @@ export type FormularioDeLancamentoProps = {
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   readonly tiposDeAvaliacao: readonly string[];
-  readonly subtipos: readonly { readonly valor: string; readonly categoria: string | null }[];
+  readonly subtipos: readonly TipoOferecido[];
+  readonly podeAtividadeGlobal?: boolean;
   readonly lancar: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly aoFechar: () => void;
 };
 
-type Tipo = "aula" | "avaliacao" | "vista_prova" | "AEC" | "TAD" | "TR" | "Estudo_Individual";
+type Tipo =
+  | "aula"
+  | "avaliacao"
+  | "vista_prova"
+  | "AEC"
+  | "TAD"
+  | "TR"
+  | "Estudo_Individual"
+  | "Apoio_Individualizado";
 
 const TIPOS: readonly (readonly [Tipo, string])[] = [
   ["aula", "Aula"],
@@ -114,9 +125,25 @@ const TIPOS: readonly (readonly [Tipo, string])[] = [
   ["TAD", "TAD"],
   ["TR", "TR"],
   ["Estudo_Individual", "Estudo Individual"],
+  ["Apoio_Individualizado", "Apoio Individualizado"],
 ];
 
-const NAO_LETIVOS: ReadonlySet<Tipo> = new Set<Tipo>(["AEC", "TAD", "TR", "Estudo_Individual"]);
+const NAO_LETIVOS: ReadonlySet<Tipo> = new Set<Tipo>([
+  "AEC",
+  "TAD",
+  "TR",
+  "Estudo_Individual",
+  "Apoio_Individualizado",
+]);
+
+/** O rótulo da categoria que o tipo dá, mostrado antes de gravar (spec 014, FR-011). */
+const ROTULO_DA_CATEGORIA: Readonly<Record<string, string>> = {
+  AEC: "AEC",
+  TAD: "TAD",
+  TR: "TR",
+  Estudo_Individual: "Estudo Individual (fora da CHT)",
+  Apoio_Individualizado: "Apoio Individualizado — alunos específicos (fora da CHT)",
+};
 
 /** O alerta do item 1c, com as palavras do comando de 08/10/2026. */
 export const ALERTA_SEM_UNIDADE =
@@ -137,6 +164,7 @@ export function FormularioDeLancamento({
   tecnicas,
   tiposDeAvaliacao,
   subtipos,
+  podeAtividadeGlobal = false,
   lancar,
   aoFechar,
 }: FormularioDeLancamentoProps) {
@@ -157,6 +185,8 @@ export function FormularioDeLancamento({
   const [subtipo, definirSubtipo] = React.useState("");
   const [descricao, definirDescricao] = React.useState("");
   const [responsavelExterno, definirResponsavelExterno] = React.useState("");
+  const [todasAsTurmas, definirTodasAsTurmas] = React.useState(false);
+  const [quantidadeAlunos, definirQuantidadeAlunos] = React.useState("");
   const [recusa, definirRecusa] = React.useState<string | null>(null);
   const [avisos, definirAvisos] = React.useState<readonly { codigo: string; texto: string }[]>([]);
   const [gravando, definirGravando] = React.useState(false);
@@ -170,6 +200,7 @@ export function FormularioDeLancamento({
   function escolherTipo(novo: Tipo): void {
     definirTipo(novo);
     definirSubtipo("");
+    if (novo === "Estudo_Individual") definirTodasAsTurmas(false);
     definirUnidade("");
     definirAvaliacao("");
     /* Disciplina só existe em aula, avaliação, vista e AEC. */
@@ -245,16 +276,24 @@ export function FormularioDeLancamento({
     if (tipo === "vista_prova") {
       return { tipo: "vista_prova", ...comum, avaliacaoId };
     }
+    const global = podeAtividadeGlobal && todasAsTurmas && tipo !== "Estudo_Individual";
     return {
       tipo: "atividade",
       ...comum,
-      categoria: tipo,
-      subtipo,
+      /* ⚠️ Spec 014, FR-014: «todas as turmas» grava com a turma nula (escopo global). */
+      turmaId: global ? null : turmaId,
+      /* ⚠️ Spec 014, FR-011: o TIPO; a categoria é do banco, pelo tipo. */
+      tipoAtividadeId: subtipo,
       descricao,
       instrutorId: nulo(quemMinistra),
       responsavelExterno: texto(responsavelExterno),
       /* A disciplina da AEC é opcional, e só da AEC (item 1b). */
-      disciplinaId: tipo === "AEC" ? nulo(disciplinaId) : null,
+      disciplinaId: tipo === "AEC" && !global ? nulo(disciplinaId) : null,
+      /* A quantidade de alunos, opcional, só no Apoio (FR-020). */
+      quantidadeAlunos:
+        tipo === "Apoio_Individualizado" && quantidadeAlunos.trim() !== ""
+          ? Number(quantidadeAlunos)
+          : null,
     };
   }
 
@@ -276,6 +315,7 @@ export function FormularioDeLancamento({
 
   /* Os subtipos filtram por categoria — é o que a `H2` do analyze pôs em `metadados.categoria`. */
   const subtiposDoTipo = subtipos.filter((s) => s.categoria === tipo);
+  const tipoEscolhido = subtipos.find((s) => s.id === subtipo);
 
   return (
     <form
@@ -311,15 +351,47 @@ export function FormularioDeLancamento({
          * ⚠️ **O SUBTIPO VEM DA LISTA ADMINISTRÁVEL, FILTRADA PELA CATEGORIA** (`H2`), e nenhuma sigla
          * de duas letras entra: a planilha usa `AD`, `TR`, `FR` com sentidos que mudam entre cursos.
          */
-        <EscolhaSimples
-          id="dsa-subtipo"
-          rotulo="Subtipo"
-          obrigatorio
-          textoVazio="Escolha o subtipo…"
-          valor={subtipo}
-          aoMudar={definirSubtipo}
-          opcoes={subtiposDoTipo.map((s) => ({ valor: s.valor, rotulo: s.valor }))}
-        />
+        <div className="flex flex-col gap-1">
+          <EscolhaSimples
+            id="dsa-subtipo"
+            rotulo="Tipo de atividade"
+            obrigatorio
+            textoVazio="Escolha o tipo…"
+            valor={subtipo}
+            aoMudar={definirSubtipo}
+            opcoes={subtiposDoTipo.map((s) => ({ valor: s.id, rotulo: s.valor }))}
+          />
+          {/* ⚠️ Spec 014, FR-011: a categoria que o tipo dá aparece ANTES de gravar. */}
+          {tipoEscolhido ? (
+            <p className="text-texto-suave text-xs" data-slot="categoria-do-tipo">
+              Conta como: {ROTULO_DA_CATEGORIA[tipoEscolhido.categoria] ?? tipoEscolhido.categoria}
+            </p>
+          ) : null}
+          {podeAtividadeGlobal && tipo !== "Estudo_Individual" ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={todasAsTurmas}
+                onChange={(e) => definirTodasAsTurmas(e.target.checked)}
+                data-slot="atividade-de-todas-as-turmas"
+              />
+              Todas as turmas (com DSA nesta data)
+            </label>
+          ) : null}
+          {tipo === "Apoio_Individualizado" ? (
+            <label className="flex flex-col gap-1 text-sm">
+              <span>Quantos alunos (opcional)</span>
+              <Input
+                id="dsa-quantidade-alunos"
+                type="number"
+                min={1}
+                max={999}
+                value={quantidadeAlunos}
+                onChange={(e) => definirQuantidadeAlunos(e.target.value)}
+              />
+            </label>
+          ) : null}
+        </div>
       ) : null}
 
       {/* b) A DISCIPLINA — obrigatória em aula, avaliação e vista; opcional na AEC. */}
@@ -490,7 +562,9 @@ export function FormularioDeLancamento({
       {naoLetivo ? (
         <div className="flex flex-col gap-1">
           {/* ⚠️ `Q-8`: a coluna da planilha traz entidade (`DOEP`, `NAS`) e palestrante externo. */}
-          <Label htmlFor="dsa-responsavel-externo">Responsável de fora (opcional)</Label>
+          <Label htmlFor="dsa-responsavel-externo">
+            Entidade ou palestrante externo (opcional)
+          </Label>
           <Input
             id="dsa-responsavel-externo"
             value={responsavelExterno}

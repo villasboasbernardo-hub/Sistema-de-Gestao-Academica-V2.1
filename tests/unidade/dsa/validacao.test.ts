@@ -185,8 +185,7 @@ describe("`RF-EXTRA-01` e `Q-8` · a atividade não letiva", () => {
     taInicial: 1,
     tempos: 2,
     local: null,
-    categoria: "AEC" as const,
-    subtipo: "Palestra",
+    tipoAtividadeId: "33333333-3333-4333-8333-333333333333",
     descricao: "Palestra de segurança",
     instrutorId: null,
     responsavelExterno: null,
@@ -208,22 +207,15 @@ describe("`RF-EXTRA-01` e `Q-8` · a atividade não letiva", () => {
     expect(esquemaDoBloco.safeParse({ ...atividadeBase, turmaId: null }).success).toBe(true);
   });
 
-  /* ⚠️ `V-5`: é o mesmo `CHECK` que o PR B pôs no banco, repetido para a recusa chegar como frase. */
-  it("`V-5` · Estudo Individual GLOBAL é recusado — ele é sempre de turma", () => {
-    expect(recusa({ ...atividadeBase, categoria: "Estudo_Individual", turmaId: null })).toContain(
-      "sempre de uma turma",
-    );
+  it("spec 014, FR-011 · sem o TIPO (uuid da lista) é recusada — nenhuma sigla entra", () => {
+    expect(recusa({ ...atividadeBase, tipoAtividadeId: "AD" })).toContain("tipo");
+    expect(recusa({ ...atividadeBase, tipoAtividadeId: "" })).toContain("tipo");
   });
 
-  it("Estudo Individual de TURMA é aceito", () => {
-    expect(
-      esquemaDoBloco.safeParse({ ...atividadeBase, categoria: "Estudo_Individual" }).success,
-    ).toBe(true);
-  });
-
-  it("categoria fora do ENUM é recusada — nenhuma sigla de duas letras entra", () => {
-    expect(recusa({ ...atividadeBase, categoria: "AD" })).not.toBeNull();
-    expect(recusa({ ...atividadeBase, subtipo: "" })).toContain("subtipo");
+  it("spec 014, FR-020 · a quantidade de alunos é inteira, de 1 a 999, e opcional", () => {
+    expect(esquemaDoBloco.safeParse({ ...atividadeBase, quantidadeAlunos: 4 }).success).toBe(true);
+    expect(recusa({ ...atividadeBase, quantidadeAlunos: 0 })).toContain("ao menos 1");
+    expect(recusa({ ...atividadeBase, quantidadeAlunos: 2.5 })).toContain("inteiro");
   });
 
   /*
@@ -234,12 +226,6 @@ describe("`RF-EXTRA-01` e `Q-8` · a atividade não letiva", () => {
   it("AEC de turma COM disciplina é aceita — e sem ela também, porque é opcional", () => {
     expect(esquemaDoBloco.safeParse({ ...atividadeBase, disciplinaId: OUTRO }).success).toBe(true);
     expect(esquemaDoBloco.safeParse(atividadeBase).success).toBe(true);
-  });
-
-  it("disciplina em TAD é recusada — só a AEC leva disciplina", () => {
-    expect(recusa({ ...atividadeBase, categoria: "TAD", disciplinaId: OUTRO })).toBe(
-      "Só a AEC leva disciplina.",
-    );
   });
 
   it("AEC GLOBAL com disciplina é recusada — ela vale para todas as turmas", () => {

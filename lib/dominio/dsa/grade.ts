@@ -31,7 +31,12 @@
  */
 
 import { capacidadeDaSemana, type CapacidadeDaSemana } from "./capacidade";
-import { motivoDoBloqueio, type FeriadoDoCalendario } from "./dia-bloqueado";
+import {
+  motivoDoBloqueio,
+  paradaQueCobre,
+  type FeriadoDoCalendario,
+  type ParadaDoDia,
+} from "./dia-bloqueado";
 import type { MarcaDeConflito } from "./conflitos";
 import { tempoDeAula, trechosDoBloco, type Relogio, type Trecho } from "./horario-do-bloco";
 import { motivoDaFaltaDePosicao, semPosicao, type OrigemDoFato } from "./posicao-herdada";
@@ -56,6 +61,11 @@ export type FatoDaSemana = {
   readonly tecnica: string | null;
   readonly instrutor: string | null;
   readonly local: string | null;
+  /**
+   * Apoio Individualizado (spec 014, A-6): convive com a aula no mesmo tempo **sem** conflito de
+   * ocupação — quando divide o tempo com outro lançamento, vai para a faixa abaixo do dia, com o motivo.
+   */
+  readonly apoio?: boolean;
   /**
    * O que está GRAVADO na linha, cru — é daqui que o cartão único se preenche (ajuste 2 do PR #40).
    *
@@ -108,6 +118,8 @@ export type DiaDaGrade = {
   readonly data: string;
   /** A descrição do feriado de dia inteiro, ou `null`. */
   readonly bloqueio: string | null;
+  /** As paradas ativas do dia para esta turma (spec 014): para mostrar e para «Desfazer». */
+  readonly paradas: readonly ParadaDoDia[];
   /** Feriado de impacto parcial ou informativo — aviso que **não** bloqueia (`RN-EVT-02`). */
   readonly avisos: readonly string[];
   readonly celulas: readonly Celula[];
@@ -122,6 +134,31 @@ export type Semana = {
   readonly capacidade: CapacidadeDaSemana | null;
 };
 
+/** O motivo de o Apoio sair da célula: ele divide o tempo com outro lançamento, e isso não é conflito. */
+export const MOTIVO_DO_APOIO_NO_MESMO_TEMPO =
+  "Apoio Individualizado — alunos específicos, no mesmo tempo de outro lançamento da turma (não é conflito).";
+
+/** O Apoio divide algum TA com outro lançamento (não Apoio) posicionado no mesmo dia? */
+function divideTempoComOutro(apoio: FatoDaSemana, fatos: readonly FatoDaSemana[]): boolean {
+  if (apoio.taInicial === null || apoio.tempos === null) return false;
+  const fim = apoio.taInicial + apoio.tempos - 1;
+  return fatos.some(
+    (f) =>
+      f.fatoId !== apoio.fatoId &&
+      f.apoio !== true &&
+      f.data === apoio.data &&
+      f.taInicial !== null &&
+      f.tempos !== null &&
+      f.taInicial <= fim &&
+      f.taInicial + f.tempos - 1 >= (apoio.taInicial as number),
+  );
+}
+
+/** A parada de PARTE do dia, como a grade e o papel a escrevem (`FR-027`). */
+export function rotuloDaParadaParcial(p: ParadaDoDia): string {
+  return `Parado — ${p.tipo}: ${p.motivo} (tempos ${p.taInicial} a ${(p.taInicial ?? 0) + (p.tempos ?? 1) - 1})`;
+}
+
 export function montarSemana(entrada: {
   /** As datas da semana, ISO, na ordem — cinco, ou seis com o sábado. */
   readonly dias: readonly string[];
@@ -135,6 +172,9 @@ export function montarSemana(entrada: {
   /** `aaaa-mm-dd` no fuso da CIAARA-11. */
   readonly hoje: string;
   readonly sabadoAberto: boolean;
+  /** Spec 014: os dias parados e os TR bloqueantes; ausente = nenhum (as telas antigas). */
+  readonly paradas?: readonly ParadaDoDia[];
+  readonly turmaId?: string;
 }): Semana {
   const { relogio, fatos, feriados, marcas, hoje } = entrada;
 
@@ -169,6 +209,12 @@ export function montarSemana(entrada: {
       faixaPorDia.set(fato.data, lista);
       continue;
     }
+    if (fato.apoio === true && divideTempoComOutro(fato, fatos)) {
+      const lista = faixaPorDia.get(fato.data) ?? [];
+      lista.push({ fato, motivo: MOTIVO_DO_APOIO_NO_MESMO_TEMPO });
+      faixaPorDia.set(fato.data, lista);
+      continue;
+    }
     const marca = marcas.get(fato.fatoId);
     posicionados.push({
       ...fato,
@@ -182,7 +228,23 @@ export function montarSemana(entrada: {
   const linhas = quantasLinhas(relogio, entrada.temposDeclarados, posicionados);
 
   const dias = entrada.dias.map((data): DiaDaGrade => {
-    const bloqueio = motivoDoBloqueio(data, feriados);
+    /*
+     * ⚠️ **SPEC 014 (emenda D-AA-13): A PARADA TAMBÉM BLOQUEIA.** O dia parado inteiro bloqueia o dia,
+     *    com tipo e motivo; a parada de parte do dia bloqueia só as células dos tempos dela. Qual parada
+     *    cobre é decisão de `paradaQueCobre`, a mesma da recusa na Server Action.
+     */
+    const paradasDoDia = (entrada.paradas ?? []).filter(
+      (p) =>
+        p.data.slice(0, 10) === data &&
+        (p.status === undefined || p.status === "ativo") &&
+        (p.turmaId === null || p.turmaId === entrada.turmaId),
+    );
+    const paradaDoDiaInteiro = paradasDoDia.find((p) => p.taInicial === null || p.tempos === null);
+    const bloqueio =
+      motivoDoBloqueio(data, feriados) ??
+      (paradaDoDiaInteiro
+        ? `Parado — ${paradaDoDiaInteiro.tipo}: ${paradaDoDiaInteiro.motivo}`
+        : null);
     const doDia = posicionados.filter((b) => b.data === data);
     const celulas: Celula[] = [];
 
@@ -200,7 +262,22 @@ export function montarSemana(entrada: {
       celulas.push({
         dia: data,
         ta,
-        estado: estadoDa({ relogio, bloqueio, inicia, cobre }),
+        estado: estadoDa({
+          relogio,
+          bloqueio:
+            bloqueio ??
+            (entrada.turmaId !== undefined &&
+            paradaQueCobre(paradasDoDia, {
+              data,
+              turmaId: entrada.turmaId,
+              taInicial: ta,
+              tempos: 1,
+            })
+              ? "parado"
+              : null),
+          inicia,
+          cobre,
+        }),
         bloco: inicia ?? null,
         horario:
           taDoRelogio === undefined
@@ -212,7 +289,11 @@ export function montarSemana(entrada: {
     return {
       data,
       bloqueio,
-      avisos: avisosPorDia.get(data) ?? [],
+      paradas: paradasDoDia,
+      avisos: [
+        ...(avisosPorDia.get(data) ?? []),
+        ...paradasDoDia.filter((p) => p !== paradaDoDiaInteiro).map(rotuloDaParadaParcial),
+      ],
       celulas,
       semPosicao: faixaPorDia.get(data) ?? [],
     };

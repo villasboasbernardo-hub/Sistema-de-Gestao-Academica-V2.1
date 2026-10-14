@@ -16,6 +16,10 @@
  * ⚠️ **"SEGUINTE" É O QUE COMEÇA NO MESMO TEMPO OU DEPOIS DO BLOCO.** O lançamento que começa ANTES e
  * é atingido — alguém pôs um bloco no meio de outro — não é seguinte: empurrá-lo para depois
  * inverteria a ordem, que a decisão manda manter. Esse caso é RECUSADO, com a frase que diz qual.
+ *
+ * ⚠️ **O TEMPO PARADO É PAREDE** (spec 014, `FR-028`): o dia parado e o TR bloqueante não são
+ * empurrados e não se pula por cima deles — o lançamento que a cascata levaria para dentro deles é
+ * RECUSADO, com a frase que nomeia a parada.
  */
 import { dataParaLeitura } from "@/lib/formato/data";
 
@@ -41,6 +45,14 @@ export type Empurrado = {
   readonly deTa: number;
   readonly paraTa: number;
   readonly tempos: number;
+};
+
+/** Um bloqueio do dia (dia parado ou TR bloqueante). Tempos nulos = o dia inteiro. */
+export type Parede = {
+  /** `"LA — Licença da turma"`, para a frase da recusa. */
+  readonly rotulo: string;
+  readonly taInicial: number | null;
+  readonly tempos: number | null;
 };
 
 export type ResultadoDoEmpurrao =
@@ -76,6 +88,8 @@ export function empurrarEmCascata(entrada: {
   readonly doDia: readonly LancamentoNoDia[];
   readonly ultimoTempo: number;
   readonly data: string;
+  /** Os tempos parados da turma no dia (`FR-028`). */
+  readonly paredes?: readonly Parede[];
 }): ResultadoDoEmpurrao {
   const { bloco, ultimoTempo } = entrada;
   const fimDoBloco = bloco.taInicial + bloco.tempos - 1;
@@ -114,6 +128,25 @@ export function empurrarEmCascata(entrada: {
     }
     if (paraTa + l.tempos - 1 > ultimoTempo) naoCabem.push(l.rotulo);
     cursor = paraTa + l.tempos;
+  }
+
+  for (const e of empurrados) {
+    const fim = e.paraTa + e.tempos - 1;
+    const parede = (entrada.paredes ?? []).find(
+      (p) =>
+        p.taInicial === null ||
+        p.tempos === null ||
+        (e.paraTa <= p.taInicial + p.tempos - 1 && fim >= p.taInicial),
+    );
+    if (parede !== undefined) {
+      return {
+        tipo: "recusa",
+        mensagem:
+          `Não cabe em ${dataParaLeitura(entrada.data)}: empurrar «${e.rotulo}» o levaria aos ` +
+          `tempos parados («${parede.rotulo}»), e a parada não se empurra. Nada foi gravado. ` +
+          "Diminua o bloco, ou leve esse lançamento para outro dia primeiro.",
+      };
+    }
   }
 
   if (naoCabem.length > 0) {

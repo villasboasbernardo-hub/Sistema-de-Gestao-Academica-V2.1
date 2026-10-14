@@ -454,7 +454,7 @@ test.describe("item 1 · o tempo inicial, a vista de prova e a AEC com disciplin
     /* Sexta, 5º tempo (linha 4). */
     await clicarCelulaLivre(page, "4:4");
     await page.locator('[data-tipo="AEC"]').click();
-    await page.locator("#dsa-subtipo").selectOption("Palestra");
+    await page.locator("#dsa-subtipo").selectOption({ label: "Palestra" });
     /* A disciplina da AEC é OPCIONAL — o campo diz isso no rótulo. */
     await expect(page.locator('label[for="dsa-disciplina"]')).toContainText("opcional");
     await escolherDisciplina(page, SEMEADO.codDisciplina);

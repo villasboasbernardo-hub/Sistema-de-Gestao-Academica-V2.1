@@ -15,6 +15,7 @@
  * ⚠️ **SEM DADO PESSOAL** (`FR-029`): dos instrutores, só o nome como o DSA imprime — nenhuma coluna
  * de CPF, RG, telefone ou endereço é pedida, e só entram os da turma.
  */
+import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
@@ -188,7 +189,7 @@ export async function lerDadosDaPlanilha(
         .from("avaliacoes")
         .select("id, codigo, tipo_avaliacao, disciplina_id", contagemNaPrimeira(f))
         .eq("turma_id", turmaId)
-        .neq("status", "cancelada")
+        .in("status", [...STATUS_DE_AVALIACAO_VIVA])
         .order("codigo")
         .range(f.de, f.ate),
     ),
