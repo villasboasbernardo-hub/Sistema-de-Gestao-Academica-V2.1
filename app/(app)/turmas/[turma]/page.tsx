@@ -21,6 +21,11 @@ import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
 import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
 import { tetosDaTurma, type Categoria } from "@/lib/dominio/tetos-da-turma";
 import { gravarPrevistoProens } from "@/lib/acoes/previsto-proens";
+import {
+  confirmarSugestao,
+  definirTempoArbitrado,
+  nomearUe,
+} from "@/lib/acoes/avaliacoes-do-curriculo";
 import { AVISO_DE_TURMA_EAD, ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import type { JanelaDeTurma, VigenciaProtegida } from "@/lib/dominio/protecao-de-vigencia";
@@ -548,7 +553,20 @@ export default async function FichaDaTurma({
       <AbasDaTurma
         avaliacoes={
           avaliacoes ? (
-            <AvaliacoesDaTurma quadro={avaliacoes.quadro} aviso={avaliacoes.aviso} />
+            <AvaliacoesDaTurma
+              quadro={avaliacoes.quadro}
+              aviso={avaliacoes.aviso}
+              turmaId={turma.id as string}
+              {...(pode(permissoes, "avaliacoes_curriculo_arbitrado", "editar")
+                ? {
+                    arbitrado: {
+                      definir: definirTempoArbitrado,
+                      confirmar: confirmarSugestao,
+                      nomear: nomearUe,
+                    },
+                  }
+                : {})}
+            />
           ) : (
             <p className="text-texto-suave text-sm" data-slot="avaliacoes-turma-ead">
               Turma EAD: sem avaliações lançadas no DSA.

@@ -50,6 +50,11 @@ export type AvaliacaoDoQuadro = {
 };
 
 export type LinhaDeItem = {
+  itemId: string;
+  /** O tempo é do currículo (sem ajuste): no curso não se arbitra, só na turma. */
+  tempoDeCurriculo: boolean;
+  /** Sem UE: o currículo não diz de qual UE a avaliação sai (FR-031.3). */
+  semUe: boolean;
   rotulo: string;
   natureza: NaturezaDaAvaliacao;
   tempo: number | null;
@@ -139,6 +144,9 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
                 terminoDaTurma: entrada.terminoDaTurma,
               });
       return {
+        itemId: item.id,
+        tempoDeCurriculo: item.origemTaAplicacao === "curriculo" && !item.ajusteDaTurma,
+        semUe: item.unidadeEnsinoId === null,
         rotulo: prevista.rotulo,
         natureza: prevista.natureza,
         tempo: prevista.tempo,

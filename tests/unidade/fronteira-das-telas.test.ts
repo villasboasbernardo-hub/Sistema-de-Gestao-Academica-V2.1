@@ -58,6 +58,8 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   // ── Spec 014, PR 5: a aba «Avaliações» da turma (R-12) ──────────────────────────────────────────
   "app/(app)/turmas/[turma]/AbasDaTurma.tsx":
     "a barra de abas Ficha · Avaliações, escrita na URL; o conteúdo das duas chega desenhado do servidor",
+  "app/(app)/turmas/[turma]/DefinirTempoArbitrado.tsx":
+    "definir tempo, confirmar sugestão e nomear a UE de uma avaliação do currículo; as ações chegam por propriedade",
   "app/(app)/turmas/[turma]/EdicaoDoPrevisto.tsx":
     "editar o previsto do PROENS de um card: abrir, digitar e gravar é interação; a ação chega por propriedade",
   "app/(app)/atividades/FiltrosDeAtividades.tsx": "os filtros de /atividades, na URL",

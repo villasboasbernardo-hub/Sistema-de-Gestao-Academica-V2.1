@@ -14,6 +14,15 @@ import { ROTULO_DA_SITUACAO, type SituacaoDaAvaliacao } from "@/lib/dominio/aval
 import { dataParaLeitura } from "@/lib/formato/data";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 
+import { DefinirTempoArbitrado } from "./DefinirTempoArbitrado";
+
+type Acao = (
+  entrada: unknown,
+) => Promise<
+  | { readonly ok: true; readonly aviso?: "soma_acima_da_ch" }
+  | { readonly ok: false; readonly erro: string }
+>;
+
 const TOM: Record<
   SituacaoDaAvaliacao,
   "executado" | "planejado" | "atrasado" | "conflito" | "adiantado"
@@ -33,9 +42,14 @@ function Situacao({ situacao }: { readonly situacao: SituacaoDaAvaliacao | null 
 export function AvaliacoesDaTurma({
   quadro,
   aviso,
+  turmaId,
+  arbitrado,
 }: {
   readonly quadro: QuadroDeAvaliacoes | null;
   readonly aviso: string | null;
+  readonly turmaId: string;
+  /** As ações do arbitrado — montadas pela página SÓ para quem tem `avaliacoes_curriculo_arbitrado.editar`. */
+  readonly arbitrado?: { readonly definir: Acao; readonly confirmar: Acao; readonly nomear: Acao };
 }) {
   return (
     <section
@@ -130,6 +144,18 @@ export function AvaliacoesDaTurma({
                         <span className="text-texto-suave text-xs">
                           {dataParaLeitura(item.aplicacao)}
                         </span>
+                      ) : null}
+                      {arbitrado && item.natureza !== "od" ? (
+                        <DefinirTempoArbitrado
+                          itemId={item.itemId}
+                          turmaId={turmaId}
+                          tempoDeCurriculo={item.tempoDeCurriculo}
+                          sugestaoAConfirmar={item.marca === "sugestao_a_confirmar"}
+                          unidades={item.semUe ? disciplina.unidades : []}
+                          definir={arbitrado.definir}
+                          confirmar={arbitrado.confirmar}
+                          nomear={arbitrado.nomear}
+                        />
                       ) : null}
                     </li>
                   ))}
