@@ -111,6 +111,7 @@ select jsonb_build_object(
   'tipos_atividade', (select coalesce(jsonb_agg(jsonb_build_object('valor', valor, 'categoria', metadados ->> 'categoria')), '[]')
        from public.config_listas where lista = 'tipos_atividade' and ativo),
   'tipos_avaliacao', (select coalesce(jsonb_agg(valor), '[]') from public.config_listas where lista = 'tipos_avaliacao' and ativo),
+  'tipos_parada', (select coalesce(jsonb_object_agg(valor, id), '{{}}') from public.config_listas where lista = 'tipos_parada' and ativo),
   'salas', (select coalesce(jsonb_agg(valor), '[]') from public.config_listas where lista = 'salas' and ativo),
   'tetos', (select coalesce(jsonb_object_agg(chave, valor), '{{}}') from public.config_parametros
              where chave in ('dsa.teto_tfm_semana', 'dsa.teto_recomendado_semana') and status = 'ativo'),
@@ -156,7 +157,9 @@ select jsonb_build_object(
         'metodologia', a.metodologia, 'local', a.local, 'conteudo_resumo', a.conteudo_resumo,
         'data_vista_prova', a.data_vista_prova, 'ta_inicial_vista', a.ta_inicial_vista,
         'tempos_consumidos_vista', a.tempos_consumidos_vista, 'local_vista', a.local_vista,
-        'status', case when a.status = 'cancelada' then 'inativo' else 'ativo' end)), '[]')
+        'status', case when a.status <> 'cancelada' then 'ativo'
+                       when coalesce(a.observacoes, '') like '%[SAIU DA PLANILHA DE CONTROLE]%' then 'inativo'
+                       else 'cancelada_na_tela' end)), '[]')
       from public.avaliacoes a join public.disciplinas d on d.id = a.disciplina_id
       left join public.instrutores i on i.id = a.instrutor_responsavel_id left join public.instrutores f on f.id = a.fiscal_id
      where a.turma_id = (select id from t) and a.codigo like 'DSAP-%'),
@@ -165,7 +168,13 @@ select jsonb_build_object(
         'descricao', n.descricao, 'ta_inicial', n.ta_inicial, 'tempos_consumidos', n.tempos_consumidos,
         'local', n.local, 'instrutor', i.codigo, 'responsavel_externo', n.responsavel_externo, 'status', n.status)), '[]')
       from public.atividades_nao_letivas n left join public.instrutores i on i.id = n.instrutor_id
-     where n.turma_id = (select id from t) and n.codigo like 'DSAP-%')),
+     where n.turma_id = (select id from t) and n.codigo like 'DSAP-%'),
+    -- Spec 014 (FR-024): o dia parado da turma que a carga pos (codigo DSAP-…-P).
+    'dias_parados', (select coalesce(jsonb_agg(jsonb_build_object(
+        'codigo', p.codigo, 'data', p.data, 'ta_inicial', p.ta_inicial, 'tempos', p.tempos,
+        'tipo_parada', c.valor, 'motivo', p.motivo, 'prevista', p.prevista, 'status', p.status)), '[]')
+      from public.dias_parados p join public.config_listas c on c.id = p.tipo_parada_id
+     where p.turma_id = (select id from t) and p.codigo like 'DSAP-%')),
   -- O que veio do ETL e ainda esta ATIVO: e o que «substituir, nao somar» vai inativar.
   'etl', jsonb_build_object(
     'aulas', (select count(*) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo'),
@@ -192,3 +201,20 @@ def referencia(destino: str, turma: str, autor: str, de: str, ate: str) -> dict:
     if not retrato or retrato.get("turma") is None:
         raise RecusaDoBanco(f"a turma «{turma}» nao existe no destino «{destino}»")
     return retrato
+
+
+# Spec 014, SC-008 e D-CUR-1: a sincronizacao NUNCA muda o catalogo. O retrato e o md5 da CH de toda
+# disciplina e de toda UE, ordenados por codigo, tirado antes da primeira escrita e depois da ultima.
+_RETRATO_DO_CATALOGO = """
+select md5(coalesce((select string_agg(codigo || ':' || coalesce(carga_horaria_tempos::text, '-') || ':' || status::text, '|' order by codigo)
+                       from public.disciplinas), '')) as disciplinas,
+       md5(coalesce((select string_agg(codigo || ':' || coalesce(ch_prevista_tempos::text, '-') || ':' || status::text, '|' order by codigo)
+                       from public.unidades_ensino), '')) as unidades,
+       (select count(*) from public.disciplinas) as n_disciplinas,
+       (select count(*) from public.unidades_ensino) as n_unidades
+"""
+
+
+def retrato_do_catalogo(destino: str) -> dict:
+    """O md5 da CH do catalogo (disciplinas e UEs) — so leitura."""
+    return consultar(destino, _RETRATO_DO_CATALOGO)[0]

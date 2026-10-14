@@ -115,6 +115,51 @@
 - **A2.1.2 — Capturas no banco local:** `C:/Users/VILLAS BOAS/AppData/Local/ciaara-11/capturas-014/pr2.1-*.png`.
   ✅ **RESOLVIDO — CONFERIDAS E APROVADAS por Bernardo Villas Boas em 14/10/2026.**
 
+## PR 3 — a sincronização da leva 1 (só no local)
+
+- **A3.1 — As chaves do lote de decisões que mandavam Apoio para AEC ou TAD (T108).** Apliquei a
+  recomendação da spec (FR-021, D-AA-12) e registrei no próprio JSON (`decisao`):
+  `c-espc-hn-2026.json` **BDF+1**: AEC *Atividade Extracurricular* → **Apoio Individualizado, BDF**;
+  `c-exp-obs-me-2026.json` **30+1**: TAD *Administração* (responsável *MONITORIA / DOEP*) → **Apoio
+  Individualizado, Monitoria** (a turma está fora da rodada do PR 3 e volta no PR 6). A varredura dos dez
+  JSON não achou outra chave assim. Para mudar: voltar as duas entradas de `chaves`. **Aprovação:** [pendente]
+- **A3.2 — Os 43 textos de responsável que não casam com o cadastro (T117, FR-016).** São 312 TA. Inclui
+  os 22 de pessoa cadastrável da M-4 e as entidades. Cada um precisa de uma das três saídas: casar com
+  instrutor, aceitar como entidade ou palestrante externo, ou cadastrar a pessoa. A lista tem nomes e por
+  isso está **fora do git**: `planilhas-de-origem/rodadas/2026-10-06T1541/pendencias-de-responsavel.md`.
+  **Enquanto não forem decididos, a rodada no remoto PARA cada turma que os tem** (todas as nove).
+  **Aprovação:** [pendente]
+- **A3.3 — ⚠️ Lançamentos feitos NA TELA no remoto, em três turmas sincronizadas.** Medido na cópia
+  `remoto-20261014-085612.sql`, pela conta `de_tela` da sincronização:
+  - **CAHO 2026**: 6 linhas (5 atividades e 1 aula), de 13 a 16/10, criadas em 09/10;
+  - **C-Ap-FR 2026**: 10 linhas (8 aulas e 2 avaliações), de 13 a 16/10, criadas em 09/10;
+  - **C-Ap-HN 2026**: 10 linhas (8 aulas e 2 avaliações), de 13 a 16/10, criadas em 13/10.
+
+  A VIRADA-1 diz que até a virada ninguém lança no sistema nas turmas sincronizadas, e a sincronização
+  **para** a turma que tem lançamento da tela. Do jeito que está, a rodada do T121 pararia essas três.
+  Opções:
+  - **(a)** tirar as três da rodada do PR 3, como a C-Exp-Obs-ME (D-SYNC-1);
+  - **(b)** inativar os lançamentos da tela e deixar a planilha cobrir a semana;
+  - **(c)** declarar o sistema como fonte dessas turmas a partir de uma data, o que é a virada delas.
+
+  **Recomendação: (a)** para o PR 3, e decidir (c) turma a turma. No local, medi com
+  `--medir-com-lancamento-da-tela`: os lançamentos da tela ficam ao lado dos da planilha (D3.2).
+  **Aprovação:** [pendente]
+- **A3.4 — Linhas da planilha EDITADAS na tela no remoto.** Com a exportação de 06/10, a rodada devolveria
+  seis linhas `DSAP-` ao valor da planilha:
+  - em **C-Ap-HN 2026**: uma aula com 4 → 5 tempos; um local *EAD* → *Sala 01*; três vistas de prova
+    movidas ou acrescentadas na tela em 10, 13 e 16/10;
+  - em **C-Ap-FR 2026**: um local *EAD* → *Sala 06*.
+
+  Com **exportação nova** (como o T121 manda), a planilha pode já trazer essas mudanças. Se não trouxer, a
+  rodada as desfaz, porque a planilha manda. Recomendação: conferir as seis na planilha antes da rodada no
+  remoto. **Aprovação:** [pendente]
+- **A3.5 — O antes/depois da rodada** (`antes-depois/rodada-do-pr3-no-local.md`). O TAD cai em todas as
+  nove turmas: CAHO 40 → 11, C-Ap-HN 85 → 54, C-Ap-FR 89 → 65, C-Espc-HN 63 → 31, C-Espc-FR 51 → 15,
+  C-Esp-ME 29 → 0, MetocOf 9 → 0, BATI 2 → 0 e Ag-Mag 1 → 0. Acima do máximo de TAD sobra **só
+  C-Ap-FR 2026** (65 de 58,25). A lista de erros de planilha tem 198 linhas, fora do git. Antes do remoto,
+  a medida se refaz com exportação nova. **Aprovação:** [pendente]
+
 ## Decisões tomadas sozinho durante a implementação
 
 ✅ **D1.1 a D2.1.4 ACEITAS por Bernardo Villas Boas em 14/10/2026** (*"Decisões que você tomou sozinho
@@ -196,3 +241,29 @@
   motivo *"no mesmo tempo de outro lançamento da turma (não é conflito)"*: a grade tem uma célula por
   tempo, e assim a tela mostra os dois (A-6). O Apoio também não empurra nem é empurrado na cascata.
   Para mudar: desenhar dois blocos lado a lado na célula.
+- **D3.1 (PR 3) — A rodada do PR 3 foi medida no local com a MESMA exportação que o remoto recebeu em
+  06/10/2026** (`2026-10-06T1541`), não com uma nova. Assim a diferença medida é só o efeito das regras da
+  spec 014. A exportação nova é passo do T121, no remoto. Para mudar: exportar as planilhas de novo (pelo
+  conector do Drive) e repetir a medição.
+- **D3.2 (PR 3) — Nasceu `--medir-com-lancamento-da-tela`, que só existe contra o local.** Com ele, a turma
+  com lançamento feito na tela não para, e esses lançamentos ficam como estão, ao lado da planilha. Sem ele,
+  três das nove turmas não teriam medida (A3.3). Contra o remoto, a opção é recusada. Para mudar: remover a
+  opção e medir só as seis.
+- **D3.3 (PR 3) — Em modo provisório (só local), a atividade com responsável que não casa entra com o
+  texto como externo**, e a pendência continua **bloqueando** o remoto (FR-016). Sem isso, a medição do TAD
+  perderia 312 TA que voltam assim que o lote for decidido. Para mudar: deixar a linha de fora também no
+  local.
+- **D3.4 (PR 3) — A linha que muda de categoria na MESMA tabela (Monitoria TAD → Apoio, BDF AEC → Apoio)
+  é atualizada no lugar**, com o tipo novo; o gatilho da E-1 recalcula a categoria. Só a linha que **muda
+  de tabela** (TAD → `dias_parados`) é inativada com a marca *"[RECLASSIFICADO PELA SPEC 014]"*. Para
+  mudar: inativar e regravar também as da mesma tabela, com código novo.
+- **D3.5 (PR 3) — O dia parado de todas as turmas em PARTE do dia não é detectado como global.** O dia
+  global continua sendo o que parou o expediente inteiro de todas as turmas (vai para `feriados`, como
+  antes). A parada de parte do dia vira um dia parado em cada turma, uma linha por turma. É o mesmo
+  princípio da FR-015: o que está em todas as turmas fica uma linha por turma. Para mudar: detectar a parada
+  parcial comum a todas e gravar uma linha global.
+- **D3.6 (PR 3) — Os erros antigos da carga, em texto livre, entram na tabela de `erros-de-planilha.md`**
+  com o texto na coluna *"o que diverge"*. Os novos (CH de disciplina e de UE contra o currículo, aula em
+  dia parado) vêm com as cinco colunas. A aula em dia parado é conferida **por dia**, porque uma célula da
+  planilha tem uma chave só e aula e parada nunca dividem o mesmo tempo. Para mudar: estruturar os
+  antigos também.

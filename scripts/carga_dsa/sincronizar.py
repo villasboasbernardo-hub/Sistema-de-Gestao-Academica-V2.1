@@ -26,7 +26,8 @@ O QUE UMA RODADA FAZ, por turma, numa transacao so:
    sistema nas turmas da lista; se houver linha que nao e do ETL nem desta carga, quem decide e gente.
 
 SAIDA: 0 passou · 2 planilha ou rodada · 3 pendencia que bloqueia · 4 recusa do banco ·
-5 a conferencia apos a escrita divergiu · 6 o plano do remoto nao e o do local.
+5 a conferencia apos a escrita divergiu · 6 o plano do remoto nao e o do local ·
+7 o catalogo (CH de disciplina ou UE) mudou durante a execucao (spec 014, SC-008).
 """
 
 from __future__ import annotations
@@ -44,6 +45,8 @@ from scripts.carga_dsa.resolver import MARCA_DE_DEMAIS, Pendencia, Resolvido, cl
 AQUI = Path(__file__).parent
 MARCA_DO_ETL = "[SUBSTITUIDO PELA PLANILHA DE CONTROLE]"
 MARCA_DE_SAIDA = "[SAIU DA PLANILHA DE CONTROLE]"
+# Spec 014 (FR-022, D-3 do plan): a linha TAD que era dia parado sai com esta marca e entra em `dias_parados`.
+MARCA_DE_RECLASSIFICACAO = "[RECLASSIFICADO PELA SPEC 014]"
 SENTINELA = "ENSAIO_DESFEITO"
 
 # Os campos COMPARADOS de cada tabela, em chaves naturais. `observacoes` fica de fora de proposito:
@@ -54,6 +57,7 @@ CAMPOS = {
                    "nome_fiscal_externo", "metodologia", "local", "conteudo_resumo", "data_vista_prova", "ta_inicial_vista",
                    "tempos_consumidos_vista", "local_vista"),
     "atividades": ("categoria_normativa", "data", "subtipo", "descricao", "ta_inicial", "tempos_consumidos", "local", "instrutor", "responsavel_externo"),
+    "dias_parados": ("data", "ta_inicial", "tempos", "tipo_parada", "motivo", "prevista"),
 }
 
 
@@ -64,8 +68,9 @@ def _demais(linha: dict) -> str:
 def diferencas(res: Resolvido, atuais: dict) -> dict:
     """Plano × o que ja esta no banco: novas, mudadas (campo a campo), reativadas e as que saem."""
     saida = {}
-    for nome, plano in (("aulas", res.aulas), ("avaliacoes", res.avaliacoes), ("atividades", res.atividades)):
-        por_codigo = {a["codigo"]: a for a in atuais[nome]}
+    for nome, plano in (("aulas", res.aulas), ("avaliacoes", res.avaliacoes), ("atividades", res.atividades),
+                        ("dias_parados", res.dias_parados)):
+        por_codigo = {a["codigo"]: a for a in atuais.get(nome, [])}
         novas, mudadas, reativadas = [], [], []
         for linha in plano:
             atual = por_codigo.get(linha["codigo"])
@@ -76,6 +81,9 @@ def diferencas(res: Resolvido, atuais: dict) -> dict:
             campos = [(c, atual.get(c), esperado.get(c)) for c in CAMPOS[nome] if (atual.get(c) or None) != (esperado.get(c) or None)]
             if campos:
                 mudadas.append((linha["codigo"], campos))
+            elif atual["status"] == "cancelada_na_tela":
+                # Spec 014, FR-049 e D-AA-10: a cancelada pela TELA continua cancelada — nao e reativada.
+                continue
             elif atual["status"] != "ativo":
                 reativadas.append(linha["codigo"])
         do_plano = {l["codigo"] for l in plano}
@@ -177,7 +185,8 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
     """Um bloco `DO` por turma — atomico. No ensaio ele termina levantando a sentinela.
 
     ⚠️ NENHUM CODIGO SAI DE SEQUENCIA (gotcha 6: sequencia nao obedece a `ROLLBACK`): o ensaio nao
-       consome numero. A unica excecao e `feriados.codigo`, calculado por `max + 1` dentro do bloco.
+       consome numero. A unica excecao e `feriados.codigo`, que desde a spec 014 (E-2) sai do DEFAULT
+       `FER-` — o ensaio pode consumir um numero da sequencia, o que so deixa buraco, nunca colisao.
     """
     t, c, autor = lit(res.turma["id"]) + "::uuid", lit(res.turma["curso_id"]) + "::uuid", lit(res.autor["auth_user_id"]) + "::uuid"
     prefixo = f"DSAP-{slug(res.turma['codigo'])}-L"
@@ -250,10 +259,14 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
        metodologia = excluded.metodologia, local = excluded.local, data_vista_prova = excluded.data_vista_prova,
        ta_inicial_vista = excluded.ta_inicial_vista, tempos_consumidos_vista = excluded.tempos_consumidos_vista,
        local_vista = excluded.local_vista, observacoes = excluded.observacoes,
-       status = case when r.status = 'cancelada' then 'pendente' else r.status end
+       -- Spec 014 (FR-049, D-AA-10): so volta a `pendente` a que a PROPRIA sincronizacao tirou; a cancelada
+       -- pela tela continua cancelada (era o defeito da `DSAP-C-EXP-OBS-ME-2026-L206-V`).
+       status = case when r.status = 'cancelada' and coalesce(r.observacoes, '') like {lit('%' + MARCA_DE_SAIDA + '%')}
+                     then 'pendente' else r.status end
      where (r.disciplina_id, r.tipo_avaliacao, r.data_avaliacao, r.ta_inicial, r.tempos_consumidos, r.instrutor_responsavel_id,
             r.fiscal_id, r.nome_fiscal_externo, r.conteudo_resumo, r.metodologia, r.local, r.data_vista_prova,
-            r.ta_inicial_vista, r.tempos_consumidos_vista, r.local_vista, r.status = 'cancelada')
+            r.ta_inicial_vista, r.tempos_consumidos_vista, r.local_vista,
+            r.status = 'cancelada' and coalesce(r.observacoes, '') like {lit('%' + MARCA_DE_SAIDA + '%')})
        is distinct from
            (excluded.disciplina_id, excluded.tipo_avaliacao, excluded.data_avaliacao, excluded.ta_inicial, excluded.tempos_consumidos,
             excluded.instrutor_responsavel_id, excluded.fiscal_id, excluded.nome_fiscal_externo, excluded.conteudo_resumo,
@@ -288,8 +301,37 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
   ) select count(*) filter (where nova), count(*) filter (where not nova) into n, m from gravadas;
   k := k || jsonb_build_object('atividades_novas', n, 'atividades_atualizadas', m);""")
 
+    if res.dias_parados:
+        p.append(f"""
+  with dados(codigo, data, ta, tempos, tipo, motivo, prevista) as (values
+    {_valores([[d["codigo"], d["data"], d["ta_inicial"], d["tempos"], d["tipo_parada"], d["motivo"], d["prevista"]] for d in res.dias_parados])}
+  ), gravadas as (
+    insert into public.dias_parados as r (codigo, turma_id, data, ta_inicial, tempos, tipo_parada_id, motivo, prevista, criado_por)
+    select d.codigo, {t}, d.data::date, d.ta::smallint, d.tempos::smallint, c.id, d.motivo, d.prevista::boolean, {autor}
+      from dados d join public.config_listas c on c.lista = 'tipos_parada' and c.valor = d.tipo
+    on conflict (codigo) do update set
+       data = excluded.data, ta_inicial = excluded.ta_inicial, tempos = excluded.tempos,
+       tipo_parada_id = excluded.tipo_parada_id, motivo = excluded.motivo, prevista = excluded.prevista, status = 'ativo'
+     where (r.data, r.ta_inicial, r.tempos, r.tipo_parada_id, r.motivo, r.prevista, r.status::text)
+       is distinct from
+           (excluded.data, excluded.ta_inicial, excluded.tempos, excluded.tipo_parada_id, excluded.motivo, excluded.prevista, 'ativo')
+    returning (xmax = 0) as nova
+  ) select count(*) filter (where nova), count(*) filter (where not nova) into n, m from gravadas;
+  if (select count(*) from (values {', '.join('(' + lit(d['tipo_parada']) + ')' for d in res.dias_parados)}) as v(tipo)
+       where not exists (select 1 from public.config_listas c where c.lista = 'tipos_parada' and c.valor = v.tipo)) > 0 then
+    raise exception 'Tipo de parada fora de config_listas.tipos_parada no plano da turma.';
+  end if;
+  k := k || jsonb_build_object('dias_parados_novos', n, 'dias_parados_atualizados', m);""")
+
     # 3. inativar o que saiu da planilha
     codigos = res.codigos()
+    # Spec 014 (FR-022): a atividade TAD da mesma linha que agora e dia parado sai com a marca de reclassificacao.
+    reclassificadas = [c[:-1] + "N" for c in codigos["dias_parados"]]
+    if reclassificadas:
+        p.append(f"""
+  update public.atividades_nao_letivas set status = 'inativo', observacoes = concat_ws(' ', {lit(MARCA_DE_RECLASSIFICACAO)}, observacoes)
+   where turma_id = {t} and status = 'ativo' and codigo = any (array[{", ".join(lit(x) for x in reclassificadas)}]::text[]);
+  get diagnostics n := row_count; k := k || jsonb_build_object('reclassificadas_para_dia_parado', n);""")
     for tabela, chave, comando in (
         ("registros_aula", "aulas_que_sairam", "status = 'inativo'"),
         ("atividades_nao_letivas", "atividades_que_sairam", "status = 'inativo'"),
@@ -301,17 +343,21 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
   update public.{tabela} set {comando}, observacoes = concat_ws(' ', {lit(MARCA_DE_SAIDA)}, observacoes)
    where turma_id = {t} and codigo like {lit(prefixo + '%')} and {ativa} and not (codigo = any ({lista}));
   get diagnostics n := row_count; k := k || jsonb_build_object({lit(chave)}, n);""")
+    lista_p = "array[" + ", ".join(lit(x) for x in codigos["dias_parados"]) + "]::text[]"
+    p.append(f"""
+  update public.dias_parados set status = 'inativo'
+   where turma_id = {t} and codigo like {lit(prefixo + '%')} and status = 'ativo' and not (codigo = any ({lista_p}));
+  get diagnostics n := row_count; k := k || jsonb_build_object('dias_parados_que_sairam', n);""")
 
     # 4. o calendario global: so o dia que parou TODAS as turmas, e so se ainda nao estiver la
     if incluir_calendario:
         for dia in res.calendario:
             p.append(f"""
   if not exists (select 1 from public.feriados where data = {lit(dia["data"])}::date and impacto = 'dia_inteiro' and status = 'ativo') then
-    insert into public.feriados (codigo, ano, data, descricao, impacto, abrangencia, criado_por)
-    select 'FER-' || lpad((coalesce(max(substring(codigo from '^FER-([0-9]+)$')::int), 0) + 1)::text, 6, '0'),
-           extract(year from {lit(dia["data"])}::date)::smallint, {lit(dia["data"])}::date, {lit(dia["descricao"])}, 'dia_inteiro',
-           {lit(abrangencia)}, {autor}
-      from public.feriados;
+    -- Spec 014 (E-2): o codigo sai do DEFAULT `FER-` da sequencia, nunca de `max + 1`.
+    insert into public.feriados (ano, data, descricao, impacto, abrangencia, criado_por)
+    values (extract(year from {lit(dia["data"])}::date)::smallint, {lit(dia["data"])}::date, {lit(dia["descricao"])}, 'dia_inteiro',
+            {lit(abrangencia)}, {autor});
     f := f + 1;
   end if;""")
     p.append("  k := k || jsonb_build_object('feriados_novos', f);")
@@ -355,6 +401,33 @@ def dias_globais_de(leituras: dict[str, planilha.Leitura], decisoes: dict[str, d
         pararam = sorted(t for t in cobrem if dia in por_turma[t][1])
         quadro[dia] = {"cobrem": cobrem, "pararam": pararam, "global": bool(cobrem) and cobrem == pararam}
     return {d for d, q in quadro.items() if q["global"]}, quadro
+
+
+def _celula(texto: object) -> str:
+    return " ".join(str(texto).split()).replace("|", "/")
+
+
+def escrever_erros_de_planilha(pasta: Path, por_turma: list[tuple[str, Resolvido]]) -> Path:
+    """FR-036.1 (spec 014, §11-B): `erros-de-planilha.md` na pasta da RODADA (fora do git), uma tabela
+    por turma — disciplina · o que diverge · planilha · curriculo · o que o sistema fez. Os erros antigos,
+    em texto livre, entram na coluna «o que diverge»."""
+    linhas = [
+        "# Erros de planilha — rodada " + pasta.name, "",
+        "> Gerado por `python -m scripts.carga_dsa.sincronizar`. O lancamento entra como FATO mesmo quando a",
+        "> planilha diverge (a planilha manda); o catalogo NUNCA muda por rodada (D-CUR-1). Corrigir na planilha.", "",
+    ]
+    for turma, res in por_turma:
+        linhas += [f"## {turma}", "", "| disciplina | o que diverge | planilha | curriculo | o que o sistema fez |", "|---|---|---|---|---|"]
+        for e in res.erros_tabelados:
+            linhas.append("| " + " | ".join(_celula(e[c]) for c in ("disciplina", "diverge", "planilha", "curriculo", "fez")) + " |")
+        for texto in res.erros_de_planilha:
+            linhas.append(f"| — | {_celula(texto)} | — | — | registrado; a carga seguiu |")
+        if not res.erros_tabelados and not res.erros_de_planilha:
+            linhas.append("| — | nenhum erro | — | — | — |")
+        linhas.append("")
+    arquivo = pasta / "erros-de-planilha.md"
+    arquivo.write_text("\n".join(linhas), encoding="utf-8", newline="\n")
+    return arquivo
 
 
 def titulo(texto: str) -> None:
@@ -405,10 +478,16 @@ def main() -> int:
     a.add_argument("--adiar", default="", help="tipos de pendencia que NAO bloqueiam (o que eles cobrem fica FORA e e listado): "
                    "decisao nominal, ex. pessoa fora do cadastro e UE ausente que aguardam resposta")
     a.add_argument("--relatorio", type=Path, help="pasta onde gravar o plano de cada turma (JSON, sem nomes)")
+    a.add_argument("--medir-com-lancamento-da-tela", action="store_true",
+                   help="so contra o local (spec 014, medicao do PR 3): a turma com lancamento feito na tela NAO para; "
+                        "o lancamento da tela fica como esta, ao lado do da planilha")
     arg = a.parse_args()
 
     if arg.provisorio and arg.destino != "local":
         print("[RECUSADO] --provisorio so existe contra o banco local.")
+        return 2
+    if arg.medir_com_lancamento_da_tela and arg.destino != "local":
+        print("[RECUSADO] --medir-com-lancamento-da-tela so existe contra o banco local.")
         return 2
     fontes = json.loads((AQUI / "fontes.json").read_text(encoding="utf-8"))
     try:
@@ -474,6 +553,9 @@ def main() -> int:
 
     veredito = 0
     resumo = []
+    resolvidos: list[tuple[str, Resolvido]] = []
+    # Spec 014 (SC-008, D-CUR-1): o retrato do catalogo ANTES da primeira escrita desta execucao.
+    catalogo_antes = banco.retrato_do_catalogo(arg.destino)
     for turma in pedidas:
         leitura, dec = leituras[turma], decisoes[turma]
         titulo(f"{turma} ← «{titulos[turma]}»")
@@ -484,6 +566,7 @@ def main() -> int:
             print(f"  [BANCO] {erro}")
             return 4
         res = resolver(leitura, ref, dec, titulos[turma], globais, arg.provisorio)
+        resolvidos.append((turma, res))
         relogios = plano_do_relogio(leitura, ref, res, titulos[turma], dec.get("relogio"))
         dif = diferencas(res, ref["atuais"])
         relatar(res, leitura, ref, dif)
@@ -518,7 +601,9 @@ def main() -> int:
         bloqueiam = [p for p in res.pendencias if p.bloqueia and p.tipo not in adiadas]
         if adiadas and any(p.tipo in adiadas for p in res.pendencias):
             print(f"  [ADIADO] {sum(p.ta for p in res.pendencias if p.tipo in adiadas)} TA ficam fora por decisao: {sorted({p.tipo for p in res.pendencias if p.tipo in adiadas})}")
-        if ref["etl"]["de_tela"]:
+        if ref["etl"]["de_tela"] and arg.medir_com_lancamento_da_tela:
+            print(f"  [MEDICAO] a turma tem {ref['etl']['de_tela']} lancamento(s) feito(s) na tela; no local eles ficam ao lado da planilha.")
+        elif ref["etl"]["de_tela"]:
             print(f"  [PARADO] a turma tem {ref['etl']['de_tela']} lancamento(s) feito(s) na tela: quem decide o que fazer e gente.")
             veredito = max(veredito, 3)
             continue
@@ -572,6 +657,17 @@ def main() -> int:
             veredito = max(veredito, 5)
             continue
         print("  gravado; lido de volta: o banco e o plano, linha a linha, e nao sobrou ETL ativo.")
+
+    catalogo_depois = banco.retrato_do_catalogo(arg.destino)
+    titulo("Catalogo (D-CUR-1): a CH de disciplinas e UEs antes e depois desta execucao")
+    print(f"  antes  {catalogo_antes}")
+    print(f"  depois {catalogo_depois}")
+    if catalogo_antes != catalogo_depois:
+        print("  ✗ O CATALOGO MUDOU durante a sincronizacao — a rodada nunca altera CH (SC-008).")
+        veredito = max(veredito, 7)
+
+    arquivo = escrever_erros_de_planilha(arg.rodada, resolvidos)
+    print(f"  lista de erros de planilha: {arquivo}")
 
     titulo("Resumo da rodada")
     for turma, contagem, mudancas in resumo:

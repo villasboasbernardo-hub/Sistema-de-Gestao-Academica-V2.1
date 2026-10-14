@@ -25,6 +25,32 @@ toca turma listada em `fontes.json`, e o remoto só recebe o plano que bateu, li
 emendadas, e o `db reset` do ramo `main` as recusa na restauração (medido em 06/10/2026). Até o PR #33 ser mesclado,
 rode-o do ramo do PR.
 
+## Spec 014 — a rodada da leva 1 (PR 3): dia parado, Apoio Individualizado e responsável pelo lote
+
+**No LOCAL em 14/10/2026; no remoto [pendente]** (T121, depois das decisões A3.1 a A3.5 de
+`specs/014-atividades-e-avaliacoes/aprovacoes-pendentes.md`).
+
+- **D-SYNC-1** _(Bernardo Villas Boas, 13/10/2026)_: a `C-Exp-Obs-ME 2026`, encerrada em 09/10/2026 e com os
+  dados conferidos, fica **fora** da rodada do PR 3. A `DSA-MUYK0RFD-V`, relançada pela tela, faria
+  `de_tela` diferente de zero e pararia a turma. A vista é recriada pela `PEND-DSA-VISTA`, com antes/depois
+  para aprovação e fora da spec 014. A turma **volta** na rodada do PR 6. A exclusão é por `--turmas`,
+  **sem** tirar a turma de `fontes.json`.
+- **O que a rodada passa a fazer:**
+  - o dia parado só da turma vai para `dias_parados` (`DSAP-…-L<linha>-P`, previsto, com o tipo de parada
+    pela descrição), e a linha TAD antiga sai com a marca _"[RECLASSIFICADO PELA SPEC 014]"_;
+  - Monitoria, Português, BDA e BDF são Apoio Individualizado;
+  - Recepção e APOINST ganham os tipos _Recepção aos alunos_ e _Apoio à Instrução_;
+  - o responsável que não casa vira pendência do lote;
+  - a avaliação cancelada pela tela continua cancelada;
+  - o código de feriado sai do `DEFAULT FER-`;
+  - o catálogo é conferido antes e depois (saída 7 se mudar);
+  - a lista `erros-de-planilha.md` é escrita na pasta da rodada.
+- **Medido no local** (cópia `remoto-20261014-085612.sql`, rodada `2026-10-06T1541`, 9 turmas): a primeira
+  rodada fez 95 mudanças, a segunda **0**; catálogo igual antes e depois. Antes/depois do TAD de cada turma
+  em `specs/014-atividades-e-avaliacoes/antes-depois/rodada-do-pr3-no-local.md`.
+- ⚠️ **Três das nove têm lançamento feito na tela no remoto** (CAHO, C-Ap-FR e C-Ap-HN, semana de 13/10) e
+  **parariam** na rodada do remoto. É o portão A3.3.
+
 ## Onda 1 — C-Esp-ME 2026 · C-Exp-MetocOf 2026 · C-Exp-Obs-ME 2026 · C-Exp-BATI T1 2026 · C-Exp-Ag-Mag 2026
 
 **Carga no remoto: CONCLUÍDA em 06/10/2026**, rodada `2026-10-06T1541` (exportação do Drive às 15:41), decisões

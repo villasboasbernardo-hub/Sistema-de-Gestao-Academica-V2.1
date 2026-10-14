@@ -79,8 +79,9 @@
   ],
   "chaves": {
     "BDF+1": {
-      "tipo": "aec",
-      "subtipo": "Atividade Extracurricular"
+      "tipo": "apoio",
+      "subtipo": "BDF",
+      "decisao": "Spec 014, FR-021 e D-AA-12: BDF e Apoio Individualizado (era AEC). Aplicado em 14/10/2026 pela recomendacao da spec; portao A3.1 em aprovacoes-pendentes.md."
     }
   },
   "vista_extra_como_aec": true,

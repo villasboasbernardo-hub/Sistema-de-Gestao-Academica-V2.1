@@ -32,9 +32,10 @@
       "local": "Laboratório de Informática"
     },
     "30+1": {
-      "tipo": "tad",
-      "subtipo": "Administração",
-      "responsavel_externo": "MONITORIA / DOEP"
+      "tipo": "apoio",
+      "subtipo": "Monitoria",
+      "responsavel_externo": "MONITORIA / DOEP",
+      "decisao": "Spec 014, FR-021 e D-AA-12: Monitoria e Apoio Individualizado (era TAD Administracao). Aplicado em 14/10/2026 pela recomendacao da spec; portao A3.1 em aprovacoes-pendentes.md."
     },
     "TR+2": {
       "tipo": "aec",
