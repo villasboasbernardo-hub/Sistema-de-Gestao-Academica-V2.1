@@ -11,6 +11,7 @@
 import "server-only";
 
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
+import { alertasDeVista, type AlertaDeVista } from "@/lib/dominio/avaliacoes/alertas-de-vista";
 import {
   naturezaPeloTipo,
   quadroDeAvaliacoesDaTurma,
@@ -31,9 +32,11 @@ export async function lerAvaliacoesDaTurma(entrada: {
   readonly cursoId: string;
   readonly hoje: string;
   readonly terminoDaTurma: string | null;
-}): Promise<{ quadro: QuadroDeAvaliacoes | null; aviso: string | null }> {
+  /** O código da turma, para os alertas de vista (FR-054). */
+  readonly turmaCodigo?: string;
+}): Promise<{ quadro: QuadroDeAvaliacoes | null; aviso: string | null; alertas: AlertaDeVista[] }> {
   const supabase = await criarClienteDeServidor();
-  const [disc, ues, itens, ajustes, avals, execucao, prazo] = await Promise.all([
+  const [disc, ues, itens, ajustes, avals, execucao, prazo, breve] = await Promise.all([
     supabase
       .from("disciplinas")
       .select("id, cod_disciplina, nome_disciplina, carga_horaria_tempos")
@@ -73,11 +76,21 @@ export async function lerAvaliacoesDaTurma(entrada: {
       .eq("chave", "avaliacao.prazo_vista_dias")
       .eq("status", "ativo")
       .maybeSingle(),
+    supabase
+      .from("config_parametros")
+      .select("valor")
+      .eq("chave", "avaliacao.vence_em_breve_dias")
+      .eq("status", "ativo")
+      .maybeSingle(),
   ]);
 
   const falha = [disc, ues, itens, ajustes, avals, execucao].find((r) => r.error);
   if (falha?.error) {
-    return { quadro: null, aviso: "Não foi possível ler as avaliações desta turma agora." };
+    return {
+      quadro: null,
+      aviso: "Não foi possível ler as avaliações desta turma agora.",
+      alertas: [],
+    };
   }
 
   const exec = new Map(
@@ -162,7 +175,31 @@ export async function lerAvaliacoesDaTurma(entrada: {
   }));
 
   const prazoDias = Number((prazo.data as Linha | null)?.valor ?? 7) || 7;
+  const venceEmBreveDias = Number((breve.data as Linha | null)?.valor ?? 2) || 2;
+  // Tem item de vista: sem item ligado (histórico), sim; com item, o tempo de vista efetivo (ajuste da turma ou
+  // currículo) maior que zero — o mesmo critério de `app.fn_status_vista`.
+  const itemPorId = new Map(itensDoQuadro.map((i) => [i.id, i] as const));
+  const codDe = new Map(disciplinas.map((d) => [d.id, d.cod] as const));
+  const alertas = alertasDeVista(
+    avaliacoes.map((a) => {
+      const item = a.itemId ? itemPorId.get(a.itemId) : undefined;
+      const vista = item ? (item.ajusteDaTurma?.taVista ?? item.taVista) : null;
+      return {
+        id: a.id,
+        turma: entrada.turmaCodigo ?? "",
+        disciplina: codDe.get(a.disciplinaId) ?? "",
+        tipo: a.tipo,
+        natureza: a.natureza,
+        estadoDoRegistro: a.estadoDoRegistro,
+        aplicacao: a.aplicacao,
+        sessoesDeVista: a.sessoesDeVista,
+        temItemDeVista: a.itemId === null || (vista !== null && vista > 0),
+      };
+    }),
+    { prazoDias, venceEmBreveDias, hoje: entrada.hoje },
+  );
   return {
+    alertas,
     quadro: quadroDeAvaliacoesDaTurma({
       disciplinas: disciplinas.filter((d) => d.ch > 0),
       itens: itensDoQuadro,
@@ -183,7 +220,12 @@ export async function lerAvaliacoesDoCurso(entrada: {
   readonly cursoId: string;
   readonly turmaCodigo: string | null;
   readonly hoje: string;
-}): Promise<{ quadro: QuadroDeAvaliacoes | null; aviso: string | null; turmaId: string | null }> {
+}): Promise<{
+  quadro: QuadroDeAvaliacoes | null;
+  aviso: string | null;
+  turmaId: string | null;
+  alertas: AlertaDeVista[];
+}> {
   let turmaId: string | null = null;
   let termino: string | null = null;
   if (entrada.turmaCodigo) {

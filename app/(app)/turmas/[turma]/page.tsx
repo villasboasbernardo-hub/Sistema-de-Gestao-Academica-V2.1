@@ -57,6 +57,7 @@ import { CardsDeTetos, type AutoriaDoPrevisto } from "./CardsDeTetos";
 import { CardDeAvaliacoes } from "./CardDeAvaliacoes";
 import { AvaliacoesDaTurma } from "./AvaliacoesDaTurma";
 import { AbasDaTurma } from "./AbasDaTurma";
+import { AlertasDeVista } from "./AlertasDeVista";
 import { lerAvaliacoesDaTurma } from "./consulta-de-avaliacoes";
 import { EdicaoDoPrevisto } from "./EdicaoDoPrevisto";
 import {
@@ -391,6 +392,7 @@ export default async function FichaDaTurma({
         cursoId,
         hoje,
         terminoDaTurma: dataTermino,
+        turmaCodigo: turma.codigo as string,
       });
 
   return (
@@ -525,6 +527,9 @@ export default async function FichaDaTurma({
       </header>
 
       <QuadroDeAvisosDaTurma avisos={avisos} />
+
+      {/* As vistas atrasadas e as que vencem em breve (FR-054, `RF-CURSO-06`): informativo, nunca bloqueia. */}
+      <AlertasDeVista alertas={avaliacoes?.alertas ?? []} mostrarTurma={false} />
 
       <SecaoDeAndamento andamento={andamento} dataTermino={dataTermino} />
 
