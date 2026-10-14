@@ -35,7 +35,8 @@
  * ⚠️ TypeScript puro: sem `next`, sem `react`, sem `supabase` (Princípio II).
  */
 
-export type SituacaoDaAvaliacao = "pendente" | "em_andamento" | "concluida" | "atrasada" | "sem_correspondencia";
+export type SituacaoDaAvaliacao =
+  "pendente" | "em_andamento" | "concluida" | "atrasada" | "sem_correspondencia";
 
 /** A natureza do instrumento (`config_listas.instrumentos_avaliacao.metadados.natureza`). */
 export type NaturezaDaAvaliacao = "prova" | "trabalho" | "od";
@@ -80,14 +81,20 @@ export function situacaoDaAvaliacao(entrada: EntradaDaSituacao): SituacaoDaAvali
 
   // Avaliação agendada à frente ainda não foi aplicada: é pendente (FR-051).
   if (entrada.aplicacao === null || entrada.aplicacao > entrada.hoje) {
-    if (entrada.aplicacao === null && entrada.terminoDaTurma !== null && entrada.hoje > entrada.terminoDaTurma) {
+    if (
+      entrada.aplicacao === null &&
+      entrada.terminoDaTurma !== null &&
+      entrada.hoje > entrada.terminoDaTurma
+    ) {
       return "sem_correspondencia";
     }
     return "pendente";
   }
 
   if (!entrada.temItemDeVista || entrada.sessoesDeVista.length > 0) return "concluida";
-  return diasCorridos(entrada.aplicacao, entrada.hoje) > entrada.prazoDias ? "atrasada" : "em_andamento";
+  return diasCorridos(entrada.aplicacao, entrada.hoje) > entrada.prazoDias
+    ? "atrasada"
+    : "em_andamento";
 }
 
 /** Rótulo de tela de cada situação. */

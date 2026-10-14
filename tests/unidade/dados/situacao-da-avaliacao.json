@@ -2,23 +2,158 @@
   "_sobre": "Tabela de casos ÚNICA da situação da avaliação (R-8 da spec 014): lida pelo Vitest (situacao.test.ts) e pela prova cruzada contra app.fn_status_vista (situacao-sql-igual-ts.test.ts). Prazo de vista 7 dias corridos, contado da APLICAÇÃO (FR-052).",
   "prazoDias": 7,
   "casos": [
-    { "nome": "aplicada com sessão de vista → concluída", "natureza": "prova", "aplicacao": "2026-10-01", "sessoesDeVista": ["2026-10-03"], "temItemDeVista": true, "hoje": "2026-10-20", "terminoDaTurma": "2026-12-15", "esperado": "concluida" },
-    { "nome": "item sem vista no currículo (TFM) → concluída ao aplicar", "natureza": "prova", "aplicacao": "2026-10-01", "sessoesDeVista": [], "temItemDeVista": false, "hoje": "2026-10-01", "terminoDaTurma": "2026-12-15", "esperado": "concluida" },
-    { "nome": "trabalho aplicado no mesmo dia, sem vista → em andamento", "natureza": "trabalho", "aplicacao": "2026-10-01", "sessoesDeVista": [], "temItemDeVista": true, "hoje": "2026-10-01", "terminoDaTurma": "2026-12-15", "esperado": "em_andamento" },
-    { "nome": "7º dia sem vista → em andamento", "natureza": "prova", "aplicacao": "2026-10-01", "sessoesDeVista": [], "temItemDeVista": true, "hoje": "2026-10-08", "terminoDaTurma": "2026-12-15", "esperado": "em_andamento" },
-    { "nome": "8º dia sem vista → atrasada", "natureza": "prova", "aplicacao": "2026-10-01", "sessoesDeVista": [], "temItemDeVista": true, "hoje": "2026-10-09", "terminoDaTurma": "2026-12-15", "esperado": "atrasada" },
-    { "nome": "o prazo atravessa o mês sem erro de fuso (8º dia)", "natureza": "trabalho", "aplicacao": "2026-02-25", "sessoesDeVista": [], "temItemDeVista": true, "hoje": "2026-03-05", "terminoDaTurma": "2026-12-15", "esperado": "atrasada" },
-    { "nome": "avaliação agendada à frente → pendente", "natureza": "prova", "aplicacao": "2026-10-30", "sessoesDeVista": [], "temItemDeVista": true, "hoje": "2026-10-20", "terminoDaTurma": "2026-12-15", "esperado": "pendente" },
-    { "nome": "item sem aplicação antes do término → pendente", "natureza": "prova", "aplicacao": null, "sessoesDeVista": [], "temItemDeVista": true, "hoje": "2026-10-20", "terminoDaTurma": "2026-12-15", "esperado": "pendente" },
-    { "nome": "item sem aplicação depois do término → sem correspondência", "natureza": "prova", "aplicacao": null, "sessoesDeVista": [], "temItemDeVista": true, "hoje": "2026-12-16", "terminoDaTurma": "2026-12-15", "esperado": "sem_correspondencia" },
-    { "nome": "item sem aplicação e turma sem término → pendente (RN-DEG-01)", "natureza": "trabalho", "aplicacao": null, "sessoesDeVista": [], "temItemDeVista": true, "hoje": "2027-01-10", "terminoDaTurma": null, "esperado": "pendente" },
-    { "nome": "substituída pela planilha → fora", "natureza": "prova", "estadoDoRegistro": "substituida_pela_planilha", "aplicacao": "2026-10-01", "sessoesDeVista": [], "temItemDeVista": true, "hoje": "2026-10-20", "terminoDaTurma": "2026-12-15", "esperado": null },
-    { "nome": "cancelada → fora", "natureza": "prova", "estadoDoRegistro": "cancelada", "aplicacao": "2026-10-01", "sessoesDeVista": [], "temItemDeVista": true, "hoje": "2026-10-20", "terminoDaTurma": "2026-12-15", "esperado": null },
-    { "nome": "pendente GRAVADO não muda a leitura (R-7): aplicada no 8º dia → atrasada", "natureza": "prova", "estadoDoRegistro": "pendente", "aplicacao": "2026-10-01", "sessoesDeVista": [], "temItemDeVista": true, "hoje": "2026-10-09", "terminoDaTurma": "2026-12-15", "esperado": "atrasada" }
+    {
+      "nome": "aplicada com sessão de vista → concluída",
+      "natureza": "prova",
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": ["2026-10-03"],
+      "temItemDeVista": true,
+      "hoje": "2026-10-20",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "concluida"
+    },
+    {
+      "nome": "item sem vista no currículo (TFM) → concluída ao aplicar",
+      "natureza": "prova",
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": [],
+      "temItemDeVista": false,
+      "hoje": "2026-10-01",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "concluida"
+    },
+    {
+      "nome": "trabalho aplicado no mesmo dia, sem vista → em andamento",
+      "natureza": "trabalho",
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-01",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "em_andamento"
+    },
+    {
+      "nome": "7º dia sem vista → em andamento",
+      "natureza": "prova",
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-08",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "em_andamento"
+    },
+    {
+      "nome": "8º dia sem vista → atrasada",
+      "natureza": "prova",
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-09",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "atrasada"
+    },
+    {
+      "nome": "o prazo atravessa o mês sem erro de fuso (8º dia)",
+      "natureza": "trabalho",
+      "aplicacao": "2026-02-25",
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-03-05",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "atrasada"
+    },
+    {
+      "nome": "avaliação agendada à frente → pendente",
+      "natureza": "prova",
+      "aplicacao": "2026-10-30",
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-20",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "pendente"
+    },
+    {
+      "nome": "item sem aplicação antes do término → pendente",
+      "natureza": "prova",
+      "aplicacao": null,
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-20",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "pendente"
+    },
+    {
+      "nome": "item sem aplicação depois do término → sem correspondência",
+      "natureza": "prova",
+      "aplicacao": null,
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-12-16",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "sem_correspondencia"
+    },
+    {
+      "nome": "item sem aplicação e turma sem término → pendente (RN-DEG-01)",
+      "natureza": "trabalho",
+      "aplicacao": null,
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2027-01-10",
+      "terminoDaTurma": null,
+      "esperado": "pendente"
+    },
+    {
+      "nome": "substituída pela planilha → fora",
+      "natureza": "prova",
+      "estadoDoRegistro": "substituida_pela_planilha",
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-20",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": null
+    },
+    {
+      "nome": "cancelada → fora",
+      "natureza": "prova",
+      "estadoDoRegistro": "cancelada",
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-20",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": null
+    },
+    {
+      "nome": "pendente GRAVADO não muda a leitura (R-7): aplicada no 8º dia → atrasada",
+      "natureza": "prova",
+      "estadoDoRegistro": "pendente",
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-09",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "atrasada"
+    }
   ],
   "casosOd": [
-    { "nome": "OD antes do 1º lançamento da disciplina → pendente", "disciplinaIniciada": false, "disciplinaConcluida": false, "esperado": "pendente" },
-    { "nome": "OD com a disciplina correndo → em andamento", "disciplinaIniciada": true, "disciplinaConcluida": false, "esperado": "em_andamento" },
-    { "nome": "OD com a disciplina concluída → concluída", "disciplinaIniciada": true, "disciplinaConcluida": true, "esperado": "concluida" }
+    {
+      "nome": "OD antes do 1º lançamento da disciplina → pendente",
+      "disciplinaIniciada": false,
+      "disciplinaConcluida": false,
+      "esperado": "pendente"
+    },
+    {
+      "nome": "OD com a disciplina correndo → em andamento",
+      "disciplinaIniciada": true,
+      "disciplinaConcluida": false,
+      "esperado": "em_andamento"
+    },
+    {
+      "nome": "OD com a disciplina concluída → concluída",
+      "disciplinaIniciada": true,
+      "disciplinaConcluida": true,
+      "esperado": "concluida"
+    }
   ]
 }
