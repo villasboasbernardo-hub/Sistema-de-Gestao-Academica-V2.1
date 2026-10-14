@@ -792,7 +792,11 @@ informação, pergunte em vez de assumir.
 ```
 
 **Portão de saída:** busca por `formula_mf` e `carater` sem nenhuma leitura funcional; avaliação
-agendada aparecendo no DSA e somando na CHD.
+**registrada no DSA** aparecendo no DSA e somando na CHD; agendada sem registro não soma.
+
+> ⚠️ **Emenda E-6 de 14/10/2026** *(spec 014 §13; decisão D-AA-15 de Bernardo Villas Boas, 12/10/2026; aprovada
+> em 14/10/2026, A0.1)*. **Antes:** *"avaliação agendada aparecendo no DSA e somando na CHD."* O `.docx` **não**
+> recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
 ---
 
