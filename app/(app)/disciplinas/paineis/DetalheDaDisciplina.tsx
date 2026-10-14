@@ -22,6 +22,7 @@ import type { LinhaDaGradeDeDisciplinas } from "../consulta";
 import type { PermissoesDaGrade } from "../GradeDeDisciplinas";
 import { DialogoDeExclusao } from "./DialogoDeExclusao";
 import { FormularioDeDisciplina } from "./FormularioDeDisciplina";
+import { PainelDeAvaliacoesDoCurriculo } from "./PainelDeAvaliacoesDoCurriculo";
 import { PainelDeUnidades } from "./PainelDeUnidades";
 import { SituacaoDaDisciplina } from "./SituacaoDaDisciplina";
 
@@ -129,6 +130,13 @@ export function DetalheDaDisciplina({
           podeDesativar={permissoes.desativar}
         />
       ) : null}
+
+      {/* ── avaliações do currículo (spec 014, FR-038): a mesma permissão das UEs ──────────────── */}
+      <PainelDeAvaliacoesDoCurriculo
+        disciplinaId={linha.disciplinaId}
+        itens={linha.avaliacoesDoCurriculo}
+        podeEditar={permissoes.editar}
+      />
     </div>
   );
 }
