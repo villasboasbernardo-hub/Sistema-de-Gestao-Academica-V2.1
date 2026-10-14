@@ -121,3 +121,57 @@ test("Q-8 · o Operador não vê «Todas as turmas»; o Admin vê", async ({ pag
   await expect(page.locator('[data-slot="formulario-de-parada"]')).toBeVisible();
   await expect(page.locator('[data-slot="parada-de-todas"]')).toHaveCount(0);
 });
+
+/** O TR da turma, como a ficha o soma (`vw_carga_horaria_turma`). */
+async function trDaTurma(): Promise<number> {
+  const { data } = await banco()
+    .from("vw_carga_horaria_turma")
+    .select("ta_tr")
+    .eq("turma_codigo", S.turmaComRelogio)
+    .maybeSingle();
+  return Number((data as { ta_tr: number | null } | null)?.ta_tr ?? 0);
+}
+
+test("SC-012 · LA NÃO prevista consome Tempo Reserva (+2), sai no papel e volta ao desfazer", async ({
+  page,
+}) => {
+  const motivo = "Licença não prevista (teste de TR)";
+  const antes = await trDaTurma();
+  await abrirASemana(page, ADMIN);
+  await page.locator('[data-slot="parar-dia"]').click();
+  const form = page.locator('[data-slot="formulario-de-parada"]');
+  await form.locator("#parada-dia").selectOption(SEXTA);
+  await form.locator("#parada-tipo").selectOption({ label: "LA — Licença Administrativa" });
+  await form.locator("#parada-motivo").fill(motivo);
+  await form.getByLabel("Dia inteiro").uncheck();
+  await form.getByLabel("Do tempo").fill("3");
+  await form.getByLabel("quantos").fill("2");
+  await form.getByLabel("Prevista no calendário").uncheck();
+  await form.locator('[data-slot="consome-tempo-reserva"]').check();
+  await form.locator('[data-slot="gravar-parada"]').click();
+  const confirmar = page.locator('[data-slot="confirmar-parada"]');
+  const resposta = page.locator('[data-slot="resposta-da-parada"]');
+  await expect(confirmar.or(resposta)).toBeVisible();
+  if (await confirmar.isVisible()) {
+    await confirmar.getByRole("button", { name: "Parar mesmo assim" }).click();
+  }
+  await expect(resposta).toHaveText("Dia parado registrado.");
+  await expect.poll(trDaTurma).toBe(antes + 2);
+  /* O TR bloqueante OCUPA os tempos: é TR e bloqueio, e sai marcado como tal (FR-027). */
+  await expect(celula(page, 3)).toHaveAttribute("aria-label", /^TR — tempo bloqueado para aula/);
+
+  /* FR-027: o papel mostra os tempos parados, com o tipo e o motivo. */
+  await page.locator('[data-slot="imprimir-dsa"]').click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/print/dsa");
+  await expect(page.locator('[data-slot="dsa-tempo-parado"]').first()).toContainText("Parado — TR");
+  await expect(page.locator("body")).toContainText(motivo);
+
+  await page.goBack();
+  await expect(page.locator('[data-slot="grade-alocacao"]')).toBeVisible();
+  await page
+    .locator("[data-parada]", { hasText: motivo })
+    .locator('[data-slot="desfazer-parada"]')
+    .click();
+  await expect(page.locator('[data-slot="resposta-da-parada"]')).toHaveText("Parada desfeita.");
+  await expect.poll(trDaTurma).toBe(antes);
+});

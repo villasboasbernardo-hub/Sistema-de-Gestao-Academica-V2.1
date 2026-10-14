@@ -56,3 +56,32 @@ export const ROTULO_DA_CATEGORIA_DE_ATIVIDADE: Readonly<Record<CategoriaDeAtivid
   Estudo_Individual: "Estudo Individual",
   Apoio_Individualizado: "Apoio Individualizado",
 };
+
+/**
+ * As regras da atividade que dependem da CATEGORIA — que agora sai do tipo, e por isso não cabem no
+ * Zod (spec 014, FR-011). A ação as confere depois de ler o tipo; o banco tem os `CHECK` irmãos.
+ *
+ * - só a AEC leva disciplina (`ativ_disciplina_so_aec_da_turma`, item 1b de 08/10/2026);
+ * - o Estudo Individual é sempre de uma turma (`V-5`, `ativ_estudo_individual_de_turma`);
+ * - a quantidade de alunos é só do Apoio Individualizado (FR-020).
+ */
+export function recusaPelaCategoria(entrada: {
+  readonly categoria: CategoriaDeAtividade;
+  readonly turmaId: string | null;
+  readonly disciplinaId: string | null;
+  readonly quantidadeAlunos: number | null;
+}): { readonly campo: string; readonly mensagem: string } | null {
+  if (entrada.disciplinaId !== null && entrada.categoria !== "AEC") {
+    return { campo: "disciplinaId", mensagem: "Só a AEC leva disciplina." };
+  }
+  if (entrada.categoria === "Estudo_Individual" && entrada.turmaId === null) {
+    return { campo: "turmaId", mensagem: "Estudo Individual é sempre de uma turma." };
+  }
+  if (entrada.quantidadeAlunos !== null && entrada.categoria !== "Apoio_Individualizado") {
+    return {
+      campo: "quantidadeAlunos",
+      mensagem: "A quantidade de alunos é só do Apoio Individualizado.",
+    };
+  }
+  return null;
+}

@@ -208,6 +208,8 @@ export type ConteudoDoFato = {
   readonly unidadeEnsinoId?: string | null | undefined;
   /** `registros_aula.disciplina_id`, a da COLUNA (aula sem UE, `D-DSA-1`). */
   readonly disciplinaColuna?: string | null | undefined;
+  /** Apoio Individualizado (spec 014, A-6): convive com a aula no mesmo tempo sem conflito. */
+  readonly apoio?: boolean | undefined;
   /** O tópico GRAVADO, cru — o `conteudo` acima pode ser o tipo da avaliação, para exibir. */
   readonly conteudoGravado?: string | null | undefined;
 };
@@ -279,6 +281,7 @@ export function fatoDaOcupacao(
     /* ⚠️ Sem instrutor, entra o responsável de fora do cadastro — ver `responsavelDoFato`. */
     instrutor: responsavelDoFato(responsavel, extra?.externo),
     local: linha.local,
+    ...(extra?.apoio === true ? { apoio: true } : {}),
     /* ⚠️ O GRAVADO, CRU — é dele que o cartão único se preenche (ajuste 2 do PR #40). */
     gravado: {
       instrutorId: linha.instrutor_id,

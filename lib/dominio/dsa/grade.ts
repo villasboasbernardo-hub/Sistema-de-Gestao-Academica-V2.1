@@ -62,6 +62,11 @@ export type FatoDaSemana = {
   readonly instrutor: string | null;
   readonly local: string | null;
   /**
+   * Apoio Individualizado (spec 014, A-6): convive com a aula no mesmo tempo **sem** conflito de
+   * ocupação — quando divide o tempo com outro lançamento, vai para a faixa abaixo do dia, com o motivo.
+   */
+  readonly apoio?: boolean;
+  /**
    * O que está GRAVADO na linha, cru — é daqui que o cartão único se preenche (ajuste 2 do PR #40).
    *
    * ⚠️ **OS CAMPOS ACIMA SÃO DE EXIBIÇÃO, e reabrir o editor com eles regravava o que se mostra no
@@ -129,6 +134,31 @@ export type Semana = {
   readonly capacidade: CapacidadeDaSemana | null;
 };
 
+/** O motivo de o Apoio sair da célula: ele divide o tempo com outro lançamento, e isso não é conflito. */
+export const MOTIVO_DO_APOIO_NO_MESMO_TEMPO =
+  "Apoio Individualizado — alunos específicos, no mesmo tempo de outro lançamento da turma (não é conflito).";
+
+/** O Apoio divide algum TA com outro lançamento (não Apoio) posicionado no mesmo dia? */
+function divideTempoComOutro(apoio: FatoDaSemana, fatos: readonly FatoDaSemana[]): boolean {
+  if (apoio.taInicial === null || apoio.tempos === null) return false;
+  const fim = apoio.taInicial + apoio.tempos - 1;
+  return fatos.some(
+    (f) =>
+      f.fatoId !== apoio.fatoId &&
+      f.apoio !== true &&
+      f.data === apoio.data &&
+      f.taInicial !== null &&
+      f.tempos !== null &&
+      f.taInicial <= fim &&
+      f.taInicial + f.tempos - 1 >= (apoio.taInicial as number),
+  );
+}
+
+/** A parada de PARTE do dia, como a grade e o papel a escrevem (`FR-027`). */
+export function rotuloDaParadaParcial(p: ParadaDoDia): string {
+  return `Parado — ${p.tipo}: ${p.motivo} (tempos ${p.taInicial} a ${(p.taInicial ?? 0) + (p.tempos ?? 1) - 1})`;
+}
+
 export function montarSemana(entrada: {
   /** As datas da semana, ISO, na ordem — cinco, ou seis com o sábado. */
   readonly dias: readonly string[];
@@ -176,6 +206,12 @@ export function montarSemana(entrada: {
         fato,
         motivo: motivoDaFaltaDePosicao(paraPosicao) ?? "Sem posição na grade.",
       });
+      faixaPorDia.set(fato.data, lista);
+      continue;
+    }
+    if (fato.apoio === true && divideTempoComOutro(fato, fatos)) {
+      const lista = faixaPorDia.get(fato.data) ?? [];
+      lista.push({ fato, motivo: MOTIVO_DO_APOIO_NO_MESMO_TEMPO });
       faixaPorDia.set(fato.data, lista);
       continue;
     }
@@ -256,12 +292,7 @@ export function montarSemana(entrada: {
       paradas: paradasDoDia,
       avisos: [
         ...(avisosPorDia.get(data) ?? []),
-        ...paradasDoDia
-          .filter((p) => p !== paradaDoDiaInteiro)
-          .map(
-            (p) =>
-              `Parado — ${p.tipo}: ${p.motivo} (tempos ${p.taInicial} a ${(p.taInicial ?? 0) + (p.tempos ?? 1) - 1})`,
-          ),
+        ...paradasDoDia.filter((p) => p !== paradaDoDiaInteiro).map(rotuloDaParadaParcial),
       ],
       celulas,
       semPosicao: faixaPorDia.get(data) ?? [],

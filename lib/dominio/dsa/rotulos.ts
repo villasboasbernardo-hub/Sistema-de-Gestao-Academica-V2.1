@@ -138,3 +138,32 @@ export function camposDoEstudoIndividual(dia: string, slot: number) {
     local: LOCAL_DO_ESTUDO_INDIVIDUAL,
   };
 }
+
+/**
+ * A marca do Apoio Individualizado na grade e no papel — `FR-019` da spec 014: *"A grade e o papel do
+ * DSA MUST marcar essas linhas com «Apoio Individualizado — alunos específicos»"*.
+ */
+export const ROTULO_DO_APOIO = "Apoio Individualizado — alunos específicos";
+
+/** A marca do TR que bloqueia aula (licença não prevista, spec 014 Q-13): é TR **e** bloqueio. */
+export const ROTULO_DO_TR_BLOQUEANTE = "TR — tempo bloqueado para aula";
+
+/**
+ * O conteúdo de uma atividade na grade e no papel: a descrição, com a marca do Apoio ou do TR
+ * bloqueante na frente. ⚠️ É de EXIBIÇÃO: o cartão de edição reabre com a descrição GRAVADA.
+ */
+export function conteudoDaAtividade(entrada: {
+  readonly descricao: string | null | undefined;
+  readonly categoria: string | null | undefined;
+  readonly bloqueiaAula?: boolean | null | undefined;
+}): string | null {
+  const descricao = limpo(entrada.descricao);
+  const marca =
+    entrada.categoria === "Apoio_Individualizado"
+      ? ROTULO_DO_APOIO
+      : entrada.bloqueiaAula === true
+        ? ROTULO_DO_TR_BLOQUEANTE
+        : null;
+  if (marca === null) return descricao === "" ? null : descricao;
+  return descricao === "" ? marca : `${marca}: ${descricao}`;
+}

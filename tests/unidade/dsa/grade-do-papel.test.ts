@@ -174,3 +174,21 @@ describe("os cartões ocupam os tempos do lançamento", () => {
     expect(grade?.foraDaGrade).toHaveLength(1);
   });
 });
+
+describe("spec 014, FR-027 · os tempos parados no papel", () => {
+  it("a parada de parte do dia ocupa as faixas dos tempos dela, com o rótulo", () => {
+    const d: DiaImpresso = {
+      ...dia("2026-07-20", []),
+      paradas: [{ taInicial: 6, tempos: 2, rotulo: "Parado — LA: Licença (tempos 6 a 7)" }],
+    };
+    const grade = gradeDoPapel([d], relogioDoCatalogo(CFG_H, 9));
+    const p = grade?.paradas[0];
+    expect(p?.rotulo).toBe("Parado — LA: Licença (tempos 6 a 7)");
+    expect(grade?.faixas[p?.faixaInicial ?? -1]).toMatchObject({ tipo: "tempo", numero: 6 });
+    expect(grade?.faixas[p?.faixaFinal ?? -1]).toMatchObject({ tipo: "tempo", numero: 7 });
+  });
+
+  it("controle: sem parada, nada", () => {
+    expect(gradeDoPapel([dia("2026-07-20", [])], relogioDoCatalogo(CFG_H, 9))?.paradas).toEqual([]);
+  });
+});

@@ -466,6 +466,7 @@ export default async function SemanaDoDsa({
           tecnicas={lida.tecnicas}
           tiposDeAvaliacao={lida.tiposDeAvaliacao}
           subtipos={lida.subtipos}
+          podeAtividadeGlobal={pode(permissoes, "atividades_globais", "criar")}
           lancar={lancar}
           lancarEstudoIndividual={lancarEstudoIndividualDaSemana}
           mover={mover}

@@ -238,3 +238,50 @@ describe("`Q-4` · o sábado", () => {
     expect(semana.capacidade?.diasUteis).toBe(6);
   });
 });
+
+describe("spec 014, A-6 · o Apoio Individualizado no mesmo tempo de uma aula", () => {
+  const aula = fato({ fatoId: "aula", taInicial: 1, tempos: 2 });
+  const apoio = fato({
+    fatoId: "apoio",
+    origem: "atividade_nao_letiva",
+    taInicial: 2,
+    tempos: 1,
+    disciplina: null,
+    conteudo: "Apoio Individualizado — alunos específicos: Monitoria",
+    apoio: true,
+  });
+
+  it("a aula fica na célula e o Apoio vai para a faixa do dia, com o motivo — não é conflito", () => {
+    const dia = montar({ fatos: [aula, apoio] }).dias[0];
+    expect(dia?.celulas[0]?.bloco?.fatoId).toBe("aula");
+    expect(dia?.semPosicao.map((s) => s.fato.fatoId)).toEqual(["apoio"]);
+    expect(dia?.semPosicao[0]?.motivo).toContain("não é conflito");
+  });
+
+  it("controle: o Apoio sozinho no tempo fica na célula", () => {
+    const dia = montar({ fatos: [apoio] }).dias[0];
+    expect(dia?.celulas[1]?.bloco?.fatoId).toBe("apoio");
+    expect(dia?.semPosicao).toEqual([]);
+  });
+});
+
+describe("spec 014, FR-027 · a parada de parte do dia", () => {
+  it("vira aviso do dia com o tipo, o motivo e os tempos", () => {
+    const dia = montar({
+      turmaId: "t",
+      paradas: [
+        {
+          data: "2026-10-05",
+          turmaId: "t",
+          taInicial: 6,
+          tempos: 2,
+          tipo: "LA",
+          motivo: "Licença",
+        },
+      ],
+    }).dias[0];
+    expect(dia?.avisos).toContain("Parado — LA: Licença (tempos 6 a 7)");
+    expect(dia?.celulas[5]?.estado).toBe("bloqueada");
+    expect(dia?.celulas[4]?.estado).toBe("livre");
+  });
+});

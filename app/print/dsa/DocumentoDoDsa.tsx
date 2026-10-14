@@ -363,6 +363,21 @@ function Grade({
           ),
         )}
 
+        {/* ⚠️ Spec 014, FR-027: os tempos parados de parte do dia, com o tipo e o motivo. */}
+        {grade.paradas.map((p) => (
+          <div
+            key={`p-${p.coluna}-${p.faixaInicial}`}
+            className="dsa4-bloqueio"
+            data-slot="dsa-tempo-parado"
+            style={{
+              gridColumn: `${p.coluna + 2} / ${p.coluna + 3}`,
+              gridRow: `${p.faixaInicial + 2} / ${p.faixaFinal + 3}`,
+            }}
+          >
+            <span>{p.rotulo}</span>
+          </div>
+        ))}
+
         {grade.cartoes.map((c) => (
           <Cartao
             key={`${c.linha.chave}-${c.parte}`}
@@ -449,6 +464,12 @@ function ListaSemRelogio({ dias }: { readonly dias: readonly DiaImpresso[] }) {
           {dia.bloqueio === null ? null : (
             <span data-slot="dsa-dia-bloqueado"> — {dia.bloqueio}</span>
           )}
+          {(dia.paradas ?? []).map((p) => (
+            <span key={p.taInicial} data-slot="dsa-tempo-parado">
+              {" "}
+              — {p.rotulo}
+            </span>
+          ))}
           <ul>
             {dia.linhas.map((l: LinhaImpressa) => (
               <li

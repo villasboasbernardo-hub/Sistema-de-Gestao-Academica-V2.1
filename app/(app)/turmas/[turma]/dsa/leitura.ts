@@ -44,10 +44,19 @@ import {
   type OcupacaoDeTa,
   type OcupacaoPropria,
 } from "@/lib/dominio/dsa/conflitos";
+import {
+  categoriaPeloTipo,
+  tiposOferecidos,
+  type TipoDeAtividade,
+} from "@/lib/dominio/categoria-pelo-tipo";
 import { montarSemana, type FatoDaSemana, type Semana } from "@/lib/dominio/dsa/grade";
 import { relogioDaSemana, type Relogio } from "@/lib/dominio/dsa/horario-do-bloco";
 import type { ExecucaoDaDisciplina, TecnicaDoCatalogo } from "@/lib/dominio/dsa/impressao";
-import { conteudoDaAvaliacao, tecnicaDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
+import {
+  conteudoDaAtividade,
+  conteudoDaAvaliacao,
+  tecnicaDaVistaDeProva,
+} from "@/lib/dominio/dsa/rotulos";
 import type { ResponsavelDoCurso } from "@/lib/dominio/dsa/assinaturas";
 import { nomeParaDsa, type InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { emOrdemNaturalDoCodigo } from "@/lib/dominio/ordem-natural";
@@ -80,6 +89,13 @@ import {
 type ClienteDeServidor = Awaited<ReturnType<typeof criarClienteDeServidor>>;
 
 /** Uma unidade de ensino oferecida à turma, com a CH prevista, a lançada e a restante (`P-3`). */
+/** Um tipo de atividade oferecido, com a categoria que ele dá (spec 014, FR-011). */
+export type TipoOferecido = {
+  readonly id: string;
+  readonly valor: string;
+  readonly categoria: string;
+};
+
 export type UnidadeLida = {
   readonly id: string;
   readonly disciplinaId: string;
@@ -146,7 +162,11 @@ export type SemanaDoDsa = {
   /** As técnicas **com a sigla** dos `metadados` — o que a coluna T/E do papel usa (`T040`). */
   readonly tecnicasComSigla: readonly TecnicaDoCatalogo[];
   readonly tiposDeAvaliacao: readonly string[];
-  readonly subtipos: readonly { readonly valor: string; readonly categoria: string | null }[];
+  /**
+   * Os TIPOS de atividade que o formulário oferece (spec 014, FR-011): ativos e com categoria, pela
+   * mesma regra do banco (`categoriaPeloTipo`). A categoria vem do tipo, nunca o contrário.
+   */
+  readonly subtipos: readonly TipoOferecido[];
   /**
    * Os fatos que são **Estudo Individual**, por `id`.
    *
@@ -323,7 +343,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("atividades_nao_letivas")
         .select(
-          "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id",
+          "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id, bloqueia_aula",
           contagemNaPrimeira(f),
         )
         .or(`turma_id.eq.${turmaId},turma_id.is.null`)
@@ -389,7 +409,7 @@ export async function lerPeriodoDoDsa(
     lerTodasAsPaginas((f) =>
       supabase
         .from("config_listas")
-        .select("lista, valor, ordem, ativo, metadados", contagemNaPrimeira(f))
+        .select("id, lista, valor, ordem, ativo, metadados", contagemNaPrimeira(f))
         .in("lista", ["metodologias", "tipos_avaliacao", "tipos_atividade", "escala_antiguidade"])
         .eq("ativo", true)
         .order("ordem")
@@ -710,6 +730,7 @@ export function montarSemanaDoDsa(
    * técnica dela é a do catálogo cuja sigla é `EO`, e não a da aplicação, com quem divide a linha.
    */
   const listas = (listasRes.data ?? []) as {
+    id: string;
     lista: string;
     valor: string;
     ordem: number;
@@ -769,6 +790,7 @@ export function montarSemanaDoDsa(
     descricao: string | null;
     responsavel_externo: string | null;
     disciplina_id: string | null;
+    bloqueia_aula: boolean | null;
   }[];
   for (const n of atividades) {
     /*
@@ -776,7 +798,14 @@ export function montarSemanaDoDsa(
      * não o imprime na coluna T/E — ver `diaImpresso`, que trata a origem não letiva à parte.
      */
     conteudos.set(n.id, {
-      conteudo: n.descricao,
+      /* ⚠️ O Apoio e o TR bloqueante saem MARCADOS (spec 014, FR-019 e FR-027); o editor, com o gravado. */
+      conteudo: conteudoDaAtividade({
+        descricao: n.descricao,
+        categoria: n.categoria_normativa,
+        bloqueiaAula: n.bloqueia_aula,
+      }),
+      conteudoGravado: n.descricao,
+      apoio: n.categoria_normativa === "Apoio_Individualizado",
       tecnica: n.subtipo,
       externo: n.responsavel_externo,
       /* A disciplina OPCIONAL da AEC (item 1b): só para exibir — ela não entra na CH da disciplina. */
@@ -988,10 +1017,14 @@ export function montarSemanaDoDsa(
     tecnicas: metodologias.map((l) => l.valor),
     tecnicasComSigla,
     tiposDeAvaliacao: daLista("tipos_avaliacao").map((l) => l.valor),
-    subtipos: daLista("tipos_atividade").map((l) => ({
-      valor: l.valor,
-      categoria: (l.metadados?.["categoria"] as string | undefined) ?? null,
-    })),
+    subtipos: tiposOferecidos(
+      daLista("tipos_atividade").map((l) => ({
+        id: l.id,
+        valor: l.valor,
+        ativo: true,
+        metadados: (l.metadados ?? null) as TipoDeAtividade["metadados"],
+      })),
+    ).map((t) => ({ id: t.id, valor: t.valor, categoria: categoriaPeloTipo(t) as string })),
     idsDeEstudoIndividual,
     marcasDeConflito,
     ocupacaoAcumulada: (

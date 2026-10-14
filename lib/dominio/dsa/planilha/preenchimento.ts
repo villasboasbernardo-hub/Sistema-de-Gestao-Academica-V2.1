@@ -845,7 +845,10 @@ export function abaDeEntrada(entrada: {
       const d0 = primeiraLinhaDoDia(g, k, d);
       const dia = semana.dias[d];
       const avisos = [
-        ...(dia?.bloqueio ? [`FERIADO — ${dia.bloqueio}`] : []),
+        /* Spec 014: o dia parado já chega rotulado («Parado — LA: …»); o feriado leva a palavra. */
+        ...(dia?.bloqueio
+          ? [dia.bloqueio.startsWith("Parado — ") ? dia.bloqueio : `FERIADO — ${dia.bloqueio}`]
+          : []),
         ...(semana.avisosDosDias[d] ?? []),
       ];
       for (let t = 1; t <= g.tempos; t += 1) {

@@ -177,3 +177,22 @@
 - **D2.1.5 (PR 2.1) — Na frase unificada da E-8, o `<motivo>` da parada é `<tipo> — <motivo>`**
   (*"Dia bloqueado: LA — Licença da turma. …"*), e o do feriado é a descrição dele, como antes. A sigla
   diz de onde a parada vem, que é o que se desfaz. Para mudar: tirar o tipo em `mensagemDeTempoParado`.
+- **D2.1.6 (PR 2.1) — Os casos de ponta a ponta de tipo e global ficaram num arquivo só**
+  (`tests/e2e/dsa-tipo-e-global.spec.ts`, T097 e T098), e o papel da parada entrou em
+  `dsa-parar-dia.spec.ts` (T100), porque o caminho de clique é o mesmo da parada. A semente do DSA não
+  precisou crescer (T096): os tipos novos nascem na migration D-2 também na base limpa. A recusa de aula
+  em tempo parado (SC-009), a licença prevista sem TR (SC-013) e o EI automático fora dos tempos parados
+  ficam provados em unidade (`dia-bloqueado.test.ts`, `empurrar.test.ts`) e pelos casos do PR 1 no banco.
+  Para mudar: acrescentar os três cenários ao `dsa-parar-dia.spec.ts`.
+- **D2.1.7 (PR 2.1) — A atividade global vai para uma semana que nenhuma outra suíte usa (16/11/2026).**
+  Ela aparece na grade de TODA turma, inclusive das suítes que rodam em paralelo; numa semana comum
+  mudaria a contagem delas. Para mudar: rodar o caso em série com o resto.
+- **D2.1.8 (PR 2.1) — O formulário continua escolhendo a categoria primeiro, como filtro da lista de
+  tipos**, e mostra *"Conta como: …"* com a categoria que o TIPO dá antes de gravar; a ação manda só o
+  tipo, e a categoria gravada é a do banco (`app.categoria_pelo_tipo`). Foi o caminho que manteve as
+  suítes do DSA (o botão por categoria é o percurso delas). Apoio Individualizado ganhou botão próprio.
+  Para mudar: uma lista única de tipos, sem o botão por categoria.
+- **D2.1.9 (PR 2.1) — O Apoio no mesmo tempo de uma aula sai da célula para a faixa do dia**, com o
+  motivo *"no mesmo tempo de outro lançamento da turma (não é conflito)"*: a grade tem uma célula por
+  tempo, e assim a tela mostra os dois (A-6). O Apoio também não empurra nem é empurrado na cascata.
+  Para mudar: desenhar dois blocos lado a lado na célula.

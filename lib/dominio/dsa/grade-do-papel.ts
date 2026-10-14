@@ -71,6 +71,13 @@ export type GradeDoPapel = {
   readonly cartoes: readonly CartaoDaGrade[];
   /** Linha que não tem tempo no relógio (TA ausente ou fora dele) — vai para baixo da grade, nunca some. */
   readonly foraDaGrade: readonly { readonly coluna: number; readonly linha: LinhaImpressa }[];
+  /** Os tempos parados de parte do dia (spec 014, `FR-027`), por coluna e faixa, com o rótulo. */
+  readonly paradas: readonly {
+    readonly coluna: number;
+    readonly faixaInicial: number;
+    readonly faixaFinal: number;
+    readonly rotulo: string;
+  }[];
 };
 
 /**
@@ -194,5 +201,16 @@ export function gradeDoPapel(
     }
   });
 
-  return { faixas, colunas: dias.map(colunaDoDia), cartoes, foraDaGrade };
+  const paradas: GradeDoPapel["paradas"][number][] = [];
+  dias.forEach((dia, coluna) => {
+    for (const p of dia.paradas ?? []) {
+      const ultimo = Math.min(p.taInicial + p.tempos - 1, tempos[tempos.length - 1]?.numero ?? 0);
+      const inicial = faixaDoTempo.get(p.taInicial);
+      const final = faixaDoTempo.get(ultimo);
+      if (inicial === undefined || final === undefined) continue;
+      paradas.push({ coluna, faixaInicial: inicial, faixaFinal: final, rotulo: p.rotulo });
+    }
+  });
+
+  return { faixas, colunas: dias.map(colunaDoDia), cartoes, foraDaGrade, paradas };
 }

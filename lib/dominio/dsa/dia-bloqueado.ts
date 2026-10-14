@@ -107,7 +107,14 @@ export type ParadaDoDia = {
   /** Para «Desfazer»: onde a parada mora e o código dela. */
   readonly destino?: "feriado" | "dia_parado" | "atividade";
   readonly codigo?: string;
+  /** O TR bloqueante é também um lançamento da grade: o `fato_id` dele, para a cascata não empurrá-lo. */
+  readonly fatoId?: string;
 };
+
+/** O rótulo da parada nas frases: `"LA — Licença da turma"`. */
+export function rotuloDaParada(p: ParadaDoDia): string {
+  return `${p.tipo} — ${p.motivo.trim().replace(/[.\s]+$/u, "")}`;
+}
 
 /** A parada que cobre o dia (e, se informados, os tempos) desta turma — ou `null`. */
 export function paradaQueCobre(
@@ -138,9 +145,8 @@ export function paradaQueCobre(
  * *"Tempo bloqueado"* quando a parada cobre só parte do dia (`RN-EVT-04`, emenda E-8).
  */
 export function mensagemDeTempoParado(p: ParadaDoDia): string {
-  const limpo = p.motivo.trim().replace(/[.\s]+$/u, "");
   const parteDoDia = p.taInicial !== null && p.tempos !== null;
-  return mensagemDeDiaBloqueado(`${p.tipo} — ${limpo}`, parteDoDia ? "tempo" : "dia");
+  return mensagemDeDiaBloqueado(rotuloDaParada(p), parteDoDia ? "tempo" : "dia");
 }
 
 /**

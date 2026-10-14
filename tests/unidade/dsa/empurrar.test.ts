@@ -126,3 +126,54 @@ describe("`D-DSA-3` · o empurrão em cascata", () => {
     expect(avisoDoEmpurrao([], DIA)).toBeNull();
   });
 });
+
+describe("FR-028 da spec 014 · o tempo parado é PAREDE na cascata", () => {
+  const PAREDE = { rotulo: "LA — Licença da turma", taInicial: 3, tempos: 2 };
+
+  it("empurrar um lançamento para dentro dos tempos parados é RECUSADO, nomeando a parada", () => {
+    const r = empurrarEmCascata({
+      bloco: { fatoId: "a", taInicial: 1, tempos: 2 },
+      doDia: [A, B],
+      ultimoTempo: 9,
+      data: DIA,
+      paredes: [PAREDE],
+    });
+    expect(r.tipo).toBe("recusa");
+    expect(r.tipo === "recusa" ? r.mensagem : "").toContain("«LA — Licença da turma»");
+    expect(r.tipo === "recusa" ? r.mensagem : "").toContain("«II — Aula B»");
+  });
+
+  it("a parada não se mexe e não pula: o lançamento depois dela continua onde está", () => {
+    const D = { fatoId: "d", rotulo: "IV — Aula D", taInicial: 6, tempos: 1 };
+    const r = empurrarEmCascata({
+      bloco: { fatoId: "a", taInicial: 1, tempos: 2 },
+      doDia: [A, D],
+      ultimoTempo: 9,
+      data: DIA,
+      paredes: [PAREDE],
+    });
+    expect(r).toEqual({ tipo: "ok", empurrados: [] });
+  });
+
+  it("parada de dia inteiro: nenhum empurrão cabe", () => {
+    const r = empurrarEmCascata({
+      bloco: { fatoId: "a", taInicial: 1, tempos: 2 },
+      doDia: [A, B],
+      ultimoTempo: 9,
+      data: DIA,
+      paredes: [{ rotulo: "FR — Data Magna", taInicial: null, tempos: null }],
+    });
+    expect(r.tipo).toBe("recusa");
+  });
+
+  it("controle: sem paredes, o mesmo empurrão passa (B vai para o 3º tempo)", () => {
+    const r = empurrarEmCascata({
+      bloco: { fatoId: "a", taInicial: 1, tempos: 2 },
+      doDia: [A, B],
+      ultimoTempo: 9,
+      data: DIA,
+      paredes: [],
+    });
+    expect(r.tipo === "ok" ? r.empurrados.map((e) => e.paraTa) : r).toEqual([3]);
+  });
+});

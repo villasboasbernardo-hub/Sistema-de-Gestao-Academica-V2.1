@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  recusaPelaCategoria,
   categoriaPeloTipo,
   foraDaCht,
   tiposOferecidos,
@@ -53,5 +54,32 @@ describe("categoriaPeloTipo", () => {
     expect(foraDaCht("Estudo_Individual")).toBe(true);
     expect(foraDaCht("Apoio_Individualizado")).toBe(true);
     expect(["AEC", "TAD", "TR"].map((c) => foraDaCht(c as "AEC"))).toEqual([false, false, false]);
+  });
+});
+
+describe("spec 014, FR-011 · as regras que dependem da categoria (`recusaPelaCategoria`)", () => {
+  const base = { turmaId: "t", disciplinaId: null, quantidadeAlunos: null } as const;
+
+  it("disciplina em TAD é recusada — só a AEC leva disciplina; na AEC passa", () => {
+    expect(recusaPelaCategoria({ ...base, categoria: "TAD", disciplinaId: "d" })?.mensagem).toBe(
+      "Só a AEC leva disciplina.",
+    );
+    expect(recusaPelaCategoria({ ...base, categoria: "AEC", disciplinaId: "d" })).toBeNull();
+  });
+
+  it("`V-5` · Estudo Individual GLOBAL é recusado; de turma, aceito", () => {
+    expect(
+      recusaPelaCategoria({ ...base, categoria: "Estudo_Individual", turmaId: null })?.mensagem,
+    ).toContain("sempre de uma turma");
+    expect(recusaPelaCategoria({ ...base, categoria: "Estudo_Individual" })).toBeNull();
+  });
+
+  it("FR-020 · quantidade de alunos só no Apoio", () => {
+    expect(recusaPelaCategoria({ ...base, categoria: "TAD", quantidadeAlunos: 3 })?.campo).toBe(
+      "quantidadeAlunos",
+    );
+    expect(
+      recusaPelaCategoria({ ...base, categoria: "Apoio_Individualizado", quantidadeAlunos: 3 }),
+    ).toBeNull();
   });
 });
