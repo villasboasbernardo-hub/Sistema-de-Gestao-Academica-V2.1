@@ -18,6 +18,18 @@ depois dela.
 consumido na transação desfeita é inofensivo (a sequência só avança).
 
 Cada consulta de `<contagens.sql>` é separada por uma linha `-- @ <título>`.
+
+MODO PREPARAR (a pré-condição acima, feita por este script):
+
+    python -m scripts.provas.antes_e_depois preparar <copia.sql> <versao_da_main> <migration>...
+
+    1. `supabase db reset --version <versao_da_main>` — o esquema da `main`, onde a cópia restaura sem
+       esbarrar em restrição nova (ex.: `ativ_tipo_obrigatorio` da E-1 recusaria a linha que chega sem
+       tipo, porque a restauração roda com `session_replication_role = replica` e o gatilho não a preenche);
+    2. esvazia `public` e restaura a cópia, como `scripts/manutencao/dado_do_remoto.py`;
+    3. aplica, NA ORDEM DADA, as migrations do ramo anteriores à medida (por `psql`, sem registrar no
+       histórico — o local é recriado depois);
+    4. avança as sequências de código (`carregar.avancar_sequencias`), já com as sequências novas.
 """
 
 from __future__ import annotations
@@ -73,7 +85,37 @@ def tabela_md(csv_texto: str) -> str:
     return "\n".join(out) + "\n"
 
 
+def preparar(copia: Path, versao: str, migrations: list[Path]) -> int:
+    conteiner = conteiner_local()
+    r = subprocess.run(["supabase", "db", "reset", "--version", versao], capture_output=True, text=True, shell=True)
+    if r.returncode != 0:
+        sys.exit(f"reset falhou: {(r.stderr or r.stdout)[-400:]}")
+    psql(conteiner, "set session_replication_role = replica; do $$ declare t record; begin "
+                    "for t in select tablename from pg_tables where schemaname = 'public' loop "
+                    "execute format('truncate table public.%I cascade', t.tablename); end loop; end $$;")
+    r = subprocess.run(["docker", "exec", "-i", conteiner, "psql", "-U", "postgres", "-d", "postgres",
+                        "-v", "ON_ERROR_STOP=1", "-q"], input=copia.read_bytes(), capture_output=True)
+    if r.returncode != 0:
+        sys.exit(f"restauração falhou: {r.stderr.decode('utf-8', 'replace')[-600:]}")
+    psql(conteiner, "update public.usuarios u set auth_user_id = null where u.auth_user_id is not null "
+                    "and not exists (select 1 from auth.users a where a.id = u.auth_user_id);")
+    for m in migrations:
+        psql(conteiner, "begin;" + chr(10) + m.read_text(encoding="utf-8") + chr(10) + "commit;" + chr(10))
+        print(f"  aplicada: {m.name}")
+    import psycopg
+
+    from scripts.etl import carregar
+
+    with psycopg.connect(carregar.CONEXAO_LOCAL) as con:
+        carregar.avancar_sequencias(con)
+        con.commit()
+    print(f"preparado: {copia.name} sobre {versao} + {len(migrations)} migration(s)")
+    return 0
+
+
 def main(argv: list[str]) -> int:
+    if len(argv) >= 4 and argv[1] == "preparar":
+        return preparar(Path(argv[2]), argv[3], [Path(x) for x in argv[4:]])
     if len(argv) < 4:
         print(__doc__)
         return 2

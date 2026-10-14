@@ -61,6 +61,7 @@ AMBIENTES = ("local", "preview", "producao")
 MIGRATIONS_DE_DADO_SPEC_014: tuple[str, ...] = (
     "limites_dos_24_curriculos",        # D-1, PR 1
     "reclassificar_tipos_de_atividade", # D-2, PR 1
+    "reservas_do_proens_para_as_turmas", # D-3, PR 1.1
 )
 
 def _linha(titulo: str) -> None:

@@ -2012,6 +2012,117 @@ export type Database = {
           },
         ]
       }
+      previstos_proens_alteracoes: {
+        Row: {
+          autor_id: string | null
+          categoria: Database["public"]["Enums"]["categoria_normativa"]
+          id: string
+          previsto_id: string
+          registrado_em: string
+          tempos_antes: number | null
+          tempos_depois: number
+          turma_id: string
+        }
+        Insert: {
+          autor_id?: string | null
+          categoria: Database["public"]["Enums"]["categoria_normativa"]
+          id?: string
+          previsto_id: string
+          registrado_em?: string
+          tempos_antes?: number | null
+          tempos_depois: number
+          turma_id: string
+        }
+        Update: {
+          autor_id?: string | null
+          categoria?: Database["public"]["Enums"]["categoria_normativa"]
+          id?: string
+          previsto_id?: string
+          registrado_em?: string
+          tempos_antes?: number | null
+          tempos_depois?: number
+          turma_id?: string
+        }
+        Relationships: []
+      }
+      previstos_proens_turma: {
+        Row: {
+          categoria: Database["public"]["Enums"]["categoria_normativa"]
+          criado_em: string
+          criado_por: string | null
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          origem_migracao_v1: string | null
+          origem_proens: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          tempos_previstos: number
+          turma_id: string
+        }
+        Insert: {
+          categoria: Database["public"]["Enums"]["categoria_normativa"]
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          origem_proens?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          tempos_previstos: number
+          turma_id: string
+        }
+        Update: {
+          categoria?: Database["public"]["Enums"]["categoria_normativa"]
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          origem_proens?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          tempos_previstos?: number
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "previstos_proens_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "previstos_proens_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "previstos_proens_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "previstos_proens_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "previstos_proens_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+        ]
+      }
       registros_aula: {
         Row: {
           categoria_normativa: Database["public"]["Enums"]["categoria_registro_aula"]
@@ -3359,25 +3470,16 @@ export type Database = {
       }
       vw_conformidade_tetos: {
         Row: {
-          aec_excedido: boolean | null
           ano_letivo: number | null
-          chd_executada: number | null
-          chr_curricular: number | null
-          cht_executada: number | null
+          categoria: string | null
+          ch_curricular: number | null
+          cumprido: number | null
           curso_codigo: string | null
           curso_id: string | null
+          limite_declarado: number | null
           nome_curso: string | null
-          ta_aec: number | null
-          ta_estudo_individual: number | null
-          ta_tad: number | null
-          ta_tr: number | null
-          tad_excedido: boolean | null
-          tad_reservado_proens: number | null
-          teto_aec: number | null
-          teto_tad: number | null
-          teto_tr: number | null
-          tr_excedido: boolean | null
-          tr_reservado_proens: number | null
+          percentual_norma: number | null
+          previsto: number | null
           turma_codigo: string | null
           turma_id: string | null
         }

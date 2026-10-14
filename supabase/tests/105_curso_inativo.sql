@@ -82,7 +82,6 @@ select * from (values
   ('avaliacoes',                 'curso_em_oferta'),
   ('janelas_curso',              'curso_em_oferta'),
   ('planejamento_anual',         'curso_em_oferta'),
-  ('reservas_proens',            'curso_em_oferta'),
   ('turma_disciplina',           'turma_em_oferta'),
   ('turma_disciplina_instrutor', 'turma_em_oferta'),
   -- Fatia (b), 25/09/2026. REGRA DOS VALORES ESPERADOS: (a) — a tabela nova do caso 5 do
@@ -94,6 +93,9 @@ select * from (values
   -- mesma condição: o dia parado espelha a atividade da turma, e o limite é dado do curso.
   ('dias_parados',               'turma_em_oferta'),
   ('limites_curriculo',          'curso_em_oferta'),
+  -- Spec 014, PR 1.1: `reservas_proens` SAIU (ficou só de leitura, sem policy de escrita) e o previsto
+  -- por turma entrou no lugar dela, com a mesma regra de oferta.
+  ('previstos_proens_turma',     'turma_em_oferta'),
   ('instrutor_disciplina',       'disciplina_em_oferta')
 ) as v(tabela, chave);
 
@@ -132,6 +134,7 @@ select is(
   -- escrita, espelhando `turma_disciplina_instrutor`: 30 + 2 = 32, em 16 tabelas. O que a
   -- assercao prova continua o mesmo — duas por tabela protegida, criar e editar.
   -- Spec 014, PR 1: + `dias_parados` e `limites_curriculo`, duas cada — 32 + 4 = 36, em 18 tabelas.
+  -- PR 1.1: − `reservas_proens` (só leitura) + `previstos_proens_turma` — continua 36, em 18.
   36,
   'FR-017.5 · sao 36 policies de escrita em 18 tabelas — duas por tabela, criar e editar'
 );

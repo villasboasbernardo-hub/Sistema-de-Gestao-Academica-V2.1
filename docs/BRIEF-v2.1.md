@@ -255,6 +255,17 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 14/10/2026 — duas tabelas novas, do PR 1.1 da spec 014
+>
+> - **`previstos_proens_turma`** — o **previsto** de AEC, TAD e TR que o PROENS dá a **cada turma**, em
+>   TA (`FR-008`, emenda E-7). Substitui `reservas_proens`, que era por curso e passa a só leitura,
+>   aposentada. Escrita por `previsto_proens.editar` (Admin, Encarregado e Ajudante).
+> - **`previstos_proens_alteracoes`** — a **trilha** do previsto: antes, depois, quem e quando
+>   (`FR-008.2`). **Só de acréscimo**, no molde de `auditoria_de_conta`: `UPDATE`, `DELETE` e `TRUNCATE`
+>   recusados por gatilho de comando, inclusive para a `service_role`.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a
