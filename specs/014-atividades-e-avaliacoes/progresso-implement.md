@@ -5,10 +5,10 @@
 | Fase 0 | `docs/EPICO-8-9-estado-atual` | [#45](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/45) | verde | 2/2 | aberto, sem merge |
 | PR 1 | `db/EPICO-9-banco-da-leva-1` | [#46](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/46) | verde (três blocos) | 29/32 | aberto, sem merge |
 | PR 1.1 | `db/EPICO-9-previsto-proens-por-turma` | [#47](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/47) | verde (três blocos) | 12/16 | aberto, sem merge |
-| PR 2 | `feat/EPICO-9-cards-de-tetos` | [#48](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/48) | [ver o PR] | 24/26 | aberto, sem merge; e2e local 7/7 duas vezes |
-| PR 2.1 | `feat/EPICO-9-dsa-tipo-global-e-dia-parado` | [pendente] | [pendente] | 11/28 | **PARCIAL**: parar dia, desfazer, avaliação viva, E-8 |
+| PR 2 | `feat/EPICO-9-cards-de-tetos` | [#48](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/48) | verde (três blocos) | 24/26 | aberto, sem merge; e2e local 7/7 duas vezes |
+| PR 2.1 | `feat/EPICO-9-dsa-tipo-global-e-dia-parado` | [#49](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/49) (rascunho) | [em execução às 07:30] | 11/28 | **PARCIAL**: parar dia, desfazer, avaliação viva, E-8 |
 
-**Tarefa atual:** PR 2.1 — abrir o PR parcial e esperar o CI.
+**Tarefa atual:** PR 2.1 — terminar as tarefas abertas no mesmo ramo (o PR #49 é rascunho).
 **Abertas:** PR 1 — T004, T028, T032 (remoto), T034 (conferência). PR 1.1 — T045, T048 (remoto), T050
 (conferência). PR 2 — T074 (CI) e T076 (conferência).
 **Próximos passos (retomada):** terminar o PR 2.1 no mesmo ramo — T082 (parede da cascata), T083 e T093
