@@ -39,6 +39,15 @@ import { lerParametros } from "@/lib/navegacao/esquema";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
+import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+
+import {
+  COLUNAS_DA_CONFORMIDADE,
+  fraseDoExcedido,
+  tetosExcedidos,
+  type LinhaDaConformidade,
+  type LinhaDoPrevisto,
+} from "../turmas/tetos-excedidos";
 import { FiltroDoPanorama } from "./FiltroDoPanorama";
 import {
   montarPanorama,
@@ -96,7 +105,16 @@ export default async function Inicio({
    */
   const hoje = hojeNaCiaara();
 
-  const [cursosRes, cargasRes, totalRes, turmasRes, regimesRes, feriadosRes] = await Promise.all([
+  const [
+    cursosRes,
+    cargasRes,
+    totalRes,
+    turmasRes,
+    regimesRes,
+    feriadosRes,
+    conformidadeRes,
+    previstosRes,
+  ] = await Promise.all([
     consultaDeCursos,
     supabase
       .from("vw_carga_horaria_turma")
@@ -138,6 +156,15 @@ export default async function Inicio({
       .eq("impacto", "dia_inteiro")
       .eq("status", "ativo")
       .gte("data", hoje),
+    /*
+     * ⚠️ **OS TETOS DE AEC, TAD E TR** (spec 014, PR 2, `FR-005`, `RF-INI-04`): o veredito sai de
+     *    `tetosDaTurma`, o mesmo dos cards da ficha, em memória — duas leituras na mesma rodada.
+     */
+    supabase.from("vw_conformidade_tetos").select(COLUNAS_DA_CONFORMIDADE),
+    supabase
+      .from("previstos_proens_turma")
+      .select("turma_id, categoria, tempos_previstos")
+      .eq("status", "ativo"),
   ]);
 
   /*
@@ -168,6 +195,13 @@ export default async function Inicio({
     hoje,
   );
   const totais = totaisDo(panorama);
+  /* ⚠️ O alerta de teto respeita o recorte: só as turmas que o panorama mostra (e não EAD, FR-006). */
+  const noRecorte = new Set(panorama.map((t) => t.turmaCodigo));
+  const excedidos = tetosExcedidos(
+    (conformidadeRes.data ?? []) as LinhaDaConformidade[],
+    (previstosRes.data ?? []) as LinhaDoPrevisto[],
+    new Map((turmasRes.data ?? []).map((t) => [t.id as string, t.modalidade as string | null])),
+  ).filter((e) => noRecorte.has(e.turmaCodigo));
   const temRecorte = classificacao !== "" || modalidade !== "";
   const baseVazia = (totalRes.count ?? 0) === 0;
 
@@ -202,6 +236,35 @@ export default async function Inicio({
             : ["Nenhuma turma em andamento com saldo negativo no recorte atual."]
         }
       />
+
+      {/*
+        ⚠️ **UM ALERTA POR CARD EXCEDIDO, COM LINK PARA A TURMA** (spec 014, `FR-005`). Informativo:
+           nada aqui bloqueia lançamento (`RN-DEG-02`).
+      */}
+      {excedidos.length > 0 ? (
+        <section
+          aria-labelledby="titulo-tetos-excedidos"
+          className="border-atrasado-borda bg-atrasado-fundo rounded-ciaara flex flex-col gap-1 border p-3"
+          data-slot="alertas-de-teto"
+        >
+          <h2 id="titulo-tetos-excedidos" className="text-atrasado-tinta text-sm font-semibold">
+            Tetos de AEC, TAD e TR
+          </h2>
+          <ul role="status" className="flex flex-col gap-0.5 text-sm">
+            {excedidos.map((e) => (
+              <li key={`${e.turmaCodigo}-${e.categoria}-${e.alerta}`}>
+                <Link
+                  href={enderecoDaTurma(e.turmaCodigo)}
+                  className="text-atrasado-tinta underline-offset-2 hover:underline"
+                  data-slot="alerta-de-teto"
+                >
+                  {fraseDoExcedido(e)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <CardKpi rotulo="Turmas no recorte" valor={totais.turmas} />

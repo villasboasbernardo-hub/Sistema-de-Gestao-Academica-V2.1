@@ -167,7 +167,7 @@ export const MENU: readonly EntradaDeMenu[] = [
     rotulo: "Atividades",
     rota: "/atividades",
     icone: "atividades",
-    disponivel: false,
+    disponivel: true,
     entregaEm: "Épico 9",
   },
   {

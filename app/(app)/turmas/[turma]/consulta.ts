@@ -89,7 +89,12 @@ export function protecoesDoBanco(linhas: readonly LinhaDeProtecao[]): VigenciaPr
  * `registros_aula.tempos_consumidos` com `status = 'ativo'` e as avaliações. A regra é honrada
  * **antes** do módulo puro, que só recebe o número.
  */
-export const COLUNAS_DA_CARGA_DA_TURMA = "chr_curricular, chd_executada";
+export const COLUNAS_DA_CARGA_DA_TURMA =
+  "chr_curricular, chd_executada, ta_aec, ta_tad, ta_tr, ta_estudo_individual, ta_apoio_individualizado, ta_dias_parados";
+/*
+ * ⚠️ **AS SEIS COLUNAS NOVAS SÃO DOS CARDS DE AEC, TAD E TR** (spec 014, PR 2, `FR-004`): elas vêm da
+ *    MESMA linha da view que o Andamento já lê — uma leitura só, nunca uma segunda consulta à view.
+ */
 
 /**
  * As colunas de `vw_cursos_regime_vigente` de que a capacidade diária depende.

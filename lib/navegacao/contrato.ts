@@ -134,6 +134,13 @@ export const SITUACOES_DE_CADASTRO = Constants.public.Enums.status_registro;
 export const SITUACOES_DE_TURMA = Constants.public.Enums.status_turma;
 
 /**
+ * As categorias de atividade não letiva (`/atividades`, spec 014): o enum `categoria_normativa`
+ * inteiro — AEC, TAD, TR, Estudo Individual e Apoio Individualizado (a CHD é de aula e não está nele).
+ * Sai do enum gerado: uma lista escrita à mão divergiria do banco.
+ */
+export const CATEGORIAS_DE_ATIVIDADE = Constants.public.Enums.categoria_normativa;
+
+/**
  * As quatro situações de execução de uma disciplina numa turma (`FR-053`).
  *
  * ⚠️ **ELA NÃO VEM DE UM ENUM DO BANCO, porque NÃO HÁ enum: a situação é DERIVADA** da CH prevista,
@@ -541,6 +548,42 @@ export const CONTRATO = {
         avisaServidor: true,
         limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
       },
+    },
+  },
+  /*
+   * ⚠️ **`/atividades` (spec 014, PR 2, `FR-063`)**: a lista de atividades não letivas, só de leitura —
+   *    o lançamento continua no DSA. As categorias são as do enum `categoria_normativa` usadas por
+   *    atividade (sem CHD), e as datas vão como texto ISO, como os demais filtros de data.
+   */
+  "/atividades": {
+    rota: "/atividades",
+    origem: "RF-EXTRA-03",
+    parametros: {
+      turma: {
+        nome: "turma",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      categoria: {
+        nome: "categoria",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: CATEGORIAS_DE_ATIVIDADE,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      tipo: {
+        nome: "tipo",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
+      },
+      de: { nome: "de", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
+      ate: { nome: "ate", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
     },
   },
   "/cursos/[curso]/turmas/nova": {
