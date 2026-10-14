@@ -60,6 +60,11 @@
     "locais fora do inventario de salas entram como TEXTO (Sala 05, CAMR, CIAA, CN, Auditorio DHN, BFNIF, H36, H38, CMOpM, Sala 00, DHN, FAB, NAS, Patio, Biblioteca, Porto do Acu) — cadastrar como sala e decisao do lote"
   ],
   "aprovadas": [
-    "«XX» = RECON em I/II/IV/V: aula sem UE em disciplina com UE — o banco nao aceita; fica FORA e vai para a lista (item 4, 06/10/2026)"
+    "«XX» = RECON em I/II/IV/V: aula sem UE em disciplina com UE — o banco nao aceita; fica FORA e vai para a lista (item 4, 06/10/2026)",
+    "responsavel_externo_aceito: entidades e palestrantes externos da lista de pendencias de responsavel — decisao A3.6 de Bernardo Villas Boas (14/10/2026); o palestrante entra como SHA-256 do texto normalizado (nome de pessoa, repositorio publico)"
+  ],
+  "responsavel_externo_aceito": ["CIAA", "CIAARA-30", "DEnsM"],
+  "responsavel_externo_aceito_sha256": [
+    "dbb0001aa83fb70bb4cc47566c0e71f67e1dbe84fca9f1d8c6787dcd06b3dbc8"
   ]
 }

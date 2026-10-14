@@ -40,6 +40,9 @@
   },
   "aprovadas": [
     "H11 cadastrado como sala (D5, 06/10/2026)",
-    "habilitacao do instrutor 13 em I (D4, 06/10/2026)"
-  ]
+    "habilitacao do instrutor 13 em I (D4, 06/10/2026)",
+    "responsavel_externo_aceito: entidades e palestrantes externos da lista de pendencias de responsavel — decisao A3.6 de Bernardo Villas Boas (14/10/2026); o palestrante entra como SHA-256 do texto normalizado (nome de pessoa, repositorio publico)"
+  ],
+  "responsavel_externo_aceito": ["DEPARTAMENTO DE ALUNOS"],
+  "responsavel_externo_aceito_sha256": []
 }

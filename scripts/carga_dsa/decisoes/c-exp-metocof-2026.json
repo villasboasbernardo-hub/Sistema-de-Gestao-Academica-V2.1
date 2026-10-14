@@ -38,12 +38,19 @@
   "aprovadas": [
     "ues I+8..12 → IV+1..5: aprovado por Bernardo Villas Boas em 06/10/2026 (item 5 do lote da onda 1)",
     "Estagio Pratico (V): disciplina marcada sem_unidades_ensino (D2, 06/10/2026); a aula entra por disciplina com o topico da planilha",
-    "OFICIAIS-MONITORES (D3, 06/10/2026): aula com instrutor = titular da disciplina na turma e observacao «OFICIAIS-MONITORES (conforme DSA)». ⚠️ A turma NAO tem titular de V em turma_disciplina_instrutor; valeu o instrutor com mais TA na V pela planilha (codigo 127) — listado no lote para ratificacao"
+    "OFICIAIS-MONITORES (D3, 06/10/2026): aula com instrutor = titular da disciplina na turma e observacao «OFICIAIS-MONITORES (conforme DSA)». ⚠️ A turma NAO tem titular de V em turma_disciplina_instrutor; valeu o instrutor com mais TA na V pela planilha (codigo 127) — listado no lote para ratificacao",
+    "responsavel_externo_aceito: entidades e palestrantes externos da lista de pendencias de responsavel — decisao A3.6 de Bernardo Villas Boas (14/10/2026); o palestrante entra como SHA-256 do texto normalizado (nome de pessoa, repositorio publico)"
   ],
   "instrutor_por_texto": {
     "OFICIAIS MONITORES": {
       "codigo": "127",
       "observacao": "OFICIAIS-MONITORES (conforme DSA)"
     }
-  }
+  },
+  "responsavel_externo_aceito": [],
+  "responsavel_externo_aceito_sha256": [
+    "333ab99dced28e7ae4ccf2c3182201c86426e438b98dea5852ea00cee0f62240",
+    "797f39d7ae47ca17d4727ee910ad72f4f9b9d13d192723aa0a4589765d2a3c22",
+    "af3388aee0a5886f102fb6b003f88fe4960cb6cb6a30585d21c620f7474e04e9"
+  ]
 }

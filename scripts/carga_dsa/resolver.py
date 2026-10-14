@@ -315,6 +315,20 @@ def resolver(
         primeiro = casar(partes[0], bloco, obrigatorio=True)
         return primeiro, "; ".join(partes[1:]), bruto
 
+    def outros_de(demais: str, bloco: Bloco) -> tuple[list[str], str]:
+        """Spec 014, FR-046 (D-8): os demais instrutores pelo CODIGO (`outros_instrutores`); o texto que nao
+        casa com UM do cadastro continua em `observacoes`, como antes — nada e inventado."""
+        if not demais or demais.endswith("(conforme DSA)"):
+            return [], demais
+        codigos, sobra = [], []
+        for parte in [p.strip() for p in demais.split(";") if p.strip()]:
+            achado = casar(parte, bloco, obrigatorio=False)
+            if achado is None:
+                sobra.append(parte)
+            else:
+                codigos.append(str(achado["codigo"]))
+        return codigos, "; ".join(sobra)
+
     def classificar(bloco: Bloco) -> tuple[str, dict]:
         """(tipo, regra). tipo ∈ aula · avaliacao · vista · nao letivo · dia_parado · calendario · ignorar · pendente."""
         regra = chaves.get(f"{bloco.cod}+{bloco.ue}") or chaves.get(bloco.cod)
@@ -389,7 +403,10 @@ def resolver(
                         # Spec 014, FR-016: o texto que nao casa com o cadastro NAO e gravado como externo em
                         # silencio. Ou o lote ja decidiu (`responsavel_externo_aceito`: entidade ou palestrante),
                         # ou vira PENDENCIA com as tres saidas (casar com instrutor, externo, cadastrar).
-                        if normalizar(texto) in {normalizar(t) for t in decisoes.get("responsavel_externo_aceito", [])}:
+                        # A3.6 (14/10/2026): o palestrante (nome de pessoa) vem como SHA-256 do texto normalizado (D4.6).
+                        aceitos_sha = set(decisoes.get("responsavel_externo_aceito_sha256", []))
+                        if (normalizar(texto) in {normalizar(t) for t in decisoes.get("responsavel_externo_aceito", [])}
+                                or hashlib.sha256(normalizar(texto).encode("utf-8")).hexdigest() in aceitos_sha):
                             externo = texto
                         else:
                             # Decisao A3.2 (Bernardo Villas Boas, 14/10/2026): a pendencia trava SO A LINHA. A
@@ -497,6 +514,7 @@ def resolver(
         if topico_digitado is not None:
             r.digitadas_adotadas.append(f"L{bloco.linha} {bloco.data:%d/%m} {bloco.cod}+{bloco.ue}: topico «{topico_digitado}»")
         topico_da_planilha = re.sub(r"^\s*[0-9]+\s*[–-]\s*", "", " ".join((topico_digitado or linha_do_catalogo.topico).split()))
+        outros, demais = outros_de(demais, bloco)
         r.aulas.append({
             "codigo": codigo(bloco, "A"),
             "data": bloco.data.isoformat(),
@@ -517,6 +535,7 @@ def resolver(
             "metodologia": metodologia,
             "local": local_de(bloco),
             "observacoes": procedencia(bloco) + ("" if not demais else f" {demais}" if demais.endswith("(conforme DSA)") else f"{MARCA_DE_DEMAIS}{demais}."),
+            "outros_instrutores": outros,
         })
 
     _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura, codigo=codigo, procedencia=procedencia)

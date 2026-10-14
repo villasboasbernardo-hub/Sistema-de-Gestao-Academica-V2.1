@@ -598,6 +598,11 @@ SEQUENCIAS_DE_CODIGO: tuple[tuple[str, str, str], ...] = (
      "case when codigo ~ '^DPA-[0-9]+$' then substring(codigo from 5)::bigint end"),
     ("app.feriados_codigo_seq", "feriados",
      "case when codigo ~ '^FER-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    # As duas do PR 4 da spec 014 (E-4): o item de avaliação do currículo e a sessão de vista (T145).
+    ("app.avaliacoes_curriculo_codigo_seq", "avaliacoes_curriculo",
+     "case when codigo ~ '^AVC-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    ("app.vistas_de_avaliacao_codigo_seq", "vistas_de_avaliacao",
+     "case when codigo ~ '^VST-[0-9]+$' then substring(codigo from 5)::bigint end"),
 )
 
 

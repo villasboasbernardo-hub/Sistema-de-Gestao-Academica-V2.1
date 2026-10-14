@@ -207,6 +207,22 @@ const MENSAGEM_DA_RESTRICAO: Readonly<Record<string, string>> = {
   // Spec 014, PR 1.1 (E-3).
   previsto_unico:
     "Esta turma já tem previsto do PROENS para esta categoria. Edite o existente em vez de criar outro.",
+  // Spec 014, PR 4 (E-4): as avaliações do currículo e as sessões de vista.
+  avc_numero_unico:
+    "Esta disciplina já tem uma avaliação com este instrumento e este número. Use o número seguinte.",
+  avct_unico:
+    "Esta turma já tem ajuste para esta avaliação. Edite o existente em vez de criar outro.",
+  vst_numero_unico: "Esta avaliação já tem uma sessão de vista com este número.",
+  avc_fonte_se_curriculo:
+    "Avaliação de origem currículo precisa do arquivo e da página do currículo.",
+  avc_ta_com_origem: "Todo tempo de avaliação precisa dizer de onde vem (currículo ou arbitrado).",
+  avc_origem_ue_coerente:
+    "A unidade de ensino da avaliação precisa dizer de onde vem: do currículo, ou decidida pela Divisão com a data.",
+  avc_ue_da_disciplina: "A unidade de ensino escolhida não é desta disciplina.",
+  avc_disciplina_do_curso: "A disciplina escolhida não é deste curso.",
+  avaliacoes_item_da_disciplina: "A avaliação do currículo escolhida é de outra disciplina.",
+  vst_conduz_exclusivo:
+    "Quem conduz a vista é um instrutor do cadastro ou um nome externo, nunca os dois.",
 };
 
 /**
@@ -315,6 +331,11 @@ function porChave(
     // Spec 014, PR 1.1 (E-3): a trilha do previsto não se reescreve.
     case "trilha_do_previsto_imutavel":
       return "O histórico do previsto não se altera. Para corrigir, grave o valor novo no previsto.";
+    // Spec 014, PR 4 (E-4): o arbitrado e a vista antes da prova.
+    case "arbitrado_sem_permissao":
+      return "Só o Admin e o Encarregado definem o tempo arbitrado ou nomeiam a unidade de ensino de uma avaliação.";
+    case "vista_antes_da_aplicacao":
+      return "A vista não pode ser antes da aplicação da prova. Escolha uma data a partir do dia da prova.";
 
     case "codigo_de_turma_divergente":
     case "codigo_de_turma_imutavel":
@@ -641,6 +662,9 @@ const NUMERACAO_INTERNA: Readonly<Record<string, string>> = {
   // Spec 014, PR 1: os dois códigos GERADOS da E-2 (`DPA-`, `FER-`).
   dias_parados_codigo_key: "a numeração dos dias parados",
   feriados_codigo_key: "a numeração do calendário",
+  // Spec 014, PR 4 (E-4): `AVC-` e `VST-`.
+  avaliacoes_curriculo_codigo_key: "a numeração das avaliações do currículo",
+  vistas_de_avaliacao_codigo_key: "a numeração das sessões de vista",
 };
 
 /** Qual numeração interna estourou, se foi uma delas. */

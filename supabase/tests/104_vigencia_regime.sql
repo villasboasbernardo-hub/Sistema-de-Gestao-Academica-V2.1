@@ -371,6 +371,8 @@ insert into public.atividades_nao_letivas (codigo, subtipo, categoria_normativa,
 --    estariam travadas por lançamento PRÓPRIO, e o aviso do `FR-021.8` diria que encurtar a janela
 --    não desprotege nada. Sem ela, a única coisa que as trava é a atividade global — que é
 --    exatamente o caso que o aviso existe para nomear.
+-- Spec 014, PR 4 (E-5): a vista da avaliação vira SESSÃO (espelho), filha com FK; ela sai primeiro.
+delete from public.vistas_de_avaliacao where avaliacao_id in (select id from public.avaliacoes where codigo = 'T104-AVA-1');
 delete from public.avaliacoes where codigo = 'T104-AVA-1';
 
 -- MEDIDO, e contraria a expectativa de quem escreveu a asserção primeiro: a atividade global trava

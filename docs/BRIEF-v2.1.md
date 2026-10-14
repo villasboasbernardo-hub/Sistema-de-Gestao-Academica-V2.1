@@ -266,6 +266,20 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ⏳ Emenda PROPOSTA (14/10/2026) — três tabelas novas, do PR 4 da spec 014 · **aguarda aprovação (A4.1)**
+>
+> - **`avaliacoes_curriculo`** — o **item de avaliação do currículo** da DEnsM (prova, trabalho ou OD), por
+>   disciplina, com quantidade e tempo de aplicação e de vista, **cada um com a sua origem** (currículo, com
+>   arquivo e página; arbitrado pela Divisão; sugestão da planilha) (`FR-030`, `FR-031.6`). O tempo está
+>   **dentro** da CH da disciplina (D-CUR-1). Escrita por `disciplinas.editar`; o arbitrado, só por
+>   `avaliacoes_curriculo_arbitrado.editar` (Admin e Encarregado).
+> - **`avaliacoes_curriculo_turma`** — o **ajuste por turma** do tempo de um item, que não altera o do curso,
+>   ou a sugestão da planilha a confirmar (`FR-031.7`, `FR-031.8`).
+> - **`vistas_de_avaliacao`** — as **sessões de vista** de uma avaliação (N por avaliação), com quem conduz
+>   (`FR-041`, R-5). Filha da avaliação: continua **um fato por avaliação** (`RN-AVAL-02`).
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a

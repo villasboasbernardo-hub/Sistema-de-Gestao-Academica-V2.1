@@ -44,8 +44,10 @@ select is(
 
 select is(
   (select count(distinct disciplina_id)::int from public.unidades_ensino),
-  (select case when sim then 138 else 0 end from carregada),
-  'FR-066 · as 587 caem em 138 disciplinas: 136 do curriculo, com 2 desdobradas em 4 (N-3)'
+  -- Spec 014, PR 4 (D-6, Q-15): REGRA DOS VALORES ESPERADOS (a) — os dois desdobramentos foram UNIFICADOS
+  -- como no currículo, então as 587 caem em 136 disciplinas (eram 138, com 2 desdobradas em 4).
+  (select case when sim then 136 else 0 end from carregada),
+  'FR-066 · as 587 caem em 136 disciplinas — o currículo, com os desdobramentos N-3 unificados pela D-6'
 );
 
 select is(
@@ -111,8 +113,10 @@ select is(
        join public.disciplinas d on d.id = u.disciplina_id
       group by d.codigo, d.carga_horaria_tempos
      having sum(u.ch_prevista_tempos) <> d.carga_horaria_tempos) as divergem),
-  (select case when sim then 4 else 0 end from carregada),
-  'P-1 · as divergencias de CH sao exatamente as 4 declaradas — uma a menos e correcao a registrar'
+  -- Spec 014, PR 4 (D-5, §11-A): REGRA DOS VALORES ESPERADOS (a) — B-1, B-2 e B-3 corrigiram três das quatro
+  -- no banco; sobra a `EST-QF-APOC I` (79 × 80, B-4), que espera a conferência no PDF (T129).
+  (select case when sim then 1 else 0 end from carregada),
+  'P-1 · as divergencias de CH sao exatamente as declaradas — depois da D-5, só a EST-QF-APOC I (B-4)'
 );
 
 -- ============================================ N-3 — os dois desdobramentos, por UE
@@ -128,10 +132,10 @@ select is(
                          '23 - C-Ap-HN - I', '24 - C-Ap-HN - I-I')
       group by d.codigo) as x),
   (select case when sim then
-     '1 - CAHO - MAT=1/28 | 2 - CAHO - FIS=1/28 | '
-     '23 - C-Ap-HN - I=6/105 | 24 - C-Ap-HN - I-I=1/21'
+     -- Spec 014, PR 4 (D-6): REGRA DOS VALORES ESPERADOS (a) — as UEs da extra passaram à unificada.
+     '1 - CAHO - MAT=2/56 | 23 - C-Ap-HN - I=7/126'
    else '(sem carga)' end from carregada),
-  'N-3 · o desdobramento cai por UE: MAT 28, FIS 28, `I` 105 em 6 UEs, `I-I` 21 em 1'
+  'N-3 · unificado pela D-6: MATFIS com 2 UEs e 56, HN-2101 (`I`) com 7 UEs e 126'
 );
 
 -- ============================================ D-B3 — curso e disciplina sem UE sao DADO

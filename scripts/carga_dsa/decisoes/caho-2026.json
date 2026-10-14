@@ -59,17 +59,17 @@
   "provisorias": [
     "locais fora do inventario de salas entram como TEXTO (Sala 05, CAMR, CIAA, CN, Auditorio DHN, BFNIF, H36, H38, CMOpM, Sala 00, DHN, FAB, NAS, Patio, Biblioteca, Porto do Acu) — cadastrar como sala e decisao do lote",
     "chaves T/T1/T2/T3 sao TRABALHO (avaliacao) e VT/VT1..3 sao a vista do trabalho («comentarios ao trabalho») — padrao estendido so nesta planilha",
-    "XXI «NIVELAMENTO DE MATEMATICA E FISICA» e DUAS disciplinas no banco (MAT, FIS): de-para pelo topico (UE 1 e PM1/VP1 → MAT; UE 2 e PM2/VP2 → FIS)"
+    "XXI «NIVELAMENTO DE MATEMATICA E FISICA» era DUAS disciplinas no banco (MAT, FIS); desde a D-6 da spec 014 (14/10/2026) e UMA, MATFIS, com as UEs 1 e 2 — o de-para leva tudo a MATFIS"
   ],
   "padrao_ue_de_avaliacao": "(AV|PE|PM|PP|PO|TG|TI|TR|OD|T)[0-9]*",
   "padrao_ue_de_vista": "V[PT][0-9]*",
   "ues": {
-    "XXI+1": "MAT+1",
-    "XXI+2": "FIS+2",
-    "XXI+PM1": "MAT+PM1",
-    "XXI+VP1": "MAT+VP1",
-    "XXI+PM2": "FIS+PM2",
-    "XXI+VP2": "FIS+VP2",
+    "XXI+1": "MATFIS+1",
+    "XXI+2": "MATFIS+2",
+    "XXI+PM1": "MATFIS+PM1",
+    "XXI+VP1": "MATFIS+VP1",
+    "XXI+PM2": "MATFIS+PM2",
+    "XXI+VP2": "MATFIS+VP2",
     "XIX+3": "XIX+1",
     "TR+T": "III+T"
   },
@@ -89,6 +89,13 @@
     "CFG-H (D2-1, 06/10/2026)",
     "ORIENTADORES → titular da XX na turma (codigo 18) com observacao «ORIENTADORES (conforme DSA)» (item 3, 06/10/2026)",
     "XIX+3 «CORRIDA / PRE-TAF» → XIX UE 1 «CORRIDA» (topico bate; item 4, 06/10/2026)",
-    "TR+T «ESTATISTICA – TRABALHO» = avaliacao (trabalho) da III — conferencia de 07/10/2026 (Bernardo Villas Boas: aplicar a recomendacao de cada caso)"
+    "TR+T «ESTATISTICA – TRABALHO» = avaliacao (trabalho) da III — conferencia de 07/10/2026 (Bernardo Villas Boas: aplicar a recomendacao de cada caso)",
+    "responsavel_externo_aceito: entidades e palestrantes externos da lista de pendencias de responsavel — decisao A3.6 de Bernardo Villas Boas (14/10/2026); o palestrante entra como SHA-256 do texto normalizado (nome de pessoa, repositorio publico)"
+  ],
+  "responsavel_externo_aceito": [],
+  "responsavel_externo_aceito_sha256": [
+    "3fdbee4f78db41c0691c123f8257ca1a16f209d405bf8530f7b2c45c6521021f",
+    "dbb0001aa83fb70bb4cc47566c0e71f67e1dbe84fca9f1d8c6787dcd06b3dbc8",
+    "ef0d1931f1feb8d8ea5e7466fd70443125b064632c80d570048c2d2b6f1ed501"
   ]
 }

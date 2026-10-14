@@ -344,12 +344,12 @@ def main() -> int:
             with t as (select id from public.turmas where codigo = {lit(turma)})
             select (select count(*) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'inativo') as etl_aulas_inativas,
                    (select count(*) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo') as etl_aulas_ativas,
-                   (select count(*) from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'cancelada') as etl_aval_canceladas,
-                   (select count(*) from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is not null and status <> 'cancelada') as etl_aval_ativas,
+                   (select count(*) from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is not null and status in ('cancelada', 'substituida_pela_planilha')) as etl_aval_canceladas,
+                   (select count(*) from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is not null and status in ('pendente', 'em_andamento', 'concluida', 'atrasada')) as etl_aval_ativas,
                    (select count(*) from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'inativo') as etl_ativ_inativas,
                    (select count(*) from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo') as etl_ativ_ativas,
                    (select count(*) from public.registros_aula where turma_id = (select id from t) and codigo like 'DSAP-%' and status = 'ativo') as novas_aulas,
-                   (select count(*) from public.avaliacoes where turma_id = (select id from t) and codigo like 'DSAP-%' and status <> 'cancelada') as novas_aval,
+                   (select count(*) from public.avaliacoes where turma_id = (select id from t) and codigo like 'DSAP-%' and status in ('pendente', 'em_andamento', 'concluida', 'atrasada')) as novas_aval,
                    (select count(*) from public.atividades_nao_letivas where turma_id = (select id from t) and codigo like 'DSAP-%' and status = 'ativo') as novas_ativ""")[0]
         relatorio.append("### (d) Substituição\n")
         relatorio.append(f"ETL inativado: {d['etl_aulas_inativas']} aulas, {d['etl_aval_canceladas']} avaliações, {d['etl_ativ_inativas']} atividades "

@@ -54,6 +54,8 @@ let turmaExpeditaId = "";
 let paradaLaId = "";
 let tipoAecId = "";
 let tipoTrId = "";
+let disciplinaId = "";
+let instrumentoPmId = "";
 const DIA = "2026-04-08";
 
 async function criarConta(p: Papel): Promise<void> {
@@ -160,6 +162,9 @@ async function limpar(): Promise<void> {
     if (data.users.length < 200) break;
   }
   await servico.from("usuarios").delete().like("codigo", "USR-AAV-%");
+  await servico.from("avaliacoes_curriculo").delete().like("fonte_arquivo", "aav-%");
+  await servico.from("avaliacoes_curriculo").delete().like("ues_abordadas", "AAV%");
+  await servico.from("disciplinas").delete().like("codigo", "AAV-DIS-%");
   const { data: turmas } = await servico.from("turmas").select("id").like("codigo", "AAV-%");
   for (const t of turmas ?? []) {
     const id = (t as { id: string }).id;
@@ -211,6 +216,20 @@ beforeAll(async () => {
   paradaLaId = await idDaLista("tipos_parada", "LA", { pode_global: true, aceita_tr: true });
   tipoAecId = await idDaLista("tipos_atividade", "AAV Palestra", { categoria: "AEC" });
   tipoTrId = await idDaLista("tipos_atividade", "AAV Tempo Reserva", { categoria: "TR" });
+  instrumentoPmId = await idDaLista("instrumentos_avaliacao", "PM", { natureza: "prova" });
+  const { data: dis, error: eDis } = await servico
+    .from("disciplinas")
+    .insert({
+      codigo: `AAV-DIS-${SELO}`,
+      curso_id: cursoRegularId,
+      cod_disciplina: `AAV${SELO}`,
+      nome_disciplina: "Disciplina AAV",
+      carga_horaria_tempos: 40,
+    })
+    .select("id")
+    .single();
+  if (eDis) throw new Error(`disciplina: ${eDis.message}`);
+  disciplinaId = (dis as { id: string }).id;
   for (const p of PAPEIS) await criarConta(p);
 }, 120_000);
 
@@ -486,6 +505,107 @@ describe("previsto do PROENS por turma (FR-008.1, SC-018) — PR 1.1", () => {
         curso_id: cursoRegularId,
         tipo_reserva: "TAD",
         tempos_reservados: 1,
+      });
+    expect(error?.code).toBe("42501");
+  });
+});
+
+/**
+ * Spec 014, PR 4 (T142; FR-031.7, FR-038, FR-039.1): o item de avaliação do currículo se escreve com a permissão
+ * das UEs (`disciplinas.editar`), mas o ARBITRADO — tempo, quantidade e a UE decidida pela Divisão — só por
+ * `avaliacoes_curriculo_arbitrado.editar` (Admin e Encarregado).
+ * ⚠️ O CASO QUE DISCRIMINA (DoD 8) É O OPERADOR: ele JÁ tem `disciplinas.editar` (T133); sem o gatilho
+ * `app.proteger_arbitrado()`, a policy deixaria ele arbitrar. O controle positivo é ele mudar `ues_abordadas`.
+ */
+describe("avaliações do currículo e o arbitrado (FR-031.7, T142)", () => {
+  function item(extra: Record<string, unknown> = {}) {
+    return {
+      disciplina_id: disciplinaId,
+      curso_id: cursoRegularId,
+      ordem: 1,
+      instrumento_id: instrumentoPmId,
+      numero: 1,
+      origem_item: "curriculo",
+      fonte_arquivo: `aav-${SELO}.pdf`,
+      fonte_pagina: 1,
+      ta_aplicacao: 2,
+      origem_ta_aplicacao: "curriculo",
+      ...extra,
+    };
+  }
+  let itemId = "";
+
+  it("o Operador cria o item de origem currículo (controle positivo da permissão das UEs)", async () => {
+    const { error } = await sessao("operador").from("avaliacoes_curriculo").insert(item());
+    expect(error).toBeNull();
+    const { data } = await servico
+      .from("avaliacoes_curriculo")
+      .select("id")
+      .eq("fonte_arquivo", `aav-${SELO}.pdf`)
+      .single();
+    itemId = (data as { id: string }).id;
+  });
+
+  it("o Operador recebe 42501 ao criar item ARBITRADO", async () => {
+    const { error } = await sessao("operador")
+      .from("avaliacoes_curriculo")
+      .insert(
+        item({
+          numero: 2,
+          origem_item: "arbitrado",
+          fonte_arquivo: null,
+          fonte_pagina: null,
+          origem_ta_aplicacao: "arbitrado",
+        }),
+      );
+    expect(error?.code).toBe("42501");
+  });
+
+  it("o Operador recebe 42501 ao mudar o tempo para arbitrado, e o valor fica intacto (o caso que discrimina)", async () => {
+    const { error } = await sessao("operador")
+      .from("avaliacoes_curriculo")
+      .update({ ta_aplicacao: 5, origem_ta_aplicacao: "arbitrado" })
+      .eq("id", itemId);
+    expect(error?.code).toBe("42501");
+    const { data } = await servico
+      .from("avaliacoes_curriculo")
+      .select("ta_aplicacao")
+      .eq("id", itemId)
+      .single();
+    expect((data as { ta_aplicacao: number }).ta_aplicacao).toBe(2);
+  });
+
+  it("o Operador muda as UEs abordadas de um item de origem currículo (controle positivo)", async () => {
+    const { error } = await sessao("operador")
+      .from("avaliacoes_curriculo")
+      .update({ ues_abordadas: "AAV UE 1 a 2" })
+      .eq("id", itemId);
+    expect(error).toBeNull();
+  });
+
+  it("o Ajudante também recebe 42501 no arbitrado", async () => {
+    const { error } = await sessao("ajudante_administracao_academica")
+      .from("avaliacoes_curriculo")
+      .update({ ta_vista: 1, origem_ta_vista: "arbitrado" })
+      .eq("id", itemId);
+    expect(error?.code).toBe("42501");
+  });
+
+  it("o Encarregado arbitra o tempo (controle positivo)", async () => {
+    const { error } = await sessao("encarregado_administracao_academica")
+      .from("avaliacoes_curriculo")
+      .update({ ta_vista: 1, origem_ta_vista: "arbitrado" })
+      .eq("id", itemId);
+    expect(error).toBeNull();
+  });
+
+  it("avaliacoes_planejadas ficou só de leitura: o Encarregado recebe 42501 no INSERT", async () => {
+    const { error } = await sessao("encarregado_administracao_academica")
+      .from("avaliacoes_planejadas")
+      .insert({
+        codigo: `AAV-AVP-${SELO}`,
+        curso_id: cursoRegularId,
+        nome_disciplina: "Disciplina AAV",
       });
     expect(error?.code).toBe("42501");
   });

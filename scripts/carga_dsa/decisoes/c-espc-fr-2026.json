@@ -69,7 +69,7 @@
     "IV": "ESTANFR-012",
     "V": "FANAVFR-13",
     "VI": "IITFR-003",
-    "VII": "HN-1104-0506",
+    "VII": "FAANFR-005",
     "VIII": "MAANFR-001",
     "IX": "INELEFR-009",
     "X": "INTANFR-006",
@@ -77,7 +77,7 @@
     "XII": "MFMFR-007",
     "XIII": "NAV-015",
     "XIV": "PPREVACER-005",
-    "XV": "SN-1103-0506",
+    "XV": "PSFFR-014",
     "XVI": "TFMFR-004",
     "XVII": "EQUFR-010"
   },
@@ -86,6 +86,12 @@
     "locais fora do inventario de salas entram como TEXTO (Sala 05, CAMR, CIAA, CN, Auditorio DHN, BFNIF, H36, H38, CMOpM, Sala 00, DHN, FAB, NAS, Patio, Biblioteca, Porto do Acu) — cadastrar como sala e decisao do lote"
   ],
   "aprovadas": [
-    "locais externos (MACAÉ, BNRJ, BHMN, BENFICA, AVB POLLUX, SIMULADOR) como texto livre — conferencia de 07/10/2026 (Bernardo Villas Boas: aplicar a recomendacao de cada caso)"
+    "locais externos (MACAÉ, BNRJ, BHMN, BENFICA, AVB POLLUX, SIMULADOR) como texto livre — conferencia de 07/10/2026 (Bernardo Villas Boas: aplicar a recomendacao de cada caso)",
+    "responsavel_externo_aceito: entidades e palestrantes externos da lista de pendencias de responsavel — decisao A3.6 de Bernardo Villas Boas (14/10/2026); o palestrante entra como SHA-256 do texto normalizado (nome de pessoa, repositorio publico)"
+  ],
+  "responsavel_externo_aceito": ["CAPELANIA", "CIAARA-10", "CIAARA-30", "DEnsM", "NAS DHN"],
+  "responsavel_externo_aceito_sha256": [
+    "dbb0001aa83fb70bb4cc47566c0e71f67e1dbe84fca9f1d8c6787dcd06b3dbc8",
+    "ef0d1931f1feb8d8ea5e7466fd70443125b064632c80d570048c2d2b6f1ed501"
   ]
 }

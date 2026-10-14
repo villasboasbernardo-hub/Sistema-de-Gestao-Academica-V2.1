@@ -182,14 +182,64 @@
   (pessoa cadastrada provável · entidade · palestrante externo) está em `pendencias-de-responsavel.md`, na
   pasta da rodada do remoto, fora do git. **Nada foi aplicado.** Para cada texto, a decisão vira entrada no
   lote (`instrutor_por_texto` ou `responsavel_externo_aceito`) e a linha entra na rodada seguinte.
-  **Aprovação:** [pendente]
+  ✅ **RESOLVIDO EM PARTE — decisão de Bernardo Villas Boas, 14/10/2026:** *"aplique só os classificados como
+  ENTIDADE ou PALESTRANTE EXTERNO; os 'pessoa cadastrada provável' esperam meu OK (fica a lista fora do git)"*.
+  Feito no lote: as 10 entidades e os 7 palestrantes externos viram `responsavel_externo_aceito`. ⚠️ Os
+  palestrantes são nome de pessoa, e o repositório é público: no lote eles entram como **resumo SHA-256 do
+  texto normalizado** (`responsavel_externo_aceito_sha256`), e o texto fica só na lista fora do git (D4.6). Os
+  demais (24 militares fora do cadastro, 1 pessoa cadastrada provável, 1 só traços) continuam esperando.
+
+## PR 4 — banco da leva 2 (só no local; nada no remoto)
+
+Medido sobre a cópia **`remoto-20261014-130529.sql`** (o remoto já sincronizado pelo PR 3), com as seis migrations
+aplicadas na ordem do `db push`. **Nas 28 turmas, aulas, avaliações, atividades, CHD, aplicação, vista e CHT ficaram
+iguais antes e depois.** Os quatro relatórios estão em `antes-depois/`.
+
+- **A4.1 — Emenda do BRIEF §2.1: três tabelas novas** (`avaliacoes_curriculo`, `avaliacoes_curriculo_turma`,
+  `vistas_de_avaliacao`). O texto PROPOSTO está no próprio BRIEF, marcado ⏳. A asserção FR-001 do pgTAP (010) já as
+  espera.
+  ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.**
+- **A4.2 — D-5, as correções banco × currículo, CASO A CASO** (`antes-depois/correcoes_banco_x_curriculo.md`): B-1,
+  B-2, B-3, B-5, B-6, B-7 e B-8 aplicadas; B-4 e B-12 FORA, esperando a conferência (T129).
+  ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.** *"B-4 e B-12: faça você a conferência no PDF do currículo; se o PDF confirmar, inclua na D-5 e me mostre a
+  página citada no relatório; se não confirmar, deixe fora e liste."* Feito: **B-12 confirmada e incluída** (o
+  currículo do C-Exp-Metoc-OF-SP tem quatro disciplinas, e a IV é *Estágio Prático* — índice, p. 2; a
+  disciplina *"Efeitos atmosféricos…"* é inativada, sem lançamento); **B-4 NÃO confirmada, fica fora**: o PDF dá
+  79 à disciplina (p. 4 e p. 5), que é o que o banco tem; as UEs somam 80 (p. 5–6), com o TR de 1 h à parte (p. 4).
+- **A4.3 — D-6, a unificação** (`antes-depois/unificar_hn2101_e_matfis.md`): HN-2101 (`I`, 126) e MATFIS (56); as
+  duas listas de instrutores e a lista unida; nenhum lançamento perdido.
+  ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.** A D4.1 (código `I`) foi aceita.
+- **A4.4 — D-4, as avaliações dos 24 currículos** (`antes-depois/avaliacoes_dos_24_curriculos.md`): 194 itens entram;
+  **90 ficam fora**, marcados `conferir` no CSV (instrumento PT fora da lista do data-model; "TI ou TG"; tempo do
+  conjunto do TFM; vista da sinopse do C-Esp-ALH; quatro disciplinas do C-Espc-FR sem destino no banco porque o
+  código do plano difere do sumário; o EST-QF-APOC digitalizado). Cada caso é decisão sua.
+  ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.** para os 194 itens. Os 90 de fora: *"gere uma lista com UMA RECOMENDAÇÃO por item (destino provável, tipo,
+  TA, página do PDF), para eu revisar em lote depois; enquanto isso, a disciplina mostra 'tempo de avaliação não
+  definido'"*. A lista é `medicoes/d4-fora-recomendacoes.md` — portão **A4.7**, abaixo.
+- **A4.5 — D-7, em três blocos** (`antes-depois/substituidas_e_vistas_para_sessoes.md`): D-7 (188 → substituídas,
+  com o status anterior); D-7b (241 vistas → sessão 1; anda junto da E-5); D-8 (15 de 16 aulas com o 2º instrutor por
+  código; 1 texto não casou e ficou em `observacoes`).
+  ✅ **RESOLVIDO — APROVADO por Bernardo Villas Boas em 14/10/2026.** (os três blocos)
+- **A4.6 — Achados do remoto que não são desta spec**, medidos na cópia: (a) `C-Exp-MetocOf V` está marcada
+  `sem_unidades_ensino` e TEM 50 TA de UE — a marcação parece engano de tela (pgTAP 112, asserção D-B3, conta 7 e
+  não 6); (b) `TDI-000042` (disciplina X) tem `instrutor_id` sem par ativo na junção (pgTAP 108, FR-032.1). Nenhum
+  dos dois foi tocado.
+  ✅ **RESOLVIDO — decisão de Bernardo Villas Boas, 14/10/2026:** *"NÃO mexer agora; registre como pendências
+  nomeadas."* Registradas no `CLAUDE.md` como **PEND-014-4** (MetocOf V «sem UE» com 50 TA de UE) e **PEND-014-5**
+  (`TDI-000042` sem par ativo na junção).
+- **A4.7 — Os 90 itens da extração que ficaram FORA da D-4**, cada um com UMA recomendação (destino provável, tipo,
+  TA e página do PDF): `medicoes/d4-fora-recomendacoes.md`. Enquanto não decididos, a disciplina mostra *"tempo de
+  avaliação não definido"*. **Aprovação:** [pendente], em lote.
 
 ## Decisões tomadas sozinho durante a implementação
 
 ✅ **D1.1 a D2.1.4 ACEITAS por Bernardo Villas Boas em 14/10/2026** (*"Decisões que você tomou sozinho
 (relatório §3): todas aceitas."*). ✅ **D2.1.5 a D2.1.9 e D3.1 a D3.6 ACEITAS por Bernardo Villas Boas em
 14/10/2026**, na mesma conferência que decidiu A3.1 a A3.5 (a D3.2 e a D3.3 foram superadas pelas decisões
-A3.3 e A3.2). As de número maior nasceram depois e esperam a palavra dele.
+A3.3 e A3.2). ✅ **D3.7 a D3.10, D4.1 a D4.5 e D5.2 ACEITAS por Bernardo Villas Boas em 14/10/2026.** ❌ **A D5.1 foi
+RECUSADA**: *"a turma tem de ter uma ABA «Avaliações» de verdade (barra de abas na página da turma, URL dona do
+estado), como pedi; o card leva para essa aba"* — feito no PR 5. As de número maior nasceram depois e esperam a
+palavra dele.
 
 *(formato: decidi X porque Y; para mudar: Z)*
 
@@ -320,3 +370,24 @@ A3.3 e A3.2). As de número maior nasceram depois e esperam a palavra dele.
   `remoto-20261014-115453.sql`, a rodada inativava essas linhas como se tivessem saído da planilha, e o TAD
   da C-Ap-FR caía de 89 para **5** (e não por reclassificação: por apagamento lógico de TAD legítimo).
   A linha nova com a pendência não entra. Para mudar: inativar a linha pendente que já existe.
+- **D4.1 (PR 4) — Na unificação da C-Ap-HN, `cod_disciplina` fica `I`**, e não `HN-2101-0621`: é a chave da
+  planilha de controle e de toda a grade da turma, e mudá-la obrigaria a mexer no lote de decisões e no DSA sem
+  ganho. O nome e a CH passam aos do currículo. A do CAHO vira `MATFIS`, como a T152 já previa. Para mudar: trocar o
+  código na D-6 e a chave no lote.
+- **D4.2 (PR 4) — A D-4 só carrega o item SEM `conferir`.** O que a extração não leu com segurança fica fora, contado
+  no cabeçalho da migration, e vai a Bernardo (A4.4); a máquina não decide instrumento nem tempo. O casamento item ×
+  disciplina do banco ficou numa coluna do CSV (`destino_disciplina_codigo`), preenchida por regras escritas em
+  `parear_avaliacoes_curriculo.py`. Para mudar: decidir os casos e regerar.
+- **D4.3 (PR 4) — A D-8 casa o 2º instrutor pelo nome de guerra no cadastro, em tempo de execução**, para não pôr
+  nome de pessoa na migration (repositório público). O que não casa com UM instrutor fica em `observacoes`.
+  Para mudar: decidir o texto que sobrou (1) e reaplicar.
+- **D4.4 (PR 4) — A D-6 tira e repõe, na mesma transação, as duas FKs compostas de `turma_disciplina_unidade`**, que
+  impediam mover a UE e a linha da turma no mesmo passo; ao voltar, elas validam a tabela inteira. E desliga os
+  gatilhos de auditoria só ali dentro, para as linhas históricas reapontadas preservarem `editado_em` nulo (D-UNIF-1).
+  Para mudar: tornar as FKs adiáveis numa migration de estrutura.
+- **D4.5 (PR 4) — A sincronização passa a gravar a substituída do ETL como `substituida_pela_planilha`** (com
+  `status_anterior`), e a ler avaliação viva pela lista positiva; o 2º instrutor da aula sai em `outros_instrutores`
+  pelo código (T151). ⚠️ Esse código só pode rodar no remoto DEPOIS das migrations do PR 4 lá (congelamento da T161).
+- **D4.6 (PR 4) — O palestrante externo aceito entra no lote como resumo SHA-256 do texto normalizado**, e não como
+  texto, porque o texto é nome de pessoa e o repositório é público. O resolver aceita o texto se ele OU o resumo
+  dele estiver no lote. Para mudar: guardar o lote de palestrantes fora do git.
