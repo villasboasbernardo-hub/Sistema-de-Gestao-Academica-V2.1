@@ -398,3 +398,15 @@ palavra dele.
   lista mostra as duas coisas: o item (pendente, até o vínculo existir) e a avaliação lançada. O vínculo explícito
   (FR-039) chega pelo DSA no PR 5.1 e pela carga no PR 6. Sem esse desconto, a disciplina com a prova feita acusaria
   estouro falso (medido na C-Ap-HN 2026, no TFM). ✅ Aceita em 14/10/2026.
+- **D5.3 (PR 5) — Sem «desfazer» do arbitrado nesta entrega.** O T198 pede, no roteiro, *Definir tempo* → **desfazer**;
+  nenhuma tarefa cria essa ação, e o arbitrado grava com quem e quando (a trilha é a auditoria do gatilho). Escolhi
+  **não** inventar uma ação de remover ajuste agora: o roteiro manda conferir com **"só esta turma"**, numa turma fora
+  de `fontes.json`, e o ajuste fica registrado. **Recomendação:** se quiser o desfazer, ele vira *Remover ajuste da
+  turma* (status `inativo` em `avaliacoes_curriculo_turma`, regra 4), no PR 5.1. — aguarda sua palavra.
+- **D5.4 (PR 5) — A aba Avaliações do curso usa a turma da Grade** (`?turma=`, com a pré-seleção pela janela), em vez
+  de um segundo seletor de turma na aba: um parâmetro só, e a mesma turma nas duas abas. Os filtros `disciplina` e
+  `situacao` da T175 **não** entraram (o quadro é recolhível por disciplina e mostra a situação por item); ficam para
+  quando o volume pedir.
+- **D5.5 (PR 5) — Semente própria das avaliações** (`tests/e2e/avaliacoes-de-teste.ts`) em vez de estender
+  `dsa-de-teste.ts` (T187): a do DSA serve a seis arquivos e passa de mil linhas. A **projeção** (100 e 118 cumpridos)
+  fica provada na unidade (`projecao.test.ts`), não na ponta a ponta — por isso a T189 segue aberta.
