@@ -105,6 +105,8 @@ test("FR-054 · o /inicio mostra a vista atrasada e a que vence em breve, com li
 }) => {
   await entrar(page, EMAIL_ADMIN, "/inicio");
   const alertas = page.locator('[data-slot="alertas-de-vista"]');
+  // Nasce recolhido, com a contagem à vista (RNF-USA-04): abrir para ver a lista.
+  await alertas.locator('[data-slot="avisos-recolhiveis"] button').first().click();
   await expect(
     alertas.locator(`[data-alerta-de-vista="atrasada"]`, { hasText: SEMEADO.turma }),
   ).toHaveCount(1);

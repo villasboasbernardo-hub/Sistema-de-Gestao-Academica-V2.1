@@ -410,3 +410,8 @@ palavra dele.
 - **D5.5 (PR 5) — Semente própria das avaliações** (`tests/e2e/avaliacoes-de-teste.ts`) em vez de estender
   `dsa-de-teste.ts` (T187): a do DSA serve a seis arquivos e passa de mil linhas. A **projeção** (100 e 118 cumpridos)
   fica provada na unidade (`projecao.test.ts`), não na ponta a ponta — por isso a T189 segue aberta.
+- **D5.6 (PR 5) — O bloco «Vistas de prova» nasce recolhido, com a contagem à vista.** Medido em 14/10/2026 na
+  cópia `remoto-20261014-155938.sql`: o `/inicio` listava **cerca de 50 vistas atrasadas** — quase todas provas lançadas
+  **sem** item ligado (o histórico e a sincronização da leva 1), que por isso exigem vista, e muitas *Prova Prática*. O
+  vínculo ao item, no PR 6, deve tirar da lista as provas cujo item não prevê vista. Usei o `AvisosRecolhiveis` dos
+  quadros de avisos (`RNF-USA-04`). Captura: `pr5-06-inicio-vistas.png` (antes de recolher).

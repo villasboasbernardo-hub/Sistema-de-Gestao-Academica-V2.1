@@ -5,10 +5,15 @@
  * ⚠️ **QUEM DECIDE É `alertasDeVista`**, sobre `situacaoDaAvaliacao` (ponto único, R-8): aqui só se desenha.
  * ⚠️ **INFORMATIVO** (`RN-DEG-02`): nada aqui bloqueia lançamento. Cada linha leva à aba Avaliações da turma, pelo
  *    módulo único de endereço (gotcha 12).
+ * ⚠️ **NASCE RECOLHIDO, COM A CONTAGEM À VISTA** (`RNF-USA-04`, o mesmo `AvisosRecolhiveis` dos quadros de avisos):
+ *    medido em 14/10/2026 na cópia do remoto, o `/inicio` listava cerca de 50 vistas atrasadas — aberta, a lista
+ *    empurrava o panorama para fora da tela.
  * ⚠️ Sem alerta, o bloco NÃO aparece: na ficha e no `/inicio` a região de alertas geral já diz «nada exigindo
  *    atenção»; um segundo «nada» repetiria a frase.
  */
 import Link from "next/link";
+
+import { AvisosRecolhiveis } from "@/components/ciaara/avisos-recolhiveis";
 
 import type { AlertaDeVista } from "@/lib/dominio/avaliacoes/alertas-de-vista";
 import { dataParaLeitura } from "@/lib/formato/data";
@@ -35,22 +40,31 @@ export function AlertasDeVista({
       <h2 id="titulo-alertas-de-vista" className="text-atrasado-tinta text-sm font-semibold">
         Vistas de prova
       </h2>
-      <ul role="status" className="flex flex-col gap-0.5 text-sm">
-        {alertas.map((a) => (
-          <li key={a.id} data-alerta-de-vista={a.tipoDoAlerta}>
-            <Link
-              href={enderecoDasAvaliacoesDaTurma(a.turma)}
-              className="text-atrasado-tinta underline-offset-2 hover:underline"
-            >
-              {mostrarTurma ? `${a.turma} · ` : ""}
-              {a.disciplina} · {a.tipo} de {dataParaLeitura(a.aplicacao)}:{" "}
-              {a.tipoDoAlerta === "atrasada"
-                ? `vista atrasada (o prazo venceu em ${dataParaLeitura(a.venceEm)})`
-                : `a vista vence em ${dataParaLeitura(a.venceEm)}`}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <AvisosRecolhiveis
+        contagens={
+          <p className="text-atrasado-tinta text-sm" data-slot="contagem-de-vistas">
+            <strong>{atrasadas}</strong> {atrasadas === 1 ? "vista atrasada" : "vistas atrasadas"}
+            {alertas.length > atrasadas ? ` · ${alertas.length - atrasadas} vencendo em breve` : ""}
+          </p>
+        }
+      >
+        <ul role="status" className="flex flex-col gap-0.5 text-sm">
+          {alertas.map((a) => (
+            <li key={a.id} data-alerta-de-vista={a.tipoDoAlerta}>
+              <Link
+                href={enderecoDasAvaliacoesDaTurma(a.turma)}
+                className="text-atrasado-tinta underline-offset-2 hover:underline"
+              >
+                {mostrarTurma ? `${a.turma} · ` : ""}
+                {a.disciplina} · {a.tipo} de {dataParaLeitura(a.aplicacao)}:{" "}
+                {a.tipoDoAlerta === "atrasada"
+                  ? `vista atrasada (o prazo venceu em ${dataParaLeitura(a.venceEm)})`
+                  : `a vista vence em ${dataParaLeitura(a.venceEm)}`}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </AvisosRecolhiveis>
     </section>
   );
 }
