@@ -334,6 +334,9 @@ function porChave(
     // Spec 014, PR 4 (E-4): o arbitrado e a vista antes da prova.
     case "arbitrado_sem_permissao":
       return "Só o Admin e o Encarregado definem o tempo arbitrado ou nomeiam a unidade de ensino de uma avaliação.";
+    // Spec 014, PR 5 (condição da D5.3): a trilha do arbitrado não se reescreve.
+    case "trilha_do_arbitrado_imutavel":
+      return "O histórico do arbitrado não se altera. Para corrigir, grave o valor novo na avaliação do currículo.";
     case "vista_antes_da_aplicacao":
       return "A vista não pode ser antes da aplicação da prova. Escolha uma data a partir do dia da prova.";
 

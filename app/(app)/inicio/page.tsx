@@ -253,6 +253,7 @@ export default async function Inicio({
           .filter((v) => v.status === "ativo")
           .map((v) => v.data),
         temItemDeVista: a.avaliacao_curriculo_id === null || (a.item?.ta_vista ?? 0) > 0,
+        itemLigado: a.avaliacao_curriculo_id !== null,
       })),
     {
       prazoDias: parametroDaVista("avaliacao.prazo_vista_dias", 7),

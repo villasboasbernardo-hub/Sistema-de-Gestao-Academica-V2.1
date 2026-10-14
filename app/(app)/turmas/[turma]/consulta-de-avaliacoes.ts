@@ -194,6 +194,7 @@ export async function lerAvaliacoesDaTurma(entrada: {
         aplicacao: a.aplicacao,
         sessoesDeVista: a.sessoesDeVista,
         temItemDeVista: a.itemId === null || (vista !== null && vista > 0),
+        itemLigado: item !== undefined,
       };
     }),
     { prazoDias, venceEmBreveDias, hoje: entrada.hoje },

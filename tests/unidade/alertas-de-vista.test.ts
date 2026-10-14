@@ -19,6 +19,7 @@ const base: AvaliacaoParaAlerta = {
   aplicacao: "2026-10-01",
   sessoesDeVista: [],
   temItemDeVista: true,
+  itemLigado: true,
 };
 const P = { prazoDias: 7, venceEmBreveDias: 2 };
 
@@ -43,6 +44,16 @@ describe("FR-054 · alertas de vista", () => {
     expect(alertasDeVista([{ ...base, natureza: "od" }], hoje)).toEqual([]);
     expect(alertasDeVista([{ ...base, estadoDoRegistro: "cancelada" }], hoje)).toEqual([]);
     expect(alertasDeVista([{ ...base, aplicacao: null }], hoje)).toEqual([]);
+  });
+
+  it("prova SEM item do currículo ligado não entra no alerta (14/10/2026): vai para a lista de erros de planilha", () => {
+    const hoje = { ...P, hoje: "2026-10-20" };
+    expect(alertasDeVista([{ ...base, itemLigado: false }], hoje)).toEqual([]);
+    expect(alertasDeVista([{ ...base, itemLigado: false }], { ...P, hoje: "2026-10-07" })).toEqual(
+      [],
+    );
+    // O caso que discrimina: a mesma prova, ligada, é atrasada.
+    expect(alertasDeVista([base], hoje)[0]?.tipoDoAlerta).toBe("atrasada");
   });
 
   it("atrasadas primeiro, e a data-limite vem calculada", () => {
