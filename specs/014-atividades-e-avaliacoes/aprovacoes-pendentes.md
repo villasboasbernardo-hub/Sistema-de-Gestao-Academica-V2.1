@@ -391,3 +391,27 @@ palavra dele.
 - **D4.6 (PR 4) — O palestrante externo aceito entra no lote como resumo SHA-256 do texto normalizado**, e não como
   texto, porque o texto é nome de pessoa e o repositório é público. O resolver aceita o texto se ele OU o resumo
   dele estiver no lote. Para mudar: guardar o lote de palestrantes fora do git.
+- **D5.1 (PR 5) — ❌ RECUSADA por Bernardo Villas Boas em 14/10/2026.** A primeira parte do PR 5 levava o card a uma
+  seção da ficha; a decisão manda uma **aba "Avaliações" de verdade**, com a barra de abas na página da turma e a URL
+  dona do estado (`?aba=avaliacoes`), e o card levando a ela. Feito na segunda parte do PR 5 (T175, T177).
+- **D5.2 (PR 5) — A avaliação APLICADA sem item do currículo ligado consome um item pendente na projeção**, e a
+  lista mostra as duas coisas: o item (pendente, até o vínculo existir) e a avaliação lançada. O vínculo explícito
+  (FR-039) chega pelo DSA no PR 5.1 e pela carga no PR 6. Sem esse desconto, a disciplina com a prova feita acusaria
+  estouro falso (medido na C-Ap-HN 2026, no TFM). ✅ Aceita em 14/10/2026.
+- **D5.3 (PR 5) — Sem «desfazer» do arbitrado nesta entrega.** O T198 pede, no roteiro, *Definir tempo* → **desfazer**;
+  nenhuma tarefa cria essa ação, e o arbitrado grava com quem e quando (a trilha é a auditoria do gatilho). Escolhi
+  **não** inventar uma ação de remover ajuste agora: o roteiro manda conferir com **"só esta turma"**, numa turma fora
+  de `fontes.json`, e o ajuste fica registrado. **Recomendação:** se quiser o desfazer, ele vira *Remover ajuste da
+  turma* (status `inativo` em `avaliacoes_curriculo_turma`, regra 4), no PR 5.1. — aguarda sua palavra.
+- **D5.4 (PR 5) — A aba Avaliações do curso usa a turma da Grade** (`?turma=`, com a pré-seleção pela janela), em vez
+  de um segundo seletor de turma na aba: um parâmetro só, e a mesma turma nas duas abas. Os filtros `disciplina` e
+  `situacao` da T175 **não** entraram (o quadro é recolhível por disciplina e mostra a situação por item); ficam para
+  quando o volume pedir.
+- **D5.5 (PR 5) — Semente própria das avaliações** (`tests/e2e/avaliacoes-de-teste.ts`) em vez de estender
+  `dsa-de-teste.ts` (T187): a do DSA serve a seis arquivos e passa de mil linhas. A **projeção** (100 e 118 cumpridos)
+  fica provada na unidade (`projecao.test.ts`), não na ponta a ponta — por isso a T189 segue aberta.
+- **D5.6 (PR 5) — O bloco «Vistas de prova» nasce recolhido, com a contagem à vista.** Medido em 14/10/2026 na
+  cópia `remoto-20261014-155938.sql`: o `/inicio` listava **cerca de 50 vistas atrasadas** — quase todas provas lançadas
+  **sem** item ligado (o histórico e a sincronização da leva 1), que por isso exigem vista, e muitas *Prova Prática*. O
+  vínculo ao item, no PR 6, deve tirar da lista as provas cujo item não prevê vista. Usei o `AvisosRecolhiveis` dos
+  quadros de avisos (`RNF-USA-04`). Captura: `pr5-06-inicio-vistas.png` (antes de recolher).

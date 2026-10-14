@@ -249,6 +249,10 @@ async function limpar(): Promise<void> {
     const id = (t as { id: string }).id;
     await servico.from("registros_aula").delete().eq("turma_id", id);
     await servico.from("atividades_nao_letivas").delete().eq("turma_id", id);
+    // Spec 014 (PR 4): as sessões de vista antes da avaliação — a FK é `restrict`.
+    const { data: avs } = await servico.from("avaliacoes").select("id").eq("turma_id", id);
+    const ids = (avs ?? []).map((x) => (x as { id: string }).id);
+    if (ids.length > 0) await servico.from("vistas_de_avaliacao").delete().in("avaliacao_id", ids);
     await servico.from("avaliacoes").delete().eq("turma_id", id);
     await servico.from("turma_disciplina_unidade").delete().eq("turma_id", id);
     await servico.from("turma_disciplina").delete().eq("turma_id", id);

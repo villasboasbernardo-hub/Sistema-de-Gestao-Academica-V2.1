@@ -599,6 +599,46 @@ describe("avaliações do currículo e o arbitrado (FR-031.7, T142)", () => {
     expect(error).toBeNull();
   });
 
+  /*
+   * D5.3 (condição de Bernardo Villas Boas, 14/10/2026): a trilha registra quem arbitrou, quando e o valor
+   * anterior. As tentativas recusadas do Operador e do Ajudante NÃO deixam linha (a transação desfaz o gatilho).
+   */
+  it("a trilha do arbitrado tem UMA linha — a do Encarregado —, com o valor anterior e o autor", async () => {
+    const { data } = await sessao("encarregado_administracao_academica")
+      .from("avaliacoes_curriculo_arbitragens")
+      .select("operacao, antes, depois, autor_id, registrado_em")
+      .eq("avaliacao_curriculo_id", itemId);
+    const linhas = (data ?? []) as {
+      operacao: string;
+      antes: Record<string, unknown> | null;
+      depois: Record<string, unknown>;
+      autor_id: string | null;
+      registrado_em: string | null;
+    }[];
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0]?.operacao).toBe("UPDATE");
+    expect(linhas[0]?.antes?.["ta_vista"]).toBeNull();
+    expect(linhas[0]?.antes?.["origem_ta_vista"]).toBeNull();
+    expect(linhas[0]?.depois["ta_vista"]).toBe(1);
+    expect(linhas[0]?.depois["origem_ta_vista"]).toBe("arbitrado");
+    expect(linhas[0]?.autor_id).not.toBeNull();
+    expect(linhas[0]?.registrado_em).not.toBeNull();
+  });
+
+  it("ninguém escreve na trilha do arbitrado direto: o Encarregado recebe 42501", async () => {
+    const { error } = await sessao("encarregado_administracao_academica")
+      .from("avaliacoes_curriculo_arbitragens")
+      .insert({
+        tabela: "avaliacoes_curriculo",
+        registro_id: itemId,
+        avaliacao_curriculo_id: itemId,
+        curso_id: cursoRegularId,
+        operacao: "INSERT",
+        depois: {},
+      });
+    expect(error?.code).toBe("42501");
+  });
+
   it("avaliacoes_planejadas ficou só de leitura: o Encarregado recebe 42501 no INSERT", async () => {
     const { error } = await sessao("encarregado_administracao_academica")
       .from("avaliacoes_planejadas")

@@ -49,6 +49,10 @@ import {
   type LinhaDoPrevisto,
 } from "../turmas/tetos-excedidos";
 import { FiltroDoPanorama } from "./FiltroDoPanorama";
+import { AlertasDeVista } from "../turmas/[turma]/AlertasDeVista";
+import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
+import { alertasDeVista } from "@/lib/dominio/avaliacoes/alertas-de-vista";
+import { naturezaPeloTipo } from "@/lib/dominio/avaliacoes/quadro-da-turma";
 import {
   montarPanorama,
   totaisDo,
@@ -114,6 +118,8 @@ export default async function Inicio({
     feriadosRes,
     conformidadeRes,
     previstosRes,
+    avaliacoesRes,
+    parametrosDaVistaRes,
   ] = await Promise.all([
     consultaDeCursos,
     supabase
@@ -165,6 +171,22 @@ export default async function Inicio({
       .from("previstos_proens_turma")
       .select("turma_id, categoria, tempos_previstos")
       .eq("status", "ativo"),
+    /*
+     * ⚠️ **OS ALERTAS DE VISTA** (spec 014, FR-054, `RF-INI-04`): as avaliações VIVAS já aplicadas, com as sessões
+     *    de vista e o tempo de vista do item; o veredito é de `alertasDeVista`, sobre `situacaoDaAvaliacao`.
+     */
+    supabase
+      .from("avaliacoes")
+      .select(
+        "id, tipo_avaliacao, data_avaliacao, status, avaliacao_curriculo_id, turma:turmas!avaliacoes_turma_id_fkey(codigo), disciplina:disciplinas!avaliacoes_disciplina_id_fkey(cod_disciplina), item:avaliacoes_curriculo!avaliacoes_item_da_disciplina(ta_vista), vistas_de_avaliacao(data, status)",
+      )
+      .in("status", [...STATUS_DE_AVALIACAO_VIVA])
+      .lte("data_avaliacao", hoje),
+    supabase
+      .from("config_parametros")
+      .select("chave, valor")
+      .in("chave", ["avaliacao.prazo_vista_dias", "avaliacao.vence_em_breve_dias"])
+      .eq("status", "ativo"),
   ]);
 
   /*
@@ -202,6 +224,43 @@ export default async function Inicio({
     (previstosRes.data ?? []) as LinhaDoPrevisto[],
     new Map((turmasRes.data ?? []).map((t) => [t.id as string, t.modalidade as string | null])),
   ).filter((e) => noRecorte.has(e.turmaCodigo));
+  const parametroDaVista = (chave: string, padrao: number) =>
+    Number((parametrosDaVistaRes.data ?? []).find((p) => p.chave === chave)?.valor ?? padrao) ||
+    padrao;
+  type LinhaDeAvaliacao = {
+    id: string;
+    tipo_avaliacao: string | null;
+    data_avaliacao: string | null;
+    status: string;
+    avaliacao_curriculo_id: string | null;
+    turma: { codigo: string } | null;
+    disciplina: { cod_disciplina: string } | null;
+    item: { ta_vista: number | null } | null;
+    vistas_de_avaliacao: { data: string; status: string }[];
+  };
+  const vistas = alertasDeVista(
+    ((avaliacoesRes.data ?? []) as unknown as LinhaDeAvaliacao[])
+      .filter((a) => a.turma && noRecorte.has(a.turma.codigo))
+      .map((a) => ({
+        id: a.id,
+        turma: a.turma?.codigo ?? "",
+        disciplina: a.disciplina?.cod_disciplina ?? "",
+        tipo: a.tipo_avaliacao ?? "",
+        natureza: naturezaPeloTipo(a.tipo_avaliacao ?? ""),
+        estadoDoRegistro: a.status,
+        aplicacao: a.data_avaliacao,
+        sessoesDeVista: a.vistas_de_avaliacao
+          .filter((v) => v.status === "ativo")
+          .map((v) => v.data),
+        temItemDeVista: a.avaliacao_curriculo_id === null || (a.item?.ta_vista ?? 0) > 0,
+        itemLigado: a.avaliacao_curriculo_id !== null,
+      })),
+    {
+      prazoDias: parametroDaVista("avaliacao.prazo_vista_dias", 7),
+      venceEmBreveDias: parametroDaVista("avaliacao.vence_em_breve_dias", 2),
+      hoje,
+    },
+  );
   const temRecorte = classificacao !== "" || modalidade !== "";
   const baseVazia = (totalRes.count ?? 0) === 0;
 
@@ -236,6 +295,8 @@ export default async function Inicio({
             : ["Nenhuma turma em andamento com saldo negativo no recorte atual."]
         }
       />
+
+      <AlertasDeVista alertas={vistas} mostrarTurma />
 
       {/*
         ⚠️ **UM ALERTA POR CARD EXCEDIDO, COM LINK PARA A TURMA** (spec 014, `FR-005`). Informativo:

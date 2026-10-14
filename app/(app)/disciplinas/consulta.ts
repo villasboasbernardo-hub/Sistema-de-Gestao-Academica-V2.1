@@ -72,6 +72,18 @@ export type UnidadeDaLinha = {
   readonly ativa: boolean;
 };
 
+/** Um item de avaliação do currículo da disciplina (spec 014, FR-038). */
+export type ItemDoCurriculoDaLinha = {
+  readonly id: string;
+  readonly rotulo: string;
+  readonly instrumento: string;
+  readonly numero: number;
+  readonly taAplicacao: number | null;
+  readonly taVista: number | null;
+  readonly origemItem: string;
+  readonly ativo: boolean;
+};
+
 export type LinhaDaGradeDeDisciplinas = {
   readonly disciplinaId: string;
   readonly codigo: string;
@@ -92,6 +104,8 @@ export type LinhaDaGradeDeDisciplinas = {
   /** Quem pode ser atribuído. Vazio = ninguém habilitado, e a tela oferece o caminho de habilitar. */
   readonly habilitados: readonly HabilitadoDaLinha[];
   readonly unidades: readonly UnidadeDaLinha[];
+  /** As avaliações do currículo da disciplina, ativas e inativas (regra 4: a inativa continua na lista). */
+  readonly avaliacoesDoCurriculo: readonly ItemDoCurriculoDaLinha[];
   /** O aviso da soma das UEs, ou `null` quando fecha **ou quando não há UE** (`FR-061`). */
   readonly avisoDaSoma: string | null;
 };
@@ -242,11 +256,37 @@ export async function lerGradeDeDisciplinas(filtro: {
   }
 
   // ── unidades de ensino: UMA consulta para todas as disciplinas ───────────────────────────────
-  const unidadesRes = await supabase
-    .from("unidades_ensino")
-    .select("id, codigo, disciplina_id, numero_ue, topico, ch_prevista_tempos, status")
-    .in("disciplina_id", idsDasDisciplinas)
-    .order("numero_ue");
+  // ⚠️ As avaliações do currículo (spec 014, FR-038) vêm na MESMA rodada, e uma consulta só.
+  const [unidadesRes, itensRes] = await Promise.all([
+    supabase
+      .from("unidades_ensino")
+      .select("id, codigo, disciplina_id, numero_ue, topico, ch_prevista_tempos, status")
+      .in("disciplina_id", idsDasDisciplinas)
+      .order("numero_ue"),
+    supabase
+      .from("avaliacoes_curriculo")
+      .select(
+        "id, disciplina_id, ordem, numero, ta_aplicacao, ta_vista, origem_item, status, instrumento:config_listas!avaliacoes_curriculo_instrumento_id_fkey(valor)",
+      )
+      .in("disciplina_id", idsDasDisciplinas)
+      .order("ordem"),
+  ]);
+  const itensPorDisciplina = new Map<string, ItemDoCurriculoDaLinha[]>();
+  for (const i of itensRes.data ?? []) {
+    const instrumento = (i.instrumento as { valor?: string } | null)?.valor ?? "?";
+    const lista = itensPorDisciplina.get(i.disciplina_id) ?? [];
+    lista.push({
+      id: i.id,
+      rotulo: `${instrumento} ${i.numero}`,
+      instrumento,
+      numero: Number(i.numero),
+      taAplicacao: i.ta_aplicacao === null ? null : Number(i.ta_aplicacao),
+      taVista: i.ta_vista === null ? null : Number(i.ta_vista),
+      origemItem: i.origem_item,
+      ativo: i.status === "ativo",
+    });
+    itensPorDisciplina.set(i.disciplina_id, lista);
+  }
 
   const unidadesPorDisciplina = new Map<string, UnidadeDaLinha[]>();
   for (const u of unidadesRes.data ?? []) {
@@ -434,6 +474,7 @@ export async function lerGradeDeDisciplinas(filtro: {
       instrutores: instrutoresPorDisciplina.get(d.id) ?? [],
       habilitados: habilitadosPorDisciplina.get(d.id) ?? [],
       unidades,
+      avaliacoesDoCurriculo: itensPorDisciplina.get(d.id) ?? [],
       avisoDaSoma:
         conferirSomaDasUnidades(
           unidades.map((u) => ({ chPrevistaTempos: u.chPrevistaTempos, ativa: u.ativa })),

@@ -99,7 +99,10 @@ select set_eq(
            ('previstos_proens_turma'), ('previstos_proens_alteracoes'),
            -- PR 4 da spec 014, 14/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entraram no BRIEF §2.1
            -- (emenda PROPOSTA de 14/10/2026, portão A4.1) antes de entrar aqui.
-           ('avaliacoes_curriculo'), ('avaliacoes_curriculo_turma'), ('vistas_de_avaliacao')$$,
+           ('avaliacoes_curriculo'), ('avaliacoes_curriculo_turma'), ('vistas_de_avaliacao'),
+           -- PR 5 da spec 014, 14/10/2026, condicao da D5.3. REGRA DOS VALORES ESPERADOS: (a). Entrou no
+           -- BRIEF §2.1 (emenda de 14/10/2026) antes de entrar aqui.
+           ('avaliacoes_curriculo_arbitragens')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

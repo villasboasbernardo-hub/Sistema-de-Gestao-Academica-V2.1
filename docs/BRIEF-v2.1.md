@@ -266,7 +266,7 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
-> ### ⏳ Emenda PROPOSTA (14/10/2026) — três tabelas novas, do PR 4 da spec 014 · **aguarda aprovação (A4.1)**
+> ### ✅ Emenda de 14/10/2026 — três tabelas novas, do PR 4 da spec 014 · **aprovada por Bernardo Villas Boas em 14/10/2026 (A4.1)**
 >
 > - **`avaliacoes_curriculo`** — o **item de avaliação do currículo** da DEnsM (prova, trabalho ou OD), por
 >   disciplina, com quantidade e tempo de aplicação e de vista, **cada um com a sua origem** (currículo, com
@@ -277,6 +277,15 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >   ou a sugestão da planilha a confirmar (`FR-031.7`, `FR-031.8`).
 > - **`vistas_de_avaliacao`** — as **sessões de vista** de uma avaliação (N por avaliação), com quem conduz
 >   (`FR-041`, R-5). Filha da avaliação: continua **um fato por avaliação** (`RN-AVAL-02`).
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
+> ### ✅ Emenda de 14/10/2026 — uma tabela nova, do PR 5 da spec 014 (condição da D5.3)
+>
+> - **`avaliacoes_curriculo_arbitragens`** — a **trilha do arbitrado** das avaliações do currículo: antes,
+>   depois, quem e quando, no item do curso e no ajuste por turma. **Só de acréscimo**, no molde de
+>   `previstos_proens_alteracoes`. Nasce da condição de Bernardo Villas Boas ao aceitar a D5.3 (14/10/2026):
+>   *"desde que a trilha de auditoria registre quem arbitrou, quando e o valor anterior"*.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 

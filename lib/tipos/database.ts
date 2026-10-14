@@ -829,6 +829,48 @@ export type Database = {
           },
         ]
       }
+      avaliacoes_curriculo_arbitragens: {
+        Row: {
+          antes: Json | null
+          autor_id: string | null
+          avaliacao_curriculo_id: string
+          curso_id: string
+          depois: Json
+          id: string
+          operacao: string
+          registrado_em: string
+          registro_id: string
+          tabela: string
+          turma_id: string | null
+        }
+        Insert: {
+          antes?: Json | null
+          autor_id?: string | null
+          avaliacao_curriculo_id: string
+          curso_id: string
+          depois: Json
+          id?: string
+          operacao: string
+          registrado_em?: string
+          registro_id: string
+          tabela: string
+          turma_id?: string | null
+        }
+        Update: {
+          antes?: Json | null
+          autor_id?: string | null
+          avaliacao_curriculo_id?: string
+          curso_id?: string
+          depois?: Json
+          id?: string
+          operacao?: string
+          registrado_em?: string
+          registro_id?: string
+          tabela?: string
+          turma_id?: string | null
+        }
+        Relationships: []
+      }
       avaliacoes_curriculo_turma: {
         Row: {
           avaliacao_curriculo_id: string

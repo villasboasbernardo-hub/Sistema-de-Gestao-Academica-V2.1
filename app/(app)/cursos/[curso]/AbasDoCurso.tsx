@@ -1,9 +1,10 @@
 /**
- * As **duas** abas da página do curso — folha de cliente (`FR-006.2`, `FR-041`).
+ * As **três** abas da página do curso — folha de cliente (`FR-006.2`, `FR-041`; spec 014, FR-053).
  *
- * ⚠️ **SÃO EXATAMENTE DUAS, E ISSO É A DECISÃO Q-02.** "Grade" e "Sobre o Curso". Avaliações e
- * Relatório **não** entram — nem como aba desabilitada, nem com marca *"em breve"* (`FR-008`, A-4):
- * *"a tela não anuncia o que não entrega"*.
+ * ⚠️ **ERAM EXATAMENTE DUAS (decisão Q-02 da spec 009), E A TERCEIRA ENTROU QUANDO A TELA PASSOU A ENTREGAR:**
+ * "Grade", "Sobre o Curso" e — desde a spec 014 (`RF-CURSO-02`, FR-053) — "Avaliações". Relatório continua
+ * **fora** — nem como aba desabilitada, nem com marca *"em breve"* (`FR-008`, A-4): *"a tela não anuncia o que
+ * não entrega"*.
  *
  * ⚠️ **A ABA MORA NA URL, E EMPILHA HISTÓRICO.** Trocar de aba é navegação: quem aperta "voltar"
  * desfaz **um** passo. É a diferença para os filtros de `/cursos`, que substituem.
@@ -21,17 +22,20 @@ import { useParametro } from "@/lib/navegacao/usar-parametro";
 const ABAS = [
   { valor: "grade", rotulo: "Grade" },
   { valor: "sobre", rotulo: "Sobre o Curso" },
+  { valor: "avaliacoes", rotulo: "Avaliações" },
 ] as const;
 
 export function AbasDoCurso({
   grade,
   sobre,
+  avaliacoes,
 }: {
   readonly grade: React.ReactNode;
   readonly sobre: React.ReactNode;
+  readonly avaliacoes: React.ReactNode;
 }) {
   const [aba, definirAba] = useParametro("/cursos/[curso]", "aba");
-  const atual = aba === "sobre" ? "sobre" : "grade";
+  const atual = aba === "sobre" || aba === "avaliacoes" ? aba : "grade";
 
   return (
     <div className="flex flex-col gap-4" data-slot="abas-do-curso">
@@ -59,7 +63,7 @@ export function AbasDoCurso({
       </div>
 
       <div role="tabpanel" id={`painel-${atual}`} aria-labelledby={`aba-${atual}`}>
-        {atual === "sobre" ? sobre : grade}
+        {atual === "sobre" ? sobre : atual === "avaliacoes" ? avaliacoes : grade}
       </div>
     </div>
   );

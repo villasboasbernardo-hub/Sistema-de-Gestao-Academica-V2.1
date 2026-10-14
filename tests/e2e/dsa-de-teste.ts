@@ -1017,6 +1017,24 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
 }
 
 /** Deixa a base no estado inicial. Roda ANTES e DEPOIS — execução interrompida não inviabiliza a seguinte. */
+/**
+ * Apaga avaliações da amostra COM as sessões de vista delas — e confere o erro, que antes era descartado.
+ */
+async function apagarAvaliacoes(
+  filtro: (q: ReturnType<ReturnType<SupabaseClient["from"]>["select"]>) => typeof q,
+): Promise<void> {
+  const { data } = await filtro(admin().from("avaliacoes").select("id"));
+  const ids = ((data ?? []) as { id: string }[]).map((a) => a.id);
+  if (ids.length === 0) return;
+  const { error: erroSessoes } = await admin()
+    .from("vistas_de_avaliacao")
+    .delete()
+    .in("avaliacao_id", ids);
+  if (erroSessoes) throw new Error(`falha ao limpar as sessões de vista: ${erroSessoes.message}`);
+  const { error } = await admin().from("avaliacoes").delete().in("id", ids);
+  if (error) throw new Error(`falha ao limpar as avaliações: ${error.message}`);
+}
+
 export async function limparDsa(semeado: DsaSemeado | undefined): Promise<void> {
   if (!semeado) return;
   const s = semeado.turmaComRelogio
@@ -1042,7 +1060,13 @@ export async function limparDsa(semeado: DsaSemeado | undefined): Promise<void> 
    * ⚠️ **O que fica para trás é UMA linha marcada** (`observacao = MARCA_DA_SEMENTE`), e ela
    * desaparece no `db:reset` da verificação seguinte — que é como a suíte sempre começa.
    */
-  await admin().from("avaliacoes").delete().like("codigo", `DSA-${s}-%`);
+  /*
+   * ⚠️ **AS SESSÕES DE VISTA SAEM ANTES DA AVALIAÇÃO** (spec 014, PR 4): `vistas_de_avaliacao.avaliacao_id` é FK
+   *    `restrict`, e o `delete` da avaliação com sessão FALHAVA EM SILÊNCIO (o erro não era lido). A avaliação e a
+   *    turma ficavam, e o arquivo seguinte do mesmo processo reaproveitava a turma suja — medido em 14/10/2026:
+   *    `dsa-parar-dia` achava a VISTA que `dsa-lancar` deixou na sexta, 6º tempo, e reprovava só na suíte inteira.
+   */
+  await apagarAvaliacoes((q) => q.like("codigo", `DSA-${s}-%`));
   await admin().from("registros_aula").delete().like("codigo", `DSA-${s}-%`);
 
   for (const codigo of [
@@ -1055,7 +1079,7 @@ export async function limparDsa(semeado: DsaSemeado | undefined): Promise<void> 
     if (!data) continue;
     const id = (data as { id: string }).id;
     await admin().from("registros_aula").delete().eq("turma_id", id);
-    await admin().from("avaliacoes").delete().eq("turma_id", id);
+    await apagarAvaliacoes((q) => q.eq("turma_id", id));
     await admin().from("atividades_nao_letivas").delete().eq("turma_id", id);
     await admin().from("turma_disciplina_unidade").delete().eq("turma_id", id);
     await admin().from("turma_disciplina").delete().eq("turma_id", id);

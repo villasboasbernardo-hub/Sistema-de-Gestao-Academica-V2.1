@@ -142,3 +142,35 @@ describe("⚠️ e o resto do sistema não lê esses campos", () => {
     }
   });
 });
+
+/*
+ * Spec 014 (T184, SC-011, FR-062): as telas de avaliação NÃO tratam de nota, média nem aprovação — são de outra
+ * divisão (`RNF-NORM-06`). A varredura cobra INTERPRETAÇÃO (identificador de código, sem comentário — regra
+ * 9.1.1), não a palavra em texto de tela; e tem controle positivo, para não passar cega.
+ */
+describe("`FR-062` · as telas de avaliação não interpretam nota, média nem aprovação", () => {
+  const TELAS = [
+    "app/(app)/turmas/[turma]/AvaliacoesDaTurma.tsx",
+    "app/(app)/turmas/[turma]/CardDeAvaliacoes.tsx",
+    "app/(app)/turmas/[turma]/DefinirTempoArbitrado.tsx",
+    "app/(app)/turmas/[turma]/AlertasDeVista.tsx",
+    "app/(app)/turmas/[turma]/consulta-de-avaliacoes.ts",
+    "app/(app)/cursos/[curso]/AbaAvaliacoes.tsx",
+    "lib/dominio/avaliacoes/quadro-da-turma.ts",
+    "lib/dominio/avaliacoes/contagem.ts",
+    "lib/acoes/avaliacoes-do-curriculo.ts",
+  ];
+  const PROIBIDO =
+    /\b(nota|notas|media_final|mediaFinal|formula_mf|formulaMf|aprovad[oa]s?|reprovad[oa]s?|carater)\w*\b/;
+
+  it("controle positivo: o detector acusa uma interpretação plantada", () => {
+    expect(PROIBIDO.test(semComentario("const aprovado = nota >= 5; // comentário"))).toBe(true);
+    expect(PROIBIDO.test(semComentario("// aprovado só no comentário\nconst x = 1;"))).toBe(false);
+  });
+
+  it.each(TELAS)("%s existe e não interpreta nota, média nem aprovação", (arquivo) => {
+    const codigo = ler(arquivo);
+    expect(codigo.length).toBeGreaterThan(200);
+    expect(codigo.match(PROIBIDO)?.[0] ?? null).toBeNull();
+  });
+});
