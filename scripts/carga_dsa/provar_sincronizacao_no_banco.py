@@ -56,7 +56,7 @@ def rodar(rodada: Path, turma: str, autor: str) -> str:
     r = subprocess.run(
         [sys.executable, "-X", "utf8", "-m", "scripts.carga_dsa.sincronizar", "--rodada", str(rodada),
          "--destino", "local", "--autor", autor, "--turmas", turma, "--provisorio",
-         "--medir-com-lancamento-da-tela", "--gravar"],
+         "--gravar"],
         capture_output=True, text=True, encoding="utf-8", check=False,
     )
     return r.stdout + r.stderr

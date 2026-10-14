@@ -262,9 +262,11 @@ def main() -> int:
              any(pp.tipo == "responsavel_sem_decisao" and "CICRANO" in pp.detalhe for pp in res.pendencias)
              and "Palestra" not in cat, [pp.detalhe for pp in res.pendencias])
     provisorio = resolver(leva1, ref, dec, "l.xlsx", set(), True)
-    conferir("FR-016 · no modo provisorio (so local) a palestra entra, e a pendencia continua bloqueando o remoto",
-             any(a["subtipo"] == "Palestra" for a in provisorio.atividades)
-             and any(pp.tipo == "responsavel_sem_decisao" and pp.bloqueia for pp in provisorio.pendencias))
+    conferir("A3.2 · a pendencia de responsavel trava SO A LINHA: nao bloqueia a turma, e a palestra fica fora ate no local",
+             not any(a["subtipo"] == "Palestra" for a in provisorio.atividades)
+             and any(pp.tipo == "responsavel_sem_decisao" and not pp.bloqueia for pp in provisorio.pendencias)
+             and not any(pp.tipo == "responsavel_sem_decisao" and pp.bloqueia for pp in res.pendencias)
+             and bool(res.aulas))
     aceito = resolver(leva1, ref, {**dec, "responsavel_externo_aceito": ["SR. CICRANO DE FORA"]}, "l.xlsx", set(), True)
     conferir("FR-016 · com a decisao no lote, entra como externo",
              any(a["responsavel_externo"] == "SR. CICRANO DE FORA" for a in aceito.atividades), aceito.atividades)
@@ -293,6 +295,58 @@ def main() -> int:
     conferir("controle: a cancelada pela CARGA (inativo) volta como reativada",
              sincronizar.diferencas(falsa, {"aulas": [], "avaliacoes": [{**vazia, "codigo": "X", "status": "inativo"}],
                                             "atividades": [], "dias_parados": []})["avaliacoes"]["reativadas"] == ["X"])
+
+    print("A SISTEMA VENCE (A3.3 virada por turma, A3.4 edicao da tela vence)")
+    vazio_aula = {c: None for c in sincronizar.CAMPOS["aulas"]}
+
+    def plano_de(*aulas):
+        r = type(res)(turma=res.turma, autor=res.autor, titulo="x")
+        r.aulas.extend({**vazio_aula, "observacoes": "", "unidade_ensino_id": None, "disciplina_id": None, "instrutor_id": None, **a} for a in aulas)
+        return r
+
+    def ref_com(*atuais, de_tela=()):
+        return {"atuais": {"aulas": [{**vazio_aula, "status": "ativo", "na_tela": False, **a} for a in atuais],
+                           "avaliacoes": [], "atividades": [], "dias_parados": []},
+                "de_tela_linhas": list(de_tela)}
+
+    r = plano_de({"codigo": "A", "data": "2026-10-09", "ta_inicial": 1, "tempos_consumidos": 2},
+              {"codigo": "B", "data": "2026-10-13", "ta_inicial": 1, "tempos_consumidos": 2})
+    rf = ref_com({"codigo": "C", "data": "2026-10-14", "ta_inicial": 3, "tempos_consumidos": 1})
+    prot, _d = sincronizar.proteger(r, rf, "2026-10-13")
+    conferir("A3.3 · a linha da planilha NA data da virada sai do plano; a de antes fica",
+             [a["codigo"] for a in r.aulas] == ["A"], r.aulas)
+    conferir("A3.3 · a linha do banco depois da virada fica protegida e nao «sai»",
+             "C" in prot["aulas"] and sincronizar.diferencas(r, rf["atuais"], prot)["aulas"]["saem"] == [], prot)
+    conferir("controle: SEM virada, a mesma linha do banco «sai»",
+             sincronizar.diferencas(r, rf["atuais"])["aulas"]["saem"] == ["C"])
+    sql = sincronizar.sql_da_turma(r, False, None, ensaio=False, virada="2026-10-13", protegidas=prot)
+    conferir("A3.3 · o SQL so inativa ETL e linha que saiu ANTES da virada, e nunca a protegida",
+             sql.count("< '2026-10-13'::date") >= 4 and "array['C']::text[]" in sql)
+
+    r = plano_de({"codigo": "E", "data": "2026-10-05", "ta_inicial": 1, "tempos_consumidos": 5, "local": "Sala 01"})
+    rf = ref_com({"codigo": "E", "data": "2026-10-05", "ta_inicial": 1, "tempos_consumidos": 4, "local": "EAD", "na_tela": True})
+    prot, div = sincronizar.proteger(r, rf, None)
+    conferir("A3.4 · a linha editada na tela sai do plano (nao e desfeita) e vai para «planilha diverge do sistema»",
+             r.aulas == [] and "E" in prot["aulas"] and len(div) == 1 and "tempos_consumidos" in div[0]["campos"], div)
+    dif = sincronizar.diferencas(r, rf["atuais"], prot)["aulas"]
+    conferir("A3.4 · e a rodada da zero mudanca sobre ela", not any(dif.values()), dif)
+    r = plano_de({"codigo": "E", "data": "2026-10-05", "ta_inicial": 1, "tempos_consumidos": 5, "local": "Sala 01"})
+    rf2 = ref_com({"codigo": "E", "data": "2026-10-05", "ta_inicial": 1, "tempos_consumidos": 4, "local": "EAD", "na_tela": False})
+    sincronizar.proteger(r, rf2, None)
+    conferir("controle: a MESMA linha sem edicao da tela e atualizada pela planilha",
+             sincronizar.diferencas(r, rf2["atuais"])["aulas"]["mudadas"] != [])
+
+    r = plano_de({"codigo": "F", "data": "2026-10-06", "ta_inicial": 3, "tempos_consumidos": 2},
+              {"codigo": "G", "data": "2026-10-06", "ta_inicial": 5, "tempos_consumidos": 2})
+    prot, div = sincronizar.proteger(r, ref_com(de_tela=[{"tabela": "aulas", "codigo": "DSA-X", "data": "2026-10-06", "ta_inicial": 4, "tempos": 1}]), None)
+    conferir("A3.4 · o lancamento NASCIDO na tela fica; a linha da planilha no mesmo tempo sai e e listada, a vizinha entra",
+             [a["codigo"] for a in r.aulas] == ["G"] and div and "DSA-X" in div[0]["motivo"], (r.aulas, div))
+
+    conferir("A3.2 · proposta de classificacao do responsavel (entidade · pessoa · palestrante)",
+             sincronizar.classificar_responsavel("CIAARA-10", set()) == "entidade"
+             and sincronizar.classificar_responsavel("1ºTEN FULANO", {"FULANO"}).startswith("pessoa cadastrada")
+             and sincronizar.classificar_responsavel("SR. CICRANO DE FORA", set()) == "palestrante externo")
+
     print(f"\n{'TODAS AS PROVAS PASSARAM' if not FALHAS else f'{len(FALHAS)} PROVA(S) FALHARAM'}")
     return 1 if FALHAS else 0
 

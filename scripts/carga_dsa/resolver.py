@@ -389,17 +389,15 @@ def resolver(
                         if normalizar(texto) in {normalizar(t) for t in decisoes.get("responsavel_externo_aceito", [])}:
                             externo = texto
                         else:
-                            # No modo PROVISORIO (so no banco local) a atividade entra com o texto como externo,
-                            # para a medicao andar; a pendencia continua e BLOQUEIA o remoto.
-                            if provisorio:
-                                externo = texto
+                            # Decisao A3.2 (Bernardo Villas Boas, 14/10/2026): a pendencia trava SO A LINHA. A
+                            # atividade fica fora do plano e e listada; o resto da turma entra. Vale nos dois
+                            # bancos — no local tambem —, para o ensaio do local ser o plano do remoto.
                             pend("responsavel_sem_decisao",
                                  f"responsavel «{texto}» da atividade {bloco.cod}+{bloco.ue} nao casa com o cadastro: "
                                  "decidir no lote — casar com instrutor (`instrutor_por_texto`), aceitar como entidade ou "
                                  "palestrante externo (`responsavel_externo_aceito`) ou cadastrar a pessoa",
-                                 bloco.tempos, chave=normalizar(texto))
-                            if not provisorio:
-                                continue
+                                 bloco.tempos, bloqueia=False, chave=normalizar(texto))
+                            continue
             r.atividades.append({
                 "codigo": codigo(bloco, "N"),
                 "categoria_normativa": CATEGORIAS[tipo],

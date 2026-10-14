@@ -48,8 +48,27 @@ rode-o do ramo do PR.
 - **Medido no local** (cópia `remoto-20261014-085612.sql`, rodada `2026-10-06T1541`, 9 turmas): a primeira
   rodada fez 95 mudanças, a segunda **0**; catálogo igual antes e depois. Antes/depois do TAD de cada turma
   em `specs/014-atividades-e-avaliacoes/antes-depois/rodada-do-pr3-no-local.md`.
-- ⚠️ **Três das nove têm lançamento feito na tela no remoto** (CAHO, C-Ap-FR e C-Ap-HN, semana de 13/10) e
-  **parariam** na rodada do remoto. É o portão A3.3.
+- ~~⚠️ **Três das nove têm lançamento feito na tela no remoto** (CAHO, C-Ap-FR e C-Ap-HN, semana de 13/10) e
+  **parariam** na rodada do remoto. É o portão A3.3.~~ Resolvido pela virada por turma, abaixo.
+
+## Virada por turma — a data a partir da qual o SISTEMA é a fonte
+
+_(decisão A3.3 de Bernardo Villas Boas, 14/10/2026)_ A sincronização de uma turma com virada cobre **só as
+datas anteriores** a ela; da virada em diante **não toca nada** — nem insere, nem atualiza, nem inativa, nem
+substitui ETL. A data mora em `fontes.json` (`virada`, por turma), que é o que a sincronização semanal lê.
+As demais turmas seguem pela planilha até a virada de cada uma.
+
+| Turma        | Virada (o sistema é a fonte a partir de) | A sincronização cobre | Decisão                                |
+| ------------ | ---------------------------------------- | --------------------- | -------------------------------------- |
+| CAHO 2026    | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026 |
+| C-Ap-FR 2026 | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026 |
+| C-Ap-HN 2026 | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026 |
+
+**E, em TODA turma, o que a tela fez vence a planilha** _(A3.4, 14/10/2026)_: a linha da planilha editada na
+tela (`editado_por` preenchido — D3.7), a avaliação cancelada na tela e o lançamento nascido na tela não são
+desfeitos; o que a planilha tem de diferente vai para `planilha-diverge-do-sistema.md`, na pasta da rodada
+(fora do git), para os operadores. **A pendência de responsável trava só a linha** _(A3.2)_: ela fica fora,
+listada em `pendencias-de-responsavel.md` com a classificação proposta, e o resto da turma entra.
 
 ## Onda 1 — C-Esp-ME 2026 · C-Exp-MetocOf 2026 · C-Exp-Obs-ME 2026 · C-Exp-BATI T1 2026 · C-Exp-Ag-Mag 2026
 

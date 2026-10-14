@@ -145,7 +145,7 @@ select jsonb_build_object(
     'aulas', (select coalesce(jsonb_agg(jsonb_build_object(
         'codigo', r.codigo, 'data', r.data, 'ta_inicial', r.ta_inicial, 'tempos_consumidos', r.tempos_consumidos,
         'ue', u.codigo, 'disciplina_sem_ue', d.cod_disciplina, 'instrutor', i.codigo, 'metodologia', r.metodologia,
-        'local', r.local, 'conteudo_resumo', r.conteudo_resumo, 'status', r.status,
+        'local', r.local, 'conteudo_resumo', r.conteudo_resumo, 'status', r.status, 'na_tela', r.editado_por is not null,
         'demais', split_part(coalesce(r.observacoes, ''), ' Demais instrutores: ', 2))), '[]')
       from public.registros_aula r left join public.unidades_ensino u on u.id = r.unidade_ensino_id
       left join public.disciplinas d on d.id = r.disciplina_id left join public.instrutores i on i.id = r.instrutor_id
@@ -156,7 +156,7 @@ select jsonb_build_object(
         'instrutor', i.codigo, 'fiscal', f.codigo, 'nome_fiscal_externo', a.nome_fiscal_externo,
         'metodologia', a.metodologia, 'local', a.local, 'conteudo_resumo', a.conteudo_resumo,
         'data_vista_prova', a.data_vista_prova, 'ta_inicial_vista', a.ta_inicial_vista,
-        'tempos_consumidos_vista', a.tempos_consumidos_vista, 'local_vista', a.local_vista,
+        'tempos_consumidos_vista', a.tempos_consumidos_vista, 'local_vista', a.local_vista, 'na_tela', a.editado_por is not null,
         'status', case when a.status <> 'cancelada' then 'ativo'
                        when coalesce(a.observacoes, '') like '%[SAIU DA PLANILHA DE CONTROLE]%' then 'inativo'
                        else 'cancelada_na_tela' end)), '[]')
@@ -166,24 +166,43 @@ select jsonb_build_object(
     'atividades', (select coalesce(jsonb_agg(jsonb_build_object(
         'codigo', n.codigo, 'categoria_normativa', n.categoria_normativa, 'data', n.data, 'subtipo', n.subtipo,
         'descricao', n.descricao, 'ta_inicial', n.ta_inicial, 'tempos_consumidos', n.tempos_consumidos,
-        'local', n.local, 'instrutor', i.codigo, 'responsavel_externo', n.responsavel_externo, 'status', n.status)), '[]')
+        'local', n.local, 'instrutor', i.codigo, 'responsavel_externo', n.responsavel_externo, 'status', n.status,
+        'na_tela', n.editado_por is not null)), '[]')
       from public.atividades_nao_letivas n left join public.instrutores i on i.id = n.instrutor_id
      where n.turma_id = (select id from t) and n.codigo like 'DSAP-%'),
     -- Spec 014 (FR-024): o dia parado da turma que a carga pos (codigo DSAP-…-P).
     'dias_parados', (select coalesce(jsonb_agg(jsonb_build_object(
         'codigo', p.codigo, 'data', p.data, 'ta_inicial', p.ta_inicial, 'tempos', p.tempos,
-        'tipo_parada', c.valor, 'motivo', p.motivo, 'prevista', p.prevista, 'status', p.status)), '[]')
+        'tipo_parada', c.valor, 'motivo', p.motivo, 'prevista', p.prevista, 'status', p.status,
+        'na_tela', p.editado_por is not null)), '[]')
       from public.dias_parados p join public.config_listas c on c.id = p.tipo_parada_id
      where p.turma_id = (select id from t) and p.codigo like 'DSAP-%')),
   -- O que veio do ETL e ainda esta ATIVO: e o que «substituir, nao somar» vai inativar.
   'etl', jsonb_build_object(
-    'aulas', (select count(*) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo'),
-    'aulas_ta', (select coalesce(sum(tempos_consumidos), 0) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo'),
-    'avaliacoes', (select count(*) from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is not null and status <> 'cancelada'),
-    'atividades', (select count(*) from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo'),
-    'de_tela', (select count(*) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo')
-              + (select count(*) from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status <> 'cancelada')
-              + (select count(*) from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo')),
+    'aulas', (select count(*) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo' and data < {virada}::date),
+    'aulas_ta', (select coalesce(sum(tempos_consumidos), 0) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo' and data < {virada}::date),
+    'avaliacoes', (select count(*) from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is not null and status <> 'cancelada' and data_avaliacao < {virada}::date),
+    'atividades', (select count(*) from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is not null and status = 'ativo' and data < {virada}::date),
+    'de_tela', (select count(*) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo' and data < {virada}::date)
+              + (select count(*) from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status <> 'cancelada' and data_avaliacao < {virada}::date)
+              + (select count(*) from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo' and data < {virada}::date),
+    'de_tela_depois_da_virada', (select count(*) from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo' and data >= {virada}::date)
+              + (select count(*) from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status <> 'cancelada' and data_avaliacao >= {virada}::date)
+              + (select count(*) from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo' and data >= {virada}::date)),
+  -- Spec 014 (A3.3 e A3.4, 14/10/2026): o lancamento NASCIDO na tela antes da virada fica como esta, e a
+  -- linha da planilha no mesmo tempo sai do plano e vai para a lista «planilha diverge do sistema».
+  'de_tela_linhas', (select coalesce(jsonb_agg(x), '[]') from (
+       select jsonb_build_object('tabela', 'aulas', 'codigo', codigo, 'data', data, 'ta_inicial', ta_inicial, 'tempos', tempos_consumidos) as x
+         from public.registros_aula where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo' and data < {virada}::date
+       union all
+       select jsonb_build_object('tabela', 'avaliacoes', 'codigo', codigo, 'data', data_avaliacao, 'ta_inicial', ta_inicial, 'tempos', tempos_consumidos)
+         from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status <> 'cancelada' and data_avaliacao < {virada}::date
+       union all
+       select jsonb_build_object('tabela', 'avaliacoes', 'codigo', codigo || ' (vista)', 'data', data_vista_prova, 'ta_inicial', ta_inicial_vista, 'tempos', tempos_consumidos_vista)
+         from public.avaliacoes where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status <> 'cancelada' and data_vista_prova < {virada}::date
+       union all
+       select jsonb_build_object('tabela', 'atividades', 'codigo', codigo, 'data', data, 'ta_inicial', ta_inicial, 'tempos', tempos_consumidos)
+         from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo' and data < {virada}::date) s),
   'de_outras_turmas', (select coalesce(jsonb_agg(jsonb_build_object(
        'turma', x.codigo, 'origem', o.origem, 'data', o.data, 'ta_inicial', o.ta_inicial, 'ta_final', o.ta_final,
        'instrutor_id', o.instrutor_id, 'fiscal_id', o.fiscal_id, 'local', o.local)), '[]')
@@ -193,8 +212,10 @@ select jsonb_build_object(
 """
 
 
-def referencia(destino: str, turma: str, autor: str, de: str, ate: str) -> dict:
-    linhas = consultar(destino, _REFERENCIA.format(turma=lit(turma), autor=lit(autor), de=lit(de), ate=lit(ate)))
+def referencia(destino: str, turma: str, autor: str, de: str, ate: str, virada: str | None = None) -> dict:
+    """`virada` (spec 014, A3.3): a data a partir da qual o SISTEMA e a fonte da turma; sem ela, nunca."""
+    linhas = consultar(destino, _REFERENCIA.format(turma=lit(turma), autor=lit(autor), de=lit(de), ate=lit(ate),
+                                                   virada=lit(virada or "9999-12-31")))
     retrato = linhas[0]["m"] if linhas else None
     if isinstance(retrato, str):
         retrato = json.loads(retrato)
