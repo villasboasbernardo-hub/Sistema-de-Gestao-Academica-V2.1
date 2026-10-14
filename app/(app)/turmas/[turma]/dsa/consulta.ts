@@ -303,7 +303,10 @@ export function fatoDaOcupacao(
       ? `${rotuloDaVistaDeProva({ prova: extra?.conteudo, aplicadaEm: extra?.aplicadaEm })}${
           (linha.numero_sessao ?? 1) > 1 ? ` — sessão ${linha.numero_sessao}` : ""
         }`
-      : linha.origem === "avaliacao" && extra?.uesAbordadas
+      : /* A faixa de UEs só entra quando o título ainda não a traz (a planilha a escreve no próprio título). */
+        linha.origem === "avaliacao" &&
+          extra?.uesAbordadas &&
+          !(extra.conteudo ?? "").includes(extra.uesAbordadas)
         ? `${extra?.conteudo ?? ""} (${extra.uesAbordadas})`
         : (extra?.conteudo ?? null),
     tecnica: ehVista ? (extra?.tecnicaDaVista ?? null) : (extra?.tecnica ?? null),

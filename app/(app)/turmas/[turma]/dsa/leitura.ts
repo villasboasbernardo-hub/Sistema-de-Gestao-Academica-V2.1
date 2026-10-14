@@ -1223,11 +1223,24 @@ export function montarSemanaDoDsa(
     avaliacoesDoCurriculo: ofertas.flatMap(({ disciplinaId, oferta }) =>
       oferta.avaliacoes.map((o) => ({ ...o, disciplinaId })),
     ),
-    avaliacoesPorDisciplina: ofertas.map(({ disciplinaId, oferta }) => ({
-      disciplinaId,
-      aplicadas: oferta.avaliacoes.filter((a) => a.aplicada).length,
-      previstas: oferta.avaliacoes.length,
-    })),
+    /*
+     * ⚠️ «X de Y aplicadas» é ACUMULADO ATÉ A SEMANA, como todo o painel — medido na captura de 14/10/2026: contando o
+     *    ano inteiro, a semana 21 dizia «4 de 4» com só a PM 4 aplicada. O mesmo critério de «aplicada» da oferta (uma
+     *    avaliação viva ligada ao item), cortado na data.
+     */
+    avaliacoesPorDisciplina: ofertas.map(({ disciplinaId, oferta }) => {
+      const ateASemana = new Set(
+        paraVistaDaTurma
+          .filter((x) => x.disciplina_id === disciplinaId && ateOFim(x.data_avaliacao))
+          .map((x) => x.avaliacao_curriculo_id)
+          .filter((x): x is string => x !== null),
+      );
+      return {
+        disciplinaId,
+        aplicadas: oferta.avaliacoes.filter((x) => ateASemana.has(x.itemId)).length,
+        previstas: oferta.avaliacoes.length,
+      };
+    }),
     /* ⚠️ Instrutor INATIVO não chega ao seletor (`RN-INST-02`). */
     instrutores: linhasDeInstrutor
       .filter((i) => i.status === undefined || i.status === "ativo")
