@@ -443,6 +443,28 @@ def main() -> int:
     _ligar_itens(ordem, {"itens_curriculo": ITENS_DA_LEVA_2})
     conferir("FR-036 · o numero ESCRITO na descricao («PM2 –») vence a ordem de aplicacao: a PM 2 aplicada antes liga ao item 2",
              [a["avaliacao_curriculo_id"] for a in ordem.avaliacoes] == ["av-2", "av-1"], ordem.avaliacoes)
+    # 14/10/2026 (Bernardo Villas Boas): a prova sem item nao some da lista — a da disciplina sem avaliacao do
+    # curriculo carregada, e a vista nao lancada de prova sem item (que o alerta do sistema deixou de contar).
+    from datetime import date as _date
+    from scripts.carga_dsa.resolver import _vista_de_prova_sem_item
+    sem = Resolvido(turma={}, autor={}, titulo="x")
+    sem.avaliacoes = [{**base, "disciplina": "IX", "disciplina_id": "d-9", "data_avaliacao": "2026-04-01",
+                       "descricao": "PROVA ESCRITA", "sessoes": []}]
+    _ligar_itens(sem, {"itens_curriculo": ITENS_DA_LEVA_2})
+    conferir("A4.7 · a prova da disciplina SEM avaliacao do curriculo carregada vai para a lista (antes, sumia)",
+             any("IX AV" in e and "nao tem avaliacao do curriculo carregada" in e for e in sem.erros_de_planilha),
+             sem.erros_de_planilha)
+    _vista_de_prova_sem_item(sem, _date(2026, 4, 9))
+    conferir("vista · a prova sem item, sem vista, no 8º dia vai para a lista", any("vista nao lancada" in e for e in sem.erros_de_planilha),
+             sem.erros_de_planilha)
+    cedo = Resolvido(turma={}, autor={}, titulo="x")
+    cedo.avaliacoes = [dict(sem.avaliacoes[0])]
+    _vista_de_prova_sem_item(cedo, _date(2026, 4, 8))
+    ligada = Resolvido(turma={}, autor={}, titulo="x")
+    ligada.avaliacoes = [{**sem.avaliacoes[0], "avaliacao_curriculo_id": "av-1"}]
+    _vista_de_prova_sem_item(ligada, _date(2026, 4, 30))
+    conferir("controle: no 7º dia, ou com item ligado (o alerta do sistema cobre), nao vai para a lista",
+             cedo.erros_de_planilha == [] and ligada.erros_de_planilha == [], (cedo.erros_de_planilha, ligada.erros_de_planilha))
     sessoes = prova["PM1"]["sessoes"]
     conferir("FR-042 · a vista da PM 1 em DUAS sessoes, numeradas 1 e 2, cada uma no seu dia",
              [(v["numero"], v["data"]) for v in sessoes] == [(1, "2026-04-07"), (2, "2026-04-08")], sessoes)

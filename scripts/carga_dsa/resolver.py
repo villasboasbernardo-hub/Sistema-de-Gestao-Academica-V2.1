@@ -561,6 +561,7 @@ def resolver(
 
     _ligar_itens(r, ref)
     _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura, codigo=codigo, procedencia=procedencia)
+    _vista_de_prova_sem_item(r, date.today())
     _sugestoes(r, ref)
     _resolver_dias_parados(r, dias_parados, dias_globais, leitura, codigo, procedencia, categoria_do_subtipo)
     _aula_em_dia_parado(r)
@@ -605,6 +606,26 @@ def _instrumento(prova: dict, itens: list[dict]) -> str | None:
     return None
 
 
+def _e_od(prova: dict) -> bool:
+    """A OD e continua (Q-17): pela chave «OD…» ou pela descricao «OBSERVACAO DE DESEMPENHO»."""
+    return normalizar(prova.get("chave_ue") or "").startswith("OD") or "OBSERVACAO DE DESEMPENHO" in normalizar(
+        prova.get("descricao") or "")
+
+
+def _vista_de_prova_sem_item(r: Resolvido, hoje: date) -> None:
+    """Spec 014 (decisao de Bernardo Villas Boas, 14/10/2026): o alerta de vista do sistema conta so a prova LIGADA a
+    item do curriculo. A prova SEM item, aplicada ha mais de 7 dias e sem vista na planilha, vai para a lista — nao se
+    sabe se o curriculo preve vista, e quem sabe e o operador. O prazo e o do parametro (`avaliacao.prazo_vista_dias`,
+    7); aqui ele so decide o que listar, nunca o que gravar."""
+    for prova in r.avaliacoes:
+        if prova.get("avaliacao_curriculo_id") or prova.get("sessoes") or _e_od(prova):
+            continue
+        if (hoje - date.fromisoformat(prova["data_avaliacao"])).days > 7:
+            r.erros_de_planilha.append(
+                f"{prova['disciplina']} {prova['chave_ue']} de {prova['data_avaliacao']}: vista nao lancada na planilha, e a"
+                " prova nao tem avaliacao do curriculo que diga se ha vista — sem alerta no sistema")
+
+
 def _ligar_itens(r: Resolvido, ref: dict) -> None:
     """Spec 014 (FR-036, FR-036.1, FR-039, T224): a prova da planilha aponta o item do curriculo pelo instrumento e
     pelo numero de ordem dentro da disciplina. Nao casou — linha `RECON`, instrumento que a disciplina nao tem, ou
@@ -620,12 +641,14 @@ def _ligar_itens(r: Resolvido, ref: dict) -> None:
     contagem: dict[tuple[str, str], int] = {}
     for prova in sorted(r.avaliacoes, key=lambda a: (a["disciplina"], a["data_avaliacao"], a["ta_inicial"] or 0)):
         da_disciplina = por_disciplina.get(prova["disciplina_id"], [])
-        if not da_disciplina:
-            continue
         rotulo = f"{prova['disciplina']} {prova['chave_ue']} de {prova['data_avaliacao']}"
         # A OD e continua (Q-17): nao tem item de aplicacao a ligar, e nao e erro de planilha.
-        if normalizar(prova.get("chave_ue") or "").startswith("OD") or "OBSERVACAO DE DESEMPENHO" in normalizar(
-                prova.get("descricao") or ""):
+        if _e_od(prova):
+            continue
+        if not da_disciplina:
+            # ⚠️ Nao some da lista (decisao de Bernardo Villas Boas, 14/10/2026): a disciplina sem avaliacao do
+            #    curriculo carregada (os 90 itens fora da D-4, A4.7) tambem e prova que nao cumpre item nenhum.
+            r.erros_de_planilha.append(f"{rotulo}: a disciplina nao tem avaliacao do curriculo carregada (A4.7) — entra sem avaliacao do curriculo")
             continue
         if "RECON" in normalizar(prova.get("chave_ue") or "") or "RECON" in normalizar(prova.get("descricao") or ""):
             r.erros_de_planilha.append(f"{rotulo}: linha sem correspondente no curriculo (RECON) — entra sem avaliacao do curriculo")
