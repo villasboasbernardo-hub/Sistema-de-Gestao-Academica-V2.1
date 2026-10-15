@@ -468,3 +468,34 @@ auditoria registre quem arbitrou, quando e o valor anterior"* — medido antes: 
 - **Roteiros de conferência** dos PRs 4, 5, 5.1 e 6: *"farei pelo preview, só leitura."*
 - **Testes instáveis sob carga** (`tema`, `dsa-tipo-e-global` e outros): registrados como pendência nomeada
   **PEND-014-7** no `CLAUDE.md`.
+
+## 15/10/2026 — registro de processo e o fechamento da spec (só no local)
+
+**Registro de processo** *(Bernardo Villas Boas, 15/10/2026)*: *"tabela ou migration nova que não estava no plano
+aprovado é PORTÃO meu, mesmo que cumpra uma condição minha; pare e me mostre o desenho antes do remoto."* A trilha
+`avaliacoes_curriculo_arbitragens` (`20261014223818`, PR 5) entrou no remoto sem esse portão e fica **APROVADA a
+posteriori**. Registrado também no `CLAUDE.md` (regra 9.4).
+
+**O que esta rodada deixou para a palavra de Bernardo** (nada aplicado no remoto):
+
+- **A4.7 (`PEND-014-6`)** — a planilha de decisão está em
+  `planilhas-de-origem/rodadas/2026-10-14T1916/a47-decisao.xlsx` (fora do git): 90 linhas, a recomendação e a
+  proposta já em colunas (87 propõem carregar, 3 não: a OPAP II, que repete a prova da OPAP I; o EST-QF-APOC, que
+  aprova por frequência; e o PrevMe V, sem item legível), e as colunas **decisão** (aceito / recuso / corrijo) e
+  **valor corrigido**. Preenchida, `python -X utf8 -m scripts.etl.decisao_a47 migration --planilha … --sql … --antes-depois …`
+  gera a migration e o antes/depois — **sem aplicar**. Ensaiado numa cópia preenchida com "aceito" em tudo (e um
+  recuso e um corrijo): 86 itens, SQL válido numa transação desfeita no banco local.
+- **Conferência em Production, só leitura** — `roteiro-de-conferencia-producao.md`, roteiro único que substitui,
+  para o fechamento, os de T198, T221 e T235.
+- **Propostas de cancelamento** (decisão sua):
+  - **T189, três itens que a tela não tem**: *arbitrar a quantidade* (a ação `arbitrarQuantidade` existe e não tem
+    botão — Server Action sem consumidor, a forma da `GUARDA-ACAO`), o *histórico da v2.0 «Sem correspondência»*
+    (`lib/dominio/avaliacoes/historico.ts` não tem consumidor) e o *filtro por disciplina na URL*. Proposta:
+    cancelar os três **nesta spec** e registrar como pendência — a quantidade vai entrar em lote pela A4.7, o
+    histórico precisa de desenho de tela, e o filtro tem pouco valor numa aba de `<details>` por disciplina.
+  - **T213, a situação da avaliação na planilha de contingência**: as N sessões de vista já saem na planilha
+    (cada sessão é um fato). A situação por avaliação **não** — e proponho cancelar: como valor fixo, ela envelhece
+    no dia seguinte à geração, justamente durante a contingência; como fórmula, seria um segundo cálculo de
+    `situacaoDaAvaliacao` em linguagem de planilha, contra o ponto único (R-8).
+- **Achado da T208, já consertado neste PR**: na atividade sem instrutor do cadastro, o 2º nome sumia da grade e do
+  papel (ver `progresso-implement.md`).

@@ -79,6 +79,11 @@ python -m scripts.carga_dsa.sincronizar --rodada planilhas-de-origem/rodadas/202
 
 ## A ligação ao item — as 187 avaliações vivas da planilha (rodada `2026-10-14T1916`)
 
+> ⚠️ **Correção de 15/10/2026:** as categorias desta tabela somam **191**, não 187 — a linha *"não casa"* (86) conta
+> linhas da lista de erros, e **4** delas são de provas posteriores à virada, que a rodada não carrega. A tabela em
+> categorias exclusivas, que soma 187 (*"não casa"* = 82), está em `medicoes/conta-das-187.md`. Esta fica como foi
+> publicada.
+
 | | Quantas | Onde aparecem |
 |---|---:|---|
 | Ligadas a uma avaliação do currículo | **75** (43 PE, 21 PP, 11 trabalhos) | no item, com a situação |
