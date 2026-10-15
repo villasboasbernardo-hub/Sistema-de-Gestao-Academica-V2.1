@@ -38,5 +38,5 @@
 
 ## O que não fechou, e por quê
 
-`[pendente]` — preencher no dia. Já se sabe que entram aqui, se Bernardo aceitar as propostas de 15/10/2026: a T213
+`[pendente]` — preencher no dia. Já se sabe que entram aqui, **cancelados por decisão de Bernardo Villas Boas em 15/10/2026**: a T213
 (situação na planilha), os três itens sem tela da T189 e a `PEND-014-6` (A4.7), se ainda aberta.
