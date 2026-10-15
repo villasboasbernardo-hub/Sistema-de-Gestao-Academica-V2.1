@@ -119,6 +119,30 @@ rodada de sincronização entre o push e o merge).
 ⚠️ **O código da `main` antes do merge continuou compatível com o esquema novo**, medido antes de mesclar: ele lê
 `avaliacoes.data_vista_prova`, que a leva 2 **mantém** (a vista passou às sessões, e a coluna fica).
 
+### A migration do PR 5 (#52) — a trilha do arbitrado (condição da D5.3)
+
+✅ **APLICADA NO REMOTO em 14/10/2026** e **mesclada em `cd27abd`**. `20261014223818_trilha_do_arbitrado` cria
+`avaliacoes_curriculo_arbitragens` (antes, depois, quem e quando do arbitrado), só de acréscimo; não muda dado.
+
+| Passo | Medido |
+|---|---|
+| CI do ramo | verde nos três blocos sobre `1fa3a6b` |
+| Reversão | `reversao-pr5.sql` no local: `19d845f0…` (1.935) → `129d83d4…` (1.904), a impressão digital da `main` |
+| Remoto antes | `129d83d4…`, 1.904 objetos, 69 migrations |
+| Backup imediatamente antes | **`remoto-20261014-201119.sql`** |
+| Dry-run | só `20261014223818_trilha_do_arbitrado.sql` |
+| `db push --linked` | saída **0** |
+| Migrations | **70 e 70** |
+| Impressão digital | **`19d845f064aa78fab01e8f2e36e7a1cb`, 1.935 objetos, igual no local e no remoto** |
+| Dado | a carga das 28 turmas com o **mesmo md5** antes e depois (`da925be4…`); 194 itens; 0 ajustes; a trilha vazia, com os dois gatilhos de imutabilidade; **0** policies de `DELETE` |
+| Production | `/login` e `/estilo` 200, as protegidas 307 |
+
 ### A rodada do PR 6
 
-[pendente]
+✅ **APLICADA NO REMOTO em 14/10/2026**, com as aprovações **A6.1** e **A6.2** de Bernardo Villas Boas, depois dos
+merges de #52, #53 e #54 e do deploy de cada um. Exportação nova `2026-10-14T1916`; backup imediatamente antes
+**`remoto-20261014-205951.sql`**; a A6.1 (`pend-dsa-vista.sql`) primeiro, igual ao ensaio; plano do remoto = plano do
+local nas **dez** turmas; 1ª rodada 318 mudanças, 2ª **0**; catálogo igual; dados das dez turmas **iguais** no local e
+no remoto, e as 18 outras sem mudança; impressão digital `19d845f0…`, 1.935 objetos, igual nos dois. Relatório, com a
+CHT por turma antes → depois, as 17 linhas que viram Apoio Individualizado e a lista de erros por turma:
+`antes-depois/rodada-do-pr6-no-remoto.md`.

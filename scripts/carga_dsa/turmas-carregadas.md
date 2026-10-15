@@ -139,3 +139,11 @@ juntas, medidas em 06/10/2026 contra a planilha e o catálogo do banco:
 
 A CH **da disciplina** fecha (50 e 65); o que não fecha é a soma por UE. Decidir entre ligar a
 avaliação à UE ou descontar o tempo de prova do previsto da UE é do Épico 8.
+
+## Leva 2 no remoto — 14/10/2026
+
+Rodada da sincronização do PR 6 (spec 014) nas **dez** turmas de `fontes.json` — a `C-Exp-Obs-ME 2026` volta, com a
+`PEND-DSA-VISTA` corrigida antes (A6.1) —, exportação `2026-10-14T1916`, backup `remoto-20261014-205951.sql`. A prova
+aponta a avaliação do currículo (75 de 187), a vista é sessão `…-S`, e 6 sugestões da planilha foram para o ajuste da
+turma. Plano = local, 2ª rodada 0, dados iguais nos dois bancos. Relatório:
+`specs/014-atividades-e-avaliacoes/antes-depois/rodada-do-pr6-no-remoto.md`.
