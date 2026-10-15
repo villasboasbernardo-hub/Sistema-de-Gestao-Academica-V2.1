@@ -48,8 +48,15 @@ async function ou(promessa: PromiseLike<{ error: { message: string } | null }>, 
   if (error) throw new Error(`falha ao ${o_que}: ${error.message}`);
 }
 
-export async function semearAvaliacoes(processo: number): Promise<AvaliacoesSemeadas> {
-  const s = `E2A${processo}`;
+/**
+ * ⚠️ `prefixo` separa os cursos de dois arquivos que usam esta semente (`avaliacoes-nas-telas` usa o padrão,
+ *    `avaliacoes-da-turma` o seu): o mesmo `workerIndex` em arquivos diferentes dá cursos diferentes.
+ */
+export async function semearAvaliacoes(
+  processo: number,
+  prefixo = "E2A",
+): Promise<AvaliacoesSemeadas> {
+  const s = `${prefixo}${processo}`;
   const curso = `CUR-${s}`;
   const hoje = hojeNaCiaara();
 
@@ -264,8 +271,8 @@ export async function semearAvaliacoes(processo: number): Promise<AvaliacoesSeme
 }
 
 /** Limpa o que a semente criou; o curso fica (regra 9.1). */
-export async function limparAvaliacoes(processo: number): Promise<void> {
-  const curso = `CUR-E2A${processo}`;
+export async function limparAvaliacoes(processo: number, prefixo = "E2A"): Promise<void> {
+  const curso = `CUR-${prefixo}${processo}`;
   const { data: c } = await admin().from("cursos").select("id").eq("codigo", curso).maybeSingle();
   if (!c) return;
   const cursoId = (c as { id: string }).id;
