@@ -24,6 +24,7 @@ import {
   execucaoAteASemana,
   fatoDaOcupacao,
   unidadesDaTurma,
+  type ConteudoDoFato,
   type LinhaDaOcupacao,
 } from "@/app/(app)/turmas/[turma]/dsa/consulta";
 import {
@@ -327,5 +328,48 @@ describe("as unidades da turma partem do CURRÍCULO, e a view só completa os n�
       aulasAteASemana: [{ unidadeId: "ue-velha", tempos: 4 }],
     });
     expect(unidades.map((u) => u.id)).toEqual(["ue-1"]);
+  });
+});
+
+describe("spec 014, FR-046 · os demais instrutores aparecem onde o 1º aparece — também sem instrutor do cadastro", () => {
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA, achado pela ponta a ponta da T208 (15/10/2026):** a atividade sem instrutor do
+   *    cadastro juntava os demais ao `principal` (nulo) e só DEPOIS caía no responsável de fora — os demais sumiam
+   *    da grade e do papel, gravados no banco e invisíveis.
+   */
+  const comOutros = {
+    ...NOMES,
+    conteudos: new Map<string, ConteudoDoFato>([
+      ...NOMES.conteudos,
+      [
+        "ativ-3",
+        { conteudo: "PALESTRA", tecnica: "Palestra", externo: "DOEP", outros: ["1ºSG B."] },
+      ],
+      ["ativ-4", { conteudo: "PALESTRA", tecnica: "Palestra", externo: null, outros: ["1ºSG B."] }],
+      ["aula-1", { conteudo: "TÓPICO", tecnica: "Exposição Oral", outros: ["CC A."] }],
+    ]),
+  };
+  const atividade = (id: string) =>
+    fatoDaOcupacao(
+      linha({
+        origem: "atividade_nao_letiva",
+        fato_id: id,
+        instrutor_id: null,
+        disciplina_id: null,
+      }),
+      comOutros,
+    );
+
+  it("a atividade com responsável de fora: «DOEP / 1ºSG B.»", () => {
+    expect(atividade("ativ-3").instrutor).toBe("DOEP / 1ºSG B.");
+  });
+
+  it("a atividade sem responsável nenhum mostra os demais, em vez de nada", () => {
+    expect(atividade("ativ-4").instrutor).toBe("1ºSG B.");
+  });
+
+  it("controle positivo: a aula com instrutor do cadastro já mostrava o 2º nome", () => {
+    const aula = fatoDaOcupacao(linha({ origem: "aula", fato_id: "aula-1" }), comOutros);
+    expect(aula.instrutor).toBe("1ºTen (RM2-T) FULANA DE TAL / CC A.");
   });
 });
