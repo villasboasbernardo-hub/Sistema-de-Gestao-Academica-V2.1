@@ -277,10 +277,18 @@ export function fatoDaOcupacao(
     (ehVista ? extra?.conduzExterno?.trim() || null : null) ?? doCadastro(linha.instrutor_id);
   const principal =
     linha.origem === "avaliacao" ? (fiscal ?? ministrante) : (ministrante ?? fiscal);
-  /* Spec 014, FR-046: o 2º nome aparece onde o 1º aparece — *"CC A. / 1ºTen B."*. */
+  /*
+   * Spec 014, FR-046: o 2º nome aparece onde o 1º aparece — *"CC A. / 1ºTen B."*.
+   * ⚠️ O 1º é decidido ANTES de juntar os demais, com o responsável de fora do cadastro incluído (`responsavelDoFato`):
+   *    juntar ao `principal` nulo da atividade sem instrutor fazia os demais SUMIREM da grade e do papel (achado pela
+   *    ponta a ponta da T208, 15/10/2026). Sem 1º nenhum, os demais aparecem sozinhos — gravados, nunca invisíveis.
+   */
   const outros = (extra?.outros ?? []).filter((n) => n.trim() !== "");
+  const primeiro = responsavelDoFato(principal, extra?.externo);
   const responsavel =
-    principal === null || outros.length === 0 ? principal : [principal, ...outros].join(" / ");
+    outros.length === 0
+      ? primeiro
+      : [...(primeiro === null ? [] : [primeiro]), ...outros].join(" / ");
   return {
     fatoId: idDoFato,
     origem:
@@ -310,8 +318,8 @@ export function fatoDaOcupacao(
         ? `${extra?.conteudo ?? ""} (${extra.uesAbordadas})`
         : (extra?.conteudo ?? null),
     tecnica: ehVista ? (extra?.tecnicaDaVista ?? null) : (extra?.tecnica ?? null),
-    /* ⚠️ Sem instrutor, entra o responsável de fora do cadastro — ver `responsavelDoFato`. */
-    instrutor: responsavelDoFato(responsavel, extra?.externo),
+    /* ⚠️ Sem instrutor, entra o responsável de fora do cadastro — ver `responsavelDoFato`, acima. */
+    instrutor: responsavel,
     local: linha.local,
     ...(extra?.apoio === true ? { apoio: true } : {}),
     /* ⚠️ O GRAVADO, CRU — é dele que o cartão único se preenche (ajuste 2 do PR #40). */
