@@ -556,6 +556,16 @@ Node atende as 4 abas em uma thread só, e as telas do DSA e de gestão fazem v�
 **Critério de aceite do PR dedicado:** três rodadas seguidas da suíte inteira, no local, **sem nenhuma** reprovação, com
 o tempo total de cada uma anotado ao lado (regra 9.2).
 
+⚠️ **Achado de 16/10/2026, que muda a proposta: um dos casos NÃO é carga, é interação entre arquivos.** No
+`verificar:tudo` do #58 (473 casos, 2 processos: 463 passaram, 6 pulados, 4 reprovaram), três reprovados passaram
+isolados (`admin-sobre-contas` ×2, `dsa-tipo-e-global:160`). O quarto, **`tema.spec.ts:202`**, reprova **sempre** que
+roda junto de `admin-sobre-contas.spec.ts` (com `dsa-tipo-e-global.spec.ts`, 2 processos): 3 de 3 rodadas na base que
+a suíte deixa, 1 de 1 na base limpa — e **também na `main` `9bf9c67`**, 1 de 1 na base limpa (worktree com o build da
+`main`, o mesmo trio de arquivos): o login da conta `tema-<processo>` fica na tela de login nas duas tentativas. Sozinho, o `tema.spec.ts` passa **6 de 6**. Não é regressão do #58 (nenhum dos três
+arquivos nem `conta-de-teste.ts` mudou nele). A hipótese a medir no PR dedicado é que `admin-sobre-contas` aja sobre
+contas que não são dele (ex.: redefinir senha ou excluir pela lista) enquanto o `tema` usa a sua — o item 2 da
+proposta (série) **não** cobre isto; a correção é isolar as contas de cada arquivo.
+
 ## 15/10/2026 — emenda RN-AV-10 a RN-AV-14 e RN-RESP-1
 
 **A decisão** *(Bernardo Villas Boas, 15/10/2026, no texto dele; registrada na spec §2.4)*:

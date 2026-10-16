@@ -9,7 +9,8 @@
 --    · a de 16/10/2026: a situação do espelho `app.fn_status_vista` (o instrumento — PM, PO e PE —, do item ou de
 --      `avaliacoes.instrumento_id`; o prazo da última sessão), só para a prova ligada OU com instrumento gravado, e
 --      sem OD — o mesmo filtro do alerta (`lib/dominio/avaliacoes/alertas-de-vista.ts`), provado pela prova cruzada.
-\pset footer off
+-- ⚠️ Três consultas, separadas por linha em branco: a CLI do remoto devolve só a ÚLTIMA de um arquivo, então lá elas
+--    vão uma a uma (`scripts/provas/medir_no_remoto.py`). Sem comando do psql (`\pset`…): a CLI recusa a barra.
 with vivas as (
   select a.* from public.avaliacoes a
    where a.codigo like 'DSAP-%' and a.status in ('pendente', 'em_andamento', 'concluida', 'atrasada')
