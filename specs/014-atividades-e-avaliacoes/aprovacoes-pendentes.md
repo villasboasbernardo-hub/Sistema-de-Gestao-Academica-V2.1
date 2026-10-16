@@ -468,3 +468,90 @@ auditoria registre quem arbitrou, quando e o valor anterior"* — medido antes: 
 - **Roteiros de conferência** dos PRs 4, 5, 5.1 e 6: *"farei pelo preview, só leitura."*
 - **Testes instáveis sob carga** (`tema`, `dsa-tipo-e-global` e outros): registrados como pendência nomeada
   **PEND-014-7** no `CLAUDE.md`.
+
+## 15/10/2026 — registro de processo e o fechamento da spec (só no local)
+
+**Registro de processo** *(Bernardo Villas Boas, 15/10/2026)*: *"tabela ou migration nova que não estava no plano
+aprovado é PORTÃO meu, mesmo que cumpra uma condição minha; pare e me mostre o desenho antes do remoto."* A trilha
+`avaliacoes_curriculo_arbitragens` (`20261014223818`, PR 5) entrou no remoto sem esse portão e fica **APROVADA a
+posteriori**. Registrado também no `CLAUDE.md` (regra 9.4).
+
+**O que esta rodada deixou para a palavra de Bernardo** (nada aplicado no remoto):
+
+- **A4.7 (`PEND-014-6`)** — a planilha de decisão está em
+  `planilhas-de-origem/rodadas/2026-10-14T1916/a47-decisao.xlsx` (fora do git): 90 linhas, a recomendação e a
+  proposta já em colunas (87 propõem carregar, 3 não: a OPAP II, que repete a prova da OPAP I; o EST-QF-APOC, que
+  aprova por frequência; e o PrevMe V, sem item legível), e as colunas **decisão** (aceito / recuso / corrijo) e
+  **valor corrigido**. Preenchida, `python -X utf8 -m scripts.etl.decisao_a47 migration --planilha … --sql … --antes-depois …`
+  gera a migration e o antes/depois — **sem aplicar**. Ensaiado numa cópia com 88 "aceito", 1 "recuso" (item 5,
+  CAHO VII) e 1 "corrijo" (item 1, CAHO I): 86 itens, SQL válido numa transação desfeita no banco local. ⚠️ *Corrigido
+  em 15/10/2026: a primeira redação dizia "aceito em tudo", e não era — ver a seção seguinte.*
+- **Conferência em Production, só leitura** — `roteiro-de-conferencia-producao.md`, roteiro único que substitui,
+  para o fechamento, os de T198, T221 e T235.
+- **Propostas de cancelamento** (decisão sua):
+  - **T189, três itens que a tela não tem**: *arbitrar a quantidade* (a ação `arbitrarQuantidade` existe e não tem
+    botão — Server Action sem consumidor, a forma da `GUARDA-ACAO`), o *histórico da v2.0 «Sem correspondência»*
+    (`lib/dominio/avaliacoes/historico.ts` não tem consumidor) e o *filtro por disciplina na URL*. Proposta:
+    cancelar os três **nesta spec** e registrar como pendência — a quantidade vai entrar em lote pela A4.7, o
+    histórico precisa de desenho de tela, e o filtro tem pouco valor numa aba de `<details>` por disciplina.
+  - **T213, a situação da avaliação na planilha de contingência**: as N sessões de vista já saem na planilha
+    (cada sessão é um fato). A situação por avaliação **não** — e proponho cancelar: como valor fixo, ela envelhece
+    no dia seguinte à geração, justamente durante a contingência; como fórmula, seria um segundo cálculo de
+    `situacaoDaAvaliacao` em linguagem de planilha, contra o ponto único (R-8).
+- **Achado da T208, já consertado neste PR**: na atividade sem instrutor do cadastro, o 2º nome sumia da grade e do
+  papel (ver `progresso-implement.md`).
+
+## 15/10/2026 (noite) — decisões de Bernardo sobre o fechamento
+
+*(Bernardo Villas Boas, 15/10/2026)*
+
+- **Cancelamentos propostos: TODOS APROVADOS.** Saem da spec 014 os três itens sem tela da T189 (arbitrar a
+  quantidade, o histórico «Sem correspondência», o filtro por disciplina) e a situação por avaliação da T213.
+- **Backlog, pendências nomeadas novas** (entram no `CLAUDE.md` pela T237):
+  - **PEND-014-8** — *"Encarregado ajusta quantidade de avaliações quando o currículo mudar"*: o botão que consome
+    `arbitrarQuantidade`, hoje Server Action sem consumidor (a forma da `GUARDA-ACAO`).
+  - **PEND-014-9** — **card de CHT na turma**: número único (`CHD + AEC + TAD + TR`), com o Apoio Individualizado à
+    parte. Hoje a CHT não aparece como número em tela nenhuma; o roteiro de Production a soma à mão.
+  - **PEND-014-7** passa a ter **PR dedicado** — proposta de causa e correção abaixo, **sem implementar**.
+- **Agora:** o conserto dos "demais instrutores" sai do #56 num PR próprio (código + teste de unidade, sem migration),
+  com merge depois do CI verde e o deploy de Production conferido; o resto do #56 fica em rascunho.
+- **Aguardando Bernardo:** a conferência em Production e a `a47-decisao.xlsx` preenchida. Devolvida a planilha:
+  gerar a migration e o antes/depois por disciplina, ensaiar no local e **PARAR** para aprovação antes do remoto.
+
+### A4.7 — por que o ensaio deu 86 e a proposta é 87
+
+**Não é erro do script nem da recomendação: é a descrição do ensaio que estava errada.** O ensaio de 15/10/2026
+(`teste-preenchida.xlsx`, no rascunho da sessão) **não** tinha "aceito" em tudo: tinha **88 aceito, 1 recuso e 1
+corrijo**. O recuso caiu no **item 5 (CAHO VII)**, que a proposta carrega — por isso 87 − 1 = **86**; o corrijo (item 1,
+CAHO I, `instrumento=TI; vista=2`) mantém o item. **Medido de novo com "aceito" nas 90 linhas: entram 87** (`decisões:
+aceito 90 · proposta que não carrega 3 → entram 87`), igual à proposta. Nenhuma linha do script ou da recomendação muda.
+
+### PEND-014-7 — proposta de causa e correção (não implementada)
+
+**O que se mede:** na suíte inteira (≈ 460 casos), 2 a 6 casos reprovam por **tempo** (`Test timeout of 30000ms`,
+`toBeVisible` esgotado) e **passam isolados**; o servidor repete *"The destination stream closed early"*, que é o Next
+abortando uma resposta em fluxo porque o navegador desistiu dela — **sintoma**, não causa. Os arquivos que reprovam
+**migram** de uma rodada para outra.
+
+**Causa provável — saturação da máquina, não defeito de produto:** `playwright.config.ts` não fixa `workers`, então
+vale o padrão (metade dos núcleos lógicos: **4** nesta máquina, 4 núcleos físicos / 8 lógicos, 23,8 GB). Os 4
+navegadores, **um** servidor Next de produção (um processo Node) e o stack do Supabase em Docker disputam a mesma CPU; o
+Node atende as 4 abas em uma thread só, e as telas do DSA e de gestão fazem várias consultas por página. Com
+`fullyParallel: true`, os arquivos pesados do DSA caem juntos com frequência — daí a migração do arquivo que reprova.
+
+**Correção proposta, em ordem de custo:**
+
+1. **`workers` explícito e menor no local** (`process.env.CI ? undefined : 2`, sobrescrevível por `PW_WORKERS`) —
+   a medida mais barata; custa tempo de suíte (estimativa a medir, não chutar).
+2. **Agrupar os arquivos pesados do DSA em série** (`test.describe.configure({ mode: "serial" })` por arquivo, ou um
+   `project` próprio com `workers: 1` e `dependencies`) para não caírem juntos.
+3. **`retries: 1` no local**, com o relatório separando "instável" de "reprovado", como o CI já faz — **só junto** com
+   1 ou 2, para não virar tapete; e toda reprovação continua isolada antes de ser chamada de instável (a regra da
+   PEND-014-7, que já pegou um defeito real de teste).
+4. **Não** aumentar o limite de 30 s por caso: medido no Épico 4, aumentar prazo **subiu** a instabilidade (2 → 6), e o
+   prazo maior esconde tela lenta de verdade.
+5. **Reuso de servidor:** sem mudança — a porta 3100 já separa a suíte do `dev:local` (gotcha 7). Medir, no PR, se
+   o servidor de produção da suíte satura (CPU do processo Node durante a rodada) antes de pensar em dois servidores.
+
+**Critério de aceite do PR dedicado:** três rodadas seguidas da suíte inteira, no local, **sem nenhuma** reprovação, com
+o tempo total de cada uma anotado ao lado (regra 9.2).

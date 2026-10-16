@@ -183,6 +183,10 @@ diferente *(decisão de 17/09/2026)*. ⚠️ **Medido no histórico em
    plausível. ⚠️ **O modo de falha é específico e caro**: a frase escrita por antecipação quase sempre
    **acerta**, e por isso a vez em que ela erra passa despercebida — foi o que produziu o veredito
    falso e tranquilizador do script da corrida, que contava uma recusa como corrupção.
+9.4. **Tabela ou migration nova que não estava no plano aprovado é PORTÃO de Bernardo, mesmo que cumpra uma
+   condição dele** *(decisão de Bernardo Villas Boas, 15/10/2026)*: parar e mostrar o **desenho** antes do remoto.
+   Nasceu da trilha `avaliacoes_curriculo_arbitragens` (spec 014, PR 5), criada para cumprir a condição da D5.3 e
+   aplicada no remoto sem que ele tivesse visto o desenho — **aprovada a posteriori**, e a exceção não se repete.
 10. **Não regressão se prova por invariante**, nunca por diff com a saída histórica de um curso.
     **A CAHO 2026 foi rejeitada como padrão-ouro** (Bernardo, 10/08/2026) — não reabrir.
 11. **`RNF-NORM-04` permanece rejeitado** (sequenciamento pedagógico de técnica de ensino): não gera

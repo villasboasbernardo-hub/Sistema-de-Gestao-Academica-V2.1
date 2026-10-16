@@ -12,14 +12,32 @@
 | PR 5 | `feat/EPICO-8-avaliacoes-nas-telas` | [#52](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/52) | verde (`1fa3a6b`) | 34/35 | ✅ **trilha do arbitrado no remoto** (backup `remoto-20261014-201119.sql`; 70 e 70; `19d845f0…`, 1.935 objetos, igual) e **mesclado** em `cd27abd`; deploy `success`; falta a conferência (T198) e a T189 |
 | PR 5.1 | `feat/EPICO-8-dsa-itens-sessoes-e-papeis` | [#53](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/53) | verde (`b657d24`) | 21/23 | ✅ **mesclado** em `eacde13`; deploy `success`; falta a conferência (T221), a T208/T212/T213 em parte e a T218 |
 | PR 6 | `feat/EPICO-8-carga-da-leva-2` | [#54](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/54) | verde (`44cdf2d`) | 13/14 | ✅ **mesclado** em `1807007`; deploy `success`; **A6.1 e rodada no remoto** em 14/10/2026 (backup `remoto-20261014-205951.sql`; plano = local; 2ª rodada 0; dados iguais); falta a conferência (T235) |
+| Fechamento (local) | `feat/EPICO-8-fechamento-da-spec-014` | [#56](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/56) (rascunho) | CI a conferir | T189, T208, T212, T218 ✅; T213 e três itens da T189 **cancelados** (Bernardo, 15/10/2026) | 🟨 **rascunho**, só local: a T189 e o resto do PR 5.1 (com um defeito de tela consertado), a conta das 187, a planilha e o gerador da A4.7, o roteiro único de Production, as listas por turma e a T236/T237 preparadas |
+| Conserto dos demais instrutores | `fix/EPICO-8-demais-instrutores-na-atividade` | [#57](https://github.com/villasboasbernardo-hub/Sistema-de-Gestao-Academica-V2.1/pull/57) | `[pendente]` | achado da T208 | separado do #56 por decisão de Bernardo (15/10/2026): só `consulta.ts` e o teste de unidade, sem migration; merge com CI verde e deploy de Production conferido |
 
 **Remoto (14/10/2026, depois do PR 5 e da rodada do PR 6):** 70 e 70 migrations; impressão digital `19d845f0…`,
 1.935 objetos, igual no local e no remoto. Registro em `plano-de-aplicacao-no-remoto.md`.
 
-**Tarefa atual:** a leva 2 está publicada (PRs 4, 5, 5.1 e 6 na `main`; a trilha do arbitrado e a rodada no remoto). Esperam Bernardo: a conferência pelos roteiros (no preview, só leitura) e a A4.7 (os 90 itens, PEND-014-6).
+**Tarefa atual (15/10/2026):** o fechamento da spec, só no local (ramo `feat/EPICO-8-fechamento-da-spec-014`, PR em
+rascunho). **Esperam Bernardo:** (1) a conferência em Production pelo `roteiro-de-conferencia-producao.md` (só leitura);
+(2) a A4.7, pela planilha `planilhas-de-origem/rodadas/2026-10-14T1916/a47-decisao.xlsx` (fora do git); (3) as propostas
+de cancelamento da T213 (situação na planilha) e de três itens da T189 sem tela (`aprovacoes-pendentes.md`, 15/10/2026).
+Com as duas primeiras, rodam a T236 (`fechamento.md`, preparado) e a T237 (`fechamento-claude-md.md`, preparado).
+
+**Feito em 15/10/2026, só local:**
+- **T189** — `tests/e2e/avaliacoes-da-turma.spec.ts`, 5 casos, verde duas vezes seguidas (12 de 12 com os outros dois
+  arquivos de avaliação).
+- **T208/T212/T218** — o 2º nome em aula e atividade, o fiscal de fora e o papel, no caso único de
+  `dsa-avaliacao-item.spec.ts`. ⚠️ **Defeito achado e consertado**: na atividade sem instrutor do cadastro, os demais
+  instrutores sumiam da grade e do papel (`consulta.ts` juntava os demais a um 1º nulo antes de cair no responsável de
+  fora). Caso de unidade novo em `fato-da-ocupacao.test.ts`, que reprova antes do conserto.
+- **A conta das 187** — `medicoes/conta-das-187.md`, por `scripts/provas/conta_das_provas_da_rodada.py`.
+- **A4.7** — `scripts/etl/decisao_a47.py` (planilha de decisão e gerador da migration, sem aplicar).
+- **Listas por turma** — `planilhas-de-origem/rodadas/2026-10-14T1916/erros-por-turma/` (fora do git), CAHO primeiro.
 **Abertas:** PR 1 — T004, T034 (conferência). PR 1.1 — T050 (conferência). PR 2 — T076 (conferência no
 preview). PR 3 — T123 (conferência sobre o remoto sincronizado); portão A3.6 (classificação dos 43 textos de responsável).
-**Próximos passos (retomada):** a T189 (projeção na ponta a ponta), as T208/T212/T213/T218 do PR 5.1 que ficaram em parte, e o fechamento (T236, T237) depois das conferências.
+**Próximos passos (retomada):** esperar as palavras de Bernardo (acima); então, A4.7 (gerar a migration pela planilha
+preenchida, mostrar o antes/depois, rito no remoto), T236 e T237.
 
 **Capturas de tela (fora do git):** `C:\Users\VILLAS BOAS\AppData\Local\ciaara-11\capturas-014\`.
 
