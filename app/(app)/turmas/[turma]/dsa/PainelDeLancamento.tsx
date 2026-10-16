@@ -42,6 +42,7 @@ import {
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import type { Semana } from "@/lib/dominio/dsa/grade";
 import type { GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
+import type { InstrumentoOferecido } from "@/lib/dominio/dsa/instrumento-da-prova";
 import { temposParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { dataComDiaDaSemana } from "@/lib/formato/data";
@@ -80,6 +81,8 @@ export type PainelDeLancamentoProps = {
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   readonly tiposDeAvaliacao: readonly string[];
+  /** A2 (16/10/2026): os instrumentos da prova sem item do currículo — o formulário e o cartão. */
+  readonly instrumentos?: readonly InstrumentoOferecido[];
   readonly subtipos: readonly TipoOferecido[];
   /** Quem tem `atividades_globais.criar` vê a caixa «todas as turmas» (spec 014, FR-014). */
   readonly podeAtividadeGlobal?: boolean;
@@ -162,6 +165,7 @@ export function PainelDeLancamento({
   escala,
   tecnicas,
   tiposDeAvaliacao,
+  instrumentos = [],
   subtipos,
   podeAtividadeGlobal = false,
   lancar,
@@ -347,6 +351,7 @@ export function PainelDeLancamento({
               instrutores={instrutores}
               escala={escala}
               tecnicas={tecnicas}
+              instrumentos={instrumentos}
               atualizar={atualizar}
               excluir={excluir}
               aoFechar={() => definirFato(null)}
@@ -390,6 +395,7 @@ export function PainelDeLancamento({
               escala={escala}
               tecnicas={tecnicas}
               tiposDeAvaliacao={tiposDeAvaliacao}
+              instrumentos={instrumentos}
               subtipos={subtipos}
               podeAtividadeGlobal={podeAtividadeGlobal}
               lancar={lancar}

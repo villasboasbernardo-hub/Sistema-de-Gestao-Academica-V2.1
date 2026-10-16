@@ -132,6 +132,18 @@ describe("a chave de um lançamento do sistema", () => {
       cod: "I",
       item: "VISTA",
     });
+    /*
+     * `RN-AV-12` (16/10/2026): a sessão de aplicação é a MESMA prova — a chave é a da avaliação dela (o tipo), e não
+     * a da vista nem «sem disciplina». O caso que discrimina: sem o `case`, o `switch` devolvia `undefined`.
+     */
+    expect(
+      chaveDoLancamento({
+        ...base,
+        origem: "sessao_aplicacao",
+        disciplinaCodigo: "I",
+        tipoAvaliacao: "PP",
+      }),
+    ).toEqual({ cod: "I", item: "PP" });
     expect(
       chaveDoLancamento({
         ...base,

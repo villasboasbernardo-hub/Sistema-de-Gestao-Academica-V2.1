@@ -102,7 +102,10 @@ select set_eq(
            ('avaliacoes_curriculo'), ('avaliacoes_curriculo_turma'), ('vistas_de_avaliacao'),
            -- PR 5 da spec 014, 14/10/2026, condicao da D5.3. REGRA DOS VALORES ESPERADOS: (a). Entrou no
            -- BRIEF §2.1 (emenda de 14/10/2026) antes de entrar aqui.
-           ('avaliacoes_curriculo_arbitragens')$$,
+           ('avaliacoes_curriculo_arbitragens'),
+           -- Emenda de 15/10/2026 da spec 014 (desenho aprovado em 16/10/2026). REGRA DOS VALORES ESPERADOS: (a).
+           -- Entrou no BRIEF §2.1 (emenda de 16/10/2026) antes de entrar aqui.
+           ('sessoes_de_aplicacao')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

@@ -152,6 +152,12 @@ const avaliacao = z
      * *"U.E. 3 a 6"*, são texto e não consomem TA de UE (FR-033).
      */
     avaliacaoCurriculoId: uuid.nullable().default(null),
+    /*
+     * A2 do desenho de 15/10/2026 (aprovado em 16/10/2026): o INSTRUMENTO da prova SEM item do currículo, opcional.
+     * Com item, a ação grava NULO (o instrumento é o do item); sem item, só um dos oferecidos — e quem confere isso
+     * é a ação, pela lista do banco (`instrumentoNaGravacao`), porque o esquema não sabe quais estão ativos.
+     */
+    instrumentoId: uuid.nullable().default(null),
     uesAbordadas: textoOuNulo.default(null),
     outrosInstrutores,
   })
@@ -197,6 +203,26 @@ const vistaProva = z
       });
     }
   });
+
+/**
+ * A SESSÃO DE APLICAÇÃO — a 2ª, 3ª… sessão da MESMA prova (`RN-AV-12`, emenda de 15/10/2026; desenho aprovado em
+ * 16/10/2026, opção A).
+ *
+ * > *"…é UMA prova com N sessões de aplicação, não N provas."* — `RN-AV-12`
+ *
+ * ⚠️ **ELA CHEGA COM O `avaliacaoId`, COMO A VISTA, e SEM aplicador nem fiscal**: os dois são os da avaliação. O
+ *    NÚMERO da sessão também não vem da tela — a ação o calcula (o seguinte ao maior ativo, mínimo 2). A ação confere
+ *    no banco que a prova é desta turma, está viva e foi aplicada no dia ou antes (`recusaDaSessaoDeAplicacao`).
+ */
+const sessaoAplicacao = z.object({
+  tipo: z.literal("sessao_aplicacao"),
+  avaliacaoId: z.string().uuid("Escolha a prova desta sessão."),
+  turmaId: uuid,
+  data,
+  taInicial: ta,
+  tempos,
+  local: textoOuNulo,
+});
 
 const atividade = z
   .object({
@@ -251,6 +277,7 @@ const atividade = z
 export const esquemaDoBloco = z.discriminatedUnion("tipo", [
   aula,
   avaliacao,
+  sessaoAplicacao,
   vistaProva,
   atividade,
 ]);
@@ -277,6 +304,8 @@ export const esquemaDoEstudoIndividualDaSemana = z.object({
 export const ORIGENS_DO_FATO = [
   "aula",
   "avaliacao",
+  /* A 2ª, 3ª… sessão de aplicação (`sessoes_de_aplicacao`, `RN-AV-12`): o `fatoId` é o da SESSÃO. */
+  "sessao_aplicacao",
   "vista_prova",
   "atividade_nao_letiva",
 ] as const;
@@ -329,7 +358,7 @@ export type Movimento = z.infer<typeof esquemaDoMovimento>;
  * derrubou o vínculo de instrutor na spec 011: um campo fora da tela mandando `null` apagava o
  * vínculo existente a cada gravação, e nenhuma tela mostrava isso na hora.
  */
-export const esquemaDaEdicao = z.object({
+const camposDaEdicao = z.object({
   fatoId: uuid,
   origem,
   tempos: tempos.optional(),
@@ -340,7 +369,34 @@ export const esquemaDaEdicao = z.object({
   unidadeEnsinoId: uuid.nullable().optional(),
   /* Spec 014, FR-046: os demais instrutores; `undefined` não mexe. */
   outrosInstrutores: z.array(z.string().trim().min(1).max(120)).max(5).optional(),
+  /*
+   * `RN-RESP-1` (emenda de 15/10/2026): o «outro responsável (nome livre)» da ATIVIDADE
+   * (`atividades_nao_letivas.responsavel_externo`). Exclusivo com o instrutor do cadastro — o banco impõe pelo
+   * `CHECK ativ_responsavel_exclusivo`, e a ação zera o outro lado ao gravar um.
+   */
+  responsavelExterno: textoOuNulo.optional(),
+  /*
+   * A2 do desenho de 15/10/2026: o instrumento da AVALIAÇÃO sem item do currículo. Só na origem `avaliacao`; com
+   * item ligado, a ação grava nulo. `undefined` não mexe.
+   */
+  instrumentoId: uuid.nullable().optional(),
 });
+
+/**
+ * ⚠️ **INSTRUTOR DO CADASTRO OU NOME LIVRE, NÃO OS DOIS NA MESMA GRAVAÇÃO** (`RN-RESP-1`). Mandar um e omitir o outro
+ * é o caminho normal — a ação apaga o outro lado. Mandar os dois preenchidos é contradição, e vira frase aqui em vez de
+ * `23514` do banco.
+ */
+const exclusivo = (e: {
+  instrutorId?: string | null | undefined;
+  responsavelExterno?: string | null | undefined;
+}) => !(e.instrutorId != null && e.responsavelExterno != null);
+const FRASE_DO_EXCLUSIVO = {
+  message: "Escolha um instrutor do cadastro ou escreva o outro responsável, não os dois.",
+  path: ["responsavelExterno"],
+};
+
+export const esquemaDaEdicao = camposDaEdicao.refine(exclusivo, FRASE_DO_EXCLUSIVO);
 
 export type Edicao = z.infer<typeof esquemaDaEdicao>;
 
@@ -353,7 +409,7 @@ export type Edicao = z.infer<typeof esquemaDaEdicao>;
  * ⚠️ **UE E DISCIPLINA, UMA FONTE SÓ** (`reg_aula_ue_xor_disciplina`): com UE a disciplina é a dela;
  * sem UE, a da coluna, com o tópico obrigatório (`D-DSA-1`) — o banco confere o tópico.
  */
-export const esquemaDaAtualizacao = esquemaDaEdicao
+export const esquemaDaAtualizacao = camposDaEdicao
   .extend({
     data: data.optional(),
     taInicial: ta.optional(),
@@ -362,7 +418,8 @@ export const esquemaDaAtualizacao = esquemaDaEdicao
   .refine((e) => !(e.unidadeEnsinoId != null && e.disciplinaId != null), {
     message: "Escolha a unidade de ensino OU só a disciplina, não as duas.",
     path: ["disciplinaId"],
-  });
+  })
+  .refine(exclusivo, FRASE_DO_EXCLUSIVO);
 
 export type Atualizacao = z.infer<typeof esquemaDaAtualizacao>;
 

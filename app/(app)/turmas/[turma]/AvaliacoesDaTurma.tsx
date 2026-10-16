@@ -7,6 +7,10 @@
  * ⚠️ **ESTOURO É ALERTA, NUNCA BLOQUEIO** (`RN-DEG-02`): `role="status"`.
  * ⚠️ Nota, média e aprovação NÃO aparecem (escopo de outra divisão, `RNF-NORM-06`).
  * ⚠️ SEM MARCADOR DE CLIENTE: `<details>` nativo abre a disciplina.
+ * ⚠️ **A PROVA A MAIS É INFORMAÇÃO** (`RN-AV-14`, emenda de 15/10/2026: *"vira alerta informativo na aba Avaliações da
+ *    turma ("currículo prevê 1 PP; aplicadas 2")"*): a frase vem pronta de `alemDoPrevisto`, sem cor de erro.
+ * ⚠️ **A PROVA EM N SESSÕES É UMA** (`RN-AV-12`): a linha diz «em N sessões», e «Juntar como sessão de outra prova» só
+ *    aparece para o Admin e o Encarregado (decisão de 16/10/2026), com as candidatas prontas do quadro.
  */
 import { MARCA_ARBITRADO, MARCA_SUGESTAO } from "@/lib/dominio/avaliacoes/previsto";
 import type { QuadroDeAvaliacoes } from "@/lib/dominio/avaliacoes/quadro-da-turma";
@@ -15,6 +19,7 @@ import { dataParaLeitura } from "@/lib/formato/data";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 
 import { DefinirTempoArbitrado } from "./DefinirTempoArbitrado";
+import { JuntarComoSessao } from "./JuntarComoSessao";
 
 type Acao = (
   entrada: unknown,
@@ -22,6 +27,19 @@ type Acao = (
   | { readonly ok: true; readonly aviso?: "soma_acima_da_ch" }
   | { readonly ok: false; readonly erro: string }
 >;
+type AcaoDeJuntar = (
+  entrada: unknown,
+) => Promise<{ readonly ok: true } | { readonly ok: false; readonly erro: string }>;
+
+/** «em N sessões» — só quando a prova tem mais de uma (RN-AV-12). */
+function Sessoes({ sessoes }: { readonly sessoes: number }) {
+  if (sessoes <= 1) return null;
+  return (
+    <span className="text-texto-suave text-xs" data-avaliacoes="sessoes">
+      em {sessoes} sessões
+    </span>
+  );
+}
 
 const TOM: Record<
   SituacaoDaAvaliacao,
@@ -44,6 +62,7 @@ export function AvaliacoesDaTurma({
   aviso,
   turmaId,
   arbitrado,
+  juntar,
 }: {
   readonly quadro: QuadroDeAvaliacoes | null;
   readonly aviso: string | null;
@@ -51,6 +70,8 @@ export function AvaliacoesDaTurma({
   readonly turmaId: string;
   /** As ações do arbitrado — montadas pela página SÓ para quem tem `avaliacoes_curriculo_arbitrado.editar`. */
   readonly arbitrado?: { readonly definir: Acao; readonly confirmar: Acao; readonly nomear: Acao };
+  /** «Juntar como sessão» — montada pela página SÓ para quem tem `avaliacoes_juntar_sessao.editar`. */
+  readonly juntar?: AcaoDeJuntar;
 }) {
   return (
     <section
@@ -70,7 +91,16 @@ export function AvaliacoesDaTurma({
         <p className="text-texto-suave text-sm">Este curso ainda não tem disciplinas com CH.</p>
       ) : null}
       {quadro?.disciplinas.map(
-        ({ disciplina, previsto, projecao, itens, semItem, aplicadas, previstas }) => (
+        ({
+          disciplina,
+          previsto,
+          projecao,
+          itens,
+          semItem,
+          aplicadas,
+          previstas,
+          alemDoPrevisto,
+        }) => (
           <details
             key={disciplina.id}
             className="border-borda rounded-ciaara border p-2"
@@ -88,6 +118,12 @@ export function AvaliacoesDaTurma({
               </span>
             </summary>
             <div className="mt-2 flex flex-col gap-2 text-sm">
+              {alemDoPrevisto.length > 0 ? (
+                <p className="text-texto-suave text-xs" data-avaliacoes="alem-do-previsto">
+                  {alemDoPrevisto.map((a) => a.frase).join(" · ")} — informação, não é erro de
+                  planilha
+                </p>
+              ) : null}
               {previsto.avisos.length > 0 ? (
                 <p
                   role="status"
@@ -146,6 +182,14 @@ export function AvaliacoesDaTurma({
                           {dataParaLeitura(item.aplicacao)}
                         </span>
                       ) : null}
+                      <Sessoes sessoes={item.sessoes} />
+                      {juntar && item.avaliacaoId ? (
+                        <JuntarComoSessao
+                          avaliacaoId={item.avaliacaoId}
+                          opcoes={item.juntarEm}
+                          juntar={juntar}
+                        />
+                      ) : null}
                       {arbitrado && item.natureza !== "od" ? (
                         <DefinirTempoArbitrado
                           itemId={item.itemId}
@@ -168,13 +212,25 @@ export function AvaliacoesDaTurma({
                     Lançadas no DSA sem avaliação do currículo ligada:
                   </p>
                   <ul className="flex flex-col gap-1">
-                    {semItem.map((a, n) => (
-                      <li key={n} className="flex flex-wrap items-center gap-2 text-xs">
-                        <span>{a.tipo}</span>
+                    {semItem.map((a) => (
+                      <li
+                        key={a.id}
+                        className="flex flex-wrap items-center gap-2 text-xs"
+                        data-avaliacoes-sem-item={a.instrumento ?? a.tipo}
+                      >
+                        <span>{a.instrumento ? `${a.tipo} (${a.instrumento})` : a.tipo}</span>
                         {a.aplicacao ? (
                           <span className="text-texto-suave">{dataParaLeitura(a.aplicacao)}</span>
                         ) : null}
                         <Situacao situacao={a.situacao} />
+                        <Sessoes sessoes={a.sessoes} />
+                        {juntar ? (
+                          <JuntarComoSessao
+                            avaliacaoId={a.id}
+                            opcoes={a.juntarEm}
+                            juntar={juntar}
+                          />
+                        ) : null}
                       </li>
                     ))}
                   </ul>

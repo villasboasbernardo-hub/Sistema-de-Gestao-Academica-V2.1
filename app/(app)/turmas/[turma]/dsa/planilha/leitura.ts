@@ -258,10 +258,14 @@ export async function lerDadosDaPlanilha(
   const daAula = new Map(aulasLidas.map((a) => [a.id, a]));
   const daAvaliacao = new Map(avaliacoesLidas.map((a) => [a.id, a]));
   const daAtividade = new Map(atividadesLidas.map((a) => [a.id, a]));
+  /* A avaliação de cada SESSÃO — de vista e de aplicação (`RN-AV-12`, 16/10/2026): o fato da sessão é a sessão. */
   const avaliacaoDaSessao = new Map(
-    ((dados.sessoes ?? []) as { id: string; avaliacao_id: string }[]).map(
-      (v) => [v.id, v.avaliacao_id] as const,
-    ),
+    (
+      [...(dados.sessoes ?? []), ...(dados.sessoesDeAplicacao ?? [])] as {
+        id: string;
+        avaliacao_id: string;
+      }[]
+    ).map((v) => [v.id, v.avaliacao_id] as const),
   );
   const fatoDoInsumo = (fatoId: string, origem: FatoDoInsumo["origem"]): FatoDoInsumo => {
     if (origem === "aula") {
@@ -284,10 +288,13 @@ export async function lerDadosDaPlanilha(
         categoria: null,
       };
     }
-    if (origem === "avaliacao" || origem === "vista_prova") {
-      /* Spec 014, FR-041: o fato da vista é a SESSÃO; a avaliação (código, disciplina, tipo) é a dela. */
+    if (origem === "avaliacao" || origem === "vista_prova" || origem === "sessao_aplicacao") {
+      /*
+       * Spec 014, FR-041: o fato da vista é a SESSÃO; a avaliação (código, disciplina, tipo) é a dela. O mesmo na
+       * sessão de aplicação (`RN-AV-12`): o código que a planilha escreve é o da PROVA, que é uma só.
+       */
       const a = daAvaliacao.get(
-        origem === "vista_prova" ? (avaliacaoDaSessao.get(fatoId) ?? fatoId) : fatoId,
+        origem === "avaliacao" ? fatoId : (avaliacaoDaSessao.get(fatoId) ?? fatoId),
       );
       return {
         origem,

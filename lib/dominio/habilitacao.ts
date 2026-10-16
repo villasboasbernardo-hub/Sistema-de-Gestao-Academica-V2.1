@@ -33,6 +33,18 @@ export const EXIGE_HABILITACAO: Readonly<Record<Atuacao, boolean>> = {
   vista_de_prova: false,
 };
 
+/**
+ * Quais atuações recebem o AVISO de habilitação (D-AV-3): só a de quem aplica a prova. `Record` sobre a união, como
+ * `EXIGE_HABILITACAO`: as duas tabelas juntas são o que `regraDoResponsavel` (`responsavel.ts`, `RN-RESP-1`) lê —
+ * um ponto só para a habilitação de cada papel.
+ */
+export const AVISA_SEM_HABILITACAO: Readonly<Record<Atuacao, boolean>> = {
+  ministrar: false,
+  responsavel: false,
+  avaliacao: true,
+  vista_de_prova: false,
+};
+
 export type VinculoDeHabilitacao = {
   readonly instrutorId: string;
   readonly disciplinaId: string;
@@ -78,7 +90,7 @@ export function avisoDeHabilitacao(
   vinculos: readonly VinculoDeHabilitacao[],
   nomes: { readonly instrutor: string; readonly disciplina: string },
 ): string | null {
-  if (atuacao !== "avaliacao") return null;
+  if (!AVISA_SEM_HABILITACAO[atuacao]) return null;
   if (estaHabilitado(instrutorId, disciplinaId, vinculos)) return null;
   return `${nomes.instrutor} não está habilitado em ${nomes.disciplina}`;
 }

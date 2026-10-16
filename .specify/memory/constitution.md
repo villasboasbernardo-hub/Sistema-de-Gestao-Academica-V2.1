@@ -319,6 +319,10 @@ em preview. O documento 10 §8.3 e §8.4 trazem o procedimento.
 > exceção por decisão registrada e datada, com a justificativa escrita em *Complexity Tracking* do plano da fatia** —
 > e o atrito de ter de justificar é o que produz a justificativa. A exceção foi exercida **duas vezes**: a fatia (c)
 > do Épico 5, com **9** migrations (PR #16, 15/09/2026), e a fatia (a), com **7** (spec 009, B-1, 17/09/2026).
+> *(Acréscimo de 16/10/2026, nos dois endereços:)* e a **spec 014** — **D-CONST-VI**, aprovada por Bernardo em
+> 14/10/2026 (12 migrations em 3 PRs de banco, 5 de estrutura e 7 de dado), **emendada em 16/10/2026** com mais
+> **duas** no PR #58 (uma de estrutura e uma de dado, a emenda de 15/10/2026). Justificativas no *Complexity
+> Tracking* de `specs/014-atividades-e-avaliacoes/plan.md`.
 > Afrouxar o texto tornaria múltiplas migrations gratuitas, e ninguém voltaria a justificar.
 
 ---

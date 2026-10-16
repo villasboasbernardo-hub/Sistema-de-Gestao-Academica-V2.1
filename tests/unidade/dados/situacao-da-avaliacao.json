@@ -1,5 +1,5 @@
 {
-  "_sobre": "Tabela de casos ÚNICA da situação da avaliação (R-8 da spec 014): lida pelo Vitest (situacao.test.ts) e pela prova cruzada contra app.fn_status_vista (situacao-sql-igual-ts.test.ts). Prazo de vista 7 dias corridos, contado da APLICAÇÃO (FR-052).",
+  "_sobre": "Tabela de casos ÚNICA da situação da avaliação (R-8 da spec 014): lida pelo Vitest (situacao.test.ts) e pela prova cruzada contra app.fn_status_vista (situacao-sql-igual-ts.test.ts). Prazo de vista 7 dias corridos, contado da APLICAÇÃO (FR-052). Emenda de 15/10/2026 (desenho aprovado em 16/10/2026): `instrumento` diz qual instrumento a prova cruzada liga (PM, PO e PE exigem vista, pela marca do banco); `semItem` grava a avaliação sem item, com `instrumento` em `avaliacoes.instrumento_id`; `sessoesDeAplicacao` são as sessões 2..N, e o prazo conta da ÚLTIMA (RN-AV-12).",
   "prazoDias": 7,
   "casos": [
     {
@@ -134,6 +134,87 @@
       "hoje": "2026-10-09",
       "terminoDaTurma": "2026-12-15",
       "esperado": "atrasada"
+    },
+    {
+      "nome": "RN-AV-13 · PE ligada exige vista (16/10/2026): 8º dia → atrasada",
+      "natureza": "prova",
+      "instrumento": "PE",
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-09",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "atrasada"
+    },
+    {
+      "nome": "RN-AV-13 · PP ligada não exige vista: 8º dia → concluída",
+      "natureza": "prova",
+      "instrumento": "PP",
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": [],
+      "temItemDeVista": false,
+      "hoje": "2026-10-09",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "concluida"
+    },
+    {
+      "nome": "RN-AV-13 · sem item, com instrumento PP gravado → concluída",
+      "natureza": "prova",
+      "semItem": true,
+      "instrumento": "PP",
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": [],
+      "temItemDeVista": false,
+      "hoje": "2026-10-09",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "concluida"
+    },
+    {
+      "nome": "RN-AV-13 · sem item e sem instrumento → exige, como antes: 8º dia → atrasada",
+      "natureza": "prova",
+      "semItem": true,
+      "aplicacao": "2026-10-01",
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-09",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "atrasada"
+    },
+    {
+      "nome": "RN-AV-12 · prova em 2 sessões: o prazo conta da ÚLTIMA (3º dia depois dela) → em andamento",
+      "natureza": "prova",
+      "instrumento": "PM",
+      "aplicacao": "2026-10-01",
+      "sessoesDeAplicacao": ["2026-10-06"],
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-09",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "em_andamento"
+    },
+    {
+      "nome": "RN-AV-12 · prova em 2 sessões: 8º dia depois da última → atrasada",
+      "natureza": "prova",
+      "instrumento": "PM",
+      "aplicacao": "2026-10-01",
+      "sessoesDeAplicacao": ["2026-10-06"],
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-14",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "atrasada"
+    },
+    {
+      "nome": "RN-AV-12 · a 2ª sessão ainda à frente: a prova está em andamento, não pendente",
+      "natureza": "prova",
+      "instrumento": "PM",
+      "aplicacao": "2026-10-01",
+      "sessoesDeAplicacao": ["2026-10-12"],
+      "sessoesDeVista": [],
+      "temItemDeVista": true,
+      "hoje": "2026-10-10",
+      "terminoDaTurma": "2026-12-15",
+      "esperado": "em_andamento"
     }
   ],
   "casosOd": [

@@ -19,6 +19,9 @@
  *
  * ⚠️ **O PRAZO CONTA DA APLICAÇÃO REGISTRADA, NÃO DA DATA PREVISTA** (FR-052). A data prevista é exibida e
  * não entra aqui — por isso este módulo nem a recebe.
+ * ⚠️ **NA PROVA EM N SESSÕES, O PRAZO CONTA DA ÚLTIMA** (`RN-AV-12` da spec 014, emenda de 15/10/2026: *"UMA prova com
+ * N sessões de aplicação, não N provas"*; leitura de 16/10/2026): a prova só termina na última sessão, e contar da
+ * 1ª acusaria atraso numa prova ainda em aplicação. A 1ª sessão ainda à frente continua «pendente».
  *
  * ⚠️ **ESTE É O ÚNICO LUGAR QUE DECIDE A SITUAÇÃO** (R-8). `app.fn_status_vista` é ESPELHO desta função para
  * a view e para o pgTAP cruzado, e cobre só prova e trabalho; a OD vive só aqui. A tabela de casos única é
@@ -49,6 +52,8 @@ export type EntradaDaSituacao = {
   aplicacao: string | null;
   /** Datas ISO das sessões de vista ATIVAS da avaliação. */
   sessoesDeVista: readonly string[];
+  /** Datas ISO das sessões de aplicação 2..N ATIVAS (`sessoes_de_aplicacao`, RN-AV-12). Sem elas, só a 1ª. */
+  sessoesDeAplicacao?: readonly string[];
   /** O currículo (ou o ajuste da turma) prevê tempo de vista para o item. */
   temItemDeVista: boolean;
   /** `config_parametros`: prazo de vista em dias corridos (7). */
@@ -92,9 +97,12 @@ export function situacaoDaAvaliacao(entrada: EntradaDaSituacao): SituacaoDaAvali
   }
 
   if (!entrada.temItemDeVista || entrada.sessoesDeVista.length > 0) return "concluida";
-  return diasCorridos(entrada.aplicacao, entrada.hoje) > entrada.prazoDias
-    ? "atrasada"
-    : "em_andamento";
+  // RN-AV-12: a prova termina na ÚLTIMA sessão de aplicação (texto ISO: a maior é a mais tardia).
+  const fim = (entrada.sessoesDeAplicacao ?? []).reduce(
+    (maior, data) => (data > maior ? data : maior),
+    entrada.aplicacao,
+  );
+  return diasCorridos(fim, entrada.hoje) > entrada.prazoDias ? "atrasada" : "em_andamento";
 }
 
 /** Rótulo de tela de cada situação. */

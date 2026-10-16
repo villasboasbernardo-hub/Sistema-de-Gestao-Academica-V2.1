@@ -68,7 +68,7 @@ insert into public.disciplinas (id, codigo, curso_id, cod_disciplina, nome_disci
 -- A ENUMERAÇÃO — o conjunto, não as instâncias
 -- =================================================================================
 --
--- A lista das 15 tabelas é a do `data-model.md` §3, transcrita. Tabela nova que passe a depender
+-- A lista das tabelas é a do `data-model.md` §3, transcrita. Tabela nova que passe a depender
 -- do curso entra AQUI e na migration, juntas — como a lista do `FR-021.2`.
 create temporary table _protegidas as
 select * from (values
@@ -83,6 +83,8 @@ select * from (values
   ('avaliacoes_curriculo',       'curso_em_oferta'),
   ('avaliacoes_curriculo_turma', 'turma_em_oferta'),
   ('vistas_de_avaliacao',        'curso_em_oferta'),
+  -- Emenda de 15/10/2026 (16/10/2026): a sessão de aplicação 2..N espelha as policies da sessão de vista.
+  ('sessoes_de_aplicacao',       'curso_em_oferta'),
   ('registros_aula',             'curso_em_oferta'),
   ('avaliacoes',                 'curso_em_oferta'),
   ('janelas_curso',              'curso_em_oferta'),
@@ -141,8 +143,9 @@ select is(
   -- Spec 014, PR 1: + `dias_parados` e `limites_curriculo`, duas cada — 32 + 4 = 36, em 18 tabelas.
   -- PR 1.1: − `reservas_proens` (só leitura) + `previstos_proens_turma` — continua 36, em 18.
   -- PR 4: − `avaliacoes_planejadas` (só leitura) + as três da E-4 — 36 − 2 + 6 = 40, em 20.
-  40,
-  'FR-017.5 · sao 40 policies de escrita em 20 tabelas — duas por tabela, criar e editar'
+  -- Emenda de 15/10/2026 (E-6, 16/10/2026): + `sessoes_de_aplicacao`, duas — 40 + 2 = 42, em 21.
+  42,
+  'FR-017.5 · sao 42 policies de escrita em 21 tabelas — duas por tabela, criar e editar'
 );
 
 -- ---------------------------------------------------------------- a exclusao DECLARADA, nao ausente

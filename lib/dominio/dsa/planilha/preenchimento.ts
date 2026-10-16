@@ -183,7 +183,10 @@ export function retratoDaSemana(
           ? (fato.disciplinaCodigo ?? "")
           : ""),
       contaNoNumero:
-        item?.contaNoNumero ?? (fato?.origem === "aula" || fato?.origem === "avaliacao"),
+        item?.contaNoNumero ??
+        (fato?.origem === "aula" ||
+          fato?.origem === "avaliacao" ||
+          fato?.origem === "sessao_aplicacao"),
     };
   };
 

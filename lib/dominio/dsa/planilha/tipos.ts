@@ -14,10 +14,15 @@
 import type { Assinatura } from "../assinaturas";
 import type { Relogio } from "../horario-do-bloco";
 import type { DiaImpresso, TecnicaDoCatalogo } from "../impressao";
+import type { OrigemDoFato } from "../posicao-herdada";
 
 export type IdentidadeDaSemana = { readonly ano: number; readonly numero: number };
 
-export type OrigemDoFato = "aula" | "avaliacao" | "vista_prova" | "atividade_nao_letiva";
+/*
+ * ⚠️ A MESMA origem da grade (`posicao-herdada.ts`), e não uma cópia: com a sessão de aplicação (`RN-AV-12`,
+ *    16/10/2026) a cópia daqui ficaria com quatro valores, e a sessão chegaria à planilha sem caso no `switch`.
+ */
+export type { OrigemDoFato };
 export type CategoriaNormativa = "AEC" | "TAD" | "TR" | "Estudo_Individual";
 
 /**

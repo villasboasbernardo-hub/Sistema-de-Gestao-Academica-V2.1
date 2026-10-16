@@ -60,6 +60,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
     "a barra de abas Ficha · Avaliações, escrita na URL; o conteúdo das duas chega desenhado do servidor",
   "app/(app)/turmas/[turma]/DefinirTempoArbitrado.tsx":
     "definir tempo, confirmar sugestão e nomear a UE de uma avaliação do currículo; as ações chegam por propriedade",
+  // ── Spec 014, emenda de 15/10/2026 (decisão de 16/10/2026) ─────────────────────────────────────
+  "app/(app)/turmas/[turma]/JuntarComoSessao.tsx":
+    "«juntar como sessão da mesma prova»: abrir, escolher a prova e gravar é interação; a ação e as candidatas chegam por propriedade",
   "app/(app)/turmas/[turma]/EdicaoDoPrevisto.tsx":
     "editar o previsto do PROENS de um card: abrir, digitar e gravar é interação; a ação chega por propriedade",
   "app/(app)/atividades/FiltrosDeAtividades.tsx": "os filtros de /atividades, na URL",
@@ -80,6 +83,12 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
     "o formulário do bloco: escolher, pré-preencher e gravar é interação; a ação chega por propriedade",
   "app/(app)/turmas/[turma]/dsa/PainelDeLancamento.tsx":
     "guarda só qual célula está escolhida — estado efêmero de tela, que o guia manda deixar fora da URL",
+  /*
+   * `RN-RESP-1` (emenda de 15/10/2026): o instrutor do cadastro OU o «outro responsável (nome livre)», usado pelo
+   * formulário e pelo cartão. Só desenha o que `regraDoResponsavel` decide; escolher e digitar são interação.
+   */
+  "app/(app)/turmas/[turma]/dsa/ResponsavelOuNomeLivre.tsx":
+    "o seletor canônico do cadastro e o campo de nome livre de um papel — digitar e escolher são interação",
   /*
    * ⚠️ **A FOLHA DO PR 4.** Mover por teclado, editar e excluir são interação de formulário, e as
    * três ações **chegam por propriedade** — nunca por `import` de `@/lib/acoes/`, que é a proibição

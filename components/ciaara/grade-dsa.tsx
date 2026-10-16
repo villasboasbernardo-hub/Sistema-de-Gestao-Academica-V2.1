@@ -101,7 +101,13 @@ export type GradeDsaProps = {
 /** O tom de uma célula ocupada, pela origem do fato e pelo conflito. */
 function tomDoBloco(bloco: BlocoNaGrade): TomDaCelula {
   if (bloco.conflito) return "conflito";
-  if (bloco.origem === "avaliacao" || bloco.origem === "vista_prova") return "avaliacao";
+  /* A sessão de aplicação (`RN-AV-12`) é a MESMA prova: a mesma família de cor da avaliação e da vista. */
+  if (
+    bloco.origem === "avaliacao" ||
+    bloco.origem === "sessao_aplicacao" ||
+    bloco.origem === "vista_prova"
+  )
+    return "avaliacao";
   if (bloco.origem === "atividade_nao_letiva") return "nao_letivo";
   return "ocupada";
 }

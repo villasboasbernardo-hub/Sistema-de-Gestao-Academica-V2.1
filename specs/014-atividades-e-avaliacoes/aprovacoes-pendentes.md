@@ -555,3 +555,227 @@ Node atende as 4 abas em uma thread só, e as telas do DSA e de gestão fazem v�
 
 **Critério de aceite do PR dedicado:** três rodadas seguidas da suíte inteira, no local, **sem nenhuma** reprovação, com
 o tempo total de cada uma anotado ao lado (regra 9.2).
+
+## 15/10/2026 — emenda RN-AV-10 a RN-AV-14 e RN-RESP-1
+
+**A decisão** *(Bernardo Villas Boas, 15/10/2026, no texto dele; registrada na spec §2.4)*:
+
+> *PROVAS E VISTAS*
+> - *RN-AV-10: a prova da planilha casa com o item do currículo pela coluna COD (PM1/PM2/PP/TG/T/PO), normalizando "PM1" = "PM 1" = "PM-1". A descrição só desempata.*
+> - *RN-AV-11: COD sem número ("PM") casa com o único item do instrumento; se houver vários, casa pela ordem cronológica de aplicação (1ª aplicada = nº 1).*
+> - *RN-AV-12: prova prática (PP), trabalho (T/TG) e qualquer prova com a MESMA descrição em dias consecutivos ou próximos (mesma disciplina, mesmo COD) é UMA prova com N sessões de aplicação, não N provas. O card "N de M" conta 1.*
+> - *RN-AV-13: vista é obrigatória só para PM e PO. PP, T e TG não geram alerta de vista; se a planilha trouxer vista, registra.*
+> - *RN-AV-14: prova a mais que o currículo prevê NÃO é erro de planilha; vira alerta informativo na aba Avaliações da turma ("currículo prevê 1 PP; aplicadas 2").*
+>
+> *RESPONSÁVEL (lib/dominio, regra pura)*
+> - *RN-RESP-1: aula de disciplina (técnica EO ou prática de disciplina) exige instrutor habilitado. Palestra, AEC, estudo individual, monitoria, orientação/Apoio Individualizado aceitam responsável de nome livre, sem cadastro e sem alerta. Aplicador de prova = instrutor habilitado; fiscal e quem conduz a vista = instrutor OU nome livre. O formulário do DSA e o lançamento em tela oferecem "outro responsável (nome livre)" nesses casos. A sincronização aplica a mesma regra: texto que não casa com o cadastro só vira pendência se a linha for aula de disciplina com EO.*
+>
+> *"FAÇA, só local, sem db push, sem merge. (…) PR em rascunho, relatório curto. Se precisar de migration, PARE e me mostre o desenho antes."*
+
+### O que foi feito, só no local
+
+- **Nada no remoto:** nenhum `db push`, nenhuma rodada no remoto, nenhum merge. PR em rascunho, empilhado sobre o #56.
+- **Documentos** (T238): spec §2.4, *Session 2026-10-15* e as emendas inline; `contracts/sincronizacao.md` e
+  `contracts/avaliacoes-do-curriculo.md`; `data-model.md` §3.5.1 e a nota da §3.7; `tasks.md` (T238 a T260).
+- **Regras puras** em `lib/dominio/`: a vista obrigatória (RN-AV-13 — `vista-obrigatoria.ts` sobre o dado único
+  `instrumentos.json`, T239 a T241) e o responsável (RN-RESP-1, T242 a T244) — `lib/dominio/responsavel.ts`, o formulário e o cartão do DSA com *"Outro responsável (nome livre)"*, o fiscal do cadastro no formulário e a regra conferida também no servidor.
+- **Sincronização** (T245 a T247), implementada em `scripts/carga_dsa/` (`regras_de_prova.py`, `resolver.py`,
+  `sincronizar.py`), lendo o dado único `lib/dominio/avaliacoes/instrumentos.json`. O que ela faz hoje, para o
+  texto bater com o código:
+  - **o casamento pelo COD** (RN-AV-10, RN-AV-11): o COD é a coluna U.E. (`PM1` = `PM 1` = `PM-1`); `PM2` → o item
+    PM 2; `PM` → o único item, ou o menor número livre em ordem cronológica, **sem** contar o número escrito na
+    descrição (ela só desempata o instrumento, P3); `T` e `AV` pelas leituras P1 e P2, abaixo;
+  - **a prova sem item livre** (o instrumento casou, mas não sobrou item): se o instrumento **passou do previsto**,
+    é **informação** da RN-AV-14 (*"currículo prevê 1 PP; aplicadas 2"*); se **não** passou — o COD pede um
+    número que o currículo não tem, ou repete um item já ligado —, é **não casa**, na lista de erros e em
+    `provas-sem-casar.md`, com os itens lado a lado. Caso real, achado na revisão de 15/10/2026: a CAHO XIX
+    `PP2`, com o currículo só com a PP 3, **sumia de todas as listas** na primeira versão da regra de 15/10/2026,
+    antes desta correção (com a regra de 14/10 ela saía como «prova a mais»,
+    `antes-da-emenda-15-10/erros-de-planilha.md`);
+  - **as sessões** (RN-AV-12): agrupadas por disciplina + COD + descrição, com a janela proposta de 7 dias (P4);
+    a 1ª liga ao item; as seguintes ficam linhas sem item, fora da lista de erros, como informação. A sessão
+    seguinte **sem** nome de aplicador na linha **herda** o aplicador da 1ª; a que traz um nome **fora** do
+    cadastro fica **sem** aplicador (não herda). A decisão explícita de vista que aponta a data de uma sessão
+    seguinte vai para a **1ª sessão** — a vista é da prova;
+  - **a vista** (RN-AV-13): a vista que a planilha traz é registrada de qualquer instrumento; a prova sem item cujo
+    COD só nomeia instrumentos sem vista (PP, T, TG, TI) **não** vai para «vista não lançada»; o `AV` continua;
+  - **o responsável** (RN-RESP-1): toda **atividade** — inclusive TAD e TR (P8) — grava o texto fora do cadastro
+    em `responsavel_externo`, sem pendência; a célula só de traços é **vazia**; a chave `responsavel_externo_aceito`
+    do lote ficou **sem efeito** (o texto entra igual com ou sem ela); a **aula** fora do cadastro continua
+    pendência **bloqueante**, e o **aplicador** fora do cadastro, pendência **não bloqueante** (aviso, P6);
+  - **as listas da rodada** (fora do git): `erros-de-planilha.md` com as linhas de **informação**;
+    `pendencias-de-responsavel.md` com as pendências que sobram (aula e aplicador) e a seção *"Responsável de
+    nome livre gravado"*, com a coluna **«aula de disciplina com EO?»**; e `provas-sem-casar.md`, só com o que
+    ficou no plano (sem o que a virada da turma tira);
+  - **o gerador versionado** `scripts/carga_dsa/erros_por_turma.py` (colunas «Prioridade» e «Resposta do
+    operador»; catálogo, sessão seguinte, prova a mais e A4.7 como **informação**; nada da data de virada em
+    diante) e **a conta** `scripts/provas/conta_das_provas_da_rodada.py`, com as categorias novas: 5 sessão
+    seguinte (RN-AV-12) · 6 prova a mais (RN-AV-14) · 7 não casa · 8 sem par.
+
+  Provas: `python -X utf8 -m scripts.carga_dsa.provar_carga_dsa` sai **0** com os casos novos da emenda (medido em 15/10/2026, «TODAS AS PROVAS PASSARAM»).
+- **Reensaio da rodada `2026-10-14T1916` no local** (T248), sobre a cópia do remoto `remoto-20261015-150214.sql`, com as opções da rodada de 14/10 (`--adiar` igual): **gravado**, o banco lido de volta igual ao plano nas **10** turmas, o catálogo intacto, e a **segunda rodada com zero mudança**. Medido por `python -X utf8 -m scripts.provas.medir_emenda_15_10` e `scripts.provas.conta_das_provas_da_rodada` (15/10/2026).
+
+| Grandeza | Antes (regra de 14/10/2026) | Artefato do antes | Depois (regra de 15/10/2026) |
+|---|---:|---|---:|
+| Provas ligadas a item do currículo | **75** de 187 | `medicoes/conta-das-187.md` | **93** de 187 linhas — das 187, **17** são sessões seguintes de uma prova (RN-AV-12): **93 de 170 provas** |
+| Vistas atrasadas reais | **6** (+1 vencendo) | `antes-depois/rodada-do-pr6-no-remoto.md`; reconferido em 15/10/2026 por `scripts/provas/emenda_15_10_ligadas_e_vistas.sql` na cópia `remoto-20261015-150214.sql` | **4** (+0 vencendo): duas PO/PM da C-Espc-HN e duas PM da CAHO recém-ligadas pelo COD (IX PM 1, VI PM 3). Pela regra de 14/10, sobre o mesmo banco, seriam **8** |
+| Itens da lista de erros, soma das dez turmas | **326** | soma dos «itens a conferir» de `antes-da-emenda-15-10/erros-por-turma/*.md` (fora do git; conferida em 15/10/2026) | **91** a corrigir (+ **205** de informação), pelo gerador versionado |
+| Pendências de responsável | **26** | os 26 textos de `antes-da-emenda-15-10/pendencias-de-responsavel.md` (fora do git; conferidos em 15/10/2026) | **0** — os textos viraram nome livre gravado (**42** textos na lista de conferência, os 26 entre eles; o «------» virou célula vazia) |
+| Delas, com aula de disciplina com EO (só estas você decide cadastrar) | — | — | **0**: as 26 são atividades — 20 palestras (T/E EO no catálogo, sob chave que não é disciplina), 1 Orientação de TFM, o Apoio à Instrução de 35 TA, 1 Português para Estrangeiros, 1 Administração, 1 Tempo Reserva e a célula «------» |
+
+*Os dois artefatos do antes estão na pasta **preservada** `planilhas-de-origem/rodadas/2026-10-14T1916/antes-da-emenda-15-10/`,
+e não na raiz da rodada: o reensaio com a regra nova **regera** `erros-por-turma/` e `pendencias-de-responsavel.md` na
+raiz. (Corrigido em 15/10/2026: a primeira redação citava os arquivos da raiz, que o depois sobrescreve.)*
+
+⚠️ **326 e 336 são a mesma exportação contada em duas unidades.** A tabela de
+`antes-depois/rodada-do-pr6-no-remoto.md` soma **336** linhas da `erros-de-planilha.md`; o **326** é a soma dos «itens
+a conferir» dos dez arquivos de `antes-da-emenda-15-10/erros-por-turma/` (118 + 55 + 50 + 46 + 23 + 9 + 9 + 8 + 5 + 3,
+somados em 15/10/2026). É a forma do 191 × 187 de `medicoes/conta-das-187.md`: o depois é medido nas duas unidades,
+cada uma com o seu artefato.
+
+- **`erros-por-turma.xlsx` regerado** (T249), com as colunas «Prioridade» e «Resposta do operador» e o catálogo como
+  «informação»: na pasta da rodada, um `.md` por turma e uma aba por turma — a corrigir: CAHO 19, C-Ap-FR 20, C-Esp-ME
+  20, C-Ap-HN 4, C-Espc-FR 17, C-Espc-HN 3, Ag-Mag 4, MetocOf 3, Obs-ME 0, BATI 1 (eram 118, 55, 50, 46, 23, 9, 9, 8,
+  5 e 3).
+- **Provas que continuam sem casar** (T250), com COD + descrição + itens do currículo lado a lado:
+  `provas-sem-casar.md` da rodada (fora do git), **50** provas — **44** com COD que não nomeia instrumento (`AV`) e
+  descrição que também não nomeia; **5** com instrumento que a disciplina não tem no currículo (2 PP, 2 TG/TI, 1 TI —
+  entre elas a PP de 14 sessões da CAHO IV, cuja disciplina não tem PP); **1** com número que o currículo não tem (a
+  CAHO XIX `PP2`, currículo só com PP 3). Das 44, **27** casariam se a coluna T/E da linha desempatasse (P10).
+- **A conta das 187 em categorias exclusivas, depois** (`conta_das_provas_da_rodada`, 15/10/2026): 93 ligadas · 2 OD ·
+  4 editadas na tela · 16 A4.7 · 17 sessões seguintes (RN-AV-12) · 3 a mais (RN-AV-14) · 49 não casam · 3 sem par =
+  **187**. As 2 linhas posteriores à virada ficam fora (eram 4 na conta de 14/10: as 2 da CAHO — X e XVI, `PM2`
+  de 30/10 e 15/10 — agora casam pelo COD e não geram linha na lista).
+
+### ⛔ PORTÃO — o desenho da migration (regra 9.4)
+
+Parte da emenda **não cabe no banco de hoje**. O desenho está em **`desenho-emenda-15-10.md`**, com duas opções. A
+**Opção A** (recomendada), uma migration: **A1** a tabela `public.sessoes_de_aplicacao`, para a prova em N sessões
+contar 1 (RN-AV-12); **A2** a coluna `avaliacoes.instrumento_id`, para a prova sem item ou a mais ter instrumento e a
+RN-AV-13 e o alerta da RN-AV-14 valerem para ela; **A3** as leituras que somam a aplicação passando a somar as
+sessões; **A4** a obrigação de vista como dado no banco, lida por `app.fn_status_vista` (o espelho SQL da RN-AV-13);
+**A5** o parâmetro da janela de sessões em `config_parametros`. A **Opção B**, sem migration (N linhas ligadas ao
+mesmo item), **não** é recomendada, pelos motivos do desenho. O que você decide está na §3 dele. **Nada foi escrito em `supabase/`.**
+Até a sua palavra: as sessões 2..N seguem linhas de `avaliacoes` sem item; o card, a aba e o DSA **não** mudam para a
+RN-AV-12 nem para o alerta da RN-AV-14; e o espelho SQL segue pelo tempo de vista do item. As tarefas que esperam
+são T252 a T260.
+
+**Aprovação:** ✅ **Opção A, aprovada por Bernardo Villas Boas em 16/10/2026** (seção de 16/10/2026, abaixo).
+
+### Perguntas
+
+Cada uma está implementada, **só no local**, com a leitura indicada, até a sua palavra.
+
+- **P1 — O COD `T` (trabalho).** A RN-AV-10 lista `T` entre os CODs, mas o currículo não tem instrumento `T`: tem
+  **TG** (trabalho em grupo) e **TI** (trabalho individual). **Leitura adotada:** os candidatos de `T` são TG e TI;
+  quando a disciplina tem os dois, a descrição desempata; se não desempatar, a prova não casa e vai para a lista com
+  COD + descrição + itens. **O número do `T` não é o número do item: é a ORDEM dos trabalhos da disciplina** —
+  decidido o instrumento, cada `T` pega o menor número livre dele, em ordem cronológica de aplicação. Medido na CAHO
+  VI da exportação `2026-10-14T1916` (currículo: PM 1, PM 2, PM 3, TI 1, TG 1, TG 2 —
+  `antes-depois/avaliacoes_dos_24_curriculos.md`; a ligação registrada na nota de
+  `lib/dominio/avaliacoes/instrumentos.json`): `T1` = **TI 1**, `T2` = **TG 1**, `T3` = **TG 2**. O número só vem
+  da descrição quando ela nomeia o instrumento **com** número (*"TG2 – …"* → TG 2). **Proposta:** manter.
+  **Aprovação:** ✅ **aceita por Bernardo Villas Boas em 16/10/2026** (*"T numera a ordem dos trabalhos: aceita"*) *(Reescrita em 15/10/2026, na revisão do texto contra o código: a primeira redação
+  omitia a regra do número.)*
+- **P2 — O COD `AV` (avaliação).** `AV1`, `AV2`… (por exemplo, no C-Esp-ME e no C-Ap-FR) não nomeiam instrumento.
+  **Leitura adotada:** vale **só o instrumento que a DESCRIÇÃO nomeia** — pelo prefixo (*"PM4 – …"*) ou pelo nome do
+  instrumento no texto (*"PROVA PRÁTICA"*) —, **nunca por eliminação**: *"a disciplina só tem PM, então é PM"* é o
+  atalho que a **D6.1** (aprovada em 14/10/2026) retirou, por ligar Prova Prática a PM. A descrição que não nomeia
+  instrumento deixa a prova **sem casar**, na lista com COD + descrição + itens. O número do `AV` é a ordem da
+  avaliação na planilha, **não** o número do item; o número que **vale** é o que a descrição escreve junto do
+  instrumento (*"PM4 – …"* → PM 4, D6.1), e, sem ele, o menor número livre do instrumento, em ordem cronológica.
+  **Exemplo medido** (`provas-sem-casar.md` e `erros-de-planilha.md` da rodada `2026-10-14T1916`, fora do git, antes
+  e depois da emenda): a **C-Ap-FR X (TFM)**, com `AV1`, `AV2` e `AV3` e o currículo só com a **PP 3** — antes, a
+  `AV3` ligava à PP 3 pela coluna T/E da linha; agora as **três não casam**, porque nenhuma descrição nomeia a PP
+  (*"AV1 – TFM – AVALIAÇÃO - CORRIDA"*, *"AV2 – TFM – AVALIAÇÃO - NATAÇÃO (50 METROS)"*, *"AV3 – AVALIAÇÃO -
+  PERMANÊNCIA NA ÁGUA"*). Se a coluna T/E pode desempatar é a **P10**, abaixo. **Proposta:** manter; e, nas planilhas
+  que ainda forem usadas, o operador escrever o COD do instrumento (`PM1`, `TG1`). **Aprovação:** [pendente]
+  *(Reescrita em 15/10/2026, na revisão do texto contra o código: a primeira redação dizia "os candidatos são todos
+  os itens da disciplina, a descrição desempata", o que admitiria a eliminação que o código recusa.)*
+- **P3 — RN-AV-11 com provas numeradas e sem número misturadas.** Exemplo sintético: dois itens PM na disciplina; a
+  planilha traz `PM` em 01/03 e `PM1` em 10/03. **Leitura adotada:** a `PM1` fica com o item 1, e a `PM` sem número
+  pega o **menor número livre** — o 2 —, embora aplicada antes; entre as sem número, vale a ordem cronológica. **E o
+  número escrito na descrição não conta no COD de instrumento sem número:** a descrição só desempata o
+  **instrumento** (RN-AV-10), então `PM` com a descrição *"PM4 – …"* pega pela ordem cronológica, e não o item 4.
+  Com `AV`, ao contrário, o número da descrição vale (D6.1, P2). **Alternativa:** a ordem cronológica para todas,
+  renumerando a `PM1` — contra o número que o operador escreveu. **Proposta:** manter. **Aprovação:** [pendente]
+- **P4 — "Dias consecutivos ou próximos" (RN-AV-12).** **Leitura adotada:** até **7 dias corridos** entre uma sessão e
+  a seguinte. Nas datas dos planos da sincronização da rodada `2026-10-14T1916` (a tabela da §1 de
+  `desenho-emenda-15-10.md`): as sessões de `PP` da CAHO IV, de 22/06 a 07/07, a 0, 1, 3 e 4 dias uma da outra,
+  **juntam**; a última `PP` da CAHO IV, de 19/08, a **43 dias** da anterior (07/07), fica **separada** — é outra
+  prova, e, se passar do currículo, informação pela RN-AV-14; e a CAHO XVII, `T` de 14/07 e de 27/07 (**13 dias**),
+  fica em **duas** provas. **Proposta:** 7 dias, como o parâmetro A5 do desenho, ajustável por dado. **Pergunta:** os
+  casos de 13 e de 43 dias são, para você, a mesma prova? **Aprovação:** ✅ **7 dias, aprovado em 16/10/2026**, e a ação *"juntar como sessão da mesma prova"* na aba, para o Encarregado e o Admin *(Corrigido em 15/10/2026:
+  citava `erros-por-turma/01-CAHO-2026.md` da rodada, que o reensaio com a regra nova regera.)*
+- **P5 — PE e os demais instrumentos sem vista (RN-AV-13 literal).** A regra nomeia PM e PO como obrigatórios e PP, T e
+  TG como não; não fala de PE, PD, TI, EC, PJ e MN. **Leitura adotada:** literal — só PM e PO exigem vista.
+  Consequência: o item **PE** (ou PD, TI…) a que o currículo dá **tempo de vista** deixa de gerar alerta; a vista
+  lançada continua contando na CHD. O B de *«vistas realizadas A de B»* continua contando os itens com tempo de vista.
+  **Alternativa:** exigir vista também do item a que o currículo dá tempo de vista. **Proposta:** manter o literal, que
+  é o texto da regra; se a intenção era incluir a PE, basta acrescentar `PE` em `vistaObrigatoria` de
+  `lib/dominio/avaliacoes/instrumentos.json` — na tela e na sincronização é dado, sem código (com a A4 do desenho, a
+  marca passa a `config_listas.metadados.vista_obrigatoria`, também dado). **Pergunta:** o B passa a
+  contar só PM e PO? **Aprovação:** ✅ **decidido em 16/10/2026: vista obrigatória para PM, PO e PE** (não o literal)
+- **P6 — Aplicador: recusa ou aviso.** *"Aplicador de prova = instrutor habilitado."* **Leitura adotada:** o aplicador
+  é **instrutor do cadastro**, e a falta de **habilitação** na disciplina continua **aviso**, sem recusa — como a D-AV-3
+  (13/10/2026), a `RN-INST-01` do documento 04 e a regra 6 do `CLAUDE.md`. Na sincronização, o aplicador fora do
+  cadastro continua pendência **não bloqueante**, como hoje (a frase *"só vira pendência se a linha for aula de
+  disciplina com EO"*, lida junto com *"aplicador de prova = instrutor habilitado"*). **Proposta:** manter o aviso. Se
+  quiser recusa, ela muda a D-AV-3, e a recusa vem da Server Action e do banco, não só da tela. **Aprovação:** ✅ **aviso, aprovado em 16/10/2026**
+- **P7 — Aula de disciplina com técnica AP e responsável fora do cadastro.** **Leitura adotada:** **continua
+  pendência**, como hoje: a RN-RESP-1 diz que a aula de disciplina, *"técnica EO ou prática de disciplina"*, exige
+  instrutor habilitado; só a frase da sincronização nomeia apenas a EO. Impacto medido pela orquestração em 15/10/2026
+  sobre a rodada `2026-10-14T1916`: **0** aulas. **Proposta:** manter. **Aprovação:** [pendente]
+- **P8 — TAD e TR.** A RN-RESP-1 não as nomeia. **Leitura adotada:** nome livre também em TAD e TR — a frase da
+  sincronização vale para toda linha que não é aula de disciplina, e a tela já oferecia nome livre nelas (o rótulo
+  passa a *"Outro responsável (nome livre)"*). **Proposta:** manter. **Aprovação:** [pendente]
+- **P9 — O catálogo inteiro como «informação».** **Leitura adotada:** a seção *Catálogo (aba BD DISCIPLINAS)* da lista
+  por turma sai **inteira** com prioridade «informação». Além da diferença de CH da BD DISCIPLINAS × currículo — que a
+  sincronização nunca leva ao banco (D-CUR-1) —, ela traz dois casos que são **erro real** da planilha: o **código que
+  não existe na BD DISCIPLINAS**, que faz a IMPRESSÃO sair com erro de PROCV (por exemplo, `AD+30` na CAHO e `TR+7` no
+  C-Ap-FR), e a **técnica (T/E) da avaliação** vazia ou EO no catálogo (por exemplo, `VI+AV1` no C-Esp-ME).
+  **Proposta:** «informação» só para a diferença de CH; o PROCV e o T/E saem como erro. **Aprovação:** ✅ **decidido em 16/10/2026: PROCV e T/E da avaliação voltam a «corrigir», prioridade Média; o resto é informação**
+- **P10 — A coluna T/E da linha como desempate quando o COD é `AV`.** Pela P2, o `AV` só casa pelo instrumento que a
+  **descrição** nomeia; a coluna **T/E** (técnica de ensino) da linha da PREENCHIMENTO **não** entra. Antes da emenda,
+  ela entrava: era por ela que a `AV3` da C-Ap-FR X (TFM) ligava à PP 3 (P2). **Medido em 15/10/2026 sobre os planos
+  da gravação local da rodada `2026-10-14T1916`:** das **44** provas `AV` que não casam, **27** têm T/E que nomeia um
+  instrumento da disciplina. **Pergunta:** aceitar a T/E como desempate quando o COD é `AV` (as 27 passariam a ter
+  instrumento candidato; quantas ligariam a item **não** foi medido), ou manter só a descrição? **Proposta:** perguntar, **sem implementar** — a T/E é a técnica de ensino da
+  linha, e a RN-AV-10 diz que *"a descrição só desempata"*. **Aprovação:** ✅ **aceita em 16/10/2026** — implementada no #58
+
+## 16/10/2026 — decisões de Bernardo sobre a emenda de 15/10 (o desenho e as perguntas)
+
+**A decisão** *(Bernardo Villas Boas, 16/10/2026, no texto dele — "todas APROVADAS por mim em 16/10/2026")*:
+
+> - *Migration da emenda: opção A (desenho-emenda-15-10.md). Registre como emenda à exceção da constituição de 14/10
+>   (Princípio VI).*
+> - *T numera a ordem dos trabalhos: aceita. P10 (AV desempata pela coluna T/E): aceita.*
+> - *Dias próximos = 7, e na aba Avaliações da turma a ação "juntar como sessão da mesma prova" (Encarregado/Admin,
+>   com trilha).*
+> - *Vista obrigatória para PM, PO e PE.*
+> - *Aplicador sem habilitação: aviso. Nome livre recusado no endpoint para aula/avaliação: aceito.*
+> - *Catálogo: código inexistente (PROCV) e T/E da avaliação voltam a "corrigir", prioridade Média; o resto é
+>   informação.*
+>
+> *"EXECUTE DE PONTA A PONTA, SEM PARAR PARA ME PERGUNTAR (…) PARE E ME CHAME SÓ SE: o remoto divergir do ensaio; a 2ª
+> rodada não der zero; um teste reprovar de forma reproduzível (…); ou surgir decisão de regra de negócio que não está
+> acima."*
+
+**O que cada uma fecha** (as perguntas da seção de 15/10/2026, acima):
+
+| Item | Resposta de 16/10/2026 | Efeito |
+|---|---|---|
+| ⛔ Portão — o desenho | **Opção A** | T252 fechada; T253–T260 executadas neste ramo (#58) |
+| D-CONST-VI (14/10/2026) | **Emendada**: o #58 traz **duas** migrations (uma de estrutura, uma de dado) | `plan.md` (*Complexity Tracking*) e a nota do Princípio VI nos dois endereços da constituição (CONST-1) |
+| P1 — `T` | **Aceita**: o número do `T` é a ordem dos trabalhos | a leitura de 15/10 vira regra |
+| P4 — "dias próximos" | **7 dias**, como dado (`avaliacao.janela_sessoes_dias`) | os casos de 13 e 43 dias ficam provas separadas; quem decide juntá-los é o Encarregado ou o Admin, na aba, pela ação nova |
+| — | **Ação nova** na aba *Avaliações* da turma: *"juntar como sessão da mesma prova"*, só Encarregado e Admin, **com trilha** | a trilha mora na própria sessão (quem, quando, a avaliação juntada e o retrato dela antes), imutável por gatilho — sem tabela fora do desenho aprovado (regra 9.4) |
+| P5 — PE | **PM, PO e PE** exigem vista (não mais o literal) | a marca `vista_obrigatoria` em `config_listas.metadados` dos três; o B de *«vistas realizadas A de B»* segue contando os itens com tempo de vista |
+| P6 — aplicador | **Aviso** (sem recusa) | como estava |
+| — | **Nome livre recusado no endpoint** para aula e avaliação: **aceito** | como estava (mudança de comportamento declarada no #58) |
+| P9 — catálogo | **PROCV** (código inexistente na BD DISCIPLINAS) e **T/E da avaliação** voltam a **corrigir**, prioridade **Média**; o resto do catálogo é informação | `scripts/carga_dsa/erros_por_turma.py` |
+| P10 — T/E | **Aceita**: com COD `AV` e a descrição sem instrumento, a coluna **T/E** da linha desempata | `regras_de_prova.ligar_ao_curriculo` |
+| P2, P3, P7, P8 | não citadas em 16/10/2026 | continuam implementadas com a leitura de 15/10 e **[pendente — Bernardo]** |
+
+**Aprovação:** ✅ **aprovado por Bernardo Villas Boas em 16/10/2026** (opção A, P1, P4, P5, P6, P9, P10 e a ação de
+juntar). O que a implementação mediu e decidiu dentro dessas palavras está em *Session 2026-10-16* da spec.

@@ -65,8 +65,11 @@ CAMPOS = {
               "outros_instrutores"),
     # Spec 014 (PR 6): a vista e SESSAO (`sessoes`, comparada pela lista normalizada); o item do curriculo e o 2º
     # instrutor entram na comparacao. As colunas de vista unica sairam: a sincronizacao as grava nulas.
+    # Emenda de 15/10/2026 (desenho aprovado em 16/10/2026): as sessoes de APLICACAO 2..N (`aplicacoes`, RN-AV-12) e o
+    # instrumento gravado da prova sem item (A2) tambem.
     "avaliacoes": ("disciplina", "tipo_avaliacao", "data_avaliacao", "ta_inicial", "tempos_consumidos", "instrutor", "fiscal",
-                   "nome_fiscal_externo", "metodologia", "local", "conteudo_resumo", "item", "ues_abordadas", "outros_instrutores", "sessoes"),
+                   "nome_fiscal_externo", "metodologia", "local", "conteudo_resumo", "item", "ues_abordadas", "outros_instrutores", "sessoes",
+                   "aplicacoes", "instrumento_gravado"),
     "atividades": ("categoria_normativa", "data", "subtipo", "descricao", "ta_inicial", "tempos_consumidos", "local", "instrutor", "responsavel_externo"),
     "dias_parados": ("data", "ta_inicial", "tempos", "tipo_parada", "motivo", "prevista"),
 }
@@ -81,19 +84,22 @@ TABELA_DE = {"aulas": "registros_aula", "avaliacoes": "avaliacoes", "atividades"
 
 
 CAMPOS_DA_SESSAO = ("codigo", "numero", "data", "ta_inicial", "tempos_consumidos", "local", "conduz", "conduz_nome_externo")
+CAMPOS_DA_APLICACAO = ("codigo", "numero", "data", "ta_inicial", "tempos_consumidos", "local")
 
 
-def _sessoes(valor: object) -> list[tuple] | None:
-    """As sessoes de vista como lista comparavel: as do banco e as do plano, com as mesmas chaves e em ordem."""
+def _sessoes(valor: object, campos: tuple[str, ...] = CAMPOS_DA_SESSAO) -> list[tuple] | None:
+    """As sessoes (de vista ou de aplicacao) como lista comparavel: as do banco e as do plano, com as mesmas chaves."""
     if not valor:
         return None
     return sorted(tuple(str(v.get(c))[:10] if c == "data" and v.get(c) else (str(v.get(c)) if v.get(c) is not None else None)
-                        for c in CAMPOS_DA_SESSAO) for v in valor)  # type: ignore[union-attr]
+                        for c in campos) for v in valor)  # type: ignore[union-attr]
 
 
 def _comparavel(campo: str, valor: object) -> object:
     if campo == "sessoes":
         return _sessoes(valor)
+    if campo == "aplicacoes":
+        return _sessoes(valor, CAMPOS_DA_APLICACAO)
     if campo == "outros_instrutores":
         return sorted(str(x) for x in valor) or None if isinstance(valor, list) else (valor or None)
     return valor or None
@@ -135,13 +141,15 @@ def proteger(res: Resolvido, ref: dict, virada: str | None) -> tuple[dict[str, s
             protegidas[nome] |= {a["codigo"] for a in atuais.get(nome, []) if str(a[DATA_DE[nome]])[:10] >= virada}
         ja = {a["codigo"] for a in atuais.get("avaliacoes", [])}
         for a in list(res.avaliacoes):
-            depois = [v for v in a.get("sessoes", []) if str(v["data"])[:10] >= virada]
+            # As sessoes de vista E as de aplicacao (RN-AV-12): o que cai da virada em diante e do sistema.
+            depois = [v for chave in ("sessoes", "aplicacoes") for v in a.get(chave, []) if str(v["data"])[:10] >= virada]
             if depois:
-                if a["codigo"] in ja:  # prova antes, vista depois: a linha ja existe e fica com o sistema
+                if a["codigo"] in ja:  # prova antes, sessao depois: a linha ja existe e fica com o sistema
                     protegidas["avaliacoes"].add(a["codigo"])
                     res.avaliacoes.remove(a)
                 else:  # prova nova antes da virada: entra so com as sessoes de antes; as de depois sao do sistema
-                    a["sessoes"] = [v for v in a["sessoes"] if str(v["data"])[:10] < virada]
+                    for chave in ("sessoes", "aplicacoes"):
+                        a[chave] = [v for v in a.get(chave, []) if str(v["data"])[:10] < virada]
 
     # 1b. A linha que ficou FORA por pendencia de responsavel (A3.2) e ja esta no banco: intocada ate a decisao.
     protegidas["atividades"] |= {a["codigo"] for a in atuais.get("atividades", []) if a["codigo"] in getattr(res, "pendentes", set())}
@@ -179,7 +187,8 @@ def proteger(res: Resolvido, ref: dict, virada: str | None) -> tuple[dict[str, s
                     faixas = [_faixa(linha["data"], linha["ta_inicial"], linha["tempos"])]
                 elif nome == "avaliacoes":
                     faixas = [_faixa(linha["data_avaliacao"], linha["ta_inicial"], linha["tempos_consumidos"])]
-                    faixas += [_faixa(v["data"], v["ta_inicial"], v["tempos_consumidos"]) for v in linha.get("sessoes", [])]
+                    faixas += [_faixa(v["data"], v["ta_inicial"], v["tempos_consumidos"])
+                               for chave in ("sessoes", "aplicacoes") for v in linha.get(chave, [])]
                 else:
                     faixas = [_faixa(linha["data"], linha["ta_inicial"], linha["tempos_consumidos"])]
                 choque = [c for (dia, i, f), c in ocupado for (d2, i2, f2) in faixas if dia == d2 and i <= f2 and i2 <= f]
@@ -377,8 +386,8 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
     if res.avaliacoes:
         p.append(f"""
   with dados(codigo, disciplina, tipo, data, ta, tempos, instrutor, fiscal, fiscal_externo, conteudo, metodologia, local,
-             item, ues, outros, obs) as (values
-    {_valores([[a["codigo"], a["disciplina_id"], a["tipo_avaliacao"], a["data_avaliacao"], a["ta_inicial"], a["tempos_consumidos"], a["instrutor_responsavel_id"], a["fiscal_id"], a["nome_fiscal_externo"], a["conteudo_resumo"], a["metodologia"], a["local"], a.get("avaliacao_curriculo_id"), a.get("ues_abordadas"), ",".join(a.get("outros_instrutores") or []), a["observacoes"]] for a in res.avaliacoes])}
+             item, ues, outros, obs, instrumento) as (values
+    {_valores([[a["codigo"], a["disciplina_id"], a["tipo_avaliacao"], a["data_avaliacao"], a["ta_inicial"], a["tempos_consumidos"], a["instrutor_responsavel_id"], a["fiscal_id"], a["nome_fiscal_externo"], a["conteudo_resumo"], a["metodologia"], a["local"], a.get("avaliacao_curriculo_id"), a.get("ues_abordadas"), ",".join(a.get("outros_instrutores") or []), a["observacoes"], a.get("instrumento_gravado")] for a in res.avaliacoes])}
   ), gravadas as (
     -- Spec 014 (PR 6): as colunas de vista unica vao NULAS (a vista e sessao, gravada abaixo); na linha que as tinha,
     -- o espelho da E-5 inativa a sessao 1 espelhada, e a sessao da planilha a substitui com o codigo `…-S`.
@@ -386,12 +395,14 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
       (codigo, turma_id, curso_id, disciplina_id, tipo_avaliacao, data_avaliacao, ta_inicial, tempos_consumidos,
        instrutor_responsavel_id, fiscal_id, nome_fiscal_externo, conteudo_resumo, metodologia, local,
        data_vista_prova, ta_inicial_vista, tempos_consumidos_vista, local_vista, avaliacao_curriculo_id, ues_abordadas,
-       outros_instrutores, observacoes, criado_por)
+       outros_instrutores, observacoes, instrumento_id, criado_por)
     select d.codigo, {t}, {c}, d.disciplina::uuid, d.tipo, d.data::date, d.ta::smallint, d.tempos::smallint,
            d.instrutor::uuid, d.fiscal::uuid, d.fiscal_externo, d.conteudo, d.metodologia, d.local,
            null, null, null, null, d.item::uuid, d.ues, coalesce(string_to_array(nullif(d.outros, ''), ','), '{{}}'::text[]),
-           d.obs, {autor}
+           d.obs, l.id, {autor}
       from dados d
+      -- A2 (16/10/2026): o instrumento da prova SEM item, pelo valor da lista; com item, o plano manda nulo.
+      left join public.config_listas l on l.lista = 'instrumentos_avaliacao' and l.valor = d.instrumento
     on conflict (codigo) do update set
        disciplina_id = excluded.disciplina_id, tipo_avaliacao = excluded.tipo_avaliacao, data_avaliacao = excluded.data_avaliacao,
        ta_inicial = excluded.ta_inicial, tempos_consumidos = excluded.tempos_consumidos,
@@ -400,7 +411,7 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
        metodologia = excluded.metodologia, local = excluded.local, data_vista_prova = null,
        ta_inicial_vista = null, tempos_consumidos_vista = null, local_vista = null,
        avaliacao_curriculo_id = excluded.avaliacao_curriculo_id, ues_abordadas = excluded.ues_abordadas,
-       outros_instrutores = excluded.outros_instrutores,
+       outros_instrutores = excluded.outros_instrutores, instrumento_id = excluded.instrumento_id,
        observacoes = excluded.observacoes,
        -- Spec 014 (FR-049, D-AA-10): so volta a `pendente` a que a PROPRIA sincronizacao tirou; a cancelada
        -- pela tela continua cancelada (era o defeito da `DSAP-C-EXP-OBS-ME-2026-L206-V`).
@@ -409,12 +420,12 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
      where (r.disciplina_id, r.tipo_avaliacao, r.data_avaliacao, r.ta_inicial, r.tempos_consumidos, r.instrutor_responsavel_id,
             r.fiscal_id, r.nome_fiscal_externo, r.conteudo_resumo, r.metodologia, r.local, r.data_vista_prova,
             r.ta_inicial_vista, r.tempos_consumidos_vista, r.local_vista, r.avaliacao_curriculo_id, r.ues_abordadas, r.outros_instrutores,
-            r.status = 'cancelada' and coalesce(r.observacoes, '') like {lit('%' + MARCA_DE_SAIDA + '%')})
+            r.instrumento_id, r.status = 'cancelada' and coalesce(r.observacoes, '') like {lit('%' + MARCA_DE_SAIDA + '%')})
        is distinct from
            (excluded.disciplina_id, excluded.tipo_avaliacao, excluded.data_avaliacao, excluded.ta_inicial, excluded.tempos_consumidos,
             excluded.instrutor_responsavel_id, excluded.fiscal_id, excluded.nome_fiscal_externo, excluded.conteudo_resumo,
             excluded.metodologia, excluded.local, null::date, null::smallint, null::smallint, null::text,
-            excluded.avaliacao_curriculo_id, excluded.ues_abordadas, excluded.outros_instrutores, false)
+            excluded.avaliacao_curriculo_id, excluded.ues_abordadas, excluded.outros_instrutores, excluded.instrumento_id, false)
     returning (xmax = 0) as nova
   ) select count(*) filter (where nova), count(*) filter (where not nova) into n, m from gravadas;
   k := k || jsonb_build_object('avaliacoes_novas', n, 'avaliacoes_atualizadas', m);""")
@@ -452,6 +463,42 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
     returning (xmax = 0) as nova
   ) select count(*) filter (where nova), count(*) filter (where not nova) into n, m from gravadas;
   k := k || jsonb_build_object('sessoes_novas', n, 'sessoes_atualizadas', m);""")
+
+    # 2b'. as SESSOES DE APLICACAO 2..N (RN-AV-12, desenho aprovado em 16/10/2026): o mesmo molde das de vista, por
+    #      codigo `…-SA`. So as da PLANILHA (codigo DSAP-) sao tocadas: a sessao nascida na tela (SAP-, o DSA ou «juntar
+    #      como sessao») fica como esta. Primeiro sai a que nao esta no plano OU mudou de prova ou de numero (o indice
+    #      unico (avaliacao, numero) e por linha ativa: renumerar sem tirar antes colidiria no meio do comando).
+    aplicacoes = [(a["codigo"], v) for a in res.avaliacoes for v in a.get("aplicacoes", [])]
+    p.append(f"""
+  with plano(codigo, avaliacao, numero) as (values
+    {_valores([[v["codigo"], c, v["numero"]] for c, v in aplicacoes]) if aplicacoes else "(null::text, null::text, null::int)"}
+  )
+  update public.sessoes_de_aplicacao s set status = 'inativo'
+    from public.avaliacoes a
+   where a.id = s.avaliacao_id and a.turma_id = {t} and a.codigo like {lit(prefixo + '%')} and s.status = 'ativo'
+     and s.codigo like {lit(prefixo + '%')}
+     and not exists (select 1 from plano x where x.codigo = s.codigo and x.avaliacao = a.codigo and x.numero = s.numero)
+     and not (a.codigo = any ({intocadas('avaliacoes')})){antes('a.data_avaliacao')};
+  get diagnostics n := row_count; k := k || jsonb_build_object('aplicacoes_que_sairam', n);""")
+    if aplicacoes:
+        p.append(f"""
+  with dados(avaliacao, codigo, numero, data, ta, tempos, local) as (values
+    {_valores([[c, v["codigo"], v["numero"], v["data"], v["ta_inicial"], v["tempos_consumidos"], v["local"]] for c, v in aplicacoes])}
+  ), gravadas as (
+    insert into public.sessoes_de_aplicacao as r
+      (codigo, avaliacao_id, numero, data, ta_inicial, tempos_consumidos, local, criado_por)
+    select d.codigo, a.id, d.numero::smallint, d.data::date, d.ta::smallint, d.tempos::smallint, d.local, {autor}
+      from dados d join public.avaliacoes a on a.codigo = d.avaliacao
+    on conflict (codigo) do update set
+       avaliacao_id = excluded.avaliacao_id, numero = excluded.numero, data = excluded.data, ta_inicial = excluded.ta_inicial,
+       tempos_consumidos = excluded.tempos_consumidos, local = excluded.local, status = 'ativo'
+     where (r.avaliacao_id, r.numero, r.data, r.ta_inicial, r.tempos_consumidos, r.local, r.status::text)
+       is distinct from
+           (excluded.avaliacao_id, excluded.numero, excluded.data, excluded.ta_inicial, excluded.tempos_consumidos,
+            excluded.local, 'ativo')
+    returning (xmax = 0) as nova
+  ) select count(*) filter (where nova), count(*) filter (where not nova) into n, m from gravadas;
+  k := k || jsonb_build_object('aplicacoes_novas', n, 'aplicacoes_atualizadas', m);""")
 
     # 2c. as SUGESTOES da planilha (spec 014, FR-031.8, T227): so onde nao ha ajuste ativo, ou o ajuste e sugestao ainda
     #     nao confirmada; o arbitrado e a sugestao confirmada nunca sao tocados.
@@ -625,10 +672,42 @@ def escrever_erros_de_planilha(pasta: Path, por_turma: list[tuple[str, Resolvido
             linhas.append("| " + " | ".join(_celula(e[c]) for c in ("disciplina", "diverge", "planilha", "curriculo", "fez")) + " |")
         for texto in res.erros_de_planilha:
             linhas.append(f"| — | {_celula(texto)} | — | — | registrado; a carga seguiu |")
-        if not res.erros_tabelados and not res.erros_de_planilha:
+        # Emenda de 15/10/2026 (RN-AV-12, RN-AV-14): o que NAO e erro de planilha, mas o operador precisa saber.
+        for texto in getattr(res, "informativos", []):
+            linhas.append(f"| — | {_celula(texto)} | — | — | {INFORMACAO} |")
+        if not res.erros_tabelados and not res.erros_de_planilha and not getattr(res, "informativos", []):
             linhas.append("| — | nenhum erro | — | — | — |")
         linhas.append("")
     arquivo = pasta / "erros-de-planilha.md"
+    arquivo.write_text("\n".join(linhas), encoding="utf-8", newline="\n")
+    return arquivo
+
+
+INFORMACAO = "informacao — nao e erro de planilha"
+
+
+def escrever_provas_sem_casar(pasta: Path, por_turma: list[tuple[str, Resolvido]]) -> Path:
+    """RN-AV-10 (emenda de 15/10/2026): a prova que nao casou com item do curriculo, com o COD, a descricao e os
+    itens da disciplina LADO A LADO, para Bernardo decidir. Fora do git (a pasta da rodada)."""
+    linhas = [
+        "# Provas que nao casam com o curriculo — rodada " + pasta.name, "",
+        "> Gerado por `python -m scripts.carga_dsa.sincronizar` (RN-AV-10: o COD da prova decide; a descricao so",
+        "> desempata). Cada linha entrou como FATO, sem avaliacao do curriculo. Decidir: qual item ela cumpre, ou nenhum.", "",
+        "| turma | disciplina | COD | data | TA | descricao | itens do curriculo da disciplina | por que nao casou |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    total = 0
+    for turma, res in por_turma:
+        # So o que ficou no plano: a virada (`proteger`) tira as provas da data dela em diante, e elas nao «entraram».
+        no_plano = {a["codigo"] for a in res.avaliacoes}
+        for x in getattr(res, "provas_sem_casar", []):
+            if x.get("codigo") not in no_plano:
+                continue
+            total += 1
+            linhas.append("| " + " | ".join(_celula(str(v)) for v in (
+                turma, x["disciplina"], x["cod"], x["data"], x["ta"], x["descricao"] or "—", ", ".join(x["itens"]), x["motivo"])) + " |")
+    linhas += ["", f"Total: {total} prova(s)."]
+    arquivo = pasta / "provas-sem-casar.md"
     arquivo.write_text("\n".join(linhas), encoding="utf-8", newline="\n")
     return arquivo
 
@@ -686,9 +765,13 @@ def escrever_pendencias_de_responsavel(pasta: Path, resolvidos: list[tuple[str, 
         guerras = guerras if guerras is not None else set()
         guerras |= getattr(res, "nomes_de_guerra", set())
         for pd in res.pendencias:
-            if pd.tipo != "responsavel_sem_decisao":
+            # RN-RESP-1 (15/10/2026): a atividade nao gera mais `responsavel_sem_decisao`; o que sobra de pendencia de
+            # responsavel e o texto fora do cadastro na AULA (bloqueia) e no APLICADOR da prova (aviso).
+            if pd.tipo not in ("responsavel_sem_decisao", "instrutor_nao_casado") or "«" not in pd.detalhe:
                 continue
             texto = pd.detalhe.split("«", 1)[1].split("»", 1)[0]
+            if pd.tipo == "instrutor_nao_casado":
+                texto += " (aplicador de prova)" if "responsavel de avaliacao" in pd.detalhe else " (aula)"
             item = por_texto.setdefault(texto, {"turmas": set(), "ta": 0})
             item["turmas"].add(turma)
             item["ta"] += pd.ta
@@ -703,6 +786,29 @@ def escrever_pendencias_de_responsavel(pasta: Path, resolvidos: list[tuple[str, 
         linhas.append(f"| {n} | {_celula(texto)} | {', '.join(sorted(item['turmas']))} | {item['ta']} | {classificar_responsavel(texto, guerras or set())} |")
     linhas.append("")
     linhas.append(f"Total: {len(por_texto)} texto(s), {sum(i['ta'] for i in por_texto.values())} TA.")
+    # RN-RESP-1 (emenda de 15/10/2026): a atividade aceita responsavel de nome livre — o texto que nao casa com o
+    # cadastro foi GRAVADO como esta (`responsavel_externo`), sem pendencia. A lista fica para conferencia.
+    livres: dict[str, dict] = {}
+    for turma, res in resolvidos:
+        for x in getattr(res, "responsavel_livre", []):
+            item = livres.setdefault(x["texto"], {"turmas": set(), "ta": 0, "linhas": []})
+            item["turmas"].add(turma)
+            item["ta"] += x["tempos"]
+            item["linhas"].append((turma, x))
+    linhas += [
+        "", "## Responsavel de nome livre gravado (RN-RESP-1, 15/10/2026)", "",
+        "> A linha e ATIVIDADE (palestra, AEC, apoio, TAD, TR), nao aula: entrou com o texto como responsavel, sem",
+        "> cadastro e sem alerta. A coluna «aula de disciplina com EO?» diz se a CHAVE da linha e de uma disciplina do",
+        "> curso E a tecnica do catalogo e EO — so esses pediriam instrutor habilitado se fossem aula.", "",
+        "| # | texto | turmas | TA | linhas (turma · data · chave · tipo/subtipo · T/E) | aula de disciplina com EO? |",
+        "|---|---|---|---|---|---|",
+    ]
+    for n, (texto, item) in enumerate(sorted(livres.items()), 1):
+        detalhe = "; ".join(f"{t} · {x['data']} · {x['chave']} · {x['tipo']}/{x['subtipo']} · {x['tecnica'] or '—'}" for t, x in item["linhas"])
+        eo = sum(1 for _, x in item["linhas"] if x["cod_e_disciplina"] and x["tecnica"] == "EO")
+        linhas.append(f"| {n} | {_celula(texto)} | {', '.join(sorted(item['turmas']))} | {item['ta']} | {_celula(detalhe)} | "
+                      f"{'SIM — ' + str(eo) + ' linha(s)' if eo else 'nao'} |")
+    linhas += ["", f"Total: {len(livres)} texto(s), {sum(i['ta'] for i in livres.values())} TA gravados como nome livre."]
     arquivo = pasta / "pendencias-de-responsavel.md"
     arquivo.write_text("\n".join(linhas), encoding="utf-8", newline="\n")
     return arquivo
@@ -716,11 +822,13 @@ def relatar(res: Resolvido, leitura: planilha.Leitura, ref: dict, dif: dict) -> 
     ta = lambda linhas, campo="tempos_consumidos": sum(l[campo] or 0 for l in linhas)  # noqa: E731
     # Spec 014 (PR 6): a vista e SESSAO — as sessoes de todas as provas.
     vistas = [v for a in res.avaliacoes for v in a.get("sessoes", [])]
+    aplicacoes = [v for a in res.avaliacoes for v in a.get("aplicacoes", [])]
     ei = [a for a in res.atividades if a["categoria_normativa"] == "Estudo_Individual"]
     outras = [a for a in res.atividades if a["categoria_normativa"] != "Estudo_Individual"]
     print(f"  planilha: {len(leitura.blocos)} blocos em {len(leitura.linhas)} TA · siglas do cabecalho: {sorted(set(leitura.siglas))} · alunos: {leitura.alunos}")
     print(f"  banco:    alunos {ref['turma'].get('alunos')} · sala {ref['turma'].get('sala_alocada')} · situacao {ref['turma'].get('status')}")
-    print(f"  aulas {len(res.aulas)} ({ta(res.aulas)} TA) · avaliacoes {len(res.avaliacoes)} ({ta(res.avaliacoes)} TA) · vistas {len(vistas)} "
+    print(f"  aulas {len(res.aulas)} ({ta(res.aulas)} TA) · avaliacoes {len(res.avaliacoes)} ({ta(res.avaliacoes)} TA) · "
+          f"sessoes de aplicacao 2..N {len(aplicacoes)} ({ta(aplicacoes)} TA) · vistas {len(vistas)} "
           f"({ta(vistas)} TA) · EI {len(ei)} ({ta(ei)} TA) · outras atividades {len(outras)} ({ta(outras)} TA) · "
           f"dias de calendario {len(res.calendario)}")
     print(f"  ETL ativo a substituir: {ref['etl']['aulas']} aulas ({ref['etl']['aulas_ta']} TA), {ref['etl']['avaliacoes']} avaliacoes, {ref['etl']['atividades']} atividades · lancado na tela: {ref['etl']['de_tela']}")
@@ -867,8 +975,10 @@ def main() -> int:
                 print(f"    erro de planilha: {e}")
         if arg.relatorio is not None:
             arg.relatorio.mkdir(parents=True, exist_ok=True)
-            sem_id = lambda linhas: [{k: v for k, v in l.items() if not k.endswith("_id")} for l in linhas]  # noqa: E731
+            sem_id = lambda linhas: [{k: v for k, v in l.items() if not k.endswith("_id") and not k.startswith("_")} for l in linhas]  # noqa: E731
             (arg.relatorio / f"plano-{slug(turma)}.json").write_text(json.dumps({
+                "informativos": res.informativos, "sessoes_de_aplicacao": res.sessoes_de_aplicacao,
+                "provas_sem_casar": res.provas_sem_casar,
                 "turma": turma, "aulas": sem_id(res.aulas), "avaliacoes": sem_id(res.avaliacoes), "atividades": sem_id(res.atividades),
                 "calendario": res.calendario, "pendencias": [p.__dict__ for p in res.pendencias], "alertas": res.alertas,
                 "erros_de_planilha": res.erros_de_planilha, "classificadas": res.classificadas,
@@ -957,6 +1067,8 @@ def main() -> int:
     print(f"  lista «planilha diverge do sistema»: {arquivo}")
     arquivo = escrever_pendencias_de_responsavel(arg.rodada, resolvidos)
     print(f"  pendencias de responsavel (com a classificacao proposta): {arquivo}")
+    arquivo = escrever_provas_sem_casar(arg.rodada, resolvidos)
+    print(f"  provas que nao casam com o curriculo (COD, descricao e itens lado a lado): {arquivo}")
 
     titulo("Resumo da rodada")
     for turma, contagem, mudancas in resumo:

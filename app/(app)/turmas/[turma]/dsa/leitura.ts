@@ -50,6 +50,12 @@ import {
   type TipoDeAtividade,
 } from "@/lib/dominio/categoria-pelo-tipo";
 import { montarSemana, type FatoDaSemana, type Semana } from "@/lib/dominio/dsa/grade";
+import {
+  instrumentosOferecidos,
+  type InstrumentoOferecido,
+} from "@/lib/dominio/dsa/instrumento-da-prova";
+import { idDoLancamento } from "@/lib/dominio/dsa/posicao-herdada";
+import { rotuloDaSessaoDeAplicacao } from "@/lib/dominio/dsa/sessao-de-aplicacao";
 import { relogioDaSemana, type Relogio } from "@/lib/dominio/dsa/horario-do-bloco";
 import type { ExecucaoDaDisciplina, TecnicaDoCatalogo } from "@/lib/dominio/dsa/impressao";
 import {
@@ -155,6 +161,11 @@ export type AvaliacaoParaVista = {
   readonly titulo: string | null;
   /** Os números das sessões de vista ATIVAS (spec 014, FR-040). */
   readonly sessoes: readonly number[];
+  /**
+   * Os números das SESSÕES DE APLICAÇÃO ativas (2, 3…; `RN-AV-12`, 16/10/2026) — a mesma prova serve ao tipo
+   * «Sessão de aplicação» do formulário, que abre a seguinte (`numeroDaProximaSessao`).
+   */
+  readonly sessoesDeAplicacao: readonly number[];
   /** O número da sessão que um lançamento novo abre — o seguinte ao maior ativo. */
   readonly proximaSessao: number;
   /** O rótulo da vista, com a avaliação do currículo quando ligada (`ofertaDaDisciplina`). */
@@ -194,6 +205,11 @@ export type SemanaDoDsa = {
   /** As técnicas **com a sigla** dos `metadados` — o que a coluna T/E do papel usa (`T040`). */
   readonly tecnicasComSigla: readonly TecnicaDoCatalogo[];
   readonly tiposDeAvaliacao: readonly string[];
+  /**
+   * Os instrumentos da prova SEM item do currículo (A2 do desenho de 15/10/2026): os ativos de
+   * `instrumentos_avaliacao`, menos a OD — por `instrumentosOferecidos`, a mesma função que a Server Action usa.
+   */
+  readonly instrumentos: readonly InstrumentoOferecido[];
   /**
    * Os TIPOS de atividade que o formulário oferece (spec 014, FR-011): ativos e com categoria, pela
    * mesma regra do banco (`categoriaPeloTipo`). A categoria vem do tipo, nunca o contrário.
@@ -261,6 +277,8 @@ export type DadosDoPeriodo = {
   readonly conflitos: readonly unknown[];
   /** Spec 014: as sessões de vista ativas da turma no período (FR-040) e os itens do currículo do curso. */
   readonly sessoes?: readonly unknown[];
+  /** `RN-AV-12` (16/10/2026): as SESSÕES DE APLICAÇÃO ativas (2ª em diante) da turma no período. */
+  readonly sessoesDeAplicacao?: readonly unknown[];
   readonly itensDoCurriculo?: readonly unknown[];
   /**
    * As consultas que falharam, pelo nome da lista. ⚠️ **A TELA IGNORA, COMO SEMPRE IGNOROU** — consulta
@@ -333,8 +351,14 @@ export async function lerPeriodoDoDsa(
     trsBloqueantesRes,
     sessoesRes,
     itensRes,
+    sessoesDeAplicacaoRes,
   ] = await Promise.all([
-    /* ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`). */
+    /*
+     * ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`).
+     * ⚠️ **`sessao_id` FECHA A ORDEM TOTAL** (`DP-5`): duas sessões da MESMA prova no mesmo dia — de vista ou de
+     *    aplicação (`RN-AV-12`) — têm a mesma data, o mesmo `fato_id` e a mesma origem, e sem o desempate a página
+     *    seguinte podia repetir uma e pular a outra.
+     */
     lerTodasAsPaginas((f) =>
       supabase
         .from("vw_ocupacao_ta")
@@ -345,6 +369,7 @@ export async function lerPeriodoDoDsa(
         .order("data")
         .order("fato_id")
         .order("origem")
+        .order("sessao_id", { nullsFirst: true })
         .range(f.de, f.ate),
     ),
     lerTodasAsPaginas((f) =>
@@ -365,7 +390,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("avaliacoes")
         .select(
-          "id, data_avaliacao, ta_inicial, tipo_avaliacao, conteudo_resumo, metodologia, nome_fiscal_externo, status, avaliacao_curriculo_id, ues_abordadas, outros_instrutores",
+          "id, data_avaliacao, ta_inicial, tipo_avaliacao, conteudo_resumo, metodologia, nome_fiscal_externo, status, avaliacao_curriculo_id, instrumento_id, ues_abordadas, outros_instrutores",
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
@@ -448,8 +473,15 @@ export async function lerPeriodoDoDsa(
     lerTodasAsPaginas((f) =>
       supabase
         .from("config_listas")
-        .select("id, lista, valor, ordem, ativo, metadados", contagemNaPrimeira(f))
-        .in("lista", ["metodologias", "tipos_avaliacao", "tipos_atividade", "escala_antiguidade"])
+        .select("id, lista, valor, rotulo_exibicao, ordem, ativo, metadados", contagemNaPrimeira(f))
+        .in("lista", [
+          "metodologias",
+          "tipos_avaliacao",
+          "tipos_atividade",
+          "escala_antiguidade",
+          /* A2 (16/10/2026): o instrumento da prova sem item do currículo. */
+          "instrumentos_avaliacao",
+        ])
         .eq("ativo", true)
         .order("ordem")
         .order("id")
@@ -490,20 +522,29 @@ export async function lerPeriodoDoDsa(
     lerTodasAsPaginas((f) =>
       supabase
         .from("vw_ocupacao_ta")
-        .select("fato_id, data, disciplina_id, tempos_consumidos", contagemNaPrimeira(f))
+        /* `origem` e `sessao_id` dão o id do LANÇAMENTO (`idDoLancamento`), o mesmo das marcas de conflito. */
+        .select(
+          "fato_id, origem, sessao_id, data, disciplina_id, tempos_consumidos",
+          contagemNaPrimeira(f),
+        )
         .eq("turma_id", turmaId)
         .lte("data", ate)
         .order("data")
         .order("fato_id")
         .order("origem")
+        .order("sessao_id", { nullsFirst: true })
         .range(f.de, f.ate),
     ),
     /* As avaliações da turma inteira, para o tipo «Vista de prova» do formulário (item 1). */
     lerTodasAsPaginas((f) =>
       supabase
         .from("avaliacoes")
+        /*
+         * `RN-AV-12` (16/10/2026): as SESSÕES DE APLICAÇÃO vêm junto — o número da próxima, e o TA delas na prova da
+         * UE. ⚠️ A tabela tem DUAS FKs para `avaliacoes` (a prova e a trilha de «juntar»): o embutido nomeia a da prova.
+         */
         .select(
-          "id, disciplina_id, tipo_avaliacao, data_avaliacao, conteudo_resumo, avaliacao_curriculo_id, tempos_consumidos, vistas_de_avaliacao(numero, status, data, tempos_consumidos)",
+          "id, disciplina_id, tipo_avaliacao, data_avaliacao, conteudo_resumo, avaliacao_curriculo_id, tempos_consumidos, vistas_de_avaliacao(numero, status, data, tempos_consumidos), sessoes_de_aplicacao!sessoes_de_aplicacao_avaliacao_id_fkey(numero, status, data, tempos_consumidos)",
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
@@ -626,6 +667,27 @@ export async function lerPeriodoDoDsa(
         .order("ordem")
         .range(f.de, f.ate),
     ),
+    /*
+     * `RN-AV-12` (16/10/2026): as SESSÕES DE APLICAÇÃO (2ª em diante) da turma no período — o conteúdo de cada uma é
+     * o da prova, e é por elas que a prova aplicada semanas antes entra na leitura da semana da sessão.
+     */
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("sessoes_de_aplicacao")
+        .select(
+          "id, avaliacao_id, numero, data, ta_inicial, avaliacao:avaliacoes!sessoes_de_aplicacao_avaliacao_id_fkey!inner(turma_id, status)",
+          contagemNaPrimeira(f),
+        )
+        .eq("avaliacao.turma_id", turmaId)
+        /* A prova cancelada leva as sessões junto (a view também as tira): só as da prova VIVA. */
+        .in("avaliacao.status", [...STATUS_DE_AVALIACAO_VIVA])
+        .eq("status", "ativo")
+        .gte("data", de)
+        .lte("data", ate)
+        .order("data")
+        .order("id")
+        .range(f.de, f.ate),
+    ),
   ]);
 
   const erros: { lista: string; mensagem: string }[] = [];
@@ -669,6 +731,7 @@ export async function lerPeriodoDoDsa(
     acumulada: listaOuVazia(acumuladaRes, erros, "ocupação acumulada"),
     paraVista: listaOuVazia(paraVistaRes, erros, "avaliações para vista"),
     sessoes: listaOuVazia(sessoesRes, erros, "sessões de vista"),
+    sessoesDeAplicacao: listaOuVazia(sessoesDeAplicacaoRes, erros, "sessões de aplicação"),
     itensDoCurriculo: listaOuVazia(itensRes, erros, "avaliações do currículo"),
     curriculo: listaOuVazia(curriculoRes, erros, "currículo"),
     aulasPorUe: listaOuVazia(aulasPorUeRes, erros, "aulas por UE"),
@@ -724,7 +787,23 @@ export function montarSemanaDoDsa(
     numero: number;
     conduz_nome_externo: string | null;
   }[];
-  const comSessaoNaSemana = new Set(sessoesDaSemana.map((v) => v.avaliacao_id));
+  /*
+   * `RN-AV-12` (16/10/2026): e pela SESSÃO DE APLICAÇÃO na semana — a 2ª sessão de uma prova aplicada semanas antes
+   * precisa do conteúdo dela.
+   */
+  const sessoesDeAplicacaoDaSemana = (dados.sessoesDeAplicacao ?? []).filter((l) =>
+    naSemana(campo(l, "data")),
+  ) as {
+    id: string;
+    avaliacao_id: string;
+    numero: number;
+    data: string;
+    ta_inicial: number | null;
+  }[];
+  const comSessaoNaSemana = new Set([
+    ...sessoesDaSemana.map((v) => v.avaliacao_id),
+    ...sessoesDeAplicacaoDaSemana.map((p) => p.avaliacao_id),
+  ]);
   const avaliacoesRes = {
     data: dados.avaliacoes.filter(
       (l) => naSemana(campo(l, "data_avaliacao")) || comSessaoNaSemana.has(String(campo(l, "id"))),
@@ -829,6 +908,7 @@ export function montarSemanaDoDsa(
     id: string;
     lista: string;
     valor: string;
+    rotulo_exibicao?: string | null;
     ordem: number;
     metadados: Record<string, unknown> | null;
   }[];
@@ -865,10 +945,15 @@ export function montarSemanaDoDsa(
     conteudo_resumo: string | null;
     metodologia: string | null;
     nome_fiscal_externo: string | null;
+    avaliacao_curriculo_id?: string | null;
+    instrumento_id?: string | null;
     ues_abordadas?: string | null;
     outros_instrutores?: string[] | null;
   }[]) {
     conteudos.set(a.id, {
+      /* A2: o instrumento (prova sem item) e o item — para o cartão da avaliação reabrir com o gravado. */
+      instrumentoId: a.instrumento_id ?? null,
+      avaliacaoCurriculoId: a.avaliacao_curriculo_id ?? null,
       outros: nomesDosOutros(a.outros_instrutores),
       uesAbordadas: a.ues_abordadas ?? null,
       /* O fiscal de fora do cadastro: a view da ocupação só traz o `fiscal_id`. */
@@ -894,6 +979,15 @@ export function montarSemanaDoDsa(
       conduzExterno: v.conduz_nome_externo,
       outros: [],
     });
+  }
+  /*
+   * `RN-AV-12` (16/10/2026): a SESSÃO DE APLICAÇÃO leva o conteúdo da prova INTEIRO — o mesmo tópico, a mesma
+   * técnica, o mesmo fiscal de fora e os mesmos demais instrutores: quem aplica a 2ª sessão é quem aplica a prova. A
+   * marca *"· sessão N"* é posta pelo mapeador, com o número da view.
+   */
+  for (const p of sessoesDeAplicacaoDaSemana) {
+    const daAvaliacao = conteudos.get(p.avaliacao_id);
+    conteudos.set(p.id, { ...(daAvaliacao ?? { conteudo: null, tecnica: null }) });
   }
   const atividades = (atividadesRes.data ?? []) as {
     id: string;
@@ -957,6 +1051,22 @@ export function montarSemanaDoDsa(
       semPosicao.push(fatoSemTa(n.id, "atividade_nao_letiva", n.data, conteudos));
     }
   }
+  /*
+   * ⚠️ **A SESSÃO DE APLICAÇÃO SEM TA NÃO SOME** (`RN-AV-12`, `RN-DEG-01`): a view a filtra (`ta_inicial is not
+   *    null`), e a sessão nascida de «juntar» uma avaliação sem posição chega assim. Ela vai para a faixa, com a marca
+   *    da sessão, e se posiciona pelo mesmo `mover`.
+   */
+  for (const p of sessoesDeAplicacaoDaSemana) {
+    if (p.ta_inicial === null) {
+      semPosicao.push({
+        ...fatoSemTa(p.id, "sessao_aplicacao", p.data, conteudos),
+        conteudo: rotuloDaSessaoDeAplicacao({
+          prova: conteudos.get(p.id)?.conteudo,
+          numero: p.numero,
+        }),
+      });
+    }
+  }
 
   /* ⚠️ A RPC é lida em `lerPeriodoDoDsa`, junto com o resto; aqui chega recortada à semana. */
   const alheios: OcupacaoDeTa[] = (
@@ -983,10 +1093,15 @@ export function montarSemanaDoDsa(
    * aqui seria a segunda fonte de verdade do fim do bloco, e as duas discordariam na primeira linha
    * histórica com `tempos` nulo.
    */
+  /*
+   * ⚠️ **A MARCA DE CONFLITO É DO LANÇAMENTO, NÃO DA AVALIAÇÃO** (`RN-AV-12`, 16/10/2026): o `fatoId` aqui é o mesmo
+   *    da grade (`idDoLancamento`) — com o `fato_id` cru, o conflito da sessão 2 (de aplicação ou de vista) era
+   *    pintado na 1ª aplicação, e a sessão em conflito saía sem marca.
+   */
   const meus: OcupacaoPropria[] = ocupacao
     .filter((l) => l.ta_inicial !== null)
     .map((l) => ({
-      fatoId: l.fato_id,
+      fatoId: idDoLancamento({ origem: l.origem, fatoId: l.fato_id, sessaoId: l.sessao_id }),
       data: l.data,
       taInicial: l.ta_inicial as number,
       taFinal: (l as unknown as { ta_final: number | null }).ta_final ?? (l.ta_inicial as number),
@@ -1056,10 +1171,17 @@ export function montarSemanaDoDsa(
     tempos_consumidos: number | null;
     vistas_de_avaliacao:
       { status: string; data: string; tempos_consumidos: number | null }[] | null;
+    sessoes_de_aplicacao?:
+      { status: string; data: string; tempos_consumidos: number | null }[] | null;
   }[]) {
     if (a.avaliacao_curriculo_id === null || !ateOFim(a.data_avaliacao)) continue;
     const atual = vivasPorItem.get(a.avaliacao_curriculo_id) ?? { prova: 0, vista: 0 };
-    atual.prova += a.tempos_consumidos ?? 0;
+    /* `RN-AV-12`: a aplicação é a 1ª sessão MAIS as sessões 2..N até a semana — como `vw_carga_horaria_turma`. */
+    atual.prova +=
+      (a.tempos_consumidos ?? 0) +
+      (a.sessoes_de_aplicacao ?? [])
+        .filter((p) => p.status === "ativo" && ateOFim(p.data))
+        .reduce((s, p) => s + (p.tempos_consumidos ?? 0), 0);
     atual.vista += (a.vistas_de_avaliacao ?? [])
       .filter((v) => v.status === "ativo" && ateOFim(v.data))
       .reduce((s, v) => s + (v.tempos_consumidos ?? 0), 0);
@@ -1164,6 +1286,7 @@ export function montarSemanaDoDsa(
       conteudo_resumo: string | null;
       avaliacao_curriculo_id: string | null;
       vistas_de_avaliacao: { numero: number; status: string }[] | null;
+      sessoes_de_aplicacao?: { numero: number; status: string }[] | null;
     }[]
   ).map((a) => {
     const item = a.avaliacao_curriculo_id ? itemPorId.get(a.avaliacao_curriculo_id) : undefined;
@@ -1172,6 +1295,9 @@ export function montarSemanaDoDsa(
       sessoes: (a.vistas_de_avaliacao ?? [])
         .filter((v) => v.status === "ativo")
         .map((v) => v.numero),
+      sessoesDeAplicacao: (a.sessoes_de_aplicacao ?? [])
+        .filter((p) => p.status === "ativo")
+        .map((p) => p.numero),
       rotulo: item ? rotuloDoItem(item) : (a.tipo_avaliacao ?? "Avaliação"),
     };
   });
@@ -1222,6 +1348,7 @@ export function montarSemanaDoDsa(
       titulo: a.conteudo_resumo,
       sessoes: a.sessoes,
       proximaSessao: a.sessoes.reduce((m, n) => Math.max(m, n), 0) + 1,
+      sessoesDeAplicacao: a.sessoesDeAplicacao,
       rotulo: a.rotulo,
     })),
     avaliacoesDoCurriculo: ofertas.flatMap(({ disciplinaId, oferta }) =>
@@ -1273,6 +1400,14 @@ export function montarSemanaDoDsa(
     tecnicas: metodologias.map((l) => l.valor),
     tecnicasComSigla,
     tiposDeAvaliacao: daLista("tipos_avaliacao").map((l) => l.valor),
+    instrumentos: instrumentosOferecidos(
+      daLista("instrumentos_avaliacao").map((l) => ({
+        id: l.id,
+        valor: l.valor,
+        rotulo: l.rotulo_exibicao ?? null,
+        ativo: true,
+      })),
+    ),
     subtipos: tiposOferecidos(
       daLista("tipos_atividade").map((l) => ({
         id: l.id,
@@ -1286,12 +1421,15 @@ export function montarSemanaDoDsa(
     ocupacaoAcumulada: (
       (acumuladaRes.data ?? []) as {
         fato_id: string;
+        origem?: string;
+        sessao_id?: string | null;
         data: string;
         disciplina_id: string | null;
         tempos_consumidos: number | null;
       }[]
     ).map((o) => ({
-      fatoId: o.fato_id,
+      /* O id do LANÇAMENTO, o mesmo das marcas de conflito (`emConflito` do painel de situação casa com ele). */
+      fatoId: idDoLancamento({ origem: o.origem ?? "", fatoId: o.fato_id, sessaoId: o.sessao_id }),
       data: o.data,
       disciplinaId: o.disciplina_id,
       /* ⚠️ `tempos` é nulo em linha histórica — `?? 0` é o padrão da pasta para o que não foi medido. */
@@ -1376,7 +1514,7 @@ export type ExtrasDaImpressao = {
 };
 
 /**
- * As quatro leituras que **só** o papel precisa (`T082`, `T083`).
+ * As leituras que **só** o papel precisa (`T082`, `T083`) — cinco desde a sessão de aplicação (`RN-AV-12`).
  *
  * ⚠️ **ELA RODA EM PARALELO COM `lerSemanaDoDsa`, não depois** — as duas são independentes, e a
  * rota as põe no mesmo `Promise.all`. Em sequência seriam duas idas ao banco por impressão.
@@ -1385,8 +1523,8 @@ export async function lerExtrasDaImpressao(
   supabase: ClienteDeServidor,
   entrada: { readonly turmaId: string; readonly cursoId: string },
 ): Promise<ExtrasDaImpressao> {
-  /* ⚠️ As quatro em páginas até acabar (`DP-5`): as datas do nº do DSA são as que o teto cortava. */
-  const [execRes, respRes, aulasRes, avalRes] = await Promise.all([
+  /* ⚠️ As cinco em páginas até acabar (`DP-5`): as datas do nº do DSA são as que o teto cortava. */
+  const [execRes, respRes, aulasRes, avalRes, sessoesRes] = await Promise.all([
     lerTodasAsPaginas((f) =>
       supabase
         .from("vw_disciplinas_execucao")
@@ -1440,6 +1578,26 @@ export async function lerExtrasDaImpressao(
         .select("data_avaliacao", contagemNaPrimeira(f))
         .eq("turma_id", entrada.turmaId)
         .in("status", [...STATUS_DE_AVALIACAO_VIVA])
+        .not("ta_inicial", "is", null)
+        .order("codigo")
+        .range(f.de, f.ate),
+    ),
+    /*
+     * ⚠️ **A SESSÃO DE APLICAÇÃO CONTA NO Nº DO DSA COMO A 1ª** (`RN-AV-12`, 16/10/2026): ela é a MESMA prova, num
+     *    outro dia. É também o que impede «juntar como sessão» de mudar o número das semanas: a avaliação juntada
+     *    contava, e a sessão que nasce dela continua contando. E a planilha de contingência faz igual — a sessão leva
+     *    o item da prova, que conta no nº.
+     */
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("sessoes_de_aplicacao")
+        .select(
+          "data, avaliacao:avaliacoes!sessoes_de_aplicacao_avaliacao_id_fkey!inner(turma_id, status)",
+          contagemNaPrimeira(f),
+        )
+        .eq("avaliacao.turma_id", entrada.turmaId)
+        .in("avaliacao.status", [...STATUS_DE_AVALIACAO_VIVA])
+        .eq("status", "ativo")
         .not("ta_inicial", "is", null)
         .order("codigo")
         .range(f.de, f.ate),
@@ -1507,6 +1665,7 @@ export async function lerExtrasDaImpressao(
   const datas = [
     ...((aulasRes.data ?? []) as { data: string }[]).map((a) => a.data),
     ...((avalRes.data ?? []) as { data_avaliacao: string }[]).map((a) => a.data_avaliacao),
+    ...((sessoesRes.data ?? []) as { data: string }[]).map((p) => p.data),
   ];
 
   return { execucao, responsaveis, datasComLancamentoDaTurma: datas };

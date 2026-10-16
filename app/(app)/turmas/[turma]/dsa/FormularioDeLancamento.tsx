@@ -24,6 +24,20 @@
  *
  * ⚠️ **TODO CAMPO DE ESCOLHA VEM DE `EscolhaSimples`**: a guarda `SC-002` reprova arquivo que cite quem
  * ministra e escreva o elemento de escolha nativo à mão (`RN-ANT-01`, *Risco: Alto*, ponto único).
+ *
+ * ⚠️ **QUEM RESPONDE POR CADA PAPEL SAI DE `regraDoResponsavel`** (`RN-RESP-1`, emenda de 15/10/2026): aula e aplicador
+ * da prova pedem o instrutor do cadastro; fiscal, quem conduz a vista e toda atividade aceitam também o «outro
+ * responsável (nome livre)», sem cadastro e sem alerta. O campo livre aparece porque a regra o aceita
+ * (`ResponsavelOuNomeLivre`), nunca por lista de tipos escrita aqui.
+ *
+ * ⚠️ **A SESSÃO DE APLICAÇÃO É UM TIPO PRÓPRIO, E NÃO OUTRA AVALIAÇÃO** (`RN-AV-12`, emenda de 15/10/2026; desenho
+ * aprovado por Bernardo Villas Boas em 16/10/2026): escolhida a disciplina, o formulário oferece as provas VIVAS da
+ * turma nela aplicadas no dia ou antes (`provasParaSessaoNoDia`), e grava a 2ª, 3ª… sessão da MESMA prova. Sem
+ * aplicador nem fiscal próprios — são os da prova —, e por isso o campo de quem responde não aparece.
+ *
+ * ⚠️ **O INSTRUMENTO DA PROVA SEM ITEM** (A2 do mesmo desenho): na avaliação sem item do currículo escolhido, o
+ * «Instrumento» é oferecido, opcional (os ativos de `instrumentos_avaliacao`, menos a OD). Com item, ele não aparece
+ * e vai nulo — o instrumento é o do item.
  */
 "use client";
 
@@ -31,17 +45,20 @@ import * as React from "react";
 
 import type { TipoOferecido } from "./leitura";
 
-import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import type { InstrumentoOferecido } from "@/lib/dominio/dsa/instrumento-da-prova";
 import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/rotulos";
+import { provasParaSessaoNoDia } from "@/lib/dominio/dsa/sessao-de-aplicacao";
 import type { TempoParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
+import { regraDoResponsavel } from "@/lib/dominio/responsavel";
 import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
 
 import { EscolhaSimples } from "./EscolhaSimples";
+import { ResponsavelOuNomeLivre } from "./ResponsavelOuNomeLivre";
 
 /** Uma unidade oferecida, com os **três números** que a operação acompanha (`FR-018`, `P-3`). */
 export type UnidadeOferecida = {
@@ -78,6 +95,8 @@ export type AvaliacaoOferecida = {
   readonly titulo: string | null;
   readonly sessoes: readonly number[];
   readonly proximaSessao: number;
+  /** As sessões de APLICAÇÃO ativas (2, 3…; `RN-AV-12`): a seguinte é a que o tipo «Sessão de aplicação» abre. */
+  readonly sessoesDeAplicacao: readonly number[];
   readonly rotulo: string;
 };
 
@@ -116,6 +135,8 @@ export type FormularioDeLancamentoProps = {
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   readonly tiposDeAvaliacao: readonly string[];
+  /** A2 (16/10/2026): os instrumentos da prova sem item do currículo — os ativos, menos a OD. */
+  readonly instrumentos?: readonly InstrumentoOferecido[];
   readonly subtipos: readonly TipoOferecido[];
   readonly podeAtividadeGlobal?: boolean;
   readonly lancar: (entrada: unknown) => Promise<ResultadoDaAcao>;
@@ -133,6 +154,7 @@ function listaDeOutros(texto: string): string[] {
 type Tipo =
   | "aula"
   | "avaliacao"
+  | "sessao_aplicacao"
   | "vista_prova"
   | "AEC"
   | "TAD"
@@ -143,6 +165,7 @@ type Tipo =
 const TIPOS: readonly (readonly [Tipo, string])[] = [
   ["aula", "Aula"],
   ["avaliacao", "Avaliação"],
+  ["sessao_aplicacao", "Sessão de aplicação (prova já aplicada)"],
   ["vista_prova", "Vista de prova"],
   ["AEC", "AEC"],
   ["TAD", "TAD"],
@@ -187,6 +210,7 @@ export function FormularioDeLancamento({
   escala,
   tecnicas,
   tiposDeAvaliacao,
+  instrumentos = [],
   subtipos,
   podeAtividadeGlobal = false,
   lancar,
@@ -205,6 +229,8 @@ export function FormularioDeLancamento({
   const [localEditado, definirLocalEditado] = React.useState(false);
   const [conteudo, definirConteudo] = React.useState("");
   const [tipoAvaliacao, definirTipoAvaliacao] = React.useState("");
+  /* `RN-RESP-1`: o fiscal do cadastro OU de nome livre — exclusivos, como no banco (`fiscal_id` × nome). */
+  const [fiscalId, definirFiscal] = React.useState("");
   const [nomeFiscalExterno, definirFiscalExterno] = React.useState("");
   const [subtipo, definirSubtipo] = React.useState("");
   const [descricao, definirDescricao] = React.useState("");
@@ -214,6 +240,8 @@ export function FormularioDeLancamento({
   /* Spec 014: o item do currículo (FR-039), a faixa de UEs (FR-033), os demais instrutores (FR-046) e quem conduz
      a sessão de vista (FR-043). */
   const [itemId, definirItem] = React.useState("");
+  /* A2: o instrumento da prova SEM item do currículo — opcional. */
+  const [instrumentoId, definirInstrumento] = React.useState("");
   const [uesAbordadas, definirUesAbordadas] = React.useState("");
   const [outros, definirOutros] = React.useState("");
   const [quemConduz, definirQuemConduz] = React.useState("");
@@ -226,8 +254,20 @@ export function FormularioDeLancamento({
   const unidadesDaDisciplina = unidades.filter((u) => u.disciplinaId === disciplinaId);
   const avaliacoesDaDisciplina = avaliacoesParaVista.filter((a) => a.disciplinaId === disciplinaId);
   const itensDaDisciplina = avaliacoesDoCurriculo.filter((i) => i.disciplinaId === disciplinaId);
+  /* `RN-AV-12`: as provas da disciplina aplicadas no dia ou antes, cada uma com a sessão que abriria. */
+  const provasDaSessao = provasParaSessaoNoDia(avaliacoesParaVista, { disciplinaId, dia });
   /* ⚠️ O alerta do item 1c: aula, com disciplina, e SEM unidade. */
   const semUnidade = tipo === "aula" && disciplinaId !== "" && unidadeId === "";
+  /* `RN-RESP-1`: a regra do papel principal deste tipo — quem ministra, quem aplica, quem conduz, quem responde. */
+  const regraPrincipal = regraDoResponsavel(
+    tipo === "aula"
+      ? { tipo: "aula" }
+      : tipo === "avaliacao" || tipo === "sessao_aplicacao"
+        ? { tipo: "avaliacao", papel: "aplicador" }
+        : tipo === "vista_prova"
+          ? { tipo: "vista" }
+          : { tipo: "atividade", categoria: tipo },
+  );
 
   function escolherTipo(novo: Tipo): void {
     definirTipo(novo);
@@ -256,6 +296,8 @@ export function FormularioDeLancamento({
   /* O tempo do item é o palpite dos tempos — editável, como todo pré-preenchimento. */
   function escolherItem(id: string): void {
     definirItem(id);
+    /* Com item, o instrumento é o dele: o escolhido à mão sai. */
+    if (id !== "") definirInstrumento("");
     const i = avaliacoesDoCurriculo.find((x) => x.itemId === id);
     if (i?.tempo) definirTempos(i.tempo);
   }
@@ -310,12 +352,19 @@ export function FormularioDeLancamento({
         instrutorId: quemMinistra,
         conteudo: texto(conteudo),
         tecnica: texto(tecnica),
-        fiscalId: null,
-        nomeFiscalExterno: texto(nomeFiscalExterno),
+        /* Com o fiscal do cadastro escolhido, o nome livre não viaja (o esquema recusa os dois). */
+        fiscalId: nulo(fiscalId),
+        nomeFiscalExterno: fiscalId === "" ? texto(nomeFiscalExterno) : null,
         avaliacaoCurriculoId: nulo(itemId),
+        /* A2: o instrumento só viaja SEM item — com item, vai nulo (o instrumento é o do item). */
+        instrumentoId: itemId === "" ? nulo(instrumentoId) : null,
         uesAbordadas: texto(uesAbordadas),
         outrosInstrutores: listaDeOutros(outros),
       };
+    }
+    if (tipo === "sessao_aplicacao") {
+      /* `RN-AV-12`: só a prova e o horário — o número, o aplicador e o fiscal são do servidor e da prova. */
+      return { tipo: "sessao_aplicacao", ...comum, avaliacaoId };
     }
     if (tipo === "vista_prova") {
       return {
@@ -336,7 +385,8 @@ export function FormularioDeLancamento({
       tipoAtividadeId: subtipo,
       descricao,
       instrutorId: nulo(quemMinistra),
-      responsavelExterno: texto(responsavelExterno),
+      /* `RN-RESP-1`: com instrutor do cadastro, o nome livre não viaja (`ativ_responsavel_exclusivo`). */
+      responsavelExterno: quemMinistra === "" ? texto(responsavelExterno) : null,
       /* A disciplina da AEC é opcional, e só da AEC (item 1b). */
       disciplinaId: tipo === "AEC" && !global ? nulo(disciplinaId) : null,
       /* A quantidade de alunos, opcional, só no Apoio (FR-020). */
@@ -512,6 +562,33 @@ export function FormularioDeLancamento({
         />
       ) : null}
 
+      {/*
+        `RN-AV-12` (16/10/2026): a prova de que esta é a 2ª, 3ª… sessão — só as aplicadas no dia ou antes. A sessão
+        não é prova nova: o «X de Y» continua contando a prova uma vez.
+      */}
+      {tipo === "sessao_aplicacao" && disciplinaId !== "" ? (
+        <EscolhaSimples
+          id="dsa-prova-da-sessao"
+          rotulo="De qual prova é a sessão"
+          obrigatorio
+          textoVazio={
+            provasDaSessao.length === 0
+              ? "Nenhuma prova desta disciplina aplicada até este dia"
+              : "Escolha a prova…"
+          }
+          valor={avaliacaoId}
+          aoMudar={definirAvaliacao}
+          ajuda="A sessão de aplicação é a MESMA prova em outro dia: ela não cria avaliação nova, e quem aplica e fiscaliza são os da prova."
+          opcoes={provasDaSessao.map((a) => ({
+            valor: a.id,
+            rotulo:
+              `${a.rotulo}${a.aplicadaEm ? ` de ${dataParaLeitura(a.aplicadaEm)}` : ""}` +
+              (a.titulo ? ` — ${a.titulo}` : "") +
+              ` · sessão ${a.proximaSessao}`,
+          }))}
+        />
+      ) : null}
+
       {/* Spec 014, FR-032 e FR-039: a avaliação do currículo que esta prova cumpre — obrigatória se a disciplina tem item. */}
       {tipo === "avaliacao" && disciplinaId !== "" && itensDaDisciplina.length > 0 ? (
         <EscolhaSimples
@@ -528,6 +605,22 @@ export function FormularioDeLancamento({
               `${i.rotulo}${i.tempo ? ` — ${i.tempo} TA` : " — tempo não definido"}` +
               (i.aplicada ? " (já aplicada)" : ""),
           }))}
+        />
+      ) : null}
+
+      {/*
+        A2 (16/10/2026): o INSTRUMENTO, só na prova SEM item do currículo escolhido, e opcional. Com item, ele é o do
+        item — e a Server Action grava nulo de qualquer jeito.
+      */}
+      {tipo === "avaliacao" && disciplinaId !== "" && itemId === "" && instrumentos.length > 0 ? (
+        <EscolhaSimples
+          id="dsa-instrumento"
+          rotulo="Instrumento (opcional)"
+          textoVazio="Sem instrumento"
+          valor={instrumentoId}
+          aoMudar={definirInstrumento}
+          ajuda="Só na prova sem avaliação do currículo: com item, o instrumento é o dele."
+          opcoes={instrumentos.map((i) => ({ valor: i.id, rotulo: i.rotulo }))}
         />
       ) : null}
 
@@ -604,43 +697,50 @@ export function FormularioDeLancamento({
 
       {/*
         ⚠️ O SELETOR É O CANÔNICO, e ele reordena por ANTIGUIDADE a lista que recebe (`RN-ANT-01`).
-           A vista de prova não leva quem ministra: ela é conduzida pelo responsável da avaliação.
+           A vista de prova não leva quem ministra: leva quem CONDUZ a sessão (FR-043) — do cadastro ou de nome livre.
+        ⚠️ `RN-RESP-1`: o «outro responsável (nome livre)» aparece quando a regra do papel o aceita.
       */}
-      {tipo !== "vista_prova" ? (
-        <SeletorInstrutor
+      {tipo === "vista_prova" ? (
+        <ResponsavelOuNomeLivre
+          regra={regraPrincipal}
           instrutores={instrutores}
           escala={escala}
-          valor={quemMinistra}
-          aoMudar={definirQuemMinistra}
-          rotulo={tipo === "avaliacao" ? "Responsável pela avaliação" : "Quem ministra"}
+          legenda="Quem conduz a vista (opcional — sem ele, o responsável da avaliação)"
+          rotuloDoCadastro="Instrutor do cadastro"
+          idDoNomeLivre="dsa-conduz-externo"
+          exemplo="Posto e nome, como no documento"
+          instrutorId={quemConduz}
+          aoMudarInstrutor={definirQuemConduz}
+          nomeLivre={conduzExterno}
+          aoMudarNomeLivre={definirConduzExterno}
+          slot="quem-conduz-a-vista"
         />
-      ) : null}
-
-      {tipo === "vista_prova" ? (
-        <>
-          {/* Spec 014, FR-043: quem CONDUZ a sessão — do cadastro, pelo seletor canônico, ou de fora. */}
-          <SeletorInstrutor
-            instrutores={instrutores}
-            escala={escala}
-            valor={quemConduz}
-            aoMudar={definirQuemConduz}
-            rotulo="Quem conduz a vista (opcional — sem ele, o responsável da avaliação)"
-          />
-          {quemConduz === "" ? (
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="dsa-conduz-externo">
-                Quem conduz, de fora do cadastro (opcional)
-              </Label>
-              <Input
-                id="dsa-conduz-externo"
-                value={conduzExterno}
-                onChange={(e) => definirConduzExterno(e.target.value)}
-                placeholder="Posto e nome, como no documento"
-              />
-            </div>
-          ) : null}
-        </>
-      ) : null}
+      ) : tipo === "sessao_aplicacao" ? (
+        /* `RN-AV-12`: a sessão não tem responsável próprio — e dizer isso evita procurar o campo. */
+        <p className="text-texto-suave text-sm" data-slot="responsavel-da-sessao">
+          Quem aplica e quem fiscaliza esta sessão são os da prova (a 1ª sessão).
+        </p>
+      ) : (
+        <ResponsavelOuNomeLivre
+          regra={regraPrincipal}
+          instrutores={instrutores}
+          escala={escala}
+          rotuloDoCadastro={
+            tipo === "avaliacao"
+              ? "Responsável pela avaliação"
+              : regraPrincipal.instrutorDoCadastro === "opcional"
+                ? "Instrutor do cadastro (opcional)"
+                : "Quem ministra"
+          }
+          idDoNomeLivre="dsa-responsavel-externo"
+          exemplo="DOEP, CIAARA-30, palestrante…"
+          instrutorId={quemMinistra}
+          aoMudarInstrutor={definirQuemMinistra}
+          nomeLivre={responsavelExterno}
+          aoMudarNomeLivre={definirResponsavelExterno}
+          slot="responsavel-do-lancamento"
+        />
+      )}
 
       {tipo === "avaliacao" ? (
         <div className="flex flex-col gap-1">
@@ -655,7 +755,7 @@ export function FormularioDeLancamento({
         </div>
       ) : null}
 
-      {tipo !== "vista_prova" ? (
+      {tipo !== "vista_prova" && tipo !== "sessao_aplicacao" ? (
         <div className="flex flex-col gap-1">
           {/* Spec 014, FR-046: o 2º nome, como no documento; nada vai para observações. */}
           <Label htmlFor="dsa-outros-instrutores">Demais instrutores (opcional)</Label>
@@ -669,31 +769,24 @@ export function FormularioDeLancamento({
       ) : null}
 
       {tipo === "avaliacao" ? (
-        <div className="flex flex-col gap-1">
-          {/* `RF-AVAL-06`: quem fiscaliza pode ser de fora do cadastro (`fiscal_id` × nome). */}
-          <Label htmlFor="dsa-fiscal-externo">Fiscal de fora do cadastro (opcional)</Label>
-          <Input
-            id="dsa-fiscal-externo"
-            value={nomeFiscalExterno}
-            onChange={(e) => definirFiscalExterno(e.target.value)}
-            placeholder="Posto e nome, como no documento"
-          />
-        </div>
-      ) : null}
-
-      {naoLetivo ? (
-        <div className="flex flex-col gap-1">
-          {/* ⚠️ `Q-8`: a coluna da planilha traz entidade (`DOEP`, `NAS`) e palestrante externo. */}
-          <Label htmlFor="dsa-responsavel-externo">
-            Entidade ou palestrante externo (opcional)
-          </Label>
-          <Input
-            id="dsa-responsavel-externo"
-            value={responsavelExterno}
-            onChange={(e) => definirResponsavelExterno(e.target.value)}
-            placeholder="DOEP, CIAARA-30, palestrante…"
-          />
-        </div>
+        /*
+         * `RF-AVAL-06` e `RN-RESP-1`: quem fiscaliza é do cadastro (pelo seletor canônico) OU de nome livre — o fiscal
+         * não é atuação de instrutor (`RN-INST-01`), então não há habilitação a conferir.
+         */
+        <ResponsavelOuNomeLivre
+          regra={regraDoResponsavel({ tipo: "avaliacao", papel: "fiscal" })}
+          instrutores={instrutores}
+          escala={escala}
+          legenda="Fiscal (opcional)"
+          rotuloDoCadastro="Fiscal do cadastro"
+          idDoNomeLivre="dsa-fiscal-externo"
+          exemplo="Posto e nome, como no documento"
+          instrutorId={fiscalId}
+          aoMudarInstrutor={definirFiscal}
+          nomeLivre={nomeFiscalExterno}
+          aoMudarNomeLivre={definirFiscalExterno}
+          slot="fiscal-da-avaliacao"
+        />
       ) : null}
 
       <div className="flex flex-col gap-1">

@@ -324,6 +324,42 @@ create table public.vistas_de_avaliacao (
 campos; `conduz_*` nulos, porque a origem não dizia quem conduzia). Contagem antes/depois: nº de
 avaliações com vista = nº de sessões 1.
 
+### 3.5.1 Sessões de aplicação e instrumento da prova **[E] (emenda de 15/10/2026)** — ✅ opção A aprovada por Bernardo em 16/10/2026
+
+> ✅ **Aprovado por Bernardo Villas Boas em 16/10/2026** (opção A do **`desenho-emenda-15-10.md`**; regra 9.4
+> cumprida: o desenho veio antes da migration). Migrations **E-6** `20261016092307_sessoes_de_aplicacao_e_instrumento_da_prova`
+> (estrutura) e **D-9** `20261016092315_vista_obrigatoria_e_janela_de_sessoes` (dado), com pgTAP `132`, RLS em
+> `tests/invariantes/rls/sessoes-de-aplicacao.test.ts`, a prova cruzada SQL × TS e a reversão
+> `reversao-emenda-15-10.sql`. *(Era «PROPOSTA — aguarda Bernardo», 15/10/2026.)*
+
+Em uma linha cada, na **Opção A** (recomendada; a **Opção B**, sem migration, está no desenho e não é
+recomendada):
+- **A1** `public.sessoes_de_aplicacao`, filha de `avaliacoes` — uma prova com N sessões de aplicação,
+  não N provas; o card *"N de M"* a conta uma vez (RN-AV-12).
+- **A2** `avaliacoes.instrumento_id` → `config_listas.instrumentos_avaliacao` — o instrumento da prova
+  que não aponta item (sem item, ou a mais), para a RN-AV-13 e o alerta da RN-AV-14 valerem também
+  para ela.
+- **A3** as leituras que somam a aplicação passam a somar as sessões.
+- **A4** a obrigação de vista como dado no banco, lida por `app.fn_status_vista` — o espelho SQL da
+  RN-AV-13 (§3.7).
+- **A5** `avaliacao.janela_sessoes_dias` em `config_parametros` — o "dias consecutivos ou próximos" da
+  RN-AV-12 como dado (proposta: 7 dias corridos; `aprovacoes-pendentes.md`, 15/10/2026, P4).
+
+**Como ficou (16/10/2026), além do desenho:**
+- **A trilha de «juntar como sessão da mesma prova»** (decisão de 16/10/2026: *"Encarregado/Admin, com trilha"*)
+  mora **na própria sessão** — `juntada_de_avaliacao_id`, `juntada_por`, `juntada_em` e `avaliacao_juntada_antes`
+  (`jsonb`) —, imutável por gatilho (`app.proteger_trilha_da_juntada`, `42501`); sem tabela fora do desenho. A função
+  `public.juntar_como_sessao(p_prova_id, p_avaliacao_id)`, `SECURITY INVOKER`, com porteiro do recurso novo
+  `avaliacoes_juntar_sessao.editar` (Admin e Encarregado), cria a sessão, move as vistas da juntada para a prova e
+  cancela a juntada com a marca *"[JUNTADA COMO SESSAO n DE <codigo>]"*.
+- **`avaliacoes.instrumento_id` com item ligado fica NULO** (ou igual ao do item — o gatilho
+  `app.instrumento_da_avaliacao` recusa diferente): quem lê usa o do item; a coluna nunca é segunda fonte.
+- **A marca de vista** (A4) vale para **PM, PO e PE** (decisão de 16/10/2026); `true`/`false` em todos os 11
+  instrumentos. A tela, a sincronização e `app.fn_status_vista` leem a marca do banco; `instrumentos.json` ficou só
+  com o de-para do COD.
+- **O prazo da vista conta da ÚLTIMA sessão de aplicação** (leitura da implementação, 16/10/2026, nos dois lados da
+  prova cruzada): a prova só termina na última sessão.
+
 ### 3.6 `registros_aula` **[E] (PR 4)**
 
 ```sql
@@ -346,6 +382,12 @@ pelo bloco D-7b, que anda **junto** da E-5: recusado o D-7b, a E-5 e a D-7 saem 
 com `fato_id` = id da avaliação (o que o DSA resolve hoje) e as colunas novas `sessao_id` e
 `numero_sessao`, que o PR 5.1 adota. `aval_ta_coerente` é recriada aceitando a substituída histórica.
 ⚠️ *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*.
+
+⚠️ **Nota de 15/10/2026, resolvida em 16/10/2026 (RN-AV-13).** Na tela, a obrigação de vista é do
+**instrumento** (`exigeVista`, `lib/dominio/avaliacoes/vista-obrigatoria.ts`). Desde a E-6/D-9 (§3.5.1), **o espelho
+SQL decide pelo mesmo critério** — a marca `config_listas.metadados.vista_obrigatoria` (PM, PO e PE) do instrumento
+do item ou, sem item, de `avaliacoes.instrumento_id` — e a prova cruzada (T139) compara **todos** os casos, sem
+divergência declarada; os dois casos que discriminam (a PP com tempo de vista e a PM sem ele) estão na tabela única.
 
 ### 3.8 Migrations de **dado** da leva 2 — cada uma com antes/depois (PR 4)
 

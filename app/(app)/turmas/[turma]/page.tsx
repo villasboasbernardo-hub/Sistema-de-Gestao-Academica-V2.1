@@ -26,6 +26,7 @@ import {
   definirTempoArbitrado,
   nomearUe,
 } from "@/lib/acoes/avaliacoes-do-curriculo";
+import { juntarComoSessao } from "@/lib/acoes/juntar-sessao";
 import { AVISO_DE_TURMA_EAD, ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import type { JanelaDeTurma, VigenciaProtegida } from "@/lib/dominio/protecao-de-vigencia";
@@ -570,6 +571,9 @@ export default async function FichaDaTurma({
                       nomear: nomearUe,
                     },
                   }
+                : {})}
+              {...(pode(permissoes, "avaliacoes_juntar_sessao", "editar")
+                ? { juntar: juntarComoSessao }
                 : {})}
             />
           ) : (
