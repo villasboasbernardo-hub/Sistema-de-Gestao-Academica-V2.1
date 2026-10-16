@@ -342,6 +342,12 @@ function porChave(
     // Spec 014, emenda de 15/10/2026 (E-6, 16/10/2026): as sessões de aplicação, o instrumento e «juntar».
     case "sessao_antes_da_aplicacao":
       return "A sessão de aplicação não pode ser antes da 1ª aplicação da prova. Escolha uma data a partir do dia da prova.";
+    // Spec 014, E-7 (16/10/2026): o outro lado — a 1ª aplicação não passa das sessões dela.
+    case "aplicacao_depois_das_sessoes":
+      return (
+        "A 1ª aplicação da prova não pode ficar depois das sessões de aplicação dela. " +
+        "Escolha um dia até a 2ª sessão, ou mova as sessões antes."
+      );
     case "instrumento_fora_da_lista":
       return "O instrumento escolhido não é um instrumento de avaliação. Escolha um da lista.";
     case "instrumento_diferente_do_item":

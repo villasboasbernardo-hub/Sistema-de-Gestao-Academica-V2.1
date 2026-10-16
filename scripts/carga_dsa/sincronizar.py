@@ -433,13 +433,16 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
     # 2b. as SESSOES de vista (spec 014, FR-041, FR-042, T226): primeiro sai a sessao ATIVA de avaliacao da planilha que
     #     nao esta no plano (inclusive a sessao 1 que o espelho da E-5 criou com codigo proprio); depois entram/mudam as
     #     da planilha, pelo codigo `…-S`. A avaliacao protegida (virada, tela) nao e tocada.
+    #     ⚠️ E A SESSAO DA VIRADA EM DIANTE TAMBEM NAO (A3.3, achado no ensaio de 16/10/2026): a prova de 06/08 da CAHO XVI
+    #        ganhou na tela a vista 2 para 23/10 (`VST-000245`), e a rodada a inativava — o filtro olhava a data da PROVA,
+    #        nao a da SESSAO. «O que cai da virada em diante e do sistema» vale sessao a sessao.
     sessoes = [(a["codigo"], v) for a in res.avaliacoes for v in a.get("sessoes", [])]
     p.append(f"""
   update public.vistas_de_avaliacao s set status = 'inativo'
     from public.avaliacoes a
    where a.id = s.avaliacao_id and a.turma_id = {t} and a.codigo like {lit(prefixo + '%')} and s.status = 'ativo'
      and not (s.codigo = any (array[{", ".join(lit(v["codigo"]) for _c, v in sessoes)}]::text[]))
-     and not (a.codigo = any ({intocadas('avaliacoes')})){antes('a.data_avaliacao')};
+     and not (a.codigo = any ({intocadas('avaliacoes')})){antes('a.data_avaliacao')}{antes('s.data')};
   get diagnostics n := row_count; k := k || jsonb_build_object('sessoes_que_sairam', n);""")
     if sessoes:
         p.append(f"""
@@ -478,7 +481,7 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
    where a.id = s.avaliacao_id and a.turma_id = {t} and a.codigo like {lit(prefixo + '%')} and s.status = 'ativo'
      and s.codigo like {lit(prefixo + '%')}
      and not exists (select 1 from plano x where x.codigo = s.codigo and x.avaliacao = a.codigo and x.numero = s.numero)
-     and not (a.codigo = any ({intocadas('avaliacoes')})){antes('a.data_avaliacao')};
+     and not (a.codigo = any ({intocadas('avaliacoes')})){antes('a.data_avaliacao')}{antes('s.data')};
   get diagnostics n := row_count; k := k || jsonb_build_object('aplicacoes_que_sairam', n);""")
     if aplicacoes:
         p.append(f"""
