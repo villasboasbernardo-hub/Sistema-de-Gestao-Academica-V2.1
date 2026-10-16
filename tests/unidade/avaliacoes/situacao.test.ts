@@ -16,6 +16,8 @@ describe("situação da avaliação — tabela de casos única", () => {
           estadoDoRegistro: "estadoDoRegistro" in caso ? (caso.estadoDoRegistro as string) : null,
           aplicacao: caso.aplicacao,
           sessoesDeVista: caso.sessoesDeVista,
+          sessoesDeAplicacao:
+            "sessoesDeAplicacao" in caso ? (caso.sessoesDeAplicacao as string[]) : [],
           temItemDeVista: caso.temItemDeVista,
           prazoDias: tabela.prazoDias,
           hoje: caso.hoje,

@@ -12,9 +12,14 @@
  *    de prova ligada a item com tempo de vista — atrasadas de verdade — e **38** de prova SEM item, das quais não se
  *    sabe se o currículo prevê vista. Estas vão para a lista de erros de planilha; o alerta conta só as primeiras.
  *    A situação da avaliação (`situacaoDaAvaliacao`) NÃO muda: o quadro da turma continua mostrando a prova sem item.
- * ⚠️ **SÓ ALERTA A PROVA CUJO INSTRUMENTO EXIGE VISTA** (`RN-AV-13`, emenda de 15/10/2026: *"vista é obrigatória só
- *    para PM e PO. PP, T e TG não geram alerta de vista"*). Quem chama decide `temItemDeVista` por `exigeVista`
- *    (`vista-obrigatoria.ts`), sobre o instrumento do item — não mais pelo tempo de vista do item.
+ *    ⚠️ **E a prova sem item com INSTRUMENTO CONHECIDO entra** (desenho de 15/10/2026, aprovado em 16/10/2026; T259):
+ *    o que tirava a prova sem item do alerta era não se saber se ela exige vista — com `avaliacoes.instrumento_id`
+ *    gravado, a `RN-AV-13` responde pelo instrumento (a PM a mais alerta; a PP a mais, não).
+ * ⚠️ **SÓ ALERTA A PROVA CUJO INSTRUMENTO EXIGE VISTA** (`RN-AV-13`, emenda de 15/10/2026; PE em 16/10/2026:
+ *    *"Vista obrigatória para PM, PO e PE."*). Quem chama decide `temItemDeVista` por `exigeVista`
+ *    (`vista-obrigatoria.ts`), sobre a marca do banco do instrumento — não mais pelo tempo de vista do item.
+ * ⚠️ **NA PROVA EM N SESSÕES, O PRAZO CONTA DA ÚLTIMA** (`RN-AV-12`): `venceEm` é a última sessão + `prazoDias`, o
+ *    mesmo critério de `situacaoDaAvaliacao`.
  * ⚠️ **NUNCA BLOQUEIA** (`RN-DEG-02`): é aviso de tela.
  * ⚠️ TypeScript puro: sem `next`, sem `react`, sem `supabase` (Princípio II).
  */
@@ -31,8 +36,12 @@ export type AvaliacaoParaAlerta = {
   sessoesDeVista: readonly string[];
   /** A vista é obrigatória para esta prova: `exigeVista` sobre o instrumento do item (`RN-AV-13`). */
   temItemDeVista: boolean;
-  /** A avaliação aponta um item do currículo (`avaliacao_curriculo_id`). Sem item, não há alerta. */
+  /** A avaliação aponta um item do currículo (`avaliacao_curriculo_id`). */
   itemLigado: boolean;
+  /** Sem item, a avaliação tem instrumento gravado (`avaliacoes.instrumento_id`). Sem item E sem ele, não há alerta. */
+  instrumentoConhecido?: boolean;
+  /** As sessões de aplicação 2..N ativas (RN-AV-12). */
+  sessoesDeAplicacao?: readonly string[];
 };
 
 export type AlertaDeVista = {
@@ -58,18 +67,21 @@ export function alertasDeVista(
   const limiteDoBreve = somarDias(parametros.hoje, parametros.venceEmBreveDias);
   const alertas: AlertaDeVista[] = [];
   for (const a of avaliacoes) {
-    if (a.natureza === "od" || a.aplicacao === null || !a.itemLigado) continue;
+    if (a.natureza === "od" || a.aplicacao === null || !(a.itemLigado || a.instrumentoConhecido))
+      continue;
     const situacao = situacaoDaAvaliacao({
       natureza: a.natureza,
       estadoDoRegistro: a.estadoDoRegistro,
       aplicacao: a.aplicacao,
       sessoesDeVista: a.sessoesDeVista,
+      sessoesDeAplicacao: a.sessoesDeAplicacao ?? [],
       temItemDeVista: a.temItemDeVista,
       prazoDias: parametros.prazoDias,
       hoje: parametros.hoje,
       terminoDaTurma: null,
     });
-    const venceEm = somarDias(a.aplicacao, parametros.prazoDias);
+    const fim = (a.sessoesDeAplicacao ?? []).reduce((m, d) => (d > m ? d : m), a.aplicacao);
+    const venceEm = somarDias(fim, parametros.prazoDias);
     const base = {
       id: a.id,
       turma: a.turma,

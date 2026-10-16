@@ -60,6 +60,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
     "a barra de abas Ficha · Avaliações, escrita na URL; o conteúdo das duas chega desenhado do servidor",
   "app/(app)/turmas/[turma]/DefinirTempoArbitrado.tsx":
     "definir tempo, confirmar sugestão e nomear a UE de uma avaliação do currículo; as ações chegam por propriedade",
+  // ── Spec 014, emenda de 15/10/2026 (decisão de 16/10/2026) ─────────────────────────────────────
+  "app/(app)/turmas/[turma]/JuntarComoSessao.tsx":
+    "«juntar como sessão da mesma prova»: abrir, escolher a prova e gravar é interação; a ação e as candidatas chegam por propriedade",
   "app/(app)/turmas/[turma]/EdicaoDoPrevisto.tsx":
     "editar o previsto do PROENS de um card: abrir, digitar e gravar é interação; a ação chega por propriedade",
   "app/(app)/atividades/FiltrosDeAtividades.tsx": "os filtros de /atividades, na URL",

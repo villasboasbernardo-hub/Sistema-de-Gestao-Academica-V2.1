@@ -1,35 +1,46 @@
 /**
- * `RN-AV-13` — a vista de prova é obrigatória só para PM e PO (emenda de 15/10/2026 à spec 014).
+ * `RN-AV-13` — a vista de prova é obrigatória pelo INSTRUMENTO (emenda de 15/10/2026 à spec 014; PE acrescentada em
+ * 16/10/2026).
  *
  * > *"RN-AV-13: vista é obrigatória só para PM e PO. PP, T e TG não geram alerta de vista; se a planilha trouxer
  * > vista, registra."* — Bernardo Villas Boas, 15/10/2026
+ * > *"Vista obrigatória para PM, PO e PE."* — Bernardo Villas Boas, 16/10/2026
  *
- * ⚠️ **O DADO NÃO MORA AQUI.** A lista dos instrumentos que exigem vista é `vistaObrigatoria` de
- *    `./instrumentos.json`, o MESMO arquivo que a sincronização lê (`scripts/carga_dsa/regras_de_prova.py`). Uma
- *    regra, um arquivo: escrever a lista à mão aqui ou numa tela a faria divergir da carga em silêncio — e a guarda
- *    `tests/unidade/instrumentos-dado-unico.test.ts` reprova quem tentar.
- * ⚠️ **LEITURA LITERAL** (interpretação a confirmar por Bernardo, `aprovacoes-pendentes.md` de 15/10/2026): só PM e PO
- *    exigem. PE, PD, TI, PP, TG, OD e os demais NÃO geram alerta de vista — a vista lançada continua registrada.
- * ⚠️ **INSTRUMENTO NULO = EXIGE, COMO ANTES.** A prova sem item do currículo ligado não tem instrumento no banco
- *    (`avaliacoes` não guarda o instrumento; é o item b do desenho de 15/10/2026). Sem saber o instrumento, a situação
- *    dela continua a de hoje — e ela já fica fora do ALERTA pela decisão de 14/10/2026 (`alertas-de-vista.ts`).
- * ⚠️ **O ESPELHO SQL AINDA NÃO SEGUE ESTA REGRA.** `app.fn_status_vista` (a view e o pgTAP cruzado) continua decidindo
- *    pelo TEMPO de vista do item até a migration do desenho (`specs/014-atividades-e-avaliacoes/desenho-emenda-15-10.md`,
- *    item c) ser aprovada e aplicada. Até lá, a tela decide por aqui e a view, pelo tempo.
+ * ⚠️ **O DADO MORA NO BANCO, E SÓ LÁ** (A4 do desenho de 15/10/2026, aprovado em 16/10/2026): a marca
+ *    `vista_obrigatoria` em `config_listas.metadados` de cada instrumento de `instrumentos_avaliacao`, posta pela
+ *    migration D-9 (`20261016092315`). A tela a recebe pela consulta (`instrumentoDaVista`, abaixo), a sincronização
+ *    pelo retrato do banco, e o espelho SQL `app.fn_status_vista` a lê direto. Escrever a lista aqui — ou numa tela —
+ *    a faria divergir do banco em silêncio; a guarda `tests/unidade/instrumentos-dado-unico.test.ts` reprova quem
+ *    tentar, e a prova cruzada `tests/invariantes/situacao-sql-igual-ts.test.ts` compara as duas implementações.
+ * ⚠️ **INSTRUMENTO DESCONHECIDO = EXIGE, COMO ANTES.** A prova sem item ligado e sem `avaliacoes.instrumento_id`
+ *    (o histórico; o `AV` que nada nomeia) não tem instrumento: a situação dela continua a de antes da emenda.
  * ⚠️ TypeScript puro: sem `next`, sem `react`, sem `supabase` (Princípio II).
  */
-import instrumentos from "./instrumentos.json";
 
-const VISTA_OBRIGATORIA: ReadonlySet<string> = new Set(
-  instrumentos.vistaObrigatoria.map((i) => i.trim().toUpperCase()),
-);
+/** O instrumento de uma avaliação, com a marca do banco (`config_listas.metadados.vista_obrigatoria`). */
+export type InstrumentoDaVista = {
+  /** `config_listas.instrumentos_avaliacao.valor`: `PM`, `PP`, `TG`… */
+  readonly valor: string;
+  readonly vistaObrigatoria: boolean;
+};
 
-/** O instrumento do currículo (`config_listas.instrumentos_avaliacao.valor`: `PM`, `PP`, `TG`…), ou nulo. */
-export type EntradaDaVistaObrigatoria = { readonly instrumento: string | null | undefined };
+/**
+ * Traduz a linha de `config_listas` que a consulta trouxe (`valor` e `metadados`) para o instrumento da vista.
+ * Linha ausente → `null` (desconhecido). Marca ausente ou diferente de `true` → não exige: a D-9 marca TODO
+ * instrumento, e o que não é `true` é a decisão de não exigir.
+ */
+export function instrumentoDaVista(
+  linha: { readonly valor?: unknown; readonly metadados?: unknown } | null | undefined,
+): InstrumentoDaVista | null {
+  if (!linha || typeof linha.valor !== "string" || linha.valor.trim() === "") return null;
+  const metadados = (linha.metadados ?? {}) as { vista_obrigatoria?: unknown };
+  return { valor: linha.valor.trim(), vistaObrigatoria: metadados.vista_obrigatoria === true };
+}
 
-/** O instrumento exige vista? Nulo (prova sem item ligado) → sim, como antes da emenda. */
-export function exigeVista(entrada: EntradaDaVistaObrigatoria): boolean {
-  const instrumento = entrada.instrumento?.trim().toUpperCase() ?? "";
-  if (instrumento === "") return true;
-  return VISTA_OBRIGATORIA.has(instrumento);
+/** O instrumento exige vista? Desconhecido (nulo) → sim, como antes da emenda. */
+export function exigeVista(entrada: {
+  readonly instrumento: InstrumentoDaVista | null | undefined;
+}): boolean {
+  if (!entrada.instrumento) return true;
+  return entrada.instrumento.vistaObrigatoria;
 }

@@ -339,6 +339,29 @@ function porChave(
       return "O histórico do arbitrado não se altera. Para corrigir, grave o valor novo na avaliação do currículo.";
     case "vista_antes_da_aplicacao":
       return "A vista não pode ser antes da aplicação da prova. Escolha uma data a partir do dia da prova.";
+    // Spec 014, emenda de 15/10/2026 (E-6, 16/10/2026): as sessões de aplicação, o instrumento e «juntar».
+    case "sessao_antes_da_aplicacao":
+      return "A sessão de aplicação não pode ser antes da 1ª aplicação da prova. Escolha uma data a partir do dia da prova.";
+    case "instrumento_fora_da_lista":
+      return "O instrumento escolhido não é um instrumento de avaliação. Escolha um da lista.";
+    case "instrumento_diferente_do_item":
+      return "O instrumento não é o da avaliação do currículo escolhida. Deixe o instrumento em branco ou troque a avaliação do currículo.";
+    case "juntar_sem_permissao":
+      return "Só o Admin e o Encarregado juntam uma avaliação como sessão de outra prova.";
+    case "juntar_a_si_mesma":
+      return "Escolha duas avaliações diferentes: a prova e a que vira sessão dela.";
+    case "juntar_fora_do_alcance":
+      return "Uma das avaliações não está ao seu alcance. Recarregue a página e confira a turma.";
+    case "juntar_outra_disciplina":
+      return "Só se junta avaliação da mesma turma e da mesma disciplina.";
+    case "juntar_avaliacao_nao_viva":
+      return "Uma das avaliações já foi cancelada ou substituída pela planilha. Recarregue a página.";
+    case "juntar_anterior_a_prova":
+      return "A avaliação que vira sessão tem de ser aplicada no dia da prova ou depois dele.";
+    case "juntar_prova_com_sessoes":
+      return "A avaliação escolhida já tem sessões de aplicação. Junte a prova a ela, ou exclua as sessões antes.";
+    case "trilha_da_juntada_imutavel":
+      return "O registro da junção não se altera: quem juntou, quando e a avaliação juntada ficam como foram gravados.";
 
     case "codigo_de_turma_divergente":
     case "codigo_de_turma_imutavel":

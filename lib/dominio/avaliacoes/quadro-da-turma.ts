@@ -9,14 +9,19 @@
  *    vínculo (o histórico, e o que o DSA lançou antes do PR 5.1) aparece à parte, como «lançada sem item do
  *    currículo», com a situação dela — nunca casada por ordem nem por nome (FR-039.1 só vale para o histórico
  *    da v2.0, em `historico.ts`).
- * ⚠️ **A VISTA É OBRIGATÓRIA PELO INSTRUMENTO DO ITEM, NÃO PELO TEMPO DE VISTA** (`RN-AV-13`, emenda de 15/10/2026):
- *    quem decide é `exigeVista` (`vista-obrigatoria.ts`). A avaliação sem item ligado não tem instrumento conhecido e
- *    continua exigindo, como antes.
+ * ⚠️ **A VISTA É OBRIGATÓRIA PELO INSTRUMENTO, NÃO PELO TEMPO DE VISTA** (`RN-AV-13`, emenda de 15/10/2026; PE em
+ *    16/10/2026): quem decide é `exigeVista` (`vista-obrigatoria.ts`), sobre a marca do banco — o instrumento do item
+ *    ou, sem item, o da própria avaliação (`avaliacoes.instrumento_id`). Sem nenhum dos dois, exige, como antes.
+ * ⚠️ **A PROVA EM N SESSÕES É UMA AVALIAÇÃO** (`RN-AV-12`): as sessões 2..N chegam em `sessoesDeAplicacao` e nunca
+ *    contam como outra prova — no «N de M», no «X de Y» e no `alemDoPrevisto` (`RN-AV-14`).
+ * ⚠️ **AS CANDIDATAS A «JUNTAR COMO SESSÃO»** saem daqui (`juntarEm`), não da tela: a mesma disciplina, viva, aplicada
+ *    no mesmo dia ou antes, e sem sessões próprias. O banco confere de novo (`public.juntar_como_sessao`).
  * ⚠️ TypeScript puro (Princípio II): tudo chega por parâmetro, `hoje` inclusive.
  */
 
 import { emOrdemNaturalDoCodigo } from "@/lib/dominio/ordem-natural";
 
+import { alemDoPrevisto, type AlemDoPrevisto } from "./alem-do-previsto";
 import { contagemDeAvaliacoes, type ContagemDeAvaliacoes } from "./contagem";
 import { previstoDaDisciplina, type ItemDoCurriculo, type PrevistoDaDisciplina } from "./previsto";
 import { projecaoDaDisciplina, type ProjecaoDaDisciplina } from "./projecao";
@@ -25,7 +30,7 @@ import {
   type NaturezaDaAvaliacao,
   type SituacaoDaAvaliacao,
 } from "./situacao";
-import { exigeVista } from "./vista-obrigatoria";
+import { exigeVista, type InstrumentoDaVista } from "./vista-obrigatoria";
 
 export type DisciplinaDoQuadro = {
   id: string;
@@ -44,8 +49,8 @@ export type ItemDoQuadro = ItemDoCurriculo & {
   id: string;
   disciplinaId: string;
   ordem: number;
-  /** O instrumento do item (`PM`, `PP`, `TG`…) — é ele que diz se a vista é obrigatória (`RN-AV-13`). */
-  instrumento: string | null;
+  /** O instrumento do item (`PM`, `PP`, `TG`…), com a marca do banco — é ele que diz se a vista é obrigatória. */
+  instrumento: InstrumentoDaVista | null;
 };
 
 export type AvaliacaoDoQuadro = {
@@ -57,6 +62,17 @@ export type AvaliacaoDoQuadro = {
   aplicacao: string | null;
   estadoDoRegistro: string;
   sessoesDeVista: string[];
+  /** As sessões de aplicação 2..N ativas (`sessoes_de_aplicacao`, RN-AV-12), por data. */
+  sessoesDeAplicacao?: string[];
+  /** O instrumento da própria avaliação (`avaliacoes.instrumento_id`) — só vale sem item ligado. */
+  instrumento?: InstrumentoDaVista | null;
+};
+
+/** Uma prova da disciplina em que esta avaliação pode ser juntada como sessão (decisão de 16/10/2026). */
+export type ProvaParaJuntar = {
+  readonly id: string;
+  readonly rotulo: string;
+  readonly aplicacao: string;
 };
 
 export type LinhaDeItem = {
@@ -72,6 +88,20 @@ export type LinhaDeItem = {
   origemDaUe: string | null;
   situacao: SituacaoDaAvaliacao | null;
   aplicacao: string | null;
+  /** A avaliação ligada ao item (para «juntar como sessão»), e quantas sessões de aplicação ela tem (1 = só a 1ª). */
+  avaliacaoId: string | null;
+  sessoes: number;
+  juntarEm: ProvaParaJuntar[];
+};
+
+export type AvaliacaoSemItem = {
+  id: string;
+  tipo: string;
+  instrumento: string | null;
+  aplicacao: string | null;
+  situacao: SituacaoDaAvaliacao | null;
+  sessoes: number;
+  juntarEm: ProvaParaJuntar[];
 };
 
 export type DisciplinaNoQuadro = {
@@ -79,9 +109,11 @@ export type DisciplinaNoQuadro = {
   previsto: PrevistoDaDisciplina;
   projecao: ProjecaoDaDisciplina;
   itens: LinhaDeItem[];
-  semItem: { tipo: string; aplicacao: string | null; situacao: SituacaoDaAvaliacao | null }[];
+  semItem: AvaliacaoSemItem[];
   aplicadas: number;
   previstas: number;
+  /** `RN-AV-14`: os instrumentos aplicados além do que o currículo prevê — informação, nunca erro. */
+  alemDoPrevisto: AlemDoPrevisto[];
 };
 
 export type QuadroDeAvaliacoes = {
@@ -104,16 +136,18 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
    *    disciplina), o instrumento é desconhecido e ela exige, como antes da emenda.
    */
   const instrumentoDoItem = new Map(entrada.itens.map((i) => [i.id, i.instrumento] as const));
+  /* O instrumento da avaliação: o do item ligado; sem item (ou item de fora da lista), o da própria avaliação. */
+  const instrumentoDa = (a: AvaliacaoDoQuadro): InstrumentoDaVista | null =>
+    (a.itemId !== null ? instrumentoDoItem.get(a.itemId) : undefined) ?? a.instrumento ?? null;
   const exigeVistaDa = (a: AvaliacaoDoQuadro): boolean =>
-    exigeVista({
-      instrumento: a.itemId === null ? null : (instrumentoDoItem.get(a.itemId) ?? null),
-    });
+    exigeVista({ instrumento: instrumentoDa(a) });
   const situacaoDe = (a: AvaliacaoDoQuadro, temItemDeVista: boolean = exigeVistaDa(a)) =>
     situacaoDaAvaliacao({
       natureza: a.natureza,
       estadoDoRegistro: a.estadoDoRegistro,
       aplicacao: a.aplicacao,
       sessoesDeVista: a.sessoesDeVista,
+      sessoesDeAplicacao: a.sessoesDeAplicacao ?? [],
       temItemDeVista,
       prazoDias: entrada.prazoDias,
       hoje: entrada.hoje,
@@ -134,6 +168,25 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
       .sort((a, b) => a.ordem - b.ordem);
     const avaliacoes = entrada.avaliacoes.filter((a) => a.disciplinaId === d.id);
     const previsto = previstoDaDisciplina({ ch: d.ch, unidades: d.unidades, itens });
+    const rotuloDoItem = new Map(itens.map((i, n) => [i.id, previsto.itens[n]!.rotulo] as const));
+    /*
+     * As provas da disciplina em que outra pode ser juntada (decisão de 16/10/2026): vivas, aplicadas, de prova ou
+     * trabalho. A candidata de cada avaliação é a aplicada no MESMO DIA OU ANTES, que não é ela.
+     */
+    const provasVivas = avaliacoes.filter(
+      (a) => a.natureza !== "od" && a.aplicacao !== null && situacaoDe(a) !== null,
+    );
+    const rotuloDaProva = (a: AvaliacaoDoQuadro): string =>
+      (a.itemId && rotuloDoItem.get(a.itemId)) || instrumentoDa(a)?.valor || a.tipo;
+    const juntarEm = (a: AvaliacaoDoQuadro): ProvaParaJuntar[] =>
+      a.natureza === "od" || a.aplicacao === null || (a.sessoesDeAplicacao ?? []).length > 0
+        ? []
+        : provasVivas
+            .filter((p) => p.id !== a.id && p.aplicacao! <= a.aplicacao!)
+            .sort((x, y) =>
+              x.aplicacao! < y.aplicacao! ? -1 : x.aplicacao! > y.aplicacao! ? 1 : 0,
+            )
+            .map((p) => ({ id: p.id, rotulo: rotuloDaProva(p), aplicacao: p.aplicacao! }));
 
     const linhas: LinhaDeItem[] = itens.map((item, n) => {
       const prevista = previsto.itens[n]!;
@@ -173,12 +226,23 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
         origemDaUe: prevista.origemDaUe,
         situacao,
         aplicacao: ligada?.aplicacao ?? null,
+        avaliacaoId: ligada?.id ?? null,
+        sessoes: ligada ? 1 + (ligada.sessoesDeAplicacao ?? []).length : 0,
+        juntarEm: ligada ? juntarEm(ligada) : [],
       };
     });
 
-    const semItem = avaliacoes
+    const semItem: AvaliacaoSemItem[] = avaliacoes
       .filter((a) => a.itemId === null || !itens.some((i) => i.id === a.itemId))
-      .map((a) => ({ tipo: a.tipo, aplicacao: a.aplicacao, situacao: situacaoDe(a) }))
+      .map((a) => ({
+        id: a.id,
+        tipo: a.tipo,
+        instrumento: instrumentoDa(a)?.valor ?? null,
+        aplicacao: a.aplicacao,
+        situacao: situacaoDe(a),
+        sessoes: 1 + (a.sessoesDeAplicacao ?? []).length,
+        juntarEm: juntarEm(a),
+      }))
       .filter((a) => a.situacao !== null);
 
     // ⚠️ A avaliação APLICADA sem item ligado (o DSA antes do PR 5.1, a carga antes do PR 6) consome um item
@@ -233,6 +297,20 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
       semItem,
       aplicadas,
       previstas: provasETrabalhos.length,
+      alemDoPrevisto: alemDoPrevisto({
+        itens: itens.map((i) => ({
+          instrumento: i.instrumento?.valor ?? null,
+          natureza: i.natureza,
+        })),
+        avaliacoes: avaliacoes
+          .map((a) => ({ a, situacao: situacaoDe(a) }))
+          .filter(({ situacao }) => situacao !== null)
+          .map(({ a, situacao }) => ({
+            instrumento: instrumentoDa(a)?.valor ?? null,
+            natureza: a.natureza,
+            aplicada: APLICADA.has(situacao!),
+          })),
+      }),
     });
   }
 

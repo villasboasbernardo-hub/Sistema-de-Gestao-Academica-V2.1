@@ -53,7 +53,7 @@ import { AlertasDeVista } from "../turmas/[turma]/AlertasDeVista";
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
 import { alertasDeVista } from "@/lib/dominio/avaliacoes/alertas-de-vista";
 import { naturezaPeloTipo } from "@/lib/dominio/avaliacoes/quadro-da-turma";
-import { exigeVista } from "@/lib/dominio/avaliacoes/vista-obrigatoria";
+import { exigeVista, instrumentoDaVista } from "@/lib/dominio/avaliacoes/vista-obrigatoria";
 import {
   montarPanorama,
   totaisDo,
@@ -180,7 +180,7 @@ export default async function Inicio({
     supabase
       .from("avaliacoes")
       .select(
-        "id, tipo_avaliacao, data_avaliacao, status, avaliacao_curriculo_id, turma:turmas!avaliacoes_turma_id_fkey(codigo), disciplina:disciplinas!avaliacoes_disciplina_id_fkey(cod_disciplina), item:avaliacoes_curriculo!avaliacoes_item_da_disciplina(status, instrumento:config_listas!avaliacoes_curriculo_instrumento_id_fkey(valor)), vistas_de_avaliacao(data, status)",
+        "id, tipo_avaliacao, data_avaliacao, status, avaliacao_curriculo_id, turma:turmas!avaliacoes_turma_id_fkey(codigo), disciplina:disciplinas!avaliacoes_disciplina_id_fkey(cod_disciplina), item:avaliacoes_curriculo!avaliacoes_item_da_disciplina(status, instrumento:config_listas!avaliacoes_curriculo_instrumento_id_fkey(valor, metadados)), instrumento:config_listas!avaliacoes_instrumento_id_fkey(valor, metadados), vistas_de_avaliacao(data, status), sessoes_de_aplicacao!sessoes_de_aplicacao_avaliacao_id_fkey(data, status)",
       )
       .in("status", [...STATUS_DE_AVALIACAO_VIVA])
       .lte("data_avaliacao", hoje),
@@ -237,8 +237,14 @@ export default async function Inicio({
     avaliacao_curriculo_id: string | null;
     turma: { codigo: string } | null;
     disciplina: { cod_disciplina: string } | null;
-    item: { status: string; instrumento: { valor: string | null } | null } | null;
+    item: {
+      status: string;
+      instrumento: { valor: string | null; metadados: unknown } | null;
+    } | null;
+    /** RN-AV-13 (desenho de 15/10/2026): o instrumento da prova SEM item (`avaliacoes.instrumento_id`). */
+    instrumento: { valor: string | null; metadados: unknown } | null;
     vistas_de_avaliacao: { data: string; status: string }[];
+    sessoes_de_aplicacao: { data: string; status: string }[] | null;
   };
   const vistas = alertasDeVista(
     ((avaliacoesRes.data ?? []) as unknown as LinhaDeAvaliacao[])
@@ -251,6 +257,10 @@ export default async function Inicio({
          *    desconhecido e fora do alerta (decisão de 14/10/2026, `alertas-de-vista.ts`).
          */
         const item = a.item?.status === "ativo" ? a.item : null;
+        // RN-AV-13: o instrumento do item ligado ou, sem item, o da própria prova — a marca do banco decide.
+        const instrumento = instrumentoDaVista(
+          a.avaliacao_curriculo_id !== null ? item?.instrumento : a.instrumento,
+        );
         return {
           id: a.id,
           turma: a.turma?.codigo ?? "",
@@ -262,8 +272,12 @@ export default async function Inicio({
           sessoesDeVista: a.vistas_de_avaliacao
             .filter((v) => v.status === "ativo")
             .map((v) => v.data),
-          temItemDeVista: exigeVista({ instrumento: item?.instrumento?.valor ?? null }),
+          sessoesDeAplicacao: (a.sessoes_de_aplicacao ?? [])
+            .filter((v) => v.status === "ativo")
+            .map((v) => v.data),
+          temItemDeVista: exigeVista({ instrumento }),
           itemLigado: a.avaliacao_curriculo_id !== null && item !== null,
+          instrumentoConhecido: a.avaliacao_curriculo_id === null && instrumento !== null,
         };
       }),
     {

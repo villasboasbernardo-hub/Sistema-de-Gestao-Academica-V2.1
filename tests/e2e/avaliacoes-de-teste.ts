@@ -221,6 +221,9 @@ export async function semearAvaliacoes(
   const idsAv = (avs ?? []).map((a) => (a as { id: string }).id);
   if (idsAv.length > 0) {
     await admin().from("vistas_de_avaliacao").delete().in("avaliacao_id", idsAv);
+    // RN-AV-12 (16/10/2026): as sessões de aplicação apontam a avaliação pelas DUAS FKs (a prova e a juntada).
+    await admin().from("sessoes_de_aplicacao").delete().in("avaliacao_id", idsAv);
+    await admin().from("sessoes_de_aplicacao").delete().in("juntada_de_avaliacao_id", idsAv);
     await admin().from("avaliacoes").delete().in("id", idsAv);
   }
   await admin().from("avaliacoes_curriculo_turma").delete().eq("turma_id", turma.id);
@@ -308,6 +311,8 @@ export async function limparAvaliacoes(processo: number, prefixo = "E2A"): Promi
   const ids = (avs ?? []).map((a) => (a as { id: string }).id);
   if (ids.length > 0) {
     await admin().from("vistas_de_avaliacao").delete().in("avaliacao_id", ids);
+    await admin().from("sessoes_de_aplicacao").delete().in("avaliacao_id", ids);
+    await admin().from("sessoes_de_aplicacao").delete().in("juntada_de_avaliacao_id", ids);
     await admin().from("avaliacoes").delete().in("id", ids);
   }
   await admin()
@@ -436,6 +441,14 @@ async function limparDoCurso(cursoId: string): Promise<void> {
     await ou(
       admin().from("vistas_de_avaliacao").delete().in("avaliacao_id", ids),
       "apagar as sessões de vista",
+    );
+    await ou(
+      admin().from("sessoes_de_aplicacao").delete().in("avaliacao_id", ids),
+      "apagar as sessões de aplicação",
+    );
+    await ou(
+      admin().from("sessoes_de_aplicacao").delete().in("juntada_de_avaliacao_id", ids),
+      "apagar as sessões de aplicação juntadas",
     );
     await ou(admin().from("avaliacoes").delete().in("id", ids), "apagar as avaliações");
   }

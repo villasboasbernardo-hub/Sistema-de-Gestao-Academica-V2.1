@@ -22,7 +22,7 @@ import {
 } from "@/lib/dominio/avaliacoes/quadro-da-turma";
 import type { NaturezaDaAvaliacao } from "@/lib/dominio/avaliacoes/situacao";
 import type { OrigemDoTempo } from "@/lib/dominio/avaliacoes/previsto";
-import { exigeVista } from "@/lib/dominio/avaliacoes/vista-obrigatoria";
+import { exigeVista, instrumentoDaVista } from "@/lib/dominio/avaliacoes/vista-obrigatoria";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 type Linha = Record<string, unknown>;
@@ -63,7 +63,7 @@ export async function lerAvaliacoesDaTurma(entrada: {
     supabase
       .from("avaliacoes")
       .select(
-        "id, disciplina_id, avaliacao_curriculo_id, tipo_avaliacao, data_avaliacao, status, vistas_de_avaliacao(data, status)",
+        "id, disciplina_id, avaliacao_curriculo_id, tipo_avaliacao, data_avaliacao, status, vistas_de_avaliacao(data, status), sessoes_de_aplicacao!sessoes_de_aplicacao_avaliacao_id_fkey(data, status), instrumento:config_listas!avaliacoes_instrumento_id_fkey(valor, metadados)",
       )
       .eq("turma_id", entrada.turmaId ?? "00000000-0000-0000-0000-000000000000")
       .in("status", [...STATUS_DE_AVALIACAO_VIVA]),
@@ -143,7 +143,7 @@ export async function lerAvaliacoesDaTurma(entrada: {
       disciplinaId: String(i.disciplina_id),
       ordem: Number(i.ordem),
       rotulo: `${instrumento.valor ?? "?"} ${String(i.numero)}`,
-      instrumento: instrumento.valor ?? null,
+      instrumento: instrumentoDaVista(instrumento),
       natureza: (instrumento.metadados?.natureza ?? "prova") as NaturezaDaAvaliacao,
       unidadeEnsinoId: (i.unidade_ensino_id as string | null) ?? null,
       origemUe: (i.origem_ue as "curriculo" | "decisao_ciaara" | null) ?? null,
@@ -174,13 +174,18 @@ export async function lerAvaliacoesDaTurma(entrada: {
     sessoesDeVista: ((a.vistas_de_avaliacao ?? []) as Linha[])
       .filter((s) => s.status === "ativo")
       .map((s) => String(s.data)),
+    // RN-AV-12: as sessões 2..N da aplicação (a sessão nunca é outra avaliação).
+    sessoesDeAplicacao: ((a.sessoes_de_aplicacao ?? []) as Linha[])
+      .filter((s) => s.status === "ativo")
+      .map((s) => String(s.data)),
+    instrumento: instrumentoDaVista(a.instrumento as Linha | null),
   }));
 
   const prazoDias = Number((prazo.data as Linha | null)?.valor ?? 7) || 7;
   const venceEmBreveDias = Number((breve.data as Linha | null)?.valor ?? 2) || 2;
-  // A vista é obrigatória (`RN-AV-13`, 15/10/2026): pelo INSTRUMENTO do item, por `exigeVista`; sem item ligado
-  // (histórico), o instrumento é desconhecido e ela exige, como antes. ⚠️ `app.fn_status_vista` ainda decide pelo
-  // tempo de vista do item até a migration do desenho de 15/10/2026 — a view e esta tela podem divergir até lá.
+  // A vista é obrigatória (`RN-AV-13`; PE em 16/10/2026) pela marca do banco do INSTRUMENTO: o do item ligado ou,
+  // sem item, o da própria avaliação (`avaliacoes.instrumento_id`); sem nenhum, exige, como antes. É o mesmo critério
+  // de `app.fn_status_vista` (prova cruzada `situacao-sql-igual-ts.test.ts`).
   const itemPorId = new Map(itensDoQuadro.map((i) => [i.id, i] as const));
   const codDe = new Map(disciplinas.map((d) => [d.id, d.cod] as const));
   const alertas = alertasDeVista(
@@ -195,8 +200,10 @@ export async function lerAvaliacoesDaTurma(entrada: {
         estadoDoRegistro: a.estadoDoRegistro,
         aplicacao: a.aplicacao,
         sessoesDeVista: a.sessoesDeVista,
-        temItemDeVista: exigeVista({ instrumento: item?.instrumento ?? null }),
+        sessoesDeAplicacao: a.sessoesDeAplicacao ?? [],
+        temItemDeVista: exigeVista({ instrumento: item?.instrumento ?? a.instrumento ?? null }),
         itemLigado: item !== undefined,
+        instrumentoConhecido: (a.instrumento ?? null) !== null,
       };
     }),
     { prazoDias, venceEmBreveDias, hoje: entrada.hoje },
