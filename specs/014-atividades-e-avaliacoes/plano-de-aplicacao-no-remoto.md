@@ -177,3 +177,38 @@ ramo `sessao_aplicacao` de `vw_ocupacao_ta` só tem linha depois da rodada, que 
 local nas **dez** turmas; 1ª rodada **128** mudanças, 2ª **0**; catálogo igual; dados das **28** turmas iguais no local e
 no remoto (`scripts/provas/dados_das_turmas.sql`, total `cc69b52c`); esquema `7ed10b8c…`, 1.994 objetos, igual nos dois.
 Relatório com o antes/depois: `antes-depois/rodada-da-emenda-no-remoto.md`.
+
+### As migrations da segunda decisão de 16/10/2026 (#61) — E-7 e D-10
+
+Segunda decisão de Bernardo Villas Boas de 16/10/2026 (`aprovacoes-pendentes.md`, seção «16/10/2026 (tarde)»): a A4.7
+com a planilha preenchida e *"banco recusando 1ª aplicação depois das sessões"*, publicados de ponta a ponta pelo rito.
+A D-10 é dado decidido por ele (os 87 itens); o antes/depois por disciplina é `antes-depois/a47-antes-depois.md`.
+⚠️ **O código da `main` antes do merge (`6524c63`, #60) continua compatível**: a E-7 não muda coluna nem assinatura, e
+a RPC da tela (`public.juntar_como_sessao`) segue igual por fora.
+
+| Passo | Medido |
+|---|---|
+| CI do ramo | verde nos três blocos sobre `8dc60a7` (run `38934329964`): 2.314 · 768 · 326 · 471 + 6 pulados |
+| Reversão | `reversao-e7-e-a47.sql` numa base limpa: `dcd9297b…` (2.000) → **`7ed10b8c…` (1.994)**, a do remoto antes |
+| Ensaio na cópia | `remoto-20261016-131901.sql` com a D-10 aplicada à mão (87 inseridos): a rodada gravada, a 2ª **0**, a junção da CAHO IV e a 3ª **0** |
+| Remoto antes | `7ed10b8c068852f8678a4a42a98603b1`, 1.994 objetos; 72 migrations aplicadas e as 2 novas pendentes |
+| Backup imediatamente antes | **`remoto-20261016-135852.sql`** |
+| Dry-run | só `20261016153228_aplicacao_antes_das_sessoes_e_nucleo_de_juntar.sql` e `20261016153232_avaliacoes_do_curriculo_a47.sql` |
+| `db push --linked` | saída **0**, as duas na ordem |
+| Migrations | **74 e 74** |
+| Impressão digital | **`dcd9297b1986b9a3a0a9a795ab5e7b12`, 2.000 objetos, igual no local e no remoto** |
+| Dado | `scripts/provas/dados_das_turmas.sql`: as **29** turmas iguais antes e depois do push (total `717614ac`) |
+| D-10 | **281** itens ativos (194 + **87**); a PT com `vista_obrigatoria = false`; 1 evento `MLOG-014-A47-…` |
+| E-7 | o gatilho `trg_avaliacoes_aplicacao_antes_das_sessoes` adiado; **0** policies de `DELETE` |
+| Production | `/login` e `/estilo` 200, as protegidas 307 — antes e depois do push, e depois do deploy do merge `3165a59` (#61, deploy `success`) |
+
+### A rodada da A4.7 e a junção da CAHO IV (16/10/2026, tarde)
+
+✅ **APLICADA NO REMOTO em 16/10/2026**, depois do merge do #61 (`3165a59`) e do deploy dele. Backup imediatamente antes
+**`remoto-20261016-141227.sql`**; ensaio na cópia gravado (36) e com a 2ª rodada **0**; plano do remoto = plano do local
+nas **dez** turmas; 1ª rodada **36** mudanças (23 provas e 13 sugestões), 2ª **0**; a junção da PP de 19/08 da CAHO IV à
+PP 1 (`scripts/manutencao/juntar_como_sessao.py`: sessão 15, 40 TA, `juntada_por` nulo); 3ª rodada **0**; catálogo igual
+em cada execução; dados das **29** turmas iguais no local e no remoto (`scripts/provas/dados_das_turmas.sql`, total
+`3dc367f9`). ⚠️ A 1ª execução no remoto **parou na CAHO** (saída 6, *«plano do local × remoto: não é o mesmo plano»*)
+porque eu tinha adiantado a cópia local com a junção — nada foi gravado nela; ela foi gravada sozinha, com cópia nova
+(`remoto-20261016-145034.sql`). Relatório com o antes/depois: `antes-depois/rodada-da-a47-no-remoto.md`.

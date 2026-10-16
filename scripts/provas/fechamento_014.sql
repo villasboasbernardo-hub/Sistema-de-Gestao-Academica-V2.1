@@ -31,13 +31,13 @@ select status::text as status, count(*) as avaliacoes,
        count(*) filter (where coalesce(observacoes, '') like '%[JUNTADA COMO SESSAO%') as juntadas
   from public.avaliacoes group by 1 order by 1;
 
--- SC-008: a HN-2101 do C-Ap-HN e a soma do currículo dela.
+-- SC-008: a HN-2101 do C-Ap-HN (no sistema, `23 - C-Ap-HN - I`, depois da unificação da Q-15) e a soma do currículo dela.
 select d.codigo, d.cod_disciplina, d.carga_horaria_tempos,
        (select coalesce(sum(u.ch_prevista_tempos), 0) from public.unidades_ensino u
          where u.disciplina_id = d.id and u.status = 'ativo') as soma_das_ues,
        (select coalesce(sum(coalesce(a.ta_aplicacao, 0) + coalesce(a.ta_vista, 0)), 0) from public.avaliacoes_curriculo a
          where a.disciplina_id = d.id and a.status = 'ativo') as avaliacao_do_curriculo
-  from public.disciplinas d where d.cod_disciplina = 'HN-2101' and d.status = 'ativo';
+  from public.disciplinas d where d.codigo = '23 - C-Ap-HN - I' and d.status = 'ativo';
 
 -- SC-014: as disciplinas ativas dos cursos — avaliação do currículo dentro da CH, e quantas «não definido».
 select count(*) as disciplinas,

@@ -48,3 +48,12 @@ remoto, depois sincronizado igual a ele); o anterior era `remoto-20261014-085612
 (`C:\Users\VILLAS BOAS\AppData\Local\ciaara-11\copias-do-remoto\`), restaurado por `dado_do_remoto`; a
 rodada do PR 3 foi medida sobre ele. Os antes/depois do PR 1 e 1.1 usaram `remoto-20261014-021627.sql`.
 Para as suítes de ponta a ponta, `pnpm db:reset:limpo` antes (a cópia do remoto quebra a semente do DSA).
+
+## 16/10/2026 (tarde) — a segunda decisão do dia e o fechamento da spec
+
+**#60** (`6524c63`, o card leva à aba à vista; a causa do `tema.spec.ts:202`) e **#61** (`3165a59`, E-7 e D-10) na
+`main` e em Production; as duas migrations no remoto pelo rito (74 e 74, `dcd9297b…`, 2.000 objetos, igual nos dois);
+a rodada da A4.7 no remoto com a junção da CAHO IV (2ª e 3ª rodadas **0**, dados das 29 turmas iguais). Fechamento:
+`fechamento.md` (T236) e o `CLAUDE.md` (T237). **Pendente só a reconferência do card por Bernardo** (T268, roteiro de
+Production, passo 0). **Banco local:** a cópia `remoto-20261016-145034.sql` com a rodada da CAHO e a junção refeitas —
+igual ao remoto. As listas da rodada (fora do git) foram regeradas da 3ª rodada no remoto.
