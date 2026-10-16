@@ -699,7 +699,7 @@ Cada uma está implementada, **só no local**, com a leitura indicada, até a su
   `AV3` ligava à PP 3 pela coluna T/E da linha; agora as **três não casam**, porque nenhuma descrição nomeia a PP
   (*"AV1 – TFM – AVALIAÇÃO - CORRIDA"*, *"AV2 – TFM – AVALIAÇÃO - NATAÇÃO (50 METROS)"*, *"AV3 – AVALIAÇÃO -
   PERMANÊNCIA NA ÁGUA"*). Se a coluna T/E pode desempatar é a **P10**, abaixo. **Proposta:** manter; e, nas planilhas
-  que ainda forem usadas, o operador escrever o COD do instrumento (`PM1`, `TG1`). **Aprovação:** [pendente]
+  que ainda forem usadas, o operador escrever o COD do instrumento (`PM1`, `TG1`). **Aprovação:** ✅ **aceita como proposta por Bernardo Villas Boas em 16/10/2026** (segunda decisão do dia)
   *(Reescrita em 15/10/2026, na revisão do texto contra o código: a primeira redação dizia "os candidatos são todos
   os itens da disciplina, a descrição desempata", o que admitiria a eliminação que o código recusa.)*
 - **P3 — RN-AV-11 com provas numeradas e sem número misturadas.** Exemplo sintético: dois itens PM na disciplina; a
@@ -708,7 +708,7 @@ Cada uma está implementada, **só no local**, com a leitura indicada, até a su
   número escrito na descrição não conta no COD de instrumento sem número:** a descrição só desempata o
   **instrumento** (RN-AV-10), então `PM` com a descrição *"PM4 – …"* pega pela ordem cronológica, e não o item 4.
   Com `AV`, ao contrário, o número da descrição vale (D6.1, P2). **Alternativa:** a ordem cronológica para todas,
-  renumerando a `PM1` — contra o número que o operador escreveu. **Proposta:** manter. **Aprovação:** [pendente]
+  renumerando a `PM1` — contra o número que o operador escreveu. **Proposta:** manter. **Aprovação:** ✅ **aceita como proposta por Bernardo Villas Boas em 16/10/2026** (segunda decisão do dia)
 - **P4 — "Dias consecutivos ou próximos" (RN-AV-12).** **Leitura adotada:** até **7 dias corridos** entre uma sessão e
   a seguinte. Nas datas dos planos da sincronização da rodada `2026-10-14T1916` (a tabela da §1 de
   `desenho-emenda-15-10.md`): as sessões de `PP` da CAHO IV, de 22/06 a 07/07, a 0, 1, 3 e 4 dias uma da outra,
@@ -735,10 +735,10 @@ Cada uma está implementada, **só no local**, com a leitura indicada, até a su
 - **P7 — Aula de disciplina com técnica AP e responsável fora do cadastro.** **Leitura adotada:** **continua
   pendência**, como hoje: a RN-RESP-1 diz que a aula de disciplina, *"técnica EO ou prática de disciplina"*, exige
   instrutor habilitado; só a frase da sincronização nomeia apenas a EO. Impacto medido pela orquestração em 15/10/2026
-  sobre a rodada `2026-10-14T1916`: **0** aulas. **Proposta:** manter. **Aprovação:** [pendente]
+  sobre a rodada `2026-10-14T1916`: **0** aulas. **Proposta:** manter. **Aprovação:** ✅ **aceita como proposta por Bernardo Villas Boas em 16/10/2026** (segunda decisão do dia)
 - **P8 — TAD e TR.** A RN-RESP-1 não as nomeia. **Leitura adotada:** nome livre também em TAD e TR — a frase da
   sincronização vale para toda linha que não é aula de disciplina, e a tela já oferecia nome livre nelas (o rótulo
-  passa a *"Outro responsável (nome livre)"*). **Proposta:** manter. **Aprovação:** [pendente]
+  passa a *"Outro responsável (nome livre)"*). **Proposta:** manter. **Aprovação:** ✅ **aceita como proposta por Bernardo Villas Boas em 16/10/2026** (segunda decisão do dia)
 - **P9 — O catálogo inteiro como «informação».** **Leitura adotada:** a seção *Catálogo (aba BD DISCIPLINAS)* da lista
   por turma sai **inteira** com prioridade «informação». Além da diferença de CH da BD DISCIPLINAS × currículo — que a
   sincronização nunca leva ao banco (D-CUR-1) —, ela traz dois casos que são **erro real** da planilha: o **código que
@@ -785,7 +785,43 @@ Cada uma está implementada, **só no local**, com a leitura indicada, até a su
 | — | **Nome livre recusado no endpoint** para aula e avaliação: **aceito** | como estava (mudança de comportamento declarada no #58) |
 | P9 — catálogo | **PROCV** (código inexistente na BD DISCIPLINAS) e **T/E da avaliação** voltam a **corrigir**, prioridade **Média**; o resto do catálogo é informação | `scripts/carga_dsa/erros_por_turma.py` |
 | P10 — T/E | **Aceita**: com COD `AV` e a descrição sem instrumento, a coluna **T/E** da linha desempata | `regras_de_prova.ligar_ao_curriculo` |
-| P2, P3, P7, P8 | não citadas em 16/10/2026 | continuam implementadas com a leitura de 15/10 e **[pendente — Bernardo]** |
+| P2, P3, P7, P8 | não citadas na primeira decisão; ✅ **aceitas como propostas na segunda** (16/10/2026, seção abaixo) | a leitura de 15/10 vira regra; o código não muda |
 
 **Aprovação:** ✅ **aprovado por Bernardo Villas Boas em 16/10/2026** (opção A, P1, P4, P5, P6, P9, P10 e a ação de
 juntar). O que a implementação mediu e decidiu dentro dessas palavras está em *Session 2026-10-16* da spec.
+
+## 16/10/2026 (tarde) — segunda decisão de Bernardo: o card, P2/P3/P7/P8, a A4.7 e os três ajustes
+
+**A decisão** *(Bernardo Villas Boas, 16/10/2026, no texto dele)*:
+
+> *1. DEFEITO em Production (achado na minha conferência de 16/10): clicar no card de Avaliações não abre nada.
+> Reproduza (…). Corrija para levar à aba Avaliações da turma (?aba=avaliacoes, URL dona do estado). Acrescente um e2e
+> que CLICA no card e confere a aba aberta, para todos os cards que levam a abas. Confira também se a regressão veio do
+> #58.*
+> *2. Registre: P2, P3, P7 e P8 aceitas como propostas (Bernardo, 16/10/2026).*
+> *3. A4.7: use (…) a47-decisao-preenchida.xlsx. As 64 linhas "aceito" valem como estão; as linhas 1 a 26, em branco,
+> valem como "aceito" da proposta (decisão minha, 16/10/2026). Gere a migration com o antes/depois por disciplina.
+> Depois disso, junte a prova de 19/08 à PP 1 da CAHO IV (14 sessões + 19/08 = 40 TA) e confira a CAHO XIX PP 2 e o
+> TFM da C-Ap-FR.*
+> *4. Os três ajustes do comando anterior: interação tema × admin-sobre-contas; banco recusando 1ª aplicação depois das
+> sessões; roteiro de conferência com os números de hoje.*
+
+**O que cada item fecha:**
+
+| Item | O que foi feito | Onde |
+|---|---|---|
+| 1 — o card | **Reproduzido no local com o dado do remoto** (Production fica atrás do login, e eu não crio conta; os logs da Vercel guardam ~1 h e não tinham erro): o clique trocava a aba, mas o `<Link>` do Next **rolava a página para o topo** e as abas ficavam abaixo da faixa dos cards — CAHO 2026 em 1366×768: `scrollY` 617 → 0, abas em y = 1.101 (fora da tela também em 1536×864 e 1920×1080). Card: `[data-slot="card-de-avaliacoes"]` da ficha; `href` `/turmas/CAHO%202026?aba=avaliacoes`; **nenhum erro no console**. **Não é regressão do #58**: card, abas, endereço, contrato e gancho idênticos entre `9bf9c67` e `21bba71`; nasceu no #52 (`cd27abd`), cujo e2e conferia URL e `aria-selected`, não se a aba estava na tela. Correção: a âncora `#abas-da-turma` em `enderecoDasAvaliacoesDaTurma` (a URL continua dona da aba) e a folha das abas levando até elas ao montar | PR #60 |
+| 1 — o e2e | `cards-levam-a-aba.spec.ts`: card de Avaliações, alerta de vista da ficha, card da turma no `/inicio` (aba Grade do curso) e o link da aba Avaliações do curso, todos por **clique**, com `toBeInViewport`. **Sem a correção, 3 de 4 reprovam** (o do `/inicio` é o controle: nunca esteve quebrado) | PR #60 |
+| 2 — P2, P3, P7, P8 | **Aceitas como propostas**; marcadas nas entradas acima, na tabela e na spec (*Session 2026-10-15* e *2026-10-16*). O código não muda | spec, este arquivo |
+| 3 — A4.7 | Planilha preenchida: **64 «aceito» + 26 em branco (itens 1 a 26)**; com a decisão, aceito 90, e **3** propostas de não carregar (44, 48, 70) → **entram 87**, com a PT (Prova eletrônica) na lista. `decisao_a47.py` ganhou `--em-branco-aceito 1-26` (só a faixa nomeada; linha em branco fora dela continua fazendo parar) — a planilha do Bernardo não foi editada. Migration D-10 `20261016153232`; antes/depois por disciplina em `antes-depois/a47-antes-depois.md`: **[pendente]** | PR #61 |
+| 3 — CAHO IV 19/08 | Juntada pelo núcleo do «juntar» (E-7), sem sessão (`juntada_por` nulo = carga sem sessão): **[pendente]** | PR #61, rodada |
+| 3 — CAHO XIX PP 2 e TFM C-Ap-FR | **[pendente]** (rodada depois da D-10) | rodada |
+| 4 — tema × admin-sobre-contas | **Causa achada e corrigida — não era carga nem as contas do `admin-sobre-contas`**: com `fullyParallel`, o mesmo processo roda um caso do `tema`, um de outro arquivo e volta; o `afterAll` do `tema` roda na troca e **apaga a conta**, e a promessa guardada (`contaPronta ??=`) continuava resolvida — o caso seguinte não recriava a conta. Sonda: *"garantirConta tema-1 REAPROVEITA a promessa"* logo depois de *"afterAll do tema: apaga tema-1"*. Conserto: o `afterAll` esquece a promessa. A dupla `tema` + `admin-sobre-contas` (2 processos): **3 de 3 vermelhas antes, 3 de 3 verdes depois** | PR #60 |
+| 4 — 1ª aplicação × sessões | Migration E-7 `20261016153228`: gatilho de restrição **adiado** que recusa a 1ª aplicação viva depois de uma sessão ativa (`aplicacao_depois_das_sessoes`, 23514); frase em `traducao-de-recusas.ts`; pgTAP `133` (o caso que discrimina, o mesmo dia, a prova inteira deslocada numa transação, a sessão inativa, a cancelada) | PR #61 |
+| 4 — roteiro | `roteiro-de-conferencia-producao.md` com os números de hoje: **[pendente]** | PR #62 |
+
+⚠️ **A E-7 traz uma segunda peça, e ela está declarada (regra 9.4):** `app.juntar_como_sessao_nucleo` — o corpo da RPC
+da tela, sem o porteiro — para que a junção da CAHO IV rode **pelo mesmo código** num script versionado
+(`scripts/manutencao/juntar_como_sessao.py`). Não é tabela nova nem regra nova: a RPC da tela passa a ser porteiro +
+núcleo, e com sessão o gatilho da trilha continua exigindo `avaliacoes_juntar_sessao`. A alternativa era repetir o
+corpo no script — duas implementações da mesma junção — ou carimbar `juntada_por` com uma conta que não clicou.

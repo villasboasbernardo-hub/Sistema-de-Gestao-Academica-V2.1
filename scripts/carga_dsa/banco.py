@@ -184,14 +184,16 @@ select jsonb_build_object(
             'tempos_consumidos', s.tempos_consumidos, 'local', s.local, 'conduz', ci.codigo::text,
             'conduz_nome_externo', s.conduz_nome_externo) order by s.numero), '[]')
             from public.vistas_de_avaliacao s left join public.instrutores ci on ci.id = s.conduz_instrutor_id
-           where s.avaliacao_id = a.id and s.status = 'ativo'),
+           where s.avaliacao_id = a.id and s.status = 'ativo' and s.data < {virada}::date),
+        -- ⚠️ A sessao da virada em diante e do SISTEMA (A3.3): ela nao se compara com a planilha (achado de 16/10/2026,
+        --    a vista 2 lancada na tela para 23/10 numa prova de 06/08 da CAHO, que a rodada inativava).
         -- RN-AV-12 (desenho aprovado em 16/10/2026): as sessoes de aplicacao 2..N que a SINCRONIZACAO pos (codigo
         -- DSAP-). A sessao nascida na tela (SAP-, o DSA ou «juntar como sessao») nao e da planilha: fica como esta.
         'aplicacoes', (select coalesce(jsonb_agg(jsonb_build_object(
             'codigo', p.codigo, 'numero', p.numero, 'data', p.data, 'ta_inicial', p.ta_inicial,
             'tempos_consumidos', p.tempos_consumidos, 'local', p.local) order by p.numero), '[]')
             from public.sessoes_de_aplicacao p
-           where p.avaliacao_id = a.id and p.status = 'ativo' and p.codigo like 'DSAP-%'),
+           where p.avaliacao_id = a.id and p.status = 'ativo' and p.codigo like 'DSAP-%' and p.data < {virada}::date),
         -- A2: o instrumento gravado da prova SEM item (com item, a coluna fica nula).
         'instrumento_gravado', (select l.valor from public.config_listas l where l.id = a.instrumento_id),
         'na_tela', a.editado_por is not null,

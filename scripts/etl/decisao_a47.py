@@ -11,7 +11,9 @@ Dois passos, e só o primeiro roda sem a palavra de Bernardo Villas Boas:
 
 Decisão por linha: «aceito» (vale a proposta), «recuso» (o item não entra) ou «corrijo» (vale a proposta com o que
 «valor corrigido» trouxer, no formato `instrumento=TG; aplicacao=3; vista=1; ue=2; destino=<código>; carregar=nao`).
-Linha sem decisão faz o passo 2 PARAR, salvo `--parcial` (que a deixa de fora e diz quantas).
+Linha sem decisão faz o passo 2 PARAR, salvo `--parcial` (que a deixa de fora e diz quantas) ou
+`--em-branco-aceito 1-26` (decisão de Bernardo Villas Boas, 16/10/2026: *"as linhas 1 a 26, em branco, valem como
+'aceito' da proposta"*) — só a faixa NOMEADA vale «aceito»; linha em branco fora dela continua fazendo PARAR.
 
 ⚠️ A máquina não decide: a proposta é a recomendação de `medicoes/d4-fora-recomendacoes.md` escrita em colunas, e só
    entra o que Bernardo marcar. O arquivo SQL gerado NUNCA é editado à mão — rodar de novo dá o mesmo arquivo.
@@ -51,6 +53,9 @@ INSTRUMENTOS = {
 }
 NOVOS = {"PT": ("Prova eletrônica", "prova")}
 DECISOES = ("aceito", "recuso", "corrijo")
+# A marca da D-9 (`20261016092315`) vale para TODO instrumento da lista (pgTAP 132): o novo nasce com ela. Vista
+# obrigatória só em PM, PO e PE (decisão de Bernardo Villas Boas, 16/10/2026) — a PT não está entre eles.
+VISTA_OBRIGATORIA = {"PM", "PO", "PE"}
 
 COLUNAS = [
     ("chave", "Chave (não editar)", 26),
@@ -293,10 +298,22 @@ def aplicar_correcao(p: dict[str, object], texto: str, n: object) -> dict[str, o
     return q
 
 
-def decidir(planilha: Path, parcial: bool) -> tuple[list[dict[str, object]], dict[str, int]]:
+def faixa(texto: str | None) -> set[int]:
+    """`1-26` ou `1-26,30` → os números de item (#) cuja linha EM BRANCO vale «aceito»."""
+    if not texto:
+        return set()
+    nums: set[int] = set()
+    for parte in texto.split(","):
+        a, _, b = parte.strip().partition("-")
+        nums.update(range(int(a), int(b or a) + 1))
+    return nums
+
+
+def decidir(planilha: Path, parcial: bool, em_branco_aceito: set[int] | None = None) -> tuple[list[dict[str, object]], dict[str, int]]:
     base = {str(l["chave"]): l for l in itens()}
     preenchidas = ler_planilha(planilha)
-    conta = {"aceito": 0, "recuso": 0, "corrijo": 0, "sem decisão": 0, "proposta não carrega": 0}
+    conta = {"aceito": 0, "recuso": 0, "corrijo": 0, "sem decisão": 0, "proposta não carrega": 0,
+             "em branco = aceito": 0}
     entram: list[dict[str, object]] = []
     for r in preenchidas:
         chave = str(r["chave"])
@@ -304,6 +321,9 @@ def decidir(planilha: Path, parcial: bool) -> tuple[list[dict[str, object]], dic
             raise SystemExit(f"chave desconhecida na planilha: {chave!r}")
         b = base[chave]
         dec = (str(r["decisao"] or "").strip().lower())
+        if dec == "" and em_branco_aceito and int(b["n"]) in em_branco_aceito:
+            conta["em branco = aceito"] += 1
+            dec = "aceito"
         if dec == "":
             conta["sem decisão"] += 1
             if not parcial:
@@ -353,6 +373,9 @@ def gerar_sql(entram: list[dict[str, object]], conta: dict[str, int]) -> str:
     p("--")
     p(f"-- Decisões: aceito {conta['aceito']} · corrijo {conta['corrijo']} · recuso {conta['recuso']} · sem decisão {conta['sem decisão']}"
       f" · proposta que não carrega {conta['proposta não carrega']}. ENTRAM {len(entram)} itens.")
+    if conta["em branco = aceito"]:
+        p(f"-- Dos «aceito», {conta['em branco = aceito']} vieram de linha EM BRANCO que vale «aceito» da proposta por decisão de")
+        p("-- Bernardo Villas Boas (16/10/2026: \"as linhas 1 a 26, em branco, valem como 'aceito' da proposta\").")
     p("-- Só ACRESCENTA itens em `avaliacoes_curriculo` (origem currículo, arquivo e página): nenhuma CH, nome ou código")
     p("-- de disciplina muda (D-CUR-1). Abstém-se em base sem cursos; idempotente; evento em `migracao_log` só quando grava.")
     p("-- Reversão: os itens com a procedência `spec014-A47:` ficam `inativo` (nada é apagado, regra 4).")
@@ -362,7 +385,7 @@ def gerar_sql(entram: list[dict[str, object]], conta: dict[str, int]) -> str:
         p("-- 1. instrumento novo na lista (domínio operacional: `config_listas`, nunca ENUM)")
         p("insert into public.config_listas (lista, valor, rotulo_exibicao, ordem, metadados)")
         p("values")
-        p(",\n".join(f"  ('instrumentos_avaliacao', {lit(s)}, {lit(NOVOS[s][0])}, {20 + i}, jsonb_build_object('natureza', {lit(NOVOS[s][1])}))"
+        p(",\n".join(f"  ('instrumentos_avaliacao', {lit(s)}, {lit(NOVOS[s][0])}, {20 + i}, jsonb_build_object('natureza', {lit(NOVOS[s][1])}, 'vista_obrigatoria', {'true' if s in VISTA_OBRIGATORIA else 'false'}))"
                      for i, s in enumerate(novos)))
         p("on conflict (lista, valor) do nothing;")
         p("")
@@ -444,7 +467,8 @@ def antes_depois(entram: list[dict[str, object]], conta: dict[str, int]) -> str:
     """O previsto de avaliação de cada disciplina tocada: o banco LOCAL hoje (só leitura) e o que a migration soma."""
     destinos = sorted({str(e["destino"]) for e in entram})
     linhas = ["# A4.7 — antes/depois (gerado; não aplicado)", "",
-              f"Decisões: aceito {conta['aceito']} · corrijo {conta['corrijo']} · recuso {conta['recuso']} · sem decisão "
+              f"Decisões: aceito {conta['aceito']} (dos quais {conta['em branco = aceito']} em branco, que valem «aceito» por decisão "
+              f"de Bernardo Villas Boas de 16/10/2026) · corrijo {conta['corrijo']} · recuso {conta['recuso']} · sem decisão "
               f"{conta['sem decisão']} · proposta que não carrega {conta['proposta não carrega']}. **Entram {len(entram)} itens.**", "",
               "*Antes* = o banco **local** no momento da geração (só leitura); *depois* = antes + os itens desta migration.", ""]
     if not destinos:
@@ -482,8 +506,8 @@ select d.codigo, c.codigo, d.carga_horaria_tempos,
     return "\n".join(linhas) + "\n"
 
 
-def gerar_migration(planilha: Path, sql: Path, relatorio: Path, parcial: bool) -> int:
-    entram, conta = decidir(planilha, parcial)
+def gerar_migration(planilha: Path, sql: Path, relatorio: Path, parcial: bool, em_branco_aceito: set[int]) -> int:
+    entram, conta = decidir(planilha, parcial, em_branco_aceito)
     sql.parent.mkdir(parents=True, exist_ok=True)
     sql.write_text(gerar_sql(entram, conta), encoding="utf-8", newline="\n")
     relatorio.parent.mkdir(parents=True, exist_ok=True)
@@ -503,10 +527,12 @@ def main() -> int:
     b.add_argument("--sql", required=True, type=Path)
     b.add_argument("--antes-depois", required=True, type=Path)
     b.add_argument("--parcial", action="store_true", help="deixa de fora a linha sem decisão, em vez de parar")
+    b.add_argument("--em-branco-aceito", default=None,
+                   help="faixa de itens (#) cuja linha EM BRANCO vale «aceito», por decisão nominal (ex.: 1-26)")
     args = ap.parse_args()
     if args.passo == "planilha":
         return gerar_planilha(args.saida)
-    return gerar_migration(args.planilha, args.sql, args.antes_depois, args.parcial)
+    return gerar_migration(args.planilha, args.sql, args.antes_depois, args.parcial, faixa(args.em_branco_aceito))
 
 
 if __name__ == "__main__":

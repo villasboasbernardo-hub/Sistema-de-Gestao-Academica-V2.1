@@ -339,3 +339,37 @@ describe("juntar como sessão da mesma prova (decisão de 16/10/2026, com trilha
     expect(error?.code).toBe("23514");
   });
 });
+
+/*
+ * E-7 (`20261016153228`, pedido de Bernardo Villas Boas, 16/10/2026): a 1ª aplicação não passa das sessões. O gatilho
+ * é ADIADO — a recusa acontece no COMMIT da requisição —, e o que se prova aqui é que ela chega a quem grava pela
+ * interface de dados com o código 23514 e a chave da frase (`aplicacao_depois_das_sessoes`, `traducao-de-recusas.ts`),
+ * e não como erro genérico de transação. A prova tem a sessão 2 em 23/06.
+ */
+describe("E-7 · a 1ª aplicação não passa das sessões (gatilho adiado, pela interface de dados)", () => {
+  const dataDaProva = async () =>
+    (
+      (await servico.from("avaliacoes").select("data_avaliacao").eq("id", provaId).single())
+        .data as { data_avaliacao: string }
+    ).data_avaliacao;
+
+  it("DISCRIMINA: mover a 1ª aplicação para DEPOIS da sessão 2 é recusado com 23514 e a chave da frase, e a data fica", async () => {
+    const { error } = await sessao("encarregado")
+      .from("avaliacoes")
+      .update({ data_avaliacao: "2026-06-30" })
+      .eq("id", provaId);
+    expect(error?.code).toBe("23514");
+    expect(error?.hint).toBe("aplicacao_depois_das_sessoes");
+    expect(await dataDaProva()).toBe("2026-06-22");
+  });
+
+  it("controle positivo: o MESMO dia da sessão 2 é aceito", async () => {
+    const { error } = await sessao("encarregado")
+      .from("avaliacoes")
+      .update({ data_avaliacao: "2026-06-23" })
+      .eq("id", provaId);
+    expect(error).toBeNull();
+    expect(await dataDaProva()).toBe("2026-06-23");
+    await servico.from("avaliacoes").update({ data_avaliacao: "2026-06-22" }).eq("id", provaId);
+  });
+});

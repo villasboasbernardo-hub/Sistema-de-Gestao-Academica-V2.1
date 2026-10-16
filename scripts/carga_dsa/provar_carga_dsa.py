@@ -389,6 +389,10 @@ def main() -> int:
     sql = sincronizar.sql_da_turma(r, False, None, ensaio=False, virada="2026-10-13", protegidas=prot)
     conferir("A3.3 · o SQL so inativa ETL e linha que saiu ANTES da virada, e nunca a protegida",
              sql.count("< '2026-10-13'::date") >= 4 and "array['C']::text[]" in sql)
+    # Achado do ensaio de 16/10/2026: a vista 2 lancada na tela para 23/10, numa prova de 06/08 da CAHO, era inativada —
+    # o filtro olhava a data da PROVA. A sessao (de vista e de aplicacao) da virada em diante e do sistema.
+    conferir("A3.3 · a SESSAO da virada em diante fica: as duas inativacoes de sessao filtram a data DA SESSAO",
+             sql.count("s.data < '2026-10-13'::date") == 2, sql.count("s.data < '2026-10-13'::date"))
 
     r = plano_de({"codigo": "E", "data": "2026-10-05", "ta_inicial": 1, "tempos_consumidos": 5, "local": "Sala 01"})
     rf = ref_com({"codigo": "E", "data": "2026-10-05", "ta_inicial": 1, "tempos_consumidos": 4, "local": "EAD", "na_tela": True})
