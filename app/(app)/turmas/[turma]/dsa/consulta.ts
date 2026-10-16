@@ -331,6 +331,8 @@ export function fatoDaOcupacao(
         extra?.conteudoGravado !== undefined ? extra.conteudoGravado : (extra?.conteudo ?? null),
       tecnica: extra?.tecnica ?? null,
       local: linha.local,
+      /* `RN-RESP-1`: o nome livre da atividade, para o cartão reabrir com ele (e não o apagar sem querer). */
+      responsavelExterno: linha.origem === "atividade_nao_letiva" ? (extra?.externo ?? null) : null,
     },
   };
 }

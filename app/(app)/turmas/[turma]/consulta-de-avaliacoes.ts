@@ -22,6 +22,7 @@ import {
 } from "@/lib/dominio/avaliacoes/quadro-da-turma";
 import type { NaturezaDaAvaliacao } from "@/lib/dominio/avaliacoes/situacao";
 import type { OrigemDoTempo } from "@/lib/dominio/avaliacoes/previsto";
+import { exigeVista } from "@/lib/dominio/avaliacoes/vista-obrigatoria";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 type Linha = Record<string, unknown>;
@@ -142,6 +143,7 @@ export async function lerAvaliacoesDaTurma(entrada: {
       disciplinaId: String(i.disciplina_id),
       ordem: Number(i.ordem),
       rotulo: `${instrumento.valor ?? "?"} ${String(i.numero)}`,
+      instrumento: instrumento.valor ?? null,
       natureza: (instrumento.metadados?.natureza ?? "prova") as NaturezaDaAvaliacao,
       unidadeEnsinoId: (i.unidade_ensino_id as string | null) ?? null,
       origemUe: (i.origem_ue as "curriculo" | "decisao_ciaara" | null) ?? null,
@@ -176,14 +178,14 @@ export async function lerAvaliacoesDaTurma(entrada: {
 
   const prazoDias = Number((prazo.data as Linha | null)?.valor ?? 7) || 7;
   const venceEmBreveDias = Number((breve.data as Linha | null)?.valor ?? 2) || 2;
-  // Tem item de vista: sem item ligado (histórico), sim; com item, o tempo de vista efetivo (ajuste da turma ou
-  // currículo) maior que zero — o mesmo critério de `app.fn_status_vista`.
+  // A vista é obrigatória (`RN-AV-13`, 15/10/2026): pelo INSTRUMENTO do item, por `exigeVista`; sem item ligado
+  // (histórico), o instrumento é desconhecido e ela exige, como antes. ⚠️ `app.fn_status_vista` ainda decide pelo
+  // tempo de vista do item até a migration do desenho de 15/10/2026 — a view e esta tela podem divergir até lá.
   const itemPorId = new Map(itensDoQuadro.map((i) => [i.id, i] as const));
   const codDe = new Map(disciplinas.map((d) => [d.id, d.cod] as const));
   const alertas = alertasDeVista(
     avaliacoes.map((a) => {
       const item = a.itemId ? itemPorId.get(a.itemId) : undefined;
-      const vista = item ? (item.ajusteDaTurma?.taVista ?? item.taVista) : null;
       return {
         id: a.id,
         turma: entrada.turmaCodigo ?? "",
@@ -193,7 +195,7 @@ export async function lerAvaliacoesDaTurma(entrada: {
         estadoDoRegistro: a.estadoDoRegistro,
         aplicacao: a.aplicacao,
         sessoesDeVista: a.sessoesDeVista,
-        temItemDeVista: a.itemId === null || (vista !== null && vista > 0),
+        temItemDeVista: exigeVista({ instrumento: item?.instrumento ?? null }),
         itemLigado: item !== undefined,
       };
     }),

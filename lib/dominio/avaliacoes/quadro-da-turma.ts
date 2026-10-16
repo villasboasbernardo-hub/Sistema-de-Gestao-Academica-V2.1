@@ -9,6 +9,9 @@
  *    vínculo (o histórico, e o que o DSA lançou antes do PR 5.1) aparece à parte, como «lançada sem item do
  *    currículo», com a situação dela — nunca casada por ordem nem por nome (FR-039.1 só vale para o histórico
  *    da v2.0, em `historico.ts`).
+ * ⚠️ **A VISTA É OBRIGATÓRIA PELO INSTRUMENTO DO ITEM, NÃO PELO TEMPO DE VISTA** (`RN-AV-13`, emenda de 15/10/2026):
+ *    quem decide é `exigeVista` (`vista-obrigatoria.ts`). A avaliação sem item ligado não tem instrumento conhecido e
+ *    continua exigindo, como antes.
  * ⚠️ TypeScript puro (Princípio II): tudo chega por parâmetro, `hoje` inclusive.
  */
 
@@ -22,6 +25,7 @@ import {
   type NaturezaDaAvaliacao,
   type SituacaoDaAvaliacao,
 } from "./situacao";
+import { exigeVista } from "./vista-obrigatoria";
 
 export type DisciplinaDoQuadro = {
   id: string;
@@ -36,7 +40,13 @@ export type DisciplinaDoQuadro = {
   unidades: { id: string; rotulo: string; ch: number }[];
 };
 
-export type ItemDoQuadro = ItemDoCurriculo & { id: string; disciplinaId: string; ordem: number };
+export type ItemDoQuadro = ItemDoCurriculo & {
+  id: string;
+  disciplinaId: string;
+  ordem: number;
+  /** O instrumento do item (`PM`, `PP`, `TG`…) — é ele que diz se a vista é obrigatória (`RN-AV-13`). */
+  instrumento: string | null;
+};
 
 export type AvaliacaoDoQuadro = {
   id: string;
@@ -89,7 +99,16 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
   hoje: string;
   terminoDaTurma: string | null;
 }): QuadroDeAvaliacoes {
-  const situacaoDe = (a: AvaliacaoDoQuadro, temItemDeVista: boolean) =>
+  /*
+   * ⚠️ RN-AV-13: a avaliação ligada a item exige vista pelo instrumento do item; sem item ligado (ou item de outra
+   *    disciplina), o instrumento é desconhecido e ela exige, como antes da emenda.
+   */
+  const instrumentoDoItem = new Map(entrada.itens.map((i) => [i.id, i.instrumento] as const));
+  const exigeVistaDa = (a: AvaliacaoDoQuadro): boolean =>
+    exigeVista({
+      instrumento: a.itemId === null ? null : (instrumentoDoItem.get(a.itemId) ?? null),
+    });
+  const situacaoDe = (a: AvaliacaoDoQuadro, temItemDeVista: boolean = exigeVistaDa(a)) =>
     situacaoDaAvaliacao({
       natureza: a.natureza,
       estadoDoRegistro: a.estadoDoRegistro,
@@ -118,7 +137,7 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
 
     const linhas: LinhaDeItem[] = itens.map((item, n) => {
       const prevista = previsto.itens[n]!;
-      const ligada = avaliacoes.find((a) => a.itemId === item.id && situacaoDe(a, true) !== null);
+      const ligada = avaliacoes.find((a) => a.itemId === item.id && situacaoDe(a) !== null);
       const situacao =
         item.natureza === "od"
           ? situacaoDaAvaliacao({
@@ -133,12 +152,12 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
               disciplinaConcluida: d.concluida,
             })
           : ligada
-            ? situacaoDe(ligada, (prevista.taVista ?? 0) > 0)
+            ? situacaoDe(ligada, exigeVista({ instrumento: item.instrumento }))
             : situacaoDaAvaliacao({
                 natureza: item.natureza,
                 aplicacao: null,
                 sessoesDeVista: [],
-                temItemDeVista: (prevista.taVista ?? 0) > 0,
+                temItemDeVista: exigeVista({ instrumento: item.instrumento }),
                 prazoDias: entrada.prazoDias,
                 hoje: entrada.hoje,
                 terminoDaTurma: entrada.terminoDaTurma,
@@ -159,7 +178,7 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
 
     const semItem = avaliacoes
       .filter((a) => a.itemId === null || !itens.some((i) => i.id === a.itemId))
-      .map((a) => ({ tipo: a.tipo, aplicacao: a.aplicacao, situacao: situacaoDe(a, true) }))
+      .map((a) => ({ tipo: a.tipo, aplicacao: a.aplicacao, situacao: situacaoDe(a) }))
       .filter((a) => a.situacao !== null);
 
     // ⚠️ A avaliação APLICADA sem item ligado (o DSA antes do PR 5.1, a carga antes do PR 6) consome um item
@@ -187,20 +206,24 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
       quantidadeArbitrada:
         provasETrabalhos.length > 0 && arbitrada ? provasETrabalhos.length : null,
       quantidadeOd: itens.filter((i) => i.natureza === "od").length,
+      /*
+       * ⚠️ O «B» do card «vistas realizadas A de B» é o TEMPO de vista PREVISTO no currículo (FR-056), não a
+       *    obrigação da `RN-AV-13`: um PP com tempo de vista conta em B, e um PM sem tempo, não. Não muda aqui.
+       */
       vistasPrevistas: previsto.itens.filter((i) => (i.taVista ?? 0) > 0).length,
       vistasRealizadas: avaliacoes.filter(
-        (a) => a.sessoesDeVista.length > 0 && situacaoDe(a, true) !== null,
+        (a) => a.sessoesDeVista.length > 0 && situacaoDe(a) !== null,
       ).length,
     });
     for (const a of avaliacoes)
       paraContagem.push({
         disciplinaId: d.id,
         natureza: a.natureza,
-        situacao: situacaoDe(a, true),
+        situacao: situacaoDe(a),
       });
 
     const aplicadas = avaliacoes.filter(
-      (a) => a.natureza !== "od" && APLICADA.has(situacaoDe(a, true) ?? "pendente"),
+      (a) => a.natureza !== "od" && APLICADA.has(situacaoDe(a) ?? "pendente"),
     ).length;
     disciplinas.push({
       disciplina: d,

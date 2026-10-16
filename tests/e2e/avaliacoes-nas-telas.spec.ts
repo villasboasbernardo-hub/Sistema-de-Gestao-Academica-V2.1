@@ -7,17 +7,28 @@
  * ⚠️ **O CASO QUE DISCRIMINA** (DoD 8): a aba nasceu de uma recusa — a D5.1 punha o quadro numa âncora `#avaliacoes`
  *    da mesma página. Aqui se exige `?aba=avaliacoes` na URL **e** que «voltar» desfaça um passo; a âncora não
  *    passaria em nenhuma das duas.
+ * ⚠️ **E O DA `RN-AV-13`** (emenda de 15/10/2026): uma PP COM tempo de vista no currículo, aplicada há 10 dias e sem
+ *    vista, NÃO é vista atrasada — no `/inicio`, no alerta da ficha nem no quadro da aba. Antes da emenda os chamadores
+ *    decidiam pelo tempo de vista do item, e ela apareceria nos três; a PM da mesma turma é o controle positivo.
  */
 import { expect, test } from "@playwright/test";
 
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
-import { limparAvaliacoes, semearAvaliacoes, type AvaliacoesSemeadas } from "./avaliacoes-de-teste";
+import {
+  limparAvaliacoes,
+  limparVistaPeloInstrumento,
+  semearAvaliacoes,
+  semearVistaPeloInstrumento,
+  type AvaliacoesSemeadas,
+  type VistaPeloInstrumentoSemeada,
+} from "./avaliacoes-de-teste";
 
 let EMAIL_ADMIN = "";
 let EMAIL_OPERADOR = "";
 let SEMEADO: AvaliacoesSemeadas;
+let VISTA: VistaPeloInstrumentoSemeada;
 
 test.beforeAll(async ({}, info) => {
   const p = info.workerIndex;
@@ -26,10 +37,12 @@ test.beforeAll(async ({}, info) => {
   await criarConta(EMAIL_ADMIN, `USR-AVL-ADM-${p}`);
   await criarConta(EMAIL_OPERADOR, `USR-AVL-OPE-${p}`, "operador", "especial");
   SEMEADO = await semearAvaliacoes(p);
+  VISTA = await semearVistaPeloInstrumento(p);
 });
 
 test.afterAll(async ({}, info) => {
   await limparAvaliacoes(info.workerIndex);
+  await limparVistaPeloInstrumento(info.workerIndex);
   await apagarConta(EMAIL_ADMIN);
   await apagarConta(EMAIL_OPERADOR);
 });
@@ -120,6 +133,47 @@ test("FR-054 · o /inicio mostra a vista atrasada e a que vence em breve, com li
     .click();
   await expect(page).toHaveURL(/[?&]aba=avaliacoes/);
   await expect(page.locator('[data-slot="alertas-de-vista"]')).toBeVisible();
+});
+
+test("RN-AV-13 · a PP com tempo de vista, aplicada há 10 dias e sem vista, NÃO é vista atrasada — no /inicio nem na ficha", async ({
+  page,
+}) => {
+  await entrar(page, EMAIL_ADMIN, "/inicio");
+  const noInicio = page.locator('[data-slot="alertas-de-vista"]');
+  await noInicio.locator('[data-slot="avisos-recolhiveis"] button').first().click();
+  const atrasadaNoInicio = (cod: string) =>
+    noInicio.locator('[data-alerta-de-vista="atrasada"]', {
+      hasText: `${VISTA.turma} · ${cod} ·`,
+    });
+  // Controle positivo: a PM da MESMA turma, aplicada no mesmo dia e sem vista, é atrasada.
+  await expect(atrasadaNoInicio(VISTA.disciplinaPm)).toHaveCount(1);
+  await expect(
+    noInicio.locator("[data-alerta-de-vista]", {
+      hasText: `${VISTA.turma} · ${VISTA.disciplinaPp} ·`,
+    }),
+  ).toHaveCount(0);
+
+  // Pelo alerta da PM, à ficha da turma (aba Avaliações): o alerta da ficha conta UMA atrasada, não duas.
+  await atrasadaNoInicio(VISTA.disciplinaPm).getByRole("link").click();
+  await expect(page).toHaveURL(/[?&]aba=avaliacoes/);
+  const naFicha = page.locator('[data-slot="alertas-de-vista"]');
+  await expect(naFicha).toHaveAttribute("data-atrasadas", "1");
+  await naFicha.locator('[data-slot="avisos-recolhiveis"] button').first().click();
+  await expect(
+    naFicha.locator('[data-alerta-de-vista="atrasada"]', { hasText: `${VISTA.disciplinaPm} ·` }),
+  ).toHaveCount(1);
+  await expect(
+    naFicha.locator("[data-alerta-de-vista]", { hasText: `${VISTA.disciplinaPp} ·` }),
+  ).toHaveCount(0);
+
+  // E no quadro da aba: a PM 1 sai «Atrasada»; a PP 1, não.
+  const pm = disciplinaNaAba(page, VISTA.disciplinaPm);
+  await pm.locator("summary").click();
+  await expect(pm.locator('[data-avaliacoes-item="PM 1"]')).toContainText("Atrasada");
+  const pp = disciplinaNaAba(page, VISTA.disciplinaPp);
+  await pp.locator("summary").click();
+  await expect(pp.locator('[data-avaliacoes-item="PP 1"]')).toBeVisible();
+  await expect(pp.locator('[data-avaliacoes-item="PP 1"]')).not.toContainText("Atrasada");
 });
 
 test("FR-038 · /disciplinas: as avaliações do currículo no painel, acrescentar e inativar", async ({

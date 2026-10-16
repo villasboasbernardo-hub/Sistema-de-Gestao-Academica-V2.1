@@ -81,6 +81,12 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/turmas/[turma]/dsa/PainelDeLancamento.tsx":
     "guarda só qual célula está escolhida — estado efêmero de tela, que o guia manda deixar fora da URL",
   /*
+   * `RN-RESP-1` (emenda de 15/10/2026): o instrutor do cadastro OU o «outro responsável (nome livre)», usado pelo
+   * formulário e pelo cartão. Só desenha o que `regraDoResponsavel` decide; escolher e digitar são interação.
+   */
+  "app/(app)/turmas/[turma]/dsa/ResponsavelOuNomeLivre.tsx":
+    "o seletor canônico do cadastro e o campo de nome livre de um papel — digitar e escolher são interação",
+  /*
    * ⚠️ **A FOLHA DO PR 4.** Mover por teclado, editar e excluir são interação de formulário, e as
    * três ações **chegam por propriedade** — nunca por `import` de `@/lib/acoes/`, que é a proibição
    * do Princípio XI.

@@ -12,6 +12,9 @@
  *    de prova ligada a item com tempo de vista — atrasadas de verdade — e **38** de prova SEM item, das quais não se
  *    sabe se o currículo prevê vista. Estas vão para a lista de erros de planilha; o alerta conta só as primeiras.
  *    A situação da avaliação (`situacaoDaAvaliacao`) NÃO muda: o quadro da turma continua mostrando a prova sem item.
+ * ⚠️ **SÓ ALERTA A PROVA CUJO INSTRUMENTO EXIGE VISTA** (`RN-AV-13`, emenda de 15/10/2026: *"vista é obrigatória só
+ *    para PM e PO. PP, T e TG não geram alerta de vista"*). Quem chama decide `temItemDeVista` por `exigeVista`
+ *    (`vista-obrigatoria.ts`), sobre o instrumento do item — não mais pelo tempo de vista do item.
  * ⚠️ **NUNCA BLOQUEIA** (`RN-DEG-02`): é aviso de tela.
  * ⚠️ TypeScript puro: sem `next`, sem `react`, sem `supabase` (Princípio II).
  */
@@ -26,6 +29,7 @@ export type AvaliacaoParaAlerta = {
   estadoDoRegistro: string;
   aplicacao: string | null;
   sessoesDeVista: readonly string[];
+  /** A vista é obrigatória para esta prova: `exigeVista` sobre o instrumento do item (`RN-AV-13`). */
   temItemDeVista: boolean;
   /** A avaliação aponta um item do currículo (`avaliacao_curriculo_id`). Sem item, não há alerta. */
   itemLigado: boolean;

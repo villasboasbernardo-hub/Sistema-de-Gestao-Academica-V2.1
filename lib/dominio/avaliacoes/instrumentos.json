@@ -1,0 +1,21 @@
+{
+  "_origem": "Spec 014, emenda de 15/10/2026 (Bernardo Villas Boas): RN-AV-10, RN-AV-11 e RN-AV-13. Dado único, lido pela tela (lib/dominio/avaliacoes/vista-obrigatoria.ts) e pela sincronização (scripts/carga_dsa/resolver.py) — uma regra, um arquivo.",
+  "vistaObrigatoria": ["PM", "PO"],
+  "_vistaObrigatoria": "RN-AV-13: «vista é obrigatória só para PM e PO. PP, T e TG não geram alerta de vista; se a planilha trouxer vista, registra.» Literal: PE, PD, TI e os demais também não exigem vista.",
+  "codDaPlanilha": {
+    "PE": { "instrumentos": ["PE"], "numeroDoItem": true },
+    "PM": { "instrumentos": ["PM"], "numeroDoItem": true },
+    "PP": { "instrumentos": ["PP"], "numeroDoItem": true },
+    "PO": { "instrumentos": ["PO"], "numeroDoItem": true },
+    "PD": { "instrumentos": ["PD"], "numeroDoItem": true },
+    "TG": { "instrumentos": ["TG"], "numeroDoItem": true },
+    "TI": { "instrumentos": ["TI"], "numeroDoItem": true },
+    "EC": { "instrumentos": ["EC"], "numeroDoItem": true },
+    "PJ": { "instrumentos": ["PJ"], "numeroDoItem": true },
+    "MN": { "instrumentos": ["MN"], "numeroDoItem": true },
+    "OD": { "instrumentos": ["OD"], "numeroDoItem": true },
+    "T": { "instrumentos": ["TG", "TI"], "numeroDoItem": false },
+    "AV": { "instrumentos": "todos", "numeroDoItem": false }
+  },
+  "_codDaPlanilha": "RN-AV-10: a prova casa com o item do currículo pelo COD da prova (a coluna U.E. da PREENCHIMENTO: PM1, PP, TG, T, PO…), com «PM1» = «PM 1» = «PM-1»; a descrição só desempata. «T» (trabalho) não é instrumento do currículo: os candidatos são TG e TI, a descrição desempata quando a disciplina tem os dois, e o número do T é a ORDEM dos trabalhos da disciplina (medido na CAHO VI: T1 = TI 1, T2 = TG 1, T3 = TG 2), não o número do item. «AV» (avaliação) não nomeia instrumento: vale o instrumento que a DESCRIÇÃO nomear (prefixo «PM4 –» ou o nome, «PROVA PRÁTICA»), nunca por eliminação («a disciplina só tem PM, então é PM» — o atalho que a D6.1, aprovada em 14/10/2026, retirou), e o número do AV é a ordem da avaliação, não o número do item. As duas leituras (T e AV) são INTERPRETAÇÃO a confirmar por Bernardo (aprovacoes-pendentes.md, 15/10/2026)."
+}

@@ -85,6 +85,11 @@ export type ValoresGravados = {
   readonly conteudo: string | null;
   readonly tecnica: string | null;
   readonly local: string | null;
+  /**
+   * O «outro responsável (nome livre)» da ATIVIDADE (`responsavel_externo`, `RN-RESP-1`) — opcional porque só a
+   * atividade o tem; ausente vale nulo.
+   */
+  readonly responsavelExterno?: string | null;
 };
 
 export type BlocoNaGrade = FatoDaSemana & {

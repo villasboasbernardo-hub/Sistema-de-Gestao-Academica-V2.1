@@ -329,7 +329,7 @@ export type Movimento = z.infer<typeof esquemaDoMovimento>;
  * derrubou o vínculo de instrutor na spec 011: um campo fora da tela mandando `null` apagava o
  * vínculo existente a cada gravação, e nenhuma tela mostrava isso na hora.
  */
-export const esquemaDaEdicao = z.object({
+const camposDaEdicao = z.object({
   fatoId: uuid,
   origem,
   tempos: tempos.optional(),
@@ -340,7 +340,29 @@ export const esquemaDaEdicao = z.object({
   unidadeEnsinoId: uuid.nullable().optional(),
   /* Spec 014, FR-046: os demais instrutores; `undefined` não mexe. */
   outrosInstrutores: z.array(z.string().trim().min(1).max(120)).max(5).optional(),
+  /*
+   * `RN-RESP-1` (emenda de 15/10/2026): o «outro responsável (nome livre)» da ATIVIDADE
+   * (`atividades_nao_letivas.responsavel_externo`). Exclusivo com o instrutor do cadastro — o banco impõe pelo
+   * `CHECK ativ_responsavel_exclusivo`, e a ação zera o outro lado ao gravar um.
+   */
+  responsavelExterno: textoOuNulo.optional(),
 });
+
+/**
+ * ⚠️ **INSTRUTOR DO CADASTRO OU NOME LIVRE, NÃO OS DOIS NA MESMA GRAVAÇÃO** (`RN-RESP-1`). Mandar um e omitir o outro
+ * é o caminho normal — a ação apaga o outro lado. Mandar os dois preenchidos é contradição, e vira frase aqui em vez de
+ * `23514` do banco.
+ */
+const exclusivo = (e: {
+  instrutorId?: string | null | undefined;
+  responsavelExterno?: string | null | undefined;
+}) => !(e.instrutorId != null && e.responsavelExterno != null);
+const FRASE_DO_EXCLUSIVO = {
+  message: "Escolha um instrutor do cadastro ou escreva o outro responsável, não os dois.",
+  path: ["responsavelExterno"],
+};
+
+export const esquemaDaEdicao = camposDaEdicao.refine(exclusivo, FRASE_DO_EXCLUSIVO);
 
 export type Edicao = z.infer<typeof esquemaDaEdicao>;
 
@@ -353,7 +375,7 @@ export type Edicao = z.infer<typeof esquemaDaEdicao>;
  * ⚠️ **UE E DISCIPLINA, UMA FONTE SÓ** (`reg_aula_ue_xor_disciplina`): com UE a disciplina é a dela;
  * sem UE, a da coluna, com o tópico obrigatório (`D-DSA-1`) — o banco confere o tópico.
  */
-export const esquemaDaAtualizacao = esquemaDaEdicao
+export const esquemaDaAtualizacao = camposDaEdicao
   .extend({
     data: data.optional(),
     taInicial: ta.optional(),
@@ -362,7 +384,8 @@ export const esquemaDaAtualizacao = esquemaDaEdicao
   .refine((e) => !(e.unidadeEnsinoId != null && e.disciplinaId != null), {
     message: "Escolha a unidade de ensino OU só a disciplina, não as duas.",
     path: ["disciplinaId"],
-  });
+  })
+  .refine(exclusivo, FRASE_DO_EXCLUSIVO);
 
 export type Atualizacao = z.infer<typeof esquemaDaAtualizacao>;
 

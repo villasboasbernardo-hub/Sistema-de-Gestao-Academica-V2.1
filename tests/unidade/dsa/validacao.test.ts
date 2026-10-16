@@ -13,6 +13,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  esquemaDaAtualizacao,
   esquemaDaEdicao,
   esquemaDaExclusao,
   esquemaDoBloco,
@@ -350,5 +351,52 @@ describe("`RF-DSA-07` · mover, editar e excluir — os esquemas do PR 4", () =>
   it("a exclusão pede o fato e a origem, e NADA mais", () => {
     expect(esquemaDaExclusao.safeParse({ fatoId: ID, origem: "avaliacao" }).success).toBe(true);
     expect(esquemaDaExclusao.safeParse({ origem: "avaliacao" }).success).toBe(false);
+  });
+});
+
+describe("`RN-RESP-1` · o nome livre da atividade no cartão de edição (emenda de 15/10/2026)", () => {
+  it("o nome livre viaja sozinho, e ausente continua sendo «não mexi»", () => {
+    const r = esquemaDaAtualizacao.safeParse({
+      fatoId: ID,
+      origem: "atividade_nao_letiva",
+      responsavelExterno: "DOEP",
+    });
+    expect(r.success && r.data.responsavelExterno).toBe("DOEP");
+    const sem = esquemaDaAtualizacao.safeParse({ fatoId: ID, origem: "atividade_nao_letiva" });
+    expect(sem.success && "responsavelExterno" in sem.data).toBe(false);
+  });
+
+  it("trocar um pelo outro (o novo preenchido, o antigo nulo) é aceito nos dois esquemas", () => {
+    for (const esquema of [esquemaDaAtualizacao, esquemaDaEdicao]) {
+      expect(
+        esquema.safeParse({
+          fatoId: ID,
+          origem: "atividade_nao_letiva",
+          instrutorId: OUTRO,
+          responsavelExterno: null,
+        }).success,
+      ).toBe(true);
+      expect(
+        esquema.safeParse({
+          fatoId: ID,
+          origem: "atividade_nao_letiva",
+          instrutorId: null,
+          responsavelExterno: "Palestrante de fora",
+        }).success,
+      ).toBe(true);
+    }
+  });
+
+  it("os dois preenchidos são recusados com frase, nos dois esquemas — o `CHECK` recusaria com 23514", () => {
+    for (const esquema of [esquemaDaAtualizacao, esquemaDaEdicao]) {
+      const r = esquema.safeParse({
+        fatoId: ID,
+        origem: "atividade_nao_letiva",
+        instrutorId: OUTRO,
+        responsavelExterno: "DOEP",
+      });
+      expect(r.success).toBe(false);
+      expect(r.success ? "" : r.error.issues[0]?.message).toContain("não os dois");
+    }
   });
 });

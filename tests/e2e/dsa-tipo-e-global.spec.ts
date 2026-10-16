@@ -11,6 +11,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import { ROTULO_NOME_LIVRE } from "@/lib/dominio/responsavel";
+
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
 import { ANO, limparDsa, SEGUNDA, SEMANA, semearDsa, type DsaSemeado } from "./dsa-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
@@ -133,7 +135,7 @@ test("US2 · BDA mostra «Apoio Individualizado» antes de gravar, grava fora da
   await expect(page.locator(GRADE)).toContainText("Apoio Individualizado — alunos específicos");
 });
 
-test("US2 · Recepção aos alunos conta como TAD; o externo é «Entidade ou palestrante externo»", async ({
+test("US2 · Recepção aos alunos conta como TAD; o externo é o «Outro responsável (nome livre)» (RN-RESP-1)", async ({
   page,
 }) => {
   const descricao = `Recepção da turma ${MARCA}`;
@@ -142,9 +144,7 @@ test("US2 · Recepção aos alunos conta como TAD; o externo é «Entidade ou pa
   await page.locator('[data-tipo="TAD"]').click();
   await page.locator("#dsa-subtipo").selectOption({ label: "Recepção aos alunos" });
   await expect(page.locator('[data-slot="categoria-do-tipo"]')).toHaveText("Conta como: TAD");
-  await expect(page.locator('label[for="dsa-responsavel-externo"]')).toHaveText(
-    "Entidade ou palestrante externo (opcional)",
-  );
+  await expect(page.locator('label[for="dsa-responsavel-externo"]')).toHaveText(ROTULO_NOME_LIVRE);
   await page.locator("#dsa-responsavel-externo").fill("DOEP");
   await page.locator("#dsa-descricao").fill(descricao);
   await page.locator("#dsa-tempos").fill("1");

@@ -54,6 +54,8 @@ import {
   type TipoDeAtividade,
 } from "@/lib/dominio/categoria-pelo-tipo";
 import { avisoDoEmpurrao, empurrarEmCascata, ultimoTempoDoDia } from "@/lib/dominio/dsa/empurrar";
+import { responsavelNaEdicao } from "@/lib/dominio/dsa/responsavel-na-edicao";
+import { recusaDoNomeLivre, regraDoResponsavel } from "@/lib/dominio/responsavel";
 import type { Json } from "@/lib/tipos/database";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
@@ -696,6 +698,15 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
       quantidadeAlunos: bloco.quantidadeAlunos,
     });
     if (recusa !== null) return falha(recusa.mensagem, recusa.campo);
+    /*
+     * ⚠️ `RN-RESP-1` (15/10/2026): o «outro responsável (nome livre)» só onde a regra da CATEGORIA o aceita — e quem
+     *    confere é o servidor, não a tela (a regra de negócio nunca mora só na UI). Hoje toda categoria aceita.
+     */
+    const semNomeLivre = recusaDoNomeLivre(
+      regraDoResponsavel({ tipo: "atividade", categoria: categoriaDaAtividade }),
+      bloco.responsavelExterno,
+    );
+    if (semNomeLivre !== null) return falha(semNomeLivre, "responsavelExterno");
   }
 
   /*
@@ -1096,6 +1107,8 @@ type FatoDoBanco = {
   readonly disciplinaId: string | null;
   readonly unidadeEnsinoId: string | null;
   readonly herdado: boolean;
+  /** A categoria normativa da ATIVIDADE (`RN-RESP-1` decide o nome livre por ela); nas demais origens, `null`. */
+  readonly categoria: CategoriaDeAtividade | null;
 };
 
 async function lerFato(
@@ -1153,6 +1166,7 @@ async function lerFato(
       disciplinaId,
       unidadeEnsinoId: l.unidade_ensino_id,
       herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
+      categoria: null,
     };
   }
 
@@ -1183,6 +1197,7 @@ async function lerFato(
       disciplinaId: l.avaliacao?.disciplina_id ?? null,
       unidadeEnsinoId: null,
       herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
+      categoria: null,
     };
   }
 
@@ -1214,12 +1229,15 @@ async function lerFato(
       disciplinaId: l.disciplina_id,
       unidadeEnsinoId: null,
       herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
+      categoria: null,
     };
   }
 
   const { data } = await supabase
     .from("atividades_nao_letivas")
-    .select("data, ta_inicial, tempos_consumidos, turma_id, origem_migracao_v1, editado_em")
+    .select(
+      "data, ta_inicial, tempos_consumidos, turma_id, categoria_normativa, origem_migracao_v1, editado_em",
+    )
     .eq("id", fatoId)
     .maybeSingle();
   if (!data) return null;
@@ -1228,6 +1246,7 @@ async function lerFato(
     ta_inicial: number | null;
     tempos_consumidos: number | null;
     turma_id: string | null;
+    categoria_normativa: CategoriaDeAtividade | null;
     origem_migracao_v1: string | null;
     editado_em: string | null;
   };
@@ -1241,6 +1260,7 @@ async function lerFato(
     disciplinaId: null,
     unidadeEnsinoId: null,
     herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
+    categoria: l.categoria_normativa,
   };
 }
 
@@ -1391,7 +1411,8 @@ async function gravarNoFato(
  * ⚠️ **É `UPDATE` DO MESMO REGISTRO** (critério 7): o `id` continua, `criado_por` intacto,
  * `editado_*` carimbado — e os empurrados da `D-DSA-3` também.
  *
- * ⚠️ **OS PORTEIROS, NA ORDEM:** dia bloqueado no calendário (`RN-EVT-04`, só aula) e etapa presencial
+ * ⚠️ **OS PORTEIROS, NA ORDEM:** o responsável (`RN-RESP-1`: o nome livre só onde o papel o aceita, por
+ * `responsavelNaEdicao`); dia bloqueado no calendário (`RN-EVT-04`, só aula) e etapa presencial
  * (`D-DSA-2`) quando o dia muda; a catraca da UE da linha histórica (`Q-1`); a habilitação de quem
  * ministra (`RN-INST-01`); o **teto de TFM** quando o tamanho, o dia ou a disciplina mudam — e isto é a
  * dúvida 2 do lote, que valia só no mover e passa a valer no editar; e a cascata (`D-DSA-3`) quando a
@@ -1406,6 +1427,15 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
   const supabase = await criarClienteDeServidor();
   const fato = await lerFato(supabase, a.origem, a.fatoId);
   if (fato === null) return falha("Não encontrei este lançamento.");
+
+  /* `RN-RESP-1`: as colunas de quem responde, e a recusa do nome livre onde o papel não o aceita (função pura). */
+  const responsavel = responsavelNaEdicao({
+    origem: a.origem,
+    categoria: fato.categoria,
+    instrutorId: a.instrutorId,
+    responsavelExterno: a.responsavelExterno,
+  });
+  if (!responsavel.ok) return falha(responsavel.mensagem, responsavel.campo);
 
   const data = a.data ?? fato.data;
   const taInicial = a.taInicial ?? fato.taInicial;
@@ -1455,6 +1485,15 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
     const recusa = await conferirHabilitacao(supabase, atuacao, a.instrutorId, disciplinaId);
     if (recusa !== null) return falha(recusa, "instrutorId");
   }
+  /*
+   * ⚠️ **D-AV-3 TAMBÉM NA EDIÇÃO** (spec 014, FR-043): trocar o aplicador pelo cartão dá o MESMO aviso que lançar —
+   *    grava, e a tela diz; nunca recusa. Sem isto, o aplicador sem habilitação escolhido no lançamento era avisado,
+   *    e o mesmo aplicador posto depois pelo cartão passava calado.
+   */
+  const avisoDaTroca =
+    a.origem === "avaliacao" && a.instrutorId != null && disciplinaId !== null
+      ? await avisoDoAplicador(supabase, a.instrutorId, disciplinaId)
+      : null;
 
   let alertas: readonly string[] = [];
   if (
@@ -1515,21 +1554,20 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
     }
     if (a.conteudo !== undefined) campos["conteudo_resumo"] = a.conteudo;
     if (a.tecnica !== undefined) campos["metodologia"] = a.tecnica;
-    if (a.instrutorId !== undefined) campos["instrutor_id"] = a.instrutorId;
   } else if (a.origem === "avaliacao") {
     if (a.conteudo !== undefined) campos["conteudo_resumo"] = a.conteudo;
     if (a.tecnica !== undefined) campos["metodologia"] = a.tecnica;
-    if (a.instrutorId !== undefined) campos["instrutor_responsavel_id"] = a.instrutorId;
-  } else if (a.origem === "vista_prova") {
-    /* Quem conduz a sessão (FR-043): trocar pelo cadastro apaga o nome de fora. */
-    if (a.instrutorId !== undefined) {
-      campos["conduz_instrutor_id"] = a.instrutorId;
-      if (a.instrutorId !== null) campos["conduz_nome_externo"] = null;
-    }
   } else if (a.origem === "atividade_nao_letiva") {
     if (a.conteudo !== undefined) campos["descricao"] = a.conteudo;
-    if (a.instrutorId !== undefined) campos["instrutor_id"] = a.instrutorId;
   }
+  /*
+   * ⚠️ QUEM RESPONDE (`RN-RESP-1`, FR-043): as colunas saem de `responsavelNaEdicao` — quem ministra, o aplicador da
+   *    avaliação, quem conduz a vista (o cadastro apaga o nome de fora) e, na atividade, instrutor do cadastro × nome
+   *    livre, que são EXCLUSIVOS (`CHECK ativ_responsavel_exclusivo`): gravar um ZERA o outro. Quem chama o endpoint
+   *    só com `instrutorId` numa atividade que tinha nome livre manda, por ela, `responsavel_externo = null` junto —
+   *    sem isso o banco recusaria com `23514`. Provado em `tests/unidade/dsa/responsavel-na-edicao.test.ts`.
+   */
+  Object.assign(campos, responsavel.colunas);
   if (a.outrosInstrutores !== undefined && a.origem !== "vista_prova") {
     campos["outros_instrutores"] = a.outrosInstrutores;
   }
@@ -1551,7 +1589,11 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
         );
   if (typeof gravado === "string") return falha(gravado);
   revalidar();
-  return { ok: true, id: a.fatoId, avisos: comAviso(alertas, cascata.aviso) };
+  return {
+    ok: true,
+    id: a.fatoId,
+    avisos: comAviso([...(avisoDaTroca === null ? [] : [avisoDaTroca]), ...alertas], cascata.aviso),
+  };
 }
 
 /** O cartão único: tudo de um lançamento, numa gravação só (ajuste 1 do PR #40). */

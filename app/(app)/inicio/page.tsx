@@ -53,6 +53,7 @@ import { AlertasDeVista } from "../turmas/[turma]/AlertasDeVista";
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
 import { alertasDeVista } from "@/lib/dominio/avaliacoes/alertas-de-vista";
 import { naturezaPeloTipo } from "@/lib/dominio/avaliacoes/quadro-da-turma";
+import { exigeVista } from "@/lib/dominio/avaliacoes/vista-obrigatoria";
 import {
   montarPanorama,
   totaisDo,
@@ -173,12 +174,13 @@ export default async function Inicio({
       .eq("status", "ativo"),
     /*
      * ⚠️ **OS ALERTAS DE VISTA** (spec 014, FR-054, `RF-INI-04`): as avaliações VIVAS já aplicadas, com as sessões
-     *    de vista e o tempo de vista do item; o veredito é de `alertasDeVista`, sobre `situacaoDaAvaliacao`.
+     *    de vista e o INSTRUMENTO do item (`RN-AV-13`, 15/10/2026: a vista é obrigatória só para PM e PO, decidido por
+     *    `exigeVista`); o veredito é de `alertasDeVista`, sobre `situacaoDaAvaliacao`.
      */
     supabase
       .from("avaliacoes")
       .select(
-        "id, tipo_avaliacao, data_avaliacao, status, avaliacao_curriculo_id, turma:turmas!avaliacoes_turma_id_fkey(codigo), disciplina:disciplinas!avaliacoes_disciplina_id_fkey(cod_disciplina), item:avaliacoes_curriculo!avaliacoes_item_da_disciplina(ta_vista), vistas_de_avaliacao(data, status)",
+        "id, tipo_avaliacao, data_avaliacao, status, avaliacao_curriculo_id, turma:turmas!avaliacoes_turma_id_fkey(codigo), disciplina:disciplinas!avaliacoes_disciplina_id_fkey(cod_disciplina), item:avaliacoes_curriculo!avaliacoes_item_da_disciplina(status, instrumento:config_listas!avaliacoes_curriculo_instrumento_id_fkey(valor)), vistas_de_avaliacao(data, status)",
       )
       .in("status", [...STATUS_DE_AVALIACAO_VIVA])
       .lte("data_avaliacao", hoje),
@@ -235,26 +237,35 @@ export default async function Inicio({
     avaliacao_curriculo_id: string | null;
     turma: { codigo: string } | null;
     disciplina: { cod_disciplina: string } | null;
-    item: { ta_vista: number | null } | null;
+    item: { status: string; instrumento: { valor: string | null } | null } | null;
     vistas_de_avaliacao: { data: string; status: string }[];
   };
   const vistas = alertasDeVista(
     ((avaliacoesRes.data ?? []) as unknown as LinhaDeAvaliacao[])
       .filter((a) => a.turma && noRecorte.has(a.turma.codigo))
-      .map((a) => ({
-        id: a.id,
-        turma: a.turma?.codigo ?? "",
-        disciplina: a.disciplina?.cod_disciplina ?? "",
-        tipo: a.tipo_avaliacao ?? "",
-        natureza: naturezaPeloTipo(a.tipo_avaliacao ?? ""),
-        estadoDoRegistro: a.status,
-        aplicacao: a.data_avaliacao,
-        sessoesDeVista: a.vistas_de_avaliacao
-          .filter((v) => v.status === "ativo")
-          .map((v) => v.data),
-        temItemDeVista: a.avaliacao_curriculo_id === null || (a.item?.ta_vista ?? 0) > 0,
-        itemLigado: a.avaliacao_curriculo_id !== null,
-      })),
+      .map((a) => {
+        /*
+         * ⚠️ SÓ O ITEM ATIVO CONTA COMO LIGADO, como na ficha da turma (`consulta-de-avaliacoes.ts`), que lê os itens
+         *    com `status = 'ativo'` e não acha o inativo. Sem este filtro, a prova ligada a item INATIVO dava alerta
+         *    aqui e não na ficha — a mesma prova com dois vereditos. Item inativo ou não lido: instrumento
+         *    desconhecido e fora do alerta (decisão de 14/10/2026, `alertas-de-vista.ts`).
+         */
+        const item = a.item?.status === "ativo" ? a.item : null;
+        return {
+          id: a.id,
+          turma: a.turma?.codigo ?? "",
+          disciplina: a.disciplina?.cod_disciplina ?? "",
+          tipo: a.tipo_avaliacao ?? "",
+          natureza: naturezaPeloTipo(a.tipo_avaliacao ?? ""),
+          estadoDoRegistro: a.status,
+          aplicacao: a.data_avaliacao,
+          sessoesDeVista: a.vistas_de_avaliacao
+            .filter((v) => v.status === "ativo")
+            .map((v) => v.data),
+          temItemDeVista: exigeVista({ instrumento: item?.instrumento?.valor ?? null }),
+          itemLigado: a.avaliacao_curriculo_id !== null && item !== null,
+        };
+      }),
     {
       prazoDias: parametroDaVista("avaliacao.prazo_vista_dias", 7),
       venceEmBreveDias: parametroDaVista("avaliacao.vence_em_breve_dias", 2),

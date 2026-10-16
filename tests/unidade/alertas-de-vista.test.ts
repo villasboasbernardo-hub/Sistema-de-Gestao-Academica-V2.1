@@ -8,6 +8,7 @@ import {
   alertasDeVista,
   type AvaliacaoParaAlerta,
 } from "@/lib/dominio/avaliacoes/alertas-de-vista";
+import { exigeVista } from "@/lib/dominio/avaliacoes/vista-obrigatoria";
 
 const base: AvaliacaoParaAlerta = {
   id: "a",
@@ -68,5 +69,36 @@ describe("FR-054 · alertas de vista", () => {
       ["a", "atrasada", "2026-10-08"],
       ["b", "vence_em_breve", "2026-10-19"],
     ]);
+  });
+});
+
+describe("RN-AV-13 · o alerta segue o INSTRUMENTO do item (emenda de 15/10/2026)", () => {
+  /*
+   * Quem chama decide `temItemDeVista` por `exigeVista` sobre o instrumento do item (a ficha da turma e o `/inicio`).
+   * Antes da emenda decidia pelo TEMPO de vista do item: o caso que discrimina é uma PP COM tempo de vista no
+   * currículo, aplicada há 10 dias sem vista — antes «atrasada», agora sem alerta; e uma PM SEM tempo de vista —
+   * antes sem alerta, agora «atrasada».
+   */
+  const hoje = { ...P, hoje: "2026-10-11" };
+  const pelo = (instrumento: string, tempoDeVista: number | null) => ({
+    antes: { ...base, temItemDeVista: (tempoDeVista ?? 0) > 0 },
+    agora: { ...base, temItemDeVista: exigeVista({ instrumento }) },
+  });
+
+  it("PP com tempo de vista, 10 dias sem vista: antes atrasada, agora sem alerta", () => {
+    const pp = pelo("PP", 1);
+    expect(alertasDeVista([pp.antes], hoje)[0]?.tipoDoAlerta).toBe("atrasada");
+    expect(alertasDeVista([pp.agora], hoje)).toEqual([]);
+  });
+
+  it("PM sem tempo de vista, 10 dias sem vista: antes sem alerta, agora atrasada", () => {
+    const pm = pelo("PM", null);
+    expect(alertasDeVista([pm.antes], hoje)).toEqual([]);
+    expect(alertasDeVista([pm.agora], hoje)[0]?.tipoDoAlerta).toBe("atrasada");
+  });
+
+  it("TG e PO: o trabalho não alerta; a PO alerta", () => {
+    expect(alertasDeVista([pelo("TG", 1).agora], hoje)).toEqual([]);
+    expect(alertasDeVista([pelo("PO", null).agora], hoje)[0]?.tipoDoAlerta).toBe("atrasada");
   });
 });

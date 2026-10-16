@@ -15,6 +15,10 @@
  * ⚠️ **O GRAVAR MANDA SÓ O QUE MUDOU.** Campo que a pessoa não tocou não viaja, e por isso não pode
  * ser reescrito por engano — é a mesma distinção `undefined`/`null` da Server Action.
  *
+ * ⚠️ **NA ATIVIDADE, O INSTRUTOR DO CADASTRO OU O «OUTRO RESPONSÁVEL (NOME LIVRE)»** (`RN-RESP-1`, emenda de
+ * 15/10/2026): os dois são exclusivos (`ativ_responsavel_exclusivo`), e trocar um pelo outro manda os dois campos —
+ * o novo e o antigo apagado. A Server Action zera o outro lado de qualquer jeito.
+ *
  * ⚠️ **FOLHA DE CLIENTE, DECLARADA.** As ações chegam por propriedade (Princípio XI); quem decide é a
  * Server Action (`atualizar`), e quem impõe é o banco.
  */
@@ -23,7 +27,6 @@
 import * as React from "react";
 
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +35,7 @@ import type { DiaDaGrade, ValoresGravados } from "@/lib/dominio/dsa/grade";
 import type { OrigemDoFato } from "@/lib/dominio/dsa/posicao-herdada";
 import { temposParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
+import { regraDoResponsavel } from "@/lib/dominio/responsavel";
 import { dataComDiaDaSemana } from "@/lib/formato/data";
 
 import { EscolhaSimples } from "./EscolhaSimples";
@@ -41,6 +45,7 @@ import {
   type ResultadoDaAcao,
   type UnidadeOferecida,
 } from "./FormularioDeLancamento";
+import { ResponsavelOuNomeLivre } from "./ResponsavelOuNomeLivre";
 
 /** O fato escolhido, como a grade o conhece. */
 export type FatoEscolhido = {
@@ -100,8 +105,18 @@ export function AcoesDoBloco({
     conteudo: fato.conteudo,
     tecnica: fato.tecnica,
     local: fato.local,
+    responsavelExterno: null,
   };
   const ehAula = fato.origem === "aula";
+  const ehAtividade = fato.origem === "atividade_nao_letiva";
+  /* `RN-RESP-1`: a regra do papel de quem responde. A categoria da atividade não chega ao cartão — vale o comum. */
+  const regra = regraDoResponsavel(
+    ehAula
+      ? { tipo: "aula" }
+      : fato.origem === "avaliacao"
+        ? { tipo: "avaliacao", papel: "aplicador" }
+        : { tipo: "atividade", categoria: null },
+  );
   const temTopico = fato.origem === "aula" || fato.origem === "avaliacao";
   const temQuemMinistra = fato.origem !== "vista_prova";
 
@@ -119,6 +134,7 @@ export function AcoesDoBloco({
   const [conteudo, definirConteudo] = React.useState(g.conteudo ?? "");
   const [tecnica, definirTecnica] = React.useState(g.tecnica ?? "");
   const [instrutorId, definirInstrutor] = React.useState(g.instrutorId ?? "");
+  const [nomeLivre, definirNomeLivre] = React.useState(g.responsavelExterno ?? "");
   const [local, definirLocal] = React.useState(g.local ?? "");
   const [recusa, definirRecusa] = React.useState<string | null>(null);
   const [avisos, definirAvisos] = React.useState<readonly { codigo: string; texto: string }[]>([]);
@@ -160,8 +176,17 @@ export function AcoesDoBloco({
       if (texto(conteudo) !== g.conteudo) m["conteudo"] = texto(conteudo);
     }
     if (temTopico && texto(tecnica) !== g.tecnica) m["tecnica"] = texto(tecnica);
-    /* Quem ministra não se apaga por aqui: vazio é "não mexi". */
-    if (temQuemMinistra && instrutorId !== "" && instrutorId !== g.instrutorId) {
+    if (ehAtividade) {
+      /*
+       * `RN-RESP-1`: na atividade o responsável é OPCIONAL — «Tirar o instrutor» apaga (`null`), e o nome livre só
+       * viaja sem instrutor. Mandar os dois (um novo, o outro apagado) é o que troca um pelo outro sem `23514`.
+       */
+      const novoInstrutor = instrutorId === "" ? null : instrutorId;
+      const novoLivre = novoInstrutor === null ? texto(nomeLivre) : null;
+      if (novoInstrutor !== g.instrutorId) m["instrutorId"] = novoInstrutor;
+      if (novoLivre !== (g.responsavelExterno ?? null)) m["responsavelExterno"] = novoLivre;
+    } else if (temQuemMinistra && instrutorId !== "" && instrutorId !== g.instrutorId) {
+      /* Quem ministra não se apaga por aqui: vazio é "não mexi". */
       m["instrutorId"] = instrutorId;
     }
     return m;
@@ -291,13 +316,28 @@ export function AcoesDoBloco({
       ) : null}
 
       {temQuemMinistra ? (
-        /* ⚠️ Trocar quem ministra passa pelo porteiro da habilitação (`RN-INST-01`, Risco: Alto). */
-        <SeletorInstrutor
+        /*
+         * ⚠️ Trocar quem ministra passa pelo porteiro da habilitação (`RN-INST-01`, Risco: Alto). Na atividade, o
+         *    «outro responsável (nome livre)» aparece porque a regra o aceita (`RN-RESP-1`).
+         */
+        <ResponsavelOuNomeLivre
+          regra={regra}
           instrutores={instrutores}
           escala={escala}
-          valor={instrutorId}
-          aoMudar={definirInstrutor}
-          rotulo={fato.origem === "avaliacao" ? "Responsável pela avaliação" : "Quem ministra"}
+          rotuloDoCadastro={
+            fato.origem === "avaliacao"
+              ? "Responsável pela avaliação"
+              : ehAtividade
+                ? "Instrutor do cadastro (opcional)"
+                : "Quem ministra"
+          }
+          idDoNomeLivre="dsa-editar-responsavel-externo"
+          exemplo="DOEP, CIAARA-30, palestrante…"
+          instrutorId={instrutorId}
+          aoMudarInstrutor={definirInstrutor}
+          nomeLivre={nomeLivre}
+          aoMudarNomeLivre={definirNomeLivre}
+          slot="responsavel-do-lancamento"
         />
       ) : null}
 

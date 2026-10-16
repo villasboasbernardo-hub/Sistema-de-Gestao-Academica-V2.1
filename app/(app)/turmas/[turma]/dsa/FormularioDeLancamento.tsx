@@ -24,6 +24,11 @@
  *
  * ⚠️ **TODO CAMPO DE ESCOLHA VEM DE `EscolhaSimples`**: a guarda `SC-002` reprova arquivo que cite quem
  * ministra e escreva o elemento de escolha nativo à mão (`RN-ANT-01`, *Risco: Alto*, ponto único).
+ *
+ * ⚠️ **QUEM RESPONDE POR CADA PAPEL SAI DE `regraDoResponsavel`** (`RN-RESP-1`, emenda de 15/10/2026): aula e aplicador
+ * da prova pedem o instrutor do cadastro; fiscal, quem conduz a vista e toda atividade aceitam também o «outro
+ * responsável (nome livre)», sem cadastro e sem alerta. O campo livre aparece porque a regra o aceita
+ * (`ResponsavelOuNomeLivre`), nunca por lista de tipos escrita aqui.
  */
 "use client";
 
@@ -31,7 +36,6 @@ import * as React from "react";
 
 import type { TipoOferecido } from "./leitura";
 
-import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,9 +43,11 @@ import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/rotulos";
 import type { TempoParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
+import { regraDoResponsavel } from "@/lib/dominio/responsavel";
 import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
 
 import { EscolhaSimples } from "./EscolhaSimples";
+import { ResponsavelOuNomeLivre } from "./ResponsavelOuNomeLivre";
 
 /** Uma unidade oferecida, com os **três números** que a operação acompanha (`FR-018`, `P-3`). */
 export type UnidadeOferecida = {
@@ -205,6 +211,8 @@ export function FormularioDeLancamento({
   const [localEditado, definirLocalEditado] = React.useState(false);
   const [conteudo, definirConteudo] = React.useState("");
   const [tipoAvaliacao, definirTipoAvaliacao] = React.useState("");
+  /* `RN-RESP-1`: o fiscal do cadastro OU de nome livre — exclusivos, como no banco (`fiscal_id` × nome). */
+  const [fiscalId, definirFiscal] = React.useState("");
   const [nomeFiscalExterno, definirFiscalExterno] = React.useState("");
   const [subtipo, definirSubtipo] = React.useState("");
   const [descricao, definirDescricao] = React.useState("");
@@ -228,6 +236,16 @@ export function FormularioDeLancamento({
   const itensDaDisciplina = avaliacoesDoCurriculo.filter((i) => i.disciplinaId === disciplinaId);
   /* ⚠️ O alerta do item 1c: aula, com disciplina, e SEM unidade. */
   const semUnidade = tipo === "aula" && disciplinaId !== "" && unidadeId === "";
+  /* `RN-RESP-1`: a regra do papel principal deste tipo — quem ministra, quem aplica, quem conduz, quem responde. */
+  const regraPrincipal = regraDoResponsavel(
+    tipo === "aula"
+      ? { tipo: "aula" }
+      : tipo === "avaliacao"
+        ? { tipo: "avaliacao", papel: "aplicador" }
+        : tipo === "vista_prova"
+          ? { tipo: "vista" }
+          : { tipo: "atividade", categoria: tipo },
+  );
 
   function escolherTipo(novo: Tipo): void {
     definirTipo(novo);
@@ -310,8 +328,9 @@ export function FormularioDeLancamento({
         instrutorId: quemMinistra,
         conteudo: texto(conteudo),
         tecnica: texto(tecnica),
-        fiscalId: null,
-        nomeFiscalExterno: texto(nomeFiscalExterno),
+        /* Com o fiscal do cadastro escolhido, o nome livre não viaja (o esquema recusa os dois). */
+        fiscalId: nulo(fiscalId),
+        nomeFiscalExterno: fiscalId === "" ? texto(nomeFiscalExterno) : null,
         avaliacaoCurriculoId: nulo(itemId),
         uesAbordadas: texto(uesAbordadas),
         outrosInstrutores: listaDeOutros(outros),
@@ -336,7 +355,8 @@ export function FormularioDeLancamento({
       tipoAtividadeId: subtipo,
       descricao,
       instrutorId: nulo(quemMinistra),
-      responsavelExterno: texto(responsavelExterno),
+      /* `RN-RESP-1`: com instrutor do cadastro, o nome livre não viaja (`ativ_responsavel_exclusivo`). */
+      responsavelExterno: quemMinistra === "" ? texto(responsavelExterno) : null,
       /* A disciplina da AEC é opcional, e só da AEC (item 1b). */
       disciplinaId: tipo === "AEC" && !global ? nulo(disciplinaId) : null,
       /* A quantidade de alunos, opcional, só no Apoio (FR-020). */
@@ -604,43 +624,45 @@ export function FormularioDeLancamento({
 
       {/*
         ⚠️ O SELETOR É O CANÔNICO, e ele reordena por ANTIGUIDADE a lista que recebe (`RN-ANT-01`).
-           A vista de prova não leva quem ministra: ela é conduzida pelo responsável da avaliação.
+           A vista de prova não leva quem ministra: leva quem CONDUZ a sessão (FR-043) — do cadastro ou de nome livre.
+        ⚠️ `RN-RESP-1`: o «outro responsável (nome livre)» aparece quando a regra do papel o aceita.
       */}
-      {tipo !== "vista_prova" ? (
-        <SeletorInstrutor
+      {tipo === "vista_prova" ? (
+        <ResponsavelOuNomeLivre
+          regra={regraPrincipal}
           instrutores={instrutores}
           escala={escala}
-          valor={quemMinistra}
-          aoMudar={definirQuemMinistra}
-          rotulo={tipo === "avaliacao" ? "Responsável pela avaliação" : "Quem ministra"}
+          legenda="Quem conduz a vista (opcional — sem ele, o responsável da avaliação)"
+          rotuloDoCadastro="Instrutor do cadastro"
+          idDoNomeLivre="dsa-conduz-externo"
+          exemplo="Posto e nome, como no documento"
+          instrutorId={quemConduz}
+          aoMudarInstrutor={definirQuemConduz}
+          nomeLivre={conduzExterno}
+          aoMudarNomeLivre={definirConduzExterno}
+          slot="quem-conduz-a-vista"
         />
-      ) : null}
-
-      {tipo === "vista_prova" ? (
-        <>
-          {/* Spec 014, FR-043: quem CONDUZ a sessão — do cadastro, pelo seletor canônico, ou de fora. */}
-          <SeletorInstrutor
-            instrutores={instrutores}
-            escala={escala}
-            valor={quemConduz}
-            aoMudar={definirQuemConduz}
-            rotulo="Quem conduz a vista (opcional — sem ele, o responsável da avaliação)"
-          />
-          {quemConduz === "" ? (
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="dsa-conduz-externo">
-                Quem conduz, de fora do cadastro (opcional)
-              </Label>
-              <Input
-                id="dsa-conduz-externo"
-                value={conduzExterno}
-                onChange={(e) => definirConduzExterno(e.target.value)}
-                placeholder="Posto e nome, como no documento"
-              />
-            </div>
-          ) : null}
-        </>
-      ) : null}
+      ) : (
+        <ResponsavelOuNomeLivre
+          regra={regraPrincipal}
+          instrutores={instrutores}
+          escala={escala}
+          rotuloDoCadastro={
+            tipo === "avaliacao"
+              ? "Responsável pela avaliação"
+              : regraPrincipal.instrutorDoCadastro === "opcional"
+                ? "Instrutor do cadastro (opcional)"
+                : "Quem ministra"
+          }
+          idDoNomeLivre="dsa-responsavel-externo"
+          exemplo="DOEP, CIAARA-30, palestrante…"
+          instrutorId={quemMinistra}
+          aoMudarInstrutor={definirQuemMinistra}
+          nomeLivre={responsavelExterno}
+          aoMudarNomeLivre={definirResponsavelExterno}
+          slot="responsavel-do-lancamento"
+        />
+      )}
 
       {tipo === "avaliacao" ? (
         <div className="flex flex-col gap-1">
@@ -669,31 +691,24 @@ export function FormularioDeLancamento({
       ) : null}
 
       {tipo === "avaliacao" ? (
-        <div className="flex flex-col gap-1">
-          {/* `RF-AVAL-06`: quem fiscaliza pode ser de fora do cadastro (`fiscal_id` × nome). */}
-          <Label htmlFor="dsa-fiscal-externo">Fiscal de fora do cadastro (opcional)</Label>
-          <Input
-            id="dsa-fiscal-externo"
-            value={nomeFiscalExterno}
-            onChange={(e) => definirFiscalExterno(e.target.value)}
-            placeholder="Posto e nome, como no documento"
-          />
-        </div>
-      ) : null}
-
-      {naoLetivo ? (
-        <div className="flex flex-col gap-1">
-          {/* ⚠️ `Q-8`: a coluna da planilha traz entidade (`DOEP`, `NAS`) e palestrante externo. */}
-          <Label htmlFor="dsa-responsavel-externo">
-            Entidade ou palestrante externo (opcional)
-          </Label>
-          <Input
-            id="dsa-responsavel-externo"
-            value={responsavelExterno}
-            onChange={(e) => definirResponsavelExterno(e.target.value)}
-            placeholder="DOEP, CIAARA-30, palestrante…"
-          />
-        </div>
+        /*
+         * `RF-AVAL-06` e `RN-RESP-1`: quem fiscaliza é do cadastro (pelo seletor canônico) OU de nome livre — o fiscal
+         * não é atuação de instrutor (`RN-INST-01`), então não há habilitação a conferir.
+         */
+        <ResponsavelOuNomeLivre
+          regra={regraDoResponsavel({ tipo: "avaliacao", papel: "fiscal" })}
+          instrutores={instrutores}
+          escala={escala}
+          legenda="Fiscal (opcional)"
+          rotuloDoCadastro="Fiscal do cadastro"
+          idDoNomeLivre="dsa-fiscal-externo"
+          exemplo="Posto e nome, como no documento"
+          instrutorId={fiscalId}
+          aoMudarInstrutor={definirFiscal}
+          nomeLivre={nomeFiscalExterno}
+          aoMudarNomeLivre={definirFiscalExterno}
+          slot="fiscal-da-avaliacao"
+        />
       ) : null}
 
       <div className="flex flex-col gap-1">
