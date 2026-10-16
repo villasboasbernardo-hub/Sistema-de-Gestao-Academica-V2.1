@@ -8,8 +8,15 @@
  *
  * ⚠️ OS CASOS SEM APLICAÇÃO E A OD FICAM DE FORA DE PROPÓSITO: o SQL só fala de avaliação que existe (o «sem
  *    correspondência» de item sem lançamento e a OD vivem só na TS — data-model §3.7).
- * ⚠️ «Sem item de vista no currículo» se prova ligando a avaliação a um item com `ta_vista` nulo; sem item ligado
- *    (o histórico), a vista é exigida.
+ * ⚠️ «Sem vista obrigatória» se prova ligando a avaliação a um item de INSTRUMENTO que não exige vista (a marca do
+ *    banco, `config_listas.metadados.vista_obrigatoria`, migration D-9 — RN-AV-13, PM/PO/PE em 16/10/2026); sem item
+ *    ligado e sem instrumento gravado (o histórico), a vista é exigida. O caso com `instrumento` liga a um item dele; o
+ *    com `semItem` grava o instrumento na própria avaliação (`avaliacoes.instrumento_id`).
+ * ⚠️ **A MARCA TAMBÉM SE CRUZA**: o lado TS decide `temItemDeVista` por `exigeVista(instrumentoDaVista(linha))`, com a
+ *    linha de `config_listas` LIDA DO BANCO — e confere que dá o `temItemDeVista` da tabela. Se a D-9 mudar a marca
+ *    sem a tabela mudar, este teste acusa.
+ * ⚠️ As sessões de aplicação 2..N (`sessoesDeAplicacao`, RN-AV-12) vão para `sessoes_de_aplicacao`: o prazo conta da
+ *    última, nos dois lados.
  * ⚠️ A sessão é de ENCARREGADO, não de Admin (gotcha 8). Identificadores gerados; a amostra se apaga no fim.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -17,6 +24,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import tabela from "@/tests/unidade/dados/situacao-da-avaliacao.json";
 import { situacaoDaAvaliacao, type NaturezaDaAvaliacao } from "@/lib/dominio/avaliacoes/situacao";
+import { exigeVista, instrumentoDaVista } from "@/lib/dominio/avaliacoes/vista-obrigatoria";
 
 import { chaveLocal } from "./rls/chaves-locais";
 
@@ -35,7 +43,9 @@ let sessao: SupabaseClient;
 let cursoId = "";
 let turmaId = "";
 let disciplinaId = "";
-let itemSemVistaId = "";
+/** Por instrumento: o item do currículo da disciplina da amostra e a linha de `config_listas` (com a marca). */
+const itemDo = new Map<string, string>();
+const listaDo = new Map<string, { id: string; valor: string; metadados: unknown }>();
 
 async function limpar(): Promise<void> {
   const { data } = await servico.auth.admin.listUsers({ page: 1, perPage: 200 });
@@ -47,6 +57,10 @@ async function limpar(): Promise<void> {
   for (const a of avs ?? []) {
     await servico
       .from("vistas_de_avaliacao")
+      .delete()
+      .eq("avaliacao_id", (a as { id: string }).id);
+    await servico
+      .from("sessoes_de_aplicacao")
       .delete()
       .eq("avaliacao_id", (a as { id: string }).id);
   }
@@ -138,30 +152,35 @@ beforeAll(async () => {
     if (eT) throw new Error(`turma: ${eT.message}`);
     turmaId = (t as { id: string }).id;
   }
-  const { data: pm } = await servico
+  const { data: lista, error: eL0 } = await servico
     .from("config_listas")
-    .select("id")
-    .eq("lista", "instrumentos_avaliacao")
-    .eq("valor", "PM")
-    .single();
-  const { data: it, error: eI } = await servico
-    .from("avaliacoes_curriculo")
-    .insert({
-      disciplina_id: disciplinaId,
-      curso_id: cursoId,
-      ordem: 1,
-      instrumento_id: (pm as { id: string }).id,
-      numero: 1,
-      origem_item: "curriculo",
-      fonte_arquivo: "sit-cruzada.pdf",
-      fonte_pagina: 1,
-      ta_aplicacao: 2,
-      origem_ta_aplicacao: "curriculo",
-    })
-    .select("id")
-    .single();
-  if (eI) throw new Error(`item: ${eI.message}`);
-  itemSemVistaId = (it as { id: string }).id;
+    .select("id, valor, metadados")
+    .eq("lista", "instrumentos_avaliacao");
+  if (eL0) throw new Error(`instrumentos: ${eL0.message}`);
+  for (const l of (lista ?? []) as { id: string; valor: string; metadados: unknown }[])
+    listaDo.set(l.valor, l);
+  for (const [ordem, valor] of ["PM", "PP", "PE"].entries()) {
+    const linha = listaDo.get(valor);
+    if (!linha) throw new Error(`o instrumento ${valor} não está em config_listas`);
+    const { data: it, error: eI } = await servico
+      .from("avaliacoes_curriculo")
+      .insert({
+        disciplina_id: disciplinaId,
+        curso_id: cursoId,
+        ordem: ordem + 1,
+        instrumento_id: linha.id,
+        numero: 1,
+        origem_item: "curriculo",
+        fonte_arquivo: "sit-cruzada.pdf",
+        fonte_pagina: 1,
+        ta_aplicacao: 2,
+        origem_ta_aplicacao: "curriculo",
+      })
+      .select("id")
+      .single();
+    if (eI) throw new Error(`item ${valor}: ${eI.message}`);
+    itemDo.set(valor, (it as { id: string }).id);
+  }
   const { data: u, error: eU } = await servico.auth.admin.createUser({
     email: EMAIL,
     password: SENHA,
@@ -192,6 +211,14 @@ const casos = tabela.casos.filter((c) => c.aplicacao !== null && c.natureza !== 
 describe("R-8 · app.fn_status_vista dá o MESMO veredito de situacaoDaAvaliacao", () => {
   it.each(casos.map((c, n) => [n, c.nome, c] as const))("caso %i — %s", async (n, _nome, caso) => {
     const codigo = `SIT-${SELO}-${n}`;
+    /*
+     * O instrumento do caso: o declarado; sem ele, o histórico (exige vista → sem item) ou um que não exige (PP).
+     * Com `semItem`, o instrumento vai para a própria avaliação.
+     */
+    const semItem = "semItem" in caso && caso.semItem === true;
+    const instrumento =
+      "instrumento" in caso ? (caso.instrumento as string) : caso.temItemDeVista ? null : "PP";
+    const ligada = !semItem && instrumento !== null;
     const { data: a, error } = await servico
       .from("avaliacoes")
       .insert({
@@ -204,7 +231,8 @@ describe("R-8 · app.fn_status_vista dá o MESMO veredito de situacaoDaAvaliacao
         ta_inicial: 1,
         tempos_consumidos: 2,
         status: "estadoDoRegistro" in caso ? caso.estadoDoRegistro : "pendente",
-        avaliacao_curriculo_id: caso.temItemDeVista ? null : itemSemVistaId,
+        avaliacao_curriculo_id: ligada ? itemDo.get(instrumento!)! : null,
+        instrumento_id: semItem && instrumento ? listaDo.get(instrumento)!.id : null,
       })
       .select("id")
       .single();
@@ -217,6 +245,18 @@ describe("R-8 · app.fn_status_vista dá o MESMO veredito de situacaoDaAvaliacao
         .from("vistas_de_avaliacao")
         .insert({ avaliacao_id: id, numero: s + 1, data, ta_inicial: 3, tempos_consumidos: 1 });
     }
+    const aplicacoes = "sessoesDeAplicacao" in caso ? (caso.sessoesDeAplicacao as string[]) : [];
+    for (const [s, data] of aplicacoes.entries()) {
+      const { error: eA } = await servico
+        .from("sessoes_de_aplicacao")
+        .insert({ avaliacao_id: id, numero: s + 2, data, ta_inicial: 5, tempos_consumidos: 1 });
+      if (eA) throw new Error(`sessão de aplicação: ${eA.message}`);
+    }
+    // A marca do banco decide no lado TS também — e tem de dar o `temItemDeVista` da tabela.
+    const temItemDeVista = exigeVista({
+      instrumento: instrumento === null ? null : instrumentoDaVista(listaDo.get(instrumento)),
+    });
+    expect(temItemDeVista, "a marca do banco não é a da tabela de casos").toBe(caso.temItemDeVista);
     const { data: sql, error: eS } = await sessao.rpc(
       "situacao_da_avaliacao" as never,
       { p_avaliacao_id: id, p_hoje: caso.hoje } as never,
@@ -227,7 +267,8 @@ describe("R-8 · app.fn_status_vista dá o MESMO veredito de situacaoDaAvaliacao
       estadoDoRegistro: "estadoDoRegistro" in caso ? (caso.estadoDoRegistro as string) : null,
       aplicacao: caso.aplicacao,
       sessoesDeVista: caso.sessoesDeVista,
-      temItemDeVista: caso.temItemDeVista,
+      sessoesDeAplicacao: aplicacoes,
+      temItemDeVista,
       prazoDias: tabela.prazoDias,
       hoje: caso.hoje,
       terminoDaTurma: caso.terminoDaTurma,

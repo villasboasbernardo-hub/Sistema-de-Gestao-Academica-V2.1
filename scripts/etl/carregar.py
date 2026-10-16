@@ -603,6 +603,10 @@ SEQUENCIAS_DE_CODIGO: tuple[tuple[str, str, str], ...] = (
      "case when codigo ~ '^AVC-[0-9]+$' then substring(codigo from 5)::bigint end"),
     ("app.vistas_de_avaliacao_codigo_seq", "vistas_de_avaliacao",
      "case when codigo ~ '^VST-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    # A da emenda de 15/10/2026 (E-6, 16/10/2026): a sessão de aplicação 2..N nascida na tela (SAP-). As da
+    # sincronização têm o código da linha da planilha (`DSAP-…-SA`) e não contam aqui.
+    ("app.sessoes_de_aplicacao_codigo_seq", "sessoes_de_aplicacao",
+     "case when codigo ~ '^SAP-[0-9]+$' then substring(codigo from 5)::bigint end"),
 )
 
 
