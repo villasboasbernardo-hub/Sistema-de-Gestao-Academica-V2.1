@@ -96,11 +96,24 @@ export const ROTA_DA_FICHA_DA_TURMA = "/turmas/[turma]" as const;
  * e o que faz `?semana=` aparecer só quando alguém navegou de propósito.
  */
 /**
+ * O destino da âncora das abas da ficha da turma (`AbasDaTurma`): o `id` do bloco das abas sai daqui, e não de um
+ * `#abas-da-turma` escrito à mão lá e cá, pelo mesmo motivo de `ANCORA_DAS_DISCIPLINAS`.
+ */
+export const ANCORA_DAS_ABAS_DA_TURMA = "abas-da-turma";
+
+/**
  * A aba «Avaliações» da ficha da turma (spec 014, PR 5, R-12). O código da turma tem espaço: ele passa por
  * `enderecoDaTurma`, que o codifica — nunca montado à mão (gotcha 12).
+ *
+ * ⚠️ **A URL CONTINUA DONA DA ABA (`?aba=avaliacoes`); A ÂNCORA SÓ POSICIONA** (defeito achado por Bernardo Villas
+ *    Boas em Production, 16/10/2026: *"clicar no card de Avaliações não abre nada"*). Sem ela, o `<Link>` do Next
+ *    rola a página para o TOPO ao trocar a consulta, e as abas ficam abaixo da faixa dos cards — medido com o dado do
+ *    remoto no local: na CAHO 2026, `scrollY` 617 → 0 e as abas em y = 1.101, fora da tela em 1366×768, 1536×864 e
+ *    1920×1080. A aba trocava, e quem clicou via o topo da ficha, igual a antes. Com a âncora, o navegador leva às
+ *    abas: o card, os alertas de vista (ficha e `/inicio`) e o link da aba do curso chegam à aba ABERTA E À VISTA.
  */
 export function enderecoDasAvaliacoesDaTurma(codigo: string): string {
-  return `${enderecoDaTurma(codigo)}?aba=avaliacoes`;
+  return `${enderecoDaTurma(codigo)}?aba=avaliacoes#${ANCORA_DAS_ABAS_DA_TURMA}`;
 }
 
 export function enderecoDoDsa(
