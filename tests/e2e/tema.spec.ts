@@ -39,8 +39,18 @@ async function garantirConta(processo: number): Promise<string> {
   return EMAIL;
 }
 
+/*
+ * ⚠️ **APAGAR A CONTA É ESQUECER A PROMESSA DELA** (PEND-014-7, medido em 16/10/2026). Com `fullyParallel`, o mesmo
+ *    processo roda um caso deste arquivo, depois um de OUTRO, e volta a este: o `afterAll` roda na troca e apaga a
+ *    conta. A promessa guardada continuava resolvida, o caso seguinte NÃO recriava a conta e o `entrar()` ficava em
+ *    `/login` nas duas tentativas — sonda na rodada `tema` + `admin-sobre-contas` (2 processos): *"garantirConta
+ *    tema-1 REAPROVEITA a promessa"* logo depois de *"afterAll do tema: apaga tema-1"*. Não era carga, e o
+ *    `admin-sobre-contas` não tocava na conta: ele só fazia o escalonador intercalar os dois arquivos.
+ */
 test.afterAll(async () => {
-  if (contaPronta) await apagarConta(EMAIL);
+  if (!contaPronta) return;
+  contaPronta = undefined;
+  await apagarConta(EMAIL);
 });
 
 /** A classe que o provedor escreve no elemento raiz. */

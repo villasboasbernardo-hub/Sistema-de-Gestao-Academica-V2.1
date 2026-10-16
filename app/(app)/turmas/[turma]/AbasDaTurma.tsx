@@ -10,10 +10,13 @@
  */
 "use client";
 
-import type * as React from "react";
+import * as React from "react";
 
 import { cn } from "cn";
-import { ROTA_DA_FICHA_DA_TURMA } from "@/lib/navegacao/endereco-de-turma";
+import {
+  ANCORA_DAS_ABAS_DA_TURMA,
+  ROTA_DA_FICHA_DA_TURMA,
+} from "@/lib/navegacao/endereco-de-turma";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 const ABAS = [
@@ -30,9 +33,29 @@ export function AbasDaTurma({
 }) {
   const [aba, definirAba] = useParametro(ROTA_DA_FICHA_DA_TURMA, "aba");
   const atual = aba === "avaliacoes" ? "avaliacoes" : "ficha";
+  const raiz = React.useRef<HTMLDivElement>(null);
+
+  /*
+   * ⚠️ **VINDO DE OUTRA PÁGINA, A ÂNCORA NÃO BASTA** (medido em 16/10/2026, caso 4 de `cards-levam-a-aba.spec.ts`):
+   *    o `loading.tsx` da ficha entra primeiro, o Next procura `#abas-da-turma` antes de as abas existirem e deixa a
+   *    página no topo. Ao MONTAR, com a âncora na URL, a folha leva às abas. Só ao montar: trocar de aba depois é
+   *    clique nas próprias abas, que já estão à vista, e não deve fazer a página pular.
+   */
+  React.useEffect(() => {
+    if (window.location.hash === `#${ANCORA_DAS_ABAS_DA_TURMA}`) {
+      raiz.current?.scrollIntoView({ block: "start" });
+    }
+  }, []);
 
   return (
-    <div className="flex flex-col gap-4" data-slot="abas-da-turma">
+    // ⚠️ O `id` é o destino da âncora do card e dos alertas (`enderecoDasAvaliacoesDaTurma`): sem ele, o clique
+    //    trocava a aba ABAIXO da dobra e a página subia para o topo (defeito de 16/10/2026).
+    <div
+      ref={raiz}
+      id={ANCORA_DAS_ABAS_DA_TURMA}
+      className="flex scroll-mt-4 flex-col gap-4"
+      data-slot="abas-da-turma"
+    >
       <div role="tablist" aria-label="Seções da turma" className="border-borda flex gap-1 border-b">
         {ABAS.map((a) => (
           <button
