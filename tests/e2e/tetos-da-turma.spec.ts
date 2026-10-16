@@ -6,9 +6,11 @@
  * ⚠️ Os dois percentuais, nesta ordem: do previsto e do máximo (D-TETO-3).
  */
 import { expect, test, type Page } from "@playwright/test";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
+import { irParaASemanaDoDia } from "./percurso-do-dsa";
 import { limparTetos, previstoNoBanco, semearTetos, type TetosSemeados } from "./tetos-de-teste";
 
 /*
@@ -137,4 +139,67 @@ test("FR-063 · Atividades sai do «em breve» e lista as atividades com a categ
   await expect(linha).toBeVisible();
   await expect(linha.locator("[data-categoria]")).toHaveAttribute("data-categoria", "TAD");
   await expect(page.locator('[data-slot="limpar-filtros"]')).toHaveCount(0);
+});
+
+/*
+ * SC-003 (spec 014, fechamento de 16/10/2026): «nenhum lançamento é recusado por teto excedido» — PELA TELA.
+ * ⚠️ Até aqui a prova era do banco: a semente grava os 29 TA de TAD direto, e nenhum caso LANÇAVA acima do teto.
+ *    Este lança pelo DSA mais 1 TA de TAD numa turma já acima do máximo, lê a linha no banco e confere que a
+ *    ficha só ALERTA (regra 6: teto é alerta, nunca `CHECK`).
+ * ⚠️ É O ÚLTIMO CASO DO ARQUIVO, de propósito: os anteriores conferem o número exato «29 de 27,25».
+ */
+let servico: SupabaseClient | undefined;
+const banco = (): SupabaseClient =>
+  (servico ??= createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  }));
+
+async function atividadeNoBanco(descricao: string): Promise<Record<string, unknown> | null> {
+  const { data } = await banco()
+    .from("atividades_nao_letivas")
+    .select("categoria_normativa, status, tempos_consumidos, data")
+    .eq("descricao", descricao)
+    .maybeSingle();
+  return (data as Record<string, unknown> | null) ?? null;
+}
+
+test("SC-003 · lançar PELA TELA acima do máximo grava a linha e só alerta (o teto não recusa)", async ({
+  page,
+}) => {
+  const descricao = `Recepção acima do teto ${Date.now().toString(36)}`;
+  await irAFichaDaTurma(page, ADMIN, T.turmaAcima);
+  const tad = card(page, "tad");
+  await expect(tad.locator('[data-teto="do-maximo"]')).toContainText("29 de 27,25 máximos");
+
+  await page.locator('[data-slot="abrir-o-dsa"]').click();
+  await irParaASemanaDoDia(page, "2026-03-09", 11, 2026);
+  await page.locator('[data-slot="grade-alocacao"] td[data-celula="0:0"]').click();
+  await expect(page.locator('[data-slot="formulario-de-lancamento"]')).toBeVisible();
+  await page.locator('[data-tipo="TAD"]').click();
+  await page.locator("#dsa-subtipo").selectOption({ label: "Recepção aos alunos" });
+  await expect(page.locator('[data-slot="categoria-do-tipo"]')).toHaveText("Conta como: TAD");
+  await page.locator("#dsa-responsavel-externo").fill("DOEP");
+  await page.locator("#dsa-descricao").fill(descricao);
+  await page.locator("#dsa-tempos").fill("1");
+  await page.locator('[data-slot="gravar-lancamento"]').click();
+  await expect(page.locator('[data-slot="recusa-do-lancamento"]')).toHaveCount(0);
+
+  // A linha está no banco: o teto não a recusou.
+  await expect
+    .poll(() => atividadeNoBanco(descricao))
+    .toMatchObject({
+      categoria_normativa: "TAD",
+      status: "ativo",
+      tempos_consumidos: 1,
+      data: "2026-03-09",
+    });
+
+  // E a ficha só alerta, com o número novo.
+  await irAFichaDaTurma(page, ADMIN, T.turmaAcima);
+  await expect(card(page, "tad").locator('[data-teto="do-maximo"]')).toContainText(
+    "30 de 27,25 máximos",
+  );
+  await expect(card(page, "tad").getByRole("status")).toHaveText(
+    "acima do previsto · acima do máximo",
+  );
 });

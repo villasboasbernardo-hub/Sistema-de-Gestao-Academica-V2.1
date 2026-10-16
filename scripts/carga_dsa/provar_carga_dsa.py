@@ -23,7 +23,7 @@ from pathlib import Path
 import openpyxl
 
 from scripts.carga_dsa import planilha, plano, sincronizar
-from scripts.carga_dsa.resolver import resolver
+from scripts.carga_dsa.resolver import _aula_em_dia_parado, resolver
 
 FALHAS: list[str] = []
 
@@ -337,9 +337,17 @@ def main() -> int:
     sem_lote = resolver(leva1, ref, dec, "l.xlsx", set(), True)
     conferir("RN-RESP-1 · a decisao do lote (`responsavel_externo_aceito`) nao muda nada: com ou sem ela, o mesmo plano",
              aceito.impressao_digital() == sem_lote.impressao_digital(), (aceito.impressao_digital(), sem_lote.impressao_digital()))
-    conferir("§11-B · aula no dia que a planilha marca parado: erro de planilha, e a aula ENTRA",
-             any("marca parado" in e["diverge"] for e in res.erros_tabelados)
+    # R5 (decisao de Bernardo Villas Boas, 16/10/2026; emenda da FR-036.1 e da D3.6): a conferencia e por TEMPO. A licenca
+    # de 09/03 ocupa os tempos 1–4 e a aula da I, o 6º: parada de PARTE do dia, sem conflito — por dia ela acusava.
+    conferir("R5 · DISCRIMINA: parada de parte do dia e aula em OUTRO tempo — a aula entra e NAO vira erro (por dia, virava)",
+             not any("marca parado" in e["diverge"] for e in res.erros_tabelados)
              and any(a["data"] == "2026-03-09" for a in res.aulas), res.erros_tabelados)
+    sobreposto = type(res)(turma=res.turma, autor=res.autor, titulo="x")
+    sobreposto.aulas.append({"data": "2026-03-09", "ta_inicial": 3, "tempos_consumidos": 2, "disciplina": "I", "ue": "UE-1"})
+    sobreposto.dias_parados.append({"data": "2026-03-09", "ta_inicial": 4, "tempos": 2, "tipo_parada": "LA", "motivo": "LICENCA"})
+    _aula_em_dia_parado(sobreposto)
+    conferir("R5 · controle: aula num TEMPO parado (3–4 × 4–5) continua erro de planilha, e a aula entra",
+             any("marca parado" in e["diverge"] for e in sobreposto.erros_tabelados), sobreposto.erros_tabelados)
     conferir("§11-B · CH da disciplina: planilha 12, curriculo 10 — erro de planilha",
              any(e["diverge"] == "CH da disciplina" and e["planilha"].startswith("12") and e["curriculo"].startswith("10")
                  for e in res.erros_tabelados), res.erros_tabelados)
@@ -512,6 +520,7 @@ def main() -> int:
              sincronizar.diferencas(res2, {**atuais, "avaliacoes": outra})["avaliacoes"]["mudadas"] != [])
 
     emenda_de_15_10()
+    correcoes_de_16_10()
 
     print(f"\n{'TODAS AS PROVAS PASSARAM' if not FALHAS else f'{len(FALHAS)} PROVA(S) FALHARAM'}")
     return 1 if FALHAS else 0
@@ -649,6 +658,7 @@ def emenda_de_15_10() -> None:
     class _Bloco:
         def __init__(self) -> None:
             self.data, self.ta_inicial, self.ue, self.linha, self.tempos, self.chave = _date(2026, 6, 10), 1, "VP", 99, 1, ("I", "VP")
+            self.cod = "I"
 
     class _Linha:
         instrutor = ""
@@ -720,6 +730,200 @@ def emenda_de_15_10() -> None:
              rp.instrumento_da_prova(prova("AV1", "2026-04-01", "PROVA ORAL DE INGLES"), nomes) == "PO"
              and rp.instrumento_da_prova({**prova("AV2", "2026-04-01", "AVALIACAO"), "_tecnica": "PM"}, nomes) == "PM"
              and rp.instrumento_da_prova(prova("AV2", "2026-04-01", "AVALIACAO"), nomes) is None)
+
+
+def correcoes_de_16_10() -> None:
+    """As correcoes da lista de erros decididas por Bernardo Villas Boas em 16/10/2026 (noite): R1, R2, R4, R5, R7, a
+    sugestao vazia (PEND-014-11) e as decisoes por LINHA (item ligado, vista ligada e vista dividida). Sem banco.
+    Cada caso diz o veredito de ANTES ao lado, que e o que ele discrimina (DoD 8)."""
+    import tempfile
+    from datetime import date as _date
+
+    from scripts.carga_dsa.resolver import Resolvido, _casar_vistas, _ligar_itens, _sugestoes
+
+    print("CORRECOES DE 16/10/2026 — a lista de erros (R1, R2, R4, R5, R7, sugestao vazia, decisoes por linha)")
+
+    def pm(n: int, ta: int = 2) -> dict:
+        return {"id": f"pm-{n}", "disciplina_id": "d", "numero": n, "instrumento": "PM", "instrumento_nome": "Prova Mista",
+                "ta_aplicacao": ta, "origem_ta_aplicacao": "curriculo", "origem_ta_vista": "curriculo"}
+
+    def pp(n: int, ta: int = 2, vista: bool = True) -> dict:
+        return {"id": f"pp-{n}", "disciplina_id": "d", "numero": n, "instrumento": "PP", "instrumento_nome": "Prova Prática",
+                "ta_aplicacao": ta, "origem_ta_aplicacao": "curriculo", "origem_ta_vista": "curriculo" if vista else None}
+
+    def prova(cod: str, data: str, codigo: str, linha: int, desc: str = "AVALIACAO", ta: int = 2, inicio: int = 1) -> dict:
+        return {"chave_ue": cod, "cod_planilha": "I", "data_avaliacao": data, "descricao": desc, "ta_inicial": inicio,
+                "tempos_consumidos": ta, "disciplina": "I", "disciplina_id": "d", "sessoes": [], "codigo": codigo, "linha": linha,
+                "observacoes": "procedencia.", "instrutor": None, "instrutor_responsavel_id": None, "fiscal_id": None,
+                "nome_fiscal_externo": None, "aplicacoes": []}
+
+    # ── decisao por linha: a prova liga ao item que o lote nomeia (as 17, CAHO-01, C-Espc-HN-01) ──
+    def ligar(provas: list[dict], itens: list[dict], decisoes: dict | None = None, atuais: list[dict] | None = None) -> Resolvido:
+        r = Resolvido(turma={}, autor={}, titulo="x")
+        r.avaliacoes = provas
+        _ligar_itens(r, {"itens_curriculo": itens, "atuais": {"avaliacoes": atuais or []}}, decisoes)
+        return r
+
+    sem = ligar([prova("AV1", "2026-04-01", "X1", 10)], [pm(1), pm(2)])
+    com = ligar([prova("AV1", "2026-04-01", "X1", 10)], [pm(1), pm(2)], {"itens_por_prova": {"10": {"item": "PM 2", "motivo": "TESTE-01"}}})
+    conferir("16/10 · DISCRIMINA: a decisao `itens_por_prova` liga a prova da LINHA 10 a PM 2 (sem ela, «AV1» sem instrumento nao casa)",
+             sem.avaliacoes[0].get("avaliacao_curriculo_id") is None and com.avaliacoes[0]["avaliacao_curriculo_id"] == "pm-2"
+             and "por decisao: TESTE-01" in com.avaliacoes[0]["observacoes"], (sem.avaliacoes, com.avaliacoes))
+    duas = ligar([prova("PM", "2026-04-01", "X1", 10), prova("PM", "2026-05-01", "X2", 20)], [pm(1), pm(2)],
+                 {"itens_por_prova": {"10": {"item": "PM 2", "motivo": "T"}}})
+    conferir("16/10 · o item decidido sai da ligacao automatica: a outra «PM» fica com a PM 1, e nada vira «a mais»",
+             [a["avaliacao_curriculo_id"] for a in duas.avaliacoes] == ["pm-2", "pm-1"] and not duas.informativos, duas.avaliacoes)
+
+    # ── R7: a lista olha o que o sistema ja gravou ──
+    pp36 = ligar([prova("PP", "2026-06-22", "X3", 30, ta=36)], [pp(1, ta=40)])
+    pp36_juntada = ligar([prova("PP", "2026-06-22", "X3", 30, ta=36)], [pp(1, ta=40)],
+                         atuais=[{"codigo": "X3", "ta_fora_da_planilha": 4}])
+    conferir("R7 · DISCRIMINA: «planilha 36 × curriculo 40» some quando o sistema tem +4 TA de sessao nascida na tela (a juncao da CAHO IV)",
+             any("TA de prova diferente" in e for e in pp36.erros_de_planilha)
+             and not any("TA de prova diferente" in e for e in pp36_juntada.erros_de_planilha)
+             and any("R7" in i for i in pp36_juntada.informativos), (pp36.erros_de_planilha, pp36_juntada.erros_de_planilha))
+    duas_pp = [prova("PP", "2026-06-22", "X3", 30), prova("PP", "2026-08-19", "X4", 40)]
+    antes = ligar([dict(x) for x in duas_pp], [pp(1)])
+    depois = ligar([dict(x) for x in duas_pp], [pp(1)], atuais=[{"codigo": "X4", "juntada": True}])
+    conferir("R7 · DISCRIMINA: a prova JUNTADA como sessao nao conta de novo — «curriculo preve 1 PP; aplicadas 2» some",
+             any("aplicadas 2" in i for i in antes.informativos) and not any("aplicadas 2" in i for i in depois.informativos),
+             (antes.informativos, depois.informativos))
+    na_tela = ligar([prova("AV1", "2026-04-01", "X5", 50)], [pm(1)], atuais=[{"codigo": "X5", "na_tela": True, "item": "PM 1"}])
+    conferir("R7 · a prova que nao casa na planilha, mas esta LIGADA na tela, nao vai para a lista",
+             not na_tela.erros_de_planilha and not na_tela.provas_sem_casar, na_tela.erros_de_planilha)
+
+    # ── PEND-014-11: sugestao vazia ──
+    sv = Resolvido(turma={}, autor={}, titulo="x")
+    sv.avaliacoes = [{**prova("PP", "2026-06-22", "X6", 60), "avaliacao_curriculo_id": "pp-1", "item": "PP 1"}]
+    _sugestoes(sv, {"itens_curriculo": [pp(1, vista=False)]})
+    sv_com_vista = Resolvido(turma={}, autor={}, titulo="x")
+    sv_com_vista.avaliacoes = [{**prova("PP", "2026-06-22", "X6", 60), "avaliacao_curriculo_id": "pp-1", "item": "PP 1",
+                                "sessoes": [{"tempos_consumidos": 1}]}]
+    _sugestoes(sv_com_vista, {"itens_curriculo": [pp(1, vista=False)]})
+    conferir("PEND-014-11 · DISCRIMINA: curriculo mudo sobre a vista e planilha SEM vista → nenhuma sugestao (antes: uma, com os dois tempos nulos)",
+             sv.sugestoes == [] and [g["ta_vista"] for g in sv_com_vista.sugestoes] == [1], (sv.sugestoes, sv_com_vista.sugestoes))
+
+    # ── R2 e as decisoes de vista por linha ──
+    class _B:
+        def __init__(self, cod: str, ue: str, dia: _date, ta: int, linha: int, tempos: int = 1) -> None:
+            self.cod, self.ue, self.data, self.ta_inicial, self.linha, self.tempos = cod, ue, dia, ta, linha, tempos
+            self.chave = (cod, ue)
+
+    class _L:
+        instrutor = ""
+
+    class _Leitura:
+        def __init__(self, datas: list[dict]) -> None:
+            self.digitadas: dict = {}
+            self.catalogo = _Qualquer()
+            self.datas_avaliacoes = datas
+
+    class _Qualquer(dict):
+        def __getitem__(self, chave: object) -> _L:
+            return _L()
+
+    def casar(provas: list[dict], blocos: list[_B], decisoes: dict, datas: list[dict] | None = None) -> tuple[Resolvido, list]:
+        r = Resolvido(turma={}, autor={}, titulo="x")
+        r.avaliacoes = provas
+        pend: list = []
+        _casar_vistas(r, [(b, {"cod": "I"}) for b in blocos], decisoes, lambda *a, **k: pend.append(a), lambda b, regra=None: None,
+                      lambda *a, **k: None, _Leitura(datas or []), codigo=lambda b, suf: f"DSAP-T-L{b.linha:03d}-{suf}")
+        return r, pend
+
+    ti, po = prova("TI", "2026-03-12", "TI", 511, inicio=1, ta=1), prova("PO", "2026-03-12", "PO", 512, inicio=2, ta=1)
+    datas = [{"cod": "I", "chave_prova": "ITI", "chave_vista": "IVP2", "data_prova": _date(2026, 3, 12), "data_vista": _date(2026, 3, 12)},
+             {"cod": "I", "chave_prova": "IPO", "chave_vista": "IVP3", "data_prova": _date(2026, 3, 12), "data_vista": _date(2026, 3, 13)}]
+    r2, _p = casar([ti, po], [_B("I", "VP2", _date(2026, 3, 12), 7, 517), _B("I", "VP3", _date(2026, 3, 13), 7, 526)], {}, datas)
+    conferir("R2 · DISCRIMINA: duas provas no mesmo dia — a aba de datas manda a VP2 para a TI e a VP3 para a PO (antes: as duas para a TI)",
+             [s["codigo"] for s in ti["sessoes"]] == ["DSAP-T-L517-S"] and [s["codigo"] for s in po["sessoes"]] == ["DSAP-T-L526-S"],
+             (ti["sessoes"], po["sessoes"]))
+    av2, av1 = prova("AV2", "2026-03-12", "B2", 37, inicio=7, ta=3), prova("AV1", "2026-03-13", "B1", 42, inicio=3, ta=3)
+    casar([av2, av1], [_B("I", "VP1", _date(2026, 3, 13), 1, 40), _B("I", "VP", _date(2026, 3, 13), 6, 45)], {})
+    conferir("R2 · DISCRIMINA (BATI): a VP1 do 1º tempo NAO vai para a AV1 do 3º tempo do mesmo dia — vai para a AV2 de 12/03; a VP, para a AV1",
+             [s["ta_inicial"] for s in av2["sessoes"]] == [1] and [s["ta_inicial"] for s in av1["sessoes"]] == [6],
+             (av2["sessoes"], av1["sessoes"]))
+    t2, pm3 = prova("T2", "2026-06-23", "T2", 1452), prova("PM3", "2026-07-02", "M3", 1530)
+    _r, pend_vi = casar([t2, pm3], [_B("I", "VP3", _date(2026, 6, 24), 6, 1466), _B("I", "VT2", _date(2026, 7, 1), 9, 1529)], {})
+    conferir("R2 · DISCRIMINA (CAHO VI): a VP3 anterior a PM3 NAO cai no T2 que a VT2 reivindica — fica sem prova; a VT2 vai para o T2",
+             [s["codigo"] for s in t2["sessoes"]] == ["DSAP-T-L1529-S"] and pm3["sessoes"] == []
+             and [x[0] for x in pend_vi] == ["vista_sem_prova"], (t2["sessoes"], pend_vi))
+    a1042, b1148 = prova("AV1", "2026-05-13", "P1", 1042), prova("AV2", "2026-05-25", "P2", 1148, inicio=5, ta=3)
+    casar([a1042, b1148], [_B("I", "VP", _date(2026, 5, 27), 1, 1162, tempos=2)],
+          {"vistas": [{"linha": 1162, "dividir": [{"tempos": 1, "da_prova_linha": 1042}, {"tempos": 1, "da_prova_linha": 1148}]}]})
+    conferir("16/10 (V2) · a decisao DIVIDE o bloco de vista de 2 TA: 1º tempo para a prova de 13/05, 2º para a de 25/05, cada um com o codigo da sua linha",
+             [(s["codigo"], s["ta_inicial"], s["tempos_consumidos"]) for s in a1042["sessoes"]] == [("DSAP-T-L1162-S", 1, 1)]
+             and [(s["codigo"], s["ta_inicial"], s["tempos_consumidos"]) for s in b1148["sessoes"]] == [("DSAP-T-L1163-S", 2, 1)],
+             (a1042["sessoes"], b1148["sessoes"]))
+    t1636, t1743 = prova("T", "2026-07-14", "T1", 1636, inicio=5, ta=1), prova("T", "2026-07-27", "T2", 1743, inicio=1, ta=3)
+    casar([t1636, t1743], [_B("I", "VT", _date(2026, 7, 27), 4, 1746)], {"vistas": [{"linha": 1746, "da_prova_linha": 1636}]})
+    conferir("16/10 (CAHO-06) · DISCRIMINA: a decisao por LINHA manda os comentarios de 27/07 para a TI de 14/07 (sem ela, iam para a de 27/07)",
+             len(t1636["sessoes"]) == 1 and t1743["sessoes"] == [], (t1636["sessoes"], t1743["sessoes"]))
+
+    # ── R4 e R1: pela planilha ──
+    with tempfile.TemporaryDirectory() as pasta:
+        livro = openpyxl.Workbook()
+        cat = livro.active
+        cat.title = planilha.ABA_CATALOGO
+        cat.append([None])
+        cat.append(["CÓD", "DISCIPLINA", "Nº UE", "CONCATENADO", "UNIDADES DE ENSINO E TÓPICOS", "CH", "LOCAL", "T/E", "INSTRUTOR/PROFESSOR"])
+        for linha in (["I", "DISCIPLINA UM", "1P", "I1P", "1 – TOPICO DA PLANILHA", 1.0, "SALA 2", "EO", "CC (T) FULANO SILVA"],
+                      ["I", "DISCIPLINA UM", 1.0, "I1", "2 – SEGUNDO TOPICO", 1.0, "SALA 2", "EO", "CC (T) FULANO SILVA"],
+                      ["IV", "VISITA", 2.0, "IVVT", "VISITA AO FAROL", 8.0, "MACAE", "AP", "--"],
+                      ["CÓD", "ORDEM", "CONCATENADO", None, None, None, None, None, None]):
+            cat.append(linha)
+        folha = livro.create_sheet(planilha.ABA_PREENCHIMENTO)
+        folha["A1"], folha["B1"] = "SIGLA DO CURSO:", "C-Exp-QUALQUER"
+        folha["A2"], folha["B2"] = "Nº DE ALUNOS:", 6
+        tas = {1: ("I", "1P"), 2: ("I", 1.0), 4: ("IV", "VT")}
+        for n in range(1, 10):
+            folha.cell(3 + n, 3, f"{n}º")
+            if n == 3:
+                folha.cell(3 + n, 2, datetime(2026, 3, 11))
+            if n in tas:
+                folha.cell(3 + n, 4, tas[n][0])
+                folha.cell(3 + n, 5, tas[n][1])
+        livro.create_sheet(planilha.ABA_CONTROLE).append(["CÓD.", "DISCIPLINA", "CH. PREVISTA", "CH. CUMPRIDA"])
+        caminho = Path(pasta) / "r1r4.xlsx"
+        livro.save(caminho)
+        leitura = planilha.ler(caminho)
+    conferir("R4 · DISCRIMINA: a chave e a coluna D, como o PROCV — «IV»+«VT» acha a linha «IVVT» (por A + C, «IV»+«2», ela ficava fora)",
+             ("IV", "VT") in leitura.catalogo and ("IV", "2") not in leitura.catalogo and ("IV", "VT") not in leitura.sem_catalogo,
+             (sorted(leitura.catalogo), leitura.sem_catalogo))
+    conferir("R4 · a lista aponta A + C ≠ D (o cabecalho repetido no meio da aba nao conta)",
+             getattr(leitura.catalogo, "divergentes", None) == [(5, "IV2", "IVVT")], getattr(leitura.catalogo, "divergentes", None))
+    ref = retrato()
+    ref["ues"].append({"id": "u-2", "codigo": "UE-2", "disciplina_id": "d-1", "numero": 2, "topico": "SEGUNDO TOPICO", "ch": 1})
+    dec = {**DECISOES, "chaves": {**DECISOES["chaves"], "IV+VT": {"tipo": "ignorar"}}}
+    sem_de_para = resolver(leitura, ref, dec, "r1.xlsx", set(), True)
+    com_de_para = resolver(leitura, ref, {**dec, "ues": {"I+1P": "I+1", "I+1": "I+2"}}, "r1.xlsx", set(), True)
+    conferir("R1 · DISCRIMINA: com o de-para, «I+1P» fica na UE 1 e «I+1» vai para a UE 2 (sem ele, as duas na UE 1)",
+             [a["ue"] for a in sem_de_para.aulas] == ["UE-1", "UE-1"] and [a["ue"] for a in com_de_para.aulas] == ["UE-1", "UE-2"],
+             ([a["ue"] for a in sem_de_para.aulas], [a["ue"] for a in com_de_para.aulas]))
+    conferir("R1 · a chave CRUA vem primeiro: so com «I+1» → «I+2» no de-para, a «I+1P» iria (errado) para a UE 2 — o de-para tem de trazer a «1P»",
+             [a["ue"] for a in resolver(leitura, ref, {**dec, "ues": {"I+1": "I+2"}}, "r1.xlsx", set(), True).aulas] == ["UE-2", "UE-2"])
+    ch_ue = [e for e in com_de_para.erros_tabelados if e["diverge"].startswith("CH da UE")]
+    conferir("R1 · a CH por UE compara pela UE do de-para, e duas linhas do catalogo na MESMA UE somam (1 + 1 = 2 contra 3 na UE 1)",
+             [(e["diverge"], e["planilha"]) for e in resolver(leitura, ref, {**dec, "ues": {"I+1P": "I+1", "I+1": "I+1"}}, "r1.xlsx",
+                                                               set(), True).erros_tabelados if e["diverge"].startswith("CH da UE")]
+             == [("CH da UE 1", "2 TA (BD DISCIPLINAS)")]
+             and [(e["diverge"], e["planilha"]) for e in ch_ue] == [("CH da UE 1", "1 TA (BD DISCIPLINAS)")], ch_ue)
+
+    # ── as listas: o que ja foi decidido e as traducoes novas (erros_por_turma) ──
+    from scripts.carga_dsa import decididos
+    from scripts.carga_dsa import erros_por_turma as ept
+    item = decididos.carregar()["itens"][0]
+    t = ("1", "Provas", item["onde"], item["oque"], "Conferir.")
+    usados: set[str] = set()
+    conferir("16/10 · o item que Bernardo JA DECIDIU sai como informacao, com a decisao e o ID; o resto nao muda",
+             ept.decidir(item["turma"], t, usados)[0] == ept.INFORMACAO and item["id"] in ept.decidir(item["turma"], t, usados)[4]
+             and ept.decidir(item["turma"], ("1", "Provas", item["onde"], item["oque"] + " x", "Conferir."), set())[0] == "1")
+    conferir("R8 · o aviso de tempo do TFM (C-Ap-FR X) e informacao; o mesmo aviso em outra disciplina, nao",
+             (decididos.do_item("C-Ap-FR 2026", "Disciplina X, AV9 de 01/09/2026", "Tempo da prova diferente do currículo: planilha 3 TA, currículo 2 TA (PP 1).") or {}).get("id") == "R8"
+             and decididos.do_item("C-Ap-FR 2026", "Disciplina IX, AV9 de 01/09/2026", "Tempo da prova diferente do currículo: planilha 3 TA, currículo 2 TA (PP 1).") is None)
+    r4 = ept.traduzir("T", ["—", "BD DISCIPLINAS linha 59: a chave por A + C «IV2» difere da coluna D «IVVT» — vale a D, como o PROCV da IMPRESSAO", "—", "—", "x"], {})
+    r7 = ept.traduzir("T", ["—", "IV PP de 2026-06-22: a planilha nao casa (x), mas no sistema a prova ja esta ligada ou juntada — resolvido no sistema (R7)", "—", "—", "x"], {})
+    conferir("R4 · a divergencia A + C × D entra na lista, prioridade baixa; R7 · o que o sistema ja tem e informacao (antes: «nao casa», prioridade alta)",
+             r4 is not None and r4[0] == 6 and "IVVT" in r4[3] and r7 is not None and r7[0] == ept.INFORMACAO, (r4, r7))
 
 
 if __name__ == "__main__":

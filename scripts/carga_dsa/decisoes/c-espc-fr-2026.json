@@ -93,5 +93,39 @@
   "responsavel_externo_aceito_sha256": [
     "dbb0001aa83fb70bb4cc47566c0e71f67e1dbe84fca9f1d8c6787dcd06b3dbc8",
     "ef0d1931f1feb8d8ea5e7466fd70443125b064632c80d570048c2d2b6f1ed501"
+  ],
+  "itens_por_prova": {
+    "340": {
+      "item": "PM 1",
+      "motivo": "C-Espc-FR-02 — Bernardo Villas Boas, 16/10/2026: ligar no sistema (a «Alternativa» aceita: o T/E do catalogo da planilha nao nomeia o instrumento)"
+    },
+    "511": {
+      "item": "PM 2",
+      "motivo": "C-Espc-FR-03 — Bernardo Villas Boas, 16/10/2026: ligar no sistema (a «Alternativa» aceita: o T/E do catalogo da planilha nao nomeia o instrumento)"
+    },
+    "871": {
+      "item": "PM 1",
+      "motivo": "C-Espc-FR-04 — Bernardo Villas Boas, 16/10/2026: ligar no sistema (a «Alternativa» aceita: o T/E do catalogo da planilha nao nomeia o instrumento)"
+    },
+    "1591": {
+      "item": "PM 2",
+      "motivo": "C-Espc-FR-05 — Bernardo Villas Boas, 16/10/2026: ligar no sistema (a «Alternativa» aceita: o T/E do catalogo da planilha nao nomeia o instrumento)"
+    }
+  },
+  "vistas": [
+    {
+      "linha": 1162,
+      "dividir": [
+        {
+          "tempos": 1,
+          "da_prova_linha": 1042
+        },
+        {
+          "tempos": 1,
+          "da_prova_linha": 1148
+        }
+      ],
+      "motivo": "V2 — Bernardo Villas Boas, 16/10/2026: a vista de 27/05 (2 TA) e das duas provas da XIV: o 1º tempo da PM 1 de 13/05 e o 2º da prova de 25/05"
+    }
   ]
 }

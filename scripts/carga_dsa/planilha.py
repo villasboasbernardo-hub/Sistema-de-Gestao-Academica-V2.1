@@ -156,6 +156,38 @@ def _abrir(caminho: Path):
         return openpyxl.load_workbook(caminho, data_only=True)
 
 
+class Catalogo(dict):
+    """O catalogo (BD DISCIPLINAS) consultado COMO O PROCV DA PLANILHA: pela concatenacao COD&UE contra a coluna D
+    (CONCATENADO), digitada a mao — e so com a D vazia, por A + C.
+
+    ⚠️ R4 (decisao de Bernardo Villas Boas, 16/10/2026): a leitura montava a chave com A + C, e a IMPRESSAO procura
+       a D. Onde as duas diferem, a planilha imprime certo e a sincronizacao perdia a linha — os 24 TA da visita a
+       Macae da C-Espc-FR (18, 19 e 22/05: C = «2», D = «IVVT») — ou lia outra (CAHO TR13/TR14). Quem percorre o
+       catalogo (`items()`) continua recebendo (cod, ue): a UE e o resto da D depois do COD, quando a D comeca por ele."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.por_texto: dict[str, tuple[str, str]] = {}
+
+    def _achar(self, chave: object) -> tuple[str, str] | None:
+        if isinstance(chave, tuple) and len(chave) == 2:
+            return self.por_texto.get(f"{chave[0]}{chave[1]}")
+        return None
+
+    def __contains__(self, chave: object) -> bool:
+        return self._achar(chave) is not None
+
+    def __getitem__(self, chave: object) -> "LinhaDoCatalogo":
+        achada = self._achar(chave)
+        if achada is None:
+            raise KeyError(chave)
+        return dict.__getitem__(self, achada)
+
+    def get(self, chave: object, padrao: object = None):  # type: ignore[override]
+        achada = self._achar(chave)
+        return padrao if achada is None else dict.__getitem__(self, achada)
+
+
 def ler_catalogo(pasta) -> tuple[dict[tuple[str, str], LinhaDoCatalogo], list[LinhaDoCatalogo]]:
     if ABA_CATALOGO not in pasta.sheetnames:
         raise PlanilhaInvalida(f"a planilha nao tem a aba «{ABA_CATALOGO}»")
@@ -169,12 +201,23 @@ def ler_catalogo(pasta) -> tuple[dict[tuple[str, str], LinhaDoCatalogo], list[Li
     if cabecalho is None:
         raise PlanilhaInvalida(f"«{ABA_CATALOGO}»: nao achei o cabecalho «CÓD» na coluna A")
 
-    catalogo: dict[tuple[str, str], LinhaDoCatalogo] = {}
+    catalogo = Catalogo()
     duplicadas: list[LinhaDoCatalogo] = []
+    divergentes: list[tuple[int, str, str]] = []
     for r in range(cabecalho + 1, aba.max_row + 1):
-        cod, ue = texto(aba.cell(r, 1).value), texto(aba.cell(r, 3).value)
-        if cod == "" or ue == "":
+        cod, ue, concatenado = texto(aba.cell(r, 1).value), texto(aba.cell(r, 3).value), texto(aba.cell(r, 4).value)
+        if cod.upper() in ("CÓD", "COD"):
+            continue  # o cabecalho repetido no meio da aba (CAHO, linha 293) nao e linha do catalogo
+        if concatenado == "" and (cod == "" or ue == ""):
             continue
+        if concatenado and cod and ue and concatenado != f"{cod}{ue}":
+            # A coluna C lida como DATA (o «8.2» da BATI virou 08/02): na lista, a data como a celula mostra.
+            bruta = aba.cell(r, 3).value
+            c_lida = f"{bruta:%d/%m/%Y} (data)" if isinstance(bruta, datetime) else ue
+            divergentes.append((r, f"{cod}{c_lida}" if not isinstance(bruta, datetime) else f"{cod} + {c_lida}", concatenado))
+        if concatenado:
+            # A UE efetiva e o que a D tem depois do COD; D que nao comeca pelo COD fica inteira no lugar do COD.
+            cod, ue = (cod, concatenado[len(cod):]) if cod and concatenado.startswith(cod) and len(concatenado) > len(cod) else (concatenado, "")
         ch_bruta = aba.cell(r, 6).value
         linha = LinhaDoCatalogo(
             linha=r,
@@ -190,12 +233,15 @@ def ler_catalogo(pasta) -> tuple[dict[tuple[str, str], LinhaDoCatalogo], list[Li
                 int(aba.cell(r, 10).value) if isinstance(aba.cell(r, 10).value, (int, float)) else None
             ),
         )
-        if linha.chave in catalogo:
+        chave_texto = concatenado or f"{cod}{ue}"
+        if chave_texto in catalogo.por_texto:
             # O PROCV da planilha so enxerga a PRIMEIRA ocorrencia: a leitura faz o mesmo, e a
             # repetida volta como aviso — quem decide se ela importa e quem confere.
             duplicadas.append(linha)
             continue
-        catalogo[linha.chave] = linha
+        dict.__setitem__(catalogo, linha.chave, linha)
+        catalogo.por_texto[chave_texto] = linha.chave
+    catalogo.divergentes = divergentes  # type: ignore[attr-defined]
     return catalogo, duplicadas
 
 

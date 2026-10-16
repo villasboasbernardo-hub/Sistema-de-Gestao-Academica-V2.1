@@ -97,5 +97,28 @@
     "3fdbee4f78db41c0691c123f8257ca1a16f209d405bf8530f7b2c45c6521021f",
     "dbb0001aa83fb70bb4cc47566c0e71f67e1dbe84fca9f1d8c6787dcd06b3dbc8",
     "ef0d1931f1feb8d8ea5e7466fd70443125b064632c80d570048c2d2b6f1ed501"
+  ],
+  "itens_por_prova": {
+    "330": {
+      "item": "TG 2",
+      "motivo": "CAHO-01 — Bernardo Villas Boas, 16/10/2026: e o 2º trabalho da I (UE 3 e 4), com a chave «PM» no catalogo da planilha"
+    }
+  },
+  "vistas": [
+    {
+      "linha": 401,
+      "da_prova_linha": 330,
+      "motivo": "CAHO-01 — Bernardo Villas Boas, 16/10/2026: a vista de 20/02 e do 2º trabalho da I"
+    },
+    {
+      "linha": 1746,
+      "da_prova_linha": 1636,
+      "motivo": "CAHO-06 — Bernardo Villas Boas, 16/10/2026: os comentarios de 27/07 sao a vista da TI 1 da XVII (14/07, com a sessao de 27/07)"
+    },
+    {
+      "linha": 1778,
+      "da_prova_linha": 1719,
+      "motivo": "consequencia da CAHO-06 (16/10/2026): a vista de prova de 30/07 continua na PE de 24/07, onde ja estava; sem esta linha, a regra sem numero a mandaria para o trabalho de 27/07, que vira sessao da TI 1 e deixa de ter vista"
+    }
   ]
 }

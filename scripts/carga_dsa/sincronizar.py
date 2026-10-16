@@ -47,7 +47,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from scripts.carga_dsa import banco, planilha, relogio
+from scripts.carga_dsa import banco, decididos, planilha, relogio
 from scripts.carga_dsa.banco import lit
 from scripts.carga_dsa.resolver import MARCA_DE_DEMAIS, Pendencia, Resolvido, classificar_pela_descricao, normalizar, resolver, slug
 
@@ -436,12 +436,19 @@ def sql_da_turma(res: Resolvido, incluir_calendario: bool, abrangencia: str | No
     #     ⚠️ E A SESSAO DA VIRADA EM DIANTE TAMBEM NAO (A3.3, achado no ensaio de 16/10/2026): a prova de 06/08 da CAHO XVI
     #        ganhou na tela a vista 2 para 23/10 (`VST-000245`), e a rodada a inativava — o filtro olhava a data da PROVA,
     #        nao a da SESSAO. «O que cai da virada em diante e do sistema» vale sessao a sessao.
+    #     ⚠️ E SAI TAMBEM A QUE MUDA DE PROVA OU DE NUMERO (16/10/2026, R2 e a vista dividida): o indice unico
+    #        (avaliacao, numero) e por linha ativa, e a sessao que troca de prova colidia no meio do comando com a que
+    #        entra no lugar dela (`vst_numero_unico`, medido no ensaio da BATI: a VP1 e a VP trocando de prova). O
+    #        `upsert` seguinte a devolve, ativa, na prova e no numero do plano — o molde das sessoes de aplicacao (2b').
     sessoes = [(a["codigo"], v) for a in res.avaliacoes for v in a.get("sessoes", [])]
     p.append(f"""
+  with plano(codigo, avaliacao, numero) as (values
+    {_valores([[v["codigo"], c, v["numero"]] for c, v in sessoes]) if sessoes else "(null::text, null::text, null::int)"}
+  )
   update public.vistas_de_avaliacao s set status = 'inativo'
     from public.avaliacoes a
    where a.id = s.avaliacao_id and a.turma_id = {t} and a.codigo like {lit(prefixo + '%')} and s.status = 'ativo'
-     and not (s.codigo = any (array[{", ".join(lit(v["codigo"]) for _c, v in sessoes)}]::text[]))
+     and not exists (select 1 from plano x where x.codigo = s.codigo and x.avaliacao = a.codigo and x.numero = s.numero)
      and not (a.codigo = any ({intocadas('avaliacoes')})){antes('a.data_avaliacao')}{antes('s.data')};
   get diagnostics n := row_count; k := k || jsonb_build_object('sessoes_que_sairam', n);""")
     if sessoes:
@@ -730,7 +737,10 @@ def escrever_divergencias(pasta: Path, por_turma: list[tuple[str, list[dict]]], 
         linhas += [f"## {turma}" + (f" — virada em {virada}" if virada else ""), "",
                    "| tabela | codigo | data | por que o sistema manteve | campos (sistema × planilha) |", "|---|---|---|---|---|"]
         for d in lista:
-            linhas.append("| " + " | ".join(_celula(d[c]) or "—" for c in ("tabela", "codigo", "data", "motivo", "campos")) + " |")
+            # Decisoes de 16/10/2026 (D1, D2, D6, D8): a divergencia decidida diz a decisao ao lado do motivo.
+            dec = decididos.da_divergencia(d["codigo"])
+            motivo = d["motivo"] + (f" — decidido em {decididos.data()} ({dec['id']}): {dec['decisao']}" if dec else "")
+            linhas.append("| " + " | ".join(_celula(v) or "—" for v in (d["tabela"], d["codigo"], d["data"], motivo, d["campos"])) + " |")
         if not lista:
             linhas.append("| — | — | — | nenhuma divergencia | — |")
         linhas.append("")

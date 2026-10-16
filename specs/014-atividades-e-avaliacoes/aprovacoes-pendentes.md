@@ -347,6 +347,9 @@ auditoria registre quem arbitrou, quando e o valor anterior"* — medido antes: 
   dia parado) vêm com as cinco colunas. A aula em dia parado é conferida **por dia**, porque uma célula da
   planilha tem uma chave só e aula e parada nunca dividem o mesmo tempo. Para mudar: estruturar os
   antigos também.
+  ⚠️ *Emendada em 16/10/2026 (R5, decisão de Bernardo Villas Boas): a conferência passa a ser **por tempo**. Por
+  dia, ela só acusava paradas de PARTE do dia — que nunca são conflito, pela própria razão desta decisão —, e os 6
+  avisos da rodada de 14/10 eram todos falsos. O texto acima fica como registro do que valia.*
 - **D3.7 (PR 3) — "Editada na tela" se lê em `editado_por`, não em `editado_em`.** A regra da A3.4 diz
   *"editado_em preenchido ou origem = tela"*, mas `editado_em` também é carimbado quando a **própria
   sincronização** atualiza a linha (o gatilho `app.set_auditoria` carimba toda edição), e toda linha que a
