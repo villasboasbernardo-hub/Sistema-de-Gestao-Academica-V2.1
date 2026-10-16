@@ -6,9 +6,11 @@ Lê `erros-de-planilha.md` da rodada (gerado por `scripts.carga_dsa.sincronizar`
 `<rodada>/erros-por-turma/` um `.md` por turma e `erros-por-turma.xlsx`, com uma aba por turma e as colunas
 **Prioridade** e **Resposta do operador** *(pedido de Bernardo Villas Boas, 15/10/2026)*.
 
-Emenda de 15/10/2026 (spec 014): o **catálogo** (CH da UE e da disciplina, chave sem linha no catálogo, T/E da
-avaliação) sai como **informação**, e não como item a corrigir; a **prova a mais** que o currículo (RN-AV-14) e as
-**sessões seguintes** de uma mesma prova (RN-AV-12) também são informação — não são erro de planilha.
+Emenda de 15/10/2026 (spec 014): a **prova a mais** que o currículo (RN-AV-14) e as **sessões seguintes** de uma
+mesma prova (RN-AV-12) são informação — não são erro de planilha.
+Decisão de Bernardo Villas Boas, 16/10/2026 (P9): *"Catálogo: código inexistente (PROCV) e T/E da avaliação voltam a
+"corrigir", prioridade Média; o resto é informação."* — a CH da UE e da disciplina continuam **informação** (o sistema
+usa a CH do currículo, D-CUR-1).
 
 ⚠️ A virada de cada turma vem de `fontes.json` (a `virada` de cada turma), não de uma cópia escrita aqui: a lista não
 pede para corrigir na planilha o que a turma já lança no sistema.
@@ -28,8 +30,9 @@ FONTES = Path(__file__).resolve().parent / "fontes.json"
 ORDEM = ["CAHO 2026", "C-Ap-FR 2026", "C-Esp-ME 2026", "C-Ap-HN 2026", "C-Espc-FR 2026", "C-Espc-HN 2026",
          "C-Exp-Ag-Mag 2026", "C-Exp-MetocOf 2026", "C-Exp-Obs-ME 2026", "C-Exp-BATI T1 2026"]
 INFORMACAO = 9
-PRIORIDADE = {1: "1 — alta", 2: "2 — alta", 3: "3 — média", 5: "4 — média", 6: "5 — baixa", 7: "5 — baixa", 8: "5 — baixa",
-              INFORMACAO: "Informação"}
+# 4: o catálogo que é ERRO da planilha (PROCV e T/E da avaliação) — prioridade Média (P9, 16/10/2026).
+PRIORIDADE = {1: "1 — alta", 2: "2 — alta", 3: "3 — média", 4: "3 — média", 5: "4 — média", 6: "5 — baixa", 7: "5 — baixa",
+              8: "5 — baixa", INFORMACAO: "Informação"}
 
 
 def viradas() -> dict[str, str]:
@@ -106,14 +109,14 @@ def traduzir(turma: str, c: list[str], virada: dict[str, str]) -> tuple | None:
                 "Para informação: o sistema usa a CH do currículo.")
     m = re.match(r"linha (\d+) \(([^)]*)\): a chave (\S+) nao existe no catalogo", oque)
     if m:
-        return (INFORMACAO, "Catálogo (aba BD DISCIPLINAS)", f"Aba PREENCHIMENTO, linha {m.group(1)} ({m.group(2)})",
+        return (4, "Catálogo (aba BD DISCIPLINAS)", f"Aba PREENCHIMENTO, linha {m.group(1)} ({m.group(2)})",
                 f"O código «{m.group(3)}» não existe na aba BD DISCIPLINAS (na IMPRESSÃO sai erro de PROCV).",
-                "Para informação: o lançamento ficou fora da rodada até o código existir no catálogo.")
+                "Incluir o código na aba BD DISCIPLINAS ou corrigir a chave na PREENCHIMENTO: até lá o lançamento fica fora da rodada.")
     m = re.match(r"linha (\d+) \(([^)]*)\): a avaliacao (\S+) esta com T/E «([^»]*)» no catalogo", oque)
     if m:
-        return (INFORMACAO, "Catálogo (aba BD DISCIPLINAS)", f"Aba PREENCHIMENTO, linha {m.group(1)} ({m.group(2)})",
+        return (4, "Catálogo (aba BD DISCIPLINAS)", f"Aba PREENCHIMENTO, linha {m.group(1)} ({m.group(2)})",
                 f"A avaliação «{m.group(3)}» está com técnica de ensino «{m.group(4)}» no catálogo.",
-                "Para informação: a técnica da avaliação no catálogo.")
+                "Escrever na coluna T/E do catálogo o instrumento da avaliação (PM, PP, PE, TG…), e não EO nem vazio.")
     m = re.match(r"UE (\S+): (\d+) TA lancados e (\d+) previstos no catalogo \((\w+)\)", oque)
     if m:
         return (5, "Carga por UE", f"UE {m.group(1)}",

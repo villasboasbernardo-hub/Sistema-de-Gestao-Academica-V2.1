@@ -118,6 +118,13 @@ select jsonb_build_object(
        'avaliacao_curriculo_id', x.avaliacao_curriculo_id, 'origem', x.origem, 'confirmado', x.confirmado_em is not null,
        'ta_aplicacao', x.ta_aplicacao, 'ta_vista', x.ta_vista, 'status', x.status)), '[]')
        from public.avaliacoes_curriculo_turma x where x.turma_id = (select id from t) and x.status = 'ativo'),
+  -- Emenda de 15/10/2026 (desenho aprovado em 16/10/2026): a marca da RN-AV-13 (PM, PO e PE, migration D-9) e a janela
+  -- da RN-AV-12 sao DADO do banco — a sincronizacao le daqui, nunca de uma constante.
+  'instrumentos_com_vista', (select coalesce(jsonb_agg(valor order by valor), '[]') from public.config_listas
+       where lista = 'instrumentos_avaliacao' and (metadados ->> 'vista_obrigatoria')::boolean),
+  'instrumentos', (select coalesce(jsonb_agg(jsonb_build_object('valor', valor, 'nome', rotulo_exibicao) order by valor), '[]')
+       from public.config_listas where lista = 'instrumentos_avaliacao' and ativo),
+  'janela_sessoes_dias', (select valor from public.config_parametros where chave = 'avaliacao.janela_sessoes_dias' and status = 'ativo'),
   'metodologias', (select coalesce(jsonb_agg(jsonb_build_object('valor', valor, 'sigla', metadados ->> 'sigla')), '[]')
        from public.config_listas where lista = 'metodologias' and ativo),
   'tipos_atividade', (select coalesce(jsonb_agg(jsonb_build_object('valor', valor, 'categoria', metadados ->> 'categoria')), '[]')
@@ -178,6 +185,15 @@ select jsonb_build_object(
             'conduz_nome_externo', s.conduz_nome_externo) order by s.numero), '[]')
             from public.vistas_de_avaliacao s left join public.instrutores ci on ci.id = s.conduz_instrutor_id
            where s.avaliacao_id = a.id and s.status = 'ativo'),
+        -- RN-AV-12 (desenho aprovado em 16/10/2026): as sessoes de aplicacao 2..N que a SINCRONIZACAO pos (codigo
+        -- DSAP-). A sessao nascida na tela (SAP-, o DSA ou «juntar como sessao») nao e da planilha: fica como esta.
+        'aplicacoes', (select coalesce(jsonb_agg(jsonb_build_object(
+            'codigo', p.codigo, 'numero', p.numero, 'data', p.data, 'ta_inicial', p.ta_inicial,
+            'tempos_consumidos', p.tempos_consumidos, 'local', p.local) order by p.numero), '[]')
+            from public.sessoes_de_aplicacao p
+           where p.avaliacao_id = a.id and p.status = 'ativo' and p.codigo like 'DSAP-%'),
+        -- A2: o instrumento gravado da prova SEM item (com item, a coluna fica nula).
+        'instrumento_gravado', (select l.valor from public.config_listas l where l.id = a.instrumento_id),
         'na_tela', a.editado_por is not null,
         'status', case when a.status in ('pendente', 'em_andamento', 'concluida', 'atrasada') then 'ativo'
                        when coalesce(a.observacoes, '') like '%[SAIU DA PLANILHA DE CONTROLE]%' then 'inativo'
@@ -225,6 +241,12 @@ select jsonb_build_object(
          from public.vistas_de_avaliacao s join public.avaliacoes a on a.id = s.avaliacao_id
         where a.turma_id = (select id from t) and a.origem_migracao_v1 is null and a.codigo not like 'DSAP-%' and s.status = 'ativo'
           and a.status in ('pendente', 'em_andamento', 'concluida', 'atrasada') and s.data < {virada}::date
+       union all
+       -- RN-AV-12: a sessao de aplicacao feita na TELA (SAP-, de qualquer avaliacao) ocupa o seu tempo.
+       select jsonb_build_object('tabela', 'avaliacoes', 'codigo', a.codigo || ' (sessao ' || p.numero || ')', 'data', p.data, 'ta_inicial', p.ta_inicial, 'tempos', p.tempos_consumidos)
+         from public.sessoes_de_aplicacao p join public.avaliacoes a on a.id = p.avaliacao_id
+        where a.turma_id = (select id from t) and p.codigo not like 'DSAP-%' and p.status = 'ativo'
+          and a.status in ('pendente', 'em_andamento', 'concluida', 'atrasada') and p.data < {virada}::date
        union all
        select jsonb_build_object('tabela', 'atividades', 'codigo', codigo, 'data', data, 'ta_inicial', ta_inicial, 'tempos', tempos_consumidos)
          from public.atividades_nao_letivas where turma_id = (select id from t) and origem_migracao_v1 is null and codigo not like 'DSAP-%' and status = 'ativo' and data < {virada}::date) s),

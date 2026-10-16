@@ -7,13 +7,14 @@
 > *"RN-AV-12: prova prática (PP), trabalho (T/TG) e qualquer prova com a MESMA descrição em dias consecutivos ou
 > próximos (mesma disciplina, mesmo COD) é UMA prova com N sessões de aplicação, não N provas."*
 > *"RN-AV-13: vista é obrigatória só para PM e PO. PP, T e TG não geram alerta de vista; se a planilha trouxer
-> vista, registra."*
+> vista, registra."* — emendada em 16/10/2026: *"Vista obrigatória para PM, PO e PE."*
+> *Decisões de 16/10/2026:* *"T numera a ordem dos trabalhos: aceita. P10 (AV desempata pela coluna T/E): aceita."*
 
 ⚠️ O «COD» da emenda é a coluna **U.E.** da PREENCHIMENTO (`PM1`, `PP`, `T`, `AV1`) — a coluna COD da planilha é
    a DISCIPLINA. Na sincronização ele chega como `prova["chave_ue"]`.
-⚠️ O DADO das regras (que instrumento exige vista; o que cada COD nomeia) mora num arquivo só,
-   `lib/dominio/avaliacoes/instrumentos.json`, lido também pela tela (`lib/dominio/avaliacoes/vista-obrigatoria.ts`).
-   Uma regra, um arquivo: mudar aqui sem mudar lá é impossível por construção.
+⚠️ O DE-PARA DO COD mora num arquivo só, `lib/dominio/avaliacoes/instrumentos.json`. A lista de quem EXIGE VISTA
+   saiu dele em 16/10/2026: é dado do BANCO (`config_listas.metadados.vista_obrigatoria`, migration D-9: PM, PO e PE),
+   que chega aqui pelo retrato (`ref["instrumentos_com_vista"]`) — o mesmo que a tela e `app.fn_status_vista` leem.
 ⚠️ Funções PURAS: sem banco, sem planilha. A sincronização (`resolver.py`) as chama; `provar_carga_dsa.py` as prova.
 """
 
@@ -28,7 +29,6 @@ from pathlib import Path
 ARQUIVO_DAS_REGRAS = Path(__file__).resolve().parents[2] / "lib/dominio/avaliacoes/instrumentos.json"
 REGRAS: dict = json.loads(ARQUIVO_DAS_REGRAS.read_text(encoding="utf-8"))
 
-VISTA_OBRIGATORIA: frozenset[str] = frozenset(REGRAS["vistaObrigatoria"])
 COD_DA_PLANILHA: dict[str, dict] = REGRAS["codDaPlanilha"]
 
 # «PM1», «PM 1», «PM-1», «pm.1», «PP», «AV2»: letras, um separador opcional, o numero opcional.
@@ -103,11 +103,37 @@ def nomeados_pela_descricao(candidatos: list[str], descricao: str, nomes: dict[s
     return [c for c in candidatos if nomes.get(c) and _sem_acento(nomes[c]) in texto]
 
 
-def vista_obrigatoria(instrumento: str | None) -> bool | None:
-    """RN-AV-13. `None` quando o instrumento nao e conhecido: quem decide o que fazer e o chamador."""
+def vista_obrigatoria(instrumento: str | None, com_vista: set[str] | frozenset[str]) -> bool | None:
+    """RN-AV-13. `com_vista` e a marca do BANCO (os instrumentos com `vista_obrigatoria`); `None` quando o instrumento
+    nao e conhecido: quem decide o que fazer e o chamador."""
     if instrumento is None:
         return None
-    return instrumento in VISTA_OBRIGATORIA
+    return instrumento in com_vista
+
+
+def instrumento_da_prova(prova: dict, instrumentos: dict[str, str]) -> str | None:
+    """O instrumento de uma prova SEM item ligado (A2 do desenho de 15/10/2026, aprovado em 16/10/2026): o que o COD
+    nomeia, pelas MESMAS regras do casamento — RN-AV-10 (o COD decide, a descricao desempata), D6.1 (`AV` nunca por
+    eliminacao) e P10 (com `AV` e a descricao muda, a coluna T/E desempata). `instrumentos`: valor → nome, da lista do
+    banco. Sem um instrumento so, devolve `None` — nada e inventado."""
+    lido = ler_cod(prova.get("chave_ue") or "")
+    if lido is None or lido[0] not in COD_DA_PLANILHA:
+        return None
+    regra = COD_DA_PLANILHA[lido[0]]
+    conhecidos = sorted(v for v in instrumentos if v != "OD")
+    descricao = prova.get("descricao") or ""
+    if regra["instrumentos"] == "todos":
+        nomeados = nomeados_pela_descricao(conhecidos, descricao, instrumentos) or _pela_tecnica(prova, conhecidos)
+        return nomeados[0] if len(nomeados) == 1 else None
+    candidatos = desempatar([i for i in regra["instrumentos"] if i in conhecidos], descricao, instrumentos)
+    return candidatos[0] if len(candidatos) == 1 else None
+
+
+def _pela_tecnica(prova: dict, candidatos: list[str]) -> list[str]:
+    """P10 (aceita por Bernardo Villas Boas em 16/10/2026): «AV desempata pela coluna T/E». A tecnica (T/E) da linha
+    da PREENCHIMENTO, quando e a sigla de um dos candidatos, vale como o instrumento — so quando a descricao nao nomeia."""
+    tecnica = _sem_acento(prova.get("_tecnica") or "")
+    return [tecnica] if tecnica in candidatos else []
 
 
 def agrupar_sessoes(provas: list[dict], janela_dias: int) -> list[list[dict]]:
@@ -170,9 +196,10 @@ def ligar_ao_curriculo(provas: list[dict], itens: list[dict]) -> dict[int, dict]
         if COD_DA_PLANILHA[sigla]["instrumentos"] == "todos":
             # «AV» nao nomeia instrumento: so vale o que a DESCRICAO nomear. Sem isso, «a disciplina so tem PM,
             # entao e PM» voltaria — o atalho que a D6.1 (aprovada em 14/10/2026) retirou por ligar Prova Pratica a PM.
-            candidatos = nomeados_pela_descricao(candidatos, prova.get("descricao") or "", nomes)
+            # P10 (16/10/2026): sem instrumento na descricao, a coluna T/E da linha desempata.
+            candidatos = nomeados_pela_descricao(candidatos, prova.get("descricao") or "", nomes) or _pela_tecnica(prova, candidatos)
             if not candidatos:
-                resultado[n] = {"nao_casa": f"o COD «{prova.get('chave_ue')}» nao nomeia instrumento e a descricao tambem nao", "candidatos": sorted(da_disciplina)}
+                resultado[n] = {"nao_casa": f"o COD «{prova.get('chave_ue')}» nao nomeia instrumento, e nem a descricao nem a T/E da linha nomeiam", "candidatos": sorted(da_disciplina)}
                 continue
         candidatos = desempatar(candidatos, prova.get("descricao") or "", nomes)
         if len(candidatos) != 1:

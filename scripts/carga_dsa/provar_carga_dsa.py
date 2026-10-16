@@ -174,6 +174,10 @@ ITENS_DA_LEVA_2 = [
 ]
 
 
+# A marca de vista obrigatoria do banco (migration D-9, 16/10/2026: PM, PO e PE) — DADO DE TESTE, espelho do banco.
+COM_VISTA = frozenset({"PM", "PO", "PE"})
+
+
 def retrato(habilitado: str = "ativo") -> dict:
     """O banco em memoria. Dois «FULANO SILVA» em postos diferentes: o caso que discrimina."""
     return {
@@ -204,6 +208,12 @@ def retrato(habilitado: str = "ativo") -> dict:
         "da_turma": [],
         "codigos": {"registros_aula": [], "avaliacoes": [], "atividades_nao_letivas": []},
         "de_outras_turmas": [],
+        # Emenda de 15/10/2026 (D-9, 16/10/2026): a janela e a marca de vista sao DADO do banco — aqui, espelho de teste.
+        "janela_sessoes_dias": "7",
+        "instrumentos_com_vista": sorted(COM_VISTA),
+        "instrumentos": [{"valor": v, "nome": n} for v, n in (("PE", "Prova Escrita"), ("PM", "Prova Mista"), ("PP", "Prova Prática"),
+                                                               ("PO", "Prova Oral"), ("TG", "Trabalho em Grupo"),
+                                                               ("TI", "Trabalho Individual"), ("OD", "Observação de Desempenho"))],
     }
 
 
@@ -459,15 +469,15 @@ def main() -> int:
     conferir("A4.7 · a prova da disciplina SEM avaliacao do curriculo carregada vai para a lista (antes, sumia)",
              any("IX AV" in e and "nao tem avaliacao do curriculo carregada" in e for e in sem.erros_de_planilha),
              sem.erros_de_planilha)
-    _vista_de_prova_sem_item(sem, _date(2026, 4, 9))
+    _vista_de_prova_sem_item(sem, _date(2026, 4, 9), COM_VISTA)
     conferir("vista · a prova sem item, sem vista, no 8º dia vai para a lista", any("vista nao lancada" in e for e in sem.erros_de_planilha),
              sem.erros_de_planilha)
     cedo = Resolvido(turma={}, autor={}, titulo="x")
     cedo.avaliacoes = [dict(sem.avaliacoes[0])]
-    _vista_de_prova_sem_item(cedo, _date(2026, 4, 8))
+    _vista_de_prova_sem_item(cedo, _date(2026, 4, 8), COM_VISTA)
     ligada = Resolvido(turma={}, autor={}, titulo="x")
     ligada.avaliacoes = [{**sem.avaliacoes[0], "avaliacao_curriculo_id": "av-1"}]
-    _vista_de_prova_sem_item(ligada, _date(2026, 4, 30))
+    _vista_de_prova_sem_item(ligada, _date(2026, 4, 30), COM_VISTA)
     conferir("controle: no 7º dia, ou com item ligado (o alerta do sistema cobre), nao vai para a lista",
              cedo.erros_de_planilha == [] and ligada.erros_de_planilha == [], (cedo.erros_de_planilha, ligada.erros_de_planilha))
     sessoes = prova["PM1"]["sessoes"]
@@ -504,7 +514,8 @@ def main() -> int:
 
 
 def emenda_de_15_10() -> None:
-    """Emenda de 15/10/2026 a spec 014 (Bernardo Villas Boas): RN-AV-10 a RN-AV-14. Casos sinteticos, sem banco."""
+    """Emenda de 15/10/2026 a spec 014 (Bernardo Villas Boas): RN-AV-10 a RN-AV-14; decisoes de 16/10/2026 (P10, PE,
+    sessoes em `sessoes_de_aplicacao`, instrumento gravado). Casos sinteticos, sem banco."""
     from datetime import date as _date
 
     from scripts.carga_dsa import regras_de_prova as rp
@@ -589,6 +600,15 @@ def emenda_de_15_10() -> None:
              and sum("sessao" in i for i in r.informativos) == 2, (r.avaliacoes, r.erros_de_planilha, r.informativos))
     conferir("RN-AV-12 · o TA da prova de 3 sessoes e a SOMA (9) contra o curriculo (2): vai para a lista como TA diferente",
              any("TA de prova diferente — planilha 9, curriculo 2" in e for e in r.erros_de_planilha), r.erros_de_planilha)
+    # Desenho aprovado em 16/10/2026 (opcao A): as sessoes 2..N saem de `avaliacoes` e vao para `sessoes_de_aplicacao`.
+    from scripts.carga_dsa.resolver import _sessoes_viram_aplicacoes
+    for n, a in enumerate(r.avaliacoes):
+        a.update({"codigo": f"DSAP-X-L{100 + n:03d}-V", "local": "CAMPO", "instrutor_responsavel_id": None, "aplicacoes": []})
+    _sessoes_viram_aplicacoes(r)
+    conferir("RN-AV-12 · DISCRIMINA (16/10/2026): a PP em 3 dias e UMA avaliacao; as sessoes 2 e 3 viram `aplicacoes` (…-SA), nao linhas",
+             len(r.avaliacoes) == 1
+             and [(x["codigo"], x["numero"], x["data"]) for x in r.avaliacoes[0]["aplicacoes"]]
+             == [("DSAP-X-L101-SA", 2, "2026-06-23"), ("DSAP-X-L102-SA", 3, "2026-06-25")], r.avaliacoes)
 
     a_mais = Resolvido(turma={}, autor={}, titulo="x")
     a_mais.avaliacoes = [{**base, **prova("PP1", "2026-04-01", "PRATICA 1"), "codigo": "A"},
@@ -657,14 +677,45 @@ def emenda_de_15_10() -> None:
                         {**base, **prova("T", "2026-04-01", "TRABALHO"), "codigo": "T", **outra},
                         {**base, **prova("AV1", "2026-04-01", "AVALIACAO"), "codigo": "A", **outra},
                         {**base, **prova("PM1", "2026-04-01", "PROVA MISTA"), "codigo": "M", **outra}]
-    _vista_de_prova_sem_item(vista, _date(2026, 4, 20))
+    _vista_de_prova_sem_item(vista, _date(2026, 4, 20), COM_VISTA)
     listadas = sorted(e.split(" ")[1] for e in vista.erros_de_planilha if "vista nao lancada" in e)
     # O caso que discrimina: ate 15/10 as quatro iam para a lista; agora PP e T (sem vista obrigatoria) nao vao.
     conferir("RN-AV-13 · sem item e sem vista no 8º dia: PP e T NAO vao para a lista; PM vai; AV (instrumento desconhecido) vai",
              listadas == ["AV1", "PM1"], listadas)
-    conferir("RN-AV-13 · o dado e o da tela: PM e PO exigem vista; PP, TG, TI, PE nao (lib/dominio/avaliacoes/instrumentos.json)",
-             [rp.vista_obrigatoria(i) for i in ("PM", "PO", "PP", "TG", "TI", "PE")] == [True, True, False, False, False, False]
-             and rp.ARQUIVO_DAS_REGRAS.as_posix().endswith("lib/dominio/avaliacoes/instrumentos.json"))
+    pe = Resolvido(turma={}, autor={}, titulo="x")
+    pe.avaliacoes = [{**base, **prova("PE1", "2026-04-01", "PROVA ESCRITA"), "codigo": "E", **outra}]
+    _vista_de_prova_sem_item(pe, _date(2026, 4, 20), COM_VISTA)
+    pe_antes = Resolvido(turma={}, autor={}, titulo="x")
+    pe_antes.avaliacoes = [{**base, **prova("PE1", "2026-04-01", "PROVA ESCRITA"), "codigo": "E", **outra}]
+    _vista_de_prova_sem_item(pe_antes, _date(2026, 4, 20), frozenset({"PM", "PO"}))
+    conferir("RN-AV-13 · DISCRIMINA (16/10/2026, «PM, PO e PE»): a PE sem item e sem vista vai para a lista; com a marca antiga, nao",
+             any("vista nao lancada" in e for e in pe.erros_de_planilha) and not pe_antes.erros_de_planilha,
+             (pe.erros_de_planilha, pe_antes.erros_de_planilha))
+    conferir("RN-AV-13 · a marca e DADO do banco: `vista_obrigatoria` decide pelo conjunto que chega (o JSON nao tem mais a lista)",
+             [rp.vista_obrigatoria(i, COM_VISTA) for i in ("PM", "PO", "PE", "PP", "TG", "TI")] == [True, True, True, False, False, False]
+             and "vistaObrigatoria" not in rp.REGRAS and not hasattr(rp, "VISTA_OBRIGATORIA"))
+
+    # P10 (aceita em 16/10/2026): com «AV» e a descricao muda, a T/E da linha desempata.
+    av3 = {**prova("AV3", "2026-09-01", "AV3 – AVALIACAO - PERMANENCIA NA AGUA")}
+    conferir("P10 · DISCRIMINA: «AV3» sem instrumento na descricao, T/E «PP», curriculo so com PP 3 → liga a PP 3; sem a T/E, nao casa",
+             lig([{**av3, "_tecnica": "PP"}], [{**pp(3), "id": "pp-3", "numero": 3}]) == {0: "pp-3"}
+             and lig([av3], [{**pp(3), "id": "pp-3", "numero": 3}]) == {0: "nao_casa"})
+    conferir("P10 · a descricao que NOMEIA vence a T/E («PM2 – …» com T/E «PP» → PM 2)",
+             lig([{**prova("AV1", "2026-04-01", "PM2 – FISICA"), "_tecnica": "PP"}], [pm(1), pm(2), pp(1)]) == {0: "pm-2"})
+    conferir("P10 · T/E que nao e instrumento da disciplina (EO) nao desempata",
+             lig([{**prova("AV1", "2026-04-01", "AVALIACAO"), "_tecnica": "EO"}], [pm(1)]) == {0: "nao_casa"})
+
+    # A2 (desenho aprovado em 16/10/2026): o instrumento gravado da prova SEM item.
+    nomes = {"PE": "Prova Escrita", "PM": "Prova Mista", "PP": "Prova Prática", "PO": "Prova Oral", "TG": "Trabalho em Grupo",
+             "TI": "Trabalho Individual", "OD": "Observação de Desempenho"}
+    conferir("A2 · o instrumento da prova sem item: o COD que nomeia um so («PP» → PP); «T» desempatado pela descricao; ambiguo → nenhum",
+             rp.instrumento_da_prova(prova("PP", "2026-06-22", "PROVA PRATICA DE CAMPO"), nomes) == "PP"
+             and rp.instrumento_da_prova(prova("T", "2026-07-14", "TRABALHO INDIVIDUAL"), nomes) == "TI"
+             and rp.instrumento_da_prova(prova("T", "2026-07-14", "TRABALHO"), nomes) is None)
+    conferir("A2 · «AV»: pela descricao, depois pela T/E (P10); nada nomeado → nenhum (D6.1: nunca por eliminacao)",
+             rp.instrumento_da_prova(prova("AV1", "2026-04-01", "PROVA ORAL DE INGLES"), nomes) == "PO"
+             and rp.instrumento_da_prova({**prova("AV2", "2026-04-01", "AVALIACAO"), "_tecnica": "PM"}, nomes) == "PM"
+             and rp.instrumento_da_prova(prova("AV2", "2026-04-01", "AVALIACAO"), nomes) is None)
 
 
 if __name__ == "__main__":

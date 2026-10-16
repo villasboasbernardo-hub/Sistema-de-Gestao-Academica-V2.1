@@ -511,7 +511,13 @@ def resolver(
                 "outros_instrutores": outros_da_prova,
                 # O texto de aplicador que a linha traz (vazio = nenhum). So a sessao SEM nome herda o da 1ª (RN-AV-12).
                 "_aplicador_escrito": not eh_fiscal and limpo not in VAZIOS and not vazio(limpo),
+                # P10 (aceita em 16/10/2026): a T/E da linha desempata o `AV` cuja descricao nao nomeia instrumento.
+                "_tecnica": sigla,
                 "sessoes": [],
+                # RN-AV-12 (desenho aprovado em 16/10/2026): as sessoes de aplicacao 2..N, em `sessoes_de_aplicacao`.
+                "aplicacoes": [],
+                # A2: o instrumento gravado da prova SEM item (`avaliacoes.instrumento_id`); com item, nulo.
+                "instrumento_gravado": None,
             })
             faixa = re.search(r"\(\s*U\.?\s*E\.?[^)]*\)", linha_do_catalogo.topico, flags=re.IGNORECASE)
             # Spec 014, FR-033: a faixa «U.E. 3 a 6» vai para `ues_abordadas` — texto, sem consumir TA de UE.
@@ -573,11 +579,19 @@ def resolver(
             "outros_instrutores": outros,
         })
 
-    _agrupar_sessoes(r, int(decisoes.get("janela_de_sessoes_de_aplicacao_dias", 7)))
+    # RN-AV-12: a janela e DADO do banco (`avaliacao.janela_sessoes_dias`, D-9, decisao de 16/10/2026: 7 dias).
+    janela = ref.get("janela_sessoes_dias")
+    if janela is None:
+        pend("janela_de_sessoes", "o parametro `avaliacao.janela_sessoes_dias` nao existe (ativo) no destino: rode as migrations")
+        janela = 7
+    _agrupar_sessoes(r, int(janela))
     _ligar_itens(r, ref)
     _casar_vistas(r, blocos_de_vista, decisoes, pend, local_de, casar, leitura, codigo=codigo, procedencia=procedencia)
     _sessoes_herdam_o_aplicador(r)
-    _vista_de_prova_sem_item(r, date.today())
+    com_vista = frozenset(ref.get("instrumentos_com_vista") or [])
+    instrumentos = {i["valor"]: i.get("nome") or "" for i in ref.get("instrumentos") or []}
+    _instrumento_gravado(r, instrumentos)
+    _vista_de_prova_sem_item(r, date.today(), com_vista)
     _sugestoes(r, ref)
     _resolver_dias_parados(r, dias_parados, dias_globais, leitura, codigo, procedencia, categoria_do_subtipo)
     _aula_em_dia_parado(r)
@@ -585,7 +599,45 @@ def resolver(
     _conferencias_internas(r, leitura, decisoes, pend, set(disciplina_por_cod))
     _tetos(r, ref, pend)
     _calendario_do_banco(r, ref)
+    _sessoes_viram_aplicacoes(r)
     return r
+
+
+def _instrumento_gravado(r: Resolvido, instrumentos: dict[str, str]) -> None:
+    """A2 do desenho de 15/10/2026 (aprovado em 16/10/2026): a prova SEM item ligado grava o instrumento que o COD
+    nomeia (`avaliacoes.instrumento_id`) — e e por ele que a RN-AV-13 decide a vista dela e a RN-AV-14 a conta na aba.
+    Com item, a coluna fica nula: quem le usa a do item. A OD fica de fora (Q-17: e continua)."""
+    for prova in _cabecas(r):
+        if prova.get("avaliacao_curriculo_id") or _e_od(prova):
+            prova["instrumento_gravado"] = None
+            continue
+        conhecido = prova.get("instrumento") if prova.get("instrumento") in instrumentos else None
+        prova["instrumento_gravado"] = conhecido or regras_de_prova.instrumento_da_prova(prova, instrumentos)
+
+
+def _sessoes_viram_aplicacoes(r: Resolvido) -> None:
+    """RN-AV-12 (desenho aprovado em 16/10/2026): a prova em N sessoes e UMA avaliacao. As sessoes 2..N saem de
+    `r.avaliacoes` e entram em `aplicacoes` da 1ª, com o codigo da linha delas (`…-L<linha>-SA`) — a mesma celula, o
+    mesmo codigo, em toda rodada. A linha antiga da sessao (`…-L<linha>-V`) sai do plano, e a rodada a tira com a marca
+    de saida. Quem aplica e quem fiscaliza sao os da prova; a planilha que traz OUTRO aplicador na sessao vira
+    informacao. Fica por ULTIMO: as regras anteriores (TA somado, vista, sugestao) ja leram as sessoes como linhas."""
+    for cabeca in _cabecas(r):
+        seguintes = cabeca.pop("_sessoes_seguintes", [])
+        if not seguintes:
+            continue
+        for k, seguinte in enumerate(seguintes, 2):
+            codigo = seguinte["codigo"][:-2] + "-SA" if seguinte["codigo"].endswith("-V") else seguinte["codigo"] + "-SA"
+            cabeca["aplicacoes"].append({
+                "codigo": codigo, "numero": k, "data": seguinte["data_avaliacao"], "ta_inicial": seguinte["ta_inicial"],
+                "tempos_consumidos": seguinte["tempos_consumidos"], "local": seguinte["local"]})
+            if seguinte["instrutor_responsavel_id"] not in (None, cabeca["instrutor_responsavel_id"]):
+                r.informativos.append(
+                    f"{seguinte['disciplina']} {seguinte['chave_ue']} de {seguinte['data_avaliacao']}: a sessao {k} traz outro "
+                    "aplicador na planilha; vale o da prova (RN-AV-12: quem aplica e o da avaliacao)")
+            # A vista e da PROVA (`_casar_vistas` so olha a 1ª sessao); se alguma ficou na seguinte, passa para a prova.
+            for v in seguinte.get("sessoes", []):
+                cabeca["sessoes"].append({**v, "numero": len(cabeca["sessoes"]) + 1})
+    r.avaliacoes[:] = [p for p in r.avaliacoes if "sessao_de" not in p]
 
 
 def _e_od(prova: dict) -> bool:
@@ -604,9 +656,9 @@ def _agrupar_sessoes(r: Resolvido, janela_dias: int) -> None:
     proximos e UMA prova com N sessoes. A 1ª sessao e a prova; as seguintes ganham `sessao_de` (o codigo da 1ª) e
     `numero_sessao`.
 
-    ⚠️ ATE A TABELA DE SESSOES DE APLICACAO DO DESENHO DE 15/10/2026 SER APROVADA (regra 9.4), as sessoes seguintes
-       continuam LINHAS de `avaliacoes`, como hoje — sem item do curriculo, fora da lista de erros e listadas como
-       informacao. O banco nao tem onde guardar «sessao 2 da aplicacao»; inventar um lugar seria migration."""
+    ⚠️ DESDE O DESENHO APROVADO EM 16/10/2026 (opcao A), as sessoes seguintes vao para `sessoes_de_aplicacao` — quem as
+       move e `_sessoes_viram_aplicacoes`, no fim da resolucao. Ate la, elas andam como linhas, para as regras de TA,
+       vista e sugestao as lerem; nunca como erro de planilha."""
     for grupo in regras_de_prova.agrupar_sessoes([p for p in r.avaliacoes if not _e_od(p)], janela_dias):
         cabeca = grupo[0]
         if len(grupo) == 1:
@@ -618,8 +670,8 @@ def _agrupar_sessoes(r: Resolvido, janela_dias: int) -> None:
             seguinte["numero_sessao"] = k
             r.informativos.append(
                 f"{seguinte['disciplina']} {seguinte['chave_ue']} de {seguinte['data_avaliacao']}: sessao {k} da prova de "
-                f"{cabeca['data_avaliacao']} (RN-AV-12, mesma descricao) — a mesma prova, nao outra; fica como linha a parte "
-                "ate a tabela de sessoes de aplicacao (desenho de 15/10/2026)")
+                f"{cabeca['data_avaliacao']} (RN-AV-12, mesma descricao) — a mesma prova, nao outra; gravada como sessao de "
+                "aplicacao da prova")
         r.sessoes_de_aplicacao.append({
             "disciplina": cabeca["disciplina"], "cod": cabeca["chave_ue"], "descricao": cabeca.get("descricao"),
             "datas": [p["data_avaliacao"] for p in grupo], "ta": sum(p["tempos_consumidos"] or 0 for p in grupo)})
@@ -640,30 +692,31 @@ def _cabecas(r: Resolvido) -> list[dict]:
     return [p for p in r.avaliacoes if "sessao_de" not in p]
 
 
-def _exige_vista(prova: dict) -> bool | None:
-    """RN-AV-13 pelo instrumento conhecido da prova; `None` quando nao se sabe."""
-    if prova.get("instrumento"):
-        return regras_de_prova.vista_obrigatoria(prova["instrumento"])
+def _exige_vista(prova: dict, com_vista: frozenset[str]) -> bool | None:
+    """RN-AV-13 pelo instrumento conhecido da prova (a marca do BANCO, `com_vista`); `None` quando nao se sabe."""
+    conhecido = prova.get("instrumento") or prova.get("instrumento_gravado")
+    if conhecido:
+        return regras_de_prova.vista_obrigatoria(conhecido, com_vista)
     lido = regras_de_prova.ler_cod(prova.get("chave_ue") or "")
     regra = regras_de_prova.COD_DA_PLANILHA.get(lido[0]) if lido else None
     if regra is None or regra["instrumentos"] == "todos":
         return None
-    exigencias = {regras_de_prova.vista_obrigatoria(i) for i in regra["instrumentos"]}
+    exigencias = {regras_de_prova.vista_obrigatoria(i, com_vista) for i in regra["instrumentos"]}
     return exigencias.pop() if len(exigencias) == 1 else None
 
 
-def _vista_de_prova_sem_item(r: Resolvido, hoje: date) -> None:
+def _vista_de_prova_sem_item(r: Resolvido, hoje: date, com_vista: frozenset[str]) -> None:
     """Spec 014 (decisao de Bernardo Villas Boas, 14/10/2026): o alerta de vista do sistema conta so a prova LIGADA a
     item do curriculo. A prova SEM item, aplicada ha mais de 7 dias e sem vista na planilha, vai para a lista — nao se
     sabe se o curriculo preve vista, e quem sabe e o operador. O prazo e o do parametro (`avaliacao.prazo_vista_dias`,
     7); aqui ele so decide o que listar, nunca o que gravar.
-    RN-AV-13 (15/10/2026): «vista e obrigatoria so para PM e PO». Quando o instrumento da prova e conhecido — pela
-    «a mais» ou por um COD que so nomeia instrumentos sem vista (PP, T, TG, TI) —, a prova que nao exige vista NAO
-    vai para a lista. COD que nao nomeia instrumento (AV) continua listado: nao se sabe."""
+    RN-AV-13 (15/10/2026; PE em 16/10/2026): a vista e obrigatoria para PM, PO e PE (a marca do banco). Quando o
+    instrumento da prova e conhecido — pela «a mais», pelo instrumento gravado ou por um COD que so nomeia instrumentos
+    sem vista (PP, T, TG, TI) —, a prova que nao exige vista NAO vai para a lista. Desconhecido continua listado."""
     for prova in _cabecas(r):
         if prova.get("avaliacao_curriculo_id") or any(s.get("sessoes") for s in _sessoes(prova)) or _e_od(prova):
             continue
-        if _exige_vista(prova) is False:
+        if _exige_vista(prova, com_vista) is False:
             continue
         if (hoje - date.fromisoformat(prova["data_avaliacao"])).days > 7:
             r.erros_de_planilha.append(
