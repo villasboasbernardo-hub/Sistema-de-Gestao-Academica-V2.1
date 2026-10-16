@@ -240,14 +240,15 @@ Não se reabre.)*
 - Q: A PP de 19/08 da CAHO IV, separada da PP de 14 sessões pelos 7 dias? → A: **Juntar como sessão da PP 1** (14
   sessões + 19/08 = 40 TA, o tempo do item 4 da A4.7). Feito pelo núcleo do «juntar» (E-7), sem sessão: a trilha guarda
   quando e o retrato da avaliação juntada, e `juntada_por` fica **nulo** («carga sem sessão») — atribuir a junção a uma
-  conta que não clicou seria rastro falso (leitura da implementação). Resultado: **[pendente]**.
+  conta que não clicou seria rastro falso (leitura da implementação). Resultado, no remoto em 16/10/2026: a de 19/08 virou a **sessão 15** (`SAP-000001`) da PP 1, que soma **40 TA**; a rodada seguinte deu **0** (`antes-depois/rodada-da-a47-no-remoto.md`).
 - Q: O banco recusa a 1ª aplicação movida para depois das sessões? → A: **Sim** (pedido de Bernardo, 16/10/2026): migration
   E-7 (`20261016153228`), gatilho de restrição **adiado** para o fim da transação (`aplicacao_depois_das_sessoes`,
   23514) — adiado porque a sincronização grava a prova e depois as sessões, e uma prova inteira deslocada para frente
   passaria por um estado intermediário que um gatilho imediato recusaria (leitura da implementação). O mesmo dia é
   aceito, como do outro lado (`sessao_antes_da_aplicacao`, E-6).
-- Q: A CAHO XIX `PP2` e as três `AV` da TFM da C-Ap-FR, com os itens da A4.7? → A: **[pendente]** (medido na rodada
-  depois da D-10).
+- Q: A CAHO XIX `PP2` e as três `AV` da TFM da C-Ap-FR, com os itens da A4.7? → A: A `PP2` da XIX liga à **PP 2** (item
+  14); na TFM, **AV1 → PP 1, AV2 → PP 2, AV3 → PP 3**, pela ordem (P2 com a P10) — a AV1 deixou a PP 3, onde estava
+  desde a manhã. Medido na rodada no remoto de 16/10/2026.
 
 
 ## 3. User Scenarios & Testing *(mandatory)*
@@ -694,7 +695,7 @@ Cada requisito traz entre colchetes **[banco]**, **[tela]** ou **[carga]**: onde
 - **SC-003** Nenhum lançamento é recusado por teto excedido. Prova: e2e que lança acima do teto e confere a linha no banco.
 - **SC-004** O Estudo Individual e o Apoio Individualizado **nunca** entram na CHT (invariante pgTAP e Vitest).
 - **SC-005** Uma AEC global aparece no DSA de **todas** as turmas com DSA na data e em nenhuma outra (critério 5 do Épico 9).
-- **SC-006** Das 188 avaliações vivas da cópia, **zero** aparecem "pendente" tendo vista registrada (hoje são 135). A situação Atrasada vira exatamente no 8º dia. Pela RN-AV-13, só a prova de instrumento que exige vista (PM, PO) pode ficar Em andamento ou Atrasada; a PP, o T e o TG aplicados são Concluídos sem vista. As vistas atrasadas reais da rodada `2026-10-14T1916`, remedidas com a regra nova no reensaio local: **[pendente]** (eram **6**, `antes-depois/rodada-do-pr6-no-remoto.md`). *(Acrescentado em 15/10/2026 pela RN-AV-13.)*
+- **SC-006** Das 188 avaliações vivas da cópia, **zero** aparecem "pendente" tendo vista registrada (hoje são 135). A situação Atrasada vira exatamente no 8º dia. Pela RN-AV-13, só a prova de instrumento que exige vista (PM, PO) pode ficar Em andamento ou Atrasada; a PP, o T e o TG aplicados são Concluídos sem vista. As vistas atrasadas reais da rodada `2026-10-14T1916`, remedidas com a regra nova: **8** no remoto em 16/10/2026, com a vista obrigatória para PM, PO e PE (`antes-depois/rodada-da-a47-no-remoto.md`; eram **6**, `antes-depois/rodada-do-pr6-no-remoto.md`). *(Acrescentado em 15/10/2026 pela RN-AV-13.)*
 - **SC-007** As 188 substituídas saem de toda contagem. As vivas continuam 188, e a única cancelada sem marca continua `cancelada`.
 - **SC-008** No C-Ap-HN, a UE 7 Física mostra **18 + PM 2 + vista 1 = 21**, e a disciplina HN-2101 fecha em **126**. Uma rodada da sincronização **não altera** CH nenhuma do catálogo, provado pela impressão digital do catálogo antes e depois.
 - **SC-008.1** Depois da migration aprovada do §11-A, a comparação banco × currículo dá **zero divergência** de CH nos 24 cursos, e a quantidade de disciplinas ativas do C-Ap-HN e do CAHO iguala a do currículo. A Ambientação dos C-ApA fica fora até a `PEND-014-3`.
@@ -894,10 +895,10 @@ O currículo informa a avaliação na seção *"AVALIAÇÃO DA APRENDIZAGEM"* de
 | **Dá o TA, mas não diz de qual UE sai** | C-Exp-MetocOf (currículo de 2011): *"Prova Mista (PM) com duração de três (03) TA, abordando todas as UE; e … um (01) TA para a vista de provas"*. C-Esp-ALH: *"2 TA cada"*, sem dizer onde computa e sem vista |
 | **Não dá o TA** | C-Exp-Obs-ME: *"uma Prova Escrita Objetiva (PE) sobre as UE 1 a 4; e … (PE) sobre a UE 5"*. EST-QF MAREFLU, PGRS100, PROC-MF-EAD, APHID e EM2040PHS: avaliação por frequência, relatório ou conceito |
 | **Por competência**, com "CH DA AVALIAÇÃO" por disciplina e sem UE | C-Espc-FR e C-Espc-HN. Exemplo, MATEMÁTICA do C-Espc-HN: *"4 (quatro) TA para a aplicação e 1 (um) TA para … vista de prova. CH DA AVALIAÇÃO 5"* (30 + 11 + 5 = 46) |
-| **[pendente]** | EST-QF-APOC: o PDF é digitalizado e a seção não foi lida |
+| **Por frequência** | EST-QF-APOC: o PDF é digitalizado; lido da imagem, *aprova por frequência* (p. 6, item 4) — a proposta «não carregar item» foi aceita na A4.7 (16/10/2026). *(Era:* [pendente]*.)* |
 
 - **No banco, a avaliação não tem TA nem UE.** `avaliacoes_planejadas` tem 118 linhas só de texto, com granularidade que varia de 1 linha por disciplina a 1 linha por curso.
-- **A contagem de avaliações currículo × banco fica [pendente]**: exige contar instrumento a instrumento, e o leitor das seções de avaliação ainda é heurístico. O PR 4 o fecha.
+- **A contagem de avaliações currículo × banco fechou em 16/10/2026**: os **194** itens da D-4 mais os **87** da A4.7 = **281** itens ativos no remoto; dos 90 que tinham ficado fora da D-4, **3** não entram por decisão (a OPAP II repete a prova da OPAP I; o EST-QF-APOC aprova por frequência; o PrevMe V sem item legível). *(Era: "fica [pendente]: exige contar instrumento a instrumento … O PR 4 o fecha".)*
 
 ### 11-A. Banco × currículo — lote de correção DO BANCO (migration de dado, após aprovação de Bernardo)
 
@@ -1108,7 +1109,7 @@ São **três** casos medidos (§11-A):
 | C-ApA-AuxNav, OcOp, PCN, PrevMe | parcial; as disciplinas finais são entrega de trabalho no AVA | ≈ 8, 13, 6, 7 | ≈ 8, 28, 12, 14 TA | ≈ 3, 4, 0, 0 | — | sem turma em 2026 e EAD sem DSA; fica para quando houver |
 | EST-QF APHID, EM2040PHS, MAREFLU, PGRS100, PROC-MF-EAD | aprovação por **frequência** | 0 | — | 0 | — | nada a prever |
 | EST-QF-NAVFLU-EAD | por UE | 1 | 2 TA | 0 | — | EAD, sem DSA |
-| EST-QF-APOC | PDF digitalizado | **[pendente]** | | | | |
+| EST-QF-APOC | aprovação por **frequência** (PDF digitalizado, p. 6) | 0 | — | 0 | — | nada a prever (A4.7, 16/10/2026) |
 
 **Sugestão da planilha para o grupo a arbitrar:** só o **C-Exp-Obs-ME** tem turma com planilha em 2026. Os outros mudos (ALH, CAHO XX quanto à vista, C-Espc quanto aos sem CH) **não têm sugestão** e começam *"não definido"*.
 

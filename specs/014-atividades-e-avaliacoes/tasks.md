@@ -517,18 +517,18 @@ A tarefa que **escreve** um teste é ela mesma o teste: o **Pronto** dela diz qu
   — todo card e link que leva a uma aba, por clique, com `toBeInViewport`; sem a correção, 3 de 4 reprovam.
 - [X] T262 PEND-014-7 — o `tema.spec.ts:202` junto do `admin-sobre-contas.spec.ts`: a causa medida (o `afterAll` apaga a
   conta na troca de arquivo e a promessa guardada não a recria) e a correção; a dupla 3 de 3 verde.
-- [ ] T263 [US10] E-7 `20261016153228`: o gatilho ADIADO que recusa a 1ª aplicação depois das sessões
+- [X] T263 [US10] E-7 `20261016153228`: o gatilho ADIADO que recusa a 1ª aplicação depois das sessões
   (`aplicacao_depois_das_sessoes`), a frase em `traducao-de-recusas.ts` e o núcleo do «juntar»
   (`app.juntar_como_sessao_nucleo`). **Teste:** pgTAP `133` (o caso que discrimina, o mesmo dia, a prova inteira
   deslocada, a sessão inativa, a cancelada, o núcleo sem sessão) e `tests/invariantes/rls/sessoes-de-aplicacao.test.ts`.
   **Reversão:** `reversao-e7-e-a47.sql`, provada pela impressão digital.
-- [ ] T264 [US6] A4.7 (`PEND-014-6`): `decisao_a47.py --em-branco-aceito 1-26` sobre `a47-decisao-preenchida.xlsx` → a
+- [X] T264 [US6] A4.7 (`PEND-014-6`): `decisao_a47.py --em-branco-aceito 1-26` sobre `a47-decisao-preenchida.xlsx` → a
   migration de dado D-10 `20261016153232` (87 itens, a PT) e `antes-depois/a47-antes-depois.md`, por disciplina.
-- [ ] T265 🌐 O rito do remoto para a E-7 e a D-10 (backup, dry-run só com elas, `db push`, impressão digital local ×
+- [X] T265 🌐 O rito do remoto para a E-7 e a D-10 (backup, dry-run só com elas, `db push`, impressão digital local ×
   remoto) e a rodada `2026-10-14T1916` com os itens novos (backup, ensaio na cópia, rodada, 2ª = 0, dados iguais).
-- [ ] T266 🌐 Juntar a PP de 19/08 da CAHO IV à PP 1 (`scripts/manutencao/juntar_como_sessao.py`), ensaiada na cópia; a
+- [X] T266 🌐 Juntar a PP de 19/08 da CAHO IV à PP 1 (`scripts/manutencao/juntar_como_sessao.py`), ensaiada na cópia; a
   rodada seguinte com zero mudança; conferir a CAHO XIX `PP2` e as três `AV` da TFM da C-Ap-FR.
-- [ ] T267 O roteiro de conferência de Production com os números de hoje (`roteiro-de-conferencia-producao.md`), com o
+- [X] T267 O roteiro de conferência de Production com os números de hoje (`roteiro-de-conferencia-producao.md`), com o
   passo do card; `erros-por-turma.xlsx` e `provas-sem-casar.md` regerados do remoto.
 - [ ] T268 ⛔ A reconferência do card por Bernardo em Production — **a única pendência que esta fase deixa**.
 
@@ -538,8 +538,8 @@ A tarefa que **escreve** um teste é ela mesma o teste: o **Pronto** dela diz qu
 
 ## Fase final — Fechamento da spec · ramo `docs/EPICO-8-9-fechamento` · depende de: PR 6
 
-- [ ] T236 Medir cada critério de sucesso (SC-001 a SC-019) com o artefato ao lado, em `specs/014-atividades-e-avaliacoes/fechamento.md`; o que não fechou, com o motivo; a SC-008.3 pela asserção da D-6 e pelo relatório de T157. **Pronto:** nenhum número sem artefato (regra 9.2).
-- [ ] T237 Fechar a spec no `CLAUDE.md`: a linha da spec 014 em *Estado atual* como encerrada; as pendências `PEND-014-1`, `PEND-014-2` e `PEND-014-3` na tabela de decisões pendentes; a `PEND-E8-1` resolvida pela D-CUR-1, se o painel por UE fechou; a `PEND-DSA-VISTA` segue no backlog do DSA; o gatilho de espelho da vista registrado como resto inerte, a retirar quando não houver mais escritor das colunas antigas; abrir o PR de docs e mesclar. **Pronto:** PR de docs `docs/EPICO-8-9-fechamento` mesclado; a linha da spec 014 marcada encerrada, com as pendências nomeadas.
+- [X] T236 Medir cada critério de sucesso (SC-001 a SC-019) com o artefato ao lado, em `specs/014-atividades-e-avaliacoes/fechamento.md`; o que não fechou, com o motivo; a SC-008.3 pela asserção da D-6 e pelo relatório de T157. **Pronto:** nenhum número sem artefato (regra 9.2).
+- [X] T237 Fechar a spec no `CLAUDE.md`: a linha da spec 014 em *Estado atual* como encerrada; as pendências `PEND-014-1`, `PEND-014-2` e `PEND-014-3` na tabela de decisões pendentes; a `PEND-E8-1` resolvida pela D-CUR-1, se o painel por UE fechou; a `PEND-DSA-VISTA` segue no backlog do DSA; o gatilho de espelho da vista registrado como resto inerte, a retirar quando não houver mais escritor das colunas antigas; abrir o PR de docs e mesclar. **Pronto:** PR de docs `docs/EPICO-8-9-fechamento` mesclado; a linha da spec 014 marcada encerrada, com as pendências nomeadas.
 
 ---
 

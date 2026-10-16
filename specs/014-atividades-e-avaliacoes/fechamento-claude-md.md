@@ -1,6 +1,6 @@
 # T237 — o texto pronto para o `CLAUDE.md` (aplicar só depois de T236)
 
-> ⛔ **PREPARADO, NÃO APLICADO.** No dia do fechamento: medir T236, trocar os `[pendente]` abaixo pelos números de
+> ✅ **APLICADO em 16/10/2026** (PR de fechamento), com os números de `fechamento.md` e as pendências novas (`PEND-014-10`, `PEND-014-11`, `ESPELHO-VISTA`). O texto abaixo é o rascunho de 15/10, mantido como registro. *(Era:* ⛔ **PREPARADO, NÃO APLICADO.** No dia do fechamento: medir T236, trocar os `[pendente]` abaixo pelos números de
 > `fechamento.md`, aplicar no `CLAUDE.md`, abrir o PR de docs `docs/EPICO-8-9-fechamento` e mesclar.
 
 ## 1. A linha da spec 014 em *Estado atual* passa a começar por
