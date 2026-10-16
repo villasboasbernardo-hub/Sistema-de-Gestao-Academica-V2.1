@@ -40,7 +40,8 @@
  */
 
 /**
- * As quatro origens que a `vw_ocupacao_ta` declara na coluna `origem`.
+ * As origens que a `vw_ocupacao_ta` declara na coluna `origem` — cinco desde a sessão de aplicação
+ * (`RN-AV-12`, 16/10/2026).
  *
  * ⚠️ **ELAS NÃO SÃO O `TipoDeBloco` de `bloco.ts`, e unificar os dois seria erro.** O `TipoDeBloco`
  * tem **sete** valores porque abre a categoria normativa do lançamento (`aec`, `tad`, `tr`,
@@ -48,7 +49,41 @@
  * as quatro não letivas chegam todas como `atividade_nao_letiva`. Um tipo só obrigaria a traduzir
  * num dos dois lados, e a tradução é justamente onde a sentinela se perderia.
  */
-export type OrigemDoFato = "aula" | "avaliacao" | "vista_prova" | "atividade_nao_letiva";
+export type OrigemDoFato =
+  | "aula"
+  | "avaliacao"
+  /** A 2ª, 3ª… sessão de aplicação da MESMA avaliação (`sessoes_de_aplicacao`, `RN-AV-12`, 16/10/2026). */
+  | "sessao_aplicacao"
+  | "vista_prova"
+  | "atividade_nao_letiva";
+
+/**
+ * As origens que são SESSÃO de uma avaliação — a de aplicação (2ª em diante) e a de vista. Nelas a
+ * `vw_ocupacao_ta` entrega o `fato_id` DA AVALIAÇÃO e o `sessao_id` da sessão.
+ */
+export const ORIGENS_DE_SESSAO: ReadonlySet<OrigemDoFato> = new Set<OrigemDoFato>([
+  "sessao_aplicacao",
+  "vista_prova",
+]);
+
+/**
+ * O identificador do lançamento na grade, nas ações e nas marcas de conflito.
+ *
+ * > *"…é UMA prova com N sessões de aplicação, não N provas."* — `RN-AV-12` (spec 014, emenda de 15/10/2026)
+ *
+ * ⚠️ **NA SESSÃO, O ID É O DA SESSÃO, NUNCA O DA AVALIAÇÃO.** Com N sessões, N linhas da ocupação têm o MESMO
+ *    `fato_id` (o da avaliação): usá-lo faria mover a sessão 2 mover a prova, excluir a sessão cancelar a prova, e o
+ *    conflito da sessão aparecer marcado na 1ª aplicação. É a regra que a vista já seguia (`FR-041`), num lugar só.
+ */
+export function idDoLancamento(linha: {
+  readonly origem: string;
+  readonly fatoId: string;
+  readonly sessaoId?: string | null | undefined;
+}): string {
+  return ORIGENS_DE_SESSAO.has(linha.origem as OrigemDoFato) && linha.sessaoId
+    ? linha.sessaoId
+    : linha.fatoId;
+}
 
 /** O mínimo que se precisa saber de um fato para decidir se ele tem posição. */
 export type FatoParaPosicao = {

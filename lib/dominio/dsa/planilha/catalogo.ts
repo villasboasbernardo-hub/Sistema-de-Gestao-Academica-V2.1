@@ -64,6 +64,11 @@ export function chaveDoLancamento(fato: FatoDoInsumo): {
       if (disciplina === "") return { cod: COD_SEM_DISCIPLINA, item: ITEM.nenhum };
       return { cod: disciplina, item: fato.unidadeNumero ?? ITEM.semUe };
     case "avaliacao":
+    /*
+     * ⚠️ A SESSÃO DE APLICAÇÃO É A MESMA PROVA (`RN-AV-12`, 16/10/2026): o item é o da avaliação dela, e por isso
+     *    conta na CH e no nº do DSA como a 1ª sessão — o sistema conta as datas dela também (`lerExtrasDaImpressao`).
+     */
+    case "sessao_aplicacao":
       return { cod: disciplina, item: textoDoPapel(fato.tipoAvaliacao) || ITEM.nenhum };
     case "vista_prova":
       return { cod: disciplina, item: ITEM.vista };
@@ -117,7 +122,12 @@ export function itensDoCatalogo(insumo: InsumoDaPlanilha): {
   const sala = insumo.turma.salaAlocada;
   const tiposUsados = new Map<string, Set<string>>();
   for (const fato of insumo.fatos.values()) {
-    if (fato.origem !== "avaliacao" || fato.disciplinaCodigo === null) continue;
+    /* A sessão de aplicação usa o tipo da avaliação dela — a chave tem de existir mesmo sem a 1ª sessão na pasta. */
+    if (
+      (fato.origem !== "avaliacao" && fato.origem !== "sessao_aplicacao") ||
+      fato.disciplinaCodigo === null
+    )
+      continue;
     const tipo = textoDoPapel(fato.tipoAvaliacao);
     if (tipo === "") continue;
     const doCodigo = tiposUsados.get(fato.disciplinaCodigo) ?? new Set<string>();

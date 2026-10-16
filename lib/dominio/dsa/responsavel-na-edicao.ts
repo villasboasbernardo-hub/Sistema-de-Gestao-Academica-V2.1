@@ -18,6 +18,8 @@
  *    aplicador pedem o cadastro. Na atividade, a regra é a da CATEGORIA — hoje todas aceitam.
  * ⚠️ **CAMPO NÃO MANDADO NÃO É TOCADO** (`undefined` = *"não mandou"*, `null` = *"apague"*): editar só o horário não
  *    devolve coluna de responsável nenhuma.
+ * ⚠️ **A SESSÃO DE APLICAÇÃO NÃO TEM RESPONSÁVEL PRÓPRIO** (`RN-AV-12`, 16/10/2026): o aplicador e o fiscal são os da
+ *    avaliação, e mandar `instrutorId` para ela é recusado com a frase de `FRASE_SEM_APLICADOR_NA_SESSAO`.
  * ⚠️ TypeScript puro: sem `next`, sem `react`, sem `supabase` (Princípio II).
  */
 import type { CategoriaDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
@@ -39,7 +41,23 @@ export type EntradaDoResponsavelNaEdicao = {
 
 export type ResponsavelNaEdicao =
   | { readonly ok: true; readonly colunas: Readonly<Record<string, string | null>> }
-  | { readonly ok: false; readonly mensagem: string; readonly campo: "responsavelExterno" };
+  | {
+      readonly ok: false;
+      readonly mensagem: string;
+      readonly campo: "responsavelExterno" | "instrutorId";
+    };
+
+/**
+ * A frase da sessão de aplicação: ela não tem aplicador próprio.
+ *
+ * > *"…é UMA prova com N sessões de aplicação, não N provas."* — `RN-AV-12` (spec 014, emenda de 15/10/2026)
+ *
+ * ⚠️ Quem aplica e quem fiscaliza a 2ª sessão em diante são os DA AVALIAÇÃO (desenho de 15/10/2026, A1:
+ *    *"a emenda não pede papel por sessão"*). Trocar o aplicador pela sessão trocaria o da prova inteira — e o
+ *    cartão da sessão faria isso sem dizer. Quem troca é o cartão da 1ª sessão, que é a avaliação.
+ */
+export const FRASE_SEM_APLICADOR_NA_SESSAO =
+  "A sessão de aplicação não tem aplicador próprio: quem aplica é o da prova. Troque-o no lançamento da 1ª sessão.";
 
 /** O papel de quem responde em cada origem: na avaliação, o `instrutorId` editado é o do APLICADOR. */
 function lancamentoDa(entrada: EntradaDoResponsavelNaEdicao): LancamentoDoResponsavel {
@@ -47,6 +65,7 @@ function lancamentoDa(entrada: EntradaDoResponsavelNaEdicao): LancamentoDoRespon
     case "aula":
       return { tipo: "aula" };
     case "avaliacao":
+    case "sessao_aplicacao":
       return { tipo: "avaliacao", papel: "aplicador" };
     case "vista_prova":
       return { tipo: "vista" };
@@ -63,6 +82,9 @@ export function responsavelNaEdicao(entrada: EntradaDoResponsavelNaEdicao): Resp
   if (recusa !== null) return { ok: false, mensagem: recusa, campo: "responsavelExterno" };
 
   const { instrutorId, responsavelExterno } = entrada;
+  if (entrada.origem === "sessao_aplicacao" && instrutorId !== undefined) {
+    return { ok: false, mensagem: FRASE_SEM_APLICADOR_NA_SESSAO, campo: "instrutorId" };
+  }
   const colunas: Record<string, string | null> = {};
   switch (entrada.origem) {
     case "aula":
@@ -70,6 +92,9 @@ export function responsavelNaEdicao(entrada: EntradaDoResponsavelNaEdicao): Resp
       break;
     case "avaliacao":
       if (instrutorId !== undefined) colunas["instrutor_responsavel_id"] = instrutorId;
+      break;
+    case "sessao_aplicacao":
+      /* Nenhuma coluna de responsável: `sessoes_de_aplicacao` não as tem (o aplicador é o da avaliação). */
       break;
     case "vista_prova":
       if (instrutorId !== undefined) {

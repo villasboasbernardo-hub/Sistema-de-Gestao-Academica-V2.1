@@ -373,3 +373,66 @@ describe("spec 014, FR-046 · os demais instrutores aparecem onde o 1º aparece 
     expect(aula.instrutor).toBe("1ºTen (RM2-T) FULANA DE TAL / CC A.");
   });
 });
+
+/*
+ * `RN-AV-12` (spec 014, emenda de 15/10/2026): *"…é UMA prova com N sessões de aplicação, não N provas."*
+ *
+ * ⚠️ **O CASO QUE DISCRIMINA** (DoD 8): antes do mapeador conhecer a origem `sessao_aplicacao`, a linha caía em
+ *    `aula` com o id DA AVALIAÇÃO — o cartão abria como aula, e excluir a «aula» cancelava a prova inteira.
+ */
+describe("`RN-AV-12` · a sessão de aplicação na grade e no papel", () => {
+  const sessao = (ajustes: Partial<LinhaDaOcupacao> = {}) =>
+    linha({
+      origem: "sessao_aplicacao",
+      fato_id: "aval-1",
+      sessao_id: "sap-2",
+      numero_sessao: 2,
+      data: "2026-10-09",
+      ...ajustes,
+    });
+  const COM_A_SESSAO = {
+    ...NOMES,
+    instrutores: new Map([
+      ["instr-1", "1ºTen (RM2-T) FULANA DE TAL"],
+      ["fiscal-1", "SO (RM1-ME) BELTRANO DE TAL"],
+    ]),
+    conteudos: new Map<string, ConteudoDoFato>([
+      ["aval-1", { conteudo: "PP 1", tecnica: "Prova Prática", instrumentoId: "pp" }],
+      ["sap-2", { conteudo: "PP 1", tecnica: "Prova Prática", instrumentoId: "pp" }],
+    ]),
+  };
+
+  it("a origem é a da sessão e o id é o DA SESSÃO, nunca o da avaliação", () => {
+    const f = fatoDaOcupacao(sessao(), COM_A_SESSAO);
+    expect(f.origem).toBe("sessao_aplicacao");
+    expect(f.fatoId).toBe("sap-2");
+  });
+
+  it("o rótulo é o da prova, com a marca da sessão — «PP 1 · sessão 2»; a técnica é a da prova", () => {
+    const f = fatoDaOcupacao(sessao(), COM_A_SESSAO);
+    expect(f.conteudo).toBe("PP 1 · sessão 2");
+    expect(f.tecnica).toBe("Prova Prática");
+    expect(f.disciplina).toBe("I");
+  });
+
+  it("como na aplicação, o FISCAL vem primeiro — a sessão é a mesma prova, com o mesmo fiscal", () => {
+    const f = fatoDaOcupacao(sessao({ fiscal_id: "fiscal-1" }), COM_A_SESSAO);
+    expect(f.instrutor).toBe("SO (RM1-ME) BELTRANO DE TAL (FISCAL)");
+  });
+
+  it("o cartão da sessão não reabre com o instrumento da prova — só a avaliação o edita (A2)", () => {
+    const daSessao = fatoDaOcupacao(sessao(), COM_A_SESSAO);
+    expect(daSessao.gravado?.instrumentoId).toBeUndefined();
+    const daAvaliacao = fatoDaOcupacao(linha({ origem: "avaliacao" }), COM_A_SESSAO);
+    expect(daAvaliacao.gravado?.instrumentoId).toBe("pp");
+    expect(daAvaliacao.gravado?.avaliacaoCurriculoId).toBeNull();
+  });
+
+  it("controle: a VISTA continua com o id da sessão dela, e a aplicação sem marca de sessão", () => {
+    expect(
+      fatoDaOcupacao(linha({ origem: "vista_prova", sessao_id: "vst-1", numero_sessao: 2 }), NOMES)
+        .fatoId,
+    ).toBe("vst-1");
+    expect(fatoDaOcupacao(linha({ origem: "avaliacao" }), COM_A_SESSAO).conteudo).toBe("PP 1");
+  });
+});

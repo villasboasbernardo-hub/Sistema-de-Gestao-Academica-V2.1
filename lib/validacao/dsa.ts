@@ -152,6 +152,12 @@ const avaliacao = z
      * *"U.E. 3 a 6"*, são texto e não consomem TA de UE (FR-033).
      */
     avaliacaoCurriculoId: uuid.nullable().default(null),
+    /*
+     * A2 do desenho de 15/10/2026 (aprovado em 16/10/2026): o INSTRUMENTO da prova SEM item do currículo, opcional.
+     * Com item, a ação grava NULO (o instrumento é o do item); sem item, só um dos oferecidos — e quem confere isso
+     * é a ação, pela lista do banco (`instrumentoNaGravacao`), porque o esquema não sabe quais estão ativos.
+     */
+    instrumentoId: uuid.nullable().default(null),
     uesAbordadas: textoOuNulo.default(null),
     outrosInstrutores,
   })
@@ -197,6 +203,26 @@ const vistaProva = z
       });
     }
   });
+
+/**
+ * A SESSÃO DE APLICAÇÃO — a 2ª, 3ª… sessão da MESMA prova (`RN-AV-12`, emenda de 15/10/2026; desenho aprovado em
+ * 16/10/2026, opção A).
+ *
+ * > *"…é UMA prova com N sessões de aplicação, não N provas."* — `RN-AV-12`
+ *
+ * ⚠️ **ELA CHEGA COM O `avaliacaoId`, COMO A VISTA, e SEM aplicador nem fiscal**: os dois são os da avaliação. O
+ *    NÚMERO da sessão também não vem da tela — a ação o calcula (o seguinte ao maior ativo, mínimo 2). A ação confere
+ *    no banco que a prova é desta turma, está viva e foi aplicada no dia ou antes (`recusaDaSessaoDeAplicacao`).
+ */
+const sessaoAplicacao = z.object({
+  tipo: z.literal("sessao_aplicacao"),
+  avaliacaoId: z.string().uuid("Escolha a prova desta sessão."),
+  turmaId: uuid,
+  data,
+  taInicial: ta,
+  tempos,
+  local: textoOuNulo,
+});
 
 const atividade = z
   .object({
@@ -251,6 +277,7 @@ const atividade = z
 export const esquemaDoBloco = z.discriminatedUnion("tipo", [
   aula,
   avaliacao,
+  sessaoAplicacao,
   vistaProva,
   atividade,
 ]);
@@ -277,6 +304,8 @@ export const esquemaDoEstudoIndividualDaSemana = z.object({
 export const ORIGENS_DO_FATO = [
   "aula",
   "avaliacao",
+  /* A 2ª, 3ª… sessão de aplicação (`sessoes_de_aplicacao`, `RN-AV-12`): o `fatoId` é o da SESSÃO. */
+  "sessao_aplicacao",
   "vista_prova",
   "atividade_nao_letiva",
 ] as const;
@@ -346,6 +375,11 @@ const camposDaEdicao = z.object({
    * `CHECK ativ_responsavel_exclusivo`, e a ação zera o outro lado ao gravar um.
    */
   responsavelExterno: textoOuNulo.optional(),
+  /*
+   * A2 do desenho de 15/10/2026: o instrumento da AVALIAÇÃO sem item do currículo. Só na origem `avaliacao`; com
+   * item ligado, a ação grava nulo. `undefined` não mexe.
+   */
+  instrumentoId: uuid.nullable().optional(),
 });
 
 /**

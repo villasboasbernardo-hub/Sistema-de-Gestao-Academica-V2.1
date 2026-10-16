@@ -22,6 +22,8 @@ import {
   type TempoDoCatalogo,
 } from "@/lib/dominio/dsa/horario-do-bloco";
 import type { FatoDaSemana } from "@/lib/dominio/dsa/grade";
+import { idDoLancamento, type OrigemDoFato } from "@/lib/dominio/dsa/posicao-herdada";
+import { rotuloDaSessaoDeAplicacao } from "@/lib/dominio/dsa/sessao-de-aplicacao";
 import { responsavelDoFato, rotuloDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
 import type { FeriadoDaSemana } from "@/lib/dominio/dsa/capacidade";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
@@ -177,7 +179,10 @@ export type LinhaDaOcupacao = {
   readonly fiscal_id: string | null;
   readonly local: string | null;
   readonly herdado: boolean;
-  /** Spec 014 (E-5): a sessão de vista — só nas linhas `vista_prova`. */
+  /**
+   * Spec 014 (E-5 e E-6): a SESSÃO — só nas linhas `vista_prova` e `sessao_aplicacao` (a 2ª, 3ª… sessão de
+   * aplicação, `RN-AV-12`). Nelas o `fato_id` é o da avaliação.
+   */
   readonly sessao_id?: string | null;
   readonly numero_sessao?: number | null;
 };
@@ -221,7 +226,20 @@ export type ConteudoDoFato = {
   readonly conduzExterno?: string | null | undefined;
   /** Spec 014, FR-033: a faixa *"U.E. 3 a 6"* da avaliação, que não consome TA de UE. */
   readonly uesAbordadas?: string | null | undefined;
+  /** A2 (16/10/2026): o instrumento da AVALIAÇÃO sem item (`avaliacoes.instrumento_id`), para o cartão reabrir com ele. */
+  readonly instrumentoId?: string | null | undefined;
+  /** O item do currículo da AVALIAÇÃO — com item, o cartão não oferece instrumento (é o do item). */
+  readonly avaliacaoCurriculoId?: string | null | undefined;
 };
+
+/** As origens que `vw_ocupacao_ta` declara — a que não estiver aqui cai em `aula` (e é o que não pode acontecer). */
+const ORIGENS_DA_OCUPACAO: ReadonlySet<string> = new Set<OrigemDoFato>([
+  "aula",
+  "avaliacao",
+  "sessao_aplicacao",
+  "vista_prova",
+  "atividade_nao_letiva",
+]);
 
 /**
  * A linha da view virada `FatoDaSemana`.
@@ -240,12 +258,15 @@ export function fatoDaOcupacao(
   },
 ): FatoDaSemana {
   /*
-   * ⚠️ **A VISTA SE IDENTIFICA PELA SESSÃO** (spec 014, FR-041): com N sessões, várias linhas têm o mesmo `fato_id`
-   *    (o da avaliação). O id do fato é o da sessão — é ele que as ações recebem —, e o conteúdo é o da sessão
-   *    (que leva o da avaliação, mais quem conduz de fora).
+   * ⚠️ **A SESSÃO SE IDENTIFICA PELA SESSÃO** (spec 014, FR-041; `RN-AV-12`, 16/10/2026): com N sessões — de vista
+   *    ou de aplicação —, várias linhas têm o mesmo `fato_id` (o da avaliação). O id do fato é o da sessão — é ele
+   *    que as ações recebem —, e o conteúdo é o da sessão (que leva o da avaliação). Quem decide é `idDoLancamento`.
    */
-  const idDoFato =
-    linha.origem === "vista_prova" && linha.sessao_id ? linha.sessao_id : linha.fato_id;
+  const idDoFato = idDoLancamento({
+    origem: linha.origem,
+    fatoId: linha.fato_id,
+    sessaoId: linha.sessao_id,
+  });
   const extra = nomes.conteudos.get(idDoFato) ?? nomes.conteudos.get(linha.fato_id);
   /*
    * ⚠️ **A VISTA E A APLICAÇÃO SÃO A MESMA LINHA DE `avaliacoes`** (`RN-AVAL-02`): chegam com o
@@ -254,6 +275,12 @@ export function fatoDaOcupacao(
    * 06/10/2026: a vista imprimia *"Prova Escrita"*, T/E *"PM"*).
    */
   const ehVista = linha.origem === "vista_prova";
+  /*
+   * ⚠️ **A SESSÃO DE APLICAÇÃO É A MESMA PROVA** (`RN-AV-12`): o mesmo aplicador, o mesmo fiscal, a mesma técnica e o
+   *    mesmo tópico da avaliação — o que muda é o dia, o tempo e a marca *"· sessão N"* no rótulo.
+   */
+  const ehSessaoDeAplicacao = linha.origem === "sessao_aplicacao";
+  const ehAplicacao = linha.origem === "avaliacao" || ehSessaoDeAplicacao;
   /*
    * ⚠️ O FISCAL ENTRA NA COLUNA DO INSTRUTOR COM `(FISCAL)`, que é como o documento assinado o
    * escreve (`RF-INSTR-15`, medido nos PDFs). Sem a marca, a coluna diria um nome que não é o de
@@ -275,8 +302,7 @@ export function fatoDaOcupacao(
    */
   const ministrante =
     (ehVista ? extra?.conduzExterno?.trim() || null : null) ?? doCadastro(linha.instrutor_id);
-  const principal =
-    linha.origem === "avaliacao" ? (fiscal ?? ministrante) : (ministrante ?? fiscal);
+  const principal = ehAplicacao ? (fiscal ?? ministrante) : (ministrante ?? fiscal);
   /*
    * Spec 014, FR-046: o 2º nome aparece onde o 1º aparece — *"CC A. / 1ºTen B."*.
    * ⚠️ O 1º é decidido ANTES de juntar os demais, com o responsável de fora do cadastro incluído (`responsavelDoFato`):
@@ -289,15 +315,14 @@ export function fatoDaOcupacao(
     outros.length === 0
       ? primeiro
       : [...(primeiro === null ? [] : [primeiro]), ...outros].join(" / ");
+  /* O tópico da prova, com a faixa de UEs quando o título ainda não a traz (a planilha a escreve no próprio título). */
+  const daProva =
+    extra?.uesAbordadas && !(extra.conteudo ?? "").includes(extra.uesAbordadas)
+      ? `${extra?.conteudo ?? ""} (${extra.uesAbordadas})`
+      : (extra?.conteudo ?? null);
   return {
     fatoId: idDoFato,
-    origem:
-      linha.origem === "aula" ||
-      linha.origem === "avaliacao" ||
-      linha.origem === "vista_prova" ||
-      linha.origem === "atividade_nao_letiva"
-        ? linha.origem
-        : "aula",
+    origem: ORIGENS_DA_OCUPACAO.has(linha.origem) ? (linha.origem as OrigemDoFato) : "aula",
     data: linha.data,
     taInicial: linha.ta_inicial,
     tempos: linha.tempos_consumidos,
@@ -311,12 +336,11 @@ export function fatoDaOcupacao(
       ? `${rotuloDaVistaDeProva({ prova: extra?.conteudo, aplicadaEm: extra?.aplicadaEm })}${
           (linha.numero_sessao ?? 1) > 1 ? ` — sessão ${linha.numero_sessao}` : ""
         }`
-      : /* A faixa de UEs só entra quando o título ainda não a traz (a planilha a escreve no próprio título). */
-        linha.origem === "avaliacao" &&
-          extra?.uesAbordadas &&
-          !(extra.conteudo ?? "").includes(extra.uesAbordadas)
-        ? `${extra?.conteudo ?? ""} (${extra.uesAbordadas})`
-        : (extra?.conteudo ?? null),
+      : ehSessaoDeAplicacao
+        ? rotuloDaSessaoDeAplicacao({ prova: daProva, numero: linha.numero_sessao })
+        : linha.origem === "avaliacao"
+          ? daProva
+          : (extra?.conteudo ?? null),
     tecnica: ehVista ? (extra?.tecnicaDaVista ?? null) : (extra?.tecnica ?? null),
     /* ⚠️ Sem instrutor, entra o responsável de fora do cadastro — ver `responsavelDoFato`, acima. */
     instrutor: responsavel,
@@ -333,6 +357,13 @@ export function fatoDaOcupacao(
       local: linha.local,
       /* `RN-RESP-1`: o nome livre da atividade, para o cartão reabrir com ele (e não o apagar sem querer). */
       responsavelExterno: linha.origem === "atividade_nao_letiva" ? (extra?.externo ?? null) : null,
+      /* A2: o instrumento e o item da AVALIAÇÃO (a 1ª sessão) — só ela os edita. */
+      ...(linha.origem === "avaliacao"
+        ? {
+            instrumentoId: extra?.instrumentoId ?? null,
+            avaliacaoCurriculoId: extra?.avaliacaoCurriculoId ?? null,
+          }
+        : {}),
     },
   };
 }

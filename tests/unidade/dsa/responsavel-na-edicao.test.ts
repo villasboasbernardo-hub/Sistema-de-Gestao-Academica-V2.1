@@ -15,7 +15,10 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { CATEGORIAS_DE_ATIVIDADE } from "@/lib/dominio/categoria-pelo-tipo";
-import { responsavelNaEdicao } from "@/lib/dominio/dsa/responsavel-na-edicao";
+import {
+  FRASE_SEM_APLICADOR_NA_SESSAO,
+  responsavelNaEdicao,
+} from "@/lib/dominio/dsa/responsavel-na-edicao";
 import { FRASE_SEM_NOME_LIVRE } from "@/lib/dominio/responsavel";
 
 const ID = "11111111-1111-4111-8111-111111111111";
@@ -63,7 +66,13 @@ describe("RN-RESP-1 · as colunas de quem responde na edição", () => {
   });
 
   it("quem edita só o horário (nenhum campo de responsável mandado): NENHUMA coluna de responsável, em origem nenhuma", () => {
-    for (const origem of ["aula", "avaliacao", "vista_prova", "atividade_nao_letiva"] as const) {
+    for (const origem of [
+      "aula",
+      "avaliacao",
+      "sessao_aplicacao",
+      "vista_prova",
+      "atividade_nao_letiva",
+    ] as const) {
       expect(
         responsavelNaEdicao({
           origem,
@@ -98,6 +107,24 @@ describe("RN-RESP-1 · as colunas de quem responde na edição", () => {
         origem,
       ).toEqual({ ok: false, mensagem: FRASE_SEM_NOME_LIVRE, campo: "responsavelExterno" });
     }
+  });
+
+  /*
+   * `RN-AV-12` (16/10/2026): *"…é UMA prova com N sessões de aplicação, não N provas."* A sessão não tem aplicador
+   * próprio — trocá-lo por ela trocaria o da prova inteira. ⚠️ O caso que discrimina: com a sessão tratada como a
+   * avaliação, o `instrutorId` virava `instrutor_responsavel_id`, coluna que `sessoes_de_aplicacao` nem tem (`42703`).
+   */
+  it("sessão de aplicação: mandar o aplicador é RECUSADO (é o da prova); o nome livre também", () => {
+    expect(
+      responsavelNaEdicao({ origem: "sessao_aplicacao", categoria: null, instrutorId: ID }),
+    ).toEqual({ ok: false, mensagem: FRASE_SEM_APLICADOR_NA_SESSAO, campo: "instrutorId" });
+    expect(
+      responsavelNaEdicao({
+        origem: "sessao_aplicacao",
+        categoria: null,
+        responsavelExterno: "Fulano de fora",
+      }),
+    ).toEqual({ ok: false, mensagem: FRASE_SEM_NOME_LIVRE, campo: "responsavelExterno" });
   });
 
   it("toda categoria de atividade aceita o nome livre hoje (o comportamento não muda)", () => {

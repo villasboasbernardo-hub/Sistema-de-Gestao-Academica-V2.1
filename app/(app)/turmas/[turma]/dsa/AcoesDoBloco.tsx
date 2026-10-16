@@ -19,6 +19,10 @@
  * 15/10/2026): os dois são exclusivos (`ativ_responsavel_exclusivo`), e trocar um pelo outro manda os dois campos —
  * o novo e o antigo apagado. A Server Action zera o outro lado de qualquer jeito.
  *
+ * ⚠️ **A SESSÃO DE APLICAÇÃO (`RN-AV-12`, 16/10/2026) MOVE, CRESCE E SE EXCLUI SOZINHA**: o cartão dela tem dia,
+ * tempo, quantos tempos e local — sem quem ministra, porque quem aplica e quem fiscaliza são os da prova —, e excluir
+ * inativa SÓ a sessão; a prova continua. E na AVALIAÇÃO sem item do currículo, o «Instrumento» (A2), opcional.
+ *
  * ⚠️ **FOLHA DE CLIENTE, DECLARADA.** As ações chegam por propriedade (Princípio XI); quem decide é a
  * Server Action (`atualizar`), e quem impõe é o banco.
  */
@@ -31,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import type { InstrumentoOferecido } from "@/lib/dominio/dsa/instrumento-da-prova";
 import type { DiaDaGrade, ValoresGravados } from "@/lib/dominio/dsa/grade";
 import type { OrigemDoFato } from "@/lib/dominio/dsa/posicao-herdada";
 import { temposParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
@@ -78,6 +83,8 @@ export type AcoesDoBlocoProps = {
   readonly instrutores: readonly InstrutorParaExibir[];
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
+  /** A2 (16/10/2026): os instrumentos da prova sem item — os ativos, menos a OD. */
+  readonly instrumentos?: readonly InstrumentoOferecido[];
   readonly atualizar: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly excluir: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly aoFechar: () => void;
@@ -94,6 +101,7 @@ export function AcoesDoBloco({
   instrutores,
   escala,
   tecnicas,
+  instrumentos = [],
   atualizar,
   excluir,
   aoFechar,
@@ -109,16 +117,23 @@ export function AcoesDoBloco({
   };
   const ehAula = fato.origem === "aula";
   const ehAtividade = fato.origem === "atividade_nao_letiva";
+  /* `RN-AV-12`: a 2ª, 3ª… sessão da MESMA prova — sem tópico, técnica nem quem ministra próprios. */
+  const ehSessaoDeAplicacao = fato.origem === "sessao_aplicacao";
   /* `RN-RESP-1`: a regra do papel de quem responde. A categoria da atividade não chega ao cartão — vale o comum. */
   const regra = regraDoResponsavel(
     ehAula
       ? { tipo: "aula" }
-      : fato.origem === "avaliacao"
+      : fato.origem === "avaliacao" || ehSessaoDeAplicacao
         ? { tipo: "avaliacao", papel: "aplicador" }
         : { tipo: "atividade", categoria: null },
   );
   const temTopico = fato.origem === "aula" || fato.origem === "avaliacao";
-  const temQuemMinistra = fato.origem !== "vista_prova";
+  const temQuemMinistra = fato.origem !== "vista_prova" && !ehSessaoDeAplicacao;
+  /* A2: o instrumento só na AVALIAÇÃO sem item do currículo — com item, é o do item. */
+  const temInstrumento =
+    fato.origem === "avaliacao" &&
+    (g.avaliacaoCurriculoId ?? null) === null &&
+    instrumentos.length > 0;
 
   /* A disciplina gravada: a da UE, quando há UE; senão a da coluna. */
   const disciplinaGravada =
@@ -136,6 +151,7 @@ export function AcoesDoBloco({
   const [instrutorId, definirInstrutor] = React.useState(g.instrutorId ?? "");
   const [nomeLivre, definirNomeLivre] = React.useState(g.responsavelExterno ?? "");
   const [local, definirLocal] = React.useState(g.local ?? "");
+  const [instrumentoId, definirInstrumento] = React.useState(g.instrumentoId ?? "");
   const [recusa, definirRecusa] = React.useState<string | null>(null);
   const [avisos, definirAvisos] = React.useState<readonly { codigo: string; texto: string }[]>([]);
   const [agindo, definirAgindo] = React.useState(false);
@@ -176,6 +192,10 @@ export function AcoesDoBloco({
       if (texto(conteudo) !== g.conteudo) m["conteudo"] = texto(conteudo);
     }
     if (temTopico && texto(tecnica) !== g.tecnica) m["tecnica"] = texto(tecnica);
+    if (temInstrumento) {
+      const novo = instrumentoId === "" ? null : instrumentoId;
+      if (novo !== (g.instrumentoId ?? null)) m["instrumentoId"] = novo;
+    }
     if (ehAtividade) {
       /*
        * `RN-RESP-1`: na atividade o responsável é OPCIONAL — «Tirar o instrutor» apaga (`null`), e o nome livre só
@@ -304,6 +324,24 @@ export function AcoesDoBloco({
         </>
       ) : null}
 
+      {temInstrumento ? (
+        <EscolhaSimples
+          id="dsa-editar-instrumento"
+          rotulo="Instrumento (opcional)"
+          textoVazio="Sem instrumento"
+          valor={instrumentoId}
+          aoMudar={definirInstrumento}
+          opcoes={instrumentos.map((i) => ({ valor: i.id, rotulo: i.rotulo }))}
+        />
+      ) : null}
+
+      {ehSessaoDeAplicacao ? (
+        <p className="text-texto-suave text-sm" data-slot="responsavel-da-sessao">
+          Quem aplica e quem fiscaliza esta sessão são os da prova: troque-os no lançamento da 1ª
+          sessão.
+        </p>
+      ) : null}
+
       {fato.origem === "atividade_nao_letiva" ? (
         <div className="flex flex-col gap-1">
           <Label htmlFor="dsa-editar-conteudo">O que é</Label>
@@ -392,7 +430,9 @@ export function AcoesDoBloco({
           consequencia={
             fato.origem === "vista_prova"
               ? "A segunda data (a vista de prova) sai do DSA. A avaliação em si continua lançada — elas são o mesmo fato."
-              : "O lançamento sai da grade e do DSA impresso, e deixa de contar na carga horária. Ele não é apagado do banco: fica inativo, e pode voltar."
+              : ehSessaoDeAplicacao
+                ? "Só esta sessão de aplicação sai da grade, do DSA impresso e da carga horária. A prova continua lançada, com as outras sessões. A sessão não é apagada do banco: fica inativa, e pode voltar."
+                : "O lançamento sai da grade e do DSA impresso, e deixa de contar na carga horária. Ele não é apagado do banco: fica inativo, e pode voltar."
           }
           rotuloConfirmar="Excluir"
           aoConfirmar={() =>

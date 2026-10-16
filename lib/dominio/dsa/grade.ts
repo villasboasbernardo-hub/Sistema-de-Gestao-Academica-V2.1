@@ -90,6 +90,12 @@ export type ValoresGravados = {
    * atividade o tem; ausente vale nulo.
    */
   readonly responsavelExterno?: string | null;
+  /**
+   * O instrumento da AVALIAÇÃO sem item do currículo (`avaliacoes.instrumento_id`, A2 do desenho de 15/10/2026) e o
+   * item dela — opcionais porque só a avaliação (a 1ª sessão) os tem; ausentes valem nulo.
+   */
+  readonly instrumentoId?: string | null;
+  readonly avaliacaoCurriculoId?: string | null;
 };
 
 export type BlocoNaGrade = FatoDaSemana & {

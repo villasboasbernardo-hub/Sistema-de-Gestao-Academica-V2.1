@@ -29,6 +29,15 @@
  * da prova pedem o instrutor do cadastro; fiscal, quem conduz a vista e toda atividade aceitam também o «outro
  * responsável (nome livre)», sem cadastro e sem alerta. O campo livre aparece porque a regra o aceita
  * (`ResponsavelOuNomeLivre`), nunca por lista de tipos escrita aqui.
+ *
+ * ⚠️ **A SESSÃO DE APLICAÇÃO É UM TIPO PRÓPRIO, E NÃO OUTRA AVALIAÇÃO** (`RN-AV-12`, emenda de 15/10/2026; desenho
+ * aprovado por Bernardo Villas Boas em 16/10/2026): escolhida a disciplina, o formulário oferece as provas VIVAS da
+ * turma nela aplicadas no dia ou antes (`provasParaSessaoNoDia`), e grava a 2ª, 3ª… sessão da MESMA prova. Sem
+ * aplicador nem fiscal próprios — são os da prova —, e por isso o campo de quem responde não aparece.
+ *
+ * ⚠️ **O INSTRUMENTO DA PROVA SEM ITEM** (A2 do mesmo desenho): na avaliação sem item do currículo escolhido, o
+ * «Instrumento» é oferecido, opcional (os ativos de `instrumentos_avaliacao`, menos a OD). Com item, ele não aparece
+ * e vai nulo — o instrumento é o do item.
  */
 "use client";
 
@@ -40,7 +49,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import type { InstrumentoOferecido } from "@/lib/dominio/dsa/instrumento-da-prova";
 import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/rotulos";
+import { provasParaSessaoNoDia } from "@/lib/dominio/dsa/sessao-de-aplicacao";
 import type { TempoParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { regraDoResponsavel } from "@/lib/dominio/responsavel";
@@ -84,6 +95,8 @@ export type AvaliacaoOferecida = {
   readonly titulo: string | null;
   readonly sessoes: readonly number[];
   readonly proximaSessao: number;
+  /** As sessões de APLICAÇÃO ativas (2, 3…; `RN-AV-12`): a seguinte é a que o tipo «Sessão de aplicação» abre. */
+  readonly sessoesDeAplicacao: readonly number[];
   readonly rotulo: string;
 };
 
@@ -122,6 +135,8 @@ export type FormularioDeLancamentoProps = {
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   readonly tiposDeAvaliacao: readonly string[];
+  /** A2 (16/10/2026): os instrumentos da prova sem item do currículo — os ativos, menos a OD. */
+  readonly instrumentos?: readonly InstrumentoOferecido[];
   readonly subtipos: readonly TipoOferecido[];
   readonly podeAtividadeGlobal?: boolean;
   readonly lancar: (entrada: unknown) => Promise<ResultadoDaAcao>;
@@ -139,6 +154,7 @@ function listaDeOutros(texto: string): string[] {
 type Tipo =
   | "aula"
   | "avaliacao"
+  | "sessao_aplicacao"
   | "vista_prova"
   | "AEC"
   | "TAD"
@@ -149,6 +165,7 @@ type Tipo =
 const TIPOS: readonly (readonly [Tipo, string])[] = [
   ["aula", "Aula"],
   ["avaliacao", "Avaliação"],
+  ["sessao_aplicacao", "Sessão de aplicação (prova já aplicada)"],
   ["vista_prova", "Vista de prova"],
   ["AEC", "AEC"],
   ["TAD", "TAD"],
@@ -193,6 +210,7 @@ export function FormularioDeLancamento({
   escala,
   tecnicas,
   tiposDeAvaliacao,
+  instrumentos = [],
   subtipos,
   podeAtividadeGlobal = false,
   lancar,
@@ -222,6 +240,8 @@ export function FormularioDeLancamento({
   /* Spec 014: o item do currículo (FR-039), a faixa de UEs (FR-033), os demais instrutores (FR-046) e quem conduz
      a sessão de vista (FR-043). */
   const [itemId, definirItem] = React.useState("");
+  /* A2: o instrumento da prova SEM item do currículo — opcional. */
+  const [instrumentoId, definirInstrumento] = React.useState("");
   const [uesAbordadas, definirUesAbordadas] = React.useState("");
   const [outros, definirOutros] = React.useState("");
   const [quemConduz, definirQuemConduz] = React.useState("");
@@ -234,13 +254,15 @@ export function FormularioDeLancamento({
   const unidadesDaDisciplina = unidades.filter((u) => u.disciplinaId === disciplinaId);
   const avaliacoesDaDisciplina = avaliacoesParaVista.filter((a) => a.disciplinaId === disciplinaId);
   const itensDaDisciplina = avaliacoesDoCurriculo.filter((i) => i.disciplinaId === disciplinaId);
+  /* `RN-AV-12`: as provas da disciplina aplicadas no dia ou antes, cada uma com a sessão que abriria. */
+  const provasDaSessao = provasParaSessaoNoDia(avaliacoesParaVista, { disciplinaId, dia });
   /* ⚠️ O alerta do item 1c: aula, com disciplina, e SEM unidade. */
   const semUnidade = tipo === "aula" && disciplinaId !== "" && unidadeId === "";
   /* `RN-RESP-1`: a regra do papel principal deste tipo — quem ministra, quem aplica, quem conduz, quem responde. */
   const regraPrincipal = regraDoResponsavel(
     tipo === "aula"
       ? { tipo: "aula" }
-      : tipo === "avaliacao"
+      : tipo === "avaliacao" || tipo === "sessao_aplicacao"
         ? { tipo: "avaliacao", papel: "aplicador" }
         : tipo === "vista_prova"
           ? { tipo: "vista" }
@@ -274,6 +296,8 @@ export function FormularioDeLancamento({
   /* O tempo do item é o palpite dos tempos — editável, como todo pré-preenchimento. */
   function escolherItem(id: string): void {
     definirItem(id);
+    /* Com item, o instrumento é o dele: o escolhido à mão sai. */
+    if (id !== "") definirInstrumento("");
     const i = avaliacoesDoCurriculo.find((x) => x.itemId === id);
     if (i?.tempo) definirTempos(i.tempo);
   }
@@ -332,9 +356,15 @@ export function FormularioDeLancamento({
         fiscalId: nulo(fiscalId),
         nomeFiscalExterno: fiscalId === "" ? texto(nomeFiscalExterno) : null,
         avaliacaoCurriculoId: nulo(itemId),
+        /* A2: o instrumento só viaja SEM item — com item, vai nulo (o instrumento é o do item). */
+        instrumentoId: itemId === "" ? nulo(instrumentoId) : null,
         uesAbordadas: texto(uesAbordadas),
         outrosInstrutores: listaDeOutros(outros),
       };
+    }
+    if (tipo === "sessao_aplicacao") {
+      /* `RN-AV-12`: só a prova e o horário — o número, o aplicador e o fiscal são do servidor e da prova. */
+      return { tipo: "sessao_aplicacao", ...comum, avaliacaoId };
     }
     if (tipo === "vista_prova") {
       return {
@@ -532,6 +562,33 @@ export function FormularioDeLancamento({
         />
       ) : null}
 
+      {/*
+        `RN-AV-12` (16/10/2026): a prova de que esta é a 2ª, 3ª… sessão — só as aplicadas no dia ou antes. A sessão
+        não é prova nova: o «X de Y» continua contando a prova uma vez.
+      */}
+      {tipo === "sessao_aplicacao" && disciplinaId !== "" ? (
+        <EscolhaSimples
+          id="dsa-prova-da-sessao"
+          rotulo="De qual prova é a sessão"
+          obrigatorio
+          textoVazio={
+            provasDaSessao.length === 0
+              ? "Nenhuma prova desta disciplina aplicada até este dia"
+              : "Escolha a prova…"
+          }
+          valor={avaliacaoId}
+          aoMudar={definirAvaliacao}
+          ajuda="A sessão de aplicação é a MESMA prova em outro dia: ela não cria avaliação nova, e quem aplica e fiscaliza são os da prova."
+          opcoes={provasDaSessao.map((a) => ({
+            valor: a.id,
+            rotulo:
+              `${a.rotulo}${a.aplicadaEm ? ` de ${dataParaLeitura(a.aplicadaEm)}` : ""}` +
+              (a.titulo ? ` — ${a.titulo}` : "") +
+              ` · sessão ${a.proximaSessao}`,
+          }))}
+        />
+      ) : null}
+
       {/* Spec 014, FR-032 e FR-039: a avaliação do currículo que esta prova cumpre — obrigatória se a disciplina tem item. */}
       {tipo === "avaliacao" && disciplinaId !== "" && itensDaDisciplina.length > 0 ? (
         <EscolhaSimples
@@ -548,6 +605,22 @@ export function FormularioDeLancamento({
               `${i.rotulo}${i.tempo ? ` — ${i.tempo} TA` : " — tempo não definido"}` +
               (i.aplicada ? " (já aplicada)" : ""),
           }))}
+        />
+      ) : null}
+
+      {/*
+        A2 (16/10/2026): o INSTRUMENTO, só na prova SEM item do currículo escolhido, e opcional. Com item, ele é o do
+        item — e a Server Action grava nulo de qualquer jeito.
+      */}
+      {tipo === "avaliacao" && disciplinaId !== "" && itemId === "" && instrumentos.length > 0 ? (
+        <EscolhaSimples
+          id="dsa-instrumento"
+          rotulo="Instrumento (opcional)"
+          textoVazio="Sem instrumento"
+          valor={instrumentoId}
+          aoMudar={definirInstrumento}
+          ajuda="Só na prova sem avaliação do currículo: com item, o instrumento é o dele."
+          opcoes={instrumentos.map((i) => ({ valor: i.id, rotulo: i.rotulo }))}
         />
       ) : null}
 
@@ -642,6 +715,11 @@ export function FormularioDeLancamento({
           aoMudarNomeLivre={definirConduzExterno}
           slot="quem-conduz-a-vista"
         />
+      ) : tipo === "sessao_aplicacao" ? (
+        /* `RN-AV-12`: a sessão não tem responsável próprio — e dizer isso evita procurar o campo. */
+        <p className="text-texto-suave text-sm" data-slot="responsavel-da-sessao">
+          Quem aplica e quem fiscaliza esta sessão são os da prova (a 1ª sessão).
+        </p>
       ) : (
         <ResponsavelOuNomeLivre
           regra={regraPrincipal}
@@ -677,7 +755,7 @@ export function FormularioDeLancamento({
         </div>
       ) : null}
 
-      {tipo !== "vista_prova" ? (
+      {tipo !== "vista_prova" && tipo !== "sessao_aplicacao" ? (
         <div className="flex flex-col gap-1">
           {/* Spec 014, FR-046: o 2º nome, como no documento; nada vai para observações. */}
           <Label htmlFor="dsa-outros-instrutores">Demais instrutores (opcional)</Label>

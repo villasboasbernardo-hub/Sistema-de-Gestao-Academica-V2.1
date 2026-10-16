@@ -15,6 +15,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  idDoLancamento,
   MOTIVO_NUNCA_POSICIONADO,
   MOTIVO_POSICAO_HERDADA,
   motivoDaFaltaDePosicao,
@@ -24,10 +25,11 @@ import {
   type OrigemDoFato,
 } from "@/lib/dominio/dsa/posicao-herdada";
 
-/** As quatro origens da `vw_ocupacao_ta`, para os casos que valem em todas. */
+/** As origens da `vw_ocupacao_ta` — cinco desde a sessão de aplicação (`RN-AV-12`) —, para os casos que valem em todas. */
 const ORIGENS: readonly OrigemDoFato[] = [
   "aula",
   "avaliacao",
+  "sessao_aplicacao",
   "vista_prova",
   "atividade_nao_letiva",
 ];
@@ -174,5 +176,51 @@ describe("`Q-12` · a degradação que o tipo não impede, porque o fato vem de 
 
     expect(semPosicao(foraDaFaixa)).toBe(false);
     expect(motivoDaFaltaDePosicao(foraDaFaixa)).toBeNull();
+  });
+});
+
+/*
+ * `RN-AV-12` (spec 014, emenda de 15/10/2026): *"…é UMA prova com N sessões de aplicação, não N provas."*
+ *
+ * ⚠️ **O CASO QUE DISCRIMINA É A SESSÃO DE APLICAÇÃO** (DoD 8): até 16/10/2026 só a VISTA trocava o `fato_id` da
+ *    avaliação pelo `sessao_id`. Com a regra antiga (`origem === "vista_prova"`), a 2ª sessão de aplicação saía com o
+ *    id DA AVALIAÇÃO — mover a sessão moveria a prova, e excluí-la cancelaria a prova.
+ */
+describe("`RN-AV-12` · o id do lançamento é o da SESSÃO nas sessões, e o do fato no resto", () => {
+  const AVALIACAO = "aval-1";
+  const SESSAO = "sessao-2";
+
+  it("a sessão de APLICAÇÃO se identifica pela sessão, nunca pela avaliação", () => {
+    expect(
+      idDoLancamento({ origem: "sessao_aplicacao", fatoId: AVALIACAO, sessaoId: SESSAO }),
+    ).toBe(SESSAO);
+  });
+
+  it("a sessão de VISTA também (a regra que já valia, agora no mesmo lugar)", () => {
+    expect(idDoLancamento({ origem: "vista_prova", fatoId: AVALIACAO, sessaoId: SESSAO })).toBe(
+      SESSAO,
+    );
+  });
+
+  it("a avaliação (a 1ª sessão), a aula e a atividade ficam com o fato — mesmo que um `sessao_id` venha", () => {
+    for (const origem of ["avaliacao", "aula", "atividade_nao_letiva"]) {
+      expect(idDoLancamento({ origem, fatoId: AVALIACAO, sessaoId: SESSAO }), origem).toBe(
+        AVALIACAO,
+      );
+    }
+  });
+
+  it("sessão sem `sessao_id` (linha antiga, sem a coluna): o fato, em vez de um id vazio", () => {
+    expect(idDoLancamento({ origem: "sessao_aplicacao", fatoId: AVALIACAO, sessaoId: null })).toBe(
+      AVALIACAO,
+    );
+    expect(idDoLancamento({ origem: "vista_prova", fatoId: AVALIACAO })).toBe(AVALIACAO);
+  });
+
+  it("a sessão de aplicação NÃO herda a sentinela da avaliação — a `Q-12` é da avaliação herdada no 1º TA", () => {
+    expect(semPosicao(fato({ origem: "sessao_aplicacao", herdado: true, taInicial: 1 }))).toBe(
+      false,
+    );
+    expect(semPosicao(fato({ origem: "avaliacao", herdado: true, taInicial: 1 }))).toBe(true);
   });
 });

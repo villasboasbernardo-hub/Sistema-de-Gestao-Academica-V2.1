@@ -400,3 +400,81 @@ describe("`RN-RESP-1` · o nome livre da atividade no cartão de edição (emend
     }
   });
 });
+
+/*
+ * `RN-AV-12` (spec 014, emenda de 15/10/2026; desenho aprovado em 16/10/2026): *"…é UMA prova com N sessões de
+ * aplicação, não N provas."* E A2 do mesmo desenho: o instrumento da prova sem item.
+ */
+describe("`RN-AV-12` · a sessão de aplicação e o instrumento da prova sem item", () => {
+  const sessaoBase = {
+    tipo: "sessao_aplicacao" as const,
+    avaliacaoId: ID,
+    turmaId: ID,
+    data: "2026-04-09",
+    taInicial: 6,
+    tempos: 1,
+    local: "Sala 03",
+  };
+
+  it("a sessão chega com a prova (`avaliacaoId`) e o horário — sem aplicador, sem fiscal, sem número", () => {
+    const r = esquemaDoBloco.safeParse(sessaoBase);
+    expect(r.success).toBe(true);
+    expect(r.success && r.data).toEqual(sessaoBase);
+  });
+
+  it("sem a prova é recusada — e a prova não escolhida na tela (texto vazio) leva a frase do que escolher", () => {
+    const semProva: Record<string, unknown> = { ...sessaoBase };
+    delete semProva["avaliacaoId"];
+    expect(recusa(semProva)).not.toBeNull();
+    expect(recusa({ ...sessaoBase, avaliacaoId: "" })).toBe("Escolha a prova desta sessão.");
+  });
+
+  it("a faixa de TA é a do banco", () => {
+    expect(recusa({ ...sessaoBase, taInicial: 13 })).toContain("até 12");
+  });
+
+  it("a origem `sessao_aplicacao` é aceita em mover, editar, atualizar e excluir", () => {
+    const fato = { fatoId: ID, origem: "sessao_aplicacao" };
+    expect(
+      esquemaDoMovimento.safeParse({ ...fato, data: "2026-04-09", taInicial: 3 }).success,
+    ).toBe(true);
+    expect(esquemaDaEdicao.safeParse({ ...fato, local: null }).success).toBe(true);
+    expect(esquemaDaAtualizacao.safeParse({ ...fato, tempos: 2 }).success).toBe(true);
+    expect(esquemaDaExclusao.safeParse(fato).success).toBe(true);
+  });
+
+  it("A2 · a avaliação aceita o instrumento, e sem ele ele chega NULO (não ausente)", () => {
+    const avaliacao = {
+      tipo: "avaliacao" as const,
+      turmaId: ID,
+      cursoId: ID,
+      data: "2026-04-07",
+      taInicial: 1,
+      tempos: 2,
+      local: null,
+      disciplinaId: ID,
+      tipoAvaliacao: "Prova Escrita",
+      instrutorId: ID,
+      conteudo: null,
+      tecnica: null,
+      fiscalId: null,
+      nomeFiscalExterno: null,
+    };
+    const sem = esquemaDoBloco.safeParse(avaliacao);
+    expect(sem.success && sem.data.tipo === "avaliacao" && sem.data.instrumentoId).toBeNull();
+    const com = esquemaDoBloco.safeParse({ ...avaliacao, instrumentoId: OUTRO });
+    expect(com.success && com.data.tipo === "avaliacao" && com.data.instrumentoId).toBe(OUTRO);
+    expect(recusa({ ...avaliacao, instrumentoId: "PP" })).toBe("Identificador inválido.");
+  });
+
+  it("A2 · na edição, instrumento ausente é «não mexa» e nulo é «apague»", () => {
+    const ausente = esquemaDaAtualizacao.safeParse({ fatoId: ID, origem: "avaliacao" });
+    expect(ausente.success && "instrumentoId" in ausente.data).toBe(false);
+    const nulo = esquemaDaAtualizacao.safeParse({
+      fatoId: ID,
+      origem: "avaliacao",
+      instrumentoId: null,
+    });
+    expect(nulo.success && nulo.data.instrumentoId).toBeNull();
+  });
+});

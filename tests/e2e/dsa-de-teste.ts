@@ -1018,7 +1018,12 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
 
 /** Deixa a base no estado inicial. Roda ANTES e DEPOIS — execução interrompida não inviabiliza a seguinte. */
 /**
- * Apaga avaliações da amostra COM as sessões de vista delas — e confere o erro, que antes era descartado.
+ * Apaga avaliações da amostra COM as sessões de vista e as SESSÕES DE APLICAÇÃO delas — e confere o erro de cada
+ * exclusão, que antes era descartado.
+ *
+ * ⚠️ `sessoes_de_aplicacao` tem DUAS FKs `restrict` para `avaliacoes` (spec 014, RN-AV-12): a da prova
+ * (`avaliacao_id`) e a da trilha de «juntar» (`juntada_de_avaliacao_id`). As duas saem antes, ou o `delete` da
+ * avaliação é recusado e a turma suja passa para o arquivo seguinte do mesmo processo.
  */
 async function apagarAvaliacoes(
   filtro: (q: ReturnType<ReturnType<SupabaseClient["from"]>["select"]>) => typeof q,
@@ -1026,6 +1031,17 @@ async function apagarAvaliacoes(
   const { data } = await filtro(admin().from("avaliacoes").select("id"));
   const ids = ((data ?? []) as { id: string }[]).map((a) => a.id);
   if (ids.length === 0) return;
+  for (const coluna of ["avaliacao_id", "juntada_de_avaliacao_id"] as const) {
+    const { error: erroAplicacao } = await admin()
+      .from("sessoes_de_aplicacao")
+      .delete()
+      .in(coluna, ids);
+    if (erroAplicacao) {
+      throw new Error(
+        `falha ao limpar as sessões de aplicação (${coluna}): ${erroAplicacao.message}`,
+      );
+    }
+  }
   const { error: erroSessoes } = await admin()
     .from("vistas_de_avaliacao")
     .delete()

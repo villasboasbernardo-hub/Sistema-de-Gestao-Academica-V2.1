@@ -55,6 +55,16 @@ import {
 } from "@/lib/dominio/categoria-pelo-tipo";
 import { avisoDoEmpurrao, empurrarEmCascata, ultimoTempoDoDia } from "@/lib/dominio/dsa/empurrar";
 import { responsavelNaEdicao } from "@/lib/dominio/dsa/responsavel-na-edicao";
+import { idDoLancamento } from "@/lib/dominio/dsa/posicao-herdada";
+import {
+  numeroDaProximaSessao,
+  recusaDaSessaoDeAplicacao,
+} from "@/lib/dominio/dsa/sessao-de-aplicacao";
+import {
+  instrumentoNaGravacao,
+  instrumentosOferecidos,
+  type InstrumentoOferecido,
+} from "@/lib/dominio/dsa/instrumento-da-prova";
 import { recusaDoNomeLivre, regraDoResponsavel } from "@/lib/dominio/responsavel";
 import type { Json } from "@/lib/tipos/database";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
@@ -254,17 +264,20 @@ async function vereditoDosTetos(
   const semana = semanaIsoDe(entrada.data);
   if (tetos === null || semana === null) return { bloqueios: [], alertas: [] };
 
+  /*
+   * ⚠️ **O PRÓPRIO SAI PELO ID DO LANÇAMENTO, NÃO PELO `fato_id` DA VIEW** (`RN-AV-12`, 16/10/2026): na sessão de
+   *    aplicação e na de vista o `fato_id` é o DA AVALIAÇÃO, e um `.neq("fato_id", <id da sessão>)` não tirava a
+   *    sessão movida da conta — ela contava duas vezes. Quem traduz é `idDoLancamento`, o mesmo da grade.
+   */
   const ocupacaoDaSemana = supabase
     .from("vw_ocupacao_ta")
-    .select("data, disciplina_id, tempos_consumidos, ta_final")
+    .select("fato_id, origem, sessao_id, data, disciplina_id, tempos_consumidos, ta_final")
     .eq("turma_id", entrada.turmaId)
     .gte("data", semana.segunda)
     .lte("data", semana.domingo);
 
   const [ocupacaoRes, discRes, regimeRes] = await Promise.all([
-    entrada.ignorarFatoId === undefined
-      ? ocupacaoDaSemana
-      : ocupacaoDaSemana.neq("fato_id", entrada.ignorarFatoId),
+    ocupacaoDaSemana,
     entrada.disciplinaId === null
       ? Promise.resolve({ data: null })
       : supabase
@@ -279,12 +292,22 @@ async function vereditoDosTetos(
       .maybeSingle(),
   ]);
 
-  const ocupacao = (ocupacaoRes.data ?? []) as {
-    data: string;
-    disciplina_id: string | null;
-    tempos_consumidos: number | null;
-    ta_final: number | null;
-  }[];
+  const ocupacao = (
+    (ocupacaoRes.data ?? []) as {
+      fato_id: string;
+      origem: string;
+      sessao_id: string | null;
+      data: string;
+      disciplina_id: string | null;
+      tempos_consumidos: number | null;
+      ta_final: number | null;
+    }[]
+  ).filter(
+    (o) =>
+      entrada.ignorarFatoId === undefined ||
+      idDoLancamento({ origem: o.origem, fatoId: o.fato_id, sessaoId: o.sessao_id }) !==
+        entrada.ignorarFatoId,
+  );
 
   /* O que a disciplina já tem na semana, MAIS o que está entrando. */
   const jaNaSemana = ocupacao
@@ -477,6 +500,7 @@ type Operacao = {
 const PALAVRA_DA_ORIGEM: Readonly<Record<string, string>> = {
   aula: "aula",
   avaliacao: "avaliação",
+  sessao_aplicacao: "sessão de aplicação",
   vista_prova: "vista de prova",
   atividade_nao_letiva: "atividade",
 };
@@ -541,8 +565,9 @@ async function cascataDaTurma(
   const daTurma = paradas.filter((p) => p.turmaId === null || p.turmaId === turmaId);
   const naoEmpurraveis = new Set(daTurma.map((p) => p.fatoId).filter((f) => f !== undefined));
   /*
-   * ⚠️ **A VISTA SE IDENTIFICA PELA SESSÃO** (spec 014, FR-041, T207): a view entrega o `fato_id` da avaliação e o
-   *    `sessao_id` da vista; com N sessões, duas linhas teriam o mesmo `fato_id`. O id da vista é o da sessão.
+   * ⚠️ **A SESSÃO SE IDENTIFICA PELA SESSÃO** (spec 014, FR-041, T207; `RN-AV-12`, 16/10/2026): a view entrega o
+   *    `fato_id` da avaliação e o `sessao_id` da sessão de vista OU de aplicação; com N sessões, N linhas teriam o
+   *    mesmo `fato_id`. O id é o da sessão — pela MESMA `idDoLancamento` da grade.
    */
   const linhas = (
     (ocupacaoRes.data ?? []) as {
@@ -554,9 +579,10 @@ async function cascataDaTurma(
       sessao_id: string | null;
     }[]
   )
-    .map((l) =>
-      l.origem === "vista_prova" && l.sessao_id !== null ? { ...l, fato_id: l.sessao_id } : l,
-    )
+    .map((l) => ({
+      ...l,
+      fato_id: idDoLancamento({ origem: l.origem, fatoId: l.fato_id, sessaoId: l.sessao_id }),
+    }))
     .filter(
       (l) =>
         l.ta_inicial !== null &&
@@ -619,6 +645,29 @@ async function cascataDaTurma(
     };
   });
   return { ok: true, operacoes, aviso: avisoDoEmpurrao(resultado.empurrados, entrada.data) };
+}
+
+/**
+ * Os instrumentos que a prova SEM item pode ter (A2 do desenho de 15/10/2026): os ativos de
+ * `instrumentos_avaliacao`, menos a OD — pela MESMA função que monta a escolha do formulário.
+ */
+async function instrumentosDoBanco(
+  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+): Promise<readonly InstrumentoOferecido[]> {
+  const { data } = await supabase
+    .from("config_listas")
+    .select("id, valor, rotulo_exibicao, ativo")
+    .eq("lista", "instrumentos_avaliacao");
+  return instrumentosOferecidos(
+    (
+      (data ?? []) as {
+        id: string;
+        valor: string;
+        rotulo_exibicao: string | null;
+        ativo: boolean;
+      }[]
+    ).map((l) => ({ id: l.id, valor: l.valor, rotulo: l.rotulo_exibicao, ativo: l.ativo })),
+  );
 }
 
 /** Aplica as operações numa transação só — devolve a frase da recusa, ou `true`. */
@@ -710,6 +759,55 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
   }
 
   /*
+   * ⚠️ **`RN-AV-12`: A SESSÃO DE APLICAÇÃO É DA PROVA, E A PROVA É LIDA ANTES DA CASCATA** (16/10/2026). O servidor
+   *    confere — e não a tela — que ela é desta turma, está viva e foi aplicada no dia ou antes
+   *    (`recusaDaSessaoDeAplicacao`); o número é o seguinte ao maior ATIVO, mínimo 2 (`numeroDaProximaSessao`). O
+   *    curso dela dá o regime para a cascata, que a sessão empurra como qualquer bloco (`D-DSA-3`).
+   */
+  let provaDaSessao: { readonly cursoId: string; readonly numero: number } | null = null;
+  if (bloco.tipo === "sessao_aplicacao") {
+    const [{ data: provaLida, error: erroProva }, { data: sessoesAtivas, error: erroSessoes }] =
+      await Promise.all([
+        supabase
+          .from("avaliacoes")
+          .select("turma_id, curso_id, status, data_avaliacao")
+          .eq("id", bloco.avaliacaoId)
+          .maybeSingle(),
+        supabase
+          .from("sessoes_de_aplicacao")
+          .select("numero")
+          .eq("avaliacao_id", bloco.avaliacaoId)
+          .eq("status", "ativo"),
+      ]);
+    if (erroProva) return falha(traduzirRecusa(erroProva as ErroDoBanco));
+    if (erroSessoes) return falha(traduzirRecusa(erroSessoes as ErroDoBanco));
+    const p = provaLida as {
+      turma_id: string;
+      curso_id: string;
+      status: string;
+      data_avaliacao: string | null;
+    } | null;
+    const recusa = recusaDaSessaoDeAplicacao({
+      prova:
+        p === null
+          ? null
+          : { turmaId: p.turma_id, status: p.status, dataAvaliacao: p.data_avaliacao },
+      turmaId: bloco.turmaId,
+      dia: bloco.data,
+    });
+    if (recusa !== null || p === null) {
+      return falha(recusa ?? "Não encontrei esta prova.", "avaliacaoId");
+    }
+    provaDaSessao = {
+      cursoId: p.curso_id,
+      numero: numeroDaProximaSessao(
+        ((sessoesAtivas ?? []) as { numero: number }[]).map((x) => x.numero),
+      ),
+    };
+  }
+  const cursoDoBloco = "cursoId" in bloco ? bloco.cursoId : (provaDaSessao?.cursoId ?? null);
+
+  /*
    * ⚠️ **`D-DSA-3`: O BLOCO NOVO EMPURRA OS SEGUINTES** (decisão de Bernardo Villas Boas, 08/10/2026,
    * no lugar do aviso de sobreposição). Não cabendo, recusa ANTES de gravar qualquer coisa; cabendo, o
    * lançamento e os empurrados vão numa transação só (`gravarBloco`).
@@ -717,7 +815,7 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
   const cascata = await cascataDaTurma(supabase, {
     /* O Apoio convive com a aula no mesmo tempo (A-6): não empurra ninguém. */
     turmaId: categoriaDaAtividade === "Apoio_Individualizado" ? null : bloco.turmaId,
-    cursoId: "cursoId" in bloco ? bloco.cursoId : null,
+    cursoId: cursoDoBloco,
     data: bloco.data,
     taInicial: bloco.taInicial,
     tempos: bloco.tempos,
@@ -748,7 +846,7 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     const gravado = await gravarEmTransacao(
       supabase,
       [principal, ...cascata.operacoes],
-      "cursoId" in bloco ? bloco.cursoId : null,
+      cursoDoBloco,
     );
     return gravado === true ? null : gravado;
   };
@@ -829,22 +927,28 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
      *    composta do banco também recusa). Lançar o item já aplicado é ALERTA (edge case, `RN-DEG-02`).
      * ⚠️ **D-AV-3: O APLICADOR SEM HABILITAÇÃO GRAVA COM AVISO**, nunca recusa (`avisoDeHabilitacao`).
      */
-    const [{ data: itensDaDisciplina }, { data: jaLigadas }, aviso] = await Promise.all([
-      supabase
-        .from("avaliacoes_curriculo")
-        .select("id")
-        .eq("disciplina_id", bloco.disciplinaId)
-        .eq("status", "ativo"),
-      bloco.avaliacaoCurriculoId === null
-        ? Promise.resolve({ data: [] })
-        : supabase
-            .from("avaliacoes")
-            .select("id")
-            .eq("turma_id", bloco.turmaId)
-            .eq("avaliacao_curriculo_id", bloco.avaliacaoCurriculoId)
-            .in("status", [...STATUS_DE_AVALIACAO_VIVA]),
-      avisoDoAplicador(supabase, bloco.instrutorId, bloco.disciplinaId),
-    ]);
+    const [{ data: itensDaDisciplina }, { data: jaLigadas }, aviso, oferecidos] = await Promise.all(
+      [
+        supabase
+          .from("avaliacoes_curriculo")
+          .select("id")
+          .eq("disciplina_id", bloco.disciplinaId)
+          .eq("status", "ativo"),
+        bloco.avaliacaoCurriculoId === null
+          ? Promise.resolve({ data: [] })
+          : supabase
+              .from("avaliacoes")
+              .select("id")
+              .eq("turma_id", bloco.turmaId)
+              .eq("avaliacao_curriculo_id", bloco.avaliacaoCurriculoId)
+              .in("status", [...STATUS_DE_AVALIACAO_VIVA]),
+        avisoDoAplicador(supabase, bloco.instrutorId, bloco.disciplinaId),
+        /* A2: a lista só é lida quando há instrumento a conferir (prova sem item). */
+        bloco.avaliacaoCurriculoId === null && bloco.instrumentoId !== null
+          ? instrumentosDoBanco(supabase)
+          : Promise.resolve([] as readonly InstrumentoOferecido[]),
+      ],
+    );
     const itens = (itensDaDisciplina ?? []) as { id: string }[];
     if (itens.length > 0 && bloco.avaliacaoCurriculoId === null) {
       return falha(
@@ -858,6 +962,16 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     ) {
       return falha("Esta avaliação do currículo não é desta disciplina.", "avaliacaoCurriculoId");
     }
+    /*
+     * ⚠️ **A2: O INSTRUMENTO DA PROVA SEM ITEM** (desenho de 15/10/2026, aprovado em 16/10/2026): com item, NULO — o
+     *    instrumento é o do item; sem item, opcional e só um dos oferecidos (ativos, menos a OD).
+     */
+    const instrumento = instrumentoNaGravacao({
+      avaliacaoCurriculoId: bloco.avaliacaoCurriculoId,
+      instrumentoId: bloco.instrumentoId,
+      oferecidos,
+    });
+    if (!instrumento.ok) return falha(instrumento.mensagem, "instrumentoId");
     const alertasDaAvaliacao = [
       ...(aviso === null ? [] : [aviso]),
       ...((jaLigadas ?? []).length > 0
@@ -882,12 +996,34 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
       metodologia: bloco.tecnica,
       local: bloco.local,
       avaliacao_curriculo_id: bloco.avaliacaoCurriculoId,
+      instrumento_id: instrumento.instrumentoId,
       ues_abordadas: bloco.uesAbordadas,
       outros_instrutores: bloco.outrosInstrutores,
     });
     if (erro !== null) return falha(erro);
     revalidar();
     return { ok: true, id, avisos: comAviso(alertasDaAvaliacao, sobreposicao) };
+  }
+
+  if (bloco.tipo === "sessao_aplicacao") {
+    /*
+     * ⚠️ **`RN-AV-12`: A 2ª, 3ª… SESSÃO DA MESMA PROVA, EM `sessoes_de_aplicacao`** — nunca outra linha de
+     *    `avaliacoes` (o «X de Y» conta a prova uma vez). Sem aplicador nem fiscal: são os da avaliação. O código
+     *    `SAP-` é do banco (`DEFAULT`), e o `id` vai gerado antes, sem `RETURNING` (gotcha 4.1).
+     */
+    if (provaDaSessao === null) return falha("Não encontrei esta prova.", "avaliacaoId");
+    const erro = await gravarBloco("sessoes_de_aplicacao", {
+      id,
+      avaliacao_id: bloco.avaliacaoId,
+      numero: provaDaSessao.numero,
+      data: bloco.data,
+      ta_inicial: bloco.taInicial,
+      tempos_consumidos: bloco.tempos,
+      local: bloco.local,
+    });
+    if (erro !== null) return falha(erro);
+    revalidar();
+    return { ok: true, id, avisos: comAviso([], sobreposicao) };
   }
 
   if (bloco.tipo === "vista_prova") {
@@ -1109,6 +1245,8 @@ type FatoDoBanco = {
   readonly herdado: boolean;
   /** A categoria normativa da ATIVIDADE (`RN-RESP-1` decide o nome livre por ela); nas demais origens, `null`. */
   readonly categoria: CategoriaDeAtividade | null;
+  /** O item do currículo da AVALIAÇÃO (A2: com item, o instrumento é o dele); nas demais origens, ausente. */
+  readonly avaliacaoCurriculoId?: string | null;
 };
 
 async function lerFato(
@@ -1170,6 +1308,41 @@ async function lerFato(
     };
   }
 
+  if (origem === "sessao_aplicacao") {
+    /*
+     * `RN-AV-12` (16/10/2026): a sessão de aplicação é a SESSÃO (`sessoes_de_aplicacao`); turma, curso e disciplina
+     * vêm da avaliação. ⚠️ A tabela tem DUAS FKs para `avaliacoes` (a prova e a trilha de «juntar»): o embutido
+     * nomeia a da prova, ou o PostgREST recusa por ambiguidade.
+     */
+    const { data } = await supabase
+      .from("sessoes_de_aplicacao")
+      .select(
+        "data, ta_inicial, tempos_consumidos, origem_migracao_v1, editado_em, avaliacao:avaliacoes!sessoes_de_aplicacao_avaliacao_id_fkey(turma_id, curso_id, disciplina_id)",
+      )
+      .eq("id", fatoId)
+      .maybeSingle();
+    if (!data) return null;
+    const l = data as unknown as {
+      data: string;
+      ta_inicial: number | null;
+      tempos_consumidos: number | null;
+      origem_migracao_v1: string | null;
+      editado_em: string | null;
+      avaliacao: { turma_id: string; curso_id: string; disciplina_id: string } | null;
+    };
+    return {
+      data: l.data,
+      taInicial: l.ta_inicial,
+      tempos: l.tempos_consumidos,
+      turmaId: l.avaliacao?.turma_id ?? null,
+      cursoId: l.avaliacao?.curso_id ?? null,
+      disciplinaId: l.avaliacao?.disciplina_id ?? null,
+      unidadeEnsinoId: null,
+      herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
+      categoria: null,
+    };
+  }
+
   if (origem === "vista_prova") {
     /* Spec 014, T207: a vista é a SESSÃO (`vistas_de_avaliacao`); turma, curso e disciplina vêm da avaliação. */
     const { data } = await supabase
@@ -1205,7 +1378,7 @@ async function lerFato(
     const { data } = await supabase
       .from("avaliacoes")
       .select(
-        "data_avaliacao, ta_inicial, tempos_consumidos, turma_id, curso_id, disciplina_id, origem_migracao_v1, editado_em",
+        "data_avaliacao, ta_inicial, tempos_consumidos, turma_id, curso_id, disciplina_id, avaliacao_curriculo_id, origem_migracao_v1, editado_em",
       )
       .eq("id", fatoId)
       .maybeSingle();
@@ -1217,6 +1390,7 @@ async function lerFato(
       turma_id: string | null;
       curso_id: string | null;
       disciplina_id: string | null;
+      avaliacao_curriculo_id: string | null;
       origem_migracao_v1: string | null;
       editado_em: string | null;
     };
@@ -1230,6 +1404,7 @@ async function lerFato(
       unidadeEnsinoId: null,
       herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
       categoria: null,
+      avaliacaoCurriculoId: l.avaliacao_curriculo_id,
     };
   }
 
@@ -1356,10 +1531,11 @@ function posicaoPara(
   };
 }
 
-/** A tabela de cada origem. A vista divide a linha com a aplicação (`RN-AVAL-02`). */
+/** A tabela de cada origem. As sessões (de aplicação e de vista) vivem nas tabelas filhas da avaliação. */
 const TABELA_DA_ORIGEM: Readonly<Record<OrigemDoFatoValidada, string>> = {
   aula: "registros_aula",
   avaliacao: "avaliacoes",
+  sessao_aplicacao: "sessoes_de_aplicacao",
   vista_prova: "vistas_de_avaliacao",
   atividade_nao_letiva: "atividades_nao_letivas",
 };
@@ -1568,8 +1744,31 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
    *    sem isso o banco recusaria com `23514`. Provado em `tests/unidade/dsa/responsavel-na-edicao.test.ts`.
    */
   Object.assign(campos, responsavel.colunas);
-  if (a.outrosInstrutores !== undefined && a.origem !== "vista_prova") {
+  /* As SESSÕES (de vista e de aplicação) não têm `outros_instrutores`: os demais são os da avaliação. */
+  if (
+    a.outrosInstrutores !== undefined &&
+    a.origem !== "vista_prova" &&
+    a.origem !== "sessao_aplicacao"
+  ) {
     campos["outros_instrutores"] = a.outrosInstrutores;
+  }
+  /*
+   * ⚠️ **A2 NA EDIÇÃO, A MESMA REGRA DO LANÇAMENTO** (desenho de 15/10/2026): o instrumento é da AVALIAÇÃO; com item
+   *    ligado ela grava nulo, sem item só um dos oferecidos — por `instrumentoNaGravacao`, a função do lançar.
+   */
+  if (a.instrumentoId !== undefined) {
+    if (a.origem !== "avaliacao") {
+      return falha("O instrumento só existe na avaliação.", "instrumentoId");
+    }
+    const itemDaProva = fato.avaliacaoCurriculoId ?? null;
+    const instrumento = instrumentoNaGravacao({
+      avaliacaoCurriculoId: itemDaProva,
+      instrumentoId: a.instrumentoId,
+      oferecidos:
+        itemDaProva === null && a.instrumentoId !== null ? await instrumentosDoBanco(supabase) : [],
+    });
+    if (!instrumento.ok) return falha(instrumento.mensagem, "instrumentoId");
+    campos["instrumento_id"] = instrumento.instrumentoId;
   }
 
   if (Object.keys(campos).length === 0) {
@@ -1666,6 +1865,9 @@ export async function excluir(entrada: unknown): Promise<ResultadoDoLancamento> 
 
   /*
    * ⚠️ Spec 014, T207: excluir uma SESSÃO de vista põe `inativo` só nela — a avaliação e as outras sessões ficam.
+   * ⚠️ `RN-AV-12` (16/10/2026): o mesmo vale para a SESSÃO DE APLICAÇÃO — excluí-la inativa SÓ a sessão; a prova (a
+   *    1ª sessão) continua lançada. Excluir a PROVA continua cancelando a avaliação, e as sessões dela saem de toda
+   *    conta porque a view e as somas filtram a avaliação viva.
    */
   const campos: Record<string, Valor> =
     origem === "avaliacao" ? { status: "cancelada" } : { status: "inativo" };
