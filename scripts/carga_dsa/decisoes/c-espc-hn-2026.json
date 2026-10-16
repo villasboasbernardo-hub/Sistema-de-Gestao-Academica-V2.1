@@ -93,5 +93,11 @@
   "responsavel_externo_aceito_sha256": [
     "dbb0001aa83fb70bb4cc47566c0e71f67e1dbe84fca9f1d8c6787dcd06b3dbc8",
     "ef0d1931f1feb8d8ea5e7466fd70443125b064632c80d570048c2d2b6f1ed501"
-  ]
+  ],
+  "itens_por_prova": {
+    "511": {
+      "item": "TG 1",
+      "motivo": "C-Espc-HN-01 — Bernardo Villas Boas, 16/10/2026: a TI de 12/03 da HN-1102-0710 e o item «TI ou TG» do curriculo (A4.7 nº 84), carregado como TG 1"
+    }
+  }
 }

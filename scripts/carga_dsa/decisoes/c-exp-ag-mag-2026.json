@@ -44,5 +44,29 @@
     "responsavel_externo_aceito: entidades e palestrantes externos da lista de pendencias de responsavel — decisao A3.6 de Bernardo Villas Boas (14/10/2026); o palestrante entra como SHA-256 do texto normalizado (nome de pessoa, repositorio publico)"
   ],
   "responsavel_externo_aceito": ["DEPARTAMENTO DE ALUNOS"],
-  "responsavel_externo_aceito_sha256": []
+  "responsavel_externo_aceito_sha256": [],
+  "itens_por_prova": {
+    "64": {
+      "item": "PM 1",
+      "motivo": "Ag-Mag-01 — Bernardo Villas Boas, 16/10/2026: ligar no sistema (a «Alternativa» aceita: o T/E do catalogo da planilha nao nomeia o instrumento)"
+    },
+    "137": {
+      "item": "PM 2",
+      "motivo": "Ag-Mag-02 — Bernardo Villas Boas, 16/10/2026: ligar no sistema (a «Alternativa» aceita: o T/E do catalogo da planilha nao nomeia o instrumento)"
+    }
+  },
+  "ues": {
+    "I+1": "I+2",
+    "I+1P": "I+1",
+    "I+2": "I+3",
+    "I+3": "I+4",
+    "II+1": "II+2",
+    "II+1P": "II+1"
+  },
+  "ues_motivo": {
+    "decisao": "R1 — Bernardo Villas Boas, 16/10/2026: «1P» e a UE 1 e a chave N e a UE N+1; cada chave conferida pelo NOME da UE no banco (scripts/carga_dsa/de_para_de_ue.py); onde numero e nome divergem, vale o nome",
+    "conferencias": [
+      "NOME VALE: I+4 «5- COMPENSAÇÃO DE AGULHA MAGNÉTICA (Última Aula)»: o numero do topico diz 5, o nome casa com a UE 4 — vale o nome"
+    ]
+  }
 }

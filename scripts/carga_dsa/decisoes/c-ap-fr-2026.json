@@ -66,5 +66,90 @@
   "responsavel_externo_aceito": ["CIAA", "CIAARA-30", "DEnsM"],
   "responsavel_externo_aceito_sha256": [
     "dbb0001aa83fb70bb4cc47566c0e71f67e1dbe84fca9f1d8c6787dcd06b3dbc8"
-  ]
+  ],
+  "itens_por_prova": {
+    "733": {
+      "item": "PM 1",
+      "motivo": "C-Ap-FR-01 — Bernardo Villas Boas, 16/10/2026: ligar no sistema (a «Alternativa» aceita: o T/E do catalogo da planilha nao nomeia o instrumento)"
+    },
+    "931": {
+      "item": "PM 2",
+      "motivo": "C-Ap-FR-02 — Bernardo Villas Boas, 16/10/2026: ligar no sistema (a «Alternativa» aceita: o T/E do catalogo da planilha nao nomeia o instrumento)"
+    },
+    "313": {
+      "item": "PM 1",
+      "motivo": "C-Ap-FR-03 — Bernardo Villas Boas, 16/10/2026: ligar no sistema (a «Alternativa» aceita: o T/E do catalogo da planilha nao nomeia o instrumento)"
+    },
+    "673": {
+      "item": "PM 2",
+      "motivo": "C-Ap-FR-04 — Bernardo Villas Boas, 16/10/2026: ligar no sistema (a «Alternativa» aceita: o T/E do catalogo da planilha nao nomeia o instrumento)"
+    }
+  },
+  "ues": {
+    "I+1": "I+2",
+    "I+1P": "I+1",
+    "I+2": "I+3",
+    "II+1": "II+2",
+    "II+1P": "II+1",
+    "II+2": "II+3",
+    "II+3": "II+4",
+    "III+1": "III+2",
+    "III+1P": "III+1",
+    "IV+1P": "IV+1",
+    "IX+1": "IX+3",
+    "IX+1P": "IX+1",
+    "IX+3": "IX+4",
+    "IX+4": "IX+5",
+    "V+1": "V+2",
+    "V+1P": "V+1",
+    "V+2": "V+3",
+    "V+3": "V+4",
+    "V+4": "V+5",
+    "VI+1": "VI+2",
+    "VI+1P": "VI+1",
+    "VI+2": "VI+3",
+    "VI+3": "VI+4",
+    "VI+4": "VI+5",
+    "VI+5": "VI+6",
+    "VI+6": "VI+7",
+    "VI+7": "VI+8",
+    "VII+1": "VII+2",
+    "VII+1P": "VII+1",
+    "VIII+1": "VIII+2",
+    "VIII+1P": "VIII+1",
+    "VIII+2": "VIII+3",
+    "VIII+3": "VIII+4",
+    "VIII+4": "VIII+5",
+    "VIII+5": "VIII+6",
+    "VIII+6": "VIII+7",
+    "VIII+7": "VIII+8",
+    "VIII+8": "VIII+9",
+    "VIII+9": "VIII+10",
+    "X+1": "X+2",
+    "X+1P": "X+1",
+    "XI+1": "XI+2",
+    "XI+1P": "XI+1",
+    "XI+2": "XI+3",
+    "XI+3": "XI+4",
+    "XI+4": "XI+5",
+    "XI+5": "XI+6",
+    "XI+6": "XI+7",
+    "XI+7": "XI+8",
+    "XII+1": "XII+2",
+    "XII+1P": "XII+1"
+  },
+  "ues_motivo": {
+    "decisao": "R1 — Bernardo Villas Boas, 16/10/2026: «1P» e a UE 1 e a chave N e a UE N+1; cada chave conferida pelo NOME da UE no banco (scripts/carga_dsa/de_para_de_ue.py); onde numero e nome divergem, vale o nome",
+    "conferencias": [
+      "NOME VALE: IX+1 «2 – CONCRETO ARMADO»: o numero do topico diz 2, o nome casa com a UE 3 — vale o nome",
+      "NOME VALE: IX+2 «3 – ALVENARIA»: o numero do topico diz 3, o nome casa com a UE 2 — vale o nome",
+      "POR SEMELHANCA (numero e nome concordam): I+1 «2 – DISPOSTIVIOS DE PROTEÇÃO» → UE 2 «DISPOSITIVOS DE PROTEÇÃO»",
+      "POR SEMELHANCA (numero e nome concordam): II+2 «3 – ESTAB. CANC. E ALT. DE SINAIS NÁUT. DE AUXÍLIO À NAVEGAÇÃO» → UE 3 «ESTABELECIMENTO, CANCELAMENTO E ALTERAÇÃO DE SINAIS NÁUTICOS DE AUXÍLIOS À NAVEGAÇÃO»",
+      "POR SEMELHANCA (numero e nome concordam): II+3 «4 – COMUNICAÇÃO DE ALTERAÇÃO DE SINAIS NÁUTICOS» → UE 4 «COMUNICAÇÃO DE ALTERAÇÃO EM AUXÍLIOS À NAVEGAÇÃO»",
+      "POR SEMELHANCA (numero e nome concordam): V+2 «3 – SISTEMA DE MANUT. PLANEJADA DAS OPER. DE SINAL. NÁUTICA» → UE 3 «SISTEMA DE MANUTENÇÃO PLANEJADA DAS OPERAÇÕES DE AUXÍLIOS À NAVEGAÇÃO»",
+      "POR SEMELHANCA (numero e nome concordam): V+4 «5– CONTROLE DE SISTEMAS DE SINALIZAÇÃO NÁUTICA» → UE 5 «CONTROLE DE SISTEMAS DE AUXÍLIOS À NAVEGAÇÃO»",
+      "POR SEMELHANCA (numero e nome concordam): VI+5 «6 – ECDIS» → UE 6 «ELECTRONIC CHART DISPLAY AND INFORMATION SYSTEM (ECDIS)»",
+      "POR SEMELHANCA (numero e nome concordam): VIII+1P «1 – CONCEITOS MAT. NA REPRES. DA TERRA E DA CARTA NÁUTICA» → UE 1 «CONCEITOS MATEMÁTICOS NA REPRESENTAÇÃO DA TERRA E DA CARTA NÁUTICA»"
+    ]
+  }
 }

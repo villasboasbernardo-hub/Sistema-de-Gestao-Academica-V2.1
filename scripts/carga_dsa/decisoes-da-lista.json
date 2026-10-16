@@ -1,0 +1,301 @@
+{
+  "_sobre": "Decisoes de Bernardo Villas Boas, 16/10/2026 (noite), sobre a lista de erros da rodada 2026-10-14T1916 (sugestoes-de-correcao.xlsx, fora do git). O que esta aqui a proxima lista mostra como INFORMACAO, com «decidido em 16/10/2026 (ID)», em vez de pedir correcao. Casa por turma + onde + o que a lista diz (o texto exato do gerador); `erros_por_turma` imprime o que nao casou, para quem confere saber se o item sumiu ou mudou de texto.",
+  "decidido_em": "16/10/2026",
+  "itens": [
+    {
+      "id": "CAHO-02",
+      "turma": "CAHO 2026",
+      "onde": "Disciplina IV, PP de 22/06/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 36 TA, currículo 40 TA (PP 1).",
+      "decisao": "já resolvido"
+    },
+    {
+      "id": "CAHO-03",
+      "turma": "CAHO 2026",
+      "onde": "Disciplina VII, T de 05/02/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 4 TA, currículo 5 TA (TG 1).",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-07",
+      "turma": "CAHO 2026",
+      "onde": "Disciplina III, 29/01/2026, tempos 1–3",
+      "oque": "Aula lançada num dia que a própria planilha marca como parado (LP — LICENÇA DE PAGAMENTO (tempos 9–9)).",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-08",
+      "turma": "CAHO 2026",
+      "onde": "Disciplina XIII, 29/01/2026, tempos 4–8",
+      "oque": "Aula lançada num dia que a própria planilha marca como parado (LP — LICENÇA DE PAGAMENTO (tempos 9–9)).",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-09",
+      "turma": "CAHO 2026",
+      "onde": "Disciplina XX, 10/06/2026, tempos 6–8",
+      "oque": "Aula lançada num dia que a própria planilha marca como parado (NT — ROTINA DE DOMINGO (CERIMÔNIA BATALHA NAVAL DE RIACHUELO) (tempos 1–5)).",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-12",
+      "turma": "CAHO 2026",
+      "onde": "Aba PREENCHIMENTO, linha 465 (27/02/2026)",
+      "oque": "A avaliação «TR+T» está com técnica de ensino «vazia» no catálogo.",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-13",
+      "turma": "CAHO 2026",
+      "onde": "Aba HORÁRIOS",
+      "oque": "aba HORÁRIOS, tempo 1 x 8 TA: «07:50 às 15:35» na planilha; pelos cinco campos do relogio seria «07:50 às 15:30»",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-14",
+      "turma": "CAHO 2026",
+      "onde": "Aba HORÁRIOS",
+      "oque": "aba HORÁRIOS, tempo 2 x 7 TA: «08:40 às 15:35» na planilha; pelos cinco campos do relogio seria «08:40 às 15:30»",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-15",
+      "turma": "CAHO 2026",
+      "onde": "Aba HORÁRIOS",
+      "oque": "aba HORÁRIOS, tempo 3 x 4 TA: «09:30 às 13:45» na planilha; pelos cinco campos do relogio seria «09:30 às 13:50»",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-16",
+      "turma": "CAHO 2026",
+      "onde": "Aba HORÁRIOS",
+      "oque": "aba HORÁRIOS, tempo 3 x 6 TA: «09:30 às 15:35» na planilha; pelos cinco campos do relogio seria «09:30 às 15:30»",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-17",
+      "turma": "CAHO 2026",
+      "onde": "Aba HORÁRIOS",
+      "oque": "aba HORÁRIOS, tempo 4 x 3 TA: «10:20 às 13:45» na planilha; pelos cinco campos do relogio seria «10:20 às 13:50»",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-18",
+      "turma": "CAHO 2026",
+      "onde": "Aba HORÁRIOS",
+      "oque": "aba HORÁRIOS, tempo 4 x 5 TA: «10:20 às 15:35» na planilha; pelos cinco campos do relogio seria «10:20 às 15:30»",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-19",
+      "turma": "CAHO 2026",
+      "onde": "Aba HORÁRIOS",
+      "oque": "aba HORÁRIOS, tempo 5 x 4 TA: «11:10 às 15:35» na planilha; pelos cinco campos do relogio seria «11:10 às 15:30»",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "CAHO-20",
+      "turma": "CAHO 2026",
+      "onde": "Aba HORÁRIOS",
+      "oque": "aba HORÁRIOS, tempo 6 x 3 TA: «13:05 às 15:35» na planilha; pelos cinco campos do relogio seria «13:05 às 15:30»",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "C-Ap-FR-05",
+      "turma": "C-Ap-FR 2026",
+      "onde": "Disciplina X, AV1 de 28/07/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 3 TA, currículo 2 TA (PP 1).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Ap-FR-06",
+      "turma": "C-Ap-FR 2026",
+      "onde": "Disciplina X, AV2 de 03/09/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 2 TA, currículo 1 TA (PP 2).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Esp-ME-11",
+      "turma": "C-Esp-ME 2026",
+      "onde": "UE IV+4",
+      "oque": "Lançados 12 TA; previstos 8 TA (passou).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Esp-ME-12",
+      "turma": "C-Esp-ME 2026",
+      "onde": "UE IX+5",
+      "oque": "Lançados 8 TA; previstos 7 TA (passou).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Esp-ME-13",
+      "turma": "C-Esp-ME 2026",
+      "onde": "UE V+3",
+      "oque": "Lançados 7 TA; previstos 6 TA (passou).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Esp-ME-14",
+      "turma": "C-Esp-ME 2026",
+      "onde": "UE XI+6",
+      "oque": "Lançados 34 TA; previstos 31 TA (passou).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Esp-ME-15",
+      "turma": "C-Esp-ME 2026",
+      "onde": "UE XII+2",
+      "oque": "Lançados 14 TA; previstos 12 TA (passou).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Esp-ME-16",
+      "turma": "C-Esp-ME 2026",
+      "onde": "UE XII+3",
+      "oque": "Lançados 18 TA; previstos 17 TA (passou).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Esp-ME-17",
+      "turma": "C-Esp-ME 2026",
+      "onde": "Aba IMPRESSÃO linha 884 (24/07/2026)",
+      "oque": "nº de TA digitado «3» por cima da formula, e o PREENCHIMENTO tem 2 TA nesse bloco — o painel de CH da planilha fica deslocado dali em diante",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "C-Ap-HN-02",
+      "turma": "C-Ap-HN 2026",
+      "onde": "Disciplina XVII, PP1 de 30/07/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 3 TA, currículo 2 TA (PP 1).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Ap-HN-03",
+      "turma": "C-Ap-HN 2026",
+      "onde": "Disciplina XVII, PP2 de 03/09/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 3 TA, currículo 1 TA (PP 2).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Ap-HN-04",
+      "turma": "C-Ap-HN 2026",
+      "onde": "Disciplina V, 29/06/2026, tempos 1–2",
+      "oque": "Aula lançada num dia que a própria planilha marca como parado (LA — LICENÇA ADMINISTRATIVA (tempos 6–9)).",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "C-Ap-HN-05",
+      "turma": "C-Ap-HN 2026",
+      "onde": "Disciplina V, 29/06/2026, tempos 3–5",
+      "oque": "Aula lançada num dia que a própria planilha marca como parado (LA — LICENÇA ADMINISTRATIVA (tempos 6–9)).",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "C-Ap-HN-06",
+      "turma": "C-Ap-HN 2026",
+      "onde": "Disciplina V, 03/08/2026, tempos 1–5",
+      "oque": "Aula lançada num dia que a própria planilha marca como parado (LP — LICENÇA DE PAGAMENTO (tempos 6–9)).",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "C-Espc-FR-01",
+      "turma": "C-Espc-FR 2026",
+      "onde": "Disciplina FONFR-011, AV3 de 06/08/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 7 TA, currículo 8 TA (PP 2).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Espc-FR-07",
+      "turma": "C-Espc-FR 2026",
+      "onde": "Disciplina PSFFR-014, AV1 de 05/03/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 3 TA, currículo 2 TA (PM 1).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Espc-FR-09",
+      "turma": "C-Espc-FR 2026",
+      "onde": "Disciplina TFMFR-004, AV2 de 23/07/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 3 TA, currículo 2 TA (PP 2).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Espc-HN-02",
+      "turma": "C-Espc-HN 2026",
+      "onde": "Disciplina HN-1103-0506, PP3 de 23/07/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 1 TA, currículo 2 TA (PP 3).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "C-Espc-HN-03",
+      "turma": "C-Espc-HN 2026",
+      "onde": "Disciplina HN-1104-0808, PM de 27/03/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 2 TA, currículo 4 TA (PM 1).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "Ag-Mag-04",
+      "turma": "C-Exp-Ag-Mag 2026",
+      "onde": "UE II+1",
+      "oque": "Lançados 24 TA; previstos 32 TA (falta).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "MetocOf-01",
+      "turma": "C-Exp-MetocOf 2026",
+      "onde": "UE II+2",
+      "oque": "Lançados 15 TA; previstos 11 TA (passou).",
+      "decisao": "fato (informar a Divisão)"
+    },
+    {
+      "id": "MetocOf-02",
+      "turma": "C-Exp-MetocOf 2026",
+      "onde": "UE V+2",
+      "oque": "Lançados 5 TA; previstos 24 TA (falta).",
+      "decisao": "não é erro"
+    },
+    {
+      "id": "MetocOf-03",
+      "turma": "C-Exp-MetocOf 2026",
+      "onde": "UE V+3",
+      "oque": "Lançados 5 TA; previstos 25 TA (falta).",
+      "decisao": "não é erro"
+    }
+  ],
+  "r8_tfm": {
+    "_sobre": "R8 (16/10/2026): o aviso de tempo da prova de TFM (corrida + natacao divididas pela A4.7 em dois itens) fica como informacao; a regra nao muda.",
+    "disciplinas": [
+      {
+        "turma": "C-Ap-FR 2026",
+        "onde_comeca": "Disciplina X,"
+      },
+      {
+        "turma": "C-Ap-HN 2026",
+        "onde_comeca": "Disciplina XVII,"
+      },
+      {
+        "turma": "C-Espc-FR 2026",
+        "onde_comeca": "Disciplina TFMFR-004,"
+      }
+    ],
+    "contem": "Tempo da prova diferente do currículo"
+  },
+  "divergencias": {
+    "DSAP-C-AP-FR-2026-L1545-A": {
+      "id": "D6",
+      "decisao": "não é erro (correção feita na tela)"
+    },
+    "DSAP-CAHO-2026-L1945-V": {
+      "id": "D8",
+      "decisao": "já resolvido (juntada como a sessão 15 da PP 1 em 16/10/2026)"
+    },
+    "DSAP-C-AP-HN-2026-L1111-V": {
+      "id": "D1",
+      "decisao": "corrigido no sistema (item PM 1, U.E. 1 a 3 e a vista de 27/08); a vista de 16/10 lançada na tela fica"
+    },
+    "DSAP-C-AP-HN-2026-L1249-V": {
+      "id": "D2",
+      "decisao": "corrigido no sistema (item PP 3); a sessão de vista de 10/10 lançada na tela fica, por decisão"
+    }
+  }
+}

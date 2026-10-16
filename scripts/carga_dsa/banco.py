@@ -196,7 +196,17 @@ select jsonb_build_object(
            where p.avaliacao_id = a.id and p.status = 'ativo' and p.codigo like 'DSAP-%' and p.data < {virada}::date),
         -- A2: o instrumento gravado da prova SEM item (com item, a coluna fica nula).
         'instrumento_gravado', (select l.valor from public.config_listas l where l.id = a.instrumento_id),
-        'na_tela', a.editado_por is not null,
+        -- ⚠️ A linha CORRIGIDA NO SISTEMA por decisao (16/10/2026, D1 e D2) tambem vence a planilha, como a editada na
+        --    tela: a migration de dado que a corrige roda sem sessao e zera `editado_por`, e a marca na observacao e o
+        --    que a mantem protegida.
+        'na_tela', a.editado_por is not null or coalesce(a.observacoes, '') like '%[CORRIGIDO NO SISTEMA%',
+        -- R7 (16/10/2026): o que PERSISTE alem da planilha — juntada como sessao de outra, o TA das sessoes de aplicacao
+        -- nascidas na tela (SAP-, o «juntar») e as vistas nascidas na tela (nao DSAP-). A lista consulta antes de acusar.
+        'juntada', coalesce(a.observacoes, '') like '%[JUNTADA COMO SESSAO%',
+        'ta_fora_da_planilha', (select coalesce(sum(p.tempos_consumidos), 0) from public.sessoes_de_aplicacao p
+                                  where p.avaliacao_id = a.id and p.status = 'ativo' and p.codigo not like 'DSAP-%'),
+        'vistas_fora_da_planilha', (select count(*) from public.vistas_de_avaliacao v
+                                      where v.avaliacao_id = a.id and v.status = 'ativo' and v.codigo not like 'DSAP-%'),
         'status', case when a.status in ('pendente', 'em_andamento', 'concluida', 'atrasada') then 'ativo'
                        when coalesce(a.observacoes, '') like '%[SAIU DA PLANILHA DE CONTROLE]%' then 'inativo'
                        else 'cancelada_na_tela' end)), '[]')

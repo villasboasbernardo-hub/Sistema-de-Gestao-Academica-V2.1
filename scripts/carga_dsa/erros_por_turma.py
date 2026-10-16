@@ -12,6 +12,10 @@ Decisão de Bernardo Villas Boas, 16/10/2026 (P9): *"Catálogo: código inexiste
 "corrigir", prioridade Média; o resto é informação."* — a CH da UE e da disciplina continuam **informação** (o sistema
 usa a CH do currículo, D-CUR-1).
 
+Decisões de Bernardo Villas Boas, 16/10/2026 (noite): o item que ele JÁ DECIDIU — «não é erro», «fato», «já
+resolvido» e o aviso de tempo do TFM (R8) — sai como **informação**, com «decidido em 16/10/2026 (ID)»
+(`decididos.py`, registro `decisoes-da-lista.json`); a divergência A + C × D do catálogo (R4) entra com prioridade baixa.
+
 ⚠️ A virada de cada turma vem de `fontes.json` (a `virada` de cada turma), não de uma cópia escrita aqui: a lista não
 pede para corrigir na planilha o que a turma já lança no sistema.
 """
@@ -25,6 +29,8 @@ from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
+
+from scripts.carga_dsa import decididos
 
 FONTES = Path(__file__).resolve().parent / "fontes.json"
 ORDEM = ["CAHO 2026", "C-Ap-FR 2026", "C-Esp-ME 2026", "C-Ap-HN 2026", "C-Espc-FR 2026", "C-Espc-HN 2026",
@@ -54,6 +60,11 @@ def traduzir(turma: str, c: list[str], virada: dict[str, str]) -> tuple | None:
         onde = f"Disciplina {d}, {sig} de {br(data)}"
         if virada.get(turma) and data >= virada[turma]:
             return None  # depois da virada a turma lanca no sistema; a rodada nao le a planilha (prova, vista, TA, RECON, A4.7)
+        if "(R7)" in resto:
+            # R7 (16/10/2026): o que o sistema ja tem (juncao, ligacao na tela, sessao nascida na tela) — informacao.
+            return (INFORMACAO, "Já feito no sistema", onde,
+                    resto.replace("curriculo", "currículo").replace("nao casa", "não casa").replace("ja esta", "já está"),
+                    "Nada a corrigir.")
         if "sessao" in resto and "RN-AV-12" in resto:
             k = re.search(r"sessao (\d+) da prova de (\d{4}-\d{2}-\d{2})", resto)
             return (INFORMACAO, "Prova em várias sessões (RN-AV-12)", onde,
@@ -117,6 +128,13 @@ def traduzir(turma: str, c: list[str], virada: dict[str, str]) -> tuple | None:
         return (4, "Catálogo (aba BD DISCIPLINAS)", f"Aba PREENCHIMENTO, linha {m.group(1)} ({m.group(2)})",
                 f"A avaliação «{m.group(3)}» está com técnica de ensino «{m.group(4)}» no catálogo.",
                 "Escrever na coluna T/E do catálogo o instrumento da avaliação (PM, PP, PE, TG…), e não EO nem vazio.")
+    m = re.match(r"BD DISCIPLINAS linha (\d+): a chave por A \+ C «([^»]*)» difere da coluna D «([^»]*)»", oque)
+    if m:
+        # R4 (16/10/2026): a sincronizacao le a chave pela coluna D, como o PROCV; a lista aponta onde A + C diverge.
+        return (6, "Catálogo (aba BD DISCIPLINAS)", f"Aba BD DISCIPLINAS, linha {m.group(1)}",
+                f"As colunas A + C formam «{m.group(2)}», e a coluna D (CONCATENADO) diz «{m.group(3)}». "
+                "A IMPRESSÃO e o sistema usam a D.",
+                "Conferir: se a D estiver certa, acertar o Nº UE (coluna C); se não, corrigir a D.")
     m = re.match(r"UE (\S+): (\d+) TA lancados e (\d+) previstos no catalogo \((\w+)\)", oque)
     if m:
         return (5, "Carga por UE", f"UE {m.group(1)}",
@@ -133,7 +151,17 @@ def traduzir(turma: str, c: list[str], virada: dict[str, str]) -> tuple | None:
     return (8, "Outros", disc, oque, "Conferir.")
 
 
-def ler(rodada: Path, virada: dict[str, str]) -> dict[str, list[tuple]]:
+def decidir(turma: str, t: tuple, usados: set[str]) -> tuple:
+    """O item que Bernardo ja decidiu (16/10/2026) vira informacao, com a decisao e o ID."""
+    d = decididos.do_item(turma, t[2], t[3])
+    if d is None:
+        return t
+    usados.add(d["id"])
+    return (INFORMACAO, f"Decidido em {decididos.data()}", t[2], t[3], f"Decisão: {d['decisao']} ({d['id']}). Nada a corrigir.")
+
+
+def ler(rodada: Path, virada: dict[str, str], usados: set[str] | None = None) -> dict[str, list[tuple]]:
+    usados = usados if usados is not None else set()
     secoes: dict[str, list[tuple]] = {}
     turma = None
     for linha in (rodada / "erros-de-planilha.md").read_text(encoding="utf-8").splitlines():
@@ -148,7 +176,7 @@ def ler(rodada: Path, virada: dict[str, str]) -> dict[str, list[tuple]]:
                 continue
             t = traduzir(turma, c, virada)
             if t:
-                secoes[turma].append(t)
+                secoes[turma].append(decidir(turma, t, usados))
     return secoes
 
 
@@ -157,7 +185,8 @@ def main() -> int:
     saida = rodada / "erros-por-turma"
     saida.mkdir(exist_ok=True)
     virada = viradas()
-    secoes = ler(rodada, virada)
+    usados: set[str] = set()
+    secoes = ler(rodada, virada, usados)
     livro = Workbook()
     livro.remove(livro.active)
     print("turma\ta corrigir\tinformação")
@@ -203,6 +232,9 @@ def main() -> int:
                 c.alignment = Alignment(wrap_text=True, vertical="top")
         folha.freeze_panes = "A2"
     livro.save(saida / "erros-por-turma.xlsx")
+    sobra = [i["id"] for i in decididos.carregar()["itens"] if i["id"] not in usados]
+    print(f"\ndecididos em {decididos.data()}: {len(usados)} casaram com a lista; "
+          f"{len(sobra)} nao aparecem mais (sumiram da lista ou mudaram de texto): {', '.join(sobra) or '—'}")
     return 0
 
 
