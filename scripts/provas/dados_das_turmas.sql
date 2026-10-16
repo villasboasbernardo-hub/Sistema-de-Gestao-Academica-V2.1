@@ -8,7 +8,7 @@
 --    o valor da lista. Os uuids e o autor diferem entre os bancos por construção (cadastro de conta, cópia).
 -- ⚠️ Uma linha por turma: aulas · avaliações (com item e instrumento) · sessões de vista · sessões de aplicação ·
 --    atividades · dias parados · ajustes da turma. A última linha é o md5 das 28 turmas juntas.
-\pset footer off
+-- ⚠️ Sem comando do psql (`\pset`…): a CLI manda o arquivo ao remoto como SQL puro, e recusa a barra.
 with por_turma as (
   select t.codigo as turma,
     md5(coalesce((select string_agg(concat_ws(':', r.codigo, r.data, u.codigo, d.cod_disciplina, i.codigo, r.ta_inicial,
@@ -57,11 +57,12 @@ with por_turma as (
                    where x.turma_id = t.id), '')) as ajustes
     from public.turmas t
 )
-select turma, left(aulas, 8), left(avaliacoes, 8), left(vistas, 8), left(aplicacoes, 8), left(atividades, 8),
-       left(dias_parados, 8), left(ajustes, 8)
+-- ⚠️ Uma coluna só, com nome: a CLI devolve JSON, e colunas de mesmo nome (`left`) se sobrescrevem nele.
+select turma || '|' || left(aulas, 8) || '|' || left(avaliacoes, 8) || '|' || left(vistas, 8) || '|' || left(aplicacoes, 8)
+       || '|' || left(atividades, 8) || '|' || left(dias_parados, 8) || '|' || left(ajustes, 8) as linha
   from por_turma
 union all
-select '~TODAS', left(md5(string_agg(concat_ws(':', turma, aulas, avaliacoes, vistas, aplicacoes, atividades, dias_parados, ajustes),
-                                     '|' order by turma)), 8), '', '', '', '', '', ''
+select '~TODAS|' || left(md5(string_agg(concat_ws(':', turma, aulas, avaliacoes, vistas, aplicacoes, atividades, dias_parados,
+                                                  ajustes), '|' order by turma)), 8)
   from por_turma
  order by 1;

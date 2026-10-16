@@ -146,3 +146,34 @@ local nas **dez** turmas; 1ª rodada 318 mudanças, 2ª **0**; catálogo igual; 
 no remoto, e as 18 outras sem mudança; impressão digital `19d845f0…`, 1.935 objetos, igual nos dois. Relatório, com a
 CHT por turma antes → depois, as 17 linhas que viram Apoio Individualizado e a lista de erros por turma:
 `antes-depois/rodada-do-pr6-no-remoto.md`.
+
+### As migrations da emenda de 15/10/2026 (#58) — E-6 e D-9
+
+Desenho `desenho-emenda-15-10.md`, **opção A aprovada por Bernardo Villas Boas em 16/10/2026**, com a instrução de
+publicar de ponta a ponta (*"Publique em sequência: #56 → #58 (CI verde, merge, deploy em Production), com a migration
+pelo rito (backup, dry-run, db push, impressão digital local × remoto)"*). A D-9 é dado de **configuração** que ele
+mesmo decidiu (a marca de vista em PE, PM e PO; a janela de 7 dias): o antes/depois dela é a própria decisão.
+⚠️ **O código da `main` antes do merge continua compatível com o esquema novo**: ele não lê nenhuma coluna nova, e o
+ramo `sessao_aplicacao` de `vw_ocupacao_ta` só tem linha depois da rodada, que vem depois do merge.
+
+| Passo | Medido |
+|---|---|
+| CI do ramo | verde nos três blocos sobre `fe5cfcf` (runs `38889416595` e `38889421022`), o #58 rebaseado sobre a `main` do #56 (`9bf9c67`) com a árvore conferida **igual** à verificada |
+| Reversão | `reversao-emenda-15-10.sql` no local (16/10/2026): depois das duas partes, **`19d845f0…`, 1.935 objetos** — a do remoto antes; só a parte 1 faz o pgTAP 132 reprovar 11 asserções |
+| Remoto antes | `19d845f064aa78fab01e8f2e36e7a1cb`, 1.935 objetos; 70 migrations aplicadas e as duas novas pendentes |
+| Backup imediatamente antes | **`remoto-20261016-080835.sql`**; comparado com a cópia do ensaio (`remoto-20261016-065949.sql`): só a chave aleatória `\restrict` do `pg_dump` difere — nenhuma linha de dado |
+| Dry-run | só `20261016092307_sessoes_de_aplicacao_e_instrumento_da_prova.sql` e `20261016092315_vista_obrigatoria_e_janela_de_sessoes.sql` |
+| `db push --linked` | saída **0**, as duas na ordem |
+| Migrations | **72 e 72** |
+| Impressão digital | **`7ed10b8c068852f8678a4a42a98603b1`, 1.994 objetos, igual no local e no remoto** |
+| Dado | lançamentos (avaliações, aulas, vistas, atividades) e a carga por turma (`vw_carga_horaria_turma`) com o **mesmo md5** antes e depois do push; 390 avaliações; a D-9: `vista_obrigatoria` em **PE, PM e PO**, `false` nos outros **8**; `avaliacao.janela_sessoes_dias` = **7**; `avaliacoes_juntar_sessao.editar` para **2** perfis (Admin, Encarregado); **0** sessões; **0** policies de `DELETE` |
+| Production | `/login` e `/estilo` 200, `/inicio` e `/turmas` 307 — antes e depois do push, e depois do deploy do merge `21bba71` (#58, deploy `success`) |
+| Ensaio local da D-9 | ⚠️ `dado_do_remoto` restaura `config_listas`, `config_parametros` e `perfil_permissao` **com o conteúdo do remoto**: antes do push, a cópia no local perdia a marca, a janela e o recurso. No ensaio, as partes de dado das duas migrations foram reaplicadas no local (idempotentes) — o que o `db push` faz no remoto. Depois do push, a cópia já os traz |
+
+### A rodada da emenda (16/10/2026)
+
+✅ **APLICADA NO REMOTO em 16/10/2026**, depois do merge do #58 (`21bba71`) e do deploy dele. Backup imediatamente antes
+**`remoto-20261016-084037.sql`**; ensaio na cópia (local) gravado e com a 2ª rodada **0**; plano do remoto = plano do
+local nas **dez** turmas; 1ª rodada **128** mudanças, 2ª **0**; catálogo igual; dados das **28** turmas iguais no local e
+no remoto (`scripts/provas/dados_das_turmas.sql`, total `cc69b52c`); esquema `7ed10b8c…`, 1.994 objetos, igual nos dois.
+Relatório com o antes/depois: `antes-depois/rodada-da-emenda-no-remoto.md`.
