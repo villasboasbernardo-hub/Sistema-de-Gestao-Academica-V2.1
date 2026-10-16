@@ -67,9 +67,20 @@ situacaoDaAvaliacao({
 - Prova/trabalho: aplicada **e** (sessão registrada **ou** item sem vista) → `concluida`; aplicada sem
   sessão, ≤ 7 dias corridos da aplicação → `em_andamento`; no **8º** dia → `atrasada`; item sem
   aplicação → `pendente` até o término do curso, depois `sem_correspondencia`.
+  ⚠️ *Emendado em 15/10/2026 pela RN-AV-13 ("vista é obrigatória só para PM e PO"): "item sem vista"
+  passa a ser **instrumento que não exige vista**. Quem decide é `exigeVista`
+  (`lib/dominio/avaliacoes/vista-obrigatoria.ts`, sobre o dado único `instrumentos.json`, o mesmo que a
+  sincronização lê), chamada pelo quadro e pelos alertas sobre o instrumento do **item ligado**;
+  `situacaoDaAvaliacao` continua o ponto único da situação. A avaliação **sem** item ligado não tem
+  instrumento no banco e segue exigindo vista, como antes, até a coluna `avaliacoes.instrumento_id` do
+  desenho de 15/10/2026 (`desenho-emenda-15-10.md`, aguardando Bernardo). A leitura literal — PE, PD, TI e
+  os demais sem vista — é a P5 de `aprovacoes-pendentes.md`. Dizia "aplicada **e** (sessão registrada
+  **ou** item sem vista) → `concluida`".*
 - OD: `pendente` antes do primeiro lançamento da disciplina na turma; `em_andamento` enquanto ela
   corre; `concluida` quando a disciplina é concluída pelo critério do painel da disciplina.
-- `app.fn_status_vista` devolve o mesmo nos mesmos casos (pgTAP cruzado, R-8).
+- `app.fn_status_vista` devolve o mesmo nos mesmos casos (pgTAP cruzado, R-8). ⚠️ *Até a A4 do desenho
+  de 15/10/2026, o espelho SQL ainda decide pelo **tempo de vista do item**, e não pelo
+  instrumento (data-model §3.7).*
 
 ## 5. Contagem — `contagemDeAvaliacoes` (`lib/dominio/avaliacoes/contagem.ts`, FR-056)
 
@@ -85,6 +96,21 @@ contagemDeAvaliacoes({ itensPorDisciplina, avaliacoesDaTurma, sessoes, situacoes
 
 Substituída e cancelada **não** entram. Vista **não** entra em N/M.
 
+**Emenda de 15/10/2026:**
+- **RN-AV-12** — *"é UMA prova com N sessões de aplicação, não N provas. O card "N de M" conta 1."*
+  A prova em N sessões entra **uma vez** em `aplicadas`, e as sessões ficam na lista do item. ⛔
+  *Depende do desenho de 15/10/2026 (`desenho-emenda-15-10.md`), aguardando Bernardo: até a tabela
+  `sessoes_de_aplicacao`, as sessões 2..N são linhas de `avaliacoes` sem item e esta função as conta em
+  `aplicadas` como conta toda avaliação aplicada sem item (`medicoes/conta-das-187.md`). Nada muda nela
+  antes da aprovação.*
+- **RN-AV-14** — a prova a mais que o currículo prevê continua em `aplicadas` (é avaliação aplicada) e,
+  com o desenho aprovado, ganha na aba o alerta informativo *"currículo prevê 1 PP; aplicadas 2"*, por
+  disciplina e instrumento — sem cor de erro e sem bloquear (`RN-DEG-02`). ⛔ *Depende do mesmo desenho
+  (o instrumento da prova sem item, `avaliacoes.instrumento_id`).*
+- **RN-AV-13** — o B de *"vistas realizadas A de B"* continua contando os itens **com tempo de vista**
+  (o quadro da turma o calcula assim em 15/10/2026); a RN-AV-13 muda a **obrigação** e o **alerta**, não
+  o B. Se o B deve passar a contar só PM e PO entra na P5 de `aprovacoes-pendentes.md`.
+
 ## 6. O card e a aba (D-AV-1, D-AV-2)
 
 **Card na página da turma:** *"Avaliações — 12 aplicadas de 30 previstas no currículo"* + barra
@@ -94,7 +120,9 @@ previsto definido"* quando houver. Clique → `/turmas/[turma]?aba=avaliacoes`.
 **Aba *Avaliações* da turma** (`?aba=avaliacoes`, filtros `disciplina`, `situacao` na URL;
 `aba` empilha no histórico, como `AbasDoCurso`; os filtros substituem): uma seção por disciplina com o previsto (§2), a projeção (§3), a lista dos
 itens com situação e data, os papéis (aplicador · fiscal · quem conduz cada sessão) e os demais
-instrutores. Botão *Definir tempo (arbitrado)* só para Encarregado e Admin.
+instrutores. Botão *Definir tempo (arbitrado)* só para Encarregado e Admin. ⛔ *Com o desenho de
+15/10/2026 aprovado: o alerta informativo da RN-AV-14 por disciplina e instrumento, e as sessões de
+aplicação da RN-AV-12 na lista do item (FR-058, FR-056).*
 
 **Aba *Avaliações* do curso** (`/cursos/[curso]?aba=avaliacoes`, `RF-CURSO-02`): a mesma lista,
 por turma; filtros `turma`, `disciplina`, `situacao`.

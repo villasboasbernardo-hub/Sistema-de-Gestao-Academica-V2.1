@@ -324,6 +324,31 @@ create table public.vistas_de_avaliacao (
 campos; `conduz_*` nulos, porque a origem não dizia quem conduzia). Contagem antes/depois: nº de
 avaliações com vista = nº de sessões 1.
 
+### 3.5.1 PROPOSTA — sessões de aplicação e instrumento da prova (aguarda Bernardo, regra 9.4)
+
+> ⛔ **Nada disto existe no banco, e nenhuma migration foi escrita.** É o desenho da emenda de
+> 15/10/2026 (RN-AV-12, RN-AV-13 e RN-AV-14, spec §2.4), em **`desenho-emenda-15-10.md`** — que tem o
+> SQL, as policies, o caso que discrimina e a reversão. Não estava no plano aprovado e por isso é
+> **portão de Bernardo** (regra 9.4 do `CLAUDE.md`): nenhuma `supabase migration new` antes da palavra
+> dele. **Aprovação:** [pendente].
+
+Em uma linha cada, na **Opção A** (recomendada; a **Opção B**, sem migration, está no desenho e não é
+recomendada):
+- **A1** `public.sessoes_de_aplicacao`, filha de `avaliacoes` — uma prova com N sessões de aplicação,
+  não N provas; o card *"N de M"* a conta uma vez (RN-AV-12).
+- **A2** `avaliacoes.instrumento_id` → `config_listas.instrumentos_avaliacao` — o instrumento da prova
+  que não aponta item (sem item, ou a mais), para a RN-AV-13 e o alerta da RN-AV-14 valerem também
+  para ela.
+- **A3** as leituras que somam a aplicação passam a somar as sessões.
+- **A4** a obrigação de vista como dado no banco, lida por `app.fn_status_vista` — o espelho SQL da
+  RN-AV-13 (§3.7).
+- **A5** `avaliacao.janela_sessoes_dias` em `config_parametros` — o "dias consecutivos ou próximos" da
+  RN-AV-12 como dado (proposta: 7 dias corridos; `aprovacoes-pendentes.md`, 15/10/2026, P4).
+
+**Até a aprovação:** as sessões 2..N continuam **linhas de `avaliacoes`**, sem item, como hoje; a
+prova sem item não tem instrumento no banco; o card, a aba e o DSA **não** mudam para a RN-AV-12 nem
+para o alerta da RN-AV-14 (`contracts/sincronizacao.md`).
+
 ### 3.6 `registros_aula` **[E] (PR 4)**
 
 ```sql
@@ -346,6 +371,14 @@ pelo bloco D-7b, que anda **junto** da E-5: recusado o D-7b, a E-5 e a D-7 saem 
 com `fato_id` = id da avaliação (o que o DSA resolve hoje) e as colunas novas `sessao_id` e
 `numero_sessao`, que o PR 5.1 adota. `aval_ta_coerente` é recriada aceitando a substituída histórica.
 ⚠️ *(corrigido em 13/10/2026, na revisão adversarial do `tasks.md`)*.
+
+⚠️ **Nota de 15/10/2026 (RN-AV-13, *"vista é obrigatória só para PM e PO"*).** Na tela, a obrigação
+de vista passa a ser do **instrumento** do item ligado (`exigeVista`,
+`lib/dominio/avaliacoes/vista-obrigatoria.ts`, sobre o dado único `instrumentos.json`). **O espelho
+SQL ainda decide pelo tempo de vista do item** (`ta_vista`), até a A4 do desenho de
+15/10/2026 (§3.5.1), que aguarda Bernardo. Até lá, a tela e a `vw_avaliacoes_situacao` podem divergir
+em dois casos — a PE (ou PD, TI…) com tempo de vista e a PM ou PO sem ele. Se a prova cruzada (T139)
+passar a alimentar a função TS pelo instrumento, esses casos ficam **declarados** nela, nunca apagados.
 
 ### 3.8 Migrations de **dado** da leva 2 — cada uma com antes/depois (PR 4)
 
