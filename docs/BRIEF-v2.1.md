@@ -289,6 +289,16 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 16/10/2026 — uma tabela nova, da emenda de 15/10/2026 à spec 014 · **aprovada por Bernardo Villas Boas em 16/10/2026 (opção A do desenho)**
+>
+> - **`sessoes_de_aplicacao`** — a **2ª, 3ª… sessão de aplicação** da mesma avaliação (`RN-AV-12` da spec 014:
+>   *"UMA prova com N sessões de aplicação, não N provas"*). Filha da avaliação, como `vistas_de_avaliacao`:
+>   continua **um fato por avaliação** (`RN-AVAL-02`). A sessão nascida de *"juntar como sessão da mesma prova"*
+>   (Admin e Encarregado) traz a **trilha** da junção — quem, quando e o retrato da avaliação juntada —,
+>   imutável por gatilho. Desenho em `specs/014-atividades-e-avaliacoes/desenho-emenda-15-10.md`.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a

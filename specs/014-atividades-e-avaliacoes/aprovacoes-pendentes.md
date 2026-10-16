@@ -660,7 +660,7 @@ Até a sua palavra: as sessões 2..N seguem linhas de `avaliacoes` sem item; o c
 RN-AV-12 nem para o alerta da RN-AV-14; e o espelho SQL segue pelo tempo de vista do item. As tarefas que esperam
 são T252 a T260.
 
-**Aprovação:** [pendente]
+**Aprovação:** ✅ **Opção A, aprovada por Bernardo Villas Boas em 16/10/2026** (seção de 16/10/2026, abaixo).
 
 ### Perguntas
 
@@ -675,7 +675,7 @@ Cada uma está implementada, **só no local**, com a leitura indicada, até a su
   `antes-depois/avaliacoes_dos_24_curriculos.md`; a ligação registrada na nota de
   `lib/dominio/avaliacoes/instrumentos.json`): `T1` = **TI 1**, `T2` = **TG 1**, `T3` = **TG 2**. O número só vem
   da descrição quando ela nomeia o instrumento **com** número (*"TG2 – …"* → TG 2). **Proposta:** manter.
-  **Aprovação:** [pendente] *(Reescrita em 15/10/2026, na revisão do texto contra o código: a primeira redação
+  **Aprovação:** ✅ **aceita por Bernardo Villas Boas em 16/10/2026** (*"T numera a ordem dos trabalhos: aceita"*) *(Reescrita em 15/10/2026, na revisão do texto contra o código: a primeira redação
   omitia a regra do número.)*
 - **P2 — O COD `AV` (avaliação).** `AV1`, `AV2`… (por exemplo, no C-Esp-ME e no C-Ap-FR) não nomeiam instrumento.
   **Leitura adotada:** vale **só o instrumento que a DESCRIÇÃO nomeia** — pelo prefixo (*"PM4 – …"*) ou pelo nome do
@@ -705,7 +705,7 @@ Cada uma está implementada, **só no local**, com a leitura indicada, até a su
   **juntam**; a última `PP` da CAHO IV, de 19/08, a **43 dias** da anterior (07/07), fica **separada** — é outra
   prova, e, se passar do currículo, informação pela RN-AV-14; e a CAHO XVII, `T` de 14/07 e de 27/07 (**13 dias**),
   fica em **duas** provas. **Proposta:** 7 dias, como o parâmetro A5 do desenho, ajustável por dado. **Pergunta:** os
-  casos de 13 e de 43 dias são, para você, a mesma prova? **Aprovação:** [pendente] *(Corrigido em 15/10/2026:
+  casos de 13 e de 43 dias são, para você, a mesma prova? **Aprovação:** ✅ **7 dias, aprovado em 16/10/2026**, e a ação *"juntar como sessão da mesma prova"* na aba, para o Encarregado e o Admin *(Corrigido em 15/10/2026:
   citava `erros-por-turma/01-CAHO-2026.md` da rodada, que o reensaio com a regra nova regera.)*
 - **P5 — PE e os demais instrumentos sem vista (RN-AV-13 literal).** A regra nomeia PM e PO como obrigatórios e PP, T e
   TG como não; não fala de PE, PD, TI, EC, PJ e MN. **Leitura adotada:** literal — só PM e PO exigem vista.
@@ -715,14 +715,13 @@ Cada uma está implementada, **só no local**, com a leitura indicada, até a su
   é o texto da regra; se a intenção era incluir a PE, basta acrescentar `PE` em `vistaObrigatoria` de
   `lib/dominio/avaliacoes/instrumentos.json` — na tela e na sincronização é dado, sem código (com a A4 do desenho, a
   marca passa a `config_listas.metadados.vista_obrigatoria`, também dado). **Pergunta:** o B passa a
-  contar só PM e PO? **Aprovação:** [pendente]
+  contar só PM e PO? **Aprovação:** ✅ **decidido em 16/10/2026: vista obrigatória para PM, PO e PE** (não o literal)
 - **P6 — Aplicador: recusa ou aviso.** *"Aplicador de prova = instrutor habilitado."* **Leitura adotada:** o aplicador
   é **instrutor do cadastro**, e a falta de **habilitação** na disciplina continua **aviso**, sem recusa — como a D-AV-3
   (13/10/2026), a `RN-INST-01` do documento 04 e a regra 6 do `CLAUDE.md`. Na sincronização, o aplicador fora do
   cadastro continua pendência **não bloqueante**, como hoje (a frase *"só vira pendência se a linha for aula de
   disciplina com EO"*, lida junto com *"aplicador de prova = instrutor habilitado"*). **Proposta:** manter o aviso. Se
-  quiser recusa, ela muda a D-AV-3, e a recusa vem da Server Action e do banco, não só da tela. **Aprovação:**
-  [pendente]
+  quiser recusa, ela muda a D-AV-3, e a recusa vem da Server Action e do banco, não só da tela. **Aprovação:** ✅ **aviso, aprovado em 16/10/2026**
 - **P7 — Aula de disciplina com técnica AP e responsável fora do cadastro.** **Leitura adotada:** **continua
   pendência**, como hoje: a RN-RESP-1 diz que a aula de disciplina, *"técnica EO ou prática de disciplina"*, exige
   instrutor habilitado; só a frase da sincronização nomeia apenas a EO. Impacto medido pela orquestração em 15/10/2026
@@ -735,11 +734,48 @@ Cada uma está implementada, **só no local**, com a leitura indicada, até a su
   sincronização nunca leva ao banco (D-CUR-1) —, ela traz dois casos que são **erro real** da planilha: o **código que
   não existe na BD DISCIPLINAS**, que faz a IMPRESSÃO sair com erro de PROCV (por exemplo, `AD+30` na CAHO e `TR+7` no
   C-Ap-FR), e a **técnica (T/E) da avaliação** vazia ou EO no catálogo (por exemplo, `VI+AV1` no C-Esp-ME).
-  **Proposta:** «informação» só para a diferença de CH; o PROCV e o T/E saem como erro. **Aprovação:** [pendente]
+  **Proposta:** «informação» só para a diferença de CH; o PROCV e o T/E saem como erro. **Aprovação:** ✅ **decidido em 16/10/2026: PROCV e T/E da avaliação voltam a «corrigir», prioridade Média; o resto é informação**
 - **P10 — A coluna T/E da linha como desempate quando o COD é `AV`.** Pela P2, o `AV` só casa pelo instrumento que a
   **descrição** nomeia; a coluna **T/E** (técnica de ensino) da linha da PREENCHIMENTO **não** entra. Antes da emenda,
   ela entrava: era por ela que a `AV3` da C-Ap-FR X (TFM) ligava à PP 3 (P2). **Medido em 15/10/2026 sobre os planos
   da gravação local da rodada `2026-10-14T1916`:** das **44** provas `AV` que não casam, **27** têm T/E que nomeia um
   instrumento da disciplina. **Pergunta:** aceitar a T/E como desempate quando o COD é `AV` (as 27 passariam a ter
   instrumento candidato; quantas ligariam a item **não** foi medido), ou manter só a descrição? **Proposta:** perguntar, **sem implementar** — a T/E é a técnica de ensino da
-  linha, e a RN-AV-10 diz que *"a descrição só desempata"*. **Aprovação:** [pendente]
+  linha, e a RN-AV-10 diz que *"a descrição só desempata"*. **Aprovação:** ✅ **aceita em 16/10/2026** — implementada no #58
+
+## 16/10/2026 — decisões de Bernardo sobre a emenda de 15/10 (o desenho e as perguntas)
+
+**A decisão** *(Bernardo Villas Boas, 16/10/2026, no texto dele — "todas APROVADAS por mim em 16/10/2026")*:
+
+> - *Migration da emenda: opção A (desenho-emenda-15-10.md). Registre como emenda à exceção da constituição de 14/10
+>   (Princípio VI).*
+> - *T numera a ordem dos trabalhos: aceita. P10 (AV desempata pela coluna T/E): aceita.*
+> - *Dias próximos = 7, e na aba Avaliações da turma a ação "juntar como sessão da mesma prova" (Encarregado/Admin,
+>   com trilha).*
+> - *Vista obrigatória para PM, PO e PE.*
+> - *Aplicador sem habilitação: aviso. Nome livre recusado no endpoint para aula/avaliação: aceito.*
+> - *Catálogo: código inexistente (PROCV) e T/E da avaliação voltam a "corrigir", prioridade Média; o resto é
+>   informação.*
+>
+> *"EXECUTE DE PONTA A PONTA, SEM PARAR PARA ME PERGUNTAR (…) PARE E ME CHAME SÓ SE: o remoto divergir do ensaio; a 2ª
+> rodada não der zero; um teste reprovar de forma reproduzível (…); ou surgir decisão de regra de negócio que não está
+> acima."*
+
+**O que cada uma fecha** (as perguntas da seção de 15/10/2026, acima):
+
+| Item | Resposta de 16/10/2026 | Efeito |
+|---|---|---|
+| ⛔ Portão — o desenho | **Opção A** | T252 fechada; T253–T260 executadas neste ramo (#58) |
+| D-CONST-VI (14/10/2026) | **Emendada**: o #58 traz **duas** migrations (uma de estrutura, uma de dado) | `plan.md` (*Complexity Tracking*) e a nota do Princípio VI nos dois endereços da constituição (CONST-1) |
+| P1 — `T` | **Aceita**: o número do `T` é a ordem dos trabalhos | a leitura de 15/10 vira regra |
+| P4 — "dias próximos" | **7 dias**, como dado (`avaliacao.janela_sessoes_dias`) | os casos de 13 e 43 dias ficam provas separadas; quem decide juntá-los é o Encarregado ou o Admin, na aba, pela ação nova |
+| — | **Ação nova** na aba *Avaliações* da turma: *"juntar como sessão da mesma prova"*, só Encarregado e Admin, **com trilha** | a trilha mora na própria sessão (quem, quando, a avaliação juntada e o retrato dela antes), imutável por gatilho — sem tabela fora do desenho aprovado (regra 9.4) |
+| P5 — PE | **PM, PO e PE** exigem vista (não mais o literal) | a marca `vista_obrigatoria` em `config_listas.metadados` dos três; o B de *«vistas realizadas A de B»* segue contando os itens com tempo de vista |
+| P6 — aplicador | **Aviso** (sem recusa) | como estava |
+| — | **Nome livre recusado no endpoint** para aula e avaliação: **aceito** | como estava (mudança de comportamento declarada no #58) |
+| P9 — catálogo | **PROCV** (código inexistente na BD DISCIPLINAS) e **T/E da avaliação** voltam a **corrigir**, prioridade **Média**; o resto do catálogo é informação | `scripts/carga_dsa/erros_por_turma.py` |
+| P10 — T/E | **Aceita**: com COD `AV` e a descrição sem instrumento, a coluna **T/E** da linha desempata | `regras_de_prova.ligar_ao_curriculo` |
+| P2, P3, P7, P8 | não citadas em 16/10/2026 | continuam implementadas com a leitura de 15/10 e **[pendente — Bernardo]** |
+
+**Aprovação:** ✅ **aprovado por Bernardo Villas Boas em 16/10/2026** (opção A, P1, P4, P5, P6, P9, P10 e a ação de
+juntar). O que a implementação mediu e decidiu dentro dessas palavras está em *Session 2026-10-16* da spec.

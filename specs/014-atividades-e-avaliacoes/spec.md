@@ -4,7 +4,7 @@
 
 **Created**: 12/10/2026
 
-**Status**: **Clarify encerrado em 13/10/2026.** As Q-1 a Q-17 foram respondidas por Bernardo em 12 e 13/10/2026 (*Clarifications*). A Q-1 foi **substituída** pela decisão D-CUR-1, e a Q-1b caiu junto. O lote banco × currículo (§11-A) foi **aprovado em bloco**, com o impacto mostrado caso a caso antes de cada aplicação; a lista planilha × currículo (§11-B) vai para os operadores. Seguem para aprovação de Bernardo, na implementação, o texto da emenda da `RN-AVAL-01` (§12) e as emendas de texto (§13). Os acréscimos de Bernardo (D-CUR-2 e os cards, §2.3) foram medidos (§15), e as duas perguntas que geraram (Q-16 e Q-17, §16) estão respondidas. A emenda E-7 da `RN-2027-03` está **aprovada** para a implementação. **Nenhuma trava restante para os Épicos 9 e 8.** **Emenda de 15/10/2026** (§2.4 e *Session 2026-10-15*): Bernardo Villas Boas decidiu as regras **RN-AV-10 a RN-AV-14** (a prova casa pelo COD, a prova em N sessões, a vista só para PM e PO, a prova a mais como informação) e **RN-RESP-1** (responsável de nome livre fora da aula de disciplina). Elas emendam D-AA-9, FR-016, FR-017, FR-036, FR-036.1, FR-051, FR-054, FR-056, FR-058, SC-006, SC-008.2, SC-017 e os cenários 2 e 3 da US5 e 5 da US6. O que pede banco está no desenho `desenho-emenda-15-10.md`, **aguardando Bernardo** (regra 9.4); o resto é feito **só no local**, sem `db push` e sem merge.
+**Status**: **Clarify encerrado em 13/10/2026.** As Q-1 a Q-17 foram respondidas por Bernardo em 12 e 13/10/2026 (*Clarifications*). A Q-1 foi **substituída** pela decisão D-CUR-1, e a Q-1b caiu junto. O lote banco × currículo (§11-A) foi **aprovado em bloco**, com o impacto mostrado caso a caso antes de cada aplicação; a lista planilha × currículo (§11-B) vai para os operadores. Seguem para aprovação de Bernardo, na implementação, o texto da emenda da `RN-AVAL-01` (§12) e as emendas de texto (§13). Os acréscimos de Bernardo (D-CUR-2 e os cards, §2.3) foram medidos (§15), e as duas perguntas que geraram (Q-16 e Q-17, §16) estão respondidas. A emenda E-7 da `RN-2027-03` está **aprovada** para a implementação. **Nenhuma trava restante para os Épicos 9 e 8.** **Decisões de 16/10/2026** (*Session 2026-10-16*): Bernardo aprovou a **opção A** do desenho, a ordem dos trabalhos no `T`, a T/E como desempate do `AV`, 7 dias para as sessões com a ação de juntar na aba, a vista obrigatória para **PM, PO e PE**, e o PROCV e a T/E de volta a «corrigir». **Emenda de 15/10/2026** (§2.4 e *Session 2026-10-15*): Bernardo Villas Boas decidiu as regras **RN-AV-10 a RN-AV-14** (a prova casa pelo COD, a prova em N sessões, a vista só para PM e PO, a prova a mais como informação) e **RN-RESP-1** (responsável de nome livre fora da aula de disciplina). Elas emendam D-AA-9, FR-016, FR-017, FR-036, FR-036.1, FR-051, FR-054, FR-056, FR-058, SC-006, SC-008.2, SC-017 e os cenários 2 e 3 da US5 e 5 da US6. O que pede banco está no desenho `desenho-emenda-15-10.md`, **aguardando Bernardo** (regra 9.4); o resto é feito **só no local**, sem `db push` e sem merge.
 
 **Input**: pedido de Bernardo Villas Boas de 12/10/2026: *"Épicos 8 e 9 da v2.1 — Avaliações e Atividades."* Ele veio com **15 decisões já tomadas**, registradas na §2 como requisito e não reabertas como pergunta.
 
@@ -178,6 +178,51 @@ O DSA já lança avaliação, vista e atividade, mas há quatro lacunas:
 - Q: Quando o COD é `AV` e a descrição não nomeia instrumento, a coluna **T/E** da linha pode desempatar? → A: **[pendente — Bernardo]** (P10). Até lá: **não** — vale a P2, e a prova não casa. Medido em 15/10/2026 sobre os planos da gravação local da rodada `2026-10-14T1916`: das **44** provas `AV` que não casam, **27** têm T/E que nomeia um instrumento da disciplina. **Pergunta, não implementada.**
 
 ---
+
+### Session 2026-10-16
+
+*(Decisões de Bernardo Villas Boas, 16/10/2026 — "todas APROVADAS por mim em 16/10/2026". Não se reabrem. Registro
+completo em `aprovacoes-pendentes.md`, seção de 16/10/2026.)*
+
+- Q: O desenho de 15/10/2026 — opção A ou B? → A: **Opção A** (**D-EMENDA-A**): a tabela `sessoes_de_aplicacao` (a
+  prova em N sessões é UMA avaliação, `RN-AVAL-02`), a coluna `avaliacoes.instrumento_id` (o instrumento da prova sem
+  item ou a mais), as leituras de CH, ocupação e carga somando as sessões, a obrigação de vista como dado
+  (`config_listas.metadados.vista_obrigatoria`) lida por `app.fn_status_vista`, e o parâmetro
+  `avaliacao.janela_sessoes_dias`. **Registrada como emenda à exceção D-CONST-VI** (Princípio VI): o #58 traz duas
+  migrations, uma de estrutura e uma de dado.
+- Q: O número do `T` (P1)? → A: **A ordem dos trabalhos da disciplina** — aceita a leitura de 15/10/2026.
+- Q: "Dias consecutivos ou próximos" (P4)? → A: **7 dias corridos** entre uma sessão e a seguinte, como dado. E a aba
+  *Avaliações* da turma ganha a ação **"juntar como sessão da mesma prova"**, só para o **Encarregado e o Admin**, **com
+  trilha** — quem decide juntar o que passou da janela (os casos de 13 e 43 dias) é gente, não a regra.
+- Q: Quais instrumentos exigem vista (P5)? → A: **PM, PO e PE** (**D-VISTA-PE**). Emenda a RN-AV-13 de 15/10/2026, que
+  nomeava só PM e PO: a PE também exige.
+- Q: Aplicador sem habilitação (P6)? → A: **Aviso**, sem recusa (como a D-AV-3). E o **nome livre recusado no
+  endpoint** para aula e avaliação está **aceito**.
+- Q: O catálogo da lista por turma (P9)? → A: **O código que não existe na BD DISCIPLINAS (PROCV) e a T/E da avaliação
+  voltam a «corrigir», prioridade Média**; o resto do catálogo é informação.
+- Q: A coluna T/E desempata o `AV` (P10)? → A: **Sim**: com COD `AV` e a descrição sem instrumento, a T/E da linha
+  desempata; a descrição, quando nomeia, continua valendo.
+- Q: Onde fica a "trilha" de juntar? → A: **Na própria sessão** (leitura da implementação, 16/10/2026): a sessão nascida
+  de uma junção guarda a avaliação juntada, quem juntou, quando e o retrato dela antes (`jsonb`), e um gatilho recusa
+  mudar esses campos depois — sem tabela fora do desenho aprovado (regra 9.4). A avaliação juntada fica **cancelada**,
+  com a marca *"[JUNTADA COMO SESSAO …]"*, e as vistas dela passam para a prova.
+- Q: Com item ligado, `avaliacoes.instrumento_id` repete o instrumento do item? → A: **Não**: com item, a coluna fica
+  **nula** (ou igual ao do item — o gatilho recusa diferente), e quem lê usa o do item. Ela só guarda o que não há em
+  outro lugar (leitura da implementação, 16/10/2026: *"nunca uma segunda fonte de verdade"*).
+- Q: Na prova em N sessões, de quando conta o prazo de 7 dias da vista? → A: **Da ÚLTIMA sessão de aplicação**
+  (leitura da implementação, 16/10/2026): a prova só termina na última sessão, e contar da 1ª acusaria atraso numa
+  prova ainda em aplicação. A 1ª sessão ainda à frente continua «pendente»; entre a 1ª e a última, «em andamento». Vale
+  na TS (`situacaoDaAvaliacao`, `alertasDeVista`) e no espelho SQL (`app.fn_status_vista`), com a prova cruzada.
+- Q: A prova SEM item entra no alerta de vista? → A: **Quando tem instrumento gravado** (`avaliacoes.instrumento_id`):
+  o que a tirava do alerta (decisão de 14/10/2026) era não se saber se ela exige vista, e o instrumento responde pela
+  RN-AV-13 (T259). Sem instrumento, continua fora do alerta e na lista de erros de planilha (leitura da
+  implementação, 16/10/2026).
+- Q: O que a P10 faz com as três `AV` da TFM da C-Ap-FR (currículo só com a PP 3)? → A: A T/E «PP» dá o instrumento às
+  três; pela leitura da P2 (o número do `AV` é a ordem da avaliação — ainda **[pendente — Bernardo]**), a 1ª aplicada
+  (`AV1`, 28/07) liga à **PP 3**, e a `AV2` e a `AV3` (03/09) ficam **a mais**, como informação (*"currículo prevê 1
+  PP; aplicadas 3"*). Antes de 15/10, era a `AV3` que ligava. *(Medido no reensaio local de 16/10/2026 sobre a cópia
+  `remoto-20261016-065949.sql`.)*
+
 
 ## 3. User Scenarios & Testing *(mandatory)*
 

@@ -358,6 +358,7 @@ export type Database = {
           editado_por: string | null
           fiscal_id: string | null
           id: string
+          instrumento_id: string | null
           instrutor_responsavel_id: string | null
           item_planejado_id: string | null
           local: string | null
@@ -399,6 +400,7 @@ export type Database = {
           editado_por?: string | null
           fiscal_id?: string | null
           id?: string
+          instrumento_id?: string | null
           instrutor_responsavel_id?: string | null
           item_planejado_id?: string | null
           local?: string | null
@@ -440,6 +442,7 @@ export type Database = {
           editado_por?: string | null
           fiscal_id?: string | null
           id?: string
+          instrumento_id?: string | null
           instrutor_responsavel_id?: string | null
           item_planejado_id?: string | null
           local?: string | null
@@ -575,6 +578,13 @@ export type Database = {
             columns: ["fiscal_id"]
             isOneToOne: false
             referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_instrumento_id_fkey"
+            columns: ["instrumento_id"]
+            isOneToOne: false
+            referencedRelation: "config_listas"
             referencedColumns: ["id"]
           },
           {
@@ -2883,6 +2893,101 @@ export type Database = {
           },
         ]
       }
+      sessoes_de_aplicacao: {
+        Row: {
+          avaliacao_id: string
+          avaliacao_juntada_antes: Json | null
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          data: string
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          juntada_de_avaliacao_id: string | null
+          juntada_em: string | null
+          juntada_por: string | null
+          local: string | null
+          numero: number
+          origem_migracao_v1: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          ta_final: number | null
+          ta_inicial: number | null
+          tempos_consumidos: number | null
+        }
+        Insert: {
+          avaliacao_id: string
+          avaliacao_juntada_antes?: Json | null
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          data: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          juntada_de_avaliacao_id?: string | null
+          juntada_em?: string | null
+          juntada_por?: string | null
+          local?: string | null
+          numero: number
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_final?: number | null
+          ta_inicial?: number | null
+          tempos_consumidos?: number | null
+        }
+        Update: {
+          avaliacao_id?: string
+          avaliacao_juntada_antes?: Json | null
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          data?: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          juntada_de_avaliacao_id?: string | null
+          juntada_em?: string | null
+          juntada_por?: string | null
+          local?: string | null
+          numero?: number
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_final?: number | null
+          ta_inicial?: number | null
+          tempos_consumidos?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessoes_de_aplicacao_avaliacao_id_fkey"
+            columns: ["avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessoes_de_aplicacao_avaliacao_id_fkey"
+            columns: ["avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_avaliacoes_situacao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessoes_de_aplicacao_juntada_de_avaliacao_id_fkey"
+            columns: ["juntada_de_avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessoes_de_aplicacao_juntada_de_avaliacao_id_fkey"
+            columns: ["juntada_de_avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_avaliacoes_situacao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       turma_disciplina: {
         Row: {
           ch_prevista_por_instrutor: number | null
@@ -4665,6 +4770,10 @@ export type Database = {
       impedimentos_de_exclusao_do_instrutor: {
         Args: { p_instrutor_id: string }
         Returns: string[]
+      }
+      juntar_como_sessao: {
+        Args: { p_avaliacao_id: string; p_prova_id: string }
+        Returns: string
       }
       protecao_das_vigencias_por_atividade_global: {
         Args: { p_curso_id: string }

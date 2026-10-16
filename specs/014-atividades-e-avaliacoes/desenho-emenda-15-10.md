@@ -1,6 +1,11 @@
 # Desenho para aprovação — a parte de banco da emenda de 15/10/2026 (RN-AV-12, RN-AV-13, RN-AV-14)
 
-> ⛔ **PORTÃO DE BERNARDO (regra 9.4 do `CLAUDE.md`).** Nada deste arquivo foi aplicado — nem no local, nem no
+> ✅ **APROVADO por Bernardo Villas Boas em 16/10/2026 — OPÇÃO A** (`aprovacoes-pendentes.md`, seção de
+> 16/10/2026), com a janela de **7 dias**, a vista obrigatória para **PM, PO e PE** e a ação *"juntar como sessão da
+> mesma prova"* (Encarregado/Admin, com trilha). Implementado nas migrations E-6 `20261016092307` e D-9
+> `20261016092315` (`data-model.md` §3.5.1). O texto abaixo é o desenho como foi submetido.
+>
+> ⛔ *(Texto original, 15/10/2026:)* **PORTÃO DE BERNARDO (regra 9.4 do `CLAUDE.md`).** Nada deste arquivo foi aplicado — nem no local, nem no
 > remoto. Ele existe porque a emenda pede, em três pontos, o que o esquema de hoje **não tem onde guardar**. O resto
 > da emenda (RN-AV-10, RN-AV-11, a lista de erros da RN-AV-13 e da RN-AV-14, e a RN-RESP-1) foi feito **sem
 > migration** neste ramo — ver `aprovacoes-pendentes.md`, seção de 15/10/2026.
