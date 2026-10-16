@@ -110,7 +110,9 @@
       "_decisao": "Bernardo Villas Boas, 06/10/2026 (respostas ao lote da onda 2, item 4): o 144 foi PROMOVIDO de 1ºSG a SO (efetivo no primeiro DSA em que aparece como SO, 01/06/2026) e o texto com o posto antigo e dele; o 173 foi promovido de GM a 2ºTen e o texto «GM … » e dele. Postos normalizados (sem «º» nem espaco)."
     },
     "local_do_estudo_individual": "Biblioteca",
-    "_local_do_estudo_individual": "Bernardo Villas Boas, 07/10/2026 (conferencia visual): o local do Estudo Individual e «Biblioteca» em todos os cursos e turmas; o local da planilha no EI e ignorado"
+    "_local_do_estudo_individual": "Bernardo Villas Boas, 07/10/2026 (conferencia visual): o local do Estudo Individual e «Biblioteca» em todos os cursos e turmas; o local da planilha no EI e ignorado",
+    "janela_de_sessoes_de_aplicacao_dias": 7,
+    "_janela_de_sessoes_de_aplicacao_dias": "PROPOSTA, aguardando Bernardo Villas Boas (emenda de 15/10/2026, RN-AV-12: «dias consecutivos ou proximos»): ate 7 dias corridos entre uma sessao e a seguinte. Medido na rodada 2026-10-14T1916: intervalos de 0, 1, 3 e 4 dias juntam; 13 dias (CAHO XVII, T) e 43 dias (a ultima de CAHO IV, PP) ficam separados. Vai para config_parametros com a migration do desenho de 15/10/2026."
   },
   "virada_por_turma": "A3.3 (Bernardo Villas Boas, 14/10/2026): a turma com `virada` tem o SISTEMA como fonte a partir dessa data. A sincronizacao cobre so as datas anteriores e nao toca em nada dali em diante. As demais seguem pela planilha ate a virada de cada uma."
 }

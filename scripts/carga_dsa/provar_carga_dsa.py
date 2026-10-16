@@ -310,18 +310,23 @@ def main() -> int:
     cat = {a["subtipo"]: a["categoria_normativa"] for a in res.atividades}
     conferir("FR-021 · MONITORIA vira Apoio Individualizado", cat.get("Monitoria") == "Apoio_Individualizado", cat)
     conferir("FR-021 · RECEPCAO e TAD com o tipo «Recepção aos alunos»", cat.get("Recepção aos alunos") == "TAD", cat)
-    conferir("FR-016 · responsavel que nao casa vira PENDENCIA do lote, e a palestra nao e gravada",
-             any(pp.tipo == "responsavel_sem_decisao" and "CICRANO" in pp.detalhe for pp in res.pendencias)
-             and "Palestra" not in cat, [pp.detalhe for pp in res.pendencias])
-    provisorio = resolver(leva1, ref, dec, "l.xlsx", set(), True)
-    conferir("A3.2 · a pendencia de responsavel trava SO A LINHA: nao bloqueia a turma, e a palestra fica fora ate no local",
-             not any(a["subtipo"] == "Palestra" for a in provisorio.atividades)
-             and any(pp.tipo == "responsavel_sem_decisao" and not pp.bloqueia for pp in provisorio.pendencias)
-             and not any(pp.tipo == "responsavel_sem_decisao" and pp.bloqueia for pp in res.pendencias)
-             and bool(res.aulas))
+    # RN-RESP-1 (emenda de 15/10/2026): a palestra aceita responsavel de nome livre. O VEREDITO VIRA (DoD 8): ate
+    # 15/10 o texto fora do cadastro virava `responsavel_sem_decisao` e a palestra ficava fora (FR-016, A3.2).
+    palestra = [a for a in res.atividades if a["subtipo"] == "Palestra"]
+    conferir("RN-RESP-1 · palestra com responsavel fora do cadastro ENTRA, com o texto como responsavel livre, sem pendencia",
+             len(palestra) == 1 and palestra[0]["instrutor_id"] is None and "CICRANO" in (palestra[0]["responsavel_externo"] or "")
+             and not any(pp.tipo == "responsavel_sem_decisao" for pp in res.pendencias), (palestra, [pp.detalhe for pp in res.pendencias]))
+    conferir("RN-RESP-1 · e a linha fica registrada para a lista de conferencia (fora do git)",
+             any("CICRANO" in x["texto"] and x["tipo"] == "aec" for x in res.responsavel_livre), res.responsavel_livre)
+    conferir("RN-RESP-1 · a aula continua exigindo instrutor do cadastro (o plano tem aula, e nenhuma sem instrutor)",
+             bool(res.aulas) and all(a["instrutor_id"] for a in res.aulas), res.aulas)
+    from scripts.carga_dsa.resolver import vazio
+    conferir("RN-RESP-1 · celula so de tracos («------») e vazia, nao nome", vazio("------") and vazio(" -- ") and not vazio("CT FULANO"))
+    # A chave `responsavel_externo_aceito` do lote ficou SEM EFEITO com a RN-RESP-1: o texto entra igual com ou sem ela.
     aceito = resolver(leva1, ref, {**dec, "responsavel_externo_aceito": ["SR. CICRANO DE FORA"]}, "l.xlsx", set(), True)
-    conferir("FR-016 · com a decisao no lote, entra como externo",
-             any(a["responsavel_externo"] == "SR. CICRANO DE FORA" for a in aceito.atividades), aceito.atividades)
+    sem_lote = resolver(leva1, ref, dec, "l.xlsx", set(), True)
+    conferir("RN-RESP-1 · a decisao do lote (`responsavel_externo_aceito`) nao muda nada: com ou sem ela, o mesmo plano",
+             aceito.impressao_digital() == sem_lote.impressao_digital(), (aceito.impressao_digital(), sem_lote.impressao_digital()))
     conferir("§11-B · aula no dia que a planilha marca parado: erro de planilha, e a aula ENTRA",
              any("marca parado" in e["diverge"] for e in res.erros_tabelados)
              and any(a["data"] == "2026-03-09" for a in res.aulas), res.erros_tabelados)
@@ -492,8 +497,174 @@ def main() -> int:
     conferir("controle: faltando a sessao 2 no banco, a PM 1 muda (o teste discrimina)",
              sincronizar.diferencas(res2, {**atuais, "avaliacoes": outra})["avaliacoes"]["mudadas"] != [])
 
+    emenda_de_15_10()
+
     print(f"\n{'TODAS AS PROVAS PASSARAM' if not FALHAS else f'{len(FALHAS)} PROVA(S) FALHARAM'}")
     return 1 if FALHAS else 0
+
+
+def emenda_de_15_10() -> None:
+    """Emenda de 15/10/2026 a spec 014 (Bernardo Villas Boas): RN-AV-10 a RN-AV-14. Casos sinteticos, sem banco."""
+    from datetime import date as _date
+
+    from scripts.carga_dsa import regras_de_prova as rp
+    from scripts.carga_dsa.resolver import Resolvido, _agrupar_sessoes, _ligar_itens, _vista_de_prova_sem_item
+
+    print("EMENDA DE 15/10/2026 — RN-AV-10 a RN-AV-14")
+    conferir("RN-AV-10 · «PM1» = «PM 1» = «PM-1»",
+             rp.ler_cod("PM1") == rp.ler_cod("PM 1") == rp.ler_cod("PM-1") == ("PM", 1) and rp.ler_cod("PP") == ("PP", None)
+             and rp.cod_colado("pm - 2") == "PM2", (rp.ler_cod("PM 1"), rp.ler_cod("PM-1")))
+
+    def pm(n: int, ta: int = 2) -> dict:
+        return {"id": f"pm-{n}", "disciplina_id": "d", "numero": n, "instrumento": "PM", "instrumento_nome": "Prova Mista", "ta_aplicacao": ta}
+
+    def pp(n: int) -> dict:
+        return {"id": f"pp-{n}", "disciplina_id": "d", "numero": n, "instrumento": "PP", "instrumento_nome": "Prova Prática", "ta_aplicacao": 2}
+
+    tg = {"id": "tg-1", "disciplina_id": "d", "numero": 1, "instrumento": "TG", "instrumento_nome": "Trabalho em Grupo", "ta_aplicacao": 2}
+    ti = {"id": "ti-1", "disciplina_id": "d", "numero": 1, "instrumento": "TI", "instrumento_nome": "Trabalho Individual", "ta_aplicacao": 2}
+
+    def prova(cod: str, data: str, desc: str = "", ta: int = 2) -> dict:
+        # `sessoes` NOVA a cada prova: lista compartilhada pelo dicionario-base fazia a vista de um caso aparecer no outro.
+        return {"chave_ue": cod, "data_avaliacao": data, "descricao": desc, "ta_inicial": 1, "tempos_consumidos": ta,
+                "disciplina": "I", "disciplina_id": "d", "sessoes": []}
+
+    def lig(provas: list[dict], itens: list[dict]) -> dict:
+        saida = {}
+        for n, v in rp.ligar_ao_curriculo(provas, itens).items():
+            saida[n] = v["item"]["id"] if "item" in v else ("a_mais:" + v["a_mais"] if "a_mais" in v else "nao_casa")
+        return saida
+
+    # O caso que discrimina (DoD 8): ate 15/10 o numero da DESCRICAO vencia; agora decide o COD.
+    conferir("RN-AV-10 · o COD decide e a descricao so desempata: «PM1» com descricao «PM2 – …» liga ao item 1",
+             lig([prova("PM1", "2026-04-01", "PM2 – ESTATISTICA")], [pm(1), pm(2)]) == {0: "pm-1"})
+    conferir("RN-AV-10 · «PM-1» e «PM 1» ligam ao item 1",
+             lig([prova("PM-1", "2026-04-01")], [pm(1), pm(2)]) == {0: "pm-1"} and lig([prova("PM 1", "2026-04-01")], [pm(1)]) == {0: "pm-1"})
+    conferir("RN-AV-11 · «PM» sem numero e o UNICO item do instrumento", lig([prova("PM", "2026-04-01")], [pm(1)]) == {0: "pm-1"})
+    conferir("RN-AV-11 · varios: pela ordem cronologica de aplicacao (1ª aplicada = nº 1), na ordem da lista ou nao",
+             lig([prova("PM", "2026-05-01"), prova("PM", "2026-04-01")], [pm(1), pm(2)]) == {0: "pm-2", 1: "pm-1"})
+    conferir("RN-AV-11 · numerada e sem numero misturadas: a sem numero pega o MENOR numero livre (interpretacao)",
+             lig([prova("PM2", "2026-04-01"), prova("PM", "2026-05-01")], [pm(1), pm(2)]) == {0: "pm-2", 1: "pm-1"})
+    conferir("RN-AV-10 · «T» e o trabalho da disciplina: so TG → TG 1",
+             lig([prova("T", "2026-04-01", "TRABALHO")], [tg, pm(1)]) == {0: "tg-1"})
+    conferir("RN-AV-10 · «T» com TG e TI: a descricao desempata («TRABALHO INDIVIDUAL» → TI); sem pista, nao casa",
+             lig([prova("T", "2026-04-01", "TRABALHO INDIVIDUAL - TEMA")], [tg, ti]) == {0: "ti-1"}
+             and lig([prova("T", "2026-04-01", "TRABALHO")], [tg, ti]) == {0: "nao_casa"})
+    conferir("RN-AV-10 · o numero do «T» e a ORDEM dos trabalhos, nao o item: T1 «INDIVIDUAL» → TI 1; T2 e T3 «EM GRUPO» → TG 1 e TG 2 (CAHO VI)",
+             lig([prova("T1", "2026-04-23", "TRABALHO INDIVIDUAL"), prova("T2", "2026-06-23", "TRABALHO EM GRUPO"),
+                  prova("T3", "2026-07-06", "TRABALHO EM GRUPO, UE 6")],
+                 [ti, tg, {**tg, "id": "tg-2", "numero": 2}]) == {0: "ti-1", 1: "tg-1", 2: "tg-2"})
+    conferir("RN-AV-10 · «AV»: vale o instrumento que a DESCRICAO nomeia («PM2 –» → PM 2; «PROVA PRATICA» → PP)",
+             lig([prova("AV1", "2026-04-01", "PM2 – FISICA")], [pm(1), pm(2)]) == {0: "pm-2"}
+             and lig([prova("AV2", "2026-04-01", "PROVA PRÁTICA DE NAVEGACAO")], [pm(1), pp(1)]) == {0: "pp-1"})
+    conferir("D6.1 · «AV» sem descricao que nomeie NAO casa por eliminacao, nem numa disciplina so de PM",
+             lig([prova("AV1", "2026-04-01", "AVALIACAO DA APRENDIZAGEM")], [pm(1)]) == {0: "nao_casa"})
+    conferir("RN-AV-10 · COD de instrumento que a disciplina nao tem (PP numa disciplina so de PM) nao casa",
+             lig([prova("PP", "2026-04-01")], [pm(1)]) == {0: "nao_casa"})
+    conferir("RN-AV-14 · numero alem do curriculo, ou o mesmo item pedido duas vezes: «a mais», nao «nao casa»",
+             lig([prova("PP2", "2026-04-01")], [pp(1)]) == {0: "a_mais:PP"}
+             and lig([prova("PP1", "2026-04-01"), prova("PP1", "2026-06-01")], [pp(1)]) == {0: "pp-1", 1: "a_mais:PP"})
+
+    conferir("RN-AV-11 · «PM» sem numero e descricao «PM4 – …»: vale a ORDEM cronologica, nao o 4 da descricao (so desempata)",
+             lig([prova("PM", "2026-03-01", "PM4 – FISICA"), prova("PM", "2026-03-20", "PM1 – X")], [pm(1), pm(2), pm(3), pm(4)]) == {0: "pm-1", 1: "pm-2"})
+    conferir("D6.1 · com «AV» o numero ESCRITO na descricao continua valendo («AV1» com «PM4 – …» → PM 4)",
+             lig([prova("AV1", "2026-03-01", "PM4 – FISICA")], [pm(1), pm(4)]) == {0: "pm-4"})
+
+    grupos = rp.agrupar_sessoes([prova("PP", d, "PROVA PRATICA DE CAMPO") for d in ("2026-06-22", "2026-06-23", "2026-06-26", "2026-08-19")]
+                                + [prova("PP", "2026-06-24", "OUTRA PROVA")], 7)
+    conferir("RN-AV-12 · mesma disciplina, mesmo COD e mesma descricao em dias proximos: UMA prova (3 sessoes); 54 dias depois, outra; outra descricao, outra",
+             sorted(len(g) for g in grupos) == [1, 1, 3], [[p["data_avaliacao"] for p in g] for g in grupos])
+    conferir("RN-AV-12 · a janela e parametro: com 1 dia, o intervalo de 3 dias separa",
+             sorted(len(g) for g in rp.agrupar_sessoes([prova("PP", d, "X") for d in ("2026-06-22", "2026-06-23", "2026-06-26")], 1)) == [1, 2])
+
+    r = Resolvido(turma={}, autor={}, titulo="x")
+    base = {"tipo_avaliacao": "Prova Prática", "avaliacao_curriculo_id": None, "item": None}
+    r.avaliacoes = [{**base, **prova("PP", d, "PROVA PRATICA DE CAMPO", 3), "codigo": f"V{n}"}
+                    for n, d in enumerate(("2026-06-22", "2026-06-23", "2026-06-25"))]
+    _agrupar_sessoes(r, 7)
+    _ligar_itens(r, {"itens_curriculo": [pp(1)]})
+    conferir("RN-AV-12 · a PP em 3 dias liga UMA vez ao item; as sessoes 2 e 3 nao sao «a mais» nem erro",
+             [a.get("avaliacao_curriculo_id") for a in r.avaliacoes] == ["pp-1", None, None]
+             and not any("a mais" in e or "nao casa" in e for e in r.erros_de_planilha)
+             and sum("sessao" in i for i in r.informativos) == 2, (r.avaliacoes, r.erros_de_planilha, r.informativos))
+    conferir("RN-AV-12 · o TA da prova de 3 sessoes e a SOMA (9) contra o curriculo (2): vai para a lista como TA diferente",
+             any("TA de prova diferente — planilha 9, curriculo 2" in e for e in r.erros_de_planilha), r.erros_de_planilha)
+
+    a_mais = Resolvido(turma={}, autor={}, titulo="x")
+    a_mais.avaliacoes = [{**base, **prova("PP1", "2026-04-01", "PRATICA 1"), "codigo": "A"},
+                         {**base, **prova("PP2", "2026-09-01", "PRATICA 2"), "codigo": "B"}]
+    _agrupar_sessoes(a_mais, 7)
+    _ligar_itens(a_mais, {"itens_curriculo": [pp(1)]})
+    conferir("RN-AV-14 · prova a mais NAO e erro de planilha: vira informacao «curriculo preve 1 PP; aplicadas 2»",
+             not any("a mais" in e for e in a_mais.erros_de_planilha)
+             and any("curriculo preve 1 PP; aplicadas 2" in i for i in a_mais.informativos), (a_mais.erros_de_planilha, a_mais.informativos))
+
+    # Revisao de 15/10/2026: a «a mais» que NAO passa do previsto (o COD pede um numero que o curriculo nao tem) nao pode
+    # sumir. Caso real: CAHO XIX «PP2» com o curriculo so com PP 3 — 1 aplicada, 1 prevista.
+    numero_errado = Resolvido(turma={}, autor={}, titulo="x")
+    numero_errado.avaliacoes = [{**base, **prova("PP2", "2026-09-17", "TFM - PROVA PRATICA"), "codigo": "X"}]
+    _agrupar_sessoes(numero_errado, 7)
+    _ligar_itens(numero_errado, {"itens_curriculo": [{**pp(3), "numero": 3}]})
+    conferir("RN-AV-10 · «PP2» com o curriculo so com PP 3 (1 aplicada, 1 prevista): NAO some — vai para a lista e para as provas sem casar",
+             any("PP2" in e and "nao casa" in e and "PP 3" in e for e in numero_errado.erros_de_planilha)
+             and len(numero_errado.provas_sem_casar) == 1 and not numero_errado.informativos,
+             (numero_errado.erros_de_planilha, numero_errado.provas_sem_casar, numero_errado.informativos))
+    repetida = Resolvido(turma={}, autor={}, titulo="x")
+    repetida.avaliacoes = [{**base, **prova("PM1", "2026-03-01", "A"), "codigo": "A"}, {**base, **prova("PM1", "2026-05-01", "B"), "codigo": "B"}]
+    _agrupar_sessoes(repetida, 7)
+    _ligar_itens(repetida, {"itens_curriculo": [pm(1), pm(2), pm(3)]})
+    conferir("RN-AV-10 · a mesma «PM1» duas vezes, longe, com 3 PM no curriculo: a 2ª «nao casa» (o item PM 1 ja foi ligado), nao some",
+             any("ja foi ligado" in e for e in repetida.erros_de_planilha) and len(repetida.provas_sem_casar) == 1, repetida.erros_de_planilha)
+
+    from scripts.carga_dsa.resolver import _casar_vistas
+    vg = Resolvido(turma={}, autor={}, titulo="x")
+    vg.avaliacoes = [{**base, **prova("PP", d, "PRATICA"), "codigo": f"G{n}", "instrutor": None, "instrutor_responsavel_id": None,
+                      "fiscal_id": None, "nome_fiscal_externo": None} for n, d in enumerate(("2026-06-01", "2026-06-05"))]
+    _agrupar_sessoes(vg, 7)
+
+    class _Bloco:
+        def __init__(self) -> None:
+            self.data, self.ta_inicial, self.ue, self.linha, self.tempos, self.chave = _date(2026, 6, 10), 1, "VP", 99, 1, ("I", "VP")
+
+    class _Linha:
+        instrutor = ""
+
+    class _Leitura:
+        digitadas: dict = {}
+        catalogo = {("I", "VP"): _Linha()}
+        datas_avaliacoes: list = []
+
+    pend_vg: list = []
+    _casar_vistas(vg, [(_Bloco(), {"cod": "I"})], {"vistas": [{"disciplina": "I", "data": "2026-06-10", "da_prova_de": "2026-06-05"}]},
+                  lambda *a, **k: pend_vg.append(a), lambda b, regra=None: None, lambda *a, **k: None, _Leitura())
+    conferir("RN-AV-12 · a decisao de vista que aponta a data da 2ª SESSAO vai para a prova (a 1ª sessao), sem pendencia",
+             not pend_vg and len(vg.avaliacoes[0]["sessoes"]) == 1 and vg.avaliacoes[1]["sessoes"] == [], (pend_vg, vg.avaliacoes))
+
+    from scripts.carga_dsa.resolver import _sessoes_herdam_o_aplicador
+    ha = Resolvido(turma={}, autor={}, titulo="x")
+    papel = {"instrutor": None, "instrutor_responsavel_id": None, "fiscal_id": None, "nome_fiscal_externo": None}
+    ha.avaliacoes = [{**base, **prova("PP", "2026-06-01", "P"), **papel, "codigo": "H1", "instrutor": "90", "instrutor_responsavel_id": "i-90"},
+                     {**base, **prova("PP", "2026-06-02", "P"), **papel, "codigo": "H2", "_aplicador_escrito": False},
+                     {**base, **prova("PP", "2026-06-03", "P"), **papel, "codigo": "H3", "_aplicador_escrito": True}]
+    _agrupar_sessoes(ha, 7)
+    _sessoes_herdam_o_aplicador(ha)
+    conferir("RN-AV-12 · a sessao SEM nome na linha herda o aplicador da 1ª; a que traz um nome fora do cadastro fica sem (nao se inventa autoria)",
+             [a["instrutor_responsavel_id"] for a in ha.avaliacoes] == ["i-90", "i-90", None], ha.avaliacoes)
+
+    vista = Resolvido(turma={}, autor={}, titulo="x")
+    outra = {"disciplina": "IX", "disciplina_id": "d-9"}
+    vista.avaliacoes = [{**base, **prova("PP", "2026-04-01", "PROVA PRATICA"), "codigo": "P", **outra},
+                        {**base, **prova("T", "2026-04-01", "TRABALHO"), "codigo": "T", **outra},
+                        {**base, **prova("AV1", "2026-04-01", "AVALIACAO"), "codigo": "A", **outra},
+                        {**base, **prova("PM1", "2026-04-01", "PROVA MISTA"), "codigo": "M", **outra}]
+    _vista_de_prova_sem_item(vista, _date(2026, 4, 20))
+    listadas = sorted(e.split(" ")[1] for e in vista.erros_de_planilha if "vista nao lancada" in e)
+    # O caso que discrimina: ate 15/10 as quatro iam para a lista; agora PP e T (sem vista obrigatoria) nao vao.
+    conferir("RN-AV-13 · sem item e sem vista no 8º dia: PP e T NAO vao para a lista; PM vai; AV (instrumento desconhecido) vai",
+             listadas == ["AV1", "PM1"], listadas)
+    conferir("RN-AV-13 · o dado e o da tela: PM e PO exigem vista; PP, TG, TI, PE nao (lib/dominio/avaliacoes/instrumentos.json)",
+             [rp.vista_obrigatoria(i) for i in ("PM", "PO", "PP", "TG", "TI", "PE")] == [True, True, False, False, False, False]
+             and rp.ARQUIVO_DAS_REGRAS.as_posix().endswith("lib/dominio/avaliacoes/instrumentos.json"))
 
 
 if __name__ == "__main__":

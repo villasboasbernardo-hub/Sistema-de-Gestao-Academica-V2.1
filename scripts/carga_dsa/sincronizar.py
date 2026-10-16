@@ -625,10 +625,42 @@ def escrever_erros_de_planilha(pasta: Path, por_turma: list[tuple[str, Resolvido
             linhas.append("| " + " | ".join(_celula(e[c]) for c in ("disciplina", "diverge", "planilha", "curriculo", "fez")) + " |")
         for texto in res.erros_de_planilha:
             linhas.append(f"| — | {_celula(texto)} | — | — | registrado; a carga seguiu |")
-        if not res.erros_tabelados and not res.erros_de_planilha:
+        # Emenda de 15/10/2026 (RN-AV-12, RN-AV-14): o que NAO e erro de planilha, mas o operador precisa saber.
+        for texto in getattr(res, "informativos", []):
+            linhas.append(f"| — | {_celula(texto)} | — | — | {INFORMACAO} |")
+        if not res.erros_tabelados and not res.erros_de_planilha and not getattr(res, "informativos", []):
             linhas.append("| — | nenhum erro | — | — | — |")
         linhas.append("")
     arquivo = pasta / "erros-de-planilha.md"
+    arquivo.write_text("\n".join(linhas), encoding="utf-8", newline="\n")
+    return arquivo
+
+
+INFORMACAO = "informacao — nao e erro de planilha"
+
+
+def escrever_provas_sem_casar(pasta: Path, por_turma: list[tuple[str, Resolvido]]) -> Path:
+    """RN-AV-10 (emenda de 15/10/2026): a prova que nao casou com item do curriculo, com o COD, a descricao e os
+    itens da disciplina LADO A LADO, para Bernardo decidir. Fora do git (a pasta da rodada)."""
+    linhas = [
+        "# Provas que nao casam com o curriculo — rodada " + pasta.name, "",
+        "> Gerado por `python -m scripts.carga_dsa.sincronizar` (RN-AV-10: o COD da prova decide; a descricao so",
+        "> desempata). Cada linha entrou como FATO, sem avaliacao do curriculo. Decidir: qual item ela cumpre, ou nenhum.", "",
+        "| turma | disciplina | COD | data | TA | descricao | itens do curriculo da disciplina | por que nao casou |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    total = 0
+    for turma, res in por_turma:
+        # So o que ficou no plano: a virada (`proteger`) tira as provas da data dela em diante, e elas nao «entraram».
+        no_plano = {a["codigo"] for a in res.avaliacoes}
+        for x in getattr(res, "provas_sem_casar", []):
+            if x.get("codigo") not in no_plano:
+                continue
+            total += 1
+            linhas.append("| " + " | ".join(_celula(str(v)) for v in (
+                turma, x["disciplina"], x["cod"], x["data"], x["ta"], x["descricao"] or "—", ", ".join(x["itens"]), x["motivo"])) + " |")
+    linhas += ["", f"Total: {total} prova(s)."]
+    arquivo = pasta / "provas-sem-casar.md"
     arquivo.write_text("\n".join(linhas), encoding="utf-8", newline="\n")
     return arquivo
 
@@ -686,9 +718,13 @@ def escrever_pendencias_de_responsavel(pasta: Path, resolvidos: list[tuple[str, 
         guerras = guerras if guerras is not None else set()
         guerras |= getattr(res, "nomes_de_guerra", set())
         for pd in res.pendencias:
-            if pd.tipo != "responsavel_sem_decisao":
+            # RN-RESP-1 (15/10/2026): a atividade nao gera mais `responsavel_sem_decisao`; o que sobra de pendencia de
+            # responsavel e o texto fora do cadastro na AULA (bloqueia) e no APLICADOR da prova (aviso).
+            if pd.tipo not in ("responsavel_sem_decisao", "instrutor_nao_casado") or "«" not in pd.detalhe:
                 continue
             texto = pd.detalhe.split("«", 1)[1].split("»", 1)[0]
+            if pd.tipo == "instrutor_nao_casado":
+                texto += " (aplicador de prova)" if "responsavel de avaliacao" in pd.detalhe else " (aula)"
             item = por_texto.setdefault(texto, {"turmas": set(), "ta": 0})
             item["turmas"].add(turma)
             item["ta"] += pd.ta
@@ -703,6 +739,29 @@ def escrever_pendencias_de_responsavel(pasta: Path, resolvidos: list[tuple[str, 
         linhas.append(f"| {n} | {_celula(texto)} | {', '.join(sorted(item['turmas']))} | {item['ta']} | {classificar_responsavel(texto, guerras or set())} |")
     linhas.append("")
     linhas.append(f"Total: {len(por_texto)} texto(s), {sum(i['ta'] for i in por_texto.values())} TA.")
+    # RN-RESP-1 (emenda de 15/10/2026): a atividade aceita responsavel de nome livre — o texto que nao casa com o
+    # cadastro foi GRAVADO como esta (`responsavel_externo`), sem pendencia. A lista fica para conferencia.
+    livres: dict[str, dict] = {}
+    for turma, res in resolvidos:
+        for x in getattr(res, "responsavel_livre", []):
+            item = livres.setdefault(x["texto"], {"turmas": set(), "ta": 0, "linhas": []})
+            item["turmas"].add(turma)
+            item["ta"] += x["tempos"]
+            item["linhas"].append((turma, x))
+    linhas += [
+        "", "## Responsavel de nome livre gravado (RN-RESP-1, 15/10/2026)", "",
+        "> A linha e ATIVIDADE (palestra, AEC, apoio, TAD, TR), nao aula: entrou com o texto como responsavel, sem",
+        "> cadastro e sem alerta. A coluna «aula de disciplina com EO?» diz se a CHAVE da linha e de uma disciplina do",
+        "> curso E a tecnica do catalogo e EO — so esses pediriam instrutor habilitado se fossem aula.", "",
+        "| # | texto | turmas | TA | linhas (turma · data · chave · tipo/subtipo · T/E) | aula de disciplina com EO? |",
+        "|---|---|---|---|---|---|",
+    ]
+    for n, (texto, item) in enumerate(sorted(livres.items()), 1):
+        detalhe = "; ".join(f"{t} · {x['data']} · {x['chave']} · {x['tipo']}/{x['subtipo']} · {x['tecnica'] or '—'}" for t, x in item["linhas"])
+        eo = sum(1 for _, x in item["linhas"] if x["cod_e_disciplina"] and x["tecnica"] == "EO")
+        linhas.append(f"| {n} | {_celula(texto)} | {', '.join(sorted(item['turmas']))} | {item['ta']} | {_celula(detalhe)} | "
+                      f"{'SIM — ' + str(eo) + ' linha(s)' if eo else 'nao'} |")
+    linhas += ["", f"Total: {len(livres)} texto(s), {sum(i['ta'] for i in livres.values())} TA gravados como nome livre."]
     arquivo = pasta / "pendencias-de-responsavel.md"
     arquivo.write_text("\n".join(linhas), encoding="utf-8", newline="\n")
     return arquivo
@@ -867,8 +926,10 @@ def main() -> int:
                 print(f"    erro de planilha: {e}")
         if arg.relatorio is not None:
             arg.relatorio.mkdir(parents=True, exist_ok=True)
-            sem_id = lambda linhas: [{k: v for k, v in l.items() if not k.endswith("_id")} for l in linhas]  # noqa: E731
+            sem_id = lambda linhas: [{k: v for k, v in l.items() if not k.endswith("_id") and not k.startswith("_")} for l in linhas]  # noqa: E731
             (arg.relatorio / f"plano-{slug(turma)}.json").write_text(json.dumps({
+                "informativos": res.informativos, "sessoes_de_aplicacao": res.sessoes_de_aplicacao,
+                "provas_sem_casar": res.provas_sem_casar,
                 "turma": turma, "aulas": sem_id(res.aulas), "avaliacoes": sem_id(res.avaliacoes), "atividades": sem_id(res.atividades),
                 "calendario": res.calendario, "pendencias": [p.__dict__ for p in res.pendencias], "alertas": res.alertas,
                 "erros_de_planilha": res.erros_de_planilha, "classificadas": res.classificadas,
@@ -957,6 +1018,8 @@ def main() -> int:
     print(f"  lista «planilha diverge do sistema»: {arquivo}")
     arquivo = escrever_pendencias_de_responsavel(arg.rodada, resolvidos)
     print(f"  pendencias de responsavel (com a classificacao proposta): {arquivo}")
+    arquivo = escrever_provas_sem_casar(arg.rodada, resolvidos)
+    print(f"  provas que nao casam com o curriculo (COD, descricao e itens lado a lado): {arquivo}")
 
     titulo("Resumo da rodada")
     for turma, contagem, mudancas in resumo:

@@ -6,7 +6,11 @@ Lê o banco LOCAL (só leitura, `docker exec … psql`) — que deve ser a cópi
 `erros-de-planilha.md` da rodada. Cada avaliação viva `DSAP-` cai em UMA categoria, pela ordem:
 
     1 ligada a item · 2 OD · 3 editada na tela · 4 disciplina sem avaliação do currículo (A4.7)
-    · 5 prova a mais · 6 não casa · 7 sem par na planilha atual
+    · 5 sessão seguinte de uma prova (RN-AV-12) · 6 prova a mais (RN-AV-14) · 7 não casa · 8 sem par na planilha atual
+
+Emenda de 15/10/2026: a sincronização escreve a sessão seguinte e a prova a mais como INFORMAÇÃO — a sessão por linha
+(«… de <data>: sessao k da prova de <data> (RN-AV-12 …»), a prova a mais por disciplina («<disc>: curriculo preve N X;
+aplicadas M (<datas>) — RN-AV-14 …»). As duas são lidas aqui.
 
 ⚠️ A lista de erros conta LINHAS da planilha, e o banco conta AVALIAÇÕES carregadas: uma linha de "não casa" de
    prova posterior à virada da turma não tem avaliação no banco (a rodada não a carrega), e é ela que fazia as
@@ -49,11 +53,17 @@ def main() -> int:
         if m:
             turma = m.group(1).strip()
             continue
-        m = re.search(r"\| — \| (\S+) (\S+) de (\d{4}-\d{2}-\d{2}): (.*?) \|", l)
-        if not m or "vista" in m.group(4):
+        m = re.search(r"\| — \| (\S+): curriculo preve \d+ \S+; aplicadas \d+ \(([^)]*)\)", l)
+        if m:
+            for data in [x.strip() for x in m.group(2).split(",") if x.strip()]:
+                linhas.append({"turma": turma, "d": m.group(1), "sig": "", "data": data, "cat": "a mais"})
+            continue
+        m = re.search(r"\| — \| (\S+) (.+?) de (\d{4}-\d{2}-\d{2}): (.*?) \|", l)
+        if not m or ("vista" in m.group(4) and "sessao" not in m.group(4)):
             continue
         d, sig, data, oque = m.groups()
-        cat = ("nao casa" if "nao casa" in oque else "a mais" if "prova a mais" in oque
+        cat = ("sessao" if "sessao" in oque and "RN-AV-12" in oque else "nao casa" if "nao casa" in oque
+               else "a mais" if "prova a mais" in oque
                else "disciplina sem item" if "nao tem avaliacao do curriculo carregada" in oque else None)
         if cat:
             linhas.append({"turma": turma, "d": d, "sig": sig, "data": data, "cat": cat})
@@ -62,7 +72,7 @@ def main() -> int:
     sem_banco = []
     for L in linhas:
         cands = [v for v in vivas if v[0] == L["turma"] and v[1] == L["d"] and v[2] == L["data"]]
-        if len(cands) > 1:
+        if len(cands) > 1 and L["sig"]:
             cands = [v for v in cands if normal(v[8]).startswith(normal(L["sig"]))] or cands
         if not cands:
             sem_banco.append(L)
@@ -80,12 +90,14 @@ def main() -> int:
             k = "3 editada na tela (a tela vence)"
         elif tem == "f":
             k = "4 disciplina sem avaliação do currículo (A4.7)"
+        elif "sessao" in cats:
+            k = "5 sessão seguinte de uma prova (RN-AV-12)"
         elif "a mais" in cats:
-            k = "5 prova a mais"
+            k = "6 prova a mais (RN-AV-14, informação)"
         elif "nao casa" in cats:
-            k = "6 não casa com item da disciplina"
+            k = "7 não casa com item da disciplina"
         else:
-            k = "7 sem par na planilha atual"
+            k = "8 sem par na planilha atual"
         conta[k] += 1
     for k in sorted(conta):
         print(f"{conta[k]:>4}  {k}")
