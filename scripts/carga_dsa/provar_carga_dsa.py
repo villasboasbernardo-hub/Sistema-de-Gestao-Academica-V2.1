@@ -330,6 +330,15 @@ def main() -> int:
              any("CICRANO" in x["texto"] and x["tipo"] == "aec" for x in res.responsavel_livre), res.responsavel_livre)
     conferir("RN-RESP-1 · a aula continua exigindo instrutor do cadastro (o plano tem aula, e nenhuma sem instrutor)",
              bool(res.aulas) and all(a["instrutor_id"] for a in res.aulas), res.aulas)
+    # Duvida 6 (Bernardo Villas Boas, 16/10/2026): o texto digitado por cima da formula vale tambem para a ATIVIDADE.
+    import copy as _copy
+    digitada = _copy.deepcopy(leva1)
+    linha_pa = next(b.linha for b in digitada.blocos if b.cod == "PA")
+    digitada.digitadas[linha_pa] = {"topico": "PALESTRA DIGITADA NA IMPRESSAO"}
+    com_digitado = [a["descricao"] for a in resolver(digitada, ref, dec, "l.xlsx", set(), True).atividades if a["subtipo"] == "Palestra"]
+    sem_digitado = [a["descricao"] for a in res.atividades if a["subtipo"] == "Palestra"]
+    conferir("duvida 6 · DISCRIMINA: o topico digitado na IMPRESSAO vira a descricao da atividade (sem ele, o do catalogo)",
+             com_digitado == ["PALESTRA DIGITADA NA IMPRESSAO"] and sem_digitado == ["PALESTRA DE SEGURANÇA"], (com_digitado, sem_digitado))
     from scripts.carga_dsa.resolver import vazio
     conferir("RN-RESP-1 · celula so de tracos («------») e vazia, nao nome", vazio("------") and vazio(" -- ") and not vazio("CT FULANO"))
     # A chave `responsavel_externo_aceito` do lote ficou SEM EFEITO com a RN-RESP-1: o texto entra igual com ou sem ela.

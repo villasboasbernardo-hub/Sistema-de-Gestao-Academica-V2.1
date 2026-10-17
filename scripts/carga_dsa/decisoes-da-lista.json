@@ -260,6 +260,20 @@
       "onde": "UE V+3",
       "oque": "Lançados 5 TA; previstos 25 TA (falta).",
       "decisao": "não é erro"
+    },
+    {
+      "id": "Dúvida 4a (16/10)",
+      "turma": "C-Esp-ME 2026",
+      "onde": "Disciplina VI, AV1 de 26/05/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 2 TA, currículo 3 TA (PM 1).",
+      "decisao": "fato (as provas levaram 2 TA)"
+    },
+    {
+      "id": "Dúvida 4b (16/10)",
+      "turma": "C-Esp-ME 2026",
+      "onde": "Disciplina VI, AV2 de 26/06/2026",
+      "oque": "Tempo da prova diferente do currículo: planilha 2 TA, currículo 3 TA (PM 2).",
+      "decisao": "fato (as provas levaram 2 TA)"
     }
   ],
   "r8_tfm": {

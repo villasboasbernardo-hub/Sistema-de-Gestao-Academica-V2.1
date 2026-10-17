@@ -443,12 +443,19 @@ def resolver(
                             "tipo": tipo, "subtipo": subtipo,
                             "catalogo": " ".join(f"{linha_do_catalogo.disciplina} · {linha_do_catalogo.topico}".split()),
                         })
+            # O texto digitado por cima da formula na IMPRESSAO vale tambem para a ATIVIDADE, como ja vale para a aula
+            # (decisao de Bernardo Villas Boas, 16/10/2026, duvida 6): a R4 expôs a lacuna na CAHO de 09/10, que o DSA
+            # impresso traz como «SEMANA OCEANOGRAFICA», digitado sobre o PROCV.
+            topico_digitado = digitado(bloco, "topico") if tipo != "estudo_individual" else None
+            if topico_digitado is not None:
+                r.digitadas_adotadas.append(f"L{bloco.linha} {bloco.data:%d/%m} {bloco.cod}+{bloco.ue}: topico «{topico_digitado}»")
             r.atividades.append({
                 "codigo": codigo(bloco, "N"),
                 "categoria_normativa": CATEGORIAS[tipo],
                 "data": bloco.data.isoformat(),
                 "subtipo": subtipo,
-                "descricao": "ESTUDO INDIVIDUAL" if tipo == "estudo_individual" else (regra.get("descricao") or " ".join(linha_do_catalogo.topico.split())),
+                "descricao": "ESTUDO INDIVIDUAL" if tipo == "estudo_individual" else (
+                    " ".join(topico_digitado.split()) if topico_digitado else (regra.get("descricao") or " ".join(linha_do_catalogo.topico.split()))),
                 "ta_inicial": bloco.ta_inicial,
                 "tempos_consumidos": bloco.tempos,
                 # O local do EI e sempre o da regra global (Biblioteca, 07/10/2026): o da planilha e ignorado.
