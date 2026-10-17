@@ -12,8 +12,8 @@ remoto é aplicar na Production, **antes** do merge. Nada aqui foi executado.*
 
 ## O rito
 
-0. **Portão da regra 9.4:** Bernardo aprova o desenho de `contracts/migrations.md`. Sem isto, nada
-   abaixo acontece.
+0. **Portão da regra 9.4:** ✅ **desenho aprovado por Bernardo Villas Boas em 17/10/2026.** Volta para
+   ele se a medição do passo 4 mudar o efeito.
 1. **CI verde** nos três blocos no commit que vai ao remoto, e `pnpm verificar:tudo` com a mesma
    contagem.
 2. **Reversão provada** numa base descartável: aplicar M1 e M2, reverter (o SQL de cada uma, abaixo) e

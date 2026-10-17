@@ -7,7 +7,8 @@
 **Status**: Draft — specify em 17/10/2026 · **clarify em 17/10/2026**: as 17 perguntas do lote (§12)
 respondidas por Bernardo Villas Boas — as de escolha, todas pela recomendação; a Q-8 com o fato (tela do
 DSA, antes de 08/10). As 4 perguntas novas da §13 respondidas em 17/10/2026, antes do plan, todas pela
-recomendação · plan em 17/10/2026 (`plan.md`)
+recomendação · plan em 17/10/2026 (`plan.md`), **aprovado** no mesmo dia, com o desenho das migrations
+(regra 9.4) · tasks em 17/10/2026 (`tasks.md`)
 
 **Input**: Bloco 1 de `docs/correcoes/plano-de-correcoes-em-blocos.md` *(decisões D-COR-1 a D-COR-5 de
 Bernardo Villas Boas, 16/10/2026)* — itens 1.1 a 1.15, correções de tela e defeitos anotados nos testes
@@ -616,7 +617,8 @@ exceção do bloco, autorizada na Q-7)*
   (gotcha 10). A soma que o DSA e a planilha usam MUST NOT mudar.
 - **FR-014.6**: A lista `/turmas` MUST ganhar as colunas **Progresso** e **Saldo (TA)**, calculadas pela
   mesma função de domínio (`andamentoDaTurma`), com a mesma marca de atraso do `/inicio` e da ficha
-  (Q-6). Ela passa a ser o terceiro consumidor; a guarda `tests/unidade/andamento-unico.test.ts` o
+  (Q-6). **Progresso** aparece para **todas** as turmas; **Saldo** só para turma **ativa** ou
+  **planejada**, e **"—"** nas demais (decisão de Bernardo Villas Boas sobre o plan, P-4, 17/10/2026). Ela passa a ser o terceiro consumidor; a guarda `tests/unidade/andamento-unico.test.ts` o
   admite, desde que ele não decida atraso por conta própria.
 - **Aceite:** teste de unidade com lançamento futuro, hoje e ontem, num sábado e numa segunda. Caso de
   ponta a ponta que semeia **um lançamento futuro** (hoje nenhum e2e semeia) e confere que nem o saldo,

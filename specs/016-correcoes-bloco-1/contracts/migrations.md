@@ -1,7 +1,9 @@
 # O desenho das duas migrations do Bloco 1 — para Bernardo ver ANTES do remoto (regra 9.4)
 
-*17/10/2026 · spec 016 · PR 3. ⚠️ **Status: aguarda a aprovação do desenho.** Nada foi escrito no
-remoto, e nenhuma migration existe ainda no repositório.*
+*17/10/2026 · spec 016 · PR 3. ✅ **DESENHO APROVADO por Bernardo Villas Boas em 17/10/2026**, com o
+efeito medido **aceito** (a C-Ap-FR 2026 passa a "em atraso"; o instrutor de código 13 ganha 4 semanas
+acima da faixa). ⚠️ **Se a nova medição sobre o backup do dia mudar o efeito, o desenho volta para ele
+antes do `db push`.** Nada foi escrito no remoto, e nenhuma migration existe ainda no repositório.*
 
 > **Onde foi medido** (regra 9.2): banco **local** restaurado da cópia **`remoto-20261017-005738.sql`**.
 > Os dois esboços abaixo foram **executados** no local, dentro de uma transação **desfeita** no fim

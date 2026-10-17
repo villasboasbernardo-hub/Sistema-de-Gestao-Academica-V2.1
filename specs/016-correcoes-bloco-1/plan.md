@@ -5,6 +5,9 @@
 **Input**: `specs/016-correcoes-bloco-1/spec.md`, com o clarify de 17/10/2026 (17 respostas da §12 e 4 da
 §13, todas registradas na seção *Clarifications*).
 
+**Status**: ✅ **APROVADO por Bernardo Villas Boas em 17/10/2026** — o desenho das migrations (regra 9.4) e
+as cinco dúvidas da §10, todas pela recomendação. Registro na §0.
+
 > **Leia junto:** `contracts/migrations.md` — **o desenho das duas migrations, para aprovar antes do
 > remoto** (regra 9.4) —, `contracts/telas.md`, `research.md` (as decisões R-1 a R-14), `data-model.md`,
 > `quickstart.md` e `plano-de-aplicacao-no-remoto.md`.
@@ -13,6 +16,30 @@
 > restaurado de **`remoto-20261017-005738.sql`**; os esboços das migrations **executados no local e
 > desfeitos** (`begin … rollback`); o efeito de antes × depois calculado **pelas funções reais** de
 > `lib/dominio/`. "Hoje" = 17/10/2026.
+
+## 0. Decisões de Bernardo Villas Boas sobre este plan (17/10/2026)
+
+- **Regra 9.4 — o desenho de `contracts/migrations.md` (M1 e M2) está APROVADO**, com o efeito medido
+  **aceito**: a C-Ap-FR 2026 passa a "em atraso" no `/inicio`, e o instrutor de código 13 ganha 4 semanas
+  acima da faixa. ⚠️ **Se a nova medição sobre o backup do dia (rito, passo 4) mudar o efeito, o desenho
+  volta para ele antes do `db push`.**
+- **P-1:** três PRs, na ordem **tela → DSA → banco**.
+- **P-2:** **aceita a exceção ao Princípio VI** — M1 e M2 no mesmo PR (PR 3). Registro datado no
+  *Complexity Tracking* (§9).
+- **P-3:** a soma da CHD fica em **três lugares**, guardada pelo teste de igualdade do pgTAP 135.
+  Unificar é **fatia própria**: pendência **`PEND-016-1`** (§0.1).
+- **P-4:** em `/turmas`, **Progresso para todas** as turmas; **Saldo só em ativa e planejada**; **"—"** nas
+  demais (FR-014.6 da spec emendado no mesmo dia).
+- **P-5:** o PR do DSA (PR 2) é **mesclado entre semanas** — sexta à noite ou fim de semana —, para que
+  nenhum DSA da mesma semana saia com dois números.
+
+### 0.1 Pendências e dependências registradas por este plan
+
+| # | O quê | Quando |
+|---|---|---|
+| **`PEND-016-1`** | **Unificar a composição da CHD**: fazer `vw_carga_horaria_turma` e `vw_disciplinas_execucao` lerem de `vw_chd_por_fato`, para a soma viver num lugar só. Até lá, o pgTAP 135 garante que as três batem | Fatia própria, depois do Bloco 1 (P-3) |
+| **Dependência do Bloco 2** | Os **"TA fora do DSA"** da D-COR-3 vão **somar na base da M1** (`vw_chd_por_fato`), para entrarem na CH executada e no saldo como os lançamentos do DSA. **Nenhuma tarefa aqui**; quem especificar o Bloco 2 lê esta linha | Bloco 2 (spec 017) |
+| **D20 residual** | `vw_cursos_regime_vigente` escolhe o regime vigente por `current_date` (UTC) | Não é deste bloco |
 
 ## Summary
 
@@ -64,14 +91,14 @@ própria, mais a faixa em todas (lista em `contracts/telas.md`)
 | **III. Plataforma** | Sem pacote novo, sem ORM; Server Components; `"use client"` só nas folhas novas (olho da senha, diálogo de situação, recolhível do instrutor), declaradas nas listas das guardas de fronteira | ✅ |
 | **IV. Histórico** | Nenhum dado tocado; nenhuma tabela apagada; as duas migrations são derivadas e reversíveis | ✅ |
 | **V. Degradação e alerta** | Semana sem T → *"Semana N"* com aviso; erro da leitura de atribuições → aviso, não lista vazia; atraso e faixa continuam alerta | ✅ |
-| **VI. Cirúrgico, por invariante** | Invariantes de igualdade (base = views de hoje, 29/29 e 228/228), casos que discriminam em pgTAP e e2e, reversão provada antes do PR. ⚠️ **Duas migrations num PR** — exceção ao *"uma fatia = uma migration coesa"*, justificada no *Complexity Tracking* e posta à decisão de Bernardo (**P-2**) | ⚠️ a decidir |
+| **VI. Cirúrgico, por invariante** | Invariantes de igualdade (base = views de hoje, 29/29 e 228/228), casos que discriminam em pgTAP e e2e, reversão provada antes do PR. ⚠️ **Duas migrations num PR** — exceção ao *"uma fatia = uma migration coesa"*, justificada no *Complexity Tracking* e **aprovada por Bernardo em 17/10/2026** (P-2) | ⚠️ justificado e aprovado |
 | **VII. Configuração sobre constante** | Feriados, regime, faixa docente e duração do curso continuam lidos do banco; nenhum número normativo novo no código | ✅ |
 | **VIII. Rastreabilidade** | Commits `fix(<RF>)`/`feat(<RF>)`/`db(<RF>)` pela tabela da §6; pgTAP nomeados pelo item; spec e plan citam artefato e data | ✅ |
 | **IX. Escopo** | Só o Bloco 1; observação de status, TA fora do DSA e arquivar ficam no Bloco 2 | ✅ |
 | **X. Paridade** | Classificação item a item na §2 da spec; nada de funcionalidade de negócio nova | ✅ |
 | **XI. O banco é a fronteira** | As funções da M1 são de **leitura**, `security invoker` (a RLS de quem lê vale), `execute` só para `authenticated`; por que RPC e não Server Action: a soma precisa da RLS e do banco, e a regra (andamento) continua em `lib/dominio/`. A troca de situação é Server Action com Zod; a recusa vem da RLS e é conferida no banco | ✅ |
 
-**Gate:** passa, com a exceção do Princípio VI à espera da P-2.
+**Gate:** passa, com a exceção do Princípio VI aprovada em 17/10/2026 (P-2).
 
 ## Project Structure
 
@@ -131,7 +158,7 @@ PR 3 — banco e o que depende dele
 | PR | Ramo | Itens | Banco | O que Bernardo confere no preview |
 |---|---|---|---|---|
 | **1** | `fix/BLOCO-1-correcoes-de-tela` (este) | 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 1.10, 1.15 | não | faixa, lateral, olho da senha, filtros, página do curso, disciplinas, ficha do instrutor, trocar situação |
-| **2** | `fix/BLOCO-1-dsa` | 1.5, 1.8, 1.9, 1.11, 1.12 | não | "Semana N de T" na tela, no papel e na planilha; aviso de duração na ficha; cartão; sugestão de instrutor; datas com ano no papel e na planilha |
+| **2** | `fix/BLOCO-1-dsa` | 1.5, 1.8, 1.9, 1.11, 1.12 | não | "Semana N de T" na tela, no papel e na planilha; aviso de duração na ficha; cartão; sugestão de instrutor; datas com ano no papel e na planilha. ⚠️ **Mesclado entre semanas** — sexta à noite ou fim de semana (P-5) |
 | **3** | `db/BLOCO-1-execucao-e-ch-prevista` | 1.13, 1.14 | **M1 e M2** | `/inicio`, `/turmas`, ficha da turma, aba Avaliações e `/disciplinas` até hoje; CH prevista e "só habilitado" na ficha do instrutor |
 
 **Por que três e não dois** (research R-1): (a) o DSA é usado todo dia e o 1.9 muda o número **do papel
@@ -250,12 +277,12 @@ do Princípio VI (P-2).
 
 | Exceção | Por que é preciso | A alternativa mais simples foi recusada porque |
 |---|---|---|
-| **Duas migrations num PR** (Princípio VI) | M1 e M2 são independentes entre si e cada uma é coesa; vão juntas porque compartilham o rito do remoto (um backup, um dry-run, uma conferência) e a conferência de Bernardo das telas de execução e de instrutor | **uma migration com as duas** juntaria dois assuntos sem relação (não seria coesa); **dois PRs de banco** dobrariam o rito sem ganho de reversão, que já é por migration |
-| **A composição da CHD em três lugares** (as duas views de hoje e a base nova) | a base é o único jeito de cortar por data sem recriar as views do DSA e dos tetos | refatorar as views para lerem da base elimina a cópia, mas recria duas views com dependentes e toca o DSA (P-3). A cópia é guardada por invariante pgTAP: base = views, sempre |
+| **Duas migrations num PR** (Princípio VI) — ✅ **aprovada por Bernardo Villas Boas em 17/10/2026 (P-2)** | M1 e M2 são independentes entre si e cada uma é coesa; vão juntas porque compartilham o rito do remoto (um backup, um dry-run, uma conferência) e a conferência de Bernardo das telas de execução e de instrutor | **uma migration com as duas** juntaria dois assuntos sem relação (não seria coesa); **dois PRs de banco** dobrariam o rito sem ganho de reversão, que já é por migration |
+| **A composição da CHD em três lugares** (as duas views de hoje e a base nova) — ✅ **aceita em 17/10/2026 (P-3); unificar é a `PEND-016-1`** | a base é o único jeito de cortar por data sem recriar as views do DSA e dos tetos | refatorar as views para lerem da base elimina a cópia, mas recria duas views com dependentes e toca o DSA (P-3). A cópia é guardada por invariante pgTAP: base = views, sempre |
 
-## 10. Dúvidas do plan — em lote
+## 10. Dúvidas do plan — ✅ **AS CINCO RESPONDIDAS por Bernardo Villas Boas em 17/10/2026**, todas pela recomendação (registro na §0)
 
-### P-1 — Quantos PRs, e em que ordem?
+### P-1 — Quantos PRs, e em que ordem? · ✅ **RESPONDIDA: opção A**
 | Opção | Resposta | Implicações |
 |---|---|---|
 | A | **Três**: tela (PR 1) → DSA (PR 2) → banco (PR 3) | conferência própria do DSA; o PR 3 nasce depois da ficha do instrutor reorganizada |
@@ -265,7 +292,7 @@ do Princípio VI (P-2).
 
 **Recomendação: A.**
 
-### P-2 — Duas migrations no mesmo PR (exceção ao Princípio VI)?
+### P-2 — Duas migrations no mesmo PR (exceção ao Princípio VI)? · ✅ **RESPONDIDA: opção A**
 | Opção | Resposta | Implicações |
 |---|---|---|
 | A | **Aceitar**, com a justificativa do *Complexity Tracking* | um rito, duas reversões independentes |
@@ -274,7 +301,7 @@ do Princípio VI (P-2).
 
 **Recomendação: A.** A constituição pede a decisão registrada e datada.
 
-### P-3 — A composição da CHD fica em três lugares, guardada por invariante, ou numa só?
+### P-3 — A composição da CHD fica em três lugares, guardada por invariante, ou numa só? · ✅ **RESPONDIDA: opção A**
 | Opção | Resposta | Implicações |
 |---|---|---|
 | A | **Base nova + pgTAP de igualdade** com as duas views de hoje | as views do DSA e dos tetos não são tocadas; quem mudar uma sem as outras reprova no 135 |
@@ -282,7 +309,7 @@ do Princípio VI (P-2).
 
 **Recomendação: A** neste bloco; a B pode ser uma fatia própria depois.
 
-### P-4 — Na lista `/turmas`, o Saldo aparece para turma que não está ativa?
+### P-4 — Na lista `/turmas`, o Saldo aparece para turma que não está ativa? · ✅ **RESPONDIDA: opção A**
 **Contexto:** o andamento calcula saldo para toda turma com término e regime; numa turma concluída, a
 capacidade é zero e o saldo é o restante com sinal negativo (a ficha da C-Exp-Obs-ME 2026, concluída,
 mostra hoje *"−1 TA"*).
@@ -295,7 +322,7 @@ mostra hoje *"−1 TA"*).
 
 **Recomendação: A.**
 
-### P-5 — Quando o PR 2 (numeração do DSA) entra em Production?
+### P-5 — Quando o PR 2 (numeração do DSA) entra em Production? · ✅ **RESPONDIDA: opção A**
 **Contexto:** o merge muda o número que sai no papel: o DSA de uma semana pode ter sido impresso com
 *"Nº 26"* e a reimpressão sair *"Semana 28 de 37"*.
 
