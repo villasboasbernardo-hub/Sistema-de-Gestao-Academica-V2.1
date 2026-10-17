@@ -6,7 +6,8 @@
 
 **Status**: Draft — specify em 17/10/2026 · **clarify em 17/10/2026**: as 17 perguntas do lote (§12)
 respondidas por Bernardo Villas Boas — as de escolha, todas pela recomendação; a Q-8 com o fato (tela do
-DSA, antes de 08/10). As perguntas novas que as respostas levantaram estão na §13
+DSA, antes de 08/10). As 4 perguntas novas da §13 respondidas em 17/10/2026, antes do plan, todas pela
+recomendação · plan em 17/10/2026 (`plan.md`)
 
 **Input**: Bloco 1 de `docs/correcoes/plano-de-correcoes-em-blocos.md` *(decisões D-COR-1 a D-COR-5 de
 Bernardo Villas Boas, 16/10/2026)* — itens 1.1 a 1.15, correções de tela e defeitos anotados nos testes
@@ -85,6 +86,13 @@ levantaram estão na §13.)*
 - Q: Que tokens destacam o item ativo da lateral? → A: **Opção A**: fundo `marca`, texto `marca-contraste` (Q-16).
 - Q: O filtro abre sozinho quando a URL já traz filtro? → A: **Opção A**: sempre recolhido; o número no botão avisa (Q-17).
 - Q: E as divergências 2 e 14 da §11? → A: **Só registrar**; não são deste bloco. **A faixa Beta aparece em Production independentemente do valor de `NEXT_PUBLIC_AMBIENTE`**.
+
+*(Respostas de Bernardo Villas Boas às perguntas novas da §13, em 17/10/2026, antes do plan.)*
+
+- Q: A execução "até hoje" vale também em `/disciplinas` e na aba Avaliações da turma? → A: **Sim.** Fora do DSA e da planilha, executado é "até hoje" em **toda** tela — ficha, `/disciplinas`, aba Avaliações da turma, `/inicio`, `/turmas`. O DSA e a planilha continuam acumulados até a semana (NQ-1).
+- Q: O campo Situação continua no formulário "Editar turma"? → A: **Não.** Na edição da turma, só o botão "Trocar situação"; o campo Situação fica **só na criação** (NQ-2).
+- Q: Quando o ambiente não está declarado, a faixa mostra só o texto Beta? → A: **Sim.** A faixa mostra só o texto Beta; o ambiente entra no texto **apenas** com `local` ou `preview` declarados (NQ-3).
+- Q: A frase de "só habilitado" é por instrutor ou por disciplina? → A: **Por disciplina**: a marca *"só habilitado — não gera CH prevista"* em cada habilitação sem atribuição no ano (NQ-4).
 
 ---
 
@@ -260,8 +268,7 @@ só. Em Disciplinas, as UEs aparecem como linhas de tabela, em leitura, e o grá
   `NEXT_PUBLIC_AMBIENTE`** (decisão de 17/10/2026). ⚠️ Hoje, valor ausente ou desconhecido vira
   `local` (`lib/ambiente.ts:137-140`); por isso o acréscimo de ambiente MUST aparecer **só** quando o
   ambiente for declarado como `local` ou `preview` — valor ausente ou desconhecido mostra só o texto
-  Beta, para que Production nunca diga *"ambiente local"*. *(Derivado da decisão; confirmação na
-  **NQ-3**, §13.)*
+  Beta, para que Production nunca diga *"ambiente local"* (NQ-3, confirmada em 17/10/2026).
 - **FR-001.2**: As rotas de impressão (`/print/*`) MUST NOT mostrar a faixa, na tela e no papel,
   inclusive nos estados de carregamento e de erro.
 - **FR-001.3**: A faixa fixa MUST NOT cobrir conteúdo: a lateral (`lg:sticky lg:top-0 lg:h-dvh`,
@@ -282,7 +289,8 @@ só. Em Disciplinas, as UEs aparecem como linhas de tabela, em leitura, e o grá
   `marca-suave`.
 - **FR-002.2**: O par de cor escolhido MUST entrar na auditoria de contraste (`PARES` de
   `lib/design/vocabulario.ts`), e o destaque MUST continuar marcado por `aria-current="page"`, não só
-  pela cor (`RNF-USA-05`).
+  pela cor. Origem: `RF-DS-03` (*"contraste AA em ambos os temas"*). *(Corrigido no plan, 17/10/2026:
+  a primeira redação citava o `RNF-USA-05`, que trata da persistência do tema.)*
 - **Aceite:** `tests/unidade/contraste.test.ts` cobre o par novo nos dois temas; o caso de
   `tests/e2e/shell.spec.ts:44-51` continua exigindo um único `[aria-current="page"]`.
 
@@ -553,10 +561,10 @@ exceção do bloco, autorizada na Q-7)*
   horária total dividida pelo número de semanas da janela"*), aplicada, não alterada. Assim a atribuição
   entra também no alerta de faixa semanal. As semanas da janela MUST ser contadas pela régua única de
   semana do domínio (`RN-DIST-01`); onde a conta mora — view ou `lib/dominio/` — é decisão do plano.
-- **FR-013.4**: A ficha de quem é **só habilitado** MUST dizer, junto da CH prevista: *"Habilitação não
-  gera CH prevista; a CH prevista vem da atribuição na turma (Disciplinas da turma)."* (Q-7). Sem banco.
-  Se "só habilitado" é o instrutor sem nenhuma atribuição no ano, ou cada disciplina habilitada sem
-  atribuição, é a **NQ-4** (§13).
+- **FR-013.4**: Na lista de habilitações da ficha do instrutor, **cada disciplina habilitada sem
+  atribuição que conte no ano mostrado** MUST levar a marca *"só habilitado — não gera CH prevista"*, e a
+  ficha MUST explicar, junto da CH prevista: *"Habilitação não gera CH prevista; a CH prevista vem da
+  atribuição na turma (Disciplinas da turma)."* (Q-7 e NQ-4, por disciplina). Sem banco.
 - **FR-013.5**: ⚠️ **PORTÃO DA REGRA 9.4**: o desenho da view nova MUST ser mostrado a Bernardo e
   aprovado **antes** de qualquer aplicação no remoto, com backup antes do `db push`.
 - **Aceite:** pgTAP com uma atribuição sem período na disciplina e com período na linha da turma, e outra
@@ -593,12 +601,13 @@ exceção do bloco, autorizada na Q-7)*
 - **FR-014.3**: "Hoje" MUST ser o dia em São Paulo, passado **explicitamente** ao banco — nunca o
   `current_date` do servidor, que é UTC e erra das 21h à meia-noite (pendência `D20`; precedente:
   `fn_status_vista(p_avaliacao_id, p_hoje)`).
-- **FR-014.4**: O corte em hoje MUST valer para o **andamento** da turma (CH executada, percentual,
-  restante, saldo) **e** para a **tabela de disciplinas da ficha da turma** (CH executada e % por
-  disciplina), para que a conferência *"sem unidade de ensino"* (`DisciplinasDaTurma.tsx:257`) compare
-  duas grandezas da mesma base (Q-5). A **situação do DSA** e o rodapé do papel MUST continuar acumulados
-  **até a semana mostrada** — o `FR-028.1` da spec 013 fica preservado. O alcance nas demais telas que
-  leem a mesma execução por disciplina é a **NQ-1** (§13).
+- **FR-014.4**: **Fora do DSA e da planilha, executado é "até hoje" em toda tela** (Q-5 e NQ-1): o
+  andamento da turma (CH executada, percentual, restante, saldo) no `/inicio`, na ficha e em `/turmas`; a
+  tabela de disciplinas da ficha (CH executada e % por disciplina), para que a conferência *"sem unidade
+  de ensino"* (`DisciplinasDaTurma.tsx:257`) compare duas grandezas da mesma base; a aba **Avaliações** da
+  turma (o "cumprido" que decide se a disciplina começou ou terminou); e **`/disciplinas`** com a turma
+  escolhida. A **situação do DSA**, o rodapé do papel e a **planilha** MUST continuar acumulados **até a
+  semana mostrada** (ou a data de referência da planilha) — o `FR-028.1` da spec 013 fica preservado.
 - **FR-014.5**: ⚠️ **PORTÃO DA REGRA 9.4:** a migration nova (view, coluna ou função) — que entrega a
   CHD executada **até um dia dado**, por turma **e** por disciplina da turma — MUST ter o desenho
   mostrado a Bernardo e aprovado **antes** de qualquer aplicação no remoto, com backup antes do
@@ -644,8 +653,11 @@ exceção do bloco, autorizada na Q-7)*
   turma; a recusa do banco continua traduzida e mostrada. É o diálogo que o Bloco 2 vai estender com a
   observação (D-COR-4).
 - **FR-015.2**: Trocar a situação **e** gravar o formulário da turma MUST mostrar uma confirmação
-  visível, e o selo do cabeçalho MUST refletir a nova situação. Se o campo *Situação* continua no
-  formulário *"Editar turma"* é a **NQ-2** (§13).
+  visível, e o selo do cabeçalho MUST refletir a nova situação.
+- **FR-015.4**: Na **edição** da turma, a situação MUST se trocar **só** pelo botão *"Trocar situação"*: o
+  formulário *"Editar turma"* deixa de ter o campo *Situação*, e a ação de gravar a turma deixa de
+  mandá-lo. Na **criação** da turma o campo continua (NQ-2). Um caminho só, para que a observação do
+  Bloco 2 (D-COR-4) nasça num lugar.
 - **FR-015.3**: A observação por troca de status (D-COR-4) **não** entra aqui: exige coluna ou tabela
   nova, e é do Bloco 2.
 - **Aceite:** caso de ponta a ponta para **Admin e para Encarregado**, chegando à ficha **por clique**
@@ -1016,11 +1028,11 @@ do Bloco 2).
 
 ---
 
-## 13. Perguntas novas, levantadas pelas respostas — em lote
+## 13. Perguntas novas, levantadas pelas respostas — ✅ **AS 4 RESPONDIDAS em 17/10/2026**, todas pela recomendação (registro na seção Clarifications)
 
-> Nenhuma bloqueia o plano: cada uma tem recomendação, e o requisito correspondente aponta para ela.
+> As opções ficam abaixo como foram feitas.
 
-### NQ-1 — A execução "até hoje" vale também em `/disciplinas` e na aba Avaliações da turma? *(FR-014.4)*
+### NQ-1 — A execução "até hoje" vale também em `/disciplinas` e na aba Avaliações da turma? *(FR-014.4)* · ✅ **RESPONDIDA: opção A**
 
 **Contexto (medido na clarify):** a execução por disciplina sai de `vw_disciplinas_execucao`, lida em
 quatro lugares: a tabela de disciplinas da ficha da turma (que a Q-5 já cortou em hoje), a aba
@@ -1036,7 +1048,7 @@ Cortar só a ficha faz a mesma disciplina da mesma turma mostrar **dois números
 
 **Recomendação: A.**
 
-### NQ-2 — O campo *Situação* continua no formulário "Editar turma"? *(FR-015.2)*
+### NQ-2 — O campo *Situação* continua no formulário "Editar turma"? *(FR-015.2)* · ✅ **RESPONDIDA: opção A**
 
 **Contexto:** a Q-14 criou o botão *"Trocar situação"* no cabeçalho. Se o campo continuar também no
 formulário, a turma tem dois caminhos para trocar de situação — e a observação de cada troca, que o
@@ -1049,7 +1061,7 @@ Bloco 2 traz (D-COR-4), teria de nascer nos dois, ou um deles passaria por fora 
 
 **Recomendação: A.**
 
-### NQ-3 — Quando o ambiente não está declarado, a faixa mostra só o texto Beta? *(FR-001.4)*
+### NQ-3 — Quando o ambiente não está declarado, a faixa mostra só o texto Beta? *(FR-001.4)* · ✅ **RESPONDIDA: opção A**
 
 **Contexto:** hoje, `NEXT_PUBLIC_AMBIENTE` ausente ou desconhecido vira `local` (`lib/ambiente.ts:137-140`).
 Com a faixa única da Q-15, isso faria a Production dizer *"· ambiente local"* se a variável não estiver
@@ -1062,7 +1074,7 @@ lá — e o repositório não diz qual valor ela tem (divergência 14).
 
 **Recomendação: A.**
 
-### NQ-4 — A frase de "só habilitado" é por instrutor ou por disciplina? *(FR-013.4)*
+### NQ-4 — A frase de "só habilitado" é por instrutor ou por disciplina? *(FR-013.4)* · ✅ **RESPONDIDA: opção B**
 
 **Contexto:** o pedido original do 1.13 falava de quem *"só está habilitado **na disciplina**"*. O
 instrutor de código 15, que é atribuído em 4 disciplinas, tem **2** habilitações sem atribuição nenhuma
