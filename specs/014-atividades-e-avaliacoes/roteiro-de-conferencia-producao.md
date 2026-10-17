@@ -140,6 +140,10 @@ Na aba **Avaliações** de cada turma (abra a disciplina pelo título):
 - **C-Espc-FR 2026 → PPREVACER-005**: **PM 1** (13/05) e **PP 1** (25/05), as duas concluídas — cada uma com 1 TA da vista
   de 27/05 (V2).
 
+Depois das respostas às dúvidas (17/10/2026): **C-Ap-HN 2026 → VII** passa a ter a **PM 2** de 09/10 ligada (U.E. 4 a
+6), com a vista de 16/10 (D-12) — o card e as vistas da C-Ap-HN no passo 2 são de **antes** da D-12. Na **CAHO**, a
+atividade de 09/10 (2º e 3º tempos, TR) volta a «SEMANA OCEANOGRAFICA», como no DSA impresso.
+
 E no DSA (R1): **C-Ap-FR 2026** → **Abrir o DSA** → semana pela data **25/08/2026** → terça: a aula de 3 TA da
 disciplina I é **«INSTALAÇÕES ELÉTRICAS. DISPOSITIVOS DE PROTEÇÃO»** (a UE 2; antes, a UE 1).
 

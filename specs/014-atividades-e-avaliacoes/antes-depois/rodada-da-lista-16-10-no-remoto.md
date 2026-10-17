@@ -95,3 +95,15 @@ proteção». A L1545-A (C-Ap-FR VIII, 09/10), editada na tela, ficou como estav
   currículo: planilha 2 TA, currículo 3 TA»* — item novo, que ninguém decidiu ainda.
 - **Itens novos de baixa prioridade (R4)**: as linhas do catálogo em que A + C difere da D (CAHO 336–338, C-Ap-FR 138,
   C-Espc-FR 18, 31, 59, 70 e 207, BATI 31).
+
+## Depois das respostas às dúvidas (16/10/2026, noite; aplicado em 17/10/2026)
+
+- **D-12** (`20261017023430`, PR #65): a `DSAP-C-AP-HN-2026-L1550-V` — fantasma de uma versão antiga da planilha, da XIII —
+  é agora a **PM 2 da VII** de 09/10 (TA 1×2, item PM 2, «U.E. 4 a 6»), com a vista de 16/10 (`VST-000160`); a vista de
+  23/10 (`VST-000243`) está na PM 2 da XIII de 16/10 (`DSA-MV723OPT-V`); a vista de 27/08 é a sessão 1 da PM 1. Backup
+  `remoto-20261016-235306.sql`; 76 e 76 migrations; esquema `dcd9297b…` igual nos dois.
+- **A varredura da A3.3** (só leitura, cópia local igual ao remoto): 4 provas protegidas nas turmas com virada; só a
+  `L1550-V` divergia da planilha.
+- **O texto digitado vale para atividade** (dúvida 6): rodada só da CAHO e da C-Espc-FR (backup `remoto-20261016-235430.sql`):
+  2 mudanças — a `DSAP-CAHO-2026-L2380-N` volta a «SEMANA OCEANOGRAFICA» (o DSA impresso) e a `DSAP-C-ESPC-FR-2026-L004-N`
+  passa a «APRESENTAÇÃO»; 2ª rodada **0**; dados das 29 turmas iguais local × remoto (`beb49b51`).

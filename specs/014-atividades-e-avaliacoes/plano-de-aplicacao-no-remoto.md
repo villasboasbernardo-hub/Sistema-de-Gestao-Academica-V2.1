@@ -244,3 +244,28 @@ de 27/07 da CAHO XVII à TI 1 (CAHO-06, `SAP-000002`) **primeiro no remoto, depo
 16/10 à tarde); 3ª rodada **0** nos dois; execução final no remoto **0**; dados das **29** turmas iguais
 (`scripts/provas/dados_das_turmas.sql`, total `655b2fd1`); impressão digital `dcd9297b…` nos dois. Relatório com o
 antes/depois: `antes-depois/rodada-da-lista-16-10-no-remoto.md`.
+
+### A migration de dado das respostas às dúvidas (#65) — D-12 (16/10/2026, noite)
+
+`20261017023430_respostas_das_duvidas_16_10.sql`, **de dado** (decisão de Bernardo Villas Boas, 16/10/2026: *"Corrija por
+migration de dado (aprovada aqui)"*): a `DSAP-C-AP-HN-2026-L1550-V`, fantasma de uma versão antiga da planilha (XIII), passa
+a ser a PM 2 da VII; as vistas `VST-000160` e `VST-000243` vão para as provas delas; a vista de 27/08 da PM 1 passa a sessão 1.
+
+| Passo | Resultado |
+|---|---|
+| CI do ramo | verde nos três blocos (runs `38995740999` e `38995745987`): 2.314 · ponta a ponta 471 + 1 instável + 6 pulados |
+| Ensaio e reversão | na cópia local igual ao remoto, numa transação desfeita: impressão das linhas tocadas `030f69…` → `55ca24…` → **`030f69…`** com `reversao-d12.sql` |
+| Backup imediatamente antes | **`remoto-20261016-235306.sql`** |
+| Dry-run | só `20261017023430_respostas_das_duvidas_16_10.sql` |
+| `db push --linked` | saída **0** |
+| Migrations | **76 e 76**, nenhuma divergente |
+| Impressão digital | **`dcd9297b…`, 2.000 objetos**, a mesma de antes (migration de dado) |
+| Efeito | `L1550-V`: VII, 09/10, TA 1×2, item PM 2 (`AVC-000086`), «U.E. 4 a 6», a marca; `VST-000160` na `L1550-V` (sessão 1); `VST-000243` na `DSA-MV723OPT-V` (sessão 1); `L1182-S` sessão 1 da `L1111-V`; evento `MLOG-014-D12-…` |
+
+### A rodada da dúvida 6 — o texto digitado em atividade (17/10/2026)
+
+✅ **APLICADA NO REMOTO**, só na CAHO e na C-Espc-FR, depois do merge do #65 (`8e20583`). Backup imediatamente antes
+**`remoto-20261016-235430.sql`** (o `dado_do_remoto` completo, que restaurou a cópia no local); ensaio na cópia **2**
+mudanças e 2ª **0**; plano do remoto = plano do local nas duas (`2f5a610d…`, `fbd7e72c…`); remoto grava **2**, lidas de
+volta linha a linha; 2ª **0**; dados das 29 turmas iguais (`scripts/provas/dados_das_turmas.sql`, total `beb49b51`);
+impressão digital `dcd9297b…`, 2.000 objetos, nos dois.
