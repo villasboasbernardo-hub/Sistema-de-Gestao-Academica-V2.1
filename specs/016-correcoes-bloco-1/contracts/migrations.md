@@ -125,7 +125,8 @@ bate com `vw_carga_horaria_turma.chd_executada` em **29 de 29** turmas, e a soma
 bate com `vw_disciplinas_execucao.ta_executados` em **228 de 228** linhas. ⚠️ A composição da CHD passa a
 existir em **três** lugares (as duas views de hoje e a base). A guarda é o pgTAP **135**, que repete as
 duas igualdades em toda execução da suíte: quem mudar uma das três e esquecer as outras reprova ali.
-Eliminar a cópia, fazendo as views de hoje lerem da base, é a **P-3** do plan.
+Eliminar a cópia, fazendo as views de hoje lerem da base, ficou para fatia própria (**P-3**, decidida em
+17/10/2026): é a pendência **`PEND-016-1`**.
 
 ### O caso que discrimina (DoD 8)
 - **pgTAP 135** (sintético): uma turma com aula de 2 TA **ontem**, aula de 1 TA **no dia**, aula de 3 TA
@@ -305,4 +306,4 @@ aparece na ficha dele depois da M2.
   página é **refeita sobre o backup do dia**: se os números mudaram, a tabela é atualizada e volta para
   você.
 - ⚠️ **Duas migrations num PR** é exceção ao Princípio VI: justificativa no *Complexity Tracking* do plan
-  e decisão na **P-2**.
+  e **aprovada** por Bernardo em 17/10/2026 (**P-2**).

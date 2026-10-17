@@ -36,7 +36,7 @@ que a suíte usa. Uma rota sem caminho clicável é tela não entregue (CLAUDE.m
 |---|---|---|---|---|
 | 1.13 | `/instrutores/[codigo]` | CH prevista do ano conta as atribuições com janela efetiva; média semanal de reserva; marca *"só habilitado — não gera CH prevista"* por disciplina habilitada sem atribuição no ano, e a frase explicativa | Menu *Instrutores* → linha | `so-habilitado`, `explica-ch-prevista` |
 | 1.14 | `/inicio` | Andamento até hoje (executada, %, restante, saldo, atraso) | Menu *Início* | (os de hoje) |
-| 1.14 | `/turmas` | Colunas novas **Progresso** e **Saldo (TA)**, com a marca de atraso | Menu *Turmas* | `coluna-progresso`, `coluna-saldo` |
+| 1.14 | `/turmas` | Colunas novas **Progresso** (todas as turmas) e **Saldo (TA)** (só ativa e planejada; *"—"* nas demais — P-4), com a marca de atraso | Menu *Turmas* | `coluna-progresso`, `coluna-saldo` |
 | 1.14 | `/turmas/[turma]` | Andamento e tabela de disciplinas até hoje; aba Avaliações com o "cumprido" e o "iniciada" até hoje | Menu *Turmas* → turma (→ aba *Avaliações*) | (os de hoje) |
 | 1.14 | `/disciplinas` (turma escolhida) | Execução por disciplina até hoje | Menu *Disciplinas* → curso → turma | (os de hoje) |
 | — | DSA e planilha | **Não mudam** — continuam acumulados até a semana | — | — |

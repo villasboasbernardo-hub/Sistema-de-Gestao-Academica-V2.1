@@ -29,7 +29,7 @@ as telas que dependem delas). Ordem: 1 → 2 → 3, cada um num ramo novo a part
 
 **Descartado:** a proposta de dois PRs (doze itens de tela num PR só); quatro PRs, um por migration
 (exige o dobro do rito do remoto sem ganho de reversão, porque as duas migrations já são independentes).
-**Confirmação de Bernardo: P-1 da §11 do plan.**
+✅ **Confirmado por Bernardo Villas Boas em 17/10/2026** (P-1 do plan, §10).
 
 ## R-2 — "Executado até hoje": uma base por fato e duas funções com a data obrigatória
 
@@ -56,7 +56,7 @@ views de hoje (`vw_carga_horaria_turma`, `vw_disciplinas_execucao`) **não mudam
 - **Colunas novas nas views com a data de São Paulo dentro do SQL:** esconde o "hoje" no banco
   (contra o FR-014.3) e não serve a `/disciplinas` com a mesma base.
 - **Refatorar as duas views para lerem da base** (uma composição só): elimina a cópia da composição,
-  mas recria duas views com dependentes e toca a leitura do DSA. **Pergunta P-3 da §11.** A proteção
+  mas recria duas views com dependentes e toca a leitura do DSA. ✅ **Decidido em 17/10/2026 (P-3 do plan, §10): fica para fatia própria, a `PEND-016-1`.** A proteção
   escolhida no lugar é **invariante pgTAP**: a base sem corte tem de bater com as duas views, sempre.
 
 ## R-3 — A composição da CHD na base

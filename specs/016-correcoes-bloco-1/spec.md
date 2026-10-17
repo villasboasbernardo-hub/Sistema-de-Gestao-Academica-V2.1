@@ -55,8 +55,8 @@ bloco cria processo, cadastro ou documento novo. Eles se dividem assim:
 | 1.1 a 1.8, 1.10, 1.12, 1.15 | **Não** | Tela, Server Action e `lib/dominio/` |
 | 1.11 | **Não** | **Sem objeto** (Q-8); fica só o caso de regressão |
 | 1.9 | **Não** | `cursos.duracao_semanas`, `turmas.data_inicio` e `turmas.data_termino` já existem; a conta nasce em `lib/dominio/` |
-| **1.14** | **Sim — PORTÃO 9.4** | A executada "até hoje" não sai das views atuais sem reimplementar a soma da CHD fora do banco (ver FR-014). Alcança a executada **da turma e por disciplina** (Q-5). A migration está **autorizada em princípio** (D-COR-2); **o desenho vai a Bernardo antes do remoto** |
-| **1.13** | **Sim — PORTÃO 9.4, autorizado** | O defeito está em `vw_instrutor_carga_prevista`. É a **segunda** exceção de banco do bloco, **autorizada** por Bernardo em 17/10/2026 (Q-7); o desenho vai a ele antes do remoto |
+| **1.14** | **Sim — PORTÃO 9.4** | A executada "até hoje" não sai das views atuais sem reimplementar a soma da CHD fora do banco (ver FR-014). Alcança a executada **da turma e por disciplina** (Q-5). Autorizada em princípio (D-COR-2); **desenho aprovado em 17/10/2026** (`contracts/migrations.md`) |
+| **1.13** | **Sim — PORTÃO 9.4, autorizado** | O defeito está em `vw_instrutor_carga_prevista`. É a **segunda** exceção de banco do bloco, **autorizada** por Bernardo em 17/10/2026 (Q-7); **desenho aprovado no mesmo dia** |
 
 Nenhum item cria **tabela**. Nenhum acrescenta `for delete`.
 
@@ -567,7 +567,8 @@ exceção do bloco, autorizada na Q-7)*
   ficha MUST explicar, junto da CH prevista: *"Habilitação não gera CH prevista; a CH prevista vem da
   atribuição na turma (Disciplinas da turma)."* (Q-7 e NQ-4, por disciplina). Sem banco.
 - **FR-013.5**: ⚠️ **PORTÃO DA REGRA 9.4**: o desenho da view nova MUST ser mostrado a Bernardo e
-  aprovado **antes** de qualquer aplicação no remoto, com backup antes do `db push`.
+  aprovado **antes** de qualquer aplicação no remoto, com backup antes do `db push`. ✅ **Aprovado em
+  17/10/2026** (`contracts/migrations.md` §M2); volta a ele se a medição sobre o backup mudar o efeito.
 - **Aceite:** pgTAP com uma atribuição sem período na disciplina e com período na linha da turma, e outra
   só com a janela da turma, que **reprovam antes** da correção e passam depois (DoD 8); e uma sem
   `semanas` na disciplina, cuja média semanal sai da janela. Na cópia, a ficha do instrutor de código 15
@@ -614,7 +615,8 @@ exceção do bloco, autorizada na Q-7)*
   mostrado a Bernardo e aprovado **antes** de qualquer aplicação no remoto, com backup antes do
   `db push`. Coluna nova em `vw_carga_horaria_turma` só entra **no fim** (`vw_conformidade_tetos`
   depende da ordem — `supabase/tests/124_dias_parados.sql:44-48`), e a `security_invoker` MUST continuar
-  (gotcha 10). A soma que o DSA e a planilha usam MUST NOT mudar.
+  (gotcha 10). A soma que o DSA e a planilha usam MUST NOT mudar. ✅ **Desenho aprovado em 17/10/2026**
+  (`contracts/migrations.md` §M1); volta a Bernardo se a medição sobre o backup mudar o efeito.
 - **FR-014.6**: A lista `/turmas` MUST ganhar as colunas **Progresso** e **Saldo (TA)**, calculadas pela
   mesma função de domínio (`andamentoDaTurma`), com a mesma marca de atraso do `/inicio` e da ficha
   (Q-6). **Progresso** aparece para **todas** as turmas; **Saldo** só para turma **ativa** ou
@@ -711,8 +713,9 @@ exceção do bloco, autorizada na Q-7)*
 - **SC-007**: A CH prevista de 2026 do instrutor de código 15 conta as **4** atribuições (**271 TA**),
   não **1** (114); a view passa a ter **0** linhas com ano nulo e **0** com média semanal nula quando a
   turma tem janela (hoje, 8 e 8).
-- **SC-012**: A lista `/turmas` mostra Progresso e Saldo (TA) em 100% das turmas com término e regime, e
-  a mesma marca de atraso que o `/inicio` dá à mesma turma.
+- **SC-012**: A lista `/turmas` mostra Progresso em 100% das turmas e Saldo (TA) em 100% das turmas **ativas
+  e planejadas** com término e regime (*"—"* nas demais, P-4 do plan), com a mesma marca de atraso que o
+  `/inicio` dá à mesma turma.
 - **SC-013**: O caso de regressão do dia com 7 TA e bloco que atravessa o almoço passa na tela, no papel
   e na planilha.
 - **SC-008**: A ficha do instrutor abre com **0** campos editáveis visíveis (hoje, 207).
@@ -757,9 +760,9 @@ exceção do bloco, autorizada na Q-7)*
 - Toda tela com caminho clicável; e2e chegando por clique.
 - Separar banco de tela (§3).
 - O 1.15 só diagnostica e, se não exigir banco, corrige (é o caso: não exige).
-- **Duas exceções de banco, as duas pelo portão da regra 9.4** (desenho a Bernardo antes do remoto): a
-  do saldo (D-COR-2, autorizada em princípio) e a da CH prevista do instrutor (autorizada na Q-7, em
-  17/10/2026). Nenhuma tabela nova. Todo `db push` é precedido de
+- **Duas exceções de banco, as duas pelo portão da regra 9.4**: a do saldo (D-COR-2) e a da CH prevista do
+  instrutor (Q-7). **Desenho das duas aprovado em 17/10/2026**, no mesmo PR (exceção ao Princípio VI
+  aprovada, P-2 do plan). Nenhuma tabela nova. Todo `db push` é precedido de
   `python -m scripts.manutencao.dado_do_remoto --somente-copia`.
 - O 1.11 fica **sem objeto**; o caso de regressão entra (Q-8).
 - As divergências 2 e 14 da §11 são **só registro** (17/10/2026).

@@ -54,8 +54,8 @@ da regra 9.4:
   turma), mesmas colunas. Efeito medido: **5** instrutores mudam de CH prevista em 2026; o de código 15
   vai de **114 para 271** TA.
 
-Proposta: **três PRs** — tela (PR 1), DSA (PR 2), banco (PR 3) —, em vez dos dois do pedido, pelas razões
-da §1 (**P-1**).
+**Três PRs** — tela (PR 1), DSA (PR 2), banco (PR 3) —, em vez dos dois do pedido, pelas razões da §1;
+**decidido** por Bernardo em 17/10/2026 (P-1).
 
 ## Technical Context
 
@@ -153,7 +153,7 @@ PR 3 — banco e o que depende dele
 
 ---
 
-## 1. Os PRs — proposta: três, em sequência (**P-1**)
+## 1. Os PRs — três, em sequência (decidido em 17/10/2026, P-1)
 
 | PR | Ramo | Itens | Banco | O que Bernardo confere no preview |
 |---|---|---|---|---|
@@ -256,7 +256,8 @@ dry-run só com M1 e M2 → `db push` → conferência só de leitura (migration
   na ficha de hoje assim que a migration é aplicada. O código da `main` continua funcionando (mesmas
   colunas).
 - ⚠️ **O número do DSA muda no meio de um curso** quando o PR 2 entra: um DSA desta semana pode já ter
-  saído com *"Nº 26"* e a reimpressão sair *"Semana 28 de 37"*. Quando mesclar é a **P-5**.
+  saído com *"Nº 26"* e a reimpressão sair *"Semana 28 de 37"*. **Decidido (P-5):** o PR 2 é mesclado
+  entre semanas — sexta à noite ou fim de semana.
 - **A cópia envelhece:** a medição é de 17/10/2026, 00:57. O rito remede sobre o backup do dia.
 - **Fórmula da planilha:** o número passa a ser diferença de datas ÷ 7 + 1 — mais simples que a de hoje,
   mas tem de continuar no vocabulário do Excel 2007 (`DP-2` da spec 015) e ser provada contra a função.
@@ -270,8 +271,8 @@ dry-run só com M1 e M2 → `db push` → conferência só de leitura (migration
 ## 9. Constitution Check — reavaliação depois do desenho
 
 O desenho não mudou o veredito da tabela inicial: nenhuma tabela, nenhuma policy, nenhum dado; as duas
-migrations são derivadas, com `security_invoker`, reversíveis e com caso que discrimina. Fica a exceção
-do Princípio VI (P-2).
+migrations são derivadas, com `security_invoker`, reversíveis e com caso que discrimina. A exceção
+do Princípio VI foi aprovada em 17/10/2026 (P-2).
 
 ### Complexity Tracking
 

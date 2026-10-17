@@ -44,7 +44,8 @@ banco em `contracts/migrations.md`.*
 ## PR 3 — o que se vê (com a cópia do remoto no local)
 1. Menu *Início*: a **C-Ap-FR 2026 aparece em atraso** (saldo −16 TA); a C-Ap-HN 2026 mostra **958** TA
    executados, não 1.008.
-2. Menu *Turmas*: colunas **Progresso** e **Saldo (TA)**.
+2. Menu *Turmas*: colunas **Progresso** (todas as turmas) e **Saldo (TA)** (só ativa e planejada; *"—"* em
+   concluída e cancelada).
 3. *C-Ap-HN 2026* → ficha: a disciplina XIV mostra **33** TA executados, não 56; a aba *Avaliações* usa o
    mesmo número.
 4. Menu *Instrutores* → instrutor de código **15**: CH prevista de 2026 **271** TA (hoje 114); as
