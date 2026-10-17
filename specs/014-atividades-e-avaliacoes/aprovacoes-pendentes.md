@@ -828,3 +828,85 @@ da tela, sem o porteiro — para que a junção da CAHO IV rode **pelo mesmo có
 (`scripts/manutencao/juntar_como_sessao.py`). Não é tabela nova nem regra nova: a RPC da tela passa a ser porteiro +
 núcleo, e com sessão o gatilho da trilha continua exigindo `avaliacoes_juntar_sessao`. A alternativa era repetir o
 corpo no script — duas implementações da mesma junção — ou carimbar `juntada_por` com uma conta que não clicou.
+
+## 16/10/2026 (noite) — fechar os Épicos 8 e 9 e as correções da lista de erros
+
+**A decisão** *(Bernardo Villas Boas, 16/10/2026, sobre `sugestoes-de-correcao.xlsx` da rodada `2026-10-14T1916`)*:
+aceitas as recomendações, **exceto** as «Corrigir na planilha» (29 itens e a V7), as «Perguntar ao curso» (9 itens, V1,
+V5, V8, D3, D4, D5, D7) — que ficam com os cursos —, a CAHO-05, a V6 e a sessão de vista de 10/10 da D2 (pedem
+confirmação) e os achados R3 («PO») e R6 (RECON). **Exceção:** as 17 provas «sem item» por T/E errado entram pela
+«Alternativa» (ligar no sistema). «Não é erro» (19 + D6), «fato» (17) e «já resolvido» (CAHO-02, D8) ficam registrados
+como decididos. R8: os avisos de tempo do TFM ficam como informação, e a regra não muda. PEND-014-10: emendar a FR-062
+e a SC-011. PEND-014-11: sem sugestão sem valor; as 13 vazias saem por exclusão lógica. C-Espc-FR: as duas «PROVA
+ESCRITA» ligadas à PM 1 pela T/E «Prova Mista» ficam (P10). E o card (passo 0) foi conferido por ele em Production.
+
+**O que cada item fecha:**
+
+| Item | O que foi feito | Onde |
+|---|---|---|
+| 1a — as 17 da «Alternativa» | `itens_por_prova` no lote de cada turma, pela **linha** da prova na planilha, com o ID e a decisão no motivo (C-Ap-FR-01 a 04, C-Esp-ME-01 a 06, C-Espc-FR-02 a 05, Ag-Mag-01 e 02, BATI-01) | `scripts/carga_dsa/decisoes/*.json`, PR #63 |
+| 2 — o que já foi decidido | `scripts/carga_dsa/decisoes-da-lista.json` (37 itens + R8 + D1, D2, D6, D8); a lista por turma e a «planilha diverge do sistema» mostram o decidido como **informação**, com o ID; o gerador imprime o que não casou mais (as 6 «aula em dia parado», que a R5 tirou, e a CAHO-02, que a R7 reconhece) | `decididos.py`, `erros_por_turma.py`, `sincronizar.py` |
+| 4 — PEND-014-10 | FR-062 e SC-011 emendadas (o cálculo, o filtro, a ordenação e o alerta não leem; a exibição como texto da FR-007.1 da spec 009 fica); a guarda que já existia (`sobre-o-curso-so-consulta.test.ts`) cobra o texto novo | `spec.md` |
+| 5 — PEND-014-11 | a sincronização não cria sugestão sem valor (`_sugestoes`); as vazias saem pela D-11 (**13**, medidas no remoto pelo próprio evento da D-11, «13 ativas»); pgTAP `134` | `resolver.py`, D-11 |
+| 7 — CAHO-01 | a prova da linha 330 → TG 2 (I); a vista da linha 401 é dela | lote da CAHO |
+| 8 — CAHO-06 | a vista da linha 1746 → a TI 1 de 14/07 (linha 1636); e a junção da prova de 27/07 como sessão, pelo núcleo do «juntar» | lote da CAHO; rodada |
+| 9 — C-Espc-HN-01 | a TI da linha 511 → TG 1 (A4.7 nº 84); a vista de 12/03 (linha 517) é dela pela aba DATAS AVALIAÇÕES | lote da C-Espc-HN |
+| 10 — V2 | a vista da linha 1162 **dividida**: 1º tempo → PM 1 de 13/05 (linha 1042), 2º → a prova de 25/05 (linha 1148) | lote da C-Espc-FR |
+| 11 — D1 | D-11: item PM 1, «U.E. 1 a 3» e a vista de 27/08, 6º tempo, 1 TA, como sessão seguinte; a `VST-000160` (16/10) fica | `20261016225643` |
+| 12 — D2 | D-11: item PP 3; a `VST-000028` (10/10) **não** foi tocada | `20261016225643` |
+| 13 — R2 | a vista casa pela chave da aba DATAS AVALIAÇÕES e nunca com prova aplicada depois dela (data + tempo); V3, V4 e a BATI resolvidos | `resolver.py` |
+| 14 — R4 | a chave do catálogo pela coluna D; a lista aponta A + C ≠ D; entram os 24 TA da visita a Macaé (18, 19 e 22/05), como AEC «Apoio à Instrução», igual à de 20 e 21/05 | `planilha.py` |
+| 15 — R1 | medido antes, só leitura: a aula de 25/08 (L1153-A) estava na **UE 1**; de-para pelo **nome** em `ues` dos lotes da C-Ap-FR (51 chaves) e da Ag-Mag (6); o total por disciplina não muda | `de_para_de_ue.py` |
+| 16 — R5 | aula em dia parado por **tempo**; FR-036.1 e D3.6 emendadas; os 6 avisos da rodada de 14/10 somem | `resolver.py`, `spec.md` |
+| 17 — R7 | o gerador da lista lê o que está gravado (junção, ligação na tela, sessões nascidas na tela) antes de acusar | `resolver.py`, `banco.py` |
+| 18 — SC-003 | e2e que lança pela tela acima do teto, lê a linha e confere o alerta sem recusa; com uma recusa plantada no banco, reprova | `tetos-da-turma.spec.ts` |
+| 19 — `tasks.md` | toda tarefa aberta com destino: feita, substituída (por quê) ou cancelada (por qual decisão). Pela decisão do comando (item 19): os roteiros de preview (T034, T050, T123, T198, T221, T235) substituídos pelo roteiro único de Production; a T213 e os itens sem tela da T189 cancelados em 15/10; a T128 substituída pela conferência da D-5 | `tasks.md` |
+| 20 — `ESPELHO-VISTA` | a pendência que já existia passa a backlog (não feita agora), com a ordem: aposentar os dois escritores antigos e depois o gatilho | `CLAUDE.md` |
+
+⚠️ **Três efeitos medidos no ensaio que não estavam no comando, e o que foi feito com cada um:**
+
+- **CAHO XVII, a vista de prova de 30/07 (linha 1778).** Com a vista da linha 1746 indo para a TI de 14/07 (CAHO-06), a
+  regra sem número mandaria a de 30/07 para o trabalho de 27/07, que vira sessão. Ela foi **mantida onde já estava** (a PM 1
+  de 24/07, `DSAP-CAHO-2026-L1719-V`) por uma decisão por linha, registrada no lote como consequência da CAHO-06.
+- **CAHO VI, a «VP3» de 24/06**, anterior à PM 3 de 02/07: o recuo escrito para a BATI a mandava para o trabalho T2, que
+  já tem os comentários dele (VT2). O recuo passou a ignorar a prova que outra vista numerada reivindica, e a VP3 continua
+  **sem prova** — é a V8, que fica com o curso.
+- **A sessão de vista que muda de prova colidia** com a que entra no lugar (`vst_numero_unico`, medido no ensaio): a
+  sincronização passou a tirá-la antes do *upsert*, no mesmo molde das sessões de aplicação.
+
+**Publicado em 16/10/2026 (noite):** PR **#63** mesclado em `2bc77a9` (CI verde nos três blocos, deploy de Production
+`success`); a D-11 no remoto antes do merge (backup `remoto-20261016-203431.sql`, **75 e 75** migrations, impressão
+digital `dcd9297b…` igual nos dois); e a rodada (backup `remoto-20261016-203720.sql`): ensaio local **246** mudanças e 2ª
+**0**; plano do remoto = local nas 10; remoto grava **246**, 2ª **0**; a junção da CAHO-06 (`SAP-000002`) no remoto e na
+cópia; 3ª **0** nos dois; dados das 29 turmas iguais (`655b2fd1`). **Antes → depois, no remoto:** provas ligadas
+**140 de 169 → 161 de 168**; provas que não casam **19 → 0**; vistas atrasadas **8 → 5**; sugestões sem valor **13 → 0**;
+itens a corrigir na lista **79 → 29** (12 deles novos: 10 da R4 e 2 da C-Esp-ME VI); CH só onde a decisão previa (C-Espc-FR AEC +24, pela rodada; C-Ap-HN vista +1, pela D-11). Relatório:
+`antes-depois/rodada-da-lista-16-10-no-remoto.md`.
+
+### Dúvidas em lote (16/10/2026, noite) — para Bernardo
+
+1. **C-Ap-HN VII, a vista de 16/10.** A D1 ficou com **duas** sessões de vista: a de 27/08 (planilha, linha 1182, pela
+   sua decisão) e a `VST-000160` (16/10, 4º tempo), lançada na tela em 14/10. Na planilha de 14/10, a vista de 16/10,
+   4º tempo (linha 1613), é da **PM 2 da VII** (09/10, linhas 1550–1551). A `VST-000160` é a 2ª sessão da PM 1 ou a vista
+   da PM 2? Não mexi: é lançamento da tela, fora da D1/D2.
+2. **A PM 2 da VII (09/10) NÃO está no sistema**, e a aba a mostra *«Pendente»*. No banco, o código
+   `DSAP-C-AP-HN-2026-L1550-V` é **outra prova**: uma da **XIII** de 09/10, carregada em 07/10 de uma versão anterior da
+   planilha (as linhas deslocaram), com vista lançada na tela para 23/10 (`VST-000243`). Como a prova da planilha tem vista
+   depois da virada (16/10), a A3.3 (14/10/2026) a protege **inteira**: a rodada não a troca pela PM 2 da VII. E a XIII tem
+   ainda uma prova lançada na tela em 16/10 (`DSA-MV723OPT-V`). Perguntas: a PM 2 da VII entra pela tela? A
+   `DSAP-C-AP-HN-2026-L1550-V` (XIII, 09/10) é prova de verdade ou duplica a de 16/10?
+3. **CAHO XVII, a vista de prova de 30/07 (linha 1778)** ficou na PM 1 de 24/07 (`DSAP-CAHO-2026-L1719-V`) por uma decisão por linha que escrevi como
+   consequência da CAHO-06 (sem ela, a regra sem número a mandaria para o trabalho de 27/07, que virou sessão). Ratifica?
+4. **C-Esp-ME VI, PM 1 e PM 2**: ligadas pela «Alternativa» (C-Esp-ME-02 e -03), as duas aparecem agora na lista como
+   *«planilha 2 TA, currículo 3 TA»*. É fato, para corrigir na planilha, ou outra coisa?
+5. **C-Espc-FR, o CONTROLE da planilha** soma a visita a Macaé (18, 19 e 22/05) na CH da IV, da V e da XVII, e o sistema a
+   conta como AEC «Apoio à Instrução» (como a de 20 e 21/05). A sincronização registra a diferença como pendência de
+   contagem, adiada; nada saiu do plano. Fica assim?
+6. **CAHO, a atividade de 09/10, 2º e 3º tempos** (`DSAP-CAHO-2026-L2380-N`, TR, 2 TA) mudou a descrição de «SEMANA
+   OCEANOGRAFICA» para «PREPARAÇÃO PARA O LHFC» e perdeu o instrutor, pela R4 (as linhas 336 a 338 do catálogo têm A + C
+   deslocados de uma posição em relação à D). ⚠️ **Com isso o sistema DIVERGE do DSA impresso**: a IMPRESSÃO de 09/10 traz
+   «SEMANA OCEANOGRAFICA» **digitado por cima da fórmula**. A regra do texto digitado (*«vale, salvo as que as decisões da
+   turma recusam»*) é aplicada às **aulas** e não às **atividades**; antes da R4 o sistema acertava por coincidência.
+   **Proposta, não aplicada:** estender a regra às atividades. Efeito medido nas 10 planilhas: **duas** linhas — esta, que
+   volta a «SEMANA OCEANOGRAFICA», e a C-Espc-FR L4 (12/01, Apoio Individualizado), que passaria de «MONITORIA» a
+   «APRESENTAÇÃO», com a mesma categoria. Aplico? Pede uma rodada só dessas duas turmas.

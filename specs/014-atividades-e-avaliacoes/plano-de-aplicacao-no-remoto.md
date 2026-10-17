@@ -212,3 +212,35 @@ em cada execução; dados das **29** turmas iguais no local e no remoto (`script
 `3dc367f9`). ⚠️ A 1ª execução no remoto **parou na CAHO** (saída 6, *«plano do local × remoto: não é o mesmo plano»*)
 porque eu tinha adiantado a cópia local com a junção — nada foi gravado nela; ela foi gravada sozinha, com cópia nova
 (`remoto-20261016-145034.sql`). Relatório com o antes/depois: `antes-depois/rodada-da-a47-no-remoto.md`.
+
+### A migration de dado das correções da lista (#63) — D-11 (16/10/2026, noite)
+
+`20261016225643_correcoes_da_lista_16_10.sql`, **de dado** (decisões de Bernardo Villas Boas de 16/10/2026, noite:
+*"Migration de DADO para os itens 5 e 7 a 12: aprovada aqui"*): as sugestões da planilha sem valor saem por exclusão
+lógica (PEND-014-11); D1 (`DSAP-C-AP-HN-2026-L1111-V` → PM 1, «U.E. 1 a 3», vista de 27/08); D2
+(`DSAP-C-AP-HN-2026-L1249-V` → PP 3). Nenhuma tabela, coluna, policy ou função nova.
+
+| Passo | Resultado |
+|---|---|
+| CI do ramo | verde nos três blocos sobre `be68413` (run `38980372715`): 2.314 · 770 · 326 · 471 + 1 instável + 6 pulados (o instável, `avaliacoes-nas-telas.spec.ts:53`, passou isolado: o arquivo inteiro, 7 de 7 casos, com o :53 uma vez — `lista-16-10/e2e-avaliacoes-nas-telas.log`) |
+| Ensaio | numa transação desfeita sobre a cópia local igual ao remoto — `remoto-20261016-145034.sql` com a rodada da CAHO e a junção da tarde refeitas (dados `3dc367f9`, iguais aos do remoto): 13 sugestões, D1 com a vista como sessão 2, D2. ⚠️ *O cabeçalho da D-11 cita `remoto-20261016-141227.sql`: é o artefato errado (regra 9.2), e o arquivo, já aplicado, não é editado; o 13 foi remedido no próprio remoto pelo evento da D-11. E o «em 6 turmas» da
+mesma frase também está errado: são **5** (C-Ap-FR 3, C-Ap-HN 3, C-Espc-FR 2, C-Espc-HN 3, CAHO 2), medido na cópia
+local igual ao remoto antes da D-11; em `remoto-20261016-141227.sql` eram só 2.* |
+| Reversão | `reversao-d11.sql`, provada na mesma cópia, numa transação desfeita: a impressão das linhas tocadas `6b972dce…` → `765e2b4c…` → **`6b972dce…`** |
+| Backup imediatamente antes | **`remoto-20261016-203431.sql`** |
+| Dry-run | só `20261016225643_correcoes_da_lista_16_10.sql` |
+| `db push --linked` | saída **0** |
+| Migrations | **75 e 75**, nenhuma divergente |
+| Impressão digital | **`dcd9297b1986b9a3a0a9a795ab5e7b12`, 2.000 objetos, igual no local e no remoto** (as 2.001 linhas), a mesma de antes: migration de dado |
+| Efeito | **13** sugestões inativadas (`MLOG-014-D11-SUG-…`, «13 ativas»), **0** ativas sem valor depois; D1: PM 1, «U.E. 1 a 3», a marca `[CORRIGIDO NO SISTEMA …]` e a vista `DSAP-C-AP-HN-2026-L1182-S` (27/08, 6º tempo, 1 TA, Sala 01, instrutor 39) como sessão 2, com a `VST-000160` intacta; D2: PP 3 e a marca, com a `VST-000028` intacta; três eventos `MLOG-014-D11-…` |
+| Production | depois do deploy do merge `2bc77a9` (`success`): `/login` e `/estilo` 200, `/inicio` e `/turmas` 307 |
+
+### A rodada das correções da lista (16/10/2026, noite)
+
+✅ **APLICADA NO REMOTO em 16/10/2026**, depois do merge do #63 e do deploy dele. Backup imediatamente antes
+**`remoto-20261016-203720.sql`** (o `dado_do_remoto` completo, que restaurou a cópia no local); ensaio na cópia **246**
+mudanças e 2ª **0**; plano do remoto = plano do local nas **dez** turmas; 1ª rodada **246**, 2ª **0**; a junção da prova
+de 27/07 da CAHO XVII à TI 1 (CAHO-06, `SAP-000002`) **primeiro no remoto, depois na cópia** (a memória do tropeço de
+16/10 à tarde); 3ª rodada **0** nos dois; execução final no remoto **0**; dados das **29** turmas iguais
+(`scripts/provas/dados_das_turmas.sql`, total `655b2fd1`); impressão digital `dcd9297b…` nos dois. Relatório com o
+antes/depois: `antes-depois/rodada-da-lista-16-10-no-remoto.md`.
