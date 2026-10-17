@@ -13,6 +13,10 @@
 > - ~~**A única pendência que fica é a reconferência do card por Bernardo**~~ — **feita em 16/10/2026** (o card abre a aba
 >   à vista em Production).
 >
+> ✅ **ÉPICOS 8 E 9 ENCERRADOS em 17/10/2026**, com as 6 dúvidas do fechamento respondidas por Bernardo Villas Boas e
+> aplicadas (#65: a D-12 e o texto digitado em atividade; `aprovacoes-pendentes.md`), e R3 e R6 no backlog
+> (`PEND-014-12`, `PEND-014-13`).
+>
 > **Atualizado em 16/10/2026 (noite)**, depois do **#63** (`2bc77a9`) e da rodada das correções da lista no remoto
 > (`antes-depois/rodada-da-lista-16-10-no-remoto.md`): a SC-003 ganhou o caso pela tela e a SC-011 fecha como emendada.
 > Suítes: o CI do #63 (run `38980372715`, sobre `be68413`) — **2.314** de unidade (162) · **770** pgTAP (54) · **326**

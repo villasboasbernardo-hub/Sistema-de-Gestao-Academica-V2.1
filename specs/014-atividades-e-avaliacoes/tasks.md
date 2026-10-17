@@ -642,6 +642,9 @@ Depois, juntos: lib/dominio/avaliacoes/previsto.ts · projecao.ts · historico.t
 - [X] T277 A entrega: `erros-por-turma.xlsx` e `provas-sem-casar.md` regerados do remoto, `sugestoes-de-correcao-decididas.xlsx` (Decisão e Aplicado) e `para-os-cursos-16-10.xlsx`/`.md` (29 itens), na pasta da rodada, fora do git.
 - [X] T278 O fechamento: `fechamento.md`, o roteiro de Production com os números novos (lidos na tela), a linha da spec 014 no `CLAUDE.md` e a PEND `ESPELHO-VISTA` no backlog.
 
+- [X] T279 As respostas às 6 dúvidas (16/10/2026, noite): a D-12 (`20261017023430`, a `L1550-V` vira a PM 2 da VII e as vistas vão às provas), a varredura da A3.3 (só a `L1550-V` divergia), o texto digitado em atividade (`resolver.py`), as dúvidas 3 e 4 no lote e no registro, R3 e R6 como `PEND-014-12` e `-13`. **Feito:** PR #65 (`8e20583`), D-12 no remoto antes do merge (`plano-de-aplicacao-no-remoto.md`).
+- [X] T280 A rodada da dúvida 6, só CAHO e C-Espc-FR: 2 mudanças, 2ª **0**, dados iguais (`beb49b51`). **Feito:** `antes-depois/rodada-da-lista-16-10-no-remoto.md`.
+
 ## Notas
 
 - ~~Nenhuma tarefa deste arquivo foi executada. O remoto não foi tocado.~~ *Vencida: era a nota da geração do arquivo (13/10/2026). O estado de cada tarefa é o da caixa dela (`[X]` ou `[ ]`), com a data e o artefato na nota; o que foi aplicado no remoto está em `plano-de-aplicacao-no-remoto.md`. (Corrigida em 15/10/2026.)*
