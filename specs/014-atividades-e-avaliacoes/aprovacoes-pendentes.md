@@ -910,3 +910,18 @@ itens a corrigir na lista **79 → 29** (12 deles novos: 10 da R4 e 2 da C-Esp-M
    **Proposta, não aplicada:** estender a regra às atividades. Efeito medido nas 10 planilhas: **duas** linhas — esta, que
    volta a «SEMANA OCEANOGRAFICA», e a C-Espc-FR L4 (12/01, Apoio Individualizado), que passaria de «MONITORIA» a
    «APRESENTAÇÃO», com a mesma categoria. Aplico? Pede uma rodada só dessas duas turmas.
+
+## 16/10/2026 (noite) — as respostas de Bernardo às 6 dúvidas do fechamento, e o encerramento dos Épicos 8 e 9
+
+**A decisão** *(Bernardo Villas Boas, 16/10/2026, no texto dele, resumido item a item)*:
+
+| Dúvida | Resposta | O que foi feito |
+|---|---|---|
+| 1 e 2 — C-Ap-HN | *«a DSAP-C-AP-HN-2026-L1550-V (XIII, 09/10) é fantasma de uma versão antiga da planilha. A PM 2 da XIII foi aplicada em 16/10 (planilha, linha 1610; na tela, DSA-MV723OPT-V). Corrija por migration de dado (aprovada aqui)»*: a L1550-V passa a ser a PM 2 da VII (09/10, 1º e 2º tempos, 2 TA, «U.E. 4 a 6», item PM 2); a `VST-000160` (16/10, 4º tempo) sai da PM 1 e vai para essa PM 2; a `VST-000243` (23/10) vai para a `DSA-MV723OPT-V` | **D-12** `20261017023430` (dado), com `reversao-d12.sql`; a vista de 27/08 da PM 1 (D1) fica sozinha e passa a sessão 1. Ensaio e reversão na cópia local igual ao remoto: impressão das linhas tocadas `030f69…` → `55ca24…` → `030f69…`. No remoto: [pendente] |
+| 1 e 2 — a varredura | *«veja se há outra prova protegida pela A3.3 cuja linha da planilha hoje é de outra disciplina ou data. Se houver, só relate»* | Só leitura, nas três turmas com virada, na cópia local igual ao remoto: **4** provas protegidas pela A3.3 (CAHO 2, C-Ap-HN 2, C-Ap-FR 0); **só a L1550-V** diverge da planilha (disciplina XIII × VII; TA 1×3 × 1×2). Nenhuma outra |
+| 3 — CAHO XVII | *«ratifico. A vista de 30/07 é da PM 1 de 24/07»* | o motivo da linha 1778 no lote da CAHO registra a ratificação (só texto; o plano não muda) |
+| 4 — C-Esp-ME VI | *«é fato (as provas levaram 2 TA). Nada a corrigir»* | as duas entradas em `decisoes-da-lista.json` (Dúvida 4a e 4b): a lista as mostra como informação |
+| 5 — Macaé | *«fica como AEC. É a regra da spec (FR-021: APOINST conta como AEC); a diferença com o CONTROLE da planilha é informação»* | registrado; a sincronização já a trata como contagem adiada, sem tirar nada do plano |
+| 6 — texto digitado | *«Aplique: o texto digitado por cima da fórmula vale também para atividade, como já vale para aula. Rodada só da CAHO e da C-Espc-FR»* | `resolver.py`: a descrição da atividade adota o tópico digitado (salvo recusa no lote); caso que discrimina em `provar_carga_dsa.py` (133 de 133). Rodada no remoto: [pendente] |
+| R3 e R6 | *«Registre R3 e R6 como PEND nomeadas no backlog»* | `PEND-014-12` (R3, «PO») e `PEND-014-13` (R6, RECON) no `CLAUDE.md` |
+
