@@ -259,6 +259,61 @@ test.describe("`FR-007.2` da spec 016 · a proporção da CH é uma pizza", () =
   });
 });
 
+/*
+ * ⚠️ **A `PEND-016-3` (decisão de Bernardo Villas Boas, 18/10/2026)**: dentro do detalhe aberto, as
+ *    teclas de navegação apertadas num campo eram capturadas pela grade de fora — `preventDefault` e o
+ *    foco para uma célula: o cursor não andava no texto, a seta não mudava a data, e no seletor de
+ *    instrutor do detalhe a seta tirava o foco do painel. A grade passou a tratar só as teclas que vêm
+ *    de uma célula DELA.
+ */
+test.describe("`PEND-016-3` · as teclas num campo do detalhe são do campo", () => {
+  test("no texto da UE em edição, Home, End e setas movem o cursor, e a linha continua aberta", async ({
+    page,
+  }) => {
+    await irAGradePorClique(page);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    const linha = linhaExpansivel(page, DISCIPLINA_COM_UE.nome);
+    const tabela = page.locator('[data-slot="tabela-de-unidades"]');
+    await tabela.locator('[data-unidade="1"] [data-slot="editar-unidade"]').click();
+
+    const campo = tabela.locator('[data-unidade="1"] input[name="topico"]');
+    const original = await campo.inputValue();
+    expect(original.length, "a amostra não tem tópico para mover o cursor").toBeGreaterThan(1);
+    const cursor = () => campo.evaluate((el) => (el as HTMLInputElement).selectionStart);
+    await campo.focus();
+
+    for (const [tecla, esperado] of [
+      ["End", original.length],
+      ["Home", 0],
+      ["ArrowRight", 1],
+      ["ArrowLeft", 0],
+    ] as const) {
+      await page.keyboard.press(tecla);
+      await expect(campo, `${tecla} tirou o foco do campo`).toBeFocused();
+      expect(await cursor(), `${tecla} não moveu o cursor do texto`).toBe(esperado);
+    }
+    for (const tecla of ["ArrowDown", "ArrowUp", "PageDown", "PageUp"]) {
+      await page.keyboard.press(tecla);
+      await expect(campo, `${tecla} tirou o foco do campo`).toBeFocused();
+    }
+    await expect(linha).toHaveAttribute("aria-expanded", "true");
+
+    // Espaço é um espaço, e não fecha a linha.
+    await page.keyboard.press("End");
+    await page.keyboard.press(" ");
+    await expect(campo).toHaveValue(`${original} `);
+    await page.keyboard.press("Backspace");
+    await expect(campo).toHaveValue(original);
+    await expect(linha).toHaveAttribute("aria-expanded", "true");
+
+    // Enter grava a unidade (é o envio do formulário) — e a linha continua aberta.
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("status").filter({ hasText: "atualizada" })).toBeVisible();
+    await expect(linha).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator('[data-slot="detalhe-da-disciplina"]')).toBeVisible();
+  });
+});
+
 test.describe("`FR-020` a `FR-024` · a exclusão, com código e rastro", () => {
   test("⚠️ disciplina COM linha de turma é recusada, NOMEANDO o impedimento", async ({ page }) => {
     await irAGradePorClique(page);
