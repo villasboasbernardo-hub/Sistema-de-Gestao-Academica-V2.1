@@ -198,8 +198,8 @@ de um PR está na fundação dele (T004).*
 
 - [X] T074 Defeitos deliberados, desfeitos e registrados em `progresso-implement.md`: (a) a contagem CRONOS de volta → `semana-do-curso.test.ts` e `dsa-semana-do-curso.spec.ts` reprovam; (b) o filtro `turma_id` de volta → `leitura-do-dsa.test.ts` reprova; (c) o formatador `diaMes` de volta → `formato-de-data.test.ts` reprova · **Origem:** DoD 8
 - [X] T075 `pnpm verificar:tudo` sai 0; contagens em `specs/016-correcoes-bloco-1/progresso-implement.md` · **Origem:** SC-011
-- [ ] T076 Commits por item (`fix(RF-DSA-06)`, `fix(RF-DSA-08)`, `fix(RF-DSA-03)`, `test(RF-DSA-03)`, `fix(BLOCO-1)`); `git push -u origin fix/BLOCO-1-dsa`; PR na `main` com o template inteiro e o aviso de **merge entre semanas** · **Origem:** DoD 7
-- [ ] T077 CI verde nos três blocos com a mesma contagem; run em `progresso-implement.md` · **Origem:** SC-011
+- [X] T076 Commits por item (`fix(RF-DSA-06)`, `fix(RF-DSA-08)`, `fix(RF-DSA-03)`, `test(RF-DSA-03)`, `fix(BLOCO-1)`); `git push -u origin fix/BLOCO-1-dsa`; PR na `main` com o template inteiro e o aviso de **merge entre semanas** · **Origem:** DoD 7
+- [X] T077 CI verde nos três blocos com a mesma contagem; run em `progresso-implement.md` · **Origem:** SC-011
 - [X] T078 Escrever `specs/016-correcoes-bloco-1/roteiro-de-conferencia-pr2.md` a partir de `quickstart.md` §*PR 2* (com a cópia do remoto no local para a C-Ap-FR 2026 e a C-Exp-Obs-ME 2026), mais a **medição do SC-006** sobre essa cópia: para cada linha de turma com instrutor atribuído (92 na cópia de 17/10/2026), `preencherLancamento` devolve instrutor — resultado em `progresso-implement.md` · **Origem:** SC-003, SC-006, SC-013
 - [ ] T079 **PARE** — conferência de Bernardo no preview; merge por squash **só com a palavra dele**, **entre semanas** (sexta à noite ou fim de semana) · **Origem:** plan §0 (P-5)
 

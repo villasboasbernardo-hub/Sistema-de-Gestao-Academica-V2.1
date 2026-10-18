@@ -301,8 +301,12 @@ O reprovado foi `salas.spec.ts:126` (a sala de amostra ainda não estava na list
 toca. **Isolado:** o arquivo inteiro repetido 3 vezes com 2 processos deu **18 de 18**. É a classe já
 registrada na memória do projeto (*e2e frágil sob carga*, que cita `salas`).
 
-### CI (T077)
-[pendente]
+### CI (T077) — sobre `7588854`, PR #68
+Verde nos três blocos (`qualidade`, `build` e `banco`), run `39164795651`, com **a mesma contagem do
+`verificar:tudo` local**: **2.365** de unidade (166 arquivos) · **770** pgTAP (54) · **328** invariantes e RLS
+(18) · **513** casos de ponta a ponta — **507** passados e **6** pulados, sem instável. O `salas.spec.ts:126`, que
+reprovou no local sob carga, passou no CI de primeira. O run de `9c69303` foi cancelado pelo push do
+roteiro com o link do preview, que só muda documento.
 
 ### Medição do SC-006 (T078)
 Ver o item 1.12, acima: **92 de 92** na cópia `remoto-20261017-005738.sql`.
