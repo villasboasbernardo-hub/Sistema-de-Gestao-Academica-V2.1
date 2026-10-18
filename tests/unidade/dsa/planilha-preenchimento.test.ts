@@ -66,9 +66,50 @@ describe("o bloco de cada semana", () => {
       expect(celulaEm(aba, linhaDoCabecalho(g, k), PC.rotulo)?.valor).toBe(s.rotulo);
     });
   });
-  it("`FR-007` · o nº do DSA de cada semana é o de `numeroDoDsa` (fórmula, `DP-1`)", () => {
+  it("spec 016, FR-009.5 · a «Semana N de T» de cada semana é a de `semanaDoCurso` (fórmula, `DP-1`)", () => {
     insumo.semanas.forEach((s, k) => {
-      expect(valor(linhaDoCabecalho(g, k), PC.numero)).toBe(numeroDaSemana(s.semana.numero) ?? "—");
+      expect(valor(linhaDoCabecalho(g, k), PC.semanaDoCurso)).toBe(
+        rotuloDaSemanaDoCursoSintetica(s.semana.numero),
+      );
+      expect(s.rotulo.startsWith(`${s.rotuloDaSemanaDoCurso} — `)).toBe(true);
+    });
+    expect(valor(linhaDoCabecalho(g, SEMANA.s15), PC.semanaDoCurso)).toBe("Semana 1 de 35");
+  });
+
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA** (DoD 8): a fórmula lê o catálogo, então corrigir o início, o término ou
+   * a duração ali tem de renumerar a semana do mesmo jeito que `semanaDoCurso` renumeraria. Cada troca
+   * abaixo dá um veredito diferente do da semente — antes do início, depois do término, a turma mais
+   * longa que o curso, sem duração e sem término —, e a contagem CRONOS de antes errava todas.
+   */
+  it.each([
+    ["início uma semana antes — a 15 vira a 2", "2026-03-30", DATA_TERMINO, DURACAO_DO_CURSO],
+    ["início depois — a 15 sai «—»", "2026-04-13", DATA_TERMINO, DURACAO_DO_CURSO],
+    ["término antes — a 17 sai «—»", DATA_INICIO, "2026-04-17", DURACAO_DO_CURSO],
+    ["curso de 2 semanas, turma de 3 — T = 3", DATA_INICIO, DATA_TERMINO, 2],
+    ["sem duração — T = semanas da turma", DATA_INICIO, DATA_TERMINO, null],
+    ["sem duração e sem término — «Semana N»", DATA_INICIO, null, null],
+    ["sem término, curso de 2 — a 17 passa da duração", DATA_INICIO, null, 2],
+    ["sem início — tudo «—»", null, DATA_TERMINO, DURACAO_DO_CURSO],
+  ] as const)("fórmula = função quando o catálogo muda: %s", (_, inicio, termino, duracao) => {
+    const valorDe = avaliarCom(
+      [
+        [B_PRIMEIRA_LINHA, B.dataInicio, inicio === null ? "" : serieDaData(inicio)],
+        [B_PRIMEIRA_LINHA, B.dataTermino, termino === null ? "" : serieDaData(termino)],
+        [B_PRIMEIRA_LINHA, B.duracaoDoCurso, duracao ?? ""],
+      ],
+      ABA.catalogo,
+    );
+    insumo.semanas.forEach((s, k) => {
+      const esperado = rotuloDaSemanaDoCurso(
+        semanaDoCurso({
+          dataInicio: inicio,
+          dataTermino: termino,
+          duracaoSemanasDoCurso: duracao,
+          semana: s.semana,
+        }),
+      );
+      expect(valorDe(linhaDoCabecalho(g, k), PC.semanaDoCurso), `semana ${k}`).toBe(esperado);
     });
   });
   it("alunos, ALT vazio, relógio e as duas assinaturas pela vigência da semana", () => {

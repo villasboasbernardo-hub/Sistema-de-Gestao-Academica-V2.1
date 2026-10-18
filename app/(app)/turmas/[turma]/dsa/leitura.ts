@@ -34,7 +34,8 @@
  * ⚠️ **E TODA LISTA VEM EM PÁGINAS ATÉ ACABAR** (`DP-5`, `lib/supabase/paginacao.ts`), com ordem total
  * — a que a consulta já tinha, mais o `codigo` (ou outra chave única) de desempate. Medido em
  * 09/10/2026: com 1.114 TA numa turma, o teto de 1.000 linhas fazia o rodapé e o painel dizerem 1.004
- * e o nº do DSA errar em 3 a 4 semanas — sem erro nenhum na tela.
+ * e o nº do DSA errar em 3 a 4 semanas — sem erro nenhum na tela. (O nº do DSA virou a semana do curso
+ * em 17/10/2026, spec 016, e não lê mais lançamento; a CH continua dependendo de ler tudo.)
  */
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
 import { escalaDeLinhas, type EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
@@ -183,6 +184,8 @@ export type SemanaDoDsa = {
   /** As datas desta semana que têm lançamento — insumo do `?sabado=` e do número do DSA. */
   readonly datasComLancamento: readonly string[];
   readonly cursoCodigo: string | null;
+  /** `cursos.duracao_semanas` — o T da semana do curso (D-COR-1, Q-1; spec 016, FR-009.3). */
+  readonly duracaoSemanasDoCurso: number | null;
   readonly cursoPorCompetencias: boolean;
   readonly unidades: readonly UnidadeLida[];
   /** As disciplinas ATIVAS do curso da turma — a segunda escolha do formulário, depois do tipo. */
@@ -445,7 +448,11 @@ export async function lerPeriodoDoDsa(
         .order("codigo")
         .range(f.de, f.ate),
     ),
-    supabase.from("cursos").select("codigo, curriculo_modelo").eq("id", cursoId).maybeSingle(),
+    supabase
+      .from("cursos")
+      .select("codigo, curriculo_modelo, duracao_semanas")
+      .eq("id", cursoId)
+      .maybeSingle(),
     lerTodasAsPaginas((f) =>
       supabase
         .from("disciplinas")
@@ -1327,6 +1334,8 @@ export function montarSemanaDoDsa(
     sabadoAberto: janela.sabadoAberto,
     datasComLancamento,
     cursoCodigo: (cursoRes.data as { codigo?: string } | null)?.codigo ?? null,
+    duracaoSemanasDoCurso:
+      (cursoRes.data as { duracao_semanas?: number | null } | null)?.duracao_semanas ?? null,
     cursoPorCompetencias,
     unidades,
     /*
@@ -1505,10 +1514,11 @@ export type ExtrasDaImpressao = {
   /** As linhas de `responsaveis_curso`, já filtradas por `status = 'ativo'`. */
   readonly responsaveis: readonly ResponsavelDoCurso[];
   /**
-   * Todas as datas com lançamento da turma — insumo do **Nº do DSA**.
+   * Todas as datas com lançamento da turma — o piso e o teto das semanas da planilha de contingência
+   * quando a turma não tem período cadastrado (`FR-030` da spec 015).
    *
-   * ⚠️ **ELAS NÃO SÃO AS DA SEMANA.** O número é a ordem da semana entre as que **têm aula** desde
-   * o início da turma (convenção da aba CRONOS, `P-6`): contar só a semana aberta daria sempre 1.
+   * ⚠️ **ATÉ 17/10/2026 ELAS ERAM O INSUMO DO «Nº DO DSA»** (convenção da aba CRONOS, `P-6`). O número
+   * virou a semana corrida do curso (spec 016, FR-009; D-COR-1), que é conta de calendário e não as lê.
    */
   readonly datasComLancamentoDaTurma: readonly string[];
 };
@@ -1523,7 +1533,7 @@ export async function lerExtrasDaImpressao(
   supabase: ClienteDeServidor,
   entrada: { readonly turmaId: string; readonly cursoId: string },
 ): Promise<ExtrasDaImpressao> {
-  /* ⚠️ As cinco em páginas até acabar (`DP-5`): as datas do nº do DSA são as que o teto cortava. */
+  /* ⚠️ As cinco em páginas até acabar (`DP-5`): a CH e as datas são as que o teto cortava. */
   const [execRes, respRes, aulasRes, avalRes, sessoesRes] = await Promise.all([
     lerTodasAsPaginas((f) =>
       supabase
@@ -1583,10 +1593,9 @@ export async function lerExtrasDaImpressao(
         .range(f.de, f.ate),
     ),
     /*
-     * ⚠️ **A SESSÃO DE APLICAÇÃO CONTA NO Nº DO DSA COMO A 1ª** (`RN-AV-12`, 16/10/2026): ela é a MESMA prova, num
-     *    outro dia. É também o que impede «juntar como sessão» de mudar o número das semanas: a avaliação juntada
-     *    contava, e a sessão que nasce dela continua contando. E a planilha de contingência faz igual — a sessão leva
-     *    o item da prova, que conta no nº.
+     * ⚠️ **A SESSÃO DE APLICAÇÃO É A MESMA PROVA, NUM OUTRO DIA** (`RN-AV-12`, 16/10/2026): a data dela é data com
+     *    lançamento da turma, como a da 1ª sessão. (Até 17/10/2026 isto também segurava o «Nº do DSA»; o número
+     *    virou a semana do curso, spec 016, e não depende mais de lançamento.)
      */
     lerTodasAsPaginas((f) =>
       supabase

@@ -18,7 +18,7 @@ import {
   type ItemDaLegenda,
   type TecnicaDoCatalogo,
 } from "@/lib/dominio/dsa/impressao";
-import { numeroDoDsa } from "@/lib/dominio/dsa/numero-do-dsa";
+import { rotuloDaSemanaDoCurso, semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
 import {
   chaveDoFato,
   type FatoDoInsumo,
@@ -293,14 +293,21 @@ const todosOsLancamentos = () =>
 
 export const DATA_INICIO = "2026-04-06";
 
-export function numeroDaSemana(numero: number): number | null {
-  return numeroDoDsa({
-    datasComLancamento: todosOsLancamentos()
-      .filter((l) => l.ta !== null && (l.origem === "aula" || l.origem === "avaliacao"))
-      .map((l) => l.data),
-    dataInicio: DATA_INICIO,
-    semana: { ano: ANO, numero },
-  });
+/** O término da turma sintética — três semanas, a 15, a 16 e a 17. */
+export const DATA_TERMINO = "2026-04-24";
+/** O curso sintético tem duração de 35 semanas — o T da «Semana N de T». */
+export const DURACAO_DO_CURSO = 35;
+
+/** "Semana N de T" da semana sintética, pela função do sistema (`semanaDoCurso`, FR-009.5). */
+export function rotuloDaSemanaDoCursoSintetica(numero: number): string {
+  return rotuloDaSemanaDoCurso(
+    semanaDoCurso({
+      dataInicio: DATA_INICIO,
+      dataTermino: DATA_TERMINO,
+      duracaoSemanasDoCurso: DURACAO_DO_CURSO,
+      semana: { ano: ANO, numero },
+    }),
+  );
 }
 
 /** A CH cumprida até o fim da semana, pela regra do sistema: todo fato com TA e disciplina. */
@@ -342,7 +349,8 @@ export function insumoSintetico(opcoes: { readonly temSabado?: boolean } = {}): 
       inicioEtapaPresencial: null,
       terminoEtapaPresencial: null,
       dataInicio: DATA_INICIO,
-      dataTermino: "2026-04-24",
+      dataTermino: DATA_TERMINO,
+      duracaoSemanasDoCurso: DURACAO_DO_CURSO,
     },
     datasComLancamento: [],
     hoje: HOJE,
@@ -383,7 +391,7 @@ export function insumoSintetico(opcoes: { readonly temSabado?: boolean } = {}): 
           instrutor: l.instrutor ?? "",
           motivo: "sem TA no sistema",
         })),
-      numero: numeroDaSemana(sp.numero),
+      rotuloDaSemanaDoCurso: rotuloDaSemanaDoCursoSintetica(sp.numero),
       alunos: 12,
       assinaturas: {
         esquerda: {
@@ -400,6 +408,8 @@ export function insumoSintetico(opcoes: { readonly temSabado?: boolean } = {}): 
       codigo: "C-TESTE 2026",
       curso: "C-TESTE",
       dataInicio: DATA_INICIO,
+      dataTermino: DATA_TERMINO,
+      duracaoSemanasDoCurso: DURACAO_DO_CURSO,
       salaAlocada: "Sala 1",
     },
     geradaEm: "2026-04-08T15:30:00.000Z",

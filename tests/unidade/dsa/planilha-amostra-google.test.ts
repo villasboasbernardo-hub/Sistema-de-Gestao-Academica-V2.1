@@ -28,7 +28,7 @@ import { lerImpressao, precalcular } from "./planilha/leitura-da-pasta";
 import {
   DISCIPLINAS,
   insumoSintetico,
-  numeroDaSemana,
+  rotuloDaSemanaDoCursoSintetica,
   papelDaSemana,
   type Lancamento,
   type SemanaSintetica,
@@ -184,7 +184,7 @@ describe("T053 · a amostra do Google Planilhas", () => {
     const lida = lerImpressao(pasta, g, primeira.rotulo, precalcular(pasta));
     expect(
       divergenciasDoPapel(lida, g, {
-        numero: numeroDaSemana(15),
+        rotuloDaSemanaDoCurso: rotuloDaSemanaDoCursoSintetica(15),
         alunos: 12,
         dias: doPapel,
         grade,

@@ -16,6 +16,11 @@ import { expect, type Page } from "@playwright/test";
  * ⚠️ **É O QUE TIRA O `page.goto` DO MEIO DO PERCURSO.** Até o item 4, a semana de referência (abril
  * de 2026) só se alcançava digitando o endereço — a partir de hoje seriam dezenas de cliques em
  * *Semana anterior*. Agora se chega a ela como a pessoa chega: escolhendo o dia no calendário.
+ *
+ * ⚠️ **A SEMANA CHEGOU QUANDO A SEGUNDA-FEIRA DELA APARECE** (spec 016, FR-009.2): a navegação deixou de
+ * escrever a semana ISO (*"semana 15 de 2026"*) e passou a escrever a semana do curso e as datas. A
+ * semana ISO continua só na URL. Este auxiliar espera pela segunda-feira em DD/MM/AAAA, que não depende
+ * da turma; a semana do curso depende, e quem a confere é `dsa-semana-do-curso.spec.ts`.
  */
 export async function irParaASemanaDoDia(
   page: Page,
@@ -24,7 +29,8 @@ export async function irParaASemanaDoDia(
   ano: number,
 ): Promise<void> {
   await page.getByLabel("Ir para a semana do dia").fill(dia);
-  await expect(page.locator('[data-slot="semana-atual"]')).toHaveText(`semana ${semana} de ${ano}`);
+  const segunda = datasDaSemanaIso(ano, semana)[0] ?? "";
+  await expect(page.locator('[data-slot="semana-atual"]')).toContainText(dataParaLeitura(segunda));
 }
 
 /**

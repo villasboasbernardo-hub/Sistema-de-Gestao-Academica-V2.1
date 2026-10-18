@@ -183,7 +183,7 @@ export default async function FichaDaTurma({
   ] = await Promise.all([
     supabase
       .from("cursos")
-      .select("codigo, nome_curso, limite_turmas_ano, status")
+      .select("codigo, nome_curso, limite_turmas_ano, status, duracao_semanas")
       .eq("id", cursoId)
       .maybeSingle(),
     supabase
@@ -288,6 +288,8 @@ export default async function FichaDaTurma({
        *    proíbe consulta por turma naquela lista, que mostra todas as turmas do curso.
        */
       disciplinasAtivas: naGrade.length,
+      /* FR-009.7 da spec 016: o T da «Semana N de T» — a ficha avisa quando a turma passa dele. */
+      duracaoSemanasDoCurso: (cursoRes.data?.duracao_semanas as number | null | undefined) ?? null,
     },
     hoje,
   );

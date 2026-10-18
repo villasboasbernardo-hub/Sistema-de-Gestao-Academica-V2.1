@@ -116,7 +116,9 @@ test.describe("`RF-PDF-01` · do botão ao papel, por clique", () => {
     await expect(page.locator(`${DOCUMENTO} button`)).toHaveCount(0);
   });
 
-  test("o cabeçalho traz a organização, o Nº e a semana em DD/MM/AAAA", async ({ page }) => {
+  test("o cabeçalho traz a organização, a semana do curso e a semana em DD/MM/AAAA", async ({
+    page,
+  }) => {
     await abrirAImpressao(page, SEMANA);
     const documento = page.locator(DOCUMENTO);
     await expect(documento).toContainText("CIAARA");
@@ -124,7 +126,12 @@ test.describe("`RF-PDF-01` · do botão ao papel, por clique", () => {
       "CENTRO DE INSTRUÇÃO E ADESTRAMENTO ALMIRANTE RADLER DE AQUINO",
     );
     await expect(documento).toContainText("Detalhe Semanal de Aulas");
-    await expect(page.locator('[data-slot="dsa-numero"]')).toContainText("Nº");
+    /*
+     * ⚠️ **"SEMANA N DE T" NO LUGAR DO «Nº»** (spec 016, FR-009.2): a semente abre a turma em 05/01/2026
+     *    e a fecha em 18/12/2026 — 50 semanas —, e a semana de 06/04 é a 14ª.
+     */
+    await expect(page.locator('[data-slot="dsa-semana"]')).toHaveText("Semana 14 de 50");
+    await expect(page.locator('[data-slot="dsa-numero"]')).toHaveCount(0);
     /*
      * ⚠️ **O INTERVALO VAI ATÉ SÁBADO, E ISSO É A `Q-4` FUNCIONANDO — não um erro de conta.** A
      * semente lança um bloco em **11/04**, e a coluna de sábado abre **por haver lançamento nele**,
@@ -342,7 +349,7 @@ test.describe("⚠️ item 7 · a ASSINATURA traz o posto POR EXTENSO; a coluna 
     await page.locator('[data-acao="semana-proxima"]').click();
     await expect(semanaNaTela).not.toHaveText(deHoje);
     await page.locator('[data-acao="semana-proxima"]').click();
-    await expect(semanaNaTela).toHaveText(`semana ${SEMANA_A_FRENTE} de ${ANO_A_FRENTE}`);
+    await expect(semanaNaTela).toContainText(dataParaLeitura(DATA_A_FRENTE));
 
     /* ── 1. Na tela: a grade com a sigla, o rodapé por extenso ───────────────────────────── */
     const cartaoNaTela = page

@@ -25,7 +25,6 @@ import type { Assinatura } from "@/lib/dominio/dsa/assinaturas";
 import type { CartaoDaGrade, GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import type { DiaImpresso, LinhaImpressa } from "@/lib/dominio/dsa/impressao";
 import { NOTA_DO_ESTUDO_INDIVIDUAL, ROTULO_DE_OBSERVACOES } from "@/lib/dominio/dsa/impressao";
-import { NUMERO_AUSENTE_NO_CABECALHO } from "@/lib/dominio/dsa/numero-do-dsa";
 import {
   dataComDiaDaSemana,
   dataParaLeitura,
@@ -65,7 +64,6 @@ export function DocumentoDoDsa({
 }) {
   const { grade } = dados;
   const nomes = new Map(dados.quadroDeCh.map((d) => [d.codigo, d.nome] as const));
-  const numero = dados.numero === null ? NUMERO_AUSENTE_NO_CABECALHO : String(dados.numero);
   /* Mais linhas ou o sábado: a mesma folha, com letra e espaço menores — nunca conteúdo cortado. */
   const compacto =
     grade !== null &&
@@ -107,11 +105,13 @@ export function DocumentoDoDsa({
 
       <div className="dsa4-faixa-cabecalho" />
       <div className="dsa4-identificacao">
-        <Campo rotulo="Semana">
-          {dados.semana.numero}/{dados.semana.ano}
-        </Campo>
-        <Campo rotulo="DSA" slot="dsa-numero">
-          Nº {numero}
+        {/*
+          ⚠️ **"SEMANA N DE T" NO LUGAR DE "SEMANA 41/2026" E "DSA Nº"** (spec 016, FR-009.2; D-COR-1,
+             Bernardo Villas Boas, 16/10/2026): o número do DSA passou a ser a semana corrida do curso. Fora
+             da janela da turma, «—» — nunca "Semana 0" nem N maior que T (FR-009.6).
+        */}
+        <Campo rotulo="Semana do curso" slot="dsa-semana">
+          {dados.rotuloDaSemanaDoCurso}
         </Campo>
         <Campo rotulo="Período" slot="dsa-intervalo">
           {dataParaLeitura(dados.primeiro)} a {dataParaLeitura(dados.ultimo)}
@@ -226,7 +226,7 @@ export function DocumentoDoDsa({
         */}
         <span data-slot="dsa-gerado-em">
           Gerado em: {instanteComHoraParaLeitura(geradoEm)} · Marinha do Brasil ·{" "}
-          {SIGLA_DA_ORGANIZACAO} · {dados.curso} · DSA Nº {numero}
+          {SIGLA_DA_ORGANIZACAO} · {dados.curso} · {dados.rotuloDaSemanaDoCurso}
         </span>
       </footer>
     </div>

@@ -12,6 +12,7 @@
  */
 import { emOrdemNaturalDoCodigo } from "../../ordem-natural";
 import { dataParaLeitura } from "../../../formato/data";
+import { semanaDoCurso } from "../semana-do-curso";
 import { fn, intervalo, nome, num, op, ref, type Formula } from "../../../planilha/formula";
 import { definir, novaAba, type Aba } from "../../../planilha/pasta";
 import { COR_DA_REGUA } from "../../../planilha/cores";
@@ -70,12 +71,18 @@ export function abaDeCronos(insumo: InsumoDaPlanilha, g: GeometriaDaEntrada): Ab
     definir(aba, K_LINHA_DOS_TITULOS, coluna, { valor: texto, estilo: titulo });
   }
   semanas.forEach((s, k) => {
+    const doCurso = semanaDoCurso({
+      dataInicio: insumo.turma.dataInicio,
+      dataTermino: insumo.turma.dataTermino,
+      duracaoSemanasDoCurso: insumo.turma.duracaoSemanasDoCurso,
+      semana: s.semana,
+    });
     definir(aba, K_LINHA_DOS_TITULOS, K.primeiraSemana + k, {
-      valor: `S${s.semana.numero}`,
+      valor: doCurso.numero === null ? "—" : `S${doCurso.numero}`,
       estilo: titulo,
     });
     definir(aba, K_LINHA_DAS_DATAS, K.primeiraSemana + k, {
-      valor: dataParaLeitura(s.seisDias[0] ?? "").slice(0, 5),
+      valor: dataParaLeitura(s.seisDias[0] ?? ""),
       estilo: { tamanho: 7, horizontal: "center" },
     });
     aba.larguras.set(K.primeiraSemana + k, 5);

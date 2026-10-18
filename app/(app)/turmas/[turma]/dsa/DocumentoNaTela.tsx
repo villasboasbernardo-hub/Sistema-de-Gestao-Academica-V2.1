@@ -3,7 +3,7 @@
  * `RF-PDF-01`), no visual do sistema: tokens do tema, claro e escuro, sem faixa, logo nem cor
  * institucional, que ficam **só** no `/print/dsa`.
  *
- * ⚠️ **O DADO É O MESMO OBJETO DO PAPEL** (`montarDocumentoDoDsa`): número do DSA, período, alunos,
+ * ⚠️ **O DADO É O MESMO OBJETO DO PAPEL** (`montarDocumentoDoDsa`): semana do curso, período, alunos,
  * quadro de CH acumulada, técnicas usadas e as assinaturas pela data da semana. Aqui não se calcula
  * nada — só se escreve.
  *
@@ -13,7 +13,6 @@
  */
 import { rubricaResolvida } from "@/lib/dominio/dsa/assinatura-editada";
 import { NOTA_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/impressao";
-import { NUMERO_AUSENTE_NO_CABECALHO } from "@/lib/dominio/dsa/numero-do-dsa";
 import { dataParaLeitura } from "@/lib/formato/data";
 
 import type { DadosDoDocumento } from "../../../../print/dsa/documento";
@@ -21,12 +20,11 @@ import { RubricaEditavel } from "./AssinaturasEditaveis";
 
 export function CabecalhoDaSemana({ dados }: { readonly dados: DadosDoDocumento }) {
   const campos: readonly { rotulo: string; valor: string; slot: string }[] = [
-    { rotulo: "Semana", valor: `${dados.semana.numero}/${dados.semana.ano}`, slot: "tela-semana" },
-    {
-      rotulo: "DSA",
-      valor: `Nº ${dados.numero === null ? NUMERO_AUSENTE_NO_CABECALHO : dados.numero}`,
-      slot: "tela-numero",
-    },
+    /*
+     * ⚠️ **"SEMANA N DE T" NO LUGAR DE "SEMANA 41/2026" E "DSA Nº"** (spec 016, FR-009.2; D-COR-1): a
+     *    semana ISO fica só na URL, e o número do DSA passou a ser a semana corrida do curso.
+     */
+    { rotulo: "Semana do curso", valor: dados.rotuloDaSemanaDoCurso, slot: "tela-semana" },
     {
       rotulo: "Período",
       valor: `${dataParaLeitura(dados.primeiro)} a ${dataParaLeitura(dados.ultimo)}`,
@@ -40,7 +38,7 @@ export function CabecalhoDaSemana({ dados }: { readonly dados: DadosDoDocumento 
   ];
   return (
     <dl
-      className="rounded-ciaara border-borda bg-superficie grid grid-cols-2 gap-px overflow-hidden border sm:grid-cols-4"
+      className="rounded-ciaara border-borda bg-superficie grid grid-cols-2 gap-px overflow-hidden border sm:grid-cols-3"
       data-slot="cabecalho-da-semana"
     >
       {campos.map((c) => (

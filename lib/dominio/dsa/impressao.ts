@@ -434,8 +434,15 @@ export function taLancadoAFrente(dias: readonly DiaImpresso[]): number {
  * bloqueio"*. Quem precisa do papel hoje imprime com o traço e corrige o cadastro depois.
  */
 export function avisosAntesDeImprimir(entrada: {
-  readonly numeroDoDsa: number | null;
-  readonly motivoDoNumeroAusente: string | null;
+  /**
+   * A semana do curso (spec 016, FR-009): sem número, o motivo vai no aviso; sem total, o aviso de
+   * cadastro. Substituiu o «Nº do DSA» em 17/10/2026 (D-COR-1).
+   */
+  readonly semanaDoCurso: {
+    readonly numero: number | null;
+    readonly motivo: string | null;
+    readonly aviso: string | null;
+  };
   readonly alunos: number | null;
   readonly semRelogio: boolean;
   readonly semAssinaturaEsquerda: boolean;
@@ -443,9 +450,11 @@ export function avisosAntesDeImprimir(entrada: {
   readonly linhasImpressas: number;
 }): readonly string[] {
   const avisos: string[] = [];
-  if (entrada.numeroDoDsa === null) {
-    const motivo = entrada.motivoDoNumeroAusente ?? "não foi possível calculá-lo";
-    avisos.push(`O número do DSA sai como “Nº —”: ${motivo}`);
+  if (entrada.semanaDoCurso.numero === null) {
+    const motivo = entrada.semanaDoCurso.motivo ?? "não foi possível calculá-la.";
+    avisos.push(`A semana do curso sai como «—»: ${motivo}`);
+  } else if (entrada.semanaDoCurso.aviso !== null) {
+    avisos.push(entrada.semanaDoCurso.aviso);
   }
   if (entrada.alunos === null) {
     avisos.push(

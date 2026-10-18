@@ -100,7 +100,7 @@ async function situacaoDaAula(topico: string): Promise<string | null> {
 }
 
 test.describe("o cabeçalho e o rodapé do papel, na tela", () => {
-  test("semana, DSA nº, período e alunos em cima; CH, técnicas e assinaturas embaixo", async ({
+  test("semana do curso, período e alunos em cima; CH, técnicas e assinaturas embaixo", async ({
     page,
   }) => {
     await abrirASemana(page);

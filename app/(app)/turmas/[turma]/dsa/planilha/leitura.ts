@@ -162,7 +162,7 @@ export async function lerDadosDaPlanilha(
     inicial,
     avisos,
   } = semanasDaPlanilha({
-    turma: paraEtapa,
+    turma: { ...paraEtapa, duracaoSemanasDoCurso: semanaCorrente.duracaoSemanasDoCurso },
     datasComLancamento: periodoConhecido ? [] : extras.datasComLancamentoDaTurma,
     hoje: contexto.hoje,
   });
@@ -385,7 +385,7 @@ export async function lerDadosDaPlanilha(
       dias: documento.dias,
       avisosDosDias: lida.semana.dias.map((d) => d.avisos),
       semPosicao,
-      numero: documento.numero,
+      rotuloDaSemanaDoCurso: documento.rotuloDaSemanaDoCurso,
       alunos: documento.alunos,
       assinaturas: { esquerda: rubrica("esquerda"), direita: rubrica("direita") },
     };
@@ -429,11 +429,7 @@ export async function lerDadosDaPlanilha(
         data: o.data,
         disciplinaCodigo: codigoDaDisciplina.get(o.disciplina_id ?? "") ?? null,
         tempos: o.tempos_consumidos ?? 0,
-        contaNoNumero: false,
       })),
-    ...extras.datasComLancamentoDaTurma
-      .filter((d) => !naPasta.has(d) && d <= ate)
-      .map((data) => ({ data, disciplinaCodigo: null, tempos: 0, contaNoNumero: true })),
   ];
 
   const datasDoAno = [
@@ -470,6 +466,8 @@ export async function lerDadosDaPlanilha(
       codigo: turma.codigo,
       curso: referencia.cursoCodigo ?? turma.codigo,
       dataInicio: turma.data_inicio,
+      dataTermino: turma.data_termino,
+      duracaoSemanasDoCurso: semanaCorrente.duracaoSemanasDoCurso,
       salaAlocada: turma.sala_alocada,
     },
     geradaEm: contexto.geradaEm,

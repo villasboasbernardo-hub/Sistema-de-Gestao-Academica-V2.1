@@ -10,12 +10,17 @@ import {
   temSabadoNoAno,
 } from "@/lib/dominio/dsa/planilha/semanas";
 
-const presencial = (dataInicio: string | null, dataTermino: string | null) => ({
+const presencial = (
+  dataInicio: string | null,
+  dataTermino: string | null,
+  duracaoSemanasDoCurso: number | null = null,
+) => ({
   modalidade: "presencial",
   inicioEtapaPresencial: null,
   terminoEtapaPresencial: null,
   dataInicio,
   dataTermino,
+  duracaoSemanasDoCurso,
 });
 
 describe("`FR-030` · o ano inteiro da turma", () => {
@@ -38,8 +43,8 @@ describe("`FR-030` · o ano inteiro da turma", () => {
       hoje: "2026-04-08",
     });
     expect(semanas.map((s) => s.rotulo)).toEqual([
-      "Semana 15 — 06/04 a 11/04/2026",
-      "Semana 16 — 13/04 a 18/04/2026",
+      "Semana 1 de 35 — 06/04/2026 a 11/04/2026",
+      "Semana 2 de 35 — 13/04/2026 a 18/04/2026",
     ]);
     expect(semanas[0]?.seisDias).toEqual([
       "2026-04-06",
@@ -95,6 +100,7 @@ describe("`FR-014` · semipresencial", () => {
         terminoEtapaPresencial: "2026-05-15",
         dataInicio: "2026-03-02",
         dataTermino: "2026-06-26",
+        duracaoSemanasDoCurso: null,
       },
       datasComLancamento: [],
       hoje: "2026-05-05",
@@ -111,6 +117,7 @@ describe("`FR-014` · semipresencial", () => {
         terminoEtapaPresencial: null,
         dataInicio: "2026-03-02",
         dataTermino: "2026-03-20",
+        duracaoSemanasDoCurso: null,
       },
       datasComLancamento: [],
       hoje: "2026-03-05",
@@ -129,6 +136,8 @@ describe("*Edge Cases* · turma sem período cadastrado", () => {
     });
     expect(semanas.map((s) => s.numero)).toEqual([11, 12, 13, 14, 15]);
     expect(avisos).toEqual([AVISO_SEM_PERIODO]);
+    // Sem início não há semana do curso: o rótulo fica só com as datas, e continua único.
+    expect(semanas[0]?.rotulo).toBe("09/03/2026 a 14/03/2026");
   });
 
   it("sem período e sem lançamento, só a semana corrente — nunca um ano inventado", () => {

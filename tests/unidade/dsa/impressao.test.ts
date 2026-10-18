@@ -417,8 +417,7 @@ describe("`SC-014` · o rodapé traz SÓ o que aparece na semana", () => {
 
 describe("`FR-039` e `SC-015` · os avisos ficam na TELA, antes de imprimir", () => {
   const SEM_FALTA = {
-    numeroDoDsa: 7,
-    motivoDoNumeroAusente: null,
+    semanaDoCurso: { numero: 7, motivo: null, aviso: null },
     alunos: 24,
     semRelogio: false,
     semAssinaturaEsquerda: false,
@@ -433,8 +432,11 @@ describe("`FR-039` e `SC-015` · os avisos ficam na TELA, antes de imprimir", ()
   it("nomeia cada falta, e o motivo do número ausente vai na frase — `D-7`", () => {
     const avisos = avisosAntesDeImprimir({
       ...SEM_FALTA,
-      numeroDoDsa: null,
-      motivoDoNumeroAusente: "a turma não tem data de início cadastrada.",
+      semanaDoCurso: {
+        numero: null,
+        motivo: "a turma não tem data de início cadastrada.",
+        aviso: null,
+      },
       alunos: null,
       semRelogio: true,
       linhasImpressas: 0,

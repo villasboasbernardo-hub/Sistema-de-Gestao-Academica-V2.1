@@ -5,18 +5,21 @@
  * > acima de 1.000. Teste com mais de 1.000 linhas provando que nº do DSA e CH acumulada batem."*
  * > — Bernardo Villas Boas, 09/10/2026
  *
+ * ⚠️ **O Nº DO DSA SAIU DESTA PROVA EM 17/10/2026** (spec 016, FR-009; D-COR-1): ele virou a semana
+ * corrida do curso, "Semana N de T", que é conta de calendário e não lê lançamento nenhum — não há
+ * mais o que a paginação possa cortar nele. O que fica é a CH, que continua somando as mil e tantas.
+ *
  * ⚠️ **ESTE TESTE FOI ESCRITO E RODADO ANTES DA PAGINAÇÃO, E REPROVOU** — é o caso que discrimina
  * (DoD 8). O teto do PostgREST (`max_rows = 1000`) corta a resposta sem erro, e o nº do DSA e a CH
  * acumulada saíam calculados sobre as primeiras mil linhas. O registro da reprovação está em
  * `specs/015-planilha-de-contingencia-do-dsa/medicoes.md`.
  *
  * ⚠️ **A VERDADE É LIDA À PARTE, por um laço de páginas próprio deste teste** — nunca pelo leitor sob
- * teste. O nº do DSA sai de `numeroDoDsa` sobre TODAS as datas; a CH, da soma de `tempos_consumidos`
- * de TODA a ocupação até o fim da semana. Só o que muda entre os dois lados é ter lido tudo.
+ * teste. A CH sai da soma de `tempos_consumidos` de TODA a ocupação até o fim da semana. Só o que
+ * muda entre os dois lados é ter lido tudo.
  *
- * ⚠️ **A SEMANA SOLITÁRIA É INSERIDA POR ÚLTIMO.** As datas do nº do DSA vêm sem ordem do banco, na
- * ordem física, e numa base recém-semeada ela segue a de inserção: a última linha é a primeira a cair
- * fora das mil. Sem ela, cortar cem aulas de semanas cheias não mudaria o número.
+ * ⚠️ **A SEMANA SOLITÁRIA É INSERIDA POR ÚLTIMO.** As linhas vêm sem ordem do banco, na ordem física,
+ * e numa base recém-semeada ela segue a de inserção: a última linha é a primeira a cair fora das mil.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -25,7 +28,6 @@ import { quadrosDaSemana } from "@/app/(app)/turmas/[turma]/dsa/consulta";
 import { lerExtrasDaImpressao, lerSemanaDoDsa } from "@/app/(app)/turmas/[turma]/dsa/leitura";
 import { montarDocumentoDoDsa } from "@/app/print/dsa/documento";
 import { datasDaSemanaIso, semanaIsoDe } from "@/lib/dominio/carga-semanal";
-import { numeroDoDsa } from "@/lib/dominio/dsa/numero-do-dsa";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "../e2e/conta-de-teste";
 import { sessaoDe } from "../e2e/curso-de-teste";
@@ -129,7 +131,7 @@ afterAll(async () => {
   await apagarConta(EMAIL);
 });
 
-describe("`DP-5` · mais de 1.000 lançamentos: nº do DSA e CH acumulada batem", () => {
+describe("`DP-5` · mais de 1.000 lançamentos: a CH acumulada bate", () => {
   it("controle positivo: a turma passa do teto de 1.000 na ocupação acumulada", async () => {
     const { count } = await sessao
       .from("vw_ocupacao_ta")
@@ -138,7 +140,7 @@ describe("`DP-5` · mais de 1.000 lançamentos: nº do DSA e CH acumulada batem"
     expect(count ?? 0).toBeGreaterThan(1000);
   });
 
-  it("o nº do DSA, a CH do rodapé e o acumulado do painel batem com a contagem direta", async () => {
+  it("a CH do rodapé e o acumulado do painel batem com a contagem direta", async () => {
     const dias = datasDaSemanaIso(ANO, SEMANA_SOLITARIA);
     const fim = dias[5] as string;
     const hoje = fim;
@@ -166,31 +168,6 @@ describe("`DP-5` · mais de 1.000 lançamentos: nº do DSA e CH acumulada batem"
     });
 
     /* ---- a verdade, lida à parte ---- */
-    const aulas = await tudo<{ data: string }>((de, ate) =>
-      admin
-        .from("registros_aula")
-        .select("data")
-        .eq("turma_id", turma.id)
-        .eq("status", "ativo")
-        .not("ta_inicial", "is", null)
-        .order("codigo")
-        .range(de, ate),
-    );
-    const avaliacoes = await tudo<{ data_avaliacao: string }>((de, ate) =>
-      admin
-        .from("avaliacoes")
-        .select("data_avaliacao")
-        .eq("turma_id", turma.id)
-        .neq("status", "cancelada")
-        .not("ta_inicial", "is", null)
-        .order("codigo")
-        .range(de, ate),
-    );
-    const esperadoNumero = numeroDoDsa({
-      datasComLancamento: [...aulas.map((a) => a.data), ...avaliacoes.map((a) => a.data_avaliacao)],
-      dataInicio: turma.data_inicio,
-      semana: { ano: ANO, numero: SEMANA_SOLITARIA },
-    });
 
     const ocupacao = await tudo<{
       disciplina_id: string | null;
@@ -220,17 +197,14 @@ describe("`DP-5` · mais de 1.000 lançamentos: nº do DSA e CH acumulada batem"
     );
     expect([...esperadoPorCodigo.values()].reduce((a, b) => a + b, 0)).toBeGreaterThan(1000);
 
-    /* ---- (1) o nº do DSA ---- */
+    /* ---- (1) a CH cumprida do rodapé ---- */
     expect(semanaIsoDe(dias[0] as string)?.numero).toBe(SEMANA_SOLITARIA);
-    expect.soft(documento.numero, "nº do DSA").toBe(esperadoNumero);
-
-    /* ---- (2) a CH cumprida do rodapé ---- */
     const rodape = new Map(documento.quadroDeCh.map((q) => [q.codigo, q.cumprida]));
     for (const [codigo, soma] of esperadoPorCodigo) {
       if (rodape.has(codigo)) expect.soft(rodape.get(codigo), `rodapé de ${codigo}`).toBe(soma);
     }
 
-    /* ---- (3) o acumulado do painel ---- */
+    /* ---- (2) o acumulado do painel ---- */
     const painel = quadrosDaSemana({
       execucao: extras.execucao,
       ocupacao: lida.ocupacaoAcumulada,

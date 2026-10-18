@@ -7,7 +7,11 @@
  * divergir: a grade da tela e a do papel saem do mesmo objeto.
  *
  * ⚠️ **NENHUMA REGRA NOVA**: tudo vem de `lib/dominio/dsa` (`documentoImpresso`, `gradeDoPapel`,
- * `tabelaDeCh`, `legendaDeTecnicas`, `taLancadoAFrente`, `numeroDoDsa`, `assinaturasDoDsa`).
+ * `tabelaDeCh`, `legendaDeTecnicas`, `taLancadoAFrente`, `semanaDoCurso`, `assinaturasDoDsa`).
+ *
+ * ⚠️ **A SEMANA DO CURSO SUBSTITUIU O «Nº DO DSA» EM 17/10/2026** (spec 016, FR-009; D-COR-1): o
+ * número passou a ser a semana corrida do curso, "Semana N de T", e não depende mais de lançamento —
+ * por isso a montagem não precisa mais das datas com lançamento da turma.
  */
 import { assinaturasDoDsa, type Assinatura } from "@/lib/dominio/dsa/assinaturas";
 import { gradeDoPapel, type GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
@@ -20,7 +24,11 @@ import {
   type ExecucaoDaDisciplina,
   type ItemDaLegenda,
 } from "@/lib/dominio/dsa/impressao";
-import { numeroDoDsa } from "@/lib/dominio/dsa/numero-do-dsa";
+import {
+  rotuloDaSemanaDoCurso,
+  semanaDoCurso,
+  type SemanaDoCurso,
+} from "@/lib/dominio/dsa/semana-do-curso";
 
 import { execucaoAteASemana } from "../../(app)/turmas/[turma]/dsa/consulta";
 import type { lerExtrasDaImpressao, lerSemanaDoDsa } from "../../(app)/turmas/[turma]/dsa/leitura";
@@ -30,7 +38,10 @@ type Extras = Awaited<ReturnType<typeof lerExtrasDaImpressao>>;
 
 export type DadosDoDocumento = {
   readonly curso: string;
-  readonly numero: number | null;
+  /** A semana do curso (FR-009): número, total e, quando não há número, o motivo. */
+  readonly semanaDoCurso: SemanaDoCurso;
+  /** "Semana N de T", "Semana N" ou «—» — o que o cabeçalho e o rodapé imprimem. */
+  readonly rotuloDaSemanaDoCurso: string;
   readonly semana: { readonly ano: number; readonly numero: number };
   readonly primeiro: string;
   readonly ultimo: string;
@@ -48,7 +59,11 @@ export type DadosDoDocumento = {
 
 export function montarDocumentoDoDsa(entrada: {
   readonly codigoDaTurma: string;
-  readonly turma: { readonly data_inicio?: unknown; readonly alunos?: unknown };
+  readonly turma: {
+    readonly data_inicio?: unknown;
+    readonly data_termino?: unknown;
+    readonly alunos?: unknown;
+  };
   readonly cursoId: string;
   readonly escolha: { readonly ano: number; readonly numero: number };
   readonly lida: SemanaLida;
@@ -64,13 +79,16 @@ export function montarDocumentoDoDsa(entrada: {
   });
   const primeiro = lida.dias[0] ?? hoje;
   const ultimo = lida.dias[lida.dias.length - 1] ?? hoje;
+  const semana = semanaDoCurso({
+    dataInicio: (entrada.turma.data_inicio as string | null | undefined) ?? null,
+    dataTermino: (entrada.turma.data_termino as string | null | undefined) ?? null,
+    duracaoSemanasDoCurso: lida.duracaoSemanasDoCurso,
+    semana: { ano: escolha.ano, numero: escolha.numero },
+  });
   return {
     curso: lida.cursoCodigo ?? entrada.codigoDaTurma,
-    numero: numeroDoDsa({
-      datasComLancamento: extras.datasComLancamentoDaTurma,
-      dataInicio: (entrada.turma.data_inicio as string | null | undefined) ?? null,
-      semana: { ano: escolha.ano, numero: escolha.numero },
-    }),
+    semanaDoCurso: semana,
+    rotuloDaSemanaDoCurso: rotuloDaSemanaDoCurso(semana),
     semana: { ano: escolha.ano, numero: escolha.numero },
     primeiro,
     ultimo,

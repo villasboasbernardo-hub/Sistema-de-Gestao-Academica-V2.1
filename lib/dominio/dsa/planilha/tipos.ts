@@ -76,8 +76,11 @@ export type SemanaDoInsumo = {
   /** Os avisos de cada dia (feriado parcial, informativo), na ordem de `seisDias`. */
   readonly avisosDosDias: readonly (readonly string[])[];
   readonly semPosicao: readonly LancamentoSemPosicao[];
-  /** O nº do DSA da semana, por `numeroDoDsa` — vai como cache da fórmula. */
-  readonly numero: number | null;
+  /**
+   * "Semana N de T", por `semanaDoCurso` + `rotuloDaSemanaDoCurso` (FR-009.5) — o que o papel do sistema
+   * imprime, e contra o que a suíte confere a fórmula da planilha.
+   */
+  readonly rotuloDaSemanaDoCurso: string;
   readonly alunos: number | null;
   /** Resolvidas pela vigência na data da semana (`FR-010`), como o papel as imprime. */
   readonly assinaturas: {
@@ -123,8 +126,6 @@ export type LancamentoForaDaPasta = {
   /** A disciplina cuja CH ele consome, ou nulo. */
   readonly disciplinaCodigo: string | null;
   readonly tempos: number;
-  /** Aula ou avaliação — as duas origens do nº do DSA. */
-  readonly contaNoNumero: boolean;
 };
 
 export type InsumoDaPlanilha = {
@@ -133,6 +134,9 @@ export type InsumoDaPlanilha = {
     /** A sigla do curso, como o papel a imprime no título. */
     readonly curso: string;
     readonly dataInicio: string | null;
+    /** O término da turma e a duração do curso — o T da semana do curso (FR-009.3, Q-1). */
+    readonly dataTermino: string | null;
+    readonly duracaoSemanasDoCurso: number | null;
     readonly salaAlocada: string | null;
   };
   /** Instante ISO da geração (`FR-005`). */
@@ -196,8 +200,6 @@ export type ItemDoCatalogo = {
   readonly instrutor: string;
   /** A disciplina cuja CH o item consome (R-6), ou vazio. */
   readonly disciplinaDaCh: string;
-  /** Conta no nº do DSA — aula e avaliação, as duas consultas de `lerExtrasDaImpressao` (R-6). */
-  readonly contaNoNumero: boolean;
 };
 
 /** Um bloco da HORÁRIOS (`data-model.md` §2.6) — o `Relogio` do domínio, nunca recalculado. */
