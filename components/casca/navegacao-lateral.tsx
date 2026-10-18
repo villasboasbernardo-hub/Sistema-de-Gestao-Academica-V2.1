@@ -107,10 +107,18 @@ export function NavegacaoLateral({
                 {...(estaAtiva ? { "aria-current": "page" as const } : {})}
                 className={cn(
                   "rounded-ciaara-sm flex items-center gap-2 border-l-2 px-3 py-2 text-sm",
-                  "hover:bg-marca-suave focus-visible:ring-marca focus-visible:ring-2 focus-visible:outline-none",
+                  "focus-visible:ring-marca focus-visible:ring-2 focus-visible:outline-none",
+                  /*
+                   * ⚠️ **O ATIVO É `--marca` CHEIO DESDE 17/10/2026** (spec 016, item 1.2, `RF-DS-03`).
+                   *    Era `--marca-suave` sobre a lateral `--superficie-2`: 1,01:1 no claro e 1,06:1 no
+                   *    escuro, medidos — o ativo só se distinguia pelo traço. Os pares auditados são o
+                   *    C-4 (texto sobre o ativo) e o C-5 (o ativo contra a lateral).
+                   * ⚠️ **O REALCE DE PASSAR O PONTEIRO É SÓ DOS INATIVOS**: no ativo, o `hover` apagaria o
+                   *    destaque justamente quando a pessoa aponta para ele.
+                   */
                   estaAtiva
-                    ? "border-marca bg-marca-suave text-texto font-medium"
-                    : "text-texto-suave border-transparent",
+                    ? "border-marca bg-marca text-marca-contraste font-medium"
+                    : "text-texto-suave hover:bg-marca-suave hover:text-texto border-transparent",
                 )}
               >
                 <IconeDoMenu nome={entrada.icone} />

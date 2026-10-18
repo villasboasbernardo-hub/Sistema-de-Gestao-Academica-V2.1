@@ -49,6 +49,51 @@ test.describe("`SC-002` · depois de entrar, há para onde ir", () => {
     await expect(ativa).toHaveCount(1);
     await expect(ativa).toHaveAttribute("data-entrada", "/admin/usuarios");
   });
+
+  test("⚠️ o item ativo se DESTACA da lateral nos dois temas (spec 016, 1.2, `RF-DS-03`)", async ({
+    page,
+  }) => {
+    /*
+     * ⚠️ **MEDIR "COR DIFERENTE" NÃO PROVARIA NADA**: até 17/10/2026 o ativo era `#eef4fa` sobre
+     *    `#eef2f7` — cores diferentes, a 1,01:1. O que a correção promete é **contraste**: o fundo do
+     *    ativo contra o da lateral, pelo limite de elemento de interface (3:1, par C-5). Com o estilo
+     *    antigo de volta, este caso reprova nos dois temas.
+     */
+    await entrar(page, EMAIL);
+    const razao = () =>
+      page.evaluate(() => {
+        const ativo = document.querySelector<HTMLElement>(
+          '[data-slot="navegacao-lateral"] [aria-current="page"]',
+        );
+        if (!ativo) return 0;
+        const rgb = (el: Element) => getComputedStyle(el).backgroundColor;
+        const opaco = (cor: string) => !/rgba\(.*,\s*0\)$|transparent/.test(cor);
+        let ancestral: Element | null = ativo.parentElement;
+        while (ancestral && !opaco(rgb(ancestral))) ancestral = ancestral.parentElement;
+        const luminancia = (cor: string) => {
+          const [r, g, b] = (cor.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map(Number);
+          const canal = (v: number) => {
+            const c = v / 255;
+            return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+          };
+          return 0.2126 * canal(r ?? 0) + 0.7152 * canal(g ?? 0) + 0.0722 * canal(b ?? 0);
+        };
+        const a = luminancia(rgb(ativo));
+        const b = luminancia(ancestral ? rgb(ancestral) : "rgb(255,255,255)");
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      });
+
+    await page.getByRole("button", { name: "Claro", exact: true }).click();
+    expect(await razao(), "tema claro: o ativo não se destaca da lateral").toBeGreaterThanOrEqual(
+      3,
+    );
+
+    await page.getByRole("button", { name: "Noturno", exact: true }).click();
+    await expect(page.locator("html")).toHaveClass(/dark/);
+    expect(await razao(), "tema noturno: o ativo não se destaca da lateral").toBeGreaterThanOrEqual(
+      3,
+    );
+  });
 });
 
 test.describe("`FR-017` · o menu não inventa entrada, e não perde nenhuma", () => {
