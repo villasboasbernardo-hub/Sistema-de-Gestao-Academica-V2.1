@@ -1,7 +1,8 @@
 # Roteiro de conferência — PR 2 da spec 016 (DSA, papel e planilha)
 
 > Conferência por clique no **preview** do ramo `fix/BLOCO-1-dsa`.
-> Preview: [pendente] (endereço do ramo, sempre no último commit do PR) · PR [pendente] · ⚠️ ele pede o
+> Preview: <https://sistema-de-gestao-academica-v2-1-git-fix-bloco-1-dsa-ciaara-11.vercel.app> (endereço do
+> ramo, sempre no último commit do PR) · PR #68 · ⚠️ ele pede o
 > login da Vercel antes do login do sistema.
 >
 > ⚠️ O preview fala com o banco remoto, que é a fonte da verdade dos cadastros, e a **C-Ap-FR 2026 já lança
