@@ -32,6 +32,9 @@ as cinco dúvidas da §10, todas pela recomendação. Registro na §0.
   demais (FR-014.6 da spec emendado no mesmo dia).
 - **P-5:** o PR do DSA (PR 2) é **mesclado entre semanas** — sexta à noite ou fim de semana —, para que
   nenhum DSA da mesma semana saia com dois números.
+- **Analyze (17/10/2026):** os commits dos itens **sem requisito próprio da Fase 1** (faixa, filtros, ver
+  senha, página do curso, situação da turma…) usam o identificador **`BLOCO-1`** (opção A) — como o
+  `EPICO-5.5`. Os itens com requisito de origem usam o dele (`RF-DS-03`, `RF-DSA-06`, `RF-INI-01`…).
 
 ### 0.1 Pendências e dependências registradas por este plan
 
