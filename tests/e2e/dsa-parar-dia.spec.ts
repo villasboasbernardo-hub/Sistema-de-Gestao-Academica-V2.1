@@ -14,6 +14,7 @@ import { ANO, limparDsa, SEGUNDA, SEMANA, semearDsa, type DsaSemeado } from "./d
 const SEXTA = "2026-04-10";
 import { irAFichaDaTurma } from "./navegar-turmas";
 import { irParaASemanaDoDia } from "./percurso-do-dsa";
+import { dataComDiaDaSemana } from "@/lib/formato/data";
 
 test.describe.configure({ mode: "serial" });
 
@@ -52,9 +53,14 @@ async function abrirASemana(page: Page, email: string): Promise<void> {
   await expect(page.locator('[data-slot="grade-alocacao"]')).toBeVisible();
 }
 
-/** A célula pelo rótulo acessível, que termina em «· <tempo> · <data>». */
+/**
+ * A célula pelo rótulo acessível, que termina em «· <tempo> · <dia>» — o dia como a coluna o escreve,
+ * `SEX 10/04/2026` (spec 016, FR-005.1: era a data ISO).
+ */
 const celula = (page: Page, ta: number) =>
-  page.locator(`[data-slot="grade-alocacao"] td[aria-label$="· ${ta} · ${SEXTA}"]`);
+  page.locator(
+    `[data-slot="grade-alocacao"] td[aria-label$="· ${ta} · ${dataComDiaDaSemana(SEXTA)}"]`,
+  );
 
 test("US4 · parar os tempos 6 e 7 da sexta bloqueia só eles, e desfazer devolve", async ({
   page,
