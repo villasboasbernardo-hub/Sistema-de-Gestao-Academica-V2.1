@@ -33,6 +33,7 @@ import { ROTULO_DO_CIRCULO } from "@/lib/dominio/circulo-hierarquico";
 import { CIRCULOS_HIERARQUICOS, CLASSIFICACOES, REGIMES_DOCENTES } from "@/lib/navegacao/contrato";
 
 import { CAPACITACAO_NENHUMA } from "./consulta";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 import type { OpcoesDosFiltros } from "./opcoes";
@@ -42,7 +43,7 @@ const SIM_NAO = [
   { valor: "nao", rotulo: "Não" },
 ];
 
-const ROTA = "/instrutores";
+const ROTA = "/instrutores" as const;
 
 /** As opções de um filtro de texto, com o valor da URL incluído mesmo que o cadastro não o tenha. */
 function comEscolhido(valores: readonly string[], escolhido: string) {
@@ -198,21 +199,23 @@ export function FiltrosDeInstrutores({ opcoes }: { readonly opcoes: OpcoesDosFil
     }
   };
 
-  const algumAtivo =
-    [
-      busca,
-      om,
-      categoria,
-      capacitacao,
-      regime,
-      escolaridade,
-      posto,
-      circulo,
-      curso,
-      classificacao,
-      habilitado,
-      selecionado,
-    ].some((v) => v !== "") || situacao !== "ativo";
+  // ⚠️ A régua é o padrão do contrato (spec 016, item 1.4): `situacao` vale `ativo` por padrão, e o
+  //    número do botão e o "Limpar filtros" saem desta mesma conta.
+  const ativos = filtrosForaDoPadrao(ROTA, {
+    busca,
+    om,
+    categoria,
+    capacitacao,
+    regime,
+    escolaridade,
+    posto,
+    circulo,
+    curso,
+    classificacao,
+    habilitado,
+    selecionado,
+    situacao,
+  });
 
   const limpar = () => {
     void definirBusca("");
@@ -232,8 +235,8 @@ export function FiltrosDeInstrutores({ opcoes }: { readonly opcoes: OpcoesDosFil
 
   return (
     <div className="flex flex-col gap-2" data-slot="filtros-de-instrutores">
-      <FiltroAvancado campos={campos} estado={estado} aoMudar={aoMudar} />
-      <BotaoLimparFiltros haFiltroAtivo={algumAtivo} aoLimpar={limpar} />
+      <FiltroAvancado campos={campos} estado={estado} aoMudar={aoMudar} ativos={ativos} />
+      <BotaoLimparFiltros haFiltroAtivo={ativos > 0} aoLimpar={limpar} />
     </div>
   );
 }

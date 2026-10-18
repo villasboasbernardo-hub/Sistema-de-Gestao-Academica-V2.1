@@ -15,6 +15,7 @@ import {
   type EstadoDeFiltro,
 } from "@/components/ciaara/filtro-avancado";
 import { CATEGORIAS_DE_ATIVIDADE } from "@/lib/navegacao/contrato";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 import { ROTULO_DA_CATEGORIA } from "./consulta";
@@ -66,7 +67,8 @@ export function FiltrosDeAtividades({ turmas }: { readonly turmas: readonly stri
     if (escolha("ate") !== ate) void definirAte(escolha("ate") || null);
   };
 
-  const algumAtivo = [tipo, categoria, turma, de, ate].some((v) => v !== "");
+  // ⚠️ A régua é o padrão do contrato (spec 016, item 1.4): o número do botão e o "Limpar filtros".
+  const ativos = filtrosForaDoPadrao(ROTA, { tipo, categoria, turma, de, ate });
 
   const limpar = () => {
     void definirTipo("");
@@ -78,8 +80,8 @@ export function FiltrosDeAtividades({ turmas }: { readonly turmas: readonly stri
 
   return (
     <div className="flex flex-col gap-2" data-slot="filtros-de-atividades">
-      <FiltroAvancado campos={campos} estado={estado} aoMudar={aoMudar} />
-      <BotaoLimparFiltros haFiltroAtivo={algumAtivo} aoLimpar={limpar} />
+      <FiltroAvancado campos={campos} estado={estado} aoMudar={aoMudar} ativos={ativos} />
+      <BotaoLimparFiltros haFiltroAtivo={ativos > 0} aoLimpar={limpar} />
     </div>
   );
 }

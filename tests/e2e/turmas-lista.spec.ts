@@ -104,6 +104,8 @@ test.describe("`FR-013`, `FR-014` · os filtros vão para a URL, e o botão os l
     const outra = await context.newPage();
     await outra.goto(endereco);
     await expect(outra.locator(LISTA)).toBeVisible();
+    // O filtro nasce recolhido (spec 016, item 1.4).
+    await abrirFiltros(outra);
     // ⚠️ O campo é um `combobox` do shadcn: ele **mostra** o rótulo escolhido, não tem `value`.
     await expect(outra.locator(FILTRO).getByLabel("Curso")).toContainText(sigla);
     await outra.close();

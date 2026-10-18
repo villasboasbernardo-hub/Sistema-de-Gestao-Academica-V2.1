@@ -17,6 +17,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { abrirVitrine } from "./abrir-vitrine";
+import { abrirPainelDeFiltros } from "./filtros";
 
 /** O recorte que a amostra ligada à URL está mostrando, lido do atributo que ela publica. */
 async function recorteNaTela(page: Page): Promise<Record<string, string[]>> {
@@ -94,6 +95,8 @@ test.describe("`FR-002` · o parâmetro no valor padrão some da URL", () => {
      * estiver ligada.
      */
     await abrirVitrine(page);
+    // O filtro nasce recolhido (spec 016, item 1.4).
+    await abrirPainelDeFiltros(page, "Filtros na URL");
     const campo = page.getByLabel("Texto livre");
 
     await campo.fill("sondagem");
@@ -134,6 +137,8 @@ test.describe("`FR-024` · o histórico desfaz um passo por vez", () => {
     await abrirVitrine(page);
     const antes = await tamanhoDoHistorico(page);
 
+    // O filtro nasce recolhido (spec 016, item 1.4).
+    await abrirPainelDeFiltros(page, "Filtros na URL");
     await page.getByRole("combobox", { name: "Categoria" }).click();
     await page.getByRole("option", { name: /Categoria A/ }).click();
     await expect.poll(() => parametro(page, "categoria")).toBe("a");
@@ -168,6 +173,8 @@ test.describe("`SC-014` · oito teclas produzem UMA entrada de histórico, não 
     await abrirVitrine(page);
     const antes = await tamanhoDoHistorico(page);
 
+    // O filtro nasce recolhido (spec 016, item 1.4).
+    await abrirPainelDeFiltros(page, "Filtros na URL");
     const campo = page.getByLabel("Texto livre");
     await campo.click();
     for (const letra of "batimetr") await campo.press(letra);

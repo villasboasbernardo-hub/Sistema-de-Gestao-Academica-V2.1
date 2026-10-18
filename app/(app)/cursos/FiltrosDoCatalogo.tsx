@@ -26,9 +26,10 @@ import {
 import { CLASSIFICACOES_DE_CURSO_NA_BARRA } from "@/lib/constantes/instrutor";
 import { ROTULO_DA_MODALIDADE } from "@/lib/constantes/curso";
 import { MODALIDADES } from "@/lib/navegacao/contrato";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
-const ROTA = "/cursos";
+const ROTA = "/cursos" as const;
 
 /** Os rótulos de tela da modalidade — o valor do banco é `snake_case`, a tela não é. */
 /* ⚠️ O mapa saiu daqui em 04/10/2026 para `lib/constantes/curso.ts`: a ficha da turma pedia a
@@ -86,8 +87,11 @@ export function FiltrosDoCatalogo() {
    * ⚠️ `situacao` ENTRA NA CONTA PELO PADRÃO, e não por estar preenchida. Ela sempre tem valor —
    * `ativo` quando ninguém escolheu nada —, e compará-la com "" faria o botão nunca aparecer para
    * quem só trocou a situação.
+   * ⚠️ **DESDE 17/10/2026 A RÉGUA É O CONTRATO** (spec 016, item 1.4): o número do botão de filtros e o
+   *    "Limpar filtros" saem da mesma conta. Antes o selo contava `situacao=ativo` como filtro e
+   *    mostrava 1 com a tela limpa.
    */
-  const haFiltroAtivo = classificacao !== "" || modalidade !== "" || situacao !== "ativo";
+  const ativos = filtrosForaDoPadrao(ROTA, { classificacao, modalidade, situacao });
 
   const limpar = () => {
     void definirClassificacao(null);
@@ -97,8 +101,14 @@ export function FiltrosDoCatalogo() {
 
   return (
     <div className="flex flex-col gap-2" data-slot="filtros-do-catalogo">
-      <FiltroAvancado campos={campos} estado={estado} aoMudar={aoMudar} titulo="Filtros" />
-      <BotaoLimparFiltros haFiltroAtivo={haFiltroAtivo} aoLimpar={limpar} />
+      <FiltroAvancado
+        campos={campos}
+        estado={estado}
+        aoMudar={aoMudar}
+        ativos={ativos}
+        titulo="Filtros"
+      />
+      <BotaoLimparFiltros haFiltroAtivo={ativos > 0} aoLimpar={limpar} />
     </div>
   );
 }

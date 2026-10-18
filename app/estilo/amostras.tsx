@@ -18,6 +18,8 @@ import * as React from "react";
 import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
 import { AvisosRecolhiveis } from "@/components/ciaara/avisos-recolhiveis";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
+import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
+import { CampoDeSenha } from "@/components/ciaara/campo-de-senha";
 import { BotaoLimparFiltros } from "@/components/ciaara/botao-limpar-filtros";
 import { BadgeTeto, type Teto } from "@/components/ciaara/badge-teto";
 import { CampoObrigatorio, propsDoControle } from "@/components/ciaara/campo-obrigatorio";
@@ -52,9 +54,11 @@ import { GraficoPizza } from "@/components/graficos/grafico-pizza";
 import type { Serie } from "@/components/graficos/tipos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { STATUS } from "@/lib/design/vocabulario";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 /**
@@ -225,6 +229,36 @@ export function AmostraBotaoLimparFiltros() {
   );
 }
 
+/**
+ * A barra de ações de uma ficha — os verbos da página numa linha, do mesmo tamanho (spec 016, 1.6 e
+ * 1.10). ⚠️ Nenhum nome CONTÉM *"Desativar"*: a amostra do diálogo de confirmação abre pelo botão com
+ * esse nome, e o Playwright casa nome de papel por **trecho** — *"Desativar cadastro"* tornaria a busca
+ * ambígua.
+ */
+export function AmostraBarraDeAcoes() {
+  return (
+    <BarraDeAcoes rotulo="Ações da amostra">
+      <Button size="sm" variant="outline">
+        Editar cadastro
+      </Button>
+      <Button size="sm" variant="destructive">
+        Excluir cadastro
+      </Button>
+      <Button size="sm">Nova turma</Button>
+    </BarraDeAcoes>
+  );
+}
+
+/** O campo de senha com o olho (spec 016, 1.3) — o botão alterna o campo entre oculto e visível. */
+export function AmostraCampoDeSenha() {
+  return (
+    <div className="flex max-w-xs flex-col gap-1">
+      <Label htmlFor="amostra-senha">Senha</Label>
+      <CampoDeSenha id="amostra-senha" name="amostra-senha" autoComplete="off" />
+    </div>
+  );
+}
+
 export function AmostraDialogoConfirmacao() {
   const [feito, definirFeito] = React.useState(false);
   return (
@@ -247,10 +281,21 @@ export function AmostraDialogoConfirmacao() {
 }
 
 export function AmostraFiltroAvancado() {
-  const [estado, definirEstado] = React.useState<EstadoDeFiltro>({});
+  /*
+   * ⚠️ A AMOSTRA NASCE COM UMA ESCOLHA, e o número do botão é contado AQUI (spec 016, item 1.4): o
+   *    componente recebe o número pronto, e numa tela de verdade quem conta é `filtrosForaDoPadrao`,
+   *    pelo contrato. A escolha inicial é o que põe o número à vista na vitrine.
+   */
+  const [estado, definirEstado] = React.useState<EstadoDeFiltro>({ variedade: ["a"] });
+  const ativos = Object.values(estado).filter((v) => v.some((x) => x !== "")).length;
   return (
     <div className="flex flex-col gap-2">
-      <FiltroAvancado campos={CAMPOS_DE_EXEMPLO} estado={estado} aoMudar={definirEstado} />
+      <FiltroAvancado
+        campos={CAMPOS_DE_EXEMPLO}
+        estado={estado}
+        aoMudar={definirEstado}
+        ativos={ativos}
+      />
       <p className="text-texto-suave text-xs">
         Estado devolvido por propriedade: <code>{JSON.stringify(estado)}</code>. Onde ele mora é
         escolha de quem chama — aqui é memória; na amostra seguinte, a URL.
@@ -342,6 +387,7 @@ export function AmostraFiltroNaUrl() {
         campos={CAMPOS_NA_URL}
         estado={estado}
         aoMudar={aoMudar}
+        ativos={filtrosForaDoPadrao("/estilo", { categoria, etiquetas, busca })}
         titulo="Filtros na URL"
       />
       <p data-slot="amostra-filtro-na-url" className="text-texto-suave text-xs">

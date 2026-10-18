@@ -38,6 +38,7 @@ import {
 import { TabelaDensa, type Coluna } from "@/components/ciaara/tabela-densa";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { indicadoresDaGrade } from "@/lib/dominio/indicadores-da-grade";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 import { CascataDeCursoETurma } from "./CascataDeCursoETurma";
@@ -45,7 +46,7 @@ import type { GradeDeDisciplinas as Grade, LinhaDaGradeDeDisciplinas } from "./c
 import { DetalheDaDisciplina } from "./paineis/DetalheDaDisciplina";
 import { ProporcaoDaCarga } from "./paineis/ProporcaoDaCarga";
 
-const ROTA = "/disciplinas";
+const ROTA = "/disciplinas" as const;
 
 export type PermissoesDaGrade = {
   readonly criar: boolean;
@@ -130,7 +131,11 @@ export function GradeDeDisciplinas({
    * são **navegação**, não filtro. Limpar filtros e perder a turma em que se estava faria o botão
    * navegar — e quem clicou queria ver a lista inteira **daquela** turma.
    */
-  const haFiltroAtivo = parametros.busca !== "" || parametros.situacao !== "ativo";
+  // ⚠️ A régua é o padrão do contrato (spec 016, item 1.4): o número do botão e o "Limpar filtros".
+  const ativos = filtrosForaDoPadrao(ROTA, {
+    busca: parametros.busca,
+    situacao: parametros.situacao,
+  });
 
   const limparFiltros = () => {
     void definirBusca(null);
@@ -267,9 +272,10 @@ export function GradeDeDisciplinas({
               campos={campos}
               estado={estadoDosFiltros}
               aoMudar={aoMudarFiltro}
+              ativos={ativos}
               titulo="Filtros"
             />
-            <BotaoLimparFiltros haFiltroAtivo={haFiltroAtivo} aoLimpar={limparFiltros} />
+            <BotaoLimparFiltros haFiltroAtivo={ativos > 0} aoLimpar={limparFiltros} />
           </div>
 
           {/* ── gráfico ───────────────────────────────────────────────────────────────────── */}
