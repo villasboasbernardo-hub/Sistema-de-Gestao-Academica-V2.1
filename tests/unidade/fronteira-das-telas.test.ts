@@ -118,6 +118,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/instrutores/PainelDeDisciplinas.tsx": "marcar e desmarcar habilitações",
   "app/(app)/instrutores/[codigo]/AcoesDeInstrutor.tsx": "desativar e reativar, com confirmação",
   "app/(app)/instrutores/[codigo]/ExcluirInstrutor.tsx": "a exclusão com código de confirmação",
+  // Spec 016 (FR-010.1): a ficha abre em leitura, e o formulário fica atrás de «Editar instrutor».
+  "app/(app)/instrutores/[codigo]/EdicaoDoInstrutor.tsx":
+    "recolher o formulário de edição atrás de «Editar instrutor» — estado efêmero de aberto/fechado",
 
   // ── Épico 5 (a), PR 2: cursos, turmas, salas e regime ──────────────────────────────────────
   "app/(app)/cursos/FiltrosDoCatalogo.tsx": "os filtros do catálogo, na URL",

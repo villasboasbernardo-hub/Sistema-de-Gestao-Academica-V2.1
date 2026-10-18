@@ -13,6 +13,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { mudarSituacaoDoCurso, semearCursoInativavel } from "./curso-de-teste";
+import { abrirPainelDeFiltros } from "./filtros";
+import { abrirEdicaoDoInstrutor } from "./navegar-instrutores";
 import {
   limparInstrutores,
   semearInstrutores,
@@ -300,6 +302,8 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
   const parametro = (page: Page, nome: string) => new URL(page.url()).searchParams.get(nome);
 
   async function escolher(page: Page, campo: string, opcao: string) {
+    // O filtro nasce recolhido (spec 016, item 1.4): abre só se estiver fechado.
+    await abrirPainelDeFiltros(page);
     await page.getByRole("combobox", { name: campo, exact: true }).click();
     await page.getByRole("option", { name: opcao, exact: true }).click();
   }
@@ -381,6 +385,7 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
     await expect(grade(page)).toBeVisible();
     const antes = await page.evaluate(() => window.history.length);
 
+    await abrirPainelDeFiltros(page);
     const campo = page.getByLabel("Buscar por nome");
     await campo.click();
     for (const letra of "zacarias") await campo.press(letra);
@@ -597,11 +602,12 @@ test.describe("Regra 4, exceção · exclusão permanente de instrutor sem hist�
       .toMatch(/^\/instrutores\/\d+$/);
     const codigo = new URL(page.url()).pathname.split("/").pop() as string;
 
-    const rodape = page.locator('[data-slot="rodape-do-formulario"]');
-    await expect(rodape).toBeVisible({ timeout: 15_000 });
-    const excluir = rodape.getByRole("button", { name: "Excluir instrutor", exact: true });
+    // ⚠️ Excluir e Desativar moram na barra do topo desde 17/10/2026 (spec 016, FR-010.2).
+    const barra = page.locator('[data-slot="barra-de-acoes"]');
+    await expect(barra).toBeVisible({ timeout: 15_000 });
+    const excluir = barra.getByRole("button", { name: "Excluir instrutor", exact: true });
     await expect(excluir, "o botão de excluir não está ao lado de desativar").toBeEnabled();
-    await expect(rodape.getByRole("button", { name: "Desativar instrutor" })).toBeVisible();
+    await expect(barra.getByRole("button", { name: "Desativar instrutor" })).toBeVisible();
     await excluir.click();
 
     const dialogo = page.getByRole("alertdialog");
@@ -679,6 +685,7 @@ test.describe("`FR-022` e `FR-011` · painel de disciplinas, confirmação e a p
     const codigo = amostra.codigos.ctMaisModerno;
     const sigla = `CUR-${amostra.marcador}`;
     await entrar(page, EMAIL_ADMIN, `/instrutores/${codigo}`);
+    await abrirEdicaoDoInstrutor(page);
 
     const painel = page.locator('[data-slot="painel-de-disciplinas"]');
     await painel.getByLabel("Buscar disciplina ou sigla do curso").fill(sigla);
@@ -696,6 +703,8 @@ test.describe("`FR-022` e `FR-011` · painel de disciplinas, confirmação e a p
 
     await page.reload();
     await expect(page.locator('[data-slot="disciplinas-habilitadas"]')).toContainText(sigla);
+    // ⚠️ Recarregar fecha o formulário: aberto/fechado é estado efêmero.
+    await abrirEdicaoDoInstrutor(page);
     await painel.getByLabel("Buscar disciplina ou sigla do curso").fill(sigla);
     await expect(painel.getByRole("checkbox", { name: new RegExp(sigla) })).toBeChecked();
 
@@ -710,6 +719,7 @@ test.describe("`FR-022` e `FR-011` · painel de disciplinas, confirmação e a p
   test("Enter num campo, ou na busca do painel, não grava sem confirmação", async ({ page }) => {
     const codigo = amostra.codigos.scns;
     await entrar(page, EMAIL_ADMIN, `/instrutores/${codigo}`);
+    await abrirEdicaoDoInstrutor(page);
 
     const nomeDeGuerra = page.locator('input[name="nome_guerra"]');
     await nomeDeGuerra.fill("Zuleica");
@@ -728,16 +738,67 @@ test.describe("`FR-022` e `FR-011` · painel de disciplinas, confirmação e a p
     expect(data?.nome_guerra, "Enter gravou sem passar pelo diálogo do FR-011").toBeNull();
   });
 
-  test("desativar fica no fim da página, ao lado de gravar, e não no cabeçalho", async ({
+  /*
+   * ⚠️ **O CASO QUE DISCRIMINA DA SPEC 016 (FR-010.1)**: até 17/10/2026 a ficha abria com o formulário
+   *    montado — 207 campos editáveis na do instrutor de código 15. Agora abre em leitura, com zero.
+   */
+  test("`FR-010` da spec 016 · da lista à ficha por clique: zero campos, e *Editar* abre e grava", async ({
     page,
   }) => {
+    const codigo = amostra.codigos.cmg;
+    await entrar(page, EMAIL_ADMIN, "/inicio");
+    await page
+      .getByRole("navigation", { name: "Navegação principal" })
+      .getByRole("link", { name: "Instrutores", exact: true })
+      .click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/instrutores");
+    await abrirPainelDeFiltros(page);
+    await page.getByLabel("Buscar por nome").fill(amostra.nomes.cmg);
+    await page
+      .getByRole("grid", { name: "Instrutores" })
+      .getByText(amostra.nomes.cmg)
+      .click({ timeout: 15_000 });
+    await expect.poll(() => new URL(page.url()).pathname).toBe(`/instrutores/${codigo}`);
+
+    const barra = page.locator('[data-slot="barra-de-acoes"]');
+    await expect(barra.locator('[data-slot="abrir-edicao-do-instrutor"]')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.locator("main").locator("input:visible, select:visible, textarea:visible"),
+      "a ficha abriu com campo editável à vista",
+    ).toHaveCount(0);
+
+    await barra.locator('[data-slot="abrir-edicao-do-instrutor"]').click();
+    await page.locator('input[name="nome_guerra"]').fill("Percurso");
+    await gravar(page);
+    const { data } = await servico()
+      .from("instrutores")
+      .select("nome_guerra")
+      .eq("codigo", codigo)
+      .single();
+    expect(data?.nome_guerra).toBe("Percurso");
+  });
+
+  /*
+   * ⚠️ **O DESENHO MUDOU EM 17/10/2026** (spec 016, FR-010.2; Q-13, Bernardo Villas Boas): este caso
+   *    media *"desativar fica no fim da página, ao lado de gravar"* — a anotação de 15/09/2026 ao
+   *    `FR-011`. Agora Desativar e Excluir moram na barra do topo, ao lado de Editar, e o rodapé do
+   *    formulário só grava.
+   */
+  test("desativar fica na barra do topo, e o rodapé do formulário só grava", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN, `/instrutores/${amostra.codigos.cmg}`);
+    const barra = page.locator('[data-slot="barra-de-acoes"]');
+    await expect(barra.getByRole("button", { name: "Desativar instrutor" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(barra.locator('[data-slot="abrir-edicao-do-instrutor"]')).toBeVisible();
+
+    await abrirEdicaoDoInstrutor(page);
     const rodape = page.locator('[data-slot="rodape-do-formulario"]');
     await expect(rodape.getByRole("button", { name: "Gravar alterações" })).toBeVisible();
-    await expect(rodape.getByRole("button", { name: "Desativar instrutor" })).toBeVisible();
-    await expect(
-      page.locator("header").getByRole("button", { name: "Desativar instrutor" }),
-    ).toHaveCount(0);
+    await expect(rodape.getByRole("button", { name: "Desativar instrutor" })).toHaveCount(0);
+    await expect(rodape.getByRole("button", { name: "Excluir instrutor" })).toHaveCount(0);
   });
 });
 
@@ -764,10 +825,8 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
    */
   async function abrirFicha(page: Page, codigo: string) {
     await entrar(page, EMAIL_ADMIN, `/instrutores/${codigo}`);
-    await expect(
-      page.locator('[data-slot="rodape-do-formulario"]'),
-      "a ficha não terminou de desenhar",
-    ).toBeVisible({ timeout: 15_000 });
+    // ⚠️ Desde a spec 016 (FR-010.1) o formulário nasce recolhido; os casos abaixo gravam por ele.
+    await abrirEdicaoDoInstrutor(page);
   }
 
   test("20h com 14 horas por semana alerta nomeando as semanas, e gravar continua disponível", async ({
@@ -787,7 +846,11 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     // FR-018 · o alerta não condiciona nada: gravar continua habilitado, e desativar também.
     const rodape = page.locator('[data-slot="rodape-do-formulario"]');
     await expect(rodape.getByRole("button", { name: "Gravar alterações" })).toBeEnabled();
-    await expect(rodape.getByRole("button", { name: "Desativar instrutor" })).toBeEnabled();
+    await expect(
+      page
+        .locator('[data-slot="barra-de-acoes"]')
+        .getByRole("button", { name: "Desativar instrutor" }),
+    ).toBeEnabled();
   });
 
   test("`RN-INST-03` emendado · militar sem especialidade salva a própria ficha, e o campo segue nulo", async ({
@@ -971,6 +1034,7 @@ test.describe("`FR-017.6` · curso inativo não vaza para lista de escolha, e o 
 
     // Habilita pelo caminho real, com o curso ainda ATIVO.
     await entrar(page, EMAIL_ADMIN, `/instrutores/${codigoDoInstrutor}`);
+    await abrirEdicaoDoInstrutor(page);
     const painel = page.locator('[data-slot="painel-de-disciplinas"]');
     await painel.getByLabel("Buscar disciplina ou sigla do curso").fill(CURSO.codigo);
     await painel.getByRole("checkbox", { name: new RegExp(CURSO.codigo) }).check();
@@ -978,6 +1042,7 @@ test.describe("`FR-017.6` · curso inativo não vaza para lista de escolha, e o 
 
     await mudarSituacaoDoCurso(EMAIL_ADMIN, CURSO.codigo, "inativo");
     await page.reload();
+    await abrirEdicaoDoInstrutor(page);
 
     await expect(
       page.locator('[data-slot="disciplinas-habilitadas"]'),
@@ -1014,6 +1079,7 @@ test.describe("`FR-017.6` · curso inativo não vaza para lista de escolha, e o 
      * casa DOIS elementos — este e o de *"Classificação do curso"*, cujo nome CONTÉM "Curso". É o
      * achado 3 da fatia (b) do Épico 4 repetido, e ele falha em modo estrito, sem reexecutar.
      */
+    await abrirPainelDeFiltros(page);
     await page.locator("#filtro-curso").click();
     const rotulos = await page.getByRole("option").allTextContents();
 
@@ -1045,6 +1111,7 @@ test.describe("`FR-017.6` · curso inativo não vaza para lista de escolha, e o 
      */
     const codigoDoInstrutor = amostra.codigos.ctMaisModerno;
     await entrar(page, EMAIL_ADMIN, `/instrutores/${codigoDoInstrutor}`);
+    await abrirEdicaoDoInstrutor(page);
 
     const painel = page.locator('[data-slot="painel-de-disciplinas"]');
     await painel.getByLabel("Buscar disciplina ou sigla do curso").fill(CURSO.codigo);

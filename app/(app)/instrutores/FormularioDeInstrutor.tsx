@@ -30,7 +30,8 @@
  *
  * ⚠️ TODO CAMINHO DE GRAVAÇÃO PASSA PELO DIÁLOGO (`FR-011`, anotação de 15/09/2026). O botão abre a
  * confirmação e só ela envia; não há botão de envio no formulário, então `Enter` num campo não grava.
- * A ação de desativar chega pelo `rodape`, ao lado do botão de gravar, com o próprio diálogo.
+ * Desativar e Excluir moram na barra do topo da ficha desde 17/10/2026 (spec 016, FR-010.2), fora do
+ * formulário — que, na ficha, fica recolhido atrás de «Editar instrutor».
  *
  * ⚠️ `preferencia` É TEXTO LIVRE nesta fatia — simplificação deliberada do `RF-INSTR-06`, decidida
  * por Bernardo em 15/09/2026 (T061). A grade dia × período com observação não é construída aqui.
@@ -149,8 +150,6 @@ export type FormularioDeInstrutorProps = {
   readonly disciplinas: readonly DisciplinaDoPainel[];
   /** As disciplinas com vínculo ativo — o painel nasce com elas marcadas. */
   readonly habilitadas: readonly string[];
-  /** Ações que ficam ao lado de "Gravar alterações", no fim do formulário. */
-  readonly rodape?: React.ReactNode;
 };
 
 export function FormularioDeInstrutor({
@@ -161,7 +160,6 @@ export function FormularioDeInstrutor({
   postos,
   disciplinas,
   habilitadas,
-  rodape,
 }: FormularioDeInstrutorProps) {
   const router = useRouter();
   const formulario = useRef<HTMLFormElement>(null);
@@ -415,7 +413,6 @@ export function FormularioDeInstrutor({
             {enviando ? "Gravando…" : modo === "novo" ? "Cadastrar instrutor" : "Gravar alterações"}
           </Button>
         </DialogoConfirmacao>
-        {rodape}
       </div>
     </form>
   );

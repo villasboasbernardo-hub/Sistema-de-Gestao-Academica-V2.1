@@ -66,11 +66,15 @@ export function ExcluirInstrutor({
 
   if (motivoDoImpedimento !== null) {
     return (
-      <div className="flex flex-col gap-1" data-slot="excluir-instrutor" data-bloqueado="true">
-        <Button type="button" variant="destructive" disabled>
+      // ⚠️ `contents`, como Desativar: o botão é item da barra e o motivo vai para linha própria.
+      <div className="contents" data-slot="excluir-instrutor" data-bloqueado="true">
+        <Button type="button" size="sm" variant="destructive" disabled>
           Excluir instrutor
         </Button>
-        <p className="text-texto-suave max-w-md text-xs" data-slot="motivo-de-nao-excluir">
+        <p
+          className="text-texto-suave order-last basis-full text-xs"
+          data-slot="motivo-de-nao-excluir"
+        >
           {motivoDoImpedimento}
         </p>
       </div>
@@ -78,10 +82,10 @@ export function ExcluirInstrutor({
   }
 
   return (
-    <div className="flex flex-col gap-2" data-slot="excluir-instrutor" data-bloqueado="false">
+    <div className="contents" data-slot="excluir-instrutor" data-bloqueado="false">
       <AlertDialog onOpenChange={(aberto) => (aberto ? null : setDigitado(""))}>
         <AlertDialogTrigger asChild>
-          <Button type="button" variant="destructive" disabled={enviando}>
+          <Button type="button" size="sm" variant="destructive" disabled={enviando}>
             {enviando ? "Excluindo…" : "Excluir instrutor"}
           </Button>
         </AlertDialogTrigger>
@@ -120,7 +124,7 @@ export function ExcluirInstrutor({
       </AlertDialog>
 
       {erro ? (
-        <p role="alert" className="text-conflito-tinta text-sm">
+        <p role="alert" className="text-conflito-tinta order-last basis-full text-sm">
           {erro}
         </p>
       ) : null}

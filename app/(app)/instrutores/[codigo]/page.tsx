@@ -22,7 +22,6 @@
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
-import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
@@ -43,6 +42,7 @@ import { comSigla } from "../catalogo";
 import { AcoesDeInstrutor } from "./AcoesDeInstrutor";
 import { ExcluirInstrutor } from "./ExcluirInstrutor";
 import { CargaDoInstrutor } from "./CargaDoInstrutor";
+import { EdicaoDoInstrutor } from "./EdicaoDoInstrutor";
 import { FichaEmLeitura } from "./FichaEmLeitura";
 
 const COLUNAS_DA_FICHA =
@@ -240,28 +240,8 @@ export default async function FichaDoInstrutor({
         ? "Não foi possível conferir o histórico deste instrutor; a exclusão fica indisponível."
         : motivoDoImpedimento((impedimentosRes.data as string[] | null) ?? []);
 
-  return (
-    <section className="flex flex-col gap-5">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-texto text-lg font-semibold">
-          <NomeInstrutor
-            instrutor={{
-              id: instrutor.id,
-              pg: instrutor.posto_graduacao,
-              especialidade: instrutor.esp_hab_obs,
-              nomeCompleto: instrutor.nome_completo,
-              nomeDeGuerra: instrutor.nome_guerra,
-            }}
-          />
-        </h1>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span className="text-texto-suave" data-slot="codigo-do-instrutor">
-            Código {instrutor.codigo}
-          </span>
-          <BadgeStatus tom={ativo ? "executado" : "inativo"} rotulo={ativo ? "ativo" : "inativo"} />
-        </div>
-      </header>
-
+  const leitura = (
+    <>
       {alertasExibidos.map((a) => (
         <AlertaConformidade
           key={a.chave}
@@ -284,36 +264,71 @@ export default async function FichaDoInstrutor({
         prevista={prevista}
         atribuicoes={atribuicoes}
       />
+    </>
+  );
 
-      <SePodeVer permissoes={permissoes} recurso="instrutores" acao="editar">
-        <h2 className="text-texto text-base font-semibold">Editar cadastro</h2>
-        <FormularioDeInstrutor
-          modo="edicao"
-          instrutorId={instrutor.id}
-          iniciais={valoresFuncionaisDe(instrutor)}
-          pessoais={
-            pessoal ? valoresPessoaisDe(pessoal as unknown as Record<string, unknown>) : null
-          }
-          postos={(escalaRes.data ?? []).map((e) => e.valor)}
-          disciplinas={catalogo.filter((d) => d.ativa)}
-          habilitadas={habilitadas}
-          // ⚠️ Desativar fica no fim, ao lado de gravar, longe do caminho habitual (anotação de
-          // 15/09/2026 ao `FR-011`). Oculto para quem não edita, como o formulário inteiro.
-          rodape={
-            <div className="flex flex-wrap items-start gap-3">
+  return (
+    <section className="flex flex-col gap-5">
+      <header className="flex flex-col gap-2">
+        <h1 className="text-texto text-lg font-semibold">
+          <NomeInstrutor
+            instrutor={{
+              id: instrutor.id,
+              pg: instrutor.posto_graduacao,
+              especialidade: instrutor.esp_hab_obs,
+              nomeCompleto: instrutor.nome_completo,
+              nomeDeGuerra: instrutor.nome_guerra,
+            }}
+          />
+        </h1>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-texto-suave" data-slot="codigo-do-instrutor">
+            Código {instrutor.codigo}
+          </span>
+          <BadgeStatus tom={ativo ? "executado" : "inativo"} rotulo={ativo ? "ativo" : "inativo"} />
+        </div>
+      </header>
+
+      {/*
+        ⚠️ VER PRIMEIRO, EDITAR AO CLICAR (spec 016, FR-010.1 e FR-010.2): para quem edita, a leitura
+           vai dentro de `EdicaoDoInstrutor`, com a barra Editar · Desativar/Reativar · Excluir no topo e
+           o formulário recolhido no fim. Desativar e Excluir saíram do rodapé do formulário. Quem só lê
+           vê a leitura, sem barra.
+      */}
+      {pode(permissoes, "instrutores", "editar") ? (
+        <EdicaoDoInstrutor
+          acoes={
+            <>
               <AcoesDeInstrutor instrutorId={instrutor.id} ativo={ativo} />
               {/* ⚠️ Excluir é de quem CRIA instrutor — a ação de escrita mais restritiva da matriz. */}
-              <SePodeVer permissoes={permissoes} recurso="instrutores" acao="criar">
+              {podeExcluir ? (
                 <ExcluirInstrutor
                   instrutorId={instrutor.id}
                   codigo={instrutor.codigo}
                   motivoDoImpedimento={motivoDeNaoExcluir}
                 />
-              </SePodeVer>
-            </div>
+              ) : null}
+            </>
           }
-        />
-      </SePodeVer>
+          formulario={
+            <FormularioDeInstrutor
+              modo="edicao"
+              instrutorId={instrutor.id}
+              iniciais={valoresFuncionaisDe(instrutor)}
+              pessoais={
+                pessoal ? valoresPessoaisDe(pessoal as unknown as Record<string, unknown>) : null
+              }
+              postos={(escalaRes.data ?? []).map((e) => e.valor)}
+              disciplinas={catalogo.filter((d) => d.ativa)}
+              habilitadas={habilitadas}
+            />
+          }
+        >
+          {leitura}
+        </EdicaoDoInstrutor>
+      ) : (
+        leitura
+      )}
     </section>
   );
 }
