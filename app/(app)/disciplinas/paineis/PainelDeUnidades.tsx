@@ -11,6 +11,12 @@
  *
  * ⚠️ **UE INATIVA CONTINUA NA LISTA** (regra 4). Ela sai da soma e some da atribuição por unidade —
  * sumir da tela seria exclusão com outro nome, e ninguém conseguiria reativá-la.
+ *
+ * ⚠️ **TABELA SÓ DE LEITURA, COM *EDITAR* POR LINHA, desde 17/10/2026** (spec 016, FR-007.1). Até ali
+ * cada linha trazia um formulário de edição aberto e o de acrescentar ficava sempre à vista: abrir uma
+ * disciplina mostrava dezenas de campos, e não havia como ler as unidades sem estar editando. Agora a
+ * linha abre o formulário **só dela**, e acrescentar fica atrás de um botão. Qual linha está aberta é
+ * estado efêmero — não faz sentido num link —, e por isso mora no componente, não na URL.
  */
 import * as React from "react";
 
@@ -43,8 +49,14 @@ export function PainelDeUnidades({
   const [erro, setErro] = React.useState<string | null>(null);
   const [mensagem, setMensagem] = React.useState<string | null>(null);
   const [ocupado, setOcupado] = React.useState(false);
+  /** A unidade cujo formulário está aberto — uma por vez. */
+  const [editando, setEditando] = React.useState<string | null>(null);
+  const [acrescentando, setAcrescentando] = React.useState(false);
 
-  async function executar(acao: () => Promise<{ ok: boolean; erro?: string }>, feito: string) {
+  async function executar(
+    acao: () => Promise<{ ok: boolean; erro?: string }>,
+    feito: string,
+  ): Promise<boolean> {
     setErro(null);
     setMensagem(null);
     setOcupado(true);
@@ -52,10 +64,11 @@ export function PainelDeUnidades({
     if (resultado.ok) setMensagem(feito);
     else setErro(resultado.erro ?? "Não foi possível concluir.");
     setOcupado(false);
+    return resultado.ok;
   }
 
   async function acrescentar(dados: FormData) {
-    await executar(
+    const ok = await executar(
       () =>
         criarUnidadeEnsino({
           disciplinaId,
@@ -65,7 +78,29 @@ export function PainelDeUnidades({
         }),
       "Unidade acrescentada.",
     );
+    if (ok) setAcrescentando(false);
   }
+
+  async function gravarEdicao(unidadeId: string, dados: FormData) {
+    const ok = await executar(
+      () =>
+        editarUnidadeEnsino({
+          unidadeId,
+          numeroUe: String(dados.get("numero_ue") ?? ""),
+          topico: String(dados.get("topico") ?? ""),
+          chPrevistaTempos: Number(dados.get("ch") ?? 0),
+        }),
+      "Unidade atualizada.",
+    );
+    if (ok) setEditando(null);
+  }
+
+  const temAcoes = podeEditar || podeDesativar;
+  const colunas = temAcoes ? 5 : 4;
+  /* ⚠️ **INATIVA USA `--texto-suave`, NÃO `--texto-tenue`, e a guarda do `FR-031` está certa ao
+     cobrar.** O que está na linha é VALOR — número, tópico e carga da unidade —, e `--texto-tenue` é
+     para rótulo, dica e traço de campo. Quem diz "inativa" é a palavra da coluna Situação. */
+  const corDoValor = (ativa: boolean) => (ativa ? "text-texto" : "text-texto-suave");
 
   return (
     <section aria-labelledby="titulo-das-unidades" className="flex flex-col gap-2">
@@ -80,95 +115,168 @@ export function PainelDeUnidades({
         </p>
       ) : null}
 
-      <ul className="flex flex-col gap-1" data-slot="lista-de-unidades">
-        {unidades.map((u) => (
-          <li key={u.id} className="flex flex-wrap items-center gap-2 text-sm">
-            {/* ⚠️ **INATIVA USA `--texto-suave`, NÃO `--texto-tenue`, e a guarda do `FR-031` está
-                certa ao cobrar.** O que está aqui é VALOR — número, tópico e carga da unidade —, e
-                `--texto-tenue` é para rótulo, dica e traço de campo. Apagar um valor até o limite da
-                legibilidade para dizer "inativa" troca a mensagem pela cor; quem diz é a palavra. */}
-            <span className={u.ativa ? "text-texto" : "text-texto-suave"}>
-              {u.numeroUe} — {u.topico} ({u.chPrevistaTempos} tempos)
-              {!u.ativa ? " · inativa" : ""}
-            </span>
+      {unidades.length > 0 ? (
+        <table
+          className="w-full border-collapse text-sm"
+          data-slot="tabela-de-unidades"
+          aria-labelledby="titulo-das-unidades"
+        >
+          <thead>
+            <tr className="border-borda text-texto-suave border-b text-left text-xs">
+              <th scope="col" className="py-1 pr-3 font-medium">
+                UE
+              </th>
+              <th scope="col" className="py-1 pr-3 font-medium">
+                Tópico
+              </th>
+              <th scope="col" className="py-1 pr-3 text-right font-medium">
+                Tempos
+              </th>
+              <th scope="col" className="py-1 pr-3 font-medium">
+                Situação
+              </th>
+              {temAcoes ? (
+                <th scope="col" className="py-1 font-medium">
+                  <span className="sr-only">Ações</span>
+                </th>
+              ) : null}
+            </tr>
+          </thead>
+          <tbody>
+            {unidades.map((u) =>
+              editando === u.id ? (
+                <tr key={u.id} className="border-borda border-b" data-unidade={u.numeroUe}>
+                  <td colSpan={colunas} className="py-1">
+                    <form
+                      action={(dados: FormData) => gravarEdicao(u.id, dados)}
+                      className="flex flex-wrap items-center gap-1"
+                      data-slot="formulario-da-unidade"
+                    >
+                      <Input
+                        name="numero_ue"
+                        aria-label={`Número da unidade ${u.numeroUe}`}
+                        defaultValue={u.numeroUe}
+                        className="w-16"
+                      />
+                      <Input
+                        name="topico"
+                        aria-label={`Tópico da unidade ${u.numeroUe}`}
+                        defaultValue={u.topico}
+                        className="w-64"
+                      />
+                      <Input
+                        name="ch"
+                        type="number"
+                        min={1}
+                        step={1}
+                        aria-label={`Carga horária da unidade ${u.numeroUe}`}
+                        defaultValue={u.chPrevistaTempos}
+                        className="w-20"
+                      />
+                      <Button type="submit" size="sm" disabled={ocupado} data-slot="gravar-unidade">
+                        Gravar
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={ocupado}
+                        onClick={() => setEditando(null)}
+                      >
+                        Cancelar
+                      </Button>
+                    </form>
+                  </td>
+                </tr>
+              ) : (
+                <tr key={u.id} className="border-borda border-b" data-unidade={u.numeroUe}>
+                  <td className={`py-1 pr-3 ${corDoValor(u.ativa)}`}>{u.numeroUe}</td>
+                  <td className={`py-1 pr-3 ${corDoValor(u.ativa)}`}>{u.topico}</td>
+                  <td className={`py-1 pr-3 text-right tabular-nums ${corDoValor(u.ativa)}`}>
+                    {u.chPrevistaTempos}
+                  </td>
+                  <td className="text-texto-suave py-1 pr-3">{u.ativa ? "Ativa" : "Inativa"}</td>
+                  {temAcoes ? (
+                    <td className="py-1">
+                      <div className="flex flex-wrap items-center gap-1">
+                        {podeEditar ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={ocupado}
+                            data-slot="editar-unidade"
+                            aria-label={`Editar a unidade ${u.numeroUe}`}
+                            onClick={() => {
+                              setAcrescentando(false);
+                              setEditando(u.id);
+                            }}
+                          >
+                            Editar
+                          </Button>
+                        ) : null}
+                        {podeDesativar ? (
+                          <>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              disabled={ocupado}
+                              onClick={() =>
+                                void executar(
+                                  () =>
+                                    u.ativa
+                                      ? desativarUnidadeEnsino({ unidadeId: u.id })
+                                      : reativarUnidadeEnsino({ unidadeId: u.id }),
+                                  u.ativa ? "Unidade desativada." : "Unidade reativada.",
+                                )
+                              }
+                            >
+                              {u.ativa ? "Desativar" : "Reativar"}
+                            </Button>
 
-            {podeEditar ? (
-              <form
-                action={async (dados: FormData) => {
-                  await executar(
-                    () =>
-                      editarUnidadeEnsino({
-                        unidadeId: u.id,
-                        numeroUe: String(dados.get("numero_ue") ?? ""),
-                        topico: String(dados.get("topico") ?? ""),
-                        chPrevistaTempos: Number(dados.get("ch") ?? 0),
-                      }),
-                    "Unidade atualizada.",
-                  );
-                }}
-                className="flex flex-wrap items-center gap-1"
-              >
-                <Input
-                  name="numero_ue"
-                  aria-label={`Número da unidade ${u.numeroUe}`}
-                  defaultValue={u.numeroUe}
-                  className="w-16"
-                />
-                <Input
-                  name="topico"
-                  aria-label={`Tópico da unidade ${u.numeroUe}`}
-                  defaultValue={u.topico}
-                  className="w-64"
-                />
-                <Input
-                  name="ch"
-                  type="number"
-                  min={1}
-                  step={1}
-                  aria-label={`Carga horária da unidade ${u.numeroUe}`}
-                  defaultValue={u.chPrevistaTempos}
-                  className="w-20"
-                />
-                <Button type="submit" size="sm" variant="outline" disabled={ocupado}>
-                  Salvar
-                </Button>
-              </form>
-            ) : null}
+                            <DialogoDeExclusao
+                              tipo="unidade_de_ensino"
+                              nome={`${u.numeroUe} — ${u.topico}`}
+                              codigo={u.codigo}
+                              identificador={u.id}
+                            />
+                          </>
+                        ) : null}
+                      </div>
+                    </td>
+                  ) : null}
+                </tr>
+              ),
+            )}
+          </tbody>
+        </table>
+      ) : null}
 
-            {podeDesativar ? (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={ocupado}
-                  onClick={() =>
-                    void executar(
-                      () =>
-                        u.ativa
-                          ? desativarUnidadeEnsino({ unidadeId: u.id })
-                          : reativarUnidadeEnsino({ unidadeId: u.id }),
-                      u.ativa ? "Unidade desativada." : "Unidade reativada.",
-                    )
-                  }
-                >
-                  {u.ativa ? "Desativar" : "Reativar"}
-                </Button>
+      {podeEditar && !acrescentando ? (
+        <div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={ocupado}
+            data-slot="acrescentar-unidade"
+            onClick={() => {
+              setEditando(null);
+              setAcrescentando(true);
+            }}
+          >
+            Acrescentar unidade
+          </Button>
+        </div>
+      ) : null}
 
-                <DialogoDeExclusao
-                  tipo="unidade_de_ensino"
-                  nome={`${u.numeroUe} — ${u.topico}`}
-                  codigo={u.codigo}
-                  identificador={u.id}
-                />
-              </>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-
-      {podeEditar ? (
-        <form action={acrescentar} className="flex flex-wrap items-end gap-2">
+      {podeEditar && acrescentando ? (
+        <form
+          action={acrescentar}
+          className="flex flex-wrap items-end gap-2"
+          data-slot="formulario-de-unidade-nova"
+        >
           <div className="flex flex-col gap-1">
             <Label htmlFor={`numero-nova-${disciplinaId}`}>Número</Label>
             <Input id={`numero-nova-${disciplinaId}`} name="numero_ue" required className="w-20" />
@@ -189,8 +297,17 @@ export function PainelDeUnidades({
               className="w-20"
             />
           </div>
-          <Button type="submit" size="sm" disabled={ocupado} data-slot="acrescentar-unidade">
-            Acrescentar unidade
+          <Button type="submit" size="sm" disabled={ocupado} data-slot="gravar-unidade-nova">
+            Gravar unidade
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={ocupado}
+            onClick={() => setAcrescentando(false)}
+          >
+            Cancelar
           </Button>
         </form>
       ) : null}

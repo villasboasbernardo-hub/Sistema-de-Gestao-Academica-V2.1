@@ -139,12 +139,13 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
     await irAGradePorClique(page);
 
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
-    await expect(page.locator('[data-slot="lista-de-unidades"] li')).toHaveCount(2);
+    // ⚠️ Linhas de TABELA desde 17/10/2026 (spec 016, FR-007.1): eram itens de lista com formulário.
+    await expect(page.locator('[data-slot="tabela-de-unidades"] tbody tr')).toHaveCount(2);
 
     // A mesma tela, na disciplina sem unidade.
     await abrirDetalhe(page, DISCIPLINA_SEM_UE.nome);
     await expect(
-      page.locator('[data-slot="lista-de-unidades"] li'),
+      page.locator('[data-slot="tabela-de-unidades"] tbody tr'),
       "apareceu unidade numa disciplina que não tem",
     ).toHaveCount(0);
     // ⚠️ E **nenhum aviso de que faltam** — a ausência não é pendência (`FR-061`, D-B3).
@@ -159,13 +160,59 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
     await expect(page.locator('[data-slot="aviso-da-soma"]')).toHaveCount(0);
 
     // Acrescentar uma terceira quebra a soma — e a gravação PASSA, com aviso.
-    await page.locator('input[name="numero_ue"]').last().fill("9");
-    await page.locator('input[name="topico"]').last().fill("Unidade que desequilibra");
-    await page.locator('input[name="ch"]').last().fill("3");
+    // ⚠️ O formulário de unidade nova fica atrás de um botão desde 17/10/2026 (spec 016, FR-007.1).
     await page.locator('[data-slot="acrescentar-unidade"]').click();
+    const nova = page.locator('[data-slot="formulario-de-unidade-nova"]');
+    await nova.locator('input[name="numero_ue"]').fill("9");
+    await nova.locator('input[name="topico"]').fill("Unidade que desequilibra");
+    await nova.locator('input[name="ch"]').fill("3");
+    await nova.locator('[data-slot="gravar-unidade-nova"]').click();
 
     await expect(page.getByRole("status").filter({ hasText: "acrescentada" })).toBeVisible();
     await expect(page.locator('[data-slot="aviso-da-soma"]')).toContainText("13");
+  });
+
+  test("`FR-007.1` da spec 016 · as UEs se LEEM sem campo nenhum, e *Editar* abre só a linha", async ({
+    page,
+  }) => {
+    await irAGradePorClique(page);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+
+    const tabela = page.locator('[data-slot="tabela-de-unidades"]');
+    // ⚠️ Sem contar linhas: o caso da soma, acima, acrescenta a UE 9 à mesma disciplina.
+    await expect(tabela.locator('[data-unidade="1"]')).toBeVisible();
+    // ⚠️ O CASO QUE DISCRIMINA: até 17/10/2026 cada linha trazia três campos abertos.
+    await expect(tabela.locator("input, select, textarea")).toHaveCount(0);
+    await expect(page.locator('[data-slot="formulario-de-unidade-nova"]')).toHaveCount(0);
+
+    await tabela.locator('[data-unidade="1"] [data-slot="editar-unidade"]').click();
+    // Só a linha 1 abriu: três campos, e a linha 2 continua de leitura.
+    await expect(tabela.locator("input")).toHaveCount(3);
+    await expect(tabela.locator('[data-unidade="2"] input')).toHaveCount(0);
+
+    const topico = `Tópico editado ${PROCESSO}`;
+    await tabela.locator('[data-unidade="1"] input[name="topico"]').fill(topico);
+    await tabela.locator('[data-unidade="1"] [data-slot="gravar-unidade"]').click();
+
+    await expect(page.getByRole("status").filter({ hasText: "atualizada" })).toBeVisible();
+    await expect(tabela.locator("input")).toHaveCount(0);
+    await expect(tabela.locator('[data-unidade="1"]')).toContainText(topico);
+  });
+});
+
+test.describe("`FR-007.2` da spec 016 · a proporção da CH é uma pizza", () => {
+  test("a pizza nomeia as disciplinas da vista, com o percentual escrito", async ({ page }) => {
+    await irAGradePorClique(page);
+    const proporcao = page.locator('[data-slot="proporcao-da-carga"]');
+    await expect(proporcao.locator('[data-slot="grafico-pizza"]')).toBeVisible();
+    await expect(proporcao.locator('[data-slot="grafico-barras"]')).toHaveCount(0);
+    // ⚠️ As disciplinas da amostra cabem inteiras nas cinco fatias: «Outras» só nasce com seis ou mais, e o
+    //    agrupamento é provado por `tests/unidade/agrupar-em-outras.test.ts`.
+    // ⚠️ A disciplina limpa fica de fora: o caso da exclusão a apaga.
+    for (const d of [DISCIPLINA_COM_UE, DISCIPLINA_SEM_UE]) {
+      await expect(proporcao).toContainText(`${d.cod}:`);
+    }
+    await expect(proporcao).toContainText("%");
   });
 });
 

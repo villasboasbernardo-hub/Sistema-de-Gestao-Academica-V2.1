@@ -1,5 +1,5 @@
 /**
- * A proporção da CH prevista entre as disciplinas da vista (`FR-054`).
+ * A proporção da CH prevista entre as disciplinas da vista (`FR-054`; spec 016, FR-007.2).
  *
  * ⚠️ **ELE LÊ AS MESMAS LINHAS DA TABELA, e por isso muda junto com o filtro** (`SC-011`). Uma
  * consulta própria mostraria a proporção do curso inteiro ao lado de uma tabela filtrada, e a
@@ -9,49 +9,53 @@
  * fronteira; um segundo marcador não mudaria o que vai para o navegador e encheria a lista fechada
  * de folhas com um arquivo que não é fronteira de nada.
  *
- * ⚠️ **MAIS DE SEIS DISCIPLINAS VIRAM "as maiores + o resto"**, e isso não é enfeite: o documento 23
- * §7 limita o gráfico a seis séries — *"acima disso vira tabela"* —, e a tabela está logo abaixo. Um
- * gráfico de 30 fatias não responde nenhuma pergunta que a tabela já não responda melhor.
+ * ⚠️ **PIZZA COM AS 4 MAIORES E "OUTRAS (N)" desde 17/10/2026** (spec 016, FR-007.2; Q-11, Bernardo
+ * Villas Boas). Até ali era um gráfico de barras com as 6 maiores e "+N outras". O teto de 5 fatias é
+ * do componente (`MAXIMO_DE_CATEGORIAS_NA_PIZZA`), e quem agrupa é `agruparEmOutras`, que preserva a
+ * soma. ⚠️ **A LISTA EM TEXTO TRAZ TODAS**: a legenda da pizza nomeia as quatro maiores e "Outras", e a
+ * linha abaixo dela nomeia cada disciplina que entrou em "Outras", com o seu valor.
  */
-import { GraficoBarras } from "@/components/graficos/grafico-barras";
+import { GraficoPizza } from "@/components/graficos/grafico-pizza";
+import { agruparEmOutras } from "@/components/graficos/tipos";
 
 import type { LinhaDaGradeDeDisciplinas } from "../consulta";
-
-/** Quantas disciplinas aparecem nomeadas antes de o resto virar uma barra só. */
-const MAXIMO_DE_BARRAS = 6;
 
 export function ProporcaoDaCarga({
   linhas,
 }: {
   readonly linhas: readonly LinhaDaGradeDeDisciplinas[];
 }) {
-  // ⚠️ Nada a desenhar não é um gráfico vazio: é a ausência do gráfico. Um eixo sem barra parece
+  // ⚠️ Nada a desenhar não é um gráfico vazio: é a ausência do gráfico. Uma pizza sem fatia parece
   //    defeito de carregamento.
   if (linhas.length === 0) return null;
 
-  const ordenadas = [...linhas].sort((a, b) => b.cargaHorariaTempos - a.cargaHorariaTempos);
-  const nomeadas = ordenadas.slice(0, MAXIMO_DE_BARRAS);
-  const resto = ordenadas.slice(MAXIMO_DE_BARRAS);
-  const somaDoResto = resto.reduce((total, l) => total + l.cargaHorariaTempos, 0);
-
-  const pontos = [
-    ...nomeadas.map((l) => ({ nome: l.codDisciplina, valor: l.cargaHorariaTempos })),
-    ...(resto.length > 0 ? [{ nome: `+${resto.length} outras`, valor: somaDoResto }] : []),
-  ];
+  const { pontos, agrupados } = agruparEmOutras(
+    linhas.map((l) => ({ nome: l.codDisciplina, valor: l.cargaHorariaTempos })),
+  );
 
   return (
-    <GraficoBarras
-      series={[
-        {
+    <div data-slot="proporcao-da-carga" className="flex flex-col gap-1">
+      <GraficoPizza
+        serie={{
           chave: "ch_prevista",
           rotulo: "Carga horária prevista (tempos)",
-          forma: "quadrado",
+          forma: "circulo",
           pontos,
-        },
-      ]}
-      rotulo="Proporção da carga horária prevista entre as disciplinas desta vista"
-      corPorCategoria
-      altura={200}
-    />
+        }}
+        rotulo="Proporção da carga horária prevista entre as disciplinas desta vista"
+        altura={220}
+      />
+      {agrupados.length > 0 ? (
+        <p className="text-texto-suave text-xs" data-slot="disciplinas-em-outras">
+          Em Outras:{" "}
+          {agrupados.map((p, i) => (
+            <span key={p.nome}>
+              {i > 0 ? " · " : ""}
+              {p.nome}: <span className="tabular-nums">{p.valor}</span>
+            </span>
+          ))}
+        </p>
+      ) : null}
+    </div>
   );
 }

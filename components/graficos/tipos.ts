@@ -113,3 +113,38 @@ export function conferirTetoDeSeries(series: readonly Serie[]): Recusa | null {
       `Acima disso o gráfico vira uma tabela mal desenhada — use a tabela densa.`,
   };
 }
+
+/** As fatias que a pizza desenha e as categorias que entraram em "Outras". */
+export type Agrupamento = {
+  readonly pontos: readonly PontoDeSerie[];
+  readonly agrupados: readonly PontoDeSerie[];
+};
+
+/**
+ * As maiores categorias e uma fatia **"Outras (N)"** com a soma do resto — FR-007.2 da spec 016.
+ *
+ * > *"Gráfico de pizza com as 4 maiores e uma fatia «Outras (N)»."* — Q-11, Bernardo Villas Boas,
+ * > 17/10/2026
+ *
+ * ⚠️ **ATÉ O TETO, NADA MUDA** — nem a ordem: quem chama escolheu como apresentar. Acima dele, as
+ * `maximo − 1` maiores (empate fica na ordem de chegada) e a fatia "Outras", e a **soma é
+ * preservada**: uma pizza que perdesse valor no caminho faria as maiores parecerem maiores do que são.
+ * As categorias agrupadas voltam em `agrupados`, para a lista em texto as nomear.
+ */
+export function agruparEmOutras(
+  pontos: readonly PontoDeSerie[],
+  maximo: number = MAXIMO_DE_CATEGORIAS_NA_PIZZA,
+): Agrupamento {
+  if (pontos.length <= maximo) return { pontos: [...pontos], agrupados: [] };
+  const ordenados = pontos
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => b.p.valor - a.p.valor || a.i - b.i)
+    .map(({ p }) => p);
+  const maiores = ordenados.slice(0, maximo - 1);
+  const agrupados = ordenados.slice(maximo - 1);
+  const resto = agrupados.reduce((total, p) => total + p.valor, 0);
+  return {
+    pontos: [...maiores, { nome: `Outras (${agrupados.length})`, valor: resto }],
+    agrupados,
+  };
+}

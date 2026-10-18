@@ -196,7 +196,11 @@ test("FR-038 · /disciplinas: as avaliações do currículo no painel, acrescent
     "2 TA + vista 1 TA",
   );
 
+  // ⚠️ Em LEITURA desde 17/10/2026 (spec 016, FR-010.3): nenhum campo até alguém clicar em Editar.
+  await expect(painel.locator("input, select")).toHaveCount(0);
+
   // Acrescentar um TG 1 transcrito do currículo — e depois inativá-lo: ele FICA na lista (regra 4).
+  await painel.locator('[data-slot="acrescentar-avaliacao-do-curriculo"]').click();
   const nova = painel.locator('[data-slot="nova-avaliacao-do-curriculo"]');
   await nova.getByLabel("Instrumento").selectOption("TG");
   await nova.getByLabel("TA de aplicação").fill("2");
@@ -205,6 +209,16 @@ test("FR-038 · /disciplinas: as avaliações do currículo no painel, acrescent
   await nova.getByRole("button", { name: "Acrescentar" }).click();
   const tg = painel.locator('[data-item-do-curriculo="TG 1"]');
   await expect(tg).toHaveAttribute("data-ativo", "true");
+  await expect(nova).toHaveCount(0);
+
+  // *Editar* abre os campos SÓ deste item, e gravar os fecha com o valor novo (FR-010.3).
+  await tg.locator('[data-slot="editar-avaliacao-do-curriculo"]').click();
+  await expect(painel.locator("input")).toHaveCount(2);
+  await tg.getByLabel("TA de aplicação de TG 1").fill("3");
+  await tg.locator('[data-slot="gravar-item"]').click();
+  await expect(painel.getByRole("status").filter({ hasText: "TG 1 gravada" })).toBeVisible();
+  await expect(painel.locator("input")).toHaveCount(0);
+  await expect(tg).toContainText("3 TA");
 
   await tg.locator('[data-acao="inativar-item"]').click();
   await expect(tg).toHaveAttribute("data-ativo", "false");
