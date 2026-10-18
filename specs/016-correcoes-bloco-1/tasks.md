@@ -141,9 +141,9 @@ de um PR está na fundação dele (T004).*
 ### Prova e entrega do PR 1
 
 - [X] T043 Defeitos deliberados, um de cada vez, desfeitos em seguida e registrados em `specs/016-correcoes-bloco-1/progresso-implement.md`: (a) faixa voltando a sumir em Production → `faixa-beta.test.ts` reprova; (b) a contagem voltando a contar o padrão → `filtros-fora-do-padrao.test.ts` e `filtros-recolhidos.spec.ts` reprovam; (c) `useState(true)` de volta → `filtros-recolhidos.spec.ts` reprova; (d) sem o botão *Trocar situação* → `turmas-situacao.spec.ts` reprova · **Origem:** DoD 8
-- [ ] T044 `pnpm verificar:tudo` sai 0 (ele faz o `db:reset:limpo`); contagens de unidade, pgTAP, RLS e ponta a ponta em `specs/016-correcoes-bloco-1/progresso-implement.md`; toda reprovação instável isolada e repetida antes de ser chamada de instável (`PEND-014-7`) · **Origem:** SC-011; DoD 1–5
-- [ ] T045 Commits por item, no padrão do plan §6 (`fix(BLOCO-1)`, `fix(RF-DS-03)`…), e `git push -u origin fix/BLOCO-1-correcoes-de-tela`; abrir o PR na `main` com o template de `.github/` inteiro (sem migration: plano de reversão = reverter o merge) · **Origem:** DoD 7; Princípio VIII
-- [ ] T046 CI verde nos três blocos, com a **mesma contagem** do `verificar:tudo` (SC-005 da spec 001); registrar o run em `progresso-implement.md` · **Origem:** SC-011
+- [X] T044 `pnpm verificar:tudo` sai 0 (ele faz o `db:reset:limpo`); contagens de unidade, pgTAP, RLS e ponta a ponta em `specs/016-correcoes-bloco-1/progresso-implement.md`; toda reprovação instável isolada e repetida antes de ser chamada de instável (`PEND-014-7`) · **Origem:** SC-011; DoD 1–5
+- [X] T045 Commits por item, no padrão do plan §6 (`fix(BLOCO-1)`, `fix(RF-DS-03)`…), e `git push -u origin fix/BLOCO-1-correcoes-de-tela`; abrir o PR na `main` com o template de `.github/` inteiro (sem migration: plano de reversão = reverter o merge) · **Origem:** DoD 7; Princípio VIII
+- [X] T046 CI verde nos três blocos, com a **mesma contagem** do `verificar:tudo` (SC-005 da spec 001); registrar o run em `progresso-implement.md` · **Origem:** SC-011
 - [X] T047 Escrever `specs/016-correcoes-bloco-1/roteiro-de-conferencia-pr1.md` a partir de `quickstart.md` §*PR 1*, passo a passo por clique no preview · **Origem:** SC-001, SC-005, SC-008, SC-009, SC-010
 - [ ] T048 **PARE** — conferência de Bernardo no preview pelo roteiro; merge por squash **só com a palavra dele** · **Origem:** plan §1 (P-1)
 

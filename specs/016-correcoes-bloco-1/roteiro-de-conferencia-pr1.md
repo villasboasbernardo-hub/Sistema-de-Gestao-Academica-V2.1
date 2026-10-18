@@ -1,7 +1,8 @@
 # Roteiro de conferência — PR 1 da spec 016 (tela)
 
 > Conferência por clique no **preview** do ramo `fix/BLOCO-1-correcoes-de-tela`.
-> Preview: **[pendente — link do deploy do PR]** · commit servido: **[pendente]**
+> Preview: <https://sistema-de-gestao-academica-v2-1-git-fix-bloco-d77d1b-ciaara-11.vercel.app> (endereço do
+> ramo, sempre no último commit do PR) · PR #67 · ⚠️ ele pede o login da Vercel antes do login do sistema.
 >
 > ⚠️ O preview fala com o banco remoto, que é a fonte da verdade dos cadastros. **Os passos 6 e 7 gravam**
 > (uma situação de turma e, se quiser, um campo de instrutor): escolha uma turma e um instrutor de teste, ou

@@ -96,3 +96,14 @@ Os três reprovados pararam por **tempo** (`Test timeout of 30000ms exceeded`) s
 `admin-sobre-contas.spec.ts:206` (o *Sair* não chegou ao login a tempo) e `:501` (a exclusão de conta),
 e `dsa-tipo-e-global.spec.ts:160` (abrir a ficha pela lista). **Isolados**, as duas suítes passam inteiras,
 **24 de 24** com 1 processo e de novo **24 de 24** com 2 — é a classe da `PEND-014-7`, que já nomeia as duas.
+
+### CI (T046) — sobre `e47419f`, PR #67
+Verde nos três blocos (`qualidade`, `build`, `banco`) nos dois runs: `39086920385` (pull_request) e
+`39086904923` (push). Contagens do run `39086920385`: unidade **2.342** em 165 arquivos · pgTAP **770** em
+54 arquivos, PASS · invariantes e RLS **327** em 17 arquivos · ponta a ponta **491** passados e **6**
+pulados — os mesmos **497** casos do `verificar:tudo` local, ali sem nenhum instável (o CI tem
+`retries: 2`; o local, 0).
+
+O preview do commit é o deploy `7148402100` do GitHub, em `success`
+(`sistema-de-gestao-academica-v2-1-hxu69zra6-ciaara-11.vercel.app`); ele fica atrás da proteção de acesso
+da Vercel (redireciona para `vercel.com/sso-api`), e por isso o conteúdo não foi lido por fora.
