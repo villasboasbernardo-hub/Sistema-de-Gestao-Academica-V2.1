@@ -23,6 +23,7 @@
  * contra a função do sistema pela suíte; nenhuma decide sozinha o que o sistema não decidiria.
  */
 import { semanaIsoDe } from "../../carga-semanal";
+import { MOTIVO_NO_MESMO_TA } from "../grade";
 import { TA_MAXIMO, type Relogio } from "../horario-do-bloco";
 import { NUMERO_AUSENTE_NO_CABECALHO } from "../numero-do-dsa";
 import { instanteComHoraParaLeitura } from "../../../formato/data";
@@ -81,7 +82,8 @@ export const TEXTO_DO_TOPO = {
 } as const;
 
 export const MOTIVO_FORA_DO_RELOGIO = "fora do relógio da semana";
-export const MOTIVO_SOBREPOSTO = "no mesmo TA de outro lançamento";
+/** O mesmo TA de outro lançamento — o motivo é o da grade (FR-012.3 da spec 016), nunca um segundo texto. */
+export const MOTIVO_SOBREPOSTO = MOTIVO_NO_MESMO_TA;
 
 /* ------------------------------------------------------------------ geometria */
 
@@ -144,7 +146,7 @@ export type SemanaNoRetrato = {
     readonly item: string | number;
     readonly codigo: string | null;
     readonly noPapel: boolean;
-    /** Está em `vw_ocupacao_ta` (tem TA): conta na CH cumprida e no nº do sistema, impresso ou não. */
+    /** Está em `vw_ocupacao_ta` (tem TA): conta na CH cumprida, impresso ou não. */
     readonly naOcupacao: boolean;
     readonly disciplinaDaCh: string;
   })[];

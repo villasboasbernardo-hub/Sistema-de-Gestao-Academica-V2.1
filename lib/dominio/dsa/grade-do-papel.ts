@@ -18,6 +18,8 @@
  * ⚠️ **O BLOCO QUE ATRAVESSA O ALMOÇO VIRA DOIS CARTÕES** (`SC-011`, o `D-3` da planilha): um por
  * período, cada um com os TA dele — o almoço nunca fica dentro de um cartão.
  */
+import { MOTIVO_NO_MESMO_TA } from "./grade";
+import { dataParaLeitura, siglaDoDiaDaSemana } from "../../formato/data";
 import type { DiaImpresso, LinhaImpressa } from "./impressao";
 import { minutosEntre, type Periodo, type Relogio } from "./horario-do-bloco";
 
@@ -70,7 +72,12 @@ export type GradeDoPapel = {
   readonly colunas: readonly ColunaDaGrade[];
   readonly cartoes: readonly CartaoDaGrade[];
   /** Linha que não tem tempo no relógio (TA ausente ou fora dele) — vai para baixo da grade, nunca some. */
-  readonly foraDaGrade: readonly { readonly coluna: number; readonly linha: LinhaImpressa }[];
+  readonly foraDaGrade: readonly {
+    readonly coluna: number;
+    readonly linha: LinhaImpressa;
+    /** Por que não coube — hoje só o do mesmo TA (FR-012.3 da spec 016); sem ele, fora do relógio. */
+    readonly motivo?: string;
+  }[];
   /** Os tempos parados de parte do dia (spec 014, `FR-027`), por coluna e faixa, com o rótulo. */
   readonly paradas: readonly {
     readonly coluna: number;
@@ -163,7 +170,7 @@ export function gradeDoPapel(
 
   const periodoDe = new Map(tempos.map((t) => [t.numero, t.periodo] as const));
   const cartoes: CartaoDaGrade[] = [];
-  const foraDaGrade: { coluna: number; linha: LinhaImpressa }[] = [];
+  const foraDaGrade: { coluna: number; linha: LinhaImpressa; motivo?: string }[] = [];
 
   dias.forEach((dia, coluna) => {
     for (const linha of dia.linhas) {
@@ -198,6 +205,13 @@ export function gradeDoPapel(
           linha,
         });
       });
+    }
+  });
+
+  /* FR-012.3 da spec 016: o segundo do mesmo TA não disputa a célula — vai para a lista, com o motivo. */
+  dias.forEach((dia, coluna) => {
+    for (const linha of dia.noMesmoTa ?? []) {
+      foraDaGrade.push({ coluna, linha, motivo: MOTIVO_NO_MESMO_TA });
     }
   });
 

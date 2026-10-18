@@ -230,6 +230,12 @@ export type ConteudoDoFato = {
   readonly instrumentoId?: string | null | undefined;
   /** O item do currículo da AVALIAÇÃO — com item, o cartão não oferece instrumento (é o do item). */
   readonly avaliacaoCurriculoId?: string | null | undefined;
+  /**
+   * `codigo` e `criado_em` do lançamento (da sessão, na vista e na 2ª aplicação em diante) — a ordem estável de
+   * dois lançamentos no mesmo TA (FR-012.3 da spec 016). Nunca o `fato_id`, que muda a cada carga.
+   */
+  readonly codigo?: string | null | undefined;
+  readonly criadoEm?: string | null | undefined;
 };
 
 /** As origens que `vw_ocupacao_ta` declara — a que não estiver aqui cai em `aula` (e é o que não pode acontecer). */
@@ -346,6 +352,8 @@ export function fatoDaOcupacao(
     instrutor: responsavel,
     local: linha.local,
     ...(extra?.apoio === true ? { apoio: true } : {}),
+    codigo: extra?.codigo ?? null,
+    criadoEm: extra?.criadoEm ?? null,
     /* ⚠️ O GRAVADO, CRU — é dele que o cartão único se preenche (ajuste 2 do PR #40). */
     gravado: {
       instrutorId: linha.instrutor_id,

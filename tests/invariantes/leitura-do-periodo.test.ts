@@ -100,11 +100,12 @@ describe("R-2 · a semana recortada do período é a semana lida sozinha", () =>
       });
 
       /*
-       * ⚠️ **SÓ O ERRO QUE JÁ EXISTIA** — a consulta das atribuições por UE pede uma coluna que não
-       * existe (ver `DadosDoPeriodo.erros`). Qualquer outro erro faria a leitura degradar calada, e a
-       * comparação passaria comparando vazio com vazio.
+       * ⚠️ **NENHUM ERRO DE LEITURA** — até 18/10/2026 aqui se exigia o único que existia, o da consulta das
+       * atribuições por UE, que pedia uma coluna que a tabela não tem. Ela foi consertada (spec 016,
+       * FR-012.1), e qualquer erro agora faria a leitura degradar calada: a comparação passaria comparando
+       * vazio com vazio.
        */
-      expect(periodo.erros.map((e) => e.lista)).toEqual(["atribuições por UE"]);
+      expect(periodo.erros.map((e) => e.lista)).toEqual([]);
 
       /*
        * ⚠️ **UMA SEMANA DE CADA VEZ.** Com vinte leituras em paralelo, alguma consulta falhava sob a

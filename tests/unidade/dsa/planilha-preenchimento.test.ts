@@ -24,7 +24,18 @@ import { avaliador, celulaEm, chaveDaCelula, serieDaData, type Pasta } from "@/l
 import type { Valor } from "@/lib/planilha/formula";
 import { instanteComHoraParaLeitura } from "@/lib/formato/data";
 
-import { insumoSintetico, numeroDaSemana } from "./planilha/sintetico";
+import { MOTIVO_NO_MESMO_TA } from "@/lib/dominio/dsa/grade";
+import { rotuloDaSemanaDoCurso, semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
+
+import {
+  DATA_INICIO,
+  DATA_TERMINO,
+  DURACAO_DO_CURSO,
+  insumoSintetico,
+  RELOGIO_B,
+  rotuloDaSemanaDoCursoSintetica,
+  SEMANAS,
+} from "./planilha/sintetico";
 
 const insumo = insumoSintetico();
 const { pasta, entrada: g } = montarPlanilhaComGeometria(insumo);
@@ -230,5 +241,119 @@ describe("I-P11 · mudar o catálogo muda as linhas SUGERIDAS e nenhuma ESCRITA 
     const escrita = linhaDoTa(g, SEMANA.s15, 4, 1);
     expect(com(sugerida, P.conteudo)).toBe("Tópico trocado");
     expect(com(escrita, P.conteudo)).toBe("Aula sem UE");
+  });
+});
+
+/*
+ * ⚠️ **FR-011.1 da spec 016 · O CASO DE REGRESSÃO DO DIA DE 7 TA** (Q-8, Bernardo Villas Boas,
+ * 17/10/2026: *"o caso de regressão entra assim mesmo"*). A forma medida: regime de 7, quatro TA de
+ * manhã (o relógio B, de 50 min a partir das 08:10), e um bloco de 1 a 7 — o que atravessa o almoço. Ele
+ * passa de primeira, porque não há defeito a corrigir (FR-011.2); o que guarda é que os sete tempos
+ * continuem na entrada quando a grade mudar.
+ */
+describe("FR-011.1 · o dia de 7 TA, com o bloco que atravessa o almoço, entra inteiro", () => {
+  const terca = 1;
+  const semanas = SEMANAS.map((s) =>
+    s.numero === 17
+      ? {
+          ...s,
+          lancamentos: [
+            ...s.lancamentos,
+            {
+              id: "b7",
+              dia: terca,
+              ta: 1,
+              tempos: 7,
+              origem: "aula" as const,
+              disciplina: "I",
+              ue: 1,
+              conteudo: "Tópico I-1",
+              tecnica: "Aula expositiva",
+              instrutor: "CT Instrutor Alfa",
+              local: "Sala 1",
+            },
+          ],
+        }
+      : s,
+  );
+  const comSete = insumoSintetico({ semanas });
+  const { pasta: pastaSete, entrada: gSete } = montarPlanilhaComGeometria(comSete);
+  const abaSete = pastaSete.abas[0] as Pasta["abas"][number];
+
+  it("controle: o relógio B tem 7 tempos e 4 de manhã", () => {
+    expect(RELOGIO_B.temposDoRegime).toBe(7);
+    expect(RELOGIO_B.tempos.filter((t) => t.periodo === "manha")).toHaveLength(4);
+  });
+
+  it("as 7 linhas do dia trazem o lançamento — as 4 da manhã e as 3 da tarde", () => {
+    for (let t = 1; t <= 7; t += 1) {
+      const l = linhaDoTa(gSete, SEMANA.s17, terca, t);
+      expect(celulaEm(abaSete, l, P.codigo)?.valor, `TA ${t}`).toBe("COD-b7");
+      expect(celulaEm(abaSete, l, P.cod)?.valor, `TA ${t}`).toBe("I");
+    }
+    expect(linhaSemPosicao(gSete, SEMANA.s17, 1)).toBeGreaterThan(0);
+    expect(
+      [0, 1, 2]
+        .map((i) => celulaEm(abaSete, linhaSemPosicao(gSete, SEMANA.s17, i), P.codigo)?.valor)
+        .filter((c) => c === "COD-b7"),
+      "o bloco de 7 TA caiu na lista sem posição",
+    ).toEqual([]);
+  });
+});
+
+/*
+ * ⚠️ **FR-012.3 da spec 016 · O SEGUNDO NO MESMO TA, NA PLANILHA.** A grade o desvia para a faixa; a
+ * planilha o recebe na lista sem posição da semana, com o motivo — e a linha do TA fica com o primeiro.
+ */
+describe("FR-012.3 · dois lançamentos no mesmo TA, na planilha", () => {
+  const sexta = 4;
+  const doisNoMesmoTa = SEMANAS.map((s) =>
+    s.numero === 17
+      ? {
+          ...s,
+          lancamentos: [
+            ...s.lancamentos,
+            {
+              id: "m1",
+              dia: sexta,
+              ta: 1,
+              tempos: 2,
+              origem: "aula" as const,
+              disciplina: "I",
+              ue: 1,
+              conteudo: "Tópico I-1",
+              tecnica: "Aula expositiva",
+              instrutor: "CT Instrutor Alfa",
+              local: "Sala 1",
+            },
+            {
+              id: "m2",
+              dia: sexta,
+              ta: 1,
+              tempos: 2,
+              origem: "aula" as const,
+              disciplina: "I",
+              ue: 2,
+              conteudo: "Tópico I-2",
+              tecnica: "Aula expositiva",
+              instrutor: "CT Instrutor Alfa",
+              local: "Sala 1",
+            },
+          ],
+        }
+      : s,
+  );
+  const comDois = insumoSintetico({ semanas: doisNoMesmoTa });
+  const { pasta: pastaDois, entrada: gDois } = montarPlanilhaComGeometria(comDois);
+  const abaDois = pastaDois.abas[0] as Pasta["abas"][number];
+
+  it("a linha do TA fica com o primeiro, e o segundo vai para a lista sem posição com o motivo", () => {
+    expect(celulaEm(abaDois, linhaDoTa(gDois, SEMANA.s17, sexta, 1), P.codigo)?.valor).toBe(
+      "COD-m1",
+    );
+    const semPosicao = Array.from({ length: gDois.linhasSemPosicao }, (_, i) =>
+      linhaSemPosicao(gDois, SEMANA.s17, i),
+    ).map((l) => [celulaEm(abaDois, l, P.codigo)?.valor, celulaEm(abaDois, l, P.aviso)?.valor]);
+    expect(semPosicao).toContainEqual(["COD-m2", MOTIVO_NO_MESMO_TA]);
   });
 });

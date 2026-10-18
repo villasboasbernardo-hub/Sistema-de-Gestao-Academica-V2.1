@@ -329,6 +329,19 @@ export default async function SemanaDoDsa({
         datasDaSemana={rotuloDaSemana(lida.dias)}
       />
 
+      {/*
+        ⚠️ **O QUE A LEITURA NÃO CONSEGUIU LER É DITO** (FR-012.1 da spec 016; `RN-DEG-01`): até 18/10/2026
+           a lista que falhava chegava vazia em silêncio — e a sugestão de instrutor por UE nunca aparecia sem
+           que ninguém soubesse por quê.
+      */}
+      {lida.errosDeLeitura.length > 0 ? (
+        <p role="status" className="text-sm text-atrasado-tinta" data-slot="aviso-de-leitura">
+          Parte da semana não pôde ser lida ({lida.errosDeLeitura.map((e) => e.lista).join(", ")}).
+          O que aparece abaixo pode estar incompleto — recarregue a página; se continuar, avise o
+          suporte.
+        </p>
+      ) : null}
+
       {aviso ? (
         <p role="status" className="text-sm text-atrasado-tinta" data-slot="aviso-de-semana">
           {aviso}
@@ -471,6 +484,8 @@ export default async function SemanaDoDsa({
           numeroDaSemana={escolha.numero}
           podeLancar={podeLancar}
           unidades={lida.unidades}
+          atribuicoesPorUe={lida.atribuicoesPorUe}
+          atribuicoesPorDisciplina={lida.atribuicoesPorDisciplina}
           disciplinas={lida.disciplinas}
           avaliacoesParaVista={lida.avaliacoesParaVista}
           avaliacoesDoCurriculo={lida.avaliacoesDoCurriculo}

@@ -68,12 +68,6 @@ export type TurmaDaPlanilha = {
 export const COLUNAS_DA_TURMA_DA_PLANILHA =
   "id, codigo, curso_id, modalidade, sala_alocada, alunos, data_inicio, data_termino, inicio_etapa_presencial, termino_etapa_presencial";
 
-/**
- * A lista que já é conhecida por falhar na leitura do DSA (`PEND-DSA-SUGESTAO`) — a planilha lê a
- * atribuição por UE pela consulta certa, logo a falha daquela não a impede.
- */
-const FALHA_CONHECIDA_DO_DSA = "atribuições por UE";
-
 export class FalhaNaLeituraDaPlanilha extends Error {
   constructor(readonly listas: readonly string[]) {
     super(`a planilha não pôde ler: ${listas.join(", ")}`);
@@ -205,8 +199,8 @@ export async function lerDadosDaPlanilha(
         .range(f.de, f.ate),
     ),
   ]);
-  for (const e of dados.erros)
-    if (e.lista !== FALHA_CONHECIDA_DO_DSA) erros.push(`${e.lista} (${e.mensagem})`);
+  /* ⚠️ Toda lista que falhou para a planilha (FR-012.1 da spec 016): a exceção da consulta errada saiu com ela. */
+  for (const e of dados.erros) erros.push(`${e.lista} (${e.mensagem})`);
 
   const porUe = lista<{ unidade_ensino_id: string; instrutor_id: string }>(
     tdu,

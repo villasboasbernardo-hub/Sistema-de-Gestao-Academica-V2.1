@@ -25,6 +25,7 @@ import {
   type InsumoDaPlanilha,
 } from "@/lib/dominio/dsa/planilha/tipos";
 import { semanasDaPlanilha } from "@/lib/dominio/dsa/planilha/semanas";
+import { MOTIVO_NO_MESMO_TA } from "@/lib/dominio/dsa/grade";
 
 export const RELOGIO_A = relogioDoRegime({
   regimeTempos: 8,
@@ -260,6 +261,8 @@ export function papelDaSemana(
 ): {
   readonly dias: readonly DiaImpresso[];
   readonly grade: GradeDoPapel | null;
+  /** O que a grade desviou para a faixa por estar no mesmo TA de outro (FR-012.3 da spec 016). */
+  readonly noMesmoTa: readonly { readonly id: string; readonly motivo: string }[];
 } {
   const seis = datasDaSemanaIso(ANO, s.numero).slice(0, 6);
   const dias = comSabado ? seis : seis.slice(0, 5);
@@ -282,7 +285,15 @@ export function papelDaSemana(
     s.lancamentos.filter((l) => l.categoria === "Estudo_Individual").map((l) => l.id),
   );
   const impressos = documentoImpresso(semana, { tecnicas: TECNICAS, idsDeEstudoIndividual });
-  return { dias: impressos, grade: gradeDoPapel(impressos, s.relogio) };
+  return {
+    dias: impressos,
+    grade: gradeDoPapel(impressos, s.relogio),
+    noMesmoTa: semana.dias.flatMap((d) =>
+      d.semPosicao
+        .filter((x) => x.motivo === MOTIVO_NO_MESMO_TA)
+        .map((x) => ({ id: x.fato.fatoId, motivo: x.motivo })),
+    ),
+  };
 }
 
 const todosOsLancamentos = () =>
@@ -364,8 +375,9 @@ export function insumoSintetico(
   });
   const fatos = new Map<string, FatoDoInsumo>();
   const semanas = dasSemanas.map((sp) => {
-    const s = SEMANAS.find((x) => x.numero === sp.numero) as SemanaSintetica;
-    const { dias } = papelDaSemana(s, true);
+    const s = fonte.find((x) => x.numero === sp.numero) as SemanaSintetica;
+    const { dias, noMesmoTa } = papelDaSemana(s, true);
+    const desviados = new Map(noMesmoTa.map((x) => [x.id, x.motivo] as const));
     for (const l of s.lancamentos) {
       const data = sp.seisDias[l.dia] ?? "";
       fatos.set(chaveDoFato(l.id, data, l.ta), {
@@ -385,18 +397,18 @@ export function insumoSintetico(
       dias,
       avisosDosDias: sp.seisDias.map(() => []),
       semPosicao: s.lancamentos
-        .filter((l) => l.ta === null)
+        .filter((l) => l.ta === null || desviados.has(l.id))
         .map((l) => ({
           fatoId: l.id,
           data: sp.seisDias[l.dia] ?? "",
-          taInicial: null,
+          taInicial: l.ta,
           tempos: l.tempos,
           disciplina: l.disciplina ?? "",
           conteudo: l.conteudo,
           local: l.local ?? "",
           te: "",
           instrutor: l.instrutor ?? "",
-          motivo: "sem TA no sistema",
+          motivo: desviados.get(l.id) ?? "sem TA no sistema",
         })),
       rotuloDaSemanaDoCurso: rotuloDaSemanaDoCursoSintetica(sp.numero),
       alunos: 12,

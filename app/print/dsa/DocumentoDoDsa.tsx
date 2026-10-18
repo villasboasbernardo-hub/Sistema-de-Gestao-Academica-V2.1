@@ -390,11 +390,18 @@ function Grade({
 
       {grade.foraDaGrade.length > 0 ? (
         <ul className="dsa4-fora" data-slot="dsa-fora-da-grade">
-          {grade.foraDaGrade.map(({ coluna, linha }) => (
+          {grade.foraDaGrade.map(({ coluna, linha, motivo }) => (
             <li key={linha.chave}>
               <b>{grade.colunas[coluna]?.sigla}</b> {linha.disciplina} {linha.conteudo}
               {linha.tempos === null ? "" : ` · ${linha.tempos} TA`} · {linha.local} · {linha.te} ·{" "}
               {linha.instrutor}
+              {/* FR-012.3 da spec 016: o segundo do mesmo TA diz por que está aqui, nunca escondido. */}
+              {motivo === undefined ? null : (
+                <span data-slot="dsa-fora-motivo">
+                  {" "}
+                  — {linha.taInicial}º TA, {motivo}
+                </span>
+              )}
             </li>
           ))}
         </ul>
@@ -471,7 +478,7 @@ function ListaSemRelogio({ dias }: { readonly dias: readonly DiaImpresso[] }) {
             </span>
           ))}
           <ul>
-            {dia.linhas.map((l: LinhaImpressa) => (
+            {[...dia.linhas, ...(dia.noMesmoTa ?? [])].map((l: LinhaImpressa) => (
               <li
                 key={l.chave}
                 data-slot="dsa-cartao"
