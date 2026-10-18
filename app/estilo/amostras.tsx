@@ -607,7 +607,7 @@ export function AmostraTabelaDensa() {
         densidade={densidade}
         comBusca
         abertas={abertas}
-        aoAtivarLinha={(l) => definirAbertas((atuais) => (atuais.includes(l.id) ? [] : [l.id]))}
+        aoAlternarLinha={(l, abrir) => definirAbertas(abrir ? [l.id] : [])}
         detalhe={() => (
           <div className="flex flex-col gap-1">
             {/* veste: rótulo do detalhe; o valor ao lado é dado */}

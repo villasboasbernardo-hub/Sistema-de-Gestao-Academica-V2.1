@@ -18,6 +18,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { criarConta, apagarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirLinha, conferirQueALinhaAlterna, linhaExpansivel } from "./linha-expansivel";
 import {
   contarDisciplina,
   disciplinaComUe,
@@ -85,9 +86,14 @@ async function irAGradePorClique(page: Page): Promise<void> {
   await expect(page.getByRole("columnheader", { name: "CH" })).toBeVisible();
 }
 
-/** Abre o detalhe de uma disciplina clicando na célula do nome. */
+/**
+ * Abre o detalhe de uma disciplina clicando na célula do nome — **só se estiver fechado**.
+ *
+ * ⚠️ Desde 17/10/2026 (conferência do PR #67) clicar na linha aberta a FECHA; um auxiliar que clicasse
+ * sem olhar o `aria-expanded` fecharia o detalhe em silêncio.
+ */
 async function abrirDetalhe(page: Page, nome: string): Promise<void> {
-  await page.getByRole("gridcell", { name: nome, exact: false }).first().click();
+  await abrirLinha(page, nome);
   await expect(page.locator('[data-slot="detalhe-da-disciplina"]')).toBeVisible();
 }
 
@@ -129,6 +135,43 @@ test.describe("`FR-001` a `FR-006` · chegar, escolher e ver", () => {
     // ⚠️ Aqui o `goto` NÃO é percurso: é a prova de que o endereço basta (quickstart passo 6).
     await page.goto(endereco);
     await expect(page.locator('[data-slot="detalhe-da-disciplina"]')).toBeVisible();
+  });
+
+  /*
+   * ⚠️ **O DEFEITO DA CONFERÊNCIA DO PR #67 (17/10/2026)**: clicar de novo na disciplina aberta não a
+   *    fechava. A tela desenhava pela URL, mas decidia "abrir ou fechar" pela cópia do servidor, que o
+   *    parâmetro visual `aberta` não refaz: o segundo clique gravava o mesmo código de novo.
+   */
+  test("a linha aberta FECHA e reabre — por clique, por Enter e por Espaço", async ({ page }) => {
+    await irAGradePorClique(page);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    await conferirQueALinhaAlterna(
+      page,
+      page,
+      DISCIPLINA_COM_UE.nome,
+      page.locator('[data-slot="detalhe-da-disciplina"]'),
+    );
+  });
+
+  test("⚠️ e partindo do endereço com a linha aberta, fecha e REABRE", async ({ page }) => {
+    /*
+     * ⚠️ A FACE OPOSTA DO MESMO DEFEITO: chegando com `?aberta=` (ou depois de o servidor redesenhar a
+     *    tela, como ao gravar dentro do detalhe), a cópia do servidor já era a linha aberta — o
+     *    primeiro clique fechava, e o segundo NÃO reabria. O `goto` é o ponto de partida.
+     */
+    await irAGradePorClique(page);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    await page.goto(page.url());
+    await expect(linhaExpansivel(page, DISCIPLINA_COM_UE.nome)).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await conferirQueALinhaAlterna(
+      page,
+      page,
+      DISCIPLINA_COM_UE.nome,
+      page.locator('[data-slot="detalhe-da-disciplina"]'),
+    );
   });
 });
 

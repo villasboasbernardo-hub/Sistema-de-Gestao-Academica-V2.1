@@ -79,7 +79,6 @@ export default async function Disciplinas({
             curso: String(valores.curso),
             situacao: String(valores.situacao),
             busca: String(valores.busca),
-            aberta: String(valores.aberta),
           }}
           permissoes={{
             criar: pode(permissoes, "disciplinas", "criar"),

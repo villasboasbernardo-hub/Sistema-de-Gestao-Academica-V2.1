@@ -18,6 +18,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirLinha, conferirQueALinhaAlterna, linhaExpansivel } from "./linha-expansivel";
 import {
   codigoDaTurmaDois,
   codigoDaTurmaUm,
@@ -90,9 +91,12 @@ async function irASecaoDaTurma(page: Page, turma: string): Promise<void> {
   await expect(page.locator(SECAO)).toBeVisible();
 }
 
-/** Abre o detalhe de uma disciplina clicando na célula do nome, dentro da seção. */
+/**
+ * Abre o detalhe de uma disciplina clicando na célula do nome, dentro da seção — **só se estiver
+ * fechado**: desde 17/10/2026 (conferência do PR #67) clicar na linha aberta a FECHA.
+ */
 async function abrirDetalhe(page: Page, nome: string): Promise<void> {
-  await page.locator(SECAO).getByRole("gridcell", { name: nome, exact: false }).first().click();
+  await abrirLinha(page.locator(SECAO), nome);
   await expect(page.locator(DETALHE)).toBeVisible();
 }
 
@@ -110,6 +114,42 @@ async function acrescentarInstrutor(page: Page): Promise<void> {
   const painel = page.locator('[data-slot="popover-content"]');
   await painel.getByRole("option").first().click();
 }
+
+test.describe("conferência do PR #67 · a linha aberta da seção FECHA e reabre", () => {
+  /*
+   * ⚠️ **NA FICHA O DEFEITO ERA O DO RECUO**: o desenho caía na cópia do servidor sempre que a URL
+   *    ficava sem `aberta` — então, chegando com `?aberta=` (ou depois de gravar dentro do detalhe,
+   *    que revalida a ficha), fechar zerava a URL e o recuo reabria a mesma linha.
+   */
+  test("por clique, por Enter e por Espaço", async ({ page }) => {
+    await irASecaoDaTurma(page, CODIGO_DA_TURMA_UM);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    await conferirQueALinhaAlterna(
+      page,
+      page.locator(SECAO),
+      DISCIPLINA_COM_UE.nome,
+      page.locator(DETALHE),
+    );
+  });
+
+  test("⚠️ e partindo do endereço com a linha aberta", async ({ page }) => {
+    await irASecaoDaTurma(page, CODIGO_DA_TURMA_UM);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    // O `goto` é o ponto de partida: a ficha carregada com `?aberta=`.
+    await page.goto(page.url());
+    await expect(page.locator(SECAO)).toBeVisible();
+    await expect(linhaExpansivel(page.locator(SECAO), DISCIPLINA_COM_UE.nome)).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await conferirQueALinhaAlterna(
+      page,
+      page.locator(SECAO),
+      DISCIPLINA_COM_UE.nome,
+      page.locator(DETALHE),
+    );
+  });
+});
 
 test.describe("`FR-022` · menu → Turmas → ficha → a seção de disciplinas", () => {
   test("a seção mostra as disciplinas DAQUELA turma, e só elas", async ({ page }) => {

@@ -184,12 +184,12 @@ export function PainelDeSituacao({
   /* ⚠️ Ordem natural do código (item 5, 08/10/2026): `D2` antes de `D10`, pelo comparador único. */
   const emOrdem = React.useMemo(() => emOrdemNaturalDoCodigo(quadros, (q) => q.codigo), [quadros]);
 
-  function alternar(q: QuadroParaExibir): void {
-    definirAbertas((atuais) =>
-      atuais.includes(q.disciplinaId)
-        ? atuais.filter((id) => id !== q.disciplinaId)
-        : [...atuais, q.disciplinaId],
-    );
+  /* A tabela decide abrir ou fechar (conferência do PR #67); aqui só se obedece, sem repetir a chave. */
+  function alternar(q: QuadroParaExibir, abrir: boolean): void {
+    definirAbertas((atuais) => {
+      const sem = atuais.filter((id) => id !== q.disciplinaId);
+      return abrir ? [...sem, q.disciplinaId] : sem;
+    });
   }
 
   const colunas: readonly Coluna<QuadroParaExibir>[] = [
@@ -315,7 +315,7 @@ export function PainelDeSituacao({
             chaveLinha={(q) => q.disciplinaId}
             rotulo="Situação por disciplina"
             densidade="compacta"
-            aoAtivarLinha={alternar}
+            aoAlternarLinha={alternar}
             abertas={abertas}
             detalhe={(q) => (
               <UnidadesDaDisciplina

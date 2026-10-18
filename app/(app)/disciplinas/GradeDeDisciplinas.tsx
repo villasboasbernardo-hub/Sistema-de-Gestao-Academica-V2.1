@@ -63,11 +63,15 @@ export type PermissoesDaGrade = {
  *    antes de montar a grade, então nenhum valor de turma chega aqui. Campo que não pode receber
  *    valor é campo que a próxima edição tenta usar.
  */
+/*
+ * ⚠️ **E O `aberta` TAMBÉM SAIU, em 17/10/2026** (conferência do PR #67), pelo mesmo motivo: ele é
+ *    parâmetro visual, e a cópia do servidor fica velha a cada clique. Era ela que o clique consultava
+ *    para decidir abrir ou fechar — e por isso a linha aberta não fechava. Quem lê `aberta` é o gancho.
+ */
 export type ParametrosDaGrade = {
   readonly curso: string;
   readonly situacao: string;
   readonly busca: string;
-  readonly aberta: string;
 };
 
 export function GradeDeDisciplinas({
@@ -289,9 +293,12 @@ export function GradeDeDisciplinas({
             rotulo={`Disciplinas de ${grade.cursoEscolhido.codigo}`}
             densidade="compacta"
             motivoDoVazio="sem-dado"
-            aoAtivarLinha={(l) =>
-              void definirAberta(parametros.aberta === l.codigo ? null : l.codigo)
-            }
+            /*
+             * ⚠️ **QUEM DECIDE ABRIR OU FECHAR É A TABELA**, pelo mesmo `abertas` que ela desenha
+             *    (conferência do PR #67): fechar grava `null`, que tira `?aberta=` da URL — o estado
+             *    inicial.
+             */
+            aoAlternarLinha={(l, abrir) => void definirAberta(abrir ? l.codigo : null)}
             abertas={abertas}
             detalhe={(l) => (
               <DetalheDaDisciplina

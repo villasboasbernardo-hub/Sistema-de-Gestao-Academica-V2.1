@@ -100,8 +100,10 @@ export default async function FichaDaTurma({
   const { turma: segmento } = await params;
   const codigo = codigoDaFicha(segmento);
   /*
-   * ⚠️ **A FICHA PASSOU A TER PARÂMETRO, E É UM SÓ:** `aberta`, a linha expandida da seção de
-   *    disciplinas. Ele serve ao PRIMEIRO desenho; depois dele quem manda é o gancho na folha.
+   * ⚠️ **OS PARÂMETROS DA FICHA, E QUEM LÊ CADA UM:** `aba` e `aberta` são lidos pelas folhas, pelo
+   *    gancho; `gravada` (a confirmação, spec 016) é lido aqui. ⚠️ **`aberta` deixou de descer daqui
+   *    em 17/10/2026** (conferência do PR #67): a cópia do servidor ficava velha e reabria a linha que
+   *    a pessoa tinha fechado.
    */
   const { valores } = lerParametros(ROTA_DA_FICHA_DA_TURMA, await searchParams);
 
@@ -638,7 +640,6 @@ export default async function FichaDaTurma({
                   podeEditar={pode(permissoes, "disciplinas", "editar")}
                   avisoInicioDias={grade.avisoInicioDias}
                   hoje={hoje}
-                  abertaNoEndereco={String(valores.aberta)}
                   executadaDaTurma={andamento.executada}
                 />
               )}
