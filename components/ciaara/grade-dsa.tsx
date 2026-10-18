@@ -120,12 +120,55 @@ const TOM_DO_ESTADO: Readonly<Record<Celula["estado"], TomDaCelula>> = {
   sem_relogio: "sem_relogio",
 };
 
+/**
+ * O título do cartão — o **nome** da disciplina em destaque e o **código** depois (FR-008.1 da spec 016;
+ * Q-12: só a tela). Até 18/10/2026 o código vinha primeiro, e a grade sem relógio nem mostrava o nome.
+ * ⚠️ O papel e a planilha NÃO mudam: lá o código é a coluna do documento assinado (FR-008.2).
+ */
+function TituloDoCartao({ codigo, nome }: { readonly codigo: string; readonly nome: string }) {
+  if (codigo === "") return null;
+  return (
+    <span className="flex flex-wrap items-baseline gap-x-1" data-slot="cartao-titulo">
+      {nome === "" ? null : (
+        <strong className="font-semibold" data-slot="cartao-nome">
+          {nome}
+        </strong>
+      )}
+      <span
+        className={nome === "" ? "font-semibold" : "text-[10px] text-texto-suave"}
+        data-slot="cartao-codigo"
+      >
+        {codigo}
+      </span>
+    </span>
+  );
+}
+
+/** A técnica numa linha própria, discreta (FR-008.1) — nunca mais na linha do «N TA» e do local. */
+function TecnicaDoCartao({ tecnica }: { readonly tecnica: string | null }) {
+  if (tecnica === null || tecnica === "") return null;
+  return (
+    <span className="text-[10px] text-texto-suave" data-slot="cartao-tecnica">
+      {tecnica}
+    </span>
+  );
+}
+
+/** O rótulo acessível do cartão: começa pelo nome, como a tela (FR-008.1). */
+function rotuloDoCartao(codigo: string, nome: string, conteudo: string | null): string {
+  return [nome === "" ? null : nome, codigo === "" ? null : codigo, conteudo]
+    .filter(Boolean)
+    .join(" — ");
+}
+
 /** O conteúdo de uma célula ocupada. */
 function CorpoDoBloco({
   bloco,
+  nome,
   salaDaTurma,
 }: {
   readonly bloco: BlocoNaGrade;
+  readonly nome: string;
   readonly salaDaTurma: string | null;
 }) {
   /*
@@ -140,11 +183,9 @@ function CorpoDoBloco({
 
   return (
     <div className="flex flex-col gap-0.5 leading-tight">
-      <span className="flex items-baseline gap-1">
-        {bloco.disciplina ? <strong className="font-semibold">{bloco.disciplina}</strong> : null}
-        {bloco.tecnica ? <span className="text-[10px] uppercase">{bloco.tecnica}</span> : null}
-      </span>
+      <TituloDoCartao codigo={bloco.disciplina ?? ""} nome={nome} />
       {bloco.conteudo ? <span className="line-clamp-2">{bloco.conteudo}</span> : null}
+      <TecnicaDoCartao tecnica={bloco.tecnica} />
       {bloco.instrutor ? <span className="truncate text-[10px]">{bloco.instrutor}</span> : null}
       <span className="flex flex-wrap items-center gap-1 text-[10px]">
         {bloco.trechos.map((t) => (
@@ -226,23 +267,18 @@ function CorpoDoCartao({
       data-partes={cartao.partes}
       data-lancado={bloco ? "sim" : "nao"}
     >
-      {linha.disciplina === "" ? null : (
-        <span className="flex items-baseline gap-1 font-semibold">
-          <span>{linha.disciplina}</span>
-          {nome === "" ? null : <span className="font-normal">{nome}</span>}
-        </span>
-      )}
+      <TituloDoCartao codigo={linha.disciplina} nome={nome} />
       <span className={cn("line-clamp-3", cartao.tipo !== "aula" && "font-medium")}>
         {linha.conteudo}
         {cartao.tipo === "estudo" ? " *" : ""}
       </span>
+      <TecnicaDoCartao tecnica={linha.te} />
       {linha.instrutor === "" ? null : (
         <span className="truncate text-[10px]">{linha.instrutor}</span>
       )}
       <span className="flex flex-wrap items-center gap-x-1.5 text-[10px] tabular-nums">
         <span>{cartao.ta} TA</span>
         {linha.local === "" ? null : <span>{linha.local}</span>}
-        {linha.te === "" ? null : <strong className="font-semibold">{linha.te}</strong>}
         {cartao.partes > 1 ? (
           /*
            * ⚠️ **O TOTAL DO BLOCO VAI JUNTO DA PARTE** (item 2 do comando de 08/10/2026). O bloco que
@@ -406,9 +442,11 @@ function GradeDoModelo({
           ),
           tom: tomDoCartao(cartao, bloco),
           alturaEmLinhas: cartao.ta,
-          rotuloAcessivel: [cartao.linha.disciplina, cartao.linha.conteudo]
-            .filter(Boolean)
-            .join(" — "),
+          rotuloAcessivel: rotuloDoCartao(
+            cartao.linha.disciplina,
+            nomesDasDisciplinas?.get(cartao.linha.disciplina) ?? "",
+            cartao.linha.conteudo,
+          ),
           ...(bloco && aoMoverBloco ? { arrastavel: true } : {}),
           ...(bloco && (bloco.conflito !== null || bloco.alertaSala)
             ? {
@@ -572,6 +610,7 @@ function rodapesSemPosicao(
 /** A grade sem relógio — os TA numerados, sem horário (`RN-DEG-01`). */
 function GradeNumerada({
   semana,
+  nomesDasDisciplinas,
   salaDaTurma,
   aoEscolherCelula,
   aoEscolherFato,
@@ -642,7 +681,13 @@ function GradeNumerada({
       if (celula.estado === "ocupada" && celula.bloco) {
         const bloco = celula.bloco;
         return {
-          conteudo: <CorpoDoBloco bloco={bloco} salaDaTurma={salaDaTurma} />,
+          conteudo: (
+            <CorpoDoBloco
+              bloco={bloco}
+              nome={nomesDasDisciplinas?.get(bloco.disciplina ?? "") ?? ""}
+              salaDaTurma={salaDaTurma}
+            />
+          ),
           tom: tomDoBloco(bloco),
           /*
            * ⚠️ `tempos` pode ser nulo em linha histórica (`ativ_tempos_so_nulo_no_historico`), e
@@ -650,7 +695,11 @@ function GradeNumerada({
            * inteira. O `?? 1` é o que impede isso.
            */
           alturaEmLinhas: Math.max(bloco.tempos ?? 1, 1),
-          rotuloAcessivel: [bloco.disciplina, bloco.conteudo].filter(Boolean).join(" — "),
+          rotuloAcessivel: rotuloDoCartao(
+            bloco.disciplina ?? "",
+            nomesDasDisciplinas?.get(bloco.disciplina ?? "") ?? "",
+            bloco.conteudo,
+          ),
           ...(aoMoverBloco ? { arrastavel: true } : {}),
           /*
            * ⚠️ **A MARCA VAI PARA O ATRIBUTO E PARA O RÓTULO ACESSÍVEL, não só para a cor**
