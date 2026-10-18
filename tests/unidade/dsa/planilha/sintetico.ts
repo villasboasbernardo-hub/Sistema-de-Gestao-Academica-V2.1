@@ -342,7 +342,14 @@ export function rodapeDaSemana(s: SemanaSintetica): {
 }
 
 /** O insumo da planilha, montado como a rota o monta: o papel de cada semana com os seis dias. */
-export function insumoSintetico(opcoes: { readonly temSabado?: boolean } = {}): InsumoDaPlanilha {
+export function insumoSintetico(
+  opcoes: {
+    readonly temSabado?: boolean;
+    /** Outras semanas no lugar das de referência — mesmos números (15, 16, 17), outro conteúdo. */
+    readonly semanas?: readonly SemanaSintetica[];
+  } = {},
+): InsumoDaPlanilha {
+  const fonte = opcoes.semanas ?? SEMANAS;
   const { semanas: dasSemanas, inicial } = semanasDaPlanilha({
     turma: {
       modalidade: "presencial",
