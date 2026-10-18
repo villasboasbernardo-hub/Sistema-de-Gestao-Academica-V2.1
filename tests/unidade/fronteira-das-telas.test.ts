@@ -137,6 +137,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
    */
   "app/(app)/turmas/[turma]/EdicaoDaTurma.tsx":
     "recolher o formulário de edição atrás de «Editar turma» — estado efêmero de aberto/fechado",
+  // Spec 016 (FR-015.1): a situação se troca por um diálogo ao lado do selo do cabeçalho.
+  "app/(app)/turmas/[turma]/TrocarSituacao.tsx":
+    "o diálogo de «Trocar situação» — abrir, escolher e gravar pela ação própria",
   "app/(app)/turmas/FiltrosDeTurmas.tsx":
     "os quatro filtros da lista de turmas, escrevendo a URL por `useParametro`",
   "app/(app)/turmas/TabelaDeTurmas.tsx":

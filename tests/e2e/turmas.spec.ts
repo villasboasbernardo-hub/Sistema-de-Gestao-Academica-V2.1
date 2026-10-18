@@ -22,7 +22,12 @@ import { limparCursos, semearCursos, type CursosSemeados } from "./cursos-de-tes
  *    de «Editar turma», e os campos só existem depois do clique. O auxiliar é um só, em
  *    `navegar-turmas.ts` — escrever o clique doze vezes aqui seria a terceira cópia que diverge.
  */
-import { abrirEdicaoDaTurma } from "./navegar-turmas";
+import {
+  abrirEdicaoDaTurma,
+  esperarGravacaoDaTurma,
+  seloDaSituacao,
+  trocarSituacaoPelaFicha,
+} from "./navegar-turmas";
 
 let cliente: SupabaseClient | undefined;
 const admin = (): SupabaseClient =>
@@ -298,21 +303,41 @@ test.describe("`FR-026` · os quatro caminhos de colisão nomeiam quem ocupa", (
 });
 
 test.describe("`FR-028` · editar a turma na própria ficha", () => {
-  test("de `planejada` a `concluida` e de volta — sem passar por rota de edição", async ({
+  /*
+   * ⚠️ **REESCRITO EM 17/10/2026** (spec 016, FR-015.4): este caso trocava a situação pelo `<select>` do
+   *    formulário e conferia o **estado local** do campo — que mostra o valor escolhido mesmo que a
+   *    gravação falhe. Agora a situação se troca pelo botão do cabeçalho, e a prova é o selo **depois
+   *    de recarregar** e o valor **no banco**.
+   */
+  test("de `planejada` a `concluida` e de volta — pelo botão, sem passar por rota de edição", async ({
     page,
   }) => {
     await entrar(page, EMAIL_AJUDANTE, enderecoDe(TURMA_DE_EDICAO));
+    await expect(seloDaSituacao(page)).toContainText("Planejada");
+    // O formulário de edição não tem mais o campo: a situação tem um caminho só.
     await abrirEdicaoDaTurma(page);
     await expect(formulario(page)).toHaveAttribute("data-modo", "edicao");
-    await expect(page.locator("#turma-situacao")).toHaveValue("planejada");
+    await expect(page.locator("#turma-situacao")).toHaveCount(0);
 
-    await page.locator("#turma-situacao").selectOption("concluida");
-    await page.locator('[data-slot="gravar-turma"]').click();
-    await expect(page.locator("#turma-situacao")).toHaveValue("concluida", { timeout: 15_000 });
+    await trocarSituacaoPelaFicha(page, "Concluída");
+    await page.reload();
+    await expect(seloDaSituacao(page)).toContainText("Concluída");
+    const { data: concluida } = await admin()
+      .from("turmas")
+      .select("status")
+      .eq("codigo", TURMA_DE_EDICAO)
+      .single();
+    expect(concluida?.status).toBe("concluida");
 
-    await page.locator("#turma-situacao").selectOption("planejada");
-    await page.locator('[data-slot="gravar-turma"]').click();
-    await expect(page.locator("#turma-situacao")).toHaveValue("planejada", { timeout: 15_000 });
+    await trocarSituacaoPelaFicha(page, "Planejada");
+    await page.reload();
+    await expect(seloDaSituacao(page)).toContainText("Planejada");
+    const { data: planejada } = await admin()
+      .from("turmas")
+      .select("status")
+      .eq("codigo", TURMA_DE_EDICAO)
+      .single();
+    expect(planejada?.status).toBe("planejada");
   });
 
   test("⚠️ mexer só no efetivo grava SEM diálogo — o limite não é da turma que já existe", async ({
@@ -324,7 +349,9 @@ test.describe("`FR-028` · editar a turma na própria ficha", () => {
     await page.locator('[data-slot="gravar-turma"]').click();
 
     await expect(dialogo(page), "salvar o efetivo abriu diálogo").toHaveCount(0);
-    await expect(page.locator("#turma-alunos")).toHaveValue("27", { timeout: 15_000 });
+    // ⚠️ Gravar volta à ficha com a confirmação (spec 016, FR-015.2), e o formulário é reaberto.
+    await esperarGravacaoDaTurma(page);
+    await expect(page.locator("#turma-alunos")).toHaveValue("27");
   });
 });
 
@@ -345,7 +372,21 @@ test.describe("`FR-028.1` · os avisos informam e não bloqueiam", () => {
 
     await page.locator("#turma-alunos").fill("13");
     await page.locator('[data-slot="gravar-turma"]').click();
-    await expect(page.locator("#turma-alunos")).toHaveValue("13", { timeout: 15_000 });
+    /*
+     * ⚠️ **O CURSO DESTA AMOSTRA ESTÁ NO LIMITE DE TURMAS DO ANO, e o diálogo do limite aparece** — é
+     *    aviso, não bloqueio, e confirmá-lo é o percurso de quem grava. ⚠️ **Até 17/10/2026 este caso
+     *    não o confirmava** e conferia o valor que ele mesmo tinha digitado no campo: passava SEM GRAVAR.
+     *    A espera pela confirmação da gravação (spec 016, FR-015.2) é que expôs isso.
+     */
+    await dialogo(page).getByRole("button", { name: "Salvar" }).click();
+    await esperarGravacaoDaTurma(page);
+    await expect(page.locator("#turma-alunos")).toHaveValue("13");
+    const { data } = await admin()
+      .from("turmas")
+      .select("alunos")
+      .eq("codigo", SEMEADO.turmaAtivaComTerminoPassado)
+      .single();
+    expect(data?.alunos, "a gravação não chegou ao banco").toBe(13);
   });
 
   test("⚠️ turma sem janela avisa a janela — e NÃO acusa incoerência de data", async ({ page }) => {
@@ -408,10 +449,12 @@ test.describe("`SC-011.5` · o Operador de escopo estreito trabalha dentro dele"
      *    editar a situação logo em seguida exige o clique. Este caso chega aqui por REDIRECIONAMENTO,
      *    e não por `entrar(…)`: foi o único que o ajuste em bloco não alcançou.
      */
-    await abrirEdicaoDaTurma(page);
-    await page.locator("#turma-situacao").selectOption("ativa");
-    await page.locator('[data-slot="gravar-turma"]').click();
-    await expect(page.locator("#turma-situacao")).toHaveValue("ativa", { timeout: 15_000 });
+    // ⚠️ Desde 17/10/2026 a situação se troca pelo botão do cabeçalho (spec 016, FR-015.4).
+    await trocarSituacaoPelaFicha(page, "Ativa");
+    await page.reload();
+    await expect(seloDaSituacao(page)).toContainText("Ativa");
+    const { data } = await admin().from("turmas").select("status").eq("codigo", codigo).single();
+    expect(data?.status).toBe("ativa");
   });
 });
 
@@ -441,7 +484,8 @@ test.describe("`FR-021.8` · encurtar a janela avisa qual vigência perde prote�
     expect((await dialogo(page).innerText()).match(/deixam de estar protegidas/g)?.length).toBe(1);
 
     await dialogo(page).getByRole("button", { name: "Salvar" }).click();
-    await expect(page.locator("#turma-termino")).toHaveValue("2026-04-30", { timeout: 15_000 });
+    await esperarGravacaoDaTurma(page);
+    await expect(page.locator("#turma-termino")).toHaveValue("2026-04-30");
 
     // A amostra volta ao estado que declara — o próximo caso não herda a janela encurtada.
     await page.locator("#turma-termino").fill("2026-06-30");

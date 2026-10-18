@@ -81,6 +81,7 @@ import {
   regimeDoBanco,
 } from "./consulta";
 import { QuadroDeAvisosDaTurma } from "./QuadroDeAvisosDaTurma";
+import { TrocarSituacao } from "./TrocarSituacao";
 
 /*
  * ⚠️ **O "HOJE" LOCAL SAIU DAQUI EM 04/10/2026.** Havia TRÊS fórmulas no repositório: esta cópia,
@@ -180,7 +181,7 @@ export default async function FichaDaTurma({
   ] = await Promise.all([
     supabase
       .from("cursos")
-      .select("codigo, nome_curso, limite_turmas_ano")
+      .select("codigo, nome_curso, limite_turmas_ano, status")
       .eq("id", cursoId)
       .maybeSingle(),
     supabase
@@ -495,13 +496,21 @@ export default async function FichaDaTurma({
         >
           <span className="flex items-center gap-2">
             <Rotulo>Situação</Rotulo>
-            <dd>
+            <dd className="flex items-center gap-2">
               <BadgeStatus
                 tom={TOM_DO_STATUS_DE_TURMA[turma.status as string] ?? "planejado"}
                 rotulo={
                   ROTULO_DO_STATUS_DE_TURMA[turma.status as string] ?? (turma.status as string)
                 }
               />
+              {/*
+                ⚠️ AO LADO DO SELO (spec 016, FR-015.1): até 17/10/2026 a situação só se trocava pelo
+                   campo de *"Editar turma"*, recolhido no fim da página. Segue `turmas/editar` e o
+                   curso em oferta, como *Nova turma*; o banco recusa de qualquer forma.
+              */}
+              {podeEditar && cursoRes.data?.status !== "inativo" ? (
+                <TrocarSituacao codigo={turma.codigo as string} atual={turma.status as string} />
+              ) : null}
             </dd>
           </span>
           <span className="flex items-center gap-2">
@@ -525,6 +534,21 @@ export default async function FichaDaTurma({
             <dd className="text-texto">{texto(turma.alunos) || "—"}</dd>
           </span>
         </dl>
+
+        {/*
+          ⚠️ A CONFIRMAÇÃO DA GRAVAÇÃO (spec 016, FR-015.2) vem pela URL, escrita por
+             `enderecoDaTurmaGravada`: até 17/10/2026 trocar a situação ou gravar a turma não dizia nada.
+        */}
+        {valores.gravada === "situacao" ? (
+          <p role="status" className="text-executado-tinta text-sm" data-slot="situacao-gravada">
+            Situação gravada:{" "}
+            {ROTULO_DO_STATUS_DE_TURMA[turma.status as string] ?? (turma.status as string)}.
+          </p>
+        ) : valores.gravada === "turma" ? (
+          <p role="status" className="text-executado-tinta text-sm" data-slot="turma-gravada">
+            Alterações da turma gravadas.
+          </p>
+        ) : null}
       </header>
 
       <QuadroDeAvisosDaTurma avisos={avisos} />

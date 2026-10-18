@@ -568,11 +568,54 @@ describe("`FR-025` / `FR-024` · as permissões novas, cada uma com o seu negati
       .eq("curso_id", CURSO_DO_ESCOPO)
       .limit(1)
       .single();
-    const { error } = await cliente("operador")
+    /*
+     * ⚠️ **`error` NULO NÃO PROVA QUE GRAVOU** (spec 016, T041; gotcha 4): um `UPDATE` barrado pela RLS
+     *    também volta sem erro, com zero linhas. Até 17/10/2026 este caso só olhava o `error` — e
+     *    passaria com a policy fechada. Agora ele pede a linha de volta e confere o valor no banco.
+     */
+    const { data: afetadas, error } = await cliente("operador")
       .from("turmas")
       .update({ status: "ativa" })
-      .eq("id", turma?.id as string);
+      .eq("id", turma?.id as string)
+      .select("id");
     expect(error, `o Operador não mudou o status da turma dele: ${error?.message}`).toBeNull();
+    expect(afetadas ?? [], "o UPDATE do Operador não alcançou a turma dele").toHaveLength(1);
+    const { data: depois } = await admin
+      .from("turmas")
+      .select("status")
+      .eq("id", turma?.id as string)
+      .single();
+    expect(depois?.status, "o status da turma do Operador não mudou no banco").toBe("ativa");
+  });
+
+  it("FR-015.1 da spec 016 · quem só LÊ turma não troca a situação — zero linhas, e o banco não muda", async () => {
+    /*
+     * ⚠️ O Encarregado de Orientação Pedagógica tem só `L` em turmas: é o perfil sem `turmas/editar`
+     *    desta suíte, e o botão *"Trocar situação"* não aparece para ele. A chamada direta à ação
+     *    chega ao banco como este `UPDATE` — barrado pelo `USING`, sem erro e com zero linhas.
+     */
+    const { data: turma } = await admin
+      .from("turmas")
+      .select("id, status")
+      .eq("curso_id", CURSO_DO_ESCOPO)
+      .limit(1)
+      .single();
+    const antes = turma?.status as string;
+    const nova = antes === "cancelada" ? "planejada" : "cancelada";
+
+    const { data: afetadas } = await cliente("encarregado_orientacao_pedagogica")
+      .from("turmas")
+      .update({ status: nova })
+      .eq("id", turma?.id as string)
+      .select("id");
+    expect(afetadas ?? [], "quem só lê turma alcançou a turma num UPDATE").toHaveLength(0);
+
+    const { data: depois } = await admin
+      .from("turmas")
+      .select("status")
+      .eq("id", turma?.id as string)
+      .single();
+    expect(depois?.status, "a situação mudou pelas mãos de quem só lê").toBe(antes);
   });
 
   // ------------------------------------------------------------------ N-2: fora do escopo

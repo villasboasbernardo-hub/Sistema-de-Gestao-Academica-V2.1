@@ -623,6 +623,20 @@ export const CONTRATO = {
         historico: "substitui",
         avisaServidor: false,
       },
+      /*
+       * ⚠️ **A CONFIRMAÇÃO DA GRAVAÇÃO MORA NA URL** (spec 016, FR-015.2; 17/10/2026), como o aviso de
+       * exclusão de conta: trocar a situação ou gravar a turma pode mudar o endereço (o código é
+       * regerado com o ano ou o rótulo) e remonta a ficha — uma mensagem em estado local morreria junto.
+       * Só a ficha a lê, e quem a escreve é `enderecoDaTurmaGravada`.
+       */
+      gravada: {
+        nome: "gravada",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: ["", "turma", "situacao"],
+        historico: "substitui",
+        avisaServidor: true,
+      },
     },
   },
   /*
