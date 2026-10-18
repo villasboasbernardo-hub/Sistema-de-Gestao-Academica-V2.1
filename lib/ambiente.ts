@@ -138,3 +138,50 @@ export function ambienteAtual(): Ambiente {
   const bruto = process.env.NEXT_PUBLIC_AMBIENTE?.trim();
   return bruto === "preview" || bruto === "producao" ? bruto : "local";
 }
+
+/**
+ * O ambiente **tal como foi declarado** — `null` quando a variável falta ou traz valor desconhecido.
+ *
+ * ⚠️ **NÃO É `ambienteAtual()` COM OUTRO NOME, e a diferença é o motivo de existir** (NQ-3 da spec
+ * 016, Bernardo Villas Boas, 17/10/2026). `ambienteAtual()` trata o ausente como `local`, que é o
+ * padrão seguro **para decidir comportamento**. Para **escrever na faixa** o mesmo padrão seria uma
+ * mentira: a Production sem a variável se anunciaria como *"ambiente local"*. Aqui, quem não declarou
+ * não ganha rótulo nenhum.
+ *
+ * ⚠️ Acesso **literal** a `process.env.NEXT_PUBLIC_AMBIENTE` **dentro** da função — a mesma regra de
+ * `necessariasNoNavegador()`: literal para o Next substituir no build, tardio para os testes medirem.
+ */
+export function ambienteDeclarado(): Ambiente | null {
+  const bruto = process.env.NEXT_PUBLIC_AMBIENTE?.trim();
+  return bruto === "local" || bruto === "preview" || bruto === "producao" ? bruto : null;
+}
+
+/**
+ * O texto da faixa Beta (FR-001.1 da spec 016, item 1.1 do plano de correções).
+ *
+ * > *"Sistema privado – Versão Beta – Esta é uma versão de testes do Sistema de Gestão Acadêmica"*
+ * > — Bernardo Villas Boas, 16/10/2026
+ */
+export const TEXTO_DA_FAIXA_BETA =
+  "Sistema privado – Versão Beta – Esta é uma versão de testes do Sistema de Gestão Acadêmica";
+
+const ACRESCIMO_DO_AMBIENTE: Record<Ambiente, string | null> = {
+  local: "ambiente local",
+  preview: "pré-visualização",
+  producao: null,
+};
+
+/**
+ * O texto inteiro: o Beta, o ambiente quando **declarado** como `local` ou `preview` (NQ-3), e o aviso
+ * de variável por preencher que a faixa já dava. ⚠️ **Uma faixa só** (Q-15): a de ambiente deixou de
+ * existir como faixa própria, e o que ela dizia virou acréscimo desta.
+ */
+export function textoDaFaixa(ambiente: Ambiente | null, variaveisFaltando: number): string {
+  const partes = [TEXTO_DA_FAIXA_BETA];
+  const acrescimo = ambiente === null ? null : ACRESCIMO_DO_AMBIENTE[ambiente];
+  if (acrescimo !== null) partes.push(acrescimo);
+  if (variaveisFaltando > 0) {
+    partes.push(`${variaveisFaltando} variável(is) de ambiente por preencher`);
+  }
+  return partes.join(" · ");
+}

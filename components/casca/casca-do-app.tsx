@@ -53,7 +53,12 @@ export function CascaDoApp({
   readonly children: React.ReactNode;
 }) {
   return (
-    <div data-slot="casca-do-app" className="flex min-h-dvh flex-col">
+    <div
+      data-slot="casca-do-app"
+      // ⚠️ A faixa Beta é fixa no topo (spec 016, 1.1): a casca ocupa a tela MENOS a faixa, senão toda
+      //    página curta ganharia uma rolagem de 28 px que não mostra nada.
+      className="flex min-h-[calc(100dvh-var(--altura-da-faixa))] flex-col"
+    >
       <a
         href={`#${ID_DO_CONTEUDO}`}
         className="bg-marca text-marca-contraste rounded-ciaara-sm focus-visible:ring-marca sr-only px-3 py-2 text-sm focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus-visible:ring-2"

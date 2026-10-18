@@ -13,5 +13,10 @@
  * significar **token**, não ausência de estilo.
  */
 export default function LayoutDeAutenticacao({ children }: { children: React.ReactNode }) {
-  return <div className="bg-fundo text-texto flex min-h-screen flex-col">{children}</div>;
+  return (
+    // ⚠️ A faixa Beta fica acima, no layout raiz (spec 016, 1.1): esta tela ocupa o resto.
+    <div className="bg-fundo text-texto flex min-h-[calc(100dvh-var(--altura-da-faixa))] flex-col">
+      {children}
+    </div>
+  );
 }
