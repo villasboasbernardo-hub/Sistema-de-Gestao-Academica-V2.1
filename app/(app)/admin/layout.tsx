@@ -12,55 +12,16 @@
  * alcance sem mexer no menu é o mesmo padrão que o `RF-CURSO-02` manda usar para Avaliações e
  * Relatório — a função é alcançada **pela tela de que ela faz parte**.
  *
- * ⚠️ **SEM MARCADOR DE CLIENTE.** A aba ativa é derivada do caminho, no servidor.
+ * ⚠️ **SEM MARCADOR DE CLIENTE.** As abas são a folha `AbasDaAdministracao.tsx`, que lê o caminho do
+ * navegador — até 17/10/2026 eram desenhadas aqui com o caminho da requisição, e o layout não é
+ * redesenhado ao trocar de aba por clique: a aba marcada ficava a de entrada (conferência do PR #67).
  */
-import { headers } from "next/headers";
-import Link from "next/link";
-import { cn } from "cn";
+import { AbasDaAdministracao } from "./AbasDaAdministracao";
 
-import { CABECALHO_DO_CAMINHO, caminhoOuRaiz } from "@/lib/navegacao/caminho";
-
-const ABAS = [
-  { rotulo: "Usuários", rota: "/admin/usuarios" },
-  { rotulo: "Permissões", rota: "/admin/permissoes" },
-  /*
-   * ⚠️ **SALAS ENTRA AQUI, E NÃO NO MENU LATERAL** (`FR-029`, 23/09/2026). É o mesmo motivo das
-   *    outras duas: Administração é entrada única, decidida na MENU-1, e a lista de salas é
-   *    parâmetro administrado — não um módulo do ensino. Sem esta aba ela seria alcançável só por
-   *    digitação, que é o que o `SC-003` proíbe.
-   */
-  { rotulo: "Salas", rota: "/admin/salas" },
-] as const;
-
-export default async function LayoutDaAdministracao({ children }: { children: React.ReactNode }) {
-  const caminho = caminhoOuRaiz((await headers()).get(CABECALHO_DO_CAMINHO));
-
+export default function LayoutDaAdministracao({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-4">
-      <nav aria-label="Administração" data-slot="abas-da-administracao">
-        <ul className="border-borda flex gap-1 border-b">
-          {ABAS.map((aba) => {
-            const ativa = caminho === aba.rota || caminho.startsWith(`${aba.rota}/`);
-            return (
-              <li key={aba.rota}>
-                <Link
-                  href={aba.rota}
-                  {...(ativa ? { "aria-current": "page" as const } : {})}
-                  className={cn(
-                    "-mb-px inline-block border-b-2 px-3 py-2 text-sm",
-                    "focus-visible:ring-marca focus-visible:ring-2 focus-visible:outline-none",
-                    ativa
-                      ? "border-marca text-texto font-medium"
-                      : "text-texto-suave border-transparent",
-                  )}
-                >
-                  {aba.rotulo}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      <AbasDaAdministracao />
       {children}
     </div>
   );

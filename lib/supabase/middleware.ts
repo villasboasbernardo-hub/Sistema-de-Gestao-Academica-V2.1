@@ -14,8 +14,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { CABECALHO_DO_CAMINHO } from "@/lib/navegacao/caminho";
-
 import { conferirAmbiente } from "@/lib/ambiente";
 
 /**
@@ -56,21 +54,23 @@ function ehRotaLivreNaTrocaObrigatoria(caminho: string): boolean {
 }
 
 /**
- * Os cabeçalhos da requisição **com o caminho junto**, para a casca poder marcar a entrada ativa
- * sem virar componente de cliente (`FR-016`).
+ * Os cabeçalhos da requisição, copiados para seguirem adiante com os cookies da sessão.
  *
  * ⚠️ ELE É MONTADO A CADA CHAMADA, E NÃO GUARDADO NUMA VARIÁVEL. `requisicao.cookies.set()` altera
  * o cabeçalho de cookie da própria requisição — copiar os cabeçalhos **antes** da renovação da
  * sessão mandaria adiante os cookies velhos, e a sessão renovada não chegaria à tela.
+ *
+ * ⚠️ **ATÉ 17/10/2026 ELE GRAVAVA TAMBÉM O CAMINHO** (`x-ciaara-caminho`), para a casca marcar a
+ * entrada ativa no servidor. O layout não é redesenhado na navegação por clique, e o ativo ficava
+ * preso à primeira página (conferência do PR #67): o caminho passou a ser lido no navegador, e o
+ * cabeçalho saiu sem consumidor. A cópia ficou, porque é ela que leva os cookies renovados.
  */
-function cabecalhosComCaminho(requisicao: NextRequest): Headers {
-  const cabecalhos = new Headers(requisicao.headers);
-  cabecalhos.set(CABECALHO_DO_CAMINHO, requisicao.nextUrl.pathname);
-  return cabecalhos;
+function cabecalhosDaRequisicao(requisicao: NextRequest): Headers {
+  return new Headers(requisicao.headers);
 }
 
 export async function renovarSessao(requisicao: NextRequest) {
-  let resposta = NextResponse.next({ request: { headers: cabecalhosComCaminho(requisicao) } });
+  let resposta = NextResponse.next({ request: { headers: cabecalhosDaRequisicao(requisicao) } });
   const caminho = requisicao.nextUrl.pathname;
 
   // ⚠️ SEM CONFIGURAÇÃO, A ROTA PROTEGIDA É NEGADA — e isto CUMPRE o RN-DEG-01, não o excetua.
@@ -103,7 +103,9 @@ export async function renovarSessao(requisicao: NextRequest) {
           for (const { name, value } of cookiesParaGravar) {
             requisicao.cookies.set(name, value);
           }
-          resposta = NextResponse.next({ request: { headers: cabecalhosComCaminho(requisicao) } });
+          resposta = NextResponse.next({
+            request: { headers: cabecalhosDaRequisicao(requisicao) },
+          });
           for (const { name, value, options } of cookiesParaGravar) {
             resposta.cookies.set(name, value, options);
           }

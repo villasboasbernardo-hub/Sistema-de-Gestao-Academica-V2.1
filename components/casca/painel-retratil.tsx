@@ -1,6 +1,10 @@
 /**
- * A lateral que recolhe — **o único marcador de cliente da navegação** (`FR-019`; `FR-001` a
- * `FR-008` e `FR-011` da spec 012).
+ * A lateral que recolhe — o marcador de cliente do **abrir, fechar e fixar** da navegação (`FR-019`;
+ * `FR-001` a `FR-008` e `FR-011` da spec 012).
+ *
+ * ⚠️ **ELE ERA O ÚNICO MARCADOR DA NAVEGAÇÃO ATÉ 17/10/2026.** Desde a conferência do PR #67, cada link
+ * do menu é `entrada-do-menu.tsx`, folha de cliente que marca o ativo pelo caminho do navegador — o
+ * caminho que o layout passava ficava preso à primeira página carregada.
  *
  * ⚠️ ELE EXISTE PARA SER PEQUENO. O marcador contamina toda a subárvore de importação: um deles na
  * casca manda **todas as telas** do sistema para o pacote do navegador. Separar o comportamento da

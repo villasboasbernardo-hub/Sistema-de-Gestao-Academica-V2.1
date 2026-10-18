@@ -50,6 +50,82 @@ test.describe("`SC-002` · depois de entrar, há para onde ir", () => {
     await expect(ativa).toHaveAttribute("data-entrada", "/admin/usuarios");
   });
 
+  test("⚠️ o ativo ACOMPANHA a navegação por clique — Turmas, Cursos, Disciplinas e Instrutores", async ({
+    page,
+  }) => {
+    /*
+     * ⚠️ **O DEFEITO QUE A CONFERÊNCIA DO PR #67 ACHOU (17/10/2026)**: só *Início* ficava marcado. O
+     *    caminho vinha do cabeçalho da requisição, lido no `layout` — e o App Router **não redesenha o
+     *    layout** na navegação por clique entre páginas filhas: o ativo ficava preso à primeira página
+     *    carregada. Os casos acima chegam por endereço, e por isso não o viam. Aqui, **nenhum `goto`**
+     *    depois do `entrar`: cada parada é um clique no menu, e em cada uma se confere o
+     *    `aria-current` e a cor — o fundo do ativo é o `--marca`, resolvido pelo próprio navegador.
+     */
+    await entrar(page, EMAIL, "/inicio");
+    const navegacao = page.getByRole("navigation", { name: "Navegação principal" });
+    const ativa = navegacao.locator('[aria-current="page"]');
+    await expect(ativa).toHaveAttribute("data-entrada", "/inicio");
+
+    const corDaMarca = await page.evaluate(() => {
+      const amostra = document.createElement("div");
+      amostra.style.backgroundColor = "var(--marca)";
+      document.body.appendChild(amostra);
+      const cor = getComputedStyle(amostra).backgroundColor;
+      amostra.remove();
+      return cor;
+    });
+
+    for (const [rotulo, rota] of [
+      ["Turmas", "/turmas"],
+      ["Cursos", "/cursos"],
+      ["Disciplinas", "/disciplinas"],
+      ["Instrutores", "/instrutores"],
+      ["Início", "/inicio"],
+    ] as const) {
+      await navegacao.getByRole("link", { name: rotulo, exact: true }).click();
+      await expect.poll(() => new URL(page.url()).pathname).toBe(rota);
+      await expect(ativa, `em ${rota}, o ativo é outro`).toHaveAttribute("data-entrada", rota);
+      await expect(ativa).toHaveCount(1);
+      await expect(ativa, `em ${rota}, o ativo não está com a cor da marca`).toHaveCSS(
+        "background-color",
+        corDaMarca,
+      );
+    }
+  });
+
+  test("⚠️ as abas da Administração e o menu acompanham a troca de aba por clique", async ({
+    page,
+  }) => {
+    /*
+     * ⚠️ **O MESMO DEFEITO, NAS ABAS DA ADMINISTRAÇÃO** (achado na conferência do PR #67): o layout de
+     *    `/admin` também decidia a aba ativa pelo caminho da requisição, e não é redesenhado ao trocar
+     *    de aba — a aba marcada ficava a de entrada. ⚠️ **E O MENU TEM DE SEGUIR NA ADMINISTRAÇÃO**: a
+     *    entrada aponta para `/admin/usuarios`, e sem `ativaSob` ela se apagava em Permissões e Salas.
+     */
+    await entrar(page, EMAIL, "/inicio");
+    const menu = page.getByRole("navigation", { name: "Navegação principal" });
+    const abas = page.getByRole("navigation", { name: "Administração" });
+    await menu.getByRole("link", { name: "Administração", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/admin/usuarios");
+
+    for (const [rotulo, rota] of [
+      ["Permissões", "/admin/permissoes"],
+      ["Salas", "/admin/salas"],
+      ["Usuários", "/admin/usuarios"],
+    ] as const) {
+      await abas.getByRole("link", { name: rotulo, exact: true }).click();
+      await expect.poll(() => new URL(page.url()).pathname).toBe(rota);
+      await expect(
+        abas.locator('[aria-current="page"]'),
+        `em ${rota}, a aba marcada é outra`,
+      ).toHaveText(rotulo);
+      await expect(
+        menu.locator('[aria-current="page"]'),
+        `em ${rota}, o menu não marca a Administração`,
+      ).toHaveAttribute("data-entrada", "/admin/usuarios");
+    }
+  });
+
   test("⚠️ o item ativo se DESTACA da lateral nos dois temas (spec 016, 1.2, `RF-DS-03`)", async ({
     page,
   }) => {

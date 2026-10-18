@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
 const PASTA = "components/casca";
 
 /**
- * Os **quatro** que podem levar marcador de cliente, e o que cada um justifica.
+ * Os **cinco** que podem levar marcador de cliente, e o que cada um justifica.
  *
  * ⚠️ `FocoAoTrocarDeRota` ENTROU DEPOIS DO CONTRATO, e a adição é declarada: ela nasceu de uma
  * medição — sem ela, navegar pelo menu deixava o foco preso na entrada clicada.
@@ -31,6 +31,12 @@ const PASTA = "components/casca";
  * Épico 3 **sem consumidor nenhum**, e quem entrava pelo preview não conseguia sair. Ele é folha de
  * cliente porque o menu abre, fecha e responde a teclado — e é arquivo PRÓPRIO justamente para que
  * o marcador não encoste em `cabecalho-do-app.tsx`, que envolve toda tela do sistema.
+ *
+ * ⚠️ `EntradaDoMenu` ENTROU EM 17/10/2026 (conferência do PR #67), e também por medição: o ativo do
+ * menu era decidido no servidor com o caminho que o layout lia da requisição, e o layout **não é
+ * redesenhado** na navegação por clique — o ativo ficava preso à primeira página carregada. O caminho
+ * sempre atual só existe no navegador (`usePathname`). Ela é arquivo próprio e pequeno para que o
+ * marcador não encoste em `navegacao-lateral.tsx`, cuja proibição continua nominal.
  */
 const COM_INTERACAO: Readonly<Record<string, string>> = {
   "painel-retratil.tsx":
@@ -39,6 +45,10 @@ const COM_INTERACAO: Readonly<Record<string, string>> = {
   "foco-ao-trocar-de-rota.tsx": "mover o foco ao trocar de rota — não existe no servidor",
   "seletor-de-tema.tsx": "escolher e lembrar o tema — leitura e escrita no navegador",
   "menu-do-avatar.tsx": "abrir o menu da conta e disparar a saída — interação e foco por teclado",
+  // Conferência do PR #67 (17/10/2026): o layout não é redesenhado na navegação por clique, e o ativo
+  // decidido no servidor ficava preso à primeira página. O caminho atual só existe no navegador.
+  "entrada-do-menu.tsx":
+    "marcar a entrada ativa pelo caminho do navegador (`usePathname`) — o do layout fica preso",
 };
 
 function arquivos(): { arquivo: string; codigo: string; bruto: string }[] {

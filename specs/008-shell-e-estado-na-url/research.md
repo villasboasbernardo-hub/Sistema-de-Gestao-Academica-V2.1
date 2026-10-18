@@ -170,6 +170,15 @@ aparece na checagem de tipos** — aparece no build, que é por que ele faz part
 ⚠️ **Marcar a entrada ativa no servidor tem uma consequência**, e é aceita: ela muda por navegação,
 não por interação. É exatamente o que se quer — a entrada ativa **é** a URL.
 
+> ⚠️ **EMENDA DE 17/10/2026** *(conferência do PR #67 da spec 016, por Bernardo Villas Boas)*: esta
+> decisão produziu um defeito medido — o caminho que o `layout` lia da requisição **ficava preso à
+> primeira página carregada**, porque o App Router não redesenha o layout na navegação por clique
+> entre páginas filhas (`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/layout.md:240`,
+> Next 16.3.3). Só *Início* ficava marcado. **A marcação passou para uma folha de cliente pequena,**
+> `components/casca/entrada-do-menu.tsx`, que lê o caminho do navegador (`usePathname`) e chama a
+> mesma regra, `entradaAtiva()`; as abas da Administração seguiram o mesmo caminho
+> (`app/(app)/admin/AbasDaAdministracao.tsx`). O texto acima fica como registro da decisão original.
+
 ---
 
 ## R-7 · Como a tabela densa passa a aceitar estado por fora sem quebrar quem já a usa

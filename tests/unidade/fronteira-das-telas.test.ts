@@ -154,6 +154,10 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/perfil/senha/FormularioDeSenhaNova.tsx":
     "trocar a própria senha, com a recusa em português",
   "app/(app)/admin/salas/AcoesDeSala.tsx": "desativar e reativar sala, com o diálogo das turmas",
+  // Conferência do PR #67 (17/10/2026): a aba ativa da Administração pelo caminho do navegador — o
+  // layout não é redesenhado ao trocar de aba, e o caminho que ele lia ficava preso.
+  "app/(app)/admin/AbasDaAdministracao.tsx":
+    "marcar a aba ativa da Administração pelo caminho do navegador (`usePathname`)",
 
   // ── Épico 5 (b), PR 3: a grade de disciplinas ──────────────────────────────────────────────
   // ⚠️ SÃO DUAS FOLHAS, e os painéis abaixo delas NÃO levam marcador: o `"use client"` marca a

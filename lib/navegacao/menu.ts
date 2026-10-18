@@ -77,6 +77,15 @@ export type EntradaDeMenu = {
   readonly disponivel: boolean;
   /** O épico que entrega a tela. Serve para a mensagem, e para ninguém esquecer de ligar a entrada. */
   readonly entregaEm: string;
+  /**
+   * O prefixo de caminho sob o qual a entrada fica ativa, **quando ele não é a própria rota**.
+   *
+   * ⚠️ **EXISTE POR CAUSA DA ADMINISTRAÇÃO** (conferência do PR #67, 17/10/2026): a entrada leva a
+   * `/admin/usuarios`, mas as telas dela são três — Usuários, Permissões e Salas —, e pelo prefixo da
+   * rota o menu se apagava nas outras duas. Enquanto o ativo ficava preso à primeira página carregada,
+   * isso não aparecia. Sem o campo, vale a própria `rota`.
+   */
+  readonly ativaSob?: string;
 };
 
 /**
@@ -176,6 +185,7 @@ export const MENU: readonly EntradaDeMenu[] = [
     icone: "administracao",
     disponivel: true,
     entregaEm: "Épico 3",
+    ativaSob: "/admin",
   },
 ];
 
@@ -183,15 +193,21 @@ export const MENU: readonly EntradaDeMenu[] = [
  * A entrada ativa, derivada do caminho.
  *
  * ⚠️ **A ENTRADA ATIVA É A URL, e essa é a frase inteira.** Ela muda por navegação, não por
- * interação — não há estado a guardar, não há o que sincronizar, e é por isso que o menu não precisa
- * de marcador de cliente para marcá-la.
+ * interação — não há estado a guardar nem o que sincronizar.
+ *
+ * ⚠️ **MAS QUEM CHAMA TEM DE LER O CAMINHO DO NAVEGADOR** (emenda de 17/10/2026, conferência do PR
+ * #67). Até ali ela era chamada no servidor, com o caminho que o `layout` lia da requisição — e o App
+ * Router não redesenha o layout na navegação por clique: o ativo ficava preso à primeira página
+ * carregada. Quem a chama agora é `components/casca/entrada-do-menu.tsx`, com `usePathname`; a regra
+ * continua sendo esta, e só esta.
  *
  * ⚠️ A comparação é por **prefixo de segmento**, e não por igualdade: `/cursos/C-Ap-HN` acende
  * "Cursos". Igualdade deixaria o menu apagado em toda tela de detalhe, e quem navega perderia a
  * referência de onde está justo quando ela é mais útil.
  */
 export function entradaAtiva(caminho: string): EntradaDeMenu | undefined {
-  const candidatas = MENU.filter((e) => caminho === e.rota || caminho.startsWith(`${e.rota}/`));
+  const base = (e: EntradaDeMenu) => e.ativaSob ?? e.rota;
+  const candidatas = MENU.filter((e) => caminho === base(e) || caminho.startsWith(`${base(e)}/`));
   // A mais específica ganha: `/admin/usuarios` vence `/admin`, se um dia as duas existirem.
-  return candidatas.sort((a, b) => b.rota.length - a.rota.length)[0];
+  return candidatas.sort((a, b) => base(b).length - base(a).length)[0];
 }
