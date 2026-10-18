@@ -12,14 +12,13 @@
  * um único lugar para ir, e a única forma de alcançar outra tela era digitar a URL. É o que a
  * História 3 da fatia (c) corrige, e é substituição, não acréscimo.
  */
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { CascaDoApp } from "@/components/casca/casca-do-app";
 import { encerrarSessao } from "@/lib/acoes/sessao";
 import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { CABECALHO_DO_CAMINHO, caminhoOuRaiz } from "@/lib/navegacao/caminho";
 import { COOKIE_DA_LATERAL, lateralFixadaNoCookie } from "@/lib/navegacao/lateral";
 import { enderecoDaFoto } from "@/lib/supabase/avatar";
 
@@ -31,17 +30,18 @@ export default async function LayoutDoApp({ children }: { children: React.ReactN
   // Ele não alcança dado nenhum pela RLS; aqui ele também não vê a casca.
   if (!usuario) redirect("/login");
 
-  // ⚠️ Quatro leituras INDEPENDENTES, em paralelo. Encadeá-las somaria as esperas em toda
+  // ⚠️ Três leituras INDEPENDENTES, em paralelo. Encadeá-las somaria as esperas em toda
   //    tela do sistema, e a convenção de código proíbe `await` em laço justamente por isso.
+  //    ⚠️ O CAMINHO SAIU DAQUI EM 17/10/2026 (conferência do PR #67): o layout não é redesenhado na
+  //       navegação por clique, e o caminho que ele lia da requisição deixava o ativo do menu preso
+  //       à primeira página. Quem lê o caminho agora é `components/casca/entrada-do-menu.tsx`.
   //    ⚠️ E a foto é a única que pode falhar sem consequência: `enderecoDaFoto` devolve `null`
   //       em qualquer erro, e a tela cai nas iniciais (`RN-DEG-01`).
-  const [permissoes, cabecalhos, armazemDeCookies, fotoUrl] = await Promise.all([
+  const [permissoes, armazemDeCookies, fotoUrl] = await Promise.all([
     permissoesDoPerfil(usuario.perfil),
-    headers(),
     cookies(),
     enderecoDaFoto(usuario.avatarCaminho),
   ]);
-  const caminho = caminhoOuRaiz(cabecalhos.get(CABECALHO_DO_CAMINHO));
 
   /*
    * ⚠️ **O ESTADO DA LATERAL É DECIDIDO AQUI, NO SERVIDOR, E ISSO É O QUE ELIMINA O FLASH**
@@ -49,7 +49,8 @@ export default async function LayoutDoApp({ children }: { children: React.ReactN
    *    navegador, a tela abriria recolhida e **saltaria** para expandida depois da hidratação.
    *    ⚠️ **Não é o padrão do tema**, e a diferença é deliberada: o tema vive em `localStorage` e se
    *       corrige com um script antes da pintura — o servidor não sabe qual é. Aqui ele sabe, porque
-   *       cookie viaja na requisição. É o mesmo gesto do cabeçalho do caminho, duas linhas acima.
+   *       cookie viaja na requisição — e o estado é só o INICIAL: depois do primeiro desenho quem
+   *       manda é a folha, então o layout não redesenhar na navegação não o deixa preso.
    */
   const lateralFixada = lateralFixadaNoCookie(armazemDeCookies.get(COOKIE_DA_LATERAL)?.value);
 
@@ -62,7 +63,6 @@ export default async function LayoutDoApp({ children }: { children: React.ReactN
         nome={usuario.nomeExibicao ?? usuario.nome}
         email={usuario.email}
         perfil={usuario.perfil}
-        caminho={caminho}
         lateralFixada={lateralFixada}
         fotoUrl={fotoUrl}
         aoSair={encerrarSessao}

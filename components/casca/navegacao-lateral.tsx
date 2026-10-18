@@ -2,10 +2,14 @@
  * O menu lateral (`RF-NAV-02`, `FR-017`, `FR-019`, `FR-021`; `FR-001` a `FR-009` da spec 012).
  *
  * ⚠️ **SEM MARCADOR DE CLIENTE, E ISSO É COBRADO NOMINALMENTE** por
- * `tests/unidade/fronteira-casca.test.ts`. A entrada ativa é derivada do caminho, no servidor: ela
- * muda por navegação, não por interação — **a entrada ativa é a URL**. Quem abre, fecha, aponta e
- * fixa é `painel-retratil.tsx`, a folha de cliente que já existia; este arquivo só **monta a lista**
- * e a entrega como conteúdo dela.
+ * `tests/unidade/fronteira-casca.test.ts`. Quem abre, fecha, aponta e fixa é `painel-retratil.tsx`;
+ * este arquivo só **monta a lista** e a entrega como conteúdo dela.
+ *
+ * ⚠️ **O ATIVO SAIU DAQUI EM 17/10/2026** (conferência do PR #67). Ele era derivado do caminho no
+ * servidor, recebido do `layout` — e o layout não é redesenhado na navegação por clique, então o
+ * ativo ficava preso à primeira página carregada. Cada link agora é `EntradaDoMenu`, folha de cliente
+ * que lê o caminho do navegador e chama a mesma regra, `entradaAtiva()`. **A entrada ativa continua
+ * sendo a URL**; mudou de onde ela é lida.
  *
  * ⚠️ **ESCONDER ENTRADA NÃO PROTEGE NADA** (Princípio XI). Quem nega acesso é o banco, ainda que a
  * pessoa digite a URL. O menu é cortesia.
@@ -22,12 +26,12 @@
  * tira o elemento do fluxo, e devolvê-lo no `:hover` com `not-sr-only` briga com o `truncate` e
  * reflui a linha inteira a cada passada do mouse.
  */
-import Link from "next/link";
 import { cn } from "cn";
 
+import { EntradaDoMenu } from "@/components/casca/entrada-do-menu";
 import { IconeDoMenu } from "@/components/casca/icones-do-menu";
 import { PainelRetratil } from "@/components/casca/painel-retratil";
-import { entradaAtiva, MENU } from "@/lib/navegacao/menu";
+import { MENU } from "@/lib/navegacao/menu";
 
 const ID_DO_PAINEL = "navegacao-principal";
 
@@ -59,21 +63,11 @@ const ROTULO = cn(
   "lg:group-data-[fixada=true]:opacity-100",
 );
 
-export function NavegacaoLateral({
-  caminho,
-  fixada,
-}: {
-  readonly caminho: string;
-  readonly fixada: boolean;
-}) {
-  const ativa = entradaAtiva(caminho);
-
+export function NavegacaoLateral({ fixada }: { readonly fixada: boolean }) {
   return (
     <PainelRetratil idDoPainel={ID_DO_PAINEL} fixadaInicial={fixada}>
       <ul className="flex flex-col gap-0.5 p-2">
         {MENU.map((entrada) => {
-          const estaAtiva = ativa?.rota === entrada.rota;
-
           if (!entrada.disponivel) {
             /*
              * ⚠️ A ENTRADA QUE AINDA NÃO TEM TELA APARECE, E DIZ QUE NÃO TEM. Um menu que cresce
@@ -101,21 +95,11 @@ export function NavegacaoLateral({
 
           return (
             <li key={entrada.rota}>
-              <Link
-                href={entrada.rota}
-                data-entrada={entrada.rota}
-                {...(estaAtiva ? { "aria-current": "page" as const } : {})}
-                className={cn(
-                  "rounded-ciaara-sm flex items-center gap-2 border-l-2 px-3 py-2 text-sm",
-                  "hover:bg-marca-suave focus-visible:ring-marca focus-visible:ring-2 focus-visible:outline-none",
-                  estaAtiva
-                    ? "border-marca bg-marca-suave text-texto font-medium"
-                    : "text-texto-suave border-transparent",
-                )}
-              >
+              {/* ⚠️ O ativo é decidido na folha, pelo caminho do navegador — ver o cabeçalho. */}
+              <EntradaDoMenu rota={entrada.rota}>
                 <IconeDoMenu nome={entrada.icone} />
                 <span className={ROTULO}>{entrada.rotulo}</span>
-              </Link>
+              </EntradaDoMenu>
             </li>
           );
         })}

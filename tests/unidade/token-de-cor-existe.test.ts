@@ -101,6 +101,8 @@ const NAO_E_COR: ReadonlySet<string> = new Set([
   "pretty",
   "nowrap",
   "wrap",
+  // corte de texto com reticências (`text-ellipsis`) — a faixa Beta numa linha (spec 016, item 1.1)
+  "ellipsis",
   // sombra do tema (escala própria, não cor)
   "ciaara-1",
   "ciaara-2",

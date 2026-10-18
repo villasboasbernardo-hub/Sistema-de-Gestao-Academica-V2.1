@@ -27,7 +27,11 @@ import {
 } from "@/lib/acoes/traducao-de-recusas";
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
-import { esquemaDeTurma } from "@/lib/validacao/turma";
+import {
+  esquemaDaTrocaDeSituacao,
+  esquemaDeEdicaoDaTurma,
+  esquemaDeTurma,
+} from "@/lib/validacao/turma";
 
 export type ResultadoDeTurma =
   | { readonly ok: true; readonly codigo: string; readonly destino: string }
@@ -116,12 +120,17 @@ export async function criarTurma(cursoId: string, entrada: unknown): Promise<Res
   return { ok: true, codigo, destino: enderecoDaTurma(codigo) };
 }
 
-/** Edita a turma. **Sem `codigo`**, e pedindo a linha de volta. */
+/**
+ * Edita a turma. **Sem `codigo`**, e pedindo a linha de volta.
+ *
+ * ⚠️ **E SEM A SITUAÇÃO desde 17/10/2026** (spec 016, FR-015.4): ela se troca só por
+ * `trocarSituacaoDaTurma`, e o esquema da edição a descarta se vier no corpo.
+ */
 export async function editarTurma(
   codigoAtual: string,
   entrada: unknown,
 ): Promise<ResultadoDeTurma> {
-  const conferido = esquemaDeTurma.safeParse(entrada);
+  const conferido = esquemaDeEdicaoDaTurma.safeParse(entrada);
   if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
 
   const supabase = await criarClienteDeServidor();
@@ -164,5 +173,51 @@ export async function editarTurma(
   revalidatePath("/cursos");
   revalidatePath(enderecoDaTurma(codigoAtual));
   if (codigo !== codigoAtual) revalidatePath(enderecoDaTurma(codigo));
+  return { ok: true, codigo, destino: enderecoDaTurma(codigo) };
+}
+
+/**
+ * Troca a situação da turma — o botão *"Trocar situação"* da ficha (spec 016, FR-015.1).
+ *
+ * > *"Ao lado do selo de Situação, um botão «Trocar situação» que abre um diálogo só com a situação e
+ * > grava por uma Server Action própria — só o código da turma e a situação."* — Q-14, Bernardo Villas
+ * > Boas, 17/10/2026
+ *
+ * ⚠️ **É O ÚNICO CAMINHO DA SITUAÇÃO NA EDIÇÃO** (FR-015.4): o formulário da turma não a manda mais. É
+ * o diálogo que o Bloco 2 vai estender com a observação por troca de status (D-COR-4).
+ *
+ * ⚠️ **ZERO LINHAS É RECUSA**: o `UPDATE` barrado pela RLS volta sem erro (gotcha 4), e por isso a
+ * linha é pedida de volta e a ausência dela vira a mesma recusa por alcance da edição.
+ */
+export async function trocarSituacaoDaTurma(entrada: unknown): Promise<ResultadoDeTurma> {
+  const conferido = esquemaDaTrocaDeSituacao.safeParse(entrada);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  const { codigo, status } = conferido.data;
+
+  const supabase = await criarClienteDeServidor();
+  const { data: atual } = await supabase
+    .from("turmas")
+    .select("curso_id")
+    .eq("codigo", codigo)
+    .maybeSingle();
+  const cursoId = (atual?.curso_id as string | undefined) ?? "";
+
+  const { data, error } = await supabase
+    .from("turmas")
+    .update({ status })
+    .eq("codigo", codigo)
+    .select("codigo");
+
+  if (error) {
+    const contexto = cursoId ? await contextoDoCurso(cursoId, "alterações") : {};
+    return falha(traduzirRecusa(error as ErroDoBanco, contexto));
+  }
+  if (!data || data.length === 0) {
+    return falha(recusaPorAlcance(cursoId ? await contextoDoCurso(cursoId, "alterações") : {}));
+  }
+
+  revalidatePath("/cursos");
+  revalidatePath("/turmas");
+  revalidatePath(enderecoDaTurma(codigo));
   return { ok: true, codigo, destino: enderecoDaTurma(codigo) };
 }

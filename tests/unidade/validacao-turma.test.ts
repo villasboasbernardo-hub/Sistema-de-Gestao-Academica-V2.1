@@ -6,7 +6,11 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { esquemaDeTurma } from "@/lib/validacao/turma";
+import {
+  esquemaDaTrocaDeSituacao,
+  esquemaDeEdicaoDaTurma,
+  esquemaDeTurma,
+} from "@/lib/validacao/turma";
 
 const TURMA = {
   ano_letivo: 2026,
@@ -192,5 +196,70 @@ describe("`D-DSA-2` · a etapa presencial: as duas pontas ou nenhuma, dentro do 
       expect(r.data.inicio_etapa_presencial).toBeNull();
       expect(r.data.termino_etapa_presencial).toBeNull();
     }
+  });
+});
+
+/*
+ * ⚠️ **A SITUAÇÃO SE TROCA POR UM CAMINHO SÓ desde 17/10/2026** (spec 016, FR-015.4; NQ-2, Bernardo
+ *    Villas Boas): na **criação** o campo continua; na **edição** ele sai, e quem troca é o botão
+ *    *"Trocar situação"*, com a ação e o esquema próprios. É o diálogo que o Bloco 2 vai estender com a
+ *    observação (D-COR-4).
+ */
+describe("`FR-015.4` da spec 016 · a situação tem um caminho só", () => {
+  const SEM_STATUS = Object.fromEntries(
+    Object.entries(TURMA).filter(([campo]) => campo !== "status"),
+  );
+
+  it("a CRIAÇÃO continua exigindo a situação", () => {
+    expect(esquemaDeTurma.safeParse(SEM_STATUS).success).toBe(false);
+    expect(esquemaDeTurma.safeParse(TURMA).success).toBe(true);
+  });
+
+  it("a EDIÇÃO passa sem a situação, e não a deixa entrar nem se vier no corpo", () => {
+    const sem = esquemaDeEdicaoDaTurma.safeParse(SEM_STATUS);
+    expect(sem.success).toBe(true);
+    const com = esquemaDeEdicaoDaTurma.safeParse({ ...TURMA, status: "cancelada" });
+    expect(com.success).toBe(true);
+    if (com.success) expect("status" in com.data, "a edição deixou a situação entrar").toBe(false);
+  });
+
+  it("a EDIÇÃO mantém as regras da janela e da etapa presencial", () => {
+    expect(
+      esquemaDeEdicaoDaTurma.safeParse({
+        ...SEM_STATUS,
+        data_inicio: "2026-06-30",
+        data_termino: "2026-02-02",
+      }).success,
+    ).toBe(false);
+    expect(
+      esquemaDeEdicaoDaTurma.safeParse({
+        ...SEM_STATUS,
+        modalidade: "semipresencial",
+        inicio_etapa_presencial: "2026-03-01",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("a TROCA aceita o código e uma das quatro situações — e só isso entra", () => {
+    for (const s of ["planejada", "ativa", "concluida", "cancelada"]) {
+      expect(
+        esquemaDaTrocaDeSituacao.safeParse({ codigo: "C-Ap-FR 2026", status: s }).success,
+        s,
+      ).toBe(true);
+    }
+    expect(
+      esquemaDaTrocaDeSituacao.safeParse({ codigo: "C-Ap-FR 2026", status: "arquivada" }).success,
+    ).toBe(false);
+    expect(esquemaDaTrocaDeSituacao.safeParse({ codigo: "  ", status: "ativa" }).success).toBe(
+      false,
+    );
+    const r = esquemaDaTrocaDeSituacao.safeParse({
+      codigo: "C-Ap-FR 2026",
+      status: "ativa",
+      alunos: 99,
+      data_termino: "2026-01-01",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(Object.keys(r.data).sort()).toEqual(["codigo", "status"]);
   });
 });

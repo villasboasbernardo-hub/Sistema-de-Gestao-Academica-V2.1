@@ -4,7 +4,8 @@
  * ⚠️ **SEM MARCADOR DE CLIENTE, E ESSA É A PROPRIEDADE MAIS CARA DESTE ARQUIVO.** Ele envolve toda
  * tela do sistema: um `"use client"` aqui mandaria o catálogo inteiro para o pacote do navegador, e
  * o erro **não aparece na checagem de tipos** — aparece no build, que é por que o build faz parte da
- * verificação local. O único cliente da casca é o abre-e-fecha do menu, em folha própria.
+ * verificação local. Cada comportamento de navegador da casca mora em folha própria — a lista
+ * fechada delas, com o motivo de cada uma, é `tests/unidade/fronteira-casca.test.ts`.
  *
  * ⚠️ **A CASCA ENQUADRA.** Não busca dado de negócio, não decide regra, não escolhe cor. Usuário e
  * permissões chegam prontos do layout.
@@ -30,7 +31,6 @@ export function CascaDoApp({
   nome,
   email,
   perfil,
-  caminho,
   lateralFixada,
   fotoUrl,
   aoSair,
@@ -39,7 +39,6 @@ export function CascaDoApp({
   readonly nome: string;
   readonly email: string;
   readonly perfil: string;
-  readonly caminho: string;
   /**
    * A lateral está fixada expandida? **Chega pronta do layout**, que a leu do cookie.
    *
@@ -53,7 +52,12 @@ export function CascaDoApp({
   readonly children: React.ReactNode;
 }) {
   return (
-    <div data-slot="casca-do-app" className="flex min-h-dvh flex-col">
+    <div
+      data-slot="casca-do-app"
+      // ⚠️ A faixa Beta é fixa no topo (spec 016, 1.1): a casca ocupa a tela MENOS a faixa, senão toda
+      //    página curta ganharia uma rolagem de 28 px que não mostra nada.
+      className="flex min-h-[calc(100dvh-var(--altura-da-faixa))] flex-col"
+    >
       <a
         href={`#${ID_DO_CONTEUDO}`}
         className="bg-marca text-marca-contraste rounded-ciaara-sm focus-visible:ring-marca sr-only px-3 py-2 text-sm focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus-visible:ring-2"
@@ -66,7 +70,7 @@ export function CascaDoApp({
       <CabecalhoDoApp nome={nome} email={email} perfil={perfil} fotoUrl={fotoUrl} aoSair={aoSair} />
 
       <div className="flex flex-1 flex-col lg:flex-row">
-        <NavegacaoLateral caminho={caminho} fixada={lateralFixada} />
+        <NavegacaoLateral fixada={lateralFixada} />
         {/*
           ⚠️ **`min-w-0` NO `<main>` É O QUE IMPEDE A PÁGINA DE ROLAR LATERALMENTE** (`RNF-COMP-01`),
              e a falta dele foi medida em 05/10/2026, na grade do DSA: um item de flex **não encolhe

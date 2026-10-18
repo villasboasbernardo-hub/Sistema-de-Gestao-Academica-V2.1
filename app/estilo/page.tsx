@@ -15,8 +15,10 @@
 import {
   AmostraAlertaEteto,
   AmostraAvisosRecolhiveis,
+  AmostraBarraDeAcoes,
   AmostraBotaoLimparFiltros,
   AmostraCampo,
+  AmostraCampoDeSenha,
   AmostraDialogoConfirmacao,
   AmostraBarraDeProgresso,
   AmostraEmblemasDeStatus,
@@ -354,6 +356,14 @@ export default function Vitrine() {
 
       <Secao titulo="Limpar filtros — padrão de toda tela que filtra; some quando não há o que limpar">
         <AmostraBotaoLimparFiltros />
+      </Secao>
+
+      <Secao titulo="Campo de senha — o olho mostra e oculta o que se digitou">
+        <AmostraCampoDeSenha />
+      </Secao>
+
+      <Secao titulo="Barra de ações — os verbos da ficha numa linha, do mesmo tamanho">
+        <AmostraBarraDeAcoes />
       </Secao>
 
       <Secao titulo="Diálogo de confirmação — a consequência, que neste sistema nunca é perda">

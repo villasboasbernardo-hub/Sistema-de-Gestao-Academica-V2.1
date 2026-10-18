@@ -6,6 +6,9 @@
  * ⚠️ **INATIVA CONTINUA NA LISTA** (regra 4), com *Reativar* — sumir da tela seria exclusão com outro nome.
  * ⚠️ **PASSAR DA CH É AVISO** (FR-031, `RN-DEG-02`): grava e avisa.
  * ⚠️ O tempo vazio é *«tempo de avaliação não definido»* — o mesmo texto da ficha da turma.
+ * ⚠️ **ABRE EM LEITURA desde 17/10/2026** (spec 016, FR-010.3; Q-13): cada item é texto, com **Editar**
+ * abrindo os campos só daquele item, e a avaliação nova fica atrás de um botão — o padrão das UEs
+ * (FR-007.1). Qual item está aberto é estado efêmero, e mora no componente.
  */
 import * as React from "react";
 
@@ -30,11 +33,14 @@ export function PainelDeAvaliacoesDoCurriculo({
   const [erro, setErro] = React.useState<string | null>(null);
   const [mensagem, setMensagem] = React.useState<string | null>(null);
   const [ocupado, setOcupado] = React.useState(false);
+  /** O item cujos campos estão abertos — um por vez. */
+  const [editando, setEditando] = React.useState<string | null>(null);
+  const [acrescentando, setAcrescentando] = React.useState(false);
 
   async function executar(
     acao: () => Promise<{ ok: boolean; erro?: string; aviso?: string }>,
     feito: string,
-  ) {
+  ): Promise<boolean> {
     setErro(null);
     setMensagem(null);
     setOcupado(true);
@@ -47,6 +53,7 @@ export function PainelDeAvaliacoesDoCurriculo({
       );
     } else setErro(r.erro ?? "Não foi possível concluir.");
     setOcupado(false);
+    return r.ok;
   }
 
   const vazio = (n: FormDataEntryValue | null) => (n === null || n === "" ? undefined : String(n));
@@ -83,69 +90,115 @@ export function PainelDeAvaliacoesDoCurriculo({
                 {i.origemItem === "arbitrado" ? " · arbitrado pela Divisão" : ""}
                 {i.ativo ? "" : " · inativa"}
               </span>
-              {podeEditar ? (
-                <>
-                  <form
-                    className="inline-flex items-center gap-1 text-xs"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const f = new FormData(e.currentTarget);
-                      void executar(
-                        () =>
-                          salvarItemDoCurriculo({
-                            itemId: i.id,
-                            disciplinaId,
-                            instrumento: i.instrumento,
-                            taAplicacao: vazio(f.get("aplicacao")),
-                            taVista: vazio(f.get("vista")),
-                          }),
-                        `${i.rotulo} gravada.`,
-                      );
-                    }}
-                  >
-                    <Input
-                      name="aplicacao"
-                      type="number"
-                      min={0}
-                      defaultValue={i.taAplicacao ?? ""}
-                      aria-label={`TA de aplicação de ${i.rotulo}`}
-                      className="h-7 w-16"
-                    />
-                    <Input
-                      name="vista"
-                      type="number"
-                      min={0}
-                      defaultValue={i.taVista ?? ""}
-                      aria-label={`TA de vista de ${i.rotulo}`}
-                      className="h-7 w-16"
-                    />
-                    <Button type="submit" size="sm" variant="outline" disabled={ocupado}>
-                      Gravar
-                    </Button>
-                  </form>
+              {podeEditar && editando === i.id ? (
+                <form
+                  className="inline-flex items-center gap-1 text-xs"
+                  data-slot="formulario-do-item"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    void executar(
+                      () =>
+                        salvarItemDoCurriculo({
+                          itemId: i.id,
+                          disciplinaId,
+                          instrumento: i.instrumento,
+                          taAplicacao: vazio(f.get("aplicacao")),
+                          taVista: vazio(f.get("vista")),
+                        }),
+                      `${i.rotulo} gravada.`,
+                    ).then((ok) => {
+                      if (ok) setEditando(null);
+                    });
+                  }}
+                >
+                  <Input
+                    name="aplicacao"
+                    type="number"
+                    min={0}
+                    defaultValue={i.taAplicacao ?? ""}
+                    aria-label={`TA de aplicação de ${i.rotulo}`}
+                    className="h-7 w-16"
+                  />
+                  <Input
+                    name="vista"
+                    type="number"
+                    min={0}
+                    defaultValue={i.taVista ?? ""}
+                    aria-label={`TA de vista de ${i.rotulo}`}
+                    className="h-7 w-16"
+                  />
+                  <Button type="submit" size="sm" disabled={ocupado} data-slot="gravar-item">
+                    Gravar
+                  </Button>
                   <Button
                     type="button"
                     size="sm"
                     variant="ghost"
                     disabled={ocupado}
-                    data-acao={i.ativo ? "inativar-item" : "reativar-item"}
-                    onClick={() =>
-                      void executar(
-                        () => mudarSituacaoDoItem({ itemId: i.id, ativo: !i.ativo }),
-                        i.ativo ? `${i.rotulo} inativada.` : `${i.rotulo} reativada.`,
-                      )
-                    }
+                    onClick={() => setEditando(null)}
                   >
-                    {i.ativo ? "Inativar" : "Reativar"}
+                    Cancelar
                   </Button>
-                </>
+                </form>
+              ) : null}
+              {podeEditar && editando !== i.id ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={ocupado}
+                  data-slot="editar-avaliacao-do-curriculo"
+                  aria-label={`Editar ${i.rotulo}`}
+                  onClick={() => {
+                    setAcrescentando(false);
+                    setEditando(i.id);
+                  }}
+                >
+                  Editar
+                </Button>
+              ) : null}
+              {podeEditar ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={ocupado}
+                  data-acao={i.ativo ? "inativar-item" : "reativar-item"}
+                  onClick={() =>
+                    void executar(
+                      () => mudarSituacaoDoItem({ itemId: i.id, ativo: !i.ativo }),
+                      i.ativo ? `${i.rotulo} inativada.` : `${i.rotulo} reativada.`,
+                    )
+                  }
+                >
+                  {i.ativo ? "Inativar" : "Reativar"}
+                </Button>
               ) : null}
             </li>
           ))}
         </ul>
       )}
 
-      {podeEditar ? (
+      {podeEditar && !acrescentando ? (
+        <div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={ocupado}
+            data-slot="acrescentar-avaliacao-do-curriculo"
+            onClick={() => {
+              setEditando(null);
+              setAcrescentando(true);
+            }}
+          >
+            Acrescentar avaliação
+          </Button>
+        </div>
+      ) : null}
+
+      {podeEditar && acrescentando ? (
         <form
           className="flex flex-wrap items-end gap-2 text-sm"
           data-slot="nova-avaliacao-do-curriculo"
@@ -164,7 +217,9 @@ export function PainelDeAvaliacoesDoCurriculo({
                   fontePagina: vazio(f.get("pagina")),
                 }),
               "Avaliação do currículo acrescentada.",
-            ).then(() => formulario.reset());
+            ).then((ok) => {
+              if (ok) setAcrescentando(false);
+            });
           }}
         >
           <div className="flex flex-col gap-1">
@@ -218,6 +273,15 @@ export function PainelDeAvaliacoesDoCurriculo({
           </div>
           <Button type="submit" size="sm" disabled={ocupado}>
             Acrescentar
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={ocupado}
+            onClick={() => setAcrescentando(false)}
+          >
+            Cancelar
           </Button>
         </form>
       ) : null}

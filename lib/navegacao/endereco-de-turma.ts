@@ -50,6 +50,15 @@ export function enderecoDaTurma(codigo: string): string {
 }
 
 /**
+ * A ficha da turma **com a confirmação da gravação** — o `?gravada=` do contrato (spec 016, FR-015.2).
+ *
+ * @example enderecoDaTurmaGravada("C-Ap-FR 2026", "situacao") → "/turmas/C-Ap-FR%202026?gravada=situacao"
+ */
+export function enderecoDaTurmaGravada(codigo: string, oQue: "turma" | "situacao"): string {
+  return `${enderecoDaTurma(codigo)}?gravada=${oQue}`;
+}
+
+/**
  * O padrão de rota da ficha — para `revalidatePath(ROTA_DA_FICHA_DA_TURMA, "page")`.
  *
  * ⚠️ **ELE MORA AQUI PORQUE A GUARDA COBRA, e a guarda está certa:** `endereco-de-turma-unico.test.ts`

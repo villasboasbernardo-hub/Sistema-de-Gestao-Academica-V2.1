@@ -80,7 +80,7 @@ export type Coluna<T> = ColunaBase<T> &
     | { readonly ordenavel: true; readonly valor: (linha: T) => string | number }
   );
 
-export type TabelaDensaProps<T> = {
+type PropsComuns<T> = {
   readonly linhas: readonly T[];
   readonly colunas: readonly Coluna<T>[];
   readonly chaveLinha: (linha: T) => string;
@@ -88,7 +88,6 @@ export type TabelaDensaProps<T> = {
   readonly densidade?: Densidade;
   /** Liga o campo de busca textual sobre as colunas que declaram `valor`. */
   readonly comBusca?: boolean;
-  readonly aoAtivarLinha?: (linha: T) => void;
   readonly motivoDoVazio?: MotivoDoVazio;
   readonly className?: string;
 
@@ -105,7 +104,30 @@ export type TabelaDensaProps<T> = {
   /** O filtro textual, vindo de fora. Mesma regra: a presença decide quem manda. */
   readonly busca?: string;
   readonly aoBuscar?: (proxima: string) => void;
+};
 
+/**
+ * Tabela **sem** detalhe: ativar a linha (`Enter`, `Espaço`) chama `aoAtivarLinha` — nas telas de
+ * hoje, para NAVEGAR (a lista de turmas, a de instrutores). O clique não ativa: ele só move o foco.
+ */
+type SemDetalhe<T> = {
+  readonly aoAtivarLinha?: (linha: T) => void;
+  readonly detalhe?: never;
+  readonly abertas?: never;
+  readonly aoAlternarLinha?: never;
+};
+
+/**
+ * Tabela **com** detalhe: a linha abre e fecha.
+ *
+ * ⚠️ **QUEM DECIDE ABRIR OU FECHAR É A TABELA, PELO MESMO `abertas` QUE ELA DESENHA** (conferência do
+ * PR #67, 17/10/2026). Até ali ela entregava a linha a um `aoAtivarLinha` e cada tela recalculava o
+ * "está aberta?" de uma fonte própria — e em `/disciplinas` essa fonte era a cópia do servidor, que o
+ * parâmetro visual `aberta` não refaz: o segundo clique gravava o mesmo código, e a linha não fechava.
+ * Agora a tela recebe `aoAlternarLinha(linha, abrir)` e só obedece. ⚠️ **E O TIPO EXIGE O TRIO**:
+ * detalhe sem `abertas` ou sem quem alterne não compila, como coluna `ordenavel` sem `valor`.
+ */
+type ComDetalhe<T> = {
   /**
    * O detalhe de uma linha expandida (fatia (b) do Épico 5, 29/09/2026).
    *
@@ -124,10 +146,15 @@ export type TabelaDensaProps<T> = {
    * primeira frase do contrato de teclado — *"`Tab` entra na grade e sai dela em um passo"* —, que é
    * exatamente o defeito que o cabeçalho ordenável produziu na fatia (b) do Épico 4.
    */
-  readonly detalhe?: (linha: T) => React.ReactNode;
+  readonly detalhe: (linha: T) => React.ReactNode;
   /** As chaves das linhas expandidas. Vazio = nenhuma. */
-  readonly abertas?: readonly string[];
+  readonly abertas: readonly string[];
+  /** Abrir (`true`) ou fechar (`false`) a linha — clique, `Enter` e `Espaço` chegam aqui. */
+  readonly aoAlternarLinha: (linha: T, abrir: boolean) => void;
+  readonly aoAtivarLinha?: never;
 };
+
+export type TabelaDensaProps<T> = PropsComuns<T> & (SemDetalhe<T> | ComDetalhe<T>);
 
 const ALINHAMENTO = {
   inicio: "text-left",
@@ -158,6 +185,7 @@ export function TabelaDensa<T>(props: TabelaDensaProps<T>) {
     className,
     detalhe,
     abertas,
+    aoAlternarLinha,
   } = props;
 
   /*
@@ -249,7 +277,16 @@ export function TabelaDensa<T>(props: TabelaDensaProps<T>) {
       return;
     }
     const alvo = visiveis[linha - 1];
-    if (alvo !== undefined) aoAtivarLinha?.(alvo);
+    if (alvo !== undefined) acionarLinha(alvo);
+  }
+
+  /** Clique (com detalhe) e `Enter`/`Espaço` chegam aqui — o mesmo caminho para os três. */
+  function acionarLinha(linha: T) {
+    if (detalhe !== undefined && aoAlternarLinha !== undefined) {
+      aoAlternarLinha(linha, !(abertas ?? []).includes(chaveLinha(linha)));
+      return;
+    }
+    aoAtivarLinha?.(linha);
   }
 
   return (
@@ -390,8 +427,8 @@ export function TabelaDensa<T>(props: TabelaDensaProps<T>) {
                              *    a nona parada numa tabela de oito colunas — o defeito que o
                              *    cabeçalho ordenável produziu na fatia (b) do Épico 4.
                              */
-                            {...(detalhe !== undefined && aoAtivarLinha
-                              ? { onClick: () => aoAtivarLinha(linha) }
+                            {...(detalhe !== undefined
+                              ? { onClick: () => acionarLinha(linha) }
                               : {})}
                             className={cn(
                               "px-2 py-1 align-middle whitespace-nowrap",

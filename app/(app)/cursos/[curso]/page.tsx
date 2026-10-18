@@ -14,7 +14,6 @@
  * *"em breve"*: *"a tela não anuncia o que não entrega"*. A reserva das duas rotas em `FORA_DO_MENU`
  * continua valendo — ela diz que o menu não as terá, não que esta página já as mostra.
  */
-import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
@@ -26,7 +25,7 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../consulta";
 import { AbaGrade, type TurmaDaGrade } from "./AbaGrade";
-import { AcoesDeSituacao } from "./AcoesDeSituacao";
+import { BarraDoCurso } from "./BarraDoCurso";
 import { AbaSobre, type AvaliacaoPrevista, type DisciplinaDaGrade } from "./AbaSobre";
 import { AbaAvaliacoes } from "./AbaAvaliacoes";
 import { AbasDoCurso } from "./AbasDoCurso";
@@ -298,16 +297,26 @@ export default async function PaginaDoCurso({
         }
       />
 
+      {/*
+        ⚠️ A BARRA ÚNICA, NO TOPO (spec 016, FR-006.1): Editar · Desativar/Reativar · Nova turma, do
+           mesmo tamanho. Cada botão segue a permissão do destino, decidida aqui no servidor — e o
+           banco recusa de qualquer forma (`FR-017.8` da spec 009).
+      */}
+      <BarraDoCurso
+        sigla={curso.codigo as string}
+        ativo={cursoAtivo}
+        podeAbrirEdicao={
+          pode(permissoes, "cursos", "editar") || pode(permissoes, "horarios", "criar")
+        }
+        podeMudarSituacao={pode(permissoes, "cursos", "desativar")}
+        podeCriarTurma={pode(permissoes, "turmas", "criar")}
+      />
+
       {/* ⚠️ ACIMA DAS ABAS, fora de qualquer uma (`FR-010.1`) */}
       <QuadroDeAvisosDoCurso avisos={avisos} />
 
       {/* ⚠️ ACIMA DAS ABAS também (spec 014, `FR-009`): o limite é do curso, não de uma aba */}
       <BlocoDeLimites linhas={linhasDosLimites} ano={anoDosLimites} excedidos={excedidos} />
-
-      {/* ⚠️ OCULTO para quem não tem a permissão — e o banco recusa de qualquer forma (`FR-017.8`) */}
-      <SePodeVer permissoes={permissoes} recurso="cursos" acao="desativar">
-        <AcoesDeSituacao sigla={curso.codigo as string} ativo={cursoAtivo} />
-      </SePodeVer>
 
       <AbasDoCurso
         grade={
@@ -317,8 +326,6 @@ export default async function PaginaDoCurso({
             selecionada={selecao.codigo}
             hoje={hoje}
             avisoDaSelecao={selecao.aviso}
-            podeCriarTurma={pode(permissoes, "turmas", "criar")}
-            cursoAtivo={cursoAtivo}
             motivoDoVazio={turmas.length > 0 ? null : alcance === "recortado" ? "nao-ve" : "nao-ha"}
           />
         }

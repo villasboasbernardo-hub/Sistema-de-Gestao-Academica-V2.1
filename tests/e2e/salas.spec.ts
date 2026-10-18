@@ -14,7 +14,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
-import { abrirEdicaoDaTurma } from "./navegar-turmas";
+import { abrirEdicaoDaTurma, esperarGravacaoDaTurma } from "./navegar-turmas";
 import { limparCursos, semearCursos, type CursosSemeados } from "./cursos-de-teste";
 
 let cliente: SupabaseClient | undefined;
@@ -173,7 +173,9 @@ test.describe("`FR-029.4` · desativar sala em uso avisa e deixa prosseguir", ()
     await expect(page.locator("#turma-sala")).toHaveValue(SEMEADO.salaDeTeste);
     await page.locator("#turma-alunos").fill("19");
     await page.locator('[data-slot="gravar-turma"]').click();
-    await expect(page.locator("#turma-alunos")).toHaveValue("19", { timeout: 15_000 });
+    // ⚠️ Gravar volta à ficha com a confirmação (spec 016, FR-015.2), e o formulário é reaberto.
+    await esperarGravacaoDaTurma(page);
+    await expect(page.locator("#turma-alunos")).toHaveValue("19");
     await expect(page.locator("#turma-sala")).toHaveValue(SEMEADO.salaDeTeste);
 
     // ⚠️ Mas ela SOME da turma nova — desativar é tirar da escolha, não reescrever o passado.

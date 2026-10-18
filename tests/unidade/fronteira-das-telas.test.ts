@@ -118,6 +118,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/instrutores/PainelDeDisciplinas.tsx": "marcar e desmarcar habilitações",
   "app/(app)/instrutores/[codigo]/AcoesDeInstrutor.tsx": "desativar e reativar, com confirmação",
   "app/(app)/instrutores/[codigo]/ExcluirInstrutor.tsx": "a exclusão com código de confirmação",
+  // Spec 016 (FR-010.1): a ficha abre em leitura, e o formulário fica atrás de «Editar instrutor».
+  "app/(app)/instrutores/[codigo]/EdicaoDoInstrutor.tsx":
+    "recolher o formulário de edição atrás de «Editar instrutor» — estado efêmero de aberto/fechado",
 
   // ── Épico 5 (a), PR 2: cursos, turmas, salas e regime ──────────────────────────────────────
   "app/(app)/cursos/FiltrosDoCatalogo.tsx": "os filtros do catálogo, na URL",
@@ -134,6 +137,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
    */
   "app/(app)/turmas/[turma]/EdicaoDaTurma.tsx":
     "recolher o formulário de edição atrás de «Editar turma» — estado efêmero de aberto/fechado",
+  // Spec 016 (FR-015.1): a situação se troca por um diálogo ao lado do selo do cabeçalho.
+  "app/(app)/turmas/[turma]/TrocarSituacao.tsx":
+    "o diálogo de «Trocar situação» — abrir, escolher e gravar pela ação própria",
   "app/(app)/turmas/FiltrosDeTurmas.tsx":
     "os quatro filtros da lista de turmas, escrevendo a URL por `useParametro`",
   "app/(app)/turmas/TabelaDeTurmas.tsx":
@@ -148,6 +154,10 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/perfil/senha/FormularioDeSenhaNova.tsx":
     "trocar a própria senha, com a recusa em português",
   "app/(app)/admin/salas/AcoesDeSala.tsx": "desativar e reativar sala, com o diálogo das turmas",
+  // Conferência do PR #67 (17/10/2026): a aba ativa da Administração pelo caminho do navegador — o
+  // layout não é redesenhado ao trocar de aba, e o caminho que ele lia ficava preso.
+  "app/(app)/admin/AbasDaAdministracao.tsx":
+    "marcar a aba ativa da Administração pelo caminho do navegador (`usePathname`)",
 
   // ── Épico 5 (b), PR 3: a grade de disciplinas ──────────────────────────────────────────────
   // ⚠️ SÃO DUAS FOLHAS, e os painéis abaixo delas NÃO levam marcador: o `"use client"` marca a

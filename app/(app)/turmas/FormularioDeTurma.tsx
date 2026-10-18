@@ -35,6 +35,7 @@ import {
   type VigenciaProtegida,
 } from "@/lib/dominio/protecao-de-vigencia";
 import { naturezaDaSala, ROTULO_DA_NATUREZA, type Sala } from "@/lib/dominio/salas";
+import { enderecoDaTurmaGravada } from "@/lib/navegacao/endereco-de-turma";
 
 const MODALIDADES = [
   { valor: "presencial", rotulo: "Presencial" },
@@ -173,7 +174,11 @@ export function FormularioDeTurma({
       definirErro(resultado.erro);
       return;
     }
-    router.push(resultado.destino);
+    // ⚠️ A edição volta à ficha COM A CONFIRMAÇÃO (spec 016, FR-015.2): até 17/10/2026 gravar não
+    //    mostrava aviso nenhum, e a pessoa não sabia se tinha dado certo.
+    router.push(
+      modo === "novo" ? resultado.destino : enderecoDaTurmaGravada(resultado.codigo, "turma"),
+    );
   }
 
   const botaoGravar = (
@@ -210,23 +215,29 @@ export function FormularioDeTurma({
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <CampoObrigatorio para="turma-situacao" rotulo="Situação" obrigatorio />
-          <select
-            {...propsDoControle("turma-situacao", true)}
-            name="status"
-            value={valores.status}
-            onChange={trocar("status")}
-            className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
-          >
-            <option value="">Escolha a situação</option>
-            {SITUACOES.map((s) => (
-              <option key={s.valor} value={s.valor}>
-                {s.rotulo}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/*
+          ⚠️ SÓ NA CRIAÇÃO desde 17/10/2026 (spec 016, FR-015.4; NQ-2): na edição a situação se troca
+             pelo botão *"Trocar situação"* do cabeçalho da ficha, e a ação de gravar a turma não a manda.
+        */}
+        {modo === "novo" ? (
+          <div className="flex flex-col gap-1">
+            <CampoObrigatorio para="turma-situacao" rotulo="Situação" obrigatorio />
+            <select
+              {...propsDoControle("turma-situacao", true)}
+              name="status"
+              value={valores.status}
+              onChange={trocar("status")}
+              className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
+            >
+              <option value="">Escolha a situação</option>
+              {SITUACOES.map((s) => (
+                <option key={s.valor} value={s.valor}>
+                  {s.rotulo}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-1">
           <CampoObrigatorio para="turma-modalidade" rotulo="Modalidade" obrigatorio />

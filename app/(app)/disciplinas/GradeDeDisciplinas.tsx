@@ -38,6 +38,7 @@ import {
 import { TabelaDensa, type Coluna } from "@/components/ciaara/tabela-densa";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { indicadoresDaGrade } from "@/lib/dominio/indicadores-da-grade";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 import { CascataDeCursoETurma } from "./CascataDeCursoETurma";
@@ -45,7 +46,7 @@ import type { GradeDeDisciplinas as Grade, LinhaDaGradeDeDisciplinas } from "./c
 import { DetalheDaDisciplina } from "./paineis/DetalheDaDisciplina";
 import { ProporcaoDaCarga } from "./paineis/ProporcaoDaCarga";
 
-const ROTA = "/disciplinas";
+const ROTA = "/disciplinas" as const;
 
 export type PermissoesDaGrade = {
   readonly criar: boolean;
@@ -62,11 +63,15 @@ export type PermissoesDaGrade = {
  *    antes de montar a grade, então nenhum valor de turma chega aqui. Campo que não pode receber
  *    valor é campo que a próxima edição tenta usar.
  */
+/*
+ * ⚠️ **E O `aberta` TAMBÉM SAIU, em 17/10/2026** (conferência do PR #67), pelo mesmo motivo: ele é
+ *    parâmetro visual, e a cópia do servidor fica velha a cada clique. Era ela que o clique consultava
+ *    para decidir abrir ou fechar — e por isso a linha aberta não fechava. Quem lê `aberta` é o gancho.
+ */
 export type ParametrosDaGrade = {
   readonly curso: string;
   readonly situacao: string;
   readonly busca: string;
-  readonly aberta: string;
 };
 
 export function GradeDeDisciplinas({
@@ -130,7 +135,11 @@ export function GradeDeDisciplinas({
    * são **navegação**, não filtro. Limpar filtros e perder a turma em que se estava faria o botão
    * navegar — e quem clicou queria ver a lista inteira **daquela** turma.
    */
-  const haFiltroAtivo = parametros.busca !== "" || parametros.situacao !== "ativo";
+  // ⚠️ A régua é o padrão do contrato (spec 016, item 1.4): o número do botão e o "Limpar filtros".
+  const ativos = filtrosForaDoPadrao(ROTA, {
+    busca: parametros.busca,
+    situacao: parametros.situacao,
+  });
 
   const limparFiltros = () => {
     void definirBusca(null);
@@ -267,9 +276,10 @@ export function GradeDeDisciplinas({
               campos={campos}
               estado={estadoDosFiltros}
               aoMudar={aoMudarFiltro}
+              ativos={ativos}
               titulo="Filtros"
             />
-            <BotaoLimparFiltros haFiltroAtivo={haFiltroAtivo} aoLimpar={limparFiltros} />
+            <BotaoLimparFiltros haFiltroAtivo={ativos > 0} aoLimpar={limparFiltros} />
           </div>
 
           {/* ── gráfico ───────────────────────────────────────────────────────────────────── */}
@@ -283,9 +293,12 @@ export function GradeDeDisciplinas({
             rotulo={`Disciplinas de ${grade.cursoEscolhido.codigo}`}
             densidade="compacta"
             motivoDoVazio="sem-dado"
-            aoAtivarLinha={(l) =>
-              void definirAberta(parametros.aberta === l.codigo ? null : l.codigo)
-            }
+            /*
+             * ⚠️ **QUEM DECIDE ABRIR OU FECHAR É A TABELA**, pelo mesmo `abertas` que ela desenha
+             *    (conferência do PR #67): fechar grava `null`, que tira `?aberta=` da URL — o estado
+             *    inicial.
+             */
+            aoAlternarLinha={(l, abrir) => void definirAberta(abrir ? l.codigo : null)}
             abertas={abertas}
             detalhe={(l) => (
               <DetalheDaDisciplina

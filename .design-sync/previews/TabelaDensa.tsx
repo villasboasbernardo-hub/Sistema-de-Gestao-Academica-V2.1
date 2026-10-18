@@ -117,7 +117,7 @@ export function LinhaExpandida() {
       chaveLinha={(l) => l.id}
       rotulo="Disciplinas da turma C-Ap-HN 2026"
       abertas={abertas}
-      aoAtivarLinha={(l) => definirAbertas((a) => (a.includes(l.id) ? [] : [l.id]))}
+      aoAlternarLinha={(l, abrir) => definirAbertas(abrir ? [l.id] : [])}
       detalhe={(l) => (
         <span className="text-texto text-sm">
           {l.nome}: faltam {l.prevista - l.cumprida} TA para fechar a carga horária prevista.

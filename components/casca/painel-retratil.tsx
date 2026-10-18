@@ -1,6 +1,10 @@
 /**
- * A lateral que recolhe — **o único marcador de cliente da navegação** (`FR-019`; `FR-001` a
- * `FR-008` e `FR-011` da spec 012).
+ * A lateral que recolhe — o marcador de cliente do **abrir, fechar e fixar** da navegação (`FR-019`;
+ * `FR-001` a `FR-008` e `FR-011` da spec 012).
+ *
+ * ⚠️ **ELE ERA O ÚNICO MARCADOR DA NAVEGAÇÃO ATÉ 17/10/2026.** Desde a conferência do PR #67, cada link
+ * do menu é `entrada-do-menu.tsx`, folha de cliente que marca o ativo pelo caminho do navegador — o
+ * caminho que o layout passava ficava preso à primeira página carregada.
  *
  * ⚠️ ELE EXISTE PARA SER PEQUENO. O marcador contamina toda a subárvore de importação: um deles na
  * casca manda **todas as telas** do sistema para o pacote do navegador. Separar o comportamento da
@@ -148,8 +152,11 @@ export function PainelRetratil({
              *    faria o eixo horizontal computar `auto`, e o rótulo `whitespace-nowrap` de 224 px
              *    dentro da caixa de 56 px produziria uma barra horizontal na lateral recolhida.
              *    `overflow-x-hidden` é quem recorta o rótulo, como o `overflow-hidden` antigo fazia.
+             * ⚠️ **E A FAIXA BETA É FIXA NO TOPO DESDE A SPEC 016** (item 1.1): a lateral cola **abaixo
+             *    dela** (`top`) e tem a altura da tela **menos a faixa** — com `top-0` e `h-dvh`, a faixa
+             *    cobriria o alto da lateral e o último ícone ficaria fora da tela.
              */
-            "lg:sticky lg:top-0 lg:h-dvh lg:shrink-0 lg:overflow-x-hidden lg:overflow-y-auto lg:border-r",
+            "lg:sticky lg:top-(--altura-da-faixa) lg:h-[calc(100dvh-var(--altura-da-faixa))] lg:shrink-0 lg:overflow-x-hidden lg:overflow-y-auto lg:border-r",
             "transition-[width] duration-150 motion-reduce:transition-none",
             /*
              * ⚠️ **A ORDEM DESTAS TRÊS LINHAS NÃO DECIDE NADA — QUEM DECIDE É O `cn`.** Ele resolve

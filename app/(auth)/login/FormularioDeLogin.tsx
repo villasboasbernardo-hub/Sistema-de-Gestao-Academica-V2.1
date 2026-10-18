@@ -18,6 +18,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { CampoDeSenha } from "@/components/ciaara/campo-de-senha";
 import { registrarAcesso } from "@/lib/acoes/sessao";
 import { caminhoDeRetorno } from "@/lib/navegacao/destino-seguro";
 import { criarClienteDeNavegador } from "@/lib/supabase/client";
@@ -79,16 +80,23 @@ export function FormularioDeLogin({ destino }: { readonly destino: string }) {
         />
       </label>
 
-      <label className="block text-sm">
-        Senha
-        <input
-          name="senha"
-          type="password"
-          required
-          autoComplete="current-password"
-          className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca mt-1 w-full border px-2 py-1 focus-visible:ring-2 focus-visible:outline-none"
-        />
-      </label>
+      {/*
+        ⚠️ **O RÓTULO APONTA O CAMPO POR `id` DESDE A SPEC 016 (item 1.3)**, e não o envolve mais: o
+           campo ganhou o botão de olho, e um `<label>` em volta dos dois somaria o nome do botão ao
+           nome do campo.
+      */}
+      <div className="block text-sm">
+        <label htmlFor="login-senha">Senha</label>
+        <div className="mt-1">
+          <CampoDeSenha
+            id="login-senha"
+            name="senha"
+            required
+            autoComplete="current-password"
+            className="border-borda-forte rounded-ciaara focus-visible:ring-marca h-auto px-2 py-1 text-sm focus-visible:ring-2"
+          />
+        </div>
+      </div>
 
       {erro ? (
         <p

@@ -270,6 +270,11 @@ test.describe("`FR-033` a `FR-037` · cadastrar conta e o primeiro acesso", () =
         .toBe("/perfil/senha");
     }
 
+    // ── 7b. no PRIMEIRO ACESSO, os dois campos têm o olho (spec 016, item 1.3, FR-003.1) ───────
+    await expect(secaoDaSenha(pagina).getByRole("button", { name: "Mostrar senha" })).toHaveCount(
+      2,
+    );
+
     // ── 8. definir a nova, e sair da prisão ──────────────────────────────────────────────────
     const nova = `nova-senha-de-teste-${Date.now().toString(36)}`;
     await pagina.locator('input[name="senha"]').fill(nova);

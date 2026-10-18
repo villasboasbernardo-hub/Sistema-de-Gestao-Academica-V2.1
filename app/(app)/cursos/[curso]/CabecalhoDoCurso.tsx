@@ -17,7 +17,6 @@
 import Link from "next/link";
 
 import { BadgeStatus } from "@/components/ciaara/badge-status";
-import { buttonVariants } from "@/components/ui/button";
 import {
   ROTULO_DA_CLASSIFICACAO,
   ehClassificacaoDeCurso,
@@ -91,20 +90,9 @@ export function CabecalhoDoCurso({
         {curso.ativo ? null : <BadgeStatus tom="inativo" rotulo="Fora de oferta" />}
 
         {/*
-          ⚠️ **A ENTRADA PARA A EDIÇÃO, NO CABEÇALHO E COM ESTE NOME.** Até 24/09/2026 a única era
-             o link *"histórico e correção"*, ao lado do regime — e ninguém lê aquilo como *"editar
-             curso"*. A conferência de Bernardo encontrou; o link continua, porque leva ao mesmo
-             lugar por outro motivo, mas deixou de ser a única porta.
+          ⚠️ *EDITAR CURSO* SAIU DO CABEÇALHO EM 17/10/2026 (spec 016, FR-006.1) e mora na barra única
+             da página (`BarraDoCurso.tsx`). O link *"histórico e correção"*, abaixo, continua.
         */}
-        {podeAbrirEdicao ? (
-          <Link
-            href={`/cursos/${encodeURIComponent(curso.codigo)}/editar`}
-            className={buttonVariants({ size: "sm", variant: "outline" })}
-            data-slot="ir-para-editar-curso"
-          >
-            Editar curso
-          </Link>
-        ) : null}
       </div>
 
       <p className="text-texto-suave text-sm" data-slot="catalogo-resumido">

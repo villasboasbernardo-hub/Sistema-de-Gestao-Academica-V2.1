@@ -18,6 +18,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { criarConta, apagarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirLinha, conferirQueALinhaAlterna, linhaExpansivel } from "./linha-expansivel";
 import {
   contarDisciplina,
   disciplinaComUe,
@@ -85,9 +86,14 @@ async function irAGradePorClique(page: Page): Promise<void> {
   await expect(page.getByRole("columnheader", { name: "CH" })).toBeVisible();
 }
 
-/** Abre o detalhe de uma disciplina clicando na célula do nome. */
+/**
+ * Abre o detalhe de uma disciplina clicando na célula do nome — **só se estiver fechado**.
+ *
+ * ⚠️ Desde 17/10/2026 (conferência do PR #67) clicar na linha aberta a FECHA; um auxiliar que clicasse
+ * sem olhar o `aria-expanded` fecharia o detalhe em silêncio.
+ */
 async function abrirDetalhe(page: Page, nome: string): Promise<void> {
-  await page.getByRole("gridcell", { name: nome, exact: false }).first().click();
+  await abrirLinha(page, nome);
   await expect(page.locator('[data-slot="detalhe-da-disciplina"]')).toBeVisible();
 }
 
@@ -130,6 +136,43 @@ test.describe("`FR-001` a `FR-006` · chegar, escolher e ver", () => {
     await page.goto(endereco);
     await expect(page.locator('[data-slot="detalhe-da-disciplina"]')).toBeVisible();
   });
+
+  /*
+   * ⚠️ **O DEFEITO DA CONFERÊNCIA DO PR #67 (17/10/2026)**: clicar de novo na disciplina aberta não a
+   *    fechava. A tela desenhava pela URL, mas decidia "abrir ou fechar" pela cópia do servidor, que o
+   *    parâmetro visual `aberta` não refaz: o segundo clique gravava o mesmo código de novo.
+   */
+  test("a linha aberta FECHA e reabre — por clique, por Enter e por Espaço", async ({ page }) => {
+    await irAGradePorClique(page);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    await conferirQueALinhaAlterna(
+      page,
+      page,
+      DISCIPLINA_COM_UE.nome,
+      page.locator('[data-slot="detalhe-da-disciplina"]'),
+    );
+  });
+
+  test("⚠️ e partindo do endereço com a linha aberta, fecha e REABRE", async ({ page }) => {
+    /*
+     * ⚠️ A FACE OPOSTA DO MESMO DEFEITO: chegando com `?aberta=` (ou depois de o servidor redesenhar a
+     *    tela, como ao gravar dentro do detalhe), a cópia do servidor já era a linha aberta — o
+     *    primeiro clique fechava, e o segundo NÃO reabria. O `goto` é o ponto de partida.
+     */
+    await irAGradePorClique(page);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    await page.goto(page.url());
+    await expect(linhaExpansivel(page, DISCIPLINA_COM_UE.nome)).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await conferirQueALinhaAlterna(
+      page,
+      page,
+      DISCIPLINA_COM_UE.nome,
+      page.locator('[data-slot="detalhe-da-disciplina"]'),
+    );
+  });
 });
 
 test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
@@ -139,12 +182,13 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
     await irAGradePorClique(page);
 
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
-    await expect(page.locator('[data-slot="lista-de-unidades"] li')).toHaveCount(2);
+    // ⚠️ Linhas de TABELA desde 17/10/2026 (spec 016, FR-007.1): eram itens de lista com formulário.
+    await expect(page.locator('[data-slot="tabela-de-unidades"] tbody tr')).toHaveCount(2);
 
     // A mesma tela, na disciplina sem unidade.
     await abrirDetalhe(page, DISCIPLINA_SEM_UE.nome);
     await expect(
-      page.locator('[data-slot="lista-de-unidades"] li'),
+      page.locator('[data-slot="tabela-de-unidades"] tbody tr'),
       "apareceu unidade numa disciplina que não tem",
     ).toHaveCount(0);
     // ⚠️ E **nenhum aviso de que faltam** — a ausência não é pendência (`FR-061`, D-B3).
@@ -159,13 +203,59 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
     await expect(page.locator('[data-slot="aviso-da-soma"]')).toHaveCount(0);
 
     // Acrescentar uma terceira quebra a soma — e a gravação PASSA, com aviso.
-    await page.locator('input[name="numero_ue"]').last().fill("9");
-    await page.locator('input[name="topico"]').last().fill("Unidade que desequilibra");
-    await page.locator('input[name="ch"]').last().fill("3");
+    // ⚠️ O formulário de unidade nova fica atrás de um botão desde 17/10/2026 (spec 016, FR-007.1).
     await page.locator('[data-slot="acrescentar-unidade"]').click();
+    const nova = page.locator('[data-slot="formulario-de-unidade-nova"]');
+    await nova.locator('input[name="numero_ue"]').fill("9");
+    await nova.locator('input[name="topico"]').fill("Unidade que desequilibra");
+    await nova.locator('input[name="ch"]').fill("3");
+    await nova.locator('[data-slot="gravar-unidade-nova"]').click();
 
     await expect(page.getByRole("status").filter({ hasText: "acrescentada" })).toBeVisible();
     await expect(page.locator('[data-slot="aviso-da-soma"]')).toContainText("13");
+  });
+
+  test("`FR-007.1` da spec 016 · as UEs se LEEM sem campo nenhum, e *Editar* abre só a linha", async ({
+    page,
+  }) => {
+    await irAGradePorClique(page);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+
+    const tabela = page.locator('[data-slot="tabela-de-unidades"]');
+    // ⚠️ Sem contar linhas: o caso da soma, acima, acrescenta a UE 9 à mesma disciplina.
+    await expect(tabela.locator('[data-unidade="1"]')).toBeVisible();
+    // ⚠️ O CASO QUE DISCRIMINA: até 17/10/2026 cada linha trazia três campos abertos.
+    await expect(tabela.locator("input, select, textarea")).toHaveCount(0);
+    await expect(page.locator('[data-slot="formulario-de-unidade-nova"]')).toHaveCount(0);
+
+    await tabela.locator('[data-unidade="1"] [data-slot="editar-unidade"]').click();
+    // Só a linha 1 abriu: três campos, e a linha 2 continua de leitura.
+    await expect(tabela.locator("input")).toHaveCount(3);
+    await expect(tabela.locator('[data-unidade="2"] input')).toHaveCount(0);
+
+    const topico = `Tópico editado ${PROCESSO}`;
+    await tabela.locator('[data-unidade="1"] input[name="topico"]').fill(topico);
+    await tabela.locator('[data-unidade="1"] [data-slot="gravar-unidade"]').click();
+
+    await expect(page.getByRole("status").filter({ hasText: "atualizada" })).toBeVisible();
+    await expect(tabela.locator("input")).toHaveCount(0);
+    await expect(tabela.locator('[data-unidade="1"]')).toContainText(topico);
+  });
+});
+
+test.describe("`FR-007.2` da spec 016 · a proporção da CH é uma pizza", () => {
+  test("a pizza nomeia as disciplinas da vista, com o percentual escrito", async ({ page }) => {
+    await irAGradePorClique(page);
+    const proporcao = page.locator('[data-slot="proporcao-da-carga"]');
+    await expect(proporcao.locator('[data-slot="grafico-pizza"]')).toBeVisible();
+    await expect(proporcao.locator('[data-slot="grafico-barras"]')).toHaveCount(0);
+    // ⚠️ As disciplinas da amostra cabem inteiras nas cinco fatias: «Outras» só nasce com seis ou mais, e o
+    //    agrupamento é provado por `tests/unidade/agrupar-em-outras.test.ts`.
+    // ⚠️ A disciplina limpa fica de fora: o caso da exclusão a apaga.
+    for (const d of [DISCIPLINA_COM_UE, DISCIPLINA_SEM_UE]) {
+      await expect(proporcao).toContainText(`${d.cod}:`);
+    }
+    await expect(proporcao).toContainText("%");
   });
 });
 

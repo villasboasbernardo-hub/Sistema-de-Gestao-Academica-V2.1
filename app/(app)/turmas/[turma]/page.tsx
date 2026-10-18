@@ -81,6 +81,7 @@ import {
   regimeDoBanco,
 } from "./consulta";
 import { QuadroDeAvisosDaTurma } from "./QuadroDeAvisosDaTurma";
+import { TrocarSituacao } from "./TrocarSituacao";
 
 /*
  * ⚠️ **O "HOJE" LOCAL SAIU DAQUI EM 04/10/2026.** Havia TRÊS fórmulas no repositório: esta cópia,
@@ -99,8 +100,10 @@ export default async function FichaDaTurma({
   const { turma: segmento } = await params;
   const codigo = codigoDaFicha(segmento);
   /*
-   * ⚠️ **A FICHA PASSOU A TER PARÂMETRO, E É UM SÓ:** `aberta`, a linha expandida da seção de
-   *    disciplinas. Ele serve ao PRIMEIRO desenho; depois dele quem manda é o gancho na folha.
+   * ⚠️ **OS PARÂMETROS DA FICHA, E QUEM LÊ CADA UM:** `aba` e `aberta` são lidos pelas folhas, pelo
+   *    gancho; `gravada` (a confirmação, spec 016) é lido aqui. ⚠️ **`aberta` deixou de descer daqui
+   *    em 17/10/2026** (conferência do PR #67): a cópia do servidor ficava velha e reabria a linha que
+   *    a pessoa tinha fechado.
    */
   const { valores } = lerParametros(ROTA_DA_FICHA_DA_TURMA, await searchParams);
 
@@ -180,7 +183,7 @@ export default async function FichaDaTurma({
   ] = await Promise.all([
     supabase
       .from("cursos")
-      .select("codigo, nome_curso, limite_turmas_ano")
+      .select("codigo, nome_curso, limite_turmas_ano, status")
       .eq("id", cursoId)
       .maybeSingle(),
     supabase
@@ -495,13 +498,21 @@ export default async function FichaDaTurma({
         >
           <span className="flex items-center gap-2">
             <Rotulo>Situação</Rotulo>
-            <dd>
+            <dd className="flex items-center gap-2">
               <BadgeStatus
                 tom={TOM_DO_STATUS_DE_TURMA[turma.status as string] ?? "planejado"}
                 rotulo={
                   ROTULO_DO_STATUS_DE_TURMA[turma.status as string] ?? (turma.status as string)
                 }
               />
+              {/*
+                ⚠️ AO LADO DO SELO (spec 016, FR-015.1): até 17/10/2026 a situação só se trocava pelo
+                   campo de *"Editar turma"*, recolhido no fim da página. Segue `turmas/editar` e o
+                   curso em oferta, como *Nova turma*; o banco recusa de qualquer forma.
+              */}
+              {podeEditar && cursoRes.data?.status !== "inativo" ? (
+                <TrocarSituacao codigo={turma.codigo as string} atual={turma.status as string} />
+              ) : null}
             </dd>
           </span>
           <span className="flex items-center gap-2">
@@ -525,6 +536,21 @@ export default async function FichaDaTurma({
             <dd className="text-texto">{texto(turma.alunos) || "—"}</dd>
           </span>
         </dl>
+
+        {/*
+          ⚠️ A CONFIRMAÇÃO DA GRAVAÇÃO (spec 016, FR-015.2) vem pela URL, escrita por
+             `enderecoDaTurmaGravada`: até 17/10/2026 trocar a situação ou gravar a turma não dizia nada.
+        */}
+        {valores.gravada === "situacao" ? (
+          <p role="status" className="text-executado-tinta text-sm" data-slot="situacao-gravada">
+            Situação gravada:{" "}
+            {ROTULO_DO_STATUS_DE_TURMA[turma.status as string] ?? (turma.status as string)}.
+          </p>
+        ) : valores.gravada === "turma" ? (
+          <p role="status" className="text-executado-tinta text-sm" data-slot="turma-gravada">
+            Alterações da turma gravadas.
+          </p>
+        ) : null}
       </header>
 
       <QuadroDeAvisosDaTurma avisos={avisos} />
@@ -614,7 +640,6 @@ export default async function FichaDaTurma({
                   podeEditar={pode(permissoes, "disciplinas", "editar")}
                   avisoInicioDias={grade.avisoInicioDias}
                   hoje={hoje}
-                  abertaNoEndereco={String(valores.aberta)}
                   executadaDaTurma={andamento.executada}
                 />
               )}

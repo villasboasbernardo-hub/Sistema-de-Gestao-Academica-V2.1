@@ -104,6 +104,8 @@ test.describe("`FR-013`, `FR-014` · os filtros vão para a URL, e o botão os l
     const outra = await context.newPage();
     await outra.goto(endereco);
     await expect(outra.locator(LISTA)).toBeVisible();
+    // O filtro nasce recolhido (spec 016, item 1.4).
+    await abrirFiltros(outra);
     // ⚠️ O campo é um `combobox` do shadcn: ele **mostra** o rótulo escolhido, não tem `value`.
     await expect(outra.locator(FILTRO).getByLabel("Curso")).toContainText(sigla);
     await outra.close();
@@ -157,6 +159,8 @@ test.describe("`FR-017` · curso → turma, e o caminho para a lista inteira", (
     await expect
       .poll(() => new URL(page.url()).pathname)
       .toBe(`/cursos/${encodeURIComponent(sigla)}`);
+    // ⚠️ A padrão é *Sobre o Curso* desde a spec 016 (FR-006.2): a Grade é um clique a mais.
+    await page.locator('[data-slot="abas-do-curso"] [data-aba="grade"]').click();
 
     const verTodas = page.locator('[data-slot="ver-todas-as-turmas"]');
     await expect(verTodas).toBeVisible();

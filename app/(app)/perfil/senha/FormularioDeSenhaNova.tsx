@@ -15,8 +15,8 @@
  */
 import { useState } from "react";
 
+import { CampoDeSenha } from "@/components/ciaara/campo-de-senha";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trocarPropriaSenha } from "@/lib/acoes/perfil";
 import { conferirConfirmacao, MINIMO_DE_CARACTERES } from "@/lib/dominio/politica-de-senha";
@@ -56,18 +56,12 @@ export function FormularioDeSenhaNova() {
              bolha em inglês, escrita pelo sistema operacional, que ignora a frase do `FR-032`. A
              recusa desta tela é a nossa, em português, e vem da mesma função que o servidor usa.
         */}
-        <Input id="senha" name="senha" type="password" required autoComplete="new-password" />
+        <CampoDeSenha id="senha" name="senha" required autoComplete="new-password" />
       </div>
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="confirmacao">Repita a senha nova</Label>
-        <Input
-          id="confirmacao"
-          name="confirmacao"
-          type="password"
-          required
-          autoComplete="new-password"
-        />
+        <CampoDeSenha id="confirmacao" name="confirmacao" required autoComplete="new-password" />
       </div>
 
       <div>

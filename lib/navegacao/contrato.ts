@@ -623,6 +623,20 @@ export const CONTRATO = {
         historico: "substitui",
         avisaServidor: false,
       },
+      /*
+       * ⚠️ **A CONFIRMAÇÃO DA GRAVAÇÃO MORA NA URL** (spec 016, FR-015.2; 17/10/2026), como o aviso de
+       * exclusão de conta: trocar a situação ou gravar a turma pode mudar o endereço (o código é
+       * regerado com o ano ou o rótulo) e remonta a ficha — uma mensagem em estado local morreria junto.
+       * Só a ficha a lê, e quem a escreve é `enderecoDaTurmaGravada`.
+       */
+      gravada: {
+        nome: "gravada",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: ["", "turma", "situacao"],
+        historico: "substitui",
+        avisaServidor: true,
+      },
     },
   },
   /*
@@ -794,9 +808,11 @@ export const CONTRATO = {
       aba: {
         nome: "aba",
         tipo: "escolha",
-        padrao: "grade",
+        // Spec 016 (FR-006.2, Q-10, 17/10/2026): *Sobre o Curso* é a primeira aba e a padrão — e o padrão
+        // mora SÓ aqui; `AbasDoCurso.tsx` o lê pelo gancho, sem um segundo dono.
+        padrao: "sobre",
         // Spec 014 (FR-053): a terceira aba, «Avaliações», cedeu a Q-02 da spec 009 ao `RF-CURSO-02`.
-        opcoes: ["grade", "sobre", "avaliacoes"],
+        opcoes: ["sobre", "grade", "avaliacoes"],
         historico: "empilha",
         avisaServidor: true,
       },

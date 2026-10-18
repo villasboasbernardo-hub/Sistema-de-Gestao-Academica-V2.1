@@ -11,6 +11,9 @@
  */
 "use client";
 
+// ⚠️ O CSS da rota esconde a faixa Beta também no erro (FR-001.2 da spec 016).
+import "./impressao.css";
+
 export default function ErroNaImpressao({ reset }: { readonly reset: () => void }) {
   return (
     <section role="alert" data-slot="erro-na-impressao">

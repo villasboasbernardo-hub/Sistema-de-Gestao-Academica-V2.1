@@ -40,6 +40,14 @@ function ClicaAoMontar({
 const haFiltro = (estado: EstadoDeFiltro) =>
   Object.values(estado).some((valores) => valores.some((v) => v !== ""));
 
+/**
+ * Quantos filtros estão escolhidos — o número do botão (spec 016, FR-004; `ativos` é obrigatório desde
+ * 17/10/2026). ⚠️ Na tela a régua é o `padrao` do contrato (`filtrosForaDoPadrao`); aqui não há
+ * contrato, e o padrão de toda amostra é o vazio.
+ */
+const contarAtivos = (estado: EstadoDeFiltro) =>
+  Object.values(estado).filter((valores) => valores.some((v) => v !== "")).length;
+
 /** Tela de turmas — os quatro tipos de campo: texto, escolha, escolha múltipla e intervalo. */
 const CAMPOS_DE_TURMAS: readonly CampoDeFiltro[] = [
   { chave: "busca", rotulo: "Buscar pelo código", tipo: "texto" },
@@ -82,7 +90,12 @@ export function Padrao() {
   const [estado, definirEstado] = React.useState<EstadoDeFiltro>({});
   return (
     <div className="flex flex-col gap-2">
-      <FiltroAvancado campos={CAMPOS_DE_TURMAS} estado={estado} aoMudar={definirEstado} />
+      <FiltroAvancado
+        ativos={contarAtivos(estado)}
+        campos={CAMPOS_DE_TURMAS}
+        estado={estado}
+        aoMudar={definirEstado}
+      />
       <BotaoLimparFiltros haFiltroAtivo={haFiltro(estado)} aoLimpar={() => definirEstado({})} />
     </div>
   );
@@ -128,7 +141,12 @@ export function ComFiltrosAtivos() {
   });
   return (
     <div className="flex flex-col gap-2">
-      <FiltroAvancado campos={CAMPOS_DE_INSTRUTORES} estado={estado} aoMudar={definirEstado} />
+      <FiltroAvancado
+        ativos={contarAtivos(estado)}
+        campos={CAMPOS_DE_INSTRUTORES}
+        estado={estado}
+        aoMudar={definirEstado}
+      />
       <BotaoLimparFiltros haFiltroAtivo={haFiltro(estado)} aoLimpar={() => definirEstado({})} />
     </div>
   );
@@ -167,6 +185,7 @@ export function EscolhaMultiplaAberta() {
   return (
     <ClicaAoMontar seletor='[data-slot="popover-trigger"]' soltarFoco>
       <FiltroAvancado
+        ativos={contarAtivos(estado)}
         campos={CAMPOS_DA_GRADE}
         estado={estado}
         aoMudar={definirEstado}
@@ -222,7 +241,12 @@ export function RecolhidoComContagem() {
   return (
     <ClicaAoMontar seletor='[data-slot="collapsible-trigger"]'>
       <div className="flex flex-col gap-2">
-        <FiltroAvancado campos={CAMPOS_DO_CATALOGO} estado={estado} aoMudar={definirEstado} />
+        <FiltroAvancado
+          ativos={contarAtivos(estado)}
+          campos={CAMPOS_DO_CATALOGO}
+          estado={estado}
+          aoMudar={definirEstado}
+        />
         <BotaoLimparFiltros haFiltroAtivo={haFiltro(estado)} aoLimpar={() => definirEstado({})} />
       </div>
     </ClicaAoMontar>

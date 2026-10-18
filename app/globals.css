@@ -80,6 +80,7 @@
   --altura-linha-confortavel: 2.75rem; /* 44px */
   --altura-celula-ta: 2.5rem; /* 40px — célula de Tempo de Aula na GradeAlocacao */
   --largura-coluna-ta: 3rem; /* 48px — coluna do rótulo de TA */
+  --altura-da-faixa: 1.75rem; /* 28px — a faixa Beta numa linha; a lateral fixa a desconta (spec 016, 1.1) */
 
   /* Raio discreto: documento institucional, não aplicativo de consumo. */
   --radius-ciaara-sm: 0.25rem;

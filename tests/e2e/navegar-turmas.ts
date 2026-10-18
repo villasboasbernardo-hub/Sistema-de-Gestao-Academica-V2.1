@@ -102,3 +102,35 @@ export async function abrirEdicaoDaTurma(page: Page): Promise<void> {
   await page.locator('[data-slot="abrir-edicao-da-turma"]').click();
   await expect(campo).toBeVisible();
 }
+
+/**
+ * Espera a confirmação da gravação da turma e **reabre** o formulário (spec 016, FR-015.2).
+ *
+ * ⚠️ **DESDE 17/10/2026 GRAVAR A EDIÇÃO VOLTA À FICHA COM `?gravada=turma`**, e a navegação pode
+ * remontar a página com o formulário recolhido. Ler um campo logo depois do clique em gravar
+ * correria contra essa navegação — o campo ainda está lá antes dela e some depois. Por isso a espera é
+ * pela confirmação, que só existe depois da volta, e só então o formulário é reaberto.
+ */
+export async function esperarGravacaoDaTurma(page: Page): Promise<void> {
+  await expect(page.locator('[data-slot="turma-gravada"]')).toBeVisible({ timeout: 15_000 });
+  await abrirEdicaoDaTurma(page);
+}
+
+/** O selo de situação do cabeçalho da ficha. */
+export const seloDaSituacao = (page: Page) =>
+  page.locator('[data-slot="cabecalho-da-turma"] [data-slot="badge-status"]').first();
+
+/**
+ * Troca a situação pelo botão *"Trocar situação"* do cabeçalho (spec 016, FR-015.1) e espera a
+ * confirmação. `rotulo` é o da tela — *Planejada*, *Ativa*, *Concluída*, *Cancelada*.
+ */
+export async function trocarSituacaoPelaFicha(page: Page, rotulo: string): Promise<void> {
+  await page.locator('[data-slot="trocar-situacao"]').click();
+  const dialogo = page.locator('[data-slot="dialogo-de-situacao"]');
+  await expect(dialogo).toBeVisible();
+  await dialogo.getByRole("radio", { name: new RegExp(`^${rotulo}`) }).check();
+  await dialogo.locator('[data-slot="gravar-situacao"]').click();
+  await expect(page.locator('[data-slot="situacao-gravada"]')).toContainText(rotulo, {
+    timeout: 15_000,
+  });
+}

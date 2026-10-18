@@ -49,6 +49,127 @@ test.describe("`SC-002` · depois de entrar, há para onde ir", () => {
     await expect(ativa).toHaveCount(1);
     await expect(ativa).toHaveAttribute("data-entrada", "/admin/usuarios");
   });
+
+  test("⚠️ o ativo ACOMPANHA a navegação por clique — Turmas, Cursos, Disciplinas e Instrutores", async ({
+    page,
+  }) => {
+    /*
+     * ⚠️ **O DEFEITO QUE A CONFERÊNCIA DO PR #67 ACHOU (17/10/2026)**: só *Início* ficava marcado. O
+     *    caminho vinha do cabeçalho da requisição, lido no `layout` — e o App Router **não redesenha o
+     *    layout** na navegação por clique entre páginas filhas: o ativo ficava preso à primeira página
+     *    carregada. Os casos acima chegam por endereço, e por isso não o viam. Aqui, **nenhum `goto`**
+     *    depois do `entrar`: cada parada é um clique no menu, e em cada uma se confere o
+     *    `aria-current` e a cor — o fundo do ativo é o `--marca`, resolvido pelo próprio navegador.
+     */
+    await entrar(page, EMAIL, "/inicio");
+    const navegacao = page.getByRole("navigation", { name: "Navegação principal" });
+    const ativa = navegacao.locator('[aria-current="page"]');
+    await expect(ativa).toHaveAttribute("data-entrada", "/inicio");
+
+    const corDaMarca = await page.evaluate(() => {
+      const amostra = document.createElement("div");
+      amostra.style.backgroundColor = "var(--marca)";
+      document.body.appendChild(amostra);
+      const cor = getComputedStyle(amostra).backgroundColor;
+      amostra.remove();
+      return cor;
+    });
+
+    for (const [rotulo, rota] of [
+      ["Turmas", "/turmas"],
+      ["Cursos", "/cursos"],
+      ["Disciplinas", "/disciplinas"],
+      ["Instrutores", "/instrutores"],
+      ["Início", "/inicio"],
+    ] as const) {
+      await navegacao.getByRole("link", { name: rotulo, exact: true }).click();
+      await expect.poll(() => new URL(page.url()).pathname).toBe(rota);
+      await expect(ativa, `em ${rota}, o ativo é outro`).toHaveAttribute("data-entrada", rota);
+      await expect(ativa).toHaveCount(1);
+      await expect(ativa, `em ${rota}, o ativo não está com a cor da marca`).toHaveCSS(
+        "background-color",
+        corDaMarca,
+      );
+    }
+  });
+
+  test("⚠️ as abas da Administração e o menu acompanham a troca de aba por clique", async ({
+    page,
+  }) => {
+    /*
+     * ⚠️ **O MESMO DEFEITO, NAS ABAS DA ADMINISTRAÇÃO** (achado na conferência do PR #67): o layout de
+     *    `/admin` também decidia a aba ativa pelo caminho da requisição, e não é redesenhado ao trocar
+     *    de aba — a aba marcada ficava a de entrada. ⚠️ **E O MENU TEM DE SEGUIR NA ADMINISTRAÇÃO**: a
+     *    entrada aponta para `/admin/usuarios`, e sem `ativaSob` ela se apagava em Permissões e Salas.
+     */
+    await entrar(page, EMAIL, "/inicio");
+    const menu = page.getByRole("navigation", { name: "Navegação principal" });
+    const abas = page.getByRole("navigation", { name: "Administração" });
+    await menu.getByRole("link", { name: "Administração", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/admin/usuarios");
+
+    for (const [rotulo, rota] of [
+      ["Permissões", "/admin/permissoes"],
+      ["Salas", "/admin/salas"],
+      ["Usuários", "/admin/usuarios"],
+    ] as const) {
+      await abas.getByRole("link", { name: rotulo, exact: true }).click();
+      await expect.poll(() => new URL(page.url()).pathname).toBe(rota);
+      await expect(
+        abas.locator('[aria-current="page"]'),
+        `em ${rota}, a aba marcada é outra`,
+      ).toHaveText(rotulo);
+      await expect(
+        menu.locator('[aria-current="page"]'),
+        `em ${rota}, o menu não marca a Administração`,
+      ).toHaveAttribute("data-entrada", "/admin/usuarios");
+    }
+  });
+
+  test("⚠️ o item ativo se DESTACA da lateral nos dois temas (spec 016, 1.2, `RF-DS-03`)", async ({
+    page,
+  }) => {
+    /*
+     * ⚠️ **MEDIR "COR DIFERENTE" NÃO PROVARIA NADA**: até 17/10/2026 o ativo era `#eef4fa` sobre
+     *    `#eef2f7` — cores diferentes, a 1,01:1. O que a correção promete é **contraste**: o fundo do
+     *    ativo contra o da lateral, pelo limite de elemento de interface (3:1, par C-5). Com o estilo
+     *    antigo de volta, este caso reprova nos dois temas.
+     */
+    await entrar(page, EMAIL);
+    const razao = () =>
+      page.evaluate(() => {
+        const ativo = document.querySelector<HTMLElement>(
+          '[data-slot="navegacao-lateral"] [aria-current="page"]',
+        );
+        if (!ativo) return 0;
+        const rgb = (el: Element) => getComputedStyle(el).backgroundColor;
+        const opaco = (cor: string) => !/rgba\(.*,\s*0\)$|transparent/.test(cor);
+        let ancestral: Element | null = ativo.parentElement;
+        while (ancestral && !opaco(rgb(ancestral))) ancestral = ancestral.parentElement;
+        const luminancia = (cor: string) => {
+          const [r, g, b] = (cor.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map(Number);
+          const canal = (v: number) => {
+            const c = v / 255;
+            return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+          };
+          return 0.2126 * canal(r ?? 0) + 0.7152 * canal(g ?? 0) + 0.0722 * canal(b ?? 0);
+        };
+        const a = luminancia(rgb(ativo));
+        const b = luminancia(ancestral ? rgb(ancestral) : "rgb(255,255,255)");
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      });
+
+    await page.getByRole("button", { name: "Claro", exact: true }).click();
+    expect(await razao(), "tema claro: o ativo não se destaca da lateral").toBeGreaterThanOrEqual(
+      3,
+    );
+
+    await page.getByRole("button", { name: "Noturno", exact: true }).click();
+    await expect(page.locator("html")).toHaveClass(/dark/);
+    expect(await razao(), "tema noturno: o ativo não se destaca da lateral").toBeGreaterThanOrEqual(
+      3,
+    );
+  });
 });
 
 test.describe("`FR-017` · o menu não inventa entrada, e não perde nenhuma", () => {

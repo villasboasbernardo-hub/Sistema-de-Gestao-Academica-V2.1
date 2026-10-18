@@ -115,7 +115,9 @@ ciaara-11/
 │   │                                      #   contraste (Épico 4a) — não renderiza, não decide cor
 │   ├── navegacao/                         #   CONTRATO DE PARÂMETROS DA URL (Épico 4c):
 │   │                                      #   contrato.ts · esquema.ts · usar-parametro.ts ·
-│   │                                      #   menu.ts · caminho.ts · destino-seguro.ts
+│   │                                      #   menu.ts · destino-seguro.ts
+│   │                                      #   ⚠️ emenda de 17/10/2026: caminho.ts saiu (o ativo do
+│   │                                      #   menu é lido no navegador); o .docx não a recebeu
 │   └── constantes/                        #   rótulos institucionais, ordens fixas, mapas de ENUM
 │
 ├── supabase/

@@ -208,7 +208,6 @@ export function DisciplinasDaTurma({
   podeEditar,
   avisoInicioDias,
   hoje,
-  abertaNoEndereco,
   executadaDaTurma,
 }: {
   readonly linhas: readonly LinhaDaGradeDeDisciplinas[];
@@ -218,7 +217,6 @@ export function DisciplinasDaTurma({
   /** Quantos dias antes do início a disciplina sem instrutor passa a avisar — de `config_parametros`. */
   readonly avisoInicioDias: number;
   readonly hoje: string;
-  readonly abertaNoEndereco: string;
   /**
    * A CH executada da **turma inteira**, de `vw_carga_horaria_turma` — a mesma que a seção Andamento
    * mostra. Ela entra aqui para o rodapé poder dizer **quanto não aparece** por disciplina.
@@ -228,11 +226,15 @@ export function DisciplinasDaTurma({
   /*
    * ⚠️ **`aberta` VEM DO GANCHO, NUNCA DA PROPRIEDADE DO SERVIDOR, e isso foi medido na fatia (b):**
    *    é parâmetro **visual** (`avisaServidor: false`), e lido do servidor o detalhe **nunca abria**,
-   *    com a URL certa. O valor do servidor serve só ao primeiro desenho.
+   *    com a URL certa.
+   * ⚠️ **E O RECUO PARA O VALOR DO SERVIDOR SAIU EM 17/10/2026** (conferência do PR #67). Ele existia
+   *    "para o primeiro desenho", mas reaplicava a cópia velha sempre que a URL ficava sem `aberta`:
+   *    chegando com `?aberta=X` — ou depois de gravar no detalhe, que revalida a ficha —, fechar zerava
+   *    a URL e o recuo reabria X. O gancho já traz o valor do endereço no primeiro desenho, como em
+   *    `/disciplinas`.
    */
   const [aberta, definirAberta] = useParametro(ROTA_DA_FICHA_DA_TURMA, "aberta");
-  const atual = aberta === "" ? abertaNoEndereco : aberta;
-  const abertas = atual === "" ? [] : [atual];
+  const abertas = aberta === "" ? [] : [aberta];
 
   /*
    * ⚠️ **OS DOIS INDICADORES TAMBÉM VIERAM DE `/disciplinas`**, onde eram os únicos que dependiam de
@@ -280,7 +282,8 @@ export function DisciplinasDaTurma({
         chaveLinha={(l) => l.codigo}
         densidade="compacta"
         motivoDoVazio="sem-dado"
-        aoAtivarLinha={(l) => void definirAberta(atual === l.codigo ? null : l.codigo)}
+        // ⚠️ Quem decide abrir ou fechar é a tabela, pelo mesmo `abertas` (conferência do PR #67).
+        aoAlternarLinha={(l, abrir) => void definirAberta(abrir ? l.codigo : null)}
         abertas={abertas}
         detalhe={(l) =>
           l.turmaDisciplinaId === null ? (

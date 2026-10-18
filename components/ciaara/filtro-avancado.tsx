@@ -13,6 +13,13 @@
  * fatia (c), e é premissa desta spec que ele não saiba disso.
  *
  * ⚠️ COM MARCADOR DE CLIENTE: recolher, abrir painel e digitar são comportamento de navegador.
+ *
+ * ⚠️ **NASCE RECOLHIDO, E O NÚMERO DO BOTÃO CHEGA PRONTO, DESDE 17/10/2026** (spec 016, item 1.4,
+ * FR-004). Até ali ele nascia aberto e contava sozinho "quantos campos têm alguma escolha" — e onde o
+ * padrão de um campo não é vazio (`situacao=ativo`), a tela limpa mostrava **1**. Quem sabe o padrão
+ * é o contrato de parâmetros, e quem conta é `filtrosForaDoPadrao`, a mesma régua do *"Limpar
+ * filtros"*: o selo e o botão de limpar respondem à mesma pergunta. Abrir e recolher continua estado
+ * deste componente.
  */
 "use client";
 
@@ -56,24 +63,21 @@ export type FiltroAvancadoProps = {
   readonly campos: readonly CampoDeFiltro[];
   readonly estado: EstadoDeFiltro;
   readonly aoMudar: (proximo: EstadoDeFiltro) => void;
+  /** Quantos filtros estão FORA DO PADRÃO — vem pronto de quem chama (`filtrosForaDoPadrao`). */
+  readonly ativos: number;
   readonly titulo?: string;
   readonly className?: string;
 };
-
-/** Quantos campos têm alguma escolha — o número que aparece ao lado do rótulo recolhido. */
-function contarAtivos(estado: EstadoDeFiltro): number {
-  return Object.values(estado).filter((v) => v.some((x) => x !== "")).length;
-}
 
 export function FiltroAvancado({
   campos,
   estado,
   aoMudar,
+  ativos,
   titulo = "Filtros",
   className,
 }: FiltroAvancadoProps) {
-  const [aberto, definirAberto] = React.useState(true);
-  const ativos = contarAtivos(estado);
+  const [aberto, definirAberto] = React.useState(false);
 
   const trocar = (chave: string, valores: readonly string[]) =>
     aoMudar({ ...estado, [chave]: valores });
@@ -91,7 +95,10 @@ export function FiltroAvancado({
             <FilterIcon aria-hidden="true" className="size-4" />
             {titulo}
             {ativos > 0 ? (
-              <span className="bg-marca-suave text-texto rounded-ciaara-sm px-1.5 text-2xs font-medium tabular-nums">
+              <span
+                data-slot="filtros-ativos"
+                className="bg-marca-suave text-texto rounded-ciaara-sm px-1.5 text-2xs font-medium tabular-nums"
+              >
                 {ativos}
               </span>
             ) : null}

@@ -352,13 +352,15 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
     expect(parametrosDaRota("/cursos/[curso]").map((p) => p.nome)).toEqual(["aba", "turma"]);
   });
 
-  it("`aba` é escolha entre TRÊS, com padrão `grade`", () => {
+  it("`aba` é escolha entre TRÊS, com padrão `sobre` e *Sobre o Curso* primeiro", () => {
     // ⚠️ Eram duas (Q-02 da spec 009); a spec 014 (FR-053, `RF-CURSO-02`) trouxe «Avaliações». A guarda foi
     //    INVERTIDA, não apagada: Relatório continua fora.
+    // ⚠️ O PADRÃO PASSOU DE `grade` A `sobre` em 17/10/2026 (spec 016, FR-006.2; Q-10, Bernardo Villas
+    //    Boas): *Sobre o Curso* é a primeira aba e a padrão, e o contrato é o ÚNICO dono do padrão.
     const aba = daPagina("aba");
     expect(aba.tipo).toBe("escolha");
-    if (aba.tipo === "escolha") expect([...aba.opcoes]).toEqual(["grade", "sobre", "avaliacoes"]);
-    expect(aba.padrao).toBe("grade");
+    if (aba.tipo === "escolha") expect([...aba.opcoes]).toEqual(["sobre", "grade", "avaliacoes"]);
+    expect(aba.padrao).toBe("sobre");
   });
 
   it("⚠️ `turma` é TEXTO, e não escolha — o domínio dela é o dado, não uma lista fechada", () => {
@@ -415,7 +417,12 @@ describe("`FR-031` · turma e salas: identidade no caminho, nada na consulta", (
   it("a ficha da turma declara `aba` e `aberta`, e só elas", () => {
     // ⚠️ Spec 014, PR 5 (R-12): `aba` ENTROU — a guarda foi INVERTIDA, não apagada (padrão do `FR-012` da spec 012):
     //    a ficha tinha só `aberta`; agora a aba «Avaliações» é estado da URL, com `ficha` como padrão.
-    expect(parametrosDaRota("/turmas/[turma]").map((p) => p.nome)).toEqual(["aba", "aberta"]);
+    // ⚠️ `gravada` entrou em 17/10/2026 (spec 016, FR-015.2): a confirmação da gravação na ficha.
+    expect(parametrosDaRota("/turmas/[turma]").map((p) => p.nome)).toEqual([
+      "aba",
+      "aberta",
+      "gravada",
+    ]);
     const aba = parametrosDaRota("/turmas/[turma]").find((p) => p.nome === "aba") as Parametro;
     expect(aba.tipo).toBe("escolha");
     if (aba.tipo === "escolha") expect([...aba.opcoes]).toEqual(["ficha", "avaliacoes"]);

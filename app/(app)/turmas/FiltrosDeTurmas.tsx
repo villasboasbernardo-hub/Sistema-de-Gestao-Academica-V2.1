@@ -27,6 +27,7 @@ import {
 } from "@/components/ciaara/filtro-avancado";
 import { ROTULO_DO_STATUS_DE_TURMA } from "@/lib/dominio/seletor-de-turma";
 import { SITUACOES_DE_TURMA } from "@/lib/navegacao/contrato";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 import type { OpcaoDeCurso } from "./consulta";
@@ -86,7 +87,9 @@ export function FiltrosDeTurmas({
     if (escolha("situacao") !== situacao) void definirSituacao(escolha("situacao") || null);
   };
 
-  const algumAtivo = [busca, curso, ano, situacao].some((v) => v !== "");
+  // ⚠️ A régua é o padrão do contrato (spec 016, item 1.4): o número do botão e o "Limpar filtros"
+  //    respondem à mesma pergunta.
+  const ativos = filtrosForaDoPadrao(ROTA, { busca, curso, ano, situacao });
 
   const limpar = () => {
     void definirBusca("");
@@ -97,8 +100,8 @@ export function FiltrosDeTurmas({
 
   return (
     <div className="flex flex-col gap-2" data-slot="filtros-de-turmas">
-      <FiltroAvancado campos={campos} estado={estado} aoMudar={aoMudar} />
-      <BotaoLimparFiltros haFiltroAtivo={algumAtivo} aoLimpar={limpar} />
+      <FiltroAvancado campos={campos} estado={estado} aoMudar={aoMudar} ativos={ativos} />
+      <BotaoLimparFiltros haFiltroAtivo={ativos > 0} aoLimpar={limpar} />
     </div>
   );
 }

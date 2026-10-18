@@ -46,7 +46,9 @@ export function AcoesDeInstrutor({
     });
 
   return (
-    <div className="flex flex-col gap-2" data-slot="acoes-de-instrutor">
+    // ⚠️ `contents`: o botão vira item da barra da ficha (spec 016, FR-010.2), e a recusa vai para uma
+    //    linha própria, depois dos botões, sem desalinhar as alturas.
+    <div className="contents" data-slot="acoes-de-instrutor">
       <DialogoConfirmacao
         titulo={ativo ? "Desativar este instrutor?" : "Reativar este instrutor?"}
         consequencia={
@@ -57,13 +59,13 @@ export function AcoesDeInstrutor({
         rotuloConfirmar={ativo ? "Desativar" : "Reativar"}
         aoConfirmar={executar}
       >
-        <Button type="button" variant="outline" disabled={enviando}>
+        <Button type="button" size="sm" variant="outline" disabled={enviando}>
           {enviando ? "Gravando…" : ativo ? "Desativar instrutor" : "Reativar instrutor"}
         </Button>
       </DialogoConfirmacao>
 
       {erro ? (
-        <p role="alert" className="text-conflito-tinta text-sm">
+        <p role="alert" className="text-conflito-tinta order-last basis-full text-sm">
           {erro}
         </p>
       ) : null}

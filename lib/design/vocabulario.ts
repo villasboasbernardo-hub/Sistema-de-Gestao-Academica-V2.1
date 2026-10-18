@@ -158,6 +158,26 @@ export const PARES: readonly Par[] = [
     limite: 4.5,
     proposito: "item realçado em lista de escolha — texto sobre o realce (`accent`)",
   },
+  // ⚠️ OS PARES C-4 E C-5 ENTRARAM EM 17/10/2026 (spec 016, item 1.2, `RF-DS-03`). O item ativo da
+  // lateral era `--marca-suave` sobre `--superficie-2`: **1,01:1 no claro e 1,06:1 no escuro** —
+  // medido —, e o que o distinguia era só o traço de 2 px. Bernardo pediu que o item da página
+  // atual se destacasse; o fundo passou a `--marca`, com `--marca-contraste` por cima.
+  // ⚠️ SÃO DOIS PARES PORQUE SÃO DUAS PERGUNTAS: o texto é legível sobre o fundo do ativo (C-4)? e o
+  // ativo se distingue da lateral (C-5, elemento de interface, 3:1)?
+  {
+    id: "C-4",
+    frente: "marca-contraste",
+    fundo: "marca",
+    limite: 4.5,
+    proposito: "item ativo da lateral — texto sobre o fundo do ativo",
+  },
+  {
+    id: "C-5",
+    frente: "marca",
+    fundo: "superficie-2",
+    limite: 3,
+    proposito: "item ativo da lateral — o fundo do ativo contra o da lateral",
+  },
   // ⚠️ AS OITO SÉRIES ENTRARAM EM 10/09/2026, no saneamento normativo. Elas estavam declaradas no
   // ponto único, apareciam na vitrine e NÃO TINHAM PAR AUDITADO NENHUM — e o documento 23 §8.1
   // sempre exigiu 3:1 de ELEMENTO GRÁFICO. Não é requisito novo: é regra que a spec havia perdido.
