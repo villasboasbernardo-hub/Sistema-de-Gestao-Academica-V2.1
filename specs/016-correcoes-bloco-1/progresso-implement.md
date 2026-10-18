@@ -107,3 +107,74 @@ pulados — os mesmos **497** casos do `verificar:tudo` local, ali sem nenhum in
 O preview do commit é o deploy `7148402100` do GitHub, em `success`
 (`sistema-de-gestao-academica-v2-1-hxu69zra6-ciaara-11.vercel.app`); ele fica atrás da proteção de acesso
 da Vercel (redireciona para `vercel.com/sso-api`), e por isso o conteúdo não foi lido por fora.
+
+## Conferência do PR #67 por Bernardo Villas Boas — 17/10/2026
+
+Aprovados os passos 1, 3, 4, 5, 6 e 8 do roteiro. **Dois defeitos**, corrigidos neste ramo antes do merge.
+
+### Defeito 1 — o item ativo do menu preso à primeira página (passo 2)
+- **Causa, confirmada:** `app/(app)/layout.tsx` lia o caminho do cabeçalho `x-ciaara-caminho`, gravado
+  pelo middleware, e o App Router **não redesenha o layout** na navegação por clique entre páginas filhas
+  (`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/layout.md:240`, Next 16.3.3).
+  O ativo ficava o da primeira renderização — *Início*, entrando por `/inicio`. Defeito anterior à spec
+  016, que a cor nova do item 1.2 pôs à vista. Os casos antigos chegavam por endereço e não o viam.
+- **O mesmo defeito nas abas da Administração** (`app/(app)/admin/layout.tsx`), achado no mapeamento.
+- **Conserto:** `components/casca/entrada-do-menu.tsx`, folha de cliente com `usePathname`, chamando a
+  regra única `entradaAtiva()`; `app/(app)/admin/AbasDaAdministracao.tsx`, a mesma coisa para as abas. A
+  casca e os dois layouts deixaram de receber o caminho; o middleware deixou de gravar o cabeçalho (a
+  cópia dos cabeçalhos ficou, porque leva os cookies renovados); `lib/navegacao/caminho.ts` saiu.
+- ⚠️ **A entrada *Administração* ganhou `ativaSob: "/admin"`**: ela leva a `/admin/usuarios`, e pela
+  regra de prefixo da própria rota o menu se apagaria em Permissões e Salas assim que o caminho deixasse
+  de estar preso. `tests/unidade/entrada-ativa.test.ts` (a regra não tinha teste) reprovou só nesse caso
+  antes do campo.
+- **Caso que discrimina:** `shell.spec.ts` — entrar em `/inicio` e ir a Turmas, Cursos, Disciplinas,
+  Instrutores e de volta a Início **só por clique**, conferindo `aria-current` e o fundo `--marca` em
+  cada parada; e trocar de aba na Administração conferindo a aba marcada e o menu. **Reprovaram antes**
+  (*"em /turmas, o ativo é outro — recebido /inicio"*; *"em /admin/permissoes, a aba marcada é outra"*).
+
+### Defeito 2 — a disciplina aberta não fechava (passo 6)
+- **Causa, confirmada:** `GradeDeDisciplinas.tsx` desenhava a linha aberta pelo gancho da URL, mas
+  decidia abrir/fechar pela cópia do servidor (`parametros.aberta`), que o parâmetro visual `aberta`
+  (`avisaServidor: false`) não refaz: o segundo clique gravava o mesmo código. A face oposta: chegando com
+  `?aberta=` (ou depois de o servidor redesenhar a tela), o primeiro clique fechava e o segundo **não
+  reabria**.
+- **A ficha da turma tinha o mesmo defeito** por outro caminho: o recuo `abertaNoEndereco` reabria a linha
+  fechada sempre que a ficha tinha sido carregada com `?aberta=` ou revalidada por uma gravação no detalhe.
+- **Conserto no componente único:** a `TabelaDensa` decide abrir ou fechar pelo mesmo `abertas` que
+  desenha, para clique, Enter e Espaço, e entrega `aoAlternarLinha(linha, abrir)`. O tipo virou união:
+  com `detalhe`, `abertas` e `aoAlternarLinha` são obrigatórios e `aoAtivarLinha` não compila. As quatro
+  telas com detalhe (`/disciplinas`, a ficha da turma, o painel de situação do DSA e a vitrine) passaram
+  ao contrato novo; as duas que navegam (turmas e instrutores) ficaram como estavam. As cópias do
+  servidor de `aberta` saíram das duas páginas.
+- **Casos que discriminam:** abrir → fechar → reabrir por clique, Enter e Espaço, com `aria-expanded`, o
+  detalhe e o `?aberta=` conferidos, nas duas telas, partindo da tela limpa e do endereço com a linha
+  aberta. **Reprovaram antes:** `/disciplinas` nos dois pontos de partida e a ficha partindo do endereço;
+  a ficha partindo da tela limpa já fechava, como o mapeamento previa. Os auxiliares `abrirDetalhe`
+  passaram a abrir só se a linha estiver fechada.
+
+### Revisão adversária do conserto (17 e 18/10/2026)
+Quatro lentes sobre o diff, com um cético por achado. ⚠️ **Ficou incompleta**: o limite semanal de
+subagentes estourou no meio, e a lente de regressões não rodou (coberta pela suíte completa abaixo); os 6
+achados da lente de documentação foram conferidos à mão no código. Corrigidos: o documento 24 (só o `.md`)
+ainda citava `lib/navegacao/caminho.ts`; a emenda de `contracts/casca.md` engolia o parágrafo seguinte e
+dizia que *"o cabeçalho"* deixara de receber o caminho (ele nunca recebia); `painel-retratil.tsx` e
+`casca-do-app.tsx` se diziam o único cliente da casca; `fronteira-casca.test.ts` dizia *"quatro"* com
+cinco na lista; o cabeçalho de `entrada-ativa.test.ts` dizia que a regra estava certa; e as prévias do
+`.design-sync` da `TabelaDensa` e da `FiltroAvancado` seguiam no contrato antigo (`PEND-016-4`: o `tsc` não
+as lê). **Não corrigido, por estar fora dos dois defeitos:** as teclas de navegação dentro do detalhe
+aberto são capturadas pela grade — `PEND-016-3`, para decisão de Bernardo.
+
+### Contagens desta rodada — `pnpm verificar:tudo`, 18/10/2026, sobre `e55291a`
+| Etapa | Resultado |
+|---|---|
+| tipos, lint, formatação, build | sem erro e sem aviso |
+| unidade | **2.347** em **166** arquivos (+5: `entrada-ativa.test.ts`) |
+| pgTAP | **770** em **54** arquivos, PASS |
+| invariantes e RLS | **327** em **17** arquivos |
+| ponta a ponta (4 processos, 18,5 min) | **494** passados · **3** reprovados · **6** pulados — **503** casos (+6 novos) |
+
+Os três reprovados pararam por tempo sob 4 processos: `admin-sobre-contas.spec.ts:206` e
+`dsa-tipo-e-global.spec.ts:160` (os mesmos da rodada do PR 1) e `planilha-de-contingencia.spec.ts:112`
+(a ficha ainda em *"Carregando a ficha da turma…"* no fim dos 10 s). **Isolados:** as três suítes juntas
+com 2 processos deram 28 de 29 — o do DSA de novo, por estouro do prazo total de 30 s na terceira
+passagem pela ficha —, e o caso do DSA sozinho passou **3 de 3**. Classe da `PEND-014-7`.

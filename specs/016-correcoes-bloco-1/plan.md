@@ -35,6 +35,17 @@ as cinco dúvidas da §10, todas pela recomendação. Registro na §0.
 - **Analyze (17/10/2026):** os commits dos itens **sem requisito próprio da Fase 1** (faixa, filtros, ver
   senha, página do curso, situação da turma…) usam o identificador **`BLOCO-1`** (opção A) — como o
   `EPICO-5.5`. Os itens com requisito de origem usam o dele (`RF-DS-03`, `RF-DSA-06`, `RF-INI-01`…).
+- **Conferência do PR 1 (#67), 17/10/2026** — aprovados os passos 1, 3, 4, 5, 6 e 8 do roteiro; **dois
+  defeitos corrigidos no mesmo ramo, antes do merge**: o item ativo do menu preso à primeira página
+  carregada (passo 2) e a linha de disciplina que abria e não fechava (passo 6). O lote de dúvidas do
+  implement seguiu **todas as recomendações**:
+  1. **"Outras (N)"** só a partir de 6 disciplinas — com 5, as cinco inteiras (sem *"Outras (1)"*).
+  2. **Desativar instrutor** fica com contorno; só *Excluir* em vermelho.
+  3. **A confirmação de gravação fica na URL** (`?gravada=`), como o aviso de exclusão de conta.
+  4. **Curso fora de oferta:** *Trocar situação* some, e o formulário *Editar turma* fica como era.
+  5. **Faixa em Production** na cor da marca.
+  6. **`avaliacoes-nas-telas.spec.ts:53`** vai para a **`PEND-014-7`** (instável também na `main`).
+  7. **Testes que conferem o valor que eles mesmos digitaram** viram a **`PEND-016-2`** (§0.1).
 
 ### 0.1 Pendências e dependências registradas por este plan
 
@@ -43,6 +54,9 @@ as cinco dúvidas da §10, todas pela recomendação. Registro na §0.
 | **`PEND-016-1`** | **Unificar a composição da CHD**: fazer `vw_carga_horaria_turma` e `vw_disciplinas_execucao` lerem de `vw_chd_por_fato`, para a soma viver num lugar só. Até lá, o pgTAP 135 garante que as três batem | Fatia própria, depois do Bloco 1 (P-3) |
 | **Dependência do Bloco 2** | Os **"TA fora do DSA"** da D-COR-3 vão **somar na base da M1** (`vw_chd_por_fato`), para entrarem na CH executada e no saldo como os lançamentos do DSA. **Nenhuma tarefa aqui**; quem especificar o Bloco 2 lê esta linha | Bloco 2 (spec 017) |
 | **D20 residual** | `vw_cursos_regime_vigente` escolhe o regime vigente por `current_date` (UTC) | Não é deste bloco |
+| **`PEND-016-2`** | **Varrer os testes de ponta a ponta que conferem o valor que eles mesmos digitaram** — *preencher o campo, gravar, conferir o campo* passa mesmo quando a gravação não acontece. Medido no PR 1 (#67): *"turma ativa com término passado avisa, e a gravação acontece"* não confirmava o aviso do limite de turmas do ano e passava **sem gravar**. A prova da gravação é a confirmação da tela **e** o valor no banco, ou o campo depois de recarregar | Fatia própria (decisão de Bernardo Villas Boas, 17/10/2026) |
+| **`PEND-016-3`** | **As teclas de navegação apertadas DENTRO do detalhe aberto são capturadas pela grade de fora** (achado pela revisão do conserto da conferência do PR #67, 17/10/2026; anterior a esta spec — fatia (b) do Épico 5). `components/ciaara/lista-navegavel.tsx`, em `aoPressionar`, só confere a origem do evento para Enter e Espaço; setas, Home, End e PageUp/PageDown num campo do detalhe fazem `preventDefault` e movem o foco para a grade: o cursor não anda num texto, a seta não muda a data nem a opção, e no seletor de instrutor do detalhe da ficha a seta tira o foco do painel. **Conserto proposto:** tratar as teclas só quando o alvo é uma célula registrada da grade, com um caso de ponta a ponta que foca um campo do detalhe e aperta seta à direita | Proposta: PR próprio, pequeno, antes do PR 2 (decisão de Bernardo) |
+| **`PEND-016-4`** | **As prévias de `.design-sync/previews/` ficam fora do `tsc`** — o `include` `**/*.tsx` não casa diretório que começa com ponto, e elas importam o pacote compilado `ciaara-11-ds`. Medido no PR 1: a `TabelaDensa` e a `FiltroAvancado` mudaram de contrato e as prévias seguiam no antigo, sem nada acusar (corrigidas à mão em 17/10/2026). Uma mudança de contrato de componente tem de varrer as prévias | Fatia própria |
 
 ## Summary
 

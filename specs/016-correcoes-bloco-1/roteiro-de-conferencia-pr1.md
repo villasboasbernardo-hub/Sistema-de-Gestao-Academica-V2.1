@@ -90,3 +90,34 @@
 8. **Esperado:** o formulário **não** tem mais o campo *Situação*. Grave qualquer alteração: a ficha volta
    com *"Alterações da turma gravadas."*
 9. *(Desfaça a troca da situação, se a turma não for de teste.)*
+
+---
+
+# Reconferência — os dois defeitos da conferência de 17/10/2026
+
+> Só estes dois passos; os demais foram aprovados. Nenhum deles grava no banco.
+
+## A · O item ativo do menu acompanha a navegação (passo 2)
+
+1. Entre no sistema e fique no **Início** (azul cheio no menu).
+2. Clique, no menu, em **Turmas**, depois **Cursos**, **Disciplinas**, **Instrutores** e **Início** — sem
+   digitar endereço e sem recarregar.
+3. **Esperado:** em cada clique, a entrada da tela aberta fica azul cheio e a anterior volta ao normal.
+4. Clique em **Administração** e, nas abas do topo, em **Permissões**, **Salas** e **Usuários**.
+5. **Esperado:** a aba da tela aberta fica sublinhada, e **Administração** continua azul no menu nas três.
+6. Repita o passo 2 no tema **Noturno**: o destaque continua legível.
+
+## B · A disciplina aberta fecha (passo 6)
+
+1. Menu **Disciplinas** → escolha um curso → clique numa disciplina.
+2. **Esperado:** o detalhe abre (UEs, tópicos, avaliações).
+3. Clique de novo na **mesma linha**.
+4. **Esperado:** o detalhe fecha e a tela volta ao estado inicial (o endereço perde o `?aberta=`). Um
+   terceiro clique reabre.
+5. Com a linha selecionada, aperte **Enter**, e depois **Espaço**.
+6. **Esperado:** cada tecla alterna entre aberto e fechado.
+7. Abra uma disciplina e **recarregue a página** (F5): ela volta aberta. Clique nela: **fecha**; clique de
+   novo: **reabre**.
+8. Repita os passos 3 a 7 na ficha de uma turma (menu **Turmas** → turma → seção *Disciplinas*).
+9. ⚠️ Fechar a linha **desmonta** o que estava sendo digitado no detalhe (uma UE em edição, um período) — é
+   o comportamento pedido; grave antes de fechar.
