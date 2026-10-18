@@ -299,7 +299,7 @@ function Grade({
             style={{ gridColumn: `${i + 2} / ${i + 3}`, gridRow: "1 / 2" }}
           >
             <b>{c.sigla}</b>
-            <span>{c.diaMes}</span>
+            <span>{c.dataLegivel}</span>
           </div>
         ))}
         {grade.colunas.map((c, i) => (

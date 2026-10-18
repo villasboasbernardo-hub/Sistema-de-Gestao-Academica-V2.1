@@ -70,6 +70,11 @@ export function abaDeCronos(insumo: InsumoDaPlanilha, g: GeometriaDaEntrada): Ab
   ] as const) {
     definir(aba, K_LINHA_DOS_TITULOS, coluna, { valor: texto, estilo: titulo });
   }
+  /*
+   * ⚠️ **O TÍTULO É A SEMANA DO CURSO, E A DATA TEM O ANO** (spec 016, FR-009.5 e FR-005.1): até 18/10/2026
+   * ele dizia "S42" (a semana ISO) e a data saía `DD/MM` — duas coisas que o resto da planilha deixou de
+   * mostrar. Fora da janela da turma o título é «—», como no papel.
+   */
   semanas.forEach((s, k) => {
     const doCurso = semanaDoCurso({
       dataInicio: insumo.turma.dataInicio,
@@ -85,7 +90,7 @@ export function abaDeCronos(insumo: InsumoDaPlanilha, g: GeometriaDaEntrada): Ab
       valor: dataParaLeitura(s.seisDias[0] ?? ""),
       estilo: { tamanho: 7, horizontal: "center" },
     });
-    aba.larguras.set(K.primeiraSemana + k, 5);
+    aba.larguras.set(K.primeiraSemana + k, 9);
   });
 
   emOrdemNaturalDoCodigo(insumo.disciplinas, (d) => d.codigo).forEach((d, i) => {

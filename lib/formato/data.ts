@@ -89,7 +89,19 @@ function emInstante(valor: string | null | undefined): Date | null {
  * ⚠️ **A LISTA COMEÇA NO DOMINGO porque é o índice de `getUTCDay()`** — reordená-la para começar na
  * segunda exigiria aritmética a mais para ganhar nada.
  */
-const DIA_DA_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as const;
+export const DIA_DA_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as const;
+
+/**
+ * `AAAA-MM-DD` → `SEG` — a sigla do dia da semana, a mesma de `dataComDiaDaSemana`. Vazio quando a
+ * data não se lê. ⚠️ **ELA EXISTE PARA O PAPEL E A PLANILHA, que escrevem a sigla e a data em
+ * linhas separadas** (spec 016, FR-005.1): até 18/10/2026 cada um tinha a sua lista de dias.
+ */
+export function siglaDoDiaDaSemana(iso: string): string {
+  if (dataIlegivel(dataParaLeitura(iso))) return "";
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  const indice = new Date(Date.UTC(ano ?? 1970, (mes ?? 1) - 1, dia ?? 1)).getUTCDay();
+  return DIA_DA_SEMANA[indice] ?? "";
+}
 
 /**
  * `AAAA-MM-DD` → `SEG 06/04/2026` — a coluna **DIA** do DSA, na tela e no papel.
@@ -111,7 +123,5 @@ const DIA_DA_SEMANA = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as cons
 export function dataComDiaDaSemana(iso: string): string {
   const legivel = dataParaLeitura(iso);
   if (dataIlegivel(legivel)) return legivel;
-  const [ano, mes, dia] = iso.split("-").map(Number);
-  const indice = new Date(Date.UTC(ano ?? 1970, (mes ?? 1) - 1, dia ?? 1)).getUTCDay();
-  return `${DIA_DA_SEMANA[indice]} ${legivel}`;
+  return `${siglaDoDiaDaSemana(iso)} ${legivel}`;
 }

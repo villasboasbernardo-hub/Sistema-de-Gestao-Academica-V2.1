@@ -131,7 +131,7 @@ export function divergenciasDoPapel(
       confere(
         `dia ${d}`,
         lida.cabecalhoDoDia(d),
-        `${c.sigla} ${c.diaMes}${c.bloqueio ? `\n${c.bloqueio}` : ""}`,
+        `${c.sigla} ${c.dataLegivel}${c.bloqueio ? `\n${c.bloqueio}` : ""}`,
       ),
     );
   }

@@ -9,6 +9,9 @@
  */
 import { expect, type Page } from "@playwright/test";
 
+import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
+import { dataParaLeitura } from "@/lib/formato/data";
+
 /**
  * Abre a semana que contém `dia` pelo CAMPO DE DATA da navegação (item 4 de 08/10/2026), e espera a
  * semana chegar.

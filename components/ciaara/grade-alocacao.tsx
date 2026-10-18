@@ -298,7 +298,11 @@ export function GradeAlocacao({
                         NOME_DO_TOM[tom],
                         celula?.marcaDeConflito,
                         typeof linha.chave === "string" ? linha.chave : undefined,
-                        coluna.chave,
+                        /*
+                         * ⚠️ O RÓTULO DA COLUNA, quando é texto, e não a chave (spec 016, FR-005.1): no DSA a
+                         *    chave é a data ISO, e o leitor de tela lia "2026-04-06" no fim de cada célula.
+                         */
+                        typeof coluna.rotulo === "string" ? coluna.rotulo : coluna.chave,
                       ]
                         .filter(Boolean)
                         .join(" · ");

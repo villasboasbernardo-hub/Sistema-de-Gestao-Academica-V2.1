@@ -53,7 +53,16 @@ function semanasEntre(de: IdentidadeDaSemana, ate: IdentidadeDaSemana): Identida
   return semanas;
 }
 
-function rotuloDa(s: IdentidadeDaSemana, seisDias: readonly string[]): string {
+/**
+ * `Semana 28 de 37 — 12/10/2026 a 17/10/2026` (FR-009.5 e FR-005.1 da spec 016): a semana do curso, pela
+ * função única, e as datas com o ano nas duas pontas. ⚠️ **A SEMANA ISO SAIU DO RÓTULO** — ele dizia
+ * *"Semana 42 — 12/10 a 17/10/2026"*, uma terceira numeração. Fora da janela da turma, só as datas.
+ */
+function rotuloDa(
+  s: IdentidadeDaSemana,
+  seisDias: readonly string[],
+  janela: JanelaDaSemanaDoCurso,
+): string {
   const segunda = seisDias[0] ?? "";
   const sabado = seisDias[5] ?? segunda;
   const datas = `${dataParaLeitura(segunda)} a ${dataParaLeitura(sabado)}`;

@@ -83,7 +83,27 @@ const PROIBIDOS: readonly { readonly padrao: RegExp; readonly porque: string }[]
     padrao: /\$\{[^}]{1,40}\}\/\$\{[^}]{1,40}\}\/\$\{[^}]{1,40}\}/,
     porque: "é uma data de três pedaços montada em template — `DD/MM/AAAA` escrito à mão",
   },
+  /*
+   * ⚠️ **AS TRÊS DE BAIXO VIERAM DA VARREDURA DA SPEC 016** (FR-005.4): eram as formas que passavam. A de
+   *    dois pedaços é o `DD/MM` do papel (`grade-do-papel.ts`); o recorte é o `DD/MM` da CRONOS, tirado de
+   *    uma data já formatada; e o `Intl.DateTimeFormat` é o formatador cru, que só `lib/formato/` usa.
+   */
+  {
+    padrao: /\$\{[^}]{0,40}padStart[^}]{0,40}\}\/\$\{[^}]{0,40}padStart/,
+    porque: "é uma data de dois pedaços com `padStart` — `DD/MM` escrito à mão",
+  },
+  {
+    padrao: /dataParaLeitura\([^)]*\)\s*\.slice\(\s*0\s*,\s*5\s*\)/,
+    porque: "é o `DD/MM` recortado de uma data já formatada — a data sem o ano",
+  },
+  {
+    padrao: /Intl\.DateTimeFormat/,
+    porque: "é o formatador cru de data, que só `lib/formato/` usa",
+  },
 ];
+
+/** `lib/formato/` é isento do formatador cru: é lá que ele mora (`ano-corrente.ts` dá o «hoje» da CIAARA-11). */
+const ISENTOS_DO_FORMATADOR_CRU = /^lib\/formato\//;
 
 function semComentario(fonte: string): string {
   return fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -152,8 +172,10 @@ describe("`FR-034` · o ponto único existe e devolve o formato brasileiro", () 
 
 describe("`FR-034` · ninguém formata data por conta própria", () => {
   it.each(PROIBIDOS)("⚠️ nenhum arquivo usa o padrão que $porque", ({ padrao }) => {
-    const infratores = TODOS.filter((arquivo) =>
-      padrao.test(semComentario(readFileSync(resolve(RAIZ, arquivo), "utf8"))),
+    const infratores = TODOS.filter(
+      (arquivo) =>
+        !(padrao.source.startsWith("Intl") && ISENTOS_DO_FORMATADOR_CRU.test(arquivo)) &&
+        padrao.test(semComentario(readFileSync(resolve(RAIZ, arquivo), "utf8"))),
     );
 
     expect(
@@ -171,8 +193,12 @@ describe("`FR-034` · ninguém formata data por conta própria", () => {
      * Sem este caso, apagar toda exibição de data deixaria a varredura verde — e a guarda estaria
      * medindo a ausência do assunto, não a ausência do defeito.
      */
+    /*
+     * ⚠️ **O IMPORT RELATIVO CONTA** (FR-005.4 da spec 016): `lib/dominio/` importa o formatador por
+     *    `../../formato/data`, e o controle que só contava `@/lib/formato/data` subestimava o consumo.
+     */
     const consumidores = TODOS.filter((arquivo) =>
-      /from "@\/lib\/formato\/data"/.test(readFileSync(resolve(RAIZ, arquivo), "utf8")),
+      /from "(@\/lib\/|(\.\.\/)+)formato\/data"/.test(readFileSync(resolve(RAIZ, arquivo), "utf8")),
     );
 
     expect(

@@ -36,12 +36,13 @@ describe("`FR-030` · o ano inteiro da turma", () => {
     expect(avisos).toEqual([]);
   });
 
-  it("o rótulo é único e legível: a semana, de segunda a sábado", () => {
+  it("spec 016, FR-009.5 e FR-005.1 · o rótulo é a semana do curso e as datas com o ano", () => {
     const { semanas } = semanasDaPlanilha({
-      turma: presencial("2026-04-06", "2026-04-17"),
+      turma: presencial("2026-04-06", "2026-04-17", 35),
       datasComLancamento: [],
       hoje: "2026-04-08",
     });
+    // ⚠️ A semana ISO (15, 16) saiu do rótulo: ela era uma terceira numeração na mesma planilha.
     expect(semanas.map((s) => s.rotulo)).toEqual([
       "Semana 1 de 35 — 06/04/2026 a 11/04/2026",
       "Semana 2 de 35 — 13/04/2026 a 18/04/2026",

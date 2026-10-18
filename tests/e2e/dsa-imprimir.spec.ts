@@ -28,6 +28,7 @@ import {
   ASSINANTE_DE_JULHO,
   ASSINANTE_ENCARREGADO,
   CONTEUDO_A_FRENTE,
+  DATA_A_FRENTE,
   limparDsa,
   SEGUNDA,
   SEMANA,
@@ -37,6 +38,8 @@ import {
   TA_A_FRENTE,
   type DsaSemeado,
 } from "./dsa-de-teste";
+import { dataParaLeitura } from "@/lib/formato/data";
+
 import { irAFichaDaTurma } from "./navegar-turmas";
 import { irParaASemanaDoDia } from "./percurso-do-dsa";
 
@@ -80,6 +83,33 @@ async function abrirAImpressao(page: Page, semana: number, ano = ANO): Promise<v
 }
 
 test.describe("`RF-PDF-01` · do botão ao papel, por clique", () => {
+  /*
+   * ⚠️ **SPEC 016, FR-005.1 (Q-9): O CABEÇALHO DOS DIAS COM O ANO, E A FOLHA AINDA EM UMA PÁGINA A4.** Até
+   * 18/10/2026 o papel escrevia `SEG 06/04`, por um formatador próprio. A data mais larga não pode empurrar
+   * o DSA para uma segunda página (`RF-PDF-01`).
+   */
+  test("menu Turmas → turma → DSA → Imprimir: os dias com o ano, numa página A4", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
+    await page.locator('[data-slot="abrir-o-dsa"]').click();
+    await irParaASemanaDoDia(page, SEGUNDA, SEMANA, ANO);
+    await page.locator('[data-slot="imprimir-dsa"]').click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/print/dsa");
+    await expect(page.locator(DOCUMENTO)).toBeVisible();
+
+    const dias = page.locator(`${DOCUMENTO} .dsa4-cabeca-dia`);
+    await expect(dias.first()).toContainText("SEG");
+    await expect(dias.first()).toContainText("06/04/2026");
+    for (const texto of await dias.allInnerTexts()) {
+      expect(texto, "um dia do cabeçalho saiu sem o ano").toMatch(/\d{2}\/\d{2}\/\d{4}/);
+    }
+
+    const paisagem = await page.pdf({ format: "A4", landscape: true });
+    expect(paginasDoPdf(paisagem), "com o ano, o DSA passou de uma página A4 paisagem").toBe(1);
+  });
+
   test("a grade leva à impressão com os MESMOS parâmetros, e sem casca", async ({ page }) => {
     await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
     await page.locator('[data-slot="abrir-o-dsa"]').click();

@@ -46,8 +46,9 @@ export function FiltrosDeAtividades({ turmas }: { readonly turmas: readonly stri
       tipo: "escolha",
       opcoes: turmas.map((t) => ({ valor: t, rotulo: t })),
     },
-    { chave: "de", rotulo: "De (aaaa-mm-dd)", tipo: "texto" },
-    { chave: "ate", rotulo: "Até (aaaa-mm-dd)", tipo: "texto" },
+    /* Spec 016, FR-005.2: a data se escolhe no calendário; a URL continua em ISO (FR-005.3). */
+    { chave: "de", rotulo: "De", tipo: "data" },
+    { chave: "ate", rotulo: "Até", tipo: "data" },
   ];
 
   const estado: EstadoDeFiltro = {

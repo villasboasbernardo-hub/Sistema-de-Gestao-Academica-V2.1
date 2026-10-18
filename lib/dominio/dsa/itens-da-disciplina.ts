@@ -16,6 +16,7 @@
  * ⚠️ TypeScript puro: sem `next`, sem `react`, sem `supabase` (Princípio II).
  */
 import type { NaturezaDaAvaliacao } from "@/lib/dominio/avaliacoes/situacao";
+import { dataParaLeitura } from "@/lib/formato/data";
 
 export type ItemParaOferta = {
   readonly id: string;
@@ -94,7 +95,8 @@ export function ofertaDaDisciplina(entrada: {
     const nome = item ? rotuloDoItem(item) : a.tipo;
     vistas.push({
       avaliacaoId: a.id,
-      rotulo: `Vista da ${nome}, aplicada em ${a.aplicacao} — sessão ${proxima}`,
+      /* A data da aplicação em DD/MM/AAAA, pelo ponto único (spec 016, FR-005.1) — era a ISO crua. */
+      rotulo: `Vista da ${nome}, aplicada em ${dataParaLeitura(a.aplicacao)} — sessão ${proxima}`,
       proximaSessao: proxima,
       tempo: item?.taVista ?? null,
     });

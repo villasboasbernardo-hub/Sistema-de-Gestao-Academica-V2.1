@@ -25,8 +25,7 @@
 import { semanaIsoDe } from "../../carga-semanal";
 import { MOTIVO_NO_MESMO_TA } from "../grade";
 import { TA_MAXIMO, type Relogio } from "../horario-do-bloco";
-import { NUMERO_AUSENTE_NO_CABECALHO } from "../numero-do-dsa";
-import { instanteComHoraParaLeitura } from "../../../formato/data";
+import { instanteComHoraParaLeitura, siglaDoDiaDaSemana } from "../../../formato/data";
 import {
   concat,
   fn,
@@ -71,7 +70,6 @@ import {
   type SemanaDoInsumo,
 } from "./tipos";
 
-export const SIGLAS_DOS_DIAS = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as const;
 export const DIAS_NA_ENTRADA = 6;
 
 export const TEXTO_DO_TOPO = {
@@ -795,7 +793,7 @@ export function abaDeEntrada(entrada: {
         const borda: Estilo | undefined = t === 1 ? { borda: { superior: true } } : undefined;
         definirTexto(aba, r, P.semana, semana.rotulo, borda);
         definir(aba, r, P.data, borda === undefined ? { data } : { data, estilo: borda });
-        definirTexto(aba, r, P.dia, SIGLAS_DOS_DIAS[d] ?? "", borda);
+        definirTexto(aba, r, P.dia, siglaDoDiaDaSemana(data), borda);
         definirTexto(aba, r, P.ta, t, borda);
         definirTexto(aba, r, P.semana_indice, k + 1);
         const lancado = retrato.tas.get(chaveDoTa(d, t));
@@ -866,8 +864,7 @@ export function abaDeEntrada(entrada: {
       definir(aba, r, P.spTexto, { formula: formulaDoSemPosicao(r) });
       if (s === undefined) continue;
       definir(aba, r, P.data, { data: s.data });
-      const indice = (new Date(`${s.data}T12:00:00Z`).getUTCDay() + 6) % 7;
-      definirTexto(aba, r, P.dia, SIGLAS_DOS_DIAS[indice] ?? "");
+      definirTexto(aba, r, P.dia, siglaDoDiaDaSemana(s.data));
       definirTexto(aba, r, P.ta, s.taInicial);
       definirTexto(aba, r, P.cod, s.cod);
       definirTexto(aba, r, P.item, s.item);

@@ -47,7 +47,7 @@ export type OpcaoDeFiltro = {
   readonly contagem?: number;
 };
 
-export type TipoDeCampo = "escolha" | "escolha-multipla" | "texto" | "intervalo";
+export type TipoDeCampo = "escolha" | "escolha-multipla" | "texto" | "intervalo" | "data";
 
 export type CampoDeFiltro = {
   readonly chave: string;
@@ -144,6 +144,27 @@ function CampoDoFiltro({
         <Label htmlFor={id}>{campo.rotulo}</Label>
         <Input
           id={id}
+          value={valores[0] ?? ""}
+          onChange={(e) => aoMudar(e.target.value ? [e.target.value] : [])}
+        />
+      </div>
+    );
+  }
+
+  /*
+   * ⚠️ **A DATA SE ESCOLHE NO CALENDÁRIO, E O VALOR É ISO** (spec 016, FR-005.2 e FR-005.3): o campo pedia
+   *    "aaaa-mm-dd" num texto livre. O `<input type="date">` mostra a data no formato do navegador
+   *    (DD/MM/AAAA em pt-BR) e entrega `aaaa-mm-dd`, que é o que a URL guarda — passar o valor por
+   *    `dataParaLeitura` abriria o campo VAZIO, como em `PainelDePeriodo.tsx`.
+   */
+  if (campo.tipo === "data") {
+    return (
+      <div className="flex flex-col gap-1">
+        <Label htmlFor={id}>{campo.rotulo}</Label>
+        <Input
+          id={id}
+          type="date"
+          lang="pt-BR"
           value={valores[0] ?? ""}
           onChange={(e) => aoMudar(e.target.value ? [e.target.value] : [])}
         />

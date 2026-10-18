@@ -123,7 +123,7 @@ describe.each(SEMANAS.map((s) => [s.numero, s] as const))("semana %i", (_, s) =>
     grade.colunas.forEach((c, d) => {
       expect
         .soft(lida.cabecalhoDoDia(d))
-        .toBe(`${c.sigla} ${c.diaMes}${c.bloqueio ? `\n${c.bloqueio}` : ""}`);
+        .toBe(`${c.sigla} ${c.dataLegivel}${c.bloqueio ? `\n${c.bloqueio}` : ""}`);
     });
   });
 

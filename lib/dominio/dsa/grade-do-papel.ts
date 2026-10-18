@@ -43,7 +43,8 @@ export type ColunaDaGrade = {
   /** `SEG` … `SÁB`. */
   readonly sigla: string;
   /** `DD/MM`. */
-  readonly diaMes: string;
+  /** `DD/MM/AAAA`, por `dataParaLeitura` (FR-005.1 da spec 016). */
+  readonly dataLegivel: string;
   /** A descrição do feriado de dia inteiro, ou `null`. */
   readonly bloqueio: string | null;
 };
@@ -94,15 +95,15 @@ export type GradeDoPapel = {
  */
 export const SIGLAS_DE_AVALIACAO: ReadonlySet<string> = new Set(["PM", "PO", "PP"]);
 
-const SIGLAS_DOS_DIAS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as const;
-
+/*
+ * ⚠️ **A SIGLA E A DATA SAEM DO PONTO ÚNICO, COM O ANO** (spec 016, FR-005.1; Q-9): até 18/10/2026 o papel
+ * tinha a própria lista de dias e um `DD/MM` montado à mão — o quinto dono do formato de data.
+ */
 function colunaDoDia(dia: DiaImpresso): ColunaDaGrade {
-  const [ano, mes, d] = dia.data.split("-").map(Number);
-  const semana = new Date(Date.UTC(ano ?? 1970, (mes ?? 1) - 1, d ?? 1)).getUTCDay();
   return {
     data: dia.data,
-    sigla: SIGLAS_DOS_DIAS[semana] ?? "",
-    diaMes: `${String(d).padStart(2, "0")}/${String(mes).padStart(2, "0")}`,
+    sigla: siglaDoDiaDaSemana(dia.data),
+    dataLegivel: dataParaLeitura(dia.data),
     bloqueio: dia.bloqueio,
   };
 }
