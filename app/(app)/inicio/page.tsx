@@ -383,9 +383,11 @@ export default async function Inicio({
                 ⚠️ CADA TURMA É PONTO DE ENTRADA PARA A TELA DO CURSO (`RF-INI-03`, `FR-030`), com
                 URL própria — navegação de verdade, e não troca de conteúdo em memória. A tela de
                 destino é do Épico 7; o link já carrega o recorte que ela vai ler.
+                ⚠️ E PEDE A ABA GRADE (spec 016, FR-006.3): desde 17/10/2026 a padrão é *Sobre o
+                Curso*, e sem `aba=grade` o cartão abriria uma aba que não mostra a turma.
               */}
               <Link
-                href={enderecoDaTurmaNoCurso(t.cursoCodigo, t.turmaCodigo)}
+                href={enderecoDaTurmaNoCurso(t.cursoCodigo, t.turmaCodigo, "grade")}
                 data-turma={t.turmaCodigo}
                 className="border-borda bg-superficie rounded-ciaara hover:bg-marca-suave focus-visible:ring-marca flex flex-wrap items-center justify-between gap-3 border p-3 focus-visible:ring-2 focus-visible:outline-none"
               >

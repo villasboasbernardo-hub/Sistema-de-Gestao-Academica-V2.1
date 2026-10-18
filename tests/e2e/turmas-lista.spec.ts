@@ -159,6 +159,8 @@ test.describe("`FR-017` · curso → turma, e o caminho para a lista inteira", (
     await expect
       .poll(() => new URL(page.url()).pathname)
       .toBe(`/cursos/${encodeURIComponent(sigla)}`);
+    // ⚠️ A padrão é *Sobre o Curso* desde a spec 016 (FR-006.2): a Grade é um clique a mais.
+    await page.locator('[data-slot="abas-do-curso"] [data-aba="grade"]').click();
 
     const verTodas = page.locator('[data-slot="ver-todas-as-turmas"]');
     await expect(verTodas).toBeVisible();

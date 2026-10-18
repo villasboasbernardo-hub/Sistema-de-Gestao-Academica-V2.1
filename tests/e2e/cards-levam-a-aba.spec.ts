@@ -79,7 +79,8 @@ test("3 · /inicio → card da turma → a página do curso na aba Grade, com a 
   const card = page.locator(`[data-slot="panorama-de-turmas"] [data-turma="${SEMEADO.turma}"]`);
   await card.scrollIntoViewIfNeeded();
   await card.click();
-  await expect(page).toHaveURL(/\/cursos\/[^?]+\?turma=/);
+  // ⚠️ O cartão PEDE a Grade (spec 016, FR-006.3): a padrão passou a ser *Sobre o Curso*.
+  await expect(page).toHaveURL(/\/cursos\/[^?]+\?aba=grade&turma=/);
   const abas = page.locator('[data-slot="abas-do-curso"]');
   await expect(abas.locator('[data-aba="grade"]')).toHaveAttribute("aria-selected", "true");
   await expect(abas.getByRole("tablist")).toBeInViewport();

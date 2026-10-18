@@ -352,13 +352,15 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
     expect(parametrosDaRota("/cursos/[curso]").map((p) => p.nome)).toEqual(["aba", "turma"]);
   });
 
-  it("`aba` é escolha entre TRÊS, com padrão `grade`", () => {
+  it("`aba` é escolha entre TRÊS, com padrão `sobre` e *Sobre o Curso* primeiro", () => {
     // ⚠️ Eram duas (Q-02 da spec 009); a spec 014 (FR-053, `RF-CURSO-02`) trouxe «Avaliações». A guarda foi
     //    INVERTIDA, não apagada: Relatório continua fora.
+    // ⚠️ O PADRÃO PASSOU DE `grade` A `sobre` em 17/10/2026 (spec 016, FR-006.2; Q-10, Bernardo Villas
+    //    Boas): *Sobre o Curso* é a primeira aba e a padrão, e o contrato é o ÚNICO dono do padrão.
     const aba = daPagina("aba");
     expect(aba.tipo).toBe("escolha");
-    if (aba.tipo === "escolha") expect([...aba.opcoes]).toEqual(["grade", "sobre", "avaliacoes"]);
-    expect(aba.padrao).toBe("grade");
+    if (aba.tipo === "escolha") expect([...aba.opcoes]).toEqual(["sobre", "grade", "avaliacoes"]);
+    expect(aba.padrao).toBe("sobre");
   });
 
   it("⚠️ `turma` é TEXTO, e não escolha — o domínio dela é o dado, não uma lista fechada", () => {

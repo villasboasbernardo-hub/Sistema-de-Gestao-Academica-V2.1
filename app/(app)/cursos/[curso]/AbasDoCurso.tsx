@@ -2,7 +2,7 @@
  * As **três** abas da página do curso — folha de cliente (`FR-006.2`, `FR-041`; spec 014, FR-053).
  *
  * ⚠️ **ERAM EXATAMENTE DUAS (decisão Q-02 da spec 009), E A TERCEIRA ENTROU QUANDO A TELA PASSOU A ENTREGAR:**
- * "Grade", "Sobre o Curso" e — desde a spec 014 (`RF-CURSO-02`, FR-053) — "Avaliações". Relatório continua
+ * "Sobre o Curso" (a primeira e a padrão desde a spec 016, FR-006.2), "Grade" e — desde a spec 014 (`RF-CURSO-02`, FR-053) — "Avaliações". Relatório continua
  * **fora** — nem como aba desabilitada, nem com marca *"em breve"* (`FR-008`, A-4): *"a tela não anuncia o que
  * não entrega"*.
  *
@@ -19,9 +19,10 @@ import type * as React from "react";
 import { cn } from "cn";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
+/* Spec 016 (FR-006.2, Q-10): *Sobre o Curso* primeiro — a ordem é a do contrato de parâmetros. */
 const ABAS = [
-  { valor: "grade", rotulo: "Grade" },
   { valor: "sobre", rotulo: "Sobre o Curso" },
+  { valor: "grade", rotulo: "Grade" },
   { valor: "avaliacoes", rotulo: "Avaliações" },
 ] as const;
 
@@ -34,8 +35,12 @@ export function AbasDoCurso({
   readonly sobre: React.ReactNode;
   readonly avaliacoes: React.ReactNode;
 }) {
-  const [aba, definirAba] = useParametro("/cursos/[curso]", "aba");
-  const atual = aba === "sobre" || aba === "avaliacoes" ? aba : "grade";
+  /*
+   * ⚠️ O PADRÃO TEM UM DONO SÓ, O CONTRATO (spec 016, FR-006.2). Até 17/10/2026 esta linha repetia
+   *    `"grade"` num ternário, e trocar o padrão no contrato deixaria a aba aberta discordando da URL. O
+   *    gancho já devolve o padrão quando o parâmetro falta ou vem podre (`withDefault`).
+   */
+  const [atual, definirAba] = useParametro("/cursos/[curso]", "aba");
 
   return (
     <div className="flex flex-col gap-4" data-slot="abas-do-curso">

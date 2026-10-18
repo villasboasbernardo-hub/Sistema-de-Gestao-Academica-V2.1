@@ -32,7 +32,6 @@ import {
   TOM_DO_STATUS_DE_TURMA,
 } from "@/lib/dominio/seletor-de-turma";
 import {
-  enderecoDaNovaTurma,
   enderecoDaSecaoDeDisciplinas,
   enderecoDasDisciplinas,
   enderecoDasTurmas,
@@ -91,8 +90,6 @@ export function AbaGrade({
   selecionada,
   hoje,
   avisoDaSelecao,
-  podeCriarTurma,
-  cursoAtivo,
   motivoDoVazio,
 }: {
   readonly sigla: string;
@@ -100,21 +97,16 @@ export function AbaGrade({
   readonly selecionada: string | null;
   readonly hoje: string;
   readonly avisoDaSelecao: string | null;
-  readonly podeCriarTurma: boolean;
-  readonly cursoAtivo: boolean;
   /** Qual dos três vazios do `FR-047` mostrar quando não há turma. */
   readonly motivoDoVazio: "nao-ha" | "nao-ve" | "ainda-nao-existe" | null;
 }) {
   const turmaAtual = turmas.find((t) => t.codigo === selecionada) ?? null;
 
-  const botaoDeNovaTurma =
-    podeCriarTurma && cursoAtivo ? (
-      <Button asChild size="sm">
-        <Link href={enderecoDaNovaTurma(sigla)} data-slot="nova-turma">
-          Nova turma
-        </Link>
-      </Button>
-    ) : null;
+  /*
+   * ⚠️ *NOVA TURMA* SAIU DAQUI EM 17/10/2026 (spec 016, FR-006.1): mora na barra única do topo da
+   *    página (`BarraDoCurso.tsx`), que se vê em qualquer aba — com *Sobre o Curso* como padrão, um
+   *    botão dentro da Grade ficaria escondido de quem abre o curso.
+   */
 
   /*
    * ⚠️ **O CAMINHO CLICÁVEL PARA AS DISCIPLINAS** (fatia (b), 29/09/2026). *Tela sem caminho clicável
@@ -191,7 +183,6 @@ export function AbaGrade({
           />
         ) : null}
         {botaoDeDisciplinas}
-        {botaoDeNovaTurma}
         {linkDeTodasAsTurmas}
       </div>
 
@@ -239,7 +230,7 @@ export function AbaGrade({
           detalhe={
             motivoDoVazio === "nao-ve"
               ? "Existe turma aqui — o seu perfil não alcança."
-              : "Crie a primeira turma pelo botão acima."
+              : "Crie a primeira turma pelo botão Nova turma, no topo da página."
           }
         />
       ) : (

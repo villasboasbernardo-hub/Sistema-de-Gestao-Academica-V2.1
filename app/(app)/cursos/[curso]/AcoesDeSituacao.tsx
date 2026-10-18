@@ -51,9 +51,17 @@ export function AcoesDeSituacao({
   }
 
   return (
-    <div className="flex flex-col gap-2" data-slot="acoes-de-situacao">
+    /*
+     * ⚠️ `contents`: o botão vira item da barra única (spec 016, FR-006.1), e a recusa vai para uma linha
+     *    própria, depois dos botões (`basis-full order-last`), sem desalinhar as alturas.
+     */
+    <div className="contents" data-slot="acoes-de-situacao">
       {erro ? (
-        <p role="alert" className="text-atrasado-tinta text-sm" data-slot="erro-de-situacao">
+        <p
+          role="alert"
+          className="text-atrasado-tinta order-last basis-full text-sm"
+          data-slot="erro-de-situacao"
+        >
           {erro}
         </p>
       ) : null}

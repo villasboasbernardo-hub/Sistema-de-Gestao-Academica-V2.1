@@ -794,9 +794,11 @@ export const CONTRATO = {
       aba: {
         nome: "aba",
         tipo: "escolha",
-        padrao: "grade",
+        // Spec 016 (FR-006.2, Q-10, 17/10/2026): *Sobre o Curso* é a primeira aba e a padrão — e o padrão
+        // mora SÓ aqui; `AbasDoCurso.tsx` o lê pelo gancho, sem um segundo dono.
+        padrao: "sobre",
         // Spec 014 (FR-053): a terceira aba, «Avaliações», cedeu a Q-02 da spec 009 ao `RF-CURSO-02`.
-        opcoes: ["grade", "sobre", "avaliacoes"],
+        opcoes: ["sobre", "grade", "avaliacoes"],
         historico: "empilha",
         avisaServidor: true,
       },

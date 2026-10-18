@@ -372,8 +372,9 @@ test.describe("`FR-031.2` · o link da turma sai codificado, e de uma funcao so"
      * protegido**: o defeito de 18/09/2026 era ESPACO CRU no `href`, e `+` nao e espaco cru.
      */
     expect(href, `o href nao usou a grafia unica da consulta: ${href}`).toContain("+");
-    expect(href, "o link nao aponta para a pagina do curso com a turma na URL").toContain(
-      "?turma=",
+    // ⚠️ E PEDE A ABA GRADE (spec 016, FR-006.3): desde 17/10/2026 a padrao e *Sobre o Curso*.
+    expect(href, "o link nao aponta para a Grade do curso com a turma na URL").toContain(
+      "?aba=grade&turma=",
     );
   });
 
@@ -387,7 +388,7 @@ test.describe("`FR-031.2` · o link da turma sai codificado, e de uma funcao so"
 
     const link = page.locator(`a[data-turma="${SEMEADO.turmaEmDia}"]`);
     const href = await link.getAttribute("href");
-    const esperado = enderecoDaTurmaNoCurso(SEMEADO.cursoExpedito, SEMEADO.turmaEmDia);
+    const esperado = enderecoDaTurmaNoCurso(SEMEADO.cursoExpedito, SEMEADO.turmaEmDia, "grade");
 
     expect(href, `a tela montou ${href}, e a funcao produz ${esperado}`).toBe(esperado);
   });

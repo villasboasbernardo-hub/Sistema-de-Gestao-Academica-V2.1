@@ -126,7 +126,8 @@ test.describe("`SC-003` · chega-se às telas de turma CLICANDO, não digitando"
    * ⚠️ **ESTE BLOCO EXISTE POR CAUSA DOS DOIS DEFEITOS DE 24/09/2026.** Todos os percursos deste
    * arquivo chegam às telas por endereço — o que prova que elas funcionam e **não** prova que alguém
    * chega nelas. Foi assim que `/cursos/novo` ficou sem link nenhum e ninguém notou. Aqui se mede o
-   * caminho: menu → Cursos → cartão → aba Grade → **Nova turma**, e o mesmo até a ficha da turma.
+   * caminho: menu → Cursos → cartão → **Nova turma** (na barra do topo desde a spec 016, FR-006.1),
+   * e menu → Cursos → cartão → aba Grade → a ficha da turma.
    */
   test("menu → Cursos → cartão → Nova turma, e o mesmo até a ficha da turma", async ({ page }) => {
     const sigla = SEMEADO.porClassificacao.regular;
@@ -154,7 +155,9 @@ test.describe("`SC-003` · chega-se às telas de turma CLICANDO, não digitando"
     );
 
     // ── e até a ficha de uma turma que já existe ──────────────────────────────────────────────
+    // ⚠️ A lista de turmas mora na aba Grade, e a padrão é *Sobre o Curso* (spec 016, FR-006.2).
     await page.goBack();
+    await page.locator('[data-slot="abas-do-curso"] [data-aba="grade"]').click();
     await page.getByRole("link", { name: SEMEADO.turmaJanelaCedo }).click();
     await expect.poll(() => new URL(page.url()).pathname).toBe(enderecoDe(SEMEADO.turmaJanelaCedo));
     await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(SEMEADO.turmaJanelaCedo);
