@@ -138,6 +138,8 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
     // abre e fecha é estado efêmero de tela.
     "components/ciaara/avisos-recolhiveis.tsx",
     "components/ciaara/badge-teto.tsx",
+    // Entrou em 17/10/2026 (spec 016, item 1.3): o olho que mostra e oculta a senha é estado de tela.
+    "components/ciaara/campo-de-senha.tsx",
     "components/ciaara/dialogo-confirmacao.tsx",
     "components/ciaara/filtro-avancado.tsx",
     /*
