@@ -8,7 +8,7 @@
  * envelheceria em silêncio no dia em que alguém lançasse uma aula e ninguém a recalculasse.
  *
  * ⚠️ **A CH CUMPRIDA NÃO É TOCADA POR NADA DESTA FATIA** (`FR-044`). Ela vem de `registros_aula` por
- * `vw_disciplinas_execucao`; aqui ela só é **lida**.
+ * `execucao_por_disciplina_ate(hoje, turma)` — até hoje, inclusive (D-COR-2, spec 016); aqui ela só é **lida**.
  *
  * ⚠️ **E O CASO QUE DISCRIMINA É, DE NOVO, A DATA NULA.** *"Atrasada"* é *"passou do término previsto
  * e ainda falta CH"* — com `previsao_termino` nula não há término, e portanto **não há atraso**. As
@@ -25,7 +25,7 @@ export type SituacaoDeExecucao = "nao_iniciada" | "em_andamento" | "concluida" |
 export type ExecucaoDaDisciplina = {
   /** CH prevista em TA. */
   readonly previstos: number;
-  /** CH já cumprida em TA, lida de `vw_disciplinas_execucao`. */
+  /** CH já cumprida em TA, até hoje — de `execucao_por_disciplina_ate` (D-COR-2, spec 016). */
   readonly executados: number;
   /** `previsao_termino`, em `YYYY-MM-DD`. `null` = não informado. */
   readonly previsaoTermino: string | null;

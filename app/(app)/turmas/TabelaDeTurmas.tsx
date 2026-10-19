@@ -179,6 +179,44 @@ const COLUNAS: readonly Coluna<TurmaNaLista>[] = [
       />
     ),
   },
+  /*
+   * ⚠️ **PROGRESSO E SALDO SÃO DO `andamentoDaTurma`, O MESMO DO `/inicio` E DA FICHA** (FR-014.6 da spec 016;
+   *    Q-6): a tabela só escreve. Progresso aparece para toda turma; o Saldo só para ativa e planejada, e «—» nas
+   *    demais (P-4, Bernardo Villas Boas, 17/10/2026): turma encerrada não é acusada na lista.
+   */
+  {
+    chave: "progresso",
+    titulo: "Progresso",
+    numerica: true,
+    ordenavel: true,
+    valor: (l) => l.progresso ?? -1,
+    celula: (l) => (
+      <span
+        data-slot="coluna-progresso"
+        data-progresso={l.progresso ?? ""}
+        className="tabular-nums"
+      >
+        {l.progresso === null ? "—" : `${l.progresso}%`}
+      </span>
+    ),
+  },
+  {
+    chave: "saldo",
+    titulo: "Saldo (TA)",
+    numerica: true,
+    ordenavel: true,
+    valor: (l) => l.saldo ?? Number.NEGATIVE_INFINITY,
+    celula: (l) => (
+      <span
+        data-slot="coluna-saldo"
+        data-saldo={l.saldo ?? ""}
+        className="inline-flex items-center justify-end gap-2 whitespace-nowrap tabular-nums"
+      >
+        {l.saldo === null ? "—" : l.saldo}
+        {l.saldo !== null && l.emAtraso ? <BadgeStatus tom="atrasado" rotulo="em atraso" /> : null}
+      </span>
+    ),
+  },
   {
     chave: "alunos",
     titulo: "Efetivo",

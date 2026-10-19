@@ -39,6 +39,12 @@
  * PROENS. Com 30 dias úteis a turma EAD precisaria de 10 para não acusar atraso, e a turma em excesso
  * não acusa com nenhum número — o `restante` dela é **zero**. A apertada tem capacidade máxima de 16
  * TA contra 90 de restante: feriado nenhum muda esses vereditos.
+ *
+ * ⚠️ **E UM LANÇAMENTO NO FUTURO, que é o caso que discrimina o "até hoje"** (D-COR-2; FR-014 da spec 016): a
+ * `turmaSemCapacidade` ganha 8 TA no dia do término apertado — sempre DEPOIS de hoje (o 2º dia útil contado de
+ * hoje, inclusive). Fora do DSA e da planilha, executado é até hoje: o `/inicio`, a lista `/turmas` e a ficha
+ * continuam vendo **10** de 100; a soma sem corte daria **18**. E a situação do DSA da semana dele **o conta**
+ * (acumulada até a semana mostrada, `FR-028.1` da spec 013). Hoje nenhuma outra semente lançava no futuro.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -66,14 +72,17 @@ export type PanoramaSemeado = {
   readonly terminoFolgado: string;
   /** O término apertado — 2 dias úteis contados de hoje, inclusive. */
   readonly terminoApertado: string;
+  /** O lançamento DEPOIS de hoje, na `turmaSemCapacidade` (D-COR-2): no dia do término apertado. */
+  readonly lancamentoFuturo: { readonly data: string; readonly tempos: number };
 };
 
 /**
  * A data do enésimo dia útil contado de **hoje, inclusive**.
  *
- * ⚠️ **"INCLUSIVE" É A REGRA DA v1.0** (`diasUteis_`, `while d <= ate`, confirmada por Bernardo em
- * 04/10/2026): pedir 2 numa terça devolve quarta, e `diasUteisEntre` conta as duas pontas. Contar de
- * amanhã faria a semente e o domínio discordarem em um dia, e o caso reprovaria por aritmética.
+ * ⚠️ **"INCLUSIVE" CONTINUA SENDO A CONTA DA SEMENTE**: pedir 2 numa terça devolve quarta. Desde a D-COR-2
+ * (spec 016) o domínio conta os dias úteis do saldo **de amanhã** — o de hoje já está do lado do executado —,
+ * então a turma apertada tem **um** dia útil à frente, e não dois. Os vereditos não mudam (ver a folga no
+ * cabeçalho), e o 2º dia útil serve também de data **depois de hoje** para o lançamento futuro.
  *
  * ⚠️ **O "HOJE" VEM DE `hojeNaCiaara()`, A MESMA FUNÇÃO QUE A TELA USA.** Um `new Date()` cru aqui
  * leria o fuso da máquina e divergiria da aplicação entre 21h e a meia-noite — a terceira fórmula de
@@ -119,6 +128,7 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
     turmaSemCapacidade: `CUR-${s}-CAP 2026`,
     terminoFolgado: diaUtilApartirDeHoje(30),
     terminoApertado: diaUtilApartirDeHoje(2),
+    lancamentoFuturo: { data: diaUtilApartirDeHoje(2), tempos: 8 },
   };
 
   await limparPanorama(semeado);
@@ -385,6 +395,20 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
         instrutor_id: instrutor.id,
         unidade_ensino_id: unidade(`UE-${s}-CAP`),
         tempos_consumidos: 10,
+      },
+      /*
+       * ⚠️ **O LANÇAMENTO FUTURO** (D-COR-2): na grade do DSA, no 1º tempo do dia do término apertado. Fora do
+       *    DSA ele não conta até o dia chegar.
+       */
+      {
+        codigo: `REG-${s}-05`,
+        data: semeado.lancamentoFuturo.data,
+        ta_inicial: 1,
+        turma_id: turma(semeado.turmaSemCapacidade)?.id,
+        curso_id: turma(semeado.turmaSemCapacidade)?.curso_id,
+        instrutor_id: instrutor.id,
+        unidade_ensino_id: unidade(`UE-${s}-CAP`),
+        tempos_consumidos: semeado.lancamentoFuturo.tempos,
       },
     ]);
   if (erroRegistros) throw new Error(`falha ao semear registros: ${erroRegistros.message}`);

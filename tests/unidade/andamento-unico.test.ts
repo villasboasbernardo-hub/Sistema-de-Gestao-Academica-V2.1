@@ -42,7 +42,12 @@ const EXTENSOES = /\.(ts|tsx)$/;
  * painel do Início e a seção Andamento da ficha da turma. Um terceiro consumidor é bem-vindo; o que
  * esta lista impede é um deles **deixar** de usar o módulo e voltar a decidir sozinho.
  */
-const CONSUMIDORES = ["app/(app)/inicio/panorama.ts", "app/(app)/turmas/[turma]/page.tsx"] as const;
+const CONSUMIDORES = [
+  "app/(app)/inicio/panorama.ts",
+  "app/(app)/turmas/[turma]/page.tsx",
+  /* O terceiro (FR-014.6 da spec 016): as colunas Progresso e Saldo de `/turmas`, que só repassam. */
+  "app/(app)/turmas/consulta.ts",
+] as const;
 
 /** Toda escrita no nome do campo — anotação de tipo, repasse e decisão, as três. */
 const ESCRITAS = /\bemAtraso\s*[:=]\s*([^,;\n]*)/g;

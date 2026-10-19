@@ -171,3 +171,41 @@ test.describe("`FR-017` · curso → turma, e o caminho para a lista inteira", (
     await expect.poll(() => new URL(page.url()).searchParams.get("curso")).toBe(sigla);
   });
 });
+
+test.describe("FR-014.6 · P-4 · as colunas Progresso e Saldo (TA) da lista", () => {
+  /*
+   * > *"Progresso para todas; Saldo só em ativa e planejada; «—» nas demais."* — P-4, Bernardo Villas Boas, 17/10/2026
+   *
+   * ⚠️ **AS DUAS SAEM DE `andamentoDaTurma`, A MESMA FUNÇÃO DO `/inicio` E DA FICHA** (Q-6): a lista só escreve. O
+   *    caso do atraso e do lançamento futuro está em `andamento-ate-hoje.spec.ts`; aqui, a regra de quem mostra o quê.
+   */
+  test("menu Turmas → Progresso em toda turma; Saldo só em ativa e planejada, «—» nas demais", async ({
+    page,
+  }) => {
+    await irAListaDeTurmas(page, EMAIL);
+    const linha = (codigo: string) => page.locator(`${LISTA} tr`).filter({ hasText: codigo });
+
+    /* Concluída: 6 de 20 TA, 30 % — o progresso aparece; o saldo não acusa turma encerrada. */
+    const concluida = linha(SEMEADO.turmaJanelaCedo);
+    await expect(concluida.locator('[data-slot="coluna-progresso"]')).toHaveAttribute(
+      "data-progresso",
+      "30",
+    );
+    await expect(concluida.locator('[data-slot="coluna-saldo"]')).toHaveText("—");
+
+    /* Cancelada: «—» no saldo. */
+    const cancelada = linha(SEMEADO.turmasCanceladas[0] as string);
+    await expect(cancelada.locator('[data-slot="coluna-saldo"]')).toHaveText("—");
+
+    /* Planejada, sem lançamento e com término à frente: progresso 0 % e o saldo é um número. */
+    const planejada = linha(SEMEADO.turmaJanelaTarde);
+    await expect(planejada.locator('[data-slot="coluna-progresso"]')).toHaveAttribute(
+      "data-progresso",
+      "0",
+    );
+    await expect(planejada.locator('[data-slot="coluna-saldo"]')).toHaveAttribute(
+      "data-saldo",
+      /^-?\d+$/,
+    );
+  });
+});
