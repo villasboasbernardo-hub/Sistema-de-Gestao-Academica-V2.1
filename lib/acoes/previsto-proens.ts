@@ -19,6 +19,7 @@ import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
 import { limiteMaximo } from "@/lib/dominio/limite-maximo";
+import { recusaSeTurmaArquivada } from "@/lib/acoes/turma-arquivada";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { esquemaDoPrevistoProens } from "@/lib/validacao/previsto-proens";
 
@@ -40,6 +41,9 @@ export async function gravarPrevistoProens(entrada: unknown): Promise<ResultadoD
   }
   const { turmaId, categoria, tempos, origemProens } = conferido.data;
   const supabase = await criarClienteDeServidor();
+  /* D-COR-5: a turma arquivada é somente leitura (spec 017, FR-004.4). */
+  const arquivada = await recusaSeTurmaArquivada(supabase, turmaId);
+  if (arquivada) return { ok: false, erro: arquivada };
 
   const { data: existente, error: erroLeitura } = await supabase
     .from("previstos_proens_turma")

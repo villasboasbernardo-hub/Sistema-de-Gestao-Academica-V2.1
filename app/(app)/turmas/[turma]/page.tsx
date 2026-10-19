@@ -18,6 +18,13 @@ import Link from "next/link";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
+import {
+  estadoDoArquivamento,
+  fraseDaTurmaArquivada,
+  podeArquivar,
+  podeDesarquivar,
+} from "@/lib/dominio/arquivamento-da-turma";
+import { historicoDaTurma } from "@/lib/dominio/historico-da-turma";
 import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
 import { execucaoSeparada, foraDoDsaAte } from "@/lib/dominio/ta-fora-do-dsa";
 import { tetosDaTurma, type Categoria } from "@/lib/dominio/tetos-da-turma";
@@ -60,6 +67,8 @@ import { CardDeAvaliacoes } from "./CardDeAvaliacoes";
 import { AvaliacoesDaTurma } from "./AvaliacoesDaTurma";
 import { AbasDaTurma } from "./AbasDaTurma";
 import { AlertasDeVista } from "./AlertasDeVista";
+import { ArquivarTurma } from "./ArquivarTurma";
+import { HistoricoDaTurma } from "./HistoricoDaTurma";
 import { lerAvaliacoesDaTurma } from "./consulta-de-avaliacoes";
 import { EdicaoDoPrevisto } from "./EdicaoDoPrevisto";
 import {
@@ -199,6 +208,8 @@ export default async function FichaDaTurma({
     parametrosRes,
     executadaRes,
     foraRes,
+    trocasRes,
+    arquivosRes,
   ] = await Promise.all([
     supabase
       .from("cursos")
@@ -263,7 +274,33 @@ export default async function FichaDaTurma({
      */
     supabase.rpc("chd_da_turma_ate", { p_ate: hoje }).eq("turma_id", turmaId).maybeSingle(),
     foraPromessa,
+    /* D-COR-4 e D-COR-5: as duas trilhas da turma, na mesma rodada — quem lê a turma as lê (policy por alcance). */
+    supabase
+      .from("turma_trocas_de_situacao")
+      .select("ordem, situacao_anterior, situacao_nova, observacao, autor_id, criado_em")
+      .eq("turma_id", turmaId)
+      .order("ordem"),
+    supabase
+      .from("turma_arquivamentos")
+      .select("ordem, acao, observacao, autor_id, criado_em")
+      .eq("turma_id", turmaId)
+      .order("ordem"),
   ]);
+  const trocas = (trocasRes.data ?? []) as {
+    ordem: number;
+    situacao_anterior: string;
+    situacao_nova: string;
+    observacao: string | null;
+    autor_id: string | null;
+    criado_em: string;
+  }[];
+  const arquivos = (arquivosRes.data ?? []) as {
+    ordem: number;
+    acao: "arquivar" | "desarquivar";
+    observacao: string | null;
+    autor_id: string | null;
+    criado_em: string;
+  }[];
   const linhasDoForaDoDsa = (foraRes?.data ?? []) as unknown as LinhaDoTaForaDoDsa[];
 
   const sigla = (cursoRes.data?.codigo as string | undefined) ?? "";
@@ -383,6 +420,9 @@ export default async function FichaDaTurma({
         ...previstos.map((p) => p.editado_por ?? p.criado_por),
         // D-COR-3: quem registrou o TA fora do DSA, na MESMA leitura (C-22).
         ...linhasDoForaDoDsa.map((f) => f.criado_por),
+        // D-COR-4 e D-COR-5: quem trocou a situação e quem arquivou.
+        ...trocas.map((t) => t.autor_id),
+        ...arquivos.map((a) => a.autor_id),
       ].filter((x): x is string => !!x),
     ),
   ];
@@ -423,7 +463,39 @@ export default async function FichaDaTurma({
       : null;
   const foraPorLinha: Record<string, RegistroForaDoDsaDaTela[]> = {};
   for (const r of registrosForaDoDsa) (foraPorLinha[r.turmaDisciplinaId] ??= []).push(r);
-  const podeEditarPrevisto = pode(permissoes, "previsto_proens", "editar");
+  /*
+   * ⚠️ **A TURMA ARQUIVADA É SOMENTE LEITURA** (D-COR-5; C-4: nem o Admin edita): toda ação de gravar some da ficha.
+   *    Quem garante é o servidor (`recusaSeTurmaArquivada`) e, com a M4, o banco; aqui só não se oferece o botão.
+   */
+  const arquivamento = estadoDoArquivamento(
+    arquivos.map((a) => ({
+      ordem: a.ordem,
+      acao: a.acao,
+      criadoEm: a.criado_em,
+      autor: a.autor_id === null ? null : (nomesDosAutores.get(a.autor_id) ?? "outra conta"),
+      observacao: a.observacao,
+    })),
+  );
+  const arquivada = arquivamento.arquivada;
+  const historico = historicoDaTurma({
+    trocas: trocas.map((t) => ({
+      ordem: t.ordem,
+      anterior: t.situacao_anterior,
+      nova: t.situacao_nova,
+      observacao: t.observacao,
+      autorId: t.autor_id,
+      em: t.criado_em,
+    })),
+    arquivamentos: arquivos.map((a) => ({
+      ordem: a.ordem,
+      acao: a.acao,
+      observacao: a.observacao,
+      autorId: a.autor_id,
+      em: a.criado_em,
+    })),
+    nomes: nomesDosAutores,
+  });
+  const podeEditarPrevisto = pode(permissoes, "previsto_proens", "editar") && !arquivada;
   const edicao = podeEditarPrevisto
     ? Object.fromEntries(
         (["aec", "tad", "tr"] as const).map((c) => {
@@ -459,6 +531,18 @@ export default async function FichaDaTurma({
 
   return (
     <section className="flex flex-col gap-5">
+      {arquivamento.arquivada ? (
+        <div
+          role="status"
+          className="border-atrasado-tinta bg-superficie-2 rounded-ciaara flex flex-col gap-1 border px-3 py-2 text-sm"
+          data-slot="turma-arquivada"
+        >
+          <p className="text-texto font-medium">{fraseDaTurmaArquivada(arquivamento)}</p>
+          {arquivamento.observacao ? (
+            <p className="text-texto-suave">{arquivamento.observacao}</p>
+          ) : null}
+        </div>
+      ) : null}
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="text-texto text-xl font-semibold" data-slot="codigo-da-turma">
@@ -568,8 +652,17 @@ export default async function FichaDaTurma({
                    campo de *"Editar turma"*, recolhido no fim da página. Segue `turmas/editar` e o
                    curso em oferta, como *Nova turma*; o banco recusa de qualquer forma.
               */}
-              {podeEditar && cursoRes.data?.status !== "inativo" ? (
+              {podeEditar && !arquivada && cursoRes.data?.status !== "inativo" ? (
                 <TrocarSituacao codigo={turma.codigo as string} atual={turma.status as string} />
+              ) : null}
+              {/* D-COR-5: arquivar em qualquer situação (quem edita a turma); desarquivar, só o Admin. */}
+              {podeArquivar({ podeEditarTurma: podeEditar, arquivada }) ||
+              podeDesarquivar({ perfil: usuario?.perfil ?? null, arquivada }) ? (
+                <ArquivarTurma
+                  codigo={turma.codigo as string}
+                  situacao={turma.status as string}
+                  arquivada={arquivada}
+                />
               ) : null}
             </dd>
           </span>
@@ -608,6 +701,14 @@ export default async function FichaDaTurma({
           <p role="status" className="text-executado-tinta text-sm" data-slot="turma-gravada">
             Alterações da turma gravadas.
           </p>
+        ) : valores.gravada === "arquivada" ? (
+          <p role="status" className="text-executado-tinta text-sm" data-slot="turma-arquivada-gravada">
+            Turma arquivada.
+          </p>
+        ) : valores.gravada === "desarquivada" ? (
+          <p role="status" className="text-executado-tinta text-sm" data-slot="turma-desarquivada-gravada">
+            Turma desarquivada.
+          </p>
         ) : valores.gravada === "ta-fora" ? (
           <p role="status" className="text-executado-tinta text-sm" data-slot="ta-fora-gravado">
             TA fora do DSA registrado.
@@ -633,6 +734,8 @@ export default async function FichaDaTurma({
         dataTermino={dataTermino}
         execucaoSeparada={separada}
       />
+
+      <HistoricoDaTurma eventos={historico} />
 
       {/*
         ⚠️ **A FAIXA DOS CARDS FICA LOGO ABAIXO DO ANDAMENTO** (comentário de Bernardo no protótipo da
@@ -663,7 +766,7 @@ export default async function FichaDaTurma({
               quadro={avaliacoes.quadro}
               aviso={avaliacoes.aviso}
               turmaId={turma.id as string}
-              {...(pode(permissoes, "avaliacoes_curriculo_arbitrado", "editar")
+              {...(pode(permissoes, "avaliacoes_curriculo_arbitrado", "editar") && !arquivada
                 ? {
                     arbitrado: {
                       definir: definirTempoArbitrado,
@@ -672,7 +775,7 @@ export default async function FichaDaTurma({
                     },
                   }
                 : {})}
-              {...(pode(permissoes, "avaliacoes_juntar_sessao", "editar")
+              {...(pode(permissoes, "avaliacoes_juntar_sessao", "editar") && !arquivada
                 ? { juntar: juntarComoSessao }
                 : {})}
             />
@@ -711,7 +814,7 @@ export default async function FichaDaTurma({
                   linhas={naGrade}
                   turmaCodigo={turma.codigo as string}
                   escala={grade.escalaDeAntiguidade}
-                  podeEditar={pode(permissoes, "disciplinas", "editar")}
+                  podeEditar={pode(permissoes, "disciplinas", "editar") && !arquivada}
                   avisoInicioDias={grade.avisoInicioDias}
                   hoje={hoje}
                   executadaDaTurma={andamento.executada}
@@ -719,7 +822,7 @@ export default async function FichaDaTurma({
                     ? {
                         foraDoDsa: {
                           porLinha: foraPorLinha,
-                          podeGravar: pode(permissoes, "ta_fora_do_dsa", "editar"),
+                          podeGravar: pode(permissoes, "ta_fora_do_dsa", "editar") && !arquivada,
                         },
                       }
                     : {})}
@@ -740,7 +843,7 @@ export default async function FichaDaTurma({
            precisa lê-lo antes de salvar"* — com o formulário no fim ele está acima de qualquer
            jeito, e acima de **tudo**, que é onde uma região de alertas pertence (`RNF-USA-04`).
       */}
-            {podeEditar ? (
+            {podeEditar && !arquivada ? (
               <EdicaoDaTurma>
                 <FormularioDeTurma
                   modo="edicao"

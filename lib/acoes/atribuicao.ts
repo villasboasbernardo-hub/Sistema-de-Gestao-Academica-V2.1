@@ -21,6 +21,7 @@ import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
 import { ROTA_DA_FICHA_DA_TURMA } from "@/lib/navegacao/endereco-de-turma";
+import { recusaSeTurmaArquivadaPelaLinha } from "@/lib/acoes/turma-arquivada";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { esquemaDeAtribuicao, esquemaDeRemocaoDeInstrutor } from "@/lib/validacao/atribuicao";
 
@@ -41,6 +42,9 @@ export async function definirInstrutoresDaTurma(entrada: unknown): Promise<Resul
 
   const a = conferido.data;
   const supabase = await criarClienteDeServidor();
+  /* D-COR-5: a turma arquivada é somente leitura (spec 017, FR-004.4). */
+  const arquivada = await recusaSeTurmaArquivadaPelaLinha(supabase, a.turmaDisciplinaId);
+  if (arquivada) return falha(arquivada);
 
   const { data, error } = await supabase.rpc("definir_instrutores_da_turma", {
     p_turma_disciplina_id: a.turmaDisciplinaId,
@@ -91,6 +95,9 @@ export async function removerInstrutorDaTurma(entrada: unknown): Promise<Resulta
 
   const { turmaDisciplinaId, instrutorId } = conferido.data;
   const supabase = await criarClienteDeServidor();
+  /* D-COR-5: a turma arquivada é somente leitura (spec 017, FR-004.4). */
+  const arquivada = await recusaSeTurmaArquivadaPelaLinha(supabase, turmaDisciplinaId);
+  if (arquivada) return falha(arquivada);
 
   const { data: atuais, error: erroLeitura } = await supabase
     .from("turma_disciplina_instrutor")

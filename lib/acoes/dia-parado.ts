@@ -26,6 +26,7 @@ import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
+import { recusaSeTurmaArquivada } from "@/lib/acoes/turma-arquivada";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { esquemaDeDesfazerParada, esquemaDePararDia } from "@/lib/validacao/dia-parado";
 
@@ -54,6 +55,14 @@ export async function pararDia(entrada: unknown): Promise<ResultadoDaParada> {
   const p = conferido.data;
   const supabase = await criarClienteDeServidor();
   const global = p.alcance === "todas";
+  /*
+   * D-COR-5: a parada DA TURMA não grava em turma arquivada. A parada GLOBAL segue — ela é do calendário, e o
+   * desenho da M4 declara que o global continua alcançando a arquivada (analyze, achado 67; portão de Bernardo).
+   */
+  if (!global) {
+    const arquivada = await recusaSeTurmaArquivada(supabase, p.turmaId);
+    if (arquivada) return { ok: false, erro: arquivada };
+  }
 
   const [{ data: tipo }, { data: turma }] = await Promise.all([
     supabase
@@ -183,6 +192,23 @@ export async function desfazerParada(
   if (!conferido.success) return { ok: false, erro: "Dados inválidos." };
   const { destino, codigo } = conferido.data;
   const supabase = await criarClienteDeServidor();
+  /*
+   * D-COR-5: desfazer a parada DA TURMA também é gravar nela; a global segue (como em `pararDia`). O feriado é do
+   * calendário e não tem turma.
+   */
+  if (destino !== "feriado") {
+    const { data: alvo, error: erroDoAlvo } = await supabase
+      .from(TABELA_DO_DESTINO[destino] as "dias_parados")
+      .select("turma_id")
+      .eq("codigo", codigo)
+      .maybeSingle();
+    if (erroDoAlvo) return { ok: false, erro: traduzirRecusa(erroDoAlvo as ErroDoBanco) };
+    const turmaDoAlvo = (alvo as { turma_id: string | null } | null)?.turma_id ?? null;
+    if (turmaDoAlvo !== null) {
+      const arquivada = await recusaSeTurmaArquivada(supabase, turmaDoAlvo);
+      if (arquivada) return { ok: false, erro: arquivada };
+    }
+  }
   const { data, error } = await supabase
     .from(TABELA_DO_DESTINO[destino] as "dias_parados")
     .update({ status: "inativo" } as never)

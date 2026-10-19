@@ -69,6 +69,7 @@ import { recusaDoNomeLivre, regraDoResponsavel } from "@/lib/dominio/responsavel
 import type { Json } from "@/lib/tipos/database";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
+import { recusaSeTurmaArquivada } from "@/lib/acoes/turma-arquivada";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 import {
@@ -710,6 +711,11 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
   }
   const bloco = conferido.data;
   const supabase = await criarClienteDeServidor();
+  /* D-COR-5: a turma arquivada é somente leitura — o DSA dela não recebe (spec 017, FR-004.4). */
+  if (bloco.turmaId !== null) {
+    const arquivada = await recusaSeTurmaArquivada(supabase, bloco.turmaId);
+    if (arquivada) return falha(arquivada);
+  }
   const id = randomUUID();
   const marca = `DSA-${Date.now().toString(36).toUpperCase()}`;
 
@@ -1110,6 +1116,9 @@ export async function lancarEstudoIndividualDaSemana(
   }
   const { turmaId, ano, semana } = conferido.data;
   const supabase = await criarClienteDeServidor();
+  /* D-COR-5: a turma arquivada é somente leitura (spec 017, FR-004.4). */
+  const arquivada = await recusaSeTurmaArquivada(supabase, turmaId);
+  if (arquivada) return { ok: false, mensagem: arquivada };
 
   const dias = datasDaSemanaIso(ano, semana);
   const uteis = dias.slice(0, 5);
@@ -1603,6 +1612,11 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
   const supabase = await criarClienteDeServidor();
   const fato = await lerFato(supabase, a.origem, a.fatoId);
   if (fato === null) return falha("Não encontrei este lançamento.");
+  /* D-COR-5: a turma arquivada é somente leitura — o DSA dela não recebe (spec 017, FR-004.4). */
+  if (fato.turmaId !== null) {
+    const arquivada = await recusaSeTurmaArquivada(supabase, fato.turmaId);
+    if (arquivada) return falha(arquivada);
+  }
 
   /* `RN-RESP-1`: as colunas de quem responde, e a recusa do nome livre onde o papel não o aceita (função pura). */
   const responsavel = responsavelNaEdicao({
@@ -1862,6 +1876,11 @@ export async function excluir(entrada: unknown): Promise<ResultadoDoLancamento> 
 
   const fato = await lerFato(supabase, origem, fatoId);
   if (fato === null) return falha("Não encontrei este lançamento.");
+  /* D-COR-5: a turma arquivada é somente leitura — o DSA dela não recebe (spec 017, FR-004.4). */
+  if (fato.turmaId !== null) {
+    const arquivada = await recusaSeTurmaArquivada(supabase, fato.turmaId);
+    if (arquivada) return falha(arquivada);
+  }
 
   /*
    * ⚠️ Spec 014, T207: excluir uma SESSÃO de vista põe `inativo` só nela — a avaliação e as outras sessões ficam.

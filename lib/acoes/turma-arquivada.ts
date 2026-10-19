@@ -47,3 +47,18 @@ export async function recusaSeTurmaArquivadaPeloCodigo(
   if (!turma) return null;
   return recusaSeTurmaArquivada(supabase, (turma as { id: string }).id);
 }
+
+/** O mesmo, quando a ação só tem a linha da turma (`turma_disciplina`). */
+export async function recusaSeTurmaArquivadaPelaLinha(
+  supabase: SupabaseClient,
+  turmaDisciplinaId: string,
+): Promise<string | null> {
+  const { data: linha, error } = await supabase
+    .from("turma_disciplina")
+    .select("turma_id")
+    .eq("id", turmaDisciplinaId)
+    .maybeSingle();
+  if (error) return "Não foi possível conferir se a turma está arquivada. Tente de novo.";
+  if (!linha) return null;
+  return recusaSeTurmaArquivada(supabase, (linha as { turma_id: string }).turma_id);
+}

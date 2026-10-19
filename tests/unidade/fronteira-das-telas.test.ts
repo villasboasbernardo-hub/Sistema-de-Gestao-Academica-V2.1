@@ -143,6 +143,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   // Spec 017 (D-COR-3): o TA fora do DSA no detalhe da disciplina — lista, formulário e «Desfazer».
   "app/(app)/turmas/[turma]/TaForaDoDsa.tsx":
     "registrar e desfazer TA fora do DSA — formulário com o seletor único de instrutor",
+  // Spec 017 (D-COR-5): arquivar (com o aviso de não concluída) e desarquivar, no cabeçalho da ficha.
+  "app/(app)/turmas/[turma]/ArquivarTurma.tsx":
+    "os diálogos de «Arquivar turma» e «Desarquivar» — abrir, avisar e gravar pela ação própria",
   "app/(app)/turmas/FiltrosDeTurmas.tsx":
     "os quatro filtros da lista de turmas, escrevendo a URL por `useParametro`",
   "app/(app)/turmas/TabelaDeTurmas.tsx":

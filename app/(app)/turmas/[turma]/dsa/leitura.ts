@@ -1601,22 +1601,27 @@ export function montarSemanaDoDsa(
     idsDeEstudoIndividual,
     marcasDeConflito,
     ocupacaoAcumulada: [
-      ...((acumuladaRes.data ?? []) as {
-        fato_id: string;
-        origem?: string;
-        sessao_id?: string | null;
-        data: string;
-        disciplina_id: string | null;
-        tempos_consumidos: number | null;
-      }[]
-    ).map((o) => ({
-      /* O id do LANÇAMENTO, o mesmo das marcas de conflito (`emConflito` do painel de situação casa com ele). */
-      fatoId: idDoLancamento({ origem: o.origem ?? "", fatoId: o.fato_id, sessaoId: o.sessao_id }),
-      data: o.data,
-      disciplinaId: o.disciplina_id,
-      /* ⚠️ `tempos` é nulo em linha histórica — `?? 0` é o padrão da pasta para o que não foi medido. */
-      ta: o.tempos_consumidos ?? 0,
-    })),
+      ...(
+        (acumuladaRes.data ?? []) as {
+          fato_id: string;
+          origem?: string;
+          sessao_id?: string | null;
+          data: string;
+          disciplina_id: string | null;
+          tempos_consumidos: number | null;
+        }[]
+      ).map((o) => ({
+        /* O id do LANÇAMENTO, o mesmo das marcas de conflito (`emConflito` do painel de situação casa com ele). */
+        fatoId: idDoLancamento({
+          origem: o.origem ?? "",
+          fatoId: o.fato_id,
+          sessaoId: o.sessao_id,
+        }),
+        data: o.data,
+        disciplinaId: o.disciplina_id,
+        /* ⚠️ `tempos` é nulo em linha histórica — `?? 0` é o padrão da pasta para o que não foi medido. */
+        ta: o.tempos_consumidos ?? 0,
+      })),
       /*
        * `PEND-016-5`: o que não ocupa TA na grade soma no acumulado e não marca conflito — o id é próprio, e nenhuma
        * marca de conflito casa com ele.
