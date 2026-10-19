@@ -91,6 +91,9 @@ export function DetalheDaDisciplina({
               cargaHorariaTempos: linha.cargaHorariaTempos,
               ordemSugerida: linha.ordemSugerida,
               modoAtribuicaoPadrao: linha.modoAtribuicaoPadrao,
+              tecnicaEnsinoSugerida: linha.tecnicaEnsinoSugerida,
+              localPadrao: linha.localPadrao,
+              nomeNoDsa: linha.nomeNoDsa,
             }}
             aoConcluir={() => setEditando(false)}
           />

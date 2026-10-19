@@ -497,6 +497,7 @@ export default async function SemanaDoDsa({
         <PainelDeLancamento
           semana={lida.semana}
           grade={documento.grade}
+          nomesNoCartao={documento.nomesNoCartao}
           disciplinasDaSemana={documento.quadroDeCh.map((d) => ({
             codigo: d.codigo,
             nome: d.nome,

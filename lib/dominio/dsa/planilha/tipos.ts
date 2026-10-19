@@ -100,6 +100,8 @@ export type DisciplinaDoInsumo = {
   readonly id: string;
   readonly codigo: string;
   readonly nome: string;
+  /** O nome do CARTÃO (spec 017, FR-007): o *Nome no DSA* ou a abreviação de reserva; o rodapé usa `nome`. */
+  readonly nomeNoCartao: string;
   /** A CH prevista que o rodapé do papel imprime (`vw_disciplinas_execucao`). */
   readonly chPrevista: number;
 };

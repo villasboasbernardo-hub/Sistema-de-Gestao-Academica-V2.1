@@ -55,11 +55,39 @@ export const TECNICAS: readonly TecnicaDoCatalogo[] = [
   { nome: "Estudo dirigido", sigla: null },
 ];
 
+/*
+ * Spec 017 (FR-007): `nomeNoCartao` é o nome do CARTÃO; o da I difere do inteiro de propósito — é o que prova que o
+ * título do cartão lê `DISC_NOME_DSA` e o rodapé, `DISC_NOME`.
+ */
 export const DISCIPLINAS = [
-  { id: "d1", codigo: "I", nome: "Navegação de teste", chPrevista: 40 },
-  { id: "d2", codigo: "II", nome: "Meteorologia de teste", chPrevista: 30 },
-  { id: "d9", codigo: "IX", nome: "Hidrografia de teste", chPrevista: 20 },
-  { id: "d4", codigo: "IV", nome: "Cartografia de teste", chPrevista: 10 },
+  {
+    id: "d1",
+    codigo: "I",
+    nome: "Navegação de teste",
+    nomeNoCartao: "NAV. TESTE",
+    chPrevista: 40,
+  },
+  {
+    id: "d2",
+    codigo: "II",
+    nome: "Meteorologia de teste",
+    nomeNoCartao: "Meteorologia de teste",
+    chPrevista: 30,
+  },
+  {
+    id: "d9",
+    codigo: "IX",
+    nome: "Hidrografia de teste",
+    nomeNoCartao: "Hidrografia de teste",
+    chPrevista: 20,
+  },
+  {
+    id: "d4",
+    codigo: "IV",
+    nome: "Cartografia de teste",
+    nomeNoCartao: "Cartografia de teste",
+    chPrevista: 10,
+  },
 ] as const;
 
 export const UNIDADES = [

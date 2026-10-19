@@ -71,6 +71,8 @@ export type PainelDeLancamentoProps = {
   readonly grade: GradeDoPapel | null;
   /** As disciplinas do quadro de CH, para o nome no título do cartão. */
   readonly disciplinasDaSemana: readonly { readonly codigo: string; readonly nome: string }[];
+  /** O nome de cada disciplina no CARTÃO (spec 017, FR-007) — `documento.nomesNoCartao`. */
+  readonly nomesNoCartao?: Readonly<Record<string, string>>;
   readonly turmaId: string;
   readonly cursoId: string;
   readonly salaDaTurma: string | null;
@@ -158,6 +160,7 @@ export function PainelDeLancamento({
   semana,
   grade,
   disciplinasDaSemana,
+  nomesNoCartao,
   turmaId,
   cursoId,
   salaDaTurma,
@@ -307,6 +310,7 @@ export function PainelDeLancamento({
         semana={semana}
         grade={grade}
         nomesDasDisciplinas={new Map(disciplinasDaSemana.map((d) => [d.codigo, d.nome] as const))}
+        {...(nomesNoCartao ? { nomesNoCartao: new Map(Object.entries(nomesNoCartao)) } : {})}
         salaDaTurma={salaDaTurma}
         {...(podeLancar
           ? {

@@ -191,6 +191,7 @@ describe("o rodapé da planilha na ordem natural (spec 017, FR-008)", () => {
         id: codigo,
         codigo,
         nome: codigo,
+        nomeNoCartao: codigo,
         chPrevista: 10,
       })),
     };

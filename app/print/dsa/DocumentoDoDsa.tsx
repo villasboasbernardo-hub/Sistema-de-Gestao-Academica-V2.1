@@ -64,7 +64,8 @@ export function DocumentoDoDsa({
   readonly assinaturasEditadas?: EdicaoDasAssinaturas;
 }) {
   const { grade } = dados;
-  const nomes = new Map(dados.quadroDeCh.map((d) => [d.codigo, d.nome] as const));
+  /* Spec 017 (FR-007): o cartão leva o nome no DSA; o quadro de CH, o nome inteiro (`dados.quadroDeCh`). */
+  const nomes = new Map(Object.entries(dados.nomesNoCartao));
   /* Mais linhas ou o sábado: a mesma folha, com letra e espaço menores — nunca conteúdo cortado. */
   const compacto =
     grade !== null &&

@@ -307,12 +307,21 @@
 
 /* ── O cartão ────────────────────────────────────────────────────────────── */
 
+/*
+ * ⚠️ **O CARTÃO NUNCA CORTA O INSTRUTOR** (spec 017, FR-007.4; R-9): o título vai numa linha (com reticências), o
+ *    tópico é quem cede espaço (recorta) e o pé não encolhe. Até 19/10/2026 o nome longo quebrava em três linhas, o
+ *    cartão transbordava e o pé ia parar debaixo do cartão seguinte — *"o tópico corta e o instrutor some"*. O
+ *    recorte é DENTRO do cartão: a folha continua sem `overflow: hidden` (ver o cabeçalho), e a página única segue
+ *    provada pelo `SC-001`.
+ */
 .dsa4-cartao {
   z-index: 2;
   margin: 0.35mm 0.6mm;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   background: #ffffff;
   border: 0.25mm solid var(--dsa4-borda);
 }
@@ -324,20 +333,24 @@
 }
 
 .dsa4-cartao-corpo {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 0.2mm;
   padding: 0.5mm 1.1mm 0.6mm;
   min-width: 0;
+  min-height: 0;
 }
 
 .dsa4-cartao-titulo {
+  flex: none;
   display: flex;
   gap: 1.2mm;
   align-items: baseline;
   font-weight: 700;
   color: var(--dsa4-marinho);
   line-height: 1.15;
+  min-width: 0;
 }
 
 .dsa4-cartao-titulo > span:first-child {
@@ -346,15 +359,22 @@
 
 .dsa4-cartao-disciplina {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .dsa4-cartao-conteudo {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
 .dsa4-cartao-pe {
+  flex: none;
+  margin-top: auto;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;

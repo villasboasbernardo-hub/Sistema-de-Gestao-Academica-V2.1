@@ -1702,6 +1702,8 @@ export type ExtrasDaImpressao = {
    */
   readonly execucao: readonly (ExecucaoDaDisciplina & {
     readonly disciplinaId: string;
+    /** O *Nome no DSA* cadastrado (spec 017, FR-007) — o do cartão; o quadro de CH usa `nome`, inteiro. */
+    readonly nomeNoDsa: string | null;
     /** `previsao_inicio_efetiva` — insumo da situação `atrasada` (item 8, 08/10/2026). */
     readonly previsaoInicio: string | null;
     /** `previsao_termino_efetiva` — idem. */
@@ -1740,7 +1742,7 @@ export async function lerExtrasDaImpressao(
          *    padrão da grade, já resolvidas pela view — resolvê-las aqui seria a segunda tradução.
          */
         .select(
-          "disciplina_id, cod_disciplina, nome_disciplina, carga_horaria_tempos, ta_executados, turma_id, previsao_inicio_efetiva, previsao_termino_efetiva",
+          "disciplina_id, cod_disciplina, nome_disciplina, nome_no_dsa, carga_horaria_tempos, ta_executados, turma_id, previsao_inicio_efetiva, previsao_termino_efetiva",
           contagemNaPrimeira(f),
         )
         .eq("turma_id", entrada.turmaId)
@@ -1814,6 +1816,7 @@ export async function lerExtrasDaImpressao(
       disciplina_id: string | null;
       cod_disciplina: string | null;
       nome_disciplina: string | null;
+      nome_no_dsa: string | null;
       carga_horaria_tempos: number | null;
       ta_executados: number | null;
       previsao_inicio_efetiva: string | null;
@@ -1823,6 +1826,7 @@ export async function lerExtrasDaImpressao(
     disciplinaId: d.disciplina_id ?? "",
     codigo: d.cod_disciplina ?? "",
     nome: d.nome_disciplina ?? "",
+    nomeNoDsa: d.nome_no_dsa,
     prevista: d.carga_horaria_tempos ?? 0,
     /* ⚠️ **SEM corte por data** (`Q-2`) — é o `ta_executados` da view, como ele é. */
     cumprida: d.ta_executados ?? 0,

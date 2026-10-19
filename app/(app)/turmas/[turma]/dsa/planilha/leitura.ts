@@ -17,6 +17,7 @@
  * ⚠️ **SEM DADO PESSOAL** (`FR-029`): dos instrutores, só o nome como o DSA imprime — nenhuma coluna
  * de CPF, RG, telefone ou endereço é pedida, e só entram os da turma.
  */
+import { nomeNoCartao } from "@/lib/dominio/nome-no-dsa";
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -500,6 +501,7 @@ export async function lerDadosDaPlanilha(
       id: d.disciplinaId,
       codigo: d.codigo,
       nome: d.nome,
+      nomeNoCartao: nomeNoCartao({ nomeNoDsa: d.nomeNoDsa, nome: d.nome }),
       chPrevista: d.prevista,
     })),
     unidades: unidadesBrutas

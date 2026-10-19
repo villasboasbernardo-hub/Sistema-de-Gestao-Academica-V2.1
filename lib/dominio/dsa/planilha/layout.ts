@@ -145,6 +145,8 @@ export const B = {
   foraData: 34,
   foraDisciplina: 35,
   foraTempos: 36,
+  /* spec 017 (FR-007): o nome da disciplina no cartão, ao lado das listas do rodapé */
+  discNomeDsa: 38,
 } as const;
 export const B_LINHA_DOS_TITULOS = 2;
 export const B_PRIMEIRA_LINHA = 3;
@@ -217,6 +219,7 @@ export const NOME = {
   siglasAvaliacao: "SIGLAS_AVALIACAO",
   discCodigo: "DISC_CODIGO",
   discNome: "DISC_NOME",
+  discNomeDsa: "DISC_NOME_DSA",
   discCh: "DISC_CH",
   tecSigla: "TEC_SIGLA",
   tecNome: "TEC_NOME",

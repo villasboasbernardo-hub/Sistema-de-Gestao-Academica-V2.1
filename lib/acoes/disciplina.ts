@@ -115,6 +115,8 @@ export async function editarDisciplina(entrada: unknown): Promise<ResultadoDeDis
         modo_atribuicao_padrao: d.modoAtribuicaoPadrao,
         tecnica_ensino_sugerida: d.tecnicaEnsinoSugerida ?? null,
         local_padrao: d.localPadrao ?? null,
+        /* Spec 017 (FR-007.1): só quando veio — quem não manda o campo não o apaga. */
+        ...(d.nomeNoDsa === undefined ? {} : { nome_no_dsa: d.nomeNoDsa }),
       },
       { count: "exact" },
     )

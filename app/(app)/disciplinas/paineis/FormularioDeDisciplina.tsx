@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { criarDisciplina, editarDisciplina } from "@/lib/acoes/disciplina";
+import { LIMITE_DO_NOME_NO_DSA, nomeNoCartao } from "@/lib/dominio/nome-no-dsa";
 import { MODOS_DE_ATRIBUICAO, ROTULO_DO_MODO } from "@/lib/validacao/disciplina";
 
 export type DisciplinaNoFormulario = {
@@ -30,6 +31,9 @@ export type DisciplinaNoFormulario = {
   readonly cargaHorariaTempos: number;
   readonly ordemSugerida: number | null;
   readonly modoAtribuicaoPadrao: string;
+  readonly tecnicaEnsinoSugerida: string | null;
+  readonly localPadrao: string | null;
+  readonly nomeNoDsa: string | null;
 };
 
 export function FormularioDeDisciplina({
@@ -47,6 +51,8 @@ export function FormularioDeDisciplina({
   const [gravando, setGravando] = React.useState(false);
 
   const editando = disciplina !== undefined;
+  /* Spec 017 (FR-007.1): o *Nome no DSA* e a prévia do que o cartão vai mostrar. */
+  const [nomeNoDsa, setNomeNoDsa] = React.useState(disciplina?.nomeNoDsa ?? "");
 
   async function gravar(dados: FormData) {
     setMensagem(null);
@@ -67,7 +73,11 @@ export function FormularioDeDisciplina({
     };
 
     const resultado = editando
-      ? await editarDisciplina({ ...comum, disciplinaId: disciplina.disciplinaId })
+      ? await editarDisciplina({
+          ...comum,
+          disciplinaId: disciplina.disciplinaId,
+          nomeNoDsa: String(dados.get("nome_no_dsa") ?? ""),
+        })
       : await criarDisciplina({ ...comum, cursoId });
 
     if (resultado.ok) {
@@ -152,13 +162,45 @@ export function FormularioDeDisciplina({
 
         <div className="flex flex-col gap-1">
           <Label htmlFor={`tecnica-${id}`}>Técnica de ensino</Label>
-          <Input id={`tecnica-${id}`} name="tecnica" className="w-52" />
+          {/* ⚠️ PREENCHIDO com o gravado (FR-007.5): vazio, a edição apagava a técnica de quem não a mexeu. */}
+          <Input
+            id={`tecnica-${id}`}
+            name="tecnica"
+            defaultValue={disciplina?.tecnicaEnsinoSugerida ?? ""}
+            className="w-52"
+          />
         </div>
 
         <div className="flex flex-col gap-1">
           <Label htmlFor={`local-${id}`}>Local padrão</Label>
-          <Input id={`local-${id}`} name="local" className="w-52" />
+          <Input
+            id={`local-${id}`}
+            name="local"
+            defaultValue={disciplina?.localPadrao ?? ""}
+            className="w-52"
+          />
         </div>
+
+        {/*
+          ⚠️ **SÓ NA EDIÇÃO** (C-19): na criação vale a abreviação automática, e o campo nasce quando há o que ajustar.
+             A prévia mostra o que o cartão do DSA vai trazer — o cadastrado ou a abreviação de reserva.
+        */}
+        {editando ? (
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={`nome-no-dsa-${id}`}>Nome no DSA (até {LIMITE_DO_NOME_NO_DSA})</Label>
+            <Input
+              id={`nome-no-dsa-${id}`}
+              name="nome_no_dsa"
+              value={nomeNoDsa}
+              onChange={(e) => setNomeNoDsa(e.target.value)}
+              className="w-64"
+              data-slot="campo-nome-no-dsa"
+            />
+            <span className="text-texto-suave text-xs" data-slot="previa-do-cartao">
+              No cartão: {nomeNoCartao({ nomeNoDsa, nome: disciplina.nomeDisciplina })}
+            </span>
+          </div>
+        ) : null}
 
         <Button type="submit" size="sm" disabled={gravando} data-slot="gravar-disciplina">
           {gravando ? "Gravando…" : editando ? "Salvar disciplina" : "Criar disciplina"}

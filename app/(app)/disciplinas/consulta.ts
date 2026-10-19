@@ -94,6 +94,13 @@ export type LinhaDaGradeDeDisciplinas = {
   readonly cargaHorariaTempos: number;
   readonly ordemSugerida: number | null;
   readonly modoAtribuicaoPadrao: string;
+  /**
+   * Os três campos que a EDIÇÃO mostra preenchidos (spec 017, FR-007.5): sem eles, o formulário mandava vazio e a
+   * gravação apagava a técnica e o local de quem só mudou outro campo.
+   */
+  readonly tecnicaEnsinoSugerida: string | null;
+  readonly localPadrao: string | null;
+  readonly nomeNoDsa: string | null;
   readonly ativa: boolean;
 
   /** `null` fora da visão por turma — **não se aplica**, e não é zero. */
@@ -234,7 +241,7 @@ export async function lerGradeDeDisciplinas(filtro: {
     supabase
       .from("disciplinas")
       .select(
-        "id, codigo, cod_disciplina, nome_disciplina, carga_horaria_tempos, ordem_sugerida, modo_atribuicao_padrao, status",
+        "id, codigo, cod_disciplina, nome_disciplina, carga_horaria_tempos, ordem_sugerida, modo_atribuicao_padrao, tecnica_ensino_sugerida, local_padrao, nome_no_dsa, status",
       )
       .eq("curso_id", cursoEscolhido.id)
       .order("ordem_sugerida", { ascending: true, nullsFirst: false })
@@ -484,6 +491,9 @@ export async function lerGradeDeDisciplinas(filtro: {
       cargaHorariaTempos: Number(d.carga_horaria_tempos),
       ordemSugerida: d.ordem_sugerida === null ? null : Number(d.ordem_sugerida),
       modoAtribuicaoPadrao: d.modo_atribuicao_padrao,
+      tecnicaEnsinoSugerida: d.tecnica_ensino_sugerida,
+      localPadrao: d.local_padrao,
+      nomeNoDsa: d.nome_no_dsa,
       ativa: d.status === "ativo",
       turmaDisciplinaId: daTurma?.turmaDisciplinaId ?? null,
       previsaoInicio: daTurma?.inicio ?? null,
