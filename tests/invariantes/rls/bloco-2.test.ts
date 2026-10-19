@@ -5,7 +5,8 @@
  *
  * Os casos que discriminam (DoD 8):
  *   - o OPERADOR grava aula no DSA (`registros_aula.criar`) e NÃO grava TA fora do DSA (D-COR-3: só o trio);
- *   - o OPERADOR arquiva (tem `turmas.editar`) e NÃO desarquiva; o Encarregado também não; o ADMIN desarquiva (D-COR-5);
+ *   - arquivam E desarquivam o ADMIN, o ENCARREGADO e o AJUDANTE da Administração Acadêmica — e só eles: o OPERADOR,
+ *     que edita a turma, é recusado (decisão de Bernardo Villas Boas, 19/10/2026, que mudou a C-3 e a C-4);
  *   - a ocupação do painel devolve a turma que a pessoa não alcança ANÔNIMA (turma nula), e a dela com o código.
  *
  * ⚠️ UMA conta Admin, criada aqui e apagada no `afterAll`: as suítes de invariantes rodam EM SÉRIE
@@ -456,53 +457,88 @@ describe("D-COR-4 · a trilha da situação", () => {
   });
 });
 
-describe("D-COR-5 · arquivar: quem edita a turma arquiva, só o Admin desarquiva", () => {
-  it("o OPERADOR arquiva", async () => {
+describe("D-COR-5 · arquivar e desarquivar: o Admin, o Encarregado e o Ajudante — e só eles (19/10/2026)", () => {
+  const regular = () => turmaDe.get("regular")!;
+  const estaArquivada = async () =>
+    (
+      (await servico.from("vw_turmas_arquivadas").select("turma_id").eq("turma_id", regular()))
+        .data ?? []
+    ).length > 0;
+
+  it("⚠️ o caso que discrimina: o OPERADOR, que edita a turma, NÃO arquiva — 42501, com a linha completa", async () => {
     const { error } = await sessao("operador")
       .from("turma_arquivamentos")
-      .insert({ turma_id: turmaDe.get("regular")!, acao: "arquivar", observacao: "Encerrada" });
-    expect(error).toBeNull();
-    const { data } = await sessao("operador")
-      .from("vw_turmas_arquivadas")
-      .select("turma_id, arquivada_por, observacao")
-      .eq("turma_id", turmaDe.get("regular")!);
-    expect(data).toEqual([
-      {
-        turma_id: turmaDe.get("regular"),
-        arquivada_por: uids.get("operador"),
-        observacao: "Encerrada",
-      },
-    ]);
+      .insert({ turma_id: regular(), acao: "arquivar", observacao: "Recusa do operador" });
+    expect(error?.code).toBe("42501");
+    const { data } = await servico
+      .from("turma_arquivamentos")
+      .select("id")
+      .eq("observacao", "Recusa do operador");
+    expect(data).toEqual([]);
+    expect(await estaArquivada()).toBe(false);
   });
 
-  it.each(["operador", "encarregado", "ajudante"] as const)(
-    "⚠️ o caso que discrimina: %s NÃO desarquiva — 42501",
+  it.each(["encarregado", "ajudante", "admin"] as const)(
+    "⚠️ %s arquiva e DESARQUIVA (o Encarregado e o Ajudante não desarquivavam)",
     async (c) => {
-      const { error } = await sessao(c)
+      const arquivou = await sessao(c)
         .from("turma_arquivamentos")
-        .insert({ turma_id: turmaDe.get("regular")!, acao: "desarquivar" });
-      expect(error?.code).toBe("42501");
+        .insert({ turma_id: regular(), acao: "arquivar", observacao: `Arquivada pelo ${c}` });
+      expect(arquivou.error).toBeNull();
+      const { data } = await servico
+        .from("vw_turmas_arquivadas")
+        .select("turma_id, arquivada_por, observacao")
+        .eq("turma_id", regular());
+      expect(data).toEqual([
+        { turma_id: regular(), arquivada_por: uids.get(c), observacao: `Arquivada pelo ${c}` },
+      ]);
+
+      const desarquivou = await sessao(c)
+        .from("turma_arquivamentos")
+        .insert({ turma_id: regular(), acao: "desarquivar" });
+      expect(desarquivou.error).toBeNull();
+      expect(await estaArquivada()).toBe(false);
     },
   );
 
-  it("controle positivo · o Admin desarquiva", async () => {
-    const { error } = await sessao("admin")
-      .from("turma_arquivamentos")
-      .insert({ turma_id: turmaDe.get("regular")!, acao: "desarquivar" });
-    expect(error).toBeNull();
-    const { data } = await servico
-      .from("vw_turmas_arquivadas")
-      .select("turma_id")
-      .eq("turma_id", turmaDe.get("regular")!);
-    expect(data).toEqual([]);
-  });
-
-  it("o operador não arquiva turma que não alcança — 42501", async () => {
+  it("⚠️ o OPERADOR não desarquiva — 42501, e a turma continua arquivada", async () => {
+    conferir(
+      "arquivar para o caso do operador",
+      (
+        await sessao("encarregado")
+          .from("turma_arquivamentos")
+          .insert({ turma_id: regular(), acao: "arquivar" })
+      ).error,
+    );
     const { error } = await sessao("operador")
       .from("turma_arquivamentos")
-      .insert({ turma_id: turmaDe.get("expedito")!, acao: "arquivar" });
+      .insert({ turma_id: regular(), acao: "desarquivar" });
     expect(error?.code).toBe("42501");
+    expect(await estaArquivada()).toBe(true);
+    conferir(
+      "desarquivar depois do caso do operador",
+      (
+        await sessao("ajudante")
+          .from("turma_arquivamentos")
+          .insert({ turma_id: regular(), acao: "desarquivar" })
+      ).error,
+    );
   });
+
+  it.each(["chefe", "encop", "ajuop", "encurso", "visualizacao"] as const)(
+    "%s NÃO arquiva — 42501, com a linha completa",
+    async (c) => {
+      const { error } = await sessao(c)
+        .from("turma_arquivamentos")
+        .insert({ turma_id: regular(), acao: "arquivar", observacao: `Recusa do ${c}` });
+      expect(error?.code).toBe("42501");
+      const { data } = await servico
+        .from("turma_arquivamentos")
+        .select("id")
+        .eq("observacao", `Recusa do ${c}`);
+      expect(data).toEqual([]);
+    },
+  );
 });
 
 describe("FR-005.2 · a ocupação do painel: a turma que não se alcança sai anônima", () => {

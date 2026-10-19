@@ -10,6 +10,10 @@
  *    pronto em `vw_turmas_arquivadas`; este módulo o decide igual para a ficha, que mostra o histórico.
  * ⚠️ **QUEM DECIDE A PERMISSÃO É O BANCO** (a policy de `turma_arquivamentos`): `podeArquivar`/`podeDesarquivar` só
  *    decidem se o botão aparece, e seguem a mesma regra.
+ * ⚠️ **ARQUIVAM E DESARQUIVAM O ADMIN, O ENCARREGADO E O AJUDANTE DA ADMINISTRAÇÃO ACADÊMICA — E SÓ ELES**
+ *    *(decisão de Bernardo Villas Boas, 19/10/2026, na conferência do PR #73; muda a C-3 e a C-4 da spec 017)*: o
+ *    Operador, que edita turma, deixa de arquivar, e o desarquivar deixa de ser só do Admin. A arquivada continua sem
+ *    edição para ninguém. A regra é o recurso `arquivamento_de_turma`/`editar` da matriz, o mesmo que a policy lê.
  * ⚠️ **TypeScript puro** (Princípio II).
  */
 import { instanteParaLeitura } from "@/lib/formato/data";
@@ -41,42 +45,46 @@ export function estadoDoArquivamento(
   return { arquivada: true, em: ultimo.criadoEm, por: ultimo.autor, observacao: ultimo.observacao };
 }
 
-/** Arquiva quem pode editar a turma (`turmas.editar`), e só a que não está arquivada (C-3). */
+/** O recurso da matriz que decide quem arquiva E desarquiva — o mesmo que a policy de `turma_arquivamentos` lê. */
+export const RECURSO_DO_ARQUIVAMENTO = "arquivamento_de_turma";
+
+/** Arquiva quem tem o recurso, e só a turma que não está arquivada. */
 export function podeArquivar(e: {
-  readonly podeEditarTurma: boolean;
+  readonly podeArquivarTurmas: boolean;
   readonly arquivada: boolean;
 }): boolean {
-  return e.podeEditarTurma && !e.arquivada;
+  return e.podeArquivarTurmas && !e.arquivada;
 }
 
-/** Desarquiva SÓ o Admin, e só a arquivada (D-COR-5). */
+/** Desarquiva quem tem o MESMO recurso, e só a arquivada. */
 export function podeDesarquivar(e: {
-  readonly perfil: string | null;
+  readonly podeArquivarTurmas: boolean;
   readonly arquivada: boolean;
 }): boolean {
-  return e.perfil === "admin" && e.arquivada;
+  return e.podeArquivarTurmas && e.arquivada;
 }
 
-export const AVISO_DE_NAO_CONCLUIDA =
-  "A turma não está concluída. Arquivada, ela sai das listas e ninguém grava nela até o Administrador desarquivar.";
+/** Quem arquiva e desarquiva, por extenso: a mesma frase no aviso, na ficha, no DSA e nas recusas. */
+export const QUEM_DESARQUIVA = "o Admin, o Encarregado e o Ajudante da Administração Acadêmica";
+
+export const AVISO_DE_NAO_CONCLUIDA = `A turma não está concluída. Arquivada, ela sai das listas e ninguém grava nela até ser desarquivada (desarquivam ${QUEM_DESARQUIVA}).`;
 
 /** O aviso antes de arquivar: só quando a situação não é *Concluída* (D-COR-5: qualquer estado, com aviso). */
 export function avisoAoArquivar(situacao: string): string | null {
   return situacao === "concluida" ? null : AVISO_DE_NAO_CONCLUIDA;
 }
 
-/** *"Turma arquivada em DD/MM/AAAA por X — somente leitura. Só o Administrador desarquiva."* */
+/** *"Turma arquivada em DD/MM/AAAA por X — somente leitura. Desarquivam o Admin, o Encarregado e o Ajudante (…)."* */
 export function fraseDaTurmaArquivada(e: {
   readonly em: string;
   readonly por: string | null;
 }): string {
   const quem = e.por ? ` por ${e.por}` : "";
-  return `Turma arquivada em ${instanteParaLeitura(e.em)}${quem} — somente leitura. Só o Administrador desarquiva.`;
+  return `Turma arquivada em ${instanteParaLeitura(e.em)}${quem} — somente leitura. Desarquivam ${QUEM_DESARQUIVA}.`;
 }
 
 /** A recusa do servidor para toda gravação em turma arquivada (FR-004.4). */
-export const RECUSA_DA_TURMA_ARQUIVADA =
-  "A turma está arquivada: somente leitura. Para gravar, o Administrador precisa desarquivá-la.";
+export const RECUSA_DA_TURMA_ARQUIVADA = `A turma está arquivada: somente leitura. Para gravar, ela precisa ser desarquivada (desarquivam ${QUEM_DESARQUIVA}).`;
 
 /**
  * As listas de turma escondem a arquivada (C-24): `/inicio`, a aba *Grade* do curso e a pré-seleção, *"Turmas com

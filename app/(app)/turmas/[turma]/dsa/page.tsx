@@ -24,6 +24,7 @@ import { atualizar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } fro
 import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { QUEM_DESARQUIVA } from "@/lib/dominio/arquivamento-da-turma";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import {
   diasForaDaEtapa,
@@ -335,7 +336,7 @@ export default async function SemanaDoDsa({
 
       {arquivamentoRes.data !== null ? (
         <p role="status" className="text-sm text-atrasado-tinta" data-slot="turma-arquivada">
-          Turma arquivada — o DSA abre só para ler e imprimir. Só o Administrador desarquiva.
+          Turma arquivada — o DSA abre só para ler e imprimir. Desarquivam {QUEM_DESARQUIVA}.
         </p>
       ) : arquivamentoRes.error !== null ? (
         <p role="status" className="text-sm text-atrasado-tinta" data-slot="arquivamento-nao-lido">

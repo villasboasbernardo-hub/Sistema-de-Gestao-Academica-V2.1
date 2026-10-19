@@ -23,6 +23,7 @@ import {
   fraseDaTurmaArquivada,
   podeArquivar,
   podeDesarquivar,
+  RECURSO_DO_ARQUIVAMENTO,
 } from "@/lib/dominio/arquivamento-da-turma";
 import { historicoDaTurma } from "@/lib/dominio/historico-da-turma";
 import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
@@ -146,6 +147,7 @@ export default async function FichaDaTurma({
   }
 
   const podeEditar = pode(permissoes, "turmas", "editar");
+  const podeArquivarTurmas = pode(permissoes, RECURSO_DO_ARQUIVAMENTO, "editar");
   const cursoId = turma.curso_id as string;
 
   /*
@@ -655,9 +657,12 @@ export default async function FichaDaTurma({
               {podeEditar && !arquivada && cursoRes.data?.status !== "inativo" ? (
                 <TrocarSituacao codigo={turma.codigo as string} atual={turma.status as string} />
               ) : null}
-              {/* D-COR-5: arquivar em qualquer situação (quem edita a turma); desarquivar, só o Admin. */}
-              {podeArquivar({ podeEditarTurma: podeEditar, arquivada }) ||
-              podeDesarquivar({ perfil: usuario?.perfil ?? null, arquivada }) ? (
+              {/*
+                D-COR-5: arquivar em qualquer situação; arquivam E desarquivam o Admin, o Encarregado e o Ajudante da
+                Administração Acadêmica (o recurso da matriz; decisão de Bernardo Villas Boas, 19/10/2026).
+              */}
+              {podeArquivar({ podeArquivarTurmas, arquivada }) ||
+              podeDesarquivar({ podeArquivarTurmas, arquivada }) ? (
                 <ArquivarTurma
                   codigo={turma.codigo as string}
                   situacao={turma.status as string}

@@ -29,6 +29,7 @@ import {
   recusaSeTurmaArquivada,
   recusaSeTurmaArquivadaPeloCodigo,
 } from "@/lib/acoes/turma-arquivada";
+import { QUEM_DESARQUIVA } from "@/lib/dominio/arquivamento-da-turma";
 import { enderecoDaTurma, enderecoDaTurmaGravada } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
@@ -249,8 +250,9 @@ export async function trocarSituacaoDaTurma(entrada: unknown): Promise<Resultado
  * colunas próprias, NUNCA um 5º status. (…) o Admin desarquiva."*
  *
  * ⚠️ **É UM EVENTO, NÃO UMA COLUNA DA TURMA** (`turma_arquivamentos`, só de acréscimo; C-5): o banco carimba quem e
- *    quando, recusa arquivar a arquivada (`turma_ja_arquivada`) e a policy decide quem pode — `turmas.editar` e
- *    alcance. A situação da turma NÃO muda.
+ *    quando, recusa arquivar a arquivada (`turma_ja_arquivada`) e a policy decide quem pode — o recurso
+ *    `arquivamento_de_turma` (o Admin, o Encarregado e o Ajudante da Administração Acadêmica; decisão de Bernardo
+ *    Villas Boas, 19/10/2026) e o alcance. A situação da turma NÃO muda.
  * ⚠️ **GERA O `id` NO BANCO E NÃO PEDE A LINHA DE VOLTA** (gotcha 4.1).
  */
 export async function arquivarTurma(entrada: unknown): Promise<ResultadoDeTurma> {
@@ -272,7 +274,7 @@ export async function arquivarTurma(entrada: unknown): Promise<ResultadoDeTurma>
   if (error) {
     return falha(
       error.code === "42501"
-        ? "O seu perfil não arquiva esta turma."
+        ? `O seu perfil não arquiva turma: arquivam ${QUEM_DESARQUIVA}.`
         : traduzirRecusa(error as ErroDoBanco),
     );
   }
@@ -281,7 +283,7 @@ export async function arquivarTurma(entrada: unknown): Promise<ResultadoDeTurma>
   return { ok: true, codigo, destino: enderecoDaTurmaGravada(codigo, "arquivada") };
 }
 
-/** Desarquivar a turma — só o Admin (D-COR-5); a policy confere `app.eh_admin()`. */
+/** Desarquivar a turma — o mesmo trio que arquiva (decisão de 19/10/2026); a policy confere o recurso. */
 export async function desarquivarTurma(entrada: unknown): Promise<ResultadoDeTurma> {
   const conferido = esquemaDoDesarquivamento.safeParse(entrada);
   if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
@@ -301,7 +303,7 @@ export async function desarquivarTurma(entrada: unknown): Promise<ResultadoDeTur
   if (error) {
     return falha(
       error.code === "42501"
-        ? "Só o Administrador desarquiva a turma."
+        ? `O seu perfil não desarquiva turma: desarquivam ${QUEM_DESARQUIVA}.`
         : traduzirRecusa(error as ErroDoBanco),
     );
   }

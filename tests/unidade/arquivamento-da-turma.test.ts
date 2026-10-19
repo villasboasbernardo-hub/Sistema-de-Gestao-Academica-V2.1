@@ -9,6 +9,7 @@ import {
   idsArquivados,
   podeArquivar,
   podeDesarquivar,
+  RECURSO_DO_ARQUIVAMENTO,
   semAsArquivadas,
 } from "@/lib/dominio/arquivamento-da-turma";
 
@@ -56,18 +57,21 @@ describe("estadoDoArquivamento — o último evento manda", () => {
   });
 });
 
-describe("quem pode (D-COR-5)", () => {
-  it("arquiva quem pode editar a turma, se ela não está arquivada", () => {
-    expect(podeArquivar({ podeEditarTurma: true, arquivada: false })).toBe(true);
-    expect(podeArquivar({ podeEditarTurma: false, arquivada: false })).toBe(false);
-    expect(podeArquivar({ podeEditarTurma: true, arquivada: true })).toBe(false);
+describe("quem pode — o trio da Administração Acadêmica (ajuste de 19/10/2026; muda a C-3 e a C-4)", () => {
+  it("o recurso da matriz é um só, para arquivar e para desarquivar", () => {
+    expect(RECURSO_DO_ARQUIVAMENTO).toBe("arquivamento_de_turma");
   });
-  it("⚠️ desarquiva SÓ o Admin, e só a arquivada", () => {
-    expect(podeDesarquivar({ perfil: "admin", arquivada: true })).toBe(true);
-    expect(
-      podeDesarquivar({ perfil: "encarregado_administracao_academica", arquivada: true }),
-    ).toBe(false);
-    expect(podeDesarquivar({ perfil: "admin", arquivada: false })).toBe(false);
+  it("arquiva quem tem o recurso, se a turma não está arquivada", () => {
+    expect(podeArquivar({ podeArquivarTurmas: true, arquivada: false })).toBe(true);
+    expect(podeArquivar({ podeArquivarTurmas: true, arquivada: true })).toBe(false);
+  });
+  it("⚠️ o caso que discrimina: quem edita a turma SEM o recurso (o Operador) não arquiva mais", () => {
+    expect(podeArquivar({ podeArquivarTurmas: false, arquivada: false })).toBe(false);
+  });
+  it("⚠️ o caso que discrimina: desarquiva quem tem o recurso — não só o Admin —, e só a arquivada", () => {
+    expect(podeDesarquivar({ podeArquivarTurmas: true, arquivada: true })).toBe(true);
+    expect(podeDesarquivar({ podeArquivarTurmas: false, arquivada: true })).toBe(false);
+    expect(podeDesarquivar({ podeArquivarTurmas: true, arquivada: false })).toBe(false);
   });
 });
 
@@ -79,12 +83,12 @@ describe("o aviso e a frase", () => {
   });
   it("a frase da ficha: data em DD/MM/AAAA, quem e o somente leitura", () => {
     expect(fraseDaTurmaArquivada({ em: "2026-10-19T14:00:00Z", por: "CT Fulano" })).toBe(
-      "Turma arquivada em 19/10/2026 por CT Fulano — somente leitura. Só o Administrador desarquiva.",
+      "Turma arquivada em 19/10/2026 por CT Fulano — somente leitura. Desarquivam o Admin, o Encarregado e o Ajudante da Administração Acadêmica.",
     );
   });
   it("sem autor conhecido, não inventa nome", () => {
     expect(fraseDaTurmaArquivada({ em: "2026-10-19T14:00:00Z", por: null })).toBe(
-      "Turma arquivada em 19/10/2026 — somente leitura. Só o Administrador desarquiva.",
+      "Turma arquivada em 19/10/2026 — somente leitura. Desarquivam o Admin, o Encarregado e o Ajudante da Administração Acadêmica.",
     );
   });
 });
