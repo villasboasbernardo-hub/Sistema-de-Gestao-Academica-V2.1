@@ -98,9 +98,10 @@ select p, 'ta_fora_do_dsa', 'editar',
   from unnest(enum_range(null::public.perfil_usuario)) as p
 on conflict (perfil, recurso, acao) do update set permitido = excluded.permitido, observacao = excluded.observacao;
 
--- 5. o nome no DSA (o limite L sai da medição do cartão, R-8)
+-- 5. o nome no DSA: o banco guarda até 60 (teto de segurança); o limite do CARTÃO, L <= 60, é do domínio,
+--    medido no papel (R-8), e o Zod do servidor o aplica
 alter table public.disciplinas add column nome_no_dsa text
-  check (nome_no_dsa is null or (length(btrim(nome_no_dsa)) between 1 and :L));
+  check (nome_no_dsa is null or (length(btrim(nome_no_dsa)) between 1 and 60));
 
 -- 6. a base da M1 (spec 016): o ramo fora do DSA e a coluna sem_posicao NO FIM
 create or replace view public.vw_chd_por_fato with (security_invoker = true) as

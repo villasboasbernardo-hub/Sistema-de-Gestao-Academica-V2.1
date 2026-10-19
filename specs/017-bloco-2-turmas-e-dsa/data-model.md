@@ -41,7 +41,7 @@ Admin) → não arquivada. Arquivar a já arquivada ou desarquivar a que não es
 
 ## `disciplinas.nome_no_dsa` (nova coluna, M1)
 
-Opcional, 1 a L caracteres (L medido no cartão real, R-8). Vale só no cartão do DSA.
+Opcional; o banco aceita de 1 a 60 caracteres (teto de segurança) e o servidor exige no máximo L, o limite do cartão medido no papel (R-8, L ≤ 60). Vale só no cartão do DSA.
 
 ## Views (M1)
 

@@ -68,7 +68,7 @@
 
 - **Decisão:** L = o maior número de caracteres do nome que cabe numa linha do título do cartão de **1 TA**, no modo
   mais apertado (seis dias e letra do compacto), medido por `scrollWidth`/`boundingBox` no `/print/dsa`, com o código
-  mais largo (*"XIII "*) na frente. O valor e a medição entram em `nome-no-dsa.ts` e no `CHECK` da coluna.
+  mais largo (*"XIII "*) na frente. O valor e a medição entram em `nome-no-dsa.ts` (o Zod o aplica); o `CHECK` da coluna é só o teto de segurança de 60.
 - **Porquê:** a medida é de layout (Princípio VII não se aplica: não é norma); um limite por tamanho de cartão faria
   a mesma disciplina mudar de nome de uma semana para outra.
 - **A abreviação automática** (reproduzível): (1) espaços colapsados e ponto final tirado; (2) cabe → fica; (3) tira o
