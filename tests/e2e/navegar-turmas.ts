@@ -73,6 +73,20 @@ export async function escolherNoFiltro(
  * VAZIO POR PADRÃO** (`D4`), o que importa aqui: turma **cancelada** também precisa ser alcançável,
  * e com um padrão `ativa` ela nunca apareceria na busca.
  */
+/**
+ * Clica no código da turma na lista — o link da primeira coluna — **com ele no meio da janela**.
+ *
+ * ⚠️ **O CLIQUE NA BORDA DE BAIXO CAÍA NO VAZIO** (medido em 19/10/2026): com a coluna *Arquivo* as linhas ficaram mais
+ *    altas, e a linha da turma podia cair rente ao rodapé da janela — o link com 18 px de altura começando em *y* = 714
+ *    numa janela de 720. O clique saía, sem erro, e não navegava. No CI, com outra métrica de fonte, foi a primeira
+ *    tentativa de `turmas-lista.spec.ts:48` nas duas rodadas. Centralizar antes de clicar tira a borda da conta.
+ */
+export async function clicarNaTurmaDaLista(page: Page, codigo: string): Promise<void> {
+  const link = page.getByRole("link", { name: codigo }).first();
+  await link.evaluate((e) => e.scrollIntoView({ block: "center", inline: "nearest" }));
+  await link.click();
+}
+
 export async function irAFichaDaTurma(page: Page, email: string, codigo: string): Promise<void> {
   await irAListaDeTurmas(page, email);
   await abrirFiltros(page);
@@ -86,7 +100,7 @@ export async function irAFichaDaTurma(page: Page, email: string, codigo: string)
    */
   await expect.poll(() => new URL(page.url()).searchParams.get("busca")).toBe(codigo);
   await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText("neste recorte");
-  await page.getByRole("link", { name: codigo }).first().click();
+  await clicarNaTurmaDaLista(page, codigo);
   await expect
     .poll(() => new URL(page.url()).pathname)
     .toBe(`/turmas/${encodeURIComponent(codigo)}`);

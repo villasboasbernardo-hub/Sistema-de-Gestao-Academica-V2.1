@@ -20,6 +20,7 @@ import { limparCursos, semearCursos, type CursosSemeados } from "./cursos-de-tes
  */
 import {
   abrirFiltros,
+  clicarNaTurmaDaLista,
   escolherNoFiltro,
   FILTRO,
   irAListaDeTurmas,
@@ -62,7 +63,7 @@ test.describe("`SC-002` · do menu à ficha, sem passar pelo curso", () => {
     await expect(page.getByRole("gridcell", { name: codigo, exact: false }).first()).toBeVisible();
     await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText("turma");
 
-    await page.getByRole("link", { name: codigo }).first().click();
+    await clicarNaTurmaDaLista(page, codigo);
     await expect
       .poll(() => new URL(page.url()).pathname)
       .toBe(`/turmas/${encodeURIComponent(codigo)}`);
@@ -71,7 +72,7 @@ test.describe("`SC-002` · do menu à ficha, sem passar pelo curso", () => {
 
   test("⚠️ o cabeçalho da ficha resume a turma, e o curso é link", async ({ page }) => {
     await irAListaDeTurmas(page, EMAIL);
-    await page.getByRole("link", { name: SEMEADO.turmaJanelaCedo }).first().click();
+    await clicarNaTurmaDaLista(page, SEMEADO.turmaJanelaCedo);
 
     // `FR-021`: situação, modalidade, início, término, sala e efetivo num lugar só.
     const cabecalho = page.locator('[data-slot="cabecalho-da-turma"]');

@@ -30,7 +30,13 @@ import {
 } from "./bloco-2-de-teste";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { abrirLinha } from "./linha-expansivel";
-import { abrirFiltros, escolherNoFiltro, FILTRO, seloDaSituacao } from "./navegar-turmas";
+import {
+  abrirFiltros,
+  clicarNaTurmaDaLista,
+  escolherNoFiltro,
+  FILTRO,
+  seloDaSituacao,
+} from "./navegar-turmas";
 
 const NOME = "Disciplina da turma arquivada";
 const SECAO = '[data-slot="disciplinas-da-turma"]';
@@ -134,7 +140,7 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     await entrar(page, EMAIL_ENC, "/inicio");
     await expect(page.locator(`[data-turma="${codigo}"]`)).toBeVisible();
     await buscarNaLista(page, codigo);
-    await page.getByRole("link", { name: codigo }).first().click();
+    await clicarNaTurmaDaLista(page, codigo);
     await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(codigo);
     await page.locator('[data-slot="abrir-o-dsa"]').click();
     await expect(page.locator('[data-slot="lancar-estudo-individual"]')).toBeVisible();
@@ -203,7 +209,7 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     await entrar(page, EMAIL_AJU, "/inicio");
     await buscarNaLista(page, codigo);
     await escolherNoFiltro(page, "Arquivadas", "Mostrar arquivadas");
-    await page.getByRole("link", { name: codigo }).first().click();
+    await clicarNaTurmaDaLista(page, codigo);
     await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(codigo);
     await page.locator('[data-slot="desarquivar-turma"]').click();
     await page
@@ -240,7 +246,7 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     const linha = page.locator('[data-slot="lista-de-turmas"] tr').filter({ hasText: codigo });
     await expect(linha).toBeVisible();
     await expect(linha.locator('[data-slot="arquivar-da-linha"]')).toHaveCount(0);
-    await page.getByRole("link", { name: codigo }).first().click();
+    await clicarNaTurmaDaLista(page, codigo);
     await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(codigo);
     // O controle positivo de que ele edita a turma: a troca de situação aparece.
     await expect(page.locator('[data-slot="trocar-situacao"]')).toBeVisible();

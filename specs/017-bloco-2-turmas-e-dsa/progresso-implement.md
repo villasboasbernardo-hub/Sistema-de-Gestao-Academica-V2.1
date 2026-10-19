@@ -210,4 +210,10 @@ into a prepared statement"*. Base restaurada por `pnpm db:reset:limpo` em seguid
   `reversao.sql`, **2.012, `cbd61b2b…`** — a de `c1f8d65`. ⚠️ Na primeira tentativa a base tinha os registros dos e2e,
   e a reversão **recusou** (*"A trilha ou o arquivamento tem registro: apagar e decisao de Bernardo (regra 4)"*), sem
   mudar nada — a guarda funcionando.
+- ⚠️ **E UMA SEGUNDA FORMA DO MESMO EFEITO, SÓ NO CI**: `turmas-lista.spec.ts:48` (*"a linha leva à ficha"*, sem busca)
+  reprovou na **primeira tentativa nas duas rodadas** sobre `0bc635e` (runs `39305012203` e `39305005473`) e passou na
+  repetição — *"Expected /turmas/CT0-REG%20T1%202026, Received /turmas"*. Localmente, **6 de 6** repetido. É o clique no
+  link que ficou rente ao rodapé da janela, com a métrica de fonte do Linux. O clique na lista passou a centralizar o
+  link antes (`clicarNaTurmaDaLista`, `tests/e2e/navegar-turmas.ts`), nos seis lugares que clicavam assim; local
+  **19 de 19** nos três arquivos.
 
