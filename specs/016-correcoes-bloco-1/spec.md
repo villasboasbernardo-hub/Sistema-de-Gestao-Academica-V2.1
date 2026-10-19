@@ -4,11 +4,12 @@
 
 **Created**: 17/10/2026
 
-**Status**: Draft — specify em 17/10/2026 · **clarify em 17/10/2026**: as 17 perguntas do lote (§12)
+**Status**: ✅ **ENCERRADA em 19/10/2026** — os três PRs aprovados por Bernardo Villas Boas e mesclados na
+`main` (#67 `a64791d`, #68 `5e55f97`, #69 `c7313c3`) · specify em 17/10/2026 · **clarify em 17/10/2026**: as 17 perguntas do lote (§12)
 respondidas por Bernardo Villas Boas — as de escolha, todas pela recomendação; a Q-8 com o fato (tela do
 DSA, antes de 08/10). As 4 perguntas novas da §13 respondidas em 17/10/2026, antes do plan, todas pela
 recomendação · plan em 17/10/2026 (`plan.md`), **aprovado** no mesmo dia, com o desenho das migrations
-(regra 9.4) · tasks em 17/10/2026 (`tasks.md`)
+(regra 9.4) · tasks em 17/10/2026 (`tasks.md`) · implement de 17 a 19/10/2026
 
 **Input**: Bloco 1 de `docs/correcoes/plano-de-correcoes-em-blocos.md` *(decisões D-COR-1 a D-COR-5 de
 Bernardo Villas Boas, 16/10/2026)* — itens 1.1 a 1.15, correções de tela e defeitos anotados nos testes

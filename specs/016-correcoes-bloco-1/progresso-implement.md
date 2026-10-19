@@ -526,3 +526,47 @@ Registro completo em `plano-de-aplicacao-no-remoto.md`; aqui, o resumo.
   linhas de ano nulo (eram 8); e a medição refeita **no remoto** idêntica à do backup, seção por seção.
 - **Production (T112):** `/login` 200; as telas protegidas 307.
 - **Roteiro (T113):** `roteiro-de-conferencia-pr3.md`, com os números de 19/10; o local voltou à base limpa.
+
+## Encerramento — 19/10/2026
+
+### Conferência do PR 3 (T114)
+**Aprovado** por Bernardo Villas Boas em 19/10/2026. As dúvidas 1 a 5 do lote ficaram como deixadas; a 6 virou a
+**`PEND-016-5`** (a situação do DSA não soma lançamento histórico sem `ta_inicial`), ligada ao Bloco 2, item 1, em
+`docs/correcoes/plano-de-correcoes-em-blocos.md` e no plan §0.1. O lote, como foi entregue (cada uma já valendo):
+1. **Controle positivo do RLS** de `execucao-ate.test.ts`: o Encarregado de escopo geral, e não o Admin que a tarefa
+   citava — uma conta Admin a mais derruba `rls.test.ts` (gotcha 8). Mantido.
+2. **A média de reserva** (`RN-DIST-02`): a divisão mora em `distribuicao-semanal.ts` (`mediaSemanalDaJanela`),
+   porque a guarda da `RN-DIST-01` reprova dividir carga por semanas em outro lugar; `media-semanal.ts` só decide a
+   precedência (cadastrada → janela → nulo). Mantido.
+3. **Fora do ponta a ponta:** `/disciplinas` (não mostra execução por turma desde 04/10/2026) e a aba *Avaliações*
+   (só mostra o "cumprido" de disciplina com avaliação do currículo, que a semente não tem); as duas leem pela
+   mesma função da tabela da ficha, provada no pgTAP 135 e no RLS. Mantido.
+4. **Se a função "até hoje" falhar:** o `/inicio` cai no estado de erro, a ficha fica sem a carga e a lista mostra
+   «—»; nunca volta em silêncio à soma antiga, que inclui o futuro. Mantido.
+5. **"Só habilitado" com atribuição sem janela conhecida:** a marca aparece também ali, coerente com a CH prevista,
+   que também não a conta. Mantido.
+6. **A situação do DSA sem o lançamento sem `ta_inicial`** — achado, anterior a este PR, não corrigido: virou a
+   `PEND-016-5`.
+
+### Merge, CI e Production (T115)
+- PR #69 mesclado por squash em **`c7313c3`** (19/10/2026, 06:34). A árvore dele é a mesma do último commit do
+  ramo (`ccf5540`), conferida por `git rev-parse` (`45a2ada…` nos dois).
+- **CI da `main`** sobre `c7313c3`: verde nos três blocos (run `39231123999`) — **2.383** de unidade (168
+  arquivos) · **800** pgTAP (56) · **335** invariantes e RLS (19) · **517** casos de ponta a ponta: **510** passados,
+  **1** instável e **6** pulados. O instável é o `avaliacoes-nas-telas.spec.ts:53`, que já está na `PEND-014-7`.
+- **Production:** o deploy de `c7313c3` no ambiente Production saiu **`success`** (deployment `7170375607`);
+  `/login` **200** e `/inicio` **307**. A tela que só este merge mostra (`/inicio` com a C-Ap-FR 2026 em atraso) é
+  autenticada: por decisão de Bernardo Villas Boas (19/10/2026), a prova é o deploy do commit.
+- **Ramos:** `db/BLOCO-1-execucao-e-ch-prevista` apagado, local e remoto, depois de `gh pr list --state merged`
+  confirmar o #69; os dos PRs #67 (`fix/BLOCO-1-correcoes-de-tela`) e #68 (`fix/BLOCO-1-dsa`) já não existem em
+  nenhum dos dois lados.
+
+### O documento 04 e os registros (T116)
+- `git diff b8f7100 c7313c3 -- docs/fase-1/04-Regras-de-Negocio-a-Preservar.md` e o `.docx`: **vazio**. `b8f7100`
+  é a `main` de partida (linha de base, T003), `c7313c3` a de chegada.
+- `CLAUDE.md`: a linha da spec 016 no *Estado atual* e, na tabela de pendências, `PEND-016-1`, `-2`, `-4`, `-5`, a
+  dependência do Bloco 2 e o D20 residual; a `PEND-DSA-SUGESTAO` riscada, fechada pelo #68 (`FR-012`). `spec.md` e
+  `plan.md` com o encerramento (e o §0 com as conferências do PR 2 e do PR 3); a T079.6, que ficara aberta, marcada
+  com o merge de `5e55f97`; o Bloco 1 marcado como concluído no plano de correções.
+- **Nome de pessoa real** nas linhas acrescentadas do `git diff` do ramo `docs/BLOCO-1-encerramento`: só
+  `Bernardo Villas Boas`.
