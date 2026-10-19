@@ -521,6 +521,9 @@ export async function lerPeriodoDoDsa(
          * ⚠️ **PELA LINHA DA TURMA, E SÓ A ATIVA** (FR-012.1 da spec 016): a tabela se liga à turma por
          *    `turma_disciplina_id`, e a consulta antiga filtrava por um `turma_id` que ela não tem — falhava
          *    sempre, e a lista chegava vazia. A mesma consulta da planilha de contingência.
+         * ⚠️ **"ATIVA" VALE PARA AS DUAS PONTAS** (dúvida 2 da conferência do PR #68, Bernardo Villas Boas,
+         *    18/10/2026): a atribuição ativa numa linha de turma já inativa não sugere ninguém. Medido na cópia
+         *    `remoto-20261017-005738.sql`: 2 linhas nessa situação. O mesmo filtro na consulta abaixo.
          */
         .from("turma_disciplina_unidade")
         .select(
@@ -528,6 +531,7 @@ export async function lerPeriodoDoDsa(
           contagemNaPrimeira(f),
         )
         .eq("turma_disciplina.turma_id", turmaId)
+        .eq("turma_disciplina.status", "ativo")
         .eq("status", "ativo")
         .order("codigo")
         .range(f.de, f.ate),
@@ -740,6 +744,7 @@ export async function lerPeriodoDoDsa(
           contagemNaPrimeira(f),
         )
         .eq("turma_disciplina.turma_id", turmaId)
+        .eq("turma_disciplina.status", "ativo")
         .eq("status", "ativo")
         .order("codigo")
         .range(f.de, f.ate),

@@ -10,7 +10,9 @@
  *
  * ⚠️ **A ATRIBUIÇÃO POR UE É LIDA PELA `turma_disciplina`** — `turma_disciplina_unidade` não tem
  * `turma_id`, e a consulta do DSA que a filtra por essa coluna falha calada desde 07/10/2026
- * (`PEND-DSA-SUGESTAO`). A da tela não muda nesta spec; a da planilha nasce certa.
+ * (`PEND-DSA-SUGESTAO`). A da tela não muda nesta spec; a da planilha nasce certa. ⚠️ E as duas
+ * atribuições só valem pela linha de turma **ativa** (dúvida 2 da conferência do PR #68, 18/10/2026), como
+ * na tela.
  *
  * ⚠️ **SEM DADO PESSOAL** (`FR-029`): dos instrutores, só o nome como o DSA imprime — nenhuma coluna
  * de CPF, RG, telefone ou endereço é pedida, e só entram os da turma.
@@ -105,6 +107,7 @@ export async function lerDadosDaPlanilha(
           contagemNaPrimeira(f),
         )
         .eq("turma_disciplina.turma_id", turmaId)
+        .eq("turma_disciplina.status", "ativo")
         .eq("status", "ativo")
         .order("codigo")
         .range(f.de, f.ate),
@@ -117,6 +120,7 @@ export async function lerDadosDaPlanilha(
           contagemNaPrimeira(f),
         )
         .eq("turma_disciplina.turma_id", turmaId)
+        .eq("turma_disciplina.status", "ativo")
         .eq("status", "ativo")
         .order("codigo")
         .range(f.de, f.ate),
