@@ -454,13 +454,17 @@ function Cartao({
           {linha.conteudo}
           {cartao.tipo === "estudo" ? " *" : ""}
         </div>
+        {/*
+          ⚠️ **OS DADOS NUMA LINHA PRÓPRIA, ACIMA DO INSTRUTOR** (spec 017, FR-007.4): é a linha que cede espaço
+             antes do título quando o cartão de 1 TA aperta — o instrutor fica, sempre, na última linha.
+        */}
+        <div className="dsa4-cartao-dados">
+          <span>{cartao.ta} TA</span>
+          {linha.local === "" ? null : <span>{linha.local}</span>}
+          <b className="dsa-te">{linha.te}</b>
+        </div>
         <div className="dsa4-cartao-pe">
           <span>{linha.instrutor}</span>
-          <span className="dsa4-cartao-dados">
-            <span>{cartao.ta} TA</span>
-            {linha.local === "" ? null : <span>{linha.local}</span>}
-            <b className="dsa-te">{linha.te}</b>
-          </span>
         </div>
       </div>
     </div>

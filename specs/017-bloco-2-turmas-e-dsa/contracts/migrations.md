@@ -106,7 +106,7 @@ select p, 'ta_fora_do_dsa', 'editar',
   from unnest(enum_range(null::public.perfil_usuario)) as p
 on conflict (perfil, recurso, acao) do update set permitido = excluded.permitido, observacao = excluded.observacao;
 
--- 5. o nome no DSA: o banco guarda até 60 (teto de segurança); o limite do CARTÃO, L [pendente: medido na T045],
+-- 5. o nome no DSA: o banco guarda até 60 (teto de segurança); o limite do CARTÃO, L = 22 (medido em 19/10/2026),
 --    é do domínio, medido no papel (R-8), e o Zod do servidor o aplica
 alter table public.disciplinas add column nome_no_dsa text
   check (nome_no_dsa is null or (length(btrim(nome_no_dsa)) between 1 and 60));

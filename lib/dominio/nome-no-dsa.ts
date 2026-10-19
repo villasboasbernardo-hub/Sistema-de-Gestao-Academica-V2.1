@@ -16,9 +16,13 @@
  */
 
 /**
- * L — medido em 19/10/2026 [pendente: valor e artefato da medição da T045, trocados depois de medir].
+ * L — **22**, medido em 19/10/2026 por `tests/e2e/dsa-cartao-do-papel.spec.ts` no `/print/dsa` do build local: o
+ * título do cartão de 1 TA no papel de SEIS dias (modo compacto, Barlow 6,8 pt, 9,07 px), com o código mais largo
+ * (*XXXVIII*, 29,9 px) na frente — 117 px para o nome. Para cada um dos 172 nomes ativos
+ * (`tests/unidade/dados/disciplinas-ativas-2026-10-19.txt`) que não cabem inteiros, o maior prefixo que cabe numa
+ * linha; L é o menor deles. ⚠️ A medida é do papel, não da norma: se a folha mudar, a prova a refaz.
  */
-export const LIMITE_DO_NOME_NO_DSA = 28;
+export const LIMITE_DO_NOME_NO_DSA = 22;
 
 /** As palavras de ligação que a abreviação tira (passo 4), menos quando são a primeira palavra. */
 const LIGACAO = new Set([

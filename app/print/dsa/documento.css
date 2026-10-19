@@ -332,6 +332,13 @@
   background: var(--dsa4-marinho);
 }
 
+/*
+ * ⚠️ **QUEM CEDE ESPAÇO, E EM QUE ORDEM** (FR-007.4): o corpo cabe no cartão (`min-height: 0`); o instrutor (o pé)
+ *    não encolhe; o tópico encolhe primeiro (até zero), depois a linha de dados (TA · local · T/E) e o título por
+ *    último. Medido em 19/10/2026 na semana cheia de seis dias: no regime de 10 tempos o cartão de 1 TA tem 34,75 px,
+ *    e o instrutor sem nome de guerra — o caso comum, 2 de 177 o têm — ocupa duas linhas; sem esta ordem ele passava
+ *    do fundo e sumia sob o recorte.
+ */
 .dsa4-cartao-corpo {
   flex: 1 1 auto;
   display: flex;
@@ -340,10 +347,13 @@
   padding: 0.5mm 1.1mm 0.6mm;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .dsa4-cartao-titulo {
-  flex: none;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   gap: 1.2mm;
   align-items: baseline;
@@ -365,30 +375,47 @@
 }
 
 .dsa4-cartao-conteudo {
-  flex: 0 1 auto;
+  flex: 0 1000 auto;
   min-height: 0;
   overflow: hidden;
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
+/* O instrutor: a última linha, que nunca encolhe. */
 .dsa4-cartao-pe {
   flex: none;
-  margin-top: auto;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0 1.2mm;
   font-size: 0.9em;
+  line-height: 1.15;
   color: var(--dsa4-suave);
 }
 
+/* No compacto, a entrelinha e o respiro do cartão apertam — é o que deixa título e instrutor caberem juntos. */
+.dsa4-compacto .dsa4-cartao-corpo {
+  gap: 0.1mm;
+  padding: 0.3mm 1mm 0.35mm;
+}
+
+.dsa4-compacto .dsa4-cartao-titulo,
+.dsa4-compacto .dsa4-cartao-dados,
+.dsa4-compacto .dsa4-cartao-pe {
+  line-height: 1.05;
+}
+
+/* TA · local · T/E: cede antes do título (encolhe 100 vezes mais), depois do tópico (que encolhe 1.000). */
 .dsa4-cartao-dados {
+  flex: 0 100 auto;
+  min-height: 0;
+  overflow: hidden;
+  margin-top: auto;
   display: flex;
-  gap: 1.1mm;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 1.1mm;
   align-items: baseline;
-  margin-left: auto;
+  font-size: 0.9em;
+  line-height: 1.15;
+  color: var(--dsa4-suave);
 }
 
 .dsa4-cartao-dados b {

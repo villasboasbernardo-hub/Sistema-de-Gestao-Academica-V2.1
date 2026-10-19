@@ -35,6 +35,6 @@
   do `CLAUDE.md` exige o artefato ao lado de todo número — o mesmo padrão da spec 016. Os requisitos (*MUST*) dizem
   o que a pessoa vê e o que o banco recusa, não como.
 - **Um marcador `[pendente]`** (FR-007.1, o limite de caracteres do nome no cartão) é da regra 9.3: o número sai da
-  medição do cartão no plan, não de estimativa. Não é `[NEEDS CLARIFICATION]`.
+  medição do cartão no plan, não de estimativa. **Trocado em 19/10/2026 pela medição: L = 22.** Não é `[NEEDS CLARIFICATION]`.
 - As dúvidas do pedido foram decididas pela recomendação no clarify (fluxo `/corrigir` de 19/10/2026) e vão no lote
   final para a conferência de Bernardo.

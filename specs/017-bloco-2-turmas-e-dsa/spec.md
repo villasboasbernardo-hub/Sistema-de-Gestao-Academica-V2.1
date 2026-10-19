@@ -481,8 +481,8 @@ X*, e não *IV, IX, V, X*.
   na planilha a linha de 1 TA tem 34 pt e o instrutor é o último. No catálogo real (cópia de 19/10/2026): **172**
   disciplinas ativas; nomes com mais de 30 caracteres **61**, mais de 40 **31**, mais de 50 **20**, mais de 60
   **9**; o maior tem **81**.
-- **FR-007.1**: O cadastro da disciplina MUST ganhar o campo **"Nome no DSA"** (opcional, até L caracteres — L
-  `[pendente: L medido na T045, R-8; o banco aceita no máximo 60]`), só no modo de **edição** (C-19), com a prévia do
+- **FR-007.1**: O cadastro da disciplina MUST ganhar o campo **"Nome no DSA"** (opcional, até L caracteres — L = **22**,
+  medido em 19/10/2026 por `tests/e2e/dsa-cartao-do-papel.spec.ts` no papel de seis dias, compacto, com o código *XXXVIII* na frente; o banco aceita no máximo 60), só no modo de **edição** (C-19), com a prévia do
   que o cartão vai mostrar; acima de L, a recusa diz o limite na frase.
 - **FR-007.2**: Sem *Nome no DSA*, o cartão MUST usar uma **abreviação automática reproduzível**, aplicada só ao
   nome que passa do limite — quem cabe fica **como está** (C-25) — e com o mesmo resultado nas três superfícies e a

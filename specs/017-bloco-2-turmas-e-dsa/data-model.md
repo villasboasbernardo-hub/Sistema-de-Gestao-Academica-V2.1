@@ -47,7 +47,7 @@ Admin) → não arquivada. Arquivar a já arquivada ou desarquivar a que não es
 ## `disciplinas.nome_no_dsa` (nova coluna, M1)
 
 Opcional; o banco aceita de 1 a 60 caracteres (teto de segurança) e o servidor exige no máximo L, o limite do cartão
-medido no papel (R-8; L `[pendente: medido na T045]`, que troca este marcador pelo valor e pela medição). Vale só no
+medido no papel (R-8; L = **22**, medido em 19/10/2026 por `tests/e2e/dsa-cartao-do-papel.spec.ts` no papel de seis dias, compacto, com o código *XXXVIII* na frente — `progresso-implement.md` §T044/T045). Vale só no
 cartão do DSA.
 
 ## Views (M1)
