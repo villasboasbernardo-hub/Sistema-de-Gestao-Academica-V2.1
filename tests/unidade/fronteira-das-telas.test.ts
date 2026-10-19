@@ -146,6 +146,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   // Spec 017 (D-COR-5): arquivar (com o aviso de não concluída) e desarquivar, no cabeçalho da ficha.
   "app/(app)/turmas/[turma]/ArquivarTurma.tsx":
     "os diálogos de «Arquivar turma» e «Desarquivar» — abrir, avisar e gravar pela ação própria",
+  // Spec 017, ajuste de 19/10/2026: o painel mostra um ano só, e o ano se troca por botão, na URL.
+  "app/(app)/turmas/AnoDoPainel.tsx":
+    "o seletor de ano do painel de turmas, escrevendo o `ano` da URL por `useParametro`",
   "app/(app)/turmas/FiltrosDeTurmas.tsx":
     "os quatro filtros da lista de turmas, escrevendo a URL por `useParametro`",
   "app/(app)/turmas/TabelaDeTurmas.tsx":

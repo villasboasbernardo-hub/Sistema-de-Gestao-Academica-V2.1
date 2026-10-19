@@ -6,8 +6,13 @@
  *
  * ⚠️ **ARQUIVAR NÃO É SITUAÇÃO**: a situação da turma fica como está; o arquivamento é um evento próprio, e a ficha
  *    passa a ser somente leitura. O aviso de não concluída é do domínio (`avisoAoArquivar`), uma frase só.
- * ⚠️ **QUEM DECIDE É O BANCO** (a policy de `turma_arquivamentos`): esta folha só é montada para quem pode — arquivar
- *    com `turmas.editar`, desarquivar só o Admin — e a recusa chega traduzida pela ação.
+ * ⚠️ **QUEM DECIDE É O BANCO** (a policy de `turma_arquivamentos`): esta folha só é montada para quem pode — o Admin, o
+ *    Encarregado e o Ajudante da Administração Acadêmica, para as duas ações (decisão de Bernardo Villas Boas,
+ *    19/10/2026) — e a recusa chega traduzida pela ação.
+ * ⚠️ **A MESMA FOLHA NA LINHA DE `/turmas`** (`naLista`; ajuste da conferência de 19/10/2026: *"botão «Arquivar» em
+ *    cada linha (…) sem abrir a ficha, com o mesmo aviso de «não concluída» e a mesma ação do servidor"*): o mesmo
+ *    diálogo e a mesma Server Action; muda só o rótulo do botão, a parada de `Tab` (a da célula, como os links da
+ *    tabela) e o fim — a lista se relê no lugar, em vez de ir à ficha.
  */
 "use client";
 
@@ -36,11 +41,14 @@ export function ArquivarTurma({
   codigo,
   situacao,
   arquivada,
+  naLista = false,
 }: {
   readonly codigo: string;
   readonly situacao: string;
-  /** Arquivada: o botão é *Desarquivar* (só montado para o Admin); senão, *Arquivar turma*. */
+  /** Arquivada: o botão é *Desarquivar*; senão, *Arquivar turma* (*Arquivar*, na lista). */
   readonly arquivada: boolean;
+  /** Na linha de `/turmas`: depois de gravar, a lista se relê no lugar. */
+  readonly naLista?: boolean;
 }) {
   const router = useRouter();
   const [aberto, definirAberto] = React.useState(false);
@@ -68,7 +76,8 @@ export function ArquivarTurma({
         return;
       }
       definirAberto(false);
-      router.replace(resultado.destino);
+      if (naLista) router.refresh();
+      else router.replace(resultado.destino);
     });
   }
 
@@ -79,9 +88,23 @@ export function ArquivarTurma({
           type="button"
           size="sm"
           variant="outline"
-          data-slot={arquivada ? "desarquivar-turma" : "arquivar-turma"}
+          data-slot={
+            naLista
+              ? arquivada
+                ? "desarquivar-da-linha"
+                : "arquivar-da-linha"
+              : arquivada
+                ? "desarquivar-turma"
+                : "arquivar-turma"
+          }
+          {...(naLista
+            ? {
+                tabIndex: -1,
+                "aria-label": `${arquivada ? "Desarquivar" : "Arquivar"} a turma ${codigo}`,
+              }
+            : {})}
         >
-          {arquivada ? "Desarquivar" : "Arquivar turma"}
+          {arquivada ? "Desarquivar" : naLista ? "Arquivar" : "Arquivar turma"}
         </Button>
       </DialogTrigger>
       <DialogContent data-slot={arquivada ? "dialogo-de-desarquivar" : "dialogo-de-arquivar"}>

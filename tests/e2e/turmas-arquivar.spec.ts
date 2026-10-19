@@ -4,6 +4,10 @@
  * > *"Arquivar turma em QUALQUER estado, com aviso quando a turma não estiver concluída (…) A turma arquivada some
  * > das listas (filtro «mostrar arquivadas»), trava DSA, instrutor e edição; o Admin pode desarquivar."* — D-COR-5,
  * > Bernardo Villas Boas, 16/10/2026
+ * > *"ARQUIVAR E DESARQUIVAR: Admin, Encarregado da Administração Acadêmica e Ajudante — e SÓ eles (o Operador deixa
+ * > de arquivar). (…) LISTA /turmas: botão «Arquivar» em cada linha (para quem pode), sem abrir a ficha, com o mesmo
+ * > aviso de «não concluída» e a mesma ação do servidor; na visão «Mostrar arquivadas», o botão «Desarquivar»."* —
+ * > conferência do PR #73, Bernardo Villas Boas, 19/10/2026
  *
  * ⚠️ **A TURMA É ATIVA, e é o caso que discrimina o aviso**: arquivar a *Concluída* não avisa; a ativa avisa.
  * ⚠️ **A PROVA É A TELA E O BANCO** (PEND-016-2): a confirmação de `?gravada=` e o evento em `turma_arquivamentos`
@@ -36,7 +40,8 @@ let SEMEADO: Bloco2Semeado;
 let SIGLA = "";
 let INSTRUTOR = "";
 let EMAIL_ENC = "";
-let EMAIL_ADMIN = "";
+let EMAIL_AJU = "";
+let EMAIL_OPE = "";
 
 test.beforeAll(async ({}, info) => {
   const p = info.workerIndex;
@@ -70,14 +75,17 @@ test.beforeAll(async ({}, info) => {
     instrutorCodigo: INSTRUTOR,
   });
   EMAIL_ENC = emailDeTeste("arquivar-enc", p);
-  EMAIL_ADMIN = emailDeTeste("arquivar-adm", p);
+  EMAIL_AJU = emailDeTeste("arquivar-aju", p);
+  EMAIL_OPE = emailDeTeste("arquivar-ope", p);
   await criarConta(EMAIL_ENC, `USR-ARE-${p}`, "encarregado_administracao_academica");
-  await criarConta(EMAIL_ADMIN, `USR-ARA-${p}`);
+  await criarConta(EMAIL_AJU, `USR-ARJ-${p}`, "ajudante_administracao_academica");
+  await criarConta(EMAIL_OPE, `USR-ARO-${p}`, "operador");
 });
 
 test.afterAll(async () => {
   await apagarConta(EMAIL_ENC);
-  await apagarConta(EMAIL_ADMIN);
+  await apagarConta(EMAIL_AJU);
+  await apagarConta(EMAIL_OPE);
   await limparBloco2(SIGLA, INSTRUTOR);
 });
 
@@ -116,7 +124,7 @@ async function buscarNaLista(page: Page, codigo: string): Promise<void> {
 }
 
 test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () => {
-  test("Encarregado arquiva a turma ATIVA (com aviso); ela trava e some; o Admin desarquiva", async ({
+  test("Encarregado arquiva a turma ATIVA (com aviso); ela trava e some; o Ajudante desarquiva", async ({
     page,
   }) => {
     test.setTimeout(240_000);
@@ -160,8 +168,8 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     await expect(page.locator('[data-slot="trocar-situacao"]')).toHaveCount(0);
     await expect(page.locator('[data-slot="abrir-edicao-da-turma"]')).toHaveCount(0);
     await expect(page.locator('[data-slot="arquivar-turma"]')).toHaveCount(0);
-    // ⚠️ O Encarregado não desarquiva: só o Admin (D-COR-5).
-    await expect(page.locator('[data-slot="desarquivar-turma"]')).toHaveCount(0);
+    // ⚠️ O caso que discrimina da decisão de 19/10/2026: o Encarregado DESARQUIVA (antes, só o Admin).
+    await expect(page.locator('[data-slot="desarquivar-turma"]')).toBeVisible();
     await abrirLinha(page.locator(SECAO), NOME);
     const detalhe = page.locator('[data-slot="detalhe-da-disciplina-da-turma"]');
     await expect(detalhe).toBeVisible();
@@ -190,9 +198,9 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     const linha = page.locator('[data-slot="lista-de-turmas"] tr').filter({ hasText: codigo });
     await expect(linha.locator('[data-slot="selo-arquivada"]')).toBeVisible();
 
-    /* ── o Admin desarquiva pela ficha, alcançada pela lista com o filtro ───────────────────── */
+    /* ── o Ajudante desarquiva pela ficha, alcançada pela lista com o filtro ────────────────── */
     await page.context().clearCookies();
-    await entrar(page, EMAIL_ADMIN, "/inicio");
+    await entrar(page, EMAIL_AJU, "/inicio");
     await buscarNaLista(page, codigo);
     await escolherNoFiltro(page, "Arquivadas", "Mostrar arquivadas");
     await page.getByRole("link", { name: codigo }).first().click();
@@ -220,5 +228,65 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     await buscarNaLista(page, codigo);
     expect(new URL(page.url()).searchParams.get("arquivadas")).toBeNull();
     await expect(page.getByRole("link", { name: codigo }).first()).toBeVisible();
+  });
+
+  test("⚠️ o Operador, que edita a turma, NÃO arquiva: nem na ficha nem na lista", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const { codigo } = turma();
+    await entrar(page, EMAIL_OPE, "/inicio");
+    await buscarNaLista(page, codigo);
+    const linha = page.locator('[data-slot="lista-de-turmas"] tr').filter({ hasText: codigo });
+    await expect(linha).toBeVisible();
+    await expect(linha.locator('[data-slot="arquivar-da-linha"]')).toHaveCount(0);
+    await page.getByRole("link", { name: codigo }).first().click();
+    await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(codigo);
+    // O controle positivo de que ele edita a turma: a troca de situação aparece.
+    await expect(page.locator('[data-slot="trocar-situacao"]')).toBeVisible();
+    await expect(page.locator('[data-slot="arquivar-turma"]')).toHaveCount(0);
+  });
+
+  test("na LISTA, sem abrir a ficha: o Encarregado arquiva pela linha (com o aviso) e desarquiva na visão das arquivadas", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    const { codigo } = turma();
+    await entrar(page, EMAIL_ENC, "/inicio");
+    await buscarNaLista(page, codigo);
+    const linha = page.locator('[data-slot="lista-de-turmas"] tr').filter({ hasText: codigo });
+
+    /* ── arquivar pela linha: o mesmo diálogo, o mesmo aviso, a mesma ação ───────────────────── */
+    await linha.locator('[data-slot="arquivar-da-linha"]').click();
+    const dialogo = page.locator('[data-slot="dialogo-de-arquivar"]');
+    await expect(dialogo).toBeVisible();
+    await expect(dialogo.locator('[data-slot="aviso-nao-concluida"]')).toContainText(
+      "não está concluída",
+    );
+    await dialogo
+      .locator('[data-slot="observacao-do-arquivamento"]')
+      .fill(`Pela lista — ${codigo}`);
+    await dialogo.locator('[data-slot="confirmar-arquivar"]').click();
+    await expect(dialogo).toHaveCount(0, { timeout: 15_000 });
+    await expect(linha).toHaveCount(0, { timeout: 15_000 });
+    // Continua na lista: a ação da linha não abre a ficha.
+    expect(new URL(page.url()).pathname).toBe("/turmas");
+    expect(await arquivadaNoBanco(), "o evento da lista não chegou ao banco").toBe(true);
+    expect(await situacaoNoBanco(), "arquivar mudou a situação").toBe("ativa");
+
+    /* ── «Mostrar arquivadas»: a linha volta com o selo e o botão Desarquivar ───────────────── */
+    await escolherNoFiltro(page, "Arquivadas", "Mostrar arquivadas");
+    await expect.poll(() => new URL(page.url()).searchParams.get("arquivadas")).toBe("sim");
+    await expect(linha.locator('[data-slot="selo-arquivada"]')).toBeVisible();
+    await expect(linha.locator('[data-slot="arquivar-da-linha"]')).toHaveCount(0);
+    await linha.locator('[data-slot="desarquivar-da-linha"]').click();
+    await page
+      .locator('[data-slot="dialogo-de-desarquivar"] [data-slot="confirmar-desarquivar"]')
+      .click();
+    await expect(linha.locator('[data-slot="selo-arquivada"]')).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    await expect(linha.locator('[data-slot="arquivar-da-linha"]')).toBeVisible();
+    expect(await arquivadaNoBanco(), "o desarquivar da lista não chegou ao banco").toBe(false);
   });
 });

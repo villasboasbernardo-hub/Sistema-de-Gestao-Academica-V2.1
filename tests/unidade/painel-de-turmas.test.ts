@@ -2,6 +2,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  anoDoPainel,
+  anosDoSeletor,
   painelDeTurmas,
   semanaDoPainel,
   type OcupacaoDoPainel,
@@ -12,6 +14,7 @@ const HOJE = "2026-10-19";
 const turma = (codigo: string, extra: Partial<TurmaDoPainel> = {}): TurmaDoPainel => ({
   id: codigo,
   codigo,
+  ano: 2026,
   status: "ativa",
   dataInicio: "2026-03-02",
   dataTermino: "2026-12-11",
@@ -34,6 +37,7 @@ const aula = (
   ...extra,
 });
 const base = {
+  ano: 2026,
   mostrarArquivadas: false,
   hoje: HOJE,
   diasDeAviso: 30,
@@ -56,6 +60,7 @@ describe("os cinco indicadores", () => {
     });
     expect(p.indicadores).toEqual({
       total: 6,
+      planejadas: 3,
       emAndamento: 1,
       concluidas: 1,
       canceladas: 1,
@@ -70,6 +75,59 @@ describe("os cinco indicadores", () => {
     const com = painelDeTurmas({ ...base, turmas, mostrarArquivadas: true });
     expect(com.indicadores.total).toBe(2);
     expect(com.avisos.map((a) => a.tipo)).toEqual(["sem_janela"]);
+  });
+});
+
+describe("ajuste de 19/10/2026 · o card Planejadas e o painel de UM ano só", () => {
+  it("⚠️ o card Planejadas conta a situação planejada", () => {
+    const p = painelDeTurmas({
+      ...base,
+      turmas: [
+        turma("A"),
+        turma("P1", { status: "planejada" }),
+        turma("P2", { status: "planejada" }),
+      ],
+    });
+    expect(p.indicadores.planejadas).toBe(2);
+  });
+
+  it("⚠️ o caso que discrimina: a planejada do ano SEGUINTE não entra nos números nem nos avisos do ano vigente", () => {
+    const turmas = [
+      turma("A"),
+      turma("SEGUINTE", {
+        ano: 2027,
+        status: "planejada",
+        dataInicio: "2026-11-02",
+        dataTermino: null,
+      }),
+    ];
+    const vigente = painelDeTurmas({ ...base, turmas });
+    expect(vigente.indicadores).toEqual({
+      total: 1,
+      planejadas: 0,
+      emAndamento: 1,
+      concluidas: 0,
+      canceladas: 0,
+      iniciando: 0,
+    });
+    expect(vigente.avisos).toEqual([]);
+    const seguinte = painelDeTurmas({ ...base, turmas, ano: 2027 });
+    expect(seguinte.indicadores.total).toBe(1);
+    expect(seguinte.indicadores.planejadas).toBe(1);
+    expect(seguinte.indicadores.iniciando).toBe(1);
+    expect(seguinte.avisos.map((a) => a.turmaCodigo)).toEqual(["SEGUINTE"]);
+  });
+
+  it("o ano do painel: o da URL quando válido; senão o ano letivo vigente (o de hoje em São Paulo)", () => {
+    expect(anoDoPainel("", HOJE)).toBe(2026);
+    expect(anoDoPainel("2025", HOJE)).toBe(2025);
+    expect(anoDoPainel("abc", HOJE)).toBe(2026);
+    expect(anoDoPainel("1999x", HOJE)).toBe(2026);
+  });
+
+  it("o seletor oferece os anos das turmas e o vigente, do mais novo ao mais velho, sem repetir", () => {
+    expect(anosDoSeletor([2025, 2027, 2025], 2026)).toEqual([2027, 2026, 2025]);
+    expect(anosDoSeletor([], 2026)).toEqual([2026]);
   });
 });
 

@@ -23,8 +23,14 @@
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
 import {
+  idsArquivados,
+  RECURSO_DO_ARQUIVAMENTO,
+  semAsArquivadas,
+} from "@/lib/dominio/arquivamento-da-turma";
+import {
+  anoDoPainel,
+  anosDoSeletor,
   painelDeTurmas,
   semanaDoPainel,
   type LinhaDoPainel,
@@ -214,10 +220,19 @@ export default async function Turmas({
   );
   const diasDeAviso =
     parametroRes.error || !Number.isFinite(valorDoParametro) ? null : valorDoParametro;
+  /*
+   * ⚠️ **O PAINEL É DE UM ANO SÓ** (ajuste de 19/10/2026): o `ano` da URL, ou o vigente — o de hoje em São Paulo. A
+   *    planejada do ano seguinte não entra nos números do vigente.
+   */
+  const vigente = anoDoPainel("", hoje);
+  const anoDoPainelEscolhido = anoDoPainel(parametros.ano, hoje);
+  const anos = anosDistintos(universo.data ?? []);
   const painel = painelDeTurmas({
+    ano: anoDoPainelEscolhido,
     turmas: doRecorte.map((l) => ({
       id: l.id,
       codigo: l.codigo,
+      ano: l.ano,
       status: l.status,
       dataInicio: l.dataInicio,
       dataTermino: l.dataTermino,
@@ -229,7 +244,6 @@ export default async function Turmas({
     linhas: linhasDoPainel,
     ocupacao: ocupacaoDoPainel,
   });
-  const anos = anosDistintos(universo.data ?? []);
   const cursos = (cursosRes.data ?? []).map((c) => ({ codigo: c.codigo, nome: c.nome_curso }));
 
   return (
@@ -249,6 +263,9 @@ export default async function Turmas({
           avisos={painel.avisos}
           naoLidos={painel.naoLidos}
           diasDeAviso={diasDeAviso}
+          ano={anoDoPainelEscolhido}
+          anos={anosDoSeletor(anos, vigente)}
+          vigente={vigente}
         />
       )}
 
@@ -266,7 +283,10 @@ export default async function Turmas({
           detalhe="A leitura falhou. Tente de novo; se persistir, procure o suporte."
         />
       ) : linhas.length > 0 ? (
-        <TabelaDeTurmas linhas={linhas} />
+        <TabelaDeTurmas
+          linhas={linhas}
+          podeArquivarTurmas={pode(permissoes, RECURSO_DO_ARQUIVAMENTO, "editar")}
+        />
       ) : !podeLer ? (
         <EstadoVazio
           motivo="sem-permissao"

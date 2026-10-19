@@ -14,9 +14,11 @@
  * | T3 | planejada | sem término, início em 10 dias | *sem janela* e *iniciando* |
  * | T4 | concluída | 2025 | conta em *concluídas* e não avisa |
  * | T5 | cancelada | início em 5 dias | ⚠️ NÃO conta em *iniciando* (cancelada), nem avisa |
+ * | T6 | planejada | 2027 | ⚠️ NÃO conta no ano vigente; conta quando o painel passa a 2027 |
  *
- * ⚠️ **"BATENDO COM A TABELA"**: o *Total* é o número de linhas do recorte, sem filtro e com o filtro — a tabela e o
- *    painel são do MESMO recorte (C-14), e o filtro muda os dois juntos.
+ * ⚠️ **O PAINEL É DE UM ANO SÓ** *(ajuste da conferência do PR #73, 19/10/2026)*: por padrão o ano letivo vigente, e
+ *    o seletor do painel troca o `ano` da URL — o mesmo filtro da lista. Com o ano escolhido, o *Total* bate com a
+ *    tabela (C-14); sem ele, a tabela tem todos os anos e o painel, só o vigente.
  */
 import { expect, test, type Page } from "@playwright/test";
 
@@ -66,6 +68,7 @@ test.beforeAll(async ({}, info) => {
         inicio: maisDias(hoje, 5),
         termino: maisDias(hoje, 90),
       },
+      { chave: "T6", ano: 2027, status: "planejada", inicio: "2027-03-01", termino: "2027-11-30" },
     ],
     /* O MESMO instrutor, no MESMO dia e TA, em duas turmas: o conflito de pessoa (RN-CONF-01). */
     aulas: [
@@ -84,6 +87,14 @@ test.afterAll(async () => {
 });
 
 const codigo = (chave: string) => SEMEADO.turmas[chave]?.codigo as string;
+/** O ano letivo vigente — o de hoje em São Paulo, como a página o calcula. */
+const VIGENTE = hojeNaCiaara().slice(0, 4);
+
+async function conferirIndicadores(page: Page, esperado: Record<string, string>): Promise<void> {
+  for (const [chave, valor] of Object.entries(esperado)) {
+    await expect(indicador(page, chave).locator(".text-kpi"), chave).toHaveText(valor);
+  }
+}
 const indicador = (page: Page, chave: string) =>
   page.locator(`[data-slot="indicador-de-turmas"][data-chave="${chave}"]`);
 
@@ -112,29 +123,56 @@ async function avisos(page: Page) {
 }
 
 test.describe("FR-005 · cinco indicadores e três avisos, do recorte", () => {
-  test("o Total bate com a tabela; o filtro por curso muda os números juntos; os cinco ficam exatos", async ({
+  test("⚠️ um ano só: o vigente por padrão, sem a planejada do ano seguinte; o seletor troca, e com o ano o Total bate com a tabela", async ({
     page,
   }) => {
+    test.setTimeout(120_000);
     await irAListaDeTurmas(page, EMAIL);
-    await expect(page.locator('[data-slot="painel-de-turmas"]')).toBeVisible();
-    const semFiltro = await linhasDoRecorte(page);
-    expect(semFiltro).toBeGreaterThanOrEqual(5);
-    await expect(indicador(page, "total").locator(".text-kpi")).toHaveText(String(semFiltro));
+    const painel = page.locator('[data-slot="painel-de-turmas"]');
+    await expect(painel).toBeVisible();
+    await expect(painel).toHaveAttribute("data-ano", VIGENTE);
+    await expect(
+      page.locator(`[data-slot="ano-do-painel-opcao"][data-ano="${VIGENTE}"]`),
+    ).toHaveAttribute("aria-pressed", "true");
 
     await abrirFiltros(page);
     await escolherNoFiltro(page, "Curso", SIGLA);
     await expect.poll(() => new URL(page.url()).searchParams.get("curso")).toBe(SIGLA);
-    await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText("5 turmas");
-    for (const [chave, valor] of [
-      ["total", "5"],
-      ["emAndamento", "2"],
-      ["concluidas", "1"],
-      ["canceladas", "1"],
-      // ⚠️ O CASO QUE DISCRIMINA: a T5 começa em 5 dias e NÃO conta — está cancelada.
-      ["iniciando", "1"],
-    ] as const) {
-      await expect(indicador(page, chave).locator(".text-kpi"), chave).toHaveText(valor);
-    }
+    // A lista tem os seis, de todos os anos; o painel, só os quatro do vigente.
+    await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText("6 turmas");
+    await conferirIndicadores(page, {
+      total: "4",
+      // ⚠️ O CASO QUE DISCRIMINA do ano único: a T6, planejada de 2027, NÃO conta aqui — seriam 2.
+      planejadas: "1",
+      emAndamento: "2",
+      // A T4 é de 2025.
+      concluidas: "0",
+      canceladas: "1",
+      // ⚠️ E o da cancelada: a T5 começa em 5 dias e NÃO conta.
+      iniciando: "1",
+    });
+
+    /* ── 2027 pelo seletor do painel: só a T6, e o Total bate com a tabela ───────────────────── */
+    await page.locator('[data-slot="ano-do-painel-opcao"][data-ano="2027"]').click();
+    await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBe("2027");
+    await expect(painel).toHaveAttribute("data-ano", "2027");
+    await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText("1 turma");
+    await conferirIndicadores(page, { total: "1", planejadas: "1", emAndamento: "0" });
+    // "Batendo com a tabela": com o ano escolhido, o Total é o número de linhas do recorte.
+    await expect(indicador(page, "total").locator(".text-kpi")).toHaveText(
+      String(await linhasDoRecorte(page)),
+    );
+
+    /* ── 2025: a concluída ───────────────────────────────────────────────────────────────────── */
+    await page.locator('[data-slot="ano-do-painel-opcao"][data-ano="2025"]').click();
+    await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBe("2025");
+    await conferirIndicadores(page, { total: "1", concluidas: "1", planejadas: "0" });
+
+    /* ── de volta ao vigente: o padrão, e a URL fica sem `ano` ───────────────────────────────── */
+    await page.locator(`[data-slot="ano-do-painel-opcao"][data-ano="${VIGENTE}"]`).click();
+    await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBeNull();
+    await expect(painel).toHaveAttribute("data-ano", VIGENTE);
+    await conferirIndicadores(page, { total: "4", planejadas: "1" });
   });
 
   test("os três avisos dizem o que falta, e cada um leva à ficha por clique", async ({ page }) => {

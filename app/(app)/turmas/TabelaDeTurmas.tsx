@@ -40,6 +40,7 @@ import {
 import { dataIlegivel, dataParaLeitura } from "@/lib/formato/data";
 import { enderecoDaTurma, enderecoDoDsa } from "@/lib/navegacao/endereco-de-turma";
 
+import { ArquivarTurma } from "./[turma]/ArquivarTurma";
 import type { TurmaNaLista } from "./consulta";
 
 const traco = (v: string | null) => (v === null || v.trim() === "" ? "—" : v);
@@ -246,14 +247,37 @@ const COLUNAS: readonly Coluna<TurmaNaLista>[] = [
  * propriedades são opcionais, e a tabela guarda a ordem por dentro quando ninguém a controla de fora.
  * Passar só `ordem` a deixaria presa num valor que nada atualiza — cabeçalho clicável que não ordena.
  */
-export function TabelaDeTurmas({ linhas }: { readonly linhas: readonly TurmaNaLista[] }) {
+/**
+ * ⚠️ **ARQUIVAR E DESARQUIVAR NA LINHA, SÓ PARA QUEM PODE** (ajuste da conferência do PR #73, 19/10/2026): a coluna
+ *    nasce só com o recurso `arquivamento_de_turma` — o Admin, o Encarregado e o Ajudante da Administração
+ *    Acadêmica —, e a folha é a MESMA da ficha (`ArquivarTurma`), com o mesmo aviso e a mesma Server Action. Quem
+ *    decide é o banco; a coluna só não oferece o que a policy recusaria.
+ */
+const COLUNA_DE_ARQUIVAR: Coluna<TurmaNaLista> = {
+  chave: "arquivar",
+  titulo: "Arquivo",
+  ordenavel: false,
+  valor: (l) => (l.arquivada ? 1 : 0),
+  celula: (l) => (
+    <ArquivarTurma codigo={l.codigo} situacao={l.status} arquivada={l.arquivada === true} naLista />
+  ),
+};
+
+export function TabelaDeTurmas({
+  linhas,
+  podeArquivarTurmas = false,
+}: {
+  readonly linhas: readonly TurmaNaLista[];
+  /** O recurso `arquivamento_de_turma`/`editar` da matriz, lido pela página. */
+  readonly podeArquivarTurmas?: boolean;
+}) {
   const router = useRouter();
 
   return (
     <TabelaDensa
       rotulo="Turmas"
       linhas={linhas}
-      colunas={COLUNAS}
+      colunas={podeArquivarTurmas ? [...COLUNAS, COLUNA_DE_ARQUIVAR] : COLUNAS}
       chaveLinha={(l) => l.id}
       aoAtivarLinha={(l) => router.push(enderecoDaTurma(l.codigo))}
     />

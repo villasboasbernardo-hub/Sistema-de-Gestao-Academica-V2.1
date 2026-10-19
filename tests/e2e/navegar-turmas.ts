@@ -77,6 +77,15 @@ export async function irAFichaDaTurma(page: Page, email: string, codigo: string)
   await irAListaDeTurmas(page, email);
   await abrirFiltros(page);
   await page.locator(FILTRO).getByLabel("Buscar pelo código").fill(codigo);
+  /*
+   * ⚠️ **ESPERAR A LISTA DO RECORTE CHEGAR ANTES DE CLICAR** (medido em 19/10/2026): o clique saía logo depois de
+   *    digitar, sobre a lista AINDA SEM a busca, e a lista filtrada chegava no meio dele — o link mudava de lugar e o
+   *    clique caía no vazio, sem navegar e sem erro. Ficou visível quando a coluna *Arquivo* deixou as linhas mais
+   *    altas e o link foi parar no rodapé da janela. *"neste recorte"* só aparece quando o servidor já respondeu com
+   *    o filtro.
+   */
+  await expect.poll(() => new URL(page.url()).searchParams.get("busca")).toBe(codigo);
+  await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText("neste recorte");
   await page.getByRole("link", { name: codigo }).first().click();
   await expect
     .poll(() => new URL(page.url()).pathname)

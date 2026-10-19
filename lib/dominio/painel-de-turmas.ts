@@ -14,6 +14,10 @@
  *    ela diz SE há conflito; quem é o par, diz a chamada.
  * ⚠️ **LEITURA QUE FALHOU É "NÃO PUDE LER"** (FR-005.4, gotcha 4): `null` na entrada vira o tipo em `naoLidos`,
  *    nunca zero avisos.
+ * ⚠️ **UM ANO SÓ, E O CARD *PLANEJADAS*** *(ajuste da conferência do PR #73, Bernardo Villas Boas, 19/10/2026)*:
+ *    > *"O PAINEL MOSTRA UM ANO SÓ: por padrão o ano letivo vigente; um seletor de ano (na URL) troca. Turmas planejadas
+ *    > do ano seguinte não entram nos números do ano vigente."* O ano é o `ano` da URL — o mesmo filtro da lista —, e
+ *    vazio é o ano de hoje em São Paulo (`anoDoPainel`). Tudo o que o painel conta, indicadores e avisos, é desse ano.
  * ⚠️ **TypeScript puro** (Princípio II).
  */
 import { datasDaSemanaIso, semanaIsoDe } from "./carga-semanal";
@@ -22,6 +26,8 @@ import { detectarConflitos, type OcupacaoDeTa, type OcupacaoPropria } from "./ds
 export type TurmaDoPainel = {
   readonly id: string;
   readonly codigo: string;
+  /** O ano letivo da turma (`turmas.ano_letivo`). */
+  readonly ano: number;
   readonly status: string;
   readonly dataInicio: string | null;
   readonly dataTermino: string | null;
@@ -40,6 +46,7 @@ export type OcupacaoDoPainel = OcupacaoDeTa & {
 
 export type IndicadoresDeTurmas = {
   readonly total: number;
+  readonly planejadas: number;
   readonly emAndamento: number;
   readonly concluidas: number;
   readonly canceladas: number;
@@ -78,8 +85,23 @@ export function semanaDoPainel(hoje: string): { readonly de: string; readonly at
 
 const propria = (o: OcupacaoDoPainel): OcupacaoPropria => ({ ...o, fatoId: o.chave });
 
+/**
+ * O ano do painel: o `ano` da URL quando é um ano (quatro dígitos), senão o ano letivo VIGENTE — o de hoje em São
+ * Paulo (quem chama passa `hojeNaCiaara()`; nada aqui lê relógio).
+ */
+export function anoDoPainel(parametro: string, hoje: string): number {
+  return /^\d{4}$/.test(parametro.trim()) ? Number(parametro.trim()) : Number(hoje.slice(0, 4));
+}
+
+/** Os anos do seletor: os das turmas e o vigente, do mais novo ao mais velho, sem repetir. */
+export function anosDoSeletor(anos: readonly number[], vigente: number): readonly number[] {
+  return [...new Set([...anos, vigente])].sort((a, b) => b - a);
+}
+
 export function painelDeTurmas(entrada: {
   readonly turmas: readonly TurmaDoPainel[];
+  /** O ano letivo do painel (`anoDoPainel`): só as turmas dele entram nos números e nos avisos. */
+  readonly ano: number;
   readonly mostrarArquivadas: boolean;
   readonly hoje: string;
   /** `turmas.aviso_inicio_dias`; `null` = não lido. */
@@ -94,13 +116,13 @@ export function painelDeTurmas(entrada: {
   readonly naoLidos: readonly TipoDeAvisoDeTurma[];
 } {
   const { hoje, diasDeAviso, linhas, ocupacao } = entrada;
-  const turmas = entrada.mostrarArquivadas
-    ? entrada.turmas
-    : entrada.turmas.filter((t) => !t.arquivada);
+  const doAno = entrada.turmas.filter((t) => t.ano === entrada.ano);
+  const turmas = entrada.mostrarArquivadas ? doAno : doAno.filter((t) => !t.arquivada);
   const limite = diasDeAviso === null ? null : maisDias(hoje, diasDeAviso);
 
   const indicadores: IndicadoresDeTurmas = {
     total: turmas.length,
+    planejadas: turmas.filter((t) => t.status === "planejada").length,
     emAndamento: turmas.filter((t) => t.status === "ativa").length,
     concluidas: turmas.filter((t) => t.status === "concluida").length,
     canceladas: turmas.filter((t) => t.status === "cancelada").length,

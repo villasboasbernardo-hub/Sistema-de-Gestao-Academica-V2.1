@@ -1,8 +1,9 @@
 /**
- * O painel de `/turmas` — cinco indicadores e o quadro de avisos (Bloco 2, item 4; spec 017, FR-005).
+ * O painel de `/turmas` — seis indicadores e o quadro de avisos, de UM ano letivo (Bloco 2, item 4; spec 017,
+ * FR-005; o card *Planejadas* e o ano único são do ajuste da conferência de 19/10/2026).
  *
- * ⚠️ **SERVIDOR**: só o botão de abrir os avisos é folha (`AvisosRecolhiveis`, o componente único do molde de
- *    instrutores). Os números e os avisos chegam prontos de `painelDeTurmas`; aqui só se desenha.
+ * ⚠️ **SERVIDOR**: são folha só o botão de abrir os avisos (`AvisosRecolhiveis`, o componente único do molde de
+ *    instrutores) e o seletor de ano (`AnoDoPainel`). Os números e os avisos chegam prontos de `painelDeTurmas`; aqui só se desenha.
  * ⚠️ **"NÃO PUDE LER" É DITO, NUNCA ZERO** (FR-005.4, gotcha 4): o tipo de aviso cuja leitura falhou aparece como tal.
  */
 import Link from "next/link";
@@ -17,6 +18,8 @@ import {
 } from "@/lib/dominio/painel-de-turmas";
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
+import { AnoDoPainel } from "./AnoDoPainel";
+
 const TIPOS: readonly TipoDeAvisoDeTurma[] = ["sem_janela", "sem_instrutor", "conflito"];
 
 export function PainelDeTurmas({
@@ -24,14 +27,22 @@ export function PainelDeTurmas({
   avisos,
   naoLidos,
   diasDeAviso,
+  ano,
+  anos,
+  vigente,
 }: {
   readonly indicadores: IndicadoresDeTurmas;
   readonly avisos: readonly AvisoDeTurma[];
   readonly naoLidos: readonly TipoDeAvisoDeTurma[];
   readonly diasDeAviso: number | null;
+  /** O ano letivo que o painel mostra, os anos do seletor e o vigente (o padrão). */
+  readonly ano: number;
+  readonly anos: readonly number[];
+  readonly vigente: number;
 }) {
   const cards: readonly (readonly [keyof IndicadoresDeTurmas, string])[] = [
     ["total", "Total"],
+    ["planejadas", "Planejadas"],
     ["emAndamento", "Em andamento"],
     ["concluidas", "Concluídas"],
     ["canceladas", "Canceladas"],
@@ -52,8 +63,10 @@ export function PainelDeTurmas({
       aria-label="Painel de turmas"
       className="flex flex-col gap-3"
       data-slot="painel-de-turmas"
+      data-ano={ano}
     >
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <AnoDoPainel anos={anos} ano={ano} vigente={vigente} />
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {cards.map(([chave, rotulo]) => (
           <div key={chave} data-slot="indicador-de-turmas" data-chave={chave}>
             <CardKpi
@@ -75,7 +88,7 @@ export function PainelDeTurmas({
         </h2>
         {comAlgo.length === 0 ? (
           <p className="text-texto" role="status">
-            Nenhum aviso neste recorte.
+            Nenhum aviso neste recorte em {ano}.
           </p>
         ) : (
           <AvisosRecolhiveis
