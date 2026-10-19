@@ -5,7 +5,8 @@
 **Created**: 19/10/2026
 
 **Status**: Draft — specify em 19/10/2026, pelo `/corrigir` (fluxo de 19/10/2026: um pedido = uma spec = um PR =
-uma conferência; as dúvidas são decididas pela recomendação e conferidas por Bernardo no fim)
+uma conferência; as dúvidas são decididas pela recomendação e conferidas por Bernardo no fim) · clarify em
+19/10/2026: 21 decisões adotadas por padrão (C-1 a C-21, seção Clarifications)
 
 **Input**: o pedido de Bernardo Villas Boas de 19/10/2026 — *"Bloco 2 do plano de correções, tudo num PR só"* —
 e o Bloco 2 de `docs/correcoes/plano-de-correcoes-em-blocos.md` (itens 1 a 7), com as decisões **D-COR-3**,
@@ -54,6 +55,71 @@ disciplina é longo.**
 | Cursos → Turmas | **Não** | Sem objeto |
 
 Nenhuma policy de `DELETE`. Nenhum valor novo no enum de situação da turma.
+
+---
+
+## Clarifications
+
+### Session 2026-10-19
+
+*Fluxo `/corrigir` (decisão de Bernardo Villas Boas, 19/10/2026): cada dúvida foi decidida pela recomendação —
+**adotada por padrão, Bernardo confere no fim** — e vai no lote final da entrega. A alternativa de cada uma está no
+lote.*
+
+- C-1 · Q: A observação da troca de situação é obrigatória? → A: **Opcional**, como a decisão 13 da triagem de
+  16/10/2026; só a do TA fora do DSA é obrigatória. *(adotada por padrão — Bernardo confere no fim)* — FR-003.1
+- C-2 · Q: A ficha mostra só a última observação ou o histórico? → A: **O histórico inteiro** (de → para, quem,
+  quando, observação), incluindo as trocas feitas fora da tela, visível a quem lê a turma. *(adotada por padrão)* —
+  FR-003.2, FR-003.4
+- C-3 · Q: Quem arquiva? → A: **Quem pode editar a turma** (`turmas.editar`: Admin, Encarregado e Ajudante da
+  Administração Acadêmica e Operador), como a troca de situação (D-COR-4); **desarquiva só o Admin** (D-COR-5).
+  *(adotada por padrão)* — FR-004.1, FR-004.5
+- C-4 · Q: A turma arquivada aceita alguma edição? → A: **Nenhuma**, nem do Admin: arquivada é só leitura, e o que
+  se faz é desarquivar (o mesmo desenho do curso inativo, que só aceita reativar). *(adotada por padrão)* — FR-004.4
+- C-5 · Q: As colunas `arquivada_em`/`arquivada_por`/observação ficam na própria turma ou num registro próprio? →
+  A: **Registro próprio de arquivamento**, só de acréscimo, com arquivar e desarquivar; o estado atual expõe as três
+  colunas pedidas. Assim o "só o Admin desarquiva" mora no banco sem mexer na permissão de editar turma.
+  *(adotada por padrão)* — FR-004.2, FR-004.5
+- C-6 · Q: A trava da turma arquivada vai no banco agora? → A: **Tela e servidor neste PR; o banco é PORTÃO** —
+  a migration da trava é escrita e provada aqui e só vai ao remoto depois de Bernardo ver o desenho. *(adotada por
+  padrão)* — FR-004.4, FR-004.6
+- C-7 · Q: A arquivada conta no limite de turmas por ano e no veto de inativar curso? → A: **Conta, pela situação
+  dela** — arquivar não muda a situação. *(adotada por padrão)* — FR-004.7
+- C-8 · Q: O filtro "Mostrar arquivadas" vale em quais listas? → A: **Só em `/turmas`**; as outras listas (`/inicio`,
+  aba Grade do curso, `/atividades`) escondem a arquivada sempre. *(adotada por padrão)* — FR-004.3
+- C-9 · Q: Quais perfis registram TA fora do DSA? → A: **Admin, Encarregado e Ajudante da Administração Acadêmica**
+  (o trio do `previsto_proens`), por **recurso novo** na matriz — o Operador fica de fora. *(adotada por padrão)* —
+  FR-001.2
+- C-10 · Q: Como é o registro de TA fora do DSA? → A: **Data obrigatória e não futura**, quantidade inteira ≥ 1,
+  observação com ao menos 3 caracteres úteis, instrutor opcional; **corrigir é desfazer** (exclusão lógica) e
+  registrar de novo. *(adotada por padrão)* — FR-001.1, FR-001.3
+- C-11 · Q: O TA fora do DSA soma só na base da M1 ou também nas duas views da CHD? → A: **Nas três**: a base e as
+  duas views (o card de CHT e o DSA leem as views). A guarda do pgTAP 135 continua provando que as três batem, e
+  nada em tela muda na aplicação, porque a tabela nasce vazia (SC-010). *(adotada por padrão)* — FR-001.4
+- C-12 · Q: O TA fora do DSA com instrutor entra na carga do instrutor? → A: **Não neste bloco.** *(adotada por
+  padrão)* — FR-001.8
+- C-13 · Q: O DSA (situação, papel e planilha) conta o TA fora do DSA? → A: **Conta**, junto com o fato sem posição
+  da `PEND-016-5`, pela data, no acumulado até a semana; não vira cartão. *(adotada por padrão)* — FR-001.6, FR-002.1
+- C-14 · Q: "Em andamento" e "iniciando" no painel são o quê? → A: **Em andamento = situação ativa** (igual ao
+  `/inicio`); **iniciando = início entre hoje e hoje + N**, não cancelada, com N num **parâmetro operacional novo**
+  `turmas.aviso_inicio_dias` = 30. *(adotada por padrão)* — FR-005.1
+- C-15 · Q: Os números do painel seguem o filtro? Há gráficos? → A: **Seguem o recorte** (o molde de instrutores);
+  **sem gráficos** neste bloco. *(adotada por padrão)* — FR-005.1, FR-005.3
+- C-16 · Q: Qual conflito entra no painel? → A: **O conflito do DSA (`RN-CONF-01`) da semana corrente**, pela função
+  canônica, com a ocupação das outras turmas anônima como no DSA. O "conflito de sala" por cadastro foi medido e só
+  acha pares de EAD (Moodle) ou de turmas concluídas. *(adotada por padrão)* — FR-005.2
+- C-17 · Q: O que é "falta instrutor" e "falta data"? → A: **Falta instrutor** = turma planejada ou ativa com
+  disciplina ativa sem atribuição ativa; **falta data** = janela de datas incompleta. *(adotada por padrão)* —
+  FR-005.2
+- C-18 · Q: O item 5 (mover de Cursos o que é da turma) tem objeto? → A: **Sem objeto**: nada que se edita sobrou;
+  a leitura duplicada fica para o Bloco 3, item 4. *(adotada por padrão)* — FR-006.1
+- C-19 · Q: O "Nome no DSA" entra também na criação da disciplina? → A: **Só na edição** (a criação usa a abreviação
+  automática até alguém preencher); o rótulo acessível do cartão fica com o nome inteiro. *(adotada por padrão)* —
+  FR-007.1, FR-007.3
+- C-20 · Q: O defeito da edição de disciplina (apaga técnica e local) entra aqui? → A: **Entra**, porque o campo novo
+  mora no mesmo formulário e seria apagado igual. *(adotada por padrão)* — FR-007.5
+- C-21 · Q: A ordem natural vale só no papel? → A: **Nas três superfícies** (quadro do papel, da tela e rodapé da
+  planilha), para a invariante planilha × papel continuar valendo. *(adotada por padrão)* — FR-008.1
 
 ---
 
