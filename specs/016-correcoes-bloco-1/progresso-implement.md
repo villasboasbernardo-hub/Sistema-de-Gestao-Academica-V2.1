@@ -503,5 +503,26 @@ novo e 2 processos, junto com todos os arquivos que este PR tocou (`andamento-at
 ⚠️ Numa rodada anterior da unidade, sob carga, três guardas que instanciam o ESLint estouraram o prazo; isoladas
 deram 23 de 23, e na rodada do `verificar:tudo` passaram — o achado 6 da fatia (b) do Épico 4 (cache frio).
 
-### CI (T104)
-[pendente]
+### CI (T104) — sobre `7d562f8`, PR #69
+Verde nos três blocos (run `39204161859`), com **a mesma contagem de casos do local**: **2.383** de unidade (168
+arquivos) · **800** pgTAP (56) · **335** invariantes e RLS (19) · **517** casos de ponta a ponta — **511** passados e
+**6** pulados, **sem instável**.
+
+### O rito do remoto (T105 a T112) — 19/10/2026, das 02:42 às 02:48
+Registro completo em `plano-de-aplicacao-no-remoto.md`; aqui, o resumo.
+- **Portão 9.4 (T105):** M1 e M2 são o desenho aprovado, conferido SQL a SQL (acima).
+- **Backup (T106):** `remoto-20261019-024230.sql`.
+- **Remedição (T107):** o backup restaurado só no local, "hoje" = 19/10. **O efeito é o do desenho** — a C-Ap-FR
+  2026 passa a "em atraso" com o mesmo saldo, −16 TA; os 5 instrutores idênticos (o 15 de 114 → 271 TA); a origem
+  das janelas idêntica. Toda diferença vem do avanço da data (os lançamentos de 18 e 19/10 passam a contar, e numa
+  segunda os dias úteis do saldo começam na terça); nenhum lançamento com data até 17/10 mudou. Fora do efeito, um
+  cadastro: a `EST-QF-EM2040PHS 2026` foi de planejada a cancelada, com 0 TA nas duas cópias.
+- **T108:** a autorização condicional de Bernardo Villas Boas (19/10/2026) cobria exatamente este caso: *"se o efeito
+  for o mesmo do desenho aprovado (…), siga"*.
+- **Dry-run (T109):** só M1 e M2. **Push (T110):** saída 0.
+- **Conferência só de leitura (T111):** **78 e 78** migrations; impressão digital **igual nos dois bancos**
+  (`cbd61b2b…`, **2.012** objetos); `security_invoker` nas duas views; as duas funções sem valor padrão, sem
+  `security definer`, `execute` para `authenticated` e não para `anon`; **0** policies de `DELETE`; a view com **0**
+  linhas de ano nulo (eram 8); e a medição refeita **no remoto** idêntica à do backup, seção por seção.
+- **Production (T112):** `/login` 200; as telas protegidas 307.
+- **Roteiro (T113):** `roteiro-de-conferencia-pr3.md`, com os números de 19/10; o local voltou à base limpa.
