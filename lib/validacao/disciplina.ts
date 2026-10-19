@@ -66,12 +66,10 @@ const nomeNoDsa = z
   .transform((v) => (v === "" ? null : v));
 
 /** A edição manda o `id` junto; o curso **não** muda — mover disciplina de curso não é desta fatia. */
-export const esquemaDeEdicaoDeDisciplina = esquemaDeDisciplina
-  .omit({ cursoId: true })
-  .extend({
-    disciplinaId: z.uuid({ error: "Disciplina inválida." }),
-    nomeNoDsa: nomeNoDsa.optional(),
-  });
+export const esquemaDeEdicaoDeDisciplina = esquemaDeDisciplina.omit({ cursoId: true }).extend({
+  disciplinaId: z.uuid({ error: "Disciplina inválida." }),
+  nomeNoDsa: nomeNoDsa.optional(),
+});
 
 /** Desativar e reativar mandam **só** o identificador (`FR-013`). */
 export const esquemaDeSituacaoDaDisciplina = z.object({

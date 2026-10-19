@@ -702,11 +702,19 @@ export default async function FichaDaTurma({
             Alterações da turma gravadas.
           </p>
         ) : valores.gravada === "arquivada" ? (
-          <p role="status" className="text-executado-tinta text-sm" data-slot="turma-arquivada-gravada">
+          <p
+            role="status"
+            className="text-executado-tinta text-sm"
+            data-slot="turma-arquivada-gravada"
+          >
             Turma arquivada.
           </p>
         ) : valores.gravada === "desarquivada" ? (
-          <p role="status" className="text-executado-tinta text-sm" data-slot="turma-desarquivada-gravada">
+          <p
+            role="status"
+            className="text-executado-tinta text-sm"
+            data-slot="turma-desarquivada-gravada"
+          >
             Turma desarquivada.
           </p>
         ) : valores.gravada === "ta-fora" ? (

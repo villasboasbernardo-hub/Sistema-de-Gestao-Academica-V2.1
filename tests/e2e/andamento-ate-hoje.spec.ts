@@ -160,7 +160,10 @@ test.describe("⚠️ D-COR-2 · FR-014.4 · o lançamento no futuro não conta 
       naSemanaDele - naSemanaAnterior,
       "o DSA da semana do lançamento futuro não o contou",
     ).toBe(SEMEADO.lancamentoFuturo.tempos);
-    expect(naSemanaAnterior, "PEND-016-5 · a situação do DSA não somou o lançamento sem posição").toBe(10);
+    expect(
+      naSemanaAnterior,
+      "PEND-016-5 · a situação do DSA não somou o lançamento sem posição",
+    ).toBe(10);
     expect(naSemanaDele).toBe(18);
   });
 });

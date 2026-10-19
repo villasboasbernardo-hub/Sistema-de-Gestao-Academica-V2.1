@@ -25,7 +25,10 @@ import {
   type ContextoDaRecusa,
   type ErroDoBanco,
 } from "@/lib/acoes/traducao-de-recusas";
-import { recusaSeTurmaArquivada, recusaSeTurmaArquivadaPeloCodigo } from "@/lib/acoes/turma-arquivada";
+import {
+  recusaSeTurmaArquivada,
+  recusaSeTurmaArquivadaPeloCodigo,
+} from "@/lib/acoes/turma-arquivada";
 import { enderecoDaTurma, enderecoDaTurmaGravada } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
