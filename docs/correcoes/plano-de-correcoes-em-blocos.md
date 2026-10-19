@@ -5,6 +5,18 @@ _É o documento que seguimos até o próximo épico. Cada bloco vira **uma spec*
 
 ---
 
+## Fluxo de trabalho (desde 19/10/2026)
+
+_Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mudança entra por **`/corrigir <o pedido, em texto livre>`**. O passo a passo é [`.claude/commands/corrigir.md`](../../.claude/commands/corrigir.md), e ele prevalece sobre a frase do topo deste plano ("cada bloco vira uma spec…").
+
+- **Um pedido = uma spec = um PR = uma conferência.** O Spec Kit roda do specify ao implement sem parar entre as etapas.
+- **Dúvidas decididas pela recomendação** e conferidas por Bernardo **no fim**, num lote só.
+- **Sem sub-blocos:** o pedido usa o bloco deste plano em que cabe, ou o próximo número livre.
+- **Banco** (regra 9.4 do `CLAUDE.md`, emenda de 19/10/2026): migration que só **acrescenta** segue sozinha, com o rito completo do remoto; migration que **altera** o que existe para antes do remoto e mostra o desenho.
+- **Merge** só com o "aprovado" de Bernardo.
+
+---
+
 ## Como ler este plano
 
 - **Bloco 1** é correção: tela e defeitos, sem tabela nova. ✅ **Concluído em 19/10/2026** (spec 016, PRs #67, #68 e #69).
@@ -16,11 +28,10 @@ _É o documento que seguimos até o próximo épico. Cada bloco vira **uma spec*
 | Bloco | Tema | Banco? | Spec prevista |
 |---|---|---|---|
 | **1** | Correções de tela e defeitos — ✅ **concluído em 19/10/2026** | duas migrations, pelo portão 9.4 (M1 e M2, sem tabela nova) | 016 |
-| **2** | Turmas: andamento manual, status, arquivar, dashboard | sim | 017 |
+| **2** | Turmas: andamento manual, status, arquivar, dashboard; e o DSA no papel (os dois itens do antigo Bloco 1B) | sim | 017 |
 | **3** | Página do curso em abas: Disciplinas, Atividades, Horários | sim (regimes por turma) | 018 |
 | **4** | Início: dashboard, carrosséis, submenu | não | 019 |
 | **5** | Cadastros novos: estrangeiros, custo, currículo em PDF, capacitação, acessos | sim | 020 |
-| **1B** | DSA no papel: nome longo de disciplina no cartão | a decidir (campo novo = sim) | spec curta, logo depois do Bloco 1 |
 | **6** | Currículo versionado | sim | épico próprio |
 
 ---
@@ -68,7 +79,7 @@ _(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos*
 > - **#68** (`5e55f97`, 19/10/2026) — DSA, papel e planilha: 1.5, 1.8, 1.9, 1.12 e o caso de regressão do 1.11, que ficou **sem objeto** (não se reproduziu).
 > - **#69** (`c7313c3`, 19/10/2026) — banco, pelo portão 9.4: 1.14 (M1, a CH executada até hoje fora do DSA e da planilha) e 1.13 (M2, a CH prevista pela janela efetiva, e a marca *"só habilitado — não gera CH prevista"*). As duas no remoto antes do merge, com o backup `remoto-20261019-024230.sql`.
 >
-> O que ficou de fora virou pendência nomeada: `PEND-016-1`, `PEND-016-2` e `PEND-016-4` (na lista de pequenos ajustes, abaixo) e `PEND-016-5` (no Bloco 2, item 1). Os dois defeitos do DSA no papel achados na conferência do #68 (o nome longo no cartão e a ordem do quadro de CH) estão no **Bloco 1B**, abaixo — o próximo a entrar.
+> O que ficou de fora virou pendência nomeada: `PEND-016-1`, `PEND-016-2` e `PEND-016-4` (na lista de pequenos ajustes, abaixo) e `PEND-016-5` (no Bloco 2, item 1). Os dois defeitos do DSA no papel achados na conferência do #68 (o nome longo no cartão e a ordem do quadro de CH) passaram para o **Bloco 2** (itens 6 e 7), o próximo a entrar — o Bloco 1B deixou de existir em 19/10/2026.
 
 | # | Item | Onde (medido) | O que muda |
 |---|---|---|---|
@@ -98,6 +109,14 @@ _(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos*
 4. **Dashboard de turmas**, no molde do de instrutores: total, canceladas, concluídas, em andamento, iniciando nos próximos 30 dias, e alertas do que falta (data, instrutor, conflito).
 5. **Migrar para Turmas o que é da turma** e ainda está em Cursos (instrutor por disciplina da turma, datas, sala), se a medição mostrar que sobrou algo depois da spec 012.
 
+**DSA no papel — os dois itens do antigo Bloco 1B** _(registrados em 18/10/2026, na conferência do PR 2 do Bloco 1, #68; o Bloco 1B deixou de existir em 19/10/2026, decisão de Bernardo Villas Boas, e eles entram aqui)_:
+
+6. 🐛 **Nome longo de disciplina estoura o cartão do DSA.** Ex.: terça 13/10/2026, C-Ap-FR 2026, avaliação de 2 TA de *Equipamentos e Sistemas Eletrônicos de Auxílios à Navegação*: o nome ocupa quase todo o cartão, o tópico sai cortado (*"Equi.exist eletrônico de aus. a nave…"*) e o instrutor some. Com 1 TA só (ex.: *Operação e Administração de Auxílios à Navegação*), o nome sozinho pode passar do cartão. **Só no DSA** (tela, papel e planilha); o resto do sistema mantém o nome inteiro.
+   - **Decisão a tomar no specify:** (a) abreviação automática por regra (ex.: acima de N caracteres ou 4 palavras, abreviar palavras longas e tirar preposições), sempre reproduzível; ou (b) campo **"nome abreviado no DSA"** no cadastro da disciplina (migration), com a regra automática como reserva quando o campo estiver vazio. **Recomendação: (b) com (a) de reserva** — a abreviação oficial é de quem conhece o curso, e a máquina só cobre a falta.
+   - O nome inteiro continua no quadro de CH do rodapé do papel, então a abreviação no cartão não perde informação.
+   - Critério: nenhum cartão do papel corta o instrutor; prova com o cartão de 1 TA e o de nome mais longo do catálogo real.
+7. 🐛 **Quadro de CH do papel ordena códigos como texto (IV, IX, V); pela regra de 08/10 o romano ordena pelo valor. Existe na main desde 07/10.** _(Achado na conferência do PR #68, 18/10/2026: `tabelaDeCh`, em `lib/dominio/dsa/impressao.ts`, ordena por `localeCompare`, e não por `emOrdemNaturalDoCodigo`.)_
+
 ## Bloco 3 — Página do curso em abas (spec própria)
 
 1. Aba **Disciplinas**, com o cadastro e as UEs; a entrada *Disciplinas* sai do menu lateral.
@@ -121,16 +140,6 @@ _(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos*
 3. **Currículo em PDF**: carregar e baixar (Supabase Storage).
 4. **Capacitação didática** do instrutor em múltipla escolha, lista fechada (C-Esp-DID, C-Exp-TE, Licenciatura).
 5. **Contagem de acessos** por usuário (o último acesso já existe).
-
-## Bloco 1B — DSA no papel (spec curta, logo depois do Bloco 1, antes do Bloco 2)
-
-_Registrado em 18/10/2026, na conferência do PR 2 do Bloco 1 (#68)._
-
-1. 🐛 **Nome longo de disciplina estoura o cartão do DSA.** Ex.: terça 13/10/2026, C-Ap-FR 2026, avaliação de 2 TA de *Equipamentos e Sistemas Eletrônicos de Auxílios à Navegação*: o nome ocupa quase todo o cartão, o tópico sai cortado (*"Equi.exist eletrônico de aus. a nave…"*) e o instrutor some. Com 1 TA só (ex.: *Operação e Administração de Auxílios à Navegação*), o nome sozinho pode passar do cartão. **Só no DSA** (tela, papel e planilha); o resto do sistema mantém o nome inteiro.
-   - **Decisão a tomar no specify:** (a) abreviação automática por regra (ex.: acima de N caracteres ou 4 palavras, abreviar palavras longas e tirar preposições), sempre reproduzível; ou (b) campo **"nome abreviado no DSA"** no cadastro da disciplina (migration), com a regra automática como reserva quando o campo estiver vazio. **Recomendação: (b) com (a) de reserva** — a abreviação oficial é de quem conhece o curso, e a máquina só cobre a falta.
-   - O nome inteiro continua no quadro de CH do rodapé do papel, então a abreviação no cartão não perde informação.
-   - Critério: nenhum cartão do papel corta o instrutor; prova com o cartão de 1 TA e o de nome mais longo do catálogo real.
-2. 🐛 **Quadro de CH do papel ordena códigos como texto (IV, IX, V); pela regra de 08/10 o romano ordena pelo valor. Existe na main desde 07/10.** _(Achado na conferência do PR #68, 18/10/2026: `tabelaDeCh`, em `lib/dominio/dsa/impressao.ts`, ordena por `localeCompare`, e não por `emOrdemNaturalDoCodigo`.)_
 
 ## Lista de pequenos ajustes (backlog)
 
