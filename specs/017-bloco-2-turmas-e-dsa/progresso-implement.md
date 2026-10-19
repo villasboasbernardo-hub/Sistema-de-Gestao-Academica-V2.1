@@ -50,17 +50,21 @@ caracteres, e um instrutor sem nome de guerra curto.
   fixa a ordem de quem cede: o tópico até zero, depois os dados, depois o título; o instrutor nunca.
 - **Com a correção final:** os 54 cartões com o instrutor inteiro dentro da caixa, **uma página**, o título recortado
   em no máximo 1 px (arredondamento), e o nome inteiro no quadro de CH.
-- **L = 22** (R-8): no título do cartão do código *XXXVIII* (29,9 px; Barlow 6,8 pt, 9,07 px; 117 px para o nome), o
-  maior prefixo que cabe numa linha de cada um dos 172 nomes ativos que não cabem inteiros
-  (`tests/unidade/dados/disciplinas-ativas-2026-10-19.txt`); L é o menor. A prova o refaz a cada execução e reprova se
-  o domínio divergir. Com L = 22, **SC-008: 172 de 172**. Os marcadores da spec (FR-007.1), do `data-model.md`, do
-  contrato e do checklist foram trocados.
+- **L = 19** (R-8): no título do cartão do código *XXXVIII* (Barlow 6,8 pt, 9,07 px), o maior prefixo que cabe numa
+  linha de cada um dos 172 nomes ativos que não cabem inteiros (`tests/unidade/dados/disciplinas-ativas-2026-10-19.txt`);
+  L é o menor. **Medido em dois ambientes, e eles divergem:** no Chromium do **Windows** (build local) **22** — o
+  primeiro valor adotado —, e no Chromium do **Linux** (bloco `banco` do CI, run `39269921589`, três execuções)
+  **19**: com L = 22 o CI reprovou *"SC-008: 153 de 172"*. A fonte é a mesma (Barlow servida pelo build, sem falha de
+  download no log); o que muda é o arredondamento da largura das letras em corpo pequeno. Vale o **menor**, para o nome
+  caber nos dois. Com L = 19: **SC-008 172 de 172** no Windows (L medido 22) e no Linux (19); **119 das 172** passam do
+  limite e **38** saem com reticências (`nomes-acima-do-limite.md`, `PEND-017-4`). Os marcadores da spec (FR-007.1), do
+  `data-model.md`, do contrato e do checklist foram trocados.
 - **Na tela, o defeito não se reproduz, e a prova o diz:** a grade é uma tabela com `min-w-36` e largura automática, e
   `truncate` (sem quebra) faz a coluna **alargar até caber** o nome — medido: o instrutor com 466 px de largura e
   `scrollWidth = clientWidth`, numa janela de 1.024 px. O `break-words` da correção deixa a coluna estreita, e o caso
   da tela fica como guarda (instrutor visível e não cortado em todo cartão), não como prova que discrimina.
 - O caso de `dsa-grade.spec.ts` que esperava *"Disciplina do percurso do DSA"* (29 caracteres) no cartão passou a
-  esperar a abreviação, *"Disciplina perc. DSA"* — o comportamento novo (FR-007.2), com o nome inteiro no rótulo.
+  esperar a abreviação, *"Disc. perc. DSA"* — o comportamento novo (FR-007.2), com o nome inteiro no rótulo.
 
 ## T038 — os leitores de lista de turma (C-24)
 

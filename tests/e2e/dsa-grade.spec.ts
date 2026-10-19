@@ -418,13 +418,13 @@ test.describe("FR-008 · o cartão do DSA na tela", () => {
     const titulo = cartao.locator('[data-slot="cartao-titulo"]');
     await expect(titulo.locator("> *").first()).toHaveAttribute("data-slot", "cartao-nome");
     /*
-     * ⚠️ **O NOME DA AMOSTRA TEM 29 CARACTERES, ACIMA DO L (22)**: sem *Nome no DSA* cadastrado, o cartão traz a
+     * ⚠️ **O NOME DA AMOSTRA TEM 29 CARACTERES, ACIMA DO L (19)**: sem *Nome no DSA* cadastrado, o cartão traz a
      *    abreviação automática (spec 017, FR-007.2). O nome inteiro segue no rótulo acessível, abaixo.
      */
     await expect(titulo.locator('[data-slot="cartao-nome"]')).toHaveText(
       abreviarNomeNoDsa("Disciplina do percurso do DSA"),
     );
-    await expect(titulo.locator('[data-slot="cartao-nome"]')).toHaveText("Disciplina perc. DSA");
+    await expect(titulo.locator('[data-slot="cartao-nome"]')).toHaveText("Disc. perc. DSA");
     await expect(titulo.locator('[data-slot="cartao-codigo"]')).toHaveText(SEMEADO.codDisciplina);
     /* A técnica é filha do cartão, numa linha sua — não mais ao lado do «1 TA» e do local. */
     const tecnica = cartao.locator('> [data-slot="cartao-tecnica"]');

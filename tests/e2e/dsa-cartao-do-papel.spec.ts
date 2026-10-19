@@ -62,7 +62,7 @@ const DISCIPLINAS = [
   [
     "XXXVIII",
     "PRINCIPAIS SOFTWARES EMPREGADOS NA AQUISIÇÃO E PROCESSAMENTO DE DADOS.",
-    "SOFTWARES DE AQUISIÇÃO",
+    "SOFTWARES AQUISIÇÃO",
   ],
 ] as const;
 
@@ -323,7 +323,7 @@ test.describe("FR-007 · o cartão do DSA com o nome que cabe e o instrutor inte
     expect(falhas).toEqual([]);
     /* O cadastrado vale no cartão; o rótulo acessível continua com o nome inteiro (FR-007.3). */
     await expect(
-      page.locator('[data-slot="cartao-nome"]', { hasText: "SOFTWARES DE AQUISIÇÃO" }),
+      page.locator('[data-slot="cartao-nome"]', { hasText: "SOFTWARES AQUISIÇÃO" }),
     ).toHaveCount(TEMPOS_POR_DIA);
     await expect(
       page.locator('[aria-label*="PRINCIPAIS SOFTWARES EMPREGADOS NA AQUISIÇÃO"]'),
@@ -362,7 +362,7 @@ test.describe("FR-007 · o cartão do DSA com o nome que cabe e o instrutor inte
 
     /* O cadastrado no cartão; o nome inteiro no quadro de CH (FR-007.3). */
     await expect(
-      page.locator(".dsa4-cartao-disciplina", { hasText: "SOFTWARES DE AQUISIÇÃO" }),
+      page.locator(".dsa4-cartao-disciplina", { hasText: "SOFTWARES AQUISIÇÃO" }),
     ).toHaveCount(TEMPOS_POR_DIA);
     await expect(page.locator('[data-slot="dsa-quadro-de-ch"]')).toContainText(
       "PRINCIPAIS SOFTWARES EMPREGADOS NA AQUISIÇÃO E PROCESSAMENTO DE DADOS.",

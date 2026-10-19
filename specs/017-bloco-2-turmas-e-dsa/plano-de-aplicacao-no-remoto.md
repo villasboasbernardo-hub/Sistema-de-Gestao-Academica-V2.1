@@ -10,15 +10,20 @@ a tempo, a M4 sai deste PR antes do merge (C-30). Nada aqui foi executado: os re
 ## Passos — M1, M2 e M3
 
 0. **Pré-condição:** CI verde nos três blocos sobre o commit do PR.
-1. **Backup:** `python -m scripts.manutencao.dado_do_remoto --somente-copia`. Arquivo citado aqui: `[pendente]`.
+1. **Backup:** `python -m scripts.manutencao.dado_do_remoto --somente-copia`. Arquivo citado aqui, para a medição dos
+   passos 2 e 3: **`remoto-20261019-113345.sql`** (19/10/2026, 11:33). O backup imediatamente antes do push: `[pendente]`.
 2. **Impressão digital das views, ANTES (SC-010):** com o backup restaurado **só no local** e o esquema **sem** M1–M4.
    ⚠️ O `dado_do_remoto` recria o local por **todas** as migrations da pasta: para o "sem M1–M4", tirar as quatro da
    pasta **só na cópia de trabalho** durante a restauração (sem commit), ou restaurar numa worktree em `c1f8d65`. O md5
    do conteúdo ordenado de `vw_chd_por_fato` (as 5 colunas antigas), `vw_carga_horaria_turma` e
    `vw_disciplinas_execucao` (as colunas antigas) — `scripts/provas/impressao_digital_das_views_da_chd.sql`:
-   `[pendente]`.
+   **feito em 19/10/2026** — as quatro migrations tiradas da pasta só na cópia de trabalho, `supabase db reset` (78
+   migrations, a última `20261019035110`), o `public` esvaziado e a cópia restaurada por `psql`:
+   `vw_chd_por_fato` **2.510** linhas `23b021c5a003e4f03cded618b5ae16e8` · `vw_carga_horaria_turma` **29**
+   `b955b777b0f34bcd403e3344074d8850` · `vw_disciplinas_execucao` **228** `c61a16bfce04c73087f65c1bd09af245`.
 3. **Impressão digital das views, DEPOIS, no mesmo dado:** o local com M1–M3 aplicadas sobre o mesmo backup; tem de
-   ser **igual** à do passo 2: `[pendente]`. Se não for, **PARE**: a M1 mudou algo em tela. ⚠️ Restaurar a cópia por
+   ser **igual** à do passo 2: **IGUAL nas três** (81 migrations, a última `20261019114403`; mesmas contagens e mesmos
+   md5), 19/10/2026. O local voltou à base limpa (`pnpm db:reset:limpo`) logo em seguida. Se não for, **PARE**: a M1 mudou algo em tela. ⚠️ Restaurar a cópia por
    cima do local com M1–M3 **sobrescreve** `perfil_permissao` e `config_parametros` com o conteúdo do remoto — o local
    perde o recurso `ta_fora_do_dsa` e o parâmetro `turmas.aviso_inicio_dias` (o achado da spec 014). Para as views do
    passo não importa; **antes de qualquer outra conferência no local**, voltar à base limpa (`pnpm db:reset:limpo`) ou
