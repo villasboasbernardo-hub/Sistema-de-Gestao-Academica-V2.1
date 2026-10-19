@@ -261,6 +261,28 @@ beforeAll(async () => {
       ).error,
     );
   }
+  // Uma aula do expedito em OUTRO dia: não cruza nada do regular, e por isso não pode sair para o operador
+  // (analyze, achado 53 — a ocupação alheia só sai quando cruza a da pessoa).
+  const { data: ueExp } = await servico
+    .from("unidades_ensino")
+    .select("id")
+    .eq("codigo", "BLC2-UE-EXPEDITO")
+    .single();
+  conferir(
+    "aula sem cruzamento",
+    (
+      await servico.from("registros_aula").insert({
+        codigo: "BLC2-EXPEDITO-A2",
+        data: "2046-05-15",
+        ta_inicial: 3,
+        tempos_consumidos: 1,
+        turma_id: turmaDe.get("expedito")!,
+        curso_id: await cursoDe("expedito"),
+        unidade_ensino_id: (ueExp as { id: string }).id,
+        instrutor_id: instrutorId,
+      })
+    ).error,
+  );
   for (const c of Object.keys(CONTAS) as Conta[]) await criarConta(c);
 }, 120_000);
 
@@ -447,7 +469,7 @@ describe("D-COR-5 · arquivar: quem edita a turma arquiva, só o Admin desarquiv
     ]);
   });
 
-  it.each(["operador", "encarregado"] as const)(
+  it.each(["operador", "encarregado", "ajudante"] as const)(
     "⚠️ o caso que discrimina: %s NÃO desarquiva — 42501",
     async (c) => {
       const { error } = await sessao(c)
@@ -495,6 +517,41 @@ describe("FR-005.2 · a ocupação do painel: a turma que não se alcança sai a
     expect(doDia.some((l) => l.turma_id === null)).toBe(true);
   });
 
+  it("⚠️ a ocupação alheia que NÃO cruza a do operador não sai (nem anônima)", async () => {
+    const { data, error } = await sessao("operador").rpc("ocupacao_para_conflitos", {
+      p_de: SEMANA.de,
+      p_ate: SEMANA.ate,
+    });
+    expect(error).toBeNull();
+    const linhas = (data ?? []) as {
+      data: string;
+      local: string | null;
+      turma_id: string | null;
+    }[];
+    expect(linhas.filter((l) => l.data === "2046-05-15")).toEqual([]);
+    expect(linhas.filter((l) => l.turma_id === null).every((l) => l.local === null)).toBe(true);
+  });
+
+  it("controle positivo · o Encarregado vê a aula do expedito que não cruza nada", async () => {
+    const { data } = await sessao("encarregado").rpc("ocupacao_para_conflitos", {
+      p_de: SEMANA.de,
+      p_ate: SEMANA.ate,
+    });
+    const linhas = (data ?? []) as { data: string; turma_id: string | null }[];
+    expect(
+      linhas.some((l) => l.data === "2046-05-15" && l.turma_id === turmaDe.get("expedito")),
+    ).toBe(true);
+  });
+
+  it("gotcha 15 · datas nulas recusam (22023 janela_de_uma_semana), em vez de devolver vazio", async () => {
+    const { error } = await sessao("encarregado").rpc("ocupacao_para_conflitos", {
+      p_de: null,
+      p_ate: null,
+    } as never);
+    expect(error?.code).toBe("22023");
+    expect(error?.hint).toBe("janela_de_uma_semana");
+  });
+
   it("controle positivo · o Encarregado de escopo geral vê as duas com o código", async () => {
     const { data, error } = await sessao("encarregado").rpc("ocupacao_para_conflitos", {
       p_de: SEMANA.de,
@@ -516,4 +573,76 @@ describe("FR-005.2 · a ocupação do painel: a turma que não se alcança sai a
     });
     expect(error?.code).toBe("42501");
   });
+});
+
+describe("DoD 4 · leitura negativa: quem não alcança a turma lê ZERO linhas das tabelas novas (gotcha 4)", () => {
+  const expedito = () => turmaDe.get("expedito")!;
+
+  beforeAll(async () => {
+    const enc = sessao("encarregado");
+    const { data: l } = await servico
+      .from("turma_disciplina")
+      .select("id")
+      .eq("turma_id", expedito())
+      .single();
+    conferir(
+      "fora do DSA no expedito",
+      (
+        await enc.from("ta_fora_do_dsa").insert({
+          turma_disciplina_id: (l as { id: string }).id,
+          turma_id: expedito(),
+          disciplina_id: disciplinaDe.get("expedito")!,
+          data: "2046-05-13",
+          tempos: 1,
+          observacao: "Leitura negativa",
+        })
+      ).error,
+    );
+    const codigo = codigoDaTurma.get("expedito")!;
+    for (const status of ["planejada", "ativa"] as const) {
+      conferir(
+        `troca ${status}`,
+        (
+          await enc.rpc("trocar_situacao_da_turma", {
+            p_codigo: codigo,
+            p_status: status,
+            p_observacao: "Leitura negativa",
+          })
+        ).error,
+      );
+    }
+    conferir(
+      "arquivar o expedito",
+      (await enc.from("turma_arquivamentos").insert({ turma_id: expedito(), acao: "arquivar" }))
+        .error,
+    );
+  });
+
+  afterAll(async () => {
+    await sessao("admin")
+      .from("turma_arquivamentos")
+      .insert({ turma_id: expedito(), acao: "desarquivar" });
+  });
+
+  it.each([
+    "ta_fora_do_dsa",
+    "turma_trocas_de_situacao",
+    "turma_arquivamentos",
+    "vw_turmas_arquivadas",
+  ] as const)(
+    "o operador de cursos regulares lê 0 linhas de %s do expedito; o Encarregado lê",
+    async (t) => {
+      const doOperador = await sessao("operador")
+        .from(t)
+        .select("turma_id")
+        .eq("turma_id", expedito());
+      expect(doOperador.error).toBeNull();
+      expect(doOperador.data).toEqual([]);
+      const doEncarregado = await sessao("encarregado")
+        .from(t)
+        .select("turma_id")
+        .eq("turma_id", expedito());
+      expect((doEncarregado.data ?? []).length).toBeGreaterThan(0);
+    },
+  );
 });

@@ -8,7 +8,8 @@
 --   o pedido de 19/10/2026 (Bloco 2, item 6) — o nome da disciplina no cartão do DSA.
 -- Regra 9.4 (emenda de 19/10/2026): esta migration SÓ ACRESCENTA — tabela, coluna, recurso e um ramo que soma
 --   ZERO enquanto a tabela estiver vazia; as colunas antigas das três views ficam na mesma ordem e com o mesmo
---   valor (provado pela impressão digital do conteúdo antes × depois na cópia do remoto, SC-010 da spec 017).
+--   valor — provado no LOCAL pela impressão digital do conteúdo antes × depois sobre a cópia
+--   `remoto-20261019-024230.sql` (SC-010 da spec 017); no remoto, [pendente: passo 3 do rito].
 --
 -- O que faz:
 --   1. `public.ta_fora_do_dsa` — TA executados fora do DSA, por linha da turma: data, quantidade ≥ 1 (sem ajuste
@@ -32,8 +33,9 @@
 --   recriar `vw_chd_por_fato` com o corpo de `20261019035107` (⚠️ é `create or replace` com coluna a menos: exige
 --   `drop view` + recriar as duas funções da M1 da spec 016, que dependem dela) e as outras duas com o de
 --   `20261016092307` (idem: `drop` + recriar `vw_conformidade_tetos`, que depende de `vw_carga_horaria_turma`);
---   `alter table public.disciplinas drop column nome_no_dsa` (coluna nova, sem histórico);
---   `delete from public.perfil_permissao where recurso = 'ta_fora_do_dsa'`;
+--   `alter table public.disciplinas drop column nome_no_dsa` SÓ se nula em todas as linhas (o precedente é a
+--   reversão de `20260925135058`); com dado, ela fica como `-- [APOSENTADA — v2.1]` e a decisão é de Bernardo;
+--   o recurso na matriz vai a `permitido = false`, sem `delete` (regra 4);
 --   `drop table public.ta_fora_do_dsa`; `drop function app.guardar_ta_fora_do_dsa()`,
 --   `drop function app.proximo_codigo_ta_fora_do_dsa()`, `drop sequence app.ta_fora_do_dsa_codigo_seq`.
 --   O roteiro executável e provado é `specs/017-bloco-2-turmas-e-dsa/reversao.sql`.
@@ -109,9 +111,10 @@ begin
     return new;
   end if;
 
-  if (new.turma_disciplina_id, new.turma_id, new.disciplina_id, new.data, new.tempos, new.instrutor_id, new.observacao)
+  -- ⚠️ O REGISTRO INTEIRO, menos o que o desfazer muda: o código e a procedência também ficam (analyze, achado 63).
+  if (to_jsonb(new) - array['status', 'editado_por', 'editado_em'])
        is distinct from
-     (old.turma_disciplina_id, old.turma_id, old.disciplina_id, old.data, old.tempos, old.instrutor_id, old.observacao)
+     (to_jsonb(old) - array['status', 'editado_por', 'editado_em'])
      or not (old.status = 'ativo' and new.status = 'inativo') then
     raise exception 'O registro de TA fora do DSA so pode ser desfeito.'
       using errcode = '23514', hint = 'ta_fora_so_desfaz';
@@ -136,10 +139,14 @@ create policy ta_fora_do_dsa_criar on public.ta_fora_do_dsa
   with check (coalesce(app.pode('ta_fora_do_dsa', 'editar'), false)
               and app.alcanca_turma(turma_id) and app.turma_em_oferta(turma_id));
 
+-- ⚠️ O DESFAZER TAMBÉM EXIGE A TURMA EM OFERTA, como toda escrita das tabelas da turma (pgTAP 105): curso inativo
+--    não recebe nem desfaz.
 create policy ta_fora_do_dsa_editar on public.ta_fora_do_dsa
   for update to authenticated
-  using      (coalesce(app.pode('ta_fora_do_dsa', 'editar'), false) and app.alcanca_turma(turma_id))
-  with check (coalesce(app.pode('ta_fora_do_dsa', 'editar'), false) and app.alcanca_turma(turma_id));
+  using      (coalesce(app.pode('ta_fora_do_dsa', 'editar'), false)
+              and app.alcanca_turma(turma_id) and app.turma_em_oferta(turma_id))
+  with check (coalesce(app.pode('ta_fora_do_dsa', 'editar'), false)
+              and app.alcanca_turma(turma_id) and app.turma_em_oferta(turma_id));
 
 revoke delete, truncate on public.ta_fora_do_dsa from authenticated, anon;
 

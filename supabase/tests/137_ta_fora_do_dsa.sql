@@ -9,7 +9,7 @@
 -- ⚠️ Quem pode gravar se prova em `tests/invariantes/rls/bloco-2.test.ts`, com sessão real. Aqui, estrutura e regra.
 -- =================================================================================
 begin;
-select plan(27);
+select plan(33);
 
 create function pg_temp.recusa(p_sql text) returns jsonb
 language plpgsql as $f$
@@ -235,6 +235,50 @@ select ok(
     !~ '(current_date|now\s*\(|current_timestamp|localtimestamp)',
   'D20 · a base não lê o relógio do servidor'
 );
+-- ── o que o analyze cobrou (19/10/2026) ──
+select is(
+  (select count(*)::int from public.vw_ocupacao_ta
+    where turma_id = '13720000-0000-0000-0000-000000000001' and data = '2047-05-12'),
+  0,
+  'FR-001.6 · o TA fora do DSA não ocupa TA na grade (não vira cartão, não dispara conflito, não conta no teto)'
+);
+select ok(
+  lower(regexp_replace(pg_get_viewdef('public.vw_instrutor_carga_anual'::regclass)
+        || pg_get_viewdef('public.vw_instrutor_carga_prevista'::regclass), '--[^\n]*', '', 'g'))
+    !~ 'ta_fora_do_dsa',
+  'FR-001.8 · C-12 · o TA fora do DSA não entra na carga do instrutor'
+);
+select is(
+  (select count(*)::int from public.ta_fora_do_dsa f
+     join public.turma_disciplina td on td.id = f.turma_disciplina_id
+    where td.turma_id <> f.turma_id or td.disciplina_id <> f.disciplina_id),
+  0,
+  'P-1 · a cópia de turma e disciplina é a da linha, em todo registro'
+);
+insert into public.ta_fora_do_dsa (turma_disciplina_id, turma_id, disciplina_id, data, tempos, observacao)
+select linha, '13720000-0000-0000-0000-000000000001', disciplina_id, '2047-05-13', 1, 'Para desfazer com código'
+  from _l137 where disciplina_id = '13700000-0000-0000-0000-000000000001';
+select is(
+  pg_temp.recusa($$update public.ta_fora_do_dsa set status = 'inativo', codigo = 'TFD-999999'
+                    where observacao = 'Para desfazer com código'$$) ->> 'hint',
+  'ta_fora_so_desfaz',
+  'desfazer trocando o código é recusado: depois de gravado, só o status muda'
+);
+select ok(
+  (select not attnotnull from pg_attribute
+    where attrelid = 'public.disciplinas'::regclass and attname = 'nome_no_dsa')
+  and (pg_temp.recusa($$update public.disciplinas set nome_no_dsa = '   '
+                         where id = '13700000-0000-0000-0000-000000000001'$$) ->> 'sqlstate') = '23514',
+  'o nome no DSA é opcional, e em branco é recusado'
+);
+select ok(
+  (select bool_and(lower(regexp_replace(prosrc, '--[^\n]*', '', 'g'))
+                     !~ '(current_date|now\s*\(|current_timestamp|localtimestamp)')
+     from pg_proc
+    where oid in ('app.guardar_ta_fora_do_dsa()'::regprocedure, 'app.proximo_codigo_ta_fora_do_dsa()'::regprocedure)),
+  'D20 · as funções novas da M1 não leem o relógio do servidor'
+);
+
 select is(
   (select count(*)::int from pg_policy where polcmd = 'd'),
   0,

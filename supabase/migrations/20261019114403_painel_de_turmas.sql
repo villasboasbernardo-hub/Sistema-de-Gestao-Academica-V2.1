@@ -14,8 +14,9 @@
 --      para o aviso de conflito (`RN-CONF-01`) do painel. Quem decide o conflito continua sendo `detectarConflitos`
 --      (`lib/dominio/dsa/conflitos.ts`): aqui só se entrega a ocupação.
 --      ⚠️ `SECURITY DEFINER`, como `conflitos_da_semana`, porque o conflito é contra turmas que a pessoa pode não
---         alcançar; a ocupação delas sai ANÔNIMA (turma, origem, fato e sessão nulos), com só o que a regra precisa
---         (data, TA, instrutor, fiscal, local). Porteiro `coalesce(…, false) is not true` (gotcha 15).
+--         alcançar; a ocupação delas sai ANÔNIMA (turma, origem, fato, sessão e local nulos), com só o que a regra
+--         precisa (data, TA, instrutor, fiscal), e SÓ quando cruza a da pessoa — nunca a agenda inteira de outro
+--         curso. Porteiro `coalesce(…, false) is not true` (gotcha 15).
 --      ⚠️ A janela é de no máximo uma semana; sem valor padrão — quem chama manda as datas, calculadas do dia de São
 --         Paulo (D20).
 --
@@ -65,23 +66,46 @@ begin
       using errcode = '22023', hint = 'janela_de_uma_semana';
   end if;
 
+  -- ⚠️ A ocupação ALHEIA só sai quando CRUZA a da pessoa — mesma data, TA sobreposto (`taFinal` é o último TA
+  --    ocupado, como em `seSobrepoem`) e a mesma pessoa como instrutor ou fiscal. É o `join minha` de
+  --    `conflitos_da_semana` (Q-17 da spec 013: *"a regra exige ver o conflito, não o DSA do outro curso"*),
+  --    generalizado para o conjunto das turmas que a pessoa alcança; o local alheio sai nulo, porque o conflito de
+  --    sala fica fora do painel (analyze, achado 53).
   return query
-    select case when v.alcanca then o.turma_id end,
-           case when v.alcanca then o.origem end,
-           case when v.alcanca then o.fato_id end,
-           case when v.alcanca then o.sessao_id end,
-           o.data, o.ta_inicial, o.ta_final, o.instrutor_id, o.fiscal_id, o.local
-      from public.vw_ocupacao_ta o
-      cross join lateral (select coalesce(app.alcanca_turma(o.turma_id), false) as alcanca) v
-     where o.turma_id is not null
-       and o.ta_inicial is not null
-       and o.data between p_de and p_ate;
+    with ocupacao as (
+      select o.turma_id, o.origem, o.fato_id, o.sessao_id, o.data, o.ta_inicial, o.ta_final,
+             o.instrutor_id, o.fiscal_id, o.local,
+             coalesce(app.alcanca_turma(o.turma_id), false) as alcanca
+        from public.vw_ocupacao_ta o
+       where o.turma_id is not null
+         and o.ta_inicial is not null
+         and o.data between p_de and p_ate
+    ),
+    minha as (
+      select m.* from ocupacao m where m.alcanca
+    )
+    select m.turma_id, m.origem, m.fato_id, m.sessao_id, m.data, m.ta_inicial, m.ta_final,
+           m.instrutor_id, m.fiscal_id, m.local
+      from minha m
+    union all
+    select null::uuid, null::text, null::uuid, null::uuid, a.data, a.ta_inicial, a.ta_final,
+           a.instrutor_id, a.fiscal_id, null::text
+      from ocupacao a
+     where not a.alcanca
+       and exists (
+             select 1
+               from minha m
+              where m.data = a.data
+                and m.ta_inicial <= a.ta_final and m.ta_final >= a.ta_inicial
+                and (   (a.instrutor_id is not null and a.instrutor_id in (m.instrutor_id, m.fiscal_id))
+                     or (a.fiscal_id    is not null and a.fiscal_id    in (m.instrutor_id, m.fiscal_id))));
 end;
 $$;
 
 comment on function public.ocupacao_para_conflitos(date, date) is
-  'A ocupação de TA de todas as turmas numa semana, para o aviso de conflito do painel de /turmas (RN-CONF-01; '
-  'Bloco 2, spec 017). A das turmas que a pessoa não alcança sai anônima. Quem decide o conflito é '
+  'A ocupação de TA das turmas que a pessoa alcança numa semana, mais a das outras que CRUZA com ela (mesma data, TA '
+  'sobreposto, mesma pessoa), anônima — para o aviso de conflito do painel de /turmas (RN-CONF-01; Bloco 2, '
+  'spec 017). Quem decide o conflito é '
   '`detectarConflitos`; aqui só se entrega a ocupação. Sem valor padrão (D20).';
 
 revoke all on function public.ocupacao_para_conflitos(date, date) from public, anon;

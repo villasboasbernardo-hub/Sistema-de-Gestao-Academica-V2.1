@@ -164,11 +164,13 @@ comment on table public.turma_arquivamentos is
 
 create index turma_arquivamentos_turma_idx on public.turma_arquivamentos (turma_id, ordem desc);
 
+-- ⚠️ `security definer`, no molde de `app.turma_em_oferta`: devolve só um booleano, e como INVOKER ela dependeria da
+--    RLS de quem chama — falharia ABERTA (gotcha 4) para quem grava sem enxergar o arquivamento (analyze, achado 60).
 create or replace function app.turma_arquivada(p_turma_id uuid)
 returns boolean
 language sql
 stable
-security invoker
+security definer
 set search_path = ''
 as $$
   select coalesce(

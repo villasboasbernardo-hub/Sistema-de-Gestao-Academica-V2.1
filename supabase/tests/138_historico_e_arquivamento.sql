@@ -9,7 +9,7 @@
 -- ⚠️ "Só o Admin desarquiva" é policy: prova com sessão real em `tests/invariantes/rls/bloco-2.test.ts`.
 -- =================================================================================
 begin;
-select plan(20);
+select plan(22);
 
 create function pg_temp.recusa(p_sql text) returns jsonb
 language plpgsql as $f$
@@ -140,6 +140,23 @@ select ok(
   and not has_table_privilege('anon', 'public.vw_turmas_arquivadas', 'SELECT')
   and not has_table_privilege('authenticated', 'public.turma_trocas_de_situacao', 'INSERT'),
   'gotcha 10 e privilégios · a view é invoker, anon não lê, ninguém escreve na trilha direto'
+);
+select ok(
+  (select prosecdef and provolatile = 's' from pg_proc where oid = 'app.turma_arquivada(uuid)'::regprocedure)
+  and not has_function_privilege('anon', 'app.turma_arquivada(uuid)', 'EXECUTE'),
+  'achado 60 · turma_arquivada é definer (não falha aberta pela RLS de quem grava), stable, e anon não executa'
+);
+-- ⚠️ ISENÇÃO NOMINAL: `app.carimbar_arquivamento` carimba o INSTANTE do evento (`criado_em := now()`) — instante,
+--    não data de fato (D20); a varredura a deixa de fora pelo nome.
+select ok(
+  (select bool_and(lower(regexp_replace(prosrc, '--[^\n]*', '', 'g'))
+                     !~ '(current_date|now\s*\(|current_timestamp|localtimestamp)')
+     from pg_proc
+    where oid in ('app.anotar_troca_de_situacao()'::regprocedure,
+                  'public.trocar_situacao_da_turma(text, public.status_turma, text)'::regprocedure,
+                  'app.turma_arquivada(uuid)'::regprocedure,
+                  'app.trilha_da_turma_imutavel()'::regprocedure)),
+  'D20 · as funções novas da M2 não leem o relógio do servidor (o carimbo de instante é a isenção nominal)'
 );
 
 select * from finish();
