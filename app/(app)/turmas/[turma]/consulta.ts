@@ -13,6 +13,7 @@
  * banco por requisição que nunca muda nada na tela.
  */
 import type { RegimeDoCurso } from "@/lib/dominio/andamento-da-turma";
+import { nomeEmTexto } from "@/lib/dominio/nome-instrutor";
 import type { VigenciaProtegida } from "@/lib/dominio/protecao-de-vigencia";
 import { codigoDaTurmaNoSegmento } from "@/lib/navegacao/endereco-de-turma";
 import type { Database } from "@/lib/tipos/database";
@@ -145,4 +146,74 @@ export function regimeDoBanco(
  */
 export function datasDeFeriado(linhas: readonly { data: string }[]): string[] {
   return linhas.map((l) => l.data);
+}
+
+/*
+ * ── TA fora do DSA (D-COR-3; spec 017, FR-001) ──────────────────────────────────────────────────────────────
+ */
+
+/** As colunas do registro, com o instrutor embutido — UM instrutor por registro, não uma lista a escolher. */
+export const COLUNAS_DO_TA_FORA_DO_DSA =
+  "codigo, turma_disciplina_id, data, tempos, observacao, status, criado_por, instrutores(id, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra)";
+
+export type LinhaDoTaForaDoDsa = {
+  readonly codigo: string;
+  readonly turma_disciplina_id: string;
+  readonly data: string;
+  readonly tempos: number;
+  readonly observacao: string;
+  readonly status: string;
+  readonly criado_por: string | null;
+  readonly instrutores: {
+    readonly id: string;
+    readonly posto_graduacao: string | null;
+    readonly esp_hab_obs: string | null;
+    readonly nome_completo: string | null;
+    readonly nome_guerra: string | null;
+  } | null;
+};
+
+export type RegistroForaDoDsaDaTela = {
+  readonly codigo: string;
+  readonly turmaDisciplinaId: string;
+  readonly data: string;
+  readonly tempos: number;
+  readonly status: string;
+  readonly ativo: boolean;
+  readonly instrutor: string | null;
+  readonly observacao: string;
+  /** Quem registrou: o nome para quem lê `usuarios`; *"outra conta"* para os demais (C-22). */
+  readonly autor: string;
+};
+
+/**
+ * O registro como a tela o mostra.
+ *
+ * ⚠️ **O AUTOR SEGUE O PADRÃO DA FICHA** (C-22): o nome sai de `usuarios`, que só quem tem `usuarios.ler` lê; para os
+ *    demais a leitura volta vazia (gotcha 4) e o autor é *"outra conta"* — nunca o id cru. Sem sessão ao gravar
+ *    (`criado_por` nulo), *"sem sessão"*.
+ */
+export function registrosForaDoDsaDoBanco(
+  linhas: readonly LinhaDoTaForaDoDsa[],
+  nomes: ReadonlyMap<string, string>,
+): RegistroForaDoDsaDaTela[] {
+  return linhas.map((l) => ({
+    codigo: l.codigo,
+    turmaDisciplinaId: l.turma_disciplina_id,
+    data: l.data,
+    tempos: Number(l.tempos),
+    status: l.status,
+    ativo: l.status === "ativo",
+    instrutor: l.instrutores
+      ? nomeEmTexto({
+          id: l.instrutores.id,
+          pg: l.instrutores.posto_graduacao ?? "",
+          especialidade: l.instrutores.esp_hab_obs,
+          nomeCompleto: l.instrutores.nome_completo ?? "",
+          nomeDeGuerra: l.instrutores.nome_guerra,
+        })
+      : null,
+    observacao: l.observacao,
+    autor: l.criado_por === null ? "sem sessão" : (nomes.get(l.criado_por) ?? "outra conta"),
+  }));
 }

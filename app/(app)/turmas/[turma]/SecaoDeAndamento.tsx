@@ -55,10 +55,16 @@ function Frase({ children, slot }: { readonly children: React.ReactNode; readonl
 export function SecaoDeAndamento({
   andamento,
   dataTermino,
+  execucaoSeparada,
 }: {
   readonly andamento: Andamento;
   /** O término **gravado na turma** — é ele que a frase de `sem_termino` manda informar. */
   readonly dataTermino: string | null;
+  /**
+   * *"45 TA executados · 40 no DSA · 5 fora do DSA"* (D-COR-3), já montado por `execucaoSeparada`. Só chega quando
+   * há TA fora do DSA até hoje; sem ele a CH executada fala sozinha.
+   */
+  readonly execucaoSeparada?: string | null;
 }) {
   const { prevista, executada, percentual, saldo, saldoEmDias, capacidadeDiaria, diasUteis } =
     andamento;
@@ -112,8 +118,13 @@ export function SecaoDeAndamento({
         <div data-andamento="prevista">
           <CardKpi rotulo="CH prevista" valor={`${prevista} TA`} />
         </div>
-        <div data-andamento="executada">
+        <div data-andamento="executada" className="flex flex-col gap-1">
           <CardKpi rotulo="CH executada" valor={`${executada} TA`} />
+          {execucaoSeparada ? (
+            <p className="text-texto-suave text-xs" data-slot="execucao-separada">
+              {execucaoSeparada}
+            </p>
+          ) : null}
         </div>
         <div data-andamento="percentual">
           <CardKpi

@@ -19,6 +19,7 @@ import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
 import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
+import { execucaoSeparada, foraDoDsaAte } from "@/lib/dominio/ta-fora-do-dsa";
 import { tetosDaTurma, type Categoria } from "@/lib/dominio/tetos-da-turma";
 import { gravarPrevistoProens } from "@/lib/acoes/previsto-proens";
 import {
@@ -71,6 +72,7 @@ import { FormularioDeTurma } from "../FormularioDeTurma";
 import {
   codigoDaFicha,
   COLUNAS_DA_CARGA_DA_TURMA,
+  COLUNAS_DO_TA_FORA_DO_DSA,
   COLUNAS_DA_FICHA_DA_TURMA,
   COLUNAS_DO_REGIME_DO_CURSO,
   datasDeFeriado,
@@ -79,6 +81,9 @@ import {
   mensagemDeTurmaNaoEncontrada,
   protecoesDoBanco,
   regimeDoBanco,
+  registrosForaDoDsaDoBanco,
+  type LinhaDoTaForaDoDsa,
+  type RegistroForaDoDsaDaTela,
 } from "./consulta";
 import { QuadroDeAvisosDaTurma } from "./QuadroDeAvisosDaTurma";
 import { TrocarSituacao } from "./TrocarSituacao";
@@ -168,6 +173,18 @@ export default async function FichaDaTurma({
     : null;
 
   const turmaId = turma.id as string;
+  /*
+   * ⚠️ **O TA FORA DO DSA SÓ É LIDO POR QUEM LÊ LANÇAMENTO DA TURMA** (`registros_aula.ler`, a régua das views da
+   *    CHD; D-COR-3): para os demais a RLS devolveria vazio, e vazio na tela leria como "não há" (gotcha 4).
+   */
+  const podeLerLancamento = pode(permissoes, "registros_aula", "ler");
+  const foraPromessa = podeLerLancamento
+    ? supabase
+        .from("ta_fora_do_dsa")
+        .select(COLUNAS_DO_TA_FORA_DO_DSA)
+        .eq("turma_id", turmaId)
+        .order("data", { ascending: false })
+    : null;
   const [
     cursoRes,
     turmasRes,
@@ -181,6 +198,7 @@ export default async function FichaDaTurma({
     conformidadeRes,
     parametrosRes,
     executadaRes,
+    foraRes,
   ] = await Promise.all([
     supabase
       .from("cursos")
@@ -244,7 +262,9 @@ export default async function FichaDaTurma({
      *    tem valor padrão, FR-014.3). Nada lançado até hoje = nenhuma linha = executada **0**.
      */
     supabase.rpc("chd_da_turma_ate", { p_ate: hoje }).eq("turma_id", turmaId).maybeSingle(),
+    foraPromessa,
   ]);
+  const linhasDoForaDoDsa = (foraRes?.data ?? []) as unknown as LinhaDoTaForaDoDsa[];
 
   const sigla = (cursoRes.data?.codigo as string | undefined) ?? "";
 
@@ -358,7 +378,13 @@ export default async function FichaDaTurma({
    *    depois da leitura do previsto. Uma consulta, com `in`, nunca uma por card.
    */
   const autores = [
-    ...new Set(previstos.map((p) => p.editado_por ?? p.criado_por).filter((x): x is string => !!x)),
+    ...new Set(
+      [
+        ...previstos.map((p) => p.editado_por ?? p.criado_por),
+        // D-COR-3: quem registrou o TA fora do DSA, na MESMA leitura (C-22).
+        ...linhasDoForaDoDsa.map((f) => f.criado_por),
+      ].filter((x): x is string => !!x),
+    ),
   ];
   const { data: nomes } = autores.length
     ? await supabase
@@ -380,6 +406,23 @@ export default async function FichaDaTurma({
       return [c, linha];
     }),
   ) as Record<Categoria, AutoriaDoPrevisto>;
+  const nomesDosAutores = new Map(
+    (nomes ?? [])
+      .filter((u) => u.auth_user_id !== null)
+      .map((u) => [u.auth_user_id as string, u.nome_exibicao || u.nome] as const),
+  );
+  /*
+   * ⚠️ **A EXECUÇÃO SEPARADA (D-COR-3)**: a executada até hoje JÁ SOMA o fora do DSA (a base da CHD); aqui só se
+   *    diz quanto dela está fora, até o mesmo dia de São Paulo.
+   */
+  const registrosForaDoDsa = registrosForaDoDsaDoBanco(linhasDoForaDoDsa, nomesDosAutores);
+  const foraDoDsaAteHoje = foraDoDsaAte(registrosForaDoDsa, hoje);
+  const separada =
+    foraDoDsaAteHoje > 0
+      ? execucaoSeparada({ total: andamento.executada, foraDoDsa: foraDoDsaAteHoje }).texto
+      : null;
+  const foraPorLinha: Record<string, RegistroForaDoDsaDaTela[]> = {};
+  for (const r of registrosForaDoDsa) (foraPorLinha[r.turmaDisciplinaId] ??= []).push(r);
   const podeEditarPrevisto = pode(permissoes, "previsto_proens", "editar");
   const edicao = podeEditarPrevisto
     ? Object.fromEntries(
@@ -565,6 +608,18 @@ export default async function FichaDaTurma({
           <p role="status" className="text-executado-tinta text-sm" data-slot="turma-gravada">
             Alterações da turma gravadas.
           </p>
+        ) : valores.gravada === "ta-fora" ? (
+          <p role="status" className="text-executado-tinta text-sm" data-slot="ta-fora-gravado">
+            TA fora do DSA registrado.
+          </p>
+        ) : valores.gravada === "ta-fora-desfeito" ? (
+          <p
+            role="status"
+            className="text-executado-tinta text-sm"
+            data-slot="ta-fora-desfeito-gravado"
+          >
+            Registro de TA fora do DSA desfeito.
+          </p>
         ) : null}
       </header>
 
@@ -573,7 +628,11 @@ export default async function FichaDaTurma({
       {/* As vistas atrasadas e as que vencem em breve (FR-054, `RF-CURSO-06`): informativo, nunca bloqueia. */}
       <AlertasDeVista alertas={avaliacoes?.alertas ?? []} mostrarTurma={false} />
 
-      <SecaoDeAndamento andamento={andamento} dataTermino={dataTermino} />
+      <SecaoDeAndamento
+        andamento={andamento}
+        dataTermino={dataTermino}
+        execucaoSeparada={separada}
+      />
 
       {/*
         ⚠️ **A FAIXA DOS CARDS FICA LOGO ABAIXO DO ANDAMENTO** (comentário de Bernardo no protótipo da
@@ -656,6 +715,14 @@ export default async function FichaDaTurma({
                   avisoInicioDias={grade.avisoInicioDias}
                   hoje={hoje}
                   executadaDaTurma={andamento.executada}
+                  {...(podeLerLancamento
+                    ? {
+                        foraDoDsa: {
+                          porLinha: foraPorLinha,
+                          podeGravar: pode(permissoes, "ta_fora_do_dsa", "editar"),
+                        },
+                      }
+                    : {})}
                 />
               )}
             </section>
