@@ -118,7 +118,11 @@ Todos desfeitos por `pnpm db:reset:limpo` (os de banco) ou pela cópia do arquiv
 
 ## T065 — `verificar:tudo` e a suíte rodada duas vezes
 
-- Contagens: `[pendente]`.
+- Contagens (`pnpm verificar:tudo` sobre `8aa60cd`, base limpa, `.next` apagada, 19/10/2026): `typecheck`, `lint`,
+  `format:check` e `build` verdes; **2.465** de unidade (**176** arquivos); pgTAP **880** (**60**); invariantes e RLS
+  **372** (**20**). ⚠️ **A ponta a ponta (527 casos, 4 processos) NÃO terminou nesta máquina**: o ambiente a
+  interrompeu por falta de memória antes do primeiro resultado. O veredito dela é o do CI. (A 1ª rodada, sobre
+  `95ade9d`, reprovou só no `format:check` — quatro arquivos sem o Prettier, consertados em `8aa60cd`.)
 - `pnpm test:rls` (a pasta `tests/invariantes` inteira), duas vezes seguidas sem reset, sobre o banco local limpo
   (`pnpm db:reset:limpo`, 19/10/2026, com M1–M3 corrigidas pelo analyze): **362 de 362 em 20 arquivos** na 1ª e
   **362 de 362** na 2ª. pgTAP no mesmo banco: **862 em 59 arquivos**, verde.
