@@ -19,6 +19,11 @@ remoto é aplicar na Production, **antes** do merge. Nada aqui foi executado.*
 2. **Reversão provada** numa base descartável: aplicar M1 e M2, reverter (o SQL de cada uma, abaixo) e
    conferir a impressão digital do esquema (`scripts/provas/impressao_digital_do_esquema.sql`) voltando
    ao valor de antes (DoD 6).
+   ✅ **Feita em 19/10/2026, no banco local como base descartável** (T087), com o SQL de
+   `reversao-m1-m2.sql`: com M1 e M2, **2.012** objetos e `cbd61b2b23ad95e0502e09f287b5f921`; depois da
+   reversão, **2.000** objetos e `dcd9297b1986b9a3a0a9a795ab5e7b12`; e a base recriada **sem** as duas dá
+   **o mesmo, linha a linha** (`diff` vazio nas 2.001 linhas). É o valor que o `CLAUDE.md` registra para os
+   dois bancos desde a spec 014. Recriada a base com as duas, de novo 2.012 e `cbd61b2b…`.
 3. **Backup:** `python -m scripts.manutencao.dado_do_remoto --somente-copia`. O arquivo datado que ele
    imprime é citado aqui: `[pendente]`.
 4. **Remedir sobre o backup:** restaurar o backup no local e rodar a medição versionada do PR 3

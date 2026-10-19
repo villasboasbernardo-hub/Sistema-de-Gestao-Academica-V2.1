@@ -378,3 +378,130 @@ Os três casos na `PEND-014-7` do `CLAUDE.md`.
 | invariantes da leitura (`leitura-do-dsa`, `leitura-do-periodo`, `leitura-paginada`, `planilha-igual-ao-papel`, `planilha-de-conferencia`) | **16** de **16** |
 | ponta a ponta do DSA e da impressão (`dsa-*` e `planilha*`, 21 arquivos, base limpa, build novo) | **118** passados · **4** pulados · **0** reprovados — **122** casos, 7,9 min |
 | CI sobre `3de072f` (run `39191110451`, verde nos três blocos) | unidade **2.367** (166) · pgTAP **770** (54) · invariantes **330** (18) · ponta a ponta **507** passados + **1** instável + **6** pulados = **514** casos (os 513 de antes e o do rodapé); o instável foi `avaliacoes-nas-telas.spec.ts:53`, da `PEND-014-7` |
+
+## PR 3 — banco: M1 e M2, e o que depende delas (19/10/2026)
+
+> Ramo `db/BLOCO-1-execucao-e-ch-prevista`, criado da `main` `5e55f97` (depois do merge do PR 2) com
+> `git switch -c` — o ramo novo não troca arquivo nenhum, e o OneDrive não atrapalhou. Base local limpa
+> (`pnpm db:reset:limpo`) antes de começar. O Bloco 1B do plano ganhou a ordem do quadro de CH do papel, em
+> commit `docs` próprio.
+
+### As migrations são o desenho aprovado, conferido SQL a SQL (T081, T082, portão 9.4)
+- **M1** `20261019035107_execucao_ate_uma_data.sql` e **M2** `20261019035110_janela_da_ch_prevista.sql`, os
+  nomes como a CLI os gerou (carimbo UTC; aqui eram 00:51 de 19/10).
+- **Conferido por máquina**, sem os comentários: a M1 é **idêntica** ao esboço executado em 17/10/2026, e a
+  view da M2 também — o que sobra nela é o rodapé de `revoke`/`grant` que a base `20260926005750` já tinha.
+  Os comentários (`comment on`) e os cabeçalhos são documentação; nenhuma linha de estrutura mudou.
+
+### pgTAP — o caso que discrimina (T083, T084, T085)
+- **135** (21 asserções): o caso sintético — 2 TA ontem, 1 no dia, 3 amanhã, avaliação pendente de 2 TA
+  depois de amanhã e vista de 1 TA três dias depois dela — dá **3** em `chd_da_turma_ate(dia)` e **9** na
+  `vw_carga_horaria_turma`; a borda é inclusiva; sem corte, a base é a mesma soma das duas views em toda turma
+  e em toda turma × disciplina (a guarda da `PEND-016-1`); as funções são `stable`, não `security definer`,
+  sem valor padrão e sem relógio do servidor; a base sem escrita para `authenticated`; `anon` sem `execute`.
+- **136** (9 asserções): **reprovou 5 de 9 sem a M2**, exatamente os casos do desenho — período só na linha
+  da turma, só a janela da turma, linha × disciplina (vence a linha), sem fonte completa (ano sem término) e a
+  CH prevista do ano na `vw_instrutor_carga_anual` (**40 → 160**). As 4 do "não muda" (rateio, colunas na
+  mesma ordem, tipos e `security_invoker`) passaram antes e depois.
+- A suíte pgTAP inteira: **800** asserções em **56** arquivos, PASS (os 770 de antes, mais 21 e 9).
+- `pnpm db:tipos`: as funções e a view novas entraram em `lib/tipos/database.ts` (+25 linhas), posto no
+  índice antes do `verificar:tudo`.
+
+### RLS com sessão real (T086)
+`tests/invariantes/rls/execucao-ate.test.ts`, **5** casos: o operador de cursos regulares recebe da função
+**só** a turma do curso regular; o de expeditos, só a do expedito; a execução por disciplina de uma turma
+fora do alcance volta **vazia** (gotcha 4); o Encarregado de escopo geral recebe as duas; `anon` recebe
+`42501`. ⚠️ **O controle positivo é o Encarregado, e não o Admin** como a tarefa escrevia: nenhuma conta
+desta suíte pode ser Admin (gotcha 8, `rls.test.ts` pressupõe ser o único); o Encarregado alcança todos os
+cursos, que é o que o controle precisa mostrar.
+
+### A reversão provada (T087)
+Base descartável = o banco local. Com M1 e M2: **2.012** objetos, `cbd61b2b23ad95e0502e09f287b5f921`. Depois
+do SQL de `reversao-m1-m2.sql`: **2.000** objetos, `dcd9297b1986b9a3a0a9a795ab5e7b12` — e a base recriada
+**sem** as duas dá o mesmo, **linha a linha** (`diff` vazio nas 2.001 linhas). É o valor que o `CLAUDE.md`
+registra para os dois bancos desde a spec 014.
+
+### A medição versionada reproduz o desenho (T088)
+`scripts/provas/medir_bloco_1.sql` (uma instrução só de leitura — roda no local por `psql` e no remoto por
+`medir_no_remoto.py`) mais `scripts/provas/medir_bloco_1/antes-depois.test.ts` (o cálculo com as funções
+REAIS de `lib/dominio/`). Sobre a cópia `remoto-20261017-005738.sql` restaurada **só no local**, com "hoje"
+= 17/10/2026, ela reproduz **todas** as tabelas de `contracts/migrations.md`: as 8 turmas (C-Ap-FR 868 → 828,
+75 → 71 %, saldo +24 → −16, **em atraso**), as **19** disciplinas que mudam e as **81** que não, os **5**
+instrutores (13, 15, 40, 47, 127, número a número), a origem da janela (linha da turma **103**, turma **5**),
+**9** janelas que mudam (8 sem ano antes) e as linhas com ano nulo **8 → 0**.
+
+### Domínio (T089, T090, T091) — cada um visto reprovar antes
+- `andamento-da-turma.ts`: `diaSeguinte` e os dias úteis **de amanhã** (D-COR-2). **Reprovaram 7** antes —
+  U1, U2, U3, U4, U7, o término numa segunda e o `diaSeguinte`; depois, **24 de 24**. Casos novos: sábado
+  (não muda nada), segunda que é o término (0 dia útil), virada de mês, ano e 29/02, e o relógio às 23:30 em
+  São Paulo (já 19/10 em UTC) dando o dia de São Paulo.
+- **A média de reserva mora em `distribuicao-semanal.ts`**, e não num módulo novo, por medição: a guarda
+  `distribuicao-unica.test.ts` reprova qualquer divisão de carga por `semanas` fora do módulo da `RN-DIST-01`
+  — e a média de reserva É essa divisão. `mediaSemanalDaJanela` ficou lá, com a régua única; o
+  `lib/dominio/media-semanal.ts` previsto no plano existe e decide só a precedência (cadastrada → janela →
+  nulo), com a `RN-DIST-02` citada. `lib/dominio/so-habilitado.ts` como previsto. Os dois testes reprovaram
+  antes (os módulos não existiam).
+
+### Telas (T092 a T097)
+- `/inicio`, a ficha, `/turmas`: a executada do andamento é `chd_da_turma_ate(hoje)`, com `hoje =
+  hojeNaCiaara()`, na mesma rodada de leituras. ⚠️ **Se a função falhar, nada volta em silêncio à soma
+  antiga**: o `/inicio` cai no estado das leituras essenciais, a ficha no caminho "sem linha de carga" e a
+  lista mostra «—» nas duas colunas.
+- A tabela de disciplinas da ficha (e `/disciplinas`, a mesma leitura) e a aba Avaliações leem
+  `execucao_por_disciplina_ate(hoje, turma)`. O DSA e a planilha continuam na `vw_disciplinas_execucao`.
+- `/turmas`: **Progresso** (toda turma) e **Saldo (TA)** (ativa e planejada; «—» nas demais, P-4), com a
+  marca *em atraso* do `/inicio`; o cálculo é de `comAndamento` (`app/(app)/turmas/consulta.ts`), registrado
+  como terceiro consumidor na guarda `andamento-unico.test.ts`. ⚠️ **A guarda reprovou duas formas** antes da
+  certa: `emAtraso: false` e `emAtraso === true` contam como decisão para ela — o campo ficou opcional e só
+  existe quando é repassado de `andamentoDaTurma`.
+- Ficha do instrutor: a média de reserva na lista e no alerta de faixa, marcada *(pela janela)*; *"só
+  habilitado — não gera CH prevista"* por disciplina; a frase junto da CH prevista; e a dica fixa, que dizia
+  "data de início prevista da disciplina", passou a descrever a janela efetiva.
+
+### Ponta a ponta (T098 a T100)
+- **`andamento-ate-hoje.spec.ts`**: a semente do panorama ganhou **8 TA no futuro** (o dia do término
+  apertado, sempre depois de hoje) na turma de 10 de 100. Por clique: *Início* → *Turmas* → a ficha → *Abrir o
+  DSA* na semana do lançamento. **Reprovou antes**: com as telas da `main` sobre a base com a M1, o caso novo e o
+  `inicio.spec.ts:72` deram *"Expected: 10 — Received: 18"* no `/inicio`. Depois, com as telas novas, passa.
+  ⚠️ **Na 1ª rodada da suíte inteira ele reprovou por erro MEU, no último passo**: eu esperava 18 % na situação
+  do DSA, e o painel mostrou **8 %** — ele soma o lançamento futuro (8 TA), mas **não** o histórico da semente, que
+  não tem tempo no dia (`ta_inicial` nulo). É comportamento do DSA de antes deste PR. A asserção passou a ser a
+  **diferença entre a semana do lançamento e a anterior**: 8 pontos, os 8 TA dele.
+  ⚠️ **Fora do caso, e por quê:** `/disciplinas` não mostra execução por turma desde 04/10/2026, e a aba
+  *Avaliações* só mostra o "cumprido" de disciplina com avaliação do currículo, que a semente não tem — as duas
+  leem pela mesma função da tabela da ficha, provada no pgTAP 135 e no RLS.
+- `turmas-lista.spec.ts`: as duas colunas, com a P-4 (concluída 30 % e «—»; cancelada «—»; planejada 0 % e saldo
+  em número). `instrutores.spec.ts`: atribuição sem período nenhum → **40 TA** de CH prevista (antes **0**),
+  *(pela janela)*, a marca na habilitação sem atribuição e não na atribuída, e a frase.
+
+### Defeitos deliberados (T101) — 19/10/2026
+| Defeito plantado | Quem pegou | Resultado |
+| --- | --- | --- |
+| (a) `current_date` como padrão de `p_ate` | pgTAP 135 | reprovou *"p_ate SEM valor padrão"* |
+| (a′) `current_date` dentro do corpo | pgTAP 135 | reprovou a asserção D20 e as duas contas que ele estraga (3 de 21) |
+| (b) a janela de volta a `disciplinas.previsao_*` | pgTAP 136 | **5** de 9 reprovados |
+| (c) a executada de volta à view sem corte | `andamento-ate-hoje.spec.ts` e `inicio.spec.ts:72` | *"Expected 10, Received 18"* (medido junto com a T098) |
+| (d) as funções como `security definer` | RLS `execucao-ate.test.ts` | **3** de 5 reprovados — os operadores passam a ver as duas turmas |
+
+Todos desfeitos (`pnpm db:reset:limpo` e as telas restauradas).
+
+### `pnpm verificar:tudo` (T102) — 19/10/2026
+Saiu **1**, por 4 casos de ponta a ponta; o resto verde.
+
+| Suíte | Resultado |
+| --- | --- |
+| tipos, lint, formatação, build | sem erro e sem aviso |
+| unidade | **2.383** em **168** arquivos |
+| pgTAP | **800** em **56** arquivos, PASS |
+| invariantes e RLS | **335** em **19** arquivos |
+| ponta a ponta (19,8 min, 4 processos) | **507** passados · **4** reprovados · **6** pulados — **517** casos |
+
+Os 4: `andamento-ate-hoje.spec.ts:80` (o erro do meu teste, acima, corrigido) e **três da classe da `PEND-014-7`**
+— `admin-sobre-contas.spec.ts:206` e `:501` e `dsa-tipo-e-global.spec.ts:160`. **Isolados**, com base limpa, build
+novo e 2 processos, junto com todos os arquivos que este PR tocou (`andamento-ate-hoje`, `admin-sobre-contas`,
+`dsa-tipo-e-global`, `turmas-lista`, `instrutores`, `inicio`, `andamento`): **83 de 83**.
+⚠️ Numa rodada anterior da unidade, sob carga, três guardas que instanciam o ESLint estouraram o prazo; isoladas
+deram 23 de 23, e na rodada do `verificar:tudo` passaram — o achado 6 da fatia (b) do Épico 4 (cache frio).
+
+### CI (T104)
+[pendente]
