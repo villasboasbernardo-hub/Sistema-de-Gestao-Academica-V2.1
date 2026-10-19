@@ -20,6 +20,7 @@ _É o documento que seguimos até o próximo épico. Cada bloco vira **uma spec*
 | **3** | Página do curso em abas: Disciplinas, Atividades, Horários | sim (regimes por turma) | 018 |
 | **4** | Início: dashboard, carrosséis, submenu | não | 019 |
 | **5** | Cadastros novos: estrangeiros, custo, currículo em PDF, capacitação, acessos | sim | 020 |
+| **1B** | DSA no papel: nome longo de disciplina no cartão | a decidir (campo novo = sim) | spec curta, logo depois do Bloco 1 |
 | **6** | Currículo versionado | sim | épico próprio |
 
 ---
@@ -110,6 +111,24 @@ Medido na `main` `e968f22`:
 3. **Currículo em PDF**: carregar e baixar (Supabase Storage).
 4. **Capacitação didática** do instrutor em múltipla escolha, lista fechada (C-Esp-DID, C-Exp-TE, Licenciatura).
 5. **Contagem de acessos** por usuário (o último acesso já existe).
+
+## Bloco 1B — DSA no papel (spec curta, logo depois do Bloco 1, antes do Bloco 2)
+
+_Registrado em 18/10/2026, na conferência do PR 2 do Bloco 1 (#68)._
+
+1. 🐛 **Nome longo de disciplina estoura o cartão do DSA.** Ex.: terça 13/10/2026, C-Ap-FR 2026, avaliação de 2 TA de *Equipamentos e Sistemas Eletrônicos de Auxílios à Navegação*: o nome ocupa quase todo o cartão, o tópico sai cortado (*"Equi.exist eletrônico de aus. a nave…"*) e o instrutor some. Com 1 TA só (ex.: *Operação e Administração de Auxílios à Navegação*), o nome sozinho pode passar do cartão. **Só no DSA** (tela, papel e planilha); o resto do sistema mantém o nome inteiro.
+   - **Decisão a tomar no specify:** (a) abreviação automática por regra (ex.: acima de N caracteres ou 4 palavras, abreviar palavras longas e tirar preposições), sempre reproduzível; ou (b) campo **"nome abreviado no DSA"** no cadastro da disciplina (migration), com a regra automática como reserva quando o campo estiver vazio. **Recomendação: (b) com (a) de reserva** — a abreviação oficial é de quem conhece o curso, e a máquina só cobre a falta.
+   - O nome inteiro continua no quadro de CH do rodapé do papel, então a abreviação no cartão não perde informação.
+   - Critério: nenhum cartão do papel corta o instrutor; prova com o cartão de 1 TA e o de nome mais longo do catálogo real.
+
+## Lista de pequenos ajustes (backlog)
+
+Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
+
+- **PEND-016-2** — varrer testes que conferem o valor que eles mesmos digitaram, em vez de conferir o banco.
+- **PEND-016-4** — as prévias do `.design-sync` ficam fora do `tsc`.
+- **PEND-014-7** — testes de ponta a ponta instáveis sob carga (`salas.spec.ts:126`, `dsa-tipo-e-global.spec.ts:160`, `avaliacoes-nas-telas.spec.ts:53`, `admin-sobre-contas`).
+- **OneDrive** — a pasta do repositório deve ficar "Sempre manter neste dispositivo": arquivos sob demanda já quebraram o build (`.next`, `EPERM`) e o `git switch` (`specs`).
 
 ## Bloco 6 — Currículo versionado (épico próprio, por último)
 
