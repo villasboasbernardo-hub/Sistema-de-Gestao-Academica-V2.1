@@ -155,12 +155,34 @@ export function semanaDoCurso(entrada: EntradaDaSemanaDoCurso): SemanaDoCurso {
   return { numero, total, motivo: null, aviso: total === null ? AVISO_SEM_TOTAL : null };
 }
 
-/** O rótulo do cabeçalho: "Semana N de T", "Semana N" sem T, ou «—» sem semana (FR-009.2). */
+/** O valor sem a palavra "Semana": "N de T", "N" sem T, ou «—» sem semana. */
+export function valorDaSemanaDoCurso(semana: SemanaDoCurso): string {
+  if (semana.numero === null) return SEMANA_AUSENTE_NO_CABECALHO;
+  return semana.total === null ? `${semana.numero}` : `${semana.numero} de ${semana.total}`;
+}
+
+/**
+ * O rótulo solto — na navegação, no rodapé do papel e na planilha: "Semana N de T", "Semana N" sem T, ou
+ * «—» sem semana (FR-009.2).
+ */
 export function rotuloDaSemanaDoCurso(semana: SemanaDoCurso): string {
   if (semana.numero === null) return SEMANA_AUSENTE_NO_CABECALHO;
-  return semana.total === null
-    ? `Semana ${semana.numero}`
-    : `Semana ${semana.numero} de ${semana.total}`;
+  return `Semana ${valorDaSemanaDoCurso(semana)}`;
+}
+
+/** O rótulo do campo do cabeçalho, na tela e no papel. */
+export const ROTULO_DO_CAMPO_DA_SEMANA = "Semana do curso";
+
+/**
+ * O campo do cabeçalho num rótulo só: "Semana do curso: N de T" (ajuste A da conferência do PR #68,
+ * Bernardo Villas Boas, 18/10/2026).
+ *
+ * ⚠️ **O CAMPO NÃO REPETE A PALAVRA**: com o rótulo "Semana do curso" em cima e "Semana 28 de 37"
+ * embaixo, o papel dizia "semana" duas vezes. Onde o rótulo vem solto, sem campo (navegação, rodapé,
+ * planilha), continua `rotuloDaSemanaDoCurso`.
+ */
+export function campoDaSemanaDoCurso(semana: SemanaDoCurso): string {
+  return `${ROTULO_DO_CAMPO_DA_SEMANA}: ${valorDaSemanaDoCurso(semana)}`;
 }
 
 /**

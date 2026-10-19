@@ -129,7 +129,9 @@ test.describe("FR-009 · «Semana N de T» na tela e no papel, chegando por cliq
     await irParaASemanaDoDia(page, "2026-10-14", 42, 2026);
     await expect(page.locator('[data-slot="semana-atual"]')).toContainText("Semana 28 de 37");
     await expect(page.locator('[data-slot="semana-atual"]')).not.toContainText("semana 42");
-    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText("Semana 28 de 37");
+    /* ⚠️ Num rótulo só (ajuste A do PR #68): o campo não repete "Semana" embaixo do rótulo. */
+    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText("Semana do curso: 28 de 37");
+    await expect(page.locator('[data-slot="cabecalho-da-semana"]')).not.toContainText("Semana 28");
     await expect(page.locator('[data-slot="cabecalho-da-semana"]')).not.toContainText("Nº");
 
     /* ── FR-009.2 · no papel, pelo botão Imprimir ───────────────────────────────────────────── */
@@ -137,7 +139,8 @@ test.describe("FR-009 · «Semana N de T» na tela e no papel, chegando por cliq
     await page.waitForURL(/\/print\/dsa/);
     const documento = page.locator('[data-slot="dsa-impresso"]');
     await expect(documento).toBeVisible();
-    await expect(page.locator('[data-slot="dsa-semana"]')).toHaveText("Semana 28 de 37");
+    await expect(page.locator('[data-slot="dsa-semana"]')).toHaveText("Semana do curso: 28 de 37");
+    await expect(documento.locator(".dsa4-identificacao")).not.toContainText("Semana 28");
     await expect(page.locator('[data-slot="dsa-gerado-em"]')).toContainText("Semana 28 de 37");
     await expect(documento).not.toContainText("Nº");
   });

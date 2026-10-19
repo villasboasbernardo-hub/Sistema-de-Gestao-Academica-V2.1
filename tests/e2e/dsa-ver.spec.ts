@@ -20,7 +20,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import { AVISO_DE_TURMA_EAD, ROTULO_CURTO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
-import { rotuloDaSemanaDoCurso, semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
+import { campoDaSemanaDoCurso, semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
@@ -44,12 +44,12 @@ import {
 } from "./navegar-turmas";
 
 /**
- * A «Semana N de T» de uma semana na turma da semente — 05/01 a 18/12/2026, curso sem duração (spec 016,
+ * O campo «Semana do curso: N de T» de uma semana na turma da semente — 05/01 a 18/12/2026, curso sem duração (spec 016,
  * FR-009.2). ⚠️ Pela função do domínio, nunca uma segunda conta: o número escrito à mão aqui seria o
  * lugar a esquecer quando a semente mudar de datas.
  */
 function semanaDaSemente(ano: number, numero: number): string {
-  return rotuloDaSemanaDoCurso(
+  return campoDaSemanaDoCurso(
     semanaDoCurso({
       dataInicio: "2026-01-05",
       dataTermino: "2026-12-18",
@@ -348,7 +348,7 @@ test.describe("`RF-NAV-04` · a navegação empilha, e a vigência resolve pela 
     await expect.poll(() => parametro("semana")).toBe("53");
     expect(parametro("ano"), "o ano da URL é o ISO, não o do calendário").toBe("2026");
     /* A semente fecha a turma em 18/12/2026: a semana 53 já não é do curso, e sai «—» (FR-009.6). */
-    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText("—");
+    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText("Semana do curso: —");
     await expect(page.locator('[data-slot="tela-periodo"]')).toContainText("28/12/2026");
 
     /* Saindo do campo, ele volta a mostrar a segunda-feira da semana aberta. */

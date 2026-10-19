@@ -160,7 +160,7 @@ test.describe("`RF-PDF-01` · do botão ao papel, por clique", () => {
      * ⚠️ **"SEMANA N DE T" NO LUGAR DO «Nº»** (spec 016, FR-009.2): a semente abre a turma em 05/01/2026
      *    e a fecha em 18/12/2026 — 50 semanas —, e a semana de 06/04 é a 14ª.
      */
-    await expect(page.locator('[data-slot="dsa-semana"]')).toHaveText("Semana 14 de 50");
+    await expect(page.locator('[data-slot="dsa-semana"]')).toHaveText("Semana do curso: 14 de 50");
     await expect(page.locator('[data-slot="dsa-numero"]')).toHaveCount(0);
     /*
      * ⚠️ **O INTERVALO VAI ATÉ SÁBADO, E ISSO É A `Q-4` FUNCIONANDO — não um erro de conta.** A

@@ -13,18 +13,26 @@
  */
 import { rubricaResolvida } from "@/lib/dominio/dsa/assinatura-editada";
 import { NOTA_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/impressao";
+import { ROTULO_DO_CAMPO_DA_SEMANA } from "@/lib/dominio/dsa/semana-do-curso";
 import { dataParaLeitura } from "@/lib/formato/data";
 
 import type { DadosDoDocumento } from "../../../../print/dsa/documento";
 import { RubricaEditavel } from "./AssinaturasEditaveis";
 
 export function CabecalhoDaSemana({ dados }: { readonly dados: DadosDoDocumento }) {
-  const campos: readonly { rotulo: string; valor: string; slot: string }[] = [
+  const campos: readonly { rotulo: string; valor: string; slot: string; emLinha?: boolean }[] = [
     /*
      * ⚠️ **"SEMANA N DE T" NO LUGAR DE "SEMANA 41/2026" E "DSA Nº"** (spec 016, FR-009.2; D-COR-1): a
      *    semana ISO fica só na URL, e o número do DSA passou a ser a semana corrida do curso.
+     * ⚠️ **NUM RÓTULO SÓ, como no papel** (ajuste A da conferência do PR #68, 18/10/2026): "Semana do
+     *    curso: 28 de 37" numa linha, e não o rótulo em cima e "Semana 28 de 37" embaixo.
      */
-    { rotulo: "Semana do curso", valor: dados.rotuloDaSemanaDoCurso, slot: "tela-semana" },
+    {
+      rotulo: ROTULO_DO_CAMPO_DA_SEMANA,
+      valor: dados.valorDaSemanaDoCurso,
+      slot: "tela-semana",
+      emLinha: true,
+    },
     {
       rotulo: "Período",
       valor: `${dataParaLeitura(dados.primeiro)} a ${dataParaLeitura(dados.ultimo)}`,
@@ -41,14 +49,21 @@ export function CabecalhoDaSemana({ dados }: { readonly dados: DadosDoDocumento 
       className="rounded-ciaara border-borda bg-superficie grid grid-cols-2 gap-px overflow-hidden border sm:grid-cols-3"
       data-slot="cabecalho-da-semana"
     >
-      {campos.map((c) => (
-        <div key={c.rotulo} className="bg-superficie flex flex-col px-3 py-2">
-          <dt className="text-xs text-texto-suave">{c.rotulo}</dt>
-          <dd className="text-sm font-semibold text-texto tabular-nums" data-slot={c.slot}>
-            {c.valor}
-          </dd>
-        </div>
-      ))}
+      {campos.map((c) =>
+        c.emLinha ? (
+          <div key={c.rotulo} className="bg-superficie flex items-end px-3 py-2" data-slot={c.slot}>
+            <dt className="text-xs text-texto-suave">{c.rotulo}:</dt>{" "}
+            <dd className="ml-1 text-sm font-semibold text-texto tabular-nums">{c.valor}</dd>
+          </div>
+        ) : (
+          <div key={c.rotulo} className="bg-superficie flex flex-col px-3 py-2">
+            <dt className="text-xs text-texto-suave">{c.rotulo}</dt>
+            <dd className="text-sm font-semibold text-texto tabular-nums" data-slot={c.slot}>
+              {c.valor}
+            </dd>
+          </div>
+        ),
+      )}
     </dl>
   );
 }

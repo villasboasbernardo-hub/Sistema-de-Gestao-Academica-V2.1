@@ -147,6 +147,11 @@
   border-left: 0;
 }
 
+/* O campo de um rótulo só — a semana do curso: rótulo e valor na mesma linha, embaixo como os demais valores. */
+.dsa4-campo-em-linha {
+  justify-content: flex-end;
+}
+
 .dsa4-campo-rotulo {
   font-size: 6.5pt;
   font-weight: 600;

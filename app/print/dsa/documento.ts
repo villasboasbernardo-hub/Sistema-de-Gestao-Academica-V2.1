@@ -27,6 +27,7 @@ import {
 import {
   rotuloDaSemanaDoCurso,
   semanaDoCurso,
+  valorDaSemanaDoCurso,
   type SemanaDoCurso,
 } from "@/lib/dominio/dsa/semana-do-curso";
 
@@ -40,8 +41,10 @@ export type DadosDoDocumento = {
   readonly curso: string;
   /** A semana do curso (FR-009): número, total e, quando não há número, o motivo. */
   readonly semanaDoCurso: SemanaDoCurso;
-  /** "Semana N de T", "Semana N" ou «—» — o que o cabeçalho e o rodapé imprimem. */
+  /** "Semana N de T", "Semana N" ou «—» — o rótulo solto, que o rodapé do papel imprime. */
   readonly rotuloDaSemanaDoCurso: string;
+  /** "N de T", "N" ou «—» — o valor do campo "Semana do curso:" do cabeçalho (ajuste A do PR #68). */
+  readonly valorDaSemanaDoCurso: string;
   readonly semana: { readonly ano: number; readonly numero: number };
   readonly primeiro: string;
   readonly ultimo: string;
@@ -89,6 +92,7 @@ export function montarDocumentoDoDsa(entrada: {
     curso: lida.cursoCodigo ?? entrada.codigoDaTurma,
     semanaDoCurso: semana,
     rotuloDaSemanaDoCurso: rotuloDaSemanaDoCurso(semana),
+    valorDaSemanaDoCurso: valorDaSemanaDoCurso(semana),
     semana: { ano: escolha.ano, numero: escolha.numero },
     primeiro,
     ultimo,

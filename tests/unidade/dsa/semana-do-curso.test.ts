@@ -24,8 +24,10 @@ import {
   MOTIVO_DEPOIS_DO_TERMINO,
   MOTIVO_SEM_DATA_DE_INICIO,
   AVISO_SEM_TOTAL,
+  campoDaSemanaDoCurso,
   rotuloDaSemanaDoCurso,
   semanaDoCurso,
+  valorDaSemanaDoCurso,
   type EntradaDaSemanaDoCurso,
 } from "@/lib/dominio/dsa/semana-do-curso";
 
@@ -173,5 +175,28 @@ describe("FR-009.7 · o aviso de duração da ficha da turma", () => {
     expect(avisoDeDuracao({ ...CAPFR, duracaoSemanasDoCurso: null })).toBeNull();
     expect(avisoDeDuracao({ ...CAPFR, dataInicio: null })).toBeNull();
     expect(avisoDeDuracao({ ...CAPFR, dataTermino: null })).toBeNull();
+  });
+});
+
+describe("ajuste A do PR #68 · o campo do cabeçalho num rótulo só", () => {
+  it("«Semana do curso: 28 de 37», sem a palavra repetida", () => {
+    const s = semanaDoCurso({ ...CAPFR, semana: semana(2026, 42) });
+    expect(valorDaSemanaDoCurso(s)).toBe("28 de 37");
+    expect(campoDaSemanaDoCurso(s)).toBe("Semana do curso: 28 de 37");
+    expect(campoDaSemanaDoCurso(s).match(/semana/gi)).toHaveLength(1);
+    /* O rótulo solto (navegação, rodapé, planilha) continua com a palavra. */
+    expect(rotuloDaSemanaDoCurso(s)).toBe("Semana 28 de 37");
+  });
+
+  it("sem T, «Semana do curso: N»; fora da janela, «Semana do curso: —»", () => {
+    const semTotal = semanaDoCurso({
+      dataInicio: "2026-03-02",
+      dataTermino: null,
+      duracaoSemanasDoCurso: null,
+      semana: semana(2026, 15),
+    });
+    expect(campoDaSemanaDoCurso(semTotal)).toBe("Semana do curso: 6");
+    const depois = semanaDoCurso({ ...CAPFR, semana: semana(2026, 52) });
+    expect(campoDaSemanaDoCurso(depois)).toBe("Semana do curso: —");
   });
 });

@@ -25,6 +25,7 @@ import type { Assinatura } from "@/lib/dominio/dsa/assinaturas";
 import type { CartaoDaGrade, GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import type { DiaImpresso, LinhaImpressa } from "@/lib/dominio/dsa/impressao";
 import { NOTA_DO_ESTUDO_INDIVIDUAL, ROTULO_DE_OBSERVACOES } from "@/lib/dominio/dsa/impressao";
+import { ROTULO_DO_CAMPO_DA_SEMANA } from "@/lib/dominio/dsa/semana-do-curso";
 import {
   dataComDiaDaSemana,
   dataParaLeitura,
@@ -110,9 +111,16 @@ export function DocumentoDoDsa({
              Bernardo Villas Boas, 16/10/2026): o número do DSA passou a ser a semana corrida do curso. Fora
              da janela da turma, «—» — nunca "Semana 0" nem N maior que T (FR-009.6).
         */}
-        <Campo rotulo="Semana do curso" slot="dsa-semana">
-          {dados.rotuloDaSemanaDoCurso}
-        </Campo>
+        {/*
+          ⚠️ **NUM RÓTULO SÓ** (ajuste A da conferência do PR #68, 18/10/2026): "Semana do curso: 28 de 37",
+             e não o rótulo em cima e "Semana 28 de 37" embaixo, que dizia "semana" duas vezes.
+        */}
+        <div className="dsa4-campo dsa4-campo-em-linha">
+          <span data-slot="dsa-semana">
+            <span className="dsa4-campo-rotulo">{ROTULO_DO_CAMPO_DA_SEMANA}:</span>{" "}
+            <span className="dsa4-campo-valor">{dados.valorDaSemanaDoCurso}</span>
+          </span>
+        </div>
         <Campo rotulo="Período" slot="dsa-intervalo">
           {dataParaLeitura(dados.primeiro)} a {dataParaLeitura(dados.ultimo)}
         </Campo>
