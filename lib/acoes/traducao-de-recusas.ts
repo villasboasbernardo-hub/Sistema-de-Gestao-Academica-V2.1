@@ -373,6 +373,24 @@ function porChave(
     case "codigo_de_turma_imutavel":
       return "O código da turma é gerado pelo sistema e não muda.";
 
+    // ── Bloco 2 (spec 017) ─────────────────────────────────────────────────────────────────────────
+    case "ta_fora_linha_divergente":
+      return "A turma e a disciplina do registro não são as da linha da turma. Abra a disciplina pela ficha e registre de novo.";
+    case "ta_fora_linha_inativa":
+      return "A disciplina não está ativa nesta turma: não recebe TA fora do DSA.";
+    case "ta_fora_so_desfaz":
+      return "O registro de TA fora do DSA não se edita: desfaça-o e registre de novo com o valor certo.";
+    case "turma_fora_do_alcance":
+      return "O seu perfil não alcança esta turma, ou ela não existe mais.";
+    case "turma_inexistente":
+      return "A turma não existe mais.";
+    case "turma_ja_arquivada":
+      return "A turma já está arquivada.";
+    case "turma_nao_arquivada":
+      return "A turma não está arquivada.";
+    case "janela_de_uma_semana":
+      return "O painel lê a ocupação de uma semana por vez.";
+
     case "sala_fora_da_lista": {
       const valor = texto(d.valor);
       const qual = valor ? `A sala ${valor} não está` : "A sala escolhida não está";
@@ -697,6 +715,10 @@ const NUMERACAO_INTERNA: Readonly<Record<string, string>> = {
   // Spec 014, PR 4 (E-4): `AVC-` e `VST-`.
   avaliacoes_curriculo_codigo_key: "a numeração das avaliações do currículo",
   vistas_de_avaliacao_codigo_key: "a numeração das sessões de vista",
+  // Spec 014, emenda de 15/10 (E-6): `SAP-` — faltava aqui, embora estivesse em `SEQUENCIAS_DE_CODIGO`.
+  sessoes_de_aplicacao_codigo_key: "a numeração das sessões de aplicação",
+  // Bloco 2 (spec 017): `TFD-`.
+  ta_fora_do_dsa_codigo_key: "a numeração dos TA fora do DSA",
 };
 
 /** Qual numeração interna estourou, se foi uma delas. */

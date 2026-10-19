@@ -607,6 +607,9 @@ SEQUENCIAS_DE_CODIGO: tuple[tuple[str, str, str], ...] = (
     # sincronização têm o código da linha da planilha (`DSAP-…-SA`) e não contam aqui.
     ("app.sessoes_de_aplicacao_codigo_seq", "sessoes_de_aplicacao",
      "case when codigo ~ '^SAP-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    # A do Bloco 2 (spec 017, M1): o TA fora do DSA (TFD-), registrado só pela tela.
+    ("app.ta_fora_do_dsa_codigo_seq", "ta_fora_do_dsa",
+     "case when codigo ~ '^TFD-[0-9]+$' then substring(codigo from 5)::bigint end"),
 )
 
 
