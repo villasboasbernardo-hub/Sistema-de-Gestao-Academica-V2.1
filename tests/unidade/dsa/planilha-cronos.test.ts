@@ -9,6 +9,7 @@ import { montarPlanilhaComGeometria } from "@/lib/dominio/dsa/planilha-de-contin
 import {
   ABA,
   K,
+  K_LINHA_DAS_DATAS,
   K_LINHA_DOS_TITULOS,
   K_PRIMEIRA_LINHA,
   P,
@@ -54,10 +55,14 @@ function ocupacao(codigo: string, numero: number): number {
 describe("`FR-026` · a CRONOS", () => {
   const valor = avaliarCom();
 
-  it("uma coluna por semana da pasta, com o número da semana ISO", () => {
-    expect(semanas.map((_, k) => valor(K_LINHA_DOS_TITULOS, K.primeiraSemana + k))).toEqual(
-      semanas.map((n) => `S${n}`),
-    );
+  it("spec 016, FR-009.5 · uma coluna por semana da pasta, com a SEMANA DO CURSO e a data com o ano", () => {
+    // A turma sintética começa em 06/04/2026 (semana ISO 15): as semanas 15, 16 e 17 são a 1, a 2 e a 3.
+    expect(semanas.map((_, k) => valor(K_LINHA_DOS_TITULOS, K.primeiraSemana + k))).toEqual([
+      "S1",
+      "S2",
+      "S3",
+    ]);
+    expect(valor(K_LINHA_DAS_DATAS, K.primeiraSemana)).toBe("06/04/2026");
   });
 
   it.each(ordem.map((d) => [d.codigo, d] as const))(

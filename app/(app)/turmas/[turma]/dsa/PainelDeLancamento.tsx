@@ -43,6 +43,10 @@ import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import type { Semana } from "@/lib/dominio/dsa/grade";
 import type { GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import type { InstrumentoOferecido } from "@/lib/dominio/dsa/instrumento-da-prova";
+import type {
+  AtribuicaoPorDisciplina,
+  AtribuicaoPorUnidade,
+} from "@/lib/dominio/dsa/pre-preenchimento";
 import { temposParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { dataComDiaDaSemana } from "@/lib/formato/data";
@@ -74,6 +78,9 @@ export type PainelDeLancamentoProps = {
   readonly numeroDaSemana: number;
   readonly podeLancar: boolean;
   readonly unidades: readonly UnidadeOferecida[];
+  /** As atribuições da turma, em antiguidade — a sugestão de instrutor do formulário (FR-012.2). */
+  readonly atribuicoesPorUe?: readonly AtribuicaoPorUnidade[];
+  readonly atribuicoesPorDisciplina?: readonly AtribuicaoPorDisciplina[];
   readonly disciplinas: readonly DisciplinaOferecida[];
   readonly avaliacoesParaVista: readonly AvaliacaoOferecida[];
   readonly avaliacoesDoCurriculo?: readonly ItemDoCurriculoOferecido[];
@@ -158,6 +165,8 @@ export function PainelDeLancamento({
   numeroDaSemana,
   podeLancar,
   unidades,
+  atribuicoesPorUe = [],
+  atribuicoesPorDisciplina = [],
   disciplinas,
   avaliacoesParaVista,
   avaliacoesDoCurriculo = [],
@@ -388,6 +397,8 @@ export function PainelDeLancamento({
                 semana.linhas,
               )}
               unidades={unidades}
+              atribuicoesPorUe={atribuicoesPorUe}
+              atribuicoesPorDisciplina={atribuicoesPorDisciplina}
               disciplinas={disciplinas}
               avaliacoesParaVista={avaliacoesParaVista}
               avaliacoesDoCurriculo={avaliacoesDoCurriculo}

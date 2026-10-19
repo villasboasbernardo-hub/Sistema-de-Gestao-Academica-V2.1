@@ -109,7 +109,8 @@ describe("as colunas saem dos dias do documento, com o sábado quando houver", (
       relogioDoRegime(G45),
     );
     expect(grade?.colunas.map((c) => c.sigla)).toEqual(["SEG", "TER", "QUA", "QUI", "SEX", "SÁB"]);
-    expect(grade?.colunas[5]?.diaMes).toBe("22/08");
+    /* Spec 016, FR-005.1 (Q-9): a data do cabeçalho tem o ano, pelo ponto único. */
+    expect(grade?.colunas[5]?.dataLegivel).toBe("22/08/2026");
     expect(grade?.colunas[2]?.bloqueio).toBe("Feriado de dia inteiro");
   });
 });

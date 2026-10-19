@@ -95,7 +95,7 @@ function semComentario(fonte: string): string {
 /**
  * Os trechos em que o código **calcula** a distribuição, em vez de consumi-la.
  *
- * ⚠️ **IMPORTAR NÃO É SINAL, E NÃO PODE SER** — `lib/dominio/dsa/numero-do-dsa.ts` importa
+ * ⚠️ **IMPORTAR NÃO É SINAL, E NÃO PODE SER** — `lib/dominio/dsa/semana-do-curso.ts` importa
  * `IdentidadeDaSemana` daqui e está **certo**; é o que a regra quer que todo mundo faça. O que esta
  * função procura é a **conta**, não a menção.
  */
@@ -128,7 +128,7 @@ function arquivosDe(pasta: string): string[] {
 const TODOS = PASTAS.flatMap(arquivosDe).filter((a) => !a.endsWith(ESTE_ARQUIVO));
 
 /** O consumidor real que **só** importa — e que, por isso, não pode ser contado. */
-const SO_IMPORTA = "lib/dominio/dsa/numero-do-dsa.ts";
+const SO_IMPORTA = "lib/dominio/dsa/semana-do-curso.ts";
 
 /** Uma segunda implementação plausível, escrita à mão, para provar que o reconhecedor reconhece. */
 const COPIA_SINTETICA = `

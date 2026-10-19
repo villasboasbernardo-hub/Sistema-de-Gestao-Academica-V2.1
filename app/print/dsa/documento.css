@@ -147,6 +147,11 @@
   border-left: 0;
 }
 
+/* O campo de um rótulo só — a semana do curso: rótulo e valor na mesma linha, embaixo como os demais valores. */
+.dsa4-campo-em-linha {
+  justify-content: flex-end;
+}
+
 .dsa4-campo-rotulo {
   font-size: 6.5pt;
   font-weight: 600;
@@ -524,15 +529,32 @@
   flex: none;
 }
 
+/*
+ * ⚠️ **O QUADRO NUNCA PASSA DA COLUNA DELE** (ajuste B da conferência do PR #68, Bernardo Villas Boas,
+ * 18/10/2026: *"o quadro de CH (…), quando vai em DUAS colunas, se sobrepõe à assinatura do
+ * Auxiliar/Sargento"*). A tabela não encolhe abaixo da palavra mais larga que ela tem, e a única coisa
+ * entre a 2ª coluna do quadro e a assinatura da esquerda era o `gap` de 6 mm do rodapé: texto mais largo
+ * — um nome com palavra longa, a fonte ou o motor de impressão de quem imprime — empurrava a tabela por
+ * cima da assinatura. Medido na cópia de 17/10/2026, no Chromium: nas 131 semanas reais de duas colunas
+ * a folga era de 22 px, e a tabela mais apertada (C-Espc-FR) usava 290 dos 312 px da coluna.
+ * O conserto: as colunas do quadro são uma GRADE de colunas iguais (`minmax(0, 1fr)`), e o NOME DA
+ * DISCIPLINA quebra onde for preciso (`overflow-wrap: anywhere`) — a largura mínima da tabela passa a
+ * ser a do código e dos números, e a do nome deixa de contar. O código e os números não quebram.
+ */
+.dsa4-quadro {
+  min-width: 0;
+}
+
 .dsa4-quadro-colunas {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 4mm;
-  align-items: flex-start;
+  align-items: start;
 }
 
 .dsa4-quadro table {
-  flex: 1 1 0;
-  min-width: 0;
+  width: 100%;
   font-size: 0.92em;
   border-collapse: collapse;
   border-top: 0.5mm solid var(--dsa4-verde);
@@ -555,6 +577,7 @@
   padding: 0.2mm 1.2mm;
   line-height: 1.15;
   border-top: 0.2mm solid #e4e6ee;
+  overflow-wrap: anywhere;
 }
 
 .dsa4-quadro td:first-child {

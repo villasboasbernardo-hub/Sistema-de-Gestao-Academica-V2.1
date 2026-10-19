@@ -151,6 +151,56 @@ test.describe("conferência do PR #67 · a linha aberta da seção FECHA e reabr
   });
 });
 
+/*
+ * ⚠️ **A `PEND-016-3` (decisão de Bernardo Villas Boas, 18/10/2026)**: dentro do detalhe aberto, as
+ *    teclas de navegação apertadas num campo eram capturadas pela grade de fora — `preventDefault` e o
+ *    foco para uma célula: o cursor não andava no texto, a seta não mudava a data, e no seletor de
+ *    instrutor do detalhe a seta tirava o foco do painel. A grade passou a tratar só as teclas que vêm
+ *    de uma célula DELA.
+ */
+test.describe("`PEND-016-3` · as teclas num campo do detalhe da ficha são do campo", () => {
+  test("no campo de data a seta muda o valor, e a linha continua aberta", async ({ page }) => {
+    await irASecaoDaTurma(page, CODIGO_DA_TURMA_UM);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    const linha = linhaExpansivel(page.locator(SECAO), DISCIPLINA_COM_UE.nome);
+
+    const campo = page.locator(DETALHE).locator('input[name="previsao_inicio"]');
+    await campo.fill("2026-03-10");
+    await campo.focus();
+    await page.keyboard.press("ArrowUp");
+    await expect(campo, "a seta tirou o foco do campo de data").toBeFocused();
+    await expect(campo, "a seta não mudou a data").not.toHaveValue("2026-03-10");
+    for (const tecla of ["ArrowRight", "ArrowLeft", "Home", "End"]) {
+      await page.keyboard.press(tecla);
+      await expect(campo, `${tecla} tirou o foco do campo de data`).toBeFocused();
+    }
+    await expect(linha).toHaveAttribute("aria-expanded", "true");
+    // Nada foi gravado: o período só muda no banco por «Gravar período».
+  });
+
+  test("no seletor de instrutor aberto no detalhe, a seta anda na lista e o painel fica aberto", async ({
+    page,
+  }) => {
+    await irASecaoDaTurma(page, CODIGO_DA_TURMA_UM);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    await page.locator(DETALHE).locator('[data-slot="seletor-instrutor"]').first().click();
+    const painel = page.locator('[data-slot="popover-content"]');
+    const opcoes = painel.getByRole("option");
+    await expect(opcoes.first()).toBeVisible();
+    expect(await opcoes.count(), "a amostra precisa de duas opções").toBeGreaterThan(1);
+
+    await opcoes.first().focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(painel, "a seta fechou o seletor").toBeVisible();
+    await expect(opcoes.nth(1), "a seta não andou na lista do seletor").toBeFocused();
+    await expect(linhaExpansivel(page.locator(SECAO), DISCIPLINA_COM_UE.nome)).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await page.keyboard.press("Escape");
+  });
+});
+
 test.describe("`FR-022` · menu → Turmas → ficha → a seção de disciplinas", () => {
   test("a seção mostra as disciplinas DAQUELA turma, e só elas", async ({ page }) => {
     await irASecaoDaTurma(page, CODIGO_DA_TURMA_UM);

@@ -175,6 +175,23 @@ describe("⚠️ hoje é argumento, e a lista sai na ordem do contrato", () => {
     ]);
   });
 
+  it("spec 016, FR-009.7 · turma mais longa que o curso: «a turma tem N semanas e o curso, M»", () => {
+    // A forma medida da C-Ap-FR 2026: 06/04 a 15/12/2026 são 37 semanas, e o curso tem 35.
+    const longa = turma({ dataInicio: "2026-04-06", dataTermino: "2026-12-15" });
+    const titulos = (duracao: number | null) =>
+      avisosDaTurma({ ...longa, duracaoSemanasDoCurso: duracao }, "2026-04-01").map(
+        (a) => a.titulo,
+      );
+    expect(titulos(35)).toContain("A turma tem 37 semanas e o curso, 35.");
+    // ⚠️ Avisa só quando a turma PASSA do curso — igual, mais curta ou sem duração, nada.
+    expect(titulos(37).join(" ")).not.toContain("semanas e o curso");
+    expect(titulos(40).join(" ")).not.toContain("semanas e o curso");
+    expect(titulos(null).join(" ")).not.toContain("semanas e o curso");
+    expect(avisosDaTurma(longa, "2026-04-01").map((a) => a.chave)).not.toContain(
+      "turma_mais_longa_que_o_curso",
+    );
+  });
+
   it("todo aviso tem título legível", () => {
     for (const a of avisosDaTurma(turma({ sala: null, disciplinasAtivas: 0 }), HOJE)) {
       expect(a.titulo.length).toBeGreaterThan(5);

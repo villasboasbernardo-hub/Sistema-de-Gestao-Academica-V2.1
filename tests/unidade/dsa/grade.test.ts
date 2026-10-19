@@ -9,7 +9,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { MarcaDeConflito } from "@/lib/dominio/dsa/conflitos";
-import { montarSemana, type FatoDaSemana } from "@/lib/dominio/dsa/grade";
+import { MOTIVO_NO_MESMO_TA, montarSemana, type FatoDaSemana } from "@/lib/dominio/dsa/grade";
 import { relogioDoRegime } from "@/lib/dominio/dsa/horario-do-bloco";
 import { G45 } from "./relogio-real";
 
@@ -283,5 +283,58 @@ describe("spec 014, FR-027 · a parada de parte do dia", () => {
     expect(dia?.avisos).toContain("Parado — LA: Licença (tempos 6 a 7)");
     expect(dia?.celulas[5]?.estado).toBe("bloqueada");
     expect(dia?.celulas[4]?.estado).toBe("livre");
+  });
+});
+
+/*
+ * ⚠️ **FR-012.3 da spec 016 · DOIS LANÇAMENTOS NO MESMO TA: NENHUM SOME.** Até 17/10/2026 o segundo
+ * sumia da grade, do papel e da planilha — `doDia.find` pegava o primeiro da lista e o outro não ia a
+ * lugar nenhum, mas continuava contando na CH. E o "primeiro" era o da ordem do `fato_id`, um `uuid`
+ * novo a cada carga: a escolha mudava de uma carga para a outra (medido em 09/10/2026, spec 015).
+ * ⚠️ **O CASO QUE DISCRIMINA SÃO AS DUAS ORDENS DE ENTRADA** (DoD 8): pela ordem de chegada, cada ordem
+ * punha um diferente na grade.
+ */
+describe("FR-012.3 · dois lançamentos no mesmo TA — ordem estável, e o segundo vai para «sem posição»", () => {
+  const antigo = fato({
+    fatoId: "zzz-o-antigo",
+    codigo: "REG-000010",
+    criadoEm: "2026-10-01T10:00:00Z",
+    conteudo: "O lançado primeiro",
+  });
+  const novo = fato({
+    fatoId: "aaa-o-novo",
+    codigo: "REG-000011",
+    criadoEm: "2026-10-02T10:00:00Z",
+    conteudo: "O lançado depois",
+  });
+
+  it.each([
+    ["antigo, novo", [antigo, novo]],
+    ["novo, antigo", [novo, antigo]],
+  ] as const)("na ordem %s: o mais antigo ocupa a grade, o outro sai com o motivo", (_, fatos) => {
+    const dia = montar({ fatos: [...fatos] }).dias[0];
+    expect(dia?.celulas[0]?.bloco?.conteudo).toBe("O lançado primeiro");
+    expect(dia?.semPosicao.map((s) => [s.fato.conteudo, s.motivo])).toEqual([
+      ["O lançado depois", MOTIVO_NO_MESMO_TA],
+    ]);
+  });
+
+  it("criados no mesmo instante, desempata o código", () => {
+    const juntos = (codigo: string, conteudo: string, fatoId: string) =>
+      fato({ fatoId, codigo, criadoEm: "2026-10-01T10:00:00Z", conteudo });
+    const dia = montar({
+      fatos: [
+        juntos("REG-000020", "Segundo código", "a"),
+        juntos("REG-000019", "Primeiro código", "b"),
+      ],
+    }).dias[0];
+    expect(dia?.celulas[0]?.bloco?.conteudo).toBe("Primeiro código");
+    expect(dia?.semPosicao.map((s) => s.fato.conteudo)).toEqual(["Segundo código"]);
+  });
+
+  it("controle: TA diferentes no mesmo dia continuam os dois na grade", () => {
+    const dia = montar({ fatos: [antigo, { ...novo, taInicial: 3 }] }).dias[0];
+    expect(dia?.semPosicao).toEqual([]);
+    expect(dia?.celulas[2]?.bloco?.conteudo).toBe("O lançado depois");
   });
 });

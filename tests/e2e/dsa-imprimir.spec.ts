@@ -28,6 +28,7 @@ import {
   ASSINANTE_DE_JULHO,
   ASSINANTE_ENCARREGADO,
   CONTEUDO_A_FRENTE,
+  DATA_A_FRENTE,
   limparDsa,
   SEGUNDA,
   SEMANA,
@@ -37,6 +38,8 @@ import {
   TA_A_FRENTE,
   type DsaSemeado,
 } from "./dsa-de-teste";
+import { dataParaLeitura } from "@/lib/formato/data";
+
 import { irAFichaDaTurma } from "./navegar-turmas";
 import { irParaASemanaDoDia } from "./percurso-do-dsa";
 
@@ -80,6 +83,33 @@ async function abrirAImpressao(page: Page, semana: number, ano = ANO): Promise<v
 }
 
 test.describe("`RF-PDF-01` · do botão ao papel, por clique", () => {
+  /*
+   * ⚠️ **SPEC 016, FR-005.1 (Q-9): O CABEÇALHO DOS DIAS COM O ANO, E A FOLHA AINDA EM UMA PÁGINA A4.** Até
+   * 18/10/2026 o papel escrevia `SEG 06/04`, por um formatador próprio. A data mais larga não pode empurrar
+   * o DSA para uma segunda página (`RF-PDF-01`).
+   */
+  test("menu Turmas → turma → DSA → Imprimir: os dias com o ano, numa página A4", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
+    await page.locator('[data-slot="abrir-o-dsa"]').click();
+    await irParaASemanaDoDia(page, SEGUNDA, SEMANA, ANO);
+    await page.locator('[data-slot="imprimir-dsa"]').click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/print/dsa");
+    await expect(page.locator(DOCUMENTO)).toBeVisible();
+
+    const dias = page.locator(`${DOCUMENTO} .dsa4-cabeca-dia`);
+    await expect(dias.first()).toContainText("SEG");
+    await expect(dias.first()).toContainText("06/04/2026");
+    for (const texto of await dias.allInnerTexts()) {
+      expect(texto, "um dia do cabeçalho saiu sem o ano").toMatch(/\d{2}\/\d{2}\/\d{4}/);
+    }
+
+    const paisagem = await page.pdf({ format: "A4", landscape: true });
+    expect(paginasDoPdf(paisagem), "com o ano, o DSA passou de uma página A4 paisagem").toBe(1);
+  });
+
   test("a grade leva à impressão com os MESMOS parâmetros, e sem casca", async ({ page }) => {
     await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
     await page.locator('[data-slot="abrir-o-dsa"]').click();
@@ -116,7 +146,9 @@ test.describe("`RF-PDF-01` · do botão ao papel, por clique", () => {
     await expect(page.locator(`${DOCUMENTO} button`)).toHaveCount(0);
   });
 
-  test("o cabeçalho traz a organização, o Nº e a semana em DD/MM/AAAA", async ({ page }) => {
+  test("o cabeçalho traz a organização, a semana do curso e a semana em DD/MM/AAAA", async ({
+    page,
+  }) => {
     await abrirAImpressao(page, SEMANA);
     const documento = page.locator(DOCUMENTO);
     await expect(documento).toContainText("CIAARA");
@@ -124,7 +156,12 @@ test.describe("`RF-PDF-01` · do botão ao papel, por clique", () => {
       "CENTRO DE INSTRUÇÃO E ADESTRAMENTO ALMIRANTE RADLER DE AQUINO",
     );
     await expect(documento).toContainText("Detalhe Semanal de Aulas");
-    await expect(page.locator('[data-slot="dsa-numero"]')).toContainText("Nº");
+    /*
+     * ⚠️ **"SEMANA N DE T" NO LUGAR DO «Nº»** (spec 016, FR-009.2): a semente abre a turma em 05/01/2026
+     *    e a fecha em 18/12/2026 — 50 semanas —, e a semana de 06/04 é a 14ª.
+     */
+    await expect(page.locator('[data-slot="dsa-semana"]')).toHaveText("Semana do curso: 14 de 50");
+    await expect(page.locator('[data-slot="dsa-numero"]')).toHaveCount(0);
     /*
      * ⚠️ **O INTERVALO VAI ATÉ SÁBADO, E ISSO É A `Q-4` FUNCIONANDO — não um erro de conta.** A
      * semente lança um bloco em **11/04**, e a coluna de sábado abre **por haver lançamento nele**,
@@ -342,7 +379,7 @@ test.describe("⚠️ item 7 · a ASSINATURA traz o posto POR EXTENSO; a coluna 
     await page.locator('[data-acao="semana-proxima"]').click();
     await expect(semanaNaTela).not.toHaveText(deHoje);
     await page.locator('[data-acao="semana-proxima"]').click();
-    await expect(semanaNaTela).toHaveText(`semana ${SEMANA_A_FRENTE} de ${ANO_A_FRENTE}`);
+    await expect(semanaNaTela).toContainText(dataParaLeitura(DATA_A_FRENTE));
 
     /* ── 1. Na tela: a grade com a sigla, o rodapé por extenso ───────────────────────────── */
     const cartaoNaTela = page

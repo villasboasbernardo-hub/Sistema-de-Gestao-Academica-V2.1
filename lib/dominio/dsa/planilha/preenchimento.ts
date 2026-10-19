@@ -18,13 +18,14 @@
  *
  * ⚠️ **AS CONTAS DE APOIO SÃO AS DO PAPEL, reexpressas em fórmula** (R-6, ratificadas na `DP-1`): o
  * bloco (chave, período e código — `gradeDoPapel`), o tipo do cartão (`tipoDoCartao`), o lugar do
- * Estudo Individual (`slotDoEstudoIndividual`) e o nº do DSA (`numeroDoDsa`). Cada uma é provada
+ * Estudo Individual (`slotDoEstudoIndividual`) e a semana do curso (`semanaDoCurso`, FR-009.5 da
+ * spec 016). Cada uma é provada
  * contra a função do sistema pela suíte; nenhuma decide sozinha o que o sistema não decidiria.
  */
 import { semanaIsoDe } from "../../carga-semanal";
+import { MOTIVO_NO_MESMO_TA } from "../grade";
 import { TA_MAXIMO, type Relogio } from "../horario-do-bloco";
-import { NUMERO_AUSENTE_NO_CABECALHO } from "../numero-do-dsa";
-import { instanteComHoraParaLeitura } from "../../../formato/data";
+import { instanteComHoraParaLeitura, siglaDoDiaDaSemana } from "../../../formato/data";
 import {
   concat,
   fn,
@@ -45,6 +46,7 @@ import {
 } from "../../../planilha/cores";
 
 import { chaveDaSemanaIso, chaveDoItem, chaveDoLancamento } from "./catalogo";
+import { formulaDaSemanaCorrida, formulaDoRotuloDaSemana } from "./semana-corrida";
 import {
   ABA,
   B,
@@ -68,7 +70,6 @@ import {
   type SemanaDoInsumo,
 } from "./tipos";
 
-export const SIGLAS_DOS_DIAS = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as const;
 export const DIAS_NA_ENTRADA = 6;
 
 export const TEXTO_DO_TOPO = {
@@ -79,7 +80,8 @@ export const TEXTO_DO_TOPO = {
 } as const;
 
 export const MOTIVO_FORA_DO_RELOGIO = "fora do relógio da semana";
-export const MOTIVO_SOBREPOSTO = "no mesmo TA de outro lançamento";
+/** O mesmo TA de outro lançamento — o motivo é o da grade (FR-012.3 da spec 016), nunca um segundo texto. */
+export const MOTIVO_SOBREPOSTO = MOTIVO_NO_MESMO_TA;
 
 /* ------------------------------------------------------------------ geometria */
 
@@ -142,10 +144,9 @@ export type SemanaNoRetrato = {
     readonly item: string | number;
     readonly codigo: string | null;
     readonly noPapel: boolean;
-    /** Está em `vw_ocupacao_ta` (tem TA): conta na CH cumprida e no nº do sistema, impresso ou não. */
+    /** Está em `vw_ocupacao_ta` (tem TA): conta na CH cumprida, impresso ou não. */
     readonly naOcupacao: boolean;
     readonly disciplinaDaCh: string;
-    readonly contaNoNumero: boolean;
   })[];
   /** O maior TA de lançamento que ficou fora da grade, por dia — o papel o conta no último TA. */
   readonly ultimoTaFora: readonly number[];
@@ -182,11 +183,6 @@ export function retratoDaSemana(
         (fato !== undefined && fato.origem !== "atividade_nao_letiva"
           ? (fato.disciplinaCodigo ?? "")
           : ""),
-      contaNoNumero:
-        item?.contaNoNumero ??
-        (fato?.origem === "aula" ||
-          fato?.origem === "avaliacao" ||
-          fato?.origem === "sessao_aplicacao"),
     };
   };
 
@@ -239,7 +235,6 @@ export function retratoDaSemana(
         noPapel: true,
         naOcupacao: true,
         disciplinaDaCh: e.disciplinaDaCh,
-        contaNoNumero: e.contaNoNumero,
       });
     }
   });
@@ -253,14 +248,13 @@ export function retratoDaSemana(
       codigo: e.codigo,
       /*
        * ⚠️ **SEM POSIÇÃO NÃO É SEM TA.** O papel não imprime o lançamento sem posição; mas o de
-       * POSIÇÃO HERDADA da carga tem TA gravado, está em `vw_ocupacao_ta` e conta na CH e no nº do
-       * sistema (medido na T048: a avaliação herdada de 07/04 da semente faltava 2 TA na CH). Só o
-       * que não tem TA nenhum fica fora das duas contas — `vw_ocupacao_ta` exige TA.
+       * POSIÇÃO HERDADA da carga tem TA gravado, está em `vw_ocupacao_ta` e conta na CH (medido na
+       * T048 da spec 015: a avaliação herdada de 07/04 da semente faltava 2 TA na CH). Só o que não
+       * tem TA nenhum fica fora da conta — `vw_ocupacao_ta` exige TA.
        */
       noPapel: false,
       naOcupacao: s.taInicial !== null,
       disciplinaDaCh: s.taInicial !== null ? e.disciplinaDaCh : "",
-      contaNoNumero: s.taInicial !== null && e.contaNoNumero,
     });
   }
   return { tas, semPosicao, ultimoTaFora };
@@ -497,22 +491,6 @@ export function formulasDaLinhaDeTa(entrada: {
       ),
     ),
   );
-  f.set(
-    P.contaNoNumero,
-    SE(
-      semChave,
-      num(0),
-      fn(
-        "IFERROR",
-        op(
-          fn("INDEX", nome(NOME.bdContaNoNumero), fn("MATCH", R, nome(NOME.bdChave), num(0))),
-          "+",
-          num(0),
-        ),
-        SE(eDisciplina(c(P.cod)), num(1), num(0)),
-      ),
-    ),
-  );
   f.set(P.noPapel, SE(semChave, num(0), num(1)));
   f.set(P.taOcupado, SE(semChave, num(0), c(P.ta)));
   f.set(P.taOcupadoSemEi, SE(fn("OR", semChave, igual(c(P.tipo), txt("estudo"))), num(0), c(P.ta)));
@@ -575,62 +553,24 @@ export function formulasDoDia(entrada: {
   return f;
 }
 
-/** As fórmulas do cabeçalho da semana — o nº do DSA (`numeroDoDsa`). */
+/**
+ * As fórmulas do cabeçalho da semana — a semana do curso, "Semana N de T" (`semanaDoCurso`, FR-009.5 da
+ * spec 016). ⚠️ **NÃO DEPENDE DE LANÇAMENTO** (D-COR-1): a semana sem aula consome número, então a
+ * conta não olha a semana anterior nem os TA desta — só a segunda-feira e a janela do catálogo.
+ */
 export function formulasDoCabecalho(entrada: {
   readonly cabecalho: number;
-  readonly anterior: number | null;
-  readonly ultimaDaSemana: number;
 }): ReadonlyMap<number, Formula> {
-  const { cabecalho: h, anterior, ultimaDaSemana } = entrada;
+  const { cabecalho: h } = entrada;
   const c = (coluna: number) => daCelula(h, coluna);
-  const daSemana = (coluna: number) =>
-    intervalo({ linha: h + P_LINHAS_DO_CABECALHO, coluna }, { linha: ultimaDaSemana, coluna });
-  const inicio = doCatalogo(B.dataInicio);
   const f = new Map<number, Formula>();
-  /* A semana conta se tem aula ou avaliação (com TA) a partir do início da turma. */
+  f.set(P.semanaCorrida, formulaDaSemanaCorrida(c(PC.segunda), doCatalogo(B.dataInicio)));
   f.set(
-    P.temAula,
-    SE(
-      igual(inicio, vazio),
-      num(0),
-      SE(
-        op(
-          fn("SUMIFS", daSemana(P.contaNoNumero), daSemana(P.data), concat(txt(">="), inicio)),
-          ">",
-          num(0),
-        ),
-        num(1),
-        num(0),
-      ),
-    ),
-  );
-  const foraAte = fn("COUNTIFS", nome(NOME.foraSemanas), concat(txt("<="), c(P.chaveDaSemana)));
-  f.set(
-    P.acumulado,
-    anterior === null
-      ? op(c(P.temAula), "+", foraAte)
-      : op(
-          op(daCelula(anterior, P.acumulado), "+", c(P.temAula)),
-          "+",
-          fn(
-            "COUNTIFS",
-            nome(NOME.foraSemanas),
-            concat(txt(">"), daCelula(anterior, P.chaveDaSemana)),
-            nome(NOME.foraSemanas),
-            concat(txt("<="), c(P.chaveDaSemana)),
-          ),
-        ),
-  );
-  f.set(
-    PC.numero,
-    SE(
-      igual(inicio, vazio),
-      txt(NUMERO_AUSENTE_NO_CABECALHO),
-      SE(
-        op(c(P.chaveDaSemana), "<", doCatalogo(B.chaveInicio)),
-        txt(NUMERO_AUSENTE_NO_CABECALHO),
-        SE(igual(c(P.acumulado), num(0)), txt(NUMERO_AUSENTE_NO_CABECALHO), c(P.acumulado)),
-      ),
+    PC.semanaDoCurso,
+    formulaDoRotuloDaSemana(
+      c(P.semanaCorrida),
+      doCatalogo(B.semanasDaTurma),
+      doCatalogo(B.totalDoCurso),
     ),
   );
   f.set(
@@ -800,13 +740,11 @@ export function abaDeEntrada(entrada: {
   insumo.semanas.forEach((semana, k) => {
     const h = linhaDoCabecalho(g, k);
     const retrato = retratos[k] as SemanaNoRetrato;
-    const ultimaDaSemana = h + g.altura - 1;
     const iso = semana.semana;
 
     /* O cabeçalho da semana. */
     definirTexto(aba, h, PC.rotulo, semana.rotulo, ESTILO_DO_CABECALHO);
     definir(aba, h, PC.segunda, { data: semana.seisDias[0] ?? "", estilo: ESTILO_DO_CABECALHO });
-    definirTexto(aba, h, PC.rotuloDoNumero, "Nº", ESTILO_DO_CABECALHO);
     definirTexto(aba, h, PC.rotuloDosAlunos, "Alunos", ESTILO_DO_CABECALHO);
     definirTexto(aba, h, PC.alunos, semana.alunos, ESTILO_DO_CABECALHO);
     definirTexto(aba, h, PC.rotuloDoAlt, "ALT", ESTILO_DO_CABECALHO);
@@ -820,13 +758,9 @@ export function abaDeEntrada(entrada: {
     definirFormulas(
       aba,
       h,
-      formulasDoCabecalho({
-        cabecalho: h,
-        anterior: k === 0 ? null : linhaDoCabecalho(g, k - 1),
-        ultimaDaSemana,
-      }),
+      formulasDoCabecalho({ cabecalho: h }),
       new Map([
-        [PC.numero, ESTILO_DO_CABECALHO],
+        [PC.semanaDoCurso, ESTILO_DO_CABECALHO],
         [PC.descricaoDoRelogio, ESTILO_DO_CABECALHO],
       ]),
     );
@@ -859,7 +793,7 @@ export function abaDeEntrada(entrada: {
         const borda: Estilo | undefined = t === 1 ? { borda: { superior: true } } : undefined;
         definirTexto(aba, r, P.semana, semana.rotulo, borda);
         definir(aba, r, P.data, borda === undefined ? { data } : { data, estilo: borda });
-        definirTexto(aba, r, P.dia, SIGLAS_DOS_DIAS[d] ?? "", borda);
+        definirTexto(aba, r, P.dia, siglaDoDiaDaSemana(data), borda);
         definirTexto(aba, r, P.ta, t, borda);
         definirTexto(aba, r, P.semana_indice, k + 1);
         const lancado = retrato.tas.get(chaveDoTa(d, t));
@@ -930,8 +864,7 @@ export function abaDeEntrada(entrada: {
       definir(aba, r, P.spTexto, { formula: formulaDoSemPosicao(r) });
       if (s === undefined) continue;
       definir(aba, r, P.data, { data: s.data });
-      const indice = (new Date(`${s.data}T12:00:00Z`).getUTCDay() + 6) % 7;
-      definirTexto(aba, r, P.dia, SIGLAS_DOS_DIAS[indice] ?? "");
+      definirTexto(aba, r, P.dia, siglaDoDiaDaSemana(s.data));
       definirTexto(aba, r, P.ta, s.taInicial);
       definirTexto(aba, r, P.cod, s.cod);
       definirTexto(aba, r, P.item, s.item);
@@ -944,7 +877,6 @@ export function abaDeEntrada(entrada: {
       definirTexto(aba, r, P.aviso, s.motivo);
       definirTexto(aba, r, P.disciplina, s.disciplina);
       definirTexto(aba, r, P.noPapel, s.noPapel ? 1 : 0);
-      definirTexto(aba, r, P.contaNoNumero, s.naOcupacao && s.contaNoNumero ? 1 : 0);
       if (s.naOcupacao) {
         definirTexto(aba, r, P.spDisciplinaDaCh, s.disciplinaDaCh);
         definirTexto(aba, r, P.spTempos, Math.max(1, s.tempos ?? 1));

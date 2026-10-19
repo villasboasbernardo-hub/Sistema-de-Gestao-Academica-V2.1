@@ -17,7 +17,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
-import { limparDsa, semearDsa, type DsaSemeado } from "./dsa-de-teste";
+import { apagarLinhasDaTurma, limparDsa, semearDsa, type DsaSemeado } from "./dsa-de-teste";
 import { abrirEdicaoDaTurma, irAFichaDaTurma } from "./navegar-turmas";
 import { escolherDisciplinaEUnidade, irParaASemanaDoDia } from "./percurso-do-dsa";
 
@@ -105,8 +105,8 @@ test.afterAll(async () => {
   if (TURMA_ID !== "") {
     await banco().from("registros_aula").delete().eq("turma_id", TURMA_ID);
     await banco().from("atividades_nao_letivas").delete().eq("turma_id", TURMA_ID);
-    await banco().from("turma_disciplina_unidade").delete().eq("turma_id", TURMA_ID);
-    await banco().from("turma_disciplina").delete().eq("turma_id", TURMA_ID);
+    /* A mesma limpeza do `limparDsa`: as atribuições pela linha da turma, com o erro conferido. */
+    await apagarLinhasDaTurma(TURMA_ID);
     await banco().from("turmas").delete().eq("id", TURMA_ID);
   }
   await limparDsa(SEMEADO);

@@ -14,6 +14,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { enderecoDaPlanilhaDeContingencia } from "@/lib/navegacao/endereco-de-turma";
 import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import { dataParaLeitura } from "@/lib/formato/data";
 
 import { lerXlsx } from "../unidade/planilha/ler-xlsx";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
@@ -84,10 +85,14 @@ test.describe("`FR-001` · quem lança baixa a planilha, do DSA e da ficha", () 
     const codigos = [...(pasta.abas[0]?.celulas.values() ?? [])].map((c) => String(c.valor ?? ""));
     expect(codigos).toContain(`DSA-E2D${PROCESSO}-A2`);
 
-    /* `FR-022` · a IMPRESSÃO abre na semana corrente da turma. */
+    /*
+     * `FR-022` · a IMPRESSÃO abre na semana corrente da turma. ⚠️ O rótulo é "Semana N de T — datas"
+     * desde a spec 016 (FR-009.5): a semana se reconhece pela segunda-feira dela, com o ano.
+     */
     const hoje = semanaIsoDe(hojeNaCiaara());
-    expect(textoDaCelula(pasta, "IMPRESSÃO", "C2")).toMatch(
-      new RegExp(`^Semana ${hoje?.numero} — `),
+    expect(textoDaCelula(pasta, "IMPRESSÃO", "C2")).toMatch(/^Semana \d+ de \d+ — /);
+    expect(textoDaCelula(pasta, "IMPRESSÃO", "C2")).toContain(
+      `— ${dataParaLeitura(hoje?.segunda ?? "")} a `,
     );
   });
 

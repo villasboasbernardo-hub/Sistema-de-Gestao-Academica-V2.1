@@ -33,7 +33,6 @@ import {
 } from "@/lib/dominio/dsa/etapa-presencial";
 import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
 import { avisosAntesDeImprimir } from "@/lib/dominio/dsa/impressao";
-import { motivoDoNumeroAusente, numeroDoDsa } from "@/lib/dominio/dsa/numero-do-dsa";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
 import {
@@ -44,6 +43,7 @@ import { CONTRATO } from "@/lib/navegacao/contrato";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
+import { rotuloDaSemanaDoCurso, semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
 import { montarDocumentoDoDsa } from "../../../../print/dsa/documento";
 import { alcanceDoPerfil } from "../../../cursos/consulta";
 import { codigoDaFicha, mensagemDeTurmaNaoEncontrada } from "../consulta";
@@ -157,6 +157,12 @@ export default async function SemanaDoDsa({
   const diasDaSemanaIso = datasDaSemanaIso(escolha.ano, escolha.numero).slice(0, 6);
   const etapa = etapaDaSemana(paraEtapa, diasDaSemanaIso);
   if (etapa.tipo === "fora") {
+    /* A semana do curso também na etapa a distância (spec 016, FR-009.2) — só a duração do curso falta. */
+    const { data: cursoDaEtapa } = await supabase
+      .from("cursos")
+      .select("duracao_semanas")
+      .eq("id", cursoId)
+      .maybeSingle();
     return (
       <section className="flex min-w-0 flex-col gap-3">
         <CabecalhoDoDsa
@@ -169,6 +175,16 @@ export default async function SemanaDoDsa({
           ano={escolha.ano}
           semana={escolha.numero}
           sabadoAberto={false}
+          rotuloDaSemanaDoCurso={rotuloDaSemanaDoCurso(
+            semanaDoCurso({
+              dataInicio: (turma.data_inicio as string | null) ?? null,
+              dataTermino: (turma.data_termino as string | null) ?? null,
+              duracaoSemanasDoCurso:
+                (cursoDaEtapa?.duracao_semanas as number | null | undefined) ?? null,
+              semana: { ano: escolha.ano, numero: escolha.numero },
+            }),
+          )}
+          datasDaSemana={rotuloDaSemana(diasDaSemanaIso)}
         />
         <div
           role="status"
@@ -244,11 +260,6 @@ export default async function SemanaDoDsa({
    * assinaturas e as linhas impressas saem de `lib/dominio/dsa/`, e é por isso que o aviso diz a
    * verdade sobre o que **vai** sair — e não um palpite sobre o que talvez saia.
    */
-  const entradaDoNumero = {
-    datasComLancamento: extras.datasComLancamentoDaTurma,
-    dataInicio: (turma.data_inicio as string | null) ?? null,
-    semana: { ano: escolha.ano, numero: escolha.numero },
-  };
   /* ⚠️ A MESMA montagem da rota `/print/dsa` — a grade da tela e a do papel saem do mesmo objeto. */
   const documento = montarDocumentoDoDsa({
     codigoDaTurma: codigo,
@@ -288,8 +299,7 @@ export default async function SemanaDoDsa({
   });
 
   const avisosDaImpressao = avisosAntesDeImprimir({
-    numeroDoDsa: numeroDoDsa(entradaDoNumero),
-    motivoDoNumeroAusente: motivoDoNumeroAusente(entradaDoNumero),
+    semanaDoCurso: documento.semanaDoCurso,
     alunos: (turma.alunos as number | null) ?? null,
     semRelogio,
     semAssinaturaEsquerda: assinaturas.esquerda === null,
@@ -315,7 +325,22 @@ export default async function SemanaDoDsa({
         ano={escolha.ano}
         semana={escolha.numero}
         sabadoAberto={lida.sabadoAberto}
+        rotuloDaSemanaDoCurso={documento.rotuloDaSemanaDoCurso}
+        datasDaSemana={rotuloDaSemana(lida.dias)}
       />
+
+      {/*
+        ⚠️ **O QUE A LEITURA NÃO CONSEGUIU LER É DITO** (FR-012.1 da spec 016; `RN-DEG-01`): até 18/10/2026
+           a lista que falhava chegava vazia em silêncio — e a sugestão de instrutor por UE nunca aparecia sem
+           que ninguém soubesse por quê.
+      */}
+      {lida.errosDeLeitura.length > 0 ? (
+        <p role="status" className="text-sm text-atrasado-tinta" data-slot="aviso-de-leitura">
+          Parte da semana não pôde ser lida ({lida.errosDeLeitura.map((e) => e.lista).join(", ")}).
+          O que aparece abaixo pode estar incompleto — recarregue a página; se continuar, avise o
+          suporte.
+        </p>
+      ) : null}
 
       {aviso ? (
         <p role="status" className="text-sm text-atrasado-tinta" data-slot="aviso-de-semana">
@@ -459,6 +484,8 @@ export default async function SemanaDoDsa({
           numeroDaSemana={escolha.numero}
           podeLancar={podeLancar}
           unidades={lida.unidades}
+          atribuicoesPorUe={lida.atribuicoesPorUe}
+          atribuicoesPorDisciplina={lida.atribuicoesPorDisciplina}
           disciplinas={lida.disciplinas}
           avaliacoesParaVista={lida.avaliacoesParaVista}
           avaliacoesDoCurriculo={lida.avaliacoesDoCurriculo}

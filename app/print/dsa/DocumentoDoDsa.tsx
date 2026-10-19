@@ -25,7 +25,7 @@ import type { Assinatura } from "@/lib/dominio/dsa/assinaturas";
 import type { CartaoDaGrade, GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import type { DiaImpresso, LinhaImpressa } from "@/lib/dominio/dsa/impressao";
 import { NOTA_DO_ESTUDO_INDIVIDUAL, ROTULO_DE_OBSERVACOES } from "@/lib/dominio/dsa/impressao";
-import { NUMERO_AUSENTE_NO_CABECALHO } from "@/lib/dominio/dsa/numero-do-dsa";
+import { ROTULO_DO_CAMPO_DA_SEMANA } from "@/lib/dominio/dsa/semana-do-curso";
 import {
   dataComDiaDaSemana,
   dataParaLeitura,
@@ -65,7 +65,6 @@ export function DocumentoDoDsa({
 }) {
   const { grade } = dados;
   const nomes = new Map(dados.quadroDeCh.map((d) => [d.codigo, d.nome] as const));
-  const numero = dados.numero === null ? NUMERO_AUSENTE_NO_CABECALHO : String(dados.numero);
   /* Mais linhas ou o sábado: a mesma folha, com letra e espaço menores — nunca conteúdo cortado. */
   const compacto =
     grade !== null &&
@@ -107,12 +106,21 @@ export function DocumentoDoDsa({
 
       <div className="dsa4-faixa-cabecalho" />
       <div className="dsa4-identificacao">
-        <Campo rotulo="Semana">
-          {dados.semana.numero}/{dados.semana.ano}
-        </Campo>
-        <Campo rotulo="DSA" slot="dsa-numero">
-          Nº {numero}
-        </Campo>
+        {/*
+          ⚠️ **"SEMANA N DE T" NO LUGAR DE "SEMANA 41/2026" E "DSA Nº"** (spec 016, FR-009.2; D-COR-1,
+             Bernardo Villas Boas, 16/10/2026): o número do DSA passou a ser a semana corrida do curso. Fora
+             da janela da turma, «—» — nunca "Semana 0" nem N maior que T (FR-009.6).
+        */}
+        {/*
+          ⚠️ **NUM RÓTULO SÓ** (ajuste A da conferência do PR #68, 18/10/2026): "Semana do curso: 28 de 37",
+             e não o rótulo em cima e "Semana 28 de 37" embaixo, que dizia "semana" duas vezes.
+        */}
+        <div className="dsa4-campo dsa4-campo-em-linha">
+          <span data-slot="dsa-semana">
+            <span className="dsa4-campo-rotulo">{ROTULO_DO_CAMPO_DA_SEMANA}:</span>{" "}
+            <span className="dsa4-campo-valor">{dados.valorDaSemanaDoCurso}</span>
+          </span>
+        </div>
         <Campo rotulo="Período" slot="dsa-intervalo">
           {dataParaLeitura(dados.primeiro)} a {dataParaLeitura(dados.ultimo)}
         </Campo>
@@ -226,7 +234,7 @@ export function DocumentoDoDsa({
         */}
         <span data-slot="dsa-gerado-em">
           Gerado em: {instanteComHoraParaLeitura(geradoEm)} · Marinha do Brasil ·{" "}
-          {SIGLA_DA_ORGANIZACAO} · {dados.curso} · DSA Nº {numero}
+          {SIGLA_DA_ORGANIZACAO} · {dados.curso} · {dados.rotuloDaSemanaDoCurso}
         </span>
       </footer>
     </div>
@@ -299,7 +307,7 @@ function Grade({
             style={{ gridColumn: `${i + 2} / ${i + 3}`, gridRow: "1 / 2" }}
           >
             <b>{c.sigla}</b>
-            <span>{c.diaMes}</span>
+            <span>{c.dataLegivel}</span>
           </div>
         ))}
         {grade.colunas.map((c, i) => (
@@ -390,11 +398,18 @@ function Grade({
 
       {grade.foraDaGrade.length > 0 ? (
         <ul className="dsa4-fora" data-slot="dsa-fora-da-grade">
-          {grade.foraDaGrade.map(({ coluna, linha }) => (
+          {grade.foraDaGrade.map(({ coluna, linha, motivo }) => (
             <li key={linha.chave}>
               <b>{grade.colunas[coluna]?.sigla}</b> {linha.disciplina} {linha.conteudo}
               {linha.tempos === null ? "" : ` · ${linha.tempos} TA`} · {linha.local} · {linha.te} ·{" "}
               {linha.instrutor}
+              {/* FR-012.3 da spec 016: o segundo do mesmo TA diz por que está aqui, nunca escondido. */}
+              {motivo === undefined ? null : (
+                <span data-slot="dsa-fora-motivo">
+                  {" "}
+                  — {linha.taInicial}º TA, {motivo}
+                </span>
+              )}
             </li>
           ))}
         </ul>
@@ -471,7 +486,7 @@ function ListaSemRelogio({ dias }: { readonly dias: readonly DiaImpresso[] }) {
             </span>
           ))}
           <ul>
-            {dia.linhas.map((l: LinhaImpressa) => (
+            {[...dia.linhas, ...(dia.noMesmoTa ?? [])].map((l: LinhaImpressa) => (
               <li
                 key={l.chave}
                 data-slot="dsa-cartao"

@@ -92,6 +92,16 @@ const ContextoDaGrade = React.createContext<Contexto | null>(null);
 
 const chaveDe = (linha: number, coluna: number) => `${linha}:${coluna}`;
 
+/** Campo onde a tecla é do texto, da data ou da opção — nunca da grade. */
+function ehCampoEditavel(elemento: HTMLElement): boolean {
+  return (
+    elemento.isContentEditable ||
+    elemento.tagName === "INPUT" ||
+    elemento.tagName === "SELECT" ||
+    elemento.tagName === "TEXTAREA"
+  );
+}
+
 export type ListaNavegavelProps = {
   readonly linhas: number;
   readonly colunas: number;
@@ -174,11 +184,33 @@ export function ListaNavegavel({
     celulas.current.get(chaveDe(presa.linha, presa.coluna))?.focus();
   }, [presa.linha, presa.coluna]);
 
+  /**
+   * A tecla veio de uma célula DESTA grade (ou de dentro dela), e não de um campo?
+   *
+   * ⚠️ **A `PEND-016-3` (decisão de Bernardo Villas Boas, 18/10/2026).** O contêiner escuta o teclado
+   * de tudo o que está dentro dele — inclusive a linha de detalhe da tabela, que fica fora da grade
+   * mas dentro da caixa, e o que vem por portal (o React sobe o evento pela árvore de componentes): o
+   * seletor de instrutor aberto no detalhe da ficha. Até aqui só Enter e Espaço conferiam a origem; as
+   * setas, Home, End e PageUp/PageDown faziam `preventDefault` e levavam o foco para a grade — o cursor
+   * não andava no texto, a seta não mudava a data, e a seta do seletor fechava o painel.
+   * ⚠️ **"DE DENTRO DA CÉLULA" CONTA**, para não mudar o que já valia: um botão dentro de uma célula
+   * que recebeu o foco por clique continua navegando. Um campo editável, nunca.
+   */
+  function daGrade(alvo: EventTarget): boolean {
+    if (!(alvo instanceof HTMLElement) || ehCampoEditavel(alvo)) return false;
+    for (const celula of celulas.current.values()) {
+      if (celula === alvo || celula.contains(alvo)) return true;
+    }
+    return false;
+  }
+
   function aoPressionar(evento: React.KeyboardEvent<HTMLDivElement>) {
     if (evento.key === "Escape") {
       aoCancelar?.();
       return;
     }
+    // ⚠️ Fora de uma célula desta grade, a tecla não é da grade: nem navega, nem ativa (`PEND-016-3`).
+    if (!daGrade(evento.target)) return;
     if (evento.key === "Enter" || evento.key === " ") {
       // ⚠️ Só quando o foco está numa célula desta grade: o `Espaço` dentro de um campo de busca
       // é um espaço, não uma ativação.

@@ -18,13 +18,14 @@ import {
   type ItemDaLegenda,
   type TecnicaDoCatalogo,
 } from "@/lib/dominio/dsa/impressao";
-import { numeroDoDsa } from "@/lib/dominio/dsa/numero-do-dsa";
+import { rotuloDaSemanaDoCurso, semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
 import {
   chaveDoFato,
   type FatoDoInsumo,
   type InsumoDaPlanilha,
 } from "@/lib/dominio/dsa/planilha/tipos";
 import { semanasDaPlanilha } from "@/lib/dominio/dsa/planilha/semanas";
+import { MOTIVO_NO_MESMO_TA } from "@/lib/dominio/dsa/grade";
 
 export const RELOGIO_A = relogioDoRegime({
   regimeTempos: 8,
@@ -260,6 +261,8 @@ export function papelDaSemana(
 ): {
   readonly dias: readonly DiaImpresso[];
   readonly grade: GradeDoPapel | null;
+  /** O que a grade desviou para a faixa por estar no mesmo TA de outro (FR-012.3 da spec 016). */
+  readonly noMesmoTa: readonly { readonly id: string; readonly motivo: string }[];
 } {
   const seis = datasDaSemanaIso(ANO, s.numero).slice(0, 6);
   const dias = comSabado ? seis : seis.slice(0, 5);
@@ -282,7 +285,15 @@ export function papelDaSemana(
     s.lancamentos.filter((l) => l.categoria === "Estudo_Individual").map((l) => l.id),
   );
   const impressos = documentoImpresso(semana, { tecnicas: TECNICAS, idsDeEstudoIndividual });
-  return { dias: impressos, grade: gradeDoPapel(impressos, s.relogio) };
+  return {
+    dias: impressos,
+    grade: gradeDoPapel(impressos, s.relogio),
+    noMesmoTa: semana.dias.flatMap((d) =>
+      d.semPosicao
+        .filter((x) => x.motivo === MOTIVO_NO_MESMO_TA)
+        .map((x) => ({ id: x.fato.fatoId, motivo: x.motivo })),
+    ),
+  };
 }
 
 const todosOsLancamentos = () =>
@@ -293,14 +304,21 @@ const todosOsLancamentos = () =>
 
 export const DATA_INICIO = "2026-04-06";
 
-export function numeroDaSemana(numero: number): number | null {
-  return numeroDoDsa({
-    datasComLancamento: todosOsLancamentos()
-      .filter((l) => l.ta !== null && (l.origem === "aula" || l.origem === "avaliacao"))
-      .map((l) => l.data),
-    dataInicio: DATA_INICIO,
-    semana: { ano: ANO, numero },
-  });
+/** O término da turma sintética — três semanas, a 15, a 16 e a 17. */
+export const DATA_TERMINO = "2026-04-24";
+/** O curso sintético tem duração de 35 semanas — o T da «Semana N de T». */
+export const DURACAO_DO_CURSO = 35;
+
+/** "Semana N de T" da semana sintética, pela função do sistema (`semanaDoCurso`, FR-009.5). */
+export function rotuloDaSemanaDoCursoSintetica(numero: number): string {
+  return rotuloDaSemanaDoCurso(
+    semanaDoCurso({
+      dataInicio: DATA_INICIO,
+      dataTermino: DATA_TERMINO,
+      duracaoSemanasDoCurso: DURACAO_DO_CURSO,
+      semana: { ano: ANO, numero },
+    }),
+  );
 }
 
 /** A CH cumprida até o fim da semana, pela regra do sistema: todo fato com TA e disciplina. */
@@ -335,22 +353,31 @@ export function rodapeDaSemana(s: SemanaSintetica): {
 }
 
 /** O insumo da planilha, montado como a rota o monta: o papel de cada semana com os seis dias. */
-export function insumoSintetico(opcoes: { readonly temSabado?: boolean } = {}): InsumoDaPlanilha {
+export function insumoSintetico(
+  opcoes: {
+    readonly temSabado?: boolean;
+    /** Outras semanas no lugar das de referência — mesmos números (15, 16, 17), outro conteúdo. */
+    readonly semanas?: readonly SemanaSintetica[];
+  } = {},
+): InsumoDaPlanilha {
+  const fonte = opcoes.semanas ?? SEMANAS;
   const { semanas: dasSemanas, inicial } = semanasDaPlanilha({
     turma: {
       modalidade: "presencial",
       inicioEtapaPresencial: null,
       terminoEtapaPresencial: null,
       dataInicio: DATA_INICIO,
-      dataTermino: "2026-04-24",
+      dataTermino: DATA_TERMINO,
+      duracaoSemanasDoCurso: DURACAO_DO_CURSO,
     },
     datasComLancamento: [],
     hoje: HOJE,
   });
   const fatos = new Map<string, FatoDoInsumo>();
   const semanas = dasSemanas.map((sp) => {
-    const s = SEMANAS.find((x) => x.numero === sp.numero) as SemanaSintetica;
-    const { dias } = papelDaSemana(s, true);
+    const s = fonte.find((x) => x.numero === sp.numero) as SemanaSintetica;
+    const { dias, noMesmoTa } = papelDaSemana(s, true);
+    const desviados = new Map(noMesmoTa.map((x) => [x.id, x.motivo] as const));
     for (const l of s.lancamentos) {
       const data = sp.seisDias[l.dia] ?? "";
       fatos.set(chaveDoFato(l.id, data, l.ta), {
@@ -370,20 +397,20 @@ export function insumoSintetico(opcoes: { readonly temSabado?: boolean } = {}): 
       dias,
       avisosDosDias: sp.seisDias.map(() => []),
       semPosicao: s.lancamentos
-        .filter((l) => l.ta === null)
+        .filter((l) => l.ta === null || desviados.has(l.id))
         .map((l) => ({
           fatoId: l.id,
           data: sp.seisDias[l.dia] ?? "",
-          taInicial: null,
+          taInicial: l.ta,
           tempos: l.tempos,
           disciplina: l.disciplina ?? "",
           conteudo: l.conteudo,
           local: l.local ?? "",
           te: "",
           instrutor: l.instrutor ?? "",
-          motivo: "sem TA no sistema",
+          motivo: desviados.get(l.id) ?? "sem TA no sistema",
         })),
-      numero: numeroDaSemana(sp.numero),
+      rotuloDaSemanaDoCurso: rotuloDaSemanaDoCursoSintetica(sp.numero),
       alunos: 12,
       assinaturas: {
         esquerda: {
@@ -400,6 +427,8 @@ export function insumoSintetico(opcoes: { readonly temSabado?: boolean } = {}): 
       codigo: "C-TESTE 2026",
       curso: "C-TESTE",
       dataInicio: DATA_INICIO,
+      dataTermino: DATA_TERMINO,
+      duracaoSemanasDoCurso: DURACAO_DO_CURSO,
       salaAlocada: "Sala 1",
     },
     geradaEm: "2026-04-08T15:30:00.000Z",

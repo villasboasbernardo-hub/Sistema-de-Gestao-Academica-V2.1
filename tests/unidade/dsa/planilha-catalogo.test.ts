@@ -100,16 +100,10 @@ describe("R-9 · cada sugestão é a de `preencherLancamento`", () => {
   });
 });
 
-describe("R-6 · o que conta no nº do DSA e na CH vem do gerador, pela origem do sistema", () => {
-  it("aula e avaliação contam no nº; vista, AEC e as categorias não", () => {
-    const conta = (k: string) => porChave.get(k)?.contaNoNumero;
-    expect([conta("I|1"), conta("I|SEM UE"), conta("I|Prova")]).toEqual([true, true, true]);
-    expect([
-      conta("I|VISTA"),
-      conta("I|AEC"),
-      conta("TAD|—"),
-      conta("Estudo Individual|—"),
-    ]).toEqual([false, false, false, false]);
+describe("R-6 · o que conta na CH vem do gerador, pela origem do sistema", () => {
+  it("⚠️ a marca «conta no nº do DSA» saiu com a contagem CRONOS (spec 016, D-COR-1)", () => {
+    // A semana do curso é de calendário: nenhum item do catálogo decide mais o número.
+    expect(Object.keys(porChave.get("I|1") ?? {})).not.toContain("contaNoNumero");
   });
   it("a CH: todo item com disciplina na ocupação — a AEC não (ela só se exibe)", () => {
     expect(porChave.get("I|VISTA")?.disciplinaDaCh).toBe("I");
@@ -174,7 +168,6 @@ describe("`FR-019`, `FR-029` · as listas de escolha", () => {
     insumo,
     itens,
     rotulosDasSemanas: ["Semana 15"],
-    chaveDaSemanaDoInicio: 202615,
   });
 
   it("COD e ITEM saem do catálogo", () => {

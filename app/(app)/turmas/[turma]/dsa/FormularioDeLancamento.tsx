@@ -50,6 +50,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import type { InstrumentoOferecido } from "@/lib/dominio/dsa/instrumento-da-prova";
+import {
+  frasePara,
+  preencherLancamento,
+  type AtribuicaoPorDisciplina,
+  type AtribuicaoPorUnidade,
+  type MotivoDoInstrutorVazio,
+} from "@/lib/dominio/dsa/pre-preenchimento";
 import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/rotulos";
 import { provasParaSessaoNoDia } from "@/lib/dominio/dsa/sessao-de-aplicacao";
 import type { TempoParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
@@ -72,8 +79,6 @@ export type UnidadeOferecida = {
   readonly restante: number;
   /** A técnica sugerida da unidade — o pré-preenchimento da coluna T/E. */
   readonly tecnicaSugerida: string | null;
-  /** Quem está atribuído a esta unidade nesta turma, quando há. */
-  readonly atribuidoId: string | null;
 };
 
 /** Uma disciplina da turma (todas as ativas do curso — `D-DSA-1`). */
@@ -128,6 +133,12 @@ export type FormularioDeLancamentoProps = {
   /** Os TA do dia, com o horário de cada um (`temposParaEscolher`). */
   readonly temposDoDia: readonly TempoParaEscolher[];
   readonly unidades: readonly UnidadeOferecida[];
+  /**
+   * As atribuições da turma, em antiguidade — por UE e por disciplina: os dois primeiros degraus da
+   * sugestão de instrutor (`preencherLancamento`, FR-012.2 da spec 016). Ausentes, nada é sugerido.
+   */
+  readonly atribuicoesPorUe?: readonly AtribuicaoPorUnidade[];
+  readonly atribuicoesPorDisciplina?: readonly AtribuicaoPorDisciplina[];
   readonly disciplinas: readonly DisciplinaOferecida[];
   readonly avaliacoesParaVista: readonly AvaliacaoOferecida[];
   readonly avaliacoesDoCurriculo?: readonly ItemDoCurriculoOferecido[];
@@ -203,6 +214,8 @@ export function FormularioDeLancamento({
   taInicial,
   temposDoDia,
   unidades,
+  atribuicoesPorUe = [],
+  atribuicoesPorDisciplina = [],
   disciplinas,
   avaliacoesParaVista,
   avaliacoesDoCurriculo = [],
@@ -217,6 +230,11 @@ export function FormularioDeLancamento({
   aoFechar,
 }: FormularioDeLancamentoProps) {
   const [tipo, definirTipo] = React.useState<Tipo>("aula");
+  /* Por que o instrutor não veio sugerido — a frase de `frasePara` (`RN-DEG-01`), nunca campo mudo. */
+  const [motivoDoInstrutor, definirMotivoDoInstrutor] =
+    React.useState<MotivoDoInstrutorVazio>(null);
+  /* O último instrutor que a SUGESTÃO pôs — só ele sai quando a disciplina nova não sugere ninguém. */
+  const [instrutorSugerido, definirInstrutorSugerido] = React.useState<string | null>(null);
   const [disciplinaId, definirDisciplina] = React.useState("");
   const [unidadeId, definirUnidade] = React.useState("");
   const [avaliacaoId, definirAvaliacao] = React.useState("");
@@ -286,11 +304,43 @@ export function FormularioDeLancamento({
     }
   }
 
+  /*
+   * ⚠️ **A SUGESTÃO É A DE `preencherLancamento`, A FUNÇÃO ÚNICA** (FR-012.2 da spec 016; `FR-014` da spec
+   * 013): instrutor pela cascata UE da turma → disciplina na turma → vazio; técnica e tópico da UE. A mesma
+   * que a planilha de contingência usa — até 18/10/2026 a tela pré-preenchia à mão, só pela UE, e a planilha
+   * sugeria mais do que a tela. ⚠️ **Só na aula**: é dela a cascata, e é ela que exige instrutor.
+   */
+  function sugerir(disciplina: string, unidade: string | null) {
+    const u = unidade === null ? undefined : unidades.find((x) => x.id === unidade);
+    const p = preencherLancamento({
+      disciplinaId: disciplina,
+      unidadeEnsinoId: unidade,
+      porUnidade: atribuicoesPorUe,
+      porDisciplina: atribuicoesPorDisciplina,
+      tecnicaSugerida: u?.tecnicaSugerida ?? null,
+      topico: u?.topico ?? null,
+      salaDaTurma,
+    });
+    if (tipo === "aula") {
+      /*
+       * ⚠️ **O QUE A PESSOA ESCOLHEU NÃO É APAGADO; O QUE A SUGESTÃO PÔS, É** — trocar de disciplina para uma
+       *    sem atribuição deixaria o instrutor da anterior no campo, um valor plausível e errado que grava.
+       */
+      if (p.instrutorId !== null) definirQuemMinistra(p.instrutorId);
+      else if (quemMinistra !== "" && quemMinistra === instrutorSugerido) definirQuemMinistra("");
+      definirInstrutorSugerido(p.instrutorId);
+      definirMotivoDoInstrutor(p.motivoDoInstrutorVazio);
+    }
+    return p;
+  }
+
   function escolherDisciplina(id: string): void {
     definirDisciplina(id);
     definirUnidade("");
     definirAvaliacao("");
     definirItem("");
+    if (id === "") definirMotivoDoInstrutor(null);
+    else sugerir(id, null);
   }
 
   /* O tempo do item é o palpite dos tempos — editável, como todo pré-preenchimento. */
@@ -310,9 +360,9 @@ export function FormularioDeLancamento({
     definirUnidade(id);
     const u = unidades.find((x) => x.id === id);
     if (!u) return;
-    if (u.atribuidoId) definirQuemMinistra(u.atribuidoId);
-    if (u.tecnicaSugerida) definirTecnica(u.tecnicaSugerida);
-    if (u.topico) definirConteudo(u.topico);
+    const p = sugerir(u.disciplinaId, id);
+    if (p.tecnica) definirTecnica(p.tecnica);
+    if (p.conteudo) definirConteudo(p.conteudo);
     /* O restante da unidade é um bom palpite para os tempos — nunca mais que isso. */
     if (u.restante > 0) definirTempos(Math.min(u.restante, 4));
   }
@@ -741,6 +791,11 @@ export function FormularioDeLancamento({
           slot="responsavel-do-lancamento"
         />
       )}
+      {tipo === "aula" && quemMinistra === "" && frasePara(motivoDoInstrutor) !== null ? (
+        <p className="text-xs text-atrasado-tinta" data-slot="aviso-sem-atribuicao">
+          {frasePara(motivoDoInstrutor)}
+        </p>
+      ) : null}
 
       {tipo === "avaliacao" ? (
         <div className="flex flex-col gap-1">

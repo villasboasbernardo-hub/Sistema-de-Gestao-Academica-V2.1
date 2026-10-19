@@ -13,7 +13,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { MarcaDeConflito } from "@/lib/dominio/dsa/conflitos";
-import { montarSemana, type FatoDaSemana } from "@/lib/dominio/dsa/grade";
+import { MOTIVO_NO_MESMO_TA, montarSemana, type FatoDaSemana } from "@/lib/dominio/dsa/grade";
+import { gradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import { relogioDoCatalogo, relogioDoRegime } from "@/lib/dominio/dsa/horario-do-bloco";
 import { camposDoEstudoIndividual, LOCAL_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/rotulos";
 import {
@@ -417,8 +418,7 @@ describe("`SC-014` · o rodapé traz SÓ o que aparece na semana", () => {
 
 describe("`FR-039` e `SC-015` · os avisos ficam na TELA, antes de imprimir", () => {
   const SEM_FALTA = {
-    numeroDoDsa: 7,
-    motivoDoNumeroAusente: null,
+    semanaDoCurso: { numero: 7, motivo: null, aviso: null },
     alunos: 24,
     semRelogio: false,
     semAssinaturaEsquerda: false,
@@ -433,8 +433,11 @@ describe("`FR-039` e `SC-015` · os avisos ficam na TELA, antes de imprimir", ()
   it("nomeia cada falta, e o motivo do número ausente vai na frase — `D-7`", () => {
     const avisos = avisosAntesDeImprimir({
       ...SEM_FALTA,
-      numeroDoDsa: null,
-      motivoDoNumeroAusente: "a turma não tem data de início cadastrada.",
+      semanaDoCurso: {
+        numero: null,
+        motivo: "a turma não tem data de início cadastrada.",
+        aviso: null,
+      },
       alunos: null,
       semRelogio: true,
       linhasImpressas: 0,
@@ -522,5 +525,46 @@ describe("o local do Estudo Individual é a Biblioteca", () => {
       local: "Biblioteca",
       categoria_normativa: "Estudo_Individual",
     });
+  });
+});
+
+/*
+ * ⚠️ **FR-012.3 da spec 016 · O SEGUNDO NO MESMO TA SAI NO PAPEL, NA LISTA DE FORA DA GRADE.** Até
+ * 17/10/2026 ele sumia: o papel lê as células, e a célula só tinha um.
+ */
+describe("FR-012.3 · dois lançamentos no mesmo TA, no papel", () => {
+  const primeiro = fato({
+    fatoId: "p1",
+    codigo: "REG-000001",
+    criadoEm: "2026-10-01T10:00:00Z",
+    conteudo: "O lançado primeiro",
+  });
+  const segundo = fato({
+    fatoId: "p2",
+    codigo: "REG-000002",
+    criadoEm: "2026-10-02T10:00:00Z",
+    conteudo: "O lançado depois",
+  });
+
+  it("o primeiro fica na grade; o segundo, na lista de fora da grade, com o motivo", () => {
+    const dia = primeiroDia({ fatos: [segundo, primeiro] });
+    expect(dia.linhas.map((l) => l.conteudo)).toContain("O lançado primeiro");
+    expect(dia.linhas.map((l) => l.conteudo)).not.toContain("O lançado depois");
+    expect(dia.noMesmoTa?.map((l) => [l.conteudo, l.taInicial, l.tempos])).toEqual([
+      ["O lançado depois", 1, 2],
+    ]);
+    const grade = gradeDoPapel([dia], relogioDoRegime(G45));
+    expect(grade?.foraDaGrade.map((f) => [f.linha.conteudo, f.motivo])).toEqual([
+      ["O lançado depois", MOTIVO_NO_MESMO_TA],
+    ]);
+    /* Os cartões: o primeiro, e a linha fixa de Estudo Individual do dia — o segundo, não. */
+    const cartoes = grade?.cartoes.map((c) => c.linha.conteudo) ?? [];
+    expect(cartoes).toContain("O lançado primeiro");
+    expect(cartoes).not.toContain("O lançado depois");
+  });
+
+  it("controle: sem segundo no mesmo TA, nada vai para a lista", () => {
+    const dia = primeiroDia({ fatos: [primeiro] });
+    expect(dia.noMesmoTa).toBeUndefined();
   });
 });

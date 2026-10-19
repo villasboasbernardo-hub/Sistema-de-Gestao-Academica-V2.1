@@ -3,8 +3,8 @@
  * `FR-024`, `SC-003`, `SC-005` e as reexpressões da `DP-1` (I-P5, I-P10, I-P12) da spec 015.
  *
  * ⚠️ **O ESPERADO SAI DO DOMÍNIO, nunca de uma segunda conta**: `montarSemana` → `documentoImpresso`
- * → `gradeDoPapel` para a grade, `tabelaDeCh` e `legendaDeTecnicas` para o rodapé, `numeroDoDsa` para
- * o número. A planilha chega ao mesmo resultado por fórmula, a partir da entrada.
+ * → `gradeDoPapel` para a grade, `tabelaDeCh` e `legendaDeTecnicas` para o rodapé, `semanaDoCurso` para
+ * a «Semana N de T». A planilha chega ao mesmo resultado por fórmula, a partir da entrada.
  */
 import { describe, expect, it } from "vitest";
 
@@ -18,7 +18,7 @@ import {
   DISCIPLINAS,
   SEMANAS,
   insumoSintetico,
-  numeroDaSemana,
+  rotuloDaSemanaDoCursoSintetica,
   papelDaSemana,
   rodapeDaSemana,
 } from "./planilha/sintetico";
@@ -55,8 +55,8 @@ describe.each(SEMANAS.map((s) => [s.numero, s] as const))("semana %i", (_, s) =>
   const rotulo = insumo.semanas.find((x) => x.semana.numero === s.numero)?.rotulo ?? "";
   const lida = lerImpressao(pasta, g, rotulo, conhecidos);
 
-  it("I-P12 · o seletor escolhe exatamente esta semana", () => {
-    expect(lida.texto(6, 5)).toBe(`Semana ${s.numero}/2026`);
+  it("I-P12 · o seletor escolhe exatamente esta semana — pela «Semana N de T» (spec 016, FR-009.5)", () => {
+    expect(lida.texto(6, 5)).toBe(rotuloDaSemanaDoCursoSintetica(s.numero));
   });
 
   it("FR-012 · os cartões: posição, texto e tipo — o de `gradeDoPapel` (I-P5, I-P10)", () => {
@@ -123,7 +123,7 @@ describe.each(SEMANAS.map((s) => [s.numero, s] as const))("semana %i", (_, s) =>
     grade.colunas.forEach((c, d) => {
       expect
         .soft(lida.cabecalhoDoDia(d))
-        .toBe(`${c.sigla} ${c.diaMes}${c.bloqueio ? `\n${c.bloqueio}` : ""}`);
+        .toBe(`${c.sigla} ${c.dataLegivel}${c.bloqueio ? `\n${c.bloqueio}` : ""}`);
     });
   });
 
@@ -152,9 +152,11 @@ describe.each(SEMANAS.map((s) => [s.numero, s] as const))("semana %i", (_, s) =>
     expect(tecnicas).toEqual(legenda.map((i) => ({ sigla: i.sigla, nome: i.nome })));
   });
 
-  it("FR-007 · o nº do DSA é o de `numeroDoDsa`", () => {
-    const n = numeroDaSemana(s.numero);
-    expect(lida.texto(6, 7)).toBe(`DSA Nº ${n ?? "—"}`);
+  it("spec 016, FR-009.2 · a identificação não traz mais o «DSA Nº» nem a semana ISO", () => {
+    const linha = [3, 5, 7, 9, 11, 13].map((c) => lida.texto(6, c)).join(" | ");
+    expect(linha).not.toContain("Nº");
+    expect(linha).not.toContain(`Semana ${s.numero}/`);
+    expect(lida.texto(6, 7)).toMatch(/^Período /);
   });
 
   it("o Estudo Individual fixo no TA seguinte ao último lançado (`slotDoEstudoIndividual`)", () => {

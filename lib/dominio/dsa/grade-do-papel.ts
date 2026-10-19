@@ -18,6 +18,8 @@
  * ⚠️ **O BLOCO QUE ATRAVESSA O ALMOÇO VIRA DOIS CARTÕES** (`SC-011`, o `D-3` da planilha): um por
  * período, cada um com os TA dele — o almoço nunca fica dentro de um cartão.
  */
+import { MOTIVO_NO_MESMO_TA } from "./grade";
+import { dataParaLeitura, siglaDoDiaDaSemana } from "../../formato/data";
 import type { DiaImpresso, LinhaImpressa } from "./impressao";
 import { minutosEntre, type Periodo, type Relogio } from "./horario-do-bloco";
 
@@ -41,7 +43,8 @@ export type ColunaDaGrade = {
   /** `SEG` … `SÁB`. */
   readonly sigla: string;
   /** `DD/MM`. */
-  readonly diaMes: string;
+  /** `DD/MM/AAAA`, por `dataParaLeitura` (FR-005.1 da spec 016). */
+  readonly dataLegivel: string;
   /** A descrição do feriado de dia inteiro, ou `null`. */
   readonly bloqueio: string | null;
 };
@@ -70,7 +73,12 @@ export type GradeDoPapel = {
   readonly colunas: readonly ColunaDaGrade[];
   readonly cartoes: readonly CartaoDaGrade[];
   /** Linha que não tem tempo no relógio (TA ausente ou fora dele) — vai para baixo da grade, nunca some. */
-  readonly foraDaGrade: readonly { readonly coluna: number; readonly linha: LinhaImpressa }[];
+  readonly foraDaGrade: readonly {
+    readonly coluna: number;
+    readonly linha: LinhaImpressa;
+    /** Por que não coube — hoje só o do mesmo TA (FR-012.3 da spec 016); sem ele, fora do relógio. */
+    readonly motivo?: string;
+  }[];
   /** Os tempos parados de parte do dia (spec 014, `FR-027`), por coluna e faixa, com o rótulo. */
   readonly paradas: readonly {
     readonly coluna: number;
@@ -87,15 +95,15 @@ export type GradeDoPapel = {
  */
 export const SIGLAS_DE_AVALIACAO: ReadonlySet<string> = new Set(["PM", "PO", "PP"]);
 
-const SIGLAS_DOS_DIAS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as const;
-
+/*
+ * ⚠️ **A SIGLA E A DATA SAEM DO PONTO ÚNICO, COM O ANO** (spec 016, FR-005.1; Q-9): até 18/10/2026 o papel
+ * tinha a própria lista de dias e um `DD/MM` montado à mão — o quinto dono do formato de data.
+ */
 function colunaDoDia(dia: DiaImpresso): ColunaDaGrade {
-  const [ano, mes, d] = dia.data.split("-").map(Number);
-  const semana = new Date(Date.UTC(ano ?? 1970, (mes ?? 1) - 1, d ?? 1)).getUTCDay();
   return {
     data: dia.data,
-    sigla: SIGLAS_DOS_DIAS[semana] ?? "",
-    diaMes: `${String(d).padStart(2, "0")}/${String(mes).padStart(2, "0")}`,
+    sigla: siglaDoDiaDaSemana(dia.data),
+    dataLegivel: dataParaLeitura(dia.data),
     bloqueio: dia.bloqueio,
   };
 }
@@ -163,7 +171,7 @@ export function gradeDoPapel(
 
   const periodoDe = new Map(tempos.map((t) => [t.numero, t.periodo] as const));
   const cartoes: CartaoDaGrade[] = [];
-  const foraDaGrade: { coluna: number; linha: LinhaImpressa }[] = [];
+  const foraDaGrade: { coluna: number; linha: LinhaImpressa; motivo?: string }[] = [];
 
   dias.forEach((dia, coluna) => {
     for (const linha of dia.linhas) {
@@ -198,6 +206,13 @@ export function gradeDoPapel(
           linha,
         });
       });
+    }
+  });
+
+  /* FR-012.3 da spec 016: o segundo do mesmo TA não disputa a célula — vai para a lista, com o motivo. */
+  dias.forEach((dia, coluna) => {
+    for (const linha of dia.noMesmoTa ?? []) {
+      foraDaGrade.push({ coluna, linha, motivo: MOTIVO_NO_MESMO_TA });
     }
   });
 

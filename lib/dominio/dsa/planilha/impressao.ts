@@ -25,7 +25,7 @@ import {
   SIGLA_DO_ESTUDO_INDIVIDUAL,
 } from "../impressao";
 import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "../rotulos";
-import { instanteComHoraParaLeitura } from "../../../formato/data";
+import { DIA_DA_SEMANA, instanteComHoraParaLeitura } from "../../../formato/data";
 import {
   concat,
   fn,
@@ -58,7 +58,7 @@ import {
   P_LINHAS_DO_CABECALHO,
   P_PRIMEIRA_LINHA,
 } from "./layout";
-import { DIAS_NA_ENTRADA, SIGLAS_DOS_DIAS, type GeometriaDaEntrada } from "./preenchimento";
+import { DIAS_NA_ENTRADA, type GeometriaDaEntrada } from "./preenchimento";
 
 /** O cabeçalho institucional — o mesmo texto fixo do `/print/dsa` (conferido por teste). */
 export const SIGLA_DA_ORGANIZACAO = "CIAARA";
@@ -190,11 +190,20 @@ const daEntrada = (coluna: number, g: GeometriaDaEntrada) =>
 const naEntrada = (coluna: number, linha: Formula, g: GeometriaDaEntrada) =>
   fn("INDEX", daEntrada(coluna, g), linha);
 
-/** `DD/MM/AAAA` de um número de série, sem `TEXT` (que depende do idioma do programa, R-4). */
-export function dataPorExtenso(serie: Formula, comAno = true): Formula {
+/**
+ * `DD/MM/AAAA` de um número de série, sem `TEXT` (que depende do idioma do programa, R-4). ⚠️ **SEMPRE COM
+ * O ANO** (spec 016, FR-005.1; Q-9): até 18/10/2026 o cabeçalho dos dias e a lista fora da grade saíam
+ * `DD/MM`.
+ */
+export function dataPorExtenso(serie: Formula): Formula {
   const doisDigitos = (x: Formula) => fn("RIGHT", concat(txt("0"), x), num(2));
-  const diaMes = concat(doisDigitos(fn("DAY", serie)), txt("/"), doisDigitos(fn("MONTH", serie)));
-  return comAno ? concat(diaMes, txt("/"), fn("YEAR", serie)) : diaMes;
+  return concat(
+    doisDigitos(fn("DAY", serie)),
+    txt("/"),
+    doisDigitos(fn("MONTH", serie)),
+    txt("/"),
+    fn("YEAR", serie),
+  );
 }
 
 /** A aba IMPRESSÃO inteira. */
@@ -324,25 +333,18 @@ export function abaDeImpressao(entrada: {
     estilo: { negrito: true, tamanho: 14, corDoTexto: COR_DO_CABECALHO },
   });
   definir(aba, 5, 1, { valor: SUBTITULO_DO_DOCUMENTO, estilo: { corDoTexto: COR_SUAVE } });
-  const numero = concat(naEntrada(PC.numero, cabecalho, ge), vazio);
+  /*
+   * ⚠️ **"SEMANA N DE T" NO LUGAR DE "SEMANA 41/2026" E "DSA Nº"** (spec 016, FR-009.5; D-COR-1): a
+   * mesma célula da PREENCHIMENTO que o cabeçalho de cada semana mostra — a semana ISO saiu do papel.
+   */
+  const semanaDoCurso = concat(naEntrada(PC.semanaDoCurso, cabecalho, ge), vazio);
   const alunos = naEntrada(PC.alunos, cabecalho, ge);
   const alt = concat(naEntrada(PC.alt, cabecalho, ge), vazio);
-  const chave = geral(GERAL.chave);
-  const numeroDaSemana = fn("MOD", chave, num(100));
   const identificacao: readonly [number, Formula][] = [
     [conteudoDoDia(0), txt(`Turma ${entrada.turma}`)],
+    [conteudoDoDia(1), semanaDoCurso],
     [
-      conteudoDoDia(1),
-      concat(
-        txt("Semana "),
-        numeroDaSemana,
-        txt("/"),
-        op(op(chave, "-", numeroDaSemana), "/", num(100)),
-      ),
-    ],
-    [conteudoDoDia(2), concat(txt("DSA Nº "), numero)],
-    [
-      conteudoDoDia(3),
+      conteudoDoDia(2),
       concat(
         txt("Período "),
         dataPorExtenso(geral(GERAL.segunda)),
@@ -351,7 +353,7 @@ export function abaDeImpressao(entrada: {
       ),
     ],
     [
-      conteudoDoDia(4),
+      conteudoDoDia(3),
       concat(
         txt("ALT "),
         SE(igual(alt, vazio), txt("—"), alt),
@@ -378,8 +380,9 @@ export function abaDeImpressao(entrada: {
     const bloqueio = doDia(d, DIA.bloqueio);
     definir(aba, g.linhaDoCabecalhoDosDias, conteudoDoDia(d), {
       formula: concat(
-        txt(`${SIGLAS_DOS_DIAS[d]} `),
-        dataPorExtenso(doDia(d, DIA.data), false),
+        /* A coluna `d` é o dia `d` da semana a partir da segunda — a sigla do ponto único. */
+        txt(`${DIA_DA_SEMANA[d + 1] ?? ""} `),
+        dataPorExtenso(doDia(d, DIA.data)),
         SE(igual(bloqueio, vazio), vazio, concat(QUEBRA, bloqueio)),
       ),
       estilo: cabecaDaGrade,
@@ -589,7 +592,7 @@ export function abaDeImpressao(entrada: {
           "IFERROR",
           concat(
             txt("SÁB "),
-            dataPorExtenso(doDia(5, DIA.data), false),
+            dataPorExtenso(doDia(5, DIA.data)),
             txt(" · "),
             ta,
             txt("º TA · "),
@@ -845,9 +848,9 @@ export function abaDeImpressao(entrada: {
   definir(aba, g.emitido, 1, {
     formula: concat(
       txt(
-        `Emitido pela planilha de contingência gerada em ${instanteComHoraParaLeitura(entrada.geradaEm)} · Marinha do Brasil · ${SIGLA_DA_ORGANIZACAO} · ${entrada.curso} · DSA Nº `,
+        `Emitido pela planilha de contingência gerada em ${instanteComHoraParaLeitura(entrada.geradaEm)} · Marinha do Brasil · ${SIGLA_DA_ORGANIZACAO} · ${entrada.curso} · `,
       ),
-      numero,
+      semanaDoCurso,
     ),
     estilo: { tamanho: 7, corDoTexto: COR_SUAVE },
   });

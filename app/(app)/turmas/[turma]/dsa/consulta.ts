@@ -42,7 +42,7 @@ import { enderecoDoDsa, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 
 /** Nunca `select *`. */
 export const COLUNAS_DA_TURMA_DO_DSA =
-  "id, codigo, turma, ano_letivo, status, modalidade, sala_alocada, alunos, curso_id, data_inicio, inicio_etapa_presencial, termino_etapa_presencial";
+  "id, codigo, turma, ano_letivo, status, modalidade, sala_alocada, alunos, curso_id, data_inicio, data_termino, inicio_etapa_presencial, termino_etapa_presencial";
 
 export const COLUNAS_DA_OCUPACAO =
   "turma_id, data, ta_inicial, ta_final, tempos_consumidos, origem, fato_id, disciplina_id, instrutor_id, fiscal_id, local, herdado, sessao_id, numero_sessao";
@@ -230,6 +230,12 @@ export type ConteudoDoFato = {
   readonly instrumentoId?: string | null | undefined;
   /** O item do currículo da AVALIAÇÃO — com item, o cartão não oferece instrumento (é o do item). */
   readonly avaliacaoCurriculoId?: string | null | undefined;
+  /**
+   * `codigo` e `criado_em` do lançamento (da sessão, na vista e na 2ª aplicação em diante) — a ordem estável de
+   * dois lançamentos no mesmo TA (FR-012.3 da spec 016). Nunca o `fato_id`, que muda a cada carga.
+   */
+  readonly codigo?: string | null | undefined;
+  readonly criadoEm?: string | null | undefined;
 };
 
 /** As origens que `vw_ocupacao_ta` declara — a que não estiver aqui cai em `aula` (e é o que não pode acontecer). */
@@ -346,6 +352,8 @@ export function fatoDaOcupacao(
     instrutor: responsavel,
     local: linha.local,
     ...(extra?.apoio === true ? { apoio: true } : {}),
+    codigo: extra?.codigo ?? null,
+    criadoEm: extra?.criadoEm ?? null,
     /* ⚠️ O GRAVADO, CRU — é dele que o cartão único se preenche (ajuste 2 do PR #40). */
     gravado: {
       instrutorId: linha.instrutor_id,

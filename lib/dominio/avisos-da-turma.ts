@@ -22,8 +22,14 @@
  * Retrato da base, medido em 16/09/2026: **11** incoerências (1 + 10), `sem_janela` **1**,
  * `sem_sala` **2**, `sem_efetivo_fora_de_planejada` **0**, `sem_disciplina` **0**.
  *
+ * ⚠️ **O AVISO DE DURAÇÃO É DO BLOCO 1** (spec 016, FR-009.7; Q-1, Bernardo Villas Boas, 17/10/2026):
+ * > *"se a turma for mais longa, T = semanas corridas da turma, e a ficha da turma mostra o aviso de
+ * > cadastro «a turma tem N semanas e o curso, M»."*
+ * O texto sai de `avisoDeDuracao`, a mesma conta da «Semana N de T» — nunca uma segunda.
+ *
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
+import { avisoDeDuracao } from "@/lib/dominio/dsa/semana-do-curso";
 
 /** O que a turma precisa trazer para a leitura. */
 export type TurmaParaAvisos = {
@@ -35,6 +41,11 @@ export type TurmaParaAvisos = {
   readonly alunos: number | null;
   /** Quantas linhas ativas de `turma_disciplina` a turma tem. */
   readonly disciplinasAtivas: number;
+  /**
+   * `cursos.duracao_semanas` (FR-009.7). Opcional porque a aba *Grade* do curso não o passa: lá a lista
+   * é de todas as turmas, e o aviso de cadastro é da ficha.
+   */
+  readonly duracaoSemanasDoCurso?: number | null;
 };
 
 export type AvisoDaTurma = {
@@ -86,6 +97,13 @@ export function avisosDaTurma(turma: TurmaParaAvisos, hoje: string): readonly Av
   if (turma.disciplinasAtivas === 0) {
     avisos.push({ chave: "sem_disciplina", titulo: "Turma sem disciplina na grade" });
   }
+
+  const duracao = avisoDeDuracao({
+    dataInicio: turma.dataInicio,
+    dataTermino: turma.dataTermino,
+    duracaoSemanasDoCurso: turma.duracaoSemanasDoCurso ?? null,
+  });
+  if (duracao !== null) avisos.push({ chave: "turma_mais_longa_que_o_curso", titulo: duracao });
 
   return avisos;
 }

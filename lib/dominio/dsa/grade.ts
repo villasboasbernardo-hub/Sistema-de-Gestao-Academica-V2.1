@@ -67,6 +67,12 @@ export type FatoDaSemana = {
    */
   readonly apoio?: boolean;
   /**
+   * `criado_em` e `codigo` do lançamento — o desempate de dois lançamentos no mesmo TA (FR-012.3 da spec
+   * 016). Opcionais porque só a leitura do banco os tem; sem eles, vale a ordem de chegada.
+   */
+  readonly criadoEm?: string | null;
+  readonly codigo?: string | null;
+  /**
    * O que está GRAVADO na linha, cru — é daqui que o cartão único se preenche (ajuste 2 do PR #40).
    *
    * ⚠️ **OS CAMPOS ACIMA SÃO DE EXIBIÇÃO, e reabrir o editor com eles regravava o que se mostra no
@@ -149,6 +155,25 @@ export type Semana = {
 export const MOTIVO_DO_APOIO_NO_MESMO_TEMPO =
   "Apoio Individualizado — alunos específicos, no mesmo tempo de outro lançamento da turma (não é conflito).";
 
+/**
+ * O motivo do segundo lançamento que começa no MESMO TA de outro (FR-012.3 da spec 016): ele sai da
+ * célula e vai para «sem posição» — na tela, no papel e na planilha (`MOTIVO_SOBREPOSTO` dela é este).
+ */
+export const MOTIVO_NO_MESMO_TA = "no mesmo TA de outro lançamento";
+
+/**
+ * A ordem estável de dois lançamentos no mesmo TA: TA inicial, depois o criado antes, depois o código
+ * (FR-012.3). ⚠️ **NUNCA O `fato_id`**: ele é um `uuid` novo a cada carga, e a escolha de quem ocupava a
+ * célula mudava de uma carga para a outra com o mesmo dado (medido em 09/10/2026, spec 015).
+ */
+function antesNaGrade(a: FatoDaSemana, b: FatoDaSemana): number {
+  const ta = (a.taInicial ?? 0) - (b.taInicial ?? 0);
+  if (ta !== 0) return ta;
+  const criado = (a.criadoEm ?? "").localeCompare(b.criadoEm ?? "");
+  if (criado !== 0) return criado;
+  return (a.codigo ?? "").localeCompare(b.codigo ?? "");
+}
+
 /** O Apoio divide algum TA com outro lançamento (não Apoio) posicionado no mesmo dia? */
 function divideTempoComOutro(apoio: FatoDaSemana, fatos: readonly FatoDaSemana[]): boolean {
   if (apoio.taInicial === null || apoio.tempos === null) return false;
@@ -205,7 +230,9 @@ export function montarSemana(entrada: {
 
   const posicionados: BlocoNaGrade[] = [];
   const faixaPorDia = new Map<string, FatoSemPosicao[]>();
-  for (const fato of fatos) {
+  /* O primeiro de cada dia e TA, pela ordem estável — os outros vão para a faixa (FR-012.3). */
+  const ocupado = new Set<string>();
+  for (const fato of [...fatos].sort(antesNaGrade)) {
     const paraPosicao = {
       origem: fato.origem,
       herdado: fato.herdado,
@@ -226,6 +253,14 @@ export function montarSemana(entrada: {
       faixaPorDia.set(fato.data, lista);
       continue;
     }
+    const chaveDoInicio = `${fato.data}|${fato.taInicial}`;
+    if (ocupado.has(chaveDoInicio)) {
+      const lista = faixaPorDia.get(fato.data) ?? [];
+      lista.push({ fato, motivo: MOTIVO_NO_MESMO_TA });
+      faixaPorDia.set(fato.data, lista);
+      continue;
+    }
+    ocupado.add(chaveDoInicio);
     const marca = marcas.get(fato.fatoId);
     posicionados.push({
       ...fato,

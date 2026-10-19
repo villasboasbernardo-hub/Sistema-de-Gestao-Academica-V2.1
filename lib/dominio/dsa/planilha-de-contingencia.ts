@@ -16,12 +16,7 @@
  */
 import type { Pasta } from "../../planilha/pasta";
 
-import {
-  abaDoCatalogo,
-  chaveDaSemanaIso,
-  itensDoCatalogo,
-  tecnicasDaLegenda,
-} from "./planilha/catalogo";
+import { abaDoCatalogo, itensDoCatalogo, tecnicasDaLegenda } from "./planilha/catalogo";
 import {
   AVISO_SEMANA_SEM_RELOGIO,
   abaDeHorarios,
@@ -41,7 +36,6 @@ import {
   retratoDaSemana,
   type GeometriaDaEntrada,
 } from "./planilha/preenchimento";
-import { semanaIsoDe } from "../carga-semanal";
 import type { InsumoDaPlanilha } from "./planilha/tipos";
 
 /** Linhas de sobra na lista *sem posição* de cada semana, para o que for lançado offline. */
@@ -109,12 +103,10 @@ export function montarPlanilhaComGeometria(insumo: InsumoDaPlanilha): {
     geradaEm: insumo.geradaEm,
     rotuloInicial: insumo.semanas[insumo.semanaInicial]?.rotulo ?? insumo.semanas[0]?.rotulo ?? "",
   });
-  const inicio = insumo.turma.dataInicio === null ? null : semanaIsoDe(insumo.turma.dataInicio);
   const catalogoDaPasta = abaDoCatalogo({
     insumo,
     itens,
     rotulosDasSemanas: insumo.semanas.map((s) => s.rotulo),
-    chaveDaSemanaDoInicio: inicio === null ? null : chaveDaSemanaIso(inicio.ano, inicio.numero),
   });
   const horarios = abaDeHorarios(relogios);
 

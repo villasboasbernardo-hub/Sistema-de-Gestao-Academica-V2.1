@@ -17,7 +17,8 @@ import { conteudoDoDia, type GeometriaDaImpressao } from "@/lib/dominio/dsa/plan
 import type { ImpressaoLida } from "./leitura-da-pasta";
 
 export type PapelDaSemana = {
-  readonly numero: number | null;
+  /** "Semana N de T" (spec 016, FR-009.5) — o que o papel imprime no lugar do «Nº». */
+  readonly rotuloDaSemanaDoCurso: string;
   readonly alunos: number | null;
   readonly dias: readonly DiaImpresso[];
   readonly grade: GradeDoPapel | null;
@@ -130,7 +131,7 @@ export function divergenciasDoPapel(
       confere(
         `dia ${d}`,
         lida.cabecalhoDoDia(d),
-        `${c.sigla} ${c.diaMes}${c.bloqueio ? `\n${c.bloqueio}` : ""}`,
+        `${c.sigla} ${c.dataLegivel}${c.bloqueio ? `\n${c.bloqueio}` : ""}`,
       ),
     );
   }
@@ -155,8 +156,8 @@ export function divergenciasDoPapel(
     legenda.join("\n"),
     papel.legenda.map((i) => `${i.sigla} — ${i.nome}`).join("\n"),
   );
-  confere("nº do DSA", lida.texto(6, conteudoDoDia(2)), `DSA Nº ${papel.numero ?? "—"}`);
-  confere("alunos", lida.texto(6, conteudoDoDia(4)), `ALT — · Alunos ${papel.alunos ?? "—"}`);
+  confere("semana do curso", lida.texto(6, conteudoDoDia(1)), papel.rotuloDaSemanaDoCurso);
+  confere("alunos", lida.texto(6, conteudoDoDia(3)), `ALT — · Alunos ${papel.alunos ?? "—"}`);
   (["esquerda", "direita"] as const).forEach((lado, i) => {
     const c = i === 0 ? conteudoDoDia(0) : conteudoDoDia(3);
     const r = papel.assinaturas[lado];

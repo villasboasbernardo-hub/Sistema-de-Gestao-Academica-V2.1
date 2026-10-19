@@ -40,7 +40,7 @@
  * ESLint). A semana, o relógio, as siglas e a execução chegam **por parâmetro**.
  */
 
-import { rotuloDaParadaParcial, type DiaDaGrade, type Semana } from "./grade";
+import { MOTIVO_NO_MESMO_TA, rotuloDaParadaParcial, type DiaDaGrade, type Semana } from "./grade";
 import { slotDoEstudoIndividual, tempoDeAula, type Relogio, type Trecho } from "./horario-do-bloco";
 import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "./rotulos";
 
@@ -112,6 +112,12 @@ export type DiaImpresso = {
    * tipo e o motivo, como na tela. A de dia inteiro já é o `bloqueio`.
    */
   readonly paradas?: readonly ParadaImpressa[];
+  /**
+   * O que começa no MESMO TA de outro lançamento e não coube na célula (FR-012.3 da spec 016): sai na
+   * lista de fora da grade, com o motivo `MOTIVO_NO_MESMO_TA`. ⚠️ **Os outros "sem posição" — os da
+   * carga, sem TA — continuam fora do papel**, como sempre; este é o único que tem TA e sumia.
+   */
+  readonly noMesmoTa?: readonly LinhaImpressa[];
 };
 
 /** Uma parada de parte do dia, no papel. */
@@ -308,14 +314,17 @@ export function diaImpresso(
 
   if (dia.bloqueio !== null) {
     /* ⚠️ Só o que foi LANÇADO: a linha fixa de EI não nasce em dia sem expediente. */
+    const noMesmoTaDoBloqueado = linhasNoMesmoTa(dia, entrada.tecnicas);
     return {
       data: dia.data,
       bloqueio: dia.bloqueio,
       linhas: doEi === null ? comuns : [...comuns, doEi],
+      ...(noMesmoTaDoBloqueado.length === 0 ? {} : { noMesmoTa: noMesmoTaDoBloqueado }),
     };
   }
 
   const ei = doEi ?? linhaFixaDoEstudoIndividual(dia.data, ultimoTa, entrada.relogio);
+  const noMesmoTa = linhasNoMesmoTa(dia, entrada.tecnicas);
   const paradas: ParadaImpressa[] = [];
   for (const p of dia.paradas) {
     if (p.taInicial === null || p.tempos === null) continue;
@@ -326,7 +335,30 @@ export function diaImpresso(
     bloqueio: null,
     linhas: ei === null ? comuns : [...comuns, ei],
     ...(paradas.length === 0 ? {} : { paradas }),
+    ...(noMesmoTa.length === 0 ? {} : { noMesmoTa }),
   };
+}
+
+/** As linhas do segundo lançamento no mesmo TA (FR-012.3) — como o papel imprime um bloco, sem horário. */
+function linhasNoMesmoTa(
+  dia: DiaDaGrade,
+  tecnicas: readonly TecnicaDoCatalogo[],
+): readonly LinhaImpressa[] {
+  return dia.semPosicao
+    .filter((s) => s.motivo === MOTIVO_NO_MESMO_TA)
+    .map(({ fato }) => ({
+      chave: fato.fatoId,
+      trechos: [],
+      taInicial: fato.taInicial,
+      tempos: fato.tempos,
+      disciplina: textoDoPapel(fato.disciplina),
+      conteudo: textoDoPapel(fato.conteudo),
+      local: textoDoPapel(fato.local),
+      te: fato.origem === "atividade_nao_letiva" ? "" : siglaOuExtenso(fato.tecnica, tecnicas),
+      instrutor: textoDoPapel(fato.instrutor),
+      estudoIndividual: false,
+      lancadoAFrente: false,
+    }));
 }
 
 /** O corpo do documento: os dias da semana, na ordem, já impressos. */
@@ -434,8 +466,15 @@ export function taLancadoAFrente(dias: readonly DiaImpresso[]): number {
  * bloqueio"*. Quem precisa do papel hoje imprime com o traço e corrige o cadastro depois.
  */
 export function avisosAntesDeImprimir(entrada: {
-  readonly numeroDoDsa: number | null;
-  readonly motivoDoNumeroAusente: string | null;
+  /**
+   * A semana do curso (spec 016, FR-009): sem número, o motivo vai no aviso; sem total, o aviso de
+   * cadastro. Substituiu o «Nº do DSA» em 17/10/2026 (D-COR-1).
+   */
+  readonly semanaDoCurso: {
+    readonly numero: number | null;
+    readonly motivo: string | null;
+    readonly aviso: string | null;
+  };
   readonly alunos: number | null;
   readonly semRelogio: boolean;
   readonly semAssinaturaEsquerda: boolean;
@@ -443,9 +482,11 @@ export function avisosAntesDeImprimir(entrada: {
   readonly linhasImpressas: number;
 }): readonly string[] {
   const avisos: string[] = [];
-  if (entrada.numeroDoDsa === null) {
-    const motivo = entrada.motivoDoNumeroAusente ?? "não foi possível calculá-lo";
-    avisos.push(`O número do DSA sai como “Nº —”: ${motivo}`);
+  if (entrada.semanaDoCurso.numero === null) {
+    const motivo = entrada.semanaDoCurso.motivo ?? "não foi possível calculá-la.";
+    avisos.push(`A semana do curso sai como «—»: ${motivo}`);
+  } else if (entrada.semanaDoCurso.aviso !== null) {
+    avisos.push(entrada.semanaDoCurso.aviso);
   }
   if (entrada.alunos === null) {
     avisos.push(

@@ -1051,6 +1051,31 @@ async function apagarAvaliacoes(
   if (error) throw new Error(`falha ao limpar as avaliações: ${error.message}`);
 }
 
+/**
+ * Apaga as linhas de turma de uma turma e as atribuições delas — por UE e por disciplina —, conferindo cada
+ * `delete` (dúvida 6 da conferência do PR #68, Bernardo Villas Boas, 18/10/2026).
+ *
+ * ⚠️ **`turma_disciplina_unidade` NÃO TEM `turma_id`**: ela se liga à turma pela `turma_disciplina_id`. A
+ *    limpeza antiga filtrava por `turma_id` e **descartava o erro** — a atribuição ficava, a linha da turma
+ *    (FK `restrict`) também, e a turma junto, sem nada acusar. É a mesma consulta que a tela do DSA tinha
+ *    errada (`PEND-DSA-SUGESTAO`). Agora o `delete` que falha derruba a limpeza com o nome da tabela.
+ */
+export async function apagarLinhasDaTurma(turmaId: string): Promise<void> {
+  const { data: linhas, error } = await admin()
+    .from("turma_disciplina")
+    .select("id")
+    .eq("turma_id", turmaId);
+  if (error) throw new Error(`falha ao ler as linhas da turma: ${error.message}`);
+  const ids = ((linhas ?? []) as { id: string }[]).map((l) => l.id);
+  if (ids.length === 0) return;
+  for (const tabela of ["turma_disciplina_unidade", "turma_disciplina_instrutor"] as const) {
+    const { error: erro } = await admin().from(tabela).delete().in("turma_disciplina_id", ids);
+    if (erro) throw new Error(`falha ao limpar ${tabela}: ${erro.message}`);
+  }
+  const { error: erroLinha } = await admin().from("turma_disciplina").delete().in("id", ids);
+  if (erroLinha) throw new Error(`falha ao limpar turma_disciplina: ${erroLinha.message}`);
+}
+
 export async function limparDsa(semeado: DsaSemeado | undefined): Promise<void> {
   if (!semeado) return;
   const s = semeado.turmaComRelogio
@@ -1097,8 +1122,7 @@ export async function limparDsa(semeado: DsaSemeado | undefined): Promise<void> 
     await admin().from("registros_aula").delete().eq("turma_id", id);
     await apagarAvaliacoes((q) => q.eq("turma_id", id));
     await admin().from("atividades_nao_letivas").delete().eq("turma_id", id);
-    await admin().from("turma_disciplina_unidade").delete().eq("turma_id", id);
-    await admin().from("turma_disciplina").delete().eq("turma_id", id);
+    await apagarLinhasDaTurma(id);
     /*
      * ⚠️ A TURMA É APAGADA, e não é zelo: `099_salas.sql` decide entre asserir e pular pela
      * pergunta `count(turmas) > 0`, e uma turma deixada atrás faz aquele arquivo ACHAR que a base

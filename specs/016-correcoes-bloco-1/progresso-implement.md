@@ -178,3 +178,203 @@ Os três reprovados pararam por tempo sob 4 processos: `admin-sobre-contas.spec.
 (a ficha ainda em *"Carregando a ficha da turma…"* no fim dos 10 s). **Isolados:** as três suítes juntas
 com 2 processos deram 28 de 29 — o do DSA de novo, por estouro do prazo total de 30 s na terceira
 passagem pela ficha —, e o caso do DSA sozinho passou **3 de 3**. Classe da `PEND-014-7`.
+
+## PR 2 — DSA, papel e planilha
+
+### Ponto de partida (T049) — 18/10/2026
+- **Conferência do PR #67 por Bernardo Villas Boas em 18/10/2026: APROVADO**, inclusive os blocos A (o
+  ativo do menu) e B (a disciplina fecha) da reconferência. Os lotes de dúvidas ficam como deixados; a
+  `PEND-016-4` só registrada, para fatia própria.
+- PR #67 mesclado por squash em **`a64791d`**; CI verde nos três blocos na `main` (run `39151912994`) e
+  Production servindo o merge — a tela de entrada traz a faixa Beta e o olho da senha, e as rotas
+  protegidas respondem `307`. O ramo `fix/BLOCO-1-correcoes-de-tela` foi apagado, local e remoto, depois
+  do merge confirmado.
+- **Ramo novo, não rebase:** `fix/BLOCO-1-dsa`, a partir da `main` em `a64791d`, como a T049 prevê.
+  ⚠️ O `git switch main` falhou com `cannot stat 'specs': Invalid argument` (a pasta virou ponto de
+  reparação do OneDrive); como a árvore do squash é **idêntica** à do ramo antigo
+  (`d1a648e1…` nas duas), as referências foram movidas com `git reset --soft origin/main` e
+  `git branch -f main origin/main`, sem reescrever arquivo.
+- Base local por `pnpm db:reset:limpo`.
+- **Primeiro item, em commit próprio, a `PEND-016-3`** (decisão de Bernardo, 18/10/2026): as teclas de
+  navegação dentro do detalhe aberto.
+
+### `PEND-016-3` — as teclas num campo do detalhe aberto (commit `4372ed5`)
+- A regra ficou no componente único (`components/ciaara/lista-navegavel.tsx`): a navegação da grade só
+  atende teclas cujo alvo é **célula registrada dela e não campo editável** (`input`, `select`,
+  `textarea`, `contenteditable`); `Enter` e `Espaço` num campo também não fecham a linha.
+- **Reprovou antes:** os 3 casos novos (o tópico da UE em *Disciplinas*; a data da previsão e o seletor de
+  instrutor na ficha da turma) falharam com o componente antigo e passaram com o conserto; as 14 suítes
+  que exercitam teclado deram **198 de 198** depois.
+
+### O que o implement decidiu ou mediu, item a item (18/10/2026)
+- **1.9 · "Semana N de T" (T050–T058).** A conta é `lib/dominio/dsa/semana-do-curso.ts`, função única, e
+  tela, papel e planilha passam por ela; `numero-do-dsa.ts` e o teste dele saíram, e a guarda
+  `distribuicao-unica.test.ts` aponta agora para o módulo novo. **Medido na cópia
+  `remoto-20261017-005738.sql`:** as **12** durações preenchidas de `cursos.duracao_semanas` são inteiras
+  (de 2 a 50) e as outras **12** são nulas — a regra de inteiro positivo não descarta curso real.
+  - Na planilha, o número é **fórmula** sobre a janela que agora mora na BD DISCIPLINAS (início, término,
+    duração, semanas da turma e T), em `lib/dominio/dsa/planilha/semana-corrida.ts`; a prova *fórmula =
+    função* ganhou **8** casos que trocam a janela no catálogo — antes do início, depois do término, turma
+    mais longa que o curso, sem duração, sem término, sem início. Saíram da planilha a marca *conta no nº*,
+    as colunas `temAula`/`acumulado` e as semanas fora da pasta, que só serviam à contagem CRONOS.
+  - O rótulo *"Semana N de T"* do cabeçalho não tem título próprio e mora na coluna do horário (larga),
+    com *Alunos* nas duas colunas estreitas. Na IMPRESSÃO ele ocupa o lugar de *"Semana 41/2026"* e o
+    *"DSA Nº"* saiu; o rodapé também.
+  - **Decisão adotada (vai no lote):** o título das colunas da CRONOS deixou de ser `S42` (semana ISO) e
+    passou a `S28` (semana do curso), com «—» fora da janela.
+  - `leitura-paginada.test.ts` perdeu o ponto do nº do DSA: ele virou conta de calendário e não lê mais
+    lançamento — a CH continua sendo o que a paginação protege.
+  - A navegação mostra *"Semana N de T · 12/10/2026 a 16/10/2026"*; o auxiliar `irParaASemanaDoDia`
+    (14 suítes) passou a esperar a segunda-feira em DD/MM/AAAA. As 11 suítes que o usam: **56 de 56**.
+- **Aviso de duração (T057):** `avisosDaTurma` ganhou `turma_mais_longa_que_o_curso`, com o texto de
+  `avisoDeDuracao`; só a ficha passa a duração (a aba *Grade* do curso não, por desenho).
+- **1.11 · 7 TA (T059):** o caso passa de primeira, como previsto (Q-8). **Medido no papel:** a régua do
+  regime de 7 tem **8** linhas — os 7 do regime e o 8º marcado *excepcional* (`RF-HOR-03.1`); a asserção
+  conta os 7 do regime.
+- **1.12 · mesmo TA e sugestão (T060–T066):**
+  - **Reprovou antes:** os 3 casos de `grade.test.ts` (duas ordens de entrada e o desempate pelo código).
+    A grade ordena por TA, criação e código, e o segundo do mesmo TA vai para «sem posição» com
+    `MOTIVO_NO_MESMO_TA`, que a planilha importa. ⚠️ **O papel só lê células**, então o dia impresso ganhou
+    `noMesmoTa`, e o papel o lista em *fora da grade* com o motivo; a planilha o recebe pela lista sem
+    posição da semana, sem duplicar.
+  - A leitura do DSA lê a atribuição por UE pela linha da turma e só a ativa, lê a atribuição por
+    disciplina (`turma_disciplina_instrutor`, que não lia) e a técnica sugerida da UE e da disciplina, e
+    entrega `errosDeLeitura`, que a tela mostra em `aviso-de-leitura`. A planilha perdeu
+    `FALHA_CONHECIDA_DO_DSA`.
+  - **A guarda da `RN-ANT-01` pegou** a primeira ordenação das atribuições (um `sort` próprio); ela passou
+    a sair de `ordenarPorAntiguidade`, como na planilha.
+  - O formulário sugere por `preencherLancamento` ao escolher a disciplina e a UE (só na aula), diz a frase
+    de `frasePara` quando não há atribuição, e tira o instrutor que **a sugestão** pôs quando a disciplina
+    nova não sugere ninguém — o escolhido à mão fica.
+  - **SC-006, medido na cópia `remoto-20261017-005738.sql`, só lendo o arquivo** (o remoto não foi tocado):
+    **92** linhas de turma têm atribuição ativa por disciplina ou por UE, e `preencherLancamento` devolve
+    instrutor nas **92** (90 em linha ativa e 2 em linha já inativa). Antes do conserto a tela sugeria em
+    **0**: a consulta por UE falhava e a por disciplina não existia.
+  - ⚠️ **Achado de teste, não corrigido:** `limparDsa` apaga `turma_disciplina_unidade` por `turma_id`,
+    coluna que a tabela não tem — a limpeza falha calada. Os testes novos que semeiam atribuição apagam
+    pela `turma_disciplina_id`.
+- **1.8 · cartão (T067):** nome em destaque, código depois e a técnica numa linha própria
+  (`cartao-tecnica`), nas duas grades; a grade sem relógio passou a mostrar o nome. Papel e planilha não
+  mudaram.
+- **1.5 · datas (T068–T073):** **reprovou antes** — a guarda reforçada (template de dois pedaços com
+  `padStart`, `.slice(0, 5)` sobre data formatada, `Intl.DateTimeFormat` fora de `lib/formato/`, e o
+  import relativo no controle positivo) acusou `grade-do-papel.ts` e `cronos.ts`. O papel e a planilha
+  passaram a escrever o dia por `siglaDoDiaDaSemana` e a data com o ano; a CRONOS ganhou largura 9 para a
+  data inteira; o rótulo acessível da célula usa o rótulo da coluna (`SEG 06/04/2026`); a vista diz
+  *"aplicada em 01/10/2026"*; e `/atividades` filtra por `<input type="date">`, com a URL em ISO. O papel
+  continua em **uma** página A4 com o ano (caso novo, por clique).
+
+### Defeitos deliberados (T074) — 18/10/2026
+| Defeito plantado | Quem pegou | Resultado |
+| --- | --- | --- |
+| (a) a semana do curso começando em zero (`numero = dias / 7`) | `semana-do-curso.test.ts` | **8** de 17 reprovados |
+| (a) a regra CRONOS na montagem: turma sem lançamento sai sem número | `dsa-semana-do-curso.spec.ts` | reprovado: *"— · 12/10/2026 a 16/10/2026"* no lugar de *"Semana 28 de 37"* |
+| (b) a consulta por UE de volta ao filtro `turma_id` | `leitura-do-dsa.test.ts` | reprovado: `errosDeLeitura` com a lista |
+| (c) o `DD/MM` com `padStart` de volta no papel | `formato-de-data.test.ts` | **2** padrões reprovados |
+| a fórmula do limite ignorando o término | `planilha-preenchimento.test.ts` | reprovado no caso *"término antes"* |
+| o segundo do mesmo TA sem desvio na grade | `grade`, `impressao` e `planilha-preenchimento` | **5** reprovados |
+
+Todos desfeitos; os arquivos voltaram ao estado anterior e as suítes ao verde.
+
+### `pnpm verificar:tudo` (T075) — 18/10/2026, três rodadas
+- **1ª rodada:** reprovou em `tests/invariantes/leitura-do-periodo.test.ts` (3 casos). Ele **exigia** que a
+  única lista com erro fosse *"atribuições por UE"* — a falha que este PR conserta. Com a consulta certa a
+  lista de erros fica vazia, e a asserção passou a exigir **nenhum** erro (commit `b8af677`). A cadeia
+  parou ali, sem ponta a ponta.
+- **2ª rodada:** unidade, pgTAP e invariantes verdes; ponta a ponta com **4** reprovados de 513. **Dois eram
+  teste lendo o formato antigo**, corrigidos em `61016df`: `dsa-parar-dia.spec.ts` achava a célula pela data
+  ISO no fim do rótulo acessível (agora *"SEX 10/04/2026"*) e `planilha-de-contingencia.spec.ts` esperava
+  *"Semana 42 — "*. **Dois eram carga:** os quatro arquivos juntos, com build novo, deram **16 de 16**; isolado
+  e repetido 3 vezes, `filtros-recolhidos.spec.ts:112` deu **3 de 3** e `dsa-tipo-e-global.spec.ts:160`
+  **2 de 3** — o mesmo caso que já reprovava na rodada do PR 1, classe da `PEND-014-7`.
+- **3ª rodada, sobre `61016df`:** sai **1**, por um caso só.
+
+| Suíte | Resultado |
+| --- | --- |
+| tipos, lint, formatação, build | sem erro e sem aviso |
+| unidade | **2.365** em **166** arquivos |
+| pgTAP | **770** em **54** arquivos, PASS |
+| invariantes e RLS | **328** em **18** arquivos (+1: `leitura-do-dsa.test.ts`) |
+| ponta a ponta (12,7 min) | **506** passados · **1** reprovado · **6** pulados — **513** casos |
+
+O reprovado foi `salas.spec.ts:126` (a sala de amostra ainda não estava na lista da turma), que este PR não
+toca. **Isolado:** o arquivo inteiro repetido 3 vezes com 2 processos deu **18 de 18**. É a classe já
+registrada na memória do projeto (*e2e frágil sob carga*, que cita `salas`).
+
+### CI (T077) — sobre `7588854`, PR #68
+Verde nos três blocos (`qualidade`, `build` e `banco`), run `39164795651`, com **a mesma contagem do
+`verificar:tudo` local**: **2.365** de unidade (166 arquivos) · **770** pgTAP (54) · **328** invariantes e RLS
+(18) · **513** casos de ponta a ponta — **507** passados e **6** pulados, sem instável. O `salas.spec.ts:126`, que
+reprovou no local sob carga, passou no CI de primeira. O run de `9c69303` foi cancelado pelo push do
+roteiro com o link do preview, que só muda documento.
+
+### Medição do SC-006 (T078)
+Ver o item 1.12, acima: **92 de 92** na cópia `remoto-20261017-005738.sql`.
+
+## PR 2 — a conferência de 18/10/2026 (Bernardo Villas Boas): APROVADO, com dois ajustes no papel
+
+> *"APROVADO, com DOIS ajustes no papel do DSA, a corrigir NESTE PR antes do merge."* As dúvidas 1, 3, 4 e 5
+> do lote ficaram como estavam; a 2 e a 6 entraram neste PR; a 7 foi para a `PEND-014-7`.
+
+### A · o campo da semana num rótulo só
+- A tela e o papel diziam *"Semana do curso"* em cima e *"Semana 28 de 37"* embaixo. Agora é um rótulo só,
+  *"Semana do curso: 28 de 37"* (`campoDaSemanaDoCurso` e `valorDaSemanaDoCurso`, em
+  `lib/dominio/dsa/semana-do-curso.ts`). Fora da janela, *"Semana do curso: —"*; sem T, *"Semana do curso: 6"*.
+- **Onde NÃO mudou, de propósito:** a navegação (*"Semana 28 de 37 · 12/10/2026 a …"*), o rodapé do papel
+  (*"… · Semana 28 de 37"*) e a planilha (o cabeçalho de cada semana, o rótulo do seletor e a identificação
+  da IMPRESSÃO). Em nenhum deles há o rótulo *"Semana do curso"* ao lado, então não há repetição.
+- **Reprovou antes:** com os testes novos e o código antigo, **4** casos de ponta a ponta reprovaram —
+  `dsa-semana-do-curso.spec.ts:113`, `dsa-imprimir.spec.ts:149` e `dsa-ver.spec.ts:323` e `:401`.
+
+### B · o quadro de CH sobre a assinatura do Auxiliar
+- **Medido antes de consertar, no dado real e sem tocar o remoto:** a cópia `remoto-20261017-005738.sql`
+  restaurada **só no banco local**, e o `/print/dsa` de **todas** as semanas reais com mais de 4 disciplinas —
+  **131** semanas, 23 delas da C-Ap-FR 2026 —, com a mídia de impressão, no Chromium. **Nenhuma cruzava**:
+  em todas, a folga entre a 2ª coluna do quadro e a assinatura da esquerda era de **22 px**, que são os 6 mm do
+  `gap` do rodapé. A tabela mais apertada (C-Espc-FR, códigos como `PPREVACER-005`) usava **290** dos **312**
+  px da coluna; com a Barlow bloqueada (a fonte de reserva do `next/font`), **307** de 312.
+- **A causa é o mecanismo, e ela não depende deste PR:** a tabela não encolhe abaixo da palavra mais larga
+  que tem, e nada a prendia à coluna dela — a única separação entre o quadro e as assinaturas era o `gap`.
+  Qualquer coisa que alargue o texto (a métrica da fonte no motor de impressão de quem imprime, ou um nome
+  com palavra longa, que o cadastro aceita) empurra a 2ª coluna para cima da assinatura da esquerda. ⚠️ **Este
+  PR não mudou o CSS do papel** (`git diff main -- app/print/dsa/documento.css` vazio antes do conserto): as
+  datas com ano e o rótulo da semana mexem no cabeçalho dos dias e na faixa de identificação, não na largura
+  do rodapé. ⚠️ **O cruzamento exato que você viu NÃO se reproduziu aqui** — o Chromium desta máquina tem
+  folga em todas as semanas reais. O teste o reproduz pelo mesmo mecanismo, com uma palavra longa.
+- **O conserto** (`app/print/dsa/documento.css`): as colunas do quadro passaram de `flex` para uma grade de
+  colunas iguais (`minmax(0, 1fr)`), e o nome da disciplina quebra onde for preciso
+  (`overflow-wrap: anywhere`) — a largura mínima da tabela passa a ser a do código e dos números. O código e
+  os números não quebram.
+- **Reprovou antes:** `tests/e2e/dsa-rodape-do-papel.spec.ts` — as 13 disciplinas da C-Ap-FR com os nomes do
+  cadastro e uma 14ª com palavra longa —, no build antigo: *"o quadro de CH cruza a assinatura da esquerda
+  (o Auxiliar): quadro {x: 34, largura: 694,5} × assinatura {x: 695,4}"*. ⚠️ **Sem a palavra longa ele
+  passava no build antigo**, e foi isso que mostrou que a semana real não basta para cruzar no Chromium.
+- **Depois do conserto:** o mesmo caso passa — o quadro fica na coluna dele, a palavra longa quebra dentro
+  da tabela, e a folha continua em **uma** página A4 —, na rodada de ponta a ponta abaixo.
+
+### Dúvida 2 · só linha de turma ativa sugere instrutor
+- As quatro consultas de atribuição — por UE e por disciplina, na tela e na planilha — passaram a filtrar
+  `turma_disciplina.status = 'ativo'`, além do status da atribuição.
+- **Reprovou antes:** o caso novo de `tests/invariantes/leitura-do-dsa.test.ts` põe a linha da turma em
+  `inativo` com a atribuição ativa; com as consultas antigas, as **4** asserções reprovaram (tela e planilha,
+  por UE e por disciplina). Na cópia de 17/10, são **2** linhas nessa situação: elas deixam de sugerir.
+
+### Dúvida 6 · `limparDsa`
+- `apagarLinhasDaTurma` (em `tests/e2e/dsa-de-teste.ts`) lê as linhas da turma e apaga por
+  `turma_disciplina_id` as atribuições por UE **e** por disciplina, depois as linhas — cada `delete` com o erro
+  conferido. `limparDsa` e o `afterAll` de `dsa-etapa-presencial.spec.ts`, que tinha a mesma consulta errada,
+  passaram a usá-la.
+- **Reprovou antes:** o último caso de `leitura-do-dsa.test.ts` chama `limparDsa` com a atribuição no lugar;
+  com a limpeza antiga, *"a turma ficou depois do limparDsa"*.
+
+### Dúvida 7
+Os três casos na `PEND-014-7` do `CLAUDE.md`.
+
+### A verificação (18/10/2026)
+| Suíte | Resultado |
+| --- | --- |
+| tipos, lint, formatação | sem erro e sem aviso |
+| unidade | **2.367** em **166** arquivos (+2: o campo da semana) |
+| invariantes da leitura (`leitura-do-dsa`, `leitura-do-periodo`, `leitura-paginada`, `planilha-igual-ao-papel`, `planilha-de-conferencia`) | **16** de **16** |
+| ponta a ponta do DSA e da impressão (`dsa-*` e `planilha*`, 21 arquivos, base limpa, build novo) | **118** passados · **4** pulados · **0** reprovados — **122** casos, 7,9 min |
+| CI sobre `3de072f` (run `39191110451`, verde nos três blocos) | unidade **2.367** (166) · pgTAP **770** (54) · invariantes **330** (18) · ponta a ponta **507** passados + **1** instável + **6** pulados = **514** casos (os 513 de antes e o do rodapé); o instável foi `avaliacoes-nas-telas.spec.ts:53`, da `PEND-014-7` |

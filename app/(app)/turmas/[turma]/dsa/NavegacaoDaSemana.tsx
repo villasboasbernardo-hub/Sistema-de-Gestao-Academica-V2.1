@@ -41,6 +41,14 @@ export type NavegacaoDaSemanaProps = {
   readonly ano: number;
   readonly semana: number;
   readonly sabadoAberto: boolean;
+  /**
+   * "Semana N de T" (spec 016, FR-009.2; D-COR-1), de `rotuloDaSemanaDoCurso`. ⚠️ A semana ISO fica só na
+   * URL (`?semana=&ano=`): até 17/10/2026 a navegação mostrava *"semana 41 de 2026"*, e o cabeçalho
+   * *"Semana 41/2026 · DSA Nº 4"* — duas numerações na mesma tela, nenhuma delas a do curso.
+   */
+  readonly rotuloDaSemanaDoCurso: string;
+  /** As datas da semana, `06/04/2026 a 11/04/2026`. */
+  readonly datasDaSemana: string;
 };
 
 /**
@@ -71,7 +79,14 @@ export function proxima(ano: number, semana: number): { ano: number; semana: num
   return { ano: ano + 1, semana: 1 };
 }
 
-export function NavegacaoDaSemana({ codigo, ano, semana, sabadoAberto }: NavegacaoDaSemanaProps) {
+export function NavegacaoDaSemana({
+  codigo,
+  ano,
+  semana,
+  sabadoAberto,
+  rotuloDaSemanaDoCurso,
+  datasDaSemana,
+}: NavegacaoDaSemanaProps) {
   const router = useRouter();
 
   /*
@@ -151,7 +166,8 @@ export function NavegacaoDaSemana({ codigo, ano, semana, sabadoAberto }: Navegac
         Próxima semana
       </Button>
       <span className="ml-1 text-sm tabular-nums text-texto-suave" data-slot="semana-atual">
-        semana {semana} de {ano}
+        <span className="font-semibold text-texto">{rotuloDaSemanaDoCurso}</span>
+        {datasDaSemana ? ` · ${datasDaSemana}` : ""}
       </span>
       {/*
        * ⚠️ `<label>` DE VERDADE, ligado pelo `htmlFor`: é ele que dá nome ao campo para quem usa

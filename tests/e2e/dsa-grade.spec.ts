@@ -23,6 +23,7 @@ import {
   ANO,
   limparDsa,
   QUARTA,
+  QUINTA,
   SEGUNDA,
   SEMANA,
   semearDsa,
@@ -100,7 +101,7 @@ async function situacaoDaAula(topico: string): Promise<string | null> {
 }
 
 test.describe("o cabeçalho e o rodapé do papel, na tela", () => {
-  test("semana, DSA nº, período e alunos em cima; CH, técnicas e assinaturas embaixo", async ({
+  test("semana do curso, período e alunos em cima; CH, técnicas e assinaturas embaixo", async ({
     page,
   }) => {
     await abrirASemana(page);
@@ -363,5 +364,67 @@ test.describe("⚠️ `RN-EVT-04` · aula não entra em dia de feriado de DIA IN
       .eq("codigo", codigo)
       .maybeSingle();
     expect((data as { data: string } | null)?.data, "a aula foi movida para o feriado").toBe(TERCA);
+  });
+});
+
+/*
+ * ⚠️ **FR-008.1 da spec 016 · O CARTÃO NOVO DA TELA**: o nome da disciplina em destaque, o código depois e
+ * a técnica numa linha própria. Até 18/10/2026 o código vinha primeiro e a técnica saía na linha do «N TA».
+ * O papel e a planilha não mudam (FR-008.2) — este caso só lê a tela.
+ */
+test.describe("FR-008 · o cartão do DSA na tela", () => {
+  const CONTEUDO = "Aula do cartão novo";
+
+  test.beforeAll(async () => {
+    const turmaId = await idDaTurma();
+    const { data: aula } = await banco()
+      .from("registros_aula")
+      .select("unidade_ensino_id, instrutor_id, curso_id")
+      .eq("turma_id", turmaId)
+      .not("unidade_ensino_id", "is", null)
+      .not("instrutor_id", "is", null)
+      .limit(1)
+      .single();
+    const molde = aula as { unidade_ensino_id: string; instrutor_id: string; curso_id: string };
+    const { error } = await banco()
+      .from("registros_aula")
+      .upsert(
+        {
+          codigo: `DSA-CARTAO-${SEMEADO.codDisciplina}`,
+          turma_id: turmaId,
+          curso_id: molde.curso_id,
+          unidade_ensino_id: molde.unidade_ensino_id,
+          instrutor_id: molde.instrutor_id,
+          data: QUINTA,
+          ta_inicial: 4,
+          tempos_consumidos: 1,
+          conteudo_resumo: CONTEUDO,
+          metodologia: "Exposição Oral",
+          local: SEMEADO.sala,
+        },
+        { onConflict: "codigo" },
+      );
+    if (error) throw new Error(`falha ao semear a aula do cartão: ${error.message}`);
+  });
+
+  test("menu Turmas → turma → DSA: nome, depois código, e a técnica numa linha própria", async ({
+    page,
+  }) => {
+    await abrirASemana(page);
+    const celula = page.locator(`${GRADE} td`).filter({ hasText: CONTEUDO });
+    await expect(celula).toHaveCount(1);
+    const cartao = celula.locator('[data-slot="dsa-cartao"]');
+    const titulo = cartao.locator('[data-slot="cartao-titulo"]');
+    await expect(titulo.locator("> *").first()).toHaveAttribute("data-slot", "cartao-nome");
+    await expect(titulo.locator('[data-slot="cartao-nome"]')).toHaveText(
+      "Disciplina do percurso do DSA",
+    );
+    await expect(titulo.locator('[data-slot="cartao-codigo"]')).toHaveText(SEMEADO.codDisciplina);
+    /* A técnica é filha do cartão, numa linha sua — não mais ao lado do «1 TA» e do local. */
+    const tecnica = cartao.locator('> [data-slot="cartao-tecnica"]');
+    await expect(tecnica).toHaveCount(1);
+    await expect(tecnica).not.toHaveText("");
+    /* O rótulo acessível começa pelo nome, como a tela. */
+    await expect(celula).toHaveAttribute("aria-label", /^Disciplina do percurso do DSA — /);
   });
 });

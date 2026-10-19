@@ -17,6 +17,11 @@
 import { datasDaSemanaIso, semanaIsoDe } from "../../carga-semanal";
 import { dataParaLeitura } from "../../../formato/data";
 import { etapaDaSemana, type TurmaParaEtapa } from "../etapa-presencial";
+import {
+  rotuloDaSemanaDoCurso,
+  semanaDoCurso,
+  type JanelaDaSemanaDoCurso,
+} from "../semana-do-curso";
 
 import type { IdentidadeDaSemana } from "./tipos";
 
@@ -48,16 +53,29 @@ function semanasEntre(de: IdentidadeDaSemana, ate: IdentidadeDaSemana): Identida
   return semanas;
 }
 
-function rotuloDa(s: IdentidadeDaSemana, seisDias: readonly string[]): string {
+/**
+ * `Semana 28 de 37 — 12/10/2026 a 17/10/2026` (FR-009.5 e FR-005.1 da spec 016): a semana do curso, pela
+ * função única, e as datas com o ano nas duas pontas. ⚠️ **A SEMANA ISO SAIU DO RÓTULO** — ele dizia
+ * *"Semana 42 — 12/10 a 17/10/2026"*, uma terceira numeração. Fora da janela da turma, só as datas.
+ */
+function rotuloDa(
+  s: IdentidadeDaSemana,
+  seisDias: readonly string[],
+  janela: JanelaDaSemanaDoCurso,
+): string {
   const segunda = seisDias[0] ?? "";
   const sabado = seisDias[5] ?? segunda;
-  return `Semana ${s.numero} — ${dataParaLeitura(segunda).slice(0, 5)} a ${dataParaLeitura(sabado)}`;
+  const datas = `${dataParaLeitura(segunda)} a ${dataParaLeitura(sabado)}`;
+  const semana = semanaDoCurso({ ...janela, semana: s });
+  return semana.numero === null ? datas : `${rotuloDaSemanaDoCurso(semana)} — ${datas}`;
 }
 
 export function semanasDaPlanilha(entrada: {
   readonly turma: TurmaParaEtapa & {
     readonly dataInicio: string | null;
     readonly dataTermino: string | null;
+    /** `cursos.duracao_semanas` — o T do rótulo (FR-009.3). */
+    readonly duracaoSemanasDoCurso: number | null;
   };
   /** As datas com lançamento da turma — o piso e o teto quando falta o período. */
   readonly datasComLancamento: readonly string[];
@@ -87,7 +105,15 @@ export function semanasDaPlanilha(entrada: {
 
   let semanas = semanasEntre(de, ate).map((s) => {
     const seisDias = datasDaSemanaIso(s.ano, s.numero).slice(0, 6);
-    return { ...s, seisDias, rotulo: rotuloDa(s, seisDias) };
+    return {
+      ...s,
+      seisDias,
+      rotulo: rotuloDa(s, seisDias, {
+        dataInicio: entrada.turma.dataInicio,
+        dataTermino: entrada.turma.dataTermino,
+        duracaoSemanasDoCurso: entrada.turma.duracaoSemanasDoCurso,
+      }),
+    };
   });
 
   if (entrada.turma.modalidade === "semipresencial") {

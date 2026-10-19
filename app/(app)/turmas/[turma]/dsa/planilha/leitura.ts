@@ -10,7 +10,9 @@
  *
  * ⚠️ **A ATRIBUIÇÃO POR UE É LIDA PELA `turma_disciplina`** — `turma_disciplina_unidade` não tem
  * `turma_id`, e a consulta do DSA que a filtra por essa coluna falha calada desde 07/10/2026
- * (`PEND-DSA-SUGESTAO`). A da tela não muda nesta spec; a da planilha nasce certa.
+ * (`PEND-DSA-SUGESTAO`). A da tela não muda nesta spec; a da planilha nasce certa. ⚠️ E as duas
+ * atribuições só valem pela linha de turma **ativa** (dúvida 2 da conferência do PR #68, 18/10/2026), como
+ * na tela.
  *
  * ⚠️ **SEM DADO PESSOAL** (`FR-029`): dos instrutores, só o nome como o DSA imprime — nenhuma coluna
  * de CPF, RG, telefone ou endereço é pedida, e só entram os da turma.
@@ -68,12 +70,6 @@ export type TurmaDaPlanilha = {
 export const COLUNAS_DA_TURMA_DA_PLANILHA =
   "id, codigo, curso_id, modalidade, sala_alocada, alunos, data_inicio, data_termino, inicio_etapa_presencial, termino_etapa_presencial";
 
-/**
- * A lista que já é conhecida por falhar na leitura do DSA (`PEND-DSA-SUGESTAO`) — a planilha lê a
- * atribuição por UE pela consulta certa, logo a falha daquela não a impede.
- */
-const FALHA_CONHECIDA_DO_DSA = "atribuições por UE";
-
 export class FalhaNaLeituraDaPlanilha extends Error {
   constructor(readonly listas: readonly string[]) {
     super(`a planilha não pôde ler: ${listas.join(", ")}`);
@@ -111,6 +107,7 @@ export async function lerDadosDaPlanilha(
           contagemNaPrimeira(f),
         )
         .eq("turma_disciplina.turma_id", turmaId)
+        .eq("turma_disciplina.status", "ativo")
         .eq("status", "ativo")
         .order("codigo")
         .range(f.de, f.ate),
@@ -123,6 +120,7 @@ export async function lerDadosDaPlanilha(
           contagemNaPrimeira(f),
         )
         .eq("turma_disciplina.turma_id", turmaId)
+        .eq("turma_disciplina.status", "ativo")
         .eq("status", "ativo")
         .order("codigo")
         .range(f.de, f.ate),
@@ -162,7 +160,7 @@ export async function lerDadosDaPlanilha(
     inicial,
     avisos,
   } = semanasDaPlanilha({
-    turma: paraEtapa,
+    turma: { ...paraEtapa, duracaoSemanasDoCurso: semanaCorrente.duracaoSemanasDoCurso },
     datasComLancamento: periodoConhecido ? [] : extras.datasComLancamentoDaTurma,
     hoje: contexto.hoje,
   });
@@ -205,8 +203,8 @@ export async function lerDadosDaPlanilha(
         .range(f.de, f.ate),
     ),
   ]);
-  for (const e of dados.erros)
-    if (e.lista !== FALHA_CONHECIDA_DO_DSA) erros.push(`${e.lista} (${e.mensagem})`);
+  /* ⚠️ Toda lista que falhou para a planilha (FR-012.1 da spec 016): a exceção da consulta errada saiu com ela. */
+  for (const e of dados.erros) erros.push(`${e.lista} (${e.mensagem})`);
 
   const porUe = lista<{ unidade_ensino_id: string; instrutor_id: string }>(
     tdu,
@@ -385,7 +383,7 @@ export async function lerDadosDaPlanilha(
       dias: documento.dias,
       avisosDosDias: lida.semana.dias.map((d) => d.avisos),
       semPosicao,
-      numero: documento.numero,
+      rotuloDaSemanaDoCurso: documento.rotuloDaSemanaDoCurso,
       alunos: documento.alunos,
       assinaturas: { esquerda: rubrica("esquerda"), direita: rubrica("direita") },
     };
@@ -429,11 +427,7 @@ export async function lerDadosDaPlanilha(
         data: o.data,
         disciplinaCodigo: codigoDaDisciplina.get(o.disciplina_id ?? "") ?? null,
         tempos: o.tempos_consumidos ?? 0,
-        contaNoNumero: false,
       })),
-    ...extras.datasComLancamentoDaTurma
-      .filter((d) => !naPasta.has(d) && d <= ate)
-      .map((data) => ({ data, disciplinaCodigo: null, tempos: 0, contaNoNumero: true })),
   ];
 
   const datasDoAno = [
@@ -470,6 +464,8 @@ export async function lerDadosDaPlanilha(
       codigo: turma.codigo,
       curso: referencia.cursoCodigo ?? turma.codigo,
       dataInicio: turma.data_inicio,
+      dataTermino: turma.data_termino,
+      duracaoSemanasDoCurso: semanaCorrente.duracaoSemanasDoCurso,
       salaAlocada: turma.sala_alocada,
     },
     geradaEm: contexto.geradaEm,

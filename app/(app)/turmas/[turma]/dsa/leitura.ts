@@ -34,10 +34,15 @@
  * ⚠️ **E TODA LISTA VEM EM PÁGINAS ATÉ ACABAR** (`DP-5`, `lib/supabase/paginacao.ts`), com ordem total
  * — a que a consulta já tinha, mais o `codigo` (ou outra chave única) de desempate. Medido em
  * 09/10/2026: com 1.114 TA numa turma, o teto de 1.000 linhas fazia o rodapé e o painel dizerem 1.004
- * e o nº do DSA errar em 3 a 4 semanas — sem erro nenhum na tela.
+ * e o nº do DSA errar em 3 a 4 semanas — sem erro nenhum na tela. (O nº do DSA virou a semana do curso
+ * em 17/10/2026, spec 016, e não lê mais lançamento; a CH continua dependendo de ler tudo.)
  */
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
-import { escalaDeLinhas, type EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import {
+  escalaDeLinhas,
+  ordenarPorAntiguidade,
+  type EscalaDeAntiguidade,
+} from "@/lib/dominio/antiguidade";
 import {
   detectarConflitos,
   type MarcaDeConflito,
@@ -55,6 +60,10 @@ import {
   type InstrumentoOferecido,
 } from "@/lib/dominio/dsa/instrumento-da-prova";
 import { idDoLancamento } from "@/lib/dominio/dsa/posicao-herdada";
+import type {
+  AtribuicaoPorDisciplina,
+  AtribuicaoPorUnidade,
+} from "@/lib/dominio/dsa/pre-preenchimento";
 import { rotuloDaSessaoDeAplicacao } from "@/lib/dominio/dsa/sessao-de-aplicacao";
 import { relogioDaSemana, type Relogio } from "@/lib/dominio/dsa/horario-do-bloco";
 import type { ExecucaoDaDisciplina, TecnicaDoCatalogo } from "@/lib/dominio/dsa/impressao";
@@ -123,8 +132,8 @@ export type UnidadeLida = {
   readonly restante: number;
   /** Lançada até o fim da semana aberta — o número da cascata do painel de situação. */
   readonly lancadaAteASemana: number;
+  /** `unidades_ensino.tecnica_ensino_sugerida`, ou a da disciplina — o palpite da T/E (FR-012.2). */
   readonly tecnicaSugerida: string | null;
-  readonly atribuidoId: string | null;
   /**
    * Spec 014, FR-034 (PEND-E8-1): a avaliação prevista e lançada NA UE, até a semana — a prova e a vista que o
    * currículo computa nela. Sem item na UE, as duas ficam em zero.
@@ -180,11 +189,24 @@ export type SemanaDoDsa = {
   readonly relogio: Relogio | null;
   readonly dias: readonly string[];
   readonly sabadoAberto: boolean;
-  /** As datas desta semana que têm lançamento — insumo do `?sabado=` e do número do DSA. */
+  /** As datas desta semana que têm lançamento — insumo do `?sabado=`. */
   readonly datasComLancamento: readonly string[];
   readonly cursoCodigo: string | null;
+  /** `cursos.duracao_semanas` — o T da semana do curso (D-COR-1, Q-1; spec 016, FR-009.3). */
+  readonly duracaoSemanasDoCurso: number | null;
   readonly cursoPorCompetencias: boolean;
   readonly unidades: readonly UnidadeLida[];
+  /**
+   * As atribuições da turma, em antiguidade — os dois primeiros degraus da sugestão de instrutor
+   * (`preencherLancamento`, FR-012.2 da spec 016).
+   */
+  readonly atribuicoesPorUe: readonly AtribuicaoPorUnidade[];
+  readonly atribuicoesPorDisciplina: readonly AtribuicaoPorDisciplina[];
+  /**
+   * As listas que a leitura não conseguiu ler (FR-012.1 da spec 016; `RN-DEG-01`): a tela as diz, em vez
+   * de mostrar o vazio como se não houvesse dado.
+   */
+  readonly errosDeLeitura: readonly { readonly lista: string; readonly mensagem: string }[];
   /** As disciplinas ATIVAS do curso da turma — a segunda escolha do formulário, depois do tipo. */
   readonly disciplinas: readonly DisciplinaLida[];
   readonly avaliacoesParaVista: readonly AvaliacaoParaVista[];
@@ -266,6 +288,7 @@ export type DadosDoPeriodo = {
   readonly ueExecucao: readonly unknown[];
   readonly listas: readonly unknown[];
   readonly atribuicoes: readonly unknown[];
+  readonly atribuicoesPorDisciplina: readonly unknown[];
   readonly instrutores: readonly unknown[];
   readonly acumulada: readonly unknown[];
   readonly paraVista: readonly unknown[];
@@ -285,11 +308,11 @@ export type DadosDoPeriodo = {
    * que falha vira lista vazia e a tela degrada (`RN-DEG-01`). Quem precisa recusar, como a planilha
    * (`FR-006` da spec 015), olha aqui.
    *
-   * ⚠️ **E HÁ UM ERRO QUE ACONTECE SEMPRE, medido em 09/10/2026 ao expor esta lista:** a consulta das
-   * atribuições por UE pede `turma_disciplina_unidade.turma_id`, coluna que **não existe** (a tabela se
-   * liga à turma por `turma_disciplina_id`). Ela entrou assim em 07/10/2026 (`9c62669`) e falha calada
-   * desde então — é por isso que a tela nunca sugere instrutor por UE. **Não foi corrigida aqui**: a
-   * spec 015 não muda a tela do DSA, e o conserto é da pendência `PEND-DSA-SUGESTAO`.
+   * ⚠️ **HAVIA UM ERRO QUE ACONTECIA SEMPRE, medido em 09/10/2026 ao expor esta lista, e consertado em
+   * 18/10/2026** (spec 016, FR-012.1): a consulta das atribuições por UE pedia
+   * `turma_disciplina_unidade.turma_id`, coluna que **não existe** (a tabela se liga à turma por
+   * `turma_disciplina_id`). Entrou assim em 07/10/2026 (`9c62669`) e falhou calada até aqui — era por isso
+   * que a tela nunca sugeria instrutor por UE. Desde então a lista chega à tela (`errosDeLeitura`).
    */
   readonly erros: readonly { readonly lista: string; readonly mensagem: string }[];
 };
@@ -352,6 +375,7 @@ export async function lerPeriodoDoDsa(
     sessoesRes,
     itensRes,
     sessoesDeAplicacaoRes,
+    atribDiscRes,
   ] = await Promise.all([
     /*
      * ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`).
@@ -376,7 +400,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("registros_aula")
         .select(
-          "id, data, ta_inicial, tempos_consumidos, conteudo_resumo, metodologia, status, unidade_ensino_id, disciplina_id, outros_instrutores",
+          "id, codigo, criado_em, data, ta_inicial, tempos_consumidos, conteudo_resumo, metodologia, status, unidade_ensino_id, disciplina_id, outros_instrutores",
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
@@ -390,7 +414,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("avaliacoes")
         .select(
-          "id, data_avaliacao, ta_inicial, tipo_avaliacao, conteudo_resumo, metodologia, nome_fiscal_externo, status, avaliacao_curriculo_id, instrumento_id, ues_abordadas, outros_instrutores",
+          "id, codigo, criado_em, data_avaliacao, ta_inicial, tipo_avaliacao, conteudo_resumo, metodologia, nome_fiscal_externo, status, avaliacao_curriculo_id, instrumento_id, ues_abordadas, outros_instrutores",
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
@@ -407,7 +431,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("atividades_nao_letivas")
         .select(
-          "id, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id, bloqueia_aula, outros_instrutores",
+          "id, codigo, criado_em, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id, bloqueia_aula, outros_instrutores",
           contagemNaPrimeira(f),
         )
         .or(`turma_id.eq.${turmaId},turma_id.is.null`)
@@ -445,12 +469,16 @@ export async function lerPeriodoDoDsa(
         .order("codigo")
         .range(f.de, f.ate),
     ),
-    supabase.from("cursos").select("codigo, curriculo_modelo").eq("id", cursoId).maybeSingle(),
+    supabase
+      .from("cursos")
+      .select("codigo, curriculo_modelo, duracao_semanas")
+      .eq("id", cursoId)
+      .maybeSingle(),
     lerTodasAsPaginas((f) =>
       supabase
         .from("disciplinas")
         .select(
-          "id, cod_disciplina, nome_disciplina, sem_unidades_ensino, status",
+          "id, cod_disciplina, nome_disciplina, sem_unidades_ensino, status, tecnica_ensino_sugerida",
           contagemNaPrimeira(f),
         )
         .eq("curso_id", cursoId)
@@ -489,9 +517,22 @@ export async function lerPeriodoDoDsa(
     ),
     lerTodasAsPaginas((f) =>
       supabase
+        /*
+         * ⚠️ **PELA LINHA DA TURMA, E SÓ A ATIVA** (FR-012.1 da spec 016): a tabela se liga à turma por
+         *    `turma_disciplina_id`, e a consulta antiga filtrava por um `turma_id` que ela não tem — falhava
+         *    sempre, e a lista chegava vazia. A mesma consulta da planilha de contingência.
+         * ⚠️ **"ATIVA" VALE PARA AS DUAS PONTAS** (dúvida 2 da conferência do PR #68, Bernardo Villas Boas,
+         *    18/10/2026): a atribuição ativa numa linha de turma já inativa não sugere ninguém. Medido na cópia
+         *    `remoto-20261017-005738.sql`: 2 linhas nessa situação. O mesmo filtro na consulta abaixo.
+         */
         .from("turma_disciplina_unidade")
-        .select("unidade_ensino_id, instrutor_id, turma_id", contagemNaPrimeira(f))
-        .eq("turma_id", turmaId)
+        .select(
+          "unidade_ensino_id, instrutor_id, turma_disciplina!inner(turma_id)",
+          contagemNaPrimeira(f),
+        )
+        .eq("turma_disciplina.turma_id", turmaId)
+        .eq("turma_disciplina.status", "ativo")
+        .eq("status", "ativo")
         .order("codigo")
         .range(f.de, f.ate),
     ),
@@ -560,7 +601,10 @@ export async function lerPeriodoDoDsa(
     lerTodasAsPaginas((f) =>
       supabase
         .from("unidades_ensino")
-        .select("id, disciplina_id, numero_ue, topico, ch_prevista_tempos", contagemNaPrimeira(f))
+        .select(
+          "id, disciplina_id, numero_ue, topico, ch_prevista_tempos, tecnica_ensino_sugerida",
+          contagemNaPrimeira(f),
+        )
         .eq("curso_id", cursoId)
         .eq("status", "ativo")
         .order("numero_ue", { ascending: true })
@@ -642,7 +686,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("vistas_de_avaliacao")
         .select(
-          "id, avaliacao_id, numero, data, conduz_nome_externo, avaliacao:avaliacoes!vistas_de_avaliacao_avaliacao_id_fkey!inner(turma_id)",
+          "id, codigo, criado_em, avaliacao_id, numero, data, conduz_nome_externo, avaliacao:avaliacoes!vistas_de_avaliacao_avaliacao_id_fkey!inner(turma_id)",
           contagemNaPrimeira(f),
         )
         .eq("avaliacao.turma_id", turmaId)
@@ -675,7 +719,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("sessoes_de_aplicacao")
         .select(
-          "id, avaliacao_id, numero, data, ta_inicial, avaliacao:avaliacoes!sessoes_de_aplicacao_avaliacao_id_fkey!inner(turma_id, status)",
+          "id, codigo, criado_em, avaliacao_id, numero, data, ta_inicial, avaliacao:avaliacoes!sessoes_de_aplicacao_avaliacao_id_fkey!inner(turma_id, status)",
           contagemNaPrimeira(f),
         )
         .eq("avaliacao.turma_id", turmaId)
@@ -686,6 +730,23 @@ export async function lerPeriodoDoDsa(
         .lte("data", ate)
         .order("data")
         .order("id")
+        .range(f.de, f.ate),
+    ),
+    /*
+     * O segundo degrau da sugestão de instrutor (FR-012.2 da spec 016; `FR-014` da spec 013): quem está
+     * atribuído a cada DISCIPLINA nesta turma. A tela não lia esta tabela, e o degrau não existia.
+     */
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("turma_disciplina_instrutor")
+        .select(
+          "instrutor_id, turma_disciplina!inner(turma_id, disciplina_id)",
+          contagemNaPrimeira(f),
+        )
+        .eq("turma_disciplina.turma_id", turmaId)
+        .eq("turma_disciplina.status", "ativo")
+        .eq("status", "ativo")
+        .order("codigo")
         .range(f.de, f.ate),
     ),
   ]);
@@ -727,6 +788,7 @@ export async function lerPeriodoDoDsa(
     ueExecucao: listaOuVazia(ueExecRes, erros, "unidades da turma"),
     listas: listaOuVazia(listasRes, erros, "listas"),
     atribuicoes: listaOuVazia(atribRes, erros, "atribuições por UE"),
+    atribuicoesPorDisciplina: listaOuVazia(atribDiscRes, erros, "atribuições por disciplina"),
     instrutores: listaOuVazia(instrRes, erros, "instrutores"),
     acumulada: listaOuVazia(acumuladaRes, erros, "ocupação acumulada"),
     paraVista: listaOuVazia(paraVistaRes, erros, "avaliações para vista"),
@@ -783,6 +845,8 @@ export function montarSemanaDoDsa(
   /* Spec 014, FR-040: a avaliação entra na semana pela aplicação OU por uma sessão de vista na semana. */
   const sessoesDaSemana = (dados.sessoes ?? []).filter((l) => naSemana(campo(l, "data"))) as {
     id: string;
+    codigo?: string | null;
+    criado_em?: string | null;
     avaliacao_id: string;
     numero: number;
     conduz_nome_externo: string | null;
@@ -795,6 +859,8 @@ export function montarSemanaDoDsa(
     naSemana(campo(l, "data")),
   ) as {
     id: string;
+    codigo?: string | null;
+    criado_em?: string | null;
     avaliacao_id: string;
     numero: number;
     data: string;
@@ -858,6 +924,7 @@ export function montarSemanaDoDsa(
     nome_disciplina: string;
     sem_unidades_ensino: boolean | null;
     status: string;
+    tecnica_ensino_sugerida?: string | null;
   }[];
   const disciplinas = new Map(disciplinasDoCurso.map((d) => [d.id, d.cod_disciplina]));
 
@@ -924,6 +991,8 @@ export function montarSemanaDoDsa(
   const conteudos = new Map<string, ConteudoDoFato>();
   for (const a of (aulasRes.data ?? []) as {
     id: string;
+    codigo?: string | null;
+    criado_em?: string | null;
     conteudo_resumo: string | null;
     metodologia: string | null;
     unidade_ensino_id: string | null;
@@ -931,6 +1000,8 @@ export function montarSemanaDoDsa(
     outros_instrutores?: string[] | null;
   }[]) {
     conteudos.set(a.id, {
+      codigo: a.codigo ?? null,
+      criadoEm: a.criado_em ?? null,
       conteudo: a.conteudo_resumo,
       tecnica: a.metodologia,
       unidadeEnsinoId: a.unidade_ensino_id,
@@ -940,6 +1011,8 @@ export function montarSemanaDoDsa(
   }
   for (const a of (avaliacoesRes.data ?? []) as {
     id: string;
+    codigo?: string | null;
+    criado_em?: string | null;
     data_avaliacao: string | null;
     tipo_avaliacao: string | null;
     conteudo_resumo: string | null;
@@ -951,6 +1024,8 @@ export function montarSemanaDoDsa(
     outros_instrutores?: string[] | null;
   }[]) {
     conteudos.set(a.id, {
+      codigo: a.codigo ?? null,
+      criadoEm: a.criado_em ?? null,
       /* A2: o instrumento (prova sem item) e o item — para o cartão da avaliação reabrir com o gravado. */
       instrumentoId: a.instrumento_id ?? null,
       avaliacaoCurriculoId: a.avaliacao_curriculo_id ?? null,
@@ -976,6 +1051,8 @@ export function montarSemanaDoDsa(
     const daAvaliacao = conteudos.get(v.avaliacao_id);
     conteudos.set(v.id, {
       ...(daAvaliacao ?? { conteudo: null, tecnica: null }),
+      codigo: v.codigo ?? null,
+      criadoEm: v.criado_em ?? null,
       conduzExterno: v.conduz_nome_externo,
       outros: [],
     });
@@ -987,10 +1064,16 @@ export function montarSemanaDoDsa(
    */
   for (const p of sessoesDeAplicacaoDaSemana) {
     const daAvaliacao = conteudos.get(p.avaliacao_id);
-    conteudos.set(p.id, { ...(daAvaliacao ?? { conteudo: null, tecnica: null }) });
+    conteudos.set(p.id, {
+      ...(daAvaliacao ?? { conteudo: null, tecnica: null }),
+      codigo: p.codigo ?? null,
+      criadoEm: p.criado_em ?? null,
+    });
   }
   const atividades = (atividadesRes.data ?? []) as {
     id: string;
+    codigo?: string | null;
+    criado_em?: string | null;
     data: string;
     ta_inicial: number | null;
     categoria_normativa: string | null;
@@ -1007,6 +1090,8 @@ export function montarSemanaDoDsa(
      * não o imprime na coluna T/E — ver `diaImpresso`, que trata a origem não letiva à parte.
      */
     conteudos.set(n.id, {
+      codigo: n.codigo ?? null,
+      criadoEm: n.criado_em ?? null,
       /* ⚠️ O Apoio e o TR bloqueante saem MARCADOS (spec 014, FR-019 e FR-027); o editor, com o gravado. */
       conteudo: conteudoDaAtividade({
         descricao: n.descricao,
@@ -1202,9 +1287,70 @@ export function montarSemanaDoDsa(
     };
   };
 
-  const atribuicaoPorUe = new Map(
-    ((atribRes.data ?? []) as { unidade_ensino_id: string; instrutor_id: string | null }[]).map(
-      (a) => [a.unidade_ensino_id, a.instrutor_id],
+  /*
+   * ⚠️ **AS ATRIBUIÇÕES SAEM EM ANTIGUIDADE** (`RN-ANT-01`, Risco: Alto): `preencherLancamento` pega a
+   * primeira da lista e não reordena nada — a ordem é de quem lê. Ela sai de `ordenarPorAntiguidade`, a
+   * função única, como na planilha de contingência; quem não está na lista vai para o fim.
+   */
+  const { ordenados: emOrdemDeAntiguidade } = ordenarPorAntiguidade(
+    linhasDeInstrutor.map((i) => ({
+      id: i.id,
+      pg: i.posto_graduacao,
+      especialidade: i.esp_hab_obs,
+      nomeCompleto: i.nome_completo,
+      nomeDeGuerra: i.nome_guerra,
+    })),
+    escalaDeLinhas(
+      daLista("escala_antiguidade").map((l) => ({ valor: l.valor, ordem: l.ordem, ativo: true })),
+    ),
+  );
+  const posicaoNaAntiguidade = new Map(emOrdemDeAntiguidade.map((i, n) => [i.id, n] as const));
+  const emAntiguidade = <T extends { readonly instrutorId: string }>(xs: readonly T[]) =>
+    xs
+      .slice()
+      .sort(
+        (a, b) =>
+          (posicaoNaAntiguidade.get(a.instrutorId) ?? 1e9) -
+          (posicaoNaAntiguidade.get(b.instrutorId) ?? 1e9),
+      );
+  const atribuicoesPorUe = emAntiguidade(
+    ((atribRes.data ?? []) as { unidade_ensino_id: string; instrutor_id: string | null }[])
+      .filter((a) => a.instrutor_id !== null)
+      .map((a) => ({
+        unidadeEnsinoId: a.unidade_ensino_id,
+        instrutorId: a.instrutor_id as string,
+      })),
+  );
+  const atribuicoesPorDisciplina = emAntiguidade(
+    (
+      dados.atribuicoesPorDisciplina as {
+        instrutor_id: string | null;
+        turma_disciplina: { disciplina_id: string } | null;
+      }[]
+    )
+      .filter((a) => a.instrutor_id !== null && a.turma_disciplina !== null)
+      .map((a) => ({
+        disciplinaId: (a.turma_disciplina as { disciplina_id: string }).disciplina_id,
+        instrutorId: a.instrutor_id as string,
+      })),
+  );
+  /* A técnica sugerida: a da UE; sem ela, a da disciplina (0 de 587 UEs a têm hoje — medido na spec 016). */
+  const tecnicaDaDisciplina = new Map(
+    disciplinasDoCurso.map((d) => [d.id, d.tecnica_ensino_sugerida ?? null] as const),
+  );
+  const tecnicaDaUe = new Map(
+    (
+      (curriculoRes.data ?? []) as {
+        id: string;
+        disciplina_id: string;
+        tecnica_ensino_sugerida?: string | null;
+      }[]
+    ).map(
+      (u) =>
+        [
+          u.id,
+          u.tecnica_ensino_sugerida ?? tecnicaDaDisciplina.get(u.disciplina_id) ?? null,
+        ] as const,
     ),
   );
 
@@ -1245,8 +1391,7 @@ export function montarSemanaDoDsa(
   }).map((u) => ({
     ...u,
     disciplinaCodigo: disciplinas.get(u.disciplinaId) ?? "—",
-    tecnicaSugerida: null,
-    atribuidoId: atribuicaoPorUe.get(u.id) ?? null,
+    tecnicaSugerida: tecnicaDaUe.get(u.id) ?? null,
     ...avaliacaoNaUe(u.id),
   }));
 
@@ -1327,8 +1472,13 @@ export function montarSemanaDoDsa(
     sabadoAberto: janela.sabadoAberto,
     datasComLancamento,
     cursoCodigo: (cursoRes.data as { codigo?: string } | null)?.codigo ?? null,
+    duracaoSemanasDoCurso:
+      (cursoRes.data as { duracao_semanas?: number | null } | null)?.duracao_semanas ?? null,
     cursoPorCompetencias,
     unidades,
+    atribuicoesPorUe,
+    atribuicoesPorDisciplina,
+    errosDeLeitura: dados.erros,
     /*
      * ⚠️ **TODAS AS DISCIPLINAS ATIVAS, e não só as isentas de UE** — a `D-DSA-1` (08/10/2026) abriu a
      * aula sem UE para qualquer disciplina, e o formulário pede a disciplina antes da unidade.
@@ -1505,10 +1655,11 @@ export type ExtrasDaImpressao = {
   /** As linhas de `responsaveis_curso`, já filtradas por `status = 'ativo'`. */
   readonly responsaveis: readonly ResponsavelDoCurso[];
   /**
-   * Todas as datas com lançamento da turma — insumo do **Nº do DSA**.
+   * Todas as datas com lançamento da turma — o piso e o teto das semanas da planilha de contingência
+   * quando a turma não tem período cadastrado (`FR-030` da spec 015).
    *
-   * ⚠️ **ELAS NÃO SÃO AS DA SEMANA.** O número é a ordem da semana entre as que **têm aula** desde
-   * o início da turma (convenção da aba CRONOS, `P-6`): contar só a semana aberta daria sempre 1.
+   * ⚠️ **ATÉ 17/10/2026 ELAS ERAM O INSUMO DO «Nº DO DSA»** (convenção da aba CRONOS, `P-6`). O número
+   * virou a semana corrida do curso (spec 016, FR-009; D-COR-1), que é conta de calendário e não as lê.
    */
   readonly datasComLancamentoDaTurma: readonly string[];
 };
@@ -1523,7 +1674,7 @@ export async function lerExtrasDaImpressao(
   supabase: ClienteDeServidor,
   entrada: { readonly turmaId: string; readonly cursoId: string },
 ): Promise<ExtrasDaImpressao> {
-  /* ⚠️ As cinco em páginas até acabar (`DP-5`): as datas do nº do DSA são as que o teto cortava. */
+  /* ⚠️ As cinco em páginas até acabar (`DP-5`): a CH e as datas são as que o teto cortava. */
   const [execRes, respRes, aulasRes, avalRes, sessoesRes] = await Promise.all([
     lerTodasAsPaginas((f) =>
       supabase
@@ -1583,10 +1734,9 @@ export async function lerExtrasDaImpressao(
         .range(f.de, f.ate),
     ),
     /*
-     * ⚠️ **A SESSÃO DE APLICAÇÃO CONTA NO Nº DO DSA COMO A 1ª** (`RN-AV-12`, 16/10/2026): ela é a MESMA prova, num
-     *    outro dia. É também o que impede «juntar como sessão» de mudar o número das semanas: a avaliação juntada
-     *    contava, e a sessão que nasce dela continua contando. E a planilha de contingência faz igual — a sessão leva
-     *    o item da prova, que conta no nº.
+     * ⚠️ **A SESSÃO DE APLICAÇÃO É A MESMA PROVA, NUM OUTRO DIA** (`RN-AV-12`, 16/10/2026): a data dela é data com
+     *    lançamento da turma, como a da 1ª sessão. (Até 17/10/2026 isto também segurava o «Nº do DSA»; o número
+     *    virou a semana do curso, spec 016, e não depende mais de lançamento.)
      */
     lerTodasAsPaginas((f) =>
       supabase

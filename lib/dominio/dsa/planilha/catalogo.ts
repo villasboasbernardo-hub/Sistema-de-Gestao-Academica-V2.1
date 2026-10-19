@@ -16,7 +16,6 @@
  * ⚠️ **A LISTA DE INSTRUTORES NÃO É REORDENADA AQUI.** Ela chega em antiguidade, pela função única
  * (`ordenarPorAntiguidade`), e este módulo só a escreve na ordem recebida.
  */
-import { semanaIsoDe } from "../../carga-semanal";
 import { compararCodigoNatural, emOrdemNaturalDoCodigo } from "../../ordem-natural";
 import {
   SIGLA_DO_ESTUDO_INDIVIDUAL,
@@ -27,6 +26,7 @@ import {
 import { SIGLAS_DE_AVALIACAO } from "../grade-do-papel";
 import { preencherLancamento } from "../pre-preenchimento";
 import { LOCAL_DO_ESTUDO_INDIVIDUAL, ROTULO_DA_VISTA_DE_PROVA } from "../rotulos";
+import { ref } from "../../../planilha/formula";
 import { definir, novaAba, type Aba, type NomeDefinido } from "../../../planilha/pasta";
 
 import {
@@ -38,6 +38,7 @@ import {
   ITEM,
   NOME,
 } from "./layout";
+import { formulaDasSemanasDaTurma, formulaDoTotal } from "./semana-corrida";
 import type { FatoDoInsumo, InsumoDaPlanilha, ItemDoCatalogo, TipoDeItem } from "./tipos";
 
 /** O COD de um lançamento de aula sem disciplina no sistema — a chave dele não está no catálogo. */
@@ -66,7 +67,7 @@ export function chaveDoLancamento(fato: FatoDoInsumo): {
     case "avaliacao":
     /*
      * ⚠️ A SESSÃO DE APLICAÇÃO É A MESMA PROVA (`RN-AV-12`, 16/10/2026): o item é o da avaliação dela, e por isso
-     *    conta na CH e no nº do DSA como a 1ª sessão — o sistema conta as datas dela também (`lerExtrasDaImpressao`).
+     *    conta na CH como a 1ª sessão.
      */
     case "sessao_aplicacao":
       return { cod: disciplina, item: textoDoPapel(fato.tipoAvaliacao) || ITEM.nenhum };
@@ -81,9 +82,8 @@ export function chaveDoLancamento(fato: FatoDoInsumo): {
 }
 
 function item(
-  base: Omit<ItemDoCatalogo, "chave" | "disciplinaDaCh" | "contaNoNumero"> & {
+  base: Omit<ItemDoCatalogo, "chave" | "disciplinaDaCh"> & {
     readonly contaNaCh: boolean;
-    readonly contaNoNumero: boolean;
   },
 ): ItemDoCatalogo {
   return {
@@ -99,7 +99,6 @@ function item(
     te: base.te,
     instrutor: base.instrutor,
     disciplinaDaCh: base.contaNaCh ? base.disciplina : "",
-    contaNoNumero: base.contaNoNumero,
   };
 }
 
@@ -170,7 +169,6 @@ export function itensDoCatalogo(insumo: InsumoDaPlanilha): {
           te: siglaOuExtenso(p.tecnica, insumo.tecnicas),
           instrutor: nomeDe(p.instrutorId),
           contaNaCh: true,
-          contaNoNumero: true,
         }),
       );
     }
@@ -188,7 +186,6 @@ export function itensDoCatalogo(insumo: InsumoDaPlanilha): {
         chPrevista: null,
         te: "",
         contaNaCh: true,
-        contaNoNumero: true,
       }),
     );
 
@@ -207,7 +204,6 @@ export function itensDoCatalogo(insumo: InsumoDaPlanilha): {
           chPrevista: null,
           te: "",
           contaNaCh: true,
-          contaNoNumero: true,
         }),
       );
     }
@@ -223,7 +219,6 @@ export function itensDoCatalogo(insumo: InsumoDaPlanilha): {
         chPrevista: null,
         te: siglaOuExtenso(insumo.tecnicaDaVista, insumo.tecnicas),
         contaNaCh: true,
-        contaNoNumero: false,
       }),
     );
 
@@ -239,7 +234,6 @@ export function itensDoCatalogo(insumo: InsumoDaPlanilha): {
         te: "",
         instrutor: "",
         contaNaCh: false,
-        contaNoNumero: false,
       }),
     );
   }
@@ -272,7 +266,6 @@ export function itensDoCatalogo(insumo: InsumoDaPlanilha): {
         te: valores.te ?? "",
         instrutor: "",
         contaNaCh: false,
-        contaNoNumero: false,
       }),
     );
   }
@@ -349,7 +342,6 @@ const TITULOS: readonly [number, string][] = [
   [B.te, "T/E sugerida"],
   [B.instrutor, "Instrutor sugerido"],
   [B.disciplinaDaCh, "Conta na CH de"],
-  [B.contaNoNumero, "Conta no nº do DSA"],
   [B.listaCod, "LISTA — COD"],
   [B.listaItem, "LISTA — ITEM"],
   [B.listaInstrutores, "LISTA — instrutores da turma"],
@@ -361,11 +353,13 @@ const TITULOS: readonly [number, string][] = [
   [B.tecNome, "Técnica de ensino"],
   [B.semRotulo, "Semanas da planilha"],
   [B.dataInicio, "Início da turma"],
-  [B.chaveInicio, "APOIO — semana do início"],
+  [B.dataTermino, "Término da turma"],
+  [B.duracaoDoCurso, "Duração do curso (semanas)"],
+  [B.semanasDaTurma, "Semanas da turma"],
+  [B.totalDoCurso, "T — total da «Semana N de T»"],
   [B.foraData, "Fora das semanas — data"],
   [B.foraDisciplina, "disciplina"],
   [B.foraTempos, "TA"],
-  [B.foraSemanas, "semanas com aula"],
 ];
 
 const NOMES_DOS_TIPOS: Readonly<Record<TipoDeItem, string>> = {
@@ -384,7 +378,6 @@ export function abaDoCatalogo(entrada: {
   readonly insumo: InsumoDaPlanilha;
   readonly itens: readonly ItemDoCatalogo[];
   readonly rotulosDasSemanas: readonly string[];
-  readonly chaveDaSemanaDoInicio: number | null;
 }): { readonly aba: Aba; readonly nomes: readonly NomeDefinido[] } {
   const { insumo, itens } = entrada;
   const aba = novaAba(ABA.catalogo);
@@ -414,7 +407,6 @@ export function abaDoCatalogo(entrada: {
     definir(aba, l, B.te, { valor: i.te });
     definir(aba, l, B.instrutor, { valor: i.instrutor });
     definir(aba, l, B.disciplinaDaCh, { valor: i.disciplinaDaCh });
-    definir(aba, l, B.contaNoNumero, { valor: i.contaNoNumero ? 1 : 0 });
   });
 
   const listas = listasDoCatalogo(itens);
@@ -456,17 +448,34 @@ export function abaDoCatalogo(entrada: {
       estilo: { formato: "data" },
     });
   }
-  if (entrada.chaveDaSemanaDoInicio !== null) {
-    definir(aba, B_PRIMEIRA_LINHA, B.chaveInicio, { valor: entrada.chaveDaSemanaDoInicio });
+  /*
+   * ⚠️ **A SEMANA DO CURSO LÊ DAQUI** (FR-009.5): o término e a duração vão como valor, e as semanas da
+   * turma e o T como fórmula — corrigir o início ou o término nesta aba renumera a PREENCHIMENTO inteira.
+   * A duração só vai quando é válida (inteiro positivo), como `semanaDoCurso` a aceita.
+   */
+  if (insumo.turma.dataTermino !== null) {
+    definir(aba, B_PRIMEIRA_LINHA, B.dataTermino, {
+      data: insumo.turma.dataTermino,
+      estilo: { formato: "data" },
+    });
   }
+  const duracao = insumo.turma.duracaoSemanasDoCurso;
+  if (duracao !== null && Number.isInteger(duracao) && duracao > 0) {
+    definir(aba, B_PRIMEIRA_LINHA, B.duracaoDoCurso, { valor: duracao });
+  }
+  const daJanela = (c: number) => ref(B_PRIMEIRA_LINHA, c);
+  definir(aba, B_PRIMEIRA_LINHA, B.semanasDaTurma, {
+    formula: formulaDasSemanasDaTurma(daJanela(B.dataInicio), daJanela(B.dataTermino)),
+  });
+  definir(aba, B_PRIMEIRA_LINHA, B.totalDoCurso, {
+    formula: formulaDoTotal(daJanela(B.duracaoDoCurso), daJanela(B.semanasDaTurma)),
+  });
   insumo.foraDaPasta.forEach((f, n) => {
     const l = B_PRIMEIRA_LINHA + n;
     definir(aba, l, B.foraData, { data: f.data, estilo: { formato: "data" } });
     definir(aba, l, B.foraDisciplina, { valor: f.disciplinaCodigo ?? "" });
     definir(aba, l, B.foraTempos, { valor: f.tempos });
   });
-  const semanasFora = semanasComAulaForaDaPasta(insumo);
-  coluna(B.foraSemanas, semanasFora);
 
   for (const [c, largura] of [
     [B.chave, 18],
@@ -481,17 +490,19 @@ export function abaDoCatalogo(entrada: {
     [B.te, 8],
     [B.instrutor, 30],
     [B.disciplinaDaCh, 9],
-    [B.contaNoNumero, 9],
     [B.listaInstrutores, 30],
     [B.discNome, 30],
     [B.tecNome, 30],
     [B.semRotulo, 30],
     [B.dataInicio, 11],
+    [B.dataTermino, 11],
+    [B.duracaoDoCurso, 10],
+    [B.semanasDaTurma, 10],
+    [B.totalDoCurso, 10],
     [B.foraData, 11],
   ] as const) {
     aba.larguras.set(c, largura);
   }
-  aba.colunasOcultas.add(B.chaveInicio);
   aba.congelar = { linhas: B_LINHA_DOS_TITULOS, colunas: 0 };
 
   const faixa = (n: string, c: number, quantos: number): NomeDefinido => ({
@@ -511,7 +522,6 @@ export function abaDoCatalogo(entrada: {
       faixa(NOME.bdTe, B.te, n),
       faixa(NOME.bdInstrutor, B.instrutor, n),
       faixa(NOME.bdDisciplinaDaCh, B.disciplinaDaCh, n),
-      faixa(NOME.bdContaNoNumero, B.contaNoNumero, n),
       faixa(NOME.listaCod, B.listaCod, listas.cods.length),
       faixa(NOME.listaItem, B.listaItem, listas.itens.length),
       faixa(NOME.listaInstrutores, B.listaInstrutores, insumo.instrutores.length),
@@ -523,32 +533,18 @@ export function abaDoCatalogo(entrada: {
       faixa(NOME.tecNome, B.tecNome, legenda.length),
       faixa(NOME.listaSemanas, B.semRotulo, entrada.rotulosDasSemanas.length),
       faixa(NOME.dataInicio, B.dataInicio, 1),
-      faixa(NOME.chaveInicio, B.chaveInicio, 1),
+      faixa(NOME.dataTermino, B.dataTermino, 1),
+      faixa(NOME.duracaoDoCurso, B.duracaoDoCurso, 1),
+      faixa(NOME.semanasDaTurma, B.semanasDaTurma, 1),
+      faixa(NOME.totalDoCurso, B.totalDoCurso, 1),
       faixa(NOME.foraData, B.foraData, insumo.foraDaPasta.length),
       faixa(NOME.foraDisciplina, B.foraDisciplina, insumo.foraDaPasta.length),
       faixa(NOME.foraTempos, B.foraTempos, insumo.foraDaPasta.length),
-      faixa(NOME.foraSemanas, B.foraSemanas, semanasFora.length),
     ],
   };
 }
 
-/** `ano * 100 + número` da semana ISO de uma data — a chave que o nº do DSA compara. */
+/** `ano * 100 + número` da semana ISO — a chave da semana na coluna de apoio da PREENCHIMENTO. */
 export function chaveDaSemanaIso(ano: number, numero: number): number {
   return ano * 100 + numero;
-}
-
-/**
- * As semanas (como chave) com aula ou avaliação **fora** das semanas da pasta, a partir do início da
- * turma — elas contam no nº do DSA do sistema e a planilha não tem linha para elas.
- */
-export function semanasComAulaForaDaPasta(insumo: InsumoDaPlanilha): readonly number[] {
-  const inicio = insumo.turma.dataInicio;
-  const chaves = new Set<number>();
-  for (const f of insumo.foraDaPasta) {
-    if (!f.contaNoNumero || inicio === null || f.data < inicio) continue;
-    /* ⚠️ A semana ISO é a do domínio (`RN-DIST-01`) — nunca uma segunda conta. */
-    const semana = semanaIsoDe(f.data);
-    if (semana !== null) chaves.add(chaveDaSemanaIso(semana.ano, semana.numero));
-  }
-  return [...chaves].sort((a, b) => a - b);
 }

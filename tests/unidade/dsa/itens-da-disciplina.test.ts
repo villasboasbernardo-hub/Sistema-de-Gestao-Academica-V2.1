@@ -62,6 +62,9 @@ describe("FR-032 · a oferta da disciplina", () => {
     });
     expect(com.vistas[0]?.proximaSessao).toBe(4);
     expect(com.vistas[0]?.rotulo).toContain("sessão 4");
+    /* Spec 016, FR-005.1: a data da aplicação em DD/MM/AAAA, nunca a ISO crua. */
+    expect(com.vistas[0]?.rotulo).toContain("aplicada em 01/10/2026");
+    expect(com.vistas[0]?.rotulo).not.toContain("2026-10-01");
   });
 
   it("item sem vista no currículo não oferece vista; o histórico sem item oferece", () => {
