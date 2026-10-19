@@ -33,6 +33,8 @@ import {
   semanasForaDaFaixa,
 } from "@/lib/dominio/carga-semanal";
 import { motivoDoImpedimento } from "@/lib/dominio/exclusao-de-instrutor";
+import { mediaSemanalDaAtribuicao } from "@/lib/dominio/media-semanal";
+import { disciplinasSoHabilitadas } from "@/lib/dominio/so-habilitado";
 import { anoCorrente, hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -126,7 +128,7 @@ export default async function FichaDoInstrutor({
       supabase
         .from("vw_instrutor_carga_prevista")
         .select(
-          "atribuicao_id, ano, nome_disciplina, curso_codigo, turma_codigo, previsao_inicio, previsao_termino, tempos_previstos, semanas, media_semanal",
+          "atribuicao_id, ano, disciplina_id, nome_disciplina, curso_codigo, turma_codigo, previsao_inicio, previsao_termino, tempos_previstos, semanas, media_semanal",
         )
         .eq("instrutor_id", instrutor.id)
         /*
@@ -155,11 +157,30 @@ export default async function FichaDoInstrutor({
     v.disciplina_id ? [v.disciplina_id] : [],
   );
   const doCatalogo = new Map(catalogo.map((d) => [d.id, d]));
+  const janelasDoAno = atribuicoesRes.error ? null : (atribuicoesRes.data ?? []);
+  /*
+   * ⚠️ **"SÓ HABILITADO — NÃO GERA CH PREVISTA", POR DISCIPLINA** (FR-013.4 da spec 016; NQ-4): a habilitação sem
+   *    atribuição que conte no ano mostrado. Sem a leitura das atribuições, nenhuma marca — afirmar "só habilitado"
+   *    sem saber se há atribuição seria inventar.
+   */
+  const soHabilitadas =
+    janelasDoAno === null
+      ? null
+      : disciplinasSoHabilitadas(
+          habilitadas,
+          janelasDoAno.map((a) => ({
+            disciplinaId: a.disciplina_id as string,
+            ano: a.ano === null ? null : Number(a.ano),
+          })),
+          ano,
+        );
   const habilitadasEmLeitura = vinculosRes.error
     ? null
     : habilitadas.flatMap((id) => {
         const d = doCatalogo.get(id);
-        return d ? [{ nome: d.nome, sigla: d.sigla }] : [];
+        return d
+          ? [{ nome: d.nome, sigla: d.sigla, soHabilitado: soHabilitadas?.has(id) ?? false }]
+          : [];
       });
   // ⚠️ Falha de leitura é "—", não zero (`RN-DEG-01`): zero afirmaria que não houve aula.
   const ministrada = cargaRes.error ? null : Number(cargaRes.data?.ta_ministrado_ano ?? 0);
@@ -177,11 +198,25 @@ export default async function FichaDoInstrutor({
           maximo: Number(cargaRes.data.faixa_semanal_max),
         }
       : null;
-  const janelasDoAno = atribuicoesRes.error ? null : (atribuicoesRes.data ?? []);
+  /*
+   * ⚠️ **A MÉDIA SEMANAL É A DA `RN-DIST-02`** (FR-013.3 da spec 016): a que a view entrega (das semanas cadastradas
+   *    da disciplina) e, sem ela, a CH dividida pelas semanas da janela efetiva — a mesma média na lista e no
+   *    alerta de faixa. Sem a de reserva, a atribuição sem `semanas` ficava fora do alerta, mesmo com janela.
+   */
+  const comMedia = (janelasDoAno ?? []).map((a) => {
+    const cadastrada = a.media_semanal === null ? null : Number(a.media_semanal);
+    const media = mediaSemanalDaAtribuicao({
+      mediaCadastrada: cadastrada,
+      tempos: Number(a.tempos_previstos ?? 0),
+      inicio: a.previsao_inicio,
+      termino: a.previsao_termino,
+    });
+    return { ...a, media, mediaDaJanela: cadastrada === null && media !== null };
+  });
   const atribuicoes =
     janelasDoAno === null
       ? null
-      : janelasDoAno
+      : comMedia
           .filter((a) => a.ano === ano)
           .map((a) => ({
             id: a.atribuicao_id as string,
@@ -192,17 +227,18 @@ export default async function FichaDoInstrutor({
             termino: a.previsao_termino,
             tempos: Number(a.tempos_previstos ?? 0),
             semanas: a.semanas,
-            mediaSemanal: a.media_semanal === null ? null : Number(a.media_semanal),
+            mediaSemanal: a.media,
+            mediaDaJanela: a.mediaDaJanela,
           }));
   const alertas = [
     alertaForaDaFaixa(
       semanasForaDaFaixa(
         semanasDoAno(
           cargaPorSemana(
-            (janelasDoAno ?? []).map((a) => ({
+            comMedia.map((a) => ({
               inicio: a.previsao_inicio,
               termino: a.previsao_termino,
-              mediaSemanal: a.media_semanal === null ? null : Number(a.media_semanal),
+              mediaSemanal: a.media,
             })),
           ),
           ano,

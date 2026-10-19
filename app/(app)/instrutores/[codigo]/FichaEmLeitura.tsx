@@ -50,7 +50,14 @@ export function FichaEmLeitura({
   readonly id: string;
   readonly valores: ValoresFuncionais;
   /** Disciplinas com vínculo ativo; `null` quando a leitura falhou (`RN-DEG-01`). */
-  readonly habilitadas: readonly { readonly nome: string; readonly sigla: string }[] | null;
+  readonly habilitadas:
+    | readonly {
+        readonly nome: string;
+        readonly sigla: string;
+        /** Sem atribuição que conte no ano mostrado (FR-013.4 da spec 016; NQ-4). */
+        readonly soHabilitado?: boolean;
+      }[]
+    | null;
 }) {
   return (
     <div className="flex flex-col gap-3" data-slot="ficha-do-instrutor">
@@ -137,6 +144,12 @@ export function FichaEmLeitura({
             {habilitadas.map((d) => (
               <li key={`${d.sigla}-${d.nome}`}>
                 {d.nome} ({d.sigla})
+                {/* FR-013.4 · NQ-4: a habilitação sem atribuição no ano, por disciplina. */}
+                {d.soHabilitado ? (
+                  <span className="text-texto-suave ml-2 text-xs" data-slot="so-habilitado">
+                    só habilitado — não gera CH prevista
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>

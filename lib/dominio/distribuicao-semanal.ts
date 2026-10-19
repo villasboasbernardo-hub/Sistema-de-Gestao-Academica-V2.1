@@ -211,6 +211,27 @@ export function distribuirPorSemana(janela: JanelaDaDisciplina): readonly Previs
 }
 
 /**
+ * A média semanal da CH na janela — a segunda alternativa da `RN-DIST-02`: *"…ou a carga horária total dividida
+ * pelo número de semanas da janela"*. É a média de reserva da atribuição de instrutor cuja disciplina não tem
+ * semanas cadastradas (FR-013.3 da spec 016; research R-5), e quem decide quando ela vale é
+ * `lib/dominio/media-semanal.ts`.
+ *
+ * ⚠️ **AS SEMANAS SÃO AS DE `semanasDaJanela`** — a régua única —, e por isso ela mora AQUI: dividir carga por
+ *    semanas fora deste módulo é o que a `RN-DIST-01` proíbe (guarda `distribuicao-unica.test.ts`).
+ * ⚠️ **DUAS CASAS, COMO A `media_semanal` DA VIEW** (`round(tempos / semanas, 2)` em
+ *    `vw_instrutor_carga_prevista`): a média é para o alerta de faixa, não para distribuir — a distribuição
+ *    inteira, com o resto na última semana, continua sendo `distribuirPorSemana`.
+ * ⚠️ Sem janela — sem início, sem término, invertida —, `null`: média de uma janela que não existe é ausência.
+ */
+export function mediaSemanalDaJanela(janela: JanelaDaDisciplina): number | null {
+  const ch = Number(janela.chTempos);
+  if (!Number.isFinite(ch) || ch < 0) return null;
+  const semanas = semanasDaJanela(janela);
+  if (semanas.length === 0) return null;
+  return Math.round((ch / semanas.length) * 100) / 100;
+}
+
+/**
  * O previsto de **uma** semana — `0` fora da janela.
  *
  * ⚠️ **ZERO AQUI É MEDIDO, NÃO INVENTADO** (`RN-DEG-01`): a janela existe, a semana não está nela, e o
