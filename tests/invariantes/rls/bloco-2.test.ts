@@ -698,3 +698,75 @@ describe("SC-002 · os perfis fora do trio, um por um", () => {
     expect(await lerStatus()).toBe(antes);
   });
 });
+
+describe("M4 · a trava da turma arquivada NO BANCO (portão), com sessão real", () => {
+  const regular = () => turmaDe.get("regular")!;
+  const aula = (codigo: string) => ({
+    codigo,
+    data: "2046-05-20",
+    ta_inicial: 5,
+    tempos_consumidos: 1,
+    turma_id: regular(),
+    unidade_ensino_id: null as string | null,
+    instrutor_id: null as string | null,
+  });
+
+  beforeAll(async () => {
+    conferir(
+      "arquivar para a M4",
+      (
+        await sessao("encarregado")
+          .from("turma_arquivamentos")
+          .insert({ turma_id: regular(), acao: "arquivar" })
+      ).error,
+    );
+  });
+
+  afterAll(async () => {
+    await sessao("admin")
+      .from("turma_arquivamentos")
+      .insert({ turma_id: regular(), acao: "desarquivar" });
+  });
+
+  it("o Encarregado grava aula na arquivada e recebe 23514 turma_arquivada, com a linha completa", async () => {
+    const { data: ue } = await servico
+      .from("unidades_ensino")
+      .select("id")
+      .eq("codigo", "BLC2-UE-REGULAR")
+      .single();
+    const { data: ins } = await servico
+      .from("instrutores")
+      .select("id")
+      .eq("codigo", "BLC2-INS")
+      .single();
+    const linha = {
+      ...aula("BLC2-REGULAR-M4"),
+      curso_id: await cursoDe("regular"),
+      unidade_ensino_id: (ue as { id: string }).id,
+      instrutor_id: (ins as { id: string }).id,
+    };
+    const { error } = await sessao("encarregado").from("registros_aula").insert(linha);
+    expect(error?.code).toBe("23514");
+    expect(error?.hint).toBe("turma_arquivada");
+
+    // Desarquivada pelo Admin, a MESMA gravação passa — o caso que discrimina.
+    conferir(
+      "desarquivar",
+      (
+        await sessao("admin")
+          .from("turma_arquivamentos")
+          .insert({ turma_id: regular(), acao: "desarquivar" })
+      ).error,
+    );
+    const depois = await sessao("encarregado").from("registros_aula").insert(linha);
+    expect(depois.error).toBeNull();
+    conferir(
+      "rearquivar para o afterAll",
+      (
+        await sessao("encarregado")
+          .from("turma_arquivamentos")
+          .insert({ turma_id: regular(), acao: "arquivar" })
+      ).error,
+    );
+  });
+});

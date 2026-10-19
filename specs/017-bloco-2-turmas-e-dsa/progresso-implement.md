@@ -89,7 +89,24 @@ decisão de cada leitor:
   CONTROLE e a situação junto —, e voltou a **7 de 7** com a leitura.
 - **O CSS antigo do cartão** (f): ver §T044/T045 — reprovou *"passou de uma página"*; e a primeira correção, sem a
   ordem de quem cede, reprovou com o instrutor fora da caixa nos 60 cartões de 10 tempos.
-- Os demais: `[pendente]`.
+- **(a) o ramo fora do DSA tirado da `chd_executada` de `vw_carga_horaria_turma`** (`create or replace` no banco local
+  limpo com a M4, a coluna `ta_fora_do_dsa` mantida; o plantio confere que casou, e recusa se não): o **137** reprovou
+  os casos **4** (*"chd e cht somam os 5"*) e **6** (*"P-3 · sem corte, a base = vw_carga_horaria_turma em toda turma,
+  com TA fora do DSA"*).
+- **(b) a trilha só pela função** (o gatilho `trg_turmas_anotar_troca` retirado): o **138** reprovou os casos **2**
+  (*"a troca por UPDATE DIRETO também fica na trilha"* — o caso que discrimina), **3** e **4**.
+- **(c) desarquivar aberto a quem edita a turma** (`alter policy turma_arquivamentos_criar`): o RLS de
+  `bloco-2.test.ts` reprovou os três casos que discriminam — **Operador, Encarregado e Ajudante passaram a
+  desarquivar** (`expected undefined to be '42501'`) — e o controle positivo do Admin caiu em cascata (a turma já
+  estava desarquivada).
+- **(d) uma Server Action sem a trava** (`registrarTaForaDoDsa` sem `recusaSeTurmaArquivada`): a guarda
+  `turma-arquivada-trava.test.ts` reprovou **1 de 22** — *"registrarTaForaDoDsa grava sem conferir a turma
+  arquivada"* — e voltou a **22 de 22**.
+- **(g) a M4 sem uma tabela** (`drop trigger trg_registros_aula_turma_arquivada`): o **140** reprovou os casos **1**
+  (a enumeração, *"Results differ beginning at row 6"*), **8** (a aula na arquivada) e **11** (mover a aula para fora
+  da arquivada); e o caso com sessão real da M4 em `bloco-2.test.ts` reprovou (*"expected undefined to be '23514'"*).
+
+Todos desfeitos por `pnpm db:reset:limpo` (os de banco) ou pela cópia do arquivo (o de código), 19/10/2026.
 
 ## T021/T022 — o que a prova contra o banco mediu
 
@@ -105,6 +122,11 @@ decisão de cada leitor:
 - `pnpm test:rls` (a pasta `tests/invariantes` inteira), duas vezes seguidas sem reset, sobre o banco local limpo
   (`pnpm db:reset:limpo`, 19/10/2026, com M1–M3 corrigidas pelo analyze): **362 de 362 em 20 arquivos** na 1ª e
   **362 de 362** na 2ª. pgTAP no mesmo banco: **862 em 59 arquivos**, verde.
+- **Com a M4** (banco local limpo, 19/10/2026): pgTAP **880 em 60 arquivos**, verde; `tests/invariantes` **372 em 20
+  arquivos** (371 passados e 1 pulado, o de antes), com o caso da M4 verde depois de corrigido o rascunho
+  (`turmaDe.get`). ⚠️ O 140 nasceu vermelho por dois defeitos do TESTE, não da M4: a comparação do nome do gatilho
+  sem `collate` e a atribuição sem o `codigo` composto (`23502`, que a tabela não gera — `turma_disciplina_instrutor`
+  não tem `DEFAULT` no código).
 - Os e2e novos, duas vezes seguidas: `[pendente]`.
 
 ## T023, T031, T042, T051 e T057 — as provas de ponta a ponta das US1 a US4 e da edição da disciplina

@@ -21,6 +21,7 @@
  * Origem: `specs/009-cursos-e-turmas/contracts/escritas-recusas-e-avisos.md` §2.
  */
 
+import { RECUSA_DA_TURMA_ARQUIVADA } from "@/lib/dominio/arquivamento-da-turma";
 import { dataIlegivel, dataParaLeitura } from "@/lib/formato/data";
 import {
   chavesDaRecusa,
@@ -386,6 +387,9 @@ function porChave(
       return "A turma não existe mais.";
     case "turma_ja_arquivada":
       return "A turma já está arquivada.";
+    case "turma_arquivada":
+      // A mesma frase da trava do servidor — uma só, para a recusa do banco e a da tela (D-COR-5, M4).
+      return RECUSA_DA_TURMA_ARQUIVADA;
     case "turma_nao_arquivada":
       return "A turma não está arquivada.";
     case "janela_de_uma_semana":
