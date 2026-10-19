@@ -98,7 +98,8 @@
 
 # Reconferência dos ajustes de 18/10/2026 — só A e B
 
-> No mesmo preview do ramo, depois do commit dos ajustes. Nada é gravado.
+> Em **Production** (<https://sistema-de-gestao-academica-v2-1.vercel.app>), depois do merge de 19/10/2026 — o
+> preview do ramo some com ele. Nada é gravado.
 
 ## A · "Semana do curso: 28 de 37", num rótulo só
 

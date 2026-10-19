@@ -377,4 +377,4 @@ Os três casos na `PEND-014-7` do `CLAUDE.md`.
 | unidade | **2.367** em **166** arquivos (+2: o campo da semana) |
 | invariantes da leitura (`leitura-do-dsa`, `leitura-do-periodo`, `leitura-paginada`, `planilha-igual-ao-papel`, `planilha-de-conferencia`) | **16** de **16** |
 | ponta a ponta do DSA e da impressão (`dsa-*` e `planilha*`, 21 arquivos, base limpa, build novo) | **118** passados · **4** pulados · **0** reprovados — **122** casos, 7,9 min |
-| CI | [pendente] |
+| CI sobre `3de072f` (run `39191110451`, verde nos três blocos) | unidade **2.367** (166) · pgTAP **770** (54) · invariantes **330** (18) · ponta a ponta **507** passados + **1** instável + **6** pulados = **514** casos (os 513 de antes e o do rodapé); o instável foi `avaliacoes-nas-telas.spec.ts:53`, da `PEND-014-7` |
