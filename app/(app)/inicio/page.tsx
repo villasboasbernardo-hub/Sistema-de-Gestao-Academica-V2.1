@@ -22,6 +22,7 @@
  * ainda não recebeu a carga —, e é o único dos três que **some sozinho com o tempo**. Tratá-lo como
  * "não há" faria a tela afirmar, com todas as letras, que a CIAARA-11 não tem turma nenhuma.
  */
+import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
 import Link from "next/link";
 
 import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
@@ -122,6 +123,7 @@ export default async function Inicio({
     avaliacoesRes,
     parametrosDaVistaRes,
     executadaRes,
+    arquivadasRes,
   ] = await Promise.all([
     consultaDeCursos,
     supabase
@@ -196,6 +198,8 @@ export default async function Inicio({
      *    (FR-014.3). A view de carga continua dando o resto (curso, CH curricular, situação).
      */
     supabase.rpc("chd_da_turma_ate", { p_ate: hoje }),
+    /* D-COR-5 (spec 017, C-24): a turma arquivada some do panorama e, com ele, dos alertas. */
+    supabase.from("vw_turmas_arquivadas").select("turma_id"),
   ]);
 
   /*
@@ -221,8 +225,17 @@ export default async function Inicio({
    *    (`RN-DEG-01`). Só `cursos` e a view de carga continuam sendo condição para a tela existir:
    *    sem elas não há panorama nenhum a desenhar.
    */
+  /*
+   * ⚠️ **A ARQUIVADA SAI ANTES DO PANORAMA** (D-COR-5; C-24): tetos e vistas seguem o panorama (`noRecorte`), e saem
+   *    com ele. Falha na leitura das arquivadas não esconde nada — a turma aparece, como antes do Bloco 2.
+   */
+  const arquivadas = idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[]);
   const panorama = montarPanorama(
-    (cargasRes.data ?? []) as unknown as CargaDaTurma[],
+    semAsArquivadas(
+      (cargasRes.data ?? []) as unknown as CargaDaTurma[],
+      arquivadas,
+      (c) => c.turma_id,
+    ),
     (cursosRes.data ?? []) as unknown as CursoDoRecorte[],
     (turmasRes.data ?? []) as unknown as TurmaDoPanorama[],
     (regimesRes.data ?? []) as unknown as RegimeDoCursoNoBanco[],

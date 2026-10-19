@@ -40,7 +40,20 @@ de 19/10/2026, acima.
 
 ## T038 — os leitores de lista de turma (C-24)
 
-- Enumeração dos `from("turmas")` de `app/` e a decisão de cada um: `[pendente]`.
+Enumeração por `grep` de `from("turmas")` e `from("vw_carga_horaria_turma")` em `app/` e `lib/` (19/10/2026), e a
+decisão de cada leitor:
+
+| Leitor | Decisão | Por quê |
+|---|---|---|
+| `app/(app)/turmas/page.tsx` | **some**, volta com *Mostrar arquivadas*, com o selo | D-COR-5 |
+| `app/(app)/inicio/page.tsx` (panorama, tetos, vistas) | **some** | C-24; tetos e vistas seguem o panorama |
+| `app/(app)/cursos/[curso]/page.tsx` (lista, seletor, pré-seleção, *teto excedido*) | **some**; o **limite** conta todas | C-24 e C-7 |
+| `app/(app)/atividades/page.tsx` (filtro de turma) | **some** | C-24 |
+| `app/(app)/disciplinas/consulta.ts` (cascata) | **some da cascata**; a turma pedida pelo código continua lida | a mesma função monta a ficha da turma |
+| `app/(app)/admin/salas/page.tsx` | **fica** | histórico (C-24) |
+| `app/(app)/cursos/[curso]/editar/page.tsx` | **fica** | limite e proteção de vigência contam a arquivada (C-7) |
+| `app/(app)/cursos/[curso]/turmas/nova/page.tsx` | **fica** | o limite de turmas por ano conta a arquivada (C-7) |
+| ficha, DSA, impressão, planilha, avaliações da turma, ações | **não é lista** | leitura de UMA turma; a arquivada abre só para ler |
 
 ## T063 — defeitos deliberados
 

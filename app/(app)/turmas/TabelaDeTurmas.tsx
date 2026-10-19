@@ -173,10 +173,18 @@ const COLUNAS: readonly Coluna<TurmaNaLista>[] = [
     ordenavel: true,
     valor: (l) => l.status,
     celula: (l) => (
-      <BadgeStatus
-        tom={TOM_DO_STATUS_DE_TURMA[l.status] ?? "planejado"}
-        rotulo={ROTULO_DO_STATUS_DE_TURMA[l.status] ?? l.status}
-      />
+      <span className="flex flex-wrap items-center gap-1">
+        <BadgeStatus
+          tom={TOM_DO_STATUS_DE_TURMA[l.status] ?? "planejado"}
+          rotulo={ROTULO_DO_STATUS_DE_TURMA[l.status] ?? l.status}
+        />
+        {/* D-COR-5: arquivar não é situação — o selo vai AO LADO dela, que fica como está. */}
+        {l.arquivada ? (
+          <span data-slot="selo-arquivada">
+            <BadgeStatus tom="inativo" rotulo="Arquivada" />
+          </span>
+        ) : null}
+      </span>
     ),
   },
   /*

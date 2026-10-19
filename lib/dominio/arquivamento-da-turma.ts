@@ -77,3 +77,23 @@ export function fraseDaTurmaArquivada(e: {
 /** A recusa do servidor para toda gravação em turma arquivada (FR-004.4). */
 export const RECUSA_DA_TURMA_ARQUIVADA =
   "A turma está arquivada: somente leitura. Para gravar, o Administrador precisa desarquivá-la.";
+
+/**
+ * As listas de turma escondem a arquivada (C-24): `/inicio`, a aba *Grade* do curso e a pré-seleção, *"Turmas com
+ * teto excedido"*, o filtro de `/atividades` e a cascata de `/disciplinas`. Em `/turmas`, ela volta com *Mostrar
+ * arquivadas*. A ficha do instrutor, `/admin/salas` e as contas de limite continuam com ela, por histórico (C-7).
+ */
+export function semAsArquivadas<T>(
+  turmas: readonly T[],
+  arquivadas: ReadonlySet<string>,
+  idDe: (t: T) => string,
+): T[] {
+  return arquivadas.size === 0 ? [...turmas] : turmas.filter((t) => !arquivadas.has(idDe(t)));
+}
+
+/** O conjunto dos ids arquivados, a partir das linhas de `vw_turmas_arquivadas`. */
+export function idsArquivados(
+  linhas: readonly { readonly turma_id: string | null }[] | null,
+): Set<string> {
+  return new Set((linhas ?? []).map((l) => l.turma_id).filter((x): x is string => x !== null));
+}

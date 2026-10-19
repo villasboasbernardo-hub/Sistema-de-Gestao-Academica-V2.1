@@ -124,6 +124,8 @@ export type TurmaNaLista = {
    * andamento (sem carga): a guarda `andamento-unico.test.ts` lê um `false` escrito à mão como decisão.
    */
   readonly emAtraso?: boolean;
+  /** D-COR-5 (spec 017): arquivada — só aparece com *Mostrar arquivadas*, e com o selo ao lado da situação. */
+  readonly arquivada?: boolean;
 };
 
 /** As situações que mostram o Saldo (P-4, Bernardo Villas Boas, 17/10/2026); as demais mostram «—». */

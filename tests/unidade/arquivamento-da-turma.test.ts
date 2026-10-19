@@ -6,8 +6,10 @@ import {
   avisoAoArquivar,
   estadoDoArquivamento,
   fraseDaTurmaArquivada,
+  idsArquivados,
   podeArquivar,
   podeDesarquivar,
+  semAsArquivadas,
 } from "@/lib/dominio/arquivamento-da-turma";
 
 describe("estadoDoArquivamento — o último evento manda", () => {
@@ -84,5 +86,14 @@ describe("o aviso e a frase", () => {
     expect(fraseDaTurmaArquivada({ em: "2026-10-19T14:00:00Z", por: null })).toBe(
       "Turma arquivada em 19/10/2026 — somente leitura. Só o Administrador desarquiva.",
     );
+  });
+});
+
+describe("as listas escondem a arquivada (C-24)", () => {
+  it("tira só a arquivada, e sem arquivada nenhuma devolve a lista inteira", () => {
+    const turmas = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    const arquivadas = idsArquivados([{ turma_id: "b" }, { turma_id: null }]);
+    expect(semAsArquivadas(turmas, arquivadas, (t) => t.id).map((t) => t.id)).toEqual(["a", "c"]);
+    expect(semAsArquivadas(turmas, idsArquivados(null), (t) => t.id)).toHaveLength(3);
   });
 });

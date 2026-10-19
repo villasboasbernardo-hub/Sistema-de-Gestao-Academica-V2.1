@@ -21,6 +21,7 @@ import { escalaDeLinhas, type EscalaDeAntiguidade } from "@/lib/dominio/antiguid
 import { nomeEmTexto } from "@/lib/dominio/nome-instrutor";
 import { conferirSomaDasUnidades } from "@/lib/dominio/soma-das-unidades";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 export type CursoDaCascata = {
@@ -224,7 +225,7 @@ export async function lerGradeDeDisciplinas(filtro: {
   if (!cursoEscolhido) return vazio;
 
   // ── o curso escolhido: turmas e disciplinas, independentes entre si ──────────────────────────
-  const [turmasRes, disciplinasRes] = await Promise.all([
+  const [turmasRes, disciplinasRes, arquivadasRes] = await Promise.all([
     supabase
       .from("turmas")
       .select("id, codigo, status")
@@ -238,16 +239,27 @@ export async function lerGradeDeDisciplinas(filtro: {
       .eq("curso_id", cursoEscolhido.id)
       .order("ordem_sugerida", { ascending: true, nullsFirst: false })
       .order("cod_disciplina"),
+    supabase.from("vw_turmas_arquivadas").select("turma_id"),
   ]);
 
-  const turmas: TurmaDaCascata[] = (turmasRes.data ?? []).map((t) => ({
+  const todasAsTurmas: TurmaDaCascata[] = (turmasRes.data ?? []).map((t) => ({
     id: t.id,
     codigo: t.codigo,
     status: t.status,
   }));
+  /*
+   * ⚠️ **A ARQUIVADA SAI DA CASCATA, NÃO DA LEITURA** (D-COR-5; C-24): a lista que se oferece para escolher não a
+   *    tem, mas a turma pedida pelo código continua encontrada — esta mesma função monta as disciplinas da ficha da
+   *    turma, e a arquivada também tem ficha, somente leitura.
+   */
+  const turmas = semAsArquivadas(
+    todasAsTurmas,
+    idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[]),
+    (t) => t.id,
+  );
 
   const turmaEscolhida = filtro.turmaCodigo
-    ? (turmas.find((t) => t.codigo === filtro.turmaCodigo) ?? null)
+    ? (todasAsTurmas.find((t) => t.codigo === filtro.turmaCodigo) ?? null)
     : null;
 
   const disciplinas = disciplinasRes.data ?? [];

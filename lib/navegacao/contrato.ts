@@ -548,6 +548,18 @@ export const CONTRATO = {
         avisaServidor: true,
         limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
       },
+      /*
+       * ⚠️ **D-COR-5 (spec 017)**: a turma arquivada some da lista; `?arquivadas=sim` a traz de volta — é o caminho
+       *    até ela. O padrão vazio é *esconder*, e o `BotaoLimparFiltros` o conta como filtro fora do padrão.
+       */
+      arquivadas: {
+        nome: "arquivadas",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: SIM_OU_NAO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
     },
   },
   /*

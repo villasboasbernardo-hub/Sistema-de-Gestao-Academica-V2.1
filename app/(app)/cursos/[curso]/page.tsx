@@ -14,6 +14,7 @@
  * *"em breve"*: *"a tela não anuncia o que não entrega"*. A reserva das duas rotas em `FORA_DO_MENU`
  * continua valendo — ela diz que o menu não as terá, não que esta página já as mostra.
  */
+import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
@@ -104,6 +105,7 @@ export default async function PaginaDoCurso({
     parametrosRes,
     conformidadeRes,
     previstosRes,
+    arquivadasRes,
   ] = await Promise.all([
     supabase
       .from("turmas")
@@ -155,11 +157,26 @@ export default async function PaginaDoCurso({
       .select("turma_id, categoria, tempos_previstos, turmas!inner(curso_id)")
       .eq("turmas.curso_id", curso.id as string)
       .eq("status", "ativo"),
+    /* D-COR-5 (spec 017, C-24): a turma arquivada some da aba Grade, do seletor e da pré-seleção. */
+    supabase.from("vw_turmas_arquivadas").select("turma_id"),
   ]);
 
   const hoje = hojeEmSaoPaulo();
 
-  const turmas: TurmaDaGrade[] = (turmasRes.data ?? []).map((t) => ({
+  /*
+   * ⚠️ **A ARQUIVADA SOME DA GRADE, MAS CONTA NO LIMITE** (D-COR-5; C-7 e C-24): `paraLimite` lê TODAS as turmas,
+   *    e a lista, o seletor, a pré-seleção e *"Turmas com teto excedido"* só as não arquivadas.
+   */
+  const arquivadas = idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[]);
+  const todasAsTurmas = turmasRes.data ?? [];
+  const codigosArquivados = new Set(
+    todasAsTurmas.filter((t) => arquivadas.has(t.id as string)).map((t) => t.codigo as string),
+  );
+  const turmas: TurmaDaGrade[] = semAsArquivadas(
+    todasAsTurmas,
+    arquivadas,
+    (t) => t.id as string,
+  ).map((t) => ({
     codigo: t.codigo as string,
     rotulo: t.turma,
     ano: Number(t.ano_letivo),
@@ -201,7 +218,10 @@ export default async function PaginaDoCurso({
         })
       : { quadro: null, aviso: null, turmaId: null };
 
-  const paraLimite: TurmaParaLimite[] = turmas.map((t) => ({ ano: t.ano, status: t.status }));
+  const paraLimite: TurmaParaLimite[] = todasAsTurmas.map((t) => ({
+    ano: Number(t.ano_letivo),
+    status: t.status as string,
+  }));
   const avisos = avisosDoCurso(
     {
       duracaoSemanas: curso.duracao_semanas === null ? null : Number(curso.duracao_semanas),
@@ -274,7 +294,7 @@ export default async function PaginaDoCurso({
     (conformidadeRes.data ?? []) as LinhaDaConformidade[],
     (previstosRes.data ?? []) as unknown as LinhaDoPrevisto[],
     new Map((turmasRes.data ?? []).map((t) => [t.id as string, t.modalidade as string | null])),
-  );
+  ).filter((e) => !codigosArquivados.has(e.turmaCodigo));
 
   return (
     <section className="flex flex-col gap-5">

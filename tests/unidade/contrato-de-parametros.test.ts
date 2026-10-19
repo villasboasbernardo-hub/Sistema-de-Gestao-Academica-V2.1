@@ -444,14 +444,16 @@ describe("⚠️ `FR-012` da spec 012 · a guarda INVERTIDA — a lista de turma
    *
    * ⚠️ **O DSA SEGUE AUSENTE**, e o caso dele ficou de pé: ele é do **Épico 6**.
    */
-  it("a rota `/turmas` existe, com os quatro filtros da `D4`", () => {
+  it("a rota `/turmas` existe, com os quatro filtros da `D4` e o «Mostrar arquivadas» da D-COR-5", () => {
     expect(ROTAS, "a lista de turmas sumiu do contrato — ver a `D-NAV-1` de 04/10/2026").toContain(
       "/turmas",
     );
+    // REGRA DOS VALORES ESPERADOS: (a), spec 017 (D-COR-5, 19/10/2026) — `arquivadas` entrou: a arquivada some da
+    // lista, e o filtro é o caminho até ela.
     expect(
       [...parametrosDaRota("/turmas").map((p) => p.nome)].sort(),
-      "os quatro filtros da lista de turmas mudaram sem decisão nova",
-    ).toEqual(["ano", "busca", "curso", "situacao"]);
+      "os filtros da lista de turmas mudaram sem decisão nova",
+    ).toEqual(["ano", "arquivadas", "busca", "curso", "situacao"]);
   });
 
   it("⚠️ a situação de turma NÃO é a de cadastro — são enums diferentes", () => {

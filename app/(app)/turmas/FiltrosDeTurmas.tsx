@@ -45,6 +45,7 @@ export function FiltrosDeTurmas({
   const [ano, definirAno] = useParametro(ROTA, "ano");
   const [situacao, definirSituacao] = useParametro(ROTA, "situacao");
   const [busca, definirBusca] = useParametro(ROTA, "busca");
+  const [arquivadas, definirArquivadas] = useParametro(ROTA, "arquivadas");
 
   const campos: readonly CampoDeFiltro[] = [
     { chave: "busca", rotulo: "Buscar pelo código", tipo: "texto" },
@@ -69,6 +70,13 @@ export function FiltrosDeTurmas({
         rotulo: ROTULO_DO_STATUS_DE_TURMA[s] ?? s,
       })),
     },
+    /* D-COR-5 (spec 017): a arquivada some da lista; este é o caminho até ela. */
+    {
+      chave: "arquivadas",
+      rotulo: "Arquivadas",
+      tipo: "escolha",
+      opcoes: [{ valor: "sim", rotulo: "Mostrar arquivadas" }],
+    },
   ];
 
   const estado: EstadoDeFiltro = {
@@ -76,6 +84,7 @@ export function FiltrosDeTurmas({
     curso: curso === "" ? [] : [curso],
     ano: ano === "" ? [] : [ano],
     situacao: situacao === "" ? [] : [situacao],
+    arquivadas: arquivadas === "" ? [] : [arquivadas],
   };
 
   const aoMudar = (proximo: EstadoDeFiltro) => {
@@ -85,17 +94,19 @@ export function FiltrosDeTurmas({
     if (escolha("curso") !== curso) void definirCurso(escolha("curso") || null);
     if (escolha("ano") !== ano) void definirAno(escolha("ano") || null);
     if (escolha("situacao") !== situacao) void definirSituacao(escolha("situacao") || null);
+    if (escolha("arquivadas") !== arquivadas) void definirArquivadas(escolha("arquivadas") || null);
   };
 
   // ⚠️ A régua é o padrão do contrato (spec 016, item 1.4): o número do botão e o "Limpar filtros"
   //    respondem à mesma pergunta.
-  const ativos = filtrosForaDoPadrao(ROTA, { busca, curso, ano, situacao });
+  const ativos = filtrosForaDoPadrao(ROTA, { busca, curso, ano, situacao, arquivadas });
 
   const limpar = () => {
     void definirBusca("");
     void definirCurso(null);
     void definirAno(null);
     void definirSituacao(null);
+    void definirArquivadas(null);
   };
 
   return (
