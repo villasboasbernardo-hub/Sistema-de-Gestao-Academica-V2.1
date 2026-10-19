@@ -47,7 +47,18 @@ de 19/10/2026, acima.
 - **M3, a agenda alheia inteira** (o corpo de antes do achado 53, aplicado por `psql` no banco local limpo, 19/10/2026):
   `tests/invariantes/rls/bloco-2.test.ts` reprovou **1 de 27** — exatamente *"a ocupação alheia que NÃO cruza a do
   operador não sai"* —, e voltou a **27 de 27** com o corpo da migration. Desfeito por `pnpm db:reset:limpo`.
+- **`PEND-016-5`, o painel sem o sem posição** (o acumulado do DSA lendo `[]` no lugar de `dados.semPosicao`, 19/10/2026):
+  `tests/invariantes/planilha-igual-ao-papel.test.ts` reprovou **2 de 7** — *"D95: painel 25 × base da CHD 40"*, a
+  CONTROLE e a situação junto —, e voltou a **7 de 7** com a leitura.
 - Os demais: `[pendente]`.
+
+## T021/T022 — o que a prova contra o banco mediu
+
+- **A faixa *sem posição* das abas de semana da planilha NÃO soma** (19/10/2026, banco local limpo, semente do DSA
+  mais 10 TA sem posição na W16 e 5 TA fora do DSA): com o sem posição da pasta deixado fora de `FORA_TEMPOS` — o
+  desenho que o achado 3 do analyze propunha para não contar duas vezes —, a CONTROLE deu **30 × 40** do painel, a
+  CRONOS **32 × 42** da base, e o rodapé da IMPRESSÃO ficou **10 abaixo do papel** em quatro semanas. O risco era o
+  oposto do previsto: não dobrava, sumia. Todo fato sem posição foi para `FORA_TEMPOS`, e as três batem.
 
 ## T065 — `verificar:tudo` e a suíte rodada duas vezes
 

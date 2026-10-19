@@ -25,7 +25,15 @@ import { montarDocumentoDoDsa } from "@/app/print/dsa/documento";
 import { datasDaSemanaIso, semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import { situacaoDaDisciplina } from "@/lib/dominio/dsa/situacao";
 import { PALAVRA_DA_SITUACAO } from "@/lib/dominio/dsa/planilha/controle";
-import { ABA, C, C_PRIMEIRA_LINHA, C_REFERENCIA } from "@/lib/dominio/dsa/planilha/layout";
+import { COLUNAS_DEPOIS_DAS_SEMANAS } from "@/lib/dominio/dsa/planilha/cronos";
+import {
+  ABA,
+  C,
+  C_PRIMEIRA_LINHA,
+  C_REFERENCIA,
+  K,
+  K_PRIMEIRA_LINHA,
+} from "@/lib/dominio/dsa/planilha/layout";
 import { emOrdemNaturalDoCodigo } from "@/lib/dominio/ordem-natural";
 import { rubricaResolvida } from "@/lib/dominio/dsa/assinatura-editada";
 import { montarPlanilhaComGeometria } from "@/lib/dominio/dsa/planilha-de-contingencia";
@@ -50,6 +58,8 @@ const GERADA_POR = "Operador de Teste";
 const ANO = 2026;
 /** As semanas para onde a prova copia aulas da semente — além da W15, que a semente já povoa. */
 const SEMANAS_EXTRAS = [20, 25, 30] as const;
+/** `PEND-016-5` e D-COR-3 (spec 017): a marca do TA fora do DSA desta prova, para a limpeza. */
+const OBSERVACAO_FORA = `Prova da planilha ${PROCESSO} — fora do DSA`;
 
 type Cliente = Parameters<typeof lerSemanaDoDsa>[0];
 
@@ -173,6 +183,77 @@ beforeAll(async () => {
     if (erroPrevisao) throw new Error(`previsão da disciplina atrasada: ${erroPrevisao.message}`);
   }
 
+  /*
+   * ⚠️ **`PEND-016-5` E D-COR-3 (spec 017)**: 10 TA SEM POSIÇÃO dentro da pasta (uma aula histórica, sem
+   * `ta_inicial`, na W16) e 5 TA FORA DO DSA na mesma disciplina. O painel, a CONTROLE, a CRONOS e o papel têm de
+   * contar os 15 — e UMA vez só: o sem posição da pasta já está na faixa da semana, e não pode ir também para
+   * `FORA_TEMPOS` (analyze, achado 3).
+   */
+  {
+    const { data: t } = await admin
+      .from("turmas")
+      .select("id")
+      .eq("codigo", semeado.turmaComRelogio)
+      .single();
+    const turmaId = (t as { id: string }).id;
+    const { data: molde, error: erroMolde } = await admin
+      .from("registros_aula")
+      .select(
+        "curso_id, unidade_ensino_id, disciplina_id, instrutor_id, local, conteudo_resumo, metodologia, unidades_ensino!registros_aula_unidade_ensino_id_fkey(disciplina_id)",
+      )
+      .eq("turma_id", turmaId)
+      .eq("status", "ativo")
+      .not("ta_inicial", "is", null)
+      .order("codigo")
+      .limit(1)
+      .single();
+    if (erroMolde) throw new Error(`molde do sem posição: ${erroMolde.message}`);
+    const { unidades_ensino: ue, ...campos } = molde as unknown as {
+      unidades_ensino: { disciplina_id: string } | null;
+      disciplina_id: string | null;
+    } & Record<string, unknown>;
+    const disciplinaId = ue?.disciplina_id ?? campos.disciplina_id;
+    const { error: erroSem } = await admin.from("registros_aula").upsert(
+      {
+        ...campos,
+        codigo: `PLA-${PROCESSO}-sem-posicao`,
+        turma_id: turmaId,
+        data: datasDaSemanaIso(ANO, 16)[1] as string,
+        ta_inicial: null,
+        tempos_consumidos: 10,
+      },
+      { onConflict: "codigo" },
+    );
+    if (erroSem) throw new Error(`aula sem posição: ${erroSem.message}`);
+    /* A semente do DSA não cria a linha da turma; sem ela não há onde registrar o TA fora do DSA. */
+    const lerLinha = () =>
+      admin
+        .from("turma_disciplina")
+        .select("id")
+        .eq("turma_id", turmaId)
+        .eq("disciplina_id", disciplinaId as string)
+        .eq("status", "ativo")
+        .maybeSingle();
+    let { data: linha } = await lerLinha();
+    if (linha === null) {
+      const { error: erroLinha } = await admin
+        .from("turma_disciplina")
+        .insert({ turma_id: turmaId, disciplina_id: disciplinaId as string });
+      if (erroLinha) throw new Error(`linha da turma: ${erroLinha.message}`);
+      ({ data: linha } = await lerLinha());
+    }
+    await admin.from("ta_fora_do_dsa").delete().eq("observacao", OBSERVACAO_FORA);
+    const { error: erroFora } = await admin.from("ta_fora_do_dsa").insert({
+      turma_disciplina_id: (linha as { id: string }).id,
+      turma_id: turmaId,
+      disciplina_id: disciplinaId as string,
+      data: datasDaSemanaIso(ANO, 16)[2] as string,
+      tempos: 5,
+      observacao: OBSERVACAO_FORA,
+    });
+    if (erroFora) throw new Error(`TA fora do DSA: ${erroFora.message}`);
+  }
+
   /* Uma turma semipresencial com a etapa cadastrada, cobrindo as semanas com aula (`FR-014`). */
   const { error: erroEtapa } = await admin
     .from("turmas")
@@ -187,6 +268,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (semeado) {
+    await admin.from("ta_fora_do_dsa").delete().eq("observacao", OBSERVACAO_FORA);
     await admin.from("atividades_nao_letivas").delete().like("codigo", `PLA-${PROCESSO}-%`);
     await admin.from("registros_aula").delete().like("codigo", `PLA-${PROCESSO}-%`);
     await admin
@@ -351,6 +433,29 @@ describe.each(["turmaComRelogio"] as const)(
       );
       const ordem = emOrdemNaturalDoCodigo(insumo.disciplinas, (d) => d.codigo);
       expect(ordem.length).toBeGreaterThan(0);
+      /*
+       * ⚠️ **A BASE DA CHD É A RÉGUA** (`PEND-016-5`, C-26 da spec 017): o painel soma o que `vw_chd_por_fato` soma até
+       *    o fim da semana — o lançamento sem posição e o TA fora do DSA inclusive —, e a CRONOS o ano inteiro.
+       */
+      const { data: base } = await admin
+        .from("vw_chd_por_fato")
+        .select("disciplina_id, data, tempos, origem, sem_posicao")
+        .eq("turma_id", turma.id);
+      const somaDaBase = (disciplinaId: string, ate: string | null) =>
+        ((base ?? []) as { disciplina_id: string | null; data: string; tempos: number }[])
+          .filter((b) => b.disciplina_id === disciplinaId && (ate === null || b.data <= ate))
+          .reduce((n, b) => n + Number(b.tempos), 0);
+      const semPosicaoNaBase = (
+        (base ?? []) as { sem_posicao: boolean; origem: string; tempos: number }[]
+      ).filter((b) => b.sem_posicao && Number(b.tempos) > 0);
+      expect(
+        semPosicaoNaBase.some((b) => b.origem === "fora_do_dsa") &&
+          semPosicaoNaBase.some((b) => b.origem === "aula"),
+        "a prova precisa do sem posição e do fora do DSA semeados",
+      ).toBe(true);
+      const distribuida =
+        K.primeiraSemana + insumo.semanas.length + COLUNAS_DEPOIS_DAS_SEMANAS.distribuida;
+      const { valorDe: valorDaPasta } = avaliador(pasta, new Map());
       /* O caso que discrimina: o painel tem de dizer *Atrasada* em pelo menos uma disciplina. */
       expect(quadros.some((q) => q.situacao === "atrasada")).toBe(true);
       const divergencias: string[] = [];
@@ -361,6 +466,15 @@ describe.each(["turmaComRelogio"] as const)(
         const lancada = valorDe(ABA.controle, l, C.lancada);
         if (lancada !== q.chAcumulada)
           divergencias.push(`${d.codigo}: lançada ${String(lancada)} × ${q.chAcumulada}`);
+        const naBase = somaDaBase(d.id, ateODia);
+        if (q.chAcumulada !== naBase)
+          divergencias.push(`${d.codigo}: painel ${q.chAcumulada} × base da CHD ${naBase}`);
+        const naCronos = valorDaPasta(ABA.cronos, K_PRIMEIRA_LINHA + i, distribuida);
+        const anoInteiro = somaDaBase(d.id, null);
+        if (naCronos !== anoInteiro)
+          divergencias.push(
+            `${d.codigo}: CRONOS distribuída ${String(naCronos)} × base ${anoInteiro}`,
+          );
         const esperada =
           PALAVRA_DA_SITUACAO[
             situacaoDaDisciplina({
