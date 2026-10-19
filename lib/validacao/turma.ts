@@ -149,10 +149,41 @@ export const esquemaDeEdicaoDaTurma = camposDaTurma
   .transform(etapaSoEmSemipresencial)
   .superRefine(conferirEtapaPresencial);
 
-/** A **troca de situação** pelo botão da ficha: o código da turma e a situação, e nada mais. */
+/** A observação de uma troca de situação ou de um arquivamento: opcional; em branco vira nula (D-COR-4). */
+export const LIMITE_DA_OBSERVACAO_DA_TURMA = 500;
+const observacaoDaTurma = z
+  .string()
+  .nullish()
+  .transform((v) => (v ?? "").trim())
+  .pipe(
+    z
+      .string()
+      .max(
+        LIMITE_DA_OBSERVACAO_DA_TURMA,
+        `A observação tem no máximo ${LIMITE_DA_OBSERVACAO_DA_TURMA} caracteres.`,
+      ),
+  )
+  .transform((v) => (v === "" ? null : v));
+
+/**
+ * A **troca de situação** pelo botão da ficha: o código da turma, a situação e a observação — D-COR-4: *"status da
+ * turma com observação em toda troca"*. Nada mais entra.
+ */
 export const esquemaDaTrocaDeSituacao = z.object({
   codigo: z.string().trim().min(1, "A turma não foi informada."),
   status: situacao,
+  observacao: observacaoDaTurma,
+});
+
+/** D-COR-5: arquivar a turma em qualquer situação, com observação opcional. */
+export const esquemaDoArquivamento = z.object({
+  codigo: z.string().trim().min(1, "A turma não foi informada."),
+  observacao: observacaoDaTurma,
+});
+
+/** D-COR-5: desarquivar — só o Admin, e o banco confere. */
+export const esquemaDoDesarquivamento = z.object({
+  codigo: z.string().trim().min(1, "A turma não foi informada."),
 });
 
 export type TurmaParaGravar = z.infer<typeof esquemaDeTurma>;

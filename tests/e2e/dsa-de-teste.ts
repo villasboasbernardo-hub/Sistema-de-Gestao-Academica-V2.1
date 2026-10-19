@@ -1068,7 +1068,12 @@ export async function apagarLinhasDaTurma(turmaId: string): Promise<void> {
   if (error) throw new Error(`falha ao ler as linhas da turma: ${error.message}`);
   const ids = ((linhas ?? []) as { id: string }[]).map((l) => l.id);
   if (ids.length === 0) return;
-  for (const tabela of ["turma_disciplina_unidade", "turma_disciplina_instrutor"] as const) {
+  /* Spec 017: o TA fora do DSA também aponta a linha (FK `restrict`) e sai antes dela. */
+  for (const tabela of [
+    "turma_disciplina_unidade",
+    "turma_disciplina_instrutor",
+    "ta_fora_do_dsa",
+  ] as const) {
     const { error: erro } = await admin().from(tabela).delete().in("turma_disciplina_id", ids);
     if (erro) throw new Error(`falha ao limpar ${tabela}: ${erro.message}`);
   }

@@ -17,6 +17,7 @@
  * ⚠️ **SEM DADO PESSOAL** (`FR-029`): dos instrutores, só o nome como o DSA imprime — nenhuma coluna
  * de CPF, RG, telefone ou endereço é pedida, e só entram os da turma.
  */
+import { nomeNoCartao } from "@/lib/dominio/nome-no-dsa";
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -428,6 +429,28 @@ export async function lerDadosDaPlanilha(
         disciplinaCodigo: codigoDaDisciplina.get(o.disciplina_id ?? "") ?? null,
         tempos: o.tempos_consumidos ?? 0,
       })),
+    /*
+     * ⚠️ **`PEND-016-5` E O TA FORA DO DSA, UMA VEZ SÓ** (spec 017, C-26; analyze, achado 3): o que não ocupa TA na
+     *    grade entra aqui, dentro ou fora da pasta. ⚠️ **A FAIXA *SEM POSIÇÃO* DAS ABAS DE SEMANA NÃO SOMA** — ela
+     *    lista o fato, e nenhuma fórmula a lê: medido em 19/10/2026 pela prova contra o banco
+     *    (`planilha-igual-ao-papel.test.ts`), com 10 TA sem posição na W16 a CONTROLE dava 30 contra 40 do painel, e
+     *    a CRONOS 32 contra 42 da base. Com isso a CONTROLE, a CRONOS (*Distribuída* e *Restante*) e o rodapé da
+     *    IMPRESSÃO contam o fato uma vez, como o papel.
+     */
+    ...(
+      (dados.semPosicao ?? []) as {
+        origem: string;
+        data: string;
+        disciplina_id: string | null;
+        tempos: number;
+      }[]
+    )
+      .filter((o) => o.disciplina_id !== null)
+      .map((o) => ({
+        data: o.data,
+        disciplinaCodigo: codigoDaDisciplina.get(o.disciplina_id ?? "") ?? null,
+        tempos: Number(o.tempos),
+      })),
   ];
 
   const datasDoAno = [
@@ -478,6 +501,7 @@ export async function lerDadosDaPlanilha(
       id: d.disciplinaId,
       codigo: d.codigo,
       nome: d.nome,
+      nomeNoCartao: nomeNoCartao({ nomeNoDsa: d.nomeNoDsa, nome: d.nome }),
       chPrevista: d.prevista,
     })),
     unidades: unidadesBrutas

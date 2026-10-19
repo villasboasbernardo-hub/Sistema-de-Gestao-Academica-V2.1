@@ -10,6 +10,8 @@ import {
   esquemaDaTrocaDeSituacao,
   esquemaDeEdicaoDaTurma,
   esquemaDeTurma,
+  esquemaDoArquivamento,
+  esquemaDoDesarquivamento,
 } from "@/lib/validacao/turma";
 
 const TURMA = {
@@ -240,6 +242,35 @@ describe("`FR-015.4` da spec 016 · a situação tem um caminho só", () => {
     ).toBe(false);
   });
 
+  it("D-COR-4 · a troca leva a observação: opcional, em branco vira nula, até 500", () => {
+    const com = esquemaDaTrocaDeSituacao.safeParse({
+      codigo: "C-Ap-FR 2026",
+      status: "cancelada",
+      observacao: "  Turma sem alunos  ",
+    });
+    expect(com.success && com.data.observacao).toBe("Turma sem alunos");
+    const sem = esquemaDaTrocaDeSituacao.safeParse({
+      codigo: "C-Ap-FR 2026",
+      status: "ativa",
+      observacao: "   ",
+    });
+    expect(sem.success && sem.data.observacao).toBeNull();
+    expect(
+      esquemaDaTrocaDeSituacao.safeParse({
+        codigo: "C-Ap-FR 2026",
+        status: "ativa",
+        observacao: "x".repeat(501),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("D-COR-5 · arquivar leva o código e a observação opcional; desarquivar, só o código", () => {
+    const r = esquemaDoArquivamento.safeParse({ codigo: "C-Ap-FR 2026", observacao: "" });
+    expect(r.success && r.data.observacao).toBeNull();
+    expect(esquemaDoArquivamento.safeParse({ codigo: " ", observacao: null }).success).toBe(false);
+    expect(esquemaDoDesarquivamento.safeParse({ codigo: "C-Ap-FR 2026" }).success).toBe(true);
+  });
+
   it("a TROCA aceita o código e uma das quatro situações — e só isso entra", () => {
     for (const s of ["planejada", "ativa", "concluida", "cancelada"]) {
       expect(
@@ -260,6 +291,7 @@ describe("`FR-015.4` da spec 016 · a situação tem um caminho só", () => {
       data_termino: "2026-01-01",
     });
     expect(r.success).toBe(true);
-    if (r.success) expect(Object.keys(r.data).sort()).toEqual(["codigo", "status"]);
+    // REGRA DOS VALORES ESPERADOS: (a), spec 017 (D-COR-4, 19/10/2026) — a observação da troca entra; o resto não.
+    if (r.success) expect(Object.keys(r.data).sort()).toEqual(["codigo", "observacao", "status"]);
   });
 });

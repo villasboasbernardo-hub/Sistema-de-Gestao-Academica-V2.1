@@ -26,7 +26,8 @@ import {
 const insumo = insumoSintetico();
 const { pasta, impressao: g } = montarPlanilhaComGeometria(insumo);
 const conhecidos = precalcular(pasta);
-const NOMES = new Map<string, string>(DISCIPLINAS.map((d) => [d.codigo, d.nome]));
+/* Spec 017 (FR-007): o cartão leva o nome NO CARTÃO; o rodapé, o inteiro (conferido abaixo, com `d.nome`). */
+const NOMES = new Map<string, string>(DISCIPLINAS.map((d) => [d.codigo, d.nomeNoCartao]));
 
 /** O texto de cada célula de um cartão, pela distribuição da R-8 — a mesma regra das duas pontas. */
 function textosDoCartao(c: CartaoDaGrade): string[] {
@@ -186,8 +187,9 @@ describe("`DP-3` · turma sem sábado no ano: o sábado lançado offline vai par
     expect(sem.impressao.listaDoSabado).not.toBeNull();
     const rotulo = insumo.semanas.find((x) => x.semana.numero === 17)?.rotulo ?? "";
     const lida = lerImpressao(sem.pasta, sem.impressao, rotulo, precalcular(sem.pasta));
+    // Spec 017 (FR-007.3): a lista do sábado é lançamento por lançamento, como o cartão — leva o nome do cartão.
     expect(lida.texto((sem.impressao.listaDoSabado as number) + 1, 1)).toMatch(
-      /^SÁB .* · 1º TA · I Navegação de teste/,
+      /^SÁB .* · 1º TA · I NAV\. TESTE/,
     );
   });
 });

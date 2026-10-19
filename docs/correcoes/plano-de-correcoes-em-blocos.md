@@ -123,6 +123,7 @@ _(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos*
 2. Aba **Atividades extraclasse** (o previsto no currículo; o acompanhamento é da turma).
 3. Aba **Horários**: regimes nomeados por curso (ex.: A com 8 TA, B com 9 TA, C com 8 TA e intervalos menores), escolhidos **por turma**; o DSA usa o regime da turma. Troca por semana fica para depois.
 4. O curso **não** mostra acompanhamento de turma em aba nenhuma: só o previsto no currículo.
+   - ⚠️ **Divergência medida no Bloco 2** _(spec 017, §10, item 3; 19/10/2026)_: este item diz que a aba *Avaliações* do curso tem *"só o previsto no currículo"*, e o código **mostra o cumprido** da turma escolhida (a mesma leitura da ficha, `lerAvaliacoesDoCurso`). Não foi corrigido no Bloco 2 — é deste item.
 
 ## Bloco 4 — Início (spec própria)
 
@@ -148,6 +149,10 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
 - **PEND-016-1** — unificar a composição da CHD: `vw_carga_horaria_turma` e `vw_disciplinas_execucao` lendo de `vw_chd_por_fato` (hoje são três somas, e o pgTAP 135 prova que batem).
 - **PEND-016-2** — varrer testes que conferem o valor que eles mesmos digitaram, em vez de conferir o banco.
 - **PEND-016-4** — as prévias do `.design-sync` ficam fora do `tsc`.
+- **PEND-017-1** — **três critérios de "disciplina concluída"** _(spec 017, §10, item 2; 19/10/2026)_: a situação do DSA, a tabela da ficha da turma e a aba *Avaliações* dão resultados diferentes quando a CH prevista da disciplina é **0**. Unificar num módulo de `lib/dominio/` e fazer as três lerem dele.
+- **PEND-017-2** — **comentário vencido sobre o código da turma** _(spec 017, §10, item 4)_: `lib/acoes/turma.ts` e `lib/navegacao/contrato.ts` dizem que mudar o ano ou o rótulo **regera** o código; o gatilho `app.gerar_codigo_da_turma()` **recusa** e não regera. Corrigir o texto.
+- **PEND-017-3** — **a célula de 1 TA da planilha de contingência** _(spec 017, P-8)_: a linha tem 34 pt, e o nome do cartão já vem curto (`DISC_NOME_DSA`), mas a garantia *"o instrutor nunca some"* (FR-007.4) foi provada só na tela e no papel. Medir no Excel 2007 e no Google com o nome de 81 caracteres e decidir se a linha cresce.
+- **PEND-017-4** — **38 disciplinas com a abreviação automática terminando em reticências** _(spec 017, FR-007.2; 19/10/2026)_: com o limite do cartão medido no papel (**19** caracteres, o menor de duas medidas: 22 no Chromium do Windows, 19 no do Linux), **119 das 172** disciplinas ativas passam dele, e em **38** a abreviação não cabe inteira. É dado, não código: preencher *Nome no DSA* no cadastro (Disciplinas → a disciplina → Editar). A lista, com a abreviação de cada uma: `specs/017-bloco-2-turmas-e-dsa/nomes-acima-do-limite.md`.
 - **PEND-014-7** — testes de ponta a ponta instáveis sob carga (`salas.spec.ts:126`, `dsa-tipo-e-global.spec.ts:160`, `avaliacoes-nas-telas.spec.ts:53`, `admin-sobre-contas`).
 - **OneDrive** — a pasta do repositório deve ficar "Sempre manter neste dispositivo": arquivos sob demanda já quebraram o build (`.next`, `EPERM`) e o `git switch` (`specs`).
 

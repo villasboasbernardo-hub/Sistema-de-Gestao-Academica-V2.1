@@ -64,7 +64,8 @@ export function DocumentoDoDsa({
   readonly assinaturasEditadas?: EdicaoDasAssinaturas;
 }) {
   const { grade } = dados;
-  const nomes = new Map(dados.quadroDeCh.map((d) => [d.codigo, d.nome] as const));
+  /* Spec 017 (FR-007): o cartão leva o nome no DSA; o quadro de CH, o nome inteiro (`dados.quadroDeCh`). */
+  const nomes = new Map(Object.entries(dados.nomesNoCartao));
   /* Mais linhas ou o sábado: a mesma folha, com letra e espaço menores — nunca conteúdo cortado. */
   const compacto =
     grade !== null &&
@@ -453,13 +454,17 @@ function Cartao({
           {linha.conteudo}
           {cartao.tipo === "estudo" ? " *" : ""}
         </div>
+        {/*
+          ⚠️ **OS DADOS NUMA LINHA PRÓPRIA, ACIMA DO INSTRUTOR** (spec 017, FR-007.4): é a linha que cede espaço
+             antes do título quando o cartão de 1 TA aperta — o instrutor fica, sempre, na última linha.
+        */}
+        <div className="dsa4-cartao-dados">
+          <span>{cartao.ta} TA</span>
+          {linha.local === "" ? null : <span>{linha.local}</span>}
+          <b className="dsa-te">{linha.te}</b>
+        </div>
         <div className="dsa4-cartao-pe">
           <span>{linha.instrutor}</span>
-          <span className="dsa4-cartao-dados">
-            <span>{cartao.ta} TA</span>
-            {linha.local === "" ? null : <span>{linha.local}</span>}
-            <b className="dsa-te">{linha.te}</b>
-          </span>
         </div>
       </div>
     </div>

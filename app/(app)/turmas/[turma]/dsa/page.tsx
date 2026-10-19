@@ -24,6 +24,7 @@ import { atualizar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } fro
 import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { QUEM_DESARQUIVA } from "@/lib/dominio/arquivamento-da-turma";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import {
   diasForaDaEtapa,
@@ -209,7 +210,7 @@ export default async function SemanaDoDsa({
   const diasADistancia = diasForaDaEtapa(paraEtapa, diasDaSemanaIso);
 
   /* ⚠️ As duas leituras são independentes: uma rodada só, nenhum `await` em sequência inútil. */
-  const [lida, extras, tiposDeParadaRes] = await Promise.all([
+  const [lida, extras, tiposDeParadaRes, arquivamentoRes] = await Promise.all([
     lerSemanaDoDsa(supabase, {
       turmaId,
       cursoId,
@@ -226,6 +227,12 @@ export default async function SemanaDoDsa({
       .eq("lista", "tipos_parada")
       .eq("ativo", true)
       .order("ordem"),
+    /* D-COR-5 (spec 017): a turma arquivada abre o DSA só para ler. */
+    supabase
+      .from("vw_turmas_arquivadas")
+      .select("arquivada_em")
+      .eq("turma_id", turmaId)
+      .maybeSingle(),
   ]);
   const tiposDeParada: TipoDeParada[] = (tiposDeParadaRes.data ?? []).map((t) => {
     const m = (t.metadados ?? {}) as { pode_global?: boolean; aceita_tr?: boolean };
@@ -253,7 +260,14 @@ export default async function SemanaDoDsa({
   );
 
   const semRelogio = lida.relogio === null;
-  const podeLancar = pode(permissoes, "registros_aula", "criar");
+  /*
+   * ⚠️ **A ARQUIVADA DESLIGA SÓ O FORMULÁRIO, POR UMA MARCA PRÓPRIA** (D-COR-5; contrato das telas da spec 017): o
+   *    *pode lançar* do perfil não muda — é ele que decide o botão e a rota da planilha de contingência
+   *    (`podeBaixarPlanilhaDeContingencia`), que continuam para a arquivada, como o *Imprimir*. A falha de leitura não
+   *    libera: quem grava é recusado pelo servidor de qualquer forma (`recusaSeTurmaArquivada`).
+   */
+  const arquivada = arquivamentoRes.error !== null || arquivamentoRes.data !== null;
+  const podeLancar = pode(permissoes, "registros_aula", "criar") && !arquivada;
 
   /*
    * ⚠️ **OS AVISOS SÃO CALCULADOS COM AS MESMAS FUNÇÕES QUE O PAPEL USA.** O número do DSA, as
@@ -319,6 +333,17 @@ export default async function SemanaDoDsa({
       className="flex min-w-0 flex-col gap-3"
     >
       <CabecalhoDoDsa codigo={codigo} rotulo={rotuloDaSemana(lida.dias)} ano={escolha.ano} />
+
+      {arquivamentoRes.data !== null ? (
+        <p role="status" className="text-sm text-atrasado-tinta" data-slot="turma-arquivada">
+          Turma arquivada — o DSA abre só para ler e imprimir. Desarquivam {QUEM_DESARQUIVA}.
+        </p>
+      ) : arquivamentoRes.error !== null ? (
+        <p role="status" className="text-sm text-atrasado-tinta" data-slot="arquivamento-nao-lido">
+          Não foi possível conferir se a turma está arquivada, e o lançamento ficou fechado.
+          Recarregue a página; se continuar, avise o suporte.
+        </p>
+      ) : null}
 
       <NavegacaoDaSemana
         codigo={codigo}
@@ -473,6 +498,7 @@ export default async function SemanaDoDsa({
         <PainelDeLancamento
           semana={lida.semana}
           grade={documento.grade}
+          nomesNoCartao={documento.nomesNoCartao}
           disciplinasDaSemana={documento.quadroDeCh.map((d) => ({
             codigo: d.codigo,
             nome: d.nome,

@@ -21,6 +21,7 @@ import { escalaDeLinhas, type EscalaDeAntiguidade } from "@/lib/dominio/antiguid
 import { nomeEmTexto } from "@/lib/dominio/nome-instrutor";
 import { conferirSomaDasUnidades } from "@/lib/dominio/soma-das-unidades";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 export type CursoDaCascata = {
@@ -93,6 +94,13 @@ export type LinhaDaGradeDeDisciplinas = {
   readonly cargaHorariaTempos: number;
   readonly ordemSugerida: number | null;
   readonly modoAtribuicaoPadrao: string;
+  /**
+   * Os três campos que a EDIÇÃO mostra preenchidos (spec 017, FR-007.5): sem eles, o formulário mandava vazio e a
+   * gravação apagava a técnica e o local de quem só mudou outro campo.
+   */
+  readonly tecnicaEnsinoSugerida: string | null;
+  readonly localPadrao: string | null;
+  readonly nomeNoDsa: string | null;
   readonly ativa: boolean;
 
   /** `null` fora da visão por turma — **não se aplica**, e não é zero. */
@@ -224,7 +232,7 @@ export async function lerGradeDeDisciplinas(filtro: {
   if (!cursoEscolhido) return vazio;
 
   // ── o curso escolhido: turmas e disciplinas, independentes entre si ──────────────────────────
-  const [turmasRes, disciplinasRes] = await Promise.all([
+  const [turmasRes, disciplinasRes, arquivadasRes] = await Promise.all([
     supabase
       .from("turmas")
       .select("id, codigo, status")
@@ -233,21 +241,32 @@ export async function lerGradeDeDisciplinas(filtro: {
     supabase
       .from("disciplinas")
       .select(
-        "id, codigo, cod_disciplina, nome_disciplina, carga_horaria_tempos, ordem_sugerida, modo_atribuicao_padrao, status",
+        "id, codigo, cod_disciplina, nome_disciplina, carga_horaria_tempos, ordem_sugerida, modo_atribuicao_padrao, tecnica_ensino_sugerida, local_padrao, nome_no_dsa, status",
       )
       .eq("curso_id", cursoEscolhido.id)
       .order("ordem_sugerida", { ascending: true, nullsFirst: false })
       .order("cod_disciplina"),
+    supabase.from("vw_turmas_arquivadas").select("turma_id"),
   ]);
 
-  const turmas: TurmaDaCascata[] = (turmasRes.data ?? []).map((t) => ({
+  const todasAsTurmas: TurmaDaCascata[] = (turmasRes.data ?? []).map((t) => ({
     id: t.id,
     codigo: t.codigo,
     status: t.status,
   }));
+  /*
+   * ⚠️ **A ARQUIVADA SAI DA CASCATA, NÃO DA LEITURA** (D-COR-5; C-24): a lista que se oferece para escolher não a
+   *    tem, mas a turma pedida pelo código continua encontrada — esta mesma função monta as disciplinas da ficha da
+   *    turma, e a arquivada também tem ficha, somente leitura.
+   */
+  const turmas = semAsArquivadas(
+    todasAsTurmas,
+    idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[]),
+    (t) => t.id,
+  );
 
   const turmaEscolhida = filtro.turmaCodigo
-    ? (turmas.find((t) => t.codigo === filtro.turmaCodigo) ?? null)
+    ? (todasAsTurmas.find((t) => t.codigo === filtro.turmaCodigo) ?? null)
     : null;
 
   const disciplinas = disciplinasRes.data ?? [];
@@ -472,6 +491,9 @@ export async function lerGradeDeDisciplinas(filtro: {
       cargaHorariaTempos: Number(d.carga_horaria_tempos),
       ordemSugerida: d.ordem_sugerida === null ? null : Number(d.ordem_sugerida),
       modoAtribuicaoPadrao: d.modo_atribuicao_padrao,
+      tecnicaEnsinoSugerida: d.tecnica_ensino_sugerida,
+      localPadrao: d.local_padrao,
+      nomeNoDsa: d.nome_no_dsa,
       ativa: d.status === "ativo",
       turmaDisciplinaId: daTurma?.turmaDisciplinaId ?? null,
       previsaoInicio: daTurma?.inicio ?? null,

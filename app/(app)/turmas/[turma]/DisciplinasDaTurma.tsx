@@ -35,12 +35,24 @@ import {
   situacaoDaExecucao,
 } from "@/lib/dominio/indicadores-da-grade";
 import { severidadeDaLinha, sinaisDaDisciplina } from "@/lib/dominio/sinalizacao-de-disciplina";
+import { foraDoDsaAte } from "@/lib/dominio/ta-fora-do-dsa";
 import { ROTA_DA_FICHA_DA_TURMA } from "@/lib/navegacao/endereco-de-turma";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 import type { LinhaDaGradeDeDisciplinas } from "../../disciplinas/consulta";
 import { PainelDeInstrutores } from "../../disciplinas/paineis/PainelDeInstrutores";
 import { PainelDePeriodo } from "../../disciplinas/paineis/PainelDePeriodo";
+import type { RegistroForaDoDsaDaTela } from "./consulta";
+import { TaForaDoDsa } from "./TaForaDoDsa";
+
+/**
+ * O TA fora do DSA da turma (D-COR-3): os registros por linha da turma e quem vê e grava. Ausente = quem não lê
+ * lançamento da turma, e o painel não aparece (a RLS devolveria vazio, e vazio leria como "não há").
+ */
+export type ForaDoDsaDaTurma = {
+  readonly porLinha: Readonly<Record<string, readonly RegistroForaDoDsaDaTela[]>>;
+  readonly podeGravar: boolean;
+};
 
 /*
  * ⚠️ **A CHAVE DA ROTA VEM DO MÓDULO DE ENDEREÇO, e não escrita aqui.** A guarda da `T070` reprova
@@ -59,6 +71,7 @@ const CLASSE_DA_SEVERIDADE: Readonly<Record<string, string>> = {
 function colunas(
   hoje: string,
   avisoInicioDias: number,
+  foraDaLinha: (l: LinhaDaGradeDeDisciplinas) => number,
 ): readonly Coluna<LinhaDaGradeDeDisciplinas>[] {
   return [
     {
@@ -112,7 +125,23 @@ function colunas(
       numerica: true,
       ordenavel: true,
       valor: (l) => l.temposExecutados,
-      celula: (l) => l.temposExecutados,
+      /*
+       * ⚠️ **OS EXECUTADOS JÁ SOMAM O FORA DO DSA** (a base da CHD, M1 da spec 017): o *"· Y fora do DSA"* só diz
+       *    quanto deles não está no DSA (D-COR-3: *"a tela mostra separado"*).
+       */
+      celula: (l) => {
+        const fora = foraDaLinha(l);
+        return fora > 0 ? (
+          <span className="flex flex-col items-end">
+            <span>{l.temposExecutados}</span>
+            <span className="text-texto-suave text-2xs" data-slot="fora-do-dsa-da-linha">
+              · {fora} fora do DSA
+            </span>
+          </span>
+        ) : (
+          l.temposExecutados
+        );
+      },
     },
     {
       chave: "percentual",
@@ -209,6 +238,7 @@ export function DisciplinasDaTurma({
   avisoInicioDias,
   hoje,
   executadaDaTurma,
+  foraDoDsa,
 }: {
   readonly linhas: readonly LinhaDaGradeDeDisciplinas[];
   readonly turmaCodigo: string;
@@ -222,7 +252,11 @@ export function DisciplinasDaTurma({
    * mostra. Ela entra aqui para o rodapé poder dizer **quanto não aparece** por disciplina.
    */
   readonly executadaDaTurma: number;
+  readonly foraDoDsa?: ForaDoDsaDaTurma;
 }) {
+  const registrosDaLinha = (l: LinhaDaGradeDeDisciplinas) =>
+    (l.turmaDisciplinaId === null ? undefined : foraDoDsa?.porLinha[l.turmaDisciplinaId]) ?? [];
+  const foraDaLinha = (l: LinhaDaGradeDeDisciplinas) => foraDoDsaAte(registrosDaLinha(l), hoje);
   /*
    * ⚠️ **`aberta` VEM DO GANCHO, NUNCA DA PROPRIEDADE DO SERVIDOR, e isso foi medido na fatia (b):**
    *    é parâmetro **visual** (`avisaServidor: false`), e lido do servidor o detalhe **nunca abria**,
@@ -278,7 +312,7 @@ export function DisciplinasDaTurma({
       <TabelaDensa
         rotulo={`Disciplinas de ${turmaCodigo}`}
         linhas={linhas}
-        colunas={colunas(hoje, avisoInicioDias)}
+        colunas={colunas(hoje, avisoInicioDias, foraDaLinha)}
         chaveLinha={(l) => l.codigo}
         densidade="compacta"
         motivoDoVazio="sem-dado"
@@ -317,6 +351,18 @@ export function DisciplinasDaTurma({
                 escala={escala}
                 podeEditar={podeEditar}
               />
+
+              {foraDoDsa ? (
+                <TaForaDoDsa
+                  turmaCodigo={turmaCodigo}
+                  turmaDisciplinaId={l.turmaDisciplinaId}
+                  registros={registrosDaLinha(l)}
+                  instrutores={l.habilitados}
+                  escala={escala}
+                  podeGravar={foraDoDsa.podeGravar}
+                  hoje={hoje}
+                />
+              ) : null}
             </div>
           )
         }

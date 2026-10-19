@@ -308,9 +308,9 @@ export function listasDoCatalogo(itens: readonly ItemDoCatalogo[]): {
   return { cods, itens: valores };
 }
 
-/** As disciplinas na ordem do rodapé do papel — `localeCompare` pt-BR, a de `tabelaDeCh`. */
+/** As disciplinas na ordem do rodapé do papel — a ordem natural do código, a de `tabelaDeCh` (spec 017, FR-008). */
 export function disciplinasNaOrdemDoRodape(insumo: InsumoDaPlanilha) {
-  return insumo.disciplinas.slice().sort((a, b) => a.codigo.localeCompare(b.codigo, "pt-BR"));
+  return emOrdemNaturalDoCodigo(insumo.disciplinas, (d) => d.codigo);
 }
 
 /** As técnicas COM sigla, na ordem da legenda do papel — `legendaDeTecnicas` ordena pela sigla. */
@@ -360,6 +360,7 @@ const TITULOS: readonly [number, string][] = [
   [B.foraData, "Fora das semanas — data"],
   [B.foraDisciplina, "disciplina"],
   [B.foraTempos, "TA"],
+  [B.discNomeDsa, "Disciplina no cartão"],
 ];
 
 const NOMES_DOS_TIPOS: Readonly<Record<TipoDeItem, string>> = {
@@ -432,6 +433,11 @@ export function abaDoCatalogo(entrada: {
     B.discCh,
     rodape.map((d) => d.chPrevista),
   );
+  /* O nome do cartão, na MESMA ordem de `DISC_CODIGO` (spec 017, FR-007): o título do cartão o procura por código. */
+  coluna(
+    B.discNomeDsa,
+    rodape.map((d) => d.nomeNoCartao),
+  );
   const legenda = tecnicasDaLegenda(insumo);
   coluna(
     B.tecSigla,
@@ -492,6 +498,7 @@ export function abaDoCatalogo(entrada: {
     [B.disciplinaDaCh, 9],
     [B.listaInstrutores, 30],
     [B.discNome, 30],
+    [B.discNomeDsa, 30],
     [B.tecNome, 30],
     [B.semRotulo, 30],
     [B.dataInicio, 11],
@@ -528,6 +535,7 @@ export function abaDoCatalogo(entrada: {
       faixa(NOME.siglasAvaliacao, B.siglasAvaliacao, SIGLAS_DE_AVALIACAO.size),
       faixa(NOME.discCodigo, B.discCodigo, rodape.length),
       faixa(NOME.discNome, B.discNome, rodape.length),
+      faixa(NOME.discNomeDsa, B.discNomeDsa, rodape.length),
       faixa(NOME.discCh, B.discCh, rodape.length),
       faixa(NOME.tecSigla, B.tecSigla, legenda.length),
       faixa(NOME.tecNome, B.tecNome, legenda.length),

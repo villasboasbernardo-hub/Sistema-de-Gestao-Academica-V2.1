@@ -23,6 +23,8 @@ export type PapelDaSemana = {
   readonly dias: readonly DiaImpresso[];
   readonly grade: GradeDoPapel | null;
   readonly quadroDeCh: readonly ExecucaoDaDisciplina[];
+  /** O nome de cada disciplina no cartão (spec 017, FR-007) — `DadosDoDocumento.nomesNoCartao`. */
+  readonly nomesNoCartao: Readonly<Record<string, string>>;
   readonly legenda: readonly ItemDaLegenda[];
   readonly assinaturas: {
     readonly esquerda: {
@@ -71,7 +73,11 @@ export function divergenciasDoPapel(
     if (obtido !== esperado)
       erros.push(`${onde}: ${JSON.stringify(obtido)} ≠ ${JSON.stringify(esperado)}`);
   };
-  const nomes = new Map(papel.quadroDeCh.map((d) => [d.codigo, d.nome] as const));
+  /*
+   * Spec 017 (FR-007): o cartão da planilha leva o MESMO nome do cartão do papel (`nomesNoCartao`, `DISC_NOME_DSA`);
+   * o rodapé, o nome inteiro do quadro de CH (`DISC_NOME`), conferido mais abaixo.
+   */
+  const nomes = new Map<string, string>(Object.entries(papel.nomesNoCartao));
 
   /* Os cartões. */
   const esperado = new Map<string, { texto: string; tipo: string | null }>();

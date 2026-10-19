@@ -1519,6 +1519,7 @@ export type Database = {
           local_padrao: string | null
           modo_atribuicao_padrao: Database["public"]["Enums"]["modo_atribuicao"]
           nome_disciplina: string
+          nome_no_dsa: string | null
           nome_normalizado: string | null
           ordem_sugerida: number | null
           origem_migracao_v1: string | null
@@ -1547,6 +1548,7 @@ export type Database = {
           local_padrao?: string | null
           modo_atribuicao_padrao?: Database["public"]["Enums"]["modo_atribuicao"]
           nome_disciplina: string
+          nome_no_dsa?: string | null
           nome_normalizado?: string | null
           ordem_sugerida?: number | null
           origem_migracao_v1?: string | null
@@ -1575,6 +1577,7 @@ export type Database = {
           local_padrao?: string | null
           modo_atribuicao_padrao?: Database["public"]["Enums"]["modo_atribuicao"]
           nome_disciplina?: string
+          nome_no_dsa?: string | null
           nome_normalizado?: string | null
           ordem_sugerida?: number | null
           origem_migracao_v1?: string | null
@@ -2988,6 +2991,182 @@ export type Database = {
           },
         ]
       }
+      ta_fora_do_dsa: {
+        Row: {
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          data: string
+          disciplina_id: string
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          instrutor_id: string | null
+          observacao: string
+          origem_migracao_v1: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          tempos: number
+          turma_disciplina_id: string
+          turma_id: string
+        }
+        Insert: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          data: string
+          disciplina_id: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          instrutor_id?: string | null
+          observacao: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          tempos: number
+          turma_disciplina_id: string
+          turma_id: string
+        }
+        Update: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          data?: string
+          disciplina_id?: string
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          instrutor_id?: string | null
+          observacao?: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          tempos?: number
+          turma_disciplina_id?: string
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ta_fora_do_dsa_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_turma_disciplina_id_fkey"
+            columns: ["turma_disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "turma_disciplina"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+        ]
+      }
+      turma_arquivamentos: {
+        Row: {
+          acao: string
+          autor_id: string | null
+          criado_em: string
+          id: string
+          observacao: string | null
+          ordem: number
+          turma_id: string
+        }
+        Insert: {
+          acao: string
+          autor_id?: string | null
+          criado_em?: string
+          id?: string
+          observacao?: string | null
+          ordem?: never
+          turma_id: string
+        }
+        Update: {
+          acao?: string
+          autor_id?: string | null
+          criado_em?: string
+          id?: string
+          observacao?: string | null
+          ordem?: never
+          turma_id?: string
+        }
+        Relationships: []
+      }
       turma_disciplina: {
         Row: {
           ch_prevista_por_instrutor: number | null
@@ -3291,6 +3470,39 @@ export type Database = {
             referencedColumns: ["turma_disciplina_id", "instrutor_id"]
           },
         ]
+      }
+      turma_trocas_de_situacao: {
+        Row: {
+          autor_id: string | null
+          criado_em: string
+          id: string
+          observacao: string | null
+          ordem: number
+          situacao_anterior: Database["public"]["Enums"]["status_turma"]
+          situacao_nova: Database["public"]["Enums"]["status_turma"]
+          turma_id: string
+        }
+        Insert: {
+          autor_id?: string | null
+          criado_em?: string
+          id?: string
+          observacao?: string | null
+          ordem?: never
+          situacao_anterior: Database["public"]["Enums"]["status_turma"]
+          situacao_nova: Database["public"]["Enums"]["status_turma"]
+          turma_id: string
+        }
+        Update: {
+          autor_id?: string | null
+          criado_em?: string
+          id?: string
+          observacao?: string | null
+          ordem?: never
+          situacao_anterior?: Database["public"]["Enums"]["status_turma"]
+          situacao_nova?: Database["public"]["Enums"]["status_turma"]
+          turma_id?: string
+        }
+        Relationships: []
       }
       turmas: {
         Row: {
@@ -3989,6 +4201,7 @@ export type Database = {
           ta_dias_parados: number | null
           ta_estudo_individual: number | null
           ta_extraclasse: number | null
+          ta_fora_do_dsa: number | null
           ta_tad: number | null
           ta_tr: number | null
           ta_vista_prova: number | null
@@ -4017,6 +4230,7 @@ export type Database = {
           data: string | null
           disciplina_id: string | null
           origem: string | null
+          sem_posicao: boolean | null
           tempos: number | null
           turma_id: string | null
         }
@@ -4097,12 +4311,14 @@ export type Database = {
           disciplina_codigo: string | null
           disciplina_id: string | null
           nome_disciplina: string | null
+          nome_no_dsa: string | null
           origem_periodo: Database["public"]["Enums"]["origem_periodo"] | null
           previsao_inicio_efetiva: string | null
           previsao_termino_efetiva: string | null
           ta_aula_executados: number | null
           ta_avaliacao_executados: number | null
           ta_executados: number | null
+          ta_fora_do_dsa: number | null
           ta_saldo: number | null
           turma_codigo: string | null
           turma_id: string | null
@@ -4459,6 +4675,15 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_turmas_arquivadas: {
+        Row: {
+          arquivada_em: string | null
+          arquivada_por: string | null
+          observacao: string | null
+          turma_id: string | null
+        }
+        Relationships: []
+      }
       vw_turmas_rotulo: {
         Row: {
           ano_letivo: number | null
@@ -4702,6 +4927,7 @@ export type Database = {
           local_padrao: string | null
           modo_atribuicao_padrao: Database["public"]["Enums"]["modo_atribuicao"]
           nome_disciplina: string
+          nome_no_dsa: string | null
           nome_normalizado: string | null
           ordem_sugerida: number | null
           origem_migracao_v1: string | null
@@ -4800,6 +5026,21 @@ export type Database = {
         Args: { p_avaliacao_id: string; p_prova_id: string }
         Returns: string
       }
+      ocupacao_para_conflitos: {
+        Args: { p_ate: string; p_de: string }
+        Returns: {
+          data: string
+          fato_id: string
+          fiscal_id: string
+          instrutor_id: string
+          local: string
+          origem: string
+          sessao_id: string
+          ta_final: number
+          ta_inicial: number
+          turma_id: string
+        }[]
+      }
       protecao_das_vigencias_por_atividade_global: {
         Args: { p_curso_id: string }
         Returns: {
@@ -4839,6 +5080,7 @@ export type Database = {
           local_padrao: string | null
           modo_atribuicao_padrao: Database["public"]["Enums"]["modo_atribuicao"]
           nome_disciplina: string
+          nome_no_dsa: string | null
           nome_normalizado: string | null
           ordem_sugerida: number | null
           origem_migracao_v1: string | null
@@ -4905,6 +5147,14 @@ export type Database = {
       situacao_da_avaliacao: {
         Args: { p_avaliacao_id: string; p_hoje: string }
         Returns: string
+      }
+      trocar_situacao_da_turma: {
+        Args: {
+          p_codigo: string
+          p_observacao: string
+          p_status: Database["public"]["Enums"]["status_turma"]
+        }
+        Returns: undefined
       }
       vigencias_do_curso: {
         Args: { p_curso_id: string }

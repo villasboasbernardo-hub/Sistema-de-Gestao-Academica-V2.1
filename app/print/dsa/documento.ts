@@ -13,6 +13,7 @@
  * número passou a ser a semana corrida do curso, "Semana N de T", e não depende mais de lançamento —
  * por isso a montagem não precisa mais das datas com lançamento da turma.
  */
+import { nomeNoCartao } from "@/lib/dominio/nome-no-dsa";
 import { assinaturasDoDsa, type Assinatura } from "@/lib/dominio/dsa/assinaturas";
 import { gradeDoPapel, type GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import {
@@ -52,6 +53,12 @@ export type DadosDoDocumento = {
   readonly dias: readonly DiaImpresso[];
   readonly grade: GradeDoPapel | null;
   readonly quadroDeCh: readonly ExecucaoDaDisciplina[];
+  /**
+   * O nome de cada disciplina **no cartão** (spec 017, FR-007): o *Nome no DSA* cadastrado ou a abreviação de reserva
+   * (`nomeNoCartao`). Só o cartão o usa — o quadro de CH e o rótulo acessível ficam com o nome inteiro. Objeto, e
+   * não `Map`, porque atravessa a fronteira servidor → cliente.
+   */
+  readonly nomesNoCartao: Readonly<Record<string, string>>;
   readonly legenda: readonly ItemDaLegenda[];
   readonly aFrente: number;
   readonly assinaturas: {
@@ -114,6 +121,12 @@ export function montarDocumentoDoDsa(entrada: {
         ocupacao: lida.ocupacaoAcumulada,
         ateODia: ultimo,
       }),
+    ),
+    nomesNoCartao: Object.fromEntries(
+      extras.execucao.map((d) => [
+        d.codigo,
+        nomeNoCartao({ nomeNoDsa: d.nomeNoDsa, nome: d.nome }),
+      ]),
     ),
     legenda: legendaDeTecnicas(dias, lida.tecnicasComSigla),
     aFrente: taLancadoAFrente(dias),

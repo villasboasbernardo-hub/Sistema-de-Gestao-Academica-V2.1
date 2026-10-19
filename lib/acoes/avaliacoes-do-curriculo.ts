@@ -17,6 +17,7 @@ import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import { recusaSeTurmaArquivada } from "@/lib/acoes/turma-arquivada";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
   esquemaDaConfirmacao,
@@ -65,6 +66,11 @@ export async function definirTempoArbitrado(entrada: unknown): Promise<Resultado
     return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
   const { itemId, alcance, turmaId, taAplicacao, taVista } = conferido.data;
   const supabase = await criarClienteDeServidor();
+  /* D-COR-5: o ajuste POR TURMA não grava em turma arquivada; o do curso é currículo, e segue. */
+  if (alcance === "turma" && turmaId) {
+    const arquivada = await recusaSeTurmaArquivada(supabase, turmaId);
+    if (arquivada) return { ok: false, erro: arquivada };
+  }
   const { data: item, error: e0 } = await supabase
     .from("avaliacoes_curriculo")
     .select("disciplina_id, origem_ta_aplicacao")
@@ -135,6 +141,9 @@ export async function confirmarSugestao(entrada: unknown): Promise<ResultadoDoAr
   if (!conferido.success)
     return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
   const supabase = await criarClienteDeServidor();
+  /* D-COR-5: a turma arquivada é somente leitura (spec 017, FR-004.4). */
+  const arquivada = await recusaSeTurmaArquivada(supabase, conferido.data.turmaId);
+  if (arquivada) return { ok: false, erro: arquivada };
   const { data, error } = await supabase
     .from("avaliacoes_curriculo_turma")
     .update({ origem: "arbitrado", confirmado_em: new Date().toISOString() })

@@ -10,6 +10,7 @@ import { emOrdemNaturalDoCodigo } from "@/lib/dominio/ordem-natural";
 import {
   abaDoCatalogo,
   chaveDoLancamento,
+  disciplinasNaOrdemDoRodape,
   itensDoCatalogo,
   listasDoCatalogo,
 } from "@/lib/dominio/dsa/planilha/catalogo";
@@ -179,5 +180,26 @@ describe("`FR-019`, `FR-029` · as listas de escolha", () => {
   it("I-P9 · a lista de instrutores é só a da turma, na ordem recebida (antiguidade)", () => {
     const lista = nomes.find((n) => n.nome === NOME.listaInstrutores);
     expect(lista ? lista.ate.linha - lista.de.linha + 1 : 0).toBe(INSTRUTORES.length);
+  });
+});
+
+describe("o rodapé da planilha na ordem natural (spec 017, FR-008)", () => {
+  it("IV, V, IX, X pelo valor do romano — a mesma ordem do quadro de CH do papel", () => {
+    const comRomanos = {
+      ...insumo,
+      disciplinas: ["IX", "IV", "X", "V"].map((codigo) => ({
+        id: codigo,
+        codigo,
+        nome: codigo,
+        nomeNoCartao: codigo,
+        chPrevista: 10,
+      })),
+    };
+    expect(disciplinasNaOrdemDoRodape(comRomanos).map((d) => d.codigo)).toEqual([
+      "IV",
+      "V",
+      "IX",
+      "X",
+    ]);
   });
 });

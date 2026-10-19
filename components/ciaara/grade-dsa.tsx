@@ -60,6 +60,11 @@ export type GradeDsaProps = {
   /** `cod_disciplina` → nome, do quadro de CH do documento — para o título do cartão. */
   readonly nomesDasDisciplinas?: ReadonlyMap<string, string>;
   /**
+   * O nome **no cartão** (spec 017, FR-007): o *Nome no DSA* ou a abreviação de reserva. Ausente, o cartão usa
+   * `nomesDasDisciplinas`. O rótulo acessível continua com o nome inteiro (FR-007.3).
+   */
+  readonly nomesNoCartao?: ReadonlyMap<string, string>;
+  /**
    * `turmas.sala_alocada` — aparece **uma vez**, no cabeçalho.
    *
    * ⚠️ `null` é caso real e não defeito: turma sem sala alocada existe, e aí **nenhum** bloco é
@@ -127,10 +132,14 @@ const TOM_DO_ESTADO: Readonly<Record<Celula["estado"], TomDaCelula>> = {
  */
 function TituloDoCartao({ codigo, nome }: { readonly codigo: string; readonly nome: string }) {
   if (codigo === "") return null;
+  /*
+   * ⚠️ **UMA LINHA** (spec 017, FR-007.4; R-9): o nome do cartão já vem curto (`nomeNoCartao`), e o que ainda passar
+   *    da largura sai com reticências — nunca mais empurra o resto do cartão.
+   */
   return (
-    <span className="flex flex-wrap items-baseline gap-x-1" data-slot="cartao-titulo">
+    <span className="flex min-w-0 items-baseline gap-x-1" data-slot="cartao-titulo">
       {nome === "" ? null : (
-        <strong className="font-semibold" data-slot="cartao-nome">
+        <strong className="min-w-0 truncate font-semibold" data-slot="cartao-nome">
           {nome}
         </strong>
       )}
@@ -186,7 +195,12 @@ function CorpoDoBloco({
       <TituloDoCartao codigo={bloco.disciplina ?? ""} nome={nome} />
       {bloco.conteudo ? <span className="line-clamp-2">{bloco.conteudo}</span> : null}
       <TecnicaDoCartao tecnica={bloco.tecnica} />
-      {bloco.instrutor ? <span className="truncate text-[10px]">{bloco.instrutor}</span> : null}
+      {/* ⚠️ O instrutor fica INTEIRO (FR-007.4): quebra a linha, nunca é cortado com reticências. */}
+      {bloco.instrutor ? (
+        <span className="break-words text-[10px]" data-slot="cartao-instrutor">
+          {bloco.instrutor}
+        </span>
+      ) : null}
       <span className="flex flex-wrap items-center gap-1 text-[10px]">
         {bloco.trechos.map((t) => (
           <span key={`${t.inicio}-${t.fim}`} className="tabular-nums">
@@ -273,8 +287,11 @@ function CorpoDoCartao({
         {cartao.tipo === "estudo" ? " *" : ""}
       </span>
       <TecnicaDoCartao tecnica={linha.te} />
+      {/* ⚠️ O instrutor fica INTEIRO (FR-007.4): quebra a linha, nunca é cortado com reticências. */}
       {linha.instrutor === "" ? null : (
-        <span className="truncate text-[10px]">{linha.instrutor}</span>
+        <span className="break-words text-[10px]" data-slot="cartao-instrutor">
+          {linha.instrutor}
+        </span>
       )}
       <span className="flex flex-wrap items-center gap-x-1.5 text-[10px] tabular-nums">
         <span>{cartao.ta} TA</span>
@@ -339,6 +356,7 @@ function GradeDoModelo({
   semana,
   grade,
   nomesDasDisciplinas,
+  nomesNoCartao,
   salaDaTurma,
   aoEscolherCelula,
   aoEscolherFato,
@@ -436,7 +454,7 @@ function GradeDoModelo({
             <CorpoDoCartao
               cartao={cartao}
               bloco={bloco}
-              nome={nomesDasDisciplinas?.get(cartao.linha.disciplina) ?? ""}
+              nome={(nomesNoCartao ?? nomesDasDisciplinas)?.get(cartao.linha.disciplina) ?? ""}
               salaDaTurma={salaDaTurma}
             />
           ),
@@ -611,6 +629,7 @@ function rodapesSemPosicao(
 function GradeNumerada({
   semana,
   nomesDasDisciplinas,
+  nomesNoCartao,
   salaDaTurma,
   aoEscolherCelula,
   aoEscolherFato,
@@ -684,7 +703,7 @@ function GradeNumerada({
           conteudo: (
             <CorpoDoBloco
               bloco={bloco}
-              nome={nomesDasDisciplinas?.get(bloco.disciplina ?? "") ?? ""}
+              nome={(nomesNoCartao ?? nomesDasDisciplinas)?.get(bloco.disciplina ?? "") ?? ""}
               salaDaTurma={salaDaTurma}
             />
           ),

@@ -13,6 +13,7 @@ import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { dataParaLeitura } from "@/lib/formato/data";
 import { lerParametros } from "@/lib/navegacao/esquema";
+import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../cursos/consulta";
@@ -55,10 +56,12 @@ export default async function Atividades({
   if (filtro.de) consulta = consulta.gte("data", filtro.de);
   if (filtro.ate) consulta = consulta.lte("data", filtro.ate);
 
-  const [usuario, atividadesRes, turmasRes] = await Promise.all([
+  const [usuario, atividadesRes, turmasRes, arquivadasRes] = await Promise.all([
     usuarioDaSessao(),
     consulta.order("data", { ascending: false }).order("ta_inicial").limit(LIMITE_DE_ATIVIDADES),
-    supabase.from("turmas").select("codigo").order("codigo"),
+    supabase.from("turmas").select("id, codigo").order("codigo"),
+    /* D-COR-5 (spec 017, C-24): a turma arquivada some do filtro de turma. */
+    supabase.from("vw_turmas_arquivadas").select("turma_id"),
   ]);
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
   const podeLer = pode(permissoes, "atividades_nao_letivas", "ler");
@@ -66,7 +69,11 @@ export default async function Atividades({
   const haFiltro = Object.values(filtro).some((v) => v !== "");
 
   const linhas = paraLinhas((atividadesRes.data ?? []) as never);
-  const turmas = (turmasRes.data ?? []).map((t) => t.codigo as string);
+  const turmas = semAsArquivadas(
+    turmasRes.data ?? [],
+    idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[]),
+    (t) => t.id as string,
+  ).map((t) => t.codigo as string);
 
   return (
     <div className="flex flex-col gap-4" data-slot="lista-de-atividades">

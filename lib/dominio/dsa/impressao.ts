@@ -40,6 +40,7 @@
  * ESLint). A semana, o relógio, as siglas e a execução chegam **por parâmetro**.
  */
 
+import { emOrdemNaturalDoCodigo } from "../ordem-natural";
 import { MOTIVO_NO_MESMO_TA, rotuloDaParadaParcial, type DiaDaGrade, type Semana } from "./grade";
 import { slotDoEstudoIndividual, tempoDeAula, type Relogio, type Trecho } from "./horario-do-bloco";
 import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "./rotulos";
@@ -398,10 +399,15 @@ export function tabelaDeCh(
       if (linha.disciplina !== "") codigos.add(linha.disciplina);
     }
   }
-  return execucao
-    .filter((d) => codigos.has(d.codigo))
-    .slice()
-    .sort((a, b) => a.codigo.localeCompare(b.codigo, "pt-BR"));
+  /*
+   * ⚠️ **NA ORDEM NATURAL DO CÓDIGO, PELA FUNÇÃO ÚNICA** (Bloco 2, spec 017, FR-008; regra de 08/10/2026): o
+   *    romano ordena pelo valor — IV, V, IX, X —, como a CONTROLE e a CRONOS já faziam. O `localeCompare` de antes
+   *    punha IV, IX, V, X.
+   */
+  return emOrdemNaturalDoCodigo(
+    execucao.filter((d) => codigos.has(d.codigo)),
+    (d) => d.codigo,
+  );
 }
 
 /** Uma entrada da legenda: a sigla e o nome por extenso. */

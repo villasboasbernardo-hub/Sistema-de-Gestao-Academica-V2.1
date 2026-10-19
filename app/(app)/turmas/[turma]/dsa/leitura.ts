@@ -291,6 +291,12 @@ export type DadosDoPeriodo = {
   readonly atribuicoesPorDisciplina: readonly unknown[];
   readonly instrutores: readonly unknown[];
   readonly acumulada: readonly unknown[];
+  /**
+   * `PEND-016-5` (spec 017): os fatos de CHD que NÃO ocupam TA na grade — o lançamento sem `ta_inicial` e o TA fora
+   * do DSA (D-COR-3) —, de `vw_chd_por_fato` com `sem_posicao`, `data <= ate`. Disjuntos de `acumulada`, que só tem
+   * `ta_inicial` preenchido (medido na definição de `vw_ocupacao_ta`, 19/10/2026).
+   */
+  readonly semPosicao?: readonly unknown[];
   readonly paraVista: readonly unknown[];
   readonly curriculo: readonly unknown[];
   readonly aulasPorUe: readonly unknown[];
@@ -376,6 +382,7 @@ export async function lerPeriodoDoDsa(
     itensRes,
     sessoesDeAplicacaoRes,
     atribDiscRes,
+    semPosicaoRes,
   ] = await Promise.all([
     /*
      * ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`).
@@ -749,6 +756,27 @@ export async function lerPeriodoDoDsa(
         .order("codigo")
         .range(f.de, f.ate),
     ),
+    /*
+     * ⚠️ **`PEND-016-5`: O ACUMULADO SOMA TAMBÉM O QUE NÃO TEM POSIÇÃO** (decisão de Bernardo Villas Boas, 19/10/2026,
+     *    na conferência do PR #69; resolvida na spec 017): o lançamento histórico sem `ta_inicial` e o TA fora do DSA
+     *    entram na CH executada do `/inicio`, da ficha e de `/turmas`, e a situação do DSA ficava de fora.
+     * ⚠️ **`tempos > 0`**: as vistas históricas sem `ta_inicial` têm 0 TA (medido na cópia de 19/10/2026: 102) e não
+     *    somam nada. A ordem não é total — linhas iguais são indistinguíveis para a soma, e a página não a muda.
+     */
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("vw_chd_por_fato")
+        .select("origem, data, disciplina_id, tempos", contagemNaPrimeira(f))
+        .eq("turma_id", turmaId)
+        .eq("sem_posicao", true)
+        .gt("tempos", 0)
+        .lte("data", ate)
+        .order("data")
+        .order("origem")
+        .order("disciplina_id")
+        .order("tempos")
+        .range(f.de, f.ate),
+    ),
   ]);
 
   const erros: { lista: string; mensagem: string }[] = [];
@@ -791,6 +819,7 @@ export async function lerPeriodoDoDsa(
     atribuicoesPorDisciplina: listaOuVazia(atribDiscRes, erros, "atribuições por disciplina"),
     instrutores: listaOuVazia(instrRes, erros, "instrutores"),
     acumulada: listaOuVazia(acumuladaRes, erros, "ocupação acumulada"),
+    semPosicao: listaOuVazia(semPosicaoRes, erros, "lançamentos sem posição"),
     paraVista: listaOuVazia(paraVistaRes, erros, "avaliações para vista"),
     sessoes: listaOuVazia(sessoesRes, erros, "sessões de vista"),
     sessoesDeAplicacao: listaOuVazia(sessoesDeAplicacaoRes, erros, "sessões de aplicação"),
@@ -885,6 +914,9 @@ export function montarSemanaDoDsa(
   const atribRes = { data: dados.atribuicoes };
   const instrRes = { data: dados.instrutores };
   const acumuladaRes = { data: dados.acumulada.filter((l) => ateOFim(campo(l, "data"))) };
+  const semPosicaoRes = {
+    data: (dados.semPosicao ?? []).filter((l) => ateOFim(campo(l, "data"))),
+  };
   const paraVistaRes = { data: dados.paraVista };
   const curriculoRes = { data: dados.curriculo };
   const aulasPorUeRes = { data: dados.aulasPorUe.filter((l) => ateOFim(campo(l, "data"))) };
@@ -1568,23 +1600,46 @@ export function montarSemanaDoDsa(
     ).map((t) => ({ id: t.id, valor: t.valor, categoria: categoriaPeloTipo(t) as string })),
     idsDeEstudoIndividual,
     marcasDeConflito,
-    ocupacaoAcumulada: (
-      (acumuladaRes.data ?? []) as {
-        fato_id: string;
-        origem?: string;
-        sessao_id?: string | null;
-        data: string;
-        disciplina_id: string | null;
-        tempos_consumidos: number | null;
-      }[]
-    ).map((o) => ({
-      /* O id do LANÇAMENTO, o mesmo das marcas de conflito (`emConflito` do painel de situação casa com ele). */
-      fatoId: idDoLancamento({ origem: o.origem ?? "", fatoId: o.fato_id, sessaoId: o.sessao_id }),
-      data: o.data,
-      disciplinaId: o.disciplina_id,
-      /* ⚠️ `tempos` é nulo em linha histórica — `?? 0` é o padrão da pasta para o que não foi medido. */
-      ta: o.tempos_consumidos ?? 0,
-    })),
+    ocupacaoAcumulada: [
+      ...(
+        (acumuladaRes.data ?? []) as {
+          fato_id: string;
+          origem?: string;
+          sessao_id?: string | null;
+          data: string;
+          disciplina_id: string | null;
+          tempos_consumidos: number | null;
+        }[]
+      ).map((o) => ({
+        /* O id do LANÇAMENTO, o mesmo das marcas de conflito (`emConflito` do painel de situação casa com ele). */
+        fatoId: idDoLancamento({
+          origem: o.origem ?? "",
+          fatoId: o.fato_id,
+          sessaoId: o.sessao_id,
+        }),
+        data: o.data,
+        disciplinaId: o.disciplina_id,
+        /* ⚠️ `tempos` é nulo em linha histórica — `?? 0` é o padrão da pasta para o que não foi medido. */
+        ta: o.tempos_consumidos ?? 0,
+      })),
+      /*
+       * `PEND-016-5`: o que não ocupa TA na grade soma no acumulado e não marca conflito — o id é próprio, e nenhuma
+       * marca de conflito casa com ele.
+       */
+      ...(
+        semPosicaoRes.data as {
+          origem: string;
+          data: string;
+          disciplina_id: string | null;
+          tempos: number;
+        }[]
+      ).map((o, n) => ({
+        fatoId: `sem-posicao:${o.origem}:${o.data}:${n}`,
+        data: o.data,
+        disciplinaId: o.disciplina_id,
+        ta: Number(o.tempos),
+      })),
+    ],
   };
 }
 
@@ -1647,6 +1702,8 @@ export type ExtrasDaImpressao = {
    */
   readonly execucao: readonly (ExecucaoDaDisciplina & {
     readonly disciplinaId: string;
+    /** O *Nome no DSA* cadastrado (spec 017, FR-007) — o do cartão; o quadro de CH usa `nome`, inteiro. */
+    readonly nomeNoDsa: string | null;
     /** `previsao_inicio_efetiva` — insumo da situação `atrasada` (item 8, 08/10/2026). */
     readonly previsaoInicio: string | null;
     /** `previsao_termino_efetiva` — idem. */
@@ -1685,7 +1742,7 @@ export async function lerExtrasDaImpressao(
          *    padrão da grade, já resolvidas pela view — resolvê-las aqui seria a segunda tradução.
          */
         .select(
-          "disciplina_id, cod_disciplina, nome_disciplina, carga_horaria_tempos, ta_executados, turma_id, previsao_inicio_efetiva, previsao_termino_efetiva",
+          "disciplina_id, cod_disciplina, nome_disciplina, nome_no_dsa, carga_horaria_tempos, ta_executados, turma_id, previsao_inicio_efetiva, previsao_termino_efetiva",
           contagemNaPrimeira(f),
         )
         .eq("turma_id", entrada.turmaId)
@@ -1759,6 +1816,7 @@ export async function lerExtrasDaImpressao(
       disciplina_id: string | null;
       cod_disciplina: string | null;
       nome_disciplina: string | null;
+      nome_no_dsa: string | null;
       carga_horaria_tempos: number | null;
       ta_executados: number | null;
       previsao_inicio_efetiva: string | null;
@@ -1768,6 +1826,7 @@ export async function lerExtrasDaImpressao(
     disciplinaId: d.disciplina_id ?? "",
     codigo: d.cod_disciplina ?? "",
     nome: d.nome_disciplina ?? "",
+    nomeNoDsa: d.nome_no_dsa,
     prevista: d.carga_horaria_tempos ?? 0,
     /* ⚠️ **SEM corte por data** (`Q-2`) — é o `ta_executados` da view, como ele é. */
     cumprida: d.ta_executados ?? 0,

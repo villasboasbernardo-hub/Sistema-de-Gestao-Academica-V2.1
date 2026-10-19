@@ -30,6 +30,7 @@ import {
   type ErroDoBanco,
 } from "@/lib/acoes/traducao-de-recusas";
 import { ROTA_DA_FICHA_DA_TURMA } from "@/lib/navegacao/endereco-de-turma";
+import { recusaSeTurmaArquivadaPelaLinha } from "@/lib/acoes/turma-arquivada";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
   esquemaDeDisciplina,
@@ -114,6 +115,8 @@ export async function editarDisciplina(entrada: unknown): Promise<ResultadoDeDis
         modo_atribuicao_padrao: d.modoAtribuicaoPadrao,
         tecnica_ensino_sugerida: d.tecnicaEnsinoSugerida ?? null,
         local_padrao: d.localPadrao ?? null,
+        /* Spec 017 (FR-007.1): só quando veio — quem não manda o campo não o apaga. */
+        ...(d.nomeNoDsa === undefined ? {} : { nome_no_dsa: d.nomeNoDsa }),
       },
       { count: "exact" },
     )
@@ -212,6 +215,9 @@ export async function definirPeriodoDaTurma(entrada: unknown): Promise<Resultado
 
   const p = conferido.data;
   const supabase = await criarClienteDeServidor();
+  /* D-COR-5: a turma arquivada é somente leitura (spec 017, FR-004.4). */
+  const arquivada = await recusaSeTurmaArquivadaPelaLinha(supabase, p.turmaDisciplinaId);
+  if (arquivada) return falha(arquivada);
 
   // Limpar as duas datas é voltar ao estado "não informado"; informar o início é decisão manual.
   const origem = p.previsaoInicio === null ? "nao_informado" : "manual";

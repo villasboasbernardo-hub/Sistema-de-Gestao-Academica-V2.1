@@ -13,6 +13,8 @@
  */
 import { z } from "zod";
 
+import { LIMITE_DO_NOME_NO_DSA, recusaDoNomeNoDsa } from "@/lib/dominio/nome-no-dsa";
+
 /** ⚠️ Os dois modos CONCRETOS. `herdar` fica fora — ver o cabeçalho. */
 export const MODOS_DE_ATRIBUICAO = ["dividido", "simultaneo"] as const;
 
@@ -52,10 +54,22 @@ export const esquemaDeDisciplina = z.object({
   localPadrao: z.string().trim().max(120).nullish(),
 });
 
+/**
+ * O *Nome no DSA* (spec 017, FR-007.1): opcional, em branco vira nulo, até L — o que cabe numa linha do cartão de
+ * 1 TA, medido no papel (`LIMITE_DO_NOME_NO_DSA`). A recusa diz o limite. Só a EDIÇÃO o manda (C-19).
+ */
+const nomeNoDsa = z
+  .string()
+  .nullish()
+  .transform((v) => (v ?? "").replace(/\s+/g, " ").trim())
+  .pipe(z.string().max(LIMITE_DO_NOME_NO_DSA, recusaDoNomeNoDsa()))
+  .transform((v) => (v === "" ? null : v));
+
 /** A edição manda o `id` junto; o curso **não** muda — mover disciplina de curso não é desta fatia. */
-export const esquemaDeEdicaoDeDisciplina = esquemaDeDisciplina
-  .omit({ cursoId: true })
-  .extend({ disciplinaId: z.uuid({ error: "Disciplina inválida." }) });
+export const esquemaDeEdicaoDeDisciplina = esquemaDeDisciplina.omit({ cursoId: true }).extend({
+  disciplinaId: z.uuid({ error: "Disciplina inválida." }),
+  nomeNoDsa: nomeNoDsa.optional(),
+});
 
 /** Desativar e reativar mandam **só** o identificador (`FR-013`). */
 export const esquemaDeSituacaoDaDisciplina = z.object({

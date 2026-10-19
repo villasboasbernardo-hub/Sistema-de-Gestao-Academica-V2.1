@@ -438,7 +438,12 @@ export function formulasDaLinhaDeTa(entrada: {
   const nomeDaDisciplina = fn(
     "IFERROR",
     concat(
-      fn("INDEX", nome(NOME.discNome), fn("MATCH", c(P.disciplina), nome(NOME.discCodigo), num(0))),
+      /* Spec 017 (FR-007): o título do cartão leva o nome no DSA; o rodapé, o inteiro (`DISC_NOME`). */
+      fn(
+        "INDEX",
+        nome(NOME.discNomeDsa),
+        fn("MATCH", c(P.disciplina), nome(NOME.discCodigo), num(0)),
+      ),
       vazio,
     ),
     vazio,

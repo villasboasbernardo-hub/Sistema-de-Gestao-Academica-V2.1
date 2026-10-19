@@ -18,6 +18,7 @@
 import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa } from "@/lib/acoes/traducao-de-recusas";
+import { recusaSeTurmaArquivada } from "@/lib/acoes/turma-arquivada";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { esquemaDeJuntarSessao } from "@/lib/validacao/juntar-sessao";
 
@@ -30,6 +31,17 @@ export async function juntarComoSessao(entrada: unknown): Promise<ResultadoDeJun
     return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
   const { provaId, avaliacaoId } = conferido.data;
   const supabase = await criarClienteDeServidor();
+  /* D-COR-5: juntar como sessão grava na turma da prova — a arquivada não recebe (spec 017, achado 41). */
+  const { data: prova, error: erroDaProva } = await supabase
+    .from("avaliacoes")
+    .select("turma_id")
+    .eq("id", provaId)
+    .maybeSingle();
+  if (erroDaProva) return { ok: false, erro: traduzirRecusa(erroDaProva) };
+  if (prova) {
+    const arquivada = await recusaSeTurmaArquivada(supabase, prova.turma_id as string);
+    if (arquivada) return { ok: false, erro: arquivada };
+  }
   const { error } = await supabase.rpc("juntar_como_sessao", {
     p_prova_id: provaId,
     p_avaliacao_id: avaliacaoId,

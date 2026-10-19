@@ -25,12 +25,19 @@ import {
   type ContextoDaRecusa,
   type ErroDoBanco,
 } from "@/lib/acoes/traducao-de-recusas";
-import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+import {
+  recusaSeTurmaArquivada,
+  recusaSeTurmaArquivadaPeloCodigo,
+} from "@/lib/acoes/turma-arquivada";
+import { QUEM_DESARQUIVA } from "@/lib/dominio/arquivamento-da-turma";
+import { enderecoDaTurma, enderecoDaTurmaGravada } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
   esquemaDaTrocaDeSituacao,
   esquemaDeEdicaoDaTurma,
   esquemaDeTurma,
+  esquemaDoArquivamento,
+  esquemaDoDesarquivamento,
 } from "@/lib/validacao/turma";
 
 export type ResultadoDeTurma =
@@ -136,10 +143,16 @@ export async function editarTurma(
   const supabase = await criarClienteDeServidor();
   const { data: atual } = await supabase
     .from("turmas")
-    .select("curso_id")
+    .select("id, curso_id")
     .eq("codigo", codigoAtual)
     .maybeSingle();
   const cursoId = (atual?.curso_id as string | undefined) ?? "";
+
+  /* D-COR-5: a turma arquivada é somente leitura — nem o Admin edita (C-4). */
+  if (atual) {
+    const arquivada = await recusaSeTurmaArquivada(supabase, atual.id as string);
+    if (arquivada) return falha(arquivada);
+  }
 
   const { data, error } = await supabase
     .from("turmas")
@@ -192,7 +205,7 @@ export async function editarTurma(
 export async function trocarSituacaoDaTurma(entrada: unknown): Promise<ResultadoDeTurma> {
   const conferido = esquemaDaTrocaDeSituacao.safeParse(entrada);
   if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
-  const { codigo, status } = conferido.data;
+  const { codigo, status, observacao } = conferido.data;
 
   const supabase = await criarClienteDeServidor();
   const { data: atual } = await supabase
@@ -202,22 +215,109 @@ export async function trocarSituacaoDaTurma(entrada: unknown): Promise<Resultado
     .maybeSingle();
   const cursoId = (atual?.curso_id as string | undefined) ?? "";
 
-  const { data, error } = await supabase
-    .from("turmas")
-    .update({ status })
-    .eq("codigo", codigo)
-    .select("codigo");
+  /* D-COR-5: a turma arquivada é somente leitura — a situação também não muda. */
+  const arquivada = await recusaSeTurmaArquivadaPeloCodigo(supabase, codigo);
+  if (arquivada) return falha(arquivada);
+
+  /*
+   * ⚠️ **A TROCA E A OBSERVAÇÃO VÃO JUNTAS PELA FUNÇÃO DO BANCO** (D-COR-4; spec 017, M2): ela põe a observação na
+   *    transação e troca a situação; o gatilho anota a troca com quem e quando. A função recusa com `42501`
+   *    (`turma_fora_do_alcance`) quando o `UPDATE` não alcança a linha — o zero linhas da RLS deixa de ser calado.
+   */
+  const { error } = await supabase.rpc("trocar_situacao_da_turma", {
+    p_codigo: codigo,
+    p_status: status,
+    p_observacao: observacao,
+  });
 
   if (error) {
+    if (error.code === "42501" || error.hint === "turma_fora_do_alcance") {
+      return falha(recusaPorAlcance(cursoId ? await contextoDoCurso(cursoId, "alterações") : {}));
+    }
     const contexto = cursoId ? await contextoDoCurso(cursoId, "alterações") : {};
     return falha(traduzirRecusa(error as ErroDoBanco, contexto));
-  }
-  if (!data || data.length === 0) {
-    return falha(recusaPorAlcance(cursoId ? await contextoDoCurso(cursoId, "alterações") : {}));
   }
 
   revalidatePath("/cursos");
   revalidatePath("/turmas");
+  revalidatePath("/inicio");
   revalidatePath(enderecoDaTurma(codigo));
-  return { ok: true, codigo, destino: enderecoDaTurma(codigo) };
+  return { ok: true, codigo, destino: enderecoDaTurmaGravada(codigo, "situacao") };
+}
+
+/**
+ * Arquivar a turma — D-COR-5: *"Arquivar turma em QUALQUER estado, com aviso quando não estiver concluída; por
+ * colunas próprias, NUNCA um 5º status. (…) o Admin desarquiva."*
+ *
+ * ⚠️ **É UM EVENTO, NÃO UMA COLUNA DA TURMA** (`turma_arquivamentos`, só de acréscimo; C-5): o banco carimba quem e
+ *    quando, recusa arquivar a arquivada (`turma_ja_arquivada`) e a policy decide quem pode — o recurso
+ *    `arquivamento_de_turma` (o Admin, o Encarregado e o Ajudante da Administração Acadêmica; decisão de Bernardo
+ *    Villas Boas, 19/10/2026) e o alcance. A situação da turma NÃO muda.
+ * ⚠️ **GERA O `id` NO BANCO E NÃO PEDE A LINHA DE VOLTA** (gotcha 4.1).
+ */
+export async function arquivarTurma(entrada: unknown): Promise<ResultadoDeTurma> {
+  const conferido = esquemaDoArquivamento.safeParse(entrada);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  const { codigo, observacao } = conferido.data;
+
+  const supabase = await criarClienteDeServidor();
+  const { data: turma } = await supabase
+    .from("turmas")
+    .select("id")
+    .eq("codigo", codigo)
+    .maybeSingle();
+  if (!turma) return falha("A turma não existe mais, ou o seu perfil não a alcança.");
+
+  const { error } = await supabase
+    .from("turma_arquivamentos")
+    .insert({ turma_id: turma.id as string, acao: "arquivar", observacao });
+  if (error) {
+    return falha(
+      error.code === "42501"
+        ? `O seu perfil não arquiva turma: arquivam ${QUEM_DESARQUIVA}.`
+        : traduzirRecusa(error as ErroDoBanco),
+    );
+  }
+
+  revalidarListasDaTurma(codigo);
+  return { ok: true, codigo, destino: enderecoDaTurmaGravada(codigo, "arquivada") };
+}
+
+/** Desarquivar a turma — o mesmo trio que arquiva (decisão de 19/10/2026); a policy confere o recurso. */
+export async function desarquivarTurma(entrada: unknown): Promise<ResultadoDeTurma> {
+  const conferido = esquemaDoDesarquivamento.safeParse(entrada);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  const { codigo } = conferido.data;
+
+  const supabase = await criarClienteDeServidor();
+  const { data: turma } = await supabase
+    .from("turmas")
+    .select("id")
+    .eq("codigo", codigo)
+    .maybeSingle();
+  if (!turma) return falha("A turma não existe mais, ou o seu perfil não a alcança.");
+
+  const { error } = await supabase
+    .from("turma_arquivamentos")
+    .insert({ turma_id: turma.id as string, acao: "desarquivar" });
+  if (error) {
+    return falha(
+      error.code === "42501"
+        ? `O seu perfil não desarquiva turma: desarquivam ${QUEM_DESARQUIVA}.`
+        : traduzirRecusa(error as ErroDoBanco),
+    );
+  }
+
+  revalidarListasDaTurma(codigo);
+  return { ok: true, codigo, destino: enderecoDaTurmaGravada(codigo, "desarquivada") };
+}
+
+/** Arquivar e desarquivar mudam o que as listas mostram (C-24). */
+function revalidarListasDaTurma(codigo: string): void {
+  revalidatePath("/cursos");
+  revalidatePath("/turmas");
+  revalidatePath("/inicio");
+  revalidatePath("/disciplinas");
+  revalidatePath("/atividades");
+  revalidatePath(enderecoDaTurma(codigo));
 }

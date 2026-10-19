@@ -548,6 +548,18 @@ export const CONTRATO = {
         avisaServidor: true,
         limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
       },
+      /*
+       * ⚠️ **D-COR-5 (spec 017)**: a turma arquivada some da lista; `?arquivadas=sim` a traz de volta — é o caminho
+       *    até ela. O padrão vazio é *esconder*, e o `BotaoLimparFiltros` o conta como filtro fora do padrão.
+       */
+      arquivadas: {
+        nome: "arquivadas",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: SIM_OU_NAO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
     },
   },
   /*
@@ -633,7 +645,16 @@ export const CONTRATO = {
         nome: "gravada",
         tipo: "escolha",
         padrao: "",
-        opcoes: ["", "turma", "situacao"],
+        // Bloco 2 (spec 017): arquivar, desarquivar e o TA fora do DSA (registrado e desfeito).
+        opcoes: [
+          "",
+          "turma",
+          "situacao",
+          "arquivada",
+          "desarquivada",
+          "ta-fora",
+          "ta-fora-desfeito",
+        ],
         historico: "substitui",
         avisaServidor: true,
       },

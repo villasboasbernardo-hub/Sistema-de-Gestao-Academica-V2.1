@@ -1,0 +1,219 @@
+# Progresso do implement — spec 017 (Bloco 2)
+
+*Aberto em 19/10/2026. Todo número aqui nomeia o artefato contra o qual foi medido (regra 9.2); o que ainda não foi
+medido fica `[pendente]` (regra 9.3).*
+
+## T001 — linha de base do ramo
+
+- `pnpm verificar` sobre `c1f8d65`: **não foi rodado no ramo antes da primeira mudança** — a linha de base que vale é a
+  do CI da `main` em `c7313c3` (run `39231123999`, anotada no fechamento da spec 016): **2.383** de unidade em **168**
+  arquivos; de `c7313c3` a `c1f8d65` só entraram documentação e configuração do fluxo. No fim do Bloco 2: **2.465** em
+  **176** (+82 casos, +8 arquivos).
+
+## T002 — medições na cópia do remoto
+
+**Artefato:** o banco **local** (`supabase_db_ciaara-11-v2-1`) restaurado de **`remoto-20261019-024230.sql`**
+(19/10/2026, 02:42, o backup do rito do PR #69), com as M1–M3 desta spec aplicadas por cima. Medido em 19/10/2026 pela
+sessão principal, só de leitura (`psql` no contêiner). O remoto **não** foi lido de novo.
+
+| Medida | Valor | Consulta (resumo) |
+|---|---|---|
+| Disciplinas no total / ativas | **175** / **172** | `count(*)`, `count(*) filter (where status = 'ativo')` em `disciplinas` |
+| Nomes ativos com mais de 30 / 40 / 50 / 60 caracteres | **61** / **31** / **20** / **9** | `length(nome_disciplina)` nas ativas |
+| O maior nome ativo | **81** caracteres | `max(length(nome_disciplina))` nas ativas |
+| Turmas por situação | planejada **4** · ativa **8** · concluída **12** · cancelada **5** (**29**) | `group by status` em `turmas` |
+| Planejada ou ativa sem janela completa | **1** | `status in ('planejada','ativa') and (data_inicio is null or data_termino is null)` |
+| Iniciando em [19/10, 18/11/2026], não cancelada | **0** | `status <> 'cancelada' and data_inicio between '2026-10-19' and '2026-11-18'` |
+| Linhas de turma ativas sem instrutor ativo, em turma planejada ou ativa | **52** | `turma_disciplina` ativa sem `turma_disciplina_instrutor` ativo; a spec conta as **turmas** nessa condição: **10** |
+| `PEND-016-5` — fato de CHD ativo sem posição que some TA | **0** (aulas, sessões e avaliações vivas); **102** vistas ativas sem `ta_inicial`, todas com 0 TA | medido no specify (spec, Edge Cases), no mesmo banco |
+
+**A fixture do SC-008:** os **172** nomes das ativas, `select nome_disciplina from disciplinas where status =
+'ativo' order by nome_disciplina`, guardados fora do git e versionados pela sessão principal como
+`tests/unidade/dados/disciplinas-ativas-2026-10-19.txt` — o conjunto contra o qual a T046 prova o *172 de 172*.
+
+⚠️ **Por que os números da `triagem.md` são outros** (*mais de 30: 60; mais de 40: 30; mais de 60: 10*): ela mediu
+`scripts/etl/dados/disciplinas-do-banco.txt`, o retrato do remoto de **26/09/2026**, com **175** linhas e **sem filtro
+de status** — outro artefato, outro conjunto. Os dois estão certos para o que mediram; o que vale para o SC-008 é o
+de 19/10/2026, acima.
+
+## T044/T045 — o cartão de 1 TA e o limite L
+
+**Artefato:** `tests/e2e/dsa-cartao-do-papel.spec.ts`, banco local limpo, build de produção da suíte (porta 3100),
+19/10/2026. A amostra é **a semana cheia de seis dias no maior regime real** — 9 tempos (`regime_tempos` na cópia
+`remoto-20261019-024230.sql`: 7 em 16 vigências, 8 em 17, **9 em 7**, 0 em 4) —, **54 aulas de 1 TA**, os nomes mais
+longos do catálogo com os códigos mais largos (XIII a XXXVIII), um *Nome no DSA* cadastrado e um legado de 60
+caracteres, e um instrutor sem nome de guerra curto.
+
+- **Com o CSS de `c1f8d65` (vista reprovar):** *"o DSA dos cartões de 1 TA passou de uma página"* — sem recorte, os
+  cartões crescem com o nome e empurram a semana para a segunda folha.
+- ⚠️ **E A PRIMEIRA CORREÇÃO TAMBÉM REPROVAVA, medida antes de ser dada por boa:** título numa linha e
+  `overflow: hidden` no cartão, mas o pé na mesma linha dos dados. Com a semana cheia (medido em 10 tempos), **os 60
+  cartões** saíram com o instrutor **fora da caixa**: cartão de 34,75 px, o instrutor começando 17 px abaixo do topo e
+  ocupando 19,6 px — o recorte o escondia. A correção final separa a linha de dados (TA · local · T/E) do instrutor e
+  fixa a ordem de quem cede: o tópico até zero, depois os dados, depois o título; o instrutor nunca.
+- **Com a correção final:** os 54 cartões com o instrutor inteiro dentro da caixa, **uma página**, o título recortado
+  em no máximo 1 px (arredondamento), e o nome inteiro no quadro de CH.
+- **L = 19** (R-8): no título do cartão do código *XXXVIII* (Barlow 6,8 pt, 9,07 px), o maior prefixo que cabe numa
+  linha de cada um dos 172 nomes ativos que não cabem inteiros (`tests/unidade/dados/disciplinas-ativas-2026-10-19.txt`);
+  L é o menor. **Medido em dois ambientes, e eles divergem:** no Chromium do **Windows** (build local) **22** — o
+  primeiro valor adotado —, e no Chromium do **Linux** (bloco `banco` do CI, run `39269921589`, três execuções)
+  **19**: com L = 22 o CI reprovou *"SC-008: 153 de 172"*. A fonte é a mesma (Barlow servida pelo build, sem falha de
+  download no log); o que muda é o arredondamento da largura das letras em corpo pequeno. Vale o **menor**, para o nome
+  caber nos dois. Com L = 19: **SC-008 172 de 172** no Windows (L medido 22) e no Linux (19); **119 das 172** passam do
+  limite e **38** saem com reticências (`nomes-acima-do-limite.md`, `PEND-017-4`). Os marcadores da spec (FR-007.1), do
+  `data-model.md`, do contrato e do checklist foram trocados.
+- **Na tela, o defeito não se reproduz, e a prova o diz:** a grade é uma tabela com `min-w-36` e largura automática, e
+  `truncate` (sem quebra) faz a coluna **alargar até caber** o nome — medido: o instrutor com 466 px de largura e
+  `scrollWidth = clientWidth`, numa janela de 1.024 px. O `break-words` da correção deixa a coluna estreita, e o caso
+  da tela fica como guarda (instrutor visível e não cortado em todo cartão), não como prova que discrimina.
+- O caso de `dsa-grade.spec.ts` que esperava *"Disciplina do percurso do DSA"* (29 caracteres) no cartão passou a
+  esperar a abreviação, *"Disc. perc. DSA"* — o comportamento novo (FR-007.2), com o nome inteiro no rótulo.
+
+## T038 — os leitores de lista de turma (C-24)
+
+Enumeração por `grep` de `from("turmas")` e `from("vw_carga_horaria_turma")` em `app/` e `lib/` (19/10/2026), e a
+decisão de cada leitor:
+
+| Leitor | Decisão | Por quê |
+|---|---|---|
+| `app/(app)/turmas/page.tsx` | **some**, volta com *Mostrar arquivadas*, com o selo | D-COR-5 |
+| `app/(app)/inicio/page.tsx` (panorama, tetos, vistas) | **some** | C-24; tetos e vistas seguem o panorama |
+| `app/(app)/cursos/[curso]/page.tsx` (lista, seletor, pré-seleção, *teto excedido*) | **some**; o **limite** conta todas | C-24 e C-7 |
+| `app/(app)/atividades/page.tsx` (filtro de turma) | **some** | C-24 |
+| `app/(app)/disciplinas/consulta.ts` (cascata) | **some da cascata**; a turma pedida pelo código continua lida | a mesma função monta a ficha da turma |
+| `app/(app)/admin/salas/page.tsx` | **fica** | histórico (C-24) |
+| `app/(app)/cursos/[curso]/editar/page.tsx` | **fica** | limite e proteção de vigência contam a arquivada (C-7) |
+| `app/(app)/cursos/[curso]/turmas/nova/page.tsx` | **fica** | o limite de turmas por ano conta a arquivada (C-7) |
+| ficha, DSA, impressão, planilha, avaliações da turma, ações | **não é lista** | leitura de UMA turma; a arquivada abre só para ler |
+
+## T063 — defeitos deliberados
+
+- **M3, a agenda alheia inteira** (o corpo de antes do achado 53, aplicado por `psql` no banco local limpo, 19/10/2026):
+  `tests/invariantes/rls/bloco-2.test.ts` reprovou **1 de 27** — exatamente *"a ocupação alheia que NÃO cruza a do
+  operador não sai"* —, e voltou a **27 de 27** com o corpo da migration. Desfeito por `pnpm db:reset:limpo`.
+- **`PEND-016-5`, o painel sem o sem posição** (o acumulado do DSA lendo `[]` no lugar de `dados.semPosicao`, 19/10/2026):
+  `tests/invariantes/planilha-igual-ao-papel.test.ts` reprovou **2 de 7** — *"D95: painel 25 × base da CHD 40"*, a
+  CONTROLE e a situação junto —, e voltou a **7 de 7** com a leitura.
+- **O CSS antigo do cartão** (f): ver §T044/T045 — reprovou *"passou de uma página"*; e a primeira correção, sem a
+  ordem de quem cede, reprovou com o instrutor fora da caixa nos 60 cartões de 10 tempos.
+- **(a) o ramo fora do DSA tirado da `chd_executada` de `vw_carga_horaria_turma`** (`create or replace` no banco local
+  limpo com a M4, a coluna `ta_fora_do_dsa` mantida; o plantio confere que casou, e recusa se não): o **137** reprovou
+  os casos **4** (*"chd e cht somam os 5"*) e **6** (*"P-3 · sem corte, a base = vw_carga_horaria_turma em toda turma,
+  com TA fora do DSA"*).
+- **(b) a trilha só pela função** (o gatilho `trg_turmas_anotar_troca` retirado): o **138** reprovou os casos **2**
+  (*"a troca por UPDATE DIRETO também fica na trilha"* — o caso que discrimina), **3** e **4**.
+- **(c) desarquivar aberto a quem edita a turma** (`alter policy turma_arquivamentos_criar`): o RLS de
+  `bloco-2.test.ts` reprovou os três casos que discriminam — **Operador, Encarregado e Ajudante passaram a
+  desarquivar** (`expected undefined to be '42501'`) — e o controle positivo do Admin caiu em cascata (a turma já
+  estava desarquivada).
+- **(d) uma Server Action sem a trava** (`registrarTaForaDoDsa` sem `recusaSeTurmaArquivada`): a guarda
+  `turma-arquivada-trava.test.ts` reprovou **1 de 22** — *"registrarTaForaDoDsa grava sem conferir a turma
+  arquivada"* — e voltou a **22 de 22**.
+- **(g) a M4 sem uma tabela** (`drop trigger trg_registros_aula_turma_arquivada`): o **140** reprovou os casos **1**
+  (a enumeração, *"Results differ beginning at row 6"*), **8** (a aula na arquivada) e **11** (mover a aula para fora
+  da arquivada); e o caso com sessão real da M4 em `bloco-2.test.ts` reprovou (*"expected undefined to be '23514'"*).
+
+Todos desfeitos por `pnpm db:reset:limpo` (os de banco) ou pela cópia do arquivo (o de código), 19/10/2026.
+
+## T021/T022 — o que a prova contra o banco mediu
+
+- **A faixa *sem posição* das abas de semana da planilha NÃO soma** (19/10/2026, banco local limpo, semente do DSA
+  mais 10 TA sem posição na W16 e 5 TA fora do DSA): com o sem posição da pasta deixado fora de `FORA_TEMPOS` — o
+  desenho que o achado 3 do analyze propunha para não contar duas vezes —, a CONTROLE deu **30 × 40** do painel, a
+  CRONOS **32 × 42** da base, e o rodapé da IMPRESSÃO ficou **10 abaixo do papel** em quatro semanas. O risco era o
+  oposto do previsto: não dobrava, sumia. Todo fato sem posição foi para `FORA_TEMPOS`, e as três batem.
+
+## T065 — `verificar:tudo` e a suíte rodada duas vezes
+
+- Contagens (`pnpm verificar:tudo` sobre `8aa60cd`, base limpa, `.next` apagada, 19/10/2026): `typecheck`, `lint`,
+  `format:check` e `build` verdes; **2.465** de unidade (**176** arquivos); pgTAP **880** (**60**); invariantes e RLS
+  **372** (**20**). ⚠️ **A ponta a ponta (527 casos, 4 processos) NÃO terminou nesta máquina**: o ambiente a
+  interrompeu por falta de memória antes do primeiro resultado. O veredito dela é o do CI. (A 1ª rodada, sobre
+  `95ade9d`, reprovou só no `format:check` — quatro arquivos sem o Prettier, consertados em `8aa60cd`.)
+- `pnpm test:rls` (a pasta `tests/invariantes` inteira), duas vezes seguidas sem reset, sobre o banco local limpo
+  (`pnpm db:reset:limpo`, 19/10/2026, com M1–M3 corrigidas pelo analyze): **362 de 362 em 20 arquivos** na 1ª e
+  **362 de 362** na 2ª. pgTAP no mesmo banco: **862 em 59 arquivos**, verde.
+- **Com a M4** (banco local limpo, 19/10/2026): pgTAP **880 em 60 arquivos**, verde; `tests/invariantes` **372 em 20
+  arquivos** (371 passados e 1 pulado, o de antes), com o caso da M4 verde depois de corrigido o rascunho
+  (`turmaDe.get`). ⚠️ O 140 nasceu vermelho por dois defeitos do TESTE, não da M4: a comparação do nome do gatilho
+  sem `collate` e a atribuição sem o `codigo` composto (`23502`, que a tabela não gera — `turma_disciplina_instrutor`
+  não tem `DEFAULT` no código).
+- Os e2e novos, duas vezes seguidas: as rodadas da tabela abaixo (24, 25 e 25 de 25); e a suíte inteira no CI sobre
+  `3577447` (run `39274669059`): **521 passados + 6 pulados** (527), sem instável.
+
+## T023, T031, T042, T051 e T057 — as provas de ponta a ponta das US1 a US4 e da edição da disciplina
+
+**Artefato:** o banco local limpo (`pnpm db:reset:limpo`, 19/10/2026), o build de produção da suíte (porta 3100) e
+`--workers=2`. Arquivos: `tests/e2e/ta-fora-do-dsa.spec.ts` (novo, 2 casos), `tests/e2e/turmas-arquivar.spec.ts`
+(novo, 1), `tests/e2e/turmas-painel.spec.ts` (novo, 2), `tests/e2e/turmas-situacao.spec.ts` (+2 casos, 6 no arquivo) e
+`tests/e2e/disciplinas.spec.ts` (+1, 14 no arquivo); a semente comum é `tests/e2e/bloco-2-de-teste.ts`.
+
+| Rodada | Os cinco arquivos (25 casos) |
+|---|---|
+| 1ª, sobre a base recém-limpa | **24 de 25** — reprovou `turmas-painel.spec.ts:130`, defeito do TESTE: o aviso de conflito da T2 diz *"com T1"*, e filtrar por texto casava as duas linhas (violação de modo estrito). O filtro passou a ser pelo link da turma dona do aviso; o arquivo isolado deu **2 de 2** |
+| 2ª, sem reset | **25 de 25** |
+| 3ª, sem reset, logo em seguida | **25 de 25** — a idempotência da regra 9.1 |
+
+**Sem objeto, medido no código em 19/10/2026 (e não inventado):**
+- o *card de CHT* da T023 — a ficha não tem card de CHT; ele é a `PEND-014-9`;
+- a *aba Avaliações +5* da T023 — a aba mostra avaliações do currículo, não a CH executada da disciplina;
+- *"o campo ausente na criação"* da T051 — nenhuma tela monta `FormularioDeDisciplina` no modo de criação
+  (`criarDisciplina` só é chamada por ele, e ele só é montado na edição, em `DetalheDaDisciplina`); a regra está no
+  código (`editando ? … : null`).
+
+**Onde ficou provado o *"8 TA fora do DSA no dia e o teto do dia continua aceito"* (FR-001.6):** no banco. O DSA tira
+o teto e a cascata do dia de `vw_ocupacao_ta` (`lib/acoes/dsa.ts`, as três leituras), e o pgTAP 137 prova que o TA
+fora do DSA não gera linha nela (*"FR-001.6 · o TA fora do DSA não ocupa TA na grade"*); a ponta a ponta confere que a
+grade não ganha cartão.
+
+**Defeitos de tela achados por estas provas:** nenhum. As cinco telas passaram como escritas; a única reprovação foi do
+próprio teste (acima).
+
+## T064 — a reversão provada (DoD 6)
+
+**Artefato:** o banco local limpo (`pnpm db:reset:limpo`, 19/10/2026) com as **quatro** migrations do PR, e
+`scripts/provas/impressao_digital_do_esquema.sql` lido por `psql` no contêiner.
+
+| Momento | Impressão digital (`public` e `app`) |
+|---|---|
+| Com M1, M2, M3 e M4 | **2.137 objetos**, `9fb51fb177f1f2454e1c8d6b912f2117` |
+| Depois de `specs/017-bloco-2-turmas-e-dsa/reversao.sql` (`psql -v ON_ERROR_STOP=1`, saída 0) | **2.012 objetos**, `cbd61b2b23ad95e0502e09f287b5f921` |
+| A de `c1f8d65` (a `main` de partida, anotada no fechamento da spec 016) | **2.012 objetos**, `cbd61b2b23ad95e0502e09f287b5f921` |
+
+As três tabelas novas e a coluna `nome_no_dsa` sumiram (0 e 0, contadas no catálogo). ⚠️ A reversão roda por `psql`, não
+por `supabase db query -f`: a CLI manda o arquivo como um comando preparado e recusa *"cannot insert multiple commands
+into a prepared statement"*. Base restaurada por `pnpm db:reset:limpo` em seguida.
+
+## Os ajustes da conferência do PR #73 (19/10/2026)
+
+*Bernardo Villas Boas: testes satisfatórios; C-3 e C-4 emendadas; M4 aprovada; quatro ajustes antes do merge.*
+**Artefato:** o banco local limpo (`pnpm db:reset:limpo`) e o build de produção da suíte (porta 3100).
+
+- **Ajuste 1 — arquivar e desarquivar só o trio.** Visto falhar antes: o teste de unidade (6 de 11 vermelhos) e o RLS
+  com sessão real **sem a M5** — *"o OPERADOR, que edita a turma, NÃO arquiva"* deu `expected undefined to be
+  '42501'` (ele arquivava). Com a M5: **41 de 41** em `bloco-2.test.ts`; pgTAP **885 em 61** (o 141, 5 asserções).
+  **Defeito deliberado** (a policy de antes, por `alter policy` no banco local): o 141 reprovou os casos 3 e 4 e o RLS
+  reprovou o Operador e os desarquivar do Encarregado e do Ajudante. Desfeito por `pnpm db:reset:limpo`.
+- **Ajustes 2 e 4 — o card *Planejadas* e o ano único.** Teste de unidade visto falhar (5 vermelhos: o indicador que
+  faltava, `anoDoPainel`/`anosDoSeletor` inexistentes, e *"a planejada do ano SEGUINTE"* contando no vigente — total
+  2 em vez de 1); depois **13 de 13**. ⚠️ O e2e do painel foi escrito **depois** do código: o que o discrimina é a
+  unidade, e o e2e confere o percurso por clique (2027, 2025 e a volta ao vigente limpando o `ano`).
+- **Ajuste 3 — *Arquivar* na linha.** O e2e por clique reprovou antes do código (*"waiting for locator
+  `[data-slot="arquivar-da-linha"]`"*) e passou depois; `turmas-arquivar.spec.ts` **3 de 3**, com o caso do Operador.
+- ⚠️ **A COLUNA NOVA EXPÔS UMA CORRIDA NUM AUXILIAR DE TESTE**, e não um defeito da tela: `irAFichaDaTurma`
+  (`tests/e2e/navegar-turmas.ts`) clicava logo depois de digitar a busca, sobre a lista ainda sem o filtro. Com as
+  linhas mais altas, o link ficou no rodapé da janela (*y* = 714 numa janela de 720) e a lista filtrada chegou no meio
+  do clique — que caiu no vazio, **sem navegar e sem erro**: seis casos de `andamento.spec.ts` reprovaram. Medido com
+  uma sonda: com um perfil sem a coluna (Chefe), o mesmo clique navegava. O auxiliar passou a esperar a URL e o
+  *"neste recorte"* do servidor antes de clicar; os nove arquivos de ponta a ponta das turmas deram **76 de 76**.
+- **A reversão com a M5**, de novo numa base limpa: com as cinco, **2.137 objetos, `bb6e48a8…`**; depois de
+  `reversao.sql`, **2.012, `cbd61b2b…`** — a de `c1f8d65`. ⚠️ Na primeira tentativa a base tinha os registros dos e2e,
+  e a reversão **recusou** (*"A trilha ou o arquivamento tem registro: apagar e decisao de Bernardo (regra 4)"*), sem
+  mudar nada — a guarda funcionando.
+- ⚠️ **E UMA SEGUNDA FORMA DO MESMO EFEITO, SÓ NO CI**: `turmas-lista.spec.ts:48` (*"a linha leva à ficha"*, sem busca)
+  reprovou na **primeira tentativa nas duas rodadas** sobre `0bc635e` (runs `39305012203` e `39305005473`) e passou na
+  repetição — *"Expected /turmas/CT0-REG%20T1%202026, Received /turmas"*. Localmente, **6 de 6** repetido. É o clique no
+  link que ficou rente ao rodapé da janela, com a métrica de fonte do Linux. O clique na lista passou a centralizar o
+  link antes (`clicarNaTurmaDaLista`, `tests/e2e/navegar-turmas.ts`), nos seis lugares que clicavam assim; local
+  **19 de 19** nos três arquivos.
+

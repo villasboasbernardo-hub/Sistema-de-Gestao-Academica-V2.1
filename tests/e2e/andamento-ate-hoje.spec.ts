@@ -134,10 +134,10 @@ test.describe("⚠️ D-COR-2 · FR-014.4 · o lançamento no futuro não conta 
 
     /*
      * ── e o DSA da semana do lançamento O CONTA (acumulado até a semana, FR-028.1 da spec 013) ──
-     * ⚠️ A ASSERÇÃO É A DIFERENÇA ENTRE AS DUAS SEMANAS, e não um número absoluto: a situação do DSA não soma o
-     *    lançamento histórico da semente, que não tem tempo no dia (`ta_inicial` nulo) — comportamento do DSA de
-     *    antes deste PR, medido na suíte inteira (ela mostrou 8 %, e não 18 %). O que o caso prova é que o lançamento
-     *    futuro ENTRA: a semana dele tem 8 TA a mais que a anterior (100 de CH, então 8 pontos percentuais).
+     * ⚠️ **`PEND-016-5`, RESOLVIDA NA SPEC 017** (decisão de Bernardo Villas Boas, 19/10/2026): a situação do DSA
+     *    passou a somar o lançamento histórico da semente, que não tem tempo no dia (`ta_inicial` nulo, 10 TA em
+     *    04/03/2026). Antes ela mostrava **8 %** na semana do lançamento futuro; agora mostra **18 %** — os 10 do
+     *    histórico mais os 8 do futuro, em 100 de CH — e **10 %** na semana anterior, que já conta o histórico.
      */
     await page.locator('[data-slot="abrir-o-dsa"]').click();
     await expect(page.getByRole("heading", { name: "Detalhe Semanal de Aula" })).toBeVisible();
@@ -160,5 +160,10 @@ test.describe("⚠️ D-COR-2 · FR-014.4 · o lançamento no futuro não conta 
       naSemanaDele - naSemanaAnterior,
       "o DSA da semana do lançamento futuro não o contou",
     ).toBe(SEMEADO.lancamentoFuturo.tempos);
+    expect(
+      naSemanaAnterior,
+      "PEND-016-5 · a situação do DSA não somou o lançamento sem posição",
+    ).toBe(10);
+    expect(naSemanaDele).toBe(18);
   });
 });

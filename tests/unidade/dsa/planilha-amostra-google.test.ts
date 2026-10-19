@@ -189,6 +189,7 @@ describe("T053 · a amostra do Google Planilhas", () => {
         dias: doPapel,
         grade,
         quadroDeCh: tabelaDeCh(doPapel, execucao),
+        nomesNoCartao: Object.fromEntries(DISCIPLINAS.map((d) => [d.codigo, d.nomeNoCartao])),
         legenda: legendaDeTecnicas(doPapel, TECNICAS),
         assinaturas: primeira.assinaturas,
       }),

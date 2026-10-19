@@ -105,7 +105,10 @@ select set_eq(
            ('avaliacoes_curriculo_arbitragens'),
            -- Emenda de 15/10/2026 da spec 014 (desenho aprovado em 16/10/2026). REGRA DOS VALORES ESPERADOS: (a).
            -- Entrou no BRIEF §2.1 (emenda de 16/10/2026) antes de entrar aqui.
-           ('sessoes_de_aplicacao')$$,
+           ('sessoes_de_aplicacao'),
+           -- Spec 017 (Bloco 2), 19/10/2026. REGRA DOS VALORES ESPERADOS: (a). As tres entraram no BRIEF §2.1
+           -- (emenda de 19/10/2026) antes de entrar aqui: D-COR-3, D-COR-4 e D-COR-5.
+           ('ta_fora_do_dsa'), ('turma_trocas_de_situacao'), ('turma_arquivamentos')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 
