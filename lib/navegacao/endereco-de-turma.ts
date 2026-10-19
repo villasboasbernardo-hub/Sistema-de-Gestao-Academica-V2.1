@@ -54,7 +54,10 @@ export function enderecoDaTurma(codigo: string): string {
  *
  * @example enderecoDaTurmaGravada("C-Ap-FR 2026", "situacao") → "/turmas/C-Ap-FR%202026?gravada=situacao"
  */
-export function enderecoDaTurmaGravada(codigo: string, oQue: "turma" | "situacao"): string {
+export type GravacaoNaFicha =
+  "turma" | "situacao" | "arquivada" | "desarquivada" | "ta-fora" | "ta-fora-desfeito";
+
+export function enderecoDaTurmaGravada(codigo: string, oQue: GravacaoNaFicha): string {
   return `${enderecoDaTurma(codigo)}?gravada=${oQue}`;
 }
 

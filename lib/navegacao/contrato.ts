@@ -633,7 +633,16 @@ export const CONTRATO = {
         nome: "gravada",
         tipo: "escolha",
         padrao: "",
-        opcoes: ["", "turma", "situacao"],
+        // Bloco 2 (spec 017): arquivar, desarquivar e o TA fora do DSA (registrado e desfeito).
+        opcoes: [
+          "",
+          "turma",
+          "situacao",
+          "arquivada",
+          "desarquivada",
+          "ta-fora",
+          "ta-fora-desfeito",
+        ],
         historico: "substitui",
         avisaServidor: true,
       },
