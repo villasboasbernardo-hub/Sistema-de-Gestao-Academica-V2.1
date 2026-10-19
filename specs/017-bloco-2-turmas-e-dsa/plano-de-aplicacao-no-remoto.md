@@ -11,7 +11,7 @@ a tempo, a M4 sai deste PR antes do merge (C-30). Nada aqui foi executado: os re
 
 0. **Pré-condição:** CI verde nos três blocos sobre o commit do PR.
 1. **Backup:** `python -m scripts.manutencao.dado_do_remoto --somente-copia`. Arquivo citado aqui, para a medição dos
-   passos 2 e 3: **`remoto-20261019-113345.sql`** (19/10/2026, 11:33). O backup imediatamente antes do push: `[pendente]`.
+   passos 2 e 3: **`remoto-20261019-113345.sql`** (19/10/2026, 11:33). O backup imediatamente antes do push: **`remoto-20261019-123242.sql`** (12:32).
 2. **Impressão digital das views, ANTES (SC-010):** com o backup restaurado **só no local** e o esquema **sem** M1–M4.
    ⚠️ O `dado_do_remoto` recria o local por **todas** as migrations da pasta: para o "sem M1–M4", tirar as quatro da
    pasta **só na cópia de trabalho** durante a restauração (sem commit), ou restaurar numa worktree em `c1f8d65`. O md5
@@ -29,35 +29,44 @@ a tempo, a M4 sai deste PR antes do merge (C-30). Nada aqui foi executado: os re
    passo não importa; **antes de qualquer outra conferência no local**, voltar à base limpa (`pnpm db:reset:limpo`) ou
    reaplicar à mão as linhas da matriz e do parâmetro.
 4. **Dry-run:** M4 fora de `supabase/migrations/` **só na cópia de trabalho** (sem commit);
-   `supabase db push --linked --dry-run` tem de listar **só** M1, M2 e M3: `[pendente]`.
-5. **Aplicar:** `supabase db push --linked` (o pedido de permissão aparece para Bernardo): `[pendente]`. M4 volta à
-   pasta logo depois.
+   `supabase db push --linked --dry-run` tem de listar **só** M1, M2 e M3: **listou só as três** (19/10/2026, sobre o
+   commit `3577447`, com o CI verde nos três blocos — run `39274669059`).
+5. **Aplicar:** `supabase db push --linked` (o pedido de permissão aparece para Bernardo): **aplicadas as três**, na
+   ordem, 19/10/2026 (~12:33). M4 voltou à pasta logo depois.
 6. **Conferência só de leitura:**
    - `supabase migration list --linked`: **N+1 no local e N no remoto**, com a M4 só do lado local (esperado até o
-     portão): `[pendente]`;
+     portão): **81 e 81**, e `20261019130941` só do lado local;
    - impressão digital do esquema igual à do local **com M1–M3** (o local é recriado sem M4 para a comparação):
-     `[pendente]`;
+     **IGUAL** — **2.118 objetos, `6517d332b496d9be6ba666a194869a08`** nos dois, `diff` vazio;
    - `security_invoker=true` nas **quatro** views tocadas ou criadas (`vw_chd_por_fato`, `vw_carga_horaria_turma`,
-     `vw_disciplinas_execucao`, `vw_turmas_arquivadas`), e `vw_conformidade_tetos` intacta: `[pendente]`;
+     `vw_disciplinas_execucao`, `vw_turmas_arquivadas`), e `vw_conformidade_tetos` intacta: **as cinco com
+     `security_invoker=true`**;
    - `execute` para `authenticated` (e **não** para `anon`) em `public.trocar_situacao_da_turma`,
      `public.ocupacao_para_conflitos`, `app.turma_arquivada` e `app.proximo_codigo_ta_fora_do_dsa`; as funções de
      gatilho (`app.guardar_ta_fora_do_dsa`, `app.anotar_troca_de_situacao`, `app.carimbar_arquivamento`,
      `app.trilha_da_turma_imutavel`) **sem** `execute` para `public`, `anon` e `authenticated`; **0** policies de
-     `DELETE`: `[pendente]`;
+     `DELETE`: **as quatro com `authenticated` e sem `anon`; as quatro de gatilho sem nenhum dos dois; 0 policies de
+     `DELETE`**;
    - ⚠️ **a prova de "nada em tela mudou" no remoto é a dos DOIS RETRATOS DATADOS (gotcha 13), não o md5 do remoto
      vivo**: qualquer lançamento de testador entre o backup e a conferência muda o md5 sem relação com a migration, e
      a M2 passa a anotar toda troca de situação no mesmo instante do push. Rodar `--somente-copia` **logo depois** do
      push, restaurá-lo no local com M1–M3 e comparar as views com as do passo 3; o que restar de diferença é nomeado
-     pelo `diff` dos dois retratos: `[pendente]`;
+     pelo `diff` dos dois retratos: **feito** — `remoto-20261019-123242.sql` (antes) × `remoto-20261019-123510.sql`
+     (depois), comparados tabela a tabela em 35 tabelas: a coluna `disciplinas.nome_no_dsa` (nula em todas as linhas),
+     **1** linha nova em `config_parametros` (`turmas.aviso_inicio_dias` = 30) e **9** em `perfil_permissao` (o recurso
+     `ta_fora_do_dsa`/`editar`, `true` só para o trio) — **nenhuma linha preexistente mudou**; e as três views da CHD
+     sobre o retrato de depois, no local com M1–M3: **iguais** às do passo 2 (2.510 · 29 · 228, mesmos md5);
    - `ta_fora_do_dsa`, `turma_trocas_de_situacao` e `turma_arquivamentos`: **zero linhas, ou só linhas com `criado_em`
-     posterior ao push, nomeadas**; o parâmetro novo presente: `[pendente]`.
-7. **Production respondendo:** `/login` 200; as telas protegidas 307: `[pendente]`.
+     posterior ao push, nomeadas**; o parâmetro novo presente: **0, 0 e 0**; parâmetro `30 ativo`; matriz com `admin`,
+     `ajudante_administracao_academica` e `encarregado_administracao_academica`.
+7. **Production respondendo:** `/login` 200; as telas protegidas 307: **`/login` 200; `/`, `/turmas`, `/inicio` e
+   `/disciplinas` 307** (19/10/2026, logo depois do push).
 
 ## M4 — depois do *"aprovado"*
 
 0. **Contagem que o desenho precisa:** `select count(*) from public.vw_turmas_arquivadas` no remoto, só leitura,
    **imediatamente antes** do push; se for maior que zero, a lista das turmas, para Bernardo ver antes do `db push`:
-   `[pendente]`.
+   medido **0** logo depois do push das três (19/10/2026) — remedir imediatamente antes do push da M4: `[pendente]`.
 1. Backup novo (citado): `[pendente]`.
 2. `supabase db push --linked --dry-run` lista **só** M4: `[pendente]`.
 3. `supabase db push --linked`: `[pendente]`.
