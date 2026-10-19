@@ -310,3 +310,71 @@ roteiro com o link do preview, que só muda documento.
 
 ### Medição do SC-006 (T078)
 Ver o item 1.12, acima: **92 de 92** na cópia `remoto-20261017-005738.sql`.
+
+## PR 2 — a conferência de 18/10/2026 (Bernardo Villas Boas): APROVADO, com dois ajustes no papel
+
+> *"APROVADO, com DOIS ajustes no papel do DSA, a corrigir NESTE PR antes do merge."* As dúvidas 1, 3, 4 e 5
+> do lote ficaram como estavam; a 2 e a 6 entraram neste PR; a 7 foi para a `PEND-014-7`.
+
+### A · o campo da semana num rótulo só
+- A tela e o papel diziam *"Semana do curso"* em cima e *"Semana 28 de 37"* embaixo. Agora é um rótulo só,
+  *"Semana do curso: 28 de 37"* (`campoDaSemanaDoCurso` e `valorDaSemanaDoCurso`, em
+  `lib/dominio/dsa/semana-do-curso.ts`). Fora da janela, *"Semana do curso: —"*; sem T, *"Semana do curso: 6"*.
+- **Onde NÃO mudou, de propósito:** a navegação (*"Semana 28 de 37 · 12/10/2026 a …"*), o rodapé do papel
+  (*"… · Semana 28 de 37"*) e a planilha (o cabeçalho de cada semana, o rótulo do seletor e a identificação
+  da IMPRESSÃO). Em nenhum deles há o rótulo *"Semana do curso"* ao lado, então não há repetição.
+- **Reprovou antes:** com os testes novos e o código antigo, **4** casos de ponta a ponta reprovaram —
+  `dsa-semana-do-curso.spec.ts:113`, `dsa-imprimir.spec.ts:149` e `dsa-ver.spec.ts:323` e `:401`.
+
+### B · o quadro de CH sobre a assinatura do Auxiliar
+- **Medido antes de consertar, no dado real e sem tocar o remoto:** a cópia `remoto-20261017-005738.sql`
+  restaurada **só no banco local**, e o `/print/dsa` de **todas** as semanas reais com mais de 4 disciplinas —
+  **131** semanas, 23 delas da C-Ap-FR 2026 —, com a mídia de impressão, no Chromium. **Nenhuma cruzava**:
+  em todas, a folga entre a 2ª coluna do quadro e a assinatura da esquerda era de **22 px**, que são os 6 mm do
+  `gap` do rodapé. A tabela mais apertada (C-Espc-FR, códigos como `PPREVACER-005`) usava **290** dos **312**
+  px da coluna; com a Barlow bloqueada (a fonte de reserva do `next/font`), **307** de 312.
+- **A causa é o mecanismo, e ela não depende deste PR:** a tabela não encolhe abaixo da palavra mais larga
+  que tem, e nada a prendia à coluna dela — a única separação entre o quadro e as assinaturas era o `gap`.
+  Qualquer coisa que alargue o texto (a métrica da fonte no motor de impressão de quem imprime, ou um nome
+  com palavra longa, que o cadastro aceita) empurra a 2ª coluna para cima da assinatura da esquerda. ⚠️ **Este
+  PR não mudou o CSS do papel** (`git diff main -- app/print/dsa/documento.css` vazio antes do conserto): as
+  datas com ano e o rótulo da semana mexem no cabeçalho dos dias e na faixa de identificação, não na largura
+  do rodapé. ⚠️ **O cruzamento exato que você viu NÃO se reproduziu aqui** — o Chromium desta máquina tem
+  folga em todas as semanas reais. O teste o reproduz pelo mesmo mecanismo, com uma palavra longa.
+- **O conserto** (`app/print/dsa/documento.css`): as colunas do quadro passaram de `flex` para uma grade de
+  colunas iguais (`minmax(0, 1fr)`), e o nome da disciplina quebra onde for preciso
+  (`overflow-wrap: anywhere`) — a largura mínima da tabela passa a ser a do código e dos números. O código e
+  os números não quebram.
+- **Reprovou antes:** `tests/e2e/dsa-rodape-do-papel.spec.ts` — as 13 disciplinas da C-Ap-FR com os nomes do
+  cadastro e uma 14ª com palavra longa —, no build antigo: *"o quadro de CH cruza a assinatura da esquerda
+  (o Auxiliar): quadro {x: 34, largura: 694,5} × assinatura {x: 695,4}"*. ⚠️ **Sem a palavra longa ele
+  passava no build antigo**, e foi isso que mostrou que a semana real não basta para cruzar no Chromium.
+- **Depois do conserto:** o mesmo caso passa — o quadro fica na coluna dele, a palavra longa quebra dentro
+  da tabela, e a folha continua em **uma** página A4 —, na rodada de ponta a ponta abaixo.
+
+### Dúvida 2 · só linha de turma ativa sugere instrutor
+- As quatro consultas de atribuição — por UE e por disciplina, na tela e na planilha — passaram a filtrar
+  `turma_disciplina.status = 'ativo'`, além do status da atribuição.
+- **Reprovou antes:** o caso novo de `tests/invariantes/leitura-do-dsa.test.ts` põe a linha da turma em
+  `inativo` com a atribuição ativa; com as consultas antigas, as **4** asserções reprovaram (tela e planilha,
+  por UE e por disciplina). Na cópia de 17/10, são **2** linhas nessa situação: elas deixam de sugerir.
+
+### Dúvida 6 · `limparDsa`
+- `apagarLinhasDaTurma` (em `tests/e2e/dsa-de-teste.ts`) lê as linhas da turma e apaga por
+  `turma_disciplina_id` as atribuições por UE **e** por disciplina, depois as linhas — cada `delete` com o erro
+  conferido. `limparDsa` e o `afterAll` de `dsa-etapa-presencial.spec.ts`, que tinha a mesma consulta errada,
+  passaram a usá-la.
+- **Reprovou antes:** o último caso de `leitura-do-dsa.test.ts` chama `limparDsa` com a atribuição no lugar;
+  com a limpeza antiga, *"a turma ficou depois do limparDsa"*.
+
+### Dúvida 7
+Os três casos na `PEND-014-7` do `CLAUDE.md`.
+
+### A verificação (18/10/2026)
+| Suíte | Resultado |
+| --- | --- |
+| tipos, lint, formatação | sem erro e sem aviso |
+| unidade | **2.367** em **166** arquivos (+2: o campo da semana) |
+| invariantes da leitura (`leitura-do-dsa`, `leitura-do-periodo`, `leitura-paginada`, `planilha-igual-ao-papel`, `planilha-de-conferencia`) | **16** de **16** |
+| ponta a ponta do DSA e da impressão (`dsa-*` e `planilha*`, 21 arquivos, base limpa, build novo) | **118** passados · **4** pulados · **0** reprovados — **122** casos, 7,9 min |
+| CI | [pendente] |

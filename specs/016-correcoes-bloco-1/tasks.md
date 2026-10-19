@@ -201,7 +201,18 @@ de um PR está na fundação dele (T004).*
 - [X] T076 Commits por item (`fix(RF-DSA-06)`, `fix(RF-DSA-08)`, `fix(RF-DSA-03)`, `test(RF-DSA-03)`, `fix(BLOCO-1)`); `git push -u origin fix/BLOCO-1-dsa`; PR na `main` com o template inteiro e o aviso de **merge entre semanas** · **Origem:** DoD 7
 - [X] T077 CI verde nos três blocos com a mesma contagem; run em `progresso-implement.md` · **Origem:** SC-011
 - [X] T078 Escrever `specs/016-correcoes-bloco-1/roteiro-de-conferencia-pr2.md` a partir de `quickstart.md` §*PR 2* (com a cópia do remoto no local para a C-Ap-FR 2026 e a C-Exp-Obs-ME 2026), mais a **medição do SC-006** sobre essa cópia: para cada linha de turma com instrutor atribuído (92 na cópia de 17/10/2026), `preencherLancamento` devolve instrutor — resultado em `progresso-implement.md` · **Origem:** SC-003, SC-006, SC-013
-- [ ] T079 **PARE** — conferência de Bernardo no preview; merge por squash **só com a palavra dele**, **entre semanas** (sexta à noite ou fim de semana) · **Origem:** plan §0 (P-5)
+- [X] T079 **PARE** — conferência de Bernardo no preview; merge por squash **só com a palavra dele**, **entre semanas** (sexta à noite ou fim de semana) · **Origem:** plan §0 (P-5) · *Feita em 18/10/2026: APROVADO, com dois ajustes no papel e três dúvidas do lote a aplicar neste PR (T079.1–T079.6).*
+
+### Ajustes da conferência de 18/10/2026 (Bernardo Villas Boas), neste PR, antes do merge
+
+*Subnúmeros de propósito: T080 em diante já são do PR 3.*
+
+- [X] T079.1 **A** — o campo do cabeçalho num rótulo só, *"Semana do curso: 28 de 37"*, na tela e no papel (`campoDaSemanaDoCurso` em `lib/dominio/dsa/semana-do-curso.ts`); a IMPRESSÃO da planilha não tem o rótulo e não repete; reprovou antes em `dsa-semana-do-curso`, `dsa-imprimir` e `dsa-ver` · **Origem:** FR-009.2
+- [X] T079.2 **B** — o quadro de CH em duas colunas não cruza as assinaturas (`app/print/dsa/documento.css`); `tests/e2e/dsa-rodape-do-papel.spec.ts` compara as caixas e conta 1 página; reprovou antes · **Origem:** SC-001 da spec 013
+- [X] T079.3 **Dúvida 2** — tela e planilha só sugerem instrutor a partir de linha de turma **ativa** (as quatro consultas de atribuição filtram `turma_disciplina.status`); `tests/invariantes/leitura-do-dsa.test.ts` reprovou antes · **Origem:** FR-012.1
+- [X] T079.4 **Dúvida 6** — `limparDsa` apaga as atribuições pela `turma_disciplina_id` e confere o erro (`apagarLinhasDaTurma` em `tests/e2e/dsa-de-teste.ts`, também em `dsa-etapa-presencial.spec.ts`); o caso novo de `leitura-do-dsa.test.ts` reprovou antes · **Origem:** DoD 4
+- [X] T079.5 **Dúvida 7** — `salas.spec.ts:126`, `dsa-tipo-e-global.spec.ts:160` e `avaliacoes-nas-telas.spec.ts:53` na `PEND-014-7` do `CLAUDE.md`
+- [ ] T079.6 Unidade + ponta a ponta do DSA e da impressão → commit → push → CI verde → roteiro curto de A e B; **merge por squash só se o CI ficar verde antes de 19/10/2026, 06:00 (Brasília)** — depois disso, PARE (o merge fica para sexta à noite); com o merge, CI verde na `main`, Production servindo o merge e o ramo apagado (local e remoto). **Não começar o PR 3.**
 
 ---
 
@@ -322,7 +333,7 @@ Depois:       T006 → T007 → T008 (faixa) · T019 → T020 → T021 (filtros)
 |---|---|
 | Preparação | 3 (T001–T003) |
 | PR 1 | 45 (T004–T048): US4 13 · US5 14 · US3 5 · US1 6 · fundação 1 · fechamento 6 |
-| PR 2 | 31 (T049–T079): US2 18 · US5 6 · abertura 1 · fechamento 6 |
+| PR 2 | 31 (T049–T079): US2 18 · US5 6 · abertura 1 · fechamento 6 — e mais 6 da conferência de 18/10/2026 (T079.1–T079.6) |
 | PR 3 | 35 (T080–T114): US1 11 · US3 6 · banco e provas sem história 3 (T085, T087, T088) · abertura 1 · fechamento e rito 14 |
 | Encerramento | 2 (T115–T116) |
 | **Total** | **116**, das quais **21** marcadas `[P]` |

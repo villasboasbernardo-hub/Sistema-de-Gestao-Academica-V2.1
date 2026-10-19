@@ -93,3 +93,29 @@
 1. Menu *Turmas* → *C-Exp-Obs-ME 2026* → *Abrir o DSA* → semana de **05/10/2026**.
 2. **Esperado:** a segunda-feira mostra os **7 TA** da aula, em duas partes — 4 de manhã e 3 à tarde — e o
    papel (*Imprimir*) também.
+
+---
+
+# Reconferência dos ajustes de 18/10/2026 — só A e B
+
+> No mesmo preview do ramo, depois do commit dos ajustes. Nada é gravado.
+
+## A · "Semana do curso: 28 de 37", num rótulo só
+
+1. Menu *Turmas* → *C-Ap-FR 2026* → *Abrir o DSA* → *Ir para a semana do dia* → **12/10/2026**.
+2. **Esperado na tela:** no cabeçalho, uma linha só: *"Semana do curso: 28 de 37"*. A palavra "Semana" não
+   aparece duas vezes. Ao lado dos botões, continua *"Semana 28 de 37 · 12/10/2026 a …"*.
+3. *Imprimir*. **Esperado no papel:** na faixa de identificação, *"SEMANA DO CURSO: 28 de 37"* numa linha. O
+   rodapé continua terminando em *"… · Semana 28 de 37"*.
+4. *(A planilha não mudou: a IMPRESSÃO mostra "Semana 28 de 37" sem o rótulo ao lado, e não há repetição.)*
+
+## B · o quadro de CH não cruza a assinatura do Auxiliar
+
+1. No DSA da *C-Ap-FR 2026*, vá a uma semana com mais de 4 disciplinas: **17/08/2026** (9 disciplinas, medido
+   na cópia de 17/10) e depois **14/09/2026**.
+2. *Imprimir* → `Ctrl+P` no **mesmo navegador e com as mesmas opções** em que você viu a sobreposição.
+3. **Esperado:** o quadro de CH sai em duas colunas, e a 2ª termina **antes** da assinatura da esquerda. Um
+   nome longo quebra em mais linhas e nunca passa para a coluna das assinaturas. A prévia continua com **uma**
+   página A4 paisagem.
+4. ⚠️ **Se ainda cruzar, me diga o navegador e as opções da impressão** (margens, escala, papel): no Chromium
+   desta máquina, nenhuma das 131 semanas reais cruzava nem antes do conserto.
