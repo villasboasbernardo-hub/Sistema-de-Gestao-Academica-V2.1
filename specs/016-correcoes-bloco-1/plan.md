@@ -6,7 +6,8 @@
 §13, todas registradas na seção *Clarifications*).
 
 **Status**: ✅ **APROVADO por Bernardo Villas Boas em 17/10/2026** — o desenho das migrations (regra 9.4) e
-as cinco dúvidas da §10, todas pela recomendação. Registro na §0.
+as cinco dúvidas da §10, todas pela recomendação. Registro na §0. ✅ **Spec encerrada em 19/10/2026**: os
+três PRs aprovados e mesclados na `main` (#67 `a64791d`, #68 `5e55f97`, #69 `c7313c3`).
 
 > **Leia junto:** `contracts/migrations.md` — **o desenho das duas migrations, para aprovar antes do
 > remoto** (regra 9.4) —, `contracts/telas.md`, `research.md` (as decisões R-1 a R-14), `data-model.md`,
@@ -46,6 +47,14 @@ as cinco dúvidas da §10, todas pela recomendação. Registro na §0.
   5. **Faixa em Production** na cor da marca.
   6. **`avaliacoes-nas-telas.spec.ts:53`** vai para a **`PEND-014-7`** (instável também na `main`).
   7. **Testes que conferem o valor que eles mesmos digitaram** viram a **`PEND-016-2`** (§0.1).
+- **Conferência do PR 2 (#68), 18/10/2026** — aprovado, com dois ajustes feitos no mesmo ramo antes do merge: o
+  campo da semana num rótulo só (*"Semana do curso: 28 de 37"*, na tela e no papel) e o quadro de CH em duas
+  colunas sem cruzar as assinaturas. Do lote do implement: a 2 (só linha de turma **ativa** sugere instrutor) e a
+  6 (`limparDsa` apaga as atribuições pela linha da turma) entraram no PR; a 7 foi para a `PEND-014-7`; a 1, a 3, a
+  4 e a 5 ficaram como deixadas. Mesclado em 19/10/2026, 00:21.
+- **Conferência do PR 3 (#69), 19/10/2026** — aprovado; as dúvidas 1 a 5 do lote do implement como deixadas, e a 6
+  registrada como **`PEND-016-5`** (§0.1), ligada ao Bloco 2. O lote, item a item, está em
+  `progresso-implement.md` (*Encerramento*).
 
 ### 0.1 Pendências e dependências registradas por este plan
 
@@ -55,8 +64,9 @@ as cinco dúvidas da §10, todas pela recomendação. Registro na §0.
 | **Dependência do Bloco 2** | Os **"TA fora do DSA"** da D-COR-3 vão **somar na base da M1** (`vw_chd_por_fato`), para entrarem na CH executada e no saldo como os lançamentos do DSA. **Nenhuma tarefa aqui**; quem especificar o Bloco 2 lê esta linha | Bloco 2 (spec 017) |
 | **D20 residual** | `vw_cursos_regime_vigente` escolhe o regime vigente por `current_date` (UTC) | Não é deste bloco |
 | **`PEND-016-2`** | **Varrer os testes de ponta a ponta que conferem o valor que eles mesmos digitaram** — *preencher o campo, gravar, conferir o campo* passa mesmo quando a gravação não acontece. Medido no PR 1 (#67): *"turma ativa com término passado avisa, e a gravação acontece"* não confirmava o aviso do limite de turmas do ano e passava **sem gravar**. A prova da gravação é a confirmação da tela **e** o valor no banco, ou o campo depois de recarregar | Fatia própria (decisão de Bernardo Villas Boas, 17/10/2026) |
-| **`PEND-016-3`** | **As teclas de navegação apertadas DENTRO do detalhe aberto são capturadas pela grade de fora** (achado pela revisão do conserto da conferência do PR #67, 17/10/2026; anterior a esta spec — fatia (b) do Épico 5). `components/ciaara/lista-navegavel.tsx`, em `aoPressionar`, só confere a origem do evento para Enter e Espaço; setas, Home, End e PageUp/PageDown num campo do detalhe fazem `preventDefault` e movem o foco para a grade: o cursor não anda num texto, a seta não muda a data nem a opção, e no seletor de instrutor do detalhe da ficha a seta tira o foco do painel. **Conserto proposto:** tratar as teclas só quando o alvo é uma célula registrada da grade, com um caso de ponta a ponta que foca um campo do detalhe e aperta seta à direita | Proposta: PR próprio, pequeno, antes do PR 2 (decisão de Bernardo) |
+| **`PEND-016-3`** | **As teclas de navegação apertadas DENTRO do detalhe aberto são capturadas pela grade de fora** (achado pela revisão do conserto da conferência do PR #67, 17/10/2026; anterior a esta spec — fatia (b) do Épico 5). `components/ciaara/lista-navegavel.tsx`, em `aoPressionar`, só confere a origem do evento para Enter e Espaço; setas, Home, End e PageUp/PageDown num campo do detalhe fazem `preventDefault` e movem o foco para a grade: o cursor não anda num texto, a seta não muda a data nem a opção, e no seletor de instrutor do detalhe da ficha a seta tira o foco do painel. **Conserto proposto:** tratar as teclas só quando o alvo é uma célula registrada da grade, com um caso de ponta a ponta que foca um campo do detalhe e aperta seta à direita | ✅ **Feita no PR 2 (#68)**, em commit próprio, por decisão de Bernardo Villas Boas (18/10/2026) |
 | **`PEND-016-4`** | **As prévias de `.design-sync/previews/` ficam fora do `tsc`** — o `include` `**/*.tsx` não casa diretório que começa com ponto, e elas importam o pacote compilado `ciaara-11-ds`. Medido no PR 1: a `TabelaDensa` e a `FiltroAvancado` mudaram de contrato e as prévias seguiam no antigo, sem nada acusar (corrigidas à mão em 17/10/2026). Uma mudança de contrato de componente tem de varrer as prévias | Fatia própria |
+| **`PEND-016-5`** | **A situação do DSA não soma lançamento histórico sem `ta_inicial`** (dúvida 6 do implement do PR 3; registrada por decisão de Bernardo Villas Boas, 19/10/2026). O acumulado do painel *Situação por disciplina* lê `vw_ocupacao_ta`, que filtra `ta_inicial is not null`; a CH executada do `/inicio`, da ficha e de `/turmas` soma o lançamento inteiro. Medido na semente do e2e (`tests/e2e/panorama-de-teste.ts`): na semana do lançamento futuro, **8 %** e não **18 %** — os 10 TA do histórico, sem `ta_inicial`, de fora. Anterior a esta spec | Bloco 2, item 1 (TA fora do DSA / histórico) |
 
 ## Summary
 

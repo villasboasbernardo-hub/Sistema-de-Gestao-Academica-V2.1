@@ -7,7 +7,7 @@ _É o documento que seguimos até o próximo épico. Cada bloco vira **uma spec*
 
 ## Como ler este plano
 
-- **Bloco 1** é correção: tela e defeitos, sem tabela nova. É o que entra agora.
+- **Bloco 1** é correção: tela e defeitos, sem tabela nova. ✅ **Concluído em 19/10/2026** (spec 016, PRs #67, #68 e #69).
 - **Blocos 2 a 5** trazem tabela ou coluna nova. Cada migration passa pelo rito do remoto: backup, dry-run só com ela, `db push`, conferência só de leitura.
 - **Bloco 6** é um épico próprio e fica por último.
 - Item marcado com 🐛 é defeito. Os demais são regra nova ou melhoria.
@@ -15,7 +15,7 @@ _É o documento que seguimos até o próximo épico. Cada bloco vira **uma spec*
 
 | Bloco | Tema | Banco? | Spec prevista |
 |---|---|---|---|
-| **1** | Correções de tela e defeitos | não (exceto, se precisar, a view do saldo, pelo portão 9.4) | 016 |
+| **1** | Correções de tela e defeitos — ✅ **concluído em 19/10/2026** | duas migrations, pelo portão 9.4 (M1 e M2, sem tabela nova) | 016 |
 | **2** | Turmas: andamento manual, status, arquivar, dashboard | sim | 017 |
 | **3** | Página do curso em abas: Disciplinas, Atividades, Horários | sim (regimes por turma) | 018 |
 | **4** | Início: dashboard, carrosséis, submenu | não | 019 |
@@ -57,10 +57,18 @@ Medido na `main` `e968f22`:
 
 ---
 
-## Bloco 1 — Correções de tela e defeitos (agora)
+## Bloco 1 — Correções de tela e defeitos — ✅ CONCLUÍDO em 19/10/2026
 
 **Ramo:** `fix/BLOCO-1-correcoes-de-tela`, a partir da `main` atualizada. **Spec:** `specs/016-correcoes-bloco-1/`.
 **Banco:** nenhuma tabela nova. A única exceção possível é a view do saldo (item 14), pelo portão da regra 9.4.
+_(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos** — `fix/BLOCO-1-correcoes-de-tela` (#67), `fix/BLOCO-1-dsa` (#68) e `db/BLOCO-1-execucao-e-ch-prevista` (#69) — e **duas migrations**, as duas pelo portão 9.4: a M1, do item 1.14, e a M2, do item 1.13 (`vw_instrutor_carga_prevista`), a segunda exceção de banco, autorizada por Bernardo Villas Boas em 17/10/2026, Q-7 da spec 016.)_
+
+> ✅ **Concluído em 19/10/2026** — spec `016-correcoes-bloco-1`, aprovada por Bernardo Villas Boas nas conferências de 17, 18 e 19/10/2026, em três PRs mesclados por squash na `main`:
+> - **#67** (`a64791d`, 18/10/2026) — tela: 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 1.10 e 1.15 (*Trocar situação* num botão próprio, com confirmação; a observação na troca continua no Bloco 2).
+> - **#68** (`5e55f97`, 19/10/2026) — DSA, papel e planilha: 1.5, 1.8, 1.9, 1.12 e o caso de regressão do 1.11, que ficou **sem objeto** (não se reproduziu).
+> - **#69** (`c7313c3`, 19/10/2026) — banco, pelo portão 9.4: 1.14 (M1, a CH executada até hoje fora do DSA e da planilha) e 1.13 (M2, a CH prevista pela janela efetiva, e a marca *"só habilitado — não gera CH prevista"*). As duas no remoto antes do merge, com o backup `remoto-20261019-024230.sql`.
+>
+> O que ficou de fora virou pendência nomeada: `PEND-016-1`, `PEND-016-2` e `PEND-016-4` (na lista de pequenos ajustes, abaixo) e `PEND-016-5` (no Bloco 2, item 1). Os dois defeitos do DSA no papel achados na conferência do #68 (o nome longo no cartão e a ordem do quadro de CH) estão no **Bloco 1B**, abaixo — o próximo a entrar.
 
 | # | Item | Onde (medido) | O que muda |
 |---|---|---|---|
@@ -83,6 +91,8 @@ Medido na `main` `e968f22`:
 ## Bloco 2 — Turmas (spec própria)
 
 1. **TA fora do DSA, com observação** (D-COR-3), por disciplina da turma: quantidade, instrutor quando houver e observação; somam no executado e no saldo, mostrados separados. Serve também para o **histórico** de curso concluído sem lançar DSA antigo, e para **marcar a disciplina como concluída**. Sem ajuste negativo. Só Encarregado, ajudantes e Admin.
+   - **Dependência deixada pelo Bloco 1** _(plan da spec 016, 17/10/2026)_: os TA fora do DSA **somam na base da M1** (`vw_chd_por_fato`), para entrarem na CH executada e no saldo como os lançamentos do DSA.
+   - **`PEND-016-5` — a situação do DSA não soma lançamento histórico sem `ta_inicial`** _(registrada por decisão de Bernardo Villas Boas, 19/10/2026, na conferência do PR #69)_. O acumulado do painel *Situação por disciplina* lê `vw_ocupacao_ta`, que filtra `ta_inicial is not null` (é a grade de ocupação), enquanto a CH executada do `/inicio`, da ficha e de `/turmas` soma o lançamento inteiro. Medido na semente do e2e do PR #69 (`tests/e2e/panorama-de-teste.ts`): na semana do lançamento futuro (8 TA, com `ta_inicial`), a situação mostrou **8 %** e não **18 %** de 100 — os **10** TA do histórico, sem `ta_inicial`, ficaram de fora, e são os mesmos 10 que o `/inicio` conta. Já era assim antes do Bloco 1. Decidir, junto com o histórico sem DSA, como o lançamento sem horário entra no acumulado do DSA. Volume no dado real: não medido.
 2. **Status editável com observação** (D-COR-4) em toda troca: cancelada, concluída e arquivada.
 3. **Arquivar em qualquer estado** (D-COR-5), com aviso se não concluída.
 4. **Dashboard de turmas**, no molde do de instrutores: total, canceladas, concluídas, em andamento, iniciando nos próximos 30 dias, e alertas do que falta (data, instrutor, conflito).
@@ -126,6 +136,7 @@ _Registrado em 18/10/2026, na conferência do PR 2 do Bloco 1 (#68)._
 
 Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
 
+- **PEND-016-1** — unificar a composição da CHD: `vw_carga_horaria_turma` e `vw_disciplinas_execucao` lendo de `vw_chd_por_fato` (hoje são três somas, e o pgTAP 135 prova que batem).
 - **PEND-016-2** — varrer testes que conferem o valor que eles mesmos digitaram, em vez de conferir o banco.
 - **PEND-016-4** — as prévias do `.design-sync` ficam fora do `tsc`.
 - **PEND-014-7** — testes de ponta a ponta instáveis sob carga (`salas.spec.ts:126`, `dsa-tipo-e-global.spec.ts:160`, `avaliacoes-nas-telas.spec.ts:53`, `admin-sobre-contas`).
