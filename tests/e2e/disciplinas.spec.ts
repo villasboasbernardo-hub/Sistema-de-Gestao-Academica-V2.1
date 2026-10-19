@@ -15,9 +15,12 @@
  * ⚠️ **A AMOSTRA É IDEMPOTENTE** (regra 9.1): curso não é apagável, então ela o reaproveita. A prova
  * é rodar **duas vezes seguidas**.
  */
+import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
-import { criarConta, apagarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { nomeNoCartao } from "@/lib/dominio/nome-no-dsa";
+
+import { chaveLocal, criarConta, apagarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { abrirLinha, conferirQueALinhaAlterna, linhaExpansivel } from "./linha-expansivel";
 import {
   contarDisciplina,
@@ -395,5 +398,66 @@ test.describe("`SC-011` · filtro, indicadores e gráfico refletem o MESMO subco
       endereco.searchParams.get("turma"),
       "a turma voltou ao endereço desta tela: o recorte por turma mora na ficha",
     ).toBeNull();
+  });
+});
+
+/*
+ * ── Spec 017 · `FR-007.1` e `FR-007.5` · o *Nome no DSA*, e a edição que PRESERVA técnica e local ─────────────
+ *
+ * ⚠️ **O CASO QUE DISCRIMINA É O DA TÉCNICA E DO LOCAL** (defeito achado na triagem do Bloco 2): o formulário não
+ *    trazia os dois preenchidos, e gravar QUALQUER campo os apagava. O preparo os grava no banco; a edição mexe só no
+ *    *Nome no DSA*; e a prova é o BANCO depois (PEND-016-2), não o valor que o teste digitou.
+ * ⚠️ **"O CAMPO AUSENTE NA CRIAÇÃO" FICOU SEM OBJETO NA PONTA A PONTA**: nenhuma tela monta o formulário no modo de
+ *    criação (medido em 19/10/2026: `criarDisciplina` só é chamada por ele, e ele só é montado na edição). A regra
+ *    está no código (`editando ? … : null`) e registrada em `progresso-implement.md`.
+ */
+test.describe("`FR-007.1` e `FR-007.5` da spec 017 · o Nome no DSA, sem apagar técnica nem local", () => {
+  test("editar SÓ o Nome no DSA: a prévia mostra o cartão, e o banco guarda o nome e preserva técnica e local", async ({
+    page,
+  }) => {
+    const banco = createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const local = `Laboratório da prova ${PROCESSO}`;
+    const { error } = await banco
+      .from("disciplinas")
+      .update({ tecnica_ensino_sugerida: "AE", local_padrao: local, nome_no_dsa: null })
+      .eq("id", amostra.disciplinaComUeId);
+    expect(error).toBeNull();
+
+    await irAGradePorClique(page);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    await page.locator('[data-slot="alternar-edicao"]').click();
+
+    const formulario = page.locator('[data-slot="formulario-de-disciplina"]');
+    await expect(formulario.locator('input[name="tecnica"]')).toHaveValue("AE");
+    await expect(formulario.locator('input[name="local"]')).toHaveValue(local);
+    const campo = formulario.locator('[data-slot="campo-nome-no-dsa"]');
+    await expect(campo).toHaveValue("");
+    const previa = formulario.locator('[data-slot="previa-do-cartao"]');
+    await expect(previa).toHaveText(
+      `No cartão: ${nomeNoCartao({ nomeNoDsa: "", nome: DISCIPLINA_COM_UE.nome })}`,
+    );
+
+    await campo.fill("NAV. DA PROVA");
+    await expect(previa).toHaveText("No cartão: NAV. DA PROVA");
+    await formulario.locator('[data-slot="gravar-disciplina"]').click();
+
+    await expect
+      .poll(async () => {
+        const { data } = await banco
+          .from("disciplinas")
+          .select("nome_no_dsa, tecnica_ensino_sugerida, local_padrao")
+          .eq("id", amostra.disciplinaComUeId)
+          .single();
+        return data;
+      })
+      .toEqual({
+        nome_no_dsa: "NAV. DA PROVA",
+        tecnica_ensino_sugerida: "AE",
+        local_padrao: local,
+      });
+    // Gravar fecha a edição (`aoConcluir`): o campo deixa de existir.
+    await expect(page.locator('[data-slot="campo-nome-no-dsa"]')).toHaveCount(0);
   });
 });

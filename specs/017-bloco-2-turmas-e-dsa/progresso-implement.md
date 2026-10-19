@@ -80,3 +80,31 @@ decisão de cada leitor:
   (`pnpm db:reset:limpo`, 19/10/2026, com M1–M3 corrigidas pelo analyze): **362 de 362 em 20 arquivos** na 1ª e
   **362 de 362** na 2ª. pgTAP no mesmo banco: **862 em 59 arquivos**, verde.
 - Os e2e novos, duas vezes seguidas: `[pendente]`.
+
+## T023, T031, T042, T051 e T057 — as provas de ponta a ponta das US1 a US4 e da edição da disciplina
+
+**Artefato:** o banco local limpo (`pnpm db:reset:limpo`, 19/10/2026), o build de produção da suíte (porta 3100) e
+`--workers=2`. Arquivos: `tests/e2e/ta-fora-do-dsa.spec.ts` (novo, 2 casos), `tests/e2e/turmas-arquivar.spec.ts`
+(novo, 1), `tests/e2e/turmas-painel.spec.ts` (novo, 2), `tests/e2e/turmas-situacao.spec.ts` (+2 casos, 6 no arquivo) e
+`tests/e2e/disciplinas.spec.ts` (+1, 14 no arquivo); a semente comum é `tests/e2e/bloco-2-de-teste.ts`.
+
+| Rodada | Os cinco arquivos (25 casos) |
+|---|---|
+| 1ª, sobre a base recém-limpa | **24 de 25** — reprovou `turmas-painel.spec.ts:130`, defeito do TESTE: o aviso de conflito da T2 diz *"com T1"*, e filtrar por texto casava as duas linhas (violação de modo estrito). O filtro passou a ser pelo link da turma dona do aviso; o arquivo isolado deu **2 de 2** |
+| 2ª, sem reset | **25 de 25** |
+| 3ª, sem reset, logo em seguida | **25 de 25** — a idempotência da regra 9.1 |
+
+**Sem objeto, medido no código em 19/10/2026 (e não inventado):**
+- o *card de CHT* da T023 — a ficha não tem card de CHT; ele é a `PEND-014-9`;
+- a *aba Avaliações +5* da T023 — a aba mostra avaliações do currículo, não a CH executada da disciplina;
+- *"o campo ausente na criação"* da T051 — nenhuma tela monta `FormularioDeDisciplina` no modo de criação
+  (`criarDisciplina` só é chamada por ele, e ele só é montado na edição, em `DetalheDaDisciplina`); a regra está no
+  código (`editando ? … : null`).
+
+**Onde ficou provado o *"8 TA fora do DSA no dia e o teto do dia continua aceito"* (FR-001.6):** no banco. O DSA tira
+o teto e a cascata do dia de `vw_ocupacao_ta` (`lib/acoes/dsa.ts`, as três leituras), e o pgTAP 137 prova que o TA
+fora do DSA não gera linha nela (*"FR-001.6 · o TA fora do DSA não ocupa TA na grade"*); a ponta a ponta confere que a
+grade não ganha cartão.
+
+**Defeitos de tela achados por estas provas:** nenhum. As cinco telas passaram como escritas; a única reprovação foi do
+próprio teste (acima).
