@@ -465,8 +465,9 @@ export type OcupacaoAcumulada = {
  * atrasada.
  *
  * ⚠️ **A ORDEM DE SAÍDA É A DA VIEW, e não é aqui que se ordena**: o rodapé do papel também passa por
- * esta função (`execucaoAteASemana`), e a ordem natural do código pedida em 08/10/2026 vale para o
- * PAINEL — quem ordena é `PainelDeSituacao`. Ordenar aqui mudaria o papel em silêncio.
+ * esta função (`execucaoAteASemana`). A ordem natural do código pedida em 08/10/2026 vale para o painel
+ * (`PainelDeSituacao`) **e, desde o Bloco 2 (spec 017, FR-008), para o rodapé do papel** — quem ordena
+ * lá é `tabelaDeCh`, pela mesma `emOrdemNaturalDoCodigo`. Ordenar aqui seria um terceiro lugar.
  *
  * ⚠️ **A DISCIPLINA DE UM FATO VEM DA VIEW, que já a resolve pela UE** — `vw_ocupacao_ta` entrega
  * `disciplina_id` preenchido mesmo quando a coluna da aula é nula, porque a UE **é** a disciplina.

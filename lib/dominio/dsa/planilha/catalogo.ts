@@ -308,9 +308,9 @@ export function listasDoCatalogo(itens: readonly ItemDoCatalogo[]): {
   return { cods, itens: valores };
 }
 
-/** As disciplinas na ordem do rodapé do papel — `localeCompare` pt-BR, a de `tabelaDeCh`. */
+/** As disciplinas na ordem do rodapé do papel — a ordem natural do código, a de `tabelaDeCh` (spec 017, FR-008). */
 export function disciplinasNaOrdemDoRodape(insumo: InsumoDaPlanilha) {
-  return insumo.disciplinas.slice().sort((a, b) => a.codigo.localeCompare(b.codigo, "pt-BR"));
+  return emOrdemNaturalDoCodigo(insumo.disciplinas, (d) => d.codigo);
 }
 
 /** As técnicas COM sigla, na ordem da legenda do papel — `legendaDeTecnicas` ordena pela sigla. */

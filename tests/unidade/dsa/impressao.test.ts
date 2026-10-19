@@ -393,6 +393,19 @@ describe("`SC-014` · o rodapé traz SÓ o que aparece na semana", () => {
     expect(tabela[0]?.cumprida).toBe(12);
   });
 
+  /*
+   * ⚠️ **A ORDEM É A NATURAL DO CÓDIGO, PELO VALOR DO ROMANO** (Bloco 2, spec 017, FR-008; regra de 08/10/2026): o
+   *    `localeCompare` punha IV, IX, V, X — a ordem do texto, não a do currículo.
+   */
+  it("o quadro de CH ordena IV, V, IX, X pelo valor do romano, não pelo texto", () => {
+    const codigos = ["IX", "IV", "X", "V"];
+    const dias = [
+      { linhas: codigos.map((disciplina) => ({ disciplina })) },
+    ] as unknown as Parameters<typeof tabelaDeCh>[0];
+    const execucao = codigos.map((codigo) => ({ codigo, nome: codigo, prevista: 10, cumprida: 0 }));
+    expect(tabelaDeCh(dias, execucao).map((d) => d.codigo)).toEqual(["IV", "V", "IX", "X"]);
+  });
+
   /* ⚠️ Vazio é vazio, e não é "todas" — o gotcha 4 aplicado ao papel. */
   it("semana sem lançamento devolve tabela VAZIA", () => {
     const dias = documentoImpresso(montar(), { tecnicas: TECNICAS, idsDeEstudoIndividual: SEM_EI });
