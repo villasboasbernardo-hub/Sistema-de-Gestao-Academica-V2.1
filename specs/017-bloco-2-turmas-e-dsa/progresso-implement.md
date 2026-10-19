@@ -5,7 +5,10 @@ medido fica `[pendente]` (regra 9.3).*
 
 ## T001 — linha de base do ramo
 
-- `pnpm verificar` sobre `c1f8d65` + os commits de docs: `[pendente]` (contagem de unidade e arquivos).
+- `pnpm verificar` sobre `c1f8d65`: **não foi rodado no ramo antes da primeira mudança** — a linha de base que vale é a
+  do CI da `main` em `c7313c3` (run `39231123999`, anotada no fechamento da spec 016): **2.383** de unidade em **168**
+  arquivos; de `c7313c3` a `c1f8d65` só entraram documentação e configuração do fluxo. No fim do Bloco 2: **2.465** em
+  **176** (+82 casos, +8 arquivos).
 
 ## T002 — medições na cópia do remoto
 
@@ -135,7 +138,8 @@ Todos desfeitos por `pnpm db:reset:limpo` (os de banco) ou pela cópia do arquiv
   (`turmaDe.get`). ⚠️ O 140 nasceu vermelho por dois defeitos do TESTE, não da M4: a comparação do nome do gatilho
   sem `collate` e a atribuição sem o `codigo` composto (`23502`, que a tabela não gera — `turma_disciplina_instrutor`
   não tem `DEFAULT` no código).
-- Os e2e novos, duas vezes seguidas: `[pendente]`.
+- Os e2e novos, duas vezes seguidas: as rodadas da tabela abaixo (24, 25 e 25 de 25); e a suíte inteira no CI sobre
+  `3577447` (run `39274669059`): **521 passados + 6 pulados** (527), sem instável.
 
 ## T023, T031, T042, T051 e T057 — as provas de ponta a ponta das US1 a US4 e da edição da disciplina
 

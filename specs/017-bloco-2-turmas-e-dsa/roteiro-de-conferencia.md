@@ -1,6 +1,7 @@
 # Roteiro de conferência — Bloco 2 (spec 017)
 
-*19/10/2026. Para Bernardo Villas Boas conferir no preview, por clique. Cada bloco diz o que fazer e o que deve
+*19/10/2026. Para Bernardo Villas Boas conferir no preview, por clique — o do PR #73 (o endereço está no comentário da
+Vercel no PR, e na mensagem de entrega com o commit servido). Cada bloco diz o que fazer e o que deve
 aparecer. ⚠️ **O preview fala com o banco remoto, que é a fonte da verdade dos cadastros**: os passos marcados
 **GRAVA** escrevem dado real. Onde dá, o roteiro manda desfazer no fim.*
 
@@ -13,7 +14,7 @@ reprovar e for preciso reverter, a decisão sobre esses registros é sua.
 ## 1. TA fora do DSA (D-COR-3) — ⚠️ GRAVA
 
 1. Menu **Turmas** → buscar **C-Ap-FR 2026** → abrir a ficha.
-2. No **Andamento**, anote a *CH executada* (`[pendente]` TA hoje).
+2. No **Andamento**, anote a *CH executada* (**836** TA até 19/10/2026, medido no remoto por `chd_da_turma_ate`).
 3. Em **Disciplinas**, clique na linha de uma disciplina → no detalhe, **TA fora do DSA** → **Registrar TA fora do
    DSA**.
 4. A **data** já vem com hoje. Preencha **5** TA, escolha um instrutor (opcional) e escreva uma observação
@@ -61,7 +62,9 @@ Use uma turma que possa ser arquivada de verdade, ou desarquive no fim (passo 7)
 
 1. Menu **Turmas**. **Esperado no alto:** cinco números — *Total*, *Em andamento*, *Concluídas*, *Canceladas*,
    *Iniciando em até 30 dias* — e o quadro *"O que falta nas turmas"* com a contagem por tipo.
-   Medido no remoto em `[pendente]`: `[pendente]`.
+   Medido no remoto em 19/10/2026, por SQL que reproduz a regra de `lib/dominio/painel-de-turmas.ts` (a tela é a
+   referência): **29** no total · **8** em andamento · **12** concluídas · **5** canceladas · **0** iniciando até
+   18/11; avisos: **1** turma *sem janela de datas* e **10** com *disciplina sem instrutor* (o de conflito, só na tela).
 2. **Exibir avisos**: *Sem janela de datas*, *Disciplina sem instrutor* (*"N disciplinas"*) e *Conflito no DSA desta
    semana* (*"com <turma>"*, *"com outra turma"* ou *"dentro da própria turma"*). Clique numa turma do aviso → a ficha
    dela.
