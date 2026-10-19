@@ -4012,6 +4012,16 @@ export type Database = {
           },
         ]
       }
+      vw_chd_por_fato: {
+        Row: {
+          data: string | null
+          disciplina_id: string | null
+          origem: string | null
+          tempos: number | null
+          turma_id: string | null
+        }
+        Relationships: []
+      }
       vw_conformidade_tetos: {
         Row: {
           ano_letivo: number | null
@@ -4593,6 +4603,13 @@ export type Database = {
       }
     }
     Functions: {
+      chd_da_turma_ate: {
+        Args: { p_ate: string }
+        Returns: {
+          chd_executada: number
+          turma_id: string
+        }[]
+      }
       conflitos_da_semana: {
         Args: { p_ate: string; p_de: string; p_turma_id: string }
         Returns: {
@@ -4750,6 +4767,14 @@ export type Database = {
       excluir_unidade_ensino: {
         Args: { p_codigo_confirmacao: string; p_unidade_id: string }
         Returns: Json
+      }
+      execucao_por_disciplina_ate: {
+        Args: { p_ate: string; p_turma_id: string }
+        Returns: {
+          data_real_inicio: string
+          disciplina_id: string
+          ta_executados: number
+        }[]
       }
       gravar_dados_pessoais_instrutor: {
         Args: { p_dados: Json; p_instrutor_id: string }
