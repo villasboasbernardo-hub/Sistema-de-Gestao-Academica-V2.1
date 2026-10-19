@@ -17,6 +17,10 @@
  *
  * ⚠️ **QUEM DECIDE É O BANCO**: esta folha só é montada para quem tem `turmas/editar` com o curso em
  * oferta, e a recusa da RLS chega traduzida pela ação.
+ *
+ * ⚠️ **TODA TROCA LEVA OBSERVAÇÃO** (D-COR-4, spec 017): opcional, até 500 caracteres; ela vai com a troca para a
+ * trilha da turma, e a ficha a mostra no *Histórico da situação*. As situações vêm do enum gerado, não escritas à
+ * mão — arquivar NÃO é uma delas (D-COR-5).
  */
 "use client";
 
@@ -36,9 +40,13 @@ import {
 } from "@/components/ui/dialog";
 import { trocarSituacaoDaTurma } from "@/lib/acoes/turma";
 import { ROTULO_DO_STATUS_DE_TURMA } from "@/lib/dominio/seletor-de-turma";
-import { enderecoDaTurmaGravada } from "@/lib/navegacao/endereco-de-turma";
+import { Constants } from "@/lib/tipos/database";
+import { LIMITE_DA_OBSERVACAO_DA_TURMA } from "@/lib/validacao/turma";
 
-const SITUACOES = ["planejada", "ativa", "concluida", "cancelada"] as const;
+const SITUACOES = Constants.public.Enums.status_turma;
+
+const CAMPO =
+  "border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca w-full border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none";
 
 export function TrocarSituacao({
   codigo,
@@ -50,6 +58,7 @@ export function TrocarSituacao({
   const router = useRouter();
   const [aberto, definirAberto] = React.useState(false);
   const [escolhida, definirEscolhida] = React.useState(atual);
+  const [observacao, definirObservacao] = React.useState("");
   const [erro, definirErro] = React.useState<string | null>(null);
   const [gravando, iniciar] = React.useTransition();
 
@@ -57,6 +66,7 @@ export function TrocarSituacao({
     definirAberto(abrir);
     if (abrir) {
       definirEscolhida(atual);
+      definirObservacao("");
       definirErro(null);
     }
   }
@@ -64,13 +74,13 @@ export function TrocarSituacao({
   function gravar() {
     iniciar(async () => {
       definirErro(null);
-      const resultado = await trocarSituacaoDaTurma({ codigo, status: escolhida });
+      const resultado = await trocarSituacaoDaTurma({ codigo, status: escolhida, observacao });
       if (!resultado.ok) {
         definirErro(resultado.erro);
         return;
       }
       definirAberto(false);
-      router.replace(enderecoDaTurmaGravada(resultado.codigo, "situacao"));
+      router.replace(resultado.destino);
     });
   }
 
@@ -106,6 +116,21 @@ export function TrocarSituacao({
             </label>
           ))}
         </fieldset>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="observacao-da-situacao" className="text-texto text-sm font-medium">
+            Observação (opcional)
+          </label>
+          <textarea
+            id="observacao-da-situacao"
+            rows={3}
+            maxLength={LIMITE_DA_OBSERVACAO_DA_TURMA}
+            value={observacao}
+            onChange={(e) => definirObservacao(e.target.value)}
+            className={CAMPO}
+            data-slot="observacao-da-situacao"
+          />
+        </div>
 
         {erro ? (
           <p role="alert" className="text-conflito-tinta text-sm" data-slot="erro-da-situacao">
