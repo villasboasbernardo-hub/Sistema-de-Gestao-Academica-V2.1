@@ -62,13 +62,17 @@ a tempo, a M4 sai deste PR antes do merge (C-30). Nada aqui foi executado: os re
 7. **Production respondendo:** `/login` 200; as telas protegidas 307: **`/login` 200; `/`, `/turmas`, `/inicio` e
    `/disciplinas` 307** (19/10/2026, logo depois do push).
 
-## M4 — depois do *"aprovado"*
+## M4 e M5 — aprovadas por Bernardo em 19/10/2026
+
+*A M4 (a trava da turma arquivada no banco) foi aprovada pelo desenho mostrado, e a M5 (`20261019175355`: arquivar e
+desarquivar só o trio, pela matriz e pela policy) foi autorizada nominalmente — as duas alteram o que existe, e vão
+juntas, pelo rito completo.*
 
 0. **Contagem que o desenho precisa:** `select count(*) from public.vw_turmas_arquivadas` no remoto, só leitura,
    **imediatamente antes** do push; se for maior que zero, a lista das turmas, para Bernardo ver antes do `db push`:
    medido **0** logo depois do push das três (19/10/2026) — remedir imediatamente antes do push da M4: `[pendente]`.
 1. Backup novo (citado): `[pendente]`.
-2. `supabase db push --linked --dry-run` lista **só** M4: `[pendente]`.
+2. `supabase db push --linked --dry-run` lista **só** M4 e M5: `[pendente]`.
 3. `supabase db push --linked`: `[pendente]`.
 4. Conferência: N e N; impressão digital igual; os 13 gatilhos no catálogo; uma recusa de amostra **não** se faz no
    remoto (seria escrita) — a prova é o pgTAP 140 e o caso de RLS no local e no CI: `[pendente]`.

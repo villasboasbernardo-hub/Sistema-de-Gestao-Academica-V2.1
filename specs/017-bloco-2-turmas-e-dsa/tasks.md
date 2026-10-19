@@ -144,7 +144,19 @@ contracts/migrations.md (M1–M4), contracts/telas.md, quickstart.md, plano-de-a
 - [X] T068 Rito do remoto para **M1, M2 e M3** (`plano-de-aplicacao-no-remoto.md`): backup citado, impressão digital das views antes × depois na cópia (igual), dry-run só com as três (M4 fora da pasta, sem commit), `supabase db push --linked` (pedido de permissão para Bernardo), conferência só de leitura (os `grant`/`revoke` das funções e a comparação dos **dois retratos datados**, gotcha 13), Production respondendo
 - [X] T069 Escrever `specs/017-bloco-2-turmas-e-dsa/roteiro-de-conferencia.md` a partir de `quickstart.md`, com os números do preview, avisando os passos que gravam (e que arquivar no preview entra na contagem do desenho da M4); voltar o local à base limpa
 - [X] T070 Registrar as pendências novas no plano de correções (`docs/correcoes/plano-de-correcoes-em-blocos.md`): os três critérios de "concluída", o comentário vencido do código da turma, a célula de 1 TA da planilha, e **a divergência 3 da spec** (o plano diz que a aba Avaliações do curso mostra *"só o previsto"*; o código mostra o cumprido da turma) anotada no **item 4 do Bloco 3**
-- [ ] T071 **PARE** — entrega do `/corrigir` (o que foi feito, preview e commit, roteiro, lote de dúvidas — C-1 a C-30, P-1 a P-8 e a emenda do BRIEF —, banco, pendências) e o desenho da M4 para o portão, com a contagem do remoto (passo 0 do plano), o que ela **não** trava (atividade não letiva e dia parado globais) e a consequência de até ela a disciplina nova nascer na arquivada; **sem merge** — e, quando aprovado, o merge só depois da M4 no remoto (ou com a M4 fora do PR, C-30) e só entre semanas
+- [X] T071 **PARE** — entrega do `/corrigir` (o que foi feito, preview e commit, roteiro, lote de dúvidas — C-1 a C-30, P-1 a P-8 e a emenda do BRIEF —, banco, pendências) e o desenho da M4 para o portão, com a contagem do remoto (passo 0 do plano), o que ela **não** trava (atividade não letiva e dia parado globais) e a consequência de até ela a disciplina nova nascer na arquivada; **sem merge** — e, quando aprovado, o merge só depois da M4 no remoto (ou com a M4 fora do PR, C-30) e só entre semanas
+
+
+## Phase 10: Os ajustes da conferência de 19/10/2026 e o fechamento
+
+*Bernardo Villas Boas, 19/10/2026: testes satisfatórios; C-3 e C-4 emendadas; M4 aprovada; quatro ajustes no mesmo PR.*
+
+- [X] T072 [US3] Ajuste 1 — `lib/dominio/arquivamento-da-turma.ts` (`RECURSO_DO_ARQUIVAMENTO`, `podeArquivar`/`podeDesarquivar` pelo recurso, as frases com o trio) com o teste visto falhar; M5 `supabase/migrations/20261019175355_arquivar_so_o_trio.sql` (a matriz e `alter policy`); pgTAP `supabase/tests/141_arquivar_so_o_trio.sql`; o caso por perfil com sessão real em `tests/invariantes/rls/bloco-2.test.ts` (o Operador recusado; o Encarregado, o Ajudante e o Admin arquivam e desarquivam; os outros cinco recusados), visto falhar sem a M5; a ficha e as frases das recusas
+- [X] T073 [US4] Ajuste 2 — o card *Planejadas* (`painel-de-turmas.ts`, `PainelDeTurmas.tsx`), com o teste visto falhar
+- [X] T074 [US3] Ajuste 3 — *Arquivar*/*Desarquivar* na linha de `/turmas` (`ArquivarTurma` com `naLista`, a coluna *Arquivo* de `TabelaDeTurmas` só com o recurso), e o e2e por clique em `tests/e2e/turmas-arquivar.spec.ts` (visto falhar sem o botão), mais o caso do Operador
+- [X] T075 [US4] Ajuste 4 — o painel de um ano só (`anoDoPainel`, `anosDoSeletor`, a folha `AnoDoPainel.tsx` no `ano` da URL), com o teste visto falhar e o e2e de `tests/e2e/turmas-painel.spec.ts` (a planejada de 2027 fora do vigente; 2027, 2025 e a volta ao vigente por clique)
+- [X] T076 A reversão com a M5 (`reversao.sql`), provada de novo numa base limpa; e a corrida do auxiliar `irAFichaDaTurma` (`tests/e2e/navegar-turmas.ts`), exposta pela coluna nova
+- [ ] T077 `verificar`, commit, push, CI verde; rito do remoto para M4 e M5 (backup, dry-run só com elas, `db push`, conferência só de leitura); merge por squash; CI na `main`; Production; apagar o ramo; plano de correções e `CLAUDE.md`
 
 ---
 

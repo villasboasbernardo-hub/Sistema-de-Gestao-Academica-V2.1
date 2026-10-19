@@ -184,3 +184,30 @@ As três tabelas novas e a coluna `nome_no_dsa` sumiram (0 e 0, contadas no cat�
 por `supabase db query -f`: a CLI manda o arquivo como um comando preparado e recusa *"cannot insert multiple commands
 into a prepared statement"*. Base restaurada por `pnpm db:reset:limpo` em seguida.
 
+## Os ajustes da conferência do PR #73 (19/10/2026)
+
+*Bernardo Villas Boas: testes satisfatórios; C-3 e C-4 emendadas; M4 aprovada; quatro ajustes antes do merge.*
+**Artefato:** o banco local limpo (`pnpm db:reset:limpo`) e o build de produção da suíte (porta 3100).
+
+- **Ajuste 1 — arquivar e desarquivar só o trio.** Visto falhar antes: o teste de unidade (6 de 11 vermelhos) e o RLS
+  com sessão real **sem a M5** — *"o OPERADOR, que edita a turma, NÃO arquiva"* deu `expected undefined to be
+  '42501'` (ele arquivava). Com a M5: **41 de 41** em `bloco-2.test.ts`; pgTAP **885 em 61** (o 141, 5 asserções).
+  **Defeito deliberado** (a policy de antes, por `alter policy` no banco local): o 141 reprovou os casos 3 e 4 e o RLS
+  reprovou o Operador e os desarquivar do Encarregado e do Ajudante. Desfeito por `pnpm db:reset:limpo`.
+- **Ajustes 2 e 4 — o card *Planejadas* e o ano único.** Teste de unidade visto falhar (5 vermelhos: o indicador que
+  faltava, `anoDoPainel`/`anosDoSeletor` inexistentes, e *"a planejada do ano SEGUINTE"* contando no vigente — total
+  2 em vez de 1); depois **13 de 13**. ⚠️ O e2e do painel foi escrito **depois** do código: o que o discrimina é a
+  unidade, e o e2e confere o percurso por clique (2027, 2025 e a volta ao vigente limpando o `ano`).
+- **Ajuste 3 — *Arquivar* na linha.** O e2e por clique reprovou antes do código (*"waiting for locator
+  `[data-slot="arquivar-da-linha"]`"*) e passou depois; `turmas-arquivar.spec.ts` **3 de 3**, com o caso do Operador.
+- ⚠️ **A COLUNA NOVA EXPÔS UMA CORRIDA NUM AUXILIAR DE TESTE**, e não um defeito da tela: `irAFichaDaTurma`
+  (`tests/e2e/navegar-turmas.ts`) clicava logo depois de digitar a busca, sobre a lista ainda sem o filtro. Com as
+  linhas mais altas, o link ficou no rodapé da janela (*y* = 714 numa janela de 720) e a lista filtrada chegou no meio
+  do clique — que caiu no vazio, **sem navegar e sem erro**: seis casos de `andamento.spec.ts` reprovaram. Medido com
+  uma sonda: com um perfil sem a coluna (Chefe), o mesmo clique navegava. O auxiliar passou a esperar a URL e o
+  *"neste recorte"* do servidor antes de clicar; os nove arquivos de ponta a ponta das turmas deram **76 de 76**.
+- **A reversão com a M5**, de novo numa base limpa: com as cinco, **2.137 objetos, `bb6e48a8…`**; depois de
+  `reversao.sql`, **2.012, `cbd61b2b…`** — a de `c1f8d65`. ⚠️ Na primeira tentativa a base tinha os registros dos e2e,
+  e a reversão **recusou** (*"A trilha ou o arquivamento tem registro: apagar e decisao de Bernardo (regra 4)"*), sem
+  mudar nada — a guarda funcionando.
+

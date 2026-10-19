@@ -1,5 +1,5 @@
 -- =================================================================================
--- Reversão das migrations da spec 017 (Bloco 2): M4, M3, M2 e M1, nesta ordem — `plano-de-aplicacao-no-remoto.md`.
+-- Reversão das migrations da spec 017 (Bloco 2): M5, M4, M3, M2 e M1, nesta ordem — `plano-de-aplicacao-no-remoto.md`.
 --
 -- ⚠️ GERADO por um script a partir dos corpos ORIGINAIS das migrations (nada transcrito à mão):
 --    `vw_chd_por_fato` de `20261019035107`; `vw_carga_horaria_turma` e `vw_disciplinas_execucao` de
@@ -17,6 +17,24 @@
 --    quatro (só as que tiverem sido aplicadas), senão o próximo `db push` as dá por aplicadas.
 -- =================================================================================
 begin;
+
+-- ---------------------------------------------------------------- M5 (se aplicada)
+-- A policy de gravar no arquivamento volta ao `with check` de `20261019114234`, e o recurso a `permitido = false`
+-- (sem `delete`, C-28). Escrito à mão: são duas instruções, e a policy de antes está no arquivo da M2.
+do $$
+begin
+  if exists (select 1 from pg_policy where polname = 'turma_arquivamentos_criar') then
+    execute $p$
+      alter policy turma_arquivamentos_criar on public.turma_arquivamentos
+        with check (
+          (acao = 'arquivar' and coalesce(app.pode('turmas', 'editar'), false) and app.alcanca_turma(turma_id))
+          or (acao = 'desarquivar' and coalesce(app.eh_admin(), false))
+        )
+    $p$;
+    execute 'comment on policy turma_arquivamentos_criar on public.turma_arquivamentos is null';
+  end if;
+end $$;
+update public.perfil_permissao set permitido = false where recurso = 'arquivamento_de_turma';
 
 -- ---------------------------------------------------------------- M4 (se aplicada)
 do $$

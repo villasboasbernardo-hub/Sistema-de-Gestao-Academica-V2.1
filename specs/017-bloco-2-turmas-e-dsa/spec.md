@@ -163,6 +163,25 @@ lote.*
   próprio) antes do merge, para a `main` nunca ter migration não aplicada. Alternativa: mesclar com a M4 não
   aplicada, e o próximo `db push` de outro ramo a levaria sem passar pelo portão. *(adotada por padrão)* — FR-009.1
 
+### Conferência do PR #73 — 19/10/2026
+
+*Bernardo Villas Boas: testes **satisfatórios**; C-1 a C-30 e P-1 a P-8 **aprovadas como estavam, EXCETO a C-3 e a
+C-4**; a **M4 aprovada** pelo desenho mostrado; e quatro ajustes no mesmo PR, antes do merge.*
+
+- **C-3 e C-4, emendadas** — *"ARQUIVAR E DESARQUIVAR: Admin, Encarregado da Administração Acadêmica e Ajudante — e SÓ
+  eles (o Operador deixa de arquivar). Muda a C-3 e a C-4 (a parte de quem desarquiva; a arquivada continua sem edição
+  para ninguém). A mudança da matriz de permissões está AUTORIZADA nominalmente por Bernardo (19/10/2026, regra 9.4)."*
+  → recurso novo `arquivamento_de_turma`/`editar` (o trio), lido pela policy para as duas ações (M5,
+  `20261019175355`) — FR-004.1, FR-004.5.
+- **Ajuste 2** — *"PAINEL DE TURMAS: acrescente o card «Planejadas»."* — FR-005.1.
+- **Ajuste 3** — *"LISTA /turmas: botão «Arquivar» em cada linha (para quem pode), sem abrir a ficha, com o mesmo aviso
+  de «não concluída» e a mesma ação do servidor; na visão «Mostrar arquivadas», o botão «Desarquivar»."* — FR-004.8.
+- **Ajuste 4** — *"O PAINEL MOSTRA UM ANO SÓ: por padrão o ano letivo vigente; um seletor de ano (na URL) troca. Turmas
+  planejadas do ano seguinte não entram nos números do ano vigente."* → o seletor escreve o **mesmo `ano` da URL** que o
+  filtro da lista usa (o painel é do recorte, C-14); vazio = o ano de hoje em São Paulo; escolher o vigente limpa o
+  parâmetro. Alternativa: um parâmetro só do painel, que dividiria a tela em dois anos. *(adotada por padrão —
+  Bernardo confere no fim)* — FR-005.5.
+
 ---
 
 ## 4. User Scenarios & Testing *(mandatory)*
@@ -414,8 +433,10 @@ X*, e não *IV, IX, V, X*.
   `/atividades`, a pré-seleção de turma do curso, *"Turmas com teto excedido"*, `/admin/salas`, a cascata de
   `/disciplinas`, a ficha do instrutor e outras (medido no analyze de 19/10/2026, neste ramo: **18** arquivos de
   `app/` leem `from("turmas")`).
-- **FR-004.1**: Quem pode editar a turma (`turmas.editar`) MUST poder **arquivá-la em qualquer situação**, pela
-  ficha, com observação opcional; se a turma não estiver **concluída**, a tela MUST avisar antes e pedir
+- **FR-004.1**: O **Admin, o Encarregado e o Ajudante da Administração Acadêmica — e só eles** (recurso
+  `arquivamento_de_turma`/`editar`; emendado na conferência de 19/10/2026: antes, quem editava a turma, inclusive o
+  Operador) MUST poder **arquivá-la em qualquer situação**, pela ficha e pela linha de `/turmas` (FR-004.8), com
+  observação opcional; se a turma não estiver **concluída**, a tela MUST avisar antes e pedir
   confirmação.
 - **FR-004.2**: Arquivar **não** é situação: o enum continua com os quatro valores; o arquivamento é **registro
   próprio** com `arquivada_em`, `arquivada_por` e a observação, e a situação da turma não muda.
@@ -431,8 +452,9 @@ X*, e não *IV, IX, V, X*.
   nela: DSA (lançar, editar, mover, excluir, parar dia, estudo individual), juntar como sessão, atribuição de
   instrutor, período por disciplina, edição da turma, troca de situação, TA fora do DSA, avaliações do currículo da
   turma e previsto PROENS. O auxiliar do servidor **recusa** também quando não consegue ler se a turma está arquivada.
-- **FR-004.5**: **Só o Administrador** MUST poder desarquivar, e a recusa a qualquer outro perfil vem do **banco**.
-  Arquivar e desarquivar ficam no histórico (FR-003.4).
+- **FR-004.5**: Desarquivam **os mesmos três** do FR-004.1 (emendado em 19/10/2026: antes, só o Administrador), e a
+  recusa a qualquer outro perfil vem do **banco**. A arquivada continua sem edição para ninguém. Arquivar e
+  desarquivar ficam no histórico (FR-003.4).
 - **FR-004.6**: ⚠️ **PORTÃO (regra 9.4)**: a trava das gravações também no **banco** — por **gatilho de recusa**
   `BEFORE INSERT OR UPDATE` nas 12 tabelas da turma, com frase própria (`23514`, *hint* `turma_arquivada`; P-4), e um
   guarda por valor em `turmas`; **as policies não mudam** — é migration que **altera** o que existe. Ela é escrita e
@@ -440,6 +462,9 @@ X*, e não *IV, IX, V, X*.
   MUST não nascer em turma arquivada (até ela, nasce — ver Edge Cases).
 - **FR-004.7**: A turma arquivada continua contando no limite de turmas por ano e no veto de inativar curso pela
   situação dela — adotado por padrão, ver Clarifications.
+- **FR-004.8** *(ajuste de 19/10/2026)*: Em `/turmas`, cada linha MUST ter o botão **Arquivar** para quem pode (o
+  FR-004.1), sem abrir a ficha, com o **mesmo** aviso de não concluída e a **mesma** ação do servidor; na visão
+  *Mostrar arquivadas*, a linha arquivada MUST ter **Desarquivar**. Depois de gravar, a lista se relê no lugar.
 
 ### FR-005 — Painel de turmas (molde do painel de instrutores)
 
@@ -452,7 +477,8 @@ X*, e não *IV, IX, V, X*.
   planejadas ou ativas com disciplina ativa sem atribuição ativa (**52** linhas de turma nessa condição, remedido em
   19/10/2026 no mesmo banco, `progresso-implement.md`); **1** planejada ou ativa sem janela de datas; **0** com início
   entre 19/10 e 18/11/2026.
-- **FR-005.1**: `/turmas` MUST mostrar cinco indicadores do recorte: **Total**, **Em andamento** (situação ativa,
+- **FR-005.1**: `/turmas` MUST mostrar seis indicadores do recorte, do ano do painel (FR-005.5): **Total**,
+  **Planejadas** (ajuste de 19/10/2026), **Em andamento** (situação ativa,
   como no `/inicio`), **Concluídas**, **Canceladas** e **Iniciando em até N dias** (início entre hoje e hoje + N,
   não cancelada), com N no parâmetro operacional novo `turmas.aviso_inicio_dias` = **30**.
 - **FR-005.2**: `/turmas` MUST mostrar um quadro de avisos, com a contagem por tipo sempre à vista e a lista
@@ -465,6 +491,9 @@ X*, e não *IV, IX, V, X*.
   filtro.
 - **FR-005.4**: Sem permissão para ler o que o aviso precisa, o quadro MUST dizer que não pôde ler, e não *"nenhum
   aviso"* (gotcha 4).
+- **FR-005.5** *(ajuste de 19/10/2026)*: O painel MUST mostrar **um ano letivo só** — por padrão o **vigente** (o ano de
+  hoje em São Paulo) — e um **seletor de ano** na URL MUST trocá-lo; a turma de outro ano, inclusive a **planejada do
+  ano seguinte**, não entra nos indicadores nem nos avisos do ano mostrado.
 
 ### FR-006 — O que sobrou em Cursos e é da turma
 
