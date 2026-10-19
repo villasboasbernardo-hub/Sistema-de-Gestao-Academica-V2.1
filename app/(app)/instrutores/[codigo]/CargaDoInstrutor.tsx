@@ -23,7 +23,16 @@ export type AtribuicaoPrevista = {
   readonly tempos: number;
   readonly semanas: number | null;
   readonly mediaSemanal: number | null;
+  /** A média saiu da janela (CH ÷ semanas da janela), por falta de semanas cadastradas — `RN-DIST-02`. */
+  readonly mediaDaJanela: boolean;
 };
+
+/**
+ * A frase junto da CH prevista (FR-013.4 da spec 016; Q-7 e NQ-4, Bernardo Villas Boas, 17/10/2026).
+ * ⚠️ Texto fixo, nunca dado: é a regra (`RN-INST-04`) dita a quem lê a lista de habilitações como carga.
+ */
+export const FRASE_DA_CH_PREVISTA =
+  "Habilitação não gera CH prevista; a CH prevista vem da atribuição na turma (Disciplinas da turma).";
 
 const numero = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
@@ -62,6 +71,9 @@ export function CargaDoInstrutor({
           </dd>
         </div>
       </dl>
+      <p className="text-texto-suave text-xs" data-slot="explica-ch-prevista">
+        {FRASE_DA_CH_PREVISTA}
+      </p>
 
       {atribuicoes === null ? (
         <p className="text-texto-suave" role="status">
@@ -105,8 +117,19 @@ export function CargaDoInstrutor({
                   <td className="text-texto px-2 py-1 text-right tabular-nums">
                     {a.semanas ?? "—"}
                   </td>
-                  <td className="text-texto px-2 py-1 text-right tabular-nums">
+                  <td
+                    className="text-texto px-2 py-1 text-right tabular-nums"
+                    data-slot="media-semanal"
+                  >
                     {a.mediaSemanal === null ? "—" : numero(a.mediaSemanal)}
+                    {a.mediaDaJanela ? (
+                      <span
+                        className="text-texto-suave ml-1 text-xs"
+                        title="Sem semanas cadastradas na disciplina: a carga dividida pelas semanas da janela (RN-DIST-02)."
+                      >
+                        (pela janela)
+                      </span>
+                    ) : null}
                   </td>
                 </tr>
               ))}
@@ -118,8 +141,8 @@ export function CargaDoInstrutor({
       {/* veste: a dica que diz de onde vêm os números — texto fixo, nunca dado */}
       <p className="text-texto-tenue text-xs">
         Calculadas a partir das aulas lançadas e das atribuições ativas; não são digitadas. A
-        prevista usa a data de início prevista da disciplina e reparte a carga entre os instrutores
-        designados.
+        prevista usa a janela da atribuição — o período da disciplina na turma, senão o do
+        currículo, senão o da turma — e reparte a carga entre os instrutores designados.
       </p>
     </section>
   );

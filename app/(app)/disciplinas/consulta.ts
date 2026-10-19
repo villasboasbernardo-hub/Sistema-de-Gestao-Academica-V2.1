@@ -20,6 +20,7 @@ import "server-only";
 import { escalaDeLinhas, type EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import { nomeEmTexto } from "@/lib/dominio/nome-instrutor";
 import { conferirSomaDasUnidades } from "@/lib/dominio/soma-das-unidades";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 export type CursoDaCascata = {
@@ -376,15 +377,20 @@ export async function lerGradeDeDisciplinas(filtro: {
         .select("id, disciplina_id, previsao_inicio, previsao_termino")
         .eq("turma_id", turmaEscolhida.id)
         .eq("status", "ativo"),
-      supabase
-        .from("vw_disciplinas_execucao")
-        .select("disciplina_id, ta_executados")
-        .eq("turma_id", turmaEscolhida.id),
+      /*
+       * ⚠️ **A EXECUÇÃO É A DE ATÉ HOJE** (D-COR-2; Q-5 e NQ-1 — FR-014.4 da spec 016): a tabela de disciplinas
+       *    da ficha e `/disciplinas` com a turma escolhida somam só o lançado até o dia de São Paulo, inclusive,
+       *    como o andamento da turma. O DSA e a planilha continuam acumulados até a semana (FR-028.1 da spec 013).
+       */
+      supabase.rpc("execucao_por_disciplina_ate", {
+        p_ate: hojeNaCiaara(),
+        p_turma_id: turmaEscolhida.id,
+      }),
     ]);
 
     const executadosPorDisciplina = new Map(
-      (execucaoRes.data ?? []).map((e) => [
-        e.disciplina_id as string,
+      ((execucaoRes.data ?? []) as { disciplina_id: string; ta_executados: number }[]).map((e) => [
+        e.disciplina_id,
         Number(e.ta_executados ?? 0),
       ]),
     );

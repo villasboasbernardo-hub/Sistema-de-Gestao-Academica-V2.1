@@ -104,7 +104,7 @@ function colunas(
     /*
      * ⚠️ **AS DUAS COLUNAS NOVAS SÃO DO PR 3, E ELAS RESPONDEM A PERGUNTA QUE A GRADE NÃO RESPONDIA:**
      *    *"quanto desta disciplina já foi dado nesta turma?"*. O número vem de `temposExecutados`,
-     *    que `vw_disciplinas_execucao` soma dos **lançamentos** (`RN-CRONOS-01`) — nada aqui planeja.
+     *    que `execucao_por_disciplina_ate` soma dos **lançamentos** até hoje (`RN-CRONOS-01`; D-COR-2) — nada aqui planeja.
      */
     {
       chave: "executada",

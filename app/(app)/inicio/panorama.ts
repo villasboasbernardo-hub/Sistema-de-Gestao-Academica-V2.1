@@ -18,6 +18,10 @@
  * acidente de nome: `chd_executada` já soma aula, extraclasse, avaliação e vista (`RN-EVT-03`), e o
  * Estudo Individual fica **fora** por decisão normativa (`RN-EVT-01`). Trocar por `cht_executada`
  * inflaria o progresso de toda turma que tem AEC, TAD ou TR.
+ *
+ * ⚠️ **E A EXECUTADA É A DE ATÉ HOJE** (D-COR-2; FR-014.1 e FR-014.4 da spec 016): ela chega de
+ * `chd_da_turma_ate(hoje)`, por turma, e não mais de `vw_carga_horaria_turma.chd_executada`, que soma também
+ * o lançado no futuro. Turma sem nada lançado até hoje não aparece na função: a executada dela é **0**.
  */
 
 import { andamentoDaTurma, type RegimeDoCurso } from "@/lib/dominio/andamento-da-turma";
@@ -32,7 +36,6 @@ export type CargaDaTurma = {
   readonly ano_letivo: number;
   readonly status_turma: string;
   readonly chr_curricular: number;
-  readonly chd_executada: number;
 };
 
 /**
@@ -108,6 +111,8 @@ export function montarPanorama(
   regimes: readonly RegimeDoCursoNoBanco[],
   feriadosDiaInteiro: readonly string[],
   hoje: string,
+  /** A CHD executada até hoje, por turma — `chd_da_turma_ate(hoje)` (M1 da spec 016). */
+  executadaAteHoje: ReadonlyMap<string, number>,
 ): readonly TurmaNoPanorama[] {
   const porId = new Map(cursos.map((c) => [c.id, c]));
   const turmaPorId = new Map(turmas.map((t) => [t.id, t]));
@@ -129,7 +134,7 @@ export function montarPanorama(
           modalidade: daTabela?.modalidade ?? "",
           dataTermino: daTabela?.data_termino ?? null,
           prevista: Number(c.chr_curricular ?? 0),
-          executada: Number(c.chd_executada ?? 0),
+          executada: Number(executadaAteHoje.get(c.turma_id) ?? 0),
         },
         regimeDoCurso(regimePorCurso.get(c.curso_id)),
         feriadosDiaInteiro,

@@ -13,6 +13,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { mudarSituacaoDoCurso, semearCursoInativavel } from "./curso-de-teste";
+import { anoCorrente } from "@/lib/formato/ano-corrente";
+
 import { abrirPainelDeFiltros } from "./filtros";
 import { abrirEdicaoDoInstrutor } from "./navegar-instrutores";
 import {
@@ -1128,5 +1130,237 @@ test.describe("`FR-017.6` · curso inativo não vaza para lista de escolha, e o 
       page.getByText("perfil não pode", { exact: false }),
       "a recusa chegou como falta de PERMISSÃO — a tradução do 23514 não pegou",
     ).toHaveCount(0);
+  });
+});
+
+// =================================================================================================
+// FR-013 da spec 016 · a CH prevista conta a atribuição pela janela efetiva, e a habilitação não gera CH
+// =================================================================================================
+test.describe("FR-013 da spec 016 · CH prevista pela janela efetiva, e «só habilitado» por disciplina", () => {
+  /*
+   * > *"T = …; a janela da atribuição sai do período da linha da turma, senão do da disciplina, senão da janela da
+   * > turma."* — Q-7, Bernardo Villas Boas, 17/10/2026 · *"marca «só habilitado — não gera CH prevista» em cada
+   * > habilitação sem atribuição no ano"* — NQ-4
+   *
+   * ⚠️ **O CASO QUE DISCRIMINA É A ATRIBUIÇÃO SEM PERÍODO NENHUM** — nem na linha da turma, nem na disciplina; só a
+   *    turma tem janela. Antes da M2 a view tirava o ano de `disciplinas.previsao_*`, ele saía nulo, e a CH prevista
+   *    do ano era **0 TA** (o instrutor de código 15 da base real: 114 em vez de 271). Com a M2, **40 TA**.
+   * ⚠️ **SEMENTE PRÓPRIA, E A TURMA NASCE ANTES DAS DISCIPLINAS** (como em `instrutores-de-teste.ts`): criar a turma
+   *    faz nascer uma linha por disciplina ativa do curso, e a grade aqui é a que esta amostra monta.
+   */
+  const P = () => `CHP-${PROCESSO}`;
+  const NOME = () => `Instrutor Da Janela ${PROCESSO}`;
+
+  async function limpar(): Promise<void> {
+    const conferir = (o: string, error: { message: string } | null) => {
+      if (error) throw new Error(`falha ao limpar ${o}: ${error.message}`);
+    };
+    const { data: instrutor } = await servico()
+      .from("instrutores")
+      .select("id")
+      .eq("codigo", `INS-${P()}`)
+      .maybeSingle();
+    if (instrutor) {
+      const id = (instrutor as { id: string }).id;
+      conferir(
+        "a atribuição",
+        (await servico().from("turma_disciplina_instrutor").delete().eq("instrutor_id", id)).error,
+      );
+      conferir(
+        "a habilitação",
+        (await servico().from("instrutor_disciplina").delete().eq("instrutor_id", id)).error,
+      );
+    }
+    const { data: curso } = await servico()
+      .from("cursos")
+      .select("id")
+      .eq("codigo", `CUR-${P()}`)
+      .maybeSingle();
+    if (curso) {
+      const cursoId = (curso as { id: string }).id;
+      const { data: turmas } = await servico().from("turmas").select("id").eq("curso_id", cursoId);
+      for (const t of (turmas ?? []) as { id: string }[]) {
+        conferir(
+          "a linha da turma",
+          (await servico().from("turma_disciplina").delete().eq("turma_id", t.id)).error,
+        );
+        conferir("a turma", (await servico().from("turmas").delete().eq("id", t.id)).error);
+      }
+      conferir(
+        "as disciplinas",
+        (await servico().from("disciplinas").delete().eq("curso_id", cursoId)).error,
+      );
+    }
+    conferir(
+      "o instrutor",
+      (await servico().from("instrutores").delete().eq("codigo", `INS-${P()}`)).error,
+    );
+  }
+
+  test.beforeAll(async () => {
+    await limpar();
+    const ano = anoCorrente();
+    const conferir = (o: string, error: { message: string } | null) => {
+      if (error) throw new Error(`falha ao semear ${o}: ${error.message}`);
+    };
+    let cursoId = "";
+    const { data: existe } = await servico()
+      .from("cursos")
+      .select("id")
+      .eq("codigo", `CUR-${P()}`)
+      .maybeSingle();
+    if (existe) cursoId = (existe as { id: string }).id;
+    else {
+      const { data, error } = await servico().rpc("criar_curso_com_regime", {
+        p_curso: {
+          codigo: `CUR-${P()}`,
+          nome_curso: `Curso da janela ${PROCESSO}`,
+          classificacao: "regular",
+          modalidade: "presencial",
+          duracao_dias: 200,
+        },
+        p_regime: {
+          regime_tempos: 8,
+          ta_duracao_min: 45,
+          intervalo_manha_min: 10,
+          intervalo_tarde_min: 10,
+          hora_inicio_manha: "07:30",
+          hora_inicio_tarde: "13:30",
+          vigente_de: "2020-01-01",
+        },
+      });
+      conferir("o curso", error);
+      cursoId = (data as { id: string }).id;
+    }
+    const { data: turma, error: eT } = await servico()
+      .from("turmas")
+      .insert({
+        curso_id: cursoId,
+        ano_letivo: ano,
+        status: "ativa",
+        modalidade: "presencial",
+        data_inicio: `${ano}-03-02`,
+        data_termino: `${ano}-11-27`,
+      })
+      .select("id")
+      .single();
+    conferir("a turma", eT);
+    const { data: disciplinas, error: eD } = await servico()
+      .from("disciplinas")
+      .insert([
+        {
+          codigo: `DIS-${P()}-1`,
+          curso_id: cursoId,
+          cod_disciplina: "I",
+          nome_disciplina: `Atribuída sem período ${PROCESSO}`,
+          carga_horaria_tempos: 40,
+        },
+        {
+          codigo: `DIS-${P()}-2`,
+          curso_id: cursoId,
+          cod_disciplina: "II",
+          nome_disciplina: `Só habilitada ${PROCESSO}`,
+          carga_horaria_tempos: 30,
+        },
+      ])
+      .select("id, codigo");
+    conferir("as disciplinas", eD);
+    const idDe = (sufixo: string) =>
+      (disciplinas as { id: string; codigo: string }[]).find(
+        (d) => d.codigo === `DIS-${P()}-${sufixo}`,
+      )?.id as string;
+    const { data: linha, error: eL } = await servico()
+      .from("turma_disciplina")
+      .insert({
+        codigo: `TD-${P()}-1`,
+        turma_id: (turma as { id: string }).id,
+        disciplina_id: idDe("1"),
+      })
+      .select("id")
+      .single();
+    conferir("a linha da turma", eL);
+    const { data: instrutor, error: eI } = await servico()
+      .from("instrutores")
+      .insert({
+        codigo: `INS-${P()}`,
+        posto_graduacao: "CT",
+        esp_hab_obs: "-EF",
+        nome_completo: NOME(),
+        categoria: "Militar",
+        om: omDoProcesso(),
+      })
+      .select("id")
+      .single();
+    conferir("o instrutor", eI);
+    const instrutorId = (instrutor as { id: string }).id;
+    conferir(
+      "as habilitações",
+      (
+        await servico()
+          .from("instrutor_disciplina")
+          .insert([
+            { codigo: `VIN-${P()}-1`, instrutor_id: instrutorId, disciplina_id: idDe("1") },
+            { codigo: `VIN-${P()}-2`, instrutor_id: instrutorId, disciplina_id: idDe("2") },
+          ])
+      ).error,
+    );
+    conferir(
+      "a atribuição",
+      (
+        await servico()
+          .from("turma_disciplina_instrutor")
+          .insert({
+            codigo: `TDI-${P()}-1`,
+            turma_disciplina_id: (linha as { id: string }).id,
+            instrutor_id: instrutorId,
+          })
+      ).error,
+    );
+  });
+
+  test.afterAll(async () => {
+    await limpar();
+  });
+
+  test("menu Instrutores → linha → a CH prevista conta a atribuição, e a outra habilitação é «só habilitado»", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL_ADMIN, "/inicio");
+    await page
+      .getByRole("navigation", { name: "Navegação principal" })
+      .getByRole("link", { name: "Instrutores", exact: true })
+      .click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/instrutores");
+    await abrirPainelDeFiltros(page);
+    await page.getByLabel("Buscar por nome").fill(NOME());
+    const grade = page.getByRole("grid", { name: "Instrutores" });
+    await grade
+      .getByRole("link", { name: new RegExp(NOME()) })
+      .first()
+      .click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe(`/instrutores/INS-${P()}`);
+
+    /* FR-013.1 · a janela vem da TURMA (sem período na linha nem na disciplina): 40 TA no ano. Antes, 0 TA. */
+    await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("40 TA", {
+      timeout: 15_000,
+    });
+    /* FR-013.3 · sem semanas cadastradas, a média sai da janela — e a tela diz de onde. */
+    await expect(page.locator('[data-slot="atribuicoes-previstas"]')).toContainText(
+      "(pela janela)",
+    );
+
+    /* FR-013.4 · a habilitação SEM atribuição é marcada; a atribuída, não. E a frase junto da CH prevista. */
+    const habilitadas = page.locator('[data-slot="disciplinas-habilitadas"] li');
+    await expect(habilitadas.filter({ hasText: `Só habilitada ${PROCESSO}` })).toContainText(
+      "só habilitado — não gera CH prevista",
+    );
+    await expect(
+      habilitadas
+        .filter({ hasText: `Atribuída sem período ${PROCESSO}` })
+        .locator('[data-slot="so-habilitado"]'),
+    ).toHaveCount(0);
+    await expect(page.locator('[data-slot="explica-ch-prevista"]')).toHaveText(
+      "Habilitação não gera CH prevista; a CH prevista vem da atribuição na turma (Disciplinas da turma).",
+    );
   });
 });

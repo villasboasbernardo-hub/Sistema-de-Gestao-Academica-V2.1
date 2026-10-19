@@ -9,17 +9,23 @@
  * **segunda** (2026-01-01 é quinta; 60 dias depois, e 60 mod 7 = 4, quinta + 4 = segunda). Um teste de
  * dias úteis que use "hoje" de verdade muda de veredito conforme o dia em que roda — que é o defeito
  * que ele existiria para pegar.
+ *
+ * ⚠️ **OS DIAS ÚTEIS DO SALDO CONTAM DE AMANHÃ** (D-COR-2, Bernardo Villas Boas, 16/10/2026; FR-014.2 da spec 016):
+ * a executada já é "até hoje, inclusive" (`chd_da_turma_ate`), então o dia de hoje não é capacidade à frente —
+ * contá-lo nas duas pontas era um dia a mais. U1, U2, U3, U4 e U7 foram recalculados com a conta nova.
  */
 import { describe, expect, it } from "vitest";
 
 import {
   andamentoDaTurma,
   capacidadeDiaria,
+  diaSeguinte,
   diasUteisEntre,
   percentualExecutado,
   type RegimeDoCurso,
   type TurmaParaAndamento,
 } from "@/lib/dominio/andamento-da-turma";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 
 const SEGUNDA = "2026-03-02";
 
@@ -37,19 +43,19 @@ function turma(dados: Partial<TurmaParaAndamento> = {}): TurmaParaAndamento {
 }
 
 describe("`RF-INI-01` · o caminho feliz, calculado à mão", () => {
-  it("U1 · 10 dias úteis a 8 TA/dia cobrem o que falta, com folga de 2 dias", () => {
+  it("U1 · 9 dias úteis a 8 TA/dia cobrem o que falta, com folga de 1 dia", () => {
     /*
-     * CONTA: de segunda 02/03 a sexta 13/03 são duas semanas cheias → 5 + 5 = **10** dias úteis.
-     *        capacidade = 10 × 8 = **80**; restante = 100 − 40 = **60**; saldo = 80 − 60 = **20**;
-     *        saldoEmDias = floor(20 / 8) = **2**; percentual = round(40/100 × 100) = **40**.
+     * CONTA: hoje é segunda 02/03; de AMANHÃ, terça 03/03, a sexta 13/03 → 4 + 5 = **9** dias úteis.
+     *        capacidade = 9 × 8 = **72**; restante = 100 − 40 = **60**; saldo = 72 − 60 = **12**;
+     *        saldoEmDias = floor(12 / 8) = **1**; percentual = round(40/100 × 100) = **40**.
      */
     const a = andamentoDaTurma(turma(), PRESENCIAL_8, [], SEGUNDA);
 
-    expect(a.diasUteis).toBe(10);
-    expect(a.capacidade).toBe(80);
+    expect(a.diasUteis).toBe(9);
+    expect(a.capacidade).toBe(72);
     expect(a.restante).toBe(60);
-    expect(a.saldo).toBe(20);
-    expect(a.saldoEmDias).toBe(2);
+    expect(a.saldo).toBe(12);
+    expect(a.saldoEmDias).toBe(1);
     expect(a.percentual).toBe(40);
     expect(a.situacaoDaCapacidade).toBe("calculada");
     expect(a.emAtraso).toBe(false);
@@ -57,26 +63,26 @@ describe("`RF-INI-01` · o caminho feliz, calculado à mão", () => {
 });
 
 describe("⚠️ O CASO QUE DISCRIMINA · atraso é falta de CAPACIDADE, não excesso de execução", () => {
-  it("U2 · com 5 dias úteis o que falta NÃO cabe, e a turma ativa é acusada", () => {
+  it("U2 · com 4 dias úteis o que falta NÃO cabe, e a turma ativa é acusada", () => {
     /*
-     * CONTA: de segunda 02/03 a sexta 06/03 → **5** dias úteis. capacidade = 5 × 8 = **40**;
-     *        restante = **60**; saldo = 40 − 60 = **−20**; saldoEmDias = floor(−20/8) = floor(−2,5)
-     *        = **−3** (para baixo também no negativo: faltam três dias, não dois).
+     * CONTA: de amanhã, terça 03/03, a sexta 06/03 → **4** dias úteis. capacidade = 4 × 8 = **32**;
+     *        restante = **60**; saldo = 32 − 60 = **−28**; saldoEmDias = floor(−28/8) = floor(−3,5)
+     *        = **−4** (para baixo também no negativo: faltam quatro dias, não três).
      */
     const a = andamentoDaTurma(turma({ dataTermino: "2026-03-06" }), PRESENCIAL_8, [], SEGUNDA);
 
-    expect(a.diasUteis).toBe(5);
-    expect(a.capacidade).toBe(40);
-    expect(a.saldo).toBe(-20);
-    expect(a.saldoEmDias).toBe(-3);
+    expect(a.diasUteis).toBe(4);
+    expect(a.capacidade).toBe(32);
+    expect(a.saldo).toBe(-28);
+    expect(a.saldoEmDias).toBe(-4);
     expect(a.emAtraso, "turma ativa sem capacidade para o que falta não foi acusada").toBe(true);
   });
 
   it("⚠️ U3 · turma que executou MAIS do que o previsto NÃO está em atraso", () => {
     /*
      * CONTA: prevista 10, executada 12 → restante = max(10 − 12, 0) = **0**, e não −2.
-     *        de 02/03 a sexta 27/03 são quatro semanas → **20** dias úteis; capacidade = 160;
-     *        saldo = 160 − 0 = **160**; percentual = round(12/10 × 100) = **120**.
+     *        de amanhã, 03/03, a sexta 27/03 são quatro semanas menos a segunda → **19** dias úteis;
+     *        capacidade = 152; saldo = 152 − 0 = **152**; percentual = round(12/10 × 100) = **120**.
      *
      * ⚠️ **ESTE É O VEREDITO QUE O INDICADOR ANTIGO DE `/inicio` DAVA ERRADO.** Lá, `restante` era
      *    `prevista − executada` **sem piso**, e `restante < 0` — que é EXCESSO — era chamado de
@@ -91,13 +97,13 @@ describe("⚠️ O CASO QUE DISCRIMINA · atraso é falta de CAPACIDADE, não ex
 
     expect(a.restante, "o excesso virou restante negativo").toBe(0);
     expect(a.percentual).toBe(120);
-    expect(a.saldo).toBe(160);
+    expect(a.saldo).toBe(152);
     expect(a.emAtraso, "excesso de execução foi tratado como atraso").toBe(false);
   });
 
   it("U4 · a MESMA turma do U2, concluída, não é acusada — `em andamento` é do requisito", () => {
     /*
-     * ⚠️ Mesmo saldo (−20) e veredito oposto: o `RF-INI-01` fala de turma **em andamento**. Encher o
+     * ⚠️ Mesmo saldo (−28) e veredito oposto: o `RF-INI-01` fala de turma **em andamento**. Encher o
      *    painel de alertas sobre turmas que ninguém pode mais consertar ensina a ignorar a região de
      *    alertas inteira.
      */
@@ -108,7 +114,7 @@ describe("⚠️ O CASO QUE DISCRIMINA · atraso é falta de CAPACIDADE, não ex
       SEGUNDA,
     );
 
-    expect(a.saldo).toBe(-20);
+    expect(a.saldo).toBe(-28);
     expect(a.emAtraso).toBe(false);
   });
 
@@ -175,7 +181,7 @@ describe("`RN-DEG-01` · o que falta é dito, nunca inventado", () => {
   });
 
   it("U7 · turma EAD usa o limite diário em horas, a 1 TA por hora", () => {
-    // CONTA: 10 dias úteis × 4 h = **40** de capacidade; restante 60 → saldo **−20**.
+    // CONTA: de amanhã, 9 dias úteis × 4 h = **36** de capacidade; restante 60 → saldo **−24**.
     const a = andamentoDaTurma(
       turma({ modalidade: "ead" }),
       { regimePadraoTempos: 0, limiteDiarioEadHoras: 4 },
@@ -184,8 +190,8 @@ describe("`RN-DEG-01` · o que falta é dito, nunca inventado", () => {
     );
 
     expect(a.capacidadeDiaria).toBe(4);
-    expect(a.capacidade).toBe(40);
-    expect(a.saldo).toBe(-20);
+    expect(a.capacidade).toBe(36);
+    expect(a.saldo).toBe(-24);
   });
 
   it("⚠️ a precedência é declarada: faltando AS DUAS, vale a falta de término", () => {
@@ -296,5 +302,53 @@ describe("`FR-028` · o percentual é UMA função, e ela serve aos três grãos
   it("⚠️ e é a MESMA função que o andamento usa, não uma cópia com o mesmo resultado", () => {
     const a = andamentoDaTurma(turma({ prevista: 3, executada: 1 }), PRESENCIAL_8, [], SEGUNDA);
     expect(a.percentual).toBe(percentualExecutado(3, 1));
+  });
+});
+
+describe("⚠️ D-COR-2 · FR-014.2 · os dias úteis do saldo contam de AMANHÃ, e o dia é o de São Paulo", () => {
+  it("hoje num SÁBADO: amanhã é domingo, e a conta não muda — os dias úteis começam na segunda", () => {
+    /*
+     * CONTA: hoje sábado 07/03; amanhã domingo 08/03; de 08/03 a sexta 13/03 → **5** dias úteis (09 a 13).
+     *        É o mesmo número de antes (de sábado a sexta também dá 5): num fim de semana a regra nova não muda nada.
+     */
+    const a = andamentoDaTurma(turma(), PRESENCIAL_8, [], "2026-03-07");
+    expect(a.diasUteis).toBe(5);
+    expect(a.capacidade).toBe(40);
+  });
+
+  it("hoje numa SEGUNDA que é o próprio término: não sobra dia útil à frente", () => {
+    // CONTA: hoje segunda 09/03 = término; amanhã 10/03 > 09/03 → **0** dias úteis; restante 60 → saldo **−60**.
+    const a = andamentoDaTurma(
+      turma({ dataTermino: "2026-03-09" }),
+      PRESENCIAL_8,
+      [],
+      "2026-03-09",
+    );
+    expect(a.diasUteis).toBe(0);
+    expect(a.saldo).toBe(-60);
+    expect(a.emAtraso).toBe(true);
+  });
+
+  it("`diaSeguinte` vira o mês, o ano e o 29 de fevereiro", () => {
+    expect(diaSeguinte("2026-03-02")).toBe("2026-03-03");
+    expect(diaSeguinte("2026-01-31")).toBe("2026-02-01");
+    expect(diaSeguinte("2026-02-28")).toBe("2026-03-01");
+    expect(diaSeguinte("2028-02-28")).toBe("2028-02-29");
+    expect(diaSeguinte("2028-02-29")).toBe("2028-03-01");
+    expect(diaSeguinte("2026-12-31")).toBe("2027-01-01");
+  });
+
+  it("⚠️ FR-014.3 · às 23:30 em São Paulo (já o dia seguinte em UTC), hoje é o dia de São Paulo", () => {
+    /*
+     * 19/10/2026 02:30 UTC = 18/10/2026 23:30 em São Paulo (UTC−3, sem horário de verão). Um `current_date` em UTC
+     * diria 19/10 — e contaria como passado um lançamento de 19/10, das 21h à meia-noite (D20).
+     */
+    const agora = new Date("2026-10-19T02:30:00Z");
+    expect(agora.toISOString().slice(0, 10)).toBe("2026-10-19");
+    const hoje = hojeNaCiaara(agora);
+    expect(hoje).toBe("2026-10-18");
+    // CONTA: hoje domingo 18/10; amanhã segunda 19/10; de 19/10 a sexta 23/10 → **5** dias úteis.
+    const a = andamentoDaTurma(turma({ dataTermino: "2026-10-23" }), PRESENCIAL_8, [], hoje);
+    expect(a.diasUteis).toBe(5);
   });
 });

@@ -37,7 +37,7 @@ export type DisciplinaDoQuadro = {
   cod: string;
   nome: string;
   ch: number;
-  /** TA executados na turma (aula + aplicação + vista), de `vw_disciplinas_execucao`. */
+  /** TA executados na turma (aula + aplicação + vista) até hoje, de `execucao_por_disciplina_ate` (spec 016). */
   cumprido: number;
   /** A disciplina já teve lançamento na turma / está concluída (critério do painel da disciplina). */
   iniciada: boolean;

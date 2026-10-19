@@ -180,6 +180,7 @@ export default async function FichaDaTurma({
     previstosRes,
     conformidadeRes,
     parametrosRes,
+    executadaRes,
   ] = await Promise.all([
     supabase
       .from("cursos")
@@ -197,9 +198,8 @@ export default async function FichaDaTurma({
       .order("ordem"),
     protecaoPromessa,
     /*
-     * ⚠️ **A CH EXECUTADA VEM DA MESMA VIEW QUE O `/inicio` LÊ** — `vw_carga_horaria_turma` —, e é
-     *    por isso que os dois números batem. Uma soma própria aqui seria a segunda fonte de verdade
-     *    de `chd_executada`, com a `RN-CRONOS-01` para honrar duas vezes.
+     * ⚠️ **A CARGA VEM DA MESMA VIEW QUE O `/inicio` LÊ** — `vw_carga_horaria_turma` —: a CH curricular e os
+     *    cards de AEC, TAD e TR. A EXECUTADA do andamento é a de até hoje, abaixo.
      */
     supabase
       .from("vw_carga_horaria_turma")
@@ -238,6 +238,12 @@ export default async function FichaDaTurma({
       .select("chave, valor, ano_vigencia")
       .in("chave", [...CHAVES_DOS_PARAMETROS_DOS_TETOS])
       .eq("status", "ativo"),
+    /*
+     * ⚠️ **A EXECUTADA DO ANDAMENTO É A DE ATÉ HOJE, A MESMA DO `/inicio`** (D-COR-2; FR-014.1 e FR-014.4 da spec
+     *    016): `chd_da_turma_ate(hoje)`, filtrada por esta turma, com o dia de São Paulo passado aqui (a função não
+     *    tem valor padrão, FR-014.3). Nada lançado até hoje = nenhuma linha = executada **0**.
+     */
+    supabase.rpc("chd_da_turma_ate", { p_ate: hoje }).eq("turma_id", turmaId).maybeSingle(),
   ]);
 
   const sigla = (cursoRes.data?.codigo as string | undefined) ?? "";
@@ -246,14 +252,21 @@ export default async function FichaDaTurma({
    * ⚠️ **ERRO DE LEITURA DEGRADA, NÃO ESTOURA** (`RN-DEG-01`): sem a linha da carga o andamento sai
    *    com prevista e executada **zero**, que a seção já sabe dizer (*"o curso não tem carga
    *    curricular lançada"*). A ficha continua editável — é o `FR-033`.
+   * ⚠️ **E A FALHA DA EXECUTADA ATÉ HOJE CAI NO MESMO CAMINHO**: cair na soma da view traria de volta, em
+   *    silêncio, o lançado no futuro (D-COR-2), e executada zero com a prevista inteira inventaria atraso.
    */
+  const cargaDoAndamento = executadaRes.error ? null : cargaRes.data;
   const andamento = andamentoDaTurma(
     {
       status: turma.status as string,
       modalidade: turma.modalidade as string,
       dataTermino,
-      prevista: Number(cargaRes.data?.chr_curricular ?? 0),
-      executada: Number(cargaRes.data?.chd_executada ?? 0),
+      prevista: Number(cargaDoAndamento?.chr_curricular ?? 0),
+      executada: Number(
+        cargaDoAndamento === null || cargaDoAndamento === undefined
+          ? 0
+          : ((executadaRes.data as { chd_executada: number } | null)?.chd_executada ?? 0),
+      ),
     },
     regimeDoBanco(regimeRes.data ?? null),
     datasDeFeriado(feriadosRes?.data ?? []),

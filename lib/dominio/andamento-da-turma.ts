@@ -15,9 +15,13 @@
  * Regras que este módulo aplica, e de onde cada uma vem:
  *
  * - **`RN-CRONOS-01`** — *o executado é a soma dos registros de aula lançados, nunca o planejamento.*
- *   ⚠️ Ela é honrada **antes** deste módulo: a `executada` chega de `vw_carga_horaria_turma`, que soma
- *   `registros_aula.tempos_consumidos` com `status = 'ativo'`. Este módulo **não** reimplementa a
- *   soma — reimplementá-la seria o segundo lugar onde a regra vive.
+ *   ⚠️ Ela é honrada **antes** deste módulo: a `executada` chega do banco — `chd_da_turma_ate(hoje)`, a CHD
+ *   lançada **até hoje, inclusive** (M1 da spec 016) —, e este módulo **não** reimplementa a soma —
+ *   reimplementá-la seria o segundo lugar onde a regra vive.
+ * - **D-COR-2** — *"o saldo de capacidade conta só até hoje"* (Bernardo Villas Boas, 16/10/2026; FR-014.1 e
+ *   FR-014.2 da spec 016). A executada é a de até hoje, e por isso os dias úteis à frente contam de
+ *   **amanhã** (`diaSeguinte(hoje)`): o dia de hoje já está do lado do executado, e contá-lo também como
+ *   capacidade era um dia a mais. "Hoje" é o dia de São Paulo (`hojeNaCiaara()`), passado por quem chama.
  * - **`RN-EVT-02`** — *feriado só desconta capacidade se o impacto for dia inteiro.* Honrada por quem
  *   monta a lista de datas: aqui chegam **só** as de impacto dia inteiro, e o módulo não conhece o
  *   enum de impacto.
@@ -92,6 +96,16 @@ function meiaNoiteUtc(iso: string): number | null {
 }
 
 const UM_DIA = 86_400_000;
+
+/**
+ * O dia seguinte a `iso` (`aaaa-mm-dd`), por aritmética de calendário — vira o mês, o ano e o 29 de fevereiro.
+ * Data inválida devolve a própria entrada, e quem a usa (`diasUteisEntre`) já a trata como ausência.
+ */
+export function diaSeguinte(iso: string): string {
+  const t = meiaNoiteUtc(iso);
+  if (t === null) return iso;
+  return new Date(t + UM_DIA).toISOString().slice(0, 10);
+}
 
 /**
  * Dias úteis de `hoje` até `termino`, **ambos inclusive**, descontando feriados de dia inteiro.
@@ -248,7 +262,11 @@ export function andamentoDaTurma(
     };
   }
 
-  const diasUteis = diasUteisEntre(hoje, turma.dataTermino, feriadosDiaInteiro);
+  /*
+   * ⚠️ **DE AMANHÃ, E NÃO DE HOJE** (D-COR-2, FR-014.2): a executada já conta o lançado até hoje, inclusive.
+   *    Num sábado ou domingo nada muda — os dias úteis começam na segunda dos dois jeitos.
+   */
+  const diasUteis = diasUteisEntre(diaSeguinte(hoje), turma.dataTermino, feriadosDiaInteiro);
   const capacidade = diasUteis * capDiaria;
   const saldo = capacidade - restante;
 

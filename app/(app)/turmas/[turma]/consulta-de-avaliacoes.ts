@@ -67,10 +67,15 @@ export async function lerAvaliacoesDaTurma(entrada: {
       )
       .eq("turma_id", entrada.turmaId ?? "00000000-0000-0000-0000-000000000000")
       .in("status", [...STATUS_DE_AVALIACAO_VIVA]),
-    supabase
-      .from("vw_disciplinas_execucao")
-      .select("disciplina_id, ta_executados, data_real_inicio")
-      .eq("turma_id", entrada.turmaId ?? "00000000-0000-0000-0000-000000000000"),
+    /*
+     * ⚠️ **O "CUMPRIDO" E O "INICIADA" SÃO OS DE ATÉ HOJE** (D-COR-2; NQ-1 — FR-014.4 da spec 016): a soma e a
+     *    primeira data do lançado até o dia de São Paulo, inclusive — a mesma leitura da tabela de disciplinas
+     *    da ficha. Uma aula lançada para a semana que vem não faz a disciplina "começar" hoje.
+     */
+    supabase.rpc("execucao_por_disciplina_ate", {
+      p_ate: entrada.hoje,
+      p_turma_id: entrada.turmaId ?? "00000000-0000-0000-0000-000000000000",
+    }),
     supabase
       .from("config_parametros")
       .select("valor")

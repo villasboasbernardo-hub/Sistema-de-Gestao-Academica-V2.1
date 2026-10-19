@@ -9,8 +9,9 @@
  *
  * ⚠️ **SEM MARCADOR DE CLIENTE.** Filtro e tabela são folhas declaradas; a leitura é de servidor.
  *
- * ⚠️ **UMA CONSULTA DE TURMAS POR TELA, E NENHUMA POR LINHA** (`SC-008`). As três leituras vão em
- * paralelo: o recorte, o universo de anos e os cursos para o filtro.
+ * ⚠️ **UMA CONSULTA DE TURMAS POR TELA, E NENHUMA POR LINHA** (`SC-008`). As leituras vão em paralelo: o
+ * recorte, o universo de anos, os cursos para o filtro e — para as colunas Progresso e Saldo (FR-014.6 da spec
+ * 016) — a CH curricular, a CHD executada até hoje, o regime vigente e os feriados de dia inteiro.
  *
  * ⚠️ **O ESTADO VAZIO DISTINGUE QUATRO COISAS, E ISSO NÃO É ENFEITE** (gotcha 4): *a leitura falhou*,
  * *não há turma neste recorte*, *o seu perfil não lê turmas* e *você não alcança curso nenhum*. A
@@ -22,6 +23,7 @@
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -29,8 +31,10 @@ import { alcanceDoPerfil } from "../cursos/consulta";
 import {
   anosDistintos,
   COLUNAS_DA_LISTA_DE_TURMAS,
+  comAndamento,
   montarConsultaDeTurmas,
   paraLinhasDeTurma,
+  type InsumosDoAndamentoDaLista,
   type LinhaBrutaDeTurma,
 } from "./consulta";
 import { FiltrosDeTurmas } from "./FiltrosDeTurmas";
@@ -55,20 +59,59 @@ export default async function Turmas({
   };
 
   const supabase = await criarClienteDeServidor();
+  /* O dia de São Paulo, passado às funções do banco — elas não têm valor padrão (FR-014.3). */
+  const hoje = hojeNaCiaara();
 
-  const [usuario, recorte, universo, cursosRes] = await Promise.all([
-    usuarioDaSessao(),
-    montarConsultaDeTurmas(supabase.from("turmas").select(COLUNAS_DA_LISTA_DE_TURMAS), parametros),
-    supabase.from("turmas").select("ano_letivo"),
-    supabase.from("cursos").select("codigo, nome_curso").eq("status", "ativo").order("codigo"),
-  ]);
+  const [usuario, recorte, universo, cursosRes, cargasRes, executadasRes, regimesRes, feriadosRes] =
+    await Promise.all([
+      usuarioDaSessao(),
+      montarConsultaDeTurmas(
+        supabase.from("turmas").select(COLUNAS_DA_LISTA_DE_TURMAS),
+        parametros,
+      ),
+      supabase.from("turmas").select("ano_letivo"),
+      supabase.from("cursos").select("codigo, nome_curso").eq("status", "ativo").order("codigo"),
+      /*
+       * ⚠️ **AS COLUNAS PROGRESSO E SALDO PELO MESMO CAMINHO DO `/inicio`** (FR-014.6; Q-6): a CH curricular da
+       *    view de carga, a executada ATÉ HOJE (`chd_da_turma_ate`, D-COR-2), o regime vigente do curso e os
+       *    feriados de dia inteiro e ativos a partir de hoje (`RN-EVT-02`). Nenhuma por linha.
+       */
+      supabase.from("vw_carga_horaria_turma").select("turma_id, chr_curricular"),
+      supabase.rpc("chd_da_turma_ate", { p_ate: hoje }),
+      supabase
+        .from("vw_cursos_regime_vigente")
+        .select("curso_id, regime_padrao_tempos, limite_diario_ead_horas"),
+      supabase
+        .from("feriados")
+        .select("data")
+        .eq("impacto", "dia_inteiro")
+        .eq("status", "ativo")
+        .gte("data", hoje),
+    ]);
 
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
   const podeLer = pode(permissoes, "turmas", "ler");
   const alcance = alcanceDoPerfil(usuario?.perfil, usuario?.escopoCurso);
   const haFiltro = Object.values(parametros).some((v) => v !== "");
 
-  const linhas = paraLinhasDeTurma((recorte.data ?? []) as unknown as readonly LinhaBrutaDeTurma[]);
+  /*
+   * ⚠️ **FALHA NUMA DAS LEITURAS DO ANDAMENTO NÃO DERRUBA A LISTA E NÃO INVENTA ALERTA** (`RN-DEG-01`): sem a
+   *    carga ou sem a executada até hoje, as duas colunas saem «—» em toda linha — a soma antiga, que inclui o
+   *    futuro, não volta em silêncio.
+   */
+  const semAndamento = cargasRes.error !== null || executadasRes.error !== null;
+  const linhas = comAndamento(
+    paraLinhasDeTurma((recorte.data ?? []) as unknown as readonly LinhaBrutaDeTurma[]),
+    {
+      cargas: semAndamento
+        ? []
+        : ((cargasRes.data ?? []) as unknown as InsumosDoAndamentoDaLista["cargas"]),
+      executadas: (executadasRes.data ?? []) as unknown as InsumosDoAndamentoDaLista["executadas"],
+      regimes: (regimesRes.data ?? []) as unknown as InsumosDoAndamentoDaLista["regimes"],
+      feriadosDiaInteiro: (feriadosRes.data ?? []).map((f) => f.data as string),
+      hoje,
+    },
+  );
   const anos = anosDistintos(universo.data ?? []);
   const cursos = (cursosRes.data ?? []).map((c) => ({ codigo: c.codigo, nome: c.nome_curso }));
 

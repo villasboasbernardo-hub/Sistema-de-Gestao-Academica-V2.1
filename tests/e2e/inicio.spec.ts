@@ -97,7 +97,7 @@ test.describe("`RF-INI-01` · o panorama mostra previsto, executado e o que est�
      *    | Turma | O painel antigo dizia | A regra diz |
      *    |---|---|---|
      *    | `turmaEmExcesso` (12 de 10) | **em atraso** | não — ela não tem nada a executar |
-     *    | `turmaSemCapacidade` (10 de 100, 2 dias úteis) | nada | **em atraso** — 16 TA de capacidade contra 90 |
+     *    | `turmaSemCapacidade` (10 de 100 até hoje, 1 dia útil à frente) | nada | **em atraso** — 8 TA de capacidade contra 90 (D-COR-2: os dias úteis contam de amanhã) |
      *
      *    Com o `panorama.ts` de antes de 04/10/2026 as DUAS asserções abaixo reprovam, cada uma pelo
      *    seu lado. É o que prova que o conserto mudou o veredito, e não só o código.

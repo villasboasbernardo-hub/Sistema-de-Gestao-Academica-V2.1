@@ -121,12 +121,13 @@ export default async function Inicio({
     previstosRes,
     avaliacoesRes,
     parametrosDaVistaRes,
+    executadaRes,
   ] = await Promise.all([
     consultaDeCursos,
     supabase
       .from("vw_carga_horaria_turma")
       .select(
-        "turma_id, turma_codigo, curso_id, curso_codigo, nome_curso, ano_letivo, status_turma, chr_curricular, chd_executada",
+        "turma_id, turma_codigo, curso_id, curso_codigo, nome_curso, ano_letivo, status_turma, chr_curricular",
       ),
     /*
      * ⚠️ ESTA TERCEIRA CONSULTA EXISTE SÓ PARA DISTINGUIR OS VAZIOS, e é uma contagem — não traz
@@ -189,13 +190,23 @@ export default async function Inicio({
       .select("chave, valor")
       .in("chave", ["avaliacao.prazo_vista_dias", "avaliacao.vence_em_breve_dias"])
       .eq("status", "ativo"),
+    /*
+     * ⚠️ **A EXECUTADA DO ANDAMENTO É A DE ATÉ HOJE** (D-COR-2; FR-014.1 da spec 016): a soma da CHD com data
+     *    até `hoje`, inclusive — o dia de São Paulo, passado aqui, porque a função não tem valor padrão
+     *    (FR-014.3). A view de carga continua dando o resto (curso, CH curricular, situação).
+     */
+    supabase.rpc("chd_da_turma_ate", { p_ate: hoje }),
   ]);
 
   /*
    * ⚠️ ERRO DE LEITURA NÃO ESTOURA (`RN-DEG-01`). Ele vira o vazio de "você não vê", que é o que uma
    * negativa da RLS de fato significa — e o gotcha nº 4 do BRIEF manda distinguir isso de "não há".
    */
-  if (cursosRes.error || cargasRes.error) {
+  /*
+   * ⚠️ A EXECUTADA ATÉ HOJE É CONDIÇÃO DA TELA COMO A VIEW DE CARGA: sem ela, o andamento voltaria em
+   *    silêncio à soma que inclui o futuro (D-COR-2) — e o número errado seria o que a tela mostra.
+   */
+  if (cursosRes.error || cargasRes.error || executadaRes.error) {
     return (
       <section className="flex flex-col gap-4">
         <h1 className="text-texto text-lg font-semibold">Início</h1>
@@ -217,6 +228,11 @@ export default async function Inicio({
     (regimesRes.data ?? []) as unknown as RegimeDoCursoNoBanco[],
     (feriadosRes.data ?? []).map((f) => f.data as string),
     hoje,
+    new Map(
+      ((executadaRes.data ?? []) as { turma_id: string; chd_executada: number }[]).map(
+        (e) => [e.turma_id, Number(e.chd_executada)] as const,
+      ),
+    ),
   );
   const totais = totaisDo(panorama);
   /* ⚠️ O alerta de teto respeita o recorte: só as turmas que o panorama mostra (e não EAD, FR-006). */
