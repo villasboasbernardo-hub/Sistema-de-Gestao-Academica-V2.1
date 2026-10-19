@@ -156,3 +156,19 @@ grade não ganha cartão.
 
 **Defeitos de tela achados por estas provas:** nenhum. As cinco telas passaram como escritas; a única reprovação foi do
 próprio teste (acima).
+
+## T064 — a reversão provada (DoD 6)
+
+**Artefato:** o banco local limpo (`pnpm db:reset:limpo`, 19/10/2026) com as **quatro** migrations do PR, e
+`scripts/provas/impressao_digital_do_esquema.sql` lido por `psql` no contêiner.
+
+| Momento | Impressão digital (`public` e `app`) |
+|---|---|
+| Com M1, M2, M3 e M4 | **2.137 objetos**, `9fb51fb177f1f2454e1c8d6b912f2117` |
+| Depois de `specs/017-bloco-2-turmas-e-dsa/reversao.sql` (`psql -v ON_ERROR_STOP=1`, saída 0) | **2.012 objetos**, `cbd61b2b23ad95e0502e09f287b5f921` |
+| A de `c1f8d65` (a `main` de partida, anotada no fechamento da spec 016) | **2.012 objetos**, `cbd61b2b23ad95e0502e09f287b5f921` |
+
+As três tabelas novas e a coluna `nome_no_dsa` sumiram (0 e 0, contadas no catálogo). ⚠️ A reversão roda por `psql`, não
+por `supabase db query -f`: a CLI manda o arquivo como um comando preparado e recusa *"cannot insert multiple commands
+into a prepared statement"*. Base restaurada por `pnpm db:reset:limpo` em seguida.
+
