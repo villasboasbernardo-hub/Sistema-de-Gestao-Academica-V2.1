@@ -28,7 +28,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | Bloco | Tema | Banco? | Spec prevista |
 |---|---|---|---|
 | **1** | Correções de tela e defeitos — ✅ **concluído em 19/10/2026** | duas migrations, pelo portão 9.4 (M1 e M2, sem tabela nova) | 016 |
-| **2** | Turmas: andamento manual, status, arquivar, dashboard; e o DSA no papel (os dois itens do antigo Bloco 1B) | sim | 017 |
+| **2** | Turmas: andamento manual, status, arquivar, dashboard; e o DSA no papel (os dois itens do antigo Bloco 1B) — ✅ **concluído em 19/10/2026** | cinco migrations (três só acrescentam; a M4 e a M5 pelo portão 9.4, aprovadas por Bernardo) | 017 |
 | **3** | Página do curso em abas: Disciplinas, Atividades, Horários | sim (regimes por turma) | 018 |
 | **4** | Início: dashboard, carrosséis, submenu | não | 019 |
 | **5** | Cadastros novos: estrangeiros, custo, currículo em PDF, capacitação, acessos | sim | 020 |
@@ -99,7 +99,22 @@ _(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos*
 | 1.14 | **Saldo só até hoje** (D-COR-2) | `lib/dominio/andamento-da-turma.ts`; a executada vem de `vw_carga_horaria_turma`, que soma inclusive o futuro | Executada até hoje, dias úteis de amanhã. Vale em `/inicio`, na ficha e na lista. |
 | 1.15 | 🐛 **Não consigo trocar o status da turma** (D-COR-4) | O formulário tem o campo *Situação* (`FormularioDeTurma.tsx:217`) | Reproduzir como Admin e como Encarregado: gatilho que recusa, permissão, ou campo escondido atrás de "Editar turma". Se o conserto não exigir banco, corrigir aqui; se exigir, vai para o Bloco 2. |
 
-## Bloco 2 — Turmas (spec própria)
+## Bloco 2 — Turmas (spec própria) — ✅ CONCLUÍDO em 19/10/2026
+
+> ✅ **Concluído em 19/10/2026** — spec `017-bloco-2-turmas-e-dsa`, pelo fluxo `/corrigir`, num PR só: **#73**, mesclado
+> por squash na `main` em **`07861dc`**, depois da conferência de Bernardo Villas Boas (*"testes SATISFATÓRIOS"*), dos
+> quatro ajustes que ela pediu e das cinco migrations no remoto pelo rito (backups `remoto-20261019-123242.sql` e
+> `remoto-20261019-163024.sql`).
+> - **1** TA fora do DSA, com observação, somando na CH executada e no saldo e mostrado separado (D-COR-3) · **PEND-016-5**
+>   fechada (a situação do DSA soma o lançamento sem `ta_inicial` e o fora do DSA) · **2** observação em toda troca de
+>   situação, com o histórico na ficha (D-COR-4) · **3** arquivar em qualquer situação, por eventos próprios, sumindo
+>   das listas e travando tela, servidor e **banco** (D-COR-5; a M4); **arquivam e desarquivam o Admin, o Encarregado e
+>   o Ajudante da Administração Acadêmica — e só eles** (decisão de 19/10/2026, a M5), também pela linha de `/turmas` ·
+>   **4** painel de turmas com seis números (com *Planejadas*) e três avisos, de **um ano letivo só**, o vigente por
+>   padrão · **5** sem objeto · **6** *Nome no DSA* no cartão, com abreviação automática de reserva e o limite medido no
+>   papel (**19** caracteres; o instrutor sempre inteiro na última linha) · **7** o quadro de CH na ordem natural.
+> - Pendências novas, na lista de pequenos ajustes: `PEND-017-1` a `PEND-017-4`.
+
 
 1. **TA fora do DSA, com observação** (D-COR-3), por disciplina da turma: quantidade, instrutor quando houver e observação; somam no executado e no saldo, mostrados separados. Serve também para o **histórico** de curso concluído sem lançar DSA antigo, e para **marcar a disciplina como concluída**. Sem ajuste negativo. Só Encarregado, ajudantes e Admin.
    - **Dependência deixada pelo Bloco 1** _(plan da spec 016, 17/10/2026)_: os TA fora do DSA **somam na base da M1** (`vw_chd_por_fato`), para entrarem na CH executada e no saldo como os lançamentos do DSA.
