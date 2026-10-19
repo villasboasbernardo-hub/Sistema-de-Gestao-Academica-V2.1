@@ -36,6 +36,12 @@ const CONTAS = {
   encarregado: { perfil: "encarregado_administracao_academica", escopo: "geral" },
   ajudante: { perfil: "ajudante_administracao_academica", escopo: "geral" },
   operador: { perfil: "operador", escopo: "regular" },
+  // Os demais perfis fora do trio — de escopo geral, para que a recusa venha da PERMISSÃO e não do alcance.
+  chefe: { perfil: "chefe_departamento_ensino", escopo: "geral" },
+  encop: { perfil: "encarregado_orientacao_pedagogica", escopo: "geral" },
+  ajuop: { perfil: "ajudante_orientacao_pedagogica", escopo: "geral" },
+  encurso: { perfil: "encarregado_curso", escopo: "regular" },
+  visualizacao: { perfil: "visualizacao", escopo: "geral" },
 } as const;
 type Conta = keyof typeof CONTAS;
 
@@ -645,4 +651,50 @@ describe("DoD 4 · leitura negativa: quem não alcança a turma lê ZERO linhas 
       expect((doEncarregado.data ?? []).length).toBeGreaterThan(0);
     },
   );
+});
+
+describe("SC-002 · os perfis fora do trio, um por um", () => {
+  it.each(["chefe", "encop", "ajuop", "encurso", "visualizacao"] as const)(
+    "%s NÃO grava TA fora do DSA — 42501, com a linha completa",
+    async (c) => {
+      const { error } = await sessao(c)
+        .from("ta_fora_do_dsa")
+        .insert(foraDoDsa(`Recusa do ${c}`));
+      expect(error?.code).toBe("42501");
+      const { data } = await servico
+        .from("ta_fora_do_dsa")
+        .select("id")
+        .eq("observacao", `Recusa do ${c}`);
+      expect(data).toEqual([]);
+    },
+  );
+
+  it.each(["ta_fora_do_dsa", "turma_trocas_de_situacao", "turma_arquivamentos"] as const)(
+    "controle positivo · a visualização lê %s da turma que alcança",
+    async (t) => {
+      const { data, error } = await sessao("visualizacao")
+        .from(t)
+        .select("turma_id")
+        .eq("turma_id", turmaDe.get("regular")!);
+      expect(error).toBeNull();
+      expect((data ?? []).length).toBeGreaterThan(0);
+    },
+  );
+
+  it("a visualização não troca a situação: a função recusa (42501 turma_fora_do_alcance), nunca calada", async () => {
+    const lerStatus = async () =>
+      (
+        (await servico.from("turmas").select("status").eq("id", turmaDe.get("regular")!).single())
+          .data as { status: string }
+      ).status;
+    const antes = await lerStatus();
+    const { error } = await sessao("visualizacao").rpc("trocar_situacao_da_turma", {
+      p_codigo: codigoDaTurma.get("regular")!,
+      p_status: antes === "ativa" ? "concluida" : "ativa",
+      p_observacao: "Sem permissão",
+    });
+    expect(error?.code).toBe("42501");
+    expect(error?.hint).toBe("turma_fora_do_alcance");
+    expect(await lerStatus()).toBe(antes);
+  });
 });
