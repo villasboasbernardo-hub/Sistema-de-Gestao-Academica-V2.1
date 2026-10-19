@@ -299,6 +299,20 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 19/10/2026 — três tabelas novas, do Bloco 2 do plano de correções (spec 017)
+>
+> - **`ta_fora_do_dsa`** — os **TA executados fora do DSA**, por linha da turma, com data, quantidade (≥ 1, sem
+>   ajuste negativo), instrutor quando houver e **observação obrigatória** (decisão **D-COR-3** de Bernardo Villas
+>   Boas, 16/10/2026). Somam na CH executada e no saldo pela base da CHD (`vw_chd_por_fato`). Corrigir é desfazer
+>   (exclusão lógica); grava só o Admin, o Encarregado e o Ajudante da Administração Acadêmica.
+> - **`turma_trocas_de_situacao`** — a **trilha das trocas de situação** da turma, com a observação de cada uma
+>   (**D-COR-4**). Só de acréscimo, imutável inclusive para a `service_role`; quem escreve é o gatilho.
+> - **`turma_arquivamentos`** — os eventos de **arquivar e desarquivar** a turma (**D-COR-5**, que reabre a TURMA-1
+>   só para isto): arquivar **não** é um quinto status, o estado é o último evento. Só de acréscimo; desarquiva só
+>   o Admin.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a
