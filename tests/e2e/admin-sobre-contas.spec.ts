@@ -131,15 +131,18 @@ const resposta = (page: Page, texto: string) => page.getByRole("status").filter(
 const recusa = (page: Page, texto: string) => page.getByRole("alert").filter({ hasText: texto });
 
 test.describe("`FR-014` · a lista limpa", () => {
-  test("as CINCO colunas pedidas, e só elas", async ({ page }) => {
+  test("as colunas pedidas, e só elas", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN);
 
-    // Avatar (sem rótulo visível), Nome, E-mail, Perfil, Último acesso, Ações.
+    // Avatar (sem rótulo visível), Nome, E-mail, Perfil, Último acesso, Acessos, Ações.
     // ⚠️ **ERAM CINCO ATÉ 03/10/2026**, quando Bernardo pediu as três ações de volta à linha.
     //    A contagem subiu para SEIS, e as três colunas que ele tirou continuam fora.
-    await expect(page.getByRole("columnheader")).toHaveCount(6);
-    for (const titulo of ["Nome", "E-mail", "Perfil", "Último acesso", "Ações"]) {
-      await expect(page.getByRole("columnheader", { name: titulo })).toBeVisible();
+    // ⚠️ **E SETE DESDE 20/10/2026** (spec 020, Bloco 5, item 5 do pedido de Bernardo): a coluna «Acessos». A
+    //    contagem passou a ser DA TABELA DA LISTA — o quadro «Acessos ao sistema», acima dela, tem tabelas próprias.
+    const lista = page.locator('[data-slot="lista-de-usuarios"]');
+    await expect(lista.getByRole("columnheader")).toHaveCount(7);
+    for (const titulo of ["Nome", "E-mail", "Perfil", "Último acesso", "Acessos", "Ações"]) {
+      await expect(lista.getByRole("columnheader", { name: titulo, exact: true })).toBeVisible();
     }
 
     /*

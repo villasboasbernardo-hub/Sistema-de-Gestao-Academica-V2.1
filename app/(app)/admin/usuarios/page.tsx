@@ -239,7 +239,7 @@ export default async function Usuarios({
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
+            <table className="w-full border-collapse text-sm" data-slot="lista-de-usuarios">
               <thead>
                 <tr>
                   {/* O avatar não tem rótulo visível: a coluna é a imagem, e um título ali seria ruído. */}
