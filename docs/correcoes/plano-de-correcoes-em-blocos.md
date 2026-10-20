@@ -143,7 +143,7 @@ _(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos*
 >   regimes nomeados (novo, editar, inativar) e as vigências do curso para ler; a turma escolhe o regime em *Editar
 >   turma*, e o DSA, o alerta do excepcional, a cascata, o dia parado e o saldo usam o dela · **4** a aba *Avaliações*
 >   só com o previsto · **5** a ordem pedida.
-> - Pendências novas, na lista de pequenos ajustes: `PEND-018-1` a `PEND-018-3`.
+> - Pendências novas, na lista de pequenos ajustes: `PEND-018-1` e `PEND-018-2`; a `PEND-018-3` (o guia de testes) foi fechada no próprio PR.
 
 1. Aba **Disciplinas**, com o cadastro e as UEs; a entrada *Disciplinas* sai do menu lateral.
 2. Aba **Atividades extraclasse** (o previsto no currículo; o acompanhamento é da turma).
@@ -181,7 +181,7 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
 - **PEND-017-4** — **38 disciplinas com a abreviação automática terminando em reticências** _(spec 017, FR-007.2; 19/10/2026)_: com o limite do cartão medido no papel (**19** caracteres, o menor de duas medidas: 22 no Chromium do Windows, 19 no do Linux), **119 das 172** disciplinas ativas passam dele, e em **38** a abreviação não cabe inteira. É dado, não código: preencher *Nome no DSA* no cadastro (Disciplinas → a disciplina → Editar). A lista, com a abreviação de cada uma: `specs/017-bloco-2-turmas-e-dsa/nomes-acima-do-limite.md`.
 - **PEND-018-1** — **troca de regime por semana** _(pedido de Bernardo Villas Boas, 19/10/2026: *"fica para depois"*)_: no Bloco 3 a turma escolhe UM regime nomeado, que trava no primeiro lançamento (`RF-HOR-05`). Trocar no meio do curso exige vigência por turma (de que semana em diante), como `curso_regime_historico` tem para o curso.
 - **PEND-018-2** — **o catálogo de horários não tem tela** _(spec 018, 20/10/2026)_: o regime nomeado pode apontar para um relógio de `configuracoes_horario`/`horarios_tempos_aula` (os 8 de hoje, CFG-A a CFG-H), mas criar ou mudar um relógio do catálogo continua sendo só por migration.
-- **PEND-018-3** — **o guia de testes descreve o menu com *Disciplinas*** _(spec 018)_: `docs/testes/guia-de-testes.md` (linhas 73, 177–179 e 325–327) manda abrir *Disciplinas* pelo menu e escolher o curso; depois do merge do Bloco 3 o caminho é *Cursos* → o curso → aba *Disciplinas*. Atualizar o `.md` (e regerar o `.docx`) no merge. Vale também para o caminho do `PEND-017-4`.
+- ~~**PEND-018-3**~~ — ✅ **fechada no PR #75, antes do merge** _(pedido de Bernardo Villas Boas na conferência de 20/10/2026)_: `docs/testes/guia-de-testes.md` passou a dizer *Cursos* → o curso → aba *Disciplinas* (passos 19 do Administrador e 10 do Operador), o menu com **sete** itens e as seis abas do curso; o `.docx` foi regerado por `scripts/manutencao/md_para_docx.py` e confere com o `.md` palavra a palavra (3.579 e 3.579).
 - **PEND-014-7** — testes de ponta a ponta instáveis sob carga (`salas.spec.ts:126`, `dsa-tipo-e-global.spec.ts:160`, `avaliacoes-nas-telas.spec.ts:53`, `admin-sobre-contas`).
 - **OneDrive** — a pasta do repositório deve ficar "Sempre manter neste dispositivo": arquivos sob demanda já quebraram o build (`.next`, `EPERM`) e o `git switch` (`specs`).
 

@@ -68,9 +68,9 @@ conferir.
 
 ### O menu do lado esquerdo
 
-O menu tem oito itens, nesta ordem:
+O menu tem sete itens, nesta ordem:
 
-**Início · Cursos · Turmas · Disciplinas · Instrutores · Cronograma · Atividades · Administração**
+**Início · Cursos · Turmas · Instrutores · Cronograma · Atividades · Administração**
 
 - **Cronograma** e **Atividades** aparecem em cinza, com a marca **"em breve"**, e **não abrem**.
   São telas de etapas futuras. Não são defeito.
@@ -82,7 +82,7 @@ O menu tem oito itens, nesta ordem:
 - No **celular**, o menu não fica do lado: aparece um botão escrito **Menu**, que abre uma gaveta com
   os nomes já visíveis. O botão de fixar não existe ali.
 
-### Todos veem os oito itens do menu — e isso é de propósito
+### Todos veem os sete itens do menu — e isso é de propósito
 
 O menu é igual para todos os perfis. Você vai ver **Administração** mesmo que o seu perfil não possa
 abrir a lista de contas: ao clicar, a própria tela diz que aquilo não é para você. **Isso não é
@@ -150,7 +150,8 @@ Você vê tudo e muda tudo, inclusive as contas das outras pessoas.
    vigente:"** escrita em palavras.
 8. Abra o quadro **"Avisos de qualidade de cadastro"** (ele começa fechado, mostrando só a
    quantidade) e leia os avisos. Nenhum deles impede gravar.
-9. Troque entre as abas **Grade** e **Sobre o Curso**.
+9. Troque entre as abas da página do curso: **Sobre o Curso**, **Grade**, **Disciplinas**, **Avaliações**,
+   **Atividades** e **Horários**.
 10. Clique em **Editar curso**, mude o **propósito** e salve. Deve aparecer confirmação. Se você
     mudar a sigla, a classificação ou o limite de turmas, o sistema **pede confirmação antes** — leia
     a pergunta com atenção.
@@ -176,7 +177,8 @@ Você vê tudo e muda tudo, inclusive as contas das outras pessoas.
 
 **Disciplinas**
 
-19. Clique em **Disciplinas** e escolha um curso na lista **Curso**.
+19. As disciplinas ficam **dentro do curso** (não há mais **Disciplinas** no menu): clique em **Cursos**,
+    abra um curso e clique na aba **Disciplinas**.
 20. Clique numa linha para abrir o detalhe. Para fechar, clique em **outra** linha — nesta tela,
     clicar de novo na mesma não fecha.
 21. Clique em **Editar disciplina**, corrija o nome ou a carga e salve.
@@ -324,7 +326,7 @@ Você trabalha com **turmas** e com os **horários** dos cursos. Cursos e instru
 
 **Disciplinas**
 
-10. Abra **Disciplinas**, escolha um curso e abra uma linha.
+10. Abra **Cursos** → um curso → aba **Disciplinas**, e abra uma linha.
 11. Clique em **Editar disciplina**, corrija um dado e salve.
 12. Na **ficha de uma turma**, na seção Disciplinas, abra uma linha e use **Gravar período** e os
     botões de **instrutores** daquela disciplina naquela turma.
