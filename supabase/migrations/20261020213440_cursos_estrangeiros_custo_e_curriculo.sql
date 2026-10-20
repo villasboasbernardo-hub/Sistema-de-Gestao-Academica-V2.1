@@ -122,7 +122,11 @@ create policy curriculos_substituir
 --   drop policy curriculos_ler on storage.objects;
 --   drop policy curriculos_carregar on storage.objects;
 --   drop policy curriculos_substituir on storage.objects;
---   delete from storage.buckets where id = 'curriculos';   -- so com o balde VAZIO (o Storage recusa)
+--   -- so com o balde VAZIO. ⚠️ O `delete` direto em `storage.buckets` e RECUSADO pelo gatilho
+--   -- `storage.protect_delete` (42501, medido na prova de reversao de 20/10/2026): ou pela API do
+--   -- Storage (`deleteBucket('curriculos')`, chave de servico), ou na mesma transacao com
+--   set local storage.allow_delete_query = 'true';
+--   delete from storage.buckets where id = 'curriculos';
 --   alter table public.cursos drop constraint cursos_custo_nao_negativo;
 --   alter table public.cursos drop column curriculo_pdf_em, drop column custo_composicao,
 --     drop column custo_total, drop column estrangeiros_observacao, drop column ofertavel_estrangeiros;
