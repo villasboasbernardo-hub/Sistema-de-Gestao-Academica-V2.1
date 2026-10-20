@@ -1,8 +1,13 @@
 "use client";
 
 /**
- * A grade de disciplinas — **a folha de cliente desta tela** (`FR-003` a `FR-006`, `FR-050` a
- * `FR-054`).
+ * A grade de disciplinas — **a folha de cliente da aba *Disciplinas* do curso** (`FR-003` a `FR-006`, `FR-050` a
+ * `FR-054`; spec 018, FR-001).
+ *
+ * ⚠️ **DESDE O BLOCO 3 ELA MORA NA PÁGINA DO CURSO** (pedido de Bernardo Villas Boas, 19/10/2026: *"todo caminho por
+ * clique passa pelo curso"*). O curso vem do endereço da página, e por isso a escolha de curso (a cascata) saiu; os
+ * parâmetros são os de `/cursos/[curso]`, com os MESMOS nomes que tinham em `/disciplinas` (C-3), e o endereço antigo
+ * redireciona para cá.
  *
  * ⚠️ **É UMA FOLHA SÓ, e os painéis abaixo dela NÃO levam marcador próprio.** O `"use client"` marca
  * a **fronteira**; o que é importado a partir daqui já está no pacote do navegador. Marcar cada
@@ -41,12 +46,14 @@ import { indicadoresDaGrade } from "@/lib/dominio/indicadores-da-grade";
 import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
-import { CascataDeCursoETurma } from "./CascataDeCursoETurma";
+import { Button } from "@/components/ui/button";
+
 import type { GradeDeDisciplinas as Grade, LinhaDaGradeDeDisciplinas } from "./consulta";
 import { DetalheDaDisciplina } from "./paineis/DetalheDaDisciplina";
+import { FormularioDeDisciplina } from "./paineis/FormularioDeDisciplina";
 import { ProporcaoDaCarga } from "./paineis/ProporcaoDaCarga";
 
-const ROTA = "/disciplinas" as const;
+const ROTA = "/cursos/[curso]" as const;
 
 export type PermissoesDaGrade = {
   readonly criar: boolean;
@@ -69,7 +76,6 @@ export type PermissoesDaGrade = {
  *    para decidir abrir ou fechar — e por isso a linha aberta não fechava. Quem lê `aberta` é o gancho.
  */
 export type ParametrosDaGrade = {
-  readonly curso: string;
   readonly situacao: string;
   readonly busca: string;
 };
@@ -232,17 +238,47 @@ export function GradeDeDisciplinas({
 
   const aberta = String(abertaNaUrl);
   const abertas = aberta === "" ? [] : [aberta];
+  /*
+   * ⚠️ **NOVA DISCIPLINA ABRE O FORMULÁRIO NO LUGAR** (C-2 da spec 018): o modo de criação de `FormularioDeDisciplina`
+   *    existia desde a fatia (b) e nenhuma tela o desenhava. Abrir ou fechar o painel é estado efêmero, não vista.
+   */
+  const [criando, definirCriando] = React.useState(false);
 
   return (
     <div className="flex flex-col gap-4" data-slot="grade-de-disciplinas">
-      <CascataDeCursoETurma cursos={grade.cursos} cursoNoEndereco={parametros.curso} />
+      {permissoes.criar && grade.cursoEscolhido ? (
+        <div className="flex flex-col gap-3">
+          <div>
+            <Button
+              type="button"
+              size="sm"
+              variant={criando ? "outline" : "default"}
+              onClick={() => definirCriando((v) => !v)}
+              aria-expanded={criando}
+              data-slot="nova-disciplina"
+            >
+              {criando ? "Fechar o cadastro" : "Nova disciplina"}
+            </Button>
+          </div>
+          {criando ? (
+            <div
+              className="border-borda bg-superficie rounded-ciaara border p-3"
+              data-slot="cadastro-de-disciplina"
+            >
+              <FormularioDeDisciplina
+                cursoId={grade.cursoEscolhido.id}
+                aoConcluir={() => definirCriando(false)}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {grade.cursoNaoAlcancado ? (
         <Alert data-slot="curso-fora-do-alcance">
           <AlertTitle>Este curso não está ao seu alcance</AlertTitle>
           <AlertDescription>
-            O endereço aponta para um curso que não existe ou que o seu perfil não enxerga. Escolha
-            um curso na lista acima.
+            O endereço aponta para um curso que não existe ou que o seu perfil não enxerga.
           </AlertDescription>
         </Alert>
       ) : null}

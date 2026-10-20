@@ -53,7 +53,8 @@ function primeiraMensagem(issues: readonly { message: string }[]): string {
 }
 
 function revalidar(): void {
-  revalidatePath("/disciplinas");
+  /* Spec 018 (Bloco 3): a grade de disciplinas mora na aba *Disciplinas* da página do curso. */
+  revalidatePath("/cursos/[curso]", "page");
   revalidatePath("/cursos");
   /*
    * ⚠️ **A FICHA DA TURMA ENTROU NA REVALIDAÇÃO EM 04/10/2026, E A FALTA DELA SERIA SILENCIOSA.**

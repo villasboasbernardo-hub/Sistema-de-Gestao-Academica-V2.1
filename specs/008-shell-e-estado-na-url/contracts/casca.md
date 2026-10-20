@@ -216,7 +216,7 @@ produção, não contra este documento, e é por isso que o registro tem data.
 
 ---
 
-### Segunda validação — `D-NAV-1`, 04/10/2026 · **a vigente**
+### Segunda validação — `D-NAV-1`, 04/10/2026 · *superada em um ponto pela terceira, abaixo*
 
 > ⚠️ **ESTA SESSÃO SUBSTITUI A MENU-1 COMO VALIDAÇÃO EM VIGOR, E A DE 11/09 FICA ONDE ESTÁ.**
 > Decisão superada não se apaga: a tabela acima é o registro de que a ordem antiga foi conferida
@@ -257,3 +257,37 @@ continuam fora, por `RF-CURSO-02`.
 | *Turmas* no menu | **Sim** — com `disponivel: true` no mesmo commit da página (PR 2) | 04/10/2026 |
 | Entradas futuras visíveis | **Sim**, marcadas "em breve" (MENU-2 intacta) | 04/10/2026 |
 | Ícone por entrada | **Sim** — a lateral recolhida mostra só ícones, e o rótulo fica no DOM para leitor de tela | 04/10/2026 |
+
+---
+
+### Terceira validação — Bloco 3 (spec 018), 19/10/2026 · **a vigente**
+
+> ⚠️ **ELA MUDA UM PONTO DA `D-NAV-1`, E A DE 04/10 FICA ONDE ESTÁ.** Decisão superada não se apaga.
+
+**Pedido de Bernardo Villas Boas, 19/10/2026** (`/corrigir` do Bloco 3, spec `018-bloco-3-pagina-do-curso-em-abas`):
+*"A entrada «Disciplinas» SAI do menu lateral; /disciplinas pode continuar existindo como endereço (redirecionando
+ou servindo a aba), mas todo caminho por clique passa pelo curso."*
+
+| # | Rótulo | Rota | Mudança em relação à `D-NAV-1` |
+|---|---|---|---|
+| 1 | Início | `/inicio` | — |
+| 2 | Cursos | `/cursos` | — |
+| 3 | Turmas | `/turmas` | — |
+| — | ~~Disciplinas~~ | ~~`/disciplinas`~~ | **saiu** — a grade é a aba *Disciplinas* da página do curso; o endereço antigo redireciona |
+| 4 | Instrutores | `/instrutores` | sobe um |
+| 5 | Cronograma | `/cronograma` | sobe um — segue *"em breve"* |
+| 6 | Atividades | `/atividades` | sobe um — segue *"em breve"* |
+| 7 | Administração | `/admin/usuarios` | — |
+
+⚠️ **E ESTA MUDANÇA TOCA O `RF-NAV-02` [PRESERVADO]**, que proíbe *"remover pontos de entrada"*. O que a sustenta é a
+regra 1 do `CLAUDE.md`: **a autorização é nominal e datada** — o pedido acima, de Bernardo, que nomeia a entrada e o
+destino. E o ponto de entrada da **função** não some: a grade continua a um clique de *Cursos* (curso → aba
+*Disciplinas*), e todo link antigo para `/disciplinas` chega a ela. O rótulo **"Disciplinas"** (P-14) segue, agora na
+aba.
+
+| Item | Resposta | Data |
+|---|---|---|
+| Ordem | **Início · Cursos · Turmas · Instrutores · Cronograma · Atividades · Administração** | 19/10/2026 |
+| *Disciplinas* | **Aba da página do curso**; `/disciplinas` só redireciona (C-1 da spec 018) | 19/10/2026 |
+| MENU-2 | intacta | 19/10/2026 |
+

@@ -76,6 +76,15 @@ const camposDaTurma = z.object({
    */
   inicio_etapa_presencial: dataOpcional,
   termino_etapa_presencial: dataOpcional,
+  /*
+   * ⚠️ **O REGIME DE HORÁRIO NOMEADO** (spec 018, Bloco 3): vazio = o regime vigente do curso (nulo); AUSENTE = não
+   *    mexer — o formulário só o manda quando o campo existe na tela, e um `update` com `null` por omissão trocaria
+   *    o regime de quem não pediu (e o banco recusaria na turma com lançamento).
+   */
+  regime_de_horario_id: z
+    .union([z.literal(""), z.uuid({ error: "Regime de horário inválido." })])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "" ? null : v)),
 });
 
 type CamposDaTurma = z.infer<typeof camposDaTurma>;
@@ -98,6 +107,17 @@ function etapaSoEmSemipresencial<T extends CamposDaTurma>(t: T): T {
   return t.modalidade === "semipresencial"
     ? t
     : { ...t, inicio_etapa_presencial: null, termino_etapa_presencial: null };
+}
+
+/*
+ * ⚠️ **NA TURMA EAD O REGIME NÃO É TOCADO** (C-15 da spec 018): ela não tem tempos presenciais, e a capacidade é a do
+ *    limite EAD (`RN-MAT-04`). Ausente também sai do que se grava: a coluna fica como está.
+ */
+function regimeSoForaDeEad<T extends CamposDaTurma>(t: T): T {
+  if (t.regime_de_horario_id !== undefined && t.modalidade !== "ead") return t;
+  const resto: Partial<T> = { ...t };
+  delete resto.regime_de_horario_id;
+  return resto as T;
 }
 
 function conferirEtapaPresencial(t: CamposDaTurma, ctx: z.RefinementCtx): void {
@@ -137,6 +157,7 @@ export const esquemaDeTurma = camposDaTurma
   .extend({ status: situacao })
   .refine(terminoNaoAntesDoInicio, MENSAGEM_DO_TERMINO)
   .transform(etapaSoEmSemipresencial)
+  .transform(regimeSoForaDeEad)
   .superRefine(conferirEtapaPresencial);
 
 /**
@@ -147,6 +168,7 @@ export const esquemaDeTurma = camposDaTurma
 export const esquemaDeEdicaoDaTurma = camposDaTurma
   .refine(terminoNaoAntesDoInicio, MENSAGEM_DO_TERMINO)
   .transform(etapaSoEmSemipresencial)
+  .transform(regimeSoForaDeEad)
   .superRefine(conferirEtapaPresencial);
 
 /** A observação de uma troca de situação ou de um arquivamento: opcional; em branco vira nula (D-COR-4). */

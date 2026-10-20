@@ -19,7 +19,6 @@
  * rótulo, nunca o substitui"* — aqui a substituição é **visual**, nunca acessível.
  */
 import {
-  BookOpenIcon,
   CalendarDaysIcon,
   ClipboardListIcon,
   ContactIcon,
@@ -34,7 +33,8 @@ import type { NomeDeIcone } from "@/lib/navegacao/menu";
 type Icone = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 /**
- * Os oito, escolhidos em 04/10/2026 (dúvida **D2** do plano, na recomendação).
+ * Os oito, escolhidos em 04/10/2026 (dúvida **D2** do plano, na recomendação) — sete desde o Bloco 3 (spec 018):
+ * *Disciplinas* saiu do menu e levou o livro aberto.
  *
  * ⚠️ `Users` para **Turmas** e `Contact` para **Instrutores** são a escolha que separa as duas: as
  * duas telas falam de pessoas, e dar a mesma figura às duas é o que faz quem navega por ícone errar
@@ -44,7 +44,6 @@ const ICONES: Readonly<Record<NomeDeIcone, Icone>> = {
   inicio: HouseIcon,
   cursos: GraduationCapIcon,
   turmas: UsersIcon,
-  disciplinas: BookOpenIcon,
   instrutores: ContactIcon,
   cronograma: CalendarDaysIcon,
   atividades: ClipboardListIcon,

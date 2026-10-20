@@ -130,10 +130,7 @@ async function limpar(): Promise<void> {
     }
     if (data.users.length < 200) break;
   }
-  conferir(
-    "usuarios",
-    (await servico.from("usuarios").delete().like("codigo", "USR-RGN-%")).error,
-  );
+  conferir("usuarios", (await servico.from("usuarios").delete().like("codigo", "USR-RGN-%")).error);
   conferir("aulas", (await servico.from("registros_aula").delete().like("codigo", "RGN-%")).error);
   for (const lado of Object.keys(CURSOS) as Lado[]) {
     const { data: c } = await servico
@@ -359,22 +356,27 @@ describe("Spec 018 · editar e inativar — o Operador edita e NÃO inativa (o c
       .update({ status: "inativo" })
       .eq("id", id);
     expect(error?.code).toBe("42501");
-    const { data } = await servico.from("regimes_de_horario").select("status").eq("id", id).single();
+    const { data } = await servico
+      .from("regimes_de_horario")
+      .select("status")
+      .eq("id", id)
+      .single();
     expect((data as { status: string }).status).toBe("ativo");
   });
 
-  it.each(["admin", "encarregado", "ajudante"] as const)(
-    "%s inativa e reativa",
-    async (c) => {
-      const id = await idDoRegime("regular", `Regime ${c}`);
-      for (const status of ["inativo", "ativo"] as const) {
-        const { error } = await sessao(c).from("regimes_de_horario").update({ status }).eq("id", id);
-        expect(error).toBeNull();
-        const { data } = await servico.from("regimes_de_horario").select("status").eq("id", id).single();
-        expect((data as { status: string }).status).toBe(status);
-      }
-    },
-  );
+  it.each(["admin", "encarregado", "ajudante"] as const)("%s inativa e reativa", async (c) => {
+    const id = await idDoRegime("regular", `Regime ${c}`);
+    for (const status of ["inativo", "ativo"] as const) {
+      const { error } = await sessao(c).from("regimes_de_horario").update({ status }).eq("id", id);
+      expect(error).toBeNull();
+      const { data } = await servico
+        .from("regimes_de_horario")
+        .select("status")
+        .eq("id", id)
+        .single();
+      expect((data as { status: string }).status).toBe(status);
+    }
+  });
 
   it("RF-HOR-02 · nem o Admin muda a quantidade de TA: 23514", async () => {
     const id = await idDoRegime("regular", "Regime admin");
@@ -455,12 +457,18 @@ describe("Spec 018 · a turma escolhe o regime — turmas.editar, e trava no pri
   });
 
   it("a leitura da tela diz quem está travado, com sessão", async () => {
-    const travada = await sessao("admin").rpc("regime_da_turma_travado" as never, {
-      p_turma: turmaComLancamento,
-    } as never);
-    const livre = await sessao("admin").rpc("regime_da_turma_travado" as never, {
-      p_turma: turmaLivre,
-    } as never);
+    const travada = await sessao("admin").rpc(
+      "regime_da_turma_travado" as never,
+      {
+        p_turma: turmaComLancamento,
+      } as never,
+    );
+    const livre = await sessao("admin").rpc(
+      "regime_da_turma_travado" as never,
+      {
+        p_turma: turmaLivre,
+      } as never,
+    );
     expect(travada.error).toBeNull();
     expect(travada.data).toBe(true);
     expect(livre.data).toBe(false);

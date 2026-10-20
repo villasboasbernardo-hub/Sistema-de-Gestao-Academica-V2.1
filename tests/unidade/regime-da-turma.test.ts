@@ -44,7 +44,12 @@ describe("regimeEfetivo — o regime que o saldo da turma usa", () => {
       executada: 100,
     };
     const entrada = { hoje: "2026-10-19", feriados: [] as string[] };
-    const com8 = andamentoDaTurma(turma, regimeEfetivo(doCurso, null), entrada.feriados, entrada.hoje);
+    const com8 = andamentoDaTurma(
+      turma,
+      regimeEfetivo(doCurso, null),
+      entrada.feriados,
+      entrada.hoje,
+    );
     const com9 = andamentoDaTurma(
       turma,
       regimeEfetivo(doCurso, { regimeTempos: 9 }),

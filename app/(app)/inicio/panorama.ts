@@ -24,6 +24,7 @@
  * o lançado no futuro. Turma sem nada lançado até hoje não aparece na função: a executada dela é **0**.
  */
 
+import { regimeEfetivo } from "@/lib/dominio/regime-da-turma";
 import { andamentoDaTurma, type RegimeDoCurso } from "@/lib/dominio/andamento-da-turma";
 import { ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 
@@ -49,6 +50,8 @@ export type TurmaDoPanorama = {
   readonly id: string;
   readonly data_termino: string | null;
   readonly modalidade: string;
+  /** Spec 018 (Bloco 3): o regime nomeado que a turma escolheu, ou nulo (o do curso). */
+  readonly regime?: { readonly regime_tempos: number } | null;
 };
 
 /** O regime vigente por curso, de `vw_cursos_regime_vigente` — uma linha por curso. */
@@ -136,7 +139,11 @@ export function montarPanorama(
           prevista: Number(c.chr_curricular ?? 0),
           executada: Number(executadaAteHoje.get(c.turma_id) ?? 0),
         },
-        regimeDoCurso(regimePorCurso.get(c.curso_id)),
+        /* Spec 018 (C-9): o regime nomeado da turma troca os TA presenciais; o limite EAD fica (`RN-MAT-04`). */
+        regimeEfetivo(
+          regimeDoCurso(regimePorCurso.get(c.curso_id)),
+          daTabela?.regime ? { regimeTempos: daTabela.regime.regime_tempos } : null,
+        ),
         feriadosDiaInteiro,
         hoje,
       );

@@ -43,14 +43,7 @@
  * recolhida não nasce com um buraco no lugar de um item.
  */
 export type NomeDeIcone =
-  | "inicio"
-  | "cursos"
-  | "turmas"
-  | "disciplinas"
-  | "instrutores"
-  | "cronograma"
-  | "atividades"
-  | "administracao";
+  "inicio" | "cursos" | "turmas" | "instrutores" | "cronograma" | "atividades" | "administracao";
 
 export type EntradaDeMenu = {
   /** O rótulo como aparece na tela. **Não renomear sem o `RF-NAV-02`.** */
@@ -148,16 +141,12 @@ export const MENU: readonly EntradaDeMenu[] = [
     disponivel: true,
     entregaEm: "Épico 5.5",
   },
-  // ⚠️ Passou a `disponivel: true` em 29/09/2026, com o PR 3 da fatia (b). Até aqui a entrada
-  //    existia marcada "em breve" (decisão MENU-2): o menu não cresce a cada épico, e ninguém
-  //    reaprende a navegação sete vezes.
-  {
-    rotulo: "Disciplinas",
-    rota: "/disciplinas",
-    icone: "disciplinas",
-    disponivel: true,
-    entregaEm: "Épico 5 (b)",
-  },
+  /*
+   * ⚠️ **"Disciplinas" SAIU DO MENU no Bloco 3** (spec 018, pedido de Bernardo Villas Boas de 19/10/2026: *"A
+   *    entrada «Disciplinas» SAI do menu lateral; (…) todo caminho por clique passa pelo curso"*). A grade mora na
+   *    aba *Disciplinas* da página do curso, e `/disciplinas` só redireciona. Registro datado ao lado da `D-NAV-1` em
+   *    `specs/008-shell-e-estado-na-url/contracts/casca.md`.
+   */
   {
     rotulo: "Instrutores",
     rota: "/instrutores",

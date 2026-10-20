@@ -148,6 +148,56 @@ export function vigenciaDoBanco(linha: LinhaDeVigencia): VigenciaComCatalogo {
 }
 
 /**
+ * O regime nomeado que a turma escolheu (spec 018, Bloco 3), embutido pela FK composta — o regime é do curso da turma.
+ */
+export const COLUNAS_DO_REGIME_DA_TURMA =
+  "regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(id, codigo, regime_tempos, ta_duracao_min, intervalo_manha_min, intervalo_tarde_min, hora_inicio_manha, hora_inicio_tarde, configuracao_horario_id)";
+
+export type LinhaDoRegimeDaTurma = {
+  readonly id: string;
+  readonly codigo: string;
+  readonly regime_tempos: number;
+  readonly ta_duracao_min: number;
+  readonly intervalo_manha_min: number;
+  readonly intervalo_tarde_min: number;
+  readonly hora_inicio_manha: string | null;
+  readonly hora_inicio_tarde: string | null;
+  readonly configuracao_horario_id: string | null;
+};
+
+/**
+ * O regime da turma como a VIGÊNCIA de toda semana dela: é ele que o relógio, a capacidade e os TA declarados usam, no
+ * lugar da padrão e da exceção do curso (C-9 da spec 018).
+ *
+ * ⚠️ **SEM DATA, DE PROPÓSITO**: o regime nomeado não tem vigência — a troca de regime por semana ficou para depois, e
+ *    a escolha trava no primeiro lançamento (`RF-HOR-05`), então nenhuma semana já lançada muda de regime.
+ * ⚠️ **INATIVO CONTINUA VALENDO** para a turma que já o usa (C-11): o `status` aqui é o da vigência, sempre ativo.
+ */
+export function regimeDaTurmaComoVigencia(
+  linha: LinhaDoRegimeDaTurma | null | undefined,
+): VigenciaComCatalogo | null {
+  if (!linha) return null;
+  return {
+    id: linha.id,
+    codigo: linha.codigo,
+    tipo: "padrao",
+    status: "ativo",
+    vigenteDe: "0001-01-01",
+    vigenteAte: null,
+    regimeTempos: linha.regime_tempos,
+    taDuracaoMin: linha.ta_duracao_min,
+    intervaloManhaMin: linha.intervalo_manha_min,
+    intervaloTardeMin: linha.intervalo_tarde_min,
+    horaInicioManha: linha.hora_inicio_manha,
+    horaInicioTarde: linha.hora_inicio_tarde,
+    limiteDiarioEadHoras: null,
+    fundamentoCurricular: null,
+    motivo: null,
+    configuracaoHorarioId: linha.configuracao_horario_id,
+  };
+}
+
+/**
  * A vigência virada no formato que o relógio consome.
  *
  * ⚠️ `hora_inicio_manha` chega como `HH:MM:SS` do Postgres e o relógio espera `HH:MM` — o corte é

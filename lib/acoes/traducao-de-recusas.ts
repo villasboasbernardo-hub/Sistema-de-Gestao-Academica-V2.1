@@ -22,6 +22,7 @@
  */
 
 import { RECUSA_DA_TURMA_ARQUIVADA } from "@/lib/dominio/arquivamento-da-turma";
+import { FRASE_DA_ESCOLHA_TRAVADA } from "@/lib/dominio/regime-da-turma";
 import { dataIlegivel, dataParaLeitura } from "@/lib/formato/data";
 import {
   chavesDaRecusa,
@@ -192,6 +193,12 @@ const MENSAGEM_DA_RESTRICAO: Readonly<Record<string, string>> = {
   ativ_tempos_positivos: "A atividade tem de ter de 1 a 12 tempos.",
   // ── Spec 014, PR 1 (14/10/2026) — nomes LIDOS de `pg_constraint`/`pg_indexes` no banco local ──
   ativ_tipo_obrigatorio: "Escolha o tipo da atividade na lista.",
+  // ── Bloco 3 (spec 018) — nomes da migration `20261020025815` ─────────────────────────────────────
+  regimes_de_horario_nome_ativo_uq:
+    "Já existe um regime ativo com este nome neste curso — escolha outro nome.",
+  regimes_de_horario_tarde_depois_da_manha:
+    "O início da tarde tem de ser depois do início da manhã.",
+  turmas_regime_do_proprio_curso_fk: "O regime escolhido não é do curso desta turma.",
   ativ_bloqueio_so_tr:
     "Só o Tempo Reserva com o tipo de parada informado pode bloquear os tempos de aula.",
   ativ_alunos_so_apoio: "A quantidade de alunos só se informa no Apoio Individualizado.",
@@ -394,6 +401,19 @@ function porChave(
       return "A turma não está arquivada.";
     case "janela_de_uma_semana":
       return "O painel lê a ocupação de uma semana por vez.";
+
+    // ── Bloco 3 (spec 018) — os regimes de horário nomeados ───────────────────────────────────────
+    case "regime_curricular_imutavel":
+      return "A quantidade de TA por dia e a duração do TA decorrem do currículo e não mudam. Para outro par, cadastre outro regime.";
+    case "regime_em_uso_com_lancamento":
+      return "O horário deste regime não muda mais: uma turma que o usa já tem lançamento no DSA. Para outro horário, cadastre outro regime.";
+    case "sem_permissao_de_desativar":
+      return "O seu perfil não inativa nem reativa regime de horário.";
+    case "regime_da_turma_travado":
+      // A mesma frase da tela (o campo travado na ficha), num lugar só.
+      return FRASE_DA_ESCOLHA_TRAVADA;
+    case "regime_inativo":
+      return "O regime de horário escolhido está inativo. Escolha um regime ativo do curso.";
 
     case "sala_fora_da_lista": {
       const valor = texto(d.valor);
@@ -723,6 +743,8 @@ const NUMERACAO_INTERNA: Readonly<Record<string, string>> = {
   sessoes_de_aplicacao_codigo_key: "a numeração das sessões de aplicação",
   // Bloco 2 (spec 017): `TFD-`.
   ta_fora_do_dsa_codigo_key: "a numeração dos TA fora do DSA",
+  // Bloco 3 (spec 018): `RGH-`.
+  regimes_de_horario_codigo_key: "a numeração dos regimes de horário",
 };
 
 /** Qual numeração interna estourou, se foi uma delas. */

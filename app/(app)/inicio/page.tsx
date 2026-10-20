@@ -150,7 +150,11 @@ export default async function Inicio({
      *    `in(curso_id, …)` aqui exigiria esperar a consulta de cursos e transformaria uma rodada em
      *    duas (`FR-012`). Os volumes mandam: 28 turmas, 24 regimes e o calendário de um ano.
      */
-    supabase.from("turmas").select("id, data_termino, modalidade"),
+    supabase
+      .from("turmas")
+      .select(
+        "id, data_termino, modalidade, regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(regime_tempos)",
+      ),
     supabase
       .from("vw_cursos_regime_vigente")
       .select("curso_id, regime_padrao_tempos, limite_diario_ead_horas"),

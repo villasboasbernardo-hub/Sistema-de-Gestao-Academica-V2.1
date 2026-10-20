@@ -37,6 +37,9 @@ const NAO_SAO_TELAS_DO_SISTEMA: Readonly<Record<string, string>> = {
 
   "/estilo": "a vitrine, fora do grupo autenticado (`FR-038`)",
   "/sem-configuracao": "o desvio de ambiente incompleto — ninguém navega até ela",
+  // Spec 018 (Bloco 3, C-1): a grade mora na aba *Disciplinas* do curso; o endereço antigo só redireciona.
+  "/disciplinas":
+    "endereço antigo da grade — redireciona para a aba Disciplinas do curso, não é destino",
 };
 
 function semComentario(fonte: string): string {

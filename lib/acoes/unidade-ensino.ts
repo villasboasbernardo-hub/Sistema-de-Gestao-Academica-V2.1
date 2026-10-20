@@ -40,7 +40,8 @@ function primeiraMensagem(issues: readonly { message: string }[]): string {
 }
 
 function revalidar(): void {
-  revalidatePath("/disciplinas");
+  /* Spec 018 (Bloco 3): a grade de disciplinas mora na aba *Disciplinas* da página do curso. */
+  revalidatePath("/cursos/[curso]", "page");
 }
 
 /** Cria a unidade dentro da disciplina (`FR-060`). */

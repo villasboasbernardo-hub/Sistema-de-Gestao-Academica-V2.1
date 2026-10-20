@@ -110,7 +110,7 @@ export async function salvarItemDoCurriculo(entrada: unknown): Promise<Resultado
     });
     if (error) return recusa(error);
   }
-  revalidatePath("/disciplinas");
+  revalidatePath("/cursos/[curso]", "page");
   revalidatePath("/turmas", "layout");
   const aviso = await avisoDaCh(disciplinaId);
   return aviso ? { ok: true, aviso } : { ok: true };
@@ -129,7 +129,7 @@ export async function mudarSituacaoDoItem(entrada: unknown): Promise<ResultadoDo
     .select("id");
   if (error) return recusa(error);
   if (!data || data.length === 0) return { ok: false, erro: SEM_PERMISSAO };
-  revalidatePath("/disciplinas");
+  revalidatePath("/cursos/[curso]", "page");
   revalidatePath("/turmas", "layout");
   return { ok: true };
 }

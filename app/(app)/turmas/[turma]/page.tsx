@@ -18,6 +18,7 @@ import Link from "next/link";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
+import { regimeEfetivo, rotuloDoRegime } from "@/lib/dominio/regime-da-turma";
 import {
   estadoDoArquivamento,
   fraseDaTurmaArquivada,
@@ -84,6 +85,7 @@ import {
   COLUNAS_DA_CARGA_DA_TURMA,
   COLUNAS_DO_TA_FORA_DO_DSA,
   COLUNAS_DA_FICHA_DA_TURMA,
+  regimeEmbutido,
   COLUNAS_DO_REGIME_DO_CURSO,
   datasDeFeriado,
   deveLerFeriados,
@@ -212,6 +214,8 @@ export default async function FichaDaTurma({
     foraRes,
     trocasRes,
     arquivosRes,
+    regimesDoCursoRes,
+    regimeTravadoRes,
   ] = await Promise.all([
     supabase
       .from("cursos")
@@ -287,6 +291,13 @@ export default async function FichaDaTurma({
       .select("ordem, acao, observacao, autor_id, criado_em")
       .eq("turma_id", turmaId)
       .order("ordem"),
+    /* Spec 018 (C-18): os regimes nomeados do curso e se a escolha da turma já travou, para *Editar turma*. */
+    supabase
+      .from("regimes_de_horario")
+      .select("id, nome, regime_tempos, ta_duracao_min, status")
+      .eq("curso_id", cursoId)
+      .order("nome"),
+    supabase.rpc("regime_da_turma_travado", { p_turma: turma.id as string }),
   ]);
   const trocas = (trocasRes.data ?? []) as {
     ordem: number;
@@ -315,6 +326,7 @@ export default async function FichaDaTurma({
    *    silêncio, o lançado no futuro (D-COR-2), e executada zero com a prevista inteira inventaria atraso.
    */
   const cargaDoAndamento = executadaRes.error ? null : cargaRes.data;
+  const regimeDaFicha = regimeEmbutido(turma.regime);
   const andamento = andamentoDaTurma(
     {
       status: turma.status as string,
@@ -327,7 +339,11 @@ export default async function FichaDaTurma({
           : ((executadaRes.data as { chd_executada: number } | null)?.chd_executada ?? 0),
       ),
     },
-    regimeDoBanco(regimeRes.data ?? null),
+    /* Spec 018 (C-9): o regime nomeado da turma troca os TA presenciais; o limite EAD fica (`RN-MAT-04`). */
+    regimeEfetivo(
+      regimeDoBanco(regimeRes.data ?? null),
+      regimeDaFicha ? { regimeTempos: Number(regimeDaFicha.regime_tempos) } : null,
+    ),
     datasDeFeriado(feriadosRes?.data ?? []),
     hoje,
   );
@@ -873,6 +889,23 @@ export default async function FichaDaTurma({
                     alunos: texto(turma.alunos),
                     inicio_etapa_presencial: texto(turma.inicio_etapa_presencial),
                     termino_etapa_presencial: texto(turma.termino_etapa_presencial),
+                    regime_de_horario_id: texto(turma.regime_de_horario_id),
+                  }}
+                  regimeDeHorario={{
+                    /* Os ativos, mais o atual se estiver inativo (C-11: ele continua valendo para a turma). */
+                    opcoes: (regimesDoCursoRes.data ?? [])
+                      .filter((r) => r.status === "ativo" || r.id === turma.regime_de_horario_id)
+                      .map((r) => ({
+                        id: r.id,
+                        rotulo: rotuloDoRegime({
+                          nome: r.nome,
+                          regimeTempos: Number(r.regime_tempos),
+                          taDuracaoMin: Number(r.ta_duracao_min),
+                        }),
+                        ativo: r.status === "ativo",
+                      })),
+                    /* ⚠️ A falha da leitura trava o campo: liberar a troca sem saber se há lançamento seria pior. */
+                    travado: regimeTravadoRes.error ? true : regimeTravadoRes.data === true,
                   }}
                   salas={salas}
                   turmasDoCurso={outras}

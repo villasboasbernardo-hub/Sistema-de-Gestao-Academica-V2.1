@@ -347,19 +347,35 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
   const daPagina = (nome: string) =>
     parametrosDaRota("/cursos/[curso]").find((p) => p.nome === nome) as Parametro;
 
-  it("a rota existe, com exatamente dois parâmetros", () => {
+  it("a rota existe, com a aba, a turma da Grade e os três da aba Disciplinas (spec 018)", () => {
     expect(ROTAS).toContain("/cursos/[curso]");
-    expect(parametrosDaRota("/cursos/[curso]").map((p) => p.nome)).toEqual(["aba", "turma"]);
+    expect(parametrosDaRota("/cursos/[curso]").map((p) => p.nome)).toEqual([
+      "aba",
+      "turma",
+      "situacao",
+      "busca",
+      "aberta",
+    ]);
   });
 
-  it("`aba` é escolha entre TRÊS, com padrão `sobre` e *Sobre o Curso* primeiro", () => {
+  it("`aba` é escolha entre SEIS, na ordem do Bloco 3, com padrão `sobre` e *Sobre o Curso* primeiro", () => {
     // ⚠️ Eram duas (Q-02 da spec 009); a spec 014 (FR-053, `RF-CURSO-02`) trouxe «Avaliações». A guarda foi
     //    INVERTIDA, não apagada: Relatório continua fora.
     // ⚠️ O PADRÃO PASSOU DE `grade` A `sobre` em 17/10/2026 (spec 016, FR-006.2; Q-10, Bernardo Villas
     //    Boas): *Sobre o Curso* é a primeira aba e a padrão, e o contrato é o ÚNICO dono do padrão.
     const aba = daPagina("aba");
     expect(aba.tipo).toBe("escolha");
-    if (aba.tipo === "escolha") expect([...aba.opcoes]).toEqual(["sobre", "grade", "avaliacoes"]);
+    // ⚠️ SEIS desde o Bloco 3 (spec 018, FR-006.1, pedido de Bernardo Villas Boas de 19/10/2026): *Sobre o Curso ·
+    //    Grade · Disciplinas · Avaliações · Atividades · Horários*.
+    if (aba.tipo === "escolha")
+      expect([...aba.opcoes]).toEqual([
+        "sobre",
+        "grade",
+        "disciplinas",
+        "avaliacoes",
+        "atividades",
+        "horarios",
+      ]);
     expect(aba.padrao).toBe("sobre");
   });
 
@@ -377,8 +393,17 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
     expect(daPagina("turma").historico).toBe("empilha");
   });
 
-  it("os dois avisam o servidor — a leitura da turma é do servidor", () => {
-    for (const p of parametrosDaRota("/cursos/[curso]")) expect(p.avisaServidor).toBe(true);
+  it("avisam o servidor, menos a linha aberta da aba Disciplinas, que é visual (como em `/disciplinas`)", () => {
+    for (const p of parametrosDaRota("/cursos/[curso]"))
+      expect(p.avisaServidor, p.nome).toBe(p.nome !== "aberta");
+  });
+
+  it("os três da aba Disciplinas têm os nomes, os tipos e os padrões de `/disciplinas` (spec 018, C-3)", () => {
+    const daGrade = (nome: string) =>
+      parametrosDaRota("/disciplinas").find((p) => p.nome === nome) as Parametro;
+    for (const nome of ["situacao", "busca", "aberta"]) {
+      expect(daPagina(nome), nome).toEqual(daGrade(nome));
+    }
   });
 });
 

@@ -6,6 +6,8 @@
  *    vêm de `limiteMaximo` (ponto único); a lista de turmas excedidas vem de `tetosDaTurma`, pelo
  *    auxiliar `tetosExcedidos`. Nenhum segundo cálculo aqui.
  * ⚠️ SEM MARCADOR DE CLIENTE.
+ * ⚠️ **DOIS COMPONENTES DESDE O BLOCO 3** (spec 018): os limites foram para a aba *Atividades*; as turmas excedidas
+ *    ficam acima das abas. O texto de cada limite continua num lugar só (`texto`).
  */
 import Link from "next/link";
 
@@ -35,14 +37,15 @@ function texto(l: LinhaDoLimite, ano: number): string {
   return `${l.sigla} — ${n(l.limite.valor)} TA (norma: ${n(l.percentual ?? 0)} % de ${n(l.chCurricular ?? 0)})`;
 }
 
-export function BlocoDeLimites({
+/**
+ * Os limites do curso, com a origem — desde o Bloco 3 (spec 018, C-5/C-6) dentro da aba *Atividades*.
+ */
+export function LimitesDoCurso({
   linhas,
   ano,
-  excedidos,
 }: {
   readonly linhas: readonly LinhaDoLimite[];
   readonly ano: number;
-  readonly excedidos: readonly TetoExcedido[];
 }) {
   return (
     <section
@@ -50,9 +53,9 @@ export function BlocoDeLimites({
       className="flex flex-col gap-2"
       data-slot="limites-do-curso"
     >
-      <h2 id="titulo-dos-limites" className="text-texto text-base font-semibold">
+      <h3 id="titulo-dos-limites" className="text-texto text-sm font-semibold">
         Limites máximos de AEC, TAD e TR
-      </h2>
+      </h3>
       <ul className="text-texto flex flex-col gap-0.5 text-sm">
         {linhas.map((l) => (
           <li key={l.sigla} data-limite={l.sigla}>
@@ -60,26 +63,37 @@ export function BlocoDeLimites({
           </li>
         ))}
       </ul>
-      {excedidos.length > 0 ? (
-        <div className="flex flex-col gap-1" data-slot="turmas-com-teto-excedido">
-          <p className="text-texto-suave text-xs">
-            Turmas com teto excedido (alerta, não bloqueia):
-          </p>
-          <ul role="status" className="flex flex-col gap-0.5 text-sm">
-            {excedidos.map((e) => (
-              <li key={`${e.turmaCodigo}-${e.categoria}-${e.alerta}`}>
-                <Link
-                  href={enderecoDaTurma(e.turmaCodigo)}
-                  className="text-atrasado-tinta underline-offset-2 hover:underline"
-                  data-slot="turma-excedida"
-                >
-                  {fraseDoExcedido(e)}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </section>
+  );
+}
+
+/**
+ * *Turmas com teto excedido* — ⚠️ **FICA ACIMA DAS ABAS** (spec 018, C-5): é ALERTA do curso (`RF-CURSO-06`
+ * [PRESERVADO]: a página do curso sinaliza o que pede atenção), e escondê-lo numa aba o tiraria da vista. Some quando
+ * não há nenhuma.
+ */
+export function TurmasComTetoExcedido({
+  excedidos,
+}: {
+  readonly excedidos: readonly TetoExcedido[];
+}) {
+  if (excedidos.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-1" data-slot="turmas-com-teto-excedido">
+      <p className="text-texto-suave text-xs">Turmas com teto excedido (alerta, não bloqueia):</p>
+      <ul role="status" className="flex flex-col gap-0.5 text-sm">
+        {excedidos.map((e) => (
+          <li key={`${e.turmaCodigo}-${e.categoria}-${e.alerta}`}>
+            <Link
+              href={enderecoDaTurma(e.turmaCodigo)}
+              className="text-atrasado-tinta underline-offset-2 hover:underline"
+              data-slot="turma-excedida"
+            >
+              {fraseDoExcedido(e)}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

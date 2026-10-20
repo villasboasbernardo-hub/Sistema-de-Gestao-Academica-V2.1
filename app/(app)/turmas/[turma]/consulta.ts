@@ -19,8 +19,22 @@ import { codigoDaTurmaNoSegmento } from "@/lib/navegacao/endereco-de-turma";
 import type { Database } from "@/lib/tipos/database";
 
 /** As colunas da turma que a ficha consome. Nunca `select *`. */
+/* Spec 018 (Bloco 3): + o regime nomeado que a turma escolheu — para o saldo e para o campo de *Editar turma*. Um
+ * literal só: concatenado, o tipo da linha deixa de ser inferido pelo cliente. */
 export const COLUNAS_DA_FICHA_DA_TURMA =
-  "id, codigo, turma, ano_letivo, status, modalidade, data_inicio, data_termino, sala_alocada, alunos, curso_id, inicio_etapa_presencial, termino_etapa_presencial";
+  "id, codigo, turma, ano_letivo, status, modalidade, data_inicio, data_termino, sala_alocada, alunos, curso_id, inicio_etapa_presencial, termino_etapa_presencial, regime_de_horario_id, regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(id, nome, regime_tempos, ta_duracao_min, status)";
+
+/**
+ * O regime nomeado embutido na linha da turma (spec 018), ou `null`.
+ *
+ * ⚠️ **O TIPO GERADO LÊ O EMBED PELA FK COMPOSTA COMO LISTA**, e o PostgREST o devolve como OBJETO (muitos-para-um:
+ *    a turma aponta para um regime). Aceitar as duas formas aqui, num lugar só, evita que cada tela escolha uma.
+ */
+export function regimeEmbutido<T>(valor: T | readonly T[] | null | undefined): T | null {
+  if (valor === null || valor === undefined) return null;
+  if (Array.isArray(valor)) return (valor[0] as T | undefined) ?? null;
+  return valor as T;
+}
 
 /** O código gravado, a partir do que a rota entregou. */
 export function codigoDaFicha(segmento: string): string {
