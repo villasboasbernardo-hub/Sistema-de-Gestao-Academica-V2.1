@@ -29,6 +29,9 @@ do remoto sem parar, com a prova da SC-009.
 6. **`vw_dias_parados_turma`** recriada com `create or replace view … with (security_invoker = true)`, mesmas colunas,
    o TA do dia `coalesce(regime da turma, padrão vigente do curso, 8)`.
 
+⚠️ **Nada novo depende da data do servidor.** A view recriada continua lendo `vw_cursos_regime_vigente`, que escolhe a
+vigência por `current_date` (o **D20 residual**, já registrado no `CLAUDE.md`); o regime da turma não tem data.
+
 ## O caso que discrimina (DoD 8)
 
 - **pgTAP 142**: a turma **com** regime de 9 TA e um dia parado de dia inteiro conta **9** TA; a mesma turma sem regime

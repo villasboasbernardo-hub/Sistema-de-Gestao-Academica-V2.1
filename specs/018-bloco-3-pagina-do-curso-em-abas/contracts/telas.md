@@ -3,7 +3,9 @@
 ## `/cursos/[curso]` — as seis abas
 
 - `aba`: `sobre` (padrão) · `grade` · `disciplinas` · `avaliacoes` · `atividades` · `horarios`, nessa ordem
-  (`data-aba`, `role="tab"`).
+  (`data-aba`, `role="tab"`). Rótulos: *Sobre o Curso · Grade · Disciplinas · Avaliações · Atividades · Horários*; a
+  aba *Atividades* tem o título *"Atividades extraclasse previstas no currículo"*, para não se confundir com o menu
+  *Atividades* (as da turma).
 - Parâmetros novos da aba Disciplinas (os mesmos nomes de `/disciplinas`): `situacao` (escolha, padrão `ativo`),
   `busca` (texto), `aberta` (texto, **visual** — `avisaServidor: false`).
 - Cada aba lê o que precisa **só quando aberta** (o padrão de `aba === "avaliacoes"` hoje).

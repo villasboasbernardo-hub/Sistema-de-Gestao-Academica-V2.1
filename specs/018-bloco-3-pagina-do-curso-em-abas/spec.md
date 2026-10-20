@@ -6,7 +6,8 @@
 
 **Status**: Draft — specify em 19/10/2026, pelo `/corrigir` (um pedido = uma spec = um PR = uma conferência; as
 dúvidas são decididas pela recomendação e conferidas por Bernardo no fim) · clarify em 19/10/2026: 19 decisões
-adotadas por padrão (C-1 a C-19, seção Clarifications)
+adotadas por padrão (C-1 a C-19, seção Clarifications) · analyze em 19/10/2026: 5 achados de texto e cobertura
+  aplicados, nenhum crítico
 
 **Input**: o pedido de Bernardo Villas Boas de 19/10/2026 — *"Bloco 3 do plano de correções — a página do curso em
 abas, tudo num PR só"* — e o Bloco 3 de `docs/correcoes/plano-de-correcoes-em-blocos.md` (itens 1 a 4), com a
