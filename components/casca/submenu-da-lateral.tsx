@@ -50,9 +50,7 @@ export function SubmenuDaLateral({
    * ⚠️ **ABERTO = O QUE A PESSOA ESCOLHEU, SENÃO O RAMO DA PÁGINA** — derivado a cada desenho, sem efeito: ao navegar,
    *    o ramo da página nova abre sozinho, e o que a pessoa abriu ou fechou à mão continua como ela deixou.
    */
-  const [escolhas, definirEscolhas] = React.useState<ReadonlyMap<string, boolean>>(
-    () => new Map(),
-  );
+  const [escolhas, definirEscolhas] = React.useState<ReadonlyMap<string, boolean>>(() => new Map());
   const abertos = {
     has: (chave: string) => escolhas.get(chave) ?? ramo.abertos.includes(chave),
   };
