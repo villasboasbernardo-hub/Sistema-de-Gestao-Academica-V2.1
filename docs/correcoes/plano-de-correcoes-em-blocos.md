@@ -132,18 +132,21 @@ _(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos*
    - Critério: nenhum cartão do papel corta o instrutor; prova com o cartão de 1 TA e o de nome mais longo do catálogo real.
 7. 🐛 **Quadro de CH do papel ordena códigos como texto (IV, IX, V); pela regra de 08/10 o romano ordena pelo valor. Existe na main desde 07/10.** _(Achado na conferência do PR #68, 18/10/2026: `tabelaDeCh`, em `lib/dominio/dsa/impressao.ts`, ordena por `localeCompare`, e não por `emOrdemNaturalDoCodigo`.)_
 
-## Bloco 3 — Página do curso em abas (spec própria) — 🟨 IMPLEMENTADO em 20/10/2026, aguardando a conferência
+## Bloco 3 — Página do curso em abas (spec própria) — ✅ CONCLUÍDO em 20/10/2026
 
-> 🟨 **Implementado em 20/10/2026** — spec `018-bloco-3-pagina-do-curso-em-abas`, pelo fluxo `/corrigir`, num PR só, com
-> **uma migration que só acrescenta** (`20261020025815_regimes_nomeados_por_curso`). **Sem merge** até a conferência
-> de Bernardo Villas Boas; o DSA de toda turma de hoje sai igual (nenhuma escolheu regime), então o merge não espera a
-> virada de semana.
+> ✅ **Concluído em 20/10/2026** — spec `018-bloco-3-pagina-do-curso-em-abas`, pelo fluxo `/corrigir`, num PR só: **#75**,
+> mesclado por squash na `main` em **`34de1ae`**, depois da conferência de Bernardo Villas Boas (*"APROVADO"*, com as
+> decisões C-1 a C-19 e I-1 a I-6 como ficaram) e da migration no remoto pelo rito (backup
+> `remoto-20261020-015448.sql`; 84 e 84; impressão digital `39af6fd9…`, 2.201 objetos, igual nos dois bancos).
+> CI verde na `main` sobre `34de1ae` (os três blocos; 526 de ponta a ponta sem instável) e Production servindo o merge
+> (deploy de `34de1ae` em `success`); o ramo foi apagado, local e remoto.
 > - **1** a aba *Disciplinas* no curso, com *Nova disciplina*; *Disciplinas* saiu do menu e `/disciplinas` só
 >   redireciona · **2** a aba *Atividades* com os limites, o Estudo Individual e os tipos · **3** a aba *Horários* com os
 >   regimes nomeados (novo, editar, inativar) e as vigências do curso para ler; a turma escolhe o regime em *Editar
 >   turma*, e o DSA, o alerta do excepcional, a cascata, o dia parado e o saldo usam o dela · **4** a aba *Avaliações*
 >   só com o previsto · **5** a ordem pedida.
-> - Pendências novas, na lista de pequenos ajustes: `PEND-018-1` e `PEND-018-2`; a `PEND-018-3` (o guia de testes) foi fechada no próprio PR.
+> - Pendências novas, na lista de pequenos ajustes: `PEND-018-1` e `PEND-018-2`; a `PEND-018-3` (o guia de testes) foi
+>   fechada no próprio PR.
 
 1. Aba **Disciplinas**, com o cadastro e as UEs; a entrada *Disciplinas* sai do menu lateral.
 2. Aba **Atividades extraclasse** (o previsto no currículo; o acompanhamento é da turma).
