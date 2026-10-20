@@ -28,12 +28,13 @@
  * seria ruído.
  */
 
+import { temCapacitacao, type CapacitacaoDoInstrutor } from "./capacitacao-didatica";
 import { ehMilitar } from "./militar-ou-civil";
 
 export type InstrutorParaAvisos = {
   readonly id: string;
   readonly dataInicioDocenciaCiaara: string | null;
-  readonly capacitacaoDidatica: string | null;
+  readonly capacitacao: CapacitacaoDoInstrutor;
   readonly nip: string | null;
   readonly pg: string | null;
   readonly especialidade: string | null;
@@ -73,7 +74,7 @@ export const AVISOS_INICIAIS: readonly RegraDeAviso[] = [
   {
     chave: "sem-data-docencia",
     titulo: "Data de início de docência não informada",
-    seAplica: (i) => vazio(i.dataInicioDocenciaCiaara) && vazio(i.capacitacaoDidatica),
+    seAplica: (i) => vazio(i.dataInicioDocenciaCiaara) && !temCapacitacao(i.capacitacao),
   },
 ];
 

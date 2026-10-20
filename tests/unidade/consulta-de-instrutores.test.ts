@@ -37,6 +37,10 @@ class Gravador {
     this.chamadas.push(["in", coluna, [...valores]]);
     return this;
   }
+  is(coluna: string, valor: null) {
+    this.chamadas.push(["is", coluna, valor]);
+    return this;
+  }
   contains(coluna: string, valores: readonly string[]) {
     this.chamadas.push(["contains", coluna, [...valores]]);
     return this;
@@ -100,7 +104,7 @@ describe("`FR-025` · os filtros entram na mesma consulta, em E lógico", () => 
         ["eq", "categoria", "Militar"],
         ["eq", "regime_trabalho", "20h"],
         ["eq", "nivel_escolaridade", "Superior"],
-        ["ilike", "capacitacao_didatica", "%C-Exp-TE%"],
+        ["contains", "capacitacoes_didaticas", ["C-Exp-TE"]],
       ]),
     );
     expect(filtros).toHaveLength(6);
@@ -118,11 +122,29 @@ describe("`FR-025` · os filtros entram na mesma consulta, em E lógico", () => 
 });
 
 describe("`FR-025` emendado em 15/09/2026 · os filtros novos entram na mesma consulta", () => {
-  it('capacitação = nenhuma casa com o campo vazio, e não com o texto "nenhuma"', () => {
+  it('capacitação = nenhuma casa com a lista vazia E sem texto a corrigir, e não com o texto "nenhuma"', () => {
+    // Spec 020 (C-12): "tem capacitação" é lista não vazia OU texto a corrigir — "Nenhuma" é o contrário dos dois.
     const filtros = montar({ capacitacao: "nenhuma" }).filter((c) => c[0] !== "order");
     expect(filtros).toEqual([
       ["eq", "status", "ativo"],
-      ["or", "capacitacao_didatica.is.null,capacitacao_didatica.eq."],
+      ["eq", "capacitacoes_didaticas", "{}"],
+      ["is", "capacitacao_didatica_a_corrigir", null],
+    ]);
+  });
+
+  it("spec 020 (C-9) · capacitação da lista é «contém» na lista — quem tem duas aparece nas duas", () => {
+    const filtros = montar({ capacitacao: "C-Esp-DID" }).filter((c) => c[0] !== "order");
+    expect(filtros).toEqual([
+      ["eq", "status", "ativo"],
+      ["contains", "capacitacoes_didaticas", ["C-Esp-DID"]],
+    ]);
+  });
+
+  it("spec 020 · um valor fora da lista (link antigo) procura no texto a corrigir, com o curinga literal", () => {
+    const filtros = montar({ capacitacao: "Pedago%" }).filter((c) => c[0] !== "order");
+    expect(filtros).toEqual([
+      ["eq", "status", "ativo"],
+      ["ilike", "capacitacao_didatica_a_corrigir", "%Pedago\\%%"],
     ]);
   });
 

@@ -18,6 +18,7 @@
  */
 import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { rotuloDoRegime } from "@/lib/constantes/instrutor";
+import { CAPACITACOES_DIDATICAS, rotuloDasCapacitacoes } from "@/lib/dominio/capacitacao-didatica";
 import { dataParaLeitura } from "@/lib/formato/data";
 
 import type { ValoresFuncionais } from "../campos";
@@ -106,7 +107,26 @@ export function FichaEmLeitura({
             rotulo: "Formação principal e secundária",
             valor: texto(v.formacao_principal_secundaria),
           },
-          { rotulo: "Capacitação didática", valor: texto(v.capacitacao_didatica) },
+          {
+            rotulo: "Capacitação didática",
+            valor: (
+              <>
+                {rotuloDasCapacitacoes(v.capacitacoes_didaticas.split(","))}
+                {/* Spec 020 (C-11): o texto antigo que não casou fica guardado e pede correção à mão. */}
+                {v.capacitacao_didatica_a_corrigir.trim() !== "" ? (
+                  <span
+                    role="status"
+                    className="text-atrasado-tinta mt-1 block text-xs"
+                    data-slot="capacitacao-a-corrigir"
+                  >
+                    Capacitação a corrigir: «{v.capacitacao_didatica_a_corrigir.trim()}» — não está
+                    na lista ({CAPACITACOES_DIDATICAS.join(", ")}). Marque as capacitações em Editar
+                    e apague o texto.
+                  </span>
+                ) : null}
+              </>
+            ),
+          },
           {
             rotulo: "Início da docência na MB",
             valor: dataParaLeitura(v.data_inicio_docencia_mb),

@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { conferirTetoDeSeries, MAXIMO_DE_SERIES } from "@/components/graficos/tipos";
 import { escalaDeLinhas } from "@/lib/dominio/antiguidade";
 import {
+  CAPACITACAO_A_CORRIGIR,
   CAPACITACAO_NENHUMA,
   COM_CAPACITACAO,
   FAIXA_OUTROS,
@@ -19,6 +20,7 @@ import {
   SEM_CAPACITACAO,
   type InstrutorParaGraficos,
 } from "@/lib/dominio/graficos-instrutor";
+import { converterCapacitacao } from "@/lib/dominio/capacitacao-didatica";
 
 /** A escala como `config_listas` a entrega, com SC e SCNS no mesmo peso. */
 const ESCALA = escalaDeLinhas(
@@ -37,7 +39,7 @@ const base: InstrutorParaGraficos = {
   om: "CHM",
   escolaridade: null,
   regime: "20h",
-  capacitacaoDidatica: null,
+  capacitacao: converterCapacitacao(null),
 };
 const com = (id: string, campos: Partial<InstrutorParaGraficos>): InstrutorParaGraficos => ({
   ...base,
@@ -136,10 +138,10 @@ describe("`RN-ANT-01` · barras de posto/graduação em antiguidade, nunca alfab
 describe("`FR-026.4` emendado · capacitação didática com a fatia 'Nenhuma'", () => {
   it("duas qualificações contam nas duas fatias; o campo vazio conta em Nenhuma, no fim", () => {
     const lista = [
-      com("1", { capacitacaoDidatica: "C-Exp-TE, C-Esp-DID" }),
-      com("2", { capacitacaoDidatica: "C-Exp-TE" }),
-      com("3", { capacitacaoDidatica: "" }),
-      com("4", { capacitacaoDidatica: null }),
+      com("1", { capacitacao: converterCapacitacao("C-Exp-TE, C-Esp-DID") }),
+      com("2", { capacitacao: converterCapacitacao("C-Exp-TE") }),
+      com("3", { capacitacao: converterCapacitacao("") }),
+      com("4", { capacitacao: converterCapacitacao(null) }),
     ];
     expect(grafico(lista, "capacitacao")?.barras).toEqual([
       { nome: "C-Exp-TE", valor: 2 },
@@ -148,11 +150,28 @@ describe("`FR-026.4` emendado · capacitação didática com a fatia 'Nenhuma'",
     ]);
   });
 
+  it("spec 020 (C-12) · o texto que não casou vira a fatia «A corrigir» e conta como COM capacitação", () => {
+    const lista = [
+      com("1", { capacitacao: converterCapacitacao("Pedagogia") }),
+      com("2", { capacitacao: converterCapacitacao("C-Exp-TE, Pedagogia") }),
+      com("3", { capacitacao: converterCapacitacao(null) }),
+    ];
+    expect(grafico(lista, "capacitacao")?.barras).toEqual([
+      { nome: CAPACITACAO_A_CORRIGIR, valor: 2 },
+      { nome: "C-Exp-TE", valor: 1 },
+      { nome: CAPACITACAO_NENHUMA, valor: 1 },
+    ]);
+    expect(grafico(lista, "indice-capacitacao")?.barras).toEqual([
+      { nome: COM_CAPACITACAO, valor: 2 },
+      { nome: SEM_CAPACITACAO, valor: 1 },
+    ]);
+  });
+
   it("o índice de capacitação geral tem exatamente duas fatias e soma o total (spec 021)", () => {
     const lista = [
-      com("1", { capacitacaoDidatica: "C-Exp-TE, C-Esp-DID" }),
-      com("2", { capacitacaoDidatica: "   " }),
-      com("3", { capacitacaoDidatica: null }),
+      com("1", { capacitacao: converterCapacitacao("C-Exp-TE, C-Esp-DID") }),
+      com("2", { capacitacao: converterCapacitacao("   ") }),
+      com("3", { capacitacao: converterCapacitacao(null) }),
     ];
     const fatias = grafico(lista, "indice-capacitacao")?.barras ?? [];
     expect(fatias).toEqual([

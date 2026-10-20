@@ -15,6 +15,7 @@ import {
   converterCapacitacao,
   rotuloDasCapacitacoes,
   temCapacitacao,
+  capacitacaoDoCadastro,
 } from "@/lib/dominio/capacitacao-didatica";
 import { Constants } from "@/lib/tipos/database";
 
@@ -65,5 +66,25 @@ describe("a leitura", () => {
   it("as marcadas, na ordem da lista, ou «Nenhuma»", () => {
     expect(rotuloDasCapacitacoes(["Licenciatura", "C-Esp-DID"])).toBe("C-Esp-DID, Licenciatura");
     expect(rotuloDasCapacitacoes([])).toBe("Nenhuma");
+  });
+});
+
+describe("o que o banco devolve", () => {
+  it("põe a lista na ordem fechada, sem repetição, e normaliza o texto a corrigir", () => {
+    expect(capacitacaoDoCadastro(["Licenciatura", "C-Esp-DID", "C-Esp-DID"], "  ")).toEqual({
+      lista: ["C-Esp-DID", "Licenciatura"],
+      aCorrigir: null,
+    });
+    expect(capacitacaoDoCadastro(null, " Pedagogia ")).toEqual({
+      lista: [],
+      aCorrigir: "Pedagogia",
+    });
+  });
+
+  it("valor fora da lista nunca some: vai para o texto a corrigir", () => {
+    expect(capacitacaoDoCadastro(["C-Exp-TE", "Outra"], null)).toEqual({
+      lista: ["C-Exp-TE"],
+      aCorrigir: "Outra",
+    });
   });
 });

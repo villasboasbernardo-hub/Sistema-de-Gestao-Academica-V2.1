@@ -189,7 +189,10 @@ describe("spec 020 (Bloco 5), C-1 a C-4 · estrangeiros e custo, só na edição
   });
 
   it("custo que não é valor em reais é recusado com a frase do campo", () => {
-    expect(erro(editar({ custo_total: "doze mil" }))).toMatch(/Custo total: use reais com vírgula/);
+    const r = editar({ custo_total: "doze mil" });
+    expect(r.success ? "" : r.error.issues[0]?.message).toMatch(
+      /Custo total: use reais com vírgula/,
+    );
   });
 
   it("⚠️ AUSENTE NÃO APAGA: quem edita sem os campos novos não os manda ao banco", () => {

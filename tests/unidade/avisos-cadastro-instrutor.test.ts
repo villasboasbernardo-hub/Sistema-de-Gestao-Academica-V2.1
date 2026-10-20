@@ -9,11 +9,12 @@ import {
   type InstrutorParaAvisos,
   type RegraDeAviso,
 } from "@/lib/dominio/avisos-cadastro-instrutor";
+import { converterCapacitacao } from "@/lib/dominio/capacitacao-didatica";
 
 const completo: InstrutorParaAvisos = {
   id: "completo",
   dataInicioDocenciaCiaara: "2020-01-01",
-  capacitacaoDidatica: "C-Exp-TE",
+  capacitacao: converterCapacitacao("C-Exp-TE"),
   nip: "12.3456.78",
   pg: "CT",
   especialidade: "-EF",
@@ -37,10 +38,10 @@ describe("`RF-INSTR-09` · os dois avisos com que a lista começa", () => {
         ...completo,
         id: "sem-data-sem-cap",
         dataInicioDocenciaCiaara: null,
-        capacitacaoDidatica: null,
+        capacitacao: converterCapacitacao(null),
       },
       { ...completo, id: "sem-data-com-cap", dataInicioDocenciaCiaara: null },
-      { ...completo, id: "com-data-sem-cap", capacitacaoDidatica: "" },
+      { ...completo, id: "com-data-sem-cap", capacitacao: converterCapacitacao("") },
     ];
     const aviso = avisosDoCadastro(lista, AVISOS_INICIAIS).find(
       (a) => a.chave === "sem-data-docencia",

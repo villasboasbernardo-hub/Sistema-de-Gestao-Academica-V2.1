@@ -202,3 +202,37 @@ describe("`FR-024` · máscara: valida os dígitos, grava o formato canônico", 
     expect(r.success && r.data.funcional.nip).toBe("12.3456.78");
   });
 });
+
+describe("spec 020 (Bloco 5), C-9 a C-11 · capacitação didática em lista fechada", () => {
+  const criar = (funcional: Record<string, unknown>) =>
+    esquemaDeCriacaoDeInstrutor.safeParse({ funcional: { ...VALIDO, ...funcional } });
+
+  it("as marcadas chegam como lista, na ordem fechada e sem repetição", () => {
+    const r = criar({ capacitacoes_didaticas: "Licenciatura,C-Esp-DID,C-Esp-DID" });
+    expect(r.success && r.data.funcional.capacitacoes_didaticas).toEqual([
+      "C-Esp-DID",
+      "Licenciatura",
+    ]);
+  });
+
+  it("nenhuma marcada é lista vazia — e não nulo", () => {
+    const r = criar({ capacitacoes_didaticas: "" });
+    expect(r.success && r.data.funcional.capacitacoes_didaticas).toEqual([]);
+  });
+
+  it("valor fora da lista é recusado, nomeado", () => {
+    const r = criar({ capacitacoes_didaticas: "C-Esp-DID,Pedagogia" });
+    expect(r.success).toBe(false);
+    expect(!r.success && r.error.issues[0]?.message).toMatch(/Pedagogia/);
+  });
+
+  it("o texto antigo a corrigir é texto opcional: apagá-lo grava nulo", () => {
+    const r = criar({ capacitacao_didatica_a_corrigir: "   " });
+    expect(r.success && r.data.funcional.capacitacao_didatica_a_corrigir).toBeNull();
+  });
+
+  it("⚠️ a coluna antiga não é mais gravada pela tela (aposentada, C-10)", () => {
+    const r = criar({ capacitacao_didatica: "C-Exp-TE" });
+    expect(r.success && "capacitacao_didatica" in r.data.funcional).toBe(false);
+  });
+});

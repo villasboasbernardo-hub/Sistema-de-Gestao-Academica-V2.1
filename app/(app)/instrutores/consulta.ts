@@ -19,6 +19,7 @@
  *
  * ⚠️ VIVE AO LADO DA PÁGINA, COMO `inicio/panorama.ts`, porque é da tela. Não é regra de domínio.
  */
+import { ehCapacitacaoDidatica } from "@/lib/dominio/capacitacao-didatica";
 import { POSTOS_POR_CIRCULO } from "@/lib/dominio/circulo-hierarquico";
 
 /**
@@ -35,6 +36,7 @@ export type Encadeavel = {
   ilike(coluna: string, padrao: string): Encadeavel;
   in(coluna: string, valores: readonly string[]): Encadeavel;
   or(filtros: string): Encadeavel;
+  is(coluna: string, valor: null): Encadeavel;
   contains(coluna: string, valores: readonly string[]): Encadeavel;
   order(coluna: string, opcoes: { ascending: boolean }): Encadeavel;
 };
@@ -95,7 +97,7 @@ export const PARAMETROS_SEM_RECORTE: ParametrosDaListagem = {
  * saber quais colunas a consulta traz — as linhas chegam tipadas como erro.
  */
 export const COLUNAS_DA_LISTAGEM =
-  "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, categoria, om, regime_trabalho, nivel_escolaridade, capacitacao_didatica, nip, status, antiguidade_declarada_num, ordem_antiguidade, habilitado, selecionado, data_inicio_docencia_ciaara";
+  "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, categoria, om, regime_trabalho, nivel_escolaridade, capacitacoes_didaticas, capacitacao_didatica_a_corrigir, nip, status, antiguidade_declarada_num, ordem_antiguidade, habilitado, selecionado, data_inicio_docencia_ciaara";
 
 /**
  * Normaliza a busca como `app.normalizar_texto` normaliza `nome_normalizado`: sem acento, sem caixa,
@@ -131,15 +133,20 @@ export function montarConsultaDeInstrutores<C>(consulta: C, parametros: Parametr
   if (parametros.regime !== "") c = c.eq("regime_trabalho", parametros.regime);
   if (parametros.escolaridade !== "") c = c.eq("nivel_escolaridade", parametros.escolaridade);
   /*
-   * ⚠️ CAPACITAÇÃO É "CONTÉM", E NÃO "IGUAL". O campo guarda mais de uma qualificação no mesmo texto
-   * (`C-Exp-TE, Licenciatura`), e é por isso que o gráfico de capacitação conta o mesmo instrutor em
-   * duas barras (`FR-026.4`). Filtrar por igualdade esconderia quem tem duas.
+   * ⚠️ CAPACITAÇÃO É "CONTÉM", E NÃO "IGUAL". O instrutor tem mais de uma (`C-Exp-TE, Licenciatura`), e é por isso
+   * que o gráfico de capacitação conta o mesmo instrutor em duas barras (`FR-026.4`). Filtrar por igualdade
+   * esconderia quem tem duas.
+   * ⚠️ SPEC 020 (Bloco 5): desde a lista fechada, "contém" é na LISTA (`capacitacoes_didaticas`); um valor fora dela
+   *    — um link antigo, de quando o campo era texto — procura no texto que não casou, que ficou guardado.
    */
-  if (parametros.capacitacao === CAPACITACAO_NENHUMA) {
-    // "Nenhuma" é o campo vazio: nulo ou texto vazio, a mesma regra do indicador e do gráfico.
-    c = c.or("capacitacao_didatica.is.null,capacitacao_didatica.eq.");
-  } else if (parametros.capacitacao !== "") {
-    c = c.ilike("capacitacao_didatica", `%${escaparCuringas(parametros.capacitacao.trim())}%`);
+  const capacitacao = parametros.capacitacao.trim();
+  if (capacitacao === CAPACITACAO_NENHUMA) {
+    // "Nenhuma" é a lista vazia E nenhum texto a corrigir — a mesma regra do indicador e do gráfico (C-12).
+    c = c.eq("capacitacoes_didaticas", "{}").is("capacitacao_didatica_a_corrigir", null);
+  } else if (ehCapacitacaoDidatica(capacitacao)) {
+    c = c.contains("capacitacoes_didaticas", [capacitacao]);
+  } else if (capacitacao !== "") {
+    c = c.ilike("capacitacao_didatica_a_corrigir", `%${escaparCuringas(capacitacao)}%`);
   }
 
   if (parametros.posto !== "") c = c.eq("posto_graduacao", parametros.posto);

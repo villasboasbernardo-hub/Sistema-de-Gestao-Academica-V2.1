@@ -24,6 +24,7 @@
 import { z } from "zod";
 
 import { UFS } from "@/lib/constantes/instrutor";
+import { ehCapacitacaoDidatica, emOrdemDaLista } from "@/lib/dominio/capacitacao-didatica";
 import { ehMilitar } from "@/lib/dominio/militar-ou-civil";
 import {
   limparMascara,
@@ -130,6 +131,30 @@ const regimeOpcional = z
   .transform((v) => (v === undefined || v === "" ? null : v));
 
 /**
+ * Spec 020 (Bloco 5), C-9: a capacitação didática em lista fechada. O formulário manda as caixas marcadas como texto
+ * separado por vírgula (o formato de todo valor da ficha); aqui ela vira lista, na ordem fechada e sem repetição.
+ * Valor fora da lista é recusado, nomeado — o tipo do banco recusaria de novo, com `22P02`.
+ */
+const capacitacoesDidaticas = z
+  .string()
+  .optional()
+  .transform((v, ctx) => {
+    const partes = (v ?? "")
+      .split(",")
+      .map((p) => p.trim())
+      .filter((p) => p !== "");
+    const fora = partes.filter((p) => !ehCapacitacaoDidatica(p));
+    if (fora.length > 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Capacitação didática fora da lista: ${fora.join(", ")}.`,
+      });
+      return z.NEVER;
+    }
+    return emOrdemDaLista(partes);
+  });
+
+/**
  * As colunas funcionais que a tela grava.
  *
  * ⚠️ FICAM DE FORA, DE PROPÓSITO: `codigo` (gerado pelo banco, `FR-007`), `status` (ações próprias de
@@ -151,7 +176,9 @@ export const esquemaFuncionalDeInstrutor = z.object({
   regime_trabalho: regimeOpcional,
   nivel_escolaridade: textoOpcional(120),
   formacao_principal_secundaria: textoOpcional(),
-  capacitacao_didatica: textoOpcional(),
+  /* Spec 020 (C-9, C-10): a lista e o texto antigo que não casou; a coluna `capacitacao_didatica` é aposentada. */
+  capacitacoes_didaticas: capacitacoesDidaticas,
+  capacitacao_didatica_a_corrigir: textoOpcional(),
   data_inicio_docencia_mb: dataOpcional,
   data_inicio_docencia_ciaara: dataOpcional,
   ultima_avaliacao_desempenho: textoOpcional(120),

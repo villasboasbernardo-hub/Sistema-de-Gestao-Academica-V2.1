@@ -28,6 +28,7 @@
  * exibição são de quem desenha (`components/graficos/`). Por isso não importa componente.
  */
 import { pesoAntiguidade, type EscalaDeAntiguidade } from "./antiguidade";
+import { temCapacitacao, type CapacitacaoDoInstrutor } from "./capacitacao-didatica";
 import { circuloDoPosto, ROTULO_DO_CIRCULO } from "./circulo-hierarquico";
 
 export type InstrutorParaGraficos = {
@@ -37,7 +38,8 @@ export type InstrutorParaGraficos = {
   readonly om: string;
   readonly escolaridade: string | null;
   readonly regime: string | null;
-  readonly capacitacaoDidatica: string | null;
+  /** Spec 020 (Bloco 5): a lista fechada e o texto que não casou com ela. */
+  readonly capacitacao: CapacitacaoDoInstrutor;
 };
 
 export type Barra = { readonly nome: string; readonly valor: number };
@@ -70,6 +72,8 @@ export const NAO_INFORMADO = "Não informado";
 
 /** A fatia de quem não tem capacitação didática no gráfico de capacitação (`FR-026.4` emendado). */
 export const CAPACITACAO_NENHUMA = "Nenhuma";
+/** Spec 020 (Bloco 5): o texto antigo que não casou com a lista fechada, à espera de correção à mão. */
+export const CAPACITACAO_A_CORRIGIR = "A corrigir";
 
 /** As duas fatias do índice de capacitação geral, com o texto da spec 021 da v2.0. */
 export const COM_CAPACITACAO = "Com Capacitação Didática";
@@ -120,30 +124,21 @@ function barrasDePosto(
 }
 
 /**
- * As qualificações de um campo de capacitação, sem repetição e sem vazio.
+ * Quem tem duas capacitações conta nas duas; quem não tem nenhuma conta em "Nenhuma", no fim.
  *
- * ⚠️ EXPORTADA PORQUE O FILTRO DE CAPACITAÇÃO OFERECE AS MESMAS QUALIFICAÇÕES que o gráfico conta. Duas
- * leituras da vírgula, uma aqui e outra na tela, divergiriam no primeiro dado com espaço a mais.
+ * ⚠️ SPEC 020 (Bloco 5): a capacitação virou lista fechada, e o texto antigo que não casou com ela fica guardado para
+ *    correção à mão — ele conta numa fatia própria, "A corrigir", e nunca em "Nenhuma": antes da conversão havia texto,
+ *    e o gráfico não pode afirmar que não há (C-12).
  */
-export function qualificacoesDe(capacitacao: string | null): readonly string[] {
-  if (vazio(capacitacao)) return [];
-  return [
-    ...new Set(
-      (capacitacao as string)
-        .split(",")
-        .map((q) => q.trim())
-        .filter((q) => q !== ""),
-    ),
-  ];
-}
-
-/** Quem tem duas qualificações conta nas duas; campo vazio conta em "Nenhuma", no fim. */
 function fatiasDeCapacitacao(instrutores: readonly InstrutorParaGraficos[]): Barra[] {
   const contagem = new Map<string, number>();
   let nenhuma = 0;
   for (const i of instrutores) {
-    const qualificacoes = qualificacoesDe(i.capacitacaoDidatica);
-    if (qualificacoes.length === 0) nenhuma += 1;
+    if (!temCapacitacao(i.capacitacao)) nenhuma += 1;
+    const qualificacoes = [
+      ...new Set(i.capacitacao.lista),
+      ...((i.capacitacao.aCorrigir ?? "").trim() !== "" ? [CAPACITACAO_A_CORRIGIR] : []),
+    ];
     for (const q of qualificacoes) contagem.set(q, (contagem.get(q) ?? 0) + 1);
   }
   const fatias = [...contagem.entries()]
@@ -181,7 +176,7 @@ export function graficosDeInstrutores(
   escala: EscalaDeAntiguidade,
   selecao: { readonly habilitados: number; readonly selecionados: number },
 ): readonly GraficoDeInstrutores[] {
-  const comCapacitacao = instrutores.filter((i) => !vazio(i.capacitacaoDidatica)).length;
+  const comCapacitacao = instrutores.filter((i) => temCapacitacao(i.capacitacao)).length;
 
   return [
     {

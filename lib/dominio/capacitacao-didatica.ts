@@ -70,6 +70,21 @@ export function converterCapacitacao(texto: string | null | undefined): Capacita
 }
 
 /** C-12: tem capacitação quem tem a lista não vazia ou um texto a corrigir. */
+/**
+ * A capacitação como o banco a devolve — `capacitacoes_didaticas` e `capacitacao_didatica_a_corrigir`.
+ *
+ * ⚠️ O tipo do banco já recusa valor fora da lista; o que vier assim mesmo (um cliente sem tipo, um dado antigo) NUNCA
+ *    some: vai para o texto a corrigir, como na conversão.
+ */
+export function capacitacaoDoCadastro(
+  lista: readonly string[] | null | undefined,
+  aCorrigir: string | null | undefined,
+): CapacitacaoDoInstrutor {
+  const soltas = (lista ?? []).filter((c) => !ehCapacitacaoDidatica(c));
+  const texto = [(aCorrigir ?? "").trim(), ...soltas].filter((t) => t !== "").join(", ");
+  return { lista: emOrdemDaLista(lista ?? []), aCorrigir: texto === "" ? null : texto };
+}
+
 export function temCapacitacao(capacitacao: CapacitacaoDoInstrutor): boolean {
   return capacitacao.lista.length > 0 || (capacitacao.aCorrigir ?? "").trim() !== "";
 }

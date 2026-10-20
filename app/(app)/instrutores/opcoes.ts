@@ -11,7 +11,7 @@
  * tudo. Quem opera sobre o resultado do filtro anterior é a consulta, em E lógico.
  */
 import { pesoAntiguidade, type EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
-import { qualificacoesDe } from "@/lib/dominio/graficos-instrutor";
+import { CAPACITACOES_DIDATICAS } from "@/lib/dominio/capacitacao-didatica";
 
 /** Uma opção cujo rótulo pode diferir do valor guardado na URL. */
 export type OpcaoDeCurso = {
@@ -22,7 +22,6 @@ export type OpcaoDeCurso = {
 export type LinhaDasOpcoes = {
   readonly om: string | null;
   readonly categoria: string | null;
-  readonly capacitacao_didatica: string | null;
   readonly nivel_escolaridade: string | null;
   readonly posto_graduacao: string | null;
 };
@@ -109,7 +108,8 @@ export function opcoesDosFiltros(
   return {
     om: distintos(linhas.map((l) => l.om)),
     categoria: distintos(linhas.map((l) => l.categoria)),
-    capacitacao: distintos(linhas.flatMap((l) => qualificacoesDe(l.capacitacao_didatica))),
+    /* Spec 020 (Bloco 5): a lista fechada, sempre as três — não o que por acaso está preenchido. */
+    capacitacao: [...CAPACITACOES_DIDATICAS],
     escolaridade: distintos(linhas.map((l) => l.nivel_escolaridade)),
     posto: postosEmAntiguidade(
       linhas.map((l) => l.posto_graduacao),
