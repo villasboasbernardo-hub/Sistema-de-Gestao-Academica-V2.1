@@ -23,7 +23,7 @@
  */
 import { CabecalhoDoApp } from "@/components/casca/cabecalho-do-app";
 import { FocoAoTrocarDeRota } from "@/components/casca/foco-ao-trocar-de-rota";
-import { NavegacaoLateral } from "@/components/casca/navegacao-lateral";
+import { NavegacaoLateral, type ArvoresDoSubmenu } from "@/components/casca/navegacao-lateral";
 
 export const ID_DO_CONTEUDO = "conteudo";
 
@@ -34,6 +34,7 @@ export function CascaDoApp({
   lateralFixada,
   fotoUrl,
   aoSair,
+  submenu,
   children,
 }: {
   readonly nome: string;
@@ -49,6 +50,8 @@ export function CascaDoApp({
   /** A Server Action que encerra a sessão — **chega pronta do layout**. A casca não a
    *  importa: `@/lib/acoes/` é proibido em componente, e a proibição está certa. */
   readonly aoSair: () => Promise<void>;
+  /** A árvore do submenu da lateral (spec 019) — **chega pronta do layout**, que a leu pela RLS. */
+  readonly submenu?: ArvoresDoSubmenu;
   readonly children: React.ReactNode;
 }) {
   return (
@@ -70,7 +73,7 @@ export function CascaDoApp({
       <CabecalhoDoApp nome={nome} email={email} perfil={perfil} fotoUrl={fotoUrl} aoSair={aoSair} />
 
       <div className="flex flex-1 flex-col lg:flex-row">
-        <NavegacaoLateral fixada={lateralFixada} />
+        <NavegacaoLateral fixada={lateralFixada} {...(submenu ? { submenu } : {})} />
         {/*
           ⚠️ **`min-w-0` NO `<main>` É O QUE IMPEDE A PÁGINA DE ROLAR LATERALMENTE** (`RNF-COMP-01`),
              e a falta dele foi medida em 05/10/2026, na grade do DSA: um item de flex **não encolhe

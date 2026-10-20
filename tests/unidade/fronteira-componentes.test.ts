@@ -138,6 +138,8 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
     // abre e fecha é estado efêmero de tela.
     "components/ciaara/avisos-recolhiveis.tsx",
     "components/ciaara/badge-teto.tsx",
+    // Spec 019 (Bloco 4): o carrossel do Início — o passo, a pausa e o «reduzir movimento» são do navegador.
+    "components/ciaara/carrossel.tsx",
     // Entrou em 17/10/2026 (spec 016, item 1.3): o olho que mostra e oculta a senha é estado de tela.
     "components/ciaara/campo-de-senha.tsx",
     "components/ciaara/dialogo-confirmacao.tsx",
@@ -161,6 +163,8 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
     "components/ciaara/provedor-de-tema.tsx",
     "components/ciaara/seletor-instrutor.tsx",
     "components/casca/foco-ao-trocar-de-rota.tsx",
+    // Spec 019 (Bloco 4): o submenu da lateral, pelo mesmo motivo de `entrada-do-menu.tsx`.
+    "components/casca/submenu-da-lateral.tsx",
     // Conferência do PR #67 (17/10/2026): o ativo do menu pelo caminho do navegador.
     "components/casca/entrada-do-menu.tsx",
     // Entrou em 29/09/2026 (spec 011): o menu da conta, com a saída do sistema. O que abre,

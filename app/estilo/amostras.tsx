@@ -25,6 +25,7 @@ import { BadgeTeto, type Teto } from "@/components/ciaara/badge-teto";
 import { CampoObrigatorio, propsDoControle } from "@/components/ciaara/campo-obrigatorio";
 import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { CardKpi } from "@/components/ciaara/card-kpi";
+import { Carrossel } from "@/components/ciaara/carrossel";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { EsqueletoTabela } from "@/components/ciaara/esqueleto-tabela";
@@ -132,6 +133,22 @@ export function AmostraBarraDeProgresso() {
       <BarraDeProgresso valor={120} rotuloAcessivel="Carga executada acima do previsto" />
       <BarraDeProgresso valor={null} rotuloAcessivel="Sem carga curricular lançada" />
     </div>
+  );
+}
+
+/** Spec 019 (Bloco 4): o carrossel do Início — passa sozinho, pausa ao apontar e ao focar, anda por ← e →. */
+export function AmostraCarrossel() {
+  return (
+    <Carrossel
+      rotulo="Amostra de carrossel"
+      intervaloMs={6000}
+      largura="cartao"
+      itens={[1, 2, 3, 4, 5].map((n) => (
+        <div key={n} className="border-borda bg-superficie rounded-ciaara border p-3 text-sm">
+          Cartão {n}
+        </div>
+      ))}
+    />
   );
 }
 

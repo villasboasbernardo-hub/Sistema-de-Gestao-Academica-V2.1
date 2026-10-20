@@ -168,6 +168,8 @@ export function PainelRetratil({
              *    `:focus-within`, que o botão de fixar também satisfazia.
              */
             "lg:w-14 lg:data-[apontar=livre]:hover:w-56 lg:has-[[data-entrada]:focus-visible]:w-56",
+            /* Spec 019 (Bloco 4): o foco numa subentrada do submenu também expande — o par de `navegacao-lateral.tsx`. */
+            "lg:has-[[data-subentrada]:focus-visible]:w-56",
             fixada && "lg:w-56",
           )}
         >

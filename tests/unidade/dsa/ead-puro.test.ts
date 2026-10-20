@@ -47,7 +47,8 @@ describe("o aviso de turma EAD mora num lugar só", () => {
   const telas = [
     "app/(app)/turmas/[turma]/page.tsx",
     "app/(app)/turmas/TabelaDeTurmas.tsx",
-    "app/(app)/inicio/page.tsx",
+    // Spec 019 (Bloco 4): o cartão da turma do Início saiu da página para o seu componente.
+    "app/(app)/inicio/CartaoDaTurma.tsx",
     "app/(app)/turmas/[turma]/dsa/page.tsx",
   ];
 

@@ -49,6 +49,9 @@ const COM_INTERACAO: Readonly<Record<string, string>> = {
   // decidido no servidor ficava preso à primeira página. O caminho atual só existe no navegador.
   "entrada-do-menu.tsx":
     "marcar a entrada ativa pelo caminho do navegador (`usePathname`) — o do layout fica preso",
+  // Spec 019 (Bloco 4): o submenu — abrir e fechar é estado de tela, e o ativo é o caminho do navegador.
+  "submenu-da-lateral.tsx":
+    "abrir e fechar Cursos e Turmas na lateral e marcar a subentrada ativa pelo caminho do navegador",
 };
 
 function arquivos(): { arquivo: string; codigo: string; bruto: string }[] {

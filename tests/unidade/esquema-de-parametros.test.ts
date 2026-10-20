@@ -55,7 +55,8 @@ describe("`FR-006` · valor fora do domínio usa o padrão, E PRESERVA OS DEMAIS
 describe("`FR-007` · parâmetro fora do contrato é ignorado, e a tela não quebra", () => {
   it("ele não aparece nos valores", () => {
     const { valores } = lerParametros("/inicio", url("parametro_inventado=1&modalidade=ead"));
-    expect(Object.keys(valores).sort()).toEqual(["classificacao", "modalidade"]);
+    // Spec 019 (Bloco 4): `ano` entrou no contrato do Início — ele é do contrato, então aparece, com o padrão.
+    expect(Object.keys(valores).sort()).toEqual(["ano", "classificacao", "modalidade"]);
     expect(valores.modalidade).toBe("ead");
   });
 

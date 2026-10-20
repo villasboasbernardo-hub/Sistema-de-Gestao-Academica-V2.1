@@ -102,9 +102,16 @@ describe("`FR-037.1` · nenhum parâmetro de paginação, e é recusa declarada"
 });
 
 describe("`FR-001.1` · a emenda ao documento 25 foi aplicada nos DOIS lugares", () => {
-  it("o contrato tem classificação e modalidade na tela inicial", () => {
+  it("o contrato tem classificação, modalidade e — desde o Bloco 4 (spec 019) — o ano na tela inicial", () => {
     const nomes = parametrosDaRota("/inicio").map((p) => p.nome);
-    expect(nomes).toEqual(["classificacao", "modalidade"]);
+    expect(nomes).toEqual(["classificacao", "modalidade", "ano"]);
+  });
+
+  it("⚠️ spec 019, C-1: o `ano` do Início é TEXTO com padrão vazio (= o vigente), a régua do painel de Turmas", () => {
+    const ano = parametrosDaRota("/inicio").find((p) => p.nome === "ano");
+    expect(ano?.tipo).toBe("texto");
+    expect(ano?.padrao).toBe("");
+    expect(ano?.avisaServidor).toBe(true);
   });
 
   it("o documento 25 §1.3 traz os dois", () => {
@@ -122,6 +129,7 @@ describe("`FR-001.1` · a emenda ao documento 25 foi aplicada nos DOIS lugares",
     expect(linha, "a linha da tela inicial sumiu da tabela do documento 25").toBeDefined();
     expect(linha).toContain("classificacao");
     expect(linha).toContain("modalidade");
+    expect(linha, "spec 019: o documento 25 não recebeu o `ano` do Início").toContain("ano");
   });
 });
 
@@ -146,9 +154,8 @@ describe("`RF-INI-02` · o domínio do filtro é o domínio do BANCO, não uma l
   it("⚠️ e o contrato não encolhe o domínio — nenhum valor do banco fica de fora", () => {
     // Escrever a lista à mão é justamente como ela encolhe: alguém copia os valores que conhece.
     // `pnpm db:tipos` mantém o outro lado em dia, e o CI reprova se ele divergir do schema.
-    const nomes = parametrosDaRota("/inicio").map((p) => p.nome);
-    expect(nomes).toEqual(["classificacao", "modalidade"]);
-    for (const p of parametrosDaRota("/inicio")) {
+    // ⚠️ O `ano` (spec 019) é texto de propósito: o domínio é o das turmas, e quem o valida é `anoDoPainel`.
+    for (const p of parametrosDaRota("/inicio").filter((x) => x.nome !== "ano")) {
       expect(p.tipo, `${p.nome} voltou a ser texto — texto não tem domínio`).toBe("escolha");
     }
   });

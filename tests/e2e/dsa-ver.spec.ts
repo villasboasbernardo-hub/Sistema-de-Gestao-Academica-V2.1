@@ -568,7 +568,8 @@ test.describe("`FR-011` · os três caminhos clicáveis até o DSA", () => {
     await entrar(page, EMAIL, "/inicio");
     const bloco = (codigo: string) =>
       page
-        .locator('[data-slot="panorama-de-turmas"] > li')
+        // Spec 019 (Bloco 4): os cartões do Início são itens do carrossel.
+        .locator('[data-slot="panorama-de-turmas"] [data-slot="item-do-carrossel"]')
         .filter({ has: page.locator(`[data-turma="${codigo}"]`) });
 
     const ead = bloco(SEMEADO.turmaEad);
