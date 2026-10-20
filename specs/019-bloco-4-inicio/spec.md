@@ -91,6 +91,30 @@ semana, todas as turmas); o submenu lê `cursos` e `turmas` pela RLS de sempre. 
 - C-17 · Q: O DSA no papel ou a numeração mudam? → A: **Não** — o merge segue a conferência, sem esperar a virada de
   semana. — FR-006
 
+### Session 2026-10-20 — conferência do PR #77 *(decisões de Bernardo Villas Boas: aprovado com 5 ajustes)*
+
+*"Decisões C-1 a C-17 como você deixou, exceto onde estes ajustes mudam (C-7, C-14 e o destino do clique no cartão)."*
+
+- A-1 · O ano: *"sem o termo 'ano letivo' e sem os botões de ano. Uma CAIXA DE SELEÇÃO única (select) com os anos que
+  existem nas turmas, no CANTO SUPERIOR DIREITO da página, no Início E em Turmas (o componente é o mesmo,
+  AnoDoPainel). Padrão: o ano da data de hoje em São Paulo (hojeNaCiaara), nunca um ano fixo no código — em 01/01/2027
+  a tela abre em 2027 sozinha."* A URL continua dona (`?ano=`). Adotado junto, por padrão: o campo do filtro de Turmas
+  que usa o mesmo `ano` passa a se chamar *Ano*; o campo *Ano letivo* do cadastro da turma não muda (é o nome do dado).
+  — FR-001
+- A-2 · Os cartões: *"MAIORES, e só das turmas com situação ATIVA do ano escolhido (planejada, concluída, cancelada e
+  arquivada fora). Os números do painel continuam contando todas. Sem turma ativa no ano: estado vazio com uma frase,
+  não carrossel vazio."* — FR-002
+- A-3 · O título do cartão: *"só o nome da turma (ex.: "C-Ap-HN 2026"), sem repetir o nome do curso — a sigla já está
+  no nome da turma."* Substitui a C-7 no título; o resto do cartão (situação, barra, TA, *em atraso*, DSA) fica. — FR-002
+- A-4 · O clique no cartão: *"leva à FICHA DA TURMA (endereço pelo módulo único de endereço de turma), não mais ao
+  curso."* ⚠️ **Autorização nominal diante do `RF-INI-03` [PRESERVADO]** (*"O painel deve funcionar como ponto de
+  entrada para a Página do Curso de qualquer turma listada"*): o curso continua a um clique, pela ficha. — FR-002
+- A-5 · O submenu de Turmas: *"sem o nível do curso — lista direto as turmas do ANO VIGENTE (mesma regra de padrão do
+  item 1), não arquivadas, em ordem natural (ex.: CAHO 2026, C-Ap-FR 2026, C-Ap-HN 2026 …). O submenu de Cursos continua
+  como está."* Substitui a C-14 para Turmas. Adotado por padrão: **ordem natural lendo o código sem os hífens**, que é a
+  que dá a ordem do exemplo (`compararCodigoNatural`, o das disciplinas, lê o hífen e poria `CAHO` depois de todas as
+  `C-…`); qualquer situação, como na C-14; o rótulo é o código inteiro. — FR-005
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
@@ -171,15 +195,19 @@ está na lista; recolhida, a lateral mostra só os ícones e *Turmas* continua l
 
 ### FR-001 — O ano
 
-- **FR-001.1**: O Início MUST mostrar as turmas do ano letivo escolhido, com padrão o ano vigente (São Paulo) e o ano na
+- **FR-001.1**: O Início MUST mostrar as turmas do ano escolhido, com padrão o ano de hoje (São Paulo) e o ano na
   URL (`?ano=`), pela régua de `anoDoPainel`/`anosDoSeletor`.
+- **FR-001.3** *(A-1)*: O ano MUST ser escolhido numa caixa de seleção no canto superior direito da página, no Início e
+  em Turmas (o mesmo `AnoDoPainel`), sem o termo *"ano letivo"*, e o padrão MUST sair do relógio — nenhum ano escrito no
+  código (guardado por `tests/unidade/ano-sem-numero-fixo.test.ts`).
 - **FR-001.2**: Números, cartões, região de atraso e alertas de teto e de vista MUST seguir o ano (C-2).
 
 ### FR-002 — O carrossel das turmas
 
-- **FR-002.1**: As turmas do ano MUST aparecer como cartões num carrossel, com barra de progresso (C-3, C-7).
-- **FR-002.2**: Cada cartão MUST levar à página do curso na aba Grade com a turma (como hoje) e, fora dele, ao DSA da
-  semana ou ao aviso de EAD.
+- **FR-002.1**: As turmas **ativas** do ano MUST aparecer como cartões, maiores, num carrossel, com barra de progresso
+  (C-3, C-7, A-2); os números do painel MUST contar todas as turmas do ano; sem turma ativa, uma frase (A-2).
+- **FR-002.2**: Cada cartão MUST ter por título só o nome da turma (A-3) e levar à **ficha da turma** (A-4) e, fora dele,
+  ao DSA da semana ou ao aviso de EAD.
 
 ### FR-003 — O carrossel dos DSA da semana
 
@@ -196,8 +224,8 @@ está na lista; recolhida, a lateral mostra só os ícones e *Turmas* continua l
 
 ### FR-005 — O submenu da lateral
 
-- **FR-005.1**: *Cursos* MUST expandir em classificação → curso, e *Turmas* em curso → turma, dentro da lateral (C-12,
-  C-14).
+- **FR-005.1**: *Cursos* MUST expandir em classificação → curso (C-12, C-14), e *Turmas* MUST listar direto as turmas
+  do ano de hoje, não arquivadas, em ordem natural (A-5), dentro da lateral.
 - **FR-005.2**: O item ativo MUST estar marcado (C-15), e o ramo da página atual aberto.
 - **FR-005.3**: Recolhida, a lateral MUST continuar só com os ícones e os links das listas (C-13).
 - **FR-005.4**: Turmas arquivadas MUST NOT aparecer; cursos fora de oferta também não.
@@ -214,13 +242,14 @@ Nenhuma nova. Lê `turmas`, `cursos`, `vw_carga_horaria_turma`, `vw_ocupacao_ta`
 
 ## Success Criteria *(mandatory)*
 
-- **SC-001**: Com turmas em 2026 e 2027, o Início abre só com as de 2026; `?ano=2027` mostra só a de 2027.
+- **SC-001**: Com turmas em 2026 e 2027, o Início abre só com as de 2026; `?ano=2027` mostra só a de 2027 — pela caixa
+  de seleção do canto superior direito, que em 01/01/2027 abre em 2027 sozinha (A-1).
 - **SC-002**: O carrossel de turmas avança sozinho, pausa ao apontar, ao focar e pelo botão, anda por ← e →, e não
   anda sozinho com *"reduzir movimento"* — provado por clique e teclado.
 - **SC-003**: Uma turma com aula lançada nesta semana aparece no carrossel de DSA com o número de TA e de dias certo; a
   EAD pura e a fora da janela não aparecem.
-- **SC-004**: Pela lateral, *Turmas* → curso → turma abre a ficha com a turma marcada; a arquivada não aparece; recolhida,
-  a lateral não mostra sublistas.
+- **SC-004**: Pela lateral, *Turmas* → turma abre a ficha com a turma marcada; a arquivada e a de outro ano não
+  aparecem; recolhida, a lateral não mostra sublistas (A-5).
 - **SC-005**: Nenhuma conta muda: o percentual do cartão é o mesmo de antes para a mesma turma.
 
 ## Assumptions

@@ -42,8 +42,19 @@
 
 - [X] T014 Defeitos deliberados, em `progresso-implement.md`
 - [X] T015 `pnpm verificar` + pgTAP + RLS; a ponta a ponta no CI se a memória da máquina não deixar
-- [ ] T016 Push, PR com o template inteiro e CI verde
+- [X] T016 Push, PR com o template inteiro e CI verde (PR #77, CI verde sobre `eaa2793`)
 - [X] T017 `roteiro-de-conferencia.md`, pendências no plano de correções e a entrega — **sem merge**
+
+## Phase 9: Ajustes da conferência de 20/10/2026 (A-1 a A-5, no mesmo PR)
+
+- [X] T018 Testes vistos falhar: `tests/unidade/ano-pelo-relogio.test.ts` (relógio em 31/12/2026 e 01/01/2027),
+  `submenu-da-lateral.test.ts` (lista plana do ano) e `ano-sem-numero-fixo.test.ts`; e2e em `inicio-bloco-4.spec.ts`,
+  `cards-levam-a-aba.spec.ts` (caso 3) e `turmas-painel.spec.ts` — 9 casos vermelhos contra o código anterior
+- [X] T019 A-1: `AnoDoPainel` como caixa de seleção no cabeçalho do Início e de Turmas; *Ano* no filtro de Turmas
+- [X] T020 A-2 e A-3: `lib/dominio/cartoes-do-inicio.ts`, cartão maior com o título só da turma, a frase sem turma ativa
+- [X] T021 A-4: o cartão leva à ficha (`enderecoDaTurma`); `inicio.spec.ts` (FR-031.2 e FR-017.6) acompanha
+- [X] T022 A-5: `arvoreDeTurmas(turmas, ano, …)` plana, `compararCodigoDeTurma`, o layout lendo só o ano de hoje
+- [X] T023 Defeitos deliberados dos ajustes, `pnpm verificar`, ponta a ponta, CI, merge e encerramento
 
 ## Dependencies
 

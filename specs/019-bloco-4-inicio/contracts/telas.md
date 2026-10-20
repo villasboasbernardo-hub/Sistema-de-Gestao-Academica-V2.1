@@ -4,6 +4,9 @@
 
 - Parâmetros: `classificacao`, `modalidade` (como hoje) e **`ano`** (texto, padrão `""` = o ano vigente; `substitui`;
   avisa o servidor).
+- ⚠️ **Ajuste A-1 (20/10/2026):** o seletor de ano é uma **caixa de seleção** (`select[data-slot="ano-do-painel-escolha"]`,
+  rótulo *Ano*) no **canto superior direito**, dentro do cabeçalho (`data-slot="cabecalho-do-inicio"`; em Turmas,
+  `cabecalho-de-turmas`). Os botões abaixo são o desenho anterior.
 - Ordem: título → **seletor de ano** (o mesmo `AnoDoPainel` de `/turmas`, com `rota="/inicio"`: `data-slot="ano-do-painel"`, botões `ano-do-painel-opcao` com `data-ano` e `aria-pressed`) → filtro de recorte →
   alertas → números do ano (`data-ano`) → **Turmas de <ano>** (carrossel) → **DSA da semana** (carrossel).
 
@@ -17,6 +20,10 @@
 
 ### O cartão da turma (`data-slot="cartao-da-turma"`, `data-turma`)
 
+⚠️ **Ajustes A-2 a A-4 (20/10/2026):** só turmas **ativas**; título só com o nome da turma (`data-slot="titulo-do-cartao"`);
+o link vai à **ficha da turma** (`enderecoDaTurma`); sem turma ativa, `<p data-slot="sem-turma-ativa">Nenhuma turma em
+andamento em {ano}.</p>`. Onde o texto abaixo disser outra coisa, vale este parágrafo.
+
 Link para a aba Grade do curso com a turma; dentro: curso · turma, nome e ano, situação, `BarraDeProgresso` (percentual),
 `executada/prevista TA`, *em atraso*. Abaixo, fora do link: *DSA da semana →* ou o aviso de EAD.
 
@@ -27,6 +34,9 @@ Link para a aba Grade do curso com a turma; dentro: curso · turma, nome e ano, 
 Sem turma: `data-slot="sem-dsa-na-semana"`.
 
 ## A lateral
+
+⚠️ **Ajuste A-5 (20/10/2026):** em *Turmas* não há grupo — o `submenu` de `data-raiz="turmas"` traz direto os links das
+turmas do ano de hoje (rótulo = o código), sem as arquivadas, em ordem natural sem os hífens. *Cursos* segue abaixo.
 
 Ao lado de *Cursos* e *Turmas*: botão `data-slot="expandir-submenu"` (`aria-expanded`, `aria-controls`, rótulo
 *"Abrir os cursos"*/*"Abrir as turmas"*). Sublistas `data-slot="submenu"`; grupos (classificação, curso) com o mesmo botão;

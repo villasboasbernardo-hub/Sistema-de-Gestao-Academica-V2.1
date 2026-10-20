@@ -44,3 +44,30 @@
 | d | o Início sem o filtro de ano | `app/(app)/inicio/page.tsx` | e2e do ano vigente (cartão da planejada do ano seguinte: esperado 0, recebido 1) |
 
 Restaurados os quatro, `git status` limpo.
+
+## Ajustes da conferência de 20/10/2026 (A-1 a A-5)
+
+- **Vistos falhar antes:** `submenu-da-lateral.test.ts` (`cursos is not iterable`: a assinatura antiga) e
+  `ano-pelo-relogio.test.ts` (`Cannot find package '@/lib/dominio/cartoes-do-inicio'`); na ponta a ponta, contra o código
+  de `eaa2793` (com os dois testes de unidade afastados, porque o `next build` checa os tipos do repositório inteiro),
+  **9 reprovados e 8 passados** em `inicio-bloco-4`, `cards-levam-a-aba` e `turmas-painel` — os 9 são exatamente os
+  casos novos ou mudados.
+- ⚠️ **O teste do relógio passou de primeira na parte do ano** (`anoDoPainel("", hojeNaCiaara())` já virava em São
+  Paulo); o que ele acrescenta é a virada do **submenu** e o caso das 23:59, que discrimina o fuso.
+- ⚠️ **A guarda `ano-sem-numero-fixo` nasceu cega para data**: a expressão excluía o ano seguido de hífen, e o defeito
+  deliberado `anoDoPainel("", "2026-10-20")` passou. Corrigida, com a data no controle positivo; agora reprova.
+- ⚠️ **O caso `FR-017.6` de `inicio.spec.ts` deixou de discriminar com o A-2**: para desativar o curso a regra exige
+  concluir a turma, e turma concluída não tem cartão. Passou a medir o número *Turmas no recorte*, que conta todas as
+  situações, e a concluir só a turma do curso que sai.
+- Depois: unidade **2.554 em 184**; `inicio-bloco-4` + `cards-levam-a-aba` + `turmas-painel` **17 de 17, duas vezes
+  seguidas** (regra 9.1); `inicio.spec.ts` **12 de 12**.
+
+| # | Defeito plantado | Quem pegou |
+|---|---|---|
+| a | os cartões voltam a todas as situações | unidade (2) e e2e A-2 (2 casos) |
+| b | o submenu sem o filtro de ano | unidade (5); a ponta a ponta não, porque a consulta do layout também filtra o ano — duas defesas |
+| c | o cartão volta ao curso | e2e A-4, `cards-levam-a-aba` caso 3 e os dois do `FR-031.2` |
+| d | o Início sem o filtro de curso em oferta | e2e `FR-017.6` (o número: esperado 0, recebido 1) |
+| e | o ano de hoje trocado por `"2026-10-20"` no layout | `ano-sem-numero-fixo` (depois de corrigida) |
+
+Restaurados os cinco.
