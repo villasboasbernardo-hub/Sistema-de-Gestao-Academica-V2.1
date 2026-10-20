@@ -4,7 +4,7 @@
 
 - Parâmetros: `classificacao`, `modalidade` (como hoje) e **`ano`** (texto, padrão `""` = o ano vigente; `substitui`;
   avisa o servidor).
-- Ordem: título → **seletor de ano** (`data-slot="ano-do-inicio"`, botões `data-ano`, `aria-pressed`) → filtro de recorte →
+- Ordem: título → **seletor de ano** (o mesmo `AnoDoPainel` de `/turmas`, com `rota="/inicio"`: `data-slot="ano-do-painel"`, botões `ano-do-painel-opcao` com `data-ano` e `aria-pressed`) → filtro de recorte →
   alertas → números do ano (`data-ano`) → **Turmas de <ano>** (carrossel) → **DSA da semana** (carrossel).
 
 ### O carrossel (`components/ciaara/carrossel.tsx`)

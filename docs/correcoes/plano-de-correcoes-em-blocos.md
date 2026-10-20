@@ -154,7 +154,11 @@ _(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos*
 4. O curso **não** mostra acompanhamento de turma em aba nenhuma: só o previsto no currículo.
    - ⚠️ **Divergência medida no Bloco 2** _(spec 017, §10, item 3; 19/10/2026)_: este item diz que a aba *Avaliações* do curso tem *"só o previsto no currículo"*, e o código **mostra o cumprido** da turma escolhida (a mesma leitura da ficha, `lerAvaliacoesDoCurso`). Não foi corrigido no Bloco 2 — é deste item.
 
-## Bloco 4 — Início (spec própria)
+## Bloco 4 — Início (spec própria) — 🟨 IMPLEMENTADO, em conferência (spec 019, 20/10/2026)
+
+Spec `specs/019-bloco-4-inicio/`, ramo `feat/BLOCO-4-inicio`, **sem migration**. O Início ficou do ano escolhido (o
+vigente por padrão, `?ano=`), com os cartões e as manchetes dos DSA da semana em carrossel (um componente só, sem
+pacote), e a lateral ganhou o submenu de *Cursos* e de *Turmas*. Roteiro: `specs/019-bloco-4-inicio/roteiro-de-conferencia.md`.
 
 1. Dashboard das turmas do ano vigente.
 2. Cartões das turmas com barra de progresso, em **carrossel automático e com setas**.
@@ -185,6 +189,13 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
 - **PEND-018-1** — **troca de regime por semana** _(pedido de Bernardo Villas Boas, 19/10/2026: *"fica para depois"*)_: no Bloco 3 a turma escolhe UM regime nomeado, que trava no primeiro lançamento (`RF-HOR-05`). Trocar no meio do curso exige vigência por turma (de que semana em diante), como `curso_regime_historico` tem para o curso.
 - **PEND-018-2** — **o catálogo de horários não tem tela** _(spec 018, 20/10/2026)_: o regime nomeado pode apontar para um relógio de `configuracoes_horario`/`horarios_tempos_aula` (os 8 de hoje, CFG-A a CFG-H), mas criar ou mudar um relógio do catálogo continua sendo só por migration.
 - ~~**PEND-018-3**~~ — ✅ **fechada no PR #75, antes do merge** _(pedido de Bernardo Villas Boas na conferência de 20/10/2026)_: `docs/testes/guia-de-testes.md` passou a dizer *Cursos* → o curso → aba *Disciplinas* (passos 19 do Administrador e 10 do Operador), o menu com **sete** itens e as seis abas do curso; o `.docx` foi regerado por `scripts/manutencao/md_para_docx.py` e confere com o `.md` palavra a palavra (3.579 e 3.579).
+- **PEND-019-1** — **o submenu da lateral só se atualiza com as ações da própria pessoa** _(spec 019, C-16; 20/10/2026)_:
+  criar curso, desativar/reativar, criar turma e arquivar/desarquivar revalidam o layout; um curso ou turma criado **por
+  outra pessoa** aparece na lateral ao recarregar a página (o layout não é redesenhado na navegação por clique).
+- **PEND-019-2** — **servidor órfão na porta da ponta a ponta** _(spec 019, 20/10/2026)_: uma rodada interrompida por
+  memória deixou um `next start` vivo na porta 3100, e a rodada seguinte o **reaproveitou** (`reuseExistingServer`)
+  servindo uma `.next` já apagada — 7 de 7 reprovaram no login, sem erro do servidor no log. Encerrar o processo
+  resolveu. Proposta: o `verificar:tudo` recusar porta 3100 ocupada antes de começar (gotcha 7 por outro caminho).
 - **PEND-014-7** — testes de ponta a ponta instáveis sob carga (`salas.spec.ts:126`, `dsa-tipo-e-global.spec.ts:160`, `avaliacoes-nas-telas.spec.ts:53`, `admin-sobre-contas`).
 - **OneDrive** — a pasta do repositório deve ficar "Sempre manter neste dispositivo": arquivos sob demanda já quebraram o build (`.next`, `EPERM`) e o `git switch` (`specs`).
 

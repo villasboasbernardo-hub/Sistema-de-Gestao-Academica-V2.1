@@ -55,7 +55,7 @@ components/ciaara/carrossel.tsx         # o carrossel, folha de cliente (novo)
 components/casca/submenu-da-lateral.tsx # o submenu, folha de cliente (novo)
 components/casca/navegacao-lateral.tsx · casca-do-app.tsx · painel-retratil.tsx
 app/(app)/layout.tsx                    # lê cursos e turmas para o submenu
-app/(app)/inicio/page.tsx · panorama.ts · AnoDoInicio.tsx · CartaoDaTurma.tsx · ManchetesDoDsa.tsx
+app/(app)/inicio/page.tsx · panorama.ts · CartaoDaTurma.tsx · ManchetesDoDsa.tsx
 lib/acoes/curso.ts · turma.ts           # revalidar o layout (C-16)
 tests/…                                 # §5
 ```

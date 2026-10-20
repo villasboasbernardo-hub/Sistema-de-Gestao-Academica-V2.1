@@ -67,8 +67,9 @@ semana, todas as turmas); o submenu lê `cursos` e `turmas` pela RLS de sempre. 
   — FR-003
 - C-9 · Q: O carrossel de DSA segue o seletor de ano? → A: **Não**: é a semana de **hoje** (`semanaDoPainel`), em
   qualquer ano escolhido; segue o filtro de classificação e modalidade. — FR-003
-- C-10 · Q: O que a manchete do DSA diz? → A: **Semana do curso N de T** (`rotuloDaSemanaDoCurso`), a turma e o curso,
-  as datas da semana, e o resumo do lançado: **TA lançados**, em quantos **dias**, de quantas **disciplinas**, e quantas
+- C-10 · Q: O que a manchete do DSA diz? → A: **"Semana do curso: N de T"** (`campoDaSemanaDoCurso`, o mesmo texto do
+  cabeçalho do DSA), a turma e o curso, e o resumo do lançado — as datas da semana vão **no título da seção**, que é o
+  mesmo para todas as manchetes: **TA lançados**, em quantos **dias**, de quantas **disciplinas**, e quantas
   **avaliações** e **atividades** — ou *"Nada lançado nesta semana ainda"*; e o link **Abrir o DSA** da turma (a semana
   atual é a padrão do DSA). — FR-003
 - C-11 · Q: Atividade global entra no resumo? → A: **Sim**, na turma cuja janela contém o dia: ela aparece no DSA
