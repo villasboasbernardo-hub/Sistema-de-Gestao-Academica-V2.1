@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { lerReais, reaisParaLeitura } from "@/lib/formato/moeda";
+import { lerReais, reaisParaEdicao, reaisParaLeitura } from "@/lib/formato/moeda";
 
 describe("ler o que se digita", () => {
   it.each([
@@ -37,5 +37,8 @@ describe("escrever para ler", () => {
 
   it("e o valor do campo de edição volta a ser lido igual", () => {
     expect(lerReais(reaisParaLeitura(9876.5))).toBe(9876.5);
+    expect(reaisParaEdicao(9876.5)).toBe("9.876,50");
+    expect(lerReais(reaisParaEdicao(9876.5))).toBe(9876.5);
+    expect(reaisParaEdicao(null)).toBe("");
   });
 });

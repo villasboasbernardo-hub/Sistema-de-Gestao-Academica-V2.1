@@ -7,6 +7,7 @@ import {
   BALDE_DE_CURRICULOS,
   LIMITE_DO_CURRICULO_EM_BYTES,
   caminhoDoCurriculo,
+  fraseDaRecusaDoArmazenamento,
   recusaDoCurriculo,
 } from "@/lib/dominio/curriculo-em-pdf";
 
@@ -35,5 +36,16 @@ describe("C-6 · a conferência antes de enviar", () => {
     expect(
       recusaDoCurriculo({ tipo: "application/pdf", tamanho: LIMITE_DO_CURRICULO_EM_BYTES + 1 }),
     ).toMatch(/20 MB/);
+  });
+});
+
+describe("a recusa do balde, em português (gotcha 11: o Storage responde por HTTP, em texto)", () => {
+  it.each([
+    ["403", /não carrega currículo/],
+    ["413", /20 MB/],
+    ["415", /só PDF/],
+    [undefined, /não foi possível carregar/i],
+  ] as const)("%s", (status, frase) => {
+    expect(fraseDaRecusaDoArmazenamento(status)).toMatch(frase);
   });
 });

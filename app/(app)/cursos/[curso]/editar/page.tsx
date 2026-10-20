@@ -20,12 +20,14 @@ import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { anosAcimaDoLimite, type TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
+import { reaisParaEdicao } from "@/lib/formato/moeda";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../../consulta";
 import { FormularioDeCurso } from "../../FormularioDeCurso";
 import { mensagemDeCursoNaoEncontrado } from "../consulta";
 import { travasDoBanco, vigenciasDoBanco } from "./consulta";
+import { EnvioDoCurriculo } from "./EnvioDoCurriculo";
 import { SecaoDeRegime } from "./SecaoDeRegime";
 
 export default async function EditarCurso({ params }: { params: Promise<{ curso: string }> }) {
@@ -38,7 +40,7 @@ export default async function EditarCurso({ params }: { params: Promise<{ curso:
   const { data: curso } = await supabase
     .from("cursos")
     .select(
-      "id, codigo, nome_curso, classificacao, modalidade, duracao_dias, duracao_semanas, limite_turmas_ano, proposito",
+      "id, codigo, nome_curso, classificacao, modalidade, duracao_dias, duracao_semanas, limite_turmas_ano, proposito, status, ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculo_pdf_em",
     )
     .eq("codigo", sigla)
     .maybeSingle();
@@ -120,6 +122,18 @@ export default async function EditarCurso({ params }: { params: Promise<{ curso:
             duracao_semanas: texto(curso.duracao_semanas),
             limite_turmas_ano: texto(curso.limite_turmas_ano),
             proposito: texto(curso.proposito),
+            /* Spec 020 (C-1 a C-4): estrangeiros e custo, só na edição. */
+            ofertavel_estrangeiros:
+              curso.ofertavel_estrangeiros === true
+                ? "sim"
+                : curso.ofertavel_estrangeiros === false
+                  ? "nao"
+                  : "",
+            estrangeiros_observacao: texto(curso.estrangeiros_observacao),
+            custo_total: reaisParaEdicao(
+              curso.custo_total === null ? null : Number(curso.custo_total),
+            ),
+            custo_composicao: texto(curso.custo_composicao),
           }}
           turmasDoCurso={(turmas ?? []).length}
           {...(turmas && turmas[0] ? { exemploDeTurma: turmas[0].codigo as string } : {})}
@@ -133,6 +147,16 @@ export default async function EditarCurso({ params }: { params: Promise<{ curso:
           O seu perfil registra o regime deste curso, mas não edita o cadastro dele.
         </p>
       )}
+
+      {/* Spec 020 (C-8): carrega quem edita o curso — o botão segue a permissão do banco (policy do balde). */}
+      {podeEditarCurso ? (
+        <EnvioDoCurriculo
+          sigla={curso.codigo as string}
+          cursoId={cursoId}
+          carregadoEm={(curso.curriculo_pdf_em as string | null) ?? null}
+          cursoAtivo={curso.status === "ativo"}
+        />
+      ) : null}
 
       <SecaoDeRegime
         cursoId={cursoId}

@@ -40,3 +40,18 @@ export function recusaDoCurriculo(arquivo: {
   }
   return null;
 }
+
+/**
+ * A recusa do balde, em português. ⚠️ O Storage responde por HTTP, com o código em TEXTO (gotcha 11): `403` é a RLS,
+ * `413` o tamanho acima do `file_size_limit`, `415` o tipo fora de `allowed_mime_types`.
+ */
+export function fraseDaRecusaDoArmazenamento(status: string | undefined): string {
+  if (status === "403") {
+    return "O seu perfil não carrega currículo deste curso (ou o curso está inativo).";
+  }
+  if (status === "413") {
+    return "O PDF passa de 20 MB, o limite do currículo. Reduza o arquivo e tente de novo.";
+  }
+  if (status === "415") return "O currículo tem de ser um arquivo PDF — só PDF é aceito.";
+  return "Não foi possível carregar o PDF agora. Tente de novo; se persistir, procure o suporte.";
+}

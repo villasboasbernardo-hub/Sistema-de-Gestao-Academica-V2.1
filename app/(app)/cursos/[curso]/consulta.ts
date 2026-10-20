@@ -22,7 +22,7 @@ import { preSelecionarTurma, type TurmaParaSelecao } from "@/lib/dominio/pre-sel
  * mostrá-la, e a primeira notícia seria a tela.
  */
 export const COLUNAS_DA_PAGINA_DO_CURSO =
-  "id, codigo, nome_curso, classificacao, modalidade, proposito, duracao_dias, duracao_semanas, limite_turmas_ano, status";
+  "id, codigo, nome_curso, classificacao, modalidade, proposito, duracao_dias, duracao_semanas, limite_turmas_ano, status, ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculo_pdf_em";
 
 /** As colunas das turmas do curso — a lista da aba Grade e a base dos avisos de cada uma. */
 /* Spec 018 (Bloco 3): + o regime nomeado de cada turma, para a aba Horários dizer quem usa cada um. */

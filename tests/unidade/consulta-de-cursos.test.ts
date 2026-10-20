@@ -32,6 +32,10 @@ function espiao() {
       chamadas.push(`eq(${coluna}=${String(valor)})`);
       return c;
     },
+    is(coluna: string, valor: null) {
+      chamadas.push(`is(${coluna}=${String(valor)})`);
+      return c;
+    },
     order(coluna: string, opcoes: { ascending: boolean }) {
       chamadas.push(`order(${coluna},${opcoes.ascending ? "asc" : "desc"})`);
       return c;
@@ -74,6 +78,18 @@ describe("`FR-004` · os três filtros chegam ao banco", () => {
       "eq(modalidade=ead)",
       "order(codigo,asc)",
     ]);
+  });
+
+  it("spec 020 (C-2) · `estrangeiros`: sim e não comparam o booleano; não informado é a coluna NULA", () => {
+    const pedido = (estrangeiros: string) => {
+      const { c, chamadas } = espiao();
+      montarConsultaDeCursos(c, com({ estrangeiros }));
+      return chamadas.filter((x) => x.includes("ofertavel_estrangeiros"));
+    };
+    expect(pedido("sim")).toEqual(["eq(ofertavel_estrangeiros=true)"]);
+    expect(pedido("nao")).toEqual(["eq(ofertavel_estrangeiros=false)"]);
+    expect(pedido("nao_informado")).toEqual(["is(ofertavel_estrangeiros=null)"]);
+    expect(pedido("")).toEqual([]);
   });
 
   it("⚠️ vazio não vira filtro — é ausência de recorte, não recorte por vazio", () => {

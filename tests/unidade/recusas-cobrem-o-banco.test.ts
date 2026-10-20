@@ -46,6 +46,12 @@ function semComentario(sql: string): string {
  */
 const SEM_FRASE_DE_TELA: Readonly<Record<string, string>> = {
   destino_inexistente: "20260926024246_carga_unidades_ensino.sql",
+  /*
+   * Spec 020 (Bloco 5), C-13 e C-14: a contagem de acessos. `registrarAcesso` é silenciosa por desenho (o login não
+   * falha porque o carimbo falhou), e nenhuma tela reescreve nem apaga acesso.
+   */
+  sem_sessao: "20261020213443_acessos_de_conta.sql",
+  acessos_imutaveis: "20261020213443_acessos_de_conta.sql",
 };
 
 /** Toda chave que alguma migration levanta em `hint = '…'`, com os arquivos onde aparece. */

@@ -180,3 +180,50 @@ describe("⚠️ nenhum campo de carga horária entra por aqui (`FR-045`)", () =
     }
   });
 });
+
+describe("spec 020 (Bloco 5), C-1 a C-4 · estrangeiros e custo, só na edição", () => {
+  it("o custo se digita em reais com vírgula e chega ao banco como número", () => {
+    const r = editar({ custo_total: "12.345,67", ofertavel_estrangeiros: true });
+    expect(r.success && r.data.custo_total).toBe(12345.67);
+    expect(r.success && r.data.ofertavel_estrangeiros).toBe(true);
+  });
+
+  it("custo que não é valor em reais é recusado com a frase do campo", () => {
+    expect(erro(editar({ custo_total: "doze mil" }))).toMatch(/Custo total: use reais com vírgula/);
+  });
+
+  it("⚠️ AUSENTE NÃO APAGA: quem edita sem os campos novos não os manda ao banco", () => {
+    const r = editar({});
+    expect(r.success).toBe(true);
+    const dados: Record<string, unknown> = r.success ? r.data : {};
+    for (const campo of [
+      "ofertavel_estrangeiros",
+      "estrangeiros_observacao",
+      "custo_total",
+      "custo_composicao",
+    ]) {
+      expect(dados[campo], campo).toBeUndefined();
+    }
+  });
+
+  it("vazio vira nulo — é «não informado», e não texto em branco", () => {
+    const r = editar({
+      ofertavel_estrangeiros: null,
+      estrangeiros_observacao: "  ",
+      custo_total: null,
+      custo_composicao: "",
+    });
+    expect(r.success).toBe(true);
+    const dados: Record<string, unknown> = r.success ? r.data : {};
+    expect(dados.ofertavel_estrangeiros).toBeNull();
+    expect(dados.estrangeiros_observacao).toBeNull();
+    expect(dados.custo_total).toBeNull();
+    expect(dados.custo_composicao).toBeNull();
+  });
+
+  it("a CRIAÇÃO não conhece os campos novos (C-4: o curso nasce pela RPC)", () => {
+    const r = criar({ custo_total: "10,00" });
+    expect(r.success).toBe(true);
+    expect(r.success ? "custo_total" in r.data : true).toBe(false);
+  });
+});

@@ -395,6 +395,11 @@ export default async function PaginaDoCurso({
               limiteTurmasAno:
                 curso.limite_turmas_ano === null ? null : Number(curso.limite_turmas_ano),
               proposito: curso.proposito,
+              ofertavelEstrangeiros: curso.ofertavel_estrangeiros,
+              estrangeirosObservacao: curso.estrangeiros_observacao,
+              custoTotal: curso.custo_total === null ? null : Number(curso.custo_total),
+              custoComposicao: curso.custo_composicao,
+              curriculoPdfEm: curso.curriculo_pdf_em,
             }}
             disciplinas={disciplinas}
             avaliacoes={avaliacoes}

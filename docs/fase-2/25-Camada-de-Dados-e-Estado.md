@@ -94,6 +94,7 @@ até a v2.0 (BRIEF §2), e um `uuid` na barra de endereço não diz nada a ningu
 |---|---|---|---|---|
 | `/inicio` | `classificacao`, `modalidade`; `ano` *(emenda de 20/10/2026, spec 019 — o `.docx` não a recebeu)* | escolha; `ano` texto | `""` (todas); `ano` `""` = o ano vigente | RF-INI-02 |
 | `/estilo` | `demo`, `categoria`, `etiquetas`, `busca` | escolha/lista/texto | `""`, `[]` | RF-DS-01 |
+| `/cursos` | `classificacao`, `modalidade`, `situacao`; `estrangeiros` *(emenda de 20/10/2026, spec 020 — `sim`, `nao`, `nao_informado`; o `.docx` não a recebeu)* | escolha | `""` (todos); `situacao` `"ativo"` | RF-CURSOS-01 |
 | `/cursos/[curso]` | `aba`, `turma` | texto | `"grade"`, `""` | RF-CURSOS |
 | `/turmas/[turma]/dsa` | `semana`, `ano` | inteiro | semana/ano correntes | RF-DSA-01 |
 | `/cronograma` | `curso`, `ano`, `granularidade`, `visao` | texto/int | `""`, ano corrente, `"semana"`, `"previsto_executado"` | RF-CRONOS-01..08 |

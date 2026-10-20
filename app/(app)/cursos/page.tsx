@@ -74,6 +74,7 @@ export default async function Cursos({
     classificacao: String(valores.classificacao),
     modalidade: String(valores.modalidade),
     situacao: String(valores.situacao),
+    estrangeiros: String(valores.estrangeiros),
   };
 
   const supabase = await criarClienteDeServidor();
