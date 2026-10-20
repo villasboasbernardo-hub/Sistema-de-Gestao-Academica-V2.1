@@ -20,7 +20,7 @@
 Link para a aba Grade do curso com a turma; dentro: curso · turma, nome e ano, situação, `BarraDeProgresso` (percentual),
 `executada/prevista TA`, *em atraso*. Abaixo, fora do link: *DSA da semana →* ou o aviso de EAD.
 
-### A manchete do DSA (`data-slot="manchete-do-dsa"`, `data-turma`)
+### A manchete do DSA (`data-slot="manchete-do-dsa"`, `data-turma-da-manchete` — o `data-turma` é só do cartão, que os percursos procuram na página inteira)
 
 *Semana do curso N de T* (`data-slot="semana-do-curso-da-manchete"`), turma e curso, datas da semana, o resumo
 (`data-slot="resumo-do-dsa"`, `data-ta`, `data-dias`) e o link *Abrir o DSA* (`data-slot="abrir-o-dsa-da-manchete"`).

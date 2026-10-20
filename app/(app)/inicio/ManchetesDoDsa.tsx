@@ -59,7 +59,8 @@ export function ManchetesDoDsa({
               key={m.turmaCodigo}
               className="border-borda bg-superficie rounded-ciaara flex flex-col gap-1 border p-4"
               data-slot="manchete-do-dsa"
-              data-turma={m.turmaCodigo}
+              /* ⚠️ `data-turma` é do CARTÃO (os percursos o procuram na página inteira); a manchete tem o seu. */
+              data-turma-da-manchete={m.turmaCodigo}
             >
               <p
                 className="text-texto-suave text-xs font-medium tracking-wide uppercase"

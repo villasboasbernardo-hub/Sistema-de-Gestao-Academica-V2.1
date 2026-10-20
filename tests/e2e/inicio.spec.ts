@@ -65,7 +65,8 @@ async function esperarTurmasNaTela(page: Page, aoMenos: number): Promise<number>
 
 /** Quantas turmas o panorama está mostrando, lido do conteúdo — nunca da URL. */
 async function turmasNaTela(page: Page): Promise<number> {
-  return page.locator('[data-slot="panorama-de-turmas"] li').count();
+  // Spec 019 (Bloco 4): os cartões do Início são itens do carrossel.
+  return page.locator('[data-slot="panorama-de-turmas"] [data-slot="item-do-carrossel"]').count();
 }
 
 test.describe("`RF-INI-01` · o panorama mostra previsto, executado e o que está em atraso", () => {
