@@ -2,7 +2,7 @@
  * As **seis** abas da página do curso — folha de cliente (`FR-006.2`, `FR-041`; spec 014, FR-053; spec 018).
  *
  * ⚠️ **SEIS DESDE O BLOCO 3** (spec 018, 19/10/2026): *Sobre o Curso · Grade · Disciplinas · Avaliações · Atividades ·
- * Horários*. Nenhuma delas mostra acompanhamento de turma — o curso mostra o **previsto** (FR-005); o andamento é da
+ * Horários*. Nenhuma delas mostra acompanhamento de turma — o curso mostra o **previsto** (FR-002.2 e FR-005.2 da spec 018); o andamento é da
  * turma.
  *
  * ⚠️ **ERAM EXATAMENTE DUAS (decisão Q-02 da spec 009), E A TERCEIRA ENTROU QUANDO A TELA PASSOU A ENTREGAR:**

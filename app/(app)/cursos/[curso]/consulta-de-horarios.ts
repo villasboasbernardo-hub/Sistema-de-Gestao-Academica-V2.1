@@ -1,5 +1,5 @@
 /**
- * A leitura da aba **Horários** do curso — spec 018 (Bloco 3), FR-003, C-7, C-12, C-18.
+ * A leitura da aba **Horários** do curso — spec 018 (Bloco 3), FR-004 e FR-003, C-7, C-12, C-18.
  *
  * ⚠️ **UMA RODADA SÓ** (`Promise.all`): os regimes nomeados, o catálogo de horários e as vigências do curso; o uso de
  *    cada regime (quais turmas) sai das turmas que a página já leu, e a trava do relógio é uma leitura por regime —

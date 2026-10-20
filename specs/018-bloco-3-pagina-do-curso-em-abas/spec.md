@@ -111,6 +111,24 @@ acumulada no lote final da entrega.*
 - C-19 · Q: O papel do DSA muda? → A: **Não para as turmas de hoje** (nenhuma escolheu regime), então o merge segue a
   conferência, sem esperar a virada de semana. *(adotada por padrão)* — FR-007.1
 
+### Session 2026-10-20 — decisões da implementação *(adotadas por padrão — Bernardo confere no fim)*
+
+- I-1 · Q: Atividade ou parada **global** dentro da janela da turma conta como lançamento que trava a escolha do
+  regime? → A: **Sim**, como já trava a vigência do curso (`app.lancamentos_que_travam_vigencia`): ela ocupa tempos na
+  grade daquela turma, e trocar o regime reinterpretaria o horário dela. Medido no remoto em 20/10/2026: **0** globais
+  hoje. Alternativa: só o lançamento da própria turma. — FR-003.5
+- I-2 · Q: O nome do regime pode mudar depois de a turma lançar? → A: **Sim**: o nome não reinterpreta lançamento;
+  só a quantidade, a duração e o relógio travam. — FR-003.2
+- I-3 · Q: *"Turmas com teto excedido"* sai de cima das abas? → A: **Não**: é alerta do curso (`RF-CURSO-06`) e fica
+  acima das abas; os **limites** (o previsto) foram para a aba Atividades. — C-5
+- I-4 · Q: A escolha de curso (cascata) da grade de disciplinas fica? → A: **Sai**, e o arquivo foi apagado: na aba
+  do curso o curso vem do endereço. — FR-001.1
+- I-5 · Q: Tirar *Disciplinas* do menu fere o `RF-NAV-02` [PRESERVADO] (*"remover pontos de entrada"*)? → A: A
+  autorização é **nominal e datada** (o pedido de 19/10/2026), e a função continua a um clique de *Cursos*; registrado
+  em `specs/008-shell-e-estado-na-url/contracts/casca.md` (terceira validação do menu). — FR-001.4
+- I-6 · Q: O campo *Regime de horário* aparece também na criação da turma? → A: **Não**, só em *Editar turma* (C-18);
+  a turma nova nasce no regime vigente do curso. Alternativa: oferecer na criação. — FR-003.4
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*

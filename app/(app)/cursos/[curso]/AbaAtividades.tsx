@@ -1,5 +1,5 @@
 /**
- * A aba **Atividades** da página do curso — *"Atividades extraclasse previstas no currículo"* (spec 018, FR-004, C-6;
+ * A aba **Atividades** da página do curso — *"Atividades extraclasse previstas no currículo"* (spec 018, FR-005, C-6;
  * pedido de Bernardo Villas Boas, 19/10/2026: *"o que o currículo prevê de AEC/TAD/TR e afins (o acompanhamento é da
  * turma, não do curso)"*) — componente de servidor.
  *

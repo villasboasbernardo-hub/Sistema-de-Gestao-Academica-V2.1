@@ -220,7 +220,7 @@ export default async function PaginaDoCurso({
 
   /*
    * ⚠️ **CADA ABA LÊ SÓ QUANDO ABERTA** (spec 018): as outras não pagam a consulta.
-   * ⚠️ **A ABA AVALIAÇÕES LÊ SEM TURMA** (spec 018, FR-005, C-4): só o currículo do curso. Até o Bloco 3 ela lia a
+   * ⚠️ **A ABA AVALIAÇÕES LÊ SEM TURMA** (spec 018, FR-002, C-4): só o currículo do curso. Até o Bloco 3 ela lia a
    *    turma da Grade e mostrava o cumprido — acompanhamento de turma, que mora na ficha da turma.
    */
   const aba = String(valores.aba);

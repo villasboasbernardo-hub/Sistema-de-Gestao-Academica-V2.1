@@ -15,6 +15,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { limparCursos, semearCursos, type CursosSemeados } from "./cursos-de-teste";
 import { abrirPainelDeFiltros, numeroDeFiltrosAtivos } from "./filtros";
+import { abrirAbaDoCurso, irAoCursoPorClique } from "./navegar-curso";
 
 let EMAIL = "";
 let SEMEADO: CursosSemeados;
@@ -22,7 +23,7 @@ let SEMEADO: CursosSemeados;
 test.beforeAll(async ({}, info) => {
   EMAIL = emailDeTeste("filtros", info.workerIndex);
   await criarConta(EMAIL, `USR-FILTROS-${info.workerIndex}`);
-  // A semente traz um curso para a cascata de `/disciplinas`.
+  // A semente traz um curso para a aba Disciplinas.
   SEMEADO = await semearCursos(info.workerIndex, EMAIL);
 });
 
@@ -109,12 +110,12 @@ test.describe("`FR-004` da spec 016 · filtros recolhidos com o número fora do 
     await limparEConferir(page);
   });
 
-  test("/disciplinas, depois de escolher o curso", async ({ page }) => {
-    await entrar(page, EMAIL, "/inicio");
-    await irPeloMenu(page, "Disciplinas", "/disciplinas");
+  test("a aba Disciplinas do curso (spec 018: era /disciplinas, depois de escolher o curso)", async ({
+    page,
+  }) => {
     const sigla = SEMEADO.porClassificacao.regular;
-    await page.locator("#curso").selectOption(sigla);
-    await expect.poll(() => new URL(page.url()).searchParams.get("curso")).toBe(sigla);
+    await irAoCursoPorClique(page, EMAIL, sigla);
+    await abrirAbaDoCurso(page, "disciplinas");
     await conferirRecolhidoELimpo(page);
 
     await abrirPainelDeFiltros(page);

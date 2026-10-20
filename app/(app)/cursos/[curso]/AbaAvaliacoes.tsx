@@ -1,5 +1,5 @@
 /**
- * A aba **Avaliações** da página do curso — **só o previsto do currículo** (spec 018, FR-005, C-4; spec 014, FR-053,
+ * A aba **Avaliações** da página do curso — **só o previsto do currículo** (spec 018, FR-002, C-4; spec 014, FR-053,
  * `RF-CURSO-02`) — componente de servidor.
  *
  * ⚠️ **O CURSO NÃO MOSTRA ACOMPANHAMENTO DE TURMA** (pedido de Bernardo Villas Boas, 19/10/2026: *"O curso NÃO mostra

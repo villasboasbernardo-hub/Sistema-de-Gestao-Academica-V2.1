@@ -1,5 +1,5 @@
 /**
- * A aba **Horários** da página do curso (spec 018, FR-003, C-7, C-12) — componente de servidor.
+ * A aba **Horários** da página do curso (spec 018, FR-004, C-7, C-12) — componente de servidor.
  *
  * ⚠️ **DUAS COISAS DIFERENTES, E A TELA AS SEPARA:**
  *    1. **os regimes nomeados** (*Regime A, B, C…*), cadastrados e editados aqui, que a TURMA escolhe;

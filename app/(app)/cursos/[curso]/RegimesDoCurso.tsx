@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Os regimes de horário nomeados do curso — **a folha de cliente da aba *Horários*** (spec 018, FR-003, C-7, C-11,
+ * Os regimes de horário nomeados do curso — **a folha de cliente da aba *Horários*** (spec 018, FR-003 e FR-004, C-7, C-11,
  * C-18).
  *
  * ⚠️ **UMA FOLHA SÓ**: o formulário (`FormularioDeRegime.tsx`) vem abaixo dela, sem marcador próprio.
