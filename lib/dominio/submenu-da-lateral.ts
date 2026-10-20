@@ -3,10 +3,17 @@
  * classificação → curso (abre a página do curso) e Turmas → curso → turma (abre a ficha da turma), expandindo dentro
  * da própria lateral, com o item ativo marcado (…). Turmas arquivadas fora."*
  *
+ * ⚠️ **AJUSTE A-5 DA CONFERÊNCIA DE 20/10/2026** (Bernardo Villas Boas): *"SUBMENU DE TURMAS na lateral: sem o nível do
+ *    curso — lista direto as turmas do ANO VIGENTE (mesma regra de padrão do item 1), não arquivadas, em ordem natural
+ *    (ex.: CAHO 2026, C-Ap-FR 2026, C-Ap-HN 2026 …). O submenu de Cursos continua como está."* Turmas deixou de ser
+ *    árvore: é uma LISTA, e o ano chega por parâmetro — quem o tira do relógio é quem chama (`anoDoPainel`), e um ano
+ *    escrito aqui seria o erro que o ajuste proíbe.
+ *
  * ⚠️ **O ENDEREÇO CHEGA POR PARÂMETRO**: montar `/turmas/…` fora de `lib/navegacao/endereco-de-turma.ts` é proibido
  *    por guarda (`FR-031.2`), e o ramo ativo compara o caminho com as rotas que a árvore já tem — sem literal nenhum.
  * ⚠️ **TypeScript puro: sem `next`, sem `react`, sem `supabase`.**
  */
+import { compararCodigoDeTurma } from "@/lib/dominio/ordem-natural";
 import {
   CLASSIFICACOES_DE_CURSO,
   ROTULO_DA_CLASSIFICACAO,
@@ -21,7 +28,7 @@ export type ItemDoSubmenu = {
 };
 
 export type GrupoDoSubmenu = {
-  /** A classificação (em Cursos) ou o id do curso (em Turmas). */
+  /** A classificação do curso. */
   readonly chave: string;
   readonly rotulo: string;
   readonly itens: readonly ItemDoSubmenu[];
@@ -36,9 +43,7 @@ export type CursoDoSubmenu = {
 
 export type TurmaDoSubmenu = {
   readonly codigo: string;
-  readonly rotulo: string | null;
   readonly ano: number;
-  readonly cursoId: string;
   readonly arquivada: boolean;
 };
 
@@ -59,28 +64,16 @@ export function arvoreDeCursos(
   })).filter((g) => g.itens.length > 0);
 }
 
-/** Turmas → curso → turma, sem as arquivadas, as mais novas primeiro, pelo rótulo e o ano (C-14). */
+/** Turmas → turma: as do ano, sem as arquivadas, pelo código, em ordem natural sem os hífens (A-5). */
 export function arvoreDeTurmas(
   turmas: readonly TurmaDoSubmenu[],
-  cursos: readonly CursoDoSubmenu[],
+  ano: number,
   enderecoDaTurma: (codigo: string) => string,
-): readonly GrupoDoSubmenu[] {
-  const vivas = turmas.filter((t) => !t.arquivada);
-  return [...cursos]
-    .sort((a, b) => natural(a.codigo, b.codigo))
-    .map((c) => ({
-      chave: c.id,
-      rotulo: c.codigo,
-      itens: vivas
-        .filter((t) => t.cursoId === c.id)
-        .sort((a, b) => b.ano - a.ano || natural(a.rotulo ?? "", b.rotulo ?? ""))
-        .map((t) => ({
-          rota: enderecoDaTurma(t.codigo),
-          rotulo: t.rotulo ? `${t.rotulo} ${t.ano}` : `${t.ano}`,
-          titulo: t.codigo,
-        })),
-    }))
-    .filter((g) => g.itens.length > 0);
+): readonly ItemDoSubmenu[] {
+  return turmas
+    .filter((t) => !t.arquivada && t.ano === ano)
+    .sort((a, b) => compararCodigoDeTurma(a.codigo, b.codigo))
+    .map((t) => ({ rota: enderecoDaTurma(t.codigo), rotulo: t.codigo }));
 }
 
 /** O caminho está na rota, ou abaixo dela, por segmento (`/turmas/X/dsa` está em `/turmas/X`; `/turmas/XY`, não). */
@@ -92,22 +85,20 @@ function dentro(caminho: string, rota: string): boolean {
  * O ramo da página atual: o que abre sozinho e qual subentrada é a ativa (C-12, C-15).
  *
  * ⚠️ **NAS LISTAS, NADA**: `/cursos` e `/turmas` acendem a entrada do menu, não uma subentrada.
+ * ⚠️ **TURMA DE OUTRO ANO NÃO ACENDE NADA** (A-5): ela não está na lista do ano vigente.
  */
 export function ramoDoCaminho(
   caminho: string,
   arvores: {
     readonly cursos: readonly GrupoDoSubmenu[];
-    readonly turmas: readonly GrupoDoSubmenu[];
+    readonly turmas: readonly ItemDoSubmenu[];
   },
 ): { readonly abertos: readonly string[]; readonly ativo: string | null } {
-  for (const [raiz, grupos] of [
-    ["cursos", arvores.cursos],
-    ["turmas", arvores.turmas],
-  ] as const) {
-    for (const grupo of grupos) {
-      const item = grupo.itens.find((i) => dentro(caminho, i.rota));
-      if (item) return { abertos: [raiz, `${raiz}:${grupo.chave}`], ativo: item.rota };
-    }
+  for (const grupo of arvores.cursos) {
+    const item = grupo.itens.find((i) => dentro(caminho, i.rota));
+    if (item) return { abertos: ["cursos", `cursos:${grupo.chave}`], ativo: item.rota };
   }
+  const turma = arvores.turmas.find((i) => dentro(caminho, i.rota));
+  if (turma) return { abertos: ["turmas"], ativo: turma.rota };
   return { abertos: [], ativo: null };
 }

@@ -23,7 +23,9 @@ import { COOKIE_DA_LATERAL, lateralFixadaNoCookie } from "@/lib/navegacao/latera
 import { enderecoDaFoto } from "@/lib/supabase/avatar";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
+import { anoDoPainel } from "@/lib/dominio/painel-de-turmas";
 import { arvoreDeCursos, arvoreDeTurmas } from "@/lib/dominio/submenu-da-lateral";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { enderecoDaTurma, enderecoDoCurso } from "@/lib/navegacao/endereco-de-turma";
 
 /**
@@ -40,12 +42,11 @@ function arvoresDoSubmenu(
   }[],
   turmas: readonly {
     codigo: string;
-    turma: string | null;
     ano_letivo: number;
-    curso_id: string;
     id: string;
   }[],
   arquivadas: readonly { turma_id: string | null }[],
+  ano: number,
 ) {
   const arquivada = idsArquivados(arquivadas);
   const doSubmenu = cursos.map((c) => ({
@@ -62,12 +63,10 @@ function arvoresDoSubmenu(
     turmas: arvoreDeTurmas(
       turmas.map((t) => ({
         codigo: t.codigo,
-        rotulo: t.turma,
         ano: Number(t.ano_letivo),
-        cursoId: t.curso_id,
         arquivada: arquivada.has(t.id),
       })),
-      doSubmenu,
+      ano,
       enderecoDaTurma,
     ),
   };
@@ -89,6 +88,11 @@ export default async function LayoutDoApp({ children }: { children: React.ReactN
   //    ⚠️ E a foto é a única que pode falhar sem consequência: `enderecoDaFoto` devolve `null`
   //       em qualquer erro, e a tela cai nas iniciais (`RN-DEG-01`).
   const supabase = await criarClienteDeServidor();
+  /*
+   * ⚠️ **AS TURMAS DO SUBMENU SÃO AS DO ANO VIGENTE** (ajuste A-5 de 20/10/2026), com a mesma regra de padrão do Início
+   *    e de Turmas: o ano de hoje em São Paulo — em 01/01 a lista troca sozinha, sem ano escrito no código.
+   */
+  const anoVigente = anoDoPainel("", hojeNaCiaara());
   const [permissoes, armazemDeCookies, fotoUrl, cursosRes, turmasRes, arquivadasRes] =
     await Promise.all([
       permissoesDoPerfil(usuario.perfil),
@@ -100,13 +104,14 @@ export default async function LayoutDoApp({ children }: { children: React.ReactN
        *    (`RN-DEG-01`).
        */
       supabase.from("cursos").select("id, codigo, nome_curso, classificacao, status"),
-      supabase.from("turmas").select("codigo, turma, ano_letivo, curso_id, id"),
+      supabase.from("turmas").select("codigo, ano_letivo, id").eq("ano_letivo", anoVigente),
       supabase.from("vw_turmas_arquivadas").select("turma_id"),
     ]);
   const submenu = arvoresDoSubmenu(
     cursosRes.data ?? [],
     turmasRes.data ?? [],
     arquivadasRes.data ?? [],
+    anoVigente,
   );
 
   /*

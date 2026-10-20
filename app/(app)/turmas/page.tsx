@@ -51,6 +51,7 @@ import {
   type InsumosDoAndamentoDaLista,
   type LinhaBrutaDeTurma,
 } from "./consulta";
+import { AnoDoPainel } from "./AnoDoPainel";
 import { FiltrosDeTurmas } from "./FiltrosDeTurmas";
 import { PainelDeTurmas } from "./PainelDeTurmas";
 import { TabelaDeTurmas } from "./TabelaDeTurmas";
@@ -248,13 +249,24 @@ export default async function Turmas({
 
   return (
     <div className="flex flex-col gap-4" data-slot="lista-de-turmas">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-texto text-xl font-semibold">Turmas</h1>
-        {/* veste: a contagem do recorte, em tom secundário, acima da tabela */}
-        <p className="text-texto-suave text-sm" data-slot="contagem-de-turmas">
-          {linhas.length} turma{linhas.length === 1 ? "" : "s"}
-          {haFiltro ? " neste recorte" : ""}
-        </p>
+      {/* Spec 019, ajuste A-1: o ano numa caixa de seleção, no canto superior direito — o mesmo do Início. */}
+      <header
+        className="flex flex-wrap items-start justify-between gap-3"
+        data-slot="cabecalho-de-turmas"
+      >
+        <div className="flex flex-col gap-1">
+          <h1 className="text-texto text-xl font-semibold">Turmas</h1>
+          {/* veste: a contagem do recorte, em tom secundário, acima da tabela */}
+          <p className="text-texto-suave text-sm" data-slot="contagem-de-turmas">
+            {linhas.length} turma{linhas.length === 1 ? "" : "s"}
+            {haFiltro ? " neste recorte" : ""}
+          </p>
+        </div>
+        <AnoDoPainel
+          ano={anoDoPainelEscolhido}
+          anos={anosDoSeletor(anos, vigente)}
+          vigente={vigente}
+        />
       </header>
 
       {recorte.error ? null : (
@@ -264,8 +276,6 @@ export default async function Turmas({
           naoLidos={painel.naoLidos}
           diasDeAviso={diasDeAviso}
           ano={anoDoPainelEscolhido}
-          anos={anosDoSeletor(anos, vigente)}
-          vigente={vigente}
         />
       )}
 

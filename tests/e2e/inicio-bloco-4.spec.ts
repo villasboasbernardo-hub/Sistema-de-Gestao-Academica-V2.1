@@ -2,10 +2,15 @@
  * Spec 019 (Bloco 4) — **o Início do ano**, **os dois carrosséis** e **o submenu da lateral**, por clique e teclado.
  *
  * Os casos que discriminam (DoD 8):
- *   - a turma PLANEJADA do ano seguinte não aparece no Início do ano vigente, e aparece escolhendo o ano dela (SC-001);
+ *   - a turma PLANEJADA do ano seguinte não aparece no Início do ano vigente (SC-001);
  *   - a manchete do DSA traz os TA e os dias lançados nesta semana; a turma EAD pura, com a mesma janela, não entra
  *     (SC-003);
- *   - pela lateral, Turmas → curso → turma abre a ficha marcada; a arquivada não está lá (SC-004).
+ *   - pela lateral, Turmas → turma abre a ficha marcada; a arquivada não está lá (SC-004).
+ *
+ * ⚠️ **OS CINCO AJUSTES DA CONFERÊNCIA DE 20/10/2026** (Bernardo Villas Boas), cada um com o seu caso:
+ *   A-1 o ano numa CAIXA DE SELEÇÃO no canto superior direito, sem "ano letivo"; A-2 cartões só das turmas ATIVAS do
+ *   ano (os números contam todas), e uma frase quando não há; A-3 o título do cartão é só o nome da turma; A-4 o
+ *   cartão leva à FICHA DA TURMA; A-5 o submenu de Turmas lista direto as turmas do ano vigente, sem o nível do curso.
  *
  * ⚠️ A SEMANA É A DE HOJE (a de São Paulo, `hojeNaCiaara`): a amostra lança aula nela, e a janela das turmas a cobre.
  * ⚠️ Regra 9.1: o curso não se apaga — reaproveitado; turmas e aulas saem no começo e no fim. O registro de
@@ -37,7 +42,15 @@ let EMAIL = "";
 let SIGLA = "";
 let PREFIXO = "";
 let CURSO_ID = "";
-const T = { comAula: "", semAula: "", ead: "", seguinte: "", arquivada: "" };
+const T = {
+  comAula: "",
+  semAula: "",
+  ead: "",
+  seguinte: "",
+  arquivada: "",
+  planejada: "",
+  concluida: "",
+};
 
 async function idPorCodigo(tabela: string, codigo: string, novo: Record<string, unknown>) {
   const { data: existe } = await admin.from(tabela).select("id").eq("codigo", codigo).maybeSingle();
@@ -99,22 +112,32 @@ test.beforeAll(async ({}, info) => {
   }
   await limpar();
 
-  const turmas: [keyof typeof T, string, number, string, string][] = [
-    ["comAula", "T1", ANO, "ativa", "presencial"],
-    ["semAula", "T2", ANO, "ativa", "presencial"],
-    ["ead", "T3", ANO, "ativa", "ead"],
-    ["arquivada", "T4", ANO, "ativa", "presencial"],
-    ["seguinte", "T1", ANO + 1, "planejada", "presencial"],
+  // A janela: [início, término]; a planejada e a concluída do ano ficam fora da semana de hoje, quando der.
+  const turmas: [keyof typeof T, string, number, string, string, [string, string]][] = [
+    ["comAula", "T1", ANO, "ativa", "presencial", [`${ANO}-01-05`, `${ANO}-12-18`]],
+    ["semAula", "T2", ANO, "ativa", "presencial", [`${ANO}-01-05`, `${ANO}-12-18`]],
+    ["ead", "T3", ANO, "ativa", "ead", [`${ANO}-01-05`, `${ANO}-12-18`]],
+    ["arquivada", "T4", ANO, "ativa", "presencial", [`${ANO}-01-05`, `${ANO}-12-18`]],
+    ["planejada", "T5", ANO, "planejada", "presencial", [`${ANO}-12-21`, `${ANO}-12-30`]],
+    ["concluida", "T6", ANO, "concluida", "presencial", [`${ANO}-01-05`, `${ANO}-01-09`]],
+    [
+      "seguinte",
+      "T1",
+      ANO + 1,
+      "planejada",
+      "presencial",
+      [`${ANO + 1}-03-01`, `${ANO + 1}-11-30`],
+    ],
   ];
-  for (const [chave, rotulo, ano, status, modalidade] of turmas) {
+  for (const [chave, rotulo, ano, status, modalidade, [inicio, termino]] of turmas) {
     const { error } = await admin.from("turmas").insert({
       curso_id: CURSO_ID,
       turma: rotulo,
       ano_letivo: ano,
       status,
       modalidade,
-      data_inicio: ano === ANO ? `${ANO}-01-05` : `${ano}-03-01`,
-      data_termino: ano === ANO ? `${ANO}-12-18` : `${ano}-11-30`,
+      data_inicio: inicio,
+      data_termino: termino,
       alunos: 10,
     });
     if (error) throw new Error(`falha ao criar a turma ${chave}: ${error.message}`);
@@ -184,11 +207,31 @@ const cartao = (page: Page, codigo: string) =>
 const manchete = (page: Page, codigo: string) =>
   page.locator(`[data-slot="manchete-do-dsa"][data-turma-da-manchete="${codigo}"]`);
 
-test.describe("Spec 019 · FR-001 · o Início do ano vigente", () => {
-  test("abre no ano vigente, sem a planejada do ano seguinte; o seletor a mostra", async ({
+/** O número de um indicador do Início, pelo rótulo. */
+async function indicadorDoInicio(page: Page, rotulo: string): Promise<number> {
+  const card = page
+    .locator('[data-slot="turmas-do-ano"] [data-slot="card-kpi"]')
+    .filter({ hasText: rotulo });
+  return Number(await card.locator(".text-kpi").innerText());
+}
+
+test.describe("Spec 019 · FR-001 e A-1 · o ano, numa caixa de seleção no canto superior direito", () => {
+  test("abre no ano de hoje; a caixa troca o ano na URL; e não se fala em «ano letivo»", async ({
     page,
   }) => {
     await entrar(page, EMAIL, "/inicio");
+    const cabecalho = page.locator('[data-slot="cabecalho-do-inicio"]');
+    const escolha = cabecalho.locator('select[data-slot="ano-do-painel-escolha"]');
+    await expect(escolha).toHaveValue(String(ANO));
+    await expect(page.locator('[data-slot="ano-do-painel-opcao"]')).toHaveCount(0);
+
+    // No canto superior direito: à direita do título, na mesma faixa.
+    const titulo = await cabecalho.getByRole("heading", { level: 1 }).boundingBox();
+    const caixa = await escolha.boundingBox();
+    expect(caixa && titulo && caixa.x > titulo.x + titulo.width).toBe(true);
+    expect(caixa && titulo && caixa.y < titulo.y + titulo.height).toBe(true);
+    await expect(page.locator("main")).not.toContainText(/ano letivo/i);
+
     await expect(page.locator('[data-slot="turmas-do-ano"]')).toHaveAttribute(
       "data-ano",
       String(ANO),
@@ -197,14 +240,74 @@ test.describe("Spec 019 · FR-001 · o Início do ano vigente", () => {
     await expect(cartao(page, T.seguinte)).toHaveCount(0);
     await expect(cartao(page, T.arquivada)).toHaveCount(0);
 
-    await page.locator(`[data-slot="ano-do-painel-opcao"][data-ano="${ANO + 1}"]`).click();
+    await escolha.selectOption(String(ANO + 1));
     await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBe(String(ANO + 1));
-    await expect(cartao(page, T.seguinte)).toBeVisible();
+    await expect(page.locator('[data-slot="turmas-do-ano"]')).toHaveAttribute(
+      "data-ano",
+      String(ANO + 1),
+    );
     await expect(cartao(page, T.comAula)).toHaveCount(0);
 
-    await page.locator(`[data-slot="ano-do-painel-opcao"][data-ano="${ANO}"]`).click();
+    await escolha.selectOption(String(ANO));
     await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBeNull();
     await expect(cartao(page, T.comAula)).toBeVisible();
+  });
+
+  test("em Turmas, a mesma caixa, no mesmo canto", async ({ page }) => {
+    await entrar(page, EMAIL, "/inicio");
+    await page
+      .locator('[data-slot="navegacao-lateral"]')
+      .getByRole("link", { name: "Turmas", exact: true })
+      .click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/turmas");
+    const cabecalho = page.locator('[data-slot="cabecalho-de-turmas"]');
+    const escolha = cabecalho.locator('select[data-slot="ano-do-painel-escolha"]');
+    await expect(escolha).toHaveValue(String(ANO));
+    const titulo = await cabecalho.getByRole("heading", { level: 1 }).boundingBox();
+    const caixa = await escolha.boundingBox();
+    expect(caixa && titulo && caixa.x > titulo.x + titulo.width).toBe(true);
+    await expect(page.locator("main")).not.toContainText(/ano letivo/i);
+    await escolha.selectOption(String(ANO + 1));
+    await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBe(String(ANO + 1));
+  });
+});
+
+test.describe("Spec 019 · A-2 a A-4 · os cartões", () => {
+  test("A-2 · só as ATIVAS do ano têm cartão; os números contam todas", async ({ page }) => {
+    await entrar(page, EMAIL, "/inicio");
+    await expect(cartao(page, T.comAula)).toBeVisible();
+    await expect(cartao(page, T.semAula)).toHaveCount(1);
+    await expect(cartao(page, T.planejada)).toHaveCount(0);
+    await expect(cartao(page, T.concluida)).toHaveCount(0);
+    const cartoes = await page
+      .locator('[data-slot="carrossel-de-turmas"] [data-slot="item-do-carrossel"]')
+      .count();
+    // A planejada e a concluída do ano estão nos números, e não nos cartões.
+    expect(await indicadorDoInicio(page, "Turmas no recorte")).toBeGreaterThanOrEqual(cartoes + 2);
+  });
+
+  test("A-2 · sem turma ativa no ano, uma frase, e nada de carrossel", async ({ page }) => {
+    await entrar(page, EMAIL, `/inicio?ano=${ANO + 1}`);
+    await expect(page.locator('[data-slot="sem-turma-ativa"]')).toHaveText(
+      `Nenhuma turma em andamento em ${ANO + 1}.`,
+    );
+    await expect(page.locator('[data-slot="carrossel-de-turmas"]')).toHaveCount(0);
+  });
+
+  test("A-3 · o título do cartão é só o nome da turma, sem o nome do curso", async ({ page }) => {
+    await entrar(page, EMAIL, "/inicio");
+    const c = cartao(page, T.comAula);
+    await expect(c.locator('[data-slot="titulo-do-cartao"]')).toHaveText(T.comAula);
+    await expect(c).not.toContainText("Curso do Início");
+  });
+
+  test("A-4 · clicar no cartão leva à FICHA DA TURMA", async ({ page }) => {
+    await entrar(page, EMAIL, "/inicio");
+    await cartao(page, T.comAula).click();
+    await expect
+      .poll(() => decodeURIComponent(new URL(page.url()).pathname))
+      .toBe(`/turmas/${T.comAula}`);
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(T.comAula);
   });
 
   test("o cartão tem a barra de progresso", async ({ page }) => {
@@ -298,7 +401,7 @@ test.describe("Spec 019 · FR-004 · o carrossel passa sozinho, pausa e anda por
 test.describe("Spec 019 · FR-005 · o submenu da lateral", () => {
   const NAV = '[data-slot="navegacao-lateral"]';
 
-  test("Turmas → curso → turma abre a ficha marcada; a arquivada não está; Cursos → classificação → curso", async ({
+  test("A-5 · Turmas → turma (sem o nível do curso) abre a ficha marcada; só as do ano, sem a arquivada; Cursos → classificação → curso", async ({
     page,
   }) => {
     await entrar(page, EMAIL, "/inicio");
@@ -308,18 +411,18 @@ test.describe("Spec 019 · FR-005 · o submenu da lateral", () => {
     await page
       .locator(`${NAV} [data-slot="expandir-submenu"][aria-label="Abrir as turmas"]`)
       .click();
-    await page
-      .locator(`${NAV} [data-slot="submenu"][data-raiz="turmas"] [data-slot="grupo-do-submenu"]`)
-      .filter({ hasText: SIGLA })
-      .click();
-    const grupo = page.locator(`${NAV} [data-slot="submenu"][data-raiz="turmas"]`);
-    await expect(grupo.getByRole("link", { name: `T4 ${ANO}` })).toHaveCount(0);
-    await grupo.getByRole("link", { name: `T1 ${ANO}`, exact: true }).click();
+    const lista = page.locator(`${NAV} [data-slot="submenu"][data-raiz="turmas"]`);
+    await expect(lista.locator('[data-slot="grupo-do-submenu"]')).toHaveCount(0);
+    await expect(lista.getByRole("link", { name: T.comAula, exact: true })).toBeVisible();
+    await expect(lista.getByRole("link", { name: T.planejada, exact: true })).toBeVisible();
+    await expect(lista.getByRole("link", { name: T.arquivada, exact: true })).toHaveCount(0);
+    await expect(lista.getByRole("link", { name: T.seguinte, exact: true })).toHaveCount(0);
+    await lista.getByRole("link", { name: T.comAula, exact: true }).click();
     await expect
       .poll(() => decodeURIComponent(new URL(page.url()).pathname))
       .toBe(`/turmas/${T.comAula}`);
     await expect(page.locator(`${NAV} [data-subentrada][aria-current="page"]`)).toHaveText(
-      `T1 ${ANO}`,
+      T.comAula,
     );
 
     await page

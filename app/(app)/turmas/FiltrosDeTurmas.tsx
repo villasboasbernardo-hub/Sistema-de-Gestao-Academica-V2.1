@@ -57,7 +57,8 @@ export function FiltrosDeTurmas({
     },
     {
       chave: "ano",
-      rotulo: "Ano letivo",
+      // Spec 019, ajuste A-1: sem o termo "ano letivo" — o mesmo `ano` da caixa do canto superior direito.
+      rotulo: "Ano",
       tipo: "escolha",
       opcoes: anos.map((a) => ({ valor: String(a), rotulo: String(a) })),
     },

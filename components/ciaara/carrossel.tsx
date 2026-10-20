@@ -169,7 +169,8 @@ export function Carrossel({
             data-atual={i === atual ? "true" : "false"}
             className={cn(
               "shrink-0 snap-start",
-              largura === "inteira" ? "w-full" : "w-[min(20rem,85%)]",
+              /* Ajuste A-2 de 20/10/2026: os cartões do Início ficaram maiores (eram 20rem). */
+              largura === "inteira" ? "w-full" : "w-[min(26rem,90%)]",
             )}
           >
             {item}

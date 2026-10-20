@@ -95,6 +95,8 @@ async function conferirIndicadores(page: Page, esperado: Record<string, string>)
     await expect(indicador(page, chave).locator(".text-kpi"), chave).toHaveText(valor);
   }
 }
+const ESCOLHA_DO_ANO = (page: Page) =>
+  page.locator('[data-slot="cabecalho-de-turmas"] select[data-slot="ano-do-painel-escolha"]');
 const indicador = (page: Page, chave: string) =>
   page.locator(`[data-slot="indicador-de-turmas"][data-chave="${chave}"]`);
 
@@ -131,9 +133,8 @@ test.describe("FR-005 · cinco indicadores e três avisos, do recorte", () => {
     const painel = page.locator('[data-slot="painel-de-turmas"]');
     await expect(painel).toBeVisible();
     await expect(painel).toHaveAttribute("data-ano", VIGENTE);
-    await expect(
-      page.locator(`[data-slot="ano-do-painel-opcao"][data-ano="${VIGENTE}"]`),
-    ).toHaveAttribute("aria-pressed", "true");
+    // Spec 019, A-1: uma caixa de seleção no canto superior direito, no lugar dos botões.
+    await expect(ESCOLHA_DO_ANO(page)).toHaveValue(VIGENTE);
 
     await abrirFiltros(page);
     await escolherNoFiltro(page, "Curso", SIGLA);
@@ -153,7 +154,7 @@ test.describe("FR-005 · cinco indicadores e três avisos, do recorte", () => {
     });
 
     /* ── 2027 pelo seletor do painel: só a T6, e o Total bate com a tabela ───────────────────── */
-    await page.locator('[data-slot="ano-do-painel-opcao"][data-ano="2027"]').click();
+    await ESCOLHA_DO_ANO(page).selectOption("2027");
     await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBe("2027");
     await expect(painel).toHaveAttribute("data-ano", "2027");
     await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText("1 turma");
@@ -164,12 +165,12 @@ test.describe("FR-005 · cinco indicadores e três avisos, do recorte", () => {
     );
 
     /* ── 2025: a concluída ───────────────────────────────────────────────────────────────────── */
-    await page.locator('[data-slot="ano-do-painel-opcao"][data-ano="2025"]').click();
+    await ESCOLHA_DO_ANO(page).selectOption("2025");
     await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBe("2025");
     await conferirIndicadores(page, { total: "1", concluidas: "1", planejadas: "0" });
 
     /* ── de volta ao vigente: o padrão, e a URL fica sem `ano` ───────────────────────────────── */
-    await page.locator(`[data-slot="ano-do-painel-opcao"][data-ano="${VIGENTE}"]`).click();
+    await ESCOLHA_DO_ANO(page).selectOption(VIGENTE);
     await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBeNull();
     await expect(painel).toHaveAttribute("data-ano", VIGENTE);
     await conferirIndicadores(page, { total: "4", planejadas: "1" });

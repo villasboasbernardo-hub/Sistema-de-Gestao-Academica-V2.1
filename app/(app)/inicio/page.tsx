@@ -52,6 +52,7 @@ import { ManchetesDoDsa, type MancheteDoDsa } from "./ManchetesDoDsa";
 import { AnoDoPainel } from "../turmas/AnoDoPainel";
 import { Carrossel } from "@/components/ciaara/carrossel";
 import { anoDoPainel, anosDoSeletor, semanaDoPainel } from "@/lib/dominio/painel-de-turmas";
+import { cartoesDoInicio } from "@/lib/dominio/cartoes-do-inicio";
 import { resumoDoDsa, temDsaNaSemana } from "@/lib/dominio/dsa-da-semana";
 import { semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
 import { datasDaSemanaIso, semanaIsoDe } from "@/lib/dominio/carga-semanal";
@@ -335,6 +336,8 @@ export default async function Inicio({
   );
   const temRecorte = classificacao !== "" || modalidade !== "";
   const baseVazia = (totalRes.count ?? 0) === 0;
+  /* Ajuste A-2 (20/10/2026): os cartões são só das turmas ativas do ano; os números contam todas. */
+  const cartoes = cartoesDoInicio(panorama);
 
   /*
    * ⚠️ **OS DSA DA SEMANA** (spec 019, C-8 a C-11): as turmas do recorte (classificação e modalidade — não o ano: a
@@ -429,17 +432,24 @@ export default async function Inicio({
 
   return (
     <section className="flex flex-col gap-5">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-texto text-lg font-semibold">Início</h1>
-        {/* veste: a dica que explica o alcance do panorama — texto fixo, nunca dado */}
-        <p className="text-texto-tenue text-xs">
-          Panorama das turmas sob a CIAARA-11. O recorte vai para o endereço: este link abre com
-          ele.
-        </p>
+      {/*
+        Spec 019 (C-1 e ajuste A-1 de 20/10/2026): o ano numa caixa de seleção, no canto superior direito — a mesma
+        régua de Turmas, com o ano de hoje por padrão.
+      */}
+      <header
+        className="flex flex-wrap items-start justify-between gap-3"
+        data-slot="cabecalho-do-inicio"
+      >
+        <div className="flex flex-col gap-1">
+          <h1 className="text-texto text-lg font-semibold">Início</h1>
+          {/* veste: a dica que explica o alcance do panorama — texto fixo, nunca dado */}
+          <p className="text-texto-tenue text-xs">
+            Panorama das turmas sob a CIAARA-11. O recorte vai para o endereço: este link abre com
+            ele.
+          </p>
+        </div>
+        <AnoDoPainel anos={anos} ano={ano} vigente={anoVigente} rota="/inicio" />
       </header>
-
-      {/* Spec 019 (C-1): o ano letivo, com a régua do painel de Turmas — o vigente por padrão. */}
-      <AnoDoPainel anos={anos} ano={ano} vigente={anoVigente} rota="/inicio" />
 
       <FiltroDoPanorama />
 
@@ -509,38 +519,31 @@ export default async function Inicio({
           <CardKpi rotulo="Progresso do recorte" valor={`${totais.percentual}%`} />
         </div>
 
-        {panorama.length === 0 ? (
-          baseVazia ? (
-            <EstadoVazio
-              motivo="sem-dado"
-              titulo="Ainda não existe no sistema"
-              detalhe="A carga de cursos e turmas ainda não foi feita nesta base. Não é ausência de cadastro na CIAARA-11: é dado que ainda não chegou aqui."
-            />
-          ) : temRecorte ? (
-            <EstadoVazio
-              motivo="sem-dado"
-              titulo="Nenhuma turma neste recorte"
-              detalhe={`Há turmas cadastradas, mas nenhuma de ${ano} com esta classificação e modalidade. Volte o filtro para Todas ou escolha outro ano.`}
-            />
-          ) : (
-            <EstadoVazio
-              motivo="sem-dado"
-              titulo={`Nenhuma turma em ${ano}`}
-              detalhe="Escolha outro ano letivo acima."
-            />
-          )
+        {panorama.length === 0 && baseVazia ? (
+          <EstadoVazio
+            motivo="sem-dado"
+            titulo="Ainda não existe no sistema"
+            detalhe="A carga de cursos e turmas ainda não foi feita nesta base. Não é ausência de cadastro na CIAARA-11: é dado que ainda não chegou aqui."
+          />
+        ) : cartoes.length === 0 ? (
+          /* Ajuste A-2: sem turma ativa no ano, uma frase — nunca um carrossel vazio. */
+          <p className="text-texto-suave text-sm" data-slot="sem-turma-ativa">
+            Nenhuma turma em andamento em {ano}
+            {temRecorte ? " neste recorte" : ""}.
+          </p>
         ) : (
           /*
-           * ⚠️ **OS CARTÕES EM CARROSSEL** (spec 019, C-3 a C-7): cada um é ponto de entrada para a página do curso
-           *    (`RF-INI-03`), com a barra de progresso; o carrossel passa sozinho, pausa e anda por teclado.
+           * ⚠️ **OS CARTÕES EM CARROSSEL** (spec 019, C-3 a C-7, e ajustes A-2 a A-4 de 20/10/2026): só as turmas
+           *    ATIVAS do ano, cada uma levando à sua ficha, com a barra de progresso; o carrossel passa sozinho, pausa e
+           *    anda por teclado. Os números acima contam todas as turmas do ano.
            */
           <div data-slot="panorama-de-turmas">
             <Carrossel
-              rotulo={`Turmas de ${ano}`}
+              rotulo={`Turmas em andamento em ${ano}`}
               intervaloMs={6000}
               largura="cartao"
               dataSlot="carrossel-de-turmas"
-              itens={panorama.map((t) => (
+              itens={cartoes.map((t) => (
                 <CartaoDaTurma key={t.turmaId} turma={t} />
               ))}
             />

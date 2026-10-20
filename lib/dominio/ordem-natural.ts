@@ -49,6 +49,25 @@ export function compararCodigoNatural(a: string, b: string): number {
   return COLADOR.compare(a, b);
 }
 
+const COLADOR_SEM_PONTUACAO = new Intl.Collator("pt-BR", {
+  numeric: true,
+  sensitivity: "base",
+  ignorePunctuation: true,
+});
+
+/**
+ * Compara dois códigos de TURMA em ordem natural lendo-os sem os hífens — spec 019, ajuste A-5 da conferência de
+ * 20/10/2026: *"em ordem natural (ex.: CAHO 2026, C-Ap-FR 2026, C-Ap-HN 2026 …)"* — Bernardo Villas Boas.
+ *
+ * ⚠️ **NÃO É `compararCodigoNatural`**: aquele lê o hífen, que vem antes das letras, e poria `CAHO 2026` depois de
+ *    todas as `C-…` — o contrário do exemplo. Lido sem o hífen, `CAHO` vem antes de `CApFR` (H antes de P), e o número
+ *    continua valendo como número (`T2` antes de `T10`). O desempate, quando os dois só diferem na pontuação, é o
+ *    comparador natural.
+ */
+export function compararCodigoDeTurma(a: string, b: string): number {
+  return COLADOR_SEM_PONTUACAO.compare(a, b) || COLADOR.compare(a, b);
+}
+
 /** Uma cópia da lista em ordem do código — a lista recebida não é tocada. */
 export function emOrdemNaturalDoCodigo<T>(itens: readonly T[], codigo: (item: T) => string): T[] {
   return [...itens].sort((x, y) => compararCodigoNatural(codigo(x), codigo(y)));

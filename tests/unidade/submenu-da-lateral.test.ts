@@ -1,5 +1,10 @@
 /**
- * O submenu da lateral — spec 019 (Bloco 4), C-12 a C-15: a árvore de Cursos e de Turmas e o ramo da página atual.
+ * O submenu da lateral — spec 019 (Bloco 4), C-12 a C-15: a árvore de Cursos, a lista de Turmas e o ramo da página
+ * atual.
+ *
+ * ⚠️ **AJUSTE A-5 DA CONFERÊNCIA DE 20/10/2026** (Bernardo Villas Boas): *"SUBMENU DE TURMAS na lateral: sem o nível do
+ *    curso — lista direto as turmas do ANO VIGENTE (…), não arquivadas, em ordem natural (ex.: CAHO 2026, C-Ap-FR 2026,
+ *    C-Ap-HN 2026 …)."*
  */
 import { describe, expect, it } from "vitest";
 
@@ -12,10 +17,13 @@ const cursos = [
   { id: "c3", codigo: "CAHO", nome: "CAHO", classificacao: "especial" },
 ];
 const turmas = [
-  { codigo: "C-Ap-FR 2025", rotulo: null, ano: 2025, cursoId: "c1", arquivada: false },
-  { codigo: "C-Ap-FR T2 2026", rotulo: "T2", ano: 2026, cursoId: "c1", arquivada: false },
-  { codigo: "C-Ap-FR T1 2026", rotulo: "T1", ano: 2026, cursoId: "c1", arquivada: false },
-  { codigo: "CAHO 2026", rotulo: null, ano: 2026, cursoId: "c3", arquivada: true },
+  { codigo: "C-Ap-FR 2025", ano: 2025, arquivada: false },
+  { codigo: "C-Ap-HN 2026", ano: 2026, arquivada: false },
+  { codigo: "C-Ap-FR T10 2026", ano: 2026, arquivada: false },
+  { codigo: "C-Ap-FR T2 2026", ano: 2026, arquivada: false },
+  { codigo: "CAHO 2026", ano: 2026, arquivada: false },
+  { codigo: "C-Esp-ME 2026", ano: 2026, arquivada: true },
+  { codigo: "C-Ap-HN 2027", ano: 2027, arquivada: false },
 ];
 
 describe("C-14 · a árvore de Cursos", () => {
@@ -38,20 +46,36 @@ describe("C-14 · a árvore de Cursos", () => {
   });
 });
 
-describe("C-14 · a árvore de Turmas", () => {
-  it("por curso, sem as arquivadas, as mais novas primeiro, pelo rótulo e o ano", () => {
-    const arvore = arvoreDeTurmas(turmas, cursos, enderecoDaTurma);
-    expect(arvore).toHaveLength(1);
-    expect(arvore[0]?.rotulo).toBe("C-Ap-FR");
-    expect(arvore[0]?.itens.map((i) => i.rotulo)).toEqual(["T1 2026", "T2 2026", "2025"]);
-    expect(arvore[0]?.itens[0]?.rota).toBe("/turmas/C-Ap-FR%20T1%202026");
+describe("A-5 · a lista de Turmas, sem o nível do curso", () => {
+  const lista = arvoreDeTurmas(turmas, 2026, enderecoDaTurma);
+
+  it("só as turmas do ano, sem as arquivadas, cada uma pelo código", () => {
+    expect(lista.map((i) => i.rotulo)).not.toContain("C-Ap-FR 2025");
+    expect(lista.map((i) => i.rotulo)).not.toContain("C-Ap-HN 2027");
+    expect(lista.map((i) => i.rotulo)).not.toContain("C-Esp-ME 2026");
+    expect(lista[0]?.rota).toBe("/turmas/CAHO%202026");
+  });
+
+  it("em ordem natural lendo o código sem os hífens: CAHO antes de C-Ap-FR, e T2 antes de T10", () => {
+    expect(lista.map((i) => i.rotulo)).toEqual([
+      "CAHO 2026",
+      "C-Ap-FR T2 2026",
+      "C-Ap-FR T10 2026",
+      "C-Ap-HN 2026",
+    ]);
+  });
+
+  it("outro ano, outra lista", () => {
+    expect(arvoreDeTurmas(turmas, 2027, enderecoDaTurma).map((i) => i.rotulo)).toEqual([
+      "C-Ap-HN 2027",
+    ]);
   });
 });
 
 describe("C-12 e C-15 · o ramo da página atual", () => {
   const arvores = {
     cursos: arvoreDeCursos(cursos, enderecoDoCurso),
-    turmas: arvoreDeTurmas(turmas, cursos, enderecoDaTurma),
+    turmas: arvoreDeTurmas(turmas, 2026, enderecoDaTurma),
   };
   it("na página do curso, abre Cursos e a classificação, e marca o curso", () => {
     expect(ramoDoCaminho("/cursos/C-Ap-HN", arvores)).toEqual({
@@ -62,11 +86,14 @@ describe("C-12 e C-15 · o ramo da página atual", () => {
   it("abaixo do curso (editar), o curso continua ativo", () => {
     expect(ramoDoCaminho("/cursos/C-Ap-HN/editar", arvores).ativo).toBe("/cursos/C-Ap-HN");
   });
-  it("no DSA da turma, abre Turmas e o curso dela, e marca a turma", () => {
-    expect(ramoDoCaminho("/turmas/C-Ap-FR%20T1%202026/dsa", arvores)).toEqual({
-      abertos: ["turmas", "turmas:c1"],
-      ativo: "/turmas/C-Ap-FR%20T1%202026",
+  it("no DSA da turma, abre Turmas (sem nível de curso) e marca a turma", () => {
+    expect(ramoDoCaminho("/turmas/C-Ap-FR%20T2%202026/dsa", arvores)).toEqual({
+      abertos: ["turmas"],
+      ativo: "/turmas/C-Ap-FR%20T2%202026",
     });
+  });
+  it("na ficha de uma turma de outro ano, nada fica ativo (ela não está na lista)", () => {
+    expect(ramoDoCaminho("/turmas/C-Ap-FR%202025", arvores)).toEqual({ abertos: [], ativo: null });
   });
   it("nas listas, nada abre nem fica ativo", () => {
     expect(ramoDoCaminho("/cursos", arvores)).toEqual({ abertos: [], ativo: null });

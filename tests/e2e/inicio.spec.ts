@@ -13,7 +13,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
-import { enderecoDaTurmaNoCurso } from "@/lib/navegacao/endereco-de-turma";
+import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 import { mudarSituacaoDoCurso, mudarStatusDaTurma } from "./curso-de-teste";
 import { limparPanorama, semearPanorama, type PanoramaSemeado } from "./panorama-de-teste";
 
@@ -281,16 +281,34 @@ test.describe("`FR-017.6` · curso inativo sai do panorama, e a contagem continu
    * arquivados, que é o oposto do que o FR-017.1 quer.
    */
   /**
-   * Tira as duas turmas de pendentes e desativa os cursos pedidos — nesta ordem, que é a que a
+   * Tira de pendente a turma de cada curso pedido e desativa o curso — nesta ordem, que é a que a
    * regra impõe (`FR-017.2`).
+   *
+   * ⚠️ **SÓ A TURMA DO CURSO QUE SAI** (spec 019, ajuste A-2 de 20/10/2026): até ali as três eram
+   *    concluídas sempre, e o cartão da turma concluída continuava no Início. Desde que os cartões são
+   *    só das ATIVAS, concluir a turma do curso que FICA apagaria o cartão que o caso procura.
    */
   async function desativar(...codigos: readonly string[]): Promise<void> {
-    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaEmDia, "concluida");
-    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaEmExcesso, "concluida");
-    await mudarStatusDaTurma(EMAIL_GERAL, SEMEADO.turmaSemCapacidade, "concluida");
+    const turmaDoCurso: Record<string, string> = {
+      [SEMEADO.cursoExpedito]: SEMEADO.turmaEmDia,
+      [SEMEADO.cursoRegular]: SEMEADO.turmaEmExcesso,
+      [SEMEADO.cursoSemCapacidade]: SEMEADO.turmaSemCapacidade,
+    };
+    for (const codigo of codigos) {
+      const turma = turmaDoCurso[codigo];
+      if (turma) await mudarStatusDaTurma(EMAIL_GERAL, turma, "concluida");
+    }
     for (const codigo of codigos) {
       await mudarSituacaoDoCurso(EMAIL_GERAL, codigo, "inativo");
     }
+  }
+
+  /** O número *Turmas no recorte* — ele conta todas as turmas do ano, de qualquer situação (A-2). */
+  async function turmasNoRecorte(page: Page): Promise<number> {
+    const card = page
+      .locator('[data-slot="turmas-do-ano"] [data-slot="card-kpi"]')
+      .filter({ hasText: "Turmas no recorte" });
+    return Number(await card.locator(".text-kpi").innerText());
   }
 
   test.afterEach(async () => {
@@ -304,9 +322,24 @@ test.describe("`FR-017.6` · curso inativo sai do panorama, e a contagem continu
   });
 
   test("a turma do curso desativado some do panorama, e a do ativo fica", async ({ page }) => {
+    /*
+     * ⚠️ **A TURMA DO CURSO INATIVO ESTÁ CONCLUÍDA** (a regra a exige antes de desativar), e turma
+     *    concluída não tem cartão desde o ajuste A-2 — então a AUSÊNCIA de cartão não discrimina mais.
+     *    O que discrimina é o NÚMERO do recorte, que conta todas as situações: sem o filtro de curso em
+     *    oferta, a turma concluída do curso inativo continuaria contada.
+     */
+    const recorte = "/inicio?classificacao=expedito&modalidade=ead";
+    await entrar(page, EMAIL_GERAL, recorte);
+    const antes = await turmasNoRecorte(page);
     await desativar(SEMEADO.cursoExpedito);
-    await entrar(page, EMAIL_GERAL, "/inicio");
+    await page.goto(recorte);
+    await expect
+      .poll(() => turmasNoRecorte(page), {
+        message: "turma de curso INATIVO continua contada no panorama (FR-017.6)",
+      })
+      .toBe(antes - 1);
 
+    await page.goto("/inicio");
     await expect(
       page.locator(`[data-turma="${SEMEADO.turmaEmDia}"]`),
       "turma de curso INATIVO continua no panorama (FR-017.6)",
@@ -366,20 +399,14 @@ test.describe("`FR-031.2` · o link da turma sai codificado, e de uma funcao so"
     expect(href, "a turma do panorama nao tem link").not.toBeNull();
     expect(href, `o href saiu com espaco cru: ${href}`).not.toContain(" ");
     /*
-     * ⚠️ **O `+` PASSOU A SER O CERTO NA CONSULTA — decisao de Bernardo Villas Boas, 23/09/2026,
-     * declaracao (a) da `PEND-5a-8`.** O `FR-036` obriga a escrita a ir pelo `useParametro`, que e o
-     * `nuqs`, e o `encodeQueryValue` dele nao emite `%20` — nao ha costura. O `FR-031.1` exige UMA
-     * representacao, e a unica alcancavel e a do `nuqs`. **O que esta guarda protegia continua
-     * protegido**: o defeito de 18/09/2026 era ESPACO CRU no `href`, e `+` nao e espaco cru.
+     * ⚠️ **DESDE O AJUSTE A-4 DE 20/10/2026 (spec 019) O CARTAO LEVA A FICHA DA TURMA**, e nao mais a
+     *    Grade do curso: o codigo vai no CAMINHO, onde o espaco e `%20` (antes ia na consulta, onde o
+     *    `nuqs` escreve `+`). O defeito que esta guarda protege continua o mesmo — espaco cru no `href`.
      */
-    expect(href, `o href nao usou a grafia unica da consulta: ${href}`).toContain("+");
-    // ⚠️ E PEDE A ABA GRADE (spec 016, FR-006.3): desde 17/10/2026 a padrao e *Sobre o Curso*.
-    expect(href, "o link nao aponta para a Grade do curso com a turma na URL").toContain(
-      "?aba=grade&turma=",
-    );
+    expect(href, `o href nao codificou o espaco do codigo: ${href}`).toContain("%20");
   });
 
-  test("e o link e exatamente o que `enderecoDaTurmaNoCurso` produz", async ({ page }) => {
+  test("e o link e exatamente o que `enderecoDaTurma` produz", async ({ page }) => {
     /*
      * ⚠️ A METADE QUE FECHA A REGRA. "Tem %20" passaria com qualquer codificacao parcial
      * feita a mao; comparar com a FUNCAO prova que a tela usa o modulo unico, que e o que
@@ -389,7 +416,8 @@ test.describe("`FR-031.2` · o link da turma sai codificado, e de uma funcao so"
 
     const link = page.locator(`a[data-turma="${SEMEADO.turmaEmDia}"]`);
     const href = await link.getAttribute("href");
-    const esperado = enderecoDaTurmaNoCurso(SEMEADO.cursoExpedito, SEMEADO.turmaEmDia, "grade");
+    // Spec 019, A-4: o cartao leva a FICHA da turma, pelo modulo unico de endereco.
+    const esperado = enderecoDaTurma(SEMEADO.turmaEmDia);
 
     expect(href, `a tela montou ${href}, e a funcao produz ${esperado}`).toBe(esperado);
   });

@@ -72,19 +72,17 @@ test("2 · ficha da turma → alerta de vista → a aba Avaliações, aberta e �
   await conferirAbaDeAvaliacoesAVista(page);
 });
 
-test("3 · /inicio → card da turma → a página do curso na aba Grade, com a turma, aberta e à vista", async ({
-  page,
-}) => {
+/*
+ * ⚠️ **O CASO 3 MUDOU DE DESTINO NA CONFERÊNCIA DE 20/10/2026** (spec 019, ajuste A-4, Bernardo Villas Boas): *"CLIQUE
+ *    NO CARTÃO leva à FICHA DA TURMA (…), não mais ao curso."* Ele levava à aba Grade do curso (spec 016, FR-006.3).
+ */
+test("3 · /inicio → cartão da turma → a ficha da turma", async ({ page }) => {
   await entrar(page, EMAIL_ADMIN, "/inicio");
   const card = page.locator(`[data-slot="panorama-de-turmas"] [data-turma="${SEMEADO.turma}"]`);
   await card.scrollIntoViewIfNeeded();
   await card.click();
-  // ⚠️ O cartão PEDE a Grade (spec 016, FR-006.3): a padrão passou a ser *Sobre o Curso*.
-  await expect(page).toHaveURL(/\/cursos\/[^?]+\?aba=grade&turma=/);
-  const abas = page.locator('[data-slot="abas-do-curso"]');
-  await expect(abas.locator('[data-aba="grade"]')).toHaveAttribute("aria-selected", "true");
-  await expect(abas.getByRole("tablist")).toBeInViewport();
-  await expect(abas.getByRole("tabpanel")).toBeInViewport();
+  await expect.poll(() => new URL(page.url()).pathname).toBe(enderecoDaTurma(SEMEADO.turma));
+  await expect(page.locator('[data-slot="abas-do-curso"]')).toHaveCount(0);
 });
 
 /*

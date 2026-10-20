@@ -32,7 +32,7 @@ import { EntradaDoMenu } from "@/components/casca/entrada-do-menu";
 import { IconeDoMenu } from "@/components/casca/icones-do-menu";
 import { PainelRetratil } from "@/components/casca/painel-retratil";
 import { SubmenuDaLateral } from "@/components/casca/submenu-da-lateral";
-import type { GrupoDoSubmenu } from "@/lib/dominio/submenu-da-lateral";
+import type { GrupoDoSubmenu, ItemDoSubmenu } from "@/lib/dominio/submenu-da-lateral";
 import { MENU } from "@/lib/navegacao/menu";
 
 const ID_DO_PAINEL = "navegacao-principal";
@@ -67,10 +67,13 @@ const ROTULO = cn(
   "lg:group-data-[fixada=true]:opacity-100",
 );
 
-/** A árvore do submenu (spec 019, C-12 a C-14), lida pelo layout e entregue pronta. */
+/**
+ * O submenu (spec 019, C-12 a C-14), lido pelo layout e entregue pronto: a árvore de *Cursos* e a LISTA de *Turmas*
+ * do ano vigente (ajuste A-5 da conferência de 20/10/2026).
+ */
 export type ArvoresDoSubmenu = {
   readonly cursos: readonly GrupoDoSubmenu[];
-  readonly turmas: readonly GrupoDoSubmenu[];
+  readonly turmas: readonly ItemDoSubmenu[];
 };
 
 export function NavegacaoLateral({
@@ -119,7 +122,12 @@ export function NavegacaoLateral({
                 <IconeDoMenu nome={entrada.icone} />
                 <span className={ROTULO}>{entrada.rotulo}</span>
               </EntradaDoMenu>
-              {raiz && submenu ? <SubmenuDaLateral raiz={raiz} grupos={submenu[raiz]} /> : null}
+              {raiz === "cursos" && submenu ? (
+                <SubmenuDaLateral raiz="cursos" grupos={submenu.cursos} />
+              ) : null}
+              {raiz === "turmas" && submenu ? (
+                <SubmenuDaLateral raiz="turmas" itens={submenu.turmas} />
+              ) : null}
             </li>
           );
         })}

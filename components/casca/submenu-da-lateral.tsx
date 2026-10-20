@@ -1,9 +1,12 @@
 "use client";
 
 /**
- * O submenu da lateral — spec 019 (Bloco 4), C-12 a C-15: *Cursos* → classificação → curso e *Turmas* → curso → turma,
+ * O submenu da lateral — spec 019 (Bloco 4), C-12 a C-15: *Cursos* → classificação → curso e *Turmas* → turma,
  * expandindo dentro da própria lateral.
  *
+ * ⚠️ **TURMAS É LISTA, NÃO ÁRVORE** (ajuste A-5 da conferência de 20/10/2026, Bernardo Villas Boas): *"sem o nível do
+ *    curso — lista direto as turmas do ANO VIGENTE (…), não arquivadas, em ordem natural"*. *Cursos* continua com a
+ *    classificação no meio.
  * ⚠️ **FOLHA DE CLIENTE PELO MESMO MOTIVO DE `EntradaDoMenu`**: o ativo é o caminho do navegador (`usePathname`), e o
  *    layout não é redesenhado na navegação por clique. O aberto/fechado é estado de tela — não vai para a URL (C-12).
  * ⚠️ **A ÁRVORE CHEGA PRONTA, POR PROPRIEDADE** (Princípio XI; `fronteira-casca`): quem a lê é o layout, pela RLS.
@@ -21,7 +24,11 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 import { cn } from "cn";
 
-import { ramoDoCaminho, type GrupoDoSubmenu } from "@/lib/dominio/submenu-da-lateral";
+import {
+  ramoDoCaminho,
+  type GrupoDoSubmenu,
+  type ItemDoSubmenu,
+} from "@/lib/dominio/submenu-da-lateral";
 
 /** Visível só com a lateral expandida (no desktop); na gaveta do celular, sempre. */
 const SO_EXPANDIDA = cn(
@@ -34,17 +41,56 @@ const SO_EXPANDIDA = cn(
 
 const ROTULO_DO_BOTAO = { cursos: "Abrir os cursos", turmas: "Abrir as turmas" } as const;
 
-export function SubmenuDaLateral({
-  raiz,
-  grupos,
+/** Os links de uma lista — o mesmo desenho em *Cursos* (dentro da classificação) e em *Turmas* (direto). */
+function ListaDeItens({
+  id,
+  itens,
+  ativo,
+  className,
 }: {
-  readonly raiz: "cursos" | "turmas";
-  readonly grupos: readonly GrupoDoSubmenu[];
+  readonly id: string;
+  readonly itens: readonly ItemDoSubmenu[];
+  readonly ativo: string | null;
+  readonly className?: string;
 }) {
+  return (
+    <ul id={id} className={cn("flex flex-col", className)}>
+      {itens.map((i) => {
+        const eAtivo = ativo === i.rota;
+        return (
+          <li key={i.rota}>
+            <Link
+              href={i.rota}
+              data-subentrada={i.rota}
+              {...(i.titulo ? { title: i.titulo } : {})}
+              {...(eAtivo ? { "aria-current": "page" as const } : {})}
+              className={cn(
+                "rounded-ciaara-sm block truncate border-l-2 px-2 py-1 text-xs",
+                "focus-visible:ring-marca focus-visible:ring-2 focus-visible:outline-none",
+                eAtivo
+                  ? "border-marca text-texto font-semibold"
+                  : "text-texto-suave hover:bg-marca-suave hover:text-texto border-transparent",
+              )}
+            >
+              {i.rotulo}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function SubmenuDaLateral(
+  props:
+    | { readonly raiz: "cursos"; readonly grupos: readonly GrupoDoSubmenu[] }
+    | { readonly raiz: "turmas"; readonly itens: readonly ItemDoSubmenu[] },
+) {
+  const { raiz } = props;
   const caminho = usePathname() ?? "/";
   const ramo = ramoDoCaminho(caminho, {
-    cursos: raiz === "cursos" ? grupos : [],
-    turmas: raiz === "turmas" ? grupos : [],
+    cursos: props.raiz === "cursos" ? props.grupos : [],
+    turmas: props.raiz === "turmas" ? props.itens : [],
   });
   /*
    * ⚠️ **ABERTO = O QUE A PESSOA ESCOLHEU, SENÃO O RAMO DA PÁGINA** — derivado a cada desenho, sem efeito: ao navegar,
@@ -55,7 +101,8 @@ export function SubmenuDaLateral({
     has: (chave: string) => escolhas.get(chave) ?? ramo.abertos.includes(chave),
   };
 
-  if (grupos.length === 0) return null;
+  const vazio = props.raiz === "cursos" ? props.grupos.length === 0 : props.itens.length === 0;
+  if (vazio) return null;
 
   const alternar = (chave: string) =>
     definirEscolhas((atuais) => new Map(atuais).set(chave, !abertos.has(chave)));
@@ -86,14 +133,22 @@ export function SubmenuDaLateral({
         )}
       </button>
 
-      {raizAberta ? (
+      {!raizAberta ? null : props.raiz === "turmas" ? (
+        <div
+          data-slot="submenu"
+          data-raiz="turmas"
+          className={cn(SO_EXPANDIDA, "mt-0.5 ml-5 border-l pl-1")}
+        >
+          <ListaDeItens id={idDaRaiz} itens={props.itens} ativo={ramo.ativo} />
+        </div>
+      ) : (
         <ul
           id={idDaRaiz}
           data-slot="submenu"
-          data-raiz={raiz}
+          data-raiz="cursos"
           className={cn(SO_EXPANDIDA, "mt-0.5 ml-5 flex flex-col gap-0.5 border-l pl-1")}
         >
-          {grupos.map((g) => {
+          {props.grupos.map((g) => {
             const chave = `${raiz}:${g.chave}`;
             const aberto = abertos.has(chave);
             const idDoGrupo = `submenu-${raiz}-${g.chave}`;
@@ -120,36 +175,18 @@ export function SubmenuDaLateral({
                   <span className="truncate">{g.rotulo}</span>
                 </button>
                 {aberto ? (
-                  <ul id={idDoGrupo} className="ml-4 flex flex-col">
-                    {g.itens.map((i) => {
-                      const ativo = ramo.ativo === i.rota;
-                      return (
-                        <li key={i.rota}>
-                          <Link
-                            href={i.rota}
-                            data-subentrada={i.rota}
-                            {...(i.titulo ? { title: i.titulo } : {})}
-                            {...(ativo ? { "aria-current": "page" as const } : {})}
-                            className={cn(
-                              "rounded-ciaara-sm block truncate border-l-2 px-2 py-1 text-xs",
-                              "focus-visible:ring-marca focus-visible:ring-2 focus-visible:outline-none",
-                              ativo
-                                ? "border-marca text-texto font-semibold"
-                                : "text-texto-suave hover:bg-marca-suave hover:text-texto border-transparent",
-                            )}
-                          >
-                            {i.rotulo}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <ListaDeItens
+                    id={idDoGrupo}
+                    itens={g.itens}
+                    ativo={ramo.ativo}
+                    className="ml-4"
+                  />
                 ) : null}
               </li>
             );
           })}
         </ul>
-      ) : null}
+      )}
     </>
   );
 }
