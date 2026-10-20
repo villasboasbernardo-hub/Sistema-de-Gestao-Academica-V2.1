@@ -156,7 +156,7 @@ contracts/migrations.md (M1–M4), contracts/telas.md, quickstart.md, plano-de-a
 - [X] T074 [US3] Ajuste 3 — *Arquivar*/*Desarquivar* na linha de `/turmas` (`ArquivarTurma` com `naLista`, a coluna *Arquivo* de `TabelaDeTurmas` só com o recurso), e o e2e por clique em `tests/e2e/turmas-arquivar.spec.ts` (visto falhar sem o botão), mais o caso do Operador
 - [X] T075 [US4] Ajuste 4 — o painel de um ano só (`anoDoPainel`, `anosDoSeletor`, a folha `AnoDoPainel.tsx` no `ano` da URL), com o teste visto falhar e o e2e de `tests/e2e/turmas-painel.spec.ts` (a planejada de 2027 fora do vigente; 2027, 2025 e a volta ao vigente por clique)
 - [X] T076 A reversão com a M5 (`reversao.sql`), provada de novo numa base limpa; e a corrida do auxiliar `irAFichaDaTurma` (`tests/e2e/navegar-turmas.ts`), exposta pela coluna nova
-- [ ] T077 `verificar`, commit, push, CI verde; rito do remoto para M4 e M5 (backup, dry-run só com elas, `db push`, conferência só de leitura); merge por squash; CI na `main`; Production; apagar o ramo; plano de correções e `CLAUDE.md`
+- [X] T077 `verificar`, commit, push, CI verde; rito do remoto para M4 e M5 (backup, dry-run só com elas, `db push`, conferência só de leitura); merge por squash; CI na `main`; Production; apagar o ramo; plano de correções e `CLAUDE.md`
 
 ---
 
