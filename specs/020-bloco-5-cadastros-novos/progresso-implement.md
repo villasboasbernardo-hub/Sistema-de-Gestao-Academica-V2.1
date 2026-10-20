@@ -48,3 +48,11 @@ cabeçalhos, numa transação: **2.201 objetos, `39af6fd9…`** — a impressão
 `storage.protect_delete` (`42501`, *"Use the Storage API instead"*). O cabeçalho foi corrigido (só comentário; a
 migration ainda não tinha ido ao remoto): pela API do Storage, ou com `set local storage.allow_delete_query = 'true'`
 na mesma transação — e só com o balde vazio.
+
+## O primeiro CI reprovou, e a causa era minha (20/10/2026)
+
+Run `39511399991`: **541 passados, 1 reprovado nas três tentativas, 6 pulados**. O reprovado era a guarda `FR-030`
+(`telas-acessiveis.spec.ts:93`): o `<input type="file">` escondido do envio do currículo, em *Editar curso*, não tinha
+nome acessível — a guarda varre todo `input` do `main`, oculto ou não. ⚠️ **Ela não estava na minha lista de arquivos
+tocados**, porque não fala de curso: visita *Editar curso* entre as telas do PR 2 da spec 009. O campo ganhou
+`aria-label="Arquivo PDF do currículo"`; local, `telas-acessiveis` + `bloco-5` **8 de 8**.

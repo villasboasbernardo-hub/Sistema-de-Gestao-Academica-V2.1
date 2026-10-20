@@ -101,6 +101,7 @@ export function EnvioDoCurriculo({
             ref={entrada}
             type="file"
             accept={TIPO_DO_CURRICULO}
+            aria-label="Arquivo PDF do currículo"
             className="hidden"
             onChange={(e) => void aoEscolher(e)}
             data-slot="arquivo-do-curriculo"
