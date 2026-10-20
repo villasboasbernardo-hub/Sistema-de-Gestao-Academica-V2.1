@@ -10,6 +10,8 @@
  *    ano vigente no painel e todos os anos na lista).
  * ⚠️ **BOTÕES, E NÃO UM `<select>`**: são poucos anos, e cada um fica a um clique, com o escolhido marcado
  *    (`aria-pressed`).
+ * ⚠️ **SERVE TAMBÉM AO INÍCIO** (spec 019, C-1: *"mesma régua de ano do painel de Turmas"*): a rota chega por
+ *    propriedade, e o `ano` é o do contrato de cada uma. Um seletor só — dois divergiriam no primeiro ajuste.
  */
 "use client";
 
@@ -20,6 +22,7 @@ export function AnoDoPainel({
   anos,
   ano,
   vigente,
+  rota = "/turmas",
 }: {
   /** Os anos oferecidos (`anosDoSeletor`), do mais novo ao mais velho. */
   readonly anos: readonly number[];
@@ -27,13 +30,17 @@ export function AnoDoPainel({
   readonly ano: number;
   /** O ano letivo vigente — o padrão. */
   readonly vigente: number;
+  /** A tela cujo `?ano=` ele escreve. */
+  readonly rota?: "/turmas" | "/inicio";
 }) {
-  const [, definirAno] = useParametro("/turmas", "ano");
+  const [, definirAnoDasTurmas] = useParametro("/turmas", "ano");
+  const [, definirAnoDoInicio] = useParametro("/inicio", "ano");
+  const definirAno = rota === "/inicio" ? definirAnoDoInicio : definirAnoDasTurmas;
 
   return (
     <div
       role="group"
-      aria-label="Ano letivo do painel"
+      aria-label={rota === "/inicio" ? "Ano letivo do Início" : "Ano letivo do painel"}
       className="flex flex-wrap items-center gap-1"
       data-slot="ano-do-painel"
     >

@@ -221,6 +221,18 @@ export const CONTRATO = {
         historico: "empilha",
         avisaServidor: true,
       },
+      /*
+       * Spec 019 (Bloco 4, C-1): o ano letivo do Início — a MESMA régua do painel de Turmas (Bloco 2). Texto, com
+       * padrão vazio = o ano vigente em São Paulo; quem valida é `anoDoPainel` (ano inválido cai no vigente). Empilha
+       * como os outros dois: trocar de ano troca de contexto.
+       */
+      ano: {
+        nome: "ano",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
     },
   },
   /*

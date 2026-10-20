@@ -54,6 +54,11 @@ function primeiraMensagem(issues: readonly { message: string }[]): string {
 function revalidar(sigla: string): void {
   revalidatePath("/cursos");
   revalidatePath(`/cursos/${sigla}`);
+  /*
+   * Spec 019 (Bloco 4, C-16): o submenu da lateral mora no layout, que não é redesenhado na navegação por clique —
+   * sem isto, o curso ou a turma nova só apareceria nele depois de recarregar a página.
+   */
+  revalidatePath("/", "layout");
 }
 
 /**

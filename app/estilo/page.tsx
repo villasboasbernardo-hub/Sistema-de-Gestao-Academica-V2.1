@@ -21,6 +21,7 @@ import {
   AmostraCampoDeSenha,
   AmostraDialogoConfirmacao,
   AmostraBarraDeProgresso,
+  AmostraCarrossel,
   AmostraEmblemasDeStatus,
   AmostraGradeAlocacao,
   AmostraGradeDsa,
@@ -324,6 +325,10 @@ export default function Vitrine() {
 
       <Secao titulo="Barra de progresso — o número vai no atributo, nunca só na cor">
         <AmostraBarraDeProgresso />
+      </Secao>
+
+      <Secao titulo="Carrossel — passa sozinho, pausa ao apontar e ao focar, anda por ← e →; parado com «reduzir movimento»">
+        <AmostraCarrossel />
       </Secao>
 
       <Secao titulo="Emblema de status — os nove tons, cada um com rótulo textual obrigatório">

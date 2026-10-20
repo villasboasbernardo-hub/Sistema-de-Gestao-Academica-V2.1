@@ -31,6 +31,8 @@ import { cn } from "cn";
 import { EntradaDoMenu } from "@/components/casca/entrada-do-menu";
 import { IconeDoMenu } from "@/components/casca/icones-do-menu";
 import { PainelRetratil } from "@/components/casca/painel-retratil";
+import { SubmenuDaLateral } from "@/components/casca/submenu-da-lateral";
+import type { GrupoDoSubmenu } from "@/lib/dominio/submenu-da-lateral";
 import { MENU } from "@/lib/navegacao/menu";
 
 const ID_DO_PAINEL = "navegacao-principal";
@@ -60,10 +62,24 @@ const ROTULO = cn(
   "whitespace-nowrap transition-opacity motion-reduce:transition-none",
   "lg:opacity-0 lg:group-[[data-apontar=livre]:hover]:opacity-100",
   "lg:group-has-[[data-entrada]:focus-visible]:opacity-100",
+  /* Spec 019 (Bloco 4): o foco numa subentrada do submenu também expande — ver `submenu-da-lateral.tsx`. */
+  "lg:group-has-[[data-subentrada]:focus-visible]:opacity-100",
   "lg:group-data-[fixada=true]:opacity-100",
 );
 
-export function NavegacaoLateral({ fixada }: { readonly fixada: boolean }) {
+/** A árvore do submenu (spec 019, C-12 a C-14), lida pelo layout e entregue pronta. */
+export type ArvoresDoSubmenu = {
+  readonly cursos: readonly GrupoDoSubmenu[];
+  readonly turmas: readonly GrupoDoSubmenu[];
+};
+
+export function NavegacaoLateral({
+  fixada,
+  submenu,
+}: {
+  readonly fixada: boolean;
+  readonly submenu?: ArvoresDoSubmenu;
+}) {
   return (
     <PainelRetratil idDoPainel={ID_DO_PAINEL} fixadaInicial={fixada}>
       <ul className="flex flex-col gap-0.5 p-2">
@@ -93,13 +109,17 @@ export function NavegacaoLateral({ fixada }: { readonly fixada: boolean }) {
             );
           }
 
+          /* Spec 019 (Bloco 4): *Cursos* e *Turmas* ganham o submenu, ao lado do link da lista. */
+          const raiz =
+            entrada.rota === "/cursos" ? "cursos" : entrada.rota === "/turmas" ? "turmas" : null;
           return (
-            <li key={entrada.rota}>
+            <li key={entrada.rota} className={raiz ? "relative" : undefined}>
               {/* ⚠️ O ativo é decidido na folha, pelo caminho do navegador — ver o cabeçalho. */}
               <EntradaDoMenu rota={entrada.rota}>
                 <IconeDoMenu nome={entrada.icone} />
                 <span className={ROTULO}>{entrada.rotulo}</span>
               </EntradaDoMenu>
+              {raiz && submenu ? <SubmenuDaLateral raiz={raiz} grupos={submenu[raiz]} /> : null}
             </li>
           );
         })}

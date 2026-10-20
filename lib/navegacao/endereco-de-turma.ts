@@ -50,6 +50,16 @@ export function enderecoDaTurma(codigo: string): string {
 }
 
 /**
+ * A página do curso — spec 019 (Bloco 4), o submenu da lateral. Era montada à mão em `BarraDoCurso` e no catálogo;
+ * aqui ela tem um dono.
+ *
+ * @example enderecoDoCurso("C-Ap-FR") → "/cursos/C-Ap-FR"
+ */
+export function enderecoDoCurso(sigla: string): string {
+  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}`;
+}
+
+/**
  * A ficha da turma **com a confirmação da gravação** — o `?gravada=` do contrato (spec 016, FR-015.2).
  *
  * @example enderecoDaTurmaGravada("C-Ap-FR 2026", "situacao") → "/turmas/C-Ap-FR%202026?gravada=situacao"

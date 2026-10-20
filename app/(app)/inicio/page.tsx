@@ -26,16 +26,13 @@ import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-tu
 import Link from "next/link";
 
 import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
-import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { CardKpi } from "@/components/ciaara/card-kpi";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
-import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
 // ⚠️ O ENDERECO DE TURMA VEM DO MODULO, E NAO DE UM TEMPLATE AQUI (`FR-031.2`). O codigo da
 //    turma e `sigla [rotulo] ano` e CONTEM ESPACO — montar a mao produzia um `href` com
 //    espaco cru, que o navegador aceita e o servidor recebe diferente. Defeito medido e
 //    corrigido em 18/09/2026; a varredura de `endereco-de-turma-unico.test.ts` o impede
 //    de voltar.
-import { enderecoDaTurmaNoCurso, enderecoDoDsa } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
@@ -50,6 +47,14 @@ import {
   type LinhaDoPrevisto,
 } from "../turmas/tetos-excedidos";
 import { FiltroDoPanorama } from "./FiltroDoPanorama";
+import { CartaoDaTurma } from "./CartaoDaTurma";
+import { ManchetesDoDsa, type MancheteDoDsa } from "./ManchetesDoDsa";
+import { AnoDoPainel } from "../turmas/AnoDoPainel";
+import { Carrossel } from "@/components/ciaara/carrossel";
+import { anoDoPainel, anosDoSeletor, semanaDoPainel } from "@/lib/dominio/painel-de-turmas";
+import { resumoDoDsa, temDsaNaSemana } from "@/lib/dominio/dsa-da-semana";
+import { semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
+import { datasDaSemanaIso, semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import { AlertasDeVista } from "../turmas/[turma]/AlertasDeVista";
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
 import { alertasDeVista } from "@/lib/dominio/avaliacoes/alertas-de-vista";
@@ -64,14 +69,6 @@ import {
   type TurmaDoPanorama,
 } from "./panorama";
 
-/** O tom de cada status de turma. */
-const TOM_DA_TURMA = {
-  planejada: "planejado",
-  ativa: "executado",
-  concluida: "inativo",
-  cancelada: "conflito",
-} as const;
-
 export default async function Inicio({
   searchParams,
 }: {
@@ -85,6 +82,14 @@ export default async function Inicio({
   const { valores } = lerParametros("/inicio", await searchParams);
   const classificacao = String(valores.classificacao);
   const modalidade = String(valores.modalidade);
+  /*
+   * ⚠️ **O "HOJE" É LIDO UMA VEZ, ANTES DA RODADA** — é a mesma função da ficha da turma e dos avisos (`hojeNaCiaara`).
+   * ⚠️ **O ANO DO INÍCIO** (spec 019, C-1): a régua do painel de Turmas — `?ano=` válido, senão o vigente em São Paulo.
+   */
+  const hoje = hojeNaCiaara();
+  const anoVigente = Number(hoje.slice(0, 4));
+  const ano = anoDoPainel(String(valores.ano), hoje);
+  const semanaAtual = semanaDoPainel(hoje);
 
   const supabase = await criarClienteDeServidor();
 
@@ -99,17 +104,10 @@ export default async function Inicio({
    */
   let consultaDeCursos = supabase
     .from("cursos")
-    .select("id, codigo, classificacao, modalidade")
+    .select("id, codigo, classificacao, modalidade, nome_curso, duracao_semanas")
     .eq("status", "ativo");
   if (classificacao !== "") consultaDeCursos = consultaDeCursos.eq("classificacao", classificacao);
   if (modalidade !== "") consultaDeCursos = consultaDeCursos.eq("modalidade", modalidade);
-
-  /*
-   * ⚠️ **O "HOJE" É LIDO UMA VEZ, ANTES DA RODADA, E ENTRA NA CONSULTA DOS FERIADOS.** É a mesma
-   *    função da ficha da turma e dos avisos (`hojeNaCiaara`): três fórmulas de "hoje" conviveram
-   *    neste repositório até 04/10/2026, e uma delas estava em UTC.
-   */
-  const hoje = hojeNaCiaara();
 
   const [
     cursosRes,
@@ -124,6 +122,7 @@ export default async function Inicio({
     parametrosDaVistaRes,
     executadaRes,
     arquivadasRes,
+    ocupacaoDaSemanaRes,
   ] = await Promise.all([
     consultaDeCursos,
     supabase
@@ -153,7 +152,7 @@ export default async function Inicio({
     supabase
       .from("turmas")
       .select(
-        "id, data_termino, modalidade, regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(regime_tempos)",
+        "id, codigo, status, curso_id, ano_letivo, data_inicio, data_termino, inicio_etapa_presencial, termino_etapa_presencial, modalidade, regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(regime_tempos)",
       ),
     supabase
       .from("vw_cursos_regime_vigente")
@@ -204,6 +203,15 @@ export default async function Inicio({
     supabase.rpc("chd_da_turma_ate", { p_ate: hoje }),
     /* D-COR-5 (spec 017, C-24): a turma arquivada some do panorama e, com ele, dos alertas. */
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
+    /*
+     * ⚠️ **OS DSA DA SEMANA** (spec 019, C-10 e C-11): os lançamentos de segunda a sábado desta semana, de TODAS as
+     *    turmas, numa leitura só — e as atividades globais (`turma_id` nulo), que aparecem no DSA de cada turma.
+     */
+    supabase
+      .from("vw_ocupacao_ta")
+      .select("turma_id, data, origem, disciplina_id, tempos_consumidos")
+      .gte("data", semanaAtual.de)
+      .lte("data", semanaAtual.ate),
   ]);
 
   /*
@@ -234,12 +242,18 @@ export default async function Inicio({
    *    com ele. Falha na leitura das arquivadas não esconde nada — a turma aparece, como antes do Bloco 2.
    */
   const arquivadas = idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[]);
+  const cargasVivas = semAsArquivadas(
+    (cargasRes.data ?? []) as unknown as CargaDaTurma[],
+    arquivadas,
+    (c) => c.turma_id,
+  );
+  /* Spec 019 (C-1, C-2): o seletor oferece os anos das turmas e o vigente; o panorama é só do ano escolhido. */
+  const anos = anosDoSeletor(
+    cargasVivas.map((c) => Number(c.ano_letivo)),
+    anoVigente,
+  );
   const panorama = montarPanorama(
-    semAsArquivadas(
-      (cargasRes.data ?? []) as unknown as CargaDaTurma[],
-      arquivadas,
-      (c) => c.turma_id,
-    ),
+    cargasVivas.filter((c) => Number(c.ano_letivo) === ano),
     (cursosRes.data ?? []) as unknown as CursoDoRecorte[],
     (turmasRes.data ?? []) as unknown as TurmaDoPanorama[],
     (regimesRes.data ?? []) as unknown as RegimeDoCursoNoBanco[],
@@ -322,6 +336,97 @@ export default async function Inicio({
   const temRecorte = classificacao !== "" || modalidade !== "";
   const baseVazia = (totalRes.count ?? 0) === 0;
 
+  /*
+   * ⚠️ **OS DSA DA SEMANA** (spec 019, C-8 a C-11): as turmas do recorte (classificação e modalidade — não o ano: a
+   *    semana é a de hoje) que têm DSA nesta semana, cada uma com o que está lançado nela.
+   */
+  const diasDaSemana = (() => {
+    const s = semanaIsoDe(hoje);
+    return s === null ? [] : datasDaSemanaIso(s.ano, s.numero).slice(0, 6);
+  })();
+  const semanaIso = semanaIsoDe(hoje);
+  type TurmaDaLeitura = {
+    id: string;
+    codigo: string;
+    status: string;
+    curso_id: string;
+    data_inicio: string | null;
+    data_termino: string | null;
+    inicio_etapa_presencial: string | null;
+    termino_etapa_presencial: string | null;
+    modalidade: string | null;
+  };
+  type CursoDaLeitura = {
+    id: string;
+    codigo: string;
+    nome_curso: string;
+    duracao_semanas: number | null;
+  };
+  type LinhaDaOcupacao = {
+    turma_id: string | null;
+    data: string;
+    origem: string;
+    disciplina_id: string | null;
+    tempos_consumidos: number | null;
+  };
+  const cursoDoRecorte = new Map(
+    ((cursosRes.data ?? []) as unknown as CursoDaLeitura[]).map((c) => [c.id, c] as const),
+  );
+  const ocupacao = (ocupacaoDaSemanaRes.data ?? []) as unknown as LinhaDaOcupacao[];
+  const manchetes: MancheteDoDsa[] = ((turmasRes.data ?? []) as unknown as TurmaDaLeitura[])
+    .filter((t) => cursoDoRecorte.has(t.curso_id))
+    .filter((t) =>
+      temDsaNaSemana(
+        {
+          status: t.status,
+          modalidade: t.modalidade,
+          dataInicio: t.data_inicio,
+          dataTermino: t.data_termino,
+          inicioEtapaPresencial: t.inicio_etapa_presencial,
+          terminoEtapaPresencial: t.termino_etapa_presencial,
+          arquivada: arquivadas.has(t.id),
+        },
+        diasDaSemana,
+      ),
+    )
+    .map((t) => {
+      const curso = cursoDoRecorte.get(t.curso_id) as CursoDaLeitura;
+      const lancamentos = ocupacao
+        .filter(
+          (o) =>
+            o.turma_id === t.id ||
+            (o.turma_id === null &&
+              t.data_inicio !== null &&
+              t.data_termino !== null &&
+              o.data >= t.data_inicio &&
+              o.data <= t.data_termino),
+        )
+        .map((o) => ({
+          origem: o.origem,
+          data: o.data,
+          disciplinaId: o.disciplina_id,
+          tempos: Number(o.tempos_consumidos ?? 0),
+        }));
+      return {
+        turmaCodigo: t.codigo,
+        cursoCodigo: curso.codigo,
+        nomeCurso: curso.nome_curso,
+        semana: semanaDoCurso({
+          dataInicio: t.data_inicio,
+          dataTermino: t.data_termino,
+          duracaoSemanasDoCurso:
+            curso.duracao_semanas === null ? null : Number(curso.duracao_semanas),
+          semana: semanaIso ?? { ano: anoVigente, numero: 1 },
+        }),
+        resumo: resumoDoDsa(lancamentos),
+      };
+    })
+    .sort(
+      (a, b) =>
+        a.cursoCodigo.localeCompare(b.cursoCodigo, "pt-BR", { numeric: true }) ||
+        a.turmaCodigo.localeCompare(b.turmaCodigo, "pt-BR", { numeric: true }),
+    );
+
   return (
     <section className="flex flex-col gap-5">
       <header className="flex flex-col gap-1">
@@ -332,6 +437,9 @@ export default async function Inicio({
           ele.
         </p>
       </header>
+
+      {/* Spec 019 (C-1): o ano letivo, com a régua do painel de Turmas — o vigente por padrão. */}
+      <AnoDoPainel anos={anos} ano={ano} vigente={anoVigente} rota="/inicio" />
 
       <FiltroDoPanorama />
 
@@ -385,98 +493,66 @@ export default async function Inicio({
         </section>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <CardKpi rotulo="Turmas no recorte" valor={totais.turmas} />
-        <CardKpi rotulo="Em andamento" valor={totais.ativas} />
-        <CardKpi rotulo="Carga executada" valor={totais.executada} unidade="TA" />
-        <CardKpi rotulo="Progresso do recorte" valor={`${totais.percentual}%`} />
-      </div>
+      <section
+        aria-labelledby="titulo-turmas-do-ano"
+        className="flex flex-col gap-3"
+        data-slot="turmas-do-ano"
+        data-ano={ano}
+      >
+        <h2 id="titulo-turmas-do-ano" className="text-texto text-base font-semibold">
+          Turmas de {ano}
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <CardKpi rotulo="Turmas no recorte" valor={totais.turmas} />
+          <CardKpi rotulo="Em andamento" valor={totais.ativas} />
+          <CardKpi rotulo="Carga executada" valor={totais.executada} unidade="TA" />
+          <CardKpi rotulo="Progresso do recorte" valor={`${totais.percentual}%`} />
+        </div>
 
-      {panorama.length === 0 ? (
-        baseVazia ? (
-          <EstadoVazio
-            motivo="sem-dado"
-            titulo="Ainda não existe no sistema"
-            detalhe="A carga de cursos e turmas ainda não foi feita nesta base. Não é ausência de cadastro na CIAARA-11: é dado que ainda não chegou aqui."
-          />
-        ) : temRecorte ? (
-          <EstadoVazio
-            motivo="sem-dado"
-            titulo="Nenhuma turma neste recorte"
-            detalhe="Há turmas cadastradas, mas nenhuma com esta classificação e modalidade. Volte o filtro para Todas."
-          />
+        {panorama.length === 0 ? (
+          baseVazia ? (
+            <EstadoVazio
+              motivo="sem-dado"
+              titulo="Ainda não existe no sistema"
+              detalhe="A carga de cursos e turmas ainda não foi feita nesta base. Não é ausência de cadastro na CIAARA-11: é dado que ainda não chegou aqui."
+            />
+          ) : temRecorte ? (
+            <EstadoVazio
+              motivo="sem-dado"
+              titulo="Nenhuma turma neste recorte"
+              detalhe={`Há turmas cadastradas, mas nenhuma de ${ano} com esta classificação e modalidade. Volte o filtro para Todas ou escolha outro ano.`}
+            />
+          ) : (
+            <EstadoVazio
+              motivo="sem-dado"
+              titulo={`Nenhuma turma em ${ano}`}
+              detalhe="Escolha outro ano letivo acima."
+            />
+          )
         ) : (
-          <EstadoVazio motivo="sem-dado" />
-        )
-      ) : (
-        <ul data-slot="panorama-de-turmas" className="flex flex-col gap-2">
-          {panorama.map((t) => (
-            <li key={t.turmaId}>
-              {/*
-                ⚠️ CADA TURMA É PONTO DE ENTRADA PARA A TELA DO CURSO (`RF-INI-03`, `FR-030`), com
-                URL própria — navegação de verdade, e não troca de conteúdo em memória. A tela de
-                destino é do Épico 7; o link já carrega o recorte que ela vai ler.
-                ⚠️ E PEDE A ABA GRADE (spec 016, FR-006.3): desde 17/10/2026 a padrão é *Sobre o
-                Curso*, e sem `aba=grade` o cartão abriria uma aba que não mostra a turma.
-              */}
-              <Link
-                href={enderecoDaTurmaNoCurso(t.cursoCodigo, t.turmaCodigo, "grade")}
-                data-turma={t.turmaCodigo}
-                className="border-borda bg-superficie rounded-ciaara hover:bg-marca-suave focus-visible:ring-marca flex flex-wrap items-center justify-between gap-3 border p-3 focus-visible:ring-2 focus-visible:outline-none"
-              >
-                <span className="flex min-w-0 flex-col">
-                  <span className="text-texto text-sm font-medium">
-                    {t.cursoCodigo} · {t.turmaCodigo}
-                  </span>
-                  <span className="text-texto-suave text-xs">
-                    {t.nomeCurso} — {t.anoLetivo}
-                  </span>
-                </span>
+          /*
+           * ⚠️ **OS CARTÕES EM CARROSSEL** (spec 019, C-3 a C-7): cada um é ponto de entrada para a página do curso
+           *    (`RF-INI-03`), com a barra de progresso; o carrossel passa sozinho, pausa e anda por teclado.
+           */
+          <div data-slot="panorama-de-turmas">
+            <Carrossel
+              rotulo={`Turmas de ${ano}`}
+              intervaloMs={6000}
+              largura="cartao"
+              dataSlot="carrossel-de-turmas"
+              itens={panorama.map((t) => (
+                <CartaoDaTurma key={t.turmaId} turma={t} />
+              ))}
+            />
+          </div>
+        )}
+      </section>
 
-                <span className="flex items-center gap-3">
-                  <BadgeStatus
-                    tom={TOM_DA_TURMA[t.status as keyof typeof TOM_DA_TURMA] ?? "planejado"}
-                    rotulo={t.status}
-                  />
-                  <span className="text-texto text-sm tabular-nums" data-progresso={t.percentual}>
-                    {t.executada}/{t.prevista} TA · {t.percentual}%
-                  </span>
-                  {t.emAtraso ? <BadgeStatus tom="atrasado" rotulo="em atraso" /> : null}
-                </span>
-              </Link>
-              {/*
-                ⚠️ **O TERCEIRO DOS TRÊS CAMINHOS ATÉ O DSA** (`FR-011` da spec 013).
-                ⚠️ **ELE É IRMÃO DO BLOCO, E NÃO FILHO — porque o bloco JÁ É um `<Link>`.** Link
-                   dentro de link é HTML inválido, e o navegador o "conserta" movendo o elemento
-                   para fora em silêncio: o destino viraria imprevisível, e só em alguns casos.
-                ⚠️ **SEM `SePodeVer` AQUI, e é o Princípio XI**: o menu e o painel não escondem por
-                   permissão — quem recusa é a página de destino, com a frase. Esconder aqui faria
-                   a pessoa não encontrar o que ela de fato alcança.
-              */}
-              {/*
-                ⚠️ **TURMA EAD PURO: O AVISO NO LUGAR DO LINK** (item 9 da conferência do PR #40,
-                   08/10/2026) — a regra e a frase de `lib/dominio/dsa/ead-puro.ts`, as mesmas da
-                   ficha, da lista e da rota do DSA. Semipresencial mantém o link (`D-DSA-2`).
-              */}
-              {t.eadPuro ? (
-                <p className="text-texto-suave mt-1 pl-3 text-xs" data-slot="dsa-turma-ead">
-                  {AVISO_DE_TURMA_EAD}
-                </p>
-              ) : (
-                <p className="mt-1 pl-3 text-xs">
-                  <Link
-                    href={enderecoDoDsa(t.turmaCodigo)}
-                    className="text-texto-suave underline-offset-2 hover:text-texto hover:underline"
-                    data-slot="dsa-da-semana"
-                  >
-                    DSA da semana →
-                  </Link>
-                </p>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      <ManchetesDoDsa
+        manchetes={manchetes}
+        semana={semanaAtual}
+        erro={Boolean(ocupacaoDaSemanaRes.error || turmasRes.error)}
+      />
     </section>
   );
 }
