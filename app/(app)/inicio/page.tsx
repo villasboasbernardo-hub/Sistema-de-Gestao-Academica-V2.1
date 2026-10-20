@@ -525,6 +525,18 @@ export default async function Inicio({
             titulo="Ainda não existe no sistema"
             detalhe="A carga de cursos e turmas ainda não foi feita nesta base. Não é ausência de cadastro na CIAARA-11: é dado que ainda não chegou aqui."
           />
+        ) : panorama.length === 0 && temRecorte ? (
+          /*
+           * ⚠️ **O RECORTE SEM RESULTADO CONTINUA DIZENDO QUE NÃO HÁ, E COMO VOLTAR** (`FR-008` da spec 008, gotcha 4):
+           *    é outro caso que o do A-2 — aqui o filtro não achou turma nenhuma do ano, e a pessoa precisa saber que
+           *    o sistema tem turmas e o que mexer. Medido no CI do PR #77: trocá-lo pela frase do A-2 reprovou
+           *    `url-degradada.spec.ts`.
+           */
+          <EstadoVazio
+            motivo="sem-dado"
+            titulo="Nenhuma turma neste recorte"
+            detalhe={`Há turmas cadastradas, mas nenhuma de ${ano} com esta classificação e modalidade. Volte o filtro para Todas ou escolha outro ano.`}
+          />
         ) : cartoes.length === 0 ? (
           /* Ajuste A-2: sem turma ativa no ano, uma frase — nunca um carrossel vazio. */
           <p className="text-texto-suave text-sm" data-slot="sem-turma-ativa">

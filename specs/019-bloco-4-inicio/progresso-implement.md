@@ -71,3 +71,15 @@ Restaurados os quatro, `git status` limpo.
 | e | o ano de hoje trocado por `"2026-10-20"` no layout | `ano-sem-numero-fixo` (depois de corrigida) |
 
 Restaurados os cinco.
+
+### O CI do primeiro envio dos ajustes (`eadad05`) reprovou, e a causa era minha
+
+- `url-degradada.spec.ts:104` (`FR-008` da spec 008) reprovou nas **três** tentativas: o recorte que não acha turma
+  nenhuma precisa dizer *"Nenhuma turma neste recorte … Há turmas cadastradas"* e como voltar, e eu tinha trocado esse
+  estado pela frase do A-2. São dois casos: **recorte sem turma** (volta o estado do `FR-008`) e **turmas no ano, nenhuma
+  ativa** (a frase do A-2). A varredura de impacto procurou só os seletores do cartão; a de texto de estado vazio
+  (`nenhuma turma`, `há turmas cadastradas`) acharia o arquivo.
+- Depois do conserto, base limpa, dois processos: `url-degradada`, `inicio-bloco-4`, `inicio`, `curso-abas` e
+  `turmas-lista` — **41 de 42**; o que reprovou (`turmas-lista.spec.ts:49`, o clique na linha que não navegou) passou
+  **21 de 21** com o arquivo sozinho repetido 3 vezes: instável sob carga, classe da `PEND-014-7`.
+- O outro reprovado do CI, `avaliacoes-nas-telas.spec.ts:54`, é o instável já registrado na `PEND-014-7`.
