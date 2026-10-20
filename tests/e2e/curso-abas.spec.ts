@@ -51,7 +51,7 @@ async function limpar(): Promise<void> {
 test.beforeAll(async ({}, info) => {
   const p = info.workerIndex;
   EMAIL = emailDeTeste("curso-abas", p);
-  SIGLA = `CUR-ABAS-${p}`;
+  SIGLA = `CUR-ABX-${p}`;
   await criarConta(EMAIL, `USR-ABAS-${p}`);
 
   const { data: existe } = await admin
@@ -65,7 +65,9 @@ test.beforeAll(async ({}, info) => {
       p_curso: {
         codigo: SIGLA,
         nome_curso: `Curso das abas ${p}`,
-        classificacao: "regular",
+        // ⚠️ EXPEDITO, e não regular: o regular aceita UMA turma por ano, e duas no mesmo ano abririam a confirmação
+        //    de "acima do limite" ao gravar a turma (medido no CI, 20/10/2026).
+        classificacao: "expedito",
         modalidade: "presencial",
         duracao_dias: 200,
       },
@@ -84,15 +86,20 @@ test.beforeAll(async ({}, info) => {
   }
   await limpar();
 
-  for (const rotulo of ["T1", "T2", "T3"]) {
+  // T1 e T2 em 2045 (o limite do expedito é 2 por ano); a T3, a do lançamento, em 2044.
+  for (const [rotulo, ano] of [
+    ["T1", 2045],
+    ["T2", 2045],
+    ["T3", 2044],
+  ] as const) {
     const { error } = await admin.from("turmas").insert({
       curso_id: CURSO_ID,
       turma: rotulo,
-      ano_letivo: 2045,
+      ano_letivo: ano,
       status: "ativa",
       modalidade: "presencial",
-      data_inicio: "2045-01-09",
-      data_termino: "2045-12-15",
+      data_inicio: `${ano}-01-09`,
+      data_termino: `${ano}-12-15`,
       alunos: 10,
     });
     if (error) throw new Error(`falha ao criar a turma ${rotulo}: ${error.message}`);
@@ -115,7 +122,7 @@ test.beforeAll(async ({}, info) => {
         .single();
       const { error } = await admin.from("dias_parados").insert({
         turma_id: t.id,
-        data: DIA,
+        data: "2044-04-05",
         tipo_parada_id: (tipo as { id: string }).id,
         motivo: "Parada da amostra das abas",
       });

@@ -515,15 +515,17 @@ test.describe("Spec 018 · C-1 · o endereço antigo /disciplinas", () => {
      *    Bloco 3, e nenhum link da aplicação aponta mais para ele.
      */
     await page.goto(
-      `/disciplinas?curso=${encodeURIComponent(SIGLA_DO_CURSO)}&busca=${DISCIPLINA_LIMPA.cod}`,
+      `/disciplinas?curso=${encodeURIComponent(SIGLA_DO_CURSO)}&busca=${DISCIPLINA_COM_UE.cod}`,
     );
     await expect
       .poll(() => decodeURIComponent(new URL(page.url()).pathname))
       .toBe(`/cursos/${SIGLA_DO_CURSO}`);
     const endereco = new URL(page.url());
     expect(endereco.searchParams.get("aba")).toBe("disciplinas");
-    expect(endereco.searchParams.get("busca")).toBe(DISCIPLINA_LIMPA.cod);
-    await expect(page.getByRole("gridcell", { name: DISCIPLINA_LIMPA.nome })).toBeVisible();
+    expect(endereco.searchParams.get("busca")).toBe(DISCIPLINA_COM_UE.cod);
+    // ⚠️ A disciplina COM UE, e não a limpa: o caso da exclusão apaga a limpa no mesmo processo (CI, 20/10/2026).
+    await expect(page.getByRole("gridcell", { name: DISCIPLINA_COM_UE.nome })).toBeVisible();
+    await expect(page.getByRole("gridcell", { name: DISCIPLINA_SEM_UE.nome })).toHaveCount(0);
 
     await page.goto("/disciplinas");
     await expect.poll(() => new URL(page.url()).pathname).toBe("/cursos");
