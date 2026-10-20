@@ -308,8 +308,19 @@ garantia do motor. Cite-a quando precisar do exemplo.
 > - **`turma_trocas_de_situacao`** — a **trilha das trocas de situação** da turma, com a observação de cada uma
 >   (**D-COR-4**). Só de acréscimo, imutável inclusive para a `service_role`; quem escreve é o gatilho.
 > - **`turma_arquivamentos`** — os eventos de **arquivar e desarquivar** a turma (**D-COR-5**, que reabre a TURMA-1
->   só para isto): arquivar **não** é um quinto status, o estado é o último evento. Só de acréscimo; desarquiva só
->   o Admin.
+>   só para isto): arquivar **não** é um quinto status, o estado é o último evento. Só de acréscimo; arquivam e
+>   desarquivam o Admin, o Encarregado e o Ajudante da Administração Acadêmica — e só eles *(decisão de Bernardo
+>   Villas Boas na conferência do PR #73, 19/10/2026; a primeira redação desta linha dizia "desarquiva só o Admin")*.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
+> ### ✅ Emenda de 20/10/2026 — uma tabela nova, do Bloco 3 do plano de correções (spec 018)
+>
+> - **`regimes_de_horario`** — os **regimes de horário NOMEADOS** do curso (*"Regime A com 8 TA, Regime B com 9 TA,
+>   Regime C com 8 TA e intervalos menores"*, pedido de Bernardo Villas Boas de 19/10/2026). A turma escolhe um
+>   (`turmas.regime_de_horario_id`, nulável); a que não escolhe fica no regime vigente do curso
+>   (`curso_regime_historico`, que **não muda**). TA por dia e duração imutáveis (`RF-HOR-02`); o relógio e a escolha
+>   travam no primeiro lançamento da turma (`RF-HOR-05`). Inativar, nunca apagar.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 

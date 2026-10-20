@@ -34,6 +34,7 @@ import {
   siglaDoCurso,
   type AmostraDaGrade,
 } from "./disciplinas-de-teste";
+import { irAsDisciplinasDoCurso } from "./navegar-curso";
 
 let EMAIL = "";
 let amostra: AmostraDaGrade;
@@ -67,26 +68,15 @@ test.afterAll(async () => {
 });
 
 /**
- * **O percurso por clique**: entra, vai pelo MENU até a grade e escolhe o curso.
+ * **O percurso por clique**: entra, vai pelo menu *Cursos* até o curso e abre a aba *Disciplinas*.
  *
  * ⚠️ O único `goto` da suíte está em `entrar`, e é o ponto de partida.
  *
- * ⚠️ **ELE PERDEU O PARÂMETRO `turma` EM 04/10/2026, e com ele a espera pelo seletor de turma** — que
- * não existe mais nesta tela. A espera que ficou é pelo título: o `#curso` escreve na URL e avisa o
- * servidor, então a tabela reentregue chega **depois** do endereço mudar.
+ * ⚠️ **DESDE O BLOCO 3 (spec 018) A GRADE É A ABA DO CURSO**: o menu perdeu *Disciplinas* e a escolha de curso saiu
+ *    (o curso vem do endereço da página). Antes o caminho era menu *Disciplinas* → escolher o curso na cascata.
  */
 async function irAGradePorClique(page: Page): Promise<void> {
-  await entrar(page, EMAIL, "/inicio");
-
-  await page
-    .getByRole("navigation", { name: "Navegação principal" })
-    .getByRole("link", { name: "Disciplinas" })
-    .click();
-  await expect(page.getByRole("heading", { name: "Disciplinas" })).toBeVisible();
-
-  await page.locator("#curso").selectOption(SIGLA_DO_CURSO);
-  // ⚠️ Espera pelo que só a tabela pronta tem — nunca por tempo (achado 9 do Épico 3).
-  await expect(page.getByRole("columnheader", { name: "CH" })).toBeVisible();
+  await irAsDisciplinasDoCurso(page, EMAIL, SIGLA_DO_CURSO);
 }
 
 /**
@@ -393,7 +383,9 @@ test.describe("`SC-011` · filtro, indicadores e gráfico refletem o MESMO subco
      *    mais desta tela, e está coberta na seção da ficha.
      */
     const endereco = new URL(page.url());
-    expect(endereco.searchParams.get("curso")).toBe(SIGLA_DO_CURSO);
+    // Spec 018 (Bloco 3): o curso é o da PÁGINA (o caminho), e a aba continua a de Disciplinas.
+    expect(decodeURIComponent(endereco.pathname)).toBe(`/cursos/${SIGLA_DO_CURSO}`);
+    expect(endereco.searchParams.get("aba")).toBe("disciplinas");
     expect(
       endereco.searchParams.get("turma"),
       "a turma voltou ao endereço desta tela: o recorte por turma mora na ficha",
@@ -407,9 +399,8 @@ test.describe("`SC-011` · filtro, indicadores e gráfico refletem o MESMO subco
  * ⚠️ **O CASO QUE DISCRIMINA É O DA TÉCNICA E DO LOCAL** (defeito achado na triagem do Bloco 2): o formulário não
  *    trazia os dois preenchidos, e gravar QUALQUER campo os apagava. O preparo os grava no banco; a edição mexe só no
  *    *Nome no DSA*; e a prova é o BANCO depois (PEND-016-2), não o valor que o teste digitou.
- * ⚠️ **"O CAMPO AUSENTE NA CRIAÇÃO" FICOU SEM OBJETO NA PONTA A PONTA**: nenhuma tela monta o formulário no modo de
- *    criação (medido em 19/10/2026: `criarDisciplina` só é chamada por ele, e ele só é montado na edição). A regra
- *    está no código (`editando ? … : null`) e registrada em `progresso-implement.md`.
+ * ⚠️ **"O CAMPO AUSENTE NA CRIAÇÃO" GANHOU OBJETO NO BLOCO 3** (spec 018, C-2): a aba *Disciplinas* do curso monta o
+ *    formulário em modo de criação (*Nova disciplina*), e o caso abaixo confere que o *Nome no DSA* não aparece ali.
  */
 test.describe("`FR-007.1` e `FR-007.5` da spec 017 · o Nome no DSA, sem apagar técnica nem local", () => {
   test("editar SÓ o Nome no DSA: a prévia mostra o cartão, e o banco guarda o nome e preserva técnica e local", async ({
@@ -459,5 +450,84 @@ test.describe("`FR-007.1` e `FR-007.5` da spec 017 · o Nome no DSA, sem apagar 
       });
     // Gravar fecha a edição (`aoConcluir`): o campo deixa de existir.
     await expect(page.locator('[data-slot="campo-nome-no-dsa"]')).toHaveCount(0);
+  });
+});
+
+/*
+ * ── Spec 018 (Bloco 3) · C-2 · *Nova disciplina* na aba do curso ──────────────────────────────────────────────────
+ *
+ * ⚠️ **O MODO DE CRIAÇÃO DO FORMULÁRIO EXISTIA DESDE A FATIA (b) E NENHUMA TELA O DESENHAVA** (triagem do Bloco 3,
+ *    item 1a 🐛). A prova é o BANCO (PEND-016-2): a linha nova no curso, com o código digitado e a CH.
+ */
+test.describe("Spec 018 · C-2 · Nova disciplina na aba Disciplinas do curso", () => {
+  test("cadastrar pela aba: a linha aparece na grade e o banco guarda a disciplina no curso", async ({
+    page,
+  }) => {
+    const banco = createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const cod = `NV${PROCESSO}`;
+    const nome = `Disciplina nova da prova ${PROCESSO}`;
+
+    await irAGradePorClique(page);
+    await page.locator('[data-slot="nova-disciplina"]').click();
+    const cadastro = page.locator('[data-slot="cadastro-de-disciplina"]');
+    await expect(cadastro).toBeVisible();
+    // O *Nome no DSA* é só da edição (C-19 da spec 017).
+    await expect(cadastro.locator('[data-slot="campo-nome-no-dsa"]')).toHaveCount(0);
+
+    await cadastro.getByLabel("Código", { exact: true }).fill(cod);
+    await cadastro.getByLabel("Nome", { exact: true }).fill(nome);
+    await cadastro.getByLabel("Carga horária (tempos)").fill("12");
+    await cadastro.locator('[data-slot="gravar-disciplina"]').click();
+
+    await expect(page.getByRole("gridcell", { name: nome })).toBeVisible();
+    await expect(cadastro).toHaveCount(0);
+
+    const { data: curso } = await banco
+      .from("cursos")
+      .select("id")
+      .eq("codigo", SIGLA_DO_CURSO)
+      .single();
+    const { data, error } = await banco
+      .from("disciplinas")
+      .select("cod_disciplina, nome_disciplina, carga_horaria_tempos, status")
+      .eq("curso_id", (curso as { id: string }).id)
+      .eq("cod_disciplina", cod)
+      .single();
+    expect(error).toBeNull();
+    expect(data).toEqual({
+      cod_disciplina: cod,
+      nome_disciplina: nome,
+      carga_horaria_tempos: 12,
+      status: "ativo",
+    });
+  });
+});
+
+test.describe("Spec 018 · C-1 · o endereço antigo /disciplinas", () => {
+  test("com curso, leva à aba Disciplinas do curso, com a busca; sem curso, ao catálogo", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL, "/inicio");
+    /*
+     * ⚠️ **AQUI O `goto` NÃO É PERCURSO: É A PROVA DO REDIRECIONAMENTO** — o endereço é o que alguém salvou antes do
+     *    Bloco 3, e nenhum link da aplicação aponta mais para ele.
+     */
+    await page.goto(
+      `/disciplinas?curso=${encodeURIComponent(SIGLA_DO_CURSO)}&busca=${DISCIPLINA_COM_UE.cod}`,
+    );
+    await expect
+      .poll(() => decodeURIComponent(new URL(page.url()).pathname))
+      .toBe(`/cursos/${SIGLA_DO_CURSO}`);
+    const endereco = new URL(page.url());
+    expect(endereco.searchParams.get("aba")).toBe("disciplinas");
+    expect(endereco.searchParams.get("busca")).toBe(DISCIPLINA_COM_UE.cod);
+    // ⚠️ A disciplina COM UE, e não a limpa: o caso da exclusão apaga a limpa no mesmo processo (CI, 20/10/2026).
+    await expect(page.getByRole("gridcell", { name: DISCIPLINA_COM_UE.nome })).toBeVisible();
+    await expect(page.getByRole("gridcell", { name: DISCIPLINA_SEM_UE.nome })).toHaveCount(0);
+
+    await page.goto("/disciplinas");
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/cursos");
   });
 });

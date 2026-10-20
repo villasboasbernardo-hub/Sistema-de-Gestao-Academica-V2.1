@@ -93,9 +93,11 @@ import {
   COLUNAS_DA_VIGENCIA,
   COLUNAS_DO_CATALOGO,
   COLUNAS_DO_FERIADO,
+  COLUNAS_DO_REGIME_DA_TURMA,
   diasDaTela,
   fatoDaOcupacao,
   feriadoDoBanco,
+  regimeDaTurmaComoVigencia,
   regimeParaRelogio,
   tempoDoCatalogo,
   unidadesDaTurma,
@@ -106,6 +108,7 @@ import {
   type LinhaDeFeriado,
   type LinhaDeVigencia,
   type LinhaDoCatalogo,
+  type LinhaDoRegimeDaTurma,
   type OcupacaoAcumulada,
 } from "./consulta";
 
@@ -302,6 +305,11 @@ export type DadosDoPeriodo = {
   readonly aulasPorUe: readonly unknown[];
   /** `horarios_tempos_aula` de TODA configuração que alguma vigência do curso aponta. */
   readonly catalogo: readonly unknown[];
+  /**
+   * Spec 018 (Bloco 3): o regime nomeado que a turma escolheu, ou `null` (o regime vigente do curso, como antes).
+   * Opcional para as montagens de teste, que não o têm.
+   */
+  readonly regimeDaTurma?: unknown;
   /** Vazio quando não se pediu (`comConflitos: false`) — a grade sai sem marca, como no erro. */
   readonly conflitos: readonly unknown[];
   /** Spec 014: as sessões de vista ativas da turma no período (FR-040) e os itens do currículo do curso. */
@@ -383,6 +391,7 @@ export async function lerPeriodoDoDsa(
     sessoesDeAplicacaoRes,
     atribDiscRes,
     semPosicaoRes,
+    regimeDaTurmaRes,
   ] = await Promise.all([
     /*
      * ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`).
@@ -777,15 +786,28 @@ export async function lerPeriodoDoDsa(
         .order("tempos")
         .range(f.de, f.ate),
     ),
+    /* Spec 018 (Bloco 3): o regime nomeado da turma, quando ela escolheu um (C-9). */
+    supabase.from("turmas").select(COLUNAS_DO_REGIME_DA_TURMA).eq("id", turmaId).maybeSingle(),
   ]);
 
   const erros: { lista: string; mensagem: string }[] = [];
   const vigencias = listaOuVazia(vigenciasRes, erros, "vigências");
+  /*
+   * ⚠️ A FALHA DE LEITURA DO REGIME DA TURMA APARECE COMO ERRO DA LEITURA, e o DSA cai no regime do curso com o aviso —
+   *    nunca um regime inventado (`RN-DEG-01`).
+   */
+  const regimeDaTurma = regimeDaTurmaRes.error
+    ? (erros.push({ lista: "regime da turma", mensagem: regimeDaTurmaRes.error.message }), null)
+    : (((regimeDaTurmaRes.data as { regime?: unknown } | null)?.regime ??
+        null) as LinhaDoRegimeDaTurma | null);
   const configuracoes = [
     ...new Set(
-      (vigencias as unknown as LinhaDeVigencia[])
-        .map((v) => vigenciaDoBanco(v).configuracaoHorarioId)
-        .filter((id): id is string => typeof id === "string" && id !== ""),
+      [
+        ...(vigencias as unknown as LinhaDeVigencia[]).map(
+          (v) => vigenciaDoBanco(v).configuracaoHorarioId,
+        ),
+        regimeDaTurma?.configuracao_horario_id ?? null,
+      ].filter((id): id is string => typeof id === "string" && id !== ""),
     ),
   ];
   const catalogoRes =
@@ -827,6 +849,7 @@ export async function lerPeriodoDoDsa(
     curriculo: listaOuVazia(curriculoRes, erros, "currículo"),
     aulasPorUe: listaOuVazia(aulasPorUeRes, erros, "aulas por UE"),
     catalogo: listaOuVazia(catalogoRes, erros, "catálogo de horários"),
+    regimeDaTurma,
     conflitos: listaOuVazia(conflitosRes, erros, "conflitos"),
     diasParados: listaOuVazia(diasParadosRes, erros, "dias parados"),
     trsBloqueantes: listaOuVazia(trsBloqueantesRes, erros, "TR bloqueantes"),
@@ -928,8 +951,14 @@ export function montarSemanaDoDsa(
   const primeiroDia = todosOsSeis[0] ?? entrada.hoje;
   const excecao = vigenciaDaSemana(vigencias, "excecao", primeiroDia);
   const padrao = vigenciaDaSemana(vigencias, "padrao", primeiroDia);
-  /* A exceção vence a padrão quando as duas cobrem a data — é o desenho de `tipo_regime`. */
-  const vigente = excecao ?? padrao;
+  /*
+   * A exceção vence a padrão quando as duas cobrem a data — é o desenho de `tipo_regime`. E o regime NOMEADO que a
+   * turma escolheu (spec 018, C-9) vence os dois: sem escolha, `daTurma` é nulo e tudo fica como antes.
+   */
+  const daTurma = regimeDaTurmaComoVigencia(
+    dados.regimeDaTurma as LinhaDoRegimeDaTurma | null | undefined,
+  );
+  const vigente = daTurma ?? excecao ?? padrao;
   const maisRecente = [...vigencias]
     .filter((v) => v.tipo === "padrao")
     .sort((a, b) => b.vigenteDe.localeCompare(a.vigenteDe))[0];

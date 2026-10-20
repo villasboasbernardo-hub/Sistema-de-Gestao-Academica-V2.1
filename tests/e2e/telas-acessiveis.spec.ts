@@ -41,6 +41,11 @@ function rotas(): { readonly nome: string; readonly caminho: string }[] {
     { nome: "catálogo", caminho: "/cursos" },
     { nome: "curso · aba Grade", caminho: `/cursos/${sigla}?aba=grade` },
     { nome: "curso · aba Sobre", caminho: `/cursos/${sigla}?aba=sobre` },
+    // Spec 018 (Bloco 3): as quatro abas novas.
+    { nome: "curso · aba Disciplinas", caminho: `/cursos/${sigla}?aba=disciplinas` },
+    { nome: "curso · aba Avaliações", caminho: `/cursos/${sigla}?aba=avaliacoes` },
+    { nome: "curso · aba Atividades", caminho: `/cursos/${sigla}?aba=atividades` },
+    { nome: "curso · aba Horários", caminho: `/cursos/${sigla}?aba=horarios` },
     { nome: "novo curso", caminho: "/cursos/novo" },
     { nome: "editar curso e regime", caminho: `/cursos/${sigla}/editar` },
     { nome: "nova turma", caminho: `/cursos/${sigla}/turmas/nova` },

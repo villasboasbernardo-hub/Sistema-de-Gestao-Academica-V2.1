@@ -12,6 +12,7 @@ import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./con
 import { irAFichaDaTurma } from "./navegar-turmas";
 import { irParaASemanaDoDia } from "./percurso-do-dsa";
 import { limparTetos, previstoNoBanco, semearTetos, type TetosSemeados } from "./tetos-de-teste";
+import { abrirAbaDoCurso } from "./navegar-curso";
 
 /*
  * ⚠️ SERIAL: a sugestão da reserva genérica é um parâmetro do sistema inteiro (`config_parametros`),
@@ -99,17 +100,24 @@ test("FR-008.1 · o Operador não vê o botão de editar o previsto", async ({ p
   await expect(page.locator('[data-slot="editar-previsto"]')).toHaveCount(0);
 });
 
-test("US1 2.4 · a página do curso mostra os limites com a origem e a turma excedida", async ({
+test("US1 2.4 · a aba Atividades do curso mostra os limites com a origem, e a turma excedida fica acima das abas", async ({
   page,
 }) => {
   await irAFichaDaTurma(page, ADMIN, T.turmaSemPrevisto);
   await page.locator('[data-slot="curso-da-turma"]').click();
-  const bloco = page.locator('[data-slot="limites-do-curso"]');
+  // Spec 018 (Bloco 3, C-5/C-6): os limites (o previsto) moram na aba Atividades.
+  await abrirAbaDoCurso(page, "atividades");
+  const bloco = page.locator('[data-slot="aba-atividades"] [data-slot="limites-do-curso"]');
   await expect(bloco.locator('[data-limite="AEC"]')).toHaveText("AEC — 65 TA (currículo, p. 7)");
   await expect(bloco.locator('[data-limite="TAD"]')).toHaveText("TAD — 30 TA (norma: 5 % de 600)");
 
   await irAFichaDaTurma(page, ADMIN, T.turmaAcima);
   await page.locator('[data-slot="curso-da-turma"]').click();
+  // ⚠️ O alerta do curso fica FORA das abas (RF-CURSO-06): está na aba padrão, sem clicar em nada.
+  await expect(page.locator('[data-slot="abas-do-curso"] [data-aba="sobre"]')).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   const excedida = page.locator('[data-slot="turma-excedida"]', { hasText: "TAD acima do máximo" });
   await expect(excedida).toHaveText(`${T.turmaAcima}: TAD acima do máximo (29 de 27,25)`);
   await excedida.click();

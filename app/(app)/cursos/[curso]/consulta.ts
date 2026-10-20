@@ -25,8 +25,9 @@ export const COLUNAS_DA_PAGINA_DO_CURSO =
   "id, codigo, nome_curso, classificacao, modalidade, proposito, duracao_dias, duracao_semanas, limite_turmas_ano, status";
 
 /** As colunas das turmas do curso — a lista da aba Grade e a base dos avisos de cada uma. */
+/* Spec 018 (Bloco 3): + o regime nomeado de cada turma, para a aba Horários dizer quem usa cada um. */
 export const COLUNAS_DAS_TURMAS_DO_CURSO =
-  "id, codigo, turma, ano_letivo, status, modalidade, data_inicio, data_termino, sala_alocada, alunos";
+  "id, codigo, turma, ano_letivo, status, modalidade, data_inicio, data_termino, sala_alocada, alunos, regime_de_horario_id";
 
 export type TurmaSelecionada = {
   /** O código da turma a mostrar, ou `null` quando a página abre sem seleção. */

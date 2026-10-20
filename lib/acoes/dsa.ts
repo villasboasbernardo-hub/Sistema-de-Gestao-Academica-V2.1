@@ -69,6 +69,7 @@ import { recusaDoNomeLivre, regraDoResponsavel } from "@/lib/dominio/responsavel
 import type { Json } from "@/lib/tipos/database";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
+import { temposDoDiaDaTurmaNoServidor } from "@/lib/acoes/regime-do-dia";
 import { recusaSeTurmaArquivada } from "@/lib/acoes/turma-arquivada";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
@@ -277,7 +278,7 @@ async function vereditoDosTetos(
     .gte("data", semana.segunda)
     .lte("data", semana.domingo);
 
-  const [ocupacaoRes, discRes, regimeRes] = await Promise.all([
+  const [ocupacaoRes, discRes, temposDoRegime] = await Promise.all([
     ocupacaoDaSemana,
     entrada.disciplinaId === null
       ? Promise.resolve({ data: null })
@@ -286,11 +287,8 @@ async function vereditoDosTetos(
           .select("nome_disciplina")
           .eq("id", entrada.disciplinaId)
           .maybeSingle(),
-    supabase
-      .from("vw_cursos_regime_vigente")
-      .select("regime_padrao_tempos")
-      .eq("curso_id", entrada.cursoId)
-      .maybeSingle(),
+    /* Spec 018 (C-9, C-16): o regime da TURMA, senão o do curso — o excepcional é o que passa dele. */
+    temposDoDiaDaTurmaNoServidor(supabase, { turmaId: entrada.turmaId, cursoId: entrada.cursoId }),
   ]);
 
   const ocupacao = (
@@ -325,8 +323,7 @@ async function vereditoDosTetos(
   const noDia = ocupacao
     .filter((o) => o.data === entrada.data)
     .reduce((soma, o) => soma + (o.tempos_consumidos ?? 0), 0);
-  const regime = (regimeRes.data as { regime_padrao_tempos?: number | null } | null)
-    ?.regime_padrao_tempos;
+  const regime = temposDoRegime;
   const doDia = avaliarODia({
     taLancadosNoDia: noDia + entrada.tempos,
     temposDoRegime: regime ?? null,
@@ -533,19 +530,14 @@ async function cascataDaTurma(
 > {
   if (entrada.turmaId === null) return { ok: true, operacoes: [], aviso: null };
   const turmaId = entrada.turmaId;
-  const [ocupacaoRes, regimeRes, paradas, apoiosRes] = await Promise.all([
+  const [ocupacaoRes, temposDoRegime, paradas, apoiosRes] = await Promise.all([
     supabase
       .from("vw_ocupacao_ta")
       .select("fato_id, origem, ta_inicial, tempos_consumidos, disciplina_id, sessao_id")
       .eq("turma_id", entrada.turmaId)
       .eq("data", entrada.data),
-    entrada.cursoId === null
-      ? Promise.resolve({ data: null })
-      : supabase
-          .from("vw_cursos_regime_vigente")
-          .select("regime_padrao_tempos")
-          .eq("curso_id", entrada.cursoId)
-          .maybeSingle(),
+    /* Spec 018 (C-9): a parede da cascata é o último tempo do regime da TURMA, senão o do curso. */
+    temposDoDiaDaTurmaNoServidor(supabase, { turmaId, cursoId: entrada.cursoId }),
     paradasDoPeriodo(supabase, entrada.data, entrada.data),
     supabase
       .from("atividades_nao_letivas")
@@ -623,10 +615,7 @@ async function cascataDaTurma(
         tempos: l.tempos_consumidos ?? 1,
       };
     }),
-    ultimoTempo: ultimoTempoDoDia(
-      (regimeRes.data as { regime_padrao_tempos?: number | null } | null)?.regime_padrao_tempos ??
-        null,
-    ),
+    ultimoTempo: ultimoTempoDoDia(temposDoRegime),
     data: entrada.data,
     paredes: daTurma.map((p) => ({
       rotulo: rotuloDaParada(p),

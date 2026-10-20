@@ -1,5 +1,9 @@
 /**
- * As **três** abas da página do curso — folha de cliente (`FR-006.2`, `FR-041`; spec 014, FR-053).
+ * As **seis** abas da página do curso — folha de cliente (`FR-006.2`, `FR-041`; spec 014, FR-053; spec 018).
+ *
+ * ⚠️ **SEIS DESDE O BLOCO 3** (spec 018, 19/10/2026): *Sobre o Curso · Grade · Disciplinas · Avaliações · Atividades ·
+ * Horários*. Nenhuma delas mostra acompanhamento de turma — o curso mostra o **previsto** (FR-002.2 e FR-005.2 da spec 018); o andamento é da
+ * turma.
  *
  * ⚠️ **ERAM EXATAMENTE DUAS (decisão Q-02 da spec 009), E A TERCEIRA ENTROU QUANDO A TELA PASSOU A ENTREGAR:**
  * "Sobre o Curso" (a primeira e a padrão desde a spec 016, FR-006.2), "Grade" e — desde a spec 014 (`RF-CURSO-02`, FR-053) — "Avaliações". Relatório continua
@@ -9,7 +13,7 @@
  * ⚠️ **A ABA MORA NA URL, E EMPILHA HISTÓRICO.** Trocar de aba é navegação: quem aperta "voltar"
  * desfaz **um** passo. É a diferença para os filtros de `/cursos`, que substituem.
  *
- * ⚠️ **O CONTEÚDO DAS DUAS É DESENHADO NO SERVIDOR** e chega por propriedade. Esta folha só decide
+ * ⚠️ **O CONTEÚDO DE CADA ABA É DESENHADO NO SERVIDOR** e chega por propriedade. Esta folha só decide
  * qual mostrar — se ela buscasse dado, a página inteira iria para o navegador.
  */
 "use client";
@@ -23,18 +27,15 @@ import { useParametro } from "@/lib/navegacao/usar-parametro";
 const ABAS = [
   { valor: "sobre", rotulo: "Sobre o Curso" },
   { valor: "grade", rotulo: "Grade" },
+  { valor: "disciplinas", rotulo: "Disciplinas" },
   { valor: "avaliacoes", rotulo: "Avaliações" },
+  { valor: "atividades", rotulo: "Atividades" },
+  { valor: "horarios", rotulo: "Horários" },
 ] as const;
 
-export function AbasDoCurso({
-  grade,
-  sobre,
-  avaliacoes,
-}: {
-  readonly grade: React.ReactNode;
-  readonly sobre: React.ReactNode;
-  readonly avaliacoes: React.ReactNode;
-}) {
+type ValorDaAba = (typeof ABAS)[number]["valor"];
+
+export function AbasDoCurso(paineis: { readonly [aba in ValorDaAba]: React.ReactNode }) {
   /*
    * ⚠️ O PADRÃO TEM UM DONO SÓ, O CONTRATO (spec 016, FR-006.2). Até 17/10/2026 esta linha repetia
    *    `"grade"` num ternário, e trocar o padrão no contrato deixaria a aba aberta discordando da URL. O
@@ -68,7 +69,7 @@ export function AbasDoCurso({
       </div>
 
       <div role="tabpanel" id={`painel-${atual}`} aria-labelledby={`aba-${atual}`}>
-        {atual === "sobre" ? sobre : atual === "avaliacoes" ? avaliacoes : grade}
+        {paineis[atual as ValorDaAba] ?? paineis.sobre}
       </div>
     </div>
   );

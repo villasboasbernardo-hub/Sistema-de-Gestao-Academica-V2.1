@@ -35,6 +35,7 @@ import {
   type VigenciaProtegida,
 } from "@/lib/dominio/protecao-de-vigencia";
 import { naturezaDaSala, ROTULO_DA_NATUREZA, type Sala } from "@/lib/dominio/salas";
+import { FRASE_DA_ESCOLHA_TRAVADA, aceitaRegimeNomeado } from "@/lib/dominio/regime-da-turma";
 import { enderecoDaTurmaGravada } from "@/lib/navegacao/endereco-de-turma";
 
 const MODALIDADES = [
@@ -62,6 +63,8 @@ export type TurmaNoFormulario = {
   /** A janela da etapa presencial (`D-DSA-2`) — só aparece, e só vale, em turma semipresencial. */
   readonly inicio_etapa_presencial: string;
   readonly termino_etapa_presencial: string;
+  /** Spec 018: o regime nomeado escolhido — vazio = o regime vigente do curso. Só na edição. */
+  readonly regime_de_horario_id?: string;
 };
 
 const VAZIO: TurmaNoFormulario = {
@@ -92,6 +95,18 @@ export type FormularioDeTurmaProps = {
   /** O retrato da RPC de proteção, para o aviso do `FR-021.8`. */
   readonly vigenciasProtegidas?: readonly VigenciaProtegida[];
   readonly janelasDoCurso?: readonly JanelaDeTurma[];
+  /**
+   * Spec 018 (C-18): o campo *Regime de horário* — os regimes ATIVOS do curso (mais o atual, se inativo) e se a escolha
+   * já travou (a turma tem lançamento, `RF-HOR-05`). Ausente = o campo não aparece.
+   */
+  readonly regimeDeHorario?: {
+    readonly opcoes: readonly {
+      readonly id: string;
+      readonly rotulo: string;
+      readonly ativo: boolean;
+    }[];
+    readonly travado: boolean;
+  };
 };
 
 export function FormularioDeTurma({
@@ -105,6 +120,7 @@ export function FormularioDeTurma({
   semRotuloNoAno = [],
   vigenciasProtegidas = [],
   janelasDoCurso = [],
+  regimeDeHorario,
 }: FormularioDeTurmaProps) {
   const router = useRouter();
   const [valores, definirValores] = React.useState<TurmaNoFormulario>(inicial ?? VAZIO);
@@ -117,6 +133,11 @@ export function FormularioDeTurma({
       definirValores((v) => ({ ...v, [campo]: e.target.value }));
 
   const nulo = (v: string) => (v.trim() === "" ? null : v.trim());
+  /* C-15: a turma EAD pura não tem tempos presenciais, e o campo some. */
+  const campoDoRegime =
+    regimeDeHorario !== undefined && aceitaRegimeNomeado(valores.modalidade)
+      ? regimeDeHorario
+      : null;
   const ano = valores.ano_letivo.trim() === "" ? NaN : Number(valores.ano_letivo);
 
   const corpo = {
@@ -131,6 +152,13 @@ export function FormularioDeTurma({
     /* ⚠️ Fora de semipresencial o esquema as grava vazias — ver `lib/validacao/turma.ts`. */
     inicio_etapa_presencial: valores.inicio_etapa_presencial,
     termino_etapa_presencial: valores.termino_etapa_presencial,
+    /*
+     * ⚠️ O REGIME SÓ VAI QUANDO O CAMPO EXISTE E PODE MUDAR (spec 018): fora disso a chave fica fora, e a coluna não é
+     *    tocada — um nulo por omissão trocaria o regime de quem não pediu, e o banco recusaria na turma com lançamento.
+     */
+    ...(campoDoRegime && !campoDoRegime.travado
+      ? { regime_de_horario_id: valores.regime_de_horario_id ?? "" }
+      : {}),
   };
 
   /*
@@ -328,6 +356,40 @@ export function FormularioDeTurma({
             onChange={trocar("alunos")}
           />
         </div>
+
+        {campoDoRegime ? (
+          <div className="flex flex-col gap-1" data-slot="regime-da-turma">
+            <CampoObrigatorio para="turma-regime" rotulo="Regime de horário" />
+            <select
+              {...propsDoControle("turma-regime", false)}
+              name="regime_de_horario_id"
+              value={valores.regime_de_horario_id ?? ""}
+              onChange={trocar("regime_de_horario_id")}
+              disabled={campoDoRegime.travado}
+              className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
+            >
+              <option value="">Regime vigente do curso</option>
+              {campoDoRegime.opcoes.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.rotulo}
+                  {r.ativo ? "" : " (inativo)"}
+                </option>
+              ))}
+            </select>
+            {campoDoRegime.travado ? (
+              /* veste: dica do campo — por que ele está travado */
+              <p className="text-texto-tenue text-xs" data-slot="regime-travado">
+                {FRASE_DA_ESCOLHA_TRAVADA}
+              </p>
+            ) : (
+              /* veste: dica do campo */
+              <p className="text-texto-tenue text-xs">
+                O DSA, o alerta do tempo excepcional e o saldo usam este regime. Trava no primeiro
+                lançamento.
+              </p>
+            )}
+          </div>
+        ) : null}
 
         {/*
           ⚠️ **A ETAPA PRESENCIAL SÓ EXISTE NA SEMIPRESENCIAL** (`D-DSA-2`, decisão de Bernardo Villas

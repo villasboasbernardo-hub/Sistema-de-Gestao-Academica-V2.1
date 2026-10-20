@@ -44,7 +44,13 @@ import {
   resolverTurmaSelecionada,
 } from "./consulta";
 import { QuadroDeAvisosDoCurso } from "./QuadroDeAvisosDoCurso";
-import { BlocoDeLimites, type LinhaDoLimite } from "./BlocoDeLimites";
+import { TurmasComTetoExcedido, type LinhaDoLimite } from "./BlocoDeLimites";
+import { AbaAtividades } from "./AbaAtividades";
+import { AbaHorarios } from "./AbaHorarios";
+import { lerHorariosDoCurso } from "./consulta-de-horarios";
+import { GradeDeDisciplinas } from "../../disciplinas/GradeDeDisciplinas";
+import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
+import type { TipoDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
 import { limiteMaximo } from "@/lib/dominio/limite-maximo";
 import {
   COLUNAS_DA_CONFORMIDADE,
@@ -146,7 +152,14 @@ export default async function PaginaDoCurso({
     supabase
       .from("config_parametros")
       .select("chave, valor, ano_vigencia")
-      .in("chave", ["teto.aec_percentual_chr", "teto.tad_percentual_chr", "teto.tr_percentual_chr"])
+      .in("chave", [
+        "teto.aec_percentual_chr",
+        "teto.tad_percentual_chr",
+        "teto.tr_percentual_chr",
+        // Spec 018 (C-6): a referência do Estudo Individual, informativa, na aba Atividades.
+        "estudo_obrig_com_regime_pct",
+        "estudo_obrig_sem_regime_pct",
+      ])
       .eq("status", "ativo"),
     supabase
       .from("vw_conformidade_tetos")
@@ -206,17 +219,35 @@ export default async function PaginaDoCurso({
   );
 
   /*
-   * A aba Avaliações (spec 014, FR-053) só é lida quando é ela a aberta: as outras duas não pagam a consulta.
-   * A turma é a da Grade (`selecao`), e a leitura é a mesma da ficha da turma.
+   * ⚠️ **CADA ABA LÊ SÓ QUANDO ABERTA** (spec 018): as outras não pagam a consulta.
+   * ⚠️ **A ABA AVALIAÇÕES LÊ SEM TURMA** (spec 018, FR-002, C-4): só o currículo do curso. Até o Bloco 3 ela lia a
+   *    turma da Grade e mostrava o cumprido — acompanhamento de turma, que mora na ficha da turma.
    */
-  const avaliacoesDoCurso =
-    String(valores.aba) === "avaliacoes"
-      ? await lerAvaliacoesDoCurso({
+  const aba = String(valores.aba);
+  const [avaliacoesDoCurso, gradeDeDisciplinas, horariosDoCurso, tiposRes] = await Promise.all([
+    aba === "avaliacoes"
+      ? lerAvaliacoesDoCurso({ cursoId: curso.id as string, turmaCodigo: null, hoje })
+      : Promise.resolve({ quadro: null, aviso: null }),
+    aba === "disciplinas"
+      ? lerGradeDeDisciplinas({ cursoCodigo: curso.codigo as string, turmaCodigo: "" })
+      : Promise.resolve(null),
+    aba === "horarios"
+      ? lerHorariosDoCurso({
           cursoId: curso.id as string,
-          turmaCodigo: selecao.codigo,
-          hoje,
+          turmas: todasAsTurmas.map((t) => ({
+            codigo: t.codigo as string,
+            regimeId: (t.regime_de_horario_id as string | null) ?? null,
+          })),
         })
-      : { quadro: null, aviso: null, turmaId: null };
+      : Promise.resolve(null),
+    aba === "atividades"
+      ? supabase
+          .from("config_listas")
+          .select("id, valor, ativo, metadados")
+          .eq("lista", "tipos_atividade")
+          .order("ordem")
+      : Promise.resolve({ data: [] }),
+  ]);
 
   const paraLimite: TurmaParaLimite[] = todasAsTurmas.map((t) => ({
     ano: Number(t.ano_letivo),
@@ -335,8 +366,11 @@ export default async function PaginaDoCurso({
       {/* ⚠️ ACIMA DAS ABAS, fora de qualquer uma (`FR-010.1`) */}
       <QuadroDeAvisosDoCurso avisos={avisos} />
 
-      {/* ⚠️ ACIMA DAS ABAS também (spec 014, `FR-009`): o limite é do curso, não de uma aba */}
-      <BlocoDeLimites linhas={linhasDosLimites} ano={anoDosLimites} excedidos={excedidos} />
+      {/*
+        ⚠️ ACIMA DAS ABAS (spec 018, C-5): as turmas com teto excedido são ALERTA do curso (`RF-CURSO-06`). Os limites,
+           que são o previsto, foram para a aba Atividades.
+      */}
+      <TurmasComTetoExcedido excedidos={excedidos} />
 
       <AbasDoCurso
         grade={
@@ -367,12 +401,29 @@ export default async function PaginaDoCurso({
             avaliacoesLegiveis={!avaliacoesRes.error}
           />
         }
+        disciplinas={
+          <div data-slot="aba-disciplinas">
+            {gradeDeDisciplinas ? (
+              <GradeDeDisciplinas
+                grade={gradeDeDisciplinas}
+                parametros={{
+                  situacao: String(valores.situacao),
+                  busca: String(valores.busca),
+                }}
+                permissoes={{
+                  criar: cursoAtivo && pode(permissoes, "disciplinas", "criar"),
+                  editar: pode(permissoes, "disciplinas", "editar"),
+                  desativar: pode(permissoes, "disciplinas", "desativar"),
+                }}
+                hoje={hoje}
+              />
+            ) : null}
+          </div>
+        }
         avaliacoes={
           <AbaAvaliacoes
             quadro={avaliacoesDoCurso.quadro}
             aviso={avaliacoesDoCurso.aviso}
-            turmaCodigo={avaliacoesDoCurso.turmaId ? selecao.codigo : null}
-            turmaId={avaliacoesDoCurso.turmaId}
             {...(pode(permissoes, "avaliacoes_curriculo_arbitrado", "editar")
               ? {
                   arbitrado: {
@@ -383,6 +434,42 @@ export default async function PaginaDoCurso({
                 }
               : {})}
           />
+        }
+        atividades={
+          <AbaAtividades
+            limites={linhasDosLimites}
+            ano={anoDosLimites}
+            estudoIndividual={{
+              comEstudoObrigatorio: parametroDoAno(
+                parametrosRes.data ?? [],
+                "estudo_obrig_com_regime_pct",
+                anoDosLimites,
+              ),
+              semEstudoObrigatorio: parametroDoAno(
+                parametrosRes.data ?? [],
+                "estudo_obrig_sem_regime_pct",
+                anoDosLimites,
+              ),
+            }}
+            tipos={(tiposRes.data ?? []) as unknown as TipoDeAtividade[]}
+          />
+        }
+        horarios={
+          horariosDoCurso ? (
+            <AbaHorarios
+              sigla={curso.codigo as string}
+              cursoId={curso.id as string}
+              cursoAtivo={cursoAtivo}
+              horarios={horariosDoCurso}
+              permissoes={{
+                criar: pode(permissoes, "horarios", "criar"),
+                editar: pode(permissoes, "horarios", "editar"),
+                desativar: pode(permissoes, "horarios", "desativar"),
+                abrirEdicaoDoCurso:
+                  pode(permissoes, "cursos", "editar") || pode(permissoes, "horarios", "criar"),
+              }}
+            />
+          ) : null
         }
       />
     </section>

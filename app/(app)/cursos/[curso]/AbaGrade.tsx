@@ -121,6 +121,8 @@ export function AbaGrade({
    *    Mandá-lo para `/disciplinas?turma=` funcionaria — aquele endereço redireciona — mas faria o
    *    clique dar **dois saltos** e passar por um redirecionamento que existe para link antigo, não
    *    para navegação nova.
+   * ⚠️ **E DESDE O BLOCO 3 (spec 018), SEM TURMA ELE LEVA À ABA *Disciplinas* DESTE CURSO** — o catálogo saiu de
+   *    `/disciplinas` e passou a morar aqui, numa aba.
    */
   const botaoDeDisciplinas = (
     <Button asChild size="sm" variant="outline">

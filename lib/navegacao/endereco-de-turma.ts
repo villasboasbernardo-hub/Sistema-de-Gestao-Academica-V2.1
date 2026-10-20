@@ -313,33 +313,31 @@ export function enderecoDaTurmaNoCurso(sigla: string, codigo: string, aba?: stri
   return `${caminho}?${partes.join("&")}`;
 }
 
-/** A raiz da grade de disciplinas. Mudou de lugar? Mudou aqui, e só aqui. */
-const RAIZ_DE_DISCIPLINAS = "/disciplinas";
-
 /**
- * A grade de disciplinas de um curso, e opcionalmente **de uma turma** (fatia (b), 29/09/2026).
+ * A grade de disciplinas de um curso — **a aba *Disciplinas* da página do curso** desde o Bloco 3 (spec 018, FR-001;
+ * pedido de Bernardo Villas Boas, 19/10/2026: *"todo caminho por clique passa pelo curso"*).
  *
- * ⚠️ **ELA ENTROU AQUI PORQUE A GUARDA COBROU, e a guarda estava certa.** A primeira escrita montava
- * `?curso=…&turma=…` à mão em dois lugares — a aba *Grade* do curso e a ficha da turma —, e
- * `endereco-de-turma-unico.test.ts` reprovou: *"endereço de turma montado fora de
- * `lib/navegacao/endereco-de-turma.ts`"*. É exatamente o defeito que o `FR-031.2` existe para
- * impedir: o código da turma **contém espaços**, e um endereço montado à mão funciona na primeira
- * tela e falha **em silêncio** na que esquecer de codificar.
+ * ⚠️ **ERA `/disciplinas?curso=…`, e o endereço antigo continua valendo** — ele redireciona para cá, levando os
+ *    filtros e a linha aberta (C-1). Os três têm os MESMOS nomes nas duas rotas (C-3), e é por isso que a tradução
+ *    é só trocar o caminho.
+ * ⚠️ **A GRAFIA É A DA CONSULTA — `+` para espaço**, a mesma que o `nuqs` escreve (decisão de Bernardo Villas Boas,
+ *    23/09/2026, `PEND-5a-8`).
  *
- * ⚠️ **A GRAFIA É A DA CONSULTA — `+` para espaço**, a mesma que o `nuqs` escreve (decisão de
- * Bernardo Villas Boas, 23/09/2026, `PEND-5a-8`). Usar `%20` aqui daria **duas grafias** do mesmo
- * endereço: a do link e a que o seletor escreve ao trocar de turma.
- *
- * @example enderecoDasDisciplinas("C-Ap-FR") → "/disciplinas?curso=C-Ap-FR"
- * @example enderecoDasDisciplinas("C-Ap-FR", "C-Ap-FR T2 2026")
- *          → "/disciplinas?curso=C-Ap-FR&turma=C-Ap-FR+T2+2026"
+ * @example enderecoDasDisciplinas("C-Ap-FR") → "/cursos/C-Ap-FR?aba=disciplinas"
+ * @example enderecoDasDisciplinas("C-Ap-FR", { busca: "nav", aberta: "DIS-000003" })
+ *          → "/cursos/C-Ap-FR?aba=disciplinas&busca=nav&aberta=DIS-000003"
  */
-export function enderecoDasDisciplinas(sigla: string, codigoDaTurma?: string): string {
+export function enderecoDasDisciplinas(
+  sigla: string,
+  filtros: { readonly situacao?: string; readonly busca?: string; readonly aberta?: string } = {},
+): string {
   const partes = [
-    `curso=${comoAConsultaEscreve(sigla)}`,
-    ...(codigoDaTurma ? [`turma=${comoAConsultaEscreve(codigoDaTurma)}`] : []),
+    "aba=disciplinas",
+    ...(filtros.situacao ? [`situacao=${comoAConsultaEscreve(filtros.situacao)}`] : []),
+    ...(filtros.busca ? [`busca=${comoAConsultaEscreve(filtros.busca)}`] : []),
+    ...(filtros.aberta ? [`aberta=${comoAConsultaEscreve(filtros.aberta)}`] : []),
   ];
-  return `${RAIZ_DE_DISCIPLINAS}?${partes.join("&")}`;
+  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}?${partes.join("&")}`;
 }
 
 /**

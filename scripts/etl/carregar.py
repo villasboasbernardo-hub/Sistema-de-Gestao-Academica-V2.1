@@ -610,6 +610,9 @@ SEQUENCIAS_DE_CODIGO: tuple[tuple[str, str, str], ...] = (
     # A do Bloco 2 (spec 017, M1): o TA fora do DSA (TFD-), registrado só pela tela.
     ("app.ta_fora_do_dsa_codigo_seq", "ta_fora_do_dsa",
      "case when codigo ~ '^TFD-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    # A do Bloco 3 (spec 018): o regime de horário nomeado do curso (RGH-), cadastrado só pela tela.
+    ("app.regimes_de_horario_codigo_seq", "regimes_de_horario",
+     "case when codigo ~ '^RGH-[0-9]+$' then substring(codigo from 5)::bigint end"),
 )
 
 

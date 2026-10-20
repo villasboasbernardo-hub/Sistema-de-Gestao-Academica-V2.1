@@ -78,7 +78,7 @@ test.describe("`SC-002` · depois de entrar, há para onde ir", () => {
     for (const [rotulo, rota] of [
       ["Turmas", "/turmas"],
       ["Cursos", "/cursos"],
-      ["Disciplinas", "/disciplinas"],
+      // Spec 018 (Bloco 3): *Disciplinas* saiu do menu — a grade é a aba do curso.
       ["Instrutores", "/instrutores"],
       ["Início", "/inicio"],
     ] as const) {

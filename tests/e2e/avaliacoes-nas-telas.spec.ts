@@ -16,6 +16,7 @@ import { expect, test } from "@playwright/test";
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirAbaDoCurso, irAoCursoPorClique, irAsDisciplinasDoCurso } from "./navegar-curso";
 import {
   limparAvaliacoes,
   limparVistaPeloInstrumento,
@@ -100,17 +101,31 @@ test("US9 · o Operador vê o quadro, mas não as ações do arbitrado", async (
   await expect(page.locator('[data-slot="acoes-do-arbitrado"]')).toHaveCount(0);
 });
 
-test("US5 · a página do curso tem a aba Avaliações, com o quadro da turma da Grade", async ({
+/*
+ * ⚠️ **SPEC 018 (Bloco 3), FR-002: O CURSO NÃO MOSTRA ACOMPANHAMENTO DE TURMA** (pedido de Bernardo Villas Boas,
+ *    19/10/2026). Até o Bloco 3 a aba mostrava o quadro da turma da Grade — o cumprido, o "X de Y aplicadas" e a
+ *    situação. O caso que discrimina: a amostra TEM turma com avaliação lançada, e a aba do curso não diz nada dela.
+ */
+test("US5 · a aba Avaliações do curso mostra só o previsto do currículo — nada de turma", async ({
   page,
 }) => {
-  await entrar(page, EMAIL_ADMIN, `/cursos/${encodeURIComponent(SEMEADO.curso)}`);
-  await page.locator('[data-slot="abas-do-curso"] [data-aba="avaliacoes"]').click();
-  await expect(page).toHaveURL(/[?&]aba=avaliacoes/);
-  await expect(page.locator('[data-slot="aba-avaliacoes"]')).toBeVisible();
-  await expect(page.locator('[data-slot="avaliacoes-do-curso-turma"]')).toContainText(
-    SEMEADO.turma,
-  );
-  await expect(disciplinaNaAba(page, SEMEADO.disciplinaComTempo)).toBeVisible();
+  await irAoCursoPorClique(page, EMAIL_ADMIN, SEMEADO.curso);
+  await abrirAbaDoCurso(page, "avaliacoes");
+  const aba = page.locator('[data-slot="aba-avaliacoes-do-curriculo"]');
+  await expect(aba).toBeVisible();
+  const disciplina = disciplinaNaAba(page, SEMEADO.disciplinaComTempo);
+  await expect(disciplina).toBeVisible();
+  await disciplina.locator("summary").click();
+  await expect(disciplina.locator('[data-avaliacoes="itens"]')).toBeVisible();
+  await expect(disciplina.locator('[data-avaliacoes="previstas"]')).toBeVisible();
+
+  // Nada de turma: nem a turma, nem o cumprido, nem a situação, nem a projeção.
+  await expect(page.locator('[data-slot="avaliacoes-do-curso-turma"]')).toHaveCount(0);
+  await expect(aba.locator('[data-avaliacoes="x-de-y"]')).toHaveCount(0);
+  await expect(aba.locator('[data-avaliacoes="projecao"]')).toHaveCount(0);
+  await expect(aba.locator('[data-avaliacoes="sem-item"]')).toHaveCount(0);
+  await expect(aba).not.toContainText(SEMEADO.turma);
+  await expect(aba).not.toContainText(/aplicadas|Pendente|Concluída|Atrasada/);
 });
 
 test("FR-054 · o /inicio mostra a vista atrasada e a que vence em breve, com link para a aba", async ({
@@ -176,16 +191,11 @@ test("RN-AV-13 · a PP com tempo de vista, aplicada há 10 dias e sem vista, NÃ
   await expect(pp.locator('[data-avaliacoes-item="PP 1"]')).not.toContainText("Atrasada");
 });
 
-test("FR-038 · /disciplinas: as avaliações do currículo no painel, acrescentar e inativar", async ({
+test("FR-038 · a aba Disciplinas do curso: as avaliações do currículo no painel, acrescentar e inativar", async ({
   page,
 }) => {
-  await entrar(page, EMAIL_ADMIN, "/inicio");
-  await page
-    .getByRole("navigation", { name: "Navegação principal" })
-    .getByRole("link", { name: "Disciplinas" })
-    .click();
-  await page.locator("#curso").selectOption(SEMEADO.curso);
-  await expect(page.getByRole("columnheader", { name: "CH" })).toBeVisible();
+  // Spec 018 (Bloco 3): a grade é a aba Disciplinas do curso — o menu não tem mais a entrada.
+  await irAsDisciplinasDoCurso(page, EMAIL_ADMIN, SEMEADO.curso);
   await page
     .getByRole("gridcell", { name: `Disciplina ${SEMEADO.disciplinaComTempo}`, exact: false })
     .first()

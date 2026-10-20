@@ -19,6 +19,8 @@
  */
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
 
+import { regimeEfetivo } from "@/lib/dominio/regime-da-turma";
+
 import { regimeDoBanco } from "./[turma]/consulta";
 
 /**
@@ -47,7 +49,9 @@ export type ParametrosDaListaDeTurmas = {
  */
 export const COLUNAS_DA_LISTA_DE_TURMAS =
   "id, codigo, turma, ano_letivo, status, modalidade, data_inicio, data_termino, alunos, curso_id, " +
-  "cursos!inner(codigo, nome_curso)";
+  "cursos!inner(codigo, nome_curso), " +
+  /* Spec 018 (Bloco 3): o regime nomeado da turma, para o saldo (C-9). */
+  "regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(regime_tempos)";
 
 /** O `%` e o `_` do `ilike` são curingas: escapá-los é o que faz a busca procurar o texto digitado. */
 function escaparCuringas(texto: string): string {
@@ -99,6 +103,7 @@ export type LinhaBrutaDeTurma = {
   readonly alunos: number | null;
   readonly curso_id: string;
   readonly cursos: { readonly codigo: string; readonly nome_curso: string } | null;
+  readonly regime?: { readonly regime_tempos: number } | null;
 };
 
 /** A linha como a tela a desenha. */
@@ -117,6 +122,8 @@ export type TurmaNaLista = {
   readonly cursoNome: string;
   /** O % executado até hoje (`andamentoDaTurma`); `null` sem CH curricular ou antes de `comAndamento`. */
   readonly progresso: number | null;
+  /** Spec 018: os TA por dia do regime nomeado que a turma escolheu; ausente/nulo = o regime do curso. */
+  readonly regimeTempos?: number | null;
   /** O saldo de capacidade em TA — só em turma ativa ou planejada (P-4); `null` nas demais e sem dado. */
   readonly saldo: number | null;
   /**
@@ -172,7 +179,11 @@ export function comAndamento(
         prevista: Number(daCarga.chr_curricular ?? 0),
         executada: executada.get(l.id) ?? 0,
       },
-      regimeDoBanco(regime.get(l.cursoId) ?? null),
+      /* Spec 018 (C-9): o regime nomeado da turma troca os TA presenciais; o limite EAD fica (`RN-MAT-04`). */
+      regimeEfetivo(
+        regimeDoBanco(regime.get(l.cursoId) ?? null),
+        l.regimeTempos == null ? null : { regimeTempos: l.regimeTempos },
+      ),
       insumos.feriadosDiaInteiro,
       insumos.hoje,
     );
@@ -208,6 +219,7 @@ export function paraLinhasDeTurma(brutas: readonly LinhaBrutaDeTurma[]): readonl
     cursoNome: t.cursos?.nome_curso ?? "—",
     progresso: null,
     saldo: null,
+    regimeTempos: t.regime?.regime_tempos ?? null,
   }));
 }
 

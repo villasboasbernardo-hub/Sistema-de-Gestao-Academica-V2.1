@@ -87,16 +87,9 @@ test("3 · /inicio → card da turma → a página do curso na aba Grade, com a 
   await expect(abas.getByRole("tabpanel")).toBeInViewport();
 });
 
-test("4 · aba Avaliações do curso → «abrir na ficha da turma» → a aba Avaliações da turma, aberta e à vista", async ({
-  page,
-}) => {
-  await entrar(page, EMAIL_ADMIN, `/cursos/${encodeURIComponent(SEMEADO.curso)}`);
-  await page.locator('[data-slot="abas-do-curso"] [data-aba="avaliacoes"]').click();
-  await expect(page).toHaveURL(/[?&]aba=avaliacoes/);
-  await page
-    .locator('[data-slot="avaliacoes-do-curso-turma"]')
-    .getByRole("link", { name: "abrir na ficha da turma" })
-    .click();
-  await expect(page).toHaveURL(/\/turmas\//);
-  await conferirAbaDeAvaliacoesAVista(page);
-});
+/*
+ * ⚠️ **O CASO 4 SAIU NO BLOCO 3** (spec 018, FR-002): ele partia da aba Avaliações do CURSO e seguia o link
+ *    *"abrir na ficha da turma"* — e o curso não mostra mais turma em aba nenhuma (pedido de Bernardo Villas Boas,
+ *    19/10/2026). A ausência é provada em `avaliacoes-nas-telas.spec.ts` (US5); a aba Avaliações da turma continua
+ *    alcançada pelo cartão da ficha, nos casos acima.
+ */

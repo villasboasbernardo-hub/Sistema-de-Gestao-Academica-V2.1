@@ -169,12 +169,15 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
     "marcar a aba ativa da Administração pelo caminho do navegador (`usePathname`)",
 
   // ── Épico 5 (b), PR 3: a grade de disciplinas ──────────────────────────────────────────────
-  // ⚠️ SÃO DUAS FOLHAS, e os painéis abaixo delas NÃO levam marcador: o `"use client"` marca a
-  //    FRONTEIRA, e o que é importado a partir dela já vai para o navegador. Marcar cada painel
-  //    não mudaria o pacote e encheria esta lista com arquivos que não são fronteira de nada.
+  // ⚠️ Os painéis abaixo dela NÃO levam marcador: o `"use client"` marca a FRONTEIRA, e o que é
+  //    importado a partir dela já vai para o navegador. Marcar cada painel não mudaria o pacote e
+  //    encheria esta lista com arquivos que não são fronteira de nada.
+  // ⚠️ Spec 018 (Bloco 3): a grade passou a servir à aba *Disciplinas* do curso, e a cascata curso → turma saiu
+  //    (o curso vem do endereço da página) — `CascataDeCursoETurma.tsx` foi apagada com ela.
   "app/(app)/disciplinas/GradeDeDisciplinas.tsx": "filtros, tabela com detalhe e painéis",
-  "app/(app)/disciplinas/CascataDeCursoETurma.tsx":
-    "a cascata curso → turma, em arquivo próprio para não construir escolha num arquivo que menciona instrutor (`SC-002`)",
+  // ── Spec 018 (Bloco 3): a aba Horários do curso ──────────────────────────────────────────────
+  "app/(app)/cursos/[curso]/RegimesDoCurso.tsx":
+    "os regimes nomeados do curso: novo, editar e inativar, com o formulário abaixo dela",
 };
 
 function semComentario(fonte: string): string {

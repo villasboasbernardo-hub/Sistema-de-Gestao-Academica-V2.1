@@ -833,7 +833,9 @@ export const CONTRATO = {
         // mora SÓ aqui; `AbasDoCurso.tsx` o lê pelo gancho, sem um segundo dono.
         padrao: "sobre",
         // Spec 014 (FR-053): a terceira aba, «Avaliações», cedeu a Q-02 da spec 009 ao `RF-CURSO-02`.
-        opcoes: ["sobre", "grade", "avaliacoes"],
+        // Spec 018 (Bloco 3, 19/10/2026): SEIS — *Disciplinas* (o cadastro saiu do menu), *Atividades* (o previsto
+        // de AEC/TAD/TR) e *Horários* (os regimes nomeados do curso).
+        opcoes: ["sobre", "grade", "disciplinas", "avaliacoes", "atividades", "horarios"],
         historico: "empilha",
         avisaServidor: true,
       },
@@ -843,6 +845,33 @@ export const CONTRATO = {
         padrao: "",
         historico: "empilha",
         avisaServidor: true,
+      },
+      /*
+       * Os três da aba *Disciplinas* (spec 018, C-3): os MESMOS nomes, tipos e padrões de `/disciplinas`, para que o
+       * endereço antigo se traduza para a aba sem perder filtro nem linha aberta.
+       */
+      situacao: {
+        nome: "situacao",
+        tipo: "escolha",
+        padrao: "ativo",
+        opcoes: SITUACOES_DE_CADASTRO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      busca: {
+        nome: "busca",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
+      },
+      aberta: {
+        nome: "aberta",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: false,
       },
     },
   },

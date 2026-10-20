@@ -22,8 +22,12 @@ describe("`entradaAtiva` · a entrada do menu que o caminho acende", () => {
     expect(ativa("/inicio")).toBe("Início");
     expect(ativa("/turmas")).toBe("Turmas");
     expect(ativa("/cursos")).toBe("Cursos");
-    expect(ativa("/disciplinas")).toBe("Disciplinas");
     expect(ativa("/instrutores")).toBe("Instrutores");
+  });
+
+  it("⚠️ Bloco 3 (spec 018): /disciplinas saiu do menu — a grade é a aba do curso, que acende Cursos", () => {
+    expect(ativa("/disciplinas")).toBeUndefined();
+    expect(ativa("/cursos/C-Ap-FR")).toBe("Cursos");
   });
 
   it("a tela de detalhe acende a entrada da lista, por prefixo de segmento", () => {

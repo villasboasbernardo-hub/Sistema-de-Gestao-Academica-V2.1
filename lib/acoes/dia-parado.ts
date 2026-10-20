@@ -27,6 +27,7 @@ import { revalidatePath } from "next/cache";
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 import { recusaSeTurmaArquivada } from "@/lib/acoes/turma-arquivada";
+import { temposDoDiaDaTurmaNoServidor } from "@/lib/acoes/regime-do-dia";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { esquemaDeDesfazerParada, esquemaDePararDia } from "@/lib/validacao/dia-parado";
 
@@ -88,13 +89,13 @@ export async function pararDia(entrada: unknown): Promise<ResultadoDaParada> {
   let taInicial = p.diaInteiro ? null : p.taInicial;
   let tempos = p.diaInteiro ? null : p.tempos;
   if (p.consomeTempoReserva && taInicial === null) {
-    const { data: regime } = await supabase
-      .from("vw_cursos_regime_vigente")
-      .select("regime_padrao_tempos")
-      .eq("curso_id", turma.curso_id as string)
-      .maybeSingle();
+    /* Spec 018 (C-9): o dia inteiro é o do regime da TURMA, senão o do curso, senão 8 (a reserva de antes). */
+    const doDia = await temposDoDiaDaTurmaNoServidor(supabase, {
+      turmaId: turma.id as string,
+      cursoId: turma.curso_id as string,
+    });
     taInicial = 1;
-    tempos = Math.min(12, Math.max(1, Number(regime?.regime_padrao_tempos ?? 8)));
+    tempos = Math.min(12, Math.max(1, Number(doDia ?? 8)));
   }
 
   if (!p.confirmado) {
