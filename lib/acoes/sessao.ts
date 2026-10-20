@@ -31,10 +31,18 @@ export async function registrarAcesso(): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  await supabase
-    .from("usuarios")
-    .update({ ultimo_acesso: new Date().toISOString() })
-    .eq("auth_user_id", user.id);
+  /*
+   * Spec 020 (Bloco 5), C-13: o acesso também é CONTADO — uma linha só de acréscimo em `acessos_de_conta`, com a conta
+   * e o instante e nada mais. Quem grava é a função do banco, com a sessão de quem entrou: a tabela não aceita
+   * `INSERT` de ninguém. As duas escritas são independentes e as duas falham em silêncio, pelo mesmo motivo acima.
+   */
+  await Promise.all([
+    supabase
+      .from("usuarios")
+      .update({ ultimo_acesso: new Date().toISOString() })
+      .eq("auth_user_id", user.id),
+    supabase.rpc("registrar_acesso"),
+  ]);
 }
 
 /**

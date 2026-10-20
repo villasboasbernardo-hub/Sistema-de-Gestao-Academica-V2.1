@@ -39,6 +39,11 @@ import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { Avatar, AvatarImagem, AvatarRecuo } from "@/components/ui/avatar";
 import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import {
+  quemMaisAcessou,
+  totalDeAcessos,
+  type ResumoDeAcessos,
+} from "@/lib/dominio/acessos-de-conta";
 import { iniciaisDoNome } from "@/lib/dominio/iniciais-do-nome";
 import { rotuloDoPerfil } from "@/lib/dominio/perfis";
 import { enderecoDaFoto } from "@/lib/supabase/avatar";
@@ -48,6 +53,7 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { AcoesDaLinha } from "./AcoesDaLinha";
 import { AvisoDaLista } from "./AvisoDaLista";
 import { BuscaDeUsuarios } from "./BuscaDeUsuarios";
+import { QuadroDeAcessos } from "./QuadroDeAcessos";
 
 /** Uma célula de cabeçalho, para as oito classes não se repetirem cinco vezes. */
 const TH = "border-borda bg-superficie-2 text-texto border px-2 py-1 text-left";
@@ -87,7 +93,23 @@ export default async function Usuarios({
     consulta = consulta.or(`nome.ilike.${alvo},nome_exibicao.ilike.${alvo},email.ilike.${alvo}`);
   }
 
-  const { data, error } = await consulta;
+  /*
+   * Spec 020 (Bloco 5), C-13 a C-15: a contagem de acessos. São três leituras independentes da lista, no mesmo
+   * `Promise.all`: o total por conta (a view), os 10 acessos mais recentes e os nomes de TODAS as contas — a busca
+   * recorta a tabela, e o quadro não pode perder o nome de quem a busca escondeu.
+   * ⚠️ Só o Admin lê acesso (policy da tabela); para os outros perfis as duas leituras chegam vazias, e a página
+   *    nem chega ao quadro (a recusa abaixo).
+   */
+  const [{ data, error }, resumoRes, recentesRes, nomesRes] = await Promise.all([
+    consulta,
+    supabase.from("vw_acessos_por_conta").select("usuario_id, total, ultimo_em, primeiro_em"),
+    supabase
+      .from("acessos_de_conta")
+      .select("usuario_id, ocorrido_em")
+      .order("ocorrido_em", { ascending: false })
+      .limit(10),
+    supabase.from("usuarios").select("id, nome, nome_exibicao, excluida_em"),
+  ]);
 
   if (error) return <EstadoVazio motivo="sem-permissao" />;
 
@@ -104,6 +126,27 @@ export default async function Usuarios({
   }
 
   const contas = data ?? [];
+
+  const resumo: ResumoDeAcessos[] = (resumoRes.data ?? []).map((r) => ({
+    usuarioId: r.usuario_id as string,
+    total: Number(r.total ?? 0),
+    ultimoEm: r.ultimo_em as string,
+  }));
+  const nomes = new Map(
+    (nomesRes.data ?? []).map((u) => [
+      u.id,
+      u.excluida_em !== null ? "Conta excluída" : (u.nome_exibicao ?? u.nome ?? ""),
+    ]),
+  );
+  const vivas = new Set(
+    (nomesRes.data ?? []).filter((u) => u.excluida_em === null).map((u) => u.id),
+  );
+  const nomeDaConta = (id: string) => nomes.get(id) ?? "Conta excluída";
+  const desde =
+    (resumoRes.data ?? [])
+      .map((r) => r.primeiro_em as string | null)
+      .filter((v): v is string => v !== null)
+      .sort()[0] ?? null;
 
   // ⚠️ Um endereço assinado por conta, TODOS DE UMA VEZ — ver a nota do cabeçalho.
   const fotos = await Promise.all(contas.map((c) => enderecoDaFoto(c.avatar_caminho)));
@@ -168,6 +211,18 @@ export default async function Usuarios({
         </p>
       ) : null}
 
+      <QuadroDeAcessos
+        desde={desde}
+        maisAcessaram={quemMaisAcessou(resumo, 5, vivas).map((r) => ({
+          nome: nomeDaConta(r.usuarioId),
+          total: r.total,
+        }))}
+        recentes={(recentesRes.data ?? []).map((a) => ({
+          nome: nomeDaConta(a.usuario_id as string),
+          ocorridoEm: a.ocorrido_em as string,
+        }))}
+      />
+
       <AvisoDaLista>
         <BuscaDeUsuarios />
 
@@ -195,6 +250,7 @@ export default async function Usuarios({
                   <th className={TH}>E-mail</th>
                   <th className={TH}>Perfil</th>
                   <th className={TH}>Último acesso</th>
+                  <th className={TH}>Acessos</th>
                   <th className={TH}>Ações</th>
                 </tr>
               </thead>
@@ -233,6 +289,9 @@ export default async function Usuarios({
                         {linha.ultimo_acesso === null
                           ? "nunca"
                           : instanteParaLeitura(linha.ultimo_acesso)}
+                      </td>
+                      <td className={TD} data-slot="acessos-da-conta">
+                        {totalDeAcessos(resumo, linha.id)}
                       </td>
                       <td className={TD}>
                         <AcoesDaLinha
