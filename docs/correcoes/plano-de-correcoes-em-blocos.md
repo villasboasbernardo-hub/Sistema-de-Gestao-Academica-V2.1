@@ -174,7 +174,14 @@ _(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos*
 3. Carrossel com os **DSA da semana atual** das turmas que têm DSA, um por vez.
 4. Submenu na lateral: **Cursos** → classificação → curso, e **Turmas** → curso → turma, abrindo a página já filtrada.
 
-## Bloco 5 — Cadastros novos (spec própria)
+## Bloco 5 — Cadastros novos (spec própria) — 🟨 EM CONFERÊNCIA (PR #79)
+
+> 🟨 **Implementado em 20/10/2026** — spec `020-bloco-5-cadastros-novos`, pelo fluxo `/corrigir`, num PR só: **#79**,
+> **sem merge** até a conferência de Bernardo Villas Boas. Três migrations que só acrescentam (estrangeiros, custo e o
+> balde `curriculos`; a capacitação em lista com a conversão autorizada; a tabela de acessos). Na cópia do remoto de
+> 20/10/2026 a conversão casou **31 de 31** textos, com **0** a corrigir (`specs/020-…/antes-depois.md`). Fecha também
+> a **`PEND-019-3`**. ⚠️ **Falta a palavra de Bernardo sobre a regra 2: custo de curso é processo da CIAARA-11?** Se não
+> for, a coluna fica sem uso.
 
 ⚠️ São **novidade**, não paridade com a v2.0 (regra 3 do CLAUDE.md): o specify registra a autorização nominal de Bernardo. **Custo de curso**: confirmar que é processo da CIAARA-11 (regra 2, contenção de escopo).
 
@@ -205,12 +212,26 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
   memória deixou um `next start` vivo na porta 3100, e a rodada seguinte o **reaproveitou** (`reuseExistingServer`)
   servindo uma `.next` já apagada — 7 de 7 reprovaram no login, sem erro do servidor no log. Encerrar o processo
   resolveu. Proposta: o `verificar:tudo` recusar porta 3100 ocupada antes de começar (gotcha 7 por outro caminho).
-- **PEND-019-3** — **as sementes de ponta a ponta fixam 2026, e o Início abre no ano de hoje** _(spec 019, 20/10/2026;
+- ~~**PEND-019-3**~~ — ✅ **fechada no PR #79 (Bloco 5, spec 020, C-16)**: `panorama-de-teste.ts` (`inicio` e
+  `andamento-ate-hoje`) e `ta-fora-do-dsa.spec.ts` semeiam no ano de hoje, com as aulas na semana anterior; o `dsa-ver`
+  escolhe na caixa do Início o ano da semente do DSA; e uma guarda (`ano-sem-numero-fixo.test.ts`) reprova ano escrito
+  à mão nas quatro sementes — vista reprovar na versão antiga. _(O registro original segue.)_
+- **PEND-019-3 (registro original)** — **as sementes de ponta a ponta fixam 2026, e o Início abre no ano de hoje** _(spec 019, 20/10/2026;
   **prazo: antes de 01/01/2027**)_: `inicio.spec.ts`, `dsa-ver.spec.ts` (o caso Q-13), `andamento-ate-hoje.spec.ts` e
   `ta-fora-do-dsa.spec.ts` semeiam turmas com `ano_letivo: 2026` (e códigos `… 2026`) e as procuram nos cartões do
   Início — que desde o Bloco 4 abre no ano de hoje. Em 01/01/2027 os quatro reprovam **sem defeito no produto**. O
   conserto é a amostra semear no ano de hoje (`hojeNaCiaara`), como `inicio-bloco-4.spec.ts` e `avaliacoes-de-teste.ts`
   já fazem.
+- **PEND-020-1** — **o pgTAP reprova em cinco arquivos sobre a cópia do remoto** _(medido em 20/10/2026, spec 020, sobre
+  `remoto-20261020-195426.sql`)_: `090` (R-05/R-07 — os lançamentos da sincronização não têm procedência de ETL), `099` (o
+  remoto tem 14 salas; o inventário declara 8), `108` (`PEND-014-5`), `112` (`PEND-014-4`) e `115` (a cópia tem mais de
+  um Admin, e o arquivo pressupõe um só — a classe da `PEND-5a-5`). Nenhum é defeito do produto: são asserções escritas
+  para a base do ETL. Decidir, arquivo a arquivo, entre ler o dado de onde ele vem hoje e declarar a asserção só da base
+  limpa.
+- **PEND-020-2** — **o currículo em PDF não tem «remover» nem versões** _(spec 020, C-7; 20/10/2026)_: substituir
+  sobrescreve o mesmo arquivo (`<curso>/curriculo.pdf`) e o balde não tem policy de `DELETE` (regra 4, `STORAGE-1`) —
+  então não há como tirar o currículo de um curso pela tela, e a versão anterior não fica guardada. O currículo
+  versionado é o Bloco 6; tirar o PDF é a mesma decisão da `STORAGE-1`, agora para dois baldes.
 - **PEND-014-7** — testes de ponta a ponta instáveis sob carga (`salas.spec.ts:126`, `dsa-tipo-e-global.spec.ts:160`, `avaliacoes-nas-telas.spec.ts:53`, `admin-sobre-contas`).
 - **OneDrive** — a pasta do repositório deve ficar "Sempre manter neste dispositivo": arquivos sob demanda já quebraram o build (`.next`, `EPERM`) e o `git switch` (`specs`).
 
