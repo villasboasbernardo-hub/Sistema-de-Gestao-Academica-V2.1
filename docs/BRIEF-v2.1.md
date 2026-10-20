@@ -324,6 +324,16 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 20/10/2026 — uma tabela nova, do Bloco 5 do plano de correções (spec 020)
+>
+> - **`acessos_de_conta`** — **um registro por entrada com senha bem-sucedida**: só a conta (`usuarios.id`) e o
+>   instante (*"sem dado além de conta e instante"*, pedido de Bernardo Villas Boas de 20/10/2026; novidade autorizada
+>   nominalmente). Só de acréscimo e imutável inclusive para a `service_role`, no molde de `auditoria_de_conta`; só o
+>   Admin lê. ⚠️ **Sem `criado_por`**: `excluir_conta` conta como dependente toda coluna `criado_por` de `public`, e
+>   com ela toda conta que já entrou seria anonimizada em vez de apagada (D-USR-3).
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a
