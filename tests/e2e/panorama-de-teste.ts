@@ -77,6 +77,20 @@ export type PanoramaSemeado = {
 };
 
 /**
+ * ⚠️ PEND-019-3 (spec 020, C-16): o ano e os dias da semente saem de HOJE, nunca de 2026 escrito à mão — o Início abre
+ *    no ano de hoje, e em 01/01/2027 as turmas de 2026 sumiriam dele sem defeito nenhum no produto.
+ */
+const ANO_DE_HOJE = () => Number(hojeNaCiaara().slice(0, 4));
+
+/** O dia `n` da semana ANTERIOR à de hoje (0 = segunda): já passou, e é dia de semana. */
+function diaDaSemanaPassada(n: number): string {
+  const dia = new Date(`${hojeNaCiaara()}T12:00:00`);
+  const segunda = dia.getDate() - ((dia.getDay() + 6) % 7);
+  dia.setDate(segunda - 7 + n);
+  return `${dia.getFullYear()}-${String(dia.getMonth() + 1).padStart(2, "0")}-${String(dia.getDate()).padStart(2, "0")}`;
+}
+
+/**
  * A data do enésimo dia útil contado de **hoje, inclusive**.
  *
  * ⚠️ **"INCLUSIVE" CONTINUA SENDO A CONTA DA SEMENTE**: pedir 2 numa terça devolve quarta. Desde a D-COR-2
@@ -123,9 +137,9 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
     // ⚠️ O código da turma é `sigla [rótulo] ano` (`FR-025.1` da spec 009) — aqui sem rótulo, que é
     // ausência legítima em turma única. A partir da migration 3 daquela fatia o banco o GERA, e
     // recusa qualquer valor divergente; a amostra passa a escrever o mesmo que o banco escreveria.
-    turmaEmExcesso: `CUR-${s}-REG 2026`,
-    turmaEmDia: `CUR-${s}-EAD 2026`,
-    turmaSemCapacidade: `CUR-${s}-CAP 2026`,
+    turmaEmExcesso: `CUR-${s}-REG ${ANO_DE_HOJE()}`,
+    turmaEmDia: `CUR-${s}-EAD ${ANO_DE_HOJE()}`,
+    turmaSemCapacidade: `CUR-${s}-CAP ${ANO_DE_HOJE()}`,
     terminoFolgado: diaUtilApartirDeHoje(30),
     terminoApertado: diaUtilApartirDeHoje(2),
     lancamentoFuturo: { data: diaUtilApartirDeHoje(2), tempos: 8 },
@@ -320,28 +334,28 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
       {
         codigo: semeado.turmaEmExcesso,
         curso_id: id(semeado.cursoRegular),
-        ano_letivo: 2026,
+        ano_letivo: ANO_DE_HOJE(),
         status: "ativa",
         modalidade: "presencial",
-        data_inicio: "2026-03-02",
+        data_inicio: diaDaSemanaPassada(-21),
         data_termino: semeado.terminoFolgado,
       },
       {
         codigo: semeado.turmaEmDia,
         curso_id: id(semeado.cursoExpedito),
-        ano_letivo: 2026,
+        ano_letivo: ANO_DE_HOJE(),
         status: "ativa",
         modalidade: "ead",
-        data_inicio: "2026-03-02",
+        data_inicio: diaDaSemanaPassada(-21),
         data_termino: semeado.terminoFolgado,
       },
       {
         codigo: semeado.turmaSemCapacidade,
         curso_id: id(semeado.cursoSemCapacidade),
-        ano_letivo: 2026,
+        ano_letivo: ANO_DE_HOJE(),
         status: "ativa",
         modalidade: "presencial",
-        data_inicio: "2026-03-02",
+        data_inicio: diaDaSemanaPassada(-21),
         data_termino: semeado.terminoApertado,
       },
     ])
@@ -362,7 +376,7 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
     .insert([
       {
         codigo: `REG-${s}-01`,
-        data: "2026-03-02",
+        data: diaDaSemanaPassada(0),
         turma_id: turma(semeado.turmaEmExcesso)?.id,
         curso_id: turma(semeado.turmaEmExcesso)?.curso_id,
         instrutor_id: instrutor.id,
@@ -371,7 +385,7 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
       },
       {
         codigo: `REG-${s}-02`,
-        data: "2026-03-03",
+        data: diaDaSemanaPassada(1),
         turma_id: turma(semeado.turmaEmExcesso)?.id,
         curso_id: turma(semeado.turmaEmExcesso)?.curso_id,
         instrutor_id: instrutor.id,
@@ -380,7 +394,7 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
       },
       {
         codigo: `REG-${s}-03`,
-        data: "2026-03-03",
+        data: diaDaSemanaPassada(1),
         turma_id: turma(semeado.turmaEmDia)?.id,
         curso_id: turma(semeado.turmaEmDia)?.curso_id,
         instrutor_id: instrutor.id,
@@ -389,7 +403,7 @@ export async function semearPanorama(processo: number): Promise<PanoramaSemeado>
       },
       {
         codigo: `REG-${s}-04`,
-        data: "2026-03-04",
+        data: diaDaSemanaPassada(2),
         turma_id: turma(semeado.turmaSemCapacidade)?.id,
         curso_id: turma(semeado.turmaSemCapacidade)?.curso_id,
         instrutor_id: instrutor.id,

@@ -48,6 +48,13 @@ test.beforeAll(async ({}, info) => {
   SIGLA = `CUR-B2TF${p}`;
   INSTRUTOR = `B2TF-INS-${p}`;
   const segunda = semanaDoPainel(HOJE).de;
+  /*
+   * ⚠️ PEND-019-3 (spec 020, C-16): nada de 2026 escrito à mão — o Início abre no ano de hoje, e em 01/01/2027 a
+   *    turma de 2026 sumiria dele sem defeito nenhum no produto. A turma é do ano de hoje; as aulas sem posição caem
+   *    na semana ANTERIOR (terça a sexta), que já passou, e o início fica quatro semanas antes.
+   */
+  const ano = Number(HOJE.slice(0, 4));
+  const semanaPassada = (dia: number) => maisDias(segunda, -7 + dia);
   SEMEADO = await semearBloco2({
     sigla: SIGLA,
     nome: `Curso do TA fora do DSA ${p}`,
@@ -59,18 +66,18 @@ test.beforeAll(async ({}, info) => {
       {
         chave: "T",
         semRotulo: true,
-        ano: 2026,
+        ano,
         status: "ativa",
-        inicio: "2026-03-02",
+        inicio: maisDias(segunda, -28),
         termino: maisDias(HOJE, 60),
       },
     ],
     aulas: [
-      { sufixo: "A1", turma: "T", cod: "I", data: "2026-03-03", tempos: 10, taInicial: null },
-      { sufixo: "A2", turma: "T", cod: "I", data: "2026-03-04", tempos: 8, taInicial: null },
+      { sufixo: "A1", turma: "T", cod: "I", data: semanaPassada(1), tempos: 10, taInicial: null },
+      { sufixo: "A2", turma: "T", cod: "I", data: semanaPassada(2), tempos: 8, taInicial: null },
       { sufixo: "A3", turma: "T", cod: "I", data: segunda, tempos: 2, taInicial: 1 },
-      { sufixo: "B1", turma: "T", cod: "II", data: "2026-03-05", tempos: 10, taInicial: null },
-      { sufixo: "B2", turma: "T", cod: "II", data: "2026-03-06", tempos: 8, taInicial: null },
+      { sufixo: "B1", turma: "T", cod: "II", data: semanaPassada(3), tempos: 10, taInicial: null },
+      { sufixo: "B2", turma: "T", cod: "II", data: semanaPassada(4), tempos: 8, taInicial: null },
       { sufixo: "B3", turma: "T", cod: "II", data: segunda, tempos: 2, taInicial: 3 },
     ],
     instrutorCodigo: INSTRUTOR,
