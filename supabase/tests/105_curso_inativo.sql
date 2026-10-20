@@ -106,6 +106,9 @@ select * from (values
   -- Spec 017 (Bloco 2, M1), 19/10/2026. REGRA DOS VALORES ESPERADOS: (a) — o TA fora do DSA é lançamento da
   -- turma (D-COR-3): registrar e desfazer exigem a turma em oferta, como o dia parado e o previsto do PROENS.
   ('ta_fora_do_dsa',             'turma_em_oferta'),
+  -- Spec 018 (Bloco 3), 20/10/2026. REGRA DOS VALORES ESPERADOS: (a) — o regime nomeado é dado do curso, com as
+  -- policies de `curso_regime_historico`: criar e editar exigem o curso em oferta.
+  ('regimes_de_horario',         'curso_em_oferta'),
   ('instrutor_disciplina',       'disciplina_em_oferta')
 ) as v(tabela, chave);
 
@@ -148,8 +151,9 @@ select is(
   -- PR 4: − `avaliacoes_planejadas` (só leitura) + as três da E-4 — 36 − 2 + 6 = 40, em 20.
   -- Emenda de 15/10/2026 (E-6, 16/10/2026): + `sessoes_de_aplicacao`, duas — 40 + 2 = 42, em 21.
   -- Spec 017 (Bloco 2, M1, 19/10/2026): + `ta_fora_do_dsa`, duas (registrar e desfazer) — 42 + 2 = 44, em 22.
-  44,
-  'FR-017.5 · sao 44 policies de escrita em 22 tabelas — duas por tabela, criar e editar'
+  -- Spec 018 (Bloco 3, 20/10/2026): + `regimes_de_horario`, duas (criar e editar) — 44 + 2 = 46, em 23.
+  46,
+  'FR-017.5 · sao 46 policies de escrita em 23 tabelas — duas por tabela, criar e editar'
 );
 
 -- ---------------------------------------------------------------- a exclusao DECLARADA, nao ausente

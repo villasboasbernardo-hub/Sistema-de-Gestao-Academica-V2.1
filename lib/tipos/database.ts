@@ -2467,6 +2467,91 @@ export type Database = {
           },
         ]
       }
+      regimes_de_horario: {
+        Row: {
+          codigo: string
+          configuracao_horario_id: string | null
+          criado_em: string
+          criado_por: string | null
+          curso_id: string
+          editado_em: string | null
+          editado_por: string | null
+          hora_inicio_manha: string
+          hora_inicio_tarde: string
+          id: string
+          intervalo_manha_min: number
+          intervalo_tarde_min: number
+          nome: string
+          observacao: string | null
+          origem_migracao_v1: string | null
+          regime_tempos: number
+          status: Database["public"]["Enums"]["status_registro"]
+          ta_duracao_min: number
+        }
+        Insert: {
+          codigo?: string
+          configuracao_horario_id?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          curso_id: string
+          editado_em?: string | null
+          editado_por?: string | null
+          hora_inicio_manha: string
+          hora_inicio_tarde: string
+          id?: string
+          intervalo_manha_min: number
+          intervalo_tarde_min: number
+          nome: string
+          observacao?: string | null
+          origem_migracao_v1?: string | null
+          regime_tempos: number
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_duracao_min: number
+        }
+        Update: {
+          codigo?: string
+          configuracao_horario_id?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          curso_id?: string
+          editado_em?: string | null
+          editado_por?: string | null
+          hora_inicio_manha?: string
+          hora_inicio_tarde?: string
+          id?: string
+          intervalo_manha_min?: number
+          intervalo_tarde_min?: number
+          nome?: string
+          observacao?: string | null
+          origem_migracao_v1?: string | null
+          regime_tempos?: number
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_duracao_min?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regimes_de_horario_configuracao_horario_id_fkey"
+            columns: ["configuracao_horario_id"]
+            isOneToOne: false
+            referencedRelation: "configuracoes_horario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regimes_de_horario_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regimes_de_horario_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+        ]
+      }
       registros_aula: {
         Row: {
           categoria_normativa: Database["public"]["Enums"]["categoria_registro_aula"]
@@ -3520,6 +3605,7 @@ export type Database = {
           inicio_etapa_presencial: string | null
           modalidade: Database["public"]["Enums"]["modalidade_ensino"]
           origem_migracao_v1: string | null
+          regime_de_horario_id: string | null
           sala_alocada: string | null
           status: Database["public"]["Enums"]["status_turma"]
           termino_etapa_presencial: string | null
@@ -3540,6 +3626,7 @@ export type Database = {
           inicio_etapa_presencial?: string | null
           modalidade: Database["public"]["Enums"]["modalidade_ensino"]
           origem_migracao_v1?: string | null
+          regime_de_horario_id?: string | null
           sala_alocada?: string | null
           status: Database["public"]["Enums"]["status_turma"]
           termino_etapa_presencial?: string | null
@@ -3560,6 +3647,7 @@ export type Database = {
           inicio_etapa_presencial?: string | null
           modalidade?: Database["public"]["Enums"]["modalidade_ensino"]
           origem_migracao_v1?: string | null
+          regime_de_horario_id?: string | null
           sala_alocada?: string | null
           status?: Database["public"]["Enums"]["status_turma"]
           termino_etapa_presencial?: string | null
@@ -3579,6 +3667,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_cursos_regime_vigente"
             referencedColumns: ["curso_id"]
+          },
+          {
+            foreignKeyName: "turmas_regime_do_proprio_curso_fk"
+            columns: ["regime_de_horario_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "regimes_de_horario"
+            referencedColumns: ["id", "curso_id"]
           },
         ]
       }
@@ -5099,6 +5194,8 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      regime_da_turma_travado: { Args: { p_turma: string }; Returns: boolean }
+      regime_de_horario_em_uso: { Args: { p_regime: string }; Returns: boolean }
       registrar_acao_em_conta: {
         Args: {
           p_acao: string
