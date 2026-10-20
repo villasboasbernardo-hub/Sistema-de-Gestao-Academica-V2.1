@@ -69,10 +69,10 @@
 - [X] T031 Defeitos deliberados, cada um pego pela prova certa e desfeito, em `progresso-implement.md`: (a) a guarda do regime sem a trava de horário em uso → 142; (b) a guarda da turma sem a trava de lançamento → 142 e RLS; (c) a policy de criar aberta à Visualização → RLS; (d) o DSA ignorando o regime da turma → e2e; (e) a view dos dias parados sem o regime da turma → 142; (f) a aba Avaliações com o cumprido → e2e
 - [X] T032 `specs/018-bloco-3-pagina-do-curso-em-abas/reversao.sql` e a prova numa base limpa: a impressão digital volta à da linha de base (T001)
 - [X] T033 A impressão digital das views sobre a cópia do remoto, sem e com a migration (SC-009), em `plano-de-aplicacao-no-remoto.md`
-- [ ] T034 `pnpm verificar:tudo` (ou `verificar` + pgTAP + RLS + o CI para a ponta a ponta, se a memória da máquina não deixar), registrado; reprovação instável isolada antes de ser chamada de instável
-- [ ] T035 Push, PR com o template inteiro e CI verde nos três blocos
-- [ ] T036 Rito do remoto (`plano-de-aplicacao-no-remoto.md`): backup citado, dry-run só com a migration, `supabase db push --linked`, conferência só de leitura (os dois retratos datados)
-- [ ] T037 `roteiro-de-conferencia.md`, as pendências novas no plano de correções, e a entrega do `/corrigir` — **sem merge**
+- [X] T034 `pnpm verificar:tudo` (ou `verificar` + pgTAP + RLS + o CI para a ponta a ponta, se a memória da máquina não deixar), registrado; reprovação instável isolada antes de ser chamada de instável
+- [X] T035 Push, PR com o template inteiro e CI verde nos três blocos
+- [X] T036 Rito do remoto (`plano-de-aplicacao-no-remoto.md`): backup citado, dry-run só com a migration, `supabase db push --linked`, conferência só de leitura (os dois retratos datados)
+- [X] T037 `roteiro-de-conferencia.md`, as pendências novas no plano de correções, e a entrega do `/corrigir` — **sem merge**
 
 ## Dependencies
 

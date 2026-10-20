@@ -63,3 +63,14 @@ regime (em 2026 a atividade **global** que `semearCursos` cria em 10/05/2026 tra
 2045). **A terceira ficou sem correção**: o *Limpar filtros* da aba Disciplinas manteve o número "2", no mesmo
 intervalo em que o servidor perdia respostas por memória — fica para o CI dizer se é queda ou defeito. A rodada não foi
 repetida aqui (a máquina não tem memória para ela).
+
+## O CI (T035), 20/10/2026
+
+- Sobre `a3542f0`: `banco` vermelho — **524** passados, 1 reprovado, 1 instável. Os dois eram **do teste**: o curso
+  *regular* aceita uma turma por ano, e as três turmas da amostra em 2045 abriam a confirmação de *"acima do limite"* ao
+  gravar (a gravação nunca acontecia); e o caso da exclusão apaga a disciplina limpa no mesmo processo antes do
+  redirecionamento procurá-la. O *Limpar filtros* da aba Disciplinas **passou** — a reprovação daqui era a memória.
+- Sobre **`ac59c66`**: **verde nos três blocos** (runs `39370069541` e `39370074658`) — pgTAP **909** (62), invariantes
+  **399** (22), ponta a ponta **525 passados + 1 instável + 6 pulados**. O instável é o `avaliacoes-nas-telas.spec.ts:54`
+  (US10), já na `PEND-014-7`, não tocado por este bloco.
+
