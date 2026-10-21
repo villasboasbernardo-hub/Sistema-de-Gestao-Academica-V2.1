@@ -431,6 +431,30 @@ function porChave(
       return "Este curso tem mais de um currículo: escolha em qual deles gravar.";
     case "versao_em_uso":
       return "Este currículo é seguido por turma e não pode ser inativado.";
+    // Spec 021, PR 2 — a cópia (RC-7, RC-2), a correção do currículo em uso (RC-6) e o arquivamento (RC-10).
+    case "curriculo_em_uso":
+      return (
+        "Este currículo é seguido por turma que já tem lançamento: só o Admin, o Encarregado e o Ajudante da " +
+        "Administração Acadêmica o corrigem, com justificativa. Completar o que estava vazio é livre."
+      );
+    case "justificativa_obrigatoria":
+      return "Este currículo é seguido por turma que já tem lançamento: a correção precisa de justificativa.";
+    case "curriculo_sem_permissao":
+      return "O seu perfil não cria currículo neste curso (ou o curso não está em oferta).";
+    case "curriculo_sem_vigencia":
+      return "Informe a partir de quando o currículo novo vale.";
+    case "ja_ha_curriculo_futuro":
+      return "O curso já tem um currículo futuro: edite-o em vez de criar outro.";
+    case "curriculo_antes_do_mais_novo":
+      return "O currículo novo tem de começar depois do mais novo que o curso já tem.";
+    case "curriculo_sem_vigente":
+      return "O curso não tem currículo vigente para copiar.";
+    case "curriculo_nao_passado":
+      return "Só se arquiva currículo passado: este é o vigente ou o futuro do curso.";
+    case "curriculo_com_turma_nao_arquivada":
+      return "Este currículo ainda é seguido por turma não arquivada: arquive as turmas antes.";
+    case "arquivamento_de_curriculo_sem_permissao":
+      return "Só o Admin, o Encarregado e o Ajudante da Administração Acadêmica arquivam currículo.";
 
     case "sala_fora_da_lista": {
       const valor = texto(d.valor);

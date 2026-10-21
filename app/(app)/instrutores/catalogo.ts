@@ -8,13 +8,25 @@
  * ⚠️ A SIGLA É O `codigo` DO CURSO (spec 021 da v2.0). Curso que não veio na leitura degrada para "—",
  * em vez de derrubar o painel (`RN-DEG-01`).
  */
+import { rotuloDoCurriculo } from "@/lib/dominio/curriculos";
+
 import type { DisciplinaDoPainel } from "./PainelDeDisciplinas";
 
 export type LinhaDeDisciplina = {
   readonly id: string;
   readonly nome_disciplina: string;
   readonly curso_id: string;
+  /** Spec 021 (Bloco 6): o currículo da disciplina — para o rótulo, quando o curso tem mais de um. */
+  readonly curriculo_id?: string | null;
   readonly status: string;
+};
+
+/** Spec 021 (RC-12): o currículo, para dizer "Currículo N (vigência AAAA)" quando o curso tem mais de um. */
+export type LinhaDeCurriculo = {
+  readonly id: string;
+  readonly curso_id: string;
+  readonly versao: number;
+  readonly vigente_de: string;
 };
 
 export type LinhaDeCurso = {
@@ -45,13 +57,28 @@ export type LinhaDeCurso = {
 export function comSigla(
   disciplinas: readonly LinhaDeDisciplina[],
   cursos: readonly LinhaDeCurso[],
+  /**
+   * ⚠️ SPEC 021 (RC-12): COM DOIS CURRÍCULOS, A MESMA DISCIPLINA APARECE DUAS VEZES — uma por currículo — e o rótulo diz
+   *    de qual é. Com um currículo só (ou sem a lista), a sigla é a do curso, como sempre.
+   */
+  curriculos: readonly LinhaDeCurriculo[] = [],
 ): (DisciplinaDoPainel & { readonly ativa: boolean })[] {
   const sigla = new Map(cursos.map((c) => [c.id, c.codigo]));
   const cursoInativo = new Map(cursos.map((c) => [c.id, c.status === "inativo"]));
-  return disciplinas.map((d) => ({
-    id: d.id,
-    nome: d.nome_disciplina,
-    sigla: sigla.get(d.curso_id) ?? "—",
-    ativa: d.status === "ativo" && cursoInativo.get(d.curso_id) !== true,
-  }));
+  const porCurso = new Map<string, number>();
+  for (const c of curriculos) porCurso.set(c.curso_id, (porCurso.get(c.curso_id) ?? 0) + 1);
+  const curriculo = new Map(curriculos.map((c) => [c.id, c]));
+  return disciplinas.map((d) => {
+    const doCurso = sigla.get(d.curso_id) ?? "—";
+    const seu = d.curriculo_id ? curriculo.get(d.curriculo_id) : undefined;
+    return {
+      id: d.id,
+      nome: d.nome_disciplina,
+      sigla:
+        seu && (porCurso.get(d.curso_id) ?? 0) > 1
+          ? `${doCurso} · ${rotuloDoCurriculo(seu)}`
+          : doCurso,
+      ativa: d.status === "ativo" && cursoInativo.get(d.curso_id) !== true,
+    };
+  });
 }

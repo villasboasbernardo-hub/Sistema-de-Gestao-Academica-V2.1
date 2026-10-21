@@ -272,7 +272,8 @@ def main() -> int:
               from public.disciplinas d
               left join public.vw_ocupacao_ta o on o.disciplina_id = d.id
                    and o.turma_id = (select id from public.turmas where codigo = {lit(turma)})
-             where d.curso_id = (select curso_id from public.turmas where codigo = {lit(turma)}) and d.status = 'ativo'
+             where d.curriculo_id = (select curriculo_id from public.turmas where codigo = {lit(turma)})
+               and d.status = 'ativo'
              group by 1, 2 order by 1""")
         do_banco = {l["cod"]: l for l in linhas}
         do_catalogo: dict[str, list[int]] = {}

@@ -6,6 +6,8 @@
  */
 import { z } from "zod";
 
+import { campoDeJustificativa } from "@/lib/validacao/justificativa";
+
 const tempo = z.coerce
   .number({ error: "Informe o tempo em TA." })
   .int("O tempo é um número inteiro de TA.")
@@ -21,6 +23,8 @@ export const esquemaDoTempoArbitrado = z
     turmaId: z.uuid({ error: "Turma inválida." }).optional(),
     taAplicacao: tempo,
     taVista: tempo.optional(),
+    /* Spec 021 (Bloco 6, RC-6): a justificativa, quando o currículo é seguido por turma com lançamento. */
+    justificativa: campoDeJustificativa,
   })
   .refine((v) => v.alcance === "curso" || v.turmaId !== undefined, {
     message: "O ajuste só da turma precisa da turma.",
@@ -39,12 +43,14 @@ export const esquemaDoItemArbitrado = z.object({
   instrumento: z.string().trim().min(2, "Escolha o instrumento.").max(3),
   taAplicacao: tempo.optional(),
   taVista: tempo.optional(),
+  justificativa: campoDeJustificativa,
 });
 
 /** Nomear a UE de uma avaliação que o currículo deixou no nível da disciplina. */
 export const esquemaDaUeDecidida = z.object({
   itemId: z.uuid({ error: "Avaliação do currículo inválida." }),
   unidadeEnsinoId: z.uuid({ error: "Escolha a unidade de ensino." }),
+  justificativa: campoDeJustificativa,
 });
 
 /**
@@ -60,6 +66,8 @@ export const esquemaDoItemDoCurriculo = z
     taVista: tempo.optional(),
     fonteArquivo: z.string().trim().max(200).optional(),
     fontePagina: z.coerce.number().int().min(1, "A página é um número a partir de 1.").optional(),
+    /* Spec 021 (Bloco 6, RC-6): a justificativa, quando o currículo é seguido por turma com lançamento. */
+    justificativa: campoDeJustificativa,
   })
   .refine((v) => v.itemId !== undefined || (v.fonteArquivo && v.fontePagina !== undefined), {
     message: "Informe o arquivo e a página do currículo de onde a avaliação foi transcrita.",
@@ -70,4 +78,5 @@ export const esquemaDoItemDoCurriculo = z
 export const esquemaDaSituacaoDoItem = z.object({
   itemId: z.uuid({ error: "Avaliação do currículo inválida." }),
   ativo: z.boolean(),
+  justificativa: campoDeJustificativa,
 });

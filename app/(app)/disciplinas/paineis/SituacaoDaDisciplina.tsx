@@ -16,6 +16,7 @@
 import * as React from "react";
 
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
+import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { Button } from "@/components/ui/button";
 import { desativarDisciplina, reativarDisciplina } from "@/lib/acoes/disciplina";
 import { confirmacaoDaGravacao } from "@/lib/dominio/confirmacao-de-gravacao";
@@ -33,13 +34,18 @@ export function SituacaoDaDisciplina({
 }) {
   const [erro, setErro] = React.useState<string | null>(null);
   const [ocupado, setOcupado] = React.useState(false);
+  /* Spec 021 (RC-6): inativar ou reativar disciplina de currículo em uso é correção — com justificativa. */
+  const { executar, dialogo } = usePedidoDeJustificativa();
 
   async function alternar() {
     setErro(null);
     setOcupado(true);
-    const resultado = ativa
-      ? await desativarDisciplina({ disciplinaId })
-      : await reativarDisciplina({ disciplinaId });
+    const resultado = await executar((justificativa) => {
+      const j = justificativa ? { justificativa } : {};
+      return ativa
+        ? desativarDisciplina({ disciplinaId, ...j })
+        : reativarDisciplina({ disciplinaId, ...j });
+    });
     if (!resultado.ok) setErro(resultado.erro);
     setOcupado(false);
   }
@@ -63,6 +69,7 @@ export function SituacaoDaDisciplina({
 
   return (
     <>
+      {dialogo}
       {confirmacao.confirma ? (
         <DialogoConfirmacao
           titulo={confirmacao.titulo}

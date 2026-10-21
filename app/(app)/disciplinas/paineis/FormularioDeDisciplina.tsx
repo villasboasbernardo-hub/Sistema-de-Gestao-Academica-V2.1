@@ -17,6 +17,7 @@
  */
 import * as React from "react";
 
+import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,10 +39,13 @@ export type DisciplinaNoFormulario = {
 
 export function FormularioDeDisciplina({
   cursoId,
+  curriculoId = null,
   disciplina,
   aoConcluir,
 }: {
   readonly cursoId: string;
+  /** Spec 021 (RC-5): o currículo em que a disciplina nova nasce — o selecionado na página do curso. */
+  readonly curriculoId?: string | null;
   /** Ausente = cadastro novo. */
   readonly disciplina?: DisciplinaNoFormulario;
   readonly aoConcluir?: () => void;
@@ -49,6 +53,8 @@ export function FormularioDeDisciplina({
   const [mensagem, setMensagem] = React.useState<string | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
   const [gravando, setGravando] = React.useState(false);
+  /* Spec 021 (RC-6): no currículo em uso, a correção pede justificativa — e só o banco sabe quando. */
+  const { executar, dialogo } = usePedidoDeJustificativa();
 
   const editando = disciplina !== undefined;
   /* Spec 017 (FR-007.1): o *Nome no DSA* e a prévia do que o cartão vai mostrar. */
@@ -72,13 +78,21 @@ export function FormularioDeDisciplina({
       localPadrao: String(dados.get("local") ?? "") || null,
     };
 
-    const resultado = editando
-      ? await editarDisciplina({
-          ...comum,
-          disciplinaId: disciplina.disciplinaId,
-          nomeNoDsa: String(dados.get("nome_no_dsa") ?? ""),
-        })
-      : await criarDisciplina({ ...comum, cursoId });
+    const resultado = await executar((justificativa) =>
+      editando
+        ? editarDisciplina({
+            ...comum,
+            disciplinaId: disciplina.disciplinaId,
+            nomeNoDsa: String(dados.get("nome_no_dsa") ?? ""),
+            ...(justificativa ? { justificativa } : {}),
+          })
+        : criarDisciplina({
+            ...comum,
+            cursoId,
+            ...(curriculoId ? { curriculoId } : {}),
+            ...(justificativa ? { justificativa } : {}),
+          }),
+    );
 
     if (resultado.ok) {
       setMensagem(editando ? "Disciplina atualizada." : "Disciplina criada.");
@@ -93,6 +107,7 @@ export function FormularioDeDisciplina({
 
   return (
     <form action={gravar} className="flex flex-col gap-3" data-slot="formulario-de-disciplina">
+      {dialogo}
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
           <Label htmlFor={`cod-${id}`}>Código</Label>

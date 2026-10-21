@@ -21,9 +21,26 @@ export const LIMITE_DO_CURRICULO_EM_BYTES = 20 * 1024 * 1024;
 
 export const TIPO_DO_CURRICULO = "application/pdf";
 
-/** Um arquivo por curso: substituir sobrescreve. */
+/**
+ * O caminho do Bloco 5: um arquivo por curso. ⚠️ Desde o Bloco 6 (RC-11) é só onde mora o PDF do currículo 1 que foi
+ * carregado ANTES dos currículos — quem o aponta é `curriculos.pdf_caminho`; nenhum envio novo vai para cá.
+ */
 export function caminhoDoCurriculo(cursoId: string): string {
   return `${cursoId}/curriculo.pdf`;
+}
+
+/**
+ * RC-11 — o PDF de CADA currículo, num arquivo NOVO a cada envio (`<curso>/<currículo>/<instante>.pdf`).
+ * > *"RC-11 · PDF. Cada currículo tem o seu PDF."*
+ * ⚠️ ARQUIVO NOVO, e não substituição: substituir troca o caminho no currículo — no currículo em uso isso é correção,
+ *    com justificativa e trilha (RC-6), e a trilha guarda o caminho anterior. O arquivo anterior fica no balde (regra 4).
+ */
+export function caminhoDoPdfDoCurriculo(
+  cursoId: string,
+  curriculoId: string,
+  instante: number,
+): string {
+  return [cursoId, curriculoId, `${instante}.pdf`].join("/");
 }
 
 /** A frase de recusa, ou `null` quando o arquivo pode ir. */

@@ -70,11 +70,11 @@ export default async function FichaDoInstrutor({
   }
 
   const supabase = await criarClienteDeServidor();
-  const [instrutorRes, disciplinasRes, cursosRes, escalaRes] = await Promise.all([
+  const [instrutorRes, disciplinasRes, cursosRes, escalaRes, curriculosRes] = await Promise.all([
     supabase.from("vw_instrutores").select(COLUNAS_DA_FICHA).eq("codigo", codigo).maybeSingle(),
     supabase
       .from("disciplinas")
-      .select("id, nome_disciplina, curso_id, status")
+      .select("id, nome_disciplina, curso_id, curriculo_id, status")
       .order("nome_disciplina"),
     // ⚠️ `status` entra pelo mesmo motivo do cadastro novo, e aqui com a segunda metade: as
     //    habilitações JÁ EXISTENTES em curso inativo continuam EXIBIDAS, só leitura (`FR-017.6`).
@@ -85,6 +85,8 @@ export default async function FichaDoInstrutor({
       .eq("lista", "escala_antiguidade")
       .eq("ativo", true)
       .order("ordem"),
+    /* Spec 021 (RC-12): o currículo no rótulo, quando o curso tem mais de um. */
+    supabase.from("curriculos").select("id, curso_id, versao, vigente_de").eq("status", "ativo"),
   ]);
 
   if (instrutorRes.error) {
@@ -153,7 +155,11 @@ export default async function FichaDoInstrutor({
         : Promise.resolve(null),
     ]);
 
-  const catalogo = comSigla(disciplinasRes.data ?? [], cursosRes.data ?? []);
+  const catalogo = comSigla(
+    disciplinasRes.data ?? [],
+    cursosRes.data ?? [],
+    curriculosRes.data ?? [],
+  );
   const habilitadas = (vinculosRes.data ?? []).flatMap((v) =>
     v.disciplina_id ? [v.disciplina_id] : [],
   );

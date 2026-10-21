@@ -13,6 +13,8 @@
  */
 import { z } from "zod";
 
+import { campoDeJustificativa } from "@/lib/validacao/justificativa";
+
 import { LIMITE_DO_NOME_NO_DSA, recusaDoNomeNoDsa } from "@/lib/dominio/nome-no-dsa";
 
 /** ⚠️ Os dois modos CONCRETOS. `herdar` fica fora — ver o cabeçalho. */
@@ -39,6 +41,13 @@ const dataOpcional = z
 
 export const esquemaDeDisciplina = z.object({
   cursoId: z.uuid({ error: "Curso inválido." }),
+  /*
+   * Spec 021 (Bloco 6, RC-5): o currículo em que a disciplina nasce — o selecionado na página do curso. Opcional na
+   * forma: com um currículo só, o banco o escolhe; com dois, sem ele, recusa (`versao_obrigatoria`).
+   */
+  curriculoId: z.uuid({ error: "Currículo inválido." }).optional(),
+  /* RC-6: a justificativa, quando o currículo é seguido por turma com lançamento. */
+  justificativa: campoDeJustificativa,
   codDisciplina: textoObrigatorio("o código da disciplina", 40),
   nomeDisciplina: textoObrigatorio("o nome da disciplina"),
   cargaHorariaTempos: z
@@ -74,6 +83,7 @@ export const esquemaDeEdicaoDeDisciplina = esquemaDeDisciplina.omit({ cursoId: t
 /** Desativar e reativar mandam **só** o identificador (`FR-013`). */
 export const esquemaDeSituacaoDaDisciplina = z.object({
   disciplinaId: z.uuid({ error: "Disciplina inválida." }),
+  justificativa: campoDeJustificativa,
 });
 
 /**

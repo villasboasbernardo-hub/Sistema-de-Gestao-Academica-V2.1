@@ -252,8 +252,10 @@ export async function lerDadosDaPlanilha(
       d.cod_disciplina,
     ]),
   );
-  const numeroDaUe = new Map(unidadesBrutas.map((u) => [u.id, u.numero_ue]));
-  const disciplinaDaUe = new Map(unidadesBrutas.map((u) => [u.id, u.disciplina_id]));
+  /* Spec 021 (RC-4): as UEs do currículo DA TURMA — as das disciplinas que o DSA já recortou por ele. */
+  const unidadesDoCurriculo = unidadesBrutas.filter((u) => codigoDaDisciplina.has(u.disciplina_id));
+  const numeroDaUe = new Map(unidadesDoCurriculo.map((u) => [u.id, u.numero_ue]));
+  const disciplinaDaUe = new Map(unidadesDoCurriculo.map((u) => [u.id, u.disciplina_id]));
   const daAula = new Map(aulasLidas.map((a) => [a.id, a]));
   const daAvaliacao = new Map(avaliacoesLidas.map((a) => [a.id, a]));
   const daAtividade = new Map(atividadesLidas.map((a) => [a.id, a]));
@@ -504,7 +506,7 @@ export async function lerDadosDaPlanilha(
       nomeNoCartao: nomeNoCartao({ nomeNoDsa: d.nomeNoDsa, nome: d.nome }),
       chPrevista: d.prevista,
     })),
-    unidades: unidadesBrutas
+    unidades: unidadesDoCurriculo
       .filter((u) => u.status === "ativo" || usadas.has(u.id))
       .map((u) => ({
         id: u.id,

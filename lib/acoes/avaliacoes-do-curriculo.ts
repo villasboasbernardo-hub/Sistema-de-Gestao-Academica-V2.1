@@ -18,6 +18,7 @@ import { revalidatePath } from "next/cache";
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { recusaSeTurmaArquivada } from "@/lib/acoes/turma-arquivada";
+import { comJustificativa, pedeJustificativa } from "@/lib/acoes/justificativa";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
   esquemaDaConfirmacao,
@@ -28,12 +29,32 @@ import {
 
 export type ResultadoDoArbitrado =
   | { readonly ok: true; readonly aviso?: "soma_acima_da_ch" }
-  | { readonly ok: false; readonly erro: string };
+  | {
+      readonly ok: false;
+      readonly erro: string;
+      /** RC-6: o banco pediu a justificativa — a tela a pergunta e manda de novo. */
+      readonly pedeJustificativa?: true | undefined;
+    };
 
 const SEM_PERMISSAO = "Só o Admin e o Encarregado definem o arbitrado das avaliações do currículo.";
 
-function recusa(error: { code?: string } & ErroDoBanco): ResultadoDoArbitrado {
-  return { ok: false, erro: error.code === "42501" ? SEM_PERMISSAO : traduzirRecusa(error) };
+/*
+ * ⚠️ SPEC 021 (Bloco 6, RC-6): o `42501` deixou de ter um motivo só. O do currículo EM USO (`curriculo_em_uso`) diz
+ *    quem corrige e que completar o vazio é livre — trocá-lo pela frase do arbitrado inventaria o motivo errado.
+ */
+function recusa(
+  error: { code?: string; hint?: string | null } & ErroDoBanco,
+): ResultadoDoArbitrado {
+  if (pedeJustificativa(error)) {
+    return { ok: false, erro: traduzirRecusa(error), pedeJustificativa: true };
+  }
+  return {
+    ok: false,
+    erro:
+      error.code === "42501" && error.hint !== "curriculo_em_uso"
+        ? SEM_PERMISSAO
+        : traduzirRecusa(error),
+  };
 }
 
 /** Aviso, nunca recusa: a soma dos tempos previstos da disciplina passou da CH dela. */
@@ -64,7 +85,7 @@ export async function definirTempoArbitrado(entrada: unknown): Promise<Resultado
   const conferido = esquemaDoTempoArbitrado.safeParse(entrada);
   if (!conferido.success)
     return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
-  const { itemId, alcance, turmaId, taAplicacao, taVista } = conferido.data;
+  const { itemId, alcance, turmaId, taAplicacao, taVista, justificativa } = conferido.data;
   const supabase = await criarClienteDeServidor();
   /* D-COR-5: o ajuste POR TURMA não grava em turma arquivada; o do curso é currículo, e segue. */
   if (alcance === "turma" && turmaId) {
@@ -86,16 +107,19 @@ export async function definirTempoArbitrado(entrada: unknown): Promise<Resultado
         erro: "O tempo desta avaliação é o do currículo. Para mudar só uma turma, ajuste a turma.",
       };
     }
-    const { data, error } = await supabase
-      .from("avaliacoes_curriculo")
-      .update({
-        ta_aplicacao: taAplicacao,
-        origem_ta_aplicacao: "arbitrado",
-        ta_vista: taVista ?? null,
-        origem_ta_vista: taVista === undefined ? null : "arbitrado",
-      })
-      .eq("id", itemId)
-      .select("id");
+    const { data, error } = await comJustificativa(
+      supabase
+        .from("avaliacoes_curriculo")
+        .update({
+          ta_aplicacao: taAplicacao,
+          origem_ta_aplicacao: "arbitrado",
+          ta_vista: taVista ?? null,
+          origem_ta_vista: taVista === undefined ? null : "arbitrado",
+        })
+        .eq("id", itemId)
+        .select("id"),
+      justificativa,
+    );
     if (error) return recusa(error);
     if (!data || data.length === 0) return { ok: false, erro: SEM_PERMISSAO };
   } else {
@@ -163,7 +187,7 @@ export async function arbitrarQuantidade(entrada: unknown): Promise<ResultadoDoA
   const conferido = esquemaDoItemArbitrado.safeParse(entrada);
   if (!conferido.success)
     return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
-  const { disciplinaId, instrumento, taAplicacao, taVista } = conferido.data;
+  const { disciplinaId, instrumento, taAplicacao, taVista, justificativa } = conferido.data;
   const supabase = await criarClienteDeServidor();
   const [{ data: d, error: e1 }, { data: inst, error: e2 }, { data: existentes, error: e3 }] =
     await Promise.all([
@@ -184,21 +208,25 @@ export async function arbitrarQuantidade(entrada: unknown): Promise<ResultadoDoA
   if (falha) return recusa(falha);
   if (!d || !inst) return { ok: false, erro: "Disciplina ou instrumento não encontrado." };
   const lista = existentes ?? [];
-  const { error } = await supabase.from("avaliacoes_curriculo").insert({
-    id: randomUUID(),
-    disciplina_id: disciplinaId,
-    curso_id: d.curso_id,
-    ordem: lista.reduce((m, i) => Math.max(m, i.ordem), 0) + 1,
-    instrumento_id: inst.id,
-    numero:
-      lista.filter((i) => i.instrumento_id === inst.id).reduce((m, i) => Math.max(m, i.numero), 0) +
-      1,
-    origem_item: "arbitrado",
-    ta_aplicacao: taAplicacao ?? null,
-    origem_ta_aplicacao: taAplicacao === undefined ? null : "arbitrado",
-    ta_vista: taVista ?? null,
-    origem_ta_vista: taVista === undefined ? null : "arbitrado",
-  });
+  const { error } = await comJustificativa(
+    supabase.from("avaliacoes_curriculo").insert({
+      id: randomUUID(),
+      disciplina_id: disciplinaId,
+      curso_id: d.curso_id,
+      ordem: lista.reduce((m, i) => Math.max(m, i.ordem), 0) + 1,
+      instrumento_id: inst.id,
+      numero:
+        lista
+          .filter((i) => i.instrumento_id === inst.id)
+          .reduce((m, i) => Math.max(m, i.numero), 0) + 1,
+      origem_item: "arbitrado",
+      ta_aplicacao: taAplicacao ?? null,
+      origem_ta_aplicacao: taAplicacao === undefined ? null : "arbitrado",
+      ta_vista: taVista ?? null,
+      origem_ta_vista: taVista === undefined ? null : "arbitrado",
+    }),
+    justificativa,
+  );
   if (error) return recusa(error);
   revalidar();
   const aviso = await avisoDaCh(disciplinaId);
@@ -211,16 +239,19 @@ export async function nomearUe(entrada: unknown): Promise<ResultadoDoArbitrado> 
     return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
   const supabase = await criarClienteDeServidor();
   const hoje = hojeNaCiaara();
-  const { data, error } = await supabase
-    .from("avaliacoes_curriculo")
-    .update({
-      unidade_ensino_id: conferido.data.unidadeEnsinoId,
-      origem_ue: "decisao_ciaara",
-      ue_decidida_em: hoje,
-    })
-    .eq("id", conferido.data.itemId)
-    .is("unidade_ensino_id", null)
-    .select("id");
+  const { data, error } = await comJustificativa(
+    supabase
+      .from("avaliacoes_curriculo")
+      .update({
+        unidade_ensino_id: conferido.data.unidadeEnsinoId,
+        origem_ue: "decisao_ciaara",
+        ue_decidida_em: hoje,
+      })
+      .eq("id", conferido.data.itemId)
+      .is("unidade_ensino_id", null)
+      .select("id"),
+    conferido.data.justificativa,
+  );
   if (error) return recusa(error);
   if (!data || data.length === 0)
     return {

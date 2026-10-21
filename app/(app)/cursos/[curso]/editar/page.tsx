@@ -19,17 +19,18 @@
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { curriculoVigenteEm } from "@/lib/dominio/curriculos";
+import { curriculoVigenteEm, rotuloDoCurriculo } from "@/lib/dominio/curriculos";
 import { anosAcimaDoLimite, type TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { reaisParaEdicao } from "@/lib/formato/moeda";
+import { enderecoDaEdicaoDoCurriculo } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
+import Link from "next/link";
 
 import { alcanceDoPerfil } from "../../consulta";
 import { FormularioDeCurso } from "../../FormularioDeCurso";
 import { mensagemDeCursoNaoEncontrado, type CurriculoDaPagina } from "../consulta";
 import { travasDoBanco, vigenciasDoBanco } from "./consulta";
-import { EnvioDoCurriculo } from "./EnvioDoCurriculo";
 import { SecaoDeRegime } from "./SecaoDeRegime";
 
 export default async function EditarCurso({ params }: { params: Promise<{ curso: string }> }) {
@@ -87,7 +88,10 @@ export default async function EditarCurso({ params }: { params: Promise<{ curso:
   }
 
   const cursoId = curso.id as string;
-  /* Spec 021 (Bloco 6, RC-1): propósito, duração e PDF são do currículo — até o seletor (PR 2), o vigente hoje. */
+  /*
+   * Spec 021 (Bloco 6, RC-1 e RC-5): propósito, duração e PDF são do currículo e se editam em *Editar currículo* — esta
+   * página só aponta o caminho até o vigente.
+   */
   const curriculo = curriculoVigenteEm(
     ((curso as unknown as { curriculos?: CurriculoDaPagina[] }).curriculos ??
       []) as CurriculoDaPagina[],
@@ -126,10 +130,10 @@ export default async function EditarCurso({ params }: { params: Promise<{ curso:
             nome_curso: curso.nome_curso as string,
             classificacao: curso.classificacao as string,
             modalidade: texto(curso.modalidade),
-            duracao_dias: texto(curriculo?.duracao_dias ?? null),
-            duracao_semanas: texto(curriculo?.duracao_semanas ?? null),
+            duracao_dias: "",
+            duracao_semanas: "",
             limite_turmas_ano: texto(curso.limite_turmas_ano),
-            proposito: texto(curriculo?.proposito ?? null),
+            proposito: "",
             /* Spec 020 (C-1 a C-4): estrangeiros e custo, só na edição. */
             ofertavel_estrangeiros:
               curso.ofertavel_estrangeiros === true
@@ -156,14 +160,21 @@ export default async function EditarCurso({ params }: { params: Promise<{ curso:
         </p>
       )}
 
-      {/* Spec 020 (C-8): carrega quem edita o curso — o botão segue a permissão do banco (policy do balde). */}
-      {podeEditarCurso ? (
-        <EnvioDoCurriculo
-          sigla={curso.codigo as string}
-          cursoId={cursoId}
-          carregadoEm={curriculo?.pdf_carregado_em ?? null}
-          cursoAtivo={curso.status === "ativo"}
-        />
+      {/*
+        Spec 021 (RC-5, RC-11): o propósito, a duração e o PDF moram no currículo — e o caminho até ele fica aqui, para
+        quem vinha editá-los pelo curso. O botão segue a permissão do destino (`cursos.editar`).
+      */}
+      {podeEditarCurso && curriculo ? (
+        <p className="text-texto-suave text-sm" data-slot="caminho-do-curriculo">
+          O propósito, a duração e o PDF são do currículo.{" "}
+          <Link
+            href={enderecoDaEdicaoDoCurriculo(curso.codigo as string, curriculo.versao)}
+            className="text-marca underline-offset-2 hover:underline"
+            data-slot="ir-para-editar-curriculo"
+          >
+            Editar o {rotuloDoCurriculo(curriculo)}
+          </Link>
+        </p>
       ) : null}
 
       <SecaoDeRegime

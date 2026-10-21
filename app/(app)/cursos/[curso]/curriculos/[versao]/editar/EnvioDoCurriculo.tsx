@@ -1,11 +1,17 @@
 "use client";
 
 /**
- * O currículo do curso em PDF, em *Editar curso* — spec 020 (Bloco 5), C-5 a C-8 — **folha de cliente**.
+ * O PDF do currículo, em *Editar currículo* — spec 020 (Bloco 5), C-5 a C-8, e spec 021 (Bloco 6), RC-11 —
+ * **folha de cliente**.
  *
+ * ⚠️ **CADA CURRÍCULO TEM O SEU PDF** (RC-11). Até o Bloco 6 este envio morava em *Editar curso*, num arquivo por curso.
  * ⚠️ **O ARQUIVO VAI DO NAVEGADOR DIRETO AO STORAGE**, com a sessão de quem envia: a Vercel corta o corpo de uma função
  *    em 4,5 MB, e um currículo maior não passaria por Server Action. Quem decide se pode são as policies do balde
- *    (`cursos.editar`, alcance, curso ativo); a Server Action `registrarCurriculo` só confere que chegou e carimba a data.
+ *    (`cursos.editar`, alcance, curso ativo); a Server Action `registrarPdfDoCurriculo` confere que chegou e aponta o
+ *    currículo para ele.
+ * ⚠️ **ARQUIVO NOVO A CADA ENVIO, nunca sobrescrito** (`<curso>/<currículo>/<instante>.pdf`, sem `upsert`): substituir é
+ *    trocar o caminho no currículo — e no currículo em uso isso é correção (RC-6), com justificativa, e a trilha guarda o
+ *    caminho anterior. O arquivo anterior fica no balde (regra 4: sem policy de `DELETE`).
  * ⚠️ **O BOTÃO ABRE A JANELA DE ARQUIVO** (`type="button"`), e escolher já envia — a lição do avatar (spec 011): um
  *    botão de enviar com o campo de arquivo ao lado não leva ninguém a lugar nenhum.
  * ⚠️ **A CONFERÊNCIA DAQUI SÓ ANTECIPA A DO MOTOR** (gotcha 14): o balde recusa não-PDF (`415`) e acima de 20 MB (`413`)
@@ -14,12 +20,13 @@
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
+import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { Button } from "@/components/ui/button";
-import { registrarCurriculo } from "@/lib/acoes/curso";
+import { registrarPdfDoCurriculo } from "@/lib/acoes/curriculo";
 import {
   BALDE_DE_CURRICULOS,
   TIPO_DO_CURRICULO,
-  caminhoDoCurriculo,
+  caminhoDoPdfDoCurriculo,
   fraseDaRecusaDoArmazenamento,
   recusaDoCurriculo,
 } from "@/lib/dominio/curriculo-em-pdf";
@@ -29,16 +36,23 @@ import { criarClienteDeNavegador } from "@/lib/supabase/client";
 export function EnvioDoCurriculo({
   sigla,
   cursoId,
+  curriculoId,
+  versao,
   carregadoEm,
   cursoAtivo,
 }: {
   readonly sigla: string;
   readonly cursoId: string;
-  /** `cursos.curriculo_pdf_em`, ou `null` sem currículo. */
+  readonly curriculoId: string;
+  /** O número do currículo ("Currículo N"). */
+  readonly versao: number;
+  /** `curriculos.pdf_carregado_em`, ou `null` sem PDF. */
   readonly carregadoEm: string | null;
   readonly cursoAtivo: boolean;
 }) {
   const router = useRouter();
+  /* RC-6: trocar o PDF do currículo em uso é correção — o banco pede a justificativa, e este diálogo a pergunta. */
+  const { executar, dialogo } = usePedidoDeJustificativa();
   const entrada = React.useRef<HTMLInputElement>(null);
   const [enviando, definirEnviando] = React.useState(false);
   const [aviso, definirAviso] = React.useState<{ ok: boolean; texto: string } | null>(null);
@@ -56,12 +70,10 @@ export function EnvioDoCurriculo({
 
     definirEnviando(true);
     definirAviso(null);
+    const caminho = caminhoDoPdfDoCurriculo(cursoId, curriculoId, Date.now());
     const { error } = await criarClienteDeNavegador()
       .storage.from(BALDE_DE_CURRICULOS)
-      .upload(caminhoDoCurriculo(cursoId), arquivo, {
-        contentType: TIPO_DO_CURRICULO,
-        upsert: true,
-      });
+      .upload(caminho, arquivo, { contentType: TIPO_DO_CURRICULO, upsert: false });
     if (error) {
       definirAviso({
         ok: false,
@@ -71,7 +83,14 @@ export function EnvioDoCurriculo({
       return;
     }
 
-    const resultado = await registrarCurriculo({ sigla });
+    const resultado = await executar((justificativa) =>
+      registrarPdfDoCurriculo({
+        sigla,
+        versao,
+        caminho,
+        ...(justificativa ? { justificativa } : {}),
+      }),
+    );
     definirEnviando(false);
     if (!resultado.ok) {
       definirAviso({ ok: false, texto: resultado.erro });
@@ -87,6 +106,7 @@ export function EnvioDoCurriculo({
       className="border-borda rounded-ciaara flex flex-col gap-2 border p-3"
       data-slot="envio-do-curriculo"
     >
+      {dialogo}
       <h2 id="titulo-do-curriculo" className="text-texto text-sm font-semibold">
         Currículo em PDF
       </h2>
@@ -120,7 +140,7 @@ export function EnvioDoCurriculo({
         </div>
       ) : (
         <p className="text-texto-suave text-sm" role="status">
-          Curso inativo: o currículo não pode ser trocado.
+          Curso inativo: o PDF do currículo não pode ser trocado.
         </p>
       )}
       {aviso ? (

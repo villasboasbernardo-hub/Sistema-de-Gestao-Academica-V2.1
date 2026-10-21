@@ -21,6 +21,7 @@ import {
   traduzirRecusa,
   type ErroDoBanco,
 } from "@/lib/acoes/traducao-de-recusas";
+import { comJustificativa, pedeJustificativa } from "@/lib/acoes/justificativa";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
   esquemaDeEdicaoDeUnidade,
@@ -31,9 +32,21 @@ import {
 
 export type ResultadoDaUnidade =
   | { readonly ok: true; readonly unidadeId?: string | undefined }
-  | { readonly ok: false; readonly erro: string };
+  | {
+      readonly ok: false;
+      readonly erro: string;
+      /** RC-6: o banco pediu a justificativa — a tela a pergunta e manda de novo. */
+      readonly pedeJustificativa?: true | undefined;
+    };
 
 const falha = (erro: string): ResultadoDaUnidade => ({ ok: false, erro });
+
+/** A recusa do banco traduzida — e, quando ela é a falta da justificativa (RC-6), o aviso para a tela pedi-la. */
+function falhaDoBanco(error: ErroDoBanco): ResultadoDaUnidade {
+  return pedeJustificativa(error)
+    ? { ok: false, erro: traduzirRecusa(error), pedeJustificativa: true }
+    : { ok: false, erro: traduzirRecusa(error) };
+}
 
 function primeiraMensagem(issues: readonly { message: string }[]): string {
   return issues[0]?.message ?? "Dados inválidos.";
@@ -62,16 +75,19 @@ export async function criarUnidadeEnsino(entrada: unknown): Promise<ResultadoDaU
   if (erroLeitura) return falha(traduzirRecusa(erroLeitura as ErroDoBanco));
   if (!disciplina) return falha(recusaPorAlcance());
 
-  const { error } = await supabase.from("unidades_ensino").insert({
-    disciplina_id: u.disciplinaId,
-    curso_id: (disciplina as { curso_id: string }).curso_id,
-    numero_ue: u.numeroUe,
-    topico: u.topico,
-    ch_prevista_tempos: u.chPrevistaTempos,
-    status: "ativo",
-  });
+  const { error } = await comJustificativa(
+    supabase.from("unidades_ensino").insert({
+      disciplina_id: u.disciplinaId,
+      curso_id: (disciplina as { curso_id: string }).curso_id,
+      numero_ue: u.numeroUe,
+      topico: u.topico,
+      ch_prevista_tempos: u.chPrevistaTempos,
+      status: "ativo",
+    }),
+    u.justificativa,
+  );
 
-  if (error) return falha(traduzirRecusa(error as ErroDoBanco));
+  if (error) return falhaDoBanco(error as ErroDoBanco);
 
   revalidar();
   return { ok: true };
@@ -84,15 +100,18 @@ export async function editarUnidadeEnsino(entrada: unknown): Promise<ResultadoDa
   const u = conferido.data;
   const supabase = await criarClienteDeServidor();
 
-  const { error, count } = await supabase
-    .from("unidades_ensino")
-    .update(
-      { numero_ue: u.numeroUe, topico: u.topico, ch_prevista_tempos: u.chPrevistaTempos },
-      { count: "exact" },
-    )
-    .eq("id", u.unidadeId);
+  const { error, count } = await comJustificativa(
+    supabase
+      .from("unidades_ensino")
+      .update(
+        { numero_ue: u.numeroUe, topico: u.topico, ch_prevista_tempos: u.chPrevistaTempos },
+        { count: "exact" },
+      )
+      .eq("id", u.unidadeId),
+    u.justificativa,
+  );
 
-  if (error) return falha(traduzirRecusa(error as ErroDoBanco));
+  if (error) return falhaDoBanco(error as ErroDoBanco);
   // ⚠️ Zero linhas é recusa da policy, não sucesso vazio (gotcha 4 do lado da escrita).
   if (count === 0) return falha(recusaPorAlcance());
 
@@ -108,12 +127,15 @@ async function mudarSituacaoDaUnidade(
   if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
 
   const supabase = await criarClienteDeServidor();
-  const { error, count } = await supabase
-    .from("unidades_ensino")
-    .update({ status }, { count: "exact" })
-    .eq("id", conferido.data.unidadeId);
+  const { error, count } = await comJustificativa(
+    supabase
+      .from("unidades_ensino")
+      .update({ status }, { count: "exact" })
+      .eq("id", conferido.data.unidadeId),
+    conferido.data.justificativa,
+  );
 
-  if (error) return falha(traduzirRecusa(error as ErroDoBanco));
+  if (error) return falhaDoBanco(error as ErroDoBanco);
   if (count === 0) return falha(recusaPorAlcance());
 
   revalidar();

@@ -44,6 +44,10 @@ export type TurmaDaGrade = TurmaParaAvisos & {
   readonly codigo: string;
   readonly rotulo: string | null;
   readonly ano: number;
+  /** Spec 021 (RC-9, RC-12): "Currículo N (vigência AAAA)" — o currículo que a turma segue. */
+  readonly curriculo: string | null;
+  /** Spec 021 (RC-9): a arquivada aparece na lista, para consulta; o seletor continua sem ela (C-24 da spec 017). */
+  readonly arquivada: boolean;
 };
 
 /*
@@ -101,6 +105,7 @@ export function AbaGrade({
   readonly motivoDoVazio: "nao-ha" | "nao-ve" | "ainda-nao-existe" | null;
 }) {
   const turmaAtual = turmas.find((t) => t.codigo === selecionada) ?? null;
+  const doSeletor = turmas.filter((t) => !t.arquivada);
 
   /*
    * ⚠️ *NOVA TURMA* SAIU DAQUI EM 17/10/2026 (spec 016, FR-006.1): mora na barra única do topo da
@@ -164,7 +169,7 @@ export function AbaGrade({
       ) : null}
 
       <div className="flex flex-wrap items-end justify-between gap-3">
-        {turmas.length > 1 ? (
+        {doSeletor.length > 1 ? (
           /*
            * ⚠️ A ORDEM É A DO `FR-035`, e ela vem de `lib/dominio/` — ano ↓, início ↓ com sem data
            *    por último, código. O componente canônico **exibe** a lista como ela chega
@@ -174,7 +179,7 @@ export function AbaGrade({
            */
           <SeletorDeTurmaNaUrl
             turmas={ordenarTurmasParaSeletor(
-              turmas.map((t) => ({
+              doSeletor.map((t) => ({
                 codigo: t.codigo,
                 ano: t.ano,
                 dataInicio: t.dataInicio,
@@ -208,6 +213,12 @@ export function AbaGrade({
             <Rotulo>Sala:</Rotulo>{" "}
             <span className="text-texto" data-slot="sala-da-turma">
               {traco(turmaAtual.sala)}
+            </span>
+          </p>
+          <p className="text-sm">
+            <Rotulo>Currículo:</Rotulo>{" "}
+            <span className="text-texto" data-slot="curriculo-da-turma">
+              {traco(turmaAtual.curriculo)}
             </span>
           </p>
           <p className="text-sm">
@@ -246,6 +257,7 @@ export function AbaGrade({
               <Th>Turma</Th>
               <Th>Ano</Th>
               <Th>Situação</Th>
+              <Th>Currículo</Th>
               <Th>Janela</Th>
               <Th>Sala</Th>
               <Th>Avisos</Th>
@@ -270,6 +282,14 @@ export function AbaGrade({
                       tom={TOM_DO_STATUS_DE_TURMA[t.status] ?? "planejado"}
                       rotulo={ROTULO_DO_STATUS_DE_TURMA[t.status] ?? t.status}
                     />
+                    {t.arquivada ? (
+                      <span className="text-texto-suave ml-2 text-xs" data-slot="turma-arquivada">
+                        Arquivada
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="text-texto py-1" data-slot="curriculo-na-lista">
+                    {traco(t.curriculo)}
                   </td>
                   <td className="text-texto py-1">{janela(t)}</td>
                   <td className="text-texto py-1" data-slot="sala-na-lista">

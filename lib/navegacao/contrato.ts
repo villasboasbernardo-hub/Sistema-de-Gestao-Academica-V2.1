@@ -848,6 +848,18 @@ export const CONTRATO = {
     origem: "RF-CURSO-01",
     parametros: {},
   },
+  /* Spec 021 (Bloco 6, RC-7): o currículo novo, cópia do vigente. */
+  "/cursos/[curso]/curriculos/novo": {
+    rota: "/cursos/[curso]/curriculos/novo",
+    origem: "RF-CURSO-01",
+    parametros: {},
+  },
+  /* Spec 021 (Bloco 6, RC-5, RC-11): o currículo N — propósito, duração, vigência e PDF. */
+  "/cursos/[curso]/curriculos/[versao]/editar": {
+    rota: "/cursos/[curso]/curriculos/[versao]/editar",
+    origem: "RF-CURSO-01",
+    parametros: {},
+  },
   "/cursos/[curso]": {
     rota: "/cursos/[curso]",
     origem: "RF-CURSO-01",
@@ -870,6 +882,27 @@ export const CONTRATO = {
         tipo: "texto",
         padrao: "",
         historico: "empilha",
+        avisaServidor: true,
+      },
+      /*
+       * Spec 021 (Bloco 6, RC-8): o CURRÍCULO que as abas mostram, pelo número ("Currículo N"). O padrão vazio é o
+       * VIGENTE hoje — quem abre o curso sem escolher vê o currículo que rege as turmas novas. Trocar de currículo é ir a
+       * outro lugar: empilha histórico, como a aba.
+       */
+      curriculo: {
+        nome: "curriculo",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
+      /* Spec 021 (Bloco 6, RC-10): o currículo arquivado sai do seletor; `?arquivados=sim` o traz de volta. */
+      arquivados: {
+        nome: "arquivados",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: SIM_OU_NAO,
+        historico: "substitui",
         avisaServidor: true,
       },
       /*

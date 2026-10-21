@@ -267,6 +267,7 @@ export function GradeDeDisciplinas({
             >
               <FormularioDeDisciplina
                 cursoId={grade.cursoEscolhido.id}
+                curriculoId={grade.curriculoId}
                 aoConcluir={() => definirCriando(false)}
               />
             </div>

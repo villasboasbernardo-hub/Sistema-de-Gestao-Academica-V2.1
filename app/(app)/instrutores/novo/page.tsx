@@ -37,22 +37,25 @@ export default async function NovoInstrutor() {
   }
 
   const supabase = await criarClienteDeServidor();
-  const [{ data: escala }, { data: disciplinas }, { data: cursos }] = await Promise.all([
-    supabase
-      .from("config_listas")
-      .select("valor, ordem")
-      .eq("lista", "escala_antiguidade")
-      .eq("ativo", true)
-      .order("ordem"),
-    supabase
-      .from("disciplinas")
-      .select("id, nome_disciplina, curso_id, status")
-      .eq("status", "ativo")
-      .order("nome_disciplina"),
-    // ⚠️ `status` entra porque o painel precisa dele: disciplina ATIVA de curso INATIVO não é
-    //    oferecível (`FR-017.6` da spec 009). Ver `catalogo.ts`.
-    supabase.from("cursos").select("id, codigo, status"),
-  ]);
+  const [{ data: escala }, { data: disciplinas }, { data: cursos }, { data: curriculos }] =
+    await Promise.all([
+      supabase
+        .from("config_listas")
+        .select("valor, ordem")
+        .eq("lista", "escala_antiguidade")
+        .eq("ativo", true)
+        .order("ordem"),
+      supabase
+        .from("disciplinas")
+        .select("id, nome_disciplina, curso_id, curriculo_id, status")
+        .eq("status", "ativo")
+        .order("nome_disciplina"),
+      // ⚠️ `status` entra porque o painel precisa dele: disciplina ATIVA de curso INATIVO não é
+      //    oferecível (`FR-017.6` da spec 009). Ver `catalogo.ts`.
+      supabase.from("cursos").select("id, codigo, status"),
+      /* Spec 021 (RC-12): o currículo no rótulo, quando o curso tem mais de um. */
+      supabase.from("curriculos").select("id, curso_id, versao, vigente_de").eq("status", "ativo"),
+    ]);
 
   return (
     <section className="flex flex-col gap-4">
@@ -70,7 +73,9 @@ export default async function NovoInstrutor() {
         iniciais={valoresFuncionaisDe(null)}
         pessoais={null}
         postos={(escala ?? []).map((e) => e.valor)}
-        disciplinas={comSigla(disciplinas ?? [], cursos ?? []).filter((d) => d.ativa)}
+        disciplinas={comSigla(disciplinas ?? [], cursos ?? [], curriculos ?? []).filter(
+          (d) => d.ativa,
+        )}
         habilitadas={[]}
       />
     </section>

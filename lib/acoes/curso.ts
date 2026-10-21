@@ -33,9 +33,6 @@ import {
   type ContextoDaRecusa,
   type ErroDoBanco,
 } from "@/lib/acoes/traducao-de-recusas";
-import { BALDE_DE_CURRICULOS } from "@/lib/dominio/curriculo-em-pdf";
-import { curriculoVigenteEm, type CurriculoParaVigencia } from "@/lib/dominio/curriculos";
-import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
   esquemaDeCriacaoDeCurso,
@@ -99,52 +96,23 @@ export async function criarCurso(entrada: unknown): Promise<ResultadoDeCurso> {
 }
 
 /**
- * O currículo VIGENTE hoje do curso (spec 021, RC-1): é nele que *Editar curso* grava o propósito, a duração e o PDF,
- * até o seletor de currículo (PR 2). `null` quando o curso não é alcançado.
- */
-async function curriculoVigenteDoCurso(
-  sigla: string,
-): Promise<{ readonly cursoId: string; readonly curriculoId: string | null } | null> {
-  const supabase = await criarClienteDeServidor();
-  const { data } = await supabase
-    .from("cursos")
-    .select(
-      "id, curriculos:curriculos!curriculos_curso_id_fkey(id, versao, vigente_de, status, arquivado_em)",
-    )
-    .eq("codigo", sigla)
-    .maybeSingle();
-  if (!data) return null;
-  const curriculos = ((
-    data as unknown as { curriculos?: (CurriculoParaVigencia & { id: string })[] }
-  ).curriculos ?? []) as (CurriculoParaVigencia & { id: string })[];
-  return {
-    cursoId: data.id as string,
-    curriculoId: curriculoVigenteEm(curriculos, hojeNaCiaara())?.id ?? null,
-  };
-}
-
-/**
  * Edita o curso. **Sem `status`**, e pedindo a linha de volta.
  *
  * ⚠️ **O DESTINO É A SIGLA NOVA** quando ela muda (`FR-016.1`): quem acabou de renomear o curso não
  * pode cair numa página que não existe mais. Quem devolve a sigla é esta ação.
- * ⚠️ **SPEC 021 (Bloco 6, RC-1): SÃO DUAS GRAVAÇÕES** — o cadastro no curso e o propósito e a duração no CURRÍCULO
- *    vigente. O curso vai PRIMEIRO, porque é onde mora a recusa provável (a sigla repetida, `23505`); o currículo, com a
- *    mesma permissão e o mesmo alcance (`curriculos_editar` = `cursos_editar` + oferta), raramente recusa o que o curso
- *    aceitou — e quando recusa, a mensagem diz que só o cadastro foi salvo.
+ * ⚠️ **SPEC 021 (Bloco 6, RC-1 e RC-5): SÓ O CADASTRO DO CURSO.** O propósito, a duração e o PDF são do currículo, e
+ *    se editam num currículo escolhido (`lib/acoes/curriculo.ts`). O PDF do Bloco 5 (`registrarCurriculo`) saiu daqui
+ *    pelo mesmo motivo: cada currículo tem o seu (RC-11, `registrarPdfDoCurriculo`).
  */
 export async function editarCurso(siglaAtual: string, entrada: unknown): Promise<ResultadoDeCurso> {
   const conferido = esquemaDeEdicaoDeCurso.safeParse(entrada);
   if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
 
-  const { proposito, duracao_semanas, duracao_dias, ...doCurso } = conferido.data;
-  const vigente = await curriculoVigenteDoCurso(siglaAtual);
-  if (!vigente) return falha(recusaPorAlcance(await contextoDaSigla(siglaAtual, "alterações")));
-
+  /* Spec 021 (RC-5): só o curso — o conteúdo do currículo se edita em *Editar currículo* (`editarCurriculo`). */
   const supabase = await criarClienteDeServidor();
   const { data, error } = await supabase
     .from("cursos")
-    .update(doCurso)
+    .update(conferido.data)
     .eq("codigo", siglaAtual)
     .select("codigo");
 
@@ -163,76 +131,9 @@ export async function editarCurso(siglaAtual: string, entrada: unknown): Promise
     return falha(recusaPorAlcance(await contextoDaSigla(siglaAtual, "alterações")));
   }
 
-  const { data: doCurriculo, error: erroDoCurriculo } = await supabase
-    .from("curriculos")
-    .update({ proposito, duracao_semanas, duracao_dias })
-    .eq("id", vigente.curriculoId ?? "00000000-0000-0000-0000-000000000000")
-    .select("id");
-  if (erroDoCurriculo || !doCurriculo || doCurriculo.length === 0) {
-    revalidar(siglaAtual);
-    revalidar(conferido.data.codigo);
-    const motivo = erroDoCurriculo
-      ? traduzirRecusa(erroDoCurriculo as ErroDoBanco, { sigla: conferido.data.codigo })
-      : recusaPorAlcance(await contextoDaSigla(conferido.data.codigo, "alterações"));
-    return falha(`O cadastro do curso foi salvo, mas o propósito e a duração não: ${motivo}`);
-  }
-
   revalidar(siglaAtual);
   revalidar(conferido.data.codigo);
   return { ok: true, sigla: conferido.data.codigo };
-}
-
-/**
- * Registra o currículo em PDF que o navegador acabou de carregar no balde — spec 020 (Bloco 5), C-5 e C-8.
- *
- * ⚠️ **O ARQUIVO NÃO PASSA POR AQUI**: a Vercel corta o corpo de uma função em 4,5 MB, então o PDF sobe do navegador
- *    direto ao Storage, com a sessão de quem envia, e as policies do balde decidem. Esta ação só confere que ele
- *    chegou e carimba `cursos.curriculo_pdf_em` — que é o que faz *Sobre o Curso* oferecer o download.
- * ⚠️ **ZERO LINHAS É RECUSA** (como em `editarCurso`): quem não edita o curso não carimba.
- */
-export async function registrarCurriculo(entrada: unknown): Promise<ResultadoDeCurso> {
-  const conferido = esquemaDeSituacaoDoCurso.safeParse(entrada);
-  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
-  const { sigla } = conferido.data;
-
-  const supabase = await criarClienteDeServidor();
-  const { data: curso, error: erroDoCurso } = await supabase
-    .from("cursos")
-    .select("id")
-    .eq("codigo", sigla)
-    .maybeSingle();
-  if (erroDoCurso) return falha(traduzirRecusa(erroDoCurso as ErroDoBanco, { sigla }));
-  if (!curso) return falha(recusaPorAlcance(await contextoDaSigla(sigla, "o currículo")));
-  /* Spec 021 (Bloco 6, RC-11): o PDF é do currículo — até o seletor (PR 2), o do vigente hoje. */
-  const vigente = await curriculoVigenteDoCurso(sigla);
-  if (!vigente?.curriculoId) {
-    return falha(recusaPorAlcance(await contextoDaSigla(sigla, "o currículo")));
-  }
-
-  const { data: objetos, error: erroDaLista } = await supabase.storage
-    .from(BALDE_DE_CURRICULOS)
-    .list(curso.id as string, { search: "curriculo.pdf" });
-  const chegou = (objetos ?? []).some((o) => o.name === "curriculo.pdf");
-  if (erroDaLista || !chegou) {
-    return falha(
-      "O PDF não chegou ao armazenamento. Carregue de novo; se persistir, procure o suporte.",
-    );
-  }
-
-  const { data, error } = await supabase
-    .from("curriculos")
-    .update({ pdf_carregado_em: new Date().toISOString() })
-    .eq("id", vigente.curriculoId)
-    .select("id");
-  if (error) {
-    return falha(traduzirRecusa(error as ErroDoBanco, await contextoDaSigla(sigla, "o currículo")));
-  }
-  if (!data || data.length === 0) {
-    return falha(recusaPorAlcance(await contextoDaSigla(sigla, "o currículo")));
-  }
-
-  revalidar(sigla);
-  return { ok: true, sigla };
 }
 
 /** Muda só a situação do curso — o que as duas ações abaixo compartilham. */

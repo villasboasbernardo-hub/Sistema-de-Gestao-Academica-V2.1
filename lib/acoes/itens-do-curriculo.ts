@@ -17,6 +17,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
+import { comJustificativa, pedeJustificativa } from "@/lib/acoes/justificativa";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
   esquemaDaSituacaoDoItem,
@@ -25,12 +26,27 @@ import {
 
 export type ResultadoDoItem =
   | { readonly ok: true; readonly aviso?: "soma_acima_da_ch" }
-  | { readonly ok: false; readonly erro: string };
+  | {
+      readonly ok: false;
+      readonly erro: string;
+      /** RC-6: o banco pediu a justificativa — a tela a pergunta e manda de novo. */
+      readonly pedeJustificativa?: true | undefined;
+    };
 
 const SEM_PERMISSAO = "O seu perfil não pode editar as avaliações do currículo desta disciplina.";
 
-function recusa(error: { code?: string } & ErroDoBanco): ResultadoDoItem {
-  return { ok: false, erro: error.code === "42501" ? SEM_PERMISSAO : traduzirRecusa(error) };
+/* ⚠️ Spec 021 (Bloco 6, RC-6): o `42501` do currículo EM USO tem frase própria — ver `avaliacoes-do-curriculo.ts`. */
+function recusa(error: { code?: string; hint?: string | null } & ErroDoBanco): ResultadoDoItem {
+  if (pedeJustificativa(error)) {
+    return { ok: false, erro: traduzirRecusa(error), pedeJustificativa: true };
+  }
+  return {
+    ok: false,
+    erro:
+      error.code === "42501" && error.hint !== "curriculo_em_uso"
+        ? SEM_PERMISSAO
+        : traduzirRecusa(error),
+  };
 }
 
 async function avisoDaCh(disciplinaId: string): Promise<"soma_acima_da_ch" | undefined> {
@@ -56,8 +72,16 @@ export async function salvarItemDoCurriculo(entrada: unknown): Promise<Resultado
   if (!conferido.success) {
     return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  const { itemId, disciplinaId, instrumento, taAplicacao, taVista, fonteArquivo, fontePagina } =
-    conferido.data;
+  const {
+    itemId,
+    disciplinaId,
+    instrumento,
+    taAplicacao,
+    taVista,
+    fonteArquivo,
+    fontePagina,
+    justificativa,
+  } = conferido.data;
   const supabase = await criarClienteDeServidor();
   const tempos = {
     ta_aplicacao: taAplicacao ?? null,
@@ -67,11 +91,10 @@ export async function salvarItemDoCurriculo(entrada: unknown): Promise<Resultado
   };
 
   if (itemId) {
-    const { data, error } = await supabase
-      .from("avaliacoes_curriculo")
-      .update(tempos)
-      .eq("id", itemId)
-      .select("id");
+    const { data, error } = await comJustificativa(
+      supabase.from("avaliacoes_curriculo").update(tempos).eq("id", itemId).select("id"),
+      justificativa,
+    );
     if (error) return recusa(error);
     if (!data || data.length === 0) return { ok: false, erro: SEM_PERMISSAO };
   } else {
@@ -93,21 +116,24 @@ export async function salvarItemDoCurriculo(entrada: unknown): Promise<Resultado
     if (falha) return recusa(falha);
     if (!d || !inst) return { ok: false, erro: "Disciplina ou instrumento não encontrado." };
     const lista = existentes ?? [];
-    const { error } = await supabase.from("avaliacoes_curriculo").insert({
-      id: randomUUID(),
-      disciplina_id: disciplinaId,
-      curso_id: d.curso_id,
-      ordem: lista.reduce((m, i) => Math.max(m, i.ordem), 0) + 1,
-      instrumento_id: inst.id,
-      numero:
-        lista
-          .filter((i) => i.instrumento_id === inst.id)
-          .reduce((m, i) => Math.max(m, i.numero), 0) + 1,
-      origem_item: "curriculo",
-      fonte_arquivo: fonteArquivo,
-      fonte_pagina: fontePagina,
-      ...tempos,
-    });
+    const { error } = await comJustificativa(
+      supabase.from("avaliacoes_curriculo").insert({
+        id: randomUUID(),
+        disciplina_id: disciplinaId,
+        curso_id: d.curso_id,
+        ordem: lista.reduce((m, i) => Math.max(m, i.ordem), 0) + 1,
+        instrumento_id: inst.id,
+        numero:
+          lista
+            .filter((i) => i.instrumento_id === inst.id)
+            .reduce((m, i) => Math.max(m, i.numero), 0) + 1,
+        origem_item: "curriculo",
+        fonte_arquivo: fonteArquivo,
+        fonte_pagina: fontePagina,
+        ...tempos,
+      }),
+      justificativa,
+    );
     if (error) return recusa(error);
   }
   revalidatePath("/cursos/[curso]", "page");
@@ -122,11 +148,14 @@ export async function mudarSituacaoDoItem(entrada: unknown): Promise<ResultadoDo
     return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
   }
   const supabase = await criarClienteDeServidor();
-  const { data, error } = await supabase
-    .from("avaliacoes_curriculo")
-    .update({ status: conferido.data.ativo ? "ativo" : "inativo" })
-    .eq("id", conferido.data.itemId)
-    .select("id");
+  const { data, error } = await comJustificativa(
+    supabase
+      .from("avaliacoes_curriculo")
+      .update({ status: conferido.data.ativo ? "ativo" : "inativo" })
+      .eq("id", conferido.data.itemId)
+      .select("id"),
+    conferido.data.justificativa,
+  );
   if (error) return recusa(error);
   if (!data || data.length === 0) return { ok: false, erro: SEM_PERMISSAO };
   revalidatePath("/cursos/[curso]", "page");

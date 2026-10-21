@@ -19,6 +19,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { abrirLinha, conferirQueALinhaAlterna, linhaExpansivel } from "./linha-expansivel";
+import { clicarNaTurmaDaLista } from "./navegar-turmas";
 import {
   codigoDaTurmaDois,
   codigoDaTurmaUm,
@@ -80,7 +81,11 @@ async function irASecaoDaTurma(page: Page, turma: string): Promise<void> {
     .click();
   await expect.poll(() => new URL(page.url()).pathname).toBe("/turmas");
 
-  await page.getByRole("link", { name: turma }).first().click();
+  /*
+   * ⚠️ PELO AUXILIAR QUE CENTRALIZA (CLAUDE.md, Bloco 2): com a lista mais longa — outras amostras de turma, como as do
+   *    currículo versionado (spec 021) —, o link da T2 caía na borda da janela e o clique não navegava, sem erro.
+   */
+  await clicarNaTurmaDaLista(page, turma);
   await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(turma);
 
   /*

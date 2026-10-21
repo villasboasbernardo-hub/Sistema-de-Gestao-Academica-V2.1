@@ -140,6 +140,8 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
     "components/ciaara/badge-teto.tsx",
     // Spec 019 (Bloco 4): o carrossel do Início — o passo, a pausa e o «reduzir movimento» são do navegador.
     "components/ciaara/carrossel.tsx",
+    // Spec 021 (Bloco 6, RC-6): o diálogo que pede a justificativa da correção — abrir e esperar a resposta é estado.
+    "components/ciaara/pedido-de-justificativa.tsx",
     // Entrou em 17/10/2026 (spec 016, item 1.3): o olho que mostra e oculta a senha é estado de tela.
     "components/ciaara/campo-de-senha.tsx",
     "components/ciaara/dialogo-confirmacao.tsx",

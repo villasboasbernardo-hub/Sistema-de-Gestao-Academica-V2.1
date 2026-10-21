@@ -18,6 +18,13 @@ import Link from "next/link";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
+import {
+  opcoesDoSeletor,
+  rotuloDoCurriculo,
+  ROTULO_DA_SITUACAO,
+  type CurriculoParaVigencia,
+} from "@/lib/dominio/curriculos";
+import { enderecoDoCursoNoCurriculo } from "@/lib/navegacao/endereco-de-turma";
 import { regimeEfetivo, rotuloDoRegime } from "@/lib/dominio/regime-da-turma";
 import {
   estadoDoArquivamento,
@@ -216,6 +223,7 @@ export default async function FichaDaTurma({
     arquivosRes,
     regimesDoCursoRes,
     regimeTravadoRes,
+    curriculosDoCursoRes,
   ] = await Promise.all([
     supabase
       .from("cursos")
@@ -298,6 +306,11 @@ export default async function FichaDaTurma({
       .eq("curso_id", cursoId)
       .order("nome"),
     supabase.rpc("regime_da_turma_travado", { p_turma: turma.id as string }),
+    /* Spec 021 (RC-4): os currículos do curso, para *Editar turma* — a troca trava com o regime (mesmo lançamento). */
+    supabase
+      .from("curriculos")
+      .select("id, versao, vigente_de, status, arquivado_em")
+      .eq("curso_id", cursoId),
   ]);
   const trocas = (trocasRes.data ?? []) as {
     ordem: number;
@@ -356,7 +369,23 @@ export default async function FichaDaTurma({
    *    instrutores é o que custa caro**: é ela que carrega o `.order("ordem_antiguidade")` que a
    *    guarda da `RN-ANT-01` cobra, e uma segunda cópia é um lugar a mais onde esquecê-lo.
    */
-  const grade = await lerGradeDeDisciplinas({ cursoCodigo: sigla, turmaCodigo: codigo });
+  /* Spec 021 (Bloco 6, RC-4): a turma segue o SEU currículo — disciplinas, duração, avaliações. */
+  const curriculoDaTurma =
+    (
+      turma as unknown as {
+        curriculo?: {
+          id?: string;
+          versao?: number;
+          vigente_de?: string;
+          duracao_semanas?: number | null;
+        } | null;
+      }
+    ).curriculo ?? null;
+  const grade = await lerGradeDeDisciplinas({
+    cursoCodigo: sigla,
+    turmaCodigo: codigo,
+    curriculoId: curriculoDaTurma?.id ?? null,
+  });
   const naGrade = grade.linhas.filter((l) => l.turmaDisciplinaId !== null);
 
   const avisos = avisosDaTurma(
@@ -378,9 +407,7 @@ export default async function FichaDaTurma({
       disciplinasAtivas: naGrade.length,
       /* FR-009.7 da spec 016: o T da «Semana N de T» — a ficha avisa quando a turma passa dele. */
       /* Spec 021 (Bloco 6, RC-1): a duração é do currículo DA TURMA. */
-      duracaoSemanasDoCurso:
-        (turma as unknown as { curriculo?: { duracao_semanas?: number | null } | null }).curriculo
-          ?.duracao_semanas ?? null,
+      duracaoSemanasDoCurso: curriculoDaTurma?.duracao_semanas ?? null,
     },
     hoje,
   );
@@ -545,6 +572,8 @@ export default async function FichaDaTurma({
     : await lerAvaliacoesDaTurma({
         turmaId: turma.id as string,
         cursoId,
+        /* Spec 021 (RC-4): as avaliações do currículo DA TURMA. */
+        curriculoId: curriculoDaTurma?.id ?? null,
         hoje,
         terminoDaTurma: dataTermino,
         turmaCodigo: turma.codigo as string,
@@ -638,6 +667,22 @@ export default async function FichaDaTurma({
               data-slot="curso-da-turma"
             >
               {sigla} — {cursoRes.data?.nome_curso as string}
+            </Link>
+          </p>
+        ) : null}
+
+        {/* Spec 021 (RC-9, RC-12): o currículo que a turma segue — o mesmo rótulo da lista de turmas do curso. */}
+        {sigla && curriculoDaTurma?.versao !== undefined && curriculoDaTurma.vigente_de ? (
+          <p className="text-texto-suave text-sm" data-slot="curriculo-da-turma">
+            Segue o{" "}
+            <Link
+              href={enderecoDoCursoNoCurriculo(sigla, curriculoDaTurma.versao)}
+              className="text-texto underline-offset-2 hover:underline"
+            >
+              {rotuloDoCurriculo({
+                versao: curriculoDaTurma.versao,
+                vigente_de: curriculoDaTurma.vigente_de,
+              })}
             </Link>
           </p>
         ) : null}
@@ -893,6 +938,7 @@ export default async function FichaDaTurma({
                     inicio_etapa_presencial: texto(turma.inicio_etapa_presencial),
                     termino_etapa_presencial: texto(turma.termino_etapa_presencial),
                     regime_de_horario_id: texto(turma.regime_de_horario_id),
+                    curriculo_id: curriculoDaTurma?.id ?? "",
                   }}
                   regimeDeHorario={{
                     /* Os ativos, mais o atual se estiver inativo (C-11: ele continua valendo para a turma). */
@@ -909,6 +955,31 @@ export default async function FichaDaTurma({
                       })),
                     /* ⚠️ A falha da leitura trava o campo: liberar a troca sem saber se há lançamento seria pior. */
                     travado: regimeTravadoRes.error ? true : regimeTravadoRes.data === true,
+                  }}
+                  /*
+                   * Spec 021 (RC-4): os currículos que a turma pode seguir — os do seletor (sem arquivado), mais o
+                   * atual. Trava com o regime: o mesmo "a turma já tem lançamento" (`app.turma_tem_lancamento_no_dsa`).
+                   */
+                  curriculo={{
+                    opcoes: opcoesDoSeletor(
+                      (curriculosDoCursoRes.data ?? []) as (CurriculoParaVigencia & {
+                        id: string;
+                      })[],
+                      hoje,
+                      false,
+                    )
+                      .filter(
+                        (o) => o.situacao !== "passado" || o.curriculo.id === curriculoDaTurma?.id,
+                      )
+                      .map((o) => ({
+                        id: o.curriculo.id,
+                        rotulo: `${o.rotulo} — ${ROTULO_DA_SITUACAO[o.situacao]}`,
+                      })),
+                    travado:
+                      regimeTravadoRes.error || curriculosDoCursoRes.error
+                        ? true
+                        : regimeTravadoRes.data === true,
+                    comPadrao: false,
                   }}
                   salas={salas}
                   turmasDoCurso={outras}

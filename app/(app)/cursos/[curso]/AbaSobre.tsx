@@ -60,6 +60,11 @@ export type CatalogoDoCurso = {
   readonly custoComposicao: string | null;
   /** Quando o PDF foi registrado; `null` sem currículo. */
   readonly curriculoPdfEm: string | null;
+  /**
+   * Spec 021 (RC-11): o número do currículo mostrado, quando NÃO é o vigente — o link baixa o PDF dele. `null` = o
+   * vigente, pelo endereço sem número (o mesmo link de antes).
+   */
+  readonly curriculoVersao?: number | null;
 };
 
 const ROTULO_DA_MODALIDADE: Readonly<Record<string, string>> = {
@@ -171,7 +176,11 @@ export function AbaSobre({
           {catalogo.curriculoPdfEm ? (
             <>
               <a
-                href={enderecoDoCurriculo(catalogo.codigo)}
+                href={
+                  catalogo.curriculoVersao
+                    ? enderecoDoCurriculo(catalogo.codigo, catalogo.curriculoVersao)
+                    : enderecoDoCurriculo(catalogo.codigo)
+                }
                 className="text-marca underline-offset-2 hover:underline"
                 data-slot="baixar-curriculo"
               >

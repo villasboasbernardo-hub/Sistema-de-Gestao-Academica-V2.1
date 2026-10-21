@@ -50,18 +50,45 @@ export function enderecoDaTurma(codigo: string): string {
 }
 
 /**
+ * O download do currículo em PDF (spec 020, C-8): um Route Handler que redireciona ao link assinado.
+ * Spec 021 (RC-11): cada currículo tem o seu PDF — sem o número, o do vigente.
+ *
+ * @example enderecoDoCurriculo("CAHO", 2) → "/cursos/CAHO/curriculo?curriculo=2"
+ */
+export function enderecoDoCurriculo(sigla: string, versao?: number): string {
+  const base = `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}/curriculo`;
+  return versao === undefined ? base : `${base}?curriculo=${versao}`;
+}
+
+/**
  * A página do curso — spec 019 (Bloco 4), o submenu da lateral. Era montada à mão em `BarraDoCurso` e no catálogo;
  * aqui ela tem um dono.
  *
  * @example enderecoDoCurso("C-Ap-FR") → "/cursos/C-Ap-FR"
  */
-/** O download do currículo em PDF do curso (spec 020, C-8): um Route Handler que redireciona ao link assinado. */
-export function enderecoDoCurriculo(sigla: string): string {
-  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}/curriculo`;
-}
-
 export function enderecoDoCurso(sigla: string): string {
   return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}`;
+}
+
+/**
+ * A página do curso com um currículo escolhido no seletor (spec 021, RC-8), e a aba quando dita.
+ *
+ * @example enderecoDoCursoNoCurriculo("CAHO", 2) → "/cursos/CAHO?curriculo=2"
+ * @example enderecoDoCursoNoCurriculo("CAHO", 2, "disciplinas") → "/cursos/CAHO?curriculo=2&aba=disciplinas"
+ */
+export function enderecoDoCursoNoCurriculo(sigla: string, versao: number, aba?: string): string {
+  const base = `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}?curriculo=${versao}`;
+  return aba ? `${base}&aba=${encodeURIComponent(aba)}` : base;
+}
+
+/** *Novo currículo* — a cópia do vigente (spec 021, RC-7). */
+export function enderecoDoNovoCurriculo(sigla: string): string {
+  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}/curriculos/novo`;
+}
+
+/** *Editar currículo* — propósito, duração, vigência e PDF do currículo N (spec 021, RC-5, RC-11). */
+export function enderecoDaEdicaoDoCurriculo(sigla: string, versao: number): string {
+  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}/curriculos/${versao}/editar`;
 }
 
 /**

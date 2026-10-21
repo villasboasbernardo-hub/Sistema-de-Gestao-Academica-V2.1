@@ -367,6 +367,9 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
     expect(parametrosDaRota("/cursos/[curso]").map((p) => p.nome)).toEqual([
       "aba",
       "turma",
+      // Spec 021 (Bloco 6, RC-8 e RC-10): o currículo do seletor e "mostrar currículos arquivados".
+      "curriculo",
+      "arquivados",
       "situacao",
       "busca",
       "aberta",

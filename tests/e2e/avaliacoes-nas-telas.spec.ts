@@ -11,7 +11,7 @@
  *    vista, NÃO é vista atrasada — no `/inicio`, no alerta da ficha nem no quadro da aba. Antes da emenda os chamadores
  *    decidiam pelo tempo de vista do item, e ela apareceria nos três; a PM da mesma turma é o controle positivo.
  */
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
@@ -191,6 +191,18 @@ test("RN-AV-13 · a PP com tempo de vista, aplicada há 10 dias e sem vista, NÃ
   await expect(pp.locator('[data-avaliacoes-item="PP 1"]')).not.toContainText("Atrasada");
 });
 
+/**
+ * ⚠️ SPEC 021 (Bloco 6, RC-6): O CURRÍCULO DESTA AMOSTRA ESTÁ EM USO — a turma dela tem lançamento. Acrescentar,
+ *    mudar o que tinha valor e inativar são CORREÇÃO: o banco pede a justificativa, e a tela a pergunta. Responde-se aqui.
+ */
+async function justificar(page: Page, motivo: string): Promise<void> {
+  const pedido = page.locator('[data-slot="pedido-de-justificativa"]');
+  await expect(pedido).toBeVisible();
+  await pedido.locator('[data-slot="justificativa-da-correcao"]').fill(motivo);
+  await pedido.locator('[data-slot="confirmar-justificativa"]').click();
+  await expect(pedido).toHaveCount(0);
+}
+
 test("FR-038 · a aba Disciplinas do curso: as avaliações do currículo no painel, acrescentar e inativar", async ({
   page,
 }) => {
@@ -217,6 +229,7 @@ test("FR-038 · a aba Disciplinas do curso: as avaliações do currículo no pai
   await nova.getByLabel("Arquivo do currículo").fill("curriculo-e2e.pdf");
   await nova.getByLabel("Página").fill("3");
   await nova.getByRole("button", { name: "Acrescentar" }).click();
+  await justificar(page, "Acrescentar o TG 1 que o currículo traz.");
   const tg = painel.locator('[data-item-do-curriculo="TG 1"]');
   await expect(tg).toHaveAttribute("data-ativo", "true");
   await expect(nova).toHaveCount(0);
@@ -226,11 +239,13 @@ test("FR-038 · a aba Disciplinas do curso: as avaliações do currículo no pai
   await expect(painel.locator("input")).toHaveCount(2);
   await tg.getByLabel("TA de aplicação de TG 1").fill("3");
   await tg.locator('[data-slot="gravar-item"]').click();
+  await justificar(page, "O TG 1 tem 3 TA no currículo.");
   await expect(painel.getByRole("status").filter({ hasText: "TG 1 gravada" })).toBeVisible();
   await expect(painel.locator("input")).toHaveCount(0);
   await expect(tg).toContainText("3 TA");
 
   await tg.locator('[data-acao="inativar-item"]').click();
+  await justificar(page, "O TG 1 saiu do currículo.");
   await expect(tg).toHaveAttribute("data-ativo", "false");
   await expect(tg).toContainText("inativa");
 });

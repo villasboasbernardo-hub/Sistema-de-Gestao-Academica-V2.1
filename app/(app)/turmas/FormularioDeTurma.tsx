@@ -65,6 +65,8 @@ export type TurmaNoFormulario = {
   readonly termino_etapa_presencial: string;
   /** Spec 018: o regime nomeado escolhido — vazio = o regime vigente do curso. Só na edição. */
   readonly regime_de_horario_id?: string;
+  /** Spec 021 (RC-4): o currículo escolhido — vazio = o vigente na data de início (o banco escolhe). */
+  readonly curriculo_id?: string;
 };
 
 const VAZIO: TurmaNoFormulario = {
@@ -107,6 +109,16 @@ export type FormularioDeTurmaProps = {
     }[];
     readonly travado: boolean;
   };
+  /**
+   * Spec 021 (RC-4): o campo *Currículo* — os currículos que a turma pode seguir ("Currículo N (vigência AAAA) —
+   * vigente/futuro") e se a escolha já travou (a turma tem lançamento). Ausente = o campo não aparece.
+   */
+  readonly curriculo?: {
+    readonly opcoes: readonly { readonly id: string; readonly rotulo: string }[];
+    readonly travado: boolean;
+    /** Na criação: a primeira opção é "o vigente na data de início", que o banco escolhe. */
+    readonly comPadrao: boolean;
+  };
 };
 
 export function FormularioDeTurma({
@@ -121,6 +133,7 @@ export function FormularioDeTurma({
   vigenciasProtegidas = [],
   janelasDoCurso = [],
   regimeDeHorario,
+  curriculo,
 }: FormularioDeTurmaProps) {
   const router = useRouter();
   const [valores, definirValores] = React.useState<TurmaNoFormulario>(inicial ?? VAZIO);
@@ -158,6 +171,10 @@ export function FormularioDeTurma({
      */
     ...(campoDoRegime && !campoDoRegime.travado
       ? { regime_de_horario_id: valores.regime_de_horario_id ?? "" }
+      : {}),
+    /* RC-4: o currículo só vai quando o campo existe e pode mudar — e vazio não vai (o banco escolhe o padrão). */
+    ...(curriculo && !curriculo.travado && (valores.curriculo_id ?? "") !== ""
+      ? { curriculo_id: valores.curriculo_id }
       : {}),
   };
 
@@ -356,6 +373,41 @@ export function FormularioDeTurma({
             onChange={trocar("alunos")}
           />
         </div>
+
+        {curriculo ? (
+          <div className="flex flex-col gap-1" data-slot="curriculo-da-turma-no-formulario">
+            <CampoObrigatorio para="turma-curriculo" rotulo="Currículo" />
+            <select
+              {...propsDoControle("turma-curriculo", false)}
+              name="curriculo_id"
+              value={valores.curriculo_id ?? ""}
+              onChange={trocar("curriculo_id")}
+              disabled={curriculo.travado}
+              className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
+            >
+              {curriculo.comPadrao ? (
+                <option value="">O vigente na data de início da turma</option>
+              ) : null}
+              {curriculo.opcoes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.rotulo}
+                </option>
+              ))}
+            </select>
+            {curriculo.travado ? (
+              /* veste: dica do campo — por que ele está travado */
+              <p className="text-texto-tenue text-xs" data-slot="curriculo-travado">
+                A turma já tem lançamento: o currículo não muda mais (nada reinterpreta o passado).
+              </p>
+            ) : (
+              /* veste: dica do campo */
+              <p className="text-texto-tenue text-xs">
+                As disciplinas, o DSA, a planilha e o andamento seguem este currículo. Trava no
+                primeiro lançamento.
+              </p>
+            )}
+          </div>
+        ) : null}
 
         {campoDoRegime ? (
           <div className="flex flex-col gap-1" data-slot="regime-da-turma">

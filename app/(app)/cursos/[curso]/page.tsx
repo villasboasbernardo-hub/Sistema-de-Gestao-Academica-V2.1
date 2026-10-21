@@ -14,12 +14,21 @@
  * *"em breve"*: *"a tela não anuncia o que não entrega"*. A reserva das duas rotas em `FORA_DO_MENU`
  * continua valendo — ela diz que o menu não as terá, não que esta página já as mostra.
  */
-import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
+import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { avisosDoCurso } from "@/lib/dominio/avisos-do-curso";
-import { curriculoVigenteEm } from "@/lib/dominio/curriculos";
+import {
+  curriculoDaPagina,
+  curriculoVigenteEm,
+  impedimentoDoArquivamento,
+  impedimentoDoDescarte,
+  opcoesDoSeletor,
+  rotuloDoCurriculo,
+  ROTULO_DA_SITUACAO,
+  situacaoDoCurriculo,
+} from "@/lib/dominio/curriculos";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import { codigoDaTurmaNoSegmento } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
@@ -27,6 +36,7 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../consulta";
 import { AbaGrade, type TurmaDaGrade } from "./AbaGrade";
+import { BarraDoCurriculo } from "./BarraDoCurriculo";
 import { BarraDoCurso } from "./BarraDoCurso";
 import { AbaSobre, type AvaliacaoPrevista, type DisciplinaDaGrade } from "./AbaSobre";
 import { AbaAvaliacoes } from "./AbaAvaliacoes";
@@ -105,16 +115,28 @@ export default async function PaginaDoCurso({
   }
 
   /*
-   * ⚠️ SPEC 021 (Bloco 6, RC-1): o propósito, a duração, o PDF, as disciplinas da aba Sobre, as regras de avaliação e
-   *    os limites são do CURRÍCULO. Até o seletor (PR 2), a página mostra o VIGENTE hoje — com um currículo por curso, o
-   *    mesmo conteúdo que ela mostrava pelo curso.
+   * ⚠️ SPEC 021 (Bloco 6, RC-1 e RC-8): o propósito, a duração, o PDF, as disciplinas, as regras de avaliação e os
+   *    limites são do CURRÍCULO — o escolhido no seletor (`?curriculo=N`), ou o vigente hoje. Com um currículo por
+   *    curso, o mesmo conteúdo que a página mostrava pelo curso.
    */
-  const curriculo = curriculoVigenteEm(
-    ((curso as unknown as { curriculos?: CurriculoDaPagina[] }).curriculos ??
-      []) as CurriculoDaPagina[],
-    hojeEmSaoPaulo(),
-  );
+  const hoje = hojeEmSaoPaulo();
+  const curriculosDoCurso = ((curso as unknown as { curriculos?: CurriculoDaPagina[] })
+    .curriculos ?? []) as CurriculoDaPagina[];
+  const escolhaDoCurriculo = curriculoDaPagina(curriculosDoCurso, String(valores.curriculo), hoje);
+  const curriculo = escolhaDoCurriculo.curriculo;
+  const vigente = curriculoVigenteEm(curriculosDoCurso, hoje);
   const curriculoId = curriculo?.id ?? SEM_CURRICULO;
+  const curriculoArquivado = curriculo !== null && curriculo.arquivado_em !== null;
+  /* RC-10: o arquivado sai do seletor — mas o que foi aberto pelo número aparece nele, para não sumir da escolha. */
+  const opcoesDeCurriculo = opcoesDoSeletor(
+    curriculosDoCurso,
+    hoje,
+    valores.arquivados === "sim" || curriculoArquivado,
+  ).map((o) => ({
+    versao: o.curriculo.versao,
+    rotulo: o.rotulo,
+    situacao: ROTULO_DA_SITUACAO[o.situacao],
+  }));
 
   const [
     turmasRes,
@@ -189,8 +211,6 @@ export default async function PaginaDoCurso({
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
   ]);
 
-  const hoje = hojeEmSaoPaulo();
-
   /*
    * ⚠️ **A ARQUIVADA SOME DA GRADE, MAS CONTA NO LIMITE** (D-COR-5; C-7 e C-24): `paraLimite` lê TODAS as turmas,
    *    e a lista, o seletor, a pré-seleção e *"Turmas com teto excedido"* só as não arquivadas.
@@ -200,11 +220,14 @@ export default async function PaginaDoCurso({
   const codigosArquivados = new Set(
     todasAsTurmas.filter((t) => arquivadas.has(t.id as string)).map((t) => t.codigo as string),
   );
-  const turmas: TurmaDaGrade[] = semAsArquivadas(
-    todasAsTurmas,
-    arquivadas,
-    (t) => t.id as string,
-  ).map((t) => ({
+  /*
+   * ⚠️ SPEC 021 (RC-9): a lista da aba Grade mostra TODAS as turmas, inclusive as arquivadas, cada uma com o currículo
+   *    que segue; o seletor de turma e a pré-seleção continuam sem as arquivadas (C-24 da spec 017).
+   */
+  const rotuloDoCurriculoPorId = new Map(
+    curriculosDoCurso.map((c) => [c.id, rotuloDoCurriculo(c)] as const),
+  );
+  const turmasDaLista: TurmaDaGrade[] = todasAsTurmas.map((t) => ({
     codigo: t.codigo as string,
     rotulo: t.turma,
     ano: Number(t.ano_letivo),
@@ -220,7 +243,20 @@ export default async function PaginaDoCurso({
      * A contagem exata entra com a fatia que ler `turma_disciplina`.
      */
     disciplinasAtivas: 1,
+    curriculo: rotuloDoCurriculoPorId.get(t.curriculo_id as string) ?? null,
+    arquivada: arquivadas.has(t.id as string),
   }));
+  const turmas = turmasDaLista.filter((t) => !t.arquivada);
+
+  /* RC-10: arquivar o currículo selecionado — o botão só aparece quando a regra deixa (o banco confere de novo). */
+  const turmasDoCurriculo = todasAsTurmas
+    .filter((t) => t.curriculo_id === curriculo?.id)
+    .map((t) => ({ arquivada: arquivadas.has(t.id as string) }));
+  const podeArquivarCurriculo =
+    curriculo !== null &&
+    pode(permissoes, "arquivamento_de_curriculo", "editar") &&
+    (curriculoArquivado ||
+      impedimentoDoArquivamento(curriculo, curriculosDoCurso, hoje, turmasDoCurriculo) === null);
 
   const selecao = resolverTurmaSelecionada(
     turmas.map((t) => ({
@@ -241,10 +277,19 @@ export default async function PaginaDoCurso({
   const aba = String(valores.aba);
   const [avaliacoesDoCurso, gradeDeDisciplinas, horariosDoCurso, tiposRes] = await Promise.all([
     aba === "avaliacoes"
-      ? lerAvaliacoesDoCurso({ cursoId: curso.id as string, turmaCodigo: null, hoje })
+      ? lerAvaliacoesDoCurso({
+          cursoId: curso.id as string,
+          turmaCodigo: null,
+          hoje,
+          curriculoId,
+        })
       : Promise.resolve({ quadro: null, aviso: null }),
     aba === "disciplinas"
-      ? lerGradeDeDisciplinas({ cursoCodigo: curso.codigo as string, turmaCodigo: "" })
+      ? lerGradeDeDisciplinas({
+          cursoCodigo: curso.codigo as string,
+          turmaCodigo: "",
+          curriculoId,
+        })
       : Promise.resolve(null),
     aba === "horarios"
       ? lerHorariosDoCurso({
@@ -390,15 +435,49 @@ export default async function PaginaDoCurso({
       */}
       <TurmasComTetoExcedido excedidos={excedidos} />
 
+      {/* ⚠️ ACIMA DAS ABAS (RC-8): o currículo que as abas mostram. */}
+      <BarraDoCurriculo
+        sigla={curso.codigo as string}
+        opcoes={opcoesDeCurriculo}
+        selecionado={curriculo?.versao ?? null}
+        vigente={vigente?.versao ?? null}
+        situacao={
+          curriculo === null
+            ? null
+            : curriculoArquivado
+              ? ROTULO_DA_SITUACAO.arquivado
+              : ROTULO_DA_SITUACAO[situacaoDoCurriculo(curriculo, curriculosDoCurso, hoje)]
+        }
+        aviso={escolhaDoCurriculo.aviso}
+        podeCriar={cursoAtivo && pode(permissoes, "cursos", "editar") && vigente !== null}
+        podeEditar={
+          cursoAtivo &&
+          pode(permissoes, "cursos", "editar") &&
+          curriculo !== null &&
+          !curriculoArquivado
+        }
+        arquivamento={podeArquivarCurriculo ? { arquivado: curriculoArquivado } : null}
+        podeDescartar={
+          cursoAtivo &&
+          curriculo !== null &&
+          !curriculoArquivado &&
+          pode(permissoes, "cursos", "editar") &&
+          impedimentoDoDescarte(curriculo, curriculosDoCurso, hoje, turmasDoCurriculo.length) ===
+            null
+        }
+      />
+
       <AbasDoCurso
         grade={
           <AbaGrade
             sigla={curso.codigo as string}
-            turmas={turmas}
+            turmas={turmasDaLista}
             selecionada={selecao.codigo}
             hoje={hoje}
             avisoDaSelecao={selecao.aviso}
-            motivoDoVazio={turmas.length > 0 ? null : alcance === "recortado" ? "nao-ve" : "nao-ha"}
+            motivoDoVazio={
+              turmasDaLista.length > 0 ? null : alcance === "recortado" ? "nao-ve" : "nao-ha"
+            }
           />
         }
         sobre={
@@ -421,6 +500,11 @@ export default async function PaginaDoCurso({
               custoTotal: curso.custo_total === null ? null : Number(curso.custo_total),
               custoComposicao: curso.custo_composicao,
               curriculoPdfEm: curriculo?.pdf_carregado_em ?? null,
+              /* RC-11: o PDF do currículo mostrado; o do vigente baixa pelo endereço sem número. */
+              curriculoVersao:
+                curriculo === null || curriculo.versao === vigente?.versao
+                  ? null
+                  : curriculo.versao,
             }}
             disciplinas={disciplinas}
             avaliacoes={avaliacoes}
@@ -437,7 +521,9 @@ export default async function PaginaDoCurso({
                   busca: String(valores.busca),
                 }}
                 permissoes={{
-                  criar: cursoAtivo && pode(permissoes, "disciplinas", "criar"),
+                  /* RC-10: o currículo arquivado se consulta — não recebe disciplina nova. */
+                  criar:
+                    cursoAtivo && !curriculoArquivado && pode(permissoes, "disciplinas", "criar"),
                   editar: pode(permissoes, "disciplinas", "editar"),
                   desativar: pode(permissoes, "disciplinas", "desativar"),
                 }}

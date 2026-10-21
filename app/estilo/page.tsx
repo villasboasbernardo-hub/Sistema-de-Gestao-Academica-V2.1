@@ -22,6 +22,7 @@ import {
   AmostraDialogoConfirmacao,
   AmostraBarraDeProgresso,
   AmostraCarrossel,
+  AmostraPedidoDeJustificativa,
   AmostraEmblemasDeStatus,
   AmostraGradeAlocacao,
   AmostraGradeDsa,
@@ -329,6 +330,10 @@ export default function Vitrine() {
 
       <Secao titulo="Carrossel — passa sozinho, pausa ao apontar e ao focar, anda por ← e →; parado com «reduzir movimento»">
         <AmostraCarrossel />
+      </Secao>
+
+      <Secao titulo="Pedido de justificativa — a correção do currículo em uso pede o motivo, e só quando o banco exige">
+        <AmostraPedidoDeJustificativa />
       </Secao>
 
       <Secao titulo="Emblema de status — os nove tons, cada um com rótulo textual obrigatório">

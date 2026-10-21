@@ -12,6 +12,7 @@
  */
 import * as React from "react";
 
+import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,14 +38,24 @@ export function PainelDeAvaliacoesDoCurriculo({
   const [editando, setEditando] = React.useState<string | null>(null);
   const [acrescentando, setAcrescentando] = React.useState(false);
 
+  /* Spec 021 (RC-6): no currículo em uso, a correção pede justificativa — e só o banco sabe quando. */
+  const pedido = usePedidoDeJustificativa();
+
   async function executar(
-    acao: () => Promise<{ ok: boolean; erro?: string; aviso?: string }>,
+    acao: (j: { justificativa?: string }) => Promise<{
+      ok: boolean;
+      erro?: string;
+      aviso?: string;
+      pedeJustificativa?: true | undefined;
+    }>,
     feito: string,
   ): Promise<boolean> {
     setErro(null);
     setMensagem(null);
     setOcupado(true);
-    const r = await acao();
+    const r = await pedido.executar((justificativa) =>
+      acao(justificativa ? { justificativa } : {}),
+    );
     if (r.ok) {
       setMensagem(
         r.aviso === "soma_acima_da_ch"
@@ -64,6 +75,7 @@ export function PainelDeAvaliacoesDoCurriculo({
       aria-labelledby={`avc-${disciplinaId}`}
       data-slot="avaliacoes-do-curriculo"
     >
+      {pedido.dialogo}
       <h3 id={`avc-${disciplinaId}`} className="text-texto text-sm font-semibold">
         Avaliações do currículo
       </h3>
@@ -98,8 +110,9 @@ export function PainelDeAvaliacoesDoCurriculo({
                     e.preventDefault();
                     const f = new FormData(e.currentTarget);
                     void executar(
-                      () =>
+                      (j) =>
                         salvarItemDoCurriculo({
+                          ...j,
                           itemId: i.id,
                           disciplinaId,
                           instrumento: i.instrumento,
@@ -167,7 +180,7 @@ export function PainelDeAvaliacoesDoCurriculo({
                   data-acao={i.ativo ? "inativar-item" : "reativar-item"}
                   onClick={() =>
                     void executar(
-                      () => mudarSituacaoDoItem({ itemId: i.id, ativo: !i.ativo }),
+                      (j) => mudarSituacaoDoItem({ ...j, itemId: i.id, ativo: !i.ativo }),
                       i.ativo ? `${i.rotulo} inativada.` : `${i.rotulo} reativada.`,
                     )
                   }
@@ -207,8 +220,9 @@ export function PainelDeAvaliacoesDoCurriculo({
             const formulario = e.currentTarget;
             const f = new FormData(formulario);
             void executar(
-              () =>
+              (j) =>
                 salvarItemDoCurriculo({
+                  ...j,
                   disciplinaId,
                   instrumento: String(f.get("instrumento") ?? ""),
                   taAplicacao: vazio(f.get("aplicacao")),
