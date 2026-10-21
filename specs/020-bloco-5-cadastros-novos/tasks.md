@@ -45,11 +45,11 @@
 
 - [X] T016 `tests/e2e/bloco-5.spec.ts` por clique (estrangeiros e custo, currículo, capacitação, acessos)
 - [X] T017 Defeitos deliberados, em `progresso-implement.md`
-- [ ] T018 `pnpm verificar` + pgTAP + RLS + ponta a ponta dos tocados; a suíte inteira no CI
-- [ ] T019 Rito do remoto: backup, ensaio da conversão na cópia (`antes-depois.md`), dry-run só com M1–M3, `db push`,
+- [X] T018 `pnpm verificar` + pgTAP + RLS + ponta a ponta dos tocados; a suíte inteira no CI
+- [X] T019 Rito do remoto: backup, ensaio da conversão na cópia (`antes-depois.md`), dry-run só com M1–M3, `db push`,
   conferência só de leitura
-- [ ] T020 Push, PR com o template inteiro e CI verde
-- [ ] T021 `roteiro-de-conferencia.md`, pendências no plano de correções e a entrega — **sem merge**
+- [X] T020 Push, PR com o template inteiro e CI verde
+- [X] T021 `roteiro-de-conferencia.md`, pendências no plano de correções e a entrega — **sem merge**
 
 ## Dependencies
 
