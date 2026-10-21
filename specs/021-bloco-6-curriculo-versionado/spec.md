@@ -50,6 +50,12 @@ curso, inclusive das que estão em andamento; não há como preparar o currícul
 - D-6 · Q: O tempo **arbitrado** da avaliação do currículo também trava? → A: **Sim** (é número do currículo); o **ajuste
   por turma** (`avaliacoes_curriculo_turma`) segue livre e é o instrumento das turmas em andamento. Alternativa: liberar o
   arbitrado que preenche um valor que o currículo não definia (nulo → valor).
+  ⚠️ **Medido no CI do ramo (`antes-depois.md` §8): a trava estrita derruba TRÊS funções de hoje** — nomear a UE de um
+  item, definir o tempo "não definido" e acrescentar/inativar avaliação do currículo — nos 10 cursos com turma em
+  andamento. **Alternativa concreta para o portão:** **completar o indefinido fica livre** (TA nulo → valor, UE nula →
+  UE: o passado mostrava *"não definido"*, e defini-lo não reinterpreta número que existia); **mudar o que já está
+  definido** e **acrescentar ou inativar item** seguem travados. Com ela, os dois primeiros percursos voltam; o terceiro
+  continua recusado na versão em uso (a amostra dele passaria a usar curso sem turma com lançamento).
 - D-7 · Q: Trocar a versão de uma turma sem lançamento perde o planejamento? → A: **Não**: as linhas da versão velha ficam
   inativas e as da nova levam, **por linhagem**, o período da linha, as atribuições de instrutor, o rateio por UE e os
   ajustes de avaliação; o que não tem correspondência nasce como em turma nova. Alternativa: recusar a troca quando há

@@ -94,4 +94,16 @@ versão 1 (a D-1 reaplicada com o índice provisório, que sai). Sobre a base do
 asserções medem os efeitos das migrations de dado D-5/D-6 da spec 014 (que a ETAPA 6b **não** reaplica — a lista
 declarada só tem D-1, D-2 e D-3) e a contagem de Admins; nenhuma lê o que esta spec mudou. ⚠️ **Não conferi** se as
 três reprovam também na `main` sobre a base do ETL.
-**A ponta a ponta ainda não rodou** (é do PR, depois do portão).
+## 8. A ponta a ponta — o CI do ramo (run `39542414518`, sobre `810ee6a`)
+
+**539 passados, 3 reprovados nas três tentativas, 6 pulados.** Os três reprovam **pela trava** (a frase dela aparece na
+tela), e os três são funções de **hoje** para curso em andamento — as avaliações do currículo:
+
+| Caso | O que a tela tenta | O que a trava faz |
+|---|---|---|
+| `avaliacoes-da-turma.spec.ts:303` | **nomear a UE** de um item que o currículo deixou na disciplina (*"decisão CIAARA-11"*, `FR-031.3`) | recusa (muda `unidade_ensino_id`) |
+| `avaliacoes-nas-telas.spec.ts:76` | o Admin **define o tempo** de uma avaliação *"não definida"* (US9) | recusa (muda `ta_aplicacao`, de nulo para valor) |
+| `avaliacoes-nas-telas.spec.ts:194` | **acrescentar e inativar** avaliação do currículo na aba Disciplinas (`FR-038`) | recusa (inclui e inativa item) |
+
+É a consequência da D-4/D-6 medida na suíte: com a trava estrita, a curadoria das avaliações do currículo (que segue em
+andamento — `PEND-014-*`) para nos **10 cursos** com turma em andamento. A decisão é do portão (lote, D-4 e D-6).
