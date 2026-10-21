@@ -99,7 +99,7 @@ select ok(
   'os gatilhos ficam fechados; o currículo padrão da turma, só para authenticated');
 select is(
   (select count(*)::int from pg_trigger where tgname like 'trg_%_curriculo_em_uso' and not tgisinternal),
-  6, 'RC-6 · a correção do currículo em uso guarda as seis tabelas do conteúdo (PR 2; o caso está no 145)');
+  7, 'RC-6 · a correção do currículo em uso guarda as sete tabelas do conteúdo, os horários incluídos (PR 2; 145 e 146)');
 
 -- ── a amostra: um curso, que nasce com o currículo 1 e o conteúdo da RC-1 ──
 select public.criar_curso_com_regime(

@@ -98,6 +98,15 @@ begin
   else
     v_curriculo := (v_novo ->> 'curriculo_id')::uuid;
     v_curriculo_velho := (v_velho ->> 'curriculo_id')::uuid;
+    -- ⚠️ A LINHA QUE CHEGA SEM CURRÍCULO: o gatilho `versao` o preenche (o único ativo do curso), mas os gatilhos rodam em
+    --    ordem ALFABÉTICA e este vem antes ("curriculo_em_uso" < "versao"). Sem resolver aqui, a disciplina, o limite e a
+    --    regra gravados sem `curriculo_id` passariam pela RC-6 sem justificativa (medido no pgTAP 145).
+    if v_curriculo is null and tg_op = 'INSERT' then
+      select (array_agg(c.id))[1] into v_curriculo
+        from public.curriculos c
+       where c.curso_id = (v_novo ->> 'curso_id')::uuid and c.status = 'ativo'
+      having count(*) = 1;
+    end if;
   end if;
 
   if not (coalesce(app.curriculo_em_uso_com_lancamento(v_curriculo), false)

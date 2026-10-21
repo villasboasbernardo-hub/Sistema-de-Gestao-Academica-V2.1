@@ -9,6 +9,11 @@
  *   - o curso fora de oferta não recebe regime novo (`42501`), nem para o Admin;
  *   - a turma escolhe o regime por `turmas.editar`, e a escolha trava no primeiro lançamento (`23514`).
  *
+ * ⚠️ SPEC 021 (emenda à RC-1, 21/10/2026): o regime é do CURRÍCULO, e a RC-6 vale para ele — no currículo seguido por
+ *    turma com lançamento, acrescentar, mudar ou inativar regime é correção (o trio, com justificativa). Por isso a
+ *    aula da turma travada só é lançada no bloco do `RF-HOR-05`: os blocos de permissão rodam com o currículo livre,
+ *    e o último bloco prova a RC-6.
+ *
  * ⚠️ UMA conta Admin, criada aqui e apagada no `afterAll`: as suítes de invariantes rodam EM SÉRIE
  *    (`--no-file-parallelism`), o mesmo acordo de `bloco-2.test.ts` (gotcha 8).
  */
@@ -51,6 +56,10 @@ const email = (c: Conta) => `rgn-${c}@${DOMINIO}`;
 const cursoDe = new Map<Lado, string>();
 let turmaLivre = "";
 let turmaComLancamento = "";
+let ueDaAula = "";
+let instrutorDaAula = "";
+const CABECALHO = "x-justificativa-de-correcao";
+const base64 = (texto: string) => Buffer.from(texto, "utf8").toString("base64");
 
 function conferir(o: string, error: { message: string } | null): void {
   if (error) throw new Error(`${o}: ${error.message}`);
@@ -258,21 +267,8 @@ beforeAll(async () => {
     if (t.turma === "T1") turmaLivre = t.id;
     else turmaComLancamento = t.id;
   }
-  conferir(
-    "aula",
-    (
-      await servico.from("registros_aula").insert({
-        codigo: "RGN-A1",
-        data: "2046-05-12",
-        turma_id: turmaComLancamento,
-        curso_id: cursoDe.get("regular")!,
-        unidade_ensino_id: (u as { id: string }).id,
-        instrutor_id: (ins as { id: string }).id,
-        tempos_consumidos: 2,
-        ta_inicial: 1,
-      })
-    ).error,
-  );
+  ueDaAula = (u as { id: string }).id;
+  instrutorDaAula = (ins as { id: string }).id;
 
   for (const c of Object.keys(CONTAS) as Conta[]) await criarConta(c);
   // ⚠️ Desativar curso exige sessão com `cursos.desativar` (o gatilho confere): pelo Admin, depois das contas.
@@ -411,6 +407,25 @@ describe("Spec 018 · editar e inativar — o Operador edita e NÃO inativa (o c
 });
 
 describe("Spec 018 · a turma escolhe o regime — turmas.editar, e trava no primeiro lançamento", () => {
+  /* O primeiro lançamento da T2 — daqui em diante o currículo do curso está EM USO (RC-6). */
+  beforeAll(async () => {
+    conferir(
+      "aula",
+      (
+        await servico.from("registros_aula").insert({
+          codigo: "RGN-A1",
+          data: "2046-05-12",
+          turma_id: turmaComLancamento,
+          curso_id: cursoDe.get("regular")!,
+          unidade_ensino_id: ueDaAula,
+          instrutor_id: instrutorDaAula,
+          tempos_consumidos: 2,
+          ta_inicial: 1,
+        })
+      ).error,
+    );
+  });
+
   it("o operador escolhe o regime numa turma sem lançamento, e o banco guarda", async () => {
     const id = await idDoRegime("regular", "Regime admin");
     const { error } = await sessao("operador")
@@ -472,5 +487,44 @@ describe("Spec 018 · a turma escolhe o regime — turmas.editar, e trava no pri
     expect(travada.error).toBeNull();
     expect(travada.data).toBe(true);
     expect(livre.data).toBe(false);
+  });
+});
+
+/*
+ * ⚠️ SPEC 021 (emenda à RC-1 + RC-6): com a T2 lançada, o currículo do curso está em uso. O caso que discrimina é o
+ *    Operador: no bloco de cima ele cria e edita regime (o currículo estava livre); aqui, a mesma ação é recusada.
+ */
+describe("Spec 021 · o regime no currículo em uso é correção (RC-6): o trio, com justificativa", () => {
+  it("o operador NÃO cria regime no currículo em uso: 42501 do porteiro da RC-6", async () => {
+    const { error } = await novoRegime("operador", "regular", "Regime no currículo em uso");
+    expect(error?.code).toBe("42501");
+  });
+
+  it("o Admin sem justificativa: 23514 (justificativa_obrigatoria), e nada é gravado", async () => {
+    const { error } = await novoRegime("admin", "regular", "Regime sem motivo");
+    expect(error?.code).toBe("23514");
+    expect((error as { hint?: string } | null)?.hint).toBe("justificativa_obrigatoria");
+    const { data } = await servico
+      .from("regimes_de_horario")
+      .select("id")
+      .eq("curso_id", cursoDe.get("regular")!)
+      .eq("nome", "Regime sem motivo");
+    expect(data ?? []).toHaveLength(0);
+  });
+
+  it("o Encarregado, COM justificativa, acrescenta — e a trilha guarda o regime e o motivo", async () => {
+    const motivo = "Regime C do currículo: oito tempos com intervalos menores.";
+    const { error } = await sessao("encarregado")
+      .from("regimes_de_horario")
+      .insert({ curso_id: cursoDe.get("regular")!, nome: "Regime C", ...REGIME })
+      .setHeader(CABECALHO, base64(motivo));
+    expect(error).toBeNull();
+    const id = await idDoRegime("regular", "Regime C");
+    const { data: trilha } = await servico
+      .from("correcoes_de_curriculo")
+      .select("tabela, justificativa")
+      .eq("registro_id", id)
+      .single();
+    expect(trilha).toEqual({ tabela: "regimes_de_horario", justificativa: motivo });
   });
 });
