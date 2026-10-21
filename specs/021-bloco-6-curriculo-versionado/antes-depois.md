@@ -1,5 +1,50 @@
 # Antes × depois — currículo versionado (spec 021, PR 1)
 
+## Rodada 4 — o PR 2 sobre o mesmo backup, em 21/10/2026
+
+Base: `remoto-20261021-090802.sql` restaurado com as 87 migrations da `main` de antes do PR 1; depois, as **quatro**
+migrations do Bloco 6 (`supabase migration up --local`) e o código do ramo do PR 2. Antes = as medidas da rodada 3.
+
+- **A impressão do currículo: idêntica, 26 de 26.**
+- **O retrato das telas: byte a byte idêntico** — 29 turmas, 212 semanas: planilha, `.xlsx`, extras e o DSA de cada
+  semana. O DSA, o papel e a planilha lendo o currículo DA TURMA não mudaram número nenhum.
+- **O retrato das páginas: 229 de 229**, e **toda diferença é o que o PR 2 acrescenta** — nenhum número mudou:
+  - as **144** abas dos 24 cursos ganham a barra do currículo (*"Currículo 1 (vigência 2026) — vigente"*, *Editar
+    currículo*, *Novo currículo*, *Mostrar currículos arquivados*);
+  - a aba *Grade* ganha a coluna **Currículo**, e as turmas **arquivadas** passam a aparecer, marcadas (RC-9) — por isso 5
+    cursos que só têm turma arquivada deixam de dizer *"Este curso ainda não tem turma"*;
+  - as **58** páginas de turma (ficha e avaliações) ganham *"Segue o Currículo 1 (vigência 2026)"*;
+  - as **24** *Editar curso* perdem propósito, duração e o PDF e ganham o caminho *"Editar o Currículo 1 (vigência
+    2026)"* (RC-5, D-32).
+- **O esquema:** 2.331 → **2.375 objetos** (`e9cb3ebc…`).
+- **A reversão (`reversao-pr2.sql`), com dado:** volta a **2.331 objetos, `5d794f43…`**, com **0** linhas de diferença
+  contra o esquema do PR 1 (o do remoto), e a impressão do currículo igual à do antes; reaplicadas as duas migrations, o
+  esquema volta a `e9cb3ebc…`.
+
+## Rodada 3 — o rito do remoto do PR 1, em 21/10/2026
+
+O PR #81, com o CI verde nos três blocos sobre `fd5359c` (runs `39593720034` e `39593772606`: 975 pgTAP · 425 invariantes
+e RLS · 540 e 541 de ponta a ponta, com 7 pulados; os instáveis `avaliacoes-nas-telas.spec.ts:54`, da `PEND-014-7`, e
+`andamento-ate-hoje.spec.ts:86` — tempo de navegação de 10 s numa rodada, verde de primeira na outra sobre o MESMO commit).
+
+1. **Backup:** `remoto-20261021-090802.sql` (`--somente-copia`, 4.161 KB).
+2. **A remedição sobre ESSE backup**, restaurado no local com as 87 migrations da `main` (uma cópia de trabalho da `main`
+   e outra do `fd5359c`, as duas fora do OneDrive):
+   - a impressão do currículo **idêntica, 26 de 26** (`curriculo-antes` × `curriculo-depois`);
+   - o retrato das telas **byte a byte idêntico** (29 turmas, 212 semanas: planilha, `.xlsx`, extras e o DSA de cada
+     semana);
+   - o retrato das páginas **byte a byte idêntico** (229 páginas);
+   - o esquema: **2.237 → 2.331 objetos**, `5d794f43…` — o mesmo da rodada 2;
+   - a ligação: 24 currículos 1 (vigência 01/01/2026), a RC-1 igual em 24 de 24, 2 por competências, 0 com PDF; 175
+     disciplinas, 30 limites, 118 regras e 29 turmas no currículo 1, nenhuma sem currículo; 10 currículos em uso;
+     `security_invoker` nas três views; 0 policies de `DELETE`.
+3. **Dry-run** listando só `20261021030049` e `20261021030050`; **`db push`** saída 0.
+4. **Conferência só de leitura no remoto:** **89 e 89** migrations, nenhuma só de um lado; a impressão digital do esquema
+   **igual nos dois bancos, linha a linha** (2.332 linhas, 0 diferenças; `5d794f43…`, 2.331 objetos); a ligação idêntica à
+   do item 2 (24 · 24 · 2026-01-01 · 24 de 24 · 175 · 30 · 118 · 29 · 0 · 0); `security_invoker` nas três views; **0**
+   policies de `DELETE`; Production respondendo (`/login` e `/estilo` 200, as protegidas 307).
+5. **Merge** por squash: `ae4e595` (#81). O ramo do PR 1 foi apagado, local e remoto.
+
 ## Rodada 2 — o PR 1 revisto pelas RC-1 a RC-12, medido em 21/10/2026
 
 **Base:** uma cópia **nova** do remoto, `remoto-20261021-074644.sql` (modo completo do `dado_do_remoto`, só leitura no

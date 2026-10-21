@@ -2,7 +2,7 @@
 
 **Feature Branch**: `feat/BLOCO-6-curriculo-versionado`
 **Created**: 2026-10-21
-**Status**: PR 1 revisado pelas regras RC-1 a RC-12 (21/10/2026) · PR 2 a seguir
+**Status**: PR 1 na `main` (`ae4e595`, #81, 21/10/2026) · PR 2 em conferência
 **Input**: Bloco 6 do plano de correções, pelo `/corrigir` de Bernardo Villas Boas de 20/10/2026 (pedido de 16/10/2026):
 *"poder registrar um currículo NOVO de um curso — disciplinas, UEs, CH, avaliações do currículo, duração em semanas, tudo o
 que for preciso — SEM alterar o currículo em vigor (…) e as turmas em andamento continuam regidas pelo currículo atual,
@@ -145,17 +145,48 @@ O texto que vale é o de `docs/correcoes/regras-do-curriculo-bloco-6.md`; aqui, 
   — é correção. Vale para toda coluna do conteúdo, inclusive texto (nome no DSA, propósito): texto também sai no papel.
 - D-25 · Q: As habilitações de instrutor travam no currículo em uso? → A: **Não**: habilitar um instrutor novo numa
   disciplina em uso é cadastro do instrutor, não reinterpreta o passado. Alternativa: tratá-las como conteúdo (RC-6).
-- D-26 · Q: Como a justificativa chega ao banco (RC-6)? → A: por função (`public.corrigir_curriculo`, PR 2) que a recebe,
-  marca a transação e faz a mudança; o gatilho recusa a correção sem ela e grava a trilha **antes**. Alternativa: cabeçalho
-  HTTP lido pelo gatilho — rejeitada (mágica, e acento não cabe em cabeçalho).
+- ~~D-26 · Q: Como a justificativa chega ao banco (RC-6)? → A: por função (`public.corrigir_curriculo`) que a recebe,
+  marca a transação e faz a mudança.~~ → **REVISTA NA IMPLEMENTAÇÃO DO PR 2** *(adotada por padrão — Bernardo confere no
+  fim)*: pelo **cabeçalho** `x-justificativa-de-correcao` da própria gravação, em **base64 do UTF-8** (o acento cabe), lido
+  pelo gatilho por `app.justificativa_de_correcao()` em `request.headers`. O gatilho continua sendo quem decide: recusa a
+  correção sem ela (`justificativa_obrigatoria`) e grava a trilha **antes** da mudança. Motivo: a função única exigiria
+  reescrever como RPC **toda** gravação do conteúdo — disciplina, UE, avaliação do currículo, arbitrado, limites, PDF —,
+  seis caminhos que hoje são `update` com policy; o cabeçalho deixa cada ação como está e só acrescenta a frase. A
+  justificativa vale **só** para a requisição que a leva (o PostgREST põe o cabeçalho na transação dela).
 - D-27 · Q: O "um futuro" da RC-2 é regra? → A: **Sim**, na cópia: o currículo novo começa **depois do mais novo** que existe,
   e não se cria outro quando o mais novo ainda é futuro (*"edite o futuro"*). A data de hoje vem de quem chama
   (`hojeNaCiaara()`, D20).
 - D-28 · Q: Desarquivar? → A: **Sim**, pelo trio, como a turma (Bloco 2) — a RC-10 não o pede, e o arquivamento sem volta
   seria a única ação do sistema que não se desfaz.
-- D-29 · Q: O PDF por currículo mora onde? → A: o do currículo 1 continua em `<curso>/curriculo.pdf` (não se move objeto
-  do Storage por SQL); o do currículo N ≥ 2, em `<curso>/curriculo-<N>.pdf`. Substituir o PDF de currículo em uso é
-  correção (RC-6). Exige mudar as policies do balde (PR 2).
+- D-29 · Q: O PDF por currículo mora onde? → A *(revista no PR 2, adotada por padrão — Bernardo confere no fim)*: o do
+  Bloco 5 continua em `<curso>/curriculo.pdf` (não se move objeto do Storage por SQL) e passa a ser apontado pelo
+  currículo 1 (`curriculos.pdf_caminho`); todo envio novo vai para **um arquivo novo**,
+  `<curso>/<currículo>/<instante>.pdf`, **sem sobrescrever** — substituir é trocar o caminho no currículo, e no currículo
+  em uso isso é correção (RC-6), com a trilha guardando o caminho anterior. O arquivo anterior fica no balde (regra 4,
+  sem policy de `DELETE`). Uma policy nova de `INSERT` no balde aceita só esse caminho.
+- D-30 · Q: A aba *Grade* mostra as turmas do currículo selecionado ou todas? → A *(adotada por padrão)*: **todas** (a
+  RC-9 é a regra específica das turmas: *"todas juntas"*), cada uma com o currículo que segue; o seletor de currículo não
+  filtra turmas. Alternativa: só as do selecionado.
+- D-31 · Q: E as arquivadas, na aba *Grade*? → A *(adotada por padrão)*: aparecem **na lista**, marcadas *Arquivada*
+  (RC-9); o **seletor de turma** e a pré-seleção continuam sem elas (C-24 da spec 017), e *Turmas com teto excedido*
+  também.
+- D-32 · Q: Onde se editam o propósito, a duração e o PDF? → A *(adotada por padrão)*: em **Editar currículo**
+  (`/cursos/<sigla>/curriculos/<N>/editar`, aberto pela barra do currículo), no currículo escolhido (RC-5). *Editar curso*
+  deixa de mostrá-los e aponta o caminho; *Novo curso* continua pedindo-os, porque o currículo 1 nasce com o curso.
+- D-33 · Q: As disciplinas, as UEs e as avaliações do currículo novo se editam onde? → A *(adotada por padrão)*: na aba
+  *Disciplinas* do curso, com o currículo escolhido no seletor — a mesma tela de hoje, recortada pelo currículo.
+- D-34 · Q: Turma nova: qual vem marcada? → A *(adotada por padrão)*: **"o vigente na data de início da turma"**, que o
+  banco escolhe ao gravar (`app.curriculo_padrao_da_turma`) — a data ainda está sendo digitada; as outras opções são o
+  vigente e o futuro, pelo nome.
+- D-35 · Q: Na ficha do instrutor, como se distinguem as duas cópias da mesma disciplina? → A *(adotada por padrão)*: com
+  dois currículos no curso, o rótulo vira *"CAHO · Currículo 2 (vigência 2027)"*; com um só, segue *"CAHO"*.
+- D-36 · Q: E o currículo criado por engano (ou na conferência)? → A *(adotada por padrão)*: **Descartar currículo** na
+  barra do currículo — exclusão lógica (`status = 'inativo'`, D-19), só para o que **nenhuma turma** segue e **não** é o
+  vigente; o banco recusa o resto (`versao_em_uso`). Sem ele, um currículo de teste criado no preview ficaria no dado
+  real para sempre. Alternativa: sem tela (o D-19 original).
+- D-37 · Q: A situação do currículo (`status`) é "conteúdo" para a RC-6? → A *(adotada por padrão)*: **não** — ela tem
+  regra própria (`app.guardar_situacao_da_versao`: o currículo seguido por turma não se inativa); tratada como correção,
+  a recusa certa chegaria disfarçada de pedido de justificativa (medido no teste com sessão real).
 
 ## 5. Requisitos
 

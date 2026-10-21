@@ -342,6 +342,9 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >   avaliações do currículo), regras de avaliação, limites de AEC/TAD/TR e o PDF. Toda turma segue um
 >   (`turmas.curriculo_id`). O currículo de hoje é o **currículo 1** de cada curso, e toda turma existente fica ligada a
 >   ele. Vigente, futuro e passado são derivados da data; só o arquivamento é guardado. Nunca apagar.
+> - **`correcoes_de_curriculo`** (PR 2 da spec 021, RC-6) — a trilha de toda **correção** num currículo seguido por turma
+>   com lançamento: quem, quando, a tabela e o registro, o que mudou (valor anterior e novo) e a **justificativa**. Só de
+>   acréscimo, imutável inclusive para a `service_role`.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 

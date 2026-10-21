@@ -80,23 +80,41 @@ arquivado** do curso (`versao_inativa`); a turma que muda de curso vai para o vi
 `app.trocar_linhas_da_versao` (depois): tira o **mapa** antes de mudar qualquer coisa, inativa o do currículo velho (nunca
 apaga) e faz nascer as linhas novas, levando período, atribuições, rateio por UE e ajustes onde há correspondência.
 
-## 6. O PR 2 (desenho; migrations que acrescentam, e a RC-6, que altera — autorizada pelas RC)
+## 6. O PR 2 — duas migrations: a M3 só acrescenta; a M4 altera (portão 9.4)
 
-- **A cópia (RC-7)** — `public.criar_curriculo(curso, vigente_de, descricao, hoje)`, `definer` com porteiro
+**M3 `20261021124836_curriculo_copia_trilha_arquivamento`** — só acrescenta (segue o rito sem parar):
+- **O PDF por currículo (RC-11, D-29)** — `curriculos.pdf_caminho` (nulável), preenchido no currículo 1 que já tinha PDF
+  (`<curso>/curriculo.pdf`); `grant update (pdf_caminho)` a `authenticated` (a policy `curriculos_editar` continua
+  decidindo quem).
+- **A trilha (RC-6)** — `public.correcoes_de_curriculo` (quem, quando, a tabela e o registro, a ação — alterar, incluir,
+  inativar, reativar —, os campos, o valor anterior e o novo, a justificativa de 5 a 1.000 letras); só de acréscimo,
+  `UPDATE`/`DELETE`/`TRUNCATE` recusados por gatilho **inclusive para a `service_role`**; RLS de leitura = ler o curso
+  (`cursos.ler` + alcance); sem escrita para `authenticated` — quem escreve é o gatilho da M4.
+- **A justificativa da requisição (D-26, revista)** — `app.justificativa_de_correcao()`: lê o cabeçalho
+  `x-justificativa-de-correcao` de `request.headers` (base64 do UTF-8) e devolve o texto, ou nulo.
+- **A cópia (RC-7, RC-2, D-27)** — `public.criar_curriculo(curso, vigente_de, descricao, hoje)`, `definer` com porteiro
   (`cursos.editar`, alcance, curso em oferta; `coalesce(…, false) is not true`, gotcha 15): currículo N+1 copiando do
-  vigente o conteúdo da RC-1, as disciplinas, UEs, avaliações do currículo, limites, regras de avaliação e habilitações
-  **ativas**, cada cópia com a linhagem da original, ids gerados antes (gotcha 4.1). Recusa começar antes do mais novo e
-  criar um segundo futuro (RC-2, D-27); `hoje` vem de quem chama (D20).
-- **A correção (RC-6)** — recurso próprio na matriz (`correcao_de_curriculo`/`editar`: Admin, Encarregado e Ajudante da
-  Administração Acadêmica); a trilha `correcoes_de_curriculo` (só de acréscimo, imutável inclusive para a `service_role`:
-  quem, quando, tabela, registro, o quê, valor anterior, valor novo, justificativa); `public.corrigir_curriculo(
-  justificativa, alvo, id, campos)` marca a transação com a justificativa e faz a mudança; o gatilho
-  `app.guardar_curriculo_em_uso`, com sessão, no currículo seguido por turma com lançamento: completar o vazio passa
-  (D-24); qualquer outra mudança exige o recurso **e** a justificativa, e grava a trilha **antes**; sem sessão passa (D-5).
-- **O arquivamento (RC-10)** — `public.arquivar_curriculo(id, hoje)` / `desarquivar_curriculo(id)`, porteiro do trio:
-  só o passado (nem vigente nem futuro em `hoje`) com todas as turmas arquivadas.
-- **O PDF por currículo (RC-11, D-29)** — as policies do balde passam a aceitar `<curso>/curriculo-<N>.pdf` do currículo N
-  do curso; o do 1 continua em `<curso>/curriculo.pdf`.
+  vigente o conteúdo da RC-1 (sem o PDF), as disciplinas, UEs, avaliações do currículo, limites, regras de avaliação e
+  habilitações **ativas**, cada cópia com a linhagem da original. Recusa criar um segundo futuro
+  (`ja_ha_curriculo_futuro`) e começar antes do mais novo (`curriculo_antes_do_mais_novo`); `hoje` vem de quem chama (D20).
+- **O arquivamento (RC-10, D-28)** — `public.arquivar_curriculo(id, hoje)` e `public.desarquivar_curriculo(id)`, porteiro
+  do recurso `arquivamento_de_curriculo` (que a M4 cria — sem ela, falham fechados): só o passado, com todas as turmas
+  que o seguem arquivadas (`curriculo_nao_passado`, `curriculo_com_turma_nao_arquivada`).
+
+**M4 `20261021124838_curriculo_em_uso_e_pdf_por_curriculo`** — **ALTERA** (regra 9.4: portão antes do remoto):
+- **A matriz** — dois recursos: `correcao_de_curriculo`/`editar` e `arquivamento_de_curriculo`/`editar`, permitidos ao
+  trio (Admin, Encarregado e Ajudante da Administração Acadêmica) e a mais ninguém.
+- **A correção (RC-6, D-24)** — `app.guardar_curriculo_em_uso()`, `definer`, em `curriculos`, `disciplinas`,
+  `unidades_ensino`, `avaliacoes_curriculo`, `limites_curriculo` e `avaliacoes_planejadas` (`BEFORE INSERT OR UPDATE`):
+  com sessão, no currículo seguido por turma com lançamento (`app.curriculo_em_uso_com_lancamento`), **completar o
+  vazio passa**; qualquer outra mudança exige o recurso (`42501`, `curriculo_em_uso`) **e** a justificativa (`23514`,
+  `justificativa_obrigatoria`), e grava a trilha **antes**. Colunas de auditoria e de procedência não contam, nem a situação do próprio currículo (D-37). Sem sessão
+  (ETL, script, migration) passa (D-5).
+- **O balde** — a policy `curriculos_carregar_por_curriculo` (`INSERT`, `cursos.editar`, alcance, curso em oferta) para
+  `<curso>/<currículo>/<instante>.pdf`. Sem `UPDATE` nem `DELETE`: cada envio é um arquivo novo (D-29).
+- **O efeito em Production entre a aplicação e o merge**: o código da `main` não manda a justificativa — o trio que
+  corrigir conteúdo de currículo em uso pela tela recebe a recusa (completar o vazio continua livre). Por isso a M4 espera
+  a palavra de Bernardo, e o ideal é aplicá-la junto do merge.
 
 ## 7. Reversão (PR 1)
 

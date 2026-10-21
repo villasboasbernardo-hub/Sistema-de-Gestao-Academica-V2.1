@@ -259,6 +259,10 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
 > da RC-1; **nada muda em tela**, merge autorizado se a prova passar) e o **PR 2** (as telas: cópia, seletor, currículo em
 > *Nova turma*, correção pelo trio, arquivamento, PDF por currículo, leitores por currículo). Desenho:
 > `specs/021-…/contracts/banco.md`; medição: `antes-depois.md`; o quadro das RC e o lote: `spec.md`.
+>
+> ✅ **PR 1 na `main` em 21/10/2026** — `ae4e595` (#81), com o rito do remoto (backup `remoto-20261021-090802.sql`, a
+> remedição sobre ele idêntica nas três medidas, **89 e 89** migrations, esquema `5d794f43…` igual nos dois bancos), CI
+> verde na `main` e Production servindo o merge. 🟨 **PR 2** no ramo `feat/BLOCO-6-curriculo-telas`, em conferência.
 
 
 Registrar um currículo novo (disciplinas, UEs, CH, avaliações, duração) **sem** alterar o vigente, e planejar as turmas do ano seguinte por ele, enquanto as turmas em andamento seguem o currículo em vigor. Mexe no vínculo turma → versão do currículo; não cabe em correção.
