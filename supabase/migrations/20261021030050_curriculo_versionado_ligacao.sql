@@ -23,14 +23,15 @@
 --    pelo curso davam. Provado na cópia do remoto `remoto-20261020-235051.sql`: impressão digital do que o currículo
 --    alimenta (`scripts/provas/impressao_digital_do_curriculo.sql`, 24 objetos) e o retrato das telas
 --    (`tests/invariantes/retrato-das-telas.test.ts`: planilha, `.xlsx` e DSA de 212 semanas das 29 turmas), antes ×
---    depois: [pendente — medição].
+--    depois: IDÊNTICOS (24 de 24 objetos; 0 diferenças nas 29 turmas), medido em 21/10/2026 — `antes-depois.md`.
 -- ⚠️ O PREENCHIMENTO NÃO PASSA PELOS GATILHOS DE NEGÓCIO (auditoria, trilha do arbitrado, turma arquivada): não é edição
 --    de ninguém. `editado_em`/`editado_por` ficam como estavam.
 -- ⚠️ Nada aqui lê data do servidor (D20).
 --
 -- Reversão: `specs/021-bloco-6-curriculo-versionado/reversao.sql` — recria as três views e as cinco funções com os
 --   corpos anteriores, devolve os dois índices antigos, tira os gatilhos novos e as FKs, e volta as colunas a nulas;
---   só depois a M1. Provada numa base descartável (a impressão digital do esquema volta): [pendente].
+--   só depois a M1. Provada com dado na cópia do remoto em 21/10/2026: o esquema volta a 2.237 objetos, `1ba390aa…`
+--   (o da `main` e do remoto), e a impressão do currículo à do antes.
 -- =================================================================================
 
 -- ================================================================ 1. a versão 1 e a ligação
