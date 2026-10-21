@@ -174,14 +174,19 @@ _(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos*
 3. Carrossel com os **DSA da semana atual** das turmas que têm DSA, um por vez.
 4. Submenu na lateral: **Cursos** → classificação → curso, e **Turmas** → curso → turma, abrindo a página já filtrada.
 
-## Bloco 5 — Cadastros novos (spec própria) — 🟨 EM CONFERÊNCIA (PR #79)
+## Bloco 5 — Cadastros novos (spec própria) — ✅ CONCLUÍDO em 20/10/2026
 
-> 🟨 **Implementado em 20/10/2026** — spec `020-bloco-5-cadastros-novos`, pelo fluxo `/corrigir`, num PR só: **#79**,
-> **sem merge** até a conferência de Bernardo Villas Boas. Três migrations que só acrescentam (estrangeiros, custo e o
-> balde `curriculos`; a capacitação em lista com a conversão autorizada; a tabela de acessos). Na cópia do remoto de
-> 20/10/2026 a conversão casou **31 de 31** textos, com **0** a corrigir (`specs/020-…/antes-depois.md`). Fecha também
-> a **`PEND-019-3`**. ⚠️ **Falta a palavra de Bernardo sobre a regra 2: custo de curso é processo da CIAARA-11?** Se não
-> for, a coluna fica sem uso.
+> ✅ **Concluído em 20/10/2026** — spec `020-bloco-5-cadastros-novos`, pelo fluxo `/corrigir`, num PR só: **#79**,
+> **APROVADO** por Bernardo Villas Boas (decisões C-1 a C-16 e as da implementação como ficaram) e mesclado por squash
+> na `main` em **`f1a7089`**. Três migrations que só acrescentam (`20261020213440` estrangeiros, custo e o balde
+> `curriculos`; `20261020213441` a capacitação em lista, com a conversão autorizada; `20261020213443` a tabela de
+> acessos), aplicadas no remoto **antes** do merge — backup `remoto-20261020-204113.sql`, **87 e 87** migrations,
+> impressão digital idêntica nos dois bancos (**2.237 objetos, `1ba390aa…`**). Na conversão, **31 de 31** textos
+> casaram, **0** a corrigir (`specs/020-…/antes-depois.md`). CI verde na `main` sobre `f1a7089` (run `39529307549`:
+> 2.614 de unidade · 939 pgTAP · 417 invariantes e RLS · 542 de ponta a ponta + 6 pulados, sem instável) e Production
+> servindo o merge (deploy de `f1a7089` em `success`); o ramo foi apagado, local e remoto. Fechou também a
+> **`PEND-019-3`**. ⚠️ **Custo de curso fica como campo informativo; a confirmação de escopo (regra 2) segue pendente
+> com Bernardo** — `PEND-020-3`, sem bloquear.
 
 ⚠️ São **novidade**, não paridade com a v2.0 (regra 3 do CLAUDE.md): o specify registra a autorização nominal de Bernardo. **Custo de curso**: confirmar que é processo da CIAARA-11 (regra 2, contenção de escopo).
 
@@ -232,6 +237,11 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
   sobrescreve o mesmo arquivo (`<curso>/curriculo.pdf`) e o balde não tem policy de `DELETE` (regra 4, `STORAGE-1`) —
   então não há como tirar o currículo de um curso pela tela, e a versão anterior não fica guardada. O currículo
   versionado é o Bloco 6; tirar o PDF é a mesma decisão da `STORAGE-1`, agora para dois baldes.
+- **PEND-020-3** — **custo de curso é processo da CIAARA-11? (regra 2, contenção de escopo)** _(decisão de Bernardo Villas
+  Boas na aprovação do PR #79, 20/10/2026: *"fica como campo informativo — a confirmação de escopo segue pendente
+  comigo"*)_: `cursos.custo_total` e `cursos.custo_composicao` estão no ar, editados em *Editar curso* e mostrados em
+  *Sobre o Curso*, e **nada calcula a partir deles**. Se a resposta for *não*, as duas colunas ficam sem uso (nunca
+  `drop column`: viram `-- [APOSENTADA — v2.1]`) e a tela deixa de mostrá-las. **Não bloqueia nada.**
 - **PEND-014-7** — testes de ponta a ponta instáveis sob carga (`salas.spec.ts:126`, `dsa-tipo-e-global.spec.ts:160`, `avaliacoes-nas-telas.spec.ts:53`, `admin-sobre-contas`).
 - **OneDrive** — a pasta do repositório deve ficar "Sempre manter neste dispositivo": arquivos sob demanda já quebraram o build (`.next`, `EPERM`) e o `git switch` (`specs`).
 
