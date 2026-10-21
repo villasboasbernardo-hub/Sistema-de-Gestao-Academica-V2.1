@@ -42,7 +42,7 @@ export type TurmaParaAvisos = {
   /** Quantas linhas ativas de `turma_disciplina` a turma tem. */
   readonly disciplinasAtivas: number;
   /**
-   * `cursos.duracao_semanas` (FR-009.7). Opcional porque a aba *Grade* do curso não o passa: lá a lista
+   * a duração do currículo da turma, `curriculos.duracao_semanas` (FR-009.7; spec 021, RC-1). Opcional porque a aba *Grade* do curso não o passa: lá a lista
    * é de todas as turmas, e o aviso de cadastro é da ficha.
    */
   readonly duracaoSemanasDoCurso?: number | null;

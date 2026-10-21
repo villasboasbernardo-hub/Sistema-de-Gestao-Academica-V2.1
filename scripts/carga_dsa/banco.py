@@ -79,11 +79,13 @@ def lit(valor: object) -> str:
 # Uma leitura so, devolvendo um `jsonb`: o retrato contra o qual o plano e resolvido e validado.
 # ⚠️ So `select`. Os nomes de instrutor vem para a MEMORIA do processo (o casamento por posto e
 #    nome de guerra precisa deles) e NUNCA sao gravados em arquivo por este script.
+# ⚠️ Spec 021 (Bloco 6, RC-1): o modelo (UEs ou competencias) e do CURRICULO DA TURMA, nao mais do curso.
 _REFERENCIA = """
 with t as (
   select t.id, t.codigo, t.curso_id, c.codigo as curso, t.alunos, t.sala_alocada, t.data_inicio, t.data_termino,
-         t.status, (c.curriculo_modelo = 'competencias') as por_competencias
+         t.status, (cr.curriculo_modelo = 'competencias') as por_competencias
     from public.turmas t join public.cursos c on c.id = t.curso_id
+    join public.curriculos cr on cr.id = t.curriculo_id
    where t.codigo = {turma}
 )
 select jsonb_build_object(

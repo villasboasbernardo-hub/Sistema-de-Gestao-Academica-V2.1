@@ -19,6 +19,7 @@ import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { avisosDoCurso } from "@/lib/dominio/avisos-do-curso";
+import { curriculoVigenteEm } from "@/lib/dominio/curriculos";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import { codigoDaTurmaNoSegmento } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
@@ -40,8 +41,10 @@ import { CabecalhoDoCurso } from "./CabecalhoDoCurso";
 import {
   COLUNAS_DAS_TURMAS_DO_CURSO,
   COLUNAS_DA_PAGINA_DO_CURSO,
+  SEM_CURRICULO,
   mensagemDeCursoNaoEncontrado,
   resolverTurmaSelecionada,
+  type CurriculoDaPagina,
 } from "./consulta";
 import { QuadroDeAvisosDoCurso } from "./QuadroDeAvisosDoCurso";
 import { TurmasComTetoExcedido, type LinhaDoLimite } from "./BlocoDeLimites";
@@ -101,6 +104,18 @@ export default async function PaginaDoCurso({
     );
   }
 
+  /*
+   * ⚠️ SPEC 021 (Bloco 6, RC-1): o propósito, a duração, o PDF, as disciplinas da aba Sobre, as regras de avaliação e
+   *    os limites são do CURRÍCULO. Até o seletor (PR 2), a página mostra o VIGENTE hoje — com um currículo por curso, o
+   *    mesmo conteúdo que ela mostrava pelo curso.
+   */
+  const curriculo = curriculoVigenteEm(
+    ((curso as unknown as { curriculos?: CurriculoDaPagina[] }).curriculos ??
+      []) as CurriculoDaPagina[],
+    hojeEmSaoPaulo(),
+  );
+  const curriculoId = curriculo?.id ?? SEM_CURRICULO;
+
   const [
     turmasRes,
     regimeRes,
@@ -129,14 +144,14 @@ export default async function PaginaDoCurso({
     supabase
       .from("disciplinas")
       .select("cod_disciplina, nome_disciplina, carga_horaria_tempos")
-      .eq("curso_id", curso.id as string)
+      .eq("curriculo_id", curriculoId)
       .eq("status", "ativo")
       .order("ordem_sugerida", { ascending: true, nullsFirst: false })
       .order("cod_disciplina", { ascending: true }),
     supabase
       .from("avaliacoes_planejadas")
       .select("nome_disciplina, descricao_instrumentos, carater, formula_mf")
-      .eq("curso_id", curso.id as string)
+      .eq("curriculo_id", curriculoId)
       .eq("status", "ativo")
       .order("nome_disciplina", { ascending: true }),
     permissoesDoPerfil(usuario?.perfil ?? null),
@@ -147,7 +162,7 @@ export default async function PaginaDoCurso({
     supabase
       .from("limites_curriculo")
       .select("categoria, tempos, fonte_pagina")
-      .eq("curso_id", curso.id as string)
+      .eq("curriculo_id", curriculoId)
       .eq("status", "ativo"),
     supabase
       .from("config_parametros")
@@ -255,8 +270,11 @@ export default async function PaginaDoCurso({
   }));
   const avisos = avisosDoCurso(
     {
-      duracaoSemanas: curso.duracao_semanas === null ? null : Number(curso.duracao_semanas),
-      proposito: curso.proposito,
+      duracaoSemanas:
+        curriculo?.duracao_semanas === null || curriculo?.duracao_semanas === undefined
+          ? null
+          : Number(curriculo.duracao_semanas),
+      proposito: curriculo?.proposito ?? null,
       limiteTurmasAno: curso.limite_turmas_ano === null ? null : Number(curso.limite_turmas_ano),
     },
     paraLimite,
@@ -390,16 +408,19 @@ export default async function PaginaDoCurso({
               nome: curso.nome_curso as string,
               classificacao: curso.classificacao as string,
               modalidade: curso.modalidade,
-              duracaoSemanas: curso.duracao_semanas === null ? null : Number(curso.duracao_semanas),
-              duracaoDias: curso.duracao_dias === null ? null : Number(curso.duracao_dias),
+              duracaoSemanas:
+                curriculo?.duracao_semanas === null || curriculo?.duracao_semanas === undefined
+                  ? null
+                  : Number(curriculo.duracao_semanas),
+              duracaoDias: curriculo === null ? null : Number(curriculo.duracao_dias),
               limiteTurmasAno:
                 curso.limite_turmas_ano === null ? null : Number(curso.limite_turmas_ano),
-              proposito: curso.proposito,
+              proposito: curriculo?.proposito ?? null,
               ofertavelEstrangeiros: curso.ofertavel_estrangeiros,
               estrangeirosObservacao: curso.estrangeiros_observacao,
               custoTotal: curso.custo_total === null ? null : Number(curso.custo_total),
               custoComposicao: curso.custo_composicao,
-              curriculoPdfEm: curso.curriculo_pdf_em,
+              curriculoPdfEm: curriculo?.pdf_carregado_em ?? null,
             }}
             disciplinas={disciplinas}
             avaliacoes={avaliacoes}

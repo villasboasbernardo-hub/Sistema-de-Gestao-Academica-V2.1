@@ -74,7 +74,7 @@ export function semanasDaPlanilha(entrada: {
   readonly turma: TurmaParaEtapa & {
     readonly dataInicio: string | null;
     readonly dataTermino: string | null;
-    /** `cursos.duracao_semanas` — o T do rótulo (FR-009.3). */
+    /** a duração do currículo da turma (`curriculos.duracao_semanas`, spec 021) — o T do rótulo (FR-009.3). */
     readonly duracaoSemanasDoCurso: number | null;
   };
   /** As datas com lançamento da turma — o piso e o teto quando falta o período. */

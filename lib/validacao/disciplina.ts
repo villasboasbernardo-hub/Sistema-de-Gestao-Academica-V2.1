@@ -7,7 +7,7 @@
  * produziria uma recusa do banco para uma escolha que a própria tela apresentou.
  *
  * ⚠️ **A UNICIDADE DO CÓDIGO NÃO É CONFERIDA AQUI**, e a ausência é decisão. Quem decide é o índice
- * parcial `uq_disciplinas_curriculo_cod_ativo` (por versão do currículo desde a spec 021) — `where status = 'ativo'` —, e é ele que faz a `Q-04`
+ * parcial `uq_disciplinas_curriculo_cod_ativo` (por currículo desde a spec 021) — `where status = 'ativo'` —, e é ele que faz a `Q-04`
  * valer: desativar uma disciplina **libera** o código. Uma conferência nesta camada daria a resposta
  * certa quase sempre e erraria exatamente no caso interessante, que é a corrida entre duas gravações.
  */

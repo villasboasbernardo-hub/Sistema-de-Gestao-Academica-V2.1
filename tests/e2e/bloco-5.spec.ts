@@ -39,18 +39,20 @@ async function cursoNoBanco() {
   const { data, error } = await bancoDoBloco2()
     .from("cursos")
     .select(
-      "ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculo_pdf_em",
+      "ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculos:curriculos!curriculos_curso_id_fkey(pdf_carregado_em)",
     )
     .eq("id", CURSO_ID)
     .single();
   if (error) throw new Error(error.message);
-  return data as {
+  const linha = data as unknown as {
     ofertavel_estrangeiros: boolean | null;
     estrangeiros_observacao: string | null;
     custo_total: number | null;
     custo_composicao: string | null;
-    curriculo_pdf_em: string | null;
+    curriculos: { pdf_carregado_em: string | null }[];
   };
+  /* Spec 021 (Bloco 6, RC-11): a data do PDF é do CURRÍCULO (o único do curso da amostra). */
+  return { ...linha, curriculo_pdf_em: linha.curriculos[0]?.pdf_carregado_em ?? null };
 }
 
 /** Da tela em que se está até a página do curso, pelo menu e pelo cartão — por clique. */
@@ -122,10 +124,15 @@ test.beforeAll(async ({}, info) => {
       estrangeiros_observacao: null,
       custo_total: null,
       custo_composicao: null,
-      curriculo_pdf_em: null,
     })
     .eq("id", CURSO_ID);
   if (erroReset) throw new Error(erroReset.message);
+  /* Spec 021 (Bloco 6, RC-11): o PDF é do CURRÍCULO — a amostra começa sem nenhum. */
+  const { error: erroDoPdf } = await banco
+    .from("curriculos")
+    .update({ pdf_carregado_em: null })
+    .eq("curso_id", CURSO_ID);
+  if (erroDoPdf) throw new Error(erroDoPdf.message);
   await banco.storage.from("curriculos").remove([`${CURSO_ID}/curriculo.pdf`]);
 
   /* Dois instrutores: um com texto que não casou (o texto antigo também, para provar que fica intocado). */

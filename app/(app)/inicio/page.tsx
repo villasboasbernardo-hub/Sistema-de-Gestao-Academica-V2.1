@@ -105,7 +105,7 @@ export default async function Inicio({
    */
   let consultaDeCursos = supabase
     .from("cursos")
-    .select("id, codigo, classificacao, modalidade, nome_curso, duracao_semanas")
+    .select("id, codigo, classificacao, modalidade, nome_curso")
     .eq("status", "ativo");
   if (classificacao !== "") consultaDeCursos = consultaDeCursos.eq("classificacao", classificacao);
   if (modalidade !== "") consultaDeCursos = consultaDeCursos.eq("modalidade", modalidade);
@@ -153,7 +153,7 @@ export default async function Inicio({
     supabase
       .from("turmas")
       .select(
-        "id, codigo, status, curso_id, ano_letivo, data_inicio, data_termino, inicio_etapa_presencial, termino_etapa_presencial, modalidade, regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(regime_tempos)",
+        "id, codigo, status, curso_id, ano_letivo, data_inicio, data_termino, inicio_etapa_presencial, termino_etapa_presencial, modalidade, regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(regime_tempos), curriculo:curriculos!turmas_curriculo_do_proprio_curso_fk(duracao_semanas)",
       ),
     supabase
       .from("vw_cursos_regime_vigente")
@@ -358,12 +358,13 @@ export default async function Inicio({
     inicio_etapa_presencial: string | null;
     termino_etapa_presencial: string | null;
     modalidade: string | null;
+    /* Spec 021 (Bloco 6, RC-1): a duração é do currículo DA TURMA. */
+    curriculo: { duracao_semanas: number | null } | null;
   };
   type CursoDaLeitura = {
     id: string;
     codigo: string;
     nome_curso: string;
-    duracao_semanas: number | null;
   };
   type LinhaDaOcupacao = {
     turma_id: string | null;
@@ -418,7 +419,9 @@ export default async function Inicio({
           dataInicio: t.data_inicio,
           dataTermino: t.data_termino,
           duracaoSemanasDoCurso:
-            curso.duracao_semanas === null ? null : Number(curso.duracao_semanas),
+            t.curriculo?.duracao_semanas === null || t.curriculo?.duracao_semanas === undefined
+              ? null
+              : Number(t.curriculo.duracao_semanas),
           semana: semanaIso ?? { ano: anoVigente, numero: 1 },
         }),
         resumo: resumoDoDsa(lancamentos),

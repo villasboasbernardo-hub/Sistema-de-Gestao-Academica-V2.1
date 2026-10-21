@@ -78,10 +78,12 @@ def main(argv: list[str] | None = None) -> int:
             no_banco = con.execute("""
                 select c.codigo, d.codigo, d.nome_disciplina, d.carga_horaria_tempos,
                        count(u.id), coalesce(sum(u.ch_prevista_tempos), 0),
-                       bool_or(d.sem_unidades_ensino), max(c.curriculo_modelo),
+                       bool_or(d.sem_unidades_ensino), max(cr.curriculo_modelo),
                        max(d.status::text)
                   from public.cursos c
                   join public.disciplinas d on d.curso_id = c.id
+                  -- Spec 021 (Bloco 6, RC-1): o modelo e do CURRICULO da disciplina.
+                  join public.curriculos cr on cr.id = d.curriculo_id
                   left join public.unidades_ensino u
                          on u.disciplina_id = d.id and u.status = 'ativo'
                  -- ⚠️ SEM `where d.status = 'ativo'`, e a primeira versao TINHA esse filtro: ele

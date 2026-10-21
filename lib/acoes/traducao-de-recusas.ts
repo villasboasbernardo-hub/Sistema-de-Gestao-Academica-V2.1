@@ -158,10 +158,10 @@ const MENSAGEM_DA_RESTRICAO: Readonly<Record<string, string>> = {
 
   // ── Fatia (b), 29/09/2026 — nomes LIDOS de `pg_constraint` e `pg_indexes` no banco local ──────
   // ⚠️ `uq_disciplinas_curriculo_cod_ativo` é índice ÚNICO PARCIAL — `where status = 'ativo'`. É ele que
-  //    faz a `Q-04` valer: desativar uma disciplina LIBERA o código para outra na mesma versão do currículo.
-  //    Spec 021 (Bloco 6): a unicidade passou de "no curso" para "na versão" (era `uq_disciplinas_curso_cod_ativo`).
+  //    faz a `Q-04` valer: desativar uma disciplina LIBERA o código para outra no mesmo currículo.
+  //    Spec 021 (Bloco 6): a unicidade passou de "no curso" para "no currículo" (era `uq_disciplinas_curso_cod_ativo`).
   uq_disciplinas_curriculo_cod_ativo:
-    "Já existe uma disciplina ativa com este código nesta versão do currículo — escolha outro.",
+    "Já existe uma disciplina ativa com este código neste currículo — escolha outro.",
   ue_unica_na_disciplina:
     "Já existe uma unidade de ensino com este número nesta disciplina — escolha outro.",
   tdu_ue_unica_na_turma:
@@ -211,9 +211,12 @@ const MENSAGEM_DA_RESTRICAO: Readonly<Record<string, string>> = {
   dpa_tempos_coerentes: "Informe o primeiro tempo e quantos tempos param, ou nenhum dos dois.",
   dias_parados_tipo_parada_id_fkey: "O tipo de parada escolhido não está na lista.",
   dias_parados_motivo_check: "Escreva o motivo da parada (ao menos três letras).",
-  // Spec 021 (Bloco 6): um limite por categoria e VERSÃO do currículo (era `limite_unico`, por curso).
+  // Spec 021 (Bloco 6): um limite por categoria e CURRÍCULO (era `limite_unico`, por curso).
   limite_unico_na_versao:
-    "Esta versão do currículo já tem limite ativo para esta categoria. Edite o existente em vez de criar outro.",
+    "Este currículo já tem limite ativo para esta categoria. Edite o existente em vez de criar outro.",
+  // Spec 021 (Bloco 6, RC-1): as regras que eram das colunas do curso, agora no currículo — o mesmo texto.
+  curriculos_duracao_semanas_positiva: "A duração em semanas tem de ser maior que zero.",
+  curriculos_duracao_dias_positiva: "A duração em dias tem de ser maior que zero.",
   // Spec 014, PR 1.1 (E-3).
   previsto_unico:
     "Esta turma já tem previsto do PROENS para esta categoria. Edite o existente em vez de criar outro.",
@@ -417,22 +420,17 @@ function porChave(
     case "regime_inativo":
       return "O regime de horário escolhido está inativo. Escolha um regime ativo do curso.";
 
-    // ── Spec 021 (Bloco 6): o currículo versionado ────────────────────────────────────────────────
-    case "curriculo_em_uso":
-      return (
-        "Esta versão do currículo rege turma que já tem lançamento: carga horária, códigos, períodos, UEs, " +
-        "avaliações e limites dela não mudam mais. Para um currículo diferente, crie uma versão nova."
-      );
+    // ── Spec 021 (Bloco 6): o currículo — na tela, "currículo", nunca "versão" (RC-12) ─────────────
     case "curriculo_da_turma_travado":
-      return "A versão do currículo desta turma não pode mais mudar: ela já tem lançamento no DSA.";
+      return "O currículo desta turma não pode mais mudar: ela já tem lançamento no DSA.";
     case "versao_inativa":
-      return "A versão do currículo escolhida não é uma versão ativa do curso da turma.";
+      return "O currículo escolhido não é um currículo ativo (e não arquivado) do curso da turma.";
     case "disciplina_de_outra_versao":
-      return "A disciplina, a unidade de ensino ou a avaliação escolhida é de outra versão do currículo, e não da que rege esta turma.";
+      return "A disciplina, a unidade de ensino ou a avaliação escolhida é de outro currículo, e não do que rege esta turma.";
     case "versao_obrigatoria":
-      return "Este curso tem mais de uma versão do currículo: escolha em qual delas gravar.";
+      return "Este curso tem mais de um currículo: escolha em qual deles gravar.";
     case "versao_em_uso":
-      return "Esta versão do currículo é seguida por turma e não pode ser inativada.";
+      return "Este currículo é seguido por turma e não pode ser inativado.";
 
     case "sala_fora_da_lista": {
       const valor = texto(d.valor);

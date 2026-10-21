@@ -195,7 +195,7 @@ export type SemanaDoDsa = {
   /** As datas desta semana que têm lançamento — insumo do `?sabado=`. */
   readonly datasComLancamento: readonly string[];
   readonly cursoCodigo: string | null;
-  /** `cursos.duracao_semanas` — o T da semana do curso (D-COR-1, Q-1; spec 016, FR-009.3). */
+  /** `curriculos.duracao_semanas` do currículo DA TURMA (spec 021, RC-1; era `cursos.duracao_semanas`) — o T da semana do curso (D-COR-1, Q-1; spec 016, FR-009.3). */
   readonly duracaoSemanasDoCurso: number | null;
   readonly cursoPorCompetencias: boolean;
   readonly unidades: readonly UnidadeLida[];
@@ -485,10 +485,13 @@ export async function lerPeriodoDoDsa(
         .order("codigo")
         .range(f.de, f.ate),
     ),
+    /* Spec 021 (Bloco 6, RC-1): o modelo e a duração são do currículo DA TURMA; a sigla, do curso. */
     supabase
-      .from("cursos")
-      .select("codigo, curriculo_modelo, duracao_semanas")
-      .eq("id", cursoId)
+      .from("turmas")
+      .select(
+        "curso:cursos!turmas_curso_id_fkey(codigo), curriculo:curriculos!turmas_curriculo_do_proprio_curso_fk(curriculo_modelo, duracao_semanas)",
+      )
+      .eq("id", turmaId)
       .maybeSingle(),
     lerTodasAsPaginas((f) =>
       supabase
@@ -1523,8 +1526,11 @@ export function montarSemanaDoDsa(
     }),
   }));
 
-  const cursoPorCompetencias =
-    (cursoRes.data as { curriculo_modelo?: string } | null)?.curriculo_modelo === "competencias";
+  const turmaDoCurriculo = cursoRes.data as {
+    curso?: { codigo?: string } | null;
+    curriculo?: { curriculo_modelo?: string; duracao_semanas?: number | null } | null;
+  } | null;
+  const cursoPorCompetencias = turmaDoCurriculo?.curriculo?.curriculo_modelo === "competencias";
 
   return {
     semana,
@@ -1532,9 +1538,8 @@ export function montarSemanaDoDsa(
     dias: janela.dias,
     sabadoAberto: janela.sabadoAberto,
     datasComLancamento,
-    cursoCodigo: (cursoRes.data as { codigo?: string } | null)?.codigo ?? null,
-    duracaoSemanasDoCurso:
-      (cursoRes.data as { duracao_semanas?: number | null } | null)?.duracao_semanas ?? null,
+    cursoCodigo: turmaDoCurriculo?.curso?.codigo ?? null,
+    duracaoSemanasDoCurso: turmaDoCurriculo?.curriculo?.duracao_semanas ?? null,
     cursoPorCompetencias,
     unidades,
     atribuicoesPorUe,

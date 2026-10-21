@@ -10,9 +10,13 @@
 import { NextResponse } from "next/server";
 
 import { BALDE_DE_CURRICULOS, caminhoDoCurriculo } from "@/lib/dominio/curriculo-em-pdf";
+import { curriculoVigenteEm, type CurriculoParaVigencia } from "@/lib/dominio/curriculos";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 const SEGUNDOS_DO_LINK = 60;
+
+type CurriculoComPdf = CurriculoParaVigencia & { readonly pdf_carregado_em: string | null };
 
 function indisponivel(): Response {
   return new Response(
@@ -28,10 +32,20 @@ export async function GET(_pedido: Request, { params }: { params: Promise<{ curs
 
   const { data: curso } = await supabase
     .from("cursos")
-    .select("id, codigo, curriculo_pdf_em")
+    .select(
+      "id, codigo, curriculos:curriculos!curriculos_curso_id_fkey(versao, vigente_de, status, arquivado_em, pdf_carregado_em)",
+    )
     .eq("codigo", sigla)
     .maybeSingle();
-  if (!curso || !curso.curriculo_pdf_em) return indisponivel();
+  /* Spec 021 (Bloco 6, RC-11): o PDF é do currículo — até o seletor (PR 2), o do vigente hoje. */
+  const curriculo = curso
+    ? curriculoVigenteEm(
+        ((curso as unknown as { curriculos?: CurriculoComPdf[] }).curriculos ??
+          []) as CurriculoComPdf[],
+        hojeNaCiaara(),
+      )
+    : null;
+  if (!curso || !curriculo?.pdf_carregado_em) return indisponivel();
 
   const { data, error } = await supabase.storage
     .from(BALDE_DE_CURRICULOS)

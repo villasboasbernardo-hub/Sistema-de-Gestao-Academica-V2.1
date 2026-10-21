@@ -3,41 +3,53 @@
 -- Data local: 21/10/2026 (o carimbo do nome é UTC; não renomear).
 --
 -- ⚠️ ESTA MIGRATION ALTERA O QUE EXISTE, e por isso é PORTÃO (regra 9.4, emenda de 19/10/2026): preenche colunas em
---    linhas existentes, troca dois índices únicos, recria três views e cinco funções, e acrescenta gatilhos que recusam
---    escrita hoje aceita. O desenho e a medição estão em `specs/021-bloco-6-curriculo-versionado/contracts/banco.md`.
+--    linhas existentes, troca dois índices únicos, recria três views e seis funções, e acrescenta gatilhos. O desenho
+--    e a medição estão em `specs/021-bloco-6-curriculo-versionado/contracts/banco.md`; as regras, RC-1 a RC-12
+--    (Bernardo Villas Boas, 21/10/2026), em `docs/correcoes/regras-do-curriculo-bloco-6.md`.
 --
 -- O que faz:
---   1. A VERSÃO 1 de cada curso (vigente desde 01/01/2020) e TODA a estrutura de hoje ligada a ela: as disciplinas
---      (e por elas as UEs e as avaliações do currículo), os limites de AEC/TAD/TR e as turmas. A linhagem de cada
---      disciplina, UE e avaliação é o próprio id.
---   2. As colunas ficam NOT NULL, com FK composta para a versão ser do mesmo curso.
---   3. A unicidade passa a ser POR VERSÃO: o código da disciplina (RF-DADOS-06) e a categoria do limite.
---   4. Tudo o que juntava o currículo PELO CURSO passa a juntar PELA VERSÃO DA TURMA: o nascimento das linhas da turma
---      e da disciplina nova, a disciplina "é da turma" (RN-MAT-01), a CH curricular, a execução por disciplina e o
---      limite declarado.
---   5. Os gatilhos: versão padrão de quem nasce sem ela; a troca de versão da turma (trava no 1º lançamento, leva o que
---      tem correspondência); a coerência linha/lançamento × versão da turma; e a TRAVA da versão em uso por turma com
---      lançamento (RF-HOR-05: nada reinterpreta o passado), só para escrita com sessão.
+--   1. O CURRÍCULO 1 de cada curso e TODA a estrutura de hoje ligada a ele: as disciplinas (e por elas as UEs e as
+--      avaliações do currículo), os limites de AEC/TAD/TR, as regras de avaliação (`avaliacoes_planejadas`) e as
+--      turmas. A linhagem de cada disciplina, UE e avaliação é o próprio id.
+--   2. RC-1 (autorização nominal de Bernardo Villas Boas, 21/10/2026: *"levar ao currículo 1 os valores das colunas de
+--      curso da RC-1 (cópia, sem apagar nada) e passar os leitores a lê-los do currículo"*): o currículo 1 recebe
+--      propósito, duração em semanas e em dias, o modelo e a data do PDF; as colunas do curso ficam
+--      `[APOSENTADA — v2.1]`, sem apagar nada (convenção de banco). `app.disciplina_sem_ue` passa a ler o modelo do
+--      currículo da disciplina.
+--   3. As colunas ficam NOT NULL, com FK composta para o currículo ser do mesmo curso.
+--   4. A unicidade passa a ser POR CURRÍCULO: o código da disciplina (RF-DADOS-06) e a categoria do limite.
+--   5. Tudo o que juntava o currículo PELO CURSO passa a juntar PELO CURRÍCULO DA TURMA: o nascimento das linhas da
+--      turma e da disciplina nova, a disciplina "é da turma" (RN-MAT-01), a CH curricular, a execução por disciplina e
+--      o limite declarado.
+--   6. Os gatilhos: o curso novo nasce com o currículo 1; o currículo padrão de quem nasce sem ele; a troca de
+--      currículo da turma (trava no 1º lançamento, leva o que tem correspondência; recusa currículo arquivado); a
+--      coerência linha/lançamento × currículo da turma; e o currículo seguido por turma não se inativa.
+-- ⚠️ A CORREÇÃO DO CURRÍCULO EM USO (RC-6: só o trio, com justificativa e trilha) NÃO ESTÁ AQUI: ela substitui a trava
+--    estrita que esta migration trazia no desenho de 21/10/2026 (D-4/D-6) e entra no PR 2, com a tela da justificativa.
+--    Até lá, com UM currículo por curso, a edição do currículo segue como hoje — nenhuma função da tela muda.
 --
--- ⚠️ COM UMA VERSÃO SÓ POR CURSO, NADA MUDA DE NÚMERO: as junções pela versão dão exatamente as linhas que as junções
---    pelo curso davam. Provado na cópia do remoto `remoto-20261020-235051.sql`: impressão digital do que o currículo
---    alimenta (`scripts/provas/impressao_digital_do_curriculo.sql`, 24 objetos) e o retrato das telas
---    (`tests/invariantes/retrato-das-telas.test.ts`: planilha, `.xlsx` e DSA de 212 semanas das 29 turmas), antes ×
---    depois: IDÊNTICOS (24 de 24 objetos; 0 diferenças nas 29 turmas), medido em 21/10/2026 — `antes-depois.md`.
+-- ⚠️ COM UM CURRÍCULO SÓ POR CURSO, NADA MUDA DE NÚMERO NEM DE TEXTO: as junções pelo currículo dão exatamente as linhas
+--    que as junções pelo curso davam, e os valores da RC-1 são cópias. Provado na cópia do remoto — `antes-depois.md`.
 -- ⚠️ O PREENCHIMENTO NÃO PASSA PELOS GATILHOS DE NEGÓCIO (auditoria, trilha do arbitrado, turma arquivada): não é edição
 --    de ninguém. `editado_em`/`editado_por` ficam como estavam.
--- ⚠️ Nada aqui lê data do servidor (D20).
+-- ⚠️ Nada aqui lê data do servidor (D20). A vigência do currículo 1 sai do DADO (D-2, revista pelas RC): 1º de janeiro
+--    do ano mais antigo em que o sistema conhece o curso — o da turma mais antiga ou o do cadastro do curso, o menor.
 --
--- Reversão: `specs/021-bloco-6-curriculo-versionado/reversao.sql` — recria as três views e as cinco funções com os
---   corpos anteriores, devolve os dois índices antigos, tira os gatilhos novos e as FKs, e volta as colunas a nulas;
---   só depois a M1. Provada com dado na cópia do remoto em 21/10/2026: o esquema volta a 2.237 objetos, `1ba390aa…`
---   (o da `main` e do remoto), e a impressão do currículo à do antes.
+-- Reversão: `specs/021-bloco-6-curriculo-versionado/reversao.sql` — recria as três views e as seis funções com os
+--   corpos anteriores, devolve os dois índices antigos e os comentários das colunas do curso, tira os gatilhos novos e
+--   as FKs; só depois a M1. Provada com dado na cópia do remoto — `antes-depois.md`.
 -- =================================================================================
 
--- ================================================================ 1. a versão 1 e a ligação
-insert into public.curriculos (curso_id, versao, vigente_de, descricao)
-select c.id, 1, date '2020-01-01',
-       'O currículo em vigor quando o sistema passou a ter versões de currículo (21/10/2026).'
+-- ================================================================ 1. o currículo 1 e a ligação
+insert into public.curriculos (curso_id, versao, vigente_de, descricao, proposito, duracao_semanas, duracao_dias,
+                               curriculo_modelo, pdf_carregado_em)
+select c.id, 1,
+       make_date(least(
+         extract(year from (c.criado_em at time zone 'America/Sao_Paulo'))::int,
+         coalesce((select min(extract(year from coalesce(t.data_inicio, make_date(t.ano_letivo, 1, 1))))::int
+                     from public.turmas t where t.curso_id = c.id), 9999)), 1, 1),
+       'O currículo em vigor quando o sistema passou a guardar currículos (21/10/2026).',
+       c.proposito, c.duracao_semanas, c.duracao_dias, c.curriculo_modelo, c.curriculo_pdf_em
   from public.cursos c
  order by c.codigo;
 
@@ -46,6 +58,7 @@ alter table public.disciplinas disable trigger user;
 alter table public.unidades_ensino disable trigger user;
 alter table public.avaliacoes_curriculo disable trigger user;
 alter table public.limites_curriculo disable trigger user;
+alter table public.avaliacoes_planejadas disable trigger user;
 alter table public.turmas disable trigger user;
 
 update public.disciplinas d
@@ -58,6 +71,10 @@ update public.limites_curriculo l
    set curriculo_id = c.id
   from public.curriculos c
  where c.curso_id = l.curso_id and c.versao = 1;
+update public.avaliacoes_planejadas a
+   set curriculo_id = c.id
+  from public.curriculos c
+ where c.curso_id = a.curso_id and c.versao = 1;
 update public.turmas t
    set curriculo_id = c.id
   from public.curriculos c
@@ -67,7 +84,26 @@ alter table public.disciplinas enable trigger user;
 alter table public.unidades_ensino enable trigger user;
 alter table public.avaliacoes_curriculo enable trigger user;
 alter table public.limites_curriculo enable trigger user;
+alter table public.avaliacoes_planejadas enable trigger user;
 alter table public.turmas enable trigger user;
+
+-- RC-1: as colunas do curso que foram para o currículo ficam, comentadas (convenção de banco: nunca `drop column`).
+comment on column public.cursos.proposito is
+  '[APOSENTADA — v2.1] Bloco 6 (RC-1): o propósito é do currículo (`curriculos.proposito`). Aqui o valor só chega na '
+  'criação do curso (RPC e ETL), de onde o currículo 1 o copia; ninguém o lê nem o edita depois.';
+comment on column public.cursos.duracao_semanas is
+  '[APOSENTADA — v2.1] Bloco 6 (RC-1): a duração é do currículo (`curriculos.duracao_semanas`). Aqui o valor só chega '
+  'na criação do curso (RPC e ETL), de onde o currículo 1 o copia; ninguém o lê nem o edita depois.';
+comment on column public.cursos.duracao_dias is
+  '[APOSENTADA — v2.1] Bloco 6 (RC-1): a duração é do currículo (`curriculos.duracao_dias`). Aqui o valor só chega na '
+  'criação do curso (RPC e ETL), de onde o currículo 1 o copia; ninguém o lê nem o edita depois.';
+comment on column public.cursos.curriculo_modelo is
+  '[APOSENTADA — v2.1] Bloco 6 (RC-1): o modelo é do currículo (`curriculos.curriculo_modelo`). Aqui o valor só chega '
+  'na criação do curso, de onde o currículo 1 o copia (o ETL ressincroniza o currículo 1 depois da carga das UEs); '
+  'ninguém o lê depois.';
+comment on column public.cursos.curriculo_pdf_em is
+  '[APOSENTADA — v2.1] Bloco 6 (RC-11): o PDF é de cada currículo (`curriculos.pdf_carregado_em`). O arquivo do '
+  'currículo 1 continua no balde `curriculos`, em <id do curso>/curriculo.pdf.';
 
 -- ================================================================ 2. as amarras
 alter table public.disciplinas
@@ -93,6 +129,12 @@ alter table public.limites_curriculo
   alter column curriculo_id set not null,
   add constraint limites_curriculo_da_versao_do_curso_fk
     foreign key (curriculo_id, curso_id) references public.curriculos (id, curso_id) on delete restrict;
+
+alter table public.avaliacoes_planejadas
+  alter column curriculo_id set not null,
+  add constraint avaliacoes_planejadas_do_curriculo_do_curso_fk
+    foreign key (curriculo_id, curso_id) references public.curriculos (id, curso_id) on delete restrict;
+create index avaliacoes_planejadas_curriculo_idx on public.avaliacoes_planejadas (curriculo_id);
 
 alter table public.turmas
   alter column curriculo_id set not null,
@@ -130,10 +172,10 @@ begin
    limit 1;
   if v_conflito is not null then
     raise exception
-      'Já existe uma disciplina ativa com o código "%" nesta versão do currículo (registro %).',
+      'Já existe uma disciplina ativa com o código "%" neste currículo (registro %).',
       new.cod_disciplina, v_conflito
       using errcode = '23505',
-            hint = 'Cada código de disciplina é único dentro de uma versão do currículo do curso. Desative a disciplina existente antes de recriá-la. Origem: RF-DADOS-06 (emendado no Bloco 6), achado (a).';
+            hint = 'Cada código de disciplina é único dentro de um currículo do curso. Desative a disciplina existente antes de recriá-la. Origem: RF-DADOS-06 (emendado no Bloco 6), achado (a).';
   end if;
   return new;
 end;
@@ -212,6 +254,21 @@ as $$
      where d.id = p_disciplina_id
        and t.id = p_turma_id
   )
+$$;
+
+-- RC-1: o modelo (UEs ou competências) é do CURRÍCULO da disciplina (era: do curso). Com o currículo 1 cópia do curso,
+-- o veredito é o mesmo para toda disciplina de hoje.
+create or replace function app.disciplina_sem_ue(p_disciplina_id uuid)
+returns boolean
+language sql
+stable security definer
+set search_path = pg_catalog, public
+as $$
+  select coalesce(d.sem_unidades_ensino, false)
+      or cr.curriculo_modelo = 'competencias'
+    from public.disciplinas d
+    join public.curriculos cr on cr.id = d.curriculo_id
+   where d.id = p_disciplina_id
 $$;
 
 -- `criar_disciplina` passa a aceitar `curriculo_id` no corpo; sem ele, o gatilho de padrão decide (só há uma versão).
@@ -447,7 +504,9 @@ create or replace view public.vw_conformidade_tetos with (security_invoker = tru
      CROSS JOIN ( VALUES ('AEC'::text,'teto.aec_percentual_chr'::text), ('TAD'::text,'teto.tad_percentual_chr'::text), ('TR'::text,'teto.tr_percentual_chr'::text)) c(categoria, chave);
 
 -- ================================================================ 5. os gatilhos
--- ---------------------------------------------------------------- 5.1 o curso novo nasce com a versão 1
+-- ---------------------------------------------------------------- 5.1 o curso novo nasce com o currículo 1
+-- Com o conteúdo da RC-1 que veio na criação do curso (RPC `criar_curso_com_regime` ou ETL) e a vigência pelo ano do
+-- cadastro (D-2): o dado, nunca o relógio (D20).
 create or replace function app.criar_versao_1_do_curso()
 returns trigger
 language plpgsql
@@ -455,7 +514,11 @@ security definer
 set search_path = ''
 as $$
 begin
-  insert into public.curriculos (curso_id, versao, vigente_de) values (new.id, 1, date '2020-01-01');
+  insert into public.curriculos (curso_id, versao, vigente_de, proposito, duracao_semanas, duracao_dias,
+                                 curriculo_modelo, pdf_carregado_em)
+  values (new.id, 1,
+          make_date(extract(year from (new.criado_em at time zone 'America/Sao_Paulo'))::int, 1, 1),
+          new.proposito, new.duracao_semanas, new.duracao_dias, new.curriculo_modelo, new.curriculo_pdf_em);
   return null;
 end;
 $$;
@@ -463,9 +526,10 @@ revoke all on function app.criar_versao_1_do_curso() from public, anon, authenti
 create trigger trg_cursos_versao_1 after insert on public.cursos
   for each row execute function app.criar_versao_1_do_curso();
 
--- ---------------------------------------------------------------- 5.2 a disciplina e o limite sem versão
--- Sem `curriculo_id`, vai para a ÚNICA versão ativa do curso; com mais de uma, quem grava tem de dizer qual — o
--- banco não adivinha (Princípio I). Atende o ETL, as migrations de dado e as amostras de teste, que só conhecem a 1.
+-- ---------------------------------------------------------------- 5.2 a disciplina, o limite e a regra sem currículo
+-- Sem `curriculo_id`, vai para o ÚNICO currículo ativo do curso; com mais de um, quem grava tem de dizer qual — o
+-- banco não adivinha (Princípio I; RC-5). Atende o ETL, as migrations de dado e as amostras de teste, que só conhecem
+-- o 1.
 create or replace function app.versao_unica_do_curso()
 returns trigger
 language plpgsql
@@ -481,7 +545,7 @@ begin
   select array_agg(c.id) into v_versoes
     from public.curriculos c where c.curso_id = new.curso_id and c.status = 'ativo';
   if coalesce(cardinality(v_versoes), 0) <> 1 then
-    raise exception 'Informe a versão do currículo: o curso tem % versões ativas.', coalesce(cardinality(v_versoes), 0)
+    raise exception 'Informe o currículo: o curso tem % currículos ativos.', coalesce(cardinality(v_versoes), 0)
       using errcode = '23502', hint = 'versao_obrigatoria';
   end if;
   new.curriculo_id := v_versoes[1];
@@ -493,8 +557,10 @@ create trigger trg_disciplinas_versao before insert on public.disciplinas
   for each row execute function app.versao_unica_do_curso();
 create trigger trg_limites_curriculo_versao before insert on public.limites_curriculo
   for each row execute function app.versao_unica_do_curso();
+create trigger trg_avaliacoes_planejadas_versao before insert on public.avaliacoes_planejadas
+  for each row execute function app.versao_unica_do_curso();
 
--- ---------------------------------------------------------------- 5.3 a versão da turma
+-- ---------------------------------------------------------------- 5.3 o currículo da turma
 create or replace function app.versao_ativa_do_curso(p_curriculo_id uuid, p_curso_id uuid)
 returns boolean
 language sql
@@ -502,15 +568,17 @@ stable security definer
 set search_path = pg_catalog, public
 as $$
   select exists (select 1 from public.curriculos c
-                  where c.id = p_curriculo_id and c.curso_id = p_curso_id and c.status = 'ativo');
+                  where c.id = p_curriculo_id and c.curso_id = p_curso_id and c.status = 'ativo'
+                    and c.arquivado_em is null);
 $$;
 revoke all on function app.versao_ativa_do_curso(uuid, uuid) from public, anon, authenticated;
 
--- Ao nascer sem versão: a vigente na data de início (sem data, em 1º de janeiro do ano letivo). Ao trocar: só sem
--- lançamento (RF-HOR-05, a mesma régua do regime de horário) e só para versão ATIVA do curso.
+-- RC-4. Ao nascer sem currículo: o vigente na data de início (sem data, em 1º de janeiro do ano letivo). Ao trocar: só
+-- sem lançamento (RF-HOR-05, a mesma régua do regime de horário) e só para currículo ATIVO e NÃO ARQUIVADO do curso
+-- (RC-10: o arquivado não recebe turma).
 -- ⚠️ A TURMA QUE MUDA DE CURSO (FR-026, caminho 4 — só sem lançamento, porque com ele as FKs compostas já recusam) e
---    não diz a versão vai para a vigente do curso NOVO: a versão é sempre de um curso só.
--- ⚠️ A situação da VERSÃO é conferida por `app.versao_ativa_do_curso`, e não aqui: nenhum gatilho de `turmas` decide
+--    não diz o currículo vai para o vigente do curso NOVO: o currículo é sempre de um curso só.
+-- ⚠️ A situação do CURRÍCULO é conferida por `app.versao_ativa_do_curso`, e não aqui: nenhum gatilho de `turmas` decide
 --    pela palavra "status" (guarda de ausência do `101`).
 create or replace function app.guardar_curriculo_da_turma()
 returns trigger
@@ -531,11 +599,11 @@ begin
     return new;
   end if;
   if tg_op = 'UPDATE' and app.turma_tem_lancamento_no_dsa(new.id) then
-    raise exception 'A versão do currículo desta turma não pode mais mudar: ela já tem lançamento no DSA (RF-HOR-05).'
+    raise exception 'O currículo desta turma não pode mais mudar: ela já tem lançamento no DSA (RF-HOR-05).'
       using errcode = '23514', hint = 'curriculo_da_turma_travado';
   end if;
   if not app.versao_ativa_do_curso(new.curriculo_id, new.curso_id) then
-    raise exception 'A versão do currículo escolhida não é uma versão ativa do curso da turma.'
+    raise exception 'O currículo escolhido não é um currículo ativo (e não arquivado) do curso da turma.'
       using errcode = '23514', hint = 'versao_inativa';
   end if;
   return new;
@@ -545,8 +613,8 @@ revoke all on function app.guardar_curriculo_da_turma() from public, anon, authe
 create trigger trg_turmas_curriculo before insert or update of curriculo_id, curso_id on public.turmas
   for each row execute function app.guardar_curriculo_da_turma();
 
--- A TROCA DE VERSÃO de uma turma sem lançamento: as linhas da versão antiga saem (inativas, nunca apagadas) e nascem
--- as da versão nova. O que tem CORRESPONDÊNCIA (a mesma linhagem) leva junto: o período da linha, as atribuições de
+-- A TROCA DE CURRÍCULO de uma turma sem lançamento: as linhas do currículo antigo saem (inativas, nunca apagadas) e
+-- nascem as do novo. O que tem CORRESPONDÊNCIA (a mesma linhagem) leva junto: o período da linha, as atribuições de
 -- instrutor, o rateio por UE e os ajustes de avaliação do currículo da turma. O resto nasce como numa turma nova.
 create or replace function app.trocar_linhas_da_versao()
 returns trigger
@@ -638,9 +706,9 @@ revoke all on function app.trocar_linhas_da_versao() from public, anon, authenti
 create trigger trg_turmas_trocar_linhas_da_versao after update on public.turmas
   for each row execute function app.trocar_linhas_da_versao();
 
--- ---------------------------------------------------------------- 5.4 a coerência com a versão da turma
--- A linha ativa da turma, o lançamento e o ajuste de avaliação só apontam disciplina, UE ou avaliação da VERSÃO da
--- turma (RN-MAT-01 com a versão). Com uma versão por curso, é o que já vale; com duas, é o que impede misturar.
+-- ---------------------------------------------------------------- 5.4 a coerência com o currículo da turma
+-- A linha ativa da turma, o lançamento e o ajuste de avaliação só apontam disciplina, UE ou avaliação do CURRÍCULO da
+-- turma (RN-MAT-01 com o currículo). Com um currículo por curso, é o que já vale; com dois, é o que impede misturar.
 create or replace function app.conferir_versao_da_turma()
 returns trigger
 language plpgsql
@@ -677,7 +745,7 @@ begin
   -- Entre cursos diferentes quem recusa é a FK composta, com o código dela (RN-MAT-01): aqui só a versão.
   if v_do_item is not null and v_da_turma is not null and v_curso_item = v_curso_turma
      and v_do_item <> v_da_turma then
-    raise exception 'A disciplina, a UE ou a avaliação escolhida é de outra versão do currículo, e não da que rege esta turma.'
+    raise exception 'A disciplina, a UE ou a avaliação escolhida é de outro currículo, e não do que rege esta turma.'
       using errcode = '23514', hint = 'disciplina_de_outra_versao';
   end if;
   return new;
@@ -693,82 +761,8 @@ create trigger trg_avaliacoes_versao before insert or update of turma_id, discip
 create trigger trg_avaliacoes_curriculo_turma_versao before insert or update of turma_id, avaliacao_curriculo_id, status
   on public.avaliacoes_curriculo_turma for each row execute function app.conferir_versao_da_turma();
 
--- ---------------------------------------------------------------- 5.5 a TRAVA da versão em uso (RF-HOR-05)
--- Na versão seguida por turma com lançamento, nada que MUDE NÚMERO se escreve pela tela: incluir, inativar ou
--- reativar disciplina, UE, avaliação do currículo ou limite; a CH, o código e o período da disciplina (dele saem as
--- semanas e a média semanal do instrutor) e o modo de atribuição; a CH e o número da UE; o instrumento, o número, os
--- TA e a UE da avaliação do currículo; os TA do limite. Os TEXTOS seguem livres (nome, nome no DSA, tópico, técnica,
--- local, fundamento, ordem).
--- ⚠️ SÓ COM SESSÃO (`auth.uid()` não nulo): migration, ETL e script de manutenção passam — são atos revistos (portão,
---    rito do remoto), e o ETL corrige `modo_atribuicao_padrao` depois da carga (`correcoes-de-origem.md`).
-create or replace function app.guardar_curriculo_em_uso()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_curriculo uuid;
-  v_muda      boolean;
-begin
-  if auth.uid() is null then
-    return new;
-  end if;
-
-  -- ⚠️ No INSERT não há `old`: tudo o que entra numa versão em uso é mudança.
-  v_muda := tg_op = 'INSERT';
-  if tg_table_name = 'disciplinas' then
-    v_curriculo := new.curriculo_id;
-    if tg_op = 'UPDATE' then
-      v_muda := row(old.status, old.carga_horaria_tempos, old.cod_disciplina, old.previsao_inicio, old.previsao_termino,
-                    old.modo_atribuicao_padrao, old.curriculo_id, old.curso_id)
-                is distinct from
-                row(new.status, new.carga_horaria_tempos, new.cod_disciplina, new.previsao_inicio, new.previsao_termino,
-                    new.modo_atribuicao_padrao, new.curriculo_id, new.curso_id);
-    end if;
-  elsif tg_table_name = 'unidades_ensino' then
-    select d.curriculo_id into v_curriculo from public.disciplinas d where d.id = new.disciplina_id;
-    if tg_op = 'UPDATE' then
-      v_muda := row(old.status, old.ch_prevista_tempos, old.numero_ue, old.disciplina_id)
-                is distinct from row(new.status, new.ch_prevista_tempos, new.numero_ue, new.disciplina_id);
-    end if;
-  elsif tg_table_name = 'avaliacoes_curriculo' then
-    select d.curriculo_id into v_curriculo from public.disciplinas d where d.id = new.disciplina_id;
-    if tg_op = 'UPDATE' then
-      v_muda := row(old.status, old.instrumento_id, old.numero, old.ta_aplicacao, old.ta_vista, old.unidade_ensino_id,
-                    old.disciplina_id)
-                is distinct from
-                row(new.status, new.instrumento_id, new.numero, new.ta_aplicacao, new.ta_vista, new.unidade_ensino_id,
-                    new.disciplina_id);
-    end if;
-  else
-    v_curriculo := new.curriculo_id;
-    if tg_op = 'UPDATE' then
-      v_muda := row(old.status, old.tempos, old.categoria, old.curriculo_id)
-                is distinct from row(new.status, new.tempos, new.categoria, new.curriculo_id);
-    end if;
-  end if;
-
-  if v_muda and app.curriculo_em_uso_com_lancamento(v_curriculo) then
-    raise exception 'Esta versão do currículo rege turma que já tem lançamento: carga horária, códigos, períodos, UEs, '
-                    'avaliações e limites dela não mudam mais (RF-HOR-05). Para um currículo diferente, crie uma '
-                    'versão nova.'
-      using errcode = '23514', hint = 'curriculo_em_uso';
-  end if;
-  return new;
-end;
-$$;
-revoke all on function app.guardar_curriculo_em_uso() from public, anon, authenticated;
-create trigger trg_disciplinas_curriculo_em_uso before insert or update on public.disciplinas
-  for each row execute function app.guardar_curriculo_em_uso();
-create trigger trg_unidades_ensino_curriculo_em_uso before insert or update on public.unidades_ensino
-  for each row execute function app.guardar_curriculo_em_uso();
-create trigger trg_avaliacoes_curriculo_em_uso before insert or update on public.avaliacoes_curriculo
-  for each row execute function app.guardar_curriculo_em_uso();
-create trigger trg_limites_curriculo_em_uso before insert or update on public.limites_curriculo
-  for each row execute function app.guardar_curriculo_em_uso();
-
--- A versão seguida por alguma turma não se inativa (a turma ficaria sem currículo vigente para ela).
+-- O currículo seguido por alguma turma não se inativa (a turma ficaria sem currículo). Inativar é a exclusão lógica do
+-- currículo criado por engano; o currículo passado sai do seletor pelo ARQUIVAMENTO (RC-10, PR 2), não por aqui.
 create or replace function app.guardar_situacao_da_versao()
 returns trigger
 language plpgsql
@@ -778,7 +772,7 @@ as $$
 begin
   if new.status = 'inativo' and old.status = 'ativo'
      and exists (select 1 from public.turmas t where t.curriculo_id = new.id) then
-    raise exception 'Esta versão do currículo é seguida por turma; ela não se inativa.'
+    raise exception 'Este currículo é seguido por turma; ele não se inativa.'
       using errcode = '23514', hint = 'versao_em_uso';
   end if;
   return new;
@@ -787,3 +781,35 @@ $$;
 revoke all on function app.guardar_situacao_da_versao() from public, anon, authenticated;
 create trigger trg_curriculos_situacao before update of status on public.curriculos
   for each row execute function app.guardar_situacao_da_versao();
+
+-- ================================================================ 6. a conferência, dentro da própria migration
+-- Se qualquer uma falhar, a migration inteira se desfaz: nenhum banco fica pela metade.
+do $$
+declare
+  v_falhas text := '';
+begin
+  if exists (select 1 from public.cursos c
+              where (select count(*) from public.curriculos cr where cr.curso_id = c.id) <> 1) then
+    v_falhas := v_falhas || ' · curso sem exatamente um currículo';
+  end if;
+  if exists (select 1 from public.cursos c join public.curriculos cr on cr.curso_id = c.id
+              where row(cr.proposito, cr.duracao_semanas, cr.duracao_dias, cr.curriculo_modelo, cr.pdf_carregado_em)
+                    is distinct from
+                    row(c.proposito, c.duracao_semanas, c.duracao_dias, c.curriculo_modelo, c.curriculo_pdf_em)) then
+    v_falhas := v_falhas || ' · currículo 1 diferente do curso na RC-1';
+  end if;
+  if exists (select 1 from public.turmas t join public.curriculos cr on cr.id = t.curriculo_id
+              where cr.curso_id <> t.curso_id) then
+    v_falhas := v_falhas || ' · turma em currículo de outro curso';
+  end if;
+  if exists (select 1 from public.turma_disciplina td
+               join public.turmas t on t.id = td.turma_id
+               join public.disciplinas d on d.id = td.disciplina_id
+              where td.status = 'ativo' and d.curriculo_id <> t.curriculo_id) then
+    v_falhas := v_falhas || ' · linha ativa de turma fora do currículo dela';
+  end if;
+  if v_falhas <> '' then
+    raise exception 'A ligação ao currículo 1 não fechou:%', v_falhas;
+  end if;
+end;
+$$;

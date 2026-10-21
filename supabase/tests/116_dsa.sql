@@ -53,8 +53,9 @@ insert into public.cursos (id, codigo, nome_curso, classificacao, modalidade, du
   ('d1160000-0000-0000-0000-000000000002', 'T116-COMP', 'Curso por competencias', 'regular', 'presencial', 30);
 
 -- E o segundo e POR COMPETENCIAS — um dos dois eixos da isencao.
-update public.cursos set curriculo_modelo = 'competencias'
- where id = 'd1160000-0000-0000-0000-000000000002';
+-- ⚠️ Spec 021 (Bloco 6, RC-1): o modelo e do CURRICULO, e a isencao le o do curriculo da disciplina.
+update public.curriculos set curriculo_modelo = 'competencias'
+ where curso_id = 'd1160000-0000-0000-0000-000000000002';
 
 insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade,
                            data_inicio, data_termino) values

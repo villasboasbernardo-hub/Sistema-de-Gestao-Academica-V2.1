@@ -94,6 +94,16 @@ with medidas(objeto, linha) as (
     from public.turmas
   union all
   select 'cursos', row(id, codigo, duracao_semanas, duracao_dias, status)::text from public.cursos
+  union all
+  -- RC-1 (revisão de 21/10/2026): as colunas do curso que vão para o currículo, e as regras de avaliação. Antes e
+  -- depois elas continuam no curso (aposentadas, nunca apagadas): o que prova que o currículo 1 as recebeu IGUAIS é a
+  -- conferência da própria migration, e o que prova que a tela as lê iguais é o retrato das páginas.
+  select 'cursos (RC-1)', row(id, proposito, duracao_semanas, duracao_dias, curriculo_modelo, curriculo_pdf_em)::text
+    from public.cursos
+  union all
+  select 'avaliacoes_planejadas', row(id, codigo, curso_id, nome_disciplina, descricao_instrumentos, formula_mf,
+         carater, observacoes, status)::text
+    from public.avaliacoes_planejadas
 )
 select objeto || '|' || count(*) || '|' || md5(string_agg(linha, E'\n' order by linha))
   from medidas

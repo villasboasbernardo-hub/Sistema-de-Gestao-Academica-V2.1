@@ -118,7 +118,7 @@ select set_eq(
            -- 20/10/2026) antes de entrar aqui: a contagem de acessos, so conta e instante.
            ('acessos_de_conta'),
            -- Spec 021 (Bloco 6), 21/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entrou no BRIEF §2.1 (emenda de
-           -- 21/10/2026) antes de entrar aqui: as versoes do curriculo de um curso.
+           -- 21/10/2026) antes de entrar aqui: os curriculos de um curso (RC-1 a RC-12).
            ('curriculos')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );

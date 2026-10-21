@@ -7,7 +7,7 @@
 -- ⚠️ pgTAP de dado nunca pula: na base limpa, o valor que prova a abstenção da D-4 (0 itens com a procedência).
 -- =================================================================================
 begin;
-select plan(24);
+select plan(23);
 
 insert into auth.users (id, email, aud, role) values
   ('a0000000-0000-0000-0000-000000000127', 't127-admin@ciaara.teste', 'authenticated', 'authenticated');
@@ -132,17 +132,9 @@ select matches((select min(codigo) from public.vistas_de_avaliacao where avaliac
 
 -- ── o arbitrado ──
 -- Com sessão de Admin, o gatilho deixa; o caso que discrimina (Operador) está em tests/invariantes/rls.
--- ⚠️ SPEC 021 (Bloco 6), 21/10/2026 — REGRA DOS VALORES ESPERADOS: o comportamento MUDOU, por decisão do desenho
---    (avaliações do currículo são da versão, e a versão em uso por turma com lançamento não muda número, RF-HOR-05):
---    com a prova `T127-AVA` viva, a versão está em uso e o arbitrado do CURRÍCULO é recusado; o ajuste por TURMA
---    (`avaliacoes_curriculo_turma`) segue livre. Cancelada a prova, a versão sai da trava e o Admin arbitra.
-select throws_ok(
-  $$update public.avaliacoes_curriculo set ta_vista = 2, origem_ta_vista = 'arbitrado' where id = '27271111-0000-0000-0000-000000000001'$$,
-  '23514', null, 'Spec 021 · com lançamento na turma, a versão trava: o arbitrado do currículo é recusado');
-update public.avaliacoes set status = 'cancelada' where id = '27272222-0000-0000-0000-000000000001';
 select lives_ok(
   $$update public.avaliacoes_curriculo set ta_vista = 2, origem_ta_vista = 'arbitrado' where id = '27271111-0000-0000-0000-000000000001'$$,
-  'FR-031.7 · o Admin arbitra o tempo (versão sem lançamento)');
+  'FR-031.7 · o Admin arbitra o tempo');
 select set_config('request.jwt.claim.sub', '', true);
 select lives_ok(
   $$update public.avaliacoes_curriculo set ta_vista = 1, origem_ta_vista = 'curriculo' where id = '27271111-0000-0000-0000-000000000001'$$,

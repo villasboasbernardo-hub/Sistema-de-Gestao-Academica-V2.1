@@ -999,6 +999,7 @@ export type Database = {
           codigo: string
           criado_em: string
           criado_por: string | null
+          curriculo_id: string
           curso_id: string
           descricao_instrumentos: string | null
           editado_em: string | null
@@ -1016,6 +1017,7 @@ export type Database = {
           codigo: string
           criado_em?: string
           criado_por?: string | null
+          curriculo_id: string
           curso_id: string
           descricao_instrumentos?: string | null
           editado_em?: string | null
@@ -1033,6 +1035,7 @@ export type Database = {
           codigo?: string
           criado_em?: string
           criado_por?: string | null
+          curriculo_id?: string
           curso_id?: string
           descricao_instrumentos?: string | null
           editado_em?: string | null
@@ -1059,6 +1062,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_cursos_regime_vigente"
             referencedColumns: ["curso_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_planejadas_do_curriculo_do_curso_fk"
+            columns: ["curriculo_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "curriculos"
+            referencedColumns: ["id", "curso_id"]
           },
         ]
       }
@@ -1216,52 +1226,67 @@ export type Database = {
       }
       curriculos: {
         Row: {
+          arquivado_em: string | null
+          arquivado_por: string | null
           codigo: string
           copiada_de: string | null
           criado_em: string
           criado_por: string | null
+          curriculo_modelo: string
           curso_id: string
           descricao: string | null
-          duracao_dias: number | null
+          duracao_dias: number
           duracao_semanas: number | null
           editado_em: string | null
           editado_por: string | null
           id: string
           origem_migracao_v1: string | null
+          pdf_carregado_em: string | null
+          proposito: string | null
           status: Database["public"]["Enums"]["status_registro"]
           versao: number
           vigente_de: string
         }
         Insert: {
+          arquivado_em?: string | null
+          arquivado_por?: string | null
           codigo?: string
           copiada_de?: string | null
           criado_em?: string
           criado_por?: string | null
+          curriculo_modelo?: string
           curso_id: string
           descricao?: string | null
-          duracao_dias?: number | null
+          duracao_dias: number
           duracao_semanas?: number | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
           origem_migracao_v1?: string | null
+          pdf_carregado_em?: string | null
+          proposito?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
           versao: number
           vigente_de: string
         }
         Update: {
+          arquivado_em?: string | null
+          arquivado_por?: string | null
           codigo?: string
           copiada_de?: string | null
           criado_em?: string
           criado_por?: string | null
+          curriculo_modelo?: string
           curso_id?: string
           descricao?: string | null
-          duracao_dias?: number | null
+          duracao_dias?: number
           duracao_semanas?: number | null
           editado_em?: string | null
           editado_por?: string | null
           id?: string
           origem_migracao_v1?: string | null
+          pdf_carregado_em?: string | null
+          proposito?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
           versao?: number
           vigente_de?: string

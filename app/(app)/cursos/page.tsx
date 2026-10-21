@@ -23,7 +23,9 @@ import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { buttonVariants } from "@/components/ui/button";
 import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { curriculoVigenteEm, type CurriculoParaVigencia } from "@/lib/dominio/curriculos";
 import { indicadoresDoCatalogo } from "@/lib/dominio/indicadores-do-catalogo";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -125,16 +127,27 @@ export default async function Cursos({
   }
 
   const linhas = data ?? [];
-  const cursos: CartaoDeCurso[] = linhas.map((c) => ({
-    codigo: c.codigo as string,
-    nome: c.nome_curso as string,
-    classificacao: c.classificacao as string,
-    modalidade: c.modalidade,
-    proposito: c.proposito,
-    duracaoDias: c.duracao_dias === null ? null : Number(c.duracao_dias),
-    duracaoSemanas: c.duracao_semanas === null ? null : Number(c.duracao_semanas),
-    ativo: c.status === "ativo",
-  }));
+  /* Spec 021 (Bloco 6, RC-1): o propósito e a duração vêm do currículo VIGENTE hoje de cada curso. */
+  const hoje = hojeNaCiaara();
+  const cursos: CartaoDeCurso[] = linhas.map((c) => {
+    const curriculo = curriculoVigenteEm(
+      (c.curriculos ?? []) as unknown as CurriculoDoCatalogo[],
+      hoje,
+    );
+    return {
+      codigo: c.codigo as string,
+      nome: c.nome_curso as string,
+      classificacao: c.classificacao as string,
+      modalidade: c.modalidade,
+      proposito: curriculo?.proposito ?? null,
+      duracaoDias: curriculo === null ? null : Number(curriculo.duracao_dias),
+      duracaoSemanas:
+        curriculo?.duracao_semanas === null || curriculo?.duracao_semanas === undefined
+          ? null
+          : Number(curriculo.duracao_semanas),
+      ativo: c.status === "ativo",
+    };
+  });
 
   const agregados = indicadoresDoCatalogo(
     cursos.map((c) => ({ classificacao: c.classificacao, duracaoDias: c.duracaoDias })),
@@ -175,3 +188,10 @@ export default async function Cursos({
     </section>
   );
 }
+
+/** O currículo embutido na linha do catálogo (spec 021, RC-1). */
+type CurriculoDoCatalogo = CurriculoParaVigencia & {
+  readonly proposito: string | null;
+  readonly duracao_dias: number;
+  readonly duracao_semanas: number | null;
+};
