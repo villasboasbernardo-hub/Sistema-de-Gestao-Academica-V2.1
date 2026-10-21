@@ -336,11 +336,12 @@ garantia do motor. Cite-a quando precisar do exemplo.
 
 > ### ✅ Emenda de 21/10/2026 — uma tabela nova, do Bloco 6 do plano de correções (spec 021)
 >
-> - **`curriculos`** — as **versões do currículo** de um curso (*"registrar um currículo NOVO de um curso (…) SEM
->   alterar o currículo em vigor"*, pedido de Bernardo Villas Boas de 16/10/2026). A versão é dona das disciplinas (e,
->   por elas, das UEs e das avaliações do currículo) e dos limites de AEC/TAD/TR; toda turma segue uma
->   (`turmas.curriculo_id`). O currículo de hoje é a **versão 1** de cada curso, e toda turma existente fica ligada a
->   ela. A versão em uso por turma com lançamento não muda número (`RF-HOR-05`). Inativar, nunca apagar.
+> - **`curriculos`** — os **currículos** de um curso (*"registrar um currículo NOVO de um curso (…) SEM alterar o
+>   currículo em vigor"*, pedido de Bernardo Villas Boas de 16/10/2026; regras RC-1 a RC-12, 21/10/2026). O curso é a
+>   identidade; o currículo é dono do que se ensina — propósito, duração, modelo, disciplinas (e por elas UEs e
+>   avaliações do currículo), regras de avaliação, limites de AEC/TAD/TR e o PDF. Toda turma segue um
+>   (`turmas.curriculo_id`). O currículo de hoje é o **currículo 1** de cada curso, e toda turma existente fica ligada a
+>   ele. Vigente, futuro e passado são derivados da data; só o arquivamento é guardado. Nunca apagar.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 

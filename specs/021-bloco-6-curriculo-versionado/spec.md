@@ -2,11 +2,12 @@
 
 **Feature Branch**: `feat/BLOCO-6-curriculo-versionado`
 **Created**: 2026-10-21
-**Status**: Portão (regra 9.4) — desenho medido, **sem** aplicação no remoto
+**Status**: PR 1 revisado pelas regras RC-1 a RC-12 (21/10/2026) · PR 2 a seguir
 **Input**: Bloco 6 do plano de correções, pelo `/corrigir` de Bernardo Villas Boas de 20/10/2026 (pedido de 16/10/2026):
 *"poder registrar um currículo NOVO de um curso — disciplinas, UEs, CH, avaliações do currículo, duração em semanas, tudo o
 que for preciso — SEM alterar o currículo em vigor (…) e as turmas em andamento continuam regidas pelo currículo atual,
-sem nenhum acompanhamento estragado."*
+sem nenhum acompanhamento estragado."* E as **regras de negócio do currículo, RC-1 a RC-12**, decisões nominais de
+Bernardo Villas Boas de 21/10/2026 (`docs/correcoes/regras-do-curriculo-bloco-6.md`, texto integral versionado no ramo).
 
 ## 1. O problema, em uma frase
 
@@ -18,109 +19,190 @@ curso, inclusive das que estão em andamento; não há como preparar o currícul
 **Novidade**, autorizada nominalmente por Bernardo Villas Boas (resposta 7 da triagem de 16/10/2026, e o `/corrigir` de
 20/10/2026). Épico próprio, por último no plano de correções.
 
-## 3. O que é banco e o que é tela
+## 3. As regras de negócio do currículo — RC-1 a RC-12 *(decisões nominais de Bernardo Villas Boas, 21/10/2026)*
 
-- **Banco (PR 1, este portão):** a tabela das versões; o currículo de hoje vira a versão 1 de cada curso, com toda turma
-  ligada a ela; tudo o que lia o currículo **pelo curso** passa a ler **pela versão da turma**; a troca de versão da
-  turma e a trava da versão em uso. **Altera o que existe** — portão da regra 9.4.
-- **Código e telas (PR 2):** a cópia da versão; os leitores do código pela versão da turma (DSA, planilha, abas do curso,
-  ficha, sincronização); o seletor de versão e a criação da versão nova na tela.
+O texto que vale é o de `docs/correcoes/regras-do-curriculo-bloco-6.md`; aqui, a referência curta.
+
+| # | A regra |
+|---|---|
+| **RC-1** | O **curso** é a identidade permanente (sigla, nome, classificação); tudo o que descreve **o que se ensina** é do **currículo**: propósito, duração, disciplinas, UEs, avaliações e regras de avaliação, limites de AEC/TAD/TR, habilitações por disciplina e o PDF. A coluna que vai para o currículo **não é apagada** do curso: o currículo 1 recebe o valor, os leitores leem do currículo, a coluna fica `[APOSENTADA — v2.1]` |
+| **RC-2** | No máximo **um vigente** por curso; pode haver **um futuro** e os **passados** |
+| **RC-3** | Vigência por data: vigente = maior início ≤ hoje (São Paulo); futuro = início depois de hoje; passado = os demais. **Derivado**; só "arquivado" é guardado |
+| **RC-4** | A turma **escolhe o currículo ao ser criada** (vigente ou futuro; padrão: o vigente na data de início); tudo da turma segue o currículo dela; troca só sem lançamento |
+| **RC-5** | Cadastrar ou editar o conteúdo é sempre **num currículo escolhido** |
+| **RC-6** | Corrigir currículo seguido por turma com lançamento (mudar valor, acrescentar ou inativar item): **só o trio**, com **justificativa obrigatória** e **trilha** (quem, quando, o quê, valor anterior, justificativa); **completar o que estava vazio é livre**; os demais perfis não editam currículo em uso. **Substitui a D-4/D-6** |
+| **RC-7** | "Novo currículo" nasce como **cópia do vigente** e se edita livremente enquanto nenhuma turma com lançamento o segue |
+| **RC-8** | A página do curso tem **seletor de currículo** (vigente por padrão; vigente, futuro, passados) e "Novo currículo"; as abas Sobre o Curso, Grade, Disciplinas, Avaliações e Atividades mostram **só** o selecionado (URL dona do estado) |
+| **RC-9** | Turmas do curso: **todas**, inclusive arquivadas, cada uma com o currículo que segue — "Currículo 1 (vigência 2024)"; o mesmo rótulo na ficha |
+| **RC-10** | O trio **arquiva** o currículo passado quando todas as turmas que o seguem estão arquivadas; sai do seletor, **nunca é apagado**, consulta-se por "mostrar currículos arquivados"; coluna própria, não `status` |
+| **RC-11** | Cada currículo tem **o seu PDF**; o do Bloco 5 passa a ser do currículo 1 |
+| **RC-12** | Na tela, **"Currículo N"** com o ano de início da vigência; "versão" só no código |
+
+### 3.1 O quadro: cada RC × o que já estava feito × o que muda
+
+"Feito" é o PR 1 como estava no portão de 21/10/2026 (commits `3468d4c`, `810ee6a`, `ee10119`), antes da revisão.
+
+| RC | Já estava feito | Banco | Código | Tela |
+|---|---|---|---|---|
+| RC-1 | o currículo era dono de disciplinas, UEs, avaliações do currículo, limites e (pela disciplina) habilitações | **PR 1:** `curriculos` ganha propósito, duração em semanas e em dias, modelo e data do PDF; o currículo 1 recebe os valores do curso; `avaliacoes_planejadas` (fórmula da MF, caráter) ganha currículo; as cinco colunas do curso ficam `[APOSENTADA — v2.1]`; `app.disciplina_sem_ue` lê o modelo do currículo; o curso novo nasce com o currículo 1 carregando os valores | **PR 1:** todo leitor e escritor dessas colunas passa ao currículo — o vigente hoje nas telas do curso (catálogo, página, edição, download do PDF), o da turma no DSA, papel, planilha, ficha e Início; a sincronização da VIRADA-1 e a conferência do ETL leem o modelo do currículo; a ETAPA 6c do ETL ressincroniza o currículo 1; guarda contra leitura da coluna aposentada | nada muda (PR 1) |
+| RC-2 | índice único (curso, início) entre os ativos | — | **PR 2:** a cópia recusa um segundo futuro e exige começar depois do mais novo (D-27) | PR 2 |
+| RC-3 | vigência por data; currículo 1 desde 01/01/2020 | **PR 1:** o currículo 1 começa no ano em que o sistema conhece o curso (D-2 revista); `arquivado_em`/`arquivado_por`, a única situação guardada | **PR 1:** `lib/dominio/curriculos.ts` (vigente, futuro, passado; o mesmo critério de `app.curriculo_vigente`) | PR 2 |
+| RC-4 | a turma nascia no vigente e trocava só sem lançamento | **PR 1:** o currículo arquivado não recebe turma nem é o padrão | — | **PR 2:** o seletor em *Nova turma* |
+| RC-5 | `criar_disciplina` aceita o currículo; sem ele, com dois, recusa | — | **PR 2:** todo formulário de conteúdo passa o currículo selecionado | PR 2 |
+| RC-6 | a trava estrita (D-4/D-6) na M2 — derrubava três funções de hoje no CI | **PR 1: a trava SAI.** **PR 2:** a correção pelo trio (recurso próprio na matriz), com justificativa, e a trilha `correcoes_de_curriculo`, só de acréscimo | PR 2 | PR 2 |
+| RC-7 | o rascunho da cópia (`contracts/copia-da-versao-rascunho.sql`) | **PR 2:** a cópia, levando também o conteúdo da RC-1 e as regras de avaliação | PR 2 | PR 2 |
+| RC-8 | — | — | PR 2 (`?curriculo=` no contrato da URL) | PR 2 |
+| RC-9 | — | — | PR 2 (`rotuloDoCurriculo`, já no PR 1) | PR 2 |
+| RC-10 | `status` inativo só sem turma | **PR 1:** a coluna; **PR 2:** a função de arquivar, com porteiro do trio | PR 2 | PR 2 |
+| RC-11 | o PDF no curso (Bloco 5) | **PR 1:** `pdf_carregado_em` no currículo, copiado; **PR 2:** o caminho por currículo e as policies do balde | **PR 1:** o download e o registro pelo currículo vigente | PR 2 |
+| RC-12 | mensagens e descrição com "versão" | **PR 1:** mensagens e a descrição do currículo 1 sem "versão" | **PR 1:** traduções das recusas sem "versão" | — |
+
+### 3.2 RC-1, coluna a coluna de `cursos`
+
+| Coluna | Fica no curso ou vai para o currículo |
+|---|---|
+| `codigo`, `nome_curso`, `nome_normalizado`, `classificacao` | **curso** — a identidade (RC-1) |
+| `limite_turmas_ano` | **curso** — decorre da classificação, é regra de oferta |
+| `prioridade_alocacao` | **curso** — prioridade entre cursos na alocação, não descreve o ensino |
+| `status`, auditoria, `origem_migracao_v1` | **curso** — convenção |
+| `proposito` | **currículo** (RC-1, nominal) |
+| `duracao_semanas`, `duracao_dias` | **currículo** (RC-1, "duração") |
+| `curriculo_modelo` (UEs ou competências) | **currículo** — *recomendação adotada (D-20)*: descreve como o currículo oficial organiza o ensino; um currículo novo pode trocar de modelo |
+| `curriculo_pdf_em` | **currículo** (RC-11) |
+| `modalidade` | **curso** — *recomendação (D-20)*: é como o curso é oferecido, e a turma já tem a sua (`turmas.modalidade`, D8 do Épico 5.5). Alternativa: currículo |
+| `ofertavel_estrangeiros`, `estrangeiros_observacao` | **curso** — *recomendação (D-20)*: política de oferta, não conteúdo. Alternativa: currículo |
+| `custo_total`, `custo_composicao` | **curso** — *recomendação (D-20)*: informativo, e a regra 2 ainda pende (`PEND-020-3`); se ficar, depende da oferta. Alternativa: currículo |
+| regimes de horário (`regimes_de_horario`, `curso_regime_historico`) | **curso** — *recomendação (D-20)*: são o relógio, não o conteúdo; a turma escolhe o dela (Bloco 3). Alternativa: currículo |
+| *(tabela)* `avaliacoes_planejadas` — fórmula da MF, caráter | **currículo** (RC-1, "regras de avaliação"): ganha `curriculo_id` |
+
+## 4. O que é banco e o que é tela
+
+- **PR 1 (banco + leitores da RC-1):** a tabela dos currículos; o currículo de hoje vira o currículo 1 de cada curso,
+  com toda turma ligada a ele e o conteúdo da RC-1 copiado; tudo o que lia o currículo **pelo curso** no banco passa a ler
+  **pelo currículo da turma**; os leitores e escritores do código das colunas aposentadas passam ao currículo. **Altera o
+  que existe** (regra 9.4), e **nada muda em tela** — provado na cópia do remoto. **Merge autorizado** por Bernardo se a
+  prova passar.
+- **PR 2 (código e telas):** a cópia (RC-7), o seletor (RC-8), o currículo em *Nova turma* e o rótulo (RC-4, RC-9), a
+  correção pelo trio (RC-6), o arquivamento (RC-10), o PDF por currículo (RC-11) e os leitores do `contracts/codigo.md`
+  (inclusive a VIRADA-1).
 
 ## Clarifications
 
-### Session 2026-10-21 *(todas adotadas por padrão — Bernardo confere no fim, no portão)*
+### Session 2026-10-21 *(adotadas por padrão — Bernardo confere no fim; revistas pelas RC no mesmo dia)*
 
-- D-1 · Q: Como a versão guarda o currículo? → A: a versão é **dona** das disciplinas (e, por elas, das UEs e das
-  avaliações do currículo) e dos limites: a versão nova é uma **cópia** das linhas, com a mesma **linhagem**. Alternativa:
-  uma camada de "diferenças" sobre as disciplinas de hoje — rejeitada, porque cada leitor de CH teria de juntar as duas.
-- D-2 · Q: Qual a vigência da versão 1? → A: **desde sempre** (01/01/2020, o primeiro ano que `turmas_ano_valido` aceita).
-  A turma escolhe pela **data de início** (sem data, 1º de janeiro do ano letivo). Alternativa: vigência por ano letivo.
-- D-3 · Q: A versão da turma pode ser "nula = a vigente", como o regime de horário? → A: **Não**: a versão é **fixa** na
-  turma (`NOT NULL`). Nula, uma versão nova com vigência no passado trocaria em silêncio a versão de turma em andamento.
-- D-4 · Q: O que a trava da versão em uso pega? → A: tudo o que **muda número**: incluir, inativar ou reativar disciplina,
-  UE, avaliação do currículo ou limite; a CH, o código, o período (dele saem as semanas e a média semanal do instrutor) e o
-  modo de atribuição da disciplina; a CH e o número da UE; instrumento, número, TA e UE da avaliação do currículo; os TA
-  do limite. **Os textos ficam livres** (nome, nome no DSA, tópico, técnica, local, fundamento, ordem). ⚠️ **Consequência
-  medida:** **10 dos 24 cursos** entram com a versão 1 travada, e corrigir um número errado na versão em uso deixa de ser
-  possível pela tela. Alternativas: (b) o Admin corrige com justificativa registrada — exceção nominal, não desenhada;
-  (c) travar também os textos.
-- D-5 · Q: A trava vale sem sessão? → A: **Não**: migration, ETL e script de manutenção passam — são atos revistos
-  (portão, rito do remoto), e o ETL corrige `modo_atribuicao_padrao` depois da carga. Alternativa: travar também sem
-  sessão (o ETL abortaria).
-- D-6 · Q: O tempo **arbitrado** da avaliação do currículo também trava? → A: **Sim** (é número do currículo); o **ajuste
-  por turma** (`avaliacoes_curriculo_turma`) segue livre e é o instrumento das turmas em andamento. Alternativa: liberar o
-  arbitrado que preenche um valor que o currículo não definia (nulo → valor).
-  ⚠️ **Medido no CI do ramo (`antes-depois.md` §8): a trava estrita derruba TRÊS funções de hoje** — nomear a UE de um
-  item, definir o tempo "não definido" e acrescentar/inativar avaliação do currículo — nos 10 cursos com turma em
-  andamento. **Alternativa concreta para o portão:** **completar o indefinido fica livre** (TA nulo → valor, UE nula →
-  UE: o passado mostrava *"não definido"*, e defini-lo não reinterpreta número que existia); **mudar o que já está
-  definido** e **acrescentar ou inativar item** seguem travados. Com ela, os dois primeiros percursos voltam; o terceiro
-  continua recusado na versão em uso (a amostra dele passaria a usar curso sem turma com lançamento).
-- D-7 · Q: Trocar a versão de uma turma sem lançamento perde o planejamento? → A: **Não**: as linhas da versão velha ficam
-  inativas e as da nova levam, **por linhagem**, o período da linha, as atribuições de instrutor, o rateio por UE e os
-  ajustes de avaliação; o que não tem correspondência nasce como em turma nova. Alternativa: recusar a troca quando há
-  planejamento.
-- D-8 · Q: E a turma que muda de curso (`FR-026`, caminho 4)? → A: vai para a versão vigente do curso novo, e as linhas
-  são trocadas como em D-7. Alternativa: recusar a mudança de curso.
-- D-9 · Q: Disciplina ou limite gravado sem versão num curso com duas versões ativas? → A: **recusado** (*"informe a
-  versão"*): o banco não adivinha (Princípio I). Com uma versão só, vai para ela (ETL, migrations, amostras).
-- D-10 · Q: O código da disciplina continua único no curso? → A: passa a ser único **na versão** — emenda ao `RF-DADOS-06`
-  (documento 02); a `RN-MAT-02` (aposentada) não se toca; a `RN-MAT-01` fica **preservada** e ganha a versão (lançar só
-  disciplina da versão da turma). Alternativa: único no curso — impediria a cópia.
-- D-11 · Q: A duração é do curso ou da versão? → A: **da versão**, nulável: nula = a do curso. A versão 1 nasce nula, sem
-  segunda fonte de verdade. Alternativa: só no curso — o exemplo do pedido (*"3 semanas a menos"*) não caberia.
-- D-12 · Q: A cópia leva as habilitações de instrutor? → A: **Sim**: quem é habilitado na disciplina da versão copiada fica
-  habilitado na cópia (novos vínculos `VIN-`). Alternativa: habilitar de novo na versão nova.
-- D-13 · Q: Um PR ou dois? → A: **dois.** O **PR 1** é o banco (este portão): é o único que altera o que existe, precisa do
-  remoto antes do merge, e nele nenhum número muda. O **PR 2** traz a cópia, os leitores do código pela versão e as
-  telas. ⚠️ **A cópia fica no PR 2 de propósito**: antes de os leitores saberem distinguir duas versões, uma versão 2
-  criada à mão misturaria as duas no DSA, na planilha e na aba Disciplinas.
-- D-14 · Q: Duas versões podem começar no mesmo dia? → A: **Não** (índice único entre as ativas): a vigência tem de
-  decidir uma só.
-- D-15 · Q: Quem cria e quem edita a versão? → A: cria quem cria disciplina (`disciplinas.criar`, com alcance e curso em
-  oferta), pela cópia; edita o cabeçalho (vigência, descrição, duração, situação) quem edita disciplina. Alternativa:
-  `cursos.editar`.
-- D-16 · Q: Onde fica na tela (PR 2)? → A: **Nova versão do currículo** na aba *Disciplinas* (copia a vigente, pede a
-  vigência e a descrição); um **seletor de versão** no alto das abas *Grade, Disciplinas, Avaliações e Atividades*
-  (padrão: a vigente hoje); na ficha da turma, *"Segue o currículo — versão N"* com **Trocar** enquanto não há
-  lançamento. A turma nova oferece a versão padrão (a vigente na data de início) e deixa escolher outra.
-- D-17 · Q: E a VIRADA-1? → A: a sincronização passa a casar disciplina e UE **dentro da versão da turma** (PR 2). Os
-  preparos SQL antigos (`into strict` por curso e código) ficam como estão: são históricos, e com uma versão funcionam.
-- D-18 · Q: A vigência de uma versão em uso pode mudar? → A: **Sim**: só afeta a escolha das turmas novas. Alternativa:
-  travar.
-- D-19 · Q: Uma versão pode ser inativada? → A: só se **nenhuma turma** a segue (nunca apagada — regra 4).
+- D-1 · Q: Como o currículo guarda o conteúdo? → A: o currículo é **dono** das disciplinas (e, por elas, das UEs e das
+  avaliações do currículo), dos limites e — pela RC-1 — das regras de avaliação e do propósito, duração, modelo e PDF; o
+  currículo novo é uma **cópia** das linhas, com a mesma **linhagem**. Alternativa: camada de "diferenças" — rejeitada.
+- D-2 · Q: Qual a vigência do currículo 1? → A *(revista pelas RC)*: **1º de janeiro do ano mais antigo em que o sistema
+  conhece o curso** — o da turma mais antiga ou o do cadastro do curso, o menor. Medido na cópia
+  `remoto-20261021-074644.sql`: **2026 nos 24 cursos** (todas as turmas começam em 2026; todo curso foi cadastrado em
+  2026). O curso novo começa no ano do cadastro. *Antes:* 01/01/2020 em todos, que na tela sairia "vigência 2020" — um ano
+  inventado. O trio corrige a vigência pela RC-6. Alternativa: manter 2020.
+- D-3 · Q: O currículo da turma pode ser "nulo = o vigente", como o regime de horário? → A: **Não**: fixo (`NOT NULL`).
+- ~~D-4 · O que a trava pega~~ → **SUBSTITUÍDA pela RC-6** (21/10/2026). A trava estrita **saiu do PR 1**.
+- D-5 · Q: A regra da RC-6 vale sem sessão? → A: **Não**: migration, ETL e script de manutenção passam (atos revistos; o
+  ETL corrige `modo_atribuicao_padrao` e ressincroniza o currículo 1 depois da carga). Vale para o PR 2.
+- ~~D-6 · O arbitrado trava?~~ → **SUBSTITUÍDA pela RC-6**: arbitrar o que era vazio é completar (livre); mudar o
+  arbitrado é correção (trio, justificativa).
+- D-7 · Q: Trocar o currículo de uma turma sem lançamento perde o planejamento? → A: **Não**: as linhas do currículo velho
+  ficam inativas e as do novo levam, por linhagem, período, atribuições, rateio e ajustes.
+- D-8 · Q: E a turma que muda de curso (`FR-026`, caminho 4)? → A: vai para o vigente do curso novo.
+- D-9 · Q: Disciplina, limite ou regra de avaliação gravados sem currículo num curso com dois ativos? → A: **recusado**
+  (*"Informe o currículo"*): o banco não adivinha (Princípio I, RC-5).
+- D-10 · Q: O código da disciplina continua único no curso? → A: único **no currículo** — emenda ao `RF-DADOS-06`
+  (documento 02); `RN-MAT-02` (aposentada) intocada; `RN-MAT-01` preservada e reforçada.
+- ~~D-11 · A duração é do curso ou da versão (nula = a do curso)?~~ → **SUBSTITUÍDA pela RC-1**: é do currículo, sem
+  recurso ao curso; o currículo 1 recebe a do curso.
+- D-12 · Q: A cópia leva as habilitações de instrutor? → A: **Sim** (novos vínculos `VIN-`).
+- D-13 · Q: Um PR ou dois? → A *(revista)*: **dois.** O **PR 1** é o banco **e** os leitores das colunas que a RC-1 tirou do
+  curso — sem eles, a primeira edição na tela divergiria do que outra tela lê; nada muda em tela, provado. A **trava sai do
+  PR 1**: a RC-6 precisa da tela da justificativa e vai inteira no PR 2. O **PR 2** traz as telas, a cópia, a correção, o
+  arquivamento e os leitores por currículo.
+- D-14 · Q: Dois currículos podem começar no mesmo dia? → A: **Não** (índice único entre os ativos).
+- D-15 · Q: Quem cria e quem edita o currículo? → A *(revista pela RC-1)*: **`cursos.editar`** (o trio), com alcance e curso
+  em oferta — o **mesmo** direito que editava propósito e duração quando eram do curso. *Antes:* `disciplinas.editar`, que
+  daria ao Operador o propósito e a duração, que ele não editava — o caso que discrimina em
+  `tests/invariantes/rls/curriculos.test.ts`. O conteúdo (disciplinas, UEs, avaliações) segue com as permissões de hoje.
+- ~~D-16 · Onde fica na tela~~ → **SUBSTITUÍDA pela RC-8, RC-4, RC-9 e RC-12** (seletor de currículo no alto da página do
+  curso, *Novo currículo*, o currículo em *Nova turma*, o rótulo "Currículo N (vigência AAAA)").
+- D-17 · Q: E a VIRADA-1? → A: a sincronização casa disciplina e UE **dentro do currículo da turma** (PR 2); o modelo já é
+  lido do currículo da turma no PR 1.
+- ~~D-18 · A vigência de uma versão em uso pode mudar livremente?~~ → **SUBSTITUÍDA pela RC-6**: no currículo em uso, mudar
+  a vigência é correção (trio, justificativa).
+- D-19 · Q: Um currículo pode ser inativado? → A: só se **nenhuma turma** o segue — é a exclusão lógica do currículo criado
+  por engano; o passado sai do seletor pelo **arquivamento** (RC-10), não por aqui. Sem tela no PR 2.
+- D-20 · Q: As colunas ambíguas de `cursos` (RC-1)? → A: ficam no **curso** `modalidade`, estrangeiros, custo e os regimes
+  de horário; vai para o **currículo** `curriculo_modelo` (§3.2).
+- D-21 · Q: O currículo 1 recebe o conteúdo da RC-1 como? → A: por cópia, na M2, com a conferência dentro da própria
+  migration (24 de 24 iguais, ou ela se desfaz); o curso novo, pelo gatilho que cria o currículo 1.
+- D-22 · Q: O ETL reaplica a carga das UEs, que marca o modelo **no curso**. → A: a **ETAPA 6c** ressincroniza o currículo 1
+  com o curso, só onde há um currículo, idempotente — o "dois caminhos" do `simultaneo` (spec 010) e da conversão da
+  capacitação (spec 020).
+- D-23 · Q: O currículo arquivado pode reger turma nova? → A: **Não**: não é o padrão (`app.curriculo_vigente` o ignora) e
+  a turma não entra nele (`versao_inativa`).
+- D-24 · Q: "Completar o que estava vazio" (RC-6) é o quê? → A: o valor que era **nulo** e passa a ter valor; qualquer
+  outra mudança no currículo em uso — valor que muda, valor que se apaga, item que entra, item que se inativa ou reativa
+  — é correção. Vale para toda coluna do conteúdo, inclusive texto (nome no DSA, propósito): texto também sai no papel.
+- D-25 · Q: As habilitações de instrutor travam no currículo em uso? → A: **Não**: habilitar um instrutor novo numa
+  disciplina em uso é cadastro do instrutor, não reinterpreta o passado. Alternativa: tratá-las como conteúdo (RC-6).
+- D-26 · Q: Como a justificativa chega ao banco (RC-6)? → A: por função (`public.corrigir_curriculo`, PR 2) que a recebe,
+  marca a transação e faz a mudança; o gatilho recusa a correção sem ela e grava a trilha **antes**. Alternativa: cabeçalho
+  HTTP lido pelo gatilho — rejeitada (mágica, e acento não cabe em cabeçalho).
+- D-27 · Q: O "um futuro" da RC-2 é regra? → A: **Sim**, na cópia: o currículo novo começa **depois do mais novo** que existe,
+  e não se cria outro quando o mais novo ainda é futuro (*"edite o futuro"*). A data de hoje vem de quem chama
+  (`hojeNaCiaara()`, D20).
+- D-28 · Q: Desarquivar? → A: **Sim**, pelo trio, como a turma (Bloco 2) — a RC-10 não o pede, e o arquivamento sem volta
+  seria a única ação do sistema que não se desfaz.
+- D-29 · Q: O PDF por currículo mora onde? → A: o do currículo 1 continua em `<curso>/curriculo.pdf` (não se move objeto
+  do Storage por SQL); o do currículo N ≥ 2, em `<curso>/curriculo-<N>.pdf`. Substituir o PDF de currículo em uso é
+  correção (RC-6). Exige mudar as policies do balde (PR 2).
 
-## 4. Requisitos
+## 5. Requisitos
 
-### FR-001 — Versões (PR 1)
-- **FR-001.1**: Cada curso MUST ter uma ou mais versões de currículo, numeradas, com vigência (D-1, D-2).
-- **FR-001.2**: O currículo de hoje MUST ser a versão 1 de cada curso, e toda disciplina, limite e turma existente MUST
-  ficar ligada a ela.
-- **FR-001.3**: Nenhum número de tela MUST mudar com a ligação (SC-001).
-- **FR-001.4**: Curso novo MUST nascer com a versão 1.
+### FR-001 — Currículos (PR 1)
+- **FR-001.1**: Cada curso MUST ter um ou mais currículos, numerados, com vigência (D-1, D-2; RC-2, RC-3).
+- **FR-001.2**: O currículo de hoje MUST ser o currículo 1 de cada curso, e toda disciplina, limite, regra de avaliação e
+  turma existente MUST ficar ligada a ele.
+- **FR-001.3**: O currículo 1 MUST receber o propósito, a duração, o modelo e a data do PDF do curso (RC-1, RC-11), e as
+  cinco colunas do curso MUST ficar, comentadas `[APOSENTADA — v2.1]`.
+- **FR-001.4**: Nenhum número nem texto de tela MUST mudar com a ligação (SC-001).
+- **FR-001.5**: Curso novo MUST nascer com o currículo 1, com o conteúdo da RC-1 que veio na criação.
+- **FR-001.6**: Situação (vigente, futuro, passado) MUST ser derivada da data; só o arquivamento é guardado (RC-3).
 
-### FR-002 — A turma e a versão (PR 1)
-- **FR-002.1**: A turma MUST nascer na versão vigente na data de início (D-2), salvo escolha.
-- **FR-002.2**: A versão da turma MUST mudar só sem lançamento (`RF-HOR-05`), levando o planejamento por linhagem (D-7).
-- **FR-002.3**: Linha, lançamento e ajuste da turma MUST apontar só disciplina, UE ou avaliação da versão dela (D-10).
+### FR-002 — A turma e o currículo (PR 1)
+- **FR-002.1**: A turma MUST nascer no currículo vigente na data de início, salvo escolha (RC-4).
+- **FR-002.2**: O currículo da turma MUST mudar só sem lançamento (`RF-HOR-05`), levando o planejamento por linhagem (D-7).
+- **FR-002.3**: Linha, lançamento e ajuste da turma MUST apontar só disciplina, UE ou avaliação do currículo dela (D-10).
+- **FR-002.4**: O currículo arquivado MUST NOT receber turma nem ser o padrão (D-23).
 
-### FR-003 — A trava (PR 1)
-- **FR-003.1**: Na versão seguida por turma com lançamento, a tela MUST NOT mudar número do currículo (D-4); MAY mudar texto.
-- **FR-003.2**: Escrita sem sessão MUST passar (D-5).
+### FR-003 — Os leitores da RC-1 (PR 1)
+- **FR-003.1**: Toda tela que mostra propósito, duração, modelo ou PDF MUST lê-los do currículo (o vigente hoje nas telas
+  do curso, o da turma nas da turma), e toda gravação MUST ir ao currículo.
+- **FR-003.2**: Editar o currículo MUST exigir `cursos.editar`, alcance e curso em oferta (D-15).
 
-### FR-004 — A cópia e as telas (PR 2)
-- **FR-004.1**: A versão nova MUST nascer como cópia de uma existente (D-1, D-12), e a cópia MUST ser editável até uma
-  turma com lançamento a seguir.
-- **FR-004.2**: As abas Grade, Disciplinas, Avaliações e Atividades MUST mostrar a versão escolhida no seletor (D-16).
-- **FR-004.3**: A ficha da turma MUST dizer que versão ela segue e permitir trocar enquanto não houver lançamento.
-- **FR-004.4**: O DSA, o papel e a planilha MUST usar as disciplinas, UEs e a duração da versão da turma (D-11).
-- **FR-004.5**: A sincronização (VIRADA-1) MUST casar dentro da versão da turma (D-17).
+### FR-004 — As telas, a cópia, a correção e o arquivamento (PR 2)
+- **FR-004.1**: "Novo currículo" MUST nascer como cópia do vigente (RC-7, D-12, D-27).
+- **FR-004.2**: A página do curso MUST ter o seletor de currículo, e as abas Sobre o Curso, Grade, Disciplinas,
+  Avaliações e Atividades MUST mostrar só o selecionado (RC-8).
+- **FR-004.3**: *Nova turma* MUST oferecer o currículo (vigente ou futuro; padrão: o vigente na data de início) (RC-4).
+- **FR-004.4**: As turmas do curso MUST aparecer todas, inclusive arquivadas, com "Currículo N (vigência AAAA)"; a ficha da
+  turma MUST mostrar o mesmo rótulo (RC-9, RC-12).
+- **FR-004.5**: No currículo em uso, a correção MUST ser só do trio, com justificativa, gravada na trilha; completar o vazio
+  MUST ser livre (RC-6, D-24, D-26).
+- **FR-004.6**: O trio MUST poder arquivar o currículo passado com todas as turmas arquivadas, e desarquivar (RC-10, D-28).
+- **FR-004.7**: Cada currículo MUST ter o seu PDF (RC-11, D-29).
+- **FR-004.8**: O DSA, o papel, a planilha, as abas e a sincronização (VIRADA-1) MUST usar o currículo da turma (D-17).
 
-## 5. Critérios de sucesso
+## 6. Critérios de sucesso
 
-- **SC-001** (PR 1): Na cópia do remoto, antes × depois da migration: impressão digital do que o currículo alimenta
-  **idêntica** e retrato das telas (planilha, `.xlsx` e DSA de toda semana com lançamento de toda turma) **idêntico**.
-- **SC-002** (PR 1): Com duas versões do mesmo curso, cada turma lê a SUA — provado por pgTAP com o caso que discrimina.
+- **SC-001** (PR 1): Numa cópia **nova** do remoto, antes (o código da `main`) × depois (o código do ramo, com as
+  migrations): a impressão digital do que o currículo alimenta **idêntica**; o retrato das telas (planilha, `.xlsx` e DSA
+  de toda semana com lançamento das 29 turmas) **idêntico**; e o retrato das páginas (Sobre o Curso e as seis abas de cada
+  curso, a edição do curso, a ficha e as avaliações de cada turma, o Início, o catálogo e a lista de turmas)
+  **idêntico**.
+- **SC-002** (PR 1): Com dois currículos do mesmo curso, cada turma lê o SEU — pgTAP com o caso que discrimina.
 - **SC-003** (PR 1): A reversão volta o esquema à impressão digital da `main`, com dado.
-- **SC-004** (PR 2): Criar a versão 2 da CAHO com 3 semanas e uma CH a menos, planejar a `CAHO 2027` por ela, e a
+- **SC-004** (PR 2): Criar o currículo 2 da CAHO com 3 semanas e uma CH a menos, planejar a `CAHO 2027` por ele, e a
   `CAHO 2026` continuar com os mesmos números em toda tela.
+- **SC-005** (PR 2): No currículo em uso, a correção sem justificativa é recusada; com ela, o trio corrige e a trilha
+  guarda quem, quando, o quê, o valor anterior e a justificativa; o Operador é recusado; completar o vazio passa.

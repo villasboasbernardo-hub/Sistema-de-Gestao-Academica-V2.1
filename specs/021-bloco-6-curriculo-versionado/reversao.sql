@@ -1,7 +1,7 @@
 -- =================================================================================
 -- Reversão das migrations do Bloco 6 (spec 021) — `20261021030050` (M2) e depois `20261021030049` (M1).
 --
--- Só com UMA versão por curso (nenhuma versão 2 criada): com versão 2, reverter apagaria currículo cadastrado — e a
+-- Só com UM currículo por curso (nenhum currículo 2 criado): com o 2, reverter apagaria currículo cadastrado — e a
 -- decisão passa a ser de Bernardo (regra 4). As definições anteriores são as EXATAS das migrations de origem:
 --   public.vw_carga_horaria_turma: 20261019114024_ta_fora_do_dsa_e_execucao.sql
 --   public.vw_disciplinas_execucao: 20261019114024_ta_fora_do_dsa_e_execucao.sql
@@ -11,16 +11,26 @@
 --   app.nascer_disciplina_nas_turmas: 20261019130941_trava_da_turma_arquivada.sql
 --   app.disciplina_e_da_turma: 20261008164612_dsa_ue_opcional_aec_com_disciplina_e_etapa_presencial.sql
 --   app.criar_disciplina: 20260925135051_periodo_e_rpc_disciplina.sql
+--   app.disciplina_sem_ue: 20261005181116_dsa_lancamento_sem_ue_e_conflito.sql
 -- Provada numa transação desfeita sobre a cópia do remoto: a impressão digital do esquema volta à da `main`.
 -- =================================================================================
 begin;
 
+-- ---------------------------------------------------------------- o dado volta para onde a aplicação antiga o lê
+-- RC-1: o que foi editado no currículo 1 depois da M2 volta para as colunas do curso (sem os gatilhos de negócio: é
+-- estrutural, como o preenchimento da M2). Sem edição, não muda linha nenhuma.
+alter table public.cursos disable trigger user;
+update public.cursos c
+   set proposito = cr.proposito, duracao_semanas = cr.duracao_semanas, duracao_dias = cr.duracao_dias,
+       curriculo_modelo = cr.curriculo_modelo, curriculo_pdf_em = cr.pdf_carregado_em
+  from public.curriculos cr
+ where cr.curso_id = c.id and cr.versao = 1
+   and row(cr.proposito, cr.duracao_semanas, cr.duracao_dias, cr.curriculo_modelo, cr.pdf_carregado_em)
+       is distinct from row(c.proposito, c.duracao_semanas, c.duracao_dias, c.curriculo_modelo, c.curriculo_pdf_em);
+alter table public.cursos enable trigger user;
+
 -- ---------------------------------------------------------------- M2
 drop trigger trg_curriculos_situacao on public.curriculos;
-drop trigger trg_disciplinas_curriculo_em_uso on public.disciplinas;
-drop trigger trg_unidades_ensino_curriculo_em_uso on public.unidades_ensino;
-drop trigger trg_avaliacoes_curriculo_em_uso on public.avaliacoes_curriculo;
-drop trigger trg_limites_curriculo_em_uso on public.limites_curriculo;
 drop trigger trg_turma_disciplina_versao on public.turma_disciplina;
 drop trigger trg_registros_aula_versao on public.registros_aula;
 drop trigger trg_avaliacoes_versao on public.avaliacoes;
@@ -29,12 +39,13 @@ drop trigger trg_turmas_trocar_linhas_da_versao on public.turmas;
 drop trigger trg_turmas_curriculo on public.turmas;
 drop trigger trg_disciplinas_versao on public.disciplinas;
 drop trigger trg_limites_curriculo_versao on public.limites_curriculo;
+drop trigger trg_avaliacoes_planejadas_versao on public.avaliacoes_planejadas;
 drop trigger trg_cursos_versao_1 on public.cursos;
 drop function app.guardar_situacao_da_versao();
-drop function app.guardar_curriculo_em_uso();
 drop function app.conferir_versao_da_turma();
 drop function app.trocar_linhas_da_versao();
 drop function app.guardar_curriculo_da_turma();
+drop function app.versao_ativa_do_curso(uuid, uuid);
 drop function app.versao_unica_do_curso();
 drop function app.criar_versao_1_do_curso();
 
@@ -381,11 +392,43 @@ begin
 end;
 $$;
 
+create or replace function app.disciplina_sem_ue(p_disciplina_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $$
+  select coalesce(d.sem_unidades_ensino, false)
+      or c.curriculo_modelo = 'competencias'
+    from public.disciplinas d
+    join public.cursos c on c.id = d.curso_id
+   where d.id = p_disciplina_id
+$$;
+
 drop index public.limite_unico_na_versao;
 create unique index limite_unico on public.limites_curriculo (curso_id, categoria) where status = 'ativo';
 drop index public.uq_disciplinas_curriculo_cod_ativo;
 create unique index uq_disciplinas_curso_cod_ativo on public.disciplinas (curso_id, cod_disciplina) where status = 'ativo';
 
+-- os comentários das colunas do curso, como estavam
+comment on column public.cursos.proposito is null;
+comment on column public.cursos.duracao_semanas is null;
+comment on column public.cursos.duracao_dias is null;
+comment on column public.cursos.curriculo_modelo is
+  'Como o curriculo oficial da DEnsM descreve este curso: `unidades_de_ensino` (a secao '
+  'LISTA DE UNIDADES DE ENSINO por disciplina) ou `competencias` (COMPETENCIA TECNICA -> '
+  'INDICADORES, que NAO declara UE). E DADO, nao deducao (D-B3, Bernardo Villas Boas, '
+  '24/09/2026): com `competencias`, a tela nao renderiza secao de UE e NAO avisa que '
+  'faltam — aviso enganoso e o que a decisao proibe. Medido na conferencia de 24-25/09/2026: '
+  '`C-Espc-FR` e `C-Espc-HN` sao `competencias` (busca por "UNIDADE" em 127 e 146 paginas: '
+  'so unidades de medida e a SUE de anexos de palestra). ⚠️ Quem marca e a carga do PR 2.';
+comment on column public.cursos.curriculo_pdf_em is
+  'Spec 020 (C-8): quando o PDF do curriculo foi registrado. O arquivo mora no balde `curriculos`, em '
+  '<id do curso>/curriculo.pdf. NULO = nenhum curriculo carregado.';
+
+alter table public.avaliacoes_planejadas drop constraint avaliacoes_planejadas_do_curriculo_do_curso_fk;
+drop index public.avaliacoes_planejadas_curriculo_idx;
 alter table public.turmas drop constraint turmas_curriculo_do_proprio_curso_fk;
 drop index public.turmas_curriculo_idx;
 alter table public.limites_curriculo drop constraint limites_curriculo_da_versao_do_curso_fk;
@@ -400,6 +443,7 @@ drop function public.curriculo_padrao_da_turma(uuid, date, integer);
 drop function app.curriculo_em_uso_com_lancamento(uuid);
 drop function app.curriculo_vigente(uuid, date);
 alter table public.turmas drop column curriculo_id;
+alter table public.avaliacoes_planejadas drop column curriculo_id;
 alter table public.limites_curriculo drop column curriculo_id;
 alter table public.avaliacoes_curriculo drop column linhagem_id;
 alter table public.unidades_ensino drop column linhagem_id;

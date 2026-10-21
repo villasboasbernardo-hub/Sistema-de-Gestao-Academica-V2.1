@@ -1,109 +1,83 @@
-# Antes × depois — currículo versionado (spec 021, PR 1), medido em 21/10/2026
+# Antes × depois — currículo versionado (spec 021, PR 1)
 
-**Base:** a cópia do remoto `remoto-20261020-235051.sql` (modo completo do `dado_do_remoto`, só leitura no remoto),
-restaurada no local com as **87** migrations da `main`; depois, só as duas novas (`supabase migration up --local`).
-**Hoje fixo:** 20/10/2026 nas funções "até uma data" e nas leituras do DSA e da planilha.
+## Rodada 2 — o PR 1 revisto pelas RC-1 a RC-12, medido em 21/10/2026
 
-## 1. A impressão digital do que o currículo alimenta — IDÊNTICA
+**Base:** uma cópia **nova** do remoto, `remoto-20261021-074644.sql` (modo completo do `dado_do_remoto`, só leitura no
+remoto), restaurada no local com as **87** migrations da `main`.
+**Antes:** o código da `main` `fa372c2` (uma cópia de trabalho separada, fora do OneDrive).
+**Depois:** as duas migrations revistas (`supabase migration up --local`) e o código do ramo.
+**Hoje fixo** em 20/10/2026 nas funções "até uma data" e no retrato das telas; as páginas, no relógio do dia (as duas
+rodadas no mesmo dia).
 
-Instrumento: `scripts/provas/impressao_digital_do_curriculo.sql` — 24 objetos, `objeto|linhas|md5` das linhas ordenadas,
-com as colunas que a tela lê listadas uma a uma (uma coluna nova não mexe no md5).
+### 1. A impressão digital do que o currículo alimenta — IDÊNTICA (26 de 26)
 
-| Objeto | Linhas | Antes = depois |
-|---|---|---|
-| `vw_carga_horaria_turma` | 29 | `93e84ff8…` |
-| `vw_conformidade_tetos` | 87 | `877f04ab…` |
-| `vw_disciplinas_execucao` | 228 | `fbd8768f…` |
-| `vw_unidades_ensino_execucao` | 587 | `7ebda3af…` |
-| `vw_instrutor_carga_prevista` | 112 | `1e2e3a01…` |
-| `vw_instrutor_carga_anual` | 181 | `02dad46d…` |
-| `vw_chd_por_fato` | 2.512 | `38f312ba…` |
-| `vw_ocupacao_ta` | 3.310 | `301470aa…` |
-| `vw_dias_parados_turma` | 23 | `dc9b1481…` |
-| `vw_avaliacoes_situacao` | 392 | `6987c6c8…` |
-| `vw_instrutor_disciplina_rotulada` | 863 | `5673d076…` |
-| `chd_da_turma_ate(2026-10-20)` | 10 | `05ae8e2f…` |
-| `execucao_por_disciplina_ate(2026-10-20)` | 100 | `cf3a0cae…` |
-| `turma_disciplina` / `…_instrutor` / `…_unidade` | 231 / 115 / 4 | iguais |
-| `disciplinas` / `unidades_ensino` / `avaliacoes_curriculo` / `…_turma` / `limites_curriculo` | 175 / 587 / 281 / 19 / 30 | iguais |
-| `instrutor_disciplina` / `turmas` / `cursos` | 864 / 29 / 24 | iguais |
+Instrumento: `scripts/provas/impressao_digital_do_curriculo.sql`, agora com dois objetos a mais: as cinco colunas da
+RC-1 em `cursos` e as regras de avaliação (`avaliacoes_planejadas`, 118 linhas). `diff` vazio, e de novo vazio depois de
+reverter e reaplicar as migrations.
 
-`diff` vazio nos 24, **duas vezes**: na primeira aplicação e na reaplicação depois da reversão.
+### 2. O retrato das telas — IDÊNTICO
 
-## 2. O retrato das telas — IDÊNTICO
+`tests/invariantes/retrato-das-telas.test.ts`: para **cada uma das 29 turmas**, o insumo da planilha, o `.xlsx` inteiro, os
+extras da impressão e o DSA de **cada uma das 212 semanas** com lançamento. Antes (código da `main`) × depois (código do
+ramo): **0 diferenças**.
 
-Instrumento: `tests/invariantes/retrato-das-telas.test.ts` (só roda com `RETRATO_SAIDA`). Para **cada uma das 29
-turmas**: o insumo da planilha de contingência, o **arquivo `.xlsx` inteiro**, os extras da impressão do DSA e o
-**documento do DSA de cada semana com lançamento** — **212 semanas**. Determinístico (duas rodadas do antes: 0
-diferenças). Antes × depois: **0 diferenças**, nas duas aplicações. Andamento, saldo e CH prevista dos instrutores
-saem das views da §1.
+### 3. O retrato das páginas — IDÊNTICO (novo nesta rodada)
 
-## 3. A ligação
+`tests/e2e/retrato-das-paginas.spec.ts` (Playwright, servidor de produção, sessão de Admin): **229 páginas** — o Início, o
+catálogo, a lista de turmas, as **seis abas** de cada um dos 24 cursos (Sobre o Curso, Grade, Disciplinas, Avaliações,
+Atividades, Horários), a **edição** de cada curso (com o valor de cada campo) e a ficha e as avaliações de cada uma das 29
+turmas. Antes × depois: **0 diferenças**.
+⚠️ **O instrumento enxergava o que mudou de lugar**: o rótulo "Propósito" está nas 24 abas Sobre; as 24 telas de edição
+trazem 72 campos de propósito e duração (50 preenchidos) — e todos saíram iguais.
 
-- **24 versões**, uma por curso, todas a versão 1, vigentes desde 01/01/2020.
-- **175** disciplinas, **30** limites e **29** turmas na versão 1; linhagem = o próprio id em disciplinas, UEs e avaliações.
-- **0** linhas ativas de turma fora da versão da turma.
-- **Ninguém foi carimbado como editor**: 0 `editado_em` novos em disciplinas, UEs, avaliações, limites e turmas, e 0
-  linhas novas na trilha do arbitrado.
-- **10 versões travadas** (seguidas por turma com lançamento) — as dos 10 cursos da triagem.
-- As três views com `security_invoker=true`; **0** policies de `DELETE`.
-- Esquema: **2.237 → 2.324 objetos** (`1ba390aa…` → `c3e0ef59…`).
+### 4. A ligação
 
-## 4. O caso que discrimina (DoD 8), na cópia, numa transação desfeita
+- **24 currículos 1**, um por curso, todos com vigência **01/01/2026** (D-2: o ano mais antigo que o sistema conhece de cada
+  curso — todas as turmas começam em 2026 e todo curso foi cadastrado em 2026).
+- O conteúdo da RC-1 igual ao do curso em **24 de 24** (e a M2 se desfaz se não for); **2** currículos por competências;
+  **0** com PDF (nenhum foi carregado no remoto).
+- **175** disciplinas, **30** limites, **118** regras de avaliação e **29** turmas no currículo 1.
+- **10** currículos seguidos por turma com lançamento (os da RC-6, no PR 2).
+- Ninguém carimbado como editor: **0** `editado_em` novos nas seis tabelas, **0** linhas novas na trilha do arbitrado.
+- `security_invoker` nas três views; **0** policies de `DELETE`.
+- Esquema: **2.237 → 2.331 objetos** (`1ba390aa…` → `5d794f43…`).
 
-| # | Caso | Resultado |
-|---|---|---|
-| 1 | Versão 2 da CAHO, copiada da 1, vigente em 2027 | 21 disciplinas, 1.668 TA |
-| 2 | CH de uma disciplina da v2 (sem turma com lançamento) | aceita |
-| 3 | A mesma mudança na v1 (seguida pela CAHO 2026) | **recusada** — `curriculo_em_uso` |
-| 4 | Texto na v1 (nome no DSA) | aceito |
-| 5 | CAHO 2027 (sem lançamento) troca para a v2 | 21 linhas novas da v2; 21 velhas inativas |
-| 5b | ...com um período manual e uma atribuição plantados antes | a linha da v2 leva os dois; o rateio adiado confere |
-| 6 | CH curricular | CAHO 2026 **1.668** (igual); CAHO 2027 **1.653** (a da v2) |
-| 7 | CAHO 2026 (com lançamento) tenta trocar | **recusada** — `curriculo_da_turma_travado` |
-| 8 | Linha de disciplina da v1 na CAHO 2027 (agora v2) | **recusada** — `disciplina_de_outra_versao` |
-| 9 | CAHO 2028 inserida sem versão | nasce na **v2** (vigência) com 21 linhas |
-| 10 | Disciplina sem versão num curso com duas | **recusada** — `versao_obrigatoria` |
+### 5. A reversão — PROVADA COM DADO
 
-E o pgTAP `144` (31 asserções) codifica os mesmos casos numa amostra própria; **defeito deliberado**: com a junção
-**pelo curso** de volta na `vw_carga_horaria_turma`, ele reprova com a CH curricular **190** (as duas versões somadas) em
-vez de **100**.
+`reversao.sql` aplicado na cópia com os 24 currículos ligados: o esquema volta a **2.237 objetos, `1ba390aa…`** (o da `main`
+e do remoto), a impressão do currículo à do antes, e os comentários das colunas do curso aos originais.
+⚠️ **A primeira execução reprovou, e o roteiro foi corrigido**: faltava `drop function app.versao_ativa_do_curso` (sobrava
+um objeto). Corrigido no gerador, as migrations reaplicadas e o roteiro rodado de novo, inteiro.
+E o passo que devolve ao curso o que foi editado no currículo 1: com o propósito e a duração da CAHO mudados no currículo
+depois da M2, a reversão os pôs de volta em `cursos` (o lugar que a aplicação antiga lê).
 
-## 5. A reversão — PROVADA COM DADO
+### 6. O caso que discrimina
 
-`reversao.sql` aplicado na cópia com as 24 versões ligadas: o esquema volta a **2.237 objetos, `1ba390aa…`** — o da
-`main` e do remoto — e a impressão do currículo à do antes. Reaplicadas as duas migrations, as medições das §1 a §4 se
-repetem.
+- **pgTAP `144`** (36): com dois currículos, cada turma lê o seu (CH 100 × 90, execução, limite 10 × 7); o modelo por
+  competências do currículo 2 isenta a UE só nas disciplinas dele, com o curso dizendo "unidades"; o currículo arquivado
+  não recebe turma nem é o padrão; o PR 1 não trava nada.
+- **Permissão com sessão real** (`tests/invariantes/rls/curriculos.test.ts`, 8): o **Operador**, que edita disciplina e não
+  edita curso, **não** edita o currículo; o Ajudante edita; curso inativo não recebe escrita; sem INSERT, DELETE nem
+  arquivamento por coluna. **Defeito deliberado**: com a policy por `disciplinas.editar` (o desenho de antes das RC), o caso
+  do Operador reprovou. Duas rodadas seguidas verdes (regra 9.1).
+- **A guarda das colunas aposentadas** (`tests/unidade/colunas-aposentadas-do-curso.test.ts`): com `proposito` de volta na
+  lista do catálogo, ela reprovou nomeando o arquivo.
+- **ETL**: a ETAPA 6c ressincronizou **2** currículos 1 (os por competências, que a carga das UEs marca no curso) — sem
+  ela, os dois divergiriam do curso.
 
-## 6. O que a CÓPIA leva (o rascunho da função do PR 2), na cópia `remoto-20261021-010344.sql`
+### 7. As suítes, na base limpa
 
-| | Disciplinas | CH | UEs | Avaliações do currículo | Limites | Habilitações |
-|---|---|---|---|---|---|---|
-| CAHO v1 | 21 | 1.668 | 132 | 54 | 2 | 59 |
-| CAHO v2 (cópia) | 21 | 1.668 | 132 | 54 | 2 | 59 |
+pgTAP **975** em 64 arquivos · unidade **2.625** em 191 · invariantes e RLS **425** em 24 (+ o retrato, pulado). O ETL
+refeito sobre as migrations: **APROVADO**, 24 currículos, 0 diferenças na RC-1, 118 regras e 30 limites no currículo 1.
+Sobre a base do ETL reprovam `112` (3), `115` (3) e `129` (10) — **e reprovam igual na `main`** (medido nesta rodada, com a
+mesma planilha, na cópia de trabalho da `main`): é anterior ao Bloco 6 (`PEND-021-1`).
 
-Linhagem: **0** disciplinas, UEs ou avaliações da v2 sem par na v1. **0** turmas e **0** linhas de turma passam sozinhas
-para a v2. ⚠️ O **porteiro** da cópia não foi exercitado aqui (a restauração desfaz os vínculos de credencial de outro
-ambiente, e não havia Admin com sessão): a prova dele, com sessão real, é do PR 2.
+---
 
-## 7. As suítes, na base limpa
+## Rodada 1 — o desenho do portão, medido em 21/10/2026 (antes das RC)
 
-pgTAP **971** em 64 arquivos (com o `144`) · unidade **2.614** em 189 · invariantes e RLS **417** em 23 (+ o retrato,
-pulado sem `RETRATO_SAIDA`) — todas verdes. O ETL refeito sobre as migrations: **APROVADO**, 24 versões, 30 limites na
-versão 1 (a D-1 reaplicada com o índice provisório, que sai). Sobre a base do ETL, reprovam `112`, `115` e `129`: as
-asserções medem os efeitos das migrations de dado D-5/D-6 da spec 014 (que a ETAPA 6b **não** reaplica — a lista
-declarada só tem D-1, D-2 e D-3) e a contagem de Admins; nenhuma lê o que esta spec mudou. ⚠️ **Não conferi** se as
-três reprovam também na `main` sobre a base do ETL.
-## 8. A ponta a ponta — o CI do ramo (run `39542414518`, sobre `810ee6a`)
-
-**539 passados, 3 reprovados nas três tentativas, 6 pulados.** Os três reprovam **pela trava** (a frase dela aparece na
-tela), e os três são funções de **hoje** para curso em andamento — as avaliações do currículo:
-
-| Caso | O que a tela tenta | O que a trava faz |
-|---|---|---|
-| `avaliacoes-da-turma.spec.ts:303` | **nomear a UE** de um item que o currículo deixou na disciplina (*"decisão CIAARA-11"*, `FR-031.3`) | recusa (muda `unidade_ensino_id`) |
-| `avaliacoes-nas-telas.spec.ts:76` | o Admin **define o tempo** de uma avaliação *"não definida"* (US9) | recusa (muda `ta_aplicacao`, de nulo para valor) |
-| `avaliacoes-nas-telas.spec.ts:194` | **acrescentar e inativar** avaliação do currículo na aba Disciplinas (`FR-038`) | recusa (inclui e inativa item) |
-
-É a consequência da D-4/D-6 medida na suíte: com a trava estrita, a curadoria das avaliações do currículo (que segue em
-andamento — `PEND-014-*`) para nos **10 cursos** com turma em andamento. A decisão é do portão (lote, D-4 e D-6).
+Base: `remoto-20261020-235051.sql`. A impressão digital (24 objetos) e o retrato das telas (212 semanas das 29 turmas)
+idênticos; a reversão provada; o caso que discrimina (10 casos) e a cópia da CAHO (21 disciplinas, 1.668 TA, 132 UEs, 54
+avaliações do currículo, 2 limites, 59 habilitações) na cópia `remoto-20261021-010344.sql`. O CI do ramo (run
+`39542414518`, sobre `810ee6a`) deu 539 passados e **3 reprovados pela trava estrita** — nomear a UE de um item, definir
+o tempo "não definido" e acrescentar/inativar avaliação do currículo —, que é o que levou à RC-6 e tirou a trava do PR 1.

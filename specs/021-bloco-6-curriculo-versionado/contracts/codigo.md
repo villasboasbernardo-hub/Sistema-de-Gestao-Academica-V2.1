@@ -1,4 +1,25 @@
-# O código que lê o currículo pelo curso — o trabalho do PR 2 (spec 021)
+# O código que lê o currículo pelo curso (spec 021)
+
+## Revisão pelas RC (21/10/2026): o que o PR 1 já faz
+
+A RC-1 tirou do curso o **propósito**, a **duração** (semanas e dias), o **modelo** (UEs ou competências) e o **PDF**, e
+mandou os leitores lerem do currículo. Como o PR 1 copia esses valores para o currículo 1, **os leitores e escritores
+deles mudam no PR 1** — senão a primeira edição na tela iria para um lado e as outras telas leriam o outro:
+
+| Onde | Agora lê / grava |
+|---|---|
+| `cursos/consulta.ts` + `cursos/page.tsx` (catálogo, indicadores) | o currículo **vigente hoje** de cada curso (embutido) |
+| `cursos/[curso]/consulta.ts` + `page.tsx` (Sobre o Curso, avisos, disciplinas da aba Sobre, **regras de avaliação**, limites) | o currículo vigente hoje |
+| `cursos/[curso]/editar/page.tsx` + `lib/acoes/curso.ts` (`editarCurso`, `registrarCurriculo`) | o currículo vigente hoje (o cadastro segue no curso) |
+| `cursos/[curso]/curriculo/route.ts` (download do PDF) | o currículo vigente hoje |
+| `inicio/page.tsx` (semana do curso das manchetes) | o currículo **da turma** |
+| `turmas/[turma]/page.tsx` + `consulta.ts` (ficha) | o currículo da turma |
+| `turmas/[turma]/dsa/leitura.ts` (e por ele o papel e a planilha) e `dsa/page.tsx` | o currículo da turma (modelo e duração) |
+| `scripts/carga_dsa/banco.py` (VIRADA-1), `scripts/etl/conferir_unidades_ensino.py` | o modelo do currículo da turma / da disciplina |
+
+Guardado por `tests/unidade/colunas-aposentadas-do-curso.test.ts` (código sem comentário, com controle positivo). O que
+segue abaixo é o mapa de 21/10/2026 — **o trabalho do PR 2** —, com a duração (§ *Um valor só por curso*) já resolvida.
+
 
 Varredura de 21/10/2026 sobre a `main` `fa372c2` (`app/`, `lib/`, `scripts/`; sem comentário, sem `lib/tipos/` e
 `tests/`). **Com uma versão por curso, nada disto muda de número** (provado no PR 1); com duas, cada linha abaixo
@@ -38,11 +59,10 @@ tem de dar **0 diferenças** antes × depois, de novo.
 - ETL: `parear_avaliacoes_curriculo.py`, `gerar_pareamento_ue.py` — rodam contra base de uma versão; ficam.
 - Preparos SQL antigos (`into strict` por curso e código) — históricos; ficam (D-17).
 
-## Um valor só por curso — a duração (D-11)
-- `cursos.duracao_semanas` na *"Semana do curso N de T"*: DSA (`leitura.ts:488-492, 1526-1537`, `dsa/page.tsx:162-166`),
-  papel, planilha (`planilha/leitura.ts:164, 491`), Início (`inicio/page.tsx:106-109, 417-423`); `avisosDaTurma`,
-  `avisosDoCurso`, indicadores do catálogo — **PR 2**: `coalesce(versão.duracao_semanas, curso.duracao_semanas)`.
+## Um valor só por curso — a duração (D-11, substituída pela RC-1)
+- ✅ **Resolvido no PR 1**: a *"Semana do curso N de T"* (DSA, papel, planilha, Início, ficha), os avisos e os
+  indicadores do catálogo leem a duração do currículo (o da turma ou o vigente) — sem recurso ao curso.
 
 ## A turma nova
 - `lib/acoes/turma.ts:106-110`: o `insert` segue sem `curriculo_id` e o gatilho põe a vigente (PR 1, sem mudança de
-  código). **PR 2**: o formulário oferece a versão padrão (`public.curriculo_padrao_da_turma`) e deixa escolher outra.
+  código). **PR 2** (RC-4): o formulário oferece o currículo padrão (`public.curriculo_padrao_da_turma`) e deixa escolher o vigente ou o futuro.

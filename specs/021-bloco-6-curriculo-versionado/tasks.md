@@ -1,31 +1,42 @@
-# Tasks: Bloco 6 — currículo versionado (spec 021)
+# Tasks: Bloco 6 — currículo versionado (spec 021), revisto pelas RC-1 a RC-12
 
-## PR 1 — banco (portão da regra 9.4)
+## PR 1 — banco e os leitores da RC-1
 
 - [X] T001 Triagem medida na `main` `fa372c2` e na cópia do remoto (`triagem.md`); mapa do código (`contracts/codigo.md`)
 - [X] T002 Instrumentos: `scripts/provas/impressao_digital_do_curriculo.sql` e `tests/invariantes/retrato-das-telas.test.ts`
-  (determinístico: duas rodadas, 0 diferenças)
-- [X] T003 M1 `20261021030049_curriculo_versionado_estrutura.sql` (só acrescenta)
-- [X] T004 M2 `20261021030050_curriculo_versionado_ligacao.sql` (altera), com os atributos originais das funções conferidos
-- [X] T005 Antes × depois na cópia `remoto-20261020-235051.sql`: impressão e retrato idênticos (`antes-depois.md`)
-- [X] T006 O caso que discrimina na cópia (10 casos + a troca levando o planejamento)
-- [X] T007 Reversão provada com dado (`reversao.sql`), e a reaplicação remedida
-- [X] T008 `pnpm db:tipos`; pgTAP `144` (31), visto reprovar com a junção pelo curso; guardas `010`, `105`, `107`, `127`
-  emendadas pela regra dos valores esperados; BRIEF §2.1
-- [X] T009 Traduções das recusas novas; `SEQUENCIAS_DE_CODIGO`; o ETL reaplicando a D-1 com o índice provisório (carga
-  APROVADA); o bloco do arbitrado da RLS com curso próprio
-- [X] T010 Suítes na base limpa: pgTAP 971, unidade 2.614, RLS 417
-- [ ] T011 **PORTÃO** — Bernardo aprova o desenho (`contracts/banco.md`) e o lote de dúvidas (`spec.md`)
-- [ ] T012 Ponta a ponta inteira (`pnpm verificar:tudo`), e o que a trava derrubar ajustado sem afrouxar a trava
-- [ ] T013 PR 1 com o template; CI verde
-- [ ] T014 Rito do remoto (`plan.md`), remedindo sobre o backup do dia; conferência só de leitura
-- [ ] T015 Roteiro de conferência do PR 1 (o que muda é o que a tela recusa)
+- [X] T003 M1 e T004 M2, primeira redação (portão de 21/10/2026, commits `3468d4c`, `810ee6a`, `ee10119`)
+- [X] T005–T010 A primeira prova, a reversão, o pgTAP, as guardas e as suítes (registro em `antes-depois.md`, rodada 1)
+- [X] T011 **PORTÃO** — Bernardo respondeu com as regras RC-1 a RC-12 (21/10/2026), que substituem a D-4/D-6
+- [X] T030 As RC na spec (decisões nominais), o quadro RC × feito × muda e a RC-1 coluna a coluna (`spec.md` §3)
+- [X] T031 M1 revista: o conteúdo da RC-1 no currículo, o arquivamento (coluna), `avaliacoes_planejadas.curriculo_id`, a
+  policy de edição por `cursos.editar` com oferta, `revoke all` + `grant` por coluna
+- [X] T032 M2 revista: o currículo 1 com os valores do curso e a vigência pelo dado (D-2), as regras de avaliação ligadas,
+  `app.disciplina_sem_ue` pelo currículo, as colunas aposentadas, a recusa do currículo arquivado, mensagens sem
+  "versão", **sem a trava**, e a conferência dentro da própria migration
+- [X] T033 pgTAP `144` revisto (36); guardas `105`, `116` ajustadas; `107` e `127` de volta ao da `main` (a trava saiu)
+- [X] T034 `lib/dominio/curriculos.ts` (RC-3, RC-12) + `tests/unidade/curriculos.test.ts`
+- [X] T035 Os leitores e escritores das colunas aposentadas passam ao currículo (`contracts/codigo.md` §Revisão), a guarda
+  `colunas-aposentadas-do-curso.test.ts` (vista reprovar com o defeito deliberado) e as traduções sem "versão"
+- [X] T036 A permissão com sessão real: `tests/invariantes/rls/curriculos.test.ts` (o Operador como caso que discrimina,
+  visto reprovar com a policy por `disciplinas.editar`); duas rodadas seguidas (regra 9.1)
+- [X] T037 ETL: a ETAPA 6c (D-22); a sincronização e a conferência do ETL lendo o modelo do currículo
+- [X] T038 A prova numa cópia NOVA do remoto: impressão digital, retrato das telas e retrato das páginas, antes (`main`) ×
+  depois (ramo), e a reversão com dado (`antes-depois.md`, rodada 2)
+- [X] T039 Suítes: pgTAP, unidade, invariantes e RLS na base limpa; o ETL refeito sobre as migrations
+- [ ] T040 PR 1 com o template; CI verde
+- [ ] T041 Rito do remoto (`plan.md`), remedindo sobre o backup do dia; conferência só de leitura
+- [ ] T042 Merge (autorizado) → CI na `main` → Production
 
-## PR 2 — código e telas
+## PR 2 — as telas e o resto das RC
 
-- [ ] T020 A cópia (`public.criar_versao_do_curriculo`), com a prova do porteiro com sessão real
-- [ ] T021 Os leitores pela versão (`contracts/codigo.md`): DSA, papel, planilha, abas do curso, ficha, avaliações,
-  habilitações; a duração da versão
-- [ ] T022 A sincronização (VIRADA-1) casando na versão da turma
-- [ ] T023 As telas (D-16): seletor de versão, *Nova versão do currículo*, a versão na ficha da turma e na turma nova
-- [ ] T024 O retrato das telas antes × depois (0 diferenças) e o SC-004 por clique (CAHO 2027 pela v2, CAHO 2026 igual)
+- [ ] T050 A cópia (`public.criar_curriculo`, RC-7, RC-2), com o porteiro provado com sessão real
+- [ ] T051 A correção pelo trio (RC-6): recurso na matriz, trilha `correcoes_de_curriculo`, `public.corrigir_curriculo`, o
+  gatilho; e as telas de edição do conteúdo passando a justificativa quando o currículo está em uso
+- [ ] T052 O arquivamento (RC-10): as funções, a tela e "mostrar currículos arquivados"
+- [ ] T053 O seletor de currículo na página do curso (`?curriculo=`, RC-8) e *Novo currículo*; as abas pelo selecionado
+- [ ] T054 O currículo em *Nova turma* (RC-4); o rótulo nas turmas do curso (todas, inclusive arquivadas) e na ficha (RC-9)
+- [ ] T055 O PDF por currículo (RC-11): o caminho, as policies do balde, o envio e o download
+- [ ] T056 Os leitores por currículo (`contracts/codigo.md`): DSA, papel, planilha, abas, ficha, avaliações, habilitações;
+  a sincronização (VIRADA-1) casando no currículo da turma
+- [ ] T057 O retrato das telas e das páginas antes × depois (0 diferenças) e o SC-004/SC-005 por clique
+- [ ] T058 CI verde, preview, roteiro curto e lote de dúvidas — **PARAR**

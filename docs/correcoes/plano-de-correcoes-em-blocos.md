@@ -242,19 +242,23 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
   comigo"*)_: `cursos.custo_total` e `cursos.custo_composicao` estão no ar, editados em *Editar curso* e mostrados em
   *Sobre o Curso*, e **nada calcula a partir deles**. Se a resposta for *não*, as duas colunas ficam sem uso (nunca
   `drop column`: viram `-- [APOSENTADA — v2.1]`) e a tela deixa de mostrá-las. **Não bloqueia nada.**
+- **PEND-021-1** — **o pgTAP reprova em três arquivos sobre a base do ETL, também na `main`** _(medido em 21/10/2026, spec
+  021)_: com o ETL refeito sobre as migrations (planilha da v2.0), `112` (3 asserções), `115` (3) e `129` (10) reprovam —
+  e reprovam **igual** numa cópia de trabalho da `main` `fa372c2` com a mesma planilha. As asserções medem os efeitos das
+  migrations de dado D-5 e D-6 da spec 014, que a ETAPA 6b do ETL **não** reaplica (a lista declarada tem D-1, D-2 e D-3),
+  e a contagem de Admins (a base do ETL tem mais de um). Na base limpa, que é a do CI, as três passam. Não é do Bloco 6.
 - **PEND-014-7** — testes de ponta a ponta instáveis sob carga (`salas.spec.ts:126`, `dsa-tipo-e-global.spec.ts:160`, `avaliacoes-nas-telas.spec.ts:53`, `admin-sobre-contas`).
 - **OneDrive** — a pasta do repositório deve ficar "Sempre manter neste dispositivo": arquivos sob demanda já quebraram o build (`.next`, `EPERM`) e o `git switch` (`specs`).
 
-## Bloco 6 — Currículo versionado (épico próprio, por último) — 🟨 NO PORTÃO (regra 9.4)
+## Bloco 6 — Currículo versionado (épico próprio, por último) — 🟨 EM CURSO
 
-> 🟨 **Desenho medido em 21/10/2026** — spec `021-bloco-6-curriculo-versionado`, ramo `feat/BLOCO-6-curriculo-versionado`,
-> **nada no remoto**. Dois PRs (D-13): o **PR 1** é o banco — a tabela `curriculos`, a **versão 1** de cada curso com toda
-> turma ligada a ela, tudo lendo pela versão da turma, a troca de versão e a trava da versão em uso (`RF-HOR-05`) — e é
-> o portão; o **PR 2** traz a cópia, os leitores do código pela versão e as telas. Na cópia do remoto
-> `remoto-20261020-235051.sql`: a impressão do que o currículo alimenta (24 objetos) e o retrato das telas (planilha,
-> `.xlsx` e DSA de 212 semanas das 29 turmas) **idênticos** antes e depois; a reversão **provada com dado**. ⚠️ **10 dos
-> 24 cursos** entram com a versão 1 travada. Desenho: `specs/021-…/contracts/banco.md`; medição: `antes-depois.md`; o
-> lote de dúvidas: `spec.md` (D-1 a D-19).
+> 🟨 **Portão respondido em 21/10/2026**: Bernardo Villas Boas definiu as **regras de negócio do currículo, RC-1 a RC-12**
+> (`docs/correcoes/regras-do-curriculo-bloco-6.md`), que substituem a trava estrita (D-4/D-6) pela correção do trio com
+> justificativa (RC-6) e mandam para o currículo o propósito, a duração, o modelo e o PDF (RC-1, RC-11). Spec
+> `021-bloco-6-curriculo-versionado`, ramo `feat/BLOCO-6-curriculo-versionado`. Dois PRs: o **PR 1** (banco e os leitores
+> da RC-1; **nada muda em tela**, merge autorizado se a prova passar) e o **PR 2** (as telas: cópia, seletor, currículo em
+> *Nova turma*, correção pelo trio, arquivamento, PDF por currículo, leitores por currículo). Desenho:
+> `specs/021-…/contracts/banco.md`; medição: `antes-depois.md`; o quadro das RC e o lote: `spec.md`.
 
 
 Registrar um currículo novo (disciplinas, UEs, CH, avaliações, duração) **sem** alterar o vigente, e planejar as turmas do ano seguinte por ele, enquanto as turmas em andamento seguem o currículo em vigor. Mexe no vínculo turma → versão do currículo; não cabe em correção.
