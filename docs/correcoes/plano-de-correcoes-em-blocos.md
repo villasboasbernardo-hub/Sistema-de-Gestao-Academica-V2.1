@@ -262,7 +262,9 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
 >
 > ✅ **PR 1 na `main` em 21/10/2026** — `ae4e595` (#81), com o rito do remoto (backup `remoto-20261021-090802.sql`, a
 > remedição sobre ele idêntica nas três medidas, **89 e 89** migrations, esquema `5d794f43…` igual nos dois bancos), CI
-> verde na `main` e Production servindo o merge. 🟨 **PR 2** no ramo `feat/BLOCO-6-curriculo-telas`, em conferência.
+> verde na `main` e Production servindo o merge. 🟨 **PR 2** (#82, ramo `feat/BLOCO-6-curriculo-telas`) em conferência:
+> CI verde; a **M3** (só acrescenta) no remoto pelo rito (backup `remoto-20261021-113521.sql`, 90 e 90); a **M4** (altera:
+> a correção com justificativa, os recursos do trio e a policy do PDF) **no portão 9.4**, para entrar junto do merge.
 
 
 Registrar um currículo novo (disciplinas, UEs, CH, avaliações, duração) **sem** alterar o vigente, e planejar as turmas do ano seguinte por ele, enquanto as turmas em andamento seguem o currículo em vigor. Mexe no vínculo turma → versão do currículo; não cabe em correção.

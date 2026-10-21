@@ -1,5 +1,22 @@
 # Antes × depois — currículo versionado (spec 021, PR 1)
 
+## Rodada 5 — o rito do remoto do PR 2: SÓ a M3, em 21/10/2026
+
+O PR #82 com o CI verde nos três blocos sobre `99bde95` (run `39614223539`: 1.008 pgTAP · 438 invariantes e RLS · 544 de
+ponta a ponta, 7 pulados, nenhum instável). **A M4 ficou de fora** (regra 9.4: ela altera — a matriz, o gatilho que recusa
+escrita hoje aceita e a policy do balde): fora da pasta de migrations durante o rito, e de volta depois.
+
+1. **Backup:** `remoto-20261021-113521.sql`.
+2. **A remedição sobre ESSE backup** (restaurado com as 89 migrations da `main`): a impressão do currículo **idêntica, 26
+   de 26**, antes e depois da M3; o esquema **2.331 → 2.367 objetos** (`df8716a9…`); nenhum currículo com PDF a apontar
+   (0 de 24).
+3. **Dry-run** listando só `20261021124836`; **`db push`** saída 0.
+4. **Conferência só de leitura no remoto:** **90 e 90** migrations (sem a M4, que segue só no ramo); a impressão digital
+   do esquema **igual nos dois bancos, linha a linha** (2.368 linhas, 0 diferenças; `df8716a9…`, 2.367 objetos); a trilha
+   `correcoes_de_curriculo` vazia, com RLS, 1 policy de leitura, os 2 gatilhos de imutabilidade e **sem** `INSERT` para
+   `authenticated`; as 4 funções novas; **nada** da M4 (0 linhas na matriz, 0 gatilhos); `security_invoker` nas três views;
+   **0** policies de `DELETE`; Production respondendo (`/login` e `/estilo` 200, as protegidas 307).
+
 ## Rodada 4 — o PR 2 sobre o mesmo backup, em 21/10/2026
 
 Base: `remoto-20261021-090802.sql` restaurado com as 87 migrations da `main` de antes do PR 1; depois, as **quatro**

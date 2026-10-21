@@ -39,5 +39,5 @@
 - [X] T055 O PDF por currículo (RC-11): o caminho, as policies do balde, o envio e o download
 - [X] T056 Os leitores por currículo (`contracts/codigo.md`): DSA, papel, planilha, abas, ficha, avaliações, habilitações;
   a sincronização (VIRADA-1) casando no currículo da turma
-- [ ] T057 O retrato das telas e das páginas antes × depois (0 diferenças) e o SC-004/SC-005 por clique
-- [ ] T058 CI verde, preview, roteiro curto e lote de dúvidas — **PARAR**
+- [X] T057 O retrato das telas e das páginas antes × depois (telas idênticas; nas páginas, só o que o PR 2 acrescenta — `antes-depois.md`, rodada 4) e o SC-004/SC-005 por clique
+- [X] T058 CI verde, preview, roteiro curto e lote de dúvidas — **PARAR** (a M3 no remoto; a M4 no portão 9.4)
