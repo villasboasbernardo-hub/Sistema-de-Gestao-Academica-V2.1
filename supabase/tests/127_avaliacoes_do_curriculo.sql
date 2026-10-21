@@ -7,7 +7,7 @@
 -- ⚠️ pgTAP de dado nunca pula: na base limpa, o valor que prova a abstenção da D-4 (0 itens com a procedência).
 -- =================================================================================
 begin;
-select plan(23);
+select plan(25);
 
 insert into auth.users (id, email, aud, role) values
   ('a0000000-0000-0000-0000-000000000127', 't127-admin@ciaara.teste', 'authenticated', 'authenticated');
@@ -132,9 +132,23 @@ select matches((select min(codigo) from public.vistas_de_avaliacao where avaliac
 
 -- ── o arbitrado ──
 -- Com sessão de Admin, o gatilho deixa; o caso que discrimina (Operador) está em tests/invariantes/rls.
+-- ⚠️ SPEC 021 (Bloco 6, PR 2), REGRA DOS VALORES ESPERADOS: o comportamento MUDOU, pela RC-6 (Bernardo Villas Boas,
+--    21/10/2026). Com a prova `T127-AVA` viva, o currículo deste curso é seguido por turma com lançamento: MUDAR um
+--    tempo que o currículo já definia é correção — do trio, com justificativa (que a tela manda no cabeçalho
+--    `x-justificativa-de-correcao`). O caso que discrimina: sem justificativa, a mesma escrita é recusada.
+select throws_ok(
+  $$update public.avaliacoes_curriculo set ta_vista = 2, origem_ta_vista = 'arbitrado' where id = '27271111-0000-0000-0000-000000000001'$$,
+  '23514', null, 'RC-6 · no currículo em uso, mudar o tempo definido sem justificativa é recusado');
+select set_config('request.headers',
+  jsonb_build_object('x-justificativa-de-correcao',
+                     encode(convert_to('Arbitragem T127: o tempo de vista do currículo estava errado', 'UTF8'), 'base64'))::text,
+  true);
 select lives_ok(
   $$update public.avaliacoes_curriculo set ta_vista = 2, origem_ta_vista = 'arbitrado' where id = '27271111-0000-0000-0000-000000000001'$$,
-  'FR-031.7 · o Admin arbitra o tempo');
+  'FR-031.7 · o Admin arbitra o tempo (com justificativa, RC-6)');
+select is((select count(*)::int from public.correcoes_de_curriculo where registro_id = '27271111-0000-0000-0000-000000000001'),
+  1, 'RC-6 · e a correção fica na trilha');
+select set_config('request.headers', '{}', true);
 select set_config('request.jwt.claim.sub', '', true);
 select lives_ok(
   $$update public.avaliacoes_curriculo set ta_vista = 1, origem_ta_vista = 'curriculo' where id = '27271111-0000-0000-0000-000000000001'$$,

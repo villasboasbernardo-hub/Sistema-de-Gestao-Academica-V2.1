@@ -33,7 +33,10 @@ select set_eq(
   $$select policyname::text || ':' || cmd::text from pg_policies
      where schemaname = 'storage' and tablename = 'objects'
        and coalesce(qual, '') || coalesce(with_check, '') like '%curriculos%'$$,
-  $$values ('curriculos_ler:SELECT'), ('curriculos_carregar:INSERT'), ('curriculos_substituir:UPDATE')$$,
+  -- Spec 021 (Bloco 6, PR 2), REGRA DOS VALORES ESPERADOS: + carregar o PDF de CADA currículo (RC-11), num caminho
+  -- novo por envio — e continua sem DELETE.
+  $$values ('curriculos_ler:SELECT'), ('curriculos_carregar:INSERT'), ('curriculos_substituir:UPDATE'),
+           ('curriculos_carregar_por_curriculo:INSERT')$$,
   'C-7 · o balde tem ler, carregar e substituir — e nenhuma policy de DELETE (regra 4, STORAGE-1)'
 );
 

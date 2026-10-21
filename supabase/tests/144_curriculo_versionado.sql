@@ -97,9 +97,9 @@ select ok(
   and has_function_privilege('authenticated', 'public.curriculo_padrao_da_turma(uuid,date,integer)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.curriculo_padrao_da_turma(uuid,date,integer)', 'EXECUTE'),
   'os gatilhos ficam fechados; o currículo padrão da turma, só para authenticated');
-select ok(
-  not exists (select 1 from pg_trigger where tgname like '%curriculo_em_uso%'),
-  'RC-6 · este PR não traz trava de currículo em uso: a correção pelo trio, com justificativa, é do PR 2');
+select is(
+  (select count(*)::int from pg_trigger where tgname like 'trg_%_curriculo_em_uso' and not tgisinternal),
+  6, 'RC-6 · a correção do currículo em uso guarda as seis tabelas do conteúdo (PR 2; o caso está no 145)');
 
 -- ── a amostra: um curso, que nasce com o currículo 1 e o conteúdo da RC-1 ──
 select public.criar_curso_com_regime(
@@ -257,8 +257,8 @@ select is(app.curriculo_em_uso_com_lancamento((select id from _v2)), true,
 select set_config('request.jwt.claim.sub', '14400000-0000-0000-0000-000000000001', true);
 select is(
   pg_temp.recusa($$update public.disciplinas set carga_horaria_tempos = 25
-                    where curriculo_id = (select id from _v2) and cod_disciplina = 'I'$$) ->> 'recusou',
-  'false', 'PR 1 · nada trava ainda: a correção pela RC-6 (trio, justificativa, trilha) entra com a tela, no PR 2');
+                    where curriculo_id = (select id from _v2) and cod_disciplina = 'I'$$) ->> 'hint',
+  'curriculo_em_uso', 'RC-6 · no currículo em uso, quem não é do trio não corrige (a sessão simulada não tem perfil)');
 select set_config('request.jwt.claim.sub', '', true);
 select is(
   pg_temp.recusa($$update public.curriculos set status = 'inativo' where id = (select id from _v2)$$) ->> 'hint',

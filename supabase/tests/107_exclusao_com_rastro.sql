@@ -170,12 +170,17 @@ select is(
 );
 
 -- -- 11 — UE com aula NUNCA e excluida
+-- ⚠️ SPEC 021 (Bloco 6, PR 2, RC-6): o PREPARO da amostra roda SEM a sessão simulada. O currículo deste curso já é
+--    seguido por turma com lançamento (`T107-REG`), e acrescentar UE nele pela tela é correção (trio, justificativa);
+--    a carga e a migration passam sem sessão, que é o caminho de uma amostra. A asserção abaixo volta a ter a sessão.
+select set_config('request.jwt.claim.sub', '', true);
 insert into public.unidades_ensino (id, disciplina_id, curso_id, numero_ue, topico, ch_prevista_tempos)
 values ('a7400000-0000-0000-0000-000000000003', 'a7300000-0000-0000-0000-000000000005',
         'a7200000-0000-0000-0000-000000000001', 1, 'UE com aula', 10);
 update public.registros_aula
    set unidade_ensino_id = 'a7400000-0000-0000-0000-000000000003'
  where codigo = 'T107-REG';
+select set_config('request.jwt.claim.sub', 'a7000000-0000-0000-0000-000000000001', true);
 
 select throws_ok(
   $$select app.excluir_unidade_ensino('a7400000-0000-0000-0000-000000000003',
