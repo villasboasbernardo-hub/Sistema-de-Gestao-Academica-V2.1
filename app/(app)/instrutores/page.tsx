@@ -33,6 +33,7 @@ import {
   avisosDoCadastro,
   type RegraDeAviso,
 } from "@/lib/dominio/avisos-cadastro-instrutor";
+import { capacitacaoDoCadastro } from "@/lib/dominio/capacitacao-didatica";
 import { graficosDeInstrutores } from "@/lib/dominio/graficos-instrutor";
 import { indicadoresDeInstrutores } from "@/lib/dominio/indicadores-instrutor";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
@@ -105,7 +106,7 @@ export default async function Instrutores({
     // As opções dos filtros saem do cadastro inteiro, não do recorte (ver `opcoes.ts`).
     supabase
       .from("vw_instrutores")
-      .select("om, categoria, capacitacao_didatica, nivel_escolaridade, posto_graduacao")
+      .select("om, categoria, nivel_escolaridade, posto_graduacao")
       .order("ordem_antiguidade"),
   ]);
   const escala = escalaDeLinhas(
@@ -155,12 +156,18 @@ export default async function Instrutores({
    * ⚠️ HABILITADO E SELECIONADO VÊM DA PRÓPRIA LINHA (`vw_instrutores`, migration `20260915091717`),
    * que é o mesmo critério dos filtros — cartão, gráfico e filtro não podem discordar.
    */
+  /* Spec 020 (Bloco 5): a lista fechada e o texto que não casou — "tem capacitação" é um dos dois (C-12). */
+  const capacitacaoDaLinha = (n: number) =>
+    capacitacaoDoCadastro(
+      brutas[n]?.capacitacoes_didaticas,
+      brutas[n]?.capacitacao_didatica_a_corrigir,
+    );
   const idsOnde = (coluna: "habilitado" | "selecionado") =>
     new Set(brutas.filter((b) => b[coluna] === true).map((b) => b.id as string));
   const indicadores = indicadoresDeInstrutores(
     linhas.map((l, n) => ({
       id: l.id,
-      capacitacaoDidatica: brutas[n]?.capacitacao_didatica ?? null,
+      capacitacao: capacitacaoDaLinha(n),
     })),
     idsOnde("habilitado"),
     idsOnde("selecionado"),
@@ -173,7 +180,7 @@ export default async function Instrutores({
       om: l.om,
       escolaridade: brutas[n]?.nivel_escolaridade ?? null,
       regime: l.regime,
-      capacitacaoDidatica: brutas[n]?.capacitacao_didatica ?? null,
+      capacitacao: capacitacaoDaLinha(n),
     })),
     escala,
     indicadores.taxaDeSelecao,
@@ -190,7 +197,7 @@ export default async function Instrutores({
       om: l.om,
       nip: (brutas[n]?.nip as string | null | undefined) ?? null,
       dataInicioDocenciaCiaara: brutas[n]?.data_inicio_docencia_ciaara ?? null,
-      capacitacaoDidatica: brutas[n]?.capacitacao_didatica ?? null,
+      capacitacao: capacitacaoDaLinha(n),
     })),
     AVISOS_INICIAIS,
   );

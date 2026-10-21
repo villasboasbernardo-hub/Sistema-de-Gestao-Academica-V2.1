@@ -55,6 +55,11 @@ export function enderecoDaTurma(codigo: string): string {
  *
  * @example enderecoDoCurso("C-Ap-FR") → "/cursos/C-Ap-FR"
  */
+/** O download do currículo em PDF do curso (spec 020, C-8): um Route Handler que redireciona ao link assinado. */
+export function enderecoDoCurriculo(sigla: string): string {
+  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}/curriculo`;
+}
+
 export function enderecoDoCurso(sigla: string): string {
   return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}`;
 }

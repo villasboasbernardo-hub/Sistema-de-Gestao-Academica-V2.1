@@ -120,6 +120,12 @@ export const CIRCULOS_HIERARQUICOS = ["oficiais", "pracas"] as const;
 export const SITUACOES_DE_CADASTRO = Constants.public.Enums.status_registro;
 
 /**
+ * Spec 020 (Bloco 5), C-2: o filtro *Estrangeiros* do catálogo. `nao_informado` é o curso em que ninguém respondeu —
+ * a coluna é nula, e misturá-lo com *Não* afirmaria uma resposta que não existe.
+ */
+export const ESTRANGEIROS_DO_CATALOGO = ["sim", "nao", "nao_informado"] as const;
+
+/**
  * As quatro situações de TURMA (`FR-012` da spec 012).
  *
  * ⚠️ **NÃO CONFUNDIR COM `SITUACOES_DE_CADASTRO`, e a confusão é fácil:** aquela é
@@ -462,6 +468,14 @@ export const CONTRATO = {
         tipo: "escolha",
         padrao: "ativo",
         opcoes: SITUACOES_DE_CADASTRO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      estrangeiros: {
+        nome: "estrangeiros",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: ESTRANGEIROS_DO_CATALOGO,
         historico: "substitui",
         avisaServidor: true,
       },

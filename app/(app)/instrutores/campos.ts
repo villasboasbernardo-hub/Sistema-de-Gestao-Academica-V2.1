@@ -23,7 +23,12 @@ export const CAMPOS_FUNCIONAIS = [
   "regime_trabalho",
   "nivel_escolaridade",
   "formacao_principal_secundaria",
-  "capacitacao_didatica",
+  /*
+   * Spec 020 (Bloco 5), C-9 e C-10: a lista fechada (que vira texto separado por vírgula no formulário) e o texto
+   * antigo que não casou com ela. A coluna `capacitacao_didatica` é aposentada: nenhuma tela a lê nem a grava.
+   */
+  "capacitacoes_didaticas",
+  "capacitacao_didatica_a_corrigir",
   "data_inicio_docencia_mb",
   "data_inicio_docencia_ciaara",
   "ultima_avaliacao_desempenho",

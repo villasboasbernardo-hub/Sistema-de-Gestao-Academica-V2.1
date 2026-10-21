@@ -27,6 +27,9 @@ import {
   ROTULO_DA_CLASSIFICACAO,
   ehClassificacaoDeCurso,
 } from "@/lib/dominio/classificacoes-de-curso";
+import { instanteParaLeitura } from "@/lib/formato/data";
+import { reaisParaLeitura } from "@/lib/formato/moeda";
+import { enderecoDoCurriculo } from "@/lib/navegacao/endereco-de-turma";
 
 export type DisciplinaDaGrade = {
   readonly codigo: string;
@@ -50,6 +53,13 @@ export type CatalogoDoCurso = {
   readonly duracaoDias: number | null;
   readonly limiteTurmasAno: number | null;
   readonly proposito: string | null;
+  /* Spec 020 (Bloco 5), C-1 a C-8 — só informativo. */
+  readonly ofertavelEstrangeiros: boolean | null;
+  readonly estrangeirosObservacao: string | null;
+  readonly custoTotal: number | null;
+  readonly custoComposicao: string | null;
+  /** Quando o PDF foi registrado; `null` sem currículo. */
+  readonly curriculoPdfEm: string | null;
 };
 
 const ROTULO_DA_MODALIDADE: Readonly<Record<string, string>> = {
@@ -136,6 +146,45 @@ export function AbaSobre({
         <p className="text-sm">
           <Rotulo>Propósito:</Rotulo>{" "}
           <span className="text-texto">{traco(catalogo.proposito)}</span>
+        </p>
+        {/* Spec 020 (Bloco 5): estrangeiros, custo e o currículo — só leitura; edita-se em *Editar curso*. */}
+        <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2" data-slot="cadastro-do-bloco-5">
+          <Campo
+            rotulo="Ofertável a estrangeiros"
+            valor={
+              catalogo.ofertavelEstrangeiros === true
+                ? "Sim"
+                : catalogo.ofertavelEstrangeiros === false
+                  ? "Não"
+                  : "Não informado"
+            }
+          />
+          <Campo
+            rotulo="Observação sobre estrangeiros"
+            valor={traco(catalogo.estrangeirosObservacao)}
+          />
+          <Campo rotulo="Custo total" valor={reaisParaLeitura(catalogo.custoTotal)} />
+          <Campo rotulo="Composição do custo" valor={traco(catalogo.custoComposicao)} />
+        </div>
+        <p className="text-sm" data-slot="curriculo-do-curso">
+          <Rotulo>Currículo (PDF):</Rotulo>{" "}
+          {catalogo.curriculoPdfEm ? (
+            <>
+              <a
+                href={enderecoDoCurriculo(catalogo.codigo)}
+                className="text-marca underline-offset-2 hover:underline"
+                data-slot="baixar-curriculo"
+              >
+                Baixar o currículo (PDF)
+              </a>{" "}
+              {/* veste: a data do envio, ao lado do link — texto secundário, nunca dado novo */}
+              <span className="text-texto-tenue">
+                · carregado em {instanteParaLeitura(catalogo.curriculoPdfEm)}
+              </span>
+            </>
+          ) : (
+            <span className="text-texto-suave">Currículo ainda não carregado.</span>
+          )}
         </p>
       </section>
 

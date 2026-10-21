@@ -67,6 +67,8 @@ class Resultado:
     salas_corrigidas: list[tuple[str, str, str]] = field(default_factory=list)
     # sequência → maior código carregado nela (0 = tabela vazia, sequência intocada).
     sequencias: dict[str, int] = field(default_factory=dict)
+    # instrutores cuja capacitação foi convertida para a lista fechada (spec 020, C-10).
+    capacitacoes_convertidas: int = 0
     # as correções de origem aplicadas por cima do retrato fiel (etapa 4-B).
     correcoes_aplicadas: list = field(default_factory=list)
     vocabulario_semeado: list[tuple[str, str]] = field(default_factory=list)
@@ -931,6 +933,10 @@ def promover(conexao: str = CONEXAO_LOCAL, *, diagnostico: bool = False) -> Resu
         # As sequências de código, à frente do maior valor carregado (T073). Dentro da
         # transação: promoção desfeita não pode deixar sequência avançada.
         res.sequencias = carregar.avancar_sequencias(con)
+
+        # Spec 020 (Bloco 5), C-10: o texto da v2.0 entra na coluna antiga DEPOIS das migrations; a
+        # conversão para a lista fechada é a mesma função que a migration chamou no remoto.
+        res.capacitacoes_convertidas = carregar.converter_capacitacoes(con)
 
         # ÓRFÃOS: agora que as tabelas de destino estão povoadas, a comparação tem
         # sentido. Ainda dentro da transação — abortar aqui desfaz as 25 tabelas.

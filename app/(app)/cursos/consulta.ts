@@ -25,13 +25,14 @@ import { CONTRATO } from "@/lib/navegacao/contrato";
  * esta forma e devolve o mesmo tipo que recebeu.
  */
 export type Encadeavel = {
-  eq(coluna: string, valor: string): Encadeavel;
+  eq(coluna: string, valor: string | boolean): Encadeavel;
+  is(coluna: string, valor: null): Encadeavel;
   order(coluna: string, opcoes: { ascending: boolean }): Encadeavel;
 };
 
-/** Os três parâmetros do contrato, já degradados por `lerParametros`. */
+/** Os quatro parâmetros do contrato, já degradados por `lerParametros`. */
 export type ParametrosDoCatalogo = Readonly<
-  Record<"classificacao" | "modalidade" | "situacao", string>
+  Record<"classificacao" | "modalidade" | "situacao" | "estrangeiros", string>
 >;
 
 /**
@@ -44,6 +45,7 @@ export const PARAMETROS_SEM_RECORTE: ParametrosDoCatalogo = {
   classificacao: CONTRATO["/cursos"].parametros.classificacao.padrao,
   modalidade: CONTRATO["/cursos"].parametros.modalidade.padrao,
   situacao: CONTRATO["/cursos"].parametros.situacao.padrao,
+  estrangeiros: CONTRATO["/cursos"].parametros.estrangeiros.padrao,
 };
 
 /**
@@ -66,6 +68,10 @@ export function montarConsultaDeCursos<C>(consulta: C, parametros: ParametrosDoC
 
   if (parametros.classificacao !== "") c = c.eq("classificacao", parametros.classificacao);
   if (parametros.modalidade !== "") c = c.eq("modalidade", parametros.modalidade);
+  /* Spec 020 (C-2): `nao_informado` é a coluna nula — não é *Não*. */
+  if (parametros.estrangeiros === "sim") c = c.eq("ofertavel_estrangeiros", true);
+  if (parametros.estrangeiros === "nao") c = c.eq("ofertavel_estrangeiros", false);
+  if (parametros.estrangeiros === "nao_informado") c = c.is("ofertavel_estrangeiros", null);
 
   return c.order("codigo", { ascending: true }) as unknown as C;
 }

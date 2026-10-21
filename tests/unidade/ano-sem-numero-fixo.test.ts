@@ -55,3 +55,38 @@ describe("A-1 · o ano padrão nunca é um número escrito no código", () => {
     expect(anosFixos(readFileSync(join(RAIZ, arquivo), "utf8")), arquivo).toEqual([]);
   });
 });
+
+/**
+ * PEND-019-3 (spec 020, C-16) — prazo: antes de 01/01/2027. Os percursos que procuram no Início turmas da própria
+ * semente não podem escrever o ano: o Início abre no ano de hoje, e em 2027 a turma de 2026 sumiria dele sem defeito
+ * nenhum no produto.
+ *
+ * ⚠️ **EXCEÇÃO NOMINAL: `vigente_de: "2020-01-01"`** — o regime do curso da amostra vale desde sempre, e por isso
+ *    vale para qualquer ano futuro. O `dsa-ver.spec.ts` fica de fora: a semente do DSA é de um ano fixo, que 22
+ *    arquivos compartilham, e os dois casos dele que passam pelo Início escolhem esse ano na caixa, por clique.
+ */
+const SEMENTES_DO_INICIO = [
+  "tests/e2e/panorama-de-teste.ts",
+  "tests/e2e/inicio.spec.ts",
+  "tests/e2e/andamento-ate-hoje.spec.ts",
+  "tests/e2e/ta-fora-do-dsa.spec.ts",
+];
+
+const semVigenciaDesdeSempre = (fonte: string) => fonte.replace(/vigente_de:\s*"2020-01-01"/g, " ");
+
+describe("PEND-019-3 · as sementes do Início não escrevem o ano", () => {
+  it("controle positivo: acha a turma de 2026 e a data de março, e aceita a vigência desde sempre", () => {
+    expect(
+      anosFixos(
+        semVigenciaDesdeSempre(
+          'ano_letivo: 2026,\ndata_inicio: "2026-03-02",\nvigente_de: "2020-01-01",',
+        ),
+      ),
+    ).toEqual(["2026", "2026"]);
+  });
+
+  it.each(SEMENTES_DO_INICIO)("%s não tem ano fixo", (arquivo) => {
+    const fonte = semVigenciaDesdeSempre(readFileSync(join(RAIZ, arquivo), "utf8"));
+    expect(anosFixos(fonte), arquivo).toEqual([]);
+  });
+});

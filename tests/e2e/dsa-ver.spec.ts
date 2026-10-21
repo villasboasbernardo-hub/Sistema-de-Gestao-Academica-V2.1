@@ -515,9 +515,26 @@ test.describe("`FR-011` · os três caminhos clicáveis até o DSA", () => {
     await expect.poll(() => new URL(page.url()).pathname).toContain("/dsa");
   });
 
+  /**
+   * ⚠️ PEND-019-3 (spec 020, C-16): o Início abre no ano de HOJE, e a semente do DSA é de um ano fixo (`ANO`, que 22
+   *    arquivos compartilham). Escolher o ano dela na caixa do canto, por clique, é o que mantém estes casos de pé em
+   *    01/01/2027 — sem isso eles reprovariam sem defeito nenhum no produto.
+   */
+  async function inicioNoAnoDaSemente(page: Page): Promise<void> {
+    const escolha = page.locator(
+      '[data-slot="cabecalho-do-inicio"] select[data-slot="ano-do-painel-escolha"]',
+    );
+    await escolha.selectOption(String(ANO));
+    await expect(page.locator('[data-slot="turmas-do-ano"]')).toHaveAttribute(
+      "data-ano",
+      String(ANO),
+    );
+  }
+
   test("o `/inicio` tem o link «DSA da semana» no bloco da turma", async ({ page }) => {
     await entrar(page, EMAIL);
     await page.goto("/inicio");
+    await inicioNoAnoDaSemente(page);
     const link = page.locator('[data-slot="dsa-da-semana"]').first();
     /*
      * ⚠️ O painel do `/inicio` mostra as turmas COM lançamento; a semente do DSA tem lançamento na
@@ -566,6 +583,7 @@ test.describe("`FR-011` · os três caminhos clicáveis até o DSA", () => {
     page,
   }) => {
     await entrar(page, EMAIL, "/inicio");
+    await inicioNoAnoDaSemente(page);
     const bloco = (codigo: string) =>
       page
         // Spec 019 (Bloco 4): os cartões do Início são itens do carrossel.

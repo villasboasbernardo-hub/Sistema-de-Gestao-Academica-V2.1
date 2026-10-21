@@ -64,11 +64,15 @@ select set_eq(
 -- ============================================ as TRES policies
 -- ⚠️ EXATAMENTE tres, e o numero e a assercao: uma quarta policy em `storage.objects` seria algo
 --    que esta fatia nao pediu, e a tabela passou de ZERO para tres nesta migration.
+-- ⚠️ Spec 020 (Bloco 5), 20/10/2026. REGRA DOS VALORES ESPERADOS: (a) — o balde `curriculos` trouxe as
+--    TRES dele (ler, carregar, substituir; nenhuma de DELETE), por decisao nominal de Bernardo Villas Boas.
+--    A contagem passa a ser POR BALDE: as tres de `avatares` continuam exatamente tres.
 select is(
   (select count(*)::int from pg_policies
-    where schemaname = 'storage' and tablename = 'objects'),
+    where schemaname = 'storage' and tablename = 'objects'
+      and coalesce(qual, '') || coalesce(with_check, '') like '%avatares%'),
   3,
-  'I-5 · `storage.objects` tem EXATAMENTE tres policies — eram ZERO antes desta migration'
+  'I-5 · o balde `avatares` tem EXATAMENTE tres policies em `storage.objects` — eram ZERO antes desta migration'
 );
 
 -- ⚠️ E as tres sao restritas ao bucket. Uma policy sem o filtro de `bucket_id` abriria o Storage
@@ -76,8 +80,9 @@ select is(
 select is_empty(
   $$select policyname from pg_policies
      where schemaname = 'storage' and tablename = 'objects'
-       and coalesce(qual, '') || coalesce(with_check, '') not like '%avatares%'$$,
-  'I-5 · toda policy de `storage.objects` esta restrita ao bucket `avatares`'
+       and coalesce(qual, '') || coalesce(with_check, '') not like '%avatares%'
+       and coalesce(qual, '') || coalesce(with_check, '') not like '%curriculos%'$$,
+  'I-5 · toda policy de `storage.objects` esta restrita a um balde (`avatares` ou `curriculos`, spec 020)'
 );
 
 -- ============================================ a REGRA 4, que esta fatia NAO afrouxou

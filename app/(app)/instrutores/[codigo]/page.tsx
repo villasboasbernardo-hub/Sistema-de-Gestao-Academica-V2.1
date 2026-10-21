@@ -26,6 +26,7 @@ import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
 import { alertaForaDaFaixa, alertaSemCapacitacao } from "@/lib/dominio/alertas-instrutor";
+import { capacitacaoDoCadastro } from "@/lib/dominio/capacitacao-didatica";
 import {
   cargaPorSemana,
   limitesDoAnoIso,
@@ -48,7 +49,7 @@ import { EdicaoDoInstrutor } from "./EdicaoDoInstrutor";
 import { FichaEmLeitura } from "./FichaEmLeitura";
 
 const COLUNAS_DA_FICHA =
-  "id, codigo, status, posto_graduacao, esp_hab_obs, nome_completo, categoria, om, nome_guerra, nip, data_nascimento, dep_divisao, data_assuncao_setor, email, regime_trabalho, nivel_escolaridade, formacao_principal_secundaria, capacitacao_didatica, data_inicio_docencia_mb, data_inicio_docencia_ciaara, ultima_avaliacao_desempenho, data_avaliacao_desempenho, preferencia, antiguidade_declarada, area_conhecimento";
+  "id, codigo, status, posto_graduacao, esp_hab_obs, nome_completo, categoria, om, nome_guerra, nip, data_nascimento, dep_divisao, data_assuncao_setor, email, regime_trabalho, nivel_escolaridade, formacao_principal_secundaria, capacitacoes_didaticas, capacitacao_didatica_a_corrigir, data_inicio_docencia_mb, data_inicio_docencia_ciaara, ultima_avaliacao_desempenho, data_avaliacao_desempenho, preferencia, antiguidade_declarada, area_conhecimento";
 
 export default async function FichaDoInstrutor({
   params,
@@ -250,7 +251,10 @@ export default async function FichaDoInstrutor({
     alertaSemCapacitacao(
       {
         dataInicioDocenciaCiaara: instrutor.data_inicio_docencia_ciaara,
-        capacitacaoDidatica: instrutor.capacitacao_didatica,
+        capacitacao: capacitacaoDoCadastro(
+          instrutor.capacitacoes_didaticas,
+          instrutor.capacitacao_didatica_a_corrigir,
+        ),
       },
       hojeNaCiaara(),
     ),

@@ -39,6 +39,7 @@ export function FiltrosDoCatalogo() {
   const [classificacao, definirClassificacao] = useParametro(ROTA, "classificacao");
   const [modalidade, definirModalidade] = useParametro(ROTA, "modalidade");
   const [situacao, definirSituacao] = useParametro(ROTA, "situacao");
+  const [estrangeiros, definirEstrangeiros] = useParametro(ROTA, "estrangeiros");
 
   const campos: readonly CampoDeFiltro[] = [
     {
@@ -62,12 +63,24 @@ export function FiltrosDoCatalogo() {
         { valor: "inativo", rotulo: "Fora de oferta" },
       ],
     },
+    /* Spec 020 (Bloco 5), C-2. */
+    {
+      chave: "estrangeiros",
+      rotulo: "Estrangeiros",
+      tipo: "escolha",
+      opcoes: [
+        { valor: "sim", rotulo: "Ofertável" },
+        { valor: "nao", rotulo: "Não ofertável" },
+        { valor: "nao_informado", rotulo: "Não informado" },
+      ],
+    },
   ];
 
   const estado: EstadoDeFiltro = {
     classificacao: classificacao === "" ? [] : [String(classificacao)],
     modalidade: modalidade === "" ? [] : [String(modalidade)],
     situacao: [String(situacao)],
+    estrangeiros: estrangeiros === "" ? [] : [String(estrangeiros)],
   };
 
   const aoMudar = (proximo: EstadoDeFiltro) => {
@@ -81,6 +94,9 @@ export function FiltrosDoCatalogo() {
       void definirModalidade(escolha("modalidade"));
     }
     if (escolha("situacao") !== situacao) void definirSituacao(escolha("situacao"));
+    if (escolha("estrangeiros") !== (estrangeiros || null)) {
+      void definirEstrangeiros(escolha("estrangeiros"));
+    }
   };
 
   /*
@@ -91,12 +107,13 @@ export function FiltrosDoCatalogo() {
    *    "Limpar filtros" saem da mesma conta. Antes o selo contava `situacao=ativo` como filtro e
    *    mostrava 1 com a tela limpa.
    */
-  const ativos = filtrosForaDoPadrao(ROTA, { classificacao, modalidade, situacao });
+  const ativos = filtrosForaDoPadrao(ROTA, { classificacao, modalidade, situacao, estrangeiros });
 
   const limpar = () => {
     void definirClassificacao(null);
     void definirModalidade(null);
     void definirSituacao(null);
+    void definirEstrangeiros(null);
   };
 
   return (

@@ -46,7 +46,8 @@ type Semente = {
   readonly categoria: string;
   readonly antiguidade_declarada?: string;
   readonly regime_trabalho?: "20h" | "40h" | "dedicacao_exclusiva";
-  readonly capacitacao_didatica?: string;
+  /** Spec 020 (Bloco 5): a lista fechada — a coluna de texto antiga é aposentada. */
+  readonly capacitacoes_didaticas?: readonly ("C-Esp-DID" | "C-Exp-TE" | "Licenciatura")[];
   readonly data_inicio_docencia_mb?: string;
   readonly data_inicio_docencia_ciaara?: string;
   readonly status?: "ativo" | "inativo";
@@ -59,7 +60,7 @@ const SEMENTES = {
     categoria: "Militar",
     antiguidade_declarada: "1",
     regime_trabalho: "40h",
-    capacitacao_didatica: "C-Exp-TE, C-Esp-DID",
+    capacitacoes_didaticas: ["C-Esp-DID", "C-Exp-TE"],
   },
   /** CT com antiguidade declarada 1, 20h. Selecionado **e** habilitado. */
   ctMaisAntigo: {
@@ -67,7 +68,7 @@ const SEMENTES = {
     categoria: "Militar",
     antiguidade_declarada: "1",
     regime_trabalho: "20h",
-    capacitacao_didatica: "C-Exp-TE",
+    capacitacoes_didaticas: ["C-Exp-TE"],
   },
   /** CT com antiguidade declarada 2, 40h. */
   ctMaisModerno: {
@@ -75,7 +76,7 @@ const SEMENTES = {
     categoria: "Militar",
     antiguidade_declarada: "2",
     regime_trabalho: "40h",
-    capacitacao_didatica: "Licenciatura",
+    capacitacoes_didaticas: ["Licenciatura"],
   },
   /** Servidor civil `SC`. */
   sc: {
@@ -115,7 +116,7 @@ const SEMENTES = {
     posto_graduacao: "CF",
     categoria: "Militar",
     regime_trabalho: "40h",
-    capacitacao_didatica: "C-Esp-DID",
+    capacitacoes_didaticas: ["C-Esp-DID"],
   },
   /** `status = inativo`. */
   inativo: {
@@ -193,6 +194,8 @@ export async function semearInstrutores(
         // ⚠️ Inserção em lote manda `null` em toda chave que falte a uma das linhas — inclusive
         // `status`, que é `not null` e explícito por regra (`RN-INST-05`). Por isso ele vem antes.
         status: "ativo",
+        // A lista é `not null` (padrão `{}`), e o lote mandaria `null` a quem não a tem.
+        capacitacoes_didaticas: [],
         ...SEMENTES[c],
       })),
     )

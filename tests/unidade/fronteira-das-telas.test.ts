@@ -129,6 +129,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/cursos/[curso]/AcoesDeSituacao.tsx": "desativar e reativar, com confirmação",
   "app/(app)/cursos/[curso]/SeletorDeTurmaNaUrl.tsx": "escolher a turma escrevendo na URL",
   "app/(app)/cursos/[curso]/editar/FormularioDeVigencia.tsx": "registrar e corrigir vigência",
+  // Spec 020 (Bloco 5), C-5: o PDF sobe do navegador direto ao balde (a Vercel corta o corpo da função em 4,5 MB).
+  "app/(app)/cursos/[curso]/editar/EnvioDoCurriculo.tsx":
+    "carregar o currículo em PDF: janela de arquivo e envio ao balde",
   "app/(app)/turmas/FormularioDeTurma.tsx": "criar e editar turma, com o diálogo do limite",
   /*
    * ⚠️ Ele existe porque o `Collapsible` é folha de cliente e a FICHA não pode ser: importá-lo em

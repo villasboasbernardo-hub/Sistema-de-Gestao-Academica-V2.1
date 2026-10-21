@@ -34,6 +34,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      acessos_de_conta: {
+        Row: {
+          id: string
+          ocorrido_em: string
+          usuario_id: string
+        }
+        Insert: {
+          id?: string
+          ocorrido_em?: string
+          usuario_id: string
+        }
+        Update: {
+          id?: string
+          ocorrido_em?: string
+          usuario_id?: string
+        }
+        Relationships: []
+      }
       arquivo_avaliacoes_v1: {
         Row: {
           arquivado_em: string
@@ -1348,15 +1366,20 @@ export type Database = {
           criado_em: string
           criado_por: string | null
           curriculo_modelo: string
+          curriculo_pdf_em: string | null
+          custo_composicao: string | null
+          custo_total: number | null
           duracao_dias: number
           duracao_semanas: number | null
           editado_em: string | null
           editado_por: string | null
+          estrangeiros_observacao: string | null
           id: string
           limite_turmas_ano: number
           modalidade: Database["public"]["Enums"]["modalidade_ensino"] | null
           nome_curso: string
           nome_normalizado: string | null
+          ofertavel_estrangeiros: boolean | null
           origem_migracao_v1: string | null
           prioridade_alocacao: Database["public"]["Enums"]["criterio_prioridade_alocacao"]
           proposito: string | null
@@ -1368,15 +1391,20 @@ export type Database = {
           criado_em?: string
           criado_por?: string | null
           curriculo_modelo?: string
+          curriculo_pdf_em?: string | null
+          custo_composicao?: string | null
+          custo_total?: number | null
           duracao_dias: number
           duracao_semanas?: number | null
           editado_em?: string | null
           editado_por?: string | null
+          estrangeiros_observacao?: string | null
           id?: string
           limite_turmas_ano: number
           modalidade?: Database["public"]["Enums"]["modalidade_ensino"] | null
           nome_curso: string
           nome_normalizado?: string | null
+          ofertavel_estrangeiros?: boolean | null
           origem_migracao_v1?: string | null
           prioridade_alocacao?: Database["public"]["Enums"]["criterio_prioridade_alocacao"]
           proposito?: string | null
@@ -1388,15 +1416,20 @@ export type Database = {
           criado_em?: string
           criado_por?: string | null
           curriculo_modelo?: string
+          curriculo_pdf_em?: string | null
+          custo_composicao?: string | null
+          custo_total?: number | null
           duracao_dias?: number
           duracao_semanas?: number | null
           editado_em?: string | null
           editado_por?: string | null
+          estrangeiros_observacao?: string | null
           id?: string
           limite_turmas_ano?: number
           modalidade?: Database["public"]["Enums"]["modalidade_ensino"] | null
           nome_curso?: string
           nome_normalizado?: string | null
+          ofertavel_estrangeiros?: boolean | null
           origem_migracao_v1?: string | null
           prioridade_alocacao?: Database["public"]["Enums"]["criterio_prioridade_alocacao"]
           proposito?: string | null
@@ -1841,6 +1874,8 @@ export type Database = {
           antiguidade_declarada_num: number | null
           area_conhecimento: string | null
           capacitacao_didatica: string | null
+          capacitacao_didatica_a_corrigir: string | null
+          capacitacoes_didaticas: Database["public"]["Enums"]["tipo_capacitacao_didatica"][]
           categoria: string
           codigo: string
           cpf: string | null
@@ -1890,6 +1925,8 @@ export type Database = {
           antiguidade_declarada_num?: number | null
           area_conhecimento?: string | null
           capacitacao_didatica?: string | null
+          capacitacao_didatica_a_corrigir?: string | null
+          capacitacoes_didaticas?: Database["public"]["Enums"]["tipo_capacitacao_didatica"][]
           categoria: string
           codigo?: string
           cpf?: string | null
@@ -1939,6 +1976,8 @@ export type Database = {
           antiguidade_declarada_num?: number | null
           area_conhecimento?: string | null
           capacitacao_didatica?: string | null
+          capacitacao_didatica_a_corrigir?: string | null
+          capacitacoes_didaticas?: Database["public"]["Enums"]["tipo_capacitacao_didatica"][]
           categoria?: string
           codigo?: string
           cpf?: string | null
@@ -4052,6 +4091,15 @@ export type Database = {
       }
     }
     Views: {
+      vw_acessos_por_conta: {
+        Row: {
+          primeiro_em: string | null
+          total: number | null
+          ultimo_em: string | null
+          usuario_id: string | null
+        }
+        Relationships: []
+      }
       vw_avaliacoes_situacao: {
         Row: {
           avaliacao_curriculo_id: string | null
@@ -4712,6 +4760,10 @@ export type Database = {
           antiguidade_declarada_num: number | null
           area_conhecimento: string | null
           capacitacao_didatica: string | null
+          capacitacao_didatica_a_corrigir: string | null
+          capacitacoes_didaticas:
+            | Database["public"]["Enums"]["tipo_capacitacao_didatica"][]
+            | null
           categoria: string | null
           classificacoes_vinculadas: string[] | null
           codigo: string | null
@@ -4982,15 +5034,20 @@ export type Database = {
           criado_em: string
           criado_por: string | null
           curriculo_modelo: string
+          curriculo_pdf_em: string | null
+          custo_composicao: string | null
+          custo_total: number | null
           duracao_dias: number
           duracao_semanas: number | null
           editado_em: string | null
           editado_por: string | null
+          estrangeiros_observacao: string | null
           id: string
           limite_turmas_ano: number
           modalidade: Database["public"]["Enums"]["modalidade_ensino"] | null
           nome_curso: string
           nome_normalizado: string | null
+          ofertavel_estrangeiros: boolean | null
           origem_migracao_v1: string | null
           prioridade_alocacao: Database["public"]["Enums"]["criterio_prioridade_alocacao"]
           proposito: string | null
@@ -5204,6 +5261,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      registrar_acesso: { Args: never; Returns: undefined }
       registrar_vigencia_regime: {
         Args: { p_curso_id: string; p_vigencia: Json }
         Returns: {
@@ -5351,6 +5409,7 @@ export type Database = {
       status_turma: "planejada" | "ativa" | "concluida" | "cancelada"
       status_vigencia: "ativo" | "cancelado"
       status_vista: "pendente" | "realizada" | "atrasada"
+      tipo_capacitacao_didatica: "C-Esp-DID" | "C-Exp-TE" | "Licenciatura"
       tipo_linha_planejamento:
         | "disciplina"
         | "evento_manual"
@@ -5567,6 +5626,7 @@ export const Constants = {
       status_turma: ["planejada", "ativa", "concluida", "cancelada"],
       status_vigencia: ["ativo", "cancelado"],
       status_vista: ["pendente", "realizada", "atrasada"],
+      tipo_capacitacao_didatica: ["C-Esp-DID", "C-Exp-TE", "Licenciatura"],
       tipo_linha_planejamento: [
         "disciplina",
         "evento_manual",

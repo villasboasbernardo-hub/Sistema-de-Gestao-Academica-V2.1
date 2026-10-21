@@ -27,6 +27,7 @@
 import { z } from "zod";
 
 import { CLASSIFICACOES_DE_CURSO } from "@/lib/dominio/classificacoes-de-curso";
+import { lerReais } from "@/lib/formato/moeda";
 import { Constants } from "@/lib/tipos/database";
 
 const MODALIDADES = Constants.public.Enums.modalidade_ensino;
@@ -108,7 +109,44 @@ export const esquemaDeCriacaoDeCurso = z.object({
   }),
 });
 
-export const esquemaDeEdicaoDeCurso = z.object(camposDoCurso);
+/**
+ * Spec 020 (Bloco 5), C-1 a C-4: estrangeiros e custo, SÓ na edição (o curso nasce pela RPC e é completado aqui).
+ *
+ * ⚠️ AUSENTE NÃO APAGA: o campo que não vem fica `undefined` e sai da gravação; vazio vira nulo. Quem chama a edição
+ *    sem estes campos não zera o que outra pessoa digitou.
+ */
+const opcionalSePresente = z
+  .string()
+  .trim()
+  .transform((v) => (v === "" ? null : v))
+  .nullable()
+  .optional();
+
+const reaisSePresente = (campo: string) =>
+  z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((v, ctx) => {
+      if (v === undefined || v === null) return v;
+      const valor = lerReais(v);
+      if (valor !== null && Number.isNaN(valor)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `${campo}: use reais com vírgula, como 12.345,67.`,
+        });
+        return z.NEVER;
+      }
+      return valor;
+    });
+
+const camposDaEdicao = {
+  ofertavel_estrangeiros: z.boolean().nullable().optional(),
+  estrangeiros_observacao: opcionalSePresente,
+  custo_total: reaisSePresente("Custo total"),
+  custo_composicao: opcionalSePresente,
+};
+
+export const esquemaDeEdicaoDeCurso = z.object({ ...camposDoCurso, ...camposDaEdicao });
 
 export type CursoParaCriar = z.infer<typeof esquemaDeCriacaoDeCurso>;
 export type CursoParaEditar = z.infer<typeof esquemaDeEdicaoDeCurso>;

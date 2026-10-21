@@ -273,7 +273,7 @@ describe("`FR-028` da spec 006 · as rotas de instrutor seguem o contrato humano
   });
 });
 
-describe("`FR-004` · o catálogo `/cursos` declara os três filtros, e nada mais", () => {
+describe("`FR-004` · o catálogo `/cursos` declara os quatro filtros, e nada mais", () => {
   const doCatalogo = (nome: string) =>
     parametrosDaRota("/cursos").find((p) => p.nome === nome) as Parametro;
 
@@ -286,12 +286,19 @@ describe("`FR-004` · o catálogo `/cursos` declara os três filtros, e nada mai
     expect(ROTAS).toContain("/cursos");
   });
 
-  it("são exatamente três: classificação, modalidade e situação", () => {
+  // Spec 020 (Bloco 5), C-2: entrou `estrangeiros` (Sim, Não, Não informado), novidade autorizada.
+  it("são exatamente quatro: classificação, modalidade, situação e estrangeiros", () => {
     expect(parametrosDaRota("/cursos").map((p) => p.nome)).toEqual([
       "classificacao",
       "modalidade",
       "situacao",
+      "estrangeiros",
     ]);
+  });
+
+  it("C-2 · `estrangeiros` oferece Sim, Não e Não informado, e o padrão é todos", () => {
+    expect(opcoes("estrangeiros")).toEqual(["sim", "nao", "nao_informado"]);
+    expect(doCatalogo("estrangeiros").padrao).toBe("");
   });
 
   it("⚠️ `situacao` tem padrão `ativo`, e é o único padrão não vazio — como em `/instrutores`", () => {
@@ -340,10 +347,11 @@ describe("`FR-004` · o catálogo `/cursos` declara os três filtros, e nada mai
       "escolha",
       "escolha",
       "escolha",
+      "escolha",
     ]);
   });
 
-  it("os três avisam o servidor — o recorte é feito pela consulta, não no navegador", () => {
+  it("os quatro avisam o servidor — o recorte é feito pela consulta, não no navegador", () => {
     for (const p of parametrosDaRota("/cursos")) {
       expect(p.avisaServidor, `${p.nome} filtra sem consultar o banco`).toBe(true);
     }

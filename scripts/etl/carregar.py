@@ -643,6 +643,23 @@ def avancar_sequencias(con: psycopg.Connection) -> dict[str, int]:
     return avancadas
 
 
+def converter_capacitacoes(con: psycopg.Connection) -> int:
+    """Converte a capacitação didática carregada para a lista fechada — spec 020 (Bloco 5), C-10.
+
+    ⚠️ **SÃO DOIS CAMINHOS, como a marcação `simultaneo` da fatia (b) do Épico 5**: a migration
+    `20261020213441` converte o que JÁ está no banco (o remoto), e o ETL carrega o texto da v2.0
+    na coluna antiga DEPOIS das migrations — numa base refeita por ele a conversão nunca rodaria e
+    todo instrutor sairia "Nenhuma". As duas chamam a MESMA função do banco
+    (`app.converter_capacitacoes_didaticas()`), idempotente: ela só toca quem tem texto e ainda
+    não tem lista nem texto a corrigir.
+
+    ⚠️ RODA DENTRO DA TRANSAÇÃO DA PROMOÇÃO: promoção desfeita não deixa conversão pela metade.
+    """
+    with con.cursor() as k:
+        k.execute("select app.converter_capacitacoes_didaticas()")
+        return int(k.fetchone()[0] or 0)
+
+
 class DestinoJaCarregado(RuntimeError):
     """`--primeira-carga` contra destino que já tem dado carregado. Recusa antes de escrever."""
 

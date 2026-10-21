@@ -22,6 +22,7 @@
  */
 
 import type { SemanaForaDaFaixa } from "./carga-semanal";
+import { temCapacitacao, type CapacitacaoDoInstrutor } from "./capacitacao-didatica";
 import type { FaixaDoRegime } from "./carga-horaria";
 
 export type AlertaDoInstrutor = {
@@ -31,8 +32,6 @@ export type AlertaDoInstrutor = {
 };
 
 import { dataParaLeitura } from "@/lib/formato/data";
-
-const vazio = (texto: string | null): boolean => texto === null || texto.trim() === "";
 
 /*
  * ⚠️ **ESTE MÓDULO TINHA DOIS FORMATADORES PRÓPRIOS ATÉ 05/10/2026** — `diaMes` (`DD/MM`, sem ano) e
@@ -67,7 +66,8 @@ export function alertaForaDaFaixa(
 
 export type DadosDeCapacitacao = {
   readonly dataInicioDocenciaCiaara: string | null;
-  readonly capacitacaoDidatica: string | null;
+  /** Spec 020 (Bloco 5): a lista fechada e o texto que não casou — os dois contam (C-12). */
+  readonly capacitacao: CapacitacaoDoInstrutor;
 };
 
 /** `FR-017` · docência no CIAARA há **mais** de um ano e capacitação vazia; data vazia não alerta. */
@@ -75,7 +75,7 @@ export function alertaSemCapacitacao(
   dados: DadosDeCapacitacao,
   hoje: string,
 ): AlertaDoInstrutor | null {
-  if (!vazio(dados.capacitacaoDidatica)) return null;
+  if (temCapacitacao(dados.capacitacao)) return null;
   const inicio = dados.dataInicioDocenciaCiaara?.trim() ?? "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(inicio)) return null;
   const aniversario = `${Number(inicio.slice(0, 4)) + 1}${inicio.slice(4)}`;

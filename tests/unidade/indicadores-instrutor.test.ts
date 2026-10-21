@@ -7,10 +7,11 @@ import {
   indicadoresDeInstrutores,
   type InstrutorParaIndicadores,
 } from "@/lib/dominio/indicadores-instrutor";
+import { converterCapacitacao } from "@/lib/dominio/capacitacao-didatica";
 
 const instrutor = (id: string, capacitacaoDidatica: string | null): InstrutorParaIndicadores => ({
   id,
-  capacitacaoDidatica,
+  capacitacao: converterCapacitacao(capacitacaoDidatica),
 });
 
 describe("`FR-026` emendado em 15/09/2026 · exatamente três indicadores", () => {

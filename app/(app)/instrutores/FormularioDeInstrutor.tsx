@@ -56,6 +56,7 @@ import {
   sincronizarHabilitacoes,
 } from "@/lib/acoes/instrutor";
 import { ROTULO_DO_REGIME, UFS } from "@/lib/constantes/instrutor";
+import { CAPACITACOES_DIDATICAS } from "@/lib/dominio/capacitacao-didatica";
 import {
   mascararCep,
   mascararCpf,
@@ -177,7 +178,10 @@ export function FormularioDeInstrutor({
     setMensagem(null);
 
     const ler = (campo: string) => String(dados.get(campo) ?? "");
-    const funcional = Object.fromEntries(CAMPOS_FUNCIONAIS.map((c) => [c, ler(c)]));
+    /* Spec 020 (C-9): as caixas marcadas da capacitação, como texto separado por vírgula. */
+    const lerCampo = (campo: string) =>
+      campo === "capacitacoes_didaticas" ? dados.getAll(campo).map(String).join(",") : ler(campo);
+    const funcional = Object.fromEntries(CAMPOS_FUNCIONAIS.map((c) => [c, lerCampo(c)]));
     const resultado =
       modo === "novo"
         ? await criarInstrutor({ funcional })
@@ -296,11 +300,30 @@ export function FormularioDeInstrutor({
           rotulo="Formação principal e secundária"
           valor={v.formacao_principal_secundaria}
         />
-        <Campo
-          id="capacitacao_didatica"
-          rotulo="Capacitação didática"
-          valor={v.capacitacao_didatica}
-        />
+        {/* Spec 020 (Bloco 5), C-9 a C-11: lista fechada, mais de uma marcável. */}
+        <fieldset className="flex flex-col gap-1" data-slot="capacitacoes-didaticas">
+          <legend className="text-texto text-sm">Capacitação didática</legend>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            {CAPACITACOES_DIDATICAS.map((c) => (
+              <label key={c} className="text-texto flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  name="capacitacoes_didaticas"
+                  value={c}
+                  defaultChecked={v.capacitacoes_didaticas.split(",").includes(c)}
+                />
+                {c}
+              </label>
+            ))}
+          </div>
+          {v.capacitacao_didatica_a_corrigir.trim() !== "" ? (
+            <Campo
+              id="capacitacao_didatica_a_corrigir"
+              rotulo="Texto antigo a corrigir (apague depois de marcar as certas)"
+              valor={v.capacitacao_didatica_a_corrigir}
+            />
+          ) : null}
+        </fieldset>
         <Campo
           id="data_inicio_docencia_mb"
           rotulo="Início da docência na MB"

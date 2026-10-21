@@ -33,6 +33,7 @@ import {
   type ContextoDaRecusa,
   type ErroDoBanco,
 } from "@/lib/acoes/traducao-de-recusas";
+import { BALDE_DE_CURRICULOS } from "@/lib/dominio/curriculo-em-pdf";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
   esquemaDeCriacaoDeCurso,
@@ -130,6 +131,54 @@ export async function editarCurso(siglaAtual: string, entrada: unknown): Promise
   revalidar(siglaAtual);
   revalidar(conferido.data.codigo);
   return { ok: true, sigla: conferido.data.codigo };
+}
+
+/**
+ * Registra o currículo em PDF que o navegador acabou de carregar no balde — spec 020 (Bloco 5), C-5 e C-8.
+ *
+ * ⚠️ **O ARQUIVO NÃO PASSA POR AQUI**: a Vercel corta o corpo de uma função em 4,5 MB, então o PDF sobe do navegador
+ *    direto ao Storage, com a sessão de quem envia, e as policies do balde decidem. Esta ação só confere que ele
+ *    chegou e carimba `cursos.curriculo_pdf_em` — que é o que faz *Sobre o Curso* oferecer o download.
+ * ⚠️ **ZERO LINHAS É RECUSA** (como em `editarCurso`): quem não edita o curso não carimba.
+ */
+export async function registrarCurriculo(entrada: unknown): Promise<ResultadoDeCurso> {
+  const conferido = esquemaDeSituacaoDoCurso.safeParse(entrada);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  const { sigla } = conferido.data;
+
+  const supabase = await criarClienteDeServidor();
+  const { data: curso, error: erroDoCurso } = await supabase
+    .from("cursos")
+    .select("id")
+    .eq("codigo", sigla)
+    .maybeSingle();
+  if (erroDoCurso) return falha(traduzirRecusa(erroDoCurso as ErroDoBanco, { sigla }));
+  if (!curso) return falha(recusaPorAlcance(await contextoDaSigla(sigla, "o currículo")));
+
+  const { data: objetos, error: erroDaLista } = await supabase.storage
+    .from(BALDE_DE_CURRICULOS)
+    .list(curso.id as string, { search: "curriculo.pdf" });
+  const chegou = (objetos ?? []).some((o) => o.name === "curriculo.pdf");
+  if (erroDaLista || !chegou) {
+    return falha(
+      "O PDF não chegou ao armazenamento. Carregue de novo; se persistir, procure o suporte.",
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("cursos")
+    .update({ curriculo_pdf_em: new Date().toISOString() })
+    .eq("id", curso.id as string)
+    .select("codigo");
+  if (error) {
+    return falha(traduzirRecusa(error as ErroDoBanco, await contextoDaSigla(sigla, "o currículo")));
+  }
+  if (!data || data.length === 0) {
+    return falha(recusaPorAlcance(await contextoDaSigla(sigla, "o currículo")));
+  }
+
+  revalidar(sigla);
+  return { ok: true, sigla };
 }
 
 /** Muda só a situação do curso — o que as duas ações abaixo compartilham. */

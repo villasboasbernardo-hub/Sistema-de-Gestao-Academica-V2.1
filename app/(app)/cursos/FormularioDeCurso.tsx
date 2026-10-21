@@ -48,6 +48,14 @@ export type CursoNoFormulario = {
   readonly duracao_semanas: string;
   readonly limite_turmas_ano: string;
   readonly proposito: string;
+  /*
+   * Spec 020 (Bloco 5), C-1 a C-4: SÓ na edição. `""` = não informado.
+   */
+  readonly ofertavel_estrangeiros?: "" | "sim" | "nao";
+  readonly estrangeiros_observacao?: string;
+  /** O custo como se digita: *12.345,67*. */
+  readonly custo_total?: string;
+  readonly custo_composicao?: string;
 };
 
 const VAZIO: CursoNoFormulario = {
@@ -111,6 +119,19 @@ export function FormularioDeCurso({
     limite_turmas_ano: numero(valores.limite_turmas_ano),
     proposito: nulo(valores.proposito),
   };
+  /* Spec 020 (C-4): estrangeiros e custo vão só na edição; a validação lê o custo em reais. */
+  const corpoDaEdicao = {
+    ...corpo,
+    ofertavel_estrangeiros:
+      valores.ofertavel_estrangeiros === "sim"
+        ? true
+        : valores.ofertavel_estrangeiros === "nao"
+          ? false
+          : null,
+    estrangeiros_observacao: nulo(valores.estrangeiros_observacao ?? ""),
+    custo_total: nulo(valores.custo_total ?? ""),
+    custo_composicao: nulo(valores.custo_composicao ?? ""),
+  };
 
   /*
    * ⚠️ O LIMITE QUE A PESSOA ESTÁ DIGITANDO É O QUE VALE PARA O AVISO, e não o que está gravado. Os
@@ -166,7 +187,7 @@ export function FormularioDeCurso({
               fundamento_curricular: nulo(regime.fundamento_curricular),
             },
           })
-        : await editarCurso(inicial?.codigo ?? "", corpo);
+        : await editarCurso(inicial?.codigo ?? "", corpoDaEdicao);
     definirGravando(false);
 
     if (!resultado.ok) {
@@ -301,6 +322,69 @@ export function FormularioDeCurso({
           />
         </div>
       </div>
+
+      {modo === "edicao" ? (
+        /*
+         * Spec 020 (Bloco 5), C-1 a C-4 — novidade autorizada: só informativo, nada calcula a partir daqui.
+         */
+        <fieldset
+          className="border-borda rounded-ciaara grid gap-3 border p-3 sm:grid-cols-2"
+          data-slot="estrangeiros-e-custo"
+        >
+          <legend className="text-texto px-1 text-sm font-semibold">Estrangeiros e custo</legend>
+          <div className="flex flex-col gap-1">
+            <CampoObrigatorio para="curso-estrangeiros" rotulo="Ofertável a estrangeiros" />
+            <select
+              {...propsDoControle("curso-estrangeiros", false)}
+              name="ofertavel_estrangeiros"
+              value={valores.ofertavel_estrangeiros ?? ""}
+              onChange={(e) =>
+                definirValores((v) => ({
+                  ...v,
+                  ofertavel_estrangeiros: e.target.value as "" | "sim" | "nao",
+                }))
+              }
+              className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
+            >
+              <option value="">Não informado</option>
+              <option value="sim">Sim</option>
+              <option value="nao">Não</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <CampoObrigatorio
+              para="curso-estrangeiros-observacao"
+              rotulo="Observação sobre estrangeiros"
+            />
+            <Input
+              {...propsDoControle("curso-estrangeiros-observacao", false)}
+              name="estrangeiros_observacao"
+              value={valores.estrangeiros_observacao ?? ""}
+              onChange={trocar("estrangeiros_observacao")}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <CampoObrigatorio para="curso-custo-total" rotulo="Custo total (R$)" />
+            <Input
+              {...propsDoControle("curso-custo-total", false)}
+              name="custo_total"
+              inputMode="decimal"
+              placeholder="12.345,67"
+              value={valores.custo_total ?? ""}
+              onChange={trocar("custo_total")}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <CampoObrigatorio para="curso-custo-composicao" rotulo="Composição do custo" />
+            <Input
+              {...propsDoControle("curso-custo-composicao", false)}
+              name="custo_composicao"
+              value={valores.custo_composicao ?? ""}
+              onChange={trocar("custo_composicao")}
+            />
+          </div>
+        </fieldset>
+      ) : null}
 
       {modo === "novo" ? (
         <fieldset className="border-borda rounded-ciaara flex flex-col gap-3 border p-3">

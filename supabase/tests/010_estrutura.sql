@@ -19,8 +19,10 @@ select is(
   (select count(*)::int from pg_type t
      join pg_namespace n on n.oid = t.typnamespace
     where n.nspname = 'public' and t.typtype = 'e'),
-  28,
-  'M1 cria os 28 dominios normativos fechados'
+  -- Spec 020 (Bloco 5), 20/10/2026. REGRA DOS VALORES ESPERADOS: (a) — o 29o e
+  -- `tipo_capacitacao_didatica`, a lista fechada do pedido de Bernardo Villas Boas (C-9).
+  29,
+  'M1 cria os 28 dominios normativos fechados, e a spec 020 o 29o (a capacitacao didatica)'
 );
 
 -- FR-047 / TURMA-1: "arquivada" NAO e valor de dominio. Decidido em 28/08/2026 como
@@ -111,7 +113,10 @@ select set_eq(
            ('ta_fora_do_dsa'), ('turma_trocas_de_situacao'), ('turma_arquivamentos'),
            -- Spec 018 (Bloco 3), 20/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entrou no BRIEF §2.1 (emenda de
            -- 20/10/2026) antes de entrar aqui: os regimes de horario nomeados do curso.
-           ('regimes_de_horario')$$,
+           ('regimes_de_horario'),
+           -- Spec 020 (Bloco 5), 20/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entrou no BRIEF §2.1 (emenda de
+           -- 20/10/2026) antes de entrar aqui: a contagem de acessos, so conta e instante.
+           ('acessos_de_conta')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

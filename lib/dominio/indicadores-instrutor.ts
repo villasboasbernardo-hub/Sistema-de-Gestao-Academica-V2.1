@@ -26,9 +26,12 @@
  * existe para revelar.
  */
 
+import { temCapacitacao, type CapacitacaoDoInstrutor } from "./capacitacao-didatica";
+
 export type InstrutorParaIndicadores = {
   readonly id: string;
-  readonly capacitacaoDidatica: string | null;
+  /** Spec 020 (Bloco 5): "tem capacitação" é lista não vazia ou texto a corrigir (C-12). */
+  readonly capacitacao: CapacitacaoDoInstrutor;
 };
 
 export type TaxaDeSelecao = {
@@ -44,8 +47,6 @@ export type IndicadoresDeInstrutores = {
   readonly taxaDeSelecao: TaxaDeSelecao;
 };
 
-const preenchido = (texto: string | null): boolean => texto !== null && texto.trim() !== "";
-
 export function indicadoresDeInstrutores(
   instrutores: readonly InstrutorParaIndicadores[],
   habilitados: ReadonlySet<string>,
@@ -60,7 +61,7 @@ export function indicadoresDeInstrutores(
 
   return {
     total: instrutores.length,
-    comCapacitacaoDidatica: instrutores.filter((i) => preenchido(i.capacitacaoDidatica)).length,
+    comCapacitacaoDidatica: instrutores.filter((i) => temCapacitacao(i.capacitacao)).length,
     taxaDeSelecao: {
       habilitados: qtdHabilitados,
       selecionados: qtdSelecionados,
