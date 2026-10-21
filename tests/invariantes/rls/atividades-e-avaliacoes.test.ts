@@ -54,7 +54,13 @@ let turmaExpeditaId = "";
 let paradaLaId = "";
 let tipoAecId = "";
 let tipoTrId = "";
-let disciplinaId = "";
+/**
+ * Spec 021 (Bloco 6): a disciplina do bloco do ARBITRADO mora num curso próprio, SEM turma. O curso regular da amostra
+ * ganha dia parado (lançamento) nos casos acima, e a versão do currículo seguida por turma com lançamento trava a
+ * escrita do currículo (RF-HOR-05) — a recusa chegaria antes da permissão, e o bloco deixaria de medir permissão.
+ */
+let disciplinaDoArbitradoId = "";
+let cursoDoArbitradoId = "";
 let instrumentoPmId = "";
 const DIA = "2026-04-08";
 
@@ -217,19 +223,20 @@ beforeAll(async () => {
   tipoAecId = await idDaLista("tipos_atividade", "AAV Palestra", { categoria: "AEC" });
   tipoTrId = await idDaLista("tipos_atividade", "AAV Tempo Reserva", { categoria: "TR" });
   instrumentoPmId = await idDaLista("instrumentos_avaliacao", "PM", { natureza: "prova" });
-  const { data: dis, error: eDis } = await servico
+  cursoDoArbitradoId = await curso("AAV-AVC", "regular");
+  const { data: disAvc, error: eDisAvc } = await servico
     .from("disciplinas")
     .insert({
-      codigo: `AAV-DIS-${SELO}`,
-      curso_id: cursoRegularId,
-      cod_disciplina: `AAV${SELO}`,
-      nome_disciplina: "Disciplina AAV",
+      codigo: `AAV-DIS-AVC-${SELO}`,
+      curso_id: cursoDoArbitradoId,
+      cod_disciplina: `AAVC${SELO}`,
+      nome_disciplina: "Disciplina AAV do arbitrado",
       carga_horaria_tempos: 40,
     })
     .select("id")
     .single();
-  if (eDis) throw new Error(`disciplina: ${eDis.message}`);
-  disciplinaId = (dis as { id: string }).id;
+  if (eDisAvc) throw new Error(`disciplina do arbitrado: ${eDisAvc.message}`);
+  disciplinaDoArbitradoId = (disAvc as { id: string }).id;
   for (const p of PAPEIS) await criarConta(p);
 }, 120_000);
 
@@ -520,8 +527,8 @@ describe("previsto do PROENS por turma (FR-008.1, SC-018) — PR 1.1", () => {
 describe("avaliações do currículo e o arbitrado (FR-031.7, T142)", () => {
   function item(extra: Record<string, unknown> = {}) {
     return {
-      disciplina_id: disciplinaId,
-      curso_id: cursoRegularId,
+      disciplina_id: disciplinaDoArbitradoId,
+      curso_id: cursoDoArbitradoId,
       ordem: 1,
       instrumento_id: instrumentoPmId,
       numero: 1,

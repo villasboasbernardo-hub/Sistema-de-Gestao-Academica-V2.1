@@ -109,6 +109,9 @@ select * from (values
   -- Spec 018 (Bloco 3), 20/10/2026. REGRA DOS VALORES ESPERADOS: (a) — o regime nomeado é dado do curso, com as
   -- policies de `curso_regime_historico`: criar e editar exigem o curso em oferta.
   ('regimes_de_horario',         'curso_em_oferta'),
+  -- Spec 021 (Bloco 6), 21/10/2026. REGRA DOS VALORES ESPERADOS: (a) — a versão do currículo é dado do curso: editar
+  -- o cabeçalho dela exige o curso em oferta. ⚠️ UMA policy só (editar): a versão nasce pela cópia, sem INSERT.
+  ('curriculos',                 'curso_em_oferta'),
   ('instrutor_disciplina',       'disciplina_em_oferta')
 ) as v(tabela, chave);
 
@@ -152,8 +155,9 @@ select is(
   -- Emenda de 15/10/2026 (E-6, 16/10/2026): + `sessoes_de_aplicacao`, duas — 40 + 2 = 42, em 21.
   -- Spec 017 (Bloco 2, M1, 19/10/2026): + `ta_fora_do_dsa`, duas (registrar e desfazer) — 42 + 2 = 44, em 22.
   -- Spec 018 (Bloco 3, 20/10/2026): + `regimes_de_horario`, duas (criar e editar) — 44 + 2 = 46, em 23.
-  46,
-  'FR-017.5 · sao 46 policies de escrita em 23 tabelas — duas por tabela, criar e editar'
+  -- Spec 021 (Bloco 6, 21/10/2026): + `curriculos`, UMA (editar; a versão nasce pela cópia) — 46 + 1 = 47, em 24.
+  47,
+  'FR-017.5 · sao 47 policies de escrita em 24 tabelas — duas por tabela (criar e editar), menos a versao do curriculo, que so se edita'
 );
 
 -- ---------------------------------------------------------------- a exclusao DECLARADA, nao ausente

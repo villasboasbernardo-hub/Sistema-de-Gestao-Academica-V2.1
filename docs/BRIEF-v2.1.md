@@ -334,6 +334,16 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 21/10/2026 — uma tabela nova, do Bloco 6 do plano de correções (spec 021)
+>
+> - **`curriculos`** — as **versões do currículo** de um curso (*"registrar um currículo NOVO de um curso (…) SEM
+>   alterar o currículo em vigor"*, pedido de Bernardo Villas Boas de 16/10/2026). A versão é dona das disciplinas (e,
+>   por elas, das UEs e das avaliações do currículo) e dos limites de AEC/TAD/TR; toda turma segue uma
+>   (`turmas.curriculo_id`). O currículo de hoje é a **versão 1** de cada curso, e toda turma existente fica ligada a
+>   ela. A versão em uso por turma com lançamento não muda número (`RF-HOR-05`). Inativar, nunca apagar.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a

@@ -697,6 +697,7 @@ export type Database = {
           fonte_pagina: number | null
           id: string
           instrumento_id: string
+          linhagem_id: string
           numero: number
           ordem: number
           origem_item: string
@@ -723,6 +724,7 @@ export type Database = {
           fonte_pagina?: number | null
           id?: string
           instrumento_id: string
+          linhagem_id?: string
           numero: number
           ordem: number
           origem_item: string
@@ -749,6 +751,7 @@ export type Database = {
           fonte_pagina?: number | null
           id?: string
           instrumento_id?: string
+          linhagem_id?: string
           numero?: number
           ordem?: number
           origem_item?: string
@@ -1211,6 +1214,82 @@ export type Database = {
           },
         ]
       }
+      curriculos: {
+        Row: {
+          codigo: string
+          copiada_de: string | null
+          criado_em: string
+          criado_por: string | null
+          curso_id: string
+          descricao: string | null
+          duracao_dias: number | null
+          duracao_semanas: number | null
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          origem_migracao_v1: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          versao: number
+          vigente_de: string
+        }
+        Insert: {
+          codigo?: string
+          copiada_de?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          curso_id: string
+          descricao?: string | null
+          duracao_dias?: number | null
+          duracao_semanas?: number | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          versao: number
+          vigente_de: string
+        }
+        Update: {
+          codigo?: string
+          copiada_de?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          curso_id?: string
+          descricao?: string | null
+          duracao_dias?: number | null
+          duracao_semanas?: number | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          versao?: number
+          vigente_de?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculos_copiada_de_fkey"
+            columns: ["copiada_de"]
+            isOneToOne: false
+            referencedRelation: "curriculos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curriculos_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curriculos_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+        ]
+      }
       curso_regime_historico: {
         Row: {
           codigo: string
@@ -1542,6 +1621,7 @@ export type Database = {
           codigo: string
           criado_em: string
           criado_por: string | null
+          curriculo_id: string
           curso_id: string
           editado_em: string | null
           editado_por: string | null
@@ -1549,6 +1629,7 @@ export type Database = {
           id_disciplina_legado: string | null
           instrutores_atribuidos: string[]
           instrutores_atribuidos_legado_v1: string | null
+          linhagem_id: string
           local_padrao: string | null
           modo_atribuicao_padrao: Database["public"]["Enums"]["modo_atribuicao"]
           nome_disciplina: string
@@ -1571,6 +1652,7 @@ export type Database = {
           codigo?: string
           criado_em?: string
           criado_por?: string | null
+          curriculo_id: string
           curso_id: string
           editado_em?: string | null
           editado_por?: string | null
@@ -1578,6 +1660,7 @@ export type Database = {
           id_disciplina_legado?: string | null
           instrutores_atribuidos?: string[]
           instrutores_atribuidos_legado_v1?: string | null
+          linhagem_id?: string
           local_padrao?: string | null
           modo_atribuicao_padrao?: Database["public"]["Enums"]["modo_atribuicao"]
           nome_disciplina: string
@@ -1600,6 +1683,7 @@ export type Database = {
           codigo?: string
           criado_em?: string
           criado_por?: string | null
+          curriculo_id?: string
           curso_id?: string
           editado_em?: string | null
           editado_por?: string | null
@@ -1607,6 +1691,7 @@ export type Database = {
           id_disciplina_legado?: string | null
           instrutores_atribuidos?: string[]
           instrutores_atribuidos_legado_v1?: string | null
+          linhagem_id?: string
           local_padrao?: string | null
           modo_atribuicao_padrao?: Database["public"]["Enums"]["modo_atribuicao"]
           nome_disciplina?: string
@@ -1623,6 +1708,13 @@ export type Database = {
           tecnica_ensino_sugerida?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "disciplinas_curriculo_do_proprio_curso_fk"
+            columns: ["curriculo_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "curriculos"
+            referencedColumns: ["id", "curso_id"]
+          },
           {
             foreignKeyName: "disciplinas_curso_id_fkey"
             columns: ["curso_id"]
@@ -2095,6 +2187,7 @@ export type Database = {
           categoria: Database["public"]["Enums"]["categoria_normativa"]
           criado_em: string
           criado_por: string | null
+          curriculo_id: string
           curso_id: string
           editado_em: string | null
           editado_por: string | null
@@ -2109,6 +2202,7 @@ export type Database = {
           categoria: Database["public"]["Enums"]["categoria_normativa"]
           criado_em?: string
           criado_por?: string | null
+          curriculo_id: string
           curso_id: string
           editado_em?: string | null
           editado_por?: string | null
@@ -2123,6 +2217,7 @@ export type Database = {
           categoria?: Database["public"]["Enums"]["categoria_normativa"]
           criado_em?: string
           criado_por?: string | null
+          curriculo_id?: string
           curso_id?: string
           editado_em?: string | null
           editado_por?: string | null
@@ -2147,6 +2242,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_cursos_regime_vigente"
             referencedColumns: ["curso_id"]
+          },
+          {
+            foreignKeyName: "limites_curriculo_da_versao_do_curso_fk"
+            columns: ["curriculo_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "curriculos"
+            referencedColumns: ["id", "curso_id"]
           },
         ]
       }
@@ -3635,6 +3737,7 @@ export type Database = {
           codigo: string
           criado_em: string
           criado_por: string | null
+          curriculo_id: string
           curso_id: string
           data_inicio: string | null
           data_termino: string | null
@@ -3656,6 +3759,7 @@ export type Database = {
           codigo: string
           criado_em?: string
           criado_por?: string | null
+          curriculo_id: string
           curso_id: string
           data_inicio?: string | null
           data_termino?: string | null
@@ -3677,6 +3781,7 @@ export type Database = {
           codigo?: string
           criado_em?: string
           criado_por?: string | null
+          curriculo_id?: string
           curso_id?: string
           data_inicio?: string | null
           data_termino?: string | null
@@ -3693,6 +3798,13 @@ export type Database = {
           turma?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "turmas_curriculo_do_proprio_curso_fk"
+            columns: ["curriculo_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "curriculos"
+            referencedColumns: ["id", "curso_id"]
+          },
           {
             foreignKeyName: "turmas_curso_id_fkey"
             columns: ["curso_id"]
@@ -3728,6 +3840,7 @@ export type Database = {
           editado_por: string | null
           fundamento_normativo: string | null
           id: string
+          linhagem_id: string
           numero_ue: number
           origem_migracao_v1: string | null
           status: Database["public"]["Enums"]["status_registro"]
@@ -3745,6 +3858,7 @@ export type Database = {
           editado_por?: string | null
           fundamento_normativo?: string | null
           id?: string
+          linhagem_id?: string
           numero_ue: number
           origem_migracao_v1?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
@@ -3762,6 +3876,7 @@ export type Database = {
           editado_por?: string | null
           fundamento_normativo?: string | null
           id?: string
+          linhagem_id?: string
           numero_ue?: number
           origem_migracao_v1?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
@@ -5069,6 +5184,7 @@ export type Database = {
           codigo: string
           criado_em: string
           criado_por: string | null
+          curriculo_id: string
           curso_id: string
           editado_em: string | null
           editado_por: string | null
@@ -5076,6 +5192,7 @@ export type Database = {
           id_disciplina_legado: string | null
           instrutores_atribuidos: string[]
           instrutores_atribuidos_legado_v1: string | null
+          linhagem_id: string
           local_padrao: string | null
           modo_atribuicao_padrao: Database["public"]["Enums"]["modo_atribuicao"]
           nome_disciplina: string
@@ -5097,6 +5214,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      curriculo_padrao_da_turma: {
+        Args: {
+          p_ano_letivo: number
+          p_curso_id: string
+          p_data_inicio: string
+        }
+        Returns: string
       }
       definir_instrutores_da_turma: {
         Args: {
@@ -5222,6 +5347,7 @@ export type Database = {
           codigo: string
           criado_em: string
           criado_por: string | null
+          curriculo_id: string
           curso_id: string
           editado_em: string | null
           editado_por: string | null
@@ -5229,6 +5355,7 @@ export type Database = {
           id_disciplina_legado: string | null
           instrutores_atribuidos: string[]
           instrutores_atribuidos_legado_v1: string | null
+          linhagem_id: string
           local_padrao: string | null
           modo_atribuicao_padrao: Database["public"]["Enums"]["modo_atribuicao"]
           nome_disciplina: string

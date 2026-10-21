@@ -186,7 +186,20 @@ def executar(
                 return 2
             try:
                 with psycopg.connect(conexao, autocommit=False) as con:
+                    # ⚠️ SPEC 021 (Bloco 6): os limites passaram a ser únicos por VERSÃO do currículo
+                    #    (`limite_unico_na_versao`), e a D-1 — já aplicada no remoto, e por isso
+                    #    intocável — diz `on conflict (curso_id, categoria)`. O índice antigo volta
+                    #    SÓ durante esta reaplicação, na mesma transação: numa base recém-carregada há
+                    #    UMA versão por curso, então ele não conflita com nada; e sai em seguida.
+                    limites = sufixo == "limites_dos_24_curriculos"
+                    if limites:
+                        con.execute(
+                            "create unique index limite_unico_da_reaplicacao on "
+                            "public.limites_curriculo (curso_id, categoria) where status = 'ativo'"
+                        )
                     con.execute(achados[0].read_text(encoding="utf-8"))
+                    if limites:
+                        con.execute("drop index public.limite_unico_da_reaplicacao")
                     con.commit()
             except Exception as erro:  # noqa: BLE001 — o motivo vai para o relatório
                 print(f"[NAO CONFERIDA] a migration de dado {achados[0].name} falhou: {erro}")
