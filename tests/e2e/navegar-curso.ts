@@ -5,7 +5,7 @@
  *    aba *Disciplinas* do curso, e o menu não tem mais a entrada (*"todo caminho por clique passa pelo curso"*). O
  *    `goto` fica só no ponto de partida (`entrar`).
  */
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type Locator } from "@playwright/test";
 
 import { entrar } from "./conta-de-teste";
 
@@ -92,4 +92,20 @@ export async function justificarCorrecao(page: Page, motivo: string): Promise<vo
   await pedido.locator('[data-slot="justificativa-da-correcao"]').fill(motivo);
   await pedido.locator('[data-slot="confirmar-justificativa"]').click();
   await expect(pedido).toHaveCount(0);
+}
+
+/**
+ * Como `justificarCorrecao`, mas para a amostra cujo currículo PODE estar em uso conforme a ordem dos arquivos: "em uso"
+ * conta também a atividade GLOBAL na janela da turma (I-1 do Bloco 3), e outras amostras criam uma (10/05/2026). Espera o
+ * `resultado` OU o pedido, e responde ao pedido quando ele vem. A regra em si está provada sem depender de ordem no pgTAP
+ * `146` e em `tests/invariantes/rls/regimes-nomeados.test.ts`.
+ */
+export async function justificarSePedir(
+  page: Page,
+  motivo: string,
+  resultado: Locator,
+): Promise<void> {
+  const pedido = page.locator('[data-slot="pedido-de-justificativa"]');
+  await expect(resultado.or(pedido).first()).toBeVisible();
+  if (await pedido.isVisible()) await justificarCorrecao(page, motivo);
 }

@@ -37,7 +37,7 @@ import {
 import {
   irAsDisciplinasDaEdicao,
   irAsDisciplinasDoCurso,
-  justificarCorrecao,
+  justificarSePedir,
 } from "./navegar-curso";
 
 let EMAIL = "";
@@ -217,8 +217,11 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
     await nova.locator('input[name="topico"]').fill("Unidade que desequilibra");
     await nova.locator('input[name="ch"]').fill("3");
     await nova.locator('[data-slot="gravar-unidade-nova"]').click();
+    // RC-6: se outra amostra deixar o currículo em uso (atividade global), a tela pede a justificativa.
+    const acrescentada = page.getByRole("status").filter({ hasText: "acrescentada" });
+    await justificarSePedir(page, "A unidade 9 entra no currículo.", acrescentada);
 
-    await expect(page.getByRole("status").filter({ hasText: "acrescentada" })).toBeVisible();
+    await expect(acrescentada).toBeVisible();
     await expect(page.locator('[data-slot="aviso-da-soma"]')).toContainText("13");
   });
 
@@ -243,8 +246,11 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
     const topico = `Tópico editado ${PROCESSO}`;
     await tabela.locator('[data-unidade="1"] input[name="topico"]').fill(topico);
     await tabela.locator('[data-unidade="1"] [data-slot="gravar-unidade"]').click();
+    // RC-6: se outra amostra deixar o currículo em uso (atividade global), a tela pede a justificativa.
+    const atualizada = page.getByRole("status").filter({ hasText: "atualizada" });
+    await justificarSePedir(page, "O tópico da unidade 1 foi revisto.", atualizada);
 
-    await expect(page.getByRole("status").filter({ hasText: "atualizada" })).toBeVisible();
+    await expect(atualizada).toBeVisible();
     await expect(tabela.locator("input")).toHaveCount(0);
     await expect(tabela.locator('[data-unidade="1"]')).toContainText(topico);
   });
@@ -315,7 +321,10 @@ test.describe("`PEND-016-3` · as teclas num campo do detalhe são do campo", ()
 
     // Enter grava a unidade (é o envio do formulário) — e a linha continua aberta.
     await page.keyboard.press("Enter");
-    await expect(page.getByRole("status").filter({ hasText: "atualizada" })).toBeVisible();
+    // RC-6: se outra amostra deixar o currículo em uso (atividade global), a tela pede a justificativa.
+    const gravada = page.getByRole("status").filter({ hasText: "atualizada" });
+    await justificarSePedir(page, "O tópico da unidade 1, gravado com Enter.", gravada);
+    await expect(gravada).toBeVisible();
     await expect(linha).toHaveAttribute("aria-expanded", "true");
     await expect(page.locator('[data-slot="detalhe-da-disciplina"]')).toBeVisible();
   });
@@ -495,10 +504,15 @@ test.describe("Spec 018 · C-2 · Nova disciplina (desde a spec 021, em Editar c
     await cadastro.getByLabel("Carga horária (tempos)").fill("12");
     await cadastro.locator('[data-slot="gravar-disciplina"]').click();
     /*
-     * ⚠️ RC-6 (spec 021): o currículo da amostra é seguido por turma com lançamento — acrescentar disciplina é correção.
-     *    Até a correção do buraco da M4 (D-46), a inserção pela RPC pulava o porteiro e não perguntava nada.
+     * ⚠️ RC-6 (spec 021): se o currículo da amostra estiver em uso, acrescentar disciplina é correção e a tela pede a
+     *    justificativa. "Em uso" depende da ordem dos arquivos (a atividade GLOBAL de outra amostra conta) — medido: o
+     *    pedido veio aqui e não veio no CI de `fcbc48b`. Responde-se quando vier.
      */
-    await justificarCorrecao(page, "A disciplina nova entra no currículo em vigor.");
+    await justificarSePedir(
+      page,
+      "A disciplina nova entra no currículo em vigor.",
+      page.getByRole("gridcell", { name: nome }),
+    );
 
     await expect(page.getByRole("gridcell", { name: nome })).toBeVisible();
     await expect(cadastro).toHaveCount(0);

@@ -15,7 +15,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { bancoDoBloco2 } from "./bloco-2-de-teste";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { abrirPainelDeFiltros } from "./filtros";
-import { irAoCursoPorClique } from "./navegar-curso";
+import { irAoCursoPorClique, justificarSePedir } from "./navegar-curso";
 import { abrirEdicaoDoInstrutor } from "./navegar-instrutores";
 
 const MENU = (page: Page) => page.getByRole("navigation", { name: "Navegação principal" });
@@ -320,6 +320,14 @@ test.describe("spec 020 · os cadastros novos", () => {
         mimeType: "application/pdf",
         buffer: pdf("segunda-versao"),
       });
+      /*
+       * RC-6: substituir o PDF do currículo EM USO é correção. "Em uso" depende da ordem dos arquivos (a atividade global
+       * de outra amostra conta), então a justificativa se responde quando for pedida.
+       */
+      const carregado = page
+        .locator('[data-slot="aviso-do-curriculo"]')
+        .filter({ hasText: "Currículo carregado." });
+      await justificarSePedir(page, "O currículo em PDF foi substituído.", carregado);
       await expect(page.locator('[data-slot="aviso-do-curriculo"]')).toHaveText(
         "Currículo carregado.",
       );
