@@ -2,6 +2,9 @@
  * Spec 021, Bloco 6, PR 2 — o currículo versionado POR CLIQUE: SC-004 (o currículo novo, a turma nova nele, e a turma
  * antiga intacta) e SC-005 (a correção do currículo em uso pede a justificativa e fica na trilha).
  *
+ * ⚠️ DESDE OS AJUSTES DA CONFERÊNCIA DO PR #82 (21/10/2026): criar e editar currículo é em *Editar curso* (seletor,
+ *    *Novo currículo* e as partes); a página do curso mostra o vigente, e a aba *Currículo* consulta os outros.
+ *
  * > *"RC-7 · Novo currículo nasce como cópia do vigente (…)."* · *"RC-8 · (…) seletor de currículo (…)."* ·
  * > *"RC-4 · Ao criar uma turma, escolhe-se qual currículo ela segue (…)."* · *"RC-6 · (…) com justificativa
  * > obrigatória e trilha (…)."*
@@ -16,7 +19,12 @@ import { expect, test, type Page } from "@playwright/test";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
 import { apagarLinhasDaTurma } from "./dsa-de-teste";
 import { abrirLinha } from "./linha-expansivel";
-import { abrirAbaDoCurso, irAoCursoPorClique } from "./navegar-curso";
+import {
+  abrirAbaDoCurso,
+  abrirParteDaEdicao,
+  irAEdicaoDoCurso,
+  irAoCursoPorClique,
+} from "./navegar-curso";
 
 /* Os dois casos usam o mesmo curso, em ordem: o SC-004 confere a CH do currículo 1 antes de o SC-005 corrigi-la. */
 test.describe.configure({ mode: "default" });
@@ -250,12 +258,12 @@ test.describe("SC-004 · o currículo novo, a turma nova nele, e a turma antiga 
     page,
   }) => {
     test.setTimeout(180_000);
-    await irAoCursoPorClique(page, EMAIL, SIGLA);
+    await irAEdicaoDoCurso(page, EMAIL, SIGLA);
     await expect(page.locator('[data-slot="escolha-do-curriculo"]')).toContainText(
       "Currículo 1 (vigência 2020)",
     );
 
-    /* RC-7: a cópia do vigente. A data sugerida é 01/01 do ano que vem — depois do mais novo. */
+    /* RC-7: a cópia do vigente, em *Editar curso*. A data sugerida é 01/01 do ano que vem — depois do mais novo. */
     await page.locator('[data-slot="novo-curriculo"]').click();
     await expect(page.locator('[data-slot="o-que-se-copia"]')).toContainText("Currículo 1");
     await page.locator('[data-slot="criar-curriculo"]').click();
@@ -263,13 +271,13 @@ test.describe("SC-004 · o currículo novo, a turma nova nele, e a turma antiga 
     await expect(page.locator('[data-slot="situacao-do-curriculo"]')).toHaveText("futuro");
 
     /* RC-5: editar o currículo ESCOLHIDO — sem justificativa, porque nenhuma turma com lançamento o segue (RC-7). */
-    await page.locator('[data-slot="editar-curriculo"]').click();
     await page.locator("#curriculo-semanas").fill("3");
     await page.locator('[data-slot="salvar-curriculo"]').click();
+    await expect(page.locator('[data-slot="curriculo-gravado"]')).toBeVisible();
     await expect.poll(() => new URL(page.url()).searchParams.get("curriculo")).toBe("2");
     await expect(page.locator('[data-slot="pedido-de-justificativa"]')).toHaveCount(0);
 
-    await abrirAbaDoCurso(page, "disciplinas");
+    await abrirParteDaEdicao(page, "disciplinas");
     await expect(page).toHaveURL(/[?&]curriculo=2(&|$)/);
     await editarCh(page, "39");
     await expect.poll(() => disciplinaNoCurriculo(2)).toBe(39);
@@ -284,6 +292,25 @@ test.describe("SC-004 · o currículo novo, a turma nova nele, e a turma antiga 
       { versao: 1, duracao_semanas: 4 },
       { versao: 2, duracao_semanas: 3 },
     ]);
+
+    /*
+     * Ajuste 2: a página do curso mostra o VIGENTE (1); o 2 se consulta na aba *Currículo*, só para leitura, com a CH
+     * da cópia editada.
+     */
+    await irAoCursoPorClique(page, EMAIL, SIGLA);
+    await abrirAbaDoCurso(page, "curriculo");
+    const lista = page.locator('[data-slot="lista-de-curriculos"]');
+    await expect(
+      lista.locator('tr[data-curriculo="1"] [data-slot="situacao-na-lista"]'),
+    ).toHaveText("vigente");
+    await expect(
+      lista.locator('tr[data-curriculo="2"] [data-slot="situacao-na-lista"]'),
+    ).toHaveText("futuro");
+    await lista.locator('tr[data-curriculo="2"] [data-slot="consultar-curriculo"]').click();
+    await expect.poll(() => new URL(page.url()).searchParams.get("curriculo")).toBe("2");
+    const consulta = page.locator('[data-slot="consulta-do-curriculo"][data-curriculo="2"]');
+    await expect(consulta.getByRole("gridcell", { name: DISCIPLINA })).toBeVisible();
+    await expect(consulta.locator('[data-slot="nova-disciplina"]')).toHaveCount(0);
 
     /* RC-4: a turma nova escolhe o currículo 2. */
     await page.locator('[data-slot="nova-turma"]').click();
@@ -321,10 +348,10 @@ test.describe("SC-005 · a correção do currículo em uso pede a justificativa,
   }) => {
     test.setTimeout(120_000);
     const motivo = "Correção de digitação: o currículo diz 41.";
-    await irAoCursoPorClique(page, EMAIL, SIGLA);
-    /* O vigente é o padrão do seletor — e é o currículo 1, seguido pela turma com avaliação. */
+    await irAEdicaoDoCurso(page, EMAIL, SIGLA);
+    /* O vigente é o padrão do seletor de *Editar curso* — e é o currículo 1, seguido pela turma com avaliação. */
     await expect(page.locator('[data-slot="escolha-do-curriculo"]')).toHaveValue("1");
-    await abrirAbaDoCurso(page, "disciplinas");
+    await abrirParteDaEdicao(page, "disciplinas");
     await editarCh(page, "41");
 
     const pedido = page.locator('[data-slot="pedido-de-justificativa"]');

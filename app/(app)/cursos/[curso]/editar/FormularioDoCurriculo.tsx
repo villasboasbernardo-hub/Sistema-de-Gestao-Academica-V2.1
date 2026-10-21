@@ -1,5 +1,6 @@
 /**
- * *Editar currículo* — spec 021, Bloco 6, RC-5 e RC-6 — **folha de cliente**.
+ * Os dados do currículo escolhido, em *Editar curso* — spec 021, Bloco 6, RC-5 e RC-6 (e o ajuste 3 da conferência do PR
+ * #82) — **folha de cliente**.
  *
  * > *"RC-5 · Editar escolhendo o currículo. Cadastrar ou editar disciplinas, avaliações, duração, propósito e o restante
  * > do conteúdo é sempre feito num currículo escolhido."*
@@ -17,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { editarCurriculo } from "@/lib/acoes/curriculo";
-import { enderecoDoCursoNoCurriculo } from "@/lib/navegacao/endereco-de-turma";
 
 export type CurriculoNoFormulario = {
   readonly vigenteDe: string;
@@ -39,6 +39,7 @@ export function FormularioDoCurriculo({
   const router = useRouter();
   const [valores, definirValores] = React.useState(inicial);
   const [erro, definirErro] = React.useState<string | null>(null);
+  const [gravado, definirGravado] = React.useState(false);
   const [gravando, definirGravando] = React.useState(false);
   const { executar, dialogo } = usePedidoDeJustificativa();
 
@@ -49,6 +50,7 @@ export function FormularioDoCurriculo({
     e.preventDefault();
     definirGravando(true);
     definirErro(null);
+    definirGravado(false);
     const resultado = await executar((justificativa) =>
       editarCurriculo({
         sigla,
@@ -67,7 +69,8 @@ export function FormularioDoCurriculo({
       definirErro(resultado.erro);
       return;
     }
-    router.push(enderecoDoCursoNoCurriculo(sigla, versao));
+    definirGravado(true);
+    router.refresh();
   }
 
   return (
@@ -128,6 +131,11 @@ export function FormularioDoCurriculo({
       {erro ? (
         <p role="alert" className="text-conflito-tinta text-sm" data-slot="erro-do-curriculo">
           {erro}
+        </p>
+      ) : null}
+      {gravado ? (
+        <p role="status" className="text-texto text-sm" data-slot="curriculo-gravado">
+          Currículo gravado.
         </p>
       ) : null}
       <div>

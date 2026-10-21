@@ -53,6 +53,11 @@ const hhmm = (t: string | null) => (t === null ? null : t.slice(0, 5));
 
 export async function lerHorariosDoCurso(entrada: {
   readonly cursoId: string;
+  /**
+   * Spec 021 (Bloco 6, emenda à RC-1 de 21/10/2026): os regimes nomeados são do CURRÍCULO — os deste. As vigências do
+   * regime padrão continuam do curso (`curso_regime_historico`).
+   */
+  readonly curriculoId: string;
   /** As turmas do curso, como a página já as leu: o código e o regime de cada uma. */
   readonly turmas: readonly { readonly codigo: string; readonly regimeId: string | null }[];
 }): Promise<HorariosDoCurso> {
@@ -63,7 +68,7 @@ export async function lerHorariosDoCurso(entrada: {
       .select(
         "id, codigo, nome, regime_tempos, ta_duracao_min, intervalo_manha_min, intervalo_tarde_min, hora_inicio_manha, hora_inicio_tarde, configuracao_horario_id, observacao, status",
       )
-      .eq("curso_id", entrada.cursoId)
+      .eq("curriculo_id", entrada.curriculoId)
       .order("status")
       .order("nome"),
     supabase

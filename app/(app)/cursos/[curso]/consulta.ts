@@ -26,7 +26,7 @@ import { preSelecionarTurma, type TurmaParaSelecao } from "@/lib/dominio/pre-sel
  * página escolhe o vigente hoje (`curriculoVigenteEm`). Estrangeiros e custo ficam no curso (D-20).
  */
 export const COLUNAS_DA_PAGINA_DO_CURSO =
-  "id, codigo, nome_curso, classificacao, modalidade, limite_turmas_ano, status, ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculos:curriculos!curriculos_curso_id_fkey(id, versao, vigente_de, status, arquivado_em, proposito, duracao_dias, duracao_semanas, pdf_carregado_em)";
+  "id, codigo, nome_curso, classificacao, modalidade, limite_turmas_ano, status, ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculos:curriculos!curriculos_curso_id_fkey(id, versao, vigente_de, status, arquivado_em, descricao, proposito, duracao_dias, duracao_semanas, pdf_carregado_em)";
 
 /** O currículo embutido na linha do curso (spec 021). */
 export type CurriculoDaPagina = {
@@ -35,6 +35,7 @@ export type CurriculoDaPagina = {
   readonly vigente_de: string;
   readonly status: string;
   readonly arquivado_em: string | null;
+  readonly descricao: string | null;
   readonly proposito: string | null;
   readonly duracao_dias: number;
   readonly duracao_semanas: number | null;

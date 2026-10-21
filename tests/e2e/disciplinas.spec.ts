@@ -34,7 +34,11 @@ import {
   siglaDoCurso,
   type AmostraDaGrade,
 } from "./disciplinas-de-teste";
-import { irAsDisciplinasDoCurso } from "./navegar-curso";
+import {
+  irAsDisciplinasDaEdicao,
+  irAsDisciplinasDoCurso,
+  justificarCorrecao,
+} from "./navegar-curso";
 
 let EMAIL = "";
 let amostra: AmostraDaGrade;
@@ -77,6 +81,16 @@ test.afterAll(async () => {
  */
 async function irAGradePorClique(page: Page): Promise<void> {
   await irAsDisciplinasDoCurso(page, EMAIL, SIGLA_DO_CURSO);
+}
+
+/**
+ * **A grade EM EDIÇÃO**, por clique: Cursos → o curso → *Editar curso* → *Disciplinas e avaliações*.
+ *
+ * ⚠️ DESDE O AJUSTE 1 DA CONFERÊNCIA DO PR #82 (spec 021, 21/10/2026) A PÁGINA DO CURSO É SÓ LEITURA: criar, editar,
+ *    acrescentar UE e excluir moram em *Editar curso*, no currículo escolhido (o vigente por padrão).
+ */
+async function irAGradeEmEdicao(page: Page): Promise<void> {
+  await irAsDisciplinasDaEdicao(page, EMAIL, SIGLA_DO_CURSO);
 }
 
 /**
@@ -189,7 +203,7 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
   });
 
   test("a soma que não fecha AVISA, e não bloqueia", async ({ page }) => {
-    await irAGradePorClique(page);
+    await irAGradeEmEdicao(page);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
 
     // As duas unidades somam 10, igual à CH: nenhum aviso.
@@ -211,7 +225,7 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
   test("`FR-007.1` da spec 016 · as UEs se LEEM sem campo nenhum, e *Editar* abre só a linha", async ({
     page,
   }) => {
-    await irAGradePorClique(page);
+    await irAGradeEmEdicao(page);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
 
     const tabela = page.locator('[data-slot="tabela-de-unidades"]');
@@ -263,7 +277,7 @@ test.describe("`PEND-016-3` · as teclas num campo do detalhe são do campo", ()
   test("no texto da UE em edição, Home, End e setas movem o cursor, e a linha continua aberta", async ({
     page,
   }) => {
-    await irAGradePorClique(page);
+    await irAGradeEmEdicao(page);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
     const linha = linhaExpansivel(page, DISCIPLINA_COM_UE.nome);
     const tabela = page.locator('[data-slot="tabela-de-unidades"]');
@@ -309,7 +323,7 @@ test.describe("`PEND-016-3` · as teclas num campo do detalhe são do campo", ()
 
 test.describe("`FR-020` a `FR-024` · a exclusão, com código e rastro", () => {
   test("⚠️ disciplina COM linha de turma é recusada, NOMEANDO o impedimento", async ({ page }) => {
-    await irAGradePorClique(page);
+    await irAGradeEmEdicao(page);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
 
     await page.locator('[data-slot="abrir-exclusao"]').first().click();
@@ -326,7 +340,7 @@ test.describe("`FR-020` a `FR-024` · a exclusão, com código e rastro", () => 
   test("⚠️ o botão só libera com o CÓDIGO certo, e a disciplina LIMPA some com rastro", async ({
     page,
   }) => {
-    await irAGradePorClique(page);
+    await irAGradeEmEdicao(page);
     await abrirDetalhe(page, DISCIPLINA_LIMPA.nome);
 
     await page.locator('[data-slot="abrir-exclusao"]').first().click();
@@ -416,7 +430,7 @@ test.describe("`FR-007.1` e `FR-007.5` da spec 017 · o Nome no DSA, sem apagar 
       .eq("id", amostra.disciplinaComUeId);
     expect(error).toBeNull();
 
-    await irAGradePorClique(page);
+    await irAGradeEmEdicao(page);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
     await page.locator('[data-slot="alternar-edicao"]').click();
 
@@ -459,8 +473,8 @@ test.describe("`FR-007.1` e `FR-007.5` da spec 017 · o Nome no DSA, sem apagar 
  * ⚠️ **O MODO DE CRIAÇÃO DO FORMULÁRIO EXISTIA DESDE A FATIA (b) E NENHUMA TELA O DESENHAVA** (triagem do Bloco 3,
  *    item 1a 🐛). A prova é o BANCO (PEND-016-2): a linha nova no curso, com o código digitado e a CH.
  */
-test.describe("Spec 018 · C-2 · Nova disciplina na aba Disciplinas do curso", () => {
-  test("cadastrar pela aba: a linha aparece na grade e o banco guarda a disciplina no curso", async ({
+test.describe("Spec 018 · C-2 · Nova disciplina (desde a spec 021, em Editar curso)", () => {
+  test("cadastrar na edição do curso: a linha aparece na grade e o banco guarda a disciplina no curso", async ({
     page,
   }) => {
     const banco = createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
@@ -469,7 +483,7 @@ test.describe("Spec 018 · C-2 · Nova disciplina na aba Disciplinas do curso", 
     const cod = `NV${PROCESSO}`;
     const nome = `Disciplina nova da prova ${PROCESSO}`;
 
-    await irAGradePorClique(page);
+    await irAGradeEmEdicao(page);
     await page.locator('[data-slot="nova-disciplina"]').click();
     const cadastro = page.locator('[data-slot="cadastro-de-disciplina"]');
     await expect(cadastro).toBeVisible();
@@ -480,6 +494,11 @@ test.describe("Spec 018 · C-2 · Nova disciplina na aba Disciplinas do curso", 
     await cadastro.getByLabel("Nome", { exact: true }).fill(nome);
     await cadastro.getByLabel("Carga horária (tempos)").fill("12");
     await cadastro.locator('[data-slot="gravar-disciplina"]').click();
+    /*
+     * ⚠️ RC-6 (spec 021): o currículo da amostra é seguido por turma com lançamento — acrescentar disciplina é correção.
+     *    Até a correção do buraco da M4 (D-46), a inserção pela RPC pulava o porteiro e não perguntava nada.
+     */
+    await justificarCorrecao(page, "A disciplina nova entra no currículo em vigor.");
 
     await expect(page.getByRole("gridcell", { name: nome })).toBeVisible();
     await expect(cadastro).toHaveCount(0);
@@ -502,6 +521,41 @@ test.describe("Spec 018 · C-2 · Nova disciplina na aba Disciplinas do curso", 
       carga_horaria_tempos: 12,
       status: "ativo",
     });
+  });
+});
+
+/*
+ * ⚠️ O CASO QUE DISCRIMINA O AJUSTE 1 (spec 021, conferência do PR #82): a aba Disciplinas do curso mostra a grade e
+ *    o detalhe, e NENHUMA ação — até 21/10/2026 ela trazia *Nova disciplina*, *Editar*, *Acrescentar unidade* e
+ *    *Excluir*. A mesma disciplina, em *Editar curso*, traz as ações.
+ */
+test.describe("Spec 021 · ajuste 1 · a aba Disciplinas do curso é só leitura", () => {
+  test("a página do curso não edita; *Editar curso* edita a mesma disciplina", async ({ page }) => {
+    await irAGradePorClique(page);
+    await expect(page.locator('[data-slot="nova-disciplina"]')).toHaveCount(0);
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    const detalhe = page.locator('[data-slot="detalhe-da-disciplina"]');
+    await expect(
+      detalhe.locator('[data-slot="tabela-de-unidades"] [data-unidade="1"]'),
+    ).toBeVisible();
+    for (const acao of [
+      "alternar-edicao",
+      "acrescentar-unidade",
+      "editar-unidade",
+      "abrir-exclusao",
+    ]) {
+      await expect(
+        detalhe.locator(`[data-slot="${acao}"]`),
+        `a página do curso ofereceu ${acao}`,
+      ).toHaveCount(0);
+    }
+
+    await irAGradeEmEdicao(page);
+    await expect(page.locator('[data-slot="nova-disciplina"]')).toBeVisible();
+    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    await expect(
+      page.locator('[data-slot="detalhe-da-disciplina"] [data-slot="alternar-edicao"]'),
+    ).toBeVisible();
   });
 });
 

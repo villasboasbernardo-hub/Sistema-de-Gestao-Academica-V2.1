@@ -17,7 +17,8 @@
  * ⚠️ **NENHUM CAMPO DE CARGA HORÁRIA** (`FR-045`). A grandeza é view; não há onde gravá-la.
  *
  * ⚠️ **SPEC 021 (Bloco 6, RC-1 e RC-5): DURAÇÃO E PROPÓSITO SÓ NO MODO `novo`.** São do currículo: o curso novo os
- *    traz para o currículo 1, que nasce com ele; depois, eles se editam em *Editar currículo*, no currículo escolhido.
+ *    traz para o currículo 1, que nasce com ele; depois, eles se editam na seção *Currículo* de *Editar curso*, no
+ *    currículo escolhido (ajuste 3 da conferência do PR #82).
  */
 "use client";
 

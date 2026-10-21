@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { Button } from "@/components/ui/button";
 import { descartarCurriculo } from "@/lib/acoes/curriculo";
-import { enderecoDoCurso } from "@/lib/navegacao/endereco-de-turma";
+import { enderecoDaEdicaoDoCurso } from "@/lib/navegacao/endereco-de-turma";
 
 export function DescartarCurriculo({
   sigla,
@@ -34,7 +34,7 @@ export function DescartarCurriculo({
       definirErro(resultado.erro);
       return;
     }
-    router.push(enderecoDoCurso(sigla));
+    router.push(enderecoDaEdicaoDoCurso(sigla));
   }
 
   return (

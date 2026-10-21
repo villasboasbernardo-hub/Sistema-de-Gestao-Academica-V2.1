@@ -22,9 +22,11 @@ import { BALDE_DE_CURRICULOS } from "@/lib/dominio/curriculo-em-pdf";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
+  esquemaDaRetiradaDoLimite,
   esquemaDeEdicaoDoCurriculo,
   esquemaDeNovoCurriculo,
   esquemaDoArquivamentoDoCurriculo,
+  esquemaDoLimiteDoCurriculo,
   esquemaDoPdfDoCurriculo,
 } from "@/lib/validacao/curriculo";
 
@@ -53,6 +55,7 @@ function revalidar(sigla: string): void {
   revalidatePath("/cursos");
   revalidatePath(`/cursos/${sigla}`);
   revalidatePath("/cursos/[curso]", "page");
+  revalidatePath("/cursos/[curso]/editar", "page");
   revalidatePath("/turmas", "layout");
 }
 
@@ -232,4 +235,77 @@ export async function registrarPdfDoCurriculo(entrada: unknown): Promise<Resulta
 
   revalidar(sigla);
   return { ok: true, versao };
+}
+
+/**
+ * Ajuste 3 (conferência do PR #82): grava o LIMITE de AEC, TAD ou TR do currículo — atualiza o declarado, ou declara o
+ * que não havia. No currículo em uso, mudar o limite que já tinha valor é correção (RC-6): o banco pede a justificativa.
+ * ⚠️ ZERO LINHAS É RECUSA (a policy `limites_curriculo_editar` é `cursos.editar`, alcance e curso em oferta).
+ */
+export async function salvarLimiteDoCurriculo(entrada: unknown): Promise<ResultadoDoCurriculo> {
+  const conferido = esquemaDoLimiteDoCurriculo.safeParse(entrada);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  const l = conferido.data;
+  const alvo = await curriculoDoCurso(l.sigla, l.versao);
+  if (!alvo) return falha(recusaPorAlcance());
+
+  const supabase = await criarClienteDeServidor();
+  const { data: atual } = await supabase
+    .from("limites_curriculo")
+    .select("id")
+    .eq("curriculo_id", alvo.curriculoId)
+    .eq("categoria", l.categoria)
+    .eq("status", "ativo")
+    .maybeSingle();
+  const valores = { tempos: l.tempos, fonte_arquivo: l.fonteArquivo, fonte_pagina: l.fontePagina };
+  const { data, error } = atual
+    ? await comJustificativa(
+        supabase
+          .from("limites_curriculo")
+          .update(valores)
+          .eq("id", atual.id as string)
+          .select("id"),
+        l.justificativa,
+      )
+    : await comJustificativa(
+        supabase
+          .from("limites_curriculo")
+          .insert({
+            ...valores,
+            curso_id: alvo.cursoId,
+            curriculo_id: alvo.curriculoId,
+            categoria: l.categoria,
+          })
+          .select("id"),
+        l.justificativa,
+      );
+  if (error) return falhaDoBanco(error as ErroDoBanco);
+  if (!data || data.length === 0) return falha(recusaPorAlcance());
+  revalidar(l.sigla);
+  return { ok: true, versao: l.versao };
+}
+
+/** Ajuste 3: retira o limite declarado (exclusão lógica): a categoria volta ao percentual da norma. RC-6 no em uso. */
+export async function retirarLimiteDoCurriculo(entrada: unknown): Promise<ResultadoDoCurriculo> {
+  const conferido = esquemaDaRetiradaDoLimite.safeParse(entrada);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  const l = conferido.data;
+  const alvo = await curriculoDoCurso(l.sigla, l.versao);
+  if (!alvo) return falha(recusaPorAlcance());
+
+  const supabase = await criarClienteDeServidor();
+  const { data, error } = await comJustificativa(
+    supabase
+      .from("limites_curriculo")
+      .update({ status: "inativo" })
+      .eq("curriculo_id", alvo.curriculoId)
+      .eq("categoria", l.categoria)
+      .eq("status", "ativo")
+      .select("id"),
+    l.justificativa,
+  );
+  if (error) return falhaDoBanco(error as ErroDoBanco);
+  if (!data || data.length === 0) return falha(recusaPorAlcance());
+  revalidar(l.sigla);
+  return { ok: true, versao: l.versao };
 }

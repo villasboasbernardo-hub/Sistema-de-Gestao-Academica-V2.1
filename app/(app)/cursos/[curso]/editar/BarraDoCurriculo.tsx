@@ -1,24 +1,15 @@
 /**
- * A barra do currículo na página do curso — spec 021, Bloco 6, RC-7, RC-8, RC-10 e RC-12.
+ * A barra do currículo em *Editar curso* — spec 021, Bloco 6, RC-7, RC-10 e RC-12, no lugar que o ajuste 3 da
+ * conferência do PR #82 (21/10/2026) lhe deu: *"escolher o currículo (ou criar o novo, cópia do vigente) e editar ali
+ * TODAS as informações dele"*.
  *
- * > *"RC-8 · Página do curso. Tem um seletor de currículo (o vigente por padrão), que alterna entre vigente, futuro e
- * > passados."* · *"RC-12 · Nome na tela. "Currículo N", com o ano de início da vigência."*
- *
- * ⚠️ SEM MARCADOR DE CLIENTE: o seletor e o arquivamento são folhas; os botões são links.
- * ⚠️ CADA BOTÃO SEGUE A PERMISSÃO DO DESTINO, decidida pela página (`cursos.editar` para criar e editar currículo,
+ * ⚠️ SEM MARCADOR DE CLIENTE: o seletor, o currículo novo, o arquivamento e o descarte são folhas.
+ * ⚠️ CADA AÇÃO SEGUE A PERMISSÃO DO DESTINO, decidida pela página (`cursos.editar` para criar e descartar,
  *    `arquivamento_de_curriculo.editar` para arquivar) — e o banco recusa de qualquer forma.
- * ⚠️ O CURRÍCULO ARQUIVADO SE CONSULTA, não se edita por aqui: o botão de editar some; desarquivar o devolve.
  */
-import Link from "next/link";
-
-import { buttonVariants } from "@/components/ui/button";
-import {
-  enderecoDaEdicaoDoCurriculo,
-  enderecoDoNovoCurriculo,
-} from "@/lib/navegacao/endereco-de-turma";
-
 import { ArquivarCurriculo } from "./ArquivarCurriculo";
 import { DescartarCurriculo } from "./DescartarCurriculo";
+import { FormularioDeNovoCurriculo } from "./FormularioDeNovoCurriculo";
 import { SeletorDeCurriculo, type OpcaoDoSeletorDeCurriculo } from "./SeletorDeCurriculo";
 
 export function BarraDoCurriculo({
@@ -28,8 +19,7 @@ export function BarraDoCurriculo({
   vigente,
   situacao,
   aviso,
-  podeCriar,
-  podeEditar,
+  novo,
   arquivamento,
   podeDescartar,
 }: {
@@ -39,12 +29,10 @@ export function BarraDoCurriculo({
   readonly vigente: number | null;
   /** A situação do selecionado, já em texto (vigente, futuro, passado, arquivado). */
   readonly situacao: string | null;
-  /** O pedido da URL que não serviu (`curriculoDaPagina`). */
+  /** O pedido da URL que não serviu. */
   readonly aviso: string | null;
-  /** *Novo currículo*: `cursos.editar` e curso em oferta. */
-  readonly podeCriar: boolean;
-  /** *Editar currículo*: `cursos.editar`, curso em oferta e currículo não arquivado. */
-  readonly podeEditar: boolean;
+  /** *Novo currículo*: o rótulo do vigente (que é copiado) e a data sugerida — `null` quando não cabe. */
+  readonly novo: { readonly copiaDe: string; readonly vigenteDeSugerido: string } | null;
   /** Arquivar ou desarquivar o selecionado — `null` quando não cabe (RC-10). */
   readonly arquivamento: { readonly arquivado: boolean } | null;
   /** D-36: descartar o selecionado — não é o vigente, nenhuma turma o segue, e quem vê edita o curso. */
@@ -74,24 +62,6 @@ export function BarraDoCurriculo({
             {situacao}
           </span>
         ) : null}
-        {podeEditar && selecionado !== null ? (
-          <Link
-            href={enderecoDaEdicaoDoCurriculo(sigla, selecionado)}
-            className={buttonVariants({ size: "sm", variant: "outline" })}
-            data-slot="editar-curriculo"
-          >
-            Editar currículo
-          </Link>
-        ) : null}
-        {podeCriar ? (
-          <Link
-            href={enderecoDoNovoCurriculo(sigla)}
-            className={buttonVariants({ size: "sm", variant: "outline" })}
-            data-slot="novo-curriculo"
-          >
-            Novo currículo
-          </Link>
-        ) : null}
         {podeDescartar && selecionado !== null ? (
           <DescartarCurriculo sigla={sigla} versao={selecionado} />
         ) : null}
@@ -100,6 +70,13 @@ export function BarraDoCurriculo({
             sigla={sigla}
             versao={selecionado}
             arquivado={arquivamento.arquivado}
+          />
+        ) : null}
+        {novo ? (
+          <FormularioDeNovoCurriculo
+            sigla={sigla}
+            copiaDe={novo.copiaDe}
+            vigenteDeSugerido={novo.vigenteDeSugerido}
           />
         ) : null}
       </div>

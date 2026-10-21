@@ -843,22 +843,54 @@ export const CONTRATO = {
     origem: "RF-CURSOS-01",
     parametros: {},
   },
+  /*
+   * Spec 021 (Bloco 6), ajuste 3 da conferência do PR #82 (Bernardo Villas Boas, 21/10/2026): *Editar curso* é onde o
+   * currículo se escolhe, se cria e se edita por inteiro. O currículo escolhido e a parte em edição vivem na URL; os três
+   * da grade de disciplinas são os MESMOS da página do curso (o mesmo componente os lê).
+   */
   "/cursos/[curso]/editar": {
     rota: "/cursos/[curso]/editar",
     origem: "RF-CURSO-01",
-    parametros: {},
-  },
-  /* Spec 021 (Bloco 6, RC-7): o currículo novo, cópia do vigente. */
-  "/cursos/[curso]/curriculos/novo": {
-    rota: "/cursos/[curso]/curriculos/novo",
-    origem: "RF-CURSO-01",
-    parametros: {},
-  },
-  /* Spec 021 (Bloco 6, RC-5, RC-11): o currículo N — propósito, duração, vigência e PDF. */
-  "/cursos/[curso]/curriculos/[versao]/editar": {
-    rota: "/cursos/[curso]/curriculos/[versao]/editar",
-    origem: "RF-CURSO-01",
-    parametros: {},
+    parametros: {
+      curriculo: {
+        nome: "curriculo",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
+      parte: {
+        nome: "parte",
+        tipo: "escolha",
+        padrao: "dados",
+        opcoes: ["dados", "disciplinas", "horarios", "atividades"],
+        historico: "empilha",
+        avisaServidor: true,
+      },
+      situacao: {
+        nome: "situacao",
+        tipo: "escolha",
+        padrao: "ativo",
+        opcoes: SITUACOES_DE_CADASTRO,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      busca: {
+        nome: "busca",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
+      },
+      aberta: {
+        nome: "aberta",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: false,
+      },
+    },
   },
   "/cursos/[curso]": {
     rota: "/cursos/[curso]",
@@ -873,7 +905,17 @@ export const CONTRATO = {
         // Spec 014 (FR-053): a terceira aba, «Avaliações», cedeu a Q-02 da spec 009 ao `RF-CURSO-02`.
         // Spec 018 (Bloco 3, 19/10/2026): SEIS — *Disciplinas* (o cadastro saiu do menu), *Atividades* (o previsto
         // de AEC/TAD/TR) e *Horários* (os regimes nomeados do curso).
-        opcoes: ["sobre", "grade", "disciplinas", "avaliacoes", "atividades", "horarios"],
+        // Spec 021 (Bloco 6), ajuste 2 da conferência do PR #82: a SÉTIMA, *Currículo* — a lista dos currículos do curso
+        // e a consulta ao conteúdo de cada um, só leitura.
+        opcoes: [
+          "sobre",
+          "grade",
+          "disciplinas",
+          "avaliacoes",
+          "atividades",
+          "horarios",
+          "curriculo",
+        ],
         historico: "empilha",
         avisaServidor: true,
       },
@@ -885,24 +927,14 @@ export const CONTRATO = {
         avisaServidor: true,
       },
       /*
-       * Spec 021 (Bloco 6, RC-8): o CURRÍCULO que as abas mostram, pelo número ("Currículo N"). O padrão vazio é o
-       * VIGENTE hoje — quem abre o curso sem escolher vê o currículo que rege as turmas novas. Trocar de currículo é ir a
-       * outro lugar: empilha histórico, como a aba.
+       * Spec 021 (Bloco 6): o currículo CONSULTADO na aba *Currículo*, pelo número ("Currículo N"); vazio, o vigente. As
+       * outras abas mostram sempre o vigente (ajuste 1 da conferência do PR #82: a página do curso é só leitura).
        */
       curriculo: {
         nome: "curriculo",
         tipo: "texto",
         padrao: "",
         historico: "empilha",
-        avisaServidor: true,
-      },
-      /* Spec 021 (Bloco 6, RC-10): o currículo arquivado sai do seletor; `?arquivados=sim` o traz de volta. */
-      arquivados: {
-        nome: "arquivados",
-        tipo: "escolha",
-        padrao: "",
-        opcoes: SIM_OU_NAO,
-        historico: "substitui",
         avisaServidor: true,
       },
       /*

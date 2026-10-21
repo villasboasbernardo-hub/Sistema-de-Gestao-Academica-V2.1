@@ -71,24 +71,28 @@ export function enderecoDoCurso(sigla: string): string {
 }
 
 /**
- * A página do curso com um currículo escolhido no seletor (spec 021, RC-8), e a aba quando dita.
+ * A aba *Currículo* da página do curso, consultando o "Currículo N" (spec 021; ajuste 2 da conferência do PR #82).
  *
- * @example enderecoDoCursoNoCurriculo("CAHO", 2) → "/cursos/CAHO?curriculo=2"
- * @example enderecoDoCursoNoCurriculo("CAHO", 2, "disciplinas") → "/cursos/CAHO?curriculo=2&aba=disciplinas"
+ * @example enderecoDoCurriculoNoCurso("CAHO", 2) → "/cursos/CAHO?aba=curriculo&curriculo=2"
  */
-export function enderecoDoCursoNoCurriculo(sigla: string, versao: number, aba?: string): string {
-  const base = `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}?curriculo=${versao}`;
-  return aba ? `${base}&aba=${encodeURIComponent(aba)}` : base;
+export function enderecoDoCurriculoNoCurso(sigla: string, versao: number): string {
+  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}?aba=curriculo&curriculo=${versao}`;
 }
 
-/** *Novo currículo* — a cópia do vigente (spec 021, RC-7). */
-export function enderecoDoNovoCurriculo(sigla: string): string {
-  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}/curriculos/novo`;
-}
-
-/** *Editar currículo* — propósito, duração, vigência e PDF do currículo N (spec 021, RC-5, RC-11). */
-export function enderecoDaEdicaoDoCurriculo(sigla: string, versao: number): string {
-  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}/curriculos/${versao}/editar`;
+/**
+ * *Editar curso*, com o currículo escolhido e a parte em edição quando ditos (spec 021; ajuste 3 da conferência do PR
+ * #82: o currículo se cria e se edita por inteiro dentro de *Editar curso*).
+ *
+ * @example enderecoDaEdicaoDoCurso("CAHO") → "/cursos/CAHO/editar"
+ * @example enderecoDaEdicaoDoCurso("CAHO", 2, "disciplinas") → "/cursos/CAHO/editar?curriculo=2&parte=disciplinas"
+ */
+export function enderecoDaEdicaoDoCurso(sigla: string, versao?: number, parte?: string): string {
+  const base = `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}/editar`;
+  const busca = new URLSearchParams();
+  if (versao !== undefined) busca.set("curriculo", String(versao));
+  if (parte) busca.set("parte", parte);
+  const texto = busca.toString();
+  return texto ? `${base}?${texto}` : base;
 }
 
 /**

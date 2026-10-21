@@ -16,7 +16,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
-import { abrirAbaDoCurso, irAoCursoPorClique, irAsDisciplinasDoCurso } from "./navegar-curso";
+import { abrirAbaDoCurso, irAoCursoPorClique, irAsDisciplinasDaEdicao } from "./navegar-curso";
 import {
   limparAvaliacoes,
   limparVistaPeloInstrumento,
@@ -126,6 +126,24 @@ test("US5 · a aba Avaliações do curso mostra só o previsto do currículo —
   await expect(aba.locator('[data-avaliacoes="sem-item"]')).toHaveCount(0);
   await expect(aba).not.toContainText(SEMEADO.turma);
   await expect(aba).not.toContainText(/aplicadas|Pendente|Concluída|Atrasada/);
+  // ⚠️ Spec 021, ajuste 1 (conferência do PR #82): a página do curso é só leitura — nem o Admin tem o arbitrado ali.
+  await expect(page.locator('[data-slot="acoes-do-arbitrado"]')).toHaveCount(0);
+});
+
+/*
+ * ⚠️ SPEC 021, AJUSTE 3: as avaliações do currículo, com o arbitrado, editam-se em *Editar curso* → *Disciplinas e
+ *    avaliações*. O caso que discrimina é o anterior: a mesma pessoa não tem a ação na página do curso.
+ */
+test("Spec 021 · ajuste 3 · o arbitrado do curso fica em Editar curso, no currículo escolhido", async ({
+  page,
+}) => {
+  await irAsDisciplinasDaEdicao(page, EMAIL_ADMIN, SEMEADO.curso);
+  const parte = page.locator('[data-slot="parte-disciplinas"]');
+  await expect(parte.locator('[data-slot="aba-avaliacoes-do-curriculo"]')).toBeVisible();
+  // As ações do arbitrado existem aqui (uma por item que não é OD); na página do curso, nenhuma (o caso de cima).
+  await expect
+    .poll(() => parte.locator('[data-slot="acoes-do-arbitrado"]').count())
+    .toBeGreaterThan(0);
 });
 
 test("FR-054 · o /inicio mostra a vista atrasada e a que vence em breve, com link para a aba", async ({
@@ -203,11 +221,11 @@ async function justificar(page: Page, motivo: string): Promise<void> {
   await expect(pedido).toHaveCount(0);
 }
 
-test("FR-038 · a aba Disciplinas do curso: as avaliações do currículo no painel, acrescentar e inativar", async ({
+test("FR-038 · Editar curso → Disciplinas e avaliações: as avaliações do currículo no painel, acrescentar e inativar", async ({
   page,
 }) => {
-  // Spec 018 (Bloco 3): a grade é a aba Disciplinas do curso — o menu não tem mais a entrada.
-  await irAsDisciplinasDoCurso(page, EMAIL_ADMIN, SEMEADO.curso);
+  // Spec 021 (ajuste 3 da conferência do PR #82): editar o currículo é em *Editar curso*; a aba do curso só lê.
+  await irAsDisciplinasDaEdicao(page, EMAIL_ADMIN, SEMEADO.curso);
   await page
     .getByRole("gridcell", { name: `Disciplina ${SEMEADO.disciplinaComTempo}`, exact: false })
     .first()

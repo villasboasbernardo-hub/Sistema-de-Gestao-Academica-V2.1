@@ -56,12 +56,13 @@ const grade = (sigla: string, consulta = "") =>
 const abas = (page: Page) => page.locator('[data-slot="abas-do-curso"] [role="tab"]');
 const turmaSelecionada = (page: Page) => page.locator('[data-slot="turma-selecionada"]');
 
-test.describe("`FR-006.2` · seis abas, e elas moram na URL", () => {
-  test("são seis, na ordem do Bloco 3, e a padrão é *Sobre o Curso*, a primeira (spec 018, FR-006.1)", async ({
+test.describe("`FR-006.2` · as abas moram na URL (sete desde a spec 021)", () => {
+  test("são sete, na ordem do Bloco 3 mais *Currículo*, e a padrão é *Sobre o Curso*, a primeira (spec 018, FR-006.1)", async ({
     page,
   }) => {
     await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular));
-    await expect(abas(page)).toHaveCount(6);
+    // Sete desde a spec 021 (ajuste 2 da conferência do PR #82): a aba *Currículo*, a última.
+    await expect(abas(page)).toHaveCount(7);
     for (const [i, aba] of [
       "sobre",
       "grade",
@@ -69,6 +70,7 @@ test.describe("`FR-006.2` · seis abas, e elas moram na URL", () => {
       "avaliacoes",
       "atividades",
       "horarios",
+      "curriculo",
     ].entries())
       await expect(abas(page).nth(i)).toHaveAttribute("data-aba", aba);
     await expect(abas(page)).toHaveText([
@@ -78,6 +80,7 @@ test.describe("`FR-006.2` · seis abas, e elas moram na URL", () => {
       "Avaliações",
       "Atividades",
       "Horários",
+      "Currículo",
     ]);
     await expect(abas(page).nth(0)).toHaveAttribute("aria-selected", "true");
     await expect(page.locator('[data-slot="aba-sobre"]')).toBeVisible();

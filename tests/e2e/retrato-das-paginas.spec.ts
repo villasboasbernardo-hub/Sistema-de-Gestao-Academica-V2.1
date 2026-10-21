@@ -25,6 +25,8 @@ const ABAS_DO_CURSO = [
   "avaliacoes",
   "atividades",
   "horarios",
+  // Spec 021 (ajuste 2 da conferência do PR #82): a aba *Currículo*.
+  "curriculo",
 ] as const;
 const ABAS_DA_TURMA = ["ficha", "avaliacoes"] as const;
 
@@ -49,6 +51,9 @@ test("o retrato das páginas do curso e da turma", async ({ page }) => {
       const base = `/cursos/${encodeURIComponent(c.codigo)}`;
       for (const aba of ABAS_DO_CURSO) enderecos.push(`${base}?aba=${aba}`);
       enderecos.push(`${base}/editar`);
+      // Spec 021 (ajuste 3): as partes do currículo em *Editar curso* — os mesmos números, agora onde se editam.
+      for (const parte of ["disciplinas", "horarios", "atividades"])
+        enderecos.push(`${base}/editar?parte=${parte}`);
     }
     for (const t of (turmas ?? []) as { codigo: string }[]) {
       for (const aba of ABAS_DA_TURMA)

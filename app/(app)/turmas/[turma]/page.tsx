@@ -24,7 +24,7 @@ import {
   ROTULO_DA_SITUACAO,
   type CurriculoParaVigencia,
 } from "@/lib/dominio/curriculos";
-import { enderecoDoCursoNoCurriculo } from "@/lib/navegacao/endereco-de-turma";
+import { enderecoDoCurriculoNoCurso } from "@/lib/navegacao/endereco-de-turma";
 import { regimeEfetivo, rotuloDoRegime } from "@/lib/dominio/regime-da-turma";
 import {
   estadoDoArquivamento,
@@ -302,7 +302,8 @@ export default async function FichaDaTurma({
     /* Spec 018 (C-18): os regimes nomeados do curso e se a escolha da turma já travou, para *Editar turma*. */
     supabase
       .from("regimes_de_horario")
-      .select("id, nome, regime_tempos, ta_duracao_min, status")
+      /* Spec 021 (emenda à RC-1, 21/10/2026): a turma escolhe entre os regimes do currículo DELA. */
+      .select("id, nome, regime_tempos, ta_duracao_min, status, curriculo_id")
       .eq("curso_id", cursoId)
       .order("nome"),
     supabase.rpc("regime_da_turma_travado", { p_turma: turma.id as string }),
@@ -676,7 +677,7 @@ export default async function FichaDaTurma({
           <p className="text-texto-suave text-sm" data-slot="curriculo-da-turma">
             Segue o{" "}
             <Link
-              href={enderecoDoCursoNoCurriculo(sigla, curriculoDaTurma.versao)}
+              href={enderecoDoCurriculoNoCurso(sigla, curriculoDaTurma.versao)}
               className="text-texto underline-offset-2 hover:underline"
             >
               {rotuloDoCurriculo({
@@ -943,7 +944,11 @@ export default async function FichaDaTurma({
                   regimeDeHorario={{
                     /* Os ativos, mais o atual se estiver inativo (C-11: ele continua valendo para a turma). */
                     opcoes: (regimesDoCursoRes.data ?? [])
-                      .filter((r) => r.status === "ativo" || r.id === turma.regime_de_horario_id)
+                      .filter(
+                        (r) =>
+                          (r.status === "ativo" && r.curriculo_id === curriculoDaTurma?.id) ||
+                          r.id === turma.regime_de_horario_id,
+                      )
                       .map((r) => ({
                         id: r.id,
                         rotulo: rotuloDoRegime({

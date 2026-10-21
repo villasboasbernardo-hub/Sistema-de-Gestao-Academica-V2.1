@@ -10,6 +10,8 @@
  */
 import { z } from "zod";
 
+import { campoDeJustificativa } from "@/lib/validacao/justificativa";
+
 const inteiro = (erro: string) => z.coerce.number({ error: erro }).int(erro);
 const hora = (erro: string) =>
   z
@@ -55,10 +57,15 @@ const TARDE_DEPOIS = {
 const tardeDepois = (r: { hora_inicio_manha: string; hora_inicio_tarde: string }) =>
   r.hora_inicio_tarde > r.hora_inicio_manha;
 
-/** Criar regime nomeado no curso. */
+/**
+ * Criar regime nomeado. Spec 021 (Bloco 6, emenda à RC-1 de 21/10/2026): os horários são do CURRÍCULO — `curriculo_id`
+ * diz em qual; sem ele, o banco usa o único currículo ativo do curso.
+ */
 export const esquemaDoRegime = z
   .object({
     curso_id: z.uuid({ error: "O curso não foi informado." }),
+    curriculo_id: z.uuid({ error: "Currículo inválido." }).optional(),
+    justificativa: campoDeJustificativa,
     nome,
     regime_tempos: inteiro("Informe quantos TA por dia.")
       .min(1, "TA por dia vai de 1 a 12.")
@@ -76,6 +83,7 @@ export const esquemaDoRegime = z
 export const esquemaDaEdicaoDoRegime = z
   .object({
     id: z.uuid({ error: "O regime não foi informado." }),
+    justificativa: campoDeJustificativa,
     nome,
     ...relogio,
     observacao,
@@ -85,6 +93,7 @@ export const esquemaDaEdicaoDoRegime = z
 /** Inativar ou reativar (C-11): só o regime — a ação diz qual das duas; o banco confere `horarios.desativar`. */
 export const esquemaDaSituacaoDoRegime = z.object({
   id: z.uuid({ error: "O regime não foi informado." }),
+  justificativa: campoDeJustificativa,
 });
 
 export type RegimeParaGravar = z.infer<typeof esquemaDoRegime>;

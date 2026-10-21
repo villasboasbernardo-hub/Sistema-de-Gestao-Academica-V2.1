@@ -228,7 +228,7 @@ test.describe("`SC-003` · cada botão segue a permissão da SUA página", () =>
 });
 
 test.describe("`FR-016` · editar curso", () => {
-  test("editar o propósito CLICANDO: menu → Cursos → cartão → Editar currículo (spec 021, RC-5)", async ({
+  test("editar o propósito CLICANDO: menu → Cursos → cartão → Editar curso → Currículo (spec 021, RC-5)", async ({
     page,
   }) => {
     const sigla = SEMEADO.porClassificacao.regular;
@@ -261,38 +261,25 @@ test.describe("`FR-016` · editar curso", () => {
       .toBe(`/cursos/${encodeURIComponent(sigla)}`);
 
     /*
-     * ⚠️ SPEC 021 (RC-5, D-32): o propósito é do CURRÍCULO, e se edita no currículo escolhido — pela barra do currículo,
-     *    acima das abas. *Editar curso* não o mostra mais, e aponta o caminho.
+     * ⚠️ SPEC 021 (RC-5; ajuste 3 da conferência do PR #82): o propósito é do CURRÍCULO, e se edita em *Editar curso*,
+     *    na seção *Currículo* — o vigente por padrão. O cadastro do curso não o tem mais.
      */
     await page.locator('[data-slot="ir-para-editar-curso"]').click();
     await expect(formulario(page)).toHaveAttribute("data-modo", "edicao");
     await expect(
       page.locator("#curso-proposito"),
-      "o propósito voltou à edição do curso",
+      "o propósito voltou ao cadastro do curso",
     ).toHaveCount(0);
-    await page.locator('[data-slot="ir-para-editar-curriculo"]').click();
-    await expect
-      .poll(() => new URL(page.url()).pathname)
-      .toBe(`/cursos/${encodeURIComponent(sigla)}/curriculos/1/editar`);
-    await page.goBack();
-    await page.goBack();
-    await expect
-      .poll(() => new URL(page.url()).pathname)
-      .toBe(`/cursos/${encodeURIComponent(sigla)}`);
-
-    await page.locator('[data-slot="editar-curriculo"]').click();
-    await expect
-      .poll(() => new URL(page.url()).pathname)
-      .toBe(`/cursos/${encodeURIComponent(sigla)}/curriculos/1/editar`);
+    await expect(page.locator('[data-slot="escolha-do-curriculo"]')).toHaveValue("1");
     await page.locator("#curriculo-proposito").fill("Propósito revisado pelo percurso.");
     await page.locator('[data-slot="salvar-curriculo"]').click();
 
     // Completar o vazio é livre (RC-6): o propósito foi esvaziado no preparo, então não há pedido de justificativa.
+    await expect(page.locator('[data-slot="curriculo-gravado"]')).toBeVisible();
     await expect(page.locator('[data-slot="pedido-de-justificativa"]')).toHaveCount(0);
     await expect
       .poll(() => new URL(page.url()).pathname)
-      .toBe(`/cursos/${encodeURIComponent(sigla)}`);
-    await expect.poll(() => new URL(page.url()).searchParams.get("curriculo")).toBe("1");
+      .toBe(`/cursos/${encodeURIComponent(sigla)}/editar`);
 
     /*
      * ⚠️ SPEC 021 (Bloco 6, RC-1): o propósito é do CURRÍCULO — conferido no BANCO, não no campo (PEND-016-2), e é o

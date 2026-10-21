@@ -252,8 +252,11 @@ test.describe("spec 020 · os cadastros novos", () => {
   }) => {
     test.setTimeout(180_000);
     await irAoCursoPorClique(page, EMAIL, SIGLA);
-    /* Spec 021 (RC-11, D-32): o PDF é do currículo — carrega-se em *Editar currículo*, pela barra do currículo. */
-    await page.locator('[data-slot="editar-curriculo"]').click();
+    /*
+     * Spec 021 (RC-11; ajuste 3 da conferência do PR #82): o PDF é do currículo — carrega-se em *Editar curso*, na seção
+     * *Currículo*, parte *Dados e PDF* (a padrão), no currículo escolhido (o vigente).
+     */
+    await page.locator('[data-slot="ir-para-editar-curso"]').click();
     const envio = page.locator('[data-slot="envio-do-curriculo"]');
     await expect(envio).toContainText("Nenhum currículo carregado.");
 
@@ -306,7 +309,7 @@ test.describe("spec 020 · os cadastros novos", () => {
      * Substituir aponta o currículo para um ARQUIVO NOVO (D-29): o anterior fica no balde (regra 4, sem `DELETE`), e o
      * baixado é o novo.
      */
-    await page.locator('[data-slot="editar-curriculo"]').click();
+    await page.locator('[data-slot="ir-para-editar-curso"]').click();
     {
       const [janela] = await Promise.all([
         page.waitForEvent("filechooser"),

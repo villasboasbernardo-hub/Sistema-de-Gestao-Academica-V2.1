@@ -72,5 +72,38 @@ export const esquemaDoPdfDoCurriculo = z.object({
   justificativa: campoDeJustificativa,
 });
 
+/**
+ * Ajuste 3 da conferência do PR #82 (21/10/2026): o LIMITE de AEC, TAD ou TR que o quadro final do currículo declara, em
+ * TA, com o arquivo e a página (spec 014, FR-001.1). Só informativo (regra 6): nunca vira CHECK de lançamento.
+ */
+export const CATEGORIAS_DE_LIMITE = ["AEC", "TAD", "TR"] as const;
+export const esquemaDoLimiteDoCurriculo = z.object({
+  sigla,
+  versao,
+  categoria: z.enum(CATEGORIAS_DE_LIMITE, { error: "A categoria é AEC, TAD ou TR." }),
+  tempos: z.coerce
+    .number({ error: "Informe o limite em TA." })
+    .int("O limite é um número inteiro de TA.")
+    .min(0, "O limite não é negativo."),
+  fonteArquivo: z
+    .string({ error: "Informe o arquivo do currículo." })
+    .trim()
+    .min(1, "Informe o arquivo do currículo.")
+    .max(200, "O nome do arquivo passou de 200 caracteres."),
+  fontePagina: z.coerce
+    .number({ error: "Informe a página." })
+    .int("A página é um número inteiro.")
+    .positive("A página começa em 1."),
+  justificativa: campoDeJustificativa,
+});
+
+/** Retirar o limite declarado: a categoria volta ao percentual da norma (exclusão lógica). */
+export const esquemaDaRetiradaDoLimite = z.object({
+  sigla,
+  versao,
+  categoria: z.enum(CATEGORIAS_DE_LIMITE, { error: "A categoria é AEC, TAD ou TR." }),
+  justificativa: campoDeJustificativa,
+});
+
 export type NovoCurriculo = z.infer<typeof esquemaDeNovoCurriculo>;
 export type CurriculoParaEditar = z.infer<typeof esquemaDeEdicaoDoCurriculo>;
