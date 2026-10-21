@@ -41,3 +41,26 @@
   a sincronização (VIRADA-1) casando no currículo da turma
 - [X] T057 O retrato das telas e das páginas antes × depois (telas idênticas; nas páginas, só o que o PR 2 acrescenta — `antes-depois.md`, rodada 4) e o SC-004/SC-005 por clique
 - [X] T058 CI verde, preview, roteiro curto e lote de dúvidas — **PARAR** (a M3 no remoto; a M4 no portão 9.4)
+
+## PR 2 — os ajustes da conferência do PR #82 (Bernardo Villas Boas, 21/10/2026), no mesmo PR
+
+- [X] T060 Fechar a `PEND-020-3` (custo é controle da CIAARA-11) no plano de correções
+- [X] T061 A M4 corrigida antes do remoto: o porteiro da RC-6 vê o currículo na inserção só com `curso_id` (D-46), com o
+  caso de pgTAP que reprova sem a correção
+- [X] T062 A M5 — os regimes nomeados do currículo (A-4): colunas, FK da turma, a troca de currículo levando o regime, a
+  cópia, a RC-6 nos regimes (D-38); pgTAP `146`; tipos; reversão (`reversao-pr2.sql`, a M5 primeiro)
+- [X] T063 A página do curso só leitura, no vigente (A-1): sem o seletor; nenhuma ação nas abas (Disciplinas, Avaliações,
+  Horários); o botão *Editar curso* pela permissão de destino (D-40)
+- [X] T064 A aba *Currículo* (A-2): a lista (todos, arquivados inclusive, D-45) e a consulta só leitura de disciplinas,
+  avaliações, horários e atividades do currículo escolhido (`?curriculo=N`)
+- [X] T065 *Editar curso* com a seção *Currículo* (A-3, D-41): seletor, *Novo currículo*, *Descartar*, *Arquivar*, e as
+  partes — dados e PDF, disciplinas e avaliações (com o arbitrado, D-43), horários, atividades e limites (D-42); as rotas
+  `/cursos/[curso]/curriculos/*` saem; o arquivado só se consulta (D-44)
+- [X] T066 A turma escolhe regime só entre os do currículo dela (ficha); o link *"Segue o Currículo"* abre a aba *Currículo*
+- [X] T067 Testes: unidade (contrato, guardas), invariantes (RC-6 nos regimes e nos limites, com defeito deliberado),
+  ponta a ponta por clique (a página só leitura, a aba *Currículo*, *Editar curso* em todas as partes, SC-004/SC-005)
+- [ ] T068 A prova na cópia NOVA do remoto (SC-006): antes da M4, 24 cursos → 24 currículos e 0 turmas em currículo de
+  outro curso; DSA, papel, planilha e páginas das 29 turmas idênticos — com a M4 e a M5 sob o código da `main` e sob o
+  código do ramo
+- [ ] T069 CI verde → rito do remoto (M4 e M5: backup citado, dry-run só com as duas, `db push`, conferência só de
+  leitura) → merge → CI na `main` → Production → PR de documentação do encerramento → roteiro de Production

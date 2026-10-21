@@ -80,7 +80,7 @@ arquivado** do curso (`versao_inativa`); a turma que muda de curso vai para o vi
 `app.trocar_linhas_da_versao` (depois): tira o **mapa** antes de mudar qualquer coisa, inativa o do currículo velho (nunca
 apaga) e faz nascer as linhas novas, levando período, atribuições, rateio por UE e ajustes onde há correspondência.
 
-## 6. O PR 2 — duas migrations: a M3 só acrescenta; a M4 altera (portão 9.4)
+## 6. O PR 2 — três migrations: a M3 só acrescenta; a M4 e a M5 alteram (portão 9.4; as duas autorizadas na conferência do PR #82)
 
 **M3 `20261021124836_curriculo_copia_trilha_arquivamento`** — só acrescenta (segue o rito sem parar):
 - **O PDF por currículo (RC-11, D-29)** — `curriculos.pdf_caminho` (nulável), preenchido no currículo 1 que já tinha PDF
@@ -114,7 +114,34 @@ apaga) e faz nascer as linhas novas, levando período, atribuições, rateio por
   `<curso>/<currículo>/<instante>.pdf`. Sem `UPDATE` nem `DELETE`: cada envio é um arquivo novo (D-29).
 - **O efeito em Production entre a aplicação e o merge**: o código da `main` não manda a justificativa — o trio que
   corrigir conteúdo de currículo em uso pela tela recebe a recusa (completar o vazio continua livre). Por isso a M4 espera
-  a palavra de Bernardo, e o ideal é aplicá-la junto do merge.
+  a palavra de Bernardo, e o ideal é aplicá-la junto do merge. ✅ **Autorizada na conferência do PR #82 (21/10/2026)**:
+  rito da M4 e da M5 e **merge logo em seguida**.
+- **O buraco achado antes do remoto (D-46)**: os gatilhos rodam em ordem alfabética, e o porteiro
+  (`trg_…_curriculo_em_uso`) roda **antes** do que preenche o currículo pelo curso (`trg_…_versao`). Inserir só com
+  `curso_id` chegava ao porteiro com o currículo nulo e **pulava a RC-6**. A M4 foi corrigida no mesmo arquivo (ainda não
+  aplicada): sem currículo, na inserção, o porteiro usa o **único** currículo ativo do curso. Caso de pgTAP `146` (o 14º),
+  que reprova com a correção desligada.
+
+**M5 `20261021201915_horarios_do_curriculo`** — **ALTERA** (emenda à RC-1, A-4; autorizada com a prova na cópia do remoto):
+- **`regimes_de_horario.curriculo_id`** (NOT NULL, FK composta `(curriculo_id, curso_id)` → `curriculos`) e
+  **`linhagem_id`** (o mesmo regime em currículos diferentes): cada regime vai para o **currículo 1** do seu curso,
+  preenchido sem os gatilhos de negócio (como a M2). O guarda do regime (Bloco 3) passa a recusar a troca de currículo e de
+  linhagem (`regime_curricular_imutavel`).
+- **O nome** é único entre os ativos **do currículo** (era: do curso) — a cópia repete os nomes.
+- **Sem `curriculo_id` na inserção**, o regime vai para o único currículo ativo do curso (`app.versao_unica_do_curso`,
+  como a disciplina).
+- **A turma** só aponta regime do currículo **dela** (`turmas_regime_do_proprio_curriculo_fk`); trocar o currículo da
+  turma (só sem lançamento, D-7) leva o regime da mesma linhagem (`app.regime_correspondente`), ou nenhum — volta ao
+  regime padrão do curso (`trg_turmas_curriculo_regime`, sem a palavra da situação no corpo: guarda dos pgTAP 101 e 138).
+- **A cópia** (`public.criar_curriculo`) passa a copiar os regimes ativos, com a linhagem da original.
+- **RC-6 nos regimes (D-38)**: o porteiro da M4 também em `regimes_de_horario`, e a trilha aceita a tabela. O `RF-HOR-05`
+  (o relógio do regime usado por turma lançada não muda) continua valendo por cima.
+- **O regime padrão com vigência** (`curso_regime_historico`) **fica no curso** (D-39).
+- **Quem lê**: a ficha da turma (as opções de regime, só as do currículo dela), *Editar curso* → *Horários* (os do currículo
+  escolhido), a aba *Horários* do curso (os do vigente) e a aba *Currículo* (os do consultado). O DSA, o papel, a planilha,
+  a cascata, o dia parado e o saldo leem o regime **da turma**, como no Bloco 3 — nada muda neles.
+- Conferência dentro da migration: nenhum regime fora do currículo 1 do seu curso, nenhuma turma com regime de outro
+  currículo.
 
 ## 7. Reversão (PR 1)
 
