@@ -86,11 +86,14 @@ test.describe("US1 · a vitrine mostra o vocabulário de COMPONENTES inteiro", (
       abrir: "Desativar",
     },
     /* Spec 021 (Bloco 6, RC-6): o pedido de justificativa só monta quando a "gravação" da amostra o pede. */
-    ...["pedido-de-justificativa", "justificativa-da-correcao", "confirmar-justificativa"].map((slot) => ({
-      slot,
-      motivo: "vive dentro do diálogo modal do pedido de justificativa, montado só quando o banco pede o motivo",
-      abrir: "Corrigir a CH (amostra)",
-    })),
+    ...["pedido-de-justificativa", "justificativa-da-correcao", "confirmar-justificativa"].map(
+      (slot) => ({
+        slot,
+        motivo:
+          "vive dentro do diálogo modal do pedido de justificativa, montado só quando o banco pede o motivo",
+        abrir: "Corrigir a CH (amostra)",
+      }),
+    ),
   ];
 
   function slotsDeclarados(): string[] {
