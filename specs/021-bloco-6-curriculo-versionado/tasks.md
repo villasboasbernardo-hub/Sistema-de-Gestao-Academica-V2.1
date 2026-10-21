@@ -59,7 +59,7 @@
 - [X] T066 A turma escolhe regime só entre os do currículo dela (ficha); o link *"Segue o Currículo"* abre a aba *Currículo*
 - [X] T067 Testes: unidade (contrato, guardas), invariantes (RC-6 nos regimes e nos limites, com defeito deliberado),
   ponta a ponta por clique (a página só leitura, a aba *Currículo*, *Editar curso* em todas as partes, SC-004/SC-005)
-- [ ] T068 A prova na cópia NOVA do remoto (SC-006): antes da M4, 24 cursos → 24 currículos e 0 turmas em currículo de
+- [X] T068 A prova na cópia NOVA do remoto (SC-006, rodada 6 de `antes-depois.md`): antes da M4, 24 cursos → 24 currículos e 0 turmas em currículo de
   outro curso; DSA, papel, planilha e páginas das 29 turmas idênticos — com a M4 e a M5 sob o código da `main` e sob o
   código do ramo
 - [ ] T069 CI verde → rito do remoto (M4 e M5: backup citado, dry-run só com as duas, `db push`, conferência só de

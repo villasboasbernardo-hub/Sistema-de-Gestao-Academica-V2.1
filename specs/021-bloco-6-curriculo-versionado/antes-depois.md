@@ -1,5 +1,37 @@
 # Antes × depois — currículo versionado (spec 021, PR 1)
 
+## Rodada 6 — os ajustes da conferência do PR #82: a M4 e a M5, em 21/10/2026 (SC-006)
+
+Base: **`remoto-20261021-180100.sql`** (cópia nova do remoto, 24 cursos, 29 turmas, 175 disciplinas, 3.736 aulas),
+restaurada com as **90** migrations do remoto (as 89 da `main` mais a M3). Antes = o código da `main` (`ae4e595`, o que a
+Production serve). Instrumentos: `scripts/provas/impressao_digital_do_curriculo.sql`, `retrato-das-telas.test.ts` e
+`retrato-das-paginas.spec.ts`, cada build num passo separado e a navegação com `--workers=1`.
+
+0. **Antes da M4, no remoto, só leitura:** **24 cursos → 24 currículos** (o 1 de cada, 0 além dele), **0 turmas em
+   currículo de outro curso**, 0 sem currículo, 29 turmas, **0 regimes nomeados**, 0 turmas com regime, trilha vazia.
+1. **O esquema de partida** igual ao do remoto: `df8716a9…`, 2.367 objetos.
+2. **O código da `main` com a M4 e a M5 aplicadas** (o que a Production mostra entre o `db push` e o merge): a impressão
+   do currículo **idêntica, 26 de 26**; o retrato das telas (planilha, `.xlsx`, extras e o DSA de cada semana das 29
+   turmas) **byte a byte idêntico**; o retrato das páginas **idêntico nas 229**.
+3. **O código do ramo com a M4 e a M5** (pelo `db reset` com as 92 migrations — o mesmo esquema da aplicação à mão,
+   `89a3f08e…`, **2.390 objetos**): a impressão do currículo **idêntica**; as telas **byte a byte idênticas**; as páginas,
+   229 de 229 mais **96 novas** (a aba *Currículo* e as três partes de *Editar curso* dos 24 cursos), e **nenhum número
+   mudou** — toda diferença é estrutura:
+   - saem da página do curso as ações: *Nova disciplina* (24), *Novo regime* (24) e os campos do arbitrado nas
+     avaliações (10 cursos) — ajuste 1;
+   - a lista de abas ganha *Currículo* — ajuste 2;
+   - *Editar curso* troca propósito, duração e PDF do cadastro pela seção *Currículo* (seletor, *Novo currículo*, as
+     quatro partes, o formulário do currículo com os mesmos campos e o envio do PDF) — ajuste 3;
+   - o que já vinha do PR 2 (rodada 4): a coluna *Currículo* e as turmas arquivadas na *Grade*, *"Segue o Currículo 1
+     (vigência …)"* nas 58 páginas de turma.
+   - **As mesmas linhas com número em outro lugar:** de cada aba *Disciplinas* e *Avaliações*, **0** linhas com número
+     faltam na consulta da aba *Currículo* e na parte *Disciplinas e avaliações* de *Editar curso*; de *Atividades*, 0
+     na consulta; de *Horários*, faltam só as **29** linhas das vigências do regime padrão, que ficam do curso (D-39).
+4. **A reversão (`reversao-pr2.sql`, M5 → M4 → M3), com dado:** volta a **2.331 objetos, `5d794f43…`** (o esquema do
+   PR 1), com a impressão do currículo igual; reaplicadas as três, volta a `89a3f08e…`. ⚠️ A primeira execução **parou
+   num erro de sintaxe**: o gerador cortara o comentário de `public.criar_curriculo` no primeiro `;` de dentro do texto.
+   O erro desfez a transação inteira (esquema conferido igual depois dele); o comentário foi copiado inteiro da M3.
+
 ## Rodada 5 — o rito do remoto do PR 2: SÓ a M3, em 21/10/2026
 
 O PR #82 com o CI verde nos três blocos sobre `99bde95` (run `39614223539`: 1.008 pgTAP · 438 invariantes e RLS · 544 de

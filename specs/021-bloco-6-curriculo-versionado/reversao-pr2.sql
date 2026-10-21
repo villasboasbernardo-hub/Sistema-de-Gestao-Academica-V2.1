@@ -191,7 +191,7 @@ grant execute on function public.criar_curriculo(uuid, date, text, date) to auth
 comment on function public.criar_curriculo(uuid, date, text, date) is
   'Bloco 6 (spec 021, RC-7 e RC-2): cria o currículo N+1 do curso como cópia do vigente em `p_hoje` — o conteúdo da '
   'RC-1, disciplinas, UEs, avaliações do currículo, limites, regras de avaliação e habilitações ativas, com a linhagem '
-  'da original. Começa depois do mais novo;
+  'da original. Começa depois do mais novo; não cria um segundo futuro. Porteiro: cursos.editar, alcance e oferta.';
 
 
 -- ── M4: a correção do currículo em uso, a matriz e a policy do balde ──
