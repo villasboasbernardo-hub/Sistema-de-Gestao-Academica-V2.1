@@ -36,7 +36,7 @@ export type JanelaDaSemanaDoCurso = {
   readonly dataInicio: string | null;
   /** `turmas.data_termino` — nulável no banco. */
   readonly dataTermino: string | null;
-  /** `cursos.duracao_semanas` — 12 dos 24 cursos não a têm (medido em 17/10/2026). */
+  /** a duração do currículo da turma (`curriculos.duracao_semanas`; era `cursos.duracao_semanas`, spec 021) — 12 dos 24 cursos não a têm (medido em 17/10/2026). */
   readonly duracaoSemanasDoCurso: number | null;
 };
 

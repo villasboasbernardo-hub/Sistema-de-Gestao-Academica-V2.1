@@ -158,12 +158,18 @@ export default async function SemanaDoDsa({
   const diasDaSemanaIso = datasDaSemanaIso(escolha.ano, escolha.numero).slice(0, 6);
   const etapa = etapaDaSemana(paraEtapa, diasDaSemanaIso);
   if (etapa.tipo === "fora") {
-    /* A semana do curso também na etapa a distância (spec 016, FR-009.2) — só a duração do curso falta. */
-    const { data: cursoDaEtapa } = await supabase
-      .from("cursos")
-      .select("duracao_semanas")
-      .eq("id", cursoId)
+    /*
+     * A semana do curso também na etapa a distância (spec 016, FR-009.2) — só a duração falta, e ela é do currículo
+     * DA TURMA (spec 021, RC-1).
+     */
+    const { data: daEtapa } = await supabase
+      .from("turmas")
+      .select("curriculo:curriculos!turmas_curriculo_do_proprio_curso_fk(duracao_semanas)")
+      .eq("id", turmaId)
       .maybeSingle();
+    const cursoDaEtapa = (
+      daEtapa as { curriculo?: { duracao_semanas?: number | null } | null } | null
+    )?.curriculo;
     return (
       <section className="flex min-w-0 flex-col gap-3">
         <CabecalhoDoDsa

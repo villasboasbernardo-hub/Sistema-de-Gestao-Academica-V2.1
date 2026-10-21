@@ -64,7 +64,9 @@ async function semear(processo: number): Promise<string> {
     if (error) throw new Error(`falha ao semear ${sigla}: ${error.message}`);
     cursoId = (data as { id: string }).id;
   }
-  await admin.from("cursos").update({ status: "ativo", duracao_semanas: 35 }).eq("id", cursoId);
+  await admin.from("cursos").update({ status: "ativo" }).eq("id", cursoId);
+  /* Spec 021 (Bloco 6, RC-1): o T da semana do curso é a duração do CURRÍCULO da turma. */
+  await admin.from("curriculos").update({ duracao_semanas: 35 }).eq("curso_id", cursoId);
 
   const janela = {
     status: "ativa",

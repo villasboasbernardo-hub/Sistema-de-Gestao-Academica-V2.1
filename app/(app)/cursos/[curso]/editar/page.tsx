@@ -19,13 +19,15 @@
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { curriculoVigenteEm } from "@/lib/dominio/curriculos";
 import { anosAcimaDoLimite, type TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { reaisParaEdicao } from "@/lib/formato/moeda";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../../consulta";
 import { FormularioDeCurso } from "../../FormularioDeCurso";
-import { mensagemDeCursoNaoEncontrado } from "../consulta";
+import { mensagemDeCursoNaoEncontrado, type CurriculoDaPagina } from "../consulta";
 import { travasDoBanco, vigenciasDoBanco } from "./consulta";
 import { EnvioDoCurriculo } from "./EnvioDoCurriculo";
 import { SecaoDeRegime } from "./SecaoDeRegime";
@@ -40,7 +42,7 @@ export default async function EditarCurso({ params }: { params: Promise<{ curso:
   const { data: curso } = await supabase
     .from("cursos")
     .select(
-      "id, codigo, nome_curso, classificacao, modalidade, duracao_dias, duracao_semanas, limite_turmas_ano, proposito, status, ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculo_pdf_em",
+      "id, codigo, nome_curso, classificacao, modalidade, limite_turmas_ano, status, ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculos:curriculos!curriculos_curso_id_fkey(id, versao, vigente_de, status, arquivado_em, proposito, duracao_dias, duracao_semanas, pdf_carregado_em)",
     )
     .eq("codigo", sigla)
     .maybeSingle();
@@ -85,6 +87,12 @@ export default async function EditarCurso({ params }: { params: Promise<{ curso:
   }
 
   const cursoId = curso.id as string;
+  /* Spec 021 (Bloco 6, RC-1): propósito, duração e PDF são do currículo — até o seletor (PR 2), o vigente hoje. */
+  const curriculo = curriculoVigenteEm(
+    ((curso as unknown as { curriculos?: CurriculoDaPagina[] }).curriculos ??
+      []) as CurriculoDaPagina[],
+    hojeNaCiaara(),
+  );
 
   const [turmasRes, vigenciasRes] = await Promise.all([
     supabase
@@ -118,10 +126,10 @@ export default async function EditarCurso({ params }: { params: Promise<{ curso:
             nome_curso: curso.nome_curso as string,
             classificacao: curso.classificacao as string,
             modalidade: texto(curso.modalidade),
-            duracao_dias: texto(curso.duracao_dias),
-            duracao_semanas: texto(curso.duracao_semanas),
+            duracao_dias: texto(curriculo?.duracao_dias ?? null),
+            duracao_semanas: texto(curriculo?.duracao_semanas ?? null),
             limite_turmas_ano: texto(curso.limite_turmas_ano),
-            proposito: texto(curso.proposito),
+            proposito: texto(curriculo?.proposito ?? null),
             /* Spec 020 (C-1 a C-4): estrangeiros e custo, só na edição. */
             ofertavel_estrangeiros:
               curso.ofertavel_estrangeiros === true
@@ -153,7 +161,7 @@ export default async function EditarCurso({ params }: { params: Promise<{ curso:
         <EnvioDoCurriculo
           sigla={curso.codigo as string}
           cursoId={cursoId}
-          carregadoEm={(curso.curriculo_pdf_em as string | null) ?? null}
+          carregadoEm={curriculo?.pdf_carregado_em ?? null}
           cursoAtivo={curso.status === "ativo"}
         />
       ) : null}

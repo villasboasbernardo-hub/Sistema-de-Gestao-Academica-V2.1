@@ -21,8 +21,28 @@ import { preSelecionarTurma, type TurmaParaSelecao } from "@/lib/dominio/pre-sel
  * ⚠️ NUNCA `select *` — coluna nova do schema apareceria na tela sem que ninguém tivesse decidido
  * mostrá-la, e a primeira notícia seria a tela.
  */
+/*
+ * Spec 021 (Bloco 6, RC-1): o propósito, a duração e o PDF são do CURRÍCULO — os currículos do curso vêm embutidos, e a
+ * página escolhe o vigente hoje (`curriculoVigenteEm`). Estrangeiros e custo ficam no curso (D-20).
+ */
 export const COLUNAS_DA_PAGINA_DO_CURSO =
-  "id, codigo, nome_curso, classificacao, modalidade, proposito, duracao_dias, duracao_semanas, limite_turmas_ano, status, ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculo_pdf_em";
+  "id, codigo, nome_curso, classificacao, modalidade, limite_turmas_ano, status, ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculos:curriculos!curriculos_curso_id_fkey(id, versao, vigente_de, status, arquivado_em, proposito, duracao_dias, duracao_semanas, pdf_carregado_em)";
+
+/** O currículo embutido na linha do curso (spec 021). */
+export type CurriculoDaPagina = {
+  readonly id: string;
+  readonly versao: number;
+  readonly vigente_de: string;
+  readonly status: string;
+  readonly arquivado_em: string | null;
+  readonly proposito: string | null;
+  readonly duracao_dias: number;
+  readonly duracao_semanas: number | null;
+  readonly pdf_carregado_em: string | null;
+};
+
+/** O id que as consultas do currículo filtram quando o curso não tem currículo legível: nenhuma linha casa. */
+export const SEM_CURRICULO = "00000000-0000-0000-0000-000000000000";
 
 /** As colunas das turmas do curso — a lista da aba Grade e a base dos avisos de cada uma. */
 /* Spec 018 (Bloco 3): + o regime nomeado de cada turma, para a aba Horários dizer quem usa cada um. */

@@ -186,12 +186,53 @@ def executar(
                 return 2
             try:
                 with psycopg.connect(conexao, autocommit=False) as con:
+                    # ⚠️ SPEC 021 (Bloco 6): os limites passaram a ser únicos por VERSÃO do currículo
+                    #    (`limite_unico_na_versao`), e a D-1 — já aplicada no remoto, e por isso
+                    #    intocável — diz `on conflict (curso_id, categoria)`. O índice antigo volta
+                    #    SÓ durante esta reaplicação, na mesma transação: numa base recém-carregada há
+                    #    UMA versão por curso, então ele não conflita com nada; e sai em seguida.
+                    limites = sufixo == "limites_dos_24_curriculos"
+                    if limites:
+                        con.execute(
+                            "create unique index limite_unico_da_reaplicacao on "
+                            "public.limites_curriculo (curso_id, categoria) where status = 'ativo'"
+                        )
                     con.execute(achados[0].read_text(encoding="utf-8"))
+                    if limites:
+                        con.execute("drop index public.limite_unico_da_reaplicacao")
                     con.commit()
             except Exception as erro:  # noqa: BLE001 — o motivo vai para o relatório
                 print(f"[NAO CONFERIDA] a migration de dado {achados[0].name} falhou: {erro}")
                 return 2
             print(f"  {achados[0].name}: aplicada")
+
+        # ⚠️ ETAPA 6c — SPEC 021 (Bloco 6, RC-1): o CURRICULO 1 recebe o que a carga pos no curso DEPOIS de o
+        #    curso nascer. O curriculo 1 nasce com o curso (gatilho), copiando o proposito, a duracao e o
+        #    modelo daquele instante; mas a ETAPA 6 reaplica a carga das UEs, que marca `curriculo_modelo`
+        #    nos dois cursos por competencias — e marca no CURSO, porque e uma migration ja aplicada no
+        #    remoto, e por isso intocavel. Sem este passo, o curriculo do local diria "unidades" onde o do
+        #    remoto diz "competencias", e a isencao da UE divergiria em silencio entre os dois bancos.
+        #    ⚠️ So no curso que tem UM curriculo (o caso de toda base recem-carregada), e idempotente.
+        _linha("ETAPA 6c — o curriculo 1 recebe o que a carga pos no curso (RC-1)")
+        with psycopg.connect(conexao, autocommit=False) as con:
+            mudou = con.execute(
+                """
+                update public.curriculos cr
+                   set proposito = c.proposito, duracao_semanas = c.duracao_semanas,
+                       duracao_dias = c.duracao_dias, curriculo_modelo = c.curriculo_modelo,
+                       pdf_carregado_em = c.curriculo_pdf_em
+                  from public.cursos c
+                 where cr.curso_id = c.id and cr.versao = 1
+                   and (select count(*) from public.curriculos o where o.curso_id = c.id) = 1
+                   and row(cr.proposito, cr.duracao_semanas, cr.duracao_dias, cr.curriculo_modelo,
+                           cr.pdf_carregado_em)
+                       is distinct from
+                       row(c.proposito, c.duracao_semanas, c.duracao_dias, c.curriculo_modelo,
+                           c.curriculo_pdf_em)
+                """
+            ).rowcount
+            con.commit()
+        print(f"  curriculos 1 atualizados: {mudou}")
 
     # ⚠️ A CONTA LOCAL VOLTA SOZINHA AO FIM DA CARGA — decisão de Bernardo Villas Boas,
     #    24/09/2026. Depois da carga o banco tem 5.394 linhas e **nenhuma credencial**: sem

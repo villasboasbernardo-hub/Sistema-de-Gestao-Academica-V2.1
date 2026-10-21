@@ -54,8 +54,9 @@ export const PARAMETROS_SEM_RECORTE: ParametrosDoCatalogo = {
  * ⚠️ NUNCA `select *`. Com ele, uma coluna nova do schema apareceria no tipo das linhas sem que
  * ninguém tivesse decidido mostrá-la, e a primeira notícia seria a tela.
  */
+/* Spec 021 (Bloco 6, RC-1): o propósito e a duração são do CURRÍCULO — o vigente de cada curso, escolhido na página. */
 export const COLUNAS_DO_CATALOGO =
-  "id, codigo, nome_curso, classificacao, modalidade, proposito, duracao_dias, duracao_semanas, limite_turmas_ano, status";
+  "id, codigo, nome_curso, classificacao, modalidade, limite_turmas_ano, status, curriculos:curriculos!curriculos_curso_id_fkey(id, versao, vigente_de, status, arquivado_em, proposito, duracao_dias, duracao_semanas, pdf_carregado_em)";
 
 /**
  * ⚠️ A ORDEM DENTRO DO GRUPO É A DA SIGLA, e o agrupamento é do componente. O banco devolve uma lista

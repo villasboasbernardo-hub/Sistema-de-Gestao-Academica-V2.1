@@ -613,6 +613,9 @@ SEQUENCIAS_DE_CODIGO: tuple[tuple[str, str, str], ...] = (
     # A do Bloco 3 (spec 018): o regime de horário nomeado do curso (RGH-), cadastrado só pela tela.
     ("app.regimes_de_horario_codigo_seq", "regimes_de_horario",
      "case when codigo ~ '^RGH-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    # A do Bloco 6 (spec 021): a versão do currículo (CRV-), criada pela migration (a versão 1) e pela cópia.
+    ("app.curriculos_codigo_seq", "curriculos",
+     "case when codigo ~ '^CRV-[0-9]+$' then substring(codigo from 5)::bigint end"),
 )
 
 

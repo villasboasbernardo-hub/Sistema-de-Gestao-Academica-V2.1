@@ -297,10 +297,11 @@ beforeAll(async () => {
   cursoCompetenciasId = await criarCurso(`C-Cmp-DSA${SELO}`, "regular");
 
   // O eixo da isenção da Q-1: currículo por competências.
+  /* Spec 021 (Bloco 6, RC-1): o modelo é do CURRÍCULO; a isenção lê o do currículo da disciplina. */
   const { error: erroModelo } = await servico
-    .from("cursos")
+    .from("curriculos")
     .update({ curriculo_modelo: "competencias" })
-    .eq("id", cursoCompetenciasId);
+    .eq("curso_id", cursoCompetenciasId);
   if (erroModelo) throw new Error(`falha ao marcar competencias: ${erroModelo.message}`);
 
   turmaRegularId = await criarTurma(cursoRegularId);

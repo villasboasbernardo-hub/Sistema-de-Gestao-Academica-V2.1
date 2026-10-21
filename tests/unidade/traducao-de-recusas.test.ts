@@ -169,14 +169,14 @@ describe("`FR-042` · cada linha do contrato §2 vira a mensagem de negócio del
        * não estava traduzida, ela caía na frase genérica e mandava a pessoa **escolher outro valor
        * que ela não escolhe**, que é exatamente o modo de falha do gotcha 9.
        *
-       * O campo digitado é `cod_disciplina`, guardado por `uq_disciplinas_curso_cod_ativo` — índice
+       * O campo digitado é `cod_disciplina`, guardado por `uq_disciplinas_curriculo_cod_ativo` (spec 021: por currículo; era `uq_disciplinas_curso_cod_ativo`) — índice
        * único PARCIAL, `where status = 'ativo'`. É ele que faz a `Q-04` valer: desativar libera o
        * código.
        */
       const mensagem = traduzirRecusa(
         erro("23505", {
           message:
-            'duplicate key value violates unique constraint "uq_disciplinas_curso_cod_ativo"',
+            'duplicate key value violates unique constraint "uq_disciplinas_curriculo_cod_ativo"',
         }),
       );
       expect(mensagem).toContain("escolha outro");

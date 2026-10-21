@@ -258,6 +258,20 @@ test.describe("`FR-016` · editar curso", () => {
     await expect
       .poll(() => new URL(page.url()).pathname)
       .toBe(`/cursos/${encodeURIComponent(sigla)}`);
+
+    /*
+     * ⚠️ SPEC 021 (Bloco 6, RC-1): o propósito é do CURRÍCULO — conferido no BANCO, não no campo (PEND-016-2), e é o
+     *    caso que discrimina: antes do Bloco 6 o valor ia para `cursos.proposito`, que agora é aposentada.
+     */
+    const { data: gravado } = await admin()
+      .from("curriculos")
+      .select("proposito, cursos!curriculos_curso_id_fkey!inner(codigo)")
+      .eq("cursos.codigo", sigla)
+      .eq("versao", 1)
+      .single();
+    expect(gravado?.proposito, "o propósito foi para o currículo do curso").toBe(
+      "Propósito revisado pelo percurso.",
+    );
   });
 
   test("⚠️ trocar a sigla abre o diálogo COM TODAS AS LETRAS, e leva à sigla nova", async ({
