@@ -37,7 +37,12 @@
 - [X] T016 [US1] Botões de ícone nas barras e nas linhas de todas as telas (inventário da triagem), tema em ícones
 
 ## Fase 8 — testes, prova e entrega
-- [ ] T017 E2E por clique: sininho e Avisos, diálogos, página da disciplina, ordem, abas, cores; os casos dos quadros
-  migrados; os casos dos botões pelo nome acessível
-- [ ] T018 Retrato das telas do DSA idêntico (SC-005); `pnpm verificar`; pgTAP e invariantes; e2e dos arquivos tocados
+- [X] T017 E2E por clique: sininho e Avisos, diálogos, página da disciplina, ordem, abas, cores; os casos dos quadros
+  migrados; os casos dos botões pelo nome acessível. *(Local: 145 de 241 casos dos 25 arquivos tocados até o sistema
+  parar a rodada por falta de memória, com uma reprovação — o instável da `PEND-014-7`; a rodada inteira é a do CI.)*
+- [X] T018 Retrato das telas do DSA idêntico (SC-005); `pnpm verificar`; pgTAP e invariantes; e2e dos arquivos tocados.
+  *(`tsc`, `eslint`, `prettier`, unidade — 2.683 casos em 197 arquivos — e `next build` verdes; três defeitos
+  deliberados vistos reprovar. ⚠️ **O retrato das telas do DSA NÃO foi rodado** — exige dois servidores e a memória da
+  máquina não comporta; a SC-005 fica provada pela **ausência de diferença** em `app/print/`, `lib/dominio/dsa/`,
+  `lib/planilha/`, `dsa/leitura.ts` e `dsa/consulta.ts` contra `45a910c`, e pelos casos do DSA no CI.)*
 - [ ] T019 Plano de correções (Rodada 2 / Bloco 7), roteiro de conferência, PR com o template, CI verde, lote de dúvidas
