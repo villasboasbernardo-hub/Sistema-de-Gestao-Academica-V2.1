@@ -14,14 +14,14 @@
  * respostas para "quantos cursos regulares há" — a dos indicadores e a dos cartões —, e elas
  * divergiriam em silêncio no dia em que uma das duas mudasse.
  *
- * ⚠️ **A MÉDIA É EM DIAS POR CAUSA DO DADO, não por preferência.** `duracao_dias` está preenchida em
- * todos os cursos; `duracao_semanas` tem **12** vazias (medido em 16/09/2026). Uma média em semanas
- * seria calculada sobre metade da base **sem que o número dissesse isso** — e é por isso que o
- * resultado carrega `base`: quantos cursos entraram em cada média.
+ * ⚠️ **SPEC 022 (Bloco 7), ITEM 10** — *"Cursos: estatísticas no mesmo componente/estilo das de Instrutores — cursos
+ * por classificação e duração em semanas de cada curso/estágio; remova o de duração média por classificação."*
+ * (Bernardo Villas Boas, 22/10/2026). A **duração média em dias por classificação SAIU**; no lugar, a duração em
+ * **semanas de cada curso**, do currículo vigente (spec 021, RC-1). Continua sendo um dos quatro itens da lista
+ * fechada da A-6 — trocado, não acrescentado.
  *
- * ⚠️ **AUSÊNCIA É `null`, NUNCA ZERO** (`RN-DEG-01`). "Nenhum curso nesta classificação" e "a média
- * dá zero dias" são fatos diferentes, e um gráfico que os desenhasse igual mentiria na altura da
- * barra.
+ * ⚠️ **AUSÊNCIA NÃO É ZERO** (`RN-DEG-01`). O curso sem a duração em semanas não vira barra no chão — que se leria
+ * como "dura zero semanas" —: ele sai do gráfico e é **nomeado** em `semInformacao`.
  *
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
@@ -31,20 +31,20 @@ import {
   ehClassificacaoDeCurso,
   type ClassificacaoDeCurso,
 } from "./classificacoes-de-curso";
+import { emOrdemDeCurso } from "./ordem-de-cursos";
 
 /** O mínimo que um curso precisa trazer para entrar nos agregados. */
 export type CursoParaIndicador = {
+  readonly codigo: string;
   readonly classificacao: string;
-  readonly duracaoDias: number | null;
+  /** Do currículo vigente (spec 021, RC-1); `null` quando não informada. */
+  readonly duracaoSemanas: number | null;
 };
 
-/** Uma barra da duração média. `dias` é `null` quando não houve o que somar. */
-export type DuracaoMedia = {
-  readonly classificacao: ClassificacaoDeCurso;
-  readonly rotulo: string;
-  readonly dias: number | null;
-  /** Sobre quantos cursos a média foi feita — o que a torna conferível. */
-  readonly base: number;
+/** A duração em semanas de cada curso — as barras — e os cursos sem ela, nomeados (spec 022, item 10). */
+export type DuracaoEmSemanas = {
+  readonly porCurso: readonly { readonly codigo: string; readonly semanas: number }[];
+  readonly semInformacao: readonly string[];
 };
 
 /** Uma barra da contagem por classificação. Aqui zero é zero de verdade. */
@@ -61,7 +61,7 @@ export type ContagemPorClassificacao = {
 export type IndicadoresDoCatalogo = {
   readonly cursosRegulares: number;
   readonly estagiosDeQualificacao: number;
-  readonly duracaoMediaPorClassificacao: readonly DuracaoMedia[];
+  readonly duracaoEmSemanas: DuracaoEmSemanas;
   readonly cursosPorClassificacao: readonly ContagemPorClassificacao[];
 };
 
@@ -79,18 +79,16 @@ export function indicadoresDoCatalogo(
   const daClasse = (c: ClassificacaoDeCurso) =>
     classificados.filter((curso) => curso.classificacao === c);
 
-  const duracaoMediaPorClassificacao: DuracaoMedia[] = CLASSIFICACOES_DE_CURSO.map((c) => {
-    const informadas = daClasse(c)
-      .map((curso) => curso.duracaoDias)
-      .filter((d): d is number => typeof d === "number" && Number.isFinite(d));
-    const base = informadas.length;
-    return {
-      classificacao: c,
-      rotulo: ROTULO_DA_CLASSIFICACAO[c],
-      dias: base === 0 ? null : Math.round(informadas.reduce((s, d) => s + d, 0) / base),
-      base,
-    };
-  });
+  // A ordem única do sistema (spec 022, item 3): classificação, depois a sigla.
+  const emOrdem = emOrdemDeCurso(classificados);
+  const informada = (s: number | null): s is number =>
+    typeof s === "number" && Number.isFinite(s) && s > 0;
+  const duracaoEmSemanas: DuracaoEmSemanas = {
+    porCurso: emOrdem
+      .filter((c) => informada(c.duracaoSemanas))
+      .map((c) => ({ codigo: c.codigo, semanas: c.duracaoSemanas as number })),
+    semInformacao: emOrdem.filter((c) => !informada(c.duracaoSemanas)).map((c) => c.codigo),
+  };
 
   const cursosPorClassificacao: ContagemPorClassificacao[] = CLASSIFICACOES_DE_CURSO.map((c) => ({
     classificacao: c,
@@ -101,7 +99,7 @@ export function indicadoresDoCatalogo(
   return {
     cursosRegulares: daClasse("regular").length,
     estagiosDeQualificacao: daClasse("estagio_qualificacao").length,
-    duracaoMediaPorClassificacao,
+    duracaoEmSemanas,
     cursosPorClassificacao,
   };
 }

@@ -198,7 +198,7 @@ test.describe("spec 020 · os cadastros novos", () => {
     test.setTimeout(180_000);
     await irAoCursoPorClique(page, EMAIL, SIGLA);
     await page.locator('[data-slot="ir-para-editar-curso"]').first().click();
-    const bloco = page.locator('[data-slot="estrangeiros-e-custo"]');
+    const bloco = page.locator('[data-slot="grupo-oferta-e-custo"]');
     await expect(bloco).toBeVisible();
 
     /* Custo que não é valor em reais: a tela recusa com a frase do campo, e o banco não recebe nada. */

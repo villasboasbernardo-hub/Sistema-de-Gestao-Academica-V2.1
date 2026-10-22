@@ -19,6 +19,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { sessaoDe } from "./curso-de-teste";
 import { limparCursos, semearCursos, type CursosSemeados } from "./cursos-de-teste";
+import { abrirParteDaEdicao } from "./navegar-curso";
 
 let cliente: SupabaseClient | undefined;
 const admin = (): SupabaseClient =>
@@ -85,6 +86,13 @@ const secao = (page: Page) => page.locator('[data-slot="secao-de-regime"]');
 const dialogo = (page: Page) => page.locator('[data-slot="dialogo-confirmacao"]');
 const enderecoDaEdicao = (sigla: string) => `/cursos/${encodeURIComponent(sigla)}/editar`;
 
+/** Spec 022 (Bloco 7, item 9): a vigência do regime mora na parte *Horários* de Editar curso — chega-se pela aba. */
+async function irAVigencia(page: Page, email: string, sigla: string): Promise<void> {
+  await entrar(page, email, enderecoDaEdicao(sigla));
+  await abrirParteDaEdicao(page, "horarios");
+  await expect(secao(page)).toBeVisible();
+}
+
 /** O `id` da vigência `padrao` ativa de um curso — buscado, nunca guardado entre execuções. */
 async function vigenciaPadraoAtivaDe(
   sigla: string,
@@ -113,7 +121,7 @@ test.describe("`FR-021.1` · corrigir a vigência que ainda não alcançou lanç
     const sigla = SEMEADO.porClassificacao.expedito;
     const antes = await vigenciaPadraoAtivaDe(sigla);
 
-    await entrar(page, EMAIL_ENCARREGADO, enderecoDaEdicao(sigla));
+    await irAVigencia(page, EMAIL_ENCARREGADO, sigla);
     const linha = secao(page).locator(`[data-vigencia="${antes.codigo}"]`);
     await expect(linha).toHaveAttribute("data-corrigivel", "true");
 
@@ -173,7 +181,7 @@ test.describe("`FR-021.2` · a vigência com lançamento não se corrige", () =>
     const sigla = SEMEADO.porClassificacao.regular;
     const travada = await vigenciaPadraoAtivaDe(sigla);
 
-    await entrar(page, EMAIL_ENCARREGADO, enderecoDaEdicao(sigla));
+    await irAVigencia(page, EMAIL_ENCARREGADO, sigla);
     const linha = secao(page).locator(`[data-vigencia="${travada.codigo}"]`);
 
     await expect(linha).toHaveAttribute("data-corrigivel", "false");
@@ -243,7 +251,7 @@ test.describe("`FR-019` · registrar vigência nova a partir de uma data", () =>
      */
     const quandoNaTela = dataParaLeitura(quando);
 
-    await entrar(page, EMAIL_ENCARREGADO, enderecoDaEdicao(sigla));
+    await irAVigencia(page, EMAIL_ENCARREGADO, sigla);
     await secao(page).locator('[data-slot="registrar-nova-vigencia"] summary').click();
 
     // ⚠️ `FR-015.1`: o formulário de registro abre VAZIO — nada de tipo por padrão.
@@ -282,7 +290,7 @@ test.describe("`FR-019` · registrar vigência nova a partir de uma data", () =>
      *    recusa — com a data e o caminho, nunca com o erro cru.
      */
     const sigla = SEMEADO.porClassificacao.regular;
-    await entrar(page, EMAIL_ENCARREGADO, enderecoDaEdicao(sigla));
+    await irAVigencia(page, EMAIL_ENCARREGADO, sigla);
     await secao(page).locator('[data-slot="registrar-nova-vigencia"] summary').click();
 
     await page.locator("#registrar-tipo").selectOption("padrao");
@@ -315,7 +323,7 @@ test.describe("`SC-011.1` · a rota atende DUAS permissões, e elas não andam j
      *    lhe permite: o negativo e o controle positivo passariam, e só este caso pega a troca.
      */
     const sigla = SEMEADO.porClassificacao.expedito;
-    await entrar(page, EMAIL_OPERADOR, enderecoDaEdicao(sigla));
+    await irAVigencia(page, EMAIL_OPERADOR, sigla);
 
     await expect(secao(page)).toBeVisible();
     await expect(secao(page).locator("li[data-vigencia]").first()).toBeVisible();

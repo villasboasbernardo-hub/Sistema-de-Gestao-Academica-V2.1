@@ -20,6 +20,7 @@
  * biblioteca desenha.
  */
 import { CardKpi } from "@/components/ciaara/card-kpi";
+import { EstatisticasRecolhiveis } from "@/components/ciaara/estatisticas-recolhiveis";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
 import { GraficoPizza } from "@/components/graficos/grafico-pizza";
 import type { Serie } from "@/components/graficos/tipos";
@@ -27,8 +28,6 @@ import { rotuloDaCategoria, rotuloDoRegime } from "@/lib/constantes/instrutor";
 import type { GraficoDeInstrutores } from "@/lib/dominio/graficos-instrutor";
 import { NAO_INFORMADO } from "@/lib/dominio/graficos-instrutor";
 import type { IndicadoresDeInstrutores } from "@/lib/dominio/indicadores-instrutor";
-
-import { EstatisticasRecolhiveis } from "./EstatisticasRecolhiveis";
 
 const numero = (n: number) => n.toLocaleString("pt-BR");
 
@@ -58,7 +57,7 @@ export function PainelDeInstrutores({
   const { taxaDeSelecao: taxa } = indicadores;
 
   return (
-    <EstatisticasRecolhiveis>
+    <EstatisticasRecolhiveis id="estatisticas-de-instrutores">
       <section aria-label="Indicadores e gráficos" className="flex flex-col gap-4">
         <div className="grid gap-3 sm:grid-cols-3" data-slot="indicadores-de-instrutores">
           <CardKpi rotulo="Total de instrutores" valor={numero(indicadores.total)} />

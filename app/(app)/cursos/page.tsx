@@ -149,7 +149,11 @@ export default async function Cursos({
   });
 
   const agregados = indicadoresDoCatalogo(
-    cursos.map((c) => ({ classificacao: c.classificacao, duracaoDias: c.duracaoDias })),
+    cursos.map((c) => ({
+      codigo: c.codigo,
+      classificacao: c.classificacao,
+      duracaoSemanas: c.duracaoSemanas,
+    })),
   );
 
   /*

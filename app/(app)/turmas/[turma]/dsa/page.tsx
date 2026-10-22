@@ -417,7 +417,7 @@ export default async function SemanaDoDsa({
        */}
       {/*
        * ⚠️ O LINK LEVAVA À FICHA DA TURMA, que não registra vigência (achado da triagem da spec 022, Bloco 7): a vigência
-       *    mora em *Editar curso* → *Regime de horário*, e é para lá que ele leva.
+       *    mora em *Editar curso* → parte *Horários* (spec 022, item 9), e é para lá que ele leva.
        */}
       {semRelogio ? (
         <p role="status" className="text-sm text-atrasado-tinta" data-slot="sem-relogio">
@@ -426,7 +426,8 @@ export default async function SemanaDoDsa({
           <Link
             href={
               lida.cursoCodigo
-                ? `${enderecoDaEdicaoDoCurso(lida.cursoCodigo)}#regime-de-horario`
+                ? // Spec 022 (item 9): a vigência do regime mora na parte *Horários* de Editar curso.
+                  `${enderecoDaEdicaoDoCurso(lida.cursoCodigo, undefined, "horarios")}#regime-de-horario`
                 : enderecoDaTurma(codigo)
             }
             className="underline underline-offset-2 hover:text-texto"

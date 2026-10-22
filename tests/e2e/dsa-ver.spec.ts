@@ -250,6 +250,16 @@ test.describe("`RN-DEG-01` · a faixa «Sem posição» e a degradação", () =>
     await expect(page.locator(`${GRADE} tbody th`).first()).not.toContainText(":");
     /* E o aviso leva à tela que resolve, em vez de dizer "faltou dado". */
     await expect(page.locator('[data-slot="sem-relogio"]').getByRole("link")).toBeVisible();
+    /*
+     * Spec 022 (Bloco 7): o link leva a *Editar curso* (era a ficha da turma — achado da triagem) e, desde o item 9, à
+     * parte *Horários*, onde a vigência do regime mora agora.
+     */
+    await page.locator('[data-slot="sem-relogio"]').getByRole("link").click();
+    await expect
+      .poll(() => decodeURIComponent(new URL(page.url()).pathname))
+      .toBe(`/cursos/${SEMEADO.cursoSemRelogio}/editar`);
+    expect(new URL(page.url()).searchParams.get("parte")).toBe("horarios");
+    await expect(page.locator('[data-slot="secao-de-regime"]')).toBeVisible();
   });
 
   /*
