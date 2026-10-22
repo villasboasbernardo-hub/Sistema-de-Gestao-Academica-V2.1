@@ -64,6 +64,7 @@ test.afterAll(async () => {
 
 const SECAO = '[data-slot="disciplinas-da-turma"]';
 const DETALHE = '[data-slot="detalhe-da-disciplina-da-turma"]';
+const DIALOGO_DOS_INSTRUTORES = '[data-slot="dialogo-dos-instrutores"]';
 
 /**
  * **O percurso por clique**: entra, vai pelo menu até Turmas, acha a turma na lista e abre a ficha.
@@ -114,8 +115,13 @@ async function abrirDetalhe(page: Page, nome: string): Promise<void> {
  * mais tempo, e sim com escopo.
  */
 async function acrescentarInstrutor(page: Page): Promise<void> {
-  const detalhe = page.locator(DETALHE);
-  await detalhe.locator('[data-slot="seletor-instrutor"]').first().click();
+  /* Spec 022 (Bloco 7, FR-002): o editor dos instrutores mora num diálogo, aberto pelo ícone do detalhe. */
+  const dialogo = page.locator(DIALOGO_DOS_INSTRUTORES);
+  if (!(await dialogo.isVisible())) {
+    await page.locator(`${DETALHE} [data-slot="editar-instrutores"]`).click();
+    await expect(dialogo).toBeVisible();
+  }
+  await dialogo.locator('[data-slot="seletor-instrutor"]').first().click();
   const painel = page.locator('[data-slot="popover-content"]');
   await painel.getByRole("option").first().click();
 }
@@ -253,6 +259,8 @@ test.describe("⚠️ CRITÉRIO 4 · o período é DAQUELA turma, e de mais nenh
     await irASecaoDaTurma(page, CODIGO_DA_TURMA_DOIS);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
 
+    // Spec 022 (Bloco 7, FR-002): o período se edita num diálogo, pelo ícone.
+    await page.locator('[data-slot="editar-periodo"]').click();
     await page.locator('input[name="previsao_inicio"]').fill("2026-03-10");
     await page.locator('input[name="previsao_termino"]').fill("2026-04-10");
     await page.locator('[data-slot="gravar-periodo"]').click();
@@ -277,6 +285,8 @@ test.describe("⚠️ CRITÉRIO 4 · o período é DAQUELA turma, e de mais nenh
     await abrirDetalhe(page, DISCIPLINA_SEM_UE.nome);
 
     // A janela da turma é 02/03 a 30/06. Janeiro está fora.
+    // Spec 022 (Bloco 7, FR-002): o período se edita num diálogo, pelo ícone.
+    await page.locator('[data-slot="editar-periodo"]').click();
     await page.locator('input[name="previsao_inicio"]').fill("2026-01-05");
     await page.locator('input[name="previsao_termino"]').fill("2026-01-20");
     await page.locator('[data-slot="gravar-periodo"]').click();
@@ -299,6 +309,8 @@ test.describe("⚠️ CRITÉRIO 4 · o período é DAQUELA turma, e de mais nenh
     await irASecaoDaTurma(page, CODIGO_DA_TURMA_DOIS);
     await abrirDetalhe(page, DISCIPLINA_SEM_UE.nome);
 
+    // Spec 022 (Bloco 7, FR-002): o período se edita num diálogo, pelo ícone.
+    await page.locator('[data-slot="editar-periodo"]').click();
     await page.locator('input[name="previsao_inicio"]').fill("2026-04-01");
     await page.locator('input[name="previsao_termino"]').fill("2026-05-01");
     await page.locator('[data-slot="gravar-periodo"]').click();
@@ -347,7 +359,7 @@ test.describe("`FR-041` · os cinco casos do rateio, na seção da turma", () =>
     for (let i = 0; i < 2; i++) await acrescentarInstrutor(page);
 
     await page.getByRole("radio", { name: /Informar os tempos/ }).check();
-    const campos = page.locator(`${DETALHE} input[type="number"]`);
+    const campos = page.locator(`${DIALOGO_DOS_INSTRUTORES} input[type="number"]`);
     await campos.nth(0).fill("7");
     await campos.nth(1).fill("2");
 

@@ -22,8 +22,11 @@
 import * as React from "react";
 import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
 import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { definirInstrutoresDaTurma } from "@/lib/acoes/atribuicao";
@@ -34,16 +37,7 @@ import type { HabilitadoDaLinha, InstrutorDaLinha, UnidadeDaLinha } from "../con
 
 type ModoDaTela = "automatico" | "por_tempos" | "por_unidades";
 
-export function PainelDeInstrutores({
-  turmaDisciplinaId,
-  cargaHorariaTempos,
-  modoDaDisciplina,
-  atribuidos,
-  habilitados,
-  unidades,
-  escala,
-  podeEditar,
-}: {
+type PropsDoPainel = {
   readonly turmaDisciplinaId: string;
   readonly cargaHorariaTempos: number;
   readonly modoDaDisciplina: string;
@@ -52,7 +46,122 @@ export function PainelDeInstrutores({
   readonly unidades: readonly UnidadeDaLinha[];
   readonly escala: EscalaDeAntiguidade;
   readonly podeEditar: boolean;
-}) {
+};
+
+/**
+ * ⚠️ **A LISTA É LEITURA; ATRIBUIR ABRE UM DIÁLOGO** (spec 022, Bloco 7, FR-002; *"nunca campos abertos na página"*).
+ *    Até o Bloco 7 o seletor, o modo do rateio e os tempos ficavam abertos no detalhe da disciplina. A lista mostra quem
+ *    está atribuído e a parcela de cada um pela mesma conta de antes (`ratear`); o editor inteiro mora no diálogo.
+ */
+export function PainelDeInstrutores(props: PropsDoPainel) {
+  const {
+    turmaDisciplinaId,
+    cargaHorariaTempos,
+    modoDaDisciplina,
+    atribuidos,
+    habilitados,
+    podeEditar,
+  } = props;
+  const [mensagem, setMensagem] = React.useState<string | null>(null);
+  const atribuidosEmOrdem = habilitados.filter((h) =>
+    atribuidos.some((a) => a.instrutorId === h.instrutorId),
+  );
+  const previsao = ratear({
+    cargaHorariaTempos,
+    modo: (modoDaDisciplina === "simultaneo" ? "simultaneo" : "dividido") as ModoDeAtribuicao,
+    temAtribuicaoPorUnidade: false,
+    instrutores: atribuidosEmOrdem.map((h) => ({
+      instrutorId: h.instrutorId,
+      temposDigitados: null,
+      temposDasUnidades: null,
+    })),
+  });
+
+  return (
+    <section aria-labelledby={`instrutores-${turmaDisciplinaId}`} className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id={`instrutores-${turmaDisciplinaId}`} className="text-texto text-sm font-semibold">
+          Instrutores nesta turma
+        </h3>
+        {podeEditar && habilitados.length > 0 ? (
+          <DialogoDeFormulario
+            titulo="Instrutores nesta turma"
+            largo
+            slot="dialogo-dos-instrutores"
+            gatilho={
+              <BotaoDeIcone
+                acao="editar"
+                rotulo="Editar instrutores"
+                data-slot="editar-instrutores"
+              />
+            }
+          >
+            {(fechar) => (
+              <EditorDeInstrutores
+                {...props}
+                fechar={fechar}
+                aoGravar={() => {
+                  setMensagem("Instrutores gravados nesta turma.");
+                  fechar();
+                }}
+              />
+            )}
+          </DialogoDeFormulario>
+        ) : null}
+      </div>
+
+      {habilitados.length === 0 ? (
+        /* ⚠️ **CAMINHO CLICÁVEL, e não um beco.** São 55 disciplinas reais sem ninguém habilitado. */
+        <p className="text-texto-suave text-sm" data-slot="sem-habilitado">
+          Nenhum instrutor habilitado nesta disciplina. A habilitação é feita na ficha do instrutor,
+          no painel de disciplinas —{" "}
+          <Link
+            href="/instrutores"
+            className="text-marca rounded-ciaara-sm underline focus-visible:ring-2 focus-visible:outline-none"
+          >
+            abrir a lista de instrutores
+          </Link>
+          .
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-1" data-slot="atribuidos-em-leitura">
+          {atribuidosEmOrdem.length === 0 ? (
+            <li className="text-conflito-tinta text-sm">Nenhum instrutor atribuído nesta turma.</li>
+          ) : (
+            atribuidosEmOrdem.map((h) => (
+              <li key={h.instrutorId} className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-texto">{h.nome}</span>
+                <span className="text-texto-suave text-xs tabular-nums" data-slot="parcela-gravada">
+                  {previsao.parcelas.find((p) => p.instrutorId === h.instrutorId)?.tempos ?? 0}{" "}
+                  tempos
+                </span>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+
+      {mensagem ? (
+        <p role="status" className="text-texto-suave text-sm">
+          {mensagem}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function EditorDeInstrutores({
+  turmaDisciplinaId,
+  cargaHorariaTempos,
+  modoDaDisciplina,
+  atribuidos,
+  habilitados,
+  unidades,
+  escala,
+  podeEditar,
+  fechar,
+  aoGravar,
+}: PropsDoPainel & { readonly fechar: () => void; readonly aoGravar: () => void }) {
   const unidadesAtivas = unidades.filter((u) => u.ativa);
 
   const [marcados, setMarcados] = React.useState<readonly string[]>(
@@ -61,7 +170,6 @@ export function PainelDeInstrutores({
   const [tempos, setTempos] = React.useState<Readonly<Record<string, string>>>({});
   const [donoDaUnidade, setDonoDaUnidade] = React.useState<Readonly<Record<string, string>>>({});
   const [modo, setModo] = React.useState<ModoDaTela>("automatico");
-  const [mensagem, setMensagem] = React.useState<string | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
   const [gravando, setGravando] = React.useState(false);
 
@@ -103,7 +211,6 @@ export function PainelDeInstrutores({
     previsao.parcelas.find((p) => p.instrutorId === instrutorId)?.tempos ?? 0;
 
   async function gravar() {
-    setMensagem(null);
     setErro(null);
     setGravando(true);
     const resultado = await definirInstrutoresDaTurma({
@@ -122,31 +229,14 @@ export function PainelDeInstrutores({
               .map((u) => ({ unidadeEnsinoId: u.id, instrutorId: donoDaUnidade[u.id]! }))
           : null,
     });
-    if (resultado.ok) setMensagem("Instrutores gravados nesta turma.");
-    else setErro(resultado.erro);
     setGravando(false);
+    if (resultado.ok) aoGravar();
+    else setErro(resultado.erro);
   }
 
   return (
-    <section aria-labelledby={`instrutores-${turmaDisciplinaId}`} className="flex flex-col gap-2">
-      <h3 id={`instrutores-${turmaDisciplinaId}`} className="text-texto text-sm font-semibold">
-        Instrutores nesta turma
-      </h3>
-
-      {habilitados.length === 0 ? (
-        /* ⚠️ **CAMINHO CLICÁVEL, e não um beco.** São 55 disciplinas reais sem ninguém habilitado. */
-        <p className="text-texto-suave text-sm" data-slot="sem-habilitado">
-          Nenhum instrutor habilitado nesta disciplina. A habilitação é feita na ficha do instrutor,
-          no painel de disciplinas —{" "}
-          <Link
-            href="/instrutores"
-            className="text-marca rounded-ciaara-sm underline focus-visible:ring-2 focus-visible:outline-none"
-          >
-            abrir a lista de instrutores
-          </Link>
-          .
-        </p>
-      ) : (
+    <div className="flex flex-col gap-3" data-slot="editor-de-instrutores">
+      {habilitados.length === 0 ? null : (
         <>
           {/* ── quem já está ─────────────────────────────────────────────────────────────────── */}
           <ul className="flex flex-col gap-1" data-slot="atribuidos">
@@ -272,33 +362,30 @@ export function PainelDeInstrutores({
               {previsao.motivo}
             </p>
           ) : null}
-
-          {podeEditar ? (
-            <div>
-              <Button
-                type="button"
-                size="sm"
-                onClick={gravar}
-                disabled={gravando}
-                data-slot="gravar-instrutores"
-              >
-                {gravando ? "Gravando…" : "Gravar instrutores"}
-              </Button>
-            </div>
-          ) : null}
         </>
       )}
 
-      {mensagem ? (
-        <p role="status" className="text-texto-suave text-sm">
-          {mensagem}
-        </p>
-      ) : null}
       {erro ? (
         <p role="alert" className="text-conflito-tinta text-sm">
           {erro}
         </p>
       ) : null}
-    </section>
+      <DialogFooter>
+        <Button type="button" variant="ghost" size="sm" onClick={fechar} disabled={gravando}>
+          Cancelar
+        </Button>
+        {podeEditar ? (
+          <Button
+            type="button"
+            size="sm"
+            onClick={gravar}
+            disabled={gravando}
+            data-slot="gravar-instrutores"
+          >
+            {gravando ? "Gravando…" : "Gravar instrutores"}
+          </Button>
+        ) : null}
+      </DialogFooter>
+    </div>
   );
 }

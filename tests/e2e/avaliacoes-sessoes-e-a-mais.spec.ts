@@ -327,10 +327,13 @@ test("RN-AV-12 · o Encarregado junta a 2ª PP como sessão da PP 1: o card cont
 
   const semItem = s1.locator('[data-avaliacoes-sem-item="PP"]');
   await semItem.locator('[data-slot="juntar-como-sessao"]').click();
-  await semItem
+  // Spec 022 (Bloco 7, FR-002): a prova se escolhe num diálogo.
+  const dialogo = page.locator('[data-slot="formulario-de-juntar"]');
+  await dialogo
     .locator('[data-slot="prova-para-juntar"]')
     .selectOption({ label: `PP 1 · ${dataParaLeitura(DIA_1)}` });
-  await semItem.getByRole("button", { name: "Juntar", exact: true }).click();
+  await dialogo.getByRole("button", { name: "Juntar", exact: true }).click();
+  await expect(dialogo).toHaveCount(0);
 
   await expect(s1.locator('[data-avaliacoes-sem-item="PP"]')).toHaveCount(0);
   await expect(s1.locator('[data-avaliacoes-item="PP 1"] [data-avaliacoes="sessoes"]')).toHaveText(

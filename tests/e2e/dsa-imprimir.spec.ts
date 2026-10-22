@@ -492,6 +492,9 @@ test.describe("⚠️ item 4 · assinatura editada na tela vai para o papel, e o
 
     await nome.fill("SUBSTITUTO DO ENCARREGADO");
     await posto.fill("Capitão-Tenente");
+    // Spec 022 (Bloco 7, FR-002): os campos moram num diálogo; *Pronto* fecha, e a edição fica.
+    await page.getByRole("dialog").getByRole("button", { name: "Pronto" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     /* A prévia acompanha, e diz que a edição é só desta impressão. */
     await expect(direita).toContainText("Capitão-Tenente SUBSTITUTO DO ENCARREGADO");
     await expect(direita.locator('[data-slot="tela-assinatura-aviso"]')).toBeVisible();

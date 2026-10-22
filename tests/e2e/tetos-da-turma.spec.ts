@@ -81,13 +81,18 @@ test("US1 2.2/2.3 · o Ajudante grava acima do máximo, e é avisado; a sugestã
 }) => {
   await irAFichaDaTurma(page, AJUDANTE, T.turmaSemPrevisto);
   const tad = card(page, "tad");
+  // Spec 022 (Bloco 7, FR-002): o previsto se edita num diálogo; a resposta fica no card.
+  const dialogo = page.locator('[data-slot="formulario-do-previsto"]');
   await tad.locator('[data-slot="editar-previsto"]').click();
-  await expect(tad.locator('[data-slot="sugestao-do-previsto"]')).toContainText("Sugestão");
+  await expect(dialogo.locator('[data-slot="sugestao-do-previsto"]')).toContainText("Sugestão");
+  await dialogo.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialogo).toHaveCount(0);
 
   const aec = card(page, "aec");
   await aec.locator('[data-slot="editar-previsto"]').click();
-  await aec.getByLabel("Previsto no PROENS (TA)").fill("70");
-  await aec.locator('[data-slot="gravar-previsto"]').click();
+  await dialogo.getByLabel("Previsto no PROENS (TA)").fill("70");
+  await dialogo.locator('[data-slot="gravar-previsto"]').click();
+  await expect(dialogo).toHaveCount(0);
   await expect(aec.locator('[data-slot="previsto-gravado"]')).toContainText(
     "acima do limite máximo",
   );

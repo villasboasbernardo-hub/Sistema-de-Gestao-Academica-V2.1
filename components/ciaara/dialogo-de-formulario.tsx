@@ -37,6 +37,12 @@ export type DialogoDeFormularioProps = {
   readonly largo?: boolean;
   /** `data-slot` do conteúdo do diálogo. */
   readonly slot?: string;
+  /**
+   * O modo controlado, para quem já guarda se o formulário está aberto (o *Parar dia* do DSA, que pede confirmação
+   * sem fechar). Sem os dois, o diálogo guarda o próprio estado.
+   */
+  readonly aberto?: boolean;
+  readonly aoMudar?: (aberto: boolean) => void;
 };
 
 export function DialogoDeFormulario({
@@ -46,9 +52,20 @@ export function DialogoDeFormulario({
   children,
   largo = false,
   slot = "dialogo-de-formulario",
+  aberto: abertoDeFora,
+  aoMudar,
 }: DialogoDeFormularioProps): React.ReactNode {
-  const [aberto, definirAberto] = React.useState(false);
-  const fechar = React.useCallback(() => definirAberto(false), []);
+  const [abertoAqui, definirAbertoAqui] = React.useState(false);
+  const controlado = abertoDeFora !== undefined;
+  const aberto = controlado ? abertoDeFora : abertoAqui;
+  const definirAberto = React.useCallback(
+    (proximo: boolean) => {
+      if (!controlado) definirAbertoAqui(proximo);
+      aoMudar?.(proximo);
+    },
+    [controlado, aoMudar],
+  );
+  const fechar = React.useCallback(() => definirAberto(false), [definirAberto]);
 
   return (
     <Dialog open={aberto} onOpenChange={definirAberto}>

@@ -9,14 +9,21 @@
  *    permissão da ação. Não é a proteção: a função do banco recusa os demais com `42501`.
  * ⚠️ **AS CANDIDATAS CHEGAM PRONTAS** (`juntarEm`, de `quadroDeAvaliacoesDaTurma`): aqui não se decide qual prova
  *    serve. A ação chega por propriedade (Princípio XI).
+ * ⚠️ **A ESCOLHA ABRE NUM DIÁLOGO** (spec 022, Bloco 7, FR-002): até o Bloco 7 o seletor abria no lugar do botão.
  */
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
+import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { dataParaLeitura } from "@/lib/formato/data";
 
 type Resultado = { readonly ok: true } | { readonly ok: false; readonly erro: string };
 type Acao = (entrada: unknown) => Promise<Resultado>;
+
+type Opcao = { readonly id: string; readonly rotulo: string; readonly aplicacao: string };
 
 export function JuntarComoSessao({
   avaliacaoId,
@@ -25,53 +32,71 @@ export function JuntarComoSessao({
 }: {
   readonly avaliacaoId: string;
   /** As provas da disciplina em que esta avaliação pode virar sessão (rótulo pronto). */
-  readonly opcoes: readonly {
-    readonly id: string;
-    readonly rotulo: string;
-    readonly aplicacao: string;
-  }[];
+  readonly opcoes: readonly Opcao[];
   readonly juntar: Acao;
 }) {
+  if (opcoes.length === 0) return null;
+  return (
+    <DialogoDeFormulario
+      titulo="Juntar como sessão de outra prova"
+      slot="formulario-de-juntar"
+      gatilho={
+        <BotaoDeIcone
+          acao="juntar"
+          rotulo="Juntar como sessão de outra prova"
+          data-slot="juntar-como-sessao"
+        />
+      }
+    >
+      {(fechar) => (
+        <FormularioDeJuntar
+          avaliacaoId={avaliacaoId}
+          opcoes={opcoes}
+          juntar={juntar}
+          fechar={fechar}
+        />
+      )}
+    </DialogoDeFormulario>
+  );
+}
+
+function FormularioDeJuntar({
+  avaliacaoId,
+  opcoes,
+  juntar,
+  fechar,
+}: {
+  readonly avaliacaoId: string;
+  readonly opcoes: readonly Opcao[];
+  readonly juntar: Acao;
+  readonly fechar: () => void;
+}) {
   const router = useRouter();
-  const [aberto, setAberto] = useState(false);
   const [provaId, setProvaId] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [gravando, iniciar] = useTransition();
 
-  if (opcoes.length === 0) return null;
-  if (!aberto)
-    return (
-      <button
-        type="button"
-        onClick={() => setAberto(true)}
-        className="border-borda rounded-ciaara hover:bg-marca-suave border px-2 py-0.5 text-xs"
-        data-slot="juntar-como-sessao"
-      >
-        Juntar como sessão de outra prova
-      </button>
-    );
   return (
     <form
-      className="inline-flex flex-wrap items-center gap-2 text-xs"
-      data-slot="formulario-de-juntar"
+      className="flex flex-col gap-3 text-sm"
       onSubmit={(e) => {
         e.preventDefault();
         setErro(null);
         iniciar(async () => {
           const r = await juntar({ provaId, avaliacaoId });
           if (r.ok) {
-            setAberto(false);
+            fechar();
             router.refresh();
           } else setErro(r.erro);
         });
       }}
     >
-      <label className="inline-flex items-center gap-1">
+      <label className="flex flex-col gap-1">
         <span>Sessão da prova</span>
         <select
           value={provaId}
           onChange={(e) => setProvaId(e.target.value)}
-          className="border-borda-forte bg-superficie rounded-ciaara border px-1 py-0.5"
+          className="border-borda-forte bg-superficie rounded-ciaara h-8 border px-2"
           required
           data-slot="prova-para-juntar"
         >
@@ -83,21 +108,19 @@ export function JuntarComoSessao({
           ))}
         </select>
       </label>
-      <button
-        type="submit"
-        disabled={gravando || provaId === ""}
-        className="bg-marca text-marca-contraste rounded-ciaara px-2 py-0.5 disabled:opacity-50"
-      >
-        {gravando ? "Juntando…" : "Juntar"}
-      </button>
-      <button type="button" onClick={() => setAberto(false)} className="text-texto-suave underline">
-        Cancelar
-      </button>
       {erro ? (
-        <span role="alert" className="text-conflito-tinta">
+        <p role="alert" className="text-conflito-tinta text-sm">
           {erro}
-        </span>
+        </p>
       ) : null}
+      <DialogFooter>
+        <Button type="button" variant="ghost" size="sm" onClick={fechar} disabled={gravando}>
+          Cancelar
+        </Button>
+        <Button type="submit" size="sm" disabled={gravando || provaId === ""}>
+          {gravando ? "Juntando…" : "Juntar"}
+        </Button>
+      </DialogFooter>
     </form>
   );
 }

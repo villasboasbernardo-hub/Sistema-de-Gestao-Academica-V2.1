@@ -90,13 +90,16 @@ test.describe("`FR-029.2` · acrescentar sala", () => {
     page,
   }) => {
     await entrar(page, EMAIL_ENCARREGADO, "/admin/salas");
+    // Spec 022 (Bloco 7, FR-002): o formulário abre num diálogo, pelo ícone do topo.
+    await page.locator('[data-slot="acrescentar-sala"]').click();
 
     // ⚠️ `FR-029.6`: abrir com "Física" marcada gravaria escolha que ninguém fez.
     await expect(page.locator("#sala-natureza")).toHaveValue("");
 
     await page.locator("#sala-nome").fill(SALA_NOVA);
     await page.locator("#sala-natureza").selectOption("virtual");
-    await page.locator('[data-slot="acrescentar-sala"]').click();
+    await page.locator('[data-slot="gravar-sala"]').click();
+    await expect(page.locator('[data-slot="dialogo-da-sala"]')).toHaveCount(0);
 
     const linha = linhaDaSala(page, SALA_NOVA);
     await expect(linha).toBeVisible({ timeout: 15_000 });
