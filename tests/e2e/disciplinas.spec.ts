@@ -18,7 +18,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
-import { nomeNoCartao } from "@/lib/dominio/nome-no-dsa";
+import { nomeNoCartao, nomeNoGrafico } from "@/lib/dominio/nome-no-dsa";
 
 import { chaveLocal, criarConta, apagarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { abrirLinha, conferirQueALinhaAlterna, linhaExpansivel } from "./linha-expansivel";
@@ -269,19 +269,43 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
   });
 });
 
-test.describe("`FR-007.2` da spec 016 · a proporção da CH é uma pizza", () => {
-  test("a pizza nomeia as disciplinas da vista, com o percentual escrito", async ({ page }) => {
+/*
+ * ⚠️ SPEC 022 (Bloco 7), ITEM 8 — *"legenda com o NOME da disciplina, não o código; nome longo usa o Nome no DSA (ou a
+ *    abreviação automática do Bloco 2)"*. O nome esperado sai do BANCO (o caso do *Nome no DSA*, abaixo, grava um na
+ *    mesma disciplina) e da mesma função da tela, `nomeNoGrafico`. Item 7: sem «Outras».
+ */
+test.describe("`FR-007.2` da spec 016 e spec 022 (itens 7 e 8) · a proporção da CH é uma pizza", () => {
+  test("a pizza nomeia as disciplinas da vista PELO NOME, com o percentual escrito", async ({
+    page,
+  }) => {
+    const banco = createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
     await irAGradePorClique(page);
     const proporcao = page.locator('[data-slot="proporcao-da-carga"]');
     await expect(proporcao.locator('[data-slot="grafico-pizza"]')).toBeVisible();
     await expect(proporcao.locator('[data-slot="grafico-barras"]')).toHaveCount(0);
-    // ⚠️ As disciplinas da amostra cabem inteiras nas cinco fatias: «Outras» só nasce com seis ou mais, e o
-    //    agrupamento é provado por `tests/unidade/agrupar-em-outras.test.ts`.
     // ⚠️ A disciplina limpa fica de fora: o caso da exclusão a apaga.
-    for (const d of [DISCIPLINA_COM_UE, DISCIPLINA_SEM_UE]) {
-      await expect(proporcao).toContainText(`${d.cod}:`);
+    for (const [d, id] of [
+      [DISCIPLINA_COM_UE, amostra.disciplinaComUeId],
+      [DISCIPLINA_SEM_UE, amostra.disciplinaSemUeId],
+    ] as const) {
+      const { data } = await banco
+        .from("disciplinas")
+        .select("nome_disciplina, nome_no_dsa")
+        .eq("id", id)
+        .single();
+      const nome = nomeNoGrafico({
+        nome: (data as { nome_disciplina: string }).nome_disciplina,
+        nomeNoDsa: (data as { nome_no_dsa: string | null }).nome_no_dsa,
+      });
+      await expect(proporcao.locator('[data-slot="legenda-da-pizza"]')).toContainText(`${nome}:`);
+      await expect(proporcao.locator('[data-slot="legenda-da-pizza"]')).not.toContainText(
+        `${d.cod}:`,
+      );
     }
     await expect(proporcao).toContainText("%");
+    await expect(proporcao).not.toContainText("Outras");
   });
 });
 

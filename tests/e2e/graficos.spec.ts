@@ -20,7 +20,8 @@ test.beforeEach(async ({ page }) => {
 test.describe("US4 · forma e rótulo, não cor", () => {
   test("os três tipos de gráfico aparecem na vitrine", async ({ page }) => {
     await expect(page.locator('[data-slot="grafico-barras"]').first()).toBeVisible();
-    await expect(page.locator('[data-slot="grafico-pizza"]')).toBeVisible();
+    // Spec 022 (item 7): a vitrine tem duas pizzas — a de 3 fatias e a de 12.
+    await expect(page.locator('[data-slot="grafico-pizza"]').first()).toBeVisible();
     await expect(page.locator('[data-slot="grafico-linha"]')).toBeVisible();
   });
 

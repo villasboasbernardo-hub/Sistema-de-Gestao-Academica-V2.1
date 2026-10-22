@@ -148,8 +148,10 @@ test.describe("`SC-002` · os indicadores do `FR-002`, e só eles", () => {
     await expect(pizza).toContainText("Cursos por classificação");
     const duracao = page.locator('[data-chave="duracao-em-semanas"]');
     await expect(duracao).toContainText("Duração em semanas de cada curso e estágio");
-    // Cada curso com a duração em semanas é uma barra com a sigla no eixo.
-    await expect(duracao.locator(".recharts-cartesian-axis-tick").first()).toBeVisible();
+    // Cada curso com a duração em semanas é uma barra com a sigla no eixo (o `<g>` do SVG não tem caixa própria).
+    await expect(
+      duracao.locator(".recharts-xAxis .recharts-cartesian-axis-tick-value").first(),
+    ).toBeAttached();
     await expect(page.getByText("Duração média, em dias, por classificação")).toHaveCount(0);
   });
 
