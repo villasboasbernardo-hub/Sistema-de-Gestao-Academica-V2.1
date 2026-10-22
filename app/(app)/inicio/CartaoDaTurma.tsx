@@ -15,6 +15,7 @@
  */
 import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
@@ -63,14 +64,15 @@ export function CartaoDaTurma({ turma: t }: { readonly turma: TurmaNoPanorama })
           {AVISO_DE_TURMA_EAD}
         </p>
       ) : (
-        <p className="pl-1 text-xs">
-          <Link
+        <p className="flex justify-end pl-1 text-xs">
+          {/* Spec 022 (FR-001): abrir o DSA é um verbo padrão — o ícone, com o nome de antes na dica. */}
+          <BotaoDeIcone
+            acao="abrir-dsa"
+            rotulo="DSA da semana"
+            variante="fantasma"
             href={enderecoDoDsa(t.turmaCodigo)}
-            className="text-texto-suave hover:text-texto underline-offset-2 hover:underline"
             data-slot="dsa-da-semana"
-          >
-            DSA da semana →
-          </Link>
+          />
         </p>
       )}
     </div>

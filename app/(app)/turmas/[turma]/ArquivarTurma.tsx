@@ -19,6 +19,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -84,10 +85,17 @@ export function ArquivarTurma({
   return (
     <Dialog open={aberto} onOpenChange={abrirOuFechar}>
       <DialogTrigger asChild>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
+        {/* Spec 022 (FR-001): o verbo é o ícone, com o nome de antes na dica e no nome acessível. */}
+        <BotaoDeIcone
+          acao={arquivada ? "desarquivar" : "arquivar"}
+          rotulo={
+            naLista
+              ? `${arquivada ? "Desarquivar" : "Arquivar"} a turma ${codigo}`
+              : arquivada
+                ? "Desarquivar"
+                : "Arquivar turma"
+          }
+          variante={naLista ? "fantasma" : "contorno"}
           data-slot={
             naLista
               ? arquivada
@@ -97,15 +105,8 @@ export function ArquivarTurma({
                 ? "desarquivar-turma"
                 : "arquivar-turma"
           }
-          {...(naLista
-            ? {
-                tabIndex: -1,
-                "aria-label": `${arquivada ? "Desarquivar" : "Arquivar"} a turma ${codigo}`,
-              }
-            : {})}
-        >
-          {arquivada ? "Desarquivar" : naLista ? "Arquivar" : "Arquivar turma"}
-        </Button>
+          {...(naLista ? { tabIndex: -1 } : {})}
+        />
       </DialogTrigger>
       <DialogContent data-slot={arquivada ? "dialogo-de-desarquivar" : "dialogo-de-arquivar"}>
         <DialogHeader>

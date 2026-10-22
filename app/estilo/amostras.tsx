@@ -57,6 +57,7 @@ import { GraficoLinha } from "@/components/graficos/grafico-linha";
 import { GraficoPizza } from "@/components/graficos/grafico-pizza";
 import type { Serie } from "@/components/graficos/tipos";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
@@ -336,14 +337,15 @@ export function AmostraDialogoDeFormulario() {
               <Label htmlFor="amostra-dialogo-nome">Nome</Label>
               <Input id="amostra-dialogo-nome" name="nome" defaultValue={nome} />
             </div>
-            <div className="flex justify-end gap-2">
+            {/* D-3 da spec 022: o rodapé do diálogo continua com texto. */}
+            <DialogFooter>
               <Button type="button" variant="ghost" size="sm" onClick={fechar}>
                 Cancelar
               </Button>
               <Button type="submit" size="sm">
                 Salvar
               </Button>
-            </div>
+            </DialogFooter>
           </form>
         )}
       </DialogoDeFormulario>
@@ -936,9 +938,12 @@ export function AmostraAlertaEteto() {
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <Button size="sm" onClick={() => definirSalvou(true)}>
-            Salvar mesmo assim
-          </Button>
+          <BotaoDeIcone
+            acao="salvar"
+            rotulo="Salvar mesmo assim"
+            variante="padrao"
+            onClick={() => definirSalvou(true)}
+          />
           <span className="text-texto-suave text-sm">
             {salvou ? "Salvou — o alerta não impediu nada." : "O botão continua habilitado."}
           </span>

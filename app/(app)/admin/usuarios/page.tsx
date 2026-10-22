@@ -34,6 +34,7 @@
  */
 import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { Avatar, AvatarImagem, AvatarRecuo } from "@/components/ui/avatar";
@@ -160,12 +161,12 @@ export default async function Usuarios({
              decisão de 03/10/2026 pediu, e o que dá endereço compartilhável e botão de voltar.
              ⚠️ E ele é o caminho clicável que `toda-tela-tem-caminho.test.ts` exige para a rota nova.
         */}
-        <Link
+        <BotaoDeIcone
+          acao="cadastrar"
+          rotulo="Cadastrar usuário"
+          variante="padrao"
           href="/admin/usuarios/novo"
-          className="border-marca bg-marca text-marca-contraste rounded-ciaara focus-visible:ring-marca border px-3 py-1 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
-        >
-          Cadastrar usuário
-        </Link>
+        />
       </div>
 
       {/* veste: explicação do regime de acesso — texto de apoio, não valor */}

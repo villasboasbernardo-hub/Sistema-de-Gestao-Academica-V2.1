@@ -25,9 +25,9 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { CampoObrigatorio, propsDoControle } from "@/components/ciaara/campo-obrigatorio";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { criarCurso, editarCurso } from "@/lib/acoes/curso";
 import {
@@ -210,9 +210,14 @@ export function FormularioDeCurso({
   }
 
   const botaoGravar = (
-    <Button type="submit" size="sm" disabled={gravando} data-slot="gravar-curso">
-      {modo === "novo" ? "Criar curso" : "Salvar alterações"}
-    </Button>
+    <BotaoDeIcone
+      acao="salvar"
+      rotulo={modo === "novo" ? "Criar curso" : "Salvar alterações"}
+      variante="padrao"
+      type="submit"
+      ocupado={gravando}
+      data-slot="gravar-curso"
+    />
   );
 
   return (

@@ -27,6 +27,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -87,9 +88,7 @@ export function TrocarSituacao({
   return (
     <Dialog open={aberto} onOpenChange={abrirOuFechar}>
       <DialogTrigger asChild>
-        <Button type="button" size="sm" variant="outline" data-slot="trocar-situacao">
-          Trocar situação
-        </Button>
+        <BotaoDeIcone acao="trocar-situacao" rotulo="Trocar situação" data-slot="trocar-situacao" />
       </DialogTrigger>
       <DialogContent data-slot="dialogo-de-situacao">
         <DialogHeader>

@@ -16,11 +16,10 @@
  * curso" e "ainda não existe curso no sistema" são fatos diferentes. A Production hoje é o terceiro,
  * e mostrar-lhe o primeiro ensinaria a concluir que a migração falhou.
  */
-import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
-import { buttonVariants } from "@/components/ui/button";
 import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { curriculoVigenteEm, type CurriculoParaVigencia } from "@/lib/dominio/curriculos";
@@ -106,13 +105,13 @@ export default async function Cursos({
         </p>
       </div>
       <SePodeVer permissoes={permissoes} recurso="cursos" acao="criar">
-        <Link
+        <BotaoDeIcone
+          acao="novo"
+          rotulo="Novo curso"
+          variante="padrao"
           href="/cursos/novo"
-          className={buttonVariants({ size: "sm" })}
           data-slot="ir-para-novo-curso"
-        >
-          Novo curso
-        </Link>
+        />
       </SePodeVer>
     </div>
   );

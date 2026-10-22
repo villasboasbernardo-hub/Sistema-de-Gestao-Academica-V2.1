@@ -16,8 +16,8 @@
  */
 import { useState } from "react";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { Button } from "@/components/ui/button";
 import { desativar, reativar, redefinirSenha } from "@/lib/acoes/usuarios";
 
 type Resposta = { ok: boolean; erro?: string; senha?: string };
@@ -71,9 +71,7 @@ export function AcoesDaConta({
               )
             }
           >
-            <Button type="button" variant="outline" disabled={ocupado}>
-              Redefinir senha
-            </Button>
+            <BotaoDeIcone acao="redefinir-senha" rotulo="Redefinir senha" disabled={ocupado} />
           </DialogoConfirmacao>
         ) : (
           /*
@@ -98,20 +96,21 @@ export function AcoesDaConta({
             rotuloConfirmar="Desativar"
             aoConfirmar={() => void executar(() => desativar({ usuarioId }), "Conta desativada.")}
           >
-            <Button type="button" variant="outline" disabled={ocupado}>
-              Desativar
-            </Button>
+            <BotaoDeIcone
+              acao="desativar"
+              rotulo="Desativar"
+              variante="destrutivo"
+              disabled={ocupado}
+            />
           </DialogoConfirmacao>
         ) : (
           // Reativar é desfazer — não pede confirmação, porque não há consequência a avisar.
-          <Button
-            type="button"
-            variant="outline"
+          <BotaoDeIcone
+            acao="reativar"
+            rotulo="Reativar"
             disabled={ocupado}
             onClick={() => void executar(() => reativar({ usuarioId }), "Conta reativada.")}
-          >
-            Reativar
-          </Button>
+          />
         )}
       </div>
 

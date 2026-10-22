@@ -20,6 +20,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { atualizar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } from "@/lib/acoes/dsa";
 import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
@@ -462,13 +463,13 @@ export default async function SemanaDoDsa({
                decide o nome do arquivo, e a recusa volta para cá com o aviso abaixo.
           */}
           {podeBaixarPlanilhaDeContingencia(permissoes, turma.modalidade as string | null) ? (
-            <a
+            <BotaoDeIcone
+              acao="baixar"
+              rotulo="Baixar planilha de contingência"
+              nativo
               href={enderecoDaPlanilhaDeContingencia(codigo)}
-              className="text-sm underline underline-offset-2 hover:text-texto"
               data-slot="baixar-planilha-de-contingencia"
-            >
-              Baixar planilha de contingência
-            </a>
+            />
           ) : null}
         </div>
         {valores.planilha === "falhou" ? (

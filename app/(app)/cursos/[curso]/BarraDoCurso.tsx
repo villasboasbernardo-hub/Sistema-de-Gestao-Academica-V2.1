@@ -13,10 +13,9 @@
  *
  * ⚠️ **SEM AÇÃO PERMITIDA, SEM BARRA**: um grupo vazio anunciado ao leitor de tela seria ruído.
  */
-import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { enderecoDaNovaTurma } from "@/lib/navegacao/endereco-de-turma";
 
 import { AcoesDeSituacao } from "./AcoesDeSituacao";
@@ -43,21 +42,22 @@ export function BarraDoCurso({
   return (
     <BarraDeAcoes rotulo="Ações do curso">
       {podeAbrirEdicao ? (
-        <Link
+        <BotaoDeIcone
+          acao="editar"
+          rotulo="Editar curso"
           href={`/cursos/${encodeURIComponent(sigla)}/editar`}
-          className={buttonVariants({ size: "sm", variant: "outline" })}
           data-slot="ir-para-editar-curso"
-        >
-          Editar curso
-        </Link>
+        />
       ) : null}
       {podeMudarSituacao ? <AcoesDeSituacao sigla={sigla} ativo={ativo} /> : null}
       {novaTurma ? (
-        <Button asChild size="sm">
-          <Link href={enderecoDaNovaTurma(sigla)} data-slot="nova-turma">
-            Nova turma
-          </Link>
-        </Button>
+        <BotaoDeIcone
+          acao="novo"
+          rotulo="Nova turma"
+          variante="padrao"
+          href={enderecoDaNovaTurma(sigla)}
+          data-slot="nova-turma"
+        />
       ) : null}
     </BarraDeAcoes>
   );

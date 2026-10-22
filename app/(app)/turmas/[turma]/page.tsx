@@ -15,6 +15,7 @@
  */
 import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
@@ -591,13 +592,13 @@ export default async function FichaDaTurma({
             </p>
           ) : (
             <SePodeVer permissoes={permissoes} recurso="registros_aula" acao="ler">
-              <Link
+              <BotaoDeIcone
+                acao="abrir-dsa"
+                rotulo="Abrir o DSA"
+                variante="padrao"
                 href={enderecoDoDsa(turma.codigo as string)}
-                className="border-borda rounded-ciaara hover:bg-marca-suave border px-3 py-1.5 text-sm font-medium"
                 data-slot="abrir-o-dsa"
-              >
-                Abrir o DSA
-              </Link>
+              />
             </SePodeVer>
           )}
           {/*
@@ -606,13 +607,13 @@ export default async function FichaDaTurma({
                Daqui ele vale mais que lá: é o caminho que sobra quando a tela do DSA não abre.
           */}
           {podeBaixarPlanilhaDeContingencia(permissoes, turma.modalidade as string | null) ? (
-            <a
+            <BotaoDeIcone
+              acao="baixar"
+              rotulo="Baixar planilha de contingência"
+              nativo
               href={enderecoDaPlanilhaDeContingencia(turma.codigo as string)}
-              className="border-borda rounded-ciaara hover:bg-marca-suave border px-3 py-1.5 text-sm"
               data-slot="baixar-planilha-de-contingencia"
-            >
-              Baixar planilha de contingência
-            </a>
+            />
           ) : null}
         </div>
         {/*

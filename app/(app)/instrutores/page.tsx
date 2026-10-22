@@ -22,8 +22,8 @@
  * ⚠️ **ERRO DE LEITURA NÃO ESTOURA** (`RN-DEG-01`): vira o vazio de "você não vê", que é o que uma
  * negativa da RLS de fato significa.
  */
-import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
@@ -189,12 +189,12 @@ export default async function Instrutores({
           <h1 className="text-texto text-lg font-semibold">Instrutores</h1>
           {/* ⚠️ Oculto para quem não pode criar — e a RLS nega se a ação vier por fora da tela. */}
           <SePodeVer permissoes={permissoes} recurso="instrutores" acao="criar">
-            <Link
+            <BotaoDeIcone
+              acao="novo"
+              rotulo="Novo instrutor"
+              variante="padrao"
               href="/instrutores/novo"
-              className="border-marca bg-marca text-marca-contraste rounded-ciaara focus-visible:ring-marca border px-3 py-1 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Novo instrutor
-            </Link>
+            />
           </SePodeVer>
         </div>
         {/* veste: a dica que explica a ordem da lista — texto fixo, nunca dado */}

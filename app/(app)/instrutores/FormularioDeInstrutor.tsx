@@ -46,9 +46,9 @@ import { useRouter } from "next/navigation";
 import type * as React from "react";
 import { useRef, useState } from "react";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { CampoObrigatorio, propsDoControle } from "@/components/ciaara/campo-obrigatorio";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { Button } from "@/components/ui/button";
 import {
   criarInstrutor,
   editarInstrutor,
@@ -432,9 +432,12 @@ export function FormularioDeInstrutor({
           rotuloConfirmar={modo === "novo" ? "Cadastrar" : "Gravar"}
           aoConfirmar={() => formulario.current?.requestSubmit()}
         >
-          <Button type="button" disabled={enviando}>
-            {enviando ? "Gravando…" : modo === "novo" ? "Cadastrar instrutor" : "Gravar alterações"}
-          </Button>
+          <BotaoDeIcone
+            acao={modo === "novo" ? "cadastrar" : "salvar"}
+            rotulo={modo === "novo" ? "Cadastrar instrutor" : "Gravar alterações"}
+            variante="padrao"
+            ocupado={enviando}
+          />
         </DialogoConfirmacao>
       </div>
     </form>

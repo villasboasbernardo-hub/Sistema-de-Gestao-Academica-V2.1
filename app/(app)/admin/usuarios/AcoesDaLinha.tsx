@@ -32,8 +32,8 @@
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { useAvisoDaLista } from "./AvisoDaLista";
 import { desativar, excluirConta, reativar, redefinirSenha } from "@/lib/acoes/usuarios";
@@ -44,9 +44,6 @@ type Resposta = {
   senha?: string;
   caminho?: string;
 };
-
-const BOTAO =
-  "border-borda-forte text-texto hover:bg-marca-suave rounded-ciaara-sm focus-visible:ring-marca border px-2 py-0.5 text-xs focus-visible:ring-2 focus-visible:outline-none";
 
 export function AcoesDaLinha({
   usuarioId,
@@ -115,9 +112,8 @@ export function AcoesDaLinha({
   return (
     <span className="flex flex-col gap-1">
       <span className="flex flex-wrap items-center gap-1">
-        <Link href={`/admin/usuarios/${usuarioId}`} className={BOTAO}>
-          Editar
-        </Link>
+        {/* Spec 022 (FR-001): os verbos da linha são ícones, com o nome de antes na dica e no nome acessível. */}
+        <BotaoDeIcone acao="editar" rotulo="Editar" href={`/admin/usuarios/${usuarioId}`} />
 
         {/*
           ⚠️ **SEM CREDENCIAL NÃO HÁ SENHA A REDEFINIR, e o botão NÃO APARECE em vez de recusar.**
@@ -138,9 +134,7 @@ export function AcoesDaLinha({
               )
             }
           >
-            <button type="button" className={BOTAO} disabled={ocupado}>
-              Redefinir senha
-            </button>
+            <BotaoDeIcone acao="redefinir-senha" rotulo="Redefinir senha" disabled={ocupado} />
           </DialogoConfirmacao>
         ) : (
           // veste: a razão de faltar uma das quatro ações — texto explicativo, não valor
@@ -154,20 +148,22 @@ export function AcoesDaLinha({
             rotuloConfirmar="Desativar"
             aoConfirmar={() => void executar(() => desativar({ usuarioId }), "Conta desativada.")}
           >
-            <button type="button" className={BOTAO} disabled={ocupado}>
-              Desativar
-            </button>
+            <BotaoDeIcone
+              acao="desativar"
+              rotulo="Desativar"
+              variante="fantasma"
+              disabled={ocupado}
+            />
           </DialogoConfirmacao>
         ) : (
           // Reativar é desfazer — não pede confirmação, porque não há consequência a avisar.
-          <button
-            type="button"
-            className={BOTAO}
+          <BotaoDeIcone
+            acao="reativar"
+            rotulo="Reativar"
+            variante="fantasma"
             disabled={ocupado}
             onClick={() => void executar(() => reativar({ usuarioId }), "Conta reativada.")}
-          >
-            Reativar
-          </button>
+          />
         )}
 
         {/*
@@ -185,9 +181,7 @@ export function AcoesDaLinha({
             void executar(() => excluirConta({ usuarioId }) as Promise<Resposta>, "")
           }
         >
-          <button type="button" className={BOTAO} disabled={ocupado}>
-            Excluir
-          </button>
+          <BotaoDeIcone acao="excluir" rotulo="Excluir" variante="destrutivo" disabled={ocupado} />
         </DialogoConfirmacao>
       </span>
 

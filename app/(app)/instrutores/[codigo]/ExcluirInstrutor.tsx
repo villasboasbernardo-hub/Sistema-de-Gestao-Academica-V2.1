@@ -31,7 +31,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { buttonVariants, Button } from "@/components/ui/button";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { excluirInstrutor } from "@/lib/acoes/instrutor";
@@ -68,9 +69,7 @@ export function ExcluirInstrutor({
     return (
       // ⚠️ `contents`, como Desativar: o botão é item da barra e o motivo vai para linha própria.
       <div className="contents" data-slot="excluir-instrutor" data-bloqueado="true">
-        <Button type="button" size="sm" variant="destructive" disabled>
-          Excluir instrutor
-        </Button>
+        <BotaoDeIcone acao="excluir" rotulo="Excluir instrutor" variante="destrutivo" disabled />
         <p
           className="text-texto-suave order-last basis-full text-xs"
           data-slot="motivo-de-nao-excluir"
@@ -85,9 +84,13 @@ export function ExcluirInstrutor({
     <div className="contents" data-slot="excluir-instrutor" data-bloqueado="false">
       <AlertDialog onOpenChange={(aberto) => (aberto ? null : setDigitado(""))}>
         <AlertDialogTrigger asChild>
-          <Button type="button" size="sm" variant="destructive" disabled={enviando}>
-            {enviando ? "Excluindo…" : "Excluir instrutor"}
-          </Button>
+          <BotaoDeIcone
+            acao="excluir"
+            rotulo="Excluir instrutor"
+            variante="destrutivo"
+            ocupado={enviando}
+            rotuloOcupado="Excluindo…"
+          />
         </AlertDialogTrigger>
         <AlertDialogContent data-slot="dialogo-de-exclusao">
           <AlertDialogHeader>

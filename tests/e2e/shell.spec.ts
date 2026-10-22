@@ -159,12 +159,13 @@ test.describe("`SC-002` · depois de entrar, há para onde ir", () => {
         return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
       });
 
-    await page.getByRole("button", { name: "Claro", exact: true }).click();
+    // Spec 022 (Bloco 7, FR-001.5): o tema é um grupo de três ícones, cada um com o nome do tema.
+    await page.getByRole("button", { name: "Tema claro", exact: true }).click();
     expect(await razao(), "tema claro: o ativo não se destaca da lateral").toBeGreaterThanOrEqual(
       3,
     );
 
-    await page.getByRole("button", { name: "Noturno", exact: true }).click();
+    await page.getByRole("button", { name: "Tema noturno", exact: true }).click();
     await expect(page.locator("html")).toHaveClass(/dark/);
     expect(await razao(), "tema noturno: o ativo não se destaca da lateral").toBeGreaterThanOrEqual(
       3,
