@@ -10,6 +10,10 @@
  *    nada foi visto ainda, e o sininho pulsa.
  * ⚠️ **"VOLTA COM AVISO NOVO" RECARREGA A PÁGINA**: o sininho pede o resumo no máximo a cada 2 minutos (D-9), e esperar
  *    dois minutos num caso de teste seria o prazo, não o comportamento. Recarregar é o que a pessoa faz.
+ * ⚠️ **"SEM AVISO NOVO, NÃO VOLTA" NÃO SE MEDE PELO PULSO DEPOIS DE RECARREGAR**: os outros processos da suíte criam
+ *    avisos de verdade o tempo todo (o CI do PR #84 mediu 206), e um deles, nascido entre abrir *Avisos* e recarregar,
+ *    É aviso novo — o pulso voltar é o certo. O que se mede é a REGRA: depois de recarregar, o sininho pulsa **se e só
+ *    se** o resumo traz uma chave que a página *Avisos* não mostrou; e toda chave mostrada ficou guardada como vista.
  */
 import { expect, test, type Page } from "@playwright/test";
 
@@ -61,8 +65,11 @@ test("o sininho mostra o número e pulsa com aviso não visto; abrir Avisos para
   await expect(avisoDaChave(page, `instrutores:sem-nip:${codigo}`)).toHaveCount(1);
   await expect(sininho(page)).toHaveAttribute("data-novo", "nao");
   await expect(sininho(page)).toHaveAttribute("aria-label", /^Avisos: \d+$/);
+  const mostradas = await page
+    .locator('[data-slot="pagina-de-avisos"] [data-aviso]')
+    .evaluateAll((els) => els.map((e) => e.getAttribute("data-aviso") as string));
 
-  // Voltar ao Início pelo menu e recarregar: sem aviso novo, o pulso não volta.
+  // Voltar ao Início pelo menu e recarregar: o pulso só volta se o resumo trouxer chave que a página não mostrou.
   await page
     .getByRole("navigation", { name: "Navegação principal" })
     .getByRole("link", { name: "Início", exact: true })
@@ -70,7 +77,24 @@ test("o sininho mostra o número e pulsa com aviso não visto; abrir Avisos para
   await expect(page).toHaveURL(/\/inicio/);
   await page.reload();
   await expect(sininho(page)).toHaveAttribute("data-total", /\d+/, { timeout: 20_000 });
-  await expect(sininho(page)).toHaveAttribute("data-novo", "nao");
+  const vistas = await page.evaluate(
+    () => JSON.parse(localStorage.getItem("ciaara.avisos.vistos") ?? "[]") as string[],
+  );
+  expect(
+    mostradas.filter((c) => !vistas.includes(c)),
+    "aviso mostrado em Avisos não ficou guardado como visto",
+  ).toEqual([]);
+  await expect
+    .poll(async () => {
+      const resumo = await page.evaluate(async () => {
+        const r = await fetch("/avisos/resumo");
+        return (await r.json()) as { chaves: string[] };
+      });
+      const haNovo = resumo.chaves.some((c) => !mostradas.includes(c));
+      const novo = await sininho(page).getAttribute("data-novo");
+      return haNovo ? "há aviso novo" : novo;
+    }, "sem aviso novo, o pulso voltou")
+    .toMatch(/^(nao|há aviso novo)$/);
 
   // Um aviso novo (outro instrutor sem NIP): o pulso volta.
   await semearInstrutores(PROCESSO, "W");

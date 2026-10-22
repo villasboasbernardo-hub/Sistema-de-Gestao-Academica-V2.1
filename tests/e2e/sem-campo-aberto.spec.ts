@@ -113,7 +113,8 @@ const PERMITIDOS = [
 /** Os campos abertos da página, com um retrato curto de cada um para a mensagem. */
 async function camposAbertos(page: Page): Promise<string[]> {
   return page.evaluate((permitidos) => {
-    const principal = document.querySelector("main") ?? document.body;
+    // ⚠️ `#conteudo`, e não `main`: durante o carregamento há DOIS `main` (o do `loading.tsx` e o da casca).
+    const principal = document.querySelector("#conteudo") ?? document.body;
     const campos = principal.querySelectorAll<HTMLElement>("input, textarea, select");
     return [...campos]
       .filter((c) => {
@@ -136,7 +137,9 @@ async function camposAbertos(page: Page): Promise<string[]> {
 
 async function conferir(page: Page, caminho: string): Promise<void> {
   await page.goto(caminho);
-  await expect(page.locator("main")).toBeVisible();
+  // ⚠️ Espera o `loading.tsx` sair: enquanto ele está montado, a página ainda não desenhou os campos dela.
+  await expect(page.locator('main[aria-busy="true"]')).toHaveCount(0, { timeout: 20_000 });
+  await expect(page.locator("#conteudo")).toBeVisible();
   await page.waitForLoadState("networkidle");
   expect(await camposAbertos(page), `campo aberto na página de leitura ${caminho}`).toEqual([]);
 }
