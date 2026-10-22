@@ -12,11 +12,14 @@
  *    ele — a linha diz quais.
  * ⚠️ **A RESPOSTA FICA ACIMA DA TABELA** (`role="status"`/`role="alert"`), a lição de `AvisoDaLista`: a linha pode
  *    mudar de lugar sem levar a mensagem com ela.
+ * ⚠️ **NOVO E EDITAR ABREM UM DIÁLOGO** (spec 022, Bloco 7, FR-002; *"Edição e cadastro SEMPRE em diálogo (formulário
+ *    curto: UE, avaliação, regime)"*): até o Bloco 7 o formulário abria no lugar, acima da lista ou na linha.
  */
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
-import { Button } from "@/components/ui/button";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { inativarRegimeDeHorario, reativarRegimeDeHorario } from "@/lib/acoes/regime-de-horario";
 import { rotuloDoRegime } from "@/lib/dominio/regime-da-turma";
@@ -43,8 +46,6 @@ export function RegimesDoCurso({
   };
 }) {
   const router = useRouter();
-  /* Qual formulário está aberto: "novo", o id do regime em edição, ou nenhum — estado efêmero, não vista. */
-  const [aberto, definirAberto] = React.useState<string | null>(null);
   const [resposta, definirResposta] = React.useState<{ ok: boolean; texto: string } | null>(null);
   const [pendente, iniciar] = React.useTransition();
   /* Spec 021 (RC-6): inativar ou reativar regime de currículo em uso é correção — com justificativa. */
@@ -52,7 +53,6 @@ export function RegimesDoCurso({
   const nomeDoCatalogo = new Map(configuracoes.map((c) => [c.id, c.nome] as const));
 
   const concluir = (texto: string) => {
-    definirAberto(null);
     definirResposta({ ok: true, texto });
     router.refresh();
   };
@@ -85,16 +85,31 @@ export function RegimesDoCurso({
           Regimes de horário do curso
         </h3>
         {permissoes.criar ? (
-          <Button
-            type="button"
-            size="sm"
-            variant={aberto === "novo" ? "outline" : "default"}
-            aria-expanded={aberto === "novo"}
-            onClick={() => definirAberto((v) => (v === "novo" ? null : "novo"))}
-            data-slot="novo-regime"
+          <DialogoDeFormulario
+            titulo="Novo regime de horário"
+            largo
+            slot="dialogo-do-regime"
+            gatilho={
+              <BotaoDeIcone
+                acao="novo"
+                rotulo="Novo regime"
+                variante="padrao"
+                data-slot="novo-regime"
+              />
+            }
           >
-            {aberto === "novo" ? "Fechar o cadastro" : "Novo regime"}
-          </Button>
+            {(fechar) => (
+              <FormularioDeRegime
+                cursoId={cursoId}
+                curriculoId={curriculoId}
+                configuracoes={configuracoes}
+                aoConcluir={(texto) => {
+                  fechar();
+                  concluir(texto);
+                }}
+              />
+            )}
+          </DialogoDeFormulario>
         ) : null}
       </div>
       <p className="text-texto-suave text-xs">
@@ -111,17 +126,6 @@ export function RegimesDoCurso({
         >
           {resposta.texto}
         </p>
-      ) : null}
-
-      {aberto === "novo" ? (
-        <div className="border-borda bg-superficie rounded-ciaara border p-3">
-          <FormularioDeRegime
-            cursoId={cursoId}
-            curriculoId={curriculoId}
-            configuracoes={configuracoes}
-            aoConcluir={concluir}
-          />
-        </div>
       ) : null}
 
       {regimes.length === 0 ? (
@@ -160,43 +164,47 @@ export function RegimesDoCurso({
                 </span>
               </div>
               {r.observacao ? <p className="text-texto-suave text-xs">{r.observacao}</p> : null}
-              <div className="flex flex-wrap gap-2">
+              {/* Spec 022 (FR-001.2): as ações do item à direita, como ícones. */}
+              <div className="flex flex-wrap justify-end gap-1">
                 {permissoes.editar ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    aria-expanded={aberto === r.id}
-                    onClick={() => definirAberto((v) => (v === r.id ? null : r.id))}
-                    data-slot="editar-regime"
+                  <DialogoDeFormulario
+                    titulo={`Editar ${r.nome}`}
+                    largo
+                    slot="dialogo-do-regime"
+                    gatilho={
+                      <BotaoDeIcone
+                        acao="editar"
+                        rotulo={`Editar ${r.nome}`}
+                        data-slot="editar-regime"
+                      />
+                    }
                   >
-                    {aberto === r.id ? "Fechar a edição" : "Editar"}
-                  </Button>
+                    {(fechar) => (
+                      <FormularioDeRegime
+                        cursoId={cursoId}
+                        curriculoId={curriculoId}
+                        regime={r}
+                        configuracoes={configuracoes}
+                        aoConcluir={(texto) => {
+                          fechar();
+                          concluir(texto);
+                        }}
+                      />
+                    )}
+                  </DialogoDeFormulario>
                 ) : null}
                 {permissoes.desativar ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={pendente}
+                  <BotaoDeIcone
+                    acao={r.ativo ? "desativar" : "reativar"}
+                    rotulo={`${r.ativo ? "Inativar" : "Reativar"} ${r.nome}`}
+                    variante="fantasma"
+                    ocupado={pendente}
+                    rotuloOcupado="Gravando…"
                     onClick={() => mudarSituacao(r)}
                     data-slot={r.ativo ? "inativar-regime" : "reativar-regime"}
-                  >
-                    {r.ativo ? "Inativar" : "Reativar"}
-                  </Button>
+                  />
                 ) : null}
               </div>
-              {aberto === r.id ? (
-                <div className="border-borda bg-superficie rounded-ciaara border p-3">
-                  <FormularioDeRegime
-                    cursoId={cursoId}
-                    curriculoId={curriculoId}
-                    regime={r}
-                    configuracoes={configuracoes}
-                    aoConcluir={concluir}
-                  />
-                </div>
-              ) : null}
             </li>
           ))}
         </ul>

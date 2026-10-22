@@ -85,9 +85,12 @@ test("US9 · «tempo de avaliação não definido» e o Admin define o tempo no 
   await expect(semTempo).toContainText("tempo de avaliação não definido");
 
   await semTempo.locator('[data-slot="definir-tempo"]').click();
-  await semTempo.getByLabel("TA de aplicação").fill("3");
-  await semTempo.getByLabel("Alcance do arbitrado").selectOption("curso");
-  await semTempo.getByRole("button", { name: "Gravar" }).click();
+  // Spec 022 (Bloco 7, FR-002): o tempo se define num diálogo.
+  const dialogo = page.locator('[data-slot="formulario-do-arbitrado"]');
+  await dialogo.getByLabel("TA de aplicação").fill("3");
+  await dialogo.getByLabel("Alcance do arbitrado").selectOption("curso");
+  await dialogo.getByRole("button", { name: "Salvar" }).click();
+  await expect(dialogo).toHaveCount(0);
 
   await expect(semTempo).not.toContainText("tempo de avaliação não definido");
   await expect(semTempo.locator('[data-avaliacoes="arbitrado"]').first()).toBeVisible();

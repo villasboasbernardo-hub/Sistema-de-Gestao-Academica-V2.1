@@ -892,6 +892,28 @@ export const CONTRATO = {
       },
     },
   },
+  /*
+   * Spec 022 (Bloco 7, D-2): a disciplina em página própria, dentro de *Editar curso*. A edição não tem parâmetro (a
+   * identidade está no caminho); o cadastro diz em que currículo a disciplina nasce.
+   */
+  "/cursos/[curso]/editar/disciplinas/nova": {
+    rota: "/cursos/[curso]/editar/disciplinas/nova",
+    origem: "RF-CURSO-01",
+    parametros: {
+      curriculo: {
+        nome: "curriculo",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
+    },
+  },
+  "/cursos/[curso]/editar/disciplinas/[disciplina]": {
+    rota: "/cursos/[curso]/editar/disciplinas/[disciplina]",
+    origem: "RF-CURSO-01",
+    parametros: {},
+  },
   "/cursos/[curso]": {
     rota: "/cursos/[curso]",
     origem: "RF-CURSO-01",

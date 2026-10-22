@@ -46,11 +46,14 @@ import { indicadoresDaGrade } from "@/lib/dominio/indicadores-da-grade";
 import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
-import { Button } from "@/components/ui/button";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import {
+  enderecoDaDisciplinaNaEdicao,
+  enderecoDaNovaDisciplina,
+} from "@/lib/navegacao/endereco-de-turma";
 
 import type { GradeDeDisciplinas as Grade, LinhaDaGradeDeDisciplinas } from "./consulta";
 import { DetalheDaDisciplina } from "./paineis/DetalheDaDisciplina";
-import { FormularioDeDisciplina } from "./paineis/FormularioDeDisciplina";
 import { ProporcaoDaCarga } from "./paineis/ProporcaoDaCarga";
 
 const ROTA = "/cursos/[curso]" as const;
@@ -85,11 +88,17 @@ export function GradeDeDisciplinas({
   parametros,
   permissoes,
   hoje,
+  edicao = null,
 }: {
   readonly grade: Grade;
   readonly parametros: ParametrosDaGrade;
   readonly permissoes: PermissoesDaGrade;
   readonly hoje: string;
+  /**
+   * Spec 022 (Bloco 7, D-2): em *Editar curso*, o curso e o currículo — a grade ganha *Nova disciplina* no topo e o
+   * ícone *Editar* em cada linha, que levam à página própria da disciplina. Na página do curso, `null`: só leitura.
+   */
+  readonly edicao?: { readonly sigla: string; readonly versao: number } | null;
 }) {
   const [, definirSituacao] = useParametro(ROTA, "situacao");
   const [, definirBusca] = useParametro(ROTA, "busca");
@@ -188,7 +197,13 @@ export function GradeDeDisciplinas({
     if (escolha("situacao") !== parametros.situacao) void definirSituacao(escolha("situacao"));
   };
 
-  const colunas: readonly Coluna<LinhaDaGradeDeDisciplinas>[] = [
+  /* A página própria da disciplina — para quem cria, edita ou muda a situação; a página confere cada ação. */
+  const podeAbrirADisciplina =
+    edicao !== null && (permissoes.editar || permissoes.desativar || permissoes.criar);
+  const enderecoDe = (l: LinhaDaGradeDeDisciplinas) =>
+    podeAbrirADisciplina && edicao ? enderecoDaDisciplinaNaEdicao(edicao.sigla, l.codigo) : null;
+
+  const colunasDeDado: readonly Coluna<LinhaDaGradeDeDisciplinas>[] = [
     {
       chave: "cod",
       titulo: "Código",
@@ -235,43 +250,52 @@ export function GradeDeDisciplinas({
       },
     },
   ];
+  /*
+   * ⚠️ **A AÇÃO DA LINHA NA ÚLTIMA COLUNA, À DIREITA** (spec 022, FR-001.2). O ícone tem `tabIndex={-1}`: a grade é
+   *    UMA parada de tabulação (ativa linha por teclado), e quem usa teclado chega a *Editar* pelo detalhe da linha,
+   *    onde o mesmo ícone está — o mesmo arranjo do código da turma em `TabelaDeTurmas`.
+   */
+  const colunas: readonly Coluna<LinhaDaGradeDeDisciplinas>[] = podeAbrirADisciplina
+    ? [
+        ...colunasDeDado,
+        {
+          chave: "acoes",
+          titulo: "Ações",
+          valor: () => "",
+          celula: (l) => (
+            <span className="flex justify-end">
+              <BotaoDeIcone
+                acao="editar"
+                rotulo={`Editar ${l.codDisciplina}`}
+                href={enderecoDe(l) ?? ""}
+                tabIndex={-1}
+                onClick={(e) => e.stopPropagation()}
+                data-slot="editar-disciplina-na-linha"
+              />
+            </span>
+          ),
+        },
+      ]
+    : colunasDeDado;
 
   const aberta = String(abertaNaUrl);
   const abertas = aberta === "" ? [] : [aberta];
-  /*
-   * ⚠️ **NOVA DISCIPLINA ABRE O FORMULÁRIO NO LUGAR** (C-2 da spec 018): o modo de criação de `FormularioDeDisciplina`
-   *    existia desde a fatia (b) e nenhuma tela o desenhava. Abrir ou fechar o painel é estado efêmero, não vista.
-   */
-  const [criando, definirCriando] = React.useState(false);
 
   return (
     <div className="flex flex-col gap-4" data-slot="grade-de-disciplinas">
-      {permissoes.criar && grade.cursoEscolhido ? (
-        <div className="flex flex-col gap-3">
-          <div>
-            <Button
-              type="button"
-              size="sm"
-              variant={criando ? "outline" : "default"}
-              onClick={() => definirCriando((v) => !v)}
-              aria-expanded={criando}
-              data-slot="nova-disciplina"
-            >
-              {criando ? "Fechar o cadastro" : "Nova disciplina"}
-            </Button>
-          </div>
-          {criando ? (
-            <div
-              className="border-borda bg-superficie rounded-ciaara border p-3"
-              data-slot="cadastro-de-disciplina"
-            >
-              <FormularioDeDisciplina
-                cursoId={grade.cursoEscolhido.id}
-                curriculoId={grade.curriculoId}
-                aoConcluir={() => definirCriando(false)}
-              />
-            </div>
-          ) : null}
+      {/*
+        ⚠️ **NOVA DISCIPLINA É UMA PÁGINA PRÓPRIA** (spec 022, D-2): até o Bloco 7 o formulário abria no lugar, acima
+           da grade (C-2 da spec 018). O ícone fica no topo, à direita (FR-001.2).
+      */}
+      {permissoes.criar && grade.cursoEscolhido && edicao ? (
+        <div className="flex justify-end">
+          <BotaoDeIcone
+            acao="novo"
+            rotulo="Nova disciplina"
+            variante="padrao"
+            href={enderecoDaNovaDisciplina(edicao.sigla, edicao.versao)}
+            data-slot="nova-disciplina"
+          />
         </div>
       ) : null}
 
@@ -337,13 +361,7 @@ export function GradeDeDisciplinas({
              */
             aoAlternarLinha={(l, abrir) => void definirAberta(abrir ? l.codigo : null)}
             abertas={abertas}
-            detalhe={(l) => (
-              <DetalheDaDisciplina
-                linha={l}
-                permissoes={permissoes}
-                cursoId={grade.cursoEscolhido?.id ?? ""}
-              />
-            )}
+            detalhe={(l) => <DetalheDaDisciplina linha={l} enderecoDeEdicao={enderecoDe(l)} />}
           />
         </>
       )}

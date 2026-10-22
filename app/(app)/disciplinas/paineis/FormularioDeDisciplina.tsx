@@ -16,9 +16,10 @@
  * antiga com o código tomado é recusado — com a frase traduzida.
  */
 import * as React from "react";
+import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { criarDisciplina, editarDisciplina } from "@/lib/acoes/disciplina";
@@ -42,6 +43,7 @@ export function FormularioDeDisciplina({
   curriculoId = null,
   disciplina,
   aoConcluir,
+  destinoAoConcluir,
 }: {
   readonly cursoId: string;
   /** Spec 021 (RC-5): o currículo em que a disciplina nova nasce — o selecionado na página do curso. */
@@ -49,7 +51,10 @@ export function FormularioDeDisciplina({
   /** Ausente = cadastro novo. */
   readonly disciplina?: DisciplinaNoFormulario;
   readonly aoConcluir?: () => void;
+  /** Spec 022 (D-2): na página do cadastro, para onde ir depois de criar — de volta às disciplinas do curso. */
+  readonly destinoAoConcluir?: string;
 }) {
+  const router = useRouter();
   const [mensagem, setMensagem] = React.useState<string | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
   const [gravando, setGravando] = React.useState(false);
@@ -97,6 +102,7 @@ export function FormularioDeDisciplina({
     if (resultado.ok) {
       setMensagem(editando ? "Disciplina atualizada." : "Disciplina criada.");
       aoConcluir?.();
+      if (destinoAoConcluir) router.push(destinoAoConcluir);
     } else {
       setErro(resultado.erro);
     }
@@ -217,9 +223,15 @@ export function FormularioDeDisciplina({
           </div>
         ) : null}
 
-        <Button type="submit" size="sm" disabled={gravando} data-slot="gravar-disciplina">
-          {gravando ? "Gravando…" : editando ? "Salvar disciplina" : "Criar disciplina"}
-        </Button>
+        {/* Spec 022 (FR-001): o verbo é o ícone, com o nome de antes na dica e no nome acessível. */}
+        <BotaoDeIcone
+          acao="salvar"
+          rotulo={editando ? "Salvar disciplina" : "Criar disciplina"}
+          variante="padrao"
+          type="submit"
+          ocupado={gravando}
+          data-slot="gravar-disciplina"
+        />
       </div>
 
       {mensagem ? (

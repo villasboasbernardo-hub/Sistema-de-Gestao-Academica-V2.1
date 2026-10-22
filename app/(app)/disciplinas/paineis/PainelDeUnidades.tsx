@@ -12,16 +12,18 @@
  * ⚠️ **UE INATIVA CONTINUA NA LISTA** (regra 4). Ela sai da soma e some da atribuição por unidade —
  * sumir da tela seria exclusão com outro nome, e ninguém conseguiria reativá-la.
  *
- * ⚠️ **TABELA SÓ DE LEITURA, COM *EDITAR* POR LINHA, desde 17/10/2026** (spec 016, FR-007.1). Até ali
- * cada linha trazia um formulário de edição aberto e o de acrescentar ficava sempre à vista: abrir uma
- * disciplina mostrava dezenas de campos, e não havia como ler as unidades sem estar editando. Agora a
- * linha abre o formulário **só dela**, e acrescentar fica atrás de um botão. Qual linha está aberta é
- * estado efêmero — não faz sentido num link —, e por isso mora no componente, não na URL.
+ * ⚠️ **TABELA SÓ DE LEITURA; EDITAR E ACRESCENTAR ABREM UM DIÁLOGO** (spec 022, Bloco 7, FR-002; pedido de Bernardo
+ * Villas Boas, 22/10/2026: *"Edição e cadastro SEMPRE em diálogo (formulário curto: UE, avaliação, regime)"*). Até o
+ * Bloco 7 a linha abria o formulário no lugar dela (spec 016, FR-007.1). Gravar fecha o diálogo e a resposta aparece
+ * abaixo da tabela; a recusa fica no diálogo, com o que foi digitado.
  */
 import * as React from "react";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -33,6 +35,90 @@ import {
 
 import type { UnidadeDaLinha } from "../consulta";
 import { DialogoDeExclusao } from "./DialogoDeExclusao";
+
+type Resultado = { ok: boolean; erro?: string; pedeJustificativa?: true | undefined };
+
+/** O formulário de uma UE, dentro do diálogo. A recusa fica aqui, com o que foi digitado. */
+function FormularioDaUnidade({
+  id,
+  unidade,
+  gravar,
+  fechar,
+}: {
+  readonly id: string;
+  readonly unidade?: UnidadeDaLinha;
+  /** Devolve a recusa, ou `null` quando gravou. */
+  readonly gravar: (dados: FormData) => Promise<string | null>;
+  readonly fechar: () => void;
+}) {
+  const [erro, setErro] = React.useState<string | null>(null);
+  const [gravando, setGravando] = React.useState(false);
+
+  async function enviar(dados: FormData) {
+    setErro(null);
+    setGravando(true);
+    const recusa = await gravar(dados);
+    setGravando(false);
+    if (recusa === null) fechar();
+    else setErro(recusa);
+  }
+
+  return (
+    <form
+      action={enviar}
+      className="flex flex-col gap-3"
+      data-slot={unidade ? "formulario-da-unidade" : "formulario-de-unidade-nova"}
+    >
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`numero-${id}`}>Número</Label>
+          <Input
+            id={`numero-${id}`}
+            name="numero_ue"
+            required
+            defaultValue={unidade?.numeroUe ?? ""}
+            className="w-20"
+          />
+        </div>
+        <div className="flex min-w-60 flex-1 flex-col gap-1">
+          <Label htmlFor={`topico-${id}`}>Tópico</Label>
+          <Input id={`topico-${id}`} name="topico" required defaultValue={unidade?.topico ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`ch-${id}`}>Tempos</Label>
+          <Input
+            id={`ch-${id}`}
+            name="ch"
+            type="number"
+            min={1}
+            step={1}
+            required
+            defaultValue={unidade?.chPrevistaTempos ?? ""}
+            className="w-24"
+          />
+        </div>
+      </div>
+      {erro ? (
+        <p role="alert" className="text-conflito-tinta text-sm" data-slot="recusa-da-unidade">
+          {erro}
+        </p>
+      ) : null}
+      <DialogFooter>
+        <Button type="button" variant="ghost" size="sm" onClick={fechar} disabled={gravando}>
+          Cancelar
+        </Button>
+        <Button
+          type="submit"
+          size="sm"
+          disabled={gravando}
+          data-slot={unidade ? "gravar-unidade" : "gravar-unidade-nova"}
+        >
+          {gravando ? "Gravando…" : "Salvar"}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
 
 export function PainelDeUnidades({
   disciplinaId,
@@ -50,65 +136,36 @@ export function PainelDeUnidades({
   const [erro, setErro] = React.useState<string | null>(null);
   const [mensagem, setMensagem] = React.useState<string | null>(null);
   const [ocupado, setOcupado] = React.useState(false);
-  /** A unidade cujo formulário está aberto — uma por vez. */
-  const [editando, setEditando] = React.useState<string | null>(null);
-  const [acrescentando, setAcrescentando] = React.useState(false);
 
   /* Spec 021 (RC-6): no currículo em uso, a correção pede justificativa — e só o banco sabe quando. */
   const pedido = usePedidoDeJustificativa();
 
+  /** Executa a ação; devolve a recusa (ou `null`). A mensagem de sucesso vai para baixo da tabela. */
   async function executar(
-    acao: (j: { justificativa?: string }) => Promise<{
-      ok: boolean;
-      erro?: string;
-      pedeJustificativa?: true | undefined;
-    }>,
+    acao: (j: { justificativa?: string }) => Promise<Resultado>,
     feito: string,
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     setErro(null);
     setMensagem(null);
     setOcupado(true);
     const resultado = await pedido.executar((justificativa) =>
       acao(justificativa ? { justificativa } : {}),
     );
-    if (resultado.ok) setMensagem(feito);
-    else setErro(resultado.erro ?? "Não foi possível concluir.");
     setOcupado(false);
-    return resultado.ok;
+    if (resultado.ok) {
+      setMensagem(feito);
+      return null;
+    }
+    return resultado.erro ?? "Não foi possível concluir.";
   }
 
-  async function acrescentar(dados: FormData) {
-    const ok = await executar(
-      (j) =>
-        criarUnidadeEnsino({
-          ...j,
-          disciplinaId,
-          numeroUe: String(dados.get("numero_ue") ?? ""),
-          topico: String(dados.get("topico") ?? ""),
-          chPrevistaTempos: Number(dados.get("ch") ?? 0),
-        }),
-      "Unidade acrescentada.",
-    );
-    if (ok) setAcrescentando(false);
-  }
-
-  async function gravarEdicao(unidadeId: string, dados: FormData) {
-    const ok = await executar(
-      (j) =>
-        editarUnidadeEnsino({
-          ...j,
-          unidadeId,
-          numeroUe: String(dados.get("numero_ue") ?? ""),
-          topico: String(dados.get("topico") ?? ""),
-          chPrevistaTempos: Number(dados.get("ch") ?? 0),
-        }),
-      "Unidade atualizada.",
-    );
-    if (ok) setEditando(null);
-  }
+  const dadosDaUnidade = (dados: FormData) => ({
+    numeroUe: String(dados.get("numero_ue") ?? ""),
+    topico: String(dados.get("topico") ?? ""),
+    chPrevistaTempos: Number(dados.get("ch") ?? 0),
+  });
 
   const temAcoes = podeEditar || podeDesativar;
-  const colunas = temAcoes ? 5 : 4;
   /* ⚠️ **INATIVA USA `--texto-suave`, NÃO `--texto-tenue`, e a guarda do `FR-031` está certa ao
      cobrar.** O que está na linha é VALOR — número, tópico e carga da unidade —, e `--texto-tenue` é
      para rótulo, dica e traço de campo. Quem diz "inativa" é a palavra da coluna Situação. */
@@ -117,9 +174,39 @@ export function PainelDeUnidades({
   return (
     <section aria-labelledby="titulo-das-unidades" className="flex flex-col gap-2">
       {pedido.dialogo}
-      <h3 id="titulo-das-unidades" className="text-texto text-sm font-semibold">
-        Unidades de ensino
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id="titulo-das-unidades" className="text-texto text-sm font-semibold">
+          Unidades de ensino
+        </h3>
+        {/* Spec 022 (FR-001.2): a ação da tabela no topo, à direita. */}
+        {podeEditar ? (
+          <DialogoDeFormulario
+            titulo="Acrescentar unidade de ensino"
+            slot="dialogo-da-unidade"
+            gatilho={
+              <BotaoDeIcone
+                acao="acrescentar"
+                rotulo="Acrescentar unidade"
+                disabled={ocupado}
+                data-slot="acrescentar-unidade"
+              />
+            }
+          >
+            {(fechar) => (
+              <FormularioDaUnidade
+                id={`nova-${disciplinaId}`}
+                fechar={fechar}
+                gravar={(dados) =>
+                  executar(
+                    (j) => criarUnidadeEnsino({ ...j, disciplinaId, ...dadosDaUnidade(dados) }),
+                    "Unidade acrescentada.",
+                  )
+                }
+              />
+            )}
+          </DialogoDeFormulario>
+        ) : null}
+      </div>
 
       {avisoDaSoma !== null ? (
         /* ⚠️ Aviso, não bloqueio — ver o cabeçalho. */
@@ -149,184 +236,95 @@ export function PainelDeUnidades({
                 Situação
               </th>
               {temAcoes ? (
-                <th scope="col" className="py-1 font-medium">
+                <th scope="col" className="py-1 text-right font-medium">
                   <span className="sr-only">Ações</span>
                 </th>
               ) : null}
             </tr>
           </thead>
           <tbody>
-            {unidades.map((u) =>
-              editando === u.id ? (
-                <tr key={u.id} className="border-borda border-b" data-unidade={u.numeroUe}>
-                  <td colSpan={colunas} className="py-1">
-                    <form
-                      action={(dados: FormData) => gravarEdicao(u.id, dados)}
-                      className="flex flex-wrap items-center gap-1"
-                      data-slot="formulario-da-unidade"
-                    >
-                      <Input
-                        name="numero_ue"
-                        aria-label={`Número da unidade ${u.numeroUe}`}
-                        defaultValue={u.numeroUe}
-                        className="w-16"
-                      />
-                      <Input
-                        name="topico"
-                        aria-label={`Tópico da unidade ${u.numeroUe}`}
-                        defaultValue={u.topico}
-                        className="w-64"
-                      />
-                      <Input
-                        name="ch"
-                        type="number"
-                        min={1}
-                        step={1}
-                        aria-label={`Carga horária da unidade ${u.numeroUe}`}
-                        defaultValue={u.chPrevistaTempos}
-                        className="w-20"
-                      />
-                      <Button type="submit" size="sm" disabled={ocupado} data-slot="gravar-unidade">
-                        Gravar
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        disabled={ocupado}
-                        onClick={() => setEditando(null)}
-                      >
-                        Cancelar
-                      </Button>
-                    </form>
-                  </td>
-                </tr>
-              ) : (
-                <tr key={u.id} className="border-borda border-b" data-unidade={u.numeroUe}>
-                  <td className={`py-1 pr-3 ${corDoValor(u.ativa)}`}>{u.numeroUe}</td>
-                  <td className={`py-1 pr-3 ${corDoValor(u.ativa)}`}>{u.topico}</td>
-                  <td className={`py-1 pr-3 text-right tabular-nums ${corDoValor(u.ativa)}`}>
-                    {u.chPrevistaTempos}
-                  </td>
-                  <td className="text-texto-suave py-1 pr-3">{u.ativa ? "Ativa" : "Inativa"}</td>
-                  {temAcoes ? (
-                    <td className="py-1">
-                      <div className="flex flex-wrap items-center gap-1">
-                        {podeEditar ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={ocupado}
-                            data-slot="editar-unidade"
-                            aria-label={`Editar a unidade ${u.numeroUe}`}
-                            onClick={() => {
-                              setAcrescentando(false);
-                              setEditando(u.id);
-                            }}
-                          >
-                            Editar
-                          </Button>
-                        ) : null}
-                        {podeDesativar ? (
-                          <>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
+            {unidades.map((u) => (
+              <tr key={u.id} className="border-borda border-b" data-unidade={u.numeroUe}>
+                <td className={`py-1 pr-3 ${corDoValor(u.ativa)}`}>{u.numeroUe}</td>
+                <td className={`py-1 pr-3 ${corDoValor(u.ativa)}`}>{u.topico}</td>
+                <td className={`py-1 pr-3 text-right tabular-nums ${corDoValor(u.ativa)}`}>
+                  {u.chPrevistaTempos}
+                </td>
+                <td className="text-texto-suave py-1 pr-3">{u.ativa ? "Ativa" : "Inativa"}</td>
+                {temAcoes ? (
+                  <td className="py-1">
+                    {/* Spec 022 (FR-001.2): as ações da linha na última coluna, à direita. */}
+                    <div className="flex flex-wrap items-center justify-end gap-1">
+                      {podeEditar ? (
+                        <DialogoDeFormulario
+                          titulo={`Editar a unidade ${u.numeroUe}`}
+                          slot="dialogo-da-unidade"
+                          gatilho={
+                            <BotaoDeIcone
+                              acao="editar"
+                              rotulo={`Editar a unidade ${u.numeroUe}`}
                               disabled={ocupado}
-                              onClick={() =>
-                                void executar(
+                              data-slot="editar-unidade"
+                            />
+                          }
+                        >
+                          {(fechar) => (
+                            <FormularioDaUnidade
+                              id={u.id}
+                              unidade={u}
+                              fechar={fechar}
+                              gravar={(dados) =>
+                                executar(
                                   (j) =>
-                                    u.ativa
-                                      ? desativarUnidadeEnsino({ ...j, unidadeId: u.id })
-                                      : reativarUnidadeEnsino({ ...j, unidadeId: u.id }),
-                                  u.ativa ? "Unidade desativada." : "Unidade reativada.",
+                                    editarUnidadeEnsino({
+                                      ...j,
+                                      unidadeId: u.id,
+                                      ...dadosDaUnidade(dados),
+                                    }),
+                                  "Unidade atualizada.",
                                 )
                               }
-                            >
-                              {u.ativa ? "Desativar" : "Reativar"}
-                            </Button>
-
-                            <DialogoDeExclusao
-                              tipo="unidade_de_ensino"
-                              nome={`${u.numeroUe} — ${u.topico}`}
-                              codigo={u.codigo}
-                              identificador={u.id}
                             />
-                          </>
-                        ) : null}
-                      </div>
-                    </td>
-                  ) : null}
-                </tr>
-              ),
-            )}
+                          )}
+                        </DialogoDeFormulario>
+                      ) : null}
+                      {podeDesativar ? (
+                        <>
+                          <BotaoDeIcone
+                            acao={u.ativa ? "desativar" : "reativar"}
+                            rotulo={`${u.ativa ? "Desativar" : "Reativar"} a unidade ${u.numeroUe}`}
+                            variante="fantasma"
+                            disabled={ocupado}
+                            data-slot="alternar-situacao-da-unidade"
+                            onClick={() =>
+                              void executar(
+                                (j) =>
+                                  u.ativa
+                                    ? desativarUnidadeEnsino({ ...j, unidadeId: u.id })
+                                    : reativarUnidadeEnsino({ ...j, unidadeId: u.id }),
+                                u.ativa ? "Unidade desativada." : "Unidade reativada.",
+                              ).then((recusa) => setErro(recusa))
+                            }
+                          />
+                          <DialogoDeExclusao
+                            tipo="unidade_de_ensino"
+                            nome={`${u.numeroUe} — ${u.topico}`}
+                            codigo={u.codigo}
+                            identificador={u.id}
+                          />
+                        </>
+                      ) : null}
+                    </div>
+                  </td>
+                ) : null}
+              </tr>
+            ))}
           </tbody>
         </table>
       ) : null}
 
-      {podeEditar && !acrescentando ? (
-        <div>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={ocupado}
-            data-slot="acrescentar-unidade"
-            onClick={() => {
-              setEditando(null);
-              setAcrescentando(true);
-            }}
-          >
-            Acrescentar unidade
-          </Button>
-        </div>
-      ) : null}
-
-      {podeEditar && acrescentando ? (
-        <form
-          action={acrescentar}
-          className="flex flex-wrap items-end gap-2"
-          data-slot="formulario-de-unidade-nova"
-        >
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={`numero-nova-${disciplinaId}`}>Número</Label>
-            <Input id={`numero-nova-${disciplinaId}`} name="numero_ue" required className="w-20" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={`topico-nova-${disciplinaId}`}>Tópico</Label>
-            <Input id={`topico-nova-${disciplinaId}`} name="topico" required className="w-72" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={`ch-nova-${disciplinaId}`}>Tempos</Label>
-            <Input
-              id={`ch-nova-${disciplinaId}`}
-              name="ch"
-              type="number"
-              min={1}
-              step={1}
-              required
-              className="w-20"
-            />
-          </div>
-          <Button type="submit" size="sm" disabled={ocupado} data-slot="gravar-unidade-nova">
-            Gravar unidade
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={ocupado}
-            onClick={() => setAcrescentando(false)}
-          >
-            Cancelar
-          </Button>
-        </form>
-      ) : null}
-
       {mensagem ? (
-        <p role="status" className="text-texto-suave text-sm">
+        <p role="status" className="text-texto-suave text-sm" data-slot="resposta-das-unidades">
           {mensagem}
         </p>
       ) : null}

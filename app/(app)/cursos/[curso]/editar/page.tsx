@@ -456,6 +456,8 @@ export default async function EditarCurso({
                       desativar: editavel && podeDisciplinas.desativar,
                     }}
                     hoje={hoje}
+                    /* Spec 022 (D-2): *Nova disciplina* e *Editar* levam à página própria da disciplina. */
+                    edicao={{ sigla: codigo, versao: curriculo.versao }}
                   />
                 ) : null}
                 {avaliacoesDoCurriculo ? (

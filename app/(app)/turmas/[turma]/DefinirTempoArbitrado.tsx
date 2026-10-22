@@ -8,11 +8,16 @@
  *    permissão da ação. Não é a proteção: a ação chamada por fora é recusada pelo banco (`42501`).
  * ⚠️ **AS AÇÕES CHEGAM POR PROPRIEDADE** (Princípio XI).
  * ⚠️ **PASSAR DA CH É AVISO**, nunca recusa (`RN-DEG-02`): a resposta `soma_acima_da_ch` vira `role="status"`.
+ * ⚠️ **DEFINIR O TEMPO E NOMEAR A UE ABREM UM DIÁLOGO** (spec 022, Bloco 7, FR-002): até o Bloco 7 os campos abriam no
+ *    lugar do item, e o seletor da UE ficava sempre aberto na linha. Gravar fecha o diálogo; a recusa fica nele.
  */
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
+import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 
 type Resultado =
   | { readonly ok: true; readonly aviso?: "soma_acima_da_ch" }
@@ -23,6 +28,8 @@ type Resultado =
       readonly pedeJustificativa?: true | undefined;
     };
 type Acao = (entrada: unknown) => Promise<Resultado>;
+
+const CAMPO = "border-borda bg-superficie rounded-ciaara h-8 border px-2 text-sm";
 
 export function DefinirTempoArbitrado({
   itemId,
@@ -47,144 +54,77 @@ export function DefinirTempoArbitrado({
   readonly nomear: Acao;
 }) {
   const router = useRouter();
-  const [aberto, setAberto] = useState(false);
-  const [aplicacao, setAplicacao] = useState("");
-  const [vista, setVista] = useState("");
-  const [alcance, setAlcance] = useState<"curso" | "turma">(
-    tempoDeCurriculo && turmaId !== "" ? "turma" : "curso",
-  );
-  const [ue, setUe] = useState("");
   const [resposta, setResposta] = useState<Resultado | null>(null);
   const [gravando, iniciar] = useTransition();
   /* Spec 021 (RC-6): mudar o tempo que o currículo em uso já definia é correção — com justificativa. */
   const pedido = usePedidoDeJustificativa();
 
-  const rodar = (acao: Acao, entrada: unknown) =>
+  /** Roda a ação; `aoGravar` recebe a recusa (ou `null`) — o diálogo decide se fecha. */
+  const rodar = (acao: Acao, entrada: unknown, aoGravar?: (recusa: string | null) => void) =>
     iniciar(async () => {
       const r = await pedido.executar((justificativa) =>
         acao(justificativa ? { ...(entrada as object), justificativa } : entrada),
       );
       setResposta(r);
-      if (r.ok) {
-        setAberto(false);
-        router.refresh();
-      }
+      aoGravar?.(r.ok ? null : r.erro);
+      if (r.ok) router.refresh();
     });
 
   return (
     <span className="inline-flex flex-wrap items-center gap-2" data-slot="acoes-do-arbitrado">
       {pedido.dialogo}
-      {turmaId === "" && tempoDeCurriculo ? null : !aberto ? (
-        <button
-          type="button"
-          onClick={() => setAberto(true)}
-          className="border-borda rounded-ciaara hover:bg-marca-suave border px-2 py-0.5 text-xs"
-          data-slot="definir-tempo"
+      {turmaId === "" && tempoDeCurriculo ? null : (
+        <DialogoDeFormulario
+          titulo="Definir o tempo da avaliação"
+          slot="formulario-do-arbitrado"
+          gatilho={
+            <Button type="button" size="sm" variant="outline" data-slot="definir-tempo">
+              Definir tempo
+            </Button>
+          }
         >
-          Definir tempo
-        </button>
-      ) : (
-        <form
-          className="inline-flex flex-wrap items-center gap-2 text-xs"
-          data-slot="formulario-do-arbitrado"
-          onSubmit={(e) => {
-            e.preventDefault();
-            rodar(definir, {
-              itemId,
-              alcance,
-              ...(alcance === "turma" ? { turmaId } : {}),
-              taAplicacao: aplicacao,
-              ...(vista === "" ? {} : { taVista: vista }),
-            });
-          }}
-        >
-          <label className="inline-flex items-center gap-1">
-            aplicação
-            <input
-              type="number"
-              min={0}
-              required
-              value={aplicacao}
-              onChange={(e) => setAplicacao(e.target.value)}
-              className="border-borda bg-superficie w-14 rounded border px-1"
-              aria-label="TA de aplicação"
+          {(fechar) => (
+            <FormularioDoTempo
+              tempoDeCurriculo={tempoDeCurriculo}
+              turmaId={turmaId}
+              gravando={gravando}
+              fechar={fechar}
+              gravar={(entrada, aoGravar) => rodar(definir, { itemId, ...entrada }, aoGravar)}
             />
-          </label>
-          <label className="inline-flex items-center gap-1">
-            vista
-            <input
-              type="number"
-              min={0}
-              value={vista}
-              onChange={(e) => setVista(e.target.value)}
-              className="border-borda bg-superficie w-14 rounded border px-1"
-              aria-label="TA de vista"
-            />
-          </label>
-          <label className="inline-flex items-center gap-1">
-            vale para
-            <select
-              value={alcance}
-              onChange={(e) => setAlcance(e.target.value as "curso" | "turma")}
-              className="border-borda bg-superficie rounded border px-1"
-              aria-label="Alcance do arbitrado"
-            >
-              {tempoDeCurriculo ? null : <option value="curso">o curso</option>}
-              {turmaId === "" ? null : <option value="turma">só esta turma</option>}
-            </select>
-          </label>
-          <button
-            type="submit"
-            disabled={gravando}
-            className="bg-marca text-marca-contraste rounded-ciaara px-2 py-0.5"
-          >
-            Gravar
-          </button>
-          <button
-            type="button"
-            onClick={() => setAberto(false)}
-            className="text-texto-suave underline"
-          >
-            Cancelar
-          </button>
-        </form>
+          )}
+        </DialogoDeFormulario>
       )}
       {sugestaoAConfirmar ? (
-        <button
+        <Button
           type="button"
+          size="sm"
+          variant="outline"
           disabled={gravando}
           onClick={() => rodar(confirmar, { itemId, turmaId })}
-          className="border-borda rounded-ciaara hover:bg-marca-suave border px-2 py-0.5 text-xs"
           data-slot="confirmar-sugestao"
         >
           Confirmar sugestão
-        </button>
+        </Button>
       ) : null}
       {unidades.length > 0 ? (
-        <span className="inline-flex items-center gap-1 text-xs">
-          <select
-            value={ue}
-            onChange={(e) => setUe(e.target.value)}
-            className="border-borda bg-superficie rounded border px-1"
-            aria-label="Unidade de ensino da avaliação"
-          >
-            <option value="">nomear a UE…</option>
-            {unidades.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.rotulo}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            disabled={gravando || ue === ""}
-            onClick={() => rodar(nomear, { itemId, unidadeEnsinoId: ue })}
-            className="border-borda rounded-ciaara hover:bg-marca-suave border px-2 py-0.5"
-            data-slot="nomear-ue"
-          >
-            Nomear
-          </button>
-        </span>
+        <DialogoDeFormulario
+          titulo="Nomear a unidade de ensino da avaliação"
+          slot="formulario-da-ue-da-avaliacao"
+          gatilho={
+            <Button type="button" size="sm" variant="outline" data-slot="abrir-nomear-ue">
+              Nomear a UE
+            </Button>
+          }
+        >
+          {(fechar) => (
+            <FormularioDaUe
+              unidades={unidades}
+              gravando={gravando}
+              fechar={fechar}
+              gravar={(ue, aoGravar) => rodar(nomear, { itemId, unidadeEnsinoId: ue }, aoGravar)}
+            />
+          )}
+        </DialogoDeFormulario>
       ) : null}
       {resposta && !resposta.ok ? (
         <span role="alert" className="text-conflito-tinta text-xs">
@@ -197,5 +137,148 @@ export function DefinirTempoArbitrado({
         </span>
       ) : null}
     </span>
+  );
+}
+
+function FormularioDoTempo({
+  tempoDeCurriculo,
+  turmaId,
+  gravando,
+  fechar,
+  gravar,
+}: {
+  readonly tempoDeCurriculo: boolean;
+  readonly turmaId: string;
+  readonly gravando: boolean;
+  readonly fechar: () => void;
+  readonly gravar: (entrada: object, aoGravar: (recusa: string | null) => void) => void;
+}) {
+  const [aplicacao, setAplicacao] = useState("");
+  const [vista, setVista] = useState("");
+  const [alcance, setAlcance] = useState<"curso" | "turma">(
+    tempoDeCurriculo && turmaId !== "" ? "turma" : "curso",
+  );
+  const [erro, setErro] = useState<string | null>(null);
+
+  return (
+    <form
+      className="flex flex-col gap-3 text-sm"
+      onSubmit={(e) => {
+        e.preventDefault();
+        setErro(null);
+        gravar(
+          {
+            alcance,
+            ...(alcance === "turma" ? { turmaId } : {}),
+            taAplicacao: aplicacao,
+            ...(vista === "" ? {} : { taVista: vista }),
+          },
+          (recusa) => (recusa === null ? fechar() : setErro(recusa)),
+        );
+      }}
+    >
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1">
+          TA de aplicação
+          <input
+            type="number"
+            min={0}
+            required
+            value={aplicacao}
+            onChange={(e) => setAplicacao(e.target.value)}
+            className={`${CAMPO} w-24`}
+            aria-label="TA de aplicação"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          TA de vista
+          <input
+            type="number"
+            min={0}
+            value={vista}
+            onChange={(e) => setVista(e.target.value)}
+            className={`${CAMPO} w-24`}
+            aria-label="TA de vista"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          Vale para
+          <select
+            value={alcance}
+            onChange={(e) => setAlcance(e.target.value as "curso" | "turma")}
+            className={CAMPO}
+            aria-label="Alcance do arbitrado"
+          >
+            {tempoDeCurriculo ? null : <option value="curso">o curso</option>}
+            {turmaId === "" ? null : <option value="turma">só esta turma</option>}
+          </select>
+        </label>
+      </div>
+      {erro ? (
+        <p role="alert" className="text-conflito-tinta text-sm">
+          {erro}
+        </p>
+      ) : null}
+      <DialogFooter>
+        <Button type="button" variant="ghost" size="sm" onClick={fechar} disabled={gravando}>
+          Cancelar
+        </Button>
+        <Button type="submit" size="sm" disabled={gravando} data-slot="gravar-arbitrado">
+          {gravando ? "Gravando…" : "Salvar"}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+function FormularioDaUe({
+  unidades,
+  gravando,
+  fechar,
+  gravar,
+}: {
+  readonly unidades: readonly { id: string; rotulo: string }[];
+  readonly gravando: boolean;
+  readonly fechar: () => void;
+  readonly gravar: (ue: string, aoGravar: (recusa: string | null) => void) => void;
+}) {
+  const [ue, setUe] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+  return (
+    <form
+      className="flex flex-col gap-3 text-sm"
+      onSubmit={(e) => {
+        e.preventDefault();
+        setErro(null);
+        gravar(ue, (recusa) => (recusa === null ? fechar() : setErro(recusa)));
+      }}
+    >
+      <select
+        value={ue}
+        onChange={(e) => setUe(e.target.value)}
+        className={CAMPO}
+        aria-label="Unidade de ensino da avaliação"
+      >
+        <option value="">Escolha a UE…</option>
+        {unidades.map((u) => (
+          <option key={u.id} value={u.id}>
+            {u.rotulo}
+          </option>
+        ))}
+      </select>
+      {erro ? (
+        <p role="alert" className="text-conflito-tinta text-sm">
+          {erro}
+        </p>
+      ) : null}
+      <DialogFooter>
+        <Button type="button" variant="ghost" size="sm" onClick={fechar} disabled={gravando}>
+          Cancelar
+        </Button>
+        <Button type="submit" size="sm" disabled={gravando || ue === ""} data-slot="nomear-ue">
+          {gravando ? "Gravando…" : "Salvar"}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }

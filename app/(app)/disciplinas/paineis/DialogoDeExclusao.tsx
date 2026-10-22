@@ -19,6 +19,7 @@
  * é o que faz alguém tentar de novo do mesmo jeito.
  */
 import * as React from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { excluirDisciplina } from "@/lib/acoes/disciplina";
@@ -43,12 +45,16 @@ export function DialogoDeExclusao({
   nome,
   codigo,
   identificador,
+  destinoAoExcluir,
 }: {
   readonly tipo: TipoExcluivel;
   readonly nome: string;
   readonly codigo: string;
   readonly identificador: string;
+  /** Spec 022 (D-2): na página própria da disciplina, para onde ir depois de excluí-la — a página deixa de existir. */
+  readonly destinoAoExcluir?: string;
 }) {
+  const router = useRouter();
   const [digitado, setDigitado] = React.useState("");
   const [erro, setErro] = React.useState<string | null>(null);
   const [excluindo, setExcluindo] = React.useState(false);
@@ -70,6 +76,7 @@ export function DialogoDeExclusao({
     if (resultado.ok) {
       setAberto(false);
       setDigitado("");
+      if (destinoAoExcluir) router.push(destinoAoExcluir);
     } else {
       /*
        * ⚠️ **A FRASE VEM PRONTA DA TRADUÇÃO, e este componente não a remonta.** Ela já nomeia os
@@ -86,9 +93,13 @@ export function DialogoDeExclusao({
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
       <DialogTrigger asChild>
-        <Button type="button" size="sm" variant="ghost" data-slot="abrir-exclusao">
-          Excluir
-        </Button>
+        {/* Spec 022 (FR-001): o gatilho é o ícone; o texto continua dentro do diálogo (A-1). */}
+        <BotaoDeIcone
+          acao="excluir"
+          rotulo={tipo === "disciplina" ? "Excluir disciplina" : "Excluir"}
+          variante="destrutivo"
+          data-slot="abrir-exclusao"
+        />
       </DialogTrigger>
 
       <DialogContent>

@@ -69,6 +69,9 @@ function revalidar(): void {
   /* Spec 018 (Bloco 3): a grade de disciplinas mora na aba *Disciplinas* da página do curso. */
   revalidatePath("/cursos/[curso]", "page");
   revalidatePath("/cursos");
+  /* Spec 022 (Bloco 7, D-2): a edição do curso e a página própria da disciplina. */
+  revalidatePath("/cursos/[curso]/editar", "page");
+  revalidatePath("/cursos/[curso]/editar/disciplinas/[disciplina]", "page");
   /*
    * ⚠️ **A FICHA DA TURMA ENTROU NA REVALIDAÇÃO EM 04/10/2026, E A FALTA DELA SERIA SILENCIOSA.**
    *    O período e os instrutores passaram a ser editados na seção de disciplinas da ficha
