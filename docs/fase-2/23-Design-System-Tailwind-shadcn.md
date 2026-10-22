@@ -1248,7 +1248,7 @@ reaprender a legenda a cada recarga.
 | **Cor nunca é a única codificação** | traço tracejado, marcador distinto ou rótulo direto; WCAG 1.4.1 e a impressão em P&B |
 | **Rótulo direto em vez de legenda quando couber** | ≤ 4 séries: rótulo na ponta da linha ou dentro da barra; a legenda obriga o olho a ir e voltar |
 | **Máximo de 6 séries** | acima disso vira tabela — use `TabelaDensa` |
-| **Pizza/donut só com ≤ 5 categorias**, sempre com percentual escrito | barra horizontal ordenada é quase sempre melhor |
+| ~~**Pizza/donut só com ≤ 5 categorias**~~, sempre com percentual escrito — ⚠️ **EMENDADO em 22/10/2026** (spec 022, Bloco 7, item 7, decisão de Bernardo Villas Boas): *"TODAS as fatias, sem agrupar em «Outras»"*. A pizza desenha todas as categorias; acima de 5, cada fatia leva o **número** dela e a legenda numerada traz nome, valor e percentual. **O `.docx` deste documento não recebeu esta emenda** — o `.md` prevalece | barra horizontal ordenada é quase sempre melhor |
 | **Eixo Y começa em zero** em barras | eixo truncado exagera diferença — inaceitável em documento institucional |
 | **Sem 3D, gradiente, sombra ou animação de entrada** | não comunicam nada e atrapalham a impressão |
 | **Toda cor vem de `var(--serie-N)`** | `RF-DS-01` e §9.3 valem também para gráfico |

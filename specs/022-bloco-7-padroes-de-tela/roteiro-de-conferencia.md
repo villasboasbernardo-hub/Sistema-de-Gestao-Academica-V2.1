@@ -57,3 +57,45 @@ no banco**, exceto os marcados com ✍️ — e todos os ✍️ podem ser cancel
 26. O DSA de uma turma com lançamentos: aula, atividade e Estudo Individual em **azul claro**; avaliação em **verde**;
     conflito em **amarelo**; feriado e dia parado em **lilás**. O texto de cada cartão continua.
 27. **Imprimir**: o papel sai **igual** ao de antes (sem cor nova).
+
+---
+
+# Itens 7 a 11 (conferência de 22/10/2026)
+
+**Nenhum passo grava no banco**, exceto o ✍️ do item 9 (cancele ou desfaça a mudança).
+
+## Item 7 — pizza com todas as fatias
+
+28. *Cursos* → um curso com mais de 5 disciplinas → aba **Disciplinas**: a pizza de CH tem **uma fatia por
+    disciplina**, sem "Outras"; cada fatia traz um **número**, e a legenda numerada (em duas colunas) diz nome, valor e
+    percentual.
+29. *Instrutores* → **Exibir estatísticas**: a **Escolaridade** agora é pizza (eram barras) — 3 gráficos de barras e
+    6 de pizza.
+
+## Item 8 — o nome da disciplina no gráfico
+
+30. Na mesma pizza do passo 28: a legenda traz o **nome** da disciplina (não o código). Nome de até 19 caracteres sai
+    inteiro; nome mais longo sai como o *Nome no DSA* cadastrado ou, sem ele, abreviado como no cartão do DSA.
+
+## Item 9 — Editar curso em grupos
+
+31. Um curso → **Editar curso**: três grupos, de cima para baixo — **Identidade do curso** (sigla, nome,
+    classificação, modalidade), **Oferta e custo** (limite de turmas por ano, estrangeiros e observação, custo e
+    composição), com um **Salvar** para os dois, e **Currículo e suas partes** (o seletor do currículo e as partes
+    *Dados e PDF*, *Disciplinas e avaliações*, *Horários*, *Atividades e limites*).
+32. Parte **Horários**: os regimes nomeados e, abaixo, a **vigência do regime de horário** do curso (*Registrar nova
+    vigência*) — ela não fica mais solta entre o cadastro e o currículo. ✍️ Registrar grava; não é preciso.
+33. O DSA de uma turma cujo curso não tem vigência na semana: o link *"Abra a edição do curso para registrar uma nova vigência"* leva direto a essa parte.
+
+## Item 10 — estatísticas de Cursos
+
+34. **Cursos**: o botão **Exibir estatísticas** (como em Instrutores). Aberto: os dois números (*Cursos regulares*,
+    *Estágios de qualificação*), a pizza **Cursos por classificação** e as barras **Duração em semanas de cada curso
+    e estágio**, uma por sigla, na ordem das classificações; quem não tem a duração em semanas aparece escrito
+    embaixo. O gráfico de **duração média por classificação não existe mais**.
+
+## Item 11 — aviso de carga só acima da faixa
+
+35. **Sininho** → *Avisos* → *Instrutores*: os avisos de carga dizem **"acima da faixa do regime"**; nenhum diz
+    "abaixo". Um instrutor que só tem carga abaixo da faixa não aparece com aviso de carga (pode ter outros, como o
+    de NIP).

@@ -196,3 +196,69 @@ as mensagens do DSA sobre a semana, *"O papel sai assim"* e as marcas da grade.
   com aviso novo e para ao abrir a página (e2e), parado com *reduzir movimento*.
 - **SC-005**: As telas e o papel do DSA dão o **mesmo número** antes e depois (o retrato das telas do Bloco 6,
   idêntico); só a cor dos cartões muda na tela.
+
+## 8. A conferência de 22/10/2026 — itens 7 a 11, neste PR, antes do merge
+
+*Conferência do PR #84 por Bernardo Villas Boas, 22/10/2026: itens 1–6 **aprovados**; A-1 a A-4 e D-1 a D-21 como
+ficaram; e cinco itens novos, no mesmo PR.*
+
+| # | O pedido | O que existia (medido no ramo, 22/10/2026) |
+|---|---|---|
+| **7** | *"Gráficos de pizza: TODAS as fatias, sem agrupar em «Outras» (desfaz a regra de 5 fatias da Q-11 da spec 016 e o teto do componente — registre a emenda). Legenda legível com muitas fatias."* | `GraficoPizza` **recusava** mais de 5 categorias (documento 23 §7) e a grade de disciplinas agrupava o resto em "Outras (N)" (`agruparEmOutras`, `FR-007.2` da spec 016) |
+| **8** | *"Gráficos de disciplinas: legenda com o NOME da disciplina, não o código; nome longo usa o Nome no DSA (ou a abreviação automática do Bloco 2)."* | A pizza de CH da grade nomeava a fatia pelo **código** (`I`, `II`…) |
+| **9** | *"Editar curso: reorganize os campos em grupos claros (identidade do curso; oferta e custo; currículo e suas partes) — proponha e descreva no roteiro."* | Um grid só (sigla, nome, classificação, modalidade, limite), um quadro *Estrangeiros e custo*, a vigência do regime solta entre o cadastro e o currículo, e o *Currículo* com as partes |
+| **10** | *"Cursos: estatísticas no mesmo componente/estilo das de Instrutores — cursos por classificação e duração em semanas de cada curso/estágio; remova o de duração média por classificação."* | Dois cartões e dois gráficos de barras sempre abertos, um deles a **duração média em dias por classificação** |
+| **11** | *"Instrutores: aviso de carga horária SÓ quando a carga semanal está ACIMA da faixa (abaixo da faixa deixa de avisar). Mudança de regra AUTORIZADA nominalmente por Bernardo (22/10/2026); registre qual RN/FR muda e teste que discrimina (abaixo não avisa, acima avisa) — inclusive no sininho."* | O aviso disparava **fora** da faixa, dos dois lados (`FR-016` da spec 006, T011 d) |
+
+### Autorizações nominais *(o pedido de 22/10/2026)*
+
+- **A-5 · Todas as fatias da pizza** — emenda o **documento 23 §7** (*"Pizza/donut só com ≤ 5 categorias"*) e o
+  **`FR-007.2` da spec 016** (Q-11, *"as 4 maiores e «Outras (N)»"*). Registrada nos dois (`.md`; o `.docx` do
+  documento 23 não a recebeu).
+- **A-6 · Aviso de carga só acima da faixa** — emenda o **`FR-016` da spec 006** e a **T011 (d)** (15/09/2026: *"menos
+  de 8 ou mais de 12 alerta"*). **A regra `RN-2027-06` do documento 04 não muda**: a faixa (8–12 h, 16–24 h, 16–30 h)
+  e os limites inclusivos continuam; muda o lado que vira aviso. Registrada na spec 006.
+
+### Decisões da implementação *(adotadas por padrão — Bernardo confere no fim)*
+
+- D-22 · Q: Como a pizza fica legível com muitas fatias? → A: até 5, a fatia leva *nome — %*; acima, a fatia leva o
+  **número** e a legenda vira lista **numerada**, em duas colunas, com nome, valor e percentual; borda fina na cor da
+  superfície separa fatias vizinhas (a paleta tem 8 cores). Alternativa: sem rótulo na fatia, só a legenda.
+- D-23 · Q: O que é "nome longo" no gráfico? → A: o mesmo **L = 19** do *Nome no DSA* — uma régua só; o nome que cabe
+  vai inteiro, mesmo havendo *Nome no DSA*. Alternativa: um limite maior, só para o gráfico.
+- D-24 · Q: Os grupos de *Editar curso*? → A: **Identidade do curso** (sigla, nome, classificação, modalidade) ·
+  **Oferta e custo** (limite de turmas por ano, ofertável a estrangeiros e observação, custo total e composição) — os
+  dois num formulário só, com um *Salvar* · **Currículo e suas partes** (seletor, novo, arquivar, descartar; *Dados e
+  PDF*, *Disciplinas e avaliações*, *Horários*, *Atividades e limites*). A **vigência do regime de horário** do curso
+  foi para a parte **Horários**, ao lado dos regimes nomeados; o link do DSA *"sem vigência"* leva até ela.
+  Alternativa: a vigência como um quarto grupo.
+- D-25 · Q: A escolaridade dos instrutores? → A: vai para **pizza** — ela ficava em barras só pelo teto de 5 fatias
+  (pendência do `FR-026.2`, 15/09/2026); são 3 de barras e 6 de pizza, como o `FR-026.2` decidiu. Alternativa: barras.
+- D-26 · Q: *Cursos por classificação* em que forma? → A: **pizza**, como a *Classificação* de Instrutores, sem fatia
+  de classificação vazia (0% não tem área). Alternativa: barras com os zeros.
+- D-27 · Q: E o curso sem a duração em semanas? → A: fica **fora** do gráfico e é **nomeado** abaixo dele — não vira
+  barra zero, e a semana não se deriva dos dias. Alternativa: barra zero, ou dias ÷ 7.
+- D-28 · Q: As estatísticas de Cursos nascem abertas? → A: **recolhidas**, como as de Instrutores (`FR-026.5`), pelo
+  mesmo componente, que foi para `components/ciaara/`. Alternativa: abertas.
+- D-29 · Q: A chave do aviso de carga? → A: passa a `instrutores:acima-da-faixa:<código>` (título *"Carga semanal
+  prevista acima da faixa do regime"*); quem tinha o aviso antigo vê o novo como aviso novo uma vez. Alternativa:
+  manter `fora-da-faixa`.
+- D-30 · Q: Barras com muitas categorias (as siglas dos cursos)? → A: acima de 8 categorias, **todo** rótulo do eixo
+  aparece, inclinado. Alternativa: barras horizontais.
+
+### Requisitos dos itens 7 a 11
+
+- **FR-007**: A pizza MUST desenhar **todas** as categorias, sem "Outras"; acima de 5, MUST numerar as fatias e trazer
+  a legenda numerada com nome, valor e percentual (D-22).
+- **FR-008**: A pizza de CH da grade de disciplinas MUST nomear cada fatia pelo **nome** da disciplina, com
+  `nomeNoGrafico` (D-23).
+- **FR-009**: *Editar curso* MUST mostrar os três grupos da D-24, com a vigência do regime na parte *Horários*.
+- **FR-010**: As estatísticas de *Cursos* MUST usar o painel recolhível de Instrutores, com os dois cartões, a pizza de
+  cursos por classificação e as barras da duração em semanas de cada curso (D-26, D-27, D-28); a duração média por
+  classificação MUST sair.
+- **FR-011**: O aviso de carga semanal MUST disparar **só acima** do máximo da faixa, na página Avisos e no resumo do
+  sininho (A-6, D-29).
+
+- **SC-006**: Uma pizza de 12 fatias desenha as 12, numeradas, sem "Outras" (unidade e e2e da vitrine).
+- **SC-007**: O instrutor de 40h com 4 h por semana **não** tem aviso de faixa — nem na página Avisos nem no resumo do
+  sininho — e o de 20h com 14 h tem (unidade e e2e); antes da emenda, os dois tinham.

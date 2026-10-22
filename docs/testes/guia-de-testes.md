@@ -165,8 +165,10 @@ Você vê tudo e muda tudo, inclusive as contas das outras pessoas.
 
 **Cursos**
 
-5. Clique em **Cursos**. Os cursos aparecem agrupados por classificação, com dois quadros de números
-   e dois gráficos.
+5. Clique em **Cursos**. Os cursos aparecem agrupados por classificação. Clique em **Exibir
+   estatísticas**: dois números e dois gráficos — os **cursos por classificação** e a **duração em
+   semanas de cada curso e estágio** (o curso sem a duração em semanas aparece escrito embaixo, e não
+   como barra zero).
 6. O filtro **Situação** começa em **"Em oferta"**. Troque para **"Fora de oferta"** e confirme que a
    lista muda — curso desativado só aparece assim.
 7. Abra um curso. Confira o alto da tela: a sigla, o nome, a modalidade e a linha **"Regime
@@ -176,9 +178,11 @@ Você vê tudo e muda tudo, inclusive as contas das outras pessoas.
 9. Troque entre as abas da página do curso: **Sobre o Curso**, **Turmas**, **Disciplinas**,
    **Avaliações**, **Atividades**, **Horários** e **Currículo**. A aba **Turmas** reúne as turmas do
    curso; **Sobre o Curso** traz só as informações gerais.
-10. Clique em **Editar curso**, mude o **propósito** e salve. Deve aparecer confirmação. Se você
-    mudar a sigla, a classificação ou o limite de turmas, o sistema **pede confirmação antes** — leia
-    a pergunta com atenção.
+10. Clique em **Editar curso**. Os campos estão em três grupos: **Identidade do curso** (sigla,
+    nome, classificação, modalidade), **Oferta e custo** (limite de turmas por ano, estrangeiros e
+    custo) e **Currículo e suas partes**. Mude o **propósito** em *Currículo e suas partes* →
+    **Dados e PDF** e salve. Deve aparecer confirmação. Se você mudar a sigla, a classificação ou o
+    limite de turmas, o sistema **pede confirmação antes** — leia a pergunta com atenção.
 
 **Turmas**
 
@@ -216,8 +220,9 @@ Você vê tudo e muda tudo, inclusive as contas das outras pessoas.
 22. Clique em **Instrutores**. A lista sai **sempre por antiguidade**.
 23. Use alguns dos filtros. O filtro **Situação** começa em **"Ativos"** — instrutor inativo só
     aparece trocando para "Inativos".
-24. Abra a ficha de um instrutor. Os alertas dele (carga fora da faixa, capacitação vencida) estão no
-    **sininho**, com o link para a ficha — e **avisam, não impedem nada**.
+24. Abra a ficha de um instrutor. Os alertas dele (carga **acima** da faixa do regime, capacitação
+    vencida) estão no **sininho**, com o link para a ficha — e **avisam, não impedem nada**. Carga
+    **abaixo** da faixa não avisa.
 25. Clique em **Editar cadastro** no fim da ficha, corrija um dado e salve.
 
 **Meu perfil**
@@ -263,8 +268,8 @@ Siga os passos **1 a 28** da seção do Administrador: todos valem para você, d
 Em especial, você deve conseguir:
 
 1. Criar curso pelo botão **Novo curso**, no catálogo.
-2. **Editar curso**, inclusive registrar uma vigência nova de regime de horário em **Editar curso →
-   Registrar nova vigência**, e os **regimes de horário** do currículo em **Editar curso → Horários**.
+2. **Editar curso**, inclusive os **regimes de horário** do currículo e a vigência nova do regime
+   de horário do curso, os dois em **Editar curso → Horários** (*Registrar nova vigência*).
 3. **Desativar curso** e reativá-lo.
 4. Criar turma pelo botão **Nova turma**, na aba **Turmas** da página do curso. A turma nasce sempre
    dentro de um curso.
@@ -351,8 +356,8 @@ Você trabalha com **turmas** e com os **horários** dos cursos. Cursos e instru
    o regime de horário e o conteúdo do currículo, mas não o cadastro do curso, com a frase **"O seu
    perfil registra o regime e edita o conteúdo do currículo deste curso, mas não edita o cadastro
    dele."** Isso é esperado.
-9. Em **Registrar nova vigência**, registre um regime novo a partir de uma data. O sistema pede
-   confirmação.
+9. Em **Horários** → **Registrar nova vigência**, registre um regime novo a partir de uma data. O
+   sistema pede confirmação.
 
 **Disciplinas**
 

@@ -321,6 +321,22 @@ Registrar um currículo novo (disciplinas, UEs, CH, avaliações, duração) **s
    (`executado`), conflito em amarelo (`atrasado`), feriado e dia parado em lilás (`conformidade`). **O papel não
    mudou**: `app/print/` e `lib/dominio/dsa/` sem diferença contra a `main` de partida.
 
+**Conferência de 22/10/2026** *(Bernardo Villas Boas)*: itens 1–6 **aprovados**, decisões como ficaram, e cinco itens
+acrescentados **no mesmo PR, antes do merge**:
+
+7. **Pizza com todas as fatias**, sem "Outras" — desfaz o teto de 5 do componente e a Q-11 da spec 016 (emendas no
+   documento 23 §7 e no `FR-007.2` da spec 016). Acima de 5, cada fatia leva o número e a legenda numerada diz o resto.
+   A escolaridade dos instrutores, que ficava em barras só pelo teto, passou a pizza (`FR-026.2`).
+8. **Gráficos de disciplinas pelo nome**, não pelo código; nome longo usa o *Nome no DSA* ou a abreviação do Bloco 2
+   (`nomeNoGrafico`).
+9. **Editar curso em três grupos** — *Identidade do curso*, *Oferta e custo*, *Currículo e suas partes* —, com a
+   vigência do regime de horário dentro da parte *Horários*.
+10. **Estatísticas de Cursos** no painel recolhível de Instrutores (agora em `components/ciaara/`): os dois números, a
+    pizza de cursos por classificação e a duração em semanas de cada curso; a duração média por classificação saiu.
+11. **Aviso de carga só ACIMA da faixa** — mudança de regra autorizada nominalmente (emenda ao `FR-016` da spec 006 e à
+    T011 d; a faixa do `RN-2027-06` não muda), com o caso que discrimina (40h com 4 h por semana não avisa, nem no
+    sininho; 20h com 14 h avisa).
+
 **Pendências novas, achadas e não corrigidas:**
 
 - **`PEND-022-1`** — *`inicio.spec.ts` (`FR-017.6`) conta um recorte que outras amostras também povoam.* O caso lê o

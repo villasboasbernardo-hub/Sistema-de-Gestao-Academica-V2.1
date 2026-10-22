@@ -46,3 +46,20 @@
   máquina não comporta; a SC-005 fica provada pela **ausência de diferença** em `app/print/`, `lib/dominio/dsa/`,
   `lib/planilha/`, `dsa/leitura.ts` e `dsa/consulta.ts` contra `45a910c`, e pelos casos do DSA no CI.)*
 - [ ] T019 Plano de correções (Rodada 2 / Bloco 7), roteiro de conferência, PR com o template, CI verde, lote de dúvidas
+
+## Fase 9 — a conferência de 22/10/2026 (itens 7 a 11, no mesmo PR)
+- [X] T020 [US7] `components/graficos/tipos.ts` (`rotuloDaFatia`, sem teto nem `agruparEmOutras`), `grafico-pizza.tsx`
+  com legenda numerada; `tests/unidade/fatias-da-pizza.test.ts`; amostra de 12 fatias na vitrine e
+  `tests/e2e/graficos.spec.ts`; emendas no documento 23 §7 e no `FR-007.2` da spec 016
+- [X] T021 [US7] Escolaridade dos instrutores em pizza (`FR-026.2`, D-25), com teste visto falhar
+- [X] T022 [US8] `nomeNoGrafico` em `lib/dominio/nome-no-dsa.ts` (teste visto falhar) e `ProporcaoDaCarga` com todas as
+  disciplinas pelo nome
+- [X] T023 [US9] `FormularioDeCurso` em grupos (*Identidade do curso*, *Oferta e custo*; no cadastro, *Currículo 1*);
+  *Currículo e suas partes*; a vigência do regime na parte *Horários*; o link do DSA; `vigencia.spec.ts` pela aba
+- [X] T024 [US10] `indicadoresDoCatalogo` com a duração em semanas de cada curso (teste visto falhar);
+  `EstatisticasRecolhiveis` em `components/ciaara/`; `IndicadoresDoCatalogo` no estilo de Instrutores; `cursos.spec.ts`
+- [X] T025 [US11] `semanasAcimaDaFaixa` e `alertaAcimaDaFaixa` (testes vistos falhar); a leitura dos Avisos; o CMG de 4 h
+  por semana na amostra e o caso que discrimina em `instrutores.spec.ts` (Avisos e resumo do sininho); emenda no
+  `FR-016` da spec 006
+- [ ] T026 Guia de testes, roteiro, plano de correções; CI verde; merge por squash; CI na `main`; Production;
+  encerramento por PR de documentação
