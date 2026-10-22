@@ -321,6 +321,18 @@ Registrar um currículo novo (disciplinas, UEs, CH, avaliações, duração) **s
    (`executado`), conflito em amarelo (`atrasado`), feriado e dia parado em lilás (`conformidade`). **O papel não
    mudou**: `app/print/` e `lib/dominio/dsa/` sem diferença contra a `main` de partida.
 
+**Pendências novas, achadas e não corrigidas:**
+
+- **`PEND-022-1`** — *`inicio.spec.ts` (`FR-017.6`) conta um recorte que outras amostras também povoam.* O caso lê o
+  número *Turmas no recorte* de `?classificacao=expedito&modalidade=ead` antes e depois de desativar um curso, e
+  `semearCursos` (usada por 12 arquivos de `tests/e2e`, medido em 22/10/2026) cria turmas expeditas EAD no ano corrente, num processo novo a cada
+  repetição: qualquer semente concorrente entre as duas leituras muda a conta. Medido no CI do PR #84, em que a guarda
+  nova também a usava (consertado ali com amostra própria). Proposta: contar só as turmas da própria amostra. Classe
+  da `PEND-014-7`.
+- **`PEND-022-2`** — *o tempo da página Avisos com o dado real não foi medido.* Ela faz 17 leituras em paralelo
+  (`app/(app)/avisos/leitura.ts`), sobre todas as turmas, instrutores e avaliações que a pessoa alcança, e o sininho
+  pede o resumo no máximo uma vez a cada 2 minutos. Proposta: medir sobre a cópia do remoto antes de otimizar.
+
 ---
 
 ## Fora do plano
