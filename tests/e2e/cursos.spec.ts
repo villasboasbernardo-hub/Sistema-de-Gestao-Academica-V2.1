@@ -78,12 +78,13 @@ test.describe("`SC-001` · os cinco grupos, na ordem do Glossário", () => {
      * sobre o mesmo commit — que é o defeito de verificação que a spec 009 vem eliminando. A
      * promessa do `FR-003` é a ORDEM; quais grupos têm cartão é dado.
      */
+    // Spec 022 (A-4, 22/10/2026): Estágio de Qualificação antes de Aperfeiçoamento Avançado.
     const GLOSSARIO = [
       "regular",
       "expedito",
       "especial",
-      "aperfeicoamento_avancado",
       "estagio_qualificacao",
+      "aperfeicoamento_avancado",
     ];
     const ordem = await grupos(page).evaluateAll((nos) =>
       nos.map((n) => n.getAttribute("data-grupo")),

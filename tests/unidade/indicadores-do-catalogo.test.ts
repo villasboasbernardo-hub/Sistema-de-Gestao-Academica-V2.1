@@ -110,12 +110,13 @@ describe("`FR-002` · cursos por classificação", () => {
       { classificacao: "regular", rotulo: "Curso Regular", total: 3 },
       { classificacao: "expedito", rotulo: "Curso Expedito", total: 2 },
       { classificacao: "especial", rotulo: "Curso Especial", total: 1 },
+      // Spec 022 (A-4): Estágio de Qualificação antes de Aperfeiçoamento Avançado.
+      { classificacao: "estagio_qualificacao", rotulo: "Estágio de Qualificação", total: 2 },
       {
         classificacao: "aperfeicoamento_avancado",
         rotulo: "Curso de Aperfeiçoamento Avançado",
         total: 1,
       },
-      { classificacao: "estagio_qualificacao", rotulo: "Estágio de Qualificação", total: 2 },
     ]);
   });
 

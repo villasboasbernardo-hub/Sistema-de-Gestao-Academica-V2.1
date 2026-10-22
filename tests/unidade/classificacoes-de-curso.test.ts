@@ -25,13 +25,14 @@ import { Constants } from "@/lib/tipos/database";
 const DO_BANCO: readonly string[] = Constants.public.Enums.escopo_curso;
 
 describe("`FR-003` · são cinco, e nesta ordem", () => {
-  it("a ordem é a do Glossário, e não a do `ENUM`", () => {
+  // ⚠️ Spec 022 (A-4, Bernardo Villas Boas, 22/10/2026): Estágio de Qualificação antes de Aperfeiçoamento Avançado.
+  it("a ordem é a da spec 022 (A-4), e não a do `ENUM`", () => {
     expect(CLASSIFICACOES_DE_CURSO).toEqual([
       "regular",
       "expedito",
       "especial",
-      "aperfeicoamento_avancado",
       "estagio_qualificacao",
+      "aperfeicoamento_avancado",
     ]);
   });
 
