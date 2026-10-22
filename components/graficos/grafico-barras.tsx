@@ -44,6 +44,9 @@ import {
 import { MolduraDeGrafico } from "@/components/graficos/moldura";
 import { corDaSerie, SIMBOLO_DA_FORMA, type Serie } from "@/components/graficos/tipos";
 
+/** Até quantas categorias o rótulo do eixo vai reto; acima, todos aparecem inclinados. */
+const ROTULOS_RETOS_ATE = 8;
+
 export type GraficoBarrasProps = {
   readonly series: readonly Serie[];
   readonly rotulo: string;
@@ -82,6 +85,11 @@ export function GraficoBarras({
 }: GraficoBarrasProps) {
   const linhas = paraLinhas(series);
   const porCategoria = corPorCategoria && series.length === 1;
+  /*
+   * ⚠️ MUITAS CATEGORIAS: TODO RÓTULO DO EIXO APARECE, INCLINADO (spec 022, item 10 — a duração de cada curso). Sem
+   *    isto a biblioteca pula rótulos quando eles não cabem, e a barra fica sem nome.
+   */
+  const muitas = linhas.length > ROTULOS_RETOS_ATE;
 
   return (
     <MolduraDeGrafico
@@ -98,6 +106,9 @@ export function GraficoBarras({
               dataKey="nome"
               tick={{ fill: "var(--texto-suave)", fontSize: 11 }}
               stroke="var(--borda-forte)"
+              {...(muitas
+                ? { interval: 0, angle: -40, textAnchor: "end" as const, height: 76 }
+                : {})}
             />
             {/* ⚠️ `domain` começando em zero, fixo — ver o cabeçalho. */}
             <YAxis

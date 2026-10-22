@@ -2,9 +2,8 @@
  * `FR-026.2`, `FR-026.3` e `FR-026.4` da spec 006, com a segunda emenda de 15/09/2026 — os nove gráficos.
  *
  * ⚠️ O TETO DE SÉRIES É O DO DESIGN SYSTEM. `components/graficos/` recusa gráfico com mais de
- * `MAXIMO_DE_SERIES` (6) **séries**, e pizza com mais de `MAXIMO_DE_CATEGORIAS_NA_PIZZA` (5)
- * **categorias**. O gráfico de OM tem oito barras e uma série; as pizzas da amostra real ficam em até
- * quatro fatias.
+ * `MAXIMO_DE_SERIES` (6) **séries**. A pizza não tem mais teto de categorias desde a spec 022 (Bloco 7, item 7).
+ * O gráfico de OM tem oito barras e uma série.
  */
 import { describe, expect, it } from "vitest";
 
@@ -66,7 +65,11 @@ describe("`FR-026.2` emendado · exatamente nove gráficos, três de barras e se
     ]);
   });
 
-  it("barras: status de seleção, posto e OM — e escolaridade, enquanto a pendência não fecha", () => {
+  /*
+   * ⚠️ A ESCOLARIDADE FICAVA EM BARRAS SÓ PELO TETO DE 5 FATIAS DA PIZZA (pendência do `FR-026.2`, 15/09/2026). O teto
+   *    saiu na spec 022 (Bloco 7, item 7), e ela vai para a pizza que o `FR-026.2` decidiu: três de barras, seis de pizza.
+   */
+  it("barras: status de seleção, posto e OM; pizza: as seis do `FR-026.2`, escolaridade inclusive", () => {
     const formas = Object.fromEntries(
       graficosDeInstrutores([], ESCALA, SELECAO).map((g) => [g.chave, g.forma]),
     );
@@ -75,7 +78,7 @@ describe("`FR-026.2` emendado · exatamente nove gráficos, três de barras e se
       classificacao: "pizza",
       "posto-graduacao": "barras",
       om: "barras",
-      escolaridade: "barras",
+      escolaridade: "pizza",
       regime: "pizza",
       capacitacao: "pizza",
       circulo: "pizza",

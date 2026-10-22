@@ -15,6 +15,7 @@
 import {
   AmostraAlertaEteto,
   AmostraAvisosRecolhiveis,
+  AmostraEstatisticasRecolhiveis,
   AmostraBarraDeAcoes,
   AmostraBotoesDeIcone,
   AmostraDialogoDeFormulario,
@@ -364,6 +365,10 @@ export default function Vitrine() {
 
       <Secao titulo="Quadro de avisos recolhível — as contagens ficam à vista; só a lista se recolhe">
         <AmostraAvisosRecolhiveis />
+      </Secao>
+
+      <Secao titulo="Estatísticas recolhíveis — nascem recolhidas; abrir não mexe na URL">
+        <AmostraEstatisticasRecolhiveis />
       </Secao>
 
       <Secao titulo="Limpar filtros — padrão de toda tela que filtra; some quando não há o que limpar">

@@ -1,5 +1,5 @@
 /**
- * A proporção da CH prevista entre as disciplinas da vista (`FR-054`; spec 016, FR-007.2).
+ * A proporção da CH prevista entre as disciplinas da vista (`FR-054`; spec 016, FR-007.2; spec 022, itens 7 e 8).
  *
  * ⚠️ **ELE LÊ AS MESMAS LINHAS DA TABELA, e por isso muda junto com o filtro** (`SC-011`). Uma
  * consulta própria mostraria a proporção do curso inteiro ao lado de uma tabela filtrada, e a
@@ -9,14 +9,13 @@
  * fronteira; um segundo marcador não mudaria o que vai para o navegador e encheria a lista fechada
  * de folhas com um arquivo que não é fronteira de nada.
  *
- * ⚠️ **PIZZA COM AS 4 MAIORES E "OUTRAS (N)" desde 17/10/2026** (spec 016, FR-007.2; Q-11, Bernardo
- * Villas Boas). Até ali era um gráfico de barras com as 6 maiores e "+N outras". O teto de 5 fatias é
- * do componente (`MAXIMO_DE_CATEGORIAS_NA_PIZZA`), e quem agrupa é `agruparEmOutras`, que preserva a
- * soma. ⚠️ **A LISTA EM TEXTO TRAZ TODAS**: a legenda da pizza nomeia as quatro maiores e "Outras", e a
- * linha abaixo dela nomeia cada disciplina que entrou em "Outras", com o seu valor.
+ * ⚠️ **TODAS AS DISCIPLINAS, PELO NOME, desde 22/10/2026** (spec 022, Bloco 7 — Bernardo Villas Boas):
+ *    *"TODAS as fatias, sem agrupar em «Outras»"* (item 7) e *"legenda com o NOME da disciplina, não o código; nome
+ *    longo usa o Nome no DSA (ou a abreviação automática do Bloco 2)"* (item 8). De 17/10 a 22/10/2026 era uma pizza
+ *    com as 4 maiores e "Outras (N)", com o código na legenda (`FR-007.2` da spec 016, Q-11 — emendado).
  */
 import { GraficoPizza } from "@/components/graficos/grafico-pizza";
-import { agruparEmOutras } from "@/components/graficos/tipos";
+import { nomeNoGrafico } from "@/lib/dominio/nome-no-dsa";
 
 import type { LinhaDaGradeDeDisciplinas } from "../consulta";
 
@@ -29,10 +28,6 @@ export function ProporcaoDaCarga({
   //    defeito de carregamento.
   if (linhas.length === 0) return null;
 
-  const { pontos, agrupados } = agruparEmOutras(
-    linhas.map((l) => ({ nome: l.codDisciplina, valor: l.cargaHorariaTempos })),
-  );
-
   return (
     <div data-slot="proporcao-da-carga" className="flex flex-col gap-1">
       <GraficoPizza
@@ -40,22 +35,14 @@ export function ProporcaoDaCarga({
           chave: "ch_prevista",
           rotulo: "Carga horária prevista (tempos)",
           forma: "circulo",
-          pontos,
+          pontos: linhas.map((l) => ({
+            nome: nomeNoGrafico({ nome: l.nomeDisciplina, nomeNoDsa: l.nomeNoDsa }),
+            valor: l.cargaHorariaTempos,
+          })),
         }}
         rotulo="Proporção da carga horária prevista entre as disciplinas desta vista"
-        altura={220}
+        altura={260}
       />
-      {agrupados.length > 0 ? (
-        <p className="text-texto-suave text-xs" data-slot="disciplinas-em-outras">
-          Em Outras:{" "}
-          {agrupados.map((p, i) => (
-            <span key={p.nome}>
-              {i > 0 ? " · " : ""}
-              {p.nome}: <span className="tabular-nums">{p.valor}</span>
-            </span>
-          ))}
-        </p>
-      ) : null}
     </div>
   );
 }

@@ -21,8 +21,9 @@
  * (`FR-026.4` emendado em 15/09/2026). A soma das fatias não fecha com o total, e isso é correto; quem
  * fecha com o total é o índice de capacitação geral, com as duas fatias da spec 021 da v2.0.
  *
- * ⚠️ A ESCOLARIDADE CONTINUA EM BARRAS, e é pendência, não escolha: seis categorias no dado real contra
- * o limite de cinco da pizza no documento 23 §7 (`FR-026.2`, pendência de 15/09/2026).
+ * ⚠️ A ESCOLARIDADE É PIZZA DESDE 22/10/2026: ela ficava em barras só pelo limite de cinco fatias da pizza
+ * (`FR-026.2`, pendência de 15/09/2026), e o limite saiu na spec 022 (Bloco 7, item 7). São três de barras e seis
+ * de pizza, como o `FR-026.2` decidiu.
  *
  * ⚠️ ESTA FUNÇÃO NÃO SABE DESENHAR. Ela devolve forma, categorias e contagens; cor, marcador e rótulo de
  * exibição são de quem desenha (`components/graficos/`). Por isso não importa componente.
@@ -209,7 +210,7 @@ export function graficosDeInstrutores(
     {
       chave: "escolaridade",
       titulo: "Escolaridade",
-      forma: "barras",
+      forma: "pizza",
       barras: contarPorValor(instrutores.map((i) => i.escolaridade)),
     },
     {

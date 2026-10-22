@@ -29,6 +29,7 @@ import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { CardKpi } from "@/components/ciaara/card-kpi";
 import { Carrossel } from "@/components/ciaara/carrossel";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
+import { EstatisticasRecolhiveis } from "@/components/ciaara/estatisticas-recolhiveis";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { EsqueletoTabela } from "@/components/ciaara/esqueleto-tabela";
@@ -223,6 +224,21 @@ export function AmostraEstadoVazio() {
       <EstadoVazio motivo="sem-dado" />
       <EstadoVazio motivo="sem-permissao" acao={<Button size="sm">Solicitar acesso</Button>} />
     </div>
+  );
+}
+
+/**
+ * As estatísticas recolhíveis — o painel de Instrutores e de Cursos (spec 022, item 10): nascem recolhidas, e abrir
+ * não mexe na URL.
+ */
+export function AmostraEstatisticasRecolhiveis() {
+  return (
+    <EstatisticasRecolhiveis id="estatisticas-da-vitrine">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <CardKpi rotulo="Cursos regulares" valor={5} />
+        <CardKpi rotulo="Estágios de qualificação" valor={8} />
+      </div>
+    </EstatisticasRecolhiveis>
   );
 }
 
@@ -839,6 +855,30 @@ const SERIE_DE_PIZZA: Serie = {
   ],
 };
 
+/**
+ * Spec 022 (Bloco 7), item 7 — TODAS as fatias: doze disciplinas, nenhuma em "Outras". Acima de cinco, a fatia leva o
+ * número dela, e a legenda numerada diz o resto.
+ */
+const SERIE_DE_PIZZA_COM_MUITAS_FATIAS: Serie = {
+  chave: "ch_prevista",
+  rotulo: "Carga horária prevista (tempos)",
+  forma: "circulo",
+  pontos: [
+    "Navegação",
+    "Meteorologia",
+    "Oceanografia",
+    "Hidrografia",
+    "Cartografia",
+    "Sinalização Náutica",
+    "Inglês Técnico",
+    "Treinamento Físico Militar",
+    "Legislação",
+    "Segurança do Trabalho",
+    "Informática",
+    "Estágio a Bordo",
+  ].map((nome, i) => ({ nome, valor: 60 - i * 4 })),
+};
+
 const SERIES_TEMPORAIS: readonly Serie[] = [
   {
     chave: "previsto",
@@ -877,6 +917,11 @@ export function AmostraGraficos() {
     <div className="flex flex-col gap-6">
       <GraficoBarras series={SERIES_DA_AMOSTRA} rotulo="Habilitados × selecionados, por curso" />
       <GraficoPizza serie={SERIE_DE_PIZZA} rotulo="Regime de trabalho" />
+      <GraficoPizza
+        serie={SERIE_DE_PIZZA_COM_MUITAS_FATIAS}
+        rotulo="Doze disciplinas — todas as fatias, numeradas"
+        altura={300}
+      />
       <GraficoLinha series={SERIES_TEMPORAIS} rotulo="Carga horária por semana" />
       <GraficoBarras series={SERIES_DEMAIS} rotulo="Sete séries" />
       <GraficoBarras series={[]} rotulo="Gráfico sem dado" />

@@ -63,10 +63,35 @@ test.describe("US4 · forma e rótulo, não cor", () => {
   });
 
   test("o percentual da pizza é ESCRITO, não só desenhado", async ({ page }) => {
-    const pizza = page.locator('[data-slot="grafico-pizza"]');
+    const pizza = page
+      .locator('[data-slot="grafico-pizza"]')
+      .filter({ hasText: "Regime de trabalho" });
     await expect(pizza).toContainText("%");
     await expect(pizza).toContainText("20h");
     await expect(pizza).toContainText("Dedicação Exclusiva");
+  });
+
+  /*
+   * Spec 022 (Bloco 7), item 7 — *"TODAS as fatias, sem agrupar em «Outras» (…). Legenda legível com muitas fatias."*
+   * Até 22/10/2026 a pizza RECUSAVA mais de cinco categorias.
+   */
+  test("item 7 · a pizza de doze fatias desenha as doze, numeradas, sem «Outras»", async ({
+    page,
+  }) => {
+    const pizza = page
+      .locator('[data-slot="grafico-pizza"]')
+      .filter({ hasText: "Doze disciplinas" });
+    await expect(pizza).toHaveAttribute("data-fatias", "12");
+    await expect(pizza).toHaveAttribute("data-numeradas", "sim");
+    await expect(pizza.locator(".recharts-pie-sector")).toHaveCount(12);
+    const legenda = pizza.locator('[data-slot="legenda-da-pizza"] li');
+    await expect(legenda).toHaveCount(12);
+    await expect(legenda.first()).toContainText("1.");
+    await expect(legenda.first()).toContainText("Navegação");
+    await expect(legenda.last()).toContainText("12.");
+    await expect(legenda.last()).toContainText("Estágio a Bordo");
+    await expect(pizza).not.toContainText("Outras");
+    await expect(pizza.locator('[data-slot="grafico-recusado"]')).toHaveCount(0);
   });
 
   test("sete séries são RECUSADAS, e a recusa aponta a tabela densa", async ({ page }) => {

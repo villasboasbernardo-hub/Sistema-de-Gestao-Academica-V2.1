@@ -113,6 +113,23 @@ export function nomeNoCartao(disciplina: {
   return cadastrado !== "" ? cadastrado : abreviarNomeNoDsa(disciplina.nome);
 }
 
+/**
+ * O nome da disciplina num GRÁFICO — spec 022 (Bloco 7), item 8.
+ *
+ * > *"Gráficos de disciplinas: legenda com o NOME da disciplina, não o código; nome longo usa o Nome no DSA (ou a
+ * > abreviação automática do Bloco 2)."* — Bernardo Villas Boas, 22/10/2026
+ *
+ * ⚠️ **"LONGO" É O MESMO L DO CARTÃO** (`LIMITE_DO_NOME_NO_DSA`): uma régua só para "o nome cabe" no sistema. O nome que
+ *    cabe vai **inteiro**, mesmo havendo *Nome no DSA* — este existe para o que não cabe, e o gráfico não é o cartão.
+ */
+export function nomeNoGrafico(disciplina: {
+  readonly nomeNoDsa: string | null | undefined;
+  readonly nome: string;
+}): string {
+  if ([...disciplina.nome.trim()].length <= LIMITE_DO_NOME_NO_DSA) return disciplina.nome.trim();
+  return nomeNoCartao(disciplina);
+}
+
 /** A frase de recusa do cadastro acima de L — com o limite dito (FR-007.1). */
 export function recusaDoNomeNoDsa(limite: number = LIMITE_DO_NOME_NO_DSA): string {
   return `O nome no DSA tem no máximo ${limite} caracteres — é o que cabe numa linha do cartão de 1 TA.`;
