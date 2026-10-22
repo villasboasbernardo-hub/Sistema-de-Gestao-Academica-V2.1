@@ -250,10 +250,22 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
   e reprovam **igual** numa cópia de trabalho da `main` `fa372c2` com a mesma planilha. As asserções medem os efeitos das
   migrations de dado D-5 e D-6 da spec 014, que a ETAPA 6b do ETL **não** reaplica (a lista declarada tem D-1, D-2 e D-3),
   e a contagem de Admins (a base do ETL tem mais de um). Na base limpa, que é a do CI, as três passam. Não é do Bloco 6.
+- **PEND-021-2** — **amostras de ponta a ponta "em uso" por causa de OUTRA amostra** _(spec 021, 21/10/2026)_: a RC-6
+  conta como lançamento a atividade **global** na janela da turma (I-1 do Bloco 3), e `cursos-de-teste` cria uma em
+  **10/05/2026**, dentro da janela da amostra da grade (02/03 a 30/06/2026). O currículo da amostra fica em uso ou não
+  conforme a ordem dos arquivos — o CI de `fcbc48b` reprovou *Nova disciplina* porque o pedido de justificativa **não**
+  veio. Contornado com `justificarSePedir` nos passos que mudam o conteúdo; a raiz é tirar a global das janelas das
+  outras amostras sem quebrar `turmas.spec.ts` e a vigência, que dependem de 10/05/2026.
+- **PEND-021-3** — **`disciplinas.spec.ts:163` instável sob carga no CI** _(21/10/2026)_: depois do `goto` com
+  `?aberta=` a linha ficou fechada uma vez e passou na repetição; isolado, 3 de 3. Proposta: esperar o `aberta` na URL
+  antes do `goto` (a atualização da URL é assíncrona). Classe da `PEND-014-7`.
 - **PEND-014-7** — testes de ponta a ponta instáveis sob carga (`salas.spec.ts:126`, `dsa-tipo-e-global.spec.ts:160`, `avaliacoes-nas-telas.spec.ts:53`, `admin-sobre-contas`).
-- **OneDrive** — a pasta do repositório deve ficar "Sempre manter neste dispositivo": arquivos sob demanda já quebraram o build (`.next`, `EPERM`) e o `git switch` (`specs`).
+- **OneDrive** — a pasta do repositório deve ficar "Sempre manter neste dispositivo": arquivos sob demanda já quebraram o build (`.next`, `EPERM`) e o `git switch` (`specs`). Em 21/10/2026 ele **repôs um arquivo apagado no commit** (com a data antiga) e um pedaço da `.next` sumiu com o servidor de pé — o login deixou de hidratar, sem mensagem.
 
-## Bloco 6 — Currículo versionado (épico próprio, por último) — 🟨 EM CURSO
+## Bloco 6 — Currículo versionado (épico próprio, por último) — ✅ CONCLUÍDO em 21/10/2026
+
+> ✅ **SPEC 021 ENCERRADA em 21/10/2026.** Os dois PRs na `main` por squash: o **PR 1** (#81, `ae4e595`) e o **PR 2** (#82, `07c3bc7`), este com os **quatro ajustes da conferência de Bernardo Villas Boas** no mesmo PR — a página do curso **só leitura** no currículo vigente, a aba **Currículo** (lista e consulta só leitura), **Novo currículo** e a edição de **todo** o currículo dentro de **Editar curso** (dados e PDF, disciplinas e avaliações, horários, atividades e limites) e os **horários do currículo** (emenda à RC-1). **Cinco migrations no remoto antes do merge**, pelo rito: M1 e M2 (PR 1, backup `remoto-20261021-090802.sql`), M3 (`remoto-20261021-113521.sql`) e, autorizadas na conferência, **M4 e M5** (`remoto-20261021-195622.sql`, remedição sobre ele idêntica, dry-run só com as duas, `db push` 0): **92 e 92** migrations e o esquema **`89a3f08e…`, 2.390 objetos, igual nos dois bancos**. A prova (`specs/021-…/antes-depois.md`, rodada 6, sobre `remoto-20261021-180100.sql`): antes da M4, 24 cursos com 24 currículos e 0 turmas em currículo de outro curso; com a M4 e a M5 sob o código da `main`, a impressão do currículo, as telas das 29 turmas e as **229 páginas idênticas**; sob o código do ramo, nenhum número mudou. Reversão provada com dado (volta a `5d794f43…`). **CI verde na `main` sobre `07c3bc7`** (run `39703612539`: 1.022 pgTAP em 66 arquivos · 545 de ponta a ponta + 1 instável da `PEND-014-7` + 7 pulados) e **Production servindo o merge** (deploy de `07c3bc7` em `success`); os ramos foram apagados, local e remoto. A `PEND-020-3` foi fechada (custo **é** controle da CIAARA-11). Pendências novas: `PEND-021-2` e `PEND-021-3`.
+
 
 > 🟨 **Portão respondido em 21/10/2026**: Bernardo Villas Boas definiu as **regras de negócio do currículo, RC-1 a RC-12**
 > (`docs/correcoes/regras-do-curriculo-bloco-6.md`), que substituem a trava estrita (D-4/D-6) pela correção do trio com
