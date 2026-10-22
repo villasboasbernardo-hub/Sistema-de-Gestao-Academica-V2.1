@@ -132,10 +132,19 @@ test.describe("`RF-INI-01` · o panorama mostra previsto, executado e o que est�
       .toHaveCount(0);
   });
 
-  test("`RF-INI-04` · a região de alertas existe mesmo sem nada a alertar", async ({ page }) => {
-    // Região que some quando está tudo bem ensina a não procurá-la.
+  /*
+   * ⚠️ SPEC 022 (Bloco 7, A-2): a região de alertas do Início saiu para o SININHO do cabeçalho, que está em TODA tela
+   *    — e continua lá mesmo sem nada a alertar (o número diz *nenhum*). A frase de 2026 vale igual: região que some
+   *    quando está tudo bem ensina a não procurá-la.
+   */
+  test("`RF-INI-04` → spec 022 · o sininho de avisos está no Início mesmo sem nada a alertar", async ({
+    page,
+  }) => {
     await entrar(page, EMAIL_GERAL, "/inicio?classificacao=expedito");
-    await expect(page.locator('[data-slot="alerta-conformidade"]')).toBeVisible();
+    await expect(page.locator('[data-slot="alerta-conformidade"]')).toHaveCount(0);
+    const sininho = page.locator('[data-slot="sininho-de-avisos"]');
+    await expect(sininho).toBeVisible();
+    await expect(sininho).toHaveAttribute("aria-label", /^Avisos: /);
   });
 });
 

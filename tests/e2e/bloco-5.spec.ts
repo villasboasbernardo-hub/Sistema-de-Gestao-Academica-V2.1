@@ -290,7 +290,10 @@ test.describe("spec 020 · os cadastros novos", () => {
     const primeiro = await objetosDoCurriculo();
     expect(primeiro).toHaveLength(1);
     expect((await cursoNoBanco()).curriculo_pdf_em).not.toBeNull();
-    await expect(envio.locator('[data-slot="carregar-curriculo"]')).toHaveText("Substituir PDF");
+    // Spec 022 (Bloco 7): o botão é ícone — o verbo está no nome acessível (e na dica).
+    await expect(envio.locator('[data-slot="carregar-curriculo"]')).toHaveAccessibleName(
+      "Substituir PDF",
+    );
 
     /* Baixar pela aba Sobre o Curso. */
     await cursoPeloMenu(page);

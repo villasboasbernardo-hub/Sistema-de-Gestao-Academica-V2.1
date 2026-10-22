@@ -537,12 +537,18 @@ test.describe("`FR-027` → spec 022 · os avisos de cadastro estão em Avisos, 
     await expect(page.locator('[data-slot="quadro-de-avisos"]')).toHaveCount(0);
 
     await abrirAvisosPeloSininho(page);
-    const codigos = Object.values(amostra.codigos);
+    /*
+     * ⚠️ O RECORTE É O DE ANTES: o quadro olhava a listagem, que abre em *Ativos* — e a ficha do inativo não mostra
+     *    alerta (CHK019). O instrutor INATIVO da amostra é o caso que discrimina: ele não tem NIP e NÃO entra.
+     */
+    const { inativo, ...ativos } = amostra.codigos;
+    const codigos = Object.values(ativos);
     for (const codigo of codigos) {
       await expect(avisoDaChave(page, `instrutores:sem-nip:${codigo}`)).toHaveCount(1);
       // A amostra tem todos os obrigatórios preenchidos: esse aviso não aparece.
       await expect(avisoDaChave(page, `instrutores:obrigatorio-pendente:${codigo}`)).toHaveCount(0);
     }
+    await expect(avisoDaChave(page, `instrutores:sem-nip:${inativo}`)).toHaveCount(0);
     const primeiro = codigos[0] as string;
     await avisoDaChave(page, `instrutores:sem-nip:${primeiro}`).getByRole("link").click();
     await expect.poll(() => new URL(page.url()).pathname).toBe(`/instrutores/${primeiro}`);

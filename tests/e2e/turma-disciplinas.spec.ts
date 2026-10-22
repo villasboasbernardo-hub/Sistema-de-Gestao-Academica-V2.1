@@ -169,13 +169,19 @@ test.describe("conferência do PR #67 · a linha aberta da seção FECHA e reabr
  *    instrutor do detalhe a seta tirava o foco do painel. A grade passou a tratar só as teclas que vêm
  *    de uma célula DELA.
  */
-test.describe("`PEND-016-3` · as teclas num campo do detalhe da ficha são do campo", () => {
+/*
+ * ⚠️ SPEC 022 (Bloco 7, FR-002): o período e os instrutores saíram do detalhe da linha para DIÁLOGOS abertos pelo
+ *    lápis do detalhe — os casos continuam medindo que as teclas são do CAMPO, e que o detalhe de fundo segue aberto.
+ */
+test.describe("`PEND-016-3` · as teclas num campo do formulário da ficha são do campo", () => {
   test("no campo de data a seta muda o valor, e a linha continua aberta", async ({ page }) => {
     await irASecaoDaTurma(page, CODIGO_DA_TURMA_UM);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
     const linha = linhaExpansivel(page.locator(SECAO), DISCIPLINA_COM_UE.nome);
+    await page.locator(DETALHE).locator('[data-slot="editar-periodo"]').click();
+    const dialogo = page.locator('[data-slot="dialogo-do-periodo"]');
 
-    const campo = page.locator(DETALHE).locator('input[name="previsao_inicio"]');
+    const campo = dialogo.locator('input[name="previsao_inicio"]');
     await campo.fill("2026-03-10");
     await campo.focus();
     await page.keyboard.press("ArrowUp");
@@ -185,8 +191,11 @@ test.describe("`PEND-016-3` · as teclas num campo do detalhe da ficha são do c
       await page.keyboard.press(tecla);
       await expect(campo, `${tecla} tirou o foco do campo de data`).toBeFocused();
     }
+    await expect(dialogo, "uma tecla de navegação fechou o diálogo").toBeVisible();
+    // Nada foi gravado: o período só muda no banco por «Gravar período». Fechar o diálogo descarta.
+    await page.keyboard.press("Escape");
+    await expect(dialogo).toHaveCount(0);
     await expect(linha).toHaveAttribute("aria-expanded", "true");
-    // Nada foi gravado: o período só muda no banco por «Gravar período».
   });
 
   test("no seletor de instrutor aberto no detalhe, a seta anda na lista e o painel fica aberto", async ({
@@ -194,7 +203,9 @@ test.describe("`PEND-016-3` · as teclas num campo do detalhe da ficha são do c
   }) => {
     await irASecaoDaTurma(page, CODIGO_DA_TURMA_UM);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
-    await page.locator(DETALHE).locator('[data-slot="seletor-instrutor"]').first().click();
+    await page.locator(DETALHE).locator('[data-slot="editar-instrutores"]').click();
+    const dialogo = page.locator(DIALOGO_DOS_INSTRUTORES);
+    await dialogo.locator('[data-slot="seletor-instrutor"]').first().click();
     const painel = page.locator('[data-slot="popover-content"]');
     const opcoes = painel.getByRole("option");
     await expect(opcoes.first()).toBeVisible();
@@ -204,10 +215,7 @@ test.describe("`PEND-016-3` · as teclas num campo do detalhe da ficha são do c
     await page.keyboard.press("ArrowDown");
     await expect(painel, "a seta fechou o seletor").toBeVisible();
     await expect(opcoes.nth(1), "a seta não andou na lista do seletor").toBeFocused();
-    await expect(linhaExpansivel(page.locator(SECAO), DISCIPLINA_COM_UE.nome)).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
+    await expect(dialogo, "a seta fechou o diálogo dos instrutores").toBeVisible();
     await page.keyboard.press("Escape");
   });
 });
