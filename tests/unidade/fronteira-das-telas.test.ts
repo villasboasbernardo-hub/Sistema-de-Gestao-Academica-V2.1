@@ -32,10 +32,13 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
    * Spec 022 (Bloco 7, D-2): a página própria da disciplina (servidor) importa os painéis direto — até ali eles eram
    * folha só por estarem abaixo de `GradeDeDisciplinas`, e o `next build` acusou o `useRouter` num módulo de servidor.
    */
-  "app/(app)/disciplinas/paineis/FormularioDeDisciplina.tsx": "o cadastro da disciplina, na página própria",
-  "app/(app)/disciplinas/paineis/DialogoDeExclusao.tsx": "a exclusão com o código digitado, em diálogo",
+  "app/(app)/disciplinas/paineis/FormularioDeDisciplina.tsx":
+    "o cadastro da disciplina, na página própria",
+  "app/(app)/disciplinas/paineis/DialogoDeExclusao.tsx":
+    "a exclusão com o código digitado, em diálogo",
   "app/(app)/disciplinas/paineis/PainelDeUnidades.tsx": "as UEs, com edição em diálogo",
-  "app/(app)/disciplinas/paineis/PainelDeAvaliacoesDoCurriculo.tsx": "as avaliações do currículo, em diálogo",
+  "app/(app)/disciplinas/paineis/PainelDeAvaliacoesDoCurriculo.tsx":
+    "as avaliações do currículo, em diálogo",
   "app/(app)/disciplinas/paineis/SituacaoDaDisciplina.tsx": "desativar e reativar a disciplina",
   // Spec 022 (Bloco 7, D-10): abrir a página Avisos marca as chaves como vistas, no navegador.
   "app/(app)/avisos/MarcarComoVistos.tsx": "o visto dos avisos, guardado no navegador",
