@@ -80,6 +80,15 @@ export function enderecoDoCurriculoNoCurso(sigla: string, versao: number): strin
 }
 
 /**
+ * Uma aba da página do curso (spec 022, Bloco 7: o aviso de turmas acima do limite leva à aba *Turmas*).
+ *
+ * @example enderecoDaAbaDoCurso("CAHO", "turmas") → "/cursos/CAHO?aba=turmas"
+ */
+export function enderecoDaAbaDoCurso(sigla: string, aba: string): string {
+  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}?aba=${encodeURIComponent(aba)}`;
+}
+
+/**
  * *Editar curso*, com o currículo escolhido e a parte em edição quando ditos (spec 021; ajuste 3 da conferência do PR
  * #82: o currículo se cria e se edita por inteiro dentro de *Editar curso*).
  *

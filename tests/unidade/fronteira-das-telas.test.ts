@@ -28,6 +28,8 @@ const RAIZ = process.cwd();
  * escolher, abrir diálogo, chamar a Server Action e tratar a recusa — não existe no servidor.
  */
 const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
+  // Spec 022 (Bloco 7, D-10): abrir a página Avisos marca as chaves como vistas, no navegador.
+  "app/(app)/avisos/MarcarComoVistos.tsx": "o visto dos avisos, guardado no navegador",
   // ── Épico 3: autenticação ──────────────────────────────────────────────────────────────────
   "app/(auth)/login/FormularioDeLogin.tsx": "entrar: campo, envio e a recusa de credencial",
   /*

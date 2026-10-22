@@ -28,11 +28,6 @@ import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { escalaDeLinhas } from "@/lib/dominio/antiguidade";
-import {
-  AVISOS_INICIAIS,
-  avisosDoCadastro,
-  type RegraDeAviso,
-} from "@/lib/dominio/avisos-cadastro-instrutor";
 import { capacitacaoDoCadastro } from "@/lib/dominio/capacitacao-didatica";
 import { graficosDeInstrutores } from "@/lib/dominio/graficos-instrutor";
 import { indicadoresDeInstrutores } from "@/lib/dominio/indicadores-instrutor";
@@ -49,7 +44,6 @@ import {
 import { FiltrosDeInstrutores } from "./FiltrosDeInstrutores";
 import { opcoesDosFiltros } from "./opcoes";
 import { PainelDeInstrutores } from "./PainelDeInstrutores";
-import { QuadroDeAvisos, type InstrutorDoAviso } from "./QuadroDeAvisos";
 import { TabelaDeInstrutores, type LinhaDeInstrutor } from "./TabelaDeInstrutores";
 
 export default async function Instrutores({
@@ -185,22 +179,6 @@ export default async function Instrutores({
     escala,
     indicadores.taxaDeSelecao,
   );
-  const avisos = avisosDoCadastro<InstrutorDoAviso & Parameters<RegraDeAviso["seAplica"]>[0]>(
-    linhas.map((l, n) => ({
-      id: l.id,
-      codigo: l.codigo,
-      pg: l.pg,
-      especialidade: l.especialidade,
-      nomeCompleto: l.nomeCompleto,
-      nomeDeGuerra: l.nomeDeGuerra,
-      categoria: l.categoria,
-      om: l.om,
-      nip: (brutas[n]?.nip as string | null | undefined) ?? null,
-      dataInicioDocenciaCiaara: brutas[n]?.data_inicio_docencia_ciaara ?? null,
-      capacitacao: capacitacaoDaLinha(n),
-    })),
-    AVISOS_INICIAIS,
-  );
   const opcoes = opcoesDosFiltros(opcoesRes.data ?? [], cursosRes.data ?? [], escala);
   const podeLer = pode(permissoes, "instrutores", "ler");
 
@@ -226,7 +204,7 @@ export default async function Instrutores({
       </header>
 
       {/* ⚠️ No topo, acima dos filtros, e recolhido — com as contagens à vista (emenda de 15/09/2026 ao FR-027). */}
-      <QuadroDeAvisos avisos={avisos} />
+      {/* Os avisos de qualidade de cadastro saíram daqui no Bloco 7 (spec 022, FR-004.4; A-2): página Avisos. */}
 
       <FiltrosDeInstrutores opcoes={opcoes} />
 

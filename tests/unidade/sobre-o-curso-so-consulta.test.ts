@@ -158,7 +158,6 @@ describe("`FR-062` · as telas de avaliação não interpretam nota, média nem 
     "app/(app)/turmas/[turma]/AvaliacoesDaTurma.tsx",
     "app/(app)/turmas/[turma]/CardDeAvaliacoes.tsx",
     "app/(app)/turmas/[turma]/DefinirTempoArbitrado.tsx",
-    "app/(app)/turmas/[turma]/AlertasDeVista.tsx",
     "app/(app)/turmas/[turma]/consulta-de-avaliacoes.ts",
     "app/(app)/cursos/[curso]/AbaAvaliacoes.tsx",
     "lib/dominio/avaliacoes/quadro-da-turma.ts",

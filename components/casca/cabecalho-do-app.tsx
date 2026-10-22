@@ -21,6 +21,7 @@ import Image from "next/image";
 
 import { MenuDoAvatar } from "@/components/casca/menu-do-avatar";
 import { SeletorDeTema } from "@/components/casca/seletor-de-tema";
+import { SininhoDeAvisos } from "@/components/casca/sininho-de-avisos";
 import { rotuloDoPerfil } from "@/lib/dominio/perfis";
 
 export function CabecalhoDoApp({
@@ -63,6 +64,8 @@ export function CabecalhoDoApp({
         <span className="text-texto-suave hidden text-sm sm:inline">
           {nome} · {rotuloDoPerfil(perfil)}
         </span>
+        {/* Spec 022 (Bloco 7, FR-004.1): o sininho de avisos, em toda tela autenticada. */}
+        <SininhoDeAvisos />
         <SeletorDeTema />
         <MenuDoAvatar nome={nome} email={email} perfil={perfil} fotoUrl={fotoUrl} aoSair={aoSair} />
       </div>

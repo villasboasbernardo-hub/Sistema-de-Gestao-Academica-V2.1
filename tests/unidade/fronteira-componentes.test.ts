@@ -179,6 +179,8 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
     "components/casca/menu-do-avatar.tsx",
     "components/casca/painel-retratil.tsx",
     "components/casca/seletor-de-tema.tsx",
+    // Spec 022 (Bloco 7): o sininho pede o resumo ao trocar de rota e lê o "visto" do navegador.
+    "components/casca/sininho-de-avisos.tsx",
     "components/ciaara/seletor-turma.tsx",
     "components/ciaara/tabela-densa.tsx",
     "components/graficos/grafico-barras.tsx",

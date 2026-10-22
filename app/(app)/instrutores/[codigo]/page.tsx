@@ -24,19 +24,11 @@ import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
-import { alertaForaDaFaixa, alertaSemCapacitacao } from "@/lib/dominio/alertas-instrutor";
-import { capacitacaoDoCadastro } from "@/lib/dominio/capacitacao-didatica";
-import {
-  cargaPorSemana,
-  limitesDoAnoIso,
-  semanasDoAno,
-  semanasForaDaFaixa,
-} from "@/lib/dominio/carga-semanal";
+import { limitesDoAnoIso } from "@/lib/dominio/carga-semanal";
 import { motivoDoImpedimento } from "@/lib/dominio/exclusao-de-instrutor";
 import { mediaSemanalDaAtribuicao } from "@/lib/dominio/media-semanal";
 import { disciplinasSoHabilitadas } from "@/lib/dominio/so-habilitado";
-import { anoCorrente, hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import { anoCorrente } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { COLUNAS_PESSOAIS, valoresFuncionaisDe, valoresPessoaisDe } from "../campos";
@@ -194,17 +186,10 @@ export default async function FichaDoInstrutor({
   const prevista = cargaRes.error ? null : Number(cargaRes.data?.ta_previsto_ano ?? 0);
 
   /*
-   * ⚠️ OS ALERTAS DA US4 AVISAM E NÃO BLOQUEIAM (`FR-018`, `RN-DEG-02`). Nenhum deles condiciona o botão
-   * de gravar, o de desativar ou o painel. A carga semanal é somada **por semana ISO** — nunca o ano
-   * inteiro — pela decisão de Bernardo Villas Boas de 15/09/2026, e a faixa vem de `config_parametros`.
+   * ⚠️ **OS ALERTAS DA US4 SAÍRAM DA FICHA NO BLOCO 7** (spec 022, FR-004.4; A-2): a carga semanal fora da faixa e a
+   *    docência sem capacitação moram na página Avisos, calculados lá pelas mesmas funções (`alertaForaDaFaixa`,
+   *    `alertaSemCapacitacao`) e só para instrutor ativo (CHK019). Continuam avisando sem bloquear (`RN-DEG-02`).
    */
-  const faixa =
-    cargaRes.data?.faixa_semanal_min != null && cargaRes.data?.faixa_semanal_max != null
-      ? {
-          minimo: Number(cargaRes.data.faixa_semanal_min),
-          maximo: Number(cargaRes.data.faixa_semanal_max),
-        }
-      : null;
   /*
    * ⚠️ **A MÉDIA SEMANAL É A DA `RN-DIST-02`** (FR-013.3 da spec 016): a que a view entrega (das semanas cadastradas
    *    da disciplina) e, sem ela, a CH dividida pelas semanas da janela efetiva — a mesma média na lista e no
@@ -237,43 +222,8 @@ export default async function FichaDoInstrutor({
             mediaSemanal: a.media,
             mediaDaJanela: a.mediaDaJanela,
           }));
-  const alertas = [
-    alertaForaDaFaixa(
-      semanasForaDaFaixa(
-        semanasDoAno(
-          cargaPorSemana(
-            comMedia.map((a) => ({
-              inicio: a.previsao_inicio,
-              termino: a.previsao_termino,
-              mediaSemanal: a.media,
-            })),
-          ),
-          ano,
-        ),
-        faixa,
-      ),
-      faixa,
-    ),
-    alertaSemCapacitacao(
-      {
-        dataInicioDocenciaCiaara: instrutor.data_inicio_docencia_ciaara,
-        capacitacao: capacitacaoDoCadastro(
-          instrutor.capacitacoes_didaticas,
-          instrutor.capacitacao_didatica_a_corrigir,
-        ),
-      },
-      hojeNaCiaara(),
-    ),
-  ].flatMap((a) => (a ? [a] : []));
 
   const ativo = instrutor.status === "ativo";
-
-  /*
-   * ⚠️ FICHA DE INSTRUTOR INATIVO NÃO EXIBE ALERTA NORMATIVO (CHK019, decisão de Bernardo Villas Boas,
-   * 15/09/2026). Faixa do regime e capacitação didática falam de quem está em docência; o inativo não
-   * recebe atribuição nova, e o alerta seria ruído sobre alguém fora da escala.
-   */
-  const alertasExibidos = ativo ? alertas : [];
 
   /*
    * ⚠️ SEM RESPOSTA DO BANCO, A EXCLUSÃO FICA INDISPONÍVEL — nunca liberada (`RN-DEG-01`). Um erro de
@@ -288,16 +238,6 @@ export default async function FichaDoInstrutor({
 
   const leitura = (
     <>
-      {alertasExibidos.map((a) => (
-        <AlertaConformidade
-          key={a.chave}
-          tom="conformidade"
-          titulo={a.titulo}
-          avisos={a.detalhes}
-          className="static"
-        />
-      ))}
-
       <FichaEmLeitura
         id={instrutor.id}
         valores={valoresFuncionaisDe(instrutor)}
