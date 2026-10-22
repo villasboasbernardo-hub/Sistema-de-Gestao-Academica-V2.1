@@ -220,6 +220,9 @@ test("FR-038 · Editar curso → Disciplinas e avaliações: as avaliações do 
     .getByRole("gridcell", { name: `Disciplina ${SEMEADO.disciplinaComTempo}`, exact: false })
     .first()
     .click();
+  // Spec 022 (Bloco 7, D-2): as avaliações do currículo se editam na página própria da disciplina, em diálogo.
+  await page.locator('[data-slot="detalhe-da-disciplina"] [data-slot="editar-disciplina"]').click();
+  await expect(page.locator('[data-slot="pagina-da-disciplina"]')).toBeVisible();
 
   const painel = page.locator('[data-slot="avaliacoes-do-curriculo"]');
   await expect(painel.locator('[data-item-do-curriculo="PM 1"]')).toContainText(
@@ -231,22 +234,24 @@ test("FR-038 · Editar curso → Disciplinas e avaliações: as avaliações do 
 
   // Acrescentar um TG 1 transcrito do currículo — e depois inativá-lo: ele FICA na lista (regra 4).
   await painel.locator('[data-slot="acrescentar-avaliacao-do-curriculo"]').click();
-  const nova = painel.locator('[data-slot="nova-avaliacao-do-curriculo"]');
+  const nova = page.locator('[data-slot="nova-avaliacao-do-curriculo"]');
   await nova.getByLabel("Instrumento").selectOption("TG");
   await nova.getByLabel("TA de aplicação").fill("2");
   await nova.getByLabel("Arquivo do currículo").fill("curriculo-e2e.pdf");
   await nova.getByLabel("Página").fill("3");
-  await nova.getByRole("button", { name: "Acrescentar" }).click();
+  await nova.getByRole("button", { name: "Salvar" }).click();
   await justificar(page, "Acrescentar o TG 1 que o currículo traz.");
   const tg = painel.locator('[data-item-do-curriculo="TG 1"]');
   await expect(tg).toHaveAttribute("data-ativo", "true");
   await expect(nova).toHaveCount(0);
 
-  // *Editar* abre os campos SÓ deste item, e gravar os fecha com o valor novo (FR-010.3).
+  // *Editar* abre os campos SÓ deste item, num diálogo, e gravar o fecha com o valor novo (FR-010.3; spec 022).
   await tg.locator('[data-slot="editar-avaliacao-do-curriculo"]').click();
-  await expect(painel.locator("input")).toHaveCount(2);
-  await tg.getByLabel("TA de aplicação de TG 1").fill("3");
-  await tg.locator('[data-slot="gravar-item"]').click();
+  const edicao = page.locator('[data-slot="formulario-do-item"]');
+  await expect(edicao.locator("input")).toHaveCount(2);
+  await expect(painel.locator("input")).toHaveCount(0);
+  await edicao.getByLabel("TA de aplicação").fill("3");
+  await edicao.locator('[data-slot="gravar-item"]').click();
   await justificar(page, "O TG 1 tem 3 TA no currículo.");
   await expect(painel.getByRole("status").filter({ hasText: "TG 1 gravada" })).toBeVisible();
   await expect(painel.locator("input")).toHaveCount(0);

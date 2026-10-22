@@ -245,9 +245,14 @@ async function disciplinaNoCurriculo(versao: number) {
   return Number((data as { carga_horaria_tempos: number } | null)?.carga_horaria_tempos);
 }
 
+/**
+ * Muda a CH da disciplina do currículo aberto em *Editar curso*, por clique.
+ * ⚠️ Spec 022 (Bloco 7, D-2): o cadastro da disciplina mora na página própria — o detalhe da linha leva até ela.
+ */
 async function editarCh(page: Page, ch: string): Promise<void> {
   await abrirLinha(page, DISCIPLINA);
-  await page.locator('[data-slot="alternar-edicao"]').click();
+  await page.locator('[data-slot="detalhe-da-disciplina"] [data-slot="editar-disciplina"]').click();
+  await expect(page.locator('[data-slot="pagina-da-disciplina"]')).toBeVisible();
   const formulario = page.locator('[data-slot="formulario-de-disciplina"]');
   await formulario.getByLabel("Carga horária (tempos)").fill(ch);
   await formulario.locator('[data-slot="gravar-disciplina"]').click();

@@ -49,7 +49,8 @@ export default async function PaginaDaDisciplina({
 }) {
   const { curso: segmentoDoCurso, disciplina: segmentoDaDisciplina } = await params;
   const sigla = codigoDaTurmaNoSegmento(segmentoDoCurso);
-  const codigo = decodeURIComponent(segmentoDaDisciplina);
+  // O decodificador único do segmento (FR-031.2): o mesmo da sigla do curso.
+  const codigo = codigoDaTurmaNoSegmento(segmentoDaDisciplina);
 
   const usuario = await usuarioDaSessao();
   const supabase = await criarClienteDeServidor();

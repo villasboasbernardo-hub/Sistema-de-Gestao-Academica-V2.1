@@ -104,6 +104,20 @@ async function abrirDetalhe(page: Page, nome: string): Promise<void> {
   await expect(page.locator('[data-slot="detalhe-da-disciplina"]')).toBeVisible();
 }
 
+/**
+ * **A página própria da disciplina**, por clique: *Editar curso* → *Disciplinas e avaliações* → a linha → o ícone
+ * *Editar disciplina* do detalhe.
+ *
+ * ⚠️ SPEC 022 (Bloco 7, D-2): o cadastro, a situação, a exclusão, as UEs e as avaliações do currículo saíram do
+ *    detalhe da linha e moram na página própria; as UEs e as avaliações se editam em diálogo.
+ */
+async function abrirPaginaDaDisciplina(page: Page, nome: string): Promise<void> {
+  await irAGradeEmEdicao(page);
+  await abrirDetalhe(page, nome);
+  await page.locator('[data-slot="detalhe-da-disciplina"] [data-slot="editar-disciplina"]').click();
+  await expect(page.locator('[data-slot="pagina-da-disciplina"]')).toBeVisible();
+}
+
 test.describe("`FR-001` a `FR-006` · chegar, escolher e ver", () => {
   test("o menu leva à grade, e o curso escolhido traz TODAS as disciplinas dele", async ({
     page,
@@ -203,14 +217,13 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
   });
 
   test("a soma que não fecha AVISA, e não bloqueia", async ({ page }) => {
-    await irAGradeEmEdicao(page);
-    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    await abrirPaginaDaDisciplina(page, DISCIPLINA_COM_UE.nome);
 
     // As duas unidades somam 10, igual à CH: nenhum aviso.
     await expect(page.locator('[data-slot="aviso-da-soma"]')).toHaveCount(0);
 
     // Acrescentar uma terceira quebra a soma — e a gravação PASSA, com aviso.
-    // ⚠️ O formulário de unidade nova fica atrás de um botão desde 17/10/2026 (spec 016, FR-007.1).
+    // ⚠️ Spec 022 (Bloco 7): o formulário da unidade nova abre num diálogo, pelo ícone do topo da tabela.
     await page.locator('[data-slot="acrescentar-unidade"]').click();
     const nova = page.locator('[data-slot="formulario-de-unidade-nova"]');
     await nova.locator('input[name="numero_ue"]').fill("9");
@@ -225,11 +238,10 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
     await expect(page.locator('[data-slot="aviso-da-soma"]')).toContainText("13");
   });
 
-  test("`FR-007.1` da spec 016 · as UEs se LEEM sem campo nenhum, e *Editar* abre só a linha", async ({
+  test("`FR-007.1` da spec 016 e spec 022 · as UEs se LEEM sem campo nenhum, e *Editar* abre um diálogo da linha", async ({
     page,
   }) => {
-    await irAGradeEmEdicao(page);
-    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    await abrirPaginaDaDisciplina(page, DISCIPLINA_COM_UE.nome);
 
     const tabela = page.locator('[data-slot="tabela-de-unidades"]');
     // ⚠️ Sem contar linhas: o caso da soma, acima, acrescenta a UE 9 à mesma disciplina.
@@ -239,19 +251,20 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
     await expect(page.locator('[data-slot="formulario-de-unidade-nova"]')).toHaveCount(0);
 
     await tabela.locator('[data-unidade="1"] [data-slot="editar-unidade"]').click();
-    // Só a linha 1 abriu: três campos, e a linha 2 continua de leitura.
-    await expect(tabela.locator("input")).toHaveCount(3);
-    await expect(tabela.locator('[data-unidade="2"] input')).toHaveCount(0);
+    // ⚠️ Spec 022 (Bloco 7, FR-002): os três campos abrem num DIÁLOGO, só da linha 1; a tabela continua de leitura.
+    const dialogo = page.locator('[data-slot="formulario-da-unidade"]');
+    await expect(dialogo.locator("input")).toHaveCount(3);
+    await expect(tabela.locator("input")).toHaveCount(0);
 
     const topico = `Tópico editado ${PROCESSO}`;
-    await tabela.locator('[data-unidade="1"] input[name="topico"]').fill(topico);
-    await tabela.locator('[data-unidade="1"] [data-slot="gravar-unidade"]').click();
+    await dialogo.locator('input[name="topico"]').fill(topico);
+    await dialogo.locator('[data-slot="gravar-unidade"]').click();
     // RC-6: se outra amostra deixar o currículo em uso (atividade global), a tela pede a justificativa.
     const atualizada = page.getByRole("status").filter({ hasText: "atualizada" });
     await justificarSePedir(page, "O tópico da unidade 1 foi revisto.", atualizada);
 
     await expect(atualizada).toBeVisible();
-    await expect(tabela.locator("input")).toHaveCount(0);
+    await expect(dialogo).toHaveCount(0);
     await expect(tabela.locator('[data-unidade="1"]')).toContainText(topico);
   });
 });
@@ -279,17 +292,20 @@ test.describe("`FR-007.2` da spec 016 · a proporção da CH é uma pizza", () =
  *    instrutor do detalhe a seta tirava o foco do painel. A grade passou a tratar só as teclas que vêm
  *    de uma célula DELA.
  */
-test.describe("`PEND-016-3` · as teclas num campo do detalhe são do campo", () => {
-  test("no texto da UE em edição, Home, End e setas movem o cursor, e a linha continua aberta", async ({
+/*
+ * ⚠️ SPEC 022 (Bloco 7): o campo da UE saiu do detalhe da linha e mora num diálogo, fora da grade — o caso continua
+ *    medindo que as teclas são do CAMPO (o cursor anda, o foco fica) e que Enter grava.
+ */
+test.describe("`PEND-016-3` · as teclas num campo do formulário são do campo", () => {
+  test("no texto da UE em edição, Home, End e setas movem o cursor, e Enter grava", async ({
     page,
   }) => {
-    await irAGradeEmEdicao(page);
-    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
-    const linha = linhaExpansivel(page, DISCIPLINA_COM_UE.nome);
+    await abrirPaginaDaDisciplina(page, DISCIPLINA_COM_UE.nome);
     const tabela = page.locator('[data-slot="tabela-de-unidades"]');
     await tabela.locator('[data-unidade="1"] [data-slot="editar-unidade"]').click();
+    const dialogo = page.locator('[data-slot="formulario-da-unidade"]');
 
-    const campo = tabela.locator('[data-unidade="1"] input[name="topico"]');
+    const campo = dialogo.locator('input[name="topico"]');
     const original = await campo.inputValue();
     expect(original.length, "a amostra não tem tópico para mover o cursor").toBeGreaterThan(1);
     const cursor = () => campo.evaluate((el) => (el as HTMLInputElement).selectionStart);
@@ -309,33 +325,30 @@ test.describe("`PEND-016-3` · as teclas num campo do detalhe são do campo", ()
       await page.keyboard.press(tecla);
       await expect(campo, `${tecla} tirou o foco do campo`).toBeFocused();
     }
-    await expect(linha).toHaveAttribute("aria-expanded", "true");
 
-    // Espaço é um espaço, e não fecha a linha.
+    // Espaço é um espaço.
     await page.keyboard.press("End");
     await page.keyboard.press(" ");
     await expect(campo).toHaveValue(`${original} `);
     await page.keyboard.press("Backspace");
     await expect(campo).toHaveValue(original);
-    await expect(linha).toHaveAttribute("aria-expanded", "true");
 
-    // Enter grava a unidade (é o envio do formulário) — e a linha continua aberta.
+    // Enter grava a unidade (é o envio do formulário) — e o diálogo fecha.
     await page.keyboard.press("Enter");
     // RC-6: se outra amostra deixar o currículo em uso (atividade global), a tela pede a justificativa.
     const gravada = page.getByRole("status").filter({ hasText: "atualizada" });
     await justificarSePedir(page, "O tópico da unidade 1, gravado com Enter.", gravada);
     await expect(gravada).toBeVisible();
-    await expect(linha).toHaveAttribute("aria-expanded", "true");
-    await expect(page.locator('[data-slot="detalhe-da-disciplina"]')).toBeVisible();
+    await expect(dialogo).toHaveCount(0);
   });
 });
 
 test.describe("`FR-020` a `FR-024` · a exclusão, com código e rastro", () => {
   test("⚠️ disciplina COM linha de turma é recusada, NOMEANDO o impedimento", async ({ page }) => {
-    await irAGradeEmEdicao(page);
-    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    await abrirPaginaDaDisciplina(page, DISCIPLINA_COM_UE.nome);
 
-    await page.locator('[data-slot="abrir-exclusao"]').first().click();
+    // Spec 022 (D-2): a exclusão da disciplina fica no topo da página própria; as das UEs, nas linhas.
+    await page.getByRole("button", { name: "Excluir disciplina" }).click();
     await page.locator('input[name="codigo_confirmacao"]').fill(`DIS-${selo(PROCESSO)}-1`);
     await page.locator('[data-slot="confirmar-exclusao"]').click();
 
@@ -349,10 +362,9 @@ test.describe("`FR-020` a `FR-024` · a exclusão, com código e rastro", () => 
   test("⚠️ o botão só libera com o CÓDIGO certo, e a disciplina LIMPA some com rastro", async ({
     page,
   }) => {
-    await irAGradeEmEdicao(page);
-    await abrirDetalhe(page, DISCIPLINA_LIMPA.nome);
+    await abrirPaginaDaDisciplina(page, DISCIPLINA_LIMPA.nome);
 
-    await page.locator('[data-slot="abrir-exclusao"]').first().click();
+    await page.getByRole("button", { name: "Excluir disciplina" }).click();
 
     // ⚠️ Com o código errado, o botão continua desabilitado — o segundo passo é o que protege.
     await page.locator('input[name="codigo_confirmacao"]').fill("codigo-errado");
@@ -365,6 +377,8 @@ test.describe("`FR-020` a `FR-024` · a exclusão, com código e rastro", () => 
     await expect
       .poll(() => contarDisciplina(amostra.disciplinaLimpaId), { timeout: 15_000 })
       .toBe(0);
+    // A página da disciplina deixa de existir: a tela volta às disciplinas de Editar curso.
+    await expect(page.locator('[data-slot="parte-disciplinas"]')).toBeVisible();
     // ⚠️ O rastro é o que a emenda D-B1 acrescentou em relação à exclusão de instrutor.
     expect(await rastroDaExclusao(amostra.disciplinaLimpaCodigo)).toBeGreaterThan(0);
   });
@@ -439,9 +453,8 @@ test.describe("`FR-007.1` e `FR-007.5` da spec 017 · o Nome no DSA, sem apagar 
       .eq("id", amostra.disciplinaComUeId);
     expect(error).toBeNull();
 
-    await irAGradeEmEdicao(page);
-    await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
-    await page.locator('[data-slot="alternar-edicao"]').click();
+    // Spec 022 (D-2): o cadastro da disciplina mora na página própria — o formulário longo, na página.
+    await abrirPaginaDaDisciplina(page, DISCIPLINA_COM_UE.nome);
 
     const formulario = page.locator('[data-slot="formulario-de-disciplina"]');
     await expect(formulario.locator('input[name="tecnica"]')).toHaveValue("AE");
@@ -471,8 +484,10 @@ test.describe("`FR-007.1` e `FR-007.5` da spec 017 · o Nome no DSA, sem apagar 
         tecnica_ensino_sugerida: "AE",
         local_padrao: local,
       });
-    // Gravar fecha a edição (`aoConcluir`): o campo deixa de existir.
-    await expect(page.locator('[data-slot="campo-nome-no-dsa"]')).toHaveCount(0);
+    // A página própria confirma a gravação, com o valor gravado no campo.
+    await expect(
+      page.getByRole("status").filter({ hasText: "Disciplina atualizada." }),
+    ).toBeVisible();
   });
 });
 
@@ -493,7 +508,9 @@ test.describe("Spec 018 · C-2 · Nova disciplina (desde a spec 021, em Editar c
     const nome = `Disciplina nova da prova ${PROCESSO}`;
 
     await irAGradeEmEdicao(page);
+    // Spec 022 (D-2): *Nova disciplina* leva à página própria do cadastro, no currículo escolhido.
     await page.locator('[data-slot="nova-disciplina"]').click();
+    await expect(page.locator('[data-slot="pagina-da-nova-disciplina"]')).toBeVisible();
     const cadastro = page.locator('[data-slot="cadastro-de-disciplina"]');
     await expect(cadastro).toBeVisible();
     // O *Nome no DSA* é só da edição (C-19 da spec 017).
@@ -514,6 +531,7 @@ test.describe("Spec 018 · C-2 · Nova disciplina (desde a spec 021, em Editar c
       page.getByRole("gridcell", { name: nome }),
     );
 
+    // Depois de criar, de volta às disciplinas de Editar curso, com a linha nova na grade.
     await expect(page.getByRole("gridcell", { name: nome })).toBeVisible();
     await expect(cadastro).toHaveCount(0);
 
@@ -553,7 +571,7 @@ test.describe("Spec 021 · ajuste 1 · a aba Disciplinas do curso é só leitura
       detalhe.locator('[data-slot="tabela-de-unidades"] [data-unidade="1"]'),
     ).toBeVisible();
     for (const acao of [
-      "alternar-edicao",
+      "editar-disciplina",
       "acrescentar-unidade",
       "editar-unidade",
       "abrir-exclusao",
@@ -567,9 +585,10 @@ test.describe("Spec 021 · ajuste 1 · a aba Disciplinas do curso é só leitura
     await irAGradeEmEdicao(page);
     await expect(page.locator('[data-slot="nova-disciplina"]')).toBeVisible();
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
-    await expect(
-      page.locator('[data-slot="detalhe-da-disciplina"] [data-slot="alternar-edicao"]'),
-    ).toBeVisible();
+    // Spec 022 (D-2): em Editar curso, o detalhe leva à página própria; ele mesmo continua sem campo.
+    const detalheNaEdicao = page.locator('[data-slot="detalhe-da-disciplina"]');
+    await expect(detalheNaEdicao.locator('[data-slot="editar-disciplina"]')).toBeVisible();
+    await expect(detalheNaEdicao.locator("input, select, textarea")).toHaveCount(0);
   });
 });
 
