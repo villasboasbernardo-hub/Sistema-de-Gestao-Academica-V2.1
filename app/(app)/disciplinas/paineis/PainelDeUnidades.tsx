@@ -17,6 +17,8 @@
  * Bloco 7 a linha abria o formulário no lugar dela (spec 016, FR-007.1). Gravar fecha o diálogo e a resposta aparece
  * abaixo da tabela; a recusa fica no diálogo, com o que foi digitado.
  */
+"use client";
+
 import * as React from "react";
 
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";

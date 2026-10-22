@@ -18,6 +18,8 @@
  * ⚠️ **A RECUSA OFERECE A SAÍDA** (`FR-022`): *desative em vez de excluir*. Recusar sem próximo passo
  * é o que faz alguém tentar de novo do mesmo jeito.
  */
+"use client";
+
 import * as React from "react";
 import { useRouter } from "next/navigation";
 

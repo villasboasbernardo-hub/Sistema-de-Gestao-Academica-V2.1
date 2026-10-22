@@ -13,6 +13,8 @@
  * ⚠️ **A CONFIRMAÇÃO SÓ APARECE QUANDO HÁ HISTÓRICO** (A-9). Desativar uma disciplina que nenhuma
  * turma usa é barato e desfazível; confirmar ali é o clique a mais que treina a clicar sem ler.
  */
+"use client";
+
 import * as React from "react";
 
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";

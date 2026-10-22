@@ -15,6 +15,8 @@
  * a `Q-04` valer: desativar **libera** o código para outra disciplina no mesmo curso, e reativar a
  * antiga com o código tomado é recusado — com a frase traduzida.
  */
+"use client";
+
 import * as React from "react";
 import { useRouter } from "next/navigation";
 

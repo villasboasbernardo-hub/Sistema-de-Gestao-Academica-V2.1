@@ -57,11 +57,34 @@ nome, o seu e-mail e o seu perfil, e dois itens: **Meu perfil** e **Sair**. Cliq
 
 Não existe botão de sair solto na tela — o caminho é esse, dois cliques.
 
+### Os botões são desenhos — o nome aparece ao passar o mouse
+
+Os botões de ação do sistema (**Editar**, **Excluir**, **Desativar**, **Imprimir**, **Salvar**,
+**Novo**, **Cadastrar**…) são **ícones**, sempre **no alto e à direita** da página ou da tabela. Passe
+o mouse por cima (ou chegue nele com a tecla **Tab**) e o nome aparece. Dentro de uma janela de
+confirmação, como a de excluir, os botões continuam escritos.
+
+Os formulários **não ficam abertos nas páginas**: o curto (uma unidade de ensino, uma avaliação, um
+regime, uma sala) abre numa **janela** por cima da tela; o longo (o curso, a disciplina) tem uma
+**página própria**.
+
 ### Tema claro e tema escuro
 
-No alto da tela, à direita, há a palavra **Tema:** e três botões: **Claro**, **Noturno** e
-**Sistema**. "Noturno" é o tema escuro. "Sistema" segue a configuração do seu Windows. O botão do
+No alto da tela, à direita, há três ícones: um **sol** (tema claro), uma **lua** (tema noturno) e uma
+**tela de computador** (segue a configuração do seu Windows). "Noturno" é o tema escuro. O ícone do
 tema em uso fica marcado.
+
+### O sininho de avisos
+
+No alto da tela, à direita, há um **sininho** com o **número de avisos** — turma em atraso, prova sem
+vista, teto de atividades passado, cadastro incompleto de curso, de turma ou de instrutor. Enquanto
+houver aviso que você ainda não viu, o sininho **pulsa** de leve. Clique nele: abre a página
+**Avisos**, com os avisos agrupados por assunto, e cada um tem um link para **onde se resolve**. Ao
+abrir a página, o sininho para de pulsar — e só volta a pulsar quando aparecer um aviso **novo**. O
+"já vi" fica lembrado **naquele computador**.
+
+Os avisos **não ficam mais em quadros dentro das páginas** do curso, das turmas e dos instrutores:
+estão todos no sininho.
 
 Vale testar as duas aparências em todas as telas: a leitura no escuro é uma das coisas que queremos
 conferir.
@@ -131,14 +154,14 @@ Você vê tudo e muda tudo, inclusive as contas das outras pessoas.
 
 **Início**
 
-1. Clique em **Início**. Você vê quatro quadros no alto — *Turmas no recorte*, *Em andamento*,
-   *Carga executada* e *Progresso do recorte* — e a lista de turmas abaixo.
-2. Confira a faixa de avisos, que fica sempre visível: ela diz **"Turmas exigindo atenção"** com a
-   quantidade, ou **"Nada exigindo atenção"**.
-3. Troque os filtros **Classificação** e **Modalidade** (os dois começam em "Todas"). A lista e os
-   quatro quadros têm de mudar junto.
-4. Clique numa turma da lista. **Atenção:** isso abre a **página do curso** com aquela turma
-   escolhida — e não a ficha da turma. É assim mesmo.
+1. Clique em **Início**. No canto superior direito está o **ano**; abaixo, quatro números —
+   *Turmas no recorte*, *Em andamento*, *Carga executada* e *Progresso do recorte* — e os cartões das
+   turmas em andamento, que passam sozinhos.
+2. Clique no **sininho**, no alto da tela, e leia os avisos. Volte ao Início: o sininho parou de
+   pulsar.
+3. Troque os filtros **Classificação** e **Modalidade** (os dois começam em "Todas"). Os cartões e os
+   quatro números têm de mudar junto.
+4. Clique num cartão de turma: abre a **ficha da turma**.
 
 **Cursos**
 
@@ -148,10 +171,11 @@ Você vê tudo e muda tudo, inclusive as contas das outras pessoas.
    lista muda — curso desativado só aparece assim.
 7. Abra um curso. Confira o alto da tela: a sigla, o nome, a modalidade e a linha **"Regime
    vigente:"** escrita em palavras.
-8. Abra o quadro **"Avisos de qualidade de cadastro"** (ele começa fechado, mostrando só a
-   quantidade) e leia os avisos. Nenhum deles impede gravar.
-9. Troque entre as abas da página do curso: **Sobre o Curso**, **Grade**, **Disciplinas**, **Avaliações**,
-   **Atividades** e **Horários**.
+8. Os cursos seguem a ordem das classificações: **Regulares, Expeditos, Especiais, Estágios de
+   Qualificação, Aperfeiçoamento Avançado** e as demais; dentro de cada uma, pela sigla.
+9. Troque entre as abas da página do curso: **Sobre o Curso**, **Turmas**, **Disciplinas**,
+   **Avaliações**, **Atividades**, **Horários** e **Currículo**. A aba **Turmas** reúne as turmas do
+   curso; **Sobre o Curso** traz só as informações gerais.
 10. Clique em **Editar curso**, mude o **propósito** e salve. Deve aparecer confirmação. Se você
     mudar a sigla, a classificação ou o limite de turmas, o sistema **pede confirmação antes** — leia
     a pergunta com atenção.
@@ -173,28 +197,33 @@ Você vê tudo e muda tudo, inclusive as contas das outras pessoas.
 17. Desça até **Disciplinas** e confira a tabela, com CH prevista, CH executada e o percentual de
     cada disciplina.
 18. No fim da ficha, clique em **Editar turma**: o formulário abre. Mude o **efetivo** e salve.
-    **Cuidado:** fechar o painel apaga o que você digitou e não salvou.
+    **Cuidado:** fechar o painel apaga o que você digitou e não salvou. O período e os instrutores de
+    cada disciplina se editam pelo **ícone de lápis** da linha, numa janela.
 
 **Disciplinas**
 
 19. As disciplinas ficam **dentro do curso** (não há mais **Disciplinas** no menu): clique em **Cursos**,
-    abra um curso e clique na aba **Disciplinas**.
+    abra um curso e clique na aba **Disciplinas**. Ali elas são só para ler.
 20. Clique numa linha para abrir o detalhe. Para fechar, clique em **outra** linha — nesta tela,
     clicar de novo na mesma não fecha.
-21. Clique em **Editar disciplina**, corrija o nome ou a carga e salve.
+21. Para corrigir, clique em **Editar curso** → **Disciplinas e avaliações**, abra a linha e clique no
+    **lápis** (*Editar disciplina*): abre a página da disciplina. Corrija o nome ou a carga e salve.
+    As unidades de ensino e as avaliações do currículo se editam ali, pelo lápis de cada linha, numa
+    janela.
 
 **Instrutores**
 
 22. Clique em **Instrutores**. A lista sai **sempre por antiguidade**.
 23. Use alguns dos filtros. O filtro **Situação** começa em **"Ativos"** — instrutor inativo só
     aparece trocando para "Inativos".
-24. Abra a ficha de um instrutor e leia os alertas do alto, que **avisam e não impedem nada**.
+24. Abra a ficha de um instrutor. Os alertas dele (carga fora da faixa, capacitação vencida) estão no
+    **sininho**, com o link para a ficha — e **avisam, não impedem nada**.
 25. Clique em **Editar cadastro** no fim da ficha, corrija um dado e salve.
 
 **Meu perfil**
 
-26. Clique na sua foto → **Meu perfil**. Troque o seu **nome de exibição** em "Como você quer ser
-    chamado" e clique em **Gravar nome**.
+26. Clique na sua foto → **Meu perfil**. Clique no **lápis** ao lado do nome, troque o seu **nome de
+    exibição** na janela e clique em **Gravar nome**.
 27. Clique em **Enviar foto** e escolha um arquivo. **Escolher o arquivo já envia** — não há segundo
     botão. A foto precisa ser **JPG ou PNG, de até 2 MB**.
 28. Confira que **E-mail** e **Perfil** aparecem só para leitura, com a razão escrita embaixo.
@@ -203,12 +232,12 @@ Você vê tudo e muda tudo, inclusive as contas das outras pessoas.
 
 29. Clique em **Administração**. Você cai em **Usuários** e vê as três abas: **Usuários**,
     **Permissões** e **Salas**.
-30. Em **Usuários**, confira a lista e as quatro ações de cada linha: **Editar**, **Redefinir
-    senha**, **Desativar** e **Excluir**.
+30. Em **Usuários**, confira a lista e os quatro ícones de cada linha: **Editar**, **Redefinir
+    senha**, **Desativar** e **Excluir** (o nome aparece ao passar o mouse).
 31. Abra a aba **Permissões**: é a tabela que mostra, perfil por perfil, o que cada um pode fazer. É
     só leitura, e serve para você conferir por que alguém não vê um botão.
-32. Abra a aba **Salas** e acrescente uma sala de verdade, se houver uma faltando. Sala errada se
-    **desativa** — não se renomeia nem se apaga.
+32. Abra a aba **Salas** e acrescente uma sala de verdade, se houver uma faltando, pelo ícone **+** do
+    alto da página. Sala errada se **desativa** — não se renomeia nem se apaga.
 
 ### O que você NÃO deve conseguir
 
@@ -235,12 +264,12 @@ Em especial, você deve conseguir:
 
 1. Criar curso pelo botão **Novo curso**, no catálogo.
 2. **Editar curso**, inclusive registrar uma vigência nova de regime de horário em **Editar curso →
-   Registrar nova vigência**.
+   Registrar nova vigência**, e os **regimes de horário** do currículo em **Editar curso → Horários**.
 3. **Desativar curso** e reativá-lo.
-4. Criar turma pelo botão **Nova turma**, na aba **Grade** da página do curso. A turma nasce sempre
+4. Criar turma pelo botão **Nova turma**, na aba **Turmas** da página do curso. A turma nasce sempre
    dentro de um curso.
 5. Editar a turma pelo **Editar turma**, no fim da ficha.
-6. Editar disciplina e corrigir as **unidades de ensino** dela.
+6. Editar disciplina e corrigir as **unidades de ensino** dela, pela página da disciplina (passo 21).
 7. Cadastrar instrutor em **Novo instrutor** e editar a ficha de qualquer um.
 8. Em **Administração → Salas**, acrescentar e desativar sala.
 
@@ -313,23 +342,24 @@ Você trabalha com **turmas** e com os **horários** dos cursos. Cursos e instru
 5. Confira a seção **Andamento** inteira: os quatro indicadores, a barra, o saldo em dias e a
    capacidade diária.
 6. No fim da ficha, clique em **Editar turma**, corrija o **efetivo** ou a **sala** e salve.
-7. Crie uma turma: abra o curso → aba **Grade** → botão **Nova turma**. A turma nasce dentro do
+7. Crie uma turma: abra o curso → aba **Turmas** → botão **Nova turma**. A turma nasce dentro do
    curso; não há botão de criar turma na lista de Turmas.
 
 **Horários do curso**
 
 8. Na página de um curso, clique em **Editar curso**. Você **vai** conseguir abrir — e vai encontrar
-   **só** a parte do regime de horário, com a frase **"O seu perfil registra o regime deste curso,
-   mas não edita o cadastro dele."** Isso é esperado.
+   o regime de horário e o conteúdo do currículo, mas não o cadastro do curso, com a frase **"O seu
+   perfil registra o regime e edita o conteúdo do currículo deste curso, mas não edita o cadastro
+   dele."** Isso é esperado.
 9. Em **Registrar nova vigência**, registre um regime novo a partir de uma data. O sistema pede
    confirmação.
 
 **Disciplinas**
 
-10. Abra **Cursos** → um curso → aba **Disciplinas**, e abra uma linha.
-11. Clique em **Editar disciplina**, corrija um dado e salve.
-12. Na **ficha de uma turma**, na seção Disciplinas, abra uma linha e use **Gravar período** e os
-    botões de **instrutores** daquela disciplina naquela turma.
+10. Abra **Cursos** → um curso → **Editar curso** → **Disciplinas e avaliações**, e abra uma linha.
+11. Clique no **lápis** (*Editar disciplina*): abre a página da disciplina. Corrija um dado e salve.
+12. Na **ficha de uma turma**, na seção Disciplinas, abra uma linha e use os **lápis** do período e
+    dos **instrutores** daquela disciplina naquela turma — cada um abre uma janela.
 
 **Meu perfil**
 

@@ -33,6 +33,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **4** | Início: dashboard, carrosséis, submenu | não | 019 |
 | **5** | Cadastros novos: estrangeiros, custo, currículo em PDF, capacitação, acessos | sim | 020 |
 | **6** | Currículo versionado | sim | épico próprio |
+| **7** | Rodada 2 — padrões de tela: botões de ícone, formulários em diálogo ou página própria, ordem por classificação, sininho de avisos, abas do curso, cores do DSA | não | 022 |
 
 ---
 
@@ -289,6 +290,36 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
 
 
 Registrar um currículo novo (disciplinas, UEs, CH, avaliações, duração) **sem** alterar o vigente, e planejar as turmas do ano seguinte por ele, enquanto as turmas em andamento seguem o currículo em vigor. Mexe no vínculo turma → versão do currículo; não cabe em correção.
+
+---
+
+## Rodada 2 — padrões de tela *(pedido de Bernardo Villas Boas, 22/10/2026)*
+
+## Bloco 7 — Padrões de tela (spec própria, sem banco) — 🟨 EM CONFERÊNCIA
+
+> 🟨 **Implementado em 22/10/2026** — spec `022-bloco-7-padroes-de-tela`, ramo `feat/BLOCO-7-padroes-de-tela`, pelo
+> fluxo `/corrigir`, num PR só. **Sem migration** (nada em `supabase/` nem em `lib/tipos/`). Espera a conferência de
+> Bernardo; o merge só com o "aprovado".
+
+1. **Botões padrão como ícone** com dica e nome acessível, no topo e à direita; componente único `BotaoDeIcone`, com o
+   vocabulário fechado de ícones, e a guarda `tests/unidade/botoes-de-icone.test.ts`. O texto continua nos diálogos de
+   confirmação destrutiva e no rodapé dos diálogos de formulário. O tema virou três ícones.
+2. **Edição e cadastro em diálogo ou página própria**: a disciplina ganhou página própria em *Editar curso*
+   (`/cursos/[curso]/editar/disciplinas/[disciplina]` e `/nova`); UE, avaliação do currículo, arbitrado, regime,
+   limite, novo currículo, previsto, período, instrutores da turma, TA fora do DSA, juntar, parar dia, assinaturas,
+   sala e nome do perfil abrem em diálogo. A guarda `tests/e2e/sem-campo-aberto.spec.ts` (SC-001).
+3. **Ordem por classificação** (Regular → Expedito → Especial → Estágio de Qualificação → Aperfeiçoamento Avançado →
+   as demais; dentro, pela sigla; turmas pelo curso e depois o ano), por `lib/dominio/ordem-de-cursos.ts`, em todas as
+   listas, cartões, filtros e no submenu.
+4. **Sininho de avisos** no cabeçalho e a página **Avisos** (`/avisos`), agrupada por módulo, com link para onde se
+   resolve; o "visto" no navegador. **Os oito quadros de aviso das páginas saíram**, e o quadro da §6 da spec diz onde
+   cada aviso passa a aparecer.
+5. **Curso**: a aba *Grade* virou *Turmas* (`?aba=grade` redireciona); *Sobre o Curso* só com informações gerais (as
+   regras de avaliação foram para a aba *Avaliações*); *Horários* sem as vigências, com o ícone que leva à edição dos
+   regimes.
+6. **Cores dos cartões do DSA** no preenchimento: aula, atividade e EI em azul claro (`planejado`), avaliação em verde
+   (`executado`), conflito em amarelo (`atrasado`), feriado e dia parado em lilás (`conformidade`). **O papel não
+   mudou**: `app/print/` e `lib/dominio/dsa/` sem diferença contra a `main` de partida.
 
 ---
 

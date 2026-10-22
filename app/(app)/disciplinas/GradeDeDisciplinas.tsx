@@ -9,11 +9,9 @@
  * parâmetros são os de `/cursos/[curso]`, com os MESMOS nomes que tinham em `/disciplinas` (C-3), e o endereço antigo
  * redireciona para cá.
  *
- * ⚠️ **É UMA FOLHA SÓ, e os painéis abaixo dela NÃO levam marcador próprio.** O `"use client"` marca
- * a **fronteira**; o que é importado a partir daqui já está no pacote do navegador. Marcar cada
- * painel não mudaria nada no que é enviado e encheria a lista fechada de `fronteira-das-telas` com
- * arquivos que não são fronteira de nada — e é essa lista que torna visível o marcador digitado sem
- * pensar.
+ * ⚠️ **OS PAINÉIS DE EDIÇÃO GANHARAM MARCADOR PRÓPRIO NO BLOCO 7** (spec 022, D-2): a página própria da disciplina,
+ * que é servidor, passou a importá-los direto — e aí eles são fronteira de verdade. Os de leitura que só esta grade
+ * usa continuam sem marcador.
  *
  * ⚠️ **TODO ESTADO DE VISTA MORA NA URL** (`FR-001`): curso, turma, filtros e **qual linha está
  * aberta**. Colar o endereço numa janela nova reabre a mesma tela, com a mesma linha expandida. Um

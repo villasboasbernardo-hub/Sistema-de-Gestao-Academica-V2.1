@@ -1,7 +1,7 @@
 /**
  * As avaliações do currículo da disciplina, no cadastro (spec 014, FR-038, T183).
  *
- * ⚠️ **SEM MARCADOR PRÓPRIO**: o painel vive abaixo de uma folha de cliente (a grade, ou a página da disciplina).
+ * ⚠️ **FOLHA DE CLIENTE DESDE O BLOCO 7**: a página própria da disciplina (servidor) o importa direto (spec 022, D-2).
  * ⚠️ **A MESMA PERMISSÃO DAS UEs** (`disciplinas.editar`): sem ela, só a lista. O banco recusa de qualquer forma.
  * ⚠️ **INATIVA CONTINUA NA LISTA** (regra 4), com *Reativar* — sumir da tela seria exclusão com outro nome.
  * ⚠️ **PASSAR DA CH É AVISO** (FR-031, `RN-DEG-02`): grava e avisa.
@@ -10,6 +10,8 @@
  * *"Edição e cadastro SEMPRE em diálogo (formulário curto: UE, avaliação, regime)"*). Até o Bloco 7, *Editar* abria os
  * campos do item no lugar dele (spec 016, FR-010.3). Gravar fecha o diálogo; a recusa fica nele.
  */
+"use client";
+
 import * as React from "react";
 
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";

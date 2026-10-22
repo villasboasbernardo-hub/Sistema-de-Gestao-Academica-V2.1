@@ -80,9 +80,12 @@ vigência de regime que cubra esta semana… Abra o curso"* aponta para a **fich
   pendências** (os oito da §6); fica o **estado do próprio item** onde ele está — o selo *em atraso* no cartão, o
   *Atrasada* da avaliação, o sinal *sem instrutor* na linha da disciplina, a soma das UEs no detalhe, os cartões de teto
   da turma, as mensagens do DSA sobre a própria semana e as marcas da grade.
-- D-8 · Q: O alcance da página Avisos? → A: **tudo o que a pessoa alcança** (a RLS recorta): cursos em oferta, turmas
-  planejadas e ativas não arquivadas (o andamento só das ativas), instrutores ativos, vistas e tetos como o Início os
-  calculava, o conflito na **semana atual**. Sem o filtro da tela de origem.
+- D-8 · Q: O alcance da página Avisos? → A: **tudo o que a pessoa alcança** (a RLS recorta), sem o filtro da tela de
+  origem, e cada quadro com o recorte que ele já tinha: cursos **em oferta** (o fora de oferta não se edita); o painel
+  de `/turmas` nas turmas **planejadas e ativas** (de cada ano que tem uma); o quadro de cadastro da ficha em **toda
+  turma não arquivada**, como a ficha mostrava (a arquivada trava a edição, D-COR-5); o andamento pelo mesmo
+  `andamentoDaTurma` (só a ativa entra em atraso); vistas e tetos das não arquivadas; o conflito na **semana atual**;
+  instrutores **ativos** (a ficha do inativo não mostrava alerta, CHK019). *(Detalhada na implementação.)*
 - D-9 · Q: Como o sininho fica atualizado, se o cabeçalho não se redesenha ao navegar? → A: a folha do sininho pede o
   **resumo** (`GET /avisos/resumo`: o total e as chaves) ao abrir a página e a cada troca de rota, **no máximo uma vez a
   cada 2 minutos**; a página Avisos sempre lê na hora.
@@ -95,6 +98,29 @@ vigência de regime que cubra esta semana… Abra o curso"* aponta para a **fich
 - D-13 · Q: Os cartões do DSA: quais tokens? → A: azul claro = `planejado`, verde = `executado`, amarelo = `atrasado`,
   lilás = `conformidade` (o mesmo lilás da turma concluída — é o tom, não o significado). O valor `data-tom` de cada
   célula não muda; muda só a classe. O papel não muda.
+
+### Na implementação, 22/10/2026 *(adotadas por padrão — Bernardo confere no fim)*
+
+- D-14 · Q: Onde o "visto" fica guardado? → A: no armazenamento do navegador (`ciaara.avisos.vistos`), com as
+  **últimas 2.000** chaves; sem armazenamento (janela privada), o pulso continua enquanto houver aviso — o lado seguro.
+- D-15 · Q: O mesmo fato dito por dois quadros (a janela incompleta: o painel de `/turmas` e a ficha da turma)? → A:
+  **um aviso só**, pela mesma chave (`turmas:sem_janela:<turma>`).
+- D-16 · Q: Para onde leva cada aviso? → A: curso sem duração ou sem propósito → *Editar curso*; turmas acima do limite
+  → a aba *Turmas* do curso; teto, atraso e cadastro da turma → a ficha; disciplina sem instrutor → as disciplinas da
+  ficha; conflito → o DSA da semana; vista → a aba *Avaliações* da turma; instrutor → a ficha dele.
+- D-17 · Q: E a "capacitação a corrigir" da ficha do instrutor? → A: **fica** no campo da ficha (estado do item, D-7) e
+  **também** entra em *Avisos* — não se perde nem duplica quadro.
+- D-18 · Q: Os botões que não são verbo padrão (*Definir tempo*, *Confirmar sugestão*, *Nomear a UE*, *Tirar*, *Sem
+  instrutor*, *Pronto*)? → A: **continuam com texto**, e os que abrem formulário abrem diálogo.
+- D-19 · Q: O nome acessível muda em algum lugar? → A: só onde a página nova juntou ações do mesmo verbo: na página
+  própria da disciplina, *Desativar disciplina* e *Excluir disciplina* (eram *Desativar* e *Excluir* no detalhe da
+  linha); nas linhas, *Editar a unidade N* e *Editar PM 1* (já eram assim); o tema, *Tema claro*, *Tema noturno* e
+  *Tema do sistema*. Nos demais, o texto de antes (D-5).
+- D-20 · Q: Na grade de *Editar curso*, por onde se chega à página da disciplina? → A: pelo ícone *Editar disciplina* do
+  detalhe da linha (o caminho por teclado) e pelo da coluna *Ações* (atalho de mouse, fora da tabulação da grade, como
+  o código da turma em `/turmas`).
+- D-21 · Q: Depois de criar a disciplina na página do cadastro? → A: **de volta às disciplinas de *Editar curso***,
+  onde a linha nova aparece e de onde se abre a página dela para as UEs e as avaliações.
 
 ## 5. Requisitos
 
