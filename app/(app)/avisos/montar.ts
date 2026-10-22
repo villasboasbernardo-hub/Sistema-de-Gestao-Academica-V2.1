@@ -7,7 +7,7 @@
  *
  * ⚠️ **AQUI NÃO SE DECIDE AVISO NENHUM.** Quem decide são os predicados de sempre — `avisosDoCurso`, `tetosExcedidos`,
  *    `andamentoDaTurma` (pelo panorama), `alertasDeVista`, `painelDeTurmas`, `avisosDaTurma`, `avisosDoCadastro`,
- *    `alertaForaDaFaixa` e `alertaSemCapacitacao` —, chamados por `leitura.ts` com as mesmas leituras dos quadros. Esta
+ *    `alertaAcimaDaFaixa` e `alertaSemCapacitacao` —, chamados por `leitura.ts` com as mesmas leituras dos quadros. Esta
  *    função só dá a cada resultado o módulo, o sujeito (pelo CÓDIGO), a frase e o endereço onde ele se resolve. A tabela
  *    da §6 da spec é esta função, linha a linha.
  * ⚠️ **O MESMO FATO, UM AVISO SÓ**: a janela incompleta era dita pelo painel de `/turmas` e pelo quadro da ficha da

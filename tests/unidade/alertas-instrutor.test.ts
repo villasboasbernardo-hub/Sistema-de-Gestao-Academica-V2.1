@@ -3,14 +3,18 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { alertaForaDaFaixa, alertaSemCapacitacao } from "@/lib/dominio/alertas-instrutor";
-import { cargaPorSemana, semanasForaDaFaixa } from "@/lib/dominio/carga-semanal";
+import { alertaAcimaDaFaixa, alertaSemCapacitacao } from "@/lib/dominio/alertas-instrutor";
+import { cargaPorSemana, semanasAcimaDaFaixa } from "@/lib/dominio/carga-semanal";
 import { converterCapacitacao } from "@/lib/dominio/capacitacao-didatica";
 
 const REGIME_20H = { minimo: 8, maximo: 12 };
 const REGIME_40H = { minimo: 16, maximo: 24 };
 
-describe("`FR-016` · o alerta nomeia a semana fora da faixa", () => {
+/*
+ * ⚠️ SPEC 022 (Bloco 7), ITEM 11 — mudança de regra autorizada nominalmente por Bernardo Villas Boas (22/10/2026):
+ *    *"aviso de carga horária SÓ quando a carga semanal está ACIMA da faixa (abaixo da faixa deixa de avisar)"*.
+ */
+describe("`FR-016` emendado · o alerta nomeia a semana ACIMA da faixa", () => {
   it("`SC-006` · 20h com 14 h numa semana alerta; 40h com 20 h não alerta", () => {
     const quatorze = cargaPorSemana([
       { inicio: "2026-03-02", termino: "2026-03-08", mediaSemanal: 14 },
@@ -18,16 +22,25 @@ describe("`FR-016` · o alerta nomeia a semana fora da faixa", () => {
     const vinte = cargaPorSemana([
       { inicio: "2026-03-02", termino: "2026-03-08", mediaSemanal: 20 },
     ]);
-    const alerta = alertaForaDaFaixa(semanasForaDaFaixa(quatorze, REGIME_20H), REGIME_20H);
+    const alerta = alertaAcimaDaFaixa(semanasAcimaDaFaixa(quatorze, REGIME_20H), REGIME_20H);
+    expect(alerta?.chave).toBe("acima-da-faixa");
+    expect(alerta?.titulo).toBe("Carga semanal prevista acima da faixa do regime");
     expect(alerta?.detalhes).toEqual([
       "Semana 10/2026 (02/03/2026 a 08/03/2026): 14 h, acima da faixa de 8 a 12 h.",
     ]);
-    expect(alertaForaDaFaixa(semanasForaDaFaixa(vinte, REGIME_40H), REGIME_40H)).toBeNull();
+    expect(alertaAcimaDaFaixa(semanasAcimaDaFaixa(vinte, REGIME_40H), REGIME_40H)).toBeNull();
   });
 
-  it("sem semana fora da faixa, ou sem faixa, não há alerta", () => {
-    expect(alertaForaDaFaixa([], REGIME_20H)).toBeNull();
-    expect(alertaForaDaFaixa([], null)).toBeNull();
+  it("⚠️ O CASO QUE DISCRIMINA: 40h com 4 h por semana está ABAIXO da faixa e NÃO avisa mais", () => {
+    const quatro = cargaPorSemana([
+      { inicio: "2026-03-02", termino: "2026-03-29", mediaSemanal: 4 },
+    ]);
+    expect(alertaAcimaDaFaixa(semanasAcimaDaFaixa(quatro, REGIME_40H), REGIME_40H)).toBeNull();
+  });
+
+  it("sem semana acima da faixa, ou sem faixa, não há alerta", () => {
+    expect(alertaAcimaDaFaixa([], REGIME_20H)).toBeNull();
+    expect(alertaAcimaDaFaixa([], null)).toBeNull();
   });
 });
 

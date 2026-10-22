@@ -20,13 +20,13 @@ import { AVISOS_INICIAIS, avisosDoCadastro } from "@/lib/dominio/avisos-cadastro
 import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
 import { avisosDoCurso } from "@/lib/dominio/avisos-do-curso";
 import type { Aviso, ModuloDeAviso } from "@/lib/dominio/avisos/central";
-import { alertaForaDaFaixa, alertaSemCapacitacao } from "@/lib/dominio/alertas-instrutor";
+import { alertaAcimaDaFaixa, alertaSemCapacitacao } from "@/lib/dominio/alertas-instrutor";
 import { capacitacaoDoCadastro } from "@/lib/dominio/capacitacao-didatica";
 import {
   cargaPorSemana,
   limitesDoAnoIso,
   semanasDoAno,
-  semanasForaDaFaixa,
+  semanasAcimaDaFaixa,
 } from "@/lib/dominio/carga-semanal";
 import { curriculoVigenteEm, type CurriculoParaVigencia } from "@/lib/dominio/curriculos";
 import { mediaSemanalDaAtribuicao } from "@/lib/dominio/media-semanal";
@@ -484,8 +484,8 @@ export async function lerAvisos(supabase: Cliente, hoje: string): Promise<Leitur
       nome: i.nome,
       capacitacaoACorrigir: i.capacitacaoACorrigir,
       alertas: [
-        alertaForaDaFaixa(
-          semanasForaDaFaixa(semanasDoAno(cargaPorSemana(janelasDe.get(i.id) ?? []), ano), faixa),
+        alertaAcimaDaFaixa(
+          semanasAcimaDaFaixa(semanasDoAno(cargaPorSemana(janelasDe.get(i.id) ?? []), ano), faixa),
           faixa,
         ),
         alertaSemCapacitacao(

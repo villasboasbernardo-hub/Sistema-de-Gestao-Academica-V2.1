@@ -433,12 +433,13 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
       page.locator('[data-slot="indicadores-de-instrutores"] [data-slot="card-kpi"]'),
     ).toHaveCount(3);
     await expect(page.locator('[data-slot="grafico-de-instrutores"]')).toHaveCount(9);
+    // Spec 022 (item 7): sem teto de fatias, a escolaridade vai para a pizza do `FR-026.2` — três de barras, seis de pizza.
     await expect(
       page.locator('[data-slot="grafico-de-instrutores"][data-forma="barras"]'),
-    ).toHaveCount(4);
+    ).toHaveCount(3);
     await expect(
       page.locator('[data-slot="grafico-de-instrutores"][data-forma="pizza"]'),
-    ).toHaveCount(5);
+    ).toHaveCount(6);
 
     // Toda barra traz o valor escrito; o status de seleção pinta as duas barras com cores diferentes.
     const status = page.locator('[data-chave="status-de-selecao"]');
@@ -829,8 +830,8 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     ).toBeEnabled();
 
     await abrirAvisosPeloSininho(page);
-    const aviso = avisoDaChave(page, `instrutores:fora-da-faixa:${amostra.codigos.ctMaisAntigo}`);
-    await expect(aviso).toContainText("Carga semanal prevista fora da faixa do regime");
+    const aviso = avisoDaChave(page, `instrutores:acima-da-faixa:${amostra.codigos.ctMaisAntigo}`);
+    await expect(aviso).toContainText("Carga semanal prevista acima da faixa do regime");
     expect(((await aviso.textContent()) ?? "").match(SEMANA_14H) ?? []).toHaveLength(4);
     await aviso.getByRole("link").click();
     await expect
@@ -906,9 +907,9 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     await abrirAvisosPeloSininho(page);
     const alerta = avisoDaChave(
       page,
-      `instrutores:fora-da-faixa:${amostra.codigos.semCapacitacao}`,
+      `instrutores:acima-da-faixa:${amostra.codigos.semCapacitacao}`,
     );
-    await expect(alerta).toContainText("Carga semanal prevista fora da faixa do regime");
+    await expect(alerta).toContainText("Carga semanal prevista acima da faixa do regime");
     const semanas =
       ((await alerta.textContent()) ?? "").match(
         /Semana [0-9]+\/[0-9]{4} [(][^)]*[)]: [^.]*[.]/g,
@@ -922,7 +923,7 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
   });
 
   test("CHK019 · a ficha de instrutor inativo não exibe alerta normativo", async ({ page }) => {
-    // O sem capacitação alerta ativo (FR-017) e está fora da faixa (CHK005). Inativo, nenhum dos dois.
+    // O sem capacitação alerta ativo (FR-017) e está acima da faixa (CHK005). Inativo, nenhum dos dois.
     const codigo = amostra.codigos.semCapacitacao;
     await servico().from("instrutores").update({ status: "inativo" }).eq("codigo", codigo);
     try {
@@ -942,8 +943,42 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("80 TA");
     await abrirAvisosPeloSininho(page);
     await expect(
-      avisoDaChave(page, `instrutores:fora-da-faixa:${amostra.codigos.ctMaisModerno}`),
+      avisoDaChave(page, `instrutores:acima-da-faixa:${amostra.codigos.ctMaisModerno}`),
     ).toHaveCount(0);
+  });
+
+  /*
+   * ⚠️ SPEC 022 (Bloco 7), ITEM 11 — O CASO QUE DISCRIMINA. *"Aviso de carga horária SÓ quando a carga semanal está
+   *    ACIMA da faixa (abaixo da faixa deixa de avisar)"* (Bernardo Villas Boas, 22/10/2026, mudança de regra
+   *    autorizada nominalmente). O CMG (40h, faixa de 16 a 24 h) tem 4 h por semana: até ali ele AVISAVA ("abaixo da
+   *    faixa"); agora não aparece em Avisos nem no resumo que o sininho conta — e o 20h com 14 h (acima) continua.
+   */
+  test("item 11 · 40h com 4 horas por semana está ABAIXO da faixa e não avisa — nem no sininho", async ({
+    page,
+  }) => {
+    await abrirFicha(page, amostra.codigos.cmg);
+    await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("16 TA");
+    await abrirAvisosPeloSininho(page);
+    // ⚠️ Só as chaves de FAIXA: o CMG da amostra também não tem NIP, e esse aviso (outro) continua.
+    await expect(
+      avisosDoSujeito(page, "instrutores", amostra.codigos.cmg).filter({ hasText: "faixa" }),
+    ).toHaveCount(0);
+    await expect(
+      avisoDaChave(page, `instrutores:acima-da-faixa:${amostra.codigos.cmg}`),
+    ).toHaveCount(0);
+    // Controle positivo na mesma página: o de cima da faixa avisa.
+    await expect(
+      avisoDaChave(page, `instrutores:acima-da-faixa:${amostra.codigos.ctMaisAntigo}`),
+    ).toHaveCount(1);
+    // O sininho conta o resumo: nenhuma chave do CMG entra nele.
+    const chaves = await page.evaluate(async () => {
+      const r = await fetch("/avisos/resumo");
+      return ((await r.json()) as { chaves: string[] }).chaves;
+    });
+    expect(
+      chaves.filter((c) => c.includes("faixa") && c.endsWith(`:${amostra.codigos.cmg}`)),
+    ).toEqual([]);
+    expect(chaves).toContain(`instrutores:acima-da-faixa:${amostra.codigos.ctMaisAntigo}`);
   });
 });
 

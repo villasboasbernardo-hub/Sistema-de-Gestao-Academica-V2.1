@@ -6,6 +6,9 @@
  * > *"O alerta do FR-016 dispara quando ALGUMA semana coberta sai da faixa do regime — limites
  * > inclusivos — e a mensagem nomeia a semana."* — decisão de Bernardo Villas Boas, 15/09/2026
  *
+ * > *"Instrutores: aviso de carga horária SÓ quando a carga semanal está ACIMA da faixa (abaixo da faixa deixa de
+ * > avisar)."* — Bernardo Villas Boas, 22/10/2026 (spec 022, item 11: emenda o `FR-016`, autorizada nominalmente)
+ *
  * > *"MUST ser sinalizado o instrutor em docência há mais de um ano sem capacitação didática"*
  * > — `FR-017` · *"com `data_inicio_docencia_ciaara` vazia, o alerta do FR-017 NÃO dispara — sem data
  * > não há como contar o ano"* — decisão de Bernardo Villas Boas, 15/09/2026
@@ -21,12 +24,12 @@
  * alerta; alerta a partir de 16/09/2026. As datas são texto `AAAA-MM-DD`, comparadas sem fuso.
  */
 
-import type { SemanaForaDaFaixa } from "./carga-semanal";
+import type { SemanaAcimaDaFaixa } from "./carga-semanal";
 import { temCapacitacao, type CapacitacaoDoInstrutor } from "./capacitacao-didatica";
 import type { FaixaDoRegime } from "./carga-horaria";
 
 export type AlertaDoInstrutor = {
-  readonly chave: "fora-da-faixa" | "sem-capacitacao";
+  readonly chave: "acima-da-faixa" | "sem-capacitacao";
   readonly titulo: string;
   readonly detalhes: readonly string[];
 };
@@ -45,21 +48,21 @@ import { dataParaLeitura } from "@/lib/formato/data";
  */
 const horas = (n: number) => `${n.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} h`;
 
-/** `FR-016` · uma linha por semana fora da faixa, com a semana nomeada. */
-export function alertaForaDaFaixa(
-  semanas: readonly SemanaForaDaFaixa[],
+/** `FR-016` emendado (spec 022, item 11) · uma linha por semana ACIMA da faixa, com a semana nomeada. */
+export function alertaAcimaDaFaixa(
+  semanas: readonly SemanaAcimaDaFaixa[],
   faixa: FaixaDoRegime | null,
 ): AlertaDoInstrutor | null {
   if (faixa === null || semanas.length === 0) return null;
   const limites = `${horas(faixa.minimo).replace(" h", "")} a ${horas(faixa.maximo)}`;
   return {
-    chave: "fora-da-faixa",
-    titulo: "Carga semanal prevista fora da faixa do regime",
+    chave: "acima-da-faixa",
+    titulo: "Carga semanal prevista acima da faixa do regime",
     detalhes: semanas.map(
       (s) =>
         `Semana ${s.semana.numero}/${s.semana.ano} (${dataParaLeitura(s.semana.segunda)} a ` +
         `${dataParaLeitura(s.semana.domingo)}): ` +
-        `${horas(s.carga)}, ${s.situacao === "acima" ? "acima" : "abaixo"} da faixa de ${limites}.`,
+        `${horas(s.carga)}, acima da faixa de ${limites}.`,
     ),
   };
 }

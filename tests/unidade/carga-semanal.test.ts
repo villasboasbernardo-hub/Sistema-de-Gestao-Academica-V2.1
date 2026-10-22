@@ -1,6 +1,10 @@
 /**
  * `FR-016` e `RN-2027-06` — a carga semanal do instrutor por semana ISO, pela decisão de 15/09/2026.
  *
+ * ⚠️ **SÓ ACIMA DA FAIXA, desde 22/10/2026** (spec 022, Bloco 7, item 11 — mudança de regra autorizada nominalmente
+ * por Bernardo Villas Boas): *"aviso de carga horária SÓ quando a carga semanal está ACIMA da faixa (abaixo da faixa
+ * deixa de avisar)"*. Emenda o `FR-016` da spec 006 e a T011 (d); a faixa do `RN-2027-06` não muda.
+ *
  * ⚠️ AS DATAS SÃO DE 2026 E FORAM ESCOLHIDAS PELO CALENDÁRIO: 02/03/2026 é segunda-feira (semana ISO
  * 10) e 29/03/2026 é domingo (semana 13). Uma janela de 02/03 a 29/03 cobre exatamente quatro semanas.
  */
@@ -10,8 +14,8 @@ import {
   cargaPorSemana,
   limitesDoAnoIso,
   semanaIsoDe,
+  semanasAcimaDaFaixa,
   semanasDoAno,
-  semanasForaDaFaixa,
   type AtribuicaoComJanela,
 } from "@/lib/dominio/carga-semanal";
 
@@ -51,7 +55,7 @@ describe("`FR-016` · a soma é por semana, nunca do ano inteiro", () => {
       [33, 10],
     ]);
     // 🛑 Somar o ano daria 20 h e um alerta falso para quem nunca passou de 10 h numa semana.
-    expect(semanasForaDaFaixa(cargas, REGIME_20H)).toEqual([]);
+    expect(semanasAcimaDaFaixa(cargas, REGIME_20H)).toEqual([]);
   });
 
   it("janelas sobrepostas somam só nas semanas em comum, e o alerta nomeia a semana", () => {
@@ -67,16 +71,13 @@ describe("`FR-016` · a soma é por semana, nunca do ano inteiro", () => {
       [14, 7, 1],
       [15, 7, 1],
     ]);
-    const fora = semanasForaDaFaixa(cargas, REGIME_20H);
-    expect(fora.map((f) => [f.semana.numero, f.situacao])).toEqual([
-      [10, "abaixo"],
-      [11, "abaixo"],
-      [12, "acima"],
-      [13, "acima"],
-      [14, "abaixo"],
-      [15, "abaixo"],
+    // ⚠️ Item 11 da spec 022: as quatro semanas de 7 h estão ABAIXO da faixa de 8 a 12 h e não avisam mais.
+    const acima = semanasAcimaDaFaixa(cargas, REGIME_20H);
+    expect(acima.map((f) => [f.semana.numero, f.carga])).toEqual([
+      [12, 14],
+      [13, 14],
     ]);
-    expect(fora[2]?.semana).toMatchObject({ segunda: "2026-03-16", domingo: "2026-03-22" });
+    expect(acima[0]?.semana).toMatchObject({ segunda: "2026-03-16", domingo: "2026-03-22" });
   });
 
   it("uma janela que começa na quarta cobre a semana inteira daquela quarta", () => {
@@ -98,22 +99,22 @@ describe("T011 (d) · limites inclusivos, sem erro de ponto flutuante", () => {
     ]);
     expect(oito[0]?.carga).toBe(8);
     expect(doze[0]?.carga).toBe(12);
-    expect(semanasForaDaFaixa(oito, REGIME_20H)).toEqual([]);
-    expect(semanasForaDaFaixa(doze, REGIME_20H)).toEqual([]);
+    expect(semanasAcimaDaFaixa(oito, REGIME_20H)).toEqual([]);
+    expect(semanasAcimaDaFaixa(doze, REGIME_20H)).toEqual([]);
   });
 
-  it("7,99 alerta abaixo e 12,01 alerta acima", () => {
+  it("⚠️ O CASO QUE DISCRIMINA O ITEM 11: 7,99 (abaixo) NÃO avisa; 12,01 (acima) avisa", () => {
     const abaixo = cargaPorSemana([janela("2026-03-02", "2026-03-08", 7.99)]);
     const acima = cargaPorSemana([janela("2026-03-02", "2026-03-08", 12.01)]);
-    expect(semanasForaDaFaixa(abaixo, REGIME_20H)[0]?.situacao).toBe("abaixo");
-    expect(semanasForaDaFaixa(acima, REGIME_20H)[0]?.situacao).toBe("acima");
+    expect(semanasAcimaDaFaixa(abaixo, REGIME_20H)).toEqual([]);
+    expect(semanasAcimaDaFaixa(acima, REGIME_20H).map((s) => s.carga)).toEqual([12.01]);
   });
 });
 
 describe("sem atribuição · sem semana e sem alerta", () => {
   it("instrutor sem atribuição não tem semana nenhuma, e não alerta", () => {
     expect(cargaPorSemana([])).toEqual([]);
-    expect(semanasForaDaFaixa(cargaPorSemana([]), REGIME_20H)).toEqual([]);
+    expect(semanasAcimaDaFaixa(cargaPorSemana([]), REGIME_20H)).toEqual([]);
   });
 
   it("atribuição sem janela ou sem média não entra em semana nenhuma", () => {
@@ -128,7 +129,7 @@ describe("sem atribuição · sem semana e sem alerta", () => {
 
   it("sem faixa — regime não informado — não há o que comparar", () => {
     const cargas = cargaPorSemana([janela("2026-03-02", "2026-03-08", 40)]);
-    expect(semanasForaDaFaixa(cargas, null)).toEqual([]);
+    expect(semanasAcimaDaFaixa(cargas, null)).toEqual([]);
   });
 });
 
@@ -150,7 +151,7 @@ describe("CHK005 · todas as semanas ISO do ano corrente, decisão de 15/09/2026
     ]);
     // A semana 1 de 2026 começa em 29/12/2025: ela é do ano corrente, mesmo com três dias de 2025.
     expect(doAno[0]?.semana.segunda).toBe("2025-12-29");
-    expect(semanasForaDaFaixa(doAno, REGIME_20H)).toHaveLength(4);
+    expect(semanasAcimaDaFaixa(doAno, REGIME_20H)).toHaveLength(4);
   });
 
   it("semana de janela que avança para o ano seguinte sai do ano corrente", () => {
@@ -162,6 +163,6 @@ describe("CHK005 · todas as semanas ISO do ano corrente, decisão de 15/09/2026
 
   it("não há recorte por hoje: semana que já passou conta igual", () => {
     const cargas = cargaPorSemana([janela("2026-01-05", "2026-01-11", 20)]);
-    expect(semanasForaDaFaixa(semanasDoAno(cargas, 2026), REGIME_20H)).toHaveLength(1);
+    expect(semanasAcimaDaFaixa(semanasDoAno(cargas, 2026), REGIME_20H)).toHaveLength(1);
   });
 });

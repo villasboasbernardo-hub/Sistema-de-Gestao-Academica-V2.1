@@ -64,7 +64,8 @@ export type CargaDaSemana = {
   readonly atribuicoes: number;
 };
 
-export type SemanaForaDaFaixa = CargaDaSemana & { readonly situacao: "abaixo" | "acima" };
+/** Uma semana cuja carga passou do máximo da faixa do regime (spec 022, item 11: só acima avisa). */
+export type SemanaAcimaDaFaixa = CargaDaSemana;
 
 const DIA_MS = 86_400_000;
 const FORMATO = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -206,18 +207,22 @@ export function semanasDoAno(
 }
 
 /**
- * As semanas cobertas cuja carga sai da faixa do regime — **limites inclusivos** (T011 d).
+ * As semanas cobertas cuja carga passa do **máximo** da faixa do regime — **limites inclusivos** (T011 d).
  *
+ * > *"Instrutores: aviso de carga horária SÓ quando a carga semanal está ACIMA da faixa (abaixo da faixa deixa de
+ * > avisar)."* — Bernardo Villas Boas, 22/10/2026 (spec 022, Bloco 7, item 11 — mudança de regra autorizada
+ * > nominalmente)
+ *
+ * ⚠️ **EMENDA AO `FR-016` DA SPEC 006 E À T011 (d)** (15/09/2026), que avisavam também ABAIXO da faixa ("menos de 8
+ *    ou mais de 12 gera"). A faixa do `RN-2027-06` (documento 04) **não muda**: 8–12 h, 16–24 h, 16–30 h; o que muda é
+ *    que só o lado de cima vira aviso. `situarNaFaixa` continua dizendo "abaixo" — quem decide o aviso é esta função.
  * ⚠️ A FAIXA CHEGA POR ARGUMENTO, de `config_parametros`. Sem faixa (regime não informado), não há o que
- * comparar, e a lista é vazia.
+ *    comparar, e a lista é vazia.
  */
-export function semanasForaDaFaixa(
+export function semanasAcimaDaFaixa(
   cargas: readonly CargaDaSemana[],
   faixa: FaixaDoRegime | null,
-): readonly SemanaForaDaFaixa[] {
+): readonly SemanaAcimaDaFaixa[] {
   if (faixa === null) return [];
-  return cargas.flatMap((c) => {
-    const situacao = situarNaFaixa(c.carga, faixa);
-    return situacao === "dentro" ? [] : [{ ...c, situacao }];
-  });
+  return cargas.filter((c) => situarNaFaixa(c.carga, faixa) === "acima");
 }

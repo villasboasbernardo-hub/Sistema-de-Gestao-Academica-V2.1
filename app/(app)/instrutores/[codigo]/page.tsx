@@ -186,8 +186,8 @@ export default async function FichaDoInstrutor({
   const prevista = cargaRes.error ? null : Number(cargaRes.data?.ta_previsto_ano ?? 0);
 
   /*
-   * ⚠️ **OS ALERTAS DA US4 SAÍRAM DA FICHA NO BLOCO 7** (spec 022, FR-004.4; A-2): a carga semanal fora da faixa e a
-   *    docência sem capacitação moram na página Avisos, calculados lá pelas mesmas funções (`alertaForaDaFaixa`,
+   * ⚠️ **OS ALERTAS DA US4 SAÍRAM DA FICHA NO BLOCO 7** (spec 022, FR-004.4; A-2): a carga semanal acima da faixa e a
+   *    docência sem capacitação moram na página Avisos, calculados lá pelas mesmas funções (`alertaAcimaDaFaixa`,
    *    `alertaSemCapacitacao`) e só para instrutor ativo (CHK019). Continuam avisando sem bloquear (`RN-DEG-02`).
    */
   /*

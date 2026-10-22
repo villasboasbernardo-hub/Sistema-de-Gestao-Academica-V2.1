@@ -122,8 +122,8 @@ describe("§6 · cada quadro de hoje, um módulo e um link", () => {
           capacitacaoACorrigir: "curso antigo",
           alertas: [
             {
-              chave: "fora-da-faixa",
-              titulo: "Carga semanal prevista fora da faixa do regime",
+              chave: "acima-da-faixa",
+              titulo: "Carga semanal prevista acima da faixa do regime",
               detalhes: ["Semana 10/2026: 30 h, acima da faixa de 16 a 24 h."],
             },
           ],
@@ -133,7 +133,7 @@ describe("§6 · cada quadro de hoje, um módulo e um link", () => {
     expect(avisos.map((a) => [a.modulo, a.chave, a.destino])).toEqual([
       ["turmas", "turmas:sem_sala:T1 2026", "/turmas/T1%202026"],
       ["instrutores", "instrutores:sem-nip:15", "/instrutores/15"],
-      ["instrutores", "instrutores:fora-da-faixa:15", "/instrutores/15"],
+      ["instrutores", "instrutores:acima-da-faixa:15", "/instrutores/15"],
       ["instrutores", "instrutores:capacitacao_a_corrigir:15", "/instrutores/15"],
     ]);
   });
