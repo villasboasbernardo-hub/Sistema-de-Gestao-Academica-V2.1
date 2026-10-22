@@ -10,6 +10,7 @@
  */
 import * as React from "react";
 
+import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,11 +23,14 @@ const CLASSE_DO_SELETOR =
 
 export function FormularioDeRegime({
   cursoId,
+  curriculoId,
   regime,
   configuracoes,
   aoConcluir,
 }: {
   readonly cursoId: string;
+  /** Spec 021 (emenda à RC-1): o currículo em que o regime novo nasce. */
+  readonly curriculoId: string | null;
   /** Ausente = regime novo. */
   readonly regime?: RegimeNaTela;
   readonly configuracoes: readonly ConfiguracaoDoCatalogo[];
@@ -34,6 +38,8 @@ export function FormularioDeRegime({
 }) {
   const [erro, definirErro] = React.useState<string | null>(null);
   const [gravando, definirGravando] = React.useState(false);
+  /* Spec 021 (RC-6): no currículo em uso, mudar o regime é correção — o banco pede a justificativa. */
+  const { executar, dialogo } = usePedidoDeJustificativa();
   const editando = regime !== undefined;
   const relogioTravado = regime?.relogioTravado ?? false;
   const id = regime?.id ?? "novo";
@@ -56,14 +62,19 @@ export function FormularioDeRegime({
       ),
       observacao: String(dados.get("observacao") ?? ""),
     };
-    const resultado = editando
-      ? await editarRegimeDeHorario({ ...relogio, id: regime.id })
-      : await criarRegimeDeHorario({
-          ...relogio,
-          curso_id: cursoId,
-          regime_tempos: String(dados.get("regime_tempos") ?? ""),
-          ta_duracao_min: String(dados.get("ta_duracao_min") ?? ""),
-        });
+    const resultado = await executar((justificativa) => {
+      const j = justificativa ? { justificativa } : {};
+      return editando
+        ? editarRegimeDeHorario({ ...relogio, ...j, id: regime.id })
+        : criarRegimeDeHorario({
+            ...relogio,
+            ...j,
+            curso_id: cursoId,
+            ...(curriculoId ? { curriculo_id: curriculoId } : {}),
+            regime_tempos: String(dados.get("regime_tempos") ?? ""),
+            ta_duracao_min: String(dados.get("ta_duracao_min") ?? ""),
+          });
+    });
     definirGravando(false);
     if (!resultado.ok) {
       definirErro(resultado.erro);
@@ -74,6 +85,7 @@ export function FormularioDeRegime({
 
   return (
     <form action={gravar} className="flex flex-col gap-3" data-slot="formulario-de-regime">
+      {dialogo}
       {erro ? (
         <p role="alert" className="text-atrasado-tinta text-sm" data-slot="erro-do-regime">
           {erro}

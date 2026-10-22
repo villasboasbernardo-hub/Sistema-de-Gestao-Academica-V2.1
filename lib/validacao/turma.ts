@@ -85,6 +85,15 @@ const camposDaTurma = z.object({
     .union([z.literal(""), z.uuid({ error: "Regime de horário inválido." })])
     .optional()
     .transform((v) => (v === undefined ? undefined : v === "" ? null : v)),
+  /*
+   * Spec 021 (Bloco 6, RC-4): o currículo que a turma segue. ⚠️ VAZIO É "O PADRÃO" e NÃO vai ao banco: quem escolhe o
+   *    vigente na data de início é o gatilho (`app.curriculo_padrao_da_turma`). Mandar nulo gravaria turma sem
+   *    currículo — que o banco recusa. A troca na turma com lançamento é recusada pelo banco (RF-HOR-05, D-3).
+   */
+  curriculo_id: z
+    .union([z.literal(""), z.uuid({ error: "Currículo inválido." })])
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
 });
 
 type CamposDaTurma = z.infer<typeof camposDaTurma>;

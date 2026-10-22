@@ -139,6 +139,11 @@ export type GradeDeDisciplinas = {
    * A tela **avisa**, em vez de abrir vazia fingindo que não há disciplina (gotcha 4).
    */
   readonly cursoNaoAlcancado: boolean;
+  /**
+   * Spec 021 (Bloco 6, RC-5 e RC-8): o currículo cujas disciplinas a grade mostra — o selecionado na página do curso,
+   * ou o da turma na ficha. `null` = pelo curso (quem não disse o currículo; com um currículo por curso, o mesmo).
+   */
+  readonly curriculoId: string | null;
 };
 
 /** O padrão do `disciplinas.aviso_inicio_dias`, se o parâmetro sumir da tabela (`RN-DEG-01`). */
@@ -179,7 +184,10 @@ function nomeDaFicha(f: FichaCrua): string {
 export async function lerGradeDeDisciplinas(filtro: {
   readonly cursoCodigo: string;
   readonly turmaCodigo: string;
+  /** Spec 021 (RC-8, RC-4): o currículo a mostrar. Sem ele, as disciplinas do curso. */
+  readonly curriculoId?: string | null;
 }): Promise<GradeDeDisciplinas> {
+  const curriculoId = filtro.curriculoId ?? null;
   const supabase = await criarClienteDeServidor();
 
   // ── as três independentes, de uma vez ────────────────────────────────────────────────────────
@@ -227,23 +235,28 @@ export async function lerGradeDeDisciplinas(filtro: {
     escalaDeAntiguidade,
     // ⚠️ Pediu um curso e ele não veio: é **alcance**, não ausência de disciplina.
     cursoNaoAlcancado: filtro.cursoCodigo !== "" && cursoEscolhido === null,
+    curriculoId,
   } satisfies GradeDeDisciplinas;
 
   if (!cursoEscolhido) return vazio;
 
   // ── o curso escolhido: turmas e disciplinas, independentes entre si ──────────────────────────
+  /* RC-8: com o currículo dito, só as disciplinas DELE; com dois currículos, o curso somaria os dois. */
+  const consultaDasDisciplinas = supabase
+    .from("disciplinas")
+    .select(
+      "id, codigo, cod_disciplina, nome_disciplina, carga_horaria_tempos, ordem_sugerida, modo_atribuicao_padrao, tecnica_ensino_sugerida, local_padrao, nome_no_dsa, status",
+    );
   const [turmasRes, disciplinasRes, arquivadasRes] = await Promise.all([
     supabase
       .from("turmas")
       .select("id, codigo, status")
       .eq("curso_id", cursoEscolhido.id)
       .order("codigo"),
-    supabase
-      .from("disciplinas")
-      .select(
-        "id, codigo, cod_disciplina, nome_disciplina, carga_horaria_tempos, ordem_sugerida, modo_atribuicao_padrao, tecnica_ensino_sugerida, local_padrao, nome_no_dsa, status",
-      )
-      .eq("curso_id", cursoEscolhido.id)
+    (curriculoId
+      ? consultaDasDisciplinas.eq("curriculo_id", curriculoId)
+      : consultaDasDisciplinas.eq("curso_id", cursoEscolhido.id)
+    )
       .order("ordem_sugerida", { ascending: true, nullsFirst: false })
       .order("cod_disciplina"),
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
@@ -520,5 +533,6 @@ export async function lerGradeDeDisciplinas(filtro: {
     avisoInicioDias: Number.isFinite(avisoInicioDias) ? avisoInicioDias : AVISO_INICIO_DIAS_PADRAO,
     escalaDeAntiguidade,
     cursoNaoAlcancado: false,
+    curriculoId,
   };
 }

@@ -378,7 +378,12 @@ describe("limites do currículo (FR-001.1, R-11)", () => {
     expect(error?.code).toBe("42501");
   });
 
-  it("o Ajudante grava (controle positivo: tem cursos.editar)", async () => {
+  /*
+   * ⚠️ SPEC 021 (RC-6): o currículo deste curso é seguido por turma com lançamento, então ACRESCENTAR limite é correção
+   *    — o trio a faz com justificativa. Até a correção do buraco da M4 (o porteiro rodava antes de o currículo ser
+   *    preenchido na inserção só com `curso_id`), este caso passava sem ela: era o buraco, não a regra.
+   */
+  it("o Ajudante grava (controle positivo: tem cursos.editar), com a justificativa da RC-6", async () => {
     const { error } = await sessao("ajudante_administracao_academica")
       .from("limites_curriculo")
       .insert({
@@ -387,7 +392,11 @@ describe("limites do currículo (FR-001.1, R-11)", () => {
         tempos: 10,
         fonte_arquivo: "aav-aj.pdf",
         fonte_pagina: 1,
-      });
+      })
+      .setHeader(
+        "x-justificativa-de-correcao",
+        Buffer.from("Limite de AEC declarado no currículo.", "utf8").toString("base64"),
+      );
     expect(error).toBeNull();
   });
 

@@ -1,6 +1,10 @@
 /**
  * A página do curso (`RF-CURSO-01`, `FR-006` a `FR-011`, `FR-031.4`).
  *
+ * ⚠️ **SÓ LEITURA, NO CURRÍCULO VIGENTE** (spec 021, Bloco 6, ajustes 1 e 2 da conferência do PR #82, Bernardo Villas
+ * Boas, 21/10/2026): as abas mostram o currículo vigente hoje, sem ação de edição — criar e editar currículo, disciplina,
+ * UE, avaliação, horário e limite mora em *Editar curso*. A aba *Currículo* lista todos e consulta cada um.
+ *
  * ⚠️ **SEM MARCADOR DE CLIENTE.** As abas e o seletor de turma são folhas; o conteúdo das duas abas é
  * desenhado aqui, no servidor, e passado pronto.
  *
@@ -14,29 +18,31 @@
  * *"em breve"*: *"a tela não anuncia o que não entrega"*. A reserva das duas rotas em `FORA_DO_MENU`
  * continua valendo — ela diz que o menu não as terá, não que esta página já as mostra.
  */
-import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
+import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { avisosDoCurso } from "@/lib/dominio/avisos-do-curso";
-import { curriculoVigenteEm } from "@/lib/dominio/curriculos";
+import {
+  curriculoDaPagina,
+  curriculoVigenteEm,
+  opcoesDoSeletor,
+  rotuloDoCurriculo,
+  ROTULO_DA_SITUACAO,
+} from "@/lib/dominio/curriculos";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import { codigoDaTurmaNoSegmento } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../consulta";
+import { AbaCurriculo, type CurriculoNaLista } from "./AbaCurriculo";
 import { AbaGrade, type TurmaDaGrade } from "./AbaGrade";
 import { BarraDoCurso } from "./BarraDoCurso";
 import { AbaSobre, type AvaliacaoPrevista, type DisciplinaDaGrade } from "./AbaSobre";
 import { AbaAvaliacoes } from "./AbaAvaliacoes";
 import { AbasDoCurso } from "./AbasDoCurso";
 import { lerAvaliacoesDoCurso } from "../../turmas/[turma]/consulta-de-avaliacoes";
-import {
-  confirmarSugestao,
-  definirTempoArbitrado,
-  nomearUe,
-} from "@/lib/acoes/avaliacoes-do-curriculo";
 import { CabecalhoDoCurso } from "./CabecalhoDoCurso";
 import {
   COLUNAS_DAS_TURMAS_DO_CURSO,
@@ -50,7 +56,8 @@ import { QuadroDeAvisosDoCurso } from "./QuadroDeAvisosDoCurso";
 import { TurmasComTetoExcedido, type LinhaDoLimite } from "./BlocoDeLimites";
 import { AbaAtividades } from "./AbaAtividades";
 import { AbaHorarios } from "./AbaHorarios";
-import { lerHorariosDoCurso } from "./consulta-de-horarios";
+import { lerHorariosDoCurso, type HorariosDoCurso } from "./consulta-de-horarios";
+import { RegimesDoCurso } from "./RegimesDoCurso";
 import { GradeDeDisciplinas } from "../../disciplinas/GradeDeDisciplinas";
 import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
 import type { TipoDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
@@ -66,6 +73,9 @@ import { parametroDoAno } from "../../turmas/[turma]/tetos";
 /** Hoje em `yyyy-mm-dd`, no fuso de apresentação. Entra como argumento nas funções puras. */
 /* ⚠️ A cópia local saiu em 04/10/2026: `hojeNaCiaara()` é a mesma conta, num lugar só. */
 const hojeEmSaoPaulo = hojeNaCiaara;
+
+/* Ajuste 1 da conferência do PR #82 (spec 021): a página do curso é só leitura — nenhuma ação de edição nas abas. */
+const SO_LEITURA = { criar: false, editar: false, desativar: false } as const;
 
 export default async function PaginaDoCurso({
   params,
@@ -105,16 +115,19 @@ export default async function PaginaDoCurso({
   }
 
   /*
-   * ⚠️ SPEC 021 (Bloco 6, RC-1): o propósito, a duração, o PDF, as disciplinas da aba Sobre, as regras de avaliação e
-   *    os limites são do CURRÍCULO. Até o seletor (PR 2), a página mostra o VIGENTE hoje — com um currículo por curso, o
-   *    mesmo conteúdo que ela mostrava pelo curso.
+   * ⚠️ SPEC 021 (Bloco 6, RC-1; ajuste 1 da conferência do PR #82): o propósito, a duração, o PDF, as disciplinas, as
+   *    regras de avaliação, os limites e os horários são do CURRÍCULO — e a página mostra o VIGENTE hoje. Com um
+   *    currículo por curso, o mesmo conteúdo que ela mostrava pelo curso. Os outros se consultam na aba *Currículo*.
    */
-  const curriculo = curriculoVigenteEm(
-    ((curso as unknown as { curriculos?: CurriculoDaPagina[] }).curriculos ??
-      []) as CurriculoDaPagina[],
-    hojeEmSaoPaulo(),
-  );
+  const hoje = hojeEmSaoPaulo();
+  const curriculosDoCurso = ((curso as unknown as { curriculos?: CurriculoDaPagina[] })
+    .curriculos ?? []) as CurriculoDaPagina[];
+  const curriculo = curriculoVigenteEm(curriculosDoCurso, hoje);
   const curriculoId = curriculo?.id ?? SEM_CURRICULO;
+  /* A aba *Currículo*: o consultado (`?curriculo=N`), ou o vigente — com o aviso quando o pedido não serve. */
+  const escolhaDaConsulta = curriculoDaPagina(curriculosDoCurso, String(valores.curriculo), hoje);
+  const consultado = escolhaDaConsulta.curriculo;
+  const consultadoId = consultado?.id ?? SEM_CURRICULO;
 
   const [
     turmasRes,
@@ -189,8 +202,6 @@ export default async function PaginaDoCurso({
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
   ]);
 
-  const hoje = hojeEmSaoPaulo();
-
   /*
    * ⚠️ **A ARQUIVADA SOME DA GRADE, MAS CONTA NO LIMITE** (D-COR-5; C-7 e C-24): `paraLimite` lê TODAS as turmas,
    *    e a lista, o seletor, a pré-seleção e *"Turmas com teto excedido"* só as não arquivadas.
@@ -200,11 +211,14 @@ export default async function PaginaDoCurso({
   const codigosArquivados = new Set(
     todasAsTurmas.filter((t) => arquivadas.has(t.id as string)).map((t) => t.codigo as string),
   );
-  const turmas: TurmaDaGrade[] = semAsArquivadas(
-    todasAsTurmas,
-    arquivadas,
-    (t) => t.id as string,
-  ).map((t) => ({
+  /*
+   * ⚠️ SPEC 021 (RC-9): a lista da aba Grade mostra TODAS as turmas, inclusive as arquivadas, cada uma com o currículo
+   *    que segue; o seletor de turma e a pré-seleção continuam sem as arquivadas (C-24 da spec 017).
+   */
+  const rotuloDoCurriculoPorId = new Map(
+    curriculosDoCurso.map((c) => [c.id, rotuloDoCurriculo(c)] as const),
+  );
+  const turmasDaLista: TurmaDaGrade[] = todasAsTurmas.map((t) => ({
     codigo: t.codigo as string,
     rotulo: t.turma,
     ano: Number(t.ano_letivo),
@@ -220,7 +234,10 @@ export default async function PaginaDoCurso({
      * A contagem exata entra com a fatia que ler `turma_disciplina`.
      */
     disciplinasAtivas: 1,
+    curriculo: rotuloDoCurriculoPorId.get(t.curriculo_id as string) ?? null,
+    arquivada: arquivadas.has(t.id as string),
   }));
+  const turmas = turmasDaLista.filter((t) => !t.arquivada);
 
   const selecao = resolverTurmaSelecionada(
     turmas.map((t) => ({
@@ -239,30 +256,70 @@ export default async function PaginaDoCurso({
    *    turma da Grade e mostrava o cumprido — acompanhamento de turma, que mora na ficha da turma.
    */
   const aba = String(valores.aba);
-  const [avaliacoesDoCurso, gradeDeDisciplinas, horariosDoCurso, tiposRes] = await Promise.all([
-    aba === "avaliacoes"
-      ? lerAvaliacoesDoCurso({ cursoId: curso.id as string, turmaCodigo: null, hoje })
-      : Promise.resolve({ quadro: null, aviso: null }),
-    aba === "disciplinas"
-      ? lerGradeDeDisciplinas({ cursoCodigo: curso.codigo as string, turmaCodigo: "" })
-      : Promise.resolve(null),
-    aba === "horarios"
-      ? lerHorariosDoCurso({
-          cursoId: curso.id as string,
-          turmas: todasAsTurmas.map((t) => ({
-            codigo: t.codigo as string,
-            regimeId: (t.regime_de_horario_id as string | null) ?? null,
-          })),
-        })
-      : Promise.resolve(null),
-    aba === "atividades"
-      ? supabase
-          .from("config_listas")
-          .select("id, valor, ativo, metadados")
-          .eq("lista", "tipos_atividade")
-          .order("ordem")
-      : Promise.resolve({ data: [] }),
-  ]);
+  const naConsulta = aba === "curriculo" && consultado !== null;
+  const turmasPorRegime = todasAsTurmas.map((t) => ({
+    codigo: t.codigo as string,
+    regimeId: (t.regime_de_horario_id as string | null) ?? null,
+  }));
+  const [avaliacoesDoCurso, gradeDeDisciplinas, horariosDoCurso, tiposRes, consultaRes] =
+    await Promise.all([
+      aba === "avaliacoes"
+        ? lerAvaliacoesDoCurso({
+            cursoId: curso.id as string,
+            turmaCodigo: null,
+            hoje,
+            curriculoId,
+          })
+        : Promise.resolve({ quadro: null, aviso: null }),
+      aba === "disciplinas"
+        ? lerGradeDeDisciplinas({
+            cursoCodigo: curso.codigo as string,
+            turmaCodigo: "",
+            curriculoId,
+          })
+        : Promise.resolve(null),
+      aba === "horarios"
+        ? lerHorariosDoCurso({ cursoId: curso.id as string, curriculoId, turmas: turmasPorRegime })
+        : Promise.resolve(null),
+      aba === "atividades" || naConsulta
+        ? supabase
+            .from("config_listas")
+            .select("id, valor, ativo, metadados")
+            .eq("lista", "tipos_atividade")
+            .order("ordem")
+        : Promise.resolve({ data: [] }),
+      /* Ajuste 2: a consulta do currículo escolhido na aba *Currículo* — os mesmos leitores das outras abas. */
+      naConsulta
+        ? Promise.all([
+            lerGradeDeDisciplinas({
+              cursoCodigo: curso.codigo as string,
+              turmaCodigo: "",
+              curriculoId: consultadoId,
+            }),
+            lerAvaliacoesDoCurso({
+              cursoId: curso.id as string,
+              turmaCodigo: null,
+              hoje,
+              curriculoId: consultadoId,
+            }),
+            lerHorariosDoCurso({
+              cursoId: curso.id as string,
+              curriculoId: consultadoId,
+              turmas: turmasPorRegime,
+            }),
+            supabase
+              .from("limites_curriculo")
+              .select("categoria, tempos, fonte_pagina")
+              .eq("curriculo_id", consultadoId)
+              .eq("status", "ativo"),
+            supabase
+              .from("disciplinas")
+              .select("carga_horaria_tempos")
+              .eq("curriculo_id", consultadoId)
+              .eq("status", "ativo"),
+          ])
+        : Promise.resolve(null),
+    ]);
 
   const paraLimite: TurmaParaLimite[] = todasAsTurmas.map((t) => ({
     ano: Number(t.ano_letivo),
@@ -320,30 +377,67 @@ export default async function PaginaDoCurso({
    */
   const anoDosLimites = Number(hoje.slice(0, 4));
   const chCurricular = disciplinas.reduce((s, d) => s + (d.cargaHorariaTempos ?? 0), 0) || null;
-  const linhasDosLimites: LinhaDoLimite[] = (["AEC", "TAD", "TR"] as const).map((sigla) => {
-    const declarado = (limitesRes.data ?? []).find((l) => l.categoria === sigla);
-    const percentual = parametroDoAno(
-      parametrosRes.data ?? [],
-      `teto.${sigla.toLowerCase()}_percentual_chr`,
-      anoDosLimites,
-    );
-    return {
-      sigla,
-      limite: limiteMaximo({
-        declarado: declarado ? Number(declarado.tempos) : null,
-        chCurricular,
+  const limitesDe = (
+    declarados: readonly { categoria: string; tempos: number; fonte_pagina: number | null }[],
+    ch: number | null,
+  ): LinhaDoLimite[] =>
+    (["AEC", "TAD", "TR"] as const).map((sigla) => {
+      const declarado = declarados.find((l) => l.categoria === sigla);
+      const percentual = parametroDoAno(
+        parametrosRes.data ?? [],
+        `teto.${sigla.toLowerCase()}_percentual_chr`,
+        anoDosLimites,
+      );
+      return {
+        sigla,
+        limite: limiteMaximo({
+          declarado: declarado ? Number(declarado.tempos) : null,
+          chCurricular: ch,
+          percentual,
+        }),
+        pagina: declarado?.fonte_pagina ?? null,
         percentual,
-      }),
-      pagina: declarado?.fonte_pagina ?? null,
-      percentual,
-      chCurricular,
-    };
-  });
+        chCurricular: ch,
+      };
+    });
+  const linhasDosLimites = limitesDe(
+    (limitesRes.data ?? []) as { categoria: string; tempos: number; fonte_pagina: number | null }[],
+    chCurricular,
+  );
   const excedidos = tetosExcedidos(
     (conformidadeRes.data ?? []) as LinhaDaConformidade[],
     (previstosRes.data ?? []) as unknown as LinhaDoPrevisto[],
     new Map((turmasRes.data ?? []).map((t) => [t.id as string, t.modalidade as string | null])),
   ).filter((e) => !codigosArquivados.has(e.turmaCodigo));
+
+  /*
+   * Ajuste 3 (conferência do PR #82): *Editar curso* é onde o currículo inteiro se edita — então quem edita disciplina
+   * ou horário também chega lá. O botão segue a permissão da página de destino.
+   */
+  const podeAbrirEdicao =
+    pode(permissoes, "cursos", "editar") ||
+    pode(permissoes, "horarios", "criar") ||
+    pode(permissoes, "horarios", "editar") ||
+    pode(permissoes, "disciplinas", "criar") ||
+    pode(permissoes, "disciplinas", "editar");
+
+  /* Ajuste 2: a lista da aba *Currículo* — todos, os arquivados também, do mais novo ao mais antigo. */
+  const turmasPorCurriculo = new Map<string, number>();
+  for (const t of todasAsTurmas) {
+    const id = t.curriculo_id as string;
+    turmasPorCurriculo.set(id, (turmasPorCurriculo.get(id) ?? 0) + 1);
+  }
+  const listaDeCurriculos: CurriculoNaLista[] = opcoesDoSeletor(curriculosDoCurso, hoje, true).map(
+    (o) => ({
+      versao: o.curriculo.versao,
+      rotulo: o.rotulo,
+      situacao: ROTULO_DA_SITUACAO[o.situacao],
+      vigenteDe: o.curriculo.vigente_de,
+      descricao: o.curriculo.descricao ?? null,
+      temPdf: o.curriculo.pdf_carregado_em !== null,
+      turmas: turmasPorCurriculo.get(o.curriculo.id) ?? 0,
+    }),
+  );
 
   return (
     <section className="flex flex-col gap-5">
@@ -361,9 +455,7 @@ export default async function PaginaDoCurso({
          *    montada aqui, no servidor, e o cabeçalho só a recebe: duas telas decidindo alcance
          *    por conta própria é como as duas divergem.
          */
-        podeAbrirEdicao={
-          pode(permissoes, "cursos", "editar") || pode(permissoes, "horarios", "criar")
-        }
+        podeAbrirEdicao={podeAbrirEdicao}
       />
 
       {/*
@@ -374,9 +466,7 @@ export default async function PaginaDoCurso({
       <BarraDoCurso
         sigla={curso.codigo as string}
         ativo={cursoAtivo}
-        podeAbrirEdicao={
-          pode(permissoes, "cursos", "editar") || pode(permissoes, "horarios", "criar")
-        }
+        podeAbrirEdicao={podeAbrirEdicao}
         podeMudarSituacao={pode(permissoes, "cursos", "desativar")}
         podeCriarTurma={pode(permissoes, "turmas", "criar")}
       />
@@ -394,11 +484,13 @@ export default async function PaginaDoCurso({
         grade={
           <AbaGrade
             sigla={curso.codigo as string}
-            turmas={turmas}
+            turmas={turmasDaLista}
             selecionada={selecao.codigo}
             hoje={hoje}
             avisoDaSelecao={selecao.aviso}
-            motivoDoVazio={turmas.length > 0 ? null : alcance === "recortado" ? "nao-ve" : "nao-ha"}
+            motivoDoVazio={
+              turmasDaLista.length > 0 ? null : alcance === "recortado" ? "nao-ve" : "nao-ha"
+            }
           />
         }
         sobre={
@@ -436,30 +528,15 @@ export default async function PaginaDoCurso({
                   situacao: String(valores.situacao),
                   busca: String(valores.busca),
                 }}
-                permissoes={{
-                  criar: cursoAtivo && pode(permissoes, "disciplinas", "criar"),
-                  editar: pode(permissoes, "disciplinas", "editar"),
-                  desativar: pode(permissoes, "disciplinas", "desativar"),
-                }}
+                /* Ajuste 1 (conferência do PR #82): a página do curso é SÓ LEITURA — edita-se em *Editar curso*. */
+                permissoes={SO_LEITURA}
                 hoje={hoje}
               />
             ) : null}
           </div>
         }
         avaliacoes={
-          <AbaAvaliacoes
-            quadro={avaliacoesDoCurso.quadro}
-            aviso={avaliacoesDoCurso.aviso}
-            {...(pode(permissoes, "avaliacoes_curriculo_arbitrado", "editar")
-              ? {
-                  arbitrado: {
-                    definir: definirTempoArbitrado,
-                    confirmar: confirmarSugestao,
-                    nomear: nomearUe,
-                  },
-                }
-              : {})}
-          />
+          <AbaAvaliacoes quadro={avaliacoesDoCurso.quadro} aviso={avaliacoesDoCurso.aviso} />
         }
         atividades={
           <AbaAtividades
@@ -485,17 +562,81 @@ export default async function PaginaDoCurso({
             <AbaHorarios
               sigla={curso.codigo as string}
               cursoId={curso.id as string}
+              curriculoId={curriculoId}
               cursoAtivo={cursoAtivo}
               horarios={horariosDoCurso}
               permissoes={{
-                criar: pode(permissoes, "horarios", "criar"),
-                editar: pode(permissoes, "horarios", "editar"),
-                desativar: pode(permissoes, "horarios", "desativar"),
-                abrirEdicaoDoCurso:
-                  pode(permissoes, "cursos", "editar") || pode(permissoes, "horarios", "criar"),
+                ...SO_LEITURA,
+                abrirEdicaoDoCurso: podeAbrirEdicao,
               }}
             />
           ) : null
+        }
+        curriculo={
+          <AbaCurriculo
+            sigla={curso.codigo as string}
+            lista={listaDeCurriculos}
+            consultado={consultado?.versao ?? null}
+            aviso={escolhaDaConsulta.aviso}
+            consulta={
+              consultaRes
+                ? {
+                    disciplinas: (
+                      <GradeDeDisciplinas
+                        grade={consultaRes[0]}
+                        parametros={{
+                          situacao: String(valores.situacao),
+                          busca: String(valores.busca),
+                        }}
+                        permissoes={SO_LEITURA}
+                        hoje={hoje}
+                      />
+                    ),
+                    avaliacoes: (
+                      <AbaAvaliacoes quadro={consultaRes[1].quadro} aviso={consultaRes[1].aviso} />
+                    ),
+                    horarios: (
+                      <RegimesDoCurso
+                        cursoId={curso.id as string}
+                        curriculoId={consultadoId}
+                        regimes={(consultaRes[2] as HorariosDoCurso).regimes}
+                        configuracoes={(consultaRes[2] as HorariosDoCurso).configuracoes}
+                        permissoes={SO_LEITURA}
+                      />
+                    ),
+                    atividades: (
+                      <AbaAtividades
+                        limites={limitesDe(
+                          (consultaRes[3].data ?? []) as {
+                            categoria: string;
+                            tempos: number;
+                            fonte_pagina: number | null;
+                          }[],
+                          (consultaRes[4].data ?? []).reduce(
+                            (soma, d) => soma + Number(d.carga_horaria_tempos ?? 0),
+                            0,
+                          ) || null,
+                        )}
+                        ano={anoDosLimites}
+                        estudoIndividual={{
+                          comEstudoObrigatorio: parametroDoAno(
+                            parametrosRes.data ?? [],
+                            "estudo_obrig_com_regime_pct",
+                            anoDosLimites,
+                          ),
+                          semEstudoObrigatorio: parametroDoAno(
+                            parametrosRes.data ?? [],
+                            "estudo_obrig_sem_regime_pct",
+                            anoDosLimites,
+                          ),
+                        }}
+                        tipos={(tiposRes.data ?? []) as unknown as TipoDeAtividade[]}
+                      />
+                    ),
+                  }
+                : null
+            }
+          />
         }
       />
     </section>

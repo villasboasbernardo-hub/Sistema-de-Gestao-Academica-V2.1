@@ -1224,6 +1224,51 @@ export type Database = {
           },
         ]
       }
+      correcoes_de_curriculo: {
+        Row: {
+          acao: string
+          antes: Json | null
+          autor_id: string
+          campos: string[]
+          curriculo_id: string
+          curso_id: string
+          depois: Json
+          feito_em: string
+          id: string
+          justificativa: string
+          registro_id: string
+          tabela: string
+        }
+        Insert: {
+          acao: string
+          antes?: Json | null
+          autor_id: string
+          campos: string[]
+          curriculo_id: string
+          curso_id: string
+          depois: Json
+          feito_em?: string
+          id?: string
+          justificativa: string
+          registro_id: string
+          tabela: string
+        }
+        Update: {
+          acao?: string
+          antes?: Json | null
+          autor_id?: string
+          campos?: string[]
+          curriculo_id?: string
+          curso_id?: string
+          depois?: Json
+          feito_em?: string
+          id?: string
+          justificativa?: string
+          registro_id?: string
+          tabela?: string
+        }
+        Relationships: []
+      }
       curriculos: {
         Row: {
           arquivado_em: string | null
@@ -1241,6 +1286,7 @@ export type Database = {
           editado_por: string | null
           id: string
           origem_migracao_v1: string | null
+          pdf_caminho: string | null
           pdf_carregado_em: string | null
           proposito: string | null
           status: Database["public"]["Enums"]["status_registro"]
@@ -1263,6 +1309,7 @@ export type Database = {
           editado_por?: string | null
           id?: string
           origem_migracao_v1?: string | null
+          pdf_caminho?: string | null
           pdf_carregado_em?: string | null
           proposito?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
@@ -1285,6 +1332,7 @@ export type Database = {
           editado_por?: string | null
           id?: string
           origem_migracao_v1?: string | null
+          pdf_caminho?: string | null
           pdf_carregado_em?: string | null
           proposito?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
@@ -2639,6 +2687,7 @@ export type Database = {
           configuracao_horario_id: string | null
           criado_em: string
           criado_por: string | null
+          curriculo_id: string
           curso_id: string
           editado_em: string | null
           editado_por: string | null
@@ -2647,6 +2696,7 @@ export type Database = {
           id: string
           intervalo_manha_min: number
           intervalo_tarde_min: number
+          linhagem_id: string
           nome: string
           observacao: string | null
           origem_migracao_v1: string | null
@@ -2659,6 +2709,7 @@ export type Database = {
           configuracao_horario_id?: string | null
           criado_em?: string
           criado_por?: string | null
+          curriculo_id: string
           curso_id: string
           editado_em?: string | null
           editado_por?: string | null
@@ -2667,6 +2718,7 @@ export type Database = {
           id?: string
           intervalo_manha_min: number
           intervalo_tarde_min: number
+          linhagem_id?: string
           nome: string
           observacao?: string | null
           origem_migracao_v1?: string | null
@@ -2679,6 +2731,7 @@ export type Database = {
           configuracao_horario_id?: string | null
           criado_em?: string
           criado_por?: string | null
+          curriculo_id?: string
           curso_id?: string
           editado_em?: string | null
           editado_por?: string | null
@@ -2687,6 +2740,7 @@ export type Database = {
           id?: string
           intervalo_manha_min?: number
           intervalo_tarde_min?: number
+          linhagem_id?: string
           nome?: string
           observacao?: string | null
           origem_migracao_v1?: string | null
@@ -2715,6 +2769,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_cursos_regime_vigente"
             referencedColumns: ["curso_id"]
+          },
+          {
+            foreignKeyName: "regimes_de_horario_do_curriculo_do_curso_fk"
+            columns: ["curriculo_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "curriculos"
+            referencedColumns: ["id", "curso_id"]
           },
         ]
       }
@@ -3843,6 +3904,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_cursos_regime_vigente"
             referencedColumns: ["curso_id"]
+          },
+          {
+            foreignKeyName: "turmas_regime_do_proprio_curriculo_fk"
+            columns: ["regime_de_horario_id", "curriculo_id"]
+            isOneToOne: false
+            referencedRelation: "regimes_de_horario"
+            referencedColumns: ["id", "curriculo_id"]
           },
           {
             foreignKeyName: "turmas_regime_do_proprio_curso_fk"
@@ -5115,6 +5183,10 @@ export type Database = {
       }
     }
     Functions: {
+      arquivar_curriculo: {
+        Args: { p_curriculo_id: string; p_hoje: string }
+        Returns: undefined
+      }
       chd_da_turma_ate: {
         Args: { p_ate: string }
         Returns: {
@@ -5165,6 +5237,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      criar_curriculo: {
+        Args: {
+          p_curso_id: string
+          p_descricao: string
+          p_hoje: string
+          p_vigente_de: string
+        }
+        Returns: string
       }
       criar_curso_com_regime: {
         Args: { p_curso: Json; p_regime: Json }
@@ -5282,6 +5363,10 @@ export type Database = {
           quantas: number
           tabela: string
         }[]
+      }
+      desarquivar_curriculo: {
+        Args: { p_curriculo_id: string }
+        Returns: undefined
       }
       excluir_conta: { Args: { p_conta_id: string }; Returns: string }
       excluir_disciplina: {

@@ -11,12 +11,12 @@
  *    vista, NÃO é vista atrasada — no `/inicio`, no alerta da ficha nem no quadro da aba. Antes da emenda os chamadores
  *    decidiam pelo tempo de vista do item, e ela apareceria nos três; a PM da mesma turma é o controle positivo.
  */
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
-import { abrirAbaDoCurso, irAoCursoPorClique, irAsDisciplinasDoCurso } from "./navegar-curso";
+import { abrirAbaDoCurso, irAoCursoPorClique, irAsDisciplinasDaEdicao } from "./navegar-curso";
 import {
   limparAvaliacoes,
   limparVistaPeloInstrumento,
@@ -126,6 +126,24 @@ test("US5 · a aba Avaliações do curso mostra só o previsto do currículo —
   await expect(aba.locator('[data-avaliacoes="sem-item"]')).toHaveCount(0);
   await expect(aba).not.toContainText(SEMEADO.turma);
   await expect(aba).not.toContainText(/aplicadas|Pendente|Concluída|Atrasada/);
+  // ⚠️ Spec 021, ajuste 1 (conferência do PR #82): a página do curso é só leitura — nem o Admin tem o arbitrado ali.
+  await expect(page.locator('[data-slot="acoes-do-arbitrado"]')).toHaveCount(0);
+});
+
+/*
+ * ⚠️ SPEC 021, AJUSTE 3: as avaliações do currículo, com o arbitrado, editam-se em *Editar curso* → *Disciplinas e
+ *    avaliações*. O caso que discrimina é o anterior: a mesma pessoa não tem a ação na página do curso.
+ */
+test("Spec 021 · ajuste 3 · o arbitrado do curso fica em Editar curso, no currículo escolhido", async ({
+  page,
+}) => {
+  await irAsDisciplinasDaEdicao(page, EMAIL_ADMIN, SEMEADO.curso);
+  const parte = page.locator('[data-slot="parte-disciplinas"]');
+  await expect(parte.locator('[data-slot="aba-avaliacoes-do-curriculo"]')).toBeVisible();
+  // As ações do arbitrado existem aqui (uma por item que não é OD); na página do curso, nenhuma (o caso de cima).
+  await expect
+    .poll(() => parte.locator('[data-slot="acoes-do-arbitrado"]').count())
+    .toBeGreaterThan(0);
 });
 
 test("FR-054 · o /inicio mostra a vista atrasada e a que vence em breve, com link para a aba", async ({
@@ -191,11 +209,23 @@ test("RN-AV-13 · a PP com tempo de vista, aplicada há 10 dias e sem vista, NÃ
   await expect(pp.locator('[data-avaliacoes-item="PP 1"]')).not.toContainText("Atrasada");
 });
 
-test("FR-038 · a aba Disciplinas do curso: as avaliações do currículo no painel, acrescentar e inativar", async ({
+/**
+ * ⚠️ SPEC 021 (Bloco 6, RC-6): O CURRÍCULO DESTA AMOSTRA ESTÁ EM USO — a turma dela tem lançamento. Acrescentar,
+ *    mudar o que tinha valor e inativar são CORREÇÃO: o banco pede a justificativa, e a tela a pergunta. Responde-se aqui.
+ */
+async function justificar(page: Page, motivo: string): Promise<void> {
+  const pedido = page.locator('[data-slot="pedido-de-justificativa"]');
+  await expect(pedido).toBeVisible();
+  await pedido.locator('[data-slot="justificativa-da-correcao"]').fill(motivo);
+  await pedido.locator('[data-slot="confirmar-justificativa"]').click();
+  await expect(pedido).toHaveCount(0);
+}
+
+test("FR-038 · Editar curso → Disciplinas e avaliações: as avaliações do currículo no painel, acrescentar e inativar", async ({
   page,
 }) => {
-  // Spec 018 (Bloco 3): a grade é a aba Disciplinas do curso — o menu não tem mais a entrada.
-  await irAsDisciplinasDoCurso(page, EMAIL_ADMIN, SEMEADO.curso);
+  // Spec 021 (ajuste 3 da conferência do PR #82): editar o currículo é em *Editar curso*; a aba do curso só lê.
+  await irAsDisciplinasDaEdicao(page, EMAIL_ADMIN, SEMEADO.curso);
   await page
     .getByRole("gridcell", { name: `Disciplina ${SEMEADO.disciplinaComTempo}`, exact: false })
     .first()
@@ -217,6 +247,7 @@ test("FR-038 · a aba Disciplinas do curso: as avaliações do currículo no pai
   await nova.getByLabel("Arquivo do currículo").fill("curriculo-e2e.pdf");
   await nova.getByLabel("Página").fill("3");
   await nova.getByRole("button", { name: "Acrescentar" }).click();
+  await justificar(page, "Acrescentar o TG 1 que o currículo traz.");
   const tg = painel.locator('[data-item-do-curriculo="TG 1"]');
   await expect(tg).toHaveAttribute("data-ativo", "true");
   await expect(nova).toHaveCount(0);
@@ -226,11 +257,13 @@ test("FR-038 · a aba Disciplinas do curso: as avaliações do currículo no pai
   await expect(painel.locator("input")).toHaveCount(2);
   await tg.getByLabel("TA de aplicação de TG 1").fill("3");
   await tg.locator('[data-slot="gravar-item"]').click();
+  await justificar(page, "O TG 1 tem 3 TA no currículo.");
   await expect(painel.getByRole("status").filter({ hasText: "TG 1 gravada" })).toBeVisible();
   await expect(painel.locator("input")).toHaveCount(0);
   await expect(tg).toContainText("3 TA");
 
   await tg.locator('[data-acao="inativar-item"]').click();
+  await justificar(page, "O TG 1 saiu do currículo.");
   await expect(tg).toHaveAttribute("data-ativo", "false");
   await expect(tg).toContainText("inativa");
 });

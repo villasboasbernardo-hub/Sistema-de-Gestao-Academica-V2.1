@@ -15,6 +15,10 @@
  * a classificação ou baixar o limite abre **um** diálogo com todas as mensagens que couberem.
  *
  * ⚠️ **NENHUM CAMPO DE CARGA HORÁRIA** (`FR-045`). A grandeza é view; não há onde gravá-la.
+ *
+ * ⚠️ **SPEC 021 (Bloco 6, RC-1 e RC-5): DURAÇÃO E PROPÓSITO SÓ NO MODO `novo`.** São do currículo: o curso novo os
+ *    traz para o currículo 1, que nasce com ele; depois, eles se editam na seção *Currículo* de *Editar curso*, no
+ *    currículo escolhido (ajuste 3 da conferência do PR #82).
  */
 "use client";
 
@@ -119,9 +123,16 @@ export function FormularioDeCurso({
     limite_turmas_ano: numero(valores.limite_turmas_ano),
     proposito: nulo(valores.proposito),
   };
-  /* Spec 020 (C-4): estrangeiros e custo vão só na edição; a validação lê o custo em reais. */
+  /*
+   * Spec 020 (C-4): estrangeiros e custo vão só na edição; a validação lê o custo em reais.
+   * Spec 021 (RC-5): sem duração nem propósito — são do currículo.
+   */
   const corpoDaEdicao = {
-    ...corpo,
+    codigo: corpo.codigo,
+    nome_curso: corpo.nome_curso,
+    classificacao: corpo.classificacao,
+    modalidade: corpo.modalidade,
+    limite_turmas_ano: corpo.limite_turmas_ano,
     ofertavel_estrangeiros:
       valores.ofertavel_estrangeiros === "sim"
         ? true
@@ -279,27 +290,31 @@ export function FormularioDeCurso({
           </select>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <CampoObrigatorio para="curso-dias" rotulo="Duração em dias" obrigatorio />
-          <Input
-            {...propsDoControle("curso-dias", true)}
-            name="duracao_dias"
-            inputMode="numeric"
-            value={valores.duracao_dias}
-            onChange={trocar("duracao_dias")}
-          />
-        </div>
+        {modo === "novo" ? (
+          <>
+            <div className="flex flex-col gap-1">
+              <CampoObrigatorio para="curso-dias" rotulo="Duração em dias" obrigatorio />
+              <Input
+                {...propsDoControle("curso-dias", true)}
+                name="duracao_dias"
+                inputMode="numeric"
+                value={valores.duracao_dias}
+                onChange={trocar("duracao_dias")}
+              />
+            </div>
 
-        <div className="flex flex-col gap-1">
-          <CampoObrigatorio para="curso-semanas" rotulo="Duração em semanas" />
-          <Input
-            {...propsDoControle("curso-semanas", false)}
-            name="duracao_semanas"
-            inputMode="numeric"
-            value={valores.duracao_semanas}
-            onChange={trocar("duracao_semanas")}
-          />
-        </div>
+            <div className="flex flex-col gap-1">
+              <CampoObrigatorio para="curso-semanas" rotulo="Duração em semanas" />
+              <Input
+                {...propsDoControle("curso-semanas", false)}
+                name="duracao_semanas"
+                inputMode="numeric"
+                value={valores.duracao_semanas}
+                onChange={trocar("duracao_semanas")}
+              />
+            </div>
+          </>
+        ) : null}
 
         <div className="flex flex-col gap-1">
           <CampoObrigatorio para="curso-limite" rotulo="Limite de turmas por ano" />
@@ -312,15 +327,17 @@ export function FormularioDeCurso({
           />
         </div>
 
-        <div className="flex flex-col gap-1 sm:col-span-2">
-          <CampoObrigatorio para="curso-proposito" rotulo="Propósito" />
-          <Input
-            {...propsDoControle("curso-proposito", false)}
-            name="proposito"
-            value={valores.proposito}
-            onChange={trocar("proposito")}
-          />
-        </div>
+        {modo === "novo" ? (
+          <div className="flex flex-col gap-1 sm:col-span-2">
+            <CampoObrigatorio para="curso-proposito" rotulo="Propósito" />
+            <Input
+              {...propsDoControle("curso-proposito", false)}
+              name="proposito"
+              value={valores.proposito}
+              onChange={trocar("proposito")}
+            />
+          </div>
+        ) : null}
       </div>
 
       {modo === "edicao" ? (

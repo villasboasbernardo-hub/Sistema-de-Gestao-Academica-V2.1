@@ -23,20 +23,44 @@
 - [X] T038 A prova numa cópia NOVA do remoto: impressão digital, retrato das telas e retrato das páginas, antes (`main`) ×
   depois (ramo), e a reversão com dado (`antes-depois.md`, rodada 2)
 - [X] T039 Suítes: pgTAP, unidade, invariantes e RLS na base limpa; o ETL refeito sobre as migrations
-- [ ] T040 PR 1 com o template; CI verde
-- [ ] T041 Rito do remoto (`plan.md`), remedindo sobre o backup do dia; conferência só de leitura
-- [ ] T042 Merge (autorizado) → CI na `main` → Production
+- [X] T040 PR 1 com o template; CI verde (#81, sobre `fd5359c`)
+- [X] T041 Rito do remoto (`plan.md`), remedindo sobre o backup do dia; conferência só de leitura (`remoto-20261021-090802.sql`; `antes-depois.md`, rodada 3)
+- [X] T042 Merge (autorizado) → CI na `main` → Production (`ae4e595`, #81; CI na `main` run `39602493101` verde nos três blocos; deploy de Production `success`)
 
 ## PR 2 — as telas e o resto das RC
 
-- [ ] T050 A cópia (`public.criar_curriculo`, RC-7, RC-2), com o porteiro provado com sessão real
-- [ ] T051 A correção pelo trio (RC-6): recurso na matriz, trilha `correcoes_de_curriculo`, `public.corrigir_curriculo`, o
-  gatilho; e as telas de edição do conteúdo passando a justificativa quando o currículo está em uso
-- [ ] T052 O arquivamento (RC-10): as funções, a tela e "mostrar currículos arquivados"
-- [ ] T053 O seletor de currículo na página do curso (`?curriculo=`, RC-8) e *Novo currículo*; as abas pelo selecionado
-- [ ] T054 O currículo em *Nova turma* (RC-4); o rótulo nas turmas do curso (todas, inclusive arquivadas) e na ficha (RC-9)
-- [ ] T055 O PDF por currículo (RC-11): o caminho, as policies do balde, o envio e o download
-- [ ] T056 Os leitores por currículo (`contracts/codigo.md`): DSA, papel, planilha, abas, ficha, avaliações, habilitações;
+- [X] T050 A cópia (`public.criar_curriculo`, RC-7, RC-2), com o porteiro provado com sessão real
+- [X] T051 A correção pelo trio (RC-6): recurso na matriz, trilha `correcoes_de_curriculo`, a justificativa pelo
+  cabeçalho (D-26, revista), o gatilho; e as telas de edição do conteúdo passando a justificativa quando o currículo está
+  em uso
+- [X] T052 O arquivamento (RC-10): as funções, a tela e "mostrar currículos arquivados"; e o descarte do currículo criado por engano (D-19, D-36)
+- [X] T053 O seletor de currículo na página do curso (`?curriculo=`, RC-8) e *Novo currículo*; as abas pelo selecionado
+- [X] T054 O currículo em *Nova turma* (RC-4); o rótulo nas turmas do curso (todas, inclusive arquivadas) e na ficha (RC-9)
+- [X] T055 O PDF por currículo (RC-11): o caminho, as policies do balde, o envio e o download
+- [X] T056 Os leitores por currículo (`contracts/codigo.md`): DSA, papel, planilha, abas, ficha, avaliações, habilitações;
   a sincronização (VIRADA-1) casando no currículo da turma
-- [ ] T057 O retrato das telas e das páginas antes × depois (0 diferenças) e o SC-004/SC-005 por clique
-- [ ] T058 CI verde, preview, roteiro curto e lote de dúvidas — **PARAR**
+- [X] T057 O retrato das telas e das páginas antes × depois (telas idênticas; nas páginas, só o que o PR 2 acrescenta — `antes-depois.md`, rodada 4) e o SC-004/SC-005 por clique
+- [X] T058 CI verde, preview, roteiro curto e lote de dúvidas — **PARAR** (a M3 no remoto; a M4 no portão 9.4)
+
+## PR 2 — os ajustes da conferência do PR #82 (Bernardo Villas Boas, 21/10/2026), no mesmo PR
+
+- [X] T060 Fechar a `PEND-020-3` (custo é controle da CIAARA-11) no plano de correções
+- [X] T061 A M4 corrigida antes do remoto: o porteiro da RC-6 vê o currículo na inserção só com `curso_id` (D-46), com o
+  caso de pgTAP que reprova sem a correção
+- [X] T062 A M5 — os regimes nomeados do currículo (A-4): colunas, FK da turma, a troca de currículo levando o regime, a
+  cópia, a RC-6 nos regimes (D-38); pgTAP `146`; tipos; reversão (`reversao-pr2.sql`, a M5 primeiro)
+- [X] T063 A página do curso só leitura, no vigente (A-1): sem o seletor; nenhuma ação nas abas (Disciplinas, Avaliações,
+  Horários); o botão *Editar curso* pela permissão de destino (D-40)
+- [X] T064 A aba *Currículo* (A-2): a lista (todos, arquivados inclusive, D-45) e a consulta só leitura de disciplinas,
+  avaliações, horários e atividades do currículo escolhido (`?curriculo=N`)
+- [X] T065 *Editar curso* com a seção *Currículo* (A-3, D-41): seletor, *Novo currículo*, *Descartar*, *Arquivar*, e as
+  partes — dados e PDF, disciplinas e avaliações (com o arbitrado, D-43), horários, atividades e limites (D-42); as rotas
+  `/cursos/[curso]/curriculos/*` saem; o arquivado só se consulta (D-44)
+- [X] T066 A turma escolhe regime só entre os do currículo dela (ficha); o link *"Segue o Currículo"* abre a aba *Currículo*
+- [X] T067 Testes: unidade (contrato, guardas), invariantes (RC-6 nos regimes e nos limites, com defeito deliberado),
+  ponta a ponta por clique (a página só leitura, a aba *Currículo*, *Editar curso* em todas as partes, SC-004/SC-005)
+- [X] T068 A prova na cópia NOVA do remoto (SC-006, rodada 6 de `antes-depois.md`): antes da M4, 24 cursos → 24 currículos e 0 turmas em currículo de
+  outro curso; DSA, papel, planilha e páginas das 29 turmas idênticos — com a M4 e a M5 sob o código da `main` e sob o
+  código do ramo
+- [ ] T069 CI verde → rito do remoto (M4 e M5: backup citado, dry-run só com as duas, `db push`, conferência só de
+  leitura) → merge → CI na `main` → Production → PR de documentação do encerramento → roteiro de Production

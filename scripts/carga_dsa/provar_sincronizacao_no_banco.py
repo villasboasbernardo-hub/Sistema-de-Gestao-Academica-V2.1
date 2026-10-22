@@ -123,7 +123,8 @@ def main() -> int:
     conferir("T225 · nenhuma AEC «VISTA DE PROVA (2ª sessão)» ativa", int(aec["n"]) == 0, aec)
     item = banco.consultar("local", f"""
       select count(*) filter (where a.avaliacao_curriculo_id is not null) as com_item, count(*) as n,
-             (select count(*) from public.avaliacoes_curriculo c join public.turmas t on t.curso_id = c.curso_id
+             (select count(*) from public.avaliacoes_curriculo c join public.disciplinas d on d.id = c.disciplina_id
+                join public.turmas t on t.curriculo_id = d.curriculo_id
                where t.codigo = {lit(arg.turma)} and c.status = 'ativo') as itens
         from public.avaliacoes a where a.codigo like {lit(prefixo + '%')} and a.status in ('pendente', 'em_andamento', 'concluida', 'atrasada')""")[0]
     conferir("T224 · com itens no curriculo, alguma prova da planilha aponta o item",

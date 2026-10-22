@@ -13,7 +13,13 @@ import { createClient } from "@supabase/supabase-js";
 import { expect, test } from "@playwright/test";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
-import { abrirAbaDoCurso, irAoCursoPorClique } from "./navegar-curso";
+import {
+  abrirAbaDoCurso,
+  abrirParteDaEdicao,
+  irAEdicaoDoCurso,
+  irAoCursoPorClique,
+  justificarCorrecao,
+} from "./navegar-curso";
 import { abrirEdicaoDaTurma, esperarGravacaoDaTurma, irAFichaDaTurma } from "./navegar-turmas";
 import { irParaASemanaDoDia } from "./percurso-do-dsa";
 
@@ -136,7 +142,7 @@ test.afterAll(async () => {
   await apagarConta(EMAIL);
 });
 
-test.describe("Spec 018 · FR-006 · as seis abas, por clique", () => {
+test.describe("Spec 018 · FR-006 · as abas, por clique (sete desde a spec 021)", () => {
   test("Cursos → o curso → cada aba abre o seu painel, na ordem", async ({ page }) => {
     await irAoCursoPorClique(page, EMAIL, SIGLA);
     await expect(page.locator('[data-slot="aba-sobre"]')).toBeVisible();
@@ -146,7 +152,8 @@ test.describe("Spec 018 · FR-006 · as seis abas, por clique", () => {
 
     await abrirAbaDoCurso(page, "disciplinas");
     await expect(page.locator('[data-slot="aba-disciplinas"]')).toBeVisible();
-    await expect(page.locator('[data-slot="nova-disciplina"]')).toBeVisible();
+    // ⚠️ Spec 021, ajuste 1: a página do curso é só leitura — *Nova disciplina* mora em *Editar curso*.
+    await expect(page.locator('[data-slot="nova-disciplina"]')).toHaveCount(0);
 
     await abrirAbaDoCurso(page, "avaliacoes");
     await expect(page.locator('[data-slot="aba-avaliacoes-do-curriculo"]')).toBeVisible();
@@ -164,6 +171,24 @@ test.describe("Spec 018 · FR-006 · as seis abas, por clique", () => {
     await expect(
       page.locator('[data-slot="vigencias-do-curso"] [data-vigencia="padrao"]'),
     ).toContainText("8 TA de 45 min");
+    await expect(page.locator('[data-slot="novo-regime"]')).toHaveCount(0);
+
+    // Spec 021, ajuste 2: a aba *Currículo* lista os currículos e consulta o vigente, só para leitura.
+    await abrirAbaDoCurso(page, "curriculo");
+    const aba = page.locator('[data-slot="aba-curriculo"]');
+    await expect(
+      aba.locator('[data-slot="lista-de-curriculos"] tbody tr[data-curriculo="1"]'),
+    ).toContainText("vigente");
+    const consulta = aba.locator('[data-slot="consulta-do-curriculo"]');
+    for (const parte of ["disciplinas", "avaliacoes", "horarios", "atividades"]) {
+      await expect(consulta.locator(`[data-slot="consulta-${parte}"]`)).toBeVisible();
+    }
+    for (const acao of ["nova-disciplina", "novo-regime", "acoes-do-arbitrado", "editar-limite"]) {
+      await expect(
+        consulta.locator(`[data-slot="${acao}"]`),
+        `a consulta ofereceu ${acao}`,
+      ).toHaveCount(0);
+    }
   });
 });
 
@@ -173,9 +198,9 @@ test.describe("Spec 018 · FR-003 · o regime nomeado: cadastrado no curso, esco
   }) => {
     test.setTimeout(120_000);
 
-    /* ── 1. A aba Horários: Novo regime ───────────────────────────────────────────────────────── */
-    await irAoCursoPorClique(page, EMAIL, SIGLA);
-    await abrirAbaDoCurso(page, "horarios");
+    /* ── 1. Editar curso → Horários do currículo vigente: Novo regime (spec 021, emenda à RC-1) ── */
+    await irAEdicaoDoCurso(page, EMAIL, SIGLA);
+    await abrirParteDaEdicao(page, "horarios");
     await page.locator('[data-slot="novo-regime"]').click();
     const form = page.locator('[data-slot="formulario-de-regime"]');
     await form.getByLabel("Nome").fill("Regime B");
@@ -186,6 +211,11 @@ test.describe("Spec 018 · FR-003 · o regime nomeado: cadastrado no curso, esco
     await form.getByLabel("Início da tarde").fill("13:15");
     await form.getByLabel("Intervalo da tarde (min)").fill("5");
     await form.locator('[data-slot="gravar-regime"]').click();
+    /*
+     * ⚠️ D-38 (spec 021): o currículo desta amostra é seguido pela turma com lançamento (a do `RF-HOR-05`), então
+     *    acrescentar regime nele é correção (RC-6) — o Admin responde ao pedido de justificativa.
+     */
+    await justificarCorrecao(page, "O currículo traz o Regime B, de nove tempos.");
     await expect(page.locator('[data-slot="resposta-dos-regimes"]')).toHaveText(
       "Regime cadastrado.",
     );
@@ -195,7 +225,7 @@ test.describe("Spec 018 · FR-003 · o regime nomeado: cadastrado no curso, esco
 
     const { data: regime } = await admin
       .from("regimes_de_horario")
-      .select("id, regime_tempos, ta_duracao_min, hora_inicio_manha, status")
+      .select("id, regime_tempos, ta_duracao_min, hora_inicio_manha, status, curriculo_id")
       .eq("curso_id", CURSO_ID)
       .eq("nome", "Regime B")
       .single();
@@ -205,6 +235,14 @@ test.describe("Spec 018 · FR-003 · o regime nomeado: cadastrado no curso, esco
       hora_inicio_manha: "07:15:00",
       status: "ativo",
     });
+    // Spec 021 (emenda à RC-1): o regime é do currículo — o vigente, o que a edição abre por padrão.
+    const { data: vigente } = await admin
+      .from("curriculos")
+      .select("id")
+      .eq("curso_id", CURSO_ID)
+      .eq("versao", 1)
+      .single();
+    expect((regime as { curriculo_id: string }).curriculo_id).toBe((vigente as { id: string }).id);
 
     /* ── 2. A turma escolhe o regime em Editar turma ──────────────────────────────────────────── */
     await irAFichaDaTurma(page, EMAIL, TURMAS.comRegime);

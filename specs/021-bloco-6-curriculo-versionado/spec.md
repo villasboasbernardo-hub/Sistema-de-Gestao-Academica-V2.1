@@ -2,7 +2,7 @@
 
 **Feature Branch**: `feat/BLOCO-6-curriculo-versionado`
 **Created**: 2026-10-21
-**Status**: PR 1 revisado pelas regras RC-1 a RC-12 (21/10/2026) · PR 2 a seguir
+**Status**: PR 1 na `main` (`ae4e595`, #81, 21/10/2026) · PR 2 em conferência
 **Input**: Bloco 6 do plano de correções, pelo `/corrigir` de Bernardo Villas Boas de 20/10/2026 (pedido de 16/10/2026):
 *"poder registrar um currículo NOVO de um curso — disciplinas, UEs, CH, avaliações do currículo, duração em semanas, tudo o
 que for preciso — SEM alterar o currículo em vigor (…) e as turmas em andamento continuam regidas pelo currículo atual,
@@ -32,7 +32,7 @@ O texto que vale é o de `docs/correcoes/regras-do-curriculo-bloco-6.md`; aqui, 
 | **RC-5** | Cadastrar ou editar o conteúdo é sempre **num currículo escolhido** |
 | **RC-6** | Corrigir currículo seguido por turma com lançamento (mudar valor, acrescentar ou inativar item): **só o trio**, com **justificativa obrigatória** e **trilha** (quem, quando, o quê, valor anterior, justificativa); **completar o que estava vazio é livre**; os demais perfis não editam currículo em uso. **Substitui a D-4/D-6** |
 | **RC-7** | "Novo currículo" nasce como **cópia do vigente** e se edita livremente enquanto nenhuma turma com lançamento o segue |
-| **RC-8** | A página do curso tem **seletor de currículo** (vigente por padrão; vigente, futuro, passados) e "Novo currículo"; as abas Sobre o Curso, Grade, Disciplinas, Avaliações e Atividades mostram **só** o selecionado (URL dona do estado) |
+| **RC-8** | A página do curso tem **seletor de currículo** (vigente por padrão; vigente, futuro, passados) e "Novo currículo"; as abas Sobre o Curso, Grade, Disciplinas, Avaliações e Atividades mostram **só** o selecionado (URL dona do estado). ⚠️ **Emendada na conferência do PR #82 (A-1 a A-3, abaixo):** a página mostra **só o vigente**, sem seletor; o seletor e "Novo currículo" foram para *Editar curso*, e a aba *Currículo* consulta os outros |
 | **RC-9** | Turmas do curso: **todas**, inclusive arquivadas, cada uma com o currículo que segue — "Currículo 1 (vigência 2024)"; o mesmo rótulo na ficha |
 | **RC-10** | O trio **arquiva** o currículo passado quando todas as turmas que o seguem estão arquivadas; sai do seletor, **nunca é apagado**, consulta-se por "mostrar currículos arquivados"; coluna própria, não `status` |
 | **RC-11** | Cada currículo tem **o seu PDF**; o do Bloco 5 passa a ser do currículo 1 |
@@ -71,8 +71,9 @@ O texto que vale é o de `docs/correcoes/regras-do-curriculo-bloco-6.md`; aqui, 
 | `curriculo_pdf_em` | **currículo** (RC-11) |
 | `modalidade` | **curso** — *recomendação (D-20)*: é como o curso é oferecido, e a turma já tem a sua (`turmas.modalidade`, D8 do Épico 5.5). Alternativa: currículo |
 | `ofertavel_estrangeiros`, `estrangeiros_observacao` | **curso** — *recomendação (D-20)*: política de oferta, não conteúdo. Alternativa: currículo |
-| `custo_total`, `custo_composicao` | **curso** — *recomendação (D-20)*: informativo, e a regra 2 ainda pende (`PEND-020-3`); se ficar, depende da oferta. Alternativa: currículo |
-| regimes de horário (`regimes_de_horario`, `curso_regime_historico`) | **curso** — *recomendação (D-20)*: são o relógio, não o conteúdo; a turma escolhe o dela (Bloco 3). Alternativa: currículo |
+| `custo_total`, `custo_composicao` | **curso** — *recomendação (D-20)*: informativo. ✅ **A regra 2 foi respondida por Bernardo Villas Boas em 21/10/2026: custo de curso É controle da CIAARA-11** — a `PEND-020-3` está fechada, e as colunas ficam em uso |
+| regimes de horário NOMEADOS (`regimes_de_horario`, Bloco 3) | ~~**curso** — *recomendação (D-20)*~~ → **currículo**, por **emenda à RC-1 de Bernardo Villas Boas, 21/10/2026** (A-4, abaixo): os de cada curso vão para o currículo 1 dele; o currículo novo copia os seus; a turma escolhe entre os do currículo dela |
+| regime padrão com vigência (`curso_regime_historico`) | **curso** — *adotada por padrão (D-39)*: é o relógio de quem não escolheu regime nomeado, com vigência própria por data; a emenda fala dos regimes nomeados |
 | *(tabela)* `avaliacoes_planejadas` — fórmula da MF, caráter | **currículo** (RC-1, "regras de avaliação"): ganha `curriculo_id` |
 
 ## 4. O que é banco e o que é tela
@@ -145,17 +146,93 @@ O texto que vale é o de `docs/correcoes/regras-do-curriculo-bloco-6.md`; aqui, 
   — é correção. Vale para toda coluna do conteúdo, inclusive texto (nome no DSA, propósito): texto também sai no papel.
 - D-25 · Q: As habilitações de instrutor travam no currículo em uso? → A: **Não**: habilitar um instrutor novo numa
   disciplina em uso é cadastro do instrutor, não reinterpreta o passado. Alternativa: tratá-las como conteúdo (RC-6).
-- D-26 · Q: Como a justificativa chega ao banco (RC-6)? → A: por função (`public.corrigir_curriculo`, PR 2) que a recebe,
-  marca a transação e faz a mudança; o gatilho recusa a correção sem ela e grava a trilha **antes**. Alternativa: cabeçalho
-  HTTP lido pelo gatilho — rejeitada (mágica, e acento não cabe em cabeçalho).
+- ~~D-26 · Q: Como a justificativa chega ao banco (RC-6)? → A: por função (`public.corrigir_curriculo`) que a recebe,
+  marca a transação e faz a mudança.~~ → **REVISTA NA IMPLEMENTAÇÃO DO PR 2** *(adotada por padrão — Bernardo confere no
+  fim)*: pelo **cabeçalho** `x-justificativa-de-correcao` da própria gravação, em **base64 do UTF-8** (o acento cabe), lido
+  pelo gatilho por `app.justificativa_de_correcao()` em `request.headers`. O gatilho continua sendo quem decide: recusa a
+  correção sem ela (`justificativa_obrigatoria`) e grava a trilha **antes** da mudança. Motivo: a função única exigiria
+  reescrever como RPC **toda** gravação do conteúdo — disciplina, UE, avaliação do currículo, arbitrado, limites, PDF —,
+  seis caminhos que hoje são `update` com policy; o cabeçalho deixa cada ação como está e só acrescenta a frase. A
+  justificativa vale **só** para a requisição que a leva (o PostgREST põe o cabeçalho na transação dela).
 - D-27 · Q: O "um futuro" da RC-2 é regra? → A: **Sim**, na cópia: o currículo novo começa **depois do mais novo** que existe,
   e não se cria outro quando o mais novo ainda é futuro (*"edite o futuro"*). A data de hoje vem de quem chama
   (`hojeNaCiaara()`, D20).
 - D-28 · Q: Desarquivar? → A: **Sim**, pelo trio, como a turma (Bloco 2) — a RC-10 não o pede, e o arquivamento sem volta
   seria a única ação do sistema que não se desfaz.
-- D-29 · Q: O PDF por currículo mora onde? → A: o do currículo 1 continua em `<curso>/curriculo.pdf` (não se move objeto
-  do Storage por SQL); o do currículo N ≥ 2, em `<curso>/curriculo-<N>.pdf`. Substituir o PDF de currículo em uso é
-  correção (RC-6). Exige mudar as policies do balde (PR 2).
+- D-29 · Q: O PDF por currículo mora onde? → A *(revista no PR 2, adotada por padrão — Bernardo confere no fim)*: o do
+  Bloco 5 continua em `<curso>/curriculo.pdf` (não se move objeto do Storage por SQL) e passa a ser apontado pelo
+  currículo 1 (`curriculos.pdf_caminho`); todo envio novo vai para **um arquivo novo**,
+  `<curso>/<currículo>/<instante>.pdf`, **sem sobrescrever** — substituir é trocar o caminho no currículo, e no currículo
+  em uso isso é correção (RC-6), com a trilha guardando o caminho anterior. O arquivo anterior fica no balde (regra 4,
+  sem policy de `DELETE`). Uma policy nova de `INSERT` no balde aceita só esse caminho.
+- D-30 · Q: A aba *Grade* mostra as turmas do currículo selecionado ou todas? → A *(adotada por padrão)*: **todas** (a
+  RC-9 é a regra específica das turmas: *"todas juntas"*), cada uma com o currículo que segue; o seletor de currículo não
+  filtra turmas. Alternativa: só as do selecionado.
+- D-31 · Q: E as arquivadas, na aba *Grade*? → A *(adotada por padrão)*: aparecem **na lista**, marcadas *Arquivada*
+  (RC-9); o **seletor de turma** e a pré-seleção continuam sem elas (C-24 da spec 017), e *Turmas com teto excedido*
+  também.
+- D-32 · Q: Onde se editam o propósito, a duração e o PDF? → A *(adotada por padrão)*: em **Editar currículo**
+  (`/cursos/<sigla>/curriculos/<N>/editar`, aberto pela barra do currículo), no currículo escolhido (RC-5). *Editar curso*
+  deixa de mostrá-los e aponta o caminho; *Novo curso* continua pedindo-os, porque o currículo 1 nasce com o curso.
+- D-33 · Q: As disciplinas, as UEs e as avaliações do currículo novo se editam onde? → A *(adotada por padrão)*: na aba
+  *Disciplinas* do curso, com o currículo escolhido no seletor — a mesma tela de hoje, recortada pelo currículo.
+- D-34 · Q: Turma nova: qual vem marcada? → A *(adotada por padrão)*: **"o vigente na data de início da turma"**, que o
+  banco escolhe ao gravar (`app.curriculo_padrao_da_turma`) — a data ainda está sendo digitada; as outras opções são o
+  vigente e o futuro, pelo nome.
+- D-35 · Q: Na ficha do instrutor, como se distinguem as duas cópias da mesma disciplina? → A *(adotada por padrão)*: com
+  dois currículos no curso, o rótulo vira *"CAHO · Currículo 2 (vigência 2027)"*; com um só, segue *"CAHO"*.
+- D-36 · Q: E o currículo criado por engano (ou na conferência)? → A *(adotada por padrão)*: **Descartar currículo** na
+  barra do currículo — exclusão lógica (`status = 'inativo'`, D-19), só para o que **nenhuma turma** segue e **não** é o
+  vigente; o banco recusa o resto (`versao_em_uso`). Sem ele, um currículo de teste criado no preview ficaria no dado
+  real para sempre. Alternativa: sem tela (o D-19 original).
+- D-37 · Q: A situação do currículo (`status`) é "conteúdo" para a RC-6? → A *(adotada por padrão)*: **não** — ela tem
+  regra própria (`app.guardar_situacao_da_versao`: o currículo seguido por turma não se inativa); tratada como correção,
+  a recusa certa chegaria disfarçada de pedido de justificativa (medido no teste com sessão real).
+
+### Conferência do PR #82 — os ajustes nominais *(Bernardo Villas Boas, 21/10/2026, antes do merge, no mesmo PR)*
+
+- **A-0 · Custo do curso:** *"É controle da CIAARA-11 (regra 2) — feche a pendência."* A `PEND-020-3` está fechada.
+- **A-1 · Página do curso SÓ LEITURA**, mostrando o currículo **vigente** nas abas (Sobre, Grade, Disciplinas,
+  Avaliações, Atividades, Horários). **Sai o seletor de currículo da página.**
+- **A-2 · Nova aba "Currículo":** lista o vigente, o novo (futuro) e os arquivados, com consulta ao conteúdo de cada um
+  (disciplinas, avaliações, horários, atividades) **só para leitura**.
+- **A-3 · "Novo currículo" e "Editar currículo" passam para DENTRO de "Editar curso":** escolher o currículo (ou criar o
+  novo, cópia do vigente) e editar ali **todas** as informações dele — disciplinas, códigos, CH, UEs, avaliações, horários,
+  atividades/limites, propósito, duração, PDF. A correção do vigente em uso continua pela RC-6.
+- **A-4 · Horários passam a ser do currículo (emenda à RC-1):** os regimes nomeados de cada curso vão para o currículo 1
+  dele; currículo novo copia e edita os seus; a turma escolhe regime entre os do currículo **dela**. Migration que altera:
+  **autorizada**, com a prova de sempre na cópia do remoto (DSA, papel, planilha e páginas idênticos para as 29 turmas);
+  se mudar qualquer número de tela, PARE. Antes da M4: 24 cursos → 24 currículos (currículo 1 cada) e 0 turmas ligadas a
+  currículo de outro curso.
+
+### As dúvidas desta rodada *(adotadas por padrão — Bernardo confere no fim)*
+
+- D-38 · Q: O regime nomeado é conteúdo para a RC-6? → A *(adotada por padrão)*: **sim** — acrescentar, mudar ou inativar
+  regime no currículo seguido por turma com lançamento é correção (o trio, com justificativa, na trilha), como disciplina e
+  limite. Consequência: o **Operador** cria e edita regime só em currículo livre. Alternativa: isentar regime da RC-6 (um
+  regime novo não muda nenhuma turma até ser escolhido, e a troca já trava no primeiro lançamento — `RF-HOR-05`).
+- D-39 · Q: E o regime padrão com vigência (`curso_regime_historico`)? → A *(adotada por padrão)*: **fica no curso** — é o
+  relógio de quem não escolheu regime nomeado e já tem vigência própria; levá-lo ao currículo mudaria o relógio de turma
+  que não escolheu nada. Alternativa: currículo.
+- D-40 · Q: Quem entra em *Editar curso*? → A *(adotada por padrão)*: quem tem `cursos.editar` **ou** `horarios.criar`/
+  `editar` **ou** `disciplinas.criar`/`editar`; cada parte segue a sua permissão (o Operador edita disciplinas e horários
+  sem editar o cadastro do curso). O botão da página do curso segue a mesma regra.
+- D-41 · Q: Como se organiza a seção *Currículo* de *Editar curso*? → A *(adotada por padrão)*: a barra (seletor com todos,
+  arquivados inclusive; situação; *Novo currículo*; *Descartar*; *Arquivar/Desarquivar*) e quatro partes na URL
+  (`?parte=`): **Dados e PDF** (padrão) · **Disciplinas e avaliações** · **Horários** · **Atividades e limites**.
+- D-42 · Q: Os limites de AEC/TAD/TR se editam onde, e como? → A *(adotada por padrão)*: na parte *Atividades e limites* —
+  declarar (tempos, arquivo e página do currículo), editar e **retirar** (exclusão lógica, volta a valer o percentual da
+  norma). Até aqui eles só entravam por migration.
+- D-43 · Q: O arbitrado de avaliação "no curso" se faz onde? → A *(adotada por padrão)*: em *Editar curso* → *Disciplinas
+  e avaliações*, no quadro das avaliações do currículo; o arbitrado da turma continua na aba Avaliações da turma.
+- D-44 · Q: O currículo arquivado se edita? → A *(adotada por padrão)*: **não** — ele se consulta (aba *Currículo* e o
+  seletor de *Editar curso*); para editar, desarquiva-se.
+- D-45 · Q: A aba *Currículo* mostra os arquivados sem pedir? → A *(adotada por padrão)*: **sim**, com a situação escrita
+  ("arquivado"); o seletor "mostrar arquivados" saiu com o seletor da página.
+- D-46 · Q: O buraco achado na M4 (o porteiro da RC-6 rodava antes de o gatilho da versão preencher o currículo, então
+  inserir só com `curso_id` pulava a regra)? → A: **corrigido na própria M4, antes do remoto** — o porteiro resolve o
+  currículo do curso quando ele é único. Um caso de RLS (limites, pelo Ajudante) passava **pelo buraco**; agora manda a
+  justificativa, e o caso de pgTAP `146` reprova com a correção desligada.
 
 ## 5. Requisitos
 
@@ -182,8 +259,9 @@ O texto que vale é o de `docs/correcoes/regras-do-curriculo-bloco-6.md`; aqui, 
 
 ### FR-004 — As telas, a cópia, a correção e o arquivamento (PR 2)
 - **FR-004.1**: "Novo currículo" MUST nascer como cópia do vigente (RC-7, D-12, D-27).
-- **FR-004.2**: A página do curso MUST ter o seletor de currículo, e as abas Sobre o Curso, Grade, Disciplinas,
-  Avaliações e Atividades MUST mostrar só o selecionado (RC-8).
+- **FR-004.2**: ~~A página do curso MUST ter o seletor de currículo (RC-8).~~ → A página do curso MUST ser **só
+  leitura** e mostrar o currículo **vigente** em todas as abas; a aba *Currículo* MUST listar todos e consultar cada um
+  só para leitura (A-1, A-2).
 - **FR-004.3**: *Nova turma* MUST oferecer o currículo (vigente ou futuro; padrão: o vigente na data de início) (RC-4).
 - **FR-004.4**: As turmas do curso MUST aparecer todas, inclusive arquivadas, com "Currículo N (vigência AAAA)"; a ficha da
   turma MUST mostrar o mesmo rótulo (RC-9, RC-12).
@@ -192,6 +270,15 @@ O texto que vale é o de `docs/correcoes/regras-do-curriculo-bloco-6.md`; aqui, 
 - **FR-004.6**: O trio MUST poder arquivar o currículo passado com todas as turmas arquivadas, e desarquivar (RC-10, D-28).
 - **FR-004.7**: Cada currículo MUST ter o seu PDF (RC-11, D-29).
 - **FR-004.8**: O DSA, o papel, a planilha, as abas e a sincronização (VIRADA-1) MUST usar o currículo da turma (D-17).
+
+### FR-005 — Os ajustes da conferência do PR #82
+- **FR-005.1**: *Editar curso* MUST ter a seção *Currículo*: escolher (todos, arquivados inclusive), criar o novo (cópia
+  do vigente), arquivar/desarquivar, descartar, e editar em quatro partes — dados e PDF, disciplinas e avaliações (com o
+  arbitrado), horários, atividades e limites (A-3, D-41 a D-44).
+- **FR-005.2**: Os regimes nomeados MUST ser do currículo: o currículo 1 de cada curso recebe os seus, a cópia leva os do
+  vigente, e a turma MUST escolher só entre os do currículo dela; trocar o currículo da turma (sem lançamento) leva o
+  regime correspondente, ou nenhum (A-4).
+- **FR-005.3**: No currículo em uso, acrescentar, mudar ou inativar regime MUST seguir a RC-6 (D-38).
 
 ## 6. Critérios de sucesso
 
@@ -206,3 +293,7 @@ O texto que vale é o de `docs/correcoes/regras-do-curriculo-bloco-6.md`; aqui, 
   `CAHO 2026` continuar com os mesmos números em toda tela.
 - **SC-005** (PR 2): No currículo em uso, a correção sem justificativa é recusada; com ela, o trio corrige e a trilha
   guarda quem, quando, o quê, o valor anterior e a justificativa; o Operador é recusado; completar o vazio passa.
+- **SC-006** (ajustes do PR #82): Numa cópia **nova** do remoto, com a M4 e a M5: o DSA, o papel e a planilha de toda
+  semana com lançamento das 29 turmas **idênticos** antes e depois; as páginas das turmas idênticas (salvo o link *"Segue o
+  Currículo"*, que passa a abrir a aba *Currículo*); e, antes da M4, 24 cursos com 24 currículos (o 1 de cada) e 0 turmas
+  em currículo de outro curso.

@@ -29,6 +29,7 @@ import {
   traduzirRecusa,
   type ErroDoBanco,
 } from "@/lib/acoes/traducao-de-recusas";
+import { comJustificativa, pedeJustificativa } from "@/lib/acoes/justificativa";
 import { ROTA_DA_FICHA_DA_TURMA } from "@/lib/navegacao/endereco-de-turma";
 import { recusaSeTurmaArquivadaPelaLinha } from "@/lib/acoes/turma-arquivada";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
@@ -44,9 +45,21 @@ export type ResultadoDeDisciplina =
   // ⚠️ `| undefined` explícito: com `exactOptionalPropertyTypes` ligado, `?:` NÃO aceita
   //    `undefined` atribuído — e a criação devolve o `id` que a RPC trouxe, que pode faltar.
   | { readonly ok: true; readonly disciplinaId?: string | undefined }
-  | { readonly ok: false; readonly erro: string };
+  | {
+      readonly ok: false;
+      readonly erro: string;
+      /** RC-6: o banco pediu a justificativa — a tela a pergunta e manda de novo. */
+      readonly pedeJustificativa?: true | undefined;
+    };
 
 const falha = (erro: string): ResultadoDeDisciplina => ({ ok: false, erro });
+
+/** A recusa do banco traduzida — e, quando ela é a falta da justificativa (RC-6), o aviso para a tela pedi-la. */
+function falhaDoBanco(error: ErroDoBanco): ResultadoDeDisciplina {
+  return pedeJustificativa(error)
+    ? { ok: false, erro: traduzirRecusa(error), pedeJustificativa: true }
+    : { ok: false, erro: traduzirRecusa(error) };
+}
 
 function primeiraMensagem(issues: readonly { message: string }[]): string {
   return issues[0]?.message ?? "Dados inválidos.";
@@ -76,10 +89,12 @@ export async function criarDisciplina(entrada: unknown): Promise<ResultadoDeDisc
   const d = conferido.data;
   const supabase = await criarClienteDeServidor();
 
-  const { data, error } = await supabase
-    .rpc("criar_disciplina", {
+  const { data, error } = await comJustificativa(
+    supabase.rpc("criar_disciplina", {
       p_disciplina: {
         curso_id: d.cursoId,
+        /* RC-5: o currículo selecionado; sem ele, o banco usa o único do curso, ou recusa. */
+        ...(d.curriculoId ? { curriculo_id: d.curriculoId } : {}),
         cod_disciplina: d.codDisciplina,
         nome_disciplina: d.nomeDisciplina,
         carga_horaria_tempos: d.cargaHorariaTempos,
@@ -88,10 +103,11 @@ export async function criarDisciplina(entrada: unknown): Promise<ResultadoDeDisc
         tecnica_ensino_sugerida: d.tecnicaEnsinoSugerida ?? null,
         local_padrao: d.localPadrao ?? null,
       },
-    })
-    .single();
+    }),
+    d.justificativa,
+  ).single();
 
-  if (error) return falha(traduzirRecusa(error as ErroDoBanco));
+  if (error) return falhaDoBanco(error as ErroDoBanco);
 
   revalidar();
   return { ok: true, disciplinaId: (data as { id: string } | null)?.id };
@@ -105,25 +121,28 @@ export async function editarDisciplina(entrada: unknown): Promise<ResultadoDeDis
   const d = conferido.data;
   const supabase = await criarClienteDeServidor();
 
-  const { error, count } = await supabase
-    .from("disciplinas")
-    .update(
-      {
-        cod_disciplina: d.codDisciplina,
-        nome_disciplina: d.nomeDisciplina,
-        carga_horaria_tempos: d.cargaHorariaTempos,
-        ordem_sugerida: d.ordemSugerida ?? null,
-        modo_atribuicao_padrao: d.modoAtribuicaoPadrao,
-        tecnica_ensino_sugerida: d.tecnicaEnsinoSugerida ?? null,
-        local_padrao: d.localPadrao ?? null,
-        /* Spec 017 (FR-007.1): só quando veio — quem não manda o campo não o apaga. */
-        ...(d.nomeNoDsa === undefined ? {} : { nome_no_dsa: d.nomeNoDsa }),
-      },
-      { count: "exact" },
-    )
-    .eq("id", d.disciplinaId);
+  const { error, count } = await comJustificativa(
+    supabase
+      .from("disciplinas")
+      .update(
+        {
+          cod_disciplina: d.codDisciplina,
+          nome_disciplina: d.nomeDisciplina,
+          carga_horaria_tempos: d.cargaHorariaTempos,
+          ordem_sugerida: d.ordemSugerida ?? null,
+          modo_atribuicao_padrao: d.modoAtribuicaoPadrao,
+          tecnica_ensino_sugerida: d.tecnicaEnsinoSugerida ?? null,
+          local_padrao: d.localPadrao ?? null,
+          /* Spec 017 (FR-007.1): só quando veio — quem não manda o campo não o apaga. */
+          ...(d.nomeNoDsa === undefined ? {} : { nome_no_dsa: d.nomeNoDsa }),
+        },
+        { count: "exact" },
+      )
+      .eq("id", d.disciplinaId),
+    d.justificativa,
+  );
 
-  if (error) return falha(traduzirRecusa(error as ErroDoBanco));
+  if (error) return falhaDoBanco(error as ErroDoBanco);
   // ⚠️ Zero linhas é RECUSA, não sucesso vazio — ver o cabeçalho.
   if (count === 0) return falha(recusaPorAlcance());
 
@@ -144,20 +163,24 @@ async function mudarSituacao(
   // ⚠️ **REATIVAR VAI POR RPC**, e desativar não. `reativar_disciplina` refaz a grade das turmas
   //    ativas — o mesmo trabalho da criação —, e por isso não é um `update` de coluna (decisão A-2).
   if (status === "ativo") {
-    const { error } = await supabase
-      .rpc("reativar_disciplina", { p_disciplina_id: conferido.data.disciplinaId })
-      .single();
-    if (error) return falha(traduzirRecusa(error as ErroDoBanco));
+    const { error } = await comJustificativa(
+      supabase.rpc("reativar_disciplina", { p_disciplina_id: conferido.data.disciplinaId }),
+      conferido.data.justificativa,
+    ).single();
+    if (error) return falhaDoBanco(error as ErroDoBanco);
     revalidar();
     return { ok: true, disciplinaId: conferido.data.disciplinaId };
   }
 
-  const { error, count } = await supabase
-    .from("disciplinas")
-    .update({ status: "inativo" }, { count: "exact" })
-    .eq("id", conferido.data.disciplinaId);
+  const { error, count } = await comJustificativa(
+    supabase
+      .from("disciplinas")
+      .update({ status: "inativo" }, { count: "exact" })
+      .eq("id", conferido.data.disciplinaId),
+    conferido.data.justificativa,
+  );
 
-  if (error) return falha(traduzirRecusa(error as ErroDoBanco));
+  if (error) return falhaDoBanco(error as ErroDoBanco);
   if (count === 0) return falha(recusaPorAlcance());
 
   revalidar();

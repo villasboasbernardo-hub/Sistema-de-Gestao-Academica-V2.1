@@ -12,9 +12,16 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
+
 type Resultado =
   | { readonly ok: true; readonly aviso?: "soma_acima_da_ch" }
-  | { readonly ok: false; readonly erro: string };
+  | {
+      readonly ok: false;
+      readonly erro: string;
+      /** Spec 021 (RC-6): o banco pediu a justificativa da correção do currículo em uso. */
+      readonly pedeJustificativa?: true | undefined;
+    };
 type Acao = (entrada: unknown) => Promise<Resultado>;
 
 export function DefinirTempoArbitrado({
@@ -49,10 +56,14 @@ export function DefinirTempoArbitrado({
   const [ue, setUe] = useState("");
   const [resposta, setResposta] = useState<Resultado | null>(null);
   const [gravando, iniciar] = useTransition();
+  /* Spec 021 (RC-6): mudar o tempo que o currículo em uso já definia é correção — com justificativa. */
+  const pedido = usePedidoDeJustificativa();
 
   const rodar = (acao: Acao, entrada: unknown) =>
     iniciar(async () => {
-      const r = await acao(entrada);
+      const r = await pedido.executar((justificativa) =>
+        acao(justificativa ? { ...(entrada as object), justificativa } : entrada),
+      );
       setResposta(r);
       if (r.ok) {
         setAberto(false);
@@ -62,6 +73,7 @@ export function DefinirTempoArbitrado({
 
   return (
     <span className="inline-flex flex-wrap items-center gap-2" data-slot="acoes-do-arbitrado">
+      {pedido.dialogo}
       {turmaId === "" && tempoDeCurriculo ? null : !aberto ? (
         <button
           type="button"

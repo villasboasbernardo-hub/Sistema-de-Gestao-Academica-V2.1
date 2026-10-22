@@ -131,7 +131,22 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/cursos/[curso]/editar/FormularioDeVigencia.tsx": "registrar e corrigir vigência",
   // Spec 020 (Bloco 5), C-5: o PDF sobe do navegador direto ao balde (a Vercel corta o corpo da função em 4,5 MB).
   "app/(app)/cursos/[curso]/editar/EnvioDoCurriculo.tsx":
-    "carregar o currículo em PDF: janela de arquivo e envio ao balde",
+    "carregar o PDF do currículo: janela de arquivo e envio ao balde",
+  // Spec 021 (Bloco 6): o currículo em *Editar curso* (ajuste 3 da conferência do PR #82) — escolher na URL, arquivar,
+  // criar, editar os dados e os limites, e trocar de parte.
+  "app/(app)/cursos/[curso]/editar/SeletorDeCurriculo.tsx":
+    "escolher o currículo escrevendo na URL",
+  "app/(app)/cursos/[curso]/editar/ArquivarCurriculo.tsx":
+    "arquivar e desarquivar, com confirmação",
+  "app/(app)/cursos/[curso]/editar/DescartarCurriculo.tsx":
+    "descartar o currículo criado por engano, com confirmação",
+  "app/(app)/cursos/[curso]/editar/FormularioDeNovoCurriculo.tsx":
+    "criar o currículo novo, cópia do vigente",
+  "app/(app)/cursos/[curso]/editar/FormularioDoCurriculo.tsx":
+    "editar o currículo, com o pedido de justificativa da correção",
+  "app/(app)/cursos/[curso]/editar/LimitesDoCurriculo.tsx":
+    "declarar, editar e retirar os limites de AEC, TAD e TR, com a justificativa da correção",
+  "app/(app)/cursos/[curso]/editar/PartesDoCurriculo.tsx": "trocar de parte escrevendo na URL",
   "app/(app)/turmas/FormularioDeTurma.tsx": "criar e editar turma, com o diálogo do limite",
   /*
    * ⚠️ Ele existe porque o `Collapsible` é folha de cliente e a FICHA não pode ser: importá-lo em

@@ -26,7 +26,7 @@ import { preSelecionarTurma, type TurmaParaSelecao } from "@/lib/dominio/pre-sel
  * página escolhe o vigente hoje (`curriculoVigenteEm`). Estrangeiros e custo ficam no curso (D-20).
  */
 export const COLUNAS_DA_PAGINA_DO_CURSO =
-  "id, codigo, nome_curso, classificacao, modalidade, limite_turmas_ano, status, ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculos:curriculos!curriculos_curso_id_fkey(id, versao, vigente_de, status, arquivado_em, proposito, duracao_dias, duracao_semanas, pdf_carregado_em)";
+  "id, codigo, nome_curso, classificacao, modalidade, limite_turmas_ano, status, ofertavel_estrangeiros, estrangeiros_observacao, custo_total, custo_composicao, curriculos:curriculos!curriculos_curso_id_fkey(id, versao, vigente_de, status, arquivado_em, descricao, proposito, duracao_dias, duracao_semanas, pdf_carregado_em)";
 
 /** O currículo embutido na linha do curso (spec 021). */
 export type CurriculoDaPagina = {
@@ -35,6 +35,7 @@ export type CurriculoDaPagina = {
   readonly vigente_de: string;
   readonly status: string;
   readonly arquivado_em: string | null;
+  readonly descricao: string | null;
   readonly proposito: string | null;
   readonly duracao_dias: number;
   readonly duracao_semanas: number | null;
@@ -47,7 +48,7 @@ export const SEM_CURRICULO = "00000000-0000-0000-0000-000000000000";
 /** As colunas das turmas do curso — a lista da aba Grade e a base dos avisos de cada uma. */
 /* Spec 018 (Bloco 3): + o regime nomeado de cada turma, para a aba Horários dizer quem usa cada um. */
 export const COLUNAS_DAS_TURMAS_DO_CURSO =
-  "id, codigo, turma, ano_letivo, status, modalidade, data_inicio, data_termino, sala_alocada, alunos, regime_de_horario_id";
+  "id, codigo, turma, ano_letivo, status, modalidade, data_inicio, data_termino, sala_alocada, alunos, regime_de_horario_id, curriculo_id";
 
 export type TurmaSelecionada = {
   /** O código da turma a mostrar, ou `null` quando a página abre sem seleção. */

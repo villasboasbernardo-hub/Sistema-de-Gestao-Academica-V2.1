@@ -15,13 +15,14 @@ import { expect, test, type Page } from "@playwright/test";
 import { bancoDoBloco2 } from "./bloco-2-de-teste";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { abrirPainelDeFiltros } from "./filtros";
-import { irAoCursoPorClique } from "./navegar-curso";
+import { irAoCursoPorClique, justificarSePedir } from "./navegar-curso";
 import { abrirEdicaoDoInstrutor } from "./navegar-instrutores";
 
 const MENU = (page: Page) => page.getByRole("navigation", { name: "Navegação principal" });
 
 let SIGLA = "";
 let CURSO_ID = "";
+let CURRICULO_ID = "";
 let EMAIL = "";
 let OM = "";
 let INSTRUTOR_A = "";
@@ -72,10 +73,16 @@ async function abrirSobre(page: Page): Promise<void> {
   await expect(page.locator('[role="tabpanel"]#painel-sobre')).toBeVisible();
 }
 
+/**
+ * Os PDFs do currículo 1 da amostra. ⚠️ Spec 021 (RC-11, D-29): cada envio é um ARQUIVO NOVO na pasta do currículo
+ * (`<curso>/<currículo>/<instante>.pdf`), e o anterior fica (regra 4) — a lista cresce, não se sobrescreve.
+ */
 async function objetosDoCurriculo(): Promise<string[]> {
-  const { data, error } = await bancoDoBloco2().storage.from("curriculos").list(CURSO_ID);
+  const { data, error } = await bancoDoBloco2()
+    .storage.from("curriculos")
+    .list(`${CURSO_ID}/${CURRICULO_ID}`);
   if (error) throw new Error(error.message);
-  return (data ?? []).map((o) => o.name);
+  return (data ?? []).map((o) => o.name).filter((n) => n.endsWith(".pdf"));
 }
 
 test.beforeAll(async ({}, info) => {
@@ -116,6 +123,13 @@ test.beforeAll(async ({}, info) => {
   }
   const { data: curso } = await banco.from("cursos").select("id").eq("codigo", SIGLA).single();
   CURSO_ID = (curso as { id: string }).id;
+  const { data: curriculo } = await banco
+    .from("curriculos")
+    .select("id")
+    .eq("curso_id", CURSO_ID)
+    .eq("versao", 1)
+    .single();
+  CURRICULO_ID = (curriculo as { id: string }).id;
   const { error: erroReset } = await banco
     .from("cursos")
     .update({
@@ -130,10 +144,16 @@ test.beforeAll(async ({}, info) => {
   /* Spec 021 (Bloco 6, RC-11): o PDF é do CURRÍCULO — a amostra começa sem nenhum. */
   const { error: erroDoPdf } = await banco
     .from("curriculos")
-    .update({ pdf_carregado_em: null })
+    .update({ pdf_carregado_em: null, pdf_caminho: null })
     .eq("curso_id", CURSO_ID);
   if (erroDoPdf) throw new Error(erroDoPdf.message);
   await banco.storage.from("curriculos").remove([`${CURSO_ID}/curriculo.pdf`]);
+  const anteriores = await objetosDoCurriculo();
+  if (anteriores.length > 0) {
+    await banco.storage
+      .from("curriculos")
+      .remove(anteriores.map((n) => `${CURSO_ID}/${CURRICULO_ID}/${n}`));
+  }
 
   /* Dois instrutores: um com texto que não casou (o texto antigo também, para provar que fica intocado). */
   await banco.from("instrutores").delete().eq("om", OM);
@@ -227,12 +247,16 @@ test.describe("spec 020 · os cadastros novos", () => {
     await expect(cartao).toHaveCount(0);
   });
 
-  test("C-5 a C-8 · currículo: carregar 5 MB pela janela de arquivo, baixar em Sobre o Curso, substituir", async ({
+  test("C-5 a C-8 · currículo: carregar 5 MB pela janela de arquivo, baixar em Sobre o Curso, substituir (RC-11)", async ({
     page,
   }) => {
     test.setTimeout(180_000);
     await irAoCursoPorClique(page, EMAIL, SIGLA);
-    await page.locator('[data-slot="ir-para-editar-curso"]').first().click();
+    /*
+     * Spec 021 (RC-11; ajuste 3 da conferência do PR #82): o PDF é do currículo — carrega-se em *Editar curso*, na seção
+     * *Currículo*, parte *Dados e PDF* (a padrão), no currículo escolhido (o vigente).
+     */
+    await page.locator('[data-slot="ir-para-editar-curso"]').click();
     const envio = page.locator('[data-slot="envio-do-curriculo"]');
     await expect(envio).toContainText("Nenhum currículo carregado.");
 
@@ -263,7 +287,8 @@ test.describe("spec 020 · os cadastros novos", () => {
         { timeout: 30_000 },
       );
     }
-    expect(await objetosDoCurriculo()).toEqual(["curriculo.pdf"]);
+    const primeiro = await objetosDoCurriculo();
+    expect(primeiro).toHaveLength(1);
     expect((await cursoNoBanco()).curriculo_pdf_em).not.toBeNull();
     await expect(envio.locator('[data-slot="carregar-curriculo"]')).toHaveText("Substituir PDF");
 
@@ -280,8 +305,11 @@ test.describe("spec 020 · os cadastros novos", () => {
     };
     expect(await baixar()).toContain("primeira-versao");
 
-    /* Substituir sobrescreve: um arquivo só, e o baixado é o novo. */
-    await page.locator('[data-slot="ir-para-editar-curso"]').first().click();
+    /*
+     * Substituir aponta o currículo para um ARQUIVO NOVO (D-29): o anterior fica no balde (regra 4, sem `DELETE`), e o
+     * baixado é o novo.
+     */
+    await page.locator('[data-slot="ir-para-editar-curso"]').click();
     {
       const [janela] = await Promise.all([
         page.waitForEvent("filechooser"),
@@ -292,11 +320,21 @@ test.describe("spec 020 · os cadastros novos", () => {
         mimeType: "application/pdf",
         buffer: pdf("segunda-versao"),
       });
+      /*
+       * RC-6: substituir o PDF do currículo EM USO é correção. "Em uso" depende da ordem dos arquivos (a atividade global
+       * de outra amostra conta), então a justificativa se responde quando for pedida.
+       */
+      const carregado = page
+        .locator('[data-slot="aviso-do-curriculo"]')
+        .filter({ hasText: "Currículo carregado." });
+      await justificarSePedir(page, "O currículo em PDF foi substituído.", carregado);
       await expect(page.locator('[data-slot="aviso-do-curriculo"]')).toHaveText(
         "Currículo carregado.",
       );
     }
-    expect(await objetosDoCurriculo()).toEqual(["curriculo.pdf"]);
+    const depois = await objetosDoCurriculo();
+    expect(depois).toHaveLength(2);
+    expect(depois).toEqual(expect.arrayContaining(primeiro));
     await cursoPeloMenu(page);
     await abrirSobre(page);
     expect(await baixar()).toContain("segunda-versao");

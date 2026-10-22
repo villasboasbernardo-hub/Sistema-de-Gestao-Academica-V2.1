@@ -20,12 +20,15 @@ import { RegimesDoCurso } from "./RegimesDoCurso";
 export function AbaHorarios({
   sigla,
   cursoId,
+  curriculoId,
   cursoAtivo,
   horarios,
   permissoes,
 }: {
   readonly sigla: string;
   readonly cursoId: string;
+  /** Spec 021 (emenda à RC-1): os regimes nomeados mostrados são os deste currículo — na página, o vigente. */
+  readonly curriculoId: string;
   readonly cursoAtivo: boolean;
   readonly horarios: HorariosDoCurso;
   readonly permissoes: {
@@ -67,6 +70,7 @@ export function AbaHorarios({
 
       <RegimesDoCurso
         cursoId={cursoId}
+        curriculoId={curriculoId}
         regimes={horarios.regimes}
         configuracoes={horarios.configuracoes}
         permissoes={{

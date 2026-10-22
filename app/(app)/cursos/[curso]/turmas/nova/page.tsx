@@ -15,6 +15,12 @@ import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import type { JanelaDeTurma, VigenciaProtegida } from "@/lib/dominio/protecao-de-vigencia";
 import { salasParaEscolher, type Sala } from "@/lib/dominio/salas";
+import {
+  curriculosParaTurma,
+  ROTULO_DA_SITUACAO,
+  type CurriculoParaVigencia,
+} from "@/lib/dominio/curriculos";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { codigoDaTurmaNoSegmento } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -66,7 +72,7 @@ export default async function NovaTurma({ params }: { params: Promise<{ curso: s
 
   const cursoId = curso.id as string;
 
-  const [turmasRes, salasRes, protecaoRes] = await Promise.all([
+  const [turmasRes, salasRes, protecaoRes, curriculosRes] = await Promise.all([
     supabase
       .from("turmas")
       .select("codigo, turma, ano_letivo, status, data_inicio, data_termino")
@@ -77,6 +83,11 @@ export default async function NovaTurma({ params }: { params: Promise<{ curso: s
       .eq("lista", "salas")
       .order("ordem"),
     supabase.rpc("protecao_das_vigencias_por_atividade_global", { p_curso_id: cursoId }),
+    /* Spec 021 (RC-4): os currículos do curso — a turma nova escolhe o vigente ou o futuro. */
+    supabase
+      .from("curriculos")
+      .select("id, versao, vigente_de, status, arquivado_em")
+      .eq("curso_id", cursoId),
   ]);
 
   const todas = turmasRes.data ?? [];
@@ -107,6 +118,20 @@ export default async function NovaTurma({ params }: { params: Promise<{ curso: s
 
   const vigenciasProtegidas: VigenciaProtegida[] = protecoesDoBanco(protecaoRes.data ?? []);
 
+  /*
+   * RC-4: as opções são o vigente e o futuro; a primeira, vazia, é "o vigente na data de início", que o banco escolhe
+   * (a data ainda não foi digitada aqui). Um curso com um currículo só mostra o campo com uma opção — e o padrão.
+   */
+  const paraTurma = curriculosParaTurma(
+    (curriculosRes.data ?? []) as (CurriculoParaVigencia & { id: string })[],
+    null,
+    hojeNaCiaara(),
+  );
+  const opcoesDeCurriculo = paraTurma.opcoes.map((o) => ({
+    id: o.curriculo.id,
+    rotulo: `${o.rotulo} — ${ROTULO_DA_SITUACAO[o.situacao]}`,
+  }));
+
   return (
     <section className="flex flex-col gap-4">
       <header className="flex flex-col gap-1">
@@ -127,6 +152,7 @@ export default async function NovaTurma({ params }: { params: Promise<{ curso: s
         semRotuloNoAno={semRotuloNoAno}
         vigenciasProtegidas={vigenciasProtegidas}
         janelasDoCurso={janelasDoCurso}
+        curriculo={{ opcoes: opcoesDeCurriculo, travado: false, comPadrao: true }}
       />
     </section>
   );

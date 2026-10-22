@@ -11,6 +11,8 @@
  */
 import { z } from "zod";
 
+import { campoDeJustificativa } from "@/lib/validacao/justificativa";
+
 const textoObrigatorio = (oQue: string, maximo = 300) =>
   z
     .string({ error: `Informe ${oQue}.` })
@@ -26,6 +28,8 @@ export const esquemaDeUnidadeEnsino = z.object({
     .number({ error: "Informe a carga horária em tempos." })
     .int("A carga horária é em tempos inteiros.")
     .positive("A carga horária tem de ser maior que zero."),
+  /* Spec 021 (Bloco 6, RC-6): a justificativa, quando o currículo é seguido por turma com lançamento. */
+  justificativa: campoDeJustificativa,
 });
 
 export const esquemaDeEdicaoDeUnidade = esquemaDeUnidadeEnsino
@@ -34,6 +38,7 @@ export const esquemaDeEdicaoDeUnidade = esquemaDeUnidadeEnsino
 
 export const esquemaDeSituacaoDaUnidade = z.object({
   unidadeId: z.uuid({ error: "Unidade de ensino inválida." }),
+  justificativa: campoDeJustificativa,
 });
 
 export const esquemaDeExclusaoDeUnidade = z.object({

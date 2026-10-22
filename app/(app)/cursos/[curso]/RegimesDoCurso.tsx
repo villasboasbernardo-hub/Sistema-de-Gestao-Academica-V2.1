@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { inativarRegimeDeHorario, reativarRegimeDeHorario } from "@/lib/acoes/regime-de-horario";
 import { rotuloDoRegime } from "@/lib/dominio/regime-da-turma";
 
@@ -25,11 +26,14 @@ import { FormularioDeRegime } from "./FormularioDeRegime";
 
 export function RegimesDoCurso({
   cursoId,
+  curriculoId = null,
   regimes,
   configuracoes,
   permissoes,
 }: {
   readonly cursoId: string;
+  /** Spec 021 (emenda à RC-1): o currículo cujos regimes a lista mostra e em que o regime novo nasce. */
+  readonly curriculoId?: string | null;
   readonly regimes: readonly RegimeNaTela[];
   readonly configuracoes: readonly ConfiguracaoDoCatalogo[];
   readonly permissoes: {
@@ -43,6 +47,8 @@ export function RegimesDoCurso({
   const [aberto, definirAberto] = React.useState<string | null>(null);
   const [resposta, definirResposta] = React.useState<{ ok: boolean; texto: string } | null>(null);
   const [pendente, iniciar] = React.useTransition();
+  /* Spec 021 (RC-6): inativar ou reativar regime de currículo em uso é correção — com justificativa. */
+  const pedido = usePedidoDeJustificativa();
   const nomeDoCatalogo = new Map(configuracoes.map((c) => [c.id, c.nome] as const));
 
   const concluir = (texto: string) => {
@@ -53,9 +59,12 @@ export function RegimesDoCurso({
 
   const mudarSituacao = (regime: RegimeNaTela) =>
     iniciar(async () => {
-      const r = regime.ativo
-        ? await inativarRegimeDeHorario({ id: regime.id })
-        : await reativarRegimeDeHorario({ id: regime.id });
+      const r = await pedido.executar((justificativa) => {
+        const j = justificativa ? { justificativa } : {};
+        return regime.ativo
+          ? inativarRegimeDeHorario({ id: regime.id, ...j })
+          : reativarRegimeDeHorario({ id: regime.id, ...j });
+      });
       definirResposta(
         r.ok
           ? { ok: true, texto: regime.ativo ? "Regime inativado." : "Regime reativado." }
@@ -70,6 +79,7 @@ export function RegimesDoCurso({
       className="flex flex-col gap-3"
       data-slot="regimes-do-curso"
     >
+      {pedido.dialogo}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 id="titulo-regimes-do-curso" className="text-texto text-sm font-semibold">
           Regimes de horário do curso
@@ -107,6 +117,7 @@ export function RegimesDoCurso({
         <div className="border-borda bg-superficie rounded-ciaara border p-3">
           <FormularioDeRegime
             cursoId={cursoId}
+            curriculoId={curriculoId}
             configuracoes={configuracoes}
             aoConcluir={concluir}
           />
@@ -179,6 +190,7 @@ export function RegimesDoCurso({
                 <div className="border-borda bg-superficie rounded-ciaara border p-3">
                   <FormularioDeRegime
                     cursoId={cursoId}
+                    curriculoId={curriculoId}
                     regime={r}
                     configuracoes={configuracoes}
                     aoConcluir={concluir}

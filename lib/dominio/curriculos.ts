@@ -76,3 +76,130 @@ export function rotuloDoCurriculo(
 ): string {
   return `Currículo ${curriculo.versao} (vigência ${curriculo.vigente_de.slice(0, 4)})`;
 }
+
+/** O nome da situação na tela (RC-3, RC-10). */
+export const ROTULO_DA_SITUACAO: Readonly<Record<SituacaoDoCurriculo | "arquivado", string>> = {
+  vigente: "vigente",
+  futuro: "futuro",
+  passado: "passado",
+  arquivado: "arquivado",
+};
+
+/** Uma opção do seletor de currículo da página do curso (RC-8). */
+export type OpcaoDeCurriculo<T> = {
+  readonly curriculo: T;
+  readonly rotulo: string;
+  readonly situacao: SituacaoDoCurriculo | "arquivado";
+};
+
+/**
+ * RC-8 e RC-10 — as opções do seletor: os currículos ativos, do mais novo ao mais antigo, cada um com a situação; o
+ * arquivado só aparece quando se pede (`mostrarArquivados`).
+ * > *"RC-8 · Página do curso. Tem um seletor de currículo (o vigente por padrão), que alterna entre vigente, futuro e
+ * > passados."* · *"RC-10 · (…) Ele sai do seletor, mas não é apagado (regra 4) e pode ser consultado ("mostrar
+ * > currículos arquivados")."*
+ */
+export function opcoesDoSeletor<T extends CurriculoParaVigencia>(
+  curriculos: readonly T[],
+  hoje: string,
+  mostrarArquivados: boolean,
+): OpcaoDeCurriculo<T>[] {
+  return curriculos
+    .filter((c) => c.status === "ativo" && (mostrarArquivados || c.arquivado_em === null))
+    .sort((a, b) => b.versao - a.versao)
+    .map((c) => ({
+      curriculo: c,
+      rotulo: rotuloDoCurriculo(c),
+      situacao: c.arquivado_em !== null ? "arquivado" : situacaoDoCurriculo(c, curriculos, hoje),
+    }));
+}
+
+/** O que a página do curso mostra: o currículo pedido na URL, ou o vigente — e o aviso quando o pedido não serve. */
+export type CurriculoDaPagina<T> = { readonly curriculo: T | null; readonly aviso: string | null };
+
+/**
+ * RC-8 — qual currículo as abas mostram. `?curriculo=N` escolhe o "Currículo N"; vazio, o vigente hoje.
+ * ⚠️ PEDIDO QUE NÃO SERVE DEGRADA COM AVISO, nunca em silêncio (a mesma regra do `?turma=`): quem colou um link precisa
+ *    saber que está vendo outro currículo.
+ * ⚠️ O ARQUIVADO PEDIDO PELO NÚMERO ABRE — consultá-lo é o que a RC-10 garante; ele só não aparece no seletor.
+ */
+export function curriculoDaPagina<T extends CurriculoParaVigencia>(
+  curriculos: readonly T[],
+  pedido: string,
+  hoje: string,
+): CurriculoDaPagina<T> {
+  const vigente = curriculoVigenteEm(curriculos, hoje);
+  const numero = pedido.trim();
+  if (numero === "") return { curriculo: vigente, aviso: null };
+  const achado = curriculos.find((c) => c.status === "ativo" && String(c.versao) === numero);
+  if (achado) return { curriculo: achado, aviso: null };
+  return {
+    curriculo: vigente,
+    aviso: `O Currículo ${numero} não existe neste curso. Mostrando o vigente.`,
+  };
+}
+
+/** As opções de currículo de uma turma NOVA (RC-4) e qual vem marcada. */
+export type CurriculosParaTurma<T> = {
+  readonly opcoes: readonly OpcaoDeCurriculo<T>[];
+  readonly padrao: T | null;
+};
+
+/**
+ * RC-4 — ao criar a turma, escolhe-se o currículo: o vigente ou o futuro; o padrão é o vigente na data de início.
+ * > *"RC-4 · (…) Ao criar uma turma, escolhe-se qual currículo ela segue (vigente ou futuro). O padrão é o currículo
+ * > vigente na data de início da turma."*
+ * ⚠️ O padrão pela DATA DE INÍCIO pode ser um passado (turma registrada com data antiga): ele entra nas opções — é o
+ *    mesmo que o banco escolheria sozinho (`app.curriculo_vigente`), e escondê-lo seria escolher outro em silêncio.
+ */
+export function curriculosParaTurma<T extends CurriculoParaVigencia>(
+  curriculos: readonly T[],
+  dataInicio: string | null,
+  hoje: string,
+): CurriculosParaTurma<T> {
+  const padrao = curriculoVigenteEm(curriculos, dataInicio ?? hoje);
+  const opcoes = opcoesDoSeletor(curriculos, hoje, false).filter(
+    (o) => o.situacao !== "passado" || (padrao !== null && o.curriculo.versao === padrao.versao),
+  );
+  return { opcoes, padrao };
+}
+
+/** Por que o currículo não se arquiva — ou `null`, quando se arquiva. */
+export type ImpedimentoDoArquivamento = "nao_e_passado" | "turma_nao_arquivada" | "ja_arquivado";
+
+/**
+ * RC-10 — o trio arquiva o currículo PASSADO quando TODAS as turmas que o seguem estão arquivadas.
+ * > *"RC-10 · Arquivar currículo passado. Quando o currículo novo já está em uso e todas as turmas do currículo passado
+ * > estão arquivadas, o trio pode arquivar esse currículo."*
+ * ⚠️ É a mesma regra de `public.arquivar_curriculo`, que é quem recusa de verdade; aqui ela só decide se o botão aparece.
+ */
+export function impedimentoDoArquivamento<T extends CurriculoParaVigencia>(
+  curriculo: T,
+  curriculos: readonly T[],
+  hoje: string,
+  turmasQueSeguem: readonly { readonly arquivada: boolean }[],
+): ImpedimentoDoArquivamento | null {
+  if (curriculo.arquivado_em !== null) return "ja_arquivado";
+  if (situacaoDoCurriculo(curriculo, curriculos, hoje) !== "passado") return "nao_e_passado";
+  if (turmasQueSeguem.some((t) => !t.arquivada)) return "turma_nao_arquivada";
+  return null;
+}
+
+/** Por que o currículo não se descarta — ou `null`, quando se descarta. */
+export type ImpedimentoDoDescarte = "vigente" | "com_turma";
+
+/**
+ * D-19 e D-36 — descartar (exclusão lógica, `status = 'inativo'`) o currículo criado por engano: só o que NENHUMA turma
+ * segue, e nunca o vigente (o curso ficaria sem o currículo da turma nova). O passado sai pelo arquivamento (RC-10).
+ * ⚠️ O banco recusa o que tem turma de qualquer jeito (`versao_em_uso`); aqui só se decide se o botão aparece.
+ */
+export function impedimentoDoDescarte<T extends CurriculoParaVigencia>(
+  curriculo: T,
+  curriculos: readonly T[],
+  hoje: string,
+  turmasQueSeguem: number,
+): ImpedimentoDoDescarte | null {
+  if (situacaoDoCurriculo(curriculo, curriculos, hoje) === "vigente") return "vigente";
+  if (turmasQueSeguem > 0) return "com_turma";
+  return null;
+}

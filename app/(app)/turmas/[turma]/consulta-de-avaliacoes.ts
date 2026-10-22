@@ -31,18 +31,26 @@ export async function lerAvaliacoesDaTurma(entrada: {
   /** `null` = só o currículo do curso (a aba Avaliações do curso sem turma escolhida). */
   readonly turmaId: string | null;
   readonly cursoId: string;
+  /**
+   * Spec 021 (Bloco 6, RC-4 e RC-8): o currículo cujas avaliações o quadro mostra — o DA TURMA na ficha, o selecionado
+   * na aba do curso. `null` = pelo curso (com um currículo só, o mesmo).
+   */
+  readonly curriculoId?: string | null;
   readonly hoje: string;
   readonly terminoDaTurma: string | null;
   /** O código da turma, para os alertas de vista (FR-054). */
   readonly turmaCodigo?: string;
 }): Promise<{ quadro: QuadroDeAvaliacoes | null; aviso: string | null; alertas: AlertaDeVista[] }> {
   const supabase = await criarClienteDeServidor();
+  const curriculoId = entrada.curriculoId ?? null;
+  const consultaDasDisciplinas = supabase
+    .from("disciplinas")
+    .select("id, cod_disciplina, nome_disciplina, carga_horaria_tempos")
+    .eq("status", "ativo");
   const [disc, ues, itens, ajustes, avals, execucao, prazo, breve] = await Promise.all([
-    supabase
-      .from("disciplinas")
-      .select("id, cod_disciplina, nome_disciplina, carga_horaria_tempos")
-      .eq("curso_id", entrada.cursoId)
-      .eq("status", "ativo"),
+    curriculoId
+      ? consultaDasDisciplinas.eq("curriculo_id", curriculoId)
+      : consultaDasDisciplinas.eq("curso_id", entrada.cursoId),
     supabase
       .from("unidades_ensino")
       .select("id, disciplina_id, numero_ue, ch_prevista_tempos")
@@ -102,11 +110,17 @@ export async function lerAvaliacoesDaTurma(entrada: {
   const exec = new Map(
     ((execucao.data ?? []) as Linha[]).map((e) => [String(e.disciplina_id), e] as const),
   );
+  /*
+   * ⚠️ SPEC 021 (RC-8): a UE e a avaliação do currículo são lidas pelo CURSO e ficam só as das disciplinas do currículo
+   *    lido — com dois currículos, o curso traria as dos dois.
+   */
+  const doCurriculo = new Set(((disc.data ?? []) as Linha[]).map((d) => String(d.id)));
+  const daDisciplinaDoCurriculo = (l: Linha) => doCurriculo.has(String(l.disciplina_id));
   const uesPorDisciplina = new Map<
     string,
     { id: string; rotulo: string; ch: number; numero: number }[]
   >();
-  for (const u of (ues.data ?? []) as Linha[]) {
+  for (const u of ((ues.data ?? []) as Linha[]).filter(daDisciplinaDoCurriculo)) {
     const lista = uesPorDisciplina.get(String(u.disciplina_id)) ?? [];
     lista.push({
       id: String(u.id),
@@ -137,36 +151,38 @@ export async function lerAvaliacoesDaTurma(entrada: {
   const ajustePorItem = new Map(
     ((ajustes.data ?? []) as Linha[]).map((a) => [String(a.avaliacao_curriculo_id), a] as const),
   );
-  const itensDoQuadro: ItemDoQuadro[] = ((itens.data ?? []) as Linha[]).map((i) => {
-    const instrumento = (i.instrumento ?? {}) as {
-      valor?: string;
-      metadados?: { natureza?: string };
-    };
-    const ajuste = ajustePorItem.get(String(i.id));
-    return {
-      id: String(i.id),
-      disciplinaId: String(i.disciplina_id),
-      ordem: Number(i.ordem),
-      rotulo: `${instrumento.valor ?? "?"} ${String(i.numero)}`,
-      instrumento: instrumentoDaVista(instrumento),
-      natureza: (instrumento.metadados?.natureza ?? "prova") as NaturezaDaAvaliacao,
-      unidadeEnsinoId: (i.unidade_ensino_id as string | null) ?? null,
-      origemUe: (i.origem_ue as "curriculo" | "decisao_ciaara" | null) ?? null,
-      ueDecididaEm: (i.ue_decidida_em as string | null) ?? null,
-      taAplicacao: i.ta_aplicacao === null ? null : Number(i.ta_aplicacao),
-      origemTaAplicacao: (i.origem_ta_aplicacao as OrigemDoTempo | null) ?? null,
-      taVista: i.ta_vista === null ? null : Number(i.ta_vista),
-      origemTaVista: (i.origem_ta_vista as OrigemDoTempo | null) ?? null,
-      ajusteDaTurma: ajuste
-        ? {
-            taAplicacao: ajuste.ta_aplicacao === null ? null : Number(ajuste.ta_aplicacao),
-            taVista: ajuste.ta_vista === null ? null : Number(ajuste.ta_vista),
-            origem: ajuste.origem as "arbitrado" | "sugestao_planilha",
-            confirmado: ajuste.confirmado_em !== null,
-          }
-        : null,
-    };
-  });
+  const itensDoQuadro: ItemDoQuadro[] = ((itens.data ?? []) as Linha[])
+    .filter(daDisciplinaDoCurriculo)
+    .map((i) => {
+      const instrumento = (i.instrumento ?? {}) as {
+        valor?: string;
+        metadados?: { natureza?: string };
+      };
+      const ajuste = ajustePorItem.get(String(i.id));
+      return {
+        id: String(i.id),
+        disciplinaId: String(i.disciplina_id),
+        ordem: Number(i.ordem),
+        rotulo: `${instrumento.valor ?? "?"} ${String(i.numero)}`,
+        instrumento: instrumentoDaVista(instrumento),
+        natureza: (instrumento.metadados?.natureza ?? "prova") as NaturezaDaAvaliacao,
+        unidadeEnsinoId: (i.unidade_ensino_id as string | null) ?? null,
+        origemUe: (i.origem_ue as "curriculo" | "decisao_ciaara" | null) ?? null,
+        ueDecididaEm: (i.ue_decidida_em as string | null) ?? null,
+        taAplicacao: i.ta_aplicacao === null ? null : Number(i.ta_aplicacao),
+        origemTaAplicacao: (i.origem_ta_aplicacao as OrigemDoTempo | null) ?? null,
+        taVista: i.ta_vista === null ? null : Number(i.ta_vista),
+        origemTaVista: (i.origem_ta_vista as OrigemDoTempo | null) ?? null,
+        ajusteDaTurma: ajuste
+          ? {
+              taAplicacao: ajuste.ta_aplicacao === null ? null : Number(ajuste.ta_aplicacao),
+              taVista: ajuste.ta_vista === null ? null : Number(ajuste.ta_vista),
+              origem: ajuste.origem as "arbitrado" | "sugestao_planilha",
+              confirmado: ajuste.confirmado_em !== null,
+            }
+          : null,
+      };
+    });
 
   const avaliacoes: AvaliacaoDoQuadro[] = ((avals.data ?? []) as Linha[]).map((a) => ({
     id: String(a.id),
@@ -235,6 +251,8 @@ export async function lerAvaliacoesDoCurso(entrada: {
   readonly cursoId: string;
   readonly turmaCodigo: string | null;
   readonly hoje: string;
+  /** Spec 021 (RC-8): o currículo selecionado na página do curso. */
+  readonly curriculoId?: string | null;
 }): Promise<{
   quadro: QuadroDeAvaliacoes | null;
   aviso: string | null;
@@ -257,6 +275,7 @@ export async function lerAvaliacoesDoCurso(entrada: {
   const lido = await lerAvaliacoesDaTurma({
     turmaId,
     cursoId: entrada.cursoId,
+    curriculoId: entrada.curriculoId ?? null,
     hoje: entrada.hoje,
     terminoDaTurma: termino,
   });

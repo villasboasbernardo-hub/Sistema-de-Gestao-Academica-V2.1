@@ -27,6 +27,7 @@ import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { CardKpi } from "@/components/ciaara/card-kpi";
 import { Carrossel } from "@/components/ciaara/carrossel";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
+import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { EsqueletoTabela } from "@/components/ciaara/esqueleto-tabela";
 import {
@@ -132,6 +133,38 @@ export function AmostraBarraDeProgresso() {
       <BarraDeProgresso valor={35} rotuloAcessivel="Carga executada da turma" tom="atrasado" />
       <BarraDeProgresso valor={120} rotuloAcessivel="Carga executada acima do previsto" />
       <BarraDeProgresso valor={null} rotuloAcessivel="Sem carga curricular lançada" />
+    </div>
+  );
+}
+
+/**
+ * Spec 021 (Bloco 6, RC-6): o pedido de justificativa da correção do currículo em uso. A "gravação" da amostra responde
+ * como o banco: sem justificativa, pede; com ela, grava — e a frase mostra o que chegou.
+ */
+export function AmostraPedidoDeJustificativa() {
+  const { executar, dialogo } = usePedidoDeJustificativa();
+  const [resultado, definirResultado] = React.useState("Nada gravado ainda.");
+  async function gravar() {
+    const r = await executar(async (justificativa) =>
+      justificativa
+        ? { ok: true as const, texto: `Gravado, com a justificativa: «${justificativa}».` }
+        : {
+            ok: false as const,
+            pedeJustificativa: true as const,
+            texto: "Recusado: falta a justificativa.",
+          },
+    );
+    definirResultado(r.texto);
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {dialogo}
+      <Button type="button" size="sm" onClick={() => void gravar()}>
+        Corrigir a CH (amostra)
+      </Button>
+      <p role="status" className="text-texto text-sm">
+        {resultado}
+      </p>
     </div>
   );
 }

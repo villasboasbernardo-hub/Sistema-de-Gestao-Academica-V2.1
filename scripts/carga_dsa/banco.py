@@ -80,9 +80,12 @@ def lit(valor: object) -> str:
 # ⚠️ So `select`. Os nomes de instrutor vem para a MEMORIA do processo (o casamento por posto e
 #    nome de guerra precisa deles) e NUNCA sao gravados em arquivo por este script.
 # ⚠️ Spec 021 (Bloco 6, RC-1): o modelo (UEs ou competencias) e do CURRICULO DA TURMA, nao mais do curso.
+# ⚠️ Spec 021 (Bloco 6, D-17): as disciplinas, as UEs, as habilitacoes e os itens sao os do CURRICULO DA TURMA. Com
+#    dois curriculos, o curso traria os dois — e a planilha casaria a linha com a disciplina do outro curriculo, que o
+#    banco recusa para esta turma (FR-002.3 da spec 021).
 _REFERENCIA = """
 with t as (
-  select t.id, t.codigo, t.curso_id, c.codigo as curso, t.alunos, t.sala_alocada, t.data_inicio, t.data_termino,
+  select t.id, t.codigo, t.curso_id, t.curriculo_id, c.codigo as curso, t.alunos, t.sala_alocada, t.data_inicio, t.data_termino,
          t.status, (cr.curriculo_modelo = 'competencias') as por_competencias
     from public.turmas t join public.cursos c on c.id = t.curso_id
     join public.curriculos cr on cr.id = t.curriculo_id
@@ -95,11 +98,13 @@ select jsonb_build_object(
   'disciplinas', (select coalesce(jsonb_agg(jsonb_build_object(
        'id', d.id, 'cod', d.cod_disciplina, 'nome', d.nome_disciplina, 'ch', d.carga_horaria_tempos,
        'sem_ue', d.sem_unidades_ensino)), '[]')
-       from public.disciplinas d where d.curso_id = (select curso_id from t) and d.status = 'ativo'),
+       from public.disciplinas d where d.curriculo_id = (select curriculo_id from t) and d.status = 'ativo'),
   'ues', (select coalesce(jsonb_agg(jsonb_build_object(
        'id', u.id, 'codigo', u.codigo, 'disciplina_id', u.disciplina_id, 'numero', u.numero_ue,
        'topico', u.topico, 'ch', u.ch_prevista_tempos)), '[]')
-       from public.unidades_ensino u where u.curso_id = (select curso_id from t) and u.status = 'ativo'),
+       from public.unidades_ensino u
+      where u.disciplina_id in (select id from public.disciplinas where curriculo_id = (select curriculo_id from t))
+        and u.status = 'ativo'),
   'instrutores', (select coalesce(jsonb_agg(jsonb_build_object(
        'id', i.id, 'codigo', i.codigo, 'posto', i.posto_graduacao, 'esp', i.esp_hab_obs,
        'nome', i.nome_completo, 'guerra', i.nome_guerra)), '[]')
@@ -107,7 +112,7 @@ select jsonb_build_object(
   'habilitacoes', (select coalesce(jsonb_agg(jsonb_build_object(
        'instrutor_id', h.instrutor_id, 'disciplina_id', h.disciplina_id, 'status', h.status)), '[]')
        from public.instrutor_disciplina h
-      where h.disciplina_id in (select id from public.disciplinas where curso_id = (select curso_id from t))),
+      where h.disciplina_id in (select id from public.disciplinas where curriculo_id = (select curriculo_id from t))),
   -- Spec 014 (PR 6, FR-036, FR-039): os itens do curriculo do curso, com o instrumento, e os ajustes desta turma.
   'itens_curriculo', (select coalesce(jsonb_agg(jsonb_build_object(
        'id', c.id, 'disciplina_id', c.disciplina_id, 'numero', c.numero, 'instrumento', l.valor,
@@ -115,7 +120,8 @@ select jsonb_build_object(
        'ta_aplicacao', c.ta_aplicacao, 'origem_ta_aplicacao', c.origem_ta_aplicacao,
        'ta_vista', c.ta_vista, 'origem_ta_vista', c.origem_ta_vista) order by c.disciplina_id, c.ordem), '[]')
        from public.avaliacoes_curriculo c join public.config_listas l on l.id = c.instrumento_id
-      where c.curso_id = (select curso_id from t) and c.status = 'ativo' and (l.metadados ->> 'natureza') <> 'od'),
+      where c.disciplina_id in (select id from public.disciplinas where curriculo_id = (select curriculo_id from t))
+        and c.status = 'ativo' and (l.metadados ->> 'natureza') <> 'od'),
   'ajustes', (select coalesce(jsonb_agg(jsonb_build_object(
        'avaliacao_curriculo_id', x.avaliacao_curriculo_id, 'origem', x.origem, 'confirmado', x.confirmado_em is not null,
        'ta_aplicacao', x.ta_aplicacao, 'ta_vista', x.ta_vista, 'status', x.status)), '[]')

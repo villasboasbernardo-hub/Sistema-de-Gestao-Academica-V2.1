@@ -20,6 +20,7 @@
  */
 import * as React from "react";
 
+import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,14 +54,23 @@ export function PainelDeUnidades({
   const [editando, setEditando] = React.useState<string | null>(null);
   const [acrescentando, setAcrescentando] = React.useState(false);
 
+  /* Spec 021 (RC-6): no currículo em uso, a correção pede justificativa — e só o banco sabe quando. */
+  const pedido = usePedidoDeJustificativa();
+
   async function executar(
-    acao: () => Promise<{ ok: boolean; erro?: string }>,
+    acao: (j: { justificativa?: string }) => Promise<{
+      ok: boolean;
+      erro?: string;
+      pedeJustificativa?: true | undefined;
+    }>,
     feito: string,
   ): Promise<boolean> {
     setErro(null);
     setMensagem(null);
     setOcupado(true);
-    const resultado = await acao();
+    const resultado = await pedido.executar((justificativa) =>
+      acao(justificativa ? { justificativa } : {}),
+    );
     if (resultado.ok) setMensagem(feito);
     else setErro(resultado.erro ?? "Não foi possível concluir.");
     setOcupado(false);
@@ -69,8 +79,9 @@ export function PainelDeUnidades({
 
   async function acrescentar(dados: FormData) {
     const ok = await executar(
-      () =>
+      (j) =>
         criarUnidadeEnsino({
+          ...j,
           disciplinaId,
           numeroUe: String(dados.get("numero_ue") ?? ""),
           topico: String(dados.get("topico") ?? ""),
@@ -83,8 +94,9 @@ export function PainelDeUnidades({
 
   async function gravarEdicao(unidadeId: string, dados: FormData) {
     const ok = await executar(
-      () =>
+      (j) =>
         editarUnidadeEnsino({
+          ...j,
           unidadeId,
           numeroUe: String(dados.get("numero_ue") ?? ""),
           topico: String(dados.get("topico") ?? ""),
@@ -104,6 +116,7 @@ export function PainelDeUnidades({
 
   return (
     <section aria-labelledby="titulo-das-unidades" className="flex flex-col gap-2">
+      {pedido.dialogo}
       <h3 id="titulo-das-unidades" className="text-texto text-sm font-semibold">
         Unidades de ensino
       </h3>
@@ -224,10 +237,10 @@ export function PainelDeUnidades({
                               disabled={ocupado}
                               onClick={() =>
                                 void executar(
-                                  () =>
+                                  (j) =>
                                     u.ativa
-                                      ? desativarUnidadeEnsino({ unidadeId: u.id })
-                                      : reativarUnidadeEnsino({ unidadeId: u.id }),
+                                      ? desativarUnidadeEnsino({ ...j, unidadeId: u.id })
+                                      : reativarUnidadeEnsino({ ...j, unidadeId: u.id }),
                                   u.ativa ? "Unidade desativada." : "Unidade reativada.",
                                 )
                               }

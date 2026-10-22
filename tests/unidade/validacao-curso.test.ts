@@ -163,6 +163,22 @@ describe("`FR-019.5` · o regime `padrao` é obrigatório na CRIAÇÃO", () => {
     }
   });
 
+  it("⚠️ spec 021 (RC-5): a edição do CURSO não leva propósito nem duração — são do currículo escolhido", () => {
+    const r = esquemaDeEdicaoDeCurso.safeParse({
+      ...CURSO,
+      duracao_semanas: 3,
+      proposito: "Formar quem forma.",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(Object.keys(r.data), "o conteúdo do currículo chegaria à linha do curso").not.toEqual(
+        expect.arrayContaining(["duracao_dias"]),
+      );
+      expect(Object.keys(r.data)).not.toContain("duracao_semanas");
+      expect(Object.keys(r.data)).not.toContain("proposito");
+    }
+  });
+
   it("⚠️ a edição NUNCA manda `status` — situação tem ação própria (`FR-017`)", () => {
     const r = esquemaDeEdicaoDeCurso.safeParse({ ...CURSO, status: "inativo" });
     expect(r.success).toBe(true);

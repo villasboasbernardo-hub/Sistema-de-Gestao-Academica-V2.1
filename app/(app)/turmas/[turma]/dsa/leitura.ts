@@ -489,7 +489,7 @@ export async function lerPeriodoDoDsa(
     supabase
       .from("turmas")
       .select(
-        "curso:cursos!turmas_curso_id_fkey(codigo), curriculo:curriculos!turmas_curriculo_do_proprio_curso_fk(curriculo_modelo, duracao_semanas)",
+        "curriculo_id, curso:cursos!turmas_curso_id_fkey(codigo), curriculo:curriculos!turmas_curriculo_do_proprio_curso_fk(curriculo_modelo, duracao_semanas)",
       )
       .eq("id", turmaId)
       .maybeSingle(),
@@ -497,7 +497,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("disciplinas")
         .select(
-          "id, cod_disciplina, nome_disciplina, sem_unidades_ensino, status, tecnica_ensino_sugerida",
+          "id, cod_disciplina, nome_disciplina, sem_unidades_ensino, status, tecnica_ensino_sugerida, curriculo_id",
           contagemNaPrimeira(f),
         )
         .eq("curso_id", cursoId)
@@ -827,6 +827,22 @@ export async function lerPeriodoDoDsa(
             .range(f.de, f.ate),
         );
 
+  /*
+   * ⚠️ SPEC 021 (Bloco 6, RC-4): AS DISCIPLINAS, AS UEs E AS AVALIAÇÕES DO CURRÍCULO SÃO AS DO CURRÍCULO DA TURMA. Elas
+   *    são lidas pelo curso, na mesma rodada, e recortadas aqui: com dois currículos, o curso traria os dois — e o
+   *    formulário do lançamento ofereceria disciplina que o banco recusa para esta turma (FR-002.3).
+   */
+  const curriculoDaTurma =
+    ((cursoRes.data as { curriculo_id?: string | null } | null)?.curriculo_id ?? null) || null;
+  const disciplinasDoCurriculo = listaOuVazia(discRes, erros, "disciplinas").filter(
+    (d) =>
+      curriculoDaTurma === null ||
+      (d as { curriculo_id?: string | null }).curriculo_id === curriculoDaTurma,
+  );
+  const doCurriculo = new Set(disciplinasDoCurriculo.map((d) => String(campo(d, "id"))));
+  const daDisciplinaDoCurriculo = (l: unknown) =>
+    curriculoDaTurma === null || doCurriculo.has(String(campo(l, "disciplina_id")));
+
   return {
     ocupacao: listaOuVazia(ocupacaoRes, erros, "ocupação"),
     aulas: listaOuVazia(aulasRes, erros, "aulas"),
@@ -837,7 +853,7 @@ export async function lerPeriodoDoDsa(
     curso: cursoRes.error
       ? (erros.push({ lista: "curso", mensagem: cursoRes.error.message }), null)
       : cursoRes.data,
-    disciplinas: listaOuVazia(discRes, erros, "disciplinas"),
+    disciplinas: disciplinasDoCurriculo,
     ueExecucao: listaOuVazia(ueExecRes, erros, "unidades da turma"),
     listas: listaOuVazia(listasRes, erros, "listas"),
     atribuicoes: listaOuVazia(atribRes, erros, "atribuições por UE"),
@@ -848,8 +864,10 @@ export async function lerPeriodoDoDsa(
     paraVista: listaOuVazia(paraVistaRes, erros, "avaliações para vista"),
     sessoes: listaOuVazia(sessoesRes, erros, "sessões de vista"),
     sessoesDeAplicacao: listaOuVazia(sessoesDeAplicacaoRes, erros, "sessões de aplicação"),
-    itensDoCurriculo: listaOuVazia(itensRes, erros, "avaliações do currículo"),
-    curriculo: listaOuVazia(curriculoRes, erros, "currículo"),
+    itensDoCurriculo: listaOuVazia(itensRes, erros, "avaliações do currículo").filter(
+      daDisciplinaDoCurriculo,
+    ),
+    curriculo: listaOuVazia(curriculoRes, erros, "currículo").filter(daDisciplinaDoCurriculo),
     aulasPorUe: listaOuVazia(aulasPorUeRes, erros, "aulas por UE"),
     catalogo: listaOuVazia(catalogoRes, erros, "catálogo de horários"),
     regimeDaTurma,

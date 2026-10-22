@@ -72,7 +72,7 @@ def main() -> int:
     ues = banco.consultar(a.destino, f"""
 select d.cod_disciplina as cod, u.numero_ue::text as numero, u.topico
   from public.unidades_ensino u join public.disciplinas d on d.id = u.disciplina_id
-  join public.turmas t on t.curso_id = d.curso_id
+  join public.turmas t on t.curriculo_id = d.curriculo_id
  where t.codigo = {lit(a.turma)} and u.status = 'ativo' and d.status = 'ativo'
  order by 1, u.numero_ue;""")
     por_disciplina: dict[str, list[dict]] = {}

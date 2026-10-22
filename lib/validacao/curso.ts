@@ -94,14 +94,25 @@ const camposDoCurso = {
     error: "Classificação é obrigatória.",
   }),
   modalidade: z.enum(MODALIDADES, { error: "Modalidade é obrigatória." }),
+  limite_turmas_ano: inteiroPositivoOpcional("Limite de turmas por ano"),
+};
+
+/**
+ * O conteúdo do currículo 1, que o curso traz SÓ AO NASCER (o gatilho `criar_versao_1_do_curso` o copia).
+ *
+ * ⚠️ SPEC 021 (Bloco 6, RC-1 e RC-5): propósito e duração são do CURRÍCULO, e se editam *num currículo escolhido*
+ *    (`esquemaDeEdicaoDoCurriculo`). Na edição do curso eles não entram — o Zod descarta a chave, e ela não chega à
+ *    linha do curso, cujas colunas estão aposentadas.
+ */
+const camposDoCurriculoInicial = {
   duracao_dias: inteiroPositivo("Duração em dias"),
   duracao_semanas: inteiroPositivoOpcional("Duração em semanas"),
-  limite_turmas_ano: inteiroPositivoOpcional("Limite de turmas por ano"),
   proposito: opcional,
 };
 
 export const esquemaDeCriacaoDeCurso = z.object({
   ...camposDoCurso,
+  ...camposDoCurriculoInicial,
   // A mensagem nomeia o que falta: sem ela, o Zod diria "expected object, received undefined",
   // que não diz a ninguém que o curso precisa nascer com um regime de horário.
   regime: z.object(esquemaDeRegimePadrao.shape, {

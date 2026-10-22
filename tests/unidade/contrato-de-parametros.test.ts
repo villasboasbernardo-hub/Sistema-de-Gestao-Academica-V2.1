@@ -367,13 +367,15 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
     expect(parametrosDaRota("/cursos/[curso]").map((p) => p.nome)).toEqual([
       "aba",
       "turma",
+      // Spec 021 (Bloco 6): o currículo consultado na aba *Currículo*.
+      "curriculo",
       "situacao",
       "busca",
       "aberta",
     ]);
   });
 
-  it("`aba` é escolha entre SEIS, na ordem do Bloco 3, com padrão `sobre` e *Sobre o Curso* primeiro", () => {
+  it("`aba` é escolha entre SETE, na ordem do Bloco 3 mais *Currículo*, com padrão `sobre` e *Sobre o Curso* primeiro", () => {
     // ⚠️ Eram duas (Q-02 da spec 009); a spec 014 (FR-053, `RF-CURSO-02`) trouxe «Avaliações». A guarda foi
     //    INVERTIDA, não apagada: Relatório continua fora.
     // ⚠️ O PADRÃO PASSOU DE `grade` A `sobre` em 17/10/2026 (spec 016, FR-006.2; Q-10, Bernardo Villas
@@ -390,6 +392,8 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
         "avaliacoes",
         "atividades",
         "horarios",
+        // Spec 021 (Bloco 6), ajuste 2 da conferência do PR #82: a lista dos currículos e a consulta de cada um.
+        "curriculo",
       ]);
     expect(aba.padrao).toBe("sobre");
   });
@@ -422,16 +426,26 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
   });
 });
 
-describe("`FR-013.1` · cadastro e edição de curso não têm parâmetro de consulta", () => {
+describe("`FR-013.1` · cadastro e edição de curso: nenhum rascunho na URL", () => {
   it("as duas rotas existem", () => {
     expect(ROTAS).toEqual(expect.arrayContaining(["/cursos/novo", "/cursos/[curso]/editar"]));
   });
 
-  it("⚠️ e nenhuma das duas declara parâmetro — rascunho de formulário NÃO vai para a URL", () => {
+  it("⚠️ o cadastro não declara parâmetro — rascunho de formulário NÃO vai para a URL", () => {
     // É a mesma decisão de `/instrutores/novo`: o que a pessoa ainda está digitando não é estado
     // compartilhável, e pô-lo na barra de endereço vaza por histórico e por ombro.
     expect(parametrosDaRota("/cursos/novo")).toEqual([]);
-    expect(parametrosDaRota("/cursos/[curso]/editar")).toEqual([]);
+  });
+
+  it("a edição declara só o que é VISTA: o currículo, a parte e os três da grade (spec 021, ajuste 3)", () => {
+    // Nenhum campo de formulário: o que se digita continua fora da URL.
+    expect(parametrosDaRota("/cursos/[curso]/editar").map((p) => p.nome)).toEqual([
+      "curriculo",
+      "parte",
+      "situacao",
+      "busca",
+      "aberta",
+    ]);
   });
 });
 

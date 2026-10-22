@@ -5,12 +5,15 @@
  *    aba *Disciplinas* do curso, e o menu não tem mais a entrada (*"todo caminho por clique passa pelo curso"*). O
  *    `goto` fica só no ponto de partida (`entrar`).
  */
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type Locator } from "@playwright/test";
 
 import { entrar } from "./conta-de-teste";
 
 export type AbaDoCurso =
-  "sobre" | "grade" | "disciplinas" | "avaliacoes" | "atividades" | "horarios";
+  "sobre" | "grade" | "disciplinas" | "avaliacoes" | "atividades" | "horarios" | "curriculo";
+
+/** As partes do currículo em *Editar curso* (spec 021, ajuste 3 da conferência do PR #82). */
+export type ParteDaEdicao = "dados" | "disciplinas" | "horarios" | "atividades";
 
 /** Entra, vai pelo menu até *Cursos* e abre o curso pelo cartão. */
 export async function irAoCursoPorClique(page: Page, email: string, sigla: string): Promise<void> {
@@ -44,4 +47,65 @@ export async function irAsDisciplinasDoCurso(
   await abrirAbaDoCurso(page, "disciplinas");
   // ⚠️ Espera pelo que só a tabela pronta tem — nunca por tempo (achado 9 do Épico 3).
   await expect(page.getByRole("columnheader", { name: "CH" })).toBeVisible();
+}
+
+/**
+ * *Editar curso* por clique — Cursos → o curso → *Editar curso* (spec 021, ajuste 3 da conferência do PR #82: o
+ * currículo inteiro se edita ali).
+ */
+export async function irAEdicaoDoCurso(page: Page, email: string, sigla: string): Promise<void> {
+  await irAoCursoPorClique(page, email, sigla);
+  await page.locator('[data-slot="ir-para-editar-curso"]').click();
+  await expect
+    .poll(() => new URL(page.url()).pathname)
+    .toBe(`/cursos/${encodeURIComponent(sigla)}/editar`);
+  await expect(page.locator('[data-slot="curriculo-na-edicao"]')).toBeVisible();
+}
+
+/** Clica na parte do currículo em edição e espera o painel dela. */
+export async function abrirParteDaEdicao(page: Page, parte: ParteDaEdicao): Promise<void> {
+  await page
+    .locator(`[data-slot="partes-do-curriculo"] [role="tab"][data-parte="${parte}"]`)
+    .click();
+  if (parte !== "dados") await expect(page).toHaveURL(new RegExp(`[?&]parte=${parte}(&|$)`));
+  await expect(page.locator(`[role="tabpanel"]#painel-parte-${parte}`)).toBeVisible();
+}
+
+/** A grade de disciplinas EM EDIÇÃO, por clique: Cursos → o curso → *Editar curso* → *Disciplinas e avaliações*. */
+export async function irAsDisciplinasDaEdicao(
+  page: Page,
+  email: string,
+  sigla: string,
+): Promise<void> {
+  await irAEdicaoDoCurso(page, email, sigla);
+  await abrirParteDaEdicao(page, "disciplinas");
+  await expect(page.getByRole("columnheader", { name: "CH" })).toBeVisible();
+}
+
+/**
+ * Responde ao pedido de justificativa da RC-6 (spec 021): no currículo seguido por turma com lançamento, acrescentar,
+ * mudar o que tinha valor e inativar são correção — o banco pede o motivo, e a tela o pergunta.
+ */
+export async function justificarCorrecao(page: Page, motivo: string): Promise<void> {
+  const pedido = page.locator('[data-slot="pedido-de-justificativa"]');
+  await expect(pedido).toBeVisible();
+  await pedido.locator('[data-slot="justificativa-da-correcao"]').fill(motivo);
+  await pedido.locator('[data-slot="confirmar-justificativa"]').click();
+  await expect(pedido).toHaveCount(0);
+}
+
+/**
+ * Como `justificarCorrecao`, mas para a amostra cujo currículo PODE estar em uso conforme a ordem dos arquivos: "em uso"
+ * conta também a atividade GLOBAL na janela da turma (I-1 do Bloco 3), e outras amostras criam uma (10/05/2026). Espera o
+ * `resultado` OU o pedido, e responde ao pedido quando ele vem. A regra em si está provada sem depender de ordem no pgTAP
+ * `146` e em `tests/invariantes/rls/regimes-nomeados.test.ts`.
+ */
+export async function justificarSePedir(
+  page: Page,
+  motivo: string,
+  resultado: Locator,
+): Promise<void> {
+  const pedido = page.locator('[data-slot="pedido-de-justificativa"]');
+  await expect(resultado.or(pedido).first()).toBeVisible();
+  if (await pedido.isVisible()) await justificarCorrecao(page, motivo);
 }

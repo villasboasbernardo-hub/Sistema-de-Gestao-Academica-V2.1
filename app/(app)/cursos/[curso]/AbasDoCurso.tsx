@@ -31,6 +31,8 @@ const ABAS = [
   { valor: "avaliacoes", rotulo: "Avaliações" },
   { valor: "atividades", rotulo: "Atividades" },
   { valor: "horarios", rotulo: "Horários" },
+  // Spec 021 (Bloco 6), ajuste 2 da conferência do PR #82: os currículos do curso, para consulta.
+  { valor: "curriculo", rotulo: "Currículo" },
 ] as const;
 
 type ValorDaAba = (typeof ABAS)[number]["valor"];

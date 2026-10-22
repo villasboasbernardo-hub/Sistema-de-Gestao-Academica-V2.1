@@ -186,7 +186,8 @@ _(As duas linhas acima são a previsão de 16/10/2026. Como saiu: **três ramos*
 > 2.614 de unidade · 939 pgTAP · 417 invariantes e RLS · 542 de ponta a ponta + 6 pulados, sem instável) e Production
 > servindo o merge (deploy de `f1a7089` em `success`); o ramo foi apagado, local e remoto. Fechou também a
 > **`PEND-019-3`**. ⚠️ **Custo de curso fica como campo informativo; a confirmação de escopo (regra 2) segue pendente
-> com Bernardo** — `PEND-020-3`, sem bloquear.
+> com Bernardo** — `PEND-020-3`, sem bloquear. ✅ **Respondida em 21/10/2026: é controle da CIAARA-11** (`PEND-020-3`
+> fechada).
 
 ⚠️ São **novidade**, não paridade com a v2.0 (regra 3 do CLAUDE.md): o specify registra a autorização nominal de Bernardo. **Custo de curso**: confirmar que é processo da CIAARA-11 (regra 2, contenção de escopo).
 
@@ -237,7 +238,9 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
   sobrescreve o mesmo arquivo (`<curso>/curriculo.pdf`) e o balde não tem policy de `DELETE` (regra 4, `STORAGE-1`) —
   então não há como tirar o currículo de um curso pela tela, e a versão anterior não fica guardada. O currículo
   versionado é o Bloco 6; tirar o PDF é a mesma decisão da `STORAGE-1`, agora para dois baldes.
-- **PEND-020-3** — **custo de curso é processo da CIAARA-11? (regra 2, contenção de escopo)** _(decisão de Bernardo Villas
+- ~~**PEND-020-3**~~ ✅ **FECHADA em 21/10/2026** _(Bernardo Villas Boas, na conferência do PR #82: *"Custo do curso: É
+  controle da CIAARA-11 (regra 2) — feche a pendência."*)_: as duas colunas ficam em uso, como estão. *(Registro
+  anterior:)* **custo de curso é processo da CIAARA-11? (regra 2, contenção de escopo)** _(decisão de Bernardo Villas
   Boas na aprovação do PR #79, 20/10/2026: *"fica como campo informativo — a confirmação de escopo segue pendente
   comigo"*)_: `cursos.custo_total` e `cursos.custo_composicao` estão no ar, editados em *Editar curso* e mostrados em
   *Sobre o Curso*, e **nada calcula a partir deles**. Se a resposta for *não*, as duas colunas ficam sem uso (nunca
@@ -259,6 +262,18 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
 > da RC-1; **nada muda em tela**, merge autorizado se a prova passar) e o **PR 2** (as telas: cópia, seletor, currículo em
 > *Nova turma*, correção pelo trio, arquivamento, PDF por currículo, leitores por currículo). Desenho:
 > `specs/021-…/contracts/banco.md`; medição: `antes-depois.md`; o quadro das RC e o lote: `spec.md`.
+>
+> ✅ **PR 1 na `main` em 21/10/2026** — `ae4e595` (#81), com o rito do remoto (backup `remoto-20261021-090802.sql`, a
+> remedição sobre ele idêntica nas três medidas, **89 e 89** migrations, esquema `5d794f43…` igual nos dois bancos), CI
+> verde na `main` e Production servindo o merge. 🟨 **PR 2** (#82, ramo `feat/BLOCO-6-curriculo-telas`) em conferência:
+> CI verde; a **M3** (só acrescenta) no remoto pelo rito (backup `remoto-20261021-113521.sql`, 90 e 90); a **M4** (altera:
+> a correção com justificativa, os recursos do trio e a policy do PDF) **no portão 9.4**, para entrar junto do merge.
+>
+> 🟨 **Conferência do PR #82 (21/10/2026): quatro ajustes ANTES do merge, no mesmo PR** — a página do curso **só leitura**
+> no currículo vigente (sem seletor); a aba **Currículo** (lista e consulta só leitura); **Novo currículo** e a edição de
+> **todo** o currículo dentro de **Editar curso**; e os **horários do currículo** (emenda à RC-1: os regimes nomeados vão
+> para o currículo 1 de cada curso — **M5**, que altera, autorizada com a prova na cópia do remoto). A M4 e a M5 entram no
+> remoto pelo rito e o merge vem **logo em seguida**. A `PEND-020-3` foi respondida: custo **é** controle da CIAARA-11.
 
 
 Registrar um currículo novo (disciplinas, UEs, CH, avaliações, duração) **sem** alterar o vigente, e planejar as turmas do ano seguinte por ele, enquanto as turmas em andamento seguem o currículo em vigor. Mexe no vínculo turma → versão do currículo; não cabe em correção.
