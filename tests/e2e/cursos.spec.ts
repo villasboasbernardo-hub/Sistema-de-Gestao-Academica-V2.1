@@ -148,10 +148,15 @@ test.describe("`SC-002` · os indicadores do `FR-002`, e só eles", () => {
     await expect(pizza).toContainText("Cursos por classificação");
     const duracao = page.locator('[data-chave="duracao-em-semanas"]');
     await expect(duracao).toContainText("Duração em semanas de cada curso e estágio");
-    // Cada curso com a duração em semanas é uma barra com a sigla no eixo (o `<g>` do SVG não tem caixa própria).
-    await expect(
-      duracao.locator(".recharts-xAxis .recharts-cartesian-axis-tick-value").first(),
-    ).toBeAttached();
+    /*
+     * Cada curso com a duração em semanas é uma barra com a sigla no eixo; quem não a tem é nomeado embaixo. A ordem
+     * das barras sai do atributo que a tela publica — como o `data-barras` de Instrutores —, não das classes internas
+     * da biblioteca de gráficos (a primeira versão deste caso as adivinhou, e elas não existiam).
+     */
+    const barras = JSON.parse((await duracao.getAttribute("data-barras")) ?? "[]") as string[];
+    const semDuracao = await duracao.locator('[data-slot="cursos-sem-duracao"]').count();
+    expect(barras.length + semDuracao, "o gráfico não recebeu curso nenhum").toBeGreaterThan(0);
+    if (barras.length > 0) await expect(duracao).toContainText(barras[0] as string);
     await expect(page.getByText("Duração média, em dias, por classificação")).toHaveCount(0);
   });
 

@@ -59,7 +59,12 @@ export function IndicadoresDoCatalogo({ agregados }: { readonly agregados: Agreg
           <div className={CARTAO} data-slot="grafico-do-catalogo" data-chave="por-classificacao">
             <GraficoPizza serie={porClassificacao} rotulo="Cursos por classificação" altura={240} />
           </div>
-          <div className={CARTAO} data-slot="grafico-do-catalogo" data-chave="duracao-em-semanas">
+          <div
+            className={CARTAO}
+            data-slot="grafico-do-catalogo"
+            data-chave="duracao-em-semanas"
+            data-barras={JSON.stringify(duracao.pontos.map((p) => p.nome))}
+          >
             <GraficoBarras
               series={[duracao]}
               rotulo="Duração em semanas de cada curso e estágio"
