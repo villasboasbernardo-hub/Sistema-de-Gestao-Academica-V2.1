@@ -98,13 +98,14 @@ export type AcaoDeIcone = keyof typeof ICONE_DA_ACAO;
 
 type Variante = "padrao" | "destrutivo" | "contorno" | "fantasma";
 
-const VARIANTE_DO_BOTAO: Readonly<Record<Variante, "default" | "destructive" | "outline" | "ghost">> =
-  {
-    padrao: "default",
-    destrutivo: "destructive",
-    contorno: "outline",
-    fantasma: "ghost",
-  };
+const VARIANTE_DO_BOTAO: Readonly<
+  Record<Variante, "default" | "destructive" | "outline" | "ghost">
+> = {
+  padrao: "default",
+  destrutivo: "destructive",
+  contorno: "outline",
+  fantasma: "ghost",
+};
 
 export type BotaoDeIconeProps = Omit<React.ComponentProps<"button">, "children"> & {
   readonly acao: AcaoDeIcone;
@@ -112,6 +113,11 @@ export type BotaoDeIconeProps = Omit<React.ComponentProps<"button">, "children">
   readonly rotulo: string;
   /** Com endereço, é um link com cara de botão. */
   readonly href?: string;
+  /**
+   * Com `href`, um `<a>` comum em vez do `Link` do Next — para a rota que devolve ARQUIVO ou redireciona para fora (o
+   * currículo em PDF, a planilha de contingência): o roteador do cliente não navega para ela.
+   */
+  readonly nativo?: boolean;
   readonly variante?: Variante;
   /** Enquanto grava: o indicador de espera no lugar do ícone e o nome trocado. */
   readonly ocupado?: boolean;
@@ -125,6 +131,7 @@ export function BotaoDeIcone({
   acao,
   rotulo,
   href,
+  nativo = false,
   variante = "contorno",
   ocupado = false,
   rotuloOcupado = "Gravando…",
@@ -136,7 +143,10 @@ export function BotaoDeIcone({
   const Icone = ocupado ? LoaderCircle : ICONE_DA_ACAO[acao];
   const nome = ocupado ? rotuloOcupado : rotulo;
   const desenho = (
-    <Icone aria-hidden className={ocupado ? "animate-spin motion-reduce:animate-none" : undefined} />
+    <Icone
+      aria-hidden
+      className={ocupado ? "animate-spin motion-reduce:animate-none" : undefined}
+    />
   );
 
   return (
@@ -150,9 +160,15 @@ export function BotaoDeIcone({
             data-acao={acao}
             {...(props as React.ComponentProps<typeof Button>)}
           >
-            <Link href={href} aria-label={nome}>
-              {desenho}
-            </Link>
+            {nativo ? (
+              <a href={href} aria-label={nome}>
+                {desenho}
+              </a>
+            ) : (
+              <Link href={href} aria-label={nome}>
+                {desenho}
+              </Link>
+            )}
           </Button>
         ) : (
           <Button

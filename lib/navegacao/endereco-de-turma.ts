@@ -325,8 +325,8 @@ export function enderecoDaSecaoDeDisciplinas(codigo: string): string {
  * ⚠️ **A ABA É OPCIONAL E VEM PRIMEIRO NA URL**, para que dois links da mesma turma em
  * abas diferentes não sejam a mesma cadeia por acidente de ordem.
  *
- * @example enderecoDaTurmaNoCurso("C-ApA-PCN-PR-EAD", "C-ApA-PCN-PR-EAD T2 2026", "grade")
- *          → "/cursos/C-ApA-PCN-PR-EAD?aba=grade&turma=C-ApA-PCN-PR-EAD+T2+2026"
+ * @example enderecoDaTurmaNoCurso("C-ApA-PCN-PR-EAD", "C-ApA-PCN-PR-EAD T2 2026", "turmas")
+ *          → "/cursos/C-ApA-PCN-PR-EAD?aba=turmas&turma=C-ApA-PCN-PR-EAD+T2+2026"
  */
 /**
  * Um valor de consulta escrito **exatamente como o `nuqs` o escreve**.

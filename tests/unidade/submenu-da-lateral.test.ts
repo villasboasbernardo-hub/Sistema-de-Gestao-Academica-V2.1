@@ -8,31 +8,54 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { ROTULO_DA_CLASSIFICACAO } from "@/lib/dominio/classificacoes-de-curso";
 import { arvoreDeCursos, arvoreDeTurmas, ramoDoCaminho } from "@/lib/dominio/submenu-da-lateral";
 import { enderecoDaTurma, enderecoDoCurso } from "@/lib/navegacao/endereco-de-turma";
 
+/*
+ * Spec 022 (Bloco 7, FR-003): a ordem é a das classificações — Regulares, Expeditos, Especiais, Estágios de
+ * Qualificação, Aperfeiçoamento Avançado —, e dentro de cada uma a sigla sem os hífens (CAHO antes de C-Ap-FR).
+ */
 const cursos = [
+  { id: "c4", codigo: "C-Esp-ME", nome: "Especial ME", classificacao: "especial" },
   { id: "c2", codigo: "C-Ap-HN", nome: "Aperfeiçoamento HN", classificacao: "regular" },
+  {
+    id: "c5",
+    codigo: "EST-QF-APHID",
+    nome: "Estágio APHID",
+    classificacao: "estagio_qualificacao",
+  },
   { id: "c1", codigo: "C-Ap-FR", nome: "Aperfeiçoamento FR", classificacao: "regular" },
-  { id: "c3", codigo: "CAHO", nome: "CAHO", classificacao: "especial" },
+  { id: "c3", codigo: "CAHO", nome: "CAHO", classificacao: "regular" },
 ];
+const doCurso = (sigla: string, classificacao: string) => ({
+  cursoCodigo: sigla,
+  cursoClassificacao: classificacao,
+});
 const turmas = [
-  { codigo: "C-Ap-FR 2025", ano: 2025, arquivada: false },
-  { codigo: "C-Ap-HN 2026", ano: 2026, arquivada: false },
-  { codigo: "C-Ap-FR T10 2026", ano: 2026, arquivada: false },
-  { codigo: "C-Ap-FR T2 2026", ano: 2026, arquivada: false },
-  { codigo: "CAHO 2026", ano: 2026, arquivada: false },
-  { codigo: "C-Esp-ME 2026", ano: 2026, arquivada: true },
-  { codigo: "C-Ap-HN 2027", ano: 2027, arquivada: false },
+  { codigo: "C-Ap-FR 2025", ano: 2025, arquivada: false, ...doCurso("C-Ap-FR", "regular") },
+  { codigo: "C-Esp-ME 2026", ano: 2026, arquivada: false, ...doCurso("C-Esp-ME", "especial") },
+  { codigo: "C-Ap-HN 2026", ano: 2026, arquivada: false, ...doCurso("C-Ap-HN", "regular") },
+  { codigo: "C-Ap-FR T10 2026", ano: 2026, arquivada: false, ...doCurso("C-Ap-FR", "regular") },
+  { codigo: "C-Ap-FR T2 2026", ano: 2026, arquivada: false, ...doCurso("C-Ap-FR", "regular") },
+  { codigo: "CAHO 2026", ano: 2026, arquivada: false, ...doCurso("CAHO", "regular") },
+  {
+    codigo: "EST-QF-APHID 2026",
+    ano: 2026,
+    arquivada: true,
+    ...doCurso("EST-QF-APHID", "estagio_qualificacao"),
+  },
+  { codigo: "C-Ap-HN 2027", ano: 2027, arquivada: false, ...doCurso("C-Ap-HN", "regular") },
 ];
 
 describe("C-14 · a árvore de Cursos", () => {
-  it("por classificação, na ordem do catálogo, com o rótulo, os cursos pela sigla em ordem natural", () => {
+  it("por classificação, na ordem pedida, com o rótulo, os cursos pela sigla sem os hífens", () => {
     expect(arvoreDeCursos(cursos, enderecoDoCurso)).toEqual([
       {
         chave: "regular",
         rotulo: "Curso Regular",
         itens: [
+          { rota: "/cursos/CAHO", rotulo: "CAHO", titulo: "CAHO" },
           { rota: "/cursos/C-Ap-FR", rotulo: "C-Ap-FR", titulo: "Aperfeiçoamento FR" },
           { rota: "/cursos/C-Ap-HN", rotulo: "C-Ap-HN", titulo: "Aperfeiçoamento HN" },
         ],
@@ -40,7 +63,12 @@ describe("C-14 · a árvore de Cursos", () => {
       {
         chave: "especial",
         rotulo: "Curso Especial",
-        itens: [{ rota: "/cursos/CAHO", rotulo: "CAHO", titulo: "CAHO" }],
+        itens: [{ rota: "/cursos/C-Esp-ME", rotulo: "C-Esp-ME", titulo: "Especial ME" }],
+      },
+      {
+        chave: "estagio_qualificacao",
+        rotulo: ROTULO_DA_CLASSIFICACAO.estagio_qualificacao,
+        itens: [{ rota: "/cursos/EST-QF-APHID", rotulo: "EST-QF-APHID", titulo: "Estágio APHID" }],
       },
     ]);
   });
@@ -52,16 +80,17 @@ describe("A-5 · a lista de Turmas, sem o nível do curso", () => {
   it("só as turmas do ano, sem as arquivadas, cada uma pelo código", () => {
     expect(lista.map((i) => i.rotulo)).not.toContain("C-Ap-FR 2025");
     expect(lista.map((i) => i.rotulo)).not.toContain("C-Ap-HN 2027");
-    expect(lista.map((i) => i.rotulo)).not.toContain("C-Esp-ME 2026");
+    expect(lista.map((i) => i.rotulo)).not.toContain("EST-QF-APHID 2026");
     expect(lista[0]?.rota).toBe("/turmas/CAHO%202026");
   });
 
-  it("em ordem natural lendo o código sem os hífens: CAHO antes de C-Ap-FR, e T2 antes de T10", () => {
+  it("pela ordem do curso — a classificação, depois a sigla sem os hífens —, e T2 antes de T10", () => {
     expect(lista.map((i) => i.rotulo)).toEqual([
       "CAHO 2026",
       "C-Ap-FR T2 2026",
       "C-Ap-FR T10 2026",
       "C-Ap-HN 2026",
+      "C-Esp-ME 2026",
     ]);
   });
 

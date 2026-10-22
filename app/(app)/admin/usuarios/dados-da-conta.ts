@@ -8,6 +8,7 @@
  * há mais o que ordenar por antiguidade. Deixar a consulta de pé sem consumidor seria carregar duas
  * idas ao banco por abertura de tela, e uma guarda viva sobre código morto.
  */
+import { emOrdemDeCurso } from "@/lib/dominio/ordem-de-cursos";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 export type CursoParaVincular = {
@@ -25,12 +26,13 @@ export async function lerApoioDaConta(): Promise<ApoioDaConta> {
 
   const { data } = await supabase
     .from("cursos")
-    .select("id, codigo, nome_curso")
+    .select("id, codigo, nome_curso, classificacao")
     .eq("status", "ativo")
     .order("codigo");
 
   return {
-    cursos: (data ?? []).map((c) => ({
+    /* Spec 022 (FR-003.2): os cursos para vincular na ordem única dos cursos. */
+    cursos: emOrdemDeCurso(data ?? []).map((c) => ({
       id: c.id,
       codigo: c.codigo ?? "",
       nomeCurso: c.nome_curso ?? "",

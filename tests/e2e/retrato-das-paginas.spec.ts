@@ -20,7 +20,8 @@ import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./con
 const SAIDA = process.env.RETRATO_PAGINAS ?? "";
 const ABAS_DO_CURSO = [
   "sobre",
-  "grade",
+  // Spec 022 (Bloco 7): a aba *Grade* passou a *Turmas*.
+  "turmas",
   "disciplinas",
   "avaliacoes",
   "atividades",

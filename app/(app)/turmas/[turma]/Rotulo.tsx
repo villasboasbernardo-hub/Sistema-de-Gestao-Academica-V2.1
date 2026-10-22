@@ -9,7 +9,7 @@
  *
  * ⚠️ **ELE NÃO É `components/ciaara/`, de propósito:** é o `<dt>` desta tela, não vocabulário visual
  * do sistema — e um componente naquela pasta exige amostra na vitrine. ⚠️ **Há duas cópias irmãs em
- * `app/(app)/cursos/[curso]/` (`AbaGrade` e `AbaSobre`)**, que esta fatia **não** toca: unificá-las
+ * `app/(app)/cursos/[curso]/` (`AbaTurmas` e `AbaSobre`)**, que esta fatia **não** toca: unificá-las
  * mexeria em tela que o épico não altera. Fica registrado, não consertado.
  *
  * ⚠️ **ELE NÃO SE RENDERIZA:** o elemento é `<dt>`, e não `<Rotulo>`, que foi o defeito de recursão

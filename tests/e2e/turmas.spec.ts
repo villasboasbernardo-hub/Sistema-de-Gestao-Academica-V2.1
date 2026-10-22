@@ -162,7 +162,7 @@ test.describe("`SC-003` · chega-se às telas de turma CLICANDO, não digitando"
     // ── e até a ficha de uma turma que já existe ──────────────────────────────────────────────
     // ⚠️ A lista de turmas mora na aba Grade, e a padrão é *Sobre o Curso* (spec 016, FR-006.2).
     await page.goBack();
-    await page.locator('[data-slot="abas-do-curso"] [data-aba="grade"]').click();
+    await page.locator('[data-slot="abas-do-curso"] [data-aba="turmas"]').click();
     await page.getByRole("link", { name: SEMEADO.turmaJanelaCedo }).click();
     await expect.poll(() => new URL(page.url()).pathname).toBe(enderecoDe(SEMEADO.turmaJanelaCedo));
     await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(SEMEADO.turmaJanelaCedo);

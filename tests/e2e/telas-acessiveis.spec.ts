@@ -39,7 +39,7 @@ function rotas(): { readonly nome: string; readonly caminho: string }[] {
   const turma = encodeURIComponent(SEMEADO.turmaJanelaCedo);
   return [
     { nome: "catálogo", caminho: "/cursos" },
-    { nome: "curso · aba Grade", caminho: `/cursos/${sigla}?aba=grade` },
+    { nome: "curso · aba Turmas", caminho: `/cursos/${sigla}?aba=turmas` },
     { nome: "curso · aba Sobre", caminho: `/cursos/${sigla}?aba=sobre` },
     // Spec 018 (Bloco 3): as quatro abas novas.
     { nome: "curso · aba Disciplinas", caminho: `/cursos/${sigla}?aba=disciplinas` },

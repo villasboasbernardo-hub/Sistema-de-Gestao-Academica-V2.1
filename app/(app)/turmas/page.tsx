@@ -36,6 +36,7 @@ import {
   type LinhaDoPainel,
   type OcupacaoDoPainel,
 } from "@/lib/dominio/painel-de-turmas";
+import { emOrdemDeCurso } from "@/lib/dominio/ordem-de-cursos";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { contagemNaPrimeira, lerTodasAsPaginas } from "@/lib/supabase/paginacao";
@@ -99,7 +100,11 @@ export default async function Turmas({
     usuarioDaSessao(),
     montarConsultaDeTurmas(supabase.from("turmas").select(COLUNAS_DA_LISTA_DE_TURMAS), parametros),
     supabase.from("turmas").select("ano_letivo"),
-    supabase.from("cursos").select("codigo, nome_curso").eq("status", "ativo").order("codigo"),
+    supabase
+      .from("cursos")
+      .select("codigo, nome_curso, classificacao")
+      .eq("status", "ativo")
+      .order("codigo"),
     /*
      * ⚠️ **AS COLUNAS PROGRESSO E SALDO PELO MESMO CAMINHO DO `/inicio`** (FR-014.6; Q-6): a CH curricular da
      *    view de carga, a executada ATÉ HOJE (`chd_da_turma_ate`, D-COR-2), o regime vigente do curso e os
@@ -245,7 +250,11 @@ export default async function Turmas({
     linhas: linhasDoPainel,
     ocupacao: ocupacaoDoPainel,
   });
-  const cursos = (cursosRes.data ?? []).map((c) => ({ codigo: c.codigo, nome: c.nome_curso }));
+  /* Spec 022 (FR-003.2): as opções de curso do filtro na ordem única dos cursos. */
+  const cursos = emOrdemDeCurso(cursosRes.data ?? []).map((c) => ({
+    codigo: c.codigo,
+    nome: c.nome_curso,
+  }));
 
   return (
     <div className="flex flex-col gap-4" data-slot="lista-de-turmas">

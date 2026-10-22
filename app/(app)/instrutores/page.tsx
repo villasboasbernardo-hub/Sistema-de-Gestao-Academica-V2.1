@@ -97,7 +97,7 @@ export default async function Instrutores({
      * passado inalcançável. O que muda é que ele vai para o FIM da lista e sai marcado, o que
      * `opcoesDosFiltros` resolve. Sem a coluna, os dois ficam indistinguíveis.
      */
-    supabase.from("cursos").select("codigo, status").order("codigo"),
+    supabase.from("cursos").select("codigo, status, classificacao").order("codigo"),
     supabase
       .from("config_listas")
       .select("valor, ordem, ativo")

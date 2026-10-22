@@ -5,8 +5,9 @@
  * mandaria os 24 cartões e o vocabulário de classificação para o pacote do navegador, e a tela
  * ficaria idêntica — que é por que ninguém notaria.
  *
- * ⚠️ **A ORDEM DOS GRUPOS É A DO GLOSSÁRIO, e ela vem de `lib/dominio/`.** O banco devolveu uma lista
- * ordenada por sigla; o agrupamento é feito aqui, em memória, sobre as mesmas linhas. Pedir uma
+ * ⚠️ **A ORDEM É A ÚNICA DO SISTEMA, e ela vem de `lib/dominio/`** (spec 022, FR-003; A-4 emendou a do Glossário): os
+ * grupos na ordem das classificações e, dentro de cada um, a sigla sem os hífens (`emOrdemDeCurso`). O agrupamento é
+ * feito aqui, em memória, sobre as linhas que o banco devolveu. Pedir uma
  * consulta por grupo seria a consulta por item que o `FR-012` proíbe.
  *
  * ⚠️ **SÓ INFORMAÇÃO DESCRITIVA NO CARTÃO.** Nada de contagem de turmas nem de status derivado das
@@ -26,6 +27,7 @@ import {
   ROTULO_DA_CLASSIFICACAO,
   type ClassificacaoDeCurso,
 } from "@/lib/dominio/classificacoes-de-curso";
+import { emOrdemDeCurso } from "@/lib/dominio/ordem-de-cursos";
 
 export type CartaoDeCurso = {
   readonly codigo: string;
@@ -50,7 +52,8 @@ function duracaoEmPalavras(curso: CartaoDeCurso): string {
 }
 
 export function CatalogoDeCursos({ cursos }: { readonly cursos: readonly CartaoDeCurso[] }) {
-  const doGrupo = (c: ClassificacaoDeCurso) => cursos.filter((x) => x.classificacao === c);
+  const doGrupo = (c: ClassificacaoDeCurso) =>
+    emOrdemDeCurso(cursos.filter((x) => x.classificacao === c));
 
   return (
     <div className="flex flex-col gap-6" data-slot="catalogo-de-cursos">

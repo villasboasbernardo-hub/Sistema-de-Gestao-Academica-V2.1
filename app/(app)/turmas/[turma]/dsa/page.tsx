@@ -37,6 +37,7 @@ import { avisosAntesDeImprimir } from "@/lib/dominio/dsa/impressao";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
 import {
+  enderecoDaEdicaoDoCurso,
   enderecoDaPlanilhaDeContingencia,
   enderecoDaTurma,
 } from "@/lib/navegacao/endereco-de-turma";
@@ -413,15 +414,24 @@ export default async function SemanaDoDsa({
        * regime não tem relógio, e a grade sai com os TA **numerados**, sem horário — nunca com
        * exceção e nunca vazia. O aviso leva à tela que resolve, em vez de dizer "faltou dado".
        */}
+      {/*
+       * ⚠️ O LINK LEVAVA À FICHA DA TURMA, que não registra vigência (achado da triagem da spec 022, Bloco 7): a vigência
+       *    mora em *Editar curso* → *Regime de horário*, e é para lá que ele leva.
+       */}
       {semRelogio ? (
         <p role="status" className="text-sm text-atrasado-tinta" data-slot="sem-relogio">
           Este curso não tem vigência de regime que cubra esta semana, então os Tempos de Aula
           aparecem numerados, sem horário.{" "}
           <Link
-            href={`${enderecoDaTurma(codigo)}`}
+            href={
+              lida.cursoCodigo
+                ? `${enderecoDaEdicaoDoCurso(lida.cursoCodigo)}#regime-de-horario`
+                : enderecoDaTurma(codigo)
+            }
             className="underline underline-offset-2 hover:text-texto"
+            data-slot="registrar-vigencia"
           >
-            Abra o curso para registrar uma nova vigência.
+            Abra a edição do curso para registrar uma nova vigência.
           </Link>
         </p>
       ) : null}

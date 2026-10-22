@@ -69,7 +69,8 @@ export function SecaoDeRegime({
   readonly podeRegistrar: boolean;
 }) {
   return (
-    <section className="flex flex-col gap-4" data-slot="secao-de-regime">
+    // Spec 022 (Bloco 7): a âncora para onde o aviso "sem vigência de regime" do DSA leva.
+    <section id="regime-de-horario" className="flex flex-col gap-4" data-slot="secao-de-regime">
       <h2 className="text-texto text-base font-semibold">Regime de horário</h2>
 
       {TIPOS_DE_REGIME.map((tipo) => {

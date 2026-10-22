@@ -9,11 +9,15 @@
  *    árvore: é uma LISTA, e o ano chega por parâmetro — quem o tira do relógio é quem chama (`anoDoPainel`), e um ano
  *    escrito aqui seria o erro que o ajuste proíbe.
  *
+ * ⚠️ **A ORDEM É A ÚNICA DO SISTEMA DESDE O BLOCO 7** (spec 022, FR-003; pedido de Bernardo Villas Boas, 22/10/2026:
+ *    *"Ordem por CLASSIFICAÇÃO em cursos e turmas (listas, cartões, submenu)"*): os cursos de cada classificação pela
+ *    sigla sem os hífens, e as turmas do ano pela ordem do curso (a classificação, depois a sigla) — `ordem-de-cursos.ts`.
+ *    Emenda o A-5 da spec 019, que punha as turmas só pela ordem natural do código (A-4 da spec 022).
  * ⚠️ **O ENDEREÇO CHEGA POR PARÂMETRO**: montar `/turmas/…` fora de `lib/navegacao/endereco-de-turma.ts` é proibido
  *    por guarda (`FR-031.2`), e o ramo ativo compara o caminho com as rotas que a árvore já tem — sem literal nenhum.
  * ⚠️ **TypeScript puro: sem `next`, sem `react`, sem `supabase`.**
  */
-import { compararCodigoDeTurma } from "@/lib/dominio/ordem-natural";
+import { compararCursos, compararTurmas } from "@/lib/dominio/ordem-de-cursos";
 import {
   CLASSIFICACOES_DE_CURSO,
   ROTULO_DA_CLASSIFICACAO,
@@ -45,11 +49,12 @@ export type TurmaDoSubmenu = {
   readonly codigo: string;
   readonly ano: number;
   readonly arquivada: boolean;
+  /** O curso da turma — a ordem das turmas é a do curso (FR-003). */
+  readonly cursoCodigo: string;
+  readonly cursoClassificacao: string | null;
 };
 
-const natural = (a: string, b: string) => a.localeCompare(b, "pt-BR", { numeric: true });
-
-/** Cursos → classificação → curso, na ordem do catálogo, só as classificações com curso (C-14). */
+/** Cursos → classificação → curso, na ordem das classificações, só as que têm curso (C-14), pela sigla (FR-003). */
 export function arvoreDeCursos(
   cursos: readonly CursoDoSubmenu[],
   enderecoDoCurso: (sigla: string) => string,
@@ -59,12 +64,12 @@ export function arvoreDeCursos(
     rotulo: ROTULO_DA_CLASSIFICACAO[c],
     itens: cursos
       .filter((k) => ehClassificacaoDeCurso(k.classificacao) && k.classificacao === c)
-      .sort((a, b) => natural(a.codigo, b.codigo))
+      .sort(compararCursos)
       .map((k) => ({ rota: enderecoDoCurso(k.codigo), rotulo: k.codigo, titulo: k.nome })),
   })).filter((g) => g.itens.length > 0);
 }
 
-/** Turmas → turma: as do ano, sem as arquivadas, pelo código, em ordem natural sem os hífens (A-5). */
+/** Turmas → turma: as do ano, sem as arquivadas (A-5), pela ordem do curso e depois o código (FR-003). */
 export function arvoreDeTurmas(
   turmas: readonly TurmaDoSubmenu[],
   ano: number,
@@ -72,7 +77,7 @@ export function arvoreDeTurmas(
 ): readonly ItemDoSubmenu[] {
   return turmas
     .filter((t) => !t.arquivada && t.ano === ano)
-    .sort((a, b) => compararCodigoDeTurma(a.codigo, b.codigo))
+    .sort(compararTurmas)
     .map((t) => ({ rota: enderecoDaTurma(t.codigo), rotulo: t.codigo }));
 }
 

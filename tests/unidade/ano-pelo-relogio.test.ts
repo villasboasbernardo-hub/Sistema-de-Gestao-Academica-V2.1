@@ -18,8 +18,20 @@ import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
 const turmas = [
-  { codigo: "CAHO 2026", ano: 2026, arquivada: false },
-  { codigo: "CAHO 2027", ano: 2027, arquivada: false },
+  {
+    codigo: "CAHO 2026",
+    ano: 2026,
+    arquivada: false,
+    cursoCodigo: "CAHO",
+    cursoClassificacao: null,
+  },
+  {
+    codigo: "CAHO 2027",
+    ano: 2027,
+    arquivada: false,
+    cursoCodigo: "CAHO",
+    cursoClassificacao: null,
+  },
 ];
 
 /** O que as três telas fazem com o relógio: o ano padrão, sem `?ano=`. */

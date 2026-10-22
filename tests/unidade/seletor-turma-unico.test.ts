@@ -103,10 +103,10 @@ describe("`SC-004` · exatamente um construtor de seletor de turma", () => {
 
   it("⚠️ e a varredura NÃO confunde outras escolhas com a de turma", () => {
     // `FormularioDeCurso.tsx` tem `<select>` de classificação e de modalidade, e cita "turma" no
-    // rótulo do limite. `AbaGrade.tsx` itera `turmas` — em `<tr>`, não em `<option>`.
+    // rótulo do limite. `AbaTurmas.tsx` itera `turmas` — em `<tr>`, não em `<option>`.
     for (const arquivo of [
       "app/(app)/cursos/FormularioDeCurso.tsx",
-      "app/(app)/cursos/[curso]/AbaGrade.tsx",
+      "app/(app)/cursos/[curso]/AbaTurmas.tsx",
     ]) {
       const codigo = semComentarios(readFileSync(resolve(RAIZ, arquivo), "utf8"));
       expect(OPCOES_DE_TURMA.test(codigo), `${arquivo} foi lido como seletor de turma`).toBe(false);
@@ -132,7 +132,7 @@ describe("`FR-033` · o único construtor NÃO ordena — quem chama ordena", ()
 
 describe("`FR-035` · quem chama ordena, e a página do curso chama", () => {
   const aba = semComentarios(
-    readFileSync(resolve(RAIZ, "app/(app)/cursos/[curso]/AbaGrade.tsx"), "utf8"),
+    readFileSync(resolve(RAIZ, "app/(app)/cursos/[curso]/AbaTurmas.tsx"), "utf8"),
   );
 
   it("a aba Grade aplica a ordem do domínio", () => {

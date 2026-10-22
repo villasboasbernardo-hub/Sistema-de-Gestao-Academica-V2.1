@@ -334,7 +334,7 @@ test.describe("SC-004 · o currículo novo, a turma nova nele, e a turma antiga 
 
     /* A turma antiga continua no currículo 1 — e a aba Grade mostra as duas, cada uma com o seu (RC-9). */
     await irAoCursoPorClique(page, EMAIL, SIGLA);
-    await abrirAbaDoCurso(page, "grade");
+    await abrirAbaDoCurso(page, "turmas");
     await expect(
       page.locator(`[data-linha-turma="${TURMA_ANTIGA}"] [data-slot="curriculo-na-lista"]`),
     ).toHaveText("Currículo 1 (vigência 2020)");

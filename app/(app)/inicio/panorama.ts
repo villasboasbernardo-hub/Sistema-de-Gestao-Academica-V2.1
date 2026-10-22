@@ -24,6 +24,7 @@
  * o lançado no futuro. Turma sem nada lançado até hoje não aparece na função: a executada dela é **0**.
  */
 
+import { compararTurmas } from "@/lib/dominio/ordem-de-cursos";
 import { regimeEfetivo } from "@/lib/dominio/regime-da-turma";
 import { andamentoDaTurma, type RegimeDoCurso } from "@/lib/dominio/andamento-da-turma";
 import { ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
@@ -119,6 +120,16 @@ export function montarPanorama(
 ): readonly TurmaNoPanorama[] {
   const porId = new Map(cursos.map((c) => [c.id, c]));
   const turmaPorId = new Map(turmas.map((t) => [t.id, t]));
+  /* Spec 022 (FR-003): a ordem é a única do sistema — a do curso (a classificação, depois a sigla), depois o ano. */
+  const classificacaoDaTurma = new Map(
+    cargas.map((c) => [c.turma_id, porId.get(c.curso_id)?.classificacao ?? null] as const),
+  );
+  const paraOrdenar = (t: TurmaNoPanorama) => ({
+    codigo: t.turmaCodigo,
+    cursoCodigo: t.cursoCodigo,
+    cursoClassificacao: classificacaoDaTurma.get(t.turmaId) ?? null,
+    ano: t.anoLetivo,
+  });
   const regimePorCurso = new Map(regimes.map((r) => [r.curso_id, r]));
 
   return cargas
@@ -176,7 +187,7 @@ export function montarPanorama(
         eadPuro: ehEadPuro(daTabela?.modalidade),
       };
     })
-    .sort((a, b) => a.cursoCodigo.localeCompare(b.cursoCodigo, "pt-BR", { numeric: true }));
+    .sort((a, b) => compararTurmas(paraOrdenar(a), paraOrdenar(b)));
 }
 
 /** O regime como o domínio o espera — linha ausente e campos nulos dão o mesmo *"sem dado"*. */

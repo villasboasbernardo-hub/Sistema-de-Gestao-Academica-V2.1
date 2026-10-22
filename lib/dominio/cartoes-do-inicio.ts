@@ -6,7 +6,7 @@
  * > não carrossel vazio."* — Bernardo Villas Boas, 20/10/2026
  *
  * ⚠️ **O ANO E A ARQUIVADA JÁ VÊM RECORTADOS** pelo panorama (C-1, D-COR-5): aqui só se decide pela situação.
- * ⚠️ **A ORDEM DE CHEGADA SE MANTÉM** — é a do panorama (por curso).
+ * ⚠️ **A ORDEM DE CHEGADA SE MANTÉM** — é a do panorama, a única do sistema desde o Bloco 7 (spec 022, FR-003).
  * ⚠️ **TypeScript puro: sem `next`, sem `react`, sem `supabase`.**
  */
 

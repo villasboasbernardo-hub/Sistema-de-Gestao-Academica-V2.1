@@ -907,9 +907,10 @@ export const CONTRATO = {
         // de AEC/TAD/TR) e *Horários* (os regimes nomeados do curso).
         // Spec 021 (Bloco 6), ajuste 2 da conferência do PR #82: a SÉTIMA, *Currículo* — a lista dos currículos do curso
         // e a consulta ao conteúdo de cada um, só leitura.
+        // Spec 022 (Bloco 7, FR-005.1, D-12): `grade` passou a `turmas`; a página redireciona o endereço antigo.
         opcoes: [
           "sobre",
-          "grade",
+          "turmas",
           "disciplinas",
           "avaliacoes",
           "atividades",

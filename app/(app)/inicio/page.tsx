@@ -53,6 +53,7 @@ import { AnoDoPainel } from "../turmas/AnoDoPainel";
 import { Carrossel } from "@/components/ciaara/carrossel";
 import { anoDoPainel, anosDoSeletor, semanaDoPainel } from "@/lib/dominio/painel-de-turmas";
 import { cartoesDoInicio } from "@/lib/dominio/cartoes-do-inicio";
+import { compararTurmas } from "@/lib/dominio/ordem-de-cursos";
 import { resumoDoDsa, temDsaNaSemana } from "@/lib/dominio/dsa-da-semana";
 import { semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
 import { datasDaSemanaIso, semanaIsoDe } from "@/lib/dominio/carga-semanal";
@@ -353,6 +354,7 @@ export default async function Inicio({
     codigo: string;
     status: string;
     curso_id: string;
+    ano_letivo: number;
     data_inicio: string | null;
     data_termino: string | null;
     inicio_etapa_presencial: string | null;
@@ -365,6 +367,7 @@ export default async function Inicio({
     id: string;
     codigo: string;
     nome_curso: string;
+    classificacao: string | null;
   };
   type LinhaDaOcupacao = {
     turma_id: string | null;
@@ -377,6 +380,20 @@ export default async function Inicio({
     ((cursosRes.data ?? []) as unknown as CursoDaLeitura[]).map((c) => [c.id, c] as const),
   );
   const ocupacao = (ocupacaoDaSemanaRes.data ?? []) as unknown as LinhaDaOcupacao[];
+  const turmaDaManchete = new Map(
+    ((turmasRes.data ?? []) as unknown as TurmaDaLeitura[]).map((t) => [t.codigo, t] as const),
+  );
+  const paraOrdenarManchete = (m: MancheteDoDsa) => {
+    const turma = turmaDaManchete.get(m.turmaCodigo);
+    return {
+      codigo: m.turmaCodigo,
+      cursoCodigo: m.cursoCodigo,
+      cursoClassificacao: turma
+        ? (cursoDoRecorte.get(turma.curso_id)?.classificacao ?? null)
+        : null,
+      ano: Number(turma?.ano_letivo ?? 0),
+    };
+  };
   const manchetes: MancheteDoDsa[] = ((turmasRes.data ?? []) as unknown as TurmaDaLeitura[])
     .filter((t) => cursoDoRecorte.has(t.curso_id))
     .filter((t) =>
@@ -427,11 +444,8 @@ export default async function Inicio({
         resumo: resumoDoDsa(lancamentos),
       };
     })
-    .sort(
-      (a, b) =>
-        a.cursoCodigo.localeCompare(b.cursoCodigo, "pt-BR", { numeric: true }) ||
-        a.turmaCodigo.localeCompare(b.turmaCodigo, "pt-BR", { numeric: true }),
-    );
+    /* Spec 022 (FR-003): as manchetes na ordem única das turmas — a do curso, depois o ano e o código. */
+    .sort((a, b) => compararTurmas(paraOrdenarManchete(a), paraOrdenarManchete(b)));
 
   return (
     <section className="flex flex-col gap-5">

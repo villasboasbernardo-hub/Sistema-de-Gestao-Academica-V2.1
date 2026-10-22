@@ -26,7 +26,8 @@ import { useParametro } from "@/lib/navegacao/usar-parametro";
 /* Spec 016 (FR-006.2, Q-10): *Sobre o Curso* primeiro — a ordem é a do contrato de parâmetros. */
 const ABAS = [
   { valor: "sobre", rotulo: "Sobre o Curso" },
-  { valor: "grade", rotulo: "Grade" },
+  // Spec 022 (Bloco 7, FR-005.1): a aba *Grade* passou a *Turmas* — e concentra as turmas do curso.
+  { valor: "turmas", rotulo: "Turmas" },
   { valor: "disciplinas", rotulo: "Disciplinas" },
   { valor: "avaliacoes", rotulo: "Avaliações" },
   { valor: "atividades", rotulo: "Atividades" },

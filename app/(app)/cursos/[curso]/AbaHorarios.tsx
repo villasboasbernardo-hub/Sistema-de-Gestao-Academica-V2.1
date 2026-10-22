@@ -1,18 +1,19 @@
 /**
- * A aba **Horários** da página do curso (spec 018, FR-004, C-7, C-12) — componente de servidor.
+ * A aba **Horários** da página do curso (spec 018, FR-004, C-7; spec 022, FR-005.3) — componente de servidor.
  *
- * ⚠️ **DUAS COISAS DIFERENTES, E A TELA AS SEPARA:**
- *    1. **os regimes nomeados** (*Regime A, B, C…*), cadastrados e editados aqui, que a TURMA escolhe;
- *    2. **as vigências do regime do curso** (`curso_regime_historico`), o padrão de toda turma que não escolheu —
- *       **só para ler** aqui (C-12): elas mudam pela edição do curso, com a trava de lançamento da vigência
- *       (`RF-HOR-05`), e duas telas gravando a mesma vigência seriam dois lugares a divergir.
+ * ⚠️ **SÓ OS REGIMES NOMEADOS, SEM AS VIGÊNCIAS** (Bloco 7; pedido de Bernardo Villas Boas, 22/10/2026: *"Horários
+ *    mostra e edita os regimes, sem exibir vigências"*). As vigências do regime do curso (`curso_regime_historico`), o
+ *    padrão de toda turma que não escolheu, continuam em *Editar curso*, que é onde se registram (`RF-HOR-05`); o regime
+ *    vigente hoje segue no cabeçalho do curso.
+ * ⚠️ **"EDITA" PELO ÍCONE** (A-3 da spec 022): a página do curso continua só leitura (A-1 da spec 021), e o ícone
+ *    *Editar* leva a *Editar curso* → *Horários*, onde cada regime se edita em diálogo. Segue a mesma permissão da
+ *    barra do curso.
  * ⚠️ **CURSO SÓ EAD NÃO TEM TEMPOS PRESENCIAIS** (regime de 0 TA): a aba diz isso, e a turma EAD não escolhe regime
  *    (C-15) — a capacidade dela é o limite EAD (`RN-MAT-04`).
  * ⚠️ SEM MARCADOR DE CLIENTE: a lista de regimes é a folha.
  */
-import Link from "next/link";
-
-import { dataParaLeitura } from "@/lib/formato/data";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { enderecoDaEdicaoDoCurso } from "@/lib/navegacao/endereco-de-turma";
 
 import type { HorariosDoCurso } from "./consulta-de-horarios";
 import { RegimesDoCurso } from "./RegimesDoCurso";
@@ -48,9 +49,19 @@ export function AbaHorarios({
       className="flex flex-col gap-4"
       data-slot="aba-horarios"
     >
-      <h2 id="titulo-horarios-do-curso" className="text-texto text-base font-semibold">
-        Horários
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="titulo-horarios-do-curso" className="text-texto text-base font-semibold">
+          Horários
+        </h2>
+        {permissoes.abrirEdicaoDoCurso && cursoAtivo ? (
+          <BotaoDeIcone
+            acao="editar"
+            rotulo="Editar os horários do curso"
+            href={enderecoDaEdicaoDoCurso(sigla, undefined, "horarios")}
+            data-slot="editar-horarios-do-curso"
+          />
+        ) : null}
+      </div>
       {horarios.erro ? (
         <p role="alert" className="text-atrasado-tinta text-sm">
           Não foi possível ler os horários do curso agora. Recarregue a página.
@@ -79,45 +90,6 @@ export function AbaHorarios({
           desativar: cursoAtivo && permissoes.desativar,
         }}
       />
-
-      <section
-        aria-labelledby="titulo-vigencias-do-curso"
-        className="flex flex-col gap-2"
-        data-slot="vigencias-do-curso"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 id="titulo-vigencias-do-curso" className="text-texto text-sm font-semibold">
-            Regime vigente do curso (o padrão das turmas que não escolheram)
-          </h3>
-          {permissoes.abrirEdicaoDoCurso ? (
-            <Link
-              href={`/cursos/${encodeURIComponent(sigla)}/editar`}
-              className="text-marca text-sm underline-offset-2 hover:underline"
-              data-slot="editar-regime-do-curso"
-            >
-              Editar o regime do curso
-            </Link>
-          ) : null}
-        </div>
-        {horarios.vigencias.length === 0 ? (
-          <p className="text-texto-suave text-sm">
-            Este curso não tem vigência de regime cadastrada.
-          </p>
-        ) : (
-          <ul className="text-texto flex flex-col gap-0.5 text-sm">
-            {horarios.vigencias.map((v) => (
-              <li key={v.codigo} data-vigencia={v.tipo}>
-                <span className="font-medium">{v.tipo === "excecao" ? "Exceção" : "Padrão"}</span> ·
-                de {dataParaLeitura(v.vigenteDe)}
-                {v.vigenteAte ? ` a ${dataParaLeitura(v.vigenteAte)}` : " em diante"} ·{" "}
-                {v.regimeTempos === 0
-                  ? `só EAD${v.limiteDiarioEadHoras !== null ? `, ${v.limiteDiarioEadHoras} h por dia` : ""}`
-                  : `${v.regimeTempos} TA de ${v.taDuracaoMin} min${v.horaInicioManha ? `, manhã ${v.horaInicioManha}` : ""}${v.horaInicioTarde ? `, tarde ${v.horaInicioTarde}` : ""}`}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </section>
   );
 }
