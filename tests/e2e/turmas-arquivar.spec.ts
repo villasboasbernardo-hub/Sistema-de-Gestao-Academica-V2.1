@@ -180,8 +180,9 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     const detalhe = page.locator('[data-slot="detalhe-da-disciplina-da-turma"]');
     await expect(detalhe).toBeVisible();
     await expect(detalhe.locator('[data-slot="registrar-ta-fora"]')).toHaveCount(0);
-    await expect(detalhe.locator('[data-slot="gravar-periodo"]')).toHaveCount(0);
-    await expect(detalhe.locator('[data-slot="gravar-instrutores"]')).toHaveCount(0);
+    // Spec 022 (Bloco 7): período e instrutores se editam em diálogo — na arquivada, sem o ícone que o abre.
+    await expect(detalhe.locator('[data-slot="editar-periodo"]')).toHaveCount(0);
+    await expect(detalhe.locator('[data-slot="editar-instrutores"]')).toHaveCount(0);
 
     /* ── o DSA abre para ler, imprimir e baixar a planilha — sem lançar ──────────────────────── */
     await page.locator('[data-slot="abrir-o-dsa"]').click();

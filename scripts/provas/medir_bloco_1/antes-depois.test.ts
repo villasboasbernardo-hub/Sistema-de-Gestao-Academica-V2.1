@@ -14,8 +14,21 @@ import { readFileSync } from "node:fs";
 import { test } from "vitest";
 
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
-import { cargaPorSemana, semanasDoAno, semanasForaDaFaixa } from "@/lib/dominio/carga-semanal";
+import { situarNaFaixa, type FaixaDoRegime } from "@/lib/dominio/carga-horaria";
+import { cargaPorSemana, semanasDoAno, type CargaDaSemana } from "@/lib/dominio/carga-semanal";
 import { mediaSemanalDaAtribuicao } from "@/lib/dominio/media-semanal";
+
+/**
+ * A regra da época desta medição (17/10/2026): fora da faixa dos DOIS lados. Desde a spec 022 (Bloco 7, item 11) o
+ * aviso é só acima (`semanasAcimaDaFaixa`), e esta cópia existe para a medição da spec 016 continuar reproduzível.
+ */
+function semanasForaDaFaixa(cargas: readonly CargaDaSemana[], faixa: FaixaDoRegime | null) {
+  if (faixa === null) return [];
+  return cargas.flatMap((c) => {
+    const situacao = situarNaFaixa(c.carga, faixa);
+    return situacao === "dentro" ? [] : [{ ...c, situacao }];
+  });
+}
 
 type Turma = {
   codigo: string;

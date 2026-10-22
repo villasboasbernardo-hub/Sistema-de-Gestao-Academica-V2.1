@@ -388,6 +388,10 @@ só. Em Disciplinas, as UEs aparecem como linhas de tabela, em leitura, e o grá
 - **FR-007.2**: A proporção da CH por disciplina MUST ser um gráfico de **pizza** com as **4 maiores** e
   uma fatia **"Outras (N)"**, respeitando o teto de 5 fatias do componente; a lista em texto abaixo do
   gráfico MUST trazer todas as disciplinas (Q-11).
+  ⚠️ **EMENDADO em 22/10/2026 pela spec 022 (Bloco 7, item 7)** *(decisão de Bernardo Villas Boas)*: *"Gráficos de
+  pizza: TODAS as fatias, sem agrupar em «Outras» (desfaz a regra de 5 fatias da Q-11 da spec 016 e o teto do
+  componente)."* A pizza desenha **uma fatia por disciplina**, com o **nome** da disciplina (item 8: nome longo usa o
+  *Nome no DSA* ou a abreviação automática). O texto acima é o registro do que valia de 17/10 a 22/10/2026.
 - **Aceite:** caso de ponta a ponta que chega em Disciplinas pelo menu, escolhe o curso, expande uma
   disciplina e confere linhas sem campo editável; clica em Editar numa UE, grava, e confere o valor
   novo. `tests/e2e/disciplinas.spec.ts:135-169` é ajustado.
@@ -963,6 +967,9 @@ regressão do bloco que atravessa o almoço entra assim mesmo.
 **Recomendação: A.**
 
 ### Q-11 — O gráfico de pizza com mais de 5 disciplinas *(FR-007.2)* · ✅ **RESPONDIDA: opção A**
+
+> ⚠️ **SUPERADA em 22/10/2026** pela spec 022 (Bloco 7, item 7): todas as fatias, sem "Outras" — ver a emenda no
+> `FR-007.2`.
 
 **Contexto:** o componente de pizza recusa mais de 5 fatias (regra do design system, `tipos.ts:68`); um
 curso tem dezenas de disciplinas.

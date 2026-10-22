@@ -17,7 +17,10 @@
  */
 import * as React from "react";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { definirPeriodoDaTurma } from "@/lib/acoes/disciplina";
@@ -35,11 +38,84 @@ export function PainelDePeriodo({
   readonly podeEditar: boolean;
 }) {
   const [mensagem, setMensagem] = React.useState<string | null>(null);
+
+  return (
+    <section aria-labelledby="titulo-do-periodo" className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id="titulo-do-periodo" className="text-texto text-sm font-semibold">
+          Período previsto nesta turma
+        </h3>
+        {/* Spec 022 (Bloco 7, FR-002): o período se edita num diálogo, pelo ícone no topo à direita. */}
+        {podeEditar ? (
+          <DialogoDeFormulario
+            titulo="Período previsto nesta turma"
+            slot="dialogo-do-periodo"
+            gatilho={
+              <BotaoDeIcone acao="editar" rotulo="Editar período" data-slot="editar-periodo" />
+            }
+          >
+            {(fechar) => (
+              <FormularioDoPeriodo
+                turmaDisciplinaId={turmaDisciplinaId}
+                previsaoInicio={previsaoInicio}
+                previsaoTermino={previsaoTermino}
+                aoGravar={() => {
+                  setMensagem("Período gravado nesta turma.");
+                  fechar();
+                }}
+                fechar={fechar}
+              />
+            )}
+          </DialogoDeFormulario>
+        ) : null}
+      </div>
+
+      <p className="text-texto-suave text-sm" data-slot="periodo-em-leitura">
+        {/*
+          ⚠️ **AQUI É EXIBIÇÃO E MUDA; OS `defaultValue` DOS CAMPOS, NO FORMULÁRIO ABAIXO, SÃO VALOR E NÃO MUDAM.**
+             `<input type="date">` só aceita `AAAA-MM-DD`: formatar o campo o deixaria **vazio** na abertura, e gravar em
+             seguida escreveria nulo sobre o período que existia. Os dois usos do MESMO valor convivem neste arquivo de
+             propósito, e é a distinção mais fácil de errar da fatia.
+        */}
+        {previsaoInicio === null
+          ? "Não informado."
+          : `${dataParaLeitura(previsaoInicio)}${
+              previsaoTermino ? ` a ${dataParaLeitura(previsaoTermino)}` : ""
+            }`}{" "}
+        {!podeEditar ? (
+          /* veste: dica de por que não há como editar */
+          <span className="text-texto-tenue text-xs">
+            O seu perfil não edita o período desta turma.
+          </span>
+        ) : null}
+      </p>
+
+      {mensagem ? (
+        <p role="status" className="text-texto-suave text-sm">
+          {mensagem}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function FormularioDoPeriodo({
+  turmaDisciplinaId,
+  previsaoInicio,
+  previsaoTermino,
+  aoGravar,
+  fechar,
+}: {
+  readonly turmaDisciplinaId: string;
+  readonly previsaoInicio: string | null;
+  readonly previsaoTermino: string | null;
+  readonly aoGravar: () => void;
+  readonly fechar: () => void;
+}) {
   const [erro, setErro] = React.useState<string | null>(null);
   const [gravando, setGravando] = React.useState(false);
 
   async function gravar(dados: FormData) {
-    setMensagem(null);
     setErro(null);
     setGravando(true);
     const resultado = await definirPeriodoDaTurma({
@@ -47,79 +123,52 @@ export function PainelDePeriodo({
       previsaoInicio: String(dados.get("previsao_inicio") ?? ""),
       previsaoTermino: String(dados.get("previsao_termino") ?? ""),
     });
-    if (resultado.ok) setMensagem("Período gravado nesta turma.");
-    else setErro(resultado.erro);
     setGravando(false);
+    if (resultado.ok) aoGravar();
+    else setErro(resultado.erro);
   }
 
   return (
-    <section aria-labelledby="titulo-do-periodo" className="flex flex-col gap-2">
-      <h3 id="titulo-do-periodo" className="text-texto text-sm font-semibold">
-        Período previsto nesta turma
-      </h3>
-
-      {!podeEditar ? (
-        <p className="text-texto-suave text-sm">
-          {/*
-            ⚠️ **AQUI É EXIBIÇÃO E MUDA; OS `defaultValue` DOS CAMPOS, QUINZE LINHAS ABAIXO, SÃO
-               VALOR E NÃO MUDAM.** `<input type="date">` só aceita `AAAA-MM-DD`: formatar o campo o
-               deixaria **vazio** na abertura, e gravar em seguida escreveria nulo sobre o período
-               que existia. Os dois usos do MESMO valor convivem neste arquivo de propósito, e é a
-               distinção mais fácil de errar da fatia.
-          */}
-          {previsaoInicio === null
-            ? "Não informado."
-            : `${dataParaLeitura(previsaoInicio)}${
-                previsaoTermino ? ` a ${dataParaLeitura(previsaoTermino)}` : ""
-              }`}{" "}
-          {/* veste: dica de por que os campos não aparecem */}
-          <span className="text-texto-tenue text-xs">
-            O seu perfil não edita o período desta turma.
-          </span>
-        </p>
-      ) : (
-        <form action={gravar} className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={`inicio-${turmaDisciplinaId}`}>Início previsto</Label>
-            <Input
-              id={`inicio-${turmaDisciplinaId}`}
-              name="previsao_inicio"
-              type="date"
-              lang="pt-BR"
-              defaultValue={previsaoInicio ?? ""}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={`termino-${turmaDisciplinaId}`}>Término previsto</Label>
-            <Input
-              id={`termino-${turmaDisciplinaId}`}
-              name="previsao_termino"
-              type="date"
-              lang="pt-BR"
-              defaultValue={previsaoTermino ?? ""}
-            />
-          </div>
-          <Button type="submit" size="sm" disabled={gravando} data-slot="gravar-periodo">
-            {gravando ? "Gravando…" : "Gravar período"}
-          </Button>
-
-          {/* veste: dica de que limpar as duas datas é um estado válido */}
-          <span className="text-texto-tenue w-full text-xs">
-            Deixar as duas datas em branco volta ao estado “não informado”.
-          </span>
-        </form>
-      )}
-
-      {mensagem ? (
-        <p role="status" className="text-texto-suave text-sm">
-          {mensagem}
-        </p>
-      ) : null}
+    <form action={gravar} className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`inicio-${turmaDisciplinaId}`}>Início previsto</Label>
+          <Input
+            id={`inicio-${turmaDisciplinaId}`}
+            name="previsao_inicio"
+            type="date"
+            lang="pt-BR"
+            defaultValue={previsaoInicio ?? ""}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`termino-${turmaDisciplinaId}`}>Término previsto</Label>
+          <Input
+            id={`termino-${turmaDisciplinaId}`}
+            name="previsao_termino"
+            type="date"
+            lang="pt-BR"
+            defaultValue={previsaoTermino ?? ""}
+          />
+        </div>
+      </div>
+      {/* veste: dica de que limpar as duas datas é um estado válido */}
+      <span className="text-texto-tenue text-xs">
+        Deixar as duas datas em branco volta ao estado “não informado”.
+      </span>
       {erro ? (
         <p role="alert" className="text-conflito-tinta text-sm">
           {erro}
         </p>
       ) : null}
-    </section>
+      <DialogFooter>
+        <Button type="button" variant="ghost" size="sm" onClick={fechar} disabled={gravando}>
+          Cancelar
+        </Button>
+        <Button type="submit" size="sm" disabled={gravando} data-slot="gravar-periodo">
+          {gravando ? "Gravando…" : "Gravar período"}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }

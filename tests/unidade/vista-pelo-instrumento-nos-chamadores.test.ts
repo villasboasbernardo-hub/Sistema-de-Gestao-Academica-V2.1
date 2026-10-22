@@ -20,8 +20,12 @@ import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const RAIZ = process.cwd();
+/*
+ * Spec 022 (Bloco 7): os alertas de vista saíram do `/inicio` para a página Avisos — o chamador agora é a leitura dela,
+ * com a mesma decisão e o mesmo recorte do item ativo.
+ */
 const CHAMADORES = [
-  "app/(app)/inicio/page.tsx",
+  "app/(app)/avisos/leitura.ts",
   "app/(app)/turmas/[turma]/consulta-de-avaliacoes.ts",
 ];
 const DIRETORIOS = ["app", "components"];
@@ -160,7 +164,7 @@ describe("RN-AV-13 · os chamadores decidem a vista por exigeVista", () => {
     ).toEqual([]);
   });
 
-  it("o /inicio só conta o item ATIVO como ligado, como a ficha (que lê os itens com status = ativo)", () => {
+  it("a página Avisos (antes o /inicio) só conta o item ATIVO como ligado, como a ficha (que lê os itens com status = ativo)", () => {
     const inicio = ler(CHAMADORES[0]!);
     expect(inicio).toMatch(/item:avaliacoes_curriculo![a-z_]+\(\s*status\s*,/);
     expect(inicio).toMatch(/\.status\s*===\s*"ativo"\s*\?/);

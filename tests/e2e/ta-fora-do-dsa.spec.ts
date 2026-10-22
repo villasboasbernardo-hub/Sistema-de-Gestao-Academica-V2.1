@@ -118,20 +118,24 @@ async function registrosNoBanco(): Promise<
 const linhaDa = (page: Page, nome: string) =>
   page.locator(`${SECAO} tr`).filter({ hasText: nome }).first();
 
-/** Abre o detalhe da linha (se fechado) e o formulário; devolve o painel. */
+/**
+ * Abre o detalhe da linha (se fechado) e o diálogo do registro; devolve o diálogo.
+ *
+ * ⚠️ Spec 022 (Bloco 7, FR-002): o formulário mora num diálogo. Depois de uma recusa ele continua aberto, com o que foi
+ *    digitado — e com o diálogo aberto a página atrás não recebe clique: só se abre a linha se ele estiver fechado.
+ */
 async function abrirFormulario(page: Page, nome: string) {
+  const dialogo = page.locator('[data-slot="dialogo-ta-fora"]');
+  if (await dialogo.isVisible()) return dialogo;
   await expect(page.locator(SECAO)).toBeVisible();
   await abrirLinha(page.locator(SECAO), nome);
   const painel = page.locator(
     '[data-slot="detalhe-da-disciplina-da-turma"] [data-slot="ta-fora-do-dsa"]',
   );
   await expect(painel).toBeVisible();
-  // ⚠️ Depois de uma recusa o formulário continua aberto, e o botão de abrir some: só se clica se estiver fechado.
-  if (!(await painel.locator('[data-slot="formulario-ta-fora"]').isVisible())) {
-    await painel.locator('[data-slot="registrar-ta-fora"]').click();
-  }
-  await expect(painel.locator('[data-slot="formulario-ta-fora"]')).toBeVisible();
-  return painel;
+  await painel.locator('[data-slot="registrar-ta-fora"]').click();
+  await expect(dialogo.locator('[data-slot="formulario-ta-fora"]')).toBeVisible();
+  return dialogo;
 }
 
 async function registrar(

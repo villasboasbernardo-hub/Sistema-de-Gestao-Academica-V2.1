@@ -48,7 +48,7 @@ export const ROTULO_DO_STATUS_DE_TURMA: Readonly<Record<string, string>> = {
 /**
  * O tom da etiqueta de cada situação — **ao lado do rótulo, pelo mesmo motivo**.
  *
- * ⚠️ **ELE VIVIA DENTRO DE `AbaGrade.tsx` E SUBIU PARA CÁ EM 04/10/2026, quando a lista de turmas
+ * ⚠️ **ELE VIVIA DENTRO DE `AbaGrade.tsx` (hoje `AbaTurmas.tsx`) E SUBIU PARA CÁ EM 04/10/2026, quando a lista de turmas
  * passou a precisar do mesmo mapa.** Copiá-lo seria o segundo lugar a divergir — exatamente o que
  * aconteceu com o botão de limpar filtros, que nasceu solto numa tela e só virou componente na
  * segunda que precisou dele. A terceira cópia é a que divergiria em silêncio: a tabela dizendo

@@ -10,7 +10,7 @@ import { expect, type Page, type Locator } from "@playwright/test";
 import { entrar } from "./conta-de-teste";
 
 export type AbaDoCurso =
-  "sobre" | "grade" | "disciplinas" | "avaliacoes" | "atividades" | "horarios" | "curriculo";
+  "sobre" | "turmas" | "disciplinas" | "avaliacoes" | "atividades" | "horarios" | "curriculo";
 
 /** As partes do currículo em *Editar curso* (spec 021, ajuste 3 da conferência do PR #82). */
 export type ParteDaEdicao = "dados" | "disciplinas" | "horarios" | "atividades";

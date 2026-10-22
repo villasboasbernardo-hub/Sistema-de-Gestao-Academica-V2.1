@@ -8,13 +8,17 @@
  * ⚠️ A CÓPIA É DO BANCO (`public.criar_curriculo`): o formulário só diz a partir de quando o currículo vale e o que muda.
  *    Com um futuro já cadastrado, o banco recusa (D-27) — a frase traduzida aparece aqui.
  * ⚠️ DEPOIS DE CRIAR, A EDIÇÃO ABRE NO CURRÍCULO NOVO (`?curriculo=N`), que é onde ele se edita.
+ * ⚠️ O FORMULÁRIO ABRE NUM DIÁLOGO (spec 022, Bloco 7, FR-002): até o Bloco 7 ele abria no lugar do botão.
  */
 "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { criarCurriculo } from "@/lib/acoes/curriculo";
@@ -31,8 +35,37 @@ export function FormularioDeNovoCurriculo({
   /** "Currículo N (vigência AAAA)" — o vigente, que é copiado. */
   readonly copiaDe: string;
 }) {
+  return (
+    <DialogoDeFormulario
+      titulo="Novo currículo"
+      largo
+      slot="dialogo-do-novo-curriculo"
+      gatilho={<BotaoDeIcone acao="novo" rotulo="Novo currículo" data-slot="novo-curriculo" />}
+    >
+      {(fechar) => (
+        <CadastroDoCurriculo
+          sigla={sigla}
+          vigenteDeSugerido={vigenteDeSugerido}
+          copiaDe={copiaDe}
+          fechar={fechar}
+        />
+      )}
+    </DialogoDeFormulario>
+  );
+}
+
+function CadastroDoCurriculo({
+  sigla,
+  vigenteDeSugerido,
+  copiaDe,
+  fechar,
+}: {
+  readonly sigla: string;
+  readonly vigenteDeSugerido: string;
+  readonly copiaDe: string;
+  readonly fechar: () => void;
+}) {
   const router = useRouter();
-  const [aberto, definirAberto] = React.useState(false);
   const [vigenteDe, definirVigenteDe] = React.useState(vigenteDeSugerido);
   const [descricao, definirDescricao] = React.useState("");
   const [erro, definirErro] = React.useState<string | null>(null);
@@ -48,28 +81,14 @@ export function FormularioDeNovoCurriculo({
       definirErro(resultado.erro);
       return;
     }
-    definirAberto(false);
+    fechar();
     router.push(enderecoDaEdicaoDoCurso(sigla, resultado.versao));
-  }
-
-  if (!aberto) {
-    return (
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={() => definirAberto(true)}
-        data-slot="novo-curriculo"
-      >
-        Novo currículo
-      </Button>
-    );
   }
 
   return (
     <form
       onSubmit={(e) => void criar(e)}
-      className="border-borda bg-superficie rounded-ciaara flex basis-full flex-col gap-3 border p-3"
+      className="flex flex-col gap-3"
       data-slot="formulario-de-novo-curriculo"
     >
       <p className="text-texto text-sm" data-slot="o-que-se-copia">
@@ -105,14 +124,14 @@ export function FormularioDeNovoCurriculo({
           {erro}
         </p>
       ) : null}
-      <div className="flex gap-2">
+      <DialogFooter>
+        <Button type="button" size="sm" variant="ghost" onClick={fechar}>
+          Cancelar
+        </Button>
         <Button type="submit" size="sm" disabled={gravando} data-slot="criar-curriculo">
           {gravando ? "Criando…" : "Criar currículo"}
         </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={() => definirAberto(false)}>
-          Cancelar
-        </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

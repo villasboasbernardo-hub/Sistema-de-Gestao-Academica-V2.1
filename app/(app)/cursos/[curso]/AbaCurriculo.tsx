@@ -13,6 +13,7 @@ import type * as React from "react";
 
 import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { dataParaLeitura } from "@/lib/formato/data";
 import { enderecoDoCurriculo, enderecoDoCurriculoNoCurso } from "@/lib/navegacao/endereco-de-turma";
 
@@ -116,12 +117,13 @@ export function AbaCurriculo({
                 <td className="text-texto py-1">{c.descricao ?? "—"}</td>
                 <td className="py-1">
                   {c.temPdf ? (
-                    <a
+                    <BotaoDeIcone
+                      acao="baixar"
+                      rotulo={`Baixar o PDF do Currículo ${c.versao}`}
+                      variante="fantasma"
+                      nativo
                       href={enderecoDoCurriculo(sigla, c.versao)}
-                      className="text-marca underline-offset-2 hover:underline"
-                    >
-                      Baixar
-                    </a>
+                    />
                   ) : (
                     <span className="text-texto-suave">—</span>
                   )}

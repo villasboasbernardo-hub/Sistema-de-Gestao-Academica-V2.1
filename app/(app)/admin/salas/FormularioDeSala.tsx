@@ -9,14 +9,20 @@
  *
  * ⚠️ **ACRESCENTAR NÃO CONFIRMA** (`FR-018.1`): não é escrita que alcance o passado. Quem decide isso
  * é `lib/dominio/confirmacao-de-gravacao.ts`, com a lista fechada — não esta tela.
+ *
+ * ⚠️ **O FORMULÁRIO ABRE NUM DIÁLOGO** (spec 022, Bloco 7, FR-002): até o Bloco 7 ele ficava aberto acima da lista. O
+ *    ícone *Acrescentar sala* fica no topo da página, à direita (FR-001.2); a recusa fica no diálogo.
  */
 "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { CampoObrigatorio, propsDoControle } from "@/components/ciaara/campo-obrigatorio";
+import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { acrescentarSala } from "@/lib/acoes/sala";
 
@@ -26,6 +32,25 @@ const NATUREZAS = [
 ] as const;
 
 export function FormularioDeSala() {
+  return (
+    <DialogoDeFormulario
+      titulo="Acrescentar sala"
+      slot="dialogo-da-sala"
+      gatilho={
+        <BotaoDeIcone
+          acao="acrescentar"
+          rotulo="Acrescentar sala"
+          variante="padrao"
+          data-slot="acrescentar-sala"
+        />
+      }
+    >
+      {(fechar) => <CadastroDaSala fechar={fechar} />}
+    </DialogoDeFormulario>
+  );
+}
+
+function CadastroDaSala({ fechar }: { readonly fechar: () => void }) {
   const router = useRouter();
   const [valor, definirValor] = React.useState("");
   const [natureza, definirNatureza] = React.useState("");
@@ -45,15 +70,12 @@ export function FormularioDeSala() {
     }
     definirValor("");
     definirNatureza("");
+    fechar();
     router.refresh();
   }
 
   return (
-    <form
-      onSubmit={gravar}
-      data-slot="formulario-de-sala"
-      className="border-borda rounded-ciaara mt-4 flex flex-wrap items-end gap-3 border p-3"
-    >
+    <form onSubmit={gravar} data-slot="formulario-de-sala" className="flex flex-col gap-3">
       {erro ? (
         <p role="alert" className="text-atrasado-tinta w-full text-sm" data-slot="erro-da-sala">
           {erro}
@@ -88,9 +110,14 @@ export function FormularioDeSala() {
         </select>
       </div>
 
-      <Button type="submit" size="sm" disabled={gravando} data-slot="acrescentar-sala">
-        Acrescentar sala
-      </Button>
+      <DialogFooter>
+        <Button type="button" variant="ghost" size="sm" onClick={fechar} disabled={gravando}>
+          Cancelar
+        </Button>
+        <Button type="submit" size="sm" disabled={gravando} data-slot="gravar-sala">
+          {gravando ? "Gravando…" : "Salvar"}
+        </Button>
+      </DialogFooter>
     </form>
   );
 }

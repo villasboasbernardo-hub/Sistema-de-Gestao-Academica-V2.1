@@ -15,6 +15,7 @@
  */
 import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
@@ -34,7 +35,6 @@ import {
   RECURSO_DO_ARQUIVAMENTO,
 } from "@/lib/dominio/arquivamento-da-turma";
 import { historicoDaTurma } from "@/lib/dominio/historico-da-turma";
-import { avisosDaTurma } from "@/lib/dominio/avisos-da-turma";
 import { execucaoSeparada, foraDoDsaAte } from "@/lib/dominio/ta-fora-do-dsa";
 import { tetosDaTurma, type Categoria } from "@/lib/dominio/tetos-da-turma";
 import { gravarPrevistoProens } from "@/lib/acoes/previsto-proens";
@@ -75,7 +75,6 @@ import { CardsDeTetos, type AutoriaDoPrevisto } from "./CardsDeTetos";
 import { CardDeAvaliacoes } from "./CardDeAvaliacoes";
 import { AvaliacoesDaTurma } from "./AvaliacoesDaTurma";
 import { AbasDaTurma } from "./AbasDaTurma";
-import { AlertasDeVista } from "./AlertasDeVista";
 import { ArquivarTurma } from "./ArquivarTurma";
 import { HistoricoDaTurma } from "./HistoricoDaTurma";
 import { lerAvaliacoesDaTurma } from "./consulta-de-avaliacoes";
@@ -104,7 +103,6 @@ import {
   type LinhaDoTaForaDoDsa,
   type RegistroForaDoDsaDaTela,
 } from "./consulta";
-import { QuadroDeAvisosDaTurma } from "./QuadroDeAvisosDaTurma";
 import { TrocarSituacao } from "./TrocarSituacao";
 
 /*
@@ -389,30 +387,6 @@ export default async function FichaDaTurma({
   });
   const naGrade = grade.linhas.filter((l) => l.turmaDisciplinaId !== null);
 
-  const avisos = avisosDaTurma(
-    {
-      status: turma.status as string,
-      dataInicio: turma.data_inicio,
-      dataTermino: turma.data_termino,
-      sala: turma.sala_alocada,
-      alunos: turma.alunos === null ? null : Number(turma.alunos),
-      /*
-       * ⚠️ **A CONTAGEM PASSOU A SER REAL EM 04/10/2026** (decisão **D6**). Até aqui era `1` fixo,
-       *    com o comentário *"a grade da turma é do Épico 6 — declarar 1 mantém o aviso
-       *    silencioso"*: a ficha não lia `turma_disciplina` e não tinha o número. Agora lê, e o
-       *    aviso `sem_disciplina` passa a **disparar de verdade** em turma sem grade — é mudança
-       *    visível, e é o aviso existente passando a dizer a verdade.
-       * ⚠️ **NA ABA GRADE DO CURSO O `1` FIXO CONTINUA**, e de propósito: o `FR-012` da spec 009
-       *    proíbe consulta por turma naquela lista, que mostra todas as turmas do curso.
-       */
-      disciplinasAtivas: naGrade.length,
-      /* FR-009.7 da spec 016: o T da «Semana N de T» — a ficha avisa quando a turma passa dele. */
-      /* Spec 021 (Bloco 6, RC-1): a duração é do currículo DA TURMA. */
-      duracaoSemanasDoCurso: curriculoDaTurma?.duracao_semanas ?? null,
-    },
-    hoje,
-  );
-
   const todas = turmasRes.data ?? [];
   /* ⚠️ A TURMA EDITADA SAI DA CONTA DO LIMITE — senão o próprio lugar dela viraria excesso. */
   const outras: TurmaParaLimite[] = todas
@@ -618,13 +592,13 @@ export default async function FichaDaTurma({
             </p>
           ) : (
             <SePodeVer permissoes={permissoes} recurso="registros_aula" acao="ler">
-              <Link
+              <BotaoDeIcone
+                acao="abrir-dsa"
+                rotulo="Abrir o DSA"
+                variante="padrao"
                 href={enderecoDoDsa(turma.codigo as string)}
-                className="border-borda rounded-ciaara hover:bg-marca-suave border px-3 py-1.5 text-sm font-medium"
                 data-slot="abrir-o-dsa"
-              >
-                Abrir o DSA
-              </Link>
+              />
             </SePodeVer>
           )}
           {/*
@@ -633,13 +607,13 @@ export default async function FichaDaTurma({
                Daqui ele vale mais que lá: é o caminho que sobra quando a tela do DSA não abre.
           */}
           {podeBaixarPlanilhaDeContingencia(permissoes, turma.modalidade as string | null) ? (
-            <a
+            <BotaoDeIcone
+              acao="baixar"
+              rotulo="Baixar planilha de contingência"
+              nativo
               href={enderecoDaPlanilhaDeContingencia(turma.codigo as string)}
-              className="border-borda rounded-ciaara hover:bg-marca-suave border px-3 py-1.5 text-sm"
               data-slot="baixar-planilha-de-contingencia"
-            >
-              Baixar planilha de contingência
-            </a>
+            />
           ) : null}
         </div>
         {/*
@@ -802,10 +776,11 @@ export default async function FichaDaTurma({
         ) : null}
       </header>
 
-      <QuadroDeAvisosDaTurma avisos={avisos} />
-
-      {/* As vistas atrasadas e as que vencem em breve (FR-054, `RF-CURSO-06`): informativo, nunca bloqueia. */}
-      <AlertasDeVista alertas={avaliacoes?.alertas ?? []} mostrarTurma={false} />
+      {/*
+        ⚠️ OS AVISOS DE CADASTRO DA TURMA E AS VISTAS DE PROVA SAÍRAM DAQUI NO BLOCO 7 (spec 022, FR-004.4; A-2): o
+           sininho do cabeçalho conta, e a página Avisos lista cada um com o link de volta para esta ficha. O estado de
+           cada item continua onde está (D-7): o «em atraso», os cartões de teto e de avaliações, a aba Avaliações.
+      */}
 
       <SecaoDeAndamento
         andamento={andamento}
@@ -916,10 +891,8 @@ export default async function FichaDaTurma({
            que mudou é que ele não disputa mais a primeira tela com o que se lê. Uma rota
            separada faria navegar duas vezes para mudar um efetivo, que é o que aquele requisito
            recusou.
-        ⚠️ **E O QUADRO DE AVISOS FICOU NO TOPO, não desceu com ele.** O cabeçalho de
-           `QuadroDeAvisosDaTurma` dizia que ele vinha *"acima do formulário porque a pessoa
-           precisa lê-lo antes de salvar"* — com o formulário no fim ele está acima de qualquer
-           jeito, e acima de **tudo**, que é onde uma região de alertas pertence (`RNF-USA-04`).
+        ⚠️ **O QUADRO DE AVISOS QUE FICAVA NO TOPO SAIU NO BLOCO 7** (spec 022): os avisos de cadastro desta
+           turma moram na página Avisos, pelo sininho, com o link de volta para cá.
       */}
             {podeEditar && !arquivada ? (
               <EdicaoDaTurma>

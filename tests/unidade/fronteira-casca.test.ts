@@ -44,6 +44,9 @@ const COM_INTERACAO: Readonly<Record<string, string>> = {
     "estado efêmero, cookie de preferência e o bloqueio que faz desafixar recolher na hora",
   "foco-ao-trocar-de-rota.tsx": "mover o foco ao trocar de rota — não existe no servidor",
   "seletor-de-tema.tsx": "escolher e lembrar o tema — leitura e escrita no navegador",
+  // Spec 022 (Bloco 7, FR-004): o resumo pedido a cada troca de rota e o "visto" guardado no navegador.
+  "sininho-de-avisos.tsx":
+    "o número de avisos e o pulso do não visto — pedido e armazenamento do navegador",
   "menu-do-avatar.tsx": "abrir o menu da conta e disparar a saída — interação e foco por teclado",
   // Conferência do PR #67 (17/10/2026): o layout não é redesenhado na navegação por clique, e o ativo
   // decidido no servidor ficava preso à primeira página. O caminho atual só existe no navegador.

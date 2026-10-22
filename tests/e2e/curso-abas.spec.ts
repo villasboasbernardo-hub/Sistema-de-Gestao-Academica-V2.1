@@ -147,8 +147,8 @@ test.describe("Spec 018 · FR-006 · as abas, por clique (sete desde a spec 021)
     await irAoCursoPorClique(page, EMAIL, SIGLA);
     await expect(page.locator('[data-slot="aba-sobre"]')).toBeVisible();
 
-    await abrirAbaDoCurso(page, "grade");
-    await expect(page.locator('[data-slot="aba-grade"]')).toBeVisible();
+    await abrirAbaDoCurso(page, "turmas");
+    await expect(page.locator('[data-slot="aba-turmas"]')).toBeVisible();
 
     await abrirAbaDoCurso(page, "disciplinas");
     await expect(page.locator('[data-slot="aba-disciplinas"]')).toBeVisible();
@@ -168,10 +168,14 @@ test.describe("Spec 018 · FR-006 · as abas, por clique (sete desde a spec 021)
 
     await abrirAbaDoCurso(page, "horarios");
     await expect(page.locator('[data-slot="regimes-do-curso"]')).toBeVisible();
-    await expect(
-      page.locator('[data-slot="vigencias-do-curso"] [data-vigencia="padrao"]'),
-    ).toContainText("8 TA de 45 min");
+    // Spec 022 (FR-005.3): a aba mostra os regimes, sem as vigências; edita-se pelo ícone, em *Editar curso*.
+    await expect(page.locator('[data-slot="vigencias-do-curso"]')).toHaveCount(0);
     await expect(page.locator('[data-slot="novo-regime"]')).toHaveCount(0);
+    await expect(
+      page.locator('[data-slot="aba-horarios"]').getByRole("link", {
+        name: "Editar os horários do curso",
+      }),
+    ).toHaveAttribute("href", `/cursos/${encodeURIComponent(SIGLA)}/editar?parte=horarios`);
 
     // Spec 021, ajuste 2: a aba *Currículo* lista os currículos e consulta o vigente, só para leitura.
     await abrirAbaDoCurso(page, "curriculo");

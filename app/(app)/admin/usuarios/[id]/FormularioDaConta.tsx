@@ -13,7 +13,7 @@
  */
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { editarNomeDeConta, editarPerfilEEscopo } from "@/lib/acoes/usuarios";
 
 import { CamposDaConta, type EstadoDaConta } from "../CamposDaConta";
@@ -75,28 +75,28 @@ export function FormularioDaConta({
             onChange={(evento) => definirNome(evento.target.value)}
             className={`${CAMPO} grow`}
           />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={ocupado}
+          <BotaoDeIcone
+            acao="salvar"
+            rotulo="Gravar nome"
+            ocupado={ocupado}
             onClick={() =>
               executar(
                 () => editarNomeDeConta({ usuarioId, nomeExibicao: nome }),
                 "Nome atualizado.",
               )
             }
-          >
-            Gravar nome
-          </Button>
+          />
         </div>
       </div>
 
       <CamposDaConta estado={estado} aoMudar={definirEstado} cursos={cursos} />
 
       <div>
-        <Button
-          type="button"
-          disabled={ocupado}
+        <BotaoDeIcone
+          acao="salvar"
+          rotulo="Gravar perfil e vínculos"
+          variante="padrao"
+          ocupado={ocupado}
           onClick={() =>
             executar(
               () =>
@@ -109,9 +109,7 @@ export function FormularioDaConta({
               "Perfil, escopo e vínculos atualizados.",
             )
           }
-        >
-          Gravar perfil e vínculos
-        </Button>
+        />
         {/* veste: quando a mudança passa a valer — texto de apoio */}
         <p className="text-texto-tenue mt-1 text-xs">
           Vale na próxima tela que a pessoa abrir — ela não precisa sair e entrar.

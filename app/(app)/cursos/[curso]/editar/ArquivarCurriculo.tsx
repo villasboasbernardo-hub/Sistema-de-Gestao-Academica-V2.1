@@ -14,8 +14,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { Button } from "@/components/ui/button";
 import { arquivarCurriculo, desarquivarCurriculo } from "@/lib/acoes/curriculo";
 
 export function ArquivarCurriculo({
@@ -64,15 +64,12 @@ export function ArquivarCurriculo({
         rotuloConfirmar={arquivado ? "Desarquivar" : "Arquivar"}
         aoConfirmar={() => void acionar()}
       >
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
+        <BotaoDeIcone
+          acao={arquivado ? "desarquivar" : "arquivar"}
+          rotulo={arquivado ? "Desarquivar currículo" : "Arquivar currículo"}
           disabled={gravando}
           data-slot={arquivado ? "desarquivar-curriculo" : "arquivar-curriculo"}
-        >
-          {arquivado ? "Desarquivar currículo" : "Arquivar currículo"}
-        </Button>
+        />
       </DialogoConfirmacao>
     </div>
   );

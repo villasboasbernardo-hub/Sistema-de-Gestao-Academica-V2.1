@@ -387,7 +387,8 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
     if (aba.tipo === "escolha")
       expect([...aba.opcoes]).toEqual([
         "sobre",
-        "grade",
+        // Spec 022 (Bloco 7, FR-005.1): a aba *Grade* passou a *Turmas*.
+        "turmas",
         "disciplinas",
         "avaliacoes",
         "atividades",

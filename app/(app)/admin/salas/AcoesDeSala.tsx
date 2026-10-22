@@ -13,8 +13,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { Button } from "@/components/ui/button";
 import { desativarSala, reativarSala } from "@/lib/acoes/sala";
 import { confirmacaoDaGravacao } from "@/lib/dominio/confirmacao-de-gravacao";
 
@@ -50,17 +50,16 @@ export function AcoesDeSala({
     turmasQueUsamASala: turmasQueUsam,
   });
 
+  /* Spec 022 (FR-001): o verbo é o ícone, com o nome de antes na dica e no nome acessível. */
   const botao = (
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
+    <BotaoDeIcone
+      acao={ativa ? "desativar" : "reativar"}
+      rotulo={ativa ? "Desativar" : "Reativar"}
+      variante={ativa ? "destrutivo" : "contorno"}
       disabled={gravando}
       data-slot={ativa ? "desativar-sala" : "reativar-sala"}
       {...(confirmacao.confirma ? {} : { onClick: () => void executar() })}
-    >
-      {ativa ? "Desativar" : "Reativar"}
-    </Button>
+    />
   );
 
   return (

@@ -241,10 +241,13 @@ test("US9 · o ajuste «só esta turma» não muda a outra turma do curso", asyn
   const pm1 = a1.locator('[data-avaliacoes-item="PM 1"]');
   await expect(pm1).toContainText("3 TA");
   await pm1.locator('[data-slot="definir-tempo"]').click();
-  await pm1.getByLabel("TA de aplicação").fill("5");
-  await pm1.getByLabel("TA de vista").fill("1");
-  await expect(pm1.getByLabel("Alcance do arbitrado")).toHaveValue("turma");
-  await pm1.getByRole("button", { name: "Gravar" }).click();
+  // Spec 022 (Bloco 7, FR-002): o tempo se define num diálogo.
+  const dialogo = page.locator('[data-slot="formulario-do-arbitrado"]');
+  await dialogo.getByLabel("TA de aplicação").fill("5");
+  await dialogo.getByLabel("TA de vista").fill("1");
+  await expect(dialogo.getByLabel("Alcance do arbitrado")).toHaveValue("turma");
+  await dialogo.getByRole("button", { name: "Salvar" }).click();
+  await expect(dialogo).toHaveCount(0);
   await expect(pm1).toContainText("6 TA");
   await expect(pm1.locator('[data-avaliacoes="arbitrado"]')).toBeVisible();
 
@@ -311,8 +314,12 @@ test("FR-031.3 · nomear a UE do item que o currículo deixou na disciplina most
     "o currículo não diz de qual UE sai",
   );
   const pe1 = a2.locator('[data-avaliacoes-item="PE 1"]');
-  await pe1.getByLabel("Unidade de ensino da avaliação").selectOption({ label: "UE 1" });
-  await pe1.locator('[data-slot="nomear-ue"]').click();
+  // Spec 022 (Bloco 7, FR-002): a UE se nomeia num diálogo.
+  await pe1.locator('[data-slot="abrir-nomear-ue"]').click();
+  const dialogo = page.locator('[data-slot="formulario-da-ue-da-avaliacao"]');
+  await dialogo.getByLabel("Unidade de ensino da avaliação").selectOption({ label: "UE 1" });
+  await dialogo.locator('[data-slot="nomear-ue"]').click();
+  await expect(dialogo).toHaveCount(0);
   await expect(pe1).toContainText("UE 1 · decisão CIAARA-11,");
   await expect(a2.locator('[data-avaliacoes="avisos"]')).toHaveCount(0);
 });

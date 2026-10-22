@@ -18,11 +18,12 @@
  * *"em breve"*: *"a tela não anuncia o que não entrega"*. A reserva das duas rotas em `FORA_DO_MENU`
  * continua valendo — ela diz que o menu não as terá, não que esta página já as mostra.
  */
+import { redirect } from "next/navigation";
+
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { avisosDoCurso } from "@/lib/dominio/avisos-do-curso";
 import {
   curriculoDaPagina,
   curriculoVigenteEm,
@@ -30,16 +31,16 @@ import {
   rotuloDoCurriculo,
   ROTULO_DA_SITUACAO,
 } from "@/lib/dominio/curriculos";
-import type { TurmaParaLimite } from "@/lib/dominio/limite-de-turmas";
 import { codigoDaTurmaNoSegmento } from "@/lib/navegacao/endereco-de-turma";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../consulta";
 import { AbaCurriculo, type CurriculoNaLista } from "./AbaCurriculo";
-import { AbaGrade, type TurmaDaGrade } from "./AbaGrade";
+import { AbaTurmas, type TurmaDaAba } from "./AbaTurmas";
 import { BarraDoCurso } from "./BarraDoCurso";
-import { AbaSobre, type AvaliacaoPrevista, type DisciplinaDaGrade } from "./AbaSobre";
+import { AbaSobre } from "./AbaSobre";
+import { RegrasDeAvaliacao, type AvaliacaoPrevista } from "./RegrasDeAvaliacao";
 import { AbaAvaliacoes } from "./AbaAvaliacoes";
 import { AbasDoCurso } from "./AbasDoCurso";
 import { lerAvaliacoesDoCurso } from "../../turmas/[turma]/consulta-de-avaliacoes";
@@ -52,8 +53,7 @@ import {
   resolverTurmaSelecionada,
   type CurriculoDaPagina,
 } from "./consulta";
-import { QuadroDeAvisosDoCurso } from "./QuadroDeAvisosDoCurso";
-import { TurmasComTetoExcedido, type LinhaDoLimite } from "./BlocoDeLimites";
+import type { LinhaDoLimite } from "./BlocoDeLimites";
 import { AbaAtividades } from "./AbaAtividades";
 import { AbaHorarios } from "./AbaHorarios";
 import { lerHorariosDoCurso, type HorariosDoCurso } from "./consulta-de-horarios";
@@ -62,12 +62,6 @@ import { GradeDeDisciplinas } from "../../disciplinas/GradeDeDisciplinas";
 import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
 import type { TipoDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
 import { limiteMaximo } from "@/lib/dominio/limite-maximo";
-import {
-  COLUNAS_DA_CONFORMIDADE,
-  tetosExcedidos,
-  type LinhaDaConformidade,
-  type LinhaDoPrevisto,
-} from "../../turmas/tetos-excedidos";
 import { parametroDoAno } from "../../turmas/[turma]/tetos";
 
 /** Hoje em `yyyy-mm-dd`, no fuso de apresentação. Entra como argumento nas funções puras. */
@@ -86,7 +80,21 @@ export default async function PaginaDoCurso({
 }) {
   const { curso: segmento } = await params;
   const sigla = codigoDaTurmaNoSegmento(segmento);
-  const { valores } = lerParametros("/cursos/[curso]", await searchParams);
+  const busca = await searchParams;
+  /*
+   * Spec 022 (Bloco 7, FR-005.1, D-12): a aba *Grade* passou a *Turmas*. O endereço antigo — guardado em favorito, num
+   * e-mail, num roteiro — redireciona com o resto da consulta (a turma escolhida inclusive), em vez de cair na aba padrão.
+   */
+  if (busca.aba === "grade") {
+    const consulta = new URLSearchParams();
+    for (const [chave, valor] of Object.entries(busca)) {
+      for (const v of Array.isArray(valor) ? valor : valor === undefined ? [] : [valor]) {
+        consulta.append(chave, chave === "aba" ? "turmas" : v);
+      }
+    }
+    redirect(`/cursos/${encodeURIComponent(sigla)}?${consulta.toString()}`);
+  }
+  const { valores } = lerParametros("/cursos/[curso]", busca);
 
   const supabase = await criarClienteDeServidor();
   const usuario = await usuarioDaSessao();
@@ -137,8 +145,6 @@ export default async function PaginaDoCurso({
     permissoes,
     limitesRes,
     parametrosRes,
-    conformidadeRes,
-    previstosRes,
     arquivadasRes,
   ] = await Promise.all([
     supabase
@@ -156,11 +162,9 @@ export default async function PaginaDoCurso({
       .maybeSingle(),
     supabase
       .from("disciplinas")
-      .select("cod_disciplina, nome_disciplina, carga_horaria_tempos")
+      .select("carga_horaria_tempos")
       .eq("curriculo_id", curriculoId)
-      .eq("status", "ativo")
-      .order("ordem_sugerida", { ascending: true, nullsFirst: false })
-      .order("cod_disciplina", { ascending: true }),
+      .eq("status", "ativo"),
     supabase
       .from("avaliacoes_planejadas")
       .select("nome_disciplina, descricao_instrumentos, carater, formula_mf")
@@ -189,28 +193,16 @@ export default async function PaginaDoCurso({
         "estudo_obrig_sem_regime_pct",
       ])
       .eq("status", "ativo"),
-    supabase
-      .from("vw_conformidade_tetos")
-      .select(COLUNAS_DA_CONFORMIDADE)
-      .eq("curso_id", curso.id as string),
-    supabase
-      .from("previstos_proens_turma")
-      .select("turma_id, categoria, tempos_previstos, turmas!inner(curso_id)")
-      .eq("turmas.curso_id", curso.id as string)
-      .eq("status", "ativo"),
     /* D-COR-5 (spec 017, C-24): a turma arquivada some da aba Grade, do seletor e da pré-seleção. */
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
   ]);
 
   /*
-   * ⚠️ **A ARQUIVADA SOME DA GRADE, MAS CONTA NO LIMITE** (D-COR-5; C-7 e C-24): `paraLimite` lê TODAS as turmas,
-   *    e a lista, o seletor, a pré-seleção e *"Turmas com teto excedido"* só as não arquivadas.
+   * ⚠️ **A ARQUIVADA SOME DO SELETOR E DA PRÉ-SELEÇÃO** (D-COR-5; C-24). Os avisos do curso e as turmas com teto
+   *    excedido saíram desta página no Bloco 7 (spec 022, FR-004.4): moram na página Avisos, pelo sininho.
    */
   const arquivadas = idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[]);
   const todasAsTurmas = turmasRes.data ?? [];
-  const codigosArquivados = new Set(
-    todasAsTurmas.filter((t) => arquivadas.has(t.id as string)).map((t) => t.codigo as string),
-  );
   /*
    * ⚠️ SPEC 021 (RC-9): a lista da aba Grade mostra TODAS as turmas, inclusive as arquivadas, cada uma com o currículo
    *    que segue; o seletor de turma e a pré-seleção continuam sem as arquivadas (C-24 da spec 017).
@@ -218,7 +210,7 @@ export default async function PaginaDoCurso({
   const rotuloDoCurriculoPorId = new Map(
     curriculosDoCurso.map((c) => [c.id, rotuloDoCurriculo(c)] as const),
   );
-  const turmasDaLista: TurmaDaGrade[] = todasAsTurmas.map((t) => ({
+  const turmasDaLista: TurmaDaAba[] = todasAsTurmas.map((t) => ({
     codigo: t.codigo as string,
     rotulo: t.turma,
     ano: Number(t.ano_letivo),
@@ -321,25 +313,8 @@ export default async function PaginaDoCurso({
         : Promise.resolve(null),
     ]);
 
-  const paraLimite: TurmaParaLimite[] = todasAsTurmas.map((t) => ({
-    ano: Number(t.ano_letivo),
-    status: t.status as string,
-  }));
-  const avisos = avisosDoCurso(
-    {
-      duracaoSemanas:
-        curriculo?.duracao_semanas === null || curriculo?.duracao_semanas === undefined
-          ? null
-          : Number(curriculo.duracao_semanas),
-      proposito: curriculo?.proposito ?? null,
-      limiteTurmasAno: curso.limite_turmas_ano === null ? null : Number(curso.limite_turmas_ano),
-    },
-    paraLimite,
-  );
-
-  const disciplinas: DisciplinaDaGrade[] = (disciplinasRes.data ?? []).map((d) => ({
-    codigo: d.cod_disciplina as string,
-    nome: d.nome_disciplina as string,
+  /* Spec 022 (FR-005.2): a grade curricular saiu de *Sobre o Curso*; as disciplinas lidas aqui dão a CH curricular. */
+  const disciplinas = (disciplinasRes.data ?? []).map((d) => ({
     cargaHorariaTempos: d.carga_horaria_tempos === null ? null : Number(d.carga_horaria_tempos),
   }));
 
@@ -404,11 +379,6 @@ export default async function PaginaDoCurso({
     (limitesRes.data ?? []) as { categoria: string; tempos: number; fonte_pagina: number | null }[],
     chCurricular,
   );
-  const excedidos = tetosExcedidos(
-    (conformidadeRes.data ?? []) as LinhaDaConformidade[],
-    (previstosRes.data ?? []) as unknown as LinhaDoPrevisto[],
-    new Map((turmasRes.data ?? []).map((t) => [t.id as string, t.modalidade as string | null])),
-  ).filter((e) => !codigosArquivados.has(e.turmaCodigo));
 
   /*
    * Ajuste 3 (conferência do PR #82): *Editar curso* é onde o currículo inteiro se edita — então quem edita disciplina
@@ -471,18 +441,14 @@ export default async function PaginaDoCurso({
         podeCriarTurma={pode(permissoes, "turmas", "criar")}
       />
 
-      {/* ⚠️ ACIMA DAS ABAS, fora de qualquer uma (`FR-010.1`) */}
-      <QuadroDeAvisosDoCurso avisos={avisos} />
-
       {/*
-        ⚠️ ACIMA DAS ABAS (spec 018, C-5): as turmas com teto excedido são ALERTA do curso (`RF-CURSO-06`). Os limites,
-           que são o previsto, foram para a aba Atividades.
+        ⚠️ OS AVISOS DO CURSO E AS TURMAS COM TETO EXCEDIDO SAÍRAM DAQUI (spec 022, Bloco 7, FR-004.4; A-2): o sininho do
+           cabeçalho conta, e a página Avisos lista cada um com o link para onde se resolve.
       */}
-      <TurmasComTetoExcedido excedidos={excedidos} />
 
       <AbasDoCurso
-        grade={
-          <AbaGrade
+        turmas={
+          <AbaTurmas
             sigla={curso.codigo as string}
             turmas={turmasDaLista}
             selecionada={selecao.codigo}
@@ -514,9 +480,6 @@ export default async function PaginaDoCurso({
               custoComposicao: curso.custo_composicao,
               curriculoPdfEm: curriculo?.pdf_carregado_em ?? null,
             }}
-            disciplinas={disciplinas}
-            avaliacoes={avaliacoes}
-            avaliacoesLegiveis={!avaliacoesRes.error}
           />
         }
         disciplinas={
@@ -536,7 +499,11 @@ export default async function PaginaDoCurso({
           </div>
         }
         avaliacoes={
-          <AbaAvaliacoes quadro={avaliacoesDoCurso.quadro} aviso={avaliacoesDoCurso.aviso} />
+          /* Spec 022 (D-11): as regras de avaliação do currículo, que saíram de *Sobre o Curso*, no topo desta aba. */
+          <div className="flex flex-col gap-6">
+            <RegrasDeAvaliacao avaliacoes={avaliacoes} legiveis={!avaliacoesRes.error} />
+            <AbaAvaliacoes quadro={avaliacoesDoCurso.quadro} aviso={avaliacoesDoCurso.aviso} />
+          </div>
         }
         atividades={
           <AbaAtividades

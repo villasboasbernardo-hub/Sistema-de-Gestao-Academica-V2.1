@@ -892,6 +892,28 @@ export const CONTRATO = {
       },
     },
   },
+  /*
+   * Spec 022 (Bloco 7, D-2): a disciplina em página própria, dentro de *Editar curso*. A edição não tem parâmetro (a
+   * identidade está no caminho); o cadastro diz em que currículo a disciplina nasce.
+   */
+  "/cursos/[curso]/editar/disciplinas/nova": {
+    rota: "/cursos/[curso]/editar/disciplinas/nova",
+    origem: "RF-CURSO-01",
+    parametros: {
+      curriculo: {
+        nome: "curriculo",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
+    },
+  },
+  "/cursos/[curso]/editar/disciplinas/[disciplina]": {
+    rota: "/cursos/[curso]/editar/disciplinas/[disciplina]",
+    origem: "RF-CURSO-01",
+    parametros: {},
+  },
   "/cursos/[curso]": {
     rota: "/cursos/[curso]",
     origem: "RF-CURSO-01",
@@ -907,9 +929,10 @@ export const CONTRATO = {
         // de AEC/TAD/TR) e *Horários* (os regimes nomeados do curso).
         // Spec 021 (Bloco 6), ajuste 2 da conferência do PR #82: a SÉTIMA, *Currículo* — a lista dos currículos do curso
         // e a consulta ao conteúdo de cada um, só leitura.
+        // Spec 022 (Bloco 7, FR-005.1, D-12): `grade` passou a `turmas`; a página redireciona o endereço antigo.
         opcoes: [
           "sobre",
-          "grade",
+          "turmas",
           "disciplinas",
           "avaliacoes",
           "atividades",

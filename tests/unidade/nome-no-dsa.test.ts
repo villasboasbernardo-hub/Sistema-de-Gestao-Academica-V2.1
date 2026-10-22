@@ -7,8 +7,31 @@ import {
   abreviarNomeNoDsa,
   LIMITE_DO_NOME_NO_DSA,
   nomeNoCartao,
+  nomeNoGrafico,
   recusaDoNomeNoDsa,
 } from "@/lib/dominio/nome-no-dsa";
+
+/*
+ * Spec 022 (Bloco 7), item 8 — *"Gráficos de disciplinas: legenda com o NOME da disciplina, não o código; nome longo
+ * usa o Nome no DSA (ou a abreviação automática do Bloco 2)."* (Bernardo Villas Boas, 22/10/2026)
+ */
+describe("nomeNoGrafico", () => {
+  it("o nome que cabe vai inteiro — mesmo com Nome no DSA cadastrado", () => {
+    expect(nomeNoGrafico({ nomeNoDsa: "NAV.", nome: "NAVEGAÇÃO" })).toBe("NAVEGAÇÃO");
+  });
+  it("o nome longo usa o Nome no DSA cadastrado", () => {
+    expect(
+      nomeNoGrafico({ nomeNoDsa: "AUX. NAVEGAÇÃO", nome: "AUXÍLIOS À NAVEGAÇÃO ELETRÔNICA" }),
+    ).toBe("AUX. NAVEGAÇÃO");
+  });
+  it("o nome longo sem Nome no DSA usa a abreviação automática do Bloco 2", () => {
+    const nome = "AUXÍLIOS À NAVEGAÇÃO ELETRÔNICA";
+    expect(nomeNoGrafico({ nomeNoDsa: null, nome })).toBe(abreviarNomeNoDsa(nome));
+    expect([...nomeNoGrafico({ nomeNoDsa: null, nome })].length).toBeLessThanOrEqual(
+      LIMITE_DO_NOME_NO_DSA,
+    );
+  });
+});
 
 describe("nomeNoCartao", () => {
   it("o Nome no DSA cadastrado vence", () => {

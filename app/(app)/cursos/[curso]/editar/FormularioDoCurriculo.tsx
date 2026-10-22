@@ -13,8 +13,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { editarCurriculo } from "@/lib/acoes/curriculo";
@@ -139,9 +139,15 @@ export function FormularioDoCurriculo({
         </p>
       ) : null}
       <div>
-        <Button type="submit" size="sm" disabled={gravando} data-slot="salvar-curriculo">
-          {gravando ? "Salvando…" : "Salvar currículo"}
-        </Button>
+        <BotaoDeIcone
+          acao="salvar"
+          rotulo="Salvar currículo"
+          variante="padrao"
+          type="submit"
+          ocupado={gravando}
+          rotuloOcupado="Salvando…"
+          data-slot="salvar-curriculo"
+        />
       </div>
     </form>
   );

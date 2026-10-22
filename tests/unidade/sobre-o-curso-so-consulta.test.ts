@@ -46,14 +46,19 @@ function fontesDoProduto(diretorio = ""): string[] {
 }
 
 const ABA = "app/(app)/cursos/[curso]/AbaSobre.tsx";
+/*
+ * Spec 022 (Bloco 7, FR-005.2, D-11): as regras de avaliação do currículo saíram de *Sobre o Curso* para o topo da aba
+ * *Avaliações*, num arquivo PRÓPRIO — o único que exibe caráter e fórmula. As duas regras valem para os dois.
+ */
+const REGRAS = "app/(app)/cursos/[curso]/RegrasDeAvaliacao.tsx";
 
-describe("`FR-007` · nada na aba é editável", () => {
-  const codigo = ler(ABA);
+describe.each([ABA, REGRAS])("`FR-007` · nada em %s é editável", (arquivo) => {
+  const codigo = ler(arquivo);
 
   it("⚠️ controle positivo: a varredura está lendo o arquivo certo, e ele não está vazio", () => {
     // Sem isto, um caminho errado faria todos os casos abaixo passarem por ausência.
     expect(codigo.length).toBeGreaterThan(500);
-    expect(codigo).toContain("AbaSobre");
+    expect(codigo).toMatch(/AbaSobre|RegrasDeAvaliacao/);
   });
 
   it("nenhum campo de entrada", () => {
@@ -78,7 +83,7 @@ describe("`FR-007` · nada na aba é editável", () => {
 });
 
 describe("`FR-007.1` · `carater` e `formula_mf` são exibidos, nunca interpretados", () => {
-  const codigo = ler(ABA);
+  const codigo = ler(REGRAS);
   const CAMPOS = ["carater", "formulaMf"];
 
   it("controle positivo: os dois aparecem — a aba de fato os mostra", () => {
@@ -119,7 +124,7 @@ describe("⚠️ e o resto do sistema não lê esses campos", () => {
    * os busca no banco. Qualquer outro arquivo que os cite é, por construção, uma leitura nova — e
    * leitura nova desses dois campos é o que o `FR-007.1` existe para impedir.
    */
-  const AUTORIZADOS = [ABA, "app/(app)/cursos/[curso]/page.tsx"];
+  const AUTORIZADOS = [REGRAS, "app/(app)/cursos/[curso]/page.tsx"];
 
   it("só os dois arquivos autorizados citam `carater` ou `formula_mf`", () => {
     const leitores = fontesDoProduto()
@@ -153,7 +158,6 @@ describe("`FR-062` · as telas de avaliação não interpretam nota, média nem 
     "app/(app)/turmas/[turma]/AvaliacoesDaTurma.tsx",
     "app/(app)/turmas/[turma]/CardDeAvaliacoes.tsx",
     "app/(app)/turmas/[turma]/DefinirTempoArbitrado.tsx",
-    "app/(app)/turmas/[turma]/AlertasDeVista.tsx",
     "app/(app)/turmas/[turma]/consulta-de-avaliacoes.ts",
     "app/(app)/cursos/[curso]/AbaAvaliacoes.tsx",
     "lib/dominio/avaliacoes/quadro-da-turma.ts",

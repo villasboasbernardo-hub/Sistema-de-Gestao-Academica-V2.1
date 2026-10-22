@@ -33,6 +33,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **4** | Início: dashboard, carrosséis, submenu | não | 019 |
 | **5** | Cadastros novos: estrangeiros, custo, currículo em PDF, capacitação, acessos | sim | 020 |
 | **6** | Currículo versionado | sim | épico próprio |
+| **7** | Rodada 2 — padrões de tela: botões de ícone, formulários em diálogo ou página própria, ordem por classificação, sininho de avisos, abas do curso, cores do DSA | não | 022 |
 
 ---
 
@@ -289,6 +290,64 @@ Itens soltos, sem bloco próprio, encaixados no bloco que tocar o mesmo arquivo:
 
 
 Registrar um currículo novo (disciplinas, UEs, CH, avaliações, duração) **sem** alterar o vigente, e planejar as turmas do ano seguinte por ele, enquanto as turmas em andamento seguem o currículo em vigor. Mexe no vínculo turma → versão do currículo; não cabe em correção.
+
+---
+
+## Rodada 2 — padrões de tela *(pedido de Bernardo Villas Boas, 22/10/2026)*
+
+## Bloco 7 — Padrões de tela (spec própria, sem banco) — 🟨 EM CONFERÊNCIA
+
+> 🟨 **Implementado em 22/10/2026** — spec `022-bloco-7-padroes-de-tela`, ramo `feat/BLOCO-7-padroes-de-tela`, pelo
+> fluxo `/corrigir`, num PR só. **Sem migration** (nada em `supabase/` nem em `lib/tipos/`). Espera a conferência de
+> Bernardo; o merge só com o "aprovado".
+
+1. **Botões padrão como ícone** com dica e nome acessível, no topo e à direita; componente único `BotaoDeIcone`, com o
+   vocabulário fechado de ícones, e a guarda `tests/unidade/botoes-de-icone.test.ts`. O texto continua nos diálogos de
+   confirmação destrutiva e no rodapé dos diálogos de formulário. O tema virou três ícones.
+2. **Edição e cadastro em diálogo ou página própria**: a disciplina ganhou página própria em *Editar curso*
+   (`/cursos/[curso]/editar/disciplinas/[disciplina]` e `/nova`); UE, avaliação do currículo, arbitrado, regime,
+   limite, novo currículo, previsto, período, instrutores da turma, TA fora do DSA, juntar, parar dia, assinaturas,
+   sala e nome do perfil abrem em diálogo. A guarda `tests/e2e/sem-campo-aberto.spec.ts` (SC-001).
+3. **Ordem por classificação** (Regular → Expedito → Especial → Estágio de Qualificação → Aperfeiçoamento Avançado →
+   as demais; dentro, pela sigla; turmas pelo curso e depois o ano), por `lib/dominio/ordem-de-cursos.ts`, em todas as
+   listas, cartões, filtros e no submenu.
+4. **Sininho de avisos** no cabeçalho e a página **Avisos** (`/avisos`), agrupada por módulo, com link para onde se
+   resolve; o "visto" no navegador. **Os oito quadros de aviso das páginas saíram**, e o quadro da §6 da spec diz onde
+   cada aviso passa a aparecer.
+5. **Curso**: a aba *Grade* virou *Turmas* (`?aba=grade` redireciona); *Sobre o Curso* só com informações gerais (as
+   regras de avaliação foram para a aba *Avaliações*); *Horários* sem as vigências, com o ícone que leva à edição dos
+   regimes.
+6. **Cores dos cartões do DSA** no preenchimento: aula, atividade e EI em azul claro (`planejado`), avaliação em verde
+   (`executado`), conflito em amarelo (`atrasado`), feriado e dia parado em lilás (`conformidade`). **O papel não
+   mudou**: `app/print/` e `lib/dominio/dsa/` sem diferença contra a `main` de partida.
+
+**Conferência de 22/10/2026** *(Bernardo Villas Boas)*: itens 1–6 **aprovados**, decisões como ficaram, e cinco itens
+acrescentados **no mesmo PR, antes do merge**:
+
+7. **Pizza com todas as fatias**, sem "Outras" — desfaz o teto de 5 do componente e a Q-11 da spec 016 (emendas no
+   documento 23 §7 e no `FR-007.2` da spec 016). Acima de 5, cada fatia leva o número e a legenda numerada diz o resto.
+   A escolaridade dos instrutores, que ficava em barras só pelo teto, passou a pizza (`FR-026.2`).
+8. **Gráficos de disciplinas pelo nome**, não pelo código; nome longo usa o *Nome no DSA* ou a abreviação do Bloco 2
+   (`nomeNoGrafico`).
+9. **Editar curso em três grupos** — *Identidade do curso*, *Oferta e custo*, *Currículo e suas partes* —, com a
+   vigência do regime de horário dentro da parte *Horários*.
+10. **Estatísticas de Cursos** no painel recolhível de Instrutores (agora em `components/ciaara/`): os dois números, a
+    pizza de cursos por classificação e a duração em semanas de cada curso; a duração média por classificação saiu.
+11. **Aviso de carga só ACIMA da faixa** — mudança de regra autorizada nominalmente (emenda ao `FR-016` da spec 006 e à
+    T011 d; a faixa do `RN-2027-06` não muda), com o caso que discrimina (40h com 4 h por semana não avisa, nem no
+    sininho; 20h com 14 h avisa).
+
+**Pendências novas, achadas e não corrigidas:**
+
+- **`PEND-022-1`** — *`inicio.spec.ts` (`FR-017.6`) conta um recorte que outras amostras também povoam.* O caso lê o
+  número *Turmas no recorte* de `?classificacao=expedito&modalidade=ead` antes e depois de desativar um curso, e
+  `semearCursos` (usada por 12 arquivos de `tests/e2e`, medido em 22/10/2026) cria turmas expeditas EAD no ano corrente, num processo novo a cada
+  repetição: qualquer semente concorrente entre as duas leituras muda a conta. Medido no CI do PR #84, em que a guarda
+  nova também a usava (consertado ali com amostra própria). Proposta: contar só as turmas da própria amostra. Classe
+  da `PEND-014-7`.
+- **`PEND-022-2`** — *o tempo da página Avisos com o dado real não foi medido.* Ela faz 17 leituras em paralelo
+  (`app/(app)/avisos/leitura.ts`), sobre todas as turmas, instrutores e avaliações que a pessoa alcança, e o sininho
+  pede o resumo no máximo uma vez a cada 2 minutos. Proposta: medir sobre a cópia do remoto antes de otimizar.
 
 ---
 

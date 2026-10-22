@@ -25,9 +25,9 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { CampoObrigatorio, propsDoControle } from "@/components/ciaara/campo-obrigatorio";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { criarCurso, editarCurso } from "@/lib/acoes/curso";
 import {
@@ -210,9 +210,14 @@ export function FormularioDeCurso({
   }
 
   const botaoGravar = (
-    <Button type="submit" size="sm" disabled={gravando} data-slot="gravar-curso">
-      {modo === "novo" ? "Criar curso" : "Salvar alterações"}
-    </Button>
+    <BotaoDeIcone
+      acao="salvar"
+      rotulo={modo === "novo" ? "Criar curso" : "Salvar alterações"}
+      variante="padrao"
+      type="submit"
+      ocupado={gravando}
+      data-slot="gravar-curso"
+    />
   );
 
   return (
@@ -231,7 +236,16 @@ export function FormularioDeCurso({
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      {/*
+        Spec 022 (Bloco 7), item 9 — *"Editar curso: reorganize os campos em grupos claros (identidade do curso; oferta
+        e custo; currículo e suas partes)"* (Bernardo Villas Boas, 22/10/2026). Este formulário tem os dois primeiros
+        grupos; o currículo e as partes dele ficam abaixo, na página.
+      */}
+      <fieldset
+        className="border-borda rounded-ciaara grid gap-3 border p-3 sm:grid-cols-2"
+        data-slot="grupo-identidade"
+      >
+        <legend className="text-texto px-1 text-sm font-semibold">Identidade do curso</legend>
         <div className="flex flex-col gap-1">
           <CampoObrigatorio para="curso-codigo" rotulo="Sigla" obrigatorio />
           <Input
@@ -289,45 +303,38 @@ export function FormularioDeCurso({
             ))}
           </select>
         </div>
+      </fieldset>
 
-        {modo === "novo" ? (
-          <>
-            <div className="flex flex-col gap-1">
-              <CampoObrigatorio para="curso-dias" rotulo="Duração em dias" obrigatorio />
-              <Input
-                {...propsDoControle("curso-dias", true)}
-                name="duracao_dias"
-                inputMode="numeric"
-                value={valores.duracao_dias}
-                onChange={trocar("duracao_dias")}
-              />
-            </div>
+      {modo === "novo" ? (
+        /* No cadastro, o currículo 1 nasce junto: a duração e o propósito são dele (spec 021, RC-1). */
+        <fieldset
+          className="border-borda rounded-ciaara grid gap-3 border p-3 sm:grid-cols-2"
+          data-slot="grupo-curriculo-inicial"
+        >
+          <legend className="text-texto px-1 text-sm font-semibold">
+            Currículo 1 — duração e propósito
+          </legend>
+          <div className="flex flex-col gap-1">
+            <CampoObrigatorio para="curso-dias" rotulo="Duração em dias" obrigatorio />
+            <Input
+              {...propsDoControle("curso-dias", true)}
+              name="duracao_dias"
+              inputMode="numeric"
+              value={valores.duracao_dias}
+              onChange={trocar("duracao_dias")}
+            />
+          </div>
 
-            <div className="flex flex-col gap-1">
-              <CampoObrigatorio para="curso-semanas" rotulo="Duração em semanas" />
-              <Input
-                {...propsDoControle("curso-semanas", false)}
-                name="duracao_semanas"
-                inputMode="numeric"
-                value={valores.duracao_semanas}
-                onChange={trocar("duracao_semanas")}
-              />
-            </div>
-          </>
-        ) : null}
-
-        <div className="flex flex-col gap-1">
-          <CampoObrigatorio para="curso-limite" rotulo="Limite de turmas por ano" />
-          <Input
-            {...propsDoControle("curso-limite", false)}
-            name="limite_turmas_ano"
-            inputMode="numeric"
-            value={valores.limite_turmas_ano}
-            onChange={trocar("limite_turmas_ano")}
-          />
-        </div>
-
-        {modo === "novo" ? (
+          <div className="flex flex-col gap-1">
+            <CampoObrigatorio para="curso-semanas" rotulo="Duração em semanas" />
+            <Input
+              {...propsDoControle("curso-semanas", false)}
+              name="duracao_semanas"
+              inputMode="numeric"
+              value={valores.duracao_semanas}
+              onChange={trocar("duracao_semanas")}
+            />
+          </div>
           <div className="flex flex-col gap-1 sm:col-span-2">
             <CampoObrigatorio para="curso-proposito" rotulo="Propósito" />
             <Input
@@ -337,71 +344,87 @@ export function FormularioDeCurso({
               onChange={trocar("proposito")}
             />
           </div>
-        ) : null}
-      </div>
-
-      {modo === "edicao" ? (
-        /*
-         * Spec 020 (Bloco 5), C-1 a C-4 — novidade autorizada: só informativo, nada calcula a partir daqui.
-         */
-        <fieldset
-          className="border-borda rounded-ciaara grid gap-3 border p-3 sm:grid-cols-2"
-          data-slot="estrangeiros-e-custo"
-        >
-          <legend className="text-texto px-1 text-sm font-semibold">Estrangeiros e custo</legend>
-          <div className="flex flex-col gap-1">
-            <CampoObrigatorio para="curso-estrangeiros" rotulo="Ofertável a estrangeiros" />
-            <select
-              {...propsDoControle("curso-estrangeiros", false)}
-              name="ofertavel_estrangeiros"
-              value={valores.ofertavel_estrangeiros ?? ""}
-              onChange={(e) =>
-                definirValores((v) => ({
-                  ...v,
-                  ofertavel_estrangeiros: e.target.value as "" | "sim" | "nao",
-                }))
-              }
-              className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
-            >
-              <option value="">Não informado</option>
-              <option value="sim">Sim</option>
-              <option value="nao">Não</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <CampoObrigatorio
-              para="curso-estrangeiros-observacao"
-              rotulo="Observação sobre estrangeiros"
-            />
-            <Input
-              {...propsDoControle("curso-estrangeiros-observacao", false)}
-              name="estrangeiros_observacao"
-              value={valores.estrangeiros_observacao ?? ""}
-              onChange={trocar("estrangeiros_observacao")}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <CampoObrigatorio para="curso-custo-total" rotulo="Custo total (R$)" />
-            <Input
-              {...propsDoControle("curso-custo-total", false)}
-              name="custo_total"
-              inputMode="decimal"
-              placeholder="12.345,67"
-              value={valores.custo_total ?? ""}
-              onChange={trocar("custo_total")}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <CampoObrigatorio para="curso-custo-composicao" rotulo="Composição do custo" />
-            <Input
-              {...propsDoControle("curso-custo-composicao", false)}
-              name="custo_composicao"
-              value={valores.custo_composicao ?? ""}
-              onChange={trocar("custo_composicao")}
-            />
-          </div>
         </fieldset>
       ) : null}
+
+      <fieldset
+        className="border-borda rounded-ciaara grid gap-3 border p-3 sm:grid-cols-2"
+        data-slot="grupo-oferta-e-custo"
+      >
+        <legend className="text-texto px-1 text-sm font-semibold">
+          {modo === "edicao" ? "Oferta e custo" : "Oferta"}
+        </legend>
+        <div className="flex flex-col gap-1 sm:col-span-2">
+          <CampoObrigatorio para="curso-limite" rotulo="Limite de turmas por ano" />
+          <Input
+            {...propsDoControle("curso-limite", false)}
+            name="limite_turmas_ano"
+            inputMode="numeric"
+            value={valores.limite_turmas_ano}
+            onChange={trocar("limite_turmas_ano")}
+            className="max-w-40"
+          />
+        </div>
+
+        {modo === "edicao" ? (
+          /*
+           * Spec 020 (Bloco 5), C-1 a C-4 — novidade autorizada: só informativo, nada calcula a partir daqui.
+           */
+          <>
+            <div className="flex flex-col gap-1">
+              <CampoObrigatorio para="curso-estrangeiros" rotulo="Ofertável a estrangeiros" />
+              <select
+                {...propsDoControle("curso-estrangeiros", false)}
+                name="ofertavel_estrangeiros"
+                value={valores.ofertavel_estrangeiros ?? ""}
+                onChange={(e) =>
+                  definirValores((v) => ({
+                    ...v,
+                    ofertavel_estrangeiros: e.target.value as "" | "sim" | "nao",
+                  }))
+                }
+                className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
+              >
+                <option value="">Não informado</option>
+                <option value="sim">Sim</option>
+                <option value="nao">Não</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <CampoObrigatorio
+                para="curso-estrangeiros-observacao"
+                rotulo="Observação sobre estrangeiros"
+              />
+              <Input
+                {...propsDoControle("curso-estrangeiros-observacao", false)}
+                name="estrangeiros_observacao"
+                value={valores.estrangeiros_observacao ?? ""}
+                onChange={trocar("estrangeiros_observacao")}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <CampoObrigatorio para="curso-custo-total" rotulo="Custo total (R$)" />
+              <Input
+                {...propsDoControle("curso-custo-total", false)}
+                name="custo_total"
+                inputMode="decimal"
+                placeholder="12.345,67"
+                value={valores.custo_total ?? ""}
+                onChange={trocar("custo_total")}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <CampoObrigatorio para="curso-custo-composicao" rotulo="Composição do custo" />
+              <Input
+                {...propsDoControle("curso-custo-composicao", false)}
+                name="custo_composicao"
+                value={valores.custo_composicao ?? ""}
+                onChange={trocar("custo_composicao")}
+              />
+            </div>
+          </>
+        ) : null}
+      </fieldset>
 
       {modo === "novo" ? (
         <fieldset className="border-borda rounded-ciaara flex flex-col gap-3 border p-3">

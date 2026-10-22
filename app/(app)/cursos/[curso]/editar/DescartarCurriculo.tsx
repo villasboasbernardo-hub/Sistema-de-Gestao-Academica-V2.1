@@ -9,8 +9,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { Button } from "@/components/ui/button";
 import { descartarCurriculo } from "@/lib/acoes/curriculo";
 import { enderecoDaEdicaoDoCurso } from "@/lib/navegacao/endereco-de-turma";
 
@@ -50,15 +50,13 @@ export function DescartarCurriculo({
         rotuloConfirmar="Descartar"
         aoConfirmar={() => void acionar()}
       >
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
+        <BotaoDeIcone
+          acao="descartar"
+          rotulo="Descartar currículo"
+          variante="destrutivo"
           disabled={gravando}
           data-slot="descartar-curriculo"
-        >
-          Descartar currículo
-        </Button>
+        />
       </DialogoConfirmacao>
     </div>
   );

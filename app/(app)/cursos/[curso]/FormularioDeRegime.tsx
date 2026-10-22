@@ -12,6 +12,7 @@ import * as React from "react";
 
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { criarRegimeDeHorario, editarRegimeDeHorario } from "@/lib/acoes/regime-de-horario";
@@ -223,11 +224,12 @@ export function FormularioDeRegime({
         />
       </div>
 
-      <div>
+      {/* Spec 022 (D-3): o formulário mora num diálogo, e o rodapé de gravar continua com texto. */}
+      <DialogFooter>
         <Button type="submit" size="sm" disabled={gravando} data-slot="gravar-regime">
-          {editando ? "Salvar regime" : "Cadastrar regime"}
+          {gravando ? "Gravando…" : editando ? "Salvar regime" : "Cadastrar regime"}
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

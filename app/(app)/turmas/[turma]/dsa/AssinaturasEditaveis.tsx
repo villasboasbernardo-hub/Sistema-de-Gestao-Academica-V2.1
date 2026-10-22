@@ -23,10 +23,12 @@
  */
 "use client";
 
-import Link from "next/link";
 import * as React from "react";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -104,20 +106,21 @@ export function BotaoImprimir({
 }) {
   const edicao = React.useContext(ContextoDaEdicao)?.edicao ?? {};
   const editado = temEdicao(edicao.esquerda) || temEdicao(edicao.direita);
+  /* Spec 022 (FR-001): o verbo padrão é o ícone, com «Imprimir» na dica e no nome acessível. */
   return (
-    <Link
+    <BotaoDeIcone
+      acao="imprimir"
+      rotulo="Imprimir"
+      variante="padrao"
       href={enderecoDaImpressaoDoDsa(codigo, {
         semana,
         ano,
         ...(sabado ? { sabado: true } : {}),
         ...(editado ? { assinaturas: edicao } : {}),
       })}
-      className="rounded-ciaara border-borda-forte bg-superficie-2 text-texto hover:bg-marca-suave border px-3 py-1.5 text-sm font-medium"
       data-slot="imprimir-dsa"
       data-assinatura-editada={editado ? "sim" : "nao"}
-    >
-      Imprimir
-    </Link>
+    />
   );
 }
 
@@ -132,6 +135,8 @@ const ROTULO_DO_CAMPO: Readonly<Record<CampoDaRubrica, string>> = {
  *
  * ⚠️ **CAMPO IGUAL AO RESOLVIDO NÃO É EDIÇÃO**: voltar o texto ao que era tira o campo do endereço,
  * e o papel volta a resolver pela vigência.
+ * ⚠️ **OS TRÊS CAMPOS ABREM NUM DIÁLOGO** (spec 022, Bloco 7, FR-002): até o Bloco 7 eles abriam abaixo da rubrica. A
+ *    edição continua valendo enquanto se digita (a prévia acompanha), e *Pronto* fecha.
  */
 export function RubricaEditavel({
   lado,
@@ -144,7 +149,6 @@ export function RubricaEditavel({
   readonly resolvida: RubricaDoDsa | null;
 }) {
   const contexto = React.useContext(ContextoDaEdicao);
-  const [aberta, definirAberta] = React.useState(false);
   const doLado = contexto?.edicao[lado];
   const editada = temEdicao(doLado);
   const final = rubricaComEdicao(resolvida, doLado);
@@ -175,58 +179,65 @@ export function RubricaEditavel({
       ) : null}
 
       {contexto === null ? null : (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            aria-expanded={aberta}
-            aria-controls={`${idBase}-campos`}
-            onClick={() => definirAberta((v) => !v)}
-            data-acao={`editar-assinatura-${lado}`}
+        <div className="flex flex-wrap justify-end gap-1">
+          <DialogoDeFormulario
+            titulo={`${titulo} — para esta impressão`}
+            descricao="O cadastro de responsáveis não muda; a edição vale só para o papel desta impressão."
+            slot={`dialogo-da-assinatura-${lado}`}
+            gatilho={
+              <BotaoDeIcone
+                acao="editar"
+                rotulo="Editar para esta impressão"
+                variante="fantasma"
+                data-acao={`editar-assinatura-${lado}`}
+              />
+            }
           >
-            {aberta ? "Fechar edição" : "Editar para esta impressão"}
-          </Button>
+            {(fechar) => (
+              <div className="flex flex-col gap-3">
+                <fieldset id={`${idBase}-campos`} className="flex flex-col gap-2">
+                  <legend className="sr-only">{titulo}</legend>
+                  {CAMPOS_DA_RUBRICA.map((campo) => {
+                    const original = resolvida?.[campo] ?? "";
+                    const id = `${idBase}-${campo}`;
+                    return (
+                      <div key={campo} className="flex flex-col gap-1">
+                        <Label htmlFor={id}>
+                          {ROTULO_DO_CAMPO[campo]} — {titulo}
+                        </Label>
+                        <Input
+                          id={id}
+                          type="text"
+                          maxLength={LIMITE_DO_CAMPO}
+                          value={doLado?.[campo] ?? original}
+                          onChange={(e) => {
+                            const valor = e.target.value;
+                            contexto.definir(lado, campo, valor === original ? null : valor);
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </fieldset>
+                <DialogFooter>
+                  <Button type="button" size="sm" onClick={fechar}>
+                    Pronto
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogoDeFormulario>
           {editada ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
+            <BotaoDeIcone
+              acao="desfazer"
+              rotulo="Voltar ao cadastrado"
+              variante="fantasma"
               onClick={() => contexto.desfazer(lado)}
               data-acao={`desfazer-assinatura-${lado}`}
-            >
-              Voltar ao cadastrado
-            </Button>
+            />
           ) : null}
         </div>
       )}
-
-      {contexto !== null && aberta ? (
-        <fieldset id={`${idBase}-campos`} className="flex flex-col gap-2 pt-1">
-          <legend className="sr-only">{titulo}</legend>
-          {CAMPOS_DA_RUBRICA.map((campo) => {
-            const original = resolvida?.[campo] ?? "";
-            const id = `${idBase}-${campo}`;
-            return (
-              <div key={campo} className="flex flex-col gap-1">
-                <Label htmlFor={id}>
-                  {ROTULO_DO_CAMPO[campo]} — {titulo}
-                </Label>
-                <Input
-                  id={id}
-                  type="text"
-                  maxLength={LIMITE_DO_CAMPO}
-                  value={doLado?.[campo] ?? original}
-                  onChange={(e) => {
-                    const valor = e.target.value;
-                    contexto.definir(lado, campo, valor === original ? null : valor);
-                  }}
-                />
-              </div>
-            );
-          })}
-        </fieldset>
-      ) : null}
     </div>
   );
 }

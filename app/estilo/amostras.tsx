@@ -19,6 +19,8 @@ import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
 import { AvisosRecolhiveis } from "@/components/ciaara/avisos-recolhiveis";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
+import { BotaoDeIcone, ICONE_DA_ACAO, type AcaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
 import { CampoDeSenha } from "@/components/ciaara/campo-de-senha";
 import { BotaoLimparFiltros } from "@/components/ciaara/botao-limpar-filtros";
 import { BadgeTeto, type Teto } from "@/components/ciaara/badge-teto";
@@ -27,6 +29,7 @@ import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { CardKpi } from "@/components/ciaara/card-kpi";
 import { Carrossel } from "@/components/ciaara/carrossel";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
+import { EstatisticasRecolhiveis } from "@/components/ciaara/estatisticas-recolhiveis";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { EsqueletoTabela } from "@/components/ciaara/esqueleto-tabela";
@@ -55,6 +58,7 @@ import { GraficoLinha } from "@/components/graficos/grafico-linha";
 import { GraficoPizza } from "@/components/graficos/grafico-pizza";
 import type { Serie } from "@/components/graficos/tipos";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
@@ -224,6 +228,21 @@ export function AmostraEstadoVazio() {
 }
 
 /**
+ * As estatísticas recolhíveis — o painel de Instrutores e de Cursos (spec 022, item 10): nascem recolhidas, e abrir
+ * não mexe na URL.
+ */
+export function AmostraEstatisticasRecolhiveis() {
+  return (
+    <EstatisticasRecolhiveis id="estatisticas-da-vitrine">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <CardKpi rotulo="Cursos regulares" valor={5} />
+        <CardKpi rotulo="Estágios de qualificação" valor={8} />
+      </div>
+    </EstatisticasRecolhiveis>
+  );
+}
+
+/**
  * O quadro recolhível — **as contagens ficam, a lista some** (`FR-027` e `RNF-USA-04` da spec 006).
  *
  * ⚠️ A AMOSTRA MOSTRA AS DUAS METADES DE PROPÓSITO. Uma amostra que só abrisse e fechasse passaria
@@ -286,16 +305,70 @@ export function AmostraBotaoLimparFiltros() {
  * ambígua.
  */
 export function AmostraBarraDeAcoes() {
+  // Spec 022 (Bloco 7, FR-001): a barra alinha à direita, e os verbos padrão são ícones com dica e nome acessível.
   return (
     <BarraDeAcoes rotulo="Ações da amostra">
-      <Button size="sm" variant="outline">
-        Editar cadastro
-      </Button>
-      <Button size="sm" variant="destructive">
-        Excluir cadastro
-      </Button>
-      <Button size="sm">Nova turma</Button>
+      <BotaoDeIcone acao="editar" rotulo="Editar cadastro" />
+      <BotaoDeIcone acao="excluir" rotulo="Excluir cadastro" variante="destrutivo" />
+      <BotaoDeIcone acao="novo" rotulo="Nova turma" variante="padrao" />
     </BarraDeAcoes>
+  );
+}
+
+/**
+ * O vocabulário fechado dos botões de ícone (spec 022, FR-001): um verbo, um desenho. ⚠️ Nenhum nome CONTÉM
+ * *"Desativar"* nem *"Editar"*: as outras amostras abrem por esses nomes, e o Playwright casa por trecho.
+ */
+export function AmostraBotoesDeIcone() {
+  return (
+    <ul className="flex flex-wrap gap-2" data-slot="vocabulario-de-icones">
+      {(Object.keys(ICONE_DA_ACAO) as AcaoDeIcone[]).map((acao) => (
+        <li key={acao}>
+          <BotaoDeIcone acao={acao} rotulo={`Ícone de ${acao.replaceAll("-", " ")}`} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** O diálogo de um formulário curto (spec 022, FR-002): abre pelo ícone, grava e fecha; o rodapé com texto (D-3). */
+export function AmostraDialogoDeFormulario() {
+  const [nome, definirNome] = React.useState("Regime A");
+  return (
+    <div className="flex items-center gap-3">
+      <DialogoDeFormulario
+        titulo="Renomear a amostra"
+        gatilho={<BotaoDeIcone acao="editar" rotulo="Renomear a amostra" />}
+      >
+        {(fechar) => (
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              definirNome(String(new FormData(e.currentTarget).get("nome") ?? ""));
+              fechar();
+            }}
+          >
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="amostra-dialogo-nome">Nome</Label>
+              <Input id="amostra-dialogo-nome" name="nome" defaultValue={nome} />
+            </div>
+            {/* D-3 da spec 022: o rodapé do diálogo continua com texto. */}
+            <DialogFooter>
+              <Button type="button" variant="ghost" size="sm" onClick={fechar}>
+                Cancelar
+              </Button>
+              <Button type="submit" size="sm">
+                Salvar
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogoDeFormulario>
+      <span className="text-texto-suave text-sm" data-slot="nome-da-amostra">
+        {nome}
+      </span>
+    </div>
   );
 }
 
@@ -319,9 +392,7 @@ export function AmostraDialogoConfirmacao() {
         rotuloConfirmar="Desativar"
         aoConfirmar={() => definirFeito(true)}
       >
-        <Button variant="destructive" size="sm">
-          Desativar
-        </Button>
+        <BotaoDeIcone acao="desativar" rotulo="Desativar" variante="destrutivo" />
       </DialogoConfirmacao>
       <span className="text-texto-suave text-sm">
         {feito ? "Confirmado nesta amostra." : "Nada foi feito ainda."}
@@ -784,6 +855,30 @@ const SERIE_DE_PIZZA: Serie = {
   ],
 };
 
+/**
+ * Spec 022 (Bloco 7), item 7 — TODAS as fatias: doze disciplinas, nenhuma em "Outras". Acima de cinco, a fatia leva o
+ * número dela, e a legenda numerada diz o resto.
+ */
+const SERIE_DE_PIZZA_COM_MUITAS_FATIAS: Serie = {
+  chave: "ch_prevista",
+  rotulo: "Carga horária prevista (tempos)",
+  forma: "circulo",
+  pontos: [
+    "Navegação",
+    "Meteorologia",
+    "Oceanografia",
+    "Hidrografia",
+    "Cartografia",
+    "Sinalização Náutica",
+    "Inglês Técnico",
+    "Treinamento Físico Militar",
+    "Legislação",
+    "Segurança do Trabalho",
+    "Informática",
+    "Estágio a Bordo",
+  ].map((nome, i) => ({ nome, valor: 60 - i * 4 })),
+};
+
 const SERIES_TEMPORAIS: readonly Serie[] = [
   {
     chave: "previsto",
@@ -822,6 +917,11 @@ export function AmostraGraficos() {
     <div className="flex flex-col gap-6">
       <GraficoBarras series={SERIES_DA_AMOSTRA} rotulo="Habilitados × selecionados, por curso" />
       <GraficoPizza serie={SERIE_DE_PIZZA} rotulo="Regime de trabalho" />
+      <GraficoPizza
+        serie={SERIE_DE_PIZZA_COM_MUITAS_FATIAS}
+        rotulo="Doze disciplinas — todas as fatias, numeradas"
+        altura={300}
+      />
       <GraficoLinha series={SERIES_TEMPORAIS} rotulo="Carga horária por semana" />
       <GraficoBarras series={SERIES_DEMAIS} rotulo="Sete séries" />
       <GraficoBarras series={[]} rotulo="Gráfico sem dado" />
@@ -883,9 +983,12 @@ export function AmostraAlertaEteto() {
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <Button size="sm" onClick={() => definirSalvou(true)}>
-            Salvar mesmo assim
-          </Button>
+          <BotaoDeIcone
+            acao="salvar"
+            rotulo="Salvar mesmo assim"
+            variante="padrao"
+            onClick={() => definirSalvou(true)}
+          />
           <span className="text-texto-suave text-sm">
             {salvou ? "Salvou — o alerta não impediu nada." : "O botão continua habilitado."}
           </span>

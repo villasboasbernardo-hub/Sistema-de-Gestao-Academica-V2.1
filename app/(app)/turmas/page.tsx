@@ -28,17 +28,10 @@ import {
   RECURSO_DO_ARQUIVAMENTO,
   semAsArquivadas,
 } from "@/lib/dominio/arquivamento-da-turma";
-import {
-  anoDoPainel,
-  anosDoSeletor,
-  painelDeTurmas,
-  semanaDoPainel,
-  type LinhaDoPainel,
-  type OcupacaoDoPainel,
-} from "@/lib/dominio/painel-de-turmas";
+import { anoDoPainel, anosDoSeletor, painelDeTurmas } from "@/lib/dominio/painel-de-turmas";
+import { emOrdemDeCurso } from "@/lib/dominio/ordem-de-cursos";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { lerParametros } from "@/lib/navegacao/esquema";
-import { contagemNaPrimeira, lerTodasAsPaginas } from "@/lib/supabase/paginacao";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../cursos/consulta";
@@ -79,7 +72,6 @@ export default async function Turmas({
   const hoje = hojeNaCiaara();
   /* D-COR-5: a arquivada só aparece com «Mostrar arquivadas» (`?arquivadas=sim`). */
   const mostrarArquivadas = valores.arquivadas === "sim";
-  const semana = semanaDoPainel(hoje);
 
   const [
     usuario,
@@ -91,15 +83,16 @@ export default async function Turmas({
     regimesRes,
     feriadosRes,
     arquivadasRes,
-    linhasRes,
-    comInstrutorRes,
-    ocupacaoRes,
     parametroRes,
   ] = await Promise.all([
     usuarioDaSessao(),
     montarConsultaDeTurmas(supabase.from("turmas").select(COLUNAS_DA_LISTA_DE_TURMAS), parametros),
     supabase.from("turmas").select("ano_letivo"),
-    supabase.from("cursos").select("codigo, nome_curso").eq("status", "ativo").order("codigo"),
+    supabase
+      .from("cursos")
+      .select("codigo, nome_curso, classificacao")
+      .eq("status", "ativo")
+      .order("codigo"),
     /*
      * ⚠️ **AS COLUNAS PROGRESSO E SALDO PELO MESMO CAMINHO DO `/inicio`** (FR-014.6; Q-6): a CH curricular da
      *    view de carga, a executada ATÉ HOJE (`chd_da_turma_ate`, D-COR-2), o regime vigente do curso e os
@@ -117,28 +110,7 @@ export default async function Turmas({
       .eq("status", "ativo")
       .gte("data", hoje),
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
-    /*
-     * ⚠️ **O PAINEL (FR-005) NA MESMA RODADA**: as linhas ativas e quais têm instrutor ativo (o aviso de disciplina
-     *    sem instrutor), a ocupação da semana de todas as turmas (o de conflito, `RN-CONF-01`) e o parâmetro do
-     *    "iniciando". Em páginas: a lista de linhas cresce com o ano (DP-5).
-     */
-    lerTodasAsPaginas((f) =>
-      supabase
-        .from("turma_disciplina")
-        .select("id, turma_id", contagemNaPrimeira(f))
-        .eq("status", "ativo")
-        .order("id")
-        .range(f.de, f.ate),
-    ),
-    lerTodasAsPaginas((f) =>
-      supabase
-        .from("turma_disciplina_instrutor")
-        .select("turma_disciplina_id", contagemNaPrimeira(f))
-        .eq("status", "ativo")
-        .order("turma_disciplina_id")
-        .range(f.de, f.ate),
-    ),
-    supabase.rpc("ocupacao_para_conflitos", { p_de: semana.de, p_ate: semana.ate }),
+    /* O painel (FR-005): o parâmetro do "iniciando". Os avisos do painel saíram para a página Avisos (spec 022). */
     supabase
       .from("config_parametros")
       .select("valor")
@@ -178,43 +150,6 @@ export default async function Turmas({
    * ⚠️ **O PAINEL É DO RECORTE** (C-14): as mesmas turmas da tabela; a leitura que falhar vira "não pude ler"
    *    (gotcha 4), e o parâmetro não lido vira «—» (regra 8).
    */
-  const comInstrutor = new Set(
-    ((comInstrutorRes.data ?? []) as { turma_disciplina_id: string }[]).map(
-      (t) => t.turma_disciplina_id,
-    ),
-  );
-  const linhasDoPainel: LinhaDoPainel[] | null =
-    linhasRes.error || comInstrutorRes.error
-      ? null
-      : ((linhasRes.data ?? []) as { id: string; turma_id: string }[]).map((l) => ({
-          turmaId: l.turma_id,
-          temInstrutor: comInstrutor.has(l.id),
-        }));
-  const ocupacaoDoPainel: OcupacaoDoPainel[] | null = ocupacaoRes.error
-    ? null
-    : (
-        (ocupacaoRes.data ?? []) as {
-          turma_id: string | null;
-          origem: string | null;
-          fato_id: string | null;
-          sessao_id: string | null;
-          data: string;
-          ta_inicial: number;
-          ta_final: number;
-          instrutor_id: string | null;
-          fiscal_id: string | null;
-          local: string | null;
-        }[]
-      ).map((o, n) => ({
-        turmaId: o.turma_id,
-        chave: `${o.origem ?? "anonima"}:${o.fato_id ?? n}:${o.sessao_id ?? ""}`,
-        data: o.data,
-        taInicial: Number(o.ta_inicial),
-        taFinal: Number(o.ta_final),
-        instrutorId: o.instrutor_id,
-        fiscalId: o.fiscal_id,
-        local: o.local,
-      }));
   const valorDoParametro = Number.parseInt(
     String((parametroRes.data as { valor?: string } | null)?.valor ?? ""),
     10,
@@ -242,10 +177,15 @@ export default async function Turmas({
     mostrarArquivadas,
     hoje,
     diasDeAviso,
-    linhas: linhasDoPainel,
-    ocupacao: ocupacaoDoPainel,
+    /* Os avisos do painel moram na página Avisos (spec 022, FR-004.4); aqui ficam só os números. */
+    linhas: [],
+    ocupacao: [],
   });
-  const cursos = (cursosRes.data ?? []).map((c) => ({ codigo: c.codigo, nome: c.nome_curso }));
+  /* Spec 022 (FR-003.2): as opções de curso do filtro na ordem única dos cursos. */
+  const cursos = emOrdemDeCurso(cursosRes.data ?? []).map((c) => ({
+    codigo: c.codigo,
+    nome: c.nome_curso,
+  }));
 
   return (
     <div className="flex flex-col gap-4" data-slot="lista-de-turmas">
@@ -272,8 +212,6 @@ export default async function Turmas({
       {recorte.error ? null : (
         <PainelDeTurmas
           indicadores={painel.indicadores}
-          avisos={painel.avisos}
-          naoLidos={painel.naoLidos}
           diasDeAviso={diasDeAviso}
           ano={anoDoPainelEscolhido}
         />

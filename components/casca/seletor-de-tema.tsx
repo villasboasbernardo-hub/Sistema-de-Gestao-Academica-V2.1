@@ -17,33 +17,44 @@
  * qual tema o navegador vai resolver, então `aria-pressed` diverge de propósito. A alternativa
  * usual — marcar montagem num efeito — é o que a regra `react-hooks/set-state-in-effect` barra,
  * com razão: efeito que só existe para chamar `setState` é renderização em duas passadas.
+ *
+ * ⚠️ **TRÊS ÍCONES DESDE O BLOCO 7** (spec 022, FR-001.5; pedido de Bernardo Villas Boas, 22/10/2026: *"tema
+ *    claro/escuro/sistema"* entre os botões padrão como ícone). O nome de cada um diz o tema, e o escolhido segue em
+ *    `aria-pressed` — o destaque não é a única via.
  */
 import { useTheme } from "next-themes";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+
 const OPCOES = [
-  { valor: "light", rotulo: "Claro" },
-  { valor: "dark", rotulo: "Noturno" },
-  { valor: "system", rotulo: "Sistema" },
+  { valor: "light", acao: "tema-claro", rotulo: "Tema claro" },
+  { valor: "dark", acao: "tema-escuro", rotulo: "Tema noturno" },
+  { valor: "system", acao: "tema-sistema", rotulo: "Tema do sistema" },
 ] as const;
 
 export function SeletorDeTema() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="flex items-center gap-2" data-testid="seletor-de-tema">
-      <span className="text-texto-suave text-sm">Tema:</span>
+    <div
+      className="flex items-center gap-1"
+      role="group"
+      aria-label="Tema"
+      data-testid="seletor-de-tema"
+    >
       {OPCOES.map((o) => (
-        <button
+        <BotaoDeIcone
           key={o.valor}
-          type="button"
+          acao={o.acao}
+          rotulo={o.rotulo}
+          variante="fantasma"
+          ladoDaDica="bottom"
           onClick={() => setTheme(o.valor)}
           suppressHydrationWarning
           aria-pressed={theme === o.valor}
           data-testid={`tema-${o.valor}`}
-          className="border-borda-forte rounded-ciaara-sm aria-pressed:bg-marca aria-pressed:text-marca-contraste border px-2 py-1 text-sm"
-        >
-          {o.rotulo}
-        </button>
+          className="aria-pressed:bg-marca aria-pressed:text-marca-contraste"
+        />
       ))}
     </div>
   );

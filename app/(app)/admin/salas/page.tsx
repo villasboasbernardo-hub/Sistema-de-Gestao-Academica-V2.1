@@ -57,15 +57,19 @@ export default async function Salas() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h1 className="text-texto text-lg font-semibold">Salas</h1>
-      <p className="text-texto-suave text-sm">
-        {salas.length} salas. Sala errada se <strong>desativa</strong> — não se renomeia nem se
-        apaga: o nome é o que fica gravado em cada turma.
-      </p>
-
-      <SePodeVer permissoes={permissoes} recurso="parametros" acao="criar">
-        <FormularioDeSala />
-      </SePodeVer>
+      {/* Spec 022 (FR-001.2): a ação da página no topo, à direita. */}
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-texto text-lg font-semibold">Salas</h1>
+          <p className="text-texto-suave text-sm">
+            {salas.length} salas. Sala errada se <strong>desativa</strong> — não se renomeia nem se
+            apaga: o nome é o que fica gravado em cada turma.
+          </p>
+        </div>
+        <SePodeVer permissoes={permissoes} recurso="parametros" acao="criar">
+          <FormularioDeSala />
+        </SePodeVer>
+      </header>
 
       {salas.length === 0 ? (
         <EstadoVazio

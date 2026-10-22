@@ -23,9 +23,7 @@
  * "não há" faria a tela afirmar, com todas as letras, que a CIAARA-11 não tem turma nenhuma.
  */
 import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
-import Link from "next/link";
 
-import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
 import { CardKpi } from "@/components/ciaara/card-kpi";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 // ⚠️ O ENDERECO DE TURMA VEM DO MODULO, E NAO DE UM TEMPLATE AQUI (`FR-031.2`). O codigo da
@@ -37,15 +35,6 @@ import { lerParametros } from "@/lib/navegacao/esquema";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
-import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
-
-import {
-  COLUNAS_DA_CONFORMIDADE,
-  fraseDoExcedido,
-  tetosExcedidos,
-  type LinhaDaConformidade,
-  type LinhaDoPrevisto,
-} from "../turmas/tetos-excedidos";
 import { FiltroDoPanorama } from "./FiltroDoPanorama";
 import { CartaoDaTurma } from "./CartaoDaTurma";
 import { ManchetesDoDsa, type MancheteDoDsa } from "./ManchetesDoDsa";
@@ -53,14 +42,10 @@ import { AnoDoPainel } from "../turmas/AnoDoPainel";
 import { Carrossel } from "@/components/ciaara/carrossel";
 import { anoDoPainel, anosDoSeletor, semanaDoPainel } from "@/lib/dominio/painel-de-turmas";
 import { cartoesDoInicio } from "@/lib/dominio/cartoes-do-inicio";
+import { compararTurmas } from "@/lib/dominio/ordem-de-cursos";
 import { resumoDoDsa, temDsaNaSemana } from "@/lib/dominio/dsa-da-semana";
 import { semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
 import { datasDaSemanaIso, semanaIsoDe } from "@/lib/dominio/carga-semanal";
-import { AlertasDeVista } from "../turmas/[turma]/AlertasDeVista";
-import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
-import { alertasDeVista } from "@/lib/dominio/avaliacoes/alertas-de-vista";
-import { naturezaPeloTipo } from "@/lib/dominio/avaliacoes/quadro-da-turma";
-import { exigeVista, instrumentoDaVista } from "@/lib/dominio/avaliacoes/vista-obrigatoria";
 import {
   montarPanorama,
   totaisDo,
@@ -117,10 +102,6 @@ export default async function Inicio({
     turmasRes,
     regimesRes,
     feriadosRes,
-    conformidadeRes,
-    previstosRes,
-    avaliacoesRes,
-    parametrosDaVistaRes,
     executadaRes,
     arquivadasRes,
     ocupacaoDaSemanaRes,
@@ -171,32 +152,6 @@ export default async function Inicio({
       .eq("status", "ativo")
       .gte("data", hoje),
     /*
-     * ⚠️ **OS TETOS DE AEC, TAD E TR** (spec 014, PR 2, `FR-005`, `RF-INI-04`): o veredito sai de
-     *    `tetosDaTurma`, o mesmo dos cards da ficha, em memória — duas leituras na mesma rodada.
-     */
-    supabase.from("vw_conformidade_tetos").select(COLUNAS_DA_CONFORMIDADE),
-    supabase
-      .from("previstos_proens_turma")
-      .select("turma_id, categoria, tempos_previstos")
-      .eq("status", "ativo"),
-    /*
-     * ⚠️ **OS ALERTAS DE VISTA** (spec 014, FR-054, `RF-INI-04`): as avaliações VIVAS já aplicadas, com as sessões
-     *    de vista e o INSTRUMENTO do item (`RN-AV-13`, 15/10/2026: a vista é obrigatória só para PM e PO, decidido por
-     *    `exigeVista`); o veredito é de `alertasDeVista`, sobre `situacaoDaAvaliacao`.
-     */
-    supabase
-      .from("avaliacoes")
-      .select(
-        "id, tipo_avaliacao, data_avaliacao, status, avaliacao_curriculo_id, turma:turmas!avaliacoes_turma_id_fkey(codigo), disciplina:disciplinas!avaliacoes_disciplina_id_fkey(cod_disciplina), item:avaliacoes_curriculo!avaliacoes_item_da_disciplina(status, instrumento:config_listas!avaliacoes_curriculo_instrumento_id_fkey(valor, metadados)), instrumento:config_listas!avaliacoes_instrumento_id_fkey(valor, metadados), vistas_de_avaliacao(data, status), sessoes_de_aplicacao!sessoes_de_aplicacao_avaliacao_id_fkey(data, status)",
-      )
-      .in("status", [...STATUS_DE_AVALIACAO_VIVA])
-      .lte("data_avaliacao", hoje),
-    supabase
-      .from("config_parametros")
-      .select("chave, valor")
-      .in("chave", ["avaliacao.prazo_vista_dias", "avaliacao.vence_em_breve_dias"])
-      .eq("status", "ativo"),
-    /*
      * ⚠️ **A EXECUTADA DO ANDAMENTO É A DE ATÉ HOJE** (D-COR-2; FR-014.1 da spec 016): a soma da CHD com data
      *    até `hoje`, inclusive — o dia de São Paulo, passado aqui, porque a função não tem valor padrão
      *    (FR-014.3). A view de carga continua dando o resto (curso, CH curricular, situação).
@@ -239,7 +194,7 @@ export default async function Inicio({
    *    sem elas não há panorama nenhum a desenhar.
    */
   /*
-   * ⚠️ **A ARQUIVADA SAI ANTES DO PANORAMA** (D-COR-5; C-24): tetos e vistas seguem o panorama (`noRecorte`), e saem
+   * ⚠️ **A ARQUIVADA SAI ANTES DO PANORAMA** (D-COR-5; C-24), e com ela sai dos cartões e das manchetes.
    *    com ele. Falha na leitura das arquivadas não esconde nada — a turma aparece, como antes do Bloco 2.
    */
   const arquivadas = idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[]);
@@ -267,73 +222,10 @@ export default async function Inicio({
     ),
   );
   const totais = totaisDo(panorama);
-  /* ⚠️ O alerta de teto respeita o recorte: só as turmas que o panorama mostra (e não EAD, FR-006). */
-  const noRecorte = new Set(panorama.map((t) => t.turmaCodigo));
-  const excedidos = tetosExcedidos(
-    (conformidadeRes.data ?? []) as LinhaDaConformidade[],
-    (previstosRes.data ?? []) as LinhaDoPrevisto[],
-    new Map((turmasRes.data ?? []).map((t) => [t.id as string, t.modalidade as string | null])),
-  ).filter((e) => noRecorte.has(e.turmaCodigo));
-  const parametroDaVista = (chave: string, padrao: number) =>
-    Number((parametrosDaVistaRes.data ?? []).find((p) => p.chave === chave)?.valor ?? padrao) ||
-    padrao;
-  type LinhaDeAvaliacao = {
-    id: string;
-    tipo_avaliacao: string | null;
-    data_avaliacao: string | null;
-    status: string;
-    avaliacao_curriculo_id: string | null;
-    turma: { codigo: string } | null;
-    disciplina: { cod_disciplina: string } | null;
-    item: {
-      status: string;
-      instrumento: { valor: string | null; metadados: unknown } | null;
-    } | null;
-    /** RN-AV-13 (desenho de 15/10/2026): o instrumento da prova SEM item (`avaliacoes.instrumento_id`). */
-    instrumento: { valor: string | null; metadados: unknown } | null;
-    vistas_de_avaliacao: { data: string; status: string }[];
-    sessoes_de_aplicacao: { data: string; status: string }[] | null;
-  };
-  const vistas = alertasDeVista(
-    ((avaliacoesRes.data ?? []) as unknown as LinhaDeAvaliacao[])
-      .filter((a) => a.turma && noRecorte.has(a.turma.codigo))
-      .map((a) => {
-        /*
-         * ⚠️ SÓ O ITEM ATIVO CONTA COMO LIGADO, como na ficha da turma (`consulta-de-avaliacoes.ts`), que lê os itens
-         *    com `status = 'ativo'` e não acha o inativo. Sem este filtro, a prova ligada a item INATIVO dava alerta
-         *    aqui e não na ficha — a mesma prova com dois vereditos. Item inativo ou não lido: instrumento
-         *    desconhecido e fora do alerta (decisão de 14/10/2026, `alertas-de-vista.ts`).
-         */
-        const item = a.item?.status === "ativo" ? a.item : null;
-        // RN-AV-13: o instrumento do item ligado ou, sem item, o da própria prova — a marca do banco decide.
-        const instrumento = instrumentoDaVista(
-          a.avaliacao_curriculo_id !== null ? item?.instrumento : a.instrumento,
-        );
-        return {
-          id: a.id,
-          turma: a.turma?.codigo ?? "",
-          disciplina: a.disciplina?.cod_disciplina ?? "",
-          tipo: a.tipo_avaliacao ?? "",
-          natureza: naturezaPeloTipo(a.tipo_avaliacao ?? ""),
-          estadoDoRegistro: a.status,
-          aplicacao: a.data_avaliacao,
-          sessoesDeVista: a.vistas_de_avaliacao
-            .filter((v) => v.status === "ativo")
-            .map((v) => v.data),
-          sessoesDeAplicacao: (a.sessoes_de_aplicacao ?? [])
-            .filter((v) => v.status === "ativo")
-            .map((v) => v.data),
-          temItemDeVista: exigeVista({ instrumento }),
-          itemLigado: a.avaliacao_curriculo_id !== null && item !== null,
-          instrumentoConhecido: a.avaliacao_curriculo_id === null && instrumento !== null,
-        };
-      }),
-    {
-      prazoDias: parametroDaVista("avaliacao.prazo_vista_dias", 7),
-      venceEmBreveDias: parametroDaVista("avaliacao.vence_em_breve_dias", 2),
-      hoje,
-    },
-  );
+  /*
+   * ⚠️ **OS ALERTAS SAÍRAM DO INÍCIO NO BLOCO 7** (spec 022, FR-004.4; A-2, que emenda o `RF-INI-04`): as turmas em
+   *    atraso, as vistas de prova e os tetos de AEC, TAD e TR moram na página Avisos, pelo sininho do cabeçalho.
+   */
   const temRecorte = classificacao !== "" || modalidade !== "";
   const baseVazia = (totalRes.count ?? 0) === 0;
   /* Ajuste A-2 (20/10/2026): os cartões são só das turmas ativas do ano; os números contam todas. */
@@ -353,6 +245,7 @@ export default async function Inicio({
     codigo: string;
     status: string;
     curso_id: string;
+    ano_letivo: number;
     data_inicio: string | null;
     data_termino: string | null;
     inicio_etapa_presencial: string | null;
@@ -365,6 +258,7 @@ export default async function Inicio({
     id: string;
     codigo: string;
     nome_curso: string;
+    classificacao: string | null;
   };
   type LinhaDaOcupacao = {
     turma_id: string | null;
@@ -377,6 +271,20 @@ export default async function Inicio({
     ((cursosRes.data ?? []) as unknown as CursoDaLeitura[]).map((c) => [c.id, c] as const),
   );
   const ocupacao = (ocupacaoDaSemanaRes.data ?? []) as unknown as LinhaDaOcupacao[];
+  const turmaDaManchete = new Map(
+    ((turmasRes.data ?? []) as unknown as TurmaDaLeitura[]).map((t) => [t.codigo, t] as const),
+  );
+  const paraOrdenarManchete = (m: MancheteDoDsa) => {
+    const turma = turmaDaManchete.get(m.turmaCodigo);
+    return {
+      codigo: m.turmaCodigo,
+      cursoCodigo: m.cursoCodigo,
+      cursoClassificacao: turma
+        ? (cursoDoRecorte.get(turma.curso_id)?.classificacao ?? null)
+        : null,
+      ano: Number(turma?.ano_letivo ?? 0),
+    };
+  };
   const manchetes: MancheteDoDsa[] = ((turmasRes.data ?? []) as unknown as TurmaDaLeitura[])
     .filter((t) => cursoDoRecorte.has(t.curso_id))
     .filter((t) =>
@@ -427,11 +335,8 @@ export default async function Inicio({
         resumo: resumoDoDsa(lancamentos),
       };
     })
-    .sort(
-      (a, b) =>
-        a.cursoCodigo.localeCompare(b.cursoCodigo, "pt-BR", { numeric: true }) ||
-        a.turmaCodigo.localeCompare(b.turmaCodigo, "pt-BR", { numeric: true }),
-    );
+    /* Spec 022 (FR-003): as manchetes na ordem única das turmas — a do curso, depois o ano e o código. */
+    .sort((a, b) => compararTurmas(paraOrdenarManchete(a), paraOrdenarManchete(b)));
 
   return (
     <section className="flex flex-col gap-5">
@@ -455,56 +360,6 @@ export default async function Inicio({
       </header>
 
       <FiltroDoPanorama />
-
-      {/*
-        ⚠️ A REGIÃO DE ALERTAS É SEMPRE VISÍVEL (`RF-INI-04`, `RNF-USA-04`), inclusive quando não há
-        o que alertar. Uma região que some quando está tudo bem ensina a não procurá-la — e quando
-        ela reaparecer, ninguém vai saber onde ela ficava.
-
-        ⚠️ SÓ UM PREDICADO EXISTE HOJE, e os demais do `RF-INI-04` — disciplina sem instrutor, vista
-        de prova vencida, regime de horário perto de mudar — são dos Épicos 5 a 9. A região entra
-        agora para eles terem onde chegar.
-      */}
-      <AlertaConformidade
-        tom={totais.emAtraso > 0 ? "atrasado" : "conformidade"}
-        titulo={totais.emAtraso > 0 ? "Turmas exigindo atenção" : "Nada exigindo atenção"}
-        avisos={
-          totais.emAtraso > 0
-            ? [`${totais.emAtraso} turma(s) em andamento com saldo de carga horária negativo.`]
-            : ["Nenhuma turma em andamento com saldo negativo no recorte atual."]
-        }
-      />
-
-      <AlertasDeVista alertas={vistas} mostrarTurma />
-
-      {/*
-        ⚠️ **UM ALERTA POR CARD EXCEDIDO, COM LINK PARA A TURMA** (spec 014, `FR-005`). Informativo:
-           nada aqui bloqueia lançamento (`RN-DEG-02`).
-      */}
-      {excedidos.length > 0 ? (
-        <section
-          aria-labelledby="titulo-tetos-excedidos"
-          className="border-atrasado-borda bg-atrasado-fundo rounded-ciaara flex flex-col gap-1 border p-3"
-          data-slot="alertas-de-teto"
-        >
-          <h2 id="titulo-tetos-excedidos" className="text-atrasado-tinta text-sm font-semibold">
-            Tetos de AEC, TAD e TR
-          </h2>
-          <ul role="status" className="flex flex-col gap-0.5 text-sm">
-            {excedidos.map((e) => (
-              <li key={`${e.turmaCodigo}-${e.categoria}-${e.alerta}`}>
-                <Link
-                  href={enderecoDaTurma(e.turmaCodigo)}
-                  className="text-atrasado-tinta underline-offset-2 hover:underline"
-                  data-slot="alerta-de-teto"
-                >
-                  {fraseDoExcedido(e)}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
       <section
         aria-labelledby="titulo-turmas-do-ano"

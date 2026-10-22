@@ -28,13 +28,20 @@
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
 
-/** As cinco, na ordem do Glossário. É esta ordem que agrupa os cartões de `/cursos`. */
+/**
+ * As cinco que são curso, na ordem única de `lib/dominio/ordem-de-cursos.ts`. É esta ordem que agrupa os cartões de
+ * `/cursos`, os filtros e o submenu.
+ *
+ * ⚠️ **ESTÁGIO DE QUALIFICAÇÃO PASSOU A VIR ANTES DE APERFEIÇOAMENTO AVANÇADO** (A-4 da spec 022, pedido de Bernardo
+ *    Villas Boas de 22/10/2026), emendando a ordem do Glossário que o `FR-003` da spec 009 citava. A conferência de que
+ *    as duas listas andam juntas é `tests/unidade/ordem-de-cursos.test.ts`.
+ */
 export const CLASSIFICACOES_DE_CURSO = [
   "regular",
   "expedito",
   "especial",
-  "aperfeicoamento_avancado",
   "estagio_qualificacao",
+  "aperfeicoamento_avancado",
 ] as const;
 
 export type ClassificacaoDeCurso = (typeof CLASSIFICACOES_DE_CURSO)[number];

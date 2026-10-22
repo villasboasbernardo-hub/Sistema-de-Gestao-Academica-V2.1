@@ -64,8 +64,37 @@ export const MAXIMO_DE_SERIES = 6;
 /** Até quantas séries o rótulo direto ainda cabe. Acima disso, a legenda entra como reforço. */
 export const MAXIMO_PARA_ROTULO_DIRETO = 4;
 
-/** O teto de categorias de uma pizza — documento 23 §7. */
-export const MAXIMO_DE_CATEGORIAS_NA_PIZZA = 5;
+/**
+ * Até quantas fatias a pizza escreve **nome e percentual** na própria fatia — spec 022 (Bloco 7), item 7.
+ *
+ * > *"Gráficos de pizza: TODAS as fatias, sem agrupar em «Outras» (desfaz a regra de 5 fatias da Q-11 da spec 016 e o
+ * > teto do componente). Legenda legível com muitas fatias."* — Bernardo Villas Boas, 22/10/2026
+ *
+ * ⚠️ **NÃO É MAIS TETO**: até 22/10/2026 a pizza recusava mais de 5 categorias (documento 23 §7) e a grade de
+ *    disciplinas agrupava o resto em "Outras (N)" (`FR-007.2` da spec 016). As duas regras saíram. Acima de 5 fatias o
+ *    nome não cabe mais ao lado de cada uma: a fatia leva o **número** dela, e a legenda — numerada, com nome, valor e
+ *    percentual — diz o resto. Nenhuma categoria some e nenhuma soma muda.
+ */
+export const MAXIMO_DE_FATIAS_COM_ROTULO_COMPLETO = 5;
+
+/** O percentual de uma fatia, escrito — o olho julga ângulo mal, e o número continua legível sem cor. */
+export function percentualDaFatia(valor: number, total: number): string {
+  return `${((valor / total) * 100).toFixed(1)}%`;
+}
+
+/**
+ * O que se escreve junto da fatia: *"nome — x%"* até `MAXIMO_DE_FATIAS_COM_ROTULO_COMPLETO` fatias; acima, o
+ * **número** da fatia (1, 2, 3…), o mesmo que abre a linha dela na legenda.
+ */
+export function rotuloDaFatia(
+  indice: number,
+  ponto: PontoDeSerie,
+  total: number,
+  quantidade: number,
+): string {
+  if (quantidade > MAXIMO_DE_FATIAS_COM_ROTULO_COMPLETO) return String(indice + 1);
+  return `${ponto.nome} — ${percentualDaFatia(ponto.valor, total)}`;
+}
 
 /** As oito séries do ponto único, **em ordem fixa**. */
 export const TOKENS_DE_SERIE = [
@@ -111,40 +140,5 @@ export function conferirTetoDeSeries(series: readonly Serie[]): Recusa | null {
     motivo:
       `${series.length} séries excedem o máximo de ${MAXIMO_DE_SERIES} (documento 23 §7). ` +
       `Acima disso o gráfico vira uma tabela mal desenhada — use a tabela densa.`,
-  };
-}
-
-/** As fatias que a pizza desenha e as categorias que entraram em "Outras". */
-export type Agrupamento = {
-  readonly pontos: readonly PontoDeSerie[];
-  readonly agrupados: readonly PontoDeSerie[];
-};
-
-/**
- * As maiores categorias e uma fatia **"Outras (N)"** com a soma do resto — FR-007.2 da spec 016.
- *
- * > *"Gráfico de pizza com as 4 maiores e uma fatia «Outras (N)»."* — Q-11, Bernardo Villas Boas,
- * > 17/10/2026
- *
- * ⚠️ **ATÉ O TETO, NADA MUDA** — nem a ordem: quem chama escolheu como apresentar. Acima dele, as
- * `maximo − 1` maiores (empate fica na ordem de chegada) e a fatia "Outras", e a **soma é
- * preservada**: uma pizza que perdesse valor no caminho faria as maiores parecerem maiores do que são.
- * As categorias agrupadas voltam em `agrupados`, para a lista em texto as nomear.
- */
-export function agruparEmOutras(
-  pontos: readonly PontoDeSerie[],
-  maximo: number = MAXIMO_DE_CATEGORIAS_NA_PIZZA,
-): Agrupamento {
-  if (pontos.length <= maximo) return { pontos: [...pontos], agrupados: [] };
-  const ordenados = pontos
-    .map((p, i) => ({ p, i }))
-    .sort((a, b) => b.p.valor - a.p.valor || a.i - b.i)
-    .map(({ p }) => p);
-  const maiores = ordenados.slice(0, maximo - 1);
-  const agrupados = ordenados.slice(maximo - 1);
-  const resto = agrupados.reduce((total, p) => total + p.valor, 0);
-  return {
-    pontos: [...maiores, { nome: `Outras (${agrupados.length})`, valor: resto }],
-    agrupados,
   };
 }

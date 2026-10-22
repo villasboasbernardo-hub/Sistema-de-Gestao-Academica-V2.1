@@ -31,8 +31,8 @@
  */
 import { useRef, useState } from "react";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { Avatar, AvatarImagem, AvatarRecuo } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { enviarFoto, removerFoto } from "@/lib/acoes/perfil";
 import { iniciaisDoNome } from "@/lib/dominio/iniciais-do-nome";
@@ -144,18 +144,26 @@ export function FormularioDaFoto({
              única porta para a janela de arquivos era o campo nativo, cinza e sem destaque, ao lado
              dele. Quem clicava no botão grande não tinha como chegar à foto.
         */}
-        <Button type="button" onClick={() => campo.current?.click()} disabled={ocupado}>
-          {ocupado ? "Enviando…" : "Enviar foto"}
-        </Button>
+        <BotaoDeIcone
+          acao="enviar-foto"
+          rotulo="Enviar foto"
+          variante="padrao"
+          onClick={() => campo.current?.click()}
+          ocupado={ocupado}
+          rotuloOcupado="Enviando…"
+        />
 
         {/*
           ⚠️ O botão de remover só existe quando HÁ foto. Um "remover" permanentemente visível
              prometeria uma ação que não muda nada, e quem clicasse ficaria sem saber se funcionou.
         */}
         {temFoto ? (
-          <Button type="button" variant="outline" onClick={remover} disabled={ocupado}>
-            Remover foto
-          </Button>
+          <BotaoDeIcone
+            acao="remover-foto"
+            rotulo="Remover foto"
+            onClick={remover}
+            disabled={ocupado}
+          />
         ) : null}
       </div>
 

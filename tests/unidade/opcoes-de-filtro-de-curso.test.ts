@@ -17,8 +17,9 @@ import { opcoesDosFiltros } from "@/app/(app)/instrutores/opcoes";
 
 const SEM_ESCALA = { ordem: new Map<string, number>() } as never;
 
-const so = (cursos: readonly { codigo: string; status?: string | null }[]) =>
-  opcoesDosFiltros([], cursos, SEM_ESCALA).curso;
+const so = (
+  cursos: readonly { codigo: string; status?: string | null; classificacao?: string | null }[],
+) => opcoesDosFiltros([], cursos, SEM_ESCALA).curso;
 
 describe("`FR-017.10` · curso inativo no filtro: presente, no fim e marcado", () => {
   it("os ativos vêm primeiro, em ordem de sigla, com o rótulo igual ao valor", () => {
@@ -55,6 +56,16 @@ describe("`FR-017.10` · curso inativo no filtro: presente, no fim e marcado", (
     ]);
     expect(opcoes.map((o) => o.valor)).toEqual(["C-Ap-B", "C-Ap-M", "C-Esp-A", "C-Esp-Z"]);
     expect(opcoes.map((o) => o.rotulo.includes("— inativo"))).toEqual([false, false, true, true]);
+  });
+
+  it("spec 022 (FR-003): com a classificação, a ordem é a das classificações, e depois a sigla sem os hífens", () => {
+    const opcoes = so([
+      { codigo: "C-Esp-ME", status: "ativo", classificacao: "especial" },
+      { codigo: "C-Exp-BATI", status: "ativo", classificacao: "expedito" },
+      { codigo: "C-Ap-FR", status: "ativo", classificacao: "regular" },
+      { codigo: "CAHO", status: "ativo", classificacao: "regular" },
+    ]);
+    expect(opcoes.map((o) => o.valor)).toEqual(["CAHO", "C-Ap-FR", "C-Exp-BATI", "C-Esp-ME"]);
   });
 
   it("curso sem `status` informado é tratado como ativo — degradação segura", () => {

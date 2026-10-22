@@ -17,7 +17,7 @@
  * povoada**: sem vínculo em `usuario_curso`, `app.cursos_do_usuario()` não lhe devolve nada. É o
  * mesmo mecanismo que prova o recorte quando ele tem um curso só.
  */
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import {
@@ -78,12 +78,13 @@ test.describe("`SC-001` · os cinco grupos, na ordem do Glossário", () => {
      * sobre o mesmo commit — que é o defeito de verificação que a spec 009 vem eliminando. A
      * promessa do `FR-003` é a ORDEM; quais grupos têm cartão é dado.
      */
+    // Spec 022 (A-4, 22/10/2026): Estágio de Qualificação antes de Aperfeiçoamento Avançado.
     const GLOSSARIO = [
       "regular",
       "expedito",
       "especial",
-      "aperfeicoamento_avancado",
       "estagio_qualificacao",
+      "aperfeicoamento_avancado",
     ];
     const ordem = await grupos(page).evaluateAll((nos) =>
       nos.map((n) => n.getAttribute("data-grupo")),
@@ -119,22 +120,51 @@ test.describe("`SC-001` · os cinco grupos, na ordem do Glossário", () => {
   });
 });
 
+/*
+ * ⚠️ SPEC 022 (Bloco 7), ITEM 10 — *"Cursos: estatísticas no mesmo componente/estilo das de Instrutores — cursos por
+ *    classificação e duração em semanas de cada curso/estágio; remova o de duração média por classificação."* O painel
+ *    nasce recolhido (como o de Instrutores) e abre por clique.
+ */
+async function exibirEstatisticas(page: Page): Promise<void> {
+  await expect(page.locator('[data-slot="indicadores-do-catalogo"]')).toHaveCount(0);
+  const antes = page.url();
+  await page.getByRole("button", { name: "Exibir estatísticas" }).click();
+  expect(page.url(), "abrir as estatísticas foi para a URL — é estado efêmero").toBe(antes);
+}
+
 test.describe("`SC-002` · os indicadores do `FR-002`, e só eles", () => {
-  test("os dois indicadores e os dois gráficos aparecem", async ({ page }) => {
+  test("os dois indicadores e os dois gráficos aparecem — e a duração média por classificação saiu", async ({
+    page,
+  }) => {
     await entrar(page, EMAIL_ADMIN, "/cursos");
+    await exibirEstatisticas(page);
     const painel = page.locator('[data-slot="indicadores-do-catalogo"]');
     await expect(painel).toBeVisible();
 
-    await expect(page.getByText("Cursos regulares")).toBeVisible();
-    await expect(page.getByText("Estágios de qualificação")).toBeVisible();
-    await expect(page.getByText("Duração média, em dias, por classificação")).toBeVisible();
-    await expect(page.getByText("Cursos por classificação")).toBeVisible();
+    await expect(painel.getByText("Cursos regulares")).toBeVisible();
+    await expect(painel.getByText("Estágios de qualificação")).toBeVisible();
+    await expect(page.locator('[data-slot="grafico-do-catalogo"]')).toHaveCount(2);
+    const pizza = page.locator('[data-chave="por-classificacao"] [data-slot="grafico-pizza"]');
+    await expect(pizza).toContainText("Cursos por classificação");
+    const duracao = page.locator('[data-chave="duracao-em-semanas"]');
+    await expect(duracao).toContainText("Duração em semanas de cada curso e estágio");
+    /*
+     * Cada curso com a duração em semanas é uma barra com a sigla no eixo; quem não a tem é nomeado embaixo. A ordem
+     * das barras sai do atributo que a tela publica — como o `data-barras` de Instrutores —, não das classes internas
+     * da biblioteca de gráficos (a primeira versão deste caso as adivinhou, e elas não existiam).
+     */
+    const barras = JSON.parse((await duracao.getAttribute("data-barras")) ?? "[]") as string[];
+    const semDuracao = await duracao.locator('[data-slot="cursos-sem-duracao"]').count();
+    expect(barras.length + semDuracao, "o gráfico não recebeu curso nenhum").toBeGreaterThan(0);
+    if (barras.length > 0) await expect(duracao).toContainText(barras[0] as string);
+    await expect(page.getByText("Duração média, em dias, por classificação")).toHaveCount(0);
   });
 
   test("⚠️ e o que a A-6 adiou NÃO aparece — total de cursos e turmas ativas são da PEND-5a-2", async ({
     page,
   }) => {
     await entrar(page, EMAIL_ADMIN, "/cursos");
+    await exibirEstatisticas(page);
     await expect(page.locator('[data-slot="indicadores-do-catalogo"]')).toBeVisible();
     await expect(page.getByText("Total de cursos")).toHaveCount(0);
     await expect(page.getByText("Turmas ativas")).toHaveCount(0);
@@ -283,10 +313,15 @@ test.describe("US1 · o recorte do Encarregado de Curso", () => {
 
   test("⚠️ e os indicadores dele contam o recorte DELE, não o catálogo", async ({ page }) => {
     await entrar(page, EMAIL_ENCARREGADO, "/cursos");
-    await expect(page.locator('[data-slot="indicadores-do-catalogo"]')).toBeVisible();
+    await exibirEstatisticas(page);
+    const painel = page.locator('[data-slot="indicadores-do-catalogo"]');
+    await expect(painel).toBeVisible();
     // Um curso regular alcançado, nenhum estágio: se os indicadores tivessem consulta própria sem
     // recorte, o número não bateria com o único cartão da tela.
     await expect(grupos(page)).toHaveCount(1);
+    await expect(
+      painel.locator('[data-slot="card-kpi"]').filter({ hasText: "Estágios de qualificação" }),
+    ).toContainText("0");
   });
 });
 

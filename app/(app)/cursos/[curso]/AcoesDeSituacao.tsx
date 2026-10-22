@@ -18,8 +18,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { Button } from "@/components/ui/button";
 import { desativarCurso, reativarCurso } from "@/lib/acoes/curso";
 import { confirmacaoDaGravacao } from "@/lib/dominio/confirmacao-de-gravacao";
 
@@ -73,14 +73,12 @@ export function AcoesDeSituacao({
           rotuloConfirmar={confirmacao.rotuloConfirmar}
           aoConfirmar={() => void acionar()}
         >
-          <Button
-            type="button"
-            variant={ativo ? "destructive" : "default"}
-            size="sm"
+          <BotaoDeIcone
+            acao={ativo ? "desativar" : "reativar"}
+            rotulo={ativo ? "Desativar curso" : "Reativar curso"}
+            variante={ativo ? "destrutivo" : "padrao"}
             disabled={gravando}
-          >
-            {ativo ? "Desativar curso" : "Reativar curso"}
-          </Button>
+          />
         </DialogoConfirmacao>
       ) : null}
     </div>

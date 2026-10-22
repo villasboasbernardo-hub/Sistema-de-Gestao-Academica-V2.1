@@ -10,6 +10,7 @@
  * opções de categoria as que existem em outra OM: a pessoa perderia o caminho de volta sem limpar
  * tudo. Quem opera sobre o resultado do filtro anterior é a consulta, em E lógico.
  */
+import { compararCursos } from "@/lib/dominio/ordem-de-cursos";
 import { pesoAntiguidade, type EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import { CAPACITACOES_DIDATICAS } from "@/lib/dominio/capacitacao-didatica";
 
@@ -68,18 +69,28 @@ function postosEmAntiguidade(
 }
 
 /**
- * Os cursos, **ativos primeiro e inativos depois**, cada grupo em ordem de sigla, com os inativos
- * marcados no rótulo (`FR-017.10` da spec 009).
+ * Os cursos, **ativos primeiro e inativos depois**, cada grupo na ordem única dos cursos (spec 022, FR-003: a
+ * classificação, depois a sigla sem os hífens), com os inativos marcados no rótulo (`FR-017.10` da spec 009).
  *
  * ⚠️ **A ORDENAÇÃO DO BANCO NÃO BASTA**: `order("codigo")` devolve tudo misturado, e um curso
  * arquivado apareceria no meio dos ativos, indistinguível. Até a migration 7 da spec 009 o problema
  * não existia porque o ALCANCE escondia curso inativo — a lista chegava aqui já sem eles.
  */
 function cursosComInativosNoFim(
-  cursos: readonly { readonly codigo: string; readonly status?: string | null }[],
+  cursos: readonly {
+    readonly codigo: string;
+    readonly status?: string | null;
+    readonly classificacao?: string | null;
+  }[],
 ): OpcaoDeCurso[] {
-  const ordemDeSigla = (a: { codigo: string }, b: { codigo: string }) =>
-    a.codigo.localeCompare(b.codigo, "pt-BR");
+  const ordemDeSigla = (
+    a: { codigo: string; classificacao?: string | null },
+    b: { codigo: string; classificacao?: string | null },
+  ) =>
+    compararCursos(
+      { codigo: a.codigo, classificacao: a.classificacao ?? null },
+      { codigo: b.codigo, classificacao: b.classificacao ?? null },
+    );
   const inativo = (c: { readonly status?: string | null }) => c.status === "inativo";
 
   return [
@@ -102,7 +113,11 @@ function cursosComInativosNoFim(
 
 export function opcoesDosFiltros(
   linhas: readonly LinhaDasOpcoes[],
-  cursos: readonly { readonly codigo: string; readonly status?: string | null }[],
+  cursos: readonly {
+    readonly codigo: string;
+    readonly status?: string | null;
+    readonly classificacao?: string | null;
+  }[],
   escala: EscalaDeAntiguidade,
 ): OpcoesDosFiltros {
   return {

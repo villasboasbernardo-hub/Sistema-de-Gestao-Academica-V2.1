@@ -44,6 +44,7 @@ function arvoresDoSubmenu(
     codigo: string;
     ano_letivo: number;
     id: string;
+    curso_id: string;
   }[],
   arquivadas: readonly { turma_id: string | null }[],
   ano: number,
@@ -55,6 +56,7 @@ function arvoresDoSubmenu(
     nome: c.nome_curso,
     classificacao: c.classificacao,
   }));
+  const cursoPorId = new Map(cursos.map((c) => [c.id, c] as const));
   return {
     cursos: arvoreDeCursos(
       doSubmenu.filter((_, i) => cursos[i]?.status === "ativo"),
@@ -65,6 +67,9 @@ function arvoresDoSubmenu(
         codigo: t.codigo,
         ano: Number(t.ano_letivo),
         arquivada: arquivada.has(t.id),
+        /* Spec 022 (FR-003): a ordem das turmas é a do curso — a classificação, depois a sigla. */
+        cursoCodigo: cursoPorId.get(t.curso_id)?.codigo ?? t.codigo,
+        cursoClassificacao: cursoPorId.get(t.curso_id)?.classificacao ?? null,
       })),
       ano,
       enderecoDaTurma,
@@ -104,7 +109,10 @@ export default async function LayoutDoApp({ children }: { children: React.ReactN
        *    (`RN-DEG-01`).
        */
       supabase.from("cursos").select("id, codigo, nome_curso, classificacao, status"),
-      supabase.from("turmas").select("codigo, ano_letivo, id").eq("ano_letivo", anoVigente),
+      supabase
+        .from("turmas")
+        .select("codigo, ano_letivo, id, curso_id")
+        .eq("ano_letivo", anoVigente),
       supabase.from("vw_turmas_arquivadas").select("turma_id"),
     ]);
   const submenu = arvoresDoSubmenu(

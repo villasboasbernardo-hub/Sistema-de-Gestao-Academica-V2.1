@@ -13,6 +13,7 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 
+import { abrirAvisosPeloSininho, avisoDaChave, avisosDoSujeito } from "./avisos";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import {
   limparCursos,
@@ -47,11 +48,11 @@ const url = (sigla: string, consulta = "") =>
   `/cursos/${encodeURIComponent(sigla)}${consulta ? `?${consulta}` : ""}`;
 
 /**
- * A página do curso **na aba Grade**. ⚠️ Desde 17/10/2026 a aba padrão é *Sobre o Curso* (spec 016,
- * FR-006.2): os casos que leem a lista de turmas, o seletor ou a turma selecionada pedem a Grade.
+ * A página do curso **na aba Turmas** (a *Grade* até o Bloco 7, spec 022). ⚠️ Desde 17/10/2026 a aba padrão é *Sobre o
+ * Curso* (spec 016, FR-006.2): os casos que leem a lista de turmas, o seletor ou a turma selecionada pedem esta aba.
  */
 const grade = (sigla: string, consulta = "") =>
-  url(sigla, consulta ? `aba=grade&${consulta}` : "aba=grade");
+  url(sigla, consulta ? `aba=turmas&${consulta}` : "aba=turmas");
 
 const abas = (page: Page) => page.locator('[data-slot="abas-do-curso"] [role="tab"]');
 const turmaSelecionada = (page: Page) => page.locator('[data-slot="turma-selecionada"]');
@@ -65,7 +66,7 @@ test.describe("`FR-006.2` · as abas moram na URL (sete desde a spec 021)", () =
     await expect(abas(page)).toHaveCount(7);
     for (const [i, aba] of [
       "sobre",
-      "grade",
+      "turmas",
       "disciplinas",
       "avaliacoes",
       "atividades",
@@ -75,7 +76,7 @@ test.describe("`FR-006.2` · as abas moram na URL (sete desde a spec 021)", () =
       await expect(abas(page).nth(i)).toHaveAttribute("data-aba", aba);
     await expect(abas(page)).toHaveText([
       "Sobre o Curso",
-      "Grade",
+      "Turmas",
       "Disciplinas",
       "Avaliações",
       "Atividades",
@@ -106,16 +107,27 @@ test.describe("`FR-006.2` · as abas moram na URL (sete desde a spec 021)", () =
     await expect(abas(page).filter({ hasText: /Relatório/ })).toHaveCount(0);
   });
 
-  test("colar a URL com `?aba=grade` numa aba nova reproduz a mesma vista, e o F5 também", async ({
+  test("colar a URL com `?aba=turmas` numa aba nova reproduz a mesma vista, e o F5 também", async ({
     page,
   }) => {
-    // ⚠️ `grade`, e não `sobre`: desde a spec 016 a `sobre` é a padrão, e o caso mede a aba que NÃO é.
+    // ⚠️ `turmas`, e não `sobre`: desde a spec 016 a `sobre` é a padrão, e o caso mede a aba que NÃO é.
     await entrar(page, EMAIL_ADMIN, grade(SEMEADO.porClassificacao.regular));
-    await expect(page.locator('[data-slot="aba-grade"]')).toBeVisible();
+    await expect(page.locator('[data-slot="aba-turmas"]')).toBeVisible();
     await expect(abas(page).nth(1)).toHaveAttribute("aria-selected", "true");
 
     await page.reload();
-    await expect(page.locator('[data-slot="aba-grade"]')).toBeVisible();
+    await expect(page.locator('[data-slot="aba-turmas"]')).toBeVisible();
+  });
+
+  test("o endereço antigo `?aba=grade` leva à aba Turmas, com o resto da consulta (spec 022, D-12)", async ({
+    page,
+  }) => {
+    const sigla = SEMEADO.porClassificacao.regular;
+    await entrar(page, EMAIL_ADMIN, url(sigla, "aba=grade&turma=QUALQUER"));
+    await expect(page.locator('[data-slot="aba-turmas"]')).toBeVisible();
+    const busca = new URL(page.url()).searchParams;
+    expect(busca.get("aba")).toBe("turmas");
+    expect(busca.get("turma")).toBe("QUALQUER");
   });
 
   test("⚠️ trocar de aba EMPILHA: 'voltar' desfaz um passo", async ({ page }) => {
@@ -123,7 +135,7 @@ test.describe("`FR-006.2` · as abas moram na URL (sete desde a spec 021)", () =
     await expect(page.locator('[data-slot="aba-sobre"]')).toBeVisible();
 
     await abas(page).nth(1).click();
-    await expect(page.locator('[data-slot="aba-grade"]')).toBeVisible();
+    await expect(page.locator('[data-slot="aba-turmas"]')).toBeVisible();
 
     await page.goBack();
     await expect(page.locator('[data-slot="aba-sobre"]')).toBeVisible();
@@ -161,7 +173,7 @@ test.describe("`FR-006.1` · a pré-seleção e o `?turma=`", () => {
 
   test("curso cujas turmas estão todas canceladas abre sem seleção", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN, grade(SEMEADO.porClassificacao.expedito));
-    await expect(page.locator('[data-slot="aba-grade"]')).toBeVisible();
+    await expect(page.locator('[data-slot="aba-turmas"]')).toBeVisible();
     await expect(turmaSelecionada(page)).toHaveCount(0);
   });
 });
@@ -242,7 +254,7 @@ test.describe("`FR-033` a `FR-036` · o seletor de turma escreve na URL", () => 
   test("`FR-006.1` · curso de uma turma só NÃO tem seletor", async ({ page }) => {
     // Sem seletor não há outra escolha — e a página abre naquela turma.
     await entrar(page, EMAIL_ADMIN, grade(SEMEADO.porClassificacao.estagio_qualificacao));
-    await expect(page.locator('[data-slot="aba-grade"]')).toBeVisible();
+    await expect(page.locator('[data-slot="aba-turmas"]')).toBeVisible();
     await expect(page.locator('[data-slot="seletor-turma"]')).toHaveCount(0);
   });
 });
@@ -275,42 +287,59 @@ test.describe("`FR-028.1` · a lista de turmas, com a SALA de cada uma (23/09/20
   });
 });
 
-test.describe("`FR-010.1` · o quadro de avisos fica ACIMA das abas, nas duas", () => {
-  test("ele está presente na Grade e no Sobre, e nasce recolhido", async ({ page }) => {
+/*
+ * Spec 022 (Bloco 7, FR-004.4): o quadro de avisos do curso SAIU da página — os avisos moram na página Avisos, pelo
+ * sininho, cada um com o link para onde se resolve. O caso mede os dois lados: o quadro sumiu, e nenhum aviso se perdeu.
+ */
+test.describe("`FR-010.1` → spec 022 · os avisos do curso vão para a página Avisos", () => {
+  test("o quadro sumiu do curso, e os dois avisos do estágio estão em Avisos, levando a Editar curso", async ({
+    page,
+  }) => {
     const sigla = SEMEADO.porClassificacao.estagio_qualificacao;
 
     await entrar(page, EMAIL_ADMIN, grade(sigla));
-    const quadro = page.locator('[data-slot="quadro-de-avisos-do-curso"]');
-    await expect(quadro).toBeVisible();
-    // O estágio da amostra nasce sem duração em semanas e sem propósito: dois avisos.
-    await expect(quadro.locator('[data-slot="total-de-avisos"]')).toHaveAttribute(
-      "data-quantidade",
-      "2",
-    );
-    await expect(quadro.locator('[data-slot="avisos-recolhiveis"]')).toHaveAttribute(
-      "data-aberto",
-      "false",
-    );
+    await expect(page.locator('[data-slot="aba-turmas"]')).toBeVisible();
+    await expect(page.locator('[data-slot="quadro-de-avisos-do-curso"]')).toHaveCount(0);
 
-    await page.goto(url(sigla, "aba=sobre"));
-    await expect(page.locator('[data-slot="quadro-de-avisos-do-curso"]')).toBeVisible();
+    await abrirAvisosPeloSininho(page);
+    // O estágio da amostra nasce sem duração em semanas e sem propósito: dois avisos.
+    for (const tipo of ["sem_duracao_semanas", "sem_proposito"]) {
+      const aviso = avisoDaChave(page, `cursos:${tipo}:${sigla}`);
+      await expect(aviso).toBeVisible();
+      await expect(aviso.getByRole("link")).toHaveAttribute(
+        "href",
+        `/cursos/${encodeURIComponent(sigla)}/editar`,
+      );
+    }
+    await avisoDaChave(page, `cursos:sem_proposito:${sigla}`).getByRole("link").click();
+    await expect
+      .poll(() => new URL(page.url()).pathname)
+      .toBe(`/cursos/${encodeURIComponent(sigla)}/editar`);
   });
 
-  test("curso sem aviso diz isso, em vez de ficar vazio", async ({ page }) => {
+  test("curso sem aviso não aparece em Avisos", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular));
-    await expect(page.locator('[data-slot="quadro-de-avisos-do-curso"]')).toContainText(
-      "Nenhum aviso neste curso",
-    );
+    await abrirAvisosPeloSininho(page);
+    await expect(avisosDoSujeito(page, "cursos", SEMEADO.porClassificacao.regular)).toHaveCount(0);
   });
 });
 
 test.describe("`FR-007` · a aba Sobre, só consulta", () => {
-  test("os três blocos aparecem, com o total de TA da grade", async ({ page }) => {
+  test("só as informações gerais: a grade e as avaliações saíram, sem se perder (spec 022, FR-005.2)", async ({
+    page,
+  }) => {
     await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular, "aba=sobre"));
-    await expect(page.locator('[data-slot="catalogo-do-curso"]')).toBeVisible();
-    // A amostra dá uma disciplina de 20 TA ao curso regular.
-    await expect(page.locator('[data-slot="total-de-tempos"]')).toHaveText("20");
-    await expect(page.getByRole("heading", { name: "Avaliações previstas" })).toBeVisible();
+    const sobre = page.locator('[data-slot="aba-sobre"]');
+    await expect(sobre.locator('[data-slot="catalogo-do-curso"]')).toBeVisible();
+    await expect(sobre.locator('[data-slot="grade-curricular"]')).toHaveCount(0);
+    await expect(sobre.locator('[data-slot="avaliacoes-previstas"]')).toHaveCount(0);
+    await expect(sobre.getByRole("heading", { name: /Avaliações previstas/ })).toHaveCount(0);
+
+    // As regras de avaliação foram para o topo da aba Avaliações (D-11), por clique.
+    await abas(page).filter({ hasText: "Avaliações" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Regras de avaliação do currículo" }),
+    ).toBeVisible();
   });
 
   test("⚠️ nada nela é editável — nenhum campo, nenhum botão de gravar", async ({ page }) => {
@@ -321,8 +350,8 @@ test.describe("`FR-007` · a aba Sobre, só consulta", () => {
   });
 
   test("curso sem avaliação prevista diz 'não há', e não 'você não vê'", async ({ page }) => {
-    await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular, "aba=sobre"));
-    const vazio = page.locator('[data-slot="aba-sobre"] [data-motivo]');
+    await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular, "aba=avaliacoes"));
+    const vazio = page.locator('[data-slot="regras-de-avaliacao"] [data-motivo]');
     await expect(vazio.first()).toHaveAttribute("data-motivo", "sem-dado");
   });
 });
@@ -407,7 +436,7 @@ test.describe("`FR-006` da spec 016 · a barra única e *Sobre o Curso* primeiro
       page.locator('[data-slot="cabecalho-do-curso"] [data-slot="ir-para-editar-curso"]'),
     ).toHaveCount(0);
     await abas(page).nth(1).click();
-    await expect(page.locator('[data-slot="aba-grade"] [data-slot="nova-turma"]')).toHaveCount(0);
+    await expect(page.locator('[data-slot="aba-turmas"] [data-slot="nova-turma"]')).toHaveCount(0);
 
     await novaTurma.click();
     await expect

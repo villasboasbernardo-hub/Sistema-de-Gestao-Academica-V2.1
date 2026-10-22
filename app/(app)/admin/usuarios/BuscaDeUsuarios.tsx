@@ -25,7 +25,7 @@ export function BuscaDeUsuarios() {
   const [busca, definirBusca] = useParametro(ROTA, "busca");
 
   return (
-    <div className="mt-4 flex flex-wrap items-end gap-2">
+    <div className="mt-4 flex flex-wrap items-end gap-2" data-slot="busca-de-usuarios">
       <div className="flex flex-col gap-1">
         <label className="text-texto-suave text-xs" htmlFor="busca-de-usuarios">
           Buscar por nome ou e-mail

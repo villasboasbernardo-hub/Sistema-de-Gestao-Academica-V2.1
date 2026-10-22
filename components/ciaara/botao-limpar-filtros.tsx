@@ -22,7 +22,7 @@
 import type * as React from "react";
 import { cn } from "cn";
 
-import { Button } from "@/components/ui/button";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 
 export type BotaoLimparFiltrosProps = {
   /** Há algum filtro fora do padrão? Sem isso, o botão não aparece. */
@@ -41,9 +41,14 @@ export function BotaoLimparFiltros({
 
   return (
     <div className={cn("flex", className)}>
-      <Button type="button" variant="ghost" size="sm" onClick={aoLimpar} data-slot="limpar-filtros">
-        Limpar filtros
-      </Button>
+      {/* Spec 022 (FR-001): o verbo padrão é o ícone, com «Limpar filtros» na dica e no nome acessível. */}
+      <BotaoDeIcone
+        acao="limpar-filtros"
+        rotulo="Limpar filtros"
+        variante="fantasma"
+        onClick={aoLimpar}
+        data-slot="limpar-filtros"
+      />
     </div>
   );
 }

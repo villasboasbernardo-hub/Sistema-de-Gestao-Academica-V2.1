@@ -198,7 +198,7 @@ test.describe("spec 020 · os cadastros novos", () => {
     test.setTimeout(180_000);
     await irAoCursoPorClique(page, EMAIL, SIGLA);
     await page.locator('[data-slot="ir-para-editar-curso"]').first().click();
-    const bloco = page.locator('[data-slot="estrangeiros-e-custo"]');
+    const bloco = page.locator('[data-slot="grupo-oferta-e-custo"]');
     await expect(bloco).toBeVisible();
 
     /* Custo que não é valor em reais: a tela recusa com a frase do campo, e o banco não recebe nada. */
@@ -290,7 +290,10 @@ test.describe("spec 020 · os cadastros novos", () => {
     const primeiro = await objetosDoCurriculo();
     expect(primeiro).toHaveLength(1);
     expect((await cursoNoBanco()).curriculo_pdf_em).not.toBeNull();
-    await expect(envio.locator('[data-slot="carregar-curriculo"]')).toHaveText("Substituir PDF");
+    // Spec 022 (Bloco 7): o botão é ícone — o verbo está no nome acessível (e na dica).
+    await expect(envio.locator('[data-slot="carregar-curriculo"]')).toHaveAccessibleName(
+      "Substituir PDF",
+    );
 
     /* Baixar pela aba Sobre o Curso. */
     await cursoPeloMenu(page);

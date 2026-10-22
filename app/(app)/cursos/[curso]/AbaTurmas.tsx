@@ -1,6 +1,10 @@
 /**
- * A aba "Grade" — a turma selecionada e a lista de turmas do curso (`FR-006.2`, `FR-006.3`,
+ * A aba **Turmas** — a turma selecionada e a lista de turmas do curso (`FR-006.2`, `FR-006.3`,
  * `FR-028.1`, `FR-047`).
+ *
+ * ⚠️ **ERA A ABA "GRADE" ATÉ O BLOCO 7** (spec 022, FR-005.1; pedido de Bernardo Villas Boas, 22/10/2026: *"aba Grade
+ * passa a TURMAS e concentra as turmas do curso"*). O endereço antigo `?aba=grade` redireciona para `?aba=turmas` (D-12),
+ * e a lista sai na ordem única de turmas (`emOrdemDeTurma`, FR-003): o ano mais recente primeiro, depois o código.
  *
  * ⚠️ **SEM PROGRESSO POR DISCIPLINA NESTA FATIA** — o `FR-009` foi **cortado** em 17/09/2026 pela
  * linha de corte do `FR-009.1`. O que entra aqui é a identificação da turma e a lista; o progresso
@@ -24,6 +28,7 @@ import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { Button } from "@/components/ui/button";
 import { avisosDaTurma, type TurmaParaAvisos } from "@/lib/dominio/avisos-da-turma";
+import { emOrdemDeTurma } from "@/lib/dominio/ordem-de-cursos";
 import { dataParaLeitura } from "@/lib/formato/data";
 import {
   ordenarTurmasParaSeletor,
@@ -40,7 +45,7 @@ import {
 
 import { SeletorDeTurmaNaUrl } from "./SeletorDeTurmaNaUrl";
 
-export type TurmaDaGrade = TurmaParaAvisos & {
+export type TurmaDaAba = TurmaParaAvisos & {
   readonly codigo: string;
   readonly rotulo: string | null;
   readonly ano: number;
@@ -83,12 +88,12 @@ function Th({ children }: { readonly children: React.ReactNode }) {
  * ⚠️ `dataParaLeitura` JÁ DEVOLVE O TRAÇO para vazio e nulo, então encadeá-la com o `traco` local
  *    seria redundante: ela sozinha faz as duas coisas (`DD/MM/AAAA` desde 05/10/2026).
  */
-function janela(t: TurmaDaGrade): string {
+function janela(t: TurmaDaAba): string {
   if (t.dataInicio === null && t.dataTermino === null) return "—";
   return `${dataParaLeitura(t.dataInicio)} a ${dataParaLeitura(t.dataTermino)}`;
 }
 
-export function AbaGrade({
+export function AbaTurmas({
   sigla,
   turmas,
   selecionada,
@@ -97,7 +102,7 @@ export function AbaGrade({
   motivoDoVazio,
 }: {
   readonly sigla: string;
-  readonly turmas: readonly TurmaDaGrade[];
+  readonly turmas: readonly TurmaDaAba[];
   readonly selecionada: string | null;
   readonly hoje: string;
   readonly avisoDaSelecao: string | null;
@@ -105,6 +110,10 @@ export function AbaGrade({
   readonly motivoDoVazio: "nao-ha" | "nao-ve" | "ainda-nao-existe" | null;
 }) {
   const turmaAtual = turmas.find((t) => t.codigo === selecionada) ?? null;
+  /* Spec 022 (FR-003): a lista na ordem única — num curso só, o ano mais recente primeiro e depois o código. */
+  const naOrdem = emOrdemDeTurma(
+    turmas.map((t) => ({ ...t, cursoCodigo: sigla, cursoClassificacao: null })),
+  );
   const doSeletor = turmas.filter((t) => !t.arquivada);
 
   /*
@@ -161,7 +170,7 @@ export function AbaGrade({
   );
 
   return (
-    <div className="flex flex-col gap-4" data-slot="aba-grade">
+    <div className="flex flex-col gap-4" data-slot="aba-turmas">
       {avisoDaSelecao ? (
         <p role="status" className="text-atrasado-tinta text-sm" data-slot="aviso-da-selecao">
           {avisoDaSelecao}
@@ -264,7 +273,7 @@ export function AbaGrade({
             </tr>
           </thead>
           <tbody>
-            {turmas.map((t) => {
+            {naOrdem.map((t) => {
               const avisos = avisosDaTurma(t, hoje);
               return (
                 <tr key={t.codigo} className="border-borda border-b" data-linha-turma={t.codigo}>

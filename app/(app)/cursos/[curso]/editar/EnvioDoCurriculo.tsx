@@ -20,8 +20,8 @@
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
-import { Button } from "@/components/ui/button";
 import { registrarPdfDoCurriculo } from "@/lib/acoes/curriculo";
 import {
   BALDE_DE_CURRICULOS,
@@ -126,16 +126,14 @@ export function EnvioDoCurriculo({
             onChange={(e) => void aoEscolher(e)}
             data-slot="arquivo-do-curriculo"
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={enviando}
+          <BotaoDeIcone
+            acao="carregar"
+            rotulo={carregadoEm ? "Substituir PDF" : "Carregar PDF"}
+            ocupado={enviando}
+            rotuloOcupado="Carregando…"
             onClick={() => entrada.current?.click()}
             data-slot="carregar-curriculo"
-          >
-            {enviando ? "Carregando…" : carregadoEm ? "Substituir PDF" : "Carregar PDF"}
-          </Button>
+          />
           <span className="text-texto-suave text-xs">Só PDF, até 20 MB.</span>
         </div>
       ) : (

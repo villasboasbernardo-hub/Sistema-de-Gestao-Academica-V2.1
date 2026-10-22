@@ -17,7 +17,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { cadastrarUsuario } from "@/lib/acoes/usuarios";
 import { PERFIL_PADRAO_DE_CADASTRO } from "@/lib/dominio/perfis";
 
@@ -89,16 +89,14 @@ export function FormularioDeCadastro({
             ⚠️ CADASTRAR OUTRA LIMPA A SENHA DA TELA, de propósito: a pessoa confirmou que copiou ao
                escolher seguir, e deixar a anterior visível faria duas credenciais conviverem na tela.
           */}
-          <Button
-            type="button"
-            variant="outline"
+          <BotaoDeIcone
+            acao="cadastrar"
+            rotulo="Cadastrar outra"
             onClick={() => {
               definirSenha(null);
               definirEstado(INICIAL);
             }}
-          >
-            Cadastrar outra
-          </Button>
+          />
         </div>
       </div>
     );
@@ -127,9 +125,14 @@ export function FormularioDeCadastro({
       <CamposDaConta estado={estado} aoMudar={definirEstado} cursos={cursos} />
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={ocupado}>
-          {ocupado ? "Cadastrando…" : "Cadastrar usuário"}
-        </Button>
+        <BotaoDeIcone
+          acao="cadastrar"
+          rotulo="Cadastrar usuário"
+          variante="padrao"
+          type="submit"
+          ocupado={ocupado}
+          rotuloOcupado="Cadastrando…"
+        />
         <Link
           href="/admin/usuarios"
           className="border-borda-forte text-texto hover:bg-marca-suave rounded-ciaara focus-visible:ring-marca border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"

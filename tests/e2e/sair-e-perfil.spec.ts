@@ -250,6 +250,8 @@ test.describe("`FR-020` a `FR-023` · o próprio cadastro", () => {
     await irAoPerfilPorClique(page);
 
     const novo = `Nome Trocado ${Date.now().toString(36)}`;
+    // Spec 022 (Bloco 7, FR-002): o nome se edita num diálogo, pelo ícone.
+    await secao(page, "Nome").locator('[data-slot="editar-nome"]').click();
     await page.locator('input[name="nomeExibicao"]').fill(novo);
     await page.getByRole("button", { name: /gravar nome/i }).click();
 

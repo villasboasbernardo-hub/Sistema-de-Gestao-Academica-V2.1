@@ -5,8 +5,8 @@
  *    (`lib/dominio/dsa-da-semana.ts`), e a semana do curso é `semanaDoCurso` — a mesma do cabeçalho do DSA.
  * ⚠️ **É A SEMANA DE HOJE, EM QUALQUER ANO ESCOLHIDO** (C-9), e por isso o título diz as datas.
  */
-import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { Carrossel } from "@/components/ciaara/carrossel";
 import { fraseDoResumo, type ResumoDoDsa } from "@/lib/dominio/dsa-da-semana";
 import { campoDaSemanaDoCurso, type SemanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
@@ -80,14 +80,13 @@ export function ManchetesDoDsa({
               >
                 {fraseDoResumo(m.resumo)}
               </p>
-              <p className="text-sm">
-                <Link
+              <p className="flex justify-end text-sm">
+                <BotaoDeIcone
+                  acao="abrir-dsa"
+                  rotulo="Abrir o DSA"
                   href={enderecoDoDsa(m.turmaCodigo)}
-                  className="text-marca underline-offset-2 hover:underline"
                   data-slot="abrir-o-dsa-da-manchete"
-                >
-                  Abrir o DSA →
-                </Link>
+                />
               </p>
             </article>
           ))}

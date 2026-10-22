@@ -6,36 +6,38 @@
  * turma — para a `PEND-5a-2`. Um teste que só conferisse os quatro passaria também num painel com
  * oito, e a fatia entregaria mais do que foi decidido. Por isso há um caso sobre **as chaves**.
  *
- * ⚠️ **A MÉDIA É EM DIAS, E ISSO NÃO É DETALHE.** `duracao_dias` não tem nulo; `duracao_semanas` tem
- * **12** (medido em 16/09/2026). Uma média em semanas seria calculada sobre metade da base sem que
- * o número dissesse isso.
+ * ⚠️ **SPEC 022 (Bloco 7), ITEM 10** — *"Cursos: estatísticas no mesmo componente/estilo das de Instrutores — cursos
+ * por classificação e duração em semanas de cada curso/estágio; remova o de duração média por classificação."*
+ * (Bernardo Villas Boas, 22/10/2026). O gráfico de duração média em dias SAIU; no lugar, a duração em SEMANAS de
+ * cada curso, que não é média: o curso sem a duração em semanas não vira barra zero — ele é NOMEADO à parte.
  *
- * Origem: `FR-002` da spec 009, `RF-CURSOS-02`, A-6.
+ * Origem: `FR-002` da spec 009, `RF-CURSOS-02`, A-6; spec 022, item 10.
  */
 import { describe, expect, it } from "vitest";
 
-import { CLASSIFICACOES_DE_CURSO } from "@/lib/dominio/classificacoes-de-curso";
 import {
   indicadoresDoCatalogo,
   type CursoParaIndicador,
 } from "@/lib/dominio/indicadores-do-catalogo";
 
-const curso = (classificacao: string, duracaoDias: number | null): CursoParaIndicador => ({
-  classificacao,
-  duracaoDias,
-});
+let n = 0;
+const curso = (
+  classificacao: string,
+  duracaoSemanas: number | null,
+  codigo = `C-${(n += 1)}`,
+): CursoParaIndicador => ({ codigo, classificacao, duracaoSemanas });
 
 /** Uma base pequena e conferível à mão — é o que permite apontar o número errado. */
 const BASE: readonly CursoParaIndicador[] = [
-  curso("regular", 120),
-  curso("regular", 100),
-  curso("regular", 80),
-  curso("expedito", 10),
-  curso("expedito", 20),
-  curso("especial", 15),
-  curso("aperfeicoamento_avancado", 200),
-  curso("estagio_qualificacao", 30),
-  curso("estagio_qualificacao", 40),
+  curso("regular", 40, "C-Ap-HN"),
+  curso("regular", 36, "C-Ap-FR"),
+  curso("regular", null, "CAHO"),
+  curso("expedito", 2, "C-Exp-TE"),
+  curso("expedito", 4, "C-Exp-MetocOf"),
+  curso("especial", 3, "C-Esp-ME"),
+  curso("aperfeicoamento_avancado", 30, "C-ApA-PCN"),
+  curso("estagio_qualificacao", 6, "EST-QF-APHID"),
+  curso("estagio_qualificacao", null, "EST-QF-APOC"),
 ];
 
 describe("`FR-002` · os dois indicadores", () => {
@@ -52,54 +54,30 @@ describe("`FR-002` · os dois indicadores", () => {
   });
 });
 
-describe("`FR-002` · duração média em DIAS por classificação", () => {
-  it("a média é a das durações informadas, arredondada", () => {
+describe("spec 022 (item 10) · a duração em SEMANAS de cada curso e estágio", () => {
+  it("uma barra por curso com a duração em semanas, na ordem única do sistema (classificação, depois sigla)", () => {
     const i = indicadoresDoCatalogo(BASE);
-    const por = (c: string) => i.duracaoMediaPorClassificacao.find((d) => d.classificacao === c);
-    expect(por("regular")?.dias).toBe(100); // (120 + 100 + 80) / 3
-    expect(por("expedito")?.dias).toBe(15); // (10 + 20) / 2
-    expect(por("aperfeicoamento_avancado")?.dias).toBe(200);
-    expect(por("estagio_qualificacao")?.dias).toBe(35);
-  });
-
-  it("arredonda, e não trunca", () => {
-    const i = indicadoresDoCatalogo([curso("regular", 10), curso("regular", 11)]);
-    expect(i.duracaoMediaPorClassificacao.find((d) => d.classificacao === "regular")?.dias).toBe(
-      11,
-    );
-  });
-
-  it("⚠️ classificação sem curso dá `null`, NUNCA zero — zero seria 'a média é zero dias'", () => {
-    const i = indicadoresDoCatalogo([curso("regular", 120)]);
-    const expedito = i.duracaoMediaPorClassificacao.find((d) => d.classificacao === "expedito");
-    expect(expedito?.dias).toBeNull();
-  });
-
-  it("⚠️ duração nula não entra na média nem a zera — ela sai da conta", () => {
-    // Hoje `duracao_dias` não tem nulo no banco; se um dia tiver, a média não pode despencar.
-    const i = indicadoresDoCatalogo([
-      curso("regular", 100),
-      curso("regular", null),
-      curso("regular", 200),
+    expect(i.duracaoEmSemanas.porCurso).toEqual([
+      { codigo: "C-Ap-FR", semanas: 36 },
+      { codigo: "C-Ap-HN", semanas: 40 },
+      { codigo: "C-Exp-MetocOf", semanas: 4 },
+      { codigo: "C-Exp-TE", semanas: 2 },
+      { codigo: "C-Esp-ME", semanas: 3 },
+      { codigo: "EST-QF-APHID", semanas: 6 },
+      { codigo: "C-ApA-PCN", semanas: 30 },
     ]);
-    const regular = i.duracaoMediaPorClassificacao.find((d) => d.classificacao === "regular");
-    expect(regular?.dias).toBe(150);
-    expect(regular?.base, "a média precisa dizer sobre quantos cursos foi feita").toBe(2);
   });
 
-  it("⚠️ classificação em que TODOS têm duração nula dá `null`, e base 0", () => {
-    const i = indicadoresDoCatalogo([curso("especial", null)]);
-    const especial = i.duracaoMediaPorClassificacao.find((d) => d.classificacao === "especial");
-    expect(especial?.dias).toBeNull();
-    expect(especial?.base).toBe(0);
-  });
-
-  it("traz as cinco, na ordem do Glossário, com rótulo de tela", () => {
+  it("⚠️ sem a duração em semanas, o curso NÃO vira barra zero — ele é nomeado à parte", () => {
     const i = indicadoresDoCatalogo(BASE);
-    expect(i.duracaoMediaPorClassificacao.map((d) => d.classificacao)).toEqual([
-      ...CLASSIFICACOES_DE_CURSO,
-    ]);
-    expect(i.duracaoMediaPorClassificacao[0]?.rotulo).toBe("Curso Regular");
+    expect(i.duracaoEmSemanas.semInformacao).toEqual(["CAHO", "EST-QF-APOC"]);
+    expect(i.duracaoEmSemanas.porCurso.some((d) => d.semanas === 0)).toBe(false);
+  });
+
+  it("⚠️ a média por classificação SAIU — nenhuma chave fala em média nem em dias", () => {
+    const chaves = JSON.stringify(Object.keys(indicadoresDoCatalogo(BASE))).toLowerCase();
+    expect(chaves).not.toContain("media");
+    expect(chaves).not.toContain("dias");
   });
 });
 
@@ -110,12 +88,13 @@ describe("`FR-002` · cursos por classificação", () => {
       { classificacao: "regular", rotulo: "Curso Regular", total: 3 },
       { classificacao: "expedito", rotulo: "Curso Expedito", total: 2 },
       { classificacao: "especial", rotulo: "Curso Especial", total: 1 },
+      // Spec 022 (A-4): Estágio de Qualificação antes de Aperfeiçoamento Avançado.
+      { classificacao: "estagio_qualificacao", rotulo: "Estágio de Qualificação", total: 2 },
       {
         classificacao: "aperfeicoamento_avancado",
         rotulo: "Curso de Aperfeiçoamento Avançado",
         total: 1,
       },
-      { classificacao: "estagio_qualificacao", rotulo: "Estágio de Qualificação", total: 2 },
     ]);
   });
 
@@ -138,7 +117,7 @@ describe("⚠️ a metade que fecha a lista", () => {
       [
         "cursosRegulares",
         "estagiosDeQualificacao",
-        "duracaoMediaPorClassificacao",
+        "duracaoEmSemanas",
         "cursosPorClassificacao",
       ].sort(),
     );

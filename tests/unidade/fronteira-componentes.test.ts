@@ -138,6 +138,12 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
     // abre e fecha é estado efêmero de tela.
     "components/ciaara/avisos-recolhiveis.tsx",
     "components/ciaara/badge-teto.tsx",
+    // Spec 022 (Bloco 7): o botão de ícone abre a dica (Radix) e serve de gatilho de diálogo — é interação.
+    "components/ciaara/botao-de-icone.tsx",
+    // Spec 022 (Bloco 7): o diálogo do formulário curto — aberto ou fechado é estado de tela.
+    "components/ciaara/dialogo-de-formulario.tsx",
+    // Spec 022 (Bloco 7, item 10): veio de `app/(app)/instrutores/` quando Cursos passou a usá-lo — abrir é estado.
+    "components/ciaara/estatisticas-recolhiveis.tsx",
     // Spec 019 (Bloco 4): o carrossel do Início — o passo, a pausa e o «reduzir movimento» são do navegador.
     "components/ciaara/carrossel.tsx",
     // Spec 021 (Bloco 6, RC-6): o diálogo que pede a justificativa da correção — abrir e esperar a resposta é estado.
@@ -175,6 +181,8 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
     "components/casca/menu-do-avatar.tsx",
     "components/casca/painel-retratil.tsx",
     "components/casca/seletor-de-tema.tsx",
+    // Spec 022 (Bloco 7): o sininho pede o resumo ao trocar de rota e lê o "visto" do navegador.
+    "components/casca/sininho-de-avisos.tsx",
     "components/ciaara/seletor-turma.tsx",
     "components/ciaara/tabela-densa.tsx",
     "components/graficos/grafico-barras.tsx",

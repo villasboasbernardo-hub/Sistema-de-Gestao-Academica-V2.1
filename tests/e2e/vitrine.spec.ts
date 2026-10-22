@@ -134,7 +134,8 @@ test.describe("US1 · a vitrine mostra o vocabulário de COMPONENTES inteiro", (
     // diálogo cujo foco preso ninguém nunca exercitou.
     await abrirVitrine(page);
     for (const { slot, abrir } of SO_QUANDO_ABERTO) {
-      await page.getByRole("button", { name: abrir }).click();
+      // ⚠️ Nome EXATO: a amostra dos botões de ícone tem *"Ícone de desativar"*, que contém *"Desativar"*.
+      await page.getByRole("button", { name: abrir, exact: true }).click();
       await expect(page.locator(`[data-slot="${slot}"]`)).toBeVisible();
       await page.keyboard.press("Escape");
     }

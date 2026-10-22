@@ -23,9 +23,9 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { CampoObrigatorio, propsDoControle } from "@/components/ciaara/campo-obrigatorio";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { corrigirVigencia, registrarVigencia } from "@/lib/acoes/vigencia-regime";
 import { confirmacaoDaGravacao } from "@/lib/dominio/confirmacao-de-gravacao";
@@ -98,14 +98,14 @@ export function FormularioDeVigencia({
   }
 
   const botao = (
-    <Button
+    <BotaoDeIcone
+      acao={modo === "registrar" ? "registrar" : "salvar"}
+      rotulo={modo === "registrar" ? "Registrar vigência" : "Salvar correção"}
+      variante="padrao"
       type="submit"
-      size="sm"
-      disabled={gravando}
+      ocupado={gravando}
       data-slot={modo === "registrar" ? "registrar-vigencia" : "gravar-correcao"}
-    >
-      {modo === "registrar" ? "Registrar vigência" : "Salvar correção"}
-    </Button>
+    />
   );
 
   return (

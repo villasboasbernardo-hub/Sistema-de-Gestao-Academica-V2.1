@@ -22,17 +22,12 @@
  * ⚠️ **ERRO DE LEITURA NÃO ESTOURA** (`RN-DEG-01`): vira o vazio de "você não vê", que é o que uma
  * negativa da RLS de fato significa.
  */
-import Link from "next/link";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { escalaDeLinhas } from "@/lib/dominio/antiguidade";
-import {
-  AVISOS_INICIAIS,
-  avisosDoCadastro,
-  type RegraDeAviso,
-} from "@/lib/dominio/avisos-cadastro-instrutor";
 import { capacitacaoDoCadastro } from "@/lib/dominio/capacitacao-didatica";
 import { graficosDeInstrutores } from "@/lib/dominio/graficos-instrutor";
 import { indicadoresDeInstrutores } from "@/lib/dominio/indicadores-instrutor";
@@ -49,7 +44,6 @@ import {
 import { FiltrosDeInstrutores } from "./FiltrosDeInstrutores";
 import { opcoesDosFiltros } from "./opcoes";
 import { PainelDeInstrutores } from "./PainelDeInstrutores";
-import { QuadroDeAvisos, type InstrutorDoAviso } from "./QuadroDeAvisos";
 import { TabelaDeInstrutores, type LinhaDeInstrutor } from "./TabelaDeInstrutores";
 
 export default async function Instrutores({
@@ -97,7 +91,7 @@ export default async function Instrutores({
      * passado inalcançável. O que muda é que ele vai para o FIM da lista e sai marcado, o que
      * `opcoesDosFiltros` resolve. Sem a coluna, os dois ficam indistinguíveis.
      */
-    supabase.from("cursos").select("codigo, status").order("codigo"),
+    supabase.from("cursos").select("codigo, status, classificacao").order("codigo"),
     supabase
       .from("config_listas")
       .select("valor, ordem, ativo")
@@ -185,22 +179,6 @@ export default async function Instrutores({
     escala,
     indicadores.taxaDeSelecao,
   );
-  const avisos = avisosDoCadastro<InstrutorDoAviso & Parameters<RegraDeAviso["seAplica"]>[0]>(
-    linhas.map((l, n) => ({
-      id: l.id,
-      codigo: l.codigo,
-      pg: l.pg,
-      especialidade: l.especialidade,
-      nomeCompleto: l.nomeCompleto,
-      nomeDeGuerra: l.nomeDeGuerra,
-      categoria: l.categoria,
-      om: l.om,
-      nip: (brutas[n]?.nip as string | null | undefined) ?? null,
-      dataInicioDocenciaCiaara: brutas[n]?.data_inicio_docencia_ciaara ?? null,
-      capacitacao: capacitacaoDaLinha(n),
-    })),
-    AVISOS_INICIAIS,
-  );
   const opcoes = opcoesDosFiltros(opcoesRes.data ?? [], cursosRes.data ?? [], escala);
   const podeLer = pode(permissoes, "instrutores", "ler");
 
@@ -211,12 +189,12 @@ export default async function Instrutores({
           <h1 className="text-texto text-lg font-semibold">Instrutores</h1>
           {/* ⚠️ Oculto para quem não pode criar — e a RLS nega se a ação vier por fora da tela. */}
           <SePodeVer permissoes={permissoes} recurso="instrutores" acao="criar">
-            <Link
+            <BotaoDeIcone
+              acao="novo"
+              rotulo="Novo instrutor"
+              variante="padrao"
               href="/instrutores/novo"
-              className="border-marca bg-marca text-marca-contraste rounded-ciaara focus-visible:ring-marca border px-3 py-1 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Novo instrutor
-            </Link>
+            />
           </SePodeVer>
         </div>
         {/* veste: a dica que explica a ordem da lista — texto fixo, nunca dado */}
@@ -226,7 +204,7 @@ export default async function Instrutores({
       </header>
 
       {/* ⚠️ No topo, acima dos filtros, e recolhido — com as contagens à vista (emenda de 15/09/2026 ao FR-027). */}
-      <QuadroDeAvisos avisos={avisos} />
+      {/* Os avisos de qualidade de cadastro saíram daqui no Bloco 7 (spec 022, FR-004.4; A-2): página Avisos. */}
 
       <FiltrosDeInstrutores opcoes={opcoes} />
 

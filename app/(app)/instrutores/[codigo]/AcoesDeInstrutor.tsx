@@ -18,8 +18,8 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { Button } from "@/components/ui/button";
 import { desativarInstrutor, reativarInstrutor } from "@/lib/acoes/instrutor";
 
 export function AcoesDeInstrutor({
@@ -59,9 +59,12 @@ export function AcoesDeInstrutor({
         rotuloConfirmar={ativo ? "Desativar" : "Reativar"}
         aoConfirmar={executar}
       >
-        <Button type="button" size="sm" variant="outline" disabled={enviando}>
-          {enviando ? "Gravando…" : ativo ? "Desativar instrutor" : "Reativar instrutor"}
-        </Button>
+        <BotaoDeIcone
+          acao={ativo ? "desativar" : "reativar"}
+          rotulo={ativo ? "Desativar instrutor" : "Reativar instrutor"}
+          variante={ativo ? "destrutivo" : "contorno"}
+          ocupado={enviando}
+        />
       </DialogoConfirmacao>
 
       {erro ? (

@@ -20,6 +20,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { atualizar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } from "@/lib/acoes/dsa";
 import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
@@ -37,6 +38,7 @@ import { avisosAntesDeImprimir } from "@/lib/dominio/dsa/impressao";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
 import {
+  enderecoDaEdicaoDoCurso,
   enderecoDaPlanilhaDeContingencia,
   enderecoDaTurma,
 } from "@/lib/navegacao/endereco-de-turma";
@@ -413,15 +415,25 @@ export default async function SemanaDoDsa({
        * regime não tem relógio, e a grade sai com os TA **numerados**, sem horário — nunca com
        * exceção e nunca vazia. O aviso leva à tela que resolve, em vez de dizer "faltou dado".
        */}
+      {/*
+       * ⚠️ O LINK LEVAVA À FICHA DA TURMA, que não registra vigência (achado da triagem da spec 022, Bloco 7): a vigência
+       *    mora em *Editar curso* → parte *Horários* (spec 022, item 9), e é para lá que ele leva.
+       */}
       {semRelogio ? (
         <p role="status" className="text-sm text-atrasado-tinta" data-slot="sem-relogio">
           Este curso não tem vigência de regime que cubra esta semana, então os Tempos de Aula
           aparecem numerados, sem horário.{" "}
           <Link
-            href={`${enderecoDaTurma(codigo)}`}
+            href={
+              lida.cursoCodigo
+                ? // Spec 022 (item 9): a vigência do regime mora na parte *Horários* de Editar curso.
+                  `${enderecoDaEdicaoDoCurso(lida.cursoCodigo, undefined, "horarios")}#regime-de-horario`
+                : enderecoDaTurma(codigo)
+            }
             className="underline underline-offset-2 hover:text-texto"
+            data-slot="registrar-vigencia"
           >
-            Abra o curso para registrar uma nova vigência.
+            Abra a edição do curso para registrar uma nova vigência.
           </Link>
         </p>
       ) : null}
@@ -452,13 +464,13 @@ export default async function SemanaDoDsa({
                decide o nome do arquivo, e a recusa volta para cá com o aviso abaixo.
           */}
           {podeBaixarPlanilhaDeContingencia(permissoes, turma.modalidade as string | null) ? (
-            <a
+            <BotaoDeIcone
+              acao="baixar"
+              rotulo="Baixar planilha de contingência"
+              nativo
               href={enderecoDaPlanilhaDeContingencia(codigo)}
-              className="text-sm underline underline-offset-2 hover:text-texto"
               data-slot="baixar-planilha-de-contingencia"
-            >
-              Baixar planilha de contingência
-            </a>
+            />
           ) : null}
         </div>
         {valores.planilha === "falhou" ? (

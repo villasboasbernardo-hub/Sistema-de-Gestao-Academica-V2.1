@@ -5,6 +5,10 @@
  * > *"Expandir o painel de Estatísticas."* — spec 015 da v2.0, quickstart, passo 1 — o painel da v2.0
  * > nascia recolhido e era expandido por quem queria vê-lo.
  *
+ * ⚠️ **VOCABULÁRIO DESDE 22/10/2026** (spec 022, Bloco 7, item 10): *"Cursos: estatísticas no mesmo componente/estilo
+ *    das de Instrutores"* (Bernardo Villas Boas). Ele morava em `app/(app)/instrutores/`; a segunda tela que o usa
+ *    o trouxe para cá — um painel só, e não duas cópias que divergem.
+ *
  * ⚠️ O ESTADO É EFÊMERO, E FICA NO COMPONENTE. A pergunta do contrato de estado é *"isto faz sentido num
  * link que eu mando para outra pessoa?"* — o painel estar aberto não faz, como o painel de filtros
  * recolhido não faz (`tests/unidade/estado-efemero-intacto.test.ts`).
@@ -22,7 +26,14 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
-export function EstatisticasRecolhiveis({ children }: { readonly children: React.ReactNode }) {
+export function EstatisticasRecolhiveis({
+  id,
+  children,
+}: {
+  /** O `id` do painel — o `aria-controls` do botão aponta para ele; um por tela. */
+  readonly id: string;
+  readonly children: React.ReactNode;
+}) {
   const [aberto, setAberto] = useState(false);
 
   return (
@@ -33,7 +44,7 @@ export function EstatisticasRecolhiveis({ children }: { readonly children: React
           variant="outline"
           size="sm"
           aria-expanded={aberto}
-          aria-controls="estatisticas-de-instrutores"
+          aria-controls={id}
           onClick={() => setAberto((a) => !a)}
         >
           {aberto ? "Ocultar estatísticas" : "Exibir estatísticas"}
@@ -45,7 +56,7 @@ export function EstatisticasRecolhiveis({ children }: { readonly children: React
           />
         </Button>
       </div>
-      <div id="estatisticas-de-instrutores">{aberto ? children : null}</div>
+      <div id={id}>{aberto ? children : null}</div>
     </div>
   );
 }

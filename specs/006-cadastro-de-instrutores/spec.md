@@ -283,6 +283,12 @@ refinamento reaparece.
   ⚠️ **O teto é a FAIXA, jamais o número do regime.** Um instrutor de 40h com 20h previstas está
   **dentro**, não no limite.
   **Decisão registrada em 15/09/2026 (T011 d)**: os limites da faixa são **inclusivos** — exatamente 8h ou 12h no regime de 20h está dentro e não alerta; menos de 8 ou mais de 12 alerta. *(decisão de Bernardo Villas Boas, 15/09/2026)*
+  ⚠️ **EMENDA de 22/10/2026 — spec 022 (Bloco 7), item 11, mudança de regra autorizada nominalmente por Bernardo
+  Villas Boas**: *"Instrutores: aviso de carga horária SÓ quando a carga semanal está ACIMA da faixa (abaixo da faixa
+  deixa de avisar)."* O alerta deste `FR-016` passa a disparar **só acima do máximo** da faixa (mais de 12h no 20h,
+  mais de 24h no 40h, mais de 30h na Dedicação Exclusiva), na ficha e no sininho de avisos; **abaixo da faixa deixa de
+  avisar**. A faixa do `RN-2027-06` (documento 04) **não muda**, nem os limites inclusivos. O texto acima — "menos de
+  8 ou mais de 12 alerta" e "sai da faixa" — é o registro do que valia até 22/10/2026.
   **Decisão registrada em 15/09/2026 (fecha a pendência acima)**: a carga semanal do instrutor numa semana ISO — de segunda a domingo — é a **soma das médias semanais das atribuições ativas cuja janela prevista cobre aquela semana**. Semana sem atribuição não entra no cálculo nem gera alerta. O alerta dispara quando **alguma** semana coberta sai da faixa, e a mensagem nomeia a semana. 🛑 **Somar as médias do ano inteiro é proibido**: criaria alerta para quem nunca passou da faixa em semana nenhuma. A herança não define outro início de semana, e o projeto já usa semana ISO (documentos 20 e 25). *(decisão de Bernardo Villas Boas, 15/09/2026)*
   **Decisão registrada em 15/09/2026 (fecha o CHK005)**: o alerta de faixa avalia **todas** as semanas ISO que caem no **ano corrente** e estão cobertas por atribuição ativa — **inclusive semanas já passadas**, e **inclusive a parte que cai no ano corrente de uma janela que começou no ano anterior**. Semana ISO "do ano" é a do ano ISO, o da quinta-feira da semana (ISO 8601): a semana 1 de 2026 começa em 29/12/2025. A carga prevista **do ano** (`FR-014`) não muda: continua contando a atribuição no ano da data de início (T011 c). *(decisão de Bernardo Villas Boas, 15/09/2026)*
 - **FR-017**: MUST ser sinalizado o instrutor em docência há **mais de um ano sem capacitação

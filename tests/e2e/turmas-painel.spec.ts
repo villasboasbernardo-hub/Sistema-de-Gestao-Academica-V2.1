@@ -26,6 +26,7 @@ import { semanaDoPainel } from "@/lib/dominio/painel-de-turmas";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 
 import { limparBloco2, maisDias, semearBloco2, type Bloco2Semeado } from "./bloco-2-de-teste";
+import { abrirAvisosPeloSininho, avisoDaChave } from "./avisos";
 import { apagarConta, criarConta, emailDeTeste } from "./conta-de-teste";
 import { abrirFiltros, escolherNoFiltro, irAListaDeTurmas } from "./navegar-turmas";
 
@@ -106,24 +107,6 @@ async function linhasDoRecorte(page: Page): Promise<number> {
   return Number(texto.match(/\d+/)?.[0] ?? Number.NaN);
 }
 
-/**
- * O aviso de UM tipo, da turma dona dele — pelo LINK da turma, e não pelo texto: o aviso de conflito da T2 diz
- * *"com T1"*, e filtrar por texto casaria as duas linhas (medido na 1ª rodada, 19/10/2026).
- */
-function avisoDa(quadro: ReturnType<Page["locator"]>, tipo: string, turma: string) {
-  return quadro
-    .locator(`[data-slot="aviso-de-turma"][data-tipo="${tipo}"]`)
-    .filter({ has: quadro.page().getByRole("link", { name: turma, exact: true }) });
-}
-
-async function avisos(page: Page) {
-  const quadro = page.locator('[data-slot="avisos-de-turmas"]');
-  await expect(quadro).toBeVisible();
-  const botao = quadro.getByRole("button", { name: /Exibir avisos/ });
-  if (await botao.isVisible()) await botao.click();
-  return quadro;
-}
-
 test.describe("FR-005 · cinco indicadores e três avisos, do recorte", () => {
   test("⚠️ um ano só: o vigente por padrão, sem a planejada do ano seguinte; o seletor troca, e com o ano o Total bate com a tabela", async ({
     page,
@@ -176,40 +159,47 @@ test.describe("FR-005 · cinco indicadores e três avisos, do recorte", () => {
     await conferirIndicadores(page, { total: "4", planejadas: "1" });
   });
 
-  test("os três avisos dizem o que falta, e cada um leva à ficha por clique", async ({ page }) => {
+  /*
+   * Spec 022 (Bloco 7, FR-004.4): o quadro "O que falta nas turmas" saiu de `/turmas` — os números ficam, e os três
+   * avisos moram na página Avisos, pelo sininho, cada um com o link para onde se resolve: a janela na ficha, o instrutor
+   * nas disciplinas da ficha e o conflito no DSA da semana.
+   */
+  test("os três avisos dizem o que falta em Avisos, e cada um leva para onde se resolve, por clique", async ({
+    page,
+  }) => {
     test.setTimeout(120_000);
     await irAListaDeTurmas(page, EMAIL);
-    await abrirFiltros(page);
-    await escolherNoFiltro(page, "Curso", SIGLA);
-    await expect.poll(() => new URL(page.url()).searchParams.get("curso")).toBe(SIGLA);
+    await expect(page.locator('[data-slot="avisos-de-turmas"]')).toHaveCount(0);
+    await abrirAvisosPeloSininho(page);
 
-    let quadro = await avisos(page);
-    const semJanela = quadro.locator('[data-slot="aviso-de-turma"][data-tipo="sem_janela"]');
-    await expect(semJanela).toHaveCount(1);
-    await expect(semJanela).toContainText(codigo("T3"));
-
-    await expect(avisoDa(quadro, "sem_instrutor", codigo("T1"))).toContainText("1 disciplina");
+    await expect(avisoDaChave(page, `turmas:sem_janela:${codigo("T3")}`)).toHaveCount(1);
+    await expect(avisoDaChave(page, `turmas:sem_instrutor:${codigo("T1")}`)).toContainText(
+      "1 disciplina",
+    );
     // A concluída e a cancelada não estão em oferta: não avisam.
-    await expect(avisoDa(quadro, "sem_instrutor", codigo("T4"))).toHaveCount(0);
-    await expect(avisoDa(quadro, "sem_instrutor", codigo("T5"))).toHaveCount(0);
+    await expect(avisoDaChave(page, `turmas:sem_instrutor:${codigo("T4")}`)).toHaveCount(0);
+    await expect(avisoDaChave(page, `turmas:sem_instrutor:${codigo("T5")}`)).toHaveCount(0);
 
-    await expect(avisoDa(quadro, "conflito", codigo("T1"))).toContainText(`com ${codigo("T2")}`);
-    await expect(avisoDa(quadro, "conflito", codigo("T2"))).toContainText(`com ${codigo("T1")}`);
+    await expect(avisoDaChave(page, `turmas:conflito:${codigo("T1")}`)).toContainText(
+      `com ${codigo("T2")}`,
+    );
+    await expect(avisoDaChave(page, `turmas:conflito:${codigo("T2")}`)).toContainText(
+      `com ${codigo("T1")}`,
+    );
     // Sem conflito na T3 (não tem aula), e o aviso não nasce dela.
-    await expect(avisoDa(quadro, "conflito", codigo("T3"))).toHaveCount(0);
+    await expect(avisoDaChave(page, `turmas:conflito:${codigo("T3")}`)).toHaveCount(0);
 
-    for (const [tipo, chave] of [
-      ["sem_janela", "T3"],
-      ["sem_instrutor", "T1"],
-      ["conflito", "T2"],
+    for (const [tipo, chave, destino] of [
+      ["sem_janela", "T3", (c: string) => `/turmas/${encodeURIComponent(c)}`],
+      ["sem_instrutor", "T1", (c: string) => `/turmas/${encodeURIComponent(c)}`],
+      ["conflito", "T2", (c: string) => `/turmas/${encodeURIComponent(c)}/dsa`],
     ] as const) {
-      quadro = await avisos(page);
-      await avisoDa(quadro, tipo, codigo(chave))
-        .getByRole("link", { name: codigo(chave), exact: true })
+      await avisoDaChave(page, `turmas:${tipo}:${codigo(chave)}`)
+        .getByRole("link")
         .click();
-      await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(codigo(chave));
+      await expect.poll(() => new URL(page.url()).pathname).toBe(destino(codigo(chave)));
       await page.goBack();
-      await expect(page.locator('[data-slot="painel-de-turmas"]')).toBeVisible();
+      await expect(page.locator('[data-slot="pagina-de-avisos"]')).toBeVisible();
     }
   });
 });

@@ -17,6 +17,7 @@
  * com a executada **até hoje** (`chd_da_turma_ate`, D-COR-2), como o `/inicio` e a ficha. A guarda
  * `andamento-unico.test.ts` o admite como consumidor, desde que ele não decida atraso por conta própria.
  */
+import { emOrdemDeTurma } from "@/lib/dominio/ordem-de-cursos";
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
 
 import { regimeEfetivo } from "@/lib/dominio/regime-da-turma";
@@ -49,7 +50,8 @@ export type ParametrosDaListaDeTurmas = {
  */
 export const COLUNAS_DA_LISTA_DE_TURMAS =
   "id, codigo, turma, ano_letivo, status, modalidade, data_inicio, data_termino, alunos, curso_id, " +
-  "cursos!inner(codigo, nome_curso), " +
+  /* Spec 022 (FR-003): a classificação do curso dá a ordem da lista. */
+  "cursos!inner(codigo, nome_curso, classificacao), " +
   /* Spec 018 (Bloco 3): o regime nomeado da turma, para o saldo (C-9). */
   "regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(regime_tempos)";
 
@@ -102,7 +104,11 @@ export type LinhaBrutaDeTurma = {
   readonly data_termino: string | null;
   readonly alunos: number | null;
   readonly curso_id: string;
-  readonly cursos: { readonly codigo: string; readonly nome_curso: string } | null;
+  readonly cursos: {
+    readonly codigo: string;
+    readonly nome_curso: string;
+    readonly classificacao?: string | null;
+  } | null;
   readonly regime?: { readonly regime_tempos: number } | null;
 };
 
@@ -120,6 +126,8 @@ export type TurmaNaLista = {
   readonly cursoId: string;
   readonly cursoCodigo: string;
   readonly cursoNome: string;
+  /** Spec 022 (FR-003): a ordem das turmas é a do curso — a classificação, depois a sigla. */
+  readonly cursoClassificacao?: string | null;
   /** O % executado até hoje (`andamentoDaTurma`); `null` sem CH curricular ou antes de `comAndamento`. */
   readonly progresso: number | null;
   /** Spec 018: os TA por dia do regime nomeado que a turma escolheu; ausente/nulo = o regime do curso. */
@@ -202,25 +210,31 @@ export type OpcaoDeCurso = { readonly codigo: string; readonly nome: string };
  * ⚠️ **O TRAÇO NO LUGAR DO CURSO AUSENTE NÃO DEVERIA ACONTECER — e é por isso que ele existe.** O
  * `!inner` garante o curso; se um dia a junção mudar, a célula diz *"—"* em vez de a tela estourar
  * (`RN-DEG-01`).
+ * ⚠️ **A ORDEM É A ÚNICA DO SISTEMA** (spec 022, FR-003): a do curso (a classificação, depois a sigla sem os hífens),
+ *    depois o ano mais recente, depois o código — `emOrdemDeTurma`. O banco ainda ordena por ano e código, o que deixa
+ *    a entrada determinística; quem decide a ordem que se vê é o domínio.
  */
 export function paraLinhasDeTurma(brutas: readonly LinhaBrutaDeTurma[]): readonly TurmaNaLista[] {
-  return brutas.map((t) => ({
-    id: t.id,
-    codigo: t.codigo,
-    rotulo: t.turma,
-    ano: t.ano_letivo,
-    status: t.status,
-    modalidade: t.modalidade,
-    dataInicio: t.data_inicio,
-    dataTermino: t.data_termino,
-    alunos: t.alunos,
-    cursoId: t.curso_id,
-    cursoCodigo: t.cursos?.codigo ?? "—",
-    cursoNome: t.cursos?.nome_curso ?? "—",
-    progresso: null,
-    saldo: null,
-    regimeTempos: t.regime?.regime_tempos ?? null,
-  }));
+  return emOrdemDeTurma(
+    brutas.map((t) => ({
+      id: t.id,
+      codigo: t.codigo,
+      rotulo: t.turma,
+      ano: t.ano_letivo,
+      status: t.status,
+      modalidade: t.modalidade,
+      dataInicio: t.data_inicio,
+      dataTermino: t.data_termino,
+      alunos: t.alunos,
+      cursoId: t.curso_id,
+      cursoCodigo: t.cursos?.codigo ?? "—",
+      cursoNome: t.cursos?.nome_curso ?? "—",
+      cursoClassificacao: t.cursos?.classificacao ?? null,
+      progresso: null,
+      saldo: null,
+      regimeTempos: t.regime?.regime_tempos ?? null,
+    })),
+  );
 }
 
 /**

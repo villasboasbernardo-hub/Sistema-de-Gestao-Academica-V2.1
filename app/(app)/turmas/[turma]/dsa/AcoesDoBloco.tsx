@@ -30,6 +30,7 @@
 
 import * as React from "react";
 
+import { DialogFooter } from "@/components/ui/dialog";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -406,7 +407,8 @@ export function AcoesDoBloco({
         </div>
       ) : null}
 
-      <div className="border-borda flex flex-wrap items-center gap-2 border-t pt-2">
+      {/* Spec 022 (D-3): é o rodapé do diálogo do lançamento — os botões continuam com texto. */}
+      <DialogFooter className="border-borda flex-row flex-wrap items-center gap-2 border-t pt-2 sm:justify-start">
         <Button
           type="button"
           size="sm"
@@ -443,7 +445,7 @@ export function AcoesDoBloco({
             Excluir
           </Button>
         </DialogoConfirmacao>
-      </div>
+      </DialogFooter>
     </section>
   );
 }

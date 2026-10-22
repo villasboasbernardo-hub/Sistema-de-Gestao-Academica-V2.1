@@ -80,6 +80,35 @@ export function enderecoDoCurriculoNoCurso(sigla: string, versao: number): strin
 }
 
 /**
+ * A página própria de uma disciplina, dentro de *Editar curso* (spec 022, Bloco 7, D-2): o formulário longo da
+ * disciplina, a situação, a exclusão e as UEs e avaliações do currículo em diálogo. Pelo código gerado (`DIS-…`).
+ *
+ * @example enderecoDaDisciplinaNaEdicao("CAHO", "DIS-000123") → "/cursos/CAHO/editar/disciplinas/DIS-000123"
+ */
+export function enderecoDaDisciplinaNaEdicao(sigla: string, codigo: string): string {
+  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}/editar/disciplinas/${encodeURIComponent(codigo)}`;
+}
+
+/**
+ * O cadastro de disciplina, no currículo escolhido (spec 022, D-2).
+ *
+ * @example enderecoDaNovaDisciplina("CAHO", 2) → "/cursos/CAHO/editar/disciplinas/nova?curriculo=2"
+ */
+export function enderecoDaNovaDisciplina(sigla: string, versao?: number): string {
+  const base = `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}/editar/disciplinas/nova`;
+  return versao === undefined ? base : `${base}?curriculo=${versao}`;
+}
+
+/**
+ * Uma aba da página do curso (spec 022, Bloco 7: o aviso de turmas acima do limite leva à aba *Turmas*).
+ *
+ * @example enderecoDaAbaDoCurso("CAHO", "turmas") → "/cursos/CAHO?aba=turmas"
+ */
+export function enderecoDaAbaDoCurso(sigla: string, aba: string): string {
+  return `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}?aba=${encodeURIComponent(aba)}`;
+}
+
+/**
  * *Editar curso*, com o currículo escolhido e a parte em edição quando ditos (spec 021; ajuste 3 da conferência do PR
  * #82: o currículo se cria e se edita por inteiro dentro de *Editar curso*).
  *
@@ -325,8 +354,8 @@ export function enderecoDaSecaoDeDisciplinas(codigo: string): string {
  * ⚠️ **A ABA É OPCIONAL E VEM PRIMEIRO NA URL**, para que dois links da mesma turma em
  * abas diferentes não sejam a mesma cadeia por acidente de ordem.
  *
- * @example enderecoDaTurmaNoCurso("C-ApA-PCN-PR-EAD", "C-ApA-PCN-PR-EAD T2 2026", "grade")
- *          → "/cursos/C-ApA-PCN-PR-EAD?aba=grade&turma=C-ApA-PCN-PR-EAD+T2+2026"
+ * @example enderecoDaTurmaNoCurso("C-ApA-PCN-PR-EAD", "C-ApA-PCN-PR-EAD T2 2026", "turmas")
+ *          → "/cursos/C-ApA-PCN-PR-EAD?aba=turmas&turma=C-ApA-PCN-PR-EAD+T2+2026"
  */
 /**
  * Um valor de consulta escrito **exatamente como o `nuqs` o escreve**.

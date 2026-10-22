@@ -21,10 +21,9 @@
 "use client";
 
 import * as React from "react";
-import { PencilIcon } from "lucide-react";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
-import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export function EdicaoDoInstrutor({
@@ -55,10 +54,11 @@ export function EdicaoDoInstrutor({
     >
       <BarraDeAcoes rotulo="Ações do instrutor">
         <CollapsibleTrigger asChild>
-          <Button type="button" size="sm" variant="outline" data-slot="abrir-edicao-do-instrutor">
-            <PencilIcon aria-hidden="true" className="size-4" />
-            Editar instrutor
-          </Button>
+          <BotaoDeIcone
+            acao="editar"
+            rotulo="Editar instrutor"
+            data-slot="abrir-edicao-do-instrutor"
+          />
         </CollapsibleTrigger>
         {acoes}
       </BarraDeAcoes>

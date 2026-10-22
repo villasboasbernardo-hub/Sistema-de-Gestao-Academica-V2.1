@@ -13,11 +13,13 @@
  * ⚠️ **A CONFIRMAÇÃO SÓ APARECE QUANDO HÁ HISTÓRICO** (A-9). Desativar uma disciplina que nenhuma
  * turma usa é barato e desfazível; confirmar ali é o clique a mais que treina a clicar sem ler.
  */
+"use client";
+
 import * as React from "react";
 
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
-import { Button } from "@/components/ui/button";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { desativarDisciplina, reativarDisciplina } from "@/lib/acoes/disciplina";
 import { confirmacaoDaGravacao } from "@/lib/dominio/confirmacao-de-gravacao";
 
@@ -54,17 +56,17 @@ export function SituacaoDaDisciplina({
     ? confirmacaoDaGravacao("desativar_disciplina_com_historico", { nome, turmasQueUsam })
     : { confirma: false as const };
 
+  /* Spec 022 (FR-001): o verbo é o ícone, com o nome de antes na dica e no nome acessível. */
   const botao = (
-    <Button
-      type="button"
-      size="sm"
-      variant="ghost"
-      disabled={ocupado}
+    <BotaoDeIcone
+      acao={ativa ? "desativar" : "reativar"}
+      rotulo={ativa ? "Desativar disciplina" : "Reativar disciplina"}
+      variante={ativa ? "destrutivo" : "contorno"}
+      ocupado={ocupado}
+      rotuloOcupado={ativa ? "Desativando…" : "Reativando…"}
       onClick={confirmacao.confirma ? undefined : alternar}
       data-slot="alternar-situacao-da-disciplina"
-    >
-      {ativa ? "Desativar" : "Reativar"}
-    </Button>
+    />
   );
 
   return (

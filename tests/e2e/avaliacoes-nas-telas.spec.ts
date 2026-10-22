@@ -15,6 +15,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
+import { abrirAvisosPeloSininho, avisosDeVista } from "./avisos";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { abrirAbaDoCurso, irAoCursoPorClique, irAsDisciplinasDaEdicao } from "./navegar-curso";
 import {
@@ -84,9 +85,12 @@ test("US9 · «tempo de avaliação não definido» e o Admin define o tempo no 
   await expect(semTempo).toContainText("tempo de avaliação não definido");
 
   await semTempo.locator('[data-slot="definir-tempo"]').click();
-  await semTempo.getByLabel("TA de aplicação").fill("3");
-  await semTempo.getByLabel("Alcance do arbitrado").selectOption("curso");
-  await semTempo.getByRole("button", { name: "Gravar" }).click();
+  // Spec 022 (Bloco 7, FR-002): o tempo se define num diálogo.
+  const dialogo = page.locator('[data-slot="formulario-do-arbitrado"]');
+  await dialogo.getByLabel("TA de aplicação").fill("3");
+  await dialogo.getByLabel("Alcance do arbitrado").selectOption("curso");
+  await dialogo.getByRole("button", { name: "Salvar" }).click();
+  await expect(dialogo).toHaveCount(0);
 
   await expect(semTempo).not.toContainText("tempo de avaliação não definido");
   await expect(semTempo.locator('[data-avaliacoes="arbitrado"]').first()).toBeVisible();
@@ -146,58 +150,44 @@ test("Spec 021 · ajuste 3 · o arbitrado do curso fica em Editar curso, no curr
     .toBeGreaterThan(0);
 });
 
-test("FR-054 · o /inicio mostra a vista atrasada e a que vence em breve, com link para a aba", async ({
+/*
+ * Spec 022 (Bloco 7, FR-004.4): os alertas de vista saíram do /inicio e da ficha da turma — moram na página Avisos, pelo
+ * sininho, no módulo Avaliações, com o link para a aba Avaliações da turma.
+ */
+test("FR-054 · Avisos mostra a vista atrasada e a que vence em breve, com link para a aba", async ({
   page,
 }) => {
   await entrar(page, EMAIL_ADMIN, "/inicio");
-  const alertas = page.locator('[data-slot="alertas-de-vista"]');
-  // Nasce recolhido, com a contagem à vista (RNF-USA-04): abrir para ver a lista.
-  await alertas.locator('[data-slot="avisos-recolhiveis"] button').first().click();
+  await expect(page.locator('[data-slot="alertas-de-vista"]')).toHaveCount(0);
+  await abrirAvisosPeloSininho(page);
+  const atrasada = avisosDeVista(page, "atrasada").filter({ hasText: SEMEADO.turma });
+  await expect(atrasada).toHaveCount(1);
   await expect(
-    alertas.locator(`[data-alerta-de-vista="atrasada"]`, { hasText: SEMEADO.turma }),
-  ).toHaveCount(1);
-  await expect(
-    alertas.locator(`[data-alerta-de-vista="vence_em_breve"]`, { hasText: SEMEADO.turma }),
+    avisosDeVista(page, "vence_em_breve").filter({ hasText: SEMEADO.turma }),
   ).toHaveCount(1);
 
-  await alertas
-    .locator(`[data-alerta-de-vista="atrasada"]`, { hasText: SEMEADO.turma })
-    .getByRole("link")
-    .click();
+  await atrasada.getByRole("link").click();
   await expect(page).toHaveURL(/[?&]aba=avaliacoes/);
-  await expect(page.locator('[data-slot="alertas-de-vista"]')).toBeVisible();
+  await expect(page.locator('[data-aba="avaliacoes"]')).toHaveAttribute("aria-selected", "true");
 });
 
-test("RN-AV-13 · a PP com tempo de vista, aplicada há 10 dias e sem vista, NÃO é vista atrasada — no /inicio nem na ficha", async ({
+test("RN-AV-13 · a PP com tempo de vista, aplicada há 10 dias e sem vista, NÃO é vista atrasada — em Avisos nem na aba", async ({
   page,
 }) => {
   await entrar(page, EMAIL_ADMIN, "/inicio");
-  const noInicio = page.locator('[data-slot="alertas-de-vista"]');
-  await noInicio.locator('[data-slot="avisos-recolhiveis"] button').first().click();
-  const atrasadaNoInicio = (cod: string) =>
-    noInicio.locator('[data-alerta-de-vista="atrasada"]', {
-      hasText: `${VISTA.turma} · ${cod} ·`,
-    });
-  // Controle positivo: a PM da MESMA turma, aplicada no mesmo dia e sem vista, é atrasada.
-  await expect(atrasadaNoInicio(VISTA.disciplinaPm)).toHaveCount(1);
-  await expect(
-    noInicio.locator("[data-alerta-de-vista]", {
-      hasText: `${VISTA.turma} · ${VISTA.disciplinaPp} ·`,
-    }),
-  ).toHaveCount(0);
+  await abrirAvisosPeloSininho(page);
+  const daTurma = (tipo: "atrasada" | "vence_em_breve", cod: string) =>
+    avisosDeVista(page, tipo)
+      .filter({ hasText: `${VISTA.turma}:` })
+      .filter({ hasText: `${cod} ·` });
+  // Controle positivo: a PM da MESMA turma, aplicada no mesmo dia e sem vista, é atrasada — UMA vez.
+  await expect(daTurma("atrasada", VISTA.disciplinaPm)).toHaveCount(1);
+  await expect(daTurma("atrasada", VISTA.disciplinaPp)).toHaveCount(0);
+  await expect(daTurma("vence_em_breve", VISTA.disciplinaPp)).toHaveCount(0);
 
-  // Pelo alerta da PM, à ficha da turma (aba Avaliações): o alerta da ficha conta UMA atrasada, não duas.
-  await atrasadaNoInicio(VISTA.disciplinaPm).getByRole("link").click();
+  // Pelo aviso da PM, à ficha da turma (aba Avaliações).
+  await daTurma("atrasada", VISTA.disciplinaPm).getByRole("link").click();
   await expect(page).toHaveURL(/[?&]aba=avaliacoes/);
-  const naFicha = page.locator('[data-slot="alertas-de-vista"]');
-  await expect(naFicha).toHaveAttribute("data-atrasadas", "1");
-  await naFicha.locator('[data-slot="avisos-recolhiveis"] button').first().click();
-  await expect(
-    naFicha.locator('[data-alerta-de-vista="atrasada"]', { hasText: `${VISTA.disciplinaPm} ·` }),
-  ).toHaveCount(1);
-  await expect(
-    naFicha.locator("[data-alerta-de-vista]", { hasText: `${VISTA.disciplinaPp} ·` }),
-  ).toHaveCount(0);
 
   // E no quadro da aba: a PM 1 sai «Atrasada»; a PP 1, não.
   const pm = disciplinaNaAba(page, VISTA.disciplinaPm);
@@ -230,6 +220,9 @@ test("FR-038 · Editar curso → Disciplinas e avaliações: as avaliações do 
     .getByRole("gridcell", { name: `Disciplina ${SEMEADO.disciplinaComTempo}`, exact: false })
     .first()
     .click();
+  // Spec 022 (Bloco 7, D-2): as avaliações do currículo se editam na página própria da disciplina, em diálogo.
+  await page.locator('[data-slot="detalhe-da-disciplina"] [data-slot="editar-disciplina"]').click();
+  await expect(page.locator('[data-slot="pagina-da-disciplina"]')).toBeVisible();
 
   const painel = page.locator('[data-slot="avaliacoes-do-curriculo"]');
   await expect(painel.locator('[data-item-do-curriculo="PM 1"]')).toContainText(
@@ -241,22 +234,24 @@ test("FR-038 · Editar curso → Disciplinas e avaliações: as avaliações do 
 
   // Acrescentar um TG 1 transcrito do currículo — e depois inativá-lo: ele FICA na lista (regra 4).
   await painel.locator('[data-slot="acrescentar-avaliacao-do-curriculo"]').click();
-  const nova = painel.locator('[data-slot="nova-avaliacao-do-curriculo"]');
+  const nova = page.locator('[data-slot="nova-avaliacao-do-curriculo"]');
   await nova.getByLabel("Instrumento").selectOption("TG");
   await nova.getByLabel("TA de aplicação").fill("2");
   await nova.getByLabel("Arquivo do currículo").fill("curriculo-e2e.pdf");
   await nova.getByLabel("Página").fill("3");
-  await nova.getByRole("button", { name: "Acrescentar" }).click();
+  await nova.getByRole("button", { name: "Salvar" }).click();
   await justificar(page, "Acrescentar o TG 1 que o currículo traz.");
   const tg = painel.locator('[data-item-do-curriculo="TG 1"]');
   await expect(tg).toHaveAttribute("data-ativo", "true");
   await expect(nova).toHaveCount(0);
 
-  // *Editar* abre os campos SÓ deste item, e gravar os fecha com o valor novo (FR-010.3).
+  // *Editar* abre os campos SÓ deste item, num diálogo, e gravar o fecha com o valor novo (FR-010.3; spec 022).
   await tg.locator('[data-slot="editar-avaliacao-do-curriculo"]').click();
-  await expect(painel.locator("input")).toHaveCount(2);
-  await tg.getByLabel("TA de aplicação de TG 1").fill("3");
-  await tg.locator('[data-slot="gravar-item"]').click();
+  const edicao = page.locator('[data-slot="formulario-do-item"]');
+  await expect(edicao.locator("input")).toHaveCount(2);
+  await expect(painel.locator("input")).toHaveCount(0);
+  await edicao.getByLabel("TA de aplicação").fill("3");
+  await edicao.locator('[data-slot="gravar-item"]').click();
   await justificar(page, "O TG 1 tem 3 TA no currículo.");
   await expect(painel.getByRole("status").filter({ hasText: "TG 1 gravada" })).toBeVisible();
   await expect(painel.locator("input")).toHaveCount(0);

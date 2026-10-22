@@ -8,6 +8,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import { abrirAvisosPeloSininho, avisoDaChave } from "./avisos";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
 import { irParaASemanaDoDia } from "./percurso-do-dsa";
@@ -80,13 +81,18 @@ test("US1 2.2/2.3 · o Ajudante grava acima do máximo, e é avisado; a sugestã
 }) => {
   await irAFichaDaTurma(page, AJUDANTE, T.turmaSemPrevisto);
   const tad = card(page, "tad");
+  // Spec 022 (Bloco 7, FR-002): o previsto se edita num diálogo; a resposta fica no card.
+  const dialogo = page.locator('[data-slot="formulario-do-previsto"]');
   await tad.locator('[data-slot="editar-previsto"]').click();
-  await expect(tad.locator('[data-slot="sugestao-do-previsto"]')).toContainText("Sugestão");
+  await expect(dialogo.locator('[data-slot="sugestao-do-previsto"]')).toContainText("Sugestão");
+  await dialogo.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialogo).toHaveCount(0);
 
   const aec = card(page, "aec");
   await aec.locator('[data-slot="editar-previsto"]').click();
-  await aec.getByLabel("Previsto no PROENS (TA)").fill("70");
-  await aec.locator('[data-slot="gravar-previsto"]').click();
+  await dialogo.getByLabel("Previsto no PROENS (TA)").fill("70");
+  await dialogo.locator('[data-slot="gravar-previsto"]').click();
+  await expect(dialogo).toHaveCount(0);
   await expect(aec.locator('[data-slot="previsto-gravado"]')).toContainText(
     "acima do limite máximo",
   );
@@ -100,7 +106,7 @@ test("FR-008.1 · o Operador não vê o botão de editar o previsto", async ({ p
   await expect(page.locator('[data-slot="editar-previsto"]')).toHaveCount(0);
 });
 
-test("US1 2.4 · a aba Atividades do curso mostra os limites com a origem, e a turma excedida fica acima das abas", async ({
+test("US1 2.4 · a aba Atividades do curso mostra os limites com a origem, e a turma excedida vai para Avisos", async ({
   page,
 }) => {
   await irAFichaDaTurma(page, ADMIN, T.turmaSemPrevisto);
@@ -113,24 +119,26 @@ test("US1 2.4 · a aba Atividades do curso mostra os limites com a origem, e a t
 
   await irAFichaDaTurma(page, ADMIN, T.turmaAcima);
   await page.locator('[data-slot="curso-da-turma"]').click();
-  // ⚠️ O alerta do curso fica FORA das abas (RF-CURSO-06): está na aba padrão, sem clicar em nada.
-  await expect(page.locator('[data-slot="abas-do-curso"] [data-aba="sobre"]')).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  const excedida = page.locator('[data-slot="turma-excedida"]', { hasText: "TAD acima do máximo" });
-  await expect(excedida).toHaveText(`${T.turmaAcima}: TAD acima do máximo (29 de 27,25)`);
-  await excedida.click();
+  /*
+   * Spec 022 (Bloco 7, FR-004.4): a turma excedida saiu da página do curso — está na página Avisos, pelo sininho, com a
+   * mesma frase, e o link leva à ficha.
+   */
+  await expect(page.locator('[data-slot="abas-do-curso"]')).toBeVisible();
+  await expect(page.locator('[data-slot="turma-excedida"]')).toHaveCount(0);
+  await abrirAvisosPeloSininho(page);
+  const excedida = avisoDaChave(page, `turmas:teto_tad_acima_do_maximo:${T.turmaAcima}`);
+  await expect(excedida).toContainText(`${T.turmaAcima}: TAD acima do máximo (29 de 27,25)`);
+  await excedida.getByRole("link").click();
   await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(T.turmaAcima);
 });
 
-test("FR-005 · o /inicio alerta o teto excedido e leva à turma", async ({ page }) => {
+test("FR-005 · o teto excedido está em Avisos (era o /inicio) e leva à turma", async ({ page }) => {
   await entrar(page, ADMIN, "/inicio");
-  const alerta = page.locator('[data-slot="alerta-de-teto"]', {
-    hasText: `${T.turmaAcima}: TAD acima do máximo`,
-  });
-  await expect(alerta).toBeVisible();
-  await alerta.click();
+  await expect(page.locator('[data-slot="alertas-de-teto"]')).toHaveCount(0);
+  await abrirAvisosPeloSininho(page);
+  const alerta = avisoDaChave(page, `turmas:teto_tad_acima_do_maximo:${T.turmaAcima}`);
+  await expect(alerta).toContainText(`${T.turmaAcima}: TAD acima do máximo`);
+  await alerta.getByRole("link").click();
   await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(T.turmaAcima);
 });
 

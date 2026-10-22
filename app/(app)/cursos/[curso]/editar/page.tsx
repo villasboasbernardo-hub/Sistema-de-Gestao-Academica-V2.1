@@ -290,6 +290,17 @@ export default async function EditarCurso({
     });
   }
 
+  /* A vigência do regime de horário do curso — na parte *Horários* (spec 022, item 9). */
+  const secaoDeRegime = (
+    <SecaoDeRegime
+      cursoId={cursoId}
+      sigla={codigo}
+      vigencias={vigencias}
+      travas={travas}
+      podeRegistrar={podeRegistrarRegime}
+    />
+  );
+
   return (
     <section className="flex flex-col gap-6">
       <h1 className="text-texto text-lg font-semibold">Editar {codigo}</h1>
@@ -338,21 +349,18 @@ export default async function EditarCurso({
         )}
       </section>
 
-      <SecaoDeRegime
-        cursoId={cursoId}
-        sigla={codigo}
-        vigencias={vigencias}
-        travas={travas}
-        podeRegistrar={podeRegistrarRegime}
-      />
-
       <section
         aria-labelledby="titulo-curriculo-do-curso"
         className="flex flex-col gap-4"
         data-slot="curriculo-na-edicao"
       >
+        {/*
+          Spec 022 (Bloco 7), item 9 — o terceiro grupo: *"currículo e suas partes"*. A vigência do regime de horário do
+          curso, que ficava solta entre o cadastro e o currículo, foi para a parte *Horários*, ao lado dos regimes
+          nomeados — tudo o que é horário num lugar só.
+        */}
         <h2 id="titulo-curriculo-do-curso" className="text-texto text-base font-semibold">
-          Currículo
+          Currículo e suas partes
         </h2>
         <BarraDoCurriculo
           sigla={codigo}
@@ -456,6 +464,8 @@ export default async function EditarCurso({
                       desativar: editavel && podeDisciplinas.desativar,
                     }}
                     hoje={hoje}
+                    /* Spec 022 (D-2): *Nova disciplina* e *Editar* levam à página própria da disciplina. */
+                    edicao={{ sigla: codigo, versao: curriculo.versao }}
                   />
                 ) : null}
                 {avaliacoesDoCurriculo ? (
@@ -476,7 +486,7 @@ export default async function EditarCurso({
               </div>
             }
             horarios={
-              <div data-slot="parte-horarios">
+              <div className="flex flex-col gap-6" data-slot="parte-horarios">
                 {horarios ? (
                   <>
                     {horarios.erro ? (
@@ -497,6 +507,7 @@ export default async function EditarCurso({
                     />
                   </>
                 ) : null}
+                {secaoDeRegime}
               </div>
             }
             atividades={
@@ -510,7 +521,10 @@ export default async function EditarCurso({
               </div>
             }
           />
-        ) : null}
+        ) : (
+          /* Sem currículo não há partes: a vigência do regime fica à vista mesmo assim. */
+          secaoDeRegime
+        )}
       </section>
     </section>
   );
