@@ -13,6 +13,7 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 
+import { abrirAvisosPeloSininho, avisoDaChave, avisosDoSujeito } from "./avisos";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import {
   limparCursos,
@@ -286,32 +287,40 @@ test.describe("`FR-028.1` · a lista de turmas, com a SALA de cada uma (23/09/20
   });
 });
 
-test.describe("`FR-010.1` · o quadro de avisos fica ACIMA das abas, nas duas", () => {
-  test("ele está presente na Grade e no Sobre, e nasce recolhido", async ({ page }) => {
+/*
+ * Spec 022 (Bloco 7, FR-004.4): o quadro de avisos do curso SAIU da página — os avisos moram na página Avisos, pelo
+ * sininho, cada um com o link para onde se resolve. O caso mede os dois lados: o quadro sumiu, e nenhum aviso se perdeu.
+ */
+test.describe("`FR-010.1` → spec 022 · os avisos do curso vão para a página Avisos", () => {
+  test("o quadro sumiu do curso, e os dois avisos do estágio estão em Avisos, levando a Editar curso", async ({
+    page,
+  }) => {
     const sigla = SEMEADO.porClassificacao.estagio_qualificacao;
 
     await entrar(page, EMAIL_ADMIN, grade(sigla));
-    const quadro = page.locator('[data-slot="quadro-de-avisos-do-curso"]');
-    await expect(quadro).toBeVisible();
-    // O estágio da amostra nasce sem duração em semanas e sem propósito: dois avisos.
-    await expect(quadro.locator('[data-slot="total-de-avisos"]')).toHaveAttribute(
-      "data-quantidade",
-      "2",
-    );
-    await expect(quadro.locator('[data-slot="avisos-recolhiveis"]')).toHaveAttribute(
-      "data-aberto",
-      "false",
-    );
+    await expect(page.locator('[data-slot="aba-turmas"]')).toBeVisible();
+    await expect(page.locator('[data-slot="quadro-de-avisos-do-curso"]')).toHaveCount(0);
 
-    await page.goto(url(sigla, "aba=sobre"));
-    await expect(page.locator('[data-slot="quadro-de-avisos-do-curso"]')).toBeVisible();
+    await abrirAvisosPeloSininho(page);
+    // O estágio da amostra nasce sem duração em semanas e sem propósito: dois avisos.
+    for (const tipo of ["sem_duracao_semanas", "sem_proposito"]) {
+      const aviso = avisoDaChave(page, `cursos:${tipo}:${sigla}`);
+      await expect(aviso).toBeVisible();
+      await expect(aviso.getByRole("link")).toHaveAttribute(
+        "href",
+        `/cursos/${encodeURIComponent(sigla)}/editar`,
+      );
+    }
+    await avisoDaChave(page, `cursos:sem_proposito:${sigla}`).getByRole("link").click();
+    await expect
+      .poll(() => new URL(page.url()).pathname)
+      .toBe(`/cursos/${encodeURIComponent(sigla)}/editar`);
   });
 
-  test("curso sem aviso diz isso, em vez de ficar vazio", async ({ page }) => {
+  test("curso sem aviso não aparece em Avisos", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN, url(SEMEADO.porClassificacao.regular));
-    await expect(page.locator('[data-slot="quadro-de-avisos-do-curso"]')).toContainText(
-      "Nenhum aviso neste curso",
-    );
+    await abrirAvisosPeloSininho(page);
+    await expect(avisosDoSujeito(page, "cursos", SEMEADO.porClassificacao.regular)).toHaveCount(0);
   });
 });
 

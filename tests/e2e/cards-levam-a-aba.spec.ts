@@ -15,6 +15,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
+import { abrirAvisosPeloSininho, avisosDeVista } from "./avisos";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { limparAvaliacoes, semearAvaliacoes, type AvaliacoesSemeadas } from "./avaliacoes-de-teste";
 
@@ -62,13 +63,17 @@ test("1 · ficha da turma → card «Avaliações» → a aba Avaliações, aber
   await expect(page.locator('[data-aba="ficha"]')).toHaveAttribute("aria-selected", "true");
 });
 
-test("2 · ficha da turma → alerta de vista → a aba Avaliações, aberta e à vista", async ({
+/* Spec 022 (Bloco 7): o alerta de vista saiu da ficha — o caminho é o sininho, e o aviso leva à aba à vista. */
+test("2 · ficha da turma → sininho → aviso de vista → a aba Avaliações, aberta e à vista", async ({
   page,
 }) => {
   await entrar(page, EMAIL_ADMIN, enderecoDaTurma(SEMEADO.turma));
-  const alertas = page.locator('[data-slot="alertas-de-vista"]');
-  await alertas.locator('[data-slot="avisos-recolhiveis"] button').first().click();
-  await alertas.locator('[data-alerta-de-vista="atrasada"]').getByRole("link").first().click();
+  await abrirAvisosPeloSininho(page);
+  await avisosDeVista(page, "atrasada")
+    .filter({ hasText: `${SEMEADO.turma}:` })
+    .first()
+    .getByRole("link")
+    .click();
   await conferirAbaDeAvaliacoesAVista(page);
 });
 

@@ -18,6 +18,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, test } from "@playwright/test";
 
+import { abrirAvisosPeloSininho, avisoDaChave } from "./avisos";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
 import { irParaASemanaDoDia } from "./percurso-do-dsa";
@@ -118,12 +119,15 @@ test.describe("FR-009 · «Semana N de T» na tela e no papel, chegando por cliq
     test.setTimeout(90_000);
     await irAFichaDaTurma(page, EMAIL, TURMA);
 
-    /* ── FR-009.7 · o aviso de cadastro: a turma passa da duração do curso ───────────────────── */
-    const quadro = page.locator('[data-slot="quadro-de-avisos-da-turma"]');
-    await quadro.getByRole("button", { name: "Exibir avisos" }).click();
-    await expect(quadro.locator('[data-aviso="turma_mais_longa_que_o_curso"]')).toHaveText(
-      "A turma tem 37 semanas e o curso, 35.",
-    );
+    /*
+     * ── FR-009.7 · o aviso de cadastro: a turma passa da duração do curso ─────────────────────
+     * Spec 022 (Bloco 7): o quadro saiu da ficha — o aviso está na página Avisos, pelo sininho, e leva de volta.
+     */
+    await abrirAvisosPeloSininho(page);
+    const aviso = avisoDaChave(page, `turmas:turma_mais_longa_que_o_curso:${TURMA}`);
+    await expect(aviso).toContainText("A turma tem 37 semanas e o curso, 35.");
+    await aviso.getByRole("link").click();
+    await expect(page.locator('[data-slot="abrir-o-dsa"]')).toBeVisible();
 
     /* ── FR-009.2 · na tela: a 28ª semana, sem a semana ISO nem o «Nº» ──────────────────────── */
     await page.locator('[data-slot="abrir-o-dsa"]').click();

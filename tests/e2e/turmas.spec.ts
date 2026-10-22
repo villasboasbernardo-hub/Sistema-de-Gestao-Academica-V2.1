@@ -15,6 +15,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
+import { abrirAvisosPeloSininho, avisoDaChave } from "./avisos";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { limparCursos, semearCursos, type CursosSemeados } from "./cursos-de-teste";
 /*
@@ -360,15 +361,18 @@ test.describe("`FR-028.1` · os avisos informam e não bloqueiam", () => {
     page,
   }) => {
     await entrar(page, EMAIL_AJUDANTE, enderecoDe(SEMEADO.turmaAtivaComTerminoPassado));
-    await abrirEdicaoDaTurma(page);
-
-    const quadro = page.locator('[data-slot="quadro-de-avisos-da-turma"]');
     /*
-     * ⚠️ O QUADRO NASCE RECOLHIDO (`RNF-USA-04`), e fechado a lista **não é montada**. Contar
-     *    `[data-aviso]` sem abrir mede zero em qualquer implementação — inclusive numa que nunca avisa.
+     * Spec 022 (Bloco 7, FR-004.4): o quadro saiu da ficha — o aviso está na página Avisos, pelo sininho, e o link dele
+     * traz de volta à ficha, onde a gravação acontece assim mesmo.
      */
-    await quadro.getByRole("button", { name: "Exibir avisos" }).click();
-    await expect(quadro.locator('[data-aviso="ativa_com_termino_passado"]')).toHaveCount(1);
+    await abrirAvisosPeloSininho(page);
+    const aviso = avisoDaChave(
+      page,
+      `turmas:ativa_com_termino_passado:${SEMEADO.turmaAtivaComTerminoPassado}`,
+    );
+    await expect(aviso).toHaveCount(1);
+    await aviso.getByRole("link").click();
+    await abrirEdicaoDaTurma(page);
 
     await page.locator("#turma-alunos").fill("13");
     await page.locator('[data-slot="gravar-turma"]').click();
@@ -391,17 +395,17 @@ test.describe("`FR-028.1` · os avisos informam e não bloqueiam", () => {
 
   test("⚠️ turma sem janela avisa a janela — e NÃO acusa incoerência de data", async ({ page }) => {
     await entrar(page, EMAIL_AJUDANTE, enderecoDe(SEMEADO.turmaSemJanela));
-    await abrirEdicaoDaTurma(page);
-    const quadro = page.locator('[data-slot="quadro-de-avisos-da-turma"]');
-    await quadro.getByRole("button", { name: "Exibir avisos" }).click();
+    await abrirAvisosPeloSininho(page);
+    const turma = SEMEADO.turmaSemJanela;
 
-    await expect(quadro.locator('[data-aviso="sem_janela"]')).toHaveCount(1);
+    /* Spec 022: a janela incompleta dita pelo painel e pela ficha é UM aviso só (a mesma chave). */
+    await expect(avisoDaChave(page, `turmas:sem_janela:${turma}`)).toHaveCount(1);
     /*
      * ⚠️ DATA VAZIA NÃO DISPARA INCOERÊNCIA (`FR-028.1`): a ausência de janela já tem aviso próprio, e
      *    contar a mesma falha duas vezes mandaria corrigir a coisa errada.
      */
-    await expect(quadro.locator('[data-aviso="planejada_com_inicio_passado"]')).toHaveCount(0);
-    await expect(quadro.locator('[data-aviso="ativa_com_termino_passado"]')).toHaveCount(0);
+    await expect(avisoDaChave(page, `turmas:planejada_com_inicio_passado:${turma}`)).toHaveCount(0);
+    await expect(avisoDaChave(page, `turmas:ativa_com_termino_passado:${turma}`)).toHaveCount(0);
   });
 });
 

@@ -15,6 +15,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
+import { abrirAvisosPeloSininho, avisosDeVista } from "./avisos";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { abrirAbaDoCurso, irAoCursoPorClique, irAsDisciplinasDaEdicao } from "./navegar-curso";
 import {
@@ -146,58 +147,44 @@ test("Spec 021 · ajuste 3 · o arbitrado do curso fica em Editar curso, no curr
     .toBeGreaterThan(0);
 });
 
-test("FR-054 · o /inicio mostra a vista atrasada e a que vence em breve, com link para a aba", async ({
+/*
+ * Spec 022 (Bloco 7, FR-004.4): os alertas de vista saíram do /inicio e da ficha da turma — moram na página Avisos, pelo
+ * sininho, no módulo Avaliações, com o link para a aba Avaliações da turma.
+ */
+test("FR-054 · Avisos mostra a vista atrasada e a que vence em breve, com link para a aba", async ({
   page,
 }) => {
   await entrar(page, EMAIL_ADMIN, "/inicio");
-  const alertas = page.locator('[data-slot="alertas-de-vista"]');
-  // Nasce recolhido, com a contagem à vista (RNF-USA-04): abrir para ver a lista.
-  await alertas.locator('[data-slot="avisos-recolhiveis"] button').first().click();
+  await expect(page.locator('[data-slot="alertas-de-vista"]')).toHaveCount(0);
+  await abrirAvisosPeloSininho(page);
+  const atrasada = avisosDeVista(page, "atrasada").filter({ hasText: SEMEADO.turma });
+  await expect(atrasada).toHaveCount(1);
   await expect(
-    alertas.locator(`[data-alerta-de-vista="atrasada"]`, { hasText: SEMEADO.turma }),
-  ).toHaveCount(1);
-  await expect(
-    alertas.locator(`[data-alerta-de-vista="vence_em_breve"]`, { hasText: SEMEADO.turma }),
+    avisosDeVista(page, "vence_em_breve").filter({ hasText: SEMEADO.turma }),
   ).toHaveCount(1);
 
-  await alertas
-    .locator(`[data-alerta-de-vista="atrasada"]`, { hasText: SEMEADO.turma })
-    .getByRole("link")
-    .click();
+  await atrasada.getByRole("link").click();
   await expect(page).toHaveURL(/[?&]aba=avaliacoes/);
-  await expect(page.locator('[data-slot="alertas-de-vista"]')).toBeVisible();
+  await expect(page.locator('[data-aba="avaliacoes"]')).toHaveAttribute("aria-selected", "true");
 });
 
-test("RN-AV-13 · a PP com tempo de vista, aplicada há 10 dias e sem vista, NÃO é vista atrasada — no /inicio nem na ficha", async ({
+test("RN-AV-13 · a PP com tempo de vista, aplicada há 10 dias e sem vista, NÃO é vista atrasada — em Avisos nem na aba", async ({
   page,
 }) => {
   await entrar(page, EMAIL_ADMIN, "/inicio");
-  const noInicio = page.locator('[data-slot="alertas-de-vista"]');
-  await noInicio.locator('[data-slot="avisos-recolhiveis"] button').first().click();
-  const atrasadaNoInicio = (cod: string) =>
-    noInicio.locator('[data-alerta-de-vista="atrasada"]', {
-      hasText: `${VISTA.turma} · ${cod} ·`,
-    });
-  // Controle positivo: a PM da MESMA turma, aplicada no mesmo dia e sem vista, é atrasada.
-  await expect(atrasadaNoInicio(VISTA.disciplinaPm)).toHaveCount(1);
-  await expect(
-    noInicio.locator("[data-alerta-de-vista]", {
-      hasText: `${VISTA.turma} · ${VISTA.disciplinaPp} ·`,
-    }),
-  ).toHaveCount(0);
+  await abrirAvisosPeloSininho(page);
+  const daTurma = (tipo: "atrasada" | "vence_em_breve", cod: string) =>
+    avisosDeVista(page, tipo)
+      .filter({ hasText: `${VISTA.turma}:` })
+      .filter({ hasText: `${cod} ·` });
+  // Controle positivo: a PM da MESMA turma, aplicada no mesmo dia e sem vista, é atrasada — UMA vez.
+  await expect(daTurma("atrasada", VISTA.disciplinaPm)).toHaveCount(1);
+  await expect(daTurma("atrasada", VISTA.disciplinaPp)).toHaveCount(0);
+  await expect(daTurma("vence_em_breve", VISTA.disciplinaPp)).toHaveCount(0);
 
-  // Pelo alerta da PM, à ficha da turma (aba Avaliações): o alerta da ficha conta UMA atrasada, não duas.
-  await atrasadaNoInicio(VISTA.disciplinaPm).getByRole("link").click();
+  // Pelo aviso da PM, à ficha da turma (aba Avaliações).
+  await daTurma("atrasada", VISTA.disciplinaPm).getByRole("link").click();
   await expect(page).toHaveURL(/[?&]aba=avaliacoes/);
-  const naFicha = page.locator('[data-slot="alertas-de-vista"]');
-  await expect(naFicha).toHaveAttribute("data-atrasadas", "1");
-  await naFicha.locator('[data-slot="avisos-recolhiveis"] button').first().click();
-  await expect(
-    naFicha.locator('[data-alerta-de-vista="atrasada"]', { hasText: `${VISTA.disciplinaPm} ·` }),
-  ).toHaveCount(1);
-  await expect(
-    naFicha.locator("[data-alerta-de-vista]", { hasText: `${VISTA.disciplinaPp} ·` }),
-  ).toHaveCount(0);
 
   // E no quadro da aba: a PM 1 sai «Atrasada»; a PP 1, não.
   const pm = disciplinaNaAba(page, VISTA.disciplinaPm);

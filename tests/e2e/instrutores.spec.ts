@@ -11,6 +11,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
+import { abrirAvisosPeloSininho, avisoDaChave, avisosDoSujeito } from "./avisos";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { mudarSituacaoDoCurso, semearCursoInativavel } from "./curso-de-teste";
 import { anoCorrente } from "@/lib/formato/ano-corrente";
@@ -500,7 +501,8 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
       [...posicoes].sort((a, b) => a - b),
     );
 
-    await expect(page.locator('[data-slot="quadro-de-avisos"]')).toContainText("Instrutor sem NIP");
+    // Spec 022 (Bloco 7): o quadro de avisos de cadastro saiu da listagem — está na página Avisos.
+    await expect(page.locator('[data-slot="quadro-de-avisos"]')).toHaveCount(0);
 
     await expect(
       grade(page).locator('input, select, textarea, [contenteditable="true"]'),
@@ -509,7 +511,11 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
   });
 });
 
-test.describe("`FR-027` emendado · o quadro de avisos nasce recolhido, no topo, com as contagens", () => {
+/*
+ * Spec 022 (Bloco 7, FR-004.4; A-2, que emenda o `RF-INSTR-09`): o quadro de avisos de qualidade de cadastro SAIU da
+ * listagem — os avisos moram na página Avisos, pelo sininho, um por instrutor, cada um levando à ficha.
+ */
+test.describe("`FR-027` → spec 022 · os avisos de cadastro estão em Avisos, e levam à ficha", () => {
   let amostra: AmostraDeInstrutores;
 
   test.beforeAll(async () => {
@@ -520,63 +526,26 @@ test.describe("`FR-027` emendado · o quadro de avisos nasce recolhido, no topo,
     await limparInstrutores(PROCESSO, "Q");
   });
 
-  test("recolhido mostra contagem por tipo e total, sem tipo zerado; abrir mostra a lista e não mexe na URL", async ({
+  test("a listagem não tem mais o quadro; em Avisos, cada instrutor sem NIP da amostra, com o link da ficha", async ({
     page,
   }) => {
     await entrar(page, EMAIL_ADMIN, `/instrutores?om=${amostra.om}`);
-    const quadro = page.locator('[data-slot="quadro-de-avisos"]');
     // ⚠️ Prazo medido: com a base real e quatro processos, a listagem passa de 5 s (ver `abrirFicha`).
-    await expect(quadro).toBeVisible({ timeout: 15_000 });
-
-    // No topo: o quadro vem antes da barra de filtros.
-    const acima = await page.evaluate(() => {
-      const q = document.querySelector('[data-slot="quadro-de-avisos"]');
-      const f = document.querySelector('[data-slot="filtros-de-instrutores"]');
-      return !!q && !!f && !!(q.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING);
+    await expect(page.locator('[data-slot="filtros-de-instrutores"]')).toBeVisible({
+      timeout: 15_000,
     });
-    expect(acima, "o quadro de avisos não está acima dos filtros").toBe(true);
+    await expect(page.locator('[data-slot="quadro-de-avisos"]')).toHaveCount(0);
 
-    // Recolhido: a lista não está montada, e as contagens estão à vista.
-    await expect(quadro.getByRole("button", { name: "Exibir avisos" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
-    await expect(quadro.locator("[data-aviso]")).toHaveCount(0);
-    const contagens = quadro.locator("[data-contagem]");
-    await expect(contagens.first()).toBeVisible();
-    const quantidades = await contagens.evaluateAll((els) =>
-      els.map((e) => [e.getAttribute("data-contagem"), Number(e.getAttribute("data-quantidade"))]),
-    );
-    expect(
-      quantidades.every(([, n]) => (n as number) > 0),
-      "tipo com contagem zero apareceu na linha",
-    ).toBe(true);
-    // A amostra tem todos os obrigatórios preenchidos: esse tipo não aparece.
-    await expect(quadro.locator('[data-contagem="obrigatorio-pendente"]')).toHaveCount(0);
-    const soma = quantidades.reduce((t, [, n]) => t + (n as number), 0);
-    await expect(quadro.locator('[data-slot="total-de-avisos"]')).toHaveAttribute(
-      "data-quantidade",
-      String(soma),
-    );
-
-    const antes = page.url();
-    await quadro.getByRole("button", { name: "Exibir avisos" }).click();
-    await expect(quadro.getByRole("button", { name: "Ocultar avisos" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
-    for (const [chave, n] of quantidades) {
-      await expect(quadro.locator(`[data-aviso="${chave}"] li`)).toHaveCount(n as number);
+    await abrirAvisosPeloSininho(page);
+    const codigos = Object.values(amostra.codigos);
+    for (const codigo of codigos) {
+      await expect(avisoDaChave(page, `instrutores:sem-nip:${codigo}`)).toHaveCount(1);
+      // A amostra tem todos os obrigatórios preenchidos: esse aviso não aparece.
+      await expect(avisoDaChave(page, `instrutores:obrigatorio-pendente:${codigo}`)).toHaveCount(0);
     }
-    expect(page.url(), "abrir o quadro mexeu na URL").toBe(antes);
-  });
-
-  test("recorte sem aviso nenhum mantém o quadro na tela, dizendo isso", async ({ page }) => {
-    await entrar(page, EMAIL_ADMIN, `/instrutores?om=${amostra.om}-SEM-NINGUEM`);
-    const quadro = page.locator('[data-slot="quadro-de-avisos"]');
-    // ⚠️ Prazo medido: com a base real e quatro processos, a listagem passa de 5 s (ver `abrirFicha`).
-    await expect(quadro).toBeVisible({ timeout: 15_000 });
-    await expect(quadro.getByRole("status")).toHaveText("Nenhum aviso de cadastro neste recorte.");
+    const primeiro = codigos[0] as string;
+    await avisoDaChave(page, `instrutores:sem-nip:${primeiro}`).getByRole("link").click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe(`/instrutores/${primeiro}`);
   });
 });
 
@@ -831,19 +800,18 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     await abrirEdicaoDoInstrutor(page);
   }
 
-  test("20h com 14 horas por semana alerta nomeando as semanas, e gravar continua disponível", async ({
+  /*
+   * Spec 022 (Bloco 7, FR-004.4): os alertas da ficha SAÍRAM dela — moram na página Avisos, pelo sininho, calculados
+   * pelas mesmas funções. O texto de cada semana é o mesmo de antes, no detalhe do aviso.
+   */
+  const SEMANA_14H =
+    /Semana \d+\/\d{4} \(\d{2}\/\d{2}\/\d{4} a \d{2}\/\d{2}\/\d{4}\): 14 h, acima da faixa de 8 a 12 h\./g;
+
+  test("20h com 14 horas por semana alerta em Avisos nomeando as semanas, e gravar continua disponível", async ({
     page,
   }) => {
     await abrirFicha(page, amostra.codigos.ctMaisAntigo);
-    const alerta = page
-      .locator('[data-slot="alerta-conformidade"]')
-      .filter({ hasText: "Carga semanal prevista fora da faixa do regime" });
-    await expect(alerta).toBeVisible();
-    await expect(
-      alerta.getByText(
-        /^Semana \d+\/\d{4} \(\d{2}\/\d{2}\/\d{4} a \d{2}\/\d{2}\/\d{4}\): 14 h, acima da faixa de 8 a 12 h\.$/,
-      ),
-    ).toHaveCount(4);
+    await expect(page.locator('[data-slot="alerta-conformidade"]')).toHaveCount(0);
 
     // FR-018 · o alerta não condiciona nada: gravar continua habilitado, e desativar também.
     const rodape = page.locator('[data-slot="rodape-do-formulario"]');
@@ -853,6 +821,15 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
         .locator('[data-slot="barra-de-acoes"]')
         .getByRole("button", { name: "Desativar instrutor" }),
     ).toBeEnabled();
+
+    await abrirAvisosPeloSininho(page);
+    const aviso = avisoDaChave(page, `instrutores:fora-da-faixa:${amostra.codigos.ctMaisAntigo}`);
+    await expect(aviso).toContainText("Carga semanal prevista fora da faixa do regime");
+    expect(((await aviso.textContent()) ?? "").match(SEMANA_14H) ?? []).toHaveLength(4);
+    await aviso.getByRole("link").click();
+    await expect
+      .poll(() => new URL(page.url()).pathname)
+      .toBe(`/instrutores/${amostra.codigos.ctMaisAntigo}`);
   });
 
   test("`RN-INST-03` emendado · militar sem especialidade salva a própria ficha, e o campo segue nulo", async ({
@@ -891,22 +868,23 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
   }) => {
     const titulo = "Docência há mais de um ano sem capacitação didática";
     await abrirFicha(page, amostra.codigos.semCapacitacao);
-    const alerta = page.locator('[data-slot="alerta-conformidade"]').filter({ hasText: titulo });
-    await expect(alerta).toBeVisible();
-    await expect(
-      alerta.getByText(
-        "Em docência no CIAARA desde 01/03/2021, sem capacitação didática registrada.",
-      ),
-    ).toBeVisible();
     await expect(
       page
         .locator('[data-slot="rodape-do-formulario"]')
         .getByRole("button", { name: "Gravar alterações" }),
     ).toBeEnabled();
 
-    await abrirFicha(page, amostra.codigos.comAula);
+    await abrirAvisosPeloSininho(page);
+    const alerta = avisoDaChave(
+      page,
+      `instrutores:sem-capacitacao:${amostra.codigos.semCapacitacao}`,
+    );
+    await expect(alerta).toContainText(titulo);
+    await expect(alerta).toContainText(
+      "Em docência no CIAARA desde 01/03/2021, sem capacitação didática registrada.",
+    );
     await expect(
-      page.locator('[data-slot="alerta-conformidade"]').filter({ hasText: titulo }),
+      avisoDaChave(page, `instrutores:sem-capacitacao:${amostra.codigos.comAula}`),
     ).toHaveCount(0);
   });
 
@@ -916,19 +894,25 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     // 01/12 do ano anterior a 31/01 do corrente, 25 h por semana: acima da faixa de 8 a 12 h do 20h.
     const ano = new Date().getFullYear();
     await abrirFicha(page, amostra.codigos.semCapacitacao);
-    const alerta = page
-      .locator('[data-slot="alerta-conformidade"]')
-      .filter({ hasText: "Carga semanal prevista fora da faixa do regime" });
-    await expect(alerta).toBeVisible();
-    const linhas = alerta.getByText(/^Semana \d+\/\d{4} \(/);
-    expect(await linhas.count(), "a parte do ano corrente não alertou").toBeGreaterThanOrEqual(4);
-    for (const texto of await linhas.allInnerTexts()) {
+    // A atribuição começou no ano anterior: não entra na carga prevista do ano (T011 c).
+    await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("0 TA");
+
+    await abrirAvisosPeloSininho(page);
+    const alerta = avisoDaChave(
+      page,
+      `instrutores:fora-da-faixa:${amostra.codigos.semCapacitacao}`,
+    );
+    await expect(alerta).toContainText("Carga semanal prevista fora da faixa do regime");
+    const semanas =
+      ((await alerta.textContent()) ?? "").match(
+        /Semana [0-9]+\/[0-9]{4} [(][^)]*[)]: [^.]*[.]/g,
+      ) ?? [];
+    expect(semanas.length, "a parte do ano corrente não alertou").toBeGreaterThanOrEqual(4);
+    for (const texto of semanas) {
       expect(texto, "semana de outro ano entrou no alerta").toMatch(
         new RegExp(`^Semana [0-9]+/${ano} [(].*: 25 h, acima da faixa de 8 a 12 h[.]$`),
       );
     }
-    // A atribuição começou no ano anterior: não entra na carga prevista do ano (T011 c).
-    await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("0 TA");
   });
 
   test("CHK019 · a ficha de instrutor inativo não exibe alerta normativo", async ({ page }) => {
@@ -939,6 +923,9 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
       await abrirFicha(page, codigo);
       await expect(page.locator('header [data-slot="badge-status"]')).toContainText("inativo");
       await expect(page.locator('[data-slot="alerta-conformidade"]')).toHaveCount(0);
+      // Spec 022: e a página Avisos não traz nada dele — só instrutor ativo entra (CHK019).
+      await abrirAvisosPeloSininho(page);
+      await expect(avisosDoSujeito(page, "instrutores", codigo)).toHaveCount(0);
     } finally {
       await servico().from("instrutores").update({ status: "ativo" }).eq("codigo", codigo);
     }
@@ -947,10 +934,9 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
   test("40h com 20 horas por semana está dentro da faixa, e não alerta", async ({ page }) => {
     await abrirFicha(page, amostra.codigos.ctMaisModerno);
     await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("80 TA");
+    await abrirAvisosPeloSininho(page);
     await expect(
-      page
-        .locator('[data-slot="alerta-conformidade"]')
-        .filter({ hasText: "Carga semanal prevista fora da faixa do regime" }),
+      avisoDaChave(page, `instrutores:fora-da-faixa:${amostra.codigos.ctMaisModerno}`),
     ).toHaveCount(0);
   });
 });
