@@ -16,6 +16,8 @@ import {
   AmostraAlertaEteto,
   AmostraAvisosRecolhiveis,
   AmostraBarraDeAcoes,
+  AmostraBotoesDeIcone,
+  AmostraDialogoDeFormulario,
   AmostraBotaoLimparFiltros,
   AmostraCampo,
   AmostraCampoDeSenha,
@@ -372,8 +374,16 @@ export default function Vitrine() {
         <AmostraCampoDeSenha />
       </Secao>
 
-      <Secao titulo="Barra de ações — os verbos da ficha numa linha, do mesmo tamanho">
+      <Secao titulo="Barra de ações — os verbos da ficha numa linha, à direita, do mesmo tamanho">
         <AmostraBarraDeAcoes />
+      </Secao>
+
+      <Secao titulo="Botões de ícone — um verbo, um desenho; o rótulo vai na dica e no nome acessível">
+        <AmostraBotoesDeIcone />
+      </Secao>
+
+      <Secao titulo="Diálogo de formulário — o formulário curto abre num diálogo, nunca no meio da página">
+        <AmostraDialogoDeFormulario />
       </Secao>
 
       <Secao titulo="Diálogo de confirmação — a consequência, que neste sistema nunca é perda">

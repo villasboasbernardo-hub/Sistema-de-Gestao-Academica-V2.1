@@ -19,6 +19,8 @@ import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
 import { AvisosRecolhiveis } from "@/components/ciaara/avisos-recolhiveis";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
+import { BotaoDeIcone, ICONE_DA_ACAO, type AcaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
 import { CampoDeSenha } from "@/components/ciaara/campo-de-senha";
 import { BotaoLimparFiltros } from "@/components/ciaara/botao-limpar-filtros";
 import { BadgeTeto, type Teto } from "@/components/ciaara/badge-teto";
@@ -286,16 +288,69 @@ export function AmostraBotaoLimparFiltros() {
  * ambígua.
  */
 export function AmostraBarraDeAcoes() {
+  // Spec 022 (Bloco 7, FR-001): a barra alinha à direita, e os verbos padrão são ícones com dica e nome acessível.
   return (
     <BarraDeAcoes rotulo="Ações da amostra">
-      <Button size="sm" variant="outline">
-        Editar cadastro
-      </Button>
-      <Button size="sm" variant="destructive">
-        Excluir cadastro
-      </Button>
-      <Button size="sm">Nova turma</Button>
+      <BotaoDeIcone acao="editar" rotulo="Editar cadastro" />
+      <BotaoDeIcone acao="excluir" rotulo="Excluir cadastro" variante="destrutivo" />
+      <BotaoDeIcone acao="novo" rotulo="Nova turma" variante="padrao" />
     </BarraDeAcoes>
+  );
+}
+
+/**
+ * O vocabulário fechado dos botões de ícone (spec 022, FR-001): um verbo, um desenho. ⚠️ Nenhum nome CONTÉM
+ * *"Desativar"* nem *"Editar"*: as outras amostras abrem por esses nomes, e o Playwright casa por trecho.
+ */
+export function AmostraBotoesDeIcone() {
+  return (
+    <ul className="flex flex-wrap gap-2" data-slot="vocabulario-de-icones">
+      {(Object.keys(ICONE_DA_ACAO) as AcaoDeIcone[]).map((acao) => (
+        <li key={acao}>
+          <BotaoDeIcone acao={acao} rotulo={`Ícone de ${acao.replaceAll("-", " ")}`} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** O diálogo de um formulário curto (spec 022, FR-002): abre pelo ícone, grava e fecha; o rodapé com texto (D-3). */
+export function AmostraDialogoDeFormulario() {
+  const [nome, definirNome] = React.useState("Regime A");
+  return (
+    <div className="flex items-center gap-3">
+      <DialogoDeFormulario
+        titulo="Renomear a amostra"
+        gatilho={<BotaoDeIcone acao="editar" rotulo="Renomear a amostra" />}
+      >
+        {(fechar) => (
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              definirNome(String(new FormData(e.currentTarget).get("nome") ?? ""));
+              fechar();
+            }}
+          >
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="amostra-dialogo-nome">Nome</Label>
+              <Input id="amostra-dialogo-nome" name="nome" defaultValue={nome} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={fechar}>
+                Cancelar
+              </Button>
+              <Button type="submit" size="sm">
+                Salvar
+              </Button>
+            </div>
+          </form>
+        )}
+      </DialogoDeFormulario>
+      <span className="text-texto-suave text-sm" data-slot="nome-da-amostra">
+        {nome}
+      </span>
+    </div>
   );
 }
 
@@ -319,9 +374,7 @@ export function AmostraDialogoConfirmacao() {
         rotuloConfirmar="Desativar"
         aoConfirmar={() => definirFeito(true)}
       >
-        <Button variant="destructive" size="sm">
-          Desativar
-        </Button>
+        <BotaoDeIcone acao="desativar" rotulo="Desativar" variante="destrutivo" />
       </DialogoConfirmacao>
       <span className="text-texto-suave text-sm">
         {feito ? "Confirmado nesta amostra." : "Nada foi feito ainda."}

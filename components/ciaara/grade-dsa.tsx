@@ -213,12 +213,12 @@ function CorpoDoBloco({
        * tinge a célula; sem a palavra, quem não distingue a cor não sabe que há conflito.
        */}
       {foraDaSala ? (
-        <span className="w-fit rounded bg-conflito-fundo px-1 text-[10px] text-conflito-tinta">
+        <span className="w-fit rounded bg-atrasado-fundo px-1 text-[10px] text-atrasado-tinta">
           fora da sala · {bloco.local}
         </span>
       ) : null}
       {bloco.conflito ? (
-        <span className="w-fit rounded bg-conflito-fundo px-1 text-[10px] font-medium text-conflito-tinta">
+        <span className="w-fit rounded bg-atrasado-fundo px-1 text-[10px] font-medium text-atrasado-tinta">
           conflito de {bloco.conflito === "instrutor" ? "instrutor" : "fiscal"}
         </span>
       ) : null}
@@ -314,12 +314,12 @@ function CorpoDoCartao({
       ) : null}
       {/* ⚠️ As marcas vão como TEXTO, nunca só como cor (`RNF-USA-05`). */}
       {foraDaSala ? (
-        <span className="w-fit rounded bg-conflito-fundo px-1 text-[10px] text-conflito-tinta">
+        <span className="w-fit rounded bg-atrasado-fundo px-1 text-[10px] text-atrasado-tinta">
           fora da sala · {bloco?.local}
         </span>
       ) : null}
       {bloco?.conflito ? (
-        <span className="w-fit rounded bg-conflito-fundo px-1 text-[10px] font-medium text-conflito-tinta">
+        <span className="w-fit rounded bg-atrasado-fundo px-1 text-[10px] font-medium text-atrasado-tinta">
           conflito de {bloco.conflito === "instrutor" ? "instrutor" : "fiscal"}
         </span>
       ) : null}

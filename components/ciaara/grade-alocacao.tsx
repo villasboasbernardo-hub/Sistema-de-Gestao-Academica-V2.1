@@ -60,15 +60,22 @@ import { CelulaNavegavel, ListaNavegavel } from "@/components/ciaara/lista-naveg
 export type TomDaCelula =
   "livre" | "ocupada" | "nao_letivo" | "avaliacao" | "bloqueada" | "sem_relogio" | "conflito";
 
+/*
+ * ⚠️ **AS CORES DOS CARTÕES DO DSA** (spec 022, FR-006, D-13; pedido de Bernardo Villas Boas, 22/10/2026: *"aula,
+ *    atividade e Estudo Individual em azul claro; avaliação em verde; alerta/conflito em amarelo; feriado e dia parado
+ *    em roxo/lilás"*). São trios que já existem — `planejado`, `executado`, `atrasado`, `conformidade` —, nos dois temas
+ *    e auditados no contraste. O texto de cada cartão continua (a cor nunca é a única via, `RNF-USA-05`), e o
+ *    `data-tom` não mudou: muda só a classe. ⚠️ O PAPEL NÃO MUDA — a impressão tem o seu CSS (`app/print/dsa`).
+ */
 const TINTA_DO_TOM: Readonly<Record<TomDaCelula, string>> = {
   livre: "bg-superficie",
-  ocupada: "bg-executado-fundo text-executado-tinta",
-  nao_letivo: "bg-nao-letivo-fundo text-nao-letivo-tinta",
-  avaliacao: "bg-reserva-fundo text-reserva-tinta",
-  bloqueada: "bg-inativo-fundo text-inativo-tinta",
+  ocupada: "bg-planejado-fundo text-planejado-tinta",
+  nao_letivo: "bg-planejado-fundo text-planejado-tinta",
+  avaliacao: "bg-executado-fundo text-executado-tinta",
+  bloqueada: "bg-conformidade-fundo text-conformidade-tinta",
   // veste: o ESTADO VAZIO da célula sem relógio — não há valor nela, só a ausência.
   sem_relogio: "bg-superficie-2 text-texto-tenue",
-  conflito: "bg-conflito-fundo text-conflito-tinta",
+  conflito: "bg-atrasado-fundo text-atrasado-tinta",
 };
 
 /** Como cada tom se chama para quem não vê a cor. */
@@ -244,7 +251,7 @@ export function GradeAlocacao({
                   {c.bloqueio ? (
                     <span
                       id={`bloqueio-${c.chave}`}
-                      className="mt-0.5 block truncate text-[11px] font-normal text-inativo-tinta"
+                      className="mt-0.5 block truncate text-[11px] font-normal text-conformidade-tinta"
                       title={c.bloqueio}
                     >
                       {c.bloqueio}

@@ -37,7 +37,8 @@ export function BarraDeAcoes({ rotulo, children, className }: BarraDeAcoesProps)
       role="group"
       aria-label={rotulo}
       data-slot="barra-de-acoes"
-      className={cn("flex flex-wrap items-center gap-2", className)}
+      // Spec 022 (Bloco 7, FR-001.2): as ações ficam à DIREITA — a barra vai na linha do título ou acima da tabela.
+      className={cn("flex flex-wrap items-center justify-end gap-2", className)}
     >
       {children}
     </div>

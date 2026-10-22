@@ -126,7 +126,7 @@ export function ControleDeParadas({
         {paradas.map((p) => (
           <span
             key={p.codigo}
-            className="border-borda bg-nao-letivo-fundo text-nao-letivo-tinta rounded-ciaara inline-flex items-center gap-2 border px-2 py-0.5 text-xs"
+            className="border-borda bg-conformidade-fundo text-conformidade-tinta rounded-ciaara inline-flex items-center gap-2 border px-2 py-0.5 text-xs"
             data-parada={p.codigo}
           >
             {dataParaLeitura(p.data)} · {p.tipo}: {p.motivo}
