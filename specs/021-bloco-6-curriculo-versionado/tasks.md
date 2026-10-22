@@ -62,5 +62,5 @@
 - [X] T068 A prova na cópia NOVA do remoto (SC-006, rodada 6 de `antes-depois.md`): antes da M4, 24 cursos → 24 currículos e 0 turmas em currículo de
   outro curso; DSA, papel, planilha e páginas das 29 turmas idênticos — com a M4 e a M5 sob o código da `main` e sob o
   código do ramo
-- [ ] T069 CI verde → rito do remoto (M4 e M5: backup citado, dry-run só com as duas, `db push`, conferência só de
+- [X] T069 CI verde → rito do remoto (M4 e M5: backup citado, dry-run só com as duas, `db push`, conferência só de
   leitura) → merge → CI na `main` → Production → PR de documentação do encerramento → roteiro de Production

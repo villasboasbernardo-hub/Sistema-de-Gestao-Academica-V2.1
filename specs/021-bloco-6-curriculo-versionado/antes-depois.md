@@ -1,5 +1,27 @@
 # Antes × depois — currículo versionado (spec 021, PR 1)
 
+## Rodada 7 — o rito do remoto da M4 e da M5, em 21/10/2026 (autorizado na conferência do PR #82)
+
+O PR #82 com o CI verde nos três blocos sobre `c1cb088` (run `39690026463`: 1.022 pgTAP em 66 arquivos · 544 de ponta a
+ponta, 2 instáveis que passaram na repetição, 7 pulados).
+
+1. **Backup:** `remoto-20261021-195622.sql`.
+2. **A remedição sobre ESSE backup** (restaurado com as 90 migrations do remoto e o código da `main`): a impressão do
+   currículo **idêntica, 26 de 26**, antes e depois da M4 e da M5 (e igual à da cópia das 18:01); o retrato das telas das
+   29 turmas **byte a byte idêntico**.
+3. **Dry-run** listando só `20261021124838` e `20261021201915`; **`db push`** saída 0.
+4. **Conferência só de leitura no remoto:** **92 e 92** migrations, nenhuma só de um lado; a impressão digital do esquema
+   **igual nos dois bancos, linha a linha** (2.391 linhas, 0 diferenças; **`89a3f08e…`, 2.390 objetos**); **0** policies
+   de `DELETE`; uma view só sem `security_invoker`, a exceção nominal `vw_instrutor_dados_pessoais` (PII-1); os **7**
+   gatilhos da RC-6, os **2** da M5, a FK da turma para o regime do currículo e a policy do PDF por currículo; **6** linhas
+   do trio na matriz; 24 cursos, 24 currículos, 29 turmas, **0** regimes nomeados (nenhum sem currículo) e a trilha vazia;
+   Production respondendo (`/login` e `/estilo` 200, as protegidas 307).
+5. ⚠️ **O instável novo do CI, isolado:** `disciplinas.spec.ts:163` (*"partindo do endereço com a linha aberta, fecha e
+   REABRE"*) reprovou uma vez sob carga (a linha fechada depois do `goto`) e passou na repetição; **isolado aqui, 3 de 3**
+   (`PEND-021-3`). A primeira tentativa de isolar reprovou no **login**, e a causa era a máquina: um pedaço de JavaScript
+   da `.next` sumido e um arquivo apagado no commit (`SeletorDeCurriculo.tsx` na pasta antiga) reposto pelo OneDrive com a
+   data de antes do `git mv` — removido, build refeito, e o caso passou.
+
 ## Rodada 6 — os ajustes da conferência do PR #82: a M4 e a M5, em 21/10/2026 (SC-006)
 
 Base: **`remoto-20261021-180100.sql`** (cópia nova do remoto, 24 cursos, 29 turmas, 175 disciplinas, 3.736 aulas),
