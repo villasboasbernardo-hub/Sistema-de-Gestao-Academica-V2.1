@@ -15,7 +15,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
 import { ANO, limparDsa, SEGUNDA, SEMANA, semearDsa, type DsaSemeado } from "./dsa-de-teste";
-import { escolherDisciplina, irParaASemanaDoDia } from "./percurso-do-dsa";
+import { escolherDisciplina, irParaASemanaDoDia, salvarASemana } from "./percurso-do-dsa";
 import { irAFichaDaTurma } from "./navegar-turmas";
 
 let EMAIL = "";
@@ -257,6 +257,8 @@ test("US6 e US7 · a PM 1 aponta o item, a vista abre a sessão 1 e a 2, e os pa
   await expect(page.locator(`${GRADE} td[data-celula="2:4"]`)).toContainText("1ºSG Atividade Dois");
 
   // ── T218: o PAPEL, pelo botão Imprimir — a faixa, as sessões, quem conduz, o fiscal e os demais instrutores ──
+  // Spec 024 (RP-0): o lançado pela grade é rascunho até o «Salvar a semana», e o papel só traz o salvo.
+  await salvarASemana(page);
   await page.locator('[data-slot="imprimir-dsa"]').click();
   await page.waitForURL(/\/print\/dsa/);
   const papel = page.locator('[data-slot="dsa-impresso"]');

@@ -24,13 +24,19 @@ const ev = (
 });
 
 describe("situacaoDaSemana", () => {
-  it("sem evento e sem rascunho: em preenchimento — salvar sim, prévia e publicar não", () => {
+  it("⚠️ D-18: sem evento e sem rascunho é REGISTRADO — o que existe nasce salvo (RP-8)", () => {
     const s = situacaoDaSemana([], 0, false);
+    expect(s.situacao).toBe("registrado");
+    expect(s.podeGerarPrevia).toBe(true);
+    expect(s.podePublicar).toBe(true);
+    expect(s.travada).toBe(false);
+  });
+  it("sem evento e COM rascunho: em preenchimento — salvar sim, prévia e publicar não", () => {
+    const s = situacaoDaSemana([], 1, false);
     expect(s.situacao).toBe("em_preenchimento");
     expect(s.podeSalvar).toBe(true);
     expect(s.podeGerarPrevia).toBe(false);
     expect(s.podePublicar).toBe(false);
-    expect(s.travada).toBe(false);
   });
   it("com rascunho: em preenchimento, e o descarte aparece", () => {
     const s = situacaoDaSemana([ev("salvo", "2026-10-20T10:00:00Z")], 2, false);

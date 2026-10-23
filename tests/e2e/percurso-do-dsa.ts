@@ -55,3 +55,17 @@ export async function escolherDisciplinaEUnidade(page: Page, cod: string): Promi
   await escolherDisciplina(page, cod);
   await page.locator("#dsa-unidade").selectOption({ index: 1 });
 }
+
+/**
+ * **Salvar a semana** (spec 024, RP-0): o que se lança pela grade nasce RASCUNHO e não conta em nada — nem no papel, nem
+ * na situação, nem na CH — até o «Salvar». Todo percurso que lança pela tela e depois imprime ou confere número passa por
+ * aqui, e espera a resposta e o fim do «não salvo».
+ *
+ * ⚠️ **UM AUXILIAR SÓ** (pedido de Bernardo Villas Boas, 23/10/2026): esquecer o Salvar dá um papel sem o lançamento e um
+ *    número que não mudou — o sintoma se lê como defeito da impressão, não como passo faltando.
+ */
+export async function salvarASemana(page: Page): Promise<void> {
+  await page.locator('[data-slot="salvar-semana"]').click();
+  await expect(page.locator('[data-slot="resposta-da-publicacao"]')).toContainText("Semana salva");
+  await expect(page.locator('[data-slot="nao-salvos"]')).toHaveCount(0);
+}

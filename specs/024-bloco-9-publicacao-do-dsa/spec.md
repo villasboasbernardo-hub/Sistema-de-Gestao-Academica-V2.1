@@ -158,3 +158,7 @@ semipresencial conta a carga do curso inteiro, inclusive a etapa a distância.
   Bernardo (23/10/2026). Emenda o `D8` da spec 012 (*capacidade da EAD pelo limite diário em horas*), que deixa de valer.
 - D-17 · A M2 **não mexe em privilégio**: `create or replace view` preserva os da view (achado da prova da reversão,
   `antes-depois.md` §1).
+- D-18 · A semana está **Registrada** quando **não tem rascunho** — não quando tem o evento «salvo». O que existe nasce
+  salvo (RP-8): uma semana com dado de antes do Bloco 9, ou vazia, já está registrada e pode gerar a prévia e ser
+  publicada; *Em preenchimento* é ter rascunho por salvar. O banco publica pela mesma regra. *Alternativa: exigir um
+  «Salvar» em toda semana antiga antes da primeira prévia (achado dos e2e: 27 reprovações da impressão vinham disso).*

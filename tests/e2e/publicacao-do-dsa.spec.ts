@@ -18,7 +18,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
 import { limparDsa, semearDsa, type DsaSemeado } from "./dsa-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
-import { escolherDisciplinaEUnidade, irParaASemanaDoDia } from "./percurso-do-dsa";
+import { escolherDisciplinaEUnidade, irParaASemanaDoDia, salvarASemana } from "./percurso-do-dsa";
 import { dataComDiaDaSemana } from "@/lib/formato/data";
 
 test.describe.configure({ mode: "serial" });
@@ -109,7 +109,8 @@ test("SC-001/SC-003/SC-004 · rascunho → salvar → prévia → publicar → a
   test.setTimeout(300_000);
   const antes = await taDaTurma();
   await abrirASemana(page, SEGUNDA, SEMANA);
-  await expect(situacao(page)).toHaveAttribute("data-situacao", "em_preenchimento");
+  /* D-18: a semana sem rascunho já está registrada — o que existe nasce salvo. */
+  await expect(situacao(page)).toHaveAttribute("data-situacao", "registrado");
 
   /* 1. Lançar é rascunho: «não salvo», e a CH não muda. */
   await lancarAula(page, 3, TERCA, topico("um"));
@@ -122,14 +123,14 @@ test("SC-001/SC-003/SC-004 · rascunho → salvar → prévia → publicar → a
     .single();
   expect((rascunho as { salvo: boolean }).salvo).toBe(false);
   expect(await taDaTurma(), "o rascunho NÃO conta (RP-8)").toBe(antes);
+  await expect(situacao(page)).toHaveAttribute("data-situacao", "em_preenchimento");
   await expect(page.locator('[data-slot="imprimir-dsa"]')).toHaveAttribute(
     "data-desabilitado",
     "sim",
   );
 
   /* 2. Salvar: conta. */
-  await page.locator('[data-slot="salvar-semana"]').click();
-  await expect(page.locator('[data-slot="resposta-da-publicacao"]')).toContainText("Semana salva");
+  await salvarASemana(page);
   await expect(situacao(page)).toHaveAttribute("data-situacao", "registrado");
   await expect.poll(taDaTurma).toBe(antes + 1);
 

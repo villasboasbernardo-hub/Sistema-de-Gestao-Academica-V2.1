@@ -557,9 +557,8 @@ begin
    order by e.ocorrido_em desc, e.criado_em desc limit 1;
 
   if v_ultimo is null then
-    if not exists (select 1 from public.dsa_eventos_da_semana e
-                    where e.turma_id = p_turma and e.ano = p_ano and e.semana = p_semana and e.tipo = 'salvo')
-       or exists (select 1 from app.rascunhos_da_semana(p_turma, p_de, p_ate)) then
+    -- D-18: salva é NÃO TER RASCUNHO — o que existe nasce salvo (RP-8); o evento «salvo» não é exigido.
+    if exists (select 1 from app.rascunhos_da_semana(p_turma, p_de, p_ate)) then
       raise exception 'Salve a semana antes de publicar.' using errcode = '23514', hint = 'semana_do_dsa_nao_salva';
     end if;
     perform app.registrar_evento_do_dsa(p_turma, p_ano, p_semana, 'publicado', 0::smallint, null, p_retrato);

@@ -79,13 +79,15 @@ export function situacaoDaSemana(
   const publicada = publicacoes.length > 0;
   const emAlteracao = ultimoDeTrava?.tipo === "alteracao_iniciada";
   const travada = publicada && !emAlteracao;
-  const salva = ordem.some((e) => e.tipo === "salvo");
-
+  /*
+   * ⚠️ D-18: «registrado» é NÃO TER RASCUNHO, não ter o evento «salvo» — o que existe nasce salvo (RP-8), e uma semana com
+   *    dado anterior ao Bloco 9 (ou vazia) já está toda registrada. «Em preenchimento» é ter rascunho por salvar.
+   */
   const situacao: Situacao = emAlteracao
     ? "alteracao_em_andamento"
     : travada
       ? "publicado"
-      : salva && rascunhos === 0
+      : rascunhos === 0
         ? "registrado"
         : "em_preenchimento";
 
