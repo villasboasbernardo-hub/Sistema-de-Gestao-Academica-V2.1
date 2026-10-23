@@ -622,6 +622,24 @@ export const CONTRATO = {
       },
       de: { nome: "de", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
       ate: { nome: "ate", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
+      /*
+       * Spec 023 (Bloco 8, D-6): as abas «Atividades» e «Calendário». Trocar de aba é navegação — empilha, como as
+       * abas da turma e do curso. A aba Calendário só existe para quem tem permissão de calendário; para os demais,
+       * `?aba=calendario` cai na lista.
+       */
+      aba: {
+        nome: "aba",
+        tipo: "escolha",
+        padrao: "atividades",
+        opcoes: ["atividades", "calendario"],
+        historico: "empilha",
+        avisaServidor: true,
+      },
+      /*
+       * Spec 023 (FR-006): o ano do Calendário — a mesma régua do Início e de Turmas (`AnoDoPainel`). Texto, com
+       * padrão vazio = o ano de hoje em São Paulo; quem valida é `anoDoPainel`.
+       */
+      ano: { nome: "ano", tipo: "texto", padrao: "", historico: "empilha", avisaServidor: true },
     },
   },
   "/cursos/[curso]/turmas/nova": {

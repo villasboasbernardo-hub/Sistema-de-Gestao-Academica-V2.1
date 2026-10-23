@@ -87,6 +87,8 @@ import {
   type ItemParaOferta,
 } from "@/lib/dominio/dsa/itens-da-disciplina";
 import { naturezaPeloTipo } from "@/lib/dominio/avaliacoes/quadro-da-turma";
+import { linhasComAbrangencia } from "@/lib/calendario/abrangencia";
+import { feriadosDaTurma, tipoDaLinha } from "@/lib/dominio/calendario";
 import type { NaturezaDaAvaliacao } from "@/lib/dominio/avaliacoes/situacao";
 import {
   COLUNAS_DA_OCUPACAO,
@@ -187,7 +189,26 @@ export type AvaliacaoParaVista = {
 /** Uma avaliação do currículo oferecida ao formulário, por disciplina (spec 014, FR-032). */
 export type AvaliacaoDoCurriculoOferecida = ItemOferecido & { readonly disciplinaId: string };
 
+/**
+ * Spec 023 (Bloco 8, FR-001): a linha do calendário de dia inteiro que alcança a turma na semana — o que a faixa de
+ * paradas mostra com *Desfazer*. Ela NÃO entra nas `paradas` do domínio: a grade e o papel já a mostram como dia
+ * bloqueado, e o papel não muda (FR-017).
+ */
+export type FeriadoNaFaixa = {
+  readonly codigo: string;
+  readonly data: string;
+  readonly descricao: string;
+  /** A sigla do tipo (`tipoDaLinha`), ou `null` quando não informado. */
+  readonly tipo: string | null;
+  /** `true` quando a linha é de turmas escolhidas (não de todas). */
+  readonly restrito: boolean;
+  /** Quantas turmas escolhidas (0 = todas). */
+  readonly turmasEscolhidas: number;
+};
+
 export type SemanaDoDsa = {
+  /** Spec 023: os feriados de dia inteiro da semana, para a faixa de paradas. */
+  readonly feriadosNaFaixa: readonly FeriadoNaFaixa[];
   readonly semana: Semana;
   readonly relogio: Relogio | null;
   readonly dias: readonly string[];
@@ -528,6 +549,8 @@ export async function lerPeriodoDoDsa(
           "escala_antiguidade",
           /* A2 (16/10/2026): o instrumento da prova sem item do currículo. */
           "instrumentos_avaliacao",
+          /* Spec 023: as siglas do tipo da linha do calendário (a faixa de paradas lê o prefixo do nome). */
+          "tipos_parada",
         ])
         .eq("ativo", true)
         .order("ordem")
@@ -849,7 +872,11 @@ export async function lerPeriodoDoDsa(
     avaliacoes: listaOuVazia(avaliacoesRes, erros, "avaliações"),
     atividades: listaOuVazia(atividadesRes, erros, "atividades"),
     vigencias,
-    feriados: listaOuVazia(feriadosRes, erros, "feriados"),
+    /* Spec 023 (D-4): só as linhas do calendário que alcançam a turma — a grade, o papel e a planilha herdam. */
+    feriados: feriadosDaTurma(
+      linhasComAbrangencia<Record<string, unknown>>(listaOuVazia(feriadosRes, erros, "feriados")),
+      turmaId,
+    ),
     curso: cursoRes.error
       ? (erros.push({ lista: "curso", mensagem: cursoRes.error.message }), null)
       : cursoRes.data,
@@ -1551,6 +1578,10 @@ export function montarSemanaDoDsa(
   const cursoPorCompetencias = turmaDoCurriculo?.curriculo?.curriculo_modelo === "competencias";
 
   return {
+    feriadosNaFaixa: feriadosNaFaixa(
+      feriadosRes.data ?? [],
+      daLista("tipos_parada").map((l) => l.valor),
+    ),
     semana,
     relogio,
     dias: janela.dias,
@@ -1930,6 +1961,28 @@ export async function lerExtrasDaImpressao(
   ];
 
   return { execucao, responsaveis, datasComLancamentoDaTurma: datas };
+}
+
+/** Spec 023 (FR-001): as linhas de dia inteiro da semana, com o tipo e a abrangência. Só tira coluna de linha. */
+function feriadosNaFaixa(linhas: readonly unknown[], siglas: readonly string[]): FeriadoNaFaixa[] {
+  type L = {
+    codigo: string;
+    data: string;
+    descricao: string;
+    impacto: string;
+    tipo: { valor: string } | null;
+    turmas: readonly string[];
+  };
+  return (linhas as L[])
+    .filter((l) => l.impacto === "dia_inteiro")
+    .map((l) => ({
+      codigo: l.codigo,
+      data: l.data,
+      descricao: l.descricao,
+      tipo: tipoDaLinha({ tipo: l.tipo?.valor ?? null, descricao: l.descricao }, siglas),
+      restrito: l.turmas.length > 0,
+      turmasEscolhidas: l.turmas.length,
+    }));
 }
 
 /** As paradas da semana no formato do domínio (spec 014). Só tira coluna de linha. */

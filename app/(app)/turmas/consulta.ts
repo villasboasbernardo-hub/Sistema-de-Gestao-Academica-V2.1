@@ -17,6 +17,7 @@
  * com a executada **até hoje** (`chd_da_turma_ate`, D-COR-2), como o `/inicio` e a ficha. A guarda
  * `andamento-unico.test.ts` o admite como consumidor, desde que ele não decida atraso por conta própria.
  */
+import { datasQueAlcancam } from "@/lib/dominio/calendario";
 import { emOrdemDeTurma } from "@/lib/dominio/ordem-de-cursos";
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
 
@@ -156,7 +157,11 @@ export type InsumosDoAndamentoDaLista = {
     readonly regime_padrao_tempos: number | null;
     readonly limite_diario_ead_horas: number | null;
   }[];
-  readonly feriadosDiaInteiro: readonly string[];
+  /** Spec 023 (D-4): os feriados de dia inteiro com as turmas escolhidas (vazio = todas). */
+  readonly feriadosDiaInteiro: readonly {
+    readonly data: string;
+    readonly turmas: readonly string[];
+  }[];
   /** O dia de São Paulo (`hojeNaCiaara()`). */
   readonly hoje: string;
 };
@@ -192,7 +197,7 @@ export function comAndamento(
         regimeDoBanco(regime.get(l.cursoId) ?? null),
         l.regimeTempos == null ? null : { regimeTempos: l.regimeTempos },
       ),
-      insumos.feriadosDiaInteiro,
+      datasQueAlcancam(insumos.feriadosDiaInteiro, l.id),
       insumos.hoje,
     );
     return {

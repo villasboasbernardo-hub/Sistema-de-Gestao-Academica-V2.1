@@ -20,6 +20,7 @@
  * errada que o gotcha descreve. Quem decide a frase é o **alcance declarado do perfil**, nunca o
  * tamanho da lista.
  */
+import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
@@ -105,7 +106,8 @@ export default async function Turmas({
       .select("curso_id, regime_padrao_tempos, limite_diario_ead_horas"),
     supabase
       .from("feriados")
-      .select("data")
+      /* Spec 023 (D-4): com as turmas escolhidas, para cada turma descontar só o que a alcança. */
+      .select(`data, ${COLUNAS_DA_ABRANGENCIA}`)
       .eq("impacto", "dia_inteiro")
       .eq("status", "ativo")
       .gte("data", hoje),
@@ -142,7 +144,7 @@ export default async function Turmas({
         : ((cargasRes.data ?? []) as unknown as InsumosDoAndamentoDaLista["cargas"]),
       executadas: (executadasRes.data ?? []) as unknown as InsumosDoAndamentoDaLista["executadas"],
       regimes: (regimesRes.data ?? []) as unknown as InsumosDoAndamentoDaLista["regimes"],
-      feriadosDiaInteiro: (feriadosRes.data ?? []).map((f) => f.data as string),
+      feriadosDiaInteiro: linhasComAbrangencia<{ data: string }>(feriadosRes.data),
       hoje,
     },
   );

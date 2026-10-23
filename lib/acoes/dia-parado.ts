@@ -44,6 +44,8 @@ const SEM_PERMISSAO_TURMA = "O seu perfil não pode parar o dia desta turma.";
 
 function revalidar(): void {
   revalidatePath(ROTA_DO_DSA, "page");
+  revalidatePath("/atividades");
+  revalidatePath("/turmas");
   revalidatePath(ROTA_DA_FICHA_DA_TURMA, "page");
   revalidatePath("/inicio");
 }
@@ -60,7 +62,7 @@ export async function pararDia(entrada: unknown): Promise<ResultadoDaParada> {
    * D-COR-5: a parada DA TURMA não grava em turma arquivada. A parada GLOBAL segue — ela é do calendário, e o
    * desenho da M4 declara que o global continua alcançando a arquivada (analyze, achado 67; portão de Bernardo).
    */
-  if (!global) {
+  if (!global && p.turmaId !== null) {
     const arquivada = await recusaSeTurmaArquivada(supabase, p.turmaId);
     if (arquivada) return { ok: false, erro: arquivada };
   }
@@ -72,7 +74,10 @@ export async function pararDia(entrada: unknown): Promise<ResultadoDaParada> {
       .eq("id", p.tipoParadaId)
       .eq("lista", "tipos_parada")
       .maybeSingle(),
-    supabase.from("turmas").select("id, curso_id").eq("id", p.turmaId).maybeSingle(),
+    /* Spec 023 (D-8): sem turma (o «Parar dia» do Calendário), não há o que ler. */
+    p.turmaId === null
+      ? Promise.resolve({ data: null })
+      : supabase.from("turmas").select("id, curso_id").eq("id", p.turmaId).maybeSingle(),
   ]);
   if (!tipo || tipo.ativo === false)
     return { ok: false, erro: "Escolha um tipo de parada da lista." };
@@ -83,12 +88,12 @@ export async function pararDia(entrada: unknown): Promise<ResultadoDaParada> {
   if (p.consomeTempoReserva && meta.aceita_tr === false) {
     return { ok: false, erro: `O tipo ${tipo.valor} não consome Tempo Reserva.` };
   }
-  if (!turma) return { ok: false, erro: "Não encontrei a turma." };
+  if (p.turmaId !== null && !turma) return { ok: false, erro: "Não encontrei a turma." };
 
   // Os tempos da parada: os informados, ou o dia inteiro do regime quando o TR precisa contar tempos.
   let taInicial = p.diaInteiro ? null : p.taInicial;
   let tempos = p.diaInteiro ? null : p.tempos;
-  if (p.consomeTempoReserva && taInicial === null) {
+  if (p.consomeTempoReserva && taInicial === null && turma) {
     /* Spec 018 (C-9): o dia inteiro é o do regime da TURMA, senão o do curso, senão 8 (a reserva de antes). */
     const doDia = await temposDoDiaDaTurmaNoServidor(supabase, {
       turmaId: turma.id as string,
@@ -103,7 +108,7 @@ export async function pararDia(entrada: unknown): Promise<ResultadoDaParada> {
       .from("vw_ocupacao_ta")
       .select("fato_id", { count: "exact", head: true })
       .eq("data", p.data);
-    if (!global) consulta = consulta.eq("turma_id", p.turmaId);
+    if (!global && p.turmaId !== null) consulta = consulta.eq("turma_id", p.turmaId);
     const { count } = await consulta;
     if ((count ?? 0) > 0) return { ok: false, erro: "confirmar", lancamentosNoDia: count ?? 0 };
   }
@@ -140,6 +145,8 @@ export async function pararDia(entrada: unknown): Promise<ResultadoDaParada> {
       data: p.data,
       descricao: `${sigla} — ${p.motivo}`,
       impacto: "dia_inteiro",
+      /* Spec 023 (D-16): o tipo vai também na coluna, não só no prefixo do nome. */
+      tipo_parada_id: p.tipoParadaId,
     } as never);
     erro = r.error as ErroDoBanco | null;
     const { data: lido } = await supabase

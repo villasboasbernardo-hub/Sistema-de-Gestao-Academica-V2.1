@@ -348,6 +348,17 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 22/10/2026 — uma tabela nova, do Bloco 8 do plano de correções (spec 023)
+>
+> - **`feriado_turma`** — as **turmas escolhidas** de uma linha do calendário (`feriados`), pedido de Bernardo Villas
+>   Boas de 22/10/2026 (*"abrangência: todas as turmas ou turmas escolhidas"*). Linha sem turma escolhida ativa vale
+>   para **todas** as turmas — o comportamento de antes e o de todo dado existente; com, só para elas, no bloqueio de
+>   aula (`RN-EVT-04`), no DSA e na capacidade (`RN-EVT-02`). Escrita de quem tem `calendario.criar`/`editar`; tirar a
+>   turma é `status = 'inativo'`, nunca apagar. Junto, a coluna nulável `feriados.tipo_parada_id` (o tipo da linha,
+>   da lista `tipos_parada`).
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a

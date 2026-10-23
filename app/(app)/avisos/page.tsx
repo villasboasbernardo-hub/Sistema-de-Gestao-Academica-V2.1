@@ -17,6 +17,8 @@
 import Link from "next/link";
 
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
+import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { agruparPorModulo, ROTULO_DO_MODULO } from "@/lib/dominio/avisos/central";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
@@ -26,7 +28,13 @@ import { MarcarComoVistos } from "./MarcarComoVistos";
 
 export default async function Avisos() {
   const supabase = await criarClienteDeServidor();
-  const { avisos, naoLidos } = await lerAvisos(supabase, hojeNaCiaara());
+  const usuario = await usuarioDaSessao();
+  const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
+  const { avisos, naoLidos } = await lerAvisos(
+    supabase,
+    hojeNaCiaara(),
+    pode(permissoes, "calendario", "editar"),
+  );
   const grupos = agruparPorModulo(avisos);
 
   return (

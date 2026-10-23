@@ -19,6 +19,8 @@ import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
+import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
+import { feriadosDaTurma } from "@/lib/dominio/calendario";
 import {
   opcoesDoSeletor,
   rotuloDoCurriculo,
@@ -183,7 +185,8 @@ export default async function FichaDaTurma({
   const feriadosPromessa = deveLerFeriados(dataTermino)
     ? supabase
         .from("feriados")
-        .select("data")
+        /* Spec 023 (D-4): com as turmas escolhidas — o feriado de outras turmas não desconta aqui. */
+        .select(`data, ${COLUNAS_DA_ABRANGENCIA}`)
         .eq("impacto", "dia_inteiro")
         .eq("status", "ativo")
         .gte("data", hoje)
@@ -356,7 +359,12 @@ export default async function FichaDaTurma({
       regimeDoBanco(regimeRes.data ?? null),
       regimeDaFicha ? { regimeTempos: Number(regimeDaFicha.regime_tempos) } : null,
     ),
-    datasDeFeriado(feriadosRes?.data ?? []),
+    datasDeFeriado(
+      feriadosDaTurma(
+        linhasComAbrangencia<{ data: string }>(feriadosRes?.data),
+        turma.id as string,
+      ),
+    ),
     hoje,
   );
 

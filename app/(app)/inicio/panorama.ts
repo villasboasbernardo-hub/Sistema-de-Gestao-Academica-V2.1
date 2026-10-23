@@ -24,6 +24,7 @@
  * o lançado no futuro. Turma sem nada lançado até hoje não aparece na função: a executada dela é **0**.
  */
 
+import { datasQueAlcancam } from "@/lib/dominio/calendario";
 import { compararTurmas } from "@/lib/dominio/ordem-de-cursos";
 import { regimeEfetivo } from "@/lib/dominio/regime-da-turma";
 import { andamentoDaTurma, type RegimeDoCurso } from "@/lib/dominio/andamento-da-turma";
@@ -113,7 +114,8 @@ export function montarPanorama(
   cursos: readonly CursoDoRecorte[],
   turmas: readonly TurmaDoPanorama[],
   regimes: readonly RegimeDoCursoNoBanco[],
-  feriadosDiaInteiro: readonly string[],
+  /** Spec 023 (D-4): os feriados de dia inteiro com as turmas escolhidas (vazio = todas). */
+  feriadosDiaInteiro: readonly { readonly data: string; readonly turmas: readonly string[] }[],
   hoje: string,
   /** A CHD executada até hoje, por turma — `chd_da_turma_ate(hoje)` (M1 da spec 016). */
   executadaAteHoje: ReadonlyMap<string, number>,
@@ -155,7 +157,7 @@ export function montarPanorama(
           regimeDoCurso(regimePorCurso.get(c.curso_id)),
           daTabela?.regime ? { regimeTempos: daTabela.regime.regime_tempos } : null,
         ),
-        feriadosDiaInteiro,
+        datasQueAlcancam(feriadosDiaInteiro, c.turma_id),
         hoje,
       );
 

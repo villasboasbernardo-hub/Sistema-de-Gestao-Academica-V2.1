@@ -11,6 +11,8 @@
  * ⚠️ **"NÃO PUDE LER" É DITO, NUNCA ZERO** (gotcha 4): a leitura que falha entra em `naoLidos`, com o módulo, e a página
  *    diz que não pôde ler — o que falhou não vira "nenhum aviso".
  */
+import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
+import { diasBloqueadosComLancamento } from "@/lib/dominio/calendario";
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
 import { alertasDeVista } from "@/lib/dominio/avaliacoes/alertas-de-vista";
@@ -119,8 +121,49 @@ type OcupacaoLida = {
 const COLUNAS_DOS_INSTRUTORES =
   "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, categoria, om, nip, capacitacoes_didaticas, capacitacao_didatica_a_corrigir, data_inicio_docencia_ciaara, ordem_antiguidade";
 
-export async function lerAvisos(supabase: Cliente, hoje: string): Promise<LeituraDosAvisos> {
+/**
+ * Spec 023 (FR-013, D-15): os dias do calendário do ano bloqueados com lançamento — só para quem tem
+ * `calendario.editar`, que é quem os resolve (quem chama diz, por `comCalendario`). `null` quando a leitura falhou.
+ * ⚠️ A permissão chega por parâmetro: esta leitura não conhece a sessão (é chamada também por teste sem servidor).
+ */
+async function lerAvisosDoCalendario(
+  supabase: Cliente,
+  ano: number,
+  comCalendario: boolean,
+): Promise<EntradaDaCentral["calendario"] | null> {
+  if (!comCalendario) return [];
+  const linhasRes = await supabase
+    .from("feriados")
+    .select(`codigo, data, descricao, ${COLUNAS_DA_ABRANGENCIA}`)
+    .eq("impacto", "dia_inteiro")
+    .eq("status", "ativo")
+    .gte("data", `${ano}-01-01`)
+    .lte("data", `${ano}-12-31`);
+  if (linhasRes.error) return null;
+  const linhas = linhasComAbrangencia<{ codigo: string; data: string; descricao: string }>(
+    linhasRes.data,
+  );
+  if (linhas.length === 0) return [];
+  const ocupacaoRes = await supabase
+    .from("vw_ocupacao_ta")
+    .select("data, turma_id")
+    .in("data", [...new Set(linhas.map((l) => l.data))]);
+  if (ocupacaoRes.error) return null;
+  return diasBloqueadosComLancamento(
+    linhas,
+    (ocupacaoRes.data ?? []) as { data: string; turma_id: string | null }[],
+  );
+}
+
+export async function lerAvisos(
+  supabase: Cliente,
+  hoje: string,
+  /** Spec 023: a pessoa tem `calendario.editar` — só então entram os avisos do calendário. */
+  comCalendario = false,
+): Promise<LeituraDosAvisos> {
   const ano = Number(hoje.slice(0, 4));
+  /* Começa já, em paralelo com a leitura grande (nenhum `await` em laço). */
+  const calendarioPromessa = lerAvisosDoCalendario(supabase, ano, comCalendario);
   const semana = semanaDoPainel(hoje);
   const limitesDoAno = limitesDoAnoIso(ano);
 
@@ -165,7 +208,8 @@ export async function lerAvisos(supabase: Cliente, hoje: string): Promise<Leitur
       .select("curso_id, regime_padrao_tempos, limite_diario_ead_horas"),
     supabase
       .from("feriados")
-      .select("data")
+      /* Spec 023 (D-4): com as turmas escolhidas, para cada turma descontar só o que a alcança. */
+      .select(`data, ${COLUNAS_DA_ABRANGENCIA}`)
       .eq("impacto", "dia_inteiro")
       .eq("status", "ativo")
       .gte("data", hoje),
@@ -285,7 +329,7 @@ export async function lerAvisos(supabase: Cliente, hoje: string): Promise<Leitur
           cursos as unknown as CursoDoRecorte[],
           turmas,
           (regimesRes.data ?? []) as unknown as RegimeDoCursoNoBanco[],
-          (feriadosRes.data ?? []).map((f) => f.data as string),
+          linhasComAbrangencia<{ data: string }>(feriadosRes.data),
           hoje,
           new Map(
             ((executadaRes.data ?? []) as { turma_id: string; chd_executada: number }[]).map(
@@ -496,8 +540,12 @@ export async function lerAvisos(supabase: Cliente, hoje: string): Promise<Leitur
     };
   });
 
+  const calendario = await calendarioPromessa;
+  if (calendario === null) naoLidos.add("calendario");
+
   return {
     avisos: montarAvisos({
+      calendario: calendario ?? [],
       cursos: doCurso,
       tetos,
       atrasadas,

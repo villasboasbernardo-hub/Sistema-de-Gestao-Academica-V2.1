@@ -34,6 +34,8 @@ import {
   type VinculoDeHabilitacao,
 } from "@/lib/dominio/habilitacao";
 import { avaliarODia, avaliarTetosDaSemana, type TetosDoDsa } from "@/lib/dominio/dsa/tetos";
+import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
+import { feriadosDaTurma } from "@/lib/dominio/calendario";
 import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import { slotDoEstudoIndividual } from "@/lib/dominio/dsa/horario-do-bloco";
 import { camposDoEstudoIndividual } from "@/lib/dominio/dsa/rotulos";
@@ -373,12 +375,14 @@ async function recusaDoCalendario(
   const [{ data: linhas }, paradas] = await Promise.all([
     supabase
       .from("feriados")
-      .select("data, descricao, impacto, status")
+      .select(`data, descricao, impacto, status, ${COLUNAS_DA_ABRANGENCIA}`)
       .eq("data", data)
       .eq("status", "ativo"),
     alvo === null ? Promise.resolve([] as ParadaDoDia[]) : paradasDoPeriodo(supabase, data, data),
   ]);
-  const feriados = (linhas ?? []) as FeriadoDoCalendario[];
+  /* Spec 023 (D-4): o feriado de turmas escolhidas só recusa aula nelas. */
+  const lidas = linhasComAbrangencia<FeriadoDoCalendario>(linhas);
+  const feriados = alvo === null ? lidas : feriadosDaTurma(lidas, alvo.turmaId);
   if (alvo === null) return recusaDeAulaNoDia({ data, dataAtual, feriados });
   return recusaDeAulaNoTempo({ data, dataAtual, feriados, paradas, ...alvo });
 }
@@ -1127,7 +1131,7 @@ export async function lancarEstudoIndividualDaSemana(
       .lte("data", ate),
     supabase
       .from("feriados")
-      .select("data, descricao, impacto, status")
+      .select(`data, descricao, impacto, status, ${COLUNAS_DA_ABRANGENCIA}`)
       /* ⚠️ Só o feriado ATIVO bloqueia (regra 4) — o inativado deixava o dia sem Estudo Individual. */
       .eq("status", "ativo")
       .gte("data", de)
@@ -1149,7 +1153,11 @@ export async function lancarEstudoIndividualDaSemana(
   ]);
 
   /* ⚠️ O dia bloqueado é o da MESMA função da grade e da recusa de aula (`RN-EVT-04`). */
-  const feriados = (feriadosRes.data ?? []) as FeriadoDoCalendario[];
+  /* Spec 023 (D-4): só o feriado que alcança a turma pula o dia. */
+  const feriados = feriadosDaTurma(
+    linhasComAbrangencia<FeriadoDoCalendario>(feriadosRes.data),
+    turmaId,
+  );
   /*
    * ⚠️ **E O DIA DA ETAPA A DISTÂNCIA TAMBÉM É PULADO** (`D-DSA-2`): a semana que a janela corta ao
    * meio tem DSA, mas o dia de fora não — pela mesma função que recusa o lançamento um a um.

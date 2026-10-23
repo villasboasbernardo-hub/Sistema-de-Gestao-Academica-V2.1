@@ -508,7 +508,9 @@ export default async function SemanaDoDsa({
             dias={lida.semana.dias.map((d) => d.data)}
             tipos={tiposDeParada}
             podeGlobal={pode(permissoes, "calendario", "criar")}
+            podeDesfazerGlobal={pode(permissoes, "calendario", "editar")}
             paradas={paradasDaSemana}
+            feriados={lida.feriadosNaFaixa}
             pararDia={pararDia}
             desfazerParada={desfazerParada}
           />

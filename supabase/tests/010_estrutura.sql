@@ -122,7 +122,10 @@ select set_eq(
            ('curriculos'),
            -- Spec 021 (Bloco 6, PR 2), 21/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entrou no BRIEF §2.1 antes de
            -- entrar aqui: a trilha da correcao do curriculo em uso (RC-6), so de acrescimo.
-           ('correcoes_de_curriculo')$$,
+           ('correcoes_de_curriculo'),
+           -- Spec 023 (Bloco 8), 22/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entrou no BRIEF §2.1 (emenda de
+           -- 22/10/2026) antes de entrar aqui: as turmas escolhidas de uma linha do calendario.
+           ('feriado_turma')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

@@ -1834,6 +1834,88 @@ export type Database = {
         }
         Relationships: []
       }
+      feriado_turma: {
+        Row: {
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          editado_em: string | null
+          editado_por: string | null
+          feriado_id: string
+          id: string
+          origem_migracao_v1: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          turma_id: string
+        }
+        Insert: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          feriado_id: string
+          id?: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_id: string
+        }
+        Update: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          feriado_id?: string
+          id?: string
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feriado_turma_feriado_id_fkey"
+            columns: ["feriado_id"]
+            isOneToOne: false
+            referencedRelation: "feriados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feriado_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feriado_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "feriado_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "feriado_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "feriado_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+        ]
+      }
       feriados: {
         Row: {
           abrangencia: string | null
@@ -1850,6 +1932,7 @@ export type Database = {
           origem_migracao_v1: string | null
           origem_proens: string | null
           status: Database["public"]["Enums"]["status_registro"]
+          tipo_parada_id: string | null
         }
         Insert: {
           abrangencia?: string | null
@@ -1866,6 +1949,7 @@ export type Database = {
           origem_migracao_v1?: string | null
           origem_proens?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
+          tipo_parada_id?: string | null
         }
         Update: {
           abrangencia?: string | null
@@ -1882,8 +1966,17 @@ export type Database = {
           origem_migracao_v1?: string | null
           origem_proens?: string | null
           status?: Database["public"]["Enums"]["status_registro"]
+          tipo_parada_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feriados_tipo_parada_id_fkey"
+            columns: ["tipo_parada_id"]
+            isOneToOne: false
+            referencedRelation: "config_listas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       horarios_tempos_aula: {
         Row: {

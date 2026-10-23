@@ -58,6 +58,12 @@ function leiturasDeFeriados(): { arquivo: string; consulta: string }[] {
   return leituras;
 }
 
+/**
+ * A ÚNICA isenção, nominal (spec 023, Bloco 8, D-10): a aba Calendário LISTA as linhas inativas — marcadas «Inativo» e
+ * com «Reativar» —, porque sem elas não haveria como desfazer um desfazer. Ela não decide bloqueio nem capacidade.
+ */
+const ISENTOS = new Set(["app/(app)/atividades/calendario.ts"]);
+
 describe("regra 4 · toda leitura de `feriados` filtra o que está ativo", () => {
   const leituras = leiturasDeFeriados();
 
@@ -75,6 +81,9 @@ describe("regra 4 · toda leitura de `feriados` filtra o que está ativo", () =>
      */
     const semFiltro = leituras
       .filter((l) => l.consulta.includes(".select("))
+      /* Spec 023: `update(...).select(...)` devolve a linha que a pessoa ACABOU de mudar — é escrita, não leitura. */
+      .filter((l) => !/\.(update|insert)\(/.test(l.consulta))
+      .filter((l) => !ISENTOS.has(l.arquivo.replaceAll("\\", "/")))
       .filter((l) => !/\.eq\(\s*"status"\s*,\s*"ativo"\s*\)/.test(l.consulta))
       .map((l) => l.arquivo.replaceAll("\\", "/"));
     expect(semFiltro, 'leitura de `feriados` sem `.eq("status", "ativo")`').toEqual([]);
