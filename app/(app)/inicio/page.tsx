@@ -22,6 +22,7 @@
  * ainda não recebeu a carga —, e é o único dos três que **some sozinho com o tempo**. Tratá-lo como
  * "não há" faria a tela afirmar, com todas as letras, que a CIAARA-11 não tem turma nenhuma.
  */
+import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
 
 import { CardKpi } from "@/components/ciaara/card-kpi";
@@ -147,7 +148,8 @@ export default async function Inicio({
      */
     supabase
       .from("feriados")
-      .select("data")
+      /* Spec 023 (D-4): com as turmas escolhidas, para cada turma descontar só o que a alcança. */
+      .select(`data, ${COLUNAS_DA_ABRANGENCIA}`)
       .eq("impacto", "dia_inteiro")
       .eq("status", "ativo")
       .gte("data", hoje),
@@ -213,7 +215,7 @@ export default async function Inicio({
     (cursosRes.data ?? []) as unknown as CursoDoRecorte[],
     (turmasRes.data ?? []) as unknown as TurmaDoPanorama[],
     (regimesRes.data ?? []) as unknown as RegimeDoCursoNoBanco[],
-    (feriadosRes.data ?? []).map((f) => f.data as string),
+    linhasComAbrangencia<{ data: string }>(feriadosRes.data),
     hoje,
     new Map(
       ((executadaRes.data ?? []) as { turma_id: string; chd_executada: number }[]).map(

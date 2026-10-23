@@ -31,11 +31,18 @@ export function AnoDoPainel({
   /** O ano de hoje em São Paulo — o padrão. */
   readonly vigente: number;
   /** A tela cujo `?ano=` ele escreve. */
-  readonly rota?: "/turmas" | "/inicio";
+  readonly rota?: "/turmas" | "/inicio" | "/atividades";
 }) {
   const [, definirAnoDasTurmas] = useParametro("/turmas", "ano");
   const [, definirAnoDoInicio] = useParametro("/inicio", "ano");
-  const definirAno = rota === "/inicio" ? definirAnoDoInicio : definirAnoDasTurmas;
+  /* Spec 023 (FR-006): o ano da aba Calendário em Atividades. */
+  const [, definirAnoDoCalendario] = useParametro("/atividades", "ano");
+  const definirAno =
+    rota === "/inicio"
+      ? definirAnoDoInicio
+      : rota === "/atividades"
+        ? definirAnoDoCalendario
+        : definirAnoDasTurmas;
 
   return (
     <label className="flex shrink-0 items-center gap-2 text-sm" data-slot="ano-do-painel">

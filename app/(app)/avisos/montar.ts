@@ -62,6 +62,16 @@ export type EntradaDaCentral = {
     readonly alertas: readonly AlertaDoInstrutor[];
     readonly capacitacaoACorrigir: string | null;
   })[];
+  /**
+   * Spec 023 (FR-013, D-15): as linhas do calendário de dia inteiro com lançamento no dia (`diasBloqueadosComLancamento`)
+   * — só para quem cuida do calendário; ausente para os demais.
+   */
+  readonly calendario?: readonly {
+    readonly codigo: string;
+    readonly data: string;
+    readonly descricao: string;
+    readonly lancamentos: number;
+  }[];
 };
 
 /** Os avisos do curso que se resolvem nos dados do currículo; o do limite, na lista de turmas do curso. */
@@ -175,6 +185,16 @@ export function montarAvisos(entrada: EntradaDaCentral): readonly Aviso[] {
         destino: enderecoDoInstrutor(i.codigo),
       });
     }
+  }
+
+  for (const d of entrada.calendario ?? []) {
+    avisos.push({
+      chave: chaveDoAviso("calendario", "dia_bloqueado_com_lancamento", d.codigo),
+      modulo: "calendario",
+      titulo: `${dataParaLeitura(d.data)}: dia bloqueado com ${d.lancamentos} lançamento${d.lancamentos === 1 ? "" : "s"}`,
+      detalhe: `«${d.descricao}» bloqueia aula nova nesse dia; o que já foi lançado fica. Confira se o dia devia mesmo estar bloqueado.`,
+      destino: `/atividades?aba=calendario&ano=${d.data.slice(0, 4)}`,
+    });
   }
 
   /* O mesmo fato dito por dois quadros (a janela incompleta): a primeira ocorrência fica. */

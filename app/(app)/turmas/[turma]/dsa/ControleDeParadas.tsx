@@ -7,6 +7,10 @@
  *    QUEM TEM `calendario.criar`** — e a ação recusa mesmo assim (Q-8). ⚠️ **«Consome Tempo Reserva» só
  *    com a parada NÃO prevista**, e só no tipo que aceita TR. ⚠️ **Com lançamento no dia, pede
  *    confirmação**: os lançamentos ficam; a parada impede aula nova. ⚠️ **Desfazer inativa** (regra 4).
+ * ⚠️ **O FERIADO DA SEMANA TAMBÉM ESTÁ NA FAIXA** (spec 023, FR-001 a FR-004): parar o dia de todas as turmas grava
+ *    no calendário, e só daqui (ou da aba Calendário) ele se desfaz. O *Desfazer* do feriado e o das paradas GLOBAIS
+ *    aparecem só para quem tem `calendario.editar` (`podeDesfazerGlobal`) — o banco recusaria os outros —, e o do
+ *    feriado pede confirmação: ele libera o dia em todas as turmas que alcança.
  * ⚠️ **O FORMULÁRIO ABRE NUM DIÁLOGO** (spec 022, Bloco 7, FR-002): até o Bloco 7 ele abria abaixo do botão. A recusa e
  *    o pedido de confirmação ficam no diálogo; a resposta da gravação, abaixo do botão.
  */
@@ -14,6 +18,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
@@ -40,6 +45,30 @@ export type ParadaNaSemana = {
   readonly codigo: string;
 };
 
+/** Spec 023: a linha do calendário de dia inteiro da semana (`FeriadoNaFaixa` da leitura). */
+export type FeriadoDaFaixa = {
+  readonly codigo: string;
+  readonly data: string;
+  readonly descricao: string;
+  readonly tipo: string | null;
+  readonly restrito: boolean;
+  readonly turmasEscolhidas: number;
+};
+
+/** O nome sem o prefixo «<sigla> — » que o «Parar dia» escreve, para a sigla não sair duas vezes. */
+function nomeSemPrefixo(f: FeriadoDaFaixa): string {
+  return f.tipo !== null && f.descricao.startsWith(`${f.tipo} — `)
+    ? f.descricao.slice(f.tipo.length + 3)
+    : f.descricao;
+}
+
+/** A frase da confirmação (FR-003). */
+export function consequenciaDeDesfazerFeriado(f: FeriadoDaFaixa): string {
+  return f.restrito
+    ? `Isso libera o dia nas ${f.turmasEscolhidas} turma${f.turmasEscolhidas === 1 ? "" : "s"} escolhida${f.turmasEscolhidas === 1 ? "" : "s"}. A linha fica inativa no calendário — nada é apagado.`
+    : "Isso libera o dia em todas as turmas. A linha fica inativa no calendário — nada é apagado.";
+}
+
 type Resposta =
   | { readonly ok: true }
   | { readonly ok: false; readonly erro: string; readonly lancamentosNoDia?: number };
@@ -49,7 +78,9 @@ export function ControleDeParadas({
   dias,
   tipos,
   podeGlobal,
+  podeDesfazerGlobal = false,
   paradas,
+  feriados = [],
   pararDia,
   desfazerParada,
 }: {
@@ -57,7 +88,11 @@ export function ControleDeParadas({
   readonly dias: readonly string[];
   readonly tipos: readonly TipoDeParada[];
   readonly podeGlobal: boolean;
+  /** Spec 023 (FR-002, FR-004): `calendario.editar` — o *Desfazer* do feriado e das paradas globais. */
+  readonly podeDesfazerGlobal?: boolean;
   readonly paradas: readonly ParadaNaSemana[];
+  /** Spec 023 (FR-001): os feriados de dia inteiro da semana que alcançam a turma. */
+  readonly feriados?: readonly FeriadoDaFaixa[];
   readonly pararDia: (entrada: unknown) => Promise<Resposta>;
   readonly desfazerParada: (entrada: unknown) => Promise<Resposta>;
 }) {
@@ -112,10 +147,16 @@ export function ControleDeParadas({
       router.refresh();
     });
 
-  const desfazer = (p: ParadaNaSemana) =>
+  const desfazer = (p: Pick<ParadaNaSemana, "destino" | "codigo">) =>
     iniciar(async () => {
       const r = await desfazerParada({ turmaId, destino: p.destino, codigo: p.codigo });
-      setResposta(r.ok ? "Parada desfeita." : r.erro);
+      setResposta(
+        r.ok
+          ? p.destino === "feriado"
+            ? "Feriado desfeito: o dia está liberado."
+            : "Parada desfeita."
+          : r.erro,
+      );
       if (r.ok) router.refresh();
     });
 
@@ -273,15 +314,44 @@ export function ControleDeParadas({
               ? " (dia inteiro)"
               : ` (tempos ${p.taInicial} a ${p.taInicial + (p.tempos ?? 1) - 1})`}
             {p.global ? " · todas as turmas" : ""}
-            <BotaoDeIcone
-              acao="desfazer"
-              rotulo={`Desfazer a parada de ${dataParaLeitura(p.data)}`}
-              variante="fantasma"
-              className="size-6"
-              onClick={() => desfazer(p)}
-              disabled={gravando}
-              data-slot="desfazer-parada"
-            />
+            {p.global && !podeDesfazerGlobal ? null : (
+              <BotaoDeIcone
+                acao="desfazer"
+                rotulo={`Desfazer a parada de ${dataParaLeitura(p.data)}`}
+                variante="fantasma"
+                className="size-6"
+                onClick={() => desfazer(p)}
+                disabled={gravando}
+                data-slot="desfazer-parada"
+              />
+            )}
+          </span>
+        ))}
+        {feriados.map((f) => (
+          <span
+            key={f.codigo}
+            className="border-borda bg-conformidade-fundo text-conformidade-tinta rounded-ciaara inline-flex items-center gap-2 border px-2 py-0.5 text-xs"
+            data-feriado={f.codigo}
+          >
+            {dataParaLeitura(f.data)} · {f.tipo ?? "Calendário"}: {nomeSemPrefixo(f)} (dia inteiro)
+            {f.restrito ? " · turmas escolhidas" : " · todas as turmas"}
+            {podeDesfazerGlobal ? (
+              <DialogoConfirmacao
+                titulo={`Desfazer o feriado de ${dataParaLeitura(f.data)}?`}
+                consequencia={consequenciaDeDesfazerFeriado(f)}
+                rotuloConfirmar="Desfazer"
+                aoConfirmar={() => desfazer({ destino: "feriado", codigo: f.codigo })}
+              >
+                <BotaoDeIcone
+                  acao="desfazer"
+                  rotulo={`Desfazer o feriado de ${dataParaLeitura(f.data)}`}
+                  variante="fantasma"
+                  className="size-6"
+                  disabled={gravando}
+                  data-slot="desfazer-feriado"
+                />
+              </DialogoConfirmacao>
+            ) : null}
           </span>
         ))}
       </div>

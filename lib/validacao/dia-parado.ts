@@ -16,7 +16,8 @@ const tempo = z.coerce
 
 export const esquemaDePararDia = z
   .object({
-    turmaId: uuid,
+    /* Spec 023 (D-8): o «Parar dia» do Calendário é de todas as turmas e não tem turma. */
+    turmaId: uuid.nullable().default(null),
     alcance: z.enum(["turma", "todas"], { error: "Escolha se a parada é da turma ou de todas." }),
     data,
     diaInteiro: z.boolean(),
@@ -33,6 +34,9 @@ export const esquemaDePararDia = z
     confirmado: z.boolean().default(false),
   })
   .superRefine((v, ctx) => {
+    if (v.turmaId === null && (v.alcance === "turma" || v.consomeTempoReserva)) {
+      ctx.addIssue({ code: "custom", path: ["turmaId"], message: "Escolha a turma da parada." });
+    }
     if (!v.diaInteiro && (v.taInicial === null || v.tempos === null)) {
       ctx.addIssue({
         code: "custom",
@@ -55,7 +59,8 @@ export const esquemaDePararDia = z
 export type ParadaParaGravar = z.infer<typeof esquemaDePararDia>;
 
 export const esquemaDeDesfazerParada = z.object({
-  turmaId: uuid,
+  /* Spec 023: o desfazer do Calendário não tem turma. */
+  turmaId: uuid.nullable().default(null),
   destino: z.enum(["feriado", "dia_parado", "atividade"]),
   codigo: z.string().trim().min(1),
 });

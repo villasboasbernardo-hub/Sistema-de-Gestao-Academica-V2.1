@@ -80,6 +80,14 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/turmas/[turma]/EdicaoDoPrevisto.tsx":
     "editar o previsto do PROENS de um card: abrir, digitar e gravar é interação; a ação chega por propriedade",
   "app/(app)/atividades/FiltrosDeAtividades.tsx": "os filtros de /atividades, na URL",
+  "app/(app)/atividades/AbasDeAtividades.tsx": "spec 023: as abas Atividades e Calendário, na URL",
+  "app/(app)/atividades/PainelDoCalendario.tsx":
+    "spec 023: a lista do calendário, com as ações por linha e a resposta acima dela",
+  "app/(app)/atividades/DialogoDaLinha.tsx":
+    "spec 023: cadastrar e editar uma linha do calendário, em diálogo",
+  "app/(app)/atividades/EscolhaDeTurmas.tsx": "spec 023: as turmas escolhidas, por marcação",
+  "app/(app)/atividades/PararDiaDoCalendario.tsx":
+    "spec 023: «Parar dia» de todas as turmas, em diálogo",
   "app/(app)/turmas/[turma]/dsa/ControleDeParadas.tsx":
     "«Parar dia» e «Desfazer»: formulário e confirmação são interação; as ações chegam por propriedade",
 

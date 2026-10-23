@@ -6,9 +6,16 @@
  * ⚠️ **O FILTRO ESTÁ NA URL** e é validado antes de virar predicado (`RF-NAV-01`): valor fora do
  *    contrato cai para o padrão.
  * ⚠️ **"NÃO HÁ" × "VOCÊ NÃO VÊ"** (gotcha 4): a RLS nega em silêncio, e a frase do vazio distingue.
- * ⚠️ SEM MARCADOR DE CLIENTE. Só os filtros são folha.
+ * ⚠️ SEM MARCADOR DE CLIENTE. Só os filtros, as abas e o painel do calendário são folha.
+ * ⚠️ **A ABA CALENDÁRIO** (spec 023, Bloco 8, FR-005 a FR-014) só existe para quem tem `calendario.criar` ou
+ *    `calendario.editar`; para os demais a página é a de antes, sem abas, e `?aba=calendario` cai na lista. Só a aba
+ *    aberta é lida no servidor.
  */
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import { mudarSituacaoDaLinha, gravarLinhaDoCalendario } from "@/lib/acoes/calendario";
+import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
+import { anoDoPainel } from "@/lib/dominio/painel-de-turmas";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { dataParaLeitura } from "@/lib/formato/data";
@@ -23,7 +30,11 @@ import {
   paraLinhas,
   ROTULO_DA_CATEGORIA,
 } from "./consulta";
+import { AnoDoPainel } from "../turmas/AnoDoPainel";
+import { AbasDeAtividades } from "./AbasDeAtividades";
+import { lerCalendario } from "./calendario";
 import { FiltrosDeAtividades } from "./FiltrosDeAtividades";
+import { PainelDoCalendario } from "./PainelDoCalendario";
 
 const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -42,6 +53,46 @@ export default async function Atividades({
   };
 
   const supabase = await criarClienteDeServidor();
+  const usuario = await usuarioDaSessao();
+  const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
+  const podeCriarNoCalendario = pode(permissoes, "calendario", "criar");
+  const podeEditarCalendario = pode(permissoes, "calendario", "editar");
+  const temCalendario = podeCriarNoCalendario || podeEditarCalendario;
+  const aba = temCalendario && valores.aba === "calendario" ? "calendario" : "atividades";
+
+  if (aba === "calendario") {
+    const hoje = hojeNaCiaara();
+    const vigente = Number(hoje.slice(0, 4));
+    const ano = anoDoPainel(String(valores.ano ?? ""), hoje);
+    const dados = await lerCalendario(supabase, ano, vigente);
+    return (
+      <div className="flex flex-col gap-4" data-slot="lista-de-atividades">
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-texto text-xl font-semibold">Atividades</h1>
+            <p className="text-texto-suave text-sm">
+              Feriados, licenças e paradas de todas as turmas. Linha de dia inteiro bloqueia aula
+              nova e desconta capacidade do saldo das turmas que alcança.
+            </p>
+          </div>
+          <AnoDoPainel anos={dados.anos} ano={ano} vigente={vigente} rota="/atividades" />
+        </header>
+        <AbasDeAtividades>
+          <PainelDoCalendario
+            ano={ano}
+            dados={dados}
+            podeCriar={podeCriarNoCalendario}
+            podeEditar={podeEditarCalendario}
+            gravar={gravarLinhaDoCalendario}
+            mudarSituacao={mudarSituacaoDaLinha}
+            pararDia={pararDia}
+            desfazerParada={desfazerParada}
+          />
+        </AbasDeAtividades>
+      </div>
+    );
+  }
+
   let consulta = supabase
     .from("atividades_nao_letivas")
     .select(
@@ -56,14 +107,12 @@ export default async function Atividades({
   if (filtro.de) consulta = consulta.gte("data", filtro.de);
   if (filtro.ate) consulta = consulta.lte("data", filtro.ate);
 
-  const [usuario, atividadesRes, turmasRes, arquivadasRes] = await Promise.all([
-    usuarioDaSessao(),
+  const [atividadesRes, turmasRes, arquivadasRes] = await Promise.all([
     consulta.order("data", { ascending: false }).order("ta_inicial").limit(LIMITE_DE_ATIVIDADES),
     supabase.from("turmas").select("id, codigo").order("codigo"),
     /* D-COR-5 (spec 017, C-24): a turma arquivada some do filtro de turma. */
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
   ]);
-  const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
   const podeLer = pode(permissoes, "atividades_nao_letivas", "ler");
   const alcance = alcanceDoPerfil(usuario?.perfil, usuario?.escopoCurso);
   const haFiltro = Object.values(filtro).some((v) => v !== "");
@@ -75,22 +124,8 @@ export default async function Atividades({
     (t) => t.id as string,
   ).map((t) => t.codigo as string);
 
-  return (
-    <div className="flex flex-col gap-4" data-slot="lista-de-atividades">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-texto text-xl font-semibold">Atividades</h1>
-        <p className="text-texto-suave text-sm" data-slot="contagem-de-atividades">
-          {linhas.length} atividade{linhas.length === 1 ? "" : "s"}
-          {haFiltro ? " neste recorte" : ""}
-          {linhas.length === LIMITE_DE_ATIVIDADES
-            ? ` — mostrando as ${LIMITE_DE_ATIVIDADES} mais recentes; filtre para ver as demais`
-            : ""}
-          . O lançamento é feito no DSA da turma.
-        </p>
-      </header>
-
-      <FiltrosDeAtividades turmas={turmas} />
-
+  const corpo = (
+    <>
       {atividadesRes.error ? (
         <EstadoVazio
           motivo="sem-permissao"
@@ -156,6 +191,34 @@ export default async function Atividades({
           titulo="Ainda não há atividade lançada"
           detalhe="As atividades nascem no DSA da turma."
         />
+      )}
+    </>
+  );
+
+  return (
+    <div className="flex flex-col gap-4" data-slot="lista-de-atividades">
+      <header className="flex flex-col gap-1">
+        <h1 className="text-texto text-xl font-semibold">Atividades</h1>
+        <p className="text-texto-suave text-sm" data-slot="contagem-de-atividades">
+          {linhas.length} atividade{linhas.length === 1 ? "" : "s"}
+          {haFiltro ? " neste recorte" : ""}
+          {linhas.length === LIMITE_DE_ATIVIDADES
+            ? ` — mostrando as ${LIMITE_DE_ATIVIDADES} mais recentes; filtre para ver as demais`
+            : ""}
+          . O lançamento é feito no DSA da turma.
+        </p>
+      </header>
+
+      {temCalendario ? (
+        <AbasDeAtividades>
+          <FiltrosDeAtividades turmas={turmas} />
+          {corpo}
+        </AbasDeAtividades>
+      ) : (
+        <>
+          <FiltrosDeAtividades turmas={turmas} />
+          {corpo}
+        </>
       )}
     </div>
   );

@@ -17,7 +17,14 @@
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
 
-export const MODULOS_DE_AVISO = ["cursos", "turmas", "avaliacoes", "instrutores"] as const;
+/* Spec 023 (Bloco 8, FR-013): o Calendário entrou por último. */
+export const MODULOS_DE_AVISO = [
+  "cursos",
+  "turmas",
+  "avaliacoes",
+  "instrutores",
+  "calendario",
+] as const;
 export type ModuloDeAviso = (typeof MODULOS_DE_AVISO)[number];
 
 export const ROTULO_DO_MODULO: Readonly<Record<ModuloDeAviso, string>> = {
@@ -25,6 +32,7 @@ export const ROTULO_DO_MODULO: Readonly<Record<ModuloDeAviso, string>> = {
   turmas: "Turmas",
   avaliacoes: "Avaliações",
   instrutores: "Instrutores",
+  calendario: "Calendário",
 };
 
 export type Aviso = {

@@ -50,7 +50,11 @@ export const COLUNAS_DA_OCUPACAO =
 export const COLUNAS_DA_VIGENCIA =
   "id, codigo, tipo_regime, status, vigente_de, vigente_ate, regime_tempos, ta_duracao_min, intervalo_manha_min, intervalo_tarde_min, hora_inicio_manha, hora_inicio_tarde, limite_diario_ead_horas, fundamento_curricular, motivo, configuracao_horario_id";
 
-export const COLUNAS_DO_FERIADO = "data, descricao, impacto";
+/**
+ * Spec 023 (Bloco 8): o código e o tipo (para a faixa de paradas) e as turmas escolhidas (a abrangência, D-4) vêm junto.
+ */
+export const COLUNAS_DO_FERIADO =
+  "codigo, data, descricao, impacto, tipo:config_listas(valor), feriado_turma(turma_id, status)";
 
 /** ⚠️ As colunas reais de `horarios_tempos_aula`, medidas: `tempo_numero`, não `numero_ta`. */
 export const COLUNAS_DO_CATALOGO = "tempo_numero, periodo, tipo_tempo, hora_inicio, hora_fim";

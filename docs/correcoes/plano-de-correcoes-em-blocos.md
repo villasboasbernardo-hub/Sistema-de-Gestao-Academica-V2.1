@@ -34,6 +34,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **5** | Cadastros novos: estrangeiros, custo, currículo em PDF, capacitação, acessos | sim | 020 |
 | **6** | Currículo versionado | sim | épico próprio |
 | **7** | Rodada 2 — padrões de tela: botões de ícone, formulários em diálogo ou página própria, ordem por classificação, sininho de avisos, abas do curso, cores do DSA — ✅ **concluído em 22/10/2026** | não | 022 |
+| **8** | Calendário na tela de Atividades e desfazer feriado no DSA — 🟨 **em conferência** | duas migrations (a M1 só acrescenta; a M2 recria `vw_dias_parados_turma` com o mesmo resultado para o dado existente) | 023 |
 
 ---
 
@@ -350,6 +351,33 @@ acrescentados **no mesmo PR, antes do merge**:
 - **`PEND-022-2`** — *o tempo da página Avisos com o dado real não foi medido.* Ela faz 17 leituras em paralelo
   (`app/(app)/avisos/leitura.ts`), sobre todas as turmas, instrutores e avaliações que a pessoa alcança, e o sininho
   pede o resumo no máximo uma vez a cada 2 minutos. Proposta: medir sobre a cópia do remoto antes de otimizar.
+
+## Bloco 8 — Calendário em Atividades e desfazer feriado no DSA (spec própria) — 🟨 EM CONFERÊNCIA
+
+_Pedido de Bernardo Villas Boas, 22/10/2026, pelo `/corrigir`._ Spec `023-bloco-8-calendario`, ramo
+`fix/BLOCO-8-calendario`, um PR.
+
+1. 🐛 **DSA**: parar o dia de todas as turmas grava um feriado no calendário, e nada o desfazia — a faixa de paradas não
+   o lia. Agora o feriado aparece na faixa (*"· todas as turmas"* ou *"· turmas escolhidas"*) com o ícone **Desfazer**
+   para quem tem `calendario.editar`, com confirmação; desfazer **inativa**.
+2. **Atividades → aba Calendário** (Admin e Encarregado): o ano escolhido, com as linhas ativas e inativas; cadastrar e
+   editar em diálogo, com **tipo** (FR, LA, LP, RC, PF — a lista do *Parar dia*) e **abrangência** (todas as turmas ou
+   turmas escolhidas); inativar e reativar com confirmação; *Parar dia* de todas as turmas; o aviso *"dia bloqueado com
+   lançamento"* no sininho.
+3. **Efeito medido** na cópia do remoto (`specs/023-…/antes-depois.md`): o 28/10/2026 (`FER-000024`) **já estava
+   inativo** desde 22/10/2026 12:30 UTC, inativado sem sessão; inativá-lo devolve 1 dia útil e 5 a 8 TA de saldo a 8
+   turmas, sem mudar veredito.
+4. e2e por clique: `tests/e2e/calendario.spec.ts`.
+
+**Pendências novas, achadas e não corrigidas:**
+
+- **`PEND-023-1`** — *as 33 linhas antigas do calendário não têm tipo* (D-2): a tela lê a sigla do nome (`FR — …`) e,
+  sem sigla, mostra *"não informado"*. Classificar as antigas é `UPDATE` em dado existente (portão 9.4), ou edição linha
+  a linha pela tela nova.
+- **`PEND-023-2`** — *o `D21` continua no dado*: *Nossa Senhora Aparecida* segue também em **12/11/2026**
+  (`FER-000023`, ativo, além das duas linhas de 12/10). Corrigível agora pela aba Calendário, por Bernardo.
+- **`PEND-023-3`** — *a alteração em semana de DSA já publicada* (RP-4 das regras da publicação, 22/10/2026): mudar o
+  calendário muda a semana sem aviso de *"alterado desde a publicação"*, porque a publicação ainda não existe.
 
 ---
 
