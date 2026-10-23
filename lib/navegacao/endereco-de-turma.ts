@@ -281,6 +281,8 @@ export function enderecoDaImpressaoDoDsa(
     readonly sabado?: boolean;
     /** As assinaturas editadas na tela antes de imprimir — só o que foi editado (item 4 de 08/10/2026). */
     readonly assinaturas?: EdicaoDasAssinaturas;
+    /** Spec 024 (RP-3): a versão publicada a reimprimir (0 = original, N = ALT N). */
+    readonly versao?: number;
   },
 ): string {
   const partes = [
@@ -288,6 +290,7 @@ export function enderecoDaImpressaoDoDsa(
     `semana=${String(recorte.semana)}`,
     `ano=${String(recorte.ano)}`,
     ...(recorte.sabado ? ["sabado=sim"] : []),
+    ...(recorte.versao === undefined ? [] : [`versao=${String(recorte.versao)}`]),
     ...LADOS_DA_ASSINATURA.flatMap((lado) =>
       CAMPOS_DA_RUBRICA.flatMap((campo) => {
         const valor = recorte.assinaturas?.[lado]?.[campo];

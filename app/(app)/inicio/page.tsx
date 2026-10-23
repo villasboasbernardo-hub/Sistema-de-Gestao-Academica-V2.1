@@ -22,6 +22,7 @@
  * ainda não recebeu a carga —, e é o único dos três que **some sozinho com o tempo**. Tratá-lo como
  * "não há" faria a tela afirmar, com todas as letras, que a CIAARA-11 não tem turma nenhuma.
  */
+import { lerContagemPresencial } from "../turmas/contagem-presencial";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
 
@@ -106,6 +107,7 @@ export default async function Inicio({
     executadaRes,
     arquivadasRes,
     ocupacaoDaSemanaRes,
+    presenciais,
   ] = await Promise.all([
     consultaDeCursos,
     supabase
@@ -170,6 +172,8 @@ export default async function Inicio({
       .select("turma_id, data, origem, disciplina_id, tempos_consumidos")
       .gte("data", semanaAtual.de)
       .lte("data", semanaAtual.ate),
+    /* Spec 024 (FR-020): a etapa presencial das semipresenciais. */
+    lerContagemPresencial(supabase, hoje),
   ]);
 
   /*
@@ -222,6 +226,7 @@ export default async function Inicio({
         (e) => [e.turma_id, Number(e.chd_executada)] as const,
       ),
     ),
+    presenciais,
   );
   const totais = totaisDo(panorama);
   /*

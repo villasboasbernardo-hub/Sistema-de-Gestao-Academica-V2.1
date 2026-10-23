@@ -100,7 +100,9 @@ export default async function Atividades({
         ? COLUNAS_DAS_ATIVIDADES.replace("turmas(codigo)", "turmas!inner(codigo)")
         : COLUNAS_DAS_ATIVIDADES,
     )
-    .eq("status", "ativo");
+    .eq("status", "ativo")
+    /* Spec 024 (RP-0/RP-8): o rascunho só aparece no DSA da turma; a lista é do salvo. */
+    .eq("salvo", true);
   if (filtro.turma) consulta = consulta.eq("turmas.codigo", filtro.turma);
   if (filtro.categoria) consulta = consulta.eq("categoria_normativa", filtro.categoria as never);
   if (filtro.tipo) consulta = consulta.ilike("subtipo", `%${filtro.tipo}%`);

@@ -78,6 +78,8 @@ const nomeNoDsa = z
 export const esquemaDeEdicaoDeDisciplina = esquemaDeDisciplina.omit({ cursoId: true }).extend({
   disciplinaId: z.uuid({ error: "Disciplina inválida." }),
   nomeNoDsa: nomeNoDsa.optional(),
+  /** Spec 024 (FR-019): a marca da etapa presencial. Só a edição a manda; ausente, não é tocada. */
+  presencial: z.boolean().optional(),
 });
 
 /** Desativar e reativar mandam **só** o identificador (`FR-013`). */

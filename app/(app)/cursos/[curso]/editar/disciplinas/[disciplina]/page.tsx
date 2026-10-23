@@ -185,6 +185,7 @@ export default async function PaginaDaDisciplina({
               tecnicaEnsinoSugerida: linha.tecnicaEnsinoSugerida,
               localPadrao: linha.localPadrao,
               nomeNoDsa: linha.nomeNoDsa,
+              presencial: linha.presencial,
             }}
           />
         ) : (

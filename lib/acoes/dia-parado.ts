@@ -65,6 +65,17 @@ export async function pararDia(entrada: unknown): Promise<ResultadoDaParada> {
   if (!global && p.turmaId !== null) {
     const arquivada = await recusaSeTurmaArquivada(supabase, p.turmaId);
     if (arquivada) return { ok: false, erro: arquivada };
+    /* Spec 024 (D-4): a semana publicada também recusa parar o dia DA TURMA — use «Fazer alteração». */
+    const { data: travada } = await supabase.rpc("dsa_travado_na_data", {
+      p_turma: p.turmaId,
+      p_data: p.data,
+    });
+    if (travada === true) {
+      return {
+        ok: false,
+        erro: "Esta semana do DSA está publicada. Para mudar, use «Fazer alteração» (a alteração pede justificativa).",
+      };
+    }
   }
 
   const [{ data: tipo }, { data: turma }] = await Promise.all([

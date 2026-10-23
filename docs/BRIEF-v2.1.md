@@ -359,6 +359,18 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 23/10/2026 — uma tabela nova, do Bloco 9 do plano de correções (spec 024)
+>
+> - **`dsa_eventos_da_semana`** — a **trilha da publicação do DSA**, por turma e semana ISO (regras RP-0 a RP-8 de
+>   `docs/correcoes/regras-da-publicacao-do-dsa.md`): salvo, rascunho descartado, publicado (original), alteração
+>   iniciada e alteração publicada (ALT N, com **justificativa obrigatória**), com autor, data e o **retrato** do
+>   documento publicado. Só de acréscimo, imutável inclusive para a `service_role`; quem grava são as funções de
+>   salvar, descartar e publicar, com porteiro. Junto, nas cinco tabelas de lançamento, as colunas do **rascunho**
+>   (`salvo`, padrão verdadeiro — todo dado existente nasce salvo —, `rascunho_de` e `rascunho_exclui`) e, em
+>   `disciplinas`, a marca `presencial` (etapa presencial da turma semipresencial).
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a

@@ -178,6 +178,8 @@ export async function lerDadosDaPlanilha(
         .select("id, codigo, unidade_ensino_id, disciplina_id", contagemNaPrimeira(f))
         .eq("turma_id", turmaId)
         .eq("status", "ativo")
+        /* Spec 024 (RP-8): a planilha é do salvo. */
+        .eq("salvo", true)
         .gte("data", de)
         .lte("data", ate)
         .order("codigo")
@@ -189,6 +191,7 @@ export async function lerDadosDaPlanilha(
         .select("id, codigo, tipo_avaliacao, disciplina_id", contagemNaPrimeira(f))
         .eq("turma_id", turmaId)
         .in("status", [...STATUS_DE_AVALIACAO_VIVA])
+        .eq("salvo", true)
         .order("codigo")
         .range(f.de, f.ate),
     ),
@@ -198,6 +201,7 @@ export async function lerDadosDaPlanilha(
         .select("id, codigo, categoria_normativa, disciplina_id", contagemNaPrimeira(f))
         .or(`turma_id.eq.${turmaId},turma_id.is.null`)
         .eq("status", "ativo")
+        .eq("salvo", true)
         .gte("data", de)
         .lte("data", ate)
         .order("codigo")

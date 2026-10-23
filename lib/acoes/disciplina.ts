@@ -138,6 +138,8 @@ export async function editarDisciplina(entrada: unknown): Promise<ResultadoDeDis
           local_padrao: d.localPadrao ?? null,
           /* Spec 017 (FR-007.1): só quando veio — quem não manda o campo não o apaga. */
           ...(d.nomeNoDsa === undefined ? {} : { nome_no_dsa: d.nomeNoDsa }),
+          /* Spec 024 (FR-019): idem para a marca presencial. */
+          ...(d.presencial === undefined ? {} : { presencial: d.presencial }),
         },
         { count: "exact" },
       )

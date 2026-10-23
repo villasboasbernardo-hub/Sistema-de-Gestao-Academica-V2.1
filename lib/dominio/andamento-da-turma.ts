@@ -54,6 +54,11 @@ export type TurmaParaAndamento = {
   readonly prevista: number;
   /** CHD executada, em TA — de lançamento, nunca de planejamento. */
   readonly executada: number;
+  /**
+   * Spec 024 (D-9): o primeiro dia da capacidade, quando ela não começa amanhã — o início da etapa presencial da turma
+   * semipresencial que ainda não chegou (`contagemDaTurma`). Ausente: amanhã.
+   */
+  readonly inicioDaCapacidade?: string | null;
 };
 
 /**
@@ -62,7 +67,12 @@ export type TurmaParaAndamento = {
  * ⚠️ **AS DUAS AUSÊNCIAS SÃO ESTADOS DA TELA, NUNCA ZERO** (`RN-DEG-01`). Um zero inventado se leria
  * como *"não cabe"*, que é uma afirmação sobre a turma — e não se mediu nada.
  */
-export type SituacaoDaCapacidade = "calculada" | "sem_termino" | "sem_regime";
+export type SituacaoDaCapacidade =
+  | "calculada"
+  | "sem_termino"
+  | "sem_regime"
+  /** Spec 024 (FR-018): turma EAD — o andamento é controlado pela Divisão de Ensino a Distância; nada se conta. */
+  | "controle_da_dead";
 
 export type Andamento = {
   readonly prevista: number;
@@ -214,6 +224,26 @@ export function andamentoDaTurma(
   feriadosDiaInteiro: readonly string[],
   hoje: string,
 ): Andamento {
+  /*
+   * ⚠️ **SPEC 024 (FR-018): A EAD NÃO CONTA TA EM LUGAR NENHUM** — o andamento dela é da Divisão de Ensino a Distância
+   *    (`AVISO_DE_TURMA_EAD`). Nada de progresso, saldo nem «em atraso»: toda tela mostra o aviso no lugar.
+   */
+  if (turma.modalidade === "ead") {
+    return {
+      prevista: 0,
+      executada: 0,
+      restante: 0,
+      percentual: null,
+      semLancamentos: true,
+      capacidadeDiaria: null,
+      diasUteis: null,
+      capacidade: null,
+      saldo: null,
+      saldoEmDias: null,
+      situacaoDaCapacidade: "controle_da_dead",
+      emAtraso: false,
+    };
+  }
   const prevista = Number(turma.prevista) || 0;
   const executada = Number(turma.executada) || 0;
 
@@ -266,7 +296,13 @@ export function andamentoDaTurma(
    * ⚠️ **DE AMANHÃ, E NÃO DE HOJE** (D-COR-2, FR-014.2): a executada já conta o lançado até hoje, inclusive.
    *    Num sábado ou domingo nada muda — os dias úteis começam na segunda dos dois jeitos.
    */
-  const diasUteis = diasUteisEntre(diaSeguinte(hoje), turma.dataTermino, feriadosDiaInteiro);
+  const amanha = diaSeguinte(hoje);
+  /* Spec 024 (D-9): a etapa presencial que ainda não começou conta do início dela. */
+  const inicio =
+    turma.inicioDaCapacidade && turma.inicioDaCapacidade > amanha
+      ? turma.inicioDaCapacidade
+      : amanha;
+  const diasUteis = diasUteisEntre(inicio, turma.dataTermino, feriadosDiaInteiro);
   const capacidade = diasUteis * capDiaria;
   const saldo = capacidade - restante;
 
@@ -285,3 +321,68 @@ export function andamentoDaTurma(
     emAtraso: turma.status === "ativa" && saldo < 0,
   };
 }
+
+/**
+ * Os insumos da etapa presencial de uma turma semipresencial (spec 024, FR-019/FR-020): as disciplinas marcadas
+ * *presencial* do currículo dela (`vw_carga_presencial_turma`), a CHD lançada na etapa (`chd_da_turma_na_etapa_ate`) e as
+ * datas da etapa.
+ */
+export type ContagemPresencial = {
+  readonly disciplinasMarcadas: number;
+  readonly chPresencial: number;
+  readonly executadaNaEtapa: number;
+  readonly inicioEtapa: string | null;
+  readonly terminoEtapa: string | null;
+};
+
+/**
+ * O que entra na conta do andamento — spec 024 (Bloco 9, item 2).
+ *
+ * > *"SEMIPRESENCIAL conta só a etapa presencial: marca «presencial» por disciplina no currículo; CH prevista soma só as
+ * > marcadas e a executada só o lançado na etapa presencial; sem marca, aviso e conta tudo, como hoje."*
+ * > — Bernardo Villas Boas, 23/10/2026
+ *
+ * ⚠️ **SEM MARCA, OU SEM ETAPA CADASTRADA, CONTA TUDO** (D-10), com o aviso que diz o que falta — o lado seguro de errar
+ *    é o número de antes, não um número de uma etapa que não se sabe onde está.
+ * ⚠️ Presencial e EAD passam como vieram (a EAD sai da conta em `andamentoDaTurma`).
+ */
+export function contagemDaTurma(
+  turma: {
+    readonly modalidade: string;
+    readonly prevista: number;
+    readonly executada: number;
+    readonly dataTermino: string | null;
+  },
+  presencial: ContagemPresencial | null,
+): {
+  readonly prevista: number;
+  readonly executada: number;
+  readonly dataTermino: string | null;
+  readonly inicioDaCapacidade: string | null;
+  readonly aviso: "sem_marca" | "sem_etapa" | null;
+} {
+  const comoVeio = {
+    prevista: turma.prevista,
+    executada: turma.executada,
+    dataTermino: turma.dataTermino,
+    inicioDaCapacidade: null,
+  };
+  if (turma.modalidade !== "semipresencial") return { ...comoVeio, aviso: null };
+  if (presencial === null || presencial.disciplinasMarcadas === 0)
+    return { ...comoVeio, aviso: "sem_marca" };
+  if (!presencial.inicioEtapa || !presencial.terminoEtapa)
+    return { ...comoVeio, aviso: "sem_etapa" };
+  return {
+    prevista: presencial.chPresencial,
+    executada: presencial.executadaNaEtapa,
+    dataTermino: presencial.terminoEtapa,
+    inicioDaCapacidade: presencial.inicioEtapa,
+    aviso: null,
+  };
+}
+
+/** As frases dos avisos da contagem semipresencial (FR-020). */
+export const AVISO_DA_CONTAGEM_PRESENCIAL = {
+  sem_marca: "Marque as disciplinas presenciais do currículo para contar só a etapa presencial.",
+  sem_etapa: "Cadastre a etapa presencial da turma para contar só ela.",
+} as const;

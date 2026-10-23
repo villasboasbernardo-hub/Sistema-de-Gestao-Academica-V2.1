@@ -23,6 +23,12 @@ import { notFound } from "next/navigation";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { atualizar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } from "@/lib/acoes/dsa";
 import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
+import {
+  descartarRascunhoDoDsa,
+  fazerAlteracaoNoDsa,
+  publicarSemanaDoDsa,
+  salvarSemanaDoDsa,
+} from "@/lib/acoes/publicacao-do-dsa";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { QUEM_DESARQUIVA } from "@/lib/dominio/arquivamento-da-turma";
@@ -35,19 +41,22 @@ import {
 } from "@/lib/dominio/dsa/etapa-presencial";
 import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
 import { avisosAntesDeImprimir } from "@/lib/dominio/dsa/impressao";
+import { documentosIguais, situacaoDaSemana } from "@/lib/dominio/dsa/publicacao";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
 import {
   enderecoDaEdicaoDoCurso,
   enderecoDaPlanilhaDeContingencia,
   enderecoDaTurma,
+  enderecoDaImpressaoDoDsa,
 } from "@/lib/navegacao/endereco-de-turma";
 import { CONTRATO } from "@/lib/navegacao/contrato";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { rotuloDaSemanaDoCurso, semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
-import { montarDocumentoDoDsa } from "../../../../print/dsa/documento";
+import { montarDocumentoDoDsa, type DadosDoDocumento } from "../../../../print/dsa/documento";
+import { conteudoDaSemana, montarRetratoDaSemana } from "../../../../print/dsa/retrato";
 import { alcanceDoPerfil } from "../../../cursos/consulta";
 import { codigoDaFicha, mensagemDeTurmaNaoEncontrada } from "../consulta";
 import {
@@ -65,6 +74,8 @@ import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
 import { podeBaixarPlanilhaDeContingencia } from "./planilha/acesso";
 import { ControleDeParadas, type ParadaNaSemana, type TipoDeParada } from "./ControleDeParadas";
 import { PainelDeLancamento } from "./PainelDeLancamento";
+import { PainelDaPublicacao } from "./PainelDaPublicacao";
+import { lerPublicacaoDaSemana } from "./publicacao";
 import { PainelDeSituacao } from "./PainelDeSituacao";
 
 export default async function SemanaDoDsa({
@@ -218,8 +229,9 @@ export default async function SemanaDoDsa({
   const diasADistancia = diasForaDaEtapa(paraEtapa, diasDaSemanaIso);
 
   /* ⚠️ As duas leituras são independentes: uma rodada só, nenhum `await` em sequência inútil. */
-  const [lida, extras, tiposDeParadaRes, arquivamentoRes] = await Promise.all([
+  const [lida, extras, tiposDeParadaRes, arquivamentoRes, publicacao] = await Promise.all([
     lerSemanaDoDsa(supabase, {
+      comRascunho: true,
       turmaId,
       cursoId,
       ano: escolha.ano,
@@ -241,7 +253,45 @@ export default async function SemanaDoDsa({
       .select("arquivada_em")
       .eq("turma_id", turmaId)
       .maybeSingle(),
+    /* Spec 024 (RP-3): a trilha da semana e o número de rascunhos dela. */
+    lerPublicacaoDaSemana(supabase, {
+      turmaId,
+      ano: escolha.ano,
+      numero: escolha.numero,
+      de: diasDaSemanaIso[0] ?? hoje,
+      ate: datasDaSemanaIso(escolha.ano, escolha.numero)[6] ?? hoje,
+    }),
   ]);
+  /*
+   * Spec 024 (RP-4): semana publicada — o papel de HOJE (só o salvo, montado com o mesmo «hoje» do retrato) ainda é o
+   * publicado? Só se lê quando a semana está travada: é a única situação em que a pergunta tem resposta.
+   */
+  const publicadas = publicacao.eventos.filter(
+    (e) => (e.tipo === "publicado" || e.tipo === "alteracao_publicada") && e.dados !== null,
+  );
+  const vigente = publicadas.at(-1);
+  const travadaAgora = situacaoDaSemana(publicacao.eventos, publicacao.rascunhos, false).travada;
+  const retratoDeHoje =
+    travadaAgora && vigente?.hoje
+      ? await montarRetratoDaSemana(supabase, {
+          turmaId,
+          ano: escolha.ano,
+          numero: escolha.numero,
+          hoje: vigente.hoje,
+        })
+      : null;
+  const documentoDifere =
+    retratoDeHoje !== null && vigente !== undefined
+      ? !documentosIguais(
+          conteudoDaSemana(retratoDeHoje.dados),
+          conteudoDaSemana(vigente.dados as DadosDoDocumento),
+        )
+      : false;
+  const situacaoDaPublicacao = situacaoDaSemana(
+    publicacao.eventos,
+    publicacao.rascunhos,
+    documentoDifere,
+  );
   const tiposDeParada: TipoDeParada[] = (tiposDeParadaRes.data ?? []).map((t) => {
     const m = (t.metadados ?? {}) as { pode_global?: boolean; aceita_tr?: boolean };
     return {
@@ -275,7 +325,9 @@ export default async function SemanaDoDsa({
    *    libera: quem grava é recusado pelo servidor de qualquer forma (`recusaSeTurmaArquivada`).
    */
   const arquivada = arquivamentoRes.error !== null || arquivamentoRes.data !== null;
-  const podeLancar = pode(permissoes, "registros_aula", "criar") && !arquivada;
+  /* Spec 024 (RP-5): quem lança o DSA da turma salva, publica e altera — e a semana publicada não aceita lançamento. */
+  const podeOperarAPublicacao = pode(permissoes, "registros_aula", "criar") && !arquivada;
+  const podeLancar = podeOperarAPublicacao && !situacaoDaPublicacao.travada;
 
   /*
    * ⚠️ **OS AVISOS SÃO CALCULADOS COM AS MESMAS FUNÇÕES QUE O PAPEL USA.** O número do DSA, as
@@ -449,11 +501,23 @@ export default async function SemanaDoDsa({
       >
         <div className="flex flex-wrap items-center gap-3">
           {/* ⚠️ Folha de cliente: o endereço leva as assinaturas editadas no rodapé (item 4, 08/10/2026). */}
+          {/*
+            Spec 024 (D-6): antes da publicação o papel é a PRÉVIA, e ela exige a semana salva (FR-010); depois,
+            «Imprimir» imprime a versão vigente (o retrato).
+          */}
           <BotaoImprimir
             codigo={codigo}
             semana={escolha.numero}
             ano={escolha.ano}
             sabado={lida.sabadoAberto}
+            rotulo={situacaoDaPublicacao.historico.length > 0 ? "Imprimir" : "Gerar prévia"}
+            desabilitadoPor={
+              situacaoDaPublicacao.historico.length > 0 || situacaoDaPublicacao.podeGerarPrevia
+                ? null
+                : situacaoDaPublicacao.rascunhos > 0
+                  ? "salve o rascunho antes"
+                  : "salve a semana antes"
+            }
           />
           <span className="text-xs text-texto-suave">
             Uma página A4 paisagem, com as assinaturas da data desta semana.
@@ -499,6 +563,28 @@ export default async function SemanaDoDsa({
           </div>
         ) : null}
       </div>
+
+      <PainelDaPublicacao
+        turmaId={turmaId}
+        ano={escolha.ano}
+        semana={escolha.numero}
+        situacao={situacaoDaPublicacao}
+        enderecosDeReimpressao={Object.fromEntries(
+          situacaoDaPublicacao.historico.map((h) => [
+            h.numero,
+            enderecoDaImpressaoDoDsa(codigo, {
+              semana: escolha.numero,
+              ano: escolha.ano,
+              versao: h.numero,
+            }),
+          ]),
+        )}
+        podeOperar={podeOperarAPublicacao && !publicacao.erro}
+        salvar={salvarSemanaDoDsa}
+        descartar={descartarRascunhoDoDsa}
+        fazerAlteracao={fazerAlteracaoNoDsa}
+        publicar={publicarSemanaDoDsa}
+      />
 
       <div className="flex min-w-0 flex-col gap-3">
         <CabecalhoDaSemana dados={documento} />

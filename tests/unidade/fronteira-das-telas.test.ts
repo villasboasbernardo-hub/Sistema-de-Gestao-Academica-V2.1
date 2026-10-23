@@ -132,6 +132,8 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
    */
   "app/(app)/turmas/[turma]/dsa/AssinaturasEditaveis.tsx":
     "editar as assinaturas só para a impressão, e o botão Imprimir que leva a edição no endereço",
+  "app/(app)/turmas/[turma]/dsa/PainelDaPublicacao.tsx":
+    "salvar, descartar, publicar e fazer alteração da semana (spec 024), com confirmação e a justificativa da alteração",
   "app/(app)/turmas/[turma]/dsa/PainelDeSituacao.tsx":
     "a situação por disciplina, com a cascata das unidades de ensino — abrir e fechar a linha da tabela única é interação",
   "app/(app)/instrutores/TabelaDeInstrutores.tsx": "a grade navegável por teclado",

@@ -52,6 +52,8 @@ export function DocumentoDoDsa({
   nomeDeQuemImprime,
   geradoEm,
   assinaturasEditadas = {},
+  alteracao = "ALT —",
+  previa = false,
 }: {
   readonly dados: DadosDoDocumento;
   readonly nomeDeQuemImprime: string | null;
@@ -62,6 +64,13 @@ export function DocumentoDoDsa({
    * só para este papel — `responsaveis_curso` não muda. Sem edição, sai o resolvido pela vigência.
    */
   readonly assinaturasEditadas?: EdicaoDasAssinaturas;
+  /**
+   * Spec 024 (RP-1, ciclo): o campo ALT — *"ALT —"* na original e antes de publicar; *"ALT N"* na alteração N
+   * (`rotuloDoAlt`). Ausente = *"ALT —"*, o papel de antes do Bloco 9.
+   */
+  readonly alteracao?: string;
+  /** Spec 024 (FR-010): a PRÉVIA sai com a marca bem visível, e não é versão. */
+  readonly previa?: boolean;
 }) {
   const { grade } = dados;
   /* Spec 017 (FR-007): o cartão leva o nome no DSA; o quadro de CH, o nome inteiro (`dados.quadroDeCh`). */
@@ -76,6 +85,16 @@ export function DocumentoDoDsa({
       className={`dsa4 ${barlow.className}${compacto ? " dsa4-compacto" : ""}`}
       data-slot="dsa-impresso"
     >
+      {previa ? (
+        /* Spec 024 (FR-010): a marca PRÉVIA, em TEXTO, sobre a folha inteira. */
+        <div
+          className="dsa4-previa"
+          data-slot="dsa-previa"
+          aria-label="Prévia — não é versão publicada"
+        >
+          PRÉVIA
+        </div>
+      ) : null}
       <div className="dsa4-faixa-topo" />
       <header className="dsa4-cabecalho">
         <Image
@@ -125,8 +144,10 @@ export function DocumentoDoDsa({
         <Campo rotulo="Período" slot="dsa-intervalo">
           {dataParaLeitura(dados.primeiro)} a {dataParaLeitura(dados.ultimo)}
         </Campo>
-        {/* ⚠️ O `ALT` ainda não é registrado (`Q-3`): «não aparece em vez de aparecer errado». */}
-        <Campo rotulo="Alteração">ALT —</Campo>
+        {/* Spec 024 (RP-1): o ALT da versão publicada — em branco na original e antes de publicar. */}
+        <Campo rotulo="Alteração" slot="dsa-alt">
+          {alteracao}
+        </Campo>
         <Campo rotulo="Alunos" slot={dados.alunos === null ? undefined : "dsa-alunos"}>
           {dados.alunos === null ? "—" : dados.alunos}
         </Campo>

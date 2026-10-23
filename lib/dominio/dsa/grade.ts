@@ -80,6 +80,11 @@ export type FatoDaSemana = {
    * quem aparece é o fiscal antes do responsável. Opcional porque só a grade de edição o usa.
    */
   readonly gravado?: ValoresGravados;
+  /**
+   * Spec 024 (RP-0): o lançamento é RASCUNHO — guardado, visível só na tela do DSA, «não salvo», sem contar em nada.
+   * Só a leitura da tela (`comRascunho`) o traz; o papel e a planilha nunca o veem.
+   */
+  readonly rascunho?: boolean;
 };
 
 /** Os valores gravados de um lançamento, sem nenhuma resolução para exibir. */

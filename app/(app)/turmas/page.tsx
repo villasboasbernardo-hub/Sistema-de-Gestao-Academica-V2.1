@@ -20,6 +20,7 @@
  * errada que o gotcha descreve. Quem decide a frase é o **alcance declarado do perfil**, nunca o
  * tamanho da lista.
  */
+import { lerContagemPresencial } from "./contagem-presencial";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
@@ -85,6 +86,7 @@ export default async function Turmas({
     feriadosRes,
     arquivadasRes,
     parametroRes,
+    presenciais,
   ] = await Promise.all([
     usuarioDaSessao(),
     montarConsultaDeTurmas(supabase.from("turmas").select(COLUNAS_DA_LISTA_DE_TURMAS), parametros),
@@ -119,6 +121,8 @@ export default async function Turmas({
       .eq("chave", "turmas.aviso_inicio_dias")
       .eq("status", "ativo")
       .maybeSingle(),
+    /* Spec 024 (FR-020): a etapa presencial das semipresenciais. */
+    lerContagemPresencial(supabase, hoje),
   ]);
 
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
@@ -146,6 +150,7 @@ export default async function Turmas({
       regimes: (regimesRes.data ?? []) as unknown as InsumosDoAndamentoDaLista["regimes"],
       feriadosDiaInteiro: linhasComAbrangencia<{ data: string }>(feriadosRes.data),
       hoje,
+      presenciais,
     },
   );
   /*

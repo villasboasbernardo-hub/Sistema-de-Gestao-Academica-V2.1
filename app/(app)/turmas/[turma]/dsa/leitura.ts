@@ -383,9 +383,15 @@ export async function lerPeriodoDoDsa(
     readonly de: string;
     readonly ate: string;
     readonly comConflitos: boolean;
+    /**
+     * Spec 024 (RP-0): a TELA do DSA vê o rascunho por cima do salvo (a grade e o conteúdo dos cartões); o papel, a
+     * planilha e toda conta veem só o salvo (RP-8). Ausente = só o salvo.
+     */
+    readonly comRascunho?: boolean;
   },
 ): Promise<DadosDoPeriodo> {
   const { turmaId, cursoId, de, ate } = entrada;
+  const comRascunho = entrada.comRascunho === true;
 
   const [
     ocupacaoRes,
@@ -422,8 +428,12 @@ export async function lerPeriodoDoDsa(
      */
     lerTodasAsPaginas((f) =>
       supabase
-        .from("vw_ocupacao_ta")
-        .select(COLUNAS_DA_OCUPACAO, contagemNaPrimeira(f))
+        /* Spec 024 (RP-0): a tela lê a grade com o rascunho por cima; o papel e a planilha, só o salvo. */
+        .from(comRascunho ? "vw_ocupacao_do_dsa" : "vw_ocupacao_ta")
+        .select(
+          comRascunho ? `${COLUNAS_DA_OCUPACAO}, rascunho` : COLUNAS_DA_OCUPACAO,
+          contagemNaPrimeira(f),
+        )
         .or(`turma_id.eq.${turmaId},turma_id.is.null`)
         .gte("data", de)
         .lte("data", ate)
@@ -442,6 +452,7 @@ export async function lerPeriodoDoDsa(
         )
         .eq("turma_id", turmaId)
         .eq("status", "ativo")
+        .in("salvo", comRascunho ? [true, false] : [true])
         .gte("data", de)
         .lte("data", ate)
         .order("codigo")
@@ -456,6 +467,7 @@ export async function lerPeriodoDoDsa(
         )
         .eq("turma_id", turmaId)
         .in("status", [...STATUS_DE_AVALIACAO_VIVA])
+        .in("salvo", comRascunho ? [true, false] : [true])
         /*
          * ⚠️ Spec 014, FR-040: a vista é SESSÃO, e uma sessão da semana pode ser de prova aplicada semanas antes.
          *    Toda avaliação viva até o fim do período (a vista nunca vem antes da aplicação); a montagem recorta.
@@ -473,6 +485,7 @@ export async function lerPeriodoDoDsa(
         )
         .or(`turma_id.eq.${turmaId},turma_id.is.null`)
         .eq("status", "ativo")
+        .in("salvo", comRascunho ? [true, false] : [true])
         .gte("data", de)
         .lte("data", ate)
         .order("codigo")
@@ -632,6 +645,11 @@ export async function lerPeriodoDoDsa(
         )
         .eq("turma_id", turmaId)
         .in("status", [...STATUS_DE_AVALIACAO_VIVA])
+        /*
+         * Spec 024 (RP-8): a prova oferecida para a vista é a SALVA. As sessões embutidas vêm todas (o rascunho
+         * inclusive): o número da próxima sessão não pode repetir o de um rascunho.
+         */
+        .eq("salvo", true)
         .order("data_avaliacao")
         .order("codigo")
         .range(f.de, f.ate),
@@ -663,6 +681,8 @@ export async function lerPeriodoDoDsa(
         .select("unidade_ensino_id, tempos_consumidos, data", contagemNaPrimeira(f))
         .eq("turma_id", turmaId)
         .eq("status", "ativo")
+        /* Spec 024 (RP-8): a situação por UE conta só o salvo. */
+        .eq("salvo", true)
         .not("unidade_ensino_id", "is", null)
         .lte("data", ate)
         .order("codigo")
@@ -716,6 +736,7 @@ export async function lerPeriodoDoDsa(
       .from("atividades_nao_letivas")
       .select("codigo, data, turma_id, ta_inicial, tempos_consumidos, descricao, status")
       .eq("status", "ativo")
+      .eq("salvo", true)
       .eq("bloqueia_aula", true)
       .or(`turma_id.eq.${turmaId},turma_id.is.null`)
       .gte("data", de)
@@ -733,6 +754,7 @@ export async function lerPeriodoDoDsa(
         )
         .eq("avaliacao.turma_id", turmaId)
         .eq("status", "ativo")
+        .in("salvo", comRascunho ? [true, false] : [true])
         .gte("data", de)
         .lte("data", ate)
         .order("data")
@@ -768,6 +790,7 @@ export async function lerPeriodoDoDsa(
         /* A prova cancelada leva as sessões junto (a view também as tira): só as da prova VIVA. */
         .in("avaliacao.status", [...STATUS_DE_AVALIACAO_VIVA])
         .eq("status", "ativo")
+        .in("salvo", comRascunho ? [true, false] : [true])
         .gte("data", de)
         .lte("data", ate)
         .order("data")
@@ -1739,6 +1762,8 @@ export async function lerSemanaDoDsa(
     readonly numero: number;
     readonly sabadoPedido: boolean;
     readonly hoje: string;
+    /** Spec 024 (RP-0): só a tela do DSA pede o rascunho; o papel e a planilha, nunca. */
+    readonly comRascunho?: boolean;
   },
 ): Promise<SemanaDoDsa> {
   const todosOsSeis = diasDaTela({
@@ -1753,6 +1778,7 @@ export async function lerSemanaDoDsa(
     de: todosOsSeis[0] ?? entrada.hoje,
     ate: todosOsSeis[todosOsSeis.length - 1] ?? entrada.hoje,
     comConflitos: true,
+    comRascunho: entrada.comRascunho === true,
   });
   return montarSemanaDoDsa(dados, entrada);
 }
@@ -1859,6 +1885,7 @@ export async function lerExtrasDaImpressao(
         .select("data", contagemNaPrimeira(f))
         .eq("turma_id", entrada.turmaId)
         .eq("status", "ativo")
+        .eq("salvo", true)
         .not("ta_inicial", "is", null)
         .order("codigo")
         .range(f.de, f.ate),
@@ -1869,6 +1896,7 @@ export async function lerExtrasDaImpressao(
         .select("data_avaliacao", contagemNaPrimeira(f))
         .eq("turma_id", entrada.turmaId)
         .in("status", [...STATUS_DE_AVALIACAO_VIVA])
+        .eq("salvo", true)
         .not("ta_inicial", "is", null)
         .order("codigo")
         .range(f.de, f.ate),
@@ -1888,6 +1916,7 @@ export async function lerExtrasDaImpressao(
         .eq("avaliacao.turma_id", entrada.turmaId)
         .in("avaliacao.status", [...STATUS_DE_AVALIACAO_VIVA])
         .eq("status", "ativo")
+        .eq("salvo", true)
         .not("ta_inicial", "is", null)
         .order("codigo")
         .range(f.de, f.ate),

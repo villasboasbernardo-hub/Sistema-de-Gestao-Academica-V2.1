@@ -384,9 +384,35 @@ _Pedido de Bernardo Villas Boas, 22/10/2026, pelo `/corrigir`._ Spec `023-bloco-
 - **`PEND-023-2`** — *o `D21` continua no dado*: *Nossa Senhora Aparecida* segue também em **12/11/2026**
   (`FER-000023`, ativo, além das duas linhas de 12/10). Corrigível agora pela aba Calendário, por Bernardo.
 - **`PEND-023-3`** — *a alteração em semana de DSA já publicada*: mudar o calendário muda a semana sem aviso de *"alterado
-  desde a publicação"*, porque a publicação ainda não existe. ✅ **Coberta pelo Bloco 9** (a publicação do DSA, regra
+  desde a publicação"*, porque a publicação ainda não existe. ✅ **Fechada pelo Bloco 9** (spec 024: o aviso do RP-4 compara
+  o conteúdo da semana publicada, e o calendário entra nele). Era: ✅ **Coberta pelo Bloco 9** (a publicação do DSA, regra
   **RP-4**: *"se algo de fora mudar uma semana publicada (feriado ou parada pelo Calendário…), o DSA avisa e pede uma
   alteração"*) — decisão de Bernardo Villas Boas, 23/10/2026.
+
+## Bloco 9 — Publicação do DSA (com rascunho) e contagem EAD/semipresencial (spec própria) — 🟨 PR aberto, sem merge
+
+_Pedido de Bernardo Villas Boas, 23/10/2026, pelo `/corrigir`._ Spec `024-bloco-9-publicacao-do-dsa`, ramo
+`feat/BLOCO-9-publicacao-do-dsa`, um PR. ⚠️ **O papel do DSA muda (PRÉVIA/ALT): merge só entre semanas.**
+
+1. **Publicação do DSA** (`docs/correcoes/regras-da-publicacao-do-dsa.md`, RP-0 a RP-8): lançar é **rascunho** (guardado,
+   «não salvo», não conta em nada; *Descartar rascunho*) → **Salvar** (só então registra e conta) → **Gerar prévia** (PRÉVIA,
+   exige semana salva) → **Publicar** (original, retrato, semana travada) → **Fazer alteração** → **Publicar alteração**
+   com justificativa obrigatória (ALT N no papel). Histórico com *Reimprimir*. O aviso *"alterado desde a publicação"*
+   inclui o Calendário (fecha a `PEND-023-3`). **Portão autorizado** (22/10/2026): a M2 filtra `salvo` em tudo o que soma
+   ou cruza lançamentos — provado na cópia do remoto: as 12 leituras do banco, as telas das 30 turmas e as 327 páginas
+   idênticas, fora as 14 da EAD (item 2) (`specs/024-…/antes-depois.md`).
+2. **EAD não conta TA** em lugar nenhum (andamento, saldo, Início, Turmas): o aviso da Divisão de Ensino a Distância no
+   lugar. **Semipresencial** conta só a etapa presencial pela marca **presencial** da disciplina (*Editar curso →
+   Currículo → Disciplinas*); sem marca, aviso e conta tudo. Medido nas 6 EAD e 5 semipresenciais da cópia.
+
+**Pendências novas, achadas e não corrigidas:**
+
+- **`PEND-024-1`** — *nenhuma disciplina está marcada presencial*: as 5 semipresenciais seguem contando tudo, com o
+  aviso, até alguém marcar as disciplinas presenciais do currículo (pela tela, Bernardo ou o Encarregado).
+- **`PEND-024-2`** — *só 1 das 5 semipresenciais tem a etapa presencial cadastrada* (`C-ApA-AuxNav-PR-SP T2 2026`,
+  26 a 30/10/2026); nas demais, marcar disciplinas dá o aviso «sem etapa» e continua contando tudo.
+- **`PEND-024-3`** — *o aviso do RP-4 não olha o quadro de CH acumulada* (D-8): uma correção numa semana **anterior**
+  muda o acumulado impresso nas seguintes já publicadas sem aviso. Proposta: decidir se o quadro entra na comparação.
 
 ---
 
