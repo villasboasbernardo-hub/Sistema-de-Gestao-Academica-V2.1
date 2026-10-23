@@ -54,7 +54,23 @@ test.afterAll(async () => {
     banco().from("turmas").select("id").eq("codigo", S.turmaComRelogio),
   ]);
   if (e1 || e2) throw new Error(`a conferência da limpeza falhou: ${(e1 ?? e2)?.message}`);
-  if ((atividades ?? []).length > 0 || (turmas ?? []).length > 0) {
+  /*
+   * ⚠️ Spec 024: a turma da semente é a do processo, e outro arquivo do mesmo processo pode ter salvado uma semana nela —
+   *    o evento vai para a trilha `dsa_eventos_da_semana`, imutável (nada se apaga), e a turma fica. Turma com trilha não
+   *    é limpeza esquecida; as atividades da amostra, sim.
+   */
+  const comTrilha =
+    (turmas ?? []).length > 0 &&
+    ((
+      await banco()
+        .from("dsa_eventos_da_semana")
+        .select("id", { count: "exact", head: true })
+        .in(
+          "turma_id",
+          (turmas ?? []).map((t) => (t as { id: string }).id),
+        )
+    ).count ?? 0) > 0;
+  if ((atividades ?? []).length > 0 || ((turmas ?? []).length > 0 && !comTrilha)) {
     throw new Error(
       `a limpeza deixou ${(atividades ?? []).length} atividade(s) e ${(turmas ?? []).length} turma(s)`,
     );
