@@ -8,6 +8,7 @@
  */
 import { NextResponse } from "next/server";
 
+import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
@@ -20,7 +21,12 @@ export async function GET() {
   const usuario = await usuarioDaSessao();
   if (!usuario) return NextResponse.json({ erro: "sem sessão" }, { status: 401 });
   const supabase = await criarClienteDeServidor();
-  const { avisos, naoLidos } = await lerAvisos(supabase, hojeNaCiaara());
+  const permissoes = await permissoesDoPerfil(usuario.perfil);
+  const { avisos, naoLidos } = await lerAvisos(
+    supabase,
+    hojeNaCiaara(),
+    pode(permissoes, "calendario", "editar"),
+  );
   return NextResponse.json(
     { total: avisos.length, chaves: avisos.map((a) => a.chave), naoLidos },
     { headers: { "Cache-Control": "no-store" } },

@@ -11,8 +11,6 @@
  * ⚠️ **"NÃO PUDE LER" É DITO, NUNCA ZERO** (gotcha 4): a leitura que falha entra em `naoLidos`, com o módulo, e a página
  *    diz que não pôde ler — o que falhou não vira "nenhum aviso".
  */
-import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
-import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { diasBloqueadosComLancamento } from "@/lib/dominio/calendario";
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
@@ -125,15 +123,15 @@ const COLUNAS_DOS_INSTRUTORES =
 
 /**
  * Spec 023 (FR-013, D-15): os dias do calendário do ano bloqueados com lançamento — só para quem tem
- * `calendario.editar`, que é quem os resolve. `null` quando a leitura falhou.
+ * `calendario.editar`, que é quem os resolve (quem chama diz, por `comCalendario`). `null` quando a leitura falhou.
+ * ⚠️ A permissão chega por parâmetro: esta leitura não conhece a sessão (é chamada também por teste sem servidor).
  */
 async function lerAvisosDoCalendario(
   supabase: Cliente,
   ano: number,
+  comCalendario: boolean,
 ): Promise<EntradaDaCentral["calendario"] | null> {
-  const usuario = await usuarioDaSessao();
-  const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
-  if (!pode(permissoes, "calendario", "editar")) return [];
+  if (!comCalendario) return [];
   const linhasRes = await supabase
     .from("feriados")
     .select(`codigo, data, descricao, ${COLUNAS_DA_ABRANGENCIA}`)
@@ -157,10 +155,15 @@ async function lerAvisosDoCalendario(
   );
 }
 
-export async function lerAvisos(supabase: Cliente, hoje: string): Promise<LeituraDosAvisos> {
+export async function lerAvisos(
+  supabase: Cliente,
+  hoje: string,
+  /** Spec 023: a pessoa tem `calendario.editar` — só então entram os avisos do calendário. */
+  comCalendario = false,
+): Promise<LeituraDosAvisos> {
   const ano = Number(hoje.slice(0, 4));
   /* Começa já, em paralelo com a leitura grande (nenhum `await` em laço). */
-  const calendarioPromessa = lerAvisosDoCalendario(supabase, ano);
+  const calendarioPromessa = lerAvisosDoCalendario(supabase, ano, comCalendario);
   const semana = semanaDoPainel(hoje);
   const limitesDoAno = limitesDoAnoIso(ano);
 
