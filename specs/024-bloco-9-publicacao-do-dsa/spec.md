@@ -162,3 +162,7 @@ semipresencial conta a carga do curso inteiro, inclusive a etapa a distância.
   salvo (RP-8): uma semana com dado de antes do Bloco 9, ou vazia, já está registrada e pode gerar a prévia e ser
   publicada; *Em preenchimento* é ter rascunho por salvar. O banco publica pela mesma regra. *Alternativa: exigir um
   «Salvar» em toda semana antiga antes da primeira prévia (achado dos e2e: 27 reprovações da impressão vinham disso).*
+- D-19 · Na **tela do DSA**, a lista de provas para vista e para sessão de aplicação oferece a prova **salva e a nova em
+  rascunho**, e numera as sessões contando as salvas e as novas (nunca a sombra de uma edição): lançar a prova e a vista
+  na mesma semana, antes do Salvar, é o uso normal. A **contagem** da situação por UE soma só o salvo (RP-8). *Achado
+  dos e2e: a contagem somava a vista e a sessão em rascunho; consertado.*

@@ -21,6 +21,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
 import { ANO, limparDsa, SEMANA, semearDsa, type DsaSemeado } from "./dsa-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
+import { salvarASemana } from "./percurso-do-dsa";
 
 let EMAIL = "";
 let SEMEADO: DsaSemeado;
@@ -88,7 +89,9 @@ async function quantasLinhasDeAula(): Promise<number> {
   const { count } = await banco()
     .from("registros_aula")
     .select("id", { count: "exact", head: true })
-    .eq("turma_id", turmaId);
+    .eq("turma_id", turmaId)
+    // Spec 024: a sombra da exclusão fica como registro inativo e não salvo — conta-se o SALVO, que é a linha.
+    .eq("salvo", true);
   return count ?? 0;
 }
 
@@ -167,6 +170,7 @@ test.describe("⚠️ critério 7 · mover é UPDATE do mesmo registro", () => {
     await page.locator('[data-slot="gravar-edicao"]').click();
     expect(await aguardarAcao(page)).toBe("fechou");
 
+    await salvarASemana(page); // Spec 024 (RP-0): o movimento é rascunho até o «Salvar a semana».
     const depois = await retratoDaAula(codigo);
     expect(depois?.data, "o bloco não mudou de dia").toBe("2026-04-10");
     /*
@@ -202,6 +206,7 @@ test.describe("⚠️ critério 7 · mover é UPDATE do mesmo registro", () => {
 
     await expect(page.locator('[data-slot="resposta-do-movimento"]')).toContainText("movido");
 
+    await salvarASemana(page); // Spec 024 (RP-0): o movimento é rascunho até o «Salvar a semana».
     const { data: depois } = await banco()
       .from("avaliacoes")
       .select("id, data_avaliacao, ta_inicial")
@@ -267,6 +272,7 @@ test.describe("⚠️ `Q-1` · mover linha histórica SEM unidade de ensino pede
     await page.locator('[data-slot="gravar-edicao"]').click();
     expect(await aguardarAcao(page)).toBe("fechou");
 
+    await salvarASemana(page); // Spec 024 (RP-0): o movimento é rascunho até o «Salvar a semana».
     const depois = await retratoDaAula(codigo);
     expect(depois?.data, "o movimento com a unidade não aconteceu").toBe("2026-04-07");
   });
@@ -300,6 +306,7 @@ test.describe("`SC-012` · editar não toca o catálogo", () => {
     await page.locator('[data-slot="gravar-edicao"]').click();
     expect(await aguardarAcao(page)).toBe("fechou");
 
+    await salvarASemana(page); // Spec 024 (RP-0): o movimento é rascunho até o «Salvar a semana».
     const depois = await retratoDaAula(codigo);
     expect(depois?.local).toBe("Sala 04");
     expect(depois?.conteudo_resumo).toBe("Tópico trocado só nesta aula");
@@ -397,6 +404,7 @@ test.describe("`FR-031` e regra 4 · excluir é LÓGICO, e o diálogo descreve o
      * ⚠️ **ZERO `DELETE`**: a linha continua lá, **inativa** (regra 4). A contagem é a prova — uma
      * exclusão que apagasse a linha sumiria da grade do mesmo jeito.
      */
+    await salvarASemana(page); // Spec 024 (RP-0): o movimento é rascunho até o «Salvar a semana».
     await expect
       .poll(async () => (await retratoDaAula(codigo))?.status, {
         message: "a exclusão não mudou a situação da linha",
@@ -437,6 +445,7 @@ test.describe("`Q-12` · posicionar o que está na faixa «Sem posição» é o 
     await page.locator('[data-slot="gravar-edicao"]').click();
     expect(await aguardarAcao(page)).toBe("fechou");
 
+    await salvarASemana(page); // Spec 024 (RP-0): o movimento é rascunho até o «Salvar a semana».
     const depois = await retratoDaAula(codigo);
     expect(depois?.ta_inicial, "o lançamento da faixa não ganhou posição").toBe(7);
     expect(depois?.id, "posicionar criou outro registro").toBe(antes?.id);

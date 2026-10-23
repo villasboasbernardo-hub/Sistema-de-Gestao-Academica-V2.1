@@ -80,10 +80,17 @@ test.describe("`RF-INI-01` · o panorama mostra previsto, executado e o que est�
     await expect(emDia).toBeVisible();
     await expect(semCapacidade).toBeVisible();
 
-    // 12 tempos executados sobre 10 previstos, 10 sobre 50 e 10 sobre 100.
+    // 12 tempos executados sobre 10 previstos e 10 sobre 100.
     await expect(emExcesso.locator("[data-progresso]")).toHaveAttribute("data-progresso", "120");
-    await expect(emDia.locator("[data-progresso]")).toHaveAttribute("data-progresso", "20");
     await expect(semCapacidade.locator("[data-progresso]")).toHaveAttribute("data-progresso", "10");
+    /*
+     * ⚠️ `turmaEmDia` é EAD: desde a spec 024 (D-16) a EAD não conta TA em lugar nenhum — o cartão traz o aviso da Divisão
+     *    de Ensino a Distância e nenhum progresso (era «10 de 50, 20 %»).
+     */
+    await expect(emDia.locator("[data-progresso]")).toHaveCount(0);
+    await expect(emDia.locator('[data-slot="dsa-turma-ead"]')).toContainText(
+      "Divisão de Ensino a Distância",
+    );
   });
 
   test("⚠️ só a turma com saldo NEGATIVO DE CAPACIDADE é sinalizada — os dois vereditos virados", async ({

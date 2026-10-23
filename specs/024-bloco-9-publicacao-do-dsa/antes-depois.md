@@ -33,17 +33,22 @@ mexer em permissão está fora do portão autorizado.
 | Instrumento | Antes (código da `main`) | Depois (código do ramo + M1/M2) | Resultado |
 |---|---|---|---|
 | `tests/invariantes/retrato-das-telas.test.ts` — andamento, saldo, DSA, papel, planilha | 30 turmas, 213 semanas | idem | **idêntico** |
-| `tests/e2e/retrato-das-paginas.spec.ts` — 327 páginas | 327 | 327 | **313 idênticas; 14 diferentes, todas de turma EAD (item 2)** |
+| `tests/e2e/retrato-das-paginas.spec.ts` — 327 páginas, **build final** (`cb0d9c0`, código do ramo + M1/M2 finais), cópia `remoto-20261023-130122.sql` restaurada nas duas pontas | 327 | 327 | **303 idênticas; 24 diferentes, todas do item 2** |
 
-As 14 páginas diferentes: `/inicio`, `/turmas` e a ficha e a aba Avaliações das **6 turmas EAD**. Nenhuma diferença vem
-do rascunho (RP-8). O que muda é o pedido do item 2:
+As 24 páginas diferentes, agrupadas pelo que muda (nenhuma diferença vem do rascunho, RP-8):
 
-- **Início:** as duas EAD ativas (`C-ApA-PCN-PR-EAD T2 2026`, `C-ApA-PrevMe-PR-EAD T2 2026`) deixam de sair **em atraso**;
-  o cartão delas mostra o aviso da DEaD sem barra de progresso; o KPI **Progresso do recorte vai de 72 % para 79 %**,
-  porque a CH prevista das EAD (328 + 368 TA, executado 0) sai da soma.
-- **Turmas:** Progresso e Saldo das 6 EAD viram «—»; as duas ativas perdem «em atraso» (saldos −288 e −293).
-- **Ficha da turma EAD:** a seção Andamento é só o aviso *"Turma EAD: o andamento é controlado pela Divisão de Ensino a
-  Distância, em sistema próprio."*.
+- **`/inicio`:** as duas EAD ativas (`C-ApA-PCN-PR-EAD T2 2026`, `C-ApA-PrevMe-PR-EAD T2 2026`) deixam de sair **em atraso**
+  e o cartão delas perde a barra e o «0/328 TA», «0/368 TA» (fica o aviso da DEaD); o KPI **Progresso do recorte vai de
+  72 % para 79 %**, porque a CH prevista das EAD sai da soma. *(Efeito aprovado por Bernardo Villas Boas, 23/10/2026.)*
+- **`/turmas`:** Progresso e Saldo das EAD viram «—»; as duas ativas perdem «em atraso» (saldos −288 e −293).
+- **Ficha e aba Avaliações das 6 EAD (12 páginas):** a seção Andamento é só o aviso *"Turma EAD: o andamento é controlado
+  pela Divisão de Ensino a Distância, em sistema próprio."* — saem CH prevista, executada, progresso, saldo e capacidade.
+- **Ficha e aba Avaliações das 5 semipresenciais (10 páginas):** **uma linha a mais e nenhum número diferente** — o aviso
+  *"Marque as disciplinas presenciais do currículo para contar só a etapa presencial."* (FR-019: sem marca, aviso e
+  conta tudo, como antes).
+
+⚠️ A primeira tomada do retrato (de 13:30) usou um build anterior às últimas edições de tela, e uma segunda foi
+interrompida porque testes de RLS rodaram no mesmo banco durante ela. A tomada que vale é esta, com o banco exclusivo.
 
 ## 3. O item 2 — EAD e semipresencial (cópia `remoto-20261023-130122.sql`, hoje = 23/10/2026)
 

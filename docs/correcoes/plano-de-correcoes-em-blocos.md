@@ -413,6 +413,9 @@ _Pedido de Bernardo Villas Boas, 23/10/2026, pelo `/corrigir`._ Spec `024-bloco-
   26 a 30/10/2026); nas demais, marcar disciplinas dá o aviso «sem etapa» e continua contando tudo.
 - **`PEND-024-3`** — *o aviso do RP-4 não olha o quadro de CH acumulada* (D-8): uma correção numa semana **anterior**
   muda o acumulado impresso nas seguintes já publicadas sem aviso. Proposta: decidir se o quadro entra na comparação.
+- **`PEND-024-4`** — *vista salva de uma prova ainda em rascunho, em semanas diferentes*: salvar a semana da vista antes
+  da semana da prova deixa a vista salva apontando uma prova que não conta. Raro (a vista vem depois da prova); proposta:
+  o Salvar recusar a vista cuja prova é rascunho, com a frase «salve antes a semana da prova».
 
 ---
 

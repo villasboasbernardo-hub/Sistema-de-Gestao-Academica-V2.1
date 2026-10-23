@@ -11,7 +11,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
 import { ANO, limparDsa, SEGUNDA, SEMANA, semearDsa, type DsaSemeado } from "./dsa-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
-import { escolherDisciplinaEUnidade, irParaASemanaDoDia } from "./percurso-do-dsa";
+import { escolherDisciplinaEUnidade, irParaASemanaDoDia, salvarASemana } from "./percurso-do-dsa";
 
 let EMAIL = "";
 let SEMEADO: DsaSemeado;
@@ -149,6 +149,9 @@ test.describe("⚠️ ajuste 2 · o cartão reabre com o valor GRAVADO, nunca co
     expect(await desfecho(page, CARTAO, "recusa-da-acao", "avisos-da-acao")).not.toMatch(
       /^recusou/,
     );
+    if ((await page.locator(CARTAO).count()) > 0) await page.keyboard.press("Escape");
+    // Spec 024 (RP-0): as duas edições são rascunho até o «Salvar a semana»; o banco confere o SALVO.
+    await salvarASemana(page);
 
     await expect
       .poll(async () => {

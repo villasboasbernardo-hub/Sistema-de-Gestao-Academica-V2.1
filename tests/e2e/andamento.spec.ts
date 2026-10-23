@@ -166,22 +166,21 @@ test.describe("`FR-026.1`, `FR-027` · a tela nomeia o que falta, e nunca respon
     await expect(page.locator(`${SECAO} [role="progressbar"]`)).toHaveCount(0);
   });
 
-  test("sem regime vigente para a modalidade da turma: capacidade «sem dado»", async ({ page }) => {
+  test("a turma EAD: o andamento é da Divisão de Ensino a Distância, sem número (spec 024, D-16)", async ({
+    page,
+  }) => {
     /*
-     * ⚠️ **A TURMA É EAD NUM CURSO CUJO REGIME NÃO DECLARA O LIMITE DIÁRIO EAD, e é assim que a
-     *    `RN-MAT-04` se observa.** A escolha do TA/dia segue a modalidade da **turma**: para EAD o
-     *    campo é `limite_diario_ead_horas`, e ele está vazio neste curso. ⚠️ **E NÃO HÁ RECURSO AO
-     *    REGIME PRESENCIAL** (decisão D8): cair nos 8 TA/dia presenciais daria um número plausível
-     *    para uma turma que não tem aula presencial nenhuma — plausível e inventado.
+     * ⚠️ **ATÉ O BLOCO 9, ESTE CASO PROVAVA A `RN-MAT-04` PELA FALTA DE REGIME EAD** (capacidade «sem dado» numa turma EAD
+     *    cujo curso não declara o limite diário). Desde a spec 024 (D-16, pedido de Bernardo Villas Boas de 23/10/2026) a
+     *    EAD não conta TA em lugar nenhum: a seção Andamento é só o aviso, sem saldo, sem «em atraso» e sem zero. A
+     *    modalidade continua sendo a DA TURMA (`RN-MAT-04`); a falta de regime da turma presencial fica na unidade.
      */
     await irAFichaDaTurma(page, EMAIL, CURSOS.turmasCanceladas[0] as string);
 
-    await expect(campo(page, "sem-regime")).toContainText(/regime vigente/i);
-
-    // ⚠️ Mesma leitura do caso de cima: o cartão existe com TRAÇO e a razão curta, nunca com zero.
-    await expect(campo(page, "saldo")).toContainText("—");
-    await expect(campo(page, "saldo")).toContainText(/sem regime vigente/i);
-    await expect(campo(page, "saldo")).not.toContainText("0 TA");
+    await expect(page.locator('[data-slot="andamento-ead"]')).toContainText(
+      "Divisão de Ensino a Distância",
+    );
+    await expect(campo(page, "saldo")).toHaveCount(0);
     await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toHaveCount(0);
   });
 

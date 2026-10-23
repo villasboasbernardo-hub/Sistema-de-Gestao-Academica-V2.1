@@ -11,7 +11,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { abrirAvisosPeloSininho, avisoDaChave } from "./avisos";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
-import { irParaASemanaDoDia } from "./percurso-do-dsa";
+import { irParaASemanaDoDia, salvarASemana } from "./percurso-do-dsa";
 import { limparTetos, previstoNoBanco, semearTetos, type TetosSemeados } from "./tetos-de-teste";
 import { abrirAbaDoCurso } from "./navegar-curso";
 
@@ -199,6 +199,17 @@ test("SC-003 · lançar PELA TELA acima do máximo grava a linha e só alerta (o
   await page.locator("#dsa-tempos").fill("1");
   await page.locator('[data-slot="gravar-lancamento"]').click();
   await expect(page.locator('[data-slot="recusa-do-lancamento"]')).toHaveCount(0);
+  // Spec 024 (RP-0): o lançado é rascunho e não conta no teto até o «Salvar a semana». Espera o desfecho (fechou, ou o
+  // alerta do teto, que mantém o formulário aberto — RN-DEG-02), fecha o alerta e salva.
+  const formulario = page.locator('[data-slot="formulario-de-lancamento"]');
+  const avisos = page.locator('[data-slot="avisos-do-lancamento"]');
+  await expect
+    .poll(async () => (await formulario.count()) === 0 || (await avisos.count()) > 0, {
+      timeout: 60_000,
+    })
+    .toBe(true);
+  if ((await avisos.count()) > 0) await page.getByRole("button", { name: "Entendi" }).click();
+  await salvarASemana(page);
 
   // A linha está no banco: o teto não a recusou.
   await expect
