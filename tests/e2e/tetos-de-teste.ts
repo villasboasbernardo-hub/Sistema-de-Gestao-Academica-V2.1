@@ -222,7 +222,12 @@ export async function limparTetos(semeado: TetosSemeados | undefined): Promise<v
       await admin().from("previstos_proens_turma").delete().in("turma_id", idsDeTurma);
       // A grade nasce por gatilho junto com a turma, e a FK é `restrict`: sai antes dela.
       await admin().from("turma_disciplina").delete().in("turma_id", idsDeTurma);
-      await admin().from("turmas").delete().in("id", idsDeTurma);
+      /*
+       * ⚠️ UMA A UMA (spec 024): a turma em que o teste salvou a semana fica pela trilha imutável
+       *    (`dsa_eventos_da_semana`), e um DELETE único das três falhava inteiro — deixando para trás a turma EAD do curso
+       *    regular, que é justamente a combinação que `url-degradada.spec.ts` prova vazia. Medido no CI do PR #88.
+       */
+      for (const id of idsDeTurma) await admin().from("turmas").delete().eq("id", id);
     }
     await admin().from("limites_curriculo").delete().in("curso_id", ids);
   }
