@@ -34,7 +34,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **5** | Cadastros novos: estrangeiros, custo, currículo em PDF, capacitação, acessos | sim | 020 |
 | **6** | Currículo versionado | sim | épico próprio |
 | **7** | Rodada 2 — padrões de tela: botões de ícone, formulários em diálogo ou página própria, ordem por classificação, sininho de avisos, abas do curso, cores do DSA — ✅ **concluído em 22/10/2026** | não | 022 |
-| **8** | Calendário na tela de Atividades e desfazer feriado no DSA — 🟨 **em conferência** | duas migrations (a M1 só acrescenta; a M2 recria `vw_dias_parados_turma` com o mesmo resultado para o dado existente) | 023 |
+| **8** | Calendário na tela de Atividades e desfazer feriado no DSA — ✅ **concluído em 23/10/2026** | duas migrations (a M1 só acrescenta; a M2 recria `vw_dias_parados_turma` com o mesmo resultado para o dado existente) | 023 |
 
 ---
 
@@ -352,7 +352,14 @@ acrescentados **no mesmo PR, antes do merge**:
   (`app/(app)/avisos/leitura.ts`), sobre todas as turmas, instrutores e avaliações que a pessoa alcança, e o sininho
   pede o resumo no máximo uma vez a cada 2 minutos. Proposta: medir sobre a cópia do remoto antes de otimizar.
 
-## Bloco 8 — Calendário em Atividades e desfazer feriado no DSA (spec própria) — 🟨 EM CONFERÊNCIA
+## Bloco 8 — Calendário em Atividades e desfazer feriado no DSA (spec própria) — ✅ CONCLUÍDO em 23/10/2026
+
+> ✅ **Concluído em 23/10/2026** — spec `023-bloco-8-calendario`, pelo fluxo `/corrigir`, num PR só: **#86**, **APROVADO** por
+> Bernardo Villas Boas (D-1 a D-18 como ficaram; a M2 sem portão confirmada, pelo resultado idêntico) e mesclado por squash
+> na `main` em **`977b71a`**. As duas migrations no remoto antes do merge (backup `remoto-20261022-232457.sql`; 94 e 94;
+> esquema `e5b55421…`, 2.425 objetos, igual nos dois bancos). CI verde na `main` (run `39895925086`: 2.697 de unidade ·
+> 1.035 pgTAP · 450 invariantes e RLS · 554 de ponta a ponta + 1 instável da `PEND-014-7` + 7 pulados) e Production servindo
+> o merge; o ramo foi apagado, local e remoto.
 
 _Pedido de Bernardo Villas Boas, 22/10/2026, pelo `/corrigir`._ Spec `023-bloco-8-calendario`, ramo
 `fix/BLOCO-8-calendario`, um PR.
@@ -376,8 +383,10 @@ _Pedido de Bernardo Villas Boas, 22/10/2026, pelo `/corrigir`._ Spec `023-bloco-
   a linha pela tela nova.
 - **`PEND-023-2`** — *o `D21` continua no dado*: *Nossa Senhora Aparecida* segue também em **12/11/2026**
   (`FER-000023`, ativo, além das duas linhas de 12/10). Corrigível agora pela aba Calendário, por Bernardo.
-- **`PEND-023-3`** — *a alteração em semana de DSA já publicada* (RP-4 das regras da publicação, 22/10/2026): mudar o
-  calendário muda a semana sem aviso de *"alterado desde a publicação"*, porque a publicação ainda não existe.
+- **`PEND-023-3`** — *a alteração em semana de DSA já publicada*: mudar o calendário muda a semana sem aviso de *"alterado
+  desde a publicação"*, porque a publicação ainda não existe. ✅ **Coberta pelo Bloco 9** (a publicação do DSA, regra
+  **RP-4**: *"se algo de fora mudar uma semana publicada (feriado ou parada pelo Calendário…), o DSA avisa e pede uma
+  alteração"*) — decisão de Bernardo Villas Boas, 23/10/2026.
 
 ---
 
