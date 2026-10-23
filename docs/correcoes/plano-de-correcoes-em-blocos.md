@@ -33,7 +33,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **4** | Início: dashboard, carrosséis, submenu | não | 019 |
 | **5** | Cadastros novos: estrangeiros, custo, currículo em PDF, capacitação, acessos | sim | 020 |
 | **6** | Currículo versionado | sim | épico próprio |
-| **7** | Rodada 2 — padrões de tela: botões de ícone, formulários em diálogo ou página própria, ordem por classificação, sininho de avisos, abas do curso, cores do DSA | não | 022 |
+| **7** | Rodada 2 — padrões de tela: botões de ícone, formulários em diálogo ou página própria, ordem por classificação, sininho de avisos, abas do curso, cores do DSA — ✅ **concluído em 22/10/2026** | não | 022 |
 
 ---
 
@@ -295,11 +295,13 @@ Registrar um currículo novo (disciplinas, UEs, CH, avaliações, duração) **s
 
 ## Rodada 2 — padrões de tela *(pedido de Bernardo Villas Boas, 22/10/2026)*
 
-## Bloco 7 — Padrões de tela (spec própria, sem banco) — 🟨 EM CONFERÊNCIA
+## Bloco 7 — Padrões de tela (spec própria, sem banco) — ✅ CONCLUÍDO em 22/10/2026
 
-> 🟨 **Implementado em 22/10/2026** — spec `022-bloco-7-padroes-de-tela`, ramo `feat/BLOCO-7-padroes-de-tela`, pelo
-> fluxo `/corrigir`, num PR só. **Sem migration** (nada em `supabase/` nem em `lib/tipos/`). Espera a conferência de
-> Bernardo; o merge só com o "aprovado".
+> ✅ **Concluído em 22/10/2026** — spec `022-bloco-7-padroes-de-tela`, pelo fluxo `/corrigir`, num PR só: **#84**,
+> **APROVADO** por Bernardo Villas Boas (itens 1–6; itens 7–11 acrescentados na conferência, no mesmo PR; D-1 a D-30 e
+> A-1 a A-6 como ficaram) e mesclado por squash na `main` em **`bceea83`**. **Sem migration** (nada em `supabase/` nem em
+> `lib/tipos/`). CI verde na `main` (run `39873438898`: 2.682 de unidade em 197 arquivos · 1.022 pgTAP em 66 · 443 invariantes e RLS em 27 · 552 de ponta a ponta + 7 pulados, sem instável) e Production servindo o merge; o ramo foi apagado,
+> local e remoto.
 
 1. **Botões padrão como ícone** com dica e nome acessível, no topo e à direita; componente único `BotaoDeIcone`, com o
    vocabulário fechado de ícones, e a guarda `tests/unidade/botoes-de-icone.test.ts`. O texto continua nos diálogos de

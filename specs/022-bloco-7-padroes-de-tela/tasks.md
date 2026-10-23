@@ -45,7 +45,7 @@
   deliberados vistos reprovar. ⚠️ **O retrato das telas do DSA NÃO foi rodado** — exige dois servidores e a memória da
   máquina não comporta; a SC-005 fica provada pela **ausência de diferença** em `app/print/`, `lib/dominio/dsa/`,
   `lib/planilha/`, `dsa/leitura.ts` e `dsa/consulta.ts` contra `45a910c`, e pelos casos do DSA no CI.)*
-- [ ] T019 Plano de correções (Rodada 2 / Bloco 7), roteiro de conferência, PR com o template, CI verde, lote de dúvidas
+- [X] T019 Plano de correções (Rodada 2 / Bloco 7), roteiro de conferência, PR com o template, CI verde, lote de dúvidas
 
 ## Fase 9 — a conferência de 22/10/2026 (itens 7 a 11, no mesmo PR)
 - [X] T020 [US7] `components/graficos/tipos.ts` (`rotuloDaFatia`, sem teto nem `agruparEmOutras`), `grafico-pizza.tsx`
@@ -61,5 +61,5 @@
 - [X] T025 [US11] `semanasAcimaDaFaixa` e `alertaAcimaDaFaixa` (testes vistos falhar); a leitura dos Avisos; o CMG de 4 h
   por semana na amostra e o caso que discrimina em `instrutores.spec.ts` (Avisos e resumo do sininho); emenda no
   `FR-016` da spec 006
-- [ ] T026 Guia de testes, roteiro, plano de correções; CI verde; merge por squash; CI na `main`; Production;
+- [X] T026 Guia de testes, roteiro, plano de correções; CI verde; merge por squash; CI na `main`; Production;
   encerramento por PR de documentação
