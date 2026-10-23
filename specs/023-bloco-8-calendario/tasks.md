@@ -48,5 +48,5 @@ Ordem de dentro para fora. `[P]` = pode correr em paralelo.
 - [x] T022 Defeitos deliberados nos testes que provam a mudança (filtro de abrangência removido; botão sem permissão;
       M2 sem a cláusula)
 - [x] T023 `pnpm verificar:tudo`; papel do DSA sem diff (`app/print/`, `lib/dominio/dsa/impressao*`)
-- [ ] T024 Rito do remoto (backup, dry-run só M1+M2, `db push`, conferência só de leitura)
+- [x] T024 Rito do remoto (backup, dry-run só M1+M2, `db push`, conferência só de leitura)
 - [ ] T025 Commit, push, PR com o template, CI verde; `roteiro-de-conferencia.md`; plano de correções e pendências

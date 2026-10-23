@@ -65,3 +65,18 @@ ramo), antes e depois de `specs/023-bloco-8-calendario/reversao.sql`.
 |---|---|---|
 | com a M1 e a M2 | 2.425 | `e5b55421da868262dd6d011736590e9d` |
 | depois da reversão | 2.390 | `89a3f08eeab3459a284b715fb68076f1` — a mesma da `main` (spec 021, `CLAUDE.md`) |
+
+## Medida 4 — aplicação no remoto (22/10/2026, ~23:30 de Brasília)
+
+Depois do CI verde nos três blocos sobre `6d7e5d0` (run `39887406284`: 450 invariantes e RLS + 1 pulado; 554 de ponta a
+ponta + 1 instável, `avaliacoes-nas-telas.spec.ts:55` da `PEND-014-7`, + 7 pulados).
+
+1. Backup: **`remoto-20261022-232457.sql`** (`dado_do_remoto --somente-copia`).
+2. Dry-run: só `20261023010547_calendario_tipo_e_abrangencia` e `20261023010557_dias_parados_respeitam_abrangencia`.
+3. `vw_dias_parados_turma` no remoto **antes** do push: 22 linhas, `d14ba5b32bf8a022e76d77978a43e0b4`.
+4. `supabase db push --linked`: saída 0, as duas aplicadas.
+5. Conferência só de leitura: **94 e 94** migrations; impressão digital do esquema **idêntica nos dois bancos**
+   (**2.425 objetos, `e5b55421da868262dd6d011736590e9d`**); `vw_dias_parados_turma` **depois**: 22 linhas, o mesmo
+   `d14ba5b3…`; `{security_invoker=true}`; **0** policies de DELETE; `feriado_turma` com 0 linhas; 0 linhas com
+   `tipo_parada_id` (nenhum dado mudou); 31 linhas em `feriados`; `FER-000024` **inativo**, como antes; Production
+   respondendo (`/login` 200, as protegidas 307).
