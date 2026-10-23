@@ -345,8 +345,26 @@ describe("juntar como sessão da mesma prova (decisão de 16/10/2026, com trilha
  * é ADIADO — a recusa acontece no COMMIT da requisição —, e o que se prova aqui é que ela chega a quem grava pela
  * interface de dados com o código 23514 e a chave da frase (`aplicacao_depois_das_sessoes`, `traducao-de-recusas.ts`),
  * e não como erro genérico de transação. A prova tem a sessão 2 em 23/06.
+ * ⚠️ Spec 024 (D-12): com SESSÃO, o lançamento salvo não muda direto — só pelo «Salvar» do DSA (o caso abaixo). O gatilho
+ *    adiado não depende de sessão, e por isso a prova dele grava com a chave de serviço, que também passa pela interface
+ *    de dados e chega ao COMMIT do mesmo jeito.
  */
 describe("E-7 · a 1ª aplicação não passa das sessões (gatilho adiado, pela interface de dados)", () => {
+  /*
+   * Spec 024 (RP-0): a sessão 2 que o Operador lançou acima é RASCUNHO, e o gatilho olha só o salvo. O «Salvar a semana»
+   * (ISO 26 de 2026, 22 a 28/06) a registra, pela mesma RPC da tela, com sessão real.
+   */
+  beforeAll(async () => {
+    const { error } = await sessao("encarregado").rpc("salvar_semana_do_dsa", {
+      p_turma: turmaId,
+      p_ano: 2026,
+      p_semana: 26,
+      p_de: "2026-06-22",
+      p_ate: "2026-06-28",
+    });
+    if (error) throw new Error(`salvar a semana: ${error.message}`);
+  });
+
   const dataDaProva = async () =>
     (
       (await servico.from("avaliacoes").select("data_avaliacao").eq("id", provaId).single())
@@ -354,7 +372,7 @@ describe("E-7 · a 1ª aplicação não passa das sessões (gatilho adiado, pela
     ).data_avaliacao;
 
   it("DISCRIMINA: mover a 1ª aplicação para DEPOIS da sessão 2 é recusado com 23514 e a chave da frase, e a data fica", async () => {
-    const { error } = await sessao("encarregado")
+    const { error } = await servico
       .from("avaliacoes")
       .update({ data_avaliacao: "2026-06-30" })
       .eq("id", provaId);
@@ -364,12 +382,22 @@ describe("E-7 · a 1ª aplicação não passa das sessões (gatilho adiado, pela
   });
 
   it("controle positivo: o MESMO dia da sessão 2 é aceito", async () => {
-    const { error } = await sessao("encarregado")
+    const { error } = await servico
       .from("avaliacoes")
       .update({ data_avaliacao: "2026-06-23" })
       .eq("id", provaId);
     expect(error).toBeNull();
     expect(await dataDaProva()).toBe("2026-06-23");
     await servico.from("avaliacoes").update({ data_avaliacao: "2026-06-22" }).eq("id", provaId);
+  });
+
+  it("Spec 024 (D-12): com sessão, a escrita direta na prova salva é recusada pela guarda do rascunho, e a data fica", async () => {
+    const { error } = await sessao("encarregado")
+      .from("avaliacoes")
+      .update({ data_avaliacao: "2026-06-23" })
+      .eq("id", provaId);
+    expect(error?.code).toBe("42501");
+    expect(error?.hint).toBe("lancamento_salvo_so_pelo_salvar");
+    expect(await dataDaProva()).toBe("2026-06-22");
   });
 });

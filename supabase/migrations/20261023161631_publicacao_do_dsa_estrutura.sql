@@ -30,7 +30,9 @@ begin
   foreach t in array array['registros_aula', 'avaliacoes', 'atividades_nao_letivas', 'vistas_de_avaliacao',
                            'sessoes_de_aplicacao'] loop
     execute format('alter table public.%I add column salvo boolean not null default true', t);
-    execute format('alter table public.%I add column rascunho_de uuid references public.%I (id) on delete restrict',
+    -- `no action` (e não `restrict`): a conferência fica para o fim do comando, e um mesmo DELETE de limpeza de amostra
+    -- leva o original e a sombra juntos. Sombra órfã continua impossível; em produção nada se apaga (regra 4).
+    execute format('alter table public.%I add column rascunho_de uuid references public.%I (id) on delete no action',
                    t, t);
     execute format('alter table public.%I add column rascunho_exclui boolean not null default false', t);
     -- O salvo não é sombra nem pede exclusão; a exclusão é só de sombra.
