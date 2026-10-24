@@ -138,6 +138,13 @@ async function abrirFormulario(page: Page, nome: string) {
   return dialogo;
 }
 
+/** O próprio dia, ou a sexta anterior quando ele cai num sábado ou domingo (em ISO, sem fuso). */
+function sextaSeFimDeSemana(dia: string): string {
+  const d = new Date(`${dia}T12:00:00Z`);
+  const recuo = d.getUTCDay() === 6 ? 1 : d.getUTCDay() === 0 ? 2 : 0;
+  return new Date(d.getTime() - recuo * 86_400_000).toISOString().slice(0, 10);
+}
+
 async function registrar(
   page: Page,
   nome: string,
@@ -148,6 +155,13 @@ async function registrar(
   const formulario = painel.locator('[data-slot="formulario-ta-fora"]');
   // ⚠️ A data ABRE com hoje, o de São Paulo (FR-001.1): é o valor do campo, sem ninguém digitar.
   await expect(formulario.locator('input[name="data"]')).toHaveValue(HOJE);
+  /*
+   * ⚠️ EM FIM DE SEMANA, A SEXTA DA MESMA SEMANA: a situação do DSA acumula até o último dia da semana MOSTRADA (de
+   *    segunda a sexta, sem sábado aberto), e o TA de sábado ou domingo só entraria na semana seguinte. Medido no CI da
+   *    `main` em 24/10/2026, um sábado: o caso lia 40 em vez de 50 — defeito do teste, não do produto.
+   */
+  const diaUtil = sextaSeFimDeSemana(HOJE);
+  if (diaUtil !== HOJE) await formulario.locator('input[name="data"]').fill(diaUtil);
   await formulario.locator('input[name="tempos"]').fill(String(tempos));
   await formulario.locator('textarea[name="observacao"]').fill(observacao);
   await formulario.locator('[data-slot="gravar-ta-fora"]').click();
@@ -201,7 +215,7 @@ test.describe("D-COR-3 · registrar, somar em toda tela, separar e desfazer", ()
       tempos: 5,
       status: "ativo",
       disciplina_id: disciplinaA,
-      data: HOJE,
+      data: sextaSeFimDeSemana(HOJE),
     });
     const codigoDoRegistroA = banco[0]?.codigo as string;
     expect(codigoDoRegistroA).toMatch(/^TFD-\d{6}$/);

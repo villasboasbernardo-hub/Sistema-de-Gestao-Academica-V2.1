@@ -35,6 +35,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **6** | Currículo versionado | sim | épico próprio |
 | **7** | Rodada 2 — padrões de tela: botões de ícone, formulários em diálogo ou página própria, ordem por classificação, sininho de avisos, abas do curso, cores do DSA — ✅ **concluído em 22/10/2026** | não | 022 |
 | **8** | Calendário na tela de Atividades e desfazer feriado no DSA — ✅ **concluído em 23/10/2026** | duas migrations (a M1 só acrescenta; a M2 recria `vw_dias_parados_turma` com o mesmo resultado para o dado existente) | 023 |
+| **9** | Publicação do DSA com rascunho e contagem EAD/semipresencial — ✅ **concluído em 24/10/2026** | duas migrations (a M1 só acrescenta; a M2 pelo portão autorizado em 22/10/2026, com o que soma idêntico) | 024 |
 
 ---
 
@@ -294,7 +295,10 @@ Registrar um currículo novo (disciplinas, UEs, CH, avaliações, duração) **s
 
 ---
 
-## Rodada 2 — padrões de tela *(pedido de Bernardo Villas Boas, 22/10/2026)*
+## Rodada 2 — padrões de tela *(pedido de Bernardo Villas Boas, 22/10/2026)* — ✅ CONCLUÍDA em 24/10/2026
+
+> ✅ **Os três blocos da rodada na `main`**: o 7 (#84, `bceea83`), o 8 (#86, `977b71a`) e o 9 (#88, `d2da1ac`), **aprovados em
+> conferência conjunta** por Bernardo Villas Boas em 23/10/2026.
 
 ## Bloco 7 — Padrões de tela (spec própria, sem banco) — ✅ CONCLUÍDO em 22/10/2026
 
@@ -389,7 +393,18 @@ _Pedido de Bernardo Villas Boas, 22/10/2026, pelo `/corrigir`._ Spec `023-bloco-
   **RP-4**: *"se algo de fora mudar uma semana publicada (feriado ou parada pelo Calendário…), o DSA avisa e pede uma
   alteração"*) — decisão de Bernardo Villas Boas, 23/10/2026.
 
-## Bloco 9 — Publicação do DSA (com rascunho) e contagem EAD/semipresencial (spec própria) — 🟨 PR #88 aberto, migrations no remoto, sem merge
+## Bloco 9 — Publicação do DSA (com rascunho) e contagem EAD/semipresencial (spec própria) — ✅ CONCLUÍDO em 24/10/2026
+
+> ✅ **Concluído em 24/10/2026** — spec `024-bloco-9-publicacao-do-dsa`, pelo fluxo `/corrigir`, num PR só: **#88**, **APROVADO**
+> por Bernardo Villas Boas (conferência conjunta dos Blocos 7, 8 e 9, 23/10/2026; D-12 a D-19 como ficaram, a D-15 aprovada
+> antes) e mesclado por squash na `main` em **`d2da1ac`**, na virada da semana (o papel do DSA mudou). As duas migrations no
+> remoto antes do merge (backup `remoto-20261023-192656.sql`; esquema `80345112…`, 2.573 objetos, igual nos dois bancos).
+> Production servindo o merge (deploy de `d2da1ac` em `success`); o ramo foi apagado, local e remoto. ⚠️ **O CI da `main`
+> sobre `d2da1ac` reprovou em UM caso** (run `40059953003`: 2.717 de unidade · 1.056 pgTAP · 457 invariantes e RLS · 557 de
+> ponta a ponta + 1 reprovado + 7 pulados): `ta-fora-do-dsa.spec.ts:169`, **por ser sábado** — o teste gravava o TA fora do
+> DSA com a data de hoje, e a situação do DSA acumula até a sexta da semana mostrada. Defeito de teste anterior a este bloco
+> (reprovaria em qualquer fim de semana), consertado no PR de encerramento: em fim de semana, o TA vai na sexta da mesma
+> semana. O mesmo caso passou nas duas execuções do PR, na sexta-feira.
 
 _Pedido de Bernardo Villas Boas, 23/10/2026, pelo `/corrigir`._ Spec `024-bloco-9-publicacao-do-dsa`, ramo
 `feat/BLOCO-9-publicacao-do-dsa`, um PR. ⚠️ **O papel do DSA muda (PRÉVIA/ALT): merge só entre semanas.**
