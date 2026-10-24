@@ -28,6 +28,8 @@
   --dsa4-almoco: 3.6mm;
   --dsa4-letra: 7.6pt;
 
+  position: relative;
+
   box-sizing: border-box;
   width: 297mm;
   /*
@@ -730,4 +732,21 @@
     break-inside: avoid;
     page-break-inside: avoid;
   }
+}
+
+/* Spec 024 (FR-010): a marca PRÉVIA — grande, inclinada e clara, sobre a folha, sem esconder o conteúdo. */
+.dsa4 .dsa4-previa {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: 96pt;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--dsa4-amarelo);
+  opacity: 0.35;
+  transform: rotate(-24deg);
 }

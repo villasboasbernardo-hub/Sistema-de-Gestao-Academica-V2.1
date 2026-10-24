@@ -38,6 +38,8 @@ export type DisciplinaNoFormulario = {
   readonly tecnicaEnsinoSugerida: string | null;
   readonly localPadrao: string | null;
   readonly nomeNoDsa: string | null;
+  /** Spec 024 (FR-019): da etapa presencial da turma semipresencial. Ausente = desmarcada. */
+  readonly presencial?: boolean;
 };
 
 export function FormularioDeDisciplina({
@@ -91,6 +93,7 @@ export function FormularioDeDisciplina({
             ...comum,
             disciplinaId: disciplina.disciplinaId,
             nomeNoDsa: String(dados.get("nome_no_dsa") ?? ""),
+            presencial: dados.get("presencial") === "on",
             ...(justificativa ? { justificativa } : {}),
           })
         : criarDisciplina({
@@ -223,6 +226,21 @@ export function FormularioDeDisciplina({
               No cartão: {nomeNoCartao({ nomeNoDsa, nome: disciplina.nomeDisciplina })}
             </span>
           </div>
+        ) : null}
+        {/*
+          Spec 024 (FR-019): a marca da etapa presencial. Com alguma marcada no currículo, a turma semipresencial conta
+          só as marcadas e o lançado na etapa presencial; sem nenhuma, conta tudo, como antes.
+        */}
+        {editando ? (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="presencial"
+              defaultChecked={disciplina.presencial === true}
+              data-slot="campo-presencial"
+            />
+            Presencial — conta na etapa presencial da turma semipresencial
+          </label>
         ) : null}
 
         {/* Spec 022 (FR-001): o verbo é o ícone, com o nome de antes na dica e no nome acessível. */}

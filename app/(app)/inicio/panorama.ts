@@ -27,7 +27,12 @@
 import { datasQueAlcancam } from "@/lib/dominio/calendario";
 import { compararTurmas } from "@/lib/dominio/ordem-de-cursos";
 import { regimeEfetivo } from "@/lib/dominio/regime-da-turma";
-import { andamentoDaTurma, type RegimeDoCurso } from "@/lib/dominio/andamento-da-turma";
+import {
+  andamentoDaTurma,
+  type RegimeDoCurso,
+  contagemDaTurma,
+  type ContagemPresencial,
+} from "@/lib/dominio/andamento-da-turma";
 import { ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 
 export type CargaDaTurma = {
@@ -119,6 +124,8 @@ export function montarPanorama(
   hoje: string,
   /** A CHD executada até hoje, por turma — `chd_da_turma_ate(hoje)` (M1 da spec 016). */
   executadaAteHoje: ReadonlyMap<string, number>,
+  /** Spec 024 (FR-020): a etapa presencial das semipresenciais (`lerContagemPresencial`). Ausente = conta tudo. */
+  presenciais: ReadonlyMap<string, ContagemPresencial> = new Map(),
 ): readonly TurmaNoPanorama[] {
   const porId = new Map(cursos.map((c) => [c.id, c]));
   const turmaPorId = new Map(turmas.map((t) => [t.id, t]));
@@ -138,6 +145,16 @@ export function montarPanorama(
     .filter((c) => porId.has(c.curso_id))
     .map((c) => {
       const daTabela = turmaPorId.get(c.turma_id);
+      /* Spec 024 (FR-020): a semipresencial com marca presencial conta só a etapa presencial. */
+      const contagem = contagemDaTurma(
+        {
+          modalidade: daTabela?.modalidade ?? "",
+          dataTermino: daTabela?.data_termino ?? null,
+          prevista: Number(c.chr_curricular ?? 0),
+          executada: Number(executadaAteHoje.get(c.turma_id) ?? 0),
+        },
+        presenciais.get(c.turma_id) ?? null,
+      );
       const andamento = andamentoDaTurma(
         {
           status: c.status_turma,
@@ -148,9 +165,10 @@ export function montarPanorama(
            *    *"sem dado"*, que é o que a ausência significa.
            */
           modalidade: daTabela?.modalidade ?? "",
-          dataTermino: daTabela?.data_termino ?? null,
-          prevista: Number(c.chr_curricular ?? 0),
-          executada: Number(executadaAteHoje.get(c.turma_id) ?? 0),
+          dataTermino: contagem.dataTermino,
+          inicioDaCapacidade: contagem.inicioDaCapacidade,
+          prevista: contagem.prevista,
+          executada: contagem.executada,
         },
         /* Spec 018 (C-9): o regime nomeado da turma troca os TA presenciais; o limite EAD fica (`RN-MAT-04`). */
         regimeEfetivo(

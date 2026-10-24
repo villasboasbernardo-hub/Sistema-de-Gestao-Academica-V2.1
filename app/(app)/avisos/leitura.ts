@@ -11,6 +11,7 @@
  * ⚠️ **"NÃO PUDE LER" É DITO, NUNCA ZERO** (gotcha 4): a leitura que falha entra em `naoLidos`, com o módulo, e a página
  *    diz que não pôde ler — o que falhou não vira "nenhum aviso".
  */
+import { lerContagemPresencial } from "../turmas/contagem-presencial";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { diasBloqueadosComLancamento } from "@/lib/dominio/calendario";
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
@@ -185,6 +186,7 @@ export async function lerAvisos(
     instrutoresRes,
     cargaAnualRes,
     previstaRes,
+    presenciais,
   ] = await Promise.all([
     supabase
       .from("cursos")
@@ -224,6 +226,10 @@ export async function lerAvisos(
         "id, tipo_avaliacao, data_avaliacao, status, avaliacao_curriculo_id, turma:turmas!avaliacoes_turma_id_fkey(codigo), disciplina:disciplinas!avaliacoes_disciplina_id_fkey(cod_disciplina), item:avaliacoes_curriculo!avaliacoes_item_da_disciplina(status, instrumento:config_listas!avaliacoes_curriculo_instrumento_id_fkey(valor, metadados)), instrumento:config_listas!avaliacoes_instrumento_id_fkey(valor, metadados), vistas_de_avaliacao(data, status), sessoes_de_aplicacao!sessoes_de_aplicacao_avaliacao_id_fkey(data, status)",
       )
       .in("status", [...STATUS_DE_AVALIACAO_VIVA])
+      /* Spec 024 (RP-8): os avisos contam só o salvo — a prova e as sessões dela. */
+      .eq("salvo", true)
+      .eq("vistas_de_avaliacao.salvo", true)
+      .eq("sessoes_de_aplicacao.salvo", true)
       .lte("data_avaliacao", hoje),
     supabase
       .from("config_parametros")
@@ -269,6 +275,8 @@ export async function lerAvisos(
         .order("atribuicao_id")
         .range(f.de, f.ate),
     ),
+    /* Spec 024 (FR-020): a etapa presencial das semipresenciais. */
+    lerContagemPresencial(supabase, hoje),
   ]);
 
   const naoLidos = new Set<ModuloDeAviso>();
@@ -336,6 +344,7 @@ export async function lerAvisos(
               (e) => [e.turma_id, Number(e.chd_executada)] as const,
             ),
           ),
+          presenciais,
         )
           .filter((t) => t.emAtraso)
           .map((t) => t.turmaCodigo);

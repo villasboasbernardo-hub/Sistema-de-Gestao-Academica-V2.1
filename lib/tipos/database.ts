@@ -157,7 +157,10 @@ export type Database = {
           origem_migracao_v1: string | null
           outros_instrutores: string[]
           quantidade_alunos: number | null
+          rascunho_de: string | null
+          rascunho_exclui: boolean
           responsavel_externo: string | null
+          salvo: boolean
           status: Database["public"]["Enums"]["status_registro"]
           subtipo: string | null
           ta_final: number | null
@@ -188,7 +191,10 @@ export type Database = {
           origem_migracao_v1?: string | null
           outros_instrutores?: string[]
           quantidade_alunos?: number | null
+          rascunho_de?: string | null
+          rascunho_exclui?: boolean
           responsavel_externo?: string | null
+          salvo?: boolean
           status?: Database["public"]["Enums"]["status_registro"]
           subtipo?: string | null
           ta_final?: number | null
@@ -219,7 +225,10 @@ export type Database = {
           origem_migracao_v1?: string | null
           outros_instrutores?: string[]
           quantidade_alunos?: number | null
+          rascunho_de?: string | null
+          rascunho_exclui?: boolean
           responsavel_externo?: string | null
+          salvo?: boolean
           status?: Database["public"]["Enums"]["status_registro"]
           subtipo?: string | null
           ta_final?: number | null
@@ -281,6 +290,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "atividades_nao_letivas_rascunho_de_fkey"
+            columns: ["rascunho_de"]
+            isOneToOne: false
+            referencedRelation: "atividades_nao_letivas"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "atividades_nao_letivas_tipo_atividade_id_fkey"
             columns: ["tipo_atividade_id"]
             isOneToOne: false
@@ -306,6 +322,13 @@ export type Database = {
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
             referencedColumns: ["turma_id"]
           },
           {
@@ -387,6 +410,9 @@ export type Database = {
           origem_execucao_v1: string | null
           origem_migracao_v1: string | null
           outros_instrutores: string[]
+          rascunho_de: string | null
+          rascunho_exclui: boolean
+          salvo: boolean
           status: Database["public"]["Enums"]["status_avaliacao"]
           status_anterior:
             | Database["public"]["Enums"]["status_avaliacao"]
@@ -429,6 +455,9 @@ export type Database = {
           origem_execucao_v1?: string | null
           origem_migracao_v1?: string | null
           outros_instrutores?: string[]
+          rascunho_de?: string | null
+          rascunho_exclui?: boolean
+          salvo?: boolean
           status?: Database["public"]["Enums"]["status_avaliacao"]
           status_anterior?:
             | Database["public"]["Enums"]["status_avaliacao"]
@@ -471,6 +500,9 @@ export type Database = {
           origem_execucao_v1?: string | null
           origem_migracao_v1?: string | null
           outros_instrutores?: string[]
+          rascunho_de?: string | null
+          rascunho_exclui?: boolean
+          salvo?: boolean
           status?: Database["public"]["Enums"]["status_avaliacao"]
           status_anterior?:
             | Database["public"]["Enums"]["status_avaliacao"]
@@ -648,6 +680,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "avaliacoes_rascunho_de_fkey"
+            columns: ["rascunho_de"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_rascunho_de_fkey"
+            columns: ["rascunho_de"]
+            isOneToOne: false
+            referencedRelation: "vw_avaliacoes_situacao"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "avaliacoes_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
@@ -659,6 +705,13 @@ export type Database = {
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
             referencedColumns: ["turma_id"]
           },
           {
@@ -968,6 +1021,13 @@ export type Database = {
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_curriculo_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
             referencedColumns: ["turma_id"]
           },
           {
@@ -1667,6 +1727,13 @@ export type Database = {
             foreignKeyName: "dias_parados_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dias_parados_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
             referencedRelation: "vw_conformidade_tetos"
             referencedColumns: ["turma_id"]
           },
@@ -1710,6 +1777,7 @@ export type Database = {
           nome_normalizado: string | null
           ordem_sugerida: number | null
           origem_migracao_v1: string | null
+          presencial: boolean
           previsao_inicio: string | null
           previsao_termino: string | null
           prioridade_alocacao_peso: number | null
@@ -1741,6 +1809,7 @@ export type Database = {
           nome_normalizado?: string | null
           ordem_sugerida?: number | null
           origem_migracao_v1?: string | null
+          presencial?: boolean
           previsao_inicio?: string | null
           previsao_termino?: string | null
           prioridade_alocacao_peso?: number | null
@@ -1772,6 +1841,7 @@ export type Database = {
           nome_normalizado?: string | null
           ordem_sugerida?: number | null
           origem_migracao_v1?: string | null
+          presencial?: boolean
           previsao_inicio?: string | null
           previsao_termino?: string | null
           prioridade_alocacao_peso?: number | null
@@ -1801,6 +1871,106 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_cursos_regime_vigente"
             referencedColumns: ["curso_id"]
+          },
+        ]
+      }
+      dsa_eventos_da_semana: {
+        Row: {
+          ano: number
+          autor_id: string | null
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          justificativa: string | null
+          numero: number | null
+          ocorrido_em: string
+          origem_migracao_v1: string | null
+          retrato: Json | null
+          semana: number
+          tipo: string
+          turma_id: string
+        }
+        Insert: {
+          ano: number
+          autor_id?: string | null
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          justificativa?: string | null
+          numero?: number | null
+          ocorrido_em?: string
+          origem_migracao_v1?: string | null
+          retrato?: Json | null
+          semana: number
+          tipo: string
+          turma_id: string
+        }
+        Update: {
+          ano?: number
+          autor_id?: string | null
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          justificativa?: string | null
+          numero?: number | null
+          ocorrido_em?: string
+          origem_migracao_v1?: string | null
+          retrato?: Json | null
+          semana?: number
+          tipo?: string
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dsa_eventos_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dsa_eventos_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dsa_eventos_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dsa_eventos_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dsa_eventos_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dsa_eventos_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
           },
         ]
       }
@@ -1891,6 +2061,13 @@ export type Database = {
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "feriado_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
             referencedColumns: ["turma_id"]
           },
           {
@@ -2644,6 +2821,13 @@ export type Database = {
             foreignKeyName: "planejamento_anual_turma_prevista_id_fkey"
             columns: ["turma_prevista_id"]
             isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "planejamento_anual_turma_prevista_id_fkey"
+            columns: ["turma_prevista_id"]
+            isOneToOne: false
             referencedRelation: "vw_conformidade_tetos"
             referencedColumns: ["turma_id"]
           },
@@ -2749,6 +2933,13 @@ export type Database = {
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "previstos_proens_turma_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
             referencedColumns: ["turma_id"]
           },
           {
@@ -2892,6 +3083,9 @@ export type Database = {
           observacoes: string | null
           origem_migracao_v1: string | null
           outros_instrutores: string[]
+          rascunho_de: string | null
+          rascunho_exclui: boolean
+          salvo: boolean
           status: Database["public"]["Enums"]["status_registro"]
           ta_final: number | null
           ta_inicial: number | null
@@ -2919,6 +3113,9 @@ export type Database = {
           observacoes?: string | null
           origem_migracao_v1?: string | null
           outros_instrutores?: string[]
+          rascunho_de?: string | null
+          rascunho_exclui?: boolean
+          salvo?: boolean
           status?: Database["public"]["Enums"]["status_registro"]
           ta_final?: number | null
           ta_inicial?: number | null
@@ -2946,6 +3143,9 @@ export type Database = {
           observacoes?: string | null
           origem_migracao_v1?: string | null
           outros_instrutores?: string[]
+          rascunho_de?: string | null
+          rascunho_exclui?: boolean
+          salvo?: boolean
           status?: Database["public"]["Enums"]["status_registro"]
           ta_final?: number | null
           ta_inicial?: number | null
@@ -3061,6 +3261,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "registros_aula_rascunho_de_fkey"
+            columns: ["rascunho_de"]
+            isOneToOne: false
+            referencedRelation: "registros_aula"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "registros_aula_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
@@ -3072,6 +3279,13 @@ export type Database = {
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "registros_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
             referencedColumns: ["turma_id"]
           },
           {
@@ -3318,6 +3532,9 @@ export type Database = {
           local: string | null
           numero: number
           origem_migracao_v1: string | null
+          rascunho_de: string | null
+          rascunho_exclui: boolean
+          salvo: boolean
           status: Database["public"]["Enums"]["status_registro"]
           ta_final: number | null
           ta_inicial: number | null
@@ -3339,6 +3556,9 @@ export type Database = {
           local?: string | null
           numero: number
           origem_migracao_v1?: string | null
+          rascunho_de?: string | null
+          rascunho_exclui?: boolean
+          salvo?: boolean
           status?: Database["public"]["Enums"]["status_registro"]
           ta_final?: number | null
           ta_inicial?: number | null
@@ -3360,6 +3580,9 @@ export type Database = {
           local?: string | null
           numero?: number
           origem_migracao_v1?: string | null
+          rascunho_de?: string | null
+          rascunho_exclui?: boolean
+          salvo?: boolean
           status?: Database["public"]["Enums"]["status_registro"]
           ta_final?: number | null
           ta_inicial?: number | null
@@ -3392,6 +3615,13 @@ export type Database = {
             columns: ["juntada_de_avaliacao_id"]
             isOneToOne: false
             referencedRelation: "vw_avaliacoes_situacao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessoes_de_aplicacao_rascunho_de_fkey"
+            columns: ["rascunho_de"]
+            isOneToOne: false
+            referencedRelation: "sessoes_de_aplicacao"
             referencedColumns: ["id"]
           },
         ]
@@ -3517,6 +3747,13 @@ export type Database = {
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "ta_fora_do_dsa_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
             referencedColumns: ["turma_id"]
           },
           {
@@ -3686,6 +3923,13 @@ export type Database = {
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
             referencedColumns: ["turma_id"]
           },
           {
@@ -4302,6 +4546,9 @@ export type Database = {
           local: string | null
           numero: number
           origem_migracao_v1: string | null
+          rascunho_de: string | null
+          rascunho_exclui: boolean
+          salvo: boolean
           status: Database["public"]["Enums"]["status_registro"]
           ta_final: number | null
           ta_inicial: number | null
@@ -4321,6 +4568,9 @@ export type Database = {
           local?: string | null
           numero: number
           origem_migracao_v1?: string | null
+          rascunho_de?: string | null
+          rascunho_exclui?: boolean
+          salvo?: boolean
           status?: Database["public"]["Enums"]["status_registro"]
           ta_final?: number | null
           ta_inicial?: number | null
@@ -4340,6 +4590,9 @@ export type Database = {
           local?: string | null
           numero?: number
           origem_migracao_v1?: string | null
+          rascunho_de?: string | null
+          rascunho_exclui?: boolean
+          salvo?: boolean
           status?: Database["public"]["Enums"]["status_registro"]
           ta_final?: number | null
           ta_inicial?: number | null
@@ -4386,6 +4639,13 @@ export type Database = {
             columns: ["conduz_instrutor_id"]
             isOneToOne: false
             referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vistas_de_avaliacao_rascunho_de_fkey"
+            columns: ["rascunho_de"]
+            isOneToOne: false
+            referencedRelation: "vistas_de_avaliacao"
             referencedColumns: ["id"]
           },
         ]
@@ -4609,6 +4869,13 @@ export type Database = {
             foreignKeyName: "avaliacoes_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
             referencedRelation: "vw_conformidade_tetos"
             referencedColumns: ["turma_id"]
           },
@@ -4668,6 +4935,14 @@ export type Database = {
             referencedColumns: ["curso_id"]
           },
         ]
+      }
+      vw_carga_presencial_turma: {
+        Row: {
+          ch_presencial: number | null
+          disciplinas_presenciais: number | null
+          turma_id: string | null
+        }
+        Relationships: []
       }
       vw_chd_por_fato: {
         Row: {
@@ -4897,6 +5172,13 @@ export type Database = {
             foreignKeyName: "turma_disciplina_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_disciplina_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
             referencedRelation: "vw_conformidade_tetos"
             referencedColumns: ["turma_id"]
           },
@@ -5104,6 +5386,27 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_ocupacao_do_dsa: {
+        Row: {
+          data: string | null
+          disciplina_id: string | null
+          fato_id: string | null
+          fiscal_id: string | null
+          herdado: boolean | null
+          instrutor_id: string | null
+          local: string | null
+          numero_sessao: number | null
+          origem: string | null
+          rascunho: boolean | null
+          rascunho_de: string | null
+          sessao_id: string | null
+          ta_final: number | null
+          ta_inicial: number | null
+          tempos_consumidos: number | null
+          turma_id: string | null
+        }
+        Relationships: []
+      }
       vw_ocupacao_ta: {
         Row: {
           data: string | null
@@ -5199,6 +5502,13 @@ export type Database = {
             foreignKeyName: "registros_aula_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "registros_aula_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
             referencedRelation: "vw_conformidade_tetos"
             referencedColumns: ["turma_id"]
           },
@@ -5281,6 +5591,13 @@ export type Database = {
         Returns: undefined
       }
       chd_da_turma_ate: {
+        Args: { p_ate: string }
+        Returns: {
+          chd_executada: number
+          turma_id: string
+        }[]
+      }
+      chd_da_turma_na_etapa_ate: {
         Args: { p_ate: string }
         Returns: {
           chd_executada: number
@@ -5399,6 +5716,7 @@ export type Database = {
           nome_normalizado: string | null
           ordem_sugerida: number | null
           origem_migracao_v1: string | null
+          presencial: boolean
           previsao_inicio: string | null
           previsao_termino: string | null
           prioridade_alocacao_peso: number | null
@@ -5461,6 +5779,20 @@ export type Database = {
         Args: { p_curriculo_id: string }
         Returns: undefined
       }
+      descartar_rascunho_do_dsa: {
+        Args: {
+          p_ano: number
+          p_ate: string
+          p_de: string
+          p_semana: number
+          p_turma: string
+        }
+        Returns: number
+      }
+      dsa_travado_na_data: {
+        Args: { p_data: string; p_turma: string }
+        Returns: boolean
+      }
       excluir_conta: { Args: { p_conta_id: string }; Returns: string }
       excluir_disciplina: {
         Args: { p_codigo_confirmacao: string; p_disciplina_id: string }
@@ -5490,6 +5822,7 @@ export type Database = {
         Args: { p_operacoes: Json }
         Returns: number
       }
+      gravar_rascunho_do_dsa: { Args: { p_operacoes: Json }; Returns: number }
       impedimentos_de_exclusao_da_disciplina: {
         Args: { p_disciplina_id: string }
         Returns: string[]
@@ -5501,6 +5834,10 @@ export type Database = {
       impedimentos_de_exclusao_do_instrutor: {
         Args: { p_instrutor_id: string }
         Returns: string[]
+      }
+      iniciar_alteracao_do_dsa: {
+        Args: { p_ano: number; p_semana: number; p_turma: string }
+        Returns: string
       }
       juntar_como_sessao: {
         Args: { p_avaliacao_id: string; p_prova_id: string }
@@ -5531,6 +5868,22 @@ export type Database = {
           vigencia: string
           vigente_de: string
         }[]
+      }
+      publicar_semana_do_dsa: {
+        Args: {
+          p_ano: number
+          p_ate: string
+          p_de: string
+          p_justificativa?: string
+          p_retrato: Json
+          p_semana: number
+          p_turma: string
+        }
+        Returns: number
+      }
+      quantos_rascunhos_na_semana: {
+        Args: { p_ate: string; p_de: string; p_turma: string }
+        Returns: number
       }
       rastro_da_conta: {
         Args: { p_conta_alvo_id: string }
@@ -5566,6 +5919,7 @@ export type Database = {
           nome_normalizado: string | null
           ordem_sugerida: number | null
           origem_migracao_v1: string | null
+          presencial: boolean
           previsao_inicio: string | null
           previsao_termino: string | null
           prioridade_alocacao_peso: number | null
@@ -5624,6 +5978,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      salvar_semana_do_dsa: {
+        Args: {
+          p_ano: number
+          p_ate: string
+          p_de: string
+          p_semana: number
+          p_turma: string
+        }
+        Returns: number
       }
       sincronizar_habilitacoes: {
         Args: { p_disciplinas: string[]; p_instrutor_id: string }

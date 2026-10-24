@@ -212,6 +212,15 @@ function CorpoDoBloco({
        * ⚠️ Os três marcadores vão como TEXTO, nunca só como cor (`RNF-USA-05`). O conflito já
        * tinge a célula; sem a palavra, quem não distingue a cor não sabe que há conflito.
        */}
+      {/* Spec 024 (RP-0): o rascunho diz que é rascunho, em TEXTO (`RNF-USA-05`). */}
+      {bloco.rascunho ? (
+        <span
+          className="border-borda-forte text-texto w-fit rounded border border-dashed px-1 text-[10px] font-medium"
+          data-slot="nao-salvo"
+        >
+          não salvo
+        </span>
+      ) : null}
       {foraDaSala ? (
         <span className="w-fit rounded bg-atrasado-fundo px-1 text-[10px] text-atrasado-tinta">
           fora da sala · {bloco.local}
@@ -311,6 +320,15 @@ function CorpoDoCartao({
       </span>
       {bloco === undefined && cartao.tipo === "estudo" ? (
         <span className="w-fit text-[10px] text-texto-suave">no papel, sem lançamento</span>
+      ) : null}
+      {/* Spec 024 (RP-0): o rascunho diz que é rascunho, em TEXTO (`RNF-USA-05`). */}
+      {bloco?.rascunho ? (
+        <span
+          className="border-borda-forte text-texto w-fit rounded border border-dashed px-1 text-[10px] font-medium"
+          data-slot="nao-salvo"
+        >
+          não salvo
+        </span>
       ) : null}
       {/* ⚠️ As marcas vão como TEXTO, nunca só como cor (`RNF-USA-05`). */}
       {foraDaSala ? (

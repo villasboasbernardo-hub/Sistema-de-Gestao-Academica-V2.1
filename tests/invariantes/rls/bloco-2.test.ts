@@ -400,7 +400,12 @@ describe("D-COR-3 · TA fora do DSA: grava só o trio", () => {
     expect(desfazer.data).toHaveLength(1);
   });
 
-  it("a soma até hoje da turma inclui o que sobrou ativo (ajudante 2 + admin 2) e a aula", async () => {
+  /*
+   * ⚠️ Spec 024 (RP-0/RP-8): a aula que o Operador lançou acima pela interface de dados nasce RASCUNHO e NÃO conta —
+   *    era 2 + 1 + 2 + 2 antes do Bloco 9. Salvar por aqui gravaria um evento na trilha imutável e prenderia a turma que
+   *    esta amostra recria a cada execução (regra 9.1); o «salvar conta» se prova em `publicacao-do-dsa.test.ts`.
+   */
+  it("a soma até hoje da turma inclui o que sobrou ativo (ajudante 2 + admin 2) — e não a aula em rascunho", async () => {
     const { data, error } = await sessao("encarregado").rpc("chd_da_turma_ate", {
       p_ate: "2046-12-31",
     });
@@ -408,7 +413,7 @@ describe("D-COR-3 · TA fora do DSA: grava só o trio", () => {
     const linha = ((data ?? []) as { turma_id: string; chd_executada: number }[]).find(
       (l) => l.turma_id === turmaDe.get("regular"),
     );
-    expect(Number(linha?.chd_executada)).toBe(2 + 1 + 2 + 2);
+    expect(Number(linha?.chd_executada)).toBe(2 + 2 + 2);
   });
 });
 

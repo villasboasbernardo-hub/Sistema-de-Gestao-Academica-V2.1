@@ -101,6 +101,8 @@ export type LinhaDaGradeDeDisciplinas = {
   readonly tecnicaEnsinoSugerida: string | null;
   readonly localPadrao: string | null;
   readonly nomeNoDsa: string | null;
+  /** Spec 024 (FR-019): da etapa presencial da turma semipresencial. */
+  readonly presencial: boolean;
   readonly ativa: boolean;
 
   /** `null` fora da visão por turma — **não se aplica**, e não é zero. */
@@ -245,7 +247,7 @@ export async function lerGradeDeDisciplinas(filtro: {
   const consultaDasDisciplinas = supabase
     .from("disciplinas")
     .select(
-      "id, codigo, cod_disciplina, nome_disciplina, carga_horaria_tempos, ordem_sugerida, modo_atribuicao_padrao, tecnica_ensino_sugerida, local_padrao, nome_no_dsa, status",
+      "id, codigo, cod_disciplina, nome_disciplina, carga_horaria_tempos, ordem_sugerida, modo_atribuicao_padrao, tecnica_ensino_sugerida, local_padrao, nome_no_dsa, presencial, status",
     );
   const [turmasRes, disciplinasRes, arquivadasRes] = await Promise.all([
     supabase
@@ -507,6 +509,7 @@ export async function lerGradeDeDisciplinas(filtro: {
       tecnicaEnsinoSugerida: d.tecnica_ensino_sugerida,
       localPadrao: d.local_padrao,
       nomeNoDsa: d.nome_no_dsa,
+      presencial: d.presencial === true,
       ativa: d.status === "ativo",
       turmaDisciplinaId: daTurma?.turmaDisciplinaId ?? null,
       previsaoInicio: daTurma?.inicio ?? null,

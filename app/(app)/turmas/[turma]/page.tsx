@@ -18,7 +18,11 @@ import Link from "next/link";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
+import {
+  andamentoDaTurma,
+  AVISO_DA_CONTAGEM_PRESENCIAL,
+  contagemDaTurma,
+} from "@/lib/dominio/andamento-da-turma";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { feriadosDaTurma } from "@/lib/dominio/calendario";
 import {
@@ -68,6 +72,7 @@ import { SePodeVer } from "@/components/ciaara/SePodeVer";
 
 import { alcanceDoPerfil } from "../../cursos/consulta";
 import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
+import { lerContagemPresencial } from "../contagem-presencial";
 import { DisciplinasDaTurma } from "./DisciplinasDaTurma";
 import { podeBaixarPlanilhaDeContingencia } from "./dsa/planilha/acesso";
 import { EdicaoDaTurma } from "./EdicaoDaTurma";
@@ -225,6 +230,7 @@ export default async function FichaDaTurma({
     regimesDoCursoRes,
     regimeTravadoRes,
     curriculosDoCursoRes,
+    contagensPresenciais,
   ] = await Promise.all([
     supabase
       .from("cursos")
@@ -313,6 +319,8 @@ export default async function FichaDaTurma({
       .from("curriculos")
       .select("id, versao, vigente_de, status, arquivado_em")
       .eq("curso_id", cursoId),
+    /* Spec 024 (FR-020): a etapa presencial das semipresenciais — a marca do currículo e o lançado nela. */
+    lerContagemPresencial(supabase, hoje),
   ]);
   const trocas = (trocasRes.data ?? []) as {
     ordem: number;
@@ -342,9 +350,9 @@ export default async function FichaDaTurma({
    */
   const cargaDoAndamento = executadaRes.error ? null : cargaRes.data;
   const regimeDaFicha = regimeEmbutido(turma.regime);
-  const andamento = andamentoDaTurma(
+  /* Spec 024 (FR-020): a semipresencial com marca presencial conta só a etapa presencial. */
+  const contagem = contagemDaTurma(
     {
-      status: turma.status as string,
       modalidade: turma.modalidade as string,
       dataTermino,
       prevista: Number(cargaDoAndamento?.chr_curricular ?? 0),
@@ -353,6 +361,17 @@ export default async function FichaDaTurma({
           ? 0
           : ((executadaRes.data as { chd_executada: number } | null)?.chd_executada ?? 0),
       ),
+    },
+    contagensPresenciais.get(turma.id as string) ?? null,
+  );
+  const andamento = andamentoDaTurma(
+    {
+      status: turma.status as string,
+      modalidade: turma.modalidade as string,
+      dataTermino: contagem.dataTermino,
+      inicioDaCapacidade: contagem.inicioDaCapacidade,
+      prevista: contagem.prevista,
+      executada: contagem.executada,
     },
     /* Spec 018 (C-9): o regime nomeado da turma troca os TA presenciais; o limite EAD fica (`RN-MAT-04`). */
     regimeEfetivo(
@@ -794,6 +813,9 @@ export default async function FichaDaTurma({
         andamento={andamento}
         dataTermino={dataTermino}
         execucaoSeparada={separada}
+        avisoDaContagem={
+          contagem.aviso === null ? null : AVISO_DA_CONTAGEM_PRESENCIAL[contagem.aviso]
+        }
       />
 
       <HistoricoDaTurma eventos={historico} />

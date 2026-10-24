@@ -239,6 +239,8 @@ export type LinhaDaOcupacao = {
    */
   readonly sessao_id?: string | null;
   readonly numero_sessao?: number | null;
+  /** Spec 024 (RP-0): só em `vw_ocupacao_do_dsa` — a linha é rascunho. */
+  readonly rascunho?: boolean | null;
 };
 
 /**
@@ -387,6 +389,7 @@ export function fatoDaOcupacao(
     taInicial: linha.ta_inicial,
     tempos: linha.tempos_consumidos,
     herdado: linha.herdado,
+    ...(linha.rascunho ? { rascunho: true } : {}),
     disciplina: (() => {
       /* A da view (aula, avaliação, vista); na falta, a da AEC, que só a tabela tem. */
       const id = linha.disciplina_id ?? extra?.disciplinaId ?? null;

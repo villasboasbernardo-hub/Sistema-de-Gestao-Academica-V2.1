@@ -74,7 +74,11 @@ export async function lerAvaliacoesDaTurma(entrada: {
         "id, disciplina_id, avaliacao_curriculo_id, tipo_avaliacao, data_avaliacao, status, vistas_de_avaliacao(data, status), sessoes_de_aplicacao!sessoes_de_aplicacao_avaliacao_id_fkey(data, status), instrumento:config_listas!avaliacoes_instrumento_id_fkey(valor, metadados)",
       )
       .eq("turma_id", entrada.turmaId ?? "00000000-0000-0000-0000-000000000000")
-      .in("status", [...STATUS_DE_AVALIACAO_VIVA]),
+      .in("status", [...STATUS_DE_AVALIACAO_VIVA])
+      /* Spec 024 (RP-8): a aba Avaliações conta só o salvo — a prova e as sessões dela. */
+      .eq("salvo", true)
+      .eq("vistas_de_avaliacao.salvo", true)
+      .eq("sessoes_de_aplicacao.salvo", true),
     /*
      * ⚠️ **O "CUMPRIDO" E O "INICIADA" SÃO OS DE ATÉ HOJE** (D-COR-2; NQ-1 — FR-014.4 da spec 016): a soma e a
      *    primeira data do lançado até o dia de São Paulo, inclusive — a mesma leitura da tabela de disciplinas

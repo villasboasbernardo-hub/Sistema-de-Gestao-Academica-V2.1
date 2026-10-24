@@ -48,15 +48,20 @@ export function CartaoDaTurma({ turma: t }: { readonly turma: TurmaNoPanorama })
           />
           {t.emAtraso ? <BadgeStatus tom="atrasado" rotulo="em atraso" /> : null}
         </span>
-        <BarraDeProgresso
-          valor={t.percentual}
-          rotuloAcessivel={`Carga executada de ${t.turmaCodigo}`}
-          tom={t.emAtraso ? "atrasado" : "executado"}
-          className="h-3"
-        />
-        <span className="text-texto text-sm tabular-nums" data-progresso={t.percentual}>
-          {t.executada}/{t.prevista} TA · {t.percentual}%
-        </span>
+        {/* Spec 024 (FR-018): a EAD não conta TA — sem barra nem «x/y TA»; o aviso abaixo diz de quem é o controle. */}
+        {t.eadPuro ? null : (
+          <>
+            <BarraDeProgresso
+              valor={t.percentual}
+              rotuloAcessivel={`Carga executada de ${t.turmaCodigo}`}
+              tom={t.emAtraso ? "atrasado" : "executado"}
+              className="h-3"
+            />
+            <span className="text-texto text-sm tabular-nums" data-progresso={t.percentual}>
+              {t.executada}/{t.prevista} TA · {t.percentual}%
+            </span>
+          </>
+        )}
       </Link>
       {/* ⚠️ TURMA EAD PURO: O AVISO NO LUGAR DO LINK (item 9 da conferência do PR #40) — a frase de `ead-puro.ts`. */}
       {t.eadPuro ? (

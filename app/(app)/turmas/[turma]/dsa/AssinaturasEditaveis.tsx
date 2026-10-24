@@ -98,19 +98,37 @@ export function BotaoImprimir({
   semana,
   ano,
   sabado,
+  rotulo = "Imprimir",
+  desabilitadoPor = null,
 }: {
   readonly codigo: string;
   readonly semana: number;
   readonly ano: number;
   readonly sabado: boolean;
+  /** Spec 024 (D-6): *«Gerar prévia»* antes da publicação; *«Imprimir»* (a versão vigente) depois. */
+  readonly rotulo?: string;
+  /** Spec 024 (FR-010): a prévia exige a semana salva — o motivo aparece no lugar do botão. */
+  readonly desabilitadoPor?: string | null;
 }) {
   const edicao = React.useContext(ContextoDaEdicao)?.edicao ?? {};
   const editado = temEdicao(edicao.esquerda) || temEdicao(edicao.direita);
+  if (desabilitadoPor) {
+    return (
+      <BotaoDeIcone
+        acao="imprimir"
+        rotulo={`${rotulo} — ${desabilitadoPor}`}
+        variante="padrao"
+        disabled
+        data-slot="imprimir-dsa"
+        data-desabilitado="sim"
+      />
+    );
+  }
   /* Spec 022 (FR-001): o verbo padrão é o ícone, com «Imprimir» na dica e no nome acessível. */
   return (
     <BotaoDeIcone
       acao="imprimir"
-      rotulo="Imprimir"
+      rotulo={rotulo}
       variante="padrao"
       href={enderecoDaImpressaoDoDsa(codigo, {
         semana,

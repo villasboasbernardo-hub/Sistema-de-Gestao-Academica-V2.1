@@ -1147,6 +1147,8 @@ export function AmostraGradeDsa() {
         tecnica: "EO",
         instrutor: "1ºTEN SILVA",
         local: "SALA 3",
+        /* Spec 024 (RP-0): o lançamento ainda não salvo leva o marcador «não salvo». */
+        rascunho: true,
       },
       {
         fatoId: "a2",

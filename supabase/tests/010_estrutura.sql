@@ -125,7 +125,10 @@ select set_eq(
            ('correcoes_de_curriculo'),
            -- Spec 023 (Bloco 8), 22/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entrou no BRIEF §2.1 (emenda de
            -- 22/10/2026) antes de entrar aqui: as turmas escolhidas de uma linha do calendario.
-           ('feriado_turma')$$,
+           ('feriado_turma'),
+           -- Spec 024 (Bloco 9), 23/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entrou no BRIEF §2.1 (emenda de
+           -- 23/10/2026) antes de entrar aqui: a trilha da publicacao do DSA (RP-0 a RP-8), so de acrescimo.
+           ('dsa_eventos_da_semana')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

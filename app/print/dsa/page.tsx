@@ -45,7 +45,10 @@ import {
   semanaEscolhida,
 } from "../../(app)/turmas/[turma]/dsa/consulta";
 import { lerExtrasDaImpressao, lerSemanaDoDsa } from "../../(app)/turmas/[turma]/dsa/leitura";
-import { montarDocumentoDoDsa } from "./documento";
+import { rotuloDoAlt } from "@/lib/dominio/dsa/publicacao";
+
+import { lerPublicacaoDaSemana } from "../../(app)/turmas/[turma]/dsa/publicacao";
+import { montarDocumentoDoDsa, type DadosDoDocumento } from "./documento";
 import { DocumentoDoDsa } from "./DocumentoDoDsa";
 
 import "./impressao.css";
@@ -114,6 +117,40 @@ export default async function ImpressaoDoDsa({
     );
   }
 
+  /*
+   * Spec 024 (RP-1, RP-3, FR-010, FR-014, FR-015): semana PUBLICADA imprime o RETRATO — o vigente, ou a versão pedida
+   * em `?versao=` (o «Reimprimir» do histórico) —, idêntico, com o ALT dele; semana NÃO publicada imprime o salvo com a
+   * marca PRÉVIA (a prévia não é versão). O rascunho nunca chega ao papel (RP-8).
+   */
+  const diasDaSemana = datasDaSemanaIso(escolha.ano, escolha.numero);
+  const publicacao = await lerPublicacaoDaSemana(supabase, {
+    turmaId,
+    ano: escolha.ano,
+    numero: escolha.numero,
+    de: diasDaSemana[0] ?? hoje,
+    ate: diasDaSemana[6] ?? hoje,
+  });
+  const publicadas = publicacao.eventos.filter(
+    (e) => (e.tipo === "publicado" || e.tipo === "alteracao_publicada") && e.dados !== null,
+  );
+  if (publicadas.length > 0) {
+    const pedida = umValor("versao").trim();
+    const versao =
+      pedida === "" ? publicadas.at(-1) : publicadas.find((e) => String(e.numero ?? 0) === pedida);
+    if (versao === undefined) notFound();
+    return (
+      <main className="dsa-impressao">
+        <DocumentoDoDsa
+          dados={versao.dados as DadosDoDocumento}
+          nomeDeQuemImprime={usuario?.nome ?? null}
+          geradoEm={new Date().toISOString()}
+          assinaturasEditadas={edicaoDaImpressaoDoDsa(busca)}
+          alteracao={rotuloDoAlt(versao.numero)}
+        />
+      </main>
+    );
+  }
+
   /* ⚠️ As duas leituras são independentes: uma rodada só de banco por impressão. */
   const [lida, extras] = await Promise.all([
     lerSemanaDoDsa(supabase, {
@@ -149,6 +186,7 @@ export default async function ImpressaoDoDsa({
          * React. Vale só para este papel — nada é gravado.
          */
         assinaturasEditadas={edicaoDaImpressaoDoDsa(busca)}
+        previa
       />
     </main>
   );

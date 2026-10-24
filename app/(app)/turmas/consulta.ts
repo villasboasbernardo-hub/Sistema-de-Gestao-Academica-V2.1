@@ -19,7 +19,11 @@
  */
 import { datasQueAlcancam } from "@/lib/dominio/calendario";
 import { emOrdemDeTurma } from "@/lib/dominio/ordem-de-cursos";
-import { andamentoDaTurma } from "@/lib/dominio/andamento-da-turma";
+import {
+  andamentoDaTurma,
+  contagemDaTurma,
+  type ContagemPresencial,
+} from "@/lib/dominio/andamento-da-turma";
 
 import { regimeEfetivo } from "@/lib/dominio/regime-da-turma";
 
@@ -164,6 +168,8 @@ export type InsumosDoAndamentoDaLista = {
   }[];
   /** O dia de São Paulo (`hojeNaCiaara()`). */
   readonly hoje: string;
+  /** Spec 024 (FR-020): a etapa presencial das semipresenciais (`lerContagemPresencial`). Ausente = conta tudo. */
+  readonly presenciais?: ReadonlyMap<string, ContagemPresencial>;
 };
 
 /**
@@ -184,13 +190,24 @@ export function comAndamento(
   return linhas.map((l) => {
     const daCarga = carga.get(l.id);
     if (daCarga === undefined) return { ...l, progresso: null, saldo: null };
-    const andamento = andamentoDaTurma(
+    /* Spec 024 (FR-020): a semipresencial com marca presencial conta só a etapa presencial. */
+    const contagem = contagemDaTurma(
       {
-        status: l.status,
         modalidade: l.modalidade,
         dataTermino: l.dataTermino,
         prevista: Number(daCarga.chr_curricular ?? 0),
         executada: executada.get(l.id) ?? 0,
+      },
+      insumos.presenciais?.get(l.id) ?? null,
+    );
+    const andamento = andamentoDaTurma(
+      {
+        status: l.status,
+        modalidade: l.modalidade,
+        dataTermino: contagem.dataTermino,
+        inicioDaCapacidade: contagem.inicioDaCapacidade,
+        prevista: contagem.prevista,
+        executada: contagem.executada,
       },
       /* Spec 018 (C-9): o regime nomeado da turma troca os TA presenciais; o limite EAD fica (`RN-MAT-04`). */
       regimeEfetivo(

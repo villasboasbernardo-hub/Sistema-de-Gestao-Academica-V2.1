@@ -22,11 +22,7 @@ import { randomUUID } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
 
-import {
-  recusaPorAlcance,
-  traduzirRecusa,
-  type ErroDoBanco,
-} from "@/lib/acoes/traducao-de-recusas";
+import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
 import {
   avisoDeHabilitacao,
   podeAtuar,
@@ -274,7 +270,8 @@ async function vereditoDosTetos(
    *    sessão movida da conta — ela contava duas vezes. Quem traduz é `idDoLancamento`, o mesmo da grade.
    */
   const ocupacaoDaSemana = supabase
-    .from("vw_ocupacao_ta")
+    /* Spec 024 (RP-0): o teto confere a semana como a tela a mostra — o salvo com o rascunho por cima. */
+    .from("vw_ocupacao_do_dsa")
     .select("fato_id, origem, sessao_id, data, disciplina_id, tempos_consumidos, ta_final")
     .eq("turma_id", entrada.turmaId)
     .gte("data", semana.segunda)
@@ -536,7 +533,8 @@ async function cascataDaTurma(
   const turmaId = entrada.turmaId;
   const [ocupacaoRes, temposDoRegime, paradas, apoiosRes] = await Promise.all([
     supabase
-      .from("vw_ocupacao_ta")
+      /* Spec 024 (RP-0): a cascata empurra o que a tela mostra — o salvo com o rascunho por cima. */
+      .from("vw_ocupacao_do_dsa")
       .select("fato_id, origem, ta_inicial, tempos_consumidos, disciplina_id, sessao_id")
       .eq("turma_id", entrada.turmaId)
       .eq("data", entrada.data),
@@ -664,13 +662,19 @@ async function instrumentosDoBanco(
   );
 }
 
-/** Aplica as operações numa transação só — devolve a frase da recusa, ou `true`. */
+/**
+ * Aplica as operações numa transação só — devolve a frase da recusa, ou `true`.
+ *
+ * ⚠️ **SPEC 024 (RP-0): TODA ESCRITA DO DSA É RASCUNHO**, e esta é a única porta: `gravar_rascunho_do_dsa` grava a
+ *    inserção como rascunho e a edição de um salvo como a sombra dele (o salvo continua contando até o Salvar), e
+ *    recusa semana publicada (RP-1). As formas antigas (`insert`/`update` direto) passaram todas por aqui.
+ */
 async function gravarEmTransacao(
   supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
   operacoes: readonly Operacao[],
   cursoId: string | null,
 ): Promise<true | string> {
-  const { error } = await supabase.rpc("gravar_lancamentos_em_transacao", {
+  const { error } = await supabase.rpc("gravar_rascunho_do_dsa", {
     p_operacoes: operacoes as unknown as Json,
   });
   if (error) {
@@ -828,16 +832,6 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     linha: Record<string, Valor>,
     atualizarId?: string,
   ): Promise<string | null> => {
-    if (cascata.operacoes.length === 0) {
-      const { error } =
-        atualizarId === undefined
-          ? await supabase.from(tabela as "registros_aula").insert(linha as never)
-          : await supabase
-              .from(tabela as "avaliacoes")
-              .update(linha as never)
-              .eq("id", atualizarId);
-      return error ? traduzirRecusa(error as ErroDoBanco) : null;
-    }
     const principal: Operacao =
       atualizarId === undefined
         ? { acao: "inserir", tabela, campos: linha }
@@ -1124,7 +1118,8 @@ export async function lancarEstudoIndividualDaSemana(
   /* ⚠️ Uma rodada só: nenhum `await` dentro de laço. */
   const [ocupacaoRes, feriadosRes, eiRes, turmaRes, paradas] = await Promise.all([
     supabase
-      .from("vw_ocupacao_ta")
+      /* Spec 024 (RP-0): o tempo livre do Estudo Individual é o da grade com o rascunho. */
+      .from("vw_ocupacao_do_dsa")
       .select("data, ta_final")
       .eq("turma_id", turmaId)
       .gte("data", de)
@@ -1219,8 +1214,16 @@ export async function lancarEstudoIndividualDaSemana(
      * uma transação própria, então um `insert` de cinco linhas entra inteiro ou não entra: cinco
      * chamadas separadas deixariam a semana meio lançada se a terceira falhasse.
      */
-    const { error } = await supabase.from("atividades_nao_letivas").insert(linhas);
-    if (error) return { ok: false, mensagem: traduzirRecusa(error as ErroDoBanco) };
+    const gravado = await gravarEmTransacao(
+      supabase,
+      linhas.map((campos) => ({
+        acao: "inserir" as const,
+        tabela: "atividades_nao_letivas",
+        campos: campos as Record<string, Valor>,
+      })),
+      null,
+    );
+    if (gravado !== true) return { ok: false, mensagem: gravado };
   }
   revalidar();
   return { ok: true, criados: linhas.length, pulados };
@@ -1567,22 +1570,12 @@ async function gravarNoFato(
   cursoId: string | null,
   campos: Record<string, Valor>,
 ): Promise<true | string> {
-  const { data, error } = await supabase
-    .from(TABELA_DA_ORIGEM[origem])
-    .update(campos)
-    .eq("id", fatoId)
-    .select("id");
-
-  if (error) {
-    return traduzirRecusa(
-      error as ErroDoBanco,
-      await contextoDoCurso(supabase, cursoId, "lançamento"),
-    );
-  }
-  if ((data ?? []).length === 0) {
-    return recusaPorAlcance(await contextoDoCurso(supabase, cursoId, "lançamento"));
-  }
-  return true;
+  /* Spec 024 (RP-0): pelo rascunho — o salvo vira sombra; a recusa de alcance chega como `42501` do RPC. */
+  return gravarEmTransacao(
+    supabase,
+    [{ acao: "atualizar", tabela: TABELA_DA_ORIGEM[origem], id: fatoId, campos }],
+    cursoId,
+  );
 }
 
 /**

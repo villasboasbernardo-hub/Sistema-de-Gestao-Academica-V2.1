@@ -25,6 +25,7 @@
  * pelo formulário que a pessoa conserta a data que falta. Desde 05/10/2026 ele vive recolhido atrás
  * de *"Editar turma"*, um clique abaixo: a frase daqui continua apontando para lá.
  */
+import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
 import type { Andamento } from "@/lib/dominio/andamento-da-turma";
 import { dataParaLeitura } from "@/lib/formato/data";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
@@ -56,6 +57,7 @@ export function SecaoDeAndamento({
   andamento,
   dataTermino,
   execucaoSeparada,
+  avisoDaContagem = null,
 }: {
   readonly andamento: Andamento;
   /** O término **gravado na turma** — é ele que a frase de `sem_termino` manda informar. */
@@ -65,7 +67,26 @@ export function SecaoDeAndamento({
    * há TA fora do DSA até hoje; sem ele a CH executada fala sozinha.
    */
   readonly execucaoSeparada?: string | null;
+  /** Spec 024 (FR-020): a semipresencial sem marca presencial (ou sem etapa) conta tudo — e diz o que falta. */
+  readonly avisoDaContagem?: string | null;
 }) {
+  /* Spec 024 (FR-018): a turma EAD não conta TA — o andamento dela é da Divisão de Ensino a Distância. */
+  if (andamento.situacaoDaCapacidade === "controle_da_dead") {
+    return (
+      <section
+        aria-labelledby="titulo-do-andamento"
+        className="flex flex-col gap-2"
+        data-slot="andamento-da-turma"
+      >
+        <h2 id="titulo-do-andamento" className="text-texto text-base font-semibold">
+          Andamento
+        </h2>
+        <p className="text-texto-suave max-w-prose text-sm" data-slot="andamento-ead">
+          {AVISO_DE_TURMA_EAD}
+        </p>
+      </section>
+    );
+  }
   const { prevista, executada, percentual, saldo, saldoEmDias, capacidadeDiaria, diasUteis } =
     andamento;
 
@@ -85,6 +106,11 @@ export function SecaoDeAndamento({
       className="flex flex-col gap-3"
       data-slot="andamento-da-turma"
     >
+      {avisoDaContagem ? (
+        <p role="status" className="text-atrasado-tinta text-sm" data-slot="aviso-da-contagem">
+          {avisoDaContagem}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-3">
         <h2 id="titulo-do-andamento" className="text-texto text-base font-semibold">
           Andamento

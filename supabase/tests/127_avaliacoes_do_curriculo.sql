@@ -14,6 +14,8 @@ insert into auth.users (id, email, aud, role) values
 insert into public.usuarios (codigo, auth_user_id, email, nome, perfil) values
   ('T127-USR-ADM', 'a0000000-0000-0000-0000-000000000127', 't127-admin@ciaara.teste', 'Admin T127', 'admin');
 select set_config('request.jwt.claim.sub', 'a0000000-0000-0000-0000-000000000127', true);
+-- Spec 024 (D-15): os lançamentos desta amostra representam dado SALVO; a sessão acima é só para a auditoria.
+select set_config('app.escrita_fora_do_dsa', 'sim', true);
 
 select public.criar_curso_com_regime(
   '{"codigo":"T127-CUR","nome_curso":"Curso T127","classificacao":"regular",

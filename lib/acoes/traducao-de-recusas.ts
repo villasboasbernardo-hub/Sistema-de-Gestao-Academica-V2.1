@@ -352,6 +352,19 @@ function porChave(
       return "O histórico do arbitrado não se altera. Para corrigir, grave o valor novo na avaliação do currículo.";
     case "vista_antes_da_aplicacao":
       return "A vista não pode ser antes da aplicação da prova. Escolha uma data a partir do dia da prova.";
+    // Spec 024 (Bloco 9): a publicação do DSA (RP-0 a RP-5).
+    case "semana_do_dsa_publicada":
+      return "Esta semana do DSA está publicada. Para mudar, use «Fazer alteração» (a alteração pede justificativa).";
+    case "semana_do_dsa_nao_publicada":
+      return "Esta semana do DSA ainda não foi publicada: não há o que alterar.";
+    case "semana_do_dsa_nao_salva":
+      return "Salve a semana antes de publicar (e não deixe rascunho por salvar).";
+    case "alteracao_sem_justificativa":
+      return "Escreva a justificativa da alteração (ao menos 10 caracteres).";
+    case "dsa_fora_do_alcance":
+      return "O seu perfil não lança o DSA desta turma.";
+    case "lancamento_salvo_so_pelo_salvar":
+      return "Este lançamento já está salvo: a mudança vai como rascunho, pelo DSA, e passa a contar no «Salvar a semana».";
     // Spec 014, emenda de 15/10/2026 (E-6, 16/10/2026): as sessões de aplicação, o instrumento e «juntar».
     case "sessao_antes_da_aplicacao":
       return "A sessão de aplicação não pode ser antes da 1ª aplicação da prova. Escolha uma data a partir do dia da prova.";

@@ -21,7 +21,7 @@ import { expect, test } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste } from "./conta-de-teste";
 import { ANO, limparDsa, SEMANA, semearDsa, type DsaSemeado } from "./dsa-de-teste";
-import { escolherDisciplinaEUnidade } from "./percurso-do-dsa";
+import { escolherDisciplinaEUnidade, salvarASemana } from "./percurso-do-dsa";
 import { irAFichaDaTurma } from "./navegar-turmas";
 
 let EMAIL = "";
@@ -97,7 +97,8 @@ test("⚠️ critério 8 · ficha → DSA → lançar → ver na grade → impri
   /* ── 4. Ver na grade: o que foi lançado está lá, sem recarregar à mão ────────────────────── */
   await expect(page.locator(GRADE)).toContainText(TOPICO_DA_JORNADA);
 
-  /* ── 5. Imprimir, pelo botão ─────────────────────────────────────────────────────────────── */
+  /* ── 5. Salvar a semana (spec 024, RP-0: o lançado é rascunho até aqui) e imprimir, pelo botão ── */
+  await salvarASemana(page);
   await page.locator('[data-slot="imprimir-dsa"]').click();
   /*
    * ⚠️ A TELA TAMBÉM MOSTRA O DOCUMENTO (modelo v4, mesma montagem): sem esperar a URL, a asserção

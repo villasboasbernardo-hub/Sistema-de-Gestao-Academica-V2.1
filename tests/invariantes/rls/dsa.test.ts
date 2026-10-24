@@ -898,7 +898,11 @@ describe("⚠️ `D-DSA-3` · a transação do empurrão respeita o alcance de Q
 
   it("operação na turma alheia recusa com `42501`, e a operação legítima da mesma chamada é desfeita", async () => {
     const propria = await idDe(`DSA-REG-PROPRIA-${SELO}`);
-    const { error } = await sessao("operador").rpc("gravar_lancamentos_em_transacao", {
+    /*
+     * Spec 024: a escrita do DSA passou a ser `gravar_rascunho_do_dsa` (o rascunho do RP-0) — `gravar_lancamentos_em_
+     * transacao` ficou sem consumidor. A propriedade é a mesma: tudo ou nada, no alcance de QUEM CHAMA.
+     */
+    const { error } = await sessao("operador").rpc("gravar_rascunho_do_dsa", {
       p_operacoes: [
         {
           acao: "atualizar",
@@ -929,11 +933,16 @@ describe("⚠️ `D-DSA-3` · a transação do empurrão respeita o alcance de Q
       "Tópico que NÃO pode ficar gravado",
     );
     expect(linhas.find((l) => l.codigo.includes("ALHEIA"))?.ta_inicial).toBe(1);
+    const { count } = await servico
+      .from("registros_aula")
+      .select("id", { count: "exact", head: true })
+      .eq("rascunho_de", propria);
+    expect(count, "a sombra da operação legítima também foi desfeita").toBe(0);
   });
 
   it("controle positivo · a mesma sessão grava na turma que ela alcança", async () => {
     const propria = await idDe(`DSA-REG-PROPRIA-${SELO}`);
-    const { error } = await sessao("operador").rpc("gravar_lancamentos_em_transacao", {
+    const { error } = await sessao("operador").rpc("gravar_rascunho_do_dsa", {
       p_operacoes: [
         {
           acao: "atualizar",
@@ -944,13 +953,12 @@ describe("⚠️ `D-DSA-3` · a transação do empurrão respeita o alcance de Q
       ],
     });
     expect(error, JSON.stringify(error)).toBeNull();
+    /* A edição de um salvo é a sombra (D-1): o rascunho leva o tópico novo, e o salvo segue como estava até o Salvar. */
     const { data } = await servico
       .from("registros_aula")
-      .select("conteudo_resumo")
-      .eq("id", propria)
+      .select("conteudo_resumo, salvo")
+      .eq("rascunho_de", propria)
       .single();
-    expect((data as { conteudo_resumo: string | null }).conteudo_resumo).toBe(
-      "Tópico gravado pela transação",
-    );
+    expect(data).toEqual({ conteudo_resumo: "Tópico gravado pela transação", salvo: false });
   });
 });

@@ -29,6 +29,8 @@ insert into auth.users (id, email, aud, role) values
 insert into public.usuarios (codigo, auth_user_id, email, nome, perfil) values
   ('T104-USR-ADM', 'a0000000-0000-0000-0000-000000000104', 't104-admin@ciaara.teste', 'Admin T104', 'admin');
 select set_config('request.jwt.claim.sub', 'a0000000-0000-0000-0000-000000000104', true);
+-- Spec 024 (D-15): os lançamentos desta amostra representam dado SALVO; a sessão acima é só para a auditoria.
+select set_config('app.escrita_fora_do_dsa', 'sim', true);
 
 create function pg_temp.recusa(p_sql text) returns jsonb
 language plpgsql as $f$

@@ -177,11 +177,17 @@ describe("`RN-DEG-01` · o que falta é dito, nunca inventado", () => {
       SEGUNDA,
     );
     expect(eadEmCursoPresencial.capacidadeDiaria).toBeNull();
-    expect(eadEmCursoPresencial.situacaoDaCapacidade).toBe("sem_regime");
+    /* Spec 024 (FR-018): a turma EAD não conta TA — o «sem regime» deixou de se aplicar a ela. */
+    expect(eadEmCursoPresencial.situacaoDaCapacidade).toBe("controle_da_dead");
   });
 
-  it("U7 · turma EAD usa o limite diário em horas, a 1 TA por hora", () => {
-    // CONTA: de amanhã, 9 dias úteis × 4 h = **36** de capacidade; restante 60 → saldo **−24**.
+  /*
+   * ⚠️ **U7 MUDOU DE REGRA na spec 024 (FR-018, Bernardo Villas Boas, 23/10/2026):** *"EAD NÃO CONTA TA em lugar
+   *    nenhum"*. Até o Bloco 9 a turma EAD tinha capacidade pelo limite diário em horas (D8 da spec 012) e podia sair
+   *    «em atraso»; agora o andamento dela é da Divisão de Ensino a Distância e nada se conta. A `RN-MAT-04` (decidir
+   *    pela modalidade DA TURMA) continua: é por ela que a turma EAD é reconhecida.
+   */
+  it("U7 · turma EAD não conta TA: nem capacidade, nem saldo, nem atraso (FR-018)", () => {
     const a = andamentoDaTurma(
       turma({ modalidade: "ead" }),
       { regimePadraoTempos: 0, limiteDiarioEadHoras: 4 },
@@ -189,9 +195,10 @@ describe("`RN-DEG-01` · o que falta é dito, nunca inventado", () => {
       SEGUNDA,
     );
 
-    expect(a.capacidadeDiaria).toBe(4);
-    expect(a.capacidade).toBe(36);
-    expect(a.saldo).toBe(-24);
+    expect(a.situacaoDaCapacidade).toBe("controle_da_dead");
+    expect(a.capacidade).toBeNull();
+    expect(a.saldo).toBeNull();
+    expect(a.emAtraso).toBe(false);
   });
 
   it("⚠️ a precedência é declarada: faltando AS DUAS, vale a falta de término", () => {

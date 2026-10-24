@@ -616,6 +616,9 @@ SEQUENCIAS_DE_CODIGO: tuple[tuple[str, str, str], ...] = (
     # A do Bloco 6 (spec 021): a versão do currículo (CRV-), criada pela migration (a versão 1) e pela cópia.
     ("app.curriculos_codigo_seq", "curriculos",
      "case when codigo ~ '^CRV-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    # A do Bloco 9 (spec 024, M1): o evento da publicação do DSA (DEV-), gravado só pelas funções da tela.
+    ("app.dsa_eventos_codigo_seq", "dsa_eventos_da_semana",
+     "case when codigo ~ '^DEV-[0-9]+$' then substring(codigo from 5)::bigint end"),
     # A do Bloco 8 (spec 023, M1): a turma escolhida de uma linha do calendário (FTU-), gravada só pela tela.
     ("app.feriado_turma_codigo_seq", "feriado_turma",
      "case when codigo ~ '^FTU-[0-9]+$' then substring(codigo from 5)::bigint end"),
