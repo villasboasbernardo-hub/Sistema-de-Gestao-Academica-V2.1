@@ -14,7 +14,9 @@
  * ⚠️ **O CONTEÚDO SÓ EXISTE ABERTO**: fechado, nada é montado — os gráficos não são desenhados à toa, e os testes que
  *    contam cartões contam zero.
  * ⚠️ **O NÚMERO DE FILTROS ATIVOS CHEGA PRONTO DO SERVIDOR** (`filtrosForaDoPadrao`, a mesma régua do *Limpar
- *    filtros*): a página o recalcula a cada troca de filtro, que avisa o servidor.
+ *    filtros*) — e, com o painel ABERTO, o filtro publica o dele (`usePublicarContagem`), que vale na hora do clique:
+ *    o do servidor só muda quando a página volta, e sob carga o ícone seguia com o número de antes do *Limpar filtros*
+ *    (revisão do PR #90; na `main` o número era o do navegador).
  */
 "use client";
 
@@ -28,6 +30,9 @@ type Paineis = {
   readonly abertos: ReadonlySet<NomeDoPainel>;
   readonly alternar: (painel: NomeDoPainel) => void;
   readonly id: (painel: NomeDoPainel) => string;
+  /** O número que o conteúdo aberto publicou; sem ele, vale o do servidor. */
+  readonly vivas: ReadonlyMap<NomeDoPainel, number>;
+  readonly publicar: (painel: NomeDoPainel, contagem: number | null) => void;
 };
 
 const ContextoDosPaineis = React.createContext<Paineis | null>(null);
@@ -42,6 +47,16 @@ export function useDentroDePainel(): boolean {
 export function ProvedorDePaineis({ children }: { readonly children: React.ReactNode }) {
   const base = React.useId();
   const [abertos, definirAbertos] = React.useState<ReadonlySet<NomeDoPainel>>(() => new Set());
+  const [vivas, definirVivas] = React.useState<ReadonlyMap<NomeDoPainel, number>>(() => new Map());
+  const publicar = React.useCallback((painel: NomeDoPainel, contagem: number | null) => {
+    definirVivas((atual) => {
+      if ((atual.get(painel) ?? null) === contagem) return atual;
+      const proximo = new Map(atual);
+      if (contagem === null) proximo.delete(painel);
+      else proximo.set(painel, contagem);
+      return proximo;
+    });
+  }, []);
   const valor = React.useMemo<Paineis>(
     () => ({
       abertos,
@@ -53,8 +68,10 @@ export function ProvedorDePaineis({ children }: { readonly children: React.React
           return proximo;
         }),
       id: (painel) => `${base}-${painel}`,
+      vivas,
+      publicar,
     }),
-    [abertos, base],
+    [abertos, base, vivas, publicar],
   );
   return <ContextoDosPaineis.Provider value={valor}>{children}</ContextoDosPaineis.Provider>;
 }
@@ -66,6 +83,21 @@ function usePaineis(): Paineis {
   return paineis;
 }
 
+/**
+ * O conteúdo aberto publica o número dele para o ícone da barra; ao fechar, o número volta a ser o do servidor. Fora de
+ * um painel da página, não faz nada.
+ */
+export function usePublicarContagem(painel: NomeDoPainel, contagem: number): void {
+  const paineis = React.useContext(ContextoDosPaineis);
+  const dentro = React.useContext(ContextoDoConteudo);
+  const publicar = dentro ? paineis?.publicar : undefined;
+  React.useEffect(() => {
+    if (!publicar) return;
+    publicar(painel, contagem);
+    return () => publicar(painel, null);
+  }, [publicar, painel, contagem]);
+}
+
 const ROTULO: Readonly<Record<NomeDoPainel, string>> = {
   filtros: "Filtros",
   estatisticas: "Estatísticas",
@@ -73,14 +105,15 @@ const ROTULO: Readonly<Record<NomeDoPainel, string>> = {
 
 export function GatilhoDePainel({
   painel,
-  contagem = 0,
+  contagem: doServidor = 0,
 }: {
   readonly painel: NomeDoPainel;
   /** Quantos filtros estão fora do padrão (só nos Filtros). */
   readonly contagem?: number;
 }) {
-  const { abertos, alternar, id } = usePaineis();
+  const { abertos, alternar, id, vivas } = usePaineis();
   const aberto = abertos.has(painel);
+  const contagem = vivas.get(painel) ?? doServidor;
   const rotulo =
     contagem > 0
       ? `${ROTULO[painel]} (${contagem} ${contagem === 1 ? "ativo" : "ativos"})`

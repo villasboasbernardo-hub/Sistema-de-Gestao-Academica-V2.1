@@ -92,6 +92,12 @@ export function ExclusaoPermanente({
   const [digitado, definirDigitado] = React.useState("");
   const [erro, definirErro] = React.useState<string | null>(null);
   const [enviando, iniciar] = React.useTransition();
+  /*
+   * Em voo = entre o pedido e a resposta. ⚠️ NÃO É O `enviando`: num `startTransition` assíncrono, a recusa gravada
+   * depois do `await` aparece na tela ANTES de o `enviando` voltar a falso — e bloquear o fechamento por ele prendia o
+   * diálogo aberto com a recusa já à vista (medido: o `Escape` da vitrine caía nessa janela).
+   */
+  const emVoo = React.useRef(false);
   const campo = React.useId();
 
   if (!estado.liberada) {
@@ -112,7 +118,13 @@ export function ExclusaoPermanente({
   const confirmar = () =>
     iniciar(async () => {
       definirErro(null);
-      const resposta = await excluir({ id, codigoConfirmacao: digitado.trim() });
+      emVoo.current = true;
+      let resposta: Awaited<ReturnType<typeof excluir>>;
+      try {
+        resposta = await excluir({ id, codigoConfirmacao: digitado.trim() });
+      } finally {
+        emVoo.current = false;
+      }
       if (!resposta.ok) {
         const mensagem = ("erro" in resposta && resposta.erro) || "Não foi possível excluir.";
         if (aoRecusar) {
@@ -136,10 +148,10 @@ export function ExclusaoPermanente({
         open={aberto}
         onOpenChange={(abrir) => {
           /*
-           * ⚠️ ENQUANTO A EXCLUSÃO CORRE, O DIÁLOGO NÃO FECHA (revisão do PR #90): fechado, a recusa que chegasse depois iria
-           *    para um aviso dentro do diálogo invisível — a pessoa veria a linha lá e suporia "cancelado".
+           * ⚠️ ENQUANTO O PEDIDO ESTÁ EM VOO, O DIÁLOGO NÃO FECHA (revisão do PR #90): fechado, a recusa que chegasse depois
+           *    iria para um aviso dentro do diálogo invisível — a pessoa veria a linha lá e suporia "cancelado".
            */
-          if (!abrir && enviando) return;
+          if (!abrir && emVoo.current) return;
           definirAberto(abrir);
           definirDigitado("");
           definirErro(null);

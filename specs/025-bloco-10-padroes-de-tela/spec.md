@@ -290,6 +290,15 @@ turma de curso fora de oferta; e a página de edição do instrutor, sem as habi
 (já era assim na `main`). **Refutado:** a situação que o formulário manda sempre (é a regra de "a última gravação vence"
 da edição inteira).
 
+**E o CI do PR achou mais dois, com três casos instáveis isolados antes de serem chamados de instáveis:** (1) o número
+do ícone *Filtros* da barra passou a vir **só do servidor** — na `main` era o do navegador —, e sob carga ficava em 2
+depois do *Limpar filtros*: o filtro aberto agora publica o dele (`usePublicarContagem`), provado por um e2e que atrasa
+as respostas da página em 5 s e exige o número fora em 2 s (reprovava antes); (2) a trava do diálogo de exclusão pelo
+`enviando` **prendia o diálogo aberto com a recusa já à vista** — num `startTransition` assíncrono a recusa aparece
+antes de o `enviando` voltar a falso, e o `Escape` da vitrine caía nessa janela: a trava passou a valer só com o pedido
+**em voo** (referência). O terceiro era corrida do teste: `disciplinas.spec.ts` recarregava antes de o `?aberta=` chegar
+à barra, e passou a esperá-lo.
+
 ## 5. Requisitos
 
 ### FR-001 — A ficha da turma (item 1)

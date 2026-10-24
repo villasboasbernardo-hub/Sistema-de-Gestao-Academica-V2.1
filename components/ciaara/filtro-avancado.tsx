@@ -31,7 +31,7 @@ import * as React from "react";
 import { cn } from "cn";
 import { ChevronDownIcon, FilterIcon } from "lucide-react";
 
-import { useDentroDePainel } from "@/components/ciaara/paineis-da-pagina";
+import { useDentroDePainel, usePublicarContagem } from "@/components/ciaara/paineis-da-pagina";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
@@ -84,6 +84,8 @@ export function FiltroAvancado({
 }: FiltroAvancadoProps) {
   const [aberto, definirAberto] = React.useState(false);
   const emPainel = useDentroDePainel();
+  /* Dentro do painel da página, o número vai para o ícone da barra — o do navegador, que vale na hora (RT-4). */
+  usePublicarContagem("filtros", ativos);
 
   const trocar = (chave: string, valores: readonly string[]) =>
     aoMudar({ ...estado, [chave]: valores });

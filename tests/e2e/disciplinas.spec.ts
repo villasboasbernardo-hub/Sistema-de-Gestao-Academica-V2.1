@@ -184,6 +184,9 @@ test.describe("`FR-001` a `FR-006` · chegar, escolher e ver", () => {
      */
     await irAGradePorClique(page);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    // O detalhe aparece antes de o `?aberta=` chegar à barra (o nuqs grava um instante depois): sem esperar a URL, o
+    // `goto` podia recarregar SEM a linha aberta — instável no CI do PR #90.
+    await expect.poll(() => new URL(page.url()).searchParams.get("aberta")).not.toBeNull();
     await page.goto(page.url());
     await expect(linhaExpansivel(page, DISCIPLINA_COM_UE.nome)).toHaveAttribute(
       "aria-expanded",

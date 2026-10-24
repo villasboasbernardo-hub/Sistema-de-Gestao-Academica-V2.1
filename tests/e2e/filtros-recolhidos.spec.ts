@@ -113,6 +113,29 @@ test.describe("`FR-004` da spec 016 · filtros recolhidos com o número fora do 
     await limparEConferir(page);
   });
 
+  test("o número do ícone segue o clique, sem esperar a resposta do servidor", async ({ page }) => {
+    /*
+     * Revisão do PR #90: o número do ícone da barra vinha só do servidor, e sob carga continuava em 2 depois do *Limpar
+     * filtros* (instável no CI). O filtro aberto agora publica o número dele. Para o caso discriminar, as respostas da
+     * página passam a demorar 5 s DEPOIS de o filtro estar escolhido: o número tem de sumir antes delas.
+     */
+    await entrar(page, EMAIL, "/inicio");
+    await irPeloMenu(page, "Atividades", "/atividades");
+    await abrirPainelDeFiltros(page);
+    await escolherOpcao(page, "Categoria", /^AEC/);
+    await expect.poll(() => numeroDeFiltrosAtivos(page), { timeout: 10_000 }).toBe("1");
+
+    await page.route(
+      (url) => url.pathname === "/atividades",
+      async (rota) => {
+        if (rota.request().headers()["rsc"]) await new Promise((r) => setTimeout(r, 5_000));
+        await rota.fallback();
+      },
+    );
+    await page.getByRole("button", { name: "Limpar filtros" }).click();
+    await expect.poll(() => numeroDeFiltrosAtivos(page), { timeout: 2_000 }).toBeNull();
+  });
+
   test("a aba Disciplinas do curso (spec 018: era /disciplinas, depois de escolher o curso)", async ({
     page,
   }) => {
