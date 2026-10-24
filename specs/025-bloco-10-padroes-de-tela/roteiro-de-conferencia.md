@@ -77,6 +77,8 @@ Regras de tela de referência: `docs/correcoes/padroes-de-tela.md` (RT-1 a RT-7 
 3. *Disciplinas*: o lápis de uma disciplina abre a página dela; a UE continua em janela.
 4. *Horários*: *Registrar nova vigência* e *Corrigir esta vigência* abrem em **janela** (eram blocos abertos na página).
 5. Um link antigo com `?parte=horarios` abre direto o *Currículo* → *Horários*.
+6. Estando em *Currículo* → *Horários*, clique em *Cadastro*: a página **fica** no Cadastro (antes da revisão, voltava ao
+   Currículo).
 
 ## 8. Gráficos interativos
 
@@ -99,6 +101,10 @@ Regras de tela de referência: `docs/correcoes/padroes-de-tela.md` (RT-1 a RT-7 
    coluna de CH), na ficha do instrutor, na página do curso, em *Atividades* (lista e Calendário) e no submenu de
    *Turmas* da lateral.
 3. Volte ao ano de hoje: a escolha é apagada. A escolha expira sozinha na virada do ano.
+4. Abra um endereço com o ano nele (copie a barra com `?ano=` e cole numa aba nova) e troque o ano no seletor: a tela e o
+   endereço trocam juntos (antes da revisão, a tela ficava presa no ano do link).
+5. Na página de um curso com currículo futuro, escolha o ano dele: *Sobre o curso* → *Baixar o currículo (PDF)* traz o PDF
+   **desse** currículo, e o *Editar* da aba *Horários* abre *Editar curso* nesse currículo.
 
 ## 11. Calendário
 

@@ -31,6 +31,7 @@ import {
 } from "@/components/graficos/moldura";
 import {
   alternarGrupo,
+  ocultosEmVigor,
   corDaSerie,
   SIMBOLO_DA_FORMA,
   type Serie,
@@ -71,10 +72,10 @@ function paraLinhas(series: readonly Serie[]): Record<string, string | number>[]
 export function GraficoLinha({ series, rotulo, altura = 260, className }: GraficoLinhaProps) {
   const linhas = paraLinhas(series);
   /* RT-5 (spec 025, D-22): a legenda oculta e mostra cada série; a cor e o tracejado são os de origem. */
-  const [ocultas, definirOcultas] = React.useState<ReadonlySet<string>>(() => new Set());
+  const [guardadas, definirOcultas] = React.useState<ReadonlySet<string>>(() => new Set());
   const chaves = series.map((s) => s.chave);
-  const alternar = (chave: string) =>
-    definirOcultas((atual) => alternarGrupo(atual, chave, chaves));
+  const ocultas = ocultosEmVigor(guardadas, chaves);
+  const alternar = (chave: string) => definirOcultas(alternarGrupo(ocultas, chave, chaves));
   const visiveis = series
     .map((serie, indice) => ({ serie, indice }))
     .filter(({ serie }) => !ocultas.has(serie.chave));

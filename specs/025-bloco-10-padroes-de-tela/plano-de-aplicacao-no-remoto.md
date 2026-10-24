@@ -14,7 +14,7 @@
 | A | o rastro `exclusoes_registradas` passa a aceitar `turmas`, `feriados`, `regimes_de_horario`, `avaliacoes_curriculo` e `config_listas` (só a sala) |
 | B | `app.referencias_por_fk` — a **rede de segurança**: toda FK que aponte para o registro prende a exclusão, inclusive a que nascer depois (lida no catálogo) |
 | C | **turma** — `app.registros_da_turma`, os impedimentos (um e em lote) e `app.excluir_turma` |
-| D | **linha do calendário** — `app.registros_do_feriado` (semana do DSA **salva ou publicada** de turma alcançada, D-11), impedimentos e `app.excluir_feriado` |
+| D | **linha do calendário** — `app.registros_do_feriado` (semana do DSA **salva ou publicada**, ou lançamento salvo e vivo nela — aula, atividade, a 1ª aplicação, as sessões e a vista da prova —, de turma alcançada, D-11), impedimentos e `app.excluir_feriado` |
 | E, F, G | **regime de horário**, **item de avaliação do currículo** e **sala** — o mesmo trio (D-30) |
 | H | os impedimentos **antigos** de instrutor, disciplina e UE **corrigidos** (D-32): passam a conhecer as FKs que faltavam e usam a rede |
 | I | os espelhos `public.*` `SECURITY INVOKER`, `revoke`/`grant` |
@@ -43,9 +43,11 @@ as atribuições de instrutor, o rateio e as ligações **inativas** de feriado.
 
 ## 3. Os casos que discriminam (DoD 8)
 
-- **pgTAP `149`**: a turma **só com atribuição** não tem registro (é estrutura); com **um** evento `salvo` do DSA, tem; o
-  feriado de **todas** as turmas, na semana salva de uma delas, tem registro; o mesmo evento **não** prende o feriado
-  escolhido só para outra turma.
+- **pgTAP `149`** (33 asserções): a turma **só com atribuição** não tem registro (é estrutura); com **um** evento `salvo`
+  do DSA, tem; o feriado de **todas** as turmas, na semana salva de uma delas, tem registro; o mesmo evento **não** prende
+  o feriado escolhido só para outra turma; a **aula salva sem evento** prende, e em **rascunho** não (a versão só com o
+  evento reprova); e a **prova salva sem sessão nem vista** prende pela 1ª aplicação (a versão sem ela reprova — revisão do
+  PR #90).
 - **RLS `exclusao-de-cadastros.test.ts`** (sessão real): o **Operador** tem `turmas.criar` e é recusado pelo **alcance**
   (`42501`); o **Ajudante** exclui turma e é recusado no calendário e na sala; regime e item — o mesmo id inexistente dá
   `42501` a quem não pode e `P0002` a quem pode (o porteiro vem antes da leitura).
@@ -84,8 +86,8 @@ exato** de `20260915140100` e `20260925135044`, e a restrição de 3 tabelas. �
 tabelas novas**: com rastro delas, a reversão recusa (o rastro é só de acréscimo) — e recusou de fato, na primeira
 tentativa, sobre os 3 rastros que a suíte de ponta a ponta deixou no banco local.
 
-**Prova (24/10/2026, banco local, numa transação desfeita, com os rastros retirados só dentro dela):** a impressão digital
-do esquema vai de **2.637 objetos `c291980c…`** (com a migration) a **2.573 objetos `80345112…`** — a mesma do remoto
+**Prova (24/10/2026, refeita depois da correção da revisão do PR #90, banco local, numa transação desfeita, com os rastros retirados só dentro dela):** a impressão digital
+do esquema vai de **2.637 objetos `5ab2b13b…`** (com a migration) a **2.573 objetos `80345112…`** — a mesma do remoto
 depois do Bloco 9; o `rollback` devolveu o esquema e os 3 rastros.
 
 ## 6. O rito, quando você autorizar

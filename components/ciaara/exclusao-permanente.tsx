@@ -57,8 +57,13 @@ export type ExclusaoPermanenteProps = {
   }) => Promise<RespostaDaExclusao | { readonly ok: boolean; readonly erro?: string }>;
   /** Depois de excluir: ir ao `destino` da resposta, ou reler a página. */
   readonly depois?: "navegar" | "atualizar";
-  /** Na linha de uma tabela: fantasma e fora da tabulação da grade. */
+  /** Na linha de uma tabela ou lista: fantasma e pequeno. */
   readonly naLinha?: boolean;
+  /**
+   * Dentro de uma grade com foco itinerante (`TabelaDensa`): fora da tabulação, porque a parada de `Tab` é a célula.
+   * ⚠️ Só ali — numa `<ul>` ou `<table>` comum, fora da tabulação quer dizer INALCANÇÁVEL por teclado (revisão do PR #90).
+   */
+  readonly naGrade?: boolean;
   /** Onde a recusa aparece; sem ela, abaixo do ícone. */
   readonly aoRecusar?: (erro: string) => void;
   /** Depois de excluir — a resposta acima da lista, quando a linha some com o ícone. */
@@ -77,6 +82,7 @@ export function ExclusaoPermanente({
   excluir,
   depois = "atualizar",
   naLinha = false,
+  naGrade = false,
   aoRecusar,
   aoConcluir,
   slot = "excluir",
@@ -97,7 +103,8 @@ export function ExclusaoPermanente({
         indisponivel={estado.dica ?? "indisponível"}
         data-slot={slot}
         data-bloqueado="true"
-        {...(naLinha ? { tabIndex: -1, className: "size-7" } : {})}
+        {...(naLinha ? { className: "size-7" } : {})}
+        {...(naGrade ? { tabIndex: -1 } : {})}
       />
     );
   }
@@ -128,11 +135,14 @@ export function ExclusaoPermanente({
       <AlertDialog
         open={aberto}
         onOpenChange={(abrir) => {
+          /*
+           * ⚠️ ENQUANTO A EXCLUSÃO CORRE, O DIÁLOGO NÃO FECHA (revisão do PR #90): fechado, a recusa que chegasse depois iria
+           *    para um aviso dentro do diálogo invisível — a pessoa veria a linha lá e suporia "cancelado".
+           */
+          if (!abrir && enviando) return;
           definirAberto(abrir);
-          if (!abrir) {
-            definirDigitado("");
-            definirErro(null);
-          }
+          definirDigitado("");
+          definirErro(null);
         }}
       >
         <AlertDialogTrigger asChild>
@@ -144,7 +154,8 @@ export function ExclusaoPermanente({
             rotuloOcupado="Excluindo…"
             data-slot={slot}
             data-bloqueado="false"
-            {...(naLinha ? { tabIndex: -1, className: "size-7" } : {})}
+            {...(naLinha ? { className: "size-7" } : {})}
+            {...(naGrade ? { tabIndex: -1 } : {})}
           />
         </AlertDialogTrigger>
         <AlertDialogContent data-slot="dialogo-de-exclusao">
@@ -173,7 +184,7 @@ export function ExclusaoPermanente({
             </p>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={enviando}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className={buttonVariants({ variant: "destructive" })}
               disabled={!codigoConfere(digitado, codigo) || enviando}

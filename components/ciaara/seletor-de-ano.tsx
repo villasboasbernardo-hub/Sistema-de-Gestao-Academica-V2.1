@@ -56,7 +56,7 @@ export function SeletorDeAno({
     const url = new URL(window.location.href);
     if (url.searchParams.get("ano") === String(ano)) return;
     url.searchParams.set("ano", String(ano));
-    window.history.replaceState(window.history.state, "", url);
+    window.history.replaceState(null, "", url);
   }, [ano, origem]);
 
   function escolher(escolhido: number) {
@@ -69,9 +69,22 @@ export function SeletorDeAno({
     const url = new URL(window.location.href);
     if (padrao) url.searchParams.delete("ano");
     else url.searchParams.set("ano", String(escolhido));
-    if (empilha) window.history.pushState(window.history.state, "", url);
-    else window.history.replaceState(window.history.state, "", url);
-    iniciar(() => router.refresh());
+    /*
+     * ⚠️ NAVEGA PARA O ENDEREÇO NOVO E DEPOIS ATUALIZA — as duas coisas, nesta ordem (revisão do PR #90, medido):
+     *    - só `history.pushState` + `refresh()`: com `window.history.state` (marca `__NA`) o Next não passava a URL ao
+     *      roteador, e o `refresh()` pedia a antiga — presa no ano de um link `?ano=`, porque a URL vence o cookie;
+     *    - só a navegação: a página SEM `?ano=` depende do cookie, e o Next a serviu do cache, desenhada com o cookie de
+     *      antes — voltar ao ano de hoje no *Início* não ia ao servidor. E o layout (o submenu de *Turmas*) não se redesenha
+     *      numa navegação;
+     *    - a navegação acerta o endereço do roteador, e o `refresh()`, que vem depois na fila, invalida o cache e relê a
+     *      página e o layout com o cookie novo.
+     */
+    const destino = `${url.pathname}${url.search}${url.hash}`;
+    iniciar(() => {
+      if (empilha) router.push(destino, { scroll: false });
+      else router.replace(destino, { scroll: false });
+      router.refresh();
+    });
   }
 
   return (

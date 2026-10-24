@@ -182,6 +182,20 @@ export function alternarGrupo(
   return todos.every((n) => proximo.has(n)) ? ocultos : proximo;
 }
 
+/**
+ * Os ocultos que AINDA valem para os grupos de agora. ⚠️ O conjunto guardado sobrevive à troca dos dados (um filtro
+ * do servidor, uma busca): sem esta poda, o grupo que sumiu continuaria "oculto", e os que sobraram podiam estar todos
+ * ocultos — o gráfico vazio que `alternarGrupo` existe para impedir (revisão do PR #90). Sobrando todos ocultos, mostra
+ * todos.
+ */
+export function ocultosEmVigor(
+  ocultos: ReadonlySet<string>,
+  todos: readonly string[],
+): ReadonlySet<string> {
+  const valendo = new Set(todos.filter((n) => ocultos.has(n)));
+  return todos.length > 0 && valendo.size >= new Set(todos).size ? new Set() : valendo;
+}
+
 /** O total dos pontos à vista — a base dos percentuais depois de ocultar (*"o gráfico se redistribui"*). */
 export function totalVisivel(pontos: readonly GrupoVisivel<PontoDeSerie>[]): number {
   return pontos.reduce((soma, p) => soma + p.item.valor, 0);

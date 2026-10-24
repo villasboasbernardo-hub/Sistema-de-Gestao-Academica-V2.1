@@ -33,7 +33,7 @@
 --
 -- REVERSAO — `specs/025-bloco-10-padroes-de-tela/reversao.sql`, PROVADA em 24/10/2026 numa
 --    transacao desfeita no banco local: a impressao digital do esquema
---    (`scripts/provas/impressao_digital_do_esquema.sql`) vai de 2.637 objetos `c291980c...`
+--    (`scripts/provas/impressao_digital_do_esquema.sql`) vai de 2.637 objetos `5ab2b13b...`
 --    (com esta migration) a 2.573 objetos `80345112...` — a mesma do remoto depois do
 --    Bloco 9. Em resumo:
 --    drop function public.excluir_turma(uuid, text), public.excluir_feriado(uuid, text),
@@ -382,7 +382,8 @@ grant execute on function app.excluir_turma(uuid, text) to authenticated;
 -- ⚠️ "SEMANA SALVA OU PUBLICADA LIGADA": na semana ISO da data, alguma turma que o feriado
 --    alcanca (as escolhidas ATIVAS em `feriado_turma`; sem nenhuma, todas) tem (a) o evento
 --    `salvo`, `publicado` ou `alteracao_publicada` na trilha do DSA, ou (b) LANCAMENTO SALVO
---    vivo — aula, atividade (a global alcanca todas), sessao de aplicacao ou vista de prova.
+--    vivo — aula, atividade (a global alcanca todas), a prova (a 1a aplicacao, as sessoes e
+--    a vista).
 -- ⚠️ O (b) NASCEU DA MEDICAO NA COPIA DO REMOTO (24/10/2026): so com o evento, NENHUMA das 32
 --    linhas do calendario ficaria protegida — o que existia antes do Bloco 9 nasce salvo
 --    (RP-8) e nao tem evento. Com o (b), 29 das 32. A semana *registrada* VAZIA (D-18 da
@@ -437,12 +438,18 @@ begin
                                where ft.feriado_id = p_feriado_id and ft.status = 'ativo'))
   ) or exists (
     select 1
-      from (select s.avaliacao_id, s.data from public.sessoes_de_aplicacao s
+      -- A 1a aplicacao e a propria linha de `avaliacoes` (`data_avaliacao`, RN-AV-12); as sessoes guardam
+      -- da 2a em diante. A prova "viva" e a mesma lista de `vw_ocupacao_ta` (achado da revisao do PR #90).
+      from (select a1.id as avaliacao_id, a1.data_avaliacao as data from public.avaliacoes a1
+             where a1.salvo and a1.data_avaliacao is not null
+            union all
+            select s.avaliacao_id, s.data from public.sessoes_de_aplicacao s
              where s.salvo and s.status = 'ativo'
             union all
             select w.avaliacao_id, w.data from public.vistas_de_avaliacao w
              where w.salvo and w.status = 'ativo') x
-      join public.avaliacoes av on av.id = x.avaliacao_id and av.status <> 'cancelada'
+      join public.avaliacoes av on av.id = x.avaliacao_id
+       and av.status in ('pendente', 'em_andamento', 'concluida', 'atrasada')
      where x.data between v_de and v_ate
        and (v_todas or av.turma_id in (select ft.turma_id from public.feriado_turma ft
                                         where ft.feriado_id = p_feriado_id and ft.status = 'ativo'))

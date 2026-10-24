@@ -158,7 +158,7 @@ ordem por classificação (`ordem-de-cursos.ts`), o aviso de carga só acima da 
   por UE — tudo no retrato do rastro. *Alternativa: a atribuição também impede.*
 - D-11 · Q: O que é "semana salva/publicada ligada" ao feriado? → A: alguma turma que o feriado alcança tem, **na
   semana ISO da data**, o evento **salvo**, **publicado** ou **alteração publicada** na trilha do DSA **ou lançamento
-  salvo e vivo** (aula, atividade — a global alcança todas —, sessão de aplicação ou vista). A semana *registrada*
+  salvo e vivo** (aula, atividade — a global alcança todas —, a prova: a 1ª aplicação, as sessões e a vista). A semana *registrada*
   **vazia** (D-18 da spec 024) não conta — por ela, toda semana contaria. ⚠️ **Trocada pela medição** (24/10/2026, cópia
   `remoto-20261024-061801.sql`): só com o evento, **nenhuma** das 32 linhas do calendário ficaria protegida — o que existia antes do
   Bloco 9 nasce salvo (RP-8) e não tem evento; com o lançamento salvo, **29 das 32**. *Alternativa: só o evento (a
@@ -269,6 +269,26 @@ ordem por classificação (`ordem-de-cursos.ts`), o aviso de carga só acima da 
   a barra Editar · Desativar/Reativar · Excluir no topo direito, na linha do nome.
 - D-36 · Q: A página da conta (`/admin/usuarios/[id]`)? → A: **fica** — já é a página própria da D-USR-5, com nome,
   perfil e acessos.
+- D-37 · Q: A exclusão de um cadastro de **curso fora de oferta** (regime, item do currículo, turma)? → A: **permitida**,
+  como no molde (disciplina, UE e instrutor não conferem `curso_em_oferta`): desativar o curso não deve travar a limpeza
+  de um engano sem histórico. *Alternativa: recusar, como as policies de escrita fazem (FR-017.5 da spec 009).*
+
+### Revisão adversarial do PR #90 (24/10/2026)
+
+Quatro revisores (banco, ações, componentes, telas) e um verificador cético por achado. **Corrigidos**, cada um com o
+caso que o prova visto reprovar antes: o **seletor de ano** ficava preso no ano de um link com `?ano=` (com
+`window.history.state`, que traz a marca `__NA`, o Next não passava a URL nova ao roteador; e só navegar também não
+basta, porque a página sem `?ano=` vem do cache desenhada com o cookie de antes — o seletor agora navega **e** atualiza,
+medido pelas requisições — e2e); o **feriado** não olhava a
+**1ª aplicação** da prova, que é a própria linha de `avaliacoes` (RN-AV-12 — pgTAP `149`, caso 22; o efeito medido não
+muda: 3 de 32); o **Excluir** (e o *Arquivar* da aba Turmas) saía da tabulação fora da grade (`naGrade` separado de
+`naLinha` — e2e); *Cadastro* em *Editar curso* deixava `?parte=` e a página devolvia ao *Currículo* (e2e); o **PDF** e o
+*Editar* dos horários da página do curso iam ao currículo de hoje, não ao do ano escolhido; os **gráficos** podiam ficar
+todos ocultos depois de um filtro (`ocultosEmVigor` — unidade); o **diálogo de exclusão** fechava durante o envio e a
+recusa ficava invisível; *Atividades* vazia num ano dizia *"ainda não há"*; o *Editar* da lista `/turmas` aparecia para
+turma de curso fora de oferta; e a página de edição do instrutor, sem as habilitações lidas, abriria com tudo desmarcado
+(já era assim na `main`). **Refutado:** a situação que o formulário manda sempre (é a regra de "a última gravação vence"
+da edição inteira).
 
 ## 5. Requisitos
 

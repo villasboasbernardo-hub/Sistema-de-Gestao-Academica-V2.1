@@ -25,6 +25,7 @@ import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { LegendaInterativa, MarcadorDaSerie } from "@/components/graficos/moldura";
 import {
   alternarGrupo,
+  ocultosEmVigor,
   corDaSerie,
   gruposVisiveis,
   MAXIMO_DE_FATIAS_COM_ROTULO_COMPLETO,
@@ -43,8 +44,9 @@ export type GraficoPizzaProps = {
 
 export function GraficoPizza({ serie, rotulo, altura = 260, className }: GraficoPizzaProps) {
   const pontos = serie.pontos;
-  const [ocultos, definirOcultos] = React.useState<ReadonlySet<string>>(() => new Set());
+  const [guardados, definirOcultos] = React.useState<ReadonlySet<string>>(() => new Set());
   const nomes = React.useMemo(() => pontos.map((p) => p.nome), [pontos]);
+  const ocultos = ocultosEmVigor(guardados, nomes);
   const totalGeral = pontos.reduce((soma, p) => soma + p.valor, 0);
   const numeradas = pontos.length > MAXIMO_DE_FATIAS_COM_ROTULO_COMPLETO;
 
@@ -61,7 +63,7 @@ export function GraficoPizza({ serie, rotulo, altura = 260, className }: Grafico
 
   const visiveis = gruposVisiveis(pontos, (p) => p.nome, ocultos);
   const total = totalVisivel(visiveis);
-  const alternar = (nome: string) => definirOcultos((atual) => alternarGrupo(atual, nome, nomes));
+  const alternar = (nome: string) => definirOcultos(alternarGrupo(ocultos, nome, nomes));
   const percentual = (valor: number) => (total > 0 ? percentualDaFatia(valor, total) : "—");
 
   return (

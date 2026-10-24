@@ -28,6 +28,7 @@ export function AbasDaEdicaoDoCurso({
   readonly curriculo: React.ReactNode;
 }) {
   const [aba, definirAba] = useParametro("/cursos/[curso]/editar", "aba");
+  const [, definirParte] = useParametro("/cursos/[curso]/editar", "parte");
   const atual = aba === "curriculo" ? "curriculo" : "cadastro";
 
   return (
@@ -46,7 +47,14 @@ export function AbasDaEdicaoDoCurso({
             aria-selected={atual === a.valor}
             aria-controls={`painel-da-edicao-${a.valor}`}
             data-aba={a.valor}
-            onClick={() => void definirAba(a.valor)}
+            onClick={() => {
+              /*
+               * ⚠️ *Cadastro* LIMPA A SUB-ABA NA MESMA NAVEGAÇÃO (o nuqs junta as duas): sem isso sobrava `?parte=` sem
+               *    `?aba=`, que é a forma do link antigo, e a página devolvia ao *Currículo* (revisão do PR #90).
+               */
+              if (a.valor === "cadastro") void definirParte(null);
+              void definirAba(a.valor);
+            }}
             className={cn(
               "-mb-px border-b-2 px-3 py-2 text-sm",
               atual === a.valor

@@ -47,9 +47,9 @@
   texto, a edição em página da ficha do instrutor e o Excluir onde faltar
 
 ## Fase 5 — prova e entrega
-- [ ] T025 E2E por clique dos itens 1 a 12; os casos antigos que mudam de forma (ficha da turma, filtros, estatísticas,
+- [X] T025 E2E por clique dos itens 1 a 12; os casos antigos que mudam de forma (ficha da turma, filtros, estatísticas,
   ano, Editar curso, calendário)
-- [ ] T026 Defeitos deliberados nos testes que provam a mudança; `pnpm verificar`; pgTAP; invariantes; e2e dos
+- [X] T026 Defeitos deliberados nos testes que provam a mudança; `pnpm verificar`; pgTAP; invariantes; e2e dos
   arquivos tocados
-- [ ] T027 O efeito no dado real (cópia do remoto): quantas turmas e feriados teriam o Excluir habilitado
-- [ ] T028 Roteiro de conferência, plano de correções (Bloco 10, D-COR-6), PR com o template, CI verde, lote de dúvidas
+- [X] T027 O efeito no dado real (cópia do remoto): quantas turmas e feriados teriam o Excluir habilitado
+- [X] T028 Roteiro de conferência, plano de correções (Bloco 10, D-COR-6), PR com o template, CI verde, lote de dúvidas

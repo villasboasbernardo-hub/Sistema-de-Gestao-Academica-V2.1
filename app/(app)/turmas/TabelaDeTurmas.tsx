@@ -284,7 +284,7 @@ function colunaDeAcoes(acoes: AcoesDaListaDeTurmas): Coluna<TurmaNaLista> {
     valor: (l) => (l.arquivada ? 1 : 0),
     celula: (l) => (
       <span className="flex justify-end gap-1" data-slot="acoes-da-turma">
-        {acoes.podeEditar && l.arquivada !== true ? (
+        {acoes.podeEditar && l.arquivada !== true && l.cursoEmOferta !== false ? (
           <BotaoDeIcone
             acao="editar"
             rotulo={`Editar a turma ${l.codigo}`}
@@ -301,6 +301,7 @@ function colunaDeAcoes(acoes: AcoesDaListaDeTurmas): Coluna<TurmaNaLista> {
             situacao={l.status}
             arquivada={l.arquivada === true}
             naLista
+            naGrade
           />
         ) : null}
         {acoes.podeExcluir && l.arquivada !== true ? (
@@ -314,6 +315,7 @@ function colunaDeAcoes(acoes: AcoesDaListaDeTurmas): Coluna<TurmaNaLista> {
             estado={acoes.exclusao[l.id] ?? SEM_LEITURA}
             excluir={acoes.excluir}
             naLinha
+            naGrade
             slot="excluir-da-linha"
           />
         ) : null}

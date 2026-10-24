@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   alternarGrupo,
   gruposVisiveis,
+  ocultosEmVigor,
   percentualDaFatia,
   totalVisivel,
   type PontoDeSerie,
@@ -52,5 +53,22 @@ describe("RT-5 · alternar", () => {
   it("o último à vista não se oculta", () => {
     const dois = new Set(["Superior", "Médio"]);
     expect(alternarGrupo(dois, "Não informado", todos)).toBe(dois);
+  });
+});
+
+describe("RT-5 · os ocultos depois de os dados mudarem (revisão do PR #90)", () => {
+  it("o grupo que sumiu dos dados deixa de contar como oculto", () => {
+    expect([...ocultosEmVigor(new Set(["XIV", "II"]), ["I", "II", "III"])]).toEqual(["II"]);
+  });
+
+  it("um filtro que deixa só o grupo oculto mostra todos, e o gráfico não fica vazio", () => {
+    expect([...ocultosEmVigor(new Set(["XIV"]), ["XIV"])]).toEqual([]);
+    expect([...ocultosEmVigor(new Set(["I", "II"]), ["I", "II"])]).toEqual([]);
+  });
+
+  it("sem mudança nos dados, o oculto continua oculto", () => {
+    expect([...ocultosEmVigor(new Set(["Médio"]), ["Superior", "Médio", "Não informado"])]).toEqual(
+      ["Médio"],
+    );
   });
 });

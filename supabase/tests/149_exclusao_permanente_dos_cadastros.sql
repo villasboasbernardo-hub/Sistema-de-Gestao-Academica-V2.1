@@ -25,7 +25,7 @@
 --    catalogo inteiro, e zero privilegio de DELETE para `authenticated` nas tabelas novas.
 -- =================================================================================
 begin;
-select plan(32);
+select plan(33);
 
 -- ── estrutura ────────────────────────────────────────────────────────────────────
 select has_function('app', 'excluir_turma', array['uuid', 'text'], 'app.excluir_turma existe');
@@ -152,7 +152,15 @@ values
    'a1497000-0000-0000-0000-000000000001', 'a1491000-0000-0000-0000-000000000001', 2, 1, false);
 insert into public.feriados (id, ano, data, descricao, impacto, status) values
   ('a1496000-0000-0000-0000-000000000003', 2047, '2047-04-17', 'T149 aula salva', 'dia_inteiro', 'ativo'),
-  ('a1496000-0000-0000-0000-000000000004', 2047, '2047-05-08', 'T149 so rascunho', 'dia_inteiro', 'ativo');
+  ('a1496000-0000-0000-0000-000000000004', 2047, '2047-05-08', 'T149 so rascunho', 'dia_inteiro', 'ativo'),
+  ('a1496000-0000-0000-0000-000000000005', 2047, '2047-06-05', 'T149 so a prova', 'dia_inteiro', 'ativo');
+-- Na semana do feriado 5, a T4 tem SÓ uma prova salva: a 1ª aplicação é a própria linha de `avaliacoes` (RN-AV-12).
+-- `tipos_avaliacao` e lista ADMINISTRAVEL, vazia no `db:reset` limpo: o teste semeia o que usa (idempotente).
+insert into public.config_listas (lista, valor, rotulo_exibicao)
+  values ('tipos_avaliacao', 'Prova T149', 'Prova T149') on conflict do nothing;
+insert into public.avaliacoes (codigo, turma_id, disciplina_id, curso_id, tipo_avaliacao, data_avaliacao, status, salvo)
+values ('T149-AVL', 'a1495000-0000-0000-0000-000000000004', 'a1493000-0000-0000-0000-000000000001',
+        'a1492000-0000-0000-0000-000000000001', 'Prova T149', '2047-06-04', 'pendente', true);
 
 -- ── o que prende a turma (D-10) ──────────────────────────────────────────────────
 select is(app.registros_da_turma('a1495000-0000-0000-0000-000000000001'), array[]::text[],
@@ -171,6 +179,8 @@ select ok('semana_do_dsa_salva_ou_publicada' = any (app.registros_do_feriado('a1
   'DISCRIMINA (medido na copia do remoto): a aula SALVA na semana prende, mesmo sem evento do DSA');
 select is(app.registros_do_feriado('a1496000-0000-0000-0000-000000000004'), array[]::text[],
   'e o RASCUNHO nao prende: ele ainda nao conta (RP-0)');
+select ok('semana_do_dsa_salva_ou_publicada' = any (app.registros_do_feriado('a1496000-0000-0000-0000-000000000005')),
+  'DISCRIMINA (revisao do PR #90): a 1a aplicacao da prova salva prende, sem sessao nem vista');
 
 -- ── com sessao (porteiro e rastro; nao autorizacao) ──────────────────────────────
 select set_config('request.jwt.claim.sub', 'a1490000-0000-0000-0000-000000000001', true);

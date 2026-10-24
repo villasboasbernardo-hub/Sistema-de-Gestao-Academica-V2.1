@@ -135,15 +135,29 @@ export default async function EditarInstrutor({ params }: { params: Promise<{ co
         {voltar}
       </header>
 
-      <FormularioDeInstrutor
-        modo="edicao"
-        instrutorId={instrutor.id}
-        iniciais={valoresFuncionaisDe(instrutor)}
-        pessoais={pessoal ? valoresPessoaisDe(pessoal as unknown as Record<string, unknown>) : null}
-        postos={(escalaRes.data ?? []).map((e) => e.valor)}
-        disciplinas={catalogo.filter((d) => d.ativa)}
-        habilitadas={habilitadas}
-      />
+      {/*
+       * ⚠️ SEM AS HABILITAÇÕES LIDAS, NÃO HÁ FORMULÁRIO (RN-DEG-01; revisão do PR #90): ele abriria com todas as disciplinas
+       *    desmarcadas, e o *Salvar* sincroniza a lista — desativaria todo vínculo ativo do instrutor sem ninguém ter
+       *    mexido no painel.
+       */}
+      {vinculosRes.error ? (
+        <p role="alert" className="text-atrasado-tinta text-sm" data-slot="habilitacoes-ilegiveis">
+          Não foi possível ler as disciplinas habilitadas deste instrutor. Recarregue a página antes
+          de editar: gravar sem elas desmarcaria todas.
+        </p>
+      ) : (
+        <FormularioDeInstrutor
+          modo="edicao"
+          instrutorId={instrutor.id}
+          iniciais={valoresFuncionaisDe(instrutor)}
+          pessoais={
+            pessoal ? valoresPessoaisDe(pessoal as unknown as Record<string, unknown>) : null
+          }
+          postos={(escalaRes.data ?? []).map((e) => e.valor)}
+          disciplinas={catalogo.filter((d) => d.ativa)}
+          habilitadas={habilitadas}
+        />
+      )}
     </section>
   );
 }

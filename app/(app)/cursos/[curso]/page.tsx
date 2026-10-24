@@ -34,6 +34,7 @@ import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import {
   curriculoDaPagina,
   curriculoVigenteEm,
+  versaoDoAnoEscolhido,
   opcoesDoSeletor,
   rotuloDoCurriculo,
   ROTULO_DA_SITUACAO,
@@ -146,6 +147,11 @@ export default async function PaginaDoCurso({
     .curriculos ?? []) as CurriculoDaPagina[];
   const curriculo = curriculoVigenteEm(curriculosDoCurso, referencia);
   const curriculoId = curriculo?.id ?? SEM_CURRICULO;
+  /*
+   * O número do currículo mostrado, SÓ quando ele não é o vigente hoje (outro ano no seletor): o PDF e o *Editar* dos
+   * horários vão a ele, e não ao de hoje (revisão do PR #90). No caso comum o endereço fica o de sempre.
+   */
+  const versaoDoAno = versaoDoAnoEscolhido(curriculosDoCurso, referencia, hoje);
   /* A aba *Currículo*: o consultado (`?curriculo=N`), ou o vigente — com o aviso quando o pedido não serve. */
   const escolhaDaConsulta = curriculoDaPagina(curriculosDoCurso, String(valores.curriculo), hoje);
   const consultado = escolhaDaConsulta.curriculo;
@@ -540,6 +546,8 @@ export default async function PaginaDoCurso({
               custoTotal: curso.custo_total === null ? null : Number(curso.custo_total),
               custoComposicao: curso.custo_composicao,
               curriculoPdfEm: curriculo?.pdf_carregado_em ?? null,
+              /* O PDF é o do currículo MOSTRADO — o do ano escolhido, não o de hoje (revisão do PR #90). */
+              curriculoVersao: versaoDoAno,
             }}
           />
         }
@@ -591,6 +599,7 @@ export default async function PaginaDoCurso({
               sigla={curso.codigo as string}
               cursoId={curso.id as string}
               curriculoId={curriculoId}
+              curriculoVersao={versaoDoAno}
               cursoAtivo={cursoAtivo}
               horarios={horariosDoCurso}
               permissoes={{

@@ -147,11 +147,20 @@ export default async function Atividades({
   if (filtro.de) consulta = consulta.gte("data", filtro.de);
   if (filtro.ate) consulta = consulta.lte("data", filtro.ate);
 
-  const [atividadesRes, turmasRes, arquivadasRes] = await Promise.all([
+  const [atividadesRes, turmasRes, arquivadasRes, universo] = await Promise.all([
     consulta.order("data", { ascending: false }).order("ta_inicial").limit(LIMITE_DE_ATIVIDADES),
     supabase.from("turmas").select("id, codigo").eq("ano_letivo", ano).order("codigo"),
     /* D-COR-5 (spec 017, C-24): a turma arquivada some do filtro de turma. */
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
+    /*
+     * O universo SEM o ano — só a contagem: é o que separa *"nenhuma em <ano>"* de *"ainda não há"* (revisão do PR #90;
+     * o mesmo de Turmas, Início e da aba Turmas do curso).
+     */
+    supabase
+      .from("atividades_nao_letivas")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "ativo")
+      .eq("salvo", true),
   ]);
   const podeLer = pode(permissoes, "atividades_nao_letivas", "ler");
   const alcance = alcanceDoPerfil(usuario?.perfil, usuario?.escopoCurso);
@@ -218,6 +227,12 @@ export default async function Atividades({
           motivo="sem-dado"
           titulo="Nenhuma atividade neste recorte"
           detalhe="Afrouxe ou limpe os filtros acima."
+        />
+      ) : (universo.count ?? 0) > 0 ? (
+        <EstadoVazio
+          motivo="sem-dado"
+          titulo={`Nenhuma atividade em ${ano}`}
+          detalhe="As atividades de outros anos aparecem trocando o ano, no canto superior direito."
         />
       ) : alcance === "recortado" ? (
         <EstadoVazio

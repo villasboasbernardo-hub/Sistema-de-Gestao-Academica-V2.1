@@ -53,6 +53,7 @@ import {
 } from "@/components/graficos/moldura";
 import {
   alternarGrupo,
+  ocultosEmVigor,
   corDaSerie,
   SIMBOLO_DA_FORMA,
   type Serie,
@@ -111,7 +112,7 @@ export function GraficoBarras({
   legendaDaCategoria,
   unidadeNaLegenda,
 }: GraficoBarrasProps) {
-  const [ocultos, definirOcultos] = React.useState<ReadonlySet<string>>(() => new Set());
+  const [guardados, definirOcultos] = React.useState<ReadonlySet<string>>(() => new Set());
   const todasAsLinhas = paraLinhas(series);
   /* RT-5: com uma série, o grupo é a CATEGORIA; com várias, é a SÉRIE. */
   const porCategoriaNaLegenda = series.length === 1;
@@ -119,8 +120,8 @@ export function GraficoBarras({
   const grupos = porCategoriaNaLegenda
     ? todasAsLinhas.map((l) => l.nome)
     : series.map((s) => s.chave);
-  const alternar = (grupo: string) =>
-    definirOcultos((atual) => alternarGrupo(atual, grupo, grupos));
+  const ocultos = ocultosEmVigor(guardados, grupos);
+  const alternar = (grupo: string) => definirOcultos(alternarGrupo(ocultos, grupo, grupos));
   const mostrarTodos = () => definirOcultos(new Set());
 
   /* O índice de origem fica com cada linha e cada série: é dele que sai a cor. */

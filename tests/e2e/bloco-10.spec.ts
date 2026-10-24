@@ -222,6 +222,10 @@ test.describe("item 11 · o calendário", () => {
     await linha.locator('[data-slot="desativar-linha"]').hover();
     await expect(page.getByRole("tooltip")).toHaveText("Desativar");
     await expect(page.locator("main")).not.toContainText("Inativar");
+    // O Excluir se alcança por teclado: a tabela do calendário não é grade, e o `Tab` passa por ele (revisão do PR #90).
+    await linha.locator('[data-slot="desativar-linha"]').focus();
+    await page.keyboard.press("Tab");
+    await expect(linha.locator('[data-slot="excluir-linha"]')).toBeFocused();
 
     await linha.locator('[data-slot="excluir-linha"]').click();
     const dialogo = page.locator('[data-slot="dialogo-de-exclusao"]');
@@ -260,6 +264,35 @@ test.describe("item 10 · RT-6 · o ano escolhido vale nos outros módulos", () 
     await MENU(page).getByRole("link", { name: "Turmas", exact: true }).click();
     await expect(page.locator('[data-slot="ano-do-painel-escolha"]')).toHaveValue(String(ANO));
     await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText(`em ${ANO}`);
+  });
+
+  test("aberto por um link com «?ano=», o seletor troca o ano e o endereço acompanha", async ({
+    page,
+  }) => {
+    /*
+     * Revisão do PR #90: com `window.history.state` (que traz a marca `__NA`) o Next não passava a URL nova ao
+     * roteador, o `refresh()` pedia a antiga, e a URL vence o cookie — a tela ficava presa no ano do link.
+     */
+    await entrar(page, EMAIL, "/inicio");
+    await MENU(page).getByRole("link", { name: "Turmas", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/turmas");
+    // O ponto de partida é o link que alguém mandaria, com o ano nele.
+    await page.goto(`/turmas?ano=${ANO + 1}`);
+    const escolha = page.locator('[data-slot="ano-do-painel-escolha"]');
+    await expect(escolha).toHaveValue(String(ANO + 1), { timeout: 15_000 });
+
+    await escolha.selectOption(String(ANO + 2));
+    await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText(`em ${ANO + 2}`, {
+      timeout: 15_000,
+    });
+    await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBe(String(ANO + 2));
+    await expect(escolha).toHaveValue(String(ANO + 2));
+
+    await escolha.selectOption(String(ANO));
+    await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText(`em ${ANO}`, {
+      timeout: 15_000,
+    });
+    await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBeNull();
   });
 
   test("o seletor oferece qualquer ano de 2020 até o de hoje + 10", async ({ page }) => {
@@ -321,6 +354,22 @@ test.describe("item 7 · Editar curso", () => {
       .locator('[data-slot="partes-do-curriculo"] [role="tab"]')
       .allInnerTexts();
     expect(partes).toEqual(["Disciplinas", "Horários", "Atividades e limites"]);
+
+    // Da sub-aba Horários de volta ao Cadastro: a sub-aba sai junto, e a página não devolve ao Currículo (revisão do
+    // PR #90 — sobrava `?parte=` sem `?aba=`, a forma do link antigo).
+    await page
+      .locator('[data-slot="partes-do-curriculo"] [role="tab"]', { hasText: "Horários" })
+      .click();
+    await expect.poll(() => new URL(page.url()).searchParams.get("parte")).toBe("horarios");
+    await abas.locator('[role="tab"][data-aba="cadastro"]').click();
+    await expect.poll(() => new URL(page.url()).searchParams.get("parte")).toBeNull();
+    await page.waitForLoadState("networkidle");
+    await expect(abas.locator('[role="tab"][data-aba="cadastro"]')).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page.locator('[data-slot="formulario-de-curso"]')).toBeVisible();
+    expect(new URL(page.url()).searchParams.get("aba")).toBeNull();
 
     // O endereço guardado antes do Bloco 10 (`?parte=`) continua chegando onde a parte mora.
     await page.goto(`/cursos/${encodeURIComponent(SIGLA)}/editar?parte=horarios`);
