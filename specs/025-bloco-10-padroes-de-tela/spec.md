@@ -157,9 +157,12 @@ ordem por classificação (`ordem-de-cursos.ts`), o aviso de carga só acima da 
   turma**, como estrutura dela: as linhas da grade (que nascem com a turma), as atribuições de instrutor e o rateio
   por UE — tudo no retrato do rastro. *Alternativa: a atribuição também impede.*
 - D-11 · Q: O que é "semana salva/publicada ligada" ao feriado? → A: alguma turma que o feriado alcança tem, **na
-  semana ISO da data**, o evento **salvo**, **publicado** ou **alteração publicada** na trilha do DSA. A semana
-  *registrada* sem evento (D-18 da spec 024) não conta — por ela, toda semana contaria. *Alternativa: qualquer
-  lançamento salvo na semana.*
+  semana ISO da data**, o evento **salvo**, **publicado** ou **alteração publicada** na trilha do DSA **ou lançamento
+  salvo e vivo** (aula, atividade — a global alcança todas —, sessão de aplicação ou vista). A semana *registrada*
+  **vazia** (D-18 da spec 024) não conta — por ela, toda semana contaria. ⚠️ **Trocada pela medição** (24/10/2026, cópia
+  `remoto-20261024-061801.sql`): só com o evento, **nenhuma** das 32 linhas do calendário ficaria protegida — o que existia antes do
+  Bloco 9 nasce salvo (RP-8) e não tem evento; com o lançamento salvo, **29 das 32**. *Alternativa: só o evento (a
+  proteção valeria só para as semanas salvas daqui em diante).*
 - D-12 · Q: A confirmação? → A: o **alerta** de exclusão permanente e o **código digitado**, como as três exclusões do
   domínio acadêmico (instrutor, disciplina, UE); o banco confere o código de novo. *Alternativa: só o alerta, sem
   digitar, como a conta (D-USR-4).*
@@ -356,8 +359,9 @@ PR; **não vai ao remoto antes de Bernardo ver este desenho**.
   `turmas`. O **retrato** do rastro leva a turma **e** as linhas que saíram com ela.
 - **Feriado** — `app.impedimentos_de_exclusao_do_feriado(uuid)`, `app.impedimentos_de_exclusao_dos_feriados(uuid[])` e
   `app.excluir_feriado(uuid, text)`, porteiro `app.pode('calendario','criar')`. Impede (D-11): evento `salvo`,
-  `publicado` ou `alteracao_publicada` na semana ISO da data (`app.semana_iso`), para alguma turma que o feriado
-  alcança (as escolhidas em `feriado_turma`, ou todas). Sai junto: `feriado_turma`, depois `feriados`.
+  `publicado` ou `alteracao_publicada` na semana ISO da data (`app.semana_iso`) **ou lançamento salvo e vivo** nela,
+  para alguma turma que o feriado alcança (as escolhidas em `feriado_turma`, ou todas). Sai junto: `feriado_turma`,
+  depois `feriados`.
 - **Regime de horário, item de avaliação do currículo e sala** (D-30) — o mesmo trio de funções para cada um
   (impedimentos de um, impedimentos de uma lista, excluir), com porteiro `horarios.criar`, `disciplinas.criar` e
   `parametros.criar`, e o impedimento `curriculo_em_uso` (`app.curriculo_em_uso_com_lancamento`) nos dois primeiros. A
@@ -375,10 +379,12 @@ PR; **não vai ao remoto antes de Bernardo ver este desenho**.
 - **Quem lê**: a ficha da turma (o seu), a aba *Turmas* do curso (a lista), a aba *Calendário* (a lista do ano). As
   Server Actions `excluirTurma` e `excluirLinhaDoCalendario`, com Zod na primeira linha.
 - **O caso que discrimina** (DoD 8): a turma **só com atribuição de instrutor** se exclui (a atribuição sai junto), e a
-  mesma turma com **um TA fora do DSA** é recusada; o feriado numa semana com **lançamento salvo e sem evento** se
-  exclui, e com o **evento *salvo*** é recusado.
-- **Efeito no dado real**: medido sobre a cópia do remoto [pendente — quantas turmas e quantos feriados de hoje teriam
-  o ícone habilitado].
+  mesma turma com **um evento *salvo* do DSA** é recusada; o feriado numa semana com **aula salva e sem evento** é
+  recusado (o dado de antes do Bloco 9), e com a aula **em rascunho** se exclui.
+- **Efeito no dado real**: medido em 24/10/2026 sobre a cópia `remoto-20261024-061801.sql` restaurada no banco local, numa transação
+  desfeita — ver `plano-de-aplicacao-no-remoto.md` §4: **11 de 30** turmas, **3 de 32** linhas do calendário, **51 de 281**
+  avaliações do currículo e **6 de 14** salas ficam excluíveis; nenhum regime existe; instrutor e disciplina seguem
+  **0** excluíveis, e as UEs caem de **206** para **176** (30 presas por avaliação do currículo, a FK que faltava).
 - **Reversão**: `drop` das funções e a restrição de volta à lista de três — esta só se nenhuma exclusão de turma ou de
   feriado tiver acontecido (com linha, o rastro **fica** e a restrição continua aceitando-a).
 

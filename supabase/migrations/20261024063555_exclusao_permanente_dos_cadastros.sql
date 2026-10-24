@@ -33,7 +33,7 @@
 --
 -- REVERSAO — `specs/025-bloco-10-padroes-de-tela/reversao.sql`, PROVADA em 24/10/2026 numa
 --    transacao desfeita no banco local: a impressao digital do esquema
---    (`scripts/provas/impressao_digital_do_esquema.sql`) vai de 2.637 objetos `5a362188...`
+--    (`scripts/provas/impressao_digital_do_esquema.sql`) vai de 2.637 objetos `c291980c...`
 --    (com esta migration) a 2.573 objetos `80345112...` — a mesma do remoto depois do
 --    Bloco 9. Em resumo:
 --    drop function public.excluir_turma(uuid, text), public.excluir_feriado(uuid, text),
@@ -379,10 +379,14 @@ grant execute on function app.excluir_turma(uuid, text) to authenticated;
 -- ---------------------------------------------------------------------------------
 -- PARTE D — a LINHA DO CALENDARIO (feriado) (D-COR-6; D-11)
 --
--- ⚠️ "SEMANA SALVA OU PUBLICADA LIGADA": o evento `salvo`, `publicado` ou
---    `alteracao_publicada` da trilha do DSA, na semana ISO da data, de alguma turma que o
---    feriado alcanca (as escolhidas em `feriado_turma`; sem linha, todas). A semana
---    "registrada" sem evento (D-18 da spec 024) nao conta — por ela, toda semana contaria.
+-- ⚠️ "SEMANA SALVA OU PUBLICADA LIGADA": na semana ISO da data, alguma turma que o feriado
+--    alcanca (as escolhidas ATIVAS em `feriado_turma`; sem nenhuma, todas) tem (a) o evento
+--    `salvo`, `publicado` ou `alteracao_publicada` na trilha do DSA, ou (b) LANCAMENTO SALVO
+--    vivo — aula, atividade (a global alcanca todas), sessao de aplicacao ou vista de prova.
+-- ⚠️ O (b) NASCEU DA MEDICAO NA COPIA DO REMOTO (24/10/2026): so com o evento, NENHUMA das 32
+--    linhas do calendario ficaria protegida — o que existia antes do Bloco 9 nasce salvo
+--    (RP-8) e nao tem evento. Com o (b), 29 das 32. A semana *registrada* VAZIA (D-18 da
+--    spec 024) continua nao contando: por ela, toda semana contaria.
 -- ---------------------------------------------------------------------------------
 create or replace function app.registros_do_feriado(p_feriado_id uuid)
 returns text[]
@@ -392,16 +396,25 @@ security definer
 set search_path = pg_catalog, public
 as $$
 declare
-  v_data   date;
-  v_ano    smallint;
-  v_semana smallint;
-  v        text[] := array[]::text[];
+  v_data    date;
+  v_ano     smallint;
+  v_semana  smallint;
+  v_de      date;
+  v_ate     date;
+  v_todas   boolean;
+  v         text[] := array[]::text[];
 begin
   select f.data into v_data from public.feriados f where f.id = p_feriado_id;
   if v_data is null then
     return v;
   end if;
   select s.ano, s.semana into v_ano, v_semana from app.semana_iso(v_data) s;
+  -- A semana ISO de segunda a domingo: a data menos o dia da semana ISO (1 = segunda).
+  v_de := v_data - (extract(isodow from v_data)::int - 1);
+  v_ate := v_de + 6;
+  -- As turmas escolhidas ATIVAS; sem nenhuma, todas (`turmasEscolhidas`, spec 023).
+  v_todas := not exists (select 1 from public.feriado_turma ft
+                          where ft.feriado_id = p_feriado_id and ft.status = 'ativo');
 
   if exists (
     select 1
@@ -409,11 +422,30 @@ begin
      where e.ano = v_ano
        and e.semana = v_semana
        and e.tipo in ('salvo', 'publicado', 'alteracao_publicada')
-       -- As turmas escolhidas ATIVAS; sem nenhuma, todas (`turmasEscolhidas`, spec 023).
-       and (not exists (select 1 from public.feriado_turma ft
-                         where ft.feriado_id = p_feriado_id and ft.status = 'ativo')
-            or e.turma_id in (select ft.turma_id from public.feriado_turma ft
+       and (v_todas or e.turma_id in (select ft.turma_id from public.feriado_turma ft
+                                       where ft.feriado_id = p_feriado_id and ft.status = 'ativo'))
+  ) or exists (
+    select 1 from public.registros_aula r
+     where r.data between v_de and v_ate and r.salvo and r.status = 'ativo'
+       and (v_todas or r.turma_id in (select ft.turma_id from public.feriado_turma ft
+                                       where ft.feriado_id = p_feriado_id and ft.status = 'ativo'))
+  ) or exists (
+    select 1 from public.atividades_nao_letivas a
+     where a.data between v_de and v_ate and a.salvo and a.status = 'ativo'
+       and (v_todas or a.turma_id is null
+            or a.turma_id in (select ft.turma_id from public.feriado_turma ft
                                where ft.feriado_id = p_feriado_id and ft.status = 'ativo'))
+  ) or exists (
+    select 1
+      from (select s.avaliacao_id, s.data from public.sessoes_de_aplicacao s
+             where s.salvo and s.status = 'ativo'
+            union all
+            select w.avaliacao_id, w.data from public.vistas_de_avaliacao w
+             where w.salvo and w.status = 'ativo') x
+      join public.avaliacoes av on av.id = x.avaliacao_id and av.status <> 'cancelada'
+     where x.data between v_de and v_ate
+       and (v_todas or av.turma_id in (select ft.turma_id from public.feriado_turma ft
+                                        where ft.feriado_id = p_feriado_id and ft.status = 'ativo'))
   ) then
     v := array_append(v, 'semana_do_dsa_salva_ou_publicada');
   end if;

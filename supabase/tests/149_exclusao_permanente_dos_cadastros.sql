@@ -25,7 +25,7 @@
 --    catalogo inteiro, e zero privilegio de DELETE para `authenticated` nas tabelas novas.
 -- =================================================================================
 begin;
-select plan(30);
+select plan(32);
 
 -- ── estrutura ────────────────────────────────────────────────────────────────────
 select has_function('app', 'excluir_turma', array['uuid', 'text'], 'app.excluir_turma existe');
@@ -135,6 +135,25 @@ insert into public.feriados (id, ano, data, descricao, impacto, status) values
 insert into public.feriado_turma (feriado_id, turma_id, status) values
   ('a1496000-0000-0000-0000-000000000002', 'a1495000-0000-0000-0000-000000000003', 'ativo');
 
+-- A T4 (2047, longe do dado real: o caso vale também na base carregada) tem uma aula SALVA numa semana e uma em
+-- RASCUNHO noutra — sem evento nenhum: é o dado de antes do Bloco 9, que nasce salvo (RP-8) e não tem evento.
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade, data_inicio, data_termino)
+values ('a1495000-0000-0000-0000-000000000004', 'T149-CUR T4 2047', 'a1492000-0000-0000-0000-000000000001',
+        'T4', 2047, 'ativa', 'presencial', '2047-03-04', '2047-06-28');
+insert into public.unidades_ensino (id, codigo, disciplina_id, curso_id, numero_ue, topico, ch_prevista_tempos)
+values ('a1497000-0000-0000-0000-000000000001', 'T149-UE', 'a1493000-0000-0000-0000-000000000001',
+        'a1492000-0000-0000-0000-000000000001', 1, 'Topico T149', 10);
+insert into public.registros_aula
+  (codigo, data, turma_id, curso_id, unidade_ensino_id, instrutor_id, tempos_consumidos, ta_inicial, salvo)
+values
+  ('T149-REG-SALVA', '2047-04-16', 'a1495000-0000-0000-0000-000000000004', 'a1492000-0000-0000-0000-000000000001',
+   'a1497000-0000-0000-0000-000000000001', 'a1491000-0000-0000-0000-000000000001', 2, 1, true),
+  ('T149-REG-RASCUNHO', '2047-05-07', 'a1495000-0000-0000-0000-000000000004', 'a1492000-0000-0000-0000-000000000001',
+   'a1497000-0000-0000-0000-000000000001', 'a1491000-0000-0000-0000-000000000001', 2, 1, false);
+insert into public.feriados (id, ano, data, descricao, impacto, status) values
+  ('a1496000-0000-0000-0000-000000000003', 2047, '2047-04-17', 'T149 aula salva', 'dia_inteiro', 'ativo'),
+  ('a1496000-0000-0000-0000-000000000004', 2047, '2047-05-08', 'T149 so rascunho', 'dia_inteiro', 'ativo');
+
 -- ── o que prende a turma (D-10) ──────────────────────────────────────────────────
 select is(app.registros_da_turma('a1495000-0000-0000-0000-000000000001'), array[]::text[],
   'DISCRIMINA: a turma so com atribuicao de instrutor nao tem registro — a atribuicao e estrutura');
@@ -148,6 +167,10 @@ select ok('semana_do_dsa_salva_ou_publicada' = any (app.registros_do_feriado('a1
   'o feriado de todas as turmas, na semana salva de uma delas, tem registro');
 select is(app.registros_do_feriado('a1496000-0000-0000-0000-000000000002'), array[]::text[],
   'DISCRIMINA: o feriado so da T3 nao e preso pela semana salva da T2');
+select ok('semana_do_dsa_salva_ou_publicada' = any (app.registros_do_feriado('a1496000-0000-0000-0000-000000000003')),
+  'DISCRIMINA (medido na copia do remoto): a aula SALVA na semana prende, mesmo sem evento do DSA');
+select is(app.registros_do_feriado('a1496000-0000-0000-0000-000000000004'), array[]::text[],
+  'e o RASCUNHO nao prende: ele ainda nao conta (RP-0)');
 
 -- ── com sessao (porteiro e rastro; nao autorizacao) ──────────────────────────────
 select set_config('request.jwt.claim.sub', 'a1490000-0000-0000-0000-000000000001', true);

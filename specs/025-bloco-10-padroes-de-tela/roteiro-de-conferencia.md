@@ -41,9 +41,9 @@ Regras de tela de referência: `docs/correcoes/padroes-de-tela.md` (RT-1 a RT-7 
    *Excluir turma* está liberado: clique → o alerta diz que é **permanente**; o botão *Excluir permanentemente* só libera
    com o **código da turma** digitado → confirme. **[GRAVA]** Esperado: vai para *Turmas* com *"Turma … excluída
    permanentemente."*; a turma sumiu.
-2. **[DEPOIS DA MIGRATION]** *Atividades* → *Calendário*: numa linha de uma data cuja semana **tem DSA salvo ou
-   publicado** de uma turma alcançada, o *Excluir* está desabilitado com *"tem registros: use Desativar"*; numa linha
-   sem semana salva, liberado (ver item 11).
+2. **[DEPOIS DA MIGRATION]** *Atividades* → *Calendário*: numa linha de uma data cuja semana **tem lançamento salvo ou
+   DSA publicado** de uma turma alcançada (quase todas as de 2026), o *Excluir* está desabilitado com *"tem registros: use
+   Desativar"*; medido na cópia do remoto, só 3 das 32 ficam liberadas (02/11, 12/11 e 15/11/2026).
 
 ## 4. Curso, aba Disciplinas — barras
 

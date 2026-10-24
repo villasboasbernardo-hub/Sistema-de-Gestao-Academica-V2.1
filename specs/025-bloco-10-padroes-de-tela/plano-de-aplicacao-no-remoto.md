@@ -54,22 +54,28 @@ as atribuições de instrutor, o rateio e as ligações **inativas** de feriado.
 
 ## 4. Efeito medido na cópia do remoto
 
-Cópia: `[pendente]` — restaurada no banco **local** por `python -m scripts.manutencao.dado_do_remoto`; medição numa
-transação **desfeita**, com as funções antigas recriadas em `pg_temp` para o antes × depois.
+Cópia: **`remoto-20261024-061801.sql`** (24/10/2026) — restaurada no banco **local** por `python -m scripts.manutencao.dado_do_remoto`
+(cursos 24, turmas 30, instrutores 181, disciplinas 175, salas 14, aulas 3.749); medição numa transação **desfeita**,
+com as funções antigas recriadas em `pg_temp` para o antes × depois.
 
 | Cadastro | Total | Excluíveis depois da migration |
 |---|---|---|
-| Turmas | `[pendente]` | `[pendente]` |
-| Linhas do calendário | `[pendente]` | `[pendente]` |
-| Regimes de horário | `[pendente]` | `[pendente]` |
-| Itens de avaliação do currículo | `[pendente]` | `[pendente]` |
-| Salas | `[pendente]` | `[pendente]` |
+| Turmas | 30 | **11** — `C-ApA-PCN-PR-EAD T2 2026`, `C-ApA-PrevMe-PR-EAD T2 2026`, `C-Esp-OpAP T1 2026`, `C-Exp-Metoc-OF-SP 2026`, `C-Exp-Obs-ME T1 2026`, `CAHO 2027`, `EST-QF-APHID 2026`, `EST-QF-MAREFLU 2026`, `EST-QF-NAVFLU-EAD 2026`, `EST-QF-PGRS100 2026`, `EST-QF-PROC-MF-EAD 2026` |
+| Linhas do calendário | 32 (25 ativas) | **3** — `FER-000038` (02/11/2026), `FER-000023` (12/11/2026) e `FER-000026` (15/11/2026), em semanas sem nada salvo |
+| Regimes de horário | 0 | 0 |
+| Itens de avaliação do currículo | 281 | **51** |
+| Salas | 14 | **6** — Biblioteca, H11, H36, H38, Sala 00, Sala 05 |
 
 | Impedimento antigo | Total | Excluíveis antes | Excluíveis depois |
 |---|---|---|---|
-| Instrutor | `[pendente]` | `[pendente]` | `[pendente]` |
-| Disciplina | `[pendente]` | `[pendente]` | `[pendente]` |
-| Unidade de ensino | `[pendente]` | `[pendente]` | `[pendente]` |
+| Instrutor | 181 | 0 | 0 |
+| Disciplina | 175 | 0 | 0 |
+| Unidade de ensino | 587 | 206 | **176** — as 30 que saem estão ligadas a avaliação do currículo, a FK que a função antiga não conhecia (o `DELETE` esbarraria nela com a frase errada) |
+
+⚠️ **O CRITÉRIO DO CALENDÁRIO MUDOU POR ESTA MEDIÇÃO** (D-11): só com o evento salvo/publicado da trilha do DSA,
+**nenhuma** das 32 linhas ficaria protegida — o que existe de antes do Bloco 9 nasce salvo (RP-8) e não tem evento. A
+função passou a contar também o **lançamento salvo e vivo** da semana; com isso, **29 de 32** ficam presas. O pgTAP `149`
+prova a diferença (a versão só com o evento reprova o caso novo).
 
 ## 5. Reversão
 
@@ -79,7 +85,7 @@ tabelas novas**: com rastro delas, a reversão recusa (o rastro é só de acrés
 tentativa, sobre os 3 rastros que a suíte de ponta a ponta deixou no banco local.
 
 **Prova (24/10/2026, banco local, numa transação desfeita, com os rastros retirados só dentro dela):** a impressão digital
-do esquema vai de **2.637 objetos `5a362188…`** (com a migration) a **2.573 objetos `80345112…`** — a mesma do remoto
+do esquema vai de **2.637 objetos `c291980c…`** (com a migration) a **2.573 objetos `80345112…`** — a mesma do remoto
 depois do Bloco 9; o `rollback` devolveu o esquema e os 3 rastros.
 
 ## 6. O rito, quando você autorizar
