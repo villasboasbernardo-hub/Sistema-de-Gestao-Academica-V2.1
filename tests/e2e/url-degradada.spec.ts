@@ -13,6 +13,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirPainelDeFiltros } from "./filtros";
 import { limparPanorama, semearPanorama, type PanoramaSemeado } from "./panorama-de-teste";
 
 let EMAIL = "";
@@ -38,6 +39,8 @@ async function abrirInicioCom(page: Page, consulta: string) {
 async function aTelaAbriu(page: Page) {
   await expect(page.getByRole("heading", { name: "Início", level: 1 })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Navegação principal" })).toBeVisible();
+  // Spec 025 (RT-4, D-19): o recorte do Início mora no painel do ícone *Filtros*.
+  await abrirPainelDeFiltros(page);
 }
 
 test.describe("`FR-006` · valor fora do domínio usa o padrão e preserva os demais", () => {

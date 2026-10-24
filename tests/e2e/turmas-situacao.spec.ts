@@ -91,20 +91,36 @@ for (const [quem, email] of [
   });
 }
 
-test("`FR-015.1` · quem só LÊ turma não vê *Trocar situação*", async ({ page }) => {
+test("`FR-015.1` · quem só LÊ turma não vê *Editar turma*, onde a situação se troca (spec 025, D-2)", async ({
+  page,
+}) => {
   await irAFichaDaTurma(page, EMAIL_SO_LEITURA, SEMEADO.turmaJanelaCedo);
   await expect(seloDaSituacao(page)).toBeVisible();
-  await expect(page.locator('[data-slot="trocar-situacao"]')).toHaveCount(0);
+  await expect(page.locator('[data-slot="editar-turma"]')).toHaveCount(0);
 });
 
-test("`FR-015.4` · *Editar turma* não tem o campo Situação; a criação tem", async ({ page }) => {
+/*
+ * REGRA DOS VALORES ESPERADOS: (a), spec 025 (Bloco 10, D-2; emenda o FR-015.4 da spec 016) — *"um único Editar edita
+ * tudo"*: a situação voltou a *Editar turma*, e o botão *Trocar situação* da ficha saiu. A observação da troca aparece
+ * só quando a situação muda.
+ */
+test("`D-2` da spec 025 · *Editar turma* tem a Situação, com a observação só quando ela muda; a criação também", async ({
+  page,
+}) => {
   await irAFichaDaTurma(page, EMAIL_ADMIN, SEMEADO.turmaJanelaCedo);
+  await expect(page.locator('[data-slot="trocar-situacao"]')).toHaveCount(0);
   await abrirEdicaoDaTurma(page);
   await expect(page.locator('[data-slot="formulario-de-turma"]')).toHaveAttribute(
     "data-modo",
     "edicao",
   );
-  await expect(page.locator("#turma-situacao")).toHaveCount(0);
+  await expect(page.locator("#turma-situacao")).toBeVisible();
+  await expect(page.locator('[data-slot="observacao-da-situacao"]')).toHaveCount(0);
+  const atual = await page.locator("#turma-situacao").inputValue();
+  await page
+    .locator("#turma-situacao")
+    .selectOption(atual === "cancelada" ? "planejada" : "cancelada");
+  await expect(page.locator('[data-slot="observacao-da-situacao"]')).toBeVisible();
 
   // A criação, pelo curso: menu → Cursos → cartão → *Nova turma* (a barra do topo, FR-006.1).
   const sigla = SEMEADO.porClassificacao.regular;
@@ -145,19 +161,9 @@ async function ultimaTroca(codigo: string) {
   };
 }
 
-/** Troca pelo diálogo, com observação (ou sem, se vazia), e espera a confirmação. */
+/** Troca em *Editar turma* (spec 025, D-2), com observação (ou sem, se vazia), e espera a confirmação na ficha. */
 async function trocarComObservacao(page: Page, rotulo: string, observacao: string): Promise<void> {
-  await page.locator('[data-slot="trocar-situacao"]').click();
-  const dialogo = page.locator('[data-slot="dialogo-de-situacao"]');
-  await expect(dialogo).toBeVisible();
-  await dialogo.getByRole("radio", { name: new RegExp(`^${rotulo}`) }).check();
-  if (observacao !== "") {
-    await dialogo.locator('[data-slot="observacao-da-situacao"]').fill(observacao);
-  }
-  await dialogo.locator('[data-slot="gravar-situacao"]').click();
-  await expect(page.locator('[data-slot="situacao-gravada"]')).toContainText(rotulo, {
-    timeout: 15_000,
-  });
+  await trocarSituacaoPelaFicha(page, rotulo, observacao === "" ? undefined : observacao);
 }
 
 async function abrirHistorico(page: Page) {

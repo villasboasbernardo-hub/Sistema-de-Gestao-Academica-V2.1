@@ -584,7 +584,8 @@ export default async function FichaDaTurma({
               arquivada={arquivada}
             />
           ) : null}
-          {podeExcluir ? (
+          {/* A arquivada tem o registro do arquivamento: o caminho dela é desarquivar, não excluir (como nas listas). */}
+          {podeExcluir && !arquivada ? (
             <ExclusaoPermanente
               id={turmaId}
               codigo={turma.codigo as string}

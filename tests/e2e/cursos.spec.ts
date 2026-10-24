@@ -20,6 +20,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirPainel } from "./paineis";
 import {
   limparCursos,
   responsabilizarPorCurso,
@@ -125,15 +126,19 @@ test.describe("`SC-001` · os cinco grupos, na ordem do Glossário", () => {
  *    classificação e duração em semanas de cada curso/estágio; remova o de duração média por classificação."* O painel
  *    nasce recolhido (como o de Instrutores) e abre por clique.
  */
+/*
+ * ⚠️ SPEC 025 (Bloco 10, RT-4): o painel abre pelo ÍCONE *Estatísticas* da barra, na linha de *Novo curso* — o botão de
+ *    texto *"Exibir estatísticas"* saiu.
+ */
 async function exibirEstatisticas(page: Page): Promise<void> {
   await expect(page.locator('[data-slot="indicadores-do-catalogo"]')).toHaveCount(0);
   const antes = page.url();
-  await page.getByRole("button", { name: "Exibir estatísticas" }).click();
+  await abrirPainel(page, "estatisticas");
   expect(page.url(), "abrir as estatísticas foi para a URL — é estado efêmero").toBe(antes);
 }
 
 test.describe("`SC-002` · os indicadores do `FR-002`, e só eles", () => {
-  test("os dois indicadores e os dois gráficos aparecem — e a duração média por classificação saiu", async ({
+  test("um cartão por classificação, o total e os dois gráficos — e a duração média por classificação saiu", async ({
     page,
   }) => {
     await entrar(page, EMAIL_ADMIN, "/cursos");
@@ -141,11 +146,45 @@ test.describe("`SC-002` · os indicadores do `FR-002`, e só eles", () => {
     const painel = page.locator('[data-slot="indicadores-do-catalogo"]');
     await expect(painel).toBeVisible();
 
+    /* Spec 025 (item 6, D-20): o total, as cinco classificações e os demais — sete cartões do mesmo tamanho. */
+    await expect(painel.locator('[data-slot="card-kpi"]')).toHaveCount(7);
+    for (const classe of [
+      "total",
+      "regular",
+      "expedito",
+      "especial",
+      "estagio_qualificacao",
+      "aperfeicoamento_avancado",
+      "demais",
+    ]) {
+      await expect(
+        painel.locator(`[data-classificacao="${classe}"] [data-slot="card-kpi"]`),
+      ).toHaveCount(1);
+    }
+    await expect(painel.getByText("Total de cursos e estágios do CIAARA-11")).toBeVisible();
     await expect(painel.getByText("Cursos regulares")).toBeVisible();
     await expect(painel.getByText("Estágios de qualificação")).toBeVisible();
+    // Os seis somam o total (SC-006 da spec 025).
+    const numero = async (classe: string) =>
+      Number(
+        await painel
+          .locator(`[data-classificacao="${classe}"] [data-slot="card-kpi"] .text-kpi`)
+          .innerText(),
+      );
+    const partes = await Promise.all(
+      [
+        "regular",
+        "expedito",
+        "especial",
+        "estagio_qualificacao",
+        "aperfeicoamento_avancado",
+        "demais",
+      ].map(numero),
+    );
+    expect(partes.reduce((a, b) => a + b, 0)).toBe(await numero("total"));
     await expect(page.locator('[data-slot="grafico-do-catalogo"]')).toHaveCount(2);
     const pizza = page.locator('[data-chave="por-classificacao"] [data-slot="grafico-pizza"]');
-    await expect(pizza).toContainText("Cursos por classificação");
+    await expect(pizza).toContainText("Quantidade de cursos em cada classificação");
     const duracao = page.locator('[data-chave="duracao-em-semanas"]');
     await expect(duracao).toContainText("Duração em semanas de cada curso e estágio");
     /*
@@ -160,13 +199,13 @@ test.describe("`SC-002` · os indicadores do `FR-002`, e só eles", () => {
     await expect(page.getByText("Duração média, em dias, por classificação")).toHaveCount(0);
   });
 
-  test("⚠️ e o que a A-6 adiou NÃO aparece — total de cursos e turmas ativas são da PEND-5a-2", async ({
+  test("⚠️ e o que a A-6 adiou e ninguém pediu NÃO aparece — turmas ativas seguem na PEND-5a-2", async ({
     page,
   }) => {
+    // REGRA DOS VALORES ESPERADOS: (a), spec 025 (A-8) — o TOTAL de cursos entrou, pedido no item 6; o resto fica.
     await entrar(page, EMAIL_ADMIN, "/cursos");
     await exibirEstatisticas(page);
     await expect(page.locator('[data-slot="indicadores-do-catalogo"]')).toBeVisible();
-    await expect(page.getByText("Total de cursos")).toHaveCount(0);
     await expect(page.getByText("Turmas ativas")).toHaveCount(0);
   });
 });
@@ -239,9 +278,13 @@ test.describe("Limpar filtros — padrão de toda tela que filtra (23/09/2026)",
     const gruposCompletos = await grupos(page).count();
 
     // ⚠️ Sem filtro, o botão NÃO existe — um botão de limpar que nunca some ensina a ignorá-lo.
+    await abrirPainel(page, "filtros");
     await expect(page.locator('[data-slot="limpar-filtros"]')).toHaveCount(0);
 
     await page.goto("/cursos?classificacao=expedito&situacao=inativo");
+    // Spec 025 (RT-4, D-18): o *Limpar filtros* mora no painel de Filtros, e o ícone conta os ativos.
+    await expect(page.locator('[data-slot="filtros-ativos"]').first()).toHaveText("2");
+    await abrirPainel(page, "filtros");
     await expect(page.locator('[data-slot="limpar-filtros"]')).toBeVisible();
 
     await page.locator('[data-slot="limpar-filtros"]').click();
@@ -259,6 +302,7 @@ test.describe("Limpar filtros — padrão de toda tela que filtra (23/09/2026)",
     page,
   }) => {
     await entrar(page, EMAIL_ADMIN, "/cursos?situacao=inativo");
+    await abrirPainel(page, "filtros");
     await expect(page.locator('[data-slot="limpar-filtros"]')).toBeVisible();
   });
 });

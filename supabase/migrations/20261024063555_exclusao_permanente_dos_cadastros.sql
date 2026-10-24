@@ -31,7 +31,11 @@
 --    `feriado_turma` —, e a do feriado apaga a abrangencia dele (`feriado_turma`). Tudo
 --    vai no RETRATO do rastro.
 --
--- REVERSAO (executada numa base descartavel antes do PR):
+-- REVERSAO — `specs/025-bloco-10-padroes-de-tela/reversao.sql`, PROVADA em 24/10/2026 numa
+--    transacao desfeita no banco local: a impressao digital do esquema
+--    (`scripts/provas/impressao_digital_do_esquema.sql`) vai de 2.637 objetos `5a362188...`
+--    (com esta migration) a 2.573 objetos `80345112...` — a mesma do remoto depois do
+--    Bloco 9. Em resumo:
 --    drop function public.excluir_turma(uuid, text), public.excluir_feriado(uuid, text),
 --      public.excluir_regime_de_horario(uuid, text),
 --      public.excluir_item_de_avaliacao_do_curriculo(uuid, text),

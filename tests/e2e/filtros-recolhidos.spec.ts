@@ -40,15 +40,18 @@ async function irPeloMenu(page: Page, rotulo: string, rota: string): Promise<voi
   await expect.poll(() => new URL(page.url()).pathname).toBe(rota);
 }
 
-/** O painel nasce recolhido e o botão não traz número. */
+/**
+ * O painel nasce recolhido e o ícone não traz número.
+ *
+ * ⚠️ Spec 025 (Bloco 10, RT-4): o gatilho é o ÍCONE *Filtros* da barra de ações da página, e não mais o botão do
+ *    `FiltroAvancado`; o número de filtros fora do padrão vai no selo do ícone.
+ */
 async function conferirRecolhidoELimpo(page: Page): Promise<void> {
-  const gatilho = page
-    .locator('[data-slot="filtro-avancado"]')
-    .getByRole("button", { name: /^Filtros\s*\d*$/ })
-    .first();
-  await expect(gatilho).toBeVisible();
+  const gatilho = page.locator('[data-slot="abrir-filtros"]').first();
+  await expect(gatilho).toBeVisible({ timeout: 15_000 });
   await expect(gatilho).toHaveAttribute("aria-expanded", "false");
-  expect(await numeroDeFiltrosAtivos(page), "a tela limpa mostra número no botão").toBeNull();
+  await expect(page.locator('[data-slot="painel-de-filtros"]')).toHaveCount(0);
+  expect(await numeroDeFiltrosAtivos(page), "a tela limpa mostra número no ícone").toBeNull();
 }
 
 async function escolherOpcao(page: Page, campo: string, opcao: RegExp | string): Promise<void> {

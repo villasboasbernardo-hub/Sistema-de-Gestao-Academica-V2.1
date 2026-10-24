@@ -332,6 +332,7 @@ export function AbaTurmas({
                     <Link
                       href={enderecoDaTurma(t.codigo)}
                       className="text-texto underline-offset-2 hover:underline"
+                      data-slot="link-da-turma"
                     >
                       {t.codigo}
                     </Link>

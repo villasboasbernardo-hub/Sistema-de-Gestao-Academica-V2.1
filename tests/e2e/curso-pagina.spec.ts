@@ -280,10 +280,10 @@ test.describe("`FR-028.1` · a lista de turmas, com a SALA de cada uma (23/09/20
 
   test("cada turma leva à ficha dela", async ({ page }) => {
     await entrar(page, EMAIL_ADMIN, grade(SEMEADO.porClassificacao.regular));
-    await expect(page.locator(`[data-linha-turma="${SEMEADO.turmaJanelaCedo}"] a`)).toHaveAttribute(
-      "href",
-      `/turmas/${encodeURIComponent(SEMEADO.turmaJanelaCedo)}`,
-    );
+    // Spec 025 (item 2): a linha tem também o *Editar* — o link da turma é o do código.
+    await expect(
+      page.locator(`[data-linha-turma="${SEMEADO.turmaJanelaCedo}"] [data-slot="link-da-turma"]`),
+    ).toHaveAttribute("href", `/turmas/${encodeURIComponent(SEMEADO.turmaJanelaCedo)}`);
   });
 });
 
@@ -389,7 +389,8 @@ test.describe("`FR-011` · o regime vigente no cabeçalho", () => {
     await expect(regime).toContainText("8 TA por dia");
     await expect(regime.locator('[data-slot="ir-para-historico-de-regime"]')).toHaveAttribute(
       "href",
-      `/cursos/${encodeURIComponent(SEMEADO.porClassificacao.regular)}/editar`,
+      // Spec 025 (D-28): o histórico do regime mora em *Editar curso* → *Currículo* → *Horários*.
+      `/cursos/${encodeURIComponent(SEMEADO.porClassificacao.regular)}/editar?aba=curriculo&parte=horarios#regime-de-horario`,
     );
   });
 });

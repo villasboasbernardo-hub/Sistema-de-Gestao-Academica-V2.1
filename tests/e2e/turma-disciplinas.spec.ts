@@ -255,7 +255,12 @@ test.describe("`FR-022` · menu → Turmas → ficha → a seção de disciplina
 
     // ⚠️ `D-NAV-3`: a volta deixou de ser o curso, que continua alcançável pelo cabeçalho.
     await expect(page.locator('[data-slot="curso-da-turma"]')).toBeVisible();
-    await page.locator('[data-slot="voltar-a-lista"]').click();
+    // Spec 025 (A-3): o *"← Turmas"* solto saiu — a volta é a lateral.
+    await expect(page.locator('[data-slot="voltar-a-lista"]')).toHaveCount(0);
+    await page
+      .getByRole("navigation", { name: "Navegação principal" })
+      .getByRole("link", { name: "Turmas", exact: true })
+      .click();
     await expect.poll(() => new URL(page.url()).pathname).toBe("/turmas");
   });
 });

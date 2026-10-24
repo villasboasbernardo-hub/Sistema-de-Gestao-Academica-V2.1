@@ -48,6 +48,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **D-COR-3** | **TA fora do DSA, com observação.** A turma pode registrar tempos de aula que **não** estão em DSA (atividade fora dos tempos convencionais, aula que virou EAD, histórico de curso antigo), com quantidade, disciplina, instrutor quando houver e **observação obrigatória**. Esses TA **somam** na CH executada e no saldo, e a tela mostra os dois separados: *"45 TA executados · 40 no DSA · 5 fora do DSA"*. Só o Encarregado da Divisão, os ajudantes e o Admin registram. → Bloco 2. |
 | **D-COR-4** | **O status da turma é editável** pelo Admin e por quem pode editar turma (planejada, ativa, concluída, cancelada), e **toda troca de status aceita uma observação** (por que foi cancelada, como foi concluída, por que foi arquivada), que fica visível na ficha. Hoje Bernardo relata que **não consegue** trocar o status: medir no Bloco 1 e corrigir no Bloco 2. |
 | **D-COR-5** | **Arquivar turma em QUALQUER estado**, com aviso quando a turma não estiver concluída. Arquivar **não é um quinto status**: são colunas próprias (`arquivada_em`, `arquivada_por`, observação), o status fica como está. A turma arquivada some das listas (filtro "mostrar arquivadas"), trava DSA, instrutor e edição; o Admin pode desarquivar. **Reabre nominalmente a TURMA-1** (28/08/2026), que dizia "Arquivada é VIEW, não valor novo" — continua não sendo valor novo de status. |
+| **D-COR-6** | *(Bernardo Villas Boas, 24/10/2026, Bloco 10)* **Excluir turma e Excluir feriado só habilitados sem semana salva/publicada ligada**; com registros, o ícone fica **desabilitado** com a dica *"tem registros: use Arquivar"* (turma) ou *"…use Desativar"* (feriado). Exclusão **permanente**, com alerta e o código digitado, por RPC com porteiro e **rastro** — a regra 4 ganha a turma e a linha do calendário (e, pela RT-2, regime, item de avaliação do currículo e sala). → `docs/correcoes/padroes-de-tela.md`, spec 025. |
 
 ### As 16 respostas da triagem (16/10/2026)
 
@@ -433,6 +434,32 @@ _Pedido de Bernardo Villas Boas, 23/10/2026, pelo `/corrigir`._ Spec `024-bloco-
 - **`PEND-024-4`** — *vista salva de uma prova ainda em rascunho, em semanas diferentes*: salvar a semana da vista antes
   da semana da prova deixa a vista salva apontando uma prova que não conta. Raro (a vista vem depois da prova); proposta:
   o Salvar recusar a vista cuja prova é rascunho, com a frase «salve antes a semana da prova».
+
+## Bloco 10 — Padrões de tela, turma, curso, estatísticas, calendário e ano (spec própria) — 🟨 PR aberto, aguardando conferência
+
+_Pedido de Bernardo Villas Boas, 24/10/2026, pelo `/corrigir`._ Spec `025-bloco-10-padroes-de-tela`, ramo
+`feat/BLOCO-10-padroes-de-tela`, um PR. Regras novas **RT-1 a RT-7** e **D-COR-6** em `docs/correcoes/padroes-de-tela.md`
+(apontado no `CLAUDE.md`). Os doze itens, as 36 decisões adotadas por padrão (D-1 a D-36) e as autorizações A-1 a A-9
+estão na spec; o roteiro é `specs/025-…/roteiro-de-conferencia.md`.
+
+⚠️ **UMA MIGRATION, E ELA É PORTÃO 9.4** (`20261024063555_exclusao_permanente_dos_cadastros.sql`): troca a restrição do
+rastro e o resultado de três funções de impedimento que a tela já usa, e passa a apagar dado quando chamada. O desenho
+está em `specs/025-…/plano-de-aplicacao-no-remoto.md`; **o remoto espera a palavra de Bernardo**. Até lá, todo *Excluir*
+novo aparece desabilitado no preview, com *"não foi possível conferir os registros"* (`RN-DEG-01`).
+
+**Pendências novas, achadas e não corrigidas:**
+
+- **`PEND-025-1`** — *o curso nunca é excluível*: todo curso tem o histórico do regime, que é só de acréscimo (regra 9.1),
+  e o *Excluir* fica sempre desabilitado com a dica. Excluir o curso criado por engano exigiria abrir uma exceção na
+  imutabilidade de `curso_regime_historico` — decisão sua.
+- **`PEND-025-2`** — *a lateral não lê o `?ano=` do link*: o layout não recebe a URL, então quem abre um link com
+  `?ano=2027` vê a página em 2027 e o submenu de Turmas no ano da própria escolha, até escolher de novo.
+- **`PEND-025-3`** — *três componentes de exclusão*: `ExclusaoPermanente` (os cadastros novos), `ExcluirInstrutor` e
+  `DialogoDeExclusao` (disciplina e UE) fazem a mesma coisa com textos diferentes. Unificá-los é fatia própria — a
+  terceira cópia é a que diverge.
+- **`PEND-025-4`** — *turma com evento do DSA nunca sai*: os eventos da semana são só de acréscimo **inclusive para a
+  `service_role`**; a turma que teve uma semana salva fica presa para sempre — é o que a D-COR-6 pede, e fica escrito
+  para ninguém tentar "limpar" depois.
 
 ---
 

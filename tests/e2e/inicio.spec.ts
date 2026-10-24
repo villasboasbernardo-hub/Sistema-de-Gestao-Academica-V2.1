@@ -13,6 +13,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirPainelDeFiltros } from "./filtros";
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 import { mudarSituacaoDoCurso, mudarStatusDaTurma } from "./curso-de-teste";
 import { limparPanorama, semearPanorama, type PanoramaSemeado } from "./panorama-de-teste";
@@ -169,6 +170,7 @@ test.describe("`FR-004.1` · o NÚMERO na tela muda ao trocar o filtro", () => {
     await entrar(page, EMAIL_GERAL, "/inicio");
     const antes = await esperarTurmasNaTela(page, 3);
 
+    await abrirPainelDeFiltros(page);
     await page.selectOption("#filtro-classificacao", "expedito");
     await expect
       .poll(() => turmasNaTela(page), {
@@ -183,6 +185,7 @@ test.describe("`FR-004.1` · o NÚMERO na tela muda ao trocar o filtro", () => {
 
   test("e o recorte fica no endereço, para o link carregá-lo", async ({ page }) => {
     await entrar(page, EMAIL_GERAL, "/inicio");
+    await abrirPainelDeFiltros(page);
     await page.selectOption("#filtro-modalidade", "ead");
     await expect.poll(() => new URL(page.url()).searchParams.get("modalidade")).toBe("ead");
   });
@@ -203,6 +206,7 @@ test.describe("`FR-045` · a troca de recorte não fica muda", () => {
      * Medido em 18/09/2026 na base carregada pelo ETL, onde o conteúdo chega ~1 s depois da
      * casca; na base vazia ele chegava a tempo e o caso passava por sorte.
      */
+    await abrirPainelDeFiltros(page);
     await expect(page.locator('[data-slot="filtro-do-panorama"]')).toBeVisible();
 
     await page.evaluate(() => {
@@ -257,6 +261,7 @@ test.describe("`FR-025` · o link compartilhado, e quem nega é o banco", () => 
      * legítimo pode ser zero. O que se espera é o CONTEÚDO ter chegado, e o marcador disso
      * é a região do panorama existir na página, com ou sem itens.
      */
+    await abrirPainelDeFiltros(page);
     await expect(page.locator('[data-slot="filtro-do-panorama"]')).toBeVisible();
     // ⚠️ `networkidle` NAO serve aqui: o Next mantem conexao aberta e a espera estoura o
     //    prazo (medido em 18/09/2026). O marcador deterministico e o `loading.tsx` sumir.

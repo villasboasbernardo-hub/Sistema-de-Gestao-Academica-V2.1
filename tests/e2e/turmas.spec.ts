@@ -164,7 +164,7 @@ test.describe("`SC-003` · chega-se às telas de turma CLICANDO, não digitando"
     // ⚠️ A lista de turmas mora na aba Grade, e a padrão é *Sobre o Curso* (spec 016, FR-006.2).
     await page.goBack();
     await page.locator('[data-slot="abas-do-curso"] [data-aba="turmas"]').click();
-    await page.getByRole("link", { name: SEMEADO.turmaJanelaCedo }).click();
+    await page.getByRole("link", { name: SEMEADO.turmaJanelaCedo, exact: true }).click();
     await expect.poll(() => new URL(page.url()).pathname).toBe(enderecoDe(SEMEADO.turmaJanelaCedo));
     await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(SEMEADO.turmaJanelaCedo);
   });
@@ -204,7 +204,12 @@ test.describe("`FR-025` · criar turma sob o curso do caminho", () => {
     const curso = page.locator('[data-slot="curso-da-turma"]');
     await expect(curso).toContainText(sigla);
 
-    await page.locator('[data-slot="voltar-a-lista"]').click();
+    // Spec 025 (A-3): o *"← Turmas"* solto saiu — a volta é a lateral.
+    await expect(page.locator('[data-slot="voltar-a-lista"]')).toHaveCount(0);
+    await page
+      .getByRole("navigation", { name: "Navegação principal" })
+      .getByRole("link", { name: "Turmas", exact: true })
+      .click();
     await expect.poll(() => new URL(page.url()).pathname).toBe("/turmas");
   });
 
@@ -288,8 +293,13 @@ test.describe("`FR-026` · os quatro caminhos de colisão nomeiam quem ocupa", (
     await page.locator('[data-slot="gravar-turma"]').click();
 
     await expect(erro(page)).toContainText(ocupada());
-    // ⚠️ E a ficha continua sendo a mesma: recusa não grava metade.
-    await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(TURMA_DE_EDICAO);
+    // ⚠️ E a turma continua sendo a mesma: recusa não grava metade — e a tela fica na edição (spec 025, D-1).
+    await expect(page).toHaveURL(/\/editar/);
+    const { count } = await admin()
+      .from("turmas")
+      .select("id", { count: "exact", head: true })
+      .eq("codigo", TURMA_DE_EDICAO);
+    expect(count, "a recusa mudou o código da turma").toBe(1);
   });
 
   test("editar para SEM rótulo num ano que já tem uma sem rótulo", async ({ page }) => {
@@ -305,20 +315,21 @@ test.describe("`FR-026` · os quatro caminhos de colisão nomeiam quem ocupa", (
 
 test.describe("`FR-028` · editar a turma na própria ficha", () => {
   /*
-   * ⚠️ **REESCRITO EM 17/10/2026** (spec 016, FR-015.4): este caso trocava a situação pelo `<select>` do
-   *    formulário e conferia o **estado local** do campo — que mostra o valor escolhido mesmo que a
-   *    gravação falhe. Agora a situação se troca pelo botão do cabeçalho, e a prova é o selo **depois
-   *    de recarregar** e o valor **no banco**.
+   * ⚠️ **REESCRITO EM 17/10/2026** (spec 016, FR-015.4) **E DE NOVO EM 24/10/2026** (spec 025, D-1 e D-2; A-1 e A-2):
+   *    *"um único Editar edita tudo"* — a situação voltou ao formulário de *Editar turma*, que mora em página própria.
+   *    A prova continua sendo o selo **depois de recarregar** e o valor **no banco**, nunca o campo.
    */
-  test("de `planejada` a `concluida` e de volta — pelo botão, sem passar por rota de edição", async ({
+  test("de `planejada` a `concluida` e de volta — em *Editar turma*, conferido no banco", async ({
     page,
   }) => {
     await entrar(page, EMAIL_AJUDANTE, enderecoDe(TURMA_DE_EDICAO));
     await expect(seloDaSituacao(page)).toContainText("Planejada");
-    // O formulário de edição não tem mais o campo: a situação tem um caminho só.
     await abrirEdicaoDaTurma(page);
     await expect(formulario(page)).toHaveAttribute("data-modo", "edicao");
-    await expect(page.locator("#turma-situacao")).toHaveCount(0);
+    await expect(page.locator("#turma-situacao")).toHaveValue("planejada");
+    await page.locator('[data-slot="voltar-a-ficha"]').click();
+    await expect(page).not.toHaveURL(/\/editar/);
+    await expect(seloDaSituacao(page)).toContainText("Planejada");
 
     await trocarSituacaoPelaFicha(page, "Concluída");
     await page.reload();

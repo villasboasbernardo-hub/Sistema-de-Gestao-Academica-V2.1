@@ -108,7 +108,13 @@ describe("spec 022 (item 10) · a duração em SEMANAS de cada curso e estágio"
 describe("`FR-002` · cursos por classificação", () => {
   it("conta cada grupo, e zero é zero de verdade", () => {
     const i = indicadoresDoCatalogo(BASE);
-    expect(i.cursosPorClassificacao.map(({ rotuloDoCartao: _, ...resto }) => resto)).toEqual([
+    expect(
+      i.cursosPorClassificacao.map((c) => ({
+        classificacao: c.classificacao,
+        rotulo: c.rotulo,
+        total: c.total,
+      })),
+    ).toEqual([
       { classificacao: "regular", rotulo: "Curso Regular", total: 3 },
       { classificacao: "expedito", rotulo: "Curso Expedito", total: 2 },
       { classificacao: "especial", rotulo: "Curso Especial", total: 1 },

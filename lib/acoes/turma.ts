@@ -209,8 +209,10 @@ export async function editarTurma(
     if (!troca.ok) {
       return falha(`As alterações da turma foram gravadas, mas a situação não: ${troca.erro}`);
     }
+    /* A ficha confirma a troca com a situação nova (`?gravada=situacao`), como fazia o botão próprio. */
+    return { ok: true, codigo, destino: enderecoDaTurmaGravada(codigo, "situacao") };
   }
-  return { ok: true, codigo, destino: enderecoDaTurma(codigo) };
+  return { ok: true, codigo, destino: enderecoDaTurmaGravada(codigo, "turma") };
 }
 
 /**

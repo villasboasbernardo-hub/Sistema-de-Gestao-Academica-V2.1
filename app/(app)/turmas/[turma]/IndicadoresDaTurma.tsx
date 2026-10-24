@@ -186,9 +186,12 @@ export function IndicadoresDaTurma({
         <h2 id="titulo-dos-indicadores" className="text-texto text-base font-semibold">
           Andamento
         </h2>
-        <p className="text-texto-suave max-w-prose text-sm" data-slot="andamento-ead">
-          {AVISO_DE_TURMA_EAD}
-        </p>
+        {/* O mesmo aviso diz por que não há DSA nem planilha na barra (Q-13 da spec 013): um texto só na página. */}
+        <div data-slot="andamento-ead">
+          <p className="text-texto-suave max-w-prose text-sm" data-slot="dsa-turma-ead">
+            {AVISO_DE_TURMA_EAD}
+          </p>
+        </div>
       </section>
     );
   }

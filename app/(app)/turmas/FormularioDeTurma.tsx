@@ -41,7 +41,6 @@ import {
 import { naturezaDaSala, ROTULO_DA_NATUREZA, type Sala } from "@/lib/dominio/salas";
 import { LIMITE_DA_OBSERVACAO_DA_TURMA } from "@/lib/validacao/turma";
 import { FRASE_DA_ESCOLHA_TRAVADA, aceitaRegimeNomeado } from "@/lib/dominio/regime-da-turma";
-import { enderecoDaTurmaGravada } from "@/lib/navegacao/endereco-de-turma";
 
 const MODALIDADES = [
   { valor: "presencial", rotulo: "Presencial" },
@@ -231,9 +230,8 @@ export function FormularioDeTurma({
     }
     // ⚠️ A edição volta à ficha COM A CONFIRMAÇÃO (spec 016, FR-015.2): até 17/10/2026 gravar não
     //    mostrava aviso nenhum, e a pessoa não sabia se tinha dado certo.
-    router.push(
-      modo === "novo" ? resultado.destino : enderecoDaTurmaGravada(resultado.codigo, "turma"),
-    );
+    //    Desde o Bloco 10 (D-2) quem escolhe a confirmação é a ação — *turma* ou *situação*, se ela trocou.
+    router.push(resultado.destino);
   }
 
   const botaoGravar = (
