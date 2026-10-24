@@ -273,6 +273,25 @@ ordem por classificação (`ordem-de-cursos.ts`), o aviso de carga só acima da 
   como no molde (disciplina, UE e instrutor não conferem `curso_em_oferta`): desativar o curso não deve travar a limpeza
   de um engano sem histórico. *Alternativa: recusar, como as policies de escrita fazem (FR-017.5 da spec 009).*
 
+- D-38 · Q: A ficha do instrutor recalcula pelo ano como? → A: as atribuições dela são as do ano pela **janela** da
+  atribuição (`vw_instrutor_carga_prevista`), como já eram; medido no remoto em 24/10/2026: **112 de 112** atribuições
+  ativas têm o mesmo ano pela janela e pela turma. *Alternativa: ler pelo ano da turma (diverge só para atribuição sem
+  período, que não gera CH prevista).*
+- D-39 · Q: Os filtros *Curso* e *Classificação* de Instrutores seguem o ano? → A: **não** — continuam casando
+  habilitação **ou** atribuição de qualquer ano (`cursos_vinculados` da view): o vínculo com o curso não tem ano, e o
+  filtro *Selecionado* é que segue o ano. *Alternativa: a parte da atribuição só do ano escolhido.*
+
+### Conferência parcial de Bernardo (24/10/2026)
+
+*"D-1 a D-37 aprovadas."* — e **um defeito**: em *Instrutores*, *"selecionados"* ignorava o ano escolhido (em 2027, sem
+turma, mostrava 34). *"Regra: habilitado não tem ano (disciplina marcada na ficha); SELECIONADO tem ano = instrutor
+designado para disciplina em turma cujo ano é o escolhido."* Medido no remoto: a coluna `vw_instrutores.selecionado`
+vale para **qualquer** ano — os **34** estão em turmas de 2026, e 2027 tem 1 turma e **0** designações. **Corrigido sem
+mexer na view** (recriá-la seria portão): `lib/dominio/selecao-no-ano.ts` decide o selecionado pelas designações ativas
+com o ano da turma, e a lista aplica o filtro *Selecionado* em memória (a lista de ids na URL já derrubou a leitura). O
+caso de ponta a ponta troca 2026 → 2027 por clique e reprovava com a regra sem ano (*"2 × 2"* em 2027). E o **portão 9.4
+foi autorizado e aplicado** (`plano-de-aplicacao-no-remoto.md` §7).
+
 ### Revisão adversarial do PR #90 (24/10/2026)
 
 Quatro revisores (banco, ações, componentes, telas) e um verificador cético por achado. **Corrigidos**, cada um com o

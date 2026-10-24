@@ -48,9 +48,12 @@ function serieDe(grafico: GraficoDeInstrutores): Serie {
 export function PainelDeInstrutores({
   indicadores,
   graficos,
+  ano,
 }: {
   readonly indicadores: IndicadoresDeInstrutores;
   readonly graficos: readonly GraficoDeInstrutores[];
+  /** O ano escolhido: o selecionado é designado em turma DESTE ano (o habilitado não tem ano). */
+  readonly ano: number;
 }) {
   const { taxaDeSelecao: taxa } = indicadores;
 
@@ -68,7 +71,7 @@ export function PainelDeInstrutores({
         />
         <div className="contents" data-slot="taxa-de-selecao">
           <CardKpi
-            rotulo="Habilitados × selecionados"
+            rotulo={`Habilitados × selecionados em ${ano}`}
             valor={`${numero(taxa.habilitados)} × ${numero(taxa.selecionados)}`}
             detalhe={
               <span className="tabular-nums">

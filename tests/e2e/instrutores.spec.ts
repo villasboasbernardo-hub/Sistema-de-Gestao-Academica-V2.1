@@ -13,7 +13,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { abrirAvisosPeloSininho, avisoDaChave, avisosDoSujeito } from "./avisos";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
-import { abrirPainel } from "./paineis";
+import { abrirPainel, escolherAno } from "./paineis";
 import { mudarSituacaoDoCurso, semearCursoInativavel } from "./curso-de-teste";
 import { anoCorrente } from "@/lib/formato/ano-corrente";
 
@@ -416,6 +416,54 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
     const vazio = page.locator('[data-slot="estado-vazio"]');
     await expect(vazio).toHaveAttribute("data-motivo", "sem-dado");
     await expect(vazio).toContainText("não é falta de acesso");
+  });
+
+  test("o SELECIONADO tem ano: de 2026 para 2027, a seleção zera nos cartões, no gráfico, no filtro e na ficha", async ({
+    page,
+  }) => {
+    /*
+     * Conferência do PR #90 (Bernardo Villas Boas, 24/10/2026): «habilitado não tem ano (disciplina marcada na
+     * ficha); SELECIONADO tem ano = instrutor designado para disciplina em turma cujo ano é o escolhido». A amostra
+     * designa o CT mais antigo e a 1ºTen numa turma do ano corrente, e ninguém no seguinte. O ponto de partida é o
+     * recorte da OM da amostra; a troca de ano é pelo seletor, por clique.
+     */
+    const ANO = anoCorrente();
+    await entrar(page, EMAIL_ADMIN, `/instrutores?om=${amostra.om}`);
+    await expect(grade(page)).toBeVisible();
+    await abrirPainel(page, "estatisticas");
+    const taxa = page.locator('[data-slot="taxa-de-selecao"] [data-slot="card-kpi"]');
+    const status = page.locator(
+      '[data-chave="status-de-selecao"] [data-slot="rotulo-da-barra"] text',
+    );
+    await expect(taxa).toContainText(`Habilitados × selecionados em ${ANO}`);
+    await expect(taxa).toContainText("2 × 2");
+    await expect(status).toHaveText(["2", "2"]);
+
+    await escolherAno(page, ANO + 1);
+    await abrirPainel(page, "estatisticas");
+    await expect(taxa).toContainText(`Habilitados × selecionados em ${ANO + 1}`);
+    await expect(taxa, "o selecionado de 2026 continuou contando em 2027").toContainText("2 × 0");
+    // O habilitado não tem ano: continua 2.
+    await expect(status.first()).toHaveText("2");
+    await expect(status).not.toHaveText(["2", "2"]);
+
+    // O filtro «Selecionado» segue o mesmo ano: ninguém em 2027, os dois em 2026.
+    await escolher(page, "Selecionado", "Sim");
+    await expect.poll(() => parametro(page, "selecionado")).toBe("sim");
+    await expect(contagem(page)).toContainText("0 instrutor(es)");
+    await escolherAno(page, ANO);
+    await expect(contagem(page)).toContainText("2 instrutor(es)");
+
+    /*
+     * A ficha, pela linha da lista, segue o ano escolhido. ⚠️ As atribuições dela são as do ano pela JANELA da
+     * atribuição (D-38): no dado real, 112 de 112 têm o mesmo ano da turma (medido no remoto, 24/10/2026); a turma
+     * desta amostra não tem datas, e por isso a ficha não lista a atribuição em ano nenhum.
+     */
+    await grade(page).locator(`a[href="/instrutores/${amostra.codigos.ctMaisAntigo}"]`).click();
+    const carga = page.locator('[data-slot="carga-do-instrutor"]');
+    await expect(carga).toContainText(`Carga horária de ${ANO}`, { timeout: 15_000 });
+    await escolherAno(page, ANO + 1);
+    await expect(carga).toContainText(`Carga horária de ${ANO + 1}`);
   });
 
   test("3 indicadores, 9 gráficos com posto em antiguidade, lista em antiguidade e sem edição em linha", async ({

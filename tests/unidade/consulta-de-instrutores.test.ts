@@ -158,14 +158,17 @@ describe("`FR-025` emendado em 15/09/2026 · os filtros novos entram na mesma co
     );
   });
 
-  it("habilitado e selecionado são predicados independentes, e não listas de ids", () => {
+  it("habilitado é predicado da view; o selecionado TEM ANO e sai da consulta — e nada vira lista de ids", () => {
+    /*
+     * Conferência do PR #90 (24/10/2026): a coluna `selecionado` da view vale para qualquer ano, e em 2027 dava os
+     * 34 de 2026. O selecionado é aplicado pela página, pelo ano (`filtrarPorSelecao`).
+     */
     const filtros = montar({ habilitado: "nao", selecionado: "sim" }).filter(
       (c) => c[0] !== "order",
     );
     expect(filtros).toEqual([
       ["eq", "status", "ativo"],
       ["eq", "habilitado", false],
-      ["eq", "selecionado", true],
     ]);
     expect(
       filtros.some((c) => c[1] === "id"),

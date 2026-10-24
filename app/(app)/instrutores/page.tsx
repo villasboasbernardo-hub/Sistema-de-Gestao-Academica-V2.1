@@ -38,10 +38,12 @@ import { escalaDeLinhas } from "@/lib/dominio/antiguidade";
 import { capacitacaoDoCadastro } from "@/lib/dominio/capacitacao-didatica";
 import { graficosDeInstrutores } from "@/lib/dominio/graficos-instrutor";
 import { indicadoresDeInstrutores } from "@/lib/dominio/indicadores-instrutor";
+import { filtrarPorSelecao, selecionadosNoAno } from "@/lib/dominio/selecao-no-ano";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
+import { contagemNaPrimeira, lerTodasAsPaginas } from "@/lib/supabase/paginacao";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import {
@@ -53,6 +55,12 @@ import { FiltrosDeInstrutores } from "./FiltrosDeInstrutores";
 import { opcoesDosFiltros } from "./opcoes";
 import { PainelDeInstrutores } from "./PainelDeInstrutores";
 import { TabelaDeInstrutores, type LinhaDeInstrutor } from "./TabelaDeInstrutores";
+
+/** Uma designação lida, com a turma embutida (`turma_disciplina!inner(…, turmas!inner(ano_letivo))`). */
+type DesignacaoLida = {
+  readonly instrutor_id: string;
+  readonly turma_disciplina: { readonly turmas: { readonly ano_letivo: number } | null } | null;
+};
 
 export default async function Instrutores({
   searchParams,
@@ -85,34 +93,52 @@ export default async function Instrutores({
   const escolha = await anoEscolhido(String(valores.ano));
   const ano = escolha.ano;
   const supabase = await criarClienteDeServidor();
-  const [usuario, { data, error }, cargaRes, cursosRes, escalaRes, opcoesRes] = await Promise.all([
-    usuarioDaSessao(),
-    montarConsultaDeInstrutores(
-      supabase.from("vw_instrutores").select(COLUNAS_DA_LISTAGEM),
-      parametros,
-    ),
-    supabase
-      .from("vw_instrutor_carga_anual")
-      .select("instrutor_id, ta_ministrado_ano")
-      .eq("ano", ano),
-    /*
-     * ⚠️ `status` ENTRA NA CONSULTA (`FR-017.10` da spec 009). Curso inativo CONTINUA no filtro — a
-     * listagem de instrutores é consulta sobre histórico, e esconder o curso arquivado tornaria o
-     * passado inalcançável. O que muda é que ele vai para o FIM da lista e sai marcado, o que
-     * `opcoesDosFiltros` resolve. Sem a coluna, os dois ficam indistinguíveis.
-     */
-    supabase.from("cursos").select("codigo, status, classificacao").order("codigo"),
-    supabase
-      .from("config_listas")
-      .select("valor, ordem, ativo")
-      .eq("lista", "escala_antiguidade")
-      .order("ordem"),
-    // As opções dos filtros saem do cadastro inteiro, não do recorte (ver `opcoes.ts`).
-    supabase
-      .from("vw_instrutores")
-      .select("om, categoria, nivel_escolaridade, posto_graduacao")
-      .order("ordem_antiguidade"),
-  ]);
+  const [usuario, { data, error }, cargaRes, cursosRes, escalaRes, opcoesRes, designacoesRes] =
+    await Promise.all([
+      usuarioDaSessao(),
+      montarConsultaDeInstrutores(
+        supabase.from("vw_instrutores").select(COLUNAS_DA_LISTAGEM),
+        parametros,
+      ),
+      supabase
+        .from("vw_instrutor_carga_anual")
+        .select("instrutor_id, ta_ministrado_ano")
+        .eq("ano", ano),
+      /*
+       * ⚠️ `status` ENTRA NA CONSULTA (`FR-017.10` da spec 009). Curso inativo CONTINUA no filtro — a
+       * listagem de instrutores é consulta sobre histórico, e esconder o curso arquivado tornaria o
+       * passado inalcançável. O que muda é que ele vai para o FIM da lista e sai marcado, o que
+       * `opcoesDosFiltros` resolve. Sem a coluna, os dois ficam indistinguíveis.
+       */
+      supabase.from("cursos").select("codigo, status, classificacao").order("codigo"),
+      supabase
+        .from("config_listas")
+        .select("valor, ordem, ativo")
+        .eq("lista", "escala_antiguidade")
+        .order("ordem"),
+      // As opções dos filtros saem do cadastro inteiro, não do recorte (ver `opcoes.ts`).
+      supabase
+        .from("vw_instrutores")
+        .select("om, categoria, nivel_escolaridade, posto_graduacao")
+        .order("ordem_antiguidade"),
+      /*
+       * ⚠️ O SELECIONADO TEM ANO (conferência do PR #90, 24/10/2026): as designações ativas em linha de turma
+       *    ativa, com o ano da TURMA. A coluna `selecionado` da view vale para qualquer ano — em 2027, sem turma
+       *    designada, ela dava os 34 de 2026. Em páginas, como toda leitura que pode passar do teto.
+       */
+      lerTodasAsPaginas((f) =>
+        supabase
+          .from("turma_disciplina_instrutor")
+          .select(
+            "id, instrutor_id, turma_disciplina!inner(status, turmas!inner(ano_letivo))",
+            contagemNaPrimeira(f),
+          )
+          .eq("status", "ativo")
+          .eq("turma_disciplina.status", "ativo")
+          .order("id")
+          .range(f.de, f.ate),
+      ),
+    ]);
   const escala = escalaDeLinhas(
     (escalaRes.data ?? []).map((e) => ({
       valor: e.valor,
@@ -141,7 +167,21 @@ export default async function Instrutores({
     if (c.instrutor_id) cargaPorInstrutor.set(c.instrutor_id, Number(c.ta_ministrado_ano ?? 0));
   }
 
-  const brutas = data ?? [];
+  /*
+   * Sem as designações lidas, ninguém conta como selecionado — e um aviso diz por quê (`RN-DEG-01`): o número
+   * da view, sem ano, seria o defeito de volta.
+   */
+  const selecaoLida = !designacoesRes.error;
+  const selecionados = selecaoLida
+    ? selecionadosNoAno(
+        ((designacoesRes.data ?? []) as DesignacaoLida[]).map((d) => ({
+          instrutorId: d.instrutor_id,
+          anoDaTurma: d.turma_disciplina?.turmas?.ano_letivo ?? null,
+        })),
+        ano,
+      )
+    : new Set<string>();
+  const brutas = filtrarPorSelecao(data ?? [], selecionados, parametros.selecionado);
   const linhas: LinhaDeInstrutor[] = brutas.map((i) => ({
     id: i.id as string,
     codigo: i.codigo as string,
@@ -157,8 +197,9 @@ export default async function Instrutores({
   }));
 
   /*
-   * ⚠️ HABILITADO E SELECIONADO VÊM DA PRÓPRIA LINHA (`vw_instrutores`, migration `20260915091717`),
-   * que é o mesmo critério dos filtros — cartão, gráfico e filtro não podem discordar.
+   * ⚠️ HABILITADO VEM DA PRÓPRIA LINHA (`vw_instrutores`, migration `20260915091717`); SELECIONADO, das
+   * designações do ANO (`selecionadosNoAno`). Os dois são o mesmo critério dos filtros — cartão, gráfico e
+   * filtro não podem discordar.
    */
   /* Spec 020 (Bloco 5): a lista fechada e o texto que não casou — "tem capacitação" é um dos dois (C-12). */
   const capacitacaoDaLinha = (n: number) =>
@@ -166,15 +207,19 @@ export default async function Instrutores({
       brutas[n]?.capacitacoes_didaticas,
       brutas[n]?.capacitacao_didatica_a_corrigir,
     );
-  const idsOnde = (coluna: "habilitado" | "selecionado") =>
-    new Set(brutas.filter((b) => b[coluna] === true).map((b) => b.id as string));
+  const habilitados = new Set(
+    brutas.filter((b) => b.habilitado === true).map((b) => b.id as string),
+  );
+  const selecionadosDoRecorte = new Set(
+    brutas.map((b) => b.id as string).filter((id) => selecionados.has(id)),
+  );
   const indicadores = indicadoresDeInstrutores(
     linhas.map((l, n) => ({
       id: l.id,
       capacitacao: capacitacaoDaLinha(n),
     })),
-    idsOnde("habilitado"),
-    idsOnde("selecionado"),
+    habilitados,
+    selecionadosDoRecorte,
   );
   const graficos = graficosDeInstrutores(
     linhas.map((l, n) => ({
@@ -251,13 +296,20 @@ export default async function Instrutores({
         </ConteudoDePainel>
 
         <ConteudoDePainel painel="estatisticas">
-          <PainelDeInstrutores indicadores={indicadores} graficos={graficos} />
+          <PainelDeInstrutores indicadores={indicadores} graficos={graficos} ano={ano} />
         </ConteudoDePainel>
 
         <p className="text-texto-suave text-sm" data-slot="contagem-de-instrutores">
           {linhas.length} instrutor(es){" "}
           {parametros.situacao === "inativo" ? "inativo(s)" : "ativo(s)"}
         </p>
+
+        {!selecaoLida && (
+          <p className="text-texto-suave text-sm" role="status" data-slot="selecao-indisponivel">
+            Não foi possível ler as designações de {ano}. Selecionados e o status da seleção saem
+            sem elas até a leitura voltar.
+          </p>
+        )}
 
         {!cargaDisponivel && (
           <p className="text-texto-suave text-sm" role="status" data-slot="carga-indisponivel">
