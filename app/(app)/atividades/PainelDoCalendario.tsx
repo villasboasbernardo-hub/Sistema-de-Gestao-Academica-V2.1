@@ -5,8 +5,14 @@
  *    a permissão, o botão não é desenhado — e o banco recusaria de qualquer forma.
  * ⚠️ **A RESPOSTA DE TODA AÇÃO FICA ACIMA DA LISTA** (FR-014): a linha que muda de situação não leva a mensagem com
  *    ela (a lição do `AvisoDaLista`, spec 011).
- * ⚠️ **INATIVAR, REATIVAR E DESFAZER PEDEM CONFIRMAÇÃO; NADA É APAGADO** (regra 4). O reativar de dia inteiro diz
+ * ⚠️ **DESATIVAR, REATIVAR E DESFAZER PEDEM CONFIRMAÇÃO; NADA É APAGADO** (regra 4). O reativar de dia inteiro diz
  *    quantos lançamentos já há no dia (D-11).
+ * ⚠️ **"INATIVAR" VIROU "DESATIVAR"** (RT-2 do Bloco 10, spec 025, D-17): o verbo é o do resto do sistema; a situação
+ *    gravada continua `inativo`, e a coluna diz *Inativo*.
+ * ⚠️ **O EXCLUIR DA LINHA** (RT-2 e D-COR-6; D-11 da spec 025): só habilitado quando nenhuma turma alcançada tem semana
+ *    do DSA salva ou publicada que contenha a data; com registro, desabilitado com a dica *"tem registros: use
+ *    Desativar"*. Quem decide é o banco, na leitura e de novo na exclusão. A parada de parte do dia não tem *Excluir*:
+ *    ela se desfaz (D-14).
  */
 "use client";
 
@@ -16,6 +22,8 @@ import * as React from "react";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import { ExclusaoPermanente } from "@/components/ciaara/exclusao-permanente";
+import { DICA_SEM_LEITURA, type EstadoDaExclusao } from "@/lib/dominio/exclusao-permanente";
 import { dataParaLeitura } from "@/lib/formato/data";
 
 import type { DadosDoCalendario, LinhaDoCalendario } from "./calendario";
@@ -40,13 +48,15 @@ function consequenciaDeReativar(l: LinhaDoCalendario): string {
     : base;
 }
 
-function consequenciaDeInativar(l: LinhaDoCalendario): string {
+function consequenciaDeDesativar(l: LinhaDoCalendario): string {
   return l.impacto === "dia_inteiro"
     ? l.turmas.length > 0
-      ? "Isso libera o dia nas turmas escolhidas. A linha fica inativa — nada é apagado."
-      : "Isso libera o dia em todas as turmas. A linha fica inativa — nada é apagado."
-    : "A linha deixa de valer no calendário. Ela fica inativa — nada é apagado.";
+      ? "Isso libera o dia nas turmas escolhidas. A linha fica desativada — nada é apagado."
+      : "Isso libera o dia em todas as turmas. A linha fica desativada — nada é apagado."
+    : "A linha deixa de valer no calendário. Ela fica desativada — nada é apagado.";
 }
+
+const SEM_LEITURA: EstadoDaExclusao = { liberada: false, dica: DICA_SEM_LEITURA, detalhe: null };
 
 export function PainelDoCalendario({
   ano,
@@ -57,6 +67,9 @@ export function PainelDoCalendario({
   mudarSituacao,
   pararDia,
   desfazerParada,
+  podeExcluir = false,
+  exclusao = {},
+  excluir,
 }: {
   readonly ano: number;
   readonly dados: DadosDoCalendario;
@@ -66,6 +79,11 @@ export function PainelDoCalendario({
   readonly mudarSituacao: (entrada: unknown) => Promise<RespostaDoCalendario>;
   readonly pararDia: (entrada: unknown) => Promise<RespostaSimples>;
   readonly desfazerParada: (entrada: unknown) => Promise<RespostaSimples>;
+  /** `calendario.criar` — quem exclui (D-9). */
+  readonly podeExcluir?: boolean;
+  /** O estado do *Excluir* de cada linha, pelo `id`; ausente = não lido (desabilitado). */
+  readonly exclusao?: Readonly<Record<string, EstadoDaExclusao>>;
+  readonly excluir?: (entrada: unknown) => Promise<RespostaDoCalendario>;
 }) {
   const router = useRouter();
   const [resposta, setResposta] = React.useState<{ texto: string; falha: boolean } | null>(null);
@@ -180,9 +198,9 @@ export function PainelDoCalendario({
                   </td>
                   <td className="py-1 pr-3">{l.situacao === "ativo" ? "Ativo" : "Inativo"}</td>
                   <td className="py-1">
-                    {podeEditar ? (
+                    {podeEditar || podeExcluir ? (
                       <span className="flex justify-end gap-1">
-                        {l.origem === "feriado" ? (
+                        {l.origem === "feriado" && podeEditar ? (
                           <>
                             <DialogoDaLinha
                               linha={l}
@@ -195,18 +213,18 @@ export function PainelDoCalendario({
                             />
                             {l.situacao === "ativo" ? (
                               <DialogoConfirmacao
-                                titulo={`Inativar «${l.nome}» (${dataParaLeitura(l.data)})?`}
-                                consequencia={consequenciaDeInativar(l)}
-                                rotuloConfirmar="Inativar"
+                                titulo={`Desativar «${l.nome}» (${dataParaLeitura(l.data)})?`}
+                                consequencia={consequenciaDeDesativar(l)}
+                                rotuloConfirmar="Desativar"
                                 aoConfirmar={() => situacao(l, "inativo")}
                               >
                                 <BotaoDeIcone
                                   acao="desativar"
-                                  rotulo={`Inativar ${l.nome}`}
+                                  rotulo={`Desativar ${l.nome}`}
                                   variante="fantasma"
                                   className="size-7"
                                   disabled={gravando}
-                                  data-slot="inativar-linha"
+                                  data-slot="desativar-linha"
                                 />
                               </DialogoConfirmacao>
                             ) : (
@@ -227,7 +245,7 @@ export function PainelDoCalendario({
                               </DialogoConfirmacao>
                             )}
                           </>
-                        ) : (
+                        ) : l.origem === "feriado" ? null : !podeEditar ? null : (
                           <DialogoConfirmacao
                             titulo={`Desfazer a parada de ${dataParaLeitura(l.data)}?`}
                             consequencia="Isso libera esses tempos em todas as turmas. A parada fica inativa — nada é apagado."
@@ -244,6 +262,22 @@ export function PainelDoCalendario({
                             />
                           </DialogoConfirmacao>
                         )}
+                        {l.origem === "feriado" && podeExcluir && excluir ? (
+                          <ExclusaoPermanente
+                            id={l.id}
+                            codigo={l.codigo}
+                            nomeDoCodigo="o código da linha"
+                            rotulo={`Excluir ${l.nome} (${dataParaLeitura(l.data)})`}
+                            titulo={`Excluir «${l.nome}» (${dataParaLeitura(l.data)}) permanentemente?`}
+                            consequencia="A linha sai do calendário, e o dia deixa de valer como feriado ou licença. Só é possível porque nenhuma semana do DSA salva ou publicada contém a data."
+                            estado={exclusao[l.id] ?? SEM_LEITURA}
+                            excluir={excluir}
+                            naLinha
+                            aoRecusar={(e) => responder(e, true)}
+                            aoConcluir={() => responder("Linha excluída do calendário.")}
+                            slot="excluir-linha"
+                          />
+                        ) : null}
                       </span>
                     ) : null}
                   </td>

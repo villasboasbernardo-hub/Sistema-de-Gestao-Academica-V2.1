@@ -5,7 +5,9 @@
  * > *"Editar ali TODAS as informações dele — disciplinas, códigos, CH, UEs, avaliações, horários, atividades/limites,
  * > propósito, duração, PDF."*
  *
- * ⚠️ O PADRÃO TEM UM DONO SÓ, O CONTRATO (`dados`), como nas abas do curso. Trocar de parte empilha histórico.
+ * ⚠️ O PADRÃO TEM UM DONO SÓ, O CONTRATO (`disciplinas`), como nas abas do curso. Trocar de parte empilha histórico.
+ * ⚠️ **TRÊS SUB-ABAS DESDE O BLOCO 10** (spec 025, D-28): *Disciplinas · Horários · Atividades e limites*. Os dados do
+ *    currículo e o PDF saíram das partes e ficam no alto da aba *Currículo*, com um *Salvar* só.
  */
 "use client";
 
@@ -15,8 +17,7 @@ import { cn } from "cn";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 const PARTES = [
-  { valor: "dados", rotulo: "Dados e PDF" },
-  { valor: "disciplinas", rotulo: "Disciplinas e avaliações" },
+  { valor: "disciplinas", rotulo: "Disciplinas" },
   { valor: "horarios", rotulo: "Horários" },
   { valor: "atividades", rotulo: "Atividades e limites" },
 ] as const;
@@ -55,7 +56,7 @@ export function PartesDoCurriculo(paineis: { readonly [parte in ValorDaParte]: R
         ))}
       </div>
       <div role="tabpanel" id={`painel-parte-${atual}`} aria-labelledby={`parte-${atual}`}>
-        {paineis[atual as ValorDaParte] ?? paineis.dados}
+        {paineis[atual as ValorDaParte] ?? paineis.disciplinas}
       </div>
     </div>
   );

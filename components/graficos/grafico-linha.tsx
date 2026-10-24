@@ -13,7 +13,7 @@
  */
 "use client";
 
-import type * as React from "react";
+import * as React from "react";
 import {
   CartesianGrid,
   Line,
@@ -24,8 +24,18 @@ import {
   YAxis,
 } from "recharts";
 
-import { MolduraDeGrafico } from "@/components/graficos/moldura";
-import { corDaSerie, SIMBOLO_DA_FORMA, type Serie } from "@/components/graficos/tipos";
+import {
+  LegendaInterativa,
+  MarcadorDaSerie,
+  MolduraDeGrafico,
+} from "@/components/graficos/moldura";
+import {
+  alternarGrupo,
+  ocultosEmVigor,
+  corDaSerie,
+  SIMBOLO_DA_FORMA,
+  type Serie,
+} from "@/components/graficos/tipos";
 
 export type GraficoLinhaProps = {
   readonly series: readonly Serie[];
@@ -61,12 +71,33 @@ function paraLinhas(series: readonly Serie[]): Record<string, string | number>[]
 
 export function GraficoLinha({ series, rotulo, altura = 260, className }: GraficoLinhaProps) {
   const linhas = paraLinhas(series);
+  /* RT-5 (spec 025, D-22): a legenda oculta e mostra cada série; a cor e o tracejado são os de origem. */
+  const [guardadas, definirOcultas] = React.useState<ReadonlySet<string>>(() => new Set());
+  const chaves = series.map((s) => s.chave);
+  const ocultas = ocultosEmVigor(guardadas, chaves);
+  const alternar = (chave: string) => definirOcultas(alternarGrupo(ocultas, chave, chaves));
+  const visiveis = series
+    .map((serie, indice) => ({ serie, indice }))
+    .filter(({ serie }) => !ocultas.has(serie.chave));
 
   return (
     <MolduraDeGrafico
       series={series}
       rotulo={rotulo}
       altura={altura}
+      legenda={
+        <LegendaInterativa
+          rotulo={rotulo}
+          aoAlternar={alternar}
+          aoMostrarTodos={() => definirOcultas(new Set())}
+          itens={series.map((serie, i) => ({
+            chave: serie.chave,
+            oculto: ocultas.has(serie.chave),
+            marcador: <MarcadorDaSerie serie={serie} indice={i} />,
+            texto: serie.rotulo,
+          }))}
+        />
+      }
       {...(className === undefined ? {} : { className })}
     >
       <div data-slot="grafico-linha" className="h-full w-full">
@@ -84,7 +115,7 @@ export function GraficoLinha({ series, rotulo, altura = 260, className }: Grafic
               tick={{ fill: "var(--texto-suave)", fontSize: 11 }}
               stroke="var(--borda-forte)"
             />
-            {series.map((serie, i) => (
+            {visiveis.map(({ serie, indice: i }) => (
               <Line
                 key={serie.chave}
                 type="linear"
@@ -94,6 +125,8 @@ export function GraficoLinha({ series, rotulo, altura = 260, className }: Grafic
                 strokeWidth={2}
                 strokeDasharray={TRACEJADO[i % TRACEJADO.length] ?? "0"}
                 isAnimationActive={false}
+                className="cursor-pointer"
+                onClick={() => alternar(serie.chave)}
                 connectNulls={false}
                 activeDot={false}
                 dot={(props: {

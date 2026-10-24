@@ -56,6 +56,8 @@ export type FormularioDeVigenciaProps = {
   /** Só no modo `corrigir`: a vigência que sai de cena. */
   readonly vigenciaId?: string;
   readonly inicial?: ValoresDaVigencia;
+  /** Depois de gravar — o diálogo fecha (D-34 da spec 025). */
+  readonly aoGravar?: () => void;
 };
 
 export function FormularioDeVigencia({
@@ -64,6 +66,7 @@ export function FormularioDeVigencia({
   sigla,
   vigenciaId,
   inicial,
+  aoGravar,
 }: FormularioDeVigenciaProps) {
   const router = useRouter();
   const [valores, definirValores] = React.useState<ValoresDaVigencia>(inicial ?? VAZIA);
@@ -94,6 +97,7 @@ export function FormularioDeVigencia({
       return;
     }
     if (modo === "corrigir") definirValores({ ...valores, motivo: "" });
+    aoGravar?.();
     router.refresh();
   }
 

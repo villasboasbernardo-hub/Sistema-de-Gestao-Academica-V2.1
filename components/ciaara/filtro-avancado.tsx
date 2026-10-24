@@ -20,6 +20,10 @@
  * é o contrato de parâmetros, e quem conta é `filtrosForaDoPadrao`, a mesma régua do *"Limpar
  * filtros"*: o selo e o botão de limpar respondem à mesma pergunta. Abrir e recolher continua estado
  * deste componente.
+ *
+ * ⚠️ **DENTRO DO PAINEL DA PÁGINA, SEM GATILHO PRÓPRIO** (RT-4 do Bloco 10, spec 025): quando a página põe o filtro num
+ * `ConteudoDePainel`, quem abre é o ícone *Filtros* da barra de ações, e aqui ficam só os campos — o botão de texto
+ * largo some. Fora de painel (a vitrine), ele continua recolhível por conta própria.
  */
 "use client";
 
@@ -27,6 +31,7 @@ import * as React from "react";
 import { cn } from "cn";
 import { ChevronDownIcon, FilterIcon } from "lucide-react";
 
+import { useDentroDePainel, usePublicarContagem } from "@/components/ciaara/paineis-da-pagina";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
@@ -78,9 +83,33 @@ export function FiltroAvancado({
   className,
 }: FiltroAvancadoProps) {
   const [aberto, definirAberto] = React.useState(false);
+  const emPainel = useDentroDePainel();
+  /* Dentro do painel da página, o número vai para o ícone da barra — o do navegador, que vale na hora (RT-4). */
+  usePublicarContagem("filtros", ativos);
 
   const trocar = (chave: string, valores: readonly string[]) =>
     aoMudar({ ...estado, [chave]: valores });
+
+  const camposDoFiltro = (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {campos.map((campo) => (
+        <CampoDoFiltro
+          key={campo.chave}
+          campo={campo}
+          valores={estado[campo.chave] ?? []}
+          aoMudar={(v) => trocar(campo.chave, v)}
+        />
+      ))}
+    </div>
+  );
+
+  if (emPainel) {
+    return (
+      <div data-slot="filtro-avancado" data-em-painel="sim" className={className}>
+        {camposDoFiltro}
+      </div>
+    );
+  }
 
   return (
     <Collapsible
@@ -111,16 +140,7 @@ export function FiltroAvancado({
       </CollapsibleTrigger>
 
       <CollapsibleContent>
-        <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
-          {campos.map((campo) => (
-            <CampoDoFiltro
-              key={campo.chave}
-              campo={campo}
-              valores={estado[campo.chave] ?? []}
-              aoMudar={(v) => trocar(campo.chave, v)}
-            />
-          ))}
-        </div>
+        <div className="p-3">{camposDoFiltro}</div>
       </CollapsibleContent>
     </Collapsible>
   );

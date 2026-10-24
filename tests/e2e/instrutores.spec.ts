@@ -13,11 +13,12 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { abrirAvisosPeloSininho, avisoDaChave, avisosDoSujeito } from "./avisos";
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirPainel } from "./paineis";
 import { mudarSituacaoDoCurso, semearCursoInativavel } from "./curso-de-teste";
 import { anoCorrente } from "@/lib/formato/ano-corrente";
 
 import { abrirPainelDeFiltros } from "./filtros";
-import { abrirEdicaoDoInstrutor } from "./navegar-instrutores";
+import { abrirEdicaoDoInstrutor, voltarAFichaDoInstrutor } from "./navegar-instrutores";
 import {
   limparInstrutores,
   semearInstrutores,
@@ -426,7 +427,8 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
     // FR-026.5 · as estatísticas nascem recolhidas, como na v2.0, e abrir não mexe na URL.
     await expect(page.locator('[data-slot="card-kpi"]')).toHaveCount(0);
     const urlAntes = page.url();
-    await page.getByRole("button", { name: "Exibir estatísticas" }).click();
+    // Spec 025 (RT-4): o ícone *Estatísticas* da barra, na linha de *Novo instrutor*.
+    await abrirPainel(page, "estatisticas");
     expect(page.url(), "abrir as estatísticas foi para a URL — é estado efêmero").toBe(urlAntes);
 
     await expect(
@@ -457,9 +459,9 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
     await expect(
       page.locator('[data-chave="indice-capacitacao"] [data-slot="grafico-pizza"]'),
     ).toContainText("%");
-    await page.getByRole("button", { name: "Ocultar estatísticas" }).click();
+    await page.locator('[data-slot="abrir-estatisticas"]').click();
     await expect(page.locator('[data-slot="card-kpi"]')).toHaveCount(0);
-    await page.getByRole("button", { name: "Exibir estatísticas" }).click();
+    await abrirPainel(page, "estatisticas");
 
     const barrasDePosto = await page
       .locator('[data-slot="grafico-de-instrutores"][data-chave="posto-graduacao"]')
@@ -532,7 +534,8 @@ test.describe("`FR-027` → spec 022 · os avisos de cadastro estão em Avisos, 
   }) => {
     await entrar(page, EMAIL_ADMIN, `/instrutores?om=${amostra.om}`);
     // ⚠️ Prazo medido: com a base real e quatro processos, a listagem passa de 5 s (ver `abrirFicha`).
-    await expect(page.locator('[data-slot="filtros-de-instrutores"]')).toBeVisible({
+    // Spec 025 (RT-4): os filtros moram no painel do ícone *Filtros*, na barra.
+    await expect(page.locator('[data-slot="abrir-filtros"]')).toBeVisible({
       timeout: 15_000,
     });
     await expect(page.locator('[data-slot="quadro-de-avisos"]')).toHaveCount(0);
@@ -679,9 +682,10 @@ test.describe("`FR-022` e `FR-011` · painel de disciplinas, confirmação e a p
       /^VIN-\d{6}$/,
     );
 
+    // A leitura das habilitações é da FICHA (spec 025, D-35: a edição mora em página própria).
+    await voltarAFichaDoInstrutor(page);
     await page.reload();
     await expect(page.locator('[data-slot="disciplinas-habilitadas"]')).toContainText(sigla);
-    // ⚠️ Recarregar fecha o formulário: aberto/fechado é estado efêmero.
     await abrirEdicaoDoInstrutor(page);
     await painel.getByLabel("Buscar disciplina ou sigla do curso").fill(sigla);
     await expect(painel.getByRole("checkbox", { name: new RegExp(sigla) })).toBeChecked();
@@ -742,12 +746,18 @@ test.describe("`FR-022` e `FR-011` · painel de disciplinas, confirmação e a p
     await expect(barra.locator('[data-slot="abrir-edicao-do-instrutor"]')).toBeVisible({
       timeout: 15_000,
     });
+    // O seletor de ano (RT-6) é escolha de VISTA, não campo do cadastro: fica fora da conta.
     await expect(
-      page.locator("main").locator("input:visible, select:visible, textarea:visible"),
+      page
+        .locator("main")
+        .locator(
+          'input:visible, select:visible:not([data-slot="ano-do-painel-escolha"]), textarea:visible',
+        ),
       "a ficha abriu com campo editável à vista",
     ).toHaveCount(0);
 
     await barra.locator('[data-slot="abrir-edicao-do-instrutor"]').click();
+    await expect(page).toHaveURL(new RegExp(`/instrutores/${codigo}/editar`));
     await page.locator('input[name="nome_guerra"]').fill("Percurso");
     await gravar(page);
     const { data } = await servico()
@@ -803,13 +813,17 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
    */
   async function abrirFicha(page: Page, codigo: string) {
     await entrar(page, EMAIL_ADMIN, `/instrutores/${codigo}`);
-    // ⚠️ Desde a spec 016 (FR-010.1) o formulário nasce recolhido; os casos abaixo gravam por ele.
-    await abrirEdicaoDoInstrutor(page);
+    // ⚠️ Desde a spec 025 (D-35) o formulário mora em página própria; quem grava chama `abrirEdicaoDoInstrutor`.
+    await expect(page.locator('[data-slot="codigo-do-instrutor"]')).toBeVisible({
+      timeout: 15_000,
+    });
   }
 
   /*
    * Spec 022 (Bloco 7, FR-004.4): os alertas da ficha SAÍRAM dela — moram na página Avisos, pelo sininho, calculados
    * pelas mesmas funções. O texto de cada semana é o mesmo de antes, no detalhe do aviso.
+   * ⚠️ Spec 025 (Bloco 10, item 9, D-29; emenda a A-2 da spec 022): o da FAIXA voltou à ficha, em lilás, do ano
+   *    escolhido — e continua em Avisos. O da capacitação continua só em Avisos.
    */
   const SEMANA_14H =
     /Semana \d+\/\d{4} \(\d{2}\/\d{2}\/\d{4} a \d{2}\/\d{2}\/\d{4}\): 14 h, acima da faixa de 8 a 12 h\./g;
@@ -818,16 +832,23 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     page,
   }) => {
     await abrirFicha(page, amostra.codigos.ctMaisAntigo);
-    await expect(page.locator('[data-slot="alerta-conformidade"]')).toHaveCount(0);
+    const naFicha = page.locator('[data-slot="alerta-conformidade"]');
+    await expect(naFicha).toHaveCount(1);
+    await expect(naFicha).toHaveAttribute("data-tom", "conformidade");
+    await expect(naFicha).toContainText(
+      `Carga semanal prevista acima da faixa do regime em ${new Date().getFullYear()}`,
+    );
+    expect(((await naFicha.textContent()) ?? "").match(SEMANA_14H) ?? []).toHaveLength(4);
 
-    // FR-018 · o alerta não condiciona nada: gravar continua habilitado, e desativar também.
-    const rodape = page.locator('[data-slot="rodape-do-formulario"]');
-    await expect(rodape.getByRole("button", { name: "Gravar alterações" })).toBeEnabled();
+    // FR-018 · o alerta não condiciona nada: desativar continua habilitado, e gravar também.
     await expect(
       page
         .locator('[data-slot="barra-de-acoes"]')
         .getByRole("button", { name: "Desativar instrutor" }),
     ).toBeEnabled();
+    await abrirEdicaoDoInstrutor(page);
+    const rodape = page.locator('[data-slot="rodape-do-formulario"]');
+    await expect(rodape.getByRole("button", { name: "Gravar alterações" })).toBeEnabled();
 
     await abrirAvisosPeloSininho(page);
     const aviso = avisoDaChave(page, `instrutores:acima-da-faixa:${amostra.codigos.ctMaisAntigo}`);
@@ -847,6 +868,7 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     await servico().from("instrutores").update({ esp_hab_obs: null }).eq("codigo", codigo);
 
     await abrirFicha(page, codigo);
+    await abrirEdicaoDoInstrutor(page);
     await expect(page.locator('input[name="esp_hab_obs"]')).toHaveValue("");
     await page
       .locator('[data-slot="rodape-do-formulario"]')
@@ -875,6 +897,9 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
   }) => {
     const titulo = "Docência há mais de um ano sem capacitação didática";
     await abrirFicha(page, amostra.codigos.semCapacitacao);
+    // D-29 (spec 025): o da capacitação NÃO volta à ficha.
+    await expect(page.getByText(titulo)).toHaveCount(0);
+    await abrirEdicaoDoInstrutor(page);
     await expect(
       page
         .locator('[data-slot="rodape-do-formulario"]')
@@ -941,6 +966,8 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
   test("40h com 20 horas por semana está dentro da faixa, e não alerta", async ({ page }) => {
     await abrirFicha(page, amostra.codigos.ctMaisModerno);
     await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("80 TA");
+    // D-29 (spec 025): na ficha, o alerta é só o de ACIMA da faixa.
+    await expect(page.locator('[data-slot="alerta-conformidade"]')).toHaveCount(0);
     await abrirAvisosPeloSininho(page);
     await expect(
       avisoDaChave(page, `instrutores:acima-da-faixa:${amostra.codigos.ctMaisModerno}`),
@@ -958,6 +985,8 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
   }) => {
     await abrirFicha(page, amostra.codigos.cmg);
     await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("16 TA");
+    // D-29 (spec 025): na ficha, o alerta é só o de ACIMA da faixa.
+    await expect(page.locator('[data-slot="alerta-conformidade"]')).toHaveCount(0);
     await abrirAvisosPeloSininho(page);
     // ⚠️ Só as chaves de FAIXA: o CMG da amostra também não tem NIP, e esse aviso (outro) continua.
     await expect(
@@ -1070,13 +1099,15 @@ test.describe("`FR-017.6` · curso inativo não vaza para lista de escolha, e o 
     await gravarEsperando(page, "Alterações gravadas.");
 
     await mudarSituacaoDoCurso(EMAIL_ADMIN, CURSO.codigo, "inativo");
+    // A leitura das habilitações é da FICHA; a lista de escolha é da página de edição (spec 025, D-35).
+    await voltarAFichaDoInstrutor(page);
     await page.reload();
-    await abrirEdicaoDoInstrutor(page);
 
     await expect(
       page.locator('[data-slot="disciplinas-habilitadas"]'),
       "a habilitação existente em curso inativo sumiu da ficha — isso apaga histórico (FR-017.6)",
     ).toContainText(CURSO.codigo);
+    await abrirEdicaoDoInstrutor(page);
 
     const painelDepois = page.locator('[data-slot="painel-de-disciplinas"]');
     await painelDepois.getByLabel("Buscar disciplina ou sigla do curso").fill(CURSO.codigo);

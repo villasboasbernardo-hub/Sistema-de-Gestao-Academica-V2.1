@@ -28,6 +28,7 @@ import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { limparBloco2, maisDias, semearBloco2, type Bloco2Semeado } from "./bloco-2-de-teste";
 import { abrirAvisosPeloSininho, avisoDaChave } from "./avisos";
 import { apagarConta, criarConta, emailDeTeste } from "./conta-de-teste";
+import { abrirPainel } from "./paineis";
 import { abrirFiltros, escolherNoFiltro, irAListaDeTurmas } from "./navegar-turmas";
 
 let SEMEADO: Bloco2Semeado;
@@ -113,6 +114,8 @@ test.describe("FR-005 · cinco indicadores e três avisos, do recorte", () => {
   }) => {
     test.setTimeout(120_000);
     await irAListaDeTurmas(page, EMAIL);
+    // Spec 025 (RT-4, D-19): os números moram no painel do ícone *Estatísticas*.
+    await abrirPainel(page, "estatisticas");
     const painel = page.locator('[data-slot="painel-de-turmas"]');
     await expect(painel).toBeVisible();
     await expect(painel).toHaveAttribute("data-ano", VIGENTE);
@@ -122,8 +125,9 @@ test.describe("FR-005 · cinco indicadores e três avisos, do recorte", () => {
     await abrirFiltros(page);
     await escolherNoFiltro(page, "Curso", SIGLA);
     await expect.poll(() => new URL(page.url()).searchParams.get("curso")).toBe(SIGLA);
-    // A lista tem os seis, de todos os anos; o painel, só os quatro do vigente.
-    await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText("6 turmas");
+    // REGRA DOS VALORES ESPERADOS: (a), spec 025 (RT-6, D-26) — a LISTA também é só do ano escolhido: os quatro do
+    // vigente, como o painel (eram os seis, de todos os anos).
+    await expect(page.locator('[data-slot="contagem-de-turmas"]')).toContainText("4 turmas");
     await conferirIndicadores(page, {
       total: "4",
       // ⚠️ O CASO QUE DISCRIMINA do ano único: a T6, planejada de 2027, NÃO conta aqui — seriam 2.

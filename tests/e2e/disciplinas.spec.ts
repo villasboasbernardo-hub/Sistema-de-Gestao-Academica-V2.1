@@ -21,6 +21,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { nomeNoCartao, nomeNoGrafico } from "@/lib/dominio/nome-no-dsa";
 
 import { chaveLocal, criarConta, apagarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirPainel } from "./paineis";
 import { abrirLinha, conferirQueALinhaAlterna, linhaExpansivel } from "./linha-expansivel";
 import {
   contarDisciplina,
@@ -30,7 +31,6 @@ import {
   limparAmostraDaGrade,
   rastroDaExclusao,
   semearGradeDeDisciplinas,
-  selo,
   siglaDoCurso,
   type AmostraDaGrade,
 } from "./disciplinas-de-teste";
@@ -137,6 +137,8 @@ test.describe("`FR-001` a `FR-006` · chegar, escolher e ver", () => {
 
   test("⚠️ o que é POR TURMA degrada com aviso — nunca com zero", async ({ page }) => {
     await irAGradePorClique(page);
+    // Spec 025 (RT-4, D-19): os indicadores e o aviso moram no painel do ícone *Estatísticas* da aba.
+    await abrirPainel(page, "estatisticas");
 
     // ⚠️ "0 sem instrutor" afirmaria que está tudo designado. A frase diz ONDE isso se decide.
     await expect(page.getByText(/são \s*por turma/i).first()).toBeVisible();
@@ -182,6 +184,9 @@ test.describe("`FR-001` a `FR-006` · chegar, escolher e ver", () => {
      */
     await irAGradePorClique(page);
     await abrirDetalhe(page, DISCIPLINA_COM_UE.nome);
+    // O detalhe aparece antes de o `?aberta=` chegar à barra (o nuqs grava um instante depois): sem esperar a URL, o
+    // `goto` podia recarregar SEM a linha aberta — instável no CI do PR #90.
+    await expect.poll(() => new URL(page.url()).searchParams.get("aberta")).not.toBeNull();
     await page.goto(page.url());
     await expect(linhaExpansivel(page, DISCIPLINA_COM_UE.nome)).toHaveAttribute(
       "aria-expanded",
@@ -274,17 +279,28 @@ test.describe("`FR-060` a `FR-063` · as unidades de ensino", () => {
  *    abreviação automática do Bloco 2)"*. O nome esperado sai do BANCO (o caso do *Nome no DSA*, abaixo, grava um na
  *    mesma disciplina) e da mesma função da tela, `nomeNoGrafico`. Item 7: sem «Outras».
  */
-test.describe("`FR-007.2` da spec 016 e spec 022 (itens 7 e 8) · a proporção da CH é uma pizza", () => {
-  test("a pizza nomeia as disciplinas da vista PELO NOME, com o percentual escrito", async ({
+/*
+ * REGRA DOS VALORES ESPERADOS: (a), spec 025 (Bloco 10, item 4, D-23) — *"trocar a pizza por barras verticais: uma
+ * barra por disciplina, altura = CH em TA, eixo X com o código da disciplina, eixo Y em tempos de aula. Interativo"*. O
+ * NOME continua na legenda (*"código — nome: N TA"*), que é o item 8 da spec 022.
+ */
+test.describe("spec 025 (item 4) · a CH das disciplinas é uma barra por disciplina, pelo código", () => {
+  test("as barras saem pelo código, em ordem natural, e a legenda nomeia cada uma PELO NOME", async ({
     page,
   }) => {
     const banco = createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
       auth: { persistSession: false, autoRefreshToken: false },
     });
     await irAGradePorClique(page);
+    await abrirPainel(page, "estatisticas");
     const proporcao = page.locator('[data-slot="proporcao-da-carga"]');
-    await expect(proporcao.locator('[data-slot="grafico-pizza"]')).toBeVisible();
-    await expect(proporcao.locator('[data-slot="grafico-barras"]')).toHaveCount(0);
+    await expect(proporcao.locator('[data-slot="grafico-barras"]')).toBeVisible();
+    await expect(proporcao.locator('[data-slot="grafico-pizza"]')).toHaveCount(0);
+    await expect(proporcao).toContainText("Tempos de aula (TA)");
+    const barras = JSON.parse((await proporcao.getAttribute("data-barras")) ?? "[]") as string[];
+    expect(barras, "as barras não seguem a ordem natural do código").toEqual(
+      [...barras].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true })),
+    );
     // ⚠️ A disciplina limpa fica de fora: o caso da exclusão a apaga.
     for (const [d, id] of [
       [DISCIPLINA_COM_UE, amostra.disciplinaComUeId],
@@ -299,12 +315,12 @@ test.describe("`FR-007.2` da spec 016 e spec 022 (itens 7 e 8) · a proporção 
         nome: (data as { nome_disciplina: string }).nome_disciplina,
         nomeNoDsa: (data as { nome_no_dsa: string | null }).nome_no_dsa,
       });
-      await expect(proporcao.locator('[data-slot="legenda-da-pizza"]')).toContainText(`${nome}:`);
-      await expect(proporcao.locator('[data-slot="legenda-da-pizza"]')).not.toContainText(
-        `${d.cod}:`,
+      await expect(proporcao.locator('[data-slot="legenda-de-grafico"]')).toContainText(
+        `${d.cod} — ${nome}:`,
       );
+      expect(barras).toContain(d.cod);
     }
-    await expect(proporcao).toContainText("%");
+    await expect(proporcao).toContainText(" TA");
     await expect(proporcao).not.toContainText("Outras");
   });
 });
@@ -372,15 +388,13 @@ test.describe("`FR-020` a `FR-024` · a exclusão, com código e rastro", () => 
     await abrirPaginaDaDisciplina(page, DISCIPLINA_COM_UE.nome);
 
     // Spec 022 (D-2): a exclusão da disciplina fica no topo da página própria; as das UEs, nas linhas.
-    await page.getByRole("button", { name: "Excluir disciplina" }).click();
-    await page.locator('input[name="codigo_confirmacao"]').fill(`DIS-${selo(PROCESSO)}-1`);
-    await page.locator('[data-slot="confirmar-exclusao"]').click();
-
-    const recusa = page.locator('[data-slot="recusa-da-exclusao"]');
-    await expect(recusa).toBeVisible();
-    await expect(recusa).toContainText("linha de turma");
-    // ⚠️ E a recusa OFERECE A SAÍDA — sem próximo passo, a pessoa tenta de novo do mesmo jeito.
-    await expect(recusa).toContainText("Desative");
+    // ⚠️ Spec 025 (D-32): a página pergunta ao banco ao abrir — o ícone JÁ CHEGA desabilitado, com a dica da D-COR-6
+    //    e o impedimento NOMEADO no nome acessível; a recusa no clique fica para o que mudar depois da leitura.
+    const excluir = page.locator('[data-slot="pagina-da-disciplina"] [data-slot="abrir-exclusao"]');
+    await expect(excluir).toHaveAttribute("data-bloqueado", "true");
+    await expect(excluir).toHaveAttribute("aria-disabled", "true");
+    await expect(excluir).toHaveAttribute("aria-label", /linha de turma/);
+    await expect(excluir).toHaveAttribute("aria-label", /tem registros: use Desativar/);
   });
 
   test("⚠️ o botão só libera com o CÓDIGO certo, e a disciplina LIMPA some com rastro", async ({
@@ -412,21 +426,15 @@ test.describe("`SC-011` · filtro, indicadores e gráfico refletem o MESMO subco
   test("⚠️ filtrar muda os três juntos, e *Limpar filtros* mantém o curso", async ({ page }) => {
     await irAGradePorClique(page);
 
+    // Spec 025 (RT-4): os dois painéis da aba, abertos juntos — são independentes (D-18).
+    await abrirPainel(page, "estatisticas");
     const indicadorDeDisciplinas = page
-      .locator('[data-slot="indicadores"] p')
-      .filter({ hasText: /^\d+$/ })
+      .locator('[data-slot="indicadores"] [data-slot="card-kpi"] .text-kpi')
       .first();
     const antes = await indicadorDeDisciplinas.textContent();
 
-    /*
-     * ⚠️ **ABRE O PAINEL SÓ SE ELE ESTIVER FECHADO.** `FiltroAvancado` é um `Collapsible` e pode vir
-     * aberto; um clique incondicional no gatilho o **fechava**, e o campo sumia — o sintoma era
-     * `getByLabel("Buscar")` não existir, que se lê como "o filtro de busca não foi escrito".
-     */
+    await abrirPainel(page, "filtros");
     const filtro = page.locator('[data-slot="filtro-avancado"]');
-    if (!(await filtro.getByLabel("Buscar").isVisible())) {
-      await filtro.getByRole("button", { name: "Filtros" }).click();
-    }
     await filtro.getByLabel("Buscar").fill(DISCIPLINA_COM_UE.cod);
 
     await expect

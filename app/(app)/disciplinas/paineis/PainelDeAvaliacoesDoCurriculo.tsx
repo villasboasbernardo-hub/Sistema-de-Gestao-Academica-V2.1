@@ -16,12 +16,18 @@ import * as React from "react";
 
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
+import { ExclusaoPermanente } from "@/components/ciaara/exclusao-permanente";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { mudarSituacaoDoItem, salvarItemDoCurriculo } from "@/lib/acoes/itens-do-curriculo";
+import {
+  excluirItemDoCurriculo,
+  mudarSituacaoDoItem,
+  salvarItemDoCurriculo,
+} from "@/lib/acoes/itens-do-curriculo";
+import { DICA_SEM_LEITURA, type EstadoDaExclusao } from "@/lib/dominio/exclusao-permanente";
 
 import type { ItemDoCurriculoDaLinha } from "../consulta";
 
@@ -150,10 +156,16 @@ export function PainelDeAvaliacoesDoCurriculo({
   disciplinaId,
   itens,
   podeEditar,
+  exclusao,
 }: {
   readonly disciplinaId: string;
   readonly itens: readonly ItemDoCurriculoDaLinha[];
   readonly podeEditar: boolean;
+  /**
+   * O *Excluir* de cada item, pelo `id` (RT-2, spec 025, D-30) — só para quem exclui (`disciplinas.criar`); ausente, o
+   * ícone não nasce. Com avaliação lançada, arbitragem, correção ou currículo em uso, desabilitado com a dica.
+   */
+  readonly exclusao?: Readonly<Record<string, EstadoDaExclusao>>;
 }) {
   const [erro, setErro] = React.useState<string | null>(null);
   const [mensagem, setMensagem] = React.useState<string | null>(null);
@@ -297,17 +309,35 @@ export function PainelDeAvaliacoesDoCurriculo({
                   </DialogoDeFormulario>
                   <BotaoDeIcone
                     acao={i.ativo ? "desativar" : "reativar"}
-                    rotulo={`${i.ativo ? "Inativar" : "Reativar"} ${i.rotulo}`}
+                    rotulo={`${i.ativo ? "Desativar" : "Reativar"} ${i.rotulo}`}
                     variante="fantasma"
                     disabled={ocupado}
-                    data-acao={i.ativo ? "inativar-item" : "reativar-item"}
+                    data-acao={i.ativo ? "desativar-item" : "reativar-item"}
                     onClick={() =>
                       void executar(
                         (j) => mudarSituacaoDoItem({ ...j, itemId: i.id, ativo: !i.ativo }),
-                        i.ativo ? `${i.rotulo} inativada.` : `${i.rotulo} reativada.`,
+                        i.ativo ? `${i.rotulo} desativada.` : `${i.rotulo} reativada.`,
                       ).then((recusa) => setErro(recusa))
                     }
                   />
+                  {exclusao ? (
+                    <ExclusaoPermanente
+                      id={i.id}
+                      codigo={i.codigo}
+                      nomeDoCodigo="o código da avaliação"
+                      rotulo={`Excluir ${i.rotulo}`}
+                      titulo={`Excluir a avaliação ${i.rotulo} permanentemente?`}
+                      consequencia="A avaliação sai do currículo da disciplina. Só é possível porque nenhuma avaliação foi lançada nela e o currículo não está em uso."
+                      estado={
+                        exclusao[i.id] ?? { liberada: false, dica: DICA_SEM_LEITURA, detalhe: null }
+                      }
+                      excluir={excluirItemDoCurriculo}
+                      naLinha
+                      aoRecusar={(e) => setErro(e)}
+                      aoConcluir={() => setMensagem(`${i.rotulo} excluída.`)}
+                      slot="excluir-avaliacao-do-curriculo"
+                    />
+                  ) : null}
                 </span>
               ) : null}
             </li>

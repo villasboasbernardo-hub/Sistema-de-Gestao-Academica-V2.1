@@ -15,6 +15,7 @@ import {
   opcoesDoSeletor,
   rotuloDoCurriculo,
   situacaoDoCurriculo,
+  versaoDoAnoEscolhido,
   type CurriculoParaVigencia,
 } from "@/lib/dominio/curriculos";
 
@@ -170,5 +171,19 @@ describe("impedimentoDoDescarte — o currículo criado por engano sai por exclu
   });
   it("o que uma turma segue não se descarta (o banco recusa: `versao_em_uso`)", () => {
     expect(impedimentoDoDescarte(DOIS, [UM, DOIS], "2026-10-21", 1)).toBe("com_turma");
+  });
+});
+
+describe("versaoDoAnoEscolhido — o PDF e o Editar vão ao currículo do ano escolhido (RT-6; revisão do PR #90)", () => {
+  const todos = [UM, DOIS, TRES];
+  it("no ano de hoje, sem número: o endereço fica o de sempre", () => {
+    expect(versaoDoAnoEscolhido(todos, "2026-10-24", "2026-10-24")).toBeNull();
+  });
+  it("com o ano seguinte, o número do currículo dele", () => {
+    expect(versaoDoAnoEscolhido(todos, "2027-01-01", "2026-10-24")).toBe(2);
+    expect(versaoDoAnoEscolhido(todos, "2028-01-01", "2026-10-24")).toBe(3);
+  });
+  it("um ano em que vale o mesmo currículo de hoje: sem número", () => {
+    expect(versaoDoAnoEscolhido([UM], "2030-01-01", "2026-10-24")).toBeNull();
   });
 });

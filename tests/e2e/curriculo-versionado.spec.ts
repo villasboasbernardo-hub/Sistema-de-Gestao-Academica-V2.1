@@ -17,6 +17,7 @@ import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
+import { escolherAno } from "./paineis";
 import { apagarLinhasDaTurma } from "./dsa-de-teste";
 import { abrirLinha } from "./linha-expansivel";
 import {
@@ -24,6 +25,7 @@ import {
   abrirParteDaEdicao,
   irAEdicaoDoCurso,
   irAoCursoPorClique,
+  abrirAbaDoCurriculoNaEdicao,
 } from "./navegar-curso";
 
 /* Os dois casos usam o mesmo curso, em ordem: o SC-004 confere a CH do currículo 1 antes de o SC-005 corrigi-la. */
@@ -264,6 +266,7 @@ test.describe("SC-004 · o currículo novo, a turma nova nele, e a turma antiga 
   }) => {
     test.setTimeout(180_000);
     await irAEdicaoDoCurso(page, EMAIL, SIGLA);
+    await abrirAbaDoCurriculoNaEdicao(page);
     await expect(page.locator('[data-slot="escolha-do-curriculo"]')).toContainText(
       "Currículo 1 (vigência 2020)",
     );
@@ -326,8 +329,9 @@ test.describe("SC-004 · o currículo novo, a turma nova nele, e a turma antiga 
     await page.locator("#turma-modalidade").selectOption("presencial");
     await page.locator("#turma-rotulo").fill("T1");
     await page.locator('[data-slot="gravar-turma"]').click();
-    await expect(page.locator('[data-slot="curriculo-da-turma"]')).toHaveText(
-      `Segue o Currículo 2 (vigência ${ANO + 1})`,
+    // Spec 025 (item 1, D-4): a identificação da ficha traz o currículo com a vigência.
+    await expect(page.locator('[data-slot="curriculo-da-turma"]')).toContainText(
+      `Currículo 2 (vigência ${ANO + 1})`,
     );
     const { data: nova } = await banco
       .from("turmas")
@@ -337,13 +341,21 @@ test.describe("SC-004 · o currículo novo, a turma nova nele, e a turma antiga 
       .single();
     expect((nova as unknown as { curriculos: { versao: number } }).curriculos.versao).toBe(2);
 
-    /* A turma antiga continua no currículo 1 — e a aba Grade mostra as duas, cada uma com o seu (RC-9). */
+    /*
+     * A turma antiga continua no currículo 1 — e a aba Turmas mostra cada uma com o seu (RC-9). Spec 025 (RT-6, D-26):
+     * a aba mostra só as turmas do ANO ESCOLHIDO — a antiga no ano de hoje, a nova no seguinte.
+     */
     await irAoCursoPorClique(page, EMAIL, SIGLA);
     await abrirAbaDoCurso(page, "turmas");
     await expect(
       page.locator(`[data-linha-turma="${TURMA_ANTIGA}"] [data-slot="curriculo-na-lista"]`),
     ).toHaveText("Currículo 1 (vigência 2020)");
-    await expect(page.locator('[data-slot="curriculo-na-lista"]')).toHaveCount(2);
+    await expect(page.locator('[data-slot="curriculo-na-lista"]')).toHaveCount(1);
+    await escolherAno(page, ANO + 1);
+    await expect(page.locator('[data-slot="curriculo-na-lista"]')).toHaveCount(1);
+    await expect(page.locator('[data-slot="curriculo-na-lista"]')).toHaveText(
+      `Currículo 2 (vigência ${ANO + 1})`,
+    );
   });
 });
 
@@ -354,6 +366,7 @@ test.describe("SC-005 · a correção do currículo em uso pede a justificativa,
     test.setTimeout(120_000);
     const motivo = "Correção de digitação: o currículo diz 41.";
     await irAEdicaoDoCurso(page, EMAIL, SIGLA);
+    await abrirAbaDoCurriculoNaEdicao(page);
     /* O vigente é o padrão do seletor de *Editar curso* — e é o currículo 1, seguido pela turma com avaliação. */
     await expect(page.locator('[data-slot="escolha-do-curriculo"]')).toHaveValue("1");
     await abrirParteDaEdicao(page, "disciplinas");

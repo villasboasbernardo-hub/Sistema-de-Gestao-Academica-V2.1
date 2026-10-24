@@ -146,7 +146,9 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     await expect(page.locator('[data-slot="lancar-estudo-individual"]')).toBeVisible();
     await page.goBack();
     await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(codigo);
-    await expect(page.locator('[data-slot="trocar-situacao"]')).toBeVisible();
+    await expect(
+      page.locator('[data-slot="cabecalho-da-turma"] [data-slot="editar-turma"]'),
+    ).toBeVisible();
 
     /* ── arquivar: o aviso de não concluída, a observação, a confirmação ─────────────────────── */
     await page.locator('[data-slot="arquivar-turma"]').click();
@@ -171,8 +173,10 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     const aviso = page.locator('[data-slot="turma-arquivada"]');
     await expect(aviso).toContainText("somente leitura");
     await expect(aviso).toContainText(`Encerrada — prova ${codigo}`);
-    await expect(page.locator('[data-slot="trocar-situacao"]')).toHaveCount(0);
-    await expect(page.locator('[data-slot="abrir-edicao-da-turma"]')).toHaveCount(0);
+    await expect(
+      page.locator('[data-slot="cabecalho-da-turma"] [data-slot="editar-turma"]'),
+    ).toHaveCount(0);
+    await expect(page.locator('[data-slot="excluir-turma"]')).toHaveCount(0);
     await expect(page.locator('[data-slot="arquivar-turma"]')).toHaveCount(0);
     // ⚠️ O caso que discrimina da decisão de 19/10/2026: o Encarregado DESARQUIVA (antes, só o Admin).
     await expect(page.locator('[data-slot="desarquivar-turma"]')).toBeVisible();
@@ -195,7 +199,8 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
 
     /* ── some do /inicio e da /turmas; volta com «Mostrar arquivadas», com o selo ────────────── */
     await MENU(page).getByRole("link", { name: "Início", exact: true }).click();
-    await expect(page.locator('[data-slot="filtro-do-panorama"]')).toBeVisible();
+    // Spec 025 (RT-4): o filtro do Início mora no painel; o sinal de tela pronta é o bloco do ano.
+    await expect(page.locator('[data-slot="turmas-do-ano"]')).toBeVisible();
     await expect(page.locator(`[data-turma="${codigo}"]`)).toHaveCount(0);
 
     await buscarNaLista(page, codigo);
@@ -221,7 +226,9 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     });
     expect(await arquivadaNoBanco(), "desarquivar não chegou ao banco").toBe(false);
     await expect(page.locator('[data-slot="turma-arquivada"]')).toHaveCount(0);
-    await expect(page.locator('[data-slot="trocar-situacao"]')).toBeVisible();
+    await expect(
+      page.locator('[data-slot="cabecalho-da-turma"] [data-slot="editar-turma"]'),
+    ).toBeVisible();
 
     /* ── o histórico mostra os dois eventos, o mais recente primeiro ────────────────────────── */
     await page.locator('[data-slot="historico-da-situacao"] summary').click();
@@ -249,8 +256,10 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     await expect(linha.locator('[data-slot="arquivar-da-linha"]')).toHaveCount(0);
     await clicarNaTurmaDaLista(page, codigo);
     await expect(page.locator('[data-slot="codigo-da-turma"]')).toHaveText(codigo);
-    // O controle positivo de que ele edita a turma: a troca de situação aparece.
-    await expect(page.locator('[data-slot="trocar-situacao"]')).toBeVisible();
+    // O controle positivo de que ele edita a turma: *Editar turma* aparece (a situação mora lá, spec 025 D-2).
+    await expect(
+      page.locator('[data-slot="cabecalho-da-turma"] [data-slot="editar-turma"]'),
+    ).toBeVisible();
     await expect(page.locator('[data-slot="arquivar-turma"]')).toHaveCount(0);
   });
 

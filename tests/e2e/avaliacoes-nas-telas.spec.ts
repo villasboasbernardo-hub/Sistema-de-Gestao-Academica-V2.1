@@ -257,7 +257,7 @@ test("FR-038 · Editar curso → Disciplinas e avaliações: as avaliações do 
   await expect(painel.locator("input")).toHaveCount(0);
   await expect(tg).toContainText("3 TA");
 
-  await tg.locator('[data-acao="inativar-item"]').click();
+  await tg.locator('[data-acao="desativar-item"]').click();
   await justificar(page, "O TG 1 saiu do currículo.");
   await expect(tg).toHaveAttribute("data-ativo", "false");
   await expect(tg).toContainText("inativa");

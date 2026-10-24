@@ -6,10 +6,12 @@
  *
  * ⚠️ **UMA FOLHA SÓ**: o formulário (`FormularioDeRegime.tsx`) vem abaixo dela, sem marcador próprio.
  * ⚠️ **CADA BOTÃO SEGUE A PERMISSÃO DA AÇÃO** — *Novo regime* (`horarios.criar`), *Editar* (`horarios.editar`),
- *    *Inativar* ou *Reativar* (`horarios.desativar`), decididas no servidor e recebidas aqui; o banco recusa de qualquer
- *    forma (`42501`).
- * ⚠️ **INATIVAR REGIME EM USO É PERMITIDO** (C-11): ele sai da lista de escolha, e as turmas que o usam continuam com
- *    ele — a linha diz quais.
+ *    *Desativar* ou *Reativar* (`horarios.desativar`), *Excluir* (`horarios.criar`), decididas no servidor e recebidas
+ *    aqui; o banco recusa de qualquer forma (`42501`).
+ * ⚠️ **DESATIVAR REGIME EM USO É PERMITIDO** (C-11): ele sai da lista de escolha, e as turmas que o usam continuam com
+ *    ele — a linha diz quais. *"Inativar"* virou *"Desativar"* no Bloco 10 (RT-2, spec 025, D-17).
+ * ⚠️ **EXCLUIR SÓ O REGIME SEM REGISTRO** (RT-2, D-30): nenhuma turma o usa, o currículo não está em uso e não há
+ *    correção registrada. Com registro, o ícone desabilitado com a dica; quem decide é o banco, na leitura e na exclusão.
  * ⚠️ **A RESPOSTA FICA ACIMA DA TABELA** (`role="status"`/`role="alert"`), a lição de `AvisoDaLista`: a linha pode
  *    mudar de lugar sem levar a mensagem com ela.
  * ⚠️ **NOVO E EDITAR ABREM UM DIÁLOGO** (spec 022, Bloco 7, FR-002; *"Edição e cadastro SEMPRE em diálogo (formulário
@@ -20,7 +22,12 @@ import * as React from "react";
 
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
+import {
+  ExclusaoPermanente,
+  type ExclusaoPermanenteProps,
+} from "@/components/ciaara/exclusao-permanente";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
+import { DICA_SEM_LEITURA, type EstadoDaExclusao } from "@/lib/dominio/exclusao-permanente";
 import { inativarRegimeDeHorario, reativarRegimeDeHorario } from "@/lib/acoes/regime-de-horario";
 import { rotuloDoRegime } from "@/lib/dominio/regime-da-turma";
 
@@ -33,6 +40,7 @@ export function RegimesDoCurso({
   regimes,
   configuracoes,
   permissoes,
+  exclusao,
 }: {
   readonly cursoId: string;
   /** Spec 021 (emenda à RC-1): o currículo cujos regimes a lista mostra e em que o regime novo nasce. */
@@ -43,6 +51,11 @@ export function RegimesDoCurso({
     readonly criar: boolean;
     readonly editar: boolean;
     readonly desativar: boolean;
+  };
+  /** O *Excluir* de cada regime (`horarios.criar`): o estado lido no banco, pelo `id`, e a ação. */
+  readonly exclusao?: {
+    readonly estados: Readonly<Record<string, EstadoDaExclusao>>;
+    readonly excluir: ExclusaoPermanenteProps["excluir"];
   };
 }) {
   const router = useRouter();
@@ -67,7 +80,7 @@ export function RegimesDoCurso({
       });
       definirResposta(
         r.ok
-          ? { ok: true, texto: regime.ativo ? "Regime inativado." : "Regime reativado." }
+          ? { ok: true, texto: regime.ativo ? "Regime desativado." : "Regime reativado." }
           : { ok: false, texto: r.erro },
       );
       if (r.ok) router.refresh();
@@ -196,12 +209,34 @@ export function RegimesDoCurso({
                 {permissoes.desativar ? (
                   <BotaoDeIcone
                     acao={r.ativo ? "desativar" : "reativar"}
-                    rotulo={`${r.ativo ? "Inativar" : "Reativar"} ${r.nome}`}
+                    rotulo={`${r.ativo ? "Desativar" : "Reativar"} ${r.nome}`}
                     variante="fantasma"
                     ocupado={pendente}
                     rotuloOcupado="Gravando…"
                     onClick={() => mudarSituacao(r)}
-                    data-slot={r.ativo ? "inativar-regime" : "reativar-regime"}
+                    data-slot={r.ativo ? "desativar-regime" : "reativar-regime"}
+                  />
+                ) : null}
+                {exclusao ? (
+                  <ExclusaoPermanente
+                    id={r.id}
+                    codigo={r.codigo}
+                    nomeDoCodigo="o código do regime"
+                    rotulo={`Excluir ${r.nome}`}
+                    titulo={`Excluir o regime «${r.nome}» permanentemente?`}
+                    consequencia="O regime sai do currículo. Só é possível porque nenhuma turma o usa e o currículo não está em uso."
+                    estado={
+                      exclusao.estados[r.id] ?? {
+                        liberada: false,
+                        dica: DICA_SEM_LEITURA,
+                        detalhe: null,
+                      }
+                    }
+                    excluir={exclusao.excluir}
+                    naLinha
+                    aoRecusar={(erro) => definirResposta({ ok: false, texto: erro })}
+                    aoConcluir={() => definirResposta({ ok: true, texto: "Regime excluído." })}
+                    slot="excluir-regime"
                   />
                 ) : null}
               </div>

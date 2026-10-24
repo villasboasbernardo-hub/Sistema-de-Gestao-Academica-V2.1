@@ -18,6 +18,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirPainelDeFiltros } from "./filtros";
 
 const VITRINE = "/estilo";
 
@@ -292,10 +293,9 @@ test.describe("US2 · no tema ESCURO a lista de seleção é legível (`FR-011`)
     await expect.poll(() => new URL(page.url()).pathname).toBe("/turmas");
     await expect(page.locator('[data-slot="lista-de-turmas"]')).toBeVisible();
 
+    // Spec 025 (RT-4): o filtro mora no painel do ícone *Filtros*.
+    await abrirPainelDeFiltros(page);
     const filtro = page.locator('[data-slot="filtro-avancado"]');
-    if (!(await filtro.getByLabel("Buscar pelo código").isVisible())) {
-      await filtro.getByRole("button", { name: "Filtros" }).click();
-    }
     await filtro.getByLabel("Situação").click();
 
     const painel = page.locator('[data-slot="select-content"]');

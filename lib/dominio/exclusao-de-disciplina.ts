@@ -25,6 +25,12 @@
  * faria a recusa dizer *"tem histórico"* sem dizer **qual**, que é a única informação útil ali.
  */
 
+import {
+  estadoDaExclusao,
+  rotuloDoImpedimento,
+  type EstadoDaExclusao,
+} from "./exclusao-permanente";
+
 /**
  * Os seis impedimentos da **disciplina** e o da **UE**, lidos das funções do banco em 29/09/2026.
  *
@@ -39,9 +45,15 @@ export const ROTULO_DO_IMPEDIMENTO: Readonly<Record<string, string>> = {
   planejamento: "planejamento",
   unidade_de_ensino: "unidade de ensino",
   aula_lancada: "aula lançada",
+  // Bloco 10 (spec 025, D-32): as FKs criadas depois da emenda de 24/09/2026.
+  atividade: "atividade lançada",
+  avaliacao_do_curriculo: "avaliação do currículo",
+  ta_fora_do_dsa: "TA fora do DSA",
+  rateio: "rateio por unidade de ensino",
 };
 
-const rotulo = (chave: string): string => ROTULO_DO_IMPEDIMENTO[chave] ?? chave;
+/** Chave desconhecida (a rede de segurança devolve o nome da tabela) sai pelo nome dela — nunca some. */
+const rotulo = (chave: string): string => rotuloDoImpedimento(chave, ROTULO_DO_IMPEDIMENTO);
 
 function juntar(itens: readonly string[]): string {
   if (itens.length <= 1) return itens.join("");
@@ -105,3 +117,18 @@ export function chavesDaRecusa(mensagem: string): readonly string[] {
 export function codigoConfere(digitado: string, codigo: string): boolean {
   return digitado.trim() !== "" && digitado.trim() === codigo;
 }
+
+/**
+ * O estado do ícone *Excluir* da disciplina e da UE, lido no banco ao abrir a página (spec 025, Bloco 10, D-32): com
+ * registro, desabilitado com a dica da D-COR-6 e o que prende; sem leitura, desabilitado com a dica de não ter
+ * conferido. O banco confere de novo na exclusão.
+ */
+export function estadoDaExclusaoDaDisciplina(
+  impedimentos: readonly string[] | null,
+): EstadoDaExclusao {
+  return estadoDaExclusao(impedimentos, ROTULO_DO_IMPEDIMENTO, DICA_COM_REGISTROS);
+}
+
+export const estadoDaExclusaoDaUnidade = estadoDaExclusaoDaDisciplina;
+
+const DICA_COM_REGISTROS = "tem registros: use Desativar";

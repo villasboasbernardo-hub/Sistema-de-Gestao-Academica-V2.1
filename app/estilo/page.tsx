@@ -15,7 +15,10 @@
 import {
   AmostraAlertaEteto,
   AmostraAvisosRecolhiveis,
-  AmostraEstatisticasRecolhiveis,
+  AmostraCartoesJuntos,
+  AmostraExclusaoPermanente,
+  AmostraPaineisDaPagina,
+  AmostraSeletorDeAno,
   AmostraBarraDeAcoes,
   AmostraBotoesDeIcone,
   AmostraDialogoDeFormulario,
@@ -367,8 +370,22 @@ export default function Vitrine() {
         <AmostraAvisosRecolhiveis />
       </Secao>
 
-      <Secao titulo="Estatísticas recolhíveis — nascem recolhidas; abrir não mexe na URL">
-        <AmostraEstatisticasRecolhiveis />
+      <Secao titulo="Painéis da página — Filtros e Estatísticas são ícones na barra; nascem recolhidos (RT-4)">
+        <AmostraPaineisDaPagina />
+      </Secao>
+
+      <Secao titulo="Cartões de indicadores — juntos, do mesmo tamanho, o detalhe dentro (RT-7)">
+        <div id="cartoes-juntos">
+          <AmostraCartoesJuntos />
+        </div>
+      </Secao>
+
+      <Secao titulo="Seletor de ano — qualquer ano, o de hoje por padrão, o mesmo em todo módulo (RT-6)">
+        <AmostraSeletorDeAno />
+      </Secao>
+
+      <Secao titulo="Exclusão permanente — com registro, desabilitada com a dica; sem, alerta e código (RT-2)">
+        <AmostraExclusaoPermanente />
       </Secao>
 
       <Secao titulo="Limpar filtros — padrão de toda tela que filtra; some quando não há o que limpar">

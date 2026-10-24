@@ -59,15 +59,37 @@ export async function irAEdicaoDoCurso(page: Page, email: string, sigla: string)
   await expect
     .poll(() => new URL(page.url()).pathname)
     .toBe(`/cursos/${encodeURIComponent(sigla)}/editar`);
-  await expect(page.locator('[data-slot="curriculo-na-edicao"]')).toBeVisible();
+  await expect(page.locator('[data-slot="abas-da-edicao-do-curso"]')).toBeVisible();
 }
 
-/** Clica na parte do currículo em edição e espera o painel dela. */
+/** Abre a aba *Currículo* de *Editar curso* (spec 025, D-28) — só se ela não estiver aberta. */
+export async function abrirAbaDoCurriculoNaEdicao(page: Page): Promise<void> {
+  const aba = page.locator(
+    '[data-slot="abas-da-edicao-do-curso"] [role="tab"][data-aba="curriculo"]',
+  );
+  if ((await aba.getAttribute("aria-selected")) !== "true") await aba.click();
+  await expect(page.locator('[data-slot="curriculo-na-edicao"]')).toBeVisible({ timeout: 15_000 });
+}
+
+/**
+ * Clica na parte do currículo em edição e espera o painel dela.
+ *
+ * ⚠️ **DESDE O BLOCO 10 (spec 025, D-28) AS PARTES MORAM NA ABA *CURRÍCULO***, e os *dados* e o PDF saíram das partes
+ *    para o alto da aba: `"dados"` só abre a aba e espera os dados.
+ */
 export async function abrirParteDaEdicao(page: Page, parte: ParteDaEdicao): Promise<void> {
+  await abrirAbaDoCurriculoNaEdicao(page);
+  if (parte === "dados") {
+    await expect(page.locator('[data-slot="parte-dados"]')).toBeVisible();
+    return;
+  }
   await page
     .locator(`[data-slot="partes-do-curriculo"] [role="tab"][data-parte="${parte}"]`)
     .click();
-  if (parte !== "dados") await expect(page).toHaveURL(new RegExp(`[?&]parte=${parte}(&|$)`));
+  // *Disciplinas* é o padrão da parte (D-28): na URL ele não aparece.
+  if (parte !== "disciplinas") {
+    await expect(page).toHaveURL(new RegExp(`[?&]parte=${parte}(&|$)`));
+  }
   await expect(page.locator(`[role="tabpanel"]#painel-parte-${parte}`)).toBeVisible();
 }
 

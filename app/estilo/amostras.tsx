@@ -29,7 +29,14 @@ import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { CardKpi } from "@/components/ciaara/card-kpi";
 import { Carrossel } from "@/components/ciaara/carrossel";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
-import { EstatisticasRecolhiveis } from "@/components/ciaara/estatisticas-recolhiveis";
+import { ExclusaoPermanente } from "@/components/ciaara/exclusao-permanente";
+import {
+  ConteudoDePainel,
+  GatilhoDePainel,
+  ProvedorDePaineis,
+} from "@/components/ciaara/paineis-da-pagina";
+import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { EsqueletoTabela } from "@/components/ciaara/esqueleto-tabela";
@@ -228,17 +235,100 @@ export function AmostraEstadoVazio() {
 }
 
 /**
- * As estatísticas recolhíveis — o painel de Instrutores e de Cursos (spec 022, item 10): nascem recolhidas, e abrir
- * não mexe na URL.
+ * Os painéis da página — **Filtros** e **Estatísticas** como ícones na barra (RT-4 do Bloco 10, spec 025): nascem
+ * recolhidos, são independentes, e abrir não mexe na URL. O número no ícone de filtros é quantos estão ativos.
  */
-export function AmostraEstatisticasRecolhiveis() {
+export function AmostraPaineisDaPagina() {
   return (
-    <EstatisticasRecolhiveis id="estatisticas-da-vitrine">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <CardKpi rotulo="Cursos regulares" valor={5} />
-        <CardKpi rotulo="Estágios de qualificação" valor={8} />
+    <ProvedorDePaineis>
+      <div className="flex flex-col gap-3">
+        <BarraDeAcoes rotulo="Ações da amostra de painéis">
+          <GatilhoDePainel painel="filtros" contagem={2} />
+          <GatilhoDePainel painel="estatisticas" />
+        </BarraDeAcoes>
+        <ConteudoDePainel painel="filtros">
+          <p className="text-texto-suave text-sm">Os campos de filtro da tela moram aqui.</p>
+        </ConteudoDePainel>
+        <ConteudoDePainel painel="estatisticas">
+          <div className="grid auto-rows-fr gap-3 sm:grid-cols-3">
+            <CardKpi rotulo="Total de cursos e estágios do CIAARA-11" valor={13} />
+            <CardKpi rotulo="Cursos regulares" valor={5} />
+            <CardKpi rotulo="Estágios de qualificação" valor={8} />
+          </div>
+        </ConteudoDePainel>
       </div>
-    </EstatisticasRecolhiveis>
+    </ProvedorDePaineis>
+  );
+}
+
+/**
+ * Os cartões de indicadores juntos, do mesmo tamanho (RT-7): o detalhe vai DENTRO do cartão, a ação no canto, e o
+ * cartão inteiro pode levar a outro lugar.
+ */
+export function AmostraCartoesJuntos() {
+  return (
+    <div className="grid auto-rows-fr gap-3 sm:grid-cols-3">
+      <CardKpi rotulo="CH prevista" valor={1165} unidade="TA" />
+      <CardKpi
+        rotulo="AEC"
+        valor={12}
+        unidade="TA"
+        detalhe="12 de 40 previstos (30 %)"
+        acao={<BotaoDeIcone acao="editar" rotulo="Editar o previsto de AEC" variante="fantasma" />}
+      />
+      <CardKpi
+        rotulo="Avaliações"
+        valor="3 de 9"
+        detalhe="aplicadas"
+        href="/estilo#cartoes-juntos"
+      />
+    </div>
+  );
+}
+
+/**
+ * O seletor de ano (RT-6): qualquer ano de 2020 ao de hoje + 10, o de hoje por padrão. ⚠️ Na vitrine ele não lê
+ * cookie: escolher um ano aqui grava a escolha como em qualquer tela.
+ */
+export function AmostraSeletorDeAno() {
+  const vigente = Number(hojeNaCiaara().slice(0, 4));
+  return <SeletorDeAno ano={vigente} vigente={vigente} origem="hoje" rota="/inicio" />;
+}
+
+/**
+ * A exclusão permanente (RT-2 e D-COR-6): com registro, o ícone desabilitado com a dica; sem, o alerta e o código
+ * digitado. ⚠️ A ação da amostra não exclui nada: ela sempre recusa, para mostrar onde a recusa aparece.
+ */
+export function AmostraExclusaoPermanente() {
+  return (
+    <BarraDeAcoes rotulo="Ações da amostra de exclusão">
+      <ExclusaoPermanente
+        id="00000000-0000-4000-8000-000000000001"
+        codigo="AMOSTRA-1"
+        nomeDoCodigo="o código da amostra"
+        rotulo="Excluir a amostra com registro"
+        titulo="Excluir a amostra permanentemente?"
+        consequencia="A amostra sai do sistema."
+        estado={{
+          liberada: false,
+          dica: "tem registros: use Arquivar",
+          detalhe: "Tem aula lançada.",
+        }}
+        excluir={async () => ({ ok: false, erro: "Amostra: nada foi excluído." })}
+        slot="excluir-amostra-com-registro"
+      />
+      <ExclusaoPermanente
+        id="00000000-0000-4000-8000-000000000002"
+        codigo="AMOSTRA-2"
+        nomeDoCodigo="o código da amostra"
+        rotulo="Excluir a amostra sem registro"
+        titulo="Excluir a amostra permanentemente?"
+        consequencia="A amostra sai do sistema."
+        estado={{ liberada: true, dica: null, detalhe: null }}
+        excluir={async () => ({ ok: false, erro: "Amostra: nada foi excluído." })}
+        slot="excluir-amostra-sem-registro"
+      />
+    </BarraDeAcoes>
   );
 }
 

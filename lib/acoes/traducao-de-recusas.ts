@@ -21,6 +21,7 @@
  * Origem: `specs/009-cursos-e-turmas/contracts/escritas-recusas-e-avisos.md` §2.
  */
 
+import { recusaDeExclusao } from "@/lib/dominio/recusa-de-exclusao";
 import { RECUSA_DA_TURMA_ARQUIVADA } from "@/lib/dominio/arquivamento-da-turma";
 import { FRASE_DA_ESCOLHA_TRAVADA } from "@/lib/dominio/regime-da-turma";
 import { dataIlegivel, dataParaLeitura } from "@/lib/formato/data";
@@ -443,7 +444,7 @@ function porChave(
     case "versao_obrigatoria":
       return "Este curso tem mais de um currículo: escolha em qual deles gravar.";
     case "versao_em_uso":
-      return "Este currículo é seguido por turma e não pode ser inativado.";
+      return "Este currículo é seguido por turma e não pode ser desativado.";
     // Spec 021, PR 2 — a cópia (RC-7, RC-2), a correção do currículo em uso (RC-6) e o arquivamento (RC-10).
     case "curriculo_em_uso":
       return (
@@ -550,6 +551,9 @@ function porChave(
     // ══════════════════════════════════════════════════════════════════════════════════════════
 
     case "registro_com_historico": {
+      /* Spec 025 (Bloco 10): turma, linha do calendário, regime, item do currículo e sala têm frase própria. */
+      const doBloco10 = recusaDeExclusao(erro.message);
+      if (doBloco10) return doBloco10;
       /*
        * ⚠️ **A LISTA DE IMPEDIMENTOS É NOMEADA AQUI, e não na tela.** A primeira escrita devolvia só
        * a frase de fundo e deixava o diálogo extrair a lista — mas o diálogo recebe **esta** frase,

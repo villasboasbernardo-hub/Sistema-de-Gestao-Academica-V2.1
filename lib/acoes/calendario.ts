@@ -19,6 +19,7 @@ import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusa
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { esquemaDaLinhaDoCalendario, esquemaDaSituacaoDaLinha } from "@/lib/validacao/calendario";
+import { esquemaDaExclusaoPermanente } from "@/lib/validacao/exclusao";
 
 export type RespostaDoCalendario =
   { readonly ok: true; readonly mensagem: string } | { readonly ok: false; readonly erro: string };
@@ -185,7 +186,7 @@ export async function gravarLinhaDoCalendario(entrada: unknown): Promise<Respost
   };
 }
 
-/** Inativar ou reativar uma linha — FR-011. Nunca apaga. */
+/** Desativar ou reativar uma linha — FR-011 (spec 025, RT-2: o verbo é *Desativar*). Nunca apaga. */
 export async function mudarSituacaoDaLinha(entrada: unknown): Promise<RespostaDoCalendario> {
   const conferido = esquemaDaSituacaoDaLinha.safeParse(entrada);
   if (!conferido.success) return { ok: false, erro: "Dados inválidos." };
@@ -200,7 +201,7 @@ export async function mudarSituacaoDaLinha(entrada: unknown): Promise<RespostaDo
   if (!r.data || r.data.length === 0) return { ok: false, erro: SEM_PERMISSAO };
   revalidar();
   if (situacao === "inativo")
-    return { ok: true, mensagem: "Linha inativada: o dia está liberado." };
+    return { ok: true, mensagem: "Linha desativada: o dia está liberado." };
   const linha = r.data[0] as unknown as {
     data: string;
     impacto: string;
@@ -212,4 +213,32 @@ export async function mudarSituacaoDaLinha(entrada: unknown): Promise<RespostaDo
   const n =
     linha.impacto === "dia_inteiro" ? await lancamentosNoDia(supabase, linha.data, turmas) : 0;
   return { ok: true, mensagem: `Linha reativada.${avisoDeLancamentos(n)}` };
+}
+
+/**
+ * Excluir a linha do calendário **permanentemente** — D-COR-6 (spec 025, D-11 a D-13).
+ *
+ * ⚠️ **SEM `delete` AQUI** (regra 4): o caminho é `public.excluir_feriado`, com porteiro (`calendario.criar`), o
+ *    código digitado e o impedimento conferido no banco — semana do DSA salva ou publicada ligada à data —, e o rastro.
+ */
+export async function excluirLinhaDoCalendario(entrada: unknown): Promise<RespostaDoCalendario> {
+  const conferido = esquemaDaExclusaoPermanente.safeParse(entrada);
+  if (!conferido.success) {
+    return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const supabase = await criarClienteDeServidor();
+  const { error } = await supabase.rpc("excluir_feriado", {
+    p_feriado_id: conferido.data.id,
+    p_codigo_confirmacao: conferido.data.codigoConfirmacao,
+  });
+  if (error) {
+    if (error.code === "42501" && error.hint !== "rastro_imutavel") {
+      return { ok: false, erro: "O seu perfil não exclui do calendário (Encarregado e Admin)." };
+    }
+    if (error.code === "P0002")
+      return { ok: false, erro: "A linha do calendário não existe mais." };
+    return { ok: false, erro: traduzirRecusa(error as ErroDoBanco) };
+  }
+  revalidar();
+  return { ok: true, mensagem: "Linha excluída do calendário." };
 }

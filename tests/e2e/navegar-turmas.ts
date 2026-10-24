@@ -13,6 +13,7 @@
 import { expect, type Page } from "@playwright/test";
 
 import { entrar } from "./conta-de-teste";
+import { abrirPainel, anoDoCodigoDaTurma, escolherAno } from "./paineis";
 
 export const LISTA_DE_TURMAS = '[data-slot="lista-de-turmas"]';
 export const FILTRO = '[data-slot="filtro-avancado"]';
@@ -29,17 +30,14 @@ export async function irAListaDeTurmas(page: Page, email: string): Promise<void>
 }
 
 /**
- * Abre o painel de filtros — **só se ele estiver fechado**.
+ * Abre o painel de filtros — **só se ele estiver fechado** (spec 025, RT-4: o ícone *Filtros* da barra).
  *
- * ⚠️ `FiltroAvancado` é um `Collapsible` e pode vir aberto; um clique incondicional no gatilho o
- * **fechava**, e o campo sumia — o sintoma era `getByLabel` não achar nada, que se lê como "o filtro
- * não foi escrito".
+ * ⚠️ Um clique incondicional no gatilho **fechava** o painel aberto, e o campo sumia — o sintoma era `getByLabel` não
+ * achar nada, que se lê como "o filtro não foi escrito".
  */
 export async function abrirFiltros(page: Page): Promise<void> {
-  const filtro = page.locator(FILTRO);
-  if (!(await filtro.getByLabel("Buscar pelo código").isVisible())) {
-    await filtro.getByRole("button", { name: "Filtros" }).click();
-  }
+  await abrirPainel(page, "filtros");
+  await expect(page.locator(FILTRO).getByLabel("Buscar pelo código")).toBeVisible();
 }
 
 /**
@@ -89,6 +87,9 @@ export async function clicarNaTurmaDaLista(page: Page, codigo: string): Promise<
 
 export async function irAFichaDaTurma(page: Page, email: string, codigo: string): Promise<void> {
   await irAListaDeTurmas(page, email);
+  /* Spec 025 (RT-6): a lista mostra só o ano escolhido — o da turma sai do código dela. */
+  const ano = anoDoCodigoDaTurma(codigo);
+  if (ano !== null) await escolherAno(page, ano);
   await abrirFiltros(page);
   await page.locator(FILTRO).getByLabel("Buscar pelo código").fill(codigo);
   /*
@@ -108,22 +109,17 @@ export async function irAFichaDaTurma(page: Page, email: string, codigo: string)
 }
 
 /**
- * Abre o formulário de edição da ficha, que desde 05/10/2026 nasce **recolhido**.
+ * Abre *Editar turma* — **a página própria** desde o Bloco 10 (spec 025, D-1; era o formulário recolhido no fim da
+ * ficha), pelo ícone da barra de ações da ficha.
  *
- * ⚠️ **ELE EXISTE PORQUE QUATRO ARQUIVOS DE PONTA A PONTA AGIAM NOS CAMPOS SEM CLICAR EM NADA** —
- * `turmas`, `salas`, `andamento` e `telas-acessiveis` —, e o `Collapsible` do Radix **desmonta** o
- * conteúdo fechado: os campos deixam de **existir**, não só de estar visíveis. O sintoma no
- * Playwright é *"locator resolved to 0 elements"*, que se lê como "o campo foi apagado" e não como
- * "o painel está fechado".
- *
- * ⚠️ **E ELE É IDEMPOTENTE**: se o painel já estiver aberto, não clica — assim um caso pode
- * chamá-lo duas vezes sem fechar o que acabou de abrir.
+ * ⚠️ **ELE É IDEMPOTENTE**: já na página de edição (depois de uma gravação recusada, por exemplo), não clica.
  */
 export async function abrirEdicaoDaTurma(page: Page): Promise<void> {
   const campo = page.locator("#turma-ano");
   if (await campo.isVisible()) return;
-  await page.locator('[data-slot="abrir-edicao-da-turma"]').click();
-  await expect(campo).toBeVisible();
+  await page.locator('[data-slot="cabecalho-da-turma"] [data-slot="editar-turma"]').click();
+  await expect(page).toHaveURL(/\/turmas\/[^/?#]+\/editar/);
+  await expect(campo).toBeVisible({ timeout: 15_000 });
 }
 
 /**
@@ -144,15 +140,25 @@ export const seloDaSituacao = (page: Page) =>
   page.locator('[data-slot="cabecalho-da-turma"] [data-slot="badge-status"]').first();
 
 /**
- * Troca a situação pelo botão *"Trocar situação"* do cabeçalho (spec 016, FR-015.1) e espera a
- * confirmação. `rotulo` é o da tela — *Planejada*, *Ativa*, *Concluída*, *Cancelada*.
+ * Troca a situação **dentro de Editar turma** (spec 025, D-2; era o botão *"Trocar situação"* do cabeçalho, spec 016)
+ * e espera a confirmação na ficha. `rotulo` é o da tela — *Planejada*, *Ativa*, *Concluída*, *Cancelada* —, e a
+ * observação, quando vem, vai para o histórico (D-COR-4).
  */
-export async function trocarSituacaoPelaFicha(page: Page, rotulo: string): Promise<void> {
-  await page.locator('[data-slot="trocar-situacao"]').click();
-  const dialogo = page.locator('[data-slot="dialogo-de-situacao"]');
-  await expect(dialogo).toBeVisible();
-  await dialogo.getByRole("radio", { name: new RegExp(`^${rotulo}`) }).check();
-  await dialogo.locator('[data-slot="gravar-situacao"]').click();
+export async function trocarSituacaoPelaFicha(
+  page: Page,
+  rotulo: string,
+  observacao?: string,
+): Promise<void> {
+  await abrirEdicaoDaTurma(page);
+  await page.locator("#turma-situacao").selectOption({ label: rotulo });
+  if (observacao !== undefined) {
+    await page.locator('[data-slot="observacao-da-situacao"]').fill(observacao);
+  }
+  await page.locator('[data-slot="gravar-turma"]').click();
+  const dialogo = page.locator('[data-slot="dialogo-confirmacao"]');
+  if (await dialogo.isVisible().catch(() => false)) {
+    await dialogo.getByRole("button", { name: "Salvar" }).click();
+  }
   await expect(page.locator('[data-slot="situacao-gravada"]')).toContainText(rotulo, {
     timeout: 15_000,
   });

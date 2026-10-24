@@ -23,7 +23,7 @@ import { COOKIE_DA_LATERAL, lateralFixadaNoCookie } from "@/lib/navegacao/latera
 import { enderecoDaFoto } from "@/lib/supabase/avatar";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
-import { anoDoPainel } from "@/lib/dominio/painel-de-turmas";
+import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
 import { arvoreDeCursos, arvoreDeTurmas } from "@/lib/dominio/submenu-da-lateral";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { enderecoDaTurma, enderecoDoCurso } from "@/lib/navegacao/endereco-de-turma";
@@ -94,10 +94,12 @@ export default async function LayoutDoApp({ children }: { children: React.ReactN
   //       em qualquer erro, e a tela cai nas iniciais (`RN-DEG-01`).
   const supabase = await criarClienteDeServidor();
   /*
-   * ⚠️ **AS TURMAS DO SUBMENU SÃO AS DO ANO VIGENTE** (ajuste A-5 de 20/10/2026), com a mesma regra de padrão do Início
-   *    e de Turmas: o ano de hoje em São Paulo — em 01/01 a lista troca sozinha, sem ano escrito no código.
+   * ⚠️ **AS TURMAS DO SUBMENU SÃO AS DO ANO ESCOLHIDO** (RT-6 do Bloco 10, spec 025, D-24 e D-26; era o ano vigente, do
+   *    ajuste A-5 de 20/10/2026): o guardado no navegador pelo seletor, senão o de hoje em São Paulo — em 01/01 a escolha
+   *    expira e a lista troca sozinha. O layout não lê a URL: um link com `?ano=` mostra a página no ano do link e a
+   *    lateral no da escolha de quem abre, até ele escolher de novo.
    */
-  const anoVigente = anoDoPainel("", hojeNaCiaara());
+  const anoVigente = (await anoEscolhido("", hojeNaCiaara())).ano;
   const [permissoes, armazemDeCookies, fotoUrl, cursosRes, turmasRes, arquivadasRes] =
     await Promise.all([
       permissoesDoPerfil(usuario.perfil),

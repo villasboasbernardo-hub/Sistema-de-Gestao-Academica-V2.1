@@ -211,7 +211,8 @@ describe("`SC-003` · toda tela do sistema tem caminho clicável até ela", () =
     const destinos = destinosEscritos();
     for (const [rota, onde] of [
       ["/cursos/novo", "app/(app)/cursos/page.tsx"],
-      ["/cursos/[param]/editar", "app/(app)/cursos/[curso]/CabecalhoDoCurso.tsx"],
+      /* Spec 016 (FR-006.1) pôs *Editar curso* na barra única; o cabeçalho segue com o link do histórico do regime. */
+      ["/cursos/[param]/editar", "app/(app)/cursos/[curso]/BarraDoCurso.tsx"],
     ] as const) {
       expect(
         destinos.some((d) => normalizar(d.rota) === rota && d.onde === onde),

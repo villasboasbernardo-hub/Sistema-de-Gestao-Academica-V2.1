@@ -175,7 +175,11 @@ test.describe("Spec 018 · FR-006 · as abas, por clique (sete desde a spec 021)
       page.locator('[data-slot="aba-horarios"]').getByRole("link", {
         name: "Editar os horários do curso",
       }),
-    ).toHaveAttribute("href", `/cursos/${encodeURIComponent(SIGLA)}/editar?parte=horarios`);
+    ).toHaveAttribute(
+      "href",
+      // Spec 025 (D-28): as partes moram na aba *Currículo* de *Editar curso*.
+      `/cursos/${encodeURIComponent(SIGLA)}/editar?aba=curriculo&parte=horarios`,
+    );
 
     // Spec 021, ajuste 2: a aba *Currículo* lista os currículos e consulta o vigente, só para leitura.
     await abrirAbaDoCurso(page, "curriculo");
@@ -264,6 +268,8 @@ test.describe("Spec 018 · FR-003 · o regime nomeado: cadastrado no curso, esco
     );
 
     /* ── 3. O DSA da turma: o relógio do Regime B, nove tempos no papel ───────────────────────── */
+    // Spec 025 (D-1): a edição mora em página própria — o DSA se abre pela barra da ficha.
+    await page.locator('[data-slot="voltar-a-ficha"]').click();
     await page.locator('[data-slot="abrir-o-dsa"]').click();
     await expect(page.getByRole("heading", { name: "Detalhe Semanal de Aula" })).toBeVisible();
     await irParaASemanaDoDia(page, DIA, 14, 2045);

@@ -77,7 +77,15 @@ describe("`SC-022` · zero contêiner de contexto como fonte de verdade de naveg
    *    vai no endereço do botão, montado pelo dono único (`enderecoDaImpressaoDoDsa`). A `key` por
    *    semana na página impede que ele sobreviva à troca de semana.
    */
+  /*
+   * ⚠️ **O QUARTO ISENTO ENTROU EM 24/10/2026** (spec 025, Bloco 10, RT-4): os painéis de *Filtros* e *Estatísticas*
+   *    da página. Ele guarda **só se cada painel está aberto** — estado de olhar, efêmero, como o aberto/fechado de um
+   *    `Collapsible`. O que o filtro filtra continua na URL, pelos campos dele; a pergunta do `FR-010` dá *não*: um
+   *    link mandado a outra pessoa não deve abrir com os painéis de quem mandou. O contêiner existe porque o ícone (na
+   *    barra do cabeçalho) e o painel (abaixo dele) são irmãos distantes na árvore.
+   */
   const ISENTOS = [
+    "components/ciaara/paineis-da-pagina.tsx",
     "components/ciaara/lista-navegavel.tsx",
     "app/(app)/admin/usuarios/AvisoDaLista.tsx",
     "app/(app)/turmas/[turma]/dsa/AssinaturasEditaveis.tsx",

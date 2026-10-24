@@ -12,10 +12,15 @@
  * três booleanos. O banco recusa de qualquer forma; aqui só se esconde (`FR-017.8` da spec 009).
  *
  * ⚠️ **SEM AÇÃO PERMITIDA, SEM BARRA**: um grupo vazio anunciado ao leitor de tela seria ruído.
+ *
+ * ⚠️ **O *EXCLUIR* DO CURSO É SEMPRE DESABILITADO** (RT-2, spec 025, D-30): o curso tem o histórico do regime, que é
+ *    permanente (regra 9.1), e currículo — não há curso sem registro. O ícone está lá, com a dica, para que a regra se
+ *    leia na tela em vez de parecer esquecida; o caminho é *Desativar*.
  */
 
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
+import { EXCLUSAO_DO_CURSO } from "@/lib/dominio/exclusao-de-partes";
 import { enderecoDaNovaTurma } from "@/lib/navegacao/endereco-de-turma";
 
 import { AcoesDeSituacao } from "./AcoesDeSituacao";
@@ -26,6 +31,7 @@ export function BarraDoCurso({
   podeAbrirEdicao,
   podeMudarSituacao,
   podeCriarTurma,
+  podeExcluir = false,
 }: {
   readonly sigla: string;
   readonly ativo: boolean;
@@ -35,9 +41,11 @@ export function BarraDoCurso({
   readonly podeMudarSituacao: boolean;
   /** `turmas.criar` — e só vale com o curso em oferta. */
   readonly podeCriarTurma: boolean;
+  /** `cursos.criar` — quem veria o *Excluir*, sempre desabilitado (D-30). */
+  readonly podeExcluir?: boolean;
 }) {
   const novaTurma = podeCriarTurma && ativo;
-  if (!podeAbrirEdicao && !podeMudarSituacao && !novaTurma) return null;
+  if (!podeAbrirEdicao && !podeMudarSituacao && !novaTurma && !podeExcluir) return null;
 
   return (
     <BarraDeAcoes rotulo="Ações do curso">
@@ -50,6 +58,15 @@ export function BarraDoCurso({
         />
       ) : null}
       {podeMudarSituacao ? <AcoesDeSituacao sigla={sigla} ativo={ativo} /> : null}
+      {podeExcluir ? (
+        <BotaoDeIcone
+          acao="excluir"
+          rotulo={`Excluir o curso ${sigla}. ${EXCLUSAO_DO_CURSO.detalhe ?? ""}`.trim()}
+          variante="destrutivo"
+          indisponivel={EXCLUSAO_DO_CURSO.dica}
+          data-slot="excluir-curso"
+        />
+      ) : null}
       {novaTurma ? (
         <BotaoDeIcone
           acao="novo"

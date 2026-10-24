@@ -34,7 +34,13 @@
  */
 import Link from "next/link";
 
+import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import {
+  ConteudoDePainel,
+  GatilhoDePainel,
+  ProvedorDePaineis,
+} from "@/components/ciaara/paineis-da-pagina";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { Avatar, AvatarImagem, AvatarRecuo } from "@/components/ui/avatar";
@@ -153,165 +159,176 @@ export default async function Usuarios({
   const fotos = await Promise.all(contas.map((c) => enderecoDaFoto(c.avatar_caminho)));
 
   return (
-    <section>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold">Usuários</h1>
-        {/*
+    <ProvedorDePaineis>
+      <section>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-lg font-semibold">Usuários</h1>
+          {/*
+          ⚠️ RT-4 DO BLOCO 10 (spec 025, D-19): o quadro *Acessos ao sistema* é a estatística desta tela, e mora no
+             painel do ícone *Estatísticas*, na mesma linha de *Cadastrar usuário*. A busca continua à vista.
+        */}
+          <BarraDeAcoes rotulo="Ações dos usuários">
+            <GatilhoDePainel painel="estatisticas" />
+            {/*
           ⚠️ **É UM LINK PARA UMA PÁGINA, não um botão que abre formulário na lista.** É o que a
              decisão de 03/10/2026 pediu, e o que dá endereço compartilhável e botão de voltar.
              ⚠️ E ele é o caminho clicável que `toda-tela-tem-caminho.test.ts` exige para a rota nova.
         */}
-        <BotaoDeIcone
-          acao="cadastrar"
-          rotulo="Cadastrar usuário"
-          variante="padrao"
-          href="/admin/usuarios/novo"
-        />
-      </div>
+            <BotaoDeIcone
+              acao="cadastrar"
+              rotulo="Cadastrar usuário"
+              variante="padrao"
+              href="/admin/usuarios/novo"
+            />
+          </BarraDeAcoes>
+        </div>
 
-      {/* veste: explicação do regime de acesso — texto de apoio, não valor */}
-      <p className="text-texto-suave mt-1 text-sm">
-        {contas.length} {contas.length === 1 ? "cadastro" : "cadastros"}. O acesso é{" "}
-        <strong>somente por cadastro do Admin</strong>: não há autocadastro, e desativar nunca
-        apaga.
-      </p>
+        {/* veste: explicação do regime de acesso — texto de apoio, não valor */}
+        <p className="text-texto-suave mt-1 text-sm">
+          {contas.length} {contas.length === 1 ? "cadastro" : "cadastros"}. O acesso é{" "}
+          <strong>somente por cadastro do Admin</strong>: não há autocadastro, e desativar nunca
+          apaga.
+        </p>
 
-      {/*
+        {/*
         ⚠️ **O AVISO DA EXCLUSÃO FICA AQUI, FORA DA TABELA.** Ele vem da URL porque a linha que
            disparou a ação **não existe mais** — ver a nota no contrato de `/admin/usuarios`. As duas
            frases são diferentes de propósito: as duas exclusões são permanentes, e só uma deixa
            cadastro para trás.
       */}
-      {excluida === "apagada" ||
-      excluida === "anonimizada" ||
-      excluida === "apagada_email_em_uso" ||
-      excluida === "apagada_sem_conferir_credencial" ? (
-        <p
-          role="status"
-          className="border-borda bg-superficie-2 rounded-ciaara text-texto mt-3 border p-2 text-sm"
-        >
-          {excluida === "apagada"
-            ? "Conta excluída. Ela não deixou registro nenhum no sistema, então saiu inteira, e o e-mail está livre para um novo cadastro."
-            : excluida === "anonimizada"
-              ? "Conta excluída. Ela registrou histórico, então o cadastro ficou como «Conta excluída» e saiu da lista, para os registros antigos continuarem tendo autor. O e-mail está livre para um novo cadastro."
-              : /*
+        {excluida === "apagada" ||
+        excluida === "anonimizada" ||
+        excluida === "apagada_email_em_uso" ||
+        excluida === "apagada_sem_conferir_credencial" ? (
+          <p
+            role="status"
+            className="border-borda bg-superficie-2 rounded-ciaara text-texto mt-3 border p-2 text-sm"
+          >
+            {excluida === "apagada"
+              ? "Conta excluída. Ela não deixou registro nenhum no sistema, então saiu inteira, e o e-mail está livre para um novo cadastro."
+              : excluida === "anonimizada"
+                ? "Conta excluída. Ela registrou histórico, então o cadastro ficou como «Conta excluída» e saiu da lista, para os registros antigos continuarem tendo autor. O e-mail está livre para um novo cadastro."
+                : /*
                  ⚠️ **A TERCEIRA FRASE É A QUE EVITA UMA MENTIRA.** A conta saiu, mas o e-mail dela é
                     o login de OUTRA conta — e apagar aquela credencial derrubaria o acesso de quem
                     não pediu nada. Dizer "o e-mail está livre" aqui faria o Admin tentar cadastrar e
                     bater num erro sem explicação.
                 */
-                excluida === "apagada_email_em_uso"
-                ? "Conta excluída e removida da lista. ⚠️ O e-mail dela NÃO ficou livre: esse endereço é a credencial de outra conta do sistema, e ela foi preservada. Para reaproveitar o endereço, resolva primeiro a conta que o usa."
-                : /*
+                  excluida === "apagada_email_em_uso"
+                  ? "Conta excluída e removida da lista. ⚠️ O e-mail dela NÃO ficou livre: esse endereço é a credencial de outra conta do sistema, e ela foi preservada. Para reaproveitar o endereço, resolva primeiro a conta que o usa."
+                  : /*
                    ⚠️ **A QUINTA FRASE DIZ O QUE NÃO FOI OLHADO.** A exclusão concluiu — o
                       cadastro saiu —, mas a varredura de credencial órfã precisa da chave
                       administrativa, e ela não respondeu. Afirmar que o e-mail está livre sem ter
                       conferido seria inventar um resultado.
                   */
-                  "Conta excluída e removida da lista. ⚠️ NÃO foi possível conferir se restou credencial presa no e-mail dela: a chave administrativa deste ambiente não respondeu. O cadastro saiu; o endereço pode continuar ocupado até que isso seja verificado."}
-        </p>
-      ) : null}
+                    "Conta excluída e removida da lista. ⚠️ NÃO foi possível conferir se restou credencial presa no e-mail dela: a chave administrativa deste ambiente não respondeu. O cadastro saiu; o endereço pode continuar ocupado até que isso seja verificado."}
+          </p>
+        ) : null}
 
-      <QuadroDeAcessos
-        desde={desde}
-        maisAcessaram={quemMaisAcessou(resumo, 5, vivas).map((r) => ({
-          nome: nomeDaConta(r.usuarioId),
-          total: r.total,
-        }))}
-        recentes={(recentesRes.data ?? []).map((a) => ({
-          nome: nomeDaConta(a.usuario_id as string),
-          ocorridoEm: a.ocorrido_em as string,
-        }))}
-      />
+        <ConteudoDePainel painel="estatisticas">
+          <QuadroDeAcessos
+            desde={desde}
+            maisAcessaram={quemMaisAcessou(resumo, 5, vivas).map((r) => ({
+              nome: nomeDaConta(r.usuarioId),
+              total: r.total,
+            }))}
+            recentes={(recentesRes.data ?? []).map((a) => ({
+              nome: nomeDaConta(a.usuario_id as string),
+              ocorridoEm: a.ocorrido_em as string,
+            }))}
+          />
+        </ConteudoDePainel>
 
-      <AvisoDaLista>
-        <BuscaDeUsuarios />
+        <AvisoDaLista>
+          <BuscaDeUsuarios />
 
-        {contas.length === 0 ? (
-          <div className="mt-6">
-            <EstadoVazio
-              motivo="sem-dado"
-              detalhe={
-                busca.trim()
-                  ? `Nenhuma conta com «${busca.trim()}» no nome ou no e-mail.`
-                  : "Nenhuma conta cadastrada."
-              }
-            />
-          </div>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full border-collapse text-sm" data-slot="lista-de-usuarios">
-              <thead>
-                <tr>
-                  {/* O avatar não tem rótulo visível: a coluna é a imagem, e um título ali seria ruído. */}
-                  <th className={TH}>
-                    <span className="sr-only">Avatar</span>
-                  </th>
-                  <th className={TH}>Nome</th>
-                  <th className={TH}>E-mail</th>
-                  <th className={TH}>Perfil</th>
-                  <th className={TH}>Último acesso</th>
-                  <th className={TH}>Acessos</th>
-                  <th className={TH}>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contas.map((linha, indice) => {
-                  const nome = linha.nome_exibicao ?? linha.nome ?? "";
-                  return (
-                    <tr key={linha.id}>
-                      <td className={TD}>
-                        <Avatar className="size-8">
-                          {fotos[indice] ? <AvatarImagem src={fotos[indice]!} alt="" /> : null}
-                          <AvatarRecuo className="text-xs">{iniciaisDoNome(nome)}</AvatarRecuo>
-                        </Avatar>
-                      </td>
-                      <td className={TD}>
-                        {/*
+          {contas.length === 0 ? (
+            <div className="mt-6">
+              <EstadoVazio
+                motivo="sem-dado"
+                detalhe={
+                  busca.trim()
+                    ? `Nenhuma conta com «${busca.trim()}» no nome ou no e-mail.`
+                    : "Nenhuma conta cadastrada."
+                }
+              />
+            </div>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full border-collapse text-sm" data-slot="lista-de-usuarios">
+                <thead>
+                  <tr>
+                    {/* O avatar não tem rótulo visível: a coluna é a imagem, e um título ali seria ruído. */}
+                    <th className={TH}>
+                      <span className="sr-only">Avatar</span>
+                    </th>
+                    <th className={TH}>Nome</th>
+                    <th className={TH}>E-mail</th>
+                    <th className={TH}>Perfil</th>
+                    <th className={TH}>Último acesso</th>
+                    <th className={TH}>Acessos</th>
+                    <th className={TH}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contas.map((linha, indice) => {
+                    const nome = linha.nome_exibicao ?? linha.nome ?? "";
+                    return (
+                      <tr key={linha.id}>
+                        <td className={TD}>
+                          <Avatar className="size-8">
+                            {fotos[indice] ? <AvatarImagem src={fotos[indice]!} alt="" /> : null}
+                            <AvatarRecuo className="text-xs">{iniciaisDoNome(nome)}</AvatarRecuo>
+                          </Avatar>
+                        </td>
+                        <td className={TD}>
+                          {/*
                         ⚠️ O NOME É O LINK PARA A PÁGINA DA CONTA. É o caminho clicável de
                            `/admin/usuarios/[id]`, e põe a ação onde a pessoa já está olhando.
                       */}
-                        <span className="flex flex-wrap items-center gap-2">
-                          <Link
-                            href={`/admin/usuarios/${linha.id}`}
-                            className="text-marca rounded-ciaara-sm focus-visible:ring-marca underline focus-visible:ring-2 focus-visible:outline-none"
-                          >
-                            {nome}
-                          </Link>
-                          {/* A etiqueta só existe quando é má notícia — ver a nota do cabeçalho. */}
-                          {linha.status !== "ativo" ? (
-                            <BadgeStatus tom="inativo" rotulo="Desativada" />
-                          ) : null}
-                        </span>
-                      </td>
-                      <td className={TD}>{linha.email}</td>
-                      <td className={TD}>{rotuloDoPerfil(linha.perfil)}</td>
-                      <td className={TD}>
-                        {linha.ultimo_acesso === null
-                          ? "nunca"
-                          : instanteParaLeitura(linha.ultimo_acesso)}
-                      </td>
-                      <td className={TD} data-slot="acessos-da-conta">
-                        {totalDeAcessos(resumo, linha.id)}
-                      </td>
-                      <td className={TD}>
-                        <AcoesDaLinha
-                          usuarioId={linha.id}
-                          nome={nome}
-                          email={linha.email ?? ""}
-                          ativa={linha.status === "ativo"}
-                          temCredencial={Boolean(linha.auth_user_id)}
-                          ehMinhaConta={linha.id === usuario?.id}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </AvisoDaLista>
-    </section>
+                          <span className="flex flex-wrap items-center gap-2">
+                            <Link
+                              href={`/admin/usuarios/${linha.id}`}
+                              className="text-marca rounded-ciaara-sm focus-visible:ring-marca underline focus-visible:ring-2 focus-visible:outline-none"
+                            >
+                              {nome}
+                            </Link>
+                            {/* A etiqueta só existe quando é má notícia — ver a nota do cabeçalho. */}
+                            {linha.status !== "ativo" ? (
+                              <BadgeStatus tom="inativo" rotulo="Desativada" />
+                            ) : null}
+                          </span>
+                        </td>
+                        <td className={TD}>{linha.email}</td>
+                        <td className={TD}>{rotuloDoPerfil(linha.perfil)}</td>
+                        <td className={TD}>
+                          {linha.ultimo_acesso === null
+                            ? "nunca"
+                            : instanteParaLeitura(linha.ultimo_acesso)}
+                        </td>
+                        <td className={TD} data-slot="acessos-da-conta">
+                          {totalDeAcessos(resumo, linha.id)}
+                        </td>
+                        <td className={TD}>
+                          <AcoesDaLinha
+                            usuarioId={linha.id}
+                            nome={nome}
+                            email={linha.email ?? ""}
+                            ativa={linha.status === "ativo"}
+                            temCredencial={Boolean(linha.auth_user_id)}
+                            ehMinhaConta={linha.id === usuario?.id}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </AvisoDaLista>
+      </section>
+    </ProvedorDePaineis>
   );
 }

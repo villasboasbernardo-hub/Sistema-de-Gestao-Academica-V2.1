@@ -40,6 +40,14 @@ import {
 import { dataIlegivel, dataParaLeitura } from "@/lib/formato/data";
 import { enderecoDaTurma, enderecoDoDsa } from "@/lib/navegacao/endereco-de-turma";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import {
+  ExclusaoPermanente,
+  type ExclusaoPermanenteProps,
+} from "@/components/ciaara/exclusao-permanente";
+import { DICA_SEM_LEITURA, type EstadoDaExclusao } from "@/lib/dominio/exclusao-permanente";
+import { enderecoDaEdicaoDaTurma } from "@/lib/navegacao/endereco-de-turma";
+
 import { ArquivarTurma } from "./[turma]/ArquivarTurma";
 import type { TurmaNaLista } from "./consulta";
 
@@ -247,37 +255,92 @@ const COLUNAS: readonly Coluna<TurmaNaLista>[] = [
  * propriedades são opcionais, e a tabela guarda a ordem por dentro quando ninguém a controla de fora.
  * Passar só `ordem` a deixaria presa num valor que nada atualiza — cabeçalho clicável que não ordena.
  */
-/**
- * ⚠️ **ARQUIVAR E DESARQUIVAR NA LINHA, SÓ PARA QUEM PODE** (ajuste da conferência do PR #73, 19/10/2026): a coluna
- *    nasce só com o recurso `arquivamento_de_turma` — o Admin, o Encarregado e o Ajudante da Administração
- *    Acadêmica —, e a folha é a MESMA da ficha (`ArquivarTurma`), com o mesmo aviso e a mesma Server Action. Quem
- *    decide é o banco; a coluna só não oferece o que a policy recusaria.
- */
-const COLUNA_DE_ARQUIVAR: Coluna<TurmaNaLista> = {
-  chave: "arquivar",
-  titulo: "Arquivo",
-  ordenavel: false,
-  valor: (l) => (l.arquivada ? 1 : 0),
-  celula: (l) => (
-    <ArquivarTurma codigo={l.codigo} situacao={l.status} arquivada={l.arquivada === true} naLista />
-  ),
+/** As ações da linha (spec 025, Bloco 10, RT-2): o que cada perfil pode, decidido pela página, e a ação de excluir. */
+export type AcoesDaListaDeTurmas = {
+  /** `turmas.editar`. */
+  readonly podeEditar: boolean;
+  /** O recurso `arquivamento_de_turma`/`editar`. */
+  readonly podeArquivar: boolean;
+  /** `turmas.criar` — quem exclui (D-9). */
+  readonly podeExcluir: boolean;
+  /** O estado do *Excluir* de cada turma, pelo `id`; ausente = não lido (desabilitado, D-13). */
+  readonly exclusao: Readonly<Record<string, EstadoDaExclusao>>;
+  readonly excluir: ExclusaoPermanenteProps["excluir"];
 };
+
+const SEM_LEITURA: EstadoDaExclusao = { liberada: false, dica: DICA_SEM_LEITURA, detalhe: null };
+
+/**
+ * ⚠️ **EDITAR · ARQUIVAR · EXCLUIR NA LINHA, SÓ PARA QUEM PODE** (RT-2 do Bloco 10, spec 025; o *Arquivar* veio da
+ *    conferência do PR #73, 19/10/2026): cada ícone nasce só com a permissão dele, e as folhas são as MESMAS da ficha —
+ *    `ArquivarTurma` e `ExclusaoPermanente`, com o mesmo aviso e a mesma Server Action. A arquivada não se edita nem se
+ *    exclui; a turma com registro mostra o *Excluir* desabilitado com a dica (D-COR-6). Quem decide é o banco.
+ */
+function colunaDeAcoes(acoes: AcoesDaListaDeTurmas): Coluna<TurmaNaLista> {
+  return {
+    chave: "acoes",
+    titulo: "Ações",
+    ordenavel: false,
+    valor: (l) => (l.arquivada ? 1 : 0),
+    celula: (l) => (
+      <span className="flex justify-end gap-1" data-slot="acoes-da-turma">
+        {acoes.podeEditar && l.arquivada !== true && l.cursoEmOferta !== false ? (
+          <BotaoDeIcone
+            acao="editar"
+            rotulo={`Editar a turma ${l.codigo}`}
+            variante="fantasma"
+            className="size-7"
+            tabIndex={-1}
+            href={enderecoDaEdicaoDaTurma(l.codigo)}
+            data-slot="editar-da-linha"
+          />
+        ) : null}
+        {acoes.podeArquivar ? (
+          <ArquivarTurma
+            codigo={l.codigo}
+            situacao={l.status}
+            arquivada={l.arquivada === true}
+            naLista
+            naGrade
+          />
+        ) : null}
+        {acoes.podeExcluir && l.arquivada !== true ? (
+          <ExclusaoPermanente
+            id={l.id}
+            codigo={l.codigo}
+            nomeDoCodigo="o código da turma"
+            rotulo={`Excluir a turma ${l.codigo}`}
+            titulo={`Excluir a turma ${l.codigo} permanentemente?`}
+            consequencia="A turma sai do sistema, com as linhas da grade, as atribuições de instrutor e o rateio. Só é possível porque ela não tem registro."
+            estado={acoes.exclusao[l.id] ?? SEM_LEITURA}
+            excluir={acoes.excluir}
+            naLinha
+            naGrade
+            slot="excluir-da-linha"
+          />
+        ) : null}
+      </span>
+    ),
+  };
+}
 
 export function TabelaDeTurmas({
   linhas,
-  podeArquivarTurmas = false,
+  acoes,
 }: {
   readonly linhas: readonly TurmaNaLista[];
-  /** O recurso `arquivamento_de_turma`/`editar` da matriz, lido pela página. */
-  readonly podeArquivarTurmas?: boolean;
+  /** As ações da linha; sem nenhuma permitida, a coluna não nasce. */
+  readonly acoes?: AcoesDaListaDeTurmas;
 }) {
   const router = useRouter();
+  const comAcoes =
+    acoes !== undefined && (acoes.podeEditar || acoes.podeArquivar || acoes.podeExcluir);
 
   return (
     <TabelaDensa
       rotulo="Turmas"
       linhas={linhas}
-      colunas={podeArquivarTurmas ? [...COLUNAS, COLUNA_DE_ARQUIVAR] : COLUNAS}
+      colunas={comAcoes && acoes ? [...COLUNAS, colunaDeAcoes(acoes)] : COLUNAS}
       chaveLinha={(l) => l.id}
       aoAtivarLinha={(l) => router.push(enderecoDaTurma(l.codigo))}
     />

@@ -143,6 +143,8 @@ select is(
         -- · o impedimento de exclusão enxerga TUDO, o rascunho inclusive (um rascunho também prende o cadastro):
         'impedimentos_de_exclusao_da_disciplina', 'impedimentos_de_exclusao_da_unidade_ensino',
         'impedimentos_de_exclusao_do_instrutor',
+        -- · spec 025 (Bloco 10, D-COR-6): o que prende a turma e o item do currículo, pelo mesmo motivo.
+        'registros_da_turma', 'registros_do_item',
         -- · leem `vw_ocupacao_ta` ou `vw_avaliacoes_situacao`/`fn_status_vista`, que já filtram o salvo (M2):
         'conflitos_da_semana', 'ocupacao_para_conflitos', 'situacao_da_avaliacao',
         -- · a proteção de vigência pela atividade global lê `lancamentos_que_travam_vigencia`, que filtra (M2):

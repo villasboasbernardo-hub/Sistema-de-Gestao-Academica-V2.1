@@ -20,7 +20,12 @@ import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
-import { esquemaDeSala, esquemaDeSituacaoDaSala } from "@/lib/validacao/sala";
+import {
+  esquemaDaNaturezaDaSala,
+  esquemaDeSala,
+  esquemaDeSituacaoDaSala,
+} from "@/lib/validacao/sala";
+import { esquemaDaExclusaoPermanente } from "@/lib/validacao/exclusao";
 
 export type ResultadoDeSala =
   { readonly ok: true; readonly valor: string } | { readonly ok: false; readonly erro: string };
@@ -108,4 +113,52 @@ export async function desativarSala(entrada: unknown): Promise<ResultadoDeSala> 
 /** Devolve a sala à lista de escolha (`FR-029.5`). */
 export async function reativarSala(entrada: unknown): Promise<ResultadoDeSala> {
   return mudarSituacao(entrada, true);
+}
+
+/**
+ * Editar a sala — **só a natureza** (spec 025, D-31): o nome é o texto gravado nas turmas (`FR-029.5`), e renomear
+ * apagaria a ligação.
+ */
+export async function editarNaturezaDaSala(entrada: unknown): Promise<ResultadoDeSala> {
+  const conferido = esquemaDaNaturezaDaSala.safeParse(entrada);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  const { valor, natureza } = conferido.data;
+  const supabase = await criarClienteDeServidor();
+  const { data, error } = await supabase
+    .from("config_listas")
+    .update({ metadados: { ambiente_virtual: natureza === "virtual" } } as never)
+    .eq("lista", "salas")
+    .eq("valor", valor)
+    .select("valor");
+  if (error) return falha(traduzirRecusa(error as ErroDoBanco));
+  if (!data || data.length === 0) {
+    return falha("O seu perfil não edita sala, ou a sala não existe mais.");
+  }
+  revalidar();
+  return { ok: true, valor };
+}
+
+/**
+ * Excluir a sala **permanentemente** — a varredura do Bloco 10 (spec 025, D-30). O nome digitado confirma.
+ *
+ * ⚠️ **SEM `delete` AQUI** (regra 4): `public.excluir_sala` confere a permissão (`parametros.criar`), o nome e a turma
+ *    que a usa — de qualquer situação.
+ */
+export async function excluirSala(entrada: unknown): Promise<ResultadoDeSala> {
+  const conferido = esquemaDaExclusaoPermanente.safeParse(entrada);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  const supabase = await criarClienteDeServidor();
+  const { error } = await supabase.rpc("excluir_sala", {
+    p_sala_id: conferido.data.id,
+    p_nome_confirmacao: conferido.data.codigoConfirmacao,
+  });
+  if (error) {
+    if (error.code === "42501" && error.hint !== "rastro_imutavel") {
+      return falha("O seu perfil não exclui sala.");
+    }
+    if (error.code === "P0002") return falha("A sala não existe mais.");
+    return falha(traduzirRecusa(error as ErroDoBanco));
+  }
+  revalidar();
+  return { ok: true, valor: conferido.data.codigoConfirmacao };
 }

@@ -77,6 +77,8 @@ export type UnidadeDaLinha = {
 /** Um item de avaliação do currículo da disciplina (spec 014, FR-038). */
 export type ItemDoCurriculoDaLinha = {
   readonly id: string;
+  /** O código do item — o que se digita para excluí-lo (spec 025, D-12). */
+  readonly codigo: string;
   readonly rotulo: string;
   readonly instrumento: string;
   readonly numero: number;
@@ -301,7 +303,7 @@ export async function lerGradeDeDisciplinas(filtro: {
     supabase
       .from("avaliacoes_curriculo")
       .select(
-        "id, disciplina_id, ordem, numero, ta_aplicacao, ta_vista, origem_item, status, instrumento:config_listas!avaliacoes_curriculo_instrumento_id_fkey(valor)",
+        "id, codigo, disciplina_id, ordem, numero, ta_aplicacao, ta_vista, origem_item, status, instrumento:config_listas!avaliacoes_curriculo_instrumento_id_fkey(valor)",
       )
       .in("disciplina_id", idsDasDisciplinas)
       .order("ordem"),
@@ -312,6 +314,7 @@ export async function lerGradeDeDisciplinas(filtro: {
     const lista = itensPorDisciplina.get(i.disciplina_id) ?? [];
     lista.push({
       id: i.id,
+      codigo: i.codigo as string,
       rotulo: `${instrumento} ${i.numero}`,
       instrumento,
       numero: Number(i.numero),

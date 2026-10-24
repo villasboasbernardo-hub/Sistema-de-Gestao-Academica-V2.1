@@ -56,7 +56,7 @@ export type ParametrosDaListaDeTurmas = {
 export const COLUNAS_DA_LISTA_DE_TURMAS =
   "id, codigo, turma, ano_letivo, status, modalidade, data_inicio, data_termino, alunos, curso_id, " +
   /* Spec 022 (FR-003): a classificação do curso dá a ordem da lista. */
-  "cursos!inner(codigo, nome_curso, classificacao), " +
+  "cursos!inner(codigo, nome_curso, classificacao, status), " +
   /* Spec 018 (Bloco 3): o regime nomeado da turma, para o saldo (C-9). */
   "regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(regime_tempos)";
 
@@ -113,6 +113,7 @@ export type LinhaBrutaDeTurma = {
     readonly codigo: string;
     readonly nome_curso: string;
     readonly classificacao?: string | null;
+    readonly status?: string | null;
   } | null;
   readonly regime?: { readonly regime_tempos: number } | null;
 };
@@ -146,6 +147,11 @@ export type TurmaNaLista = {
   readonly emAtraso?: boolean;
   /** D-COR-5 (spec 017): arquivada — só aparece com *Mostrar arquivadas*, e com o selo ao lado da situação. */
   readonly arquivada?: boolean;
+  /**
+   * O curso está em oferta (`cursos.status <> 'inativo'`). Fora dela a policy `turmas_editar` recusa a edição, e o
+   * *Editar* da linha levaria a um beco — a ficha e a aba Turmas do curso já o escondem (revisão do PR #90).
+   */
+  readonly cursoEmOferta?: boolean;
 };
 
 /** As situações que mostram o Saldo (P-4, Bernardo Villas Boas, 17/10/2026); as demais mostram «—». */
@@ -252,6 +258,7 @@ export function paraLinhasDeTurma(brutas: readonly LinhaBrutaDeTurma[]): readonl
       cursoCodigo: t.cursos?.codigo ?? "—",
       cursoNome: t.cursos?.nome_curso ?? "—",
       cursoClassificacao: t.cursos?.classificacao ?? null,
+      cursoEmOferta: t.cursos?.status !== "inativo",
       progresso: null,
       saldo: null,
       regimeTempos: t.regime?.regime_tempos ?? null,

@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  esquemaDaSituacaoNaEdicao,
   esquemaDaTrocaDeSituacao,
   esquemaDeEdicaoDaTurma,
   esquemaDeTurma,
@@ -293,5 +294,44 @@ describe("`FR-015.4` da spec 016 · a situação tem um caminho só", () => {
     expect(r.success).toBe(true);
     // REGRA DOS VALORES ESPERADOS: (a), spec 017 (D-COR-4, 19/10/2026) — a observação da troca entra; o resto não.
     if (r.success) expect(Object.keys(r.data).sort()).toEqual(["codigo", "observacao", "status"]);
+  });
+});
+
+/*
+ * ⚠️ **SPEC 025 (Bloco 10, D-2): A SITUAÇÃO VOLTOU A *EDITAR TURMA*, À PARTE DOS CAMPOS** (RT-3: *"um único Editar edita
+ *    tudo"*). O esquema dos campos continua descartando `status` (acima); quem lê a situação e a observação da troca é
+ *    `esquemaDaSituacaoNaEdicao`, e a ação a grava pela função do banco que anota o histórico.
+ */
+describe("D-2 da spec 025 · a situação dentro de Editar turma", () => {
+  it("lê a situação e a observação, que é opcional e em branco vira nula", () => {
+    const r = esquemaDaSituacaoNaEdicao.safeParse({
+      ...TURMA,
+      status: "cancelada",
+      observacao_da_situacao: "  sem alunos  ",
+    });
+    expect(r.success && r.data).toEqual({
+      status: "cancelada",
+      observacao_da_situacao: "sem alunos",
+    });
+    const branco = esquemaDaSituacaoNaEdicao.safeParse({
+      status: "ativa",
+      observacao_da_situacao: " ",
+    });
+    expect(branco.success && branco.data.observacao_da_situacao).toBeNull();
+  });
+
+  it("sem a situação no corpo, não há troca", () => {
+    const r = esquemaDaSituacaoNaEdicao.safeParse({ ...TURMA, status: undefined });
+    expect(r.success && r.data.status).toBeUndefined();
+  });
+
+  it("situação fora do domínio e observação longa demais são recusadas", () => {
+    expect(esquemaDaSituacaoNaEdicao.safeParse({ status: "arquivada" }).success).toBe(false);
+    expect(
+      esquemaDaSituacaoNaEdicao.safeParse({
+        status: "ativa",
+        observacao_da_situacao: "x".repeat(501),
+      }).success,
+    ).toBe(false);
   });
 });

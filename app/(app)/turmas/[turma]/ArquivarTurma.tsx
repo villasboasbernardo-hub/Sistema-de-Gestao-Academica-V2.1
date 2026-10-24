@@ -43,6 +43,7 @@ export function ArquivarTurma({
   situacao,
   arquivada,
   naLista = false,
+  naGrade = false,
 }: {
   readonly codigo: string;
   readonly situacao: string;
@@ -50,6 +51,8 @@ export function ArquivarTurma({
   readonly arquivada: boolean;
   /** Na linha de `/turmas`: depois de gravar, a lista se relê no lugar. */
   readonly naLista?: boolean;
+  /** Dentro da grade de `/turmas` (foco itinerante): fora da tabulação. Na aba Turmas do curso, não — é tabela comum. */
+  readonly naGrade?: boolean;
 }) {
   const router = useRouter();
   const [aberto, definirAberto] = React.useState(false);
@@ -105,7 +108,7 @@ export function ArquivarTurma({
                 ? "desarquivar-turma"
                 : "arquivar-turma"
           }
-          {...(naLista ? { tabIndex: -1 } : {})}
+          {...(naGrade ? { tabIndex: -1 } : {})}
         />
       </DialogTrigger>
       <DialogContent data-slot={arquivada ? "dialogo-de-desarquivar" : "dialogo-de-arquivar"}>

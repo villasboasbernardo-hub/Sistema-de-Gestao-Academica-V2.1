@@ -192,12 +192,19 @@ describe("`FR-028` da spec 006 · as rotas de instrutor seguem o contrato humano
   });
 
   it("a listagem declara exatamente os parâmetros do contrato, na ordem dele (emenda de 15/09/2026)", () => {
-    expect(parametrosDaRota("/instrutores").map((p) => p.nome)).toEqual([...FILTROS, "ordem"]);
+    // REGRA DOS VALORES ESPERADOS: (a), spec 025 (Bloco 10, RT-6, D-26) — o `ano` escolhido, a coluna *CH do ano*.
+    expect(parametrosDaRota("/instrutores").map((p) => p.nome)).toEqual([
+      "ano",
+      ...FILTROS,
+      "ordem",
+    ]);
   });
 
   it("ficha e cadastro não têm parâmetro de consulta — identidade no caminho, rascunho fora da URL", () => {
-    expect(parametrosDaRota("/instrutores/[codigo]")).toEqual([]);
+    // Spec 025 (RT-6, D-26): a ficha ganhou o `ano` — é VISTA (carga, atribuições e alertas do ano), não rascunho.
+    expect(parametrosDaRota("/instrutores/[codigo]").map((p) => p.nome)).toEqual(["ano"]);
     expect(parametrosDaRota("/instrutores/novo")).toEqual([]);
+    expect(parametrosDaRota("/instrutores/[codigo]/editar")).toEqual([]);
   });
 
   it.each(FILTROS)("o filtro %s substitui o histórico e avisa o servidor", (nome) => {
@@ -365,6 +372,8 @@ describe("`FR-006.2` · a página do curso tem aba e turma na URL", () => {
   it("a rota existe, com a aba, a turma da Grade e os três da aba Disciplinas (spec 018)", () => {
     expect(ROTAS).toContain("/cursos/[curso]");
     expect(parametrosDaRota("/cursos/[curso]").map((p) => p.nome)).toEqual([
+      // Spec 025 (Bloco 10, RT-6, D-26): o ano escolhido — a aba Turmas, o currículo do ano.
+      "ano",
       "aba",
       "turma",
       // Spec 021 (Bloco 6): o currículo consultado na aba *Currículo*.
@@ -442,6 +451,8 @@ describe("`FR-013.1` · cadastro e edição de curso: nenhum rascunho na URL", (
     // Nenhum campo de formulário: o que se digita continua fora da URL.
     expect(parametrosDaRota("/cursos/[curso]/editar").map((p) => p.nome)).toEqual([
       "curriculo",
+      // Spec 025 (Bloco 10, D-28): as abas Cadastro e Currículo.
+      "aba",
       "parte",
       "situacao",
       "busca",
@@ -504,11 +515,12 @@ describe("⚠️ `FR-012` da spec 012 · a guarda INVERTIDA — a lista de turma
       "/turmas",
     );
     // REGRA DOS VALORES ESPERADOS: (a), spec 017 (D-COR-5, 19/10/2026) — `arquivadas` entrou: a arquivada some da
-    // lista, e o filtro é o caminho até ela.
+    // lista, e o filtro é o caminho até ela. (a), spec 025 (D-15): `excluida` — a confirmação da exclusão permanente,
+    // que chega pela URL porque a ficha deixou de existir.
     expect(
       [...parametrosDaRota("/turmas").map((p) => p.nome)].sort(),
       "os filtros da lista de turmas mudaram sem decisão nova",
-    ).toEqual(["ano", "arquivadas", "busca", "curso", "situacao"]);
+    ).toEqual(["ano", "arquivadas", "busca", "curso", "excluida", "situacao"]);
   });
 
   it("⚠️ a situação de turma NÃO é a de cadastro — são enums diferentes", () => {
