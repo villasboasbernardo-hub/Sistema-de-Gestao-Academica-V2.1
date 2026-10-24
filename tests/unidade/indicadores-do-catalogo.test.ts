@@ -40,17 +40,41 @@ const BASE: readonly CursoParaIndicador[] = [
   curso("estagio_qualificacao", null, "EST-QF-APOC"),
 ];
 
-describe("`FR-002` · os dois indicadores", () => {
-  it("conta os cursos regulares e os estágios de qualificação", () => {
+describe("spec 025 (item 6) · um cartão por classificação, os demais e o total", () => {
+  it("conta cada uma das cinco classificações", () => {
     const i = indicadoresDoCatalogo(BASE);
-    expect(i.cursosRegulares).toBe(3);
-    expect(i.estagiosDeQualificacao).toBe(2);
+    const total = (c: string) => i.cursosPorClassificacao.find((x) => x.classificacao === c)?.total;
+    expect(total("regular")).toBe(3);
+    expect(total("expedito")).toBe(2);
+    expect(total("especial")).toBe(1);
+    expect(total("estagio_qualificacao")).toBe(2);
+    expect(total("aperfeicoamento_avancado")).toBe(1);
   });
 
-  it("base vazia devolve zero nos dois, e não estoura", () => {
+  it("os seis cartões fecham com o total — inclusive os de fora das cinco (SC-006)", () => {
+    const i = indicadoresDoCatalogo([...BASE, curso("geral", 5)]);
+    expect(i.demais).toBe(1);
+    expect(i.total).toBe(BASE.length + 1);
+    expect(i.cursosPorClassificacao.reduce((s, c) => s + c.total, 0) + i.demais).toBe(i.total);
+  });
+
+  it("base vazia devolve zero em tudo, e não estoura", () => {
     const i = indicadoresDoCatalogo([]);
-    expect(i.cursosRegulares).toBe(0);
-    expect(i.estagiosDeQualificacao).toBe(0);
+    expect(i.total).toBe(0);
+    expect(i.demais).toBe(0);
+    expect(i.cursosPorClassificacao.every((c) => c.total === 0)).toBe(true);
+  });
+
+  it("o rótulo de cada cartão é o plural do Glossário", () => {
+    expect(indicadoresDoCatalogo(BASE).cursosPorClassificacao.map((c) => c.rotuloDoCartao)).toEqual(
+      [
+        "Cursos regulares",
+        "Cursos expeditos",
+        "Cursos especiais",
+        "Estágios de qualificação",
+        "Cursos de aperfeiçoamento avançado",
+      ],
+    );
   });
 });
 
@@ -84,7 +108,7 @@ describe("spec 022 (item 10) · a duração em SEMANAS de cada curso e estágio"
 describe("`FR-002` · cursos por classificação", () => {
   it("conta cada grupo, e zero é zero de verdade", () => {
     const i = indicadoresDoCatalogo(BASE);
-    expect(i.cursosPorClassificacao).toEqual([
+    expect(i.cursosPorClassificacao.map(({ rotuloDoCartao: _, ...resto }) => resto)).toEqual([
       { classificacao: "regular", rotulo: "Curso Regular", total: 3 },
       { classificacao: "expedito", rotulo: "Curso Expedito", total: 2 },
       { classificacao: "especial", rotulo: "Curso Especial", total: 1 },
@@ -110,28 +134,23 @@ describe("`FR-002` · cursos por classificação", () => {
   });
 });
 
-describe("⚠️ a metade que fecha a lista", () => {
-  it("o resultado tem EXATAMENTE quatro chaves — nada da `PEND-5a-2` entrou", () => {
+describe("⚠️ a lista continua fechada (spec 025, A-8)", () => {
+  it("o resultado tem EXATAMENTE quatro chaves: por classificação, os demais, o total e a duração", () => {
     const i = indicadoresDoCatalogo(BASE);
     expect([...Object.keys(i)].sort()).toEqual(
-      [
-        "cursosRegulares",
-        "estagiosDeQualificacao",
-        "duracaoEmSemanas",
-        "cursosPorClassificacao",
-      ].sort(),
+      ["cursosPorClassificacao", "demais", "duracaoEmSemanas", "total"].sort(),
     );
   });
 
-  it("⚠️ e nenhuma delas é 'total de cursos' nem 'turmas ativas' — são da PEND-5a-2", () => {
+  it("⚠️ 'turmas ativas' continua fora — é a parte da PEND-5a-2 que o pedido não trouxe", () => {
     const chaves = Object.keys(indicadoresDoCatalogo(BASE)).join(" ").toLowerCase();
-    expect(chaves).not.toContain("total");
     expect(chaves).not.toContain("turma");
   });
 
-  it("⚠️ classificação fora das cinco não aparece e não derruba — o banco já a recusa", () => {
+  it("⚠️ classificação fora das cinco não vira grupo: cai em demais", () => {
     const i = indicadoresDoCatalogo([...BASE, curso("geral", 5), curso("ead_semipresencial", 5)]);
     expect(i.cursosPorClassificacao).toHaveLength(5);
     expect(i.cursosPorClassificacao.reduce((s, c) => s + c.total, 0)).toBe(BASE.length);
+    expect(i.demais).toBe(2);
   });
 });

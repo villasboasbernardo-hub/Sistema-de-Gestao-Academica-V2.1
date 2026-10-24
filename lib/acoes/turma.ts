@@ -30,9 +30,15 @@ import {
   recusaSeTurmaArquivadaPeloCodigo,
 } from "@/lib/acoes/turma-arquivada";
 import { QUEM_DESARQUIVA } from "@/lib/dominio/arquivamento-da-turma";
-import { enderecoDaTurma, enderecoDaTurmaGravada } from "@/lib/navegacao/endereco-de-turma";
-import { criarClienteDeServidor } from "@/lib/supabase/server";
 import {
+  enderecoDasTurmasComExclusao,
+  enderecoDaTurma,
+  enderecoDaTurmaGravada,
+} from "@/lib/navegacao/endereco-de-turma";
+import { criarClienteDeServidor } from "@/lib/supabase/server";
+import { esquemaDaExclusaoPermanente } from "@/lib/validacao/exclusao";
+import {
+  esquemaDaSituacaoNaEdicao,
   esquemaDaTrocaDeSituacao,
   esquemaDeEdicaoDaTurma,
   esquemaDeTurma,
@@ -135,20 +141,24 @@ export async function criarTurma(cursoId: string, entrada: unknown): Promise<Res
 /**
  * Edita a turma. **Sem `codigo`**, e pedindo a linha de volta.
  *
- * ⚠️ **E SEM A SITUAÇÃO desde 17/10/2026** (spec 016, FR-015.4): ela se troca só por
- * `trocarSituacaoDaTurma`, e o esquema da edição a descarta se vier no corpo.
+ * ⚠️ **A SITUAÇÃO VOLTOU, À PARTE DOS CAMPOS** (spec 025, Bloco 10, D-2): *Editar turma* edita tudo. O esquema dos
+ * campos continua descartando `status`; a troca é lida por `esquemaDaSituacaoNaEdicao` e, **depois** de os campos
+ * gravarem, vai pela função do banco que anota o histórico com a observação (D-COR-4). Se ela for recusada, a resposta
+ * diz que os campos ficaram gravados.
  */
 export async function editarTurma(
   codigoAtual: string,
   entrada: unknown,
 ): Promise<ResultadoDeTurma> {
   const conferido = esquemaDeEdicaoDaTurma.safeParse(entrada);
+  const daSituacao = esquemaDaSituacaoNaEdicao.safeParse(entrada);
   if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  if (!daSituacao.success) return falha(primeiraMensagem(daSituacao.error.issues));
 
   const supabase = await criarClienteDeServidor();
   const { data: atual } = await supabase
     .from("turmas")
-    .select("id, curso_id")
+    .select("id, curso_id, status")
     .eq("codigo", codigoAtual)
     .maybeSingle();
   const cursoId = (atual?.curso_id as string | undefined) ?? "";
@@ -191,6 +201,15 @@ export async function editarTurma(
   revalidatePath("/cursos");
   revalidatePath(enderecoDaTurma(codigoAtual));
   if (codigo !== codigoAtual) revalidatePath(enderecoDaTurma(codigo));
+
+  /* D-2: a troca de situação, depois dos campos — pela função que anota o histórico (D-COR-4). */
+  const { status, observacao_da_situacao: observacao } = daSituacao.data;
+  if (status !== undefined && status !== (atual?.status as string | undefined)) {
+    const troca = await trocarSituacaoDaTurma({ codigo, status, observacao });
+    if (!troca.ok) {
+      return falha(`As alterações da turma foram gravadas, mas a situação não: ${troca.erro}`);
+    }
+  }
   return { ok: true, codigo, destino: enderecoDaTurma(codigo) };
 }
 
@@ -330,4 +349,41 @@ function revalidarListasDaTurma(codigo: string): void {
    * sem isto, o curso ou a turma nova só apareceria nele depois de recarregar a página.
    */
   revalidatePath("/", "layout");
+}
+
+/**
+ * Excluir a turma **permanentemente** — D-COR-6 (spec 025, D-9 a D-15).
+ *
+ * > *"Excluir turma (alerta de exclusão permanente)."* · *"…só habilitados sem semana salva/publicada ligada."* —
+ * > Bernardo Villas Boas, 24/10/2026
+ *
+ * ⚠️ **NÃO HÁ `delete` AQUI, e não pode haver**: `authenticated` não tem privilégio nem policy de `DELETE` (regra 4). O
+ *    caminho é `public.excluir_turma`, com porteiro (`turmas.criar` + alcance), o código digitado e os impedimentos
+ *    conferidos no banco, e o rastro em `exclusoes_registradas` gravado antes.
+ * ⚠️ **DEPOIS, A LISTA** — a ficha deixou de existir — com a confirmação na URL (`?excluida=`, D-15).
+ */
+export async function excluirTurma(entrada: unknown): Promise<ResultadoDeTurma> {
+  const conferido = esquemaDaExclusaoPermanente.safeParse(entrada);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+
+  const supabase = await criarClienteDeServidor();
+  const { data, error } = await supabase.rpc("excluir_turma", {
+    p_turma_id: conferido.data.id,
+    p_codigo_confirmacao: conferido.data.codigoConfirmacao,
+  });
+  if (error) {
+    if (error.code === "42501" && error.hint !== "rastro_imutavel") {
+      return falha(
+        "O seu perfil não exclui esta turma: excluem turma quem pode criá-la, no alcance do curso.",
+      );
+    }
+    if (error.code === "P0002") return falha("A turma não existe mais.");
+    return falha(traduzirRecusa(error as ErroDoBanco));
+  }
+
+  const codigo = String(
+    (data as { codigo?: string } | null)?.codigo ?? conferido.data.codigoConfirmacao,
+  );
+  revalidarListasDaTurma(codigo);
+  return { ok: true, codigo, destino: enderecoDasTurmasComExclusao(codigo) };
 }

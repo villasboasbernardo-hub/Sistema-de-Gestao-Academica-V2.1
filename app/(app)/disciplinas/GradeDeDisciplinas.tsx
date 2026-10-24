@@ -31,8 +31,15 @@
  */
 import * as React from "react";
 
+import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { BotaoLimparFiltros } from "@/components/ciaara/botao-limpar-filtros";
+import { CardKpi } from "@/components/ciaara/card-kpi";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import {
+  ConteudoDePainel,
+  GatilhoDePainel,
+  ProvedorDePaineis,
+} from "@/components/ciaara/paineis-da-pagina";
 import {
   FiltroAvancado,
   type CampoDeFiltro,
@@ -280,99 +287,97 @@ export function GradeDeDisciplinas({
   const abertas = aberta === "" ? [] : [aberta];
 
   return (
-    <div className="flex flex-col gap-4" data-slot="grade-de-disciplinas">
-      {/*
+    <ProvedorDePaineis>
+      <div className="flex flex-col gap-4" data-slot="grade-de-disciplinas">
+        {/*
         ⚠️ **NOVA DISCIPLINA É UMA PÁGINA PRÓPRIA** (spec 022, D-2): até o Bloco 7 o formulário abria no lugar, acima
            da grade (C-2 da spec 018). O ícone fica no topo, à direita (FR-001.2).
+        ⚠️ **FILTROS E ESTATÍSTICAS SÃO ÍCONES NA MESMA BARRA** (RT-4 do Bloco 10, spec 025, D-19): cada um abre o seu
+           painel, recolhido ao chegar; os indicadores e as barras da CH ficam no de Estatísticas.
       */}
-      {permissoes.criar && grade.cursoEscolhido && edicao ? (
-        <div className="flex justify-end">
-          <BotaoDeIcone
-            acao="novo"
-            rotulo="Nova disciplina"
-            variante="padrao"
-            href={enderecoDaNovaDisciplina(edicao.sigla, edicao.versao)}
-            data-slot="nova-disciplina"
+        {grade.cursoEscolhido ? (
+          <BarraDeAcoes rotulo="Ações das disciplinas">
+            <GatilhoDePainel painel="filtros" contagem={ativos} />
+            <GatilhoDePainel painel="estatisticas" />
+            {permissoes.criar && edicao ? (
+              <BotaoDeIcone
+                acao="novo"
+                rotulo="Nova disciplina"
+                variante="padrao"
+                href={enderecoDaNovaDisciplina(edicao.sigla, edicao.versao)}
+                data-slot="nova-disciplina"
+              />
+            ) : null}
+          </BarraDeAcoes>
+        ) : null}
+
+        {grade.cursoNaoAlcancado ? (
+          <Alert data-slot="curso-fora-do-alcance">
+            <AlertTitle>Este curso não está ao seu alcance</AlertTitle>
+            <AlertDescription>
+              O endereço aponta para um curso que não existe ou que o seu perfil não enxerga.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {!grade.cursoEscolhido ? (
+          <EstadoVazio
+            motivo="sem-dado"
+            titulo="Escolha um curso"
+            detalhe="A grade mostra as disciplinas de um curso. O período previsto e os instrutores de cada turma ficam na ficha da turma."
           />
-        </div>
-      ) : null}
+        ) : (
+          <>
+            {/* ── filtros ───────────────────────────────────────────────────────────────────── */}
+            <ConteudoDePainel painel="filtros">
+              <div className="flex flex-col gap-2" data-slot="filtros-da-grade">
+                <FiltroAvancado
+                  campos={campos}
+                  estado={estadoDosFiltros}
+                  aoMudar={aoMudarFiltro}
+                  ativos={ativos}
+                  titulo="Filtros"
+                />
+                <BotaoLimparFiltros haFiltroAtivo={ativos > 0} aoLimpar={limparFiltros} />
+              </div>
+            </ConteudoDePainel>
 
-      {grade.cursoNaoAlcancado ? (
-        <Alert data-slot="curso-fora-do-alcance">
-          <AlertTitle>Este curso não está ao seu alcance</AlertTitle>
-          <AlertDescription>
-            O endereço aponta para um curso que não existe ou que o seu perfil não enxerga.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      {!grade.cursoEscolhido ? (
-        <EstadoVazio
-          motivo="sem-dado"
-          titulo="Escolha um curso"
-          detalhe="A grade mostra as disciplinas de um curso. O período previsto e os instrutores de cada turma ficam na ficha da turma."
-        />
-      ) : (
-        <>
-          {/* ── indicadores ───────────────────────────────────────────────────────────────── */}
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-slot="indicadores">
-            <Indicador rotulo="Disciplinas" valor={indicadores.disciplinas} />
-            <Indicador rotulo="CH prevista (tempos)" valor={indicadores.chPrevistaTempos} />
-            {/* ⚠️ **DEGRADA COM AVISO, não com zero** (`RN-DEG-01`, `FR-081`). "0 sem instrutor"
+            {/* ── estatísticas: os cartões juntos (RT-7) e as barras da CH (item 4) ─────────── */}
+            <ConteudoDePainel painel="estatisticas">
+              <div className="grid auto-rows-fr gap-3 sm:grid-cols-2" data-slot="indicadores">
+                <CardKpi rotulo="Disciplinas" valor={indicadores.disciplinas} />
+                <CardKpi rotulo="CH prevista" valor={indicadores.chPrevistaTempos} unidade="TA" />
+              </div>
+              {/* ⚠️ **DEGRADA COM AVISO, não com zero** (`RN-DEG-01`, `FR-081`). "0 sem instrutor"
                 aqui afirmaria que está tudo designado; o certo é dizer onde isso se decide — e
                 desde 04/10/2026 o lugar é a ficha da turma. */}
-            <div className="border-borda bg-superficie rounded-ciaara border p-3 sm:col-span-2">
               <p className="text-texto-suave text-sm">
                 Instrutores, período e execução são <strong>por turma</strong>, e ficam na{" "}
                 <strong>ficha da turma</strong>.
               </p>
-            </div>
-          </div>
+              <ProporcaoDaCarga linhas={linhas} />
+            </ConteudoDePainel>
 
-          {/* ── filtros ───────────────────────────────────────────────────────────────────── */}
-          <div className="flex flex-col gap-2" data-slot="filtros-da-grade">
-            <FiltroAvancado
-              campos={campos}
-              estado={estadoDosFiltros}
-              aoMudar={aoMudarFiltro}
-              ativos={ativos}
-              titulo="Filtros"
+            {/* ── tabela ────────────────────────────────────────────────────────────────────── */}
+            <TabelaDensa
+              linhas={linhas}
+              colunas={colunas}
+              chaveLinha={(l) => l.codigo}
+              rotulo={`Disciplinas de ${grade.cursoEscolhido.codigo}`}
+              densidade="compacta"
+              motivoDoVazio="sem-dado"
+              /*
+               * ⚠️ **QUEM DECIDE ABRIR OU FECHAR É A TABELA**, pelo mesmo `abertas` que ela desenha
+               *    (conferência do PR #67): fechar grava `null`, que tira `?aberta=` da URL — o estado
+               *    inicial.
+               */
+              aoAlternarLinha={(l, abrir) => void definirAberta(abrir ? l.codigo : null)}
+              abertas={abertas}
+              detalhe={(l) => <DetalheDaDisciplina linha={l} enderecoDeEdicao={enderecoDe(l)} />}
             />
-            <BotaoLimparFiltros haFiltroAtivo={ativos > 0} aoLimpar={limparFiltros} />
-          </div>
-
-          {/* ── gráfico ───────────────────────────────────────────────────────────────────── */}
-          <ProporcaoDaCarga linhas={linhas} />
-
-          {/* ── tabela ────────────────────────────────────────────────────────────────────── */}
-          <TabelaDensa
-            linhas={linhas}
-            colunas={colunas}
-            chaveLinha={(l) => l.codigo}
-            rotulo={`Disciplinas de ${grade.cursoEscolhido.codigo}`}
-            densidade="compacta"
-            motivoDoVazio="sem-dado"
-            /*
-             * ⚠️ **QUEM DECIDE ABRIR OU FECHAR É A TABELA**, pelo mesmo `abertas` que ela desenha
-             *    (conferência do PR #67): fechar grava `null`, que tira `?aberta=` da URL — o estado
-             *    inicial.
-             */
-            aoAlternarLinha={(l, abrir) => void definirAberta(abrir ? l.codigo : null)}
-            abertas={abertas}
-            detalhe={(l) => <DetalheDaDisciplina linha={l} enderecoDeEdicao={enderecoDe(l)} />}
-          />
-        </>
-      )}
-    </div>
-  );
-}
-
-function Indicador({ rotulo, valor }: { readonly rotulo: string; readonly valor: number }) {
-  return (
-    <div className="border-borda bg-superficie rounded-ciaara border p-3">
-      {/* veste: rótulo do indicador; o número ao lado é dado */}
-      <p className="text-texto-tenue text-2xs uppercase">{rotulo}</p>
-      <p className="text-texto text-xl font-semibold tabular-nums">{valor}</p>
-    </div>
+          </>
+        )}
+      </div>
+    </ProvedorDePaineis>
   );
 }

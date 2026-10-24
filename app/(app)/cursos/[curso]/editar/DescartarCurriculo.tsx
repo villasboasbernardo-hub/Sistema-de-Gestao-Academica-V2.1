@@ -34,7 +34,8 @@ export function DescartarCurriculo({
       definirErro(resultado.erro);
       return;
     }
-    router.push(enderecoDaEdicaoDoCurso(sigla));
+    /* Spec 025 (D-28): de volta à aba *Currículo*, que é onde o descarte aconteceu. */
+    router.push(enderecoDaEdicaoDoCurso(sigla, undefined, "disciplinas"));
   }
 
   return (

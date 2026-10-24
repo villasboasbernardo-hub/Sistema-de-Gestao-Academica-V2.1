@@ -27,7 +27,7 @@ import {
 
 import { dataParaLeitura } from "@/lib/formato/data";
 
-import { FormularioDeVigencia } from "./FormularioDeVigencia";
+import { DialogoDeVigencia } from "./DialogoDeVigencia";
 
 /** O rótulo de um parâmetro no resumo da vigência. */
 function Parametro({ nome, valor }: { readonly nome: string; readonly valor: string }) {
@@ -135,21 +135,18 @@ export function SecaoDeRegime({
                         </p>
                       ) : null}
 
+                      {/* D-34 (spec 025): a correção abre em diálogo, pelo ícone *Editar* da linha. */}
                       {podeRegistrar && corrigivel ? (
-                        <details data-slot="corrigir-vigencia">
-                          <summary className="text-texto cursor-pointer text-sm">
-                            Corrigir esta vigência
-                          </summary>
-                          <div className="pt-2">
-                            <FormularioDeVigencia
-                              modo="corrigir"
-                              cursoId={cursoId}
-                              sigla={sigla}
-                              vigenciaId={v.id}
-                              inicial={valoresDaVigencia(v)}
-                            />
-                          </div>
-                        </details>
+                        <div className="flex justify-end">
+                          <DialogoDeVigencia
+                            modo="corrigir"
+                            cursoId={cursoId}
+                            sigla={sigla}
+                            vigenciaId={v.id}
+                            inicial={valoresDaVigencia(v)}
+                            periodo={`de ${dataParaLeitura(v.vigenteDe)}`}
+                          />
+                        </div>
                       ) : null}
                     </li>
                   );
@@ -160,15 +157,11 @@ export function SecaoDeRegime({
         );
       })}
 
+      {/* D-34 (spec 025): registrar abre em diálogo, pelo ícone no canto da seção (RT-1). */}
       {podeRegistrar ? (
-        <details data-slot="registrar-nova-vigencia">
-          <summary className="text-texto cursor-pointer text-sm font-medium">
-            Registrar nova vigência
-          </summary>
-          <div className="pt-2">
-            <FormularioDeVigencia modo="registrar" cursoId={cursoId} sigla={sigla} />
-          </div>
-        </details>
+        <div className="flex justify-end">
+          <DialogoDeVigencia modo="registrar" cursoId={cursoId} sigla={sigla} />
+        </div>
       ) : (
         <p className="text-texto-suave text-sm" role="status" data-slot="sem-permissao-de-regime">
           O seu perfil consulta o regime, mas não registra vigência.

@@ -23,8 +23,15 @@
  * negativa da RLS de fato significa.
  */
 
+import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import {
+  ConteudoDePainel,
+  GatilhoDePainel,
+  ProvedorDePaineis,
+} from "@/components/ciaara/paineis-da-pagina";
+import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { escalaDeLinhas } from "@/lib/dominio/antiguidade";
@@ -32,8 +39,9 @@ import { capacitacaoDoCadastro } from "@/lib/dominio/capacitacao-didatica";
 import { graficosDeInstrutores } from "@/lib/dominio/graficos-instrutor";
 import { indicadoresDeInstrutores } from "@/lib/dominio/indicadores-instrutor";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { anoCorrente } from "@/lib/formato/ano-corrente";
+import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
 import { lerParametros } from "@/lib/navegacao/esquema";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import {
@@ -73,7 +81,9 @@ export default async function Instrutores({
     ordem: String(valores.ordem),
   };
 
-  const ano = anoCorrente();
+  /* RT-6 (spec 025, D-26): a coluna *CH do ano* é a do ano escolhido. */
+  const escolha = await anoEscolhido(String(valores.ano));
+  const ano = escolha.ano;
   const supabase = await criarClienteDeServidor();
   const [usuario, { data, error }, cargaRes, cursosRes, escalaRes, opcoesRes] = await Promise.all([
     usuarioDaSessao(),
@@ -182,62 +192,97 @@ export default async function Instrutores({
   const opcoes = opcoesDosFiltros(opcoesRes.data ?? [], cursosRes.data ?? [], escala);
   const podeLer = pode(permissoes, "instrutores", "ler");
 
+  /* RT-4 (spec 025, D-18): o número no ícone é a mesma régua do *Limpar filtros*; a ordem não é filtro. */
+  const { busca, om, categoria, capacitacao, regime, escolaridade, posto, circulo } = parametros;
+  const { curso, classificacao, habilitado, selecionado, situacao } = parametros;
+  const ativos = filtrosForaDoPadrao("/instrutores", {
+    busca,
+    om,
+    categoria,
+    capacitacao,
+    regime,
+    escolaridade,
+    posto,
+    circulo,
+    curso,
+    classificacao,
+    habilitado,
+    selecionado,
+    situacao,
+  });
+
   return (
-    <section className="flex flex-col gap-5">
-      <header className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-texto text-lg font-semibold">Instrutores</h1>
-          {/* ⚠️ Oculto para quem não pode criar — e a RLS nega se a ação vier por fora da tela. */}
-          <SePodeVer permissoes={permissoes} recurso="instrutores" acao="criar">
-            <BotaoDeIcone
-              acao="novo"
-              rotulo="Novo instrutor"
-              variante="padrao"
-              href="/instrutores/novo"
+    <ProvedorDePaineis>
+      <section className="flex flex-col gap-5">
+        <header className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-texto text-lg font-semibold">Instrutores</h1>
+            <BarraDeAcoes rotulo="Ações dos instrutores">
+              <SeletorDeAno
+                ano={ano}
+                vigente={escolha.vigente}
+                origem={escolha.origem}
+                rota="/instrutores"
+              />
+              <GatilhoDePainel painel="filtros" contagem={ativos} />
+              <GatilhoDePainel painel="estatisticas" />
+              {/* ⚠️ Oculto para quem não pode criar — e a RLS nega se a ação vier por fora da tela. */}
+              <SePodeVer permissoes={permissoes} recurso="instrutores" acao="criar">
+                <BotaoDeIcone
+                  acao="novo"
+                  rotulo="Novo instrutor"
+                  variante="padrao"
+                  href="/instrutores/novo"
+                />
+              </SePodeVer>
+            </BarraDeAcoes>
+          </div>
+          {/* veste: a dica que explica a ordem da lista — texto fixo, nunca dado */}
+          <p className="text-texto-tenue text-xs">
+            A lista sai sempre em antiguidade. Clicar num cabeçalho reordena só a exibição.
+          </p>
+        </header>
+
+        {/* ⚠️ No topo, acima dos filtros, e recolhido — com as contagens à vista (emenda de 15/09/2026 ao FR-027). */}
+        {/* Os avisos de qualidade de cadastro saíram daqui no Bloco 7 (spec 022, FR-004.4; A-2): página Avisos. */}
+
+        <ConteudoDePainel painel="filtros">
+          <FiltrosDeInstrutores opcoes={opcoes} />
+        </ConteudoDePainel>
+
+        <ConteudoDePainel painel="estatisticas">
+          <PainelDeInstrutores indicadores={indicadores} graficos={graficos} />
+        </ConteudoDePainel>
+
+        <p className="text-texto-suave text-sm" data-slot="contagem-de-instrutores">
+          {linhas.length} instrutor(es){" "}
+          {parametros.situacao === "inativo" ? "inativo(s)" : "ativo(s)"}
+        </p>
+
+        {!cargaDisponivel && (
+          <p className="text-texto-suave text-sm" role="status" data-slot="carga-indisponivel">
+            Não foi possível ler a carga horária de {ano}. A lista continua completa; a coluna
+            mostra “—” até a leitura voltar.
+          </p>
+        )}
+
+        {linhas.length === 0 ? (
+          podeLer ? (
+            <EstadoVazio
+              motivo="sem-dado"
+              titulo="Nenhum instrutor neste recorte"
+              detalhe="O seu perfil lê o cadastro inteiro: não é falta de acesso. Afrouxe ou limpe os filtros."
             />
-          </SePodeVer>
-        </div>
-        {/* veste: a dica que explica a ordem da lista — texto fixo, nunca dado */}
-        <p className="text-texto-tenue text-xs">
-          A lista sai sempre em antiguidade. Clicar num cabeçalho reordena só a exibição.
-        </p>
-      </header>
-
-      {/* ⚠️ No topo, acima dos filtros, e recolhido — com as contagens à vista (emenda de 15/09/2026 ao FR-027). */}
-      {/* Os avisos de qualidade de cadastro saíram daqui no Bloco 7 (spec 022, FR-004.4; A-2): página Avisos. */}
-
-      <FiltrosDeInstrutores opcoes={opcoes} />
-
-      <PainelDeInstrutores indicadores={indicadores} graficos={graficos} />
-
-      <p className="text-texto-suave text-sm" data-slot="contagem-de-instrutores">
-        {linhas.length} instrutor(es){" "}
-        {parametros.situacao === "inativo" ? "inativo(s)" : "ativo(s)"}
-      </p>
-
-      {!cargaDisponivel && (
-        <p className="text-texto-suave text-sm" role="status" data-slot="carga-indisponivel">
-          Não foi possível ler a carga horária de {ano}. A lista continua completa; a coluna mostra
-          “—” até a leitura voltar.
-        </p>
-      )}
-
-      {linhas.length === 0 ? (
-        podeLer ? (
-          <EstadoVazio
-            motivo="sem-dado"
-            titulo="Nenhum instrutor neste recorte"
-            detalhe="O seu perfil lê o cadastro inteiro: não é falta de acesso. Afrouxe ou limpe os filtros."
-          />
+          ) : (
+            <EstadoVazio
+              motivo="sem-permissao"
+              detalhe="O seu perfil não lê o cadastro de instrutores. Fale com o Admin se precisar."
+            />
+          )
         ) : (
-          <EstadoVazio
-            motivo="sem-permissao"
-            detalhe="O seu perfil não lê o cadastro de instrutores. Fale com o Admin se precisar."
-          />
-        )
-      ) : (
-        <TabelaDeInstrutores linhas={linhas} ano={ano} />
-      )}
-    </section>
+          <TabelaDeInstrutores linhas={linhas} ano={ano} />
+        )}
+      </section>
+    </ProvedorDePaineis>
   );
 }

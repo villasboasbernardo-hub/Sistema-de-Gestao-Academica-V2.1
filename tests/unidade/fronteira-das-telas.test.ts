@@ -141,9 +141,6 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/instrutores/PainelDeDisciplinas.tsx": "marcar e desmarcar habilitações",
   "app/(app)/instrutores/[codigo]/AcoesDeInstrutor.tsx": "desativar e reativar, com confirmação",
   "app/(app)/instrutores/[codigo]/ExcluirInstrutor.tsx": "a exclusão com código de confirmação",
-  // Spec 016 (FR-010.1): a ficha abre em leitura, e o formulário fica atrás de «Editar instrutor».
-  "app/(app)/instrutores/[codigo]/EdicaoDoInstrutor.tsx":
-    "recolher o formulário de edição atrás de «Editar instrutor» — estado efêmero de aberto/fechado",
 
   // ── Épico 5 (a), PR 2: cursos, turmas, salas e regime ──────────────────────────────────────
   "app/(app)/cursos/FiltrosDoCatalogo.tsx": "os filtros do catálogo, na URL",
@@ -170,26 +167,18 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/cursos/[curso]/editar/LimitesDoCurriculo.tsx":
     "declarar, editar e retirar os limites de AEC, TAD e TR, com a justificativa da correção",
   "app/(app)/cursos/[curso]/editar/PartesDoCurriculo.tsx": "trocar de parte escrevendo na URL",
+  // Spec 025 (Bloco 10, D-28): as abas Cadastro e Currículo de *Editar curso*, na URL.
+  "app/(app)/cursos/[curso]/editar/AbasDaEdicaoDoCurso.tsx": "trocar de aba escrevendo na URL",
+  // Spec 025 (D-34): registrar e corrigir a vigência do regime em diálogo — aberto ou fechado é estado de tela.
+  "app/(app)/cursos/[curso]/editar/DialogoDeVigencia.tsx":
+    "abrir o diálogo de registrar ou corrigir a vigência, e fechá-lo quando grava",
   "app/(app)/turmas/FormularioDeTurma.tsx": "criar e editar turma, com o diálogo do limite",
-  /*
-   * ⚠️ Ele existe porque o `Collapsible` é folha de cliente e a FICHA não pode ser: importá-lo em
-   *    `page.tsx` poria o marcador na página e contaminaria a subárvore. Ele recebe o formulário
-   *    por `children`, como o `PainelRetratil` faz com a lista do menu.
-   */
-  "app/(app)/turmas/[turma]/EdicaoDaTurma.tsx":
-    "recolher o formulário de edição atrás de «Editar turma» — estado efêmero de aberto/fechado",
-  // Spec 016 (FR-015.1): a situação se troca por um diálogo ao lado do selo do cabeçalho.
-  "app/(app)/turmas/[turma]/TrocarSituacao.tsx":
-    "o diálogo de «Trocar situação» — abrir, escolher e gravar pela ação própria",
   // Spec 017 (D-COR-3): o TA fora do DSA no detalhe da disciplina — lista, formulário e «Desfazer».
   "app/(app)/turmas/[turma]/TaForaDoDsa.tsx":
     "registrar e desfazer TA fora do DSA — formulário com o seletor único de instrutor",
   // Spec 017 (D-COR-5): arquivar (com o aviso de não concluída) e desarquivar, no cabeçalho da ficha.
   "app/(app)/turmas/[turma]/ArquivarTurma.tsx":
     "os diálogos de «Arquivar turma» e «Desarquivar» — abrir, avisar e gravar pela ação própria",
-  // Spec 017, ajuste de 19/10/2026: o painel mostra um ano só, e o ano se troca por botão, na URL.
-  "app/(app)/turmas/AnoDoPainel.tsx":
-    "o seletor de ano do painel de turmas, escrevendo o `ano` da URL por `useParametro`",
   "app/(app)/turmas/FiltrosDeTurmas.tsx":
     "os quatro filtros da lista de turmas, escrevendo a URL por `useParametro`",
   "app/(app)/turmas/TabelaDeTurmas.tsx":

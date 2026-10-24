@@ -17,6 +17,10 @@
  *
  * ⚠️ **A RECUSA OFERECE A SAÍDA** (`FR-022`): *desative em vez de excluir*. Recusar sem próximo passo
  * é o que faz alguém tentar de novo do mesmo jeito.
+ *
+ * ⚠️ **COM O ESTADO LIDO NO BANCO, O ÍCONE JÁ CHEGA DESABILITADO** (spec 025, Bloco 10, D-32; RT-2): a página pergunta
+ * os impedimentos ao abrir, e a disciplina ou a UE com registro mostra o *Excluir* com a dica *"tem registros: use
+ * Desativar"*, como as exclusões novas. A recusa no clique continua para o que mudar entre a leitura e o clique.
  */
 "use client";
 
@@ -41,6 +45,7 @@ import { excluirDisciplina } from "@/lib/acoes/disciplina";
 import { excluirUnidadeEnsino } from "@/lib/acoes/unidade-ensino";
 import { confirmacaoDaGravacao } from "@/lib/dominio/confirmacao-de-gravacao";
 import { codigoConfere, type TipoExcluivel } from "@/lib/dominio/exclusao-de-disciplina";
+import type { EstadoDaExclusao } from "@/lib/dominio/exclusao-permanente";
 
 export function DialogoDeExclusao({
   tipo,
@@ -48,6 +53,7 @@ export function DialogoDeExclusao({
   codigo,
   identificador,
   destinoAoExcluir,
+  estado,
 }: {
   readonly tipo: TipoExcluivel;
   readonly nome: string;
@@ -55,6 +61,8 @@ export function DialogoDeExclusao({
   readonly identificador: string;
   /** Spec 022 (D-2): na página própria da disciplina, para onde ir depois de excluí-la — a página deixa de existir. */
   readonly destinoAoExcluir?: string;
+  /** O estado lido no banco (D-32); sem ele, o ícone abre o diálogo e quem recusa é a exclusão. */
+  readonly estado?: EstadoDaExclusao;
 }) {
   const router = useRouter();
   const [digitado, setDigitado] = React.useState("");
@@ -91,6 +99,20 @@ export function DialogoDeExclusao({
   }
 
   const liberado = codigoConfere(digitado, codigo);
+  const rotulo = tipo === "disciplina" ? "Excluir disciplina" : `Excluir a unidade ${nome}`;
+
+  if (estado && !estado.liberada) {
+    return (
+      <BotaoDeIcone
+        acao="excluir"
+        rotulo={estado.detalhe ? `${rotulo}. ${estado.detalhe}` : rotulo}
+        variante="destrutivo"
+        indisponivel={estado.dica ?? "indisponível"}
+        data-slot="abrir-exclusao"
+        data-bloqueado="true"
+      />
+    );
+  }
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
@@ -98,9 +120,10 @@ export function DialogoDeExclusao({
         {/* Spec 022 (FR-001): o gatilho é o ícone; o texto continua dentro do diálogo (A-1). */}
         <BotaoDeIcone
           acao="excluir"
-          rotulo={tipo === "disciplina" ? "Excluir disciplina" : "Excluir"}
+          rotulo={rotulo}
           variante="destrutivo"
           data-slot="abrir-exclusao"
+          data-bloqueado="false"
         />
       </DialogTrigger>
 

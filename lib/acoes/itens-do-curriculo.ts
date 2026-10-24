@@ -19,6 +19,7 @@ import { revalidatePath } from "next/cache";
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
 import { comJustificativa, pedeJustificativa } from "@/lib/acoes/justificativa";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
+import { esquemaDaExclusaoPermanente } from "@/lib/validacao/exclusao";
 import {
   esquemaDaSituacaoDoItem,
   esquemaDoItemDoCurriculo,
@@ -160,5 +161,35 @@ export async function mudarSituacaoDoItem(entrada: unknown): Promise<ResultadoDo
   if (!data || data.length === 0) return { ok: false, erro: SEM_PERMISSAO };
   revalidatePath("/cursos/[curso]", "page");
   revalidatePath("/turmas", "layout");
+  return { ok: true };
+}
+
+/**
+ * Excluir o item de avaliação do currículo **permanentemente** — a varredura do Bloco 10 (spec 025, D-30).
+ *
+ * ⚠️ **SEM `delete` AQUI** (regra 4): `public.excluir_item_de_avaliacao_do_curriculo` confere no banco a permissão
+ *    (`disciplinas.criar` e o alcance), o código digitado e o que prende — avaliação lançada, arbitragem, correção
+ *    registrada, currículo em uso.
+ */
+export async function excluirItemDoCurriculo(entrada: unknown): Promise<ResultadoDoItem> {
+  const conferido = esquemaDaExclusaoPermanente.safeParse(entrada);
+  if (!conferido.success) {
+    return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const supabase = await criarClienteDeServidor();
+  const { error } = await supabase.rpc("excluir_item_de_avaliacao_do_curriculo", {
+    p_item_id: conferido.data.id,
+    p_codigo_confirmacao: conferido.data.codigoConfirmacao,
+  });
+  if (error) {
+    if (error.code === "42501" && error.hint !== "rastro_imutavel") {
+      return { ok: false, erro: "O seu perfil não exclui avaliação do currículo." };
+    }
+    if (error.code === "P0002") return { ok: false, erro: "O item não existe mais." };
+    return { ok: false, erro: traduzirRecusa(error as ErroDoBanco) };
+  }
+  revalidatePath("/cursos/[curso]", "page");
+  revalidatePath("/cursos/[curso]/editar", "page");
+  revalidatePath("/cursos/[curso]/editar/disciplinas/[disciplina]", "page");
   return { ok: true };
 }

@@ -30,6 +30,8 @@ export type MolduraDeGraficoProps = {
   readonly motivoDoVazio?: MotivoDoVazio;
   readonly altura?: number;
   readonly className?: string;
+  /** A legenda que alterna os grupos (RT-5); sem ela, a legenda fixa das séries. */
+  readonly legenda?: React.ReactNode;
   readonly children: React.ReactNode;
 };
 
@@ -60,6 +62,7 @@ export function MolduraDeGrafico({
   motivoDoVazio = "sem-dado",
   altura = 260,
   className,
+  legenda,
   children,
 }: MolduraDeGraficoProps) {
   const recusa = conferirTetoDeSeries(series);
@@ -103,7 +106,7 @@ export function MolduraDeGrafico({
     <figure data-slot="moldura-grafico" className={cn("flex flex-col gap-2", className)}>
       <figcaption className="text-texto-suave text-sm font-medium">{rotulo}</figcaption>
       <div style={{ height: altura }}>{children}</div>
-      <LegendaComForma series={series} />
+      {legenda ?? <LegendaComForma series={series} />}
     </figure>
   );
 }
@@ -129,5 +132,94 @@ export function LegendaComForma({ series }: { series: readonly Serie[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Um grupo na legenda interativa: a fatia, a barra ou a série. */
+export type ItemDaLegenda = {
+  readonly chave: string;
+  readonly texto: string;
+  readonly marcador: React.ReactNode;
+  readonly oculto: boolean;
+  /** O número da fatia, na pizza de muitas fatias. */
+  readonly numero?: number;
+};
+
+/**
+ * A legenda que **oculta e mostra o grupo** — RT-5 do Bloco 10 (spec 025, D-22).
+ *
+ * > *"Todo gráfico é interativo: clicar na legenda ou na série oculta/mostra o grupo."* — Bernardo Villas Boas,
+ * > 24/10/2026
+ *
+ * ⚠️ **CADA ITEM É UM BOTÃO DE ALTERNAR** (`aria-pressed` = à vista): é o caminho por teclado e por leitor de tela, e o
+ *    clique no desenho é só o atalho de mouse. ⚠️ **ELA CONTINUA SENDO A LEITURA EM TEXTO DO GRÁFICO**: o oculto fica
+ *    na lista, riscado, com o valor — não some, senão a legenda deixaria de dizer o que o gráfico tem.
+ */
+export function LegendaInterativa({
+  rotulo,
+  itens,
+  aoAlternar,
+  aoMostrarTodos,
+  numerada = false,
+  slot = "legenda-de-grafico",
+}: {
+  /** O nome do gráfico, para o nome acessível da lista. */
+  readonly rotulo: string;
+  readonly itens: readonly ItemDaLegenda[];
+  readonly aoAlternar: (chave: string) => void;
+  readonly aoMostrarTodos: () => void;
+  readonly numerada?: boolean;
+  readonly slot?: string;
+}) {
+  const algumOculto = itens.some((i) => i.oculto);
+  const Lista = numerada ? "ol" : "ul";
+  return (
+    <div className="mt-2 flex flex-col gap-1">
+      <Lista
+        data-slot={slot}
+        aria-label={`Legenda de ${rotulo} — clique para ocultar ou mostrar`}
+        className={cn(
+          "text-texto-suave text-xs",
+          numerada ? "grid gap-x-4 gap-y-1 sm:grid-cols-2" : "flex flex-wrap gap-x-4 gap-y-1",
+        )}
+      >
+        {itens.map((item) => (
+          <li
+            key={item.chave}
+            {...(item.numero === undefined ? {} : { "data-fatia": item.numero })}
+            data-oculto={item.oculto ? "sim" : "nao"}
+          >
+            <button
+              type="button"
+              aria-pressed={!item.oculto}
+              onClick={() => aoAlternar(item.chave)}
+              data-slot="alternar-grupo"
+              className={cn(
+                "rounded-ciaara focus-visible:ring-marca flex items-start gap-1.5 text-left focus-visible:ring-2 focus-visible:outline-none",
+                item.oculto ? "line-through opacity-60" : "hover:text-texto",
+              )}
+            >
+              {item.marcador}
+              {item.numero === undefined ? null : (
+                <span className="text-texto w-5 shrink-0 text-right font-medium tabular-nums">
+                  {item.numero}.
+                </span>
+              )}
+              <span className="min-w-0">{item.texto}</span>
+            </button>
+          </li>
+        ))}
+      </Lista>
+      {algumOculto ? (
+        <button
+          type="button"
+          onClick={aoMostrarTodos}
+          data-slot="mostrar-todos"
+          className="text-marca rounded-ciaara focus-visible:ring-marca self-start text-xs underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+        >
+          Mostrar todos
+        </button>
+      ) : null}
+    </div>
   );
 }

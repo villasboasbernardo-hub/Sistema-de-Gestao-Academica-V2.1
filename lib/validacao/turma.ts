@@ -197,6 +197,15 @@ const observacaoDaTurma = z
   .transform((v) => (v === "" ? null : v));
 
 /**
+ * A troca de situação **dentro de Editar turma** (spec 025, Bloco 10, D-2): a situação e a observação vêm no mesmo
+ * corpo do formulário, e a ação as lê à parte dos campos (`esquemaDeEdicaoDaTurma` continua descartando a situação).
+ */
+export const esquemaDaSituacaoNaEdicao = z.object({
+  status: situacao.optional(),
+  observacao_da_situacao: observacaoDaTurma,
+});
+
+/**
  * A **troca de situação** pelo botão da ficha: o código da turma, a situação e a observação — D-COR-4: *"status da
  * turma com observação em toda troca"*. Nada mais entra.
  */

@@ -25,11 +25,16 @@
  * **uma** série — "habilitados × selecionados" em duas cores, posto e OM com uma cor por barra. Com
  * várias séries a cor continua sendo da série. Toda cor segue vindo de `var(--serie-N)`.
  *
+ * ⚠️ **INTERATIVO** desde 24/10/2026 (RT-5 do Bloco 10, spec 025, D-22): a legenda é feita de botões que ocultam e
+ * mostram o grupo — com **uma** série, cada **categoria** (a barra); com várias, cada **série** —, e clicar na barra faz
+ * o mesmo. A cor é a de origem: ocultar uma barra não repinta as outras.
+ *
  * ⚠️ SEM ANIMAÇÃO DE ENTRADA. A preferência por menos movimento (`FR-029`) valeria de qualquer
  * forma, e a impressão captura o quadro errado quando há animação.
  */
 "use client";
 
+import * as React from "react";
 import {
   Bar,
   BarChart,
@@ -41,8 +46,17 @@ import {
   YAxis,
 } from "recharts";
 
-import { MolduraDeGrafico } from "@/components/graficos/moldura";
-import { corDaSerie, SIMBOLO_DA_FORMA, type Serie } from "@/components/graficos/tipos";
+import {
+  LegendaInterativa,
+  MarcadorDaSerie,
+  MolduraDeGrafico,
+} from "@/components/graficos/moldura";
+import {
+  alternarGrupo,
+  corDaSerie,
+  SIMBOLO_DA_FORMA,
+  type Serie,
+} from "@/components/graficos/tipos";
 
 /** Até quantas categorias o rótulo do eixo vai reto; acima, todos aparecem inclinados. */
 const ROTULOS_RETOS_ATE = 8;
@@ -54,10 +68,21 @@ export type GraficoBarrasProps = {
   readonly className?: string;
   /** Uma cor por categoria do eixo, quando há uma série só. */
   readonly corPorCategoria?: boolean;
+  /** O nome do eixo vertical (*"Tempos de aula (TA)"*) — spec 025, item 4. */
+  readonly rotuloDoEixoY?: string;
+  /**
+   * O texto de cada categoria na legenda, quando difere do nome do eixo (as disciplinas: o eixo leva o código, a
+   * legenda *"código — nome"*). Sem ele, a legenda usa o nome do eixo.
+   */
+  readonly legendaDaCategoria?: (nome: string) => string;
+  /** A unidade depois do valor na legenda (*"12 TA"*), quando o eixo a declara. */
+  readonly unidadeNaLegenda?: string;
 };
 
+type Linha = { nome: string; [chave: string]: string | number };
+
 /** Pivota as séries para a forma que a biblioteca espera: uma linha por categoria do eixo. */
-function paraLinhas(series: readonly Serie[]): Record<string, string | number>[] {
+function paraLinhas(series: readonly Serie[]): Linha[] {
   const categorias: string[] = [];
   for (const serie of series) {
     for (const ponto of serie.pontos) {
@@ -65,7 +90,7 @@ function paraLinhas(series: readonly Serie[]): Record<string, string | number>[]
     }
   }
   return categorias.map((nome) => {
-    const linha: Record<string, string | number> = { nome };
+    const linha: Linha = { nome };
     for (const serie of series) {
       const ponto = serie.pontos.find((p) => p.nome === nome);
       // ⚠️ Categoria ausente numa série vira 0, e NÃO some: uma barra que desaparece faz o leitor
@@ -82,25 +107,77 @@ export function GraficoBarras({
   altura = 260,
   className,
   corPorCategoria = false,
+  rotuloDoEixoY,
+  legendaDaCategoria,
+  unidadeNaLegenda,
 }: GraficoBarrasProps) {
-  const linhas = paraLinhas(series);
+  const [ocultos, definirOcultos] = React.useState<ReadonlySet<string>>(() => new Set());
+  const todasAsLinhas = paraLinhas(series);
+  /* RT-5: com uma série, o grupo é a CATEGORIA; com várias, é a SÉRIE. */
+  const porCategoriaNaLegenda = series.length === 1;
   const porCategoria = corPorCategoria && series.length === 1;
+  const grupos = porCategoriaNaLegenda
+    ? todasAsLinhas.map((l) => l.nome)
+    : series.map((s) => s.chave);
+  const alternar = (grupo: string) =>
+    definirOcultos((atual) => alternarGrupo(atual, grupo, grupos));
+  const mostrarTodos = () => definirOcultos(new Set());
+
+  /* O índice de origem fica com cada linha e cada série: é dele que sai a cor. */
+  const linhas = todasAsLinhas
+    .map((linha, indice) => ({ linha, indice }))
+    .filter(({ linha }) => !porCategoriaNaLegenda || !ocultos.has(linha.nome));
+  const seriesVisiveis = series
+    .map((serie, indice) => ({ serie, indice }))
+    .filter(({ serie }) => porCategoriaNaLegenda || !ocultos.has(serie.chave));
   /*
    * ⚠️ MUITAS CATEGORIAS: TODO RÓTULO DO EIXO APARECE, INCLINADO (spec 022, item 10 — a duração de cada curso). Sem
    *    isto a biblioteca pula rótulos quando eles não cabem, e a barra fica sem nome.
    */
   const muitas = linhas.length > ROTULOS_RETOS_ATE;
+  const primeira = series[0];
+
+  const legenda =
+    porCategoriaNaLegenda && primeira ? (
+      <LegendaInterativa
+        rotulo={rotulo}
+        aoAlternar={alternar}
+        aoMostrarTodos={mostrarTodos}
+        itens={todasAsLinhas.map((l, i) => ({
+          chave: l.nome,
+          oculto: ocultos.has(l.nome),
+          marcador: <MarcadorDaSerie serie={primeira} indice={porCategoria ? i : 0} />,
+          texto: `${legendaDaCategoria ? legendaDaCategoria(l.nome) : l.nome}: ${l[primeira.chave] ?? 0}${unidadeNaLegenda ? ` ${unidadeNaLegenda}` : ""}`,
+        }))}
+      />
+    ) : (
+      <LegendaInterativa
+        rotulo={rotulo}
+        aoAlternar={alternar}
+        aoMostrarTodos={mostrarTodos}
+        itens={series.map((serie, i) => ({
+          chave: serie.chave,
+          oculto: ocultos.has(serie.chave),
+          marcador: <MarcadorDaSerie serie={serie} indice={i} />,
+          texto: serie.rotulo,
+        }))}
+      />
+    );
 
   return (
     <MolduraDeGrafico
       series={series}
       rotulo={rotulo}
       altura={altura}
+      legenda={legenda}
       {...(className === undefined ? {} : { className })}
     >
-      <div data-slot="grafico-barras" className="h-full w-full">
+      <div data-slot="grafico-barras" data-visiveis={linhas.length} className="h-full w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={linhas} margin={{ top: 34, right: 8, bottom: 4, left: 0 }}>
+          <BarChart
+            data={linhas.map((l) => l.linha)}
+            margin={{ top: 34, right: 8, bottom: 4, left: rotuloDoEixoY ? 12 : 0 }}
+          >
             <CartesianGrid stroke="var(--borda)" vertical={false} />
             <XAxis
               dataKey="nome"
@@ -116,14 +193,33 @@ export function GraficoBarras({
               allowDecimals={false}
               tick={{ fill: "var(--texto-suave)", fontSize: 11 }}
               stroke="var(--borda-forte)"
+              {...(rotuloDoEixoY
+                ? {
+                    label: {
+                      value: rotuloDoEixoY,
+                      angle: -90,
+                      position: "insideLeft" as const,
+                      fill: "var(--texto-suave)",
+                      fontSize: 11,
+                      style: { textAnchor: "middle" },
+                    },
+                  }
+                : {})}
             />
-            {series.map((serie, i) => (
+            {seriesVisiveis.map(({ serie, indice: i }) => (
               <Bar
                 key={serie.chave}
                 dataKey={serie.chave}
                 name={serie.rotulo}
                 fill={corDaSerie(i)}
                 isAnimationActive={false}
+                className="cursor-pointer"
+                /* RT-5: clicar na barra oculta o grupo dela — a categoria, com uma série; a série, com várias. */
+                onClick={(_: unknown, n: number) => {
+                  const alvo = linhas[n];
+                  if (!porCategoriaNaLegenda) alternar(serie.chave);
+                  else if (alvo) alternar(alvo.linha.nome);
+                }}
                 /*
                  * ⚠️ O MARCADOR DE FORMA VAI EM CIMA DA BARRA, não só na legenda (`FR-018`). É o
                  * que mantém duas séries distinguíveis quando a cor some — impressa em cinza ou
@@ -141,7 +237,8 @@ export function GraficoBarras({
                   // formas em SVG. O marcador precisa de número para calcular o centro da barra.
                   const x = Number(props.x ?? 0) + Number(props.width ?? 0) / 2;
                   const y = Number(props.y ?? 0);
-                  const cor = porCategoria ? corDaSerie(props.index ?? 0) : corDaSerie(i);
+                  const origem = linhas[props.index ?? 0]?.indice ?? 0;
+                  const cor = porCategoria ? corDaSerie(origem) : corDaSerie(i);
                   return (
                     <g data-slot="rotulo-da-barra">
                       <Symbols
@@ -168,7 +265,9 @@ export function GraficoBarras({
                 }}
               >
                 {porCategoria
-                  ? linhas.map((linha, n) => <Cell key={String(linha.nome)} fill={corDaSerie(n)} />)
+                  ? linhas.map(({ linha, indice }) => (
+                      <Cell key={String(linha.nome)} fill={corDaSerie(indice)} />
+                    ))
                   : null}
               </Bar>
             ))}

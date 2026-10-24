@@ -15,6 +15,7 @@ import { comJustificativa, pedeJustificativa } from "@/lib/acoes/justificativa";
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
+import { esquemaDaExclusaoPermanente } from "@/lib/validacao/exclusao";
 import {
   esquemaDaEdicaoDoRegime,
   esquemaDaSituacaoDoRegime,
@@ -126,4 +127,27 @@ export async function reativarRegimeDeHorario(entrada: unknown): Promise<Resulta
   const conferido = esquemaDaSituacaoDoRegime.safeParse(entrada);
   if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
   return mudarSituacao(conferido.data.id, "ativo", conferido.data.justificativa);
+}
+
+/**
+ * Excluir o regime de horário **permanentemente** — a varredura do Bloco 10 (spec 025, D-30).
+ *
+ * ⚠️ **SEM `delete` AQUI** (regra 4): `public.excluir_regime_de_horario` confere no banco a permissão (`horarios.criar`
+ *    e o alcance), o código digitado e o que prende — turma que o usa, currículo em uso, correção registrada.
+ */
+export async function excluirRegimeDeHorario(entrada: unknown): Promise<ResultadoDoRegime> {
+  const conferido = esquemaDaExclusaoPermanente.safeParse(entrada);
+  if (!conferido.success) return falha(primeiraMensagem(conferido.error.issues));
+  const supabase = await criarClienteDeServidor();
+  const { error } = await supabase.rpc("excluir_regime_de_horario", {
+    p_regime_id: conferido.data.id,
+    p_codigo_confirmacao: conferido.data.codigoConfirmacao,
+  });
+  if (error) {
+    if (error.code === "42501" && error.hint !== "rastro_imutavel") return falha(SEM_ALCANCE);
+    if (error.code === "P0002") return falha("O regime de horário não existe mais.");
+    return falha(traduzirRecusa(error as ErroDoBanco));
+  }
+  revalidar();
+  return { ok: true, id: conferido.data.id };
 }

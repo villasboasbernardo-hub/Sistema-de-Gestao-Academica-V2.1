@@ -10,12 +10,29 @@
  * ⚠️ **A ABA CALENDÁRIO** (spec 023, Bloco 8, FR-005 a FR-014) só existe para quem tem `calendario.criar` ou
  *    `calendario.editar`; para os demais a página é a de antes, sem abas, e `?aba=calendario` cai na lista. Só a aba
  *    aberta é lida no servidor.
+ * ⚠️ **AS DUAS ABAS SEGUEM O ANO ESCOLHIDO** (RT-6 do Bloco 10, spec 025, D-26): a lista mostra só as atividades do ano
+ *    (as datas *De* e *Até* recortam dentro dele), e o filtro de turma oferece só as turmas do ano. O seletor é o mesmo de
+ *    todo módulo, no canto superior direito, e o *Filtros* da lista é um ícone ao lado dele (RT-4).
  */
+import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
-import { mudarSituacaoDaLinha, gravarLinhaDoCalendario } from "@/lib/acoes/calendario";
+import {
+  ConteudoDePainel,
+  GatilhoDePainel,
+  ProvedorDePaineis,
+} from "@/components/ciaara/paineis-da-pagina";
+import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
+import {
+  excluirLinhaDoCalendario,
+  gravarLinhaDoCalendario,
+  mudarSituacaoDaLinha,
+} from "@/lib/acoes/calendario";
 import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
-import { anoDoPainel } from "@/lib/dominio/painel-de-turmas";
+import { estadoDaExclusaoDoFeriado } from "@/lib/dominio/exclusao-de-feriado";
+import { estadosPorRegistro, type ImpedimentosDoRegistro } from "@/lib/dominio/exclusao-permanente";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { dataParaLeitura } from "@/lib/formato/data";
@@ -30,7 +47,6 @@ import {
   paraLinhas,
   ROTULO_DA_CATEGORIA,
 } from "./consulta";
-import { AnoDoPainel } from "../turmas/AnoDoPainel";
 import { AbasDeAtividades } from "./AbasDeAtividades";
 import { lerCalendario } from "./calendario";
 import { FiltrosDeAtividades } from "./FiltrosDeAtividades";
@@ -60,11 +76,27 @@ export default async function Atividades({
   const temCalendario = podeCriarNoCalendario || podeEditarCalendario;
   const aba = temCalendario && valores.aba === "calendario" ? "calendario" : "atividades";
 
+  const hoje = hojeNaCiaara();
+  const escolha = await anoEscolhido(String(valores.ano ?? ""), hoje);
+  const ano = escolha.ano;
+  const seletorDeAno = (
+    <SeletorDeAno ano={ano} vigente={escolha.vigente} origem={escolha.origem} rota="/atividades" />
+  );
+
   if (aba === "calendario") {
-    const hoje = hojeNaCiaara();
-    const vigente = Number(hoje.slice(0, 4));
-    const ano = anoDoPainel(String(valores.ano ?? ""), hoje);
-    const dados = await lerCalendario(supabase, ano, vigente);
+    const dados = await lerCalendario(supabase, ano);
+    /* D-COR-6 (spec 025): o que prende cada linha do calendário — numa ida só, e só para quem exclui (D-9). */
+    const idsDeFeriado = dados.linhas.filter((l) => l.origem === "feriado").map((l) => l.id);
+    const impedimentosRes =
+      podeCriarNoCalendario && idsDeFeriado.length > 0
+        ? await supabase.rpc("impedimentos_de_exclusao_dos_feriados", { p_feriados: idsDeFeriado })
+        : null;
+    const exclusao = estadosPorRegistro(
+      impedimentosRes === null || impedimentosRes.error
+        ? null
+        : ((impedimentosRes.data ?? []) as ImpedimentosDoRegistro[]),
+      estadoDaExclusaoDoFeriado,
+    );
     return (
       <div className="flex flex-col gap-4" data-slot="lista-de-atividades">
         <header className="flex flex-wrap items-start justify-between gap-3">
@@ -75,7 +107,7 @@ export default async function Atividades({
               nova e desconta capacidade do saldo das turmas que alcança.
             </p>
           </div>
-          <AnoDoPainel anos={dados.anos} ano={ano} vigente={vigente} rota="/atividades" />
+          <BarraDeAcoes rotulo="Ano das atividades">{seletorDeAno}</BarraDeAcoes>
         </header>
         <AbasDeAtividades>
           <PainelDoCalendario
@@ -87,6 +119,9 @@ export default async function Atividades({
             mudarSituacao={mudarSituacaoDaLinha}
             pararDia={pararDia}
             desfazerParada={desfazerParada}
+            podeExcluir={podeCriarNoCalendario}
+            exclusao={exclusao}
+            excluir={excluirLinhaDoCalendario}
           />
         </AbasDeAtividades>
       </div>
@@ -102,7 +137,10 @@ export default async function Atividades({
     )
     .eq("status", "ativo")
     /* Spec 024 (RP-0/RP-8): o rascunho só aparece no DSA da turma; a lista é do salvo. */
-    .eq("salvo", true);
+    .eq("salvo", true)
+    /* RT-6 (spec 025, D-26): só o ano escolhido. */
+    .gte("data", `${ano}-01-01`)
+    .lte("data", `${ano}-12-31`);
   if (filtro.turma) consulta = consulta.eq("turmas.codigo", filtro.turma);
   if (filtro.categoria) consulta = consulta.eq("categoria_normativa", filtro.categoria as never);
   if (filtro.tipo) consulta = consulta.ilike("subtipo", `%${filtro.tipo}%`);
@@ -111,7 +149,7 @@ export default async function Atividades({
 
   const [atividadesRes, turmasRes, arquivadasRes] = await Promise.all([
     consulta.order("data", { ascending: false }).order("ta_inicial").limit(LIMITE_DE_ATIVIDADES),
-    supabase.from("turmas").select("id, codigo").order("codigo"),
+    supabase.from("turmas").select("id, codigo").eq("ano_letivo", ano).order("codigo"),
     /* D-COR-5 (spec 017, C-24): a turma arquivada some do filtro de turma. */
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
   ]);
@@ -197,31 +235,47 @@ export default async function Atividades({
     </>
   );
 
-  return (
-    <div className="flex flex-col gap-4" data-slot="lista-de-atividades">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-texto text-xl font-semibold">Atividades</h1>
-        <p className="text-texto-suave text-sm" data-slot="contagem-de-atividades">
-          {linhas.length} atividade{linhas.length === 1 ? "" : "s"}
-          {haFiltro ? " neste recorte" : ""}
-          {linhas.length === LIMITE_DE_ATIVIDADES
-            ? ` — mostrando as ${LIMITE_DE_ATIVIDADES} mais recentes; filtre para ver as demais`
-            : ""}
-          . O lançamento é feito no DSA da turma.
-        </p>
-      </header>
+  /* RT-4 (spec 025, D-18): o número no ícone é a mesma régua do *Limpar filtros*. */
+  const ativos = filtrosForaDoPadrao("/atividades", filtro);
+  const filtros = (
+    <ConteudoDePainel painel="filtros">
+      <FiltrosDeAtividades turmas={turmas} />
+    </ConteudoDePainel>
+  );
 
-      {temCalendario ? (
-        <AbasDeAtividades>
-          <FiltrosDeAtividades turmas={turmas} />
-          {corpo}
-        </AbasDeAtividades>
-      ) : (
-        <>
-          <FiltrosDeAtividades turmas={turmas} />
-          {corpo}
-        </>
-      )}
-    </div>
+  return (
+    <ProvedorDePaineis>
+      <div className="flex flex-col gap-4" data-slot="lista-de-atividades">
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-texto text-xl font-semibold">Atividades</h1>
+            <p className="text-texto-suave text-sm" data-slot="contagem-de-atividades">
+              {linhas.length} atividade{linhas.length === 1 ? "" : "s"} em {ano}
+              {haFiltro ? " neste recorte" : ""}
+              {linhas.length === LIMITE_DE_ATIVIDADES
+                ? ` — mostrando as ${LIMITE_DE_ATIVIDADES} mais recentes; filtre para ver as demais`
+                : ""}
+              . O lançamento é feito no DSA da turma.
+            </p>
+          </div>
+          <BarraDeAcoes rotulo="Ações das atividades">
+            {seletorDeAno}
+            <GatilhoDePainel painel="filtros" contagem={ativos} />
+          </BarraDeAcoes>
+        </header>
+
+        {temCalendario ? (
+          <AbasDeAtividades>
+            {filtros}
+            {corpo}
+          </AbasDeAtividades>
+        ) : (
+          <>
+            {filtros}
+            {corpo}
+          </>
+        )}
+      </div>
+    </ProvedorDePaineis>
   );
 }

@@ -215,16 +215,16 @@ test("SC-002/SC-004 · a aba Calendário: cadastrar para turmas escolhidas, inat
   await expect(page.locator('[data-slot="controle-de-paradas"]')).toBeVisible();
   await expect(page.locator("[data-feriado]", { hasText: nomeDoCalendario() })).toHaveCount(0);
 
-  /* Inativar, com confirmação — pela aba, chegando pelo menu. */
+  /* Desativar, com confirmação — pela aba, chegando pelo menu. */
   await page
     .getByRole("navigation", { name: "Navegação principal" })
     .getByRole("link", { name: "Atividades", exact: true })
     .click();
   await page.locator('[data-aba="calendario"]').click();
-  await page.locator(`[data-linha="${linha.codigo}"] [data-slot="inativar-linha"]`).click();
+  await page.locator(`[data-linha="${linha.codigo}"] [data-slot="desativar-linha"]`).click();
   await page
     .locator('[data-slot="dialogo-confirmacao"]')
-    .getByRole("button", { name: "Inativar" })
+    .getByRole("button", { name: "Desativar" })
     .click();
   await expect(page.locator(`[data-linha="${linha.codigo}"]`)).toHaveAttribute(
     "data-situacao",

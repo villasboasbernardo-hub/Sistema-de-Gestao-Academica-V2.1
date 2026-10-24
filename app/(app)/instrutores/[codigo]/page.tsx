@@ -16,28 +16,44 @@
  * ausência é zero. As atribuições, com a média semanal de cada uma, vêm de
  * `vw_instrutor_carga_prevista` (T011, decisão de Bernardo Villas Boas, 15/09/2026).
  *
- * ⚠️ **O DADO PESSOAL SÓ É LIDO PELA VISÃO COM PORTEIRO.** Se ela entrega a linha, a sessão é de um
- * dos três perfis que leem a PII, e só então a seção existe no formulário. Quem decidiu foi o banco.
+ * ⚠️ **A EDIÇÃO MORA EM PÁGINA PRÓPRIA** (RT-3 do Bloco 10, spec 025, D-35): `/instrutores/[codigo]/editar`. A barra
+ * *Editar · Desativar/Reativar · Excluir* fica no canto superior direito, na linha do nome, com o seletor de ano.
+ *
+ * ⚠️ **A FICHA SEGUE O ANO ESCOLHIDO** (RT-6, D-26): a carga, as atribuições e os alertas são do ano do seletor.
+ *
+ * ⚠️ **OS ALERTAS DE FAIXA VOLTARAM, EM LILÁS** (item 9, D-29; emenda a A-2 da spec 022): *"voltar a mostrar EM QUAIS
+ * SEMANAS a carga passou da faixa"* — uma linha por semana, pela MESMA função da página Avisos (`alertaAcimaDaFaixa`),
+ * só para instrutor ativo (CHK019). Avisam, não bloqueiam (`RN-DEG-02`); o da capacitação continua em Avisos.
  */
+import { AlertaConformidade } from "@/components/ciaara/alerta-conformidade";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
+import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
-import { limitesDoAnoIso } from "@/lib/dominio/carga-semanal";
+import { alertaAcimaDaFaixa } from "@/lib/dominio/alertas-instrutor";
+import {
+  cargaPorSemana,
+  limitesDoAnoIso,
+  semanasAcimaDaFaixa,
+  semanasDoAno,
+} from "@/lib/dominio/carga-semanal";
 import { motivoDoImpedimento } from "@/lib/dominio/exclusao-de-instrutor";
+import { DICA_SEM_LEITURA } from "@/lib/dominio/exclusao-permanente";
 import { mediaSemanalDaAtribuicao } from "@/lib/dominio/media-semanal";
 import { disciplinasSoHabilitadas } from "@/lib/dominio/so-habilitado";
-import { anoCorrente } from "@/lib/formato/ano-corrente";
+import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
+import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
-import { COLUNAS_PESSOAIS, valoresFuncionaisDe, valoresPessoaisDe } from "../campos";
-import { FormularioDeInstrutor } from "../FormularioDeInstrutor";
+import { valoresFuncionaisDe } from "../campos";
 import { comSigla } from "../catalogo";
 import { AcoesDeInstrutor } from "./AcoesDeInstrutor";
 import { ExcluirInstrutor } from "./ExcluirInstrutor";
 import { CargaDoInstrutor } from "./CargaDoInstrutor";
-import { EdicaoDoInstrutor } from "./EdicaoDoInstrutor";
 import { FichaEmLeitura } from "./FichaEmLeitura";
 
 const COLUNAS_DA_FICHA =
@@ -45,10 +61,13 @@ const COLUNAS_DA_FICHA =
 
 export default async function FichaDoInstrutor({
   params,
+  searchParams,
 }: {
   params: Promise<{ codigo: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { codigo } = await params;
+  const { valores } = lerParametros("/instrutores/[codigo]", await searchParams);
   const usuario = await usuarioDaSessao();
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
 
@@ -62,7 +81,7 @@ export default async function FichaDoInstrutor({
   }
 
   const supabase = await criarClienteDeServidor();
-  const [instrutorRes, disciplinasRes, cursosRes, escalaRes, curriculosRes] = await Promise.all([
+  const [instrutorRes, disciplinasRes, cursosRes, curriculosRes] = await Promise.all([
     supabase.from("vw_instrutores").select(COLUNAS_DA_FICHA).eq("codigo", codigo).maybeSingle(),
     supabase
       .from("disciplinas")
@@ -71,12 +90,6 @@ export default async function FichaDoInstrutor({
     // ⚠️ `status` entra pelo mesmo motivo do cadastro novo, e aqui com a segunda metade: as
     //    habilitações JÁ EXISTENTES em curso inativo continuam EXIBIDAS, só leitura (`FR-017.6`).
     supabase.from("cursos").select("id, codigo, status"),
-    supabase
-      .from("config_listas")
-      .select("valor, ordem")
-      .eq("lista", "escala_antiguidade")
-      .eq("ativo", true)
-      .order("ordem"),
     /* Spec 021 (RC-12): o currículo no rótulo, quando o curso tem mais de um. */
     supabase.from("curriculos").select("id, curso_id, versao, vigente_de").eq("status", "ativo"),
   ]);
@@ -104,48 +117,43 @@ export default async function FichaDoInstrutor({
     );
   }
 
-  const ano = anoCorrente();
+  const escolha = await anoEscolhido(String(valores.ano));
+  const ano = escolha.ano;
   const limitesDoAno = limitesDoAnoIso(ano);
   const podeExcluir = pode(permissoes, "instrutores", "criar");
-  const [{ data: pessoal }, cargaRes, atribuicoesRes, vinculosRes, impedimentosRes] =
-    await Promise.all([
-      supabase
-        .from("vw_instrutor_dados_pessoais")
-        .select(COLUNAS_PESSOAIS)
-        .eq("id", instrutor.id)
-        .maybeSingle(),
-      supabase
-        .from("vw_instrutor_carga_anual")
-        .select("ta_ministrado_ano, ta_previsto_ano, faixa_semanal_min, faixa_semanal_max")
-        .eq("instrutor_id", instrutor.id)
-        .eq("ano", ano)
-        .maybeSingle(),
-      supabase
-        .from("vw_instrutor_carga_prevista")
-        .select(
-          "atribuicao_id, ano, disciplina_id, nome_disciplina, curso_codigo, turma_codigo, previsao_inicio, previsao_termino, tempos_previstos, semanas, media_semanal",
-        )
-        .eq("instrutor_id", instrutor.id)
-        /*
-         * ⚠️ DUAS PERGUNTAS NA MESMA CONSULTA (CHK005, decisão de Bernardo Villas Boas, 15/09/2026). A seção
-         * de carga lista as atribuições **do ano** pela data de início (T011 c); o alerta de faixa precisa
-         * de toda janela que toca o ano ISO corrente, inclusive a que começou no ano anterior. Vêm as duas,
-         * e a lista é recortada abaixo, em memória.
-         */
-        .or(
-          `ano.eq.${ano},and(previsao_inicio.lte.${limitesDoAno.fim},previsao_termino.gte.${limitesDoAno.inicio})`,
-        )
-        .order("previsao_inicio"),
-      supabase
-        .from("instrutor_disciplina")
-        .select("disciplina_id")
-        .eq("instrutor_id", instrutor.id)
-        .eq("status", "ativo"),
-      // A exceção única à regra 4 (autorização de Bernardo Villas Boas, 15/09/2026): só pergunta quem pode.
-      podeExcluir
-        ? supabase.rpc("impedimentos_de_exclusao_do_instrutor", { p_instrutor_id: instrutor.id })
-        : Promise.resolve(null),
-    ]);
+  const [cargaRes, atribuicoesRes, vinculosRes, impedimentosRes] = await Promise.all([
+    supabase
+      .from("vw_instrutor_carga_anual")
+      .select("ta_ministrado_ano, ta_previsto_ano, faixa_semanal_min, faixa_semanal_max")
+      .eq("instrutor_id", instrutor.id)
+      .eq("ano", ano)
+      .maybeSingle(),
+    supabase
+      .from("vw_instrutor_carga_prevista")
+      .select(
+        "atribuicao_id, ano, disciplina_id, nome_disciplina, curso_codigo, turma_codigo, previsao_inicio, previsao_termino, tempos_previstos, semanas, media_semanal",
+      )
+      .eq("instrutor_id", instrutor.id)
+      /*
+       * ⚠️ DUAS PERGUNTAS NA MESMA CONSULTA (CHK005, decisão de Bernardo Villas Boas, 15/09/2026). A seção
+       * de carga lista as atribuições **do ano** pela data de início (T011 c); o alerta de faixa precisa
+       * de toda janela que toca o ano ISO corrente, inclusive a que começou no ano anterior. Vêm as duas,
+       * e a lista é recortada abaixo, em memória.
+       */
+      .or(
+        `ano.eq.${ano},and(previsao_inicio.lte.${limitesDoAno.fim},previsao_termino.gte.${limitesDoAno.inicio})`,
+      )
+      .order("previsao_inicio"),
+    supabase
+      .from("instrutor_disciplina")
+      .select("disciplina_id")
+      .eq("instrutor_id", instrutor.id)
+      .eq("status", "ativo"),
+    // A exceção única à regra 4 (autorização de Bernardo Villas Boas, 15/09/2026): só pergunta quem pode.
+    podeExcluir
+      ? supabase.rpc("impedimentos_de_exclusao_do_instrutor", { p_instrutor_id: instrutor.id })
+      : Promise.resolve(null),
+  ]);
 
   const catalogo = comSigla(
     disciplinasRes.data ?? [],
@@ -226,6 +234,39 @@ export default async function FichaDoInstrutor({
   const ativo = instrutor.status === "ativo";
 
   /*
+   * ⚠️ AS SEMANAS ACIMA DA FAIXA (D-29): a faixa do regime vem da view anual; sem ela, ou sem as atribuições, nenhum
+   *    alerta — afirmar "acima" sem a conta seria inventar (`RN-DEG-01`).
+   */
+  const faixa =
+    cargaRes.error ||
+    cargaRes.data?.faixa_semanal_min == null ||
+    cargaRes.data?.faixa_semanal_max == null
+      ? null
+      : {
+          minimo: Number(cargaRes.data.faixa_semanal_min),
+          maximo: Number(cargaRes.data.faixa_semanal_max),
+        };
+  const alertaDeFaixa =
+    ativo && janelasDoAno !== null
+      ? alertaAcimaDaFaixa(
+          semanasAcimaDaFaixa(
+            semanasDoAno(
+              cargaPorSemana(
+                comMedia.map((a) => ({
+                  inicio: a.previsao_inicio,
+                  termino: a.previsao_termino,
+                  mediaSemanal: a.media,
+                })),
+              ),
+              ano,
+            ),
+            faixa,
+          ),
+          faixa,
+        )
+      : null;
+
+  /*
    * ⚠️ SEM RESPOSTA DO BANCO, A EXCLUSÃO FICA INDISPONÍVEL — nunca liberada (`RN-DEG-01`). Um erro de
    * leitura dos impedimentos não pode virar "não tem histórico".
    */
@@ -235,9 +276,24 @@ export default async function FichaDoInstrutor({
       : impedimentosRes.error
         ? "Não foi possível conferir o histórico deste instrutor; a exclusão fica indisponível."
         : motivoDoImpedimento((impedimentosRes.data as string[] | null) ?? []);
+  /* D-33: a dica do ícone desabilitado é a da D-COR-6; sem leitura, a de não ter conferido. */
+  const dicaDeNaoExcluir =
+    impedimentosRes !== null && impedimentosRes.error
+      ? DICA_SEM_LEITURA
+      : "tem registros: use Desativar";
+  const podeEditar = pode(permissoes, "instrutores", "editar");
 
   const leitura = (
     <>
+      {alertaDeFaixa ? (
+        <AlertaConformidade
+          tom="conformidade"
+          titulo={`${alertaDeFaixa.titulo} em ${ano}`}
+          avisos={alertaDeFaixa.detalhes}
+          className="static"
+        />
+      ) : null}
+
       <FichaEmLeitura
         id={instrutor.id}
         valores={valoresFuncionaisDe(instrutor)}
@@ -255,66 +311,64 @@ export default async function FichaDoInstrutor({
 
   return (
     <section className="flex flex-col gap-5">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-texto text-lg font-semibold">
-          <NomeInstrutor
-            instrutor={{
-              id: instrutor.id,
-              pg: instrutor.posto_graduacao,
-              especialidade: instrutor.esp_hab_obs,
-              nomeCompleto: instrutor.nome_completo,
-              nomeDeGuerra: instrutor.nome_guerra,
-            }}
-          />
-        </h1>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span className="text-texto-suave" data-slot="codigo-do-instrutor">
-            Código {instrutor.codigo}
-          </span>
-          <BadgeStatus tom={ativo ? "executado" : "inativo"} rotulo={ativo ? "ativo" : "inativo"} />
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-texto text-lg font-semibold">
+            <NomeInstrutor
+              instrutor={{
+                id: instrutor.id,
+                pg: instrutor.posto_graduacao,
+                especialidade: instrutor.esp_hab_obs,
+                nomeCompleto: instrutor.nome_completo,
+                nomeDeGuerra: instrutor.nome_guerra,
+              }}
+            />
+          </h1>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-texto-suave" data-slot="codigo-do-instrutor">
+              Código {instrutor.codigo}
+            </span>
+            <BadgeStatus
+              tom={ativo ? "executado" : "inativo"}
+              rotulo={ativo ? "ativo" : "inativo"}
+            />
+          </div>
         </div>
+
+        {/* RT-1 (D-35): o ano e as ações no canto superior direito, na linha do nome. */}
+        <BarraDeAcoes rotulo="Ações do instrutor">
+          <SeletorDeAno
+            ano={ano}
+            vigente={escolha.vigente}
+            origem={escolha.origem}
+            rota="/instrutores/[codigo]"
+          />
+          {podeEditar ? (
+            <BotaoDeIcone
+              acao="editar"
+              rotulo="Editar instrutor"
+              href={`/instrutores/${encodeURIComponent(instrutor.codigo)}/editar`}
+              data-slot="abrir-edicao-do-instrutor"
+            />
+          ) : null}
+          {podeEditar ? <AcoesDeInstrutor instrutorId={instrutor.id} ativo={ativo} /> : null}
+          {/* ⚠️ Excluir é de quem CRIA instrutor — a ação de escrita mais restritiva da matriz. */}
+          {podeExcluir ? (
+            <ExcluirInstrutor
+              instrutorId={instrutor.id}
+              codigo={instrutor.codigo}
+              motivoDoImpedimento={motivoDeNaoExcluir}
+              dica={dicaDeNaoExcluir}
+            />
+          ) : null}
+        </BarraDeAcoes>
       </header>
 
       {/*
-        ⚠️ VER PRIMEIRO, EDITAR AO CLICAR (spec 016, FR-010.1 e FR-010.2): para quem edita, a leitura
-           vai dentro de `EdicaoDoInstrutor`, com a barra Editar · Desativar/Reativar · Excluir no topo e
-           o formulário recolhido no fim. Desativar e Excluir saíram do rodapé do formulário. Quem só lê
-           vê a leitura, sem barra.
+        ⚠️ VER PRIMEIRO, EDITAR NA PÁGINA PRÓPRIA (spec 016, FR-010.1; spec 025, D-35): a ficha é leitura para todos, e
+           *Editar instrutor* leva a `/instrutores/[codigo]/editar`. O formulário recolhido no fim da ficha saiu.
       */}
-      {pode(permissoes, "instrutores", "editar") ? (
-        <EdicaoDoInstrutor
-          acoes={
-            <>
-              <AcoesDeInstrutor instrutorId={instrutor.id} ativo={ativo} />
-              {/* ⚠️ Excluir é de quem CRIA instrutor — a ação de escrita mais restritiva da matriz. */}
-              {podeExcluir ? (
-                <ExcluirInstrutor
-                  instrutorId={instrutor.id}
-                  codigo={instrutor.codigo}
-                  motivoDoImpedimento={motivoDeNaoExcluir}
-                />
-              ) : null}
-            </>
-          }
-          formulario={
-            <FormularioDeInstrutor
-              modo="edicao"
-              instrutorId={instrutor.id}
-              iniciais={valoresFuncionaisDe(instrutor)}
-              pessoais={
-                pessoal ? valoresPessoaisDe(pessoal as unknown as Record<string, unknown>) : null
-              }
-              postos={(escalaRes.data ?? []).map((e) => e.valor)}
-              disciplinas={catalogo.filter((d) => d.ativa)}
-              habilitadas={habilitadas}
-            />
-          }
-        >
-          {leitura}
-        </EdicaoDoInstrutor>
-      ) : (
-        leitura
-      )}
+      {leitura}
     </section>
   );
 }

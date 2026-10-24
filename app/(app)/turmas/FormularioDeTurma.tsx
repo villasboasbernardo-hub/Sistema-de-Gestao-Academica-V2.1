@@ -12,6 +12,10 @@
  * `lib/dominio/salas.ts`. Sem essa metade, editar o efetivo de uma turma cuja sala foi desativada
  * apagaria a sala sem ninguém pedir.
  *
+ * ⚠️ **NA EDIÇÃO, A SITUAÇÃO VOLTOU** (spec 025, Bloco 10, D-2; emenda o `FR-015.4` da spec 016): *"um único
+ * diálogo/página edita tudo"* — e, quando ela muda, a **observação da troca** (D-COR-4) aparece logo abaixo. A ação
+ * grava os campos e, depois, a troca pela função do banco que anota o histórico.
+ *
  * ⚠️ **A NOTA DA SEGUNDA TURMA É NOTA, NÃO DIÁLOGO** (`FR-026.1`): ela aparece junto do campo de
  * rótulo e não confirma nada. Quem confirma são as duas gravações da lista fechada do `FR-018.1` — o
  * limite e a proteção de vigência —, **num diálogo só**.
@@ -35,6 +39,7 @@ import {
   type VigenciaProtegida,
 } from "@/lib/dominio/protecao-de-vigencia";
 import { naturezaDaSala, ROTULO_DA_NATUREZA, type Sala } from "@/lib/dominio/salas";
+import { LIMITE_DA_OBSERVACAO_DA_TURMA } from "@/lib/validacao/turma";
 import { FRASE_DA_ESCOLHA_TRAVADA, aceitaRegimeNomeado } from "@/lib/dominio/regime-da-turma";
 import { enderecoDaTurmaGravada } from "@/lib/navegacao/endereco-de-turma";
 
@@ -137,12 +142,15 @@ export function FormularioDeTurma({
 }: FormularioDeTurmaProps) {
   const router = useRouter();
   const [valores, definirValores] = React.useState<TurmaNoFormulario>(inicial ?? VAZIO);
+  /* D-2: a observação da troca de situação, na edição — só vai quando a situação muda. */
+  const [observacaoDaSituacao, definirObservacaoDaSituacao] = React.useState("");
+  const situacaoMudou = modo === "edicao" && valores.status !== (inicial?.status ?? "");
   const [erro, definirErro] = React.useState<string | null>(null);
   const [gravando, definirGravando] = React.useState(false);
 
   const trocar =
     (campo: keyof TurmaNoFormulario) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       definirValores((v) => ({ ...v, [campo]: e.target.value }));
 
   const nulo = (v: string) => (v.trim() === "" ? null : v.trim());
@@ -176,6 +184,8 @@ export function FormularioDeTurma({
     ...(curriculo && !curriculo.travado && (valores.curriculo_id ?? "") !== ""
       ? { curriculo_id: valores.curriculo_id }
       : {}),
+    /* D-2: na edição, a observação da troca — a ação só troca a situação quando ela mudou. */
+    ...(situacaoMudou ? { observacao_da_situacao: observacaoDaSituacao } : {}),
   };
 
   /*
@@ -266,26 +276,49 @@ export function FormularioDeTurma({
         </div>
 
         {/*
-          ⚠️ SÓ NA CRIAÇÃO desde 17/10/2026 (spec 016, FR-015.4; NQ-2): na edição a situação se troca
-             pelo botão *"Trocar situação"* do cabeçalho da ficha, e a ação de gravar a turma não a manda.
+          ⚠️ NOS DOIS MODOS desde 24/10/2026 (spec 025, D-2): *"um único Editar edita tudo"*. De 17/10 a 24/10/2026 a
+             situação só se trocava pelo botão *"Trocar situação"* da ficha (FR-015.4 da spec 016, emendado).
         */}
-        {modo === "novo" ? (
-          <div className="flex flex-col gap-1">
-            <CampoObrigatorio para="turma-situacao" rotulo="Situação" obrigatorio />
-            <select
-              {...propsDoControle("turma-situacao", true)}
-              name="status"
-              value={valores.status}
-              onChange={trocar("status")}
-              className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
+        <div className="flex flex-col gap-1">
+          <CampoObrigatorio para="turma-situacao" rotulo="Situação" obrigatorio />
+          <select
+            {...propsDoControle("turma-situacao", true)}
+            name="status"
+            value={valores.status}
+            onChange={trocar("status")}
+            className="border-borda bg-superficie text-texto rounded-ciaara h-9 border px-2 text-sm"
+          >
+            {modo === "novo" ? <option value="">Escolha a situação</option> : null}
+            {SITUACOES.map((s) => (
+              <option key={s.valor} value={s.valor}>
+                {s.rotulo}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {situacaoMudou ? (
+          <div className="flex flex-col gap-1 sm:col-span-2" data-slot="observacao-da-troca">
+            <label
+              htmlFor="turma-observacao-da-situacao"
+              className="text-texto text-sm font-medium"
             >
-              <option value="">Escolha a situação</option>
-              {SITUACOES.map((s) => (
-                <option key={s.valor} value={s.valor}>
-                  {s.rotulo}
-                </option>
-              ))}
-            </select>
+              Observação da troca de situação (opcional)
+            </label>
+            <textarea
+              id="turma-observacao-da-situacao"
+              name="observacao_da_situacao"
+              rows={2}
+              maxLength={LIMITE_DA_OBSERVACAO_DA_TURMA}
+              value={observacaoDaSituacao}
+              onChange={(e) => definirObservacaoDaSituacao(e.target.value)}
+              className="border-borda-forte bg-superficie text-texto rounded-ciaara focus-visible:ring-marca w-full border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
+              data-slot="observacao-da-situacao"
+            />
+            {/* veste: dica do campo */}
+            <p className="text-texto-tenue text-xs">
+              Vai para o histórico da situação da turma, com quem trocou e quando.
+            </p>
           </div>
         ) : null}
 

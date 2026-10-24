@@ -18,16 +18,29 @@
  * por isso continua alcançável quando a lista está vazia. Escondê-lo atrás da lista faria o único
  * caminho de saída desaparecer justo no estado em que ele é necessário.
  *
- * ⚠️ **SEM MARCADOR DE CLIENTE.** Só o seletor de turma é folha.
+ * ⚠️ **AS AÇÕES DA LINHA** (spec 025, Bloco 10, item 2; RT-2): *Editar* (a página de edição), *Arquivar* ou *Desarquivar*
+ * e *Excluir*, na última coluna, cada um pela permissão e pela regra da ficha — a arquivada não se edita nem se exclui,
+ * e a turma com registro mostra o *Excluir* desabilitado com a dica (D-COR-6). Os impedimentos chegam numa ida ao banco
+ * só, lida pela página.
+ *
+ * ⚠️ **SÓ AS TURMAS DO ANO ESCOLHIDO** (RT-6, D-26): a página já as recorta.
+ *
+ * ⚠️ **SEM MARCADOR DE CLIENTE.** O seletor de turma e as ações da linha são folhas.
  */
 import type * as React from "react";
 
 import Link from "next/link";
 
 import { BadgeStatus } from "@/components/ciaara/badge-status";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import {
+  ExclusaoPermanente,
+  type ExclusaoPermanenteProps,
+} from "@/components/ciaara/exclusao-permanente";
 import { Button } from "@/components/ui/button";
 import { avisosDaTurma, type TurmaParaAvisos } from "@/lib/dominio/avisos-da-turma";
+import type { EstadoDaExclusao } from "@/lib/dominio/exclusao-permanente";
 import { emOrdemDeTurma } from "@/lib/dominio/ordem-de-cursos";
 import { dataParaLeitura } from "@/lib/formato/data";
 import {
@@ -40,12 +53,15 @@ import {
   enderecoDaSecaoDeDisciplinas,
   enderecoDasDisciplinas,
   enderecoDasTurmas,
+  enderecoDaEdicaoDaTurma,
   enderecoDaTurma,
 } from "@/lib/navegacao/endereco-de-turma";
 
+import { ArquivarTurma } from "../../turmas/[turma]/ArquivarTurma";
 import { SeletorDeTurmaNaUrl } from "./SeletorDeTurmaNaUrl";
 
 export type TurmaDaAba = TurmaParaAvisos & {
+  readonly id: string;
   readonly codigo: string;
   readonly rotulo: string | null;
   readonly ano: number;
@@ -62,6 +78,25 @@ export type TurmaDaAba = TurmaParaAvisos & {
  */
 
 const traco = (v: string | null) => (v === null || v.trim() === "" ? "—" : v);
+
+/** As ações da linha (spec 025, item 2): o que cada perfil pode, decidido na página, e a ação de excluir. */
+export type AcoesDasTurmas = {
+  /** `turmas.editar` com o curso em oferta. */
+  readonly podeEditar: boolean;
+  /** O trio do arquivamento (`arquivamento_de_turma.editar`). */
+  readonly podeArquivar: boolean;
+  /** `turmas.criar` — quem exclui (D-9). */
+  readonly podeExcluir: boolean;
+  /** O estado do *Excluir* de cada turma, pelo `id`; ausente = não lido (desabilitado, D-13). */
+  readonly exclusao: Readonly<Record<string, EstadoDaExclusao>>;
+  readonly excluir: ExclusaoPermanenteProps["excluir"];
+};
+
+const SEM_LEITURA: EstadoDaExclusao = {
+  liberada: false,
+  dica: "não foi possível conferir os registros",
+  detalhe: null,
+};
 
 /**
  * O rótulo de um campo e o cabeçalho de uma coluna — **os dois únicos usos de `--texto-tenue` aqui**.
@@ -100,6 +135,8 @@ export function AbaTurmas({
   hoje,
   avisoDaSelecao,
   motivoDoVazio,
+  acoes,
+  ano,
 }: {
   readonly sigla: string;
   readonly turmas: readonly TurmaDaAba[];
@@ -107,8 +144,13 @@ export function AbaTurmas({
   readonly hoje: string;
   readonly avisoDaSelecao: string | null;
   /** Qual dos três vazios do `FR-047` mostrar quando não há turma. */
-  readonly motivoDoVazio: "nao-ha" | "nao-ve" | "ainda-nao-existe" | null;
+  readonly motivoDoVazio: "nao-ha" | "nao-ve" | "ainda-nao-existe" | "nenhuma-no-ano" | null;
+  readonly acoes?: AcoesDasTurmas;
+  /** O ano escolhido (RT-6): a lista só tem as turmas dele. */
+  readonly ano?: number;
 }) {
+  const comAcoes =
+    acoes !== undefined && (acoes.podeEditar || acoes.podeArquivar || acoes.podeExcluir);
   const turmaAtual = turmas.find((t) => t.codigo === selecionada) ?? null;
   /* Spec 022 (FR-003): a lista na ordem única — num curso só, o ano mais recente primeiro e depois o código. */
   const naOrdem = emOrdemDeTurma(
@@ -247,12 +289,16 @@ export function AbaTurmas({
               ? "Você não alcança as turmas deste curso"
               : motivoDoVazio === "ainda-nao-existe"
                 ? "Ainda não há turma no sistema"
-                : "Este curso ainda não tem turma"
+                : motivoDoVazio === "nenhuma-no-ano"
+                  ? `Este curso não tem turma em ${ano ?? ""}`.trim()
+                  : "Este curso ainda não tem turma"
           }
           detalhe={
             motivoDoVazio === "nao-ve"
               ? "Existe turma aqui — o seu perfil não alcança."
-              : "Crie a primeira turma pelo botão Nova turma, no topo da página."
+              : motivoDoVazio === "nenhuma-no-ano"
+                ? "As turmas de outros anos aparecem trocando o ano, no canto superior direito."
+                : "Crie a primeira turma pelo botão Nova turma, no topo da página."
           }
         />
       ) : (
@@ -270,6 +316,11 @@ export function AbaTurmas({
               <Th>Janela</Th>
               <Th>Sala</Th>
               <Th>Avisos</Th>
+              {comAcoes ? (
+                <th scope="col" className="py-1">
+                  <span className="sr-only">Ações</span>
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
@@ -307,6 +358,44 @@ export function AbaTurmas({
                   <td className="text-texto py-1" data-slot="contagem-de-avisos">
                     {avisos.length}
                   </td>
+                  {comAcoes && acoes ? (
+                    <td className="py-1">
+                      <span className="flex justify-end gap-1" data-slot="acoes-da-turma">
+                        {acoes.podeEditar && !t.arquivada ? (
+                          <BotaoDeIcone
+                            acao="editar"
+                            rotulo={`Editar a turma ${t.codigo}`}
+                            variante="fantasma"
+                            className="size-7"
+                            href={enderecoDaEdicaoDaTurma(t.codigo)}
+                            data-slot="editar-da-linha"
+                          />
+                        ) : null}
+                        {acoes.podeArquivar ? (
+                          <ArquivarTurma
+                            codigo={t.codigo}
+                            situacao={t.status}
+                            arquivada={t.arquivada}
+                            naLista
+                          />
+                        ) : null}
+                        {acoes.podeExcluir ? (
+                          <ExclusaoPermanente
+                            id={t.id}
+                            codigo={t.codigo}
+                            nomeDoCodigo="o código da turma"
+                            rotulo={`Excluir a turma ${t.codigo}`}
+                            titulo={`Excluir a turma ${t.codigo} permanentemente?`}
+                            consequencia="A turma sai do sistema, com as linhas da grade, as atribuições de instrutor e o rateio. Só é possível porque ela não tem registro."
+                            estado={acoes.exclusao[t.id] ?? SEM_LEITURA}
+                            excluir={acoes.excluir}
+                            naLinha
+                            slot="excluir-da-linha"
+                          />
+                        ) : null}
+                      </span>
+                    </td>
+                  ) : null}
                 </tr>
               );
             })}

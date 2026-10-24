@@ -13,7 +13,14 @@
  * ⚠️ **CADA PARTE LÊ SÓ QUANDO ABERTA**; cada uma segue a permissão do que edita, e o banco recusa de qualquer forma.
  * ⚠️ **O CURRÍCULO EM USO** (turma com lançamento): mudar o que tinha valor é correção (RC-6) — o diálogo único pede a
  *    justificativa quando o banco a exige.
+ * ⚠️ **DUAS ABAS DESDE O BLOCO 10** (spec 025, item 7, D-28): *Cadastro* (o formulário do curso, um *Salvar*) e
+ *    *Currículo* (a barra do currículo, os dados com um *Salvar* e o PDF no alto; as sub-abas *Disciplinas · Horários ·
+ *    Atividades e limites* embaixo). O link antigo com `?parte=` e sem `?aba=` vai para o *Currículo*; `parte=dados`,
+ *    que deixou de existir, cai em *Disciplinas*.
  */
+import { estadosPorRegistro, type ImpedimentosDoRegistro } from "@/lib/dominio/exclusao-permanente";
+import { redirect } from "next/navigation";
+
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
@@ -43,6 +50,8 @@ import {
 
 import { GradeDeDisciplinas } from "../../../disciplinas/GradeDeDisciplinas";
 import { lerGradeDeDisciplinas } from "../../../disciplinas/consulta";
+import { excluirRegimeDeHorario } from "@/lib/acoes/regime-de-horario";
+import { estadoDaExclusaoDoRegime } from "@/lib/dominio/exclusao-de-partes";
 import { lerAvaliacoesDoCurso } from "../../../turmas/[turma]/consulta-de-avaliacoes";
 import { parametroDoAno } from "../../../turmas/[turma]/tetos";
 import { alcanceDoPerfil } from "../../consulta";
@@ -51,6 +60,7 @@ import { AbaAvaliacoes } from "../AbaAvaliacoes";
 import { mensagemDeCursoNaoEncontrado, SEM_CURRICULO } from "../consulta";
 import { lerHorariosDoCurso } from "../consulta-de-horarios";
 import { RegimesDoCurso } from "../RegimesDoCurso";
+import { AbasDaEdicaoDoCurso } from "./AbasDaEdicaoDoCurso";
 import { BarraDoCurriculo } from "./BarraDoCurriculo";
 import { travasDoBanco, vigenciasDoBanco } from "./consulta";
 import { EnvioDoCurriculo } from "./EnvioDoCurriculo";
@@ -83,7 +93,20 @@ export default async function EditarCurso({
 }) {
   const { curso: segmento } = await params;
   const sigla = codigoDaTurmaNoSegmento(segmento);
-  const { valores } = lerParametros("/cursos/[curso]/editar", await searchParams);
+  const busca = await searchParams;
+  /* D-28: o endereço antigo (`?parte=` sem `?aba=`, ou `parte=dados`) abre o Currículo, com o resto da consulta. */
+  if ((busca.parte !== undefined && busca.aba === undefined) || busca.parte === "dados") {
+    const consulta = new URLSearchParams();
+    for (const [chave, valor] of Object.entries(busca)) {
+      for (const v of Array.isArray(valor) ? valor : valor === undefined ? [] : [valor]) {
+        if (chave === "aba") continue;
+        consulta.append(chave, chave === "parte" && v === "dados" ? "disciplinas" : v);
+      }
+    }
+    consulta.set("aba", "curriculo");
+    redirect(`/cursos/${encodeURIComponent(sigla)}/editar?${consulta.toString()}`);
+  }
+  const { valores } = lerParametros("/cursos/[curso]/editar", busca);
 
   const usuario = await usuarioDaSessao();
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
@@ -162,7 +185,9 @@ export default async function EditarCurso({
   const curriculoArquivado = curriculo !== null && curriculo.arquivado_em !== null;
   /* O arquivado se edita só depois de desarquivado (RC-10); fora de oferta, nada se edita. */
   const editavel = cursoAtivo && curriculo !== null && !curriculoArquivado;
-  const parte = String(valores.parte);
+  /* Só a aba aberta é lida (D-28): no *Cadastro*, nenhuma parte do currículo. */
+  const naAbaDoCurriculo = String(valores.aba) === "curriculo";
+  const parte = naAbaDoCurriculo ? String(valores.parte) : "";
 
   const [
     turmasRes,
@@ -227,6 +252,21 @@ export default async function EditarCurso({
       ? lerAvaliacoesDoCurso({ cursoId, turmaCodigo: null, hoje, curriculoId })
       : Promise.resolve(null),
   ]);
+
+  /* D-COR-6 e D-30 (spec 025): o que prende cada regime do currículo — numa ida só, e só para quem exclui. */
+  const podeExcluirRegime = editavel && podeHorarios.criar && horarios !== null;
+  const impedimentosDosRegimesRes =
+    podeExcluirRegime && horarios.regimes.length > 0
+      ? await supabase.rpc("impedimentos_de_exclusao_dos_regimes", {
+          p_regimes: horarios.regimes.map((r) => r.id),
+        })
+      : null;
+  const estadosDosRegimes = estadosPorRegistro(
+    impedimentosDosRegimesRes === null || impedimentosDosRegimesRes.error
+      ? null
+      : ((impedimentosDosRegimesRes.data ?? []) as ImpedimentosDoRegistro[]),
+    estadoDaExclusaoDoRegime,
+  );
 
   const turmas = turmasRes.data ?? [];
   const linhas = vigenciasRes.data ?? [];
@@ -301,154 +341,151 @@ export default async function EditarCurso({
     />
   );
 
-  return (
-    <section className="flex flex-col gap-6">
-      <h1 className="text-texto text-lg font-semibold">Editar {codigo}</h1>
+  const cadastro = (
+    <section aria-labelledby="titulo-cadastro-do-curso" className="flex flex-col gap-3">
+      <h2 id="titulo-cadastro-do-curso" className="text-texto text-base font-semibold">
+        Cadastro do curso
+      </h2>
+      {podeEditarCurso ? (
+        <FormularioDeCurso
+          modo="edicao"
+          inicial={{
+            codigo,
+            nome_curso: curso.nome_curso as string,
+            classificacao: curso.classificacao as string,
+            modalidade: texto(curso.modalidade),
+            duracao_dias: "",
+            duracao_semanas: "",
+            limite_turmas_ano: texto(curso.limite_turmas_ano),
+            proposito: "",
+            /* Spec 020 (C-1 a C-4): estrangeiros e custo, só na edição. */
+            ofertavel_estrangeiros:
+              curso.ofertavel_estrangeiros === true
+                ? "sim"
+                : curso.ofertavel_estrangeiros === false
+                  ? "nao"
+                  : "",
+            estrangeiros_observacao: texto(curso.estrangeiros_observacao),
+            custo_total: reaisParaEdicao(
+              curso.custo_total === null ? null : Number(curso.custo_total),
+            ),
+            custo_composicao: texto(curso.custo_composicao),
+          }}
+          turmasDoCurso={turmas.length}
+          {...(turmas[0] ? { exemploDeTurma: turmas[0].codigo as string } : {})}
+          anosAcimaDoLimite={anosAcimaDoLimite(
+            paraLimite,
+            curso.limite_turmas_ano === null ? null : Number(curso.limite_turmas_ano),
+          )}
+        />
+      ) : (
+        <p className="text-texto-suave text-sm" role="status" data-slot="so-o-regime">
+          O seu perfil registra o regime e edita o conteúdo do currículo deste curso, mas não edita
+          o cadastro dele.
+        </p>
+      )}
+    </section>
+  );
 
-      <section aria-labelledby="titulo-cadastro-do-curso" className="flex flex-col gap-3">
-        <h2 id="titulo-cadastro-do-curso" className="text-texto text-base font-semibold">
-          Cadastro do curso
-        </h2>
-        {podeEditarCurso ? (
-          <FormularioDeCurso
-            modo="edicao"
-            inicial={{
-              codigo,
-              nome_curso: curso.nome_curso as string,
-              classificacao: curso.classificacao as string,
-              modalidade: texto(curso.modalidade),
-              duracao_dias: "",
-              duracao_semanas: "",
-              limite_turmas_ano: texto(curso.limite_turmas_ano),
-              proposito: "",
-              /* Spec 020 (C-1 a C-4): estrangeiros e custo, só na edição. */
-              ofertavel_estrangeiros:
-                curso.ofertavel_estrangeiros === true
-                  ? "sim"
-                  : curso.ofertavel_estrangeiros === false
-                    ? "nao"
-                    : "",
-              estrangeiros_observacao: texto(curso.estrangeiros_observacao),
-              custo_total: reaisParaEdicao(
-                curso.custo_total === null ? null : Number(curso.custo_total),
-              ),
-              custo_composicao: texto(curso.custo_composicao),
-            }}
-            turmasDoCurso={turmas.length}
-            {...(turmas[0] ? { exemploDeTurma: turmas[0].codigo as string } : {})}
-            anosAcimaDoLimite={anosAcimaDoLimite(
-              paraLimite,
-              curso.limite_turmas_ano === null ? null : Number(curso.limite_turmas_ano),
-            )}
-          />
-        ) : (
-          <p className="text-texto-suave text-sm" role="status" data-slot="so-o-regime">
-            O seu perfil registra o regime e edita o conteúdo do currículo deste curso, mas não
-            edita o cadastro dele.
-          </p>
-        )}
-      </section>
-
-      <section
-        aria-labelledby="titulo-curriculo-do-curso"
-        className="flex flex-col gap-4"
-        data-slot="curriculo-na-edicao"
-      >
-        {/*
+  const abaDoCurriculo = (
+    <section
+      aria-labelledby="titulo-curriculo-do-curso"
+      className="flex flex-col gap-4"
+      data-slot="curriculo-na-edicao"
+    >
+      {/*
           Spec 022 (Bloco 7), item 9 — o terceiro grupo: *"currículo e suas partes"*. A vigência do regime de horário do
           curso, que ficava solta entre o cadastro e o currículo, foi para a parte *Horários*, ao lado dos regimes
           nomeados — tudo o que é horário num lugar só.
         */}
-        <h2 id="titulo-curriculo-do-curso" className="text-texto text-base font-semibold">
-          Currículo e suas partes
-        </h2>
-        <BarraDoCurriculo
-          sigla={codigo}
-          opcoes={opcoes}
-          selecionado={curriculo?.versao ?? null}
-          vigente={vigente?.versao ?? null}
-          situacao={
-            curriculo === null
-              ? null
-              : curriculoArquivado
-                ? ROTULO_DA_SITUACAO.arquivado
-                : ROTULO_DA_SITUACAO[situacaoDoCurriculo(curriculo, curriculos, hoje)]
-          }
-          aviso={escolha.aviso}
-          novo={
-            cursoAtivo && podeEditarCurso && vigente !== null && !temFuturo
-              ? {
-                  copiaDe: rotuloDoCurriculo(vigente),
-                  vigenteDeSugerido: `${Number(hoje.slice(0, 4)) + 1}-01-01`,
-                }
-              : null
-          }
-          arquivamento={podeArquivar ? { arquivado: curriculoArquivado } : null}
-          podeDescartar={
-            cursoAtivo &&
-            curriculo !== null &&
-            !curriculoArquivado &&
-            podeEditarCurso &&
-            impedimentoDoDescarte(curriculo, curriculos, hoje, turmasDoCurriculo.length) === null
-          }
-        />
-        {curriculoArquivado ? (
-          <p role="status" className="text-texto text-sm" data-slot="curriculo-arquivado">
-            Este currículo está arquivado: ele se consulta, não se edita. Para editá-lo,
-            desarquive-o.
-          </p>
-        ) : null}
-        {!cursoAtivo ? (
-          <p role="status" className="text-texto-suave text-sm" data-slot="curso-fora-de-oferta">
-            Curso fora de oferta: o currículo fica para consulta e não recebe edição.
-          </p>
-        ) : null}
-        {curriculo !== null ? (
-          <p className="text-texto-suave text-sm" data-slot="aviso-da-correcao">
-            Se uma turma que segue este currículo já tem lançamento, mudar o que já tinha valor é
-            correção: só o Admin, o Encarregado e o Ajudante da Administração Acadêmica a fazem, com
-            justificativa, e ela fica registrada. Completar o que estava vazio é livre.
-          </p>
-        ) : null}
+      <h2 id="titulo-curriculo-do-curso" className="text-texto text-base font-semibold">
+        Currículo
+      </h2>
+      <BarraDoCurriculo
+        sigla={codigo}
+        opcoes={opcoes}
+        selecionado={curriculo?.versao ?? null}
+        vigente={vigente?.versao ?? null}
+        situacao={
+          curriculo === null
+            ? null
+            : curriculoArquivado
+              ? ROTULO_DA_SITUACAO.arquivado
+              : ROTULO_DA_SITUACAO[situacaoDoCurriculo(curriculo, curriculos, hoje)]
+        }
+        aviso={escolha.aviso}
+        novo={
+          cursoAtivo && podeEditarCurso && vigente !== null && !temFuturo
+            ? {
+                copiaDe: rotuloDoCurriculo(vigente),
+                vigenteDeSugerido: `${Number(hoje.slice(0, 4)) + 1}-01-01`,
+              }
+            : null
+        }
+        arquivamento={podeArquivar ? { arquivado: curriculoArquivado } : null}
+        podeDescartar={
+          cursoAtivo &&
+          curriculo !== null &&
+          !curriculoArquivado &&
+          podeEditarCurso &&
+          impedimentoDoDescarte(curriculo, curriculos, hoje, turmasDoCurriculo.length) === null
+        }
+      />
+      {curriculoArquivado ? (
+        <p role="status" className="text-texto text-sm" data-slot="curriculo-arquivado">
+          Este currículo está arquivado: ele se consulta, não se edita. Para editá-lo, desarquive-o.
+        </p>
+      ) : null}
+      {!cursoAtivo ? (
+        <p role="status" className="text-texto-suave text-sm" data-slot="curso-fora-de-oferta">
+          Curso fora de oferta: o currículo fica para consulta e não recebe edição.
+        </p>
+      ) : null}
+      {curriculo !== null ? (
+        <p className="text-texto-suave text-sm" data-slot="aviso-da-correcao">
+          Se uma turma que segue este currículo já tem lançamento, mudar o que já tinha valor é
+          correção: só o Admin, o Encarregado e o Ajudante da Administração Acadêmica a fazem, com
+          justificativa, e ela fica registrada. Completar o que estava vazio é livre.
+        </p>
+      ) : null}
 
-        {curriculo !== null ? (
-          /*
-           * ⚠️ A CHAVE É O CURRÍCULO: trocar de currículo no seletor mantém a mesma página, e os campos dos formulários
-           *    (não controlados) guardariam o valor do anterior — gravar o 2 com a data do 1 colidia (medido no e2e).
-           */
+      {curriculo !== null ? (
+        /*
+         * ⚠️ A CHAVE É O CURRÍCULO: trocar de currículo no seletor mantém a mesma página, e os campos dos formulários
+         *    (não controlados) guardariam o valor do anterior — gravar o 2 com a data do 1 colidia (medido no e2e).
+         * ⚠️ OS DADOS E O PDF NO ALTO DA ABA (D-28): um *Salvar* só para vigência, descrição, propósito e duração.
+         */
+        <div key={curriculo.id} className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4" data-slot="parte-dados">
+            {podeEditarCurso && editavel ? (
+              <FormularioDoCurriculo
+                sigla={codigo}
+                versao={curriculo.versao}
+                inicial={{
+                  vigenteDe: curriculo.vigente_de,
+                  descricao: texto(curriculo.descricao),
+                  proposito: texto(curriculo.proposito),
+                  duracaoDias: texto(curriculo.duracao_dias),
+                  duracaoSemanas: texto(curriculo.duracao_semanas),
+                }}
+              />
+            ) : (
+              <p className="text-texto-suave text-sm">
+                Os dados do currículo se editam com a permissão de editar o curso.
+              </p>
+            )}
+            {podeEditarCurso ? (
+              <EnvioDoCurriculo
+                sigla={codigo}
+                cursoId={cursoId}
+                curriculoId={curriculo.id}
+                versao={curriculo.versao}
+                carregadoEm={curriculo.pdf_carregado_em}
+                cursoAtivo={editavel}
+              />
+            ) : null}
+          </div>
           <PartesDoCurriculo
-            key={curriculo.id}
-            dados={
-              <div className="flex flex-col gap-4" data-slot="parte-dados">
-                {podeEditarCurso && editavel ? (
-                  <FormularioDoCurriculo
-                    sigla={codigo}
-                    versao={curriculo.versao}
-                    inicial={{
-                      vigenteDe: curriculo.vigente_de,
-                      descricao: texto(curriculo.descricao),
-                      proposito: texto(curriculo.proposito),
-                      duracaoDias: texto(curriculo.duracao_dias),
-                      duracaoSemanas: texto(curriculo.duracao_semanas),
-                    }}
-                  />
-                ) : (
-                  <p className="text-texto-suave text-sm">
-                    Os dados do currículo se editam com a permissão de editar o curso.
-                  </p>
-                )}
-                {podeEditarCurso ? (
-                  <EnvioDoCurriculo
-                    sigla={codigo}
-                    cursoId={cursoId}
-                    curriculoId={curriculo.id}
-                    versao={curriculo.versao}
-                    carregadoEm={curriculo.pdf_carregado_em}
-                    cursoAtivo={editavel}
-                  />
-                ) : null}
-              </div>
-            }
             disciplinas={
               <div className="flex flex-col gap-6" data-slot="parte-disciplinas">
                 {gradeDeDisciplinas ? (
@@ -504,6 +541,14 @@ export default async function EditarCurso({
                         editar: editavel && podeHorarios.editar,
                         desativar: editavel && podeHorarios.desativar,
                       }}
+                      {...(podeExcluirRegime
+                        ? {
+                            exclusao: {
+                              estados: estadosDosRegimes,
+                              excluir: excluirRegimeDeHorario,
+                            },
+                          }
+                        : {})}
                     />
                   </>
                 ) : null}
@@ -521,11 +566,18 @@ export default async function EditarCurso({
               </div>
             }
           />
-        ) : (
-          /* Sem currículo não há partes: a vigência do regime fica à vista mesmo assim. */
-          secaoDeRegime
-        )}
-      </section>
+        </div>
+      ) : (
+        /* Sem currículo não há partes: a vigência do regime fica à vista mesmo assim. */
+        secaoDeRegime
+      )}
+    </section>
+  );
+
+  return (
+    <section className="flex flex-col gap-6">
+      <h1 className="text-texto text-lg font-semibold">Editar {codigo}</h1>
+      <AbasDaEdicaoDoCurso cadastro={cadastro} curriculo={abaDoCurriculo} />
     </section>
   );
 }

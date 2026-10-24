@@ -19,6 +19,7 @@
  * autorização, avaliação e responsável de curso também referenciam o instrutor, e entram por "sem
  * histórico nenhum". Chave desconhecida aparece como está — nunca some em silêncio (`RN-DEG-01`).
  */
+import { rotuloDoImpedimento } from "./exclusao-permanente";
 
 export const ROTULO_DO_IMPEDIMENTO: Readonly<Record<string, string>> = {
   aula_lancada: "aula lançada",
@@ -27,9 +28,13 @@ export const ROTULO_DO_IMPEDIMENTO: Readonly<Record<string, string>> = {
   conta_de_acesso: "conta de acesso ligada",
   avaliacao: "avaliação",
   responsavel_de_curso: "responsabilidade de curso",
+  // Bloco 10 (spec 025, D-32): as FKs criadas depois da exceção.
+  atividade: "atividade lançada",
+  ta_fora_do_dsa: "TA fora do DSA",
 };
 
-const rotulo = (chave: string): string => ROTULO_DO_IMPEDIMENTO[chave] ?? chave;
+/** Chave desconhecida (a rede de segurança devolve o nome da tabela) sai pelo nome dela — nunca some. */
+const rotulo = (chave: string): string => rotuloDoImpedimento(chave, ROTULO_DO_IMPEDIMENTO);
 
 function juntar(itens: readonly string[]): string {
   if (itens.length <= 1) return itens.join("");

@@ -16,6 +16,8 @@
  */
 import Link from "next/link";
 
+import { enderecoDaEdicaoDoCurso } from "@/lib/navegacao/endereco-de-turma";
+
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import {
   ROTULO_DA_CLASSIFICACAO,
@@ -108,7 +110,7 @@ export function CabecalhoDoCurso({
           <>
             {" — "}
             <Link
-              href={`/cursos/${encodeURIComponent(curso.codigo)}/editar`}
+              href={`${enderecoDaEdicaoDoCurso(curso.codigo, undefined, "horarios")}#regime-de-horario`}
               className="text-texto underline-offset-2 hover:underline"
               data-slot="ir-para-historico-de-regime"
             >

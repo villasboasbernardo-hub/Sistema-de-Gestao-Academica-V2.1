@@ -15,7 +15,6 @@ import {
   tipoDaLinha,
 } from "@/lib/dominio/calendario";
 import { emOrdemDeTurma } from "@/lib/dominio/ordem-de-cursos";
-import { anosDoSeletor } from "@/lib/dominio/painel-de-turmas";
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
 type Cliente = Awaited<ReturnType<typeof criarClienteDeServidor>>;
@@ -50,7 +49,6 @@ export type LinhaDoCalendario = {
 };
 
 export type DadosDoCalendario = {
-  readonly anos: readonly number[];
   readonly linhas: readonly LinhaDoCalendario[];
   readonly tipos: readonly TipoDoCalendario[];
   readonly turmas: readonly TurmaParaEscolher[];
@@ -59,14 +57,10 @@ export type DadosDoCalendario = {
 
 const IMPACTOS = new Set(["dia_inteiro", "parcial", "informativo"]);
 
-export async function lerCalendario(
-  supabase: Cliente,
-  ano: number,
-  vigente: number,
-): Promise<DadosDoCalendario> {
+export async function lerCalendario(supabase: Cliente, ano: number): Promise<DadosDoCalendario> {
   const de = `${ano}-01-01`;
   const ate = `${ano}-12-31`;
-  const [feriadosRes, paradasRes, tiposRes, turmasRes, arquivadasRes, anosRes] = await Promise.all([
+  const [feriadosRes, paradasRes, tiposRes, turmasRes, arquivadasRes] = await Promise.all([
     supabase
       .from("feriados")
       .select(
@@ -97,7 +91,6 @@ export async function lerCalendario(
       .select("id, codigo, ano_letivo, curso:cursos(codigo, classificacao)")
       .eq("ano_letivo", ano),
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
-    supabase.from("feriados").select("ano"),
   ]);
 
   const todosOsTipos = (tiposRes.data ?? []) as {
@@ -216,11 +209,6 @@ export async function lerCalendario(
 
   const erros = [feriadosRes, paradasRes, tiposRes, turmasRes].filter((r) => r.error);
   return {
-    /* D-7: os anos com linha, o de hoje e o seguinte. */
-    anos: anosDoSeletor(
-      [...((anosRes.data ?? []) as { ano: number }[]).map((a) => Number(a.ano)), vigente + 1],
-      vigente,
-    ),
     linhas: [...linhasDeFeriado, ...linhasDeParada].sort(
       (a, b) => a.data.localeCompare(b.data) || a.codigo.localeCompare(b.codigo),
     ),

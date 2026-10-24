@@ -36,6 +36,8 @@ import {
 } from "@/lib/acoes/unidade-ensino";
 
 import type { UnidadeDaLinha } from "../consulta";
+import { DICA_SEM_LEITURA, type EstadoDaExclusao } from "@/lib/dominio/exclusao-permanente";
+
 import { DialogoDeExclusao } from "./DialogoDeExclusao";
 
 type Resultado = { ok: boolean; erro?: string; pedeJustificativa?: true | undefined };
@@ -128,12 +130,18 @@ export function PainelDeUnidades({
   avisoDaSoma,
   podeEditar,
   podeDesativar,
+  exclusao,
 }: {
   readonly disciplinaId: string;
   readonly unidades: readonly UnidadeDaLinha[];
   readonly avisoDaSoma: string | null;
   readonly podeEditar: boolean;
   readonly podeDesativar: boolean;
+  /**
+   * O *Excluir* de cada UE, pelo `id` — só para quem exclui (`disciplinas.criar`, D-9 da spec 025); ausente, o ícone não
+   * nasce. A UE fora do mapa (leitura que falhou) fica desabilitada.
+   */
+  readonly exclusao?: Readonly<Record<string, EstadoDaExclusao>>;
 }) {
   const [erro, setErro] = React.useState<string | null>(null);
   const [mensagem, setMensagem] = React.useState<string | null>(null);
@@ -308,12 +316,21 @@ export function PainelDeUnidades({
                               ).then((recusa) => setErro(recusa))
                             }
                           />
-                          <DialogoDeExclusao
-                            tipo="unidade_de_ensino"
-                            nome={`${u.numeroUe} — ${u.topico}`}
-                            codigo={u.codigo}
-                            identificador={u.id}
-                          />
+                          {exclusao ? (
+                            <DialogoDeExclusao
+                              tipo="unidade_de_ensino"
+                              nome={`${u.numeroUe} — ${u.topico}`}
+                              codigo={u.codigo}
+                              identificador={u.id}
+                              estado={
+                                exclusao[u.id] ?? {
+                                  liberada: false,
+                                  dica: DICA_SEM_LEITURA,
+                                  detalhe: null,
+                                }
+                              }
+                            />
+                          ) : null}
                         </>
                       ) : null}
                     </div>

@@ -20,6 +20,12 @@ import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { rotuloDoCurriculo } from "@/lib/dominio/curriculos";
+import {
+  estadoDaExclusaoDaDisciplina,
+  estadoDaExclusaoDaUnidade,
+} from "@/lib/dominio/exclusao-de-disciplina";
+import { estadoDaExclusaoDoItem } from "@/lib/dominio/exclusao-de-partes";
+import { estadosPorRegistro, type ImpedimentosDoRegistro } from "@/lib/dominio/exclusao-permanente";
 import { disciplinaTemCurriculo } from "@/lib/dominio/modelo-do-curriculo";
 import {
   codigoDaTurmaNoSegmento,
@@ -117,6 +123,41 @@ export default async function PaginaDaDisciplina({
   const podeEditar = editavel && podeDisciplinas.editar;
   const podeDesativar = editavel && podeDisciplinas.desativar;
 
+  /*
+   * ⚠️ D-32 E D-30 (spec 025): quem exclui (`disciplinas.criar`) vê o *Excluir* já no estado que o banco diz — a
+   *    disciplina, cada UE e cada avaliação do currículo, numa rodada só. Sem resposta, desabilitado (D-13).
+   */
+  const podeExcluir = editavel && podeDisciplinas.criar;
+  const [impDaDisciplinaRes, impDasUnidadesRes, impDosItensRes] = podeExcluir
+    ? await Promise.all([
+        supabase.rpc("impedimentos_de_exclusao_da_disciplina", {
+          p_disciplina_id: linha.disciplinaId,
+        }),
+        linha.unidades.length > 0
+          ? supabase.rpc("impedimentos_de_exclusao_das_unidades", {
+              p_unidades: linha.unidades.map((u) => u.id),
+            })
+          : Promise.resolve(null),
+        linha.avaliacoesDoCurriculo.length > 0
+          ? supabase.rpc("impedimentos_de_exclusao_dos_itens", {
+              p_itens: linha.avaliacoesDoCurriculo.map((i) => i.id),
+            })
+          : Promise.resolve(null),
+      ])
+    : [null, null, null];
+  const estadoDaDisciplina = estadoDaExclusaoDaDisciplina(
+    impDaDisciplinaRes === null || impDaDisciplinaRes.error
+      ? null
+      : ((impDaDisciplinaRes.data as string[] | null) ?? []),
+  );
+  const loteOuNada = (r: { data: unknown; error: unknown } | null) =>
+    r === null || r.error ? null : ((r.data ?? []) as ImpedimentosDoRegistro[]);
+  const estadosDasUnidades = estadosPorRegistro(
+    loteOuNada(impDasUnidadesRes),
+    estadoDaExclusaoDaUnidade,
+  );
+  const estadosDosItens = estadosPorRegistro(loteOuNada(impDosItensRes), estadoDaExclusaoDoItem);
+
   return (
     <section className="flex flex-col gap-5" data-slot="pagina-da-disciplina">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -148,13 +189,14 @@ export default async function PaginaDaDisciplina({
             />
           ) : null}
           {/* ⚠️ Excluir segue a permissão de CRIAR (`FR-021`): o Operador, que edita, não vê este botão. */}
-          {editavel && podeDisciplinas.criar ? (
+          {podeExcluir ? (
             <DialogoDeExclusao
               tipo="disciplina"
               nome={linha.nomeDisciplina}
               codigo={linha.codigo}
               identificador={linha.disciplinaId}
               destinoAoExcluir={voltar(curriculo.versao)}
+              estado={estadoDaDisciplina}
             />
           ) : null}
         </BarraDeAcoes>
@@ -206,6 +248,7 @@ export default async function PaginaDaDisciplina({
           avisoDaSoma={linha.avisoDaSoma}
           podeEditar={podeEditar}
           podeDesativar={podeDesativar}
+          {...(podeExcluir ? { exclusao: estadosDasUnidades } : {})}
         />
       ) : null}
 
@@ -213,6 +256,7 @@ export default async function PaginaDaDisciplina({
         disciplinaId={linha.disciplinaId}
         itens={linha.avaliacoesDoCurriculo}
         podeEditar={podeEditar}
+        {...(podeExcluir ? { exclusao: estadosDosItens } : {})}
       />
     </section>
   );

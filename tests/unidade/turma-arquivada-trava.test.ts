@@ -41,6 +41,9 @@ const ISENTAS: Readonly<Record<string, string>> = {
   criarTurma: "a turma nasce agora: não existe arquivada",
   arquivarTurma: "é o próprio ato de arquivar (o banco recusa a já arquivada)",
   desarquivarTurma: "é o ato que destrava (só o Admin; o banco confere)",
+  /* Spec 025 (Bloco 10, D-COR-6): a arquivada tem, por definição, o registro do arquivamento — e o banco recusa. */
+  excluirTurma:
+    "a arquivada sempre tem registro de arquivamento, e o banco recusa turma com registro",
   arbitrarQuantidade: "currículo do CURSO, não de uma turma",
   nomearUe: "currículo do CURSO, não de uma turma",
   criarDisciplina: "cadastro do CURSO",

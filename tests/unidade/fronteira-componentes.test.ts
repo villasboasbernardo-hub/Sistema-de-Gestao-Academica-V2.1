@@ -142,8 +142,12 @@ describe("`FR-021` · marcador de cliente só onde há interação", () => {
     "components/ciaara/botao-de-icone.tsx",
     // Spec 022 (Bloco 7): o diálogo do formulário curto — aberto ou fechado é estado de tela.
     "components/ciaara/dialogo-de-formulario.tsx",
-    // Spec 022 (Bloco 7, item 10): veio de `app/(app)/instrutores/` quando Cursos passou a usá-lo — abrir é estado.
-    "components/ciaara/estatisticas-recolhiveis.tsx",
+    // Spec 025 (Bloco 10, RT-4): os painéis de Filtros e Estatísticas da página — aberto ou fechado é estado de tela.
+    "components/ciaara/paineis-da-pagina.tsx",
+    // Spec 025 (RT-6): o seletor de ano grava a escolha no navegador e troca a URL — é interação.
+    "components/ciaara/seletor-de-ano.tsx",
+    // Spec 025 (RT-2): o ícone Excluir abre o alerta e confere o código digitado — é interação.
+    "components/ciaara/exclusao-permanente.tsx",
     // Spec 019 (Bloco 4): o carrossel do Início — o passo, a pausa e o «reduzir movimento» são do navegador.
     "components/ciaara/carrossel.tsx",
     // Spec 021 (Bloco 6, RC-6): o diálogo que pede a justificativa da correção — abrir e esperar a resposta é estado.
