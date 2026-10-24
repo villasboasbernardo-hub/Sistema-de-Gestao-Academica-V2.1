@@ -5,7 +5,7 @@
       marca presencial e `vw_carga_presencial_turma`
 - [x] T002 M2: o filtro do salvo nas 13 definições, os índices da sessão, `chd_da_turma_na_etapa_ate` e a guarda de escrita
 - [x] T003 pgTAP `148` (estrutura, o caso que discrimina, sombra, trava, guarda do catálogo)
-- [ ] T004 RLS `tests/invariantes/rls/publicacao-do-dsa.test.ts` (quem lança grava; quem não lança é recusado; a escrita
+- [x] T004 RLS `tests/invariantes/rls/publicacao-do-dsa.test.ts` (quem lança grava; quem não lança é recusado; a escrita
       direta nasce rascunho; o salvo não muda fora do Salvar)
 - [x] T005 `reversao.sql`
 
@@ -27,9 +27,9 @@
 
 ## Fase 5 — prova e entrega
 - [x] T016 retrato das telas antes × depois (cópia `remoto-20261023-130122.sql`)
-- [ ] T017 retrato das páginas antes × depois
-- [ ] T018 impressão digital do que soma e reversão provada com dado
+- [x] T017 retrato das páginas antes × depois
+- [x] T018 impressão digital do que soma e reversão provada com dado
 - [x] T019 medição do item 2
-- [ ] T020 e2e `publicacao-do-dsa.spec.ts` e o ajuste dos e2e do DSA ao rascunho
-- [ ] T021 defeitos deliberados; `verificar:tudo`; rito do remoto (portão: PARAR se mudar número de tela)
+- [x] T020 e2e `publicacao-do-dsa.spec.ts` e o ajuste dos e2e do DSA ao rascunho
+- [x] T021 defeitos deliberados; `verificar:tudo`; rito do remoto (portão: PARAR se mudar número de tela)
 - [ ] T022 PR, CI verde, plano de correções

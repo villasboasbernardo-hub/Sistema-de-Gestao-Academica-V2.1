@@ -389,7 +389,7 @@ _Pedido de Bernardo Villas Boas, 22/10/2026, pelo `/corrigir`._ Spec `023-bloco-
   **RP-4**: *"se algo de fora mudar uma semana publicada (feriado ou parada pelo Calendário…), o DSA avisa e pede uma
   alteração"*) — decisão de Bernardo Villas Boas, 23/10/2026.
 
-## Bloco 9 — Publicação do DSA (com rascunho) e contagem EAD/semipresencial (spec própria) — 🟨 PR aberto, sem merge
+## Bloco 9 — Publicação do DSA (com rascunho) e contagem EAD/semipresencial (spec própria) — 🟨 PR #88 aberto, migrations no remoto, sem merge
 
 _Pedido de Bernardo Villas Boas, 23/10/2026, pelo `/corrigir`._ Spec `024-bloco-9-publicacao-do-dsa`, ramo
 `feat/BLOCO-9-publicacao-do-dsa`, um PR. ⚠️ **O papel do DSA muda (PRÉVIA/ALT): merge só entre semanas.**
@@ -400,7 +400,9 @@ _Pedido de Bernardo Villas Boas, 23/10/2026, pelo `/corrigir`._ Spec `024-bloco-
    com justificativa obrigatória (ALT N no papel). Histórico com *Reimprimir*. O aviso *"alterado desde a publicação"*
    inclui o Calendário (fecha a `PEND-023-3`). **Portão autorizado** (22/10/2026): a M2 filtra `salvo` em tudo o que soma
    ou cruza lançamentos — provado na cópia do remoto: as 12 leituras do banco, as telas das 30 turmas e as 327 páginas
-   idênticas, fora as 14 da EAD (item 2) (`specs/024-…/antes-depois.md`).
+   idênticas, fora as 24 do item 2 (14 da EAD e o aviso nas 10 das semipresenciais) (`specs/024-…/antes-depois.md`). As
+   duas migrations estão no remoto desde 23/10/2026 (backup `remoto-20261023-192656.sql`; esquema `80345112…`, 2.573
+   objetos, igual nos dois bancos); `plano-de-aplicacao-no-remoto.md`.
 2. **EAD não conta TA** em lugar nenhum (andamento, saldo, Início, Turmas): o aviso da Divisão de Ensino a Distância no
    lugar. **Semipresencial** conta só a etapa presencial pela marca **presencial** da disciplina (*Editar curso →
    Currículo → Disciplinas*); sem marca, aviso e conta tudo. Medido nas 6 EAD e 5 semipresenciais da cópia.
