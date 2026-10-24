@@ -2,11 +2,10 @@
 
 No preview, com a conta de **Admin**. Os passos **[GRAVA]** escrevem no banco remoto; os demais só leem.
 
-> ⚠️ **A EXCLUSÃO PERMANENTE (itens 2, 3, 11 e 12) SÓ FUNCIONA DEPOIS DA MIGRATION NO REMOTO** — e ela é **portão**
-> (regra 9.4: altera uma restrição existente e o resultado de três funções que a tela já usa). Até você autorizar, todo
-> ícone *Excluir* novo aparece **desabilitado** com a dica *"não foi possível conferir os registros"*: é a degradação
-> segura (`RN-DEG-01`), não defeito. Os passos marcados **[DEPOIS DA MIGRATION]** ficam para essa segunda rodada; o resto
-> se confere já.
+> ✅ **A MIGRATION DA EXCLUSÃO PERMANENTE ESTÁ NO REMOTO DESDE 24/10/2026** (portão 9.4 autorizado na conferência
+> parcial; registro em `plano-de-aplicacao-no-remoto.md` §7). Os passos marcados **[DEPOIS DA MIGRATION]** já se
+> conferem. Antes dela, o *Excluir* novo aparecia desabilitado com *"não foi possível conferir os registros"*
+> (`RN-DEG-01`).
 
 Regras de tela de referência: `docs/correcoes/padroes-de-tela.md` (RT-1 a RT-7 e D-COR-6).
 
@@ -128,3 +127,13 @@ Regras de tela de referência: `docs/correcoes/padroes-de-tela.md` (RT-1 a RT-7 
 | Curso | *Excluir* sempre desabilitado, com a dica: todo curso tem o histórico do regime, que é permanente |
 | Usuários | *Estatísticas* (quadro de acessos) na barra |
 | Mensagens | *"Regime desativado."*, *"… desativada."*, *"não pode ser desativado."* — nenhum *"Inativar"* em texto de tela (guarda `sem-inativar.test.ts`) |
+
+## 13. Rodada da conferência parcial (24/10/2026) — só o que mudou
+
+1. *Instrutores* → ícone **Estatísticas**, no ano de hoje: o cartão diz *"Habilitados × selecionados em <ano>"*. Troque o
+   ano para o **seguinte** no seletor: os **selecionados vão a 0** (não há turma do ano seguinte com instrutor
+   designado), o habilitado continua o mesmo, e o gráfico *Status de Seleção* acompanha.
+2. *Filtros* → *Selecionado: Sim* no ano seguinte → **0 instrutor(es)**; volte ao ano de hoje → os designados.
+3. Abra um instrutor pela lista: *Carga horária de <ano>* segue o ano escolhido.
+4. **[GRAVA]** A exclusão permanente agora funciona: os passos **[DEPOIS DA MIGRATION]** dos itens 2, 3, 11 e 12.
+

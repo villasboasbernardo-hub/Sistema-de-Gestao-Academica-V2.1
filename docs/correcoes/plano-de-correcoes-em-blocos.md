@@ -439,13 +439,17 @@ _Pedido de Bernardo Villas Boas, 23/10/2026, pelo `/corrigir`._ Spec `024-bloco-
 
 _Pedido de Bernardo Villas Boas, 24/10/2026, pelo `/corrigir`._ Spec `025-bloco-10-padroes-de-tela`, ramo
 `feat/BLOCO-10-padroes-de-tela`, um PR. Regras novas **RT-1 a RT-7** e **D-COR-6** em `docs/correcoes/padroes-de-tela.md`
-(apontado no `CLAUDE.md`). Os doze itens, as 37 decisões adotadas por padrão (D-1 a D-37) e as autorizações A-1 a A-9
+(apontado no `CLAUDE.md`). Os doze itens, as 39 decisões (D-1 a D-37 aprovadas por Bernardo em 24/10/2026; D-38 e D-39 da conferência parcial) e as autorizações A-1 a A-9
 estão na spec; o roteiro é `specs/025-…/roteiro-de-conferencia.md`.
 
 ⚠️ **UMA MIGRATION, E ELA É PORTÃO 9.4** (`20261024063555_exclusao_permanente_dos_cadastros.sql`): troca a restrição do
-rastro e o resultado de três funções de impedimento que a tela já usa, e passa a apagar dado quando chamada. O desenho
-está em `specs/025-…/plano-de-aplicacao-no-remoto.md`; **o remoto espera a palavra de Bernardo**. Até lá, todo *Excluir*
-novo aparece desabilitado no preview, com *"não foi possível conferir os registros"* (`RN-DEG-01`).
+rastro e o resultado de três funções de impedimento que a tela já usa, e passa a apagar dado quando chamada. ✅
+**Autorizada por Bernardo e APLICADA NO REMOTO em 24/10/2026**, com backup `remoto-20261024-130503.sql`, dry-run só
+com ela, **97 e 97** migrations e impressão digital **igual nos dois** (2.637 objetos, `5ab2b13b…`) — registro em
+`specs/025-…/plano-de-aplicacao-no-remoto.md` §7.
+
+**Conferência parcial (24/10/2026):** um defeito — *selecionados* em Instrutores ignorava o ano (em 2027 mostrava os 34
+de 2026) —, corrigido sem mexer na view, pelo ano da turma (`lib/dominio/selecao-no-ano.ts`).
 
 **Revisão adversarial do PR #90 (24/10/2026):** dez achados corrigidos antes da conferência, cada um com o caso que o
 prova visto reprovar antes — o seletor de ano preso no ano de um link, a 1ª aplicação da prova no feriado, o *Excluir* fora

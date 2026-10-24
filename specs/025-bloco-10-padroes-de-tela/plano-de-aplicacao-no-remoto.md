@@ -1,9 +1,11 @@
 # Plano de aplicação no remoto — spec 025 (Bloco 10)
 
-> ⚠️ **PORTÃO 9.4 — ESTA MIGRATION ESPERA A SUA PALAVRA.** Ela **altera o que existe**: troca a restrição
+> ✅ **PORTÃO 9.4 AUTORIZADO E APLICADO** — *"Portão 9.4 AUTORIZADO: aplique 20261024063555_exclusao_permanente_dos_
+> cadastros.sql no remoto com o rito completo"* (Bernardo Villas Boas, 24/10/2026, na conferência parcial do PR #90).
+> **Aplicada no remoto em 24/10/2026**, logo depois do backup das 13:05 — o registro está no §7. Ela **altera o que existe**: troca a restrição
 > `exclusoes_tabela_permitida` (de 3 para 8 tabelas) e **muda o resultado** de três funções que a tela já usa
 > (`app.impedimentos_de_exclusao_do_instrutor`, `…_da_disciplina`, `…_da_unidade_ensino`). E passa a **apagar dado**
-> quando chamada — a regra 4 ganha cinco tabelas na exceção. Nada foi aplicado no remoto.
+> quando chamada — a regra 4 ganha cinco tabelas na exceção.
 
 ## 1. A migration
 
@@ -90,10 +92,40 @@ tentativa, sobre os 3 rastros que a suíte de ponta a ponta deixou no banco loca
 do esquema vai de **2.637 objetos `5ab2b13b…`** (com a migration) a **2.573 objetos `80345112…`** — a mesma do remoto
 depois do Bloco 9; o `rollback` devolveu o esquema e os 3 rastros.
 
-## 6. O rito, quando você autorizar
+## 6. O rito
 
 1. `python -m scripts.manutencao.dado_do_remoto --somente-copia` — o arquivo datado vai citado aqui.
 2. `supabase db push --linked --dry-run` — listando **só** `20261024063555`.
 3. `supabase db push --linked` (o pedido de permissão aparece para você).
 4. Conferência só de leitura: migrations iguais nos dois lados; impressão digital do esquema igual no local e no remoto;
    `security_invoker` nas views; **zero** policy de `DELETE`; Production respondendo.
+
+## 7. A aplicação no remoto — 24/10/2026
+
+Autorização: Bernardo Villas Boas, 24/10/2026, na conferência parcial do PR #90 (citada no topo). CI verde nos três
+blocos sobre `dffb593`, o commit que traz a versão final da migration (com a 1ª aplicação da prova no feriado).
+
+1. **Backup:** `python -m scripts.manutencao.dado_do_remoto --somente-copia` →
+   **`remoto-20261024-130503.sql`** (4.360 KB, fora do git). O banco local não foi tocado.
+2. **Dry-run:** `supabase db push --linked --dry-run` → *"Would push these migrations: •
+   20261024063555_exclusao_permanente_dos_cadastros.sql"* — **só ela**.
+3. **Aplicação:** `supabase db push --linked` → *"Applying migration 20261024063555_exclusao_permanente_dos_cadastros.sql…
+   Finished supabase db push."*, saída 0.
+4. **Conferência só de leitura** (`supabase db query --linked`, só `select`; e `supabase migration list --linked`):
+
+| O quê | Medido |
+|---|---|
+| Migrations | **97 e 97**, nenhuma só de um lado |
+| Impressão digital do esquema (`scripts/provas/impressao_digital_do_esquema.sql`) | **2.637 objetos `5ab2b13b…` nos dois** — igual à do banco local com a migration |
+| Restrição do rastro | `exclusoes_tabela_permitida` com as **8** tabelas |
+| As cinco exclusões | `app.excluir_*` **`SECURITY DEFINER`** e `public.excluir_*` **`INVOKER`** — turma, feriado, regime, item de avaliação do currículo e sala |
+| `anon` executa alguma `public.excluir_*` | **0** |
+| Views de `public` e `app` sem `security_invoker` | só `vw_instrutor_dados_pessoais`, a exceção nominal de PII |
+| Policies de `DELETE` / `DELETE`·`TRUNCATE` para `authenticated` em `public` | **0** / **0** |
+| Rastros das tabelas novas | **0** — nada foi excluído |
+| Efeito no dado vivo | **3 de 32** linhas do calendário e **11 de 30** turmas livres — o mesmo da cópia medida no §4 |
+| Cadastros | 30 turmas, 32 linhas do calendário, 181 instrutores, 7 contas |
+| Production | `/login` **200**; `/turmas` **307** para o login |
+
+Reversão: `reversao.sql` (§5), válida enquanto o rastro das tabelas novas estiver vazio — **0** no momento da aplicação.
+
