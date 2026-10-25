@@ -458,7 +458,8 @@ da tabulação, o *Cadastro* de *Editar curso* que voltava ao *Currículo*, entr
 **Segunda conferência (24/10/2026):** a regra RT-6 ganhou a emenda *"o ano de qualquer informação ligada a turma é o ANO
 DA TURMA, nunca a data do registro ou a janela da atribuição"*. D-38 e D-39 invertidas; a migration
 `20261024213231_ano_da_turma_na_carga_do_instrutor.sql` faz as duas views de carga do instrutor contarem pelo ano da
-turma (autorização condicional; efeito medido: só a atribuição da `CAHO 2027` sai de 2026 e vai para 2027).
+turma (autorização condicional; efeito medido: só a atribuição da `CAHO 2027` sai de 2026 e vai para 2027) — ✅ **aplicada no remoto em 25/10/2026**, backup `remoto-20261025-141154.sql`, **98 e 98** migrations, impressão
+digital igual nos dois (2.637 objetos, `7e7eb3d5…`).
 
 **Pendências novas, achadas e não corrigidas:**
 

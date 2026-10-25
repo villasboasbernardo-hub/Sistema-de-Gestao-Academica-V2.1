@@ -156,3 +156,26 @@ turmas e 2047 ficava vazio); com a migration, 8 de 8. O `094` foi atualizado à 
 impressão digital do esquema dá 2.637 objetos `7e7eb3d5…`; depois da reversão, **2.637 objetos `5ab2b13b…`** — a do
 remoto antes desta migration.
 
+### 8.1 A aplicação no remoto — 25/10/2026
+
+Condição da autorização conferida duas vezes: na cópia `remoto-20261024-183028.sql` e de novo, na hora, na cópia nova
+**`remoto-20261025-133811.sql`** — o mesmo efeito, linha a linha (só a `CAHO 2027` muda de ano; só o instrutor 40 tem a
+carga redistribuída). CI verde nos três blocos sobre `e01bd40`.
+
+1. **Backup:** `python -m scripts.manutencao.dado_do_remoto --somente-copia` → **`remoto-20261025-141154.sql`** (4.360 KB,
+   fora do git).
+2. **Dry-run:** listou **só** `20261024213231_ano_da_turma_na_carga_do_instrutor.sql`.
+3. **Aplicação:** `supabase db push --linked` → *"Applying migration 20261024213231…"*, saída 0.
+4. **Conferência só de leitura:**
+
+| O quê | Medido |
+|---|---|
+| Migrations | **98 e 98**, nenhuma só de um lado |
+| Impressão digital do esquema | **2.637 objetos `7e7eb3d5…` nos dois** |
+| Opções das duas views | `security_invoker=true` nas duas |
+| Escrita para `authenticated` nas duas views / policies de `DELETE` | **0** / **0** |
+| Atribuições com `ano` diferente do ano da turma | **0** |
+| `CAHO 2027` | `ano` **2027**, 239 TA |
+| Instrutor 40 (prevista/ministrada) | 2026 = **763**/281 · 2027 = **239**/0 |
+| Production | `/login` **200**; `/instrutores` **307** para o login |
+

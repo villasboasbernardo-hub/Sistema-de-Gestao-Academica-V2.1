@@ -102,6 +102,11 @@ async function irAGradeEmEdicao(page: Page): Promise<void> {
 async function abrirDetalhe(page: Page, nome: string): Promise<void> {
   await abrirLinha(page, nome);
   await expect(page.locator('[data-slot="detalhe-da-disciplina"]')).toBeVisible();
+  /*
+   * ⚠️ O DETALHE APARECE ANTES DE O `?aberta=` CHEGAR À BARRA (o nuqs grava um instante depois): quem lê a URL logo em
+   *    seguida podia ler a de antes — instável no CI do PR #90, em dois casos (`:148` e `:179`). Espera-se a URL também.
+   */
+  await expect.poll(() => new URL(page.url()).searchParams.get("aberta")).not.toBeNull();
 }
 
 /**
