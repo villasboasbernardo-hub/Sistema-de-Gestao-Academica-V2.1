@@ -35,12 +35,7 @@ import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { alertaAcimaDaFaixa } from "@/lib/dominio/alertas-instrutor";
-import {
-  cargaPorSemana,
-  limitesDoAnoIso,
-  semanasAcimaDaFaixa,
-  semanasDoAno,
-} from "@/lib/dominio/carga-semanal";
+import { cargaPorSemana, semanasAcimaDaFaixa, semanasDoAno } from "@/lib/dominio/carga-semanal";
 import { motivoDoImpedimento } from "@/lib/dominio/exclusao-de-instrutor";
 import { DICA_SEM_LEITURA } from "@/lib/dominio/exclusao-permanente";
 import { mediaSemanalDaAtribuicao } from "@/lib/dominio/media-semanal";
@@ -119,7 +114,6 @@ export default async function FichaDoInstrutor({
 
   const escolha = await anoEscolhido(String(valores.ano));
   const ano = escolha.ano;
-  const limitesDoAno = limitesDoAnoIso(ano);
   const podeExcluir = pode(permissoes, "instrutores", "criar");
   const [cargaRes, atribuicoesRes, vinculosRes, impedimentosRes] = await Promise.all([
     supabase
@@ -135,14 +129,13 @@ export default async function FichaDoInstrutor({
       )
       .eq("instrutor_id", instrutor.id)
       /*
-       * ⚠️ DUAS PERGUNTAS NA MESMA CONSULTA (CHK005, decisão de Bernardo Villas Boas, 15/09/2026). A seção
-       * de carga lista as atribuições **do ano** pela data de início (T011 c); o alerta de faixa precisa
-       * de toda janela que toca o ano ISO corrente, inclusive a que começou no ano anterior. Vêm as duas,
-       * e a lista é recortada abaixo, em memória.
+       * ⚠️ SÓ AS ATRIBUIÇÕES DAS TURMAS DO ANO (RT-6, conferência do PR #90, 24/10/2026): *"o ano de qualquer
+       *    informação ligada a turma é o ANO DA TURMA, nunca a data do registro ou a janela da atribuição"*. A coluna
+       *    `ano` da view é o ano da turma (migration `20261024213231`). Isto SUBSTITUI a CHK005 (15/09/2026), que
+       *    trazia também toda janela que tocasse o ano: a atribuição de uma turma de 2027 com janela em 2026 entrava na
+       *    carga e no alerta de 2026. A lista, a marca "só habilitado" e o alerta de faixa saem desta mesma leitura.
        */
-      .or(
-        `ano.eq.${ano},and(previsao_inicio.lte.${limitesDoAno.fim},previsao_termino.gte.${limitesDoAno.inicio})`,
-      )
+      .eq("ano", ano)
       .order("previsao_inicio"),
     supabase
       .from("instrutor_disciplina")

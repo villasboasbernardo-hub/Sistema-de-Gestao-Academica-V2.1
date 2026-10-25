@@ -165,10 +165,11 @@ export function montarConsultaDeInstrutores<C>(consulta: C, parametros: Parametr
    */
   if (parametros.habilitado === "sim") c = c.eq("habilitado", true);
   if (parametros.habilitado === "nao") c = c.eq("habilitado", false);
-  if (parametros.curso !== "") c = c.contains("cursos_vinculados", [parametros.curso]);
-  if (parametros.classificacao !== "") {
-    c = c.contains("classificacoes_vinculadas", [parametros.classificacao]);
-  }
+  /*
+   * ⚠️ CURSO E CLASSIFICAÇÃO SAÍRAM DAQUI (D-39 invertida, conferência de 24/10/2026): *"só pelas designações do ano
+   *    escolhido"*. Os arranjos da view (`cursos_vinculados`, `classificacoes_vinculadas`) não têm ano; a página os
+   *    aplica pelas designações do ano (`noRecorteDeCurso`, `lib/dominio/selecao-no-ano.ts`).
+   */
 
   const busca = normalizar(parametros.busca);
   if (busca !== "") c = c.ilike("nome_normalizado", `%${escaparCuringas(busca)}%`);

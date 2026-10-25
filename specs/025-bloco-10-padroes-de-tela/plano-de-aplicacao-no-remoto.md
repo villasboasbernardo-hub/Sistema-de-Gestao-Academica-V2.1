@@ -129,3 +129,30 @@ blocos sobre `dffb593`, o commit que traz a versão final da migration (com a 1�
 
 Reversão: `reversao.sql` (§5), válida enquanto o rastro das tabelas novas estiver vazio — **0** no momento da aplicação.
 
+## 8. A segunda migration — `20261024213231_ano_da_turma_na_carga_do_instrutor.sql`
+
+**Autorização condicional** — *"Se precisar recriar view ou função de carga (ex.: vw_instrutor_carga_*): AUTORIZADO
+seguir sozinho com o rito completo SE a medição na cópia do remoto mostrar como único efeito a saída de turmas de outro
+ano; qualquer outra diferença, PARE e me mostre."* (Bernardo Villas Boas, 24/10/2026, segunda conferência do PR #90).
+
+**O que muda** (mesmas colunas, mesma ordem, mesmos tipos; `security_invoker` redeclarado — gotcha 10):
+`vw_instrutor_carga_prevista.ano` passa a ser o ano da TURMA (era o da janela); `vw_instrutor_carga_anual` soma a
+ministrada e a fiscalizada pelo ano da turma do fato (era o da data). A janela continua a mesma — é o período, não o ano.
+
+**Quem lê:** a ficha do instrutor (carga, atribuições, marca "só habilitado", alerta lilás), a coluna *CH do ano* de
+Instrutores, o sininho (alerta de carga), a grade de Disciplinas (pela linha da turma, sem ano — não muda).
+
+**Efeito medido** na cópia `remoto-20261024-183028.sql` restaurada no local, antes × depois das duas views, linha a
+linha: na prevista, **uma** linha das 113 muda — a atribuição da `CAHO 2027` (instrutor de código 40) de `ano` 2026 para
+2027; na anual, só o instrutor 40 — em 2026 a prevista cai de 1.002 para **763** TA (sai a turma de 2027, 239 TA), e
+nasce a linha de 2027 com os **239**. A ministrada não muda em linha nenhuma. **É exatamente a saída da turma de outro
+ano** (e a chegada dela ao ano dela, que o teste pedido exige: *"em 2027 só a da de 2027"*).
+
+**O caso que discrimina** (pgTAP `150`, 8 asserções): a mesma disciplina numa turma de 2046 e numa de 2047, janela das
+duas em 2046, e uma aula da turma de 2047 datada em 2046 — com as views antigas, **5** reprovam (2046 somava as duas
+turmas e 2047 ficava vazio); com a migration, 8 de 8. O `094` foi atualizado à regra nova (2 asserções da T011 c).
+
+**Reversão provada** (`reversao-ano-da-turma.sql`, gerado do texto das duas migrations anteriores): com a migration, a
+impressão digital do esquema dá 2.637 objetos `7e7eb3d5…`; depois da reversão, **2.637 objetos `5ab2b13b…`** — a do
+remoto antes desta migration.
+

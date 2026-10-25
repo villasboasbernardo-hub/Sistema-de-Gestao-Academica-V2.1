@@ -281,6 +281,36 @@ ordem por classificação (`ordem-de-cursos.ts`), o aviso de carga só acima da 
   habilitação **ou** atribuição de qualquer ano (`cursos_vinculados` da view): o vínculo com o curso não tem ano, e o
   filtro *Selecionado* é que segue o ano. *Alternativa: a parte da atribuição só do ano escolhido.*
 
+### Segunda conferência de Bernardo (24/10/2026) — RT-6 pelo ANO DA TURMA
+
+*"Tudo aprovado EXCETO o defeito abaixo."* O defeito, nas palavras dele: *"designei o mesmo instrutor para a mesma
+disciplina no CAL 2026 e no CAL 2027; na ficha dele, em 2026, a carga conta as DUAS turmas (a atribuição de 2027 foi feita
+hoje, e a janela dela cai em 2026). REGRA PARA O SISTEMA TODO (RT-6): o ano de qualquer informação ligada a turma é o ANO
+DA TURMA, nunca a data do registro ou a janela da atribuição."* Medido no remoto: **uma** atribuição com janela fora do
+ano da turma — a da `CAHO 2027`, com a janela em 2026 porque a previsão vem da DISCIPLINA (do currículo); e **zero**
+aula, avaliação, sessão, vista ou atividade com data fora do ano da turma.
+
+- **D-38 INVERTIDA** — a ficha (atribuições, carga prevista, carga ministrada, alertas) lê pelo ano da turma. Na fonte:
+  migration `20261024213231` — `vw_instrutor_carga_prevista.ano` passa a ser o ano da turma, e `vw_instrutor_carga_anual`
+  soma a ministrada pelo ano da turma do fato (autorizada condicionalmente; efeito medido em
+  `plano-de-aplicacao-no-remoto.md` §8). A ficha e o sininho deixam de trazer *"toda janela que toca o ano"* (a CHK005 de
+  15/09/2026, substituída).
+- **D-39 INVERTIDA** — os filtros *Curso* e *Classificação* de Instrutores só pelas designações do ano escolhido.
+- D-40 · Q: Com a D-39 invertida, a **habilitação** continua contando no filtro *Curso*? → A: **não** — *"só pelas
+  designações do ano escolhido"*. *Alternativa: habilitação (sem ano) OU designação do ano.*
+- D-41 · Q: O alerta de faixa por semana mostra que semanas? → A: as **semanas do ano escolhido**, com a carga só das
+  turmas do ano; a semana de outro ano que uma turma do ano carregue (janela fora do ano da turma, como a `CAHO 2027`)
+  não aparece. *Alternativa: todas as semanas das turmas do ano, de qualquer ano do calendário.*
+- **A varredura** (o que decide o ano por data ou janela, para dado ligado a turma): a ficha do instrutor e o sininho
+  (alertas de carga) — corrigidos; a lista de Instrutores (*CH do ano*) — corrigida pela view; *Atividades* — a de turma
+  pelo ano da turma, a global pela data (`predicado-do-ano.ts`). **Já pelo ano da turma**: Início, `/turmas` e as
+  estatísticas, a aba *Turmas* do curso. **Ficam pela data, por não terem turma**: o Calendário (feriado e parada global)
+  e o aviso de calendário do sininho.
+- **A duração pelo currículo vigente no ano** (Cursos, página do curso, estatísticas) — ⚠️ **a mensagem com esta regra
+  não chegou a esta sessão**; aplicada a régua da D-27 (o currículo vigente no ano: hoje, no ano corrente; 1º de janeiro,
+  nos outros). A página do curso já seguia desde a D-27; a lista de *Cursos* ganhou o seletor de ano, e a duração dos
+  cartões e das estatísticas é a do currículo vigente no ano escolhido.
+
 ### Conferência parcial de Bernardo (24/10/2026)
 
 *"D-1 a D-37 aprovadas."* — e **um defeito**: em *Instrutores*, *"selecionados"* ignorava o ano escolhido (em 2027, sem

@@ -21,6 +21,7 @@ import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste"
 import { abrirAbaDoCurso, irAoCursoPorClique } from "./navegar-curso";
 import { irAFichaDaTurma } from "./navegar-turmas";
 import { abrirPainel, escolherAno } from "./paineis";
+import { abrirPainelDeFiltros } from "./filtros";
 
 const MENU = (page: Page) => page.getByRole("navigation", { name: "Navegação principal" });
 
@@ -375,5 +376,181 @@ test.describe("item 7 · Editar curso", () => {
     await page.goto(`/cursos/${encodeURIComponent(SIGLA)}/editar?parte=horarios`);
     await expect.poll(() => new URL(page.url()).searchParams.get("aba")).toBe("curriculo");
     await expect(page.locator('[role="tabpanel"]#painel-parte-horarios')).toBeVisible();
+  });
+});
+
+/*
+ * Conferência de 24/10/2026 (Bernardo Villas Boas): «REGRA PARA O SISTEMA TODO (RT-6): o ano de qualquer informação
+ * ligada a turma é o ANO DA TURMA, nunca a data do registro ou a janela da atribuição». O defeito: o mesmo instrutor
+ * na mesma disciplina numa turma de cada ano, e a ficha de um ano somava as duas — a janela da turma do ano seguinte
+ * cai no ano corrente (a previsão é da DISCIPLINA, como no CAHO 2027 do remoto). A amostra reproduz isso, com uma aula
+ * da turma do ano seguinte DATADA no ano corrente, e um segundo currículo, vigente no ano seguinte, com outra duração.
+ */
+test.describe("RT-6 · o ano da turma (conferência de 24/10/2026)", () => {
+  let ANUAL: Bloco2Semeado;
+  let SIGLA_A = "";
+  let INS_A = "";
+
+  async function semErro(o: string, p: PromiseLike<{ error: { message: string } | null }>) {
+    const { error } = await p;
+    if (error) throw new Error(`semente do ano da turma — ${o}: ${error.message}`);
+  }
+
+  test.beforeAll(async ({}, info) => {
+    const p = info.workerIndex;
+    SIGLA_A = `CUR-B10A${p}`;
+    INS_A = `B10A-INS-${p}`;
+    const banco = bancoDoBloco2();
+    // O segundo currículo de uma rodada anterior sai ANTES da semente (o curso fica — regra 9.1).
+    const { data: existe } = await banco
+      .from("cursos")
+      .select("id")
+      .eq("codigo", SIGLA_A)
+      .maybeSingle();
+    if (existe) {
+      await semErro(
+        "currículo 2 antigo",
+        banco
+          .from("curriculos")
+          .delete()
+          .eq("curso_id", (existe as { id: string }).id)
+          .gt("versao", 1),
+      );
+    }
+    ANUAL = await semearBloco2({
+      sigla: SIGLA_A,
+      nome: `Curso do ano da turma ${p}`,
+      disciplinas: [{ cod: "I", nome: "Disciplina do ano", ch: 30 }],
+      turmas: [
+        {
+          chave: "T1",
+          ano: ANO,
+          status: "planejada",
+          inicio: `${ANO}-03-02`,
+          termino: `${ANO}-11-30`,
+        },
+        {
+          chave: "T2",
+          ano: ANO + 1,
+          status: "planejada",
+          inicio: `${ANO}-12-01`,
+          termino: `${ANO + 1}-06-30`,
+        },
+      ],
+      // A aula da turma do ano SEGUINTE, datada no ano corrente.
+      aulas: [
+        { sufixo: "A2", turma: "T2", cod: "I", data: `${ANO}-12-10`, tempos: 4, taInicial: 1 },
+      ],
+      instrutorCodigo: INS_A,
+    });
+    const disciplina = ANUAL.disciplinas.I as string;
+    // A janela das DUAS turmas cai no ano corrente: a previsão é da disciplina.
+    await semErro(
+      "previsão da disciplina",
+      banco
+        .from("disciplinas")
+        .update({ previsao_inicio: `${ANO}-03-02`, previsao_termino: `${ANO}-06-26` })
+        .eq("id", disciplina),
+    );
+    await semErro(
+      "designações",
+      banco.from("turma_disciplina_instrutor").insert(
+        (["T1", "T2"] as const).map((t) => ({
+          codigo: `${SIGLA_A}-TDI-${t}`,
+          turma_disciplina_id: ANUAL.linhas[`${t}|I`] as string,
+          instrutor_id: ANUAL.instrutorId,
+        })),
+      ),
+    );
+    // A duração: o currículo 1 desde sempre, com 29 semanas; o 2, vigente no ano seguinte, com 41.
+    await semErro(
+      "currículo 1",
+      banco
+        .from("curriculos")
+        .update({ vigente_de: "2020-01-01", duracao_semanas: 29 })
+        .eq("curso_id", ANUAL.cursoId)
+        .eq("versao", 1),
+    );
+    await semErro(
+      "currículo 2",
+      banco.from("curriculos").insert({
+        codigo: `${SIGLA_A}-CUR-2`,
+        curso_id: ANUAL.cursoId,
+        versao: 2,
+        vigente_de: `${ANO + 1}-01-01`,
+        duracao_dias: 200,
+        duracao_semanas: 41,
+      }),
+    );
+  });
+
+  test.afterAll(async () => {
+    if (!ANUAL) return;
+    await bancoDoBloco2().from("curriculos").delete().eq("curso_id", ANUAL.cursoId).gt("versao", 1);
+    await limparBloco2(SIGLA_A, INS_A);
+  });
+
+  test("a ficha do instrutor: em cada ano, só a turma DO ano — atribuições, prevista e ministrada", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL, "/inicio");
+    await MENU(page).getByRole("link", { name: "Instrutores", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/instrutores");
+    await abrirPainelDeFiltros(page);
+    await page.getByLabel("Buscar por nome").fill(INS_A.toLowerCase());
+    await page.locator(`a[href="/instrutores/${INS_A}"]`).click();
+
+    const carga = page.locator('[data-slot="carga-do-instrutor"]');
+    const prevista = page.locator('[data-slot="carga-prevista"]');
+    const ministrada = page.locator('[data-slot="carga-ministrada"]');
+    const tabela = page.locator('[data-slot="atribuicoes-previstas"]');
+    await expect(carga).toContainText(`Carga horária de ${ANO}`, { timeout: 15_000 });
+    await expect(prevista, "a turma do ano seguinte entrou na prevista deste ano").toHaveText(
+      "30 TA",
+    );
+    await expect(ministrada, "a aula da turma do ano seguinte entrou neste ano").toHaveText("0 TA");
+    await expect(tabela).toContainText(ANUAL.turmas.T1!.codigo);
+    await expect(tabela).not.toContainText(ANUAL.turmas.T2!.codigo);
+
+    await escolherAno(page, ANO + 1);
+    await expect(carga).toContainText(`Carga horária de ${ANO + 1}`);
+    await expect(prevista, "a turma do ano seguinte não ficou no ano dela").toHaveText("30 TA");
+    await expect(ministrada).toHaveText("4 TA");
+    await expect(tabela).toContainText(ANUAL.turmas.T2!.codigo);
+    await expect(tabela).not.toContainText(ANUAL.turmas.T1!.codigo);
+  });
+
+  test("o filtro Curso de Instrutores: só quem foi designado em turma do ano escolhido", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL, "/inicio");
+    await MENU(page).getByRole("link", { name: "Instrutores", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/instrutores");
+    await abrirPainelDeFiltros(page);
+    await page.getByRole("combobox", { name: "Curso", exact: true }).click();
+    await page
+      .getByRole("option", { name: new RegExp(`^${SIGLA_A}`) })
+      .first()
+      .click();
+    await expect.poll(() => new URL(page.url()).searchParams.get("curso")).toBe(SIGLA_A);
+    const contagem = page.locator('[data-slot="contagem-de-instrutores"]');
+    await expect(contagem).toContainText("1 instrutor(es)", { timeout: 15_000 });
+
+    // Dois anos à frente não há turma do curso: o vínculo de outro ano não conta (D-39 invertida).
+    await escolherAno(page, ANO + 2);
+    await expect(contagem, "a designação de outro ano entrou no filtro Curso").toContainText(
+      "0 instrutor(es)",
+    );
+  });
+
+  test("Cursos: a duração é a do currículo vigente no ano escolhido", async ({ page }) => {
+    await entrar(page, EMAIL, "/inicio");
+    await MENU(page).getByRole("link", { name: "Cursos", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/cursos");
+    const cartao = page.locator(`[data-slot="cartao-de-curso"][data-curso="${SIGLA_A}"]`);
+    await expect(cartao).toContainText("29 semanas", { timeout: 15_000 });
+
+    await escolherAno(page, ANO + 1);
+    await expect(cartao, "a duração não seguiu o currículo do ano").toContainText("41 semanas");
   });
 });

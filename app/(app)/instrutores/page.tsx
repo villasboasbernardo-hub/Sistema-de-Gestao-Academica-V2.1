@@ -38,7 +38,12 @@ import { escalaDeLinhas } from "@/lib/dominio/antiguidade";
 import { capacitacaoDoCadastro } from "@/lib/dominio/capacitacao-didatica";
 import { graficosDeInstrutores } from "@/lib/dominio/graficos-instrutor";
 import { indicadoresDeInstrutores } from "@/lib/dominio/indicadores-instrutor";
-import { filtrarPorSelecao, selecionadosNoAno } from "@/lib/dominio/selecao-no-ano";
+import {
+  filtrarPorSelecao,
+  noRecorteDeCurso,
+  selecionadosNoAno,
+  type DesignacaoComAno,
+} from "@/lib/dominio/selecao-no-ano";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
 import { lerParametros } from "@/lib/navegacao/esquema";
@@ -59,7 +64,12 @@ import { TabelaDeInstrutores, type LinhaDeInstrutor } from "./TabelaDeInstrutore
 /** Uma designação lida, com a turma embutida (`turma_disciplina!inner(…, turmas!inner(ano_letivo))`). */
 type DesignacaoLida = {
   readonly instrutor_id: string;
-  readonly turma_disciplina: { readonly turmas: { readonly ano_letivo: number } | null } | null;
+  readonly turma_disciplina: {
+    readonly turmas: {
+      readonly ano_letivo: number;
+      readonly curso: { readonly codigo: string; readonly classificacao: string } | null;
+    } | null;
+  } | null;
 };
 
 export default async function Instrutores({
@@ -130,7 +140,7 @@ export default async function Instrutores({
         supabase
           .from("turma_disciplina_instrutor")
           .select(
-            "id, instrutor_id, turma_disciplina!inner(status, turmas!inner(ano_letivo))",
+            "id, instrutor_id, turma_disciplina!inner(status, turmas!inner(ano_letivo, curso:cursos!turmas_curso_id_fkey(codigo, classificacao)))",
             contagemNaPrimeira(f),
           )
           .eq("status", "ativo")
@@ -172,16 +182,23 @@ export default async function Instrutores({
    * da view, sem ano, seria o defeito de volta.
    */
   const selecaoLida = !designacoesRes.error;
-  const selecionados = selecaoLida
-    ? selecionadosNoAno(
-        ((designacoesRes.data ?? []) as DesignacaoLida[]).map((d) => ({
-          instrutorId: d.instrutor_id,
-          anoDaTurma: d.turma_disciplina?.turmas?.ano_letivo ?? null,
-        })),
-        ano,
-      )
-    : new Set<string>();
-  const brutas = filtrarPorSelecao(data ?? [], selecionados, parametros.selecionado);
+  const designacoes: readonly DesignacaoComAno[] = selecaoLida
+    ? ((designacoesRes.data ?? []) as DesignacaoLida[]).map((d) => ({
+        instrutorId: d.instrutor_id,
+        anoDaTurma: d.turma_disciplina?.turmas?.ano_letivo ?? null,
+        cursoCodigo: d.turma_disciplina?.turmas?.curso?.codigo ?? null,
+        classificacao: d.turma_disciplina?.turmas?.curso?.classificacao ?? null,
+      }))
+    : [];
+  const selecionados = selecionadosNoAno(designacoes, ano);
+  /* D-39 invertida (24/10/2026): Curso e Classificação pelas designações do ano escolhido. */
+  const doCurso = noRecorteDeCurso(designacoes, ano, {
+    curso: parametros.curso,
+    classificacao: parametros.classificacao,
+  });
+  const brutas = filtrarPorSelecao(data ?? [], selecionados, parametros.selecionado).filter(
+    (b) => doCurso === null || doCurso.has(b.id as string),
+  );
   const linhas: LinhaDeInstrutor[] = brutas.map((i) => ({
     id: i.id as string,
     codigo: i.codigo as string,
@@ -306,8 +323,8 @@ export default async function Instrutores({
 
         {!selecaoLida && (
           <p className="text-texto-suave text-sm" role="status" data-slot="selecao-indisponivel">
-            Não foi possível ler as designações de {ano}. Selecionados e o status da seleção saem
-            sem elas até a leitura voltar.
+            Não foi possível ler as designações de {ano}. Selecionados, o status da seleção e os
+            filtros Curso e Classificação saem sem elas até a leitura voltar.
           </p>
         )}
 

@@ -455,8 +455,17 @@ de 2026) —, corrigido sem mexer na view, pelo ano da turma (`lib/dominio/selec
 prova visto reprovar antes — o seletor de ano preso no ano de um link, a 1ª aplicação da prova no feriado, o *Excluir* fora
 da tabulação, o *Cadastro* de *Editar curso* que voltava ao *Currículo*, entre outros (lista em `spec.md`, §Revisão).
 
+**Segunda conferência (24/10/2026):** a regra RT-6 ganhou a emenda *"o ano de qualquer informação ligada a turma é o ANO
+DA TURMA, nunca a data do registro ou a janela da atribuição"*. D-38 e D-39 invertidas; a migration
+`20261024213231_ano_da_turma_na_carga_do_instrutor.sql` faz as duas views de carga do instrutor contarem pelo ano da
+turma (autorização condicional; efeito medido: só a atribuição da `CAHO 2027` sai de 2026 e vai para 2027).
+
 **Pendências novas, achadas e não corrigidas:**
 
+- **`PEND-025-5`** — *a janela efetiva usa a previsão da DISCIPLINA, que tem data de um ano só*: numa turma de outro ano
+  (a `CAHO 2027`, no remoto), a janela cai fora do ano da turma — a carga agora conta no ano certo, mas o alerta por
+  semana não a vê (as semanas dela são do ano anterior). Corrigir é decidir de onde vem a janela de uma turma de ano
+  diferente do da previsão da disciplina.
 - **`PEND-025-1`** — *o curso nunca é excluível*: todo curso tem o histórico do regime, que é só de acréscimo (regra 9.1),
   e o *Excluir* fica sempre desabilitado com a dica. Excluir o curso criado por engano exigiria abrir uma exceção na
   imutabilidade de `curso_regime_historico` — decisão sua.

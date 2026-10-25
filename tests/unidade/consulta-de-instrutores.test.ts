@@ -176,16 +176,15 @@ describe("`FR-025` emendado em 15/09/2026 · os filtros novos entram na mesma co
     ).toBe(false);
   });
 
-  it("curso e classificação casam pelos arranjos da view — vínculo OU atribuição", () => {
+  it("curso e classificação TÊM ANO e saem da consulta — a página os aplica pelas designações do ano", () => {
+    /*
+     * Conferência de 24/10/2026 (D-39 invertida): só pelas designações do ano escolhido. Os arranjos da view
+     * (`cursos_vinculados`, `classificacoes_vinculadas`) casavam habilitação OU atribuição de qualquer ano.
+     */
     const filtros = montar({ curso: "CAHO", classificacao: "regular" }).filter(
       (c) => c[0] !== "order",
     );
-    expect(filtros).toEqual(
-      expect.arrayContaining([
-        ["contains", "cursos_vinculados", ["CAHO"]],
-        ["contains", "classificacoes_vinculadas", ["regular"]],
-      ]),
-    );
+    expect(filtros).toEqual([["eq", "status", "ativo"]]);
   });
 
   it("⚠️ os filtros novos não trocam a ordenação: continua sendo a antiguidade", () => {

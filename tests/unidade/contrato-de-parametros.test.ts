@@ -294,12 +294,15 @@ describe("`FR-004` · o catálogo `/cursos` declara os quatro filtros, e nada ma
   });
 
   // Spec 020 (Bloco 5), C-2: entrou `estrangeiros` (Sim, Não, Não informado), novidade autorizada.
-  it("são exatamente quatro: classificação, modalidade, situação e estrangeiros", () => {
+  // ⚠️ Spec 025 (RT-6, 24/10/2026): entrou `ano`, que NÃO é filtro — é o ano da tela (a duração do currículo vigente
+  //    nele); os filtros continuam quatro.
+  it("são exatamente quatro filtros — classificação, modalidade, situação e estrangeiros — e o ano da tela", () => {
     expect(parametrosDaRota("/cursos").map((p) => p.nome)).toEqual([
       "classificacao",
       "modalidade",
       "situacao",
       "estrangeiros",
+      "ano",
     ]);
   });
 
@@ -350,12 +353,11 @@ describe("`FR-004` · o catálogo `/cursos` declara os quatro filtros, e nada ma
   });
 
   it("⚠️ nenhum filtro de busca por texto — o catálogo tem 24 cartões, não uma tabela", () => {
-    expect(parametrosDaRota("/cursos").map((p) => p.tipo)).toEqual([
-      "escolha",
-      "escolha",
-      "escolha",
-      "escolha",
-    ]);
+    expect(
+      parametrosDaRota("/cursos")
+        .filter((p) => p.nome !== "ano")
+        .map((p) => p.tipo),
+    ).toEqual(["escolha", "escolha", "escolha", "escolha"]);
   });
 
   it("os quatro avisam o servidor — o recorte é feito pela consulta, não no navegador", () => {

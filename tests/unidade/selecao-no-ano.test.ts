@@ -3,7 +3,11 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { filtrarPorSelecao, selecionadosNoAno } from "@/lib/dominio/selecao-no-ano";
+import {
+  filtrarPorSelecao,
+  noRecorteDeCurso,
+  selecionadosNoAno,
+} from "@/lib/dominio/selecao-no-ano";
 
 const DESIGNACOES = [
   { instrutorId: "a", anoDaTurma: 2026 },
@@ -44,5 +48,43 @@ describe("filtrarPorSelecao — o filtro Selecionado segue o ano", () => {
 
   it("vazio não filtra", () => {
     expect(filtrarPorSelecao(LINHAS, em2027, "")).toHaveLength(3);
+  });
+});
+
+describe("noRecorteDeCurso — os filtros Curso e Classificação pelas designações do ano (D-39 invertida)", () => {
+  /*
+   * Conferência de 24/10/2026: «filtros Curso e Classificação de Instrutores só pelas designações do ano escolhido».
+   * Antes casavam a habilitação OU a atribuição de qualquer ano (`cursos_vinculados` da view).
+   */
+  const COM_CURSO = [
+    { instrutorId: "a", anoDaTurma: 2026, cursoCodigo: "CAHO", classificacao: "regular" },
+    { instrutorId: "b", anoDaTurma: 2027, cursoCodigo: "CAHO", classificacao: "regular" },
+    { instrutorId: "c", anoDaTurma: 2026, cursoCodigo: "C-Exp-X", classificacao: "expedito" },
+  ];
+
+  it("sem curso nem classificação, não recorta (null)", () => {
+    expect(noRecorteDeCurso(COM_CURSO, 2026, { curso: "", classificacao: "" })).toBeNull();
+  });
+
+  it("o curso conta só quem foi designado em turma DO ANO", () => {
+    expect([
+      ...(noRecorteDeCurso(COM_CURSO, 2026, { curso: "CAHO", classificacao: "" }) ?? []),
+    ]).toEqual(["a"]);
+    expect([
+      ...(noRecorteDeCurso(COM_CURSO, 2027, { curso: "CAHO", classificacao: "" }) ?? []),
+    ]).toEqual(["b"]);
+  });
+
+  it("num ano sem designação no curso, ninguém", () => {
+    expect(noRecorteDeCurso(COM_CURSO, 2028, { curso: "CAHO", classificacao: "" })?.size).toBe(0);
+  });
+
+  it("a classificação, idem; com os dois, vale o E lógico", () => {
+    expect([
+      ...(noRecorteDeCurso(COM_CURSO, 2026, { curso: "", classificacao: "expedito" }) ?? []),
+    ]).toEqual(["c"]);
+    expect(
+      noRecorteDeCurso(COM_CURSO, 2026, { curso: "CAHO", classificacao: "expedito" })?.size,
+    ).toBe(0);
   });
 });

@@ -479,6 +479,17 @@ export const CONTRATO = {
         historico: "substitui",
         avisaServidor: true,
       },
+      /*
+       * RT-6 (Bloco 10, conferência de 24/10/2026): a DURAÇÃO e o propósito de cada curso são os do currículo vigente
+       * no ano escolhido — e as estatísticas de duração também. Texto, padrão vazio = o ano de hoje (`anoEscolhido`).
+       */
+      ano: {
+        nome: "ano",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
     },
   },
   /*

@@ -375,9 +375,14 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
     );
     await expect(grade(page)).toContainText(amostra.nomes.selecionadoSemHabilitacao);
 
+    /*
+     * ⚠️ D-39 INVERTIDA (conferência de 24/10/2026): o filtro Curso é só pelas designações do ANO escolhido — o CT mais
+     *    antigo e a 1ºTen, designados na turma do ano corrente. O habilitado sem designação (o da aula) saiu; antes
+     *    eram 3, habilitação OU atribuição de qualquer ano.
+     */
     await page.goto(`${base}&curso=CUR-${amostra.marcador}`);
-    await expect(contagem(page), "curso não casou vínculo OU atribuição").toContainText(
-      "3 instrutor(es)",
+    await expect(contagem(page), "curso não ficou só nas designações do ano").toContainText(
+      "2 instrutor(es)",
     );
 
     await page.goto(`${base}&capacitacao=nenhuma`);
@@ -968,14 +973,18 @@ test.describe("`SC-006` · o alerta de faixa avisa, nomeia a semana e não bloqu
     ).toHaveCount(0);
   });
 
-  test("CHK005 · a janela que começou no ano anterior alerta só nas semanas do ano corrente", async ({
+  test("CHK005 (RT-6) · a turma do ano conta no ano dela, e o alerta nomeia só as semanas do ano", async ({
     page,
   }) => {
     // 01/12 do ano anterior a 31/01 do corrente, 25 h por semana: acima da faixa de 8 a 12 h do 20h.
     const ano = new Date().getFullYear();
     await abrirFicha(page, amostra.codigos.semCapacitacao);
-    // A atribuição começou no ano anterior: não entra na carga prevista do ano (T011 c).
-    await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("0 TA");
+    /*
+     * ⚠️ RT-6 (conferência de 24/10/2026) substitui a T011 c: a turma da amostra é do ano CORRENTE, então a carga dela
+     *    conta neste ano, embora a janela tenha começado no ano anterior — «o ano de qualquer informação ligada a turma
+     *    é o ANO DA TURMA, nunca a data do registro ou a janela da atribuição». Antes, 0 TA.
+     */
+    await expect(page.locator('[data-slot="carga-prevista"]')).toHaveText("225 TA");
 
     await abrirAvisosPeloSininho(page);
     const alerta = avisoDaChave(

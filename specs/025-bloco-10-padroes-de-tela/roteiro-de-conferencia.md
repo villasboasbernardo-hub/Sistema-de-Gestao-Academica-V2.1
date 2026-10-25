@@ -137,3 +137,14 @@ Regras de tela de referência: `docs/correcoes/padroes-de-tela.md` (RT-1 a RT-7 
 3. Abra um instrutor pela lista: *Carga horária de <ano>* segue o ano escolhido.
 4. **[GRAVA]** A exclusão permanente agora funciona: os passos **[DEPOIS DA MIGRATION]** dos itens 2, 3, 11 e 12.
 
+## 14. Segunda conferência (24/10/2026) — só o que mudou
+
+1. *Instrutores* → o instrutor que você designou na mesma disciplina numa turma de 2026 e numa de 2027 (no remoto, a atribuição da `CAHO 2027`). Em **2026**, *Carga horária de 2026*:
+   a **prevista** e a lista de atribuições têm **só a turma de 2026**. Troque para **2027** no seletor: só a de 2027.
+   A **ministrada** segue o ano da turma da aula; o **alerta lilás**, só as turmas do ano.
+2. *Instrutores* → *Filtros* → *Curso: CAHO*: em 2026, os designados em turma CAHO de 2026; em 2027, só o designado na
+   CAHO 2027. Quem só tem habilitação não entra mais.
+3. *Instrutores* → a coluna *CH do ano* e o sininho (alerta de carga) seguem a mesma regra.
+4. *Atividades*: a atividade de turma aparece no ano da turma; a global (de todas as turmas), pela data.
+5. *Cursos*: o seletor de ano no canto superior direito; a duração de cada cartão e as *Estatísticas* de duração são as
+   do currículo vigente no ano escolhido (troque o ano num curso com currículo novo vigente no ano seguinte).

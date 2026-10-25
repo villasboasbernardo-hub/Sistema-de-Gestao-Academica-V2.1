@@ -49,6 +49,7 @@ import {
 } from "./consulta";
 import { AbasDeAtividades } from "./AbasDeAtividades";
 import { lerCalendario } from "./calendario";
+import { predicadoDoAno } from "./predicado-do-ano";
 import { FiltrosDeAtividades } from "./FiltrosDeAtividades";
 import { PainelDoCalendario } from "./PainelDoCalendario";
 
@@ -128,6 +129,17 @@ export default async function Atividades({
     );
   }
 
+  /*
+   * ⚠️ RT-6 (conferência do PR #90, 24/10/2026): a atividade de turma vale no ANO DA TURMA, nunca pela data; a global
+   *    (sem turma), pela data. Por isso as turmas do ano vêm antes — o recorte precisa dos ids delas.
+   */
+  const turmasRes = await supabase
+    .from("turmas")
+    .select("id, codigo")
+    .eq("ano_letivo", ano)
+    .order("codigo");
+  const idsDoAno = (turmasRes.data ?? []).map((t) => t.id as string);
+
   let consulta = supabase
     .from("atividades_nao_letivas")
     .select(
@@ -138,18 +150,16 @@ export default async function Atividades({
     .eq("status", "ativo")
     /* Spec 024 (RP-0/RP-8): o rascunho só aparece no DSA da turma; a lista é do salvo. */
     .eq("salvo", true)
-    /* RT-6 (spec 025, D-26): só o ano escolhido. */
-    .gte("data", `${ano}-01-01`)
-    .lte("data", `${ano}-12-31`);
+    /* RT-6 (spec 025, D-26; conferência de 24/10/2026): só o ano escolhido — o da turma. */
+    .or(predicadoDoAno(ano, idsDoAno));
   if (filtro.turma) consulta = consulta.eq("turmas.codigo", filtro.turma);
   if (filtro.categoria) consulta = consulta.eq("categoria_normativa", filtro.categoria as never);
   if (filtro.tipo) consulta = consulta.ilike("subtipo", `%${filtro.tipo}%`);
   if (filtro.de) consulta = consulta.gte("data", filtro.de);
   if (filtro.ate) consulta = consulta.lte("data", filtro.ate);
 
-  const [atividadesRes, turmasRes, arquivadasRes, universo] = await Promise.all([
+  const [atividadesRes, arquivadasRes, universo] = await Promise.all([
     consulta.order("data", { ascending: false }).order("ta_inicial").limit(LIMITE_DE_ATIVIDADES),
-    supabase.from("turmas").select("id, codigo").eq("ano_letivo", ano).order("codigo"),
     /* D-COR-5 (spec 017, C-24): a turma arquivada some do filtro de turma. */
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
     /*
@@ -175,7 +185,7 @@ export default async function Atividades({
 
   const corpo = (
     <>
-      {atividadesRes.error ? (
+      {atividadesRes.error || turmasRes.error ? (
         <EstadoVazio
           motivo="sem-permissao"
           titulo="Não foi possível ler as atividades agora"

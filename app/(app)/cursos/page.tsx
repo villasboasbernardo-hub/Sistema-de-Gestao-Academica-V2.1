@@ -32,6 +32,9 @@ import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { curriculoVigenteEm, type CurriculoParaVigencia } from "@/lib/dominio/curriculos";
+import { curriculoDeReferencia } from "@/lib/dominio/ano-escolhido";
+import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
+import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import { indicadoresDoCatalogo } from "@/lib/dominio/indicadores-do-catalogo";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { lerParametros } from "@/lib/navegacao/esquema";
@@ -88,6 +91,15 @@ export default async function Cursos({
     estrangeiros: String(valores.estrangeiros),
   };
 
+  /*
+   * ⚠️ RT-6 (Bloco 10, conferência de 24/10/2026): a duração e o propósito são os do currículo vigente NO ANO ESCOLHIDO
+   *    — hoje, no ano corrente; 1º de janeiro, nos outros (D-27, a mesma régua da página do curso). As estatísticas de
+   *    duração saem dos mesmos cartões.
+   */
+  const hoje = hojeNaCiaara();
+  const escolha = await anoEscolhido(String(valores.ano), hoje);
+  const referencia = curriculoDeReferencia(escolha.ano, hoje);
+
   const supabase = await criarClienteDeServidor();
   const [usuario, { data, error }] = await Promise.all([
     usuarioDaSessao(),
@@ -116,6 +128,12 @@ export default async function Cursos({
         </p>
       </div>
       <BarraDeAcoes rotulo="Ações do catálogo">
+        <SeletorDeAno
+          ano={escolha.ano}
+          vigente={escolha.vigente}
+          origem={escolha.origem}
+          rota="/cursos"
+        />
         <GatilhoDePainel painel="filtros" contagem={ativos} />
         {error ? null : <GatilhoDePainel painel="estatisticas" />}
         <SePodeVer permissoes={permissoes} recurso="cursos" acao="criar">
@@ -149,12 +167,11 @@ export default async function Cursos({
   }
 
   const linhas = data ?? [];
-  /* Spec 021 (Bloco 6, RC-1): o propósito e a duração vêm do currículo VIGENTE hoje de cada curso. */
-  const hoje = hojeNaCiaara();
+  /* Spec 021 (RC-1) e RT-6: o propósito e a duração vêm do currículo vigente NO ANO ESCOLHIDO de cada curso. */
   const cursos: CartaoDeCurso[] = linhas.map((c) => {
     const curriculo = curriculoVigenteEm(
       (c.curriculos ?? []) as unknown as CurriculoDoCatalogo[],
-      hoje,
+      referencia,
     );
     return {
       codigo: c.codigo as string,
