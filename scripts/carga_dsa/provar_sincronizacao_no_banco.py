@@ -9,7 +9,9 @@ O QUE  : roda `sincronizar` DUAS vezes, gravando, sobre uma turma real do retrat
            4. a linha TAD da mesma linha da planilha (`…-N`) esta INATIVA, com a marca
               «[RECLASSIFICADO PELA SPEC 014]» — nada foi apagado (regra 4);
            5. todo `feriados.codigo` tem a forma `FER-NNNNNN` e nenhum script de `scripts/carga_dsa`
-              monta o codigo de feriado com `'FER-' ||` (varredura SEM comentario, com controle positivo).
+              monta o codigo de feriado com `'FER-' ||` (varredura SEM comentario, com controle positivo);
+           6. D4 (Bernardo Villas Boas, 26/10/2026): a turma ARQUIVADA e pulada, sai no resumo com o motivo
+              e nao para a rodada — a outra turma pedida junto chega ao ensaio e a saida e 0 (antes, 4).
 
 PARA QUE: `provar_carga_dsa.py` prova o plano em memoria; so o banco prova que o SQL gerado grava o
          que o plano diz, e que a segunda rodada nao mexe em nada.
@@ -22,6 +24,7 @@ COMO   : `python -m scripts.carga_dsa.provar_sincronizacao_no_banco --rodada <pa
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -52,11 +55,11 @@ def monta_fer_a_mao(texto: str) -> bool:
     return re.search(r"'FER-'\s*\|\|", sem_comentario(texto)) is not None
 
 
-def rodar(rodada: Path, turma: str, autor: str) -> str:
+def rodar(rodada: Path, turma: str, autor: str, gravar: bool = True) -> str:
     r = subprocess.run(
         [sys.executable, "-X", "utf8", "-m", "scripts.carga_dsa.sincronizar", "--rodada", str(rodada),
-         "--destino", "local", "--autor", autor, "--turmas", turma, "--provisorio",
-         "--gravar"],
+         "--destino", "local", "--autor", autor, "--turmas", turma, "--provisorio"]
+        + (["--gravar"] if gravar else []),
         capture_output=True, text=True, encoding="utf-8", check=False,
     )
     return r.stdout + r.stderr
@@ -82,6 +85,21 @@ def main() -> int:
              not monta_fer_a_mao("# select 'FER-' || lpad(n::text, 6, '0')"))
     achados = [p.name for p in AQUI.glob("*.py") if p.name != Path(__file__).name and monta_fer_a_mao(p.read_text(encoding="utf-8"))]
     conferir("nenhum script de scripts/carga_dsa monta `'FER-' ||`", not achados, achados)
+
+    print("D4 — a turma ARQUIVADA e pulada e nao para a rodada (Bernardo Villas Boas, 26/10/2026)")
+    fontes = [f["turma"] for f in json.loads((AQUI / "fontes.json").read_text(encoding="utf-8"))["turmas"]]
+    arquivadas = banco.arquivadas("local", fontes)
+    # Controle positivo: sem turma arquivada no local, as tres conferencias abaixo passariam sem provar nada.
+    conferir("ha turma de fontes.json ARQUIVADA no local (o retrato do remoto traz a C-Exp-BATI T1 2026)", bool(arquivadas), arquivadas)
+    for turma in sorted(arquivadas)[:1]:
+        ensaio = rodar(arg.rodada, f"{turma},{arg.turma}", arg.autor, gravar=False)
+        conferir(f"«{turma}» + «{arg.turma}» em ensaio: a rodada sai 0 (antes do D4 o banco recusava a arquivada e a saida era 4)",
+                 "saida 0" in ensaio, ensaio[-800:])
+        conferir("a arquivada sai no resumo como PULADA, com o motivo e a data",
+                 re.search(re.escape(turma) + r"\s+PULADA — turma ARQUIVADA desde \d{4}-\d{2}-\d{2}", ensaio) is not None, ensaio[-800:])
+        conferir(f"a outra turma pedida junto chega ao ensaio («{arg.turma}» no resumo com a contagem)",
+                 re.search(re.escape(arg.turma) + r"\s+\d+ mudanca\(s\)", ensaio) is not None, ensaio[-800:])
+        conferir("nenhuma recusa do banco", "recusou" not in ensaio, ensaio[-800:])
 
     print(f"NO BANCO LOCAL — {arg.turma}, duas rodadas gravando")
     catalogo_antes = banco.retrato_do_catalogo("local")

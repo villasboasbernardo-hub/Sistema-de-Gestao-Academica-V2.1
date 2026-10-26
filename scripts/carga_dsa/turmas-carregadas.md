@@ -61,11 +61,12 @@ datas anteriores** a ela; da virada em diante **não toca nada** — nem insere,
 substitui ETL. A data mora em `fontes.json` (`virada`, por turma), que é o que a sincronização semanal lê.
 As demais turmas seguem pela planilha até a virada de cada uma.
 
-| Turma        | Virada (o sistema é a fonte a partir de) | A sincronização cobre | Decisão                                |
-| ------------ | ---------------------------------------- | --------------------- | -------------------------------------- |
-| CAHO 2026    | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026 |
-| C-Ap-FR 2026 | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026 |
-| C-Ap-HN 2026 | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026 |
+| Turma          | Virada (o sistema é a fonte a partir de) | A sincronização cobre | Decisão                                                                                                                                       |
+| -------------- | ---------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| CAHO 2026      | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026                                                                                                        |
+| C-Ap-FR 2026   | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026                                                                                                        |
+| C-Ap-HN 2026   | 13/10/2026                               | até 12/10/2026        | A3.3, Bernardo Villas Boas, 14/10/2026                                                                                                        |
+| C-Espc-HN 2026 | 19/10/2026                               | até 18/10/2026        | D2, Bernardo Villas Boas, 26/10/2026 (fica no sistema tudo o que já estava de 19/10 em diante, inclusive o que entrou pela planilha em 26/10) |
 
 **E, em TODA turma, o que a tela fez vence a planilha** _(A3.4, 14/10/2026)_: a linha da planilha editada na
 tela (`editado_por` preenchido — D3.7), a avaliação cancelada na tela e o lançamento nascido na tela não são
@@ -167,3 +168,31 @@ em `planilhas-de-origem/rodadas/2026-10-26T1157/relatorio-final.md` (fora do git
 - **C-Exp-BATI T1 2026 fora**: a turma foi arquivada em 20/10/2026 (somente leitura, D-COR-5) e a planilha não mudou.
 - **C-Espc-HN 2026**: 12 lançamentos feitos na tela na semana de 19 a 23/10 (A3.4: ficam; 11 linhas da planilha ficaram fora);
   proposta registrada no relatório: virada em 19/10/2026.
+
+### Decisões de Bernardo Villas Boas sobre o relatório da rodada (26/10/2026, à tarde)
+
+- **D1 — fonte da C-Ap-HN**: a «Cópia de Cópia de C-AP-HN 2026 - Sabado» (`1Y4gdWPMu0lXOmyV_g4XF70Gy639woeSt8iOY_iLwD_E`), que
+  descende da confirmada (apagada do Drive). «C-AP-HN 2026 - Planejamento Final» e «C-ESPC-HN 2026 PLANEJAMENTO FINAL» **não** são
+  fonte. `fontes.json` atualizado.
+- **D2 — virada da C-Espc-HN em 19/10/2026** (A3.3, como as três regulares). Tudo o que já estava no sistema de 19/10 em diante fica,
+  inclusive o que entrou pela planilha nesta rodada (26/10 a 06/11); a sincronização passa a mexer só antes de 19/10.
+- **D3 — C-Exp-Obs-ME T1 2026** (planilha «C-Exp-OBS-ME-PR T01/26», `1NmX7JiIPLglZBbIjVdodJ60mLzKA6ptHQf-aiyqfH-k`, fora da pasta, 02/02 a
+  27/02/2026): carregada com as mesmas regras e deixada concluída, sem arquivar. Curso casado pelo catálogo da BD DISCIPLINAS: as duas
+  disciplinas (OBSERVAÇÃO METEOROLÓGICA I, 50 TA, UEs 1 a 5; II, 65 TA, UEs 1 a 4) têm os mesmos nomes de UE do currículo
+  **CRV-000016** da **C-Exp-Obs-ME**, vigente desde 01/01/2026 — nenhum outro currículo casa. ⚠️ **A turma já existia**: foi criada
+  pela tela em 22/10/2026 por `USR-ADMIN-001` (02/02 a 27/02, Sala 06, concluída, currículo CRV-000016, sem alunos e sem atribuição).
+  Por isso o preparo (`preparo/c-exp-obs-me-t1-2026.sql`) **não cria** turma: confere o que a tela gravou e completa o resto —
+  **alunos 19**; **atribuição** I = instrutor 47 e II = instrutor 15 (um por disciplina, os que a BD DISCIPLINAS nomeia); e o
+  **relógio** da aba HORARIOS (9 × 45 min, 07:50, intervalos de 5, tarde 13:05 — o da BATI T1) como **regime da turma**
+  (`regimes_de_horario`, o campo de _Editar turma_). ⚠️ **Não como vigência do curso**: a C-Exp-Obs-ME só tem vigência de 14/09 em
+  diante, e uma de 02/02 a 13/09 é recusada por `app.conferir_vigencia_nova` — `app.lancamentos_que_travam_vigencia` conta os
+  lançamentos de `vigente_de` em diante **sem olhar `vigente_ate`**, e a T2 tem 61 (medido no local, 26/10/2026); mudar a guarda
+  seria migration. Decisões com precedente em `decisoes/c-exp-obs-me-t1-2026.json`: locais «EAD» e «CHM» (BATI, Ag-Mag), vistas
+  pareadas por decisão explícita (T2: sem ela, as duas vistas de I iam para a AV2) e o de-para de UE pelo nome (R1: «I+5U» → UE 5,
+  «II+4U» → UE 4).
+- **Pendência de bloco da virada em diante não para a turma** (26/10/2026): a nova fonte da C-Ap-HN planeja aulas de XII de 26/10
+  a 07/11 com o instrutor 55, que não é habilitado em XII; a turma **parava** (`sem_habilitacao`) por blocos que a rodada nem grava
+  (A3.3). `Pendencia.data` guarda o dia do bloco, e `sincronizar.pendencias_que_bloqueiam` lista a de bloco da virada em diante
+  como «depois da virada», sem parar a turma. Prova em `provar_carga_dsa.py` (com controle: sem virada, as duas param).
+- **D4 — turma arquivada não para mais a sincronização**: é pulada, e sai no resumo da rodada com o motivo e a data do arquivamento
+  (`banco.arquivadas`, pela mesma `app.turma_arquivada` que o gatilho consulta). Prova em `provar_sincronizacao_no_banco.py` (item 6).

@@ -291,6 +291,22 @@ def referencia(destino: str, turma: str, autor: str, de: str, ate: str, virada: 
     return retrato
 
 
+def arquivadas(destino: str, turmas: list[str]) -> dict[str, str]:
+    """D4 (Bernardo Villas Boas, 26/10/2026): as turmas pedidas que estao ARQUIVADAS no destino, com a data do arquivamento.
+
+    So leitura. «Arquivada» e o que `app.turma_arquivada` diz (D-COR-5: o ultimo evento de `turma_arquivamentos` e
+    `arquivar`) — a mesma funcao que o gatilho de somente leitura consulta, para a rodada e o banco nunca discordarem.
+    """
+    if not turmas:
+        return {}
+    linhas = consultar(destino, f"""
+select t.codigo, (select (a.criado_em at time zone 'America/Sao_Paulo')::date::text from public.turma_arquivamentos a
+                   where a.turma_id = t.id order by a.ordem desc limit 1) as desde
+  from public.turmas t
+ where t.codigo = any (array[{', '.join(lit(x) for x in turmas)}]::text[]) and app.turma_arquivada(t.id)""")
+    return {l["codigo"]: l["desde"] for l in linhas}
+
+
 # Spec 014, SC-008 e D-CUR-1: a sincronizacao NUNCA muda o catalogo. O retrato e o md5 da CH de toda
 # disciplina e de toda UE, ordenados por codigo, tirado antes da primeira escrita e depois da ultima.
 # ⚠️ Desde o PR 6 (T228) ele inclui as AVALIACOES DO CURRICULO de origem `curriculo` (tempos e situacao) e a

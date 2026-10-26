@@ -23,7 +23,7 @@ from pathlib import Path
 import openpyxl
 
 from scripts.carga_dsa import planilha, plano, sincronizar
-from scripts.carga_dsa.resolver import _aula_em_dia_parado, resolver
+from scripts.carga_dsa.resolver import Pendencia, _aula_em_dia_parado, resolver
 
 FALHAS: list[str] = []
 
@@ -445,6 +445,21 @@ def main() -> int:
              sincronizar.classificar_responsavel("CIAARA-10", set()) == "entidade"
              and sincronizar.classificar_responsavel("1ºTEN FULANO", {"FULANO"}).startswith("pessoa cadastrada")
              and sincronizar.classificar_responsavel("SR. CICRANO DE FORA", set()) == "palestrante externo")
+
+    print("A3.3 — a pendencia de bloco da virada em diante nao para a turma (decisao de 26/10/2026, C-Ap-HN)")
+    sem_vinculo = {**retrato("inativo"), "tipos_atividade": ref["tipos_atividade"]}
+    hab = [p for p in resolver(leva1, sem_vinculo, dec, "l.xlsx", set(), False).pendencias if p.tipo == "sem_habilitacao"]
+    conferir("a pendencia de BLOCO guarda o dia do bloco (as duas aulas de I, 09/03 e 10/03, sem habilitacao)",
+             sorted(p.data for p in hab) == ["2026-03-09", "2026-03-10"], [(p.tipo, p.data) for p in hab])
+    param, depois = sincronizar.pendencias_que_bloqueiam(hab, set(), "2026-03-10")
+    conferir("com virada em 10/03: a de 09/03 PARA a turma; a de 10/03 e listada como depois da virada",
+             [p.data for p in param] == ["2026-03-09"] and [p.data for p in depois] == ["2026-03-10"], (param, depois))
+    conferir("controle: SEM virada as duas param (era o caso da C-Ap-HN antes de 26/10/2026 — o teste discrimina)",
+             len(sincronizar.pendencias_que_bloqueiam(hab, set(), None)[0]) == 2)
+    da_turma = Pendencia("autor", "T", "a conta autora nao existe", 0, True, "")
+    conferir("a pendencia SEM dia (da turma inteira) para mesmo com virada; a adiada por decisao nao para",
+             sincronizar.pendencias_que_bloqueiam([da_turma], set(), "2026-03-10")[0] == [da_turma]
+             and sincronizar.pendencias_que_bloqueiam(hab, {"sem_habilitacao"}, None)[0] == [])
 
     print("SPEC 014 — LEVA 2 (o item, as sessoes, os papeis e as sugestoes)")
     with tempfile.TemporaryDirectory() as pasta:
