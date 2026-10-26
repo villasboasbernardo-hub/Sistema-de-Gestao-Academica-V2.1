@@ -147,3 +147,23 @@ Rodada da sincronização do PR 6 (spec 014) nas **dez** turmas de `fontes.json`
 aponta a avaliação do currículo (75 de 187), a vista é sessão `…-S`, e 6 sugestões da planilha foram para o ajuste da
 turma. Plano = local, 2ª rodada 0, dados iguais nos dois bancos. Relatório:
 `specs/014-atividades-e-avaliacoes/antes-depois/rodada-do-pr6-no-remoto.md`.
+
+## Rodada de 26/10/2026 — exportação `2026-10-26T1157`, local e remoto
+
+_Pedido de Bernardo Villas Boas, 26/10/2026: todas as turmas da pasta-fonte, decidindo pela recomendação._ Relatório completo
+em `planilhas-de-origem/rodadas/2026-10-26T1157/relatorio-final.md` (fora do git).
+
+- **Rito**: local recriado do remoto (cópia `remoto-20261026-120115.sql`) → ensaio → carga → 2ª rodada **0**; remoto: backup
+  **`remoto-20261026-122421.sql`**, ensaio com o plano **igual ao do local nas 8 turmas**, gravação lida de volta, 2ª rodada **0**;
+  catálogo igual antes e depois; dados das 30 turmas **iguais** local × remoto; **26 de 30** turmas com a impressão digital intacta.
+- **100 mudanças**: CAHO 5 e C-Ap-FR 4 (só até 12/10, virada A3.3), C-Espc-HN 40 e C-Espc-FR 51 (com as semanas planejadas até
+  06/11 e 16/11); C-Esp-ME, MetocOf, Ag-Mag e Obs-ME **0** (planilha sem mudança desde 14/10).
+- **Decisão com precedente aplicada**: habilitação do instrutor **16** em **MBFCFR-017** (XI) da C-Espc-FR —
+  `preparo/rodada-2026-10-26-habilitacoes.sql`, registrada em `decisoes/c-espc-fr-2026.json`.
+- ⚠️ **A fonte da C-Ap-HN (`1BydKC…`) NÃO EXISTE MAIS no Drive** (26/10/2026). A turma não foi sincronizada — sem efeito, porque
+  a virada dela é 13/10 e os dois candidatos da pasta («Cópia de Cópia de C-AP-HN 2026 - Sabado» e «C-AP-HN 2026 - Planejamento
+  Final») são idênticos à exportação de 14/10 até 12/10. O manifesto desta rodada leva a exportação de 14/10 só para o calendário
+  global. **A próxima rodada precisa de uma decisão de Bernardo sobre a nova fonte** (ou de tirar a turma de `fontes.json`).
+- **C-Exp-BATI T1 2026 fora**: a turma foi arquivada em 20/10/2026 (somente leitura, D-COR-5) e a planilha não mudou.
+- **C-Espc-HN 2026**: 12 lançamentos feitos na tela na semana de 19 a 23/10 (A3.4: ficam; 11 linhas da planilha ficaram fora);
+  proposta registrada no relatório: virada em 19/10/2026.
