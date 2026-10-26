@@ -205,6 +205,8 @@ function linhaFixaDoEstudoIndividual(
   relogio: Relogio | null,
 ): LinhaImpressa | null {
   const slot = slotDoEstudoIndividual(ultimoTa, relogio?.temposDoRegime ?? null);
+  /* RD-2 (D-9): sem regime conhecido e dia vazio, nenhum EI — o mesmo que a planilha e o botão (revisão do Bloco 11). */
+  if (slot === null) return null;
   const tempo = relogio !== null && slot !== null ? tempoDeAula(relogio, slot) : undefined;
   if (relogio !== null && tempo === undefined) return null;
   const trechos: readonly Trecho[] =

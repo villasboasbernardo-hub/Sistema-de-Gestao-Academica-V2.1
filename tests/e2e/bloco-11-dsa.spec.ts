@@ -295,7 +295,7 @@ test("RD-1 · a lista da aula é só dos habilitados, e o par final da edição 
   expect(depois?.disciplina_id ?? null).toBeNull();
 });
 
-test("RD-2 · o Estudo Individual automático num dia vazio vai para o ÚLTIMO tempo do regime (8), não o 1º", async ({
+test("RD-2 · o Estudo Individual automático num dia vazio vai para o ÚLTIMO tempo do regime (8), não o 1º — e volta depois do Limpar", async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -320,6 +320,39 @@ test("RD-2 · o Estudo Individual automático num dia vazio vai para o ÚLTIMO t
     .eq("data", segundaDe(12))
     .eq("status", "ativo");
   expect((data ?? []).map((l) => (l as { ta_inicial: number }).ta_inicial)).toEqual([8]);
+
+  /*
+   * ⚠️ Revisão do Bloco 11 (RD-4): depois do *Limpar* de uma semana SALVA, o botão repõe o EI. O salvo excluído fica
+   *    ativo até o *Salvar minuta*, com a sombra de exclusão por cima — e o botão contava os dois como «já tem».
+   */
+  await salvarASemana(page);
+  await page.locator('[data-slot="limpar-semana"]').click();
+  await page
+    .locator('[data-slot="dialogo-confirmacao"]')
+    .getByRole("button", { name: "Limpar a semana" })
+    .click();
+  await expect(page.locator('[data-slot="resposta-da-publicacao"]')).toContainText("Semana limpa");
+  await expect
+    .poll(async () => {
+      const { count: naGrade } = await banco()
+        .from("vw_ocupacao_do_dsa")
+        .select("fato_id", { count: "exact", head: true })
+        .eq("turma_id", turmaId)
+        .eq("data", segundaDe(12));
+      return naGrade;
+    })
+    .toBe(0);
+  await page.locator('[data-slot="lancar-estudo-individual"]').click();
+  await expect(
+    page.locator('[data-slot="resposta-do-estudo-individual"]'),
+    "o botão não repôs o EI que o Limpar tirou",
+  ).toContainText(/Estudo Individual lançado em \d+ dia/);
+  const { data: reposto } = await banco()
+    .from("vw_ocupacao_do_dsa")
+    .select("ta_inicial")
+    .eq("turma_id", turmaId)
+    .eq("data", segundaDe(12));
+  expect((reposto ?? []).map((l) => (l as { ta_inicial: number }).ta_inicial)).toEqual([8]);
 });
 
 test("RD-4, RD-5 e RD-6 · Limpar no rascunho; na publicada, só depois de «Fazer alteração»; o selo e a barra", async ({
@@ -447,8 +480,12 @@ test("RD-7 e RD-8 · o Início: os cartões por situação, e o papel só do DSA
   await expect(page.locator('[data-slot="turmas-do-ano"]')).not.toContainText("Progresso");
 
   const escolher = async (data: string) => {
-    await page.locator('[data-slot="abrir-calendario-da-semana"]').click();
-    await page.locator('[data-slot="data-da-semana"]').fill(data);
+    /* O campo fica aberto depois de escolher (como no DSA): o ícone só o abre quando está fechado. */
+    const campo = page.locator('[data-slot="data-da-semana"]');
+    if (!(await campo.isVisible())) {
+      await page.locator('[data-slot="abrir-calendario-da-semana"]').click();
+    }
+    await campo.fill(data);
     await expect.poll(() => new URL(page.url()).searchParams.get("semana")).toBe(data);
   };
   const papelDaTurma = page.locator(

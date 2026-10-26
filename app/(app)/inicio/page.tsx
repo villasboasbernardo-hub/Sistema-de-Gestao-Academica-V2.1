@@ -279,6 +279,11 @@ export default async function Inicio({
   const turmaPorId = new Map(
     ((turmasRes.data ?? []) as unknown as TurmaDaLeitura[]).map((t) => [t.id, t] as const),
   );
+  /*
+   * ⚠️ **NÃO LER A TURMA É «NÃO LI», NÃO «NÃO HÁ»** (gotcha 4; revisão do Bloco 11): sem `turmasRes` cada publicação
+   *    perde a turma e sai do carrossel, e a frase de nenhum publicado mentiria — as manchetes de antes tratavam o erro.
+   */
+  const publicadosNaoLidos = publicadosRes.erro || Boolean(turmasRes.error);
   const publicados = publicadosRes.publicados
     .flatMap((p) => {
       const turma = turmaPorId.get(p.turmaId);
@@ -410,9 +415,10 @@ export default async function Inicio({
               anterior={somarDias(segundaMostrada, -7)}
               seguinte={somarDias(segundaMostrada, 7)}
               ehAAtual={ehAAtual}
+              anos={{ minimo: ANOS_DA_URL.minimo, maximo: ANOS_DA_URL.maximo }}
             />
           </div>
-          {publicadosRes.erro ? (
+          {publicadosNaoLidos ? (
             <p
               role="status"
               className="text-atrasado-tinta text-sm"

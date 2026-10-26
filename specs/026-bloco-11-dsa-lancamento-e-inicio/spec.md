@@ -236,3 +236,43 @@ publicado.
 - `PEND-026-2` — *o seletor canônico de instrutor diz "o seu perfil não os alcança" para QUALQUER lista vazia*: no
   DSA a aula ganhou a frase própria (D-32), mas o componente continua sem saber distinguir *"não há"* de *"você não vê"*
   quando quem chama esvazia a lista por outro motivo. Fica para quando houver outro chamador assim.
+
+## 9. Revisão adversarial antes da conferência (26/10/2026)
+
+Três revisores (a migration, as Server Actions, o domínio e as telas) e um verificador cético por dimensão, sobre o diff
+inteiro contra `69d2315`. **A migration só acrescenta** — confirmado pelo revisor e, à parte, pela varredura das
+migrations anteriores: nenhum dos 13 objetos dela existia antes. **Sete achados confirmados, os sete corrigidos.** Os
+que têm caso novo o viram reprovar antes, com defeito deliberado; os itens 5 e 6 ficaram **sem caso novo**, e a razão
+está neles:
+
+1. As ações liam o regime do curso de `vw_cursos_regime_vigente` — o padrão de **hoje**, sem a exceção — e a tela, o da
+   semana (exceção > padrão). Agora as duas usam `vigenteDoCursoEm` (D-14); e a atividade/vista, que não traz o curso,
+   o tira da turma (a parede da cascata virava o limite do banco). Unidade.
+2. O par da RD-1 numa edição pelo id do **salvo** que já tem rascunho era conferido pelo salvo, e a RPC grava na
+   sombra: duas edições seguidas gravavam um par não habilitado. `parPendenteDaAula` lê a sombra. Unidade.
+3. Depois do *Limpar* de uma semana salva, *Lançar o Estudo Individual da semana* pulava os dias («já tem»): contava o
+   salvo excluído e a sombra de exclusão. Conta o que a grade mostra. Ponta a ponta (RD-2): com o defeito, *"Nenhum dia
+   novo: os 5 dias úteis desta semana já têm Estudo Individual"*; com o conserto, o EI de volta no 8º.
+4. A sugestão do instrutor da aula punha o designado **inativo** que ainda tem vínculo (D-3/D-5): `idsDaListaDaAula`
+   (ativo **e** habilitado). Unidade.
+5. Início: com a leitura das turmas falhando, o carrossel dizia *"Não há DSA publicado"* — «não li» virando «não há»
+   (gotcha 4). Agora diz que não conseguiu ler. *Sem caso novo: é o caminho de erro da leitura.*
+6. Início: o campo de data navegava e fechava na primeira tecla (o dia "1" de "15" já é data; o ano "2" virava
+   `0002-…`). Rascunho, `min`/`max` e `semanaDaDataEscolhida` antes de navegar, como no DSA. *Sem caso novo: a ponta
+   a ponta usa `fill`, que escreve a data inteira de uma vez; o que o navegador entrega tecla a tecla não foi medido.*
+7. O papel imprimia a linha fixa do EI sem TA quando não há regime conhecido e o dia está vazio; a planilha e o botão
+   não lançam (RD-2, D-9). Sem slot, sem linha. Unidade.
+
+**Descartados pelo verificador** (com a razão): as FKs novas prendem a exclusão permanente da turma que tiver escolha de
+regime — é a D-32 da spec 025 (*"toda FK prende, mesmo a que nascer depois"*); `semana_do_dsa_salva` ignora lançamento
+sem `ta_inicial` e a atividade de todas as turmas — 0 vivos no remoto (cópia `remoto-20261025-141154.sql`); a falha de
+gravar o regime ao salvar e o curso sem retrato — decididos pela D-38 e pela D-37; e o relógio que a tela oferece numa
+semana antiga com o salvo sombreado — o banco recusa com `23514` `semana_do_dsa_salva`, com a frase.
+
+**A rodada local depois dos consertos** (1 processo, base limpa, 14 arquivos do DSA e do Início): **94 passados, 2
+reprovados**, os dois explicados. O RD-7 deste bloco reprovou pelo conserto 6 — o campo de data passou a ficar aberto, e o
+segundo clique no ícone o fechava; o ícone abre e fecha, e o caso só o abre quando está fechado. O `Q-12` de
+`dsa-mover.spec.ts` (anterior a este bloco) reprova com 1 processo: o «arrastar e soltar» do mesmo arquivo leva a
+avaliação da quinta para o 6º–7º, e o `Q-12` posicionava no 7º; passou para o 3º, que nenhum caso do arquivo usa. ⚠️ **Os
+dois ajustes não rodaram de novo aqui**: a nova rodada foi interrompida pelo sistema por falta de memória, e a ponta a
+ponta ficou com o CI (regra de 26/10/2026).

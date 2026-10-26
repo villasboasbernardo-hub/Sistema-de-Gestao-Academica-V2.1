@@ -20,6 +20,7 @@ import {
   type AtribuicaoPorDisciplina,
   type AtribuicaoPorUnidade,
 } from "@/lib/dominio/dsa/pre-preenchimento";
+import { idsDaListaDaAula } from "@/lib/dominio/dsa/instrutores-da-aula";
 
 const DISCIPLINA = "disciplina-navegacao";
 const OUTRA_DISCIPLINA = "disciplina-meteorologia";
@@ -263,6 +264,16 @@ describe("RD-1 (Bloco 11) · o padrão é o DESIGNADO, só se for habilitado", (
   it("sem designação nenhuma, o motivo continua o de atribuir", () => {
     const p = preencher({ porUnidade: [], porDisciplina: [], habilitados: new Set(["x"]) });
     expect(p.motivoDoInstrutorVazio).toBe("sem_atribuicao_na_turma");
+  });
+
+  it("D-3/D-5: o designado da UE INATIVO, ainda habilitado, é pulado — vem o próximo ativo e habilitado", () => {
+    const ativos = [{ id: INSTRUTOR_DA_DISCIPLINA }];
+    const habilitacoes = [
+      { instrutorId: INSTRUTOR_DA_UE, disciplinaId: DISCIPLINA },
+      { instrutorId: INSTRUTOR_DA_DISCIPLINA, disciplinaId: DISCIPLINA },
+    ];
+    const p = preencher({ habilitados: idsDaListaDaAula(ativos, habilitacoes, DISCIPLINA) });
+    expect(p.instrutorId).toBe(INSTRUTOR_DA_DISCIPLINA);
   });
 
   it("sem a lista de habilitados (a planilha de contingência, D-6), o de hoje", () => {

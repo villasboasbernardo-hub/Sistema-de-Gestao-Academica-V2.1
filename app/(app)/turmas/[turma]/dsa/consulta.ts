@@ -27,11 +27,7 @@ import { rotuloDaSessaoDeAplicacao } from "@/lib/dominio/dsa/sessao-de-aplicacao
 import { responsavelDoFato, rotuloDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
 import type { FeriadoDaSemana } from "@/lib/dominio/dsa/capacidade";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
-import {
-  vigenteEm,
-  type TipoDeRegime,
-  type VigenciaDoHistorico,
-} from "@/lib/dominio/vigencia-de-regime";
+import type { VigenciaDoHistorico } from "@/lib/dominio/vigencia-de-regime";
 import {
   quadroDaDisciplina,
   type LancamentoParaSituacao,
@@ -88,22 +84,6 @@ export function diasDaTela(entrada: {
   const temLancamentoNoSabado = sabado !== undefined && entrada.datasComLancamento.includes(sabado);
   const aberto = entrada.sabadoPedido || temLancamentoNoSabado;
   return { dias: aberto ? seis : seis.slice(0, 5), sabadoAberto: aberto };
-}
-
-/**
- * A vigência que vale na semana, **preservando o tipo concreto**.
- *
- * ⚠️ `vigenteEm` devolve `VigenciaDoHistorico`, e o DSA precisa de `configuracao_horario_id`, que
- * aquele tipo não tem. O invólucro **delega a regra** e só recupera a linha original — escrever o
- * filtro de novo aqui faria a `RN-2027-09` ter duas implementações.
- */
-export function vigenciaDaSemana<T extends VigenciaDoHistorico>(
-  vigencias: readonly T[],
-  tipo: TipoDeRegime,
-  data: string,
-): T | null {
-  const escolhida = vigenteEm(vigencias, tipo, data);
-  return escolhida ? (vigencias.find((v) => v.id === escolhida.id) ?? null) : null;
 }
 
 /** Uma linha de `curso_regime_historico`, como o PostgREST a entrega. */

@@ -14,6 +14,7 @@ import {
   podeCorrigir,
   travaDe,
   valoresDaVigencia,
+  vigenteDoCursoEm,
   vigenteEm,
   type TravaDaVigencia,
   type VigenciaDoHistorico,
@@ -210,5 +211,38 @@ describe("`FR-021.1` · o formulário de correção abre com os valores atuais",
 
   it("⚠️ o MOTIVO não é herdado — ele explica ESTA correção, não a anterior", () => {
     expect(valoresDaVigencia(com({ motivo: "motivo de outra mudança" })).motivo).toBe("");
+  });
+});
+
+/*
+ * Revisão do Bloco 11 (D-14 da spec 026): o regime do curso NA DATA DA SEMANA, a mesma resolução na tela do DSA e nas
+ * ações. As ações liam o padrão de HOJE (`vw_cursos_regime_vigente`) e ignoravam a exceção.
+ */
+describe("`vigenteDoCursoEm` · o regime do curso numa data (exceção > padrão)", () => {
+  const historico = [
+    com({ id: "p8", codigo: "REG-000001", vigenteDe: "2026-01-01", vigenteAte: "2026-12-31" }),
+    com({ id: "p9", codigo: "REG-000002", vigenteDe: "2027-01-01", regimeTempos: 9 }),
+    com({
+      id: "e10",
+      codigo: "REG-000003",
+      tipo: "excecao",
+      vigenteDe: "2026-10-26",
+      vigenteAte: "2026-10-31",
+      regimeTempos: 10,
+    }),
+  ];
+
+  it("⚠️ o caso que discrimina: a semana com EXCEÇÃO usa a exceção, e não o padrão", () => {
+    expect(vigenteDoCursoEm(historico, "2026-10-26")?.regimeTempos).toBe(10);
+  });
+
+  it("fora da exceção, o padrão daquela data — e o padrão futuro só da data dele em diante", () => {
+    expect(vigenteDoCursoEm(historico, "2026-11-02")?.regimeTempos).toBe(8);
+    expect(vigenteDoCursoEm(historico, "2027-01-04")?.regimeTempos).toBe(9);
+  });
+
+  it("devolve a linha recebida (o tipo concreto da tela), e nulo sem vigência na data", () => {
+    expect(vigenteDoCursoEm(historico, "2026-10-27")).toBe(historico[2]);
+    expect(vigenteDoCursoEm(historico, "2025-06-02")).toBeNull();
   });
 });

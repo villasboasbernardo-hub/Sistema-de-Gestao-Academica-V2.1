@@ -105,7 +105,6 @@ import {
   retratoDaSemanaComoVigencia,
   tempoDoCatalogo,
   unidadesDaTurma,
-  vigenciaDaSemana,
   vigenciaDoBanco,
   type ConteudoDoFato,
   type LinhaDaOcupacao,
@@ -121,6 +120,7 @@ import {
 import type { HabilitacaoAtiva } from "@/lib/dominio/dsa/instrutores-da-aula";
 import { regimeDaSemana, type FonteDoRegime } from "@/lib/dominio/dsa/regime-da-semana";
 import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
+import { vigenteDoCursoEm } from "@/lib/dominio/vigencia-de-regime";
 
 /** O cliente de servidor, como a rota o cria. Tipo emprestado para não reimplementá-lo. */
 type ClienteDeServidor = Awaited<ReturnType<typeof criarClienteDeServidor>>;
@@ -1117,8 +1117,6 @@ export function montarSemanaDoDsa(
     vigenciaDoBanco,
   );
   const primeiroDia = todosOsSeis[0] ?? entrada.hoje;
-  const excecao = vigenciaDaSemana(vigencias, "excecao", primeiroDia);
-  const padrao = vigenciaDaSemana(vigencias, "padrao", primeiroDia);
   /*
    * A exceção vence a padrão quando as duas cobrem a data — é o desenho de `tipo_regime`. E o regime NOMEADO que a
    * turma escolheu (spec 018, C-9) vence os dois: sem escolha, `daTurma` é nulo e tudo fica como antes.
@@ -1131,7 +1129,7 @@ export function montarSemanaDoDsa(
    *    turma* > o do curso, por `regimeDaSemana`, a mesma das ações (D-14). A tela, a prévia, o papel e a planilha
    *    montam por aqui.
    */
-  const doCurso = excecao ?? padrao;
+  const doCurso = vigenteDoCursoEm(vigencias, primeiroDia);
   const isoDaSemana = semanaIsoDe(primeiroDia);
   const linhaDaSemana =
     isoDaSemana === null

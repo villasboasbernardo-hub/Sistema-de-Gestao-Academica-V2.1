@@ -50,6 +50,19 @@ export function instrutoresDaAula<T extends { readonly id: string }>(
 }
 
 /**
+ * Quem a **sugestão** pode pôr na aula (D-3, D-5): os ids da lista da aula — ativo **e** habilitado. ⚠️ A habilitação
+ * sozinha não basta: desativar o instrutor não toca o vínculo (`instrutor_disciplina` segue ativo), e o designado
+ * inativo saía sugerido fora da lista, com o seletor sem valor válido e a recusa só no *Lançar*.
+ */
+export function idsDaListaDaAula(
+  instrutores: readonly { readonly id: string }[],
+  habilitacoes: readonly HabilitacaoAtiva[],
+  disciplinaId: string | null,
+): ReadonlySet<string> {
+  return new Set(instrutoresDaAula(instrutores, habilitacoes, disciplinaId).map((i) => i.id));
+}
+
+/**
  * A frase da lista vazia (`RN-DEG-01`: nunca campo mudo) — uma só, com dono único. O caminho clicável até *Instrutores*
  * é da tela; o texto mora aqui.
  */
@@ -62,4 +75,29 @@ export function fraseDaListaDaAula(
     return "Nenhum instrutor habilitado nesta disciplina. A habilitação é feita na ficha do instrutor.";
   }
   return null;
+}
+
+/** Quem ministra e o que se ministra numa aula: o par que a RD-1 confere. */
+export type ParDaAula = {
+  readonly instrutorId: string | null;
+  readonly disciplinaId: string | null;
+  readonly unidadeEnsinoId: string | null;
+};
+
+/**
+ * O par que vale **depois** de uma edição pelo id de um SALVO (RD-1, D-4; revisão do Bloco 11): com rascunho de edição
+ * por cima, `gravar_rascunho_do_dsa` grava **na sombra**, então o par pendente é o dela. A sombra de **exclusão** não
+ * conta (a linha sai), e sem sombra vale o próprio salvo. Conferir pelo salvo deixava duas edições seguidas — o instrutor
+ * numa, a UE na outra — gravarem um par não habilitado sem recusa.
+ */
+export function parPendenteDaAula(
+  salvo: ParDaAula,
+  sombra: (ParDaAula & { readonly rascunhoExclui: boolean }) | null,
+): ParDaAula {
+  if (sombra === null || sombra.rascunhoExclui) return salvo;
+  return {
+    instrutorId: sombra.instrutorId,
+    disciplinaId: sombra.disciplinaId,
+    unidadeEnsinoId: sombra.unidadeEnsinoId,
+  };
 }

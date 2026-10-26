@@ -140,6 +140,21 @@ describe("a linha fixa `ESTUDO INDIVIDUAL · EI` — `praticas-da-planilha.md` �
     expect(dia.linhas[0]?.taInicial).toBe(G45.regimeTempos);
   });
 
+  it("RD-2/D-9 · sem regime conhecido (sem relógio) e dia vazio: NENHUM EI — como a planilha", () => {
+    const dia = primeiroDia({ relogio: null, temposDeclarados: null });
+    expect(dia.linhas.filter((l) => l.estudoIndividual)).toEqual([]);
+  });
+
+  it("sem relógio e com lançamento, o EI segue no tempo seguinte ao último (sem horário)", () => {
+    const dia = primeiroDia({
+      relogio: null,
+      temposDeclarados: null,
+      fatos: [fato({ taInicial: 1, tempos: 4 })],
+    });
+    expect(dia.linhas.at(-1)?.estudoIndividual).toBe(true);
+    expect(dia.linhas.at(-1)?.taInicial).toBe(5);
+  });
+
   /*
    * ⚠️ **ESTE É O CASO QUE JUSTIFICA O `idsDeEstudoIndividual`.** Sem ele o EI lançado apareceria
    * como linha comum **e** a linha fixa sairia depois: o dia teria Estudo Individual duas vezes, e

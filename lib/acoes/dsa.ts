@@ -55,6 +55,7 @@ import { avisoDoEmpurrao, empurrarEmCascata, ultimoTempoDoDia } from "@/lib/domi
 import { responsavelNaEdicao } from "@/lib/dominio/dsa/responsavel-na-edicao";
 import { idDoLancamento } from "@/lib/dominio/dsa/posicao-herdada";
 import { camposDaExclusao, lancamentosParaLimpar } from "@/lib/dominio/dsa/limpar-semana";
+import { parPendenteDaAula } from "@/lib/dominio/dsa/instrutores-da-aula";
 import {
   numeroDaProximaSessao,
   recusaDaSessaoDeAplicacao,
@@ -1155,7 +1156,7 @@ export async function lancarEstudoIndividualDaSemana(
       .lte("data", ate),
     supabase
       .from("atividades_nao_letivas")
-      .select("data")
+      .select("id, data, rascunho_de, rascunho_exclui")
       .eq("turma_id", turmaId)
       .eq("categoria_normativa", "Estudo_Individual")
       .eq("status", "ativo")
@@ -1195,7 +1196,21 @@ export async function lancarEstudoIndividualDaSemana(
         terminoEtapaPresencial: (turmaRes.data.termino_etapa_presencial as string | null) ?? null,
       }
     : null;
-  const jaTem = new Set(((eiRes.data ?? []) as { data: string }[]).map((e) => e.data));
+  /*
+   * ⚠️ **O EI QUE A GRADE MOSTRA, com o rascunho por cima** (revisão do Bloco 11, RD-4): o salvo excluído pelo cartão ou
+   *    pelo *Limpar* continua ativo até o *Salvar minuta*, com uma sombra ativa de exclusão. Contar os dois deixava o dia
+   *    sem EI na tela e «já tem» aqui — o botão não repunha o que o *Limpar* tirou.
+   */
+  const eis = (eiRes.data ?? []) as {
+    id: string;
+    data: string;
+    rascunho_de: string | null;
+    rascunho_exclui: boolean;
+  }[];
+  const sombreados = new Set(eis.flatMap((e) => (e.rascunho_de === null ? [] : [e.rascunho_de])));
+  const jaTem = new Set(
+    eis.filter((e) => !e.rascunho_exclui && !sombreados.has(e.id)).map((e) => e.data),
+  );
 
   const ultimoTaDoDia = new Map<string, number>();
   for (const o of (ocupacaoRes.data ?? []) as { data: string; ta_final: number | null }[]) {
@@ -1300,12 +1315,12 @@ async function lerFato(
     const { data } = await supabase
       .from("registros_aula")
       .select(
-        "data, ta_inicial, tempos_consumidos, turma_id, curso_id, disciplina_id, unidade_ensino_id, origem_migracao_v1, editado_em, instrutor_id",
+        "data, ta_inicial, tempos_consumidos, turma_id, curso_id, disciplina_id, unidade_ensino_id, origem_migracao_v1, editado_em, instrutor_id, salvo",
       )
       .eq("id", fatoId)
       .maybeSingle();
     if (!data) return null;
-    const l = data as {
+    const salvoDaLinha = data as {
       data: string;
       ta_inicial: number | null;
       tempos_consumidos: number | null;
@@ -1316,6 +1331,51 @@ async function lerFato(
       origem_migracao_v1: string | null;
       editado_em: string | null;
       instrutor_id: string | null;
+      salvo: boolean | null;
+    };
+    /*
+     * ⚠️ **O PAR PENDENTE MORA NA SOMBRA** (revisão do Bloco 11, RD-1/D-4): com o id de um SALVO que já tem rascunho de
+     *    edição, `gravar_rascunho_do_dsa` grava **na sombra** — então o instrutor, a disciplina e a UE que valem depois
+     *    da edição são os dela, não os do salvo. Conferir o par pelo salvo deixava duas edições seguidas (o instrutor
+     *    numa, a UE na outra) gravarem um par não habilitado sem recusa.
+     */
+    type LinhaDaSombra = {
+      instrutor_id: string | null;
+      disciplina_id: string | null;
+      unidade_ensino_id: string | null;
+      rascunho_exclui: boolean;
+    };
+    const sombra: LinhaDaSombra | null =
+      salvoDaLinha.salvo === true
+        ? ((
+            await supabase
+              .from("registros_aula")
+              .select("instrutor_id, disciplina_id, unidade_ensino_id, rascunho_exclui")
+              .eq("rascunho_de", fatoId)
+              .eq("status", "ativo")
+              .maybeSingle()
+          ).data as LinhaDaSombra | null)
+        : null;
+    const par = parPendenteDaAula(
+      {
+        instrutorId: salvoDaLinha.instrutor_id,
+        disciplinaId: salvoDaLinha.disciplina_id,
+        unidadeEnsinoId: salvoDaLinha.unidade_ensino_id,
+      },
+      sombra === null
+        ? null
+        : {
+            instrutorId: sombra.instrutor_id,
+            disciplinaId: sombra.disciplina_id,
+            unidadeEnsinoId: sombra.unidade_ensino_id,
+            rascunhoExclui: sombra.rascunho_exclui,
+          },
+    );
+    const l = {
+      ...salvoDaLinha,
+      instrutor_id: par.instrutorId,
+      disciplina_id: par.disciplinaId,
+      unidade_ensino_id: par.unidadeEnsinoId,
     };
     /*
      * ⚠️ **A DISCIPLINA DE UMA AULA COM UE NÃO ESTÁ NA COLUNA `disciplina_id` — ELA ESTÁ NA UE, e a

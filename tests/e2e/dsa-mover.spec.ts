@@ -443,13 +443,18 @@ test.describe("`Q-12` · posicionar o que está na faixa «Sem posição» é o 
     /* ⚠️ O cartão diz que o lançamento está **sem posição** — e posicionar é escolher o tempo e gravar. */
     await expect(page.locator('[data-slot="bloco-escolhido"]')).toContainText("sem posição");
 
-    await page.locator("#dsa-mover-ta").selectOption("7");
+    /*
+     * ⚠️ **O 3º TEMPO DA QUINTA, que nenhum outro caso deste arquivo usa** (Bloco 11, 26/10/2026): era o 7º, e o
+     *    «arrastar e soltar» leva a avaliação nova da quinta para o 6º–7º. Com 1 processo os dois casos dividem a mesma
+     *    semente e este recusava (*"o 7º tempo fica dentro de «avaliação de D1»"*); com 2 processos, só às vezes.
+     */
+    await page.locator("#dsa-mover-ta").selectOption("3");
     await page.locator('[data-slot="gravar-edicao"]').click();
     expect(await aguardarAcao(page)).toBe("fechou");
 
     await salvarASemana(page); // Spec 024 (RP-0): o movimento é rascunho até o «Salvar a semana».
     const depois = await retratoDaAula(codigo);
-    expect(depois?.ta_inicial, "o lançamento da faixa não ganhou posição").toBe(7);
+    expect(depois?.ta_inicial, "o lançamento da faixa não ganhou posição").toBe(3);
     expect(depois?.id, "posicionar criou outro registro").toBe(antes?.id);
   });
 });

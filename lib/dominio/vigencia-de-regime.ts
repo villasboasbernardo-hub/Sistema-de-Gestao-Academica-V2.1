@@ -123,6 +123,21 @@ export function vigenteEm(
 }
 
 /**
+ * **O regime do curso numa data**: a exceção vence a padrão quando as duas cobrem a data — o desenho de
+ * `tipo_regime`. ⚠️ **UM LUGAR SÓ PARA A TELA DO DSA E AS AÇÕES** (D-14 da spec 026, revisão do Bloco 11): as ações
+ * liam `vw_cursos_regime_vigente`, que responde pelo padrão de **hoje** e ignora a exceção, e o botão do Estudo
+ * Individual, a parede da cascata e o dia parado usavam outro regime que o da grade. Genérica no tipo da linha para a
+ * tela não perder `configuracaoHorarioId`.
+ */
+export function vigenteDoCursoEm<T extends VigenciaDoHistorico>(
+  vigencias: readonly T[],
+  data: string,
+): T | null {
+  const escolhida = vigenteEm(vigencias, "excecao", data) ?? vigenteEm(vigencias, "padrao", data);
+  return escolhida ? (vigencias.find((v) => v.id === escolhida.id) ?? null) : null;
+}
+
+/**
  * A vigência pode receber a ação "Corrigir esta vigência"? (`FR-021.1`)
  *
  * ⚠️ **SÃO DUAS CONDIÇÕES, E A SEGUNDA É DO BANCO.** Ativa **e** sem trava. Oferecer a ação numa

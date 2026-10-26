@@ -43,7 +43,7 @@
 
 import {
   fraseDaListaDaAula,
-  habilitadosNaDisciplina,
+  idsDaListaDaAula,
   instrutoresDaAula,
   type HabilitacaoAtiva,
 } from "@/lib/dominio/dsa/instrutores-da-aula";
@@ -330,8 +330,8 @@ export function FormularioDeLancamento({
    */
   function sugerir(disciplina: string, unidade: string | null) {
     const u = unidade === null ? undefined : unidades.find((x) => x.id === unidade);
-    /* RD-1, D-3: só o designado HABILITADO é sugerido. */
-    const habilitados = habilitadosNaDisciplina(habilitacoes, disciplina);
+    /* RD-1, D-3, D-5: só o designado da lista da aula (ATIVO e habilitado) é sugerido. */
+    const habilitados = idsDaListaDaAula(instrutores, habilitacoes, disciplina);
     const p = preencherLancamento({
       disciplinaId: disciplina,
       unidadeEnsinoId: unidade,
