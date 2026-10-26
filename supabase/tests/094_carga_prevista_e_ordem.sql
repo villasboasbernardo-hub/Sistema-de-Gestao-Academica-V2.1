@@ -212,7 +212,11 @@ select is_empty(
   'I-8 · vw_instrutor_carga_anual nao concede escrita a authenticated'
 );
 
--- 10. So atribuicoes ativas, e no ano da data de inicio prevista.
+-- 10. So atribuicoes ativas, e no ANO DA TURMA.
+-- ⚠️ RT-6 (Bernardo Villas Boas, 24/10/2026, spec 025): "o ano de qualquer informacao ligada a turma e o ANO DA
+--    TURMA, nunca a data do registro ou a janela da atribuicao" — substitui o "ano pela data de inicio prevista" da
+--    T011 c da spec 006. A turma da amostra e do ano corrente (2026): a atribuicao de janela em 2027 (T094-27, 10 TA
+--    do CT-1) conta em 2026, e nao mais em 2027 (eram 47 em 2026 e 10 em 2027).
 select results_eq(
   $$select i.codigo, c.ano::int, c.ta_previsto_ano::numeric
       from public.vw_instrutor_carga_anual c
@@ -220,9 +224,9 @@ select results_eq(
      where i.codigo in ('T094-CT-1', 'T094-CT-2', 'T094-SC-2')
        and c.ta_previsto_ano > 0
      order by i.codigo, c.ano$$,
-  $$values ('T094-CT-1'::text, 2026, 47.00::numeric), ('T094-CT-1', 2027, 10.00),
+  $$values ('T094-CT-1'::text, 2026, 57.00::numeric),
            ('T094-CT-2', 2026, 55.00)$$,
-  'RN-INST-04 · ta_previsto_ano conta só atribuições ativas, no ano da data de início prevista'
+  'RN-INST-04 · ta_previsto_ano conta só atribuições ativas, no ano da TURMA (RT-6)'
 );
 
 -- 11. RN-MAT-05 · dividido reparte, simultaneo da a integral, declarado prevalece.
@@ -292,6 +296,8 @@ select ok(
 -- `vw_instrutor_carga_anual`; por isso a janela precisa dar linha em todo ano que toca.
 -- Amostra: T094-CT-SEM, sem nenhuma outra atribuicao, numa janela de 20/12/2027 a 30/01/2028.
 -- Esperado: linhas em 2027 (inicio, com os tempos) e 2028 (so tocado pela janela, previsto zero).
+-- ⚠️ RT-6 (24/10/2026): o previsto vai para o ANO DA TURMA (2026, o da amostra); 2027 e 2028 continuam com linha —
+--    a janela toca os dois, e e dessa linha que sai a faixa —, agora com previsto zero.
 -- ---------------------------------------------------------------------------------
 insert into public.disciplinas
   (id, codigo, curso_id, cod_disciplina, nome_disciplina, carga_horaria_tempos,
@@ -311,8 +317,8 @@ select results_eq(
       join public.instrutores i on i.id = c.instrutor_id
      where i.codigo = 'T094-CT-SEM'
      order by c.ano$$,
-  $$values (2027, 18.00::numeric), (2028, 0.00)$$,
-  'CHK005 · a janela que atravessa o ano da linha — e faixa — em todo ano que toca, e o previsto fica no ano do inicio'
+  $$values (2026, 18.00::numeric), (2027, 0.00), (2028, 0.00)$$,
+  'CHK005 · a janela que atravessa o ano da linha — e faixa — em todo ano que toca, e o previsto fica no ano da TURMA (RT-6)'
 );
 
 select * from finish();

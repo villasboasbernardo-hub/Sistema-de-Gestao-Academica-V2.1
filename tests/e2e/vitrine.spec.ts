@@ -8,7 +8,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { abrirVitrine } from "./abrir-vitrine";
 
@@ -79,11 +79,44 @@ test.describe("US1 · a vitrine mostra o vocabulário inteiro", () => {
  */
 test.describe("US1 · a vitrine mostra o vocabulário de COMPONENTES inteiro", () => {
   /** Marcadores que só existem enquanto algo está aberto — com o motivo, que é obrigatório. */
-  const SO_QUANDO_ABERTO = [
+  const SO_QUANDO_ABERTO: {
+    slot: string;
+    motivo: string;
+    abrir?: string;
+    acionar?: (page: Page) => Promise<void>;
+  }[] = [
     {
       slot: "dialogo-confirmacao",
       motivo: "vive dentro do diálogo modal, que só é montado depois do clique no gatilho",
       abrir: "Desativar",
+    },
+    /* Spec 025 (Bloco 10, RT-2): o alerta da exclusão permanente só monta depois do clique no ícone. */
+    ...["dialogo-de-exclusao", "codigo-de-confirmacao", "confirmar-exclusao"].map((slot) => ({
+      slot,
+      motivo:
+        "vive dentro do alerta de exclusão permanente, montado só depois do clique no ícone Excluir",
+      abrir: "Excluir a amostra sem registro",
+    })),
+    {
+      slot: "erro-da-exclusao",
+      motivo:
+        "só aparece quando a exclusão é recusada — na amostra, depois de digitar o código e confirmar",
+      acionar: async (page: Page) => {
+        await page
+          .getByRole("button", { name: "Excluir a amostra sem registro", exact: true })
+          .click();
+        await page.locator('[data-slot="codigo-de-confirmacao"]').fill("AMOSTRA-2");
+        await page.locator('[data-slot="confirmar-exclusao"]').click();
+      },
+    },
+    /* Spec 025 (RT-5): *Mostrar todos* só existe com um grupo oculto — ocultar um é clicar na legenda. */
+    {
+      slot: "mostrar-todos",
+      motivo:
+        "só aparece quando algum grupo do gráfico está oculto, o que exige clicar num item da legenda",
+      acionar: async (page: Page) => {
+        await page.locator('[data-slot="alternar-grupo"]').first().click();
+      },
     },
     /* Spec 021 (Bloco 6, RC-6): o pedido de justificativa só monta quando a "gravação" da amostra o pede. */
     ...["pedido-de-justificativa", "justificativa-da-correcao", "confirmar-justificativa"].map(
@@ -133,9 +166,10 @@ test.describe("US1 · a vitrine mostra o vocabulário de COMPONENTES inteiro", (
     // ⚠️ Isentar seria mais fácil e provaria menos: um diálogo que nunca é aberto num teste é um
     // diálogo cujo foco preso ninguém nunca exercitou.
     await abrirVitrine(page);
-    for (const { slot, abrir } of SO_QUANDO_ABERTO) {
+    for (const { slot, abrir, acionar } of SO_QUANDO_ABERTO) {
       // ⚠️ Nome EXATO: a amostra dos botões de ícone tem *"Ícone de desativar"*, que contém *"Desativar"*.
-      await page.getByRole("button", { name: abrir, exact: true }).click();
+      if (acionar) await acionar(page);
+      else await page.getByRole("button", { name: abrir as string, exact: true }).click();
       await expect(page.locator(`[data-slot="${slot}"]`)).toBeVisible();
       await page.keyboard.press("Escape");
     }

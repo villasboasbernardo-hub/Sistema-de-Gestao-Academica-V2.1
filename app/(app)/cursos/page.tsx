@@ -15,17 +15,30 @@
  * ⚠️ **TRÊS VAZIOS, TRÊS FRASES** (`FR-047`). "Não há para estes filtros", "você não alcança nenhum
  * curso" e "ainda não existe curso no sistema" são fatos diferentes. A Production hoje é o terceiro,
  * e mostrar-lhe o primeiro ensinaria a concluir que a migração falhou.
+ *
+ * ⚠️ **FILTROS E ESTATÍSTICAS SÃO ÍCONES NA LINHA DE *NOVO CURSO*** (RT-4 do Bloco 10, spec 025, D-18 e D-19): cada um
+ * abre o seu painel abaixo do cabeçalho, recolhido ao chegar; o número de filtros fora do padrão aparece no ícone.
  */
 
+import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import {
+  ConteudoDePainel,
+  GatilhoDePainel,
+  ProvedorDePaineis,
+} from "@/components/ciaara/paineis-da-pagina";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { curriculoVigenteEm, type CurriculoParaVigencia } from "@/lib/dominio/curriculos";
+import { curriculoDeReferencia } from "@/lib/dominio/ano-escolhido";
+import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
+import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import { indicadoresDoCatalogo } from "@/lib/dominio/indicadores-do-catalogo";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { lerParametros } from "@/lib/navegacao/esquema";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { CatalogoDeCursos, type CartaoDeCurso } from "./CatalogoDeCursos";
@@ -78,12 +91,22 @@ export default async function Cursos({
     estrangeiros: String(valores.estrangeiros),
   };
 
+  /*
+   * ⚠️ RT-6 (Bloco 10, conferência de 24/10/2026): a duração e o propósito são os do currículo vigente NO ANO ESCOLHIDO
+   *    — hoje, no ano corrente; 1º de janeiro, nos outros (D-27, a mesma régua da página do curso). As estatísticas de
+   *    duração saem dos mesmos cartões.
+   */
+  const hoje = hojeNaCiaara();
+  const escolha = await anoEscolhido(String(valores.ano), hoje);
+  const referencia = curriculoDeReferencia(escolha.ano, hoje);
+
   const supabase = await criarClienteDeServidor();
   const [usuario, { data, error }] = await Promise.all([
     usuarioDaSessao(),
     montarConsultaDeCursos(supabase.from("cursos").select(COLUNAS_DO_CATALOGO), parametros),
   ]);
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
+  const ativos = filtrosForaDoPadrao("/cursos", parametros);
 
   /*
    * ⚠️ **A ÚNICA ENTRADA CLICÁVEL PARA `/cursos/novo`** — e até 24/09/2026 não havia nenhuma:
@@ -104,34 +127,51 @@ export default async function Cursos({
           O catálogo agrupado por classificação. Clique num curso para abrir a página dele.
         </p>
       </div>
-      <SePodeVer permissoes={permissoes} recurso="cursos" acao="criar">
-        <BotaoDeIcone
-          acao="novo"
-          rotulo="Novo curso"
-          variante="padrao"
-          href="/cursos/novo"
-          data-slot="ir-para-novo-curso"
+      <BarraDeAcoes rotulo="Ações do catálogo">
+        <SeletorDeAno
+          ano={escolha.ano}
+          vigente={escolha.vigente}
+          origem={escolha.origem}
+          rota="/cursos"
         />
-      </SePodeVer>
+        <GatilhoDePainel painel="filtros" contagem={ativos} />
+        {error ? null : <GatilhoDePainel painel="estatisticas" />}
+        <SePodeVer permissoes={permissoes} recurso="cursos" acao="criar">
+          <BotaoDeIcone
+            acao="novo"
+            rotulo="Novo curso"
+            variante="padrao"
+            href="/cursos/novo"
+            data-slot="ir-para-novo-curso"
+          />
+        </SePodeVer>
+      </BarraDeAcoes>
     </div>
+  );
+  const filtros = (
+    <ConteudoDePainel painel="filtros">
+      <FiltrosDoCatalogo />
+    </ConteudoDePainel>
   );
 
   if (error) {
     return (
-      <section className="flex flex-col gap-4">
-        {cabecalho}
-        <EstadoVazio motivo="sem-permissao" />
-      </section>
+      <ProvedorDePaineis>
+        <section className="flex flex-col gap-4">
+          {cabecalho}
+          {filtros}
+          <EstadoVazio motivo="sem-permissao" />
+        </section>
+      </ProvedorDePaineis>
     );
   }
 
   const linhas = data ?? [];
-  /* Spec 021 (Bloco 6, RC-1): o propósito e a duração vêm do currículo VIGENTE hoje de cada curso. */
-  const hoje = hojeNaCiaara();
+  /* Spec 021 (RC-1) e RT-6: o propósito e a duração vêm do currículo vigente NO ANO ESCOLHIDO de cada curso. */
   const cursos: CartaoDeCurso[] = linhas.map((c) => {
     const curriculo = curriculoVigenteEm(
       (c.curriculos ?? []) as unknown as CurriculoDoCatalogo[],
-      hoje,
+      referencia,
     );
     return {
       codigo: c.codigo as string,
@@ -172,23 +212,25 @@ export default async function Cursos({
   });
 
   return (
-    <section className="flex flex-col gap-5">
-      {cabecalho}
-      <FiltrosDoCatalogo />
+    <ProvedorDePaineis>
+      <section className="flex flex-col gap-5">
+        {cabecalho}
+        {filtros}
+        <ConteudoDePainel painel="estatisticas">
+          <IndicadoresDoCatalogo agregados={agregados} recorte={haRecorte} />
+        </ConteudoDePainel>
 
-      {vazio ? (
-        <EstadoVazio
-          motivo={TEXTO_DO_VAZIO[vazio].motivo}
-          titulo={TEXTO_DO_VAZIO[vazio].titulo}
-          detalhe={TEXTO_DO_VAZIO[vazio].detalhe}
-        />
-      ) : (
-        <>
-          <IndicadoresDoCatalogo agregados={agregados} />
+        {vazio ? (
+          <EstadoVazio
+            motivo={TEXTO_DO_VAZIO[vazio].motivo}
+            titulo={TEXTO_DO_VAZIO[vazio].titulo}
+            detalhe={TEXTO_DO_VAZIO[vazio].detalhe}
+          />
+        ) : (
           <CatalogoDeCursos cursos={cursos} />
-        </>
-      )}
-    </section>
+        )}
+      </section>
+    </ProvedorDePaineis>
   );
 }
 

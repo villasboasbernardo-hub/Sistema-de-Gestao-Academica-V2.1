@@ -7,10 +7,20 @@
  * ⚠️ **O SINAL DE ESPERA VEM DO GANCHO, e é o `FR-045`.** Estes dois parâmetros avisam o servidor —
  * trocar o recorte é ida ao banco. Sem sinal, a tela fica muda entre o comando e a resposta, e a
  * pessoa clica de novo. **O que estraga não é a latência, é o silêncio.**
+ *
+ * ⚠️ **AS OPÇÕES PELO NOME INSTITUCIONAL** (spec 025, Bloco 10, D-21): até 24/10/2026 a lista mostrava o valor do
+ * banco com espaço no lugar do sublinhado (*"estagio qualificacao"*) e a modalidade em minúscula. Agora são as cinco
+ * classificações na ordem do sistema (Bloco 7), pelo rótulo do Glossário, e *Presencial · EAD · Semipresencial*. O
+ * valor que vai à URL não muda.
  */
 "use client";
 
-import { CLASSIFICACOES, MODALIDADES } from "@/lib/navegacao/contrato";
+import { ROTULO_DA_MODALIDADE } from "@/lib/constantes/curso";
+import {
+  CLASSIFICACOES_DE_CURSO,
+  ROTULO_DA_CLASSIFICACAO,
+} from "@/lib/dominio/classificacoes-de-curso";
+import { MODALIDADES } from "@/lib/navegacao/contrato";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 const CAMPO =
@@ -44,9 +54,9 @@ export function FiltroDoPanorama() {
           onChange={(e) => void definirClassificacao(e.target.value === "" ? null : e.target.value)}
         >
           <option value="">Todas</option>
-          {CLASSIFICACOES.map((c) => (
+          {CLASSIFICACOES_DE_CURSO.map((c) => (
             <option key={c} value={c}>
-              {c.replaceAll("_", " ")}
+              {ROTULO_DA_CLASSIFICACAO[c]}
             </option>
           ))}
         </select>
@@ -65,7 +75,7 @@ export function FiltroDoPanorama() {
           <option value="">Todas</option>
           {MODALIDADES.map((m) => (
             <option key={m} value={m}>
-              {m}
+              {ROTULO_DA_MODALIDADE[m] ?? m}
             </option>
           ))}
         </select>

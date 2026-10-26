@@ -46,7 +46,7 @@ const PROIBIDO = "gord" + "ura";
 
 /** O que o indicador se chama — e onde ele **tem** de aparecer. */
 const CERTO = "Saldo de capacidade";
-const ONDE_O_CERTO_VIVE = "app/(app)/turmas/[turma]/SecaoDeAndamento.tsx";
+const ONDE_O_CERTO_VIVE = "app/(app)/turmas/[turma]/IndicadoresDaTurma.tsx";
 
 function semComentario(fonte: string): string {
   return fonte

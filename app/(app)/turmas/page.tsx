@@ -19,10 +19,27 @@
  * parcial, e concluir *"não tem turma cadastrada"* a partir de uma lista vazia é exatamente a leitura
  * errada que o gotcha descreve. Quem decide a frase é o **alcance declarado do perfil**, nunca o
  * tamanho da lista.
+ *
+ * ⚠️ **SÓ O ANO ESCOLHIDO** (RT-6 do Bloco 10, spec 025, D-26): a lista e o painel são de um ano, o do seletor do
+ * canto superior direito — o mesmo de todo módulo. O *"Ano"* dos filtros saiu.
+ * ⚠️ **FILTROS E ESTATÍSTICAS SÃO ÍCONES NA BARRA** (RT-4, D-19): os seis números passaram para o painel de
+ * Estatísticas, recolhido ao chegar.
  */
+import { estadosPorRegistro, type ImpedimentosDoRegistro } from "@/lib/dominio/exclusao-permanente";
 import { lerContagemPresencial } from "./contagem-presencial";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
+import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
+import {
+  ConteudoDePainel,
+  GatilhoDePainel,
+  ProvedorDePaineis,
+} from "@/components/ciaara/paineis-da-pagina";
+import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
+import { excluirTurma } from "@/lib/acoes/turma";
+import { estadoDaExclusaoDaTurma } from "@/lib/dominio/exclusao-de-turma";
+import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import {
@@ -30,7 +47,7 @@ import {
   RECURSO_DO_ARQUIVAMENTO,
   semAsArquivadas,
 } from "@/lib/dominio/arquivamento-da-turma";
-import { anoDoPainel, anosDoSeletor, painelDeTurmas } from "@/lib/dominio/painel-de-turmas";
+import { painelDeTurmas } from "@/lib/dominio/painel-de-turmas";
 import { emOrdemDeCurso } from "@/lib/dominio/ordem-de-cursos";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { lerParametros } from "@/lib/navegacao/esquema";
@@ -38,7 +55,6 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { alcanceDoPerfil } from "../cursos/consulta";
 import {
-  anosDistintos,
   COLUNAS_DA_LISTA_DE_TURMAS,
   comAndamento,
   montarConsultaDeTurmas,
@@ -46,7 +62,6 @@ import {
   type InsumosDoAndamentoDaLista,
   type LinhaBrutaDeTurma,
 } from "./consulta";
-import { AnoDoPainel } from "./AnoDoPainel";
 import { FiltrosDeTurmas } from "./FiltrosDeTurmas";
 import { PainelDeTurmas } from "./PainelDeTurmas";
 import { TabelaDeTurmas } from "./TabelaDeTurmas";
@@ -62,16 +77,18 @@ export default async function Turmas({
    */
   const { valores } = lerParametros("/turmas", await searchParams);
 
-  const parametros = {
+  /* O dia de São Paulo, passado às funções do banco — elas não têm valor padrão (FR-014.3). */
+  const hoje = hojeNaCiaara();
+  const escolha = await anoEscolhido(String(valores.ano), hoje);
+  const filtro = {
     curso: String(valores.curso),
-    ano: String(valores.ano),
     situacao: String(valores.situacao),
     busca: String(valores.busca),
   };
+  /* RT-6: o ano escolhido entra na consulta como o recorte que sempre vale — não é filtro. */
+  const parametros = { ...filtro, ano: String(escolha.ano) };
 
   const supabase = await criarClienteDeServidor();
-  /* O dia de São Paulo, passado às funções do banco — elas não têm valor padrão (FR-014.3). */
-  const hoje = hojeNaCiaara();
   /* D-COR-5: a arquivada só aparece com «Mostrar arquivadas» (`?arquivadas=sim`). */
   const mostrarArquivadas = valores.arquivadas === "sim";
 
@@ -90,7 +107,8 @@ export default async function Turmas({
   ] = await Promise.all([
     usuarioDaSessao(),
     montarConsultaDeTurmas(supabase.from("turmas").select(COLUNAS_DA_LISTA_DE_TURMAS), parametros),
-    supabase.from("turmas").select("ano_letivo"),
+    /* RT-6: se há turma em OUTRO ano, o vazio do ano escolhido diz isso — e não "ainda não existe turma". */
+    supabase.from("turmas").select("id", { count: "exact", head: true }),
     supabase
       .from("cursos")
       .select("codigo, nome_curso, classificacao")
@@ -128,7 +146,11 @@ export default async function Turmas({
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
   const podeLer = pode(permissoes, "turmas", "ler");
   const alcance = alcanceDoPerfil(usuario?.perfil, usuario?.escopoCurso);
-  const haFiltro = Object.values(parametros).some((v) => v !== "") || mostrarArquivadas;
+  const haFiltro = Object.values(filtro).some((v) => v !== "") || mostrarArquivadas;
+  const ativos = filtrosForaDoPadrao("/turmas", {
+    ...filtro,
+    arquivadas: mostrarArquivadas ? "sim" : "",
+  });
 
   /*
    * ⚠️ **FALHA NUMA DAS LEITURAS DO ANDAMENTO NÃO DERRUBA A LISTA E NÃO INVENTA ALERTA** (`RN-DEG-01`): sem a
@@ -167,9 +189,7 @@ export default async function Turmas({
    * ⚠️ **O PAINEL É DE UM ANO SÓ** (ajuste de 19/10/2026): o `ano` da URL, ou o vigente — o de hoje em São Paulo. A
    *    planejada do ano seguinte não entra nos números do vigente.
    */
-  const vigente = anoDoPainel("", hoje);
-  const anoDoPainelEscolhido = anoDoPainel(parametros.ano, hoje);
-  const anos = anosDistintos(universo.data ?? []);
+  const anoDoPainelEscolhido = escolha.ano;
   const painel = painelDeTurmas({
     ano: anoDoPainelEscolhido,
     turmas: doRecorte.map((l) => ({
@@ -188,6 +208,22 @@ export default async function Turmas({
     linhas: [],
     ocupacao: [],
   });
+  /* D-COR-6 (spec 025): o que prende cada turma da lista, numa ida só — e só para quem exclui (D-9). */
+  const podeExcluir = pode(permissoes, "turmas", "criar");
+  const impedimentosRes =
+    podeExcluir && linhas.length > 0
+      ? await supabase.rpc("impedimentos_de_exclusao_das_turmas", {
+          p_turmas: linhas.map((l) => l.id),
+        })
+      : null;
+  const exclusao = estadosPorRegistro(
+    impedimentosRes === null || impedimentosRes.error
+      ? null
+      : ((impedimentosRes.data ?? []) as ImpedimentosDoRegistro[]),
+    estadoDaExclusaoDaTurma,
+  );
+  const excluida = String(valores.excluida ?? "");
+
   /* Spec 022 (FR-003.2): as opções de curso do filtro na ordem única dos cursos. */
   const cursos = emOrdemDeCurso(cursosRes.data ?? []).map((c) => ({
     codigo: c.codigo,
@@ -195,83 +231,112 @@ export default async function Turmas({
   }));
 
   return (
-    <div className="flex flex-col gap-4" data-slot="lista-de-turmas">
-      {/* Spec 019, ajuste A-1: o ano numa caixa de seleção, no canto superior direito — o mesmo do Início. */}
-      <header
-        className="flex flex-wrap items-start justify-between gap-3"
-        data-slot="cabecalho-de-turmas"
-      >
-        <div className="flex flex-col gap-1">
-          <h1 className="text-texto text-xl font-semibold">Turmas</h1>
-          {/* veste: a contagem do recorte, em tom secundário, acima da tabela */}
-          <p className="text-texto-suave text-sm" data-slot="contagem-de-turmas">
-            {linhas.length} turma{linhas.length === 1 ? "" : "s"}
-            {haFiltro ? " neste recorte" : ""}
+    <ProvedorDePaineis>
+      <div className="flex flex-col gap-4" data-slot="lista-de-turmas">
+        {/* Spec 019, ajuste A-1: o ano numa caixa de seleção, no canto superior direito — o mesmo do Início. */}
+        <header
+          className="flex flex-wrap items-start justify-between gap-3"
+          data-slot="cabecalho-de-turmas"
+        >
+          <div className="flex flex-col gap-1">
+            <h1 className="text-texto text-xl font-semibold">Turmas</h1>
+            {/* veste: a contagem do recorte, em tom secundário, acima da tabela */}
+            <p className="text-texto-suave text-sm" data-slot="contagem-de-turmas">
+              {linhas.length} turma{linhas.length === 1 ? "" : "s"} em {anoDoPainelEscolhido}
+              {haFiltro ? " neste recorte" : ""}
+            </p>
+          </div>
+          <BarraDeAcoes rotulo="Ações das turmas">
+            <SeletorDeAno
+              ano={anoDoPainelEscolhido}
+              vigente={escolha.vigente}
+              origem={escolha.origem}
+              rota="/turmas"
+            />
+            <GatilhoDePainel painel="filtros" contagem={ativos} />
+            {recorte.error ? null : <GatilhoDePainel painel="estatisticas" />}
+          </BarraDeAcoes>
+        </header>
+
+        {excluida ? (
+          <p role="status" className="text-executado-tinta text-sm" data-slot="turma-excluida">
+            Turma {excluida} excluída permanentemente.
           </p>
-        </div>
-        <AnoDoPainel
-          ano={anoDoPainelEscolhido}
-          anos={anosDoSeletor(anos, vigente)}
-          vigente={vigente}
-        />
-      </header>
+        ) : null}
 
-      {recorte.error ? null : (
-        <PainelDeTurmas
-          indicadores={painel.indicadores}
-          diasDeAviso={diasDeAviso}
-          ano={anoDoPainelEscolhido}
-        />
-      )}
+        <ConteudoDePainel painel="filtros">
+          <FiltrosDeTurmas cursos={cursos} />
+        </ConteudoDePainel>
 
-      <FiltrosDeTurmas cursos={cursos} anos={anos} />
+        {recorte.error ? null : (
+          <ConteudoDePainel painel="estatisticas">
+            <PainelDeTurmas
+              indicadores={painel.indicadores}
+              diasDeAviso={diasDeAviso}
+              ano={anoDoPainelEscolhido}
+            />
+          </ConteudoDePainel>
+        )}
 
-      {recorte.error ? (
-        /*
-         * ⚠️ **FALHA DE LEITURA NÃO ESTOURA A TELA** (`RN-DEG-01`): a lista volta vazia com aviso, e a
-         *    pessoa continua com filtro, menu e sessão. Dizer "não há turma" aqui seria afirmar o que
-         *    não se mediu.
-         */
-        <EstadoVazio
-          motivo="sem-permissao"
-          titulo="Não foi possível ler as turmas agora"
-          detalhe="A leitura falhou. Tente de novo; se persistir, procure o suporte."
-        />
-      ) : linhas.length > 0 ? (
-        <TabelaDeTurmas
-          linhas={linhas}
-          podeArquivarTurmas={pode(permissoes, RECURSO_DO_ARQUIVAMENTO, "editar")}
-        />
-      ) : !podeLer ? (
-        <EstadoVazio
-          motivo="sem-permissao"
-          titulo="O seu perfil não lê o cadastro de turmas"
-          detalhe="Quem nega o acesso é o banco, e a lista chega vazia por isso — não por falta de turma."
-        />
-      ) : haFiltro ? (
-        <EstadoVazio
-          motivo="sem-dado"
-          titulo="Nenhuma turma neste recorte"
-          detalhe="Afrouxe ou limpe os filtros acima."
-        />
-      ) : alcance === "recortado" ? (
-        /*
-         * ⚠️ **SEM FILTRO E SEM LINHA, COM PERMISSÃO DE LER: a pergunta é se a pessoa ALCANÇA algum
-         *    curso.** Um Operador de escopo estreito sem curso atribuído lê zero turmas, e a frase
-         *    "ainda não existe turma" seria falsa — existem 28 no banco.
-         */
-        <EstadoVazio
-          motivo="sem-permissao"
-          titulo="Você não alcança turmas"
-          detalhe="O seu perfil vê só as turmas dos cursos sob a sua responsabilidade."
-        />
-      ) : (
-        <EstadoVazio
-          motivo="sem-dado"
-          titulo="Ainda não existe turma cadastrada"
-          detalhe="As turmas nascem na página do curso, em “Nova turma”."
-        />
-      )}
-    </div>
+        {recorte.error ? (
+          /*
+           * ⚠️ **FALHA DE LEITURA NÃO ESTOURA A TELA** (`RN-DEG-01`): a lista volta vazia com aviso, e a
+           *    pessoa continua com filtro, menu e sessão. Dizer "não há turma" aqui seria afirmar o que
+           *    não se mediu.
+           */
+          <EstadoVazio
+            motivo="sem-permissao"
+            titulo="Não foi possível ler as turmas agora"
+            detalhe="A leitura falhou. Tente de novo; se persistir, procure o suporte."
+          />
+        ) : linhas.length > 0 ? (
+          <TabelaDeTurmas
+            linhas={linhas}
+            acoes={{
+              podeEditar: pode(permissoes, "turmas", "editar"),
+              podeArquivar: pode(permissoes, RECURSO_DO_ARQUIVAMENTO, "editar"),
+              podeExcluir,
+              exclusao,
+              excluir: excluirTurma,
+            }}
+          />
+        ) : !podeLer ? (
+          <EstadoVazio
+            motivo="sem-permissao"
+            titulo="O seu perfil não lê o cadastro de turmas"
+            detalhe="Quem nega o acesso é o banco, e a lista chega vazia por isso — não por falta de turma."
+          />
+        ) : haFiltro ? (
+          <EstadoVazio
+            motivo="sem-dado"
+            titulo="Nenhuma turma neste recorte"
+            detalhe="Afrouxe ou limpe os filtros acima."
+          />
+        ) : (universo.count ?? 0) > 0 ? (
+          <EstadoVazio
+            motivo="sem-dado"
+            titulo={`Nenhuma turma em ${anoDoPainelEscolhido}`}
+            detalhe="As turmas de outros anos aparecem trocando o ano, no canto superior direito."
+          />
+        ) : alcance === "recortado" ? (
+          /*
+           * ⚠️ **SEM FILTRO E SEM LINHA, COM PERMISSÃO DE LER: a pergunta é se a pessoa ALCANÇA algum
+           *    curso.** Um Operador de escopo estreito sem curso atribuído lê zero turmas, e a frase
+           *    "ainda não existe turma" seria falsa — existem 28 no banco.
+           */
+          <EstadoVazio
+            motivo="sem-permissao"
+            titulo="Você não alcança turmas"
+            detalhe="O seu perfil vê só as turmas dos cursos sob a sua responsabilidade."
+          />
+        ) : (
+          <EstadoVazio
+            motivo="sem-dado"
+            titulo="Ainda não existe turma cadastrada"
+            detalhe="As turmas nascem na página do curso, em “Nova turma”."
+          />
+        )}
+      </div>
+    </ProvedorDePaineis>
   );
 }

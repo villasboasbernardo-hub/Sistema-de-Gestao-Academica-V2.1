@@ -5798,8 +5798,28 @@ export type Database = {
         Args: { p_codigo_confirmacao: string; p_disciplina_id: string }
         Returns: Json
       }
+      excluir_feriado: {
+        Args: { p_codigo_confirmacao: string; p_feriado_id: string }
+        Returns: Json
+      }
       excluir_instrutor: {
         Args: { p_codigo_confirmacao: string; p_instrutor_id: string }
+        Returns: Json
+      }
+      excluir_item_de_avaliacao_do_curriculo: {
+        Args: { p_codigo_confirmacao: string; p_item_id: string }
+        Returns: Json
+      }
+      excluir_regime_de_horario: {
+        Args: { p_codigo_confirmacao: string; p_regime_id: string }
+        Returns: Json
+      }
+      excluir_sala: {
+        Args: { p_nome_confirmacao: string; p_sala_id: string }
+        Returns: Json
+      }
+      excluir_turma: {
+        Args: { p_codigo_confirmacao: string; p_turma_id: string }
         Returns: Json
       }
       excluir_unidade_ensino: {
@@ -5827,13 +5847,63 @@ export type Database = {
         Args: { p_disciplina_id: string }
         Returns: string[]
       }
+      impedimentos_de_exclusao_da_turma: {
+        Args: { p_turma_id: string }
+        Returns: string[]
+      }
       impedimentos_de_exclusao_da_unidade_ensino: {
         Args: { p_unidade_id: string }
+        Returns: string[]
+      }
+      impedimentos_de_exclusao_das_salas: {
+        Args: { p_salas: string[] }
+        Returns: {
+          impedimentos: string[]
+          registro_id: string
+        }[]
+      }
+      impedimentos_de_exclusao_das_turmas: {
+        Args: { p_turmas: string[] }
+        Returns: {
+          impedimentos: string[]
+          registro_id: string
+        }[]
+      }
+      impedimentos_de_exclusao_das_unidades: {
+        Args: { p_unidades: string[] }
+        Returns: {
+          impedimentos: string[]
+          registro_id: string
+        }[]
+      }
+      impedimentos_de_exclusao_do_feriado: {
+        Args: { p_feriado_id: string }
         Returns: string[]
       }
       impedimentos_de_exclusao_do_instrutor: {
         Args: { p_instrutor_id: string }
         Returns: string[]
+      }
+      impedimentos_de_exclusao_dos_feriados: {
+        Args: { p_feriados: string[] }
+        Returns: {
+          impedimentos: string[]
+          registro_id: string
+        }[]
+      }
+      impedimentos_de_exclusao_dos_itens: {
+        Args: { p_itens: string[] }
+        Returns: {
+          impedimentos: string[]
+          registro_id: string
+        }[]
+      }
+      impedimentos_de_exclusao_dos_regimes: {
+        Args: { p_regimes: string[] }
+        Returns: {
+          impedimentos: string[]
+          registro_id: string
+        }[]
       }
       iniciar_alteracao_do_dsa: {
         Args: { p_ano: number; p_semana: number; p_turma: string }

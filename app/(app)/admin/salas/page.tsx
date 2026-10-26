@@ -23,6 +23,12 @@ import {
   type Sala,
   type TurmaComSala,
 } from "@/lib/dominio/salas";
+import { estadoDaExclusaoDaSala } from "@/lib/dominio/exclusao-de-partes";
+import {
+  DICA_SEM_LEITURA,
+  estadosPorRegistro,
+  type ImpedimentosDoRegistro,
+} from "@/lib/dominio/exclusao-permanente";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { AcoesDeSala } from "./AcoesDeSala";
@@ -36,7 +42,7 @@ export default async function Salas() {
   const [salasRes, turmasRes] = await Promise.all([
     supabase
       .from("config_listas")
-      .select("valor, ativo, metadados, ordem")
+      .select("id, valor, ativo, metadados, ordem")
       .eq("lista", "salas")
       .order("ordem"),
     supabase.from("turmas").select("codigo, sala_alocada"),
@@ -54,6 +60,20 @@ export default async function Salas() {
   }));
 
   const podeEditar = pode(permissoes, "parametros", "editar");
+  /* RT-2 e D-30 (spec 025): o *Excluir* de cada sala — só para quem cria parâmetro, e pelo que o banco diz. */
+  const podeExcluir = pode(permissoes, "parametros", "criar");
+  const idsDasSalas = (salasRes.data ?? []).map((s) => s.id as string);
+  const impedimentosRes =
+    podeExcluir && idsDasSalas.length > 0
+      ? await supabase.rpc("impedimentos_de_exclusao_das_salas", { p_salas: idsDasSalas })
+      : null;
+  const exclusao = estadosPorRegistro(
+    impedimentosRes === null || impedimentosRes.error
+      ? null
+      : ((impedimentosRes.data ?? []) as ImpedimentosDoRegistro[]),
+    estadoDaExclusaoDaSala,
+  );
+  const idDaSala = new Map((salasRes.data ?? []).map((s) => [s.valor as string, s.id as string]));
 
   return (
     <section className="flex flex-col gap-3">
@@ -62,8 +82,9 @@ export default async function Salas() {
         <div className="flex flex-col gap-1">
           <h1 className="text-texto text-lg font-semibold">Salas</h1>
           <p className="text-texto-suave text-sm">
-            {salas.length} salas. Sala errada se <strong>desativa</strong> — não se renomeia nem se
-            apaga: o nome é o que fica gravado em cada turma.
+            {salas.length} salas. Sala errada se <strong>desativa</strong> — ou se{" "}
+            <strong>exclui</strong>, se nenhuma turma a usa. O nome não se renomeia: é o que fica
+            gravado em cada turma.
           </p>
         </div>
         <SePodeVer permissoes={permissoes} recurso="parametros" acao="criar">
@@ -95,7 +116,7 @@ export default async function Salas() {
                 <th className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left">
                   Turmas que a usam
                 </th>
-                {podeEditar ? (
+                {podeEditar || podeExcluir ? (
                   <th className="border-borda bg-superficie-2 text-texto border px-2 py-1 text-left">
                     Ações
                   </th>
@@ -121,12 +142,24 @@ export default async function Salas() {
                     >
                       {usadaPor.length === 0 ? "—" : usadaPor.join(", ")}
                     </td>
-                    {podeEditar ? (
+                    {podeEditar || podeExcluir ? (
                       <td className="border-borda text-texto border px-2 py-1">
                         <AcoesDeSala
+                          id={idDaSala.get(sala.valor) ?? ""}
                           valor={sala.valor}
+                          natureza={naturezaDaSala(sala)}
                           ativa={sala.ativo}
                           turmasQueUsam={usadaPor}
+                          podeEditar={podeEditar}
+                          {...(podeExcluir
+                            ? {
+                                exclusao: exclusao[idDaSala.get(sala.valor) ?? ""] ?? {
+                                  liberada: false,
+                                  dica: DICA_SEM_LEITURA,
+                                  detalhe: null,
+                                },
+                              }
+                            : {})}
                         />
                       </td>
                     ) : null}

@@ -479,6 +479,17 @@ export const CONTRATO = {
         historico: "substitui",
         avisaServidor: true,
       },
+      /*
+       * RT-6 (Bloco 10, conferência de 24/10/2026): a DURAÇÃO e o propósito de cada curso são os do currículo vigente
+       * no ano escolhido — e as estatísticas de duração também. Texto, padrão vazio = o ano de hoje (`anoEscolhido`).
+       */
+      ano: {
+        nome: "ano",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
     },
   },
   /*
@@ -544,6 +555,17 @@ export const CONTRATO = {
     rota: "/turmas",
     origem: "RF-CURSO-01",
     parametros: {
+      /*
+       * Spec 025 (Bloco 10, D-15): a confirmação da exclusão da turma — a ficha deixou de existir, e a lista diz qual
+       * saiu. Texto (o código); some ao navegar.
+       */
+      excluida: {
+        nome: "excluida",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
       curso: {
         nome: "curso",
         tipo: "texto",
@@ -644,6 +666,15 @@ export const CONTRATO = {
   },
   "/cursos/[curso]/turmas/nova": {
     rota: "/cursos/[curso]/turmas/nova",
+    origem: "RF-CURSO-01",
+    parametros: {},
+  },
+  /*
+   * Spec 025 (Bloco 10, D-1): *Editar turma* em página própria (RT-3) — emenda o "NÃO HÁ `/editar`" da spec 009 (A-1).
+   * A identidade está no caminho.
+   */
+  "/turmas/[turma]/editar": {
+    rota: "/turmas/[turma]/editar",
     origem: "RF-CURSO-01",
     parametros: {},
   },
@@ -877,11 +908,27 @@ export const CONTRATO = {
         historico: "empilha",
         avisaServidor: true,
       },
+      /*
+       * Spec 025 (Bloco 10, item 7, D-28): as duas abas de *Editar curso* — *Cadastro* e *Currículo*. Link antigo com
+       * `?parte=` e sem `?aba=` abre o *Currículo* (a página confere o parâmetro cru).
+       */
+      aba: {
+        nome: "aba",
+        tipo: "escolha",
+        padrao: "cadastro",
+        opcoes: ["cadastro", "curriculo"],
+        historico: "empilha",
+        avisaServidor: true,
+      },
+      /*
+       * As sub-abas do *Currículo*. Spec 025 (D-28): os dados e o PDF saíram das partes e ficam no alto da aba; o
+       * `parte=dados` antigo cai em *Disciplinas*, o padrão.
+       */
       parte: {
         nome: "parte",
         tipo: "escolha",
-        padrao: "dados",
-        opcoes: ["dados", "disciplinas", "horarios", "atividades"],
+        padrao: "disciplinas",
+        opcoes: ["disciplinas", "horarios", "atividades"],
         historico: "empilha",
         avisaServidor: true,
       },
@@ -936,6 +983,11 @@ export const CONTRATO = {
     rota: "/cursos/[curso]",
     origem: "RF-CURSO-01",
     parametros: {
+      /*
+       * Spec 025 (Bloco 10, RT-6, D-26): o ano escolhido — o mesmo `?ano=` do Início, de Turmas e do Calendário. Texto,
+       * com padrão vazio = o ano guardado no navegador ou o de hoje (`anoEscolhido`).
+       */
+      ano: { nome: "ano", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
       aba: {
         nome: "aba",
         tipo: "escolha",
@@ -1011,6 +1063,11 @@ export const CONTRATO = {
     rota: "/instrutores",
     origem: "RF-INSTR-01",
     parametros: {
+      /*
+       * Spec 025 (Bloco 10, RT-6, D-26): o ano escolhido — o mesmo `?ano=` do Início, de Turmas e do Calendário. Texto,
+       * com padrão vazio = o ano guardado no navegador ou o de hoje (`anoEscolhido`).
+       */
+      ano: { nome: "ano", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
       busca: {
         nome: "busca",
         tipo: "texto",
@@ -1141,6 +1198,20 @@ export const CONTRATO = {
   "/instrutores/[codigo]": {
     rota: "/instrutores/[codigo]",
     origem: "RF-INSTR-10",
+    parametros: {
+      /*
+       * Spec 025 (Bloco 10, RT-6, D-26): o ano escolhido — o mesmo `?ano=` do Início, de Turmas e do Calendário. Texto,
+       * com padrão vazio = o ano guardado no navegador ou o de hoje (`anoEscolhido`).
+       */
+      ano: { nome: "ano", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
+    },
+  },
+  /*
+   * Spec 025 (Bloco 10, D-35): a edição do instrutor em página própria (RT-3). A identidade está no caminho.
+   */
+  "/instrutores/[codigo]/editar": {
+    rota: "/instrutores/[codigo]/editar",
+    origem: "RF-INSTR-10",
     parametros: {},
   },
   /*
@@ -1167,6 +1238,11 @@ export type Rota = keyof typeof CONTRATO;
  * A tabela do documento 25 nunca conseguiu isso, e é por isso que ela não bastava.
  */
 export type ParametroDe<R extends Rota> = keyof (typeof CONTRATO)[R]["parametros"] & string;
+
+/** As rotas cujo contrato declara o parâmetro `P` (spec 025: as telas que seguem o ano escolhido). */
+export type RotaComParametro<P extends string> = {
+  [R in Rota]: P extends ParametroDe<R> ? R : never;
+}[Rota];
 
 /** O descritor de um parâmetro, para quem precisa da política e não só do valor. */
 export function descritor<R extends Rota>(rota: R, nome: ParametroDe<R>): Parametro {

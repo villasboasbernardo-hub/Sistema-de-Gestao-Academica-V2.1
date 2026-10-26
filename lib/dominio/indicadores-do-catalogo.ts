@@ -20,6 +20,12 @@
  * **semanas de cada curso**, do currículo vigente (spec 021, RC-1). Continua sendo um dos quatro itens da lista
  * fechada da A-6 — trocado, não acrescentado.
  *
+ * ⚠️ **SPEC 025 (Bloco 10), ITEM 6** — *"um card por classificação (Regulares, Expeditos, Especiais, Estágios de
+ * Qualificação, Aperfeiçoamento Avançado, demais), um card com o TOTAL de cursos e estágios do CIAARA-11, e um card com
+ * a quantidade em cada classificação."* (Bernardo Villas Boas, 24/10/2026). Os dois cartões fixos (regulares e
+ * estágios) viraram **um por classificação**, mais os **demais** e o **total** — que fecha a parte *"total de cursos"*
+ * da `PEND-5a-2` (A-8 da spec 025). *"Turmas ativas"* continua fora.
+ *
  * ⚠️ **AUSÊNCIA NÃO É ZERO** (`RN-DEG-01`). O curso sem a duração em semanas não vira barra no chão — que se leria
  * como "dura zero semanas" —: ele sai do gráfico e é **nomeado** em `semInformacao`.
  *
@@ -47,29 +53,43 @@ export type DuracaoEmSemanas = {
   readonly semInformacao: readonly string[];
 };
 
-/** Uma barra da contagem por classificação. Aqui zero é zero de verdade. */
+/** Uma classificação: o cartão e a fatia da pizza. Aqui zero é zero de verdade. */
 export type ContagemPorClassificacao = {
   readonly classificacao: ClassificacaoDeCurso;
+  /** O do Glossário, para a fatia e a legenda (*"Curso Regular"*). */
   readonly rotulo: string;
+  /** O plural do cartão (*"Cursos regulares"*). */
+  readonly rotuloDoCartao: string;
   readonly total: number;
 };
 
+/** O plural de cada classificação, para o título do cartão — o do Glossário no plural, sem inventar palavra. */
+const ROTULO_DO_CARTAO: Readonly<Record<ClassificacaoDeCurso, string>> = {
+  regular: "Cursos regulares",
+  expedito: "Cursos expeditos",
+  especial: "Cursos especiais",
+  estagio_qualificacao: "Estágios de qualificação",
+  aperfeicoamento_avancado: "Cursos de aperfeiçoamento avançado",
+};
+
 /**
- * ⚠️ **QUATRO CHAVES, E A LISTA É FECHADA.** Acrescentar uma quinta aqui é entregar o que a A-6
- * mandou para a `PEND-5a-2` — decisão de Bernardo, não manutenção.
+ * ⚠️ **QUATRO CHAVES, E A LISTA É FECHADA** (spec 025, A-8): as cinco classificações, os demais, o total e a duração.
+ * *"Turmas ativas"* é a parte da `PEND-5a-2` que nenhum pedido trouxe.
  */
 export type IndicadoresDoCatalogo = {
-  readonly cursosRegulares: number;
-  readonly estagiosDeQualificacao: number;
-  readonly duracaoEmSemanas: DuracaoEmSemanas;
   readonly cursosPorClassificacao: readonly ContagemPorClassificacao[];
+  /** Os cursos fora das cinco — hoje o banco recusa os outros dois valores do tipo, então zero é o normal. */
+  readonly demais: number;
+  /** Todos os cursos recebidos: os seis cartões somam ele (SC-006 da spec 025). */
+  readonly total: number;
+  readonly duracaoEmSemanas: DuracaoEmSemanas;
 };
 
 export function indicadoresDoCatalogo(
   cursos: readonly CursoParaIndicador[],
 ): IndicadoresDoCatalogo {
   /*
-   * ⚠️ CLASSIFICAÇÃO FORA DAS CINCO É IGNORADA, e isso não esconde dado: o banco recusa `geral`
+   * ⚠️ CLASSIFICAÇÃO FORA DAS CINCO NÃO VIRA GRUPO — vai para *demais* —, e isso não esconde dado: o banco recusa `geral`
    *    (`cursos_classificacao_nao_geral`) e `ead_semipresencial` (`FR-003.1`), que são os dois
    *    únicos outros valores do tipo. O filtro existe para a função não estourar se um dia o tipo
    *    crescer antes de a tela decidir onde o valor novo agrupa.
@@ -93,13 +113,14 @@ export function indicadoresDoCatalogo(
   const cursosPorClassificacao: ContagemPorClassificacao[] = CLASSIFICACOES_DE_CURSO.map((c) => ({
     classificacao: c,
     rotulo: ROTULO_DA_CLASSIFICACAO[c],
+    rotuloDoCartao: ROTULO_DO_CARTAO[c],
     total: daClasse(c).length,
   }));
 
   return {
-    cursosRegulares: daClasse("regular").length,
-    estagiosDeQualificacao: daClasse("estagio_qualificacao").length,
-    duracaoEmSemanas,
     cursosPorClassificacao,
+    demais: cursos.length - classificados.length,
+    total: cursos.length,
+    duracaoEmSemanas,
   };
 }

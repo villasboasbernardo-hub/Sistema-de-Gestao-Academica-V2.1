@@ -13,6 +13,7 @@ import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirAbaDoCurriculoNaEdicao } from "./navegar-curso";
 import { limparCursos, semearCursos, type CursosSemeados } from "./cursos-de-teste";
 
 const admin = () =>
@@ -270,6 +271,8 @@ test.describe("`FR-016` · editar curso", () => {
       page.locator("#curso-proposito"),
       "o propósito voltou ao cadastro do curso",
     ).toHaveCount(0);
+    // Spec 025 (D-28): o currículo é a outra aba de *Editar curso*.
+    await abrirAbaDoCurriculoNaEdicao(page);
     await expect(page.locator('[data-slot="escolha-do-curriculo"]')).toHaveValue("1");
     await page.locator("#curriculo-proposito").fill("Propósito revisado pelo percurso.");
     await page.locator('[data-slot="salvar-curriculo"]').click();

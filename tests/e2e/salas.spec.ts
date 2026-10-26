@@ -197,12 +197,19 @@ test.describe("`FR-029.4` · desativar sala em uso avisa e deixa prosseguir", ()
 });
 
 test.describe("`FR-029.5` · o que a tela NÃO oferece", () => {
-  test("⚠️ três verbos, e nenhum caminho de renomear ou apagar", async ({ page }) => {
+  /*
+   * REGRA DOS VALORES ESPERADOS: (a), spec 025 (Bloco 10, D-30 e D-31) — a linha ganhou *Editar* (SÓ a natureza: o nome
+   * é o que fica gravado em cada turma) e *Excluir* (só da sala que nenhuma turma usa, com o nome digitado). Renomear
+   * continua sem caminho.
+   */
+  test("⚠️ nenhum caminho de renomear; Editar só a natureza; Excluir só sem turma", async ({
+    page,
+  }) => {
     await entrar(page, EMAIL_ENCARREGADO, "/admin/salas");
     await expect(page.locator('[data-slot="tabela-de-salas"]')).toBeVisible();
 
     const principal = page.getByRole("main");
-    for (const proibido of [/renomear/i, /excluir/i, /apagar/i, /remover/i]) {
+    for (const proibido of [/renomear/i, /apagar/i, /remover/i]) {
       await expect(
         principal.getByRole("button", { name: proibido }),
         `a tela oferece ${proibido}`,
@@ -221,6 +228,14 @@ test.describe("`FR-029.5` · o que a tela NÃO oferece", () => {
      *    desativada, e o que a regra promete é a exclusividade, não a situação.
      */
     const linha = linhaDaSala(page, SEMEADO.salaDeTeste);
+    await expect(linha.locator('[data-slot="editar-sala"]')).toHaveCount(1);
+    await expect(linha.locator('[data-slot="excluir-sala"]')).toHaveCount(1);
+    // O diálogo de Editar não tem o nome: só a natureza.
+    await linha.locator('[data-slot="editar-sala"]').click();
+    const dialogo = page.locator('[data-slot="dialogo-da-sala"]');
+    await expect(dialogo.locator('[data-slot="formulario-da-natureza"] select')).toHaveCount(1);
+    await expect(dialogo.locator("input")).toHaveCount(0);
+    await page.keyboard.press("Escape");
     const desativar = await linha.locator('[data-slot="desativar-sala"]').count();
     const reativar = await linha.locator('[data-slot="reativar-sala"]').count();
     expect(desativar + reativar, "a linha da sala não oferece exatamente uma ação").toBe(1);

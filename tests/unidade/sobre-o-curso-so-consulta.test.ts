@@ -156,7 +156,7 @@ describe("⚠️ e o resto do sistema não lê esses campos", () => {
 describe("`FR-062` · as telas de avaliação não interpretam nota, média nem aprovação", () => {
   const TELAS = [
     "app/(app)/turmas/[turma]/AvaliacoesDaTurma.tsx",
-    "app/(app)/turmas/[turma]/CardDeAvaliacoes.tsx",
+    "app/(app)/turmas/[turma]/IndicadoresDaTurma.tsx",
     "app/(app)/turmas/[turma]/DefinirTempoArbitrado.tsx",
     "app/(app)/turmas/[turma]/consulta-de-avaliacoes.ts",
     "app/(app)/cursos/[curso]/AbaAvaliacoes.tsx",

@@ -85,7 +85,9 @@ test.describe("`FR-023`, `FR-024` · a turma que calcula — e o excesso NÃO é
      */
     await irAFichaDaTurma(page, EMAIL, PANORAMA.turmaEmExcesso);
 
-    await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toHaveCount(0);
+    await expect(
+      page.locator('[data-slot="indicadores-da-turma"] [data-slot="em-atraso"]'),
+    ).toHaveCount(0);
     await expect(campo(page, "saldo")).toContainText("+");
   });
 
@@ -103,8 +105,12 @@ test.describe("`FR-023`, `FR-024` · a turma que calcula — e o excesso NÃO é
     await irAFichaDaTurma(page, EMAIL, PANORAMA.turmaSemCapacidade);
 
     await expect(campo(page, "prevista")).toContainText("100 TA");
-    await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toBeVisible();
-    await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toContainText(/em atraso/i);
+    await expect(
+      page.locator('[data-slot="indicadores-da-turma"] [data-slot="em-atraso"]'),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-slot="indicadores-da-turma"] [data-slot="em-atraso"]'),
+    ).toContainText(/em atraso/i);
     await expect(campo(page, "saldo")).toContainText("-");
     await expect(campo(page, "saldo-em-dias")).toContainText("-");
   });
@@ -122,7 +128,9 @@ test.describe("`FR-023`, `FR-024` · a turma que calcula — e o excesso NÃO é
 
     await expect(campo(page, "percentual")).toContainText("30 %");
     await expect(campo(page, "saldo")).toContainText("-");
-    await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toHaveCount(0);
+    await expect(
+      page.locator('[data-slot="indicadores-da-turma"] [data-slot="em-atraso"]'),
+    ).toHaveCount(0);
   });
 });
 
@@ -145,7 +153,9 @@ test.describe("`FR-026.1`, `FR-027` · a tela nomeia o que falta, e nunca respon
       campo(page, "saldo"),
       "o cartão do saldo respondeu com número onde não há conta: é o gotcha 4 na forma de zero",
     ).not.toContainText("0 TA");
-    await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toHaveCount(0);
+    await expect(
+      page.locator('[data-slot="indicadores-da-turma"] [data-slot="em-atraso"]'),
+    ).toHaveCount(0);
     // ⚠️ E a capacidade diária NÃO aparece: mostrar o insumo de uma conta que não foi feita engana.
     await expect(campo(page, "capacidade")).toHaveCount(0);
   });
@@ -181,7 +191,9 @@ test.describe("`FR-026.1`, `FR-027` · a tela nomeia o que falta, e nunca respon
       "Divisão de Ensino a Distância",
     );
     await expect(campo(page, "saldo")).toHaveCount(0);
-    await expect(page.locator(`${SECAO} [data-slot="em-atraso"]`)).toHaveCount(0);
+    await expect(
+      page.locator('[data-slot="indicadores-da-turma"] [data-slot="em-atraso"]'),
+    ).toHaveCount(0);
   });
 
   test("`FR-029` · sem lançamento: «ainda sem lançamentos», e NÃO «0 %»", async ({ page }) => {
@@ -224,7 +236,10 @@ test.describe("`FR-033` · nenhum estado do andamento bloqueia a edição da fic
      *    `CLAUDE.md` nomeia duas vezes** — por isso ele continua exigindo o campo e o botão de
      *    gravar, só depois de abrir.
      */
-    await expect(page.locator('[data-slot="abrir-edicao-da-turma"]')).toBeVisible();
+    // Spec 025 (D-1): *Editar turma* é o ícone da barra da ficha, e abre a página própria.
+    await expect(
+      page.locator('[data-slot="cabecalho-da-turma"] [data-slot="editar-turma"]'),
+    ).toBeVisible();
     await abrirEdicaoDaTurma(page);
     /*
      * ⚠️ **RÓTULO EXATO** (08/10/2026): a turma da amostra é semipresencial, e desde a `D-DSA-2` a

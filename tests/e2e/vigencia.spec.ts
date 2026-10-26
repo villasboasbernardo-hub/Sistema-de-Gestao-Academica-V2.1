@@ -86,7 +86,10 @@ const secao = (page: Page) => page.locator('[data-slot="secao-de-regime"]');
 const dialogo = (page: Page) => page.locator('[data-slot="dialogo-confirmacao"]');
 const enderecoDaEdicao = (sigla: string) => `/cursos/${encodeURIComponent(sigla)}/editar`;
 
-/** Spec 022 (Bloco 7, item 9): a vigência do regime mora na parte *Horários* de Editar curso — chega-se pela aba. */
+/**
+ * Spec 022 (Bloco 7, item 9): a vigência do regime mora na parte *Horários* de Editar curso — chega-se pela aba. Spec 025
+ * (D-28, D-34): a parte mora na aba *Currículo*, e registrar e corrigir abrem em DIÁLOGO, pelo ícone.
+ */
 async function irAVigencia(page: Page, email: string, sigla: string): Promise<void> {
   await entrar(page, email, enderecoDaEdicao(sigla));
   await abrirParteDaEdicao(page, "horarios");
@@ -125,7 +128,7 @@ test.describe("`FR-021.1` · corrigir a vigência que ainda não alcançou lanç
     const linha = secao(page).locator(`[data-vigencia="${antes.codigo}"]`);
     await expect(linha).toHaveAttribute("data-corrigivel", "true");
 
-    await linha.locator('[data-slot="corrigir-vigencia"] summary').click();
+    await linha.locator('[data-slot="corrigir-vigencia"]').click();
 
     /*
      * ⚠️ O FORMULÁRIO ABRE COM OS VALORES ATUAIS (`FR-021.1`) — é o que faz a correção parecer edição
@@ -252,7 +255,7 @@ test.describe("`FR-019` · registrar vigência nova a partir de uma data", () =>
     const quandoNaTela = dataParaLeitura(quando);
 
     await irAVigencia(page, EMAIL_ENCARREGADO, sigla);
-    await secao(page).locator('[data-slot="registrar-nova-vigencia"] summary').click();
+    await secao(page).locator('[data-slot="registrar-nova-vigencia"]').click();
 
     // ⚠️ `FR-015.1`: o formulário de registro abre VAZIO — nada de tipo por padrão.
     await expect(page.locator("#registrar-tipo")).toHaveValue("");
@@ -291,7 +294,7 @@ test.describe("`FR-019` · registrar vigência nova a partir de uma data", () =>
      */
     const sigla = SEMEADO.porClassificacao.regular;
     await irAVigencia(page, EMAIL_ENCARREGADO, sigla);
-    await secao(page).locator('[data-slot="registrar-nova-vigencia"] summary').click();
+    await secao(page).locator('[data-slot="registrar-nova-vigencia"]').click();
 
     await page.locator("#registrar-tipo").selectOption("padrao");
     await page.locator("#registrar-de").fill("2026-01-05");
@@ -336,6 +339,11 @@ test.describe("`SC-011.1` · a rota atende DUAS permissões, e elas não andam j
      *    aparência. E o botão de gravar curso também não existe — sem ele, campo nenhum alcança o
      *    banco, que de todo modo recusaria pela policy `cursos_editar`.
      */
+    // Spec 025 (D-28): o cadastro do curso é a OUTRA aba de *Editar curso* — é nela que a ausência se confere.
+    await page
+      .locator('[data-slot="abas-da-edicao-do-curso"] [role="tab"][data-aba="cadastro"]')
+      .click();
+    await expect(page.locator('[data-slot="so-o-regime"]')).toBeVisible();
     await expect(page.locator('[data-slot="formulario-de-curso"]')).toHaveCount(0);
     await expect(page.locator('[data-slot="gravar-curso"]')).toHaveCount(0);
     for (const campo of [
@@ -350,14 +358,14 @@ test.describe("`SC-011.1` · a rota atende DUAS permissões, e elas não andam j
     ]) {
       await expect(page.locator(campo), `${campo} ficou editável para o Operador`).toHaveCount(0);
     }
-    await expect(page.locator('[data-slot="so-o-regime"]')).toBeVisible();
+    await abrirParteDaEdicao(page, "horarios");
 
     /*
      * ⚠️ **E O OUTRO LADO DA MESMA CONDIÇÃO: a seção de regime É editável.** Sem esta metade, a tela
      *    poderia ter barrado tudo e o caso passaria — provando que ele não edita curso e deixando de
      *    provar que ele registra vigência, que é o que a policy `horarios.criar` lhe dá.
      */
-    await secao(page).locator('[data-slot="registrar-nova-vigencia"] summary').click();
+    await secao(page).locator('[data-slot="registrar-nova-vigencia"]').click();
     await expect(page.locator("#registrar-tipo")).toBeEnabled();
     await page.locator("#registrar-tempos").fill("7");
     await expect(page.locator("#registrar-tempos")).toHaveValue("7");

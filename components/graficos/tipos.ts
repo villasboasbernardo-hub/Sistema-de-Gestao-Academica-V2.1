@@ -142,3 +142,61 @@ export function conferirTetoDeSeries(series: readonly Serie[]): Recusa | null {
       `Acima disso o gráfico vira uma tabela mal desenhada — use a tabela densa.`,
   };
 }
+
+/**
+ * RT-5 do Bloco 10 (spec 025, D-22) — **todo gráfico é interativo**: clicar na legenda (ou no próprio grupo) oculta e
+ * mostra o grupo, e o gráfico se redistribui.
+ *
+ * > *"Todo gráfico é interativo: clicar na legenda ou na série oculta/mostra o grupo (já existiu em versão antiga)."*
+ * > — Bernardo Villas Boas, 24/10/2026 (fecha o `FR-026.6` da spec 006, parado na T119)
+ *
+ * ⚠️ **O GRUPO VISÍVEL GUARDA O ÍNDICE DE ORIGEM**: a cor e o número da fatia saem dele, e não da posição entre os que
+ *    ficaram — ocultar uma fatia não pode repintar as outras (a ordem fixa da paleta, `corDaSerie`).
+ * ⚠️ **O ÚLTIMO À VISTA NÃO SE OCULTA**: um gráfico sem grupo nenhum leria como "não há dado".
+ */
+export type GrupoVisivel<T> = { readonly item: T; readonly indice: number };
+
+/** Os itens cujo nome não está entre os ocultos, na ordem de origem, cada um com o índice de origem. */
+export function gruposVisiveis<T>(
+  itens: readonly T[],
+  nome: (item: T) => string,
+  ocultos: ReadonlySet<string>,
+): readonly GrupoVisivel<T>[] {
+  return itens
+    .map((item, indice) => ({ item, indice }))
+    .filter(({ item }) => !ocultos.has(nome(item)));
+}
+
+/** Oculta o grupo à vista ou mostra o oculto — nunca deixa o gráfico sem nenhum (devolve o mesmo conjunto). */
+export function alternarGrupo(
+  ocultos: ReadonlySet<string>,
+  nome: string,
+  todos: readonly string[],
+): ReadonlySet<string> {
+  const proximo = new Set(ocultos);
+  if (proximo.has(nome)) {
+    proximo.delete(nome);
+    return proximo;
+  }
+  proximo.add(nome);
+  return todos.every((n) => proximo.has(n)) ? ocultos : proximo;
+}
+
+/**
+ * Os ocultos que AINDA valem para os grupos de agora. ⚠️ O conjunto guardado sobrevive à troca dos dados (um filtro
+ * do servidor, uma busca): sem esta poda, o grupo que sumiu continuaria "oculto", e os que sobraram podiam estar todos
+ * ocultos — o gráfico vazio que `alternarGrupo` existe para impedir (revisão do PR #90). Sobrando todos ocultos, mostra
+ * todos.
+ */
+export function ocultosEmVigor(
+  ocultos: ReadonlySet<string>,
+  todos: readonly string[],
+): ReadonlySet<string> {
+  const valendo = new Set(todos.filter((n) => ocultos.has(n)));
+  return todos.length > 0 && valendo.size >= new Set(todos).size ? new Set() : valendo;
+}
+
+/** O total dos pontos à vista — a base dos percentuais depois de ocultar (*"o gráfico se redistribui"*). */
+export function totalVisivel(pontos: readonly GrupoVisivel<PontoDeSerie>[]): number {
+  return pontos.reduce((soma, p) => soma + p.item.valor, 0);
+}

@@ -14,8 +14,13 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { bancoDoBloco2 } from "./bloco-2-de-teste";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirPainel } from "./paineis";
 import { abrirPainelDeFiltros } from "./filtros";
-import { irAoCursoPorClique, justificarSePedir } from "./navegar-curso";
+import {
+  irAoCursoPorClique,
+  justificarSePedir,
+  abrirAbaDoCurriculoNaEdicao,
+} from "./navegar-curso";
 import { abrirEdicaoDoInstrutor } from "./navegar-instrutores";
 
 const MENU = (page: Page) => page.getByRole("navigation", { name: "Navegação principal" });
@@ -257,6 +262,8 @@ test.describe("spec 020 · os cadastros novos", () => {
      * *Currículo*, parte *Dados e PDF* (a padrão), no currículo escolhido (o vigente).
      */
     await page.locator('[data-slot="ir-para-editar-curso"]').click();
+    // Spec 025 (D-28): o PDF mora no alto da aba *Currículo* de *Editar curso*.
+    await abrirAbaDoCurriculoNaEdicao(page);
     const envio = page.locator('[data-slot="envio-do-curriculo"]');
     await expect(envio).toContainText("Nenhum currículo carregado.");
 
@@ -313,6 +320,7 @@ test.describe("spec 020 · os cadastros novos", () => {
      * baixado é o novo.
      */
     await page.locator('[data-slot="ir-para-editar-curso"]').click();
+    await abrirAbaDoCurriculoNaEdicao(page);
     {
       const [janela] = await Promise.all([
         page.waitForEvent("filechooser"),
@@ -412,6 +420,8 @@ test.describe("spec 020 · os cadastros novos", () => {
     await MENU(page).getByRole("link", { name: "Administração", exact: true }).click();
     const linha = page.locator("tr").filter({ hasText: EMAIL });
     await expect(linha.locator('[data-slot="acessos-da-conta"]')).toHaveText(String(antes + 1));
+    // Spec 025 (RT-4, D-19): o quadro é a estatística da tela, no painel do ícone *Estatísticas*.
+    await abrirPainel(page, "estatisticas");
     const quadro = page.locator('[data-slot="quadro-de-acessos"]');
     await expect(quadro).toContainText("Acessos ao sistema");
     await expect(quadro).toContainText(/contados desde \d{2}\/\d{2}\/\d{4}/);

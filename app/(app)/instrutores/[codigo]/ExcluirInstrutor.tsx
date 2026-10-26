@@ -42,11 +42,14 @@ export function ExcluirInstrutor({
   instrutorId,
   codigo,
   motivoDoImpedimento,
+  dica = "tem registros: use Desativar",
 }: {
   readonly instrutorId: string;
   readonly codigo: string;
   /** `null` quando nada impede; o texto escrito ao lado do botão desabilitado quando há histórico. */
   readonly motivoDoImpedimento: string | null;
+  /** A dica do ícone desabilitado (D-33 da spec 025, a da D-COR-6). */
+  readonly dica?: string;
 }) {
   const router = useRouter();
   const [digitado, setDigitado] = useState("");
@@ -69,7 +72,12 @@ export function ExcluirInstrutor({
     return (
       // ⚠️ `contents`, como Desativar: o botão é item da barra e o motivo vai para linha própria.
       <div className="contents" data-slot="excluir-instrutor" data-bloqueado="true">
-        <BotaoDeIcone acao="excluir" rotulo="Excluir instrutor" variante="destrutivo" disabled />
+        <BotaoDeIcone
+          acao="excluir"
+          rotulo="Excluir instrutor"
+          variante="destrutivo"
+          indisponivel={dica}
+        />
         <p
           className="text-texto-suave order-last basis-full text-xs"
           data-slot="motivo-de-nao-excluir"

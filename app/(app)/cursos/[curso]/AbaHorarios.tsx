@@ -22,6 +22,7 @@ export function AbaHorarios({
   sigla,
   cursoId,
   curriculoId,
+  curriculoVersao = null,
   cursoAtivo,
   horarios,
   permissoes,
@@ -30,6 +31,11 @@ export function AbaHorarios({
   readonly cursoId: string;
   /** Spec 021 (emenda à RC-1): os regimes nomeados mostrados são os deste currículo — na página, o vigente. */
   readonly curriculoId: string;
+  /**
+   * O número do currículo mostrado — o do ano escolhido. *Editar* abre ESSE, e não o vigente hoje: com outro ano no
+   * seletor, a pessoa editaria o regime de um currículo que não estava vendo (revisão do PR #90).
+   */
+  readonly curriculoVersao?: number | null;
   readonly cursoAtivo: boolean;
   readonly horarios: HorariosDoCurso;
   readonly permissoes: {
@@ -57,7 +63,7 @@ export function AbaHorarios({
           <BotaoDeIcone
             acao="editar"
             rotulo="Editar os horários do curso"
-            href={enderecoDaEdicaoDoCurso(sigla, undefined, "horarios")}
+            href={enderecoDaEdicaoDoCurso(sigla, curriculoVersao ?? undefined, "horarios")}
             data-slot="editar-horarios-do-curso"
           />
         ) : null}

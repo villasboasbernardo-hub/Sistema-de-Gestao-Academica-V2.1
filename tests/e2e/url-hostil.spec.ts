@@ -19,6 +19,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
+import { abrirPainelDeFiltros } from "./filtros";
 
 let EMAIL = "";
 
@@ -98,6 +99,8 @@ test.describe("vetor 2 · o valor não chega a filtro de consulta", () => {
        */
       await entrar(page, EMAIL, `/inicio?classificacao=${encodeURIComponent(carga)}`);
       await expect(page.getByRole("heading", { name: "Início", level: 1 })).toBeVisible();
+      // Spec 025 (RT-4): o recorte do Início mora no painel do ícone *Filtros*.
+      await abrirPainelDeFiltros(page);
       await expect(page.locator("#filtro-classificacao")).toHaveValue("");
     });
   }
@@ -125,6 +128,8 @@ test.describe("vetor 3 · o valor não chega a interpolação de marcação", ()
         () => (window as unknown as { __invadido?: number }).__invadido,
       );
       expect(invadido, "a carga da URL executou na página").toBeUndefined();
+      // Spec 025 (RT-4): o recorte do Início mora no painel do ícone *Filtros*.
+      await abrirPainelDeFiltros(page);
       await expect(page.locator("#filtro-classificacao")).toHaveValue("");
     });
   }

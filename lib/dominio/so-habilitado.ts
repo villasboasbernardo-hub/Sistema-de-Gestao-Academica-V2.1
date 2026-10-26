@@ -17,7 +17,7 @@
 
 export type AtribuicaoNoAno = {
   readonly disciplinaId: string;
-  /** O ano da janela efetiva da atribuição (`vw_instrutor_carga_prevista.ano`); `null` sem janela. */
+  /** O ano da TURMA da atribuição (`vw_instrutor_carga_prevista.ano`, RT-6 — migration `20261024213231`). */
   readonly ano: number | null;
 };
 

@@ -74,12 +74,17 @@ test.describe("`SC-002` · do menu à ficha, sem passar pelo curso", () => {
     await irAListaDeTurmas(page, EMAIL);
     await clicarNaTurmaDaLista(page, SEMEADO.turmaJanelaCedo);
 
-    // `FR-021`: situação, modalidade, início, término, sala e efetivo num lugar só.
+    // REGRA DOS VALORES ESPERADOS: (a), spec 025 (item 1, D-4) — a identificação ficou limpa (curso, currículo e
+    // situação); modalidade, período, sala e efetivo foram para *Dados da turma*, na aba Ficha.
     const cabecalho = page.locator('[data-slot="cabecalho-da-turma"]');
     await expect(cabecalho).toBeVisible();
     await expect(cabecalho).toContainText("Situação");
-    await expect(cabecalho).toContainText("Modalidade");
+    await expect(cabecalho).toContainText("Currículo");
+    await expect(cabecalho).not.toContainText("Modalidade");
+    await expect(page.locator('[data-slot="dados-da-turma"]')).toContainText("Modalidade");
     await expect(page.locator('[data-slot="curso-da-turma"]')).toBeVisible();
+    // A-3: o caminho de volta é a lateral — o *"← Turmas"* solto saiu.
+    await expect(page.locator('[data-slot="voltar-as-turmas"]')).toHaveCount(0);
   });
 });
 

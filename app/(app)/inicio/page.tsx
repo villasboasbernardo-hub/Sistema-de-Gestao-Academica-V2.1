@@ -26,7 +26,16 @@ import { lerContagemPresencial } from "../turmas/contagem-presencial";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
 
+import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { CardKpi } from "@/components/ciaara/card-kpi";
+import {
+  ConteudoDePainel,
+  GatilhoDePainel,
+  ProvedorDePaineis,
+} from "@/components/ciaara/paineis-da-pagina";
+import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
+import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
+import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 // ⚠️ O ENDERECO DE TURMA VEM DO MODULO, E NAO DE UM TEMPLATE AQUI (`FR-031.2`). O codigo da
 //    turma e `sigla [rotulo] ano` e CONTEM ESPACO — montar a mao produzia um `href` com
@@ -40,9 +49,8 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { FiltroDoPanorama } from "./FiltroDoPanorama";
 import { CartaoDaTurma } from "./CartaoDaTurma";
 import { ManchetesDoDsa, type MancheteDoDsa } from "./ManchetesDoDsa";
-import { AnoDoPainel } from "../turmas/AnoDoPainel";
 import { Carrossel } from "@/components/ciaara/carrossel";
-import { anoDoPainel, anosDoSeletor, semanaDoPainel } from "@/lib/dominio/painel-de-turmas";
+import { semanaDoPainel } from "@/lib/dominio/painel-de-turmas";
 import { cartoesDoInicio } from "@/lib/dominio/cartoes-do-inicio";
 import { compararTurmas } from "@/lib/dominio/ordem-de-cursos";
 import { resumoDoDsa, temDsaNaSemana } from "@/lib/dominio/dsa-da-semana";
@@ -75,8 +83,10 @@ export default async function Inicio({
    * ⚠️ **O ANO DO INÍCIO** (spec 019, C-1): a régua do painel de Turmas — `?ano=` válido, senão o vigente em São Paulo.
    */
   const hoje = hojeNaCiaara();
-  const anoVigente = Number(hoje.slice(0, 4));
-  const ano = anoDoPainel(String(valores.ano), hoje);
+  /* RT-6 (spec 025, D-24): o ano escolhido vale no sistema inteiro — o `?ano=` do link, senão o guardado, senão hoje. */
+  const escolha = await anoEscolhido(String(valores.ano), hoje);
+  const anoVigente = escolha.vigente;
+  const ano = escolha.ano;
   const semanaAtual = semanaDoPainel(hoje);
 
   const supabase = await criarClienteDeServidor();
@@ -209,11 +219,7 @@ export default async function Inicio({
     arquivadas,
     (c) => c.turma_id,
   );
-  /* Spec 019 (C-1, C-2): o seletor oferece os anos das turmas e o vigente; o panorama é só do ano escolhido. */
-  const anos = anosDoSeletor(
-    cargasVivas.map((c) => Number(c.ano_letivo)),
-    anoVigente,
-  );
+  /* O panorama é só do ano escolhido; o seletor oferece qualquer ano (RT-6, D-25). */
   const panorama = montarPanorama(
     cargasVivas.filter((c) => Number(c.ano_letivo) === ano),
     (cursosRes.data ?? []) as unknown as CursoDoRecorte[],
@@ -346,93 +352,103 @@ export default async function Inicio({
     .sort((a, b) => compararTurmas(paraOrdenarManchete(a), paraOrdenarManchete(b)));
 
   return (
-    <section className="flex flex-col gap-5">
-      {/*
+    <ProvedorDePaineis>
+      <section className="flex flex-col gap-5">
+        {/*
         Spec 019 (C-1 e ajuste A-1 de 20/10/2026): o ano numa caixa de seleção, no canto superior direito — a mesma
-        régua de Turmas, com o ano de hoje por padrão.
+        de todo módulo (RT-6). Ao lado, o ícone *Filtros* (RT-4, D-19): os números do ano continuam à vista.
       */}
-      <header
-        className="flex flex-wrap items-start justify-between gap-3"
-        data-slot="cabecalho-do-inicio"
-      >
-        <div className="flex flex-col gap-1">
-          <h1 className="text-texto text-lg font-semibold">Início</h1>
-          {/* veste: a dica que explica o alcance do panorama — texto fixo, nunca dado */}
-          <p className="text-texto-tenue text-xs">
-            Panorama das turmas sob a CIAARA-11. O recorte vai para o endereço: este link abre com
-            ele.
-          </p>
-        </div>
-        <AnoDoPainel anos={anos} ano={ano} vigente={anoVigente} rota="/inicio" />
-      </header>
-
-      <FiltroDoPanorama />
-
-      <section
-        aria-labelledby="titulo-turmas-do-ano"
-        className="flex flex-col gap-3"
-        data-slot="turmas-do-ano"
-        data-ano={ano}
-      >
-        <h2 id="titulo-turmas-do-ano" className="text-texto text-base font-semibold">
-          Turmas de {ano}
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <CardKpi rotulo="Turmas no recorte" valor={totais.turmas} />
-          <CardKpi rotulo="Em andamento" valor={totais.ativas} />
-          <CardKpi rotulo="Carga executada" valor={totais.executada} unidade="TA" />
-          <CardKpi rotulo="Progresso do recorte" valor={`${totais.percentual}%`} />
-        </div>
-
-        {panorama.length === 0 && baseVazia ? (
-          <EstadoVazio
-            motivo="sem-dado"
-            titulo="Ainda não existe no sistema"
-            detalhe="A carga de cursos e turmas ainda não foi feita nesta base. Não é ausência de cadastro na CIAARA-11: é dado que ainda não chegou aqui."
-          />
-        ) : panorama.length === 0 && temRecorte ? (
-          /*
-           * ⚠️ **O RECORTE SEM RESULTADO CONTINUA DIZENDO QUE NÃO HÁ, E COMO VOLTAR** (`FR-008` da spec 008, gotcha 4):
-           *    é outro caso que o do A-2 — aqui o filtro não achou turma nenhuma do ano, e a pessoa precisa saber que
-           *    o sistema tem turmas e o que mexer. Medido no CI do PR #77: trocá-lo pela frase do A-2 reprovou
-           *    `url-degradada.spec.ts`.
-           */
-          <EstadoVazio
-            motivo="sem-dado"
-            titulo="Nenhuma turma neste recorte"
-            detalhe={`Há turmas cadastradas, mas nenhuma de ${ano} com esta classificação e modalidade. Volte o filtro para Todas ou escolha outro ano.`}
-          />
-        ) : cartoes.length === 0 ? (
-          /* Ajuste A-2: sem turma ativa no ano, uma frase — nunca um carrossel vazio. */
-          <p className="text-texto-suave text-sm" data-slot="sem-turma-ativa">
-            Nenhuma turma em andamento em {ano}
-            {temRecorte ? " neste recorte" : ""}.
-          </p>
-        ) : (
-          /*
-           * ⚠️ **OS CARTÕES EM CARROSSEL** (spec 019, C-3 a C-7, e ajustes A-2 a A-4 de 20/10/2026): só as turmas
-           *    ATIVAS do ano, cada uma levando à sua ficha, com a barra de progresso; o carrossel passa sozinho, pausa e
-           *    anda por teclado. Os números acima contam todas as turmas do ano.
-           */
-          <div data-slot="panorama-de-turmas">
-            <Carrossel
-              rotulo={`Turmas em andamento em ${ano}`}
-              intervaloMs={6000}
-              largura="cartao"
-              dataSlot="carrossel-de-turmas"
-              itens={cartoes.map((t) => (
-                <CartaoDaTurma key={t.turmaId} turma={t} />
-              ))}
-            />
+        <header
+          className="flex flex-wrap items-start justify-between gap-3"
+          data-slot="cabecalho-do-inicio"
+        >
+          <div className="flex flex-col gap-1">
+            <h1 className="text-texto text-lg font-semibold">Início</h1>
+            {/* veste: a dica que explica o alcance do panorama — texto fixo, nunca dado */}
+            <p className="text-texto-tenue text-xs">
+              Panorama das turmas sob a CIAARA-11. O recorte vai para o endereço: este link abre com
+              ele.
+            </p>
           </div>
-        )}
-      </section>
+          <BarraDeAcoes rotulo="Ações do Início">
+            <SeletorDeAno ano={ano} vigente={anoVigente} origem={escolha.origem} rota="/inicio" />
+            <GatilhoDePainel
+              painel="filtros"
+              contagem={filtrosForaDoPadrao("/inicio", { classificacao, modalidade })}
+            />
+          </BarraDeAcoes>
+        </header>
 
-      <ManchetesDoDsa
-        manchetes={manchetes}
-        semana={semanaAtual}
-        erro={Boolean(ocupacaoDaSemanaRes.error || turmasRes.error)}
-      />
-    </section>
+        <ConteudoDePainel painel="filtros">
+          <FiltroDoPanorama />
+        </ConteudoDePainel>
+
+        <section
+          aria-labelledby="titulo-turmas-do-ano"
+          className="flex flex-col gap-3"
+          data-slot="turmas-do-ano"
+          data-ano={ano}
+        >
+          <h2 id="titulo-turmas-do-ano" className="text-texto text-base font-semibold">
+            Turmas de {ano}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <CardKpi rotulo="Turmas no recorte" valor={totais.turmas} />
+            <CardKpi rotulo="Em andamento" valor={totais.ativas} />
+            <CardKpi rotulo="Carga executada" valor={totais.executada} unidade="TA" />
+            <CardKpi rotulo="Progresso do recorte" valor={`${totais.percentual}%`} />
+          </div>
+
+          {panorama.length === 0 && baseVazia ? (
+            <EstadoVazio
+              motivo="sem-dado"
+              titulo="Ainda não existe no sistema"
+              detalhe="A carga de cursos e turmas ainda não foi feita nesta base. Não é ausência de cadastro na CIAARA-11: é dado que ainda não chegou aqui."
+            />
+          ) : panorama.length === 0 && temRecorte ? (
+            /*
+             * ⚠️ **O RECORTE SEM RESULTADO CONTINUA DIZENDO QUE NÃO HÁ, E COMO VOLTAR** (`FR-008` da spec 008, gotcha 4):
+             *    é outro caso que o do A-2 — aqui o filtro não achou turma nenhuma do ano, e a pessoa precisa saber que
+             *    o sistema tem turmas e o que mexer. Medido no CI do PR #77: trocá-lo pela frase do A-2 reprovou
+             *    `url-degradada.spec.ts`.
+             */
+            <EstadoVazio
+              motivo="sem-dado"
+              titulo="Nenhuma turma neste recorte"
+              detalhe={`Há turmas cadastradas, mas nenhuma de ${ano} com esta classificação e modalidade. Volte o filtro para Todas ou escolha outro ano.`}
+            />
+          ) : cartoes.length === 0 ? (
+            /* Ajuste A-2: sem turma ativa no ano, uma frase — nunca um carrossel vazio. */
+            <p className="text-texto-suave text-sm" data-slot="sem-turma-ativa">
+              Nenhuma turma em andamento em {ano}
+              {temRecorte ? " neste recorte" : ""}.
+            </p>
+          ) : (
+            /*
+             * ⚠️ **OS CARTÕES EM CARROSSEL** (spec 019, C-3 a C-7, e ajustes A-2 a A-4 de 20/10/2026): só as turmas
+             *    ATIVAS do ano, cada uma levando à sua ficha, com a barra de progresso; o carrossel passa sozinho, pausa e
+             *    anda por teclado. Os números acima contam todas as turmas do ano.
+             */
+            <div data-slot="panorama-de-turmas">
+              <Carrossel
+                rotulo={`Turmas em andamento em ${ano}`}
+                intervaloMs={6000}
+                largura="cartao"
+                dataSlot="carrossel-de-turmas"
+                itens={cartoes.map((t) => (
+                  <CartaoDaTurma key={t.turmaId} turma={t} />
+                ))}
+              />
+            </div>
+          )}
+        </section>
+
+        <ManchetesDoDsa
+          manchetes={manchetes}
+          semana={semanaAtual}
+          erro={Boolean(ocupacaoDaSemanaRes.error || turmasRes.error)}
+        />
+      </section>
+    </ProvedorDePaineis>
   );
 }

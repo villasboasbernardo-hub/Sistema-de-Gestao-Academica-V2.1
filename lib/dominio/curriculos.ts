@@ -54,6 +54,22 @@ export function curriculoVigenteEm<T extends CurriculoParaVigencia>(
 }
 
 /**
+ * O número do currículo do ANO ESCOLHIDO para os endereços que levam a ele (o PDF, *Editar* dos horários), só quando ele
+ * não é o vigente hoje — no caso comum o endereço fica o de sempre, sem número (RT-6 do Bloco 10; revisão do PR #90).
+ * ⚠️ Sem ele, com outro ano no seletor, o PDF baixado e o regime editado seriam os do currículo de HOJE, que a página não
+ *    mostrava.
+ */
+export function versaoDoAnoEscolhido<T extends CurriculoParaVigencia>(
+  curriculos: readonly T[],
+  referencia: string,
+  hoje: string,
+): number | null {
+  const mostrado = curriculoVigenteEm(curriculos, referencia);
+  const deHoje = curriculoVigenteEm(curriculos, hoje);
+  return mostrado && mostrado.versao !== deHoje?.versao ? mostrado.versao : null;
+}
+
+/**
  * Vigente, futuro ou passado, hoje (RC-3). O arquivado é passado por construção (RC-10 só arquiva o passado).
  * ⚠️ O "primeiro" que vale na falta de vigente (todos começam depois de hoje) é FUTURO: ele só é o padrão de turma.
  */

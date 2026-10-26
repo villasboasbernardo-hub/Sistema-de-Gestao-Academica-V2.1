@@ -65,7 +65,7 @@ diferente *(decisão de 17/09/2026)*. ⚠️ **Medido no histórico em
 | Vai implementar um `RF-` | `docs/fase-1/02-Requisitos-Funcionais.md` (coluna *Destino na v2.1*) |
 | Vai escrever migration | `docs/fase-2/21-Schema-Fisico-PostgreSQL.md` + `docs/sql-referencia/*.sql` **na ordem numérica** |
 | Vai escrever policy RLS ou mexer em auth | `docs/fase-2/22-Seguranca-RLS-e-Autenticacao.md` |
-| Vai criar tela ou componente | `docs/fase-2/23-Design-System-Tailwind-shadcn.md` |
+| Vai criar tela ou componente | `docs/fase-2/23-Design-System-Tailwind-shadcn.md` **e** `docs/correcoes/padroes-de-tela.md` (RT-1 a RT-7, que prevalecem) |
 | Não sabe onde um arquivo mora | `docs/fase-2/24-Estrutura-do-Repositorio-e-Convencoes.md` |
 | Vai buscar/ mutar dado | `docs/fase-2/25-Camada-de-Dados-e-Estado.md` |
 | Vai começar um épico | `docs/fase-1/06-Backlog-de-Epicos-V2.1.md` (§3) + `docs/vibe-coding/42-Prompts-por-Epico.md` |
@@ -339,6 +339,14 @@ dela teria os cadastros e nenhuma senha; as contas se refazem **pelo cadastro do
   rota do sistema, como se fossem links; só o defeito deliberado mostrou. O **percurso por clique**
   de cada tela fica nos casos de ponta a ponta, e ali `goto` só é aceitável para chegar ao **ponto de
   partida**.
+- **Padrões de tela RT-1 a RT-7** *(decisão de Bernardo Villas Boas, 24/10/2026 — Bloco 10)*:
+  `docs/correcoes/padroes-de-tela.md`. Valem para **toda tela, nova ou antiga**, e se leem antes de criar
+  ou mexer em tela: ações no canto superior direito como ícone cuja dica é só o verbo (RT-1); todo
+  cadastro com Editar, Desativar/Reativar e Excluir, e nunca "Inativar" (RT-2); edição só em diálogo ou
+  página própria, um Editar por entidade (RT-3); Filtros e Estatísticas como ícones que abrem painel
+  recolhível (RT-4); todo gráfico interativo (RT-5); um ano escolhido para todos os módulos, padrão o de
+  hoje (RT-6); cartões de indicadores juntos e iguais (RT-7). Mais a **D-COR-6**, que delimita o Excluir
+  da turma e do feriado.
 - Densidade antes de beleza: é sistema de gestão, com tabelas grandes.
 - Toda função de `lib/dominio/` traz no topo o identificador `RN-` e a **citação literal** da regra.
 

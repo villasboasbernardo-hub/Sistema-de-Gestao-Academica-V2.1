@@ -34,15 +34,12 @@ import type { OpcaoDeCurso } from "./consulta";
 
 const ROTA = "/turmas" as const;
 
-export function FiltrosDeTurmas({
-  cursos,
-  anos,
-}: {
-  readonly cursos: readonly OpcaoDeCurso[];
-  readonly anos: readonly number[];
-}) {
+/*
+ * ⚠️ O *ANO* SAIU DOS FILTROS (RT-6 do Bloco 10, spec 025, D-26): ele é o seletor do canto superior direito, o mesmo
+ *    de todo módulo, e a lista mostra só o ano escolhido. Dois controles para o mesmo parâmetro era o *"Ano"* repetido.
+ */
+export function FiltrosDeTurmas({ cursos }: { readonly cursos: readonly OpcaoDeCurso[] }) {
   const [curso, definirCurso] = useParametro(ROTA, "curso");
-  const [ano, definirAno] = useParametro(ROTA, "ano");
   const [situacao, definirSituacao] = useParametro(ROTA, "situacao");
   const [busca, definirBusca] = useParametro(ROTA, "busca");
   const [arquivadas, definirArquivadas] = useParametro(ROTA, "arquivadas");
@@ -54,13 +51,6 @@ export function FiltrosDeTurmas({
       rotulo: "Curso",
       tipo: "escolha",
       opcoes: cursos.map((c) => ({ valor: c.codigo, rotulo: `${c.codigo} — ${c.nome}` })),
-    },
-    {
-      chave: "ano",
-      // Spec 019, ajuste A-1: sem o termo "ano letivo" — o mesmo `ano` da caixa do canto superior direito.
-      rotulo: "Ano",
-      tipo: "escolha",
-      opcoes: anos.map((a) => ({ valor: String(a), rotulo: String(a) })),
     },
     {
       chave: "situacao",
@@ -83,7 +73,6 @@ export function FiltrosDeTurmas({
   const estado: EstadoDeFiltro = {
     busca: busca === "" ? [] : [busca],
     curso: curso === "" ? [] : [curso],
-    ano: ano === "" ? [] : [ano],
     situacao: situacao === "" ? [] : [situacao],
     arquivadas: arquivadas === "" ? [] : [arquivadas],
   };
@@ -93,19 +82,17 @@ export function FiltrosDeTurmas({
 
     if (escolha("busca") !== busca) void definirBusca(escolha("busca"));
     if (escolha("curso") !== curso) void definirCurso(escolha("curso") || null);
-    if (escolha("ano") !== ano) void definirAno(escolha("ano") || null);
     if (escolha("situacao") !== situacao) void definirSituacao(escolha("situacao") || null);
     if (escolha("arquivadas") !== arquivadas) void definirArquivadas(escolha("arquivadas") || null);
   };
 
   // ⚠️ A régua é o padrão do contrato (spec 016, item 1.4): o número do botão e o "Limpar filtros"
   //    respondem à mesma pergunta.
-  const ativos = filtrosForaDoPadrao(ROTA, { busca, curso, ano, situacao, arquivadas });
+  const ativos = filtrosForaDoPadrao(ROTA, { busca, curso, situacao, arquivadas });
 
   const limpar = () => {
     void definirBusca("");
     void definirCurso(null);
-    void definirAno(null);
     void definirSituacao(null);
     void definirArquivadas(null);
   };

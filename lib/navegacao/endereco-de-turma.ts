@@ -50,6 +50,15 @@ export function enderecoDaTurma(codigo: string): string {
 }
 
 /**
+ * *Editar turma* em página própria — spec 025 (Bloco 10, D-1; RT-3).
+ *
+ * @example enderecoDaEdicaoDaTurma("C-Ap-FR 2026") → "/turmas/C-Ap-FR%202026/editar"
+ */
+export function enderecoDaEdicaoDaTurma(codigo: string): string {
+  return `${RAIZ_DE_TURMAS}/${encodeURIComponent(codigo)}/editar`;
+}
+
+/**
  * O download do currículo em PDF (spec 020, C-8): um Route Handler que redireciona ao link assinado.
  * Spec 021 (RC-11): cada currículo tem o seu PDF — sem o número, o do vigente.
  *
@@ -112,13 +121,17 @@ export function enderecoDaAbaDoCurso(sigla: string, aba: string): string {
  * *Editar curso*, com o currículo escolhido e a parte em edição quando ditos (spec 021; ajuste 3 da conferência do PR
  * #82: o currículo se cria e se edita por inteiro dentro de *Editar curso*).
  *
+ * ⚠️ **COM CURRÍCULO OU PARTE, É A ABA *CURRÍCULO*** (spec 025, Bloco 10, D-28): sem eles, a aba *Cadastro*.
+ *
  * @example enderecoDaEdicaoDoCurso("CAHO") → "/cursos/CAHO/editar"
- * @example enderecoDaEdicaoDoCurso("CAHO", 2, "disciplinas") → "/cursos/CAHO/editar?curriculo=2&parte=disciplinas"
+ * @example enderecoDaEdicaoDoCurso("CAHO", 2, "disciplinas") →
+ *          "/cursos/CAHO/editar?curriculo=2&aba=curriculo&parte=disciplinas"
  */
 export function enderecoDaEdicaoDoCurso(sigla: string, versao?: number, parte?: string): string {
   const base = `${RAIZ_DE_CURSOS}/${encodeURIComponent(sigla)}/editar`;
   const busca = new URLSearchParams();
   if (versao !== undefined) busca.set("curriculo", String(versao));
+  if (versao !== undefined || parte) busca.set("aba", "curriculo");
   if (parte) busca.set("parte", parte);
   const texto = busca.toString();
   return texto ? `${base}?${texto}` : base;
@@ -431,6 +444,11 @@ export function enderecoDasDisciplinas(
 export function enderecoDasTurmas(sigla?: string): string {
   if (sigla === undefined || sigla === "") return RAIZ_DE_TURMAS;
   return `${RAIZ_DE_TURMAS}?curso=${comoAConsultaEscreve(sigla)}`;
+}
+
+/** A lista de turmas com a confirmação da exclusão (spec 025, D-15): a ficha deixou de existir. */
+export function enderecoDasTurmasComExclusao(codigo: string): string {
+  return `${RAIZ_DE_TURMAS}?excluida=${comoAConsultaEscreve(codigo)}`;
 }
 
 /**

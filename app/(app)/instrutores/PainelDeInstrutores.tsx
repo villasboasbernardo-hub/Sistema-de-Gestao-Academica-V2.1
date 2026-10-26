@@ -3,9 +3,8 @@
  * spec 006, com as emendas de 15/09/2026, decisão de Bernardo Villas Boas).
  *
  * ⚠️ SEM MARCADOR DE CLIENTE. `CardKpi` é servidor; `GraficoBarras` e `GraficoPizza` são folhas de
- * cliente e recebem só séries prontas. O botão de exibir e ocultar é outra folha,
- * `EstatisticasRecolhiveis`, que recebe este conteúdo já desenhado no servidor. Nada aqui calcula: as
- * contagens chegam das funções de `lib/dominio/`.
+ * cliente e recebem só séries prontas. Quem abre e fecha é o ícone *Estatísticas* da barra da página (RT-4 do
+ * Bloco 10, spec 025), pelo `ConteudoDePainel`. Nada aqui calcula: as contagens chegam das funções de `lib/dominio/`.
  *
  * ⚠️ A TAXA DE SELEÇÃO MOSTRA OS DOIS ABSOLUTOS NO NÚMERO GRANDE, e o percentual embaixo, menor
  * (`FR-026.1`). Quando passa de 100% é justamente o absoluto que explica por quê.
@@ -20,7 +19,6 @@
  * biblioteca desenha.
  */
 import { CardKpi } from "@/components/ciaara/card-kpi";
-import { EstatisticasRecolhiveis } from "@/components/ciaara/estatisticas-recolhiveis";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
 import { GraficoPizza } from "@/components/graficos/grafico-pizza";
 import type { Serie } from "@/components/graficos/tipos";
@@ -50,66 +48,67 @@ function serieDe(grafico: GraficoDeInstrutores): Serie {
 export function PainelDeInstrutores({
   indicadores,
   graficos,
+  ano,
 }: {
   readonly indicadores: IndicadoresDeInstrutores;
   readonly graficos: readonly GraficoDeInstrutores[];
+  /** O ano escolhido: o selecionado é designado em turma DESTE ano (o habilitado não tem ano). */
+  readonly ano: number;
 }) {
   const { taxaDeSelecao: taxa } = indicadores;
 
   return (
-    <EstatisticasRecolhiveis id="estatisticas-de-instrutores">
-      <section aria-label="Indicadores e gráficos" className="flex flex-col gap-4">
-        <div className="grid gap-3 sm:grid-cols-3" data-slot="indicadores-de-instrutores">
-          <CardKpi rotulo="Total de instrutores" valor={numero(indicadores.total)} />
+    <section aria-label="Indicadores e gráficos" className="flex flex-col gap-4">
+      {/* RT-7 (spec 025): os três cartões do mesmo tamanho, juntos; a taxa vai DENTRO do cartão dela. */}
+      <div
+        className="grid auto-rows-fr gap-3 sm:grid-cols-3"
+        data-slot="indicadores-de-instrutores"
+      >
+        <CardKpi rotulo="Total de instrutores" valor={numero(indicadores.total)} />
+        <CardKpi
+          rotulo="Com capacitação didática"
+          valor={numero(indicadores.comCapacitacaoDidatica)}
+        />
+        <div className="contents" data-slot="taxa-de-selecao">
           <CardKpi
-            rotulo="Com capacitação didática"
-            valor={numero(indicadores.comCapacitacaoDidatica)}
+            rotulo={`Habilitados × selecionados em ${ano}`}
+            valor={`${numero(taxa.habilitados)} × ${numero(taxa.selecionados)}`}
+            detalhe={
+              <span className="tabular-nums">
+                {taxa.percentual === null
+                  ? "Sem habilitado no recorte: taxa de seleção indefinida."
+                  : `Selecionados sobre habilitados: ${Math.round(taxa.percentual).toLocaleString("pt-BR")}%`}
+              </span>
+            }
           />
-          <div className="flex flex-col gap-1" data-slot="taxa-de-selecao">
-            <CardKpi
-              rotulo="Habilitados × selecionados"
-              valor={`${numero(taxa.habilitados)} × ${numero(taxa.selecionados)}`}
-              className="flex-1"
-            />
-            <p className="text-texto-suave px-1 text-xs tabular-nums">
-              {taxa.percentual === null
-                ? "Sem habilitado no recorte: taxa de seleção indefinida."
-                : `Selecionados sobre habilitados: ${Math.round(taxa.percentual).toLocaleString("pt-BR")}%`}
-            </p>
-          </div>
         </div>
+      </div>
 
-        <div className="grid gap-4 lg:grid-cols-2" data-slot="graficos-de-instrutores">
-          {graficos.map((g) => (
-            <div
-              key={g.chave}
-              data-slot="grafico-de-instrutores"
-              data-chave={g.chave}
-              data-forma={g.forma}
-              data-barras={JSON.stringify(g.barras.map((b) => b.nome))}
-              className="border-borda bg-superficie rounded-ciaara shadow-ciaara-1 flex flex-col gap-1 border p-3"
-            >
-              {g.forma === "pizza" ? (
-                <GraficoPizza serie={serieDe(g)} rotulo={g.titulo} altura={240} />
-              ) : (
-                <GraficoBarras
-                  series={[serieDe(g)]}
-                  rotulo={g.titulo}
-                  altura={240}
-                  corPorCategoria
-                />
-              )}
-              {g.chave === "capacitacao" ? (
-                /* veste: a dica que explica por que as fatias passam do total — texto fixo, nunca dado */
-                <p className="text-texto-tenue text-xs">
-                  Quem tem duas qualificações conta nas duas fatias; o percentual é sobre a soma das
-                  fatias.
-                </p>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      </section>
-    </EstatisticasRecolhiveis>
+      <div className="grid gap-4 lg:grid-cols-2" data-slot="graficos-de-instrutores">
+        {graficos.map((g) => (
+          <div
+            key={g.chave}
+            data-slot="grafico-de-instrutores"
+            data-chave={g.chave}
+            data-forma={g.forma}
+            data-barras={JSON.stringify(g.barras.map((b) => b.nome))}
+            className="border-borda bg-superficie rounded-ciaara shadow-ciaara-1 flex flex-col gap-1 border p-3"
+          >
+            {g.forma === "pizza" ? (
+              <GraficoPizza serie={serieDe(g)} rotulo={g.titulo} altura={240} />
+            ) : (
+              <GraficoBarras series={[serieDe(g)]} rotulo={g.titulo} altura={240} corPorCategoria />
+            )}
+            {g.chave === "capacitacao" ? (
+              /* veste: a dica que explica por que as fatias passam do total — texto fixo, nunca dado */
+              <p className="text-texto-tenue text-xs">
+                Quem tem duas qualificações conta nas duas fatias; o percentual é sobre a soma das
+                fatias.
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

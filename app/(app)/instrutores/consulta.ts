@@ -97,7 +97,7 @@ export const PARAMETROS_SEM_RECORTE: ParametrosDaListagem = {
  * saber quais colunas a consulta traz — as linhas chegam tipadas como erro.
  */
 export const COLUNAS_DA_LISTAGEM =
-  "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, categoria, om, regime_trabalho, nivel_escolaridade, capacitacoes_didaticas, capacitacao_didatica_a_corrigir, nip, status, antiguidade_declarada_num, ordem_antiguidade, habilitado, selecionado, data_inicio_docencia_ciaara";
+  "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, categoria, om, regime_trabalho, nivel_escolaridade, capacitacoes_didaticas, capacitacao_didatica_a_corrigir, nip, status, antiguidade_declarada_num, ordem_antiguidade, habilitado, data_inicio_docencia_ciaara";
 
 /**
  * Normaliza a busca como `app.normalizar_texto` normaliza `nome_normalizado`: sem acento, sem caixa,
@@ -155,19 +155,21 @@ export function montarConsultaDeInstrutores<C>(consulta: C, parametros: Parametr
   }
 
   /*
-   * ⚠️ HABILITADO, SELECIONADO, CURSO E CLASSIFICAÇÃO SÃO COLUNAS DA VIEW (migration
-   * `20260915091717`), e não listas de ids calculadas aqui. A primeira versão mandava `not in (...)`
-   * com 175 identificadores, e a consulta falhou com a base real. Habilitado e selecionado são
-   * independentes: cada um é o seu predicado.
+   * ⚠️ HABILITADO, CURSO E CLASSIFICAÇÃO SÃO COLUNAS DA VIEW (migration `20260915091717`), e não listas
+   * de ids calculadas aqui. A primeira versão mandava `not in (...)` com 175 identificadores, e a
+   * consulta falhou com a base real.
+   * ⚠️ O SELECIONADO SAIU DAQUI (conferência do PR #90, 24/10/2026): ele TEM ANO — designado em turma do
+   *    ano escolhido —, e a coluna `selecionado` da view vale para qualquer ano. A página o aplica sobre a
+   *    lista lida, pelo ano (`filtrarPorSelecao`, `lib/dominio/selecao-no-ano.ts`); o habilitado não tem ano
+   *    e continua predicado da consulta.
    */
   if (parametros.habilitado === "sim") c = c.eq("habilitado", true);
   if (parametros.habilitado === "nao") c = c.eq("habilitado", false);
-  if (parametros.selecionado === "sim") c = c.eq("selecionado", true);
-  if (parametros.selecionado === "nao") c = c.eq("selecionado", false);
-  if (parametros.curso !== "") c = c.contains("cursos_vinculados", [parametros.curso]);
-  if (parametros.classificacao !== "") {
-    c = c.contains("classificacoes_vinculadas", [parametros.classificacao]);
-  }
+  /*
+   * ⚠️ CURSO E CLASSIFICAÇÃO SAÍRAM DAQUI (D-39 invertida, conferência de 24/10/2026): *"só pelas designações do ano
+   *    escolhido"*. Os arranjos da view (`cursos_vinculados`, `classificacoes_vinculadas`) não têm ano; a página os
+   *    aplica pelas designações do ano (`noRecorteDeCurso`, `lib/dominio/selecao-no-ano.ts`).
+   */
 
   const busca = normalizar(parametros.busca);
   if (busca !== "") c = c.ilike("nome_normalizado", `%${escaparCuringas(busca)}%`);

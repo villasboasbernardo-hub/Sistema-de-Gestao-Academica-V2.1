@@ -25,6 +25,9 @@ export const esquemaDeSala = z.object({
   }),
 });
 
+/** Spec 025 (D-31): editar a sala muda só a natureza — o nome identifica a sala nas turmas. */
+export const esquemaDaNaturezaDaSala = esquemaDeSala;
+
 /** O que desativar e reativar precisam, e nada mais. */
 export const esquemaDeSituacaoDaSala = z.object({ valor: nome });
 

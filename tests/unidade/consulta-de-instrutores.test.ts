@@ -158,14 +158,17 @@ describe("`FR-025` emendado em 15/09/2026 · os filtros novos entram na mesma co
     );
   });
 
-  it("habilitado e selecionado são predicados independentes, e não listas de ids", () => {
+  it("habilitado é predicado da view; o selecionado TEM ANO e sai da consulta — e nada vira lista de ids", () => {
+    /*
+     * Conferência do PR #90 (24/10/2026): a coluna `selecionado` da view vale para qualquer ano, e em 2027 dava os
+     * 34 de 2026. O selecionado é aplicado pela página, pelo ano (`filtrarPorSelecao`).
+     */
     const filtros = montar({ habilitado: "nao", selecionado: "sim" }).filter(
       (c) => c[0] !== "order",
     );
     expect(filtros).toEqual([
       ["eq", "status", "ativo"],
       ["eq", "habilitado", false],
-      ["eq", "selecionado", true],
     ]);
     expect(
       filtros.some((c) => c[1] === "id"),
@@ -173,16 +176,15 @@ describe("`FR-025` emendado em 15/09/2026 · os filtros novos entram na mesma co
     ).toBe(false);
   });
 
-  it("curso e classificação casam pelos arranjos da view — vínculo OU atribuição", () => {
+  it("curso e classificação TÊM ANO e saem da consulta — a página os aplica pelas designações do ano", () => {
+    /*
+     * Conferência de 24/10/2026 (D-39 invertida): só pelas designações do ano escolhido. Os arranjos da view
+     * (`cursos_vinculados`, `classificacoes_vinculadas`) casavam habilitação OU atribuição de qualquer ano.
+     */
     const filtros = montar({ curso: "CAHO", classificacao: "regular" }).filter(
       (c) => c[0] !== "order",
     );
-    expect(filtros).toEqual(
-      expect.arrayContaining([
-        ["contains", "cursos_vinculados", ["CAHO"]],
-        ["contains", "classificacoes_vinculadas", ["regular"]],
-      ]),
-    );
+    expect(filtros).toEqual([["eq", "status", "ativo"]]);
   });
 
   it("⚠️ os filtros novos não trocam a ordenação: continua sendo a antiguidade", () => {

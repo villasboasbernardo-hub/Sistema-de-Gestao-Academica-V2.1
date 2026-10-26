@@ -25,12 +25,7 @@ import { avisosDoCurso } from "@/lib/dominio/avisos-do-curso";
 import type { Aviso, ModuloDeAviso } from "@/lib/dominio/avisos/central";
 import { alertaAcimaDaFaixa, alertaSemCapacitacao } from "@/lib/dominio/alertas-instrutor";
 import { capacitacaoDoCadastro } from "@/lib/dominio/capacitacao-didatica";
-import {
-  cargaPorSemana,
-  limitesDoAnoIso,
-  semanasDoAno,
-  semanasAcimaDaFaixa,
-} from "@/lib/dominio/carga-semanal";
+import { cargaPorSemana, semanasDoAno, semanasAcimaDaFaixa } from "@/lib/dominio/carga-semanal";
 import { curriculoVigenteEm, type CurriculoParaVigencia } from "@/lib/dominio/curriculos";
 import { mediaSemanalDaAtribuicao } from "@/lib/dominio/media-semanal";
 import { nomeEmTexto } from "@/lib/dominio/nome-instrutor";
@@ -166,7 +161,6 @@ export async function lerAvisos(
   /* Começa já, em paralelo com a leitura grande (nenhum `await` em laço). */
   const calendarioPromessa = lerAvisosDoCalendario(supabase, ano, comCalendario);
   const semana = semanaDoPainel(hoje);
-  const limitesDoAno = limitesDoAnoIso(ano);
 
   const [
     cursosRes,
@@ -269,9 +263,11 @@ export async function lerAvisos(
           "atribuicao_id, instrutor_id, previsao_inicio, previsao_termino, tempos_previstos, media_semanal",
           contagemNaPrimeira(f),
         )
-        .or(
-          `ano.eq.${ano},and(previsao_inicio.lte.${limitesDoAno.fim},previsao_termino.gte.${limitesDoAno.inicio})`,
-        )
+        /*
+         * RT-6 (conferência do PR #90, 24/10/2026): só as atribuições das turmas do ano — a coluna `ano` é o ano da
+         * TURMA. A janela que toca o ano, de turma de outro ano, não entra mais (substitui a CHK005).
+         */
+        .eq("ano", ano)
         .order("atribuicao_id")
         .range(f.de, f.ate),
     ),

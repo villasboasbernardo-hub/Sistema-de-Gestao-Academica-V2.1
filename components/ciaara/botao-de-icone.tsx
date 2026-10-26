@@ -16,6 +16,13 @@
  *    props faria o diálogo não abrir, sem erro.
  * ⚠️ **TAMANHO `icon-sm` (8 × 8)**, a mesma altura do `sm` (`h-8`): a barra que mistura os dois continua com as caixas
  *    do mesmo tamanho (`FR-006.1` da spec 016).
+ * ⚠️ **A DICA É SÓ O VERBO** desde 24/10/2026 (RT-1 do Bloco 10, spec 025, D-16): *"ícones com dica; a dica é só o
+ *    verbo"* — Bernardo Villas Boas. Ela sai do vocabulário (`ROTULO_DA_ACAO`: *Editar*, *Excluir*, *Desativar*…), e o
+ *    **nome acessível** continua o rótulo inteiro (*"Excluir a turma C-Ap-FR 2026"*), que contém o verbo da dica
+ *    (WCAG 2.5.3). Em *Novo* o verbo é a própria ação (*"Nova turma"*): *"Novo"* sozinho não diz nada.
+ * ⚠️ **INDISPONÍVEL ≠ DESABILITADO** (D-13, D-COR-6): o botão com motivo (*"tem registros: use Arquivar"*) fica
+ *    `aria-disabled`, focável e com a dica do motivo — um `disabled` de verdade não recebe ponteiro nem foco, e a dica
+ *    nunca abriria. Ele não aciona nada: o clique e o `Enter` são engolidos aqui.
  * ⚠️ **OCUPADO:** o ícone vira o indicador de espera e o nome passa a *"Gravando…"* (ou o que vier), anunciado por
  *    `aria-busy` — sem isso, quem não vê o giro não sabe que a ação está em curso.
  */
@@ -30,9 +37,11 @@ import {
   Ban,
   Bell,
   CalendarDays,
+  ChartColumn,
   Check,
   CirclePause,
   Download,
+  Filter,
   FilterX,
   ImageOff,
   ImageUp,
@@ -83,6 +92,9 @@ export const ICONE_DA_ACAO = {
   desfazer: Undo2,
   "parar-dia": CirclePause,
   "limpar-filtros": FilterX,
+  /* Spec 025 (RT-4): os painéis recolhíveis da página. */
+  filtros: Filter,
+  estatisticas: ChartColumn,
   "enviar-foto": ImageUp,
   "remover-foto": ImageOff,
   "abrir-dsa": CalendarDays,
@@ -95,6 +107,50 @@ export const ICONE_DA_ACAO = {
 } as const satisfies Record<string, LucideIcon>;
 
 export type AcaoDeIcone = keyof typeof ICONE_DA_ACAO;
+
+/**
+ * A dica de cada ação — **só o verbo** (RT-1 do Bloco 10). `null` quando o verbo é o próprio rótulo (*Novo*: *"Nova
+ * turma"*, *"Novo curso"*).
+ */
+export const ROTULO_DA_ACAO: Readonly<Record<AcaoDeIcone, string | null>> = {
+  editar: "Editar",
+  excluir: "Excluir",
+  desativar: "Desativar",
+  reativar: "Reativar",
+  imprimir: "Imprimir",
+  salvar: "Salvar",
+  novo: null,
+  cadastrar: "Cadastrar",
+  acrescentar: "Acrescentar",
+  registrar: "Registrar",
+  arquivar: "Arquivar",
+  desarquivar: "Desarquivar",
+  descartar: "Descartar",
+  retirar: "Retirar",
+  baixar: "Baixar",
+  carregar: "Carregar",
+  "redefinir-senha": "Redefinir senha",
+  "trocar-situacao": "Trocar situação",
+  desfazer: "Desfazer",
+  "parar-dia": "Parar dia",
+  "limpar-filtros": "Limpar filtros",
+  filtros: "Filtros",
+  estatisticas: "Estatísticas",
+  "enviar-foto": "Enviar foto",
+  "remover-foto": "Remover foto",
+  "abrir-dsa": "Abrir o DSA",
+  juntar: "Juntar",
+  reiniciar: "Reiniciar",
+  "tema-claro": "Tema claro",
+  "tema-escuro": "Tema noturno",
+  "tema-sistema": "Tema do sistema",
+  avisos: "Avisos",
+};
+
+/** A dica do botão: o verbo do vocabulário, ou o rótulo quando o verbo é ele (D-16). */
+export function dicaDoBotao(acao: AcaoDeIcone, rotulo: string): string {
+  return ROTULO_DA_ACAO[acao] ?? rotulo;
+}
 
 type Variante = "padrao" | "destrutivo" | "contorno" | "fantasma";
 
@@ -124,6 +180,10 @@ export type BotaoDeIconeProps = Omit<React.ComponentProps<"button">, "children">
   readonly rotuloOcupado?: string;
   /** De que lado a dica abre. */
   readonly ladoDaDica?: "top" | "bottom" | "left" | "right";
+  /**
+   * O motivo de a ação não estar disponível (D-13): o botão fica `aria-disabled`, não aciona nada, e a dica é o motivo.
+   */
+  readonly indisponivel?: string | null;
   readonly ref?: React.Ref<HTMLButtonElement>;
 };
 
@@ -136,18 +196,46 @@ export function BotaoDeIcone({
   ocupado = false,
   rotuloOcupado = "Gravando…",
   ladoDaDica = "top",
+  indisponivel = null,
   disabled,
   ref,
   ...props
 }: BotaoDeIconeProps): React.ReactNode {
   const Icone = ocupado ? LoaderCircle : ICONE_DA_ACAO[acao];
   const nome = ocupado ? rotuloOcupado : rotulo;
+  const dica = ocupado ? rotuloOcupado : (indisponivel ?? dicaDoBotao(acao, rotulo));
   const desenho = (
     <Icone
       aria-hidden
       className={ocupado ? "animate-spin motion-reduce:animate-none" : undefined}
     />
   );
+
+  if (indisponivel !== null) {
+    /* O clique de quem chama não chega aqui: o `onClick` abaixo vem depois do espalhamento e o substitui. */
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            ref={ref}
+            type="button"
+            size="icon-sm"
+            variant={VARIANTE_DO_BOTAO[variante]}
+            aria-label={`${rotulo} — indisponível: ${indisponivel}`}
+            aria-disabled="true"
+            data-acao={acao}
+            data-indisponivel="sim"
+            {...props}
+            className={`cursor-not-allowed opacity-50 ${props.className ?? ""}`}
+            onClick={(e) => e.preventDefault()}
+          >
+            {desenho}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side={ladoDaDica}>{dica}</TooltipContent>
+      </Tooltip>
+    );
+  }
 
   return (
     <Tooltip>
@@ -186,7 +274,7 @@ export function BotaoDeIcone({
           </Button>
         )}
       </TooltipTrigger>
-      <TooltipContent side={ladoDaDica}>{nome}</TooltipContent>
+      <TooltipContent side={ladoDaDica}>{dica}</TooltipContent>
     </Tooltip>
   );
 }
