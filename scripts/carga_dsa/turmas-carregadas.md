@@ -203,8 +203,11 @@ em `planilhas-de-origem/rodadas/2026-10-26T1157/relatorio-final.md` (fora do git
   **mesmo par** nas quatro semanas da turma (02/02 a 27/02): na Aux. da Div. de Adm. Acadêmica, um 3º-Sargento (FR); na Enc. da
   Div. de Adm. Acadêmica, um Capitão-Tenente. **Nenhum dos dois está no cadastro de instrutores**, e o Capitão-Tenente também não
   está em linha nenhuma de `responsaveis_curso` (o 3º-Sargento só aparece como linha digitada, sem instrutor, no elaborador da
-  BATI, `RSP-000012`). Pela R1, não registrado. O DSA de fevereiro da T1 sai, hoje, com o elaborador GERAL dinâmico
-  (`RSP-000001`, quem imprime) e o Encarregado GERAL de 05/01 a 01/08 (`RSP-000013`, um 1º-Tenente).
+  BATI, `RSP-000012`). Pela R1, não registrado. Medido no banco pela mesma regra do DSA (linha do curso, senão a GERAL, vigente
+  na data da semana): o DSA de fevereiro da T1 sai hoje com o **elaborador em branco**, porque não há elaborador vigente em
+  fevereiro (o do curso, `RSP-000007`, começa em 14/09, e o GERAL dinâmico, `RSP-000001`, em 02/08). O Encarregado sai pelo
+  GERAL de 05/01 a 01/08 (`RSP-000013`, um 1º-Tenente). O DSA da T2 continua com o elaborador `RSP-000007` (instrutor 118) e o
+  Encarregado `RSP-000002`.
 - **R2 — BATI T1 e Ag-Mag T1, só leitura: nada a registrar**, porque as duas têm responsável no período. O rodapé diverge do
   sistema:
   - **BATI** — a semana real (09 a 13/03) é a 1ª folha da IMPRESSÃO. Ela traz, na Aux., um 2º-Sargento (HN), que é o instrutor
