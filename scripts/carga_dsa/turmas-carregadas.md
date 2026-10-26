@@ -196,3 +196,29 @@ em `planilhas-de-origem/rodadas/2026-10-26T1157/relatorio-final.md` (fora do git
   como «depois da virada», sem parar a turma. Prova em `provar_carga_dsa.py` (com controle: sem virada, as duas param).
 - **D4 — turma arquivada não para mais a sincronização**: é pulada, e sai no resumo da rodada com o motivo e a data do arquivamento
   (`banco.arquivadas`, pela mesma `app.turma_arquivada` que o gatilho consulta). Prova em `provar_sincronizacao_no_banco.py` (item 6).
+
+### Fechamento da rodada (26/10/2026, à noite) — R1 a R4 de Bernardo Villas Boas
+
+- **R1 — assinatura da C-Exp-Obs-ME T1: NÃO registrada.** A planilha não tem aba RESPONSÁVEIS. O rodapé da IMPRESSÃO traz o
+  **mesmo par** nas quatro semanas da turma (02/02 a 27/02): na Aux. da Div. de Adm. Acadêmica, um 3º-Sargento (FR); na Enc. da
+  Div. de Adm. Acadêmica, um Capitão-Tenente. **Nenhum dos dois está no cadastro de instrutores**, e o Capitão-Tenente também não
+  está em linha nenhuma de `responsaveis_curso` (o 3º-Sargento só aparece como linha digitada, sem instrutor, no elaborador da
+  BATI, `RSP-000012`). Pela R1, não registrado. Medido no banco pela mesma regra do DSA (linha do curso, senão a GERAL, vigente
+  na data da semana): o DSA de fevereiro da T1 sai hoje com o **elaborador em branco**, porque não há elaborador vigente em
+  fevereiro (o do curso, `RSP-000007`, começa em 14/09, e o GERAL dinâmico, `RSP-000001`, em 02/08). O Encarregado sai pelo
+  GERAL de 05/01 a 01/08 (`RSP-000013`, um 1º-Tenente). O DSA da T2 continua com o elaborador `RSP-000007` (instrutor 118) e o
+  Encarregado `RSP-000002`.
+- **R2 — BATI T1 e Ag-Mag T1, só leitura: nada a registrar**, porque as duas têm responsável no período. O rodapé diverge do
+  sistema:
+  - **BATI** — a semana real (09 a 13/03) é a 1ª folha da IMPRESSÃO. Ela traz, na Aux., um 2º-Sargento (HN), que é o instrutor
+    **103**, e, na Enc., um Capitão-Tenente fora do cadastro. O sistema tem como elaborador o `RSP-000012` (o 3º-Sargento FR,
+    digitado, desde 09/03) e, como Encarregado, o GERAL `RSP-000013`. As folhas 2 a 5 são semanas-modelo depois do fim do curso,
+    com outro par.
+  - **Ag-Mag** — 16/03 a 10/04, quatro folhas iguais. Na Aux., o 2º-Sargento (FR) instrutor **118**, que é o `RSP-000008` e
+    bate. Na Enc., o mesmo Capitão-Tenente fora do cadastro, contra o GERAL `RSP-000013`.
+  - O posto do Encarregado de 02/08 em diante também diverge: o rodapé da T2 (14/09 a 09/10) escreve «Capitão-Tenente», e o
+    `RSP-000002` tem 1º-Tenente.
+- **R3 — habilitação** do instrutor 55 em XII da C-Ap-HN, no mesmo arquivo da `VIN-000865`
+  (`preparo/rodada-2026-10-26-habilitacoes.sql`), registrada em `decisoes/c-ap-hn-2026.json`.
+- **R4 — `PEND-VIGENCIA-ATE`** registrada no plano de correções (`docs/correcoes/plano-de-correcoes-em-blocos.md`), sem mexer na
+  guarda.

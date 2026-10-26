@@ -10,8 +10,16 @@
 -- COMO   : a disciplina e a do CURRICULO DA TURMA (spec 021, D-17), casada pelo `cod_disciplina`; o instrutor, pelo
 --          CODIGO. Idempotente; sem nome de pessoa. Roda nos dois bancos, antes do ensaio (o plano do remoto tem de ser
 --          o do local).
+--
+-- ACRESCENTADO NO FECHAMENTO DA RODADA (26/10/2026, decisao R3 de Bernardo Villas Boas): o instrutor de codigo 55 em
+--          XII do C-Ap-HN 2026 («GERENCIAMENTO DE DADOS HIDRO..»), que a nova fonte da turma (D1) nomeia nas aulas de XII
+--          planejadas de 26/10 a 07/11 — 10 blocos, depois da virada de 13/10. Pelo mesmo caminho da primeira: e a
+--          habilitacao que a rodada listou como «depois da virada» e que a tela vai pedir quando o operador lancar
+--          essas aulas. Roda no local e, depois do merge, no remoto. O codigo sai do MAX+1 de `proximo_codigo_vinculo`, e os
+--          dois bancos estavam em `VIN-000865` (865 vinculos) antes dele — medido em 26/10/2026.
 with pares (turma, instrutor, disciplina) as (values
-  ('C-Espc-FR 2026', '16', 'MBFCFR-017')
+  ('C-Espc-FR 2026', '16', 'MBFCFR-017'),
+  ('C-Ap-HN 2026', '55', 'XII')
 )
 insert into public.instrutor_disciplina (instrutor_id, disciplina_id)
 select i.id, d.id

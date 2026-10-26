@@ -541,6 +541,19 @@ bloco em que couberem; o texto de cada uma está no bloco de origem._
 - **`PEND-026-2`** (Bloco 11) — o seletor canônico de instrutor diz *«o seu perfil não os alcança»* para **qualquer**
   lista vazia: distinguir *«não há»* de *«você não vê»* (gotcha 4) quando quem chama esvazia a lista por outro motivo.
 
+## Registrada no fechamento da rodada de 26/10/2026 da VIRADA-1 (decisão R4 de Bernardo Villas Boas)
+
+_«Guarda de vigência que ignora vigente_ate: NÃO mexa. Registre-a como pendência.»_
+
+- **`PEND-VIGENCIA-ATE`** — **a guarda de vigência de regime ignora `vigente_ate`.** O gatilho `app.conferir_vigencia_nova`
+  recusa a vigência nova quando `app.lancamentos_que_travam_vigencia(vigencia, desde)` acha lançamento, e essa função conta
+  **todo** lançamento do curso de `vigente_de` em diante, sem limite em `vigente_ate`. Por isso uma vigência **fechada no
+  passado** é recusada por lançamentos que caem **depois** do fim dela.
+  - Medido no banco local em 26/10/2026: a vigência de 02/02 a 13/09/2026 da C-Exp-Obs-ME foi recusada por 61 lançamentos da T2,
+    todos de 14/09 em diante.
+  - Contorno da rodada: a T1 ficou com o relógio como **regime da turma** (`RGH-000001`, `preparo/c-exp-obs-me-t1-2026.sql`).
+  - Consertar é migration que ALTERA função de guarda: portão da regra 9.4.
+
 ---
 
 ## Fora do plano
