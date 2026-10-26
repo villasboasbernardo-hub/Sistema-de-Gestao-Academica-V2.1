@@ -435,7 +435,14 @@ _Pedido de Bernardo Villas Boas, 23/10/2026, pelo `/corrigir`._ Spec `024-bloco-
   da semana da prova deixa a vista salva apontando uma prova que não conta. Raro (a vista vem depois da prova); proposta:
   o Salvar recusar a vista cuja prova é rascunho, com a frase «salve antes a semana da prova».
 
-## Bloco 10 — Padrões de tela, turma, curso, estatísticas, calendário e ano (spec própria) — 🟨 PR aberto, aguardando conferência
+## Bloco 10 — Padrões de tela, turma, curso, estatísticas, calendário e ano (spec própria) — ✅ CONCLUÍDO em 25/10/2026
+
+> ✅ **Concluído em 25/10/2026** — spec `025-bloco-10-padroes-de-tela`, pelo fluxo `/corrigir`, num PR só: **#90**,
+> **APROVADO** por Bernardo Villas Boas em três conferências (24 e 25/10/2026; D-1 a D-41, com D-38, D-39 e D-40 invertidas
+> por ele) e mesclado por squash na `main` em **`73d90a6`**. As duas migrations no remoto antes do merge
+> (`20261024063555`, backup `remoto-20261024-130503.sql`; `20261024213231`, backup `remoto-20261025-141154.sql`); **98 e
+> 98** migrations, esquema `7e7eb3d5…` (2.637 objetos) igual nos dois bancos. CI do PR verde sobre `235d75d`; CI da `main`
+> sobre `73d90a6` verde nos três blocos (run `40250135006`: 2.792 de unidade · 1.097 pgTAP · 573 de ponta a ponta, nenhum instável), e o deploy de Production de `73d90a6` em `success`. O ramo foi apagado, local e remoto.
 
 _Pedido de Bernardo Villas Boas, 24/10/2026, pelo `/corrigir`._ Spec `025-bloco-10-padroes-de-tela`, ramo
 `feat/BLOCO-10-padroes-de-tela`, um PR. Regras novas **RT-1 a RT-7** e **D-COR-6** em `docs/correcoes/padroes-de-tela.md`

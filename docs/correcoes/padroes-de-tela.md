@@ -28,4 +28,8 @@ desenho no banco (as funções com porteiro, o rastro e o que conta como registr
 - RT-1 · `components/ciaara/botao-de-icone.tsx` (o vocabulário e a dica), `components/ciaara/barra-de-acoes.tsx`,
   `components/ciaara/dialogo-confirmacao.tsx`; guarda `tests/unidade/botoes-de-icone.test.ts`.
 - RT-3 · `components/ciaara/dialogo-de-formulario.tsx`; guarda `tests/e2e/sem-campo-aberto.spec.ts`.
+- RT-6 · o seletor `components/ciaara/seletor-de-ano.tsx` e o ano da tela `lib/navegacao/ano-da-tela.ts`
+  (`lib/dominio/ano-escolhido.ts`); **o ano da turma**: as views de carga do instrutor (migration
+  `20261024213231`, pgTAP `150`), o selecionado e os filtros de curso de Instrutores (`lib/dominio/selecao-no-ano.ts`)
+  e as atividades de turma (`app/(app)/atividades/predicado-do-ano.ts`); guarda `ano-sem-numero-fixo.test.ts`.
 - As demais ganham componente e guarda no Bloco 10 (spec `025-bloco-10-padroes-de-tela`), registrados lá.
