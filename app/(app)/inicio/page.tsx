@@ -48,22 +48,30 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { FiltroDoPanorama } from "./FiltroDoPanorama";
 import { CartaoDaTurma } from "./CartaoDaTurma";
-import { ManchetesDoDsa, type MancheteDoDsa } from "./ManchetesDoDsa";
+import { EscalaDoPapel } from "./EscalaDoPapel";
+import { EscolhaDaSemana } from "./EscolhaDaSemana";
+import { DocumentoDoDsa } from "../../print/dsa/DocumentoDoDsa";
+import type { DadosDoDocumento } from "../../print/dsa/documento";
+import { lerPublicadosDaSemana } from "../turmas/[turma]/dsa/publicacao";
+import { rotuloDoAlt } from "@/lib/dominio/dsa/publicacao";
+import { semanaDaDataEscolhida } from "@/lib/dominio/dsa/semana-pela-data";
+import { instanteComHoraParaLeitura } from "@/lib/formato/data";
+import { CONTRATO } from "@/lib/navegacao/contrato";
+import { ROTA_DO_DSA, rotuloDaSemana } from "../turmas/[turma]/dsa/consulta";
 import { Carrossel } from "@/components/ciaara/carrossel";
-import { semanaDoPainel } from "@/lib/dominio/painel-de-turmas";
-import { cartoesDoInicio } from "@/lib/dominio/cartoes-do-inicio";
+import { cartoesDoInicio, contagemPorSituacao } from "@/lib/dominio/cartoes-do-inicio";
 import { compararTurmas } from "@/lib/dominio/ordem-de-cursos";
-import { resumoDoDsa, temDsaNaSemana } from "@/lib/dominio/dsa-da-semana";
-import { semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
 import { datasDaSemanaIso, semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import {
   montarPanorama,
-  totaisDo,
   type CargaDaTurma,
   type CursoDoRecorte,
   type RegimeDoCursoNoBanco,
   type TurmaDoPanorama,
 } from "./panorama";
+
+/** A faixa de anos que a URL aceita — a mesma da navegação do DSA (`semanaDaDataEscolhida`). */
+const ANOS_DA_URL = CONTRATO[ROTA_DO_DSA].parametros.ano;
 
 export default async function Inicio({
   searchParams,
@@ -87,7 +95,23 @@ export default async function Inicio({
   const escolha = await anoEscolhido(String(valores.ano), hoje);
   const anoVigente = escolha.vigente;
   const ano = escolha.ano;
-  const semanaAtual = semanaDoPainel(hoje);
+  /*
+   * ⚠️ **RD-7 (Bloco 11, D-28): A SEMANA DOS DSA PUBLICADOS** — `?semana=` é uma data da semana; vazia ou inválida, a de
+   *    hoje. Segunda a sábado; anterior e seguinte saem da segunda-feira, na virada do ano também.
+   */
+  const pedida = String(valores.semana).trim();
+  const dataDaSemana =
+    pedida !== "" && semanaDaDataEscolhida(pedida, ANOS_DA_URL) !== null ? pedida : hoje;
+  const isoDaSemana = semanaIsoDe(dataDaSemana) ?? { ano: anoVigente, numero: 1 };
+  const diasDaSemanaMostrada = datasDaSemanaIso(isoDaSemana.ano, isoDaSemana.numero);
+  const segundaMostrada = diasDaSemanaMostrada[0] ?? dataDaSemana;
+  const somarDias = (data: string, dias: number) =>
+    new Date(Date.parse(`${data}T00:00:00Z`) + dias * 86_400_000).toISOString().slice(0, 10);
+  const isoDeHoje = semanaIsoDe(hoje);
+  const ehAAtual =
+    isoDeHoje !== null &&
+    isoDeHoje.ano === isoDaSemana.ano &&
+    isoDeHoje.numero === isoDaSemana.numero;
 
   const supabase = await criarClienteDeServidor();
 
@@ -116,7 +140,7 @@ export default async function Inicio({
     feriadosRes,
     executadaRes,
     arquivadasRes,
-    ocupacaoDaSemanaRes,
+    publicadosRes,
     presenciais,
   ] = await Promise.all([
     consultaDeCursos,
@@ -174,14 +198,11 @@ export default async function Inicio({
     /* D-COR-5 (spec 017, C-24): a turma arquivada some do panorama e, com ele, dos alertas. */
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
     /*
-     * ⚠️ **OS DSA DA SEMANA** (spec 019, C-10 e C-11): os lançamentos de segunda a sábado desta semana, de TODAS as
-     *    turmas, numa leitura só — e as atividades globais (`turma_id` nulo), que aparecem no DSA de cada turma.
+     * ⚠️ **RD-7 (Bloco 11): OS DSA PUBLICADOS DA SEMANA**, de todas as turmas que a sessão alcança — a última versão
+     *    publicada de cada uma (a original ou a ALT mais recente), pela mesma trilha do histórico e do *Reimprimir*.
+     *    Nunca rascunho nem salvo.
      */
-    supabase
-      .from("vw_ocupacao_ta")
-      .select("turma_id, data, origem, disciplina_id, tempos_consumidos")
-      .gte("data", semanaAtual.de)
-      .lte("data", semanaAtual.ate),
+    lerPublicadosDaSemana(supabase, { ano: isoDaSemana.ano, numero: isoDaSemana.numero }),
     /* Spec 024 (FR-020): a etapa presencial das semipresenciais. */
     lerContagemPresencial(supabase, hoje),
   ]);
@@ -234,7 +255,8 @@ export default async function Inicio({
     ),
     presenciais,
   );
-  const totais = totaisDo(panorama);
+  /* RD-8 (Bloco 11): os cartões contam as turmas do ano por situação — a população do panorama (D-26). */
+  const contagem = contagemPorSituacao(panorama);
   /*
    * ⚠️ **OS ALERTAS SAÍRAM DO INÍCIO NO BLOCO 7** (spec 022, FR-004.4; A-2, que emenda o `RF-INI-04`): as turmas em
    *    atraso, as vistas de prova e os tetos de AEC, TAD e TR moram na página Avisos, pelo sininho do cabeçalho.
@@ -245,111 +267,40 @@ export default async function Inicio({
   const cartoes = cartoesDoInicio(panorama);
 
   /*
-   * ⚠️ **OS DSA DA SEMANA** (spec 019, C-8 a C-11): as turmas do recorte (classificação e modalidade — não o ano: a
-   *    semana é a de hoje) que têm DSA nesta semana, cada uma com o que está lançado nela.
+   * ⚠️ **RD-7 (Bloco 11, D-27): O CARROSSEL DO DSA SEGUE O RECORTE** (classificação e modalidade) e a semana ISO — não o
+   *    ano: a semana é de calendário. A turma arquivada fica de fora, como no panorama (D-COR-5). A ordem é a única do
+   *    sistema (spec 022, FR-003): a do curso, depois o ano e o código.
    */
-  const diasDaSemana = (() => {
-    const s = semanaIsoDe(hoje);
-    return s === null ? [] : datasDaSemanaIso(s.ano, s.numero).slice(0, 6);
-  })();
-  const semanaIso = semanaIsoDe(hoje);
-  type TurmaDaLeitura = {
-    id: string;
-    codigo: string;
-    status: string;
-    curso_id: string;
-    ano_letivo: number;
-    data_inicio: string | null;
-    data_termino: string | null;
-    inicio_etapa_presencial: string | null;
-    termino_etapa_presencial: string | null;
-    modalidade: string | null;
-    /* Spec 021 (Bloco 6, RC-1): a duração é do currículo DA TURMA. */
-    curriculo: { duracao_semanas: number | null } | null;
-  };
-  type CursoDaLeitura = {
-    id: string;
-    codigo: string;
-    nome_curso: string;
-    classificacao: string | null;
-  };
-  type LinhaDaOcupacao = {
-    turma_id: string | null;
-    data: string;
-    origem: string;
-    disciplina_id: string | null;
-    tempos_consumidos: number | null;
-  };
+  type TurmaDaLeitura = { id: string; codigo: string; curso_id: string; ano_letivo: number };
+  type CursoDaLeitura = { id: string; codigo: string; classificacao: string | null };
   const cursoDoRecorte = new Map(
     ((cursosRes.data ?? []) as unknown as CursoDaLeitura[]).map((c) => [c.id, c] as const),
   );
-  const ocupacao = (ocupacaoDaSemanaRes.data ?? []) as unknown as LinhaDaOcupacao[];
-  const turmaDaManchete = new Map(
-    ((turmasRes.data ?? []) as unknown as TurmaDaLeitura[]).map((t) => [t.codigo, t] as const),
+  const turmaPorId = new Map(
+    ((turmasRes.data ?? []) as unknown as TurmaDaLeitura[]).map((t) => [t.id, t] as const),
   );
-  const paraOrdenarManchete = (m: MancheteDoDsa) => {
-    const turma = turmaDaManchete.get(m.turmaCodigo);
-    return {
-      codigo: m.turmaCodigo,
-      cursoCodigo: m.cursoCodigo,
-      cursoClassificacao: turma
-        ? (cursoDoRecorte.get(turma.curso_id)?.classificacao ?? null)
-        : null,
-      ano: Number(turma?.ano_letivo ?? 0),
-    };
-  };
-  const manchetes: MancheteDoDsa[] = ((turmasRes.data ?? []) as unknown as TurmaDaLeitura[])
-    .filter((t) => cursoDoRecorte.has(t.curso_id))
-    .filter((t) =>
-      temDsaNaSemana(
-        {
-          status: t.status,
-          modalidade: t.modalidade,
-          dataInicio: t.data_inicio,
-          dataTermino: t.data_termino,
-          inicioEtapaPresencial: t.inicio_etapa_presencial,
-          terminoEtapaPresencial: t.termino_etapa_presencial,
-          arquivada: arquivadas.has(t.id),
-        },
-        diasDaSemana,
-      ),
-    )
-    .map((t) => {
-      const curso = cursoDoRecorte.get(t.curso_id) as CursoDaLeitura;
-      const lancamentos = ocupacao
-        .filter(
-          (o) =>
-            o.turma_id === t.id ||
-            (o.turma_id === null &&
-              t.data_inicio !== null &&
-              t.data_termino !== null &&
-              o.data >= t.data_inicio &&
-              o.data <= t.data_termino),
-        )
-        .map((o) => ({
-          origem: o.origem,
-          data: o.data,
-          disciplinaId: o.disciplina_id,
-          tempos: Number(o.tempos_consumidos ?? 0),
-        }));
-      return {
-        turmaCodigo: t.codigo,
-        cursoCodigo: curso.codigo,
-        nomeCurso: curso.nome_curso,
-        semana: semanaDoCurso({
-          dataInicio: t.data_inicio,
-          dataTermino: t.data_termino,
-          duracaoSemanasDoCurso:
-            t.curriculo?.duracao_semanas === null || t.curriculo?.duracao_semanas === undefined
-              ? null
-              : Number(t.curriculo.duracao_semanas),
-          semana: semanaIso ?? { ano: anoVigente, numero: 1 },
-        }),
-        resumo: resumoDoDsa(lancamentos),
-      };
+  const publicados = publicadosRes.publicados
+    .flatMap((p) => {
+      const turma = turmaPorId.get(p.turmaId);
+      const curso = turma ? cursoDoRecorte.get(turma.curso_id) : undefined;
+      return turma && curso && !arquivadas.has(turma.id) ? [{ ...p, turma, curso }] : [];
     })
-    /* Spec 022 (FR-003): as manchetes na ordem única das turmas — a do curso, depois o ano e o código. */
-    .sort((a, b) => compararTurmas(paraOrdenarManchete(a), paraOrdenarManchete(b)));
+    .sort((a, b) =>
+      compararTurmas(
+        {
+          codigo: a.turma.codigo,
+          cursoCodigo: a.curso.codigo,
+          cursoClassificacao: a.curso.classificacao,
+          ano: Number(a.turma.ano_letivo),
+        },
+        {
+          codigo: b.turma.codigo,
+          cursoCodigo: b.curso.codigo,
+          cursoClassificacao: b.curso.classificacao,
+          ano: Number(b.turma.ano_letivo),
+        },
+      ),
+    );
 
   return (
     <ProvedorDePaineis>
@@ -393,10 +344,10 @@ export default async function Inicio({
             Turmas de {ano}
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <CardKpi rotulo="Turmas no recorte" valor={totais.turmas} />
-            <CardKpi rotulo="Em andamento" valor={totais.ativas} />
-            <CardKpi rotulo="Carga executada" valor={totais.executada} unidade="TA" />
-            <CardKpi rotulo="Progresso do recorte" valor={`${totais.percentual}%`} />
+            <CardKpi rotulo="Turmas ativas" valor={contagem.ativas} />
+            <CardKpi rotulo="Planejadas" valor={contagem.planejadas} />
+            <CardKpi rotulo="Concluídas" valor={contagem.concluidas} />
+            <CardKpi rotulo="Canceladas" valor={contagem.canceladas} />
           </div>
 
           {panorama.length === 0 && baseVazia ? (
@@ -443,11 +394,72 @@ export default async function Inicio({
           )}
         </section>
 
-        <ManchetesDoDsa
-          manchetes={manchetes}
-          semana={semanaAtual}
-          erro={Boolean(ocupacaoDaSemanaRes.error || turmasRes.error)}
-        />
+        <section
+          aria-labelledby="titulo-dsa-publicados"
+          className="flex flex-col gap-3"
+          data-slot="dsa-publicados"
+          data-semana={`${isoDaSemana.ano}-${isoDaSemana.numero}`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="titulo-dsa-publicados" className="text-texto text-base font-semibold">
+              DSA publicados da semana
+            </h2>
+            <EscolhaDaSemana
+              rotulo={rotuloDaSemana(diasDaSemanaMostrada)}
+              dataDaSemana={segundaMostrada}
+              anterior={somarDias(segundaMostrada, -7)}
+              seguinte={somarDias(segundaMostrada, 7)}
+              ehAAtual={ehAAtual}
+            />
+          </div>
+          {publicadosRes.erro ? (
+            <p
+              role="status"
+              className="text-atrasado-tinta text-sm"
+              data-slot="dsa-publicados-nao-lidos"
+            >
+              Não foi possível ler os DSA publicados desta semana. Recarregue a página; se
+              continuar, avise o suporte.
+            </p>
+          ) : publicados.length === 0 ? (
+            /* RD-7: sem DSA publicado na semana, a frase — sem carrossel. */
+            <p className="text-texto-suave text-sm" data-slot="sem-dsa-publicado">
+              Não há DSA publicado para esta semana
+            </p>
+          ) : (
+            /*
+             * ⚠️ **O PAPEL É O DA IMPRESSÃO** (`DocumentoDoDsa`, verde e amarelo), do RETRATO publicado — só leitura
+             *    (D-29): a data do papel é a da publicação, e o ALT é o da versão.
+             */
+            <Carrossel
+              rotulo="DSA publicados da semana"
+              intervaloMs={10000}
+              largura="inteira"
+              dataSlot="carrossel-do-dsa"
+              itens={publicados.map((p) => (
+                <figure
+                  key={p.turmaId}
+                  className="m-0 flex flex-col gap-1"
+                  data-turma={p.turma.codigo}
+                >
+                  <figcaption className="text-texto-suave text-xs">
+                    {p.turma.codigo} · {p.numero === 0 ? "original" : `ALT ${p.numero}`} · publicada
+                    em {instanteComHoraParaLeitura(p.ocorridoEm)}
+                  </figcaption>
+                  <EscalaDoPapel>
+                    <DocumentoDoDsa
+                      dados={p.dados as DadosDoDocumento}
+                      nomeDeQuemImprime={null}
+                      geradoEm={p.ocorridoEm}
+                      alteracao={rotuloDoAlt(p.numero)}
+                      nivelDoTitulo={3}
+                    />
+                  </EscalaDoPapel>
+                </figure>
+              ))}
+            />
+          )}
+        </section>
       </section>
     </ProvedorDePaineis>
   );

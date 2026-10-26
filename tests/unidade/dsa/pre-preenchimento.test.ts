@@ -237,3 +237,35 @@ describe("`FR-015` · o módulo SÓ SUGERE — não há caminho de volta ao cada
     expect(preencher()).toEqual(preencher());
   });
 });
+
+describe("RD-1 (Bloco 11) · o padrão é o DESIGNADO, só se for habilitado", () => {
+  /*
+   * «Na aula, a lista de instrutores traz só os HABILITADOS na disciplina; padrão é o designado para a turma» — Bernardo
+   * Villas Boas, 26/10/2026. Medido no remoto: 16 dos 113 designados ativos não têm habilitação (D-3).
+   */
+  it("o designado habilitado continua sugerido", () => {
+    const p = preencher({ habilitados: new Set([INSTRUTOR_DA_UE]) });
+    expect(p.instrutorId).toBe(INSTRUTOR_DA_UE);
+  });
+
+  it("o designado da UE SEM habilitação é pulado — vem o da disciplina, que é habilitado", () => {
+    const p = preencher({ habilitados: new Set([INSTRUTOR_DA_DISCIPLINA]) });
+    expect(p.instrutorId).toBe(INSTRUTOR_DA_DISCIPLINA);
+  });
+
+  it("nenhum designado habilitado: vazio, com o motivo próprio e a frase de habilitar", () => {
+    const p = preencher({ habilitados: new Set(["outro-habilitado"]) });
+    expect(p.instrutorId).toBeNull();
+    expect(p.motivoDoInstrutorVazio).toBe("designado_sem_habilitacao");
+    expect(frasePara(p.motivoDoInstrutorVazio)).toMatch(/não está habilitado/);
+  });
+
+  it("sem designação nenhuma, o motivo continua o de atribuir", () => {
+    const p = preencher({ porUnidade: [], porDisciplina: [], habilitados: new Set(["x"]) });
+    expect(p.motivoDoInstrutorVazio).toBe("sem_atribuicao_na_turma");
+  });
+
+  it("sem a lista de habilitados (a planilha de contingência, D-6), o de hoje", () => {
+    expect(preencher().instrutorId).toBe(INSTRUTOR_DA_UE);
+  });
+});

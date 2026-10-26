@@ -119,11 +119,25 @@ describe("a linha fixa `ESTUDO INDIVIDUAL · EI` — `praticas-da-planilha.md` �
     expect(ei?.estudoIndividual).toBe(true);
   });
 
-  it("ocupa o TA seguinte ao último lançado, com o horário do relógio — `D-11`", () => {
+  /*
+   * RD-2 (Bloco 11): «sempre no ÚLTIMO tempo do regime, nunca no primeiro» — substitui a D-4 (o TA seguinte ao último
+   * lançado). Na G45 (regime de 8), com 4 TA lançados o EI vai ao 8º, e não ao 5º (D-8 da spec 026).
+   */
+  it("RD-2 · com 4 TA lançados num regime de 8, o EI no 8º — e não no 5º (a D-4)", () => {
     const dia = primeiroDia({ fatos: [fato({ taInicial: 1, tempos: 4 })] });
     const ei = dia.linhas[dia.linhas.length - 1];
-    expect(ei?.taInicial).toBe(5);
-    expect(ei?.trechos[0]).toEqual({ inicio: "11:10", fim: "11:55", periodo: "manha" });
+    expect(ei?.taInicial).toBe(G45.regimeTempos);
+    const oitavo = relogioDoRegime(G45)?.tempos.find((t) => t.numero === G45.regimeTempos);
+    expect(ei?.trechos[0]).toEqual({
+      inicio: oitavo?.inicio,
+      fim: oitavo?.fim,
+      periodo: oitavo?.periodo,
+    });
+  });
+
+  it("RD-2 · ⚠️ o caso que discrimina: dia SEM lançamento — o EI no último tempo do regime, e não no 1º", () => {
+    const dia = primeiroDia();
+    expect(dia.linhas[0]?.taInicial).toBe(G45.regimeTempos);
   });
 
   /*

@@ -212,17 +212,17 @@ describe("`SC-011` · o bloco que atravessa o almoço sai em DOIS trechos — co
   });
 });
 
-describe("`D-4` · o Estudo Individual vai para o slot seguinte ao último TA lançado", () => {
+describe("RD-2 (Bloco 11) · o Estudo Individual no último tempo do regime; no dia cheio, logo depois", () => {
   it("⚠️ reproduz o C-Espc-HN EXATAMENTE nos dois casos medidos", () => {
     const comSete = relogioDoRegime(G50);
-    const slot7 = slotDoEstudoIndividual(7);
+    const slot7 = slotDoEstudoIndividual(7, 7);
     expect(slot7).toBe(8);
     expect(trechosDoBloco(comSete!, slot7!, 1).map((t) => `${t.inicio}-${t.fim}`)).toEqual([
       "15:50-16:40",
     ]);
 
     const comOito = relogioDoRegime(G50_EXCECAO);
-    const slot8 = slotDoEstudoIndividual(8);
+    const slot8 = slotDoEstudoIndividual(8, 8);
     expect(slot8).toBe(9);
     expect(trechosDoBloco(comOito!, slot8!, 1).map((t) => `${t.inicio}-${t.fim}`)).toEqual([
       "16:45-17:35",
@@ -233,22 +233,38 @@ describe("`D-4` · o Estudo Individual vai para o slot seguinte ao último TA la
     // CAHO, 8 TA: a regra dá 15:35-16:20; a planilha traz 15:40-16:25 (5 min de diferença).
     const g45 = relogioDoRegime(G45);
     expect(
-      trechosDoBloco(g45!, slotDoEstudoIndividual(8)!, 1).map((t) => `${t.inicio}-${t.fim}`),
+      trechosDoBloco(g45!, slotDoEstudoIndividual(8, 8)!, 1).map((t) => `${t.inicio}-${t.fim}`),
     ).toEqual(["15:35-16:20"]);
     // C-Ap-HN, 9 TA: o início bate (16:25) e o fim difere 10 min (a planilha traz 17:20).
     const g45ex = relogioDoRegime(G45_EXCECAO);
-    const trecho = trechosDoBloco(g45ex!, slotDoEstudoIndividual(9)!, 1)[0];
+    const trecho = trechosDoBloco(g45ex!, slotDoEstudoIndividual(9, 9)!, 1)[0];
     expect(trecho?.inicio).toBe("16:25");
     expect(trecho?.fim).toBe("17:10");
   });
 
-  it("dia sem lançamento nenhum: o EI é o 1º TA", () => {
-    expect(slotDoEstudoIndividual(null)).toBe(1);
+  /*
+   * «Estudo Individual automático sempre no ÚLTIMO tempo do regime, nunca no primeiro; o usuário pode mover.» — Bernardo
+   * Villas Boas, 26/10/2026 (RD-2). Substitui a D-4 (o tempo seguinte ao último lançado) também no dia parcial (D-8).
+   */
+  it("⚠️ o caso que discrimina: dia VAZIO num regime de 8 — o EI no 8º, e não no 1º (o defeito)", () => {
+    expect(slotDoEstudoIndividual(null, 8)).toBe(8);
+  });
+
+  it("dia com 4 TA lançados num regime de 8 — o EI no 8º, e não no 5º (D-8)", () => {
+    expect(slotDoEstudoIndividual(4, 8)).toBe(8);
+  });
+
+  it("dia cheio até o último tempo do regime — logo depois, no excepcional", () => {
+    expect(slotDoEstudoIndividual(8, 8)).toBe(9);
+  });
+
+  it("sem regime conhecido e dia vazio: `null` — nunca o 1º tempo inventado (`RN-DEG-01`)", () => {
+    expect(slotDoEstudoIndividual(null, null)).toBeNull();
   });
 
   it("dia já cheio até o 12º: `null`, e a tela não inventa um 13º", () => {
-    expect(slotDoEstudoIndividual(12)).toBeNull();
-    expect(slotDoEstudoIndividual(0)).toBeNull();
+    expect(slotDoEstudoIndividual(12, 8)).toBeNull();
+    expect(slotDoEstudoIndividual(0, 8)).toBeNull();
   });
 });
 
@@ -298,7 +314,7 @@ describe("D1 · o Estudo Individual fora da tabela HORÁRIOS vem do catálogo, c
   it("com 8 TA lançados, o EI cai no 9º e sai com o horário do catálogo — 16:50–17:30, não 16:45–17:35", () => {
     const relogio = relogioDoCatalogo(CFG_F, 8);
     expect(relogio).not.toBeNull();
-    const slot = slotDoEstudoIndividual(8);
+    const slot = slotDoEstudoIndividual(8, 8);
     expect(slot).toBe(9);
     const ei = tempoDeAula(relogio as Relogio, slot as number);
     expect(ei).toMatchObject({ inicio: "16:50", fim: "17:30", tipo: "excepcional" });

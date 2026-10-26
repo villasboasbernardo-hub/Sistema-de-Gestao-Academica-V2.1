@@ -20,10 +20,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CheckCheck, PencilLine, Save, Stamp, type LucideIcon } from "lucide-react";
+
+import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
-import { atualizar, excluir, lancar, lancarEstudoIndividualDaSemana, mover } from "@/lib/acoes/dsa";
+import {
+  atualizar,
+  excluir,
+  lancar,
+  lancarEstudoIndividualDaSemana,
+  limparSemanaDoDsa,
+  mover,
+} from "@/lib/acoes/dsa";
 import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
 import {
+  definirRegimeDaSemana,
   descartarRascunhoDoDsa,
   fazerAlteracaoNoDsa,
   publicarSemanaDoDsa,
@@ -41,7 +52,14 @@ import {
 } from "@/lib/dominio/dsa/etapa-presencial";
 import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
 import { avisosAntesDeImprimir } from "@/lib/dominio/dsa/impressao";
-import { documentosIguais, situacaoDaSemana } from "@/lib/dominio/dsa/publicacao";
+import {
+  documentosIguais,
+  seloDaSituacao,
+  situacaoDaSemana,
+  type IconeDoSelo,
+  type Situacao,
+} from "@/lib/dominio/dsa/publicacao";
+import { semanaSalva } from "@/lib/dominio/dsa/regime-da-semana";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
 import {
@@ -74,7 +92,8 @@ import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
 import { podeBaixarPlanilhaDeContingencia } from "./planilha/acesso";
 import { ControleDeParadas, type ParadaNaSemana, type TipoDeParada } from "./ControleDeParadas";
 import { PainelDeLancamento } from "./PainelDeLancamento";
-import { PainelDaPublicacao } from "./PainelDaPublicacao";
+import { BarraDoDsa } from "./BarraDoDsa";
+import { VersoesPublicadas } from "./VersoesPublicadas";
 import { lerPublicacaoDaSemana } from "./publicacao";
 import { PainelDeSituacao } from "./PainelDeSituacao";
 
@@ -259,7 +278,11 @@ export default async function SemanaDoDsa({
       ano: escolha.ano,
       numero: escolha.numero,
       de: diasDaSemanaIso[0] ?? hoje,
-      ate: datasDaSemanaIso(escolha.ano, escolha.numero)[6] ?? hoje,
+      /*
+       * ⚠️ **A SEMANA VAI ATÉ O SÁBADO** (Bloco 11, FR-005.3): a lista tem SEIS datas (segunda a sábado), e o índice 6
+       *    caía no «?? hoje» — o rascunho de uma semana passada era contado até hoje, e o de uma semana futura não era.
+       */
+      ate: diasDaSemanaIso.at(-1) ?? hoje,
     }),
   ]);
   /*
@@ -392,7 +415,111 @@ export default async function SemanaDoDsa({
       key={`${escolha.ano}-${escolha.numero}`}
       className="flex min-w-0 flex-col gap-3"
     >
-      <CabecalhoDoDsa codigo={codigo} rotulo={rotuloDaSemana(lida.dias)} ano={escolha.ano} />
+      {/*
+        ⚠️ **RD-5 E RD-6 (Bloco 11): O SELO NO TÍTULO E A BARRA À DIREITA, sem cartão separado.** A situação é só o selo
+           (ícone + palavra), sem o texto «Situação da semana»; o contador «não salvo» continua ao lado dele (D-21).
+      */}
+      <header
+        className="flex flex-wrap items-start gap-2"
+        data-slot="publicacao-do-dsa"
+        data-situacao={situacaoDaPublicacao.situacao}
+      >
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-lg font-semibold text-texto">Detalhe Semanal de Aula</h1>
+            <SeloDaSemana
+              situacao={situacaoDaPublicacao.situacao}
+              versao={situacaoDaPublicacao.versaoVigente}
+            />
+            {situacaoDaPublicacao.rascunhos > 0 ? (
+              <span className="text-atrasado-tinta text-sm font-medium" data-slot="nao-salvos">
+                {situacaoDaPublicacao.rascunhos} lançamento
+                {situacaoDaPublicacao.rascunhos === 1 ? "" : "s"} não salvo
+                {situacaoDaPublicacao.rascunhos === 1 ? "" : "s"}
+              </span>
+            ) : null}
+          </div>
+          <p className="text-sm text-texto-suave">
+            {codigo}
+            {rotuloDaSemana(lida.dias)
+              ? ` · semana de ${rotuloDaSemana(lida.dias)} · ${escolha.ano}`
+              : ""}
+            {" · "}
+            <Link
+              href={enderecoDaTurma(codigo)}
+              className="underline underline-offset-2 hover:text-texto"
+            >
+              Voltar à turma
+            </Link>
+          </p>
+        </div>
+        <BarraDoDsa
+          turmaId={turmaId}
+          ano={escolha.ano}
+          semana={escolha.numero}
+          situacao={situacaoDaPublicacao}
+          podeOperar={podeOperarAPublicacao && !publicacao.erro}
+          podeLancar={podeLancar}
+          regime={lida.regimeDaSemana}
+          regimesOferecidos={lida.regimesOferecidos}
+          semanaSalva={semanaSalva({
+            tiposDeEvento: publicacao.eventos.map((e) => e.tipo),
+            temLancamentoSalvo: lida.temLancamentoSalvo,
+          })}
+          planilha={
+            podeBaixarPlanilhaDeContingencia(permissoes, turma.modalidade as string | null) ? (
+              <BotaoDeIcone
+                acao="baixar"
+                rotulo="Baixar planilha de contingência"
+                nativo
+                href={enderecoDaPlanilhaDeContingencia(codigo)}
+                data-slot="baixar-planilha-de-contingencia"
+              />
+            ) : null
+          }
+          previa={
+            /*
+              Spec 024 (D-6): antes da publicação o papel é a PRÉVIA, e ela exige a semana salva (FR-010); depois,
+              «Imprimir» imprime a versão vigente (o retrato). ⚠️ Folha de cliente: o endereço leva as assinaturas
+              editadas no rodapé (item 4, 08/10/2026).
+            */
+            <BotaoImprimir
+              codigo={codigo}
+              semana={escolha.numero}
+              ano={escolha.ano}
+              sabado={lida.sabadoAberto}
+              rotulo={situacaoDaPublicacao.historico.length > 0 ? "Imprimir" : "Gerar prévia"}
+              desabilitadoPor={
+                situacaoDaPublicacao.historico.length > 0 || situacaoDaPublicacao.podeGerarPrevia
+                  ? null
+                  : situacaoDaPublicacao.rascunhos > 0
+                    ? "salve o rascunho antes"
+                    : "salve a semana antes"
+              }
+            />
+          }
+          salvar={salvarSemanaDoDsa}
+          descartar={descartarRascunhoDoDsa}
+          fazerAlteracao={fazerAlteracaoNoDsa}
+          publicar={publicarSemanaDoDsa}
+          limpar={limparSemanaDoDsa}
+          definirRegime={definirRegimeDaSemana}
+        />
+      </header>
+
+      <VersoesPublicadas
+        situacao={situacaoDaPublicacao}
+        enderecosDeReimpressao={Object.fromEntries(
+          situacaoDaPublicacao.historico.map((h) => [
+            h.numero,
+            enderecoDaImpressaoDoDsa(codigo, {
+              semana: escolha.numero,
+              ano: escolha.ano,
+              versao: h.numero,
+            }),
+          ]),
+        )}
+      />
 
       {arquivamentoRes.data !== null ? (
         <p role="status" className="text-sm text-atrasado-tinta" data-slot="turma-arquivada">
@@ -490,101 +617,31 @@ export default async function SemanaDoDsa({
         </p>
       ) : null}
 
+      {valores.planilha === "falhou" ? (
+        <p role="alert" className="text-sm text-conflito-tinta" data-slot="planilha-falhou">
+          A planilha de contingência não pôde ser gerada agora. Tente de novo em instantes; se
+          continuar, avise o administrador do sistema.
+        </p>
+      ) : null}
+
       {/*
-       * ⚠️ **O BOTÃO É UM LINK, e `window.print()` é de quem imprime, não da tela.** Abrir a
-       * caixa de impressão sozinha tiraria da pessoa a chance de conferir o papel antes — e é
-       * conferir antes que o `D-2` da planilha ensina a fazer.
+       * ⚠️ **NENHUM DELES BLOQUEIA O BOTÃO** (`RN-DEG-02`): *"regra normativa vira alerta, nunca
+       * bloqueio"*. Quem precisa do papel hoje imprime com o traço no cabeçalho e corrige o
+       * cadastro depois. ⚠️ Sem cartão (RD-6): a barra mora no cabeçalho.
        */}
-      <div
-        className="rounded-ciaara border-borda bg-superficie flex flex-col gap-2 border p-3"
-        data-slot="barra-de-impressao"
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          {/* ⚠️ Folha de cliente: o endereço leva as assinaturas editadas no rodapé (item 4, 08/10/2026). */}
-          {/*
-            Spec 024 (D-6): antes da publicação o papel é a PRÉVIA, e ela exige a semana salva (FR-010); depois,
-            «Imprimir» imprime a versão vigente (o retrato).
-          */}
-          <BotaoImprimir
-            codigo={codigo}
-            semana={escolha.numero}
-            ano={escolha.ano}
-            sabado={lida.sabadoAberto}
-            rotulo={situacaoDaPublicacao.historico.length > 0 ? "Imprimir" : "Gerar prévia"}
-            desabilitadoPor={
-              situacaoDaPublicacao.historico.length > 0 || situacaoDaPublicacao.podeGerarPrevia
-                ? null
-                : situacaoDaPublicacao.rascunhos > 0
-                  ? "salve o rascunho antes"
-                  : "salve a semana antes"
-            }
-          />
-          <span className="text-xs text-texto-suave">
-            Uma página A4 paisagem, com as assinaturas da data desta semana.
-          </span>
-          {/*
-            ⚠️ **O «ESTEPE» DO DSA** (spec 015, `FR-001`): o ano inteiro da turma num `.xlsx`, para
-               fazer o DSA fora do sistema se ele falhar. Link comum, SEM `download` (R-10): a rota
-               decide o nome do arquivo, e a recusa volta para cá com o aviso abaixo.
-          */}
-          {podeBaixarPlanilhaDeContingencia(permissoes, turma.modalidade as string | null) ? (
-            <BotaoDeIcone
-              acao="baixar"
-              rotulo="Baixar planilha de contingência"
-              nativo
-              href={enderecoDaPlanilhaDeContingencia(codigo)}
-              data-slot="baixar-planilha-de-contingencia"
-            />
-          ) : null}
-        </div>
-        {valores.planilha === "falhou" ? (
-          <p role="alert" className="text-sm text-conflito-tinta" data-slot="planilha-falhou">
-            A planilha de contingência não pôde ser gerada agora. Tente de novo em instantes; se
-            continuar, avise o administrador do sistema.
+      {avisosDaImpressao.length > 0 ? (
+        <div role="status" data-slot="avisos-da-impressao" className="flex flex-col gap-1">
+          <p className="text-sm font-medium text-atrasado-tinta">
+            O papel sai assim ({avisosDaImpressao.length} aviso
+            {avisosDaImpressao.length > 1 ? "s" : ""}):
           </p>
-        ) : null}
-
-        {/*
-         * ⚠️ **NENHUM DELES BLOQUEIA O BOTÃO** (`RN-DEG-02`): *"regra normativa vira alerta, nunca
-         * bloqueio"*. Quem precisa do papel hoje imprime com o traço no cabeçalho e corrige o
-         * cadastro depois.
-         */}
-        {avisosDaImpressao.length > 0 ? (
-          <div role="status" data-slot="avisos-da-impressao" className="flex flex-col gap-1">
-            <p className="text-sm font-medium text-atrasado-tinta">
-              O papel sai assim ({avisosDaImpressao.length} aviso
-              {avisosDaImpressao.length > 1 ? "s" : ""}):
-            </p>
-            <ul className="list-disc pl-5 text-sm text-atrasado-tinta">
-              {avisosDaImpressao.map((texto) => (
-                <li key={texto}>{texto}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
-
-      <PainelDaPublicacao
-        turmaId={turmaId}
-        ano={escolha.ano}
-        semana={escolha.numero}
-        situacao={situacaoDaPublicacao}
-        enderecosDeReimpressao={Object.fromEntries(
-          situacaoDaPublicacao.historico.map((h) => [
-            h.numero,
-            enderecoDaImpressaoDoDsa(codigo, {
-              semana: escolha.numero,
-              ano: escolha.ano,
-              versao: h.numero,
-            }),
-          ]),
-        )}
-        podeOperar={podeOperarAPublicacao && !publicacao.erro}
-        salvar={salvarSemanaDoDsa}
-        descartar={descartarRascunhoDoDsa}
-        fazerAlteracao={fazerAlteracaoNoDsa}
-        publicar={publicarSemanaDoDsa}
-      />
+          <ul className="list-disc pl-5 text-sm text-atrasado-tinta">
+            {avisosDaImpressao.map((texto) => (
+              <li key={texto}>{texto}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="flex min-w-0 flex-col gap-3">
         <CabecalhoDaSemana dados={documento} />
@@ -622,6 +679,7 @@ export default async function SemanaDoDsa({
           avaliacoesParaVista={lida.avaliacoesParaVista}
           avaliacoesDoCurriculo={lida.avaliacoesDoCurriculo}
           instrutores={lida.instrutores}
+          habilitacoes={lida.habilitacoes}
           escala={lida.escala}
           tecnicas={lida.tecnicas}
           tiposDeAvaliacao={lida.tiposDeAvaliacao}
@@ -659,6 +717,7 @@ export default async function SemanaDoDsa({
   );
 }
 
+/** O cabeçalho das telas sem grade (turma EAD, semana fora da etapa presencial): sem selo e sem barra. */
 function CabecalhoDoDsa({
   codigo,
   rotulo,
@@ -684,6 +743,41 @@ function CabecalhoDoDsa({
         Voltar à turma
       </Link>
     </header>
+  );
+}
+
+/** O desenho de cada ícone do selo (RD-5) — o domínio diz qual, a tela desenha. */
+const ICONE_DO_SELO: Readonly<Record<IconeDoSelo, LucideIcon>> = {
+  salvo: Save,
+  preenchimento: PencilLine,
+  carimbo: Stamp,
+  alteracao: CheckCheck,
+};
+
+const TOM_DO_SELO = {
+  em_preenchimento: "planejado",
+  registrado: "executado",
+  publicado: "conformidade",
+  alteracao_em_andamento: "atrasado",
+} as const satisfies Record<Situacao, string>;
+
+/** O selo da situação da semana: ícone + palavra (RD-5) — Registrado, Em preenchimento, Publicado, ALT N. */
+function SeloDaSemana({
+  situacao,
+  versao,
+}: {
+  readonly situacao: Situacao;
+  readonly versao: number | null;
+}) {
+  const selo = seloDaSituacao(situacao, versao);
+  return (
+    <span data-slot="selo-da-semana" data-selo={selo.palavra}>
+      <BadgeStatus
+        tom={TOM_DO_SELO[situacao]}
+        rotulo={selo.palavra}
+        icone={ICONE_DO_SELO[selo.icone]}
+      />
+    </span>
   );
 }
 

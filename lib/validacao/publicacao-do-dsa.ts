@@ -10,6 +10,17 @@ export const esquemaDaSemanaDoDsa = z.object({
   semana: z.coerce.number().int().min(1).max(53),
 });
 
+/**
+ * RD-3 (Bloco 11): o regime de tempos da semana — nulo = o regime do curso; o alcance é *"só esta semana"* ou *"desta
+ * semana em diante"*. Se o regime é do curso da turma e se a semana pode mudar, quem decide é o banco.
+ */
+export const esquemaDoRegimeDaSemana = esquemaDaSemanaDoDsa.extend({
+  regimeId: z.string().uuid("Identificador inválido.").nullable(),
+  alcance: z.enum(["so_esta_semana", "desde"], {
+    message: "Escolha só esta semana ou desta semana em diante.",
+  }),
+});
+
 /** D-7: a justificativa da alteração tem ao menos 10 caracteres (o banco confere o mesmo). */
 export const MINIMO_DA_JUSTIFICATIVA = 10;
 

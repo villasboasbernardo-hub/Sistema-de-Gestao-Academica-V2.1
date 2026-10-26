@@ -109,6 +109,8 @@ export async function pararDia(entrada: unknown): Promise<ResultadoDaParada> {
     const doDia = await temposDoDiaDaTurmaNoServidor(supabase, {
       turmaId: turma.id as string,
       cursoId: turma.curso_id as string,
+      /* RD-3 (D-14): o regime da semana do dia parado. */
+      data: p.data,
     });
     taInicial = 1;
     tempos = Math.min(12, Math.max(1, Number(doDia ?? 8)));

@@ -187,7 +187,8 @@ export function siglaOuExtenso(
 }
 
 /**
- * A linha fixa do Estudo Individual, para o dia que **não** tem EI lançado (`D-4`).
+ * A linha fixa do Estudo Individual, para o dia que **não** tem EI lançado — no último tempo do regime (RD-2, que
+ * substitui a `D-4`; a mesma regra do botão e da planilha, D-9 da spec 026).
  *
  * ⚠️ **SEM RELÓGIO NENHUM ela aparece sem horário** (degradação, `RN-DEG-01`): a célula de HORÁRIO
  * fica vazia e a linha continua, porque é ela que carrega a promessa do rodapé.
@@ -203,7 +204,7 @@ function linhaFixaDoEstudoIndividual(
   ultimoTa: number | null,
   relogio: Relogio | null,
 ): LinhaImpressa | null {
-  const slot = slotDoEstudoIndividual(ultimoTa);
+  const slot = slotDoEstudoIndividual(ultimoTa, relogio?.temposDoRegime ?? null);
   const tempo = relogio !== null && slot !== null ? tempoDeAula(relogio, slot) : undefined;
   if (relogio !== null && tempo === undefined) return null;
   const trechos: readonly Trecho[] =

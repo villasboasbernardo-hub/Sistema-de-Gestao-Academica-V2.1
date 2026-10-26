@@ -502,7 +502,11 @@ export function formulasDaLinhaDeTa(entrada: {
   return f;
 }
 
-/** As fórmulas da primeira linha de um dia — o Estudo Individual (`slotDoEstudoIndividual`). */
+/**
+ * As fórmulas da primeira linha de um dia — o Estudo Individual (`slotDoEstudoIndividual`): o último tempo do regime do
+ * relógio da semana; no dia que já tem lançamento nele ou depois, logo depois do último lançado (RD-2, Bloco 11 — a
+ * mesma regra do botão e do papel, D-9). O regime sai da aba HORÁRIOS (`H_RELOGIO_REGIME`), pelo relógio da semana.
+ */
 export function formulasDoDia(entrada: {
   readonly primeira: number;
   readonly tempos: number;
@@ -514,7 +518,13 @@ export function formulasDoDia(entrada: {
   const doDia = (coluna: number) => intervalo({ linha: d0, coluna }, { linha: ultima, coluna });
   const c = (coluna: number) => daCelula(d0, coluna);
   const relogio = fixa(cabecalho, PC.relogio);
-  const proximo = op(c(P.ultimoTa), "+", num(1));
+  /* O TA do regime do relógio da semana; sem relógio, 0 (sem regime conhecido). */
+  const regimeDoRelogio = SE(
+    igual(relogio, vazio),
+    num(0),
+    fn("INDEX", nome(NOME.hRelRegime), fn("MATCH", relogio, nome(NOME.hRelId), num(0))),
+  );
+  const proximo = fn("MAX", regimeDoRelogio, op(c(P.ultimoTa), "+", num(1)));
   const f = new Map<number, Formula>();
   f.set(
     P.eiNoDia,
@@ -530,6 +540,8 @@ export function formulasDoDia(entrada: {
     diferente(c(P.bloqueio), vazio),
     /* O sábado só existe no papel quando tem lançamento (`diasDaTela`). */
     ...(sabado ? [igual(c(P.temLancamento), num(0))] : []),
+    /* Sem regime conhecido e dia vazio, nenhum EI — nunca o 1º tempo inventado (RD-2, `RN-DEG-01`). */
+    fn("AND", igual(relogio, vazio), igual(c(P.ultimoTa), num(0))),
   ];
   f.set(
     P.slotDoEi,

@@ -102,9 +102,9 @@ describe("`FR-037.1` · nenhum parâmetro de paginação, e é recusa declarada"
 });
 
 describe("`FR-001.1` · a emenda ao documento 25 foi aplicada nos DOIS lugares", () => {
-  it("o contrato tem classificação, modalidade e — desde o Bloco 4 (spec 019) — o ano na tela inicial", () => {
+  it("o contrato tem classificação, modalidade, o ano (Bloco 4, spec 019) e a semana dos DSA publicados (Bloco 11)", () => {
     const nomes = parametrosDaRota("/inicio").map((p) => p.nome);
-    expect(nomes).toEqual(["classificacao", "modalidade", "ano"]);
+    expect(nomes).toEqual(["classificacao", "modalidade", "ano", "semana"]);
   });
 
   it("⚠️ spec 019, C-1: o `ano` do Início é TEXTO com padrão vazio (= o vigente), a régua do painel de Turmas", () => {
@@ -155,7 +155,10 @@ describe("`RF-INI-02` · o domínio do filtro é o domínio do BANCO, não uma l
     // Escrever a lista à mão é justamente como ela encolhe: alguém copia os valores que conhece.
     // `pnpm db:tipos` mantém o outro lado em dia, e o CI reprova se ele divergir do schema.
     // ⚠️ O `ano` (spec 019) é texto de propósito: o domínio é o das turmas, e quem o valida é `anoDoPainel`.
-    for (const p of parametrosDaRota("/inicio").filter((x) => x.nome !== "ano")) {
+    /* `ano` e `semana` (Bloco 11, RD-7) são texto de propósito: um ano e uma DATA, validados por quem os lê. */
+    for (const p of parametrosDaRota("/inicio").filter(
+      (x) => x.nome !== "ano" && x.nome !== "semana",
+    )) {
       expect(p.tipo, `${p.nome} voltou a ser texto — texto não tem domínio`).toBe("escolha");
     }
   });

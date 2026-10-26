@@ -41,6 +41,12 @@
  */
 "use client";
 
+import {
+  fraseDaListaDaAula,
+  habilitadosNaDisciplina,
+  instrutoresDaAula,
+  type HabilitacaoAtiva,
+} from "@/lib/dominio/dsa/instrutores-da-aula";
 import * as React from "react";
 
 import type { TipoOferecido } from "./leitura";
@@ -143,6 +149,11 @@ export type FormularioDeLancamentoProps = {
   readonly avaliacoesParaVista: readonly AvaliacaoOferecida[];
   readonly avaliacoesDoCurriculo?: readonly ItemDoCurriculoOferecido[];
   readonly instrutores: readonly InstrutorParaExibir[];
+  /**
+   * RD-1 (Bloco 11): as habilitações ATIVAS. Na aula, a lista de quem ministra é só dos habilitados na disciplina, e
+   * o padrão é o designado para a turma — se for habilitado (D-3).
+   */
+  readonly habilitacoes?: readonly HabilitacaoAtiva[];
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   readonly tiposDeAvaliacao: readonly string[];
@@ -220,6 +231,7 @@ export function FormularioDeLancamento({
   avaliacoesParaVista,
   avaliacoesDoCurriculo = [],
   instrutores,
+  habilitacoes = [],
   escala,
   tecnicas,
   tiposDeAvaliacao,
@@ -312,6 +324,8 @@ export function FormularioDeLancamento({
    */
   function sugerir(disciplina: string, unidade: string | null) {
     const u = unidade === null ? undefined : unidades.find((x) => x.id === unidade);
+    /* RD-1, D-3: só o designado HABILITADO é sugerido. */
+    const habilitados = habilitadosNaDisciplina(habilitacoes, disciplina);
     const p = preencherLancamento({
       disciplinaId: disciplina,
       unidadeEnsinoId: unidade,
@@ -320,14 +334,20 @@ export function FormularioDeLancamento({
       tecnicaSugerida: u?.tecnicaSugerida ?? null,
       topico: u?.topico ?? null,
       salaDaTurma,
+      habilitados,
     });
     if (tipo === "aula") {
       /*
        * ⚠️ **O QUE A PESSOA ESCOLHEU NÃO É APAGADO; O QUE A SUGESTÃO PÔS, É** — trocar de disciplina para uma
        *    sem atribuição deixaria o instrutor da anterior no campo, um valor plausível e errado que grava.
+       * ⚠️ **RD-1: E O ESCOLHIDO QUE NÃO É HABILITADO NA DISCIPLINA NOVA SAI** — ele deixou de estar na lista.
        */
       if (p.instrutorId !== null) definirQuemMinistra(p.instrutorId);
-      else if (quemMinistra !== "" && quemMinistra === instrutorSugerido) definirQuemMinistra("");
+      else if (
+        quemMinistra !== "" &&
+        (quemMinistra === instrutorSugerido || !habilitados.has(quemMinistra))
+      )
+        definirQuemMinistra("");
       definirInstrutorSugerido(p.instrutorId);
       definirMotivoDoInstrutor(p.motivoDoInstrutorVazio);
     }
@@ -773,7 +793,16 @@ export function FormularioDeLancamento({
       ) : (
         <ResponsavelOuNomeLivre
           regra={regraPrincipal}
-          instrutores={instrutores}
+          /* RD-1 (Bloco 11): na aula, só os habilitados na disciplina dela; nos demais tipos, o cadastro (ativo). */
+          instrutores={
+            tipo === "aula"
+              ? instrutoresDaAula(
+                  instrutores,
+                  habilitacoes,
+                  disciplinaId === "" ? null : disciplinaId,
+                )
+              : instrutores
+          }
           escala={escala}
           rotuloDoCadastro={
             tipo === "avaliacao"
@@ -791,7 +820,19 @@ export function FormularioDeLancamento({
           slot="responsavel-do-lancamento"
         />
       )}
-      {tipo === "aula" && quemMinistra === "" && frasePara(motivoDoInstrutor) !== null ? (
+      {tipo === "aula" &&
+      disciplinaId !== "" &&
+      fraseDaListaDaAula(
+        disciplinaId,
+        instrutoresDaAula(instrutores, habilitacoes, disciplinaId),
+      ) !== null ? (
+        <p className="text-xs text-atrasado-tinta" data-slot="aula-sem-habilitado">
+          {fraseDaListaDaAula(
+            disciplinaId,
+            instrutoresDaAula(instrutores, habilitacoes, disciplinaId),
+          )}
+        </p>
+      ) : tipo === "aula" && quemMinistra === "" && frasePara(motivoDoInstrutor) !== null ? (
         <p className="text-xs text-atrasado-tinta" data-slot="aviso-sem-atribuicao">
           {frasePara(motivoDoInstrutor)}
         </p>

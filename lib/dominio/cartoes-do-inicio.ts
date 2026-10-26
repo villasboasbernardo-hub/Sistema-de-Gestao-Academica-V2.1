@@ -14,3 +14,27 @@
 export function cartoesDoInicio<T extends { readonly status: string }>(turmas: readonly T[]): T[] {
   return turmas.filter((t) => t.status === "ativa");
 }
+
+/**
+ * Os números do topo do Início: as turmas do ano escolhido por situação (RD-8, Bloco 11).
+ *
+ * > *"INÍCIO, CARTÕES (RD-8): Turmas ativas (= em andamento) · Planejadas · Concluídas · Canceladas, do ano escolhido.
+ * > Sair: Turmas no recorte, Carga executada, Progresso no recorte."* — Bernardo Villas Boas, 26/10/2026
+ *
+ * ⚠️ **A POPULAÇÃO É A DO PANORAMA** (D-26): o ano da turma (RT-6) e o recorte de classificação e modalidade já vêm
+ *    aplicados, e a arquivada já saiu (D-COR-5). Aqui só se conta pela situação.
+ */
+export function contagemPorSituacao(turmas: readonly { readonly status: string }[]): {
+  readonly ativas: number;
+  readonly planejadas: number;
+  readonly concluidas: number;
+  readonly canceladas: number;
+} {
+  const conta = (s: string) => turmas.filter((t) => t.status === s).length;
+  return {
+    ativas: conta("ativa"),
+    planejadas: conta("planejada"),
+    concluidas: conta("concluida"),
+    canceladas: conta("cancelada"),
+  };
+}

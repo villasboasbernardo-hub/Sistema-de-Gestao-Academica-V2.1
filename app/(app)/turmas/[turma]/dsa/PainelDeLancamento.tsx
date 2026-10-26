@@ -26,6 +26,7 @@
  */
 "use client";
 
+import type { HabilitacaoAtiva } from "@/lib/dominio/dsa/instrutores-da-aula";
 import * as React from "react";
 
 import type { TipoOferecido } from "./leitura";
@@ -87,6 +88,8 @@ export type PainelDeLancamentoProps = {
   readonly avaliacoesParaVista: readonly AvaliacaoOferecida[];
   readonly avaliacoesDoCurriculo?: readonly ItemDoCurriculoOferecido[];
   readonly instrutores: readonly InstrutorParaExibir[];
+  /** RD-1 (Bloco 11): as habilitações ativas — a lista de quem ministra a aula sai daqui, pela disciplina. */
+  readonly habilitacoes?: readonly HabilitacaoAtiva[];
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   readonly tiposDeAvaliacao: readonly string[];
@@ -174,6 +177,7 @@ export function PainelDeLancamento({
   avaliacoesParaVista,
   avaliacoesDoCurriculo = [],
   instrutores,
+  habilitacoes = [],
   escala,
   tecnicas,
   tiposDeAvaliacao,
@@ -362,6 +366,7 @@ export function PainelDeLancamento({
               unidades={unidades}
               disciplinas={disciplinas}
               instrutores={instrutores}
+              habilitacoes={habilitacoes}
               escala={escala}
               tecnicas={tecnicas}
               instrumentos={instrumentos}
@@ -407,6 +412,7 @@ export function PainelDeLancamento({
               avaliacoesParaVista={avaliacoesParaVista}
               avaliacoesDoCurriculo={avaliacoesDoCurriculo}
               instrutores={instrutores}
+              habilitacoes={habilitacoes}
               escala={escala}
               tecnicas={tecnicas}
               tiposDeAvaliacao={tiposDeAvaliacao}

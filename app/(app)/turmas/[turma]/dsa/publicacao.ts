@@ -8,7 +8,11 @@
  */
 import "server-only";
 
-import type { EventoDaSemana, TipoDeEvento } from "@/lib/dominio/dsa/publicacao";
+import {
+  versaoVigentePorTurma,
+  type EventoDaSemana,
+  type TipoDeEvento,
+} from "@/lib/dominio/dsa/publicacao";
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
 type Cliente = Awaited<ReturnType<typeof criarClienteDeServidor>>;
@@ -86,5 +90,61 @@ export async function lerPublicacaoDaSemana(
     })),
     rascunhos: Number(rascunhosRes.data ?? 0),
     erro: eventosRes.error !== null || rascunhosRes.error !== null,
+  };
+}
+
+/** A versão que vale de uma turma na semana (RD-7): o retrato publicado. */
+export type PublicadoDaTurma = {
+  readonly turmaId: string;
+  /** 0 = a original; N = a ALT N. */
+  readonly numero: number;
+  readonly ocorridoEm: string;
+  /** O documento publicado (`DadosDoDocumento`), como o retrato o guardou. */
+  readonly dados: unknown;
+};
+
+/**
+ * Os DSA PUBLICADOS de uma semana, de todas as turmas que a sessão alcança (RD-7, Bloco 11): a última versão publicada
+ * de cada uma — a original ou a ALT mais recente —, nunca rascunho nem salvo. A MESMA trilha e o MESMO retrato que o
+ * histórico e o *Reimprimir* do DSA leem (`lerPublicacaoDaSemana`); quem escolhe a versão é `versaoVigentePorTurma`.
+ * ⚠️ **A RLS RECORTA** (`registros_aula.ler` + alcance): o perfil vê o publicado das turmas que alcança.
+ */
+export async function lerPublicadosDaSemana(
+  supabase: Cliente,
+  entrada: { readonly ano: number; readonly numero: number },
+): Promise<{ readonly publicados: readonly PublicadoDaTurma[]; readonly erro: boolean }> {
+  const { data, error } = await supabase
+    .from("dsa_eventos_da_semana")
+    .select("turma_id, tipo, numero, retrato, ocorrido_em")
+    .eq("ano", entrada.ano)
+    .eq("semana", entrada.numero)
+    .in("tipo", ["publicado", "alteracao_publicada"])
+    .order("ocorrido_em");
+  const linhas = (data ?? []) as {
+    turma_id: string;
+    tipo: string;
+    numero: number | null;
+    retrato: { dados?: unknown } | null;
+    ocorrido_em: string;
+  }[];
+  const vigentes = versaoVigentePorTurma(
+    linhas.map((l) => ({
+      turmaId: l.turma_id,
+      tipo: l.tipo,
+      numero: l.numero,
+      ocorridoEm: l.ocorrido_em,
+      retrato: l.retrato?.dados ?? null,
+    })),
+  );
+  return {
+    publicados: vigentes
+      .filter((v) => v.retrato !== null)
+      .map((v) => ({
+        turmaId: v.turmaId,
+        numero: v.numero,
+        ocorridoEm: v.ocorridoEm,
+        dados: v.retrato,
+      })),
+    erro: error !== null,
   };
 }

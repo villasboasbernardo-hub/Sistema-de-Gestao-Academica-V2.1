@@ -103,7 +103,8 @@
   color: var(--dsa4-suave);
 }
 
-.dsa4 h1 {
+.dsa4 h1,
+.dsa4 .dsa4-curso {
   margin: 0;
   font-size: 17pt;
   line-height: 1.1;

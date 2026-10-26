@@ -142,3 +142,80 @@ function normalizado(valor: unknown): unknown {
 export function documentosIguais(a: unknown, b: unknown): boolean {
   return JSON.stringify(normalizado(a)) === JSON.stringify(normalizado(b));
 }
+
+/** O ícone do selo — a tela traduz para o desenho; o domínio só diz qual (RD-5). */
+export type IconeDoSelo = "salvo" | "preenchimento" | "carimbo" | "alteracao";
+
+/**
+ * O selo da situação da semana: ícone e palavra, sem o texto "Situação da semana" (RD-5, Bloco 11).
+ *
+ * > *"situação da semana só como selo (ícone + palavra): Registrado / Em preenchimento / Publicado / ALT N"* — Bernardo
+ * > Villas Boas, 26/10/2026 (`docs/correcoes/regras-do-dsa-lancamento.md`, RD-5)
+ *
+ * ⚠️ **PUBLICADO OU ALT N**: a semana publicada mostra *Publicado* na original e *ALT N* na alteração N publicada.
+ * ⚠️ **EM ALTERAÇÃO** (D-20): durante a alteração em andamento o selo diz *Em alteração* — os quatro do pedido não
+ *    nomeiam esse estado, e mostrar *Publicado* esconderia que há mudança por publicar.
+ */
+export function seloDaSituacao(
+  situacao: Situacao,
+  versaoVigente: number | null,
+): { readonly icone: IconeDoSelo; readonly palavra: string } {
+  switch (situacao) {
+    case "em_preenchimento":
+      return { icone: "preenchimento", palavra: "Em preenchimento" };
+    case "registrado":
+      return { icone: "salvo", palavra: "Registrado" };
+    case "publicado":
+      return {
+        icone: "carimbo",
+        palavra:
+          versaoVigente === null || versaoVigente === 0 ? "Publicado" : `ALT ${versaoVigente}`,
+      };
+    case "alteracao_em_andamento":
+      return { icone: "alteracao", palavra: "Em alteração" };
+  }
+}
+
+/**
+ * A versão que vale de cada turma: a ÚLTIMA publicada (original ou ALT mais recente) — nunca rascunho nem salvo (RD-7).
+ *
+ * > *"o Início mostra só DSA PUBLICADO: a última versão publicada da semana (original ou ALT mais recente), nunca
+ * > rascunho nem salvo."* — Bernardo Villas Boas, 26/10/2026 (RD-7)
+ *
+ * ⚠️ **DURANTE A ALTERAÇÃO**, a última publicada continua a valer — a alteração só vale quando publicada (RP-1).
+ * ⚠️ **A ORDEM DAS TURMAS É A DA ENTRADA** (a primeira aparição): quem chama decide a ordem do carrossel.
+ */
+export function versaoVigentePorTurma<R>(
+  eventos: readonly {
+    readonly turmaId: string;
+    readonly tipo: string;
+    readonly numero: number | null;
+    readonly ocorridoEm: string;
+    readonly retrato: R;
+  }[],
+): readonly {
+  readonly turmaId: string;
+  readonly numero: number;
+  readonly ocorridoEm: string;
+  readonly retrato: R;
+}[] {
+  const ordem: string[] = [];
+  const vigente = new Map<
+    string,
+    { turmaId: string; numero: number; ocorridoEm: string; retrato: R }
+  >();
+  for (const e of eventos) {
+    if (e.tipo !== "publicado" && e.tipo !== "alteracao_publicada") continue;
+    const atual = vigente.get(e.turmaId);
+    if (atual === undefined) ordem.push(e.turmaId);
+    if (atual === undefined || e.ocorridoEm.localeCompare(atual.ocorridoEm) > 0) {
+      vigente.set(e.turmaId, {
+        turmaId: e.turmaId,
+        numero: e.numero ?? 0,
+        ocorridoEm: e.ocorridoEm,
+        retrato: e.retrato,
+      });
+    }
+  }
+  return ordem.map((t) => vigente.get(t)).filter((v) => v !== undefined);
+}
