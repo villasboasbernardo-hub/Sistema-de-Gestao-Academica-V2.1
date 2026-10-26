@@ -96,7 +96,12 @@ test("US4 · parar os tempos 6 e 7 da sexta bloqueia só eles, e desfazer devolv
   await expect(celula(page, 6)).toHaveAttribute("data-tom", "bloqueada");
   await expect(celula(page, 7)).toHaveAttribute("data-tom", "bloqueada");
   await expect(celula(page, 5)).toHaveAttribute("data-tom", "livre");
-  await expect(celula(page, 8)).toHaveAttribute("data-tom", "livre");
+  /*
+   * ⚠️ RD-2 (Bloco 11): o 8º tempo da sexta é a linha fixa do Estudo Individual — o último tempo do regime, a mesma
+   *    regra do papel (D-9). Até ali ela caía no tempo seguinte ao último lançado, e o 8 ficava livre. O que importa
+   *    aqui continua igual: a parada não o bloqueou.
+   */
+  await expect(celula(page, 8)).not.toHaveAttribute("data-tom", "bloqueada");
 
   const { data: gravada } = await banco()
     .from("dias_parados")

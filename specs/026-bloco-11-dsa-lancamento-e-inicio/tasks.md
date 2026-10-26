@@ -25,18 +25,18 @@
 - [X] T016 `limparSemanaDoDsa` (RD-4)
 
 ## Fase 4 — leitura e telas
-- [ ] T017 Leitura do DSA: status, habilitações, regime da semana (RD-1, RD-3)
-- [ ] T018 Formulário e cartão: a lista da aula filtrada (RD-1)
-- [ ] T019 Vocabulário de ícones e o selo com ícone (RD-5, RD-6)
-- [ ] T020 A barra de ações no cabeçalho do DSA, o fim dos cartões, *Versões publicadas* (RD-6, D-24)
-- [ ] T021 O diálogo do regime e o *Limpar* (RD-3, RD-4)
-- [ ] T022 Os rascunhos até o sábado na tela e na impressão (FR-005.3)
-- [ ] T023 Início: os cartões por situação, o carrossel das turmas sem *Abrir DSA* (RD-8, item 7)
-- [ ] T024 Início: o carrossel do DSA publicado, a escolha da semana, a escala do papel (RD-7)
-- [ ] T025 *Editar turma*: a vigência atual do regime, só leitura (D-10)
+- [X] T017 Leitura do DSA: status, habilitações, regime da semana (RD-1, RD-3)
+- [X] T018 Formulário e cartão: a lista da aula filtrada (RD-1)
+- [X] T019 Vocabulário de ícones e o selo com ícone (RD-5, RD-6)
+- [X] T020 A barra de ações no cabeçalho do DSA, o fim dos cartões, *Versões publicadas* (RD-6, D-24)
+- [X] T021 O diálogo do regime e o *Limpar* (RD-3, RD-4)
+- [X] T022 Os rascunhos até o sábado na tela e na impressão (FR-005.3)
+- [X] T023 Início: os cartões por situação, o carrossel das turmas sem *Abrir DSA* (RD-8, item 7)
+- [X] T024 Início: o carrossel do DSA publicado, a escolha da semana, a escala do papel (RD-7)
+- [X] T025 *Editar turma*: a vigência atual do regime, só leitura (D-10)
 
 ## Fase 5 — testes de ponta a ponta e conferência
-- [ ] T026 RLS com sessão real do regime da semana e do Limpar
-- [ ] T027 E2E por clique de cada item; os casos antigos ajustados ao desenho
-- [ ] T028 Defeitos deliberados nos testes que provam a mudança
+- [X] T026 RLS com sessão real do regime da semana e do Limpar
+- [X] T027 E2E por clique de cada item; os casos antigos ajustados ao desenho
+- [X] T028 Defeitos deliberados nos testes que provam a mudança
 - [ ] T029 Roteiro de conferência, plano de aplicação, plano de correções; `verificar:tudo`; PR; CI; remoto

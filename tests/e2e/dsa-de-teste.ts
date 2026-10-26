@@ -1129,6 +1129,12 @@ export async function limparDsa(semeado: DsaSemeado | undefined): Promise<void> 
     await admin().from("atividades_nao_letivas").delete().eq("turma_id", id);
     await apagarLinhasDaTurma(id);
     /*
+     * Bloco 11 (RD-3): o regime gravado das semanas e o «desde» da turma referenciam a turma (`restrict`). São amostra
+     * desta turma, sem gatilho de imutabilidade — saem com ela.
+     */
+    await admin().from("dsa_regime_da_semana").delete().eq("turma_id", id);
+    await admin().from("turma_regime_vigencia").delete().eq("turma_id", id);
+    /*
      * ⚠️ A TURMA É APAGADA, e não é zelo: `099_salas.sql` decide entre asserir e pular pela
      * pergunta `count(turmas) > 0`, e uma turma deixada atrás faz aquele arquivo ACHAR que a base
      * está carregada e reprovar com os números da base real. Turma É apagável — só curso não é.

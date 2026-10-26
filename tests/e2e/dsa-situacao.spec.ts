@@ -116,7 +116,8 @@ test.describe("item 3 do comando de 08/10/2026 · o painel fica ABAIXO da grade,
 
     const grade = await page.locator(GRADE).boundingBox();
     const painel = await page.locator(PAINEL).boundingBox();
-    const barra = await page.locator('[data-slot="barra-de-impressao"]').boundingBox();
+    /* Bloco 11 (RD-6): o cartão da impressão saiu; a largura da página é a do cabeçalho do DSA. */
+    const barra = await page.locator('[data-slot="publicacao-do-dsa"]').boundingBox();
     expect(grade, "a grade da semana não está na tela").not.toBeNull();
     expect(painel, "o painel de situação não está na tela").not.toBeNull();
     expect(barra, "a barra de impressão não está na tela").not.toBeNull();

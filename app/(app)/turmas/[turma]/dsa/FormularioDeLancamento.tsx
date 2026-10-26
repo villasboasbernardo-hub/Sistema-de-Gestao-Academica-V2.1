@@ -248,6 +248,12 @@ export function FormularioDeLancamento({
   /* O último instrutor que a SUGESTÃO pôs — só ele sai quando a disciplina nova não sugere ninguém. */
   const [instrutorSugerido, definirInstrutorSugerido] = React.useState<string | null>(null);
   const [disciplinaId, definirDisciplina] = React.useState("");
+  /* RD-1 (Bloco 11): quem pode ministrar a aula — os habilitados na disciplina escolhida (nenhum sem disciplina). */
+  const listaDaAula = instrutoresDaAula(
+    instrutores,
+    habilitacoes,
+    disciplinaId === "" ? null : disciplinaId,
+  );
   const [unidadeId, definirUnidade] = React.useState("");
   const [avaliacaoId, definirAvaliacao] = React.useState("");
   const [ta, definirTa] = React.useState(String(taInicial));
@@ -790,19 +796,22 @@ export function FormularioDeLancamento({
         <p className="text-texto-suave text-sm" data-slot="responsavel-da-sessao">
           Quem aplica e quem fiscaliza esta sessão são os da prova (a 1ª sessão).
         </p>
+      ) : tipo === "aula" && listaDaAula.length === 0 ? (
+        /*
+         * RD-1 (Bloco 11): a aula sem disciplina escolhida, ou com uma sem habilitado, não tem quem escolher — a frase
+         * diz o porquê, no lugar do seletor (cujo vazio diria "o seu perfil não os alcança", que é outra coisa).
+         */
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-texto">Quem ministra</span>
+          <p className="text-xs text-atrasado-tinta" data-slot="aula-sem-habilitado">
+            {fraseDaListaDaAula(disciplinaId === "" ? null : disciplinaId, listaDaAula)}
+          </p>
+        </div>
       ) : (
         <ResponsavelOuNomeLivre
           regra={regraPrincipal}
           /* RD-1 (Bloco 11): na aula, só os habilitados na disciplina dela; nos demais tipos, o cadastro (ativo). */
-          instrutores={
-            tipo === "aula"
-              ? instrutoresDaAula(
-                  instrutores,
-                  habilitacoes,
-                  disciplinaId === "" ? null : disciplinaId,
-                )
-              : instrutores
-          }
+          instrutores={tipo === "aula" ? listaDaAula : instrutores}
           escala={escala}
           rotuloDoCadastro={
             tipo === "avaliacao"
@@ -821,18 +830,9 @@ export function FormularioDeLancamento({
         />
       )}
       {tipo === "aula" &&
-      disciplinaId !== "" &&
-      fraseDaListaDaAula(
-        disciplinaId,
-        instrutoresDaAula(instrutores, habilitacoes, disciplinaId),
-      ) !== null ? (
-        <p className="text-xs text-atrasado-tinta" data-slot="aula-sem-habilitado">
-          {fraseDaListaDaAula(
-            disciplinaId,
-            instrutoresDaAula(instrutores, habilitacoes, disciplinaId),
-          )}
-        </p>
-      ) : tipo === "aula" && quemMinistra === "" && frasePara(motivoDoInstrutor) !== null ? (
+      listaDaAula.length > 0 &&
+      quemMinistra === "" &&
+      frasePara(motivoDoInstrutor) !== null ? (
         <p className="text-xs text-atrasado-tinta" data-slot="aviso-sem-atribuicao">
           {frasePara(motivoDoInstrutor)}
         </p>

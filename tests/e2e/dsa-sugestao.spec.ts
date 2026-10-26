@@ -106,7 +106,11 @@ test.describe("FR-012.2 · a sugestão de instrutor, chegando por clique", () =>
   }) => {
     test.setTimeout(90_000);
     await abrirOFormulario(page);
-    await expect(page.locator(SELETOR)).toContainText("Escolha o instrutor");
+    /* RD-1 (Bloco 11): sem disciplina não há habilitado — a frase pede a disciplina, no lugar do seletor. */
+    await expect(page.locator('[data-slot="aula-sem-habilitado"]')).toHaveText(
+      "Escolha a disciplina.",
+    );
+    await expect(page.locator(SELETOR)).toHaveCount(0);
 
     await escolherDisciplina(page, SEMEADO.codDisciplina);
     await expect(page.locator(SELETOR)).toContainText(SEMEADO.nomeHabilitado);
@@ -116,14 +120,19 @@ test.describe("FR-012.2 · a sugestão de instrutor, chegando por clique", () =>
     await page.locator("#dsa-unidade").selectOption({ index: 1 });
     await expect(page.locator(SELETOR)).toContainText(SEMEADO.nomeHabilitado);
 
-    /* ⚠️ A sugestão é editável: trocar pelo seletor canônico, como quem lança. */
+    /*
+     * ⚠️ A sugestão é editável pelo seletor canônico — e, desde a RD-1 (Bloco 11), a lista da aula traz só os
+     *    habilitados na disciplina: quem não tem vínculo não está lá para ser escolhido.
+     */
     await page.locator(SELETOR).click();
-    await page
-      .locator('[data-slot="popover-content"]')
-      .getByRole("option", { name: new RegExp(SEMEADO.nomeSemHabilitacao, "i") })
-      .first()
-      .click();
-    await expect(page.locator(SELETOR)).toContainText(SEMEADO.nomeSemHabilitacao);
+    const painel = page.locator('[data-slot="popover-content"]');
+    await expect(
+      painel.getByRole("option", { name: new RegExp(SEMEADO.nomeHabilitado, "i") }).first(),
+    ).toBeVisible();
+    await expect(
+      painel.getByRole("option", { name: new RegExp(SEMEADO.nomeSemHabilitacao, "i") }),
+    ).toHaveCount(0);
+    await page.keyboard.press("Escape");
   });
 
   test("disciplina sem atribuição na turma: o campo fica vazio e a frase diz onde atribuir", async ({

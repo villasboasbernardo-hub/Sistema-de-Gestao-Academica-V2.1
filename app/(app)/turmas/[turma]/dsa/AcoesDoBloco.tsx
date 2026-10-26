@@ -28,7 +28,11 @@
  */
 "use client";
 
-import { instrutoresDaAula, type HabilitacaoAtiva } from "@/lib/dominio/dsa/instrutores-da-aula";
+import {
+  fraseDaListaDaAula,
+  instrutoresDaAula,
+  type HabilitacaoAtiva,
+} from "@/lib/dominio/dsa/instrutores-da-aula";
 import * as React from "react";
 
 import { DialogFooter } from "@/components/ui/dialog";
@@ -370,7 +374,15 @@ export function AcoesDoBloco({
         </div>
       ) : null}
 
-      {temQuemMinistra ? (
+      {temQuemMinistra && ehAula && listaDeQuemMinistra.length === 0 ? (
+        /* RD-1 (Bloco 11): a disciplina escolhida não tem habilitado — a frase, no lugar do seletor vazio. */
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-texto">Quem ministra</span>
+          <p className="text-xs text-atrasado-tinta" data-slot="aula-sem-habilitado">
+            {fraseDaListaDaAula(disciplinaId === "" ? null : disciplinaId, listaDeQuemMinistra)}
+          </p>
+        </div>
+      ) : temQuemMinistra ? (
         /*
          * ⚠️ Trocar quem ministra passa pelo porteiro da habilitação (`RN-INST-01`, Risco: Alto). Na atividade, o
          *    «outro responsável (nome livre)» aparece porque a regra o aceita (`RN-RESP-1`).

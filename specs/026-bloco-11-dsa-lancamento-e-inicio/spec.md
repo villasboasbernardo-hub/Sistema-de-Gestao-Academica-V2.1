@@ -176,6 +176,35 @@ publicado.
 - D-31 · Q: Como se reduz o papel? → A: por **escala** (uma folha de cliente mede a largura e aplica `transform:
   scale`), sem pacote novo.
 
+**Decididas na implementação** (adotadas por padrão — Bernardo confere no fim):
+
+- D-32 · Q: Na aula, o que aparece no lugar da lista antes da disciplina, ou numa disciplina sem habilitado? → A: **a
+  frase** (*"Escolha a disciplina."* / *"Nenhum instrutor habilitado nesta disciplina. A habilitação é feita na ficha do
+  instrutor."*) **no lugar do seletor** — o seletor canônico vazio diria *"o seu perfil não os alcança"*, que é outra
+  coisa (gotcha 4). *Alternativa: o seletor vazio com a frase dele.*
+- D-33 · Q: O Limpar alcança o lançamento sem posição (o histórico da carga, sem `ta_inicial`)? → A: **não**: limpa o
+  que a grade mostra (`vw_ocupacao_do_dsa`), que é o que a tela permite excluir cartão a cartão. *Alternativa: buscar
+  também os sem posição da semana.*
+- D-34 · Q: No cartão, a aula gravada com um instrutor que não é habilitado (histórico)? → A: ele **não aparece** na
+  lista, e uma nota diz *"… não está habilitado nesta disciplina: escolha um habilitado"*; editar só o tópico não
+  confere nada (o par só se confere quando o instrutor ou a disciplina muda). *Alternativa: manter o gravado na lista.*
+- D-35 · Q: O *desde* e a escolha *só esta semana* de outras semanas? → A: o *desde* tira a escolha *só esta semana*
+  **da própria semana** (a pessoa escolheu nela o padrão dali para a frente) e mantém a das seguintes (escolha
+  explícita, mais específica). *Alternativa: o desde apagar todas as escolhas seguintes.*
+- D-36 · Q: Dois *desde*? → A: o novo **encerra** os *desde* daquela segunda em diante (vale *"dali para a frente"*); um
+  *desde* anterior continua valendo até a segunda do novo. *Alternativa: só substituir o da mesma segunda.*
+- D-37 · Q: O regime do curso gravado com a semana leva retrato? → A: **não**: regime nulo = o do curso na data da
+  semana, que já trava pelas vigências do curso (`app.lancamentos_que_travam_vigencia`); só o nomeado leva o retrato
+  (o relógio dele pode ser editado quando nenhuma turma o usa em *Editar turma*). *Alternativa: retrato sempre.*
+- D-38 · Q: Se gravar o regime ao salvar falhar? → A: o salvar **não se desfaz** (RN-DEG-01): a resposta diz que o
+  regime não foi gravado, e a semana continua resolvida pelas vigências. *Alternativa: desfazer o salvar.*
+- D-39 · Q: Os regimes oferecidos são os do curso ou os do currículo da turma? → A: os **do currículo da turma**, os
+  mesmos de *Editar turma* (`regimes_de_horario.curriculo_id`); o banco recusa só o de outro curso. *Alternativa: os
+  do curso inteiro.*
+- D-40 · Q: O papel no carrossel do Início? → A: a **legenda** *"código · original/ALT N · publicada em …"* acima de
+  cada papel, o título do curso no papel como `h3` (a página já tem o seu `h1`; a aparência é a mesma), e 10 s por
+  papel. *Alternativa: sem legenda.*
+
 ## 6. Banco — uma migration que só acrescenta (RD-3)
 
 - Tabela **`dsa_regime_da_semana`** (turma, ano ISO, semana ISO, origem `so_esta_semana` | `gravado`, o regime nomeado
@@ -183,9 +212,12 @@ publicado.
   semana; RLS de leitura como a trilha do DSA; escrita só por RPC.
 - Tabela **`turma_regime_vigencia`** (turma, regime nomeado ou nulo = o do curso, `vigente_de` = segunda-feira), só de
   acréscimo; RLS de leitura igual.
-- RPCs `SECURITY DEFINER` com porteiro (`registros_aula.criar` + alcance + turma não arquivada): definir *só esta
-  semana* (recusa semana salva, `23514`), definir *desde* (grava antes o regime das semanas salvas seguintes) e gravar o
-  regime da semana ao salvar. Espelhos `INVOKER` em `public`.
+- Três RPCs em `public`, `SECURITY DEFINER`, com o mesmo porteiro (`app.porteiro_do_regime_do_dsa`:
+  `registros_aula.criar` + alcance, na forma que falha fechado do gotcha 15; turma não arquivada; regime ativo do
+  curso): `definir_regime_do_dsa_so_nesta_semana` (recusa semana salva, `23514` `semana_do_dsa_salva`),
+  `definir_regime_do_dsa_desde` (grava antes o regime das semanas salvas daquela segunda em diante) e
+  `gravar_regime_da_semana_do_dsa` (ao salvar e ao publicar). As auxiliares ficam em `app`, sem `execute` para
+  `authenticated`. Migration `20261026043358_regime_da_semana_do_dsa.sql`; reversão em `reversao.sql`.
 - Sem `DELETE`, sem policy de escrita, sem mudar função existente.
 
 ## 7. Os casos que discriminam (DoD 8)
@@ -201,3 +233,6 @@ publicado.
 ## 8. Fora de escopo / pendências
 
 - `PEND-026-1` — o saldo (Início, `/turmas`, ficha) segue o regime de *Editar turma*, não o *desde* (D-15).
+- `PEND-026-2` — *o seletor canônico de instrutor diz "o seu perfil não os alcança" para QUALQUER lista vazia*: no
+  DSA a aula ganhou a frase própria (D-32), mas o componente continua sem saber distinguir *"não há"* de *"você não vê"*
+  quando quem chama esvazia a lista por outro motivo. Fica para quando houver outro chamador assim.
