@@ -239,6 +239,18 @@ export const CONTRATO = {
         historico: "empilha",
         avisaServidor: true,
       },
+      /*
+       * Bloco 11 (RD-7, D-28): a semana dos DSA publicados — uma DATA (`aaaa-mm-dd`) da semana; padrão vazio = hoje.
+       * Quem valida é `semanaDaDataEscolhida` (data inválida cai em hoje). Empilha: anterior/seguinte voltam pelo
+       * histórico, como no DSA (`RF-NAV-04`).
+       */
+      semana: {
+        nome: "semana",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
     },
   },
   /*

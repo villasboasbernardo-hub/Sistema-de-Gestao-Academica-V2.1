@@ -19,7 +19,11 @@ import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
-import { esquemaDaPublicacao, esquemaDaSemanaDoDsa } from "@/lib/validacao/publicacao-do-dsa";
+import {
+  esquemaDaPublicacao,
+  esquemaDaSemanaDoDsa,
+  esquemaDoRegimeDaSemana,
+} from "@/lib/validacao/publicacao-do-dsa";
 
 import { montarRetratoDaSemana } from "@/app/print/dsa/retrato";
 
@@ -40,10 +44,29 @@ function recusa(erro: ErroDoBanco): RespostaDaPublicacao {
   return { ok: false, erro: erro.code === "42501" ? SEM_PERMISSAO : traduzirRecusa(erro) };
 }
 
-/** A semana ISO de segunda a domingo — o intervalo dos rascunhos da semana. */
+/** A semana ISO de segunda a sábado (`datasDaSemanaIso` tem seis datas) — o intervalo dos rascunhos da semana. */
 function intervalo(ano: number, semana: number): { de: string; ate: string } {
   const dias = datasDaSemanaIso(ano, semana);
-  return { de: dias[0] ?? "", ate: dias[6] ?? dias[dias.length - 1] ?? "" };
+  return { de: dias[0] ?? "", ate: dias.at(-1) ?? "" };
+}
+
+/**
+ * RD-3 (Bloco 11): ao salvar e ao publicar, o regime de tempos da semana fica GRAVADO com ela — a semana salva nunca
+ * muda de regime. ⚠️ É uma segunda chamada, e a falha dela não desfaz o salvar (RN-DEG-01): a semana fica salva, e o
+ * regime dela continua sendo resolvido pelas vigências, que já travam com o lançamento — a resposta diz que faltou.
+ */
+async function gravarRegimeDaSemana(
+  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+  turmaId: string,
+  ano: number,
+  semana: number,
+): Promise<string> {
+  const { error } = await supabase.rpc("gravar_regime_da_semana_do_dsa", {
+    p_turma: turmaId,
+    p_ano: ano,
+    p_semana: semana,
+  });
+  return error ? " O regime de tempos da semana não foi gravado junto; avise o suporte." : "";
 }
 
 /** Salvar (RP-0): aplica os rascunhos da semana de uma vez e registra o salvamento. */
@@ -61,14 +84,16 @@ export async function salvarSemanaDoDsa(entrada: unknown): Promise<RespostaDaPub
     p_ate: ate,
   });
   if (error) return recusa(error as ErroDoBanco);
+  const doRegime = await gravarRegimeDaSemana(supabase, turmaId, ano, semana);
   revalidar();
   const n = Number(data ?? 0);
   return {
     ok: true,
     mensagem:
-      n === 0
+      (n === 0
         ? "Semana salva (não havia rascunho)."
-        : `Semana salva: ${n} lançamento${n === 1 ? "" : "s"} registrado${n === 1 ? "" : "s"}.`,
+        : `Semana salva: ${n} lançamento${n === 1 ? "" : "s"} registrado${n === 1 ? "" : "s"}.`) +
+      doRegime,
   };
 }
 
@@ -150,10 +175,46 @@ export async function publicarSemanaDoDsa(entrada: unknown): Promise<RespostaDaP
     ...(alteracao ? { p_justificativa: justificativa } : {}),
   });
   if (error) return recusa(error as ErroDoBanco);
+  const doRegime = await gravarRegimeDaSemana(supabase, turmaId, ano, semana);
   revalidar();
   const numero = Number(data ?? 0);
   return {
     ok: true,
-    mensagem: numero === 0 ? "Semana publicada (original)." : `Alteração publicada: ALT ${numero}.`,
+    mensagem:
+      (numero === 0 ? "Semana publicada (original)." : `Alteração publicada: ALT ${numero}.`) +
+      doRegime,
+  };
+}
+
+/**
+ * O regime de tempos da semana (RD-3, Bloco 11): *"Só esta semana"* ou *"Desta semana em diante"* — o segundo vira o
+ * padrão da turma no DSA dali para a frente, e as semanas já salvas depois dela ficam com o regime que tinham.
+ */
+export async function definirRegimeDaSemana(entrada: unknown): Promise<RespostaDaPublicacao> {
+  const conferido = esquemaDoRegimeDaSemana.safeParse(entrada);
+  if (!conferido.success) {
+    return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const { turmaId, ano, semana, regimeId, alcance } = conferido.data;
+  const supabase = await criarClienteDeServidor();
+  const parametros = { p_turma: turmaId, p_ano: ano, p_semana: semana, p_regime: regimeId };
+  const { data, error } =
+    alcance === "desde"
+      ? await supabase.rpc("definir_regime_do_dsa_desde", parametros)
+      : await supabase.rpc("definir_regime_do_dsa_so_nesta_semana", parametros);
+  if (error) return recusa(error as ErroDoBanco);
+  revalidar();
+  if (alcance === "so_esta_semana") {
+    return { ok: true, mensagem: "Regime de tempos trocado só nesta semana." };
+  }
+  const congeladas = Number(data ?? 0);
+  return {
+    ok: true,
+    mensagem:
+      "Regime de tempos trocado desta semana em diante." +
+      (congeladas === 0
+        ? ""
+        : ` ${congeladas} semana${congeladas === 1 ? "" : "s"} já salva${congeladas === 1 ? "" : "s"} depois desta ` +
+          `continua${congeladas === 1 ? "" : "m"} com o regime que tinha${congeladas === 1 ? "" : "m"}.`),
   };
 }

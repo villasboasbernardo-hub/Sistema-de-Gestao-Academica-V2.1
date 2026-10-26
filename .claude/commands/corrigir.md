@@ -62,6 +62,10 @@ Production respondendo). Nunca `--include-all`.
   reprovação instável se **isola** antes de ser chamada de instável (`PEND-014-7`).
 - Defeitos deliberados nos testes que provam a mudança → `pnpm verificar:tudo` → commit → push → abrir o PR com o
   template inteiro → **CI verde**.
+- **A ponta a ponta inteira fica com o CI** (Bernardo, 26/10/2026; regra no `CLAUDE.md`, *Fluxo de trabalho*): com
+  tipos, lint, unidade, build, pgTAP e RLS verdes localmente, siga para o push **sem perguntar**; localmente, só a
+  ponta a ponta dos arquivos afetados (pela mudança ou por um rebase), com **1 processo**. Antes do push, o ramo tem de
+  estar sobre a `main` atual — se não estiver, rebase mantendo as regras dos dois lados.
 - Repositório público: nenhum nome pessoal ou e-mail em código, doc ou commit; instrutor pelo código.
 - Não mexer no stash antigo. Não escrever dado no remoto por script sem autorização nominal.
 

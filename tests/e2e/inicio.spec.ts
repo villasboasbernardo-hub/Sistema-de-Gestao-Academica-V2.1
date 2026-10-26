@@ -328,12 +328,20 @@ test.describe("`FR-017.6` · curso inativo sai do panorama, e a contagem continu
     }
   }
 
-  /** O número *Turmas no recorte* — ele conta todas as turmas do ano, de qualquer situação (A-2). */
+  /*
+   * As turmas do recorte em QUALQUER situação: a soma dos quatro cartões do RD-8 (Bloco 11) — ativas, planejadas,
+   * concluídas e canceladas. ⚠️ Era o cartão *Turmas no recorte*, que saiu do Início no Bloco 11; a turma do curso
+   * desativado passa de ativa a concluída no caminho, então só o TOTAL discrimina, como antes.
+   */
   async function turmasNoRecorte(page: Page): Promise<number> {
-    const card = page
-      .locator('[data-slot="turmas-do-ano"] [data-slot="card-kpi"]')
-      .filter({ hasText: "Turmas no recorte" });
-    return Number(await card.locator(".text-kpi").innerText());
+    let total = 0;
+    for (const rotulo of ["Turmas ativas", "Planejadas", "Concluídas", "Canceladas"]) {
+      const card = page
+        .locator('[data-slot="turmas-do-ano"] [data-slot="card-kpi"]')
+        .filter({ hasText: rotulo });
+      total += Number(await card.locator(".text-kpi").innerText());
+    }
+    return total;
   }
 
   test.afterEach(async () => {

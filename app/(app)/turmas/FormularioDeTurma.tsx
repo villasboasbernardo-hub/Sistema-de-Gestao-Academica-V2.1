@@ -112,6 +112,11 @@ export type FormularioDeTurmaProps = {
       readonly ativo: boolean;
     }[];
     readonly travado: boolean;
+    /**
+     * RD-3 (Bloco 11, D-10): o regime que o DSA usa «desta semana em diante», quando alguém o trocou pelo relógio do
+     * DSA — só leitura aqui; a troca é pelo DSA, semana a semana.
+     */
+    readonly noDsaDesde?: { readonly desde: string; readonly rotulo: string } | null;
   };
   /**
    * Spec 021 (RC-4): o campo *Currículo* — os currículos que a turma pode seguir ("Currículo N (vigência AAAA) —
@@ -476,6 +481,12 @@ export function FormularioDeTurma({
                 lançamento.
               </p>
             )}
+            {campoDoRegime.noDsaDesde ? (
+              <p className="text-texto-suave text-xs" data-slot="regime-no-dsa-desde">
+                No DSA, desde a semana de {campoDoRegime.noDsaDesde.desde}:{" "}
+                {campoDoRegime.noDsaDesde.rotulo} — trocado pelo relógio do DSA, semana a semana.
+              </p>
+            ) : null}
           </div>
         ) : null}
 

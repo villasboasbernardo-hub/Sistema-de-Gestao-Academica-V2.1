@@ -16,7 +16,6 @@ const RAIZ = process.cwd();
 const ARQUIVOS = [
   "app/(app)/inicio/page.tsx",
   "app/(app)/inicio/CartaoDaTurma.tsx",
-  "app/(app)/inicio/ManchetesDoDsa.tsx",
   "app/(app)/turmas/page.tsx",
   "components/ciaara/seletor-de-ano.tsx",
   "lib/navegacao/ano-da-tela.ts",

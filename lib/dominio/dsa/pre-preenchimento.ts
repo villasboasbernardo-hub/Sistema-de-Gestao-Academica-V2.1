@@ -72,7 +72,11 @@ export type AtribuicaoPorDisciplina = {
  * vazio"*; quem olha a tela precisa saber **por quê** e **onde resolver**. E ele é um tipo fechado
  * para que a frase tenha dono único (`frasePara`) em vez de nascer escrita à mão em cada tela.
  */
-export type MotivoDoInstrutorVazio = "sem_atribuicao_na_turma" | null;
+export type MotivoDoInstrutorVazio =
+  | "sem_atribuicao_na_turma"
+  /** RD-1 (Bloco 11): há designado, mas nenhum habilitado (vínculo ativo) na disciplina — 16 no remoto em 26/10/2026. */
+  | "designado_sem_habilitacao"
+  | null;
 
 export type Preenchimento = {
   readonly instrutorId: string | null;
@@ -123,6 +127,21 @@ function instrutorDaAtribuicao(atribuicao: { readonly instrutorId: string } | un
 }
 
 /**
+ * A primeira atribuição da lista (já em antiguidade) cujo instrutor pode ministrar. Sem a lista de habilitados — a
+ * planilha de contingência (D-6 do Bloco 11) —, a primeira, como antes.
+ */
+function primeiraQueMinistra<A extends { readonly instrutorId: string }>(
+  candidatas: readonly A[],
+  habilitados: ReadonlySet<string> | undefined,
+): string | null {
+  for (const a of candidatas) {
+    const id = instrutorDaAtribuicao(a);
+    if (id !== null && (habilitados === undefined || habilitados.has(id))) return id;
+  }
+  return null;
+}
+
+/**
  * O que já vem preenchido quando o operador abre o formulário — **no máximo quatro decisões para
  * ele** (`FR-013`, `SC-009`).
  *
@@ -156,22 +175,26 @@ export function preencherLancamento(entrada: {
   readonly topico: string | null;
   /** `turmas.sala_alocada` — pode ser nula. */
   readonly salaDaTurma: string | null;
+  /**
+   * RD-1 (Bloco 11): os instrutores ATIVOS habilitados (vínculo ativo) na disciplina. O designado que não está aqui não
+   * é sugerido (D-3). Ausente — a planilha de contingência, D-6 —, a cascata de antes.
+   */
+  readonly habilitados?: ReadonlySet<string>;
 }): Preenchimento {
-  const { disciplinaId, unidadeEnsinoId, porUnidade, porDisciplina } = entrada;
+  const { disciplinaId, unidadeEnsinoId, porUnidade, porDisciplina, habilitados } = entrada;
 
   // Degrau 1 — só existe quando há UE escolhida.
-  const porUe =
-    unidadeEnsinoId === null
-      ? null
-      : instrutorDaAtribuicao(porUnidade.find((a) => a.unidadeEnsinoId === unidadeEnsinoId));
+  const daUe =
+    unidadeEnsinoId === null ? [] : porUnidade.filter((a) => a.unidadeEnsinoId === unidadeEnsinoId);
+  const porUe = primeiraQueMinistra(daUe, habilitados);
 
   // Degrau 2 — a atribuição da disciplina **nesta** turma.
-  const porDisc =
-    porUe !== null
-      ? null
-      : instrutorDaAtribuicao(porDisciplina.find((a) => a.disciplinaId === disciplinaId));
+  const daDisciplina = porDisciplina.filter((a) => a.disciplinaId === disciplinaId);
+  const porDisc = porUe !== null ? null : primeiraQueMinistra(daDisciplina, habilitados);
 
   const instrutorId = porUe ?? porDisc;
+  /* Havia designado (por UE ou por disciplina), mas nenhum habilitado: a frase é a de habilitar, não a de atribuir. */
+  const haviaDesignado = [...daUe, ...daDisciplina].some((a) => instrutorDaAtribuicao(a) !== null);
 
   return {
     instrutorId,
@@ -180,7 +203,12 @@ export function preencherLancamento(entrada: {
      *    nos ramos da cascata poderia discordar do `instrutorId` — frase de ausência com instrutor
      *    preenchido, que é a tela mentindo sobre o próprio campo.
      */
-    motivoDoInstrutorVazio: instrutorId === null ? "sem_atribuicao_na_turma" : null,
+    motivoDoInstrutorVazio:
+      instrutorId !== null
+        ? null
+        : haviaDesignado && habilitados !== undefined
+          ? "designado_sem_habilitacao"
+          : "sem_atribuicao_na_turma",
     tecnica: daUnidadeDeEnsino(unidadeEnsinoId, entrada.tecnicaSugerida),
     local: textoOuNulo(entrada.salaDaTurma),
     conteudo: daUnidadeDeEnsino(unidadeEnsinoId, entrada.topico),
@@ -205,6 +233,12 @@ export function preencherLancamento(entrada: {
  * o instrutor preenchido ao lado.
  */
 export function frasePara(motivo: MotivoDoInstrutorVazio): string | null {
+  if (motivo === "designado_sem_habilitacao") {
+    return (
+      "O instrutor designado não está habilitado nesta disciplina — habilite-o na ficha do instrutor, " +
+      "ou escolha um habilitado."
+    );
+  }
   if (motivo === "sem_atribuicao_na_turma") {
     return (
       "Esta disciplina não tem instrutor atribuído nesta turma. Atribua em Disciplinas, " +

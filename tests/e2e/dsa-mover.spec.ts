@@ -332,7 +332,12 @@ test.describe("`SC-012` · editar não toca o catálogo", () => {
    * habilitado e **trocar depois** por quem não é — e o banco **não recusa** (medido: não há FK nem
    * gatilho de habilitação). A frase e a contagem provam que a troca não entrou.
    */
-  test("⚠️ trocar por quem NÃO está habilitado é recusado, e o instrutor não muda no banco", async ({
+  /*
+   * ⚠️ **RD-1 (Bloco 11)**: no cartão da AULA a lista de quem ministra é só dos habilitados na disciplina — o não
+   *    habilitado não aparece para ser escolhido. A porta lateral do servidor segue fechada e se prova pelo par final
+   *    (trocar a disciplina mantendo o instrutor, `bloco-11-dsa.spec.ts`).
+   */
+  test("⚠️ no cartão da aula, quem NÃO está habilitado não aparece, e o instrutor não muda no banco", async ({
     page,
   }) => {
     await abrirASemana(page);
@@ -345,16 +350,13 @@ test.describe("`SC-012` · editar não toca o catálogo", () => {
 
     await page.locator(`${GRADE} td[data-celula="0:1"]`).click();
     await page.locator('[data-slot="seletor-instrutor"]').first().click();
-    await page
-      .locator('[data-slot="popover-content"]')
-      .getByRole("option", { name: new RegExp(SEMEADO.nomeSemHabilitacao, "i") })
-      .first()
-      .click();
-    await page.locator('[data-slot="gravar-edicao"]').click();
-
-    const recusa = page.locator('[data-slot="recusa-da-acao"]');
-    await expect(recusa).toBeVisible();
-    await expect(recusa).toContainText("não está habilitado");
+    await expect(
+      page
+        .locator('[data-slot="popover-content"]')
+        .getByRole("option", { name: new RegExp(SEMEADO.nomeSemHabilitacao, "i") }),
+      "o instrutor SEM habilitação apareceu no cartão da aula (RD-1)",
+    ).toHaveCount(0);
+    await page.keyboard.press("Escape");
 
     const { data: depois } = await banco()
       .from("registros_aula")
@@ -441,13 +443,18 @@ test.describe("`Q-12` · posicionar o que está na faixa «Sem posição» é o 
     /* ⚠️ O cartão diz que o lançamento está **sem posição** — e posicionar é escolher o tempo e gravar. */
     await expect(page.locator('[data-slot="bloco-escolhido"]')).toContainText("sem posição");
 
-    await page.locator("#dsa-mover-ta").selectOption("7");
+    /*
+     * ⚠️ **O 3º TEMPO DA QUINTA, que nenhum outro caso deste arquivo usa** (Bloco 11, 26/10/2026): era o 7º, e o
+     *    «arrastar e soltar» leva a avaliação nova da quinta para o 6º–7º. Com 1 processo os dois casos dividem a mesma
+     *    semente e este recusava (*"o 7º tempo fica dentro de «avaliação de D1»"*); com 2 processos, só às vezes.
+     */
+    await page.locator("#dsa-mover-ta").selectOption("3");
     await page.locator('[data-slot="gravar-edicao"]').click();
     expect(await aguardarAcao(page)).toBe("fechou");
 
     await salvarASemana(page); // Spec 024 (RP-0): o movimento é rascunho até o «Salvar a semana».
     const depois = await retratoDaAula(codigo);
-    expect(depois?.ta_inicial, "o lançamento da faixa não ganhou posição").toBe(7);
+    expect(depois?.ta_inicial, "o lançamento da faixa não ganhou posição").toBe(3);
     expect(depois?.id, "posicionar criou outro registro").toBe(antes?.id);
   });
 });

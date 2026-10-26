@@ -66,6 +66,7 @@ diferente *(decisão de 17/09/2026)*. ⚠️ **Medido no histórico em
 | Vai escrever migration | `docs/fase-2/21-Schema-Fisico-PostgreSQL.md` + `docs/sql-referencia/*.sql` **na ordem numérica** |
 | Vai escrever policy RLS ou mexer em auth | `docs/fase-2/22-Seguranca-RLS-e-Autenticacao.md` |
 | Vai criar tela ou componente | `docs/fase-2/23-Design-System-Tailwind-shadcn.md` **e** `docs/correcoes/padroes-de-tela.md` (RT-1 a RT-7, que prevalecem) |
+| Vai mexer no lançamento do DSA, na barra de ações dele ou no Início | `docs/correcoes/regras-do-dsa-lancamento.md` (RD-1 a RD-8) **e** `docs/correcoes/regras-da-publicacao-do-dsa.md` (RP-0 a RP-8) |
 | Não sabe onde um arquivo mora | `docs/fase-2/24-Estrutura-do-Repositorio-e-Convencoes.md` |
 | Vai buscar/ mutar dado | `docs/fase-2/25-Camada-de-Dados-e-Estado.md` |
 | Vai começar um épico | `docs/fase-1/06-Backlog-de-Epicos-V2.1.md` (§3) + `docs/vibe-coding/42-Prompts-por-Epico.md` |
@@ -374,6 +375,13 @@ squash, via PR com o template inteiro preenchido.
 conferência, pelo `/corrigir`; dúvidas decididas pela recomendação e conferidas no fim; sem sub-blocos.** O
 passo a passo é `.claude/commands/corrigir.md`, e as permissões que ele pressupõe (o `ask` do `db push` e do
 merge, o `deny` do `--include-all`, do push forçado e do stash) são `.claude/settings.json`.
+**A ponta a ponta INTEIRA fica com o CI** *(decisão de Bernardo Villas Boas, 26/10/2026, depois de o
+`verificar:tudo` do Bloco 11 ser interrompido por falta de memória da máquina)*: no `/corrigir`, com tipos, lint,
+unidade, build, **pgTAP e RLS verdes localmente**, a suíte de ponta a ponta inteira é o portão do **CI**, sem
+perguntar de novo. Localmente roda-se só a ponta a ponta **dos arquivos afetados** — os que provam a mudança e os que
+um rebase tocar —, com **1 processo**. Antes do push, o ramo está sobre a `main` atual; se não estiver, rebase,
+conflitos resolvidos mantendo as regras dos dois lados. ⚠️ O que mudou é **onde** a suíte inteira roda, não o que ela
+prova: vermelho no CI continua sendo corrigido antes da conferência.
 
 **Data de migration: duas datas, e as duas estão certas** *(registrado em 17/09/2026)*. O **nome do
 arquivo** carrega carimbo **UTC**, gerado pela CLI do Supabase (`supabase migration new`); o

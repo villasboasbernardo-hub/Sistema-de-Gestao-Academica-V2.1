@@ -205,7 +205,12 @@ test.describe("`SC-009` · o esforço é o da planilha, ou menos", () => {
 });
 
 test.describe("⚠️ `RN-INST-01` · a habilitação, e a Server Action é a ÚNICA defesa", () => {
-  test("⚠️ O CASO QUE DISCRIMINA · quem NÃO tem vínculo é recusado, e NADA é gravado", async ({
+  /*
+   * ⚠️ **RD-1 (Bloco 11) MUDOU ESTE CASO**: até ali quem não tinha vínculo APARECIA na lista (estava ativo) e a Server
+   *    Action recusava ao gravar. Agora ele nem aparece — *"não habilitado não aparece nem é aceito"* — e a recusa do
+   *    servidor se prova pelo par final da edição (`bloco-11-dsa.spec.ts`, D-4), o caminho que ainda chega a ela.
+   */
+  test("⚠️ O CASO QUE DISCRIMINA · quem NÃO tem vínculo não aparece na lista de quem ministra a aula", async ({
     page,
   }) => {
     await abrirASemana(page);
@@ -214,25 +219,17 @@ test.describe("⚠️ `RN-INST-01` · a habilitação, e a Server Action é a Ú
 
     await clicarCelulaLivre(page, TA_LIVRE_NA_SEGUNDA);
     await escolherDisciplinaEUnidade(page, SEMEADO.codDisciplina);
-    /*
-     * ⚠️ Escolher **quem não tem vínculo** pelo seletor canônico. Ele aparece na lista porque está
-     * ATIVO — o que falta é a habilitação naquela disciplina, e é isso que a regra cobra.
-     */
-    await escolherNoSeletor(page, SEMEADO.nomeSemHabilitacao);
-
-    await page.locator('[data-slot="gravar-lancamento"]').click();
-
-    /* A frase NOMEIA a habilitação que falta e diz onde resolver. */
-    const recusa = page.locator('[data-slot="recusa-do-lancamento"]');
-    await expect(recusa).toBeVisible();
-    await expect(recusa).toContainText("não está habilitado");
-    await expect(recusa).toContainText("ficha do instrutor");
-
-    /*
-     * ⚠️ **E A PROVA É A CONTAGEM NO BANCO.** Com a defesa removida, o banco aceitaria — não há FK
-     * nem gatilho de habilitação — e a mensagem poderia continuar aparecendo por outro motivo.
-     */
-    expect(await quantasAulas(), "a aula entrou mesmo sem habilitação").toBe(antes);
+    await page.locator('[data-slot="seletor-instrutor"]').first().click();
+    const painel = page.locator('[data-slot="popover-content"]');
+    await expect(
+      painel.getByRole("option", { name: new RegExp(SEMEADO.nomeHabilitado, "i") }).first(),
+    ).toBeVisible();
+    await expect(
+      painel.getByRole("option", { name: new RegExp(SEMEADO.nomeSemHabilitacao, "i") }),
+      "o instrutor SEM habilitação na disciplina apareceu na lista da aula (RD-1)",
+    ).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    expect(await quantasAulas(), "abrir a lista gravou alguma coisa").toBe(antes);
   });
 
   test("controle positivo · quem TEM vínculo lança, e a aula aparece na grade", async ({

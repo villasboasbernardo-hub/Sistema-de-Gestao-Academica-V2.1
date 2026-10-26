@@ -54,6 +54,7 @@ export function DocumentoDoDsa({
   assinaturasEditadas = {},
   alteracao = "ALT —",
   previa = false,
+  nivelDoTitulo = 1,
 }: {
   readonly dados: DadosDoDocumento;
   readonly nomeDeQuemImprime: string | null;
@@ -71,6 +72,11 @@ export function DocumentoDoDsa({
   readonly alteracao?: string;
   /** Spec 024 (FR-010): a PRÉVIA sai com a marca bem visível, e não é versão. */
   readonly previa?: boolean;
+  /**
+   * Bloco 11 (RD-7): no carrossel do Início há um papel por turma, e a página já tem o seu `h1` — lá o nome do curso
+   * vira um título de nível 3, com a MESMA aparência (`.dsa4-curso`). Ausente = `h1`, o papel de sempre.
+   */
+  readonly nivelDoTitulo?: 1 | 3;
 }) {
   const { grade } = dados;
   /* Spec 017 (FR-007): o cartão leva o nome no DSA; o quadro de CH, o nome inteiro (`dados.quadroDeCh`). */
@@ -110,7 +116,13 @@ export function DocumentoDoDsa({
           <span className="dsa4-organizacao">
             {SIGLA_DA_ORGANIZACAO} · {NOME_DA_ORGANIZACAO}
           </span>
-          <h1 data-slot="dsa-curso">{dados.curso}</h1>
+          {nivelDoTitulo === 1 ? (
+            <h1 data-slot="dsa-curso">{dados.curso}</h1>
+          ) : (
+            <h3 className="dsa4-curso" data-slot="dsa-curso">
+              {dados.curso}
+            </h3>
+          )}
           <span className="dsa4-subtitulo">Detalhe Semanal de Aulas</span>
         </div>
         <Image

@@ -54,6 +54,8 @@ import {
 import { avisoDoEmpurrao, empurrarEmCascata, ultimoTempoDoDia } from "@/lib/dominio/dsa/empurrar";
 import { responsavelNaEdicao } from "@/lib/dominio/dsa/responsavel-na-edicao";
 import { idDoLancamento } from "@/lib/dominio/dsa/posicao-herdada";
+import { camposDaExclusao, lancamentosParaLimpar } from "@/lib/dominio/dsa/limpar-semana";
+import { parPendenteDaAula } from "@/lib/dominio/dsa/instrutores-da-aula";
 import {
   numeroDaProximaSessao,
   recusaDaSessaoDeAplicacao,
@@ -134,11 +136,26 @@ async function conferirHabilitacao(
   instrutorId: string,
   disciplinaId: string,
 ): Promise<string | null> {
-  const { data } = await supabase
-    .from("instrutor_disciplina")
-    .select("instrutor_id, disciplina_id, status")
-    .eq("instrutor_id", instrutorId)
-    .eq("disciplina_id", disciplinaId);
+  const [{ data }, { data: daFicha }] = await Promise.all([
+    supabase
+      .from("instrutor_disciplina")
+      .select("instrutor_id, disciplina_id, status")
+      .eq("instrutor_id", instrutorId)
+      .eq("disciplina_id", disciplinaId),
+    supabase
+      .from("instrutores")
+      .select("nome_completo, status")
+      .eq("id", instrutorId)
+      .maybeSingle(),
+  ]);
+  /*
+   * ⚠️ **RD-1, D-5 (Bloco 11): o INATIVO não é escolhido no DSA** — a lista não o mostra, e quem o mandar por fora é
+   *    recusado aqui, com o vínculo ativo ou não.
+   */
+  const ficha = daFicha as { nome_completo?: string; status?: string } | null;
+  if (ficha && ficha.status !== "ativo") {
+    return `${ficha.nome_completo ?? "O instrutor"} está inativo: não pode ser escolhido no DSA.`;
+  }
 
   const vinculos: VinculoDeHabilitacao[] = (
     (data ?? []) as { instrutor_id: string; disciplina_id: string; status: string }[]
@@ -154,15 +171,12 @@ async function conferirHabilitacao(
    * ⚠️ A frase **nomeia a habilitação que falta** e diz onde resolver. *"Instrutor não habilitado"*
    * sem o nome da disciplina manda a pessoa adivinhar qual vínculo criar.
    */
-  const [{ data: instrutor }, { data: disciplina }] = await Promise.all([
-    supabase.from("instrutores").select("nome_completo").eq("id", instrutorId).maybeSingle(),
-    supabase
-      .from("disciplinas")
-      .select("cod_disciplina, nome_disciplina")
-      .eq("id", disciplinaId)
-      .maybeSingle(),
-  ]);
-  const nome = (instrutor as { nome_completo?: string } | null)?.nome_completo ?? "O instrutor";
+  const { data: disciplina } = await supabase
+    .from("disciplinas")
+    .select("cod_disciplina, nome_disciplina")
+    .eq("id", disciplinaId)
+    .maybeSingle();
+  const nome = ficha?.nome_completo ?? "O instrutor";
   const d = disciplina as { cod_disciplina?: string; nome_disciplina?: string } | null;
   const qual = d ? `${d.cod_disciplina} — ${d.nome_disciplina}` : "nesta disciplina";
   return `${nome} não está habilitado em ${qual}. Habilite-o na ficha do instrutor.`;
@@ -287,7 +301,12 @@ async function vereditoDosTetos(
           .eq("id", entrada.disciplinaId)
           .maybeSingle(),
     /* Spec 018 (C-9, C-16): o regime da TURMA, senão o do curso — o excepcional é o que passa dele. */
-    temposDoDiaDaTurmaNoServidor(supabase, { turmaId: entrada.turmaId, cursoId: entrada.cursoId }),
+    temposDoDiaDaTurmaNoServidor(supabase, {
+      turmaId: entrada.turmaId,
+      cursoId: entrada.cursoId,
+      /* RD-3 (D-14): o regime da SEMANA do lançamento. */
+      data: entrada.data,
+    }),
   ]);
 
   const ocupacao = (
@@ -539,7 +558,11 @@ async function cascataDaTurma(
       .eq("turma_id", entrada.turmaId)
       .eq("data", entrada.data),
     /* Spec 018 (C-9): a parede da cascata é o último tempo do regime da TURMA, senão o do curso. */
-    temposDoDiaDaTurmaNoServidor(supabase, { turmaId, cursoId: entrada.cursoId }),
+    temposDoDiaDaTurmaNoServidor(supabase, {
+      turmaId,
+      cursoId: entrada.cursoId,
+      data: entrada.data,
+    }),
     paradasDoPeriodo(supabase, entrada.data, entrada.data),
     supabase
       .from("atividades_nao_letivas")
@@ -1133,7 +1156,7 @@ export async function lancarEstudoIndividualDaSemana(
       .lte("data", ate),
     supabase
       .from("atividades_nao_letivas")
-      .select("data")
+      .select("id, data, rascunho_de, rascunho_exclui")
       .eq("turma_id", turmaId)
       .eq("categoria_normativa", "Estudo_Individual")
       .eq("status", "ativo")
@@ -1141,11 +1164,20 @@ export async function lancarEstudoIndividualDaSemana(
       .lte("data", ate),
     supabase
       .from("turmas")
-      .select("modalidade, inicio_etapa_presencial, termino_etapa_presencial")
+      .select("modalidade, inicio_etapa_presencial, termino_etapa_presencial, curso_id")
       .eq("id", turmaId)
       .maybeSingle(),
     paradasDoPeriodo(supabase, de, ate),
   ]);
+  /*
+   * ⚠️ **RD-2 (Bloco 11): O ÚLTIMO TEMPO DO REGIME DA SEMANA** — não o 1º num dia vazio (o defeito). O regime é o da
+   *    semana (RD-3, D-14), uma leitura só para os cinco dias.
+   */
+  const temposDoRegime = await temposDoDiaDaTurmaNoServidor(supabase, {
+    turmaId,
+    cursoId: (turmaRes.data?.curso_id as string | null | undefined) ?? null,
+    data: de,
+  });
 
   /* ⚠️ O dia bloqueado é o da MESMA função da grade e da recusa de aula (`RN-EVT-04`). */
   /* Spec 023 (D-4): só o feriado que alcança a turma pula o dia. */
@@ -1164,7 +1196,21 @@ export async function lancarEstudoIndividualDaSemana(
         terminoEtapaPresencial: (turmaRes.data.termino_etapa_presencial as string | null) ?? null,
       }
     : null;
-  const jaTem = new Set(((eiRes.data ?? []) as { data: string }[]).map((e) => e.data));
+  /*
+   * ⚠️ **O EI QUE A GRADE MOSTRA, com o rascunho por cima** (revisão do Bloco 11, RD-4): o salvo excluído pelo cartão ou
+   *    pelo *Limpar* continua ativo até o *Salvar minuta*, com uma sombra ativa de exclusão. Contar os dois deixava o dia
+   *    sem EI na tela e «já tem» aqui — o botão não repunha o que o *Limpar* tirou.
+   */
+  const eis = (eiRes.data ?? []) as {
+    id: string;
+    data: string;
+    rascunho_de: string | null;
+    rascunho_exclui: boolean;
+  }[];
+  const sombreados = new Set(eis.flatMap((e) => (e.rascunho_de === null ? [] : [e.rascunho_de])));
+  const jaTem = new Set(
+    eis.filter((e) => !e.rascunho_exclui && !sombreados.has(e.id)).map((e) => e.data),
+  );
 
   const ultimoTaDoDia = new Map<string, number>();
   for (const o of (ocupacaoRes.data ?? []) as { data: string; ta_final: number | null }[]) {
@@ -1189,7 +1235,7 @@ export async function lancarEstudoIndividualDaSemana(
       pulados.push(dia);
       continue;
     }
-    const slot = slotDoEstudoIndividual(ultimoTaDoDia.get(dia) ?? null);
+    const slot = slotDoEstudoIndividual(ultimoTaDoDia.get(dia) ?? null, temposDoRegime);
     if (slot === null) {
       pulados.push(dia);
       continue;
@@ -1256,6 +1302,8 @@ type FatoDoBanco = {
   readonly categoria: CategoriaDeAtividade | null;
   /** O item do currículo da AVALIAÇÃO (A2: com item, o instrumento é o dele); nas demais origens, ausente. */
   readonly avaliacaoCurriculoId?: string | null;
+  /** Quem ministra a AULA (RD-1: o par final da edição); nas demais origens, ausente. */
+  readonly instrutorId?: string | null;
 };
 
 async function lerFato(
@@ -1267,12 +1315,12 @@ async function lerFato(
     const { data } = await supabase
       .from("registros_aula")
       .select(
-        "data, ta_inicial, tempos_consumidos, turma_id, curso_id, disciplina_id, unidade_ensino_id, origem_migracao_v1, editado_em",
+        "data, ta_inicial, tempos_consumidos, turma_id, curso_id, disciplina_id, unidade_ensino_id, origem_migracao_v1, editado_em, instrutor_id, salvo",
       )
       .eq("id", fatoId)
       .maybeSingle();
     if (!data) return null;
-    const l = data as {
+    const salvoDaLinha = data as {
       data: string;
       ta_inicial: number | null;
       tempos_consumidos: number | null;
@@ -1282,6 +1330,52 @@ async function lerFato(
       unidade_ensino_id: string | null;
       origem_migracao_v1: string | null;
       editado_em: string | null;
+      instrutor_id: string | null;
+      salvo: boolean | null;
+    };
+    /*
+     * ⚠️ **O PAR PENDENTE MORA NA SOMBRA** (revisão do Bloco 11, RD-1/D-4): com o id de um SALVO que já tem rascunho de
+     *    edição, `gravar_rascunho_do_dsa` grava **na sombra** — então o instrutor, a disciplina e a UE que valem depois
+     *    da edição são os dela, não os do salvo. Conferir o par pelo salvo deixava duas edições seguidas (o instrutor
+     *    numa, a UE na outra) gravarem um par não habilitado sem recusa.
+     */
+    type LinhaDaSombra = {
+      instrutor_id: string | null;
+      disciplina_id: string | null;
+      unidade_ensino_id: string | null;
+      rascunho_exclui: boolean;
+    };
+    const sombra: LinhaDaSombra | null =
+      salvoDaLinha.salvo === true
+        ? ((
+            await supabase
+              .from("registros_aula")
+              .select("instrutor_id, disciplina_id, unidade_ensino_id, rascunho_exclui")
+              .eq("rascunho_de", fatoId)
+              .eq("status", "ativo")
+              .maybeSingle()
+          ).data as LinhaDaSombra | null)
+        : null;
+    const par = parPendenteDaAula(
+      {
+        instrutorId: salvoDaLinha.instrutor_id,
+        disciplinaId: salvoDaLinha.disciplina_id,
+        unidadeEnsinoId: salvoDaLinha.unidade_ensino_id,
+      },
+      sombra === null
+        ? null
+        : {
+            instrutorId: sombra.instrutor_id,
+            disciplinaId: sombra.disciplina_id,
+            unidadeEnsinoId: sombra.unidade_ensino_id,
+            rascunhoExclui: sombra.rascunho_exclui,
+          },
+    );
+    const l = {
+      ...salvoDaLinha,
+      instrutor_id: par.instrutorId,
+      disciplina_id: par.disciplinaId,
+      unidade_ensino_id: par.unidadeEnsinoId,
     };
     /*
      * ⚠️ **A DISCIPLINA DE UMA AULA COM UE NÃO ESTÁ NA COLUNA `disciplina_id` — ELA ESTÁ NA UE, e a
@@ -1314,6 +1408,7 @@ async function lerFato(
       unidadeEnsinoId: l.unidade_ensino_id,
       herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
       categoria: null,
+      instrutorId: l.instrutor_id,
     };
   }
 
@@ -1660,9 +1755,16 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
   }
   const mudouDisciplina = disciplinaId !== fato.disciplinaId;
 
-  if (a.instrutorId != null && disciplinaId !== null) {
+  /*
+   * ⚠️ **RD-1, D-4 (Bloco 11): O PAR FINAL.** Na aula, mudar só a disciplina (pela UE) com o mesmo instrutor também
+   *    confere — o instrutor de antes pode não ser habilitado na disciplina nova. Sem mudar nenhum dos dois, nada se
+   *    confere: a edição do tópico de uma aula histórica não é recusada por um vínculo que não existia.
+   */
+  const instrutorFinal =
+    a.instrutorId ?? (a.origem === "aula" && mudouDisciplina ? (fato.instrutorId ?? null) : null);
+  if (instrutorFinal != null && disciplinaId !== null) {
     const atuacao: Atuacao = a.origem === "aula" ? "ministrar" : "avaliacao";
-    const recusa = await conferirHabilitacao(supabase, atuacao, a.instrutorId, disciplinaId);
+    const recusa = await conferirHabilitacao(supabase, atuacao, instrutorFinal, disciplinaId);
     if (recusa !== null) return falha(recusa, "instrutorId");
   }
   /*
@@ -1878,11 +1980,97 @@ export async function excluir(entrada: unknown): Promise<ResultadoDoLancamento> 
    *    1ª sessão) continua lançada. Excluir a PROVA continua cancelando a avaliação, e as sessões dela saem de toda
    *    conta porque a view e as somas filtram a avaliação viva.
    */
-  const campos: Record<string, Valor> =
-    origem === "avaliacao" ? { status: "cancelada" } : { status: "inativo" };
+  /* RD-4 (Bloco 11): a exclusão do cartão é UMA função, a mesma do *Limpar semana*. */
+  const campos: Record<string, Valor> = { ...camposDaExclusao(origem) };
 
   const alterado = await gravarNoFato(supabase, origem, fatoId, fato.cursoId, campos);
   if (typeof alterado === "string") return falha(alterado);
   revalidar();
   return { ok: true, id: fatoId, avisos: [] };
+}
+
+/**
+ * **Limpar semana** (RD-4, Bloco 11): exclui, de uma vez, os lançamentos da turma na semana — pela MESMA exclusão do
+ * cartão (`camposDaExclusao`), em lote, por `gravar_rascunho_do_dsa`.
+ *
+ * > *"Limpar semana apaga todos os lançamentos da semana com confirmação; em semana publicada só depois de Fazer
+ * > alteração; usa a mesma exclusão do cartão, em lote, sem brigar com a trilha imutável."* — Bernardo Villas Boas,
+ * > 26/10/2026
+ *
+ * ⚠️ **O QUE ESTAVA SALVO VIRA RASCUNHO DE EXCLUSÃO** (D-18) e só sai de vez no *Salvar minuta*; *Descartar rascunho*
+ *    o desfaz. Nada se apaga (regra 4) e a trilha não recebe evento (D-19): o Limpar é edição, como o cartão.
+ * ⚠️ **SEMANA PUBLICADA: QUEM RECUSA É O BANCO** (RP-5, `gravar_rascunho_do_dsa`), até *Fazer alteração*.
+ * ⚠️ **A GRADE DA TELA** (`vw_ocupacao_do_dsa`): o que o DSA mostra é o que se limpa — a sombra no lugar do salvo. A
+ *    atividade de todas as turmas e a parada do Calendário ficam (D-17).
+ */
+export async function limparSemanaDoDsa(
+  entrada: unknown,
+): Promise<
+  | { readonly ok: true; readonly excluidos: number }
+  | { readonly ok: false; readonly mensagem: string }
+> {
+  const conferido = esquemaDoEstudoIndividualDaSemana.safeParse(entrada);
+  if (!conferido.success) {
+    return { ok: false, mensagem: conferido.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const { turmaId, ano, semana } = conferido.data;
+  const supabase = await criarClienteDeServidor();
+  const arquivada = await recusaSeTurmaArquivada(supabase, turmaId);
+  if (arquivada) return { ok: false, mensagem: arquivada };
+
+  const dias = datasDaSemanaIso(ano, semana);
+  const de = dias[0];
+  const ate = dias[dias.length - 1];
+  if (de === undefined || ate === undefined)
+    return { ok: false, mensagem: "Não identifiquei a semana." };
+
+  const [gradeRes, paradasRes, turmaRes] = await Promise.all([
+    supabase
+      .from("vw_ocupacao_do_dsa")
+      .select("origem, fato_id, sessao_id, turma_id")
+      .eq("turma_id", turmaId)
+      .gte("data", de)
+      .lte("data", ate),
+    supabase
+      .from("atividades_nao_letivas")
+      .select("id")
+      .eq("turma_id", turmaId)
+      .eq("bloqueia_aula", true)
+      .gte("data", de)
+      .lte("data", ate),
+    supabase.from("turmas").select("curso_id").eq("id", turmaId).maybeSingle(),
+  ]);
+  if (gradeRes.error) return { ok: false, mensagem: traduzirRecusa(gradeRes.error as ErroDoBanco) };
+  const paradas = new Set(((paradasRes.data ?? []) as { id: string }[]).map((p) => p.id));
+  const exclusoes = lancamentosParaLimpar(
+    (
+      (gradeRes.data ?? []) as {
+        origem: string;
+        fato_id: string;
+        sessao_id: string | null;
+        turma_id: string | null;
+      }[]
+    ).map((l) => ({
+      origem: l.origem,
+      fatoId: l.fato_id,
+      sessaoId: l.sessao_id,
+      turmaId: l.turma_id,
+      bloqueiaAula: l.origem === "atividade_nao_letiva" && paradas.has(l.fato_id),
+    })),
+  );
+  if (exclusoes.length === 0) return { ok: true, excluidos: 0 };
+
+  const gravado = await gravarEmTransacao(
+    supabase,
+    exclusoes.map((e) => ({
+      acao: "atualizar" as const,
+      tabela: TABELA_DA_ORIGEM[e.origem],
+      id: e.id,
+      campos: { ...camposDaExclusao(e.origem) },
+    })),
+    ((turmaRes.data as { curso_id?: string } | null)?.curso_id ?? null) || null,
+  );
+  if (gravado !== true) return { ok: false, mensagem: gravado };
+  revalidar();
+  return { ok: true, excluidos: exclusoes.length };
 }

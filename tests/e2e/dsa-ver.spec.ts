@@ -541,19 +541,20 @@ test.describe("`FR-011` · os três caminhos clicáveis até o DSA", () => {
     );
   }
 
-  test("o `/inicio` tem o link «DSA da semana» no bloco da turma", async ({ page }) => {
+  /*
+   * ⚠️ **ITEM 7 DO BLOCO 11**: o cartão da turma no `/inicio` perdeu o «Abrir DSA» — o DSA publicado da semana está
+   *    logo abaixo, no papel (RD-7). O caso agora garante a ausência, para o botão não voltar por cópia.
+   */
+  test("o cartão da turma no `/inicio` não tem mais o «Abrir DSA» (Bloco 11, item 7)", async ({
+    page,
+  }) => {
     await entrar(page, EMAIL);
     await page.goto("/inicio");
     await inicioNoAnoDaSemente(page);
-    const link = page.locator('[data-slot="dsa-da-semana"]').first();
-    /*
-     * ⚠️ O painel do `/inicio` mostra as turmas COM lançamento; a semente do DSA tem lançamento na
-     * turma com relógio, então o bloco existe. Se não existir, o caso diz isso em vez de reprovar
-     * por tempo.
-     */
-    await expect(link, "o `/inicio` não ofereceu o DSA de turma nenhuma").toBeVisible();
-    await link.click();
-    await expect.poll(() => new URL(page.url()).pathname).toContain("/dsa");
+    await expect(page.locator('[data-slot="panorama-de-turmas"]')).toBeVisible();
+    await expect(
+      page.locator('[data-slot="panorama-de-turmas"] [data-slot="dsa-da-semana"]'),
+    ).toHaveCount(0);
   });
 
   /*
@@ -605,8 +606,10 @@ test.describe("`FR-011` · os três caminhos clicáveis até o DSA", () => {
     await expect(ead.locator('[data-slot="dsa-da-semana"]')).toHaveCount(0);
     await expect(ead.locator('[data-slot="dsa-turma-ead"]')).toHaveText(AVISO_DE_TURMA_EAD);
 
+    /* Bloco 11 (item 7): a presencial não tem mais o «Abrir DSA» no cartão — e também não tem o aviso da EAD. */
     const presencial = bloco(SEMEADO.turmaComRelogio);
-    await expect(presencial.locator('[data-slot="dsa-da-semana"]')).toBeVisible();
+    await expect(presencial).toHaveCount(1);
+    await expect(presencial.locator('[data-slot="dsa-da-semana"]')).toHaveCount(0);
     await expect(presencial.locator('[data-slot="dsa-turma-ead"]')).toHaveCount(0);
   });
 

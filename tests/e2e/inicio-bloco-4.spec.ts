@@ -19,8 +19,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
-import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
-import { campoDaSemanaDoCurso, semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
 import { semanaDoPainel } from "@/lib/dominio/painel-de-turmas";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 
@@ -204,8 +202,6 @@ test.afterAll(async () => {
 
 const cartao = (page: Page, codigo: string) =>
   page.locator(`[data-slot="carrossel-de-turmas"] [data-turma="${codigo}"]`);
-const manchete = (page: Page, codigo: string) =>
-  page.locator(`[data-slot="manchete-do-dsa"][data-turma-da-manchete="${codigo}"]`);
 
 /** O número de um indicador do Início, pelo rótulo. */
 async function indicadorDoInicio(page: Page, rotulo: string): Promise<number> {
@@ -273,7 +269,9 @@ test.describe("Spec 019 · FR-001 e A-1 · o ano, numa caixa de seleção no can
 });
 
 test.describe("Spec 019 · A-2 a A-4 · os cartões", () => {
-  test("A-2 · só as ATIVAS do ano têm cartão; os números contam todas", async ({ page }) => {
+  test("A-2 e RD-8 · só as ATIVAS do ano têm cartão; os números contam por situação", async ({
+    page,
+  }) => {
     await entrar(page, EMAIL, "/inicio");
     await expect(cartao(page, T.comAula)).toBeVisible();
     await expect(cartao(page, T.semAula)).toHaveCount(1);
@@ -282,8 +280,17 @@ test.describe("Spec 019 · A-2 a A-4 · os cartões", () => {
     const cartoes = await page
       .locator('[data-slot="carrossel-de-turmas"] [data-slot="item-do-carrossel"]')
       .count();
-    // A planejada e a concluída do ano estão nos números, e não nos cartões.
-    expect(await indicadorDoInicio(page, "Turmas no recorte")).toBeGreaterThanOrEqual(cartoes + 2);
+    /*
+     * RD-8 (Bloco 11): Turmas ativas · Planejadas · Concluídas · Canceladas, do ano escolhido. As ativas são os cartões
+     * (a mesma população, o mesmo desenho); a planejada e a concluída do ano estão nos números, e não nos cartões.
+     */
+    expect(await indicadorDoInicio(page, "Turmas ativas")).toBe(cartoes);
+    expect(await indicadorDoInicio(page, "Planejadas")).toBeGreaterThanOrEqual(1);
+    expect(await indicadorDoInicio(page, "Concluídas")).toBeGreaterThanOrEqual(1);
+    await expect(page.locator('[data-slot="turmas-do-ano"]')).not.toContainText(
+      "Turmas no recorte",
+    );
+    await expect(page.locator('[data-slot="turmas-do-ano"]')).not.toContainText("Carga executada");
   });
 
   test("A-2 · sem turma ativa no ano, uma frase, e nada de carrossel", async ({ page }) => {
@@ -320,49 +327,23 @@ test.describe("Spec 019 · A-2 a A-4 · os cartões", () => {
   });
 });
 
-test.describe("Spec 019 · FR-003 · os DSA da semana", () => {
-  test("a manchete diz a semana do curso, os TA e os dias lançados, e abre o DSA; a EAD não entra", async ({
-    page,
-  }) => {
-    await entrar(page, EMAIL, "/inicio");
-    const m = manchete(page, T.comAula);
-    await expect(m).toHaveCount(1);
-    // A MESMA conta do cabeçalho do DSA (`semanaDoCurso`): a manchete não tem número próprio.
-    await expect(m.locator('[data-slot="semana-do-curso-da-manchete"]')).toHaveText(
-      campoDaSemanaDoCurso(
-        semanaDoCurso({
-          dataInicio: `${ANO}-01-05`,
-          dataTermino: `${ANO}-12-18`,
-          duracaoSemanasDoCurso: 40,
-          semana: semanaIsoDe(HOJE) ?? { ano: ANO, numero: 1 },
-        }),
-      ),
-    );
-    const resumo = m.locator('[data-slot="resumo-do-dsa"]');
-    await expect(resumo).toHaveAttribute("data-ta", "5");
-    await expect(resumo).toHaveAttribute("data-dias", "2");
-    await expect(resumo).toHaveText("5 TA lançados em 2 dias · 1 disciplina");
-    await expect(manchete(page, T.semAula).locator('[data-slot="resumo-do-dsa"]')).toHaveText(
-      "Nada lançado nesta semana ainda",
-    );
-    await expect(manchete(page, T.ead)).toHaveCount(0);
-    await expect(manchete(page, T.arquivada)).toHaveCount(0);
-    await expect(manchete(page, T.seguinte)).toHaveCount(0);
-
-    await m.locator('[data-slot="abrir-o-dsa-da-manchete"]').click();
-    await expect(page.getByRole("heading", { name: "Detalhe Semanal de Aula" })).toBeVisible();
-    await expect
-      .poll(() => decodeURIComponent(new URL(page.url()).pathname))
-      .toBe(`/turmas/${T.comAula}/dsa`);
-  });
-});
-
+/*
+ * ⚠️ **AS MANCHETES DO DSA SAÍRAM NO BLOCO 11** (D-30): no lugar delas, o papel do DSA PUBLICADO da semana (RD-7), cujo
+ *    percurso está em `bloco-11-dsa.spec.ts`.
+ */
+/*
+ * ⚠️ **O CASO MEDIA O CARROSSEL DAS MANCHETES**, que saiu no Bloco 11 (D-30). O componente é UM só (`Carrossel`), e o
+ *    das turmas é o que a semente garante: duas turmas ativas no ano. Numa tela estreita cabe um cartão por vez — é o
+ *    que dá ao carrossel um próximo para onde passar.
+ */
 test.describe("Spec 019 · FR-004 · o carrossel passa sozinho, pausa e anda por teclado", () => {
-  const dsa = (page: Page) => page.locator('[data-slot="carrossel-de-dsa"]');
+  const dsa = (page: Page) => page.locator('[data-slot="carrossel-de-turmas"]');
 
   test("passa sozinho; pausa ao apontar, ao focar e pelo botão; ← e → passam", async ({ page }) => {
     test.setTimeout(60_000);
     await entrar(page, EMAIL, "/inicio");
+    /* Depois de entrar: estreita, a lateral vira o botão «Menu», e o `entrar` espera a navegação principal. */
+    await page.setViewportSize({ width: 420, height: 900 });
     await page.mouse.move(0, 0);
     const c = dsa(page);
     await expect(c).toHaveAttribute("data-passando", "true");

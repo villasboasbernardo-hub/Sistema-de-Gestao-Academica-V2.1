@@ -360,6 +360,11 @@ function porChave(
       return "Esta semana do DSA ainda não foi publicada: não há o que alterar.";
     case "semana_do_dsa_nao_salva":
       return "Salve a semana antes de publicar (e não deixe rascunho por salvar).";
+    /* Bloco 11 (RD-3): a semana salva ou publicada nunca muda de regime de tempos. */
+    case "semana_do_dsa_salva":
+      return "Esta semana já foi salva: o regime de tempos dela não muda mais. Escolha a partir de uma semana não salva.";
+    case "regime_de_outro_curso":
+      return "O regime escolhido não é um regime ativo do curso desta turma.";
     case "alteracao_sem_justificativa":
       return "Escreva a justificativa da alteração (ao menos 10 caracteres).";
     case "dsa_fora_do_alcance":

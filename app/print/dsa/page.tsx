@@ -128,7 +128,8 @@ export default async function ImpressaoDoDsa({
     ano: escolha.ano,
     numero: escolha.numero,
     de: diasDaSemana[0] ?? hoje,
-    ate: diasDaSemana[6] ?? hoje,
+    /* Bloco 11 (FR-005.3): a lista tem seis datas, de segunda a sábado — o índice 6 caía no «?? hoje». */
+    ate: diasDaSemana.at(-1) ?? hoje,
   });
   const publicadas = publicacao.eventos.filter(
     (e) => (e.tipo === "publicado" || e.tipo === "alteracao_publicada") && e.dados !== null,

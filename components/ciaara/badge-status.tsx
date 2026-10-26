@@ -13,6 +13,7 @@
  * ⚠️ O MAPA DE TONS É `Record<Tom, string>` DE PROPÓSITO: um status novo em `STATUS` passa a
  * faltar aqui e **quebra a compilação**, em vez de sair sem cor e sem ninguém notar.
  */
+import type { LucideIcon } from "lucide-react";
 import { cn } from "cn";
 
 import type { Tom } from "@/lib/design/vocabulario";
@@ -33,10 +34,15 @@ export type BadgeStatusProps = {
   readonly tom: Tom;
   /** ⚠️ OBRIGATÓRIO. É o `FR-025` expresso no tipo, não na convenção. */
   readonly rotulo: string;
+  /**
+   * Bloco 11 (RD-5): o selo com ícone — *"situação da semana só como selo (ícone + palavra)"*. O ícone acompanha a
+   * palavra, nunca a substitui (`FR-025`), e por isso é decorativo para o leitor de tela.
+   */
+  readonly icone?: LucideIcon;
   readonly className?: string;
 };
 
-export function BadgeStatus({ tom, rotulo, className }: BadgeStatusProps) {
+export function BadgeStatus({ tom, rotulo, icone: Icone, className }: BadgeStatusProps) {
   return (
     <span
       data-slot="badge-status"
@@ -44,9 +50,11 @@ export function BadgeStatus({ tom, rotulo, className }: BadgeStatusProps) {
       className={cn(
         "rounded-ciaara-sm inline-flex w-fit shrink-0 items-center border px-2 py-0.5 text-xs font-medium whitespace-nowrap",
         TONS[tom],
+        Icone ? "gap-1" : null,
         className,
       )}
     >
+      {Icone ? <Icone aria-hidden="true" className="size-3.5 shrink-0" /> : null}
       {rotulo}
     </span>
   );

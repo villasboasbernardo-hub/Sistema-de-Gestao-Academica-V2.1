@@ -296,10 +296,19 @@ export function trechosDoBloco(
 }
 
 /**
- * O slot do **Estudo Individual** de um dia: o seguinte ao último TA lançado (`D-4`).
+ * O slot do **Estudo Individual** de um dia: o **último tempo do regime**; se o dia já tem lançamento nele ou depois,
+ * logo depois do último lançado (RD-2, Bloco 11).
  *
- * *(decisão de **Bernardo Villas Boas**, 05/10/2026, contra a recomendação de usar o slot fixo
- * `regimeTempos + 1`.)*
+ * > *"Estudo Individual automático sempre no ÚLTIMO tempo do regime, nunca no primeiro; o usuário pode mover."*
+ * > — Bernardo Villas Boas, 26/10/2026 (`docs/correcoes/regras-do-dsa-lancamento.md`, RD-2)
+ *
+ * ⚠️ **SUBSTITUI A `D-4`** (05/10/2026, *"o seguinte ao último TA lançado"*), por decisão nominal no pedido do Bloco 11:
+ *    no dia VAZIO a D-4 dava o **1º tempo** (o defeito relatado), e no dia parcial — 4 TA num regime de 8 — o 5º; a RD-2
+ *    dá o 8º nos dois (D-8 da spec 026). No dia **cheio** as duas coincidem: `max(regime, último + 1)`.
+ * ⚠️ **SEM REGIME CONHECIDO E DIA VAZIO, `null`** (`RN-DEG-01`): o 1º tempo era exatamente o valor inventado.
+ *
+ * *(A D-4 foi decisão de **Bernardo Villas Boas**, 05/10/2026, contra a recomendação de usar o slot fixo
+ * `regimeTempos + 1`; o texto abaixo é o registro dela.)*
  *
  * ⚠️ **O LUGAR ACOMPANHA O DIA, e é por isso que o slot fixo foi recusado:** o C-Ap-HN tem *"9 TA em
  * parte dos dias e 8 em outros"* (medido na planilha vigente), e um slot fixo poria o Estudo
@@ -318,9 +327,18 @@ export function trechosDoBloco(
  * `excepcional` depois do último TA do regime, e a vigência aponta para esse catálogo. A regra do slot
  * não muda: o que muda é a fonte do horário, que o catálogo entrega lido, nunca recalculado.
  */
-export function slotDoEstudoIndividual(ultimoTaLancado: number | null): number | null {
-  if (ultimoTaLancado === null) return 1;
-  if (!Number.isInteger(ultimoTaLancado) || ultimoTaLancado < 1) return null;
-  const slot = ultimoTaLancado + 1;
+export function slotDoEstudoIndividual(
+  ultimoTaLancado: number | null,
+  temposDoRegime: number | null,
+): number | null {
+  if (ultimoTaLancado !== null && (!Number.isInteger(ultimoTaLancado) || ultimoTaLancado < 1)) {
+    return null;
+  }
+  const regime =
+    temposDoRegime !== null && Number.isInteger(temposDoRegime) && temposDoRegime >= 1
+      ? temposDoRegime
+      : null;
+  if (regime === null && ultimoTaLancado === null) return null;
+  const slot = Math.max(regime ?? 0, (ultimoTaLancado ?? 0) + 1);
   return slot > TA_MAXIMO ? null : slot;
 }

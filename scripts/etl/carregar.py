@@ -619,6 +619,11 @@ SEQUENCIAS_DE_CODIGO: tuple[tuple[str, str, str], ...] = (
     # A do Bloco 9 (spec 024, M1): o evento da publicação do DSA (DEV-), gravado só pelas funções da tela.
     ("app.dsa_eventos_codigo_seq", "dsa_eventos_da_semana",
      "case when codigo ~ '^DEV-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    # As do Bloco 11 (spec 026): o regime da semana do DSA (DRS-) e o «desde» da turma (TRV-), gravados só pela tela.
+    ("app.dsa_regime_da_semana_codigo_seq", "dsa_regime_da_semana",
+     "case when codigo ~ '^DRS-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    ("app.turma_regime_vigencia_codigo_seq", "turma_regime_vigencia",
+     "case when codigo ~ '^TRV-[0-9]+$' then substring(codigo from 5)::bigint end"),
     # A do Bloco 8 (spec 023, M1): a turma escolhida de uma linha do calendário (FTU-), gravada só pela tela.
     ("app.feriado_turma_codigo_seq", "feriado_turma",
      "case when codigo ~ '^FTU-[0-9]+$' then substring(codigo from 5)::bigint end"),

@@ -67,6 +67,11 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   // ── Épico 4: vitrine e panorama ────────────────────────────────────────────────────────────
   "app/estilo/amostras.tsx": "as amostras interativas da vitrine",
   "app/(app)/inicio/FiltroDoPanorama.tsx": "o recorte do panorama, escrito na URL",
+  /* Bloco 11 (RD-7): o papel do DSA publicado, reduzido pela largura medida, e a semana dele na URL. */
+  "app/(app)/inicio/EscalaDoPapel.tsx":
+    "a escala do papel do DSA pela largura medida da página (ResizeObserver)",
+  "app/(app)/inicio/EscolhaDaSemana.tsx":
+    "a semana dos DSA publicados: anterior, seguinte e o calendário, na URL",
 
   // ── Spec 014, PR 2: os cards de AEC, TAD e TR ───────────────────────────────────────────────
   // ── Spec 014, PR 5: a aba «Avaliações» da turma (R-12) ──────────────────────────────────────────
@@ -132,8 +137,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
    */
   "app/(app)/turmas/[turma]/dsa/AssinaturasEditaveis.tsx":
     "editar as assinaturas só para a impressão, e o botão Imprimir que leva a edição no endereço",
-  "app/(app)/turmas/[turma]/dsa/PainelDaPublicacao.tsx":
-    "salvar, descartar, publicar e fazer alteração da semana (spec 024), com confirmação e a justificativa da alteração",
+  /* Bloco 11 (RD-6): a publicação da spec 024 e o regime e o Limpar da spec 026, numa barra só no cabeçalho. */
+  "app/(app)/turmas/[turma]/dsa/BarraDoDsa.tsx":
+    "a barra do DSA: regime, limpar, salvar, descartar, publicar e fazer alteração, com confirmação e diálogos",
   "app/(app)/turmas/[turma]/dsa/PainelDeSituacao.tsx":
     "a situação por disciplina, com a cascata das unidades de ensino — abrir e fechar a linha da tabela única é interação",
   "app/(app)/instrutores/TabelaDeInstrutores.tsx": "a grade navegável por teclado",

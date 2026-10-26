@@ -41,6 +41,12 @@
  */
 "use client";
 
+import {
+  fraseDaListaDaAula,
+  idsDaListaDaAula,
+  instrutoresDaAula,
+  type HabilitacaoAtiva,
+} from "@/lib/dominio/dsa/instrutores-da-aula";
 import * as React from "react";
 
 import type { TipoOferecido } from "./leitura";
@@ -143,6 +149,11 @@ export type FormularioDeLancamentoProps = {
   readonly avaliacoesParaVista: readonly AvaliacaoOferecida[];
   readonly avaliacoesDoCurriculo?: readonly ItemDoCurriculoOferecido[];
   readonly instrutores: readonly InstrutorParaExibir[];
+  /**
+   * RD-1 (Bloco 11): as habilitações ATIVAS. Na aula, a lista de quem ministra é só dos habilitados na disciplina, e
+   * o padrão é o designado para a turma — se for habilitado (D-3).
+   */
+  readonly habilitacoes?: readonly HabilitacaoAtiva[];
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   readonly tiposDeAvaliacao: readonly string[];
@@ -220,6 +231,7 @@ export function FormularioDeLancamento({
   avaliacoesParaVista,
   avaliacoesDoCurriculo = [],
   instrutores,
+  habilitacoes = [],
   escala,
   tecnicas,
   tiposDeAvaliacao,
@@ -236,6 +248,12 @@ export function FormularioDeLancamento({
   /* O último instrutor que a SUGESTÃO pôs — só ele sai quando a disciplina nova não sugere ninguém. */
   const [instrutorSugerido, definirInstrutorSugerido] = React.useState<string | null>(null);
   const [disciplinaId, definirDisciplina] = React.useState("");
+  /* RD-1 (Bloco 11): quem pode ministrar a aula — os habilitados na disciplina escolhida (nenhum sem disciplina). */
+  const listaDaAula = instrutoresDaAula(
+    instrutores,
+    habilitacoes,
+    disciplinaId === "" ? null : disciplinaId,
+  );
   const [unidadeId, definirUnidade] = React.useState("");
   const [avaliacaoId, definirAvaliacao] = React.useState("");
   const [ta, definirTa] = React.useState(String(taInicial));
@@ -312,6 +330,8 @@ export function FormularioDeLancamento({
    */
   function sugerir(disciplina: string, unidade: string | null) {
     const u = unidade === null ? undefined : unidades.find((x) => x.id === unidade);
+    /* RD-1, D-3, D-5: só o designado da lista da aula (ATIVO e habilitado) é sugerido. */
+    const habilitados = idsDaListaDaAula(instrutores, habilitacoes, disciplina);
     const p = preencherLancamento({
       disciplinaId: disciplina,
       unidadeEnsinoId: unidade,
@@ -320,14 +340,20 @@ export function FormularioDeLancamento({
       tecnicaSugerida: u?.tecnicaSugerida ?? null,
       topico: u?.topico ?? null,
       salaDaTurma,
+      habilitados,
     });
     if (tipo === "aula") {
       /*
        * ⚠️ **O QUE A PESSOA ESCOLHEU NÃO É APAGADO; O QUE A SUGESTÃO PÔS, É** — trocar de disciplina para uma
        *    sem atribuição deixaria o instrutor da anterior no campo, um valor plausível e errado que grava.
+       * ⚠️ **RD-1: E O ESCOLHIDO QUE NÃO É HABILITADO NA DISCIPLINA NOVA SAI** — ele deixou de estar na lista.
        */
       if (p.instrutorId !== null) definirQuemMinistra(p.instrutorId);
-      else if (quemMinistra !== "" && quemMinistra === instrutorSugerido) definirQuemMinistra("");
+      else if (
+        quemMinistra !== "" &&
+        (quemMinistra === instrutorSugerido || !habilitados.has(quemMinistra))
+      )
+        definirQuemMinistra("");
       definirInstrutorSugerido(p.instrutorId);
       definirMotivoDoInstrutor(p.motivoDoInstrutorVazio);
     }
@@ -770,10 +796,22 @@ export function FormularioDeLancamento({
         <p className="text-texto-suave text-sm" data-slot="responsavel-da-sessao">
           Quem aplica e quem fiscaliza esta sessão são os da prova (a 1ª sessão).
         </p>
+      ) : tipo === "aula" && listaDaAula.length === 0 ? (
+        /*
+         * RD-1 (Bloco 11): a aula sem disciplina escolhida, ou com uma sem habilitado, não tem quem escolher — a frase
+         * diz o porquê, no lugar do seletor (cujo vazio diria "o seu perfil não os alcança", que é outra coisa).
+         */
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-texto">Quem ministra</span>
+          <p className="text-xs text-atrasado-tinta" data-slot="aula-sem-habilitado">
+            {fraseDaListaDaAula(disciplinaId === "" ? null : disciplinaId, listaDaAula)}
+          </p>
+        </div>
       ) : (
         <ResponsavelOuNomeLivre
           regra={regraPrincipal}
-          instrutores={instrutores}
+          /* RD-1 (Bloco 11): na aula, só os habilitados na disciplina dela; nos demais tipos, o cadastro (ativo). */
+          instrutores={tipo === "aula" ? listaDaAula : instrutores}
           escala={escala}
           rotuloDoCadastro={
             tipo === "avaliacao"
@@ -791,7 +829,10 @@ export function FormularioDeLancamento({
           slot="responsavel-do-lancamento"
         />
       )}
-      {tipo === "aula" && quemMinistra === "" && frasePara(motivoDoInstrutor) !== null ? (
+      {tipo === "aula" &&
+      listaDaAula.length > 0 &&
+      quemMinistra === "" &&
+      frasePara(motivoDoInstrutor) !== null ? (
         <p className="text-xs text-atrasado-tinta" data-slot="aviso-sem-atribuicao">
           {frasePara(motivoDoInstrutor)}
         </p>

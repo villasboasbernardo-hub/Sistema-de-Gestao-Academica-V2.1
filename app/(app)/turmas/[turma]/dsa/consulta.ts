@@ -27,11 +27,7 @@ import { rotuloDaSessaoDeAplicacao } from "@/lib/dominio/dsa/sessao-de-aplicacao
 import { responsavelDoFato, rotuloDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
 import type { FeriadoDaSemana } from "@/lib/dominio/dsa/capacidade";
 import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
-import {
-  vigenteEm,
-  type TipoDeRegime,
-  type VigenciaDoHistorico,
-} from "@/lib/dominio/vigencia-de-regime";
+import type { VigenciaDoHistorico } from "@/lib/dominio/vigencia-de-regime";
 import {
   quadroDaDisciplina,
   type LancamentoParaSituacao,
@@ -88,22 +84,6 @@ export function diasDaTela(entrada: {
   const temLancamentoNoSabado = sabado !== undefined && entrada.datasComLancamento.includes(sabado);
   const aberto = entrada.sabadoPedido || temLancamentoNoSabado;
   return { dias: aberto ? seis : seis.slice(0, 5), sabadoAberto: aberto };
-}
-
-/**
- * A vigência que vale na semana, **preservando o tipo concreto**.
- *
- * ⚠️ `vigenteEm` devolve `VigenciaDoHistorico`, e o DSA precisa de `configuracao_horario_id`, que
- * aquele tipo não tem. O invólucro **delega a regra** e só recupera a linha original — escrever o
- * filtro de novo aqui faria a `RN-2027-09` ter duas implementações.
- */
-export function vigenciaDaSemana<T extends VigenciaDoHistorico>(
-  vigencias: readonly T[],
-  tipo: TipoDeRegime,
-  data: string,
-): T | null {
-  const escolhida = vigenteEm(vigencias, tipo, data);
-  return escolhida ? (vigencias.find((v) => v.id === escolhida.id) ?? null) : null;
 }
 
 /** Uma linha de `curso_regime_historico`, como o PostgREST a entrega. */
@@ -168,6 +148,46 @@ export type LinhaDoRegimeDaTurma = {
   readonly hora_inicio_tarde: string | null;
   readonly configuracao_horario_id: string | null;
 };
+
+/** As colunas de um regime nomeado, com o nome — para a vigência «desde» e as opções do relógio (RD-3, Bloco 11). */
+export const COLUNAS_DO_REGIME_NOMEADO =
+  "id, codigo, nome, regime_tempos, ta_duracao_min, intervalo_manha_min, intervalo_tarde_min, hora_inicio_manha, hora_inicio_tarde, configuracao_horario_id";
+
+export type LinhaDoRegimeNomeado = LinhaDoRegimeDaTurma & { readonly nome: string };
+
+/** Uma linha de `dsa_regime_da_semana` (RD-3): o regime de UMA semana, com o retrato do nomeado. */
+export type LinhaDoRegimeDaSemana = {
+  readonly ano: number;
+  readonly semana: number;
+  readonly origem: string;
+  readonly regime_de_horario_id: string | null;
+  readonly regime_tempos: number | null;
+  readonly ta_duracao_min: number | null;
+  readonly intervalo_manha_min: number | null;
+  readonly intervalo_tarde_min: number | null;
+  readonly hora_inicio_manha: string | null;
+  readonly hora_inicio_tarde: string | null;
+  readonly configuracao_horario_id: string | null;
+  readonly regime?: { readonly codigo?: string | null; readonly nome?: string | null } | null;
+};
+
+/** O retrato gravado com a semana como a vigência dela; nulo = o regime do curso (sem retrato). */
+export function retratoDaSemanaComoVigencia(
+  linha: LinhaDoRegimeDaSemana,
+): VigenciaComCatalogo | null {
+  if (linha.regime_de_horario_id === null || linha.regime_tempos === null) return null;
+  return regimeDaTurmaComoVigencia({
+    id: linha.regime_de_horario_id,
+    codigo: linha.regime?.codigo ?? "",
+    regime_tempos: linha.regime_tempos,
+    ta_duracao_min: linha.ta_duracao_min ?? 45,
+    intervalo_manha_min: linha.intervalo_manha_min ?? 0,
+    intervalo_tarde_min: linha.intervalo_tarde_min ?? 0,
+    hora_inicio_manha: linha.hora_inicio_manha,
+    hora_inicio_tarde: linha.hora_inicio_tarde,
+    configuracao_horario_id: linha.configuracao_horario_id,
+  });
+}
 
 /**
  * O regime da turma como a VIGÊNCIA de toda semana dela: é ele que o relógio, a capacidade e os TA declarados usam, no

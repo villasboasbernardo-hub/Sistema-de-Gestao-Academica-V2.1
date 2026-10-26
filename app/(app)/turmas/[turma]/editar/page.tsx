@@ -28,6 +28,7 @@ import type { JanelaDeTurma, VigenciaProtegida } from "@/lib/dominio/protecao-de
 import { rotuloDoRegime } from "@/lib/dominio/regime-da-turma";
 import { salasParaEscolher, type Sala } from "@/lib/dominio/salas";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import { dataParaLeitura } from "@/lib/formato/data";
 import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
@@ -103,6 +104,7 @@ export default async function EditarTurma({ params }: { params: Promise<{ turma:
     protecaoRes,
     regimesRes,
     regimeTravadoRes,
+    regimeDesdeRes,
     curriculosRes,
     arquivosRes,
   ] = await Promise.all([
@@ -127,6 +129,15 @@ export default async function EditarTurma({ params }: { params: Promise<{ turma:
       .eq("curso_id", cursoId)
       .order("nome"),
     supabase.rpc("regime_da_turma_travado", { p_turma: turmaId }),
+    /* RD-3 (Bloco 11, D-10): a vigência «desde» do relógio do DSA, a mais recente que já começou — só leitura. */
+    supabase
+      .from("turma_regime_vigencia")
+      .select("vigente_de, regime:regimes_de_horario(nome, regime_tempos)")
+      .eq("turma_id", turmaId)
+      .eq("status", "ativo")
+      .lte("vigente_de", hoje)
+      .order("vigente_de", { ascending: false })
+      .limit(1),
     supabase
       .from("curriculos")
       .select("id, versao, vigente_de, status, arquivado_em")
@@ -235,6 +246,18 @@ export default async function EditarTurma({ params }: { params: Promise<{ turma:
               ativo: r.status === "ativo",
             })),
           travado,
+          noDsaDesde: (() => {
+            const v = (regimeDesdeRes.data ?? [])[0] as
+              | { vigente_de: string; regime: { nome: string; regime_tempos: number } | null }
+              | undefined;
+            if (v === undefined) return null;
+            return {
+              desde: dataParaLeitura(v.vigente_de),
+              rotulo: v.regime
+                ? `${v.regime.nome} (${v.regime.regime_tempos} tempos)`
+                : "o regime do curso",
+            };
+          })(),
         }}
         curriculo={{
           opcoes: opcoesDoSeletor(

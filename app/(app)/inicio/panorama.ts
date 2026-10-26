@@ -217,22 +217,3 @@ function regimeDoCurso(linha: RegimeDoCursoNoBanco | undefined): RegimeDoCurso {
     limiteDiarioEadHoras: linha?.limite_diario_ead_horas ?? null,
   };
 }
-
-/** Os números do topo. Somas, nunca médias de percentual — média de percentual mente. */
-export function totaisDo(panorama: readonly TurmaNoPanorama[]) {
-  const prevista = panorama.reduce((s, t) => s + t.prevista, 0);
-  const executada = panorama.reduce((s, t) => s + t.executada, 0);
-  return {
-    turmas: panorama.length,
-    ativas: panorama.filter((t) => t.status === "ativa").length,
-    prevista,
-    executada,
-    /*
-     * ⚠️ O PERCENTUAL VEM DAS SOMAS, e não da média dos percentuais das turmas. Média de percentual
-     * dá o mesmo peso a uma turma de 20 horas e a uma de 400 — e o número do topo passa a dizer algo
-     * que ninguém consegue reconciliar com as linhas de baixo.
-     */
-    percentual: prevista > 0 ? Math.round((executada / prevista) * 100) : 0,
-    emAtraso: panorama.filter((t) => t.emAtraso).length,
-  };
-}

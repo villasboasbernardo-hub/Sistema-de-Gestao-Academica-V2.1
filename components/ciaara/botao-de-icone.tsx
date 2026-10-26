@@ -37,10 +37,13 @@ import {
   Ban,
   Bell,
   CalendarDays,
+  CalendarSearch,
   ChartColumn,
   Check,
   CirclePause,
+  Clock,
   Download,
+  Eraser,
   Filter,
   FilterX,
   ImageOff,
@@ -57,6 +60,7 @@ import {
   Printer,
   RotateCcw,
   Save,
+  Stamp,
   Sun,
   Trash2,
   Undo2,
@@ -104,6 +108,12 @@ export const ICONE_DA_ACAO = {
   "tema-escuro": Moon,
   "tema-sistema": Monitor,
   avisos: Bell,
+  /* Bloco 11 (RD-6): a barra do DSA — o regime de tempos, o Limpar semana e o Publicar. */
+  regime: Clock,
+  limpar: Eraser,
+  publicar: Stamp,
+  /* Bloco 11 (RD-7): a semana dos DSA publicados no Início, pelo calendário. */
+  "escolher-semana": CalendarSearch,
 } as const satisfies Record<string, LucideIcon>;
 
 export type AcaoDeIcone = keyof typeof ICONE_DA_ACAO;
@@ -145,6 +155,10 @@ export const ROTULO_DA_ACAO: Readonly<Record<AcaoDeIcone, string | null>> = {
   "tema-escuro": "Tema noturno",
   "tema-sistema": "Tema do sistema",
   avisos: "Avisos",
+  regime: "Regime",
+  limpar: "Limpar",
+  publicar: "Publicar",
+  "escolher-semana": "Escolher semana",
 };
 
 /** A dica do botão: o verbo do vocabulário, ou o rótulo quando o verbo é ele (D-16). */

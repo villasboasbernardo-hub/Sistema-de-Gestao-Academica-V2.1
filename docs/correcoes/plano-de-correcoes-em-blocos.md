@@ -488,6 +488,34 @@ digital igual nos dois (2.637 objetos, `7e7eb3d5…`).
 
 ---
 
+## Bloco 11 — Lançamento do DSA e Início com o DSA publicado (spec própria) — 🟨 EM CONFERÊNCIA
+
+_Pedido de Bernardo Villas Boas, 26/10/2026, pelo `/corrigir`._ Spec `026-bloco-11-dsa-lancamento-e-inicio`, ramo
+`feat/BLOCO-11-dsa-lancamento-e-inicio`, um PR. Regras novas **RD-1 a RD-8** em
+`docs/correcoes/regras-do-dsa-lancamento.md` (apontado no `CLAUDE.md`). Os oito itens, as decisões D-1 a D-40 (adotadas
+por padrão — Bernardo confere no fim) e o roteiro de conferência estão em `specs/026-…/`. **O papel do DSA não muda**:
+o merge não espera virada de semana.
+
+**Uma migration, e ela só ACRESCENTA** (`20261026043358_regime_da_semana_do_dsa.sql`, regra 9.4 com a emenda de
+19/10/2026): as tabelas `dsa_regime_da_semana` e `turma_regime_vigencia` e as três RPCs do regime de tempos da semana
+(RD-3). Nenhuma função, view, policy ou dado existente muda. Rito do remoto em `specs/026-…/plano-de-aplicacao-no-remoto.md`.
+
+**PR #92**, com CI verde. ✅ **A migration está no remoto desde 26/10/2026**, aplicada depois do CI verde e antes do merge,
+pelo rito completo: backup `remoto-20261026-084656.sql`, dry-run só com ela, `db push` com saída 0, **99 e 99** migrations
+e impressão digital **idêntica** nos dois bancos (2.721 objetos, `d69c3a6c…`). Antes da conferência, uma revisão
+adversarial achou **sete** defeitos e os sete foram corrigidos no mesmo PR (`spec.md` §9).
+
+**Pendências novas, achadas e não corrigidas:**
+
+- **`PEND-026-1`** — *o saldo segue o regime de «Editar turma», não o «desde»*: a capacidade e o saldo do Início, de
+  `/turmas` e da ficha da turma usam o regime da turma (ou do curso); o regime trocado no DSA *desta semana em diante*
+  vale para o lançamento, o papel, a planilha e as ações (D-14), não para o saldo (D-15).
+- **`PEND-026-2`** — *o seletor canônico de instrutor diz «o seu perfil não os alcança» para qualquer lista vazia*: a
+  aula do DSA ganhou a frase própria (D-32), mas o componente não distingue *"não há"* de *"você não vê"* quando quem
+  chama esvazia a lista por outro motivo.
+
+---
+
 ## Fora do plano
 
 - **"Revisar o fluxo e tornar o sistema mais amigável"** e **"padronizar os botões"**: vago demais para virar requisito; entra item a item nos blocos (a barra de ações do 1.6 é o primeiro) e no Claude Design.

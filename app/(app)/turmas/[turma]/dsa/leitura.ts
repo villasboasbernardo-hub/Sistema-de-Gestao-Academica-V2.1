@@ -96,23 +96,31 @@ import {
   COLUNAS_DO_CATALOGO,
   COLUNAS_DO_FERIADO,
   COLUNAS_DO_REGIME_DA_TURMA,
+  COLUNAS_DO_REGIME_NOMEADO,
   diasDaTela,
   fatoDaOcupacao,
   feriadoDoBanco,
   regimeDaTurmaComoVigencia,
   regimeParaRelogio,
+  retratoDaSemanaComoVigencia,
   tempoDoCatalogo,
   unidadesDaTurma,
-  vigenciaDaSemana,
   vigenciaDoBanco,
   type ConteudoDoFato,
   type LinhaDaOcupacao,
   type LinhaDeFeriado,
   type LinhaDeVigencia,
   type LinhaDoCatalogo,
+  type LinhaDoRegimeDaSemana,
   type LinhaDoRegimeDaTurma,
+  type LinhaDoRegimeNomeado,
   type OcupacaoAcumulada,
+  type VigenciaComCatalogo,
 } from "./consulta";
+import type { HabilitacaoAtiva } from "@/lib/dominio/dsa/instrutores-da-aula";
+import { regimeDaSemana, type FonteDoRegime } from "@/lib/dominio/dsa/regime-da-semana";
+import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
+import { vigenteDoCursoEm } from "@/lib/dominio/vigencia-de-regime";
 
 /** O cliente de servidor, como a rota o cria. Tipo emprestado para não reimplementá-lo. */
 type ClienteDeServidor = Awaited<ReturnType<typeof criarClienteDeServidor>>;
@@ -226,6 +234,23 @@ export type SemanaDoDsa = {
    */
   readonly atribuicoesPorUe: readonly AtribuicaoPorUnidade[];
   readonly atribuicoesPorDisciplina: readonly AtribuicaoPorDisciplina[];
+  /** RD-1 (Bloco 11): as habilitações ativas — a lista de quem ministra a aula sai daqui, pela disciplina. */
+  readonly habilitacoes: readonly HabilitacaoAtiva[];
+  /** RD-3 (Bloco 11): o regime de tempos desta semana, de onde ele vem, e as opções do relógio. */
+  readonly regimeDaSemana: {
+    readonly fonte: FonteDoRegime;
+    /** Nulo = o regime do curso. */
+    readonly regimeId: string | null;
+    readonly nome: string;
+    readonly tempos: number | null;
+  };
+  readonly regimesOferecidos: readonly {
+    readonly id: string | null;
+    readonly nome: string;
+    readonly tempos: number | null;
+  }[];
+  /** A semana tem lançamento SALVO da turma (D-11) — com a trilha, decide se o relógio ainda muda. */
+  readonly temLancamentoSalvo: boolean;
   /**
    * As listas que a leitura não conseguiu ler (FR-012.1 da spec 016; `RN-DEG-01`): a tela as diz, em vez
    * de mostrar o vazio como se não houvesse dado.
@@ -331,6 +356,12 @@ export type DadosDoPeriodo = {
    * Opcional para as montagens de teste, que não o têm.
    */
   readonly regimeDaTurma?: unknown;
+  /** RD-1 (Bloco 11): as habilitações ativas nas disciplinas do curso. Opcional para as montagens de teste. */
+  readonly habilitacoes?: readonly unknown[];
+  /** RD-3 (Bloco 11): as linhas de `dsa_regime_da_semana`, as vigências «desde» e os regimes nomeados do curso. */
+  readonly regimesDasSemanas?: readonly unknown[];
+  readonly vigenciasDoRegime?: readonly unknown[];
+  readonly regimesDoCurso?: readonly unknown[];
   /** Vazio quando não se pediu (`comConflitos: false`) — a grade sai sem marca, como no erro. */
   readonly conflitos: readonly unknown[];
   /** Spec 014: as sessões de vista ativas da turma no período (FR-040) e os itens do currículo do curso. */
@@ -419,6 +450,10 @@ export async function lerPeriodoDoDsa(
     atribDiscRes,
     semPosicaoRes,
     regimeDaTurmaRes,
+    habilitacoesRes,
+    regimesDasSemanasRes,
+    vigenciasDoRegimeRes,
+    regimesDoCursoRes,
   ] = await Promise.all([
     /*
      * ⚠️ `turma_id is null` entra: é a atividade GLOBAL, que vale para toda turma (`V-7`).
@@ -600,7 +635,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("vw_instrutores")
         .select(
-          "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, ordem_antiguidade",
+          "id, codigo, posto_graduacao, esp_hab_obs, nome_completo, nome_guerra, ordem_antiguidade, status",
           contagemNaPrimeira(f),
         )
         .order("ordem_antiguidade")
@@ -840,6 +875,45 @@ export async function lerPeriodoDoDsa(
     ),
     /* Spec 018 (Bloco 3): o regime nomeado da turma, quando ela escolheu um (C-9). */
     supabase.from("turmas").select(COLUNAS_DO_REGIME_DA_TURMA).eq("id", turmaId).maybeSingle(),
+    /*
+     * RD-1 (Bloco 11): as habilitações ATIVAS nas disciplinas do curso — a lista de quem ministra a aula é só dos
+     * habilitados na disciplina dela.
+     */
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("instrutor_disciplina")
+        .select(
+          "instrutor_id, disciplina_id, disciplina:disciplinas!inner(curso_id)",
+          contagemNaPrimeira(f),
+        )
+        .eq("status", "ativo")
+        .eq("disciplina.curso_id", cursoId)
+        .order("disciplina_id")
+        .order("instrutor_id")
+        .range(f.de, f.ate),
+    ),
+    /* RD-3 (Bloco 11): o regime gravado ou «só esta semana» de cada semana da turma, e o «desde» dela. */
+    supabase
+      .from("dsa_regime_da_semana")
+      .select(
+        "ano, semana, origem, regime_de_horario_id, regime_tempos, ta_duracao_min, intervalo_manha_min, intervalo_tarde_min, hora_inicio_manha, hora_inicio_tarde, configuracao_horario_id, regime:regimes_de_horario(codigo, nome)",
+      )
+      .eq("turma_id", turmaId)
+      .eq("status", "ativo"),
+    supabase
+      .from("turma_regime_vigencia")
+      .select(`vigente_de, regime:regimes_de_horario(${COLUNAS_DO_REGIME_NOMEADO})`)
+      .eq("turma_id", turmaId)
+      .eq("status", "ativo")
+      .order("vigente_de"),
+    /* RD-3, D-12: os regimes nomeados ATIVOS do curso — as opções do relógio, ao lado do regime do curso. */
+    supabase
+      .from("regimes_de_horario")
+      .select(`${COLUNAS_DO_REGIME_NOMEADO}, curriculo_id`)
+      .eq("curso_id", cursoId)
+      .eq("status", "ativo")
+      .order("regime_tempos")
+      .order("nome"),
   ]);
 
   const erros: { lista: string; mensagem: string }[] = [];
@@ -852,6 +926,10 @@ export async function lerPeriodoDoDsa(
     ? (erros.push({ lista: "regime da turma", mensagem: regimeDaTurmaRes.error.message }), null)
     : (((regimeDaTurmaRes.data as { regime?: unknown } | null)?.regime ??
         null) as LinhaDoRegimeDaTurma | null);
+  const regimesDasSemanas = listaOuVazia(regimesDasSemanasRes, erros, "regime das semanas");
+  const vigenciasDoRegime = listaOuVazia(vigenciasDoRegimeRes, erros, "regime desde a semana");
+  /* D-12: os nomeados do CURRÍCULO DA TURMA — os mesmos que *Editar turma* oferece (spec 018, C-18). */
+  const regimesDoCurso = listaOuVazia(regimesDoCursoRes, erros, "regimes do curso");
   const configuracoes = [
     ...new Set(
       [
@@ -859,6 +937,16 @@ export async function lerPeriodoDoDsa(
           (v) => vigenciaDoBanco(v).configuracaoHorarioId,
         ),
         regimeDaTurma?.configuracao_horario_id ?? null,
+        /* RD-3: o catálogo que o regime de alguma semana aponta também vem. */
+        ...(regimesDasSemanas as { configuracao_horario_id?: string | null }[]).map(
+          (r) => r.configuracao_horario_id ?? null,
+        ),
+        ...(
+          vigenciasDoRegime as { regime?: { configuracao_horario_id?: string | null } | null }[]
+        ).map((v) => v.regime?.configuracao_horario_id ?? null),
+        ...(regimesDoCurso as { configuracao_horario_id?: string | null }[]).map(
+          (r) => r.configuracao_horario_id ?? null,
+        ),
       ].filter((id): id is string => typeof id === "string" && id !== ""),
     ),
   ];
@@ -924,6 +1012,12 @@ export async function lerPeriodoDoDsa(
     aulasPorUe: listaOuVazia(aulasPorUeRes, erros, "aulas por UE"),
     catalogo: listaOuVazia(catalogoRes, erros, "catálogo de horários"),
     regimeDaTurma,
+    habilitacoes: listaOuVazia(habilitacoesRes, erros, "habilitações"),
+    regimesDasSemanas,
+    vigenciasDoRegime,
+    regimesDoCurso: (regimesDoCurso as { curriculo_id?: string | null }[]).filter(
+      (r) => curriculoDaTurma === null || r.curriculo_id === curriculoDaTurma,
+    ),
     conflitos: listaOuVazia(conflitosRes, erros, "conflitos"),
     diasParados: listaOuVazia(diasParadosRes, erros, "dias parados"),
     trsBloqueantes: listaOuVazia(trsBloqueantesRes, erros, "TR bloqueantes"),
@@ -1023,8 +1117,6 @@ export function montarSemanaDoDsa(
     vigenciaDoBanco,
   );
   const primeiroDia = todosOsSeis[0] ?? entrada.hoje;
-  const excecao = vigenciaDaSemana(vigencias, "excecao", primeiroDia);
-  const padrao = vigenciaDaSemana(vigencias, "padrao", primeiroDia);
   /*
    * A exceção vence a padrão quando as duas cobrem a data — é o desenho de `tipo_regime`. E o regime NOMEADO que a
    * turma escolheu (spec 018, C-9) vence os dois: sem escolha, `daTurma` é nulo e tudo fica como antes.
@@ -1032,7 +1124,67 @@ export function montarSemanaDoDsa(
   const daTurma = regimeDaTurmaComoVigencia(
     dados.regimeDaTurma as LinhaDoRegimeDaTurma | null | undefined,
   );
-  const vigente = daTurma ?? excecao ?? padrao;
+  /*
+   * ⚠️ **RD-3 (Bloco 11): O REGIME DA SEMANA** — o gravado com ela ou o «só esta semana» > o «desde» > o de *Editar
+   *    turma* > o do curso, por `regimeDaSemana`, a mesma das ações (D-14). A tela, a prévia, o papel e a planilha
+   *    montam por aqui.
+   */
+  const doCurso = vigenteDoCursoEm(vigencias, primeiroDia);
+  const isoDaSemana = semanaIsoDe(primeiroDia);
+  const linhaDaSemana =
+    isoDaSemana === null
+      ? undefined
+      : ((dados.regimesDasSemanas ?? []) as LinhaDoRegimeDaSemana[]).find(
+          (r) => Number(r.ano) === isoDaSemana.ano && Number(r.semana) === isoDaSemana.numero,
+        );
+  const linhasDesde = (dados.vigenciasDoRegime ?? []) as {
+    vigente_de: string;
+    regime: LinhaDoRegimeNomeado | null;
+  }[];
+  const resolvido = regimeDaSemana<VigenciaComCatalogo | null>({
+    segunda: primeiroDia,
+    registro:
+      linhaDaSemana === undefined
+        ? null
+        : {
+            regime: retratoDaSemanaComoVigencia(linhaDaSemana) ?? doCurso,
+            origem: linhaDaSemana.origem === "gravado" ? "gravado" : "so_esta_semana",
+          },
+    vigenciasDaTurma: linhasDesde.map((v) => ({
+      vigenteDe: v.vigente_de,
+      regime: regimeDaTurmaComoVigencia(v.regime),
+    })),
+    daTurma,
+    doCurso,
+  });
+  const vigente = resolvido.regime;
+  /* O nome do regime em uso, para o relógio: o nomeado pelo nome dele; o do curso, como tal. */
+  const nomeDoNomeado = new Map<string, string>([
+    ...((dados.regimesDoCurso ?? []) as LinhaDoRegimeNomeado[]).map((r) => [r.id, r.nome] as const),
+    ...linhasDesde.flatMap((v) => (v.regime ? [[v.regime.id, v.regime.nome] as const] : [])),
+    ...(linhaDaSemana?.regime_de_horario_id
+      ? [[linhaDaSemana.regime_de_horario_id, linhaDaSemana.regime?.nome ?? "Regime"] as const]
+      : []),
+  ]);
+  const regimeEmUsoId = vigente !== null && vigente !== doCurso ? vigente.id : null;
+  const regimeDaSemanaLido = {
+    fonte: resolvido.fonte,
+    regimeId: regimeEmUsoId,
+    nome:
+      regimeEmUsoId === null
+        ? "Regime do curso"
+        : (nomeDoNomeado.get(regimeEmUsoId) ??
+          (daTurma !== null && vigente === daTurma ? "Regime da turma" : "Regime")),
+    tempos: vigente?.regimeTempos ?? null,
+  };
+  const regimesOferecidos = [
+    { id: null, nome: "Regime do curso", tempos: doCurso?.regimeTempos ?? null },
+    ...((dados.regimesDoCurso ?? []) as LinhaDoRegimeNomeado[]).map((r) => ({
+      id: r.id as string | null,
+      nome: r.nome,
+      tempos: r.regime_tempos as number | null,
+    })),
+  ];
   const maisRecente = [...vigencias]
     .filter((v) => v.tipo === "padrao")
     .sort((a, b) => b.vigenteDe.localeCompare(a.vigenteDe))[0];
@@ -1624,6 +1776,17 @@ export function montarSemanaDoDsa(
     unidades,
     atribuicoesPorUe,
     atribuicoesPorDisciplina,
+    habilitacoes: (
+      (dados.habilitacoes ?? []) as { instrutor_id: string; disciplina_id: string }[]
+    ).map((h) => ({
+      instrutorId: h.instrutor_id,
+      disciplinaId: h.disciplina_id,
+    })),
+    regimeDaSemana: regimeDaSemanaLido,
+    regimesOferecidos,
+    temLancamentoSalvo: (
+      (ocupacaoRes.data ?? []) as { turma_id?: string | null; rascunho?: boolean | null }[]
+    ).some((o) => o.turma_id === dados.turmaId && o.rascunho !== true),
     errosDeLeitura: dados.erros,
     /*
      * ⚠️ **TODAS AS DISCIPLINAS ATIVAS, e não só as isentas de UE** — a `D-DSA-1` (08/10/2026) abriu a

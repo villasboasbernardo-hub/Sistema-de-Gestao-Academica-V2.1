@@ -28,6 +28,11 @@
  */
 "use client";
 
+import {
+  fraseDaListaDaAula,
+  instrutoresDaAula,
+  type HabilitacaoAtiva,
+} from "@/lib/dominio/dsa/instrutores-da-aula";
 import * as React from "react";
 
 import { DialogFooter } from "@/components/ui/dialog";
@@ -82,6 +87,8 @@ export type AcoesDoBlocoProps = {
   readonly unidades: readonly UnidadeOferecida[];
   readonly disciplinas: readonly DisciplinaOferecida[];
   readonly instrutores: readonly InstrutorParaExibir[];
+  /** RD-1 (Bloco 11): na aula, a lista de quem ministra é só dos habilitados na disciplina escolhida. */
+  readonly habilitacoes?: readonly HabilitacaoAtiva[];
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   /** A2 (16/10/2026): os instrumentos da prova sem item — os ativos, menos a OD. */
@@ -100,6 +107,7 @@ export function AcoesDoBloco({
   unidades,
   disciplinas,
   instrutores,
+  habilitacoes = [],
   escala,
   tecnicas,
   instrumentos = [],
@@ -158,6 +166,18 @@ export function AcoesDoBloco({
   const [agindo, definirAgindo] = React.useState(false);
 
   const unidadesDaDisciplina = unidades.filter((u) => u.disciplinaId === disciplinaId);
+  /*
+   * RD-1 (Bloco 11): na aula, só os habilitados na disciplina escolhida; o gravado que não é habilitado não aparece, e a
+   * tela diz — sem mudar quem ministra nem a disciplina, nada se confere (D-4).
+   */
+  const listaDeQuemMinistra = ehAula
+    ? instrutoresDaAula(instrutores, habilitacoes, disciplinaId === "" ? null : disciplinaId)
+    : instrutores;
+  const gravadoForaDaLista =
+    ehAula &&
+    instrutorId !== "" &&
+    disciplinaId !== "" &&
+    !listaDeQuemMinistra.some((i) => i.id === instrutorId);
   const semUnidade = ehAula && disciplinaId !== "" && unidadeId === "";
   const diaEscolhido = diasDaSemana.find((d) => d.data === dia);
 
@@ -354,14 +374,22 @@ export function AcoesDoBloco({
         </div>
       ) : null}
 
-      {temQuemMinistra ? (
+      {temQuemMinistra && ehAula && listaDeQuemMinistra.length === 0 ? (
+        /* RD-1 (Bloco 11): a disciplina escolhida não tem habilitado — a frase, no lugar do seletor vazio. */
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-texto">Quem ministra</span>
+          <p className="text-xs text-atrasado-tinta" data-slot="aula-sem-habilitado">
+            {fraseDaListaDaAula(disciplinaId === "" ? null : disciplinaId, listaDeQuemMinistra)}
+          </p>
+        </div>
+      ) : temQuemMinistra ? (
         /*
          * ⚠️ Trocar quem ministra passa pelo porteiro da habilitação (`RN-INST-01`, Risco: Alto). Na atividade, o
          *    «outro responsável (nome livre)» aparece porque a regra o aceita (`RN-RESP-1`).
          */
         <ResponsavelOuNomeLivre
           regra={regra}
-          instrutores={instrutores}
+          instrutores={listaDeQuemMinistra}
           escala={escala}
           rotuloDoCadastro={
             fato.origem === "avaliacao"
@@ -378,6 +406,12 @@ export function AcoesDoBloco({
           aoMudarNomeLivre={definirNomeLivre}
           slot="responsavel-do-lancamento"
         />
+      ) : null}
+      {gravadoForaDaLista ? (
+        <p className="text-xs text-atrasado-tinta" data-slot="instrutor-nao-habilitado">
+          {fato.instrutor ?? "O instrutor gravado"} não está habilitado nesta disciplina: escolha um
+          habilitado (a habilitação é feita na ficha do instrutor).
+        </p>
       ) : null}
 
       <div className="flex flex-col gap-1">

@@ -15,11 +15,10 @@
  */
 import Link from "next/link";
 
-import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
-import { enderecoDaTurma, enderecoDoDsa } from "@/lib/navegacao/endereco-de-turma";
+import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
 import type { TurmaNoPanorama } from "./panorama";
 
@@ -64,22 +63,12 @@ export function CartaoDaTurma({ turma: t }: { readonly turma: TurmaNoPanorama })
         )}
       </Link>
       {/* ⚠️ TURMA EAD PURO: O AVISO NO LUGAR DO LINK (item 9 da conferência do PR #40) — a frase de `ead-puro.ts`. */}
+      {/* Bloco 11 (item 7): o «Abrir DSA» saiu do cartão — o DSA publicado da semana está logo abaixo, no papel. */}
       {t.eadPuro ? (
         <p className="text-texto-suave pl-1 text-xs" data-slot="dsa-turma-ead">
           {AVISO_DE_TURMA_EAD}
         </p>
-      ) : (
-        <p className="flex justify-end pl-1 text-xs">
-          {/* Spec 022 (FR-001): abrir o DSA é um verbo padrão — o ícone, com o nome de antes na dica. */}
-          <BotaoDeIcone
-            acao="abrir-dsa"
-            rotulo="DSA da semana"
-            variante="fantasma"
-            href={enderecoDoDsa(t.turmaCodigo)}
-            data-slot="dsa-da-semana"
-          />
-        </p>
-      )}
+      ) : null}
     </div>
   );
 }

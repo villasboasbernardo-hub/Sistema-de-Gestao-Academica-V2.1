@@ -1974,6 +1974,132 @@ export type Database = {
           },
         ]
       }
+      dsa_regime_da_semana: {
+        Row: {
+          ano: number
+          codigo: string
+          configuracao_horario_id: string | null
+          criado_em: string
+          criado_por: string | null
+          editado_em: string | null
+          editado_por: string | null
+          hora_inicio_manha: string | null
+          hora_inicio_tarde: string | null
+          id: string
+          intervalo_manha_min: number | null
+          intervalo_tarde_min: number | null
+          origem: string
+          origem_migracao_v1: string | null
+          regime_de_horario_id: string | null
+          regime_tempos: number | null
+          semana: number
+          status: Database["public"]["Enums"]["status_registro"]
+          ta_duracao_min: number | null
+          turma_id: string
+        }
+        Insert: {
+          ano: number
+          codigo?: string
+          configuracao_horario_id?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          hora_inicio_manha?: string | null
+          hora_inicio_tarde?: string | null
+          id?: string
+          intervalo_manha_min?: number | null
+          intervalo_tarde_min?: number | null
+          origem: string
+          origem_migracao_v1?: string | null
+          regime_de_horario_id?: string | null
+          regime_tempos?: number | null
+          semana: number
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_duracao_min?: number | null
+          turma_id: string
+        }
+        Update: {
+          ano?: number
+          codigo?: string
+          configuracao_horario_id?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          hora_inicio_manha?: string | null
+          hora_inicio_tarde?: string | null
+          id?: string
+          intervalo_manha_min?: number | null
+          intervalo_tarde_min?: number | null
+          origem?: string
+          origem_migracao_v1?: string | null
+          regime_de_horario_id?: string | null
+          regime_tempos?: number | null
+          semana?: number
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_duracao_min?: number | null
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dsa_regime_da_semana_configuracao_horario_id_fkey"
+            columns: ["configuracao_horario_id"]
+            isOneToOne: false
+            referencedRelation: "configuracoes_horario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dsa_regime_da_semana_regime_de_horario_id_fkey"
+            columns: ["regime_de_horario_id"]
+            isOneToOne: false
+            referencedRelation: "regimes_de_horario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dsa_regime_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dsa_regime_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dsa_regime_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dsa_regime_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dsa_regime_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "dsa_regime_da_semana_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+        ]
+      }
       exclusoes_registradas: {
         Row: {
           excluido_em: string
@@ -4120,6 +4246,98 @@ export type Database = {
           },
         ]
       }
+      turma_regime_vigencia: {
+        Row: {
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          origem_migracao_v1: string | null
+          regime_de_horario_id: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          turma_id: string
+          vigente_de: string
+        }
+        Insert: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          regime_de_horario_id?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_id: string
+          vigente_de: string
+        }
+        Update: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          origem_migracao_v1?: string | null
+          regime_de_horario_id?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_id?: string
+          vigente_de?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turma_regime_vigencia_regime_de_horario_id_fkey"
+            columns: ["regime_de_horario_id"]
+            isOneToOne: false
+            referencedRelation: "regimes_de_horario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_regime_vigencia_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_regime_vigencia_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_regime_vigencia_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_regime_vigencia_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_regime_vigencia_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "turma_regime_vigencia_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+        ]
+      }
       turma_trocas_de_situacao: {
         Row: {
           autor_id: string | null
@@ -5768,6 +5986,24 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      definir_regime_do_dsa_desde: {
+        Args: {
+          p_ano: number
+          p_regime: string
+          p_semana: number
+          p_turma: string
+        }
+        Returns: number
+      }
+      definir_regime_do_dsa_so_nesta_semana: {
+        Args: {
+          p_ano: number
+          p_regime: string
+          p_semana: number
+          p_turma: string
+        }
+        Returns: string
+      }
       dependentes_da_conta: {
         Args: { p_conta_id: string }
         Returns: {
@@ -5843,6 +6079,10 @@ export type Database = {
         Returns: number
       }
       gravar_rascunho_do_dsa: { Args: { p_operacoes: Json }; Returns: number }
+      gravar_regime_da_semana_do_dsa: {
+        Args: { p_ano: number; p_semana: number; p_turma: string }
+        Returns: boolean
+      }
       impedimentos_de_exclusao_da_disciplina: {
         Args: { p_disciplina_id: string }
         Returns: string[]
