@@ -39,4 +39,4 @@
 - [X] T026 RLS com sessão real do regime da semana e do Limpar
 - [X] T027 E2E por clique de cada item; os casos antigos ajustados ao desenho
 - [X] T028 Defeitos deliberados nos testes que provam a mudança
-- [ ] T029 Roteiro de conferência, plano de aplicação, plano de correções; `verificar:tudo`; PR; CI; remoto
+- [X] T029 Roteiro de conferência, plano de aplicação, plano de correções; `verificar:tudo`; PR; CI; remoto

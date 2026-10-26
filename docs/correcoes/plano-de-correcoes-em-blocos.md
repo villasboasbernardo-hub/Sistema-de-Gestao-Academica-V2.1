@@ -500,6 +500,11 @@ o merge não espera virada de semana.
 19/10/2026): as tabelas `dsa_regime_da_semana` e `turma_regime_vigencia` e as três RPCs do regime de tempos da semana
 (RD-3). Nenhuma função, view, policy ou dado existente muda. Rito do remoto em `specs/026-…/plano-de-aplicacao-no-remoto.md`.
 
+**PR #92**, com CI verde. ✅ **A migration está no remoto desde 26/10/2026**, aplicada depois do CI verde e antes do merge,
+pelo rito completo: backup `remoto-20261026-084656.sql`, dry-run só com ela, `db push` com saída 0, **99 e 99** migrations
+e impressão digital **idêntica** nos dois bancos (2.721 objetos, `d69c3a6c…`). Antes da conferência, uma revisão
+adversarial achou **sete** defeitos e os sete foram corrigidos no mesmo PR (`spec.md` §9).
+
 **Pendências novas, achadas e não corrigidas:**
 
 - **`PEND-026-1`** — *o saldo segue o regime de «Editar turma», não o «desde»*: a capacidade e o saldo do Início, de
