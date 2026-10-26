@@ -36,6 +36,8 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **7** | Rodada 2 — padrões de tela: botões de ícone, formulários em diálogo ou página própria, ordem por classificação, sininho de avisos, abas do curso, cores do DSA — ✅ **concluído em 22/10/2026** | não | 022 |
 | **8** | Calendário na tela de Atividades e desfazer feriado no DSA — ✅ **concluído em 23/10/2026** | duas migrations (a M1 só acrescenta; a M2 recria `vw_dias_parados_turma` com o mesmo resultado para o dado existente) | 023 |
 | **9** | Publicação do DSA com rascunho e contagem EAD/semipresencial — ✅ **concluído em 24/10/2026** | duas migrations (a M1 só acrescenta; a M2 pelo portão autorizado em 22/10/2026, com o que soma idêntico) | 024 |
+| **10** | Padrões de tela, turma, curso, estatísticas, calendário e ano — ✅ **concluído em 25/10/2026** | duas migrations (a 1ª pelo portão 9.4; a 2ª com autorização condicional) | 025 |
+| **11** | Lançamento do DSA e Início com o DSA publicado — ✅ **concluído em 26/10/2026** | uma migration, que só acrescenta | 026 |
 
 ---
 
@@ -488,7 +490,16 @@ digital igual nos dois (2.637 objetos, `7e7eb3d5…`).
 
 ---
 
-## Bloco 11 — Lançamento do DSA e Início com o DSA publicado (spec própria) — 🟨 EM CONFERÊNCIA
+## Bloco 11 — Lançamento do DSA e Início com o DSA publicado (spec própria) — ✅ CONCLUÍDO em 26/10/2026
+
+> ✅ **Concluído em 26/10/2026** — spec `026-bloco-11-dsa-lancamento-e-inicio`, pelo fluxo `/corrigir`, num PR só: **#92**,
+> **APROVADO** por Bernardo Villas Boas na conferência de 26/10/2026 (D-1 a D-40 como estão) e mesclado por squash na
+> `main` em **`eaba093`**. A migration `20261026043358` no remoto antes do merge (backup `remoto-20261026-084656.sql`);
+> **99 e 99** migrations, esquema `d69c3a6c…` (2.721 objetos) igual nos dois bancos. CI do PR verde sobre `53e9ac6`; CI
+> da `main` sobre `eaba093` verde nos três blocos (run `40339233042`: 2.828 de unidade · 1.120 pgTAP · 476 RLS · 584 casos de
+> ponta a ponta — 574 passados, 3 instáveis que passaram na repetição e 7 pulados; a mesma árvore deu 577 sem instável no CI
+> do PR), e o deploy de Production de `eaba093` em `success`. O ramo foi apagado, local e
+> remoto. As três pendências abertas (`PEND-025-5`, `PEND-026-1`, `PEND-026-2`) ficaram para o próximo bloco, abaixo.
 
 _Pedido de Bernardo Villas Boas, 26/10/2026, pelo `/corrigir`._ Spec `026-bloco-11-dsa-lancamento-e-inicio`, ramo
 `feat/BLOCO-11-dsa-lancamento-e-inicio`, um PR. Regras novas **RD-1 a RD-8** em
@@ -513,6 +524,22 @@ adversarial achou **sete** defeitos e os sete foram corrigidos no mesmo PR (`spe
 - **`PEND-026-2`** — *o seletor canônico de instrutor diz «o seu perfil não os alcança» para qualquer lista vazia*: a
   aula do DSA ganhou a frase própria (D-32), mas o componente não distingue *"não há"* de *"você não vê"* quando quem
   chama esvazia a lista por outro motivo.
+
+---
+
+## Para o próximo bloco — três pendências (registradas por Bernardo Villas Boas em 26/10/2026)
+
+_Na aprovação do Bloco 11, Bernardo mandou registrar estas três para o próximo bloco. Entram no próximo `/corrigir`, no
+bloco em que couberem; o texto de cada uma está no bloco de origem._
+
+- **`PEND-025-5`** (Bloco 10) — **regra: a janela da carga de uma turma é o período da própria turma (início–fim)**, e
+  não a previsão da disciplina, que tem data de um ano só. Hoje a `CAHO 2027`, no remoto, conta a carga no ano certo, mas
+  o alerta por semana não a vê.
+- **`PEND-026-1`** (Bloco 11) — **regra: o saldo e a capacidade seguem o regime «desde»** (*Desta semana em diante*, no
+  DSA), e não só o de *Editar turma*. No Bloco 11 a D-15 ficou como estava (o saldo do Início, de `/turmas` e da ficha
+  no regime de *Editar turma*); esta é a alternativa dela, para o próximo bloco.
+- **`PEND-026-2`** (Bloco 11) — o seletor canônico de instrutor diz *«o seu perfil não os alcança»* para **qualquer**
+  lista vazia: distinguir *«não há»* de *«você não vê»* (gotcha 4) quando quem chama esvazia a lista por outro motivo.
 
 ---
 
