@@ -371,6 +371,20 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 26/10/2026 — duas tabelas novas, do Bloco 11 do plano de correções (spec 026)
+>
+> - **`dsa_regime_da_semana`** — o **regime de tempos de UMA semana** do DSA da turma (regra RD-3 de
+>   `docs/correcoes/regras-do-dsa-lancamento.md`): escolhido *"só esta semana"* pelo relógio do DSA, ou **gravado** com a
+>   semana ao salvar e ao publicar, para a semana salva nunca mudar de regime. O regime nomeado vai com o **retrato** do
+>   relógio dele; nulo = o regime do curso na data da semana. Uma linha ativa por semana.
+> - **`turma_regime_vigencia`** — o regime da turma no DSA *"desta semana em diante"*, a partir de uma segunda-feira
+>   (pelo maior `vigente_de` ≤ a semana); nulo = o do curso. Vence o regime de *Editar turma*.
+>
+> As duas com RLS de leitura e **sem escrita** para `authenticated`: quem grava são as três RPCs do regime, com porteiro
+> de `registros_aula.criar` e alcance. Trocar é `status = 'inativo'`, nunca apagar.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a

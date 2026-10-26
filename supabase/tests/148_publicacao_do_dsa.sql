@@ -148,7 +148,10 @@ select is(
         -- · leem `vw_ocupacao_ta` ou `vw_avaliacoes_situacao`/`fn_status_vista`, que já filtram o salvo (M2):
         'conflitos_da_semana', 'ocupacao_para_conflitos', 'situacao_da_avaliacao',
         -- · a proteção de vigência pela atividade global lê `lancamentos_que_travam_vigencia`, que filtra (M2):
-        'protecao_das_vigencias_por_atividade_global')),
+        'protecao_das_vigencias_por_atividade_global',
+        -- · spec 026 (Bloco 11): o porteiro do regime da semana só cita o RECURSO `registros_aula` da matriz de
+        --   permissões (`app.pode`), como `registrar_evento_do_dsa`; a semana salva ele lê de `vw_ocupacao_ta`.
+        'porteiro_do_regime_do_dsa')),
   '',
   'RP-8: todo objeto que lê uma tabela de lançamento filtra «salvo» (ou está na lista nominal)');
 

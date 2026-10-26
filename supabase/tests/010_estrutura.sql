@@ -128,7 +128,11 @@ select set_eq(
            ('feriado_turma'),
            -- Spec 024 (Bloco 9), 23/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entrou no BRIEF §2.1 (emenda de
            -- 23/10/2026) antes de entrar aqui: a trilha da publicacao do DSA (RP-0 a RP-8), so de acrescimo.
-           ('dsa_eventos_da_semana')$$,
+           ('dsa_eventos_da_semana'),
+           -- Spec 026 (Bloco 11), 26/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entraram no BRIEF §2.1 (emenda de
+           -- 26/10/2026) antes de entrar aqui: o regime de tempos da semana do DSA e o «desde» da turma (RD-3).
+           ('dsa_regime_da_semana'),
+           ('turma_regime_vigencia')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 
