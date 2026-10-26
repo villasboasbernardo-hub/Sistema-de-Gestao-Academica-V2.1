@@ -5,6 +5,11 @@ de ações) e para o **Início**. Elas continuam as do Bloco 9 (`regras-da-publi
 mudam) e seguem os padrões de tela (`padroes-de-tela.md`, RT-1 a RT-7). **O papel do DSA não muda** — por isso o merge
 não espera virada de semana.
 
+✅ **Em vigor desde 26/10/2026**: o Bloco 11 foi aprovado por Bernardo Villas Boas (D-1 a D-40 como estão) e mesclado
+na `main` em `eaba093` (PR #92). ⚠️ **O saldo e a capacidade ainda não seguem o regime «desde»** — o RD-3 vale para o
+lançamento, o papel, a planilha e as ações (D-14), e o saldo fica no regime de *Editar turma* (D-15). A regra de que o
+saldo e a capacidade também sigam o «desde» é a **`PEND-026-1`**, registrada para o próximo bloco no plano de correções.
+
 A primeira coluna é o texto de Bernardo; a segunda, como a regra se aplica no código.
 
 | # | A regra | Como se aplica |
