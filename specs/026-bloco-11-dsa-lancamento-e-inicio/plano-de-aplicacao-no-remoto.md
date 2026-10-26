@@ -6,7 +6,9 @@ auxiliares em `app` e as três RPCs do regime de tempos da semana em `public`. N
 existente muda — por isso segue sem portão (regra 9.4, emenda de 19/10/2026), com o rito completo.
 
 **Reversão:** `reversao.sql`, nesta pasta — vale antes de uso real (depois dele, desfazer apaga as escolhas de regime e
-o regime gravado das semanas salvas).
+o regime gravado das semanas salvas). **Provada** em 26/10/2026, numa transação desfeita no banco local (99 migrations):
+a impressão digital do esquema vai de **2.721 objetos `d69c3a6c…`** a **2.637 objetos `7e7eb3d5…`** — a do remoto depois
+do Bloco 10 — e volta a 2.721 com o `rollback`.
 
 ## O rito
 
