@@ -296,11 +296,13 @@ aula, avaliação, sessão, vista ou atividade com data fora do ano da turma.
   `plano-de-aplicacao-no-remoto.md` §8). A ficha e o sininho deixam de trazer *"toda janela que toca o ano"* (a CHK005 de
   15/09/2026, substituída).
 - **D-39 INVERTIDA** — os filtros *Curso* e *Classificação* de Instrutores só pelas designações do ano escolhido.
-- D-40 · Q: Com a D-39 invertida, a **habilitação** continua contando no filtro *Curso*? → A: **não** — *"só pelas
-  designações do ano escolhido"*. *Alternativa: habilitação (sem ano) OU designação do ano.*
+- D-40 · ⚠️ **INVERTIDA na conferência final (25/10/2026)**: *"o filtro Curso de Instrutores mostra habilitados (sem
+  ano) OU designados em turma do curso no ano escolhido; 'Selecionado: Sim' continua pelo ano e, combinado, dá só os
+  designados"* — o mesmo para *Classificação*. *(Era: só as designações do ano.)*
 - D-41 · Q: O alerta de faixa por semana mostra que semanas? → A: as **semanas do ano escolhido**, com a carga só das
   turmas do ano; a semana de outro ano que uma turma do ano carregue (janela fora do ano da turma, como a `CAHO 2027`)
-  não aparece. *Alternativa: todas as semanas das turmas do ano, de qualquer ano do calendário.*
+  não aparece. *Alternativa: todas as semanas das turmas do ano, de qualquer ano do calendário.* ✅ **Aprovada** na
+  conferência final (25/10/2026).
 - **A varredura** (o que decide o ano por data ou janela, para dado ligado a turma): a ficha do instrutor e o sininho
   (alertas de carga) — corrigidos; a lista de Instrutores (*CH do ano*) — corrigida pela view; *Atividades* — a de turma
   pelo ano da turma, a global pela data (`predicado-do-ano.ts`). **Já pelo ano da turma**: Início, `/turmas` e as

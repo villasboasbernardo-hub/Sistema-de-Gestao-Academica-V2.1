@@ -376,12 +376,16 @@ test.describe("`FR-025` a `FR-028` · a tela pelo percurso de quem usa (quicksta
     await expect(grade(page)).toContainText(amostra.nomes.selecionadoSemHabilitacao);
 
     /*
-     * ⚠️ D-39 INVERTIDA (conferência de 24/10/2026): o filtro Curso é só pelas designações do ANO escolhido — o CT mais
-     *    antigo e a 1ºTen, designados na turma do ano corrente. O habilitado sem designação (o da aula) saiu; antes
-     *    eram 3, habilitação OU atribuição de qualquer ano.
+     * ⚠️ D-40 INVERTIDA (conferência final de 25/10/2026): o filtro Curso é o HABILITADO (sem ano) OU o DESIGNADO em
+     *    turma do curso no ano escolhido — o CT mais antigo (os dois), o da aula (habilitado) e a 1ºTen (designada na
+     *    turma do ano corrente) = 3; com «Selecionado: Sim», que segue o ano, só os dois designados.
      */
     await page.goto(`${base}&curso=CUR-${amostra.marcador}`);
-    await expect(contagem(page), "curso não ficou só nas designações do ano").toContainText(
+    await expect(contagem(page), "curso não casou habilitado OU designado no ano").toContainText(
+      "3 instrutor(es)",
+    );
+    await page.goto(`${base}&curso=CUR-${amostra.marcador}&selecionado=sim`);
+    await expect(contagem(page), "combinado, não ficou só o designado").toContainText(
       "2 instrutor(es)",
     );
 

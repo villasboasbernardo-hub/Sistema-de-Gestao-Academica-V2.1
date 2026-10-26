@@ -51,40 +51,46 @@ describe("filtrarPorSelecao — o filtro Selecionado segue o ano", () => {
   });
 });
 
-describe("noRecorteDeCurso — os filtros Curso e Classificação pelas designações do ano (D-39 invertida)", () => {
+describe("noRecorteDeCurso — Curso e Classificação: habilitado (sem ano) OU designado no ano (D-40 invertida)", () => {
   /*
-   * Conferência de 24/10/2026: «filtros Curso e Classificação de Instrutores só pelas designações do ano escolhido».
-   * Antes casavam a habilitação OU a atribuição de qualquer ano (`cursos_vinculados` da view).
+   * Conferência final de 25/10/2026 (Bernardo Villas Boas): «o filtro Curso de Instrutores mostra habilitados (sem
+   * ano) OU designados em turma do curso no ano escolhido; "Selecionado: Sim" continua pelo ano e, combinado, dá só os
+   * designados».
    */
-  const COM_CURSO = [
+  const DESIGNADOS = [
     { instrutorId: "a", anoDaTurma: 2026, cursoCodigo: "CAHO", classificacao: "regular" },
     { instrutorId: "b", anoDaTurma: 2027, cursoCodigo: "CAHO", classificacao: "regular" },
     { instrutorId: "c", anoDaTurma: 2026, cursoCodigo: "C-Exp-X", classificacao: "expedito" },
   ];
+  // O habilitado não tem ano: a disciplina marcada na ficha.
+  const HABILITADOS = [{ instrutorId: "h", cursoCodigo: "CAHO", classificacao: "regular" }];
+  const recorte = (ano: number, curso: string, classificacao = "") =>
+    [...(noRecorteDeCurso(DESIGNADOS, HABILITADOS, ano, { curso, classificacao }) ?? [])].sort();
 
   it("sem curso nem classificação, não recorta (null)", () => {
-    expect(noRecorteDeCurso(COM_CURSO, 2026, { curso: "", classificacao: "" })).toBeNull();
+    expect(
+      noRecorteDeCurso(DESIGNADOS, HABILITADOS, 2026, { curso: "", classificacao: "" }),
+    ).toBeNull();
   });
 
-  it("o curso conta só quem foi designado em turma DO ANO", () => {
-    expect([
-      ...(noRecorteDeCurso(COM_CURSO, 2026, { curso: "CAHO", classificacao: "" }) ?? []),
-    ]).toEqual(["a"]);
-    expect([
-      ...(noRecorteDeCurso(COM_CURSO, 2027, { curso: "CAHO", classificacao: "" }) ?? []),
-    ]).toEqual(["b"]);
+  it("o curso: o habilitado em qualquer ano, e o designado só no ano da turma", () => {
+    expect(recorte(2026, "CAHO")).toEqual(["a", "h"]);
+    expect(recorte(2027, "CAHO")).toEqual(["b", "h"]);
   });
 
-  it("num ano sem designação no curso, ninguém", () => {
-    expect(noRecorteDeCurso(COM_CURSO, 2028, { curso: "CAHO", classificacao: "" })?.size).toBe(0);
+  it("num ano sem designação no curso, só o habilitado", () => {
+    expect(recorte(2028, "CAHO")).toEqual(["h"]);
+  });
+
+  it("combinado com «Selecionado: Sim» (pelo ano), só os designados", () => {
+    const linhas = recorte(2026, "CAHO").map((id) => ({ id }));
+    const selecionados = selecionadosNoAno(DESIGNADOS, 2026);
+    expect(filtrarPorSelecao(linhas, selecionados, "sim").map((l) => l.id)).toEqual(["a"]);
   });
 
   it("a classificação, idem; com os dois, vale o E lógico", () => {
-    expect([
-      ...(noRecorteDeCurso(COM_CURSO, 2026, { curso: "", classificacao: "expedito" }) ?? []),
-    ]).toEqual(["c"]);
-    expect(
-      noRecorteDeCurso(COM_CURSO, 2026, { curso: "CAHO", classificacao: "expedito" })?.size,
-    ).toBe(0);
+    expect(recorte(2026, "", "expedito")).toEqual(["c"]);
+    expect(recorte(2026, "", "regular")).toEqual(["a", "h"]);
+    expect(recorte(2026, "CAHO", "expedito")).toEqual([]);
   });
 });

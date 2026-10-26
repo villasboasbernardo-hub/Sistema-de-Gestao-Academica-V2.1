@@ -465,8 +465,8 @@ digital igual nos dois (2.637 objetos, `7e7eb3d5…`).
 
 - **`PEND-025-5`** — *a janela efetiva usa a previsão da DISCIPLINA, que tem data de um ano só*: numa turma de outro ano
   (a `CAHO 2027`, no remoto), a janela cai fora do ano da turma — a carga agora conta no ano certo, mas o alerta por
-  semana não a vê (as semanas dela são do ano anterior). Corrigir é decidir de onde vem a janela de uma turma de ano
-  diferente do da previsão da disciplina.
+  semana não a vê (as semanas dela são do ano anterior). **Regra proposta por Bernardo (25/10/2026): a janela da carga
+  de uma turma é o período da própria turma (início–fim).** Fica registrada, para fatia própria.
 - **`PEND-025-1`** — *o curso nunca é excluível*: todo curso tem o histórico do regime, que é só de acréscimo (regra 9.1),
   e o *Excluir* fica sempre desabilitado com a dica. Excluir o curso criado por engano exigiria abrir uma exceção na
   imutabilidade de `curso_regime_historico` — decisão sua.

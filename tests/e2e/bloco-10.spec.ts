@@ -311,6 +311,39 @@ test.describe("item 10 · RT-6 · o ano escolhido vale nos outros módulos", () 
 });
 
 test.describe("item 8 · RT-5 · o gráfico é interativo", () => {
+  /*
+   * ⚠️ A PIZZA PRECISA DE DUAS CLASSIFICAÇÕES, e a amostra do arquivo só tem curso regular: sem um expedito garantido,
+   *    o caso dependia do que outro arquivo tivesse semeado naquele momento (instável sob carga, PR #90). O curso não se
+   *    apaga (regra 9.1), então a garantia é idempotente: cria se não existir.
+   */
+  test.beforeAll(async ({}, info) => {
+    const banco = bancoDoBloco2();
+    const sigla = `C-Exp-B10G${info.workerIndex}`;
+    const { data } = await banco.from("cursos").select("id").eq("codigo", sigla).maybeSingle();
+    if (!data) {
+      const { error } = await banco.rpc("criar_curso_com_regime", {
+        p_curso: {
+          codigo: sigla,
+          nome_curso: `Curso expedito do gráfico ${info.workerIndex}`,
+          classificacao: "expedito",
+          modalidade: "presencial",
+          duracao_dias: 30,
+        },
+        p_regime: {
+          regime_tempos: 8,
+          ta_duracao_min: 45,
+          intervalo_manha_min: 10,
+          intervalo_tarde_min: 10,
+          hora_inicio_manha: "07:30",
+          hora_inicio_tarde: "13:30",
+          vigente_de: "2020-01-01",
+        },
+      });
+      if (error) throw new Error(`curso expedito do gráfico: ${error.message}`);
+    }
+    await banco.from("cursos").update({ status: "ativo" }).eq("codigo", sigla);
+  });
+
   test("clicar na legenda tira o grupo, o gráfico se redistribui e «Mostrar todos» devolve", async ({
     page,
   }) => {
@@ -390,6 +423,20 @@ test.describe("RT-6 · o ano da turma (conferência de 24/10/2026)", () => {
   let ANUAL: Bloco2Semeado;
   let SIGLA_A = "";
   let INS_A = "";
+  /** Um segundo instrutor, só HABILITADO no curso (sem designação): o habilitado não tem ano (D-40 invertida). */
+  let INS_H = "";
+
+  async function limparHabilitado() {
+    const banco = bancoDoBloco2();
+    const { data } = await banco.from("instrutores").select("id").eq("codigo", INS_H).maybeSingle();
+    if (!data) return;
+    const id = (data as { id: string }).id;
+    await semErro(
+      "habilitação antiga",
+      banco.from("instrutor_disciplina").delete().eq("instrutor_id", id),
+    );
+    await semErro("habilitado antigo", banco.from("instrutores").delete().eq("id", id));
+  }
 
   async function semErro(o: string, p: PromiseLike<{ error: { message: string } | null }>) {
     const { error } = await p;
@@ -400,7 +447,9 @@ test.describe("RT-6 · o ano da turma (conferência de 24/10/2026)", () => {
     const p = info.workerIndex;
     SIGLA_A = `CUR-B10A${p}`;
     INS_A = `B10A-INS-${p}`;
+    INS_H = `B10A-HAB-${p}`;
     const banco = bancoDoBloco2();
+    await limparHabilitado();
     // O segundo currículo de uma rodada anterior sai ANTES da semente (o curso fica — regra 9.1).
     const { data: existe } = await banco
       .from("cursos")
@@ -462,6 +511,28 @@ test.describe("RT-6 · o ano da turma (conferência de 24/10/2026)", () => {
         })),
       ),
     );
+    // O só habilitado: a disciplina marcada na ficha, sem designação em turma nenhuma.
+    const { data: hab, error: erroHab } = await banco
+      .from("instrutores")
+      .insert({
+        codigo: INS_H,
+        posto_graduacao: "CT",
+        esp_hab_obs: "-EF",
+        nome_completo: `Instrutor habilitado ${INS_H}`,
+        categoria: "Militar",
+        om: "CIAARA",
+      })
+      .select("id")
+      .single();
+    if (erroHab) throw new Error(`semente do ano da turma — habilitado: ${erroHab.message}`);
+    await semErro(
+      "habilitação",
+      banco.from("instrutor_disciplina").insert({
+        codigo: `${SIGLA_A}-VIN-H`,
+        instrutor_id: (hab as { id: string }).id,
+        disciplina_id: disciplina,
+      }),
+    );
     // A duração: o currículo 1 desde sempre, com 29 semanas; o 2, vigente no ano seguinte, com 41.
     await semErro(
       "currículo 1",
@@ -487,6 +558,7 @@ test.describe("RT-6 · o ano da turma (conferência de 24/10/2026)", () => {
   test.afterAll(async () => {
     if (!ANUAL) return;
     await bancoDoBloco2().from("curriculos").delete().eq("curso_id", ANUAL.cursoId).gt("versao", 1);
+    await limparHabilitado();
     await limparBloco2(SIGLA_A, INS_A);
   });
 
@@ -520,9 +592,14 @@ test.describe("RT-6 · o ano da turma (conferência de 24/10/2026)", () => {
     await expect(tabela).not.toContainText(ANUAL.turmas.T1!.codigo);
   });
 
-  test("o filtro Curso de Instrutores: só quem foi designado em turma do ano escolhido", async ({
+  test("o filtro Curso de Instrutores: o habilitado (sem ano) OU o designado no ano; com «Selecionado: Sim», só o designado", async ({
     page,
   }) => {
+    /*
+     * D-40 invertida (conferência final de 25/10/2026): «o filtro Curso de Instrutores mostra habilitados (sem ano) OU
+     * designados em turma do curso no ano escolhido; "Selecionado: Sim" continua pelo ano e, combinado, dá só os
+     * designados».
+     */
     await entrar(page, EMAIL, "/inicio");
     await MENU(page).getByRole("link", { name: "Instrutores", exact: true }).click();
     await expect.poll(() => new URL(page.url()).pathname).toBe("/instrutores");
@@ -534,13 +611,28 @@ test.describe("RT-6 · o ano da turma (conferência de 24/10/2026)", () => {
       .click();
     await expect.poll(() => new URL(page.url()).searchParams.get("curso")).toBe(SIGLA_A);
     const contagem = page.locator('[data-slot="contagem-de-instrutores"]');
-    await expect(contagem).toContainText("1 instrutor(es)", { timeout: 15_000 });
+    const grade = page.getByRole("grid", { name: "Instrutores" });
+    // No ano corrente: o designado (turma do ano) e o habilitado.
+    await expect(contagem, "o habilitado ou o designado saiu do filtro Curso").toContainText(
+      "2 instrutor(es)",
+      { timeout: 15_000 },
+    );
 
-    // Dois anos à frente não há turma do curso: o vínculo de outro ano não conta (D-39 invertida).
+    // Dois anos à frente não há turma do curso: o designado sai, o habilitado (sem ano) fica.
     await escolherAno(page, ANO + 2);
     await expect(contagem, "a designação de outro ano entrou no filtro Curso").toContainText(
-      "0 instrutor(es)",
+      "1 instrutor(es)",
     );
+    await expect(grade.locator(`a[href="/instrutores/${INS_H}"]`)).toHaveCount(1);
+
+    // «Selecionado: Sim» continua pelo ano: dois anos à frente, ninguém; no ano corrente, só o designado.
+    await page.getByRole("combobox", { name: "Selecionado", exact: true }).click();
+    await page.getByRole("option", { name: "Sim", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).searchParams.get("selecionado")).toBe("sim");
+    await expect(contagem).toContainText("0 instrutor(es)");
+    await escolherAno(page, ANO);
+    await expect(contagem, "combinado, não ficou só o designado").toContainText("1 instrutor(es)");
+    await expect(grade.locator(`a[href="/instrutores/${INS_A}"]`)).toHaveCount(1);
   });
 
   test("Cursos: a duração é a do currículo vigente no ano escolhido", async ({ page }) => {

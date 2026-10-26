@@ -13,8 +13,10 @@
  * ⚠️ **O ANO É O DA TURMA** (`turmas.ano_letivo`), não o da janela da disciplina: é o que a regra diz — e a regra vale
  *    para o sistema todo (RT-6, 24/10/2026): *"o ano de qualquer informação ligada a turma é o ANO DA TURMA, nunca a
  *    data do registro ou a janela da atribuição"*.
- * ⚠️ **OS FILTROS CURSO E CLASSIFICAÇÃO TAMBÉM** (D-39 invertida, 24/10/2026): *"só pelas designações do ano
- *    escolhido"* — antes casavam a habilitação OU a atribuição de qualquer ano (`cursos_vinculados` da view).
+ * ⚠️ **OS FILTROS CURSO E CLASSIFICAÇÃO: HABILITADO (SEM ANO) OU DESIGNADO NO ANO** (D-40 invertida, conferência
+ *    final de 25/10/2026): *"o filtro Curso de Instrutores mostra habilitados (sem ano) OU designados em turma do curso
+ *    no ano escolhido; 'Selecionado: Sim' continua pelo ano e, combinado, dá só os designados"*. A view casava a
+ *    habilitação OU a atribuição de QUALQUER ano (`cursos_vinculados`); a parte da atribuição passa a ter ano.
  *
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
@@ -28,6 +30,13 @@ export type DesignacaoComAno = {
   readonly cursoCodigo?: string | null;
   /** A classificação do curso da turma. */
   readonly classificacao?: string | null;
+};
+
+/** Uma habilitação ativa — a disciplina marcada na ficha —, com o curso da disciplina. Não tem ano. */
+export type HabilitacaoNoCurso = {
+  readonly instrutorId: string;
+  readonly cursoCodigo: string | null;
+  readonly classificacao: string | null;
 };
 
 /** Os instrutores designados para disciplina em turma do ano escolhido. */
@@ -55,19 +64,24 @@ export function filtrarPorSelecao<T extends { readonly id: string | null }>(
 }
 
 /**
- * Os instrutores do recorte de *Curso* e *Classificação* — designados em turma DO ANO desse curso (ou de curso dessa
- * classificação). Com os dois, vale o E lógico, cada um pela sua designação, como os dois predicados de antes. Sem
- * nenhum dos dois, `null`: não há recorte.
+ * Os instrutores do recorte de *Curso* e *Classificação* — habilitados numa disciplina desse curso (sem ano) ou
+ * designados em turma DO ANO desse curso (ou de curso dessa classificação). Com os dois, vale o E lógico, cada um pelo
+ * seu vínculo, como os dois predicados de antes. Sem nenhum dos dois, `null`: não há recorte.
  */
 export function noRecorteDeCurso(
   designacoes: readonly DesignacaoComAno[],
+  habilitacoes: readonly HabilitacaoNoCurso[],
   ano: number,
   filtro: { readonly curso: string; readonly classificacao: string },
 ): ReadonlySet<string> | null {
   if (filtro.curso === "" && filtro.classificacao === "") return null;
-  const doAno = designacoes.filter((d) => d.anoDaTurma === ano);
-  const quem = (casa: (d: DesignacaoComAno) => boolean) =>
-    new Set(doAno.filter(casa).map((d) => d.instrutorId));
+  const vinculos: readonly {
+    readonly instrutorId: string;
+    readonly cursoCodigo?: string | null;
+    readonly classificacao?: string | null;
+  }[] = [...habilitacoes, ...designacoes.filter((d) => d.anoDaTurma === ano)];
+  const quem = (casa: (v: (typeof vinculos)[number]) => boolean) =>
+    new Set(vinculos.filter(casa).map((v) => v.instrutorId));
   const porCurso = filtro.curso === "" ? null : quem((d) => d.cursoCodigo === filtro.curso);
   const porClassificacao =
     filtro.classificacao === "" ? null : quem((d) => d.classificacao === filtro.classificacao);

@@ -43,6 +43,7 @@ import {
   noRecorteDeCurso,
   selecionadosNoAno,
   type DesignacaoComAno,
+  type HabilitacaoNoCurso,
 } from "@/lib/dominio/selecao-no-ano";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
@@ -69,6 +70,14 @@ type DesignacaoLida = {
       readonly ano_letivo: number;
       readonly curso: { readonly codigo: string; readonly classificacao: string } | null;
     } | null;
+  } | null;
+};
+
+/** Uma habilitação lida, com o curso da disciplina embutido. */
+type HabilitacaoLida = {
+  readonly instrutor_id: string;
+  readonly disciplina: {
+    readonly curso: { readonly codigo: string; readonly classificacao: string } | null;
   } | null;
 };
 
@@ -103,52 +112,77 @@ export default async function Instrutores({
   const escolha = await anoEscolhido(String(valores.ano));
   const ano = escolha.ano;
   const supabase = await criarClienteDeServidor();
-  const [usuario, { data, error }, cargaRes, cursosRes, escalaRes, opcoesRes, designacoesRes] =
-    await Promise.all([
-      usuarioDaSessao(),
-      montarConsultaDeInstrutores(
-        supabase.from("vw_instrutores").select(COLUNAS_DA_LISTAGEM),
-        parametros,
-      ),
+  const [
+    usuario,
+    { data, error },
+    cargaRes,
+    cursosRes,
+    escalaRes,
+    opcoesRes,
+    designacoesRes,
+    habilitacoesRes,
+  ] = await Promise.all([
+    usuarioDaSessao(),
+    montarConsultaDeInstrutores(
+      supabase.from("vw_instrutores").select(COLUNAS_DA_LISTAGEM),
+      parametros,
+    ),
+    supabase
+      .from("vw_instrutor_carga_anual")
+      .select("instrutor_id, ta_ministrado_ano")
+      .eq("ano", ano),
+    /*
+     * ⚠️ `status` ENTRA NA CONSULTA (`FR-017.10` da spec 009). Curso inativo CONTINUA no filtro — a
+     * listagem de instrutores é consulta sobre histórico, e esconder o curso arquivado tornaria o
+     * passado inalcançável. O que muda é que ele vai para o FIM da lista e sai marcado, o que
+     * `opcoesDosFiltros` resolve. Sem a coluna, os dois ficam indistinguíveis.
+     */
+    supabase.from("cursos").select("codigo, status, classificacao").order("codigo"),
+    supabase
+      .from("config_listas")
+      .select("valor, ordem, ativo")
+      .eq("lista", "escala_antiguidade")
+      .order("ordem"),
+    // As opções dos filtros saem do cadastro inteiro, não do recorte (ver `opcoes.ts`).
+    supabase
+      .from("vw_instrutores")
+      .select("om, categoria, nivel_escolaridade, posto_graduacao")
+      .order("ordem_antiguidade"),
+    /*
+     * ⚠️ O SELECIONADO TEM ANO (conferência do PR #90, 24/10/2026): as designações ativas em linha de turma
+     *    ativa, com o ano da TURMA. A coluna `selecionado` da view vale para qualquer ano — em 2027, sem turma
+     *    designada, ela dava os 34 de 2026. Em páginas, como toda leitura que pode passar do teto.
+     */
+    lerTodasAsPaginas((f) =>
       supabase
-        .from("vw_instrutor_carga_anual")
-        .select("instrutor_id, ta_ministrado_ano")
-        .eq("ano", ano),
-      /*
-       * ⚠️ `status` ENTRA NA CONSULTA (`FR-017.10` da spec 009). Curso inativo CONTINUA no filtro — a
-       * listagem de instrutores é consulta sobre histórico, e esconder o curso arquivado tornaria o
-       * passado inalcançável. O que muda é que ele vai para o FIM da lista e sai marcado, o que
-       * `opcoesDosFiltros` resolve. Sem a coluna, os dois ficam indistinguíveis.
-       */
-      supabase.from("cursos").select("codigo, status, classificacao").order("codigo"),
-      supabase
-        .from("config_listas")
-        .select("valor, ordem, ativo")
-        .eq("lista", "escala_antiguidade")
-        .order("ordem"),
-      // As opções dos filtros saem do cadastro inteiro, não do recorte (ver `opcoes.ts`).
-      supabase
-        .from("vw_instrutores")
-        .select("om, categoria, nivel_escolaridade, posto_graduacao")
-        .order("ordem_antiguidade"),
-      /*
-       * ⚠️ O SELECIONADO TEM ANO (conferência do PR #90, 24/10/2026): as designações ativas em linha de turma
-       *    ativa, com o ano da TURMA. A coluna `selecionado` da view vale para qualquer ano — em 2027, sem turma
-       *    designada, ela dava os 34 de 2026. Em páginas, como toda leitura que pode passar do teto.
-       */
-      lerTodasAsPaginas((f) =>
-        supabase
-          .from("turma_disciplina_instrutor")
-          .select(
-            "id, instrutor_id, turma_disciplina!inner(status, turmas!inner(ano_letivo, curso:cursos!turmas_curso_id_fkey(codigo, classificacao)))",
-            contagemNaPrimeira(f),
-          )
-          .eq("status", "ativo")
-          .eq("turma_disciplina.status", "ativo")
-          .order("id")
-          .range(f.de, f.ate),
-      ),
-    ]);
+        .from("turma_disciplina_instrutor")
+        .select(
+          "id, instrutor_id, turma_disciplina!inner(status, turmas!inner(ano_letivo, curso:cursos!turmas_curso_id_fkey(codigo, classificacao)))",
+          contagemNaPrimeira(f),
+        )
+        .eq("status", "ativo")
+        .eq("turma_disciplina.status", "ativo")
+        .order("id")
+        .range(f.de, f.ate),
+    ),
+    /*
+     * D-40 invertida (conferência final de 25/10/2026): o filtro Curso também conta o HABILITADO, que não tem ano —
+     * as habilitações ativas com o curso da disciplina. Só quando há filtro de curso ou classificação.
+     */
+    parametros.curso === "" && parametros.classificacao === ""
+      ? Promise.resolve({ data: [], error: null })
+      : lerTodasAsPaginas((f) =>
+          supabase
+            .from("instrutor_disciplina")
+            .select(
+              "id, instrutor_id, disciplina:disciplinas!inner(curso:cursos!disciplinas_curso_id_fkey(codigo, classificacao))",
+              contagemNaPrimeira(f),
+            )
+            .eq("status", "ativo")
+            .order("id")
+            .range(f.de, f.ate),
+        ),
+  ]);
   const escala = escalaDeLinhas(
     (escalaRes.data ?? []).map((e) => ({
       valor: e.valor,
@@ -191,8 +225,15 @@ export default async function Instrutores({
       }))
     : [];
   const selecionados = selecionadosNoAno(designacoes, ano);
-  /* D-39 invertida (24/10/2026): Curso e Classificação pelas designações do ano escolhido. */
-  const doCurso = noRecorteDeCurso(designacoes, ano, {
+  /* D-40 invertida (25/10/2026): Curso e Classificação — habilitado (sem ano) OU designado no ano escolhido. */
+  const habilitacoes: readonly HabilitacaoNoCurso[] = (
+    (habilitacoesRes.data ?? []) as HabilitacaoLida[]
+  ).map((h) => ({
+    instrutorId: h.instrutor_id,
+    cursoCodigo: h.disciplina?.curso?.codigo ?? null,
+    classificacao: h.disciplina?.curso?.classificacao ?? null,
+  }));
+  const doCurso = noRecorteDeCurso(designacoes, habilitacoes, ano, {
     curso: parametros.curso,
     classificacao: parametros.classificacao,
   });
@@ -320,6 +361,17 @@ export default async function Instrutores({
           {linhas.length} instrutor(es){" "}
           {parametros.situacao === "inativo" ? "inativo(s)" : "ativo(s)"}
         </p>
+
+        {habilitacoesRes.error && (
+          <p
+            className="text-texto-suave text-sm"
+            role="status"
+            data-slot="habilitacoes-indisponiveis"
+          >
+            Não foi possível ler as habilitações: o filtro Curso mostra só os designados em {ano}
+            até a leitura voltar.
+          </p>
+        )}
 
         {!selecaoLida && (
           <p className="text-texto-suave text-sm" role="status" data-slot="selecao-indisponivel">
