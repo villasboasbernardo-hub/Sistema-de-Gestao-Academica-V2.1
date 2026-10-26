@@ -1,0 +1,91 @@
+{
+  "turma": "C-Exp-Obs-ME T1 2026",
+  "planilha": "C-Exp-OBS-ME-PR T01/26 (02/02 a 27/02/2026)",
+  "excecao_virada_1": {
+    "autorizada_por": "Bernardo Villas Boas",
+    "em": "2026-10-26",
+    "alcance": "planilha FORA da pasta-fonte, incluida por decisao nominal (D3 de 26/10/2026)"
+  },
+  "turma_em_andamento": false,
+  "locais": {
+    "SALA 1": "Sala 01",
+    "SALA 01": "Sala 01",
+    "SALA 2": "Sala 02",
+    "SALA 02": "Sala 02",
+    "SALA 3": "Sala 03",
+    "SALA 03": "Sala 03",
+    "SALA 4": "Sala 04",
+    "SALA 04": "Sala 04",
+    "SALA 6": "Sala 06",
+    "SALA 06": "Sala 06",
+    "SALA CAHO": "Sala CAHO",
+    "LAB INFO": "Laboratório de Informática",
+    "LABORATÓRIO DE INFORMÁTICA": "Laboratório de Informática",
+    "LAB. INFO": "Laboratório de Informática",
+    "LAB DE INFORMÁTICA": "Laboratório de Informática",
+    "EAD": "EAD",
+    "CHM": "CHM"
+  },
+  "tipo_avaliacao": "Prova Escrita",
+  "padrao_ue_de_avaliacao": "AV[0-9]+",
+  "padrao_ue_de_vista": "VP[0-9]*",
+  "chaves": {
+    "30+1": {
+      "tipo": "apoio",
+      "subtipo": "Monitoria",
+      "responsavel_externo": "MONITORIA / DOEP",
+      "decisao": "como na T2 (decisoes/c-exp-obs-me-2026.json): spec 014, FR-021 e D-AA-12 — Monitoria e Apoio Individualizado"
+    },
+    "LP+1": {
+      "tipo": "calendario",
+      "descricao": "Licença de pagamento"
+    }
+  },
+  "incluir_dias_de_calendario_ausentes": true,
+  "abrangencia_do_calendario": "Nacional/Institucional",
+  "aprovadas": [
+    "D3 (Bernardo Villas Boas, 26/10/2026): turma carregada pela planilha, fora da pasta; preparo em preparo/c-exp-obs-me-t1-2026.sql (relogio, alunos e atribuicao)",
+    "locais «EAD» e «CHM» como na BATI T1 e na Ag-Mag T1 (precedente)",
+    "vistas pareadas por decisao explicita, como na T2 (precedente: decisoes/c-exp-obs-me-2026.json)",
+    "de-para de UE pelo nome (R1, precedente da C-Ap-FR e da Ag-Mag)"
+  ],
+  "vistas": [
+    {
+      "disciplina": "I",
+      "data": "2026-02-26",
+      "da_prova_de": "2026-02-12",
+      "porque": "VP «SOBRE AS UE 1 a 4» e a vista da AV1 (12/02); sem a decisao, as duas vistas de I iam para a AV2 (25/02)"
+    },
+    {
+      "disciplina": "I",
+      "data": "2026-02-27",
+      "da_prova_de": "2026-02-25",
+      "porque": "VP2 «SOBRE A UE 5» e a vista da AV2 (25/02)"
+    },
+    {
+      "disciplina": "II",
+      "data": "2026-02-25",
+      "da_prova_de": "2026-02-10",
+      "porque": "VP «SOBRE AS UE 1 a 3» e a vista da AV1 (10/02)"
+    },
+    {
+      "disciplina": "II",
+      "data": "2026-02-27",
+      "da_prova_de": "2026-02-26",
+      "porque": "VP2 «SOBRE A UE 4» e a vista da AV2 (26/02)"
+    }
+  ],
+  "ues": {
+    "I+1P": "I+1",
+    "I+5U": "I+5",
+    "II+1P": "II+1",
+    "II+4U": "II+4"
+  },
+  "ues_motivo": {
+    "decisao": "R1 — Bernardo Villas Boas, 16/10/2026: cada chave conferida pelo NOME da UE no banco; aqui numero e nome concordam",
+    "conferencias": [
+      "I+5U «5 – CARTAS E BOLETINS METEOROLÓGICOS (Última Aula)» → UE 5 «CARTAS E BOLETINS METEOROLÓGICOS» (o de_para_de_ue.py so reduz o sufixo P; o U, conferido a mao pelo nome)",
+      "II+4U «4 – OBSERVAÇÃO EM ALTITUDE ( Última Aula)» → UE 4 «OBSERVAÇÃO EM ALTITUDE»"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 {
   "pasta_fonte": "https://drive.google.com/drive/folders/1RAuN1XIJ45TSyiQn6m3MMQjn5xyLyfLR",
   "decisao": "VIRADA-1: a fonte dos lancamentos e a planilha de controle de cada turma (Bernardo Villas Boas, 06/10/2026).",
-  "fora_da_fonte": "Planilha fora da pasta, copia, «EDITAVEL», «TESTE», «ambientacao» e a subpasta Cursos Regulares/2027 NAO sao fonte. Excecao nominal (Bernardo Villas Boas, 06/10/2026, item 8 do lote da onda 1): C-Exp-BATI T01/26 e C-EXP-AG-MAG T01/26, que estao fora da pasta, sao fonte.",
+  "fora_da_fonte": "Planilha fora da pasta, copia, «EDITAVEL», «TESTE», «ambientacao» e a subpasta Cursos Regulares/2027 NAO sao fonte. Excecao nominal (Bernardo Villas Boas, 06/10/2026, item 8 do lote da onda 1): C-Exp-BATI T01/26 e C-EXP-AG-MAG T01/26, que estao fora da pasta, sao fonte. Excecao nominal (Bernardo Villas Boas, 26/10/2026, D3): C-Exp-OBS-ME-PR T01/26, fora da pasta, e fonte da C-Exp-Obs-ME T1 2026. Excecao nominal (Bernardo Villas Boas, 26/10/2026, D1): a «Copia de Copia de C-AP-HN 2026 - Sabado» e a fonte da C-Ap-HN 2026 (descende da «Copia de C-AP-HN 2026 - Sabado», confirmada em 06/10/2026 e apagada do Drive); «C-AP-HN 2026 - Planejamento Final» e «C-ESPC-HN 2026 PLANEJAMENTO FINAL» NAO sao fonte.",
   "turmas": [
     {
       "turma": "CAHO 2026",
@@ -14,8 +14,9 @@
     },
     {
       "turma": "C-Ap-HN 2026",
-      "planilha_id": "1BydKCFut_VSr7wZTo3IRrN-6ePqhUi6AdjLImkeJ2yo",
-      "titulo": "Cópia de C-AP-HN 2026 - Sabado",
+      "planilha_id": "1Y4gdWPMu0lXOmyV_g4XF70Gy639woeSt8iOY_iLwD_E",
+      "titulo": "Cópia de Cópia de C-AP-HN 2026 - Sabado",
+      "_fonte": "D1 (Bernardo Villas Boas, 26/10/2026): descende da 1BydKCFut_VSr7wZTo3IRrN-6ePqhUi6AdjLImkeJ2yo («Copia de C-AP-HN 2026 - Sabado», confirmada em 06/10/2026), que foi apagada do Drive; identica a ela ate 12/10/2026",
       "subpasta": "Cursos Regulares",
       "onda": 2,
       "decisoes": "decisoes/c-ap-hn-2026.json",
@@ -36,7 +37,9 @@
       "titulo": "C-ESPC-HN 2026",
       "subpasta": "Cursos Regulares",
       "onda": 2,
-      "decisoes": "decisoes/c-espc-hn-2026.json"
+      "decisoes": "decisoes/c-espc-hn-2026.json",
+      "virada": "2026-10-19",
+      "_virada": "D2 (Bernardo Villas Boas, 26/10/2026): virada como a das tres regulares (A3.3); o que ja esta no sistema de 19/10 em diante, inclusive o que entrou pela planilha na rodada de 26/10 (26/10 a 06/11), fica"
     },
     {
       "turma": "C-Espc-FR 2026",
@@ -69,6 +72,14 @@
       "subpasta": "Cursos Expeditos",
       "onda": 1,
       "decisoes": "decisoes/c-exp-obs-me-2026.json"
+    },
+    {
+      "turma": "C-Exp-Obs-ME T1 2026",
+      "planilha_id": "1NmX7JiIPLglZBbIjVdodJ60mLzKA6ptHQf-aiyqfH-k",
+      "titulo": "C-Exp-OBS-ME-PR T01/26",
+      "subpasta": "(fora da pasta — excecao de 26/10/2026)",
+      "onda": 3,
+      "decisoes": "decisoes/c-exp-obs-me-t1-2026.json"
     },
     {
       "turma": "C-Exp-BATI T1 2026",

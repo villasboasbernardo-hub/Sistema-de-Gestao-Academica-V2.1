@@ -129,6 +129,9 @@ class Pendencia:
     ta: int = 0
     bloqueia: bool = True
     chave: str = ""  # para agrupar no lote
+    # O DIA do bloco que a levantou (vazio = pendencia da turma, nao de um bloco). E o que deixa a sincronizacao saber
+    # que o bloco cai da virada em diante (A3.3) — fora do plano, e por isso a pendencia nao para a turma (26/10/2026).
+    data: str = ""
 
 
 @dataclass
@@ -211,8 +214,11 @@ def resolver(
     nome = turma["codigo"]
     r = Resolvido(turma=turma, autor=autor, titulo=titulo)
 
+    # O bloco que esta sendo resolvido: a pendencia levantada dentro do laco leva o dia dele (`Pendencia.data`).
+    no_bloco = {"data": ""}
+
     def pend(tipo: str, detalhe: str, ta: int = 0, bloqueia: bool = True, chave: str = "") -> None:
-        r.pendencias.append(Pendencia(tipo=tipo, turma=nome, detalhe=detalhe, ta=ta, bloqueia=bloqueia, chave=chave))
+        r.pendencias.append(Pendencia(tipo=tipo, turma=nome, detalhe=detalhe, ta=ta, bloqueia=bloqueia, chave=chave, data=no_bloco["data"]))
 
     if not autor.get("auth_user_id") or autor.get("status") != "ativo":
         pend("autor", "a conta autora nao existe, nao esta ativa ou nao tem credencial neste destino")
@@ -394,6 +400,7 @@ def resolver(
             f"BD DISCIPLINAS linha {linha_cat}: a chave por A + C «{por_ac}» difere da coluna D «{por_d}» — vale a D, como o PROCV da IMPRESSAO")
 
     for bloco in leitura.blocos:
+        no_bloco["data"] = bloco.data.isoformat()
         if bloco.chave not in leitura.catalogo:
             r.erros_de_planilha.append(
                 f"linha {bloco.linha} ({bloco.data:%d/%m/%Y}, {bloco.tempos} TA): a chave {bloco.cod}+{bloco.ue} "
@@ -592,6 +599,7 @@ def resolver(
             "observacoes": procedencia(bloco) + ("" if not demais else f" {demais}" if demais.endswith("(conforme DSA)") else f"{MARCA_DE_DEMAIS}{demais}."),
             "outros_instrutores": outros,
         })
+    no_bloco["data"] = ""  # daqui em diante a pendencia e da turma, nao de um bloco
 
     # RN-AV-12: a janela e DADO do banco (`avaliacao.janela_sessoes_dias`, D-9, decisao de 16/10/2026: 7 dias).
     janela = ref.get("janela_sessoes_dias")

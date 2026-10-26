@@ -87,7 +87,8 @@
   ],
   "aprovadas": [
     "locais externos (MACAÉ, BNRJ, BHMN, BENFICA, AVB POLLUX, SIMULADOR) como texto livre — conferencia de 07/10/2026 (Bernardo Villas Boas: aplicar a recomendacao de cada caso)",
-    "responsavel_externo_aceito: entidades e palestrantes externos da lista de pendencias de responsavel — decisao A3.6 de Bernardo Villas Boas (14/10/2026); o palestrante entra como SHA-256 do texto normalizado (nome de pessoa, repositorio publico)"
+    "responsavel_externo_aceito: entidades e palestrantes externos da lista de pendencias de responsavel — decisao A3.6 de Bernardo Villas Boas (14/10/2026); o palestrante entra como SHA-256 do texto normalizado (nome de pessoa, repositorio publico)",
+    "habilitacao do instrutor 16 em MBFCFR-017 (XI) — 9 blocos, 72 TA planejados na planilha; precedente onda-2-habilitacoes.sql (06/10/2026), aplicada pela recomendacao na rodada de 26/10/2026 por autorizacao de Bernardo Villas Boas; preparo/rodada-2026-10-26-habilitacoes.sql"
   ],
   "responsavel_externo_aceito": ["CAPELANIA", "CIAARA-10", "CIAARA-30", "DEnsM", "NAS DHN"],
   "responsavel_externo_aceito_sha256": [

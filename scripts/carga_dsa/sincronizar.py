@@ -32,6 +32,11 @@ O QUE UMA RODADA FAZ, por turma, numa transacao so:
    - O lancamento NASCIDO na tela fica como esta; a linha da planilha no mesmo tempo sai do plano e vai
      para a mesma lista. Ele ja NAO para a turma.
    - A pendencia de responsavel (A3.2) trava SO A LINHA: ela fica fora e listada, o resto entra.
+   - A pendencia de um bloco da virada em diante nao para a turma: o bloco ja esta fora do plano (26/10/2026).
+
+⚠️ TURMA ARQUIVADA E PULADA *(decisao D4 de Bernardo Villas Boas, 26/10/2026)*: a turma arquivada e somente
+   leitura (D-COR-5, o gatilho recusa toda gravacao). Ela nao para mais a rodada: e lida (o calendario global
+   depende de todas as planilhas), nao vai ao banco, e sai no resumo com o motivo e a data do arquivamento.
 
 SAIDA: 0 passou · 2 planilha ou rodada · 3 pendencia que bloqueia · 4 recusa do banco ·
 5 a conferencia apos a escrita divergiu · 6 o plano do remoto nao e o do local ·
@@ -109,6 +114,19 @@ def _campos_que_diferem(nome: str, atual: dict, linha: dict) -> list[tuple[str, 
     esperado = {**linha, "demais": _demais(linha)} if nome == "aulas" else linha
     return [(c, atual.get(c), esperado.get(c)) for c in CAMPOS[nome]
             if _comparavel(c, atual.get(c)) != _comparavel(c, esperado.get(c))]
+
+
+def pendencias_que_bloqueiam(pendencias: list[Pendencia], adiadas: set[str], virada: str | None) -> tuple[list[Pendencia], list[Pendencia]]:
+    """(as que PARAM a turma, as de bloco da virada em diante) — decisao de 26/10/2026, sobre a rodada da C-Ap-HN.
+
+    A3.3: da virada em diante a rodada nao toca nada, e `proteger` tira esses blocos do plano. A pendencia levantada
+    por um bloco desses (`Pendencia.data` >= virada) e listada e NAO para a turma — antes, a C-Ap-HN parava por uma
+    habilitacao que faltava em aulas planejadas para depois da virada, que a rodada nem gravaria. A pendencia sem dia
+    (da turma inteira) e a adiada por decisao (`--adiar`) seguem como antes.
+    """
+    depois = [p for p in pendencias if p.bloqueia and virada and p.data and p.data >= virada]
+    fora = {id(p) for p in depois}
+    return [p for p in pendencias if p.bloqueia and p.tipo not in adiadas and id(p) not in fora], depois
 
 
 def _faixa(data: object, ta: object, tempos: object) -> tuple[str, int, int]:
@@ -949,6 +967,9 @@ def main() -> int:
 
     veredito = 0
     resumo = []
+    # D4 (26/10/2026): a turma ARQUIVADA e pulada, com o motivo no resumo — nao para mais a rodada.
+    arquivadas = banco.arquivadas(arg.destino, pedidas)
+    puladas: list[tuple[str, str]] = []
     resolvidos: list[tuple[str, Resolvido]] = []
     divergencias: list[tuple[str, list[dict]]] = []
     # Spec 014 (SC-008, D-CUR-1): o retrato do catalogo ANTES da primeira escrita desta execucao.
@@ -957,6 +978,11 @@ def main() -> int:
         leitura, dec = leituras[turma], decisoes[turma]
         virada = viradas.get(turma)
         titulo(f"{turma} ← «{titulos[turma]}»" + (f" · VIRADA em {virada}: so as datas anteriores" if virada else ""))
+        if turma in arquivadas:
+            motivo = f"turma ARQUIVADA desde {arquivadas[turma]} (somente leitura, D-COR-5)"
+            print(f"  [PULADA] {motivo}: nada e enviado ao banco (D4, 26/10/2026).")
+            puladas.append((turma, motivo))
+            continue
         de, ate = min(b.data for b in leitura.blocos).isoformat(), max(b.data for b in leitura.blocos).isoformat()
         try:
             ref = banco.referencia(arg.destino, turma, arg.autor, de, ate, virada)
@@ -1004,7 +1030,10 @@ def main() -> int:
         # `--adiar`: pendencia decidida como «fica fora ate a resposta» (06/10/2026, onda 2) — o bloco nao entra,
         # o resto da turma entra, e o plano (com essas pendencias) continua tendo de ser identico ao do local.
         adiadas = {t.strip() for t in arg.adiar.split(",") if t.strip()}
-        bloqueiam = [p for p in res.pendencias if p.bloqueia and p.tipo not in adiadas]
+        bloqueiam, depois_da_virada = pendencias_que_bloqueiam(res.pendencias, adiadas, virada)
+        if depois_da_virada:
+            print(f"  [DEPOIS DA VIRADA] {sum(p.ta for p in depois_da_virada)} TA com pendencia em blocos de {virada} em diante — "
+                  f"fora do plano (A3.3), nao param a turma: {sorted({p.tipo for p in depois_da_virada})}")
         if adiadas and any(p.tipo in adiadas for p in res.pendencias):
             print(f"  [ADIADO] {sum(p.ta for p in res.pendencias if p.tipo in adiadas)} TA ficam fora por decisao: {sorted({p.tipo for p in res.pendencias if p.tipo in adiadas})}")
         if ref["etl"]["de_tela"] or ref["etl"].get("de_tela_depois_da_virada"):
@@ -1086,6 +1115,8 @@ def main() -> int:
     titulo("Resumo da rodada")
     for turma, contagem, mudancas in resumo:
         print(f"  {turma:<26} {mudancas:5d} mudanca(s)")
+    for turma, motivo in puladas:
+        print(f"  {turma:<26} PULADA — {motivo}")
     print(f"  data da rodada: {date.today().isoformat()} · saida {veredito}")
     return veredito
 
