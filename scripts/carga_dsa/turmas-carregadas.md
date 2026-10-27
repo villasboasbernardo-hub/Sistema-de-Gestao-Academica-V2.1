@@ -246,3 +246,26 @@ ou o cadastro do instrutor, pelo código).
   elaborador GERAL (dinâmico, `RSP-000001`) ainda não vale, e esses cursos não têm linha própria.
 - Aplicado no **local** em 26/10/2026, duas vezes (a segunda não inseriu nada): `RSP-000014` (T1) e `RSP-000015` (BATI). O
   remoto recebe o mesmo arquivo depois do merge.
+
+### Acertos finais da carga única de 26/10/2026 (27/10/2026) — R1 a R3 de Bernardo Villas Boas
+
+- **R2 — o quadro nas assinaturas digitadas**: a `RSP-000012` e a `RSP-000014` (3º-Sargento FR) ganham `especialidade = 'FR'`,
+  no formato das linhas que vêm do cadastro (o `esp_hab_obs` sem hífen, como a `RSP-000015` tem `HN`). O DSA passa a imprimir
+  «Terceiro-Sargento (FR)». É um UPDATE comum, carimbado pelo gatilho de auditoria (`editado_em`), por
+  `preparo/rodada-2026-10-26-quadro-das-digitadas.sql`. Nada mais muda: a BATI de 09 a 13/03 segue com a `RSP-000015` e a T2
+  com a `RSP-000007`.
+- **R1 — as 20 semanas com elaborador em branco: NÃO preenchidas, porque o banco recusa a forma pedida.** A linha geral
+  dinâmica nova, no mesmo modo da `RSP-000001`, viola `resp_dinamico_tem_chave`: linha dinâmica **nova** precisa de
+  `email_usuario` ou `usuario_id`, e só a linha vinda da v2.0 sem edição escapa (migration `20260908083100`). Medido no local, num
+  bloco desfeito: a inserção foi recusada com esse nome de restrição.
+  - O DSA **não lê** essa chave: no modo dinâmico, quem assina é quem imprime.
+  - Preencher exigiria inventar uma conta como chave, ou uma migration que ALTERA a restrição (portão, regra 9.4). Nenhuma das
+    duas foi feita.
+  - As 5 turmas não têm nenhum lançamento no DSA: `C-ApA-AuxNav-PR-SP T1 2026` (semipresencial, sem etapa presencial
+    cadastrada), `C-Esp-OpAP T1 2026`, `C-Exp-Metoc-OF-SP 2026` (semipresencial, sem etapa), `EST-QF-MAREFLU 2026` e
+    `EST-QF-PGRS100 2026`.
+- **R3 — técnica «EAD»: nenhuma técnica criada.** Os TA dos blocos de 23 e 24/10 contam no executado da turma
+  (`vw_chd_por_fato`, que soma a aula ativa e salva com ou sem técnica):
+  - na CAHO, a aula da planilha (4 TA, sem técnica);
+  - na C-Ap-FR e na C-Ap-HN, os lançamentos que a tela já tinha feito nesses tempos.
+  - A exceção é 1 TA de Estudo Individual da C-Ap-FR, que fica fora da CHD por regra.
