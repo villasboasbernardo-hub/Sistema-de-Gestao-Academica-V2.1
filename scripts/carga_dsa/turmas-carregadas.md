@@ -222,3 +222,27 @@ em `planilhas-de-origem/rodadas/2026-10-26T1157/relatorio-final.md` (fora do git
   (`preparo/rodada-2026-10-26-habilitacoes.sql`), registrada em `decisoes/c-ap-hn-2026.json`.
 - **R4 — `PEND-VIGENCIA-ATE`** registrada no plano de correções (`docs/correcoes/plano-de-correcoes-em-blocos.md`), sem mexer na
   guarda.
+
+### Assinaturas do DSA (26/10/2026, à noite) — respostas de Bernardo Villas Boas ao fechamento
+
+Respostas: o Encarregado da Divisão é **1º-Tenente** — as linhas `RSP-000013` e `RSP-000002` estão certas, e o
+«Capitão-Tenente» dos rodapés das planilhas não vale; e **nenhum DSA sai com assinatura em branco**. O preparo é
+`preparo/rodada-2026-10-26-assinaturas.sql` (um bloco, idempotente, sem nome de pessoa: copia a linha digitada que já existe
+ou o cadastro do instrutor, pelo código).
+
+- **C-Exp-Obs-ME T1 2026** (02/02 a 27/02): o rodapé da IMPRESSÃO traz o mesmo Aux. em todas as folhas, o 3º-Sargento FR, e
+  ele é a **mesma pessoa** da `RSP-000012` (nome completo igual). Entra o elaborador do curso **digitado** (`fixo`, sem
+  instrutor), com o texto da `RSP-000012`, vigente **só** de 02/02 a 27/02/2026. Nenhum instrutor é cadastrado.
+- **C-Exp-BATI T1 2026** (09/03 a 13/03): a semana real é assinada pelo instrutor **103**. A troca vale só para o período da
+  turma: a `RSP-000012` **não é apagada nem inativada** — a vigência dela passa a começar em **14/03** (fora do período da T1
+  nada muda) — e entra o elaborador do curso ligado ao instrutor 103, de 09/03 a 13/03/2026.
+- **Encarregado**: nenhuma linha nova e nenhuma troca. Pela varredura, nenhuma semana de DSA de turma de 2026 sai sem
+  Encarregado: de 05/01 a 01/08 assina a `RSP-000013`, e de 02/08 em diante a `RSP-000002`.
+- **Varredura, só de leitura** (toda semana do período de cada turma de 2026 que tem DSA, pela regra do DSA: a linha do curso,
+  senão a GERAL, vigente na segunda-feira da semana). Com o preparo aplicado, **sobram 20 semanas com o elaborador em branco, em
+  5 turmas sem planilha de controle na pasta-fonte** — o rodapé não pôde ser lido, então nada foi registrado:
+  `C-ApA-AuxNav-PR-SP T1 2026` (14 semanas, 16/03 a 15/06), `C-Esp-OpAP T1 2026` (16/03 e 23/03),
+  `C-Exp-Metoc-OF-SP 2026` (06/04), `EST-QF-MAREFLU 2026` (20/07 e 27/07) e `EST-QF-PGRS100 2026` (20/07). Antes de 02/08, o
+  elaborador GERAL (dinâmico, `RSP-000001`) ainda não vale, e esses cursos não têm linha própria.
+- Aplicado no **local** em 26/10/2026, duas vezes (a segunda não inseriu nada): `RSP-000014` (T1) e `RSP-000015` (BATI). O
+  remoto recebe o mesmo arquivo depois do merge.
