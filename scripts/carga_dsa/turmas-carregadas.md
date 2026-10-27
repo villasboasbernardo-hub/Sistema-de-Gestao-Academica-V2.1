@@ -246,3 +246,39 @@ ou o cadastro do instrutor, pelo código).
   elaborador GERAL (dinâmico, `RSP-000001`) ainda não vale, e esses cursos não têm linha própria.
 - Aplicado no **local** em 26/10/2026, duas vezes (a segunda não inseriu nada): `RSP-000014` (T1) e `RSP-000015` (BATI). O
   remoto recebe o mesmo arquivo depois do merge.
+
+### Acertos finais da carga única de 26/10/2026 (27/10/2026) — R1 a R3 de Bernardo Villas Boas
+
+- **R2 — o quadro nas assinaturas digitadas**: a `RSP-000012` e a `RSP-000014` (3º-Sargento FR) ganham `especialidade = 'FR'`,
+  no formato das linhas que vêm do cadastro (o `esp_hab_obs` sem hífen, como a `RSP-000015` tem `HN`). O DSA passa a imprimir
+  «Terceiro-Sargento (FR)». É um UPDATE comum, carimbado pelo gatilho de auditoria (`editado_em`), por
+  `preparo/rodada-2026-10-26-quadro-das-digitadas.sql`. Nada mais muda: a BATI de 09 a 13/03 segue com a `RSP-000015` e a T2
+  com a `RSP-000007`.
+- **R1 — as semanas com elaborador em branco (25, ver abaixo): NÃO preenchidas, porque o banco recusa a forma pedida.** A linha geral
+  dinâmica nova, no mesmo modo da `RSP-000001`, viola `resp_dinamico_tem_chave`: linha dinâmica **nova** precisa de
+  `email_usuario` ou `usuario_id`, e só a linha vinda da v2.0 sem edição escapa (migration `20260908083100`). Medido no local, num
+  bloco desfeito: a inserção foi recusada com esse nome de restrição.
+  - O DSA **não lê** essa chave: no modo dinâmico, quem assina é quem imprime.
+  - Preencher exigiria inventar uma conta como chave, ou uma migration que ALTERA a restrição (portão, regra 9.4). Nenhuma das
+    duas foi feita.
+  - ⚠️ **Correção da contagem**: a varredura de 26/10 deixava de fora as turmas **canceladas**, e o DSA delas também abre e
+    imprime. Contando todas as turmas de 2026, são **25 semanas**, todas de elaborador:
+    - as **20** das 5 turmas listadas acima: `C-ApA-AuxNav-PR-SP T1 2026` (semipresencial, sem etapa presencial cadastrada),
+      `C-Esp-OpAP T1 2026`, `C-Exp-Metoc-OF-SP 2026` (semipresencial, sem etapa), `EST-QF-MAREFLU 2026` e
+      `EST-QF-PGRS100 2026`;
+    - mais **5** em 3 turmas **canceladas**: `C-ApA-OcOp-PR-SP T1 2026` (22/06), `EST-QF-APOC 2026` (09/02 e 16/02) e
+      `EST-QF-EM2040PHS 2026` (20/04 e 27/04).
+  - Nenhuma das 8 turmas tem lançamento no DSA. Uma linha geral que zerasse as 25 iria de 09/02 a 01/08/2026 (véspera da
+    `RSP-000001`).
+- **R3 — técnica «EAD»: nenhuma técnica criada**, e nada foi mexido. Conferido, só de leitura, se os TA dos blocos de 23 e 24/10
+  contam no executado (`vw_chd_por_fato`, que soma a aula ativa e salva com ou sem técnica). A conta é pelo **mesmo conteúdo**
+  (disciplina e UE, com o de-para de UE pelo nome), não só pelo tempo:
+  - **CAHO** — 4 TA: **contam**. É a aula da planilha, sem técnica.
+  - **C-Ap-FR** — 8 TA:
+    - **3 contam** (I, «Eletrodutos»), pela aula lançada na tela em outro tempo.
+    - **4 NÃO contam** (III, «Equipamentos automáticos»). Nesses tempos a tela lançou uma prova de VIII e uma aula de I, e o III
+      não está no sistema em 23/10. A linha da planilha ficou fora porque a tela vence (A3.4).
+    - **1** é Estudo Individual, que fica fora da CHD por regra.
+  - **C-Ap-HN** — 10 TA: **contam**, pelas aulas da tela.
+  - A lista de técnicas já tem o valor «EAD/Moodle» (ativo, vindo da v2.0). Ele não foi aplicado: a decisão é deixar os blocos
+    sem técnica.
