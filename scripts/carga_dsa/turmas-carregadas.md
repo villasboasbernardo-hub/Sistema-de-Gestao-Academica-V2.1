@@ -270,6 +270,19 @@ ou o cadastro do instrutor, pelo código).
       `EST-QF-EM2040PHS 2026` (20/04 e 27/04).
   - Nenhuma das 8 turmas tem lançamento no DSA. Uma linha geral que zerasse as 25 iria de 09/02 a 01/08/2026 (véspera da
     `RSP-000001`).
+  - **Opção B (Bernardo Villas Boas, 27/10/2026): a regra do banco muda, e a linha entra.** A migration `20261027082223`
+    remove `resp_dinamico_tem_chave`, porque o DSA não lê a chave: no modo dinâmico assina quem imprime. É **portão** (regra
+    9.4): o desenho vai a Bernardo antes do remoto. A prova está no pgTAP `152`, onde 5 de 8 casos reprovavam antes da
+    migration e os 3 controles passavam antes e depois.
+  - O preparo `preparo/rodada-2026-10-26-elaborador-geral.sql` cria a `RSP-000016`, sem pessoa e sem chave. Ela segue o modo
+    da `RSP-000001` (geral, dinâmica, ordem 1, mesma função) e vale de 09/02 a 01/08/2026. A `RSP-000001` não é tocada.
+  - Aplicado no **local** em 27/10/2026, sobre a cópia `remoto-20261027-052838.sql`, duas vezes; a segunda não inseriu nada.
+    - **Varredura:** de **25** semanas com o elaborador em branco para **0**. Mudaram exatamente essas 25, todas para a
+      `RSP-000016`, e o Encarregado segue sem nenhuma em branco.
+    - **Semanas que não podiam mudar:** a T1 de fevereiro continua na `RSP-000014`, a BATI (09/03) na `RSP-000015` e a T2 na
+      `RSP-000007`.
+    - **Impressão digital dos dados:** só `~responsaveis` mudou.
+    - O remoto recebe a migration e o mesmo preparo depois do desenho aprovado, com backup.
 - **R3 — técnica «EAD»: nenhuma técnica criada**, e nada foi mexido. Conferido, só de leitura, se os TA dos blocos de 23 e 24/10
   contam no executado (`vw_chd_por_fato`, que soma a aula ativa e salva com ou sem técnica). A conta é pelo **mesmo conteúdo**
   (disciplina e UE, com o de-para de UE pelo nome), não só pelo tempo:
