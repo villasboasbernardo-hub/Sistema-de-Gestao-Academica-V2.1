@@ -38,7 +38,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **9** | Publicação do DSA com rascunho e contagem EAD/semipresencial — ✅ **concluído em 24/10/2026** | duas migrations (a M1 só acrescenta; a M2 pelo portão autorizado em 22/10/2026, com o que soma idêntico) | 024 |
 | **10** | Padrões de tela, turma, curso, estatísticas, calendário e ano — ✅ **concluído em 25/10/2026** | duas migrations (a 1ª pelo portão 9.4; a 2ª com autorização condicional) | 025 |
 | **11** | Lançamento do DSA e Início com o DSA publicado — ✅ **concluído em 26/10/2026** | uma migration, que só acrescenta | 026 |
-| **12** | Excluir no Calendário: exclusão lógica, sem bloqueio, com alerta de impacto (D-COR-7) — 🟨 **em conferência** | uma migration, que só acrescenta | 027 |
+| **12** | Excluir no Calendário: exclusão lógica, sem bloqueio, com alerta de impacto (D-COR-7) — 🟨 **em conferência** (PR #100; a migration no remoto desde 27/10/2026) | uma migration, que só acrescenta | 027 |
 
 ---
 
@@ -568,7 +568,9 @@ _Pedido de Bernardo Villas Boas, 27/10/2026, pelo `/corrigir`, com a decisão de
    **lançamento salvo de qualquer turma alcançada na semana ISO** da data, e a linha de todas as turmas alcança todas.
 2. **D-COR-7**: excluir lógico, sem bloqueio, só do Admin, depois do alerta de impacto; a semana publicada atingida passa
    a avisar *"alterado desde a publicação"*. **Uma migration, que só acrescenta** (`20261027123023`): as colunas
-   `feriados.excluido_em`/`excluido_por`, o gatilho que as guarda, e as funções do impacto e da exclusão.
+   `feriados.excluido_em`/`excluido_por`, o gatilho que as guarda, e as funções do impacto e da exclusão. ✅ **No
+   remoto desde 27/10/2026**, depois do CI verde e antes do merge (backup `remoto-20261027-103324.sql`; **100 e 100**;
+   esquema `4b7fb5fe…`, 2.736 objetos, igual nos dois bancos) — `specs/027-…/plano-de-aplicacao-no-remoto.md`.
 
 **Pendências novas, achadas e não corrigidas:**
 

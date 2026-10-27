@@ -33,5 +33,5 @@
 ## Fase 6 — documentos, verificação e PR
 - [x] T016 D-COR-7 e `PEND-027-1` no plano de correções e em `padroes-de-tela.md`; `reversao.sql`;
   `plano-de-aplicacao-no-remoto.md`; `roteiro-de-conferencia.md`.
-- [ ] T017 Unidade, pgTAP e RLS verdes no local; os e2e tocados no local; commit; push; PR com o template; CI verde.
-- [ ] T018 Rito do remoto (backup, dry-run só com ela, `db push`, conferência só de leitura).
+- [x] T017 Unidade, pgTAP e RLS verdes no local; os e2e tocados no local; commit; push; PR com o template; CI verde.
+- [x] T018 Rito do remoto (backup, dry-run só com ela, `db push`, conferência só de leitura).
