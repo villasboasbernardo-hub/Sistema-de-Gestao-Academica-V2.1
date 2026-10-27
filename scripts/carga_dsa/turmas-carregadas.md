@@ -270,6 +270,17 @@ ou o cadastro do instrutor, pelo código).
       `EST-QF-EM2040PHS 2026` (20/04 e 27/04).
   - Nenhuma das 8 turmas tem lançamento no DSA. Uma linha geral que zerasse as 25 iria de 09/02 a 01/08/2026 (véspera da
     `RSP-000001`).
+  - **Decisão final (27/10/2026): as 25 semanas ficam como estão.** Nada mudou no banco. Os dois desenhos tentados antes:
+    - **Migration que removia `resp_dinamico_tem_chave`** (PR #98): **não aprovada**. O PR foi fechado sem merge, e a migration
+      nunca foi ao remoto.
+    - **Estender a `RSP-000001` para começar em 09/02, sem migration:** **recusado pelo banco**, medido no local sobre a cópia
+      `remoto-20261027-061453.sql`.
+      - A `RSP-000001` não tem chave: `email_usuario` e `usuario_id` estão nulos, no local e no remoto.
+      - Ela só passa por `resp_dinamico_tem_chave` porque é linha da v2.0 nunca editada.
+      - A mudança de vigência carimba `editado_em`, e a regra recusa.
+    - **O caminho que sobrava, não escolhido:** pôr uma conta como chave na `RSP-000001`, o que gravaria dado inventado.
+  - **Por que o elaborador em branco é tolerável aqui:** nenhuma das 8 turmas tem lançamento, então ele só aparece se alguém
+    imprimir um DSA vazio. A `RSP-000001` continua valendo de 02/08/2026 em diante.
 - **R3 — técnica «EAD»: nenhuma técnica criada**, e nada foi mexido. Conferido, só de leitura, se os TA dos blocos de 23 e 24/10
   contam no executado (`vw_chd_por_fato`, que soma a aula ativa e salva com ou sem técnica). A conta é pelo **mesmo conteúdo**
   (disciplina e UE, com o de-para de UE pelo nome), não só pelo tempo:
