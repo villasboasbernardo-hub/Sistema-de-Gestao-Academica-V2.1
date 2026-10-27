@@ -9,10 +9,10 @@
  *    quantos lançamentos já há no dia (D-11).
  * ⚠️ **"INATIVAR" VIROU "DESATIVAR"** (RT-2 do Bloco 10, spec 025, D-17): o verbo é o do resto do sistema; a situação
  *    gravada continua `inativo`, e a coluna diz *Inativo*.
- * ⚠️ **O EXCLUIR DA LINHA** (RT-2 e D-COR-6; D-11 da spec 025): só habilitado quando nenhuma turma alcançada tem semana
- *    do DSA salva ou publicada que contenha a data; com registro, desabilitado com a dica *"tem registros: use
- *    Desativar"*. Quem decide é o banco, na leitura e de novo na exclusão. A parada de parte do dia não tem *Excluir*:
- *    ela se desfaz (D-14).
+ * ⚠️ **O EXCLUIR DA LINHA É LÓGICO E NUNCA BLOQUEADO** (D-COR-7, spec 027 — substitui aqui a D-COR-6): só o Admin o
+ *    vê; ele abre o alerta com o impacto calculado na hora (`ExcluirDoCalendario`) e marca a linha inativa e excluída,
+ *    que some da lista. O Encarregado continua com *Editar* e *Desativar/Reativar*. A parada de parte do dia não tem
+ *    *Excluir*: ela se desfaz (D-14 da spec 025; D-10 da spec 027).
  */
 "use client";
 
@@ -22,12 +22,12 @@ import * as React from "react";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
-import { ExclusaoPermanente } from "@/components/ciaara/exclusao-permanente";
-import { DICA_SEM_LEITURA, type EstadoDaExclusao } from "@/lib/dominio/exclusao-permanente";
+import type { ResumoDoImpacto } from "@/lib/dominio/exclusao-no-calendario";
 import { dataParaLeitura } from "@/lib/formato/data";
 
 import type { DadosDoCalendario, LinhaDoCalendario } from "./calendario";
 import { DialogoDaLinha, ROTULO_DO_IMPACTO } from "./DialogoDaLinha";
+import { ExcluirDoCalendario } from "./ExcluirDoCalendario";
 import { PararDiaDoCalendario } from "./PararDiaDoCalendario";
 
 type RespostaDoCalendario =
@@ -56,8 +56,6 @@ function consequenciaDeDesativar(l: LinhaDoCalendario): string {
     : "A linha deixa de valer no calendário. Ela fica desativada — nada é apagado.";
 }
 
-const SEM_LEITURA: EstadoDaExclusao = { liberada: false, dica: DICA_SEM_LEITURA, detalhe: null };
-
 export function PainelDoCalendario({
   ano,
   dados,
@@ -68,7 +66,7 @@ export function PainelDoCalendario({
   pararDia,
   desfazerParada,
   podeExcluir = false,
-  exclusao = {},
+  lerImpacto,
   excluir,
 }: {
   readonly ano: number;
@@ -79,10 +77,14 @@ export function PainelDoCalendario({
   readonly mudarSituacao: (entrada: unknown) => Promise<RespostaDoCalendario>;
   readonly pararDia: (entrada: unknown) => Promise<RespostaSimples>;
   readonly desfazerParada: (entrada: unknown) => Promise<RespostaSimples>;
-  /** `calendario.criar` — quem exclui (D-9). */
+  /** Só o Admin exclui (D-COR-7, FR-004). */
   readonly podeExcluir?: boolean;
-  /** O estado do *Excluir* de cada linha, pelo `id`; ausente = não lido (desabilitado). */
-  readonly exclusao?: Readonly<Record<string, EstadoDaExclusao>>;
+  readonly lerImpacto?: (
+    entrada: unknown,
+  ) => Promise<
+    | { readonly ok: true; readonly resumo: ResumoDoImpacto }
+    | { readonly ok: false; readonly erro: string }
+  >;
   readonly excluir?: (entrada: unknown) => Promise<RespostaDoCalendario>;
 }) {
   const router = useRouter();
@@ -262,20 +264,15 @@ export function PainelDoCalendario({
                             />
                           </DialogoConfirmacao>
                         )}
-                        {l.origem === "feriado" && podeExcluir && excluir ? (
-                          <ExclusaoPermanente
+                        {l.origem === "feriado" && podeExcluir && lerImpacto && excluir ? (
+                          <ExcluirDoCalendario
                             id={l.id}
-                            codigo={l.codigo}
-                            nomeDoCodigo="o código da linha"
                             rotulo={`Excluir ${l.nome} (${dataParaLeitura(l.data)})`}
-                            titulo={`Excluir «${l.nome}» (${dataParaLeitura(l.data)}) permanentemente?`}
-                            consequencia="A linha sai do calendário, e o dia deixa de valer como feriado ou licença. Só é possível porque nenhuma semana do DSA salva ou publicada contém a data."
-                            estado={exclusao[l.id] ?? SEM_LEITURA}
+                            titulo={`Excluir «${l.nome}» (${dataParaLeitura(l.data)})?`}
+                            lerImpacto={lerImpacto}
                             excluir={excluir}
-                            naLinha
                             aoRecusar={(e) => responder(e, true)}
-                            aoConcluir={() => responder("Linha excluída do calendário.")}
-                            slot="excluir-linha"
+                            aoConcluir={(m) => responder(m)}
                           />
                         ) : null}
                       </span>

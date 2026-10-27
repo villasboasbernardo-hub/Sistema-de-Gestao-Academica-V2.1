@@ -38,6 +38,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **9** | Publicação do DSA com rascunho e contagem EAD/semipresencial — ✅ **concluído em 24/10/2026** | duas migrations (a M1 só acrescenta; a M2 pelo portão autorizado em 22/10/2026, com o que soma idêntico) | 024 |
 | **10** | Padrões de tela, turma, curso, estatísticas, calendário e ano — ✅ **concluído em 25/10/2026** | duas migrations (a 1ª pelo portão 9.4; a 2ª com autorização condicional) | 025 |
 | **11** | Lançamento do DSA e Início com o DSA publicado — ✅ **concluído em 26/10/2026** | uma migration, que só acrescenta | 026 |
+| **12** | Excluir no Calendário: exclusão lógica, sem bloqueio, com alerta de impacto (D-COR-7) — 🟨 **em conferência** | uma migration, que só acrescenta | 027 |
 
 ---
 
@@ -50,6 +51,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **D-COR-3** | **TA fora do DSA, com observação.** A turma pode registrar tempos de aula que **não** estão em DSA (atividade fora dos tempos convencionais, aula que virou EAD, histórico de curso antigo), com quantidade, disciplina, instrutor quando houver e **observação obrigatória**. Esses TA **somam** na CH executada e no saldo, e a tela mostra os dois separados: *"45 TA executados · 40 no DSA · 5 fora do DSA"*. Só o Encarregado da Divisão, os ajudantes e o Admin registram. → Bloco 2. |
 | **D-COR-4** | **O status da turma é editável** pelo Admin e por quem pode editar turma (planejada, ativa, concluída, cancelada), e **toda troca de status aceita uma observação** (por que foi cancelada, como foi concluída, por que foi arquivada), que fica visível na ficha. Hoje Bernardo relata que **não consegue** trocar o status: medir no Bloco 1 e corrigir no Bloco 2. |
 | **D-COR-5** | **Arquivar turma em QUALQUER estado**, com aviso quando a turma não estiver concluída. Arquivar **não é um quinto status**: são colunas próprias (`arquivada_em`, `arquivada_por`, observação), o status fica como está. A turma arquivada some das listas (filtro "mostrar arquivadas"), trava DSA, instrutor e edição; o Admin pode desarquivar. **Reabre nominalmente a TURMA-1** (28/08/2026), que dizia "Arquivada é VIEW, não valor novo" — continua não sendo valor novo de status. |
+| **D-COR-7** | *(Bernardo Villas Boas, 26/10/2026, Bloco 12 — substitui a D-COR-6 **para a linha do calendário**, e o "ativar/inativar (nunca apagar)" do pedido de 22/10)* **No Calendário, excluir NÃO é bloqueado**, nem com DSA publicado nem com aula no dia. **Só o Admin** exclui qualquer linha (feriado, licença, dia parado), ativa ou inativa, depois de um **alerta com o impacto** calculado na hora (turmas atingidas, aulas, atividades e avaliações do dia, semanas do DSA publicadas que contêm o dia, se a data já passou). Excluir é **lógico** (regra 4): a linha some do calendário (também das desativadas) e deixa de contar em tudo; fica na auditoria, com quem e quando; não impede outra linha na mesma data. Semana publicada atingida não é republicada: o DSA avisa *"alterado desde a publicação"* (RP-4). Motivo: *"lançamento cadastrado errado tem de poder sair da lista."* → spec 027. |
 | **D-COR-6** | *(Bernardo Villas Boas, 24/10/2026, Bloco 10)* **Excluir turma e Excluir feriado só habilitados sem semana salva/publicada ligada**; com registros, o ícone fica **desabilitado** com a dica *"tem registros: use Arquivar"* (turma) ou *"…use Desativar"* (feriado). Exclusão **permanente**, com alerta e o código digitado, por RPC com porteiro e **rastro** — a regra 4 ganha a turma e a linha do calendário (e, pela RT-2, regime, item de avaliação do currículo e sala). → `docs/correcoes/padroes-de-tela.md`, spec 025. |
 
 ### As 16 respostas da triagem (16/10/2026)
@@ -553,6 +555,27 @@ _«Guarda de vigência que ignora vigente_ate: NÃO mexa. Registre-a como pendê
     todos de 14/09 em diante.
   - Contorno da rodada: a T1 ficou com o relógio como **regime da turma** (`RGH-000001`, `preparo/c-exp-obs-me-t1-2026.sql`).
   - Consertar é migration que ALTERA função de guarda: portão da regra 9.4.
+
+---
+
+## Bloco 12 — Excluir no Calendário (spec própria) — 🟨 EM CONFERÊNCIA
+
+_Pedido de Bernardo Villas Boas, 27/10/2026, pelo `/corrigir`, com a decisão de 26/10/2026 (**D-COR-7**)._ Spec
+`027-bloco-12-excluir-no-calendario`, ramo `fix/BLOCO-12-excluir-no-calendario`, um PR. **O papel do DSA não muda.**
+
+1. 🐛 **O *Excluir* do Calendário nunca liberava** (medido na cópia `remoto-20261027-061453.sql`: **32 de 32** linhas de
+   2026 presas, inclusive o 12/11, inativo e sem semana publicada): `app.registros_do_feriado` (D-COR-6) conta qualquer
+   **lançamento salvo de qualquer turma alcançada na semana ISO** da data, e a linha de todas as turmas alcança todas.
+2. **D-COR-7**: excluir lógico, sem bloqueio, só do Admin, depois do alerta de impacto; a semana publicada atingida passa
+   a avisar *"alterado desde a publicação"*. **Uma migration, que só acrescenta** (`20261027123023`): as colunas
+   `feriados.excluido_em`/`excluido_por`, o gatilho que as guarda, e as funções do impacto e da exclusão.
+
+**Pendências novas, achadas e não corrigidas:**
+
+- **`PEND-027-1`** — *a exclusão física da D-COR-6 fica no banco sem consumidor*: `public.excluir_feriado` e
+  `impedimentos_de_exclusao_dos_feriados` não são mais chamadas pela tela e seguem alcançáveis por RPC direta com
+  `calendario.criar` (Admin e Encarregado) — a física só passa em linha sem registro nenhum. Revogar o `execute` é
+  migration que altera permissão (portão 9.4).
 
 ---
 

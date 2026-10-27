@@ -208,7 +208,7 @@ test.describe("item 2 · a aba Turmas do curso", () => {
 });
 
 test.describe("item 11 · o calendário", () => {
-  test("a dica é o verbo, «Desativar» no lugar de «Inativar», e a linha sem semana salva sai", async ({
+  test("a dica é o verbo, «Desativar» no lugar de «Inativar», e a linha sai pela exclusão lógica (D-COR-7)", async ({
     page,
   }) => {
     await entrar(page, EMAIL, "/inicio");
@@ -228,18 +228,25 @@ test.describe("item 11 · o calendário", () => {
     await page.keyboard.press("Tab");
     await expect(linha.locator('[data-slot="excluir-linha"]')).toBeFocused();
 
+    /*
+     * Spec 027 (D-COR-7): o *Excluir* do calendário deixou de ser a exclusão permanente da D-COR-6 — é LÓGICA, sem código
+     * digitado, depois do alerta com o impacto. A linha some da lista e fica no banco, inativa e marcada.
+     */
     await linha.locator('[data-slot="excluir-linha"]').click();
     const dialogo = page.locator('[data-slot="dialogo-de-exclusao"]');
-    await dialogo.locator('[data-slot="codigo-de-confirmacao"]').fill(feriado.codigo);
+    await expect(dialogo).toHaveAttribute("data-leitura", "pronto", { timeout: 15_000 });
     await dialogo.locator('[data-slot="confirmar-exclusao"]').click();
     await expect(page.locator('[data-slot="resposta-do-calendario"]')).toHaveText(
-      "Linha excluída do calendário.",
+      "Linha excluída do calendário. Ela fica na auditoria.",
     );
-    const { count } = await bancoDoBloco2()
+    await expect(page.locator(`[data-linha="${feriado.codigo}"]`)).toHaveCount(0);
+    const { data } = await bancoDoBloco2()
       .from("feriados")
-      .select("id", { count: "exact", head: true })
-      .eq("id", feriado.id);
-    expect(count).toBe(0);
+      .select("status, excluido_em")
+      .eq("id", feriado.id)
+      .single();
+    expect((data as { status: string }).status).toBe("inativo");
+    expect((data as { excluido_em: string | null }).excluido_em).not.toBeNull();
   });
 });
 

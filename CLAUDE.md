@@ -348,7 +348,9 @@ dela teria os cadastros e nenhuma senha; as contas se refazem **pelo cadastro do
   recolhível (RT-4); todo gráfico interativo (RT-5); um ano escolhido para todos os módulos, padrão o de
   hoje (RT-6) — ⚠️ **e o ano de toda informação ligada a turma é o ANO DA TURMA, nunca a data do registro
   nem a janela da atribuição** *(Bernardo Villas Boas, 24/10/2026)*; cartões de indicadores juntos e iguais
-  (RT-7). Mais a **D-COR-6**, que delimita o Excluir da turma e do feriado.
+  (RT-7). Mais a **D-COR-6**, que delimita o Excluir da turma, e a **D-COR-7** *(26/10/2026)*, que a substitui
+  na **linha do calendário**: lá o Excluir é **lógico**, nunca bloqueado, só do Admin, depois de um alerta com o
+  impacto (spec 027).
 - Densidade antes de beleza: é sistema de gestão, com tabelas grandes.
 - Toda função de `lib/dominio/` traz no topo o identificador `RN-` e a **citação literal** da regra.
 

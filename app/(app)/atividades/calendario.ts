@@ -1,7 +1,8 @@
 /**
  * A leitura da aba Calendário (spec 023, Bloco 8: FR-006 a FR-008) — o ano escolhido inteiro, em uma rodada.
  *
- * ⚠️ **AS INATIVAS VÊM JUNTO** (D-10): sem elas não haveria como reativar.
+ * ⚠️ **AS INATIVAS VÊM JUNTO** (D-10): sem elas não haveria como reativar. **A EXCLUÍDA, NÃO** (D-COR-7, spec 027):
+ *    excluir é tirar da lista, e a linha fica no banco, inativa, com quem e quando.
  * ⚠️ **AS PARADAS GLOBAIS DE PARTE DO DIA ENTRAM, SÓ AS ATIVAS** (D-9): o «Parar dia» daqui pode criá-las.
  * ⚠️ **O TIPO DA LINHA ANTIGA SAI DA SIGLA DO NOME** (`tipoDaLinha`, D-2) — sem migration de dado.
  * ⚠️ Nenhum `await` em laço: uma rodada de leituras independentes, e uma segunda só para a contagem de lançamentos nas
@@ -66,6 +67,8 @@ export async function lerCalendario(supabase: Cliente, ano: number): Promise<Dad
       .select(
         `id, codigo, data, descricao, impacto, status, tipo_parada_id, tipo:config_listas(valor, rotulo_exibicao), ${COLUNAS_DA_ABRANGENCIA}`,
       )
+      /* D-COR-7 (spec 027): a linha EXCLUÍDA some da lista — também das inativas, que a lista mostra (D-10). */
+      .is("excluido_em", null)
       .gte("data", de)
       .lte("data", ate)
       .order("data")
