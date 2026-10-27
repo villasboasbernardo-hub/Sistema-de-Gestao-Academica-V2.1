@@ -90,6 +90,8 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
     "spec 023: a lista do calendário, com as ações por linha e a resposta acima dela",
   "app/(app)/atividades/DialogoDaLinha.tsx":
     "spec 023: cadastrar e editar uma linha do calendário, em diálogo",
+  "app/(app)/atividades/ExcluirDoCalendario.tsx":
+    "spec 027: o Excluir da linha do calendário — o alerta com o impacto lido ao abrir e a confirmação; as ações chegam por propriedade",
   "app/(app)/atividades/EscolhaDeTurmas.tsx": "spec 023: as turmas escolhidas, por marcação",
   "app/(app)/atividades/PararDiaDoCalendario.tsx":
     "spec 023: «Parar dia» de todas as turmas, em diálogo",

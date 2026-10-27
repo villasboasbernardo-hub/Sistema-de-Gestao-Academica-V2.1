@@ -10,6 +10,8 @@
  * ⚠️ **A ABA CALENDÁRIO** (spec 023, Bloco 8, FR-005 a FR-014) só existe para quem tem `calendario.criar` ou
  *    `calendario.editar`; para os demais a página é a de antes, sem abas, e `?aba=calendario` cai na lista. Só a aba
  *    aberta é lida no servidor.
+ * ⚠️ **O *EXCLUIR* DO CALENDÁRIO É SÓ DO ADMIN E NUNCA BLOQUEADO** (D-COR-7, spec 027): exclusão lógica, depois do alerta
+ *    com o impacto calculado na hora.
  * ⚠️ **AS DUAS ABAS SEGUEM O ANO ESCOLHIDO** (RT-6 do Bloco 10, spec 025, D-26): a lista mostra só as atividades do ano
  *    (as datas *De* e *Até* recortam dentro dele), e o filtro de turma oferece só as turmas do ano. O seletor é o mesmo de
  *    todo módulo, no canto superior direito, e o *Filtros* da lista é um ícone ao lado dele (RT-4).
@@ -25,11 +27,10 @@ import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import {
   excluirLinhaDoCalendario,
   gravarLinhaDoCalendario,
+  lerImpactoDaExclusao,
   mudarSituacaoDaLinha,
 } from "@/lib/acoes/calendario";
 import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
-import { estadoDaExclusaoDoFeriado } from "@/lib/dominio/exclusao-de-feriado";
-import { estadosPorRegistro, type ImpedimentosDoRegistro } from "@/lib/dominio/exclusao-permanente";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
 import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
@@ -86,18 +87,11 @@ export default async function Atividades({
 
   if (aba === "calendario") {
     const dados = await lerCalendario(supabase, ano);
-    /* D-COR-6 (spec 025): o que prende cada linha do calendário — numa ida só, e só para quem exclui (D-9). */
-    const idsDeFeriado = dados.linhas.filter((l) => l.origem === "feriado").map((l) => l.id);
-    const impedimentosRes =
-      podeCriarNoCalendario && idsDeFeriado.length > 0
-        ? await supabase.rpc("impedimentos_de_exclusao_dos_feriados", { p_feriados: idsDeFeriado })
-        : null;
-    const exclusao = estadosPorRegistro(
-      impedimentosRes === null || impedimentosRes.error
-        ? null
-        : ((impedimentosRes.data ?? []) as ImpedimentosDoRegistro[]),
-      estadoDaExclusaoDoFeriado,
-    );
+    /*
+     * D-COR-7 (spec 027, FR-004): só o Admin exclui do calendário — e o *Excluir* nunca é bloqueado (a D-COR-6 deixou de
+     * valer aqui). Quem recusa a chamada direta é o banco (`app.eh_admin()`).
+     */
+    const podeExcluirDoCalendario = usuario?.perfil === "admin";
     return (
       <div className="flex flex-col gap-4" data-slot="lista-de-atividades">
         <header className="flex flex-wrap items-start justify-between gap-3">
@@ -120,8 +114,8 @@ export default async function Atividades({
             mudarSituacao={mudarSituacaoDaLinha}
             pararDia={pararDia}
             desfazerParada={desfazerParada}
-            podeExcluir={podeCriarNoCalendario}
-            exclusao={exclusao}
+            podeExcluir={podeExcluirDoCalendario}
+            lerImpacto={lerImpactoDaExclusao}
             excluir={excluirLinhaDoCalendario}
           />
         </AbasDeAtividades>

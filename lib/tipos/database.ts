@@ -2230,6 +2230,8 @@ export type Database = {
           descricao: string
           editado_em: string | null
           editado_por: string | null
+          excluido_em: string | null
+          excluido_por: string | null
           id: string
           impacto: Database["public"]["Enums"]["impacto_feriado"]
           origem_migracao_v1: string | null
@@ -2247,6 +2249,8 @@ export type Database = {
           descricao: string
           editado_em?: string | null
           editado_por?: string | null
+          excluido_em?: string | null
+          excluido_por?: string | null
           id?: string
           impacto?: Database["public"]["Enums"]["impacto_feriado"]
           origem_migracao_v1?: string | null
@@ -2264,6 +2268,8 @@ export type Database = {
           descricao?: string
           editado_em?: string | null
           editado_por?: string | null
+          excluido_em?: string | null
+          excluido_por?: string | null
           id?: string
           impacto?: Database["public"]["Enums"]["impacto_feriado"]
           origem_migracao_v1?: string | null
@@ -6046,6 +6052,10 @@ export type Database = {
         Args: { p_codigo_confirmacao: string; p_item_id: string }
         Returns: Json
       }
+      excluir_linha_do_calendario: {
+        Args: { p_feriado_id: string }
+        Returns: Json
+      }
       excluir_regime_de_horario: {
         Args: { p_codigo_confirmacao: string; p_regime_id: string }
         Returns: Json
@@ -6082,6 +6092,10 @@ export type Database = {
       gravar_regime_da_semana_do_dsa: {
         Args: { p_ano: number; p_semana: number; p_turma: string }
         Returns: boolean
+      }
+      impacto_da_exclusao_do_feriado: {
+        Args: { p_feriado_id: string }
+        Returns: Json
       }
       impedimentos_de_exclusao_da_disciplina: {
         Args: { p_disciplina_id: string }

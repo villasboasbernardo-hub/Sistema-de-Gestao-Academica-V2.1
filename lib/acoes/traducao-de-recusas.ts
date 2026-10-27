@@ -597,6 +597,10 @@ function porChave(
         "Corrigir um rastro é registrar um evento novo, nunca reescrever o antigo."
       );
 
+    /* Spec 027 (D-COR-7): a linha excluída do calendário congela — não há lixeira nem restaurar. */
+    case "linha_do_calendario_excluida":
+      return "Esta linha foi excluída do calendário e não se altera mais. Se precisar, cadastre uma nova na mesma data.";
+
     /*
      * As quatro da trilha de contas (spec 011, PR 2). ⚠️ **As três últimas descrevem estados que a
      * tela já evita** — a Server Action confere sessão e perfil Admin antes de chamar o banco —, e

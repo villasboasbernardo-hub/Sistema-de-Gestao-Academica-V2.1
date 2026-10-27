@@ -45,6 +45,8 @@ const DIRETORIOS = ["app", "components"];
 const ISENTOS: Readonly<Record<string, string>> = {
   "app/(app)/cursos/consulta.ts":
     "decide QUAIS perfis alcançam todos os cursos; os valores são condição, nunca texto de tela",
+  "app/(app)/atividades/page.tsx":
+    "spec 027 (D-COR-7, D-17): decide se o Excluir do Calendário aparece — só para o Admin; é condição, nunca texto de tela, e quem recusa a chamada direta é o banco (`app.eh_admin()`)",
 };
 
 const VALORES_CRUS = Constants.public.Enums.perfil_usuario;

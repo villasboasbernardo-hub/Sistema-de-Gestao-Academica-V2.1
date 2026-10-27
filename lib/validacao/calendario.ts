@@ -42,3 +42,6 @@ export const esquemaDaSituacaoDaLinha = z.object({
   id: uuid,
   situacao: z.enum(["ativo", "inativo"]),
 });
+
+/** Excluir uma linha do calendário e ler o impacto antes — D-COR-7 (spec 027): só o `id`, sem código digitado (D-12). */
+export const esquemaDaLinhaParaExcluir = z.object({ id: uuid });

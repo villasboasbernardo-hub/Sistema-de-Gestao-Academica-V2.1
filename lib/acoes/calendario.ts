@@ -1,7 +1,8 @@
 "use server";
 
 /**
- * As ações da aba Calendário em Atividades — spec 023 (Bloco 8): FR-009 a FR-011.
+ * As ações da aba Calendário em Atividades — spec 023 (Bloco 8): FR-009 a FR-011; o *Excluir* lógico com o alerta de
+ * impacto, spec 027 (Bloco 12, D-COR-7).
  *
  * ⚠️ **A PERMISSÃO É DO BANCO**: `feriados` e `feriado_turma` só aceitam escrita com `calendario.criar`/`editar` (Admin
  *    e Encarregado). O `42501` vira frase.
@@ -16,10 +17,19 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
+import {
+  impactoDoBanco,
+  resumoDoImpacto,
+  type ResumoDoImpacto,
+} from "@/lib/dominio/exclusao-no-calendario";
+import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { ROTA_DA_FICHA_DA_TURMA, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
-import { esquemaDaLinhaDoCalendario, esquemaDaSituacaoDaLinha } from "@/lib/validacao/calendario";
-import { esquemaDaExclusaoPermanente } from "@/lib/validacao/exclusao";
+import {
+  esquemaDaLinhaDoCalendario,
+  esquemaDaLinhaParaExcluir,
+  esquemaDaSituacaoDaLinha,
+} from "@/lib/validacao/calendario";
 
 export type RespostaDoCalendario =
   { readonly ok: true; readonly mensagem: string } | { readonly ok: false; readonly erro: string };
@@ -215,30 +225,57 @@ export async function mudarSituacaoDaLinha(entrada: unknown): Promise<RespostaDo
   return { ok: true, mensagem: `Linha reativada.${avisoDeLancamentos(n)}` };
 }
 
+const SO_O_ADMIN = "Só o Admin exclui do calendário.";
+const LINHA_INEXISTENTE = "A linha do calendário não existe mais.";
+const SEM_IMPACTO = "Não foi possível calcular o impacto agora. Feche e tente de novo.";
+
+export type RespostaDoImpacto =
+  | { readonly ok: true; readonly resumo: ResumoDoImpacto }
+  | { readonly ok: false; readonly erro: string };
+
 /**
- * Excluir a linha do calendário **permanentemente** — D-COR-6 (spec 025, D-11 a D-13).
+ * O impacto de excluir a linha, calculado na hora em que o alerta abre — D-COR-7 (spec 027, FR-002).
  *
- * ⚠️ **SEM `delete` AQUI** (regra 4): o caminho é `public.excluir_feriado`, com porteiro (`calendario.criar`), o
- *    código digitado e o impedimento conferido no banco — semana do DSA salva ou publicada ligada à data —, e o rastro.
+ * ⚠️ **SÓ LEITURA, MAS SERVER ACTION** (Princípio XI: a folha recebe a ação por propriedade): o porteiro é do banco
+ *    (`app.impacto_da_exclusao_do_feriado`, só o Admin). ⚠️ O "hoje" é o de São Paulo (D-7), e não o do banco (D20).
  */
-export async function excluirLinhaDoCalendario(entrada: unknown): Promise<RespostaDoCalendario> {
-  const conferido = esquemaDaExclusaoPermanente.safeParse(entrada);
-  if (!conferido.success) {
-    return { ok: false, erro: conferido.error.issues[0]?.message ?? "Dados inválidos." };
-  }
+export async function lerImpactoDaExclusao(entrada: unknown): Promise<RespostaDoImpacto> {
+  const conferido = esquemaDaLinhaParaExcluir.safeParse(entrada);
+  if (!conferido.success) return { ok: false, erro: "Dados inválidos." };
   const supabase = await criarClienteDeServidor();
-  const { error } = await supabase.rpc("excluir_feriado", {
+  const { data, error } = await supabase.rpc("impacto_da_exclusao_do_feriado", {
     p_feriado_id: conferido.data.id,
-    p_codigo_confirmacao: conferido.data.codigoConfirmacao,
   });
   if (error) {
-    if (error.code === "42501" && error.hint !== "rastro_imutavel") {
-      return { ok: false, erro: "O seu perfil não exclui do calendário (Encarregado e Admin)." };
-    }
-    if (error.code === "P0002")
-      return { ok: false, erro: "A linha do calendário não existe mais." };
+    if (error.code === "42501") return { ok: false, erro: SO_O_ADMIN };
+    if (error.code === "P0002") return { ok: false, erro: LINHA_INEXISTENTE };
+    return { ok: false, erro: SEM_IMPACTO };
+  }
+  const impacto = impactoDoBanco(data);
+  if (impacto === null) return { ok: false, erro: SEM_IMPACTO };
+  return { ok: true, resumo: resumoDoImpacto(impacto, hojeNaCiaara()) };
+}
+
+/**
+ * Excluir a linha do calendário — **exclusão LÓGICA**, D-COR-7 (spec 027, FR-001; substitui, aqui, a D-COR-6).
+ *
+ * ⚠️ **SEM `delete` E SEM BLOQUEIO** (regra 4): `public.excluir_linha_do_calendario` marca a linha inativa e excluída
+ *    (quem e quando), grava o rastro em `exclusoes_registradas`, e nunca recusa por lançamento no dia nem por semana do
+ *    DSA publicada. ⚠️ **SÓ O ADMIN**, e quem recusa é o banco (`42501`): o Encarregado que chamar esta ação direto não
+ *    muda nada.
+ */
+export async function excluirLinhaDoCalendario(entrada: unknown): Promise<RespostaDoCalendario> {
+  const conferido = esquemaDaLinhaParaExcluir.safeParse(entrada);
+  if (!conferido.success) return { ok: false, erro: "Dados inválidos." };
+  const supabase = await criarClienteDeServidor();
+  const { error } = await supabase.rpc("excluir_linha_do_calendario", {
+    p_feriado_id: conferido.data.id,
+  });
+  if (error) {
+    if (error.code === "42501") return { ok: false, erro: SO_O_ADMIN };
+    if (error.code === "P0002") return { ok: false, erro: LINHA_INEXISTENTE };
     return { ok: false, erro: traduzirRecusa(error as ErroDoBanco) };
   }
   revalidar();
-  return { ok: true, mensagem: "Linha excluída do calendário." };
+  return { ok: true, mensagem: "Linha excluída do calendário. Ela fica na auditoria." };
 }

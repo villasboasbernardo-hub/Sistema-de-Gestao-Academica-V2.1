@@ -23,6 +23,14 @@ A primeira coluna é o texto de Bernardo; a segunda, como a regra se aplica no c
 dica 'tem registros: use Arquivar/Desativar'."* Ela delimita a RT-2 para a turma e para a linha do calendário. O
 desenho no banco (as funções com porteiro, o rastro e o que conta como registro) está na spec 025.
 
+## Decisão D-COR-7 *(Bernardo Villas Boas, 26/10/2026)* — substitui a D-COR-6 para a linha do calendário
+
+*"No Calendário, excluir NÃO é bloqueado, nem com DSA publicado nem com aula no dia. O Admin exclui qualquer lançamento
+(feriado, licença administrativa, dia parado), ativo ou inativo, depois de um ALERTA que mostra o impacto e pede
+confirmação."* Na linha do calendário, o *Excluir* da RT-2 é **lógico** (a linha some da lista e deixa de contar, e fica no
+banco, inativa, com quem e quando), **nunca desabilitado por registro**, sem código digitado, e **só do Admin**. A D-COR-6
+continua valendo para a **turma**. O desenho está na spec 027.
+
 ## Onde as regras moram no código
 
 - RT-1 · `components/ciaara/botao-de-icone.tsx` (o vocabulário e a dica), `components/ciaara/barra-de-acoes.tsx`,
