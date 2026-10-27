@@ -38,7 +38,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **9** | Publicação do DSA com rascunho e contagem EAD/semipresencial — ✅ **concluído em 24/10/2026** | duas migrations (a M1 só acrescenta; a M2 pelo portão autorizado em 22/10/2026, com o que soma idêntico) | 024 |
 | **10** | Padrões de tela, turma, curso, estatísticas, calendário e ano — ✅ **concluído em 25/10/2026** | duas migrations (a 1ª pelo portão 9.4; a 2ª com autorização condicional) | 025 |
 | **11** | Lançamento do DSA e Início com o DSA publicado — ✅ **concluído em 26/10/2026** | uma migration, que só acrescenta | 026 |
-| **12** | Excluir no Calendário: exclusão lógica, sem bloqueio, com alerta de impacto (D-COR-7) — 🟨 **em conferência** (PR #100; a migration no remoto desde 27/10/2026) | uma migration, que só acrescenta | 027 |
+| **12** | Excluir no Calendário: exclusão lógica, sem bloqueio, com alerta de impacto (D-COR-7) — ✅ **concluído em 27/10/2026** | uma migration, que só acrescenta | 027 |
 
 ---
 
@@ -529,10 +529,10 @@ adversarial achou **sete** defeitos e os sete foram corrigidos no mesmo PR (`spe
 
 ---
 
-## Para o próximo bloco — três pendências (registradas por Bernardo Villas Boas em 26/10/2026)
+## Para o próximo bloco — quatro pendências (registradas por Bernardo Villas Boas em 26 e 27/10/2026)
 
-_Na aprovação do Bloco 11, Bernardo mandou registrar estas três para o próximo bloco. Entram no próximo `/corrigir`, no
-bloco em que couberem; o texto de cada uma está no bloco de origem._
+_Na aprovação do Bloco 11, Bernardo mandou registrar as três primeiras para o próximo bloco; na do Bloco 12, a quarta.
+Entram no próximo `/corrigir`, no bloco em que couberem; o texto de cada uma está no bloco de origem._
 
 - **`PEND-025-5`** (Bloco 10) — **regra: a janela da carga de uma turma é o período da própria turma (início–fim)**, e
   não a previsão da disciplina, que tem data de um ano só. Hoje a `CAHO 2027`, no remoto, conta a carga no ano certo, mas
@@ -542,6 +542,9 @@ bloco em que couberem; o texto de cada uma está no bloco de origem._
   no regime de *Editar turma*); esta é a alternativa dela, para o próximo bloco.
 - **`PEND-026-2`** (Bloco 11) — o seletor canônico de instrutor diz *«o seu perfil não os alcança»* para **qualquer**
   lista vazia: distinguir *«não há»* de *«você não vê»* (gotcha 4) quando quem chama esvazia a lista por outro motivo.
+- **`PEND-027-1`** (Bloco 12) — a exclusão física da D-COR-6 (`public.excluir_feriado`) ficou sem uso na tela e segue
+  chamável por RPC direta pelo Admin e pelo Encarregado (só apaga linha sem registro). Revogar o `execute` é migration
+  que altera permissão: portão 9.4.
 
 ## Registrada no fechamento da rodada de 26/10/2026 da VIRADA-1 (decisão R4 de Bernardo Villas Boas)
 
@@ -558,7 +561,16 @@ _«Guarda de vigência que ignora vigente_ate: NÃO mexa. Registre-a como pendê
 
 ---
 
-## Bloco 12 — Excluir no Calendário (spec própria) — 🟨 EM CONFERÊNCIA
+## Bloco 12 — Excluir no Calendário (spec própria) — ✅ CONCLUÍDO em 27/10/2026
+
+> ✅ **Concluído em 27/10/2026** — spec `027-bloco-12-excluir-no-calendario`, pelo fluxo `/corrigir`, num PR só: **#100**,
+> **APROVADO** por Bernardo Villas Boas na conferência de 27/10/2026 (D-1 a D-17 como estão; os três passos do roteiro
+> bateram) e mesclado por squash na `main` em **`054517d`**. A migration `20261027123023` no remoto antes do merge
+> (backup `remoto-20261027-103324.sql`); depois do merge, **100 e 100** migrations e esquema `4b7fb5fe…` (2.736 objetos)
+> igual nos dois bancos. CI do PR verde sobre `3671e62`; CI da `main` sobre `054517d` verde nos três blocos
+> (run `40576211919`: 2.842 de unidade · 1.147 pgTAP · 486 RLS + 1 pulado · 580 de ponta a ponta, nenhum instável, e 7
+> pulados), e o deploy de Production de `054517d` em `success`. O ramo foi apagado, local e remoto. O 12/11/2026
+> (`FER-000023`) fica para Bernardo excluir pela tela; a `PEND-027-1` foi para o próximo bloco, acima.
 
 _Pedido de Bernardo Villas Boas, 27/10/2026, pelo `/corrigir`, com a decisão de 26/10/2026 (**D-COR-7**)._ Spec
 `027-bloco-12-excluir-no-calendario`, ramo `fix/BLOCO-12-excluir-no-calendario`, um PR. **O papel do DSA não muda.**
