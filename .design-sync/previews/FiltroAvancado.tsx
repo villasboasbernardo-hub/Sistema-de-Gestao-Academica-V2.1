@@ -12,28 +12,47 @@ import {
  */
 
 /**
- * Clica, ao montar, no elemento que casa com `seletor` — o gesto que a pessoa faria com o mouse.
- * Com `soltarFoco`, devolve o foco ao documento depois de abrir: o painel põe o foco na primeira
- * opção (o caminho de quem usa teclado), e o anel dela se confundiria com a opção marcada.
+ * Clica, ao montar, nos elementos que casam com `seletores`, um depois do outro — o gesto que a
+ * pessoa faria com o mouse. ⚠️ Desde o Bloco 1 (spec 016, FR-004) o filtro NASCE RECOLHIDO: para
+ * mostrar um campo é preciso abrir o painel antes, e o campo só existe depois que ele abre — por isso
+ * a sequência, com um intervalo entre os cliques. Com `soltarFoco`, devolve o foco ao documento no
+ * fim: o painel põe o foco na primeira opção (o caminho de quem usa teclado), e o anel dela se
+ * confundiria com a opção marcada.
  */
+const ABRIR_O_FILTRO = '[data-slot="collapsible-trigger"]';
+const ABRIR_A_ESCOLHA_MULTIPLA = '[data-slot="popover-trigger"]';
+
 function ClicaAoMontar({
-  seletor,
+  seletores,
   soltarFoco = false,
   children,
 }: {
-  readonly seletor: string;
+  readonly seletores: readonly string[];
   readonly soltarFoco?: boolean;
   readonly children: React.ReactNode;
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
+  const sequencia = seletores.join("|");
   React.useEffect(() => {
-    ref.current?.querySelector<HTMLElement>(seletor)?.click();
-    if (!soltarFoco) return;
-    const espera = window.setTimeout(() => {
-      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-    }, 50);
-    return () => window.clearTimeout(espera);
-  }, [seletor, soltarFoco]);
+    const passos = sequencia.split("|");
+    const esperas = passos.map((seletor, indice) =>
+      window.setTimeout(
+        () => ref.current?.querySelector<HTMLElement>(seletor)?.click(),
+        indice * 60,
+      ),
+    );
+    if (soltarFoco) {
+      esperas.push(
+        window.setTimeout(
+          () => {
+            if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+          },
+          passos.length * 60 + 50,
+        ),
+      );
+    }
+    return () => esperas.forEach((espera) => window.clearTimeout(espera));
+  }, [sequencia, soltarFoco]);
   return <div ref={ref}>{children}</div>;
 }
 
@@ -85,7 +104,9 @@ const CAMPOS_DE_TURMAS: readonly CampoDeFiltro[] = [
   { chave: "inicio", rotulo: "Início previsto", tipo: "intervalo" },
 ];
 
-/** Vazio: nenhum filtro aplicado, nenhuma contagem ao lado do título — e sem "Limpar filtros". */
+/**
+ * Vazio, como a tela abre: recolhido, nenhuma contagem ao lado do título — e sem "Limpar filtros".
+ */
 export function Padrao() {
   const [estado, definirEstado] = React.useState<EstadoDeFiltro>({});
   return (
@@ -132,7 +153,10 @@ const CAMPOS_DE_INSTRUTORES: readonly CampoDeFiltro[] = [
   { chave: "docencia", rotulo: "Início da docência (ano)", tipo: "intervalo" },
 ];
 
-/** Três campos escolhidos: o número aparece ao lado do título, e "Limpar filtros" passa a existir. */
+/**
+ * Três campos escolhidos, com o painel aberto: o número aparece ao lado do título, os campos mostram
+ * o que foi escolhido, e "Limpar filtros" passa a existir.
+ */
 export function ComFiltrosAtivos() {
   const [estado, definirEstado] = React.useState<EstadoDeFiltro>({
     regime: ["40h"],
@@ -140,15 +164,17 @@ export function ComFiltrosAtivos() {
     docencia: ["2018", "2024"],
   });
   return (
-    <div className="flex flex-col gap-2">
-      <FiltroAvancado
-        ativos={contarAtivos(estado)}
-        campos={CAMPOS_DE_INSTRUTORES}
-        estado={estado}
-        aoMudar={definirEstado}
-      />
-      <BotaoLimparFiltros haFiltroAtivo={haFiltro(estado)} aoLimpar={() => definirEstado({})} />
-    </div>
+    <ClicaAoMontar seletores={[ABRIR_O_FILTRO]}>
+      <div className="flex flex-col gap-2">
+        <FiltroAvancado
+          ativos={contarAtivos(estado)}
+          campos={CAMPOS_DE_INSTRUTORES}
+          estado={estado}
+          aoMudar={definirEstado}
+        />
+        <BotaoLimparFiltros haFiltroAtivo={haFiltro(estado)} aoLimpar={() => definirEstado({})} />
+      </div>
+    </ClicaAoMontar>
   );
 }
 
@@ -183,7 +209,7 @@ const CAMPOS_DA_GRADE: readonly CampoDeFiltro[] = [
 export function EscolhaMultiplaAberta() {
   const [estado, definirEstado] = React.useState<EstadoDeFiltro>({ andamento: ["em-atraso"] });
   return (
-    <ClicaAoMontar seletor='[data-slot="popover-trigger"]' soltarFoco>
+    <ClicaAoMontar seletores={[ABRIR_O_FILTRO, ABRIR_A_ESCOLHA_MULTIPLA]} soltarFoco>
       <FiltroAvancado
         ativos={contarAtivos(estado)}
         campos={CAMPOS_DA_GRADE}
@@ -197,7 +223,10 @@ export function EscolhaMultiplaAberta() {
   );
 }
 
-/** Catálogo de cursos — recolhido, o painel some e a contagem de filtros ativos fica à vista. */
+/**
+ * Catálogo de cursos — recolhido (como a tela abre), o painel some e a contagem de filtros ativos
+ * fica à vista.
+ */
 const CAMPOS_DO_CATALOGO: readonly CampoDeFiltro[] = [
   {
     chave: "classificacao",
@@ -239,16 +268,14 @@ export function RecolhidoComContagem() {
     oferta: ["ativo"],
   });
   return (
-    <ClicaAoMontar seletor='[data-slot="collapsible-trigger"]'>
-      <div className="flex flex-col gap-2">
-        <FiltroAvancado
-          ativos={contarAtivos(estado)}
-          campos={CAMPOS_DO_CATALOGO}
-          estado={estado}
-          aoMudar={definirEstado}
-        />
-        <BotaoLimparFiltros haFiltroAtivo={haFiltro(estado)} aoLimpar={() => definirEstado({})} />
-      </div>
-    </ClicaAoMontar>
+    <div className="flex flex-col gap-2">
+      <FiltroAvancado
+        ativos={contarAtivos(estado)}
+        campos={CAMPOS_DO_CATALOGO}
+        estado={estado}
+        aoMudar={definirEstado}
+      />
+      <BotaoLimparFiltros haFiltroAtivo={haFiltro(estado)} aoLimpar={() => definirEstado({})} />
+    </div>
   );
 }
