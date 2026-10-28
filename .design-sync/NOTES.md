@@ -10,7 +10,16 @@ shadcn/Radix e `components/ciaara`) com o projeto «CIAARA-11 DS» do Claude Des
   `components/ciaara/*`. O conversor roda com `--entry ./.design-sync/pacote/index.ts`.
 - **`SePodeVer` fica FORA**: importa `lib/autorizacao/matriz`, que é `server-only` (supabase de
   servidor). `components/casca` (depende do roteador do Next) e `components/graficos` (Recharts)
-  também ficam fora do sync por escopo.
+  também ficam fora do sync por escopo. Desde 27/10/2026, também `ExclusaoPermanente` e
+  `SeletorDeAno`: chamam `useRouter` do Next, que lança erro fora do roteador.
+- **`pacote/ambiente-do-navegador.ts` vem PRIMEIRO no `index.ts`** (27/10/2026): o `next/link` que o
+  `BotaoDeIcone` usa lê `process.env.__NEXT_*` ao carregar, e o navegador do Claude Design não tem
+  `process`. Sem o env vazio, o bundle inteiro quebra ao carregar — `[BUNDLE_EXPORT] 103/103 not a
+component on window.CIAARA` e `ReferenceError: process is not defined` em todo cartão. O `next/link`
+  em si funciona fora do roteador (medido: o `BotaoDeIcone` com `href` desenha o `<a>`).
+- **A lista de componentes sai do `"types"` do `pacote/package.json`** (= `index.ts`), não do `--entry`
+  sozinho: uma entrada nova que só reexporta mais componentes empacota o código, mas o conversor
+  continua listando os do `index.ts`.
 - **CSS**: Tailwind v4 precisa ser compilado. `cfg.buildCmd` = `node .design-sync/pacote/compilar-css.mjs`
   gera `.design-sync/pacote/ciaara.css` (não versionado) com o `@tailwindcss/postcss` e o `postcss`
   que o projeto já tem. **Rode-o antes do `package-build.mjs` em todo re-sync.**
@@ -23,7 +32,9 @@ shadcn/Radix e `components/ciaara`) com o projeto «CIAARA-11 DS» do Claude Des
   `node_modules/.pnpm/playwright@1.62.1/node_modules/playwright` (Chromium 1234 já em cache).
 - **Fora do git sem mexer no `.gitignore`**: `.ds-sync/`, `ds-bundle/`, `.design-sync/.cache/`,
   `.design-sync/learnings/`, `.design-sync/node_modules` e `.design-sync/pacote/ciaara.css` estão em
-  `.git/info/exclude` (local). Numa máquina nova, repita as linhas lá.
+  `.git/info/exclude` (local). Numa máquina nova, repita as linhas lá. ⚠️ O clone de trabalho
+  `C:\sis11\CIAARA-11-v2.1` (desde 23/10/2026) **não tem** essas linhas: lá os artefatos aparecem no
+  `git status` durante o sync e somem quando são apagados no fim.
 - **Os comandos, na ordem** (da raiz do repositório):
 
   ```
@@ -105,6 +116,10 @@ shadcn/Radix e `components/ciaara`) com o projeto «CIAARA-11 DS» do Claude Des
   contêiner (os papéis de cor são `@theme inline`, redefinidos sob `.dark`).
 - **Nomes de exemplo**: só fictícios, conferidos contra a base da v2.0 (0 ocorrência). A vitrine tem
   nomes reais — dela se porta a composição, nunca o nome.
+- **O `FiltroAvancado` nasce RECOLHIDO desde o Bloco 1** (spec 016, FR-004): para mostrar um campo, a
+  prévia abre o painel antes (`ClicaAoMontar` com uma SEQUÊNCIA de seletores, 60 ms entre os cliques —
+  o campo só existe depois que o painel abre). Medido em 27/10/2026: a prévia de 08/10 clicava para
+  recolher e, com o padrão invertido, duas células mostravam o contrário do nome.
 - **A folha reduzida engana na cor**: confira em `ds-bundle/_screenshots/review/raw/` antes de
   reprovar por tonalidade.
 
@@ -137,7 +152,17 @@ shadcn/Radix e `components/ciaara`) com o projeto «CIAARA-11 DS» do Claude Des
 
 - ⚠️ **`pacote/index.ts` lista os arquivos À MÃO**: componente novo em `components/ui/` ou
   `components/ciaara/` só entra no sync depois de ganhar a linha `export * from …` ali. Nenhum
-  portão acusa a falta — o componente simplesmente não aparece no Claude Design.
+  portão acusa a falta — o componente simplesmente não aparece no Claude Design. ⚠️ **Aconteceu**:
+  de 08 a 27/10/2026 os 9 arquivos novos de `components/ciaara` (Blocos 7 a 11) ficaram fora; em
+  27/10 entraram 7 arquivos, com 8 componentes (`BarraDeAcoes`, `BotaoDeIcone`, `CampoDeSenha`,
+  `Carrossel`, `DialogoDeFormulario` e `ProvedorDePaineis`/`GatilhoDePainel`/`ConteudoDePainel`; o
+  `pedido-de-justificativa` só exporta o gancho, que vai no bundle sem cartão). Antes de cada sync,
+  compare `ls components/ui components/ciaara` com as linhas do `index.ts`.
+- ⚠️ **Remover uma linha do `index.ts` APAGA o componente do projeto** no próximo sync (o diff da
+  âncora o põe em `deletePaths`). Fora do index de propósito: `SePodeVer`, `ExclusaoPermanente`,
+  `SeletorDeAno`.
+- Os 8 componentes de 27/10/2026 estão no **cartão-piso** (funcionam no `_ds_bundle.js`; falta a
+  prévia). O `BotaoDeIcone` é o que mais merece uma: é o padrão RT-1 de toda ação em ícone.
 - 59 subcomponentes estão no **cartão-piso**, sem prévia própria — todos são partes de um dos 36
   componentes com prévia (Card, Dialog, AlertDialog, Select, Table, Tooltip…; `CelulaNavegavel` é de
   `ListaNavegavel`). Funcionam no `_ds_bundle.js`; o que falta é o cartão. Ganham prévia em qualquer
