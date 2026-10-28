@@ -144,6 +144,10 @@ Nenhuma nova.
   cada Tab); o SC-004 não provava o "de onde parou" (agora compara o tempo das animações antes e depois). Também: a guarda
   da vitrine (`vitrine.spec.ts`, I-5) passou a cobrar os tokens da moeda. **4 refutados** (a transição `pausado +
   terminou`, o prazo de 1,5 s do movimento reduzido, o tamanho do texto do botão — virou a D-13 — e a I-5 sem a moeda).
+- **CI do PR #103 sobre `439f528`:** verde nos três blocos nas duas execuções (588 de ponta a ponta + 7 pulados, 1
+  instável em cada). Numa delas o instável foi o SC-004 da abertura, e a causa era o teste: `pause()` só congela o tempo
+  no quadro seguinte, e a leitura imediata via um quadro a menos (550 ms contra 566,6 ms). Corrigido esperando `ready`. Na
+  outra, `inicio.spec.ts:363`, que esta spec não toca.
 - **[pendente]** A nova rodada local desses e2e depois das correções da revisão, e dois defeitos deliberados novos (sem o
   ouvinte do Esc; retomar do zero), foi **interrompida pelo sistema por falta de memória** na máquina; o CI do PR roda a
   ponta a ponta inteira.

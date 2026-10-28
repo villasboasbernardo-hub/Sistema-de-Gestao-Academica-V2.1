@@ -146,6 +146,12 @@ test.describe("SC-004 · a aba oculta pausa, e a animação retoma de onde parou
      */
     const tempos = () =>
       page.evaluate(() => document.getAnimations().map((a) => Number(a.currentTime ?? 0)));
+    /*
+     * ⚠️ A PAUSA SÓ CONGELA O TEMPO NO QUADRO SEGUINTE (medido no CI em 27/10/2026, run 40618471857): `pause()` deixa a
+     *    animação «pendente» até o próximo quadro, e quem lê o tempo antes disso vê um quadro a menos — 550 ms contra
+     *    566,6 ms 800 ms depois, e o caso reprovou uma vez. `ready` resolve quando a pausa foi aplicada.
+     */
+    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.ready)));
     const parado = await tempos();
     expect(Math.max(...parado), "a animação não tinha andado antes de a aba sumir").toBeGreaterThan(
       200,
