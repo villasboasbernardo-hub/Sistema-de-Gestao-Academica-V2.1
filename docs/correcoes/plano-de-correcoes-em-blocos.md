@@ -39,7 +39,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **10** | Padrões de tela, turma, curso, estatísticas, calendário e ano — ✅ **concluído em 25/10/2026** | duas migrations (a 1ª pelo portão 9.4; a 2ª com autorização condicional) | 025 |
 | **11** | Lançamento do DSA e Início com o DSA publicado — ✅ **concluído em 26/10/2026** | uma migration, que só acrescenta | 026 |
 | **12** | Excluir no Calendário: exclusão lógica, sem bloqueio, com alerta de impacto (D-COR-7) — ✅ **concluído em 27/10/2026** | uma migration, que só acrescenta | 027 |
-| **13** | Abertura com a moeda do CIAARA na raiz — 🟨 **em conferência** | não | 028 |
+| **13** | Abertura com a moeda do CIAARA na raiz — ✅ **concluído em 28/10/2026** | não | 028 |
 
 ---
 
@@ -594,7 +594,14 @@ _Pedido de Bernardo Villas Boas, 27/10/2026, pelo `/corrigir`, com a decisão de
 
 ---
 
-## Bloco 13 — Abertura com a moeda do CIAARA na raiz (spec própria) — 🟨 EM CONFERÊNCIA
+## Bloco 13 — Abertura com a moeda do CIAARA na raiz (spec própria) — ✅ CONCLUÍDO em 28/10/2026
+
+> ✅ **Concluído em 28/10/2026** — spec `028-bloco-13-abertura-com-a-moeda`, pelo fluxo `/corrigir`, num PR só: **#103**,
+> **APROVADO** por Bernardo Villas Boas na conferência de 28/10/2026 (D-1 a D-13 como estão; o roteiro bateu) e mesclado
+> por squash na `main` em **`3f8e499`**. Sem banco. CI do PR verde nos três blocos sobre `7e6852b`; CI da `main` sobre
+> `3f8e499` verde nos três blocos (run `40665886580`: 2.863 de unidade · 1.147 pgTAP · 486 RLS + 1 pulado · 589 de ponta a
+> ponta, nenhum instável, e 7 pulados), e o deploy de Production de `3f8e499` em `success` — as quatro imagens da moeda
+> respondem `200` e a vitrine `/estilo` mostra a seção da moeda. O ramo foi apagado, local e remoto.
 
 _Pedido de Bernardo Villas Boas, 27/10/2026, pelo `/corrigir`._ Spec `028-bloco-13-abertura-com-a-moeda`, ramo
 `feat/BLOCO-13-abertura-com-a-moeda`, um PR. **Sem banco. O papel do DSA não muda.** Referência: o protótipo aprovado
