@@ -108,6 +108,12 @@ const NAO_E_COR: ReadonlySet<string> = new Set([
   "ciaara-2",
   "ciaara-3",
   /*
+   * ⚠️ A FORMA DO DEGRADÊ, NÃO UMA COR (27/10/2026, spec 028): `bg-radial-[…]` é o degradê radial do Tailwind, e as
+   *    cores dele vêm de `from-…`/`to-…`, que esta varredura continua conferindo. Primeiro uso: o fundo da abertura
+   *    em `app/page.tsx`.
+   */
+  "radial",
+  /*
    * ⚠️ PALAVRAS DE COR DO PRÓPRIO TAILWIND, e elas ficam aqui por um motivo: quem governa o uso
    *    delas é a regra de cor do ESLint, não esta varredura. `text-white` existe em dois
    *    primitivos (`button`, `badge`) sobre `--destructive`, e tirá-los é decisão de desenho.

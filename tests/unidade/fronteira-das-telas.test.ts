@@ -64,6 +64,10 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/admin/usuarios/[id]/FormularioDaConta.tsx": "editar nome, perfil, escopo e vínculos",
   "app/(app)/admin/usuarios/[id]/AcoesDaConta.tsx": "redefinir senha, desativar e reativar",
 
+  // ── Bloco 13 (spec 028): a abertura com a moeda na raiz ─────────────────────────────────────
+  "app/AberturaComMoeda.tsx":
+    "a animação da moeda: aba visível, Esc, clique, movimento reduzido e a API de animação nativa",
+
   // ── Épico 4: vitrine e panorama ────────────────────────────────────────────────────────────
   "app/estilo/amostras.tsx": "as amostras interativas da vitrine",
   "app/(app)/inicio/FiltroDoPanorama.tsx": "o recorte do panorama, escrito na URL",

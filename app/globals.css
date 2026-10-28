@@ -150,6 +150,16 @@
   --serie-6: #0e7490;
   --serie-7: #8a5a2b;
   --serie-8: #4d5a67;
+
+  /* A moeda da abertura (spec 028, Bloco 13): no claro, OURO. Valores do protótipo aprovado em
+     27/10/2026. A borda é um degradê de três tons; o reflexo e a sombra levam o alfa no hex
+     (o leitor de `lib/design/ler-globals.ts` só reconhece papel de cor em hex). Não são texto: sem par de
+     contraste. */
+  --moeda-borda-escura: #4a3410;
+  --moeda-borda: #6e4f1c;
+  --moeda-borda-clara: #e3c477;
+  --moeda-reflexo: #fff5d5c0;
+  --moeda-sombra: #0f172047; /* rgb(15 23 32 / 0.28) */
 }
 
 /* ── 3. PAPÉIS — MODO NOTURNO ──────────────────────────────────────────────────────────────────
@@ -208,6 +218,13 @@
   --serie-6: #52b6cc;
   --serie-7: #cd9b6a;
   --serie-8: #a8b3c2;
+
+  /* A moeda da abertura no escuro: PRATA (spec 028). */
+  --moeda-borda-escura: #34363b;
+  --moeda-borda: #5b5d63;
+  --moeda-borda-clara: #e6e7ea;
+  --moeda-reflexo: #f2f6ffc8;
+  --moeda-sombra: #00000099; /* rgb(0 0 0 / 0.6) */
 }
 
 /* ── 4. EXPOSIÇÃO DOS PAPÉIS COMO UTILITÁRIO ──────────────────────────────────────────────────
@@ -285,6 +302,12 @@ optgroup {
   --color-serie-6: var(--serie-6);
   --color-serie-7: var(--serie-7);
   --color-serie-8: var(--serie-8);
+
+  --color-moeda-borda-escura: var(--moeda-borda-escura);
+  --color-moeda-borda: var(--moeda-borda);
+  --color-moeda-borda-clara: var(--moeda-borda-clara);
+  --color-moeda-reflexo: var(--moeda-reflexo);
+  --color-moeda-sombra: var(--moeda-sombra);
 }
 
 /* ── 4b. RECONCILIAÇÃO COM OS COMPONENTES COPIADOS (`FR-018`, `SC-010`) ───────────────────────
