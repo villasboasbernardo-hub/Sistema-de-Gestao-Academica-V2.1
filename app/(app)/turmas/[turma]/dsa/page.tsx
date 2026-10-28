@@ -38,6 +38,7 @@ import {
   descartarRascunhoDoDsa,
   fazerAlteracaoNoDsa,
   publicarSemanaDoDsa,
+  salvarAlteracaoDoDsa,
   salvarSemanaDoDsa,
 } from "@/lib/acoes/publicacao-do-dsa";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
@@ -430,6 +431,7 @@ export default async function SemanaDoDsa({
             <SeloDaSemana
               situacao={situacaoDaPublicacao.situacao}
               versao={situacaoDaPublicacao.versaoVigente}
+              alteracaoSalva={situacaoDaPublicacao.alteracaoSalva}
             />
             {situacaoDaPublicacao.rascunhos > 0 ? (
               <span className="text-atrasado-tinta text-sm font-medium" data-slot="nao-salvos">
@@ -499,6 +501,7 @@ export default async function SemanaDoDsa({
             />
           }
           salvar={salvarSemanaDoDsa}
+          salvarAlteracao={salvarAlteracaoDoDsa}
           descartar={descartarRascunhoDoDsa}
           fazerAlteracao={fazerAlteracaoNoDsa}
           publicar={publicarSemanaDoDsa}
@@ -680,6 +683,11 @@ export default async function SemanaDoDsa({
           avaliacoesDoCurriculo={lida.avaliacoesDoCurriculo}
           instrutores={lida.instrutores}
           habilitacoes={lida.habilitacoes}
+          /*
+           * FR-006 da spec 029: sem `instrutores.ler`, as listas de instrutor chegam vazias pela RLS (tudo ou nada por
+           * perfil), e o vazio tem de dizer «o seu perfil não os alcança» — não «nenhum habilitado».
+           */
+          podeLerInstrutores={pode(permissoes, "instrutores", "ler")}
           escala={lida.escala}
           tecnicas={lida.tecnicas}
           tiposDeAvaliacao={lida.tiposDeAvaliacao}
@@ -761,15 +769,20 @@ const TOM_DO_SELO = {
   alteracao_em_andamento: "atrasado",
 } as const satisfies Record<Situacao, string>;
 
-/** O selo da situação da semana: ícone + palavra (RD-5) — Registrado, Em preenchimento, Publicado, ALT N. */
+/**
+ * O selo da situação da semana: ícone + palavra (RD-5) — Registrado, Em preenchimento, Publicado, ALT N; Em alteração, e
+ * *Em alteração · salva* depois do *Salvar alteração* sem rascunho novo (RP-9, D-8 da spec 029), com o tom da alteração.
+ */
 function SeloDaSemana({
   situacao,
   versao,
+  alteracaoSalva,
 }: {
   readonly situacao: Situacao;
   readonly versao: number | null;
+  readonly alteracaoSalva: boolean;
 }) {
-  const selo = seloDaSituacao(situacao, versao);
+  const selo = seloDaSituacao(situacao, versao, alteracaoSalva);
   return (
     <span data-slot="selo-da-semana" data-selo={selo.palavra}>
       <BadgeStatus

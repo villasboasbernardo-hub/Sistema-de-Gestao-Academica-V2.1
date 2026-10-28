@@ -238,7 +238,14 @@ const atividade = z
      * (`categoriaPeloTipo`). As regras que dependem da categoria moram em `recusaPelaCategoria`.
      */
     tipoAtividadeId: z.string().uuid("Escolha o tipo da atividade."),
-    descricao: z.string().trim().min(1, "Escreva o que é a atividade."),
+    /*
+     * ⚠️ **O «O QUE É» SÓ É OBRIGATÓRIO FORA DO ESTUDO INDIVIDUAL** (spec 029, FR-002; decisão de Bernardo Villas Boas,
+     *    27/10/2026). O esquema não conhece a categoria — ela sai do tipo, que aqui é um `uuid` —, então ele só APARA
+     *    (vazio vira nulo, D-5) e quem recusa a ausência fora do EI é `recusaPelaCategoria`, com a mesma frase de antes;
+     *    o banco tem o `CHECK` irmão, `ativ_descricao_fora_do_estudo_individual`. Até a spec 029 era `min(1)` aqui,
+     *    para toda categoria.
+     */
+    descricao: textoOuNulo,
     instrutorId: uuid.nullable(),
     responsavelExterno: textoOuNulo,
     /*

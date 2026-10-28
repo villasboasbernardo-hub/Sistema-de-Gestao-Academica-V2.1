@@ -30,8 +30,9 @@ outras planilhas trouxeram *(decisoes de Bernardo Villas Boas, 06/10/2026)*:
    vira PENDENCIA tipada, para o lote de decisoes. No modo provisorio (so no banco local) o que da
    para carregar sem cadastro e carregado; no remoto, pendencia que bloqueia para tudo.
 
-⚠️ AS VALIDACOES DO LANCAMENTO MANUAL continuam as de `plano.py` (`pode_atuar`, teto de TFM): este
-   modulo as reusa, nao as reescreve.
+⚠️ AS VALIDACOES DO LANCAMENTO MANUAL continuam as de `plano.py` (`pode_atuar`, `sem_teto_algum`):
+   este modulo as reusa, nao as reescreve. (O teto de TFM saiu em 27/10/2026, com a emenda da
+   `RN-DIST-03` (a) — spec 029, `FR-001`, D-4: a regra emendada vale tambem para a sincronizacao.)
 """
 
 from __future__ import annotations
@@ -47,7 +48,6 @@ from scripts.carga_dsa.planilha import Bloco, Leitura
 from scripts.carga_dsa.plano import (
     CATEGORIAS,
     casar_instrutor,
-    eh_tfm,
     ler_instrutor,
     normalizar,
     pode_atuar,
@@ -1168,9 +1168,14 @@ def _conferencias_internas(r, leitura, decisoes, pend, disciplinas_do_curso) -> 
 
 
 def _tetos(r, ref, pend) -> None:
-    """`RN-DIST-03`: TFM acima do teto BLOQUEIA; o recomendado so alerta; fim de curso, nada."""
+    """`RN-DIST-03`: o recomendado so alerta; fim de curso, nada; o TFM, como qualquer disciplina.
+
+    ⚠️ Ate 27/10/2026 o TFM acima de `dsa.teto_tfm_semana` (6) saia aqui com o aviso proprio «o teto de
+       TFM e 6» (a tela recusava; a sincronizacao so avisava). A emenda da `RN-DIST-03` (a) (spec 029,
+       `FR-001`, D-2 a D-4) tirou o ramo: acima de 25 o TFM recebe o mesmo alerta do recomendado que
+       qualquer disciplina, e a chave do TFM nem e lida — a falta dela nao cala mais o recomendado.
+    """
     try:
-        tfm = float(ref["tetos"]["dsa.teto_tfm_semana"])
         recomendado = float(ref["tetos"]["dsa.teto_recomendado_semana"])
     except (KeyError, ValueError):
         r.alertas.append("tetos: parametro ausente em `config_parametros` — o teto cala, nao e inventado")
@@ -1194,11 +1199,7 @@ def _tetos(r, ref, pend) -> None:
         nome = nome_por_cod.get(cod, cod)
         if sem_teto_algum(nome):
             continue
-        if eh_tfm(nome):
-            if ta > tfm:
-                # Regra 6 do projeto: regra normativa vira ALERTA, nunca bloqueio (RN-DEG-02) — e a tela tambem so avisa.
-                r.alertas.append(f"semana {semana}/{ano}: «{nome}» tem {ta} TA; o teto de TFM e {tfm:g} (RN-DIST-03 — alerta, nao bloqueio)")
-        elif ta > recomendado:
+        if ta > recomendado:
             r.alertas.append(f"semana {semana}/{ano}: «{nome}» tem {ta} TA; o recomendado e {recomendado:g} (alerta, nao bloqueio)")
 
 

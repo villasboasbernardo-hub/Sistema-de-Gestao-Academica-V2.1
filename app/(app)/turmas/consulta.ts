@@ -23,6 +23,8 @@ import {
   andamentoDaTurma,
   contagemDaTurma,
   type ContagemPresencial,
+  type ExcecoesDoRegime,
+  regimesDasSemanas,
 } from "@/lib/dominio/andamento-da-turma";
 
 import { regimeEfetivo } from "@/lib/dominio/regime-da-turma";
@@ -176,6 +178,11 @@ export type InsumosDoAndamentoDaLista = {
   readonly hoje: string;
   /** Spec 024 (FR-020): a etapa presencial das semipresenciais (`lerContagemPresencial`). Ausente = conta tudo. */
   readonly presenciais?: ReadonlyMap<string, ContagemPresencial>;
+  /**
+   * Spec 029 (`FR-005`): o regime das semanas de cada turma (`lerRegimesDasSemanas`). Ausente, ou turma fora do mapa =
+   * um TA/dia só, a conta de antes do Bloco 14.
+   */
+  readonly semanasDasTurmas?: ReadonlyMap<string, ExcecoesDoRegime>;
 };
 
 /**
@@ -196,6 +203,7 @@ export function comAndamento(
   return linhas.map((l) => {
     const daCarga = carga.get(l.id);
     if (daCarga === undefined) return { ...l, progresso: null, saldo: null };
+    const doCurso = regimeDoBanco(regime.get(l.cursoId) ?? null);
     /* Spec 024 (FR-020): a semipresencial com marca presencial conta só a etapa presencial. */
     const contagem = contagemDaTurma(
       {
@@ -216,12 +224,11 @@ export function comAndamento(
         executada: contagem.executada,
       },
       /* Spec 018 (C-9): o regime nomeado da turma troca os TA presenciais; o limite EAD fica (`RN-MAT-04`). */
-      regimeEfetivo(
-        regimeDoBanco(regime.get(l.cursoId) ?? null),
-        l.regimeTempos == null ? null : { regimeTempos: l.regimeTempos },
-      ),
+      regimeEfetivo(doCurso, l.regimeTempos == null ? null : { regimeTempos: l.regimeTempos }),
       datasQueAlcancam(insumos.feriadosDiaInteiro, l.id),
       insumos.hoje,
+      /* Spec 029 (`FR-005`, D-12): o regime de cada semana, com o padrão de hoje do curso como o «do curso». */
+      regimesDasSemanas(insumos.semanasDasTurmas?.get(l.id), doCurso),
     );
     return {
       ...l,

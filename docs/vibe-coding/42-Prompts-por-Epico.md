@@ -684,6 +684,10 @@ regra citado no topo e teste Vitest próprio:
 - A última semana recebe o resto (RN-DIST-02).
 - Os TRÊS regimes de teto (RN-DIST-03): TFM RÍGIDO em 6 TA/semana; disciplinas de fim de
   curso SEM TETO ALGUM; demais com 25 TA/semana APENAS RECOMENDADO. São três, não um.
+  ⚠️ EMENDA DE 27/10/2026 (decisão de Bernardo Villas Boas; RN-DIST-03 (a) emendada no
+  documento 04, Bloco 14, spec 029): o TFM NÃO tem mais teto rígido — é disciplina comum, que
+  só o alerta do recomendado de 25 TA/semana alcança —, e os regimes passam a DOIS: sem teto
+  (fim de curso) e recomendado. O .docx deste documento não recebeu esta emenda.
 - Espelhamento pelo n-ésimo dia da semana do mês (RN-2027-01).
 - Prova mista em bloco fechado de EXATAMENTE 3 TA CONTÍGUOS no mesmo dia, com revisão de
   1 TA em até 7 dias (RN-2027-04).
@@ -714,6 +718,7 @@ ARMADILHAS DESTE ÉPICO — é o de maior risco de regra perdida:
   estão em 20h; usar 20 como teto permitiria 67% acima do máximo normativo, num controle
   auditado pela CoPeCoD. É o erro mais caro possível aqui.
 - RN-DIST-03 tratado como teto único. São TRÊS regimes distintos.
+  ⚠️ EMENDA DE 27/10/2026: são DOIS desde que o TFM perdeu o teto rígido — ver o escopo acima.
 - Criar uma segunda implementação da distribuição semanal. RN-DIST-01 proíbe.
 - Literal de ano (2027) sobrevivendo em algum canto. O motor é multi-ano por requisito.
 - "Simplificar" o espelhamento do n-ésimo dia da semana para dia do mês. São coisas
@@ -1004,6 +1009,10 @@ ESCOPO — ETAPA (i) SOMENTE:
 - Reutiliza a distribuição do Épico 7 — RN-DIST-01 PROÍBE uma segunda implementação.
 - Respeita o teto RÍGIDO de TFM (6 TA/semana), o máximo de 4 disciplinas por dia e 4 TA da
   mesma disciplina por dia (RN-2027-05), e a detecção de conflito entre todas as turmas.
+  ⚠️ EMENDA DE 27/10/2026 (decisão de Bernardo Villas Boas; RN-DIST-03 (a) emendada no
+  documento 04, Bloco 14, spec 029): o TFM NÃO tem mais teto rígido — é disciplina comum, que
+  só o alerta do recomendado de 25 TA/semana alcança. O .docx deste documento não recebeu
+  esta emenda.
 - O motor é FUNÇÃO PURA de lib/dominio/, testável sem banco.
 - A sugestão NUNCA é imposta: lançar manualmente algo diferente funciona a qualquer
   momento, sem confirmação extra e sem atrito de UI.
@@ -1024,6 +1033,7 @@ implementar, não sugerir, NÃO DEIXAR PREPARADO.
 
 CRITÉRIOS DE ACEITE (documento 06, Épico 12):
 1. A sugestão respeita TODOS os limites rígidos existentes, incluindo o teto de TFM.
+   ⚠️ EMENDA DE 27/10/2026: o teto de TFM não existe mais — ver o escopo acima.
 2. A sugestão NUNCA é imposta: lançar manualmente algo diferente funciona sempre.
 3. A etapa (ii) é executada e registrada ANTES de qualquer trabalho da (iii) — critério de
    PROCESSO, verificável no histórico do repositório.

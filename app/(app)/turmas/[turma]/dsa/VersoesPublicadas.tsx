@@ -3,7 +3,8 @@
  * 11, D-24).
  *
  * ⚠️ **SEM MARCADOR DE CLIENTE**: é leitura. As ações estão na barra do cabeçalho (`BarraDoDsa`); aqui fica o que a
- *    situação diz — *alterado desde a publicação*, o lembrete da trava e do rascunho — e o histórico, com o
+ *    situação diz — *alterado desde a publicação*, o lembrete da trava e do rascunho, a alteração salva e não publicada
+ *    (RP-9, D-25 da spec 029) — e o histórico, com o
  *    *Reimprimir* de cada versão, que leva à impressão com `?versao=N` (o retrato, idêntico).
  */
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
@@ -37,7 +38,17 @@ export function VersoesPublicadas({
       ) : situacao.rascunhos > 0 ? (
         <p className="text-texto-suave text-xs">
           O que não foi salvo fica guardado, mas não conta em nada (CH, andamento, papel) até
-          «Salvar minuta».
+          {situacao.podeSalvarAlteracao ? " «Salvar alteração»." : " «Salvar minuta»."}
+        </p>
+      ) : null}
+      {/*
+        RP-9, D-25 (spec 029): a alteração SALVA já conta, e o papel oficial continua o publicado — o aviso da RP-4 só vale
+        com a semana travada, então é esta linha que diz o descompasso entre a CH e o papel.
+      */}
+      {situacao.alteracaoSalva ? (
+        <p role="status" className="text-atrasado-tinta text-sm" data-slot="alteracao-salva">
+          Alteração salva: já conta na CH e no andamento; o papel publicado continua valendo até
+          «Publicar alteração».
         </p>
       ) : null}
 

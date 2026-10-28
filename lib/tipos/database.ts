@@ -145,7 +145,7 @@ export type Database = {
           criado_em: string
           criado_por: string | null
           data: string
-          descricao: string
+          descricao: string | null
           disciplina_id: string | null
           editado_em: string | null
           editado_por: string | null
@@ -179,7 +179,7 @@ export type Database = {
           criado_em?: string
           criado_por?: string | null
           data: string
-          descricao: string
+          descricao?: string | null
           disciplina_id?: string | null
           editado_em?: string | null
           editado_por?: string | null
@@ -213,7 +213,7 @@ export type Database = {
           criado_em?: string
           criado_por?: string | null
           data?: string
-          descricao?: string
+          descricao?: string | null
           disciplina_id?: string | null
           editado_em?: string | null
           editado_por?: string | null

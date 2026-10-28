@@ -307,3 +307,123 @@ test.describe("D-COR-3 · registrar, somar em toda tela, separar e desfazer", ()
     await expect(painel.locator('[data-slot="registrar-ta-fora"]')).toHaveCount(0);
   });
 });
+
+/**
+ * FR-006 (spec 029, Bloco 14, item 6 — `PEND-026-2`): o campo de instrutor VAZIO diz o motivo certo.
+ *
+ * ⚠️ **O QUE A `main` MOSTRAVA**: a disciplina sem habilitado ativo esvazia a lista por FILTRO (a habilitação), e o
+ *    diálogo dizia *"Nada cadastrado ainda / Nenhum instrutor disponível para escolher."* — com instrutor cadastrado e
+ *    ativo no banco. A frase certa é a do «não há» do chamador: *"Nenhum instrutor habilitado nesta disciplina"*.
+ * ⚠️ **A ASSERÇÃO MORA DENTRO DO DIÁLOGO, e é o que a faz discriminar**: o painel de instrutores do detalhe da linha,
+ *    atrás dele, JÁ diz *"Nenhum instrutor habilitado nesta disciplina"* na `main` (`data-slot="sem-habilitado"`). Uma
+ *    procura na página inteira passaria antes da mudança e não provaria nada.
+ * ⚠️ **SEMENTE PRÓPRIA, NUM `describe` PRÓPRIO**: este caso grava, e o de cima confere somas exatas (*"45 TA executados ·
+ *    40 no DSA · 5 fora do DSA"*); com `fullyParallel` os dois podem cair no mesmo processo, e um registro a mais na
+ *    turma de cima o reprovaria sem defeito nenhum. Curso, turma e instrutor são outros, com o índice do processo.
+ * ⚠️ **NINGUÉM É HABILITADO NA SEMENTE** (`semearBloco2` não cria `instrutor_disciplina`), e o caso mede isso no banco
+ *    antes de abrir a tela — a premissa é medida, não suposta. O instrutor da semente existe e está ATIVO: é ele que
+ *    torna *"Nada cadastrado ainda"* falso.
+ */
+test.describe("FR-006 (spec 029) · disciplina sem habilitado: o vazio do instrutor diz o motivo", () => {
+  const NOME_SEM_HABILITADO = "Disciplina sem habilitado do TA fora do DSA";
+  let SEMEADO_V: Bloco2Semeado;
+  let SIGLA_V = "";
+  let INSTRUTOR_V = "";
+
+  test.beforeAll(async ({}, info) => {
+    const p = info.workerIndex;
+    SIGLA_V = `CUR-B2TV${p}`;
+    INSTRUTOR_V = `B2TV-INS-${p}`;
+    // HOJE vem do `beforeAll` do arquivo, que roda antes deste: o mesmo dia que `registrar` confere no campo.
+    const segunda = semanaDoPainel(HOJE).de;
+    SEMEADO_V = await semearBloco2({
+      sigla: SIGLA_V,
+      nome: `Curso do seletor de instrutor vazio ${p}`,
+      disciplinas: [{ cod: "I", nome: NOME_SEM_HABILITADO, ch: 40 }],
+      turmas: [
+        {
+          chave: "T",
+          semRotulo: true,
+          ano: Number(HOJE.slice(0, 4)),
+          status: "ativa",
+          inicio: maisDias(segunda, -28),
+          termino: maisDias(HOJE, 60),
+        },
+      ],
+      aulas: [],
+      instrutorCodigo: INSTRUTOR_V,
+    });
+  });
+
+  test.afterAll(async () => {
+    await limparBloco2(SIGLA_V, INSTRUTOR_V);
+  });
+
+  test("Encarregado: «Registrar TA fora do DSA» diz «Nenhum instrutor habilitado», nunca «Nada cadastrado ainda»; e grava sem instrutor", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const banco = bancoDoBloco2();
+    const codigo = SEMEADO_V.turmas.T?.codigo as string;
+    const turmaId = SEMEADO_V.turmas.T?.id as string;
+    const disciplinaId = SEMEADO_V.disciplinas.I as string;
+
+    /* ── a premissa, medida: nenhum habilitado ativo na disciplina, e há instrutor cadastrado e ativo ─────────── */
+    const habilitados = await banco
+      .from("instrutor_disciplina")
+      .select("id")
+      .eq("disciplina_id", disciplinaId)
+      .eq("status", "ativo");
+    expect(habilitados.error).toBeNull();
+    expect(habilitados.data, "a semente habilitou alguém: o caso não mede o vazio").toEqual([]);
+    const cadastrado = await banco
+      .from("instrutores")
+      .select("status")
+      .eq("id", SEMEADO_V.instrutorId)
+      .single();
+    expect(cadastrado.error).toBeNull();
+    expect(
+      (cadastrado.data as { status: string }).status,
+      "sem instrutor ativo, «não há cadastro» seria verdade",
+    ).toBe("ativo");
+
+    /* ── por clique: Turmas → turma → disciplina → «Registrar TA fora do DSA» ──────────────────────────────── */
+    await irAFichaDaTurma(page, EMAIL_ENC, codigo);
+    const dialogo = await abrirFormulario(page, NOME_SEM_HABILITADO);
+    const formulario = dialogo.locator('[data-slot="formulario-ta-fora"]');
+
+    /*
+     * O vazio do campo de instrutor: `role="status"` com `data-motivo` — o contrato do vazio na `main` (a caixa do
+     * `EstadoVazio`) e depois (a frase compacta, D-15). Ele existe nos dois mundos: o que reprova é a FRASE.
+     */
+    const vazioDoInstrutor = formulario.locator('[role="status"][data-motivo]');
+    await expect(vazioDoInstrutor).toBeVisible();
+    await expect(
+      vazioDoInstrutor,
+      "o campo de instrutor não diz o motivo do vazio (a habilitação)",
+    ).toContainText("Nenhum instrutor habilitado nesta disciplina");
+    await expect(formulario, "o vazio de FILTRO diz que não há cadastro").not.toContainText(
+      "Nada cadastrado ainda",
+    );
+    // O Encarregado tem `instrutores.ler`: o vazio é «não há», não «você não vê».
+    await expect(vazioDoInstrutor).toHaveAttribute("data-motivo", "sem-dado");
+    await expect(formulario).not.toContainText("o seu perfil não os alcança");
+
+    /* ── registrar SEM instrutor continua gravando: a tela confirma e o banco tem a linha, com instrutor nulo ── */
+    await registrar(page, NOME_SEM_HABILITADO, 3, `Sem instrutor habilitado — prova ${codigo}`);
+    const { data, error } = await banco
+      .from("ta_fora_do_dsa")
+      .select("tempos, status, disciplina_id, instrutor_id, data")
+      .eq("turma_id", turmaId);
+    expect(error).toBeNull();
+    expect(data, "o registro sem instrutor não gravou").toEqual([
+      {
+        tempos: 3,
+        status: "ativo",
+        disciplina_id: disciplinaId,
+        instrutor_id: null,
+        data: sextaSeFimDeSemana(HOJE),
+      },
+    ]);
+  });
+});

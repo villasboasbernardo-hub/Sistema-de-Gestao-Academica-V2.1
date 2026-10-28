@@ -610,3 +610,72 @@ describe("FR-012.3 · dois lançamentos no mesmo TA, no papel", () => {
     expect(dia.noMesmoTa).toBeUndefined();
   });
 });
+
+/*
+ * ⚠️ **D-6 da spec 029 (Bloco 14, item 2) · O ESTUDO INDIVIDUAL SEM «O QUE É» NUNCA SAI EM BRANCO NO PAPEL**
+ *    *(decisão de Bernardo Villas Boas, 27/10/2026)*. O EI que está na grade já vira a linha fixa (acima); o que cai NO
+ *    MESMO TA de outro lançamento ia por `linhasNoMesmoTa`, que imprime a DESCRIÇÃO e deixa a T/E vazia — e com a
+ *    descrição nula do FR-002 a linha sairia sem conteúdo nem T/E, no dia comum e no dia bloqueado.
+ * ⚠️ **O CONTROLE É O DADO QUE EXISTE**: no remoto, todo EI tem descrição (medido em 28/10/2026, 0 nulas em 1.090), e
+ *    ele não muda de papel — o EI descrito continua saindo com a descrição dele.
+ */
+describe("spec 029, D-6 · o EI sem descrição no mesmo TA de outro lançamento", () => {
+  const IDS_DE_EI: ReadonlySet<string> = new Set(["ei-sem-descricao", "ei-descrito"]);
+  const aula = fato({
+    fatoId: "aula-primeiro",
+    codigo: "REG-000001",
+    criadoEm: "2026-10-01T10:00:00Z",
+    taInicial: 3,
+    tempos: 1,
+  });
+  const eiSemDescricao = fato({
+    fatoId: "ei-sem-descricao",
+    codigo: "ATV-000002",
+    criadoEm: "2026-10-02T10:00:00Z",
+    origem: "atividade_nao_letiva",
+    taInicial: 3,
+    tempos: 1,
+    disciplina: null,
+    conteudo: null,
+    tecnica: "Estudo Individual",
+    instrutor: null,
+    local: LOCAL_DO_ESTUDO_INDIVIDUAL,
+  });
+
+  function impresso(fatos: readonly FatoDaSemana[], bloqueado = false) {
+    const semana = montar({
+      fatos: [...fatos],
+      feriados: bloqueado
+        ? [{ data: "2026-10-05", descricao: "Licença de pagamento", impacto: "dia_inteiro" }]
+        : [],
+    });
+    const dia = semana.dias[0];
+    if (dia === undefined) throw new Error("a semana saiu sem dias");
+    return diaImpresso(dia, {
+      relogio: semana.relogio,
+      tecnicas: TECNICAS,
+      idsDeEstudoIndividual: IDS_DE_EI,
+    });
+  }
+
+  it("⚠️ sai com o texto ESTUDO INDIVIDUAL e a sigla EI — e não com uma linha em branco", () => {
+    expect(
+      impresso([aula, eiSemDescricao]).noMesmoTa?.map((l) => [l.chave, l.conteudo, l.te]),
+    ).toEqual([["ei-sem-descricao", TEXTO_DO_ESTUDO_INDIVIDUAL, SIGLA_DO_ESTUDO_INDIVIDUAL]]);
+  });
+
+  it("⚠️ e no dia bloqueado também, abaixo da faixa", () => {
+    const dia = impresso([aula, eiSemDescricao], true);
+    expect(dia.bloqueio).toBe("Licença de pagamento");
+    expect(dia.noMesmoTa?.map((l) => [l.chave, l.conteudo, l.te])).toEqual([
+      ["ei-sem-descricao", TEXTO_DO_ESTUDO_INDIVIDUAL, SIGLA_DO_ESTUDO_INDIVIDUAL],
+    ]);
+  });
+
+  it("controle: o EI COM descrição continua saindo com ela — o dado existente não muda de papel", () => {
+    const descrito = { ...eiSemDescricao, fatoId: "ei-descrito", conteudo: "Leitura dirigida" };
+    expect(impresso([aula, descrito]).noMesmoTa?.map((l) => [l.chave, l.conteudo])).toEqual([
+      ["ei-descrito", "Leitura dirigida"],
+    ]);
+  });
+});

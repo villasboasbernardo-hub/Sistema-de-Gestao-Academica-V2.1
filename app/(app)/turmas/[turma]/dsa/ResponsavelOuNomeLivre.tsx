@@ -8,6 +8,10 @@
  *    manda o nome livre nulo); no papel em que o instrutor é OPCIONAL, «Tirar o instrutor» devolve o campo livre.
  * ⚠️ **O SELETOR É O CANÔNICO** (`SeletorInstrutor`, `RN-ANT-01`, gotcha 12): nenhuma escolha de instrutor é
  *    construída aqui.
+ * ⚠️ **A LISTA VAZIA DIZ O MOTIVO** (spec 029, `FR-006`): aqui ela é o cadastro ativo inteiro — a aula vazia não chega
+ *    a este componente (a frase da D-32 a substitui antes) —, então vazia com `instrutores.ler` é *"Nenhum instrutor
+ *    ativo no cadastro"*, e sem a permissão é o «você não vê» do seletor. Uma falha de leitura já aparece na faixa da
+ *    semana (`aviso-de-leitura`).
  * ⚠️ **FOLHA DE CLIENTE, DECLARADA**: digitar e escolher são interação.
  */
 "use client";
@@ -17,12 +21,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import { vazioDaListaDeInstrutores } from "@/lib/dominio/dsa/instrutores-da-aula";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { ROTULO_NOME_LIVRE, type RegraDoResponsavel } from "@/lib/dominio/responsavel";
 
 export type ResponsavelOuNomeLivreProps = {
   readonly regra: RegraDoResponsavel;
   readonly instrutores: readonly InstrutorParaExibir[];
+  /** O perfil tem `instrutores.ler`? Decidido no servidor: o «você não vê» da lista vazia (FR-006 da spec 029). */
+  readonly podeLerInstrutores: boolean;
   readonly escala: EscalaDeAntiguidade;
   /** O rótulo do seletor do cadastro ("Quem ministra", "Fiscal do cadastro (opcional)"…). */
   readonly rotuloDoCadastro: string;
@@ -41,6 +48,7 @@ export type ResponsavelOuNomeLivreProps = {
 export function ResponsavelOuNomeLivre({
   regra,
   instrutores,
+  podeLerInstrutores,
   escala,
   rotuloDoCadastro,
   legenda,
@@ -60,6 +68,7 @@ export function ResponsavelOuNomeLivre({
         valor={instrutorId}
         aoMudar={aoMudarInstrutor}
         rotulo={rotuloDoCadastro}
+        vazio={vazioDaListaDeInstrutores(podeLerInstrutores, "sem-cadastro")}
       />
       {regra.instrutorDoCadastro === "opcional" && instrutorId !== "" ? (
         <Button

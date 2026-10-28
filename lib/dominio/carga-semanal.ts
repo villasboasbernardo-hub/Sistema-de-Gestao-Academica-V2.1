@@ -12,6 +12,15 @@
  * > semana coberta sai da faixa do regime — limites inclusivos — e a mensagem nomeia a semana; somar as
  * > médias do ano inteiro está explicitamente PROIBIDO."* — decisão de Bernardo Villas Boas, 15/09/2026
  *
+ * ⚠️ **NOTA DE EMENDA — A JANELA DA CARGA** (spec 029, Bloco 14, item 4: `FR-004`, D-9 a D-11, adotadas por padrão em
+ *    28/10/2026, a conferir por Bernardo no fim do `/corrigir`; regra proposta por ele em 25/10/2026, `PEND-025-5`).
+ *    A citação acima fica como foi dita. A "janela prevista" que a soma percorre passou a ser a **janela da carga**
+ *    (`janelaDaCarga`, no fim deste módulo): a previsão da view (linha da turma → disciplina → turma) **recortada
+ *    pelo período da turma**, e o período inteiro da turma quando a previsão não o toca — *"a janela da carga de uma
+ *    atribuição nunca sai do período da própria turma"* (`FR-004.1`). Sem isso, a `CAHO 2027` (previsão da
+ *    disciplina de 11/05 a 16/10/2026, turma de 05/01 a 17/12/2027) não tinha semana nenhuma no alerta de 2027. A
+ *    view continua devolvendo a previsão (D-11), e a média segue a mesma (D-10): muda só QUAIS semanas a média cobre.
+ *
  * 🛑 SOMAR AS MÉDIAS DO ANO INTEIRO É PROIBIDO. Um instrutor com duas disciplinas de 10 h por semana, uma
  * em março e outra em agosto, nunca passou de 10 h em semana nenhuma; somar o ano daria 20 h e um
  * alerta falso. Esta função só soma o que cobre **a mesma** semana.
@@ -34,7 +43,8 @@
  * "hoje": semana que já passou conta igual.
  *
  * ⚠️ ATRIBUIÇÃO SEM JANELA OU SEM MÉDIA NÃO ENTRA EM SEMANA NENHUMA. Sem data não há semana a cobrir; a
- * ficha já mostra essa atribuição com a janela em branco.
+ * ficha já mostra essa atribuição com a janela em branco. A janela que chega a `cargaPorSemana` é a da
+ * carga, já recortada por quem chama (`janelaDaCarga`): esta função não conhece turma nem período.
  *
  * ⚠️ DATAS DE CALENDÁRIO NÃO PASSAM POR FUSO. `AAAA-MM-DD` é convertido para dia em UTC só para contar
  * dias; nenhuma hora local entra na conta, e o dia não muda na virada de fuso.
@@ -225,4 +235,64 @@ export function semanasAcimaDaFaixa(
 ): readonly SemanaAcimaDaFaixa[] {
   if (faixa === null) return [];
   return cargas.filter((c) => situarNaFaixa(c.carga, faixa) === "acima");
+}
+
+/** Um intervalo de datas `AAAA-MM-DD`, com limites inclusivos; cada ponta pode faltar. */
+export type IntervaloDeDatas = {
+  readonly inicio: string | null;
+  readonly termino: string | null;
+};
+
+/**
+ * A **janela da carga** de uma atribuição — o ponto único dela (spec 029, Bloco 14, item 4; `FR-004`, D-9 a D-11).
+ *
+ * > *"A janela da carga de uma atribuição nunca sai do período da própria turma: é a previsão (linha da turma →
+ * > disciplina → turma) recortada pelo período da turma; se a previsão não toca o período, a janela é o período da
+ * > turma."* — `FR-004.1` da spec 029 (D-9, recorte; regra proposta por Bernardo Villas Boas em 25/10/2026,
+ * > `PEND-025-5`)
+ *
+ * - **Previsão dentro do período**: ela mesma. É o caso de 110 das 115 atribuições ativas do remoto (medido na cópia
+ *   `remoto-20261028-133702.sql`, spec 029 §3).
+ * - **Previsão que transborda**: recortada, ponta a ponta, com limites inclusivos — um dia em comum é a janela desse
+ *   dia, não o período inteiro. São as 4 da `C-Exp-MetocOf 2026`, uma semana além do término (mesma medição).
+ * - **Previsão disjunta**: o período inteiro da turma. É a `CAHO 2027` (previsão da disciplina de 11/05 a 16/10/2026,
+ *   turma de 05/01 a 17/12/2027): sem o recurso, o alerta de 2027 cortava todas as semanas dela (`semanasDoAno`).
+ * - **Turma sem período completo**: a previsão como veio (`FR-004.3`) — sem período não há o que recortar, e o
+ *   alerta fica como hoje.
+ * - **Previsão sem as duas datas**: como veio. Não há janela a recortar, e o recorte não inventa uma: a view só devolve
+ *   previsão incompleta quando nenhuma fonte, nem a turma, tem as duas datas — e então a turma também não tem período.
+ *   Previsão ou período INVERTIDO (término antes do início) também volta como veio, pelo mesmo motivo.
+ *
+ * ⚠️ **A VIEW NÃO MUDA (D-11).** `vw_instrutor_carga_prevista.previsao_*` continua sendo a PREVISÃO, que é o que o nome
+ *    diz; o recorte mora aqui e é aplicado pelos dois leitores da janela — a ficha do instrutor e Avisos (que serve
+ *    também o sininho). Recriar a view seria portão (regra 9.4); a alternativa ficou registrada na D-11.
+ * ⚠️ **A MÉDIA NÃO MUDA (D-10).** A cadastrada (tempos ÷ `disciplinas.semanas`) continua vencendo
+ *    (`mediaSemanalDaAtribuicao`), inclusive quando a janela vira o período da turma por recurso; o que muda é QUAIS
+ *    semanas ela cobre. A de reserva (CH ÷ semanas da janela) passa a dividir pelas semanas da janela da carga.
+ * ⚠️ **AS SEMANAS DE OUTRO ANO ISO CONTINUAM DE FORA** (D-41 da spec 025): a janela da `CAHO 2027` que comece em
+ *    dezembro de 2026 só mostra, no alerta de 2027, as semanas de 2027. O recorte não reabre essa decisão.
+ * ⚠️ **DEVOLVE AS STRINGS RECEBIDAS**, nunca datas reformatadas: cada ponta é a da previsão ou a da turma, e a
+ *    comparação é pelo dia (`paraDia`), sem fuso.
+ */
+export function janelaDaCarga(
+  previsao: IntervaloDeDatas,
+  periodoDaTurma: IntervaloDeDatas,
+): IntervaloDeDatas {
+  const comoVeio: IntervaloDeDatas = { inicio: previsao.inicio, termino: previsao.termino };
+  const deP = previsao.inicio === null ? null : paraDia(previsao.inicio);
+  const ateP = previsao.termino === null ? null : paraDia(previsao.termino);
+  const deT = periodoDaTurma.inicio === null ? null : paraDia(periodoDaTurma.inicio);
+  const ateT = periodoDaTurma.termino === null ? null : paraDia(periodoDaTurma.termino);
+  if (deP === null || ateP === null || deT === null || ateT === null) return comoVeio;
+  if (ateP < deP || ateT < deT) return comoVeio;
+
+  // Disjunta: a previsão não toca o período (D-9) — vale o período inteiro da turma.
+  if (ateP < deT || deP > ateT) {
+    return { inicio: periodoDaTurma.inicio, termino: periodoDaTurma.termino };
+  }
+  // O recorte, ponta a ponta (limites inclusivos).
+  return {
+    inicio: deP >= deT ? previsao.inicio : periodoDaTurma.inicio,
+    termino: ateP <= ateT ? previsao.termino : periodoDaTurma.termino,
+  };
 }

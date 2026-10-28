@@ -128,7 +128,8 @@ export function RegimesDoCurso({
       <p className="text-texto-suave text-xs">
         Cada turma escolhe o seu regime em <strong>Editar turma</strong>, na ficha; a que não
         escolher fica no regime vigente do curso. O DSA, o alerta do tempo excepcional e o saldo de
-        capacidade da turma usam o regime dela.
+        capacidade da turma usam o regime dela, e o relógio do DSA pode trocá-lo semana a semana — o
+        saldo segue o regime de cada semana.
       </p>
 
       {resposta ? (

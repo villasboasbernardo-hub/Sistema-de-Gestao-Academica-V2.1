@@ -13,6 +13,9 @@
  * ⚠️ **A RESPOSTA FICA LOGO ABAIXO DA BARRA, EM LARGURA TOTAL** — a folha devolve dois itens para o cabeçalho, que é
  *    flexível com quebra; a resposta nunca mora dentro de um botão que vai sumir (a lição do `AvisoDaLista`).
  * ⚠️ **NA ORDEM DO PEDIDO, O DESTRUTIVO POR ÚLTIMO** (RT-1): *Descartar rascunho* fecha a barra.
+ * ⚠️ **SALVAR ALTERAÇÃO** (RP-9, spec 029 `FR-003`): na semana em alteração, logo ANTES de *Publicar alteração* —
+ *    sempre que a semana estiver em alteração, mesmo sem rascunho (D-23). O *Salvar minuta* continua fora da alteração.
+ *    ⚠️ A dica é só o verbo, «Salvar» (RT-1); o nome acessível é o rótulo inteiro.
  * ⚠️ **O RELÓGIO NÃO MUDA SEMANA SALVA** (RD-3, D-11): o botão fica indisponível, com o motivo na dica — e o banco
  *    recusa do mesmo jeito (`semana_do_dsa_salva`).
  */
@@ -68,6 +71,7 @@ export function BarraDoDsa({
   planilha,
   previa,
   salvar,
+  salvarAlteracao,
   descartar,
   fazerAlteracao,
   publicar,
@@ -96,6 +100,8 @@ export function BarraDoDsa({
   /** O botão da prévia/impressão, já desenhado. */
   readonly previa: React.ReactNode;
   readonly salvar: Acao;
+  /** RP-9 (spec 029): o *Salvar alteração* — a mesma RPC do Salvar, com a resposta da alteração. */
+  readonly salvarAlteracao: Acao;
   readonly descartar: Acao;
   readonly fazerAlteracao: Acao;
   readonly publicar: Acao;
@@ -112,6 +118,17 @@ export function BarraDoDsa({
   const [ocupado, iniciar] = React.useTransition();
   const semanaDoDsa = { turmaId, ano, semana };
   const versao = situacao.versaoVigente;
+  /*
+   * RD-4 com a RP-9 (spec 029): o salvo que o *Limpar* exclui sai de vez no botão que salva AQUI — na alteração, o
+   * *Salvar alteração* (ou o *Publicar alteração*, que salva antes de publicar); fora dela, o *Salvar minuta*.
+   */
+  const emAlteracao = situacao.podeSalvarAlteracao;
+  const noSalvar = emAlteracao
+    ? "no «Salvar alteração» (ou no «Publicar alteração»)"
+    : "no «Salvar minuta»";
+  const ateOSalvar = emAlteracao
+    ? "até o «Salvar alteração» (ou o «Publicar alteração»)"
+    : "até o «Salvar minuta»";
 
   const executar = (acao: Acao, entrada: unknown = semanaDoDsa) =>
     iniciar(async () => {
@@ -234,7 +251,7 @@ export function BarraDoDsa({
         {podeLancar ? (
           <DialogoConfirmacao
             titulo="Limpar a semana?"
-            consequencia="Todos os lançamentos desta turma na semana saem da grade, pela mesma exclusão do cartão. O que estava salvo só sai de vez no «Salvar minuta», e «Descartar rascunho» desfaz. A atividade de todas as turmas e as paradas do Calendário ficam."
+            consequencia={`Todos os lançamentos desta turma na semana saem da grade, pela mesma exclusão do cartão. O que estava salvo só sai de vez ${noSalvar}, e «Descartar rascunho» desfaz. A atividade de todas as turmas e as paradas do Calendário ficam.`}
             rotuloConfirmar="Limpar a semana"
             aoConfirmar={() =>
               iniciar(async () => {
@@ -245,7 +262,7 @@ export function BarraDoDsa({
                         texto:
                           r.excluidos === 0
                             ? "Não havia lançamento da turma nesta semana."
-                            : `Semana limpa: ${r.excluidos} lançamento${r.excluidos === 1 ? "" : "s"} fora da grade, até o «Salvar minuta».`,
+                            : `Semana limpa: ${r.excluidos} lançamento${r.excluidos === 1 ? "" : "s"} fora da grade, ${ateOSalvar}.`,
                         falha: false,
                       }
                     : { texto: r.mensagem, falha: true },
@@ -297,7 +314,7 @@ export function BarraDoDsa({
                 />
               </DialogoConfirmacao>
             ) : null}
-            {/* 7. Fazer alteração, e depois publicá-la. */}
+            {/* 7. Fazer alteração, salvá-la (RP-9) e depois publicá-la. */}
             {situacao.podeFazerAlteracao ? (
               <BotaoDeIcone
                 acao="editar"
@@ -305,6 +322,16 @@ export function BarraDoDsa({
                 ocupado={ocupado}
                 onClick={() => executar(fazerAlteracao)}
                 data-slot="fazer-alteracao"
+              />
+            ) : null}
+            {situacao.podeSalvarAlteracao ? (
+              <BotaoDeIcone
+                acao="salvar"
+                rotulo="Salvar alteração"
+                variante="padrao"
+                ocupado={ocupado}
+                onClick={() => executar(salvarAlteracao)}
+                data-slot="salvar-alteracao"
               />
             ) : null}
             {situacao.podePublicarAlteracao ? (

@@ -489,7 +489,7 @@ export function traduzirErroSupabase(error: PostgrestError): FalhaAcao {
 import { revalidatePath } from "next/cache";
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { esquemaLancarAula } from "@/lib/validacao/dsa";      // MESMO schema Zod usado no formulário (RNF-MAN-02)
-import { validarTetoSemanalTfm } from "@/lib/dominio/dsa/tetos";       // RN puro
+import { validarTetoSemanalTfm } from "@/lib/dominio/dsa/tetos";       // RN puro — ⚠️ sem efeito desde 27/10/2026 (ver o passo 2)
 import { avaliarNonoTempo } from "@/lib/dominio/horarios/nono-tempo";  // RN-DEG-02 puro
 import { traduzirErroSupabase } from "./erros";
 import type { ResultadoAcao } from "./tipos";
@@ -543,6 +543,10 @@ export async function lancarAula(
   // -----------------------------------------------------------------------------------------
   // 2. REGRAS DE DOMÍNIO — puras, sem I/O. Duas naturezas diferentes, tratadas diferente:
   //    (a) `validarTetoSemanalTfm` pode BLOQUEAR (é regra normativa dura);
+  //        ⚠️ Emenda de 27/10/2026 (decisão de Bernardo Villas Boas; RN-DIST-03 (a) emendada no
+  //        documento 04, Bloco 14, spec 029): o TFM NÃO tem mais teto rígido — é disciplina comum,
+  //        que só o alerta do recomendado de 25 TA/semana alcança. Este bloqueio deixou de existir;
+  //        o exemplo fica como registro. O .docx deste documento não recebeu esta emenda.
   //    (b) `avaliarNonoTempo` só AVISA (RN-DEG-02: 9º TA é alerta informativo, nunca bloqueio).
   // -----------------------------------------------------------------------------------------
   const avisos: string[] = [];
@@ -841,6 +845,8 @@ export type EntradaDistribuicao = {
   /** Dias letivos de cada semana da janela, em ordem. Feriados e reservas PROENS já descontados. */
   diasLetivosPorSemana: number[];
   /** Teto opcional de TA por semana para esta disciplina (ex.: TFM). `null` = sem teto. */
+  // ⚠️ Emenda de 27/10/2026 (RN-DIST-03 (a), spec 029): o TFM deixou de ser exemplo — não tem mais
+  // teto rígido. O .docx deste documento não recebeu esta emenda.
   tetoSemanal?: number | null;
 };
 
@@ -913,6 +919,8 @@ export function distribuirCargaHorariaSemanal(entrada: EntradaDistribuicao): Res
 
     // Teto semanal específico da disciplina (ex.: TFM), quando houver. `Infinity` = sem teto,
     // e `Math.min` com Infinity devolve o outro operando — por isso não há `if` aqui.
+    // ⚠️ Emenda de 27/10/2026 (RN-DIST-03 (a), spec 029): o TFM deixou de ser exemplo — não tem
+    // mais teto rígido. O .docx deste documento não recebeu esta emenda.
     const teto = entrada.tetoSemanal && entrada.tetoSemanal > 0 ? entrada.tetoSemanal : Infinity;
 
     // Aloca o menor entre: o que cabe, o que a regra permite, e o que ainda falta.

@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   cargaPorSemana,
+  janelaDaCarga,
   limitesDoAnoIso,
   semanaIsoDe,
   semanasAcimaDaFaixa,
@@ -164,5 +165,107 @@ describe("CHK005 · todas as semanas ISO do ano corrente, decisão de 15/09/2026
   it("não há recorte por hoje: semana que já passou conta igual", () => {
     const cargas = cargaPorSemana([janela("2026-01-05", "2026-01-11", 20)]);
     expect(semanasAcimaDaFaixa(semanasDoAno(cargas, 2026), REGIME_20H)).toHaveLength(1);
+  });
+});
+
+/*
+ * Spec 029 (Bloco 14), item 4 — PEND-025-5, FR-004 e as decisões D-9 a D-11:
+ *
+ * > *"A janela da carga de uma atribuição nunca sai do período da própria turma: é a previsão (linha da turma →
+ * > disciplina → turma) recortada pelo período da turma; se a previsão não toca o período, a janela é o período da
+ * > turma."* — FR-004.1 (D-9, recorte)
+ *
+ * ⚠️ O DEFEITO MEDIDO NO REMOTO: a `CAHO 2027` (HIDROGRAFIA, instrutor de código 40) tem a janela da DISCIPLINA, de 11/05
+ *    a 16/10/2026, e a turma vai de 05/01 a 17/12/2027 — disjuntas. O alerta lilás de 2027 cortava todas as semanas
+ *    (`semanasDoAno`) e não a via. As datas abaixo são de 2046 e 2047, os anos da amostra do pgTAP `150`, longe do dado
+ *    real; o formato da entrada e da saída é `{ inicio, termino }`, `AAAA-MM-DD` ou nulo.
+ * ⚠️ A VIEW NÃO MUDA (D-11): `vw_instrutor_carga_prevista` continua devolvendo a PREVISÃO; o recorte mora nesta função,
+ *    ponto único da janela da carga, aplicada na ficha do instrutor e em Avisos.
+ */
+describe("FR-004 · `janelaDaCarga` — a janela nunca sai do período da turma (D-9, recorte)", () => {
+  const TURMA_2047 = { inicio: "2047-03-02", termino: "2047-11-30" };
+
+  it("previsão dentro do período: a janela é a previsão, sem tocar em nada", () => {
+    const previsao = { inicio: "2047-03-02", termino: "2047-06-26" };
+    expect(janelaDaCarga(previsao, TURMA_2047)).toEqual(previsao);
+  });
+
+  it("previsão que TRANSBORDA o término (a C-Exp-MetocOf 2026, uma semana além): recortada no término da turma", () => {
+    expect(janelaDaCarga({ inicio: "2047-10-05", termino: "2047-12-07" }, TURMA_2047)).toEqual({
+      inicio: "2047-10-05",
+      termino: "2047-11-30",
+    });
+  });
+
+  it("previsão que começa ANTES do início: recortada no início da turma", () => {
+    expect(janelaDaCarga({ inicio: "2047-02-15", termino: "2047-04-30" }, TURMA_2047)).toEqual({
+      inicio: "2047-03-02",
+      termino: "2047-04-30",
+    });
+  });
+
+  it("previsão que cobre o período e passa dos dois lados: recortada nos dois — é o período da turma", () => {
+    expect(janelaDaCarga({ inicio: "2047-01-04", termino: "2047-12-26" }, TURMA_2047)).toEqual(
+      TURMA_2047,
+    );
+  });
+
+  it("previsão que toca o período num dia só: o recorte é esse dia (limites inclusivos), não o período inteiro", () => {
+    expect(janelaDaCarga({ inicio: "2047-02-01", termino: "2047-03-02" }, TURMA_2047)).toEqual({
+      inicio: "2047-03-02",
+      termino: "2047-03-02",
+    });
+  });
+
+  it("⚠️ O CASO QUE DISCRIMINA: previsão de 2046 e turma de 2047, DISJUNTAS — a janela é o período da turma", () => {
+    const turma = { inicio: "2047-01-04", termino: "2047-12-17" };
+    expect(janelaDaCarga({ inicio: "2046-05-11", termino: "2046-10-16" }, turma)).toEqual(turma);
+    // E disjunta pelo outro lado: a previsão depois do término.
+    expect(janelaDaCarga({ inicio: "2048-03-06", termino: "2048-06-30" }, TURMA_2047)).toEqual(
+      TURMA_2047,
+    );
+  });
+
+  it("o efeito no alerta: com a previsão de 2046, o ano de 2047 não tem semana; com a janela da carga, tem", () => {
+    const previsao = { inicio: "2046-05-11", termino: "2046-10-16" };
+    const turma = { inicio: "2047-01-04", termino: "2047-12-17" };
+    const semanas = (j: { inicio: string | null; termino: string | null }) =>
+      semanasAcimaDaFaixa(
+        semanasDoAno(cargaPorSemana([{ ...j, mediaSemanal: 15 }]), 2047),
+        REGIME_20H,
+      );
+    // Hoje (a previsão crua): o alerta de 2047 corta todas as semanas, e a turma some dele.
+    expect(semanas(previsao)).toEqual([]);
+    // Depois: as 51 semanas ISO de 2047 que o período da turma toca, de 04/01 (sexta-feira da semana 1, que começa
+    // em 31/12/2046) a 17/12 (terça-feira da semana 51).
+    const depois = semanas(janelaDaCarga(previsao, turma));
+    expect(depois).toHaveLength(51);
+    expect(depois[0]?.semana).toMatchObject({ ano: 2047, numero: 1, segunda: "2046-12-31" });
+    expect(depois.at(-1)?.semana).toMatchObject({ ano: 2047, numero: 51 });
+    expect(depois.every((s) => s.carga === 15)).toBe(true);
+  });
+
+  it("turma sem período completo fica como hoje: a previsão como veio, mesmo fora do ano da turma (FR-004.3)", () => {
+    const previsao = { inicio: "2046-05-11", termino: "2046-10-16" };
+    expect(janelaDaCarga(previsao, { inicio: null, termino: null })).toEqual(previsao);
+    expect(janelaDaCarga(previsao, { inicio: "2047-03-02", termino: null })).toEqual(previsao);
+    expect(janelaDaCarga(previsao, { inicio: null, termino: "2047-11-30" })).toEqual(previsao);
+    // A previsão incompleta (o início que existir, sem término) também passa como veio.
+    expect(
+      janelaDaCarga({ inicio: "2047-03-02", termino: null }, { inicio: null, termino: null }),
+    ).toEqual({ inicio: "2047-03-02", termino: null });
+  });
+
+  it("previsão nula: sem janela — o recorte não inventa período (a view só a devolve nula quando a turma não tem um)", () => {
+    expect(janelaDaCarga({ inicio: null, termino: null }, { inicio: null, termino: null })).toEqual(
+      {
+        inicio: null,
+        termino: null,
+      },
+    );
+    expect(janelaDaCarga({ inicio: null, termino: null }, TURMA_2047)).toEqual({
+      inicio: null,
+      termino: null,
+    });
   });
 });

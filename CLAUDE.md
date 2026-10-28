@@ -65,7 +65,7 @@ diferente *(decisão de 17/09/2026)*. ⚠️ **Medido no histórico em
 | Vai implementar um `RF-` | `docs/fase-1/02-Requisitos-Funcionais.md` (coluna *Destino na v2.1*) |
 | Vai escrever migration | `docs/fase-2/21-Schema-Fisico-PostgreSQL.md` + `docs/sql-referencia/*.sql` **na ordem numérica** |
 | Vai escrever policy RLS ou mexer em auth | `docs/fase-2/22-Seguranca-RLS-e-Autenticacao.md` |
-| Vai criar tela ou componente | `docs/fase-2/23-Design-System-Tailwind-shadcn.md` **e** `docs/correcoes/padroes-de-tela.md` (RT-1 a RT-7, que prevalecem) |
+| Vai criar tela ou componente | `docs/fase-2/23-Design-System-Tailwind-shadcn.md` **e** `docs/correcoes/padroes-de-tela.md` (RT-1 a RT-8, que prevalecem) |
 | Vai mexer no lançamento do DSA, na barra de ações dele ou no Início | `docs/correcoes/regras-do-dsa-lancamento.md` (RD-1 a RD-8) **e** `docs/correcoes/regras-da-publicacao-do-dsa.md` (RP-0 a RP-8) |
 | Não sabe onde um arquivo mora | `docs/fase-2/24-Estrutura-do-Repositorio-e-Convencoes.md` |
 | Vai buscar/ mutar dado | `docs/fase-2/25-Camada-de-Dados-e-Estado.md` |
@@ -340,7 +340,7 @@ dela teria os cadastros e nenhuma senha; as contas se refazem **pelo cadastro do
   rota do sistema, como se fossem links; só o defeito deliberado mostrou. O **percurso por clique**
   de cada tela fica nos casos de ponta a ponta, e ali `goto` só é aceitável para chegar ao **ponto de
   partida**.
-- **Padrões de tela RT-1 a RT-7** *(decisão de Bernardo Villas Boas, 24/10/2026 — Bloco 10)*:
+- **Padrões de tela RT-1 a RT-8** *(decisão de Bernardo Villas Boas, 24/10/2026 — Bloco 10)*:
   `docs/correcoes/padroes-de-tela.md`. Valem para **toda tela, nova ou antiga**, e se leem antes de criar
   ou mexer em tela: ações no canto superior direito como ícone cuja dica é só o verbo (RT-1); todo
   cadastro com Editar, Desativar/Reativar e Excluir, e nunca "Inativar" (RT-2); edição só em diálogo ou

@@ -1,5 +1,6 @@
 /**
- * `lib/dominio/dsa/publicacao.ts` — a situação da semana do DSA e o que se pode fazer nela (spec 024, RP-0 a RP-4).
+ * `lib/dominio/dsa/publicacao.ts` — a situação da semana do DSA e o que se pode fazer nela (spec 024, RP-0 a RP-4; spec 029,
+ * RP-9: *Salvar alteração*).
  */
 import { describe, expect, it } from "vitest";
 
@@ -100,6 +101,116 @@ describe("situacaoDaSemana", () => {
     expect(
       situacaoDaSemana([ev("salvo", "2026-10-20T10:00:00Z")], 0, true).alteradoDesdeAPublicacao,
     ).toBe(false);
+  });
+});
+
+/*
+ * Spec 029 (Bloco 14), item 3 — RP-9: *Salvar alteração* registra a alteração sem publicá-la.
+ *
+ * ⚠️ **«SALVA» É O `salvo` DEPOIS DO ÚLTIMO `alteracao_iniciada`, SEM RASCUNHO NOVO** (D-8, D-24): a trilha não tem tipo
+ *    próprio para o salvar da alteração — é o mesmo `salvo` do *Salvar minuta*, e quem o distingue é a POSIÇÃO. Um `salvo`
+ *    de antes (da original ou de uma ALT anterior) não faz a alteração de agora estar salva.
+ */
+describe("situacaoDaSemana — Salvar alteração (RP-9, spec 029)", () => {
+  const ORIGINAL = [
+    ev("salvo", "2026-10-20T10:00:00Z"),
+    ev("publicado", "2026-10-20T11:00:00Z", 0),
+    ev("alteracao_iniciada", "2026-10-21T09:00:00Z"),
+  ];
+
+  it("publicado → alteração iniciada → salvo, sem rascunho: em alteração, SALVA, e o «Salvar alteração» fica", () => {
+    const s = situacaoDaSemana([...ORIGINAL, ev("salvo", "2026-10-21T10:00:00Z")], 0, false);
+    expect(s.situacao).toBe("alteracao_em_andamento");
+    expect(s.alteracaoSalva).toBe(true);
+    expect(s.podeSalvarAlteracao).toBe(true);
+    /* O «Salvar minuta» continua sem aparecer na alteração: o botão é o outro. */
+    expect(s.podeSalvar).toBe(false);
+    expect(s.travada).toBe(false);
+    expect(s.podePublicarAlteracao).toBe(true);
+    /* O papel oficial continua o publicado: a versão vigente e o histórico não mudam com o salvar. */
+    expect(s.versaoVigente).toBe(0);
+    expect(s.historico.map((h) => h.numero)).toEqual([0]);
+    expect(s.alteradoDesdeAPublicacao).toBe(false);
+  });
+
+  it("a ordem de entrada não importa: a mesma trilha, de trás para a frente, dá a mesma situação", () => {
+    const s = situacaoDaSemana(
+      [...ORIGINAL, ev("salvo", "2026-10-21T10:00:00Z")].reverse(),
+      0,
+      false,
+    );
+    expect(s.alteracaoSalva).toBe(true);
+  });
+
+  it("⚠️ O CASO QUE DISCRIMINA: o `salvo` de ANTES da publicação não faz a alteração de agora estar salva", () => {
+    const s = situacaoDaSemana(ORIGINAL, 0, false);
+    expect(s.situacao).toBe("alteracao_em_andamento");
+    expect(s.alteracaoSalva).toBe(false);
+    /* D-23: o botão aparece mesmo sem rascunho, sempre que a semana está em alteração. */
+    expect(s.podeSalvarAlteracao).toBe(true);
+  });
+
+  it("⚠️ O CASO QUE DISCRIMINA: o `salvo` da ALT anterior não conta para a alteração que começou depois dela", () => {
+    const s = situacaoDaSemana(
+      [
+        ...ORIGINAL,
+        ev("salvo", "2026-10-21T10:00:00Z"),
+        ev("alteracao_publicada", "2026-10-21T11:00:00Z", 1),
+        ev("alteracao_iniciada", "2026-10-22T09:00:00Z"),
+      ],
+      0,
+      false,
+    );
+    expect(s.situacao).toBe("alteracao_em_andamento");
+    expect(s.versaoVigente).toBe(1);
+    expect(s.alteracaoSalva).toBe(false);
+    expect(s.podeSalvarAlteracao).toBe(true);
+  });
+
+  it("D-8: salvou, mas lançou de novo — com rascunho novo a alteração deixa de estar «salva»", () => {
+    const s = situacaoDaSemana([...ORIGINAL, ev("salvo", "2026-10-21T10:00:00Z")], 1, false);
+    expect(s.situacao).toBe("alteracao_em_andamento");
+    expect(s.alteracaoSalva).toBe(false);
+    expect(s.podeSalvarAlteracao).toBe(true);
+    expect(s.podeDescartar).toBe(true);
+  });
+
+  it("D-29: descartar o rascunho novo volta ao último SALVO — a alteração continua «salva»", () => {
+    const s = situacaoDaSemana(
+      [
+        ...ORIGINAL,
+        ev("salvo", "2026-10-21T10:00:00Z"),
+        ev("rascunho_descartado", "2026-10-21T10:30:00Z"),
+      ],
+      0,
+      false,
+    );
+    expect(s.situacao).toBe("alteracao_em_andamento");
+    expect(s.alteracaoSalva).toBe(true);
+    expect(s.versaoVigente).toBe(0);
+  });
+
+  it("fora da alteração, nunca há «Salvar alteração» nem alteração salva", () => {
+    const emPreenchimento = situacaoDaSemana([], 1, false);
+    const registrado = situacaoDaSemana([ev("salvo", "2026-10-20T10:00:00Z")], 0, false);
+    const publicado = situacaoDaSemana(ORIGINAL.slice(0, 2), 0, false);
+    const altPublicada = situacaoDaSemana(
+      [
+        ...ORIGINAL,
+        ev("salvo", "2026-10-21T10:00:00Z"),
+        ev("alteracao_publicada", "2026-10-21T11:00:00Z", 1),
+      ],
+      0,
+      false,
+    );
+    expect(emPreenchimento.situacao).toBe("em_preenchimento");
+    expect(registrado.situacao).toBe("registrado");
+    expect(publicado.situacao).toBe("publicado");
+    expect(altPublicada.situacao).toBe("publicado");
+    for (const s of [emPreenchimento, registrado, publicado, altPublicada]) {
+      expect(s.podeSalvarAlteracao).toBe(false);
+      expect(s.alteracaoSalva).toBe(false);
+    }
   });
 });
 

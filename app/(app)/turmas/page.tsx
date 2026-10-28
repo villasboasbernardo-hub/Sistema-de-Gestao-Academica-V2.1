@@ -24,9 +24,14 @@
  * canto superior direito — o mesmo de todo módulo. O *"Ano"* dos filtros saiu.
  * ⚠️ **FILTROS E ESTATÍSTICAS SÃO ÍCONES NA BARRA** (RT-4, D-19): os seis números passaram para o painel de
  * Estatísticas, recolhido ao chegar.
+ * ⚠️ **A ARQUIVADA SOME DA TABELA E CONTINUA NOS NÚMEROS** (RT-8; spec 029, `FR-007.3`): a tabela é lista do dia a
+ * dia e só a mostra com *Mostrar arquivadas*; as Estatísticas a contam com ou sem o filtro, pela situação que ela
+ * tinha. Por isso o cabeçalho e o vazio dizem quantas ficaram fora da lista (D-19 da spec 029) — sem isso, o *Total*
+ * maior que as linhas pareceria defeito.
  */
 import { estadosPorRegistro, type ImpedimentosDoRegistro } from "@/lib/dominio/exclusao-permanente";
 import { lerContagemPresencial } from "./contagem-presencial";
+import { lerRegimesDasSemanas } from "./regimes-das-semanas";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
@@ -89,7 +94,10 @@ export default async function Turmas({
   const parametros = { ...filtro, ano: String(escolha.ano) };
 
   const supabase = await criarClienteDeServidor();
-  /* D-COR-5: a arquivada só aparece com «Mostrar arquivadas» (`?arquivadas=sim`). */
+  /*
+   * D-COR-5: a arquivada só aparece NA TABELA com «Mostrar arquivadas» (`?arquivadas=sim`); nos números da página,
+   * sempre (RT-8, spec 029).
+   */
   const mostrarArquivadas = valores.arquivadas === "sim";
 
   const [
@@ -104,6 +112,7 @@ export default async function Turmas({
     arquivadasRes,
     parametroRes,
     presenciais,
+    semanasDasTurmas,
   ] = await Promise.all([
     usuarioDaSessao(),
     montarConsultaDeTurmas(supabase.from("turmas").select(COLUNAS_DA_LISTA_DE_TURMAS), parametros),
@@ -141,6 +150,8 @@ export default async function Turmas({
       .maybeSingle(),
     /* Spec 024 (FR-020): a etapa presencial das semipresenciais. */
     lerContagemPresencial(supabase, hoje),
+    /* Spec 029 (`FR-005`): o regime das semanas do DSA — o Saldo soma o TA/dia da semana de cada dia útil. */
+    lerRegimesDasSemanas(supabase, { hoje }),
   ]);
 
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
@@ -173,11 +184,21 @@ export default async function Turmas({
       feriadosDiaInteiro: linhasComAbrangencia<{ data: string }>(feriadosRes.data),
       hoje,
       presenciais,
+      semanasDasTurmas,
     },
   );
   /*
-   * ⚠️ **O PAINEL É DO RECORTE** (C-14): as mesmas turmas da tabela; a leitura que falhar vira "não pude ler"
-   *    (gotcha 4), e o parâmetro não lido vira «—» (regra 8).
+   * ⚠️ **D-19 (spec 029): AS ARQUIVADAS DO RECORTE QUE A TABELA ESCONDE** — o cabeçalho as acrescenta à contagem, e o
+   *    vazio diz quantas são e como mostrá-las. Com *Mostrar arquivadas* elas estão na tabela: zero fora da lista.
+   */
+  const arquivadasForaDaLista = mostrarArquivadas ? 0 : doRecorte.filter((l) => l.arquivada).length;
+  const plural = (n: number) => (n === 1 ? "" : "s");
+  /*
+   * ⚠️ **O PAINEL É DO RECORTE** (C-14): o filtro de curso, situação e busca muda a tabela e os números juntos; a
+   *    leitura que falhar vira "não pude ler" (gotcha 4), e o parâmetro não lido vira «—» (regra 8).
+   * ⚠️ **MAS NÃO É MAIS "AS MESMAS TURMAS DA TABELA"** (RT-8): o painel recebe o recorte INTEIRO, com a marca de
+   *    arquivada, e conta a arquivada com ou sem *Mostrar arquivadas* — o *Total* passa da tabela pelas
+   *    `arquivadasForaDaLista`, que o cabeçalho declara (D-19).
    */
   const valorDoParametro = Number.parseInt(
     String((parametroRes.data as { valor?: string } | null)?.valor ?? ""),
@@ -240,10 +261,16 @@ export default async function Turmas({
         >
           <div className="flex flex-col gap-1">
             <h1 className="text-texto text-xl font-semibold">Turmas</h1>
-            {/* veste: a contagem do recorte, em tom secundário, acima da tabela */}
+            {/*
+              veste: a contagem do recorte, em tom secundário, acima da tabela. Conta as LINHAS; as arquivadas fora
+              delas vêm à parte (D-19 da spec 029), porque as Estatísticas as contam (RT-8).
+            */}
             <p className="text-texto-suave text-sm" data-slot="contagem-de-turmas">
-              {linhas.length} turma{linhas.length === 1 ? "" : "s"} em {anoDoPainelEscolhido}
+              {linhas.length} turma{plural(linhas.length)} em {anoDoPainelEscolhido}
               {haFiltro ? " neste recorte" : ""}
+              {arquivadasForaDaLista > 0
+                ? ` · ${arquivadasForaDaLista} arquivada${plural(arquivadasForaDaLista)} fora da lista`
+                : ""}
             </p>
           </div>
           <BarraDeAcoes rotulo="Ações das turmas">
@@ -305,6 +332,17 @@ export default async function Turmas({
             motivo="sem-permissao"
             titulo="O seu perfil não lê o cadastro de turmas"
             detalhe="Quem nega o acesso é o banco, e a lista chega vazia por isso — não por falta de turma."
+          />
+        ) : arquivadasForaDaLista > 0 ? (
+          /*
+           * ⚠️ **D-19 (spec 029): TODAS AS TURMAS DO RECORTE ESTÃO ARQUIVADAS** — é o uso esperado no fim do ano. Dizer
+           *    "Nenhuma turma em ANO" desmentiria o *Total* das Estatísticas, que as conta (RT-8); o vazio diz quantas
+           *    são e o caminho para vê-las. Vem antes dos vazios de filtro e de ano, que perguntam outra coisa.
+           */
+          <EstadoVazio
+            motivo="sem-dado"
+            titulo={`Nenhuma turma de ${anoDoPainelEscolhido} na lista`}
+            detalhe={`Há ${arquivadasForaDaLista} turma${plural(arquivadasForaDaLista)} arquivada${plural(arquivadasForaDaLista)} em ${anoDoPainelEscolhido}${haFiltro ? " neste recorte" : ""}, fora da lista. Para ${arquivadasForaDaLista === 1 ? "vê-la" : "vê-las"}, abra os Filtros e, em Arquivadas, escolha «Mostrar arquivadas».`}
           />
         ) : haFiltro ? (
           <EstadoVazio

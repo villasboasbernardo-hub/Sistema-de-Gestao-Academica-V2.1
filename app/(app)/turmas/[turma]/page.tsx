@@ -37,6 +37,7 @@ import {
   andamentoDaTurma,
   AVISO_DA_CONTAGEM_PRESENCIAL,
   contagemDaTurma,
+  regimesDasSemanas,
 } from "@/lib/dominio/andamento-da-turma";
 import {
   estadoDoArquivamento,
@@ -71,6 +72,7 @@ import { criarClienteDeServidor } from "@/lib/supabase/server";
 import { alcanceDoPerfil } from "../../cursos/consulta";
 import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
 import { lerContagemPresencial } from "../contagem-presencial";
+import { lerRegimesDasSemanas } from "../regimes-das-semanas";
 import { AbasDaTurma } from "./AbasDaTurma";
 import { ArquivarTurma } from "./ArquivarTurma";
 import { AvaliacoesDaTurma } from "./AvaliacoesDaTurma";
@@ -211,6 +213,7 @@ export default async function FichaDaTurma({
     arquivosRes,
     contagensPresenciais,
     impedimentosRes,
+    semanasDaTurma,
   ] = await Promise.all([
     supabase.from("cursos").select("codigo, nome_curso, status").eq("id", cursoId).maybeSingle(),
     /* A carga vem da MESMA view do `/inicio`: a CH curricular e os cartões de AEC, TAD e TR. */
@@ -258,6 +261,8 @@ export default async function FichaDaTurma({
     /* Spec 024 (FR-020): a etapa presencial das semipresenciais. */
     lerContagemPresencial(supabase, hoje),
     impedimentosPromessa,
+    /* Spec 029 (`FR-005`): o regime das semanas do DSA desta turma — o saldo soma o TA/dia da semana de cada dia. */
+    lerRegimesDasSemanas(supabase, { hoje, turmaId }),
   ]);
 
   const trocas = (trocasRes.data ?? []) as {
@@ -281,6 +286,7 @@ export default async function FichaDaTurma({
   /* ⚠️ ERRO DE LEITURA DEGRADA, NÃO ESTOURA (`RN-DEG-01`): sem a executada de até hoje, o andamento sai sem carga. */
   const cargaDoAndamento = executadaRes.error ? null : cargaRes.data;
   const regimeDaFicha = regimeEmbutido(turma.regime);
+  const regimeDoCursoHoje = regimeDoBanco(regimeRes.data ?? null);
   const contagem = contagemDaTurma(
     {
       modalidade: turma.modalidade as string,
@@ -305,13 +311,15 @@ export default async function FichaDaTurma({
     },
     /* Spec 018 (C-9): o regime nomeado da turma troca os TA presenciais; o limite EAD fica (`RN-MAT-04`). */
     regimeEfetivo(
-      regimeDoBanco(regimeRes.data ?? null),
+      regimeDoCursoHoje,
       regimeDaFicha ? { regimeTempos: Number(regimeDaFicha.regime_tempos) } : null,
     ),
     datasDeFeriado(
       feriadosDaTurma(linhasComAbrangencia<{ data: string }>(feriadosRes?.data), turmaId),
     ),
     hoje,
+    /* Spec 029 (`FR-005`, D-12): o regime de cada semana, com o padrão de hoje do curso como o «do curso». */
+    regimesDasSemanas(semanasDaTurma.get(turmaId), regimeDoCursoHoje),
   );
 
   /* Spec 021 (RC-4): a turma segue o SEU currículo — disciplinas, duração, avaliações. */
@@ -735,23 +743,47 @@ export default async function FichaDaTurma({
                   Esta turma ainda não tem disciplinas na grade.
                 </p>
               ) : (
-                <DisciplinasDaTurma
-                  linhas={naGrade}
-                  turmaCodigo={turma.codigo as string}
-                  escala={grade.escalaDeAntiguidade}
-                  podeEditar={pode(permissoes, "disciplinas", "editar") && !arquivada}
-                  avisoInicioDias={grade.avisoInicioDias}
-                  hoje={hoje}
-                  executadaDaTurma={andamento.executada}
-                  {...(podeLerLancamento
-                    ? {
-                        foraDoDsa: {
-                          porLinha: foraPorLinha,
-                          podeGravar: pode(permissoes, "ta_fora_do_dsa", "editar") && !arquivada,
-                        },
-                      }
-                    : {})}
-                />
+                <>
+                  {/*
+                    ⚠️ **A LEITURA DOS HABILITADOS QUE FALHOU É DITA** (D-16 da spec 029; `RN-DEG-01`): até 28/10/2026
+                       o erro era descartado, a lista chegava vazia, e o detalhe de cada disciplina dizia *"Nenhum
+                       instrutor habilitado"*. A faixa diz a falha; o detalhe também (`habilitadosLidos`).
+                  */}
+                  {grade.habilitadosLidos ? null : (
+                    <p
+                      role="status"
+                      className="text-atrasado-tinta text-sm"
+                      data-slot="habilitados-indisponiveis"
+                    >
+                      Não foi possível ler os instrutores habilitados nas disciplinas. As listas de
+                      instrutor do detalhe saem vazias até a leitura voltar — recarregue a página;
+                      se continuar, avise o suporte.
+                    </p>
+                  )}
+                  <DisciplinasDaTurma
+                    linhas={naGrade}
+                    turmaCodigo={turma.codigo as string}
+                    escala={grade.escalaDeAntiguidade}
+                    podeEditar={pode(permissoes, "disciplinas", "editar") && !arquivada}
+                    avisoInicioDias={grade.avisoInicioDias}
+                    hoje={hoje}
+                    executadaDaTurma={andamento.executada}
+                    /*
+                     * FR-006 da spec 029: o «você não vê» das listas de instrutor decide-se AQUI, no servidor — a RLS
+                     * de `instrutores` e `instrutor_disciplina` é `app.pode('instrutores','ler')`, tudo ou nada.
+                     */
+                    podeLerInstrutores={pode(permissoes, "instrutores", "ler")}
+                    habilitadosLidos={grade.habilitadosLidos}
+                    {...(podeLerLancamento
+                      ? {
+                          foraDoDsa: {
+                            porLinha: foraPorLinha,
+                            podeGravar: pode(permissoes, "ta_fora_do_dsa", "editar") && !arquivada,
+                          },
+                        }
+                      : {})}
+                  />
+                </>
               )}
             </section>
           </>

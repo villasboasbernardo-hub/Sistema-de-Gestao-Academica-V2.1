@@ -18,6 +18,10 @@ export type AtribuicaoPrevista = {
   readonly disciplina: string;
   readonly curso: string;
   readonly turma: string;
+  /**
+   * A janela da carga (`janelaDaCarga`, spec 029 `FR-004`): a previsão recortada pelo período da turma — é o que a
+   * coluna «Janela prevista» mostra, e não a previsão crua da view.
+   */
   readonly inicio: string | null;
   readonly termino: string | null;
   readonly tempos: number;
@@ -138,11 +142,15 @@ export function CargaDoInstrutor({
         </div>
       )}
 
-      {/* veste: a dica que diz de onde vêm os números — texto fixo, nunca dado */}
+      {/*
+        veste: a dica que diz de onde vêm os números — texto fixo, nunca dado. ⚠️ A ordem da janela é a da
+        `janelaDaCarga` (spec 029, item 4, FR-004): a previsão, recortada pelo período da turma.
+      */}
       <p className="text-texto-tenue text-xs">
         Calculadas a partir das aulas lançadas e das atribuições ativas; não são digitadas. A
         prevista usa a janela da atribuição — o período da disciplina na turma, senão o do
-        currículo, senão o da turma — e reparte a carga entre os instrutores designados.
+        currículo, senão o da turma, e nunca fora do período da turma — e reparte a carga entre os
+        instrutores designados.
       </p>
     </section>
   );

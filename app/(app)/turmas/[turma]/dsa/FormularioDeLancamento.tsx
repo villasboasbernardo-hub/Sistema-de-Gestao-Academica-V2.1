@@ -51,10 +51,12 @@ import * as React from "react";
 
 import type { TipoOferecido } from "./leitura";
 
+import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import { descricaoObrigatoria, type CategoriaDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
 import type { InstrumentoOferecido } from "@/lib/dominio/dsa/instrumento-da-prova";
 import {
   frasePara,
@@ -154,6 +156,12 @@ export type FormularioDeLancamentoProps = {
    * o padrão é o designado para a turma — se for habilitado (D-3).
    */
   readonly habilitacoes?: readonly HabilitacaoAtiva[];
+  /**
+   * O perfil tem `instrutores.ler`? Decidido no servidor. Sem ele, `instrutores` e `habilitacoes` chegam vazios pela RLS
+   * (sem erro), e toda lista de instrutor vazia diz «o seu perfil não os alcança» — a da aula também (FR-006.3 da spec
+   * 029), que até ali dizia *"Nenhum instrutor habilitado nesta disciplina"*.
+   */
+  readonly podeLerInstrutores: boolean;
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   readonly tiposDeAvaliacao: readonly string[];
@@ -232,6 +240,7 @@ export function FormularioDeLancamento({
   avaliacoesDoCurriculo = [],
   instrutores,
   habilitacoes = [],
+  podeLerInstrutores,
   escala,
   tecnicas,
   tiposDeAvaliacao,
@@ -459,7 +468,8 @@ export function FormularioDeLancamento({
       turmaId: global ? null : turmaId,
       /* ⚠️ Spec 014, FR-011: o TIPO; a categoria é do banco, pelo tipo. */
       tipoAtividadeId: subtipo,
-      descricao,
+      /* Spec 029, D-5: vazio viaja NULO (o EI sem «O que é» grava nulo); fora do EI, a ação recusa com a frase. */
+      descricao: texto(descricao),
       instrutorId: nulo(quemMinistra),
       /* `RN-RESP-1`: com instrutor do cadastro, o nome livre não viaja (`ativ_responsavel_exclusivo`). */
       responsavelExterno: quemMinistra === "" ? texto(responsavelExterno) : null,
@@ -738,11 +748,19 @@ export function FormularioDeLancamento({
       </div>
 
       {naoLetivo ? (
+        /*
+         * ⚠️ **SPEC 029, FR-002: OPCIONAL SÓ NO ESTUDO INDIVIDUAL** (decisão de Bernardo Villas Boas, 27/10/2026). O
+         *    `required` e o «(opcional)» saem de `descricaoObrigatoria` — o mesmo ponto da ação e do `CHECK` do banco —,
+         *    e o `tipo` aqui JÁ É a categoria (os botões não letivos são as cinco). Até ali o campo era `required` em
+         *    toda atividade, e o navegador barrava o EI vazio antes de a ação ser chamada.
+         */
         <div className="flex flex-col gap-1">
-          <Label htmlFor="dsa-descricao">O que é</Label>
+          <Label htmlFor="dsa-descricao">
+            {descricaoObrigatoria(tipo as CategoriaDeAtividade) ? "O que é" : "O que é (opcional)"}
+          </Label>
           <Input
             id="dsa-descricao"
-            required
+            required={descricaoObrigatoria(tipo as CategoriaDeAtividade)}
             value={descricao}
             onChange={(e) => definirDescricao(e.target.value)}
           />
@@ -780,6 +798,7 @@ export function FormularioDeLancamento({
         <ResponsavelOuNomeLivre
           regra={regraPrincipal}
           instrutores={instrutores}
+          podeLerInstrutores={podeLerInstrutores}
           escala={escala}
           legenda="Quem conduz a vista (opcional — sem ele, o responsável da avaliação)"
           rotuloDoCadastro="Instrutor do cadastro"
@@ -799,19 +818,34 @@ export function FormularioDeLancamento({
       ) : tipo === "aula" && listaDaAula.length === 0 ? (
         /*
          * RD-1 (Bloco 11): a aula sem disciplina escolhida, ou com uma sem habilitado, não tem quem escolher — a frase
-         * diz o porquê, no lugar do seletor (cujo vazio diria "o seu perfil não os alcança", que é outra coisa).
+         * diz o porquê, no lugar do seletor (D-32 da spec 026). ⚠️ O comentário daqui dizia que o vazio do seletor
+         * diria "o seu perfil não os alcança"; medido na spec 029 (FR-006, PEND-026-2), ele dizia "Nada cadastrado
+         * ainda" — a premissa estava invertida. ⚠️ E SEM `instrutores.ler` A FRASE É OUTRA: a lista chega vazia pela
+         * RLS, e dizer "nenhum habilitado" seria o «não há» onde o motivo é «você não vê» (FR-006.3) — o vazio do
+         * seletor único diz isso, com a frase dele.
          */
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium text-texto">Quem ministra</span>
-          <p className="text-xs text-atrasado-tinta" data-slot="aula-sem-habilitado">
-            {fraseDaListaDaAula(disciplinaId === "" ? null : disciplinaId, listaDaAula)}
-          </p>
+          {podeLerInstrutores ? (
+            <p className="text-xs text-atrasado-tinta" data-slot="aula-sem-habilitado">
+              {fraseDaListaDaAula(disciplinaId === "" ? null : disciplinaId, listaDaAula)}
+            </p>
+          ) : (
+            <SeletorInstrutor
+              instrutores={listaDaAula}
+              escala={escala}
+              aoMudar={definirQuemMinistra}
+              rotulo="Quem ministra"
+              vazio={{ motivo: "sem-permissao" }}
+            />
+          )}
         </div>
       ) : (
         <ResponsavelOuNomeLivre
           regra={regraPrincipal}
           /* RD-1 (Bloco 11): na aula, só os habilitados na disciplina dela; nos demais tipos, o cadastro (ativo). */
           instrutores={tipo === "aula" ? listaDaAula : instrutores}
+          podeLerInstrutores={podeLerInstrutores}
           escala={escala}
           rotuloDoCadastro={
             tipo === "avaliacao"
@@ -872,6 +906,7 @@ export function FormularioDeLancamento({
         <ResponsavelOuNomeLivre
           regra={regraDoResponsavel({ tipo: "avaliacao", papel: "fiscal" })}
           instrutores={instrutores}
+          podeLerInstrutores={podeLerInstrutores}
           escala={escala}
           legenda="Fiscal (opcional)"
           rotuloDoCadastro="Fiscal do cadastro"
@@ -905,8 +940,10 @@ export function FormularioDeLancamento({
 
       {/*
         ⚠️ **OS AVISOS NÃO BLOQUEIAM** (`RN-DEG-02`): o lançamento JÁ foi gravado quando eles aparecem.
-           Os bloqueios — o teto de TFM, o dia bloqueado no calendário (`RN-EVT-04`) e o dia fora da
-           etapa presencial (`D-DSA-2`) — chegam como recusa, ANTES de gravar, e não aqui.
+           Os bloqueios — o dia bloqueado no calendário (`RN-EVT-04`) e o dia fora da etapa presencial
+           (`D-DSA-2`) — chegam como recusa, ANTES de gravar, e não aqui. ⚠️ O teto de TFM saiu desta
+           lista em 27/10/2026 (emenda da `RN-DIST-03` (a), spec 029 `FR-001`): nenhum teto recusa, e o
+           TFM acima de 25 TA chega aqui como o alerta do recomendado de qualquer disciplina.
       */}
       {avisos.length > 0 ? (
         <div role="status" data-slot="avisos-do-lancamento" className="flex flex-col gap-1">

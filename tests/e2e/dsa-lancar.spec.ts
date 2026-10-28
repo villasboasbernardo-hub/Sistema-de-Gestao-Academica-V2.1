@@ -283,9 +283,10 @@ test.describe("`RN-DEG-02` · o alerta acompanha a gravação, e NÃO a impede",
 
     /*
      * ⚠️ **O LANÇAMENTO ACONTECEU.** Os tetos AEC/TAD/TR e o TA excepcional são **alerta**
-     * (`RN-DEG-02`), e os dois bloqueios do épico são o teto de TFM (`RN-DIST-03` (a)) e o dia
-     * bloqueado no calendário (`RN-EVT-04`). Transformar este aviso
-     * em impedimento mudaria a regra de negócio.
+     * (`RN-DEG-02`), e os bloqueios do épico são o dia bloqueado no calendário (`RN-EVT-04`) e o dia
+     * fora da etapa presencial (`D-DSA-2`) — o teto de TFM (`RN-DIST-03` (a)) saiu com a emenda de
+     * 27/10/2026 (spec 029, `FR-001`). Transformar este aviso em impedimento mudaria a regra de
+     * negócio.
      */
     const avisos = page.locator('[data-slot="avisos-do-lancamento"]');
     await expect(avisos).toBeVisible();

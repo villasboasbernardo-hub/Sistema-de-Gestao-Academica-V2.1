@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   fraseDaListaDaAula,
+  fraseDaListaDeInstrutoresVazia,
   habilitadosNaDisciplina,
   idsDaListaDaAula,
   instrutoresDaAula,
@@ -83,5 +84,64 @@ describe("parPendenteDaAula — o par que a RD-1 confere numa edição pelo id d
       rascunhoExclui: true,
     };
     expect(parPendenteDaAula(salvo, exclusao)).toEqual(salvo);
+  });
+});
+
+/*
+ * FR-006 (spec 029, Bloco 14, item 6 — PEND-026-2): o «não há» da lista de instrutores tem UM dono de frases, por
+ * motivo. A frase da D-32 (a aula) passa a ser um dos motivos; o TA fora do DSA e o rateio por UE ganham a sua — até
+ * aqui eles mostravam «Nada cadastrado ainda», que é o motivo errado: o vazio vem de um FILTRO, não da falta de cadastro.
+ * O «você não vê» (perfil sem `instrutores.ler`) não mora aqui: a frase é do `SeletorInstrutor`.
+ */
+const SEM_HABILITADO_DE_HOJE =
+  "Nenhum instrutor habilitado nesta disciplina. A habilitação é feita na ficha do instrutor.";
+
+describe("fraseDaListaDeInstrutoresVazia — uma frase por motivo do «não há» (FR-006.1)", () => {
+  it("sem disciplina escolhida: «Escolha a disciplina.»", () => {
+    expect(fraseDaListaDeInstrutoresVazia("sem-disciplina")).toBe("Escolha a disciplina.");
+  });
+
+  it("disciplina sem habilitado: o texto de hoje da D-32, letra por letra", () => {
+    expect(fraseDaListaDeInstrutoresVazia("sem-habilitado")).toBe(SEM_HABILITADO_DE_HOJE);
+  });
+
+  it("ninguém atribuído na linha da turma: acrescentar instrutor antes de dividir pelas UEs", () => {
+    const frase = fraseDaListaDeInstrutoresVazia("sem-atribuido");
+    expect(frase, "a frase não diz o que fazer: acrescentar instrutor à linha da turma").toMatch(
+      /acrescent/i,
+    );
+    expect(frase, "a frase não diz que é para dividir pelas unidades de ensino").toMatch(
+      /dividir/i,
+    );
+    expect(frase, "o vazio vem da ATRIBUIÇÃO, não da habilitação").not.toContain(
+      "Nenhum instrutor habilitado",
+    );
+  });
+
+  it("três motivos, três frases — e nenhuma diz que não há cadastro", () => {
+    const frases = (["sem-disciplina", "sem-habilitado", "sem-atribuido"] as const).map((m) =>
+      fraseDaListaDeInstrutoresVazia(m),
+    );
+    expect(new Set(frases).size).toBe(3);
+    for (const f of frases) {
+      expect(f).not.toMatch(/Nada cadastrado/i);
+      expect(f.trim().length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("fraseDaListaDaAula — continua devolvendo EXATAMENTE o texto de hoje (não regressão da D-32)", () => {
+  it("o texto, letra por letra, nos três estados", () => {
+    expect(fraseDaListaDaAula(null, [])).toBe("Escolha a disciplina.");
+    expect(fraseDaListaDaAula("", [])).toBe("Escolha a disciplina.");
+    expect(fraseDaListaDaAula("sem-ninguem", [])).toBe(SEM_HABILITADO_DE_HOJE);
+    expect(fraseDaListaDaAula("nav", [{ id: "ct" }])).toBeNull();
+  });
+
+  it("e delega ao dono único: a frase da aula É a do motivo", () => {
+    expect(fraseDaListaDaAula(null, [])).toBe(fraseDaListaDeInstrutoresVazia("sem-disciplina"));
+    expect(fraseDaListaDaAula("sem-ninguem", [])).toBe(
+      fraseDaListaDeInstrutoresVazia("sem-habilitado"),
+    );
   });
 });

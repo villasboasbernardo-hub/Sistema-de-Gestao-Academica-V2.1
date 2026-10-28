@@ -469,7 +469,7 @@ Quatro épicos da v2.1 não têm épico correspondente na v2.0 porque cobrem fun
 5. Uma mudança de regime cadastrada para o meio da janela altera a capacidade calculada **a partir da data de vigência**, e não antes.
 6. Prova Mista é sempre bloco fechado de exatamente 3 TA contíguos no mesmo dia, nas disciplinas que a regra alcança.
 7. No máximo 4 disciplinas distintas por dia e no máximo 4 TA da mesma disciplina por dia.
-8. Teto de TFM respeitado como limite **rígido**; os demais tetos semanais conforme os três regimes de `RN-DIST-03`.
+8. Teto de TFM respeitado como limite **rígido**; os demais tetos semanais conforme os três regimes de `RN-DIST-03`. ⚠️ *(Emenda de 27/10/2026 — decisão de Bernardo Villas Boas; `RN-DIST-03` (a) emendada no documento 04, Bloco 14, spec 029: o TFM **não tem mais teto rígido** — é disciplina comum —, e os regimes da `RN-DIST-03` passam a **dois**: sem teto (fim de curso) e recomendado (25 TA/semana, só alerta). O `.docx` não recebeu esta emenda.)*
 9. Cada regra `RN-2027-*` e `RN-DIST-*` tem função pura em `lib/dominio/` com teste de unidade próprio.
 10. Validação de não regressão por **invariante estrutural e matemático**, nunca por diff com a CAHO 2026.
 
@@ -672,7 +672,7 @@ Quatro épicos da v2.1 não têm épico correspondente na v2.0 porque cobrem fun
 
 **Critérios de aceite.**
 
-1. A sugestão respeita **todos** os limites rígidos existentes, incluindo o teto de TFM (`RN-DIST-03`).
+1. A sugestão respeita **todos** os limites rígidos existentes, incluindo o teto de TFM (`RN-DIST-03`). ⚠️ *(Emenda de 27/10/2026 — decisão de Bernardo Villas Boas; `RN-DIST-03` (a) emendada no documento 04, Bloco 14, spec 029: o TFM **não tem mais teto rígido**; é disciplina comum, que só o alerta do recomendado de 25 TA/semana alcança. O `.docx` não recebeu esta emenda.)*
 2. A sugestão **nunca** é imposta: lançar manualmente algo diferente funciona a qualquer momento, sem confirmação extra.
 3. A etapa (ii) é executada e registrada **antes** de qualquer trabalho da etapa (iii) — critério de processo, verificável no histórico do repositório.
 4. Nenhuma restrição de sequenciamento pedagógico é implementada — provado por revisão do código do motor.

@@ -60,6 +60,7 @@ import { montarSemana } from "@/lib/dominio/dsa/grade";
 import { gradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import { relogioDoRegime } from "@/lib/dominio/dsa/horario-do-bloco";
 import { documentoImpresso } from "@/lib/dominio/dsa/impressao";
+import { vazioDaListaDeInstrutores } from "@/lib/dominio/dsa/instrutores-da-aula";
 import { GraficoBarras } from "@/components/graficos/grafico-barras";
 import { GraficoLinha } from "@/components/graficos/grafico-linha";
 import { GraficoPizza } from "@/components/graficos/grafico-pizza";
@@ -708,11 +709,34 @@ export function AmostraSeletorInstrutor() {
         escala={ESCALA_DA_AMOSTRA}
         {...(escolhido === undefined ? {} : { valor: escolhido })}
         aoMudar={definirEscolhido}
+        vazio={{ motivo: "sem-dado", detalhe: "Nenhum instrutor nesta amostra." }}
       />
       <p className="text-texto-suave text-xs">
         A lista entregue está <strong>desordenada</strong> e o último tem posto fora da escala. Ela
         aparece em antiguidade crescente, e o desconhecido vai para o fim — com aviso, sem sumir.
       </p>
+      {/*
+        ⚠️ OS DOIS VAZIOS, LADO A LADO (spec 029, FR-006): a MESMA lista vazia, dois motivos, duas
+           frases — o «não há» com a frase de quem chama, o «você não vê» com a do componente. Compactos
+           (D-15), do tamanho do campo, e não a caixa de página do `EstadoVazio`.
+      */}
+      <p className="text-texto-suave text-xs">
+        A mesma lista <strong>vazia</strong>, com os dois motivos — quem chama declara qual é:
+      </p>
+      <SeletorInstrutor
+        instrutores={[]}
+        escala={ESCALA_DA_AMOSTRA}
+        aoMudar={() => undefined}
+        rotulo="Instrutor do TA fora do DSA"
+        vazio={vazioDaListaDeInstrutores(true, "sem-habilitado")}
+      />
+      <SeletorInstrutor
+        instrutores={[]}
+        escala={ESCALA_DA_AMOSTRA}
+        aoMudar={() => undefined}
+        rotulo="Instrutor do TA fora do DSA"
+        vazio={vazioDaListaDeInstrutores(false, "sem-habilitado")}
+      />
     </div>
   );
 }

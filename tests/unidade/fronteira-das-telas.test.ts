@@ -71,9 +71,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   // ── Épico 4: vitrine e panorama ────────────────────────────────────────────────────────────
   "app/estilo/amostras.tsx": "as amostras interativas da vitrine",
   "app/(app)/inicio/FiltroDoPanorama.tsx": "o recorte do panorama, escrito na URL",
-  /* Bloco 11 (RD-7): o papel do DSA publicado, reduzido pela largura medida, e a semana dele na URL. */
+  /* Bloco 11 (RD-7) e spec 029 (FR-008): o papel do DSA publicado enquadrado na janela, e a semana dele na URL. */
   "app/(app)/inicio/EscalaDoPapel.tsx":
-    "a escala do papel do DSA pela largura medida da página (ResizeObserver)",
+    "a escala do papel do DSA pela largura e pela altura disponíveis na janela (ResizeObserver e resize)",
   "app/(app)/inicio/EscolhaDaSemana.tsx":
     "a semana dos DSA publicados: anterior, seguinte e o calendário, na URL",
 

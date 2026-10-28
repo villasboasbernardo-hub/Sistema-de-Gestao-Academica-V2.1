@@ -23,8 +23,9 @@
  * "não há" faria a tela afirmar, com todas as letras, que a CIAARA-11 não tem turma nenhuma.
  */
 import { lerContagemPresencial } from "../turmas/contagem-presencial";
+import { lerRegimesDasSemanas } from "../turmas/regimes-das-semanas";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
-import { idsArquivados, semAsArquivadas } from "@/lib/dominio/arquivamento-da-turma";
+import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
 
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { CardKpi } from "@/components/ciaara/card-kpi";
@@ -142,6 +143,7 @@ export default async function Inicio({
     arquivadasRes,
     publicadosRes,
     presenciais,
+    semanasDasTurmas,
   ] = await Promise.all([
     consultaDeCursos,
     supabase
@@ -195,7 +197,10 @@ export default async function Inicio({
      *    (FR-014.3). A view de carga continua dando o resto (curso, CH curricular, situação).
      */
     supabase.rpc("chd_da_turma_ate", { p_ate: hoje }),
-    /* D-COR-5 (spec 017, C-24): a turma arquivada some do panorama e, com ele, dos alertas. */
+    /*
+     * D-COR-5 e RT-8 (spec 029, FR-007): a marca de arquivada — os cartões do ano a contam; o carrossel das turmas e o
+     * dos DSA publicados não a mostram.
+     */
     supabase.from("vw_turmas_arquivadas").select("turma_id"),
     /*
      * ⚠️ **RD-7 (Bloco 11): OS DSA PUBLICADOS DA SEMANA**, de todas as turmas que a sessão alcança — a última versão
@@ -205,6 +210,8 @@ export default async function Inicio({
     lerPublicadosDaSemana(supabase, { ano: isoDaSemana.ano, numero: isoDaSemana.numero }),
     /* Spec 024 (FR-020): a etapa presencial das semipresenciais. */
     lerContagemPresencial(supabase, hoje),
+    /* Spec 029 (`FR-005`): o regime das semanas do DSA — o saldo soma o TA/dia da semana de cada dia útil. */
+    lerRegimesDasSemanas(supabase, { hoje }),
   ]);
 
   /*
@@ -231,18 +238,22 @@ export default async function Inicio({
    *    sem elas não há panorama nenhum a desenhar.
    */
   /*
-   * ⚠️ **A ARQUIVADA SAI ANTES DO PANORAMA** (D-COR-5; C-24), e com ela sai dos cartões e das manchetes.
-   *    com ele. Falha na leitura das arquivadas não esconde nada — a turma aparece, como antes do Bloco 2.
+   * ⚠️ **A ARQUIVADA FICA NO PANORAMA, COM A MARCA** (RT-8; spec 029, FR-007.2 e D-17, que emendam a D-26 e o
+   *    FR-006.1 da spec 026 e a C-24 da spec 017 na parte do `/inicio`): *"ela CONTINUA contando nas estatísticas e
+   *    nos cartões do ano dela, com a situação que tinha"* (Bernardo Villas Boas, 28/10/2026). Até o Bloco 14 ela saía
+   *    ANTES do panorama, e os cartões do ano a descontavam — contra a A-2 de 20/10/2026 (*"os números do painel
+   *    continuam contando todas"*). Agora a mesma população vai às duas funções de `cartoes-do-inicio.ts`: os números
+   *    a contam, o carrossel a tira. Falha na leitura das arquivadas não esconde nada — a turma aparece no carrossel,
+   *    como antes do Bloco 2.
+   * ⚠️ **O «EM ATRASO» E OS AVISOS NÃO PASSAM A VÊ-LA** (D-COR-5): o veredito só se desenha no cartão do carrossel,
+   *    que não tem a arquivada, e a página Avisos monta o próprio panorama, sem ela (`avisos/leitura.ts`).
    */
   const arquivadas = idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[]);
-  const cargasVivas = semAsArquivadas(
-    (cargasRes.data ?? []) as unknown as CargaDaTurma[],
-    arquivadas,
-    (c) => c.turma_id,
-  );
   /* O panorama é só do ano escolhido; o seletor oferece qualquer ano (RT-6, D-25). */
   const panorama = montarPanorama(
-    cargasVivas.filter((c) => Number(c.ano_letivo) === ano),
+    ((cargasRes.data ?? []) as unknown as CargaDaTurma[]).filter(
+      (c) => Number(c.ano_letivo) === ano,
+    ),
     (cursosRes.data ?? []) as unknown as CursoDoRecorte[],
     (turmasRes.data ?? []) as unknown as TurmaDoPanorama[],
     (regimesRes.data ?? []) as unknown as RegimeDoCursoNoBanco[],
@@ -254,8 +265,12 @@ export default async function Inicio({
       ),
     ),
     presenciais,
-  );
-  /* RD-8 (Bloco 11): os cartões contam as turmas do ano por situação — a população do panorama (D-26). */
+    semanasDasTurmas,
+  ).map((t) => ({ ...t, arquivada: arquivadas.has(t.turmaId) }));
+  /*
+   * RD-8 (Bloco 11) com a RT-8 (spec 029): os cartões contam as turmas do ano por situação — a população do panorama,
+   * arquivada inclusive, pela situação que tinha.
+   */
   const contagem = contagemPorSituacao(panorama);
   /*
    * ⚠️ **OS ALERTAS SAÍRAM DO INÍCIO NO BLOCO 7** (spec 022, FR-004.4; A-2, que emenda o `RF-INI-04`): as turmas em
@@ -263,13 +278,17 @@ export default async function Inicio({
    */
   const temRecorte = classificacao !== "" || modalidade !== "";
   const baseVazia = (totalRes.count ?? 0) === 0;
-  /* Ajuste A-2 (20/10/2026): os cartões são só das turmas ativas do ano; os números contam todas. */
+  /*
+   * Ajuste A-2 (20/10/2026): os cartões são só das turmas ativas do ano; os números contam todas. RT-8 (D-17): a ativa
+   * arquivada conta em *Turmas ativas* e não ganha cartão.
+   */
   const cartoes = cartoesDoInicio(panorama);
 
   /*
    * ⚠️ **RD-7 (Bloco 11, D-27): O CARROSSEL DO DSA SEGUE O RECORTE** (classificação e modalidade) e a semana ISO — não o
-   *    ano: a semana é de calendário. A turma arquivada fica de fora, como no panorama (D-COR-5). A ordem é a única do
-   *    sistema (spec 022, FR-003): a do curso, depois o ano e o código.
+   *    ano: a semana é de calendário. A turma arquivada fica de fora, como no carrossel das turmas (D-COR-5; D-17 da
+   *    spec 029: é vista do dia a dia, e o DSA dela segue alcançável pela ficha e pelo *Reimprimir*). A ordem é a única
+   *    do sistema (spec 022, FR-003): a do curso, depois o ano e o código.
    */
   type TurmaDaLeitura = { id: string; codigo: string; curso_id: string; ano_letivo: number };
   type CursoDaLeitura = { id: string; codigo: string; classificacao: string | null };
@@ -313,19 +332,13 @@ export default async function Inicio({
         {/*
         Spec 019 (C-1 e ajuste A-1 de 20/10/2026): o ano numa caixa de seleção, no canto superior direito — a mesma
         de todo módulo (RT-6). Ao lado, o ícone *Filtros* (RT-4, D-19): os números do ano continuam à vista.
+        Spec 029 (Bloco 14, item 8, FR-008.1): a frase do panorama saiu; o título e a barra ficam (RT-1 e RT-6).
       */}
         <header
           className="flex flex-wrap items-start justify-between gap-3"
           data-slot="cabecalho-do-inicio"
         >
-          <div className="flex flex-col gap-1">
-            <h1 className="text-texto text-lg font-semibold">Início</h1>
-            {/* veste: a dica que explica o alcance do panorama — texto fixo, nunca dado */}
-            <p className="text-texto-tenue text-xs">
-              Panorama das turmas sob a CIAARA-11. O recorte vai para o endereço: este link abre com
-              ele.
-            </p>
-          </div>
+          <h1 className="text-texto text-lg font-semibold">Início</h1>
           <BarraDeAcoes rotulo="Ações do Início">
             <SeletorDeAno ano={ano} vigente={anoVigente} origem={escolha.origem} rota="/inicio" />
             <GatilhoDePainel
@@ -339,66 +352,15 @@ export default async function Inicio({
           <FiltroDoPanorama />
         </ConteudoDePainel>
 
-        <section
-          aria-labelledby="titulo-turmas-do-ano"
-          className="flex flex-col gap-3"
-          data-slot="turmas-do-ano"
-          data-ano={ano}
-        >
-          <h2 id="titulo-turmas-do-ano" className="text-texto text-base font-semibold">
-            Turmas de {ano}
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <CardKpi rotulo="Turmas ativas" valor={contagem.ativas} />
-            <CardKpi rotulo="Planejadas" valor={contagem.planejadas} />
-            <CardKpi rotulo="Concluídas" valor={contagem.concluidas} />
-            <CardKpi rotulo="Canceladas" valor={contagem.canceladas} />
-          </div>
-
-          {panorama.length === 0 && baseVazia ? (
-            <EstadoVazio
-              motivo="sem-dado"
-              titulo="Ainda não existe no sistema"
-              detalhe="A carga de cursos e turmas ainda não foi feita nesta base. Não é ausência de cadastro na CIAARA-11: é dado que ainda não chegou aqui."
-            />
-          ) : panorama.length === 0 && temRecorte ? (
-            /*
-             * ⚠️ **O RECORTE SEM RESULTADO CONTINUA DIZENDO QUE NÃO HÁ, E COMO VOLTAR** (`FR-008` da spec 008, gotcha 4):
-             *    é outro caso que o do A-2 — aqui o filtro não achou turma nenhuma do ano, e a pessoa precisa saber que
-             *    o sistema tem turmas e o que mexer. Medido no CI do PR #77: trocá-lo pela frase do A-2 reprovou
-             *    `url-degradada.spec.ts`.
-             */
-            <EstadoVazio
-              motivo="sem-dado"
-              titulo="Nenhuma turma neste recorte"
-              detalhe={`Há turmas cadastradas, mas nenhuma de ${ano} com esta classificação e modalidade. Volte o filtro para Todas ou escolha outro ano.`}
-            />
-          ) : cartoes.length === 0 ? (
-            /* Ajuste A-2: sem turma ativa no ano, uma frase — nunca um carrossel vazio. */
-            <p className="text-texto-suave text-sm" data-slot="sem-turma-ativa">
-              Nenhuma turma em andamento em {ano}
-              {temRecorte ? " neste recorte" : ""}.
-            </p>
-          ) : (
-            /*
-             * ⚠️ **OS CARTÕES EM CARROSSEL** (spec 019, C-3 a C-7, e ajustes A-2 a A-4 de 20/10/2026): só as turmas
-             *    ATIVAS do ano, cada uma levando à sua ficha, com a barra de progresso; o carrossel passa sozinho, pausa e
-             *    anda por teclado. Os números acima contam todas as turmas do ano.
-             */
-            <div data-slot="panorama-de-turmas">
-              <Carrossel
-                rotulo={`Turmas em andamento em ${ano}`}
-                intervaloMs={6000}
-                largura="cartao"
-                dataSlot="carrossel-de-turmas"
-                itens={cartoes.map((t) => (
-                  <CartaoDaTurma key={t.turmaId} turma={t} />
-                ))}
-              />
-            </div>
-          )}
-        </section>
-
+        {/*
+         * ⚠️ **OS DSA PUBLICADOS LOGO ABAIXO DO CABEÇALHO** (spec 029, Bloco 14, item 8, FR-008.2; emenda o FR-008.1 e
+         *    a D-31 da spec 026, em que eles vinham depois do carrossel das turmas): é o que se vê sem rolar. Rolando,
+         *    os cartões do ano e o carrossel das turmas. O papel é enquadrado pela largura E pela altura da janela
+         *    (`EscalaDoPapel`, FR-008.3) — e a escala se refaz com o painel de Filtros aberto aqui em cima (D-27).
+         * ⚠️ **O ANO DO CABEÇALHO NÃO VALE PARA O PAPEL**: ele segue a semana e o recorte (D-27 da spec 026) — trocar o
+         *    ano muda os cartões, não o DSA.
+         * ⚠️ **O VAZIO É UMA FRASE SÓ, SEM ALTURA RESERVADA** (FR-008.4): sem papel, os cartões do ano sobem.
+         */}
         <section
           aria-labelledby="titulo-dsa-publicados"
           className="flex flex-col gap-3"
@@ -448,7 +410,8 @@ export default async function Inicio({
                   className="m-0 flex flex-col gap-1"
                   data-turma={p.turma.codigo}
                 >
-                  <figcaption className="text-texto-suave text-xs">
+                  {/* D-21 (spec 029): a legenda centrada, como o papel embaixo dela. */}
+                  <figcaption className="text-texto-suave text-center text-xs">
                     {p.turma.codigo} · {p.numero === 0 ? "original" : `ALT ${p.numero}`} · publicada
                     em {instanteComHoraParaLeitura(p.ocorridoEm)}
                   </figcaption>
@@ -464,6 +427,71 @@ export default async function Inicio({
                 </figure>
               ))}
             />
+          )}
+        </section>
+
+        <section
+          aria-labelledby="titulo-turmas-do-ano"
+          className="flex flex-col gap-3"
+          data-slot="turmas-do-ano"
+          data-ano={ano}
+        >
+          <h2 id="titulo-turmas-do-ano" className="text-texto text-base font-semibold">
+            Turmas de {ano}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <CardKpi rotulo="Turmas ativas" valor={contagem.ativas} />
+            <CardKpi rotulo="Planejadas" valor={contagem.planejadas} />
+            <CardKpi rotulo="Concluídas" valor={contagem.concluidas} />
+            <CardKpi rotulo="Canceladas" valor={contagem.canceladas} />
+          </div>
+
+          {/*
+           * ⚠️ **OS VAZIOS LEEM A MESMA POPULAÇÃO DOS NÚMEROS** (RT-8): «Nenhuma turma neste recorte» só quando nem
+           *    arquivada houver no ano e no recorte — com a arquivada contada num cartão ao lado, a frase desmentiria o
+           *    número. Havendo só arquivada (ou nenhuma ativa), a frase é a do A-2, pelos cartões do carrossel.
+           */}
+          {panorama.length === 0 && baseVazia ? (
+            <EstadoVazio
+              motivo="sem-dado"
+              titulo="Ainda não existe no sistema"
+              detalhe="A carga de cursos e turmas ainda não foi feita nesta base. Não é ausência de cadastro na CIAARA-11: é dado que ainda não chegou aqui."
+            />
+          ) : panorama.length === 0 && temRecorte ? (
+            /*
+             * ⚠️ **O RECORTE SEM RESULTADO CONTINUA DIZENDO QUE NÃO HÁ, E COMO VOLTAR** (`FR-008` da spec 008, gotcha 4):
+             *    é outro caso que o do A-2 — aqui o filtro não achou turma nenhuma do ano, e a pessoa precisa saber que
+             *    o sistema tem turmas e o que mexer. Medido no CI do PR #77: trocá-lo pela frase do A-2 reprovou
+             *    `url-degradada.spec.ts`.
+             */
+            <EstadoVazio
+              motivo="sem-dado"
+              titulo="Nenhuma turma neste recorte"
+              detalhe={`Há turmas cadastradas, mas nenhuma de ${ano} com esta classificação e modalidade. Volte o filtro para Todas ou escolha outro ano.`}
+            />
+          ) : cartoes.length === 0 ? (
+            /* Ajuste A-2: sem turma ativa no ano, uma frase — nunca um carrossel vazio. */
+            <p className="text-texto-suave text-sm" data-slot="sem-turma-ativa">
+              Nenhuma turma em andamento em {ano}
+              {temRecorte ? " neste recorte" : ""}.
+            </p>
+          ) : (
+            /*
+             * ⚠️ **OS CARTÕES EM CARROSSEL** (spec 019, C-3 a C-7, e ajustes A-2 a A-4 de 20/10/2026): só as turmas
+             *    ATIVAS do ano, cada uma levando à sua ficha, com a barra de progresso; o carrossel passa sozinho, pausa e
+             *    anda por teclado. Os números acima contam todas as turmas do ano.
+             */
+            <div data-slot="panorama-de-turmas">
+              <Carrossel
+                rotulo={`Turmas em andamento em ${ano}`}
+                intervaloMs={6000}
+                largura="cartao"
+                dataSlot="carrossel-de-turmas"
+                itens={cartoes.map((t) => (
+                  <CartaoDaTurma key={t.turmaId} turma={t} />
+                ))}
+              />
+            </div>
           )}
         </section>
       </section>

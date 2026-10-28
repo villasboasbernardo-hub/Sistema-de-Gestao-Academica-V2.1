@@ -140,6 +140,28 @@ export function camposDoEstudoIndividual(dia: string, slot: number) {
 }
 
 /**
+ * O título de um lançamento NA TELA — o cabeçalho do cartão de edição (`AcoesDoBloco`) e o item da faixa *"Sem
+ * posição"* da grade (`components/ciaara/grade-dsa.tsx`): a disciplina e o conteúdo, como sempre.
+ *
+ * ⚠️ **A ATIVIDADE SEM CONTEÚDO SE NOMEIA PELO SUBTIPO** — D-6 da spec 029 *(decisão de Bernardo Villas Boas,
+ *    27/10/2026)*. Atividade não tem disciplina, e desde o FR-002 o Estudo Individual pode não ter «O que é»: o título
+ *    caía no genérico *"Lançamento"*, que não diz o que é. O subtipo (*"Estudo Individual"*) chega no campo da técnica,
+ *    como na célula da grade. *"Lançamento"* sobra só para o fato sem nada a dizer de si.
+ * ⚠️ Os dois lugares tinham a mesma expressão escrita à mão; agora é uma só, para não discordarem no próximo ajuste.
+ */
+export function tituloDoLancamento(fato: {
+  readonly origem: string;
+  readonly disciplina: string | null;
+  readonly conteudo: string | null;
+  readonly tecnica: string | null;
+}): string {
+  const titulo = [fato.disciplina, fato.conteudo].filter(Boolean).join(" — ");
+  if (titulo !== "") return titulo;
+  const subtipo = fato.origem === "atividade_nao_letiva" ? limpo(fato.tecnica) : "";
+  return subtipo === "" ? "Lançamento" : subtipo;
+}
+
+/**
  * A marca do Apoio Individualizado na grade e no papel — `FR-019` da spec 014: *"A grade e o papel do
  * DSA MUST marcar essas linhas com «Apoio Individualizado — alunos específicos»"*.
  */

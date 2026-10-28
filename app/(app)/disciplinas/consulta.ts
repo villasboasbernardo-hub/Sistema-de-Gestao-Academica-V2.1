@@ -144,6 +144,13 @@ export type GradeDeDisciplinas = {
    */
   readonly cursoNaoAlcancado: boolean;
   /**
+   * As duas leituras dos habilitados (`instrutor_disciplina` e `vw_instrutores`) deram certo? `false` = uma falhou, e as
+   * listas `habilitados` saem vazias SEM serem «nenhum habilitado» — a tela avisa a falha (D-16 da spec 029). Até
+   * 28/10/2026 o `error` era descartado (`data ?? []`), e a falha virava *"Nenhum instrutor habilitado nesta
+   * disciplina"*: o erro descartado inventando outra causa (vizinho do gotcha 4).
+   */
+  readonly habilitadosLidos: boolean;
+  /**
    * Spec 021 (Bloco 6, RC-5 e RC-8): o currículo cujas disciplinas a grade mostra — o selecionado na página do curso,
    * ou o da turma na ficha. `null` = pelo curso (quem não disse o currículo; com um currículo por curso, o mesmo).
    */
@@ -240,6 +247,8 @@ export async function lerGradeDeDisciplinas(filtro: {
     // ⚠️ Pediu um curso e ele não veio: é **alcance**, não ausência de disciplina.
     cursoNaoAlcancado: filtro.cursoCodigo !== "" && cursoEscolhido === null,
     curriculoId,
+    // Sem disciplina, os habilitados não são lidos — e nada falhou.
+    habilitadosLidos: true,
   } satisfies GradeDeDisciplinas;
 
   if (!cursoEscolhido) return vazio;
@@ -363,12 +372,19 @@ export async function lerGradeDeDisciplinas(filtro: {
    *    comparador escrito numa consulta de tela.
    */
   const fichasOrdenadas: (FichaCrua & { ordem_antiguidade: number | null })[] = [];
-  if (idsHabilitados.length > 0) {
+  /*
+   * ⚠️ **O ERRO DAS DUAS LEITURAS NÃO É DESCARTADO** (D-16 da spec 029): ele vira `habilitadosLidos: false`, e a ficha
+   *    da turma avisa a falha em vez de dizer *"Nenhum instrutor habilitado"*. A lista continua vazia — não há o que
+   *    mostrar —, mas o motivo é o certo.
+   */
+  let habilitadosLidos = habilitadosRes.error === null;
+  if (habilitadosLidos && idsHabilitados.length > 0) {
     const fichasRes = await supabase
       .from("vw_instrutores")
       .select(`${COLUNAS_DO_NOME}, ordem_antiguidade`)
       .in("id", idsHabilitados)
       .order("ordem_antiguidade");
+    habilitadosLidos = fichasRes.error === null;
     for (const bruta of fichasRes.data ?? []) {
       fichasOrdenadas.push(bruta as unknown as FichaCrua & { ordem_antiguidade: number | null });
     }
@@ -540,5 +556,6 @@ export async function lerGradeDeDisciplinas(filtro: {
     escalaDeAntiguidade,
     cursoNaoAlcancado: false,
     curriculoId,
+    habilitadosLidos,
   };
 }

@@ -12,6 +12,7 @@
  *    diz que não pôde ler — o que falhou não vira "nenhum aviso".
  */
 import { lerContagemPresencial } from "../turmas/contagem-presencial";
+import { lerRegimesDasSemanas } from "../turmas/regimes-das-semanas";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { diasBloqueadosComLancamento } from "@/lib/dominio/calendario";
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
@@ -25,7 +26,12 @@ import { avisosDoCurso } from "@/lib/dominio/avisos-do-curso";
 import type { Aviso, ModuloDeAviso } from "@/lib/dominio/avisos/central";
 import { alertaAcimaDaFaixa, alertaSemCapacitacao } from "@/lib/dominio/alertas-instrutor";
 import { capacitacaoDoCadastro } from "@/lib/dominio/capacitacao-didatica";
-import { cargaPorSemana, semanasDoAno, semanasAcimaDaFaixa } from "@/lib/dominio/carga-semanal";
+import {
+  cargaPorSemana,
+  janelaDaCarga,
+  semanasDoAno,
+  semanasAcimaDaFaixa,
+} from "@/lib/dominio/carga-semanal";
 import { curriculoVigenteEm, type CurriculoParaVigencia } from "@/lib/dominio/curriculos";
 import { mediaSemanalDaAtribuicao } from "@/lib/dominio/media-semanal";
 import { nomeEmTexto } from "@/lib/dominio/nome-instrutor";
@@ -54,6 +60,12 @@ import {
 import { montarAvisos, type EntradaDaCentral } from "./montar";
 
 type Cliente = Awaited<ReturnType<typeof criarClienteDeServidor>>;
+
+/** O período da turma embutido na leitura da prevista (spec 029, item 4, `FR-004`). */
+type PeriodoEmbutido = {
+  readonly data_inicio: string | null;
+  readonly data_termino: string | null;
+} | null;
 
 export type LeituraDosAvisos = {
   readonly avisos: readonly Aviso[];
@@ -181,6 +193,7 @@ export async function lerAvisos(
     cargaAnualRes,
     previstaRes,
     presenciais,
+    semanasDasTurmas,
   ] = await Promise.all([
     supabase
       .from("cursos")
@@ -259,8 +272,12 @@ export async function lerAvisos(
     lerTodasAsPaginas((f) =>
       supabase
         .from("vw_instrutor_carga_prevista")
+        /*
+         * Spec 029 (item 4, `FR-004`): o período da turma vem embutido, para a janela da carga (`janelaDaCarga`) — a
+         * previsão recortada por ele. Na mesma leitura, sem consulta por linha; a view não muda (D-11).
+         */
         .select(
-          "atribuicao_id, instrutor_id, previsao_inicio, previsao_termino, tempos_previstos, media_semanal",
+          "atribuicao_id, instrutor_id, previsao_inicio, previsao_termino, tempos_previstos, media_semanal, turma:turmas!turma_disciplina_turma_id_fkey(data_inicio, data_termino)",
           contagemNaPrimeira(f),
         )
         /*
@@ -273,6 +290,8 @@ export async function lerAvisos(
     ),
     /* Spec 024 (FR-020): a etapa presencial das semipresenciais. */
     lerContagemPresencial(supabase, hoje),
+    /* Spec 029 (`FR-005`): o regime das semanas do DSA — o «em atraso» daqui é o mesmo do Início. */
+    lerRegimesDasSemanas(supabase, { hoje }),
   ]);
 
   const naoLidos = new Set<ModuloDeAviso>();
@@ -341,6 +360,7 @@ export async function lerAvisos(
             ),
           ),
           presenciais,
+          semanasDasTurmas,
         )
           .filter((t) => t.emAtraso)
           .map((t) => t.turmaCodigo);
@@ -506,22 +526,35 @@ export async function lerAvisos(
     string,
     { inicio: string | null; termino: string | null; mediaSemanal: number | null }[]
   >();
+  /*
+   * ⚠️ A JANELA É A DA CARGA (spec 029, item 4, `FR-004`; D-9 a D-11): a previsão recortada pelo período da turma, e o
+   *    período inteiro quando a previsão não o toca — pela MESMA função da ficha do instrutor (`janelaDaCarga`), para o
+   *    alerta de faixa daqui e o da ficha nomearem as mesmas semanas. A média cadastrada continua vencendo (D-10); a de
+   *    reserva divide pelas semanas da janela da carga.
+   */
   for (const a of (previstaRes.data ?? []) as {
     instrutor_id: string;
     previsao_inicio: string | null;
     previsao_termino: string | null;
     tempos_previstos: number | null;
     media_semanal: number | null;
+    turma: PeriodoEmbutido | PeriodoEmbutido[];
   }[]) {
+    // O tipo gerado lê o embutido da view como lista; o PostgREST devolve objeto (muitos-para-um). As duas formas.
+    const turma = Array.isArray(a.turma) ? a.turma[0] : a.turma;
+    const janela = janelaDaCarga(
+      { inicio: a.previsao_inicio, termino: a.previsao_termino },
+      { inicio: turma?.data_inicio ?? null, termino: turma?.data_termino ?? null },
+    );
     const media = mediaSemanalDaAtribuicao({
       mediaCadastrada: a.media_semanal === null ? null : Number(a.media_semanal),
       tempos: Number(a.tempos_previstos ?? 0),
-      inicio: a.previsao_inicio,
-      termino: a.previsao_termino,
+      inicio: janela.inicio,
+      termino: janela.termino,
     });
     janelasDe.set(a.instrutor_id, [
       ...(janelasDe.get(a.instrutor_id) ?? []),
-      { inicio: a.previsao_inicio, termino: a.previsao_termino, mediaSemanal: media },
+      { inicio: janela.inicio, termino: janela.termino, mediaSemanal: media },
     ]);
   }
   const semCarga = cargaAnualRes.error !== null || previstaRes.error !== null;

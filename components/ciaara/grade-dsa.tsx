@@ -45,6 +45,7 @@ import {
 } from "@/components/ciaara/grade-alocacao";
 import type { BlocoNaGrade, Celula, Semana } from "@/lib/dominio/dsa/grade";
 import type { CartaoDaGrade, GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
+import { tituloDoLancamento } from "@/lib/dominio/dsa/rotulos";
 import { dataComDiaDaSemana } from "@/lib/formato/data";
 
 export type GradeDsaProps = {
@@ -598,8 +599,8 @@ function rodapesSemPosicao(
     return (
       <ul key={dia.data} className="flex flex-col gap-1">
         {dia.semPosicao.map(({ fato, motivo }) => {
-          const descricao =
-            [fato.disciplina, fato.conteudo].filter(Boolean).join(" — ") || "Lançamento";
+          /* Spec 029, D-6: o Estudo Individual sem «O que é» se nomeia pelo subtipo, e não «Lançamento». */
+          const descricao = tituloDoLancamento(fato);
           return (
             <li key={fato.fatoId} className="leading-tight">
               {aoEscolherFato ? (

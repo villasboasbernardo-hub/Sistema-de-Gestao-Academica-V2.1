@@ -28,6 +28,7 @@ import {
   siglaOuExtenso,
   textoDoPapel,
   SIGLA_DO_ESTUDO_INDIVIDUAL,
+  TEXTO_DO_ESTUDO_INDIVIDUAL,
 } from "@/lib/dominio/dsa/impressao";
 import { nomeParaDsa } from "@/lib/dominio/nome-instrutor";
 import { tecnicaDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
@@ -367,7 +368,11 @@ export async function lerDadosDaPlanilha(
           taInicial: fato.taInicial,
           tempos: fato.tempos,
           disciplina: textoDoPapel(fato.disciplina),
-          conteudo: textoDoPapel(fato.conteudo),
+          /* Spec 029, D-6: o EI sem «O que é» sai com o texto do EI, como no papel — nunca a célula vazia. */
+          conteudo:
+            ehEi && textoDoPapel(fato.conteudo) === ""
+              ? TEXTO_DO_ESTUDO_INDIVIDUAL
+              : textoDoPapel(fato.conteudo),
           local: textoDoPapel(fato.local),
           te:
             fato.origem === "atividade_nao_letiva"

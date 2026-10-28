@@ -23,15 +23,33 @@
  * ⚠️ POSTO DESCONHECIDO VAI PARA O FIM, COM AVISO, E NUNCA SOME (`RN-DEG-01`). Quem some de uma
  * lista é quem ninguém encontra depois.
  *
+ * ⚠️ A LISTA VAZIA DIZ O MOTIVO QUE QUEM CHAMA DECLARA — `vazio` É OBRIGATÓRIA (spec 029, `FR-006`,
+ * `PEND-026-2`). Até 28/10/2026 havia `motivoDoVazio`, opcional e com padrão `sem-dado`, e nenhum
+ * chamador passava outro valor: *"o seu perfil não os alcança"* nunca aparecia, e todo vazio dizia
+ * *"Nada cadastrado ainda"* — inclusive o de FILTRO (a habilitação, a atribuição), com instrutor
+ * cadastrado. Obrigatória pela razão do `motivo` do `EstadoVazio`: o `tsc` cobra a declaração em todo
+ * chamador. A frase do **«você não vê»** é daqui (o motivo é um só, seja qual for a lista); a do
+ * **«não há»** vem de quem chama, que sabe qual filtro aplicou — as frases moram em
+ * `lib/dominio/dsa/instrutores-da-aula.ts` (`vazioDaListaDeInstrutores`).
+ * ⚠️ E O VAZIO É COMPACTO (D-15 da spec 029): uma frase `role="status"` com `data-motivo`, do tamanho
+ * do campo — não a caixa de página do `EstadoVazio`, que dentro de diálogo pesava e se repetia em cada
+ * unidade de ensino do rateio.
+ *
  * ⚠️ COM MARCADOR DE CLIENTE: busca, foco e teclado são comportamento de navegador.
  */
 "use client";
 
 import * as React from "react";
 import { cn } from "cn";
-import { CheckIcon, ChevronsUpDownIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronsUpDownIcon,
+  InboxIcon,
+  LockIcon,
+  SearchIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 
-import { EstadoVazio, type MotivoDoVazio } from "@/components/ciaara/EstadoVazio";
 import { CelulaNavegavel, ListaNavegavel } from "@/components/ciaara/lista-navegavel";
 import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { Button } from "@/components/ui/button";
@@ -47,10 +65,24 @@ export type SeletorInstrutorProps = {
   readonly valor?: string;
   readonly aoMudar: (id: string) => void;
   readonly rotulo?: string;
-  /** Quando a lista chega vazia: quem chama sabe se foi ausência de dado ou de permissão. */
-  readonly motivoDoVazio?: MotivoDoVazio;
+  /**
+   * Quando a lista chega vazia, o motivo — e quem chama é quem sabe qual é (spec 029, `FR-006`):
+   * **«você não vê»** (perfil sem `instrutores.ler`; a frase é do componente) ou **«não há»**, com a
+   * frase do filtro que esvaziou a lista e, se houver, o caminho clicável (`acao`). Sem padrão.
+   */
+  readonly vazio: VazioDoSeletorInstrutor;
   readonly className?: string;
 };
+
+export type VazioDoSeletorInstrutor =
+  | { readonly motivo: "sem-permissao" }
+  | { readonly motivo: "sem-dado"; readonly detalhe: string; readonly acao?: React.ReactNode };
+
+/**
+ * A frase do «você não vê» — do componente, não de quem chama: a RLS de `instrutores` é tudo ou nada
+ * por perfil, então o motivo é um só para qualquer lista (FR-006.1 da spec 029).
+ */
+const FRASE_SEM_PERMISSAO = "Existem instrutores cadastrados — o seu perfil não os alcança.";
 
 /**
  * Normaliza para comparar: sem acento e sem caixa.
@@ -72,7 +104,7 @@ export function SeletorInstrutor({
   valor,
   aoMudar,
   rotulo = "Instrutor",
-  motivoDoVazio = "sem-dado",
+  vazio,
   className,
 }: SeletorInstrutorProps) {
   const [aberto, definirAberto] = React.useState(false);
@@ -97,15 +129,31 @@ export function SeletorInstrutor({
   const escolhido = ordenados.find((i) => i.id === valor);
 
   if (instrutores.length === 0) {
+    /*
+     * ⚠️ O VAZIO COMPACTO (D-15): uma região `status` só, com o motivo no atributo — o contrato do
+     *    `EstadoVazio` (`role`, `data-motivo`) sem a caixa tracejada de página. O tom acompanha o
+     *    motivo: o «não há» pede ação (a cor do atraso, como a frase da aula da D-32); o «você não
+     *    vê» é informação, com o cadeado.
+     */
+    const naoHa = vazio.motivo === "sem-dado" ? vazio : null;
+    const Icone = naoHa ? InboxIcon : LockIcon;
     return (
-      <EstadoVazio
-        motivo={motivoDoVazio}
-        detalhe={
-          motivoDoVazio === "sem-dado"
-            ? "Nenhum instrutor disponível para escolher."
-            : "Existem instrutores cadastrados — o seu perfil não os alcança."
-        }
-      />
+      <div
+        role="status"
+        data-slot="seletor-instrutor-vazio"
+        data-motivo={vazio.motivo}
+        className={cn(
+          "flex items-start gap-1.5 text-xs",
+          naoHa ? "text-atrasado-tinta" : "text-texto-suave",
+          className,
+        )}
+      >
+        <Icone aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
+        <p>
+          {naoHa ? naoHa.detalhe : FRASE_SEM_PERMISSAO}
+          {naoHa?.acao ? <> {naoHa.acao}</> : null}
+        </p>
+      </div>
     );
   }
 

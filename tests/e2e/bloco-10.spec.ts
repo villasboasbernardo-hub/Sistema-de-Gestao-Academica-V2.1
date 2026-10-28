@@ -12,11 +12,19 @@
  * ⚠️ **IDEMPOTENTE** (regra 9.1): a semente apaga e refaz turmas e disciplinas a cada execução; o curso fica, e o rastro
  *    das exclusões (só de acréscimo) aponta para `id`s que a execução seguinte não reusa.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
+import { dataParaLeitura } from "@/lib/formato/data";
 
-import { bancoDoBloco2, limparBloco2, semearBloco2, type Bloco2Semeado } from "./bloco-2-de-teste";
+import {
+  bancoDoBloco2,
+  limparBloco2,
+  maisDias,
+  semearBloco2,
+  type Bloco2Semeado,
+} from "./bloco-2-de-teste";
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { abrirAbaDoCurso, irAoCursoPorClique } from "./navegar-curso";
 import { irAFichaDaTurma } from "./navegar-turmas";
@@ -99,6 +107,33 @@ async function turmaNoBanco(id: string): Promise<number> {
     .select("id", { count: "exact", head: true })
     .eq("id", id);
   return count ?? 0;
+}
+
+/** O intervalo como a coluna «Janela prevista» o escreve: `DD/MM/AAAA a DD/MM/AAAA`. */
+function intervalo(janela: { readonly inicio: string; readonly termino: string }): string {
+  return `${dataParaLeitura(janela.inicio)} a ${dataParaLeitura(janela.termino)}`;
+}
+
+/**
+ * As semanas ISO do `ano` que o intervalo toca, como o alerta as escreve (`N/AAAA`), em ordem — só as do ano escolhido
+ * (D-41 da spec 025). Conta dia a dia pela `semanaIsoDe`, sem passar pela janela da carga que o caso prova.
+ */
+function semanasNoAno(
+  janela: { readonly inicio: string; readonly termino: string },
+  ano: number,
+): string[] {
+  const vistas = new Set<string>();
+  for (let dia = janela.inicio; dia <= janela.termino; dia = maisDias(dia, 1)) {
+    const semana = semanaIsoDe(dia);
+    if (semana?.ano === ano) vistas.add(`${semana.numero}/${semana.ano}`);
+  }
+  return [...vistas];
+}
+
+/** As semanas que o alerta lilás nomeia, `N/AAAA`, na ordem em que aparecem. */
+async function semanasDoAlerta(alerta: Locator): Promise<string[]> {
+  const linhas = await alerta.locator("li").allInnerTexts();
+  return linhas.map((l) => /^Semana (\d+\/\d{4}) /.exec(l)?.[1] ?? l);
 }
 
 async function rastroDe(id: string): Promise<number> {
@@ -432,6 +467,10 @@ test.describe("RT-6 · o ano da turma (conferência de 24/10/2026)", () => {
   let INS_A = "";
   /** Um segundo instrutor, só HABILITADO no curso (sem designação): o habilitado não tem ano (D-40 invertida). */
   let INS_H = "";
+  /** A previsão da disciplina: duas semanas no começo do período da T1, fora do período da T2 (spec 029, item 4). */
+  const PREVISAO = { inicio: `${ANO}-03-02`, termino: `${ANO}-03-13` };
+  /** O período da T2, a turma do ano seguinte — começa em dezembro do ano corrente. */
+  const PERIODO_T2 = { inicio: `${ANO}-12-01`, termino: `${ANO + 1}-06-30` };
 
   async function limparHabilitado() {
     const banco = bancoDoBloco2();
@@ -489,8 +528,8 @@ test.describe("RT-6 · o ano da turma (conferência de 24/10/2026)", () => {
           chave: "T2",
           ano: ANO + 1,
           status: "planejada",
-          inicio: `${ANO}-12-01`,
-          termino: `${ANO + 1}-06-30`,
+          inicio: PERIODO_T2.inicio,
+          termino: PERIODO_T2.termino,
         },
       ],
       // A aula da turma do ano SEGUINTE, datada no ano corrente.
@@ -500,13 +539,22 @@ test.describe("RT-6 · o ano da turma (conferência de 24/10/2026)", () => {
       instrutorCodigo: INS_A,
     });
     const disciplina = ANUAL.disciplinas.I as string;
-    // A janela das DUAS turmas cai no ano corrente: a previsão é da disciplina.
+    /*
+     * A janela das DUAS turmas cai no ano corrente: a previsão é da disciplina.
+     * ⚠️ Spec 029 (item 4, FR-004): a previsão tem DUAS semanas (`disciplinas.semanas` é gerada dela), e a média
+     *    cadastrada da atribuição sai 30 ÷ 2 = 15 h — acima da faixa de 8 a 12 h do regime 20h, que o instrutor ganha
+     *    abaixo. Sem carga acima da faixa não há alerta lilás para ver, em ano nenhum. A CH (30 TA) não muda.
+     */
     await semErro(
       "previsão da disciplina",
       banco
         .from("disciplinas")
-        .update({ previsao_inicio: `${ANO}-03-02`, previsao_termino: `${ANO}-06-26` })
+        .update({ previsao_inicio: PREVISAO.inicio, previsao_termino: PREVISAO.termino })
         .eq("id", disciplina),
+    );
+    await semErro(
+      "regime do instrutor",
+      banco.from("instrutores").update({ regime_trabalho: "20h" }).eq("id", ANUAL.instrutorId),
     );
     await semErro(
       "designações",
@@ -597,6 +645,63 @@ test.describe("RT-6 · o ano da turma (conferência de 24/10/2026)", () => {
     await expect(ministrada).toHaveText("4 TA");
     await expect(tabela).toContainText(ANUAL.turmas.T2!.codigo);
     await expect(tabela).not.toContainText(ANUAL.turmas.T1!.codigo);
+  });
+
+  /*
+   * Spec 029 (Bloco 14), item 4 — PEND-025-5, FR-004 (D-9 a D-11): *"a janela da carga de uma atribuição nunca sai do
+   * período da própria turma: é a previsão recortada pelo período da turma; se a previsão não toca o período, a janela
+   * é o período da turma"*. O defeito é o da `CAHO 2027` no remoto: a T2 é do ano seguinte e a previsão da disciplina é
+   * do ano corrente, DISJUNTA do período dela. Na ficha do ano da T2, a coluna «Janela prevista» mostrava a previsão, e
+   * o alerta lilás cortava todas as semanas dela (`semanasDoAno`) — a turma não aparecia no alerta de ano nenhum.
+   * ⚠️ O CASO QUE DISCRIMINA é o ano seguinte: hoje a janela da T2 é a previsão e não há alerta; depois, a janela é o
+   *    período da T2 e o alerta nomeia as semanas dele. As semanas de dezembro do ano corrente (o começo da T2) ficam de
+   *    fora pela D-41 da spec 025: o alerta mostra só as semanas do ano escolhido.
+   * ⚠️ CONTROLE, no ano corrente: a previsão da T1 cabe no período dela, e a janela continua a previsão — duas semanas,
+   *    não o período inteiro (o recorte da D-9, não a letra). Passa antes e depois, e prova que a semente gera alerta:
+   *    o vermelho do ano seguinte é da janela, não da falta de carga acima da faixa.
+   */
+  test("FR-004 · no ano da turma de outro ano, a janela é o período da turma e o alerta lilás vê as semanas dele", async ({
+    page,
+  }) => {
+    await entrar(page, EMAIL, "/inicio");
+    await MENU(page).getByRole("link", { name: "Instrutores", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/instrutores");
+    await abrirPainelDeFiltros(page);
+    await page.getByLabel("Buscar por nome").fill(INS_A.toLowerCase());
+    await page.locator(`a[href="/instrutores/${INS_A}"]`).click();
+
+    const carga = page.locator('[data-slot="carga-do-instrutor"]');
+    const tabela = page.locator('[data-slot="atribuicoes-previstas"]');
+    const alerta = page.locator('[data-slot="alerta-conformidade"][data-tom="conformidade"]');
+    const linhaDa = (chave: "T1" | "T2") =>
+      tabela.locator("tbody tr").filter({ hasText: ANUAL.turmas[chave]!.codigo });
+    const titulo = (ano: number) => `Carga semanal prevista acima da faixa do regime em ${ano}`;
+
+    // O ano corrente (controle): a T1, com a previsão dentro do período dela.
+    await expect(carga).toContainText(`Carga horária de ${ANO}`, { timeout: 15_000 });
+    await expect(linhaDa("T1")).toContainText(intervalo(PREVISAO));
+    await expect(alerta).toContainText(titulo(ANO));
+    expect(await semanasDoAlerta(alerta), "o controle: as semanas da T1 mudaram").toEqual(
+      semanasNoAno(PREVISAO, ANO),
+    );
+
+    // O ano da T2.
+    await escolherAno(page, ANO + 1);
+    await expect(carga).toContainText(`Carga horária de ${ANO + 1}`);
+    await expect(tabela).toContainText(ANUAL.turmas.T2!.codigo);
+    await expect
+      .soft(linhaDa("T2"), "a «Janela prevista» saiu do período da turma")
+      .toContainText(intervalo(PERIODO_T2));
+    await expect(alerta, "o alerta lilás não viu a turma do ano seguinte").toHaveCount(1);
+    await expect(alerta).toContainText(titulo(ANO + 1));
+    const semanas = semanasNoAno(PERIODO_T2, ANO + 1);
+    expect(semanas[0], "a amostra: a T2 começa no ano anterior ao dela").toBe(`1/${ANO + 1}`);
+    expect(await semanasDoAlerta(alerta), "o alerta não tem as semanas do período da T2").toEqual(
+      semanas,
+    );
+    // A média cadastrada vence (D-10): 30 TA ÷ 2 semanas da disciplina, em toda semana da janela.
+    const linhas = await alerta.locator("li").allInnerTexts();
+    expect(linhas.filter((l) => !l.endsWith(": 15 h, acima da faixa de 8 a 12 h."))).toEqual([]);
   });
 
   test("o filtro Curso de Instrutores: o habilitado (sem ano) OU o designado no ano; com «Selecionado: Sim», só o designado", async ({

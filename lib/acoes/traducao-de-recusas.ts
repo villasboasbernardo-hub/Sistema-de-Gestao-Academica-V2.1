@@ -205,6 +205,11 @@ const MENSAGEM_DA_RESTRICAO: Readonly<Record<string, string>> = {
     "Só o Tempo Reserva com o tipo de parada informado pode bloquear os tempos de aula.",
   ativ_alunos_so_apoio: "A quantidade de alunos só se informa no Apoio Individualizado.",
   ativ_quantidade_alunos_positiva: "A quantidade de alunos tem de ser maior que zero.",
+  // ── Spec 029 (Bloco 14, item 2) — migration `20261028182926`. A ação recusa antes, com a frase de
+  //    `recusaPelaCategoria`; esta é a da chamada direta, e a do tipo de Estudo Individual recategorizado
+  //    com linha ativa sem descrição (a consequência aceita na D-7).
+  ativ_descricao_fora_do_estudo_individual:
+    "Escreva o que é a atividade. Só o Estudo Individual pode ficar sem o «O que é».",
   atividades_nao_letivas_tipo_parada_id_fkey: "O tipo de parada escolhido não está na lista.",
   atividades_nao_letivas_tipo_atividade_id_fkey: "O tipo de atividade escolhido não está na lista.",
   dpa_global_so_parte_do_dia:

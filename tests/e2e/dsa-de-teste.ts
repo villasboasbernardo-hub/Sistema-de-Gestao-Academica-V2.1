@@ -121,7 +121,10 @@ export type DsaSemeado = {
   readonly codDisciplina: string;
   /** ⚠️ A disciplina **sem unidades**: é ela que faz o modo da `Q-1` aparecer. */
   readonly codDisciplinaIsenta: string;
-  /** ⚠️ A de **TFM**: o único teto RÍGIDO do épico (`RN-DIST-03` (a)). */
+  /**
+   * ⚠️ A de **TFM**: até 27/10/2026, o único teto RÍGIDO do épico (`RN-DIST-03` (a)); desde a emenda
+   * (spec 029, `FR-001`), disciplina comum do recomendado — é ela que prova que o TFM não recusa mais.
+   */
   readonly codDisciplinaTfm: string;
   /** Quem TEM vínculo em `instrutor_disciplina` — o controle positivo da habilitação. */
   readonly nomeHabilitado: string;
@@ -551,8 +554,10 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
    *
    * ⚠️ A isenta é o que faz o modo *"Aula sem unidade"* aparecer: a tela só o oferece onde
    * `app.disciplina_sem_ue` vale, e oferecê-lo sempre faria o banco recusar com `23514`.
-   * ⚠️ A de TFM existe para o **único teto que bloqueia** no épico: o nome casa com o marcador `tfm` que
-   * `lib/dominio/dsa/tetos.ts` normaliza sem acento.
+   * ⚠️ A de TFM nasceu para o **único teto que bloqueava** no épico (o nome casava com o marcador `tfm`
+   * de `lib/dominio/dsa/tetos.ts`). Desde a emenda da `RN-DIST-03` (a), de 27/10/2026 (spec 029,
+   * `FR-001`), o marcador saiu e ela é disciplina comum: fica para provar que 7 TA de TFM na semana
+   * gravam sem recusa e sem aviso (`dsa-cartao-unico.spec.ts`), e como a segunda disciplina com UE.
    */
   for (const d of [
     { cod: semeado.codDisciplinaIsenta, nome: "Disciplina sem unidades do percurso", isenta: true },

@@ -140,8 +140,10 @@ select jsonb_build_object(
   'tipos_avaliacao', (select coalesce(jsonb_agg(valor), '[]') from public.config_listas where lista = 'tipos_avaliacao' and ativo),
   'tipos_parada', (select coalesce(jsonb_object_agg(valor, id), '{{}}') from public.config_listas where lista = 'tipos_parada' and ativo),
   'salas', (select coalesce(jsonb_agg(valor), '[]') from public.config_listas where lista = 'salas' and ativo),
+  -- So o recomendado: `dsa.teto_tfm_semana` ficou como dado inerte com a emenda da RN-DIST-03 (a), de
+  -- 27/10/2026 (spec 029, FR-001 e D-3), e o codigo deixou de le-lo.
   'tetos', (select coalesce(jsonb_object_agg(chave, valor), '{{}}') from public.config_parametros
-             where chave in ('dsa.teto_tfm_semana', 'dsa.teto_recomendado_semana') and status = 'ativo'),
+             where chave = 'dsa.teto_recomendado_semana' and status = 'ativo'),
   'feriados', (select coalesce(jsonb_agg(jsonb_build_object(
        'data', f.data, 'descricao', f.descricao, 'impacto', f.impacto, 'codigo', f.codigo)), '[]')
        from public.feriados f where f.status = 'ativo' and f.data between {de}::date and {ate}::date),

@@ -2,8 +2,9 @@
 
 O QUE  : monta uma planilha SINTETICA do modelo (nomes ficticios), le, e confere bloco a bloco;
          depois arma um retrato de banco em memoria e confere cada recusa pelo caso que a
-         discrimina — o instrutor homonimo em outro posto, o vinculo inativo, a UE que falta,
-         o 7º TA de TFM.
+         discrimina — o instrutor homonimo em outro posto, o vinculo inativo, a UE que falta.
+         ⚠️ O 7º TA de TFM era recusa ate 27/10/2026; desde a emenda da RN-DIST-03 (a) (spec 029,
+         FR-001, D-4) a prova e a INVERSA: os 7 TA passam sem recusa e sem aviso.
 
 PARA QUE: validacao que nunca foi vista recusando nao e validacao. Esta carga escreve fora da
          Server Action, entao o que ela nao recusar ninguem recusa: o banco, medido em
@@ -203,7 +204,9 @@ def retrato(habilitado: str = "ativo") -> dict:
         "tipos_atividade": [{"valor": "Estudo Individual", "categoria": "Estudo_Individual"}],
         "tipos_avaliacao": ["Prova Escrita"],
         "salas": [],
-        "tetos": {"dsa.teto_tfm_semana": "6", "dsa.teto_recomendado_semana": "25"},
+        # Espelho de `banco.py`, que so le o recomendado desde 27/10/2026 (spec 029, D-3): a chave do TFM
+        # ficou no banco como dado inerte, e a prova que ela nao vale esta no fim do bloco «O PLANO».
+        "tetos": {"dsa.teto_recomendado_semana": "25"},
         "feriados": [],
         "da_turma": [],
         "codigos": {"registros_aula": [], "avaliacoes": [], "atividades_nao_letivas": []},
@@ -262,14 +265,17 @@ def main() -> int:
     p = plano.montar(leitura, retrato(), DECISOES, "sintetica.xlsx", "2026-03-10")
     recusas = "\n".join(p.recusas)
     conferir("UE que o banco nao tem: recusa, e nao cria", "UE 9 da disciplina I NAO existe" in recusas, recusas)
-    conferir("7 TA de TFM numa semana: recusa (RN-DIST-03)", "teto de TFM" in recusas, recusas)
+    # Spec 029 (FR-001): a RN-DIST-03 (a) foi emendada em 27/10/2026 — o TFM nao tem mais teto rigido.
+    conferir("7 TA de TFM numa semana: NAO recusa nem avisa (RN-DIST-03 (a) emendada em 27/10/2026)",
+             not any("Treinamento Físico Militar" in x or "teto de TFM" in x for x in p.recusas + p.alertas),
+             p.recusas + p.alertas)
     conferir("UE × CH do catalogo da planilha: a UE 9, que nao entrou, nao fecha — recusa",
              "UE I+9: lancado 0 TA" in recusas, recusas)
     conferir("disciplina × CONTROLE: I soma 6 no plano e a planilha conta 7 — recusa",
              "disciplina I: o plano soma 6 TA" in recusas, recusas)
     conferir("controle positivo: T fecha com a UE (7) e com o CONTROLE (7), e nao e acusada",
              "UE T+1" not in recusas and "disciplina T:" not in recusas, recusas)
-    conferir("so essas quatro recusas", len(p.recusas) == 4, p.recusas)
+    conferir("so essas tres recusas (a do TFM saiu com a emenda de 27/10/2026)", len(p.recusas) == 3, p.recusas)
     conferir("o titulo da prova vem da planilha", p.avaliacoes[0]["conteudo_resumo"] == "PROVA", p.avaliacoes[0])
     andamento = plano.montar(leitura, retrato(), {**DECISOES, "turma_em_andamento": True}, "s.xlsx", "2026-03-10")
     conferir("turma em andamento: UE abaixo da CH vira alerta, nao recusa",
@@ -286,10 +292,25 @@ def main() -> int:
     conferir("instrutor com vinculo inativo: as aulas dele sao recusadas",
              sum("nao esta habilitado" in r for r in p_inativo.recusas) == 2, p_inativo.recusas)
 
-    seis = retrato()
-    seis["tetos"]["dsa.teto_tfm_semana"] = "7"
-    conferir("o teto vem do PARAMETRO: com 7 no banco, os mesmos 7 TA passam",
-             not any("teto de TFM" in r for r in plano.montar(leitura, seis, DECISOES, "s.xlsx", "2026-03-10").recusas))
+    # Spec 029 (FR-001, D-3): a chave do TFM continua no banco, em 6, como dado inerte. O caso que discrimina
+    # a carrega de volta no retrato e exige que ela NAO valha — sem ele, o plano poderia voltar a le-la e esta
+    # prova so veria o retrato sem a chave.
+    inerte = retrato()
+    inerte["tetos"]["dsa.teto_tfm_semana"] = "6"
+    p_inerte = plano.montar(leitura, inerte, DECISOES, "s.xlsx", "2026-03-10")
+    conferir("a chave inerte do TFM (6) de volta no retrato: os mesmos 7 TA continuam sem recusa e sem aviso",
+             not any("Treinamento Físico Militar" in x or "teto de TFM" in x for x in p_inerte.recusas + p_inerte.alertas),
+             p_inerte.recusas + p_inerte.alertas)
+    # E o numero do TFM e o do RECOMENDADO, como o de qualquer disciplina: com 5 no banco, os 7 TA alertam
+    # com a frase comum — alerta, nunca recusa (RN-DEG-02).
+    baixo = retrato()
+    baixo["tetos"]["dsa.teto_recomendado_semana"] = "5"
+    p_baixo = plano.montar(leitura, baixo, DECISOES, "s.xlsx", "2026-03-10")
+    do_tfm = [x for x in p_baixo.alertas if "Treinamento Físico Militar" in x]
+    conferir("o teto vem do PARAMETRO do recomendado: com 5 no banco, o TFM de 7 TA da o alerta comum",
+             len(do_tfm) == 1 and "o recomendado e 5" in do_tfm[0] and "teto de TFM" not in do_tfm[0]
+             and not any("Treinamento Físico Militar" in r for r in p_baixo.recusas),
+             (do_tfm, p_baixo.recusas))
 
     print("A TRANSACAO")
     ensaio, gravar = plano.sql(p, DECISOES, ensaio=True), plano.sql(p, DECISOES, ensaio=False)

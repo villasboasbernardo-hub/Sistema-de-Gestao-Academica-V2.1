@@ -5,8 +5,17 @@
  * > próximos 30 dias, e alertas do que falta (data, instrutor, conflito)."* — pedido de Bernardo Villas Boas,
  * > 16/10/2026
  *
- * ⚠️ **DO RECORTE** (C-14): os números são das turmas que a lista mostra — o filtro muda os dois juntos. A arquivada
- *    fica fora sem *Mostrar arquivadas* (FR-005.3).
+ * ⚠️ **DO RECORTE** (C-14): os números são das turmas do recorte da lista — o filtro de curso, situação e busca muda
+ *    os dois juntos.
+ * ⚠️ **A ARQUIVADA CONTA NOS INDICADORES, COM OU SEM *MOSTRAR ARQUIVADAS*** (RT-8; spec 029, `FR-007.3`, que emenda o
+ *    FR-005.3 da spec 017):
+ *    > *"Arquivar esconde a turma das listas do dia a dia […], mas ela CONTINUA contando nas estatísticas e nos
+ *    > cartões do ano dela, com a situação que tinha."* — Bernardo Villas Boas, 28/10/2026
+ *    O filtro mexe só na tabela; por isso o *Total* deixa de bater com as linhas quando há arquivada fora da lista, e o
+ *    cabeçalho da página diz quantas são (D-19). Exceção: *Iniciando* **não** a conta (D-18) — não é situação, e a
+ *    arquivada está travada, não vai começar. Os **avisos** não mudam: sem ela, salvo com *Mostrar arquivadas* — aviso
+ *    é lista do dia a dia (a página Avisos tira a arquivada antes de chamar esta função, e `/turmas` só desenha os
+ *    números).
  * ⚠️ **"EM ANDAMENTO" É A SITUAÇÃO ATIVA; "INICIANDO" É [hoje, hoje + N], NÃO CANCELADA** (C-15), com N de
  *    `config_parametros` (`turmas.aviso_inicio_dias`, regra 8).
  * ⚠️ **O CONFLITO É A `RN-CONF-01`, PELO PONTO ÚNICO** (`detectarConflitos`, C-16 e C-23): só de PESSOA, inclusive
@@ -117,20 +126,27 @@ export function painelDeTurmas(entrada: {
 } {
   const { hoje, diasDeAviso, linhas, ocupacao } = entrada;
   const doAno = entrada.turmas.filter((t) => t.ano === entrada.ano);
+  /*
+   * ⚠️ **DUAS POPULAÇÕES, E A DIFERENÇA É A RT-8**: os indicadores contam `doAno` inteiro, arquivada inclusive e sem
+   *    olhar `mostrarArquivadas` (a situação dela é a que tinha, D-COR-5); os avisos usam `turmas`, que só a traz de
+   *    volta com o filtro — como antes do Bloco 14 (FR-005.3 da spec 017, na parte dos avisos, que a RT-8 não emenda).
+   */
   const turmas = entrada.mostrarArquivadas ? doAno : doAno.filter((t) => !t.arquivada);
   const limite = diasDeAviso === null ? null : maisDias(hoje, diasDeAviso);
 
   const indicadores: IndicadoresDeTurmas = {
-    total: turmas.length,
-    planejadas: turmas.filter((t) => t.status === "planejada").length,
-    emAndamento: turmas.filter((t) => t.status === "ativa").length,
-    concluidas: turmas.filter((t) => t.status === "concluida").length,
-    canceladas: turmas.filter((t) => t.status === "cancelada").length,
+    total: doAno.length,
+    planejadas: doAno.filter((t) => t.status === "planejada").length,
+    emAndamento: doAno.filter((t) => t.status === "ativa").length,
+    concluidas: doAno.filter((t) => t.status === "concluida").length,
+    canceladas: doAno.filter((t) => t.status === "cancelada").length,
+    /* D-18 (spec 029): a arquivada fica fora de «iniciando», com ou sem o filtro — ela está travada. */
     iniciando:
       limite === null
         ? null
-        : turmas.filter(
+        : doAno.filter(
             (t) =>
+              !t.arquivada &&
               t.status !== "cancelada" &&
               t.dataInicio !== null &&
               t.dataInicio >= hoje &&

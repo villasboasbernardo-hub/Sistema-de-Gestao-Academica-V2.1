@@ -87,9 +87,16 @@ export function fraseDaTurmaArquivada(e: {
 export const RECUSA_DA_TURMA_ARQUIVADA = `A turma está arquivada: somente leitura. Para gravar, ela precisa ser desarquivada (desarquivam ${QUEM_DESARQUIVA}).`;
 
 /**
- * As listas de turma escondem a arquivada (C-24): `/inicio`, a aba *Grade* do curso e a pré-seleção, *"Turmas com
- * teto excedido"*, o filtro de `/atividades` e a cascata de `/disciplinas`. Em `/turmas`, ela volta com *Mostrar
- * arquivadas*. A ficha do instrutor, `/admin/salas` e as contas de limite continuam com ela, por histórico (C-7).
+ * As listas de turma escondem a arquivada (C-24): o carrossel das turmas e o dos DSA publicados do `/inicio`, a aba
+ * *Grade* do curso e a pré-seleção, *"Turmas com teto excedido"*, o filtro de `/atividades` e a cascata de
+ * `/disciplinas`. Em `/turmas`, ela volta à tabela com *Mostrar arquivadas*. A ficha do instrutor, `/admin/salas` e as
+ * contas de limite continuam com ela, por histórico (C-7).
+ *
+ * ⚠️ **ESTA FUNÇÃO É PARA LISTA, NUNCA PARA ESTATÍSTICA NEM CARTÃO DO ANO** (RT-8; spec 029, `FR-007`, que emenda a
+ *    C-24 da spec 017 na parte do panorama do `/inicio`): *"ela CONTINUA contando nas estatísticas e nos cartões do ano
+ *    dela, com a situação que tinha"* (Bernardo Villas Boas, 28/10/2026). Os cartões do Início contam o panorama COM
+ *    a arquivada (`contagemPorSituacao`) e os indicadores de `/turmas` contam o ano inteiro (`painelDeTurmas`); aplicar
+ *    esta função antes de contar é exatamente o defeito que a RT-8 corrigiu.
  */
 export function semAsArquivadas<T>(
   turmas: readonly T[],

@@ -8,8 +8,15 @@
  * antiguidade, e um construtor paralelo devolveria o *"esquecer numa tela nova"* que ele elimina.
  *
  * ⚠️ **SÓ OS HABILITADOS APARECEM** (`RF-MATERIAS-02`). Quando a lista está vazia, a tela **oferece o
- * caminho de habilitar** em vez de mostrar um seletor mudo — são **55** disciplinas reais nessa
- * situação, e um seletor vazio sem saída é o que faz alguém concluir que o sistema está quebrado.
+ * caminho de habilitar** em vez de mostrar um seletor mudo — um seletor vazio sem saída é o que faz
+ * alguém concluir que o sistema está quebrado. *(O comentário dizia "55 disciplinas reais", sem data
+ * nem artefato — regra 9.2; o número não foi remedido.)*
+ *
+ * ⚠️ **E O VAZIO DIZ O MOTIVO CERTO** (spec 029, `FR-006.3`): sem `instrutores.ler`, a RLS devolve a
+ * lista vazia e a frase seria *"Nenhum instrutor habilitado"* — o «não há» onde o motivo é «você não
+ * vê». Com a leitura dos habilitados em falha, a frase diz que ela falhou (D-16). No rateio por UE, a
+ * lista de cada unidade é a dos ATRIBUÍDOS, e vazia ela pede para acrescentar instrutor — não a caixa
+ * *"Nada cadastrado ainda"* repetida em cada UE, que era o que aparecia.
  *
  * ⚠️ **A SOMA É ANTECIPADA PELA FUNÇÃO PURA; quem GARANTE é o banco** (`FR-043`). `ratear` mostra o
  * número e a frase antes de gravar; o gatilho adiado recusa se não fechar. Se um dia discordarem,
@@ -31,6 +38,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { definirInstrutoresDaTurma } from "@/lib/acoes/atribuicao";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import {
+  fraseDaListaDeInstrutoresVazia,
+  vazioDaListaDeInstrutores,
+} from "@/lib/dominio/dsa/instrutores-da-aula";
 import { explicacaoDoCaso, ratear, type ModoDeAtribuicao } from "@/lib/dominio/rateio-de-carga";
 
 import type { HabilitadoDaLinha, InstrutorDaLinha, UnidadeDaLinha } from "../consulta";
@@ -46,6 +57,10 @@ type PropsDoPainel = {
   readonly unidades: readonly UnidadeDaLinha[];
   readonly escala: EscalaDeAntiguidade;
   readonly podeEditar: boolean;
+  /** O perfil tem `instrutores.ler`? Decidido no servidor (FR-006 da spec 029). */
+  readonly podeLerInstrutores: boolean;
+  /** A leitura dos habilitados deu certo? Falha não é «nenhum habilitado» (D-16 da spec 029). */
+  readonly habilitadosLidos: boolean;
 };
 
 /**
@@ -60,7 +75,10 @@ export function PainelDeInstrutores(props: PropsDoPainel) {
     modoDaDisciplina,
     atribuidos,
     habilitados,
+    escala,
     podeEditar,
+    podeLerInstrutores,
+    habilitadosLidos,
   } = props;
   const [mensagem, setMensagem] = React.useState<string | null>(null);
   const atribuidosEmOrdem = habilitados.filter((h) =>
@@ -110,16 +128,31 @@ export function PainelDeInstrutores(props: PropsDoPainel) {
         ) : null}
       </div>
 
-      {habilitados.length === 0 ? (
-        /* ⚠️ **CAMINHO CLICÁVEL, e não um beco.** São 55 disciplinas reais sem ninguém habilitado. */
+      {habilitados.length === 0 && (!podeLerInstrutores || !habilitadosLidos) ? (
+        /*
+         * ⚠️ **A LISTA VAZIA QUE NÃO É «NÃO HÁ»** (FR-006.3 e D-16 da spec 029): sem `instrutores.ler`, o «você não vê»;
+         *    com a leitura em falha, que ela falhou. As duas frases saem do vazio do seletor único — a do «você não vê» é
+         *    dele, e o desenho (`role="status"`, `data-motivo`) é o mesmo dos campos.
+         */
+        <SeletorInstrutor
+          instrutores={[]}
+          escala={escala}
+          aoMudar={() => undefined}
+          rotulo="Instrutores habilitados nesta disciplina"
+          vazio={vazioDaListaDeInstrutores(podeLerInstrutores, "sem-leitura")}
+        />
+      ) : habilitados.length === 0 ? (
+        /*
+         * ⚠️ **CAMINHO CLICÁVEL, e não um beco.** A frase é a do dono único (`sem-habilitado`, a mesma da aula do DSA e
+         *    do TA fora do DSA); o vínculo é da tela.
+         */
         <p className="text-texto-suave text-sm" data-slot="sem-habilitado">
-          Nenhum instrutor habilitado nesta disciplina. A habilitação é feita na ficha do instrutor,
-          no painel de disciplinas —{" "}
+          {fraseDaListaDeInstrutoresVazia("sem-habilitado")}{" "}
           <Link
             href="/instrutores"
             className="text-marca rounded-ciaara-sm underline focus-visible:ring-2 focus-visible:outline-none"
           >
-            abrir a lista de instrutores
+            Abrir a lista de instrutores
           </Link>
           .
         </p>
@@ -159,6 +192,7 @@ function EditorDeInstrutores({
   unidades,
   escala,
   podeEditar,
+  podeLerInstrutores,
   fechar,
   aoGravar,
 }: PropsDoPainel & { readonly fechar: () => void; readonly aoGravar: () => void }) {
@@ -292,6 +326,11 @@ function EditorDeInstrutores({
                 escala={escala}
                 valor=""
                 aoMudar={(id) => setMarcados((atuais) => [...atuais, id])}
+                /*
+                 * ⚠️ Inalcançável pelo `naoMarcados.length > 0` acima, que esconde o campo quando todos os
+                 *    habilitados já estão marcados; o vazio declarado é o da lista de onde ele sai.
+                 */
+                vazio={vazioDaListaDeInstrutores(podeLerInstrutores, "sem-habilitado")}
                 className="w-80"
               />
             </div>
@@ -345,6 +384,11 @@ function EditorDeInstrutores({
                     valor={donoDaUnidade[u.id] ?? ""}
                     aoMudar={(id) => setDonoDaUnidade((atuais) => ({ ...atuais, [u.id]: id }))}
                     rotulo={`Instrutor da unidade ${u.numeroUe}`}
+                    /*
+                     * ⚠️ A lista de cada UE é a dos ATRIBUÍDOS (`emOrdem`): vazia, ninguém foi acrescentado ainda —
+                     *    FILTRO de atribuição, não falta de cadastro (FR-006 da spec 029).
+                     */
+                    vazio={vazioDaListaDeInstrutores(podeLerInstrutores, "sem-atribuido")}
                     className="w-72"
                   />
                 </li>
