@@ -44,11 +44,24 @@ export const PAPEIS_BASE = [
 /** Séries de gráfico. Consumidas a partir da fatia (b); declaradas aqui porque são papel. */
 export const SERIES = Array.from({ length: 8 }, (_, i) => `serie-${i + 1}`);
 
+/**
+ * As cores da moeda da abertura (spec 028, Bloco 13): ouro no claro, prata no escuro. São de uma tela só e não pintam
+ * texto — por isso não têm par de contraste —, mas são papel: mudam com o tema e entram nos três lugares.
+ */
+export const MOEDA = [
+  "moeda-borda-escura",
+  "moeda-borda",
+  "moeda-borda-clara",
+  "moeda-reflexo",
+  "moeda-sombra",
+] as const;
+
 /** Todo papel que `:root` e `.dark` MUST declarar. */
 export const PAPEIS: readonly string[] = [
   ...PAPEIS_BASE,
   ...STATUS.flatMap((s) => [`${s}-fundo`, `${s}-tinta`, `${s}-borda`]),
   ...SERIES,
+  ...MOEDA,
 ];
 
 export type Par = {

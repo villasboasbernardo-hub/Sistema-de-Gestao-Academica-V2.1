@@ -60,6 +60,7 @@ import {
 import { claro, escuro } from "@/lib/design/ler-globals";
 import {
   ISENTOS,
+  MOEDA,
   PAPEIS_BASE,
   PARES,
   PENDENTES,
@@ -257,6 +258,14 @@ export default function Vitrine() {
       <Secao titulo="Séries de gráfico — ordem fixa, luminâncias distintas para sobreviver ao P&B">
         <div className="grid grid-cols-4 gap-3 md:grid-cols-8">
           {SERIES.map((t) => (
+            <Amostra key={t} token={t} {...valores(temaClaro, temaEscuro, t)} />
+          ))}
+        </div>
+      </Secao>
+
+      <Secao titulo="Moeda da abertura — ouro no tema claro, prata no escuro (spec 028)">
+        <div className="grid grid-cols-3 gap-3 md:grid-cols-5">
+          {MOEDA.map((t) => (
             <Amostra key={t} token={t} {...valores(temaClaro, temaEscuro, t)} />
           ))}
         </div>

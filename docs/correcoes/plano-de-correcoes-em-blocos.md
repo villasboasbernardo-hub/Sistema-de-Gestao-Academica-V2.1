@@ -39,6 +39,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **10** | Padrões de tela, turma, curso, estatísticas, calendário e ano — ✅ **concluído em 25/10/2026** | duas migrations (a 1ª pelo portão 9.4; a 2ª com autorização condicional) | 025 |
 | **11** | Lançamento do DSA e Início com o DSA publicado — ✅ **concluído em 26/10/2026** | uma migration, que só acrescenta | 026 |
 | **12** | Excluir no Calendário: exclusão lógica, sem bloqueio, com alerta de impacto (D-COR-7) — ✅ **concluído em 27/10/2026** | uma migration, que só acrescenta | 027 |
+| **13** | Abertura com a moeda do CIAARA na raiz — 🟨 **em conferência** | não | 028 |
 
 ---
 
@@ -590,6 +591,27 @@ _Pedido de Bernardo Villas Boas, 27/10/2026, pelo `/corrigir`, com a decisão de
   `impedimentos_de_exclusao_dos_feriados` não são mais chamadas pela tela e seguem alcançáveis por RPC direta com
   `calendario.criar` (Admin e Encarregado) — a física só passa em linha sem registro nenhum. Revogar o `execute` é
   migration que altera permissão (portão 9.4).
+
+---
+
+## Bloco 13 — Abertura com a moeda do CIAARA na raiz (spec própria) — 🟨 EM CONFERÊNCIA
+
+_Pedido de Bernardo Villas Boas, 27/10/2026, pelo `/corrigir`._ Spec `028-bloco-13-abertura-com-a-moeda`, ramo
+`feat/BLOCO-13-abertura-com-a-moeda`, um PR. **Sem banco. O papel do DSA não muda.** Referência: o protótipo aprovado
+(guardado na pasta da spec) e as quatro imagens de `public/abertura/`.
+
+1. **A raiz mostra só a moeda e o botão "Início"** (link para `/inicio`); saem o título, a linha da Divisão/Ambiente, o
+   parágrafo e o rodapé da v2.0. O aviso *"Configuração incompleta"* fica igual.
+2. **A animação do protótipo, com os mesmos tempos** (~3,5 s): surge no verso, afasta-se de 1,6× a 1× girando duas voltas
+   e meia (180° a 1080°), sobe e desce com sombra, para na frente; o reflexo passa e o botão aparece focado. Tema claro
+   ouro sobre o fundo do sistema; escuro prata sobre `ciaara-azul-900/800`.
+3. **Aba oculta pausa e retoma; Esc ou clique pulam; movimento reduzido abre no quadro final; o botão só é focável
+   depois de aparecer.** A página continua Server Component, com uma folha de cliente (`app/AberturaComMoeda.tsx`) e a
+   API de animação nativa; os tempos e a máquina de estados num módulo puro e testado (`lib/design/abertura-da-moeda.ts`).
+4. **Cinco papéis de cor novos** (`--moeda-*`), ouro no claro e prata no escuro, nos três lugares (`app/globals.css`,
+   `lib/design/vocabulario.ts`, a vitrine).
+
+**Pendências novas:** nenhuma.
 
 ---
 
