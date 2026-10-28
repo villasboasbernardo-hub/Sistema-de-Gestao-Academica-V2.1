@@ -1,0 +1,147 @@
+<title>Abertura CIAARA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: coluna centralizada — moeda 3D e, embaixo, só o botão "Início". ~3,5 s.
+   Tokens copiados de app/globals.css do CIAARA-11 (claro: --fundo/--marca; escuro: rampa ciaara-azul). */
+@font-face{font-family:"Rawline"; src:url(rawline-600.woff2) format("woff2"); font-weight:600; font-display:swap}
+:root{
+  --fundo:#f4f7fa; --fundo-2:#ffffff; --marca:#003366; --marca-contraste:#ffffff; --foco:#1f5a97;
+  --texto-suave:#47546a; --sombra:rgb(15 23 32 / .28);
+  --borda-1:#6e4f1c; --borda-2:#e3c477; --borda-3:#4a3410; --reflexo:#fff5d5c0;
+  --m-frente:url(frente-ouro.webp); --m-verso:url(verso-ouro.webp);
+  --font-sans:"Rawline",ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --moeda:min(48vmin,400px); --esp:calc(var(--moeda)*.06);
+  --raio:.375rem; --sombra-botao:0 2px 4px -1px rgb(15 23 32 / .08),0 4px 8px -2px rgb(15 23 32 / .1);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  color-scheme:dark; --fundo:#00152b; --fundo-2:#001f3f; --marca:#4a7fb8; --marca-contraste:#04121f; --foco:#7ea7d2;
+  --texto-suave:#a8b3c2; --sombra:rgb(0 0 0 / .6);
+  --borda-1:#5b5d63; --borda-2:#e6e7ea; --borda-3:#34363b; --reflexo:#f2f6ffc8;
+  --m-frente:url(frente-prata.webp); --m-verso:url(verso-prata.webp);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark; --fundo:#00152b; --fundo-2:#001f3f; --marca:#4a7fb8; --marca-contraste:#04121f; --foco:#7ea7d2;
+  --texto-suave:#a8b3c2; --sombra:rgb(0 0 0 / .6);
+  --borda-1:#5b5d63; --borda-2:#e6e7ea; --borda-3:#34363b; --reflexo:#f2f6ffc8;
+  --m-frente:url(frente-prata.webp); --m-verso:url(verso-prata.webp);
+}
+html,body{height:100%}
+body{background:var(--fundo); color:var(--texto-suave); font-family:var(--font-sans); overflow:hidden;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px))}
+#palco{position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(40px,8vh,72px);
+  background:radial-gradient(90% 70% at 50% 42%,var(--fundo-2) 0%,var(--fundo) 70%)}
+
+#pos{position:relative; width:var(--moeda); height:var(--moeda); flex:none}
+#sombra{position:absolute; left:14%; right:14%; bottom:-11%; height:8%; border-radius:50%;
+  background:radial-gradient(ellipse,var(--sombra),transparent 70%); filter:blur(6px); opacity:0}
+#zoom{position:absolute; inset:0; perspective:1400px; opacity:0}
+#lift,#moeda{position:absolute; inset:0; transform-style:preserve-3d}
+#moeda{transform:rotateY(180deg)}
+.borda{position:absolute; inset:.6%; border-radius:50%;
+  background:linear-gradient(90deg,var(--borda-3),var(--borda-1) 20%,var(--borda-2) 48%,var(--borda-1) 78%,var(--borda-3));
+  transform:translateZ(calc(var(--esp)*(var(--i)/15 - .5)))}
+.face{position:absolute; inset:0; border-radius:50%; backface-visibility:hidden; -webkit-backface-visibility:hidden; isolation:isolate; overflow:hidden}
+.face img{position:absolute; inset:0; width:100%; height:100%; user-select:none; -webkit-user-drag:none}
+.frente{transform:translateZ(calc(var(--esp)/2))}
+.verso{transform:rotateY(180deg) translateZ(calc(var(--esp)/2))}
+/* claro = ouro, escuro = prata */
+.prata{display:none}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ouro{display:none} :root:not([data-theme="light"]) .prata{display:block} }
+:root[data-theme="dark"] .ouro{display:none} :root[data-theme="dark"] .prata{display:block}
+.brilho{position:absolute; inset:0; pointer-events:none; mix-blend-mode:screen;
+  background:linear-gradient(105deg,transparent 36%,transparent 41%,var(--reflexo) 50%,transparent 59%,transparent 64%);
+  background-size:300% 100%; background-position:130% 0; -webkit-mask-size:100% 100%; mask-size:100% 100%}
+.frente .brilho{-webkit-mask-image:var(--m-frente); mask-image:var(--m-frente)}
+.verso .brilho{-webkit-mask-image:var(--m-verso); mask-image:var(--m-verso)}
+
+#acao{min-height:48px; display:flex; align-items:center}
+#ir{font:600 1rem/1 var(--font-sans); letter-spacing:.02em; color:var(--marca-contraste); background:var(--marca);
+  border:0; border-radius:var(--raio); padding:14px 40px; cursor:pointer; box-shadow:var(--sombra-botao)}
+#ir:hover{filter:brightness(1.1)}
+#ir:focus-visible,.proto button:focus-visible{outline:2px solid var(--foco); outline-offset:3px}
+.proto{position:absolute; top:calc(14px + env(safe-area-inset-top,0px)); left:calc(14px + env(safe-area-inset-left,0px));
+  display:flex; flex-wrap:wrap; gap:6px; align-items:center; font:600 .72rem var(--font-sans)}
+.proto span{letter-spacing:.14em; text-transform:uppercase; margin-right:4px}
+.proto button{font:inherit; color:var(--texto-suave); background:transparent; border:1px solid currentColor; padding:5px 10px; border-radius:999px; cursor:pointer; opacity:.85}
+.proto button[aria-pressed="true"]{background:var(--marca); color:var(--marca-contraste); border-color:var(--marca); opacity:1}
+</style>
+
+<div id="palco">
+  <div id="pos">
+    <div id="sombra"></div>
+    <div id="zoom"><div id="lift"><div id="moeda">
+      <div class="borda" style="--i:0"></div><div class="borda" style="--i:1"></div><div class="borda" style="--i:2"></div><div class="borda" style="--i:3"></div>
+      <div class="borda" style="--i:4"></div><div class="borda" style="--i:5"></div><div class="borda" style="--i:6"></div><div class="borda" style="--i:7"></div>
+      <div class="borda" style="--i:8"></div><div class="borda" style="--i:9"></div><div class="borda" style="--i:10"></div><div class="borda" style="--i:11"></div>
+      <div class="borda" style="--i:12"></div><div class="borda" style="--i:13"></div><div class="borda" style="--i:14"></div><div class="borda" style="--i:15"></div>
+      <div class="face frente">
+        <img class="ouro" src="frente-ouro.webp" alt="Moeda do CIAARA: marinheiro com sextante, farol e navio, com os dizeres CIAARA e Formando do Nauta à Estrela-Guia">
+        <img class="prata" src="frente-prata.webp" alt="Moeda do CIAARA: marinheiro com sextante, farol e navio, com os dizeres CIAARA e Formando do Nauta à Estrela-Guia">
+        <div class="brilho" id="brilho-frente"></div>
+      </div>
+      <div class="face verso">
+        <img class="ouro" src="verso-ouro.webp" alt="">
+        <img class="prata" src="verso-prata.webp" alt="">
+        <div class="brilho"></div>
+      </div>
+    </div></div></div>
+  </div>
+  <div id="acao"><button id="ir" type="button" hidden>Início</button></div>
+  <div class="proto" aria-label="Controles do protótipo">
+    <span>Protótipo</span>
+    <button type="button" data-tema="" aria-pressed="true">Sistema</button>
+    <button type="button" data-tema="light" aria-pressed="false">Claro</button>
+    <button type="button" data-tema="dark" aria-pressed="false">Escuro</button>
+    <button type="button" id="b-rever">Rever</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const root = document.documentElement;
+  const reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let anims = [], estado = 'aguardando';
+  const SAI = 'cubic-bezier(.2,.7,.2,1)';
+  const anima = (sel, kf, opt) => { const a = $(sel).animate(kf, {fill:'both', ...opt}); anims.push(a); return a; };
+
+  // ~3,5 s: surge no verso, zoom-out com duas voltas e meia, para na frente (CIAARA), reflexo e botão
+  function animar(){
+    anima('#zoom', [{opacity:0},{opacity:1}], {duration:400, easing:'ease-out'});
+    anima('#zoom', [{transform:'scale(1.6)'},{transform:'scale(1)'}], {duration:2500, easing:SAI, composite:'add'});
+    anima('#moeda', [{transform:'rotateY(180deg)'},{transform:'rotateY(1080deg)'}], {duration:3000, easing:'cubic-bezier(.3,.05,.15,1)'});
+    anima('#lift', [{transform:'translateZ(0) rotateX(0)'},{transform:'translateZ(60px) rotateX(8deg)', offset:.4},{transform:'translateZ(0) rotateX(0)'}], {duration:3000, easing:'ease-in-out'});
+    anima('#sombra', [{opacity:0},{opacity:1}], {duration:1200, delay:400});
+    const r = anima('#brilho-frente', [{backgroundPosition:'130% 0'},{backgroundPosition:'-30% 0'}], {duration:750, delay:2750, easing:'ease-in-out'});
+    r.finished.then(revelaBotao).catch(() => {});
+  }
+  function revelaBotao(){
+    if (estado === 'fim') return; estado = 'fim';
+    const b = $('#ir'); b.hidden = false;
+    b.animate([{opacity:0, transform:'translateY(8px)'},{opacity:1, transform:'none'}], {duration:350, easing:SAI});
+    b.focus({preventScroll:true});
+  }
+
+  // Só começa (e só continua) com a aba visível
+  function tocar(){
+    if (document.visibilityState !== 'visible') return;
+    if (estado === 'aguardando'){ estado = 'tocando'; animar(); if (reduz) pular(); }
+    else if (estado === 'pausado'){ estado = 'tocando'; anims.forEach(a => a.playState === 'paused' && a.play()); }
+  }
+  function pausar(){ if (estado !== 'tocando') return; estado = 'pausado'; anims.forEach(a => a.playState === 'running' && a.pause()); }
+  function pular(){ if (estado === 'fim') return; anims.forEach(a => { try { a.finish() } catch(e){} }); revelaBotao(); }
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' ? tocar() : pausar());
+  addEventListener('keydown', e => { if (e.key === 'Escape') pular(); });
+  $('#palco').addEventListener('click', e => { if (estado === 'tocando' && !e.target.closest('button')) pular(); });
+
+  // Controles do protótipo (não vão para o sistema)
+  document.querySelectorAll('[data-tema]').forEach(b => b.addEventListener('click', () => {
+    const t = b.dataset.tema; t ? root.setAttribute('data-theme', t) : root.removeAttribute('data-theme');
+    document.querySelectorAll('[data-tema]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  }));
+  $('#b-rever').addEventListener('click', () => { anims.forEach(a => a.cancel()); anims = []; estado = 'aguardando'; $('#ir').hidden = true; tocar(); });
+  $('#ir').addEventListener('click', () => { $('#ir').textContent = 'No sistema, vai para /inicio'; });
+
+  tocar();
+})();
+</script>

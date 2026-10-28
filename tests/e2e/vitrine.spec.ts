@@ -12,7 +12,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { abrirVitrine } from "./abrir-vitrine";
 
-import { PAPEIS_BASE, PARES, SERIES, STATUS } from "../../lib/design/vocabulario";
+import { MOEDA, PAPEIS_BASE, PARES, SERIES, STATUS } from "../../lib/design/vocabulario";
 
 test.describe("US1 · a vitrine mostra o vocabulário inteiro", () => {
   test("todo papel, status e série aparece — invariante I-5", async ({ page }) => {
@@ -22,6 +22,7 @@ test.describe("US1 · a vitrine mostra o vocabulário inteiro", () => {
     const ausentes = [
       ...PAPEIS_BASE.map((t) => `--${t}`),
       ...SERIES.map((t) => `--${t}`),
+      ...MOEDA.map((t) => `--${t}`),
       ...STATUS.map((s) => `--${s}-fundo`),
     ].filter((t) => !texto.includes(t));
 

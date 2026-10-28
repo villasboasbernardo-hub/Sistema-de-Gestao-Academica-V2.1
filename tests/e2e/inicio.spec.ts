@@ -287,7 +287,13 @@ test.describe("`FR-030` · a raiz deixou de ser um beco", () => {
      */
     await entrar(page, EMAIL_GERAL, "/inicio");
     await page.goto("/");
-    await page.getByRole("link", { name: /ir para o início/i }).click();
+    /*
+     * Spec 028 (Bloco 13): a raiz é a abertura com a moeda, e o caminho para dentro é o botão "Início", que aparece no
+     * fim da animação — o Esc a leva ao quadro final. O rótulo antigo, "Ir para o Início", saiu.
+     */
+    await expect(page.locator('[data-slot="abertura"]')).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.getByRole("link", { name: "Início", exact: true }).click();
     await expect.poll(() => new URL(page.url()).pathname).toBe("/inicio");
   });
 });
