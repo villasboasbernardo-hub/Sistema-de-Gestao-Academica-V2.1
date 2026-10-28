@@ -32,7 +32,7 @@ Uma história só (US1 — *a raiz abre com a moeda e leva ao Início*), entregu
   SC-004 reprova; (c) ignorar o movimento reduzido → SC-003 reprova. Cada um desfeito em seguida.
 - [x] T014 `pnpm verificar` verde; os e2e tocados verdes no local; conferência visual por captura (claro, escuro,
   celular, aba trocada).
-- [ ] T015 Plano de correções (Bloco 13) e `docs/correcoes/padroes-de-tela.md` se couber; commit `feat(BLOCO-13): …`;
+- [x] T015 Plano de correções (Bloco 13) e `docs/correcoes/padroes-de-tela.md` se couber; commit `feat(BLOCO-13): …`;
   push; PR com o template; CI verde.
 
 ## Dependências

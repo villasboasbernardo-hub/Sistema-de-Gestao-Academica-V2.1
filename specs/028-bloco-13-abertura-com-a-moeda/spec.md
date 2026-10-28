@@ -148,6 +148,9 @@ Nenhuma nova.
   instável em cada). Numa delas o instável foi o SC-004 da abertura, e a causa era o teste: `pause()` só congela o tempo
   no quadro seguinte, e a leitura imediata via um quadro a menos (550 ms contra 566,6 ms). Corrigido esperando `ready`. Na
   outra, `inicio.spec.ts:363`, que esta spec não toca.
-- **[pendente]** A nova rodada local desses e2e depois das correções da revisão, e dois defeitos deliberados novos (sem o
-  ouvinte do Esc; retomar do zero), foi **interrompida pelo sistema por falta de memória** na máquina; o CI do PR roda a
-  ponta a ponta inteira.
+- **Não refeito no local:** a nova rodada desses e2e depois das correções da revisão, e dois defeitos deliberados novos
+  (sem o ouvinte do Esc; retomar do zero), foi **interrompida pelo sistema por falta de memória** na máquina e não foi
+  reiniciada. A ponta a ponta inteira ficou com o CI (regra de 26/10/2026): sobre `7e6852b`, verde nos três blocos nas
+  duas execuções, com **zero** falha em `abertura.spec.ts` (588 passados + 1 instável e 586 + 3 instáveis, todos fora
+  desta spec, e 7 pulados). Os dois defeitos deliberados novos **não foram executados**.
+- **Fechamento (28/10/2026):** aprovado por Bernardo Villas Boas e mesclado por squash em `3f8e499` (PR #103).
