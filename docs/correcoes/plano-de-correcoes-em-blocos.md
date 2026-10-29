@@ -630,7 +630,9 @@ _Pedido de Bernardo Villas Boas, 28/10/2026, pelo `/corrigir` — chamado de «B
 estavam usados (D-1)._ Spec `029-bloco-14-dsa-inicio-e-pendencias`, ramo `fix/BLOCO-14-dsa-inicio-e-pendencias`, um PR.
 Regras novas: **RP-9** (`regras-da-publicacao-do-dsa.md`) e **RT-8** (`padroes-de-tela.md`); emenda da **RN-DIST-03 (a)**
 do documento 04 (decisão de 27/10/2026). Os itens 1 a 3 mexem no fluxo do DSA, não no papel: o merge não espera virada
-de semana. **Uma migration, que só acrescenta** (`20261028182926_estudo_individual_sem_descricao.sql`).
+de semana. **Uma migration, que só acrescenta** (`20261028182926_estudo_individual_sem_descricao.sql`), ✅ **no remoto
+desde 29/10/2026** pelo rito completo: backup `remoto-20261029-011810.sql`, **101 e 101** migrations e impressão digital
+**igual nos dois** bancos (2.737 objetos, `32ba63c9…`); nenhuma linha mudou. **PR #105**, CI verde nos três blocos.
 
 1. **TFM sem teto**: o DSA não recusa nem avisa o TFM acima de 6 TA; o TFM vira disciplina comum (só o recomendado de 25
    o alcança, D-2); os parâmetros ficam inertes (D-3); a sincronização e a carga antiga também (D-4).

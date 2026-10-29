@@ -13,8 +13,21 @@ com o rito completo, depois do CI verde e antes do merge (o mesmo projeto serve 
 - Impressão digital do esquema do remoto antes desta migration: **2.736 objetos, `4b7fb5fe…`** (a do Bloco 12; o Bloco
   13 não teve banco).
 
-## O rito
-[pendente — preenchido na aplicação, depois do CI verde]
+## O rito — aplicado em 29/10/2026, depois do CI verde em `e62ae10` (runs `40813730436` e `40813725925`)
+1. **Backup** — `python -m scripts.manutencao.dado_do_remoto --somente-copia` → **`remoto-20261029-011810.sql`**
+   (4.721.766 bytes, *"dump complete"*, fora do git).
+2. **Dry-run** — `supabase db push --linked --dry-run` listou **só** `20261028182926_estudo_individual_sem_descricao.sql`.
+3. **Aplicação** — `supabase db push --linked`, saída **0**.
+4. **Conferência só de leitura**, na hora:
+   - migrations: **101 e 101**, os 101 pares iguais (`supabase migration list --linked`);
+   - impressão digital do esquema **idêntica nos dois bancos**: **2.737 objetos, `32ba63c9…`** (era 2.736, `4b7fb5fe…`);
+   - `atividades_nao_letivas.descricao` aceita nulo; `ativ_descricao_fora_do_estudo_individual` = `CHECK (((descricao IS
+     NOT NULL) OR (categoria_normativa = 'Estudo_Individual')))`;
+   - as linhas por categoria **iguais às de antes** — AEC 190, TAD 143, TR 75, Estudo Individual 1.090, Apoio 40 — e
+     **0** descrições nulas: a migration não mudou linha nenhuma;
+   - **0** policies de `DELETE` no catálogo; **0** views de `public`/`app` sem `security_invoker`, fora a exceção nominal
+     `vw_instrutor_dados_pessoais`;
+   - Production respondendo: `/login` **200**; `/`, `/inicio` e `/turmas` **307** (para o login).
 
 ## Reversão
 `reversao.sql` (nesta pasta): `drop constraint`; `update … set descricao = 'ESTUDO INDIVIDUAL' where descricao is null

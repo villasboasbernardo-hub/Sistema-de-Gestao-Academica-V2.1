@@ -316,3 +316,13 @@ Pendências novas, achadas e **não** corrigidas:
   `CLAUDE.md` com RP-9 e RT-8). **9** derrubados.
 - **CI** do ramo sobre `a2bc1b5` (antes das correções): verde nos três blocos — **601** de ponta a ponta + 2 instáveis
   fora deste bloco (`inicio.spec.ts:363`, `lateral.spec.ts:316`) + 7 pulados; pgTAP 1.161.
+- **Os casos de edição do Estudo Individual eram instáveis no CI, e a causa era do teste** (três rodadas até achá-la):
+  o arquivo dividia a turma semeada com os outros arquivos do DSA do mesmo processo (passou a semear com 700 +
+  processo, numa semana só dele), e o clique logo depois do *Salvar minuta* achava a célula «vazia» no redesenho e
+  abria o formulário de novo lançamento, cuja camada barrava os cliques seguintes (o auxiliar espera a célula mostrar o
+  salvo). No local, 12 de 12 e 8 de 8 em repetições seguidas.
+- **CI final sobre `e62ae10`:** verde nos três blocos **nas duas execuções** (PR `40813730436` e push `40813725925`):
+  **605** de ponta a ponta, **nenhum instável**, 7 pulados; pgTAP **1.161**.
+- **Remoto:** a migration aplicada em 29/10/2026 pelo rito completo — backup `remoto-20261029-011810.sql`, **101 e 101**
+  migrations, impressão digital igual nos dois bancos (2.737 objetos, `32ba63c9…`), nenhuma linha mudou
+  (`plano-de-aplicacao-no-remoto.md`).

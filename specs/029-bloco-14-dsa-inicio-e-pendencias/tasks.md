@@ -103,9 +103,9 @@ arquivos do DSA (itens 1, 2, 3, 6) andam em sequência.
   (a suíte inteira fica com o CI). ⚠️ A rodada local dos arquivos tocados foi **interrompida pelo sistema por falta de
   memória** depois de 29 casos verdes e nenhum vermelho (spec §10); o resto ficou com o CI.
 - [x] T024 Revisão adversarial do diff (independente), correções no mesmo PR.
-- [ ] T025 `roteiro-de-conferencia.md`, `plano-de-aplicacao-no-remoto.md`; plano de correções (Bloco 14 em conferência;
+- [x] T025 `roteiro-de-conferencia.md`, `plano-de-aplicacao-no-remoto.md`; plano de correções (Bloco 14 em conferência;
   PEND-025-5, PEND-026-1 e PEND-026-2 fechadas; pendências novas); commit `fix(BLOCO-14): …`; push; PR com o template.
-- [ ] T026 CI verde; rito do remoto da migration do item 2 (backup, dry-run só com ela, `db push`, conferência só de
+- [x] T026 CI verde; rito do remoto da migration do item 2 (backup, dry-run só com ela, `db push`, conferência só de
   leitura); preview conferido.
 
 ## Dependências
