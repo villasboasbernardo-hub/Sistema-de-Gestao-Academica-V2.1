@@ -166,13 +166,16 @@ async function lancarDescritaESalvar(
  * ⚠️ O clique vem logo depois do *Salvar minuta*, que redesenha a grade: no CI de 29/10/2026 (PR #105) o clique chegou
  *    no meio do redesenho, o cartão não abriu, e os dois casos de edição passaram só na repetição. Clicar de novo até o
  *    cartão abrir mede o que importa — que a célula abre o cartão — sem depender de quando a grade termina de chegar.
+ * ⚠️ E SÓ CLICA SE O CARTÃO AINDA NÃO ESTÁ ABERTO, COM PRAZO PRÓPRIO NO CLIQUE (medido no local em 29/10/2026): o
+ *    segundo clique de uma primeira versão chegava com o diálogo já abrindo, a camada do diálogo interceptava o
+ *    ponteiro, e o clique esperava a vez até estourar o prazo do caso — o cartão estava aberto atrás dele.
  */
 async function abrirCartaoDescrito(page: Page, celula: string, descricao: string): Promise<void> {
   const celulaDaGrade = page.locator(`${GRADE} td[data-celula="${celula}"]`);
   await expect(async () => {
-    await celulaDaGrade.click();
-    await expect(page.locator(CARTAO)).toBeVisible({ timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+    if ((await page.locator(CARTAO).count()) === 0) await celulaDaGrade.click({ timeout: 3_000 });
+    await expect(page.locator(CARTAO)).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 45_000 });
   await expect(page.locator("#dsa-editar-conteudo")).toHaveValue(descricao);
 }
 
@@ -259,6 +262,8 @@ test("controle · a AEC com «O que é» vazio continua barrada — no navegador
 test("FR-002.1 · editar: apagar o «O que é» de um Estudo Individual descrito grava a descrição NULA", async ({
   page,
 }) => {
+  /* Lança, salva, edita e salva de novo: mais que o prazo padrão de 30 s quando o CI está carregado. */
+  test.setTimeout(90_000);
   const descricao = `Leitura dirigida ${Date.now().toString(36)}`;
   await abrirASemana(page);
   await lancarDescritaESalvar(
@@ -295,6 +300,8 @@ test("FR-002.1 · editar: apagar o «O que é» de um Estudo Individual descrito
 test("controle · editar: apagar o «O que é» de uma AEC descrita é recusado com a frase do lançar, e o banco não muda", async ({
   page,
 }) => {
+  /* Lança, salva, edita e salva de novo: mais que o prazo padrão de 30 s quando o CI está carregado. */
+  test.setTimeout(90_000);
   const descricao = `Palestra de segurança ${Date.now().toString(36)}`;
   await abrirASemana(page);
   await lancarDescritaESalvar(page, CELULA_DA_AEC_EDITADA, "AEC", "Palestra", descricao);
