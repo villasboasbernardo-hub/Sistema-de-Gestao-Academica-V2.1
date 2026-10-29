@@ -7,7 +7,6 @@
 import { ABA } from "@/lib/dominio/dsa/planilha/layout";
 import {
   conteudoDoDia,
-  DIA,
   faixaDoDia,
   type GeometriaDaImpressao,
 } from "@/lib/dominio/dsa/planilha/impressao";
@@ -24,7 +23,6 @@ export type ImpressaoLida = {
   readonly regua: (t: number) => string;
   readonly separador: (t: number) => string;
   readonly cabecalhoDoDia: (d: number) => string;
-  readonly slot: (d: number) => number;
 };
 
 export function precalcular(pasta: Pasta): Map<string, Valor> {
@@ -60,7 +58,6 @@ export function lerImpressao(
     regua: (t) => texto(g.linhaDoTa(t), 1),
     separador: (t) => texto(g.linhaDoSeparador(t), 1),
     cabecalhoDoDia: (d) => texto(g.linhaDoCabecalhoDosDias, conteudoDoDia(d)),
-    slot: (d) => Number(valor(DIA.slot, g.apoioDoDia(d))),
   };
 }
 

@@ -68,3 +68,22 @@ export function lancamentosParaLimpar(
   }
   return [...vistas.values()];
 }
+
+/**
+ * **Remover Estudo Individual da semana** (Bloco 15, spec 030, `FR-004.2`, D-11): as exclusões do Limpar, **só dos
+ * Estudos Individuais** da turma.
+ *
+ * > *"o EI lançado automaticamente pode ser excluído pelo cartão (…) e por um ícone na barra 'Remover Estudo Individual
+ * > da semana'. EI excluído NÃO volta sozinho: só pelo botão do EI da semana."* — Bernardo Villas Boas, 29/10/2026
+ *
+ * ⚠️ **A MESMA REGRA DO LIMPAR, FILTRADA** — quem diz quais fatos são EI é quem chama (a categoria normativa vive em
+ *    `atividades_nao_letivas`, não na grade); a atividade de todas as turmas continua de fora, como no Limpar.
+ */
+export function estudosIndividuaisParaRemover(
+  lancamentos: readonly LancamentoDaSemana[],
+  idsDeEstudoIndividual: ReadonlySet<string>,
+): readonly { readonly origem: OrigemDoLancamento; readonly id: string }[] {
+  return lancamentosParaLimpar(lancamentos).filter(
+    (x) => x.origem === "atividade_nao_letiva" && idsDeEstudoIndividual.has(x.id),
+  );
+}

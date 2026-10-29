@@ -19,12 +19,7 @@
  * ⚠️ **O TEXTO FIXO DO DOCUMENTO É O DO PAPEL** (`RNF-COMP-01`): a organização, a nota do Estudo
  * Individual e o rótulo das observações saem verbatim — uma suíte confere contra o `/print/dsa`.
  */
-import {
-  NOTA_DO_ESTUDO_INDIVIDUAL,
-  ROTULO_DE_OBSERVACOES,
-  SIGLA_DO_ESTUDO_INDIVIDUAL,
-} from "../impressao";
-import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "../rotulos";
+import { NOTA_DO_ESTUDO_INDIVIDUAL, ROTULO_DE_OBSERVACOES } from "../impressao";
 import { DIA_DA_SEMANA, instanteComHoraParaLeitura } from "../../../formato/data";
 import {
   concat,
@@ -51,7 +46,6 @@ import {
 
 import {
   ABA,
-  CONTEUDO_DO_ESTUDO_NO_CARTAO,
   NOME,
   P,
   PC,
@@ -67,9 +61,6 @@ export const SUBTITULO_DO_DOCUMENTO = "Detalhe Semanal de Aulas";
 
 export const INSTRUCAO_DA_IMPRESSAO =
   "Escolha a semana na célula ao lado e mande imprimir: a página sai em A4 paisagem. Edite a assinatura, os alunos e o ALT no cabeçalho da semana, na PREENCHIMENTO.";
-
-/** O cartão da linha fixa de Estudo Individual — `linhaFixaDoEstudoIndividual`, numa célula. */
-export const TEXTO_DO_ESTUDO_FIXO = `${CONTEUDO_DO_ESTUDO_NO_CARTAO}\n1 TA · ${LOCAL_DO_ESTUDO_INDIVIDUAL} · ${SIGLA_DO_ESTUDO_INDIVIDUAL}`;
 
 const TIPOS: readonly TipoDoCartao[] = ["aula", "avaliacao", "estudo", "atividade"];
 
@@ -161,17 +152,16 @@ export const GERAL = {
   linhas: 4,
   temposDoRelogio: 5,
   temposDoRegime: 6,
-  estudoFixo: 7,
+  /* 7 e 11 ficaram livres no Bloco 15 (spec 030): eram o texto e a contagem da linha fixa do Estudo Individual. */
   segunda: 8,
   ultimo: 9,
   chave: 10,
-  fixosDeEstudo: 11,
 } as const;
 
 /** As contas por dia, na coluna `apoioDoDia(d)`. */
 export const DIA = {
   primeira: 1,
-  slot: 2,
+  /* 2 ficou livre no Bloco 15 (spec 030): era o tempo da linha fixa do Estudo Individual. */
   bloqueio: 3,
   data: 4,
   maior: 5,
@@ -271,7 +261,6 @@ export function abaDeImpressao(entrada: {
   definir(aba, GERAL.temposDoRegime, g.gerais, {
     formula: doRelogio(NOME.hRelRegime, num(g.tempos)),
   });
-  definir(aba, GERAL.estudoFixo, g.gerais, { valor: TEXTO_DO_ESTUDO_FIXO });
   definir(aba, GERAL.segunda, g.gerais, { formula: naEntrada(P.data, cabecalho, ge) });
   definir(aba, GERAL.chave, g.gerais, { formula: naEntrada(P.chaveDaSemana, cabecalho, ge) });
 
@@ -282,7 +271,6 @@ export function abaDeImpressao(entrada: {
       formula: op(cabecalho, "+", num(P_LINHAS_DO_CABECALHO + d * ge.tempos)),
     });
     const primeira = doDia(d, DIA.primeira);
-    definir(aba, DIA.slot, c, { formula: naEntrada(P.slotDoEi, primeira, ge) });
     definir(aba, DIA.bloqueio, c, { formula: concat(naEntrada(P.bloqueio, primeira, ge), vazio) });
     definir(aba, DIA.data, c, { formula: naEntrada(P.data, primeira, ge) });
     definir(aba, DIA.maior, c, { formula: naEntrada(P.maxTaDoDia, primeira, ge) });
@@ -292,11 +280,6 @@ export function abaDeImpressao(entrada: {
   const sabadoComLancamento = ref(DIA.temLancamento, g.apoioDoDia(5), { fixa: true });
   definir(aba, GERAL.ultimo, g.gerais, {
     formula: op(geral(GERAL.segunda), "+", SE(igual(sabadoComLancamento, num(1)), num(5), num(4))),
-  });
-  definir(aba, GERAL.fixosDeEstudo, g.gerais, {
-    formula: Array.from({ length: DIAS_NA_ENTRADA }, (_, d) =>
-      SE(op(doDia(d, DIA.slot), ">", num(0)), num(1), num(0)),
-    ).reduce((a, b) => op(a, "+", b)),
   });
   /* Quantas linhas o papel desta semana tem (`gradeDoPapel`): o regime, ou o último TA ocupado. */
   definir(aba, GERAL.linhas, g.gerais, {
@@ -466,22 +449,12 @@ export function abaDeImpressao(entrada: {
     /* Cada dia: as quatro contas de apoio e as duas células visíveis. */
     for (let d = 0; d < DIAS_NA_ENTRADA; d += 1) {
       const c = g.apoioDoDia(d);
-      const slot = doDia(d, DIA.slot);
-      const ehFixo = igual(slot, num(t));
       const linha = linhaDaEntrada(d, t);
-      definir(aba, l, c, {
-        formula: SE(ehFixo, txt("estudo"), concat(naEntrada(P.tipo, linha, ge), vazio)),
-      });
-      definir(aba, l, c + 1, {
-        formula: SE(ehFixo, num(0), fn("MOD", naEntrada(P.contador, linha, ge), num(2))),
-      });
-      definir(aba, l, c + 2, { formula: SE(ehFixo, num(1), naEntrada(P.inicio, linha, ge)) });
+      definir(aba, l, c, { formula: concat(naEntrada(P.tipo, linha, ge), vazio) });
+      definir(aba, l, c + 1, { formula: fn("MOD", naEntrada(P.contador, linha, ge), num(2)) });
+      definir(aba, l, c + 2, { formula: naEntrada(P.inicio, linha, ge) });
       definir(aba, l, c + 3, {
-        formula: SE(
-          ehFixo,
-          num(0),
-          SE(op(naEntrada(P.resto, linha, ge), ">", num(1)), num(1), num(0)),
-        ),
+        formula: SE(op(naEntrada(P.resto, linha, ge), ">", num(1)), num(1), num(0)),
       });
       if (d >= g.dias) continue;
       const tipo = ref(l, c, { fixa: true });
@@ -489,7 +462,7 @@ export function abaDeImpressao(entrada: {
       const inicio = ref(l, c + 2, { fixa: true });
       definir(aba, l, faixaDoDia(d), { estilo: { borda: { esquerda: true } } });
       definir(aba, l, conteudoDoDia(d), {
-        formula: SE(ehFixo, geral(GERAL.estudoFixo), concat(naEntrada(P.texto, linha, ge), vazio)),
+        formula: concat(naEntrada(P.texto, linha, ge), vazio),
         estilo: conteudo,
       });
       /* O espelho que a formatação condicional lê. */
@@ -674,18 +647,14 @@ export function abaDeImpressao(entrada: {
     definir(aba, l, presenteTec, {
       formula: SE(
         op(
-          op(
-            fn(
-              "COUNTIFS",
-              daEntradaToda(P.te),
-              sigla,
-              daEntradaToda(P.semana_indice),
-              semana,
-              daEntradaToda(P.noPapel),
-              num(1),
-            ),
-            "+",
-            SE(igual(sigla, txt(SIGLA_DO_ESTUDO_INDIVIDUAL)), geral(GERAL.fixosDeEstudo), num(0)),
+          fn(
+            "COUNTIFS",
+            daEntradaToda(P.te),
+            sigla,
+            daEntradaToda(P.semana_indice),
+            semana,
+            daEntradaToda(P.noPapel),
+            num(1),
           ),
           ">",
           num(0),

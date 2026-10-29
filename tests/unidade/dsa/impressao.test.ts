@@ -21,6 +21,7 @@ import {
   avisosAntesDeImprimir,
   diaImpresso,
   documentoImpresso,
+  ehLinhaFixaDoEstudoIndividual,
   legendaDeTecnicas,
   siglaOuExtenso,
   tabelaDeCh,
@@ -108,51 +109,38 @@ describe("`SC-011` · o bloco que atravessa o almoço — o `D-3` da planilha", 
   });
 });
 
-describe("a linha fixa `ESTUDO INDIVIDUAL · EI` — `praticas-da-planilha.md` §1.2", () => {
-  it("é a ÚLTIMA linha do dia, sem instrutor, mesmo num dia sem lançamento nenhum", () => {
-    const dia = primeiroDia();
-    expect(dia.linhas).toHaveLength(1);
-    const ei = dia.linhas[0];
-    expect(ei?.conteudo).toBe(TEXTO_DO_ESTUDO_INDIVIDUAL);
-    expect(ei?.te).toBe(SIGLA_DO_ESTUDO_INDIVIDUAL);
-    expect(ei?.instrutor).toBe("");
-    expect(ei?.estudoIndividual).toBe(true);
+/*
+ * ⚠️ **BLOCO 15 (spec 030, `FR-004`, D-9): A LINHA FIXA SAIU** — *"EI excluído NÃO volta sozinho: só pelo botão do EI da
+ *    semana"* (Bernardo Villas Boas, 29/10/2026). Até ali o papel desenhava, em todo dia útil sem EI lançado, a linha
+ *    `ESTUDO INDIVIDUAL · EI` no último tempo do regime (`praticas-da-planilha.md` §1.2) — e era ela que "voltava" depois
+ *    de excluir o EI. A regra do último tempo continua, no botão (`slotDoEstudoIndividual`, testada em
+ *    `horario-do-bloco.test.ts`); o papel só imprime o EI lançado, no pé do dia.
+ */
+describe("o Estudo Individual no papel é só o LANÇADO (Bloco 15, `FR-004`)", () => {
+  it("⚠️ o caso que discrimina: o dia SEM lançamento nenhum sai VAZIO — sem a linha fixa", () => {
+    expect(primeiroDia().linhas).toEqual([]);
   });
 
-  /*
-   * RD-2 (Bloco 11): «sempre no ÚLTIMO tempo do regime, nunca no primeiro» — substitui a D-4 (o TA seguinte ao último
-   * lançado). Na G45 (regime de 8), com 4 TA lançados o EI vai ao 8º, e não ao 5º (D-8 da spec 026).
-   */
-  it("RD-2 · com 4 TA lançados num regime de 8, o EI no 8º — e não no 5º (a D-4)", () => {
+  it("⚠️ o dia com aula e sem EI lançado: só a aula — nada no último tempo do regime", () => {
     const dia = primeiroDia({ fatos: [fato({ taInicial: 1, tempos: 4 })] });
-    const ei = dia.linhas[dia.linhas.length - 1];
-    expect(ei?.taInicial).toBe(G45.regimeTempos);
-    const oitavo = relogioDoRegime(G45)?.tempos.find((t) => t.numero === G45.regimeTempos);
-    expect(ei?.trechos[0]).toEqual({
-      inicio: oitavo?.inicio,
-      fim: oitavo?.fim,
-      periodo: oitavo?.periodo,
-    });
-  });
-
-  it("RD-2 · ⚠️ o caso que discrimina: dia SEM lançamento — o EI no último tempo do regime, e não no 1º", () => {
-    const dia = primeiroDia();
-    expect(dia.linhas[0]?.taInicial).toBe(G45.regimeTempos);
-  });
-
-  it("RD-2/D-9 · sem regime conhecido (sem relógio) e dia vazio: NENHUM EI — como a planilha", () => {
-    const dia = primeiroDia({ relogio: null, temposDeclarados: null });
+    expect(dia.linhas).toHaveLength(1);
     expect(dia.linhas.filter((l) => l.estudoIndividual)).toEqual([]);
   });
 
-  it("sem relógio e com lançamento, o EI segue no tempo seguinte ao último (sem horário)", () => {
-    const dia = primeiroDia({
+  it("sem relógio, com e sem lançamento: nenhum EI que não foi lançado", () => {
+    expect(primeiroDia({ relogio: null, temposDeclarados: null }).linhas).toEqual([]);
+    const comAula = primeiroDia({
       relogio: null,
       temposDeclarados: null,
       fatos: [fato({ taInicial: 1, tempos: 4 })],
     });
-    expect(dia.linhas.at(-1)?.estudoIndividual).toBe(true);
-    expect(dia.linhas.at(-1)?.taInicial).toBe(5);
+    expect(comAula.linhas.filter((l) => l.estudoIndividual)).toEqual([]);
+  });
+
+  it("a chave da linha fixa dos retratos antigos se reconhece — e a de um lançamento, não", () => {
+    expect(ehLinhaFixaDoEstudoIndividual({ chave: "ei-2026-10-05" })).toBe(true);
+    expect(ehLinhaFixaDoEstudoIndividual({ chave: "ei-lancado" })).toBe(false);
+    expect(ehLinhaFixaDoEstudoIndividual({ chave: "9f1c2d3e-0000-4000-8000-000000000000" })).toBe(false);
   });
 
   /*
@@ -160,7 +148,7 @@ describe("a linha fixa `ESTUDO INDIVIDUAL · EI` — `praticas-da-planilha.md` �
    * como linha comum **e** a linha fixa sairia depois: o dia teria Estudo Individual duas vezes, e
    * o papel somaria um TA que não existe.
    */
-  it("o EI LANÇADO vira a linha fixa, em vez de somar-se a ela", () => {
+  it("o EI LANÇADO vai para o pé do dia, uma vez só, sem instrutor no papel", () => {
     const semana = montar({
       fatos: [
         fato({ taInicial: 1, tempos: 4 }),
@@ -291,8 +279,8 @@ describe("a linha fixa `ESTUDO INDIVIDUAL · EI` — `praticas-da-planilha.md` �
     expect(impresso.linhas[0]?.estudoIndividual).toBe(true);
   });
 
-  /* ⚠️ O controle: só o que foi LANÇADO sai — a linha FIXA de EI continua fora do dia bloqueado. */
-  it("dia bloqueado com lançamento e SEM Estudo Individual lançado não ganha a linha fixa", () => {
+  /* ⚠️ O controle: só o que foi LANÇADO sai abaixo da faixa — nenhum EI que não foi lançado. */
+  it("dia bloqueado com lançamento e SEM Estudo Individual lançado não ganha EI", () => {
     const semana = montar({
       feriados: [{ data: "2026-10-05", descricao: "Licença de pagamento", impacto: "dia_inteiro" }],
       fatos: [fato({ fatoId: "aula-no-feriado", taInicial: 1, tempos: 2 })],
@@ -349,7 +337,8 @@ describe("a coluna T/E da atividade não letiva — o subtipo não é técnica d
       }),
       { tecnicas: TECNICAS, idsDeEstudoIndividual: SEM_EI },
     );
-    expect(legendaDeTecnicas(dias, TECNICAS).map((i) => i.sigla)).toEqual(["EI"]);
+    /* Nem o subtipo, nem o EI da linha fixa (que saiu no Bloco 15): a legenda fica vazia. */
+    expect(legendaDeTecnicas(dias, TECNICAS).map((i) => i.sigla)).toEqual([]);
   });
 
   /* ⚠️ O controle positivo: a AULA continua imprimindo a sigla da técnica dela. */
@@ -441,12 +430,13 @@ describe("`SC-014` · o rodapé traz SÓ o que aparece na semana", () => {
     expect(tabelaDeCh(dias, EXECUCAO)).toHaveLength(0);
   });
 
-  it("a legenda traz só as siglas usadas — e o EI entra, porque a linha fixa o usa", () => {
+  /* Bloco 15 (`FR-004`): o EI só entra na legenda quando há EI lançado — a linha fixa, que o punha sempre, saiu. */
+  it("a legenda traz só as siglas usadas — e o EI não entra sem EI lançado", () => {
     const dias = documentoImpresso(montar({ fatos: [fato()] }), {
       tecnicas: TECNICAS,
       idsDeEstudoIndividual: SEM_EI,
     });
-    expect(legendaDeTecnicas(dias, TECNICAS).map((i) => i.sigla)).toEqual(["EI", "EO"]);
+    expect(legendaDeTecnicas(dias, TECNICAS).map((i) => i.sigla)).toEqual(["EO"]);
   });
 
   it("a técnica que imprimiu por extenso NÃO entra na legenda", () => {
@@ -454,7 +444,7 @@ describe("`SC-014` · o rodapé traz SÓ o que aparece na semana", () => {
       tecnicas: TECNICAS,
       idsDeEstudoIndividual: SEM_EI,
     });
-    expect(legendaDeTecnicas(dias, TECNICAS).map((i) => i.sigla)).toEqual(["EI"]);
+    expect(legendaDeTecnicas(dias, TECNICAS).map((i) => i.sigla)).toEqual([]);
   });
 });
 
@@ -505,14 +495,11 @@ describe("`FR-039` e `SC-015` · os avisos ficam na TELA, antes de imprimir", ()
 });
 
 /**
- * ⚠️ **O EI NUNCA SAI SEM HORÁRIO QUANDO HÁ RELÓGIO** *(conferência visual de Bernardo Villas Boas,
- * 07/10/2026)*. Medido no CAHO 2026, semana 20–24/07: o catálogo CFG-H tem 9 tempos e, nos dias com
- * os 9 ocupados (palestra ou vista no 9º), a linha fixa ia para o 10º — que o catálogo não tem — e o
- * papel imprimia «ESTUDO INDIVIDUAL» sem horário. Varredura do ano inteiro: 38 linhas, todas no CAHO.
- * O DSA assinado desses dias NÃO traz Estudo Individual: sem tempo livre depois do último TA, não há EI
- * a oferecer, e a linha fixa não nasce.
+ * ⚠️ **O DIA CHEIO NUNCA GANHOU EI SEM HORÁRIO** *(conferência visual de Bernardo Villas Boas, 07/10/2026)* — e desde o
+ * Bloco 15 o dia que NÃO está cheio também não ganha EI que não foi lançado: era a linha fixa que nascia no 9º tempo
+ * livre do catálogo CFG-H do CAHO.
  */
-describe("a linha fixa de EI quando o relógio não tem o tempo seguinte", () => {
+describe("sem linha fixa, o catálogo de 9 tempos não muda nada (Bloco 15)", () => {
   const CATALOGO_9 = Array.from({ length: 9 }, (_, i) => ({
     tempoNumero: i + 1,
     periodo: (i < 5 ? "manha" : "tarde") as "manha" | "tarde",
@@ -521,42 +508,26 @@ describe("a linha fixa de EI quando o relógio não tem o tempo seguinte", () =>
     horaFim: `${String(8 + i).padStart(2, "0")}:45`,
   }));
 
-  it("⚠️ com os 9 tempos ocupados, o dia NÃO ganha um EI sem horário", () => {
-    const dia = primeiroDia({
-      relogio: relogioDoCatalogo(CATALOGO_9, 9),
-      temposDeclarados: 9,
-      fatos: [fato({ taInicial: 1, tempos: 9 })],
-    });
-    expect(dia.linhas.some((l) => l.estudoIndividual && l.trechos.length === 0)).toBe(false);
-    expect(dia.linhas.some((l) => l.estudoIndividual)).toBe(false);
-  });
-
-  it("com o 9º livre, o EI nasce no 9º, com o horário do catálogo", () => {
-    const dia = primeiroDia({
-      relogio: relogioDoCatalogo(CATALOGO_9, 9),
-      temposDeclarados: 9,
-      fatos: [fato({ taInicial: 1, tempos: 8 })],
-    });
-    const ei = dia.linhas.at(-1);
-    expect(ei?.estudoIndividual).toBe(true);
-    expect(ei?.trechos).toEqual([{ inicio: "16:00", fim: "16:45", periodo: "tarde" }]);
+  it("com os 9 tempos ocupados ou com o 9º livre, nenhum EI que não foi lançado", () => {
+    for (const tempos of [9, 8]) {
+      const dia = primeiroDia({
+        relogio: relogioDoCatalogo(CATALOGO_9, 9),
+        temposDeclarados: 9,
+        fatos: [fato({ taInicial: 1, tempos })],
+      });
+      expect(dia.linhas.some((l) => l.estudoIndividual)).toBe(false);
+    }
   });
 });
 
 /**
  * ⚠️ **O LOCAL DO ESTUDO INDIVIDUAL É «Biblioteca»**, em todos os cursos e turmas *(decisão de
- * Bernardo Villas Boas, 07/10/2026, na conferência visual)* — no EI lançado pela planilha, no EI da
- * semana em um clique (`Q-7`) e na linha fixa que o papel imprime.
+ * Bernardo Villas Boas, 07/10/2026, na conferência visual)* — no EI lançado pela planilha e no EI da
+ * semana em um clique (`Q-7`). (A linha fixa que o papel imprimia saiu no Bloco 15.)
  */
 describe("o local do Estudo Individual é a Biblioteca", () => {
   it("a constante é a da decisão", () => {
     expect(LOCAL_DO_ESTUDO_INDIVIDUAL).toBe("Biblioteca");
-  });
-
-  it("a linha fixa do EI sai com o local «Biblioteca»", () => {
-    const ei = primeiroDia().linhas.at(-1);
-    expect(ei?.estudoIndividual).toBe(true);
-    expect(ei?.local).toBe("Biblioteca");
   });
 
   it("o EI da semana em um clique nasce com o local «Biblioteca»", () => {
@@ -599,7 +570,7 @@ describe("FR-012.3 · dois lançamentos no mesmo TA, no papel", () => {
     expect(grade?.foraDaGrade.map((f) => [f.linha.conteudo, f.motivo])).toEqual([
       ["O lançado depois", MOTIVO_NO_MESMO_TA],
     ]);
-    /* Os cartões: o primeiro, e a linha fixa de Estudo Individual do dia — o segundo, não. */
+    /* Os cartões: o primeiro — o segundo, não. */
     const cartoes = grade?.cartoes.map((c) => c.linha.conteudo) ?? [];
     expect(cartoes).toContain("O lançado primeiro");
     expect(cartoes).not.toContain("O lançado depois");
@@ -613,7 +584,7 @@ describe("FR-012.3 · dois lançamentos no mesmo TA, no papel", () => {
 
 /*
  * ⚠️ **D-6 da spec 029 (Bloco 14, item 2) · O ESTUDO INDIVIDUAL SEM «O QUE É» NUNCA SAI EM BRANCO NO PAPEL**
- *    *(decisão de Bernardo Villas Boas, 27/10/2026)*. O EI que está na grade já vira a linha fixa (acima); o que cai NO
+ *    *(decisão de Bernardo Villas Boas, 27/10/2026)*. O EI que está na grade vira o pé do dia (acima); o que cai NO
  *    MESMO TA de outro lançamento ia por `linhasNoMesmoTa`, que imprime a DESCRIÇÃO e deixa a T/E vazia — e com a
  *    descrição nula do FR-002 a linha sairia sem conteúdo nem T/E, no dia comum e no dia bloqueado.
  * ⚠️ **O CONTROLE É O DADO QUE EXISTE**: no remoto, todo EI tem descrição (medido em 28/10/2026, 0 nulas em 1.090), e

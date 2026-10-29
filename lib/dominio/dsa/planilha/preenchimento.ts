@@ -24,7 +24,7 @@
  */
 import { semanaIsoDe } from "../../carga-semanal";
 import { MOTIVO_NO_MESMO_TA } from "../grade";
-import { TA_MAXIMO, type Relogio } from "../horario-do-bloco";
+import { type Relogio } from "../horario-do-bloco";
 import { instanteComHoraParaLeitura, siglaDoDiaDaSemana } from "../../../formato/data";
 import {
   concat,
@@ -188,8 +188,6 @@ export function retratoDaSemana(
 
   semana.dias.forEach((dia, d) => {
     for (const linha of dia.linhas) {
-      /* A linha FIXA do Estudo Individual não é lançamento: a fórmula a repõe (`slotDoEstudoIndividual`). */
-      if (linha.chave.startsWith("ei-")) continue;
       const n = Math.max(1, linha.tempos ?? 1);
       const inicio = linha.taInicial;
       const e = extra(linha.chave, dia.data, inicio);
@@ -498,75 +496,32 @@ export function formulasDaLinhaDeTa(entrada: {
   );
   f.set(P.noPapel, SE(semChave, num(0), num(1)));
   f.set(P.taOcupado, SE(semChave, num(0), c(P.ta)));
-  f.set(P.taOcupadoSemEi, SE(fn("OR", semChave, igual(c(P.tipo), txt("estudo"))), num(0), c(P.ta)));
   return f;
 }
 
 /**
- * As fórmulas da primeira linha de um dia — o Estudo Individual (`slotDoEstudoIndividual`): o último tempo do regime do
- * relógio da semana; no dia que já tem lançamento nele ou depois, logo depois do último lançado (RD-2, Bloco 11 — a
- * mesma regra do botão e do papel, D-9). O regime sai da aba HORÁRIOS (`H_RELOGIO_REGIME`), pelo relógio da semana.
+ * As fórmulas da primeira linha de um dia — se o dia tem lançamento (o sábado só entra no papel com ele) e o maior TA
+ * ocupado (a altura da grade).
+ *
+ * ⚠️ **SEM A LINHA FIXA DO ESTUDO INDIVIDUAL, DESDE O BLOCO 15** (spec 030, `FR-004`, D-9): até ali este dia calculava o
+ *    tempo do EI fixo (`slotDoEi`, a mesma regra do botão e do papel, D-9 da spec 026), e a IMPRESSÃO desenhava o cartão
+ *    em todo dia sem EI digitado. O papel do sistema deixou de desenhá-lo — *"EI excluído NÃO volta sozinho"*,
+ *    Bernardo Villas Boas, 29/10/2026 —, e a planilha o segue: o EI é o que se digita na PREENCHIMENTO.
  */
 export function formulasDoDia(entrada: {
   readonly primeira: number;
   readonly tempos: number;
-  readonly cabecalho: number;
-  readonly sabado: boolean;
 }): ReadonlyMap<number, Formula> {
-  const { primeira: d0, tempos, cabecalho, sabado } = entrada;
+  const { primeira: d0, tempos } = entrada;
   const ultima = d0 + tempos - 1;
   const doDia = (coluna: number) => intervalo({ linha: d0, coluna }, { linha: ultima, coluna });
   const c = (coluna: number) => daCelula(d0, coluna);
-  const relogio = fixa(cabecalho, PC.relogio);
-  /* O TA do regime do relógio da semana; sem relógio, 0 (sem regime conhecido). */
-  const regimeDoRelogio = SE(
-    igual(relogio, vazio),
-    num(0),
-    fn("INDEX", nome(NOME.hRelRegime), fn("MATCH", relogio, nome(NOME.hRelId), num(0))),
-  );
-  const proximo = fn("MAX", regimeDoRelogio, op(c(P.ultimoTa), "+", num(1)));
   const f = new Map<number, Formula>();
-  f.set(
-    P.eiNoDia,
-    SE(op(fn("COUNTIF", doDia(P.cod), txt(COD_DO_ESTUDO)), ">", num(0)), num(1), num(0)),
-  );
-  f.set(P.ultimoTa, fn("MAX", doDia(P.taOcupadoSemEi), c(P.ultimoTaFora)));
   f.set(
     P.temLancamento,
     SE(op(op(fn("SUM", doDia(P.noPapel)), "+", c(P.semPosicaoNoDia)), ">", num(0)), num(1), num(0)),
   );
-  const impedido = [
-    igual(c(P.eiNoDia), num(1)),
-    diferente(c(P.bloqueio), vazio),
-    /* O sábado só existe no papel quando tem lançamento (`diasDaTela`). */
-    ...(sabado ? [igual(c(P.temLancamento), num(0))] : []),
-    /* Sem regime conhecido e dia vazio, nenhum EI — nunca o 1º tempo inventado (RD-2, `RN-DEG-01`). */
-    fn("AND", igual(relogio, vazio), igual(c(P.ultimoTa), num(0))),
-  ];
-  f.set(
-    P.slotDoEi,
-    SE(
-      fn("OR", ...impedido),
-      num(0),
-      SE(
-        op(proximo, ">", num(TA_MAXIMO)),
-        num(0),
-        SE(
-          igual(relogio, vazio),
-          proximo,
-          SE(
-            fn(
-              "ISNUMBER",
-              fn("MATCH", concat(relogio, txt("|"), proximo), nome(NOME.hChave), num(0)),
-            ),
-            proximo,
-            num(0),
-          ),
-        ),
-      ),
-    ),
-  );
-  f.set(P.maxTaDoDia, fn("MAX", doDia(P.taOcupado), c(P.ultimoTaFora), c(P.slotDoEi)));
+  f.set(P.maxTaDoDia, fn("MAX", doDia(P.taOcupado), c(P.ultimoTaFora)));
   return f;
 }
 
@@ -850,7 +805,7 @@ export function abaDeEntrada(entrada: {
           definirFormulas(
             aba,
             r,
-            formulasDoDia({ primeira: d0, tempos: g.tempos, cabecalho: h, sabado: d === 5 }),
+            formulasDoDia({ primeira: d0, tempos: g.tempos }),
           );
         }
       }

@@ -319,9 +319,6 @@ function CorpoDoCartao({
           </span>
         ) : null}
       </span>
-      {bloco === undefined && cartao.tipo === "estudo" ? (
-        <span className="w-fit text-[10px] text-texto-suave">no papel, sem lançamento</span>
-      ) : null}
       {/* Spec 024 (RP-0): o rascunho diz que é rascunho, em TEXTO (`RNF-USA-05`). */}
       {bloco?.rascunho ? (
         <span
@@ -524,9 +521,9 @@ function GradeDoModelo({
         {...(aoEscolherCelula || aoEscolherFato
           ? {
               /*
-               * ⚠️ **CARTÃO DE LANÇAMENTO ABRE AS AÇÕES; TEMPO VAZIO ABRE O FORMULÁRIO** — e o cartão
-               * de Estudo Individual que só existe no papel (sem lançamento) é tempo vazio: clicar
-               * nele lança ali, com o dia e o tempo já preenchidos.
+               * ⚠️ **CARTÃO DE LANÇAMENTO ABRE AS AÇÕES; TEMPO VAZIO ABRE O FORMULÁRIO.** (Até o Bloco 15
+               * havia um terceiro caso: o cartão de Estudo Individual que só existia no papel, sem lançamento,
+               * contava como tempo vazio. Ele saiu — spec 030, `FR-004`.)
                */
               aoAtivarCelula: (linha: number, coluna: number) => {
                 const dia = grade.colunas[coluna]?.data;
@@ -624,7 +621,7 @@ function rodapesSemPosicao(
           const descricao = [linha.disciplina, linha.conteudo].filter(Boolean).join(" — ");
           return (
             <li key={linha.chave} className="leading-tight" data-fora-da-grade="sim">
-              {aoEscolherFato && !linha.chave.startsWith("ei-") ? (
+              {aoEscolherFato ? (
                 <button
                   type="button"
                   onClick={() => aoEscolherFato(linha.chave)}
