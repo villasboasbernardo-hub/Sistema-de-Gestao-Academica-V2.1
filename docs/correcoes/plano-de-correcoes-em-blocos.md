@@ -688,6 +688,11 @@ Individual lançado (a linha fixa sai — item 4): o merge espera a virada de se
 11. **`PEND-029-1`** 🐛: a «Atrasada» do DSA pela janela da carga (D-21) — medido no remoto (29/10/2026, só leitura, a
     regra inteira de `estaAtrasada`): de 38 linhas «Atrasada» para 18; as 20 que mudam são da CAHO 2027.
 
+**O que a verificação achou e mudou** (spec 030, §11): o seletor de ano saiu do `Suspense` — com a reserva, toda página
+aberta por endereço tinha, por um instante, dois seletores, e o visível mostrava o ano guardado em vez do `?ano=`; e a tela
+cheia, aberta pelo teclado, pedia dois `Esc` (o primeiro fechava só a dica do ícone) — agora o foco vai para a própria
+sobreposição. Os dois têm caso de ponta a ponta visto reprovar com o defeito de volta.
+
 **Pendências novas:** nenhuma. A `PEND-025-2` (a lateral não lê o `?ano=`) continua como estava (D-8).
 
 ---
