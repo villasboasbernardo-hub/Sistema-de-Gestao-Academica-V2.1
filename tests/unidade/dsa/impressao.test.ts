@@ -82,7 +82,6 @@ function primeiroDia(ajustes: Partial<Parameters<typeof montarSemana>[0]> = {}) 
   const dia = semana.dias[0];
   if (dia === undefined) throw new Error("a semana saiu sem dias");
   return diaImpresso(dia, {
-    relogio: semana.relogio,
     tecnicas: TECNICAS,
     idsDeEstudoIndividual: SEM_EI,
   });
@@ -170,7 +169,6 @@ describe("o Estudo Individual no papel é só o LANÇADO (Bloco 15, `FR-004`)", 
     const dia = semana.dias[0];
     if (dia === undefined) throw new Error("a semana saiu sem dias");
     const impresso = diaImpresso(dia, {
-      relogio: semana.relogio,
       tecnicas: TECNICAS,
       idsDeEstudoIndividual: new Set(["ei-lancado"]),
     });
@@ -189,7 +187,6 @@ describe("o Estudo Individual no papel é só o LANÇADO (Bloco 15, `FR-004`)", 
     const dia = semana.dias[0];
     if (dia === undefined) throw new Error("a semana saiu sem dias");
     const impresso = diaImpresso(dia, {
-      relogio: semana.relogio,
       tecnicas: TECNICAS,
       idsDeEstudoIndividual: SEM_EI,
     });
@@ -223,7 +220,6 @@ describe("o Estudo Individual no papel é só o LANÇADO (Bloco 15, `FR-004`)", 
     const dia = semana.dias[0];
     if (dia === undefined) throw new Error("a semana saiu sem dias");
     const impresso = diaImpresso(dia, {
-      relogio: semana.relogio,
       tecnicas: TECNICAS,
       idsDeEstudoIndividual: new Set(["ei-no-feriado"]),
     });
@@ -267,7 +263,6 @@ describe("o Estudo Individual no papel é só o LANÇADO (Bloco 15, `FR-004`)", 
     const dia = semana.dias[0];
     if (dia === undefined) throw new Error("a semana saiu sem dias");
     const impresso = diaImpresso(dia, {
-      relogio: semana.relogio,
       tecnicas: TECNICAS,
       idsDeEstudoIndividual: new Set(["ei-da-manha", "ei-do-fim"]),
     });
@@ -290,7 +285,6 @@ describe("o Estudo Individual no papel é só o LANÇADO (Bloco 15, `FR-004`)", 
     const dia = semana.dias[0];
     if (dia === undefined) throw new Error("a semana saiu sem dias");
     const impresso = diaImpresso(dia, {
-      relogio: semana.relogio,
       tecnicas: TECNICAS,
       idsDeEstudoIndividual: SEM_EI,
     });
@@ -625,7 +619,6 @@ describe("spec 029, D-6 · o EI sem descrição no mesmo TA de outro lançamento
     const dia = semana.dias[0];
     if (dia === undefined) throw new Error("a semana saiu sem dias");
     return diaImpresso(dia, {
-      relogio: semana.relogio,
       tecnicas: TECNICAS,
       idsDeEstudoIndividual: IDS_DE_EI,
     });

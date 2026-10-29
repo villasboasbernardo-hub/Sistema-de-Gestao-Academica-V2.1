@@ -788,10 +788,16 @@ test("FR-008 · a nova ordem: os DSA publicados logo abaixo do cabeçalho, antes
     `2026-${SEMANA_PUBLICADA}`,
   );
 
-  /* O título e a barra do ano e dos Filtros FICAM (FR-008.1; RT-1 e RT-6) — só a frase sai. */
+  /*
+   * O título e a barra dos Filtros FICAM (FR-008.1; RT-1) — só a frase sai. O ano saiu da página para o cabeçalho do
+   * sistema no Bloco 15 (spec 030, `FR-003`, RT-6 emendada).
+   */
   const cabecalho = page.locator('[data-slot="cabecalho-do-inicio"]');
   await expect(cabecalho.getByRole("heading", { level: 1, name: "Início" })).toBeVisible();
-  await expect(cabecalho.locator('[data-slot="ano-do-painel-escolha"]')).toBeVisible();
+  await expect(
+    page.locator('[data-slot="cabecalho-do-app"] [data-slot="ano-do-painel-escolha"]'),
+  ).toBeVisible();
+  await expect(cabecalho.locator('[data-slot="ano-do-painel-escolha"]')).toHaveCount(0);
   await expect(cabecalho.locator('[data-slot="abrir-filtros"]')).toBeVisible();
   await expect(cabecalho, "a frase do panorama continua no cabeçalho").not.toContainText(
     "Panorama das turmas",
@@ -1195,11 +1201,8 @@ test("FR-005 · «desta semana em diante» com outro regime numa semana futura: 
     capacidadeComUmTaPorDia,
   );
 
-  /* ── a ficha, por clique («Voltar à turma») ──────────────────────────────────────────────────────────────────────── */
-  await page
-    .locator('[data-slot="publicacao-do-dsa"]')
-    .getByRole("link", { name: "Voltar à turma" })
-    .click();
+  /* ── a ficha, por clique (o código da turma na linha do cabeçalho — Bloco 15, `FR-009`) ────────────────────────── */
+  await page.locator('[data-slot="publicacao-do-dsa"] [data-slot="turma-do-dsa"]').click();
   await expect
     .poll(() => new URL(page.url()).pathname)
     .toBe(`/turmas/${encodeURIComponent(S.turmaComRelogio)}`);

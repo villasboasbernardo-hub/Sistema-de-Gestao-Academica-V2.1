@@ -156,7 +156,7 @@ test("US6 e US7 · a PM 1 aponta o item, a vista abre a sessão 1 e a 2, e os pa
   await expect(page.locator('[data-slot="avisos-do-lancamento"]')).toContainText(
     "não está habilitado",
   );
-  await page.getByRole("button", { name: "Entendi" }).click();
+  await page.getByRole("button", { name: "Fechar o lançamento" }).click();
 
   const { turmaId } = await turmaECurso();
   const { data: av } = await banco()

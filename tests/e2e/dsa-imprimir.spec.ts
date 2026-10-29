@@ -228,18 +228,18 @@ test.describe("`SC-011` · o bloco que atravessa o almoço sai em DOIS cartões"
   });
 });
 
-test.describe("a linha fixa do Estudo Individual e o dia de feriado", () => {
-  test("cada dia tem o cartão de ESTUDO INDIVIDUAL · EI, sem instrutor", async ({ page }) => {
+test.describe("o Estudo Individual só lançado (Bloco 15) e o dia de feriado", () => {
+  /*
+   * ⚠️ **BLOCO 15 (spec 030, `FR-004`): A LINHA FIXA SAIU.** Até 29/10/2026 cada dia útil sem EI lançado ganhava o cartão
+   *    *ESTUDO INDIVIDUAL · EI* (5 nesta semana: seis dias menos o feriado) — e era ele que "voltava" depois de excluir o
+   *    EI. A semente não lança EI: o papel não tem cartão de Estudo Individual nenhum.
+   */
+  test("⚠️ sem EI lançado, o papel não tem cartão de Estudo Individual", async ({ page }) => {
     await abrirAImpressao(page, SEMANA);
-    const linhasDeEi = page.locator(`${DOCUMENTO} [data-slot="dsa-cartao"][data-tipo="estudo"]`);
-    /*
-     * ⚠️ **SEIS DIAS (o sábado abre por ter lançamento, `Q-4`) MENOS O FERIADO DE DIA INTEIRO = 5.**
-     * A quarta-feira é feriado `dia_inteiro` e sai como **uma** faixa com a descrição, **sem** linha
-     * de Estudo Individual: não há estudo individual em dia que não houve expediente.
-     */
-    await expect(linhasDeEi).toHaveCount(5);
-    await expect(linhasDeEi.first()).toContainText("ESTUDO INDIVIDUAL");
-    await expect(linhasDeEi.first().locator(".dsa-te")).toHaveText("EI");
+    await expect(page.locator(DOCUMENTO)).toBeVisible();
+    await expect(
+      page.locator(`${DOCUMENTO} [data-slot="dsa-cartao"][data-tipo="estudo"]`),
+    ).toHaveCount(0);
   });
 
   test("`Q-16` · o dia de feriado de dia inteiro sai como UMA faixa com a descrição", async ({
@@ -379,7 +379,8 @@ test.describe("⚠️ item 7 · a ASSINATURA traz o posto POR EXTENSO; a coluna 
     await page.locator('[data-acao="semana-proxima"]').click();
     await expect(semanaNaTela).not.toHaveText(deHoje);
     await page.locator('[data-acao="semana-proxima"]').click();
-    await expect(semanaNaTela).toContainText(dataParaLeitura(DATA_A_FRENTE));
+    /* Bloco 15 (`FR-009`): a segunda-feira abre o intervalo curto da linha única — *"dd/mm a dd/mm/aaaa"*. */
+    await expect(semanaNaTela).toContainText(`${dataParaLeitura(DATA_A_FRENTE).slice(0, 5)} a `);
 
     /* ── 1. Na tela: a grade com a sigla, o rodapé por extenso ───────────────────────────── */
     const cartaoNaTela = page
@@ -603,10 +604,8 @@ test.describe("`SC-015` · a semana sem lançamento imprime, com o aviso NA TELA
     /* ⚠️ A tela também mostra o documento: só a URL prova que se chegou ao papel. */
     await page.waitForURL(/\/print\/dsa/);
     await expect(page.locator(DOCUMENTO)).toBeVisible();
-    /* E o papel sai com os dias e só os cartões de Estudo Individual. */
-    await expect(
-      page.locator(`${DOCUMENTO} [data-slot="dsa-cartao"][data-tipo="estudo"]`).first(),
-    ).toBeVisible();
+    /* E o papel sai só com os dias — sem a linha fixa de Estudo Individual (Bloco 15). */
+    await expect(page.locator(`${DOCUMENTO} [data-slot="dsa-cartao"]`)).toHaveCount(0);
   });
 
   test("⚠️ e o aviso NÃO vai para o papel — ele é da tela", async ({ page }) => {

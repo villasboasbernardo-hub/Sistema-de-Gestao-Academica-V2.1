@@ -45,7 +45,7 @@
 
 import { emOrdemNaturalDoCodigo } from "../ordem-natural";
 import { MOTIVO_NO_MESMO_TA, rotuloDaParadaParcial, type DiaDaGrade, type Semana } from "./grade";
-import { type Relogio, type Trecho } from "./horario-do-bloco";
+import { type Trecho } from "./horario-do-bloco";
 
 /** O texto fixo da última linha de cada dia, como o documento assinado o escreve. */
 export const TEXTO_DO_ESTUDO_INDIVIDUAL = "ESTUDO INDIVIDUAL";
@@ -228,7 +228,6 @@ export function ehLinhaFixaDoEstudoIndividual(linha: { readonly chave: string })
 export function diaImpresso(
   dia: DiaDaGrade,
   entrada: {
-    readonly relogio: Relogio | null;
     readonly tecnicas: readonly TecnicaDoCatalogo[];
     readonly idsDeEstudoIndividual: ReadonlySet<string>;
   },
@@ -363,7 +362,6 @@ export function documentoImpresso(
 ): readonly DiaImpresso[] {
   return semana.dias.map((dia) =>
     diaImpresso(dia, {
-      relogio: semana.relogio,
       tecnicas: entrada.tecnicas,
       idsDeEstudoIndividual: entrada.idsDeEstudoIndividual,
     }),
@@ -507,7 +505,7 @@ export function avisosAntesDeImprimir(entrada: {
   }
   if (entrada.linhasImpressas === 0) {
     avisos.push(
-      "Nenhum Tempo de Aula está lançado nesta semana: o documento sai com os dias e só a linha de Estudo Individual.",
+      "Nenhum Tempo de Aula está lançado nesta semana: o documento sai só com os dias.",
     );
   }
   return avisos;

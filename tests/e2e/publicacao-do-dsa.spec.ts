@@ -138,6 +138,18 @@ async function lancarAula(page: Page, ta: number, dia: string, texto: string): P
 
 const situacao = (page: Page) => page.locator('[data-slot="publicacao-do-dsa"]');
 
+/**
+ * Abre a aba de uma versão publicada (Bloco 15, spec 030, `FR-007`) — por clique, como alguém usa — e espera o papel dela.
+ * O histórico deixou de ser a lista *Versões publicadas*: cada versão é uma aba, com o papel, a justificativa e o
+ * *Reimprimir*.
+ */
+async function abrirAVersao(page: Page, numero: number): Promise<void> {
+  await page.locator(`[data-slot="abas-de-versao"] [data-versao="${numero}"]`).click();
+  await expect(
+    page.locator(`[data-slot="papel-da-versao"][data-versao-aberta="${numero}"]`),
+  ).toBeVisible();
+}
+
 test("SC-001/SC-003/SC-004 · rascunho → salvar → prévia → publicar → alteração (ALT 1) → reimprimir", async ({
   page,
 }) => {
@@ -207,7 +219,8 @@ test("SC-001/SC-003/SC-004 · rascunho → salvar → prévia → publicar → a
   await form.locator('[data-slot="gravar-alteracao"]').click();
   await expect(page.locator('[data-slot="resposta-da-publicacao"]')).toContainText("ALT 1");
   await expect(situacao(page)).toHaveAttribute("data-situacao", "publicado");
-  await expect(page.locator('[data-versao="1"]')).toContainText(
+  await abrirAVersao(page, 1);
+  await expect(page.locator('[data-slot="justificativa-da-versao"]')).toContainText(
     "Inclusão de aula por remanejamento",
   );
   await expect.poll(taDaTurma).toBe(antes + 2);
@@ -224,12 +237,14 @@ test("SC-001/SC-003/SC-004 · rascunho → salvar → prévia → publicar → a
     { tipo: "alteracao_publicada", numero: 1 },
   ]);
 
-  /* 5. Reimprimir: a original com ALT em branco, a ALT 1 com «ALT 1». */
-  await page.locator('[data-versao="0"] [data-slot="reimprimir-versao"]').click();
+  /* 5. Reimprimir, pela aba de cada versão: a original com ALT em branco, a ALT 1 com «ALT 1». */
+  await abrirAVersao(page, 0);
+  await page.locator('[data-slot="papel-da-versao"] [data-slot="reimprimir-versao"]').click();
   await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ALT —");
   await expect(page.locator('[data-slot="dsa-previa"]')).toHaveCount(0);
   await page.goBack();
-  await page.locator('[data-versao="1"] [data-slot="reimprimir-versao"]').click();
+  await abrirAVersao(page, 1);
+  await page.locator('[data-slot="papel-da-versao"] [data-slot="reimprimir-versao"]').click();
   await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ALT 1");
 });
 
@@ -389,11 +404,12 @@ test("RP-9 · Fazer alteração → lançar → «Salvar alteração»: conta na
   await page.goBack();
   await expect(situacao(page)).toBeVisible();
 
-  /* O histórico: só a Original — e o Reimprimir dela, também sem o tópico salvo. */
-  await expect(page.locator('[data-slot="historico-da-publicacao"] tbody tr')).toHaveCount(1);
+  /* As abas: a Minuta e só a Original — e o Reimprimir dela, também sem o tópico salvo. */
+  await expect(page.locator('[data-slot="abas-de-versao"] [role="tab"]')).toHaveCount(2);
   await expect(page.locator('[data-versao="0"]')).toContainText("Original");
   await expect(page.locator('[data-versao="1"]')).toHaveCount(0);
-  await page.locator('[data-versao="0"] [data-slot="reimprimir-versao"]').click();
+  await abrirAVersao(page, 0);
+  await page.locator('[data-slot="papel-da-versao"] [data-slot="reimprimir-versao"]').click();
   await expect.poll(() => new URL(page.url()).searchParams.get("versao")).toBe("0");
   await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ALT —");
   await expect(cartaoNoPapel(daOriginal)).toHaveCount(1);
@@ -401,11 +417,11 @@ test("RP-9 · Fazer alteração → lançar → «Salvar alteração»: conta na
   await page.goBack();
   await expect(situacao(page)).toBeVisible();
 
-  /* Sair por clique (Voltar à turma) e voltar por clique (Abrir o DSA): a alteração salva continua lá. */
-  await page
-    .locator('[data-slot="publicacao-do-dsa"]')
-    .getByRole("link", { name: "Voltar à turma" })
-    .click();
+  /*
+   * Sair por clique (o código da turma na linha do cabeçalho — Bloco 15, `FR-009`) e voltar por clique (Abrir o DSA):
+   * a alteração salva continua lá.
+   */
+  await page.locator('[data-slot="publicacao-do-dsa"] [data-slot="turma-do-dsa"]').click();
   await expect
     .poll(() => new URL(page.url()).pathname)
     .toBe(`/turmas/${encodeURIComponent(S.turmaComRelogio)}`);
@@ -491,7 +507,10 @@ test("RP-9 · Fazer alteração → lançar → «Salvar alteração»: conta na
   await expect(resposta).toContainText("ALT 1");
   await expect(selo).toHaveAttribute("data-selo", "ALT 1");
   await expect(situacao(page)).toHaveAttribute("data-situacao", "publicado");
-  await expect(page.locator('[data-versao="1"]')).toContainText("Aula acrescentada e salva");
+  await abrirAVersao(page, 1);
+  await expect(page.locator('[data-slot="justificativa-da-versao"]')).toContainText(
+    "Aula acrescentada e salva",
+  );
   expect(await taDaTurma()).toBe(antes + 2);
   const { data: publicacoes } = await banco()
     .from("dsa_eventos_da_semana")
@@ -505,7 +524,7 @@ test("RP-9 · Fazer alteração → lançar → «Salvar alteração»: conta na
     { tipo: "publicado", numero: 0 },
     { tipo: "alteracao_publicada", numero: 1 },
   ]);
-  await page.locator('[data-versao="1"] [data-slot="reimprimir-versao"]').click();
+  await page.locator('[data-slot="papel-da-versao"] [data-slot="reimprimir-versao"]').click();
   await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ALT 1");
   await expect(cartaoNoPapel(daAlteracao)).toHaveCount(1);
   await expect(cartaoNoPapel(daOriginal)).toHaveCount(1);

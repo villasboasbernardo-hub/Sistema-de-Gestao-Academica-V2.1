@@ -295,21 +295,27 @@ async function ativasArquivadasNoAno(): Promise<number> {
   return count ?? 0;
 }
 
-test.describe("Spec 019 · FR-001 e A-1 · o ano, numa caixa de seleção no canto superior direito", () => {
+/*
+ * ⚠️ **O ANO SAIU DO CANTO DA PÁGINA PARA O CABEÇALHO DO SISTEMA** (Bloco 15, spec 030, `FR-003`; RT-6 emendada em
+ *    29/10/2026): *"um seletor de ano só, na barra superior, junto do sininho e do tema"*. A posição «à direita do título
+ *    da página» (A-1 da spec 019) foi superada; o que estes casos provam agora é que o seletor é UM, no cabeçalho, e vale
+ *    para o Início e para Turmas.
+ */
+test.describe("Spec 019 · FR-001 e o Bloco 15 · o ano, numa caixa de seleção no cabeçalho do sistema", () => {
   test("abre no ano de hoje; a caixa troca o ano na URL; e não se fala em «ano letivo»", async ({
     page,
   }) => {
     await entrar(page, EMAIL, "/inicio");
     const cabecalho = page.locator('[data-slot="cabecalho-do-inicio"]');
-    const escolha = cabecalho.locator('select[data-slot="ano-do-painel-escolha"]');
+    const escolha = page.locator(
+      '[data-slot="cabecalho-do-app"] select[data-slot="ano-do-painel-escolha"]',
+    );
     await expect(escolha).toHaveValue(String(ANO));
     await expect(page.locator('[data-slot="ano-do-painel-opcao"]')).toHaveCount(0);
 
-    // No canto superior direito: à direita do título, na mesma faixa.
-    const titulo = await cabecalho.getByRole("heading", { level: 1 }).boundingBox();
-    const caixa = await escolha.boundingBox();
-    expect(caixa && titulo && caixa.x > titulo.x + titulo.width).toBe(true);
-    expect(caixa && titulo && caixa.y < titulo.y + titulo.height).toBe(true);
+    // No cabeçalho do sistema, junto do sininho — e não no da página.
+    await expect(cabecalho.locator('[data-slot="ano-do-painel-escolha"]')).toHaveCount(0);
+    await expect(page.locator('select[data-slot="ano-do-painel-escolha"]')).toHaveCount(1);
     await expect(page.locator("main")).not.toContainText(/ano letivo/i);
 
     await expect(page.locator('[data-slot="turmas-do-ano"]')).toHaveAttribute(
@@ -333,7 +339,7 @@ test.describe("Spec 019 · FR-001 e A-1 · o ano, numa caixa de seleção no can
     await expect(cartao(page, T.comAula)).toBeVisible();
   });
 
-  test("em Turmas, a mesma caixa, no mesmo canto", async ({ page }) => {
+  test("em Turmas, a mesma caixa, no mesmo cabeçalho", async ({ page }) => {
     await entrar(page, EMAIL, "/inicio");
     await page
       .locator('[data-slot="navegacao-lateral"]')
@@ -341,11 +347,11 @@ test.describe("Spec 019 · FR-001 e A-1 · o ano, numa caixa de seleção no can
       .click();
     await expect.poll(() => new URL(page.url()).pathname).toBe("/turmas");
     const cabecalho = page.locator('[data-slot="cabecalho-de-turmas"]');
-    const escolha = cabecalho.locator('select[data-slot="ano-do-painel-escolha"]');
+    const escolha = page.locator(
+      '[data-slot="cabecalho-do-app"] select[data-slot="ano-do-painel-escolha"]',
+    );
     await expect(escolha).toHaveValue(String(ANO));
-    const titulo = await cabecalho.getByRole("heading", { level: 1 }).boundingBox();
-    const caixa = await escolha.boundingBox();
-    expect(caixa && titulo && caixa.x > titulo.x + titulo.width).toBe(true);
+    await expect(cabecalho.locator('[data-slot="ano-do-painel-escolha"]')).toHaveCount(0);
     await expect(page.locator("main")).not.toContainText(/ano letivo/i);
     await escolha.selectOption(String(ANO + 1));
     await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBe(String(ANO + 1));
@@ -572,7 +578,7 @@ test.describe("Spec 029 · FR-007 · RT-8 · a arquivada continua contando no an
 
     // O ano seguinte, pela caixa de seleção: a arquivada é do ANO dela (RT-6), e não conta em outro.
     await page
-      .locator('[data-slot="cabecalho-do-inicio"] select[data-slot="ano-do-painel-escolha"]')
+      .locator('[data-slot="cabecalho-do-app"] select[data-slot="ano-do-painel-escolha"]')
       .selectOption(String(ANO + 1));
     await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBe(String(ANO + 1));
     await expect(doAno).toHaveAttribute("data-ano", String(ANO + 1));

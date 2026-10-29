@@ -31,9 +31,32 @@ export async function irParaASemanaDoDia(
   semana: number,
   ano: number,
 ): Promise<void> {
+  await abrirOCampoDaSemana(page);
   await page.getByLabel("Ir para a semana do dia").fill(dia);
-  const segunda = datasDaSemanaIso(ano, semana)[0] ?? "";
-  await expect(page.locator('[data-slot="semana-atual"]')).toContainText(dataParaLeitura(segunda));
+  await esperarASemana(page, semana, ano);
+}
+
+/**
+ * Bloco 15 (spec 030, `FR-010`): o campo de data mora atrás do ícone *Escolher semana* da barra do DSA. Abrir é
+ * idempotente — com o campo à vista, não clica (um segundo clique o fecharia).
+ */
+export async function abrirOCampoDaSemana(page: Page): Promise<void> {
+  const campo = page.getByLabel("Ir para a semana do dia");
+  if (await campo.isVisible()) return;
+  await page.locator('[data-slot="abrir-calendario-do-dsa"]').click();
+  await expect(campo).toBeVisible();
+}
+
+/**
+ * A semana chegou quando a SEGUNDA-FEIRA dela abre o intervalo da linha única do cabeçalho (Bloco 15, `FR-009`):
+ * *"26/10 a 31/10/2026"* — o primeiro dia sem o ano, quando os dois são do mesmo ano; inteiro na virada.
+ */
+export async function esperarASemana(page: Page, semana: number, ano: number): Promise<void> {
+  const segunda = dataParaLeitura(datasDaSemanaIso(ano, semana)[0] ?? "");
+  const [dia, mes] = segunda.split("/");
+  await expect(page.locator('[data-slot="semana-atual"]')).toContainText(
+    new RegExp(`${dia}/${mes}(/\\d{4})? a `),
+  );
 }
 
 /**

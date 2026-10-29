@@ -96,7 +96,7 @@ async function lancar(page: Page): Promise<string> {
   };
   await expect.poll(desfecho, { timeout: 60_000 }).not.toBe("em curso");
   const r = await desfecho();
-  if (r === "avisou") await page.getByRole("button", { name: "Entendi" }).click();
+  if (r === "avisou") await page.getByRole("button", { name: "Fechar o lançamento" }).click();
   return r;
 }
 

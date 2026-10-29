@@ -247,7 +247,8 @@ test("SC-001 · o feriado futuro: alerta → excluído → sai da lista, o dia v
   await expect.poll(() => diasUteisNaFicha(page)).toBe(diasAntes + 1);
   await page.locator('[data-slot="abrir-o-dsa"]').click();
   await irParaASemanaDoDia(page, DATA_FUTURA, semana!.numero, semana!.ano);
-  await expect(page.locator('[data-slot="controle-de-paradas"]')).toBeVisible();
+  /* Bloco 15 (D-19): o *Parar dia* mora na barra do DSA; as paradas da semana só aparecem quando há alguma. */
+  await expect(page.locator('[data-slot="parar-dia"]')).toBeVisible();
   await expect(page.locator("[data-feriado]", { hasText: nomeFuturo() })).toHaveCount(0);
 });
 

@@ -381,7 +381,11 @@ export function ParadasDaSemana({
       </div>
 
       {resposta ? (
-        <p role="status" className="text-texto text-sm" data-slot="resposta-da-parada">
+        /*
+          ⚠️ Slot PRÓPRIO (Bloco 15): a resposta do *Parar dia* agora sai da barra (`resposta-da-parada`), e as duas podem
+             estar na tela ao mesmo tempo — parar e, em seguida, desfazer.
+        */
+        <p role="status" className="text-texto text-sm" data-slot="resposta-do-desfazer">
           {resposta}
         </p>
       ) : null}
