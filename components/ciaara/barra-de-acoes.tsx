@@ -31,6 +31,34 @@ export type BarraDeAcoesProps = {
   readonly className?: string;
 };
 
+/**
+ * Um grupo de ações dentro de uma barra longa — RT-1 emendada no Bloco 15 (spec 030, `FR-010`): *"agrupados
+ * (navegação | lançamento | publicação)"*, Bernardo Villas Boas, 29/10/2026.
+ *
+ * ⚠️ **A DIVISÓRIA É DO GRUPO, E SÓ ENTRE GRUPOS**: cada um, menos o primeiro da linha, abre com um traço à esquerda. O
+ *    grupo vazio não desenha nada — a barra de quem não pode lançar não mostra um traço solto.
+ */
+export function GrupoDaBarra({
+  rotulo,
+  children,
+  slot,
+}: {
+  readonly rotulo: string;
+  readonly children: React.ReactNode;
+  readonly slot?: string;
+}): React.ReactNode {
+  return (
+    <div
+      role="group"
+      aria-label={rotulo}
+      data-slot={slot ?? "grupo-da-barra"}
+      className="border-borda flex flex-wrap items-center gap-2 border-l pl-2 first:border-l-0 first:pl-0 empty:hidden"
+    >
+      {children}
+    </div>
+  );
+}
+
 export function BarraDeAcoes({ rotulo, children, className }: BarraDeAcoesProps): React.ReactNode {
   return (
     <div

@@ -88,11 +88,11 @@ export function DocumentoDoDsa({
 
   return (
     <div
-      className={`dsa4 ${barlow.className}${compacto ? " dsa4-compacto" : ""}`}
+      className={`dsa4 ${barlow.className}${compacto ? " dsa4-compacto" : ""}${previa ? " dsa4-com-previa" : ""}`}
       data-slot="dsa-impresso"
     >
       {previa ? (
-        /* Spec 024 (FR-010): a marca PRÉVIA, em TEXTO, sobre a folha inteira. */
+        /* Spec 024 (FR-010): a marca PRÉVIA, em TEXTO, na folha inteira — atrás do conteúdo desde o Bloco 15 (`FR-008`). */
         <div
           className="dsa4-previa"
           data-slot="dsa-previa"

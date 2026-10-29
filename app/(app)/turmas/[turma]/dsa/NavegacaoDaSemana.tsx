@@ -1,17 +1,25 @@
 /**
- * Semana anterior · atual · próxima, a semana **pela data** — e a coluna de sábado (`RF-DSA-02`,
- * `RF-NAV-04`, `Q-4`).
+ * Semana anterior · esta semana · a semana **pela data** · a semana seguinte — e o sábado (`RF-DSA-02`, `RF-NAV-04`,
+ * `Q-4`), **como ícones na barra do DSA** (Bloco 15, spec 030, `FR-010`).
+ *
+ * > *"mover para a barra de ícones do canto superior direito a navegação de semana (anterior · esta semana ·
+ * > calendário/ir para o dia · próxima), o Parar dia e a função do sábado. Só ícones, dica só do verbo, agrupados."*
+ * > — Bernardo Villas Boas, 29/10/2026 (RD-6 emendada)
  *
  * ⚠️ **FOLHA DE CLIENTE, DECLARADA.** Ela escreve na URL pelo roteador do Next (`router.push` com o
  * endereço de `enderecoDoDsa`), que é estado de navegador. A grade continua no servidor; só estes
- * cinco controles atravessam a fronteira.
+ * controles atravessam a fronteira.
+ *
+ * ⚠️ **ATÉ O BLOCO 15 ELA ERA UMA LINHA DE BOTÕES ESCRITOS**, com o rótulo *"Semana N de T · datas"* no meio — a segunda
+ *    das três vezes em que a semana aparecia no cabeçalho (item 9). O rótulo foi para a linha única sob o título; os
+ *    botões viraram ícones com os MESMOS `data-acao`.
  *
  * ⚠️ **O CAMPO DE DATA É O CALENDÁRIO NATIVO DO NAVEGADOR, E NENHUM PACOTE** (item 4 das correções
  * do DSA, decisão de Bernardo Villas Boas de 08/10/2026): escolhida uma data, abre a semana ISO que
- * a contém. ⚠️ **Ele passa pelo MESMO `ir()` dos botões**, e é isso que o faz empilhar no histórico
- * e levar o sábado aberto junto — um segundo caminho até a URL seria o segundo lugar a esquecer um
- * dos dois. Quem decide se a data serve, e em que semana ela cai, é `semanaDaDataEscolhida`, em
- * `lib/dominio/dsa/semana-pela-data.ts`, com teste ao lado.
+ * a contém. Desde o Bloco 15 ele abre pelo ícone *Escolher semana*, como no Início. ⚠️ **Ele passa pelo MESMO `ir()`
+ * dos botões**, e é isso que o faz empilhar no histórico e levar o sábado aberto junto — um segundo caminho até a URL
+ * seria o segundo lugar a esquecer um dos dois. Quem decide se a data serve, e em que semana ela cai, é
+ * `semanaDaDataEscolhida`, em `lib/dominio/dsa/semana-pela-data.ts`, com teste ao lado.
  *
  * ⚠️ **`semana` E `ano` EMPILHAM NO HISTÓRICO, e é o `RF-NAV-04` literal** — *"navegar entre
  * semanas usa o histórico do navegador"*. O padrão da biblioteca é SUBSTITUIR: com ele a URL
@@ -28,11 +36,12 @@
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { GrupoDaBarra } from "@/components/ciaara/barra-de-acoes";
+import { Input } from "@/components/ui/input";
 import { datasDaSemanaIso, semanasDoAnoIso } from "@/lib/dominio/carga-semanal";
 import { datasEscolhiveis, semanaDaDataEscolhida } from "@/lib/dominio/dsa/semana-pela-data";
 import { CONTRATO } from "@/lib/navegacao/contrato";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 import { enderecoDoDsa, ROTA_DO_DSA } from "./consulta";
 
@@ -41,14 +50,6 @@ export type NavegacaoDaSemanaProps = {
   readonly ano: number;
   readonly semana: number;
   readonly sabadoAberto: boolean;
-  /**
-   * "Semana N de T" (spec 016, FR-009.2; D-COR-1), de `rotuloDaSemanaDoCurso`. ⚠️ A semana ISO fica só na
-   * URL (`?semana=&ano=`): até 17/10/2026 a navegação mostrava *"semana 41 de 2026"*, e o cabeçalho
-   * *"Semana 41/2026 · DSA Nº 4"* — duas numerações na mesma tela, nenhuma delas a do curso.
-   */
-  readonly rotuloDaSemanaDoCurso: string;
-  /** As datas da semana, `06/04/2026 a 11/04/2026`. */
-  readonly datasDaSemana: string;
 };
 
 /**
@@ -79,15 +80,10 @@ export function proxima(ano: number, semana: number): { ano: number; semana: num
   return { ano: ano + 1, semana: 1 };
 }
 
-export function NavegacaoDaSemana({
-  codigo,
-  ano,
-  semana,
-  sabadoAberto,
-  rotuloDaSemanaDoCurso,
-  datasDaSemana,
-}: NavegacaoDaSemanaProps) {
+/** O grupo **navegação** da barra do DSA: as setas nos extremos, a semana de hoje e o calendário entre elas. */
+export function NavegacaoDaSemana({ codigo, ano, semana, sabadoAberto }: NavegacaoDaSemanaProps) {
   const router = useRouter();
+  const [calendarioAberto, definirCalendarioAberto] = React.useState(false);
 
   /*
    * ⚠️ `router.push` e NÃO `replace`: é o `push` que empilha, e é o empilhamento que faz o botão
@@ -138,85 +134,90 @@ export function NavegacaoDaSemana({
     ir({ ano: destino.ano, semana: destino.numero });
   };
 
-  const antes = anterior(ano, semana);
-  const depois = proxima(ano, semana);
-
   return (
-    <nav
-      aria-label="Navegação da semana"
-      className="flex flex-wrap items-center gap-2"
-      data-slot="navegacao-da-semana"
-    >
-      <Button variant="outline" size="sm" onClick={() => ir(antes)} data-acao="semana-anterior">
-        Semana anterior
-      </Button>
+    <GrupoDaBarra rotulo="Navegação da semana" slot="navegacao-da-semana">
+      <BotaoDeIcone
+        acao="voltar"
+        rotulo="Semana anterior"
+        onClick={() => ir(anterior(ano, semana))}
+        data-acao="semana-anterior"
+      />
       {/*
        * ⚠️ "Esta semana" leva ao endereço SEM parâmetro — e é isso que o torna favoritável: o
        * valor no padrão não aparece na URL, então o link guardado abre sempre na semana corrente.
        */}
-      <Button
-        variant="outline"
-        size="sm"
+      <BotaoDeIcone
+        acao="esta-semana"
+        rotulo="Ir para esta semana"
         onClick={() => router.push(enderecoDoDsa(codigo))}
         data-acao="semana-atual"
-      >
-        Esta semana
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => ir(depois)} data-acao="semana-proxima">
-        Próxima semana
-      </Button>
-      <span className="ml-1 text-sm tabular-nums text-texto-suave" data-slot="semana-atual">
-        <span className="font-semibold text-texto">{rotuloDaSemanaDoCurso}</span>
-        {datasDaSemana ? ` · ${datasDaSemana}` : ""}
-      </span>
-      {/*
-       * ⚠️ `<label>` DE VERDADE, ligado pelo `htmlFor`: é ele que dá nome ao campo para quem usa
-       * leitor de tela, e o caso de ponta a ponta o encontra PELO RÓTULO — se a ligação quebrar, o
-       * caso quebra junto.
-       * ⚠️ O VALOR É ISO (`aaaa-mm-dd`), que é o formato do `<input type="date">`; quem o escreve em
-       * DD/MM/AAAA na tela é o próprio navegador. Passá-lo por `dataParaLeitura` abriria o campo
-       * VAZIO — o mesmo aviso de `PainelDePeriodo.tsx`.
-       */}
-      <div className="ml-2 flex items-center gap-2">
-        <label htmlFor={ID_DO_CAMPO_DE_DATA} className="text-sm whitespace-nowrap text-texto-suave">
-          Ir para a semana do dia
-        </label>
-        <Input
-          id={ID_DO_CAMPO_DE_DATA}
-          type="date"
-          lang="pt-BR"
-          min={ESCOLHIVEIS.primeira}
-          max={ESCOLHIVEIS.ultima}
-          value={rascunho ?? segunda}
-          onChange={(evento) => escolherData(evento.target.value)}
-          onBlur={() => definirRascunho(null)}
-          className="h-8 w-auto text-sm"
-          data-acao="semana-pela-data"
-        />
-      </div>
-      {/*
-       * O sábado (`Q-4`): entra **por ação do operador**. ⚠️ Quando há lançamento nele a coluna
-       * aparece de qualquer jeito, e aí o botão só muda o que já está à vista — esconder um
-       * lançamento gravado seria esconder um fato.
-       */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="ml-auto"
-        aria-pressed={sabadoAberto}
-        onClick={() =>
-          router.push(
-            enderecoDoDsa(codigo, {
-              semana,
-              ano,
-              ...(sabadoAberto ? {} : { sabado: true }),
-            }),
-          )
-        }
-        data-acao="alternar-sabado"
-      >
-        {sabadoAberto ? "Fechar o sábado" : "Abrir o sábado"}
-      </Button>
-    </nav>
+      />
+      <BotaoDeIcone
+        acao="escolher-semana"
+        rotulo="Escolher a semana pelo dia"
+        aria-expanded={calendarioAberto}
+        onClick={() => definirCalendarioAberto((v) => !v)}
+        data-slot="abrir-calendario-do-dsa"
+      />
+      {calendarioAberto ? (
+        <span className="flex items-center">
+          {/*
+           * ⚠️ `<label>` DE VERDADE, ligado pelo `htmlFor`: é ele que dá nome ao campo para quem usa
+           * leitor de tela, e os casos de ponta a ponta o encontram PELO RÓTULO — se a ligação quebrar, o
+           * caso quebra junto. Na barra ele fica só para o leitor de tela (o ícone já diz o que é).
+           * ⚠️ O VALOR É ISO (`aaaa-mm-dd`), que é o formato do `<input type="date">`; quem o escreve em
+           * DD/MM/AAAA na tela é o próprio navegador. Passá-lo por `dataParaLeitura` abriria o campo
+           * VAZIO — o mesmo aviso de `PainelDePeriodo.tsx`.
+           */}
+          <label htmlFor={ID_DO_CAMPO_DE_DATA} className="sr-only">
+            Ir para a semana do dia
+          </label>
+          <Input
+            id={ID_DO_CAMPO_DE_DATA}
+            type="date"
+            lang="pt-BR"
+            min={ESCOLHIVEIS.primeira}
+            max={ESCOLHIVEIS.ultima}
+            value={rascunho ?? segunda}
+            onChange={(evento) => escolherData(evento.target.value)}
+            onBlur={() => definirRascunho(null)}
+            className="h-8 w-auto text-sm"
+            data-acao="semana-pela-data"
+          />
+        </span>
+      ) : null}
+      <BotaoDeIcone
+        acao="avancar"
+        rotulo="Semana seguinte"
+        onClick={() => ir(proxima(ano, semana))}
+        data-acao="semana-proxima"
+      />
+    </GrupoDaBarra>
+  );
+}
+
+/**
+ * O sábado (`Q-4`) — no grupo **lançamento** da barra (Bloco 15): entra **por ação do operador**. ⚠️ Quando há
+ * lançamento nele a coluna aparece de qualquer jeito, e aí o botão só muda o que já está à vista — esconder um
+ * lançamento gravado seria esconder um fato.
+ */
+export function AlternarSabado({ codigo, ano, semana, sabadoAberto }: NavegacaoDaSemanaProps) {
+  const router = useRouter();
+  return (
+    <BotaoDeIcone
+      acao={sabadoAberto ? "fechar-sabado" : "abrir-sabado"}
+      rotulo={sabadoAberto ? "Fechar o sábado" : "Abrir o sábado"}
+      aria-pressed={sabadoAberto}
+      onClick={() =>
+        router.push(
+          enderecoDoDsa(codigo, {
+            semana,
+            ano,
+            ...(sabadoAberto ? {} : { sabado: true }),
+          }),
+        )
+      }
+      data-acao="alternar-sabado"
+    />
   );
 }

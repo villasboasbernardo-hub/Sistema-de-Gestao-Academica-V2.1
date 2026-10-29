@@ -24,6 +24,7 @@ import { CheckCheck, PencilLine, Save, Stamp, type LucideIcon } from "lucide-rea
 
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
+import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import {
   atualizar,
   excluir,
@@ -31,6 +32,7 @@ import {
   lancarEstudoIndividualDaSemana,
   limparSemanaDoDsa,
   mover,
+  removerEstudoIndividualDaSemana,
 } from "@/lib/acoes/dsa";
 import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
 import {
@@ -61,8 +63,9 @@ import {
   type Situacao,
 } from "@/lib/dominio/dsa/publicacao";
 import { semanaSalva } from "@/lib/dominio/dsa/regime-da-semana";
+import { abasDeVersao, versaoEscolhida } from "@/lib/dominio/dsa/versao-escolhida";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
-import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
+import { dataComDiaDaSemana, dataParaLeitura, intervaloDeDatas } from "@/lib/formato/data";
 import {
   enderecoDaEdicaoDoCurso,
   enderecoDaPlanilhaDeContingencia,
@@ -73,7 +76,11 @@ import { CONTRATO } from "@/lib/navegacao/contrato";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
-import { rotuloDaSemanaDoCurso, semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
+import {
+  rotuloDaSemanaDoCurso,
+  semanaDoCurso,
+  SEMANA_AUSENTE_NO_CABECALHO,
+} from "@/lib/dominio/dsa/semana-do-curso";
 import { montarDocumentoDoDsa, type DadosDoDocumento } from "../../../../print/dsa/documento";
 import { conteudoDaSemana, montarRetratoDaSemana } from "../../../../print/dsa/retrato";
 import { alcanceDoPerfil } from "../../../cursos/consulta";
@@ -88,13 +95,15 @@ import {
 } from "./consulta";
 import { lerExtrasDaImpressao, lerSemanaDoDsa } from "./leitura";
 import { BotaoImprimir, EdicaoDasAssinaturasNaTela } from "./AssinaturasEditaveis";
-import { CabecalhoDaSemana, RodapeDaSemana } from "./DocumentoNaTela";
+import { RodapeDaSemana } from "./DocumentoNaTela";
 import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
 import { podeBaixarPlanilhaDeContingencia } from "./planilha/acesso";
-import { ControleDeParadas, type ParadaNaSemana, type TipoDeParada } from "./ControleDeParadas";
+import { ParadasDaSemana, type ParadaNaSemana, type TipoDeParada } from "./ControleDeParadas";
 import { PainelDeLancamento } from "./PainelDeLancamento";
 import { BarraDoDsa } from "./BarraDoDsa";
-import { VersoesPublicadas } from "./VersoesPublicadas";
+import { AbasDeVersao } from "./AbasDeVersao";
+import { NotasDaPublicacao } from "./NotasDaPublicacao";
+import { PapelDaVersao } from "./PapelDaVersao";
 import { lerPublicacaoDaSemana } from "./publicacao";
 import { PainelDeSituacao } from "./PainelDeSituacao";
 
@@ -166,7 +175,7 @@ export default async function SemanaDoDsa({
   if (ehEadPuro(turma.modalidade as string | null)) {
     return (
       <section className="flex flex-col gap-3">
-        <CabecalhoDoDsa codigo={codigo} rotulo={null} ano={escolha.ano} />
+        <CabecalhoDoDsa codigo={codigo} semanaDoCurso={null} dias={[]} />
         <p role="status" className="max-w-prose text-texto" data-slot="dsa-nao-se-aplica">
           {AVISO_DE_TURMA_EAD}
         </p>
@@ -203,29 +212,32 @@ export default async function SemanaDoDsa({
     const cursoDaEtapa = (
       daEtapa as { curriculo?: { duracao_semanas?: number | null } | null } | null
     )?.curriculo;
+    /* Bloco 15 (`FR-009.3`, `FR-010`): a linha única e, na barra, só a navegação — mantida para chegar às semanas com DSA. */
     return (
       <section className="flex min-w-0 flex-col gap-3">
-        <CabecalhoDoDsa
-          codigo={codigo}
-          rotulo={rotuloDaSemana(diasDaSemanaIso)}
-          ano={escolha.ano}
-        />
-        <NavegacaoDaSemana
-          codigo={codigo}
-          ano={escolha.ano}
-          semana={escolha.numero}
-          sabadoAberto={false}
-          rotuloDaSemanaDoCurso={rotuloDaSemanaDoCurso(
-            semanaDoCurso({
-              dataInicio: (turma.data_inicio as string | null) ?? null,
-              dataTermino: (turma.data_termino as string | null) ?? null,
-              duracaoSemanasDoCurso:
-                (cursoDaEtapa?.duracao_semanas as number | null | undefined) ?? null,
-              semana: { ano: escolha.ano, numero: escolha.numero },
-            }),
-          )}
-          datasDaSemana={rotuloDaSemana(diasDaSemanaIso)}
-        />
+        <header className="flex flex-wrap items-start gap-2">
+          <CabecalhoDoDsa
+            codigo={codigo}
+            semanaDoCurso={rotuloDaSemanaDoCurso(
+              semanaDoCurso({
+                dataInicio: (turma.data_inicio as string | null) ?? null,
+                dataTermino: (turma.data_termino as string | null) ?? null,
+                duracaoSemanasDoCurso:
+                  (cursoDaEtapa?.duracao_semanas as number | null | undefined) ?? null,
+                semana: { ano: escolha.ano, numero: escolha.numero },
+              }),
+            )}
+            dias={diasDaSemanaIso}
+          />
+          <BarraDeAcoes rotulo="Ações do DSA" className="ml-auto">
+            <NavegacaoDaSemana
+              codigo={codigo}
+              ano={escolha.ano}
+              semana={escolha.numero}
+              sabadoAberto={false}
+            />
+          </BarraDeAcoes>
+        </header>
         <div
           role="status"
           className="rounded-ciaara border-borda bg-superficie flex max-w-prose flex-col gap-1 border p-3"
@@ -316,6 +328,23 @@ export default async function SemanaDoDsa({
     publicacao.rascunhos,
     documentoDifere,
   );
+  /*
+   * Bloco 15 (`FR-007`): as abas — a Minuta e as versões publicadas — e a que o `?versao=` pede (Minuta, com aviso,
+   * quando ela não existe). O retrato da aberta vem da mesma trilha que já foi lida.
+   */
+  const numerosPublicados = situacaoDaPublicacao.historico.map((h) => h.numero);
+  const abas = abasDeVersao(numerosPublicados);
+  const escolhaDaVersao = versaoEscolhida(String(valores.versao ?? ""), numerosPublicados);
+  const versaoAberta =
+    escolhaDaVersao.numero === null
+      ? null
+      : (situacaoDaPublicacao.historico.find((h) => h.numero === escolhaDaVersao.numero) ?? null);
+  const retratoDaVersaoAberta =
+    versaoAberta === null
+      ? null
+      : ((publicadas.find((e) => (e.numero ?? 0) === versaoAberta.numero)?.dados as
+          | DadosDoDocumento
+          | undefined) ?? null);
   const tiposDeParada: TipoDeParada[] = (tiposDeParadaRes.data ?? []).map((t) => {
     const m = (t.metadados ?? {}) as { pode_global?: boolean; aceita_tr?: boolean };
     return {
@@ -422,48 +451,28 @@ export default async function SemanaDoDsa({
       className="flex min-w-0 flex-col gap-3"
     >
       {/*
-        ⚠️ **RD-5 E RD-6 (Bloco 11): O SELO NO TÍTULO E A BARRA À DIREITA, sem cartão separado.** A situação é só o selo
-           (ícone + palavra), sem o texto «Situação da semana»; o contador «não salvo» continua ao lado dele (D-21).
+        ⚠️ **RD-6 (Bloco 11) E O BLOCO 15: A BARRA À DIREITA, sem cartão separado, e a SEMANA UMA VEZ SÓ.** Sob o título,
+           uma linha — o código da turma (o link da ficha) · *Semana N de T* · as datas (`FR-009`): saíram o *Voltar à
+           turma*, o ano solto, o quadro *Semana do curso / Período / Alunos* da tela e o rótulo repetido da navegação. A
+           navegação, o sábado, o *Parar dia* e o EI foram para a barra (`FR-010`). O selo foi para a aba *Minuta*
+           (`FR-007`, D-15); o atributo da situação continua aqui, que é onde os casos de ponta a ponta o leem.
       */}
       <header
         className="flex flex-wrap items-start gap-2"
         data-slot="publicacao-do-dsa"
         data-situacao={situacaoDaPublicacao.situacao}
       >
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-semibold text-texto">Detalhe Semanal de Aula</h1>
-            <SeloDaSemana
-              situacao={situacaoDaPublicacao.situacao}
-              versao={situacaoDaPublicacao.versaoVigente}
-              alteracaoSalva={situacaoDaPublicacao.alteracaoSalva}
-            />
-            {situacaoDaPublicacao.rascunhos > 0 ? (
-              <span className="text-atrasado-tinta text-sm font-medium" data-slot="nao-salvos">
-                {situacaoDaPublicacao.rascunhos} lançamento
-                {situacaoDaPublicacao.rascunhos === 1 ? "" : "s"} não salvo
-                {situacaoDaPublicacao.rascunhos === 1 ? "" : "s"}
-              </span>
-            ) : null}
-          </div>
-          <p className="text-sm text-texto-suave">
-            {codigo}
-            {rotuloDaSemana(lida.dias)
-              ? ` · semana de ${rotuloDaSemana(lida.dias)} · ${escolha.ano}`
-              : ""}
-            {" · "}
-            <Link
-              href={enderecoDaTurma(codigo)}
-              className="underline underline-offset-2 hover:text-texto"
-            >
-              Voltar à turma
-            </Link>
-          </p>
-        </div>
+        <CabecalhoDoDsa
+          codigo={codigo}
+          semanaDoCurso={documento.rotuloDaSemanaDoCurso}
+          dias={lida.dias}
+        />
         <BarraDoDsa
           turmaId={turmaId}
+          codigo={codigo}
           ano={escolha.ano}
           semana={escolha.numero}
+          sabadoAberto={lida.sabadoAberto}
           situacao={situacaoDaPublicacao}
           podeOperar={podeOperarAPublicacao && !publicacao.erro}
           podeLancar={podeLancar}
@@ -473,6 +482,16 @@ export default async function SemanaDoDsa({
             tiposDeEvento: publicacao.eventos.map((e) => e.tipo),
             temLancamentoSalvo: lida.temLancamentoSalvo,
           })}
+          paradas={
+            tiposDeParada.length > 0
+              ? {
+                  dias: lida.semana.dias.map((d) => d.data),
+                  tipos: tiposDeParada,
+                  podeGlobal: pode(permissoes, "calendario", "criar"),
+                  pararDia,
+                }
+              : null
+          }
           planilha={
             podeBaixarPlanilhaDeContingencia(permissoes, turma.modalidade as string | null) ? (
               <BotaoDeIcone
@@ -511,23 +530,18 @@ export default async function SemanaDoDsa({
           fazerAlteracao={fazerAlteracaoNoDsa}
           publicar={publicarSemanaDoDsa}
           limpar={limparSemanaDoDsa}
+          lancarEstudoIndividual={lancarEstudoIndividualDaSemana}
+          removerEstudoIndividual={removerEstudoIndividualDaSemana}
           definirRegime={definirRegimeDaSemana}
         />
       </header>
 
-      <VersoesPublicadas
-        situacao={situacaoDaPublicacao}
-        enderecosDeReimpressao={Object.fromEntries(
-          situacaoDaPublicacao.historico.map((h) => [
-            h.numero,
-            enderecoDaImpressaoDoDsa(codigo, {
-              semana: escolha.numero,
-              ano: escolha.ano,
-              versao: h.numero,
-            }),
-          ]),
-        )}
-      />
+      <NotasDaPublicacao situacao={situacaoDaPublicacao} />
+      {escolhaDaVersao.aviso ? (
+        <p role="status" className="text-sm text-atrasado-tinta" data-slot="aviso-de-versao">
+          {escolhaDaVersao.aviso}
+        </p>
+      ) : null}
 
       {arquivamentoRes.data !== null ? (
         <p role="status" className="text-sm text-atrasado-tinta" data-slot="turma-arquivada">
@@ -539,15 +553,6 @@ export default async function SemanaDoDsa({
           Recarregue a página; se continuar, avise o suporte.
         </p>
       ) : null}
-
-      <NavegacaoDaSemana
-        codigo={codigo}
-        ano={escolha.ano}
-        semana={escolha.numero}
-        sabadoAberto={lida.sabadoAberto}
-        rotuloDaSemanaDoCurso={documento.rotuloDaSemanaDoCurso}
-        datasDaSemana={rotuloDaSemana(lida.dias)}
-      />
 
       {/*
         ⚠️ **O QUE A LEITURA NÃO CONSEGUIU LER É DITO** (FR-012.1 da spec 016; `RN-DEG-01`): até 18/10/2026
@@ -632,130 +637,184 @@ export default async function SemanaDoDsa({
         </p>
       ) : null}
 
-      {/*
-       * ⚠️ **NENHUM DELES BLOQUEIA O BOTÃO** (`RN-DEG-02`): *"regra normativa vira alerta, nunca
-       * bloqueio"*. Quem precisa do papel hoje imprime com o traço no cabeçalho e corrige o
-       * cadastro depois. ⚠️ Sem cartão (RD-6): a barra mora no cabeçalho.
-       */}
-      {avisosDaImpressao.length > 0 ? (
-        <div role="status" data-slot="avisos-da-impressao" className="flex flex-col gap-1">
-          <p className="text-sm font-medium text-atrasado-tinta">
-            O papel sai assim ({avisosDaImpressao.length} aviso
-            {avisosDaImpressao.length > 1 ? "s" : ""}):
-          </p>
-          <ul className="list-disc pl-5 text-sm text-atrasado-tinta">
-            {avisosDaImpressao.map((texto) => (
-              <li key={texto}>{texto}</li>
-            ))}
-          </ul>
-        </div>
+      {/* As paradas e os feriados da semana, com o *Desfazer* (spec 014 e 023; Bloco 15, D-19). */}
+      {podeLancar && tiposDeParada.length > 0 ? (
+        <ParadasDaSemana
+          turmaId={turmaId}
+          podeDesfazerGlobal={pode(permissoes, "calendario", "editar")}
+          paradas={paradasDaSemana}
+          feriados={lida.feriadosNaFaixa}
+          desfazerParada={desfazerParada}
+        />
       ) : null}
 
-      <div className="flex min-w-0 flex-col gap-3">
-        <CabecalhoDaSemana dados={documento} />
-        {podeLancar && tiposDeParada.length > 0 ? (
-          <ControleDeParadas
-            turmaId={turmaId}
-            dias={lida.semana.dias.map((d) => d.data)}
-            tipos={tiposDeParada}
-            podeGlobal={pode(permissoes, "calendario", "criar")}
-            podeDesfazerGlobal={pode(permissoes, "calendario", "editar")}
-            paradas={paradasDaSemana}
-            feriados={lida.feriadosNaFaixa}
-            pararDia={pararDia}
-            desfazerParada={desfazerParada}
+      {/*
+        ⚠️ **AS ABAS DE VERSÃO** (Bloco 15, spec 030, `FR-007`): a *Minuta* é a semana de trabalho — os avisos do papel, a
+           grade, a situação e o rodapé —, e cada versão publicada é o PAPEL dela, do retrato, com *Reimprimir*. O servidor
+           desenha só a aba aberta (`?versao=`).
+      */}
+      <AbasDeVersao
+        abas={abas}
+        atual={escolhaDaVersao.numero === null ? "" : String(escolhaDaVersao.numero)}
+        seloDaMinuta={
+          <span className="flex items-center gap-2 font-normal">
+            <SeloDaSemana
+              situacao={situacaoDaPublicacao.situacao}
+              versao={situacaoDaPublicacao.versaoVigente}
+              alteracaoSalva={situacaoDaPublicacao.alteracaoSalva}
+            />
+            {situacaoDaPublicacao.rascunhos > 0 ? (
+              <span className="text-atrasado-tinta text-xs font-medium" data-slot="nao-salvos">
+                {situacaoDaPublicacao.rascunhos} lançamento
+                {situacaoDaPublicacao.rascunhos === 1 ? "" : "s"} não salvo
+                {situacaoDaPublicacao.rascunhos === 1 ? "" : "s"}
+              </span>
+            ) : null}
+          </span>
+        }
+      >
+        {versaoAberta !== null ? (
+          <PapelDaVersao
+            numero={versaoAberta.numero}
+            ocorridoEm={versaoAberta.ocorridoEm}
+            autor={versaoAberta.autor}
+            justificativa={versaoAberta.justificativa}
+            dados={retratoDaVersaoAberta}
+            enderecoDeReimpressao={enderecoDaImpressaoDoDsa(codigo, {
+              semana: escolha.numero,
+              ano: escolha.ano,
+              versao: versaoAberta.numero,
+            })}
           />
-        ) : null}
-        <PainelDeLancamento
-          semana={lida.semana}
-          grade={documento.grade}
-          nomesNoCartao={documento.nomesNoCartao}
-          disciplinasDaSemana={documento.quadroDeCh.map((d) => ({
-            codigo: d.codigo,
-            nome: d.nome,
-          }))}
-          turmaId={turmaId}
-          cursoId={cursoId}
-          salaDaTurma={(turma.sala_alocada as string | null) ?? null}
-          ano={escolha.ano}
-          numeroDaSemana={escolha.numero}
-          podeLancar={podeLancar}
-          unidades={lida.unidades}
-          atribuicoesPorUe={lida.atribuicoesPorUe}
-          atribuicoesPorDisciplina={lida.atribuicoesPorDisciplina}
-          disciplinas={lida.disciplinas}
-          avaliacoesParaVista={lida.avaliacoesParaVista}
-          avaliacoesDoCurriculo={lida.avaliacoesDoCurriculo}
-          instrutores={lida.instrutores}
-          habilitacoes={lida.habilitacoes}
-          /*
-           * FR-006 da spec 029: sem `instrutores.ler`, as listas de instrutor chegam vazias pela RLS (tudo ou nada por
-           * perfil), e o vazio tem de dizer «o seu perfil não os alcança» — não «nenhum habilitado».
-           */
-          podeLerInstrutores={pode(permissoes, "instrutores", "ler")}
-          escala={lida.escala}
-          tecnicas={lida.tecnicas}
-          tiposDeAvaliacao={lida.tiposDeAvaliacao}
-          instrumentos={lida.instrumentos}
-          subtipos={lida.subtipos}
-          podeAtividadeGlobal={pode(permissoes, "atividades_globais", "criar")}
-          lancar={lancar}
-          lancarEstudoIndividual={lancarEstudoIndividualDaSemana}
-          mover={mover}
-          atualizar={atualizar}
-          excluir={excluir}
-        />
-      </div>
+        ) : (
+          <>
+            {/*
+             * ⚠️ **NENHUM DELES BLOQUEIA O BOTÃO** (`RN-DEG-02`): *"regra normativa vira alerta, nunca
+             * bloqueio"*. Quem precisa do papel hoje imprime com o traço no cabeçalho e corrige o
+             * cadastro depois. ⚠️ Sem cartão (RD-6): a barra mora no cabeçalho.
+             */}
+            {avisosDaImpressao.length > 0 ? (
+              <div role="status" data-slot="avisos-da-impressao" className="flex flex-col gap-1">
+                <p className="text-sm font-medium text-atrasado-tinta">
+                  O papel sai assim ({avisosDaImpressao.length} aviso
+                  {avisosDaImpressao.length > 1 ? "s" : ""}):
+                </p>
+                <ul className="list-disc pl-5 text-sm text-atrasado-tinta">
+                  {avisosDaImpressao.map((texto) => (
+                    <li key={texto}>{texto}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
-      {/*
-        ⚠️ **O PAINEL FICA ABAIXO DA GRADE, EM LARGURA TOTAL** *(item 3 das correções de 08/10/2026,
-           decisão de Bernardo Villas Boas)*. Até ali ele ficava ao lado a partir de `xl`, numa coluna
-           de 384 px que apertava a grade v4 e cortava os nomes das disciplinas.
-        ⚠️ **A CASCATA USA O LANÇADO ATÉ A SEMANA**, o mesmo corte da linha da disciplina — e não o
-           lançado da turma inteira, que é o do formulário (`unidadesDaTurma`).
-      */}
-      <PainelDeSituacao
-        quadros={quadros}
-        unidades={lida.unidades.map((u) => ({ ...u, lancada: u.lancadaAteASemana }))}
-        avaliacoesPorDisciplina={lida.avaliacoesPorDisciplina}
-        rotuloDaSemana={rotuloDaSemana(lida.dias)}
-      />
+            <PainelDeLancamento
+              semana={lida.semana}
+              grade={documento.grade}
+              nomesNoCartao={documento.nomesNoCartao}
+              disciplinasDaSemana={documento.quadroDeCh.map((d) => ({
+                codigo: d.codigo,
+                nome: d.nome,
+              }))}
+              turmaId={turmaId}
+              cursoId={cursoId}
+              salaDaTurma={(turma.sala_alocada as string | null) ?? null}
+              podeLancar={podeLancar}
+              unidades={lida.unidades}
+              atribuicoesPorUe={lida.atribuicoesPorUe}
+              atribuicoesPorDisciplina={lida.atribuicoesPorDisciplina}
+              disciplinas={lida.disciplinas}
+              avaliacoesParaVista={lida.avaliacoesParaVista}
+              avaliacoesDoCurriculo={lida.avaliacoesDoCurriculo}
+              instrutores={lida.instrutores}
+              habilitacoes={lida.habilitacoes}
+              /*
+               * FR-006 da spec 029: sem `instrutores.ler`, as listas de instrutor chegam vazias pela RLS (tudo ou nada por
+               * perfil), e o vazio tem de dizer «o seu perfil não os alcança» — não «nenhum habilitado».
+               */
+              podeLerInstrutores={pode(permissoes, "instrutores", "ler")}
+              escala={lida.escala}
+              tecnicas={lida.tecnicas}
+              tiposDeAvaliacao={lida.tiposDeAvaliacao}
+              instrumentos={lida.instrumentos}
+              subtipos={lida.subtipos}
+              podeAtividadeGlobal={pode(permissoes, "atividades_globais", "criar")}
+              lancar={lancar}
+              mover={mover}
+              atualizar={atualizar}
+              excluir={excluir}
+            />
 
-      {/*
-        ⚠️ **O RODAPÉ DO PAPEL, NA TELA** — carga horária acumulada, técnicas e as assinaturas da
-           data da semana, do MESMO objeto do `/print/dsa`, no visual do sistema.
-      */}
-      <RodapeDaSemana dados={documento} nomeDeQuemImprime={usuario?.nome ?? null} />
+            {/*
+              ⚠️ **O PAINEL FICA ABAIXO DA GRADE, EM LARGURA TOTAL** *(item 3 das correções de 08/10/2026,
+                 decisão de Bernardo Villas Boas)*. Até ali ele ficava ao lado a partir de `xl`, numa coluna
+                 de 384 px que apertava a grade v4 e cortava os nomes das disciplinas.
+              ⚠️ **A CASCATA USA O LANÇADO ATÉ A SEMANA**, o mesmo corte da linha da disciplina — e não o
+                 lançado da turma inteira, que é o do formulário (`unidadesDaTurma`).
+            */}
+            <PainelDeSituacao
+              quadros={quadros}
+              unidades={lida.unidades.map((u) => ({ ...u, lancada: u.lancadaAteASemana }))}
+              avaliacoesPorDisciplina={lida.avaliacoesPorDisciplina}
+              rotuloDaSemana={rotuloDaSemana(lida.dias)}
+            />
+
+            {/*
+              ⚠️ **O RODAPÉ DO PAPEL, NA TELA** — carga horária acumulada, técnicas e as assinaturas da
+                 data da semana, do MESMO objeto do `/print/dsa`, no visual do sistema.
+            */}
+            <RodapeDaSemana dados={documento} nomeDeQuemImprime={usuario?.nome ?? null} />
+          </>
+        )}
+      </AbasDeVersao>
     </EdicaoDasAssinaturasNaTela>
   );
 }
 
-/** O cabeçalho das telas sem grade (turma EAD, semana fora da etapa presencial): sem selo e sem barra. */
+/**
+ * O título e a linha única da semana (Bloco 15, spec 030, `FR-009`): *código da turma (o link da ficha) · Semana N de T ·
+ * 26/10 a 31/10/2026*. Vale para a página com grade e para as sem grade (turma EAD, semana fora da etapa presencial).
+ *
+ * > *"Deixar UMA linha: código da turma (link para a ficha) · Semana 30 de 37 · 26/10 a 31/10/2026. Sair: 'Voltar à
+ * > turma', o ano solto, o número de alunos, o quadro e a linha repetida."* — Bernardo Villas Boas, 29/10/2026
+ *
+ * ⚠️ **SEM A SEMANA DO CURSO CONHECIDA, A LINHA SAI SEM ELA** (D-25): código · datas, e não um travessão solto.
+ * ⚠️ **O `data-slot="semana-atual"` MUDOU DE LUGAR**: era o rótulo da navegação; os casos de ponta a ponta leem a semana
+ *    daqui.
+ */
 function CabecalhoDoDsa({
   codigo,
-  rotulo,
-  ano,
+  semanaDoCurso,
+  dias,
 }: {
   readonly codigo: string;
-  readonly rotulo: string | null;
-  readonly ano: number;
+  /** *"Semana N de T"*, de `rotuloDaSemanaDoCurso`; nulo na turma EAD (sem semana). */
+  readonly semanaDoCurso: string | null;
+  /** Os dias mostrados (segunda a sexta, ou a sábado); vazio na turma EAD. */
+  readonly dias: readonly string[];
 }) {
+  const datas = intervaloDeDatas(dias[0], dias[dias.length - 1]);
+  const semana =
+    semanaDoCurso !== null && semanaDoCurso !== SEMANA_AUSENTE_NO_CABECALHO ? semanaDoCurso : null;
   return (
-    <header className="flex flex-wrap items-baseline justify-between gap-2">
-      <div className="flex flex-col">
-        <h1 className="text-lg font-semibold text-texto">Detalhe Semanal de Aula</h1>
-        <p className="text-sm text-texto-suave">
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <h1 className="text-lg font-semibold text-texto">Detalhe Semanal de Aula</h1>
+      <p className="text-sm text-texto-suave tabular-nums" data-slot="semana-atual">
+        <Link
+          href={enderecoDaTurma(codigo)}
+          className="font-medium text-texto underline-offset-2 hover:underline"
+          data-slot="turma-do-dsa"
+        >
           {codigo}
-          {rotulo ? ` · semana de ${rotulo} · ${ano}` : ""}
-        </p>
-      </div>
-      <Link
-        href={enderecoDaTurma(codigo)}
-        className="text-sm text-texto-suave underline underline-offset-2 hover:text-texto"
-      >
-        Voltar à turma
-      </Link>
-    </header>
+        </Link>
+        {semana ? (
+          <>
+            {" · "}
+            <span className="font-semibold text-texto">{semana}</span>
+          </>
+        ) : null}
+        {datas ? ` · ${datas}` : ""}
+      </p>
+    </div>
   );
 }
 

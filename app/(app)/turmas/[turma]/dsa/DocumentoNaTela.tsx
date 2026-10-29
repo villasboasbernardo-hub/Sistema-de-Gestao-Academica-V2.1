@@ -1,11 +1,14 @@
 /**
- * O cabeçalho e o rodapé do DSA **na tela** — as mesmas informações do papel (`RF-DSA-06`,
+ * O rodapé do DSA **na tela** — as mesmas informações do papel (`RF-DSA-06`,
  * `RF-PDF-01`), no visual do sistema: tokens do tema, claro e escuro, sem faixa, logo nem cor
  * institucional, que ficam **só** no `/print/dsa`.
  *
- * ⚠️ **O DADO É O MESMO OBJETO DO PAPEL** (`montarDocumentoDoDsa`): semana do curso, período, alunos,
- * quadro de CH acumulada, técnicas usadas e as assinaturas pela data da semana. Aqui não se calcula
- * nada — só se escreve.
+ * ⚠️ **O DADO É O MESMO OBJETO DO PAPEL** (`montarDocumentoDoDsa`): quadro de CH acumulada, técnicas
+ * usadas e as assinaturas pela data da semana. Aqui não se calcula nada — só se escreve.
+ *
+ * ⚠️ **O CABEÇALHO DA TELA SAIU NO BLOCO 15** (spec 030, `FR-009`): o quadro *Semana do curso · Período · Alunos* era a
+ * terceira vez em que a semana aparecia; a semana e o período foram para a linha única sob o título, e os alunos ficam
+ * no papel (`/print/dsa`), que não muda.
  *
  * ⚠️ **AS ASSINATURAS SÃO EDITÁVEIS, E SÓ PARA A IMPRESSÃO** (item 4 da conferência do PR #40,
  * 08/10/2026): a rubrica é a folha `RubricaEditavel`, e o que se edita vai para o `/print/dsa` pelo
@@ -13,60 +16,9 @@
  */
 import { rubricaResolvida } from "@/lib/dominio/dsa/assinatura-editada";
 import { NOTA_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/impressao";
-import { ROTULO_DO_CAMPO_DA_SEMANA } from "@/lib/dominio/dsa/semana-do-curso";
-import { dataParaLeitura } from "@/lib/formato/data";
 
 import type { DadosDoDocumento } from "../../../../print/dsa/documento";
 import { RubricaEditavel } from "./AssinaturasEditaveis";
-
-export function CabecalhoDaSemana({ dados }: { readonly dados: DadosDoDocumento }) {
-  const campos: readonly { rotulo: string; valor: string; slot: string; emLinha?: boolean }[] = [
-    /*
-     * ⚠️ **"SEMANA N DE T" NO LUGAR DE "SEMANA 41/2026" E "DSA Nº"** (spec 016, FR-009.2; D-COR-1): a
-     *    semana ISO fica só na URL, e o número do DSA passou a ser a semana corrida do curso.
-     * ⚠️ **NUM RÓTULO SÓ, como no papel** (ajuste A da conferência do PR #68, 18/10/2026): "Semana do
-     *    curso: 28 de 37" numa linha, e não o rótulo em cima e "Semana 28 de 37" embaixo.
-     */
-    {
-      rotulo: ROTULO_DO_CAMPO_DA_SEMANA,
-      valor: dados.valorDaSemanaDoCurso,
-      slot: "tela-semana",
-      emLinha: true,
-    },
-    {
-      rotulo: "Período",
-      valor: `${dataParaLeitura(dados.primeiro)} a ${dataParaLeitura(dados.ultimo)}`,
-      slot: "tela-periodo",
-    },
-    {
-      rotulo: "Alunos",
-      valor: dados.alunos === null ? "—" : String(dados.alunos),
-      slot: "tela-alunos",
-    },
-  ];
-  return (
-    <dl
-      className="rounded-ciaara border-borda bg-superficie grid grid-cols-2 gap-px overflow-hidden border sm:grid-cols-3"
-      data-slot="cabecalho-da-semana"
-    >
-      {campos.map((c) =>
-        c.emLinha ? (
-          <div key={c.rotulo} className="bg-superficie flex items-end px-3 py-2" data-slot={c.slot}>
-            <dt className="text-xs text-texto-suave">{c.rotulo}:</dt>{" "}
-            <dd className="ml-1 text-sm font-semibold text-texto tabular-nums">{c.valor}</dd>
-          </div>
-        ) : (
-          <div key={c.rotulo} className="bg-superficie flex flex-col px-3 py-2">
-            <dt className="text-xs text-texto-suave">{c.rotulo}</dt>
-            <dd className="text-sm font-semibold text-texto tabular-nums" data-slot={c.slot}>
-              {c.valor}
-            </dd>
-          </div>
-        ),
-      )}
-    </dl>
-  );
-}
 
 export function RodapeDaSemana({
   dados,

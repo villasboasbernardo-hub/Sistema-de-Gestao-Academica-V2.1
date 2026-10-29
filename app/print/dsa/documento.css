@@ -735,11 +735,20 @@
   }
 }
 
-/* Spec 024 (FR-010): a marca PRÉVIA — grande, inclinada e clara, sobre a folha, sem esconder o conteúdo. */
+/*
+ * Spec 024 (FR-010): a marca PRÉVIA — grande e inclinada. ⚠️ **ATRÁS DO CONTEÚDO, DESDE O BLOCO 15** (spec 030, `FR-008`,
+ * D-17): *"mais transparente e atrás do conteúdo (camada de fundo, opacidade baixa, sem cobrir texto), legível como marca
+ * mas sem atrapalhar a leitura"* — Bernardo Villas Boas, 29/10/2026. Até ali ela ficava POR CIMA (`z-index: 5`, opacidade
+ * 0,35) e cobria o texto dos cartões.
+ * ⚠️ **COMO ELA FICA ATRÁS**: a folha é um contexto de empilhamento próprio (`isolation`), e a marca, `z-index: -1` nele —
+ *    pinta sobre o branco da folha e sob todo o resto. ⚠️ **E SÓ NA PRÉVIA AS COLUNAS FICAM TRANSLÚCIDAS**: o fundo branco
+ *    e a zebra das colunas cobririam a marca na grade inteira; os cartões continuam opacos, e por isso nenhum texto fica
+ *    sob ela. O papel publicado não tem a marca nem esta regra.
+ */
 .dsa4 .dsa4-previa {
   position: absolute;
   inset: 0;
-  z-index: 5;
+  z-index: -1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -748,6 +757,18 @@
   font-weight: 800;
   letter-spacing: 0.2em;
   color: var(--dsa4-amarelo);
-  opacity: 0.35;
+  opacity: 0.18;
   transform: rotate(-24deg);
+}
+
+.dsa4-com-previa {
+  isolation: isolate;
+}
+
+.dsa4-com-previa .dsa4-coluna {
+  background: transparent;
+}
+
+.dsa4-com-previa .dsa4-coluna-par {
+  background: rgba(240, 242, 246, 0.55);
 }

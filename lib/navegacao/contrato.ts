@@ -822,6 +822,18 @@ export const CONTRATO = {
         historico: "substitui",
         avisaServidor: true,
       },
+      /*
+       * A aba de versão (Bloco 15, spec 030, `FR-007`, D-15): vazio é a **Minuta**; `0`, a Original; `N`, a ALT N.
+       * ⚠️ **EMPILHA**, como as abas da turma: «voltar» desfaz a troca de aba. ⚠️ **TEXTO, não inteiro**: o padrão
+       *    precisa ser «nenhuma versão», e o `0` é uma versão. Quem confere se a versão existe é `versaoEscolhida`.
+       */
+      versao: {
+        nome: "versao",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
     },
   },
   "/admin/salas": {
