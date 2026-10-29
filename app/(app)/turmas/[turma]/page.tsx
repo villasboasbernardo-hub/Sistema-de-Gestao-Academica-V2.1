@@ -73,6 +73,7 @@ import { alcanceDoPerfil } from "../../cursos/consulta";
 import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
 import { lerContagemPresencial } from "../contagem-presencial";
 import { lerRegimesDasSemanas } from "../regimes-das-semanas";
+import { AvisoDoRegimeNaoLido } from "../AvisoDoRegimeNaoLido";
 import { AbasDaTurma } from "./AbasDaTurma";
 import { ArquivarTurma } from "./ArquivarTurma";
 import { AvaliacoesDaTurma } from "./AvaliacoesDaTurma";
@@ -319,8 +320,13 @@ export default async function FichaDaTurma({
     ),
     hoje,
     /* Spec 029 (`FR-005`, D-12): o regime de cada semana, com o padrão de hoje do curso como o «do curso». */
-    regimesDasSemanas(semanasDaTurma.get(turmaId), regimeDoCursoHoje),
+    regimesDasSemanas(semanasDaTurma.porTurma.get(turmaId), regimeDoCursoHoje),
   );
+  /*
+   * Spec 029 (`FR-005`; revisão do Bloco 14, achado 7): sem o regime das semanas, o saldo acima sai pela conta de antes
+   *    (um TA/dia só) — e a ficha diz isso. A turma EAD puro não tem saldo (`controle_da_dead`): nada a avisar.
+   */
+  const regimeNaoLido = !semanasDaTurma.lido && !ehEadPuro(turma.modalidade as string | null);
 
   /* Spec 021 (RC-4): a turma segue o SEU currículo — disciplinas, duração, avaliações. */
   const curriculoDaTurma =
@@ -622,6 +628,8 @@ export default async function FichaDaTurma({
             : ""}
         </p>
       ) : null}
+
+      {regimeNaoLido ? <AvisoDoRegimeNaoLido /> : null}
 
       <IndicadoresDaTurma
         andamento={andamento}

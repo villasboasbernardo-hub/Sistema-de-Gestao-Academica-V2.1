@@ -12,7 +12,11 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { cartoesDoInicio, contagemPorSituacao } from "@/lib/dominio/cartoes-do-inicio";
+import {
+  cartoesDoInicio,
+  contagemPorSituacao,
+  fraseDoCarrosselVazio,
+} from "@/lib/dominio/cartoes-do-inicio";
 
 describe("contagemPorSituacao", () => {
   it("as quatro situações, cada turma na sua", () => {
@@ -71,6 +75,61 @@ describe("RT-8 (spec 029, FR-007) · a arquivada CONTA nos cartões do ano e fic
     const ativasArquivadas = doAno.filter((t) => t.status === "ativa" && t.arquivada).length;
     expect(contagemPorSituacao(doAno).ativas).toBe(
       cartoesDoInicio(doAno).length + ativasArquivadas,
+    );
+  });
+});
+
+describe("RT-8 · o vazio do carrossel não desmente «Turmas ativas» (revisão do Bloco 14, achados 1 e 13)", () => {
+  /* O que a página entrega: «Turmas ativas» (com a arquivada) e quantos cartões o carrossel tem. */
+  const fraseDe = (turmas: readonly { status: string; arquivada: boolean }[], temRecorte = false) =>
+    fraseDoCarrosselVazio(
+      contagemPorSituacao(turmas).ativas,
+      cartoesDoInicio(turmas).length,
+      2026,
+      temRecorte,
+    );
+
+  it("com cartão no carrossel, nenhuma frase", () => {
+    expect(fraseDe([{ status: "ativa", arquivada: false }])).toBeNull();
+    expect(
+      fraseDe([
+        { status: "ativa", arquivada: false },
+        { status: "ativa", arquivada: true },
+      ]),
+    ).toBeNull();
+  });
+
+  it("sem ativa nenhuma no ano, a frase do A-2 sem mudança (os e2e A-2 e T8 conferem o texto exato)", () => {
+    expect(fraseDe([])).toBe("Nenhuma turma em andamento em 2026.");
+    expect(fraseDe([{ status: "concluida", arquivada: true }], true)).toBe(
+      "Nenhuma turma em andamento em 2026 neste recorte.",
+    );
+  });
+
+  it("⚠️ o caso que discrimina: a ÚNICA ativa do ano está arquivada — «Turmas ativas: 1» e a frase diz onde ela está", () => {
+    const soAArquivada = [{ status: "ativa", arquivada: true }];
+    expect(contagemPorSituacao(soAArquivada).ativas).toBe(1);
+    const frase = fraseDe(soAArquivada);
+    expect(frase, "a frase do A-2 desmente o cartão «Turmas ativas: 1»").not.toBe(
+      "Nenhuma turma em andamento em 2026.",
+    );
+    expect(frase).toBe(
+      "Nenhuma turma em andamento no carrossel de 2026: 1 turma ativa está arquivada — contada em «Turmas ativas», fora do carrossel. Para vê-la, abra Turmas e, nos Filtros, em Arquivadas, escolha «Mostrar arquivadas».",
+    );
+  });
+
+  it("no plural, e com o recorte", () => {
+    expect(
+      fraseDe(
+        [
+          { status: "ativa", arquivada: true },
+          { status: "ativa", arquivada: true },
+          { status: "planejada", arquivada: false },
+        ],
+        true,
+      ),
+    ).toBe(
+      "Nenhuma turma em andamento no carrossel de 2026 neste recorte: 2 turmas ativas estão arquivadas — contadas em «Turmas ativas», fora do carrossel. Para vê-las, abra Turmas e, nos Filtros, em Arquivadas, escolha «Mostrar arquivadas».",
     );
   });
 });

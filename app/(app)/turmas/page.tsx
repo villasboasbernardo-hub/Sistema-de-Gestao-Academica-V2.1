@@ -32,6 +32,7 @@
 import { estadosPorRegistro, type ImpedimentosDoRegistro } from "@/lib/dominio/exclusao-permanente";
 import { lerContagemPresencial } from "./contagem-presencial";
 import { lerRegimesDasSemanas } from "./regimes-das-semanas";
+import { AvisoDoRegimeNaoLido } from "./AvisoDoRegimeNaoLido";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
@@ -184,9 +185,16 @@ export default async function Turmas({
       feriadosDiaInteiro: linhasComAbrangencia<{ data: string }>(feriadosRes.data),
       hoje,
       presenciais,
-      semanasDasTurmas,
+      semanasDasTurmas: semanasDasTurmas.porTurma,
     },
   );
+  /*
+   * Spec 029 (`FR-005`; revisão do Bloco 14, achado 7): o regime das semanas que não se leu é dito, uma linha só acima
+   *    da tabela — a coluna Saldo sai pela conta de antes (um TA/dia só), e quem olha precisa saber. Só quando a tabela
+   *    desenha o Saldo: sem a carga ou a executada ele já sai «—» (`semAndamento`).
+   */
+  const regimeNaoLido =
+    !semanasDasTurmas.lido && !semAndamento && !recorte.error && linhas.length > 0;
   /*
    * ⚠️ **D-19 (spec 029): AS ARQUIVADAS DO RECORTE QUE A TABELA ESCONDE** — o cabeçalho as acrescenta à contagem, e o
    *    vazio diz quantas são e como mostrá-las. Com *Mostrar arquivadas* elas estão na tabela: zero fora da lista.
@@ -294,6 +302,8 @@ export default async function Turmas({
         <ConteudoDePainel painel="filtros">
           <FiltrosDeTurmas cursos={cursos} />
         </ConteudoDePainel>
+
+        {regimeNaoLido ? <AvisoDoRegimeNaoLido /> : null}
 
         {recorte.error ? null : (
           <ConteudoDePainel painel="estatisticas">

@@ -64,8 +64,17 @@ export type SituacaoDaSemana = {
   /**
    * RP-9 (spec 029): em alteração, sem rascunho, e houve um `salvo` DEPOIS do último `alteracao_iniciada` — a alteração
    * de agora está registrada (conta na CH) e ainda não publicada. O selo diz *«Em alteração · salva»* (D-8).
+   * ⚠️ É SÓ O DO SELO: com rascunho novo ele fica falso, e o que foi salvo continua contando — a linha da D-25 lê
+   *    `houveSalvoNestaAlteracao`.
    */
   readonly alteracaoSalva: boolean;
+  /**
+   * RP-9, D-25 (spec 029): houve um `salvo` DEPOIS do último `alteracao_iniciada` — COM ou SEM rascunho novo. O que foi
+   * salvo nesta alteração já conta na CH e no andamento, e o papel continua o publicado até *Publicar alteração*: é
+   * este sinal que mantém a linha *«Alteração salva…»* na tela enquanto houver o descompasso, mesmo com rascunho novo
+   * (achado 5 da revisão do Bloco 14). O selo continua lendo `alteracaoSalva` (D-8).
+   */
+  readonly houveSalvoNestaAlteracao: boolean;
   /** RP-9: o *Salvar alteração* — sempre que a semana está em alteração, mesmo sem rascunho (D-23). */
   readonly podeSalvarAlteracao: boolean;
   /** RP-4: publicada, travada, e o documento de hoje difere do retrato. */
@@ -110,14 +119,17 @@ export function situacaoDaSemana(
    *    O `salvo` de antes da publicação, ou o de uma ALT anterior, não faz esta alteração estar salva.
    * ⚠️ D-8: com rascunho novo depois do salvar, deixa de estar «salva» — o selo volta a *Em alteração*, com o contador.
    *    E D-29: *Descartar* grava `rascunho_descartado`, não um `salvo`; com o rascunho desfeito, volta a «salva».
+   * ⚠️ D-25: o rascunho novo NÃO desfaz o que foi salvo — `houveSalvoNestaAlteracao` é o mesmo `salvo` sem a condição do
+   *    rascunho, e é ele que diz à tela que a CH já não é a do papel. Os dois sinais são separados de propósito: com um
+   *    só, ou o selo mentia («salva» com rascunho por salvar) ou a linha da D-25 sumia com o rascunho.
    */
   const inicioDaAlteracao = emAlteracao ? ultimoDeTrava : undefined;
-  const alteracaoSalva =
+  const houveSalvoNestaAlteracao =
     inicioDaAlteracao !== undefined &&
-    rascunhos === 0 &&
     ordem.some(
       (e) => e.tipo === "salvo" && e.ocorridoEm.localeCompare(inicioDaAlteracao.ocorridoEm) > 0,
     );
+  const alteracaoSalva = houveSalvoNestaAlteracao && rascunhos === 0;
 
   const vigente = publicacoes.at(-1);
   return {
@@ -138,6 +150,7 @@ export function situacaoDaSemana(
     podeFazerAlteracao: travada,
     podePublicarAlteracao: emAlteracao,
     alteracaoSalva,
+    houveSalvoNestaAlteracao,
     /* D-23: o botão é o do Salvar, para a alteração — o *Salvar minuta* (`podeSalvar`) continua fora dela. */
     podeSalvarAlteracao: emAlteracao,
     alteradoDesdeAPublicacao: travada && documentoDifere,

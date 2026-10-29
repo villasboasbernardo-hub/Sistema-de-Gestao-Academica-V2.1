@@ -58,3 +58,37 @@ export function contagemPorSituacao(turmas: readonly { readonly status: string }
     canceladas: conta("cancelada"),
   };
 }
+
+/**
+ * A frase do carrossel das turmas SEM cartão (A-2; RT-8 e D-19 da spec 029) — ou `null`, havendo cartão.
+ *
+ * > *"Sem turma ativa no ano: estado vazio com uma frase, não carrossel vazio."* — Bernardo Villas Boas, 20/10/2026 (A-2)
+ *
+ * ⚠️ **O VAZIO NÃO DESMENTE O NÚMERO AO LADO** (revisão do Bloco 14, achados 1 e 13): com a RT-8, *Turmas ativas* conta a
+ *    ativa arquivada, e o carrossel não a mostra. Quando ela é a única ativa do ano (ou do recorte), a frase do A-2 —
+ *    *"Nenhuma turma em andamento em ANO."* — saía logo abaixo do cartão *"Turmas ativas: 1"*. Agora a frase diz quantas
+ *    ativas estão arquivadas, que elas contam no cartão e como vê-las, no espírito da D-19 de `/turmas`.
+ * ⚠️ **SEM CARTÃO, AS ATIVAS DO PANORAMA SÃO TODAS ARQUIVADAS**: `ativas` é o `contagemPorSituacao(...).ativas` da mesma
+ *    população (RT-8), e `cartoes` o tamanho de `cartoesDoInicio(...)`; a diferença é o número de ativas arquivadas.
+ * ⚠️ **SEM ATIVA NENHUMA, A FRASE DO A-2 FICA COMO ERA** — os e2e `A-2` e `T8` de `inicio-bloco-4.spec.ts` conferem o
+ *    texto exato.
+ */
+export function fraseDoCarrosselVazio(
+  ativas: number,
+  cartoes: number,
+  ano: number,
+  temRecorte: boolean,
+): string | null {
+  if (cartoes > 0) return null;
+  const recorte = temRecorte ? " neste recorte" : "";
+  const arquivadas = ativas - cartoes;
+  if (arquivadas <= 0) return `Nenhuma turma em andamento em ${ano}${recorte}.`;
+  const uma = arquivadas === 1;
+  return (
+    `Nenhuma turma em andamento no carrossel de ${ano}${recorte}: ` +
+    (uma
+      ? "1 turma ativa está arquivada — contada em «Turmas ativas», fora do carrossel. Para vê-la"
+      : `${arquivadas} turmas ativas estão arquivadas — contadas em «Turmas ativas», fora do carrossel. Para vê-las`) +
+    ", abra Turmas e, nos Filtros, em Arquivadas, escolha «Mostrar arquivadas»."
+  );
+}

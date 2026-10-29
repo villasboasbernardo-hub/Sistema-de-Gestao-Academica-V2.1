@@ -2,11 +2,15 @@
  * `RF-EXTRA-01` · `RN-EVT-01` · `FR-010` (spec 014) — a categoria vem do tipo. E `FR-002` da spec 029: o «O que é»
  * opcional só no Estudo Individual.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
   CATEGORIAS_DE_ATIVIDADE,
   descricaoObrigatoria,
+  recusaDaDescricaoNaEdicao,
   recusaPelaCategoria,
   categoriaPeloTipo,
   foraDaCht,
@@ -138,5 +142,75 @@ describe("spec 029, FR-002 · o «O que é» só é opcional no Estudo Individua
         recusaPelaCategoria({ ...sem, categoria: c, descricao: "Leitura dirigida" }),
       ),
     ).toEqual(CATEGORIAS_DE_ATIVIDADE.map(() => null));
+  });
+});
+
+/*
+ * ⚠️ **FR-002.1 da spec 029 diz «ao lançar OU EDITAR»: a EDIÇÃO que apaga o «O que é»** (achado 11 da revisão
+ *    adversarial do Bloco 14). O cartão manda `conteudo: null` quando a pessoa limpa o campo; no Estudo Individual isso
+ *    grava nulo (D-5), e nas demais categorias a ação recusa com a MESMA frase do lançar — antes do `CHECK`
+ *    `ativ_descricao_fora_do_estudo_individual`, que traduzido diria outra frase.
+ * ⚠️ **OS DOIS SENTIDOS VIRAM AQUI**: sem a regra, a AEC apagada passa (e quem recusa é o banco, com outra frase); com a
+ *    regra sem a condição da categoria, o EI apagado é recusado. `undefined` («não mandou») e o texto escrito são o
+ *    controle de que a edição de outro campo nunca tropeça nesta regra.
+ */
+describe("spec 029, FR-002 · apagar o «O que é» na EDIÇÃO (`recusaDaDescricaoNaEdicao`)", () => {
+  const foraDoEi = CATEGORIAS_DE_ATIVIDADE.filter((c) => c !== "Estudo_Individual");
+
+  it("⚠️ Estudo Individual: apagar o «O que é» é aceito (D-5: grava nulo)", () => {
+    expect(
+      recusaDaDescricaoNaEdicao({ categoria: "Estudo_Individual", conteudo: null }),
+    ).toBeNull();
+  });
+
+  it("⚠️ AEC, TAD, TR e Apoio: apagar é recusado, no campo «conteudo», com a frase do lançar", () => {
+    expect(
+      foraDoEi.map((c) => [c, recusaDaDescricaoNaEdicao({ categoria: c, conteudo: null })]),
+    ).toEqual(
+      foraDoEi.map((c) => [c, { campo: "conteudo", mensagem: "Escreva o que é a atividade." }]),
+    );
+  });
+
+  it("só de espaços é o mesmo que apagado — fora do EI, recusa; no EI, aceita", () => {
+    expect(recusaDaDescricaoNaEdicao({ categoria: "AEC", conteudo: "   " })?.campo).toBe(
+      "conteudo",
+    );
+    expect(
+      recusaDaDescricaoNaEdicao({ categoria: "Estudo_Individual", conteudo: "   " }),
+    ).toBeNull();
+  });
+
+  it("controle: não mandar o campo, ou mandar texto, não recusa em categoria nenhuma", () => {
+    expect(
+      CATEGORIAS_DE_ATIVIDADE.flatMap((c) => [
+        recusaDaDescricaoNaEdicao({ categoria: c, conteudo: undefined }),
+        recusaDaDescricaoNaEdicao({ categoria: c, conteudo: "Leitura dirigida" }),
+      ]),
+    ).toEqual(CATEGORIAS_DE_ATIVIDADE.flatMap(() => [null, null]));
+  });
+
+  it("controle: fora da atividade (categoria nula — aula, avaliação), a regra não se aplica", () => {
+    expect(recusaDaDescricaoNaEdicao({ categoria: null, conteudo: null })).toBeNull();
+  });
+});
+
+/*
+ * A LIGAÇÃO, lida sem comentário (regra 9.1.1): a Server Action da edição chama a regra pura com a categoria da LINHA e
+ * não guarda uma segunda cópia da condição. O clique fica no e2e `dsa-estudo-individual-sem-descricao.spec.ts`.
+ */
+describe("spec 029, FR-002 · `aplicarAtualizacao` usa `recusaDaDescricaoNaEdicao` (lido sem comentário)", () => {
+  const semComentarios = (fonte: string): string =>
+    fonte.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+  const acoes = semComentarios(readFileSync(resolve(process.cwd(), "lib/acoes/dsa.ts"), "utf8"));
+  const inicio = acoes.indexOf("async function aplicarAtualizacao(");
+  const corpo = inicio < 0 ? "" : acoes.slice(inicio, acoes.indexOf("\n}\n", inicio));
+
+  it("controle positivo: a varredura acha a função da edição", () => {
+    expect(corpo).toContain("lerFato(");
+  });
+
+  it("a edição recusa pela função pura, e não por uma segunda cópia de `descricaoObrigatoria`", () => {
+    expect(corpo).toMatch(/recusaDaDescricaoNaEdicao\(\s*\{\s*categoria:/);
+    expect(corpo).not.toMatch(/descricaoObrigatoria\(/);
   });
 });

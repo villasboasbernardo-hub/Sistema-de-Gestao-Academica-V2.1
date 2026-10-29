@@ -362,8 +362,12 @@ function temposDoDiaPelaSemana(
  * O andamento da turma — o único lugar que decide `emAtraso` (`SC-006`).
  *
  * `semanas` (spec 029, `FR-005`) é o regime das semanas que o DSA guarda; ausente, a conta é a de antes do Bloco 14,
- * com um TA/dia só para a janela inteira. Sem nenhum registro de semana nem «desde» dentro da janela, o resultado é
- * **idêntico** ao de antes, campo a campo (FR-005.3) — a não regressão está no teste de unidade.
+ * com um TA/dia só para a janela inteira. Sem nenhum registro de semana dentro da janela e sem «desde» com início até o
+ * término, o resultado é **idêntico** ao de antes, campo a campo (FR-005.3) — a não regressão está no teste de unidade.
+ * ⚠️ **O «DESDE» ANTERIOR À JANELA VALE NELA INTEIRA** (o de maior segunda-feira ≤ a da semana, `regimeDaSemana`): o de
+ *    meses atrás muda o TA/dia de todos os dias dela — o caso S5 prova (81, e não 72). E o registro **gravado** dentro
+ *    da janela conta mesmo sem «desde» nem «só esta semana»: a semana salva com o regime do curso numa turma que depois
+ *    ganhou regime em *Editar turma* soma o TA/dia do curso, e não o da turma (o caso do limite do «idêntico», no teste).
  */
 export function andamentoDaTurma(
   turma: TurmaParaAndamento,

@@ -25,12 +25,21 @@
  *    `<html>` não serve: ele tem `h-full`, a altura da janela, e não cresce com o conteúdo.
  * ⚠️ **SÓ GRAVA QUANDO A ESCALA MUDA**, com 3 casas e **para baixo**: o arredondamento para cima poria a folha até meio
  *    pixel além da janela; e gravar a mesma escala de novo a cada observação seria um laço com o próprio observador.
+ *    ⚠️ **E SÓ SOBE COM FOLGA** (`regravarAEscala`, revisão do Bloco 14, achado 4): a guarda acima não impedia a
+ *    ALTERNÂNCIA causada pela barra de rolagem vertical clássica (Windows) — a escala maior faz a página passar da
+ *    janela, a barra aparece e estreita a caixa, a escala cai, a barra some, e o papel piscava entre dois tamanhos.
+ *    Diminuir grava sempre; aumentar, só quando a altura disponível cresce ou a largura cresce mais que uma barra.
  * ⚠️ **CENTRADO (D-21)**: quando a altura limita, sobra largura, e o papel fica no meio, como a folha na rota de
- *    impressão. Abaixo do piso (janela estreita, telefone), a caixa **rola na horizontal** — a página não (`min-w-0` do
- *    `<main>`, `RNF-COMP-01`) —, em vez de cortar a folha calada.
+ *    impressão. Abaixo do piso (janela estreita, telefone), a caixa **rola** — a página não (`min-w-0` do `<main>`,
+ *    `RNF-COMP-01`) —, em vez de cortar a folha calada: na horizontal, e também na vertical quando a barra horizontal
+ *    clássica come a altura reservada.
  * ⚠️ **SAI DO SERVIDOR VISÍVEL (D-28; `RN-DEG-01`)**: antes da medição, a caixa reserva a **proporção da folha pela
  *    largura** e mostra o papel no tamanho da impressão; a medição só ajusta a escala. Escondê-la até medir deixaria a
  *    tela sem papel nenhum se o script não rodasse. `data-escala` só aparece depois da medição.
+ *    ⚠️ **ANTES DE MEDIR, A CAIXA ROLA NOS DOIS EIXOS** (achado 3): a folha em escala 1 é mais alta que a proporção
+ *    reservada quando a caixa é mais estreita que ela (1366 × 768 com a lateral fixada), e com `overflow-y-hidden` o pé
+ *    — as assinaturas — sumia sem rolagem. `overflow-auto` vale também depois da medição: ali a moldura tem a altura
+ *    da caixa e a largura que cabe nela, e nenhuma barra aparece.
  * ⚠️ **SEM COR**: só medida.
  */
 "use client";
@@ -41,6 +50,8 @@ import {
   ALTURA_DA_FOLHA_PX,
   LARGURA_DA_FOLHA_PX,
   escalaQueCabe,
+  regravarAEscala,
+  type MedidaDoPapel,
 } from "@/lib/dominio/enquadramento-do-papel";
 
 /** A escala com 3 casas, para baixo — a folha nunca passa do espaço medido por arredondamento. */
@@ -66,7 +77,8 @@ export function EscalaDoPapel({ children }: { readonly children: React.ReactNode
   const caixa = React.useRef<HTMLDivElement>(null);
   /* `null` = ainda não medido: é o que o servidor desenha (D-28). */
   const [escala, definirEscala] = React.useState<number | null>(null);
-  const ultima = React.useRef<number | null>(null);
+  /* A medida da última escala gravada — a referência da histerese (`regravarAEscala`). */
+  const gravada = React.useRef<MedidaDoPapel | null>(null);
 
   /*
    * ⚠️ `useLayoutEffect`: na navegação dentro da aplicação, a medida entra antes da primeira pintura, sem o papel
@@ -89,8 +101,13 @@ export function EscalaDoPapel({ children }: { readonly children: React.ReactNode
       const nova = tresCasasParaBaixo(
         escalaQueCabe(retangulo.width, Math.max(alturaDisponivel, 1)),
       );
-      if (nova === ultima.current) return;
-      ultima.current = nova;
+      const medicao: MedidaDoPapel = {
+        escala: nova,
+        largura: retangulo.width,
+        altura: alturaDisponivel,
+      };
+      if (!regravarAEscala(gravada.current, medicao)) return;
+      gravada.current = medicao;
       definirEscala(nova);
     };
     medir();
@@ -110,7 +127,7 @@ export function EscalaDoPapel({ children }: { readonly children: React.ReactNode
   return (
     <div
       ref={caixa}
-      className="w-full overflow-x-auto overflow-y-hidden"
+      className="w-full overflow-auto"
       style={
         escala === null
           ? { aspectRatio: "297 / 210" }

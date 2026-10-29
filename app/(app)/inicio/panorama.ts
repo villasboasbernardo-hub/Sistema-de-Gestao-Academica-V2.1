@@ -129,8 +129,8 @@ export function montarPanorama(
   /** Spec 024 (FR-020): a etapa presencial das semipresenciais (`lerContagemPresencial`). Ausente = conta tudo. */
   presenciais: ReadonlyMap<string, ContagemPresencial> = new Map(),
   /**
-   * Spec 029 (`FR-005`): o regime das semanas de cada turma (`lerRegimesDasSemanas`) — o gravado, o «só esta semana» e
-   * o «desde» do DSA. Ausente, ou turma fora do mapa = um TA/dia só, a conta de antes do Bloco 14.
+   * Spec 029 (`FR-005`): o regime das semanas de cada turma (o `porTurma` de `lerRegimesDasSemanas`) — o gravado, o
+   * «só esta semana» e o «desde» do DSA. Ausente, ou turma fora do mapa = um TA/dia só, a conta de antes do Bloco 14.
    */
   semanasDasTurmas: ReadonlyMap<string, ExcecoesDoRegime> = new Map(),
 ): readonly TurmaNoPanorama[] {

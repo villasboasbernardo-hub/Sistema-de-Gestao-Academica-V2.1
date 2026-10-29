@@ -837,7 +837,7 @@ describe("FR-005.3 · sem nenhum registro de semana nem «desde», o Andamento �
     });
   }
 
-  it("e o registro e o «desde» FORA da janela não mexem em nada", () => {
+  it("e o registro fora da janela e o «desde» posterior ao término não mexem em nada", () => {
     // A janela de U1 é ter 03/03 a sex 13/03: a semana 9 já passou, a 14 e o «desde» de 30/03 vêm depois do término.
     const deHoje = andamentoDaTurma(turma(), PRESENCIAL_8, [], SEGUNDA);
     const comForaDaJanela = andamentoDaTurma(turma(), PRESENCIAL_8, [], SEGUNDA, {
@@ -849,6 +849,25 @@ describe("FR-005.3 · sem nenhum registro de semana nem «desde», o Andamento �
       temposDoCurso: 8,
     });
     expect(comForaDaJanela).toEqual(deHoje);
+  });
+
+  it("⚠️ mas a semana GRAVADA com o do curso, numa turma que tem regime em Editar turma, MEXE — sem «desde» nem «só esta semana»", () => {
+    /*
+     * ⚠️ **O LIMITE DO «IDÊNTICO»** (revisão do Bloco 14, achado 10): a não regressão vale sem registro NENHUM na janela —
+     *    o gravado também conta. (O «desde» anterior à janela é o S5.)
+     * CONTA: Editar turma 9, curso 8. Janela ter 03/03 a sex 13/03: semana 10 (4 dias) e 11 (5). Semana 11 gravada com o
+     *        do curso (tempos nulo → 8): 4×9 + 5×8 = 36 + 40 = **76**; sem ela, 9 × 9 = **81**.
+     *        restante = 100 − 40 = **60**; saldo = 76 − 60 = **16** (era **21**).
+     */
+    const semGravado = andamentoDaTurma(turma(), EDITAR_TURMA_9, [], SEGUNDA);
+    const comGravado = andamentoDaTurma(turma(), EDITAR_TURMA_9, [], SEGUNDA, {
+      registros: [{ ano: 2026, semana: 11, origem: "gravado", tempos: null }],
+      vigencias: [],
+      temposDoCurso: 8,
+    });
+    expect(semGravado.capacidade).toBe(81);
+    expect(comGravado.capacidade, "a semana gravada não contou o TA/dia do curso").toBe(76);
+    expect(comGravado.saldo).toBe(16);
   });
 });
 

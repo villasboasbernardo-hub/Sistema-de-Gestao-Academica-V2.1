@@ -10,6 +10,8 @@ import {
   idsDaListaDaAula,
   instrutoresDaAula,
   parPendenteDaAula,
+  vazioDaListaDeInstrutores,
+  type MotivoDaListaVazia,
 } from "@/lib/dominio/dsa/instrutores-da-aula";
 
 const INSTRUTORES = [{ id: "ct" }, { id: "sem-vinculo" }, { id: "so-de-outra" }];
@@ -144,4 +146,49 @@ describe("fraseDaListaDaAula — continua devolvendo EXATAMENTE o texto de hoje 
       fraseDaListaDeInstrutoresVazia("sem-habilitado"),
     );
   });
+});
+
+/*
+ * FR-006.3 (spec 029): a PRECEDÊNCIA do «você não vê» sobre o «não há» mora em `vazioDaListaDeInstrutores`. Sem
+ * `instrutores.ler` a RLS devolve a lista vazia — tudo ou nada por perfil —, e nenhuma frase de filtro serve: escolher
+ * a disciplina, habilitar ou atribuir não encheria a lista. ⚠️ Até a revisão adversarial do Bloco 14 nenhum teste a
+ * chamava: devolvendo sempre o «não há», a suíte ficava verde (a de `seletor-instrutor-vazio.test.ts` passa o `vazio`
+ * montado à mão, e não exercita a precedência).
+ */
+const TODOS_OS_MOTIVOS = [
+  "sem-disciplina",
+  "sem-habilitado",
+  "sem-atribuido",
+  "sem-cadastro",
+  "sem-leitura",
+] as const satisfies readonly MotivoDaListaVazia[];
+
+describe("vazioDaListaDeInstrutores — sem `instrutores.ler`, «você não vê», seja qual for o motivo (FR-006.3)", () => {
+  it.each(TODOS_OS_MOTIVOS)("sem permissão + %s: só o motivo, sem frase de filtro", (motivo) => {
+    const vazio = vazioDaListaDeInstrutores(false, motivo);
+    expect(vazio, "sem permissão, a frase do filtro venceu o «você não vê»").toEqual({
+      motivo: "sem-permissao",
+    });
+    expect("detalhe" in vazio, "o «você não vê» carrega frase de quem chama").toBe(false);
+  });
+
+  it.each(TODOS_OS_MOTIVOS)(
+    "com permissão + %s: o «não há», com a frase do dono único",
+    (motivo) => {
+      expect(vazioDaListaDeInstrutores(true, motivo)).toEqual({
+        motivo: "sem-dado",
+        detalhe: fraseDaListaDeInstrutoresVazia(motivo),
+      });
+    },
+  );
+
+  it.each(TODOS_OS_MOTIVOS)(
+    "DoD 8 · o caso que discrimina: %s com e sem permissão dá vazios DIFERENTES",
+    (motivo) => {
+      expect(
+        vazioDaListaDeInstrutores(true, motivo),
+        "a permissão não muda o vazio: o «você não vê» não chega à tela",
+      ).not.toEqual(vazioDaListaDeInstrutores(false, motivo));
+    },
+  );
 });

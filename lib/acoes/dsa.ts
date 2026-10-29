@@ -47,8 +47,7 @@ import {
 import { recusaForaDaEtapa } from "@/lib/dominio/dsa/etapa-presencial";
 import {
   categoriaPeloTipo,
-  descricaoObrigatoria,
-  FRASE_DA_DESCRICAO_OBRIGATORIA,
+  recusaDaDescricaoNaEdicao,
   recusaPelaCategoria,
   type CategoriaDeAtividade,
   type TipoDeAtividade,
@@ -1752,15 +1751,14 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
    *    manda quando a pessoa limpa o campo); fora do EI o banco recusaria pelo `CHECK`
    *    `ativ_descricao_fora_do_estudo_individual` (23514 — até a spec 029, 23502 do NOT NULL), e aqui a recusa chega
    *    como a mesma frase do lançar, antes de qualquer leitura de teto ou cascata. A categoria é a da LINHA (`lerFato`).
+   * ⚠️ A condição é a função pura `recusaDaDescricaoNaEdicao` (Vitest nos dois sentidos, em
+   *    `tests/unidade/categoria-pelo-tipo.test.ts`); a ligação, por clique, em `dsa-estudo-individual-sem-descricao.spec.ts`.
    */
-  if (
-    a.origem === "atividade_nao_letiva" &&
-    a.conteudo === null &&
-    fato.categoria !== null &&
-    descricaoObrigatoria(fato.categoria)
-  ) {
-    return falha(FRASE_DA_DESCRICAO_OBRIGATORIA, "conteudo");
-  }
+  const daDescricao = recusaDaDescricaoNaEdicao({
+    categoria: a.origem === "atividade_nao_letiva" ? fato.categoria : null,
+    conteudo: a.conteudo,
+  });
+  if (daDescricao !== null) return falha(daDescricao.mensagem, daDescricao.campo);
 
   const data = a.data ?? fato.data;
   const taInicial = a.taInicial ?? fato.taInicial;

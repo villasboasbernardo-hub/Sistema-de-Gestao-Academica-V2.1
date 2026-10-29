@@ -10,7 +10,10 @@ import { describe, expect, it } from "vitest";
 import {
   ALTURA_DA_FOLHA_PX,
   LARGURA_DA_FOLHA_PX,
+  LARGURA_DE_UMA_BARRA_PX,
   escalaQueCabe,
+  regravarAEscala,
+  type MedidaDoPapel,
 } from "@/lib/dominio/enquadramento-do-papel";
 
 describe("a folha em pixels de CSS (96 por polegada)", () => {
@@ -84,5 +87,88 @@ describe("RN-DEG-01 · medida inválida devolve o neutro (1), sem estourar", () 
   ])("%s → 1", (_, largura, altura) => {
     expect(() => escalaQueCabe(largura, altura)).not.toThrow();
     expect(escalaQueCabe(largura, altura)).toBe(1);
+  });
+});
+
+/*
+ * ── A escala não alterna entre dois valores (revisão do Bloco 14, achado 4) ──────────────────────────────────────────
+ *
+ * Com a barra de rolagem vertical CLÁSSICA (Windows, ~17 px que ocupam largura), a escala limitada pela largura podia
+ * alternar sem fim: a escala maior faz a página passar da janela → a barra aparece → a caixa estreita → a escala cai →
+ * a página cabe → a barra some → a caixa alarga → a escala sobe… A guarda «só grava quando muda» não impedia isso.
+ */
+describe("a escala não alterna com a barra de rolagem da página (achado 4)", () => {
+  /** A escala com 3 casas, para baixo — a mesma conta de `EscalaDoPapel`. */
+  const tresCasas = (x: number) => Math.floor(x * 1000 + 1e-6) / 1000;
+  const medir = (largura: number, altura: number): MedidaDoPapel => ({
+    escala: tresCasas(escalaQueCabe(largura, altura)),
+    largura,
+    altura,
+  });
+
+  it("⚠️ o caso que discrimina: janela grande e quase quadrada, escala limitada pela largura, página no limite da janela", () => {
+    const BARRA = 17;
+    const LARGURA_SEM_BARRA = 1300;
+    const ALTURA_QUE_SOBRA = 2000; /* sobra altura: quem limita é a largura */
+    /* A página: 200 px acima do papel, o papel, e nada abaixo — ela passa da janela de 1110 px só com a escala maior. */
+    const JANELA = 1110;
+    const alturaDaPagina = (escala: number) => 200 + ALTURA_DA_FOLHA_PX * escala;
+    expect(alturaDaPagina(medir(LARGURA_SEM_BARRA, ALTURA_QUE_SOBRA).escala)).toBeGreaterThan(
+      JANELA,
+    );
+    expect(
+      alturaDaPagina(medir(LARGURA_SEM_BARRA - BARRA, ALTURA_QUE_SOBRA).escala),
+    ).toBeLessThanOrEqual(JANELA);
+
+    let gravada: MedidaDoPapel | null = null;
+    let barra = false;
+    let gravacoes = 0;
+    const escalas: number[] = [];
+    for (let quadro = 0; quadro < 12; quadro += 1) {
+      const nova = medir(LARGURA_SEM_BARRA - (barra ? BARRA : 0), ALTURA_QUE_SOBRA);
+      if (regravarAEscala(gravada, nova)) {
+        gravada = nova;
+        gravacoes += 1;
+      }
+      if (gravada === null) throw new Error("a primeira medida não foi gravada");
+      escalas.push(gravada.escala);
+      barra = alturaDaPagina(gravada.escala) > JANELA;
+    }
+    expect(gravacoes, `a escala alternou: ${escalas.join(" → ")}`).toBeLessThanOrEqual(2);
+    /* Assenta na menor — a folha cabe, sem barra, e não volta a crescer. */
+    expect(new Set(escalas.slice(-6)).size).toBe(1);
+    expect(barra).toBe(false);
+  });
+
+  it("a primeira medida grava; a mesma escala não grava de novo", () => {
+    const m = medir(1278, 480);
+    expect(regravarAEscala(null, m)).toBe(true);
+    expect(regravarAEscala(m, { ...m, largura: m.largura + 5 })).toBe(false);
+  });
+
+  it("diminuir grava SEMPRE — a folha nunca passa do espaço, nem por um alargamento pequeno anterior", () => {
+    const antes = medir(1300, 2000);
+    expect(regravarAEscala(antes, medir(1300 - 17, 2000))).toBe(true);
+    expect(regravarAEscala(antes, medir(1300, 300))).toBe(true);
+  });
+
+  it("aumentar só pela largura grava quando ela cresce MAIS que uma barra — e os alargamentos pequenos se acumulam", () => {
+    const gravada = medir(1283, 2000);
+    expect(LARGURA_DE_UMA_BARRA_PX).toBeGreaterThanOrEqual(17);
+    expect(regravarAEscala(gravada, medir(1283 + 17, 2000))).toBe(false);
+    expect(regravarAEscala(gravada, medir(1283 + LARGURA_DE_UMA_BARRA_PX, 2000))).toBe(false);
+    /* Comparado com a largura GRAVADA, não com a da última observação: o arrasto lento também chega lá. */
+    expect(regravarAEscala(gravada, medir(1283 + LARGURA_DE_UMA_BARRA_PX + 1, 2000))).toBe(true);
+    /* A lateral recolhida devolve ~200 px: grava. */
+    expect(regravarAEscala(gravada, medir(1283 + 200, 2000))).toBe(true);
+  });
+
+  it("aumentar pela ALTURA grava sempre (D-27: fechado o painel de Filtros, a escala volta)", () => {
+    const comPainel = medir(1278, 300);
+    const semPainel = medir(1278, 480);
+    expect(semPainel.escala).toBeGreaterThan(comPainel.escala);
+    expect(regravarAEscala(comPainel, semPainel)).toBe(true);
+    /* Até poucos pixels de altura a mais (a fonte que carrega) entram — a altura não alterna com a barra vertical. */
+    expect(regravarAEscala(medir(1278, 480), medir(1278, 484))).toBe(true);
   });
 });

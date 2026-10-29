@@ -342,6 +342,11 @@ export async function lerAvisos(
         ).filter((e) => naoArquivada.has(e.turmaCodigo));
 
   // ── Turmas: em atraso (o Início), pelo mesmo panorama e o mesmo `andamentoDaTurma` ───────────────
+  /*
+   * Spec 029 (`FR-005`; revisão do Bloco 14, achado 7): sem o regime das semanas, o «em atraso» sai pela conta de antes
+   * (um TA/dia só) — e a página diz que não pôde ler as turmas, em vez de dar essa lista como a de sempre.
+   */
+  if (!semanasDasTurmas.lido) naoLidos.add("turmas");
   const atrasadas =
     cargasRes.error || executadaRes.error
       ? (naoLidos.add("turmas"), [])
@@ -360,7 +365,7 @@ export async function lerAvisos(
             ),
           ),
           presenciais,
-          semanasDasTurmas,
+          semanasDasTurmas.porTurma,
         )
           .filter((t) => t.emAtraso)
           .map((t) => t.turmaCodigo);

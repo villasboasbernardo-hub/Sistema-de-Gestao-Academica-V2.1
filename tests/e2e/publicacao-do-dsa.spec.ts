@@ -283,6 +283,11 @@ test("RP-9 · Fazer alteração → lançar → «Salvar alteração»: conta na
   const naoSalvos = page.locator('[data-slot="nao-salvos"]');
   const resposta = page.locator('[data-slot="resposta-da-publicacao"]');
   const salvarAlteracao = page.locator('[data-slot="salvar-alteracao"]');
+  /* RP-9, D-25: a linha «Alteração salva…» e a nota do rascunho, abaixo do cabeçalho (`VersoesPublicadas`). */
+  const linhaDaAlteracaoSalva = page.locator('[data-slot="alteracao-salva"]');
+  const notaDoRascunho = page.locator('[data-slot="nota-do-rascunho"]');
+  const NOTA_DO_RASCUNHO_NA_ALTERACAO =
+    "O que não foi salvo fica guardado, mas não conta na CH nem no andamento até «Salvar alteração»; o papel só muda com «Publicar alteração».";
   const cartaoNoPapel = (texto: string) =>
     page.locator('[data-slot="dsa-impresso"] [data-slot="dsa-cartao"]').filter({ hasText: texto });
   const naGrade = (texto: string) =>
@@ -313,6 +318,14 @@ test("RP-9 · Fazer alteração → lançar → «Salvar alteração»: conta na
   await lancarAula(page, 3, TERCA_DA_ALTERACAO, daAlteracao);
   await expect(naoSalvos).toContainText("1 lançamento não salvo");
   expect(await taDaTurma(), "o rascunho da alteração contou antes de salvar").toBe(antes + 1);
+  /*
+   * ⚠️ RP-9, D-25 (achado 14 da revisão do Bloco 14): na alteração, a nota do rascunho NÃO promete o papel ao «Salvar
+   *    alteração» — até 28/10/2026 ela dizia «não conta em nada (CH, andamento, papel) até «Salvar alteração»», e o papel
+   *    só muda no «Publicar alteração» (conferido abaixo pelo Imprimir e pelo Reimprimir). Frase EXATA.
+   */
+  await expect(notaDoRascunho).toHaveText(NOTA_DO_RASCUNHO_NA_ALTERACAO);
+  /* Controle: nada foi salvo nesta alteração ainda — a linha da D-25 não aparece. */
+  await expect(linhaDaAlteracaoSalva).toHaveCount(0);
 
   /*
    * ⚠️ O CASO QUE DISCRIMINA (FR-003.1): a semana em alteração oferece «Salvar alteração», logo antes de «Publicar
@@ -442,6 +455,16 @@ test("RP-9 · Fazer alteração → lançar → «Salvar alteração»: conta na
   await expect(naoSalvos).toContainText("1 lançamento não salvo");
   /* D-8: com rascunho novo, o selo deixa de dizer «salva». */
   await expect(selo).toHaveAttribute("data-selo", "Em alteração");
+  /*
+   * ⚠️ O CASO QUE DISCRIMINA (D-25; achado 5 da revisão do Bloco 14): o selo perdeu o «· salva», mas o que foi SALVO nesta
+   *    alteração continua contando na CH e fora do papel — a linha da D-25 FICA. Até 28/10/2026 ela lia o mesmo sinal do
+   *    selo e sumia com o rascunho novo, deixando a tela sem dizer o descompasso entre a CH e o papel.
+   */
+  await expect(
+    linhaDaAlteracaoSalva,
+    "a linha «Alteração salva…» sumiu com o rascunho novo (D-25)",
+  ).toBeVisible();
+  await expect(notaDoRascunho).toHaveText(NOTA_DO_RASCUNHO_NA_ALTERACAO);
   await page.locator('[data-slot="descartar-rascunho"]').click();
   await page
     .locator('[data-slot="dialogo-confirmacao"]')

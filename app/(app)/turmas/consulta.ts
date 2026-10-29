@@ -179,8 +179,8 @@ export type InsumosDoAndamentoDaLista = {
   /** Spec 024 (FR-020): a etapa presencial das semipresenciais (`lerContagemPresencial`). Ausente = conta tudo. */
   readonly presenciais?: ReadonlyMap<string, ContagemPresencial>;
   /**
-   * Spec 029 (`FR-005`): o regime das semanas de cada turma (`lerRegimesDasSemanas`). Ausente, ou turma fora do mapa =
-   * um TA/dia só, a conta de antes do Bloco 14.
+   * Spec 029 (`FR-005`): o regime das semanas de cada turma (o `porTurma` de `lerRegimesDasSemanas`). Ausente, ou turma
+   * fora do mapa = um TA/dia só, a conta de antes do Bloco 14.
    */
   readonly semanasDasTurmas?: ReadonlyMap<string, ExcecoesDoRegime>;
 };

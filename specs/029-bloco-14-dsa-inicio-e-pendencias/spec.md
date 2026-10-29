@@ -260,10 +260,30 @@ Nenhuma linha muda (todas têm descrição) e nenhuma operação aceita hoje pas
 - **SC-005**: com «desde» ou «só esta semana», o saldo de Início, Avisos, `/turmas` e ficha muda só pelos dias daquelas
   semanas; sem eles, nenhum número muda (medido no remoto: 0 turmas).
 - **SC-006**: nenhum seletor de instrutor vazio diz *"Nada cadastrado ainda"* quando o vazio vem de filtro.
-- **SC-007**: em 2026, os cartões Concluídas e Canceladas do Início contam as arquivadas (no remoto: +13 e +8 sem
-  recorte); o carrossel continua sem elas.
+- **SC-007**: em 2026, os cartões Concluídas e Canceladas do Início contam as arquivadas (no remoto: [pendente: medido
+  na cópia]); o carrossel continua sem elas.
 - **SC-008**: em 1366×768 e 1920×1080 o papel do DSA publicado aparece inteiro, sem rolar, no topo do Início.
 
 ## 9. Fora de escopo / pendências
 
-*(preenchida no fim, com as pendências novas achadas e não corrigidas)*
+Fecha: **`PEND-025-5`** (FR-004), **`PEND-026-1`** (FR-005; a D-15 da spec 026 fica superada) e **`PEND-026-2`**
+(FR-006; a premissa estava invertida — a frase *"o seu perfil não os alcança"* nunca aparecia). Emenda, sem editar as
+specs de origem: o **FR-008.1** e a **D-31 da spec 026** (FR-008), a **D-26** e o **FR-006.1 da spec 026**, o **FR-005.3**
+e a **C-24 da spec 017** (FR-007).
+
+Pendências novas, achadas e **não** corrigidas:
+
+- **`PEND-029-1`** — *a situação «Atrasada» do DSA usa a previsão de um ano só*: `vw_disciplinas_execucao`
+  (`previsao_*_efetiva = coalesce(linha, disciplina)`) é o mesmo defeito do item 4 em outra view; na CAHO 2027 o término
+  efetivo cai em 2026. Depois deste bloco, o alerta do instrutor e o DSA usam janelas diferentes para a mesma linha.
+  Corrigir é recriar a view (portão 9.4).
+- **`PEND-029-2`** — *habilitado inativo na ficha da turma*: a leitura dos habilitados da ficha não filtra a situação do
+  instrutor; o desativado com vínculo ativo aparece no TA fora do DSA e no editor de instrutores, e o DSA o tira
+  (RN-INST-02). As duas telas discordam sobre o que é «não há».
+- **`PEND-029-3`** — *o «do curso» do saldo × o do DSA*: pela D-12, o saldo usa o padrão vigente **hoje**; o DSA usa
+  exceção > padrão **na semana**. Num curso com exceção vigente, a ficha pode mostrar um TA/dia diferente do da grade na
+  mesma semana. Soma-se ao **D20 residual**.
+- **`PEND-029-4`** — *turma sem período completo continua invisível ao alerta*: pelo FR-004.3 ela fica como estava, e a
+  atribuição cuja previsão cai em outro ano não aparece no alerta de ano nenhum (o caso CHK005 do pgTAP 094).
+- **`PEND-029-5`** — *o documento 04 descreve um tipo `TipoTeto` que o código nunca teve* (nem antes da emenda, com o modo
+  `rigido`): a nota de implementação da RN-DIST-03 fala de um tipo que não existe. Texto, não comportamento.

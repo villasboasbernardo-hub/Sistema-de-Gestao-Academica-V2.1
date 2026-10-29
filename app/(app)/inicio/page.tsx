@@ -24,6 +24,7 @@
  */
 import { lerContagemPresencial } from "../turmas/contagem-presencial";
 import { lerRegimesDasSemanas } from "../turmas/regimes-das-semanas";
+import { AvisoDoRegimeNaoLido } from "../turmas/AvisoDoRegimeNaoLido";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
 
@@ -60,7 +61,11 @@ import { instanteComHoraParaLeitura } from "@/lib/formato/data";
 import { CONTRATO } from "@/lib/navegacao/contrato";
 import { ROTA_DO_DSA, rotuloDaSemana } from "../turmas/[turma]/dsa/consulta";
 import { Carrossel } from "@/components/ciaara/carrossel";
-import { cartoesDoInicio, contagemPorSituacao } from "@/lib/dominio/cartoes-do-inicio";
+import {
+  cartoesDoInicio,
+  contagemPorSituacao,
+  fraseDoCarrosselVazio,
+} from "@/lib/dominio/cartoes-do-inicio";
 import { compararTurmas } from "@/lib/dominio/ordem-de-cursos";
 import { datasDaSemanaIso, semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import {
@@ -265,7 +270,7 @@ export default async function Inicio({
       ),
     ),
     presenciais,
-    semanasDasTurmas,
+    semanasDasTurmas.porTurma,
   ).map((t) => ({ ...t, arquivada: arquivadas.has(t.turmaId) }));
   /*
    * RD-8 (Bloco 11) com a RT-8 (spec 029): os cartões contam as turmas do ano por situação — a população do panorama,
@@ -283,6 +288,8 @@ export default async function Inicio({
    * arquivada conta em *Turmas ativas* e não ganha cartão.
    */
   const cartoes = cartoesDoInicio(panorama);
+  /* Sem cartão, a frase: a do A-2 — ou, com a ativa arquivada contada em *Turmas ativas*, quantas são e onde vê-las. */
+  const fraseSemCartao = fraseDoCarrosselVazio(contagem.ativas, cartoes.length, ano, temRecorte);
 
   /*
    * ⚠️ **RD-7 (Bloco 11, D-27): O CARROSSEL DO DSA SEGUE O RECORTE** (classificação e modalidade) e a semana ISO — não o
@@ -447,9 +454,17 @@ export default async function Inicio({
           </div>
 
           {/*
+           * Spec 029 (`FR-005`; revisão do Bloco 14, achado 7): o regime das semanas que não se leu é dito, uma linha só —
+           *    o «em atraso» dos cartões sai pela conta de antes (um TA/dia só). Só com cartão: sem carrossel não há veredito.
+           */}
+          {!semanasDasTurmas.lido && cartoes.length > 0 ? <AvisoDoRegimeNaoLido /> : null}
+
+          {/*
            * ⚠️ **OS VAZIOS LEEM A MESMA POPULAÇÃO DOS NÚMEROS** (RT-8): «Nenhuma turma neste recorte» só quando nem
            *    arquivada houver no ano e no recorte — com a arquivada contada num cartão ao lado, a frase desmentiria o
-           *    número. Havendo só arquivada (ou nenhuma ativa), a frase é a do A-2, pelos cartões do carrossel.
+           *    número. Sem cartão no carrossel, a frase sai de `fraseDoCarrosselVazio`: a do A-2 quando não há ativa
+           *    nenhuma; havendo ativa ARQUIVADA (que conta em *Turmas ativas* e não ganha cartão), ela diz quantas são e
+           *    como vê-las — a do A-2 ali desmentiria o «Turmas ativas: 1» logo acima (revisão do Bloco 14).
            */}
           {panorama.length === 0 && baseVazia ? (
             <EstadoVazio
@@ -469,11 +484,10 @@ export default async function Inicio({
               titulo="Nenhuma turma neste recorte"
               detalhe={`Há turmas cadastradas, mas nenhuma de ${ano} com esta classificação e modalidade. Volte o filtro para Todas ou escolha outro ano.`}
             />
-          ) : cartoes.length === 0 ? (
-            /* Ajuste A-2: sem turma ativa no ano, uma frase — nunca um carrossel vazio. */
+          ) : fraseSemCartao !== null ? (
+            /* Ajuste A-2: sem cartão no carrossel, uma frase — nunca um carrossel vazio. */
             <p className="text-texto-suave text-sm" data-slot="sem-turma-ativa">
-              Nenhuma turma em andamento em {ano}
-              {temRecorte ? " neste recorte" : ""}.
+              {fraseSemCartao}
             </p>
           ) : (
             /*

@@ -122,6 +122,7 @@ describe("situacaoDaSemana — Salvar alteração (RP-9, spec 029)", () => {
     const s = situacaoDaSemana([...ORIGINAL, ev("salvo", "2026-10-21T10:00:00Z")], 0, false);
     expect(s.situacao).toBe("alteracao_em_andamento");
     expect(s.alteracaoSalva).toBe(true);
+    expect(s.houveSalvoNestaAlteracao).toBe(true);
     expect(s.podeSalvarAlteracao).toBe(true);
     /* O «Salvar minuta» continua sem aparecer na alteração: o botão é o outro. */
     expect(s.podeSalvar).toBe(false);
@@ -146,6 +147,7 @@ describe("situacaoDaSemana — Salvar alteração (RP-9, spec 029)", () => {
     const s = situacaoDaSemana(ORIGINAL, 0, false);
     expect(s.situacao).toBe("alteracao_em_andamento");
     expect(s.alteracaoSalva).toBe(false);
+    expect(s.houveSalvoNestaAlteracao).toBe(false);
     /* D-23: o botão aparece mesmo sem rascunho, sempre que a semana está em alteração. */
     expect(s.podeSalvarAlteracao).toBe(true);
   });
@@ -164,6 +166,7 @@ describe("situacaoDaSemana — Salvar alteração (RP-9, spec 029)", () => {
     expect(s.situacao).toBe("alteracao_em_andamento");
     expect(s.versaoVigente).toBe(1);
     expect(s.alteracaoSalva).toBe(false);
+    expect(s.houveSalvoNestaAlteracao).toBe(false);
     expect(s.podeSalvarAlteracao).toBe(true);
   });
 
@@ -171,6 +174,11 @@ describe("situacaoDaSemana — Salvar alteração (RP-9, spec 029)", () => {
     const s = situacaoDaSemana([...ORIGINAL, ev("salvo", "2026-10-21T10:00:00Z")], 1, false);
     expect(s.situacao).toBe("alteracao_em_andamento");
     expect(s.alteracaoSalva).toBe(false);
+    /*
+     * ⚠️ D-25, e O CASO QUE DISCRIMINA (achado 5 da revisão do Bloco 14): o selo perde o «· salva» (D-8), mas o que foi
+     *    salvo nesta alteração CONTINUA contando na CH e fora do papel — a linha da D-25 lê este sinal, não o do selo.
+     */
+    expect(s.houveSalvoNestaAlteracao).toBe(true);
     expect(s.podeSalvarAlteracao).toBe(true);
     expect(s.podeDescartar).toBe(true);
   });
@@ -187,6 +195,7 @@ describe("situacaoDaSemana — Salvar alteração (RP-9, spec 029)", () => {
     );
     expect(s.situacao).toBe("alteracao_em_andamento");
     expect(s.alteracaoSalva).toBe(true);
+    expect(s.houveSalvoNestaAlteracao).toBe(true);
     expect(s.versaoVigente).toBe(0);
   });
 
@@ -210,6 +219,7 @@ describe("situacaoDaSemana — Salvar alteração (RP-9, spec 029)", () => {
     for (const s of [emPreenchimento, registrado, publicado, altPublicada]) {
       expect(s.podeSalvarAlteracao).toBe(false);
       expect(s.alteracaoSalva).toBe(false);
+      expect(s.houveSalvoNestaAlteracao).toBe(false);
     }
   });
 });

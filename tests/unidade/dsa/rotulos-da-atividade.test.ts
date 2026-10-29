@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   conteudoDaAtividade,
+  conteudoOuSubtipo,
   ROTULO_DO_APOIO,
   ROTULO_DO_TR_BLOQUEANTE,
   tituloDoLancamento,
@@ -82,5 +83,36 @@ describe("spec 029, D-6 · `tituloDoLancamento`", () => {
         tecnica: "Expositiva",
       }),
     ).toBe("Lançamento");
+  });
+});
+
+/*
+ * ⚠️ **D-6 TAMBÉM NO RÓTULO ACESSÍVEL DA GRADE SEM RELÓGIO** (achado 12 da revisão do Bloco 14): a célula do EI sem «O que
+ *    é» mostra o subtipo na tela, mas o `aria-label` — que substitui o conteúdo para o leitor de tela — juntava só
+ *    disciplina e conteúdo, os dois vazios. `conteudoOuSubtipo` é o recurso da D-6 sem o código da disciplina (que o
+ *    rótulo da célula já põe) e sem o genérico «Lançamento» (que no rótulo não diria nada).
+ */
+describe("spec 029, D-6 · `conteudoOuSubtipo`", () => {
+  const ei = {
+    origem: "atividade_nao_letiva",
+    conteudo: null,
+    tecnica: "Estudo Individual",
+  };
+
+  it("⚠️ a atividade sem conteúdo se nomeia pelo subtipo", () => {
+    expect(conteudoOuSubtipo(ei)).toBe("Estudo Individual");
+    expect(conteudoOuSubtipo({ ...ei, conteudo: "  " })).toBe("Estudo Individual");
+  });
+
+  it("controle: com conteúdo, o conteúdo — em qualquer origem", () => {
+    expect(conteudoOuSubtipo({ ...ei, conteudo: "Leitura dirigida" })).toBe("Leitura dirigida");
+    expect(
+      conteudoOuSubtipo({ origem: "aula", conteudo: "Cartas náuticas", tecnica: "Expositiva" }),
+    ).toBe("Cartas náuticas");
+  });
+
+  it("controle: sem nada a dizer, nulo — e a técnica da aula não é nome", () => {
+    expect(conteudoOuSubtipo({ ...ei, tecnica: "  " })).toBeNull();
+    expect(conteudoOuSubtipo({ origem: "aula", conteudo: null, tecnica: "Expositiva" })).toBeNull();
   });
 });

@@ -11,10 +11,16 @@
  *    espaços — que passa pelo `required` — a AÇÃO recusa com a frase de sempre. Os dois vereditos são iguais antes e
  *    depois; sem eles, uma tela que tirasse o `required` de toda atividade passaria no caso do EI.
  *
+ * ⚠️ **E «AO LANÇAR OU EDITAR»** (`FR-002.1`; achado 11 da revisão do Bloco 14): apagar o *"O que é"* pelo cartão de
+ *    edição grava nulo no EI e é recusado, com a MESMA frase do lançar, na AEC. Até ali nenhum caso limpava
+ *    `#dsa-editar-conteudo` de uma atividade — tirar a guarda da edição deixava tudo verde (a AEC passava a ser recusada
+ *    pelo `CHECK` traduzido, com OUTRA frase).
+ *
  * ⚠️ `goto` só no login (ponto de partida); daí, lista de turmas → ficha → *Abrir o DSA* → a semana pelo dia → célula.
- * ⚠️ **A SEXTA ESTÁ VAZIA NA SEMENTE** (`dsa-de-teste.ts`), e cada caso usa a sua célula: o EI no TA 8 e a AEC no TA 7.
- *    Com `fullyParallel`, os dois podem cair no mesmo processo, e o *Salvar minuta* do EI não leva nada da AEC — ela
- *    nunca grava.
+ * ⚠️ **A SEXTA ESTÁ VAZIA NA SEMENTE** (`dsa-de-teste.ts`), e cada caso usa a sua célula: o EI no TA 8, a AEC no TA 7,
+ *    o EI da edição no TA 6 e a AEC da edição no TA 5. Com `fullyParallel`, os casos podem cair no mesmo processo (a
+ *    mesma turma): o *Salvar minuta* de um leva os rascunhos do outro, e por isso cada conferência do banco lê só o TA e
+ *    a categoria do seu caso — e o controle da AEC no TA 7 nunca grava.
  */
 import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -35,6 +41,12 @@ const SEXTA = "2026-04-10";
 const CELULA_DO_EI = "7:4";
 /** Sexta, TA 7 (linha 6, coluna 4): a AEC do controle. */
 const CELULA_DA_AEC = "6:4";
+/** Sexta, TA 6 (linha 5, coluna 4): o Estudo Individual DESCRITO cuja descrição a edição apaga. */
+const CELULA_DO_EI_EDITADO = "5:4";
+/** Sexta, TA 5 (linha 4, coluna 4): a AEC descrita do controle da edição. */
+const CELULA_DA_AEC_EDITADA = "4:4";
+/** O cartão único do lançamento já na grade (`AcoesDoBloco`). */
+const CARTAO = '[data-slot="acoes-do-bloco"]';
 
 /** Cliente de serviço — **só** para CONFERIR no banco o que a tela gravou (ou não gravou). */
 let servico: SupabaseClient | undefined;
@@ -104,6 +116,49 @@ async function desfechoDoLancar(page: Page): Promise<string> {
   if ((await page.locator(FORMULARIO).count()) === 0) return "fechou";
   if ((await page.locator('[data-slot="avisos-do-lancamento"]').count()) > 0) return "avisou";
   return "em curso";
+}
+
+/** O desfecho do «Gravar» do cartão de edição — o mesmo de `desfechoDoLancar`, com os `data-slot` do cartão. */
+async function desfechoDaEdicao(page: Page): Promise<string> {
+  const recusa = page.locator('[data-slot="recusa-da-acao"]');
+  if ((await recusa.count()) > 0) return `recusou: ${await recusa.innerText()}`;
+  if ((await page.locator(CARTAO).count()) === 0) return "fechou";
+  if ((await page.locator('[data-slot="avisos-da-acao"]').count()) > 0) return "avisou";
+  return "em curso";
+}
+
+/**
+ * Lança, pela célula vazia da sexta, uma atividade COM «O que é» e a SALVA — o ponto de partida dos casos de edição.
+ * ⚠️ Salvar antes de editar é o caso real: a edição de um lançamento salvo grava na SOMBRA, e é o *Salvar minuta*
+ *    seguinte que leva o valor da sombra ao salvo (`app.aplicar_rascunhos_da_semana`).
+ */
+async function lancarDescritaESalvar(
+  page: Page,
+  celula: string,
+  tipo: "Estudo_Individual" | "AEC",
+  subtipo: string,
+  descricao: string,
+): Promise<void> {
+  await abrirCelula(page, celula);
+  await page.locator(`[data-tipo="${tipo}"]`).click();
+  await page.locator("#dsa-subtipo").selectOption({ label: subtipo });
+  await page.locator("#dsa-tempos").fill("1");
+  await page.locator("#dsa-descricao").fill(descricao);
+  await page.locator('[data-slot="gravar-lancamento"]').click();
+  await expect.poll(() => desfechoDoLancar(page), { timeout: 60_000 }).not.toBe("em curso");
+  expect(await desfechoDoLancar(page), "o lançamento foi recusado").not.toMatch(/^recusou/);
+  /* Com aviso (`RN-DEG-02`) o formulário fica aberto e o lançamento GRAVOU: fecha para chegar à barra. */
+  if ((await page.locator(FORMULARIO).count()) > 0) {
+    await page.locator(FORMULARIO).getByRole("button", { name: "Cancelar" }).click();
+  }
+  await salvarASemana(page);
+}
+
+/** Abre o cartão de edição do lançamento da célula — e confere que é o lançamento certo, pelo «O que é» gravado. */
+async function abrirCartaoDescrito(page: Page, celula: string, descricao: string): Promise<void> {
+  await page.locator(`${GRADE} td[data-celula="${celula}"]`).click();
+  await expect(page.locator(CARTAO)).toBeVisible();
+  await expect(page.locator("#dsa-editar-conteudo")).toHaveValue(descricao);
 }
 
 test("FR-002 · o Estudo Individual SEM «O que é» lança, salva e grava a descrição NULA", async ({
@@ -176,4 +231,75 @@ test("controle · a AEC com «O que é» vazio continua barrada — no navegador
 
   /* E nada foi gravado. */
   expect(await atividadesNoTa("AEC", 7)).toEqual([]);
+});
+
+/*
+ * ⚠️ **FR-002.1 · «AO LANÇAR OU EDITAR»** (achado 11 da revisão do Bloco 14). O cartão manda `conteudo: null` quando a
+ *    pessoa limpa o *"O que é"*, e a Server Action decide por `recusaDaDescricaoNaEdicao` (a categoria é a da LINHA).
+ *    Os dois casos abaixo são os dois sentidos da guarda:
+ *    - sem a condição da categoria, o EI apagado é recusado — e o primeiro caso reprova no desfecho;
+ *    - sem a guarda, a AEC apagada chega ao banco e volta com a frase do `CHECK` traduzido, mais longa — e o segundo
+ *      reprova no `toHaveText` EXATO (um `toContainText` passaria com as duas frases).
+ */
+test("FR-002.1 · editar: apagar o «O que é» de um Estudo Individual descrito grava a descrição NULA", async ({
+  page,
+}) => {
+  const descricao = `Leitura dirigida ${Date.now().toString(36)}`;
+  await abrirASemana(page);
+  await lancarDescritaESalvar(
+    page,
+    CELULA_DO_EI_EDITADO,
+    "Estudo_Individual",
+    "Estudo Individual",
+    descricao,
+  );
+  /* O ponto de partida, no banco: o EI SALVO, com a descrição escrita. */
+  await expect
+    .poll(() => atividadesNoTa("Estudo_Individual", 6), { timeout: 30_000 })
+    .toEqual([{ descricao, salvo: true, subtipo: "Estudo Individual" }]);
+
+  await abrirCartaoDescrito(page, CELULA_DO_EI_EDITADO, descricao);
+  await page.locator("#dsa-editar-conteudo").fill("");
+  await page.locator('[data-slot="gravar-edicao"]').click();
+  await expect.poll(() => desfechoDaEdicao(page), { timeout: 60_000 }).not.toBe("em curso");
+  expect(
+    await desfechoDaEdicao(page),
+    "a edição que apagou o «O que é» do Estudo Individual foi recusada",
+  ).not.toMatch(/^recusou/);
+  if ((await page.locator(CARTAO).count()) > 0) await page.keyboard.press("Escape");
+
+  /* Spec 024 (RP-0): a edição é rascunho (na sombra) até o «Salvar minuta». */
+  await salvarASemana(page);
+
+  /* ⚠️ A prova é o BANCO: o MESMO Estudo Individual, salvo, agora com a descrição NULA (D-5) — e uma linha só. */
+  await expect
+    .poll(() => atividadesNoTa("Estudo_Individual", 6), { timeout: 30_000 })
+    .toEqual([{ descricao: null, salvo: true, subtipo: "Estudo Individual" }]);
+});
+
+test("controle · editar: apagar o «O que é» de uma AEC descrita é recusado com a frase do lançar, e o banco não muda", async ({
+  page,
+}) => {
+  const descricao = `Palestra de segurança ${Date.now().toString(36)}`;
+  await abrirASemana(page);
+  await lancarDescritaESalvar(page, CELULA_DA_AEC_EDITADA, "AEC", "Palestra", descricao);
+  await expect
+    .poll(() => atividadesNoTa("AEC", 5), { timeout: 30_000 })
+    .toEqual([{ descricao, salvo: true, subtipo: "Palestra" }]);
+
+  await abrirCartaoDescrito(page, CELULA_DA_AEC_EDITADA, descricao);
+  await page.locator("#dsa-editar-conteudo").fill("");
+  await page.locator('[data-slot="gravar-edicao"]').click();
+  /*
+   * ⚠️ A FRASE EXATA: a do `CHECK` traduzido («Escreva o que é a atividade. Só o Estudo Individual pode ficar sem o
+   *    «O que é».») CONTÉM esta — sem a guarda da edição, `toContainText` continuaria verde.
+   */
+  await expect(page.locator('[data-slot="recusa-da-acao"]')).toHaveText(
+    "Escreva o que é a atividade.",
+  );
+  /* O cartão fica aberto, com o campo como a pessoa o deixou: nada foi gravado. */
+  await expect(page.locator(CARTAO)).toBeVisible();
+
+  /* E o BANCO não mudou: a AEC salva continua com a descrição, e não há sombra (rascunho) dela. */
+  expect(await atividadesNoTa("AEC", 5)).toEqual([{ descricao, salvo: true, subtipo: "Palestra" }]);
 });
