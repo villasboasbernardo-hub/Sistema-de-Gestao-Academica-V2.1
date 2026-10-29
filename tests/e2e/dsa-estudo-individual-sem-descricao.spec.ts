@@ -17,7 +17,11 @@
  *    pelo `CHECK` traduzido, com OUTRA frase).
  *
  * ⚠️ `goto` só no login (ponto de partida); daí, lista de turmas → ficha → *Abrir o DSA* → a semana pelo dia → célula.
- * ⚠️ **A SEXTA ESTÁ VAZIA NA SEMENTE** (`dsa-de-teste.ts`), e cada caso usa a sua célula: o EI no TA 8, a AEC no TA 7,
+ * ⚠️ **UMA SEMANA SÓ DESTE ARQUIVO — a 17 (20 a 24/04/2026)**, e não a 15 de referência da semente: a turma semeada é
+ *    a MESMA para todo arquivo do DSA que cai no mesmo processo, e a sexta da semana 15 é usada por vários deles
+ *    (`dsa-lancar`, `dsa-mover`, `dsa-parar-dia`, `dsa-avaliacao-item`…). No CI de 29/10/2026 (PR #105) a ordem do push
+ *    pôs um lançamento de outro arquivo na célula do caso de edição da AEC, e ele reprovou nas três tentativas. A sexta
+ *    da semana 17 está vazia, e cada caso usa a sua célula: o EI no TA 8, a AEC no TA 7,
  *    o EI da edição no TA 6 e a AEC da edição no TA 5. Com `fullyParallel`, os casos podem cair no mesmo processo (a
  *    mesma turma): o *Salvar minuta* de um leva os rascunhos do outro, e por isso cada conferência do banco lê só o TA e
  *    a categoria do seu caso — e o controle da AEC no TA 7 nunca grava.
@@ -26,7 +30,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste } from "./conta-de-teste";
-import { ANO, limparDsa, SEGUNDA, SEMANA, semearDsa, type DsaSemeado } from "./dsa-de-teste";
+import { ANO, limparDsa, semearDsa, type DsaSemeado } from "./dsa-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
 import { irParaASemanaDoDia, salvarASemana } from "./percurso-do-dsa";
 
@@ -35,8 +39,11 @@ let S: DsaSemeado;
 
 const GRADE = '[data-slot="grade-alocacao"]';
 const FORMULARIO = '[data-slot="formulario-de-lancamento"]';
-/** A sexta da semana de referência — vazia na semente. */
-const SEXTA = "2026-04-10";
+/** A semana deste arquivo (a 17 de 2026) — nenhum outro arquivo de ponta a ponta a usa. */
+const SEMANA_DO_ARQUIVO = 17;
+const SEGUNDA_DO_ARQUIVO = "2026-04-20";
+/** A sexta dela — vazia. */
+const SEXTA = "2026-04-24";
 /** Sexta, TA 8 (linha 7, coluna 4): o Estudo Individual. */
 const CELULA_DO_EI = "7:4";
 /** Sexta, TA 7 (linha 6, coluna 4): a AEC do controle. */
@@ -71,7 +78,7 @@ test.afterAll(async () => {
 async function abrirASemana(page: Page): Promise<void> {
   await irAFichaDaTurma(page, EMAIL, S.turmaComRelogio);
   await page.locator('[data-slot="abrir-o-dsa"]').click();
-  await irParaASemanaDoDia(page, SEGUNDA, SEMANA, ANO);
+  await irParaASemanaDoDia(page, SEGUNDA_DO_ARQUIVO, SEMANA_DO_ARQUIVO, ANO);
   await expect(page.locator(GRADE)).toBeVisible();
 }
 
