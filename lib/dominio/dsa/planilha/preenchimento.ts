@@ -802,11 +802,7 @@ export function abaDeEntrada(entrada: {
             P.semPosicaoNoDia,
             retrato.semPosicao.filter((s) => s.data === data).length,
           );
-          definirFormulas(
-            aba,
-            r,
-            formulasDoDia({ primeira: d0, tempos: g.tempos }),
-          );
+          definirFormulas(aba, r, formulasDoDia({ primeira: d0, tempos: g.tempos }));
         }
       }
       const de = { linha: d0, coluna: P.cod };

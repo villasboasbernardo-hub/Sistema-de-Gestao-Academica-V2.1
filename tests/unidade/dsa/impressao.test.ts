@@ -140,7 +140,9 @@ describe("o Estudo Individual no papel é só o LANÇADO (Bloco 15, `FR-004`)", 
   it("a chave da linha fixa dos retratos antigos se reconhece — e a de um lançamento, não", () => {
     expect(ehLinhaFixaDoEstudoIndividual({ chave: "ei-2026-10-05" })).toBe(true);
     expect(ehLinhaFixaDoEstudoIndividual({ chave: "ei-lancado" })).toBe(false);
-    expect(ehLinhaFixaDoEstudoIndividual({ chave: "9f1c2d3e-0000-4000-8000-000000000000" })).toBe(false);
+    expect(ehLinhaFixaDoEstudoIndividual({ chave: "9f1c2d3e-0000-4000-8000-000000000000" })).toBe(
+      false,
+    );
   });
 
   /*

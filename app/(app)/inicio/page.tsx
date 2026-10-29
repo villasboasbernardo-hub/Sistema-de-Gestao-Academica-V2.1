@@ -35,7 +35,6 @@ import {
   GatilhoDePainel,
   ProvedorDePaineis,
 } from "@/components/ciaara/paineis-da-pagina";
-import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
 import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
@@ -57,9 +56,9 @@ import type { DadosDoDocumento } from "../../print/dsa/documento";
 import { lerPublicadosDaSemana } from "../turmas/[turma]/dsa/publicacao";
 import { rotuloDoAlt } from "@/lib/dominio/dsa/publicacao";
 import { semanaDaDataEscolhida } from "@/lib/dominio/dsa/semana-pela-data";
-import { instanteComHoraParaLeitura } from "@/lib/formato/data";
+import { instanteComHoraParaLeitura, intervaloDeDatas } from "@/lib/formato/data";
 import { CONTRATO } from "@/lib/navegacao/contrato";
-import { ROTA_DO_DSA, rotuloDaSemana } from "../turmas/[turma]/dsa/consulta";
+import { ROTA_DO_DSA } from "../turmas/[turma]/dsa/consulta";
 import { Carrossel } from "@/components/ciaara/carrossel";
 import {
   cartoesDoInicio,
@@ -347,7 +346,6 @@ export default async function Inicio({
         >
           <h1 className="text-texto text-lg font-semibold">Início</h1>
           <BarraDeAcoes rotulo="Ações do Início">
-            <SeletorDeAno ano={ano} vigente={anoVigente} origem={escolha.origem} rota="/inicio" />
             <GatilhoDePainel
               painel="filtros"
               contagem={filtrosForaDoPadrao("/inicio", { classificacao, modalidade })}
@@ -374,19 +372,26 @@ export default async function Inicio({
           data-slot="dsa-publicados"
           data-semana={`${isoDaSemana.ano}-${isoDaSemana.numero}`}
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="titulo-dsa-publicados" className="text-texto text-base font-semibold">
-              DSA publicados da semana
-            </h2>
-            <EscolhaDaSemana
-              rotulo={rotuloDaSemana(diasDaSemanaMostrada)}
-              dataDaSemana={segundaMostrada}
-              anterior={somarDias(segundaMostrada, -7)}
-              seguinte={somarDias(segundaMostrada, 7)}
-              ehAAtual={ehAAtual}
-              anos={{ minimo: ANOS_DA_URL.minimo, maximo: ANOS_DA_URL.maximo }}
-            />
-          </div>
+          {/*
+            Bloco 15 (`FR-002`, D-6): uma linha só — a seta Voltar no canto esquerdo, ao centro o título, as datas curtas e
+            o calendário, a seta Avançar no canto direito.
+          */}
+          <EscolhaDaSemana
+            titulo={
+              <h2 id="titulo-dsa-publicados" className="text-texto text-base font-semibold">
+                DSA publicados da semana
+              </h2>
+            }
+            rotulo={intervaloDeDatas(
+              diasDaSemanaMostrada[0],
+              diasDaSemanaMostrada[diasDaSemanaMostrada.length - 1],
+            )}
+            dataDaSemana={segundaMostrada}
+            anterior={somarDias(segundaMostrada, -7)}
+            seguinte={somarDias(segundaMostrada, 7)}
+            ehAAtual={ehAAtual}
+            anos={{ minimo: ANOS_DA_URL.minimo, maximo: ANOS_DA_URL.maximo }}
+          />
           {publicadosNaoLidos ? (
             <p
               role="status"
@@ -411,6 +416,15 @@ export default async function Inicio({
               intervaloMs={10000}
               largura="inteira"
               dataSlot="carrossel-do-dsa"
+              /*
+               * Bloco 15 (`FR-001`): clicar no papel (ou `Enter` nele) abre a tela cheia; a legenda vira o título dela.
+               */
+              telaCheia={{
+                nomes: publicados.map(
+                  (p) =>
+                    `${p.turma.codigo} · ${p.numero === 0 ? "original" : `ALT ${p.numero}`} · publicada em ${instanteComHoraParaLeitura(p.ocorridoEm)}`,
+                ),
+              }}
               itens={publicados.map((p) => (
                 <figure
                   key={p.turmaId}

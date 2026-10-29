@@ -35,7 +35,7 @@ import {
   GatilhoDePainel,
   ProvedorDePaineis,
 } from "@/components/ciaara/paineis-da-pagina";
-import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
+import { SeletorDeAnoSemBusca } from "@/components/ciaara/seletor-de-ano";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
@@ -293,7 +293,7 @@ export function AmostraCartoesJuntos() {
  */
 export function AmostraSeletorDeAno() {
   const vigente = Number(hojeNaCiaara().slice(0, 4));
-  return <SeletorDeAno ano={vigente} vigente={vigente} origem="hoje" rota="/inicio" />;
+  return <SeletorDeAnoSemBusca ano={vigente} vigente={vigente} origem="hoje" />;
 }
 
 /**

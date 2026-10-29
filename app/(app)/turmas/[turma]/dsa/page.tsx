@@ -343,8 +343,7 @@ export default async function SemanaDoDsa({
     versaoAberta === null
       ? null
       : ((publicadas.find((e) => (e.numero ?? 0) === versaoAberta.numero)?.dados as
-          | DadosDoDocumento
-          | undefined) ?? null);
+          DadosDoDocumento | undefined) ?? null);
   const tiposDeParada: TipoDeParada[] = (tiposDeParadaRes.data ?? []).map((t) => {
     const m = (t.metadados ?? {}) as { pode_global?: boolean; aceita_tr?: boolean };
     return {

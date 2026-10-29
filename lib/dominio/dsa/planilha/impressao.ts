@@ -44,14 +44,7 @@ import {
   type TipoDoCartao,
 } from "../../../planilha/cores";
 
-import {
-  ABA,
-  NOME,
-  P,
-  PC,
-  P_LINHAS_DO_CABECALHO,
-  P_PRIMEIRA_LINHA,
-} from "./layout";
+import { ABA, NOME, P, PC, P_LINHAS_DO_CABECALHO, P_PRIMEIRA_LINHA } from "./layout";
 import { DIAS_NA_ENTRADA, type GeometriaDaEntrada } from "./preenchimento";
 
 /** O cabeçalho institucional — o mesmo texto fixo do `/print/dsa` (conferido por teste). */

@@ -69,26 +69,29 @@ export default async function EditarTurma({ params }: { params: Promise<{ turma:
     );
   }
 
-  const voltar = (
+  /*
+   * Bloco 15 (spec 030, `FR-009.4`): o CÓDIGO no título é o caminho para a ficha — o «Voltar à ficha da turma» solto saiu,
+   * como o «Voltar à turma» do DSA. O `data-slot` é o de antes: quem chega à ficha por ele continua chegando.
+   */
+  const linkDaFicha = (
     <Link
       href={enderecoDaTurma(turma.codigo as string)}
-      className="text-marca text-sm underline-offset-2 hover:underline"
+      className="underline-offset-2 hover:underline"
       data-slot="voltar-a-ficha"
     >
-      Voltar à ficha da turma
+      {turma.codigo as string}
     </Link>
   );
 
   if (!pode(permissoes, "turmas", "editar")) {
     return (
       <section className="flex flex-col gap-4">
-        <h1 className="text-texto text-lg font-semibold">Editar {turma.codigo as string}</h1>
+        <h1 className="text-texto text-lg font-semibold">Editar {linkDaFicha}</h1>
         <EstadoVazio
           motivo="sem-permissao"
           titulo="O seu perfil não edita turma"
           detalhe="Fale com o Admin se precisar deste acesso."
         />
-        {voltar}
       </section>
     );
   }
@@ -162,13 +165,12 @@ export default async function EditarTurma({ params }: { params: Promise<{ turma:
   if (arquivada || cursoRes.data?.status === "inativo") {
     return (
       <section className="flex flex-col gap-4">
-        <h1 className="text-texto text-lg font-semibold">Editar {turma.codigo as string}</h1>
+        <h1 className="text-texto text-lg font-semibold">Editar {linkDaFicha}</h1>
         <p role="status" className="text-texto text-sm" data-slot="edicao-indisponivel">
           {arquivada
             ? "A turma está arquivada: ela se consulta, não se edita. Para editá-la, desarquive-a na ficha."
             : "O curso está fora de oferta: a turma fica para consulta e não recebe edição."}
         </p>
-        {voltar}
       </section>
     );
   }
@@ -202,12 +204,11 @@ export default async function EditarTurma({ params }: { params: Promise<{ turma:
     <section className="flex flex-col gap-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="text-texto text-lg font-semibold">Editar {turma.codigo as string}</h1>
+          <h1 className="text-texto text-lg font-semibold">Editar {linkDaFicha}</h1>
           <p className="text-texto-suave text-sm">
             {cursoRes.data?.codigo as string} — {cursoRes.data?.nome_curso as string}
           </p>
         </div>
-        {voltar}
       </header>
 
       <FormularioDeTurma

@@ -1273,6 +1273,26 @@ export function descritor<R extends Rota>(rota: R, nome: ParametroDe<R>): Parame
   return (CONTRATO[rota].parametros as Readonly<Record<string, Parametro>>)[nome] as Parametro;
 }
 
+/**
+ * A rota do contrato que tem o **ano escolhido** (RT-6), pelo caminho da página — ou `null` (Bloco 15, spec 030,
+ * `FR-003`): é por ela que o seletor do CABEÇALHO, que vive no layout e não conhece a página, sabe se põe o `?ano=` na
+ * URL e se empilha ou substitui o histórico.
+ *
+ * ⚠️ **SÓ O ANO DO RT-6, QUE É TEXTO**: o `ano` do DSA é a **semana ISO** (inteiro, junto do `semana`), e o seletor não o
+ *    toca — escolher 2027 no cabeçalho não pode trocar a semana aberta.
+ * ⚠️ **O CAMINHO CHEGA CODIFICADO** (`usePathname`): o segmento dinâmico casa qualquer texto sem barra.
+ */
+export function rotaComAnoDoCaminho(caminho: string): RotaComParametro<"ano"> | null {
+  const limpo = caminho.split(/[?#]/)[0]?.replace(/\/+$/, "") || "/";
+  for (const rota of Object.keys(CONTRATO) as Rota[]) {
+    const ano = (CONTRATO[rota].parametros as Readonly<Record<string, Parametro>>)["ano"];
+    if (ano === undefined || ano.tipo !== "texto") continue;
+    const padrao = new RegExp(`^${rota.replace(/\[[^\]]+\]/g, "[^/]+")}$`);
+    if (padrao.test(limpo)) return rota as RotaComParametro<"ano">;
+  }
+  return null;
+}
+
 /** Todos os descritores de uma rota, na ordem em que foram declarados. */
 export function parametrosDaRota<R extends Rota>(rota: R): readonly Parametro[] {
   return Object.values(CONTRATO[rota].parametros as Readonly<Record<string, Parametro>>);

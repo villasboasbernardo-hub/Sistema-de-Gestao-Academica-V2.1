@@ -23,7 +23,6 @@ import {
   GatilhoDePainel,
   ProvedorDePaineis,
 } from "@/components/ciaara/paineis-da-pagina";
-import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import {
   excluirLinhaDoCalendario,
   gravarLinhaDoCalendario,
@@ -81,9 +80,6 @@ export default async function Atividades({
   const hoje = hojeNaCiaara();
   const escolha = await anoEscolhido(String(valores.ano ?? ""), hoje);
   const ano = escolha.ano;
-  const seletorDeAno = (
-    <SeletorDeAno ano={ano} vigente={escolha.vigente} origem={escolha.origem} rota="/atividades" />
-  );
 
   if (aba === "calendario") {
     const dados = await lerCalendario(supabase, ano);
@@ -102,7 +98,6 @@ export default async function Atividades({
               nova e desconta capacidade do saldo das turmas que alcança.
             </p>
           </div>
-          <BarraDeAcoes rotulo="Ano das atividades">{seletorDeAno}</BarraDeAcoes>
         </header>
         <AbasDeAtividades>
           <PainelDoCalendario
@@ -279,7 +274,6 @@ export default async function Atividades({
             </p>
           </div>
           <BarraDeAcoes rotulo="Ações das atividades">
-            {seletorDeAno}
             <GatilhoDePainel painel="filtros" contagem={ativos} />
           </BarraDeAcoes>
         </header>

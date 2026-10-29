@@ -12,16 +12,27 @@
  * ⚠️ **ELE SUBSTITUI O ALTERNADOR DE TEMA DA VITRINE** (`FR-018`) — substituição, não duplicação.
  * Dois alternadores é o resultado que o `CHK019` previu, e a vitrine perde o dela no mesmo commit.
  *
+ * ⚠️ **O ANO MORA AQUI DESDE O BLOCO 15** (spec 030, `FR-003`, RT-6 emendada): *"um seletor de ano só, na barra
+ * superior, junto do sininho e do tema claro/escuro, valendo para o sistema todo"* — Bernardo Villas Boas, 29/10/2026.
+ * Ele saiu das sete páginas que o desenhavam. O `Suspense` é o que `useSearchParams` pede; a reserva é o mesmo seletor,
+ * sem o ano do link.
+ *
  * ⚠️ **O TEXTO SOLTO `nome · perfil` VIROU MENU EM 29/09/2026** (`FR-002` da spec 011), e é
  * substituição, não acréscimo. Ele identificava quem estava dentro **e não oferecia saída nenhuma**:
  * quem entrava pelo preview não conseguia sair, porque `encerrarSessao()` existia sem consumidor. O
  * nome continua à vista em telas largas; o que mudou é que agora ele abre.
  */
 import Image from "next/image";
+import { Suspense } from "react";
 
 import { MenuDoAvatar } from "@/components/casca/menu-do-avatar";
 import { SeletorDeTema } from "@/components/casca/seletor-de-tema";
 import { SininhoDeAvisos } from "@/components/casca/sininho-de-avisos";
+import {
+  SeletorDeAno,
+  SeletorDeAnoSemBusca,
+  type PropsDoSeletorDeAno,
+} from "@/components/ciaara/seletor-de-ano";
 import { rotuloDoPerfil } from "@/lib/dominio/perfis";
 
 export function CabecalhoDoApp({
@@ -30,6 +41,7 @@ export function CabecalhoDoApp({
   perfil,
   fotoUrl,
   aoSair,
+  anoEscolhido,
 }: {
   readonly nome: string;
   readonly email: string;
@@ -38,6 +50,8 @@ export function CabecalhoDoApp({
   /** A Server Action que encerra a sessão — **chega pronta do layout**. A casca não a
    *  importa: `@/lib/acoes/` é proibido em componente, e a proibição está certa. */
   readonly aoSair: () => Promise<void>;
+  /** O ano guardado (ou o de hoje), lido pelo layout — o seletor do cabeçalho (Bloco 15, `FR-003`). */
+  readonly anoEscolhido: PropsDoSeletorDeAno;
 }) {
   return (
     <header
@@ -64,6 +78,10 @@ export function CabecalhoDoApp({
         <span className="text-texto-suave hidden text-sm sm:inline">
           {nome} · {rotuloDoPerfil(perfil)}
         </span>
+        {/* Bloco 15 (spec 030, `FR-003`): o ano do sistema todo, junto do sininho e do tema. */}
+        <Suspense fallback={<SeletorDeAnoSemBusca {...anoEscolhido} />}>
+          <SeletorDeAno {...anoEscolhido} />
+        </Suspense>
         {/* Spec 022 (Bloco 7, FR-004.1): o sininho de avisos, em toda tela autenticada. */}
         <SininhoDeAvisos />
         <SeletorDeTema />

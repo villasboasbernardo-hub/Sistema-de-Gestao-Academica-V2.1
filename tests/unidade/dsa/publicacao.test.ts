@@ -246,7 +246,11 @@ describe("documentosIguais", () => {
  * e 1 ALT do remoto passariam a acusar «alterado desde a publicação» sem ninguém ter mexido na semana.
  */
 describe("conteudoComparavel — a linha fixa dos retratos antigos não conta (Bloco 15, D-10)", () => {
-  const aula = { chave: "9f1c2d3e-0000-4000-8000-000000000001", conteudo: "Aula", estudoIndividual: false };
+  const aula = {
+    chave: "9f1c2d3e-0000-4000-8000-000000000001",
+    conteudo: "Aula",
+    estudoIndividual: false,
+  };
   const fixa = { chave: "ei-2026-10-05", conteudo: "ESTUDO INDIVIDUAL", estudoIndividual: true };
   const base = {
     curso: "C-Ap-HN",
@@ -278,17 +282,24 @@ describe("conteudoComparavel — a linha fixa dos retratos antigos não conta (B
   });
 
   it("controle: a aula que mudou continua acusando a alteração", () => {
-    const mudou = { ...papelDeHoje, dias: [{ data: "2026-10-05", linhas: [{ ...aula, conteudo: "Outra" }] }] };
-    expect(
-      documentosIguais(conteudoComparavel(retratoAntigo), conteudoComparavel(mudou)),
-    ).toBe(false);
+    const mudou = {
+      ...papelDeHoje,
+      dias: [{ data: "2026-10-05", linhas: [{ ...aula, conteudo: "Outra" }] }],
+    };
+    expect(documentosIguais(conteudoComparavel(retratoAntigo), conteudoComparavel(mudou))).toBe(
+      false,
+    );
   });
 
   it("controle: o EI LANÇADO (chave do fato) conta — ele é dado, não a linha fixa", () => {
-    const lancado = { chave: "9f1c2d3e-0000-4000-8000-000000000002", conteudo: "ESTUDO INDIVIDUAL", estudoIndividual: true };
+    const lancado = {
+      chave: "9f1c2d3e-0000-4000-8000-000000000002",
+      conteudo: "ESTUDO INDIVIDUAL",
+      estudoIndividual: true,
+    };
     const comEi = { ...papelDeHoje, dias: [{ data: "2026-10-05", linhas: [aula, lancado] }] };
-    expect(
-      documentosIguais(conteudoComparavel(papelDeHoje), conteudoComparavel(comEi)),
-    ).toBe(false);
+    expect(documentosIguais(conteudoComparavel(papelDeHoje), conteudoComparavel(comEi))).toBe(
+      false,
+    );
   });
 });

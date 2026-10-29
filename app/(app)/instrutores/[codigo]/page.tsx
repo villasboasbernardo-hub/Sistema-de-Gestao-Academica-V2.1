@@ -34,7 +34,6 @@ import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
-import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
@@ -381,12 +380,6 @@ export default async function FichaDoInstrutor({
 
         {/* RT-1 (D-35): o ano e as ações no canto superior direito, na linha do nome. */}
         <BarraDeAcoes rotulo="Ações do instrutor">
-          <SeletorDeAno
-            ano={ano}
-            vigente={escolha.vigente}
-            origem={escolha.origem}
-            rota="/instrutores/[codigo]"
-          />
           {podeEditar ? (
             <BotaoDeIcone
               acao="editar"

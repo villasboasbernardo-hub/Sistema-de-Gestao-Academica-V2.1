@@ -26,7 +26,11 @@ import { idDoLancamento, type OrigemDoFato } from "@/lib/dominio/dsa/posicao-her
 import { rotuloDaSessaoDeAplicacao } from "@/lib/dominio/dsa/sessao-de-aplicacao";
 import { responsavelDoFato, rotuloDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
 import type { FeriadoDaSemana } from "@/lib/dominio/dsa/capacidade";
-import { datasDaSemanaIso, janelaDaCarga, type IntervaloDeDatas } from "@/lib/dominio/carga-semanal";
+import {
+  datasDaSemanaIso,
+  janelaDaCarga,
+  type IntervaloDeDatas,
+} from "@/lib/dominio/carga-semanal";
 import type { VigenciaDoHistorico } from "@/lib/dominio/vigencia-de-regime";
 import {
   quadroDaDisciplina,

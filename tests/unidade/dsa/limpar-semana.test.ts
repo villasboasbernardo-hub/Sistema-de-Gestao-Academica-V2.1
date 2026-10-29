@@ -82,7 +82,9 @@ describe("estudosIndividuaisParaRemover — o Limpar só dos Estudos Individuais
 
   it("⚠️ só os EI da turma saem — a aula, a palestra e a prova ficam", () => {
     expect(
-      estudosIndividuaisParaRemover(grade, eis).map((x) => `${x.origem}:${x.id}`).sort(),
+      estudosIndividuaisParaRemover(grade, eis)
+        .map((x) => `${x.origem}:${x.id}`)
+        .sort(),
     ).toEqual(["atividade_nao_letiva:ei-seg", "atividade_nao_letiva:ei-ter"]);
   });
 

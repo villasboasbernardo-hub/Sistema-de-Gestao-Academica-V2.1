@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ALTURA_DA_FOLHA_PX,
+  escalaDaTelaCheia,
   LARGURA_DA_FOLHA_PX,
   LARGURA_DE_UMA_BARRA_PX,
   escalaQueCabe,
@@ -170,5 +171,31 @@ describe("a escala não alterna com a barra de rolagem da página (achado 4)", (
     expect(regravarAEscala(comPainel, semPainel)).toBe(true);
     /* Até poucos pixels de altura a mais (a fonte que carrega) entram — a altura não alterna com a barra vertical. */
     expect(regravarAEscala(medir(1278, 480), medir(1278, 484))).toBe(true);
+  });
+});
+
+/*
+ * Bloco 15 (spec 030, `FR-001`, D-2): a TELA CHEIA amplia o papel ao máximo que cabe — sem o teto de 1 que o carrossel
+ * nunca precisou, e sem o piso de 0,35 (a sobreposição não rola).
+ */
+describe("escalaDaTelaCheia — o papel ampliado ao máximo que cabe (Bloco 15)", () => {
+  it("⚠️ passa de 1 quando a caixa é maior que a folha (1920 × 1080 → ~1,3)", () => {
+    const escala = escalaDaTelaCheia(1920 - 2 * 56, 1080 - 64);
+    expect(escala).toBeGreaterThan(1.2);
+    expect(ALTURA_DA_FOLHA_PX * escala).toBeLessThanOrEqual(1080 - 64 + 0.001);
+    expect(LARGURA_DA_FOLHA_PX * escala).toBeLessThanOrEqual(1920 - 2 * 56 + 0.001);
+  });
+
+  it("a menor das duas: a altura limita numa janela larga e baixa", () => {
+    expect(escalaDaTelaCheia(4000, ALTURA_DA_FOLHA_PX)).toBeCloseTo(1, 6);
+  });
+
+  it("sem piso: numa caixa minúscula ela fica abaixo de 0,35", () => {
+    expect(escalaDaTelaCheia(200, 150)).toBeLessThan(0.35);
+  });
+
+  it("medida inválida devolve o neutro (1), sem estourar (`RN-DEG-01`)", () => {
+    expect(escalaDaTelaCheia(0, 500)).toBe(1);
+    expect(escalaDaTelaCheia(Number.NaN, 500)).toBe(1);
   });
 });

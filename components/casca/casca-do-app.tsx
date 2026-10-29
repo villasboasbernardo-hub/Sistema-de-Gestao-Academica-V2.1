@@ -24,6 +24,7 @@
 import { CabecalhoDoApp } from "@/components/casca/cabecalho-do-app";
 import { FocoAoTrocarDeRota } from "@/components/casca/foco-ao-trocar-de-rota";
 import { NavegacaoLateral, type ArvoresDoSubmenu } from "@/components/casca/navegacao-lateral";
+import type { PropsDoSeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 
 export const ID_DO_CONTEUDO = "conteudo";
 
@@ -35,6 +36,7 @@ export function CascaDoApp({
   fotoUrl,
   aoSair,
   submenu,
+  anoEscolhido,
   children,
 }: {
   readonly nome: string;
@@ -52,6 +54,8 @@ export function CascaDoApp({
   readonly aoSair: () => Promise<void>;
   /** A árvore do submenu da lateral (spec 019) — **chega pronta do layout**, que a leu pela RLS. */
   readonly submenu?: ArvoresDoSubmenu;
+  /** O ano escolhido que o layout conhece (o guardado, ou o de hoje) — o seletor do cabeçalho (Bloco 15, `FR-003`). */
+  readonly anoEscolhido: PropsDoSeletorDeAno;
   readonly children: React.ReactNode;
 }) {
   return (
@@ -70,7 +74,14 @@ export function CascaDoApp({
 
       <FocoAoTrocarDeRota alvo={ID_DO_CONTEUDO} />
 
-      <CabecalhoDoApp nome={nome} email={email} perfil={perfil} fotoUrl={fotoUrl} aoSair={aoSair} />
+      <CabecalhoDoApp
+        nome={nome}
+        email={email}
+        perfil={perfil}
+        fotoUrl={fotoUrl}
+        aoSair={aoSair}
+        anoEscolhido={anoEscolhido}
+      />
 
       <div className="flex flex-1 flex-col lg:flex-row">
         <NavegacaoLateral fixada={lateralFixada} {...(submenu ? { submenu } : {})} />

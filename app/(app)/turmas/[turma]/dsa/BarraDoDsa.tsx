@@ -266,7 +266,10 @@ export function BarraDoDsa({
                 }
               >
                 {() => (
-                  <form className="flex flex-col gap-3 text-sm" onSubmit={(e) => e.preventDefault()}>
+                  <form
+                    className="flex flex-col gap-3 text-sm"
+                    onSubmit={(e) => e.preventDefault()}
+                  >
                     <fieldset className="flex flex-col gap-1">
                       <legend className="text-texto-suave mb-1 text-xs">Regime</legend>
                       {regimesOferecidos.map((r) => (

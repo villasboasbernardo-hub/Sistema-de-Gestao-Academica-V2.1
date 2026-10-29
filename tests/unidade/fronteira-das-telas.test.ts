@@ -131,6 +131,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
     "mover (dia e tempo), editar e excluir um lançamento já na grade — o caminho de TECLADO do `RF-DSA-07`",
   "app/(app)/turmas/[turma]/dsa/NavegacaoDaSemana.tsx":
     "semana anterior/atual/próxima e a coluna de sábado — ela EMPILHA no histórico (`RF-NAV-04`), e empilhar é comportamento de navegador",
+  /* Bloco 15 (spec 030, `FR-007`): as abas de versão do DSA — o conteúdo de cada aba é desenhado no servidor. */
+  "app/(app)/turmas/[turma]/dsa/AbasDeVersao.tsx":
+    "as abas Minuta · Original · ALT N — a aba mora no `?versao=` e EMPILHA no histórico, como as abas da turma",
   /*
    * ⚠️ **ELA ERA SERVIDOR ATÉ 08/10/2026**, e o cabeçalho dela dizia por quê. A cascata das UEs (item 3
    * do comando de correções do DSA) mudou a conta: as colunas da tabela única são funções, e abrir a
