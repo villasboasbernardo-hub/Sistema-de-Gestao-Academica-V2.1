@@ -685,8 +685,8 @@ Individual lançado (a linha fixa sai — item 4): o merge espera a virada de se
    solto e o quadro *Semana do curso / Período / Alunos* da tela; em *Editar turma*, o código vira o link da ficha.
 10. **Barra única do DSA (RD-6)**: navegação | lançamento | publicação, só ícones; as paradas da semana ficam abaixo do
     cabeçalho (D-19).
-11. **`PEND-029-1`** 🐛: a «Atrasada» do DSA pela janela da carga (D-21) — no remoto, as 19 disciplinas da CAHO 2027 deixam
-    de sair atrasadas em 2026.
+11. **`PEND-029-1`** 🐛: a «Atrasada» do DSA pela janela da carga (D-21) — medido no remoto (29/10/2026, só leitura, a
+    regra inteira de `estaAtrasada`): de 38 linhas «Atrasada» para 18; as 20 que mudam são da CAHO 2027.
 
 **Pendências novas:** nenhuma. A `PEND-025-2` (a lateral não lê o `?ano=`) continua como estava (D-8).
 

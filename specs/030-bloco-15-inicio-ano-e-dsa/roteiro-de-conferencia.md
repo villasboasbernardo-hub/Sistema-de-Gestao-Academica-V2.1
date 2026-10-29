@@ -67,5 +67,5 @@ Confira nas duas janelas que o pedido cita (1366×768 e 1920×1080) onde o passo
 
 ## 11. «Atrasada» pela janela da carga (FR-011, `PEND-029-1`)
 1. *Turmas* → **CAHO 2027** → *Abrir o DSA* → uma semana de 2026 (ou a de hoje).
-2. **Esperado:** nenhuma disciplina **«Atrasada»** — sem lançamento, ela está **«Aguardando início»** (antes, as 19 que
-   herdavam a previsão de 2026 saíam atrasadas).
+2. **Esperado:** nenhuma disciplina **«Atrasada»** — sem lançamento, ela está **«Aguardando início»** (antes, as que
+   herdavam a previsão de 2026 saíam atrasadas — 20 no remoto, medidas em 29/10/2026).
