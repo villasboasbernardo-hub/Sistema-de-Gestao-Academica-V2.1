@@ -36,6 +36,7 @@ import {
   dataParaLeitura,
   instanteComHoraParaLeitura,
   instanteParaLeitura,
+  intervaloDeDatas,
 } from "@/lib/formato/data";
 
 const RAIZ = process.cwd();
@@ -122,6 +123,23 @@ function arquivosDe(pasta: string): string[] {
 const TODOS = PASTAS.flatMap(arquivosDe).filter(
   (a) => !a.endsWith(ESTE_ARQUIVO) && a !== PONTO_UNICO,
 );
+
+describe("Bloco 15 (spec 030, D-18) · o intervalo de uma semana, curto quando o ano é o mesmo", () => {
+  it("mesmo ano: o primeiro dia sem o ano — *26/10 a 31/10/2026*", () => {
+    expect(intervaloDeDatas("2026-10-26", "2026-10-31")).toBe("26/10 a 31/10/2026");
+    expect(intervaloDeDatas("2026-02-02", "2026-02-07")).toBe("02/02 a 07/02/2026");
+  });
+
+  it("⚠️ a semana que atravessa o ano leva os dois anos — o curto mentiria sobre o primeiro dia", () => {
+    expect(intervaloDeDatas("2025-12-29", "2026-01-03")).toBe("29/12/2025 a 03/01/2026");
+  });
+
+  it("um dia só, ou o que não é data, degrada sem inventar (`RN-DEG-01`)", () => {
+    expect(intervaloDeDatas("2026-10-26", "2026-10-26")).toBe("26/10/2026");
+    expect(intervaloDeDatas("", "2026-10-31")).toBe("");
+    expect(intervaloDeDatas("2026-10-26", null)).toBe("");
+  });
+});
 
 describe("`FR-034` · o ponto único existe e devolve o formato brasileiro", () => {
   it("data de calendário vira `DD/MM/AAAA`, sem passar por `Date`", () => {

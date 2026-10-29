@@ -394,6 +394,11 @@ export default async function SemanaDoDsa({
     /* ⚠️ O corte é o FIM da semana selecionada, não hoje (`RN-CRONOS-03`, `Q-2`). */
     ateODia: ultimoDia,
     hoje,
+    /* Bloco 15 (`PEND-029-1`, D-21): a «Atrasada» compara com a janela da carga, recortada pelo período da turma. */
+    periodoDaTurma: {
+      inicio: (turma.data_inicio as string | null) ?? null,
+      termino: (turma.data_termino as string | null) ?? null,
+    },
   });
 
   const avisosDaImpressao = avisosAntesDeImprimir({

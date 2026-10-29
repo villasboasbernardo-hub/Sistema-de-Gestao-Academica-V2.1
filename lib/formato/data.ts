@@ -26,6 +26,25 @@ export function dataParaLeitura(valor: string | null | undefined): string {
   return `${dia}/${mes}/${ano}`;
 }
 
+/**
+ * O intervalo de uma semana, para ler: *"26/10 a 31/10/2026"* — o primeiro dia **sem** o ano quando os dois são do mesmo
+ * ano (Bloco 15, spec 030, D-18: *"código da turma · Semana 30 de 37 · 26/10 a 31/10/2026"*).
+ *
+ * ⚠️ **A SEMANA QUE ATRAVESSA O ANO LEVA OS DOIS ANOS** (*"29/12/2025 a 03/01/2026"*): o curto diria que o primeiro dia é
+ *    de 2026. Um dia só sai inteiro, uma vez; o que não é data devolve vazio — quem chama não escreve meia frase.
+ */
+export function intervaloDeDatas(
+  de: string | null | undefined,
+  ate: string | null | undefined,
+): string {
+  const inicio = dataParaLeitura(de);
+  const fim = dataParaLeitura(ate);
+  if (dataIlegivel(inicio) || dataIlegivel(fim)) return "";
+  if (inicio === fim) return fim;
+  const mesmoAno = inicio.slice(6) === fim.slice(6);
+  return `${mesmoAno ? inicio.slice(0, 5) : inicio} a ${fim}`;
+}
+
 /** `true` quando `dataParaLeitura` não conseguiu ler o valor — serve de porteiro a quem interpola. */
 export function dataIlegivel(formatada: string): boolean {
   return formatada === "—";

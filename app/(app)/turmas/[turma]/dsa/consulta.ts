@@ -26,7 +26,7 @@ import { idDoLancamento, type OrigemDoFato } from "@/lib/dominio/dsa/posicao-her
 import { rotuloDaSessaoDeAplicacao } from "@/lib/dominio/dsa/sessao-de-aplicacao";
 import { responsavelDoFato, rotuloDaVistaDeProva } from "@/lib/dominio/dsa/rotulos";
 import type { FeriadoDaSemana } from "@/lib/dominio/dsa/capacidade";
-import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
+import { datasDaSemanaIso, janelaDaCarga, type IntervaloDeDatas } from "@/lib/dominio/carga-semanal";
 import type { VigenciaDoHistorico } from "@/lib/dominio/vigencia-de-regime";
 import {
   quadroDaDisciplina,
@@ -550,6 +550,14 @@ export type OcupacaoAcumulada = {
  * `disciplina_id` preenchido mesmo quando a coluna da aula é nula, porque a UE **é** a disciplina.
  * Resolver isso aqui seria a segunda tradução do mesmo caminho.
  *
+ * ⚠️ **A PREVISÃO PASSA PELA JANELA DA CARGA ANTES DA SITUAÇÃO** (Bloco 15, spec 030, item 11 — `PEND-029-1`; D-21):
+ * *"a situação 'Atrasada' usa a janela da carga"* — Bernardo Villas Boas, 29/10/2026. A previsão da view
+ * (`previsao_*_efetiva`: linha da turma → disciplina → turma) é **recortada pelo período da turma**, e vira o período
+ * inteiro quando não o toca, pela MESMA `janelaDaCarga` da ficha do instrutor e de Avisos (D-9 da spec 029). Medido no
+ * remoto em 29/10/2026: a CAHO 2027 herdava a previsão de 2026 e saía «Atrasada» em 19 disciplinas, sem ter começado. A
+ * view não muda. ⚠️ `periodoDaTurma` é OBRIGATÓRIO para que nenhum leitor (tela, papel, planilha) esqueça o recorte;
+ * turma sem período passa as pontas nulas, e a previsão vale como veio (`FR-004.3` da spec 029).
+ *
  * ⚠️ **`emConflito` É O CONJUNTO DOS FATOS MARCADOS NA SEMANA ABERTA, e esse limite é DECLARADO:**
  * o conflito se calcula contra a ocupação das **outras turmas**, que `conflitos_da_semana` entrega
  * por janela de datas. Pedi-la para o período inteiro da turma seria comparar as 1.566 linhas da
@@ -566,6 +574,8 @@ export function quadrosDaSemana(entrada: {
    * Hoje — marca o lançado à frente e é a referência do atraso; **não corta o cálculo** (`Q-2`).
    */
   readonly hoje: string;
+  /** O período da turma (`data_inicio`/`data_termino`) — o recorte da previsão (`PEND-029-1`). */
+  readonly periodoDaTurma: IntervaloDeDatas;
 }): readonly (QuadroDaDisciplina & { readonly codigo: string; readonly nome: string })[] {
   const porDisciplina = new Map<string, LancamentoParaSituacao[]>();
   for (const o of entrada.ocupacao) {
@@ -575,21 +585,27 @@ export function quadrosDaSemana(entrada: {
     porDisciplina.set(o.disciplinaId, lista);
   }
 
-  return entrada.execucao.map((d) => ({
-    ...quadroDaDisciplina({
-      disciplina: {
-        disciplinaId: d.disciplinaId,
-        chPrevistaTempos: d.prevista,
-        lancamentos: porDisciplina.get(d.disciplinaId) ?? [],
-        previsaoInicio: d.previsaoInicio ?? null,
-        previsaoTermino: d.previsaoTermino ?? null,
-      },
-      ateODia: entrada.ateODia,
-      hoje: entrada.hoje,
-    }),
-    codigo: d.codigo,
-    nome: d.nome,
-  }));
+  return entrada.execucao.map((d) => {
+    const janela = janelaDaCarga(
+      { inicio: d.previsaoInicio || null, termino: d.previsaoTermino || null },
+      entrada.periodoDaTurma,
+    );
+    return {
+      ...quadroDaDisciplina({
+        disciplina: {
+          disciplinaId: d.disciplinaId,
+          chPrevistaTempos: d.prevista,
+          lancamentos: porDisciplina.get(d.disciplinaId) ?? [],
+          previsaoInicio: janela.inicio,
+          previsaoTermino: janela.termino,
+        },
+        ateODia: entrada.ateODia,
+        hoje: entrada.hoje,
+      }),
+      codigo: d.codigo,
+      nome: d.nome,
+    };
+  });
 }
 
 /**
@@ -626,6 +642,8 @@ export function execucaoAteASemana(entrada: {
     emConflito: new Set<string>(),
     ateODia: entrada.ateODia,
     hoje: entrada.ateODia,
+    /* Nem a situação: o rodapé usa só a CH prevista e a acumulada, que não dependem da janela. */
+    periodoDaTurma: { inicio: null, termino: null },
   }).map((q) => ({
     codigo: q.codigo,
     nome: q.nome,

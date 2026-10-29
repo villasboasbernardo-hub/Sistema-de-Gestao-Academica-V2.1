@@ -420,6 +420,8 @@ describe.each(["turmaComRelogio"] as const)(
         emConflito,
         ateODia,
         hoje: HOJE,
+        /* Bloco 15 (`PEND-029-1`): a planilha recorta pela janela da carga, e o painel também. */
+        periodoDaTurma: { inicio: turma.data_inicio, termino: turma.data_termino },
       });
       /* A referência da CONTROLE posta no MESMO corte do painel — o fim da semana corrente. */
       const { valorDe } = avaliador(
