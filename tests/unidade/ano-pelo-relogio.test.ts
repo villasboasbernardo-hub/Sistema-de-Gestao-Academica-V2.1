@@ -69,19 +69,23 @@ describe("A-1 e A-5 · o ano padrão vira com o relógio de São Paulo", () => {
   });
 });
 
+/*
+ * RT-8 (spec 029, FR-007): a entrada leva a marca `arquivada` — o carrossel tira a arquivada, e os números não. Aqui
+ * nenhuma está arquivada; o caso dela mora em `contagem-por-situacao.test.ts`.
+ */
 describe("A-2 · os cartões do Início são só das turmas ativas", () => {
   it("planejada, concluída e cancelada ficam fora; a ordem de chegada se mantém", () => {
     const turmasDoAno = [
-      { codigo: "A", status: "planejada" },
-      { codigo: "B", status: "ativa" },
-      { codigo: "C", status: "concluida" },
-      { codigo: "D", status: "cancelada" },
-      { codigo: "E", status: "ativa" },
+      { codigo: "A", status: "planejada", arquivada: false },
+      { codigo: "B", status: "ativa", arquivada: false },
+      { codigo: "C", status: "concluida", arquivada: false },
+      { codigo: "D", status: "cancelada", arquivada: false },
+      { codigo: "E", status: "ativa", arquivada: false },
     ];
     expect(cartoesDoInicio(turmasDoAno).map((t) => t.codigo)).toEqual(["B", "E"]);
   });
 
   it("sem turma ativa, a lista sai vazia (a tela desenha a frase, não um carrossel vazio)", () => {
-    expect(cartoesDoInicio([{ codigo: "A", status: "planejada" }])).toEqual([]);
+    expect(cartoesDoInicio([{ codigo: "A", status: "planejada", arquivada: false }])).toEqual([]);
   });
 });

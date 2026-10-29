@@ -14,7 +14,9 @@
  *
  * ⚠️ **ARRASTAR E O TECLADO CHEGAM À MESMA `mover`** (`RF-DSA-07`): o arrastar passa pela grade e o
  * teclado pelo painel de ações, e os dois chamam a **mesma** Server Action. Dois caminhos de
- * gravação seriam duas regras de teto, e uma delas esqueceria o TFM.
+ * gravação seriam duas conferências de calendário, de etapa e de teto, e uma delas esqueceria alguma
+ * (até 27/10/2026 o exemplo era o teto de TFM, que recusava; a emenda da `RN-DIST-03` (a), spec 029,
+ * o tirou — o argumento do caminho único não mudou).
  *
  * ⚠️ **O EDITOR E O FORMULÁRIO ABREM NUM DIÁLOGO, e é ESTA a correção do item 2 de 08/10/2026**
  * *(«não consigo editar o total de TA de uma disciplina no dia»)*. Medido pela tela: a edição GRAVAVA
@@ -90,6 +92,8 @@ export type PainelDeLancamentoProps = {
   readonly instrutores: readonly InstrutorParaExibir[];
   /** RD-1 (Bloco 11): as habilitações ativas — a lista de quem ministra a aula sai daqui, pela disciplina. */
   readonly habilitacoes?: readonly HabilitacaoAtiva[];
+  /** O perfil tem `instrutores.ler`? Decidido no servidor: o «você não vê» das listas vazias (FR-006 da spec 029). */
+  readonly podeLerInstrutores: boolean;
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   readonly tiposDeAvaliacao: readonly string[];
@@ -178,6 +182,7 @@ export function PainelDeLancamento({
   avaliacoesDoCurriculo = [],
   instrutores,
   habilitacoes = [],
+  podeLerInstrutores,
   escala,
   tecnicas,
   tiposDeAvaliacao,
@@ -367,6 +372,7 @@ export function PainelDeLancamento({
               disciplinas={disciplinas}
               instrutores={instrutores}
               habilitacoes={habilitacoes}
+              podeLerInstrutores={podeLerInstrutores}
               escala={escala}
               tecnicas={tecnicas}
               instrumentos={instrumentos}
@@ -413,6 +419,7 @@ export function PainelDeLancamento({
               avaliacoesDoCurriculo={avaliacoesDoCurriculo}
               instrutores={instrutores}
               habilitacoes={habilitacoes}
+              podeLerInstrutores={podeLerInstrutores}
               escala={escala}
               tecnicas={tecnicas}
               tiposDeAvaliacao={tiposDeAvaliacao}

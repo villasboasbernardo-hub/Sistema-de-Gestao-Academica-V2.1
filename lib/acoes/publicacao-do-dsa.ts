@@ -2,7 +2,8 @@
 
 /**
  * As ações da publicação do DSA — spec 024 (Bloco 9): Salvar, Descartar rascunho, Fazer alteração e Publicar (a
- * original e a alteração). Regras: `docs/correcoes/regras-da-publicacao-do-dsa.md` (RP-0 a RP-8).
+ * original e a alteração); e o *Salvar alteração* da spec 029 (Bloco 14). Regras:
+ * `docs/correcoes/regras-da-publicacao-do-dsa.md` (RP-0 a RP-9).
  *
  * ⚠️ **QUEM DECIDE É O BANCO** (`salvar_semana_do_dsa`, `descartar_rascunho_do_dsa`, `iniciar_alteracao_do_dsa`,
  *    `publicar_semana_do_dsa`): a situação, a trava e a permissão (RP-5, quem lança o DSA da turma). Aqui se monta o
@@ -69,11 +70,20 @@ async function gravarRegimeDaSemana(
   return error ? " O regime de tempos da semana não foi gravado junto; avise o suporte." : "";
 }
 
-/** Salvar (RP-0): aplica os rascunhos da semana de uma vez e registra o salvamento. */
-export async function salvarSemanaDoDsa(entrada: unknown): Promise<RespostaDaPublicacao> {
-  const conferido = esquemaDaSemanaDoDsa.safeParse(entrada);
-  if (!conferido.success) return { ok: false, erro: "Dados inválidos." };
-  const { turmaId, ano, semana } = conferido.data;
+/**
+ * O corpo comum do *Salvar minuta* e do *Salvar alteração* (RP-0, RP-9): a RPC `salvar_semana_do_dsa` (aplica os
+ * rascunhos da semana de uma vez e grava o evento `salvo`), o regime da semana (RD-3) e a revalidação. Devolve quantos
+ * lançamentos foram registrados e o aviso do regime — a frase da resposta é de quem chama.
+ * ⚠️ Sem Zod aqui: quem chama já conferiu a entrada na primeira linha.
+ */
+async function salvarOsRascunhosDaSemana(
+  turmaId: string,
+  ano: number,
+  semana: number,
+): Promise<
+  | { readonly ok: true; readonly registrados: number; readonly doRegime: string }
+  | { readonly ok: false; readonly resposta: RespostaDaPublicacao }
+> {
   const supabase = await criarClienteDeServidor();
   const { de, ate } = intervalo(ano, semana);
   const { data, error } = await supabase.rpc("salvar_semana_do_dsa", {
@@ -83,17 +93,61 @@ export async function salvarSemanaDoDsa(entrada: unknown): Promise<RespostaDaPub
     p_de: de,
     p_ate: ate,
   });
-  if (error) return recusa(error as ErroDoBanco);
+  if (error) return { ok: false, resposta: recusa(error as ErroDoBanco) };
   const doRegime = await gravarRegimeDaSemana(supabase, turmaId, ano, semana);
   revalidar();
-  const n = Number(data ?? 0);
+  return { ok: true, registrados: Number(data ?? 0), doRegime };
+}
+
+const lancamentosRegistrados = (n: number) =>
+  `${n} lançamento${n === 1 ? "" : "s"} registrado${n === 1 ? "" : "s"}`;
+
+/** Salvar minuta (RP-0): aplica os rascunhos da semana de uma vez e registra o salvamento. */
+export async function salvarSemanaDoDsa(entrada: unknown): Promise<RespostaDaPublicacao> {
+  const conferido = esquemaDaSemanaDoDsa.safeParse(entrada);
+  if (!conferido.success) return { ok: false, erro: "Dados inválidos." };
+  const { turmaId, ano, semana } = conferido.data;
+  const r = await salvarOsRascunhosDaSemana(turmaId, ano, semana);
+  if (!r.ok) return r.resposta;
+  const n = r.registrados;
   return {
     ok: true,
     mensagem:
       (n === 0
         ? "Semana salva (não havia rascunho)."
-        : `Semana salva: ${n} lançamento${n === 1 ? "" : "s"} registrado${n === 1 ? "" : "s"}.`) +
-      doRegime,
+        : `Semana salva: ${lancamentosRegistrados(n)}.`) + r.doRegime,
+  };
+}
+
+/**
+ * Salvar alteração (RP-9, spec 029 `FR-003`): na semana em alteração, registra os rascunhos como o *Salvar minuta* — o
+ * salvo passa a contar (CH, andamento, avisos, conflitos) —, e o papel oficial continua o da última versão publicada até
+ * *Publicar alteração*.
+ *
+ * ⚠️ **A MESMA RPC DO SALVAR, SEM BANCO NOVO** (D-24): `salvar_semana_do_dsa` só recusa semana TRAVADA, e em alteração
+ *    ela não está travada — o *Publicar alteração* já salvava assim antes de publicar. A trilha ganha o mesmo `salvo`, e
+ *    é a posição dele depois de `alteracao_iniciada` que faz o selo *«Em alteração · salva»* (`situacaoDaSemana`).
+ * ⚠️ **O BANCO NÃO DISTINGUE OS DOIS SALVAR**: chamada fora da alteração, esta ação faz o mesmo que o *Salvar minuta*
+ *    (a mesma permissão, RP-5, e a mesma trava) — não abre poder novo; só a frase da resposta seria a da alteração.
+ * ⚠️ **O REGIME DA SEMANA** (RD-3): a semana publicada antes do Bloco 11 pode não ter a linha de regime, e então este
+ *    salvar a grava com o regime vigente agora — o mesmo que o *Publicar alteração* já fazia depois de publicar, só que
+ *    mais cedo. Medido no remoto (spec 029, §3, item 3): 0 semanas publicadas sem regime gravado.
+ * ⚠️ Sem rascunho, salva assim mesmo e diz *"não havia rascunho"* (D-23), como o *Salvar minuta*.
+ */
+export async function salvarAlteracaoDoDsa(entrada: unknown): Promise<RespostaDaPublicacao> {
+  const conferido = esquemaDaSemanaDoDsa.safeParse(entrada);
+  if (!conferido.success) return { ok: false, erro: "Dados inválidos." };
+  const { turmaId, ano, semana } = conferido.data;
+  const r = await salvarOsRascunhosDaSemana(turmaId, ano, semana);
+  if (!r.ok) return r.resposta;
+  const n = r.registrados;
+  return {
+    ok: true,
+    mensagem:
+      (n === 0
+        ? "Alteração salva (não havia rascunho)."
+        : `Alteração salva: ${lancamentosRegistrados(n)}. O papel publicado continua o mesmo até «Publicar alteração».`) +
+      r.doRegime,
   };
 }
 

@@ -318,7 +318,7 @@ export function diaImpresso(
 
   if (dia.bloqueio !== null) {
     /* ⚠️ Só o que foi LANÇADO: a linha fixa de EI não nasce em dia sem expediente. */
-    const noMesmoTaDoBloqueado = linhasNoMesmoTa(dia, entrada.tecnicas);
+    const noMesmoTaDoBloqueado = linhasNoMesmoTa(dia, entrada);
     return {
       data: dia.data,
       bloqueio: dia.bloqueio,
@@ -328,7 +328,7 @@ export function diaImpresso(
   }
 
   const ei = doEi ?? linhaFixaDoEstudoIndividual(dia.data, ultimoTa, entrada.relogio);
-  const noMesmoTa = linhasNoMesmoTa(dia, entrada.tecnicas);
+  const noMesmoTa = linhasNoMesmoTa(dia, entrada);
   const paradas: ParadaImpressa[] = [];
   for (const p of dia.paradas) {
     if (p.taInicial === null || p.tempos === null) continue;
@@ -343,26 +343,45 @@ export function diaImpresso(
   };
 }
 
-/** As linhas do segundo lançamento no mesmo TA (FR-012.3) — como o papel imprime um bloco, sem horário. */
+/**
+ * As linhas do segundo lançamento no mesmo TA (FR-012.3) — como o papel imprime um bloco, sem horário.
+ *
+ * ⚠️ **O ESTUDO INDIVIDUAL SEM «O QUE É» SAI COM O TEXTO E A SIGLA DO EI** — D-6 da spec 029 *(decisão de Bernardo Villas
+ *    Boas, 27/10/2026)*. Este ramo imprime a DESCRIÇÃO, e desde o FR-002 o EI pode não ter uma: a linha sairia sem
+ *    conteúdo nem T/E, no dia comum e no dia bloqueado. ⚠️ **O EI COM descrição não muda de papel** — continua saindo
+ *    com ela e com a T/E vazia, como antes (todo EI existente tem descrição: 0 nulas em 1.090, cópia
+ *    `remoto-20261028-133702.sql`). E nenhum dos dois é a linha FIXA do pé: `estudoIndividual` segue falso aqui.
+ */
 function linhasNoMesmoTa(
   dia: DiaDaGrade,
-  tecnicas: readonly TecnicaDoCatalogo[],
+  entrada: {
+    readonly tecnicas: readonly TecnicaDoCatalogo[];
+    readonly idsDeEstudoIndividual: ReadonlySet<string>;
+  },
 ): readonly LinhaImpressa[] {
   return dia.semPosicao
     .filter((s) => s.motivo === MOTIVO_NO_MESMO_TA)
-    .map(({ fato }) => ({
-      chave: fato.fatoId,
-      trechos: [],
-      taInicial: fato.taInicial,
-      tempos: fato.tempos,
-      disciplina: textoDoPapel(fato.disciplina),
-      conteudo: textoDoPapel(fato.conteudo),
-      local: textoDoPapel(fato.local),
-      te: fato.origem === "atividade_nao_letiva" ? "" : siglaOuExtenso(fato.tecnica, tecnicas),
-      instrutor: textoDoPapel(fato.instrutor),
-      estudoIndividual: false,
-      lancadoAFrente: false,
-    }));
+    .map(({ fato }) => {
+      const eiSemDescricao =
+        entrada.idsDeEstudoIndividual.has(fato.fatoId) && textoDoPapel(fato.conteudo) === "";
+      return {
+        chave: fato.fatoId,
+        trechos: [],
+        taInicial: fato.taInicial,
+        tempos: fato.tempos,
+        disciplina: textoDoPapel(fato.disciplina),
+        conteudo: eiSemDescricao ? TEXTO_DO_ESTUDO_INDIVIDUAL : textoDoPapel(fato.conteudo),
+        local: textoDoPapel(fato.local),
+        te: eiSemDescricao
+          ? SIGLA_DO_ESTUDO_INDIVIDUAL
+          : fato.origem === "atividade_nao_letiva"
+            ? ""
+            : siglaOuExtenso(fato.tecnica, entrada.tecnicas),
+        instrutor: textoDoPapel(fato.instrutor),
+        estudoIndividual: false,
+        lancadoAFrente: false,
+      };
+    });
 }
 
 /** O corpo do documento: os dias da semana, na ordem, já impressos. */

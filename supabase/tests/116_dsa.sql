@@ -526,10 +526,13 @@ select is(
   'Principio VII · os tres parametros do DSA sao DADO, nao constante de codigo'
 );
 
+-- ⚠️ A RN-DIST-03 (a) FOI EMENDADA EM 27/10/2026 (D-2 e D-3 da spec 029): o TFM deixou de ter teto rigido.
+--    A linha do parametro FICA, como dado inerte — o codigo deixou de le-la e nada bloqueia por ela —, e por isso
+--    o valor continua conferido aqui: muda-lo seria UPDATE de dado (portao 9.4), nao consequencia da emenda.
 select is(
   (select valor from public.config_parametros where chave = 'dsa.teto_tfm_semana' and status = 'ativo'),
   '6',
-  'RN-DIST-03 · o teto RIGIDO de TFM e 6 TA por semana — o unico bloqueio do DSA');
+  'RN-DIST-03 (a) emendada · o parametro historico do TFM continua 6, INERTE: o DSA nao o le e nao bloqueia por TFM');
 
 -- O CHECK do banco cobra fundamento de parametro normativo; esta assercao o torna visivel.
 select is_empty($$

@@ -124,6 +124,7 @@ export function AbertoEmAntiguidade() {
           escala={ESCALA}
           {...(escolhido === undefined ? {} : { valor: escolhido })}
           aoMudar={definirEscolhido}
+          vazio={{ motivo: "sem-dado", detalhe: "Nenhum instrutor ativo no cadastro." }}
         />
       </Campo>
       {/* espaço para o painel flutuante caber dentro da célula */}
@@ -143,6 +144,7 @@ export function ComEscolha() {
         valor={escolhido}
         aoMudar={definirEscolhido}
         rotulo="Instrutor da unidade 3"
+        vazio={{ motivo: "sem-dado", detalhe: "Nenhum instrutor ativo no cadastro." }}
       />
     </Campo>
   );
@@ -159,34 +161,47 @@ export function Fechado() {
         {...(escolhido === undefined ? {} : { valor: escolhido })}
         aoMudar={definirEscolhido}
         rotulo="Instrutor responsável"
+        vazio={{ motivo: "sem-dado", detalhe: "Nenhum instrutor ativo no cadastro." }}
       />
     </Campo>
   );
 }
 
-/** Lista vazia por ausência de dado: "não há". */
+/**
+ * Lista vazia por FILTRO: "não há" — a frase é de quem chama (spec 029, FR-006). Aqui, a do TA fora do DSA numa
+ * disciplina sem habilitado; o vazio é compacto (D-15), do tamanho do campo.
+ */
 export function VazioNaoHa() {
   return (
-    <Campo rotulo="Instrutor responsável">
+    <Campo rotulo="Instrutor (opcional)">
       <SeletorInstrutor
         instrutores={[]}
         escala={ESCALA}
         aoMudar={() => {}}
-        motivoDoVazio="sem-dado"
+        rotulo="Instrutor do TA fora do DSA"
+        vazio={{
+          motivo: "sem-dado",
+          detalhe:
+            "Nenhum instrutor habilitado nesta disciplina. A habilitação é feita na ficha do instrutor.",
+        }}
       />
     </Campo>
   );
 }
 
-/** Lista vazia por recorte de perfil: "você não vê" — existe instrutor, o perfil não alcança. */
+/**
+ * Lista vazia por recorte de perfil: "você não vê" — existe instrutor, o perfil não alcança. A frase é do componente;
+ * quem chama só declara o motivo (spec 029, FR-006).
+ */
 export function VazioVoceNaoVe() {
   return (
-    <Campo rotulo="Instrutor responsável">
+    <Campo rotulo="Instrutor (opcional)">
       <SeletorInstrutor
         instrutores={[]}
         escala={ESCALA}
         aoMudar={() => {}}
-        motivoDoVazio="sem-permissao"
+        rotulo="Instrutor do TA fora do DSA"
+        vazio={{ motivo: "sem-permissao" }}
       />
     </Campo>
   );

@@ -68,13 +68,41 @@ describe("os cinco indicadores", () => {
     });
   });
 
-  it("⚠️ a arquivada fica fora dos indicadores e dos avisos sem o filtro (FR-005.3), e volta com ele", () => {
-    const turmas = [turma("A"), turma("Z", { arquivada: true, dataInicio: null })];
-    expect(painelDeTurmas({ ...base, turmas }).indicadores.total).toBe(1);
-    expect(painelDeTurmas({ ...base, turmas }).avisos).toEqual([]);
-    const com = painelDeTurmas({ ...base, turmas, mostrarArquivadas: true });
-    expect(com.indicadores.total).toBe(2);
-    expect(com.avisos.map((a) => a.tipo)).toEqual(["sem_janela"]);
+  /*
+   * ⚠️ **RT-8 (spec 029, FR-007; D-18) EMENDA O FR-005.3 DA SPEC 017**, que tirava a arquivada dos números sem
+   *    *Mostrar arquivadas*: *"ela CONTINUA contando nas estatísticas e nos cartões do ano dela, com a situação que
+   *    tinha"* (Bernardo Villas Boas, 28/10/2026). O filtro passa a mexer só na tabela.
+   */
+  it("⚠️ RT-8: a arquivada CONTA nos indicadores pela situação que tinha, com ou sem o filtro — menos em «iniciando» (D-18) —, e os avisos continuam sem ela", () => {
+    const turmas = [
+      turma("A"),
+      turma("Z", { arquivada: true, dataInicio: null }),
+      turma("C", { status: "concluida", arquivada: true }),
+      // Começa em 14 dias, dentro de N = 30: sem a arquivada fora, seria «iniciando».
+      turma("P", { status: "planejada", arquivada: true, dataInicio: "2026-11-02" }),
+    ];
+    const sem = painelDeTurmas({ ...base, turmas });
+    expect(sem.indicadores).toEqual({
+      total: 4,
+      planejadas: 1,
+      emAndamento: 2,
+      concluidas: 1,
+      canceladas: 0,
+      // ⚠️ D-18: «iniciando» não é situação, e a arquivada está travada — a P não conta.
+      iniciando: 0,
+    });
+    // Os avisos continuam sem ela: a Z, ativa e sem início, não vira «sem janela».
+    expect(sem.avisos).toEqual([]);
+    // «Mostrar arquivadas» devolve a linha à tabela; os números são os mesmos.
+    expect(painelDeTurmas({ ...base, turmas, mostrarArquivadas: true }).indicadores).toEqual(
+      sem.indicadores,
+    );
+  });
+
+  it("a arquivada é do ANO dela (RT-6): não entra nos números de outro ano", () => {
+    const turmas = [turma("A"), turma("C", { status: "concluida", arquivada: true, ano: 2025 })];
+    expect(painelDeTurmas({ ...base, turmas }).indicadores.concluidas).toBe(0);
+    expect(painelDeTurmas({ ...base, turmas, ano: 2025 }).indicadores.concluidas).toBe(1);
   });
 });
 

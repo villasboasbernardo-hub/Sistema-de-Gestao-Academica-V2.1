@@ -37,6 +37,7 @@ import * as React from "react";
 
 import { DialogFooter } from "@/components/ui/dialog";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
+import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +45,7 @@ import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
 import type { InstrumentoOferecido } from "@/lib/dominio/dsa/instrumento-da-prova";
 import type { DiaDaGrade, ValoresGravados } from "@/lib/dominio/dsa/grade";
 import type { OrigemDoFato } from "@/lib/dominio/dsa/posicao-herdada";
+import { tituloDoLancamento } from "@/lib/dominio/dsa/rotulos";
 import { temposParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
 import { regraDoResponsavel } from "@/lib/dominio/responsavel";
@@ -89,6 +91,11 @@ export type AcoesDoBlocoProps = {
   readonly instrutores: readonly InstrutorParaExibir[];
   /** RD-1 (Bloco 11): na aula, a lista de quem ministra é só dos habilitados na disciplina escolhida. */
   readonly habilitacoes?: readonly HabilitacaoAtiva[];
+  /**
+   * O perfil tem `instrutores.ler`? Decidido no servidor. Sem ele as listas chegam vazias pela RLS, e o vazio diz
+   * «o seu perfil não os alcança» — também na aula (FR-006.3 da spec 029).
+   */
+  readonly podeLerInstrutores: boolean;
   readonly escala: EscalaDeAntiguidade;
   readonly tecnicas: readonly string[];
   /** A2 (16/10/2026): os instrumentos da prova sem item — os ativos, menos a OD. */
@@ -108,6 +115,7 @@ export function AcoesDoBloco({
   disciplinas,
   instrutores,
   habilitacoes = [],
+  podeLerInstrutores,
   escala,
   tecnicas,
   instrumentos = [],
@@ -173,7 +181,12 @@ export function AcoesDoBloco({
   const listaDeQuemMinistra = ehAula
     ? instrutoresDaAula(instrutores, habilitacoes, disciplinaId === "" ? null : disciplinaId)
     : instrutores;
+  /*
+   * ⚠️ Sem `instrutores.ler` a lista é vazia pela RLS, e o gravado sairia "não habilitado" sem ter sido conferido — o
+   *    «não há» onde o motivo é «você não vê» (FR-006.3 da spec 029). A Server Action confere o par de qualquer jeito.
+   */
   const gravadoForaDaLista =
+    podeLerInstrutores &&
     ehAula &&
     instrutorId !== "" &&
     disciplinaId !== "" &&
@@ -233,7 +246,8 @@ export function AcoesDoBloco({
     return m;
   }
 
-  const titulo = [fato.disciplina, fato.conteudo].filter(Boolean).join(" — ") || "Lançamento";
+  /* Spec 029, D-6: o Estudo Individual sem «O que é» se nomeia pelo subtipo, e não «Lançamento». */
+  const titulo = tituloDoLancamento(fato);
 
   return (
     <section
@@ -375,12 +389,25 @@ export function AcoesDoBloco({
       ) : null}
 
       {temQuemMinistra && ehAula && listaDeQuemMinistra.length === 0 ? (
-        /* RD-1 (Bloco 11): a disciplina escolhida não tem habilitado — a frase, no lugar do seletor vazio. */
+        /*
+         * RD-1 (Bloco 11): a disciplina escolhida não tem habilitado — a frase, no lugar do seletor vazio. ⚠️ Sem
+         * `instrutores.ler`, o «você não vê» do seletor único, não "nenhum habilitado" (FR-006.3 da spec 029).
+         */
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium text-texto">Quem ministra</span>
-          <p className="text-xs text-atrasado-tinta" data-slot="aula-sem-habilitado">
-            {fraseDaListaDaAula(disciplinaId === "" ? null : disciplinaId, listaDeQuemMinistra)}
-          </p>
+          {podeLerInstrutores ? (
+            <p className="text-xs text-atrasado-tinta" data-slot="aula-sem-habilitado">
+              {fraseDaListaDaAula(disciplinaId === "" ? null : disciplinaId, listaDeQuemMinistra)}
+            </p>
+          ) : (
+            <SeletorInstrutor
+              instrutores={listaDeQuemMinistra}
+              escala={escala}
+              aoMudar={definirInstrutor}
+              rotulo="Quem ministra"
+              vazio={{ motivo: "sem-permissao" }}
+            />
+          )}
         </div>
       ) : temQuemMinistra ? (
         /*
@@ -390,6 +417,7 @@ export function AcoesDoBloco({
         <ResponsavelOuNomeLivre
           regra={regra}
           instrutores={listaDeQuemMinistra}
+          podeLerInstrutores={podeLerInstrutores}
           escala={escala}
           rotuloDoCadastro={
             fato.origem === "avaliacao"

@@ -641,7 +641,7 @@ Tira do código os tetos AEC 10% / TAD 5% / TR 10%, as faixas de CH docente e os
 | `Editavel_Por` | `editavel_por` | `perfil_usuario` | minúsculo | — |
 | — | `status` | `status_registro` NOT NULL | **`'ativo'`** | Coluna nova; valor inicial explícito |
 | — | `origem_migracao_v1` | `text` | `'Config_Parametros:<Chave>'` | **C-07** |
-| — | *(seed normativo)* | — | **inserido pela migration `03`** | 13 chaves: `teto.aec_percentual_chr` (10), `teto.tad_percentual_chr` (5), `teto.tr_percentual_chr` (10), as seis `ch_docente.*`, `alocacao.teto_tfm_rigido` (6), `alocacao.limite_ta_dia_padrao` (8), `avaliacao.ta_padrao_bloco_prova` (3), `avaliacao.prazo_vista_dias` (7). **Não vêm da planilha** ⇒ diferença esperada na R-01 |
+| — | *(seed normativo)* | — | **inserido pela migration `03`** | 13 chaves: `teto.aec_percentual_chr` (10), `teto.tad_percentual_chr` (5), `teto.tr_percentual_chr` (10), as seis `ch_docente.*`, `alocacao.teto_tfm_rigido` (6) ⚠️ *(Inerte desde 27/10/2026 — decisão de Bernardo Villas Boas; `RN-DIST-03` (a) emendada no documento 04, Bloco 14, spec 029: o TFM não tem mais teto rígido; a linha continua no seed como dado inerte, que nenhuma regra aplica, e nenhuma linha muda (D-3 da spec 029). O `.docx` não recebeu esta emenda.)*, `alocacao.limite_ta_dia_padrao` (8), `avaliacao.ta_padrao_bloco_prova` (3), `avaliacao.prazo_vista_dias` (7). **Não vêm da planilha** ⇒ diferença esperada na R-01 |
 
 ---
 

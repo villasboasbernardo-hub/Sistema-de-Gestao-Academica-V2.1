@@ -25,6 +25,10 @@ export type RegimeDaTurma = { readonly regimeTempos: number };
 /**
  * O regime que o saldo da turma usa: o do curso com os TA presenciais trocados pelos do regime da turma.
  *
+ * ⚠️ **DESDE A SPEC 029 (`FR-005`) ELE É O DE PARTIDA, NÃO O DA JANELA INTEIRA**: as semanas com regime gravado, «só
+ *    esta semana» ou «desde» no relógio do DSA trocam o TA/dia dos dias delas, em `andamentoDaTurma` (pela mesma
+ *    `regimeDaSemana` do DSA). Até o Bloco 14 o saldo usava este regime em todos os dias (D-15 da spec 026).
+ *
  * ⚠️ **SEM ESCOLHA, DEVOLVE O DO CURSO INTEIRO** — é o que garante *"nada mudar em turma que não escolher"*.
  * ⚠️ **O LIMITE EAD NÃO É TOCADO** (`RN-MAT-04`): `capacidadeDiaria` escolhe pela modalidade da turma.
  */

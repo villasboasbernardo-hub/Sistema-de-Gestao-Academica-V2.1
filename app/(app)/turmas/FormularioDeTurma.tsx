@@ -475,10 +475,13 @@ export function FormularioDeTurma({
                 {FRASE_DA_ESCOLHA_TRAVADA}
               </p>
             ) : (
-              /* veste: dica do campo */
+              /*
+                veste: dica do campo. Spec 029 (`FR-005.5`): o relógio do DSA troca o regime semana a semana, e o
+                saldo segue o regime de cada semana — este é o de partida, o das semanas que o relógio não trocou.
+              */
               <p className="text-texto-tenue text-xs">
-                O DSA, o alerta do tempo excepcional e o saldo usam este regime. Trava no primeiro
-                lançamento.
+                O DSA, o alerta do tempo excepcional e o saldo usam este regime nas semanas em que o
+                relógio do DSA não o trocou. Trava no primeiro lançamento.
               </p>
             )}
             {campoDoRegime.noDsaDesde ? (

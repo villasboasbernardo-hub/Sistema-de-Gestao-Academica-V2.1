@@ -212,7 +212,8 @@ export default async function Atividades({
                   </td>
                   <td className="py-1 pr-3">{l.tipo ?? "—"}</td>
                   <td className="py-1 pr-3">
-                    {l.descricao}
+                    {/* Spec 029, D-6: o Estudo Individual sem «O que é» mostra «—», nunca a célula vazia. */}
+                    {l.descricao ?? "—"}
                     {l.alunos === null ? "" : ` (${l.alunos} aluno${l.alunos === 1 ? "" : "s"})`}
                   </td>
                 </tr>

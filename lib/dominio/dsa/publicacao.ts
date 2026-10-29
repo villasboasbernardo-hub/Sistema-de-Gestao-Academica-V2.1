@@ -8,6 +8,13 @@
  * > **RP-4.** Se algo de fora mudar uma semana publicada (…), o DSA avisa *"alterado desde a publicação"* e pede uma
  * > alteração para republicar. Nunca muda a versão publicada em silêncio.
  * > — `docs/correcoes/regras-da-publicacao-do-dsa.md`, Bernardo Villas Boas, 21 a 23/10/2026
+ * > **RP-9. Salvar alteração.** Na semana **em alteração** (depois de *Fazer alteração*), a barra mostra **Salvar
+ * > alteração** logo **antes** de *Publicar alteração*. Ele registra os rascunhos **como o Salvar** (RP-0): o que foi salvo
+ * > **passa a contar** (…), e a alteração pode ser retomada depois (sair da tela não a perde). O **papel oficial continua
+ * > sendo a última versão publicada** até *Publicar alteração* (…). O selo é **«Em alteração · salva»** quando houve um
+ * > salvar nesta alteração **e não há rascunho novo**; com rascunho novo, volta a *«Em alteração»*, com o contador *N não
+ * > salvos* (D-8). **Descartar rascunho** volta ao **último salvo** — o da alteração, não o publicado.
+ * > — Bernardo Villas Boas, 28/10/2026 (Bloco 14, spec 029, `FR-003`)
  *
  * ⚠️ **A SITUAÇÃO É DERIVADA**: da trilha `dsa_eventos_da_semana` (só de acréscimo), do número de rascunhos da semana e
  *    de o documento de hoje diferir do retrato publicado. Nada aqui é guardado.
@@ -54,6 +61,22 @@ export type SituacaoDaSemana = {
   readonly podePublicar: boolean;
   readonly podeFazerAlteracao: boolean;
   readonly podePublicarAlteracao: boolean;
+  /**
+   * RP-9 (spec 029): em alteração, sem rascunho, e houve um `salvo` DEPOIS do último `alteracao_iniciada` — a alteração
+   * de agora está registrada (conta na CH) e ainda não publicada. O selo diz *«Em alteração · salva»* (D-8).
+   * ⚠️ É SÓ O DO SELO: com rascunho novo ele fica falso, e o que foi salvo continua contando — a linha da D-25 lê
+   *    `houveSalvoNestaAlteracao`.
+   */
+  readonly alteracaoSalva: boolean;
+  /**
+   * RP-9, D-25 (spec 029): houve um `salvo` DEPOIS do último `alteracao_iniciada` — COM ou SEM rascunho novo. O que foi
+   * salvo nesta alteração já conta na CH e no andamento, e o papel continua o publicado até *Publicar alteração*: é
+   * este sinal que mantém a linha *«Alteração salva…»* na tela enquanto houver o descompasso, mesmo com rascunho novo
+   * (achado 5 da revisão do Bloco 14). O selo continua lendo `alteracaoSalva` (D-8).
+   */
+  readonly houveSalvoNestaAlteracao: boolean;
+  /** RP-9: o *Salvar alteração* — sempre que a semana está em alteração, mesmo sem rascunho (D-23). */
+  readonly podeSalvarAlteracao: boolean;
   /** RP-4: publicada, travada, e o documento de hoje difere do retrato. */
   readonly alteradoDesdeAPublicacao: boolean;
 };
@@ -90,6 +113,23 @@ export function situacaoDaSemana(
       : rascunhos === 0
         ? "registrado"
         : "em_preenchimento";
+  /*
+   * ⚠️ RP-9, D-24 (spec 029): o *Salvar alteração* grava o MESMO evento `salvo` do *Salvar minuta* — quem o distingue é a
+   *    POSIÇÃO: só conta o `salvo` posterior ao `alteracao_iniciada` que abriu a alteração de agora (o `ultimoDeTrava`).
+   *    O `salvo` de antes da publicação, ou o de uma ALT anterior, não faz esta alteração estar salva.
+   * ⚠️ D-8: com rascunho novo depois do salvar, deixa de estar «salva» — o selo volta a *Em alteração*, com o contador.
+   *    E D-29: *Descartar* grava `rascunho_descartado`, não um `salvo`; com o rascunho desfeito, volta a «salva».
+   * ⚠️ D-25: o rascunho novo NÃO desfaz o que foi salvo — `houveSalvoNestaAlteracao` é o mesmo `salvo` sem a condição do
+   *    rascunho, e é ele que diz à tela que a CH já não é a do papel. Os dois sinais são separados de propósito: com um
+   *    só, ou o selo mentia («salva» com rascunho por salvar) ou a linha da D-25 sumia com o rascunho.
+   */
+  const inicioDaAlteracao = emAlteracao ? ultimoDeTrava : undefined;
+  const houveSalvoNestaAlteracao =
+    inicioDaAlteracao !== undefined &&
+    ordem.some(
+      (e) => e.tipo === "salvo" && e.ocorridoEm.localeCompare(inicioDaAlteracao.ocorridoEm) > 0,
+    );
+  const alteracaoSalva = houveSalvoNestaAlteracao && rascunhos === 0;
 
   const vigente = publicacoes.at(-1);
   return {
@@ -109,6 +149,10 @@ export function situacaoDaSemana(
     podePublicar: !publicada && situacao === "registrado",
     podeFazerAlteracao: travada,
     podePublicarAlteracao: emAlteracao,
+    alteracaoSalva,
+    houveSalvoNestaAlteracao,
+    /* D-23: o botão é o do Salvar, para a alteração — o *Salvar minuta* (`podeSalvar`) continua fora dela. */
+    podeSalvarAlteracao: emAlteracao,
     alteradoDesdeAPublicacao: travada && documentoDifere,
   };
 }
@@ -155,10 +199,14 @@ export type IconeDoSelo = "salvo" | "preenchimento" | "carimbo" | "alteracao";
  * ⚠️ **PUBLICADO OU ALT N**: a semana publicada mostra *Publicado* na original e *ALT N* na alteração N publicada.
  * ⚠️ **EM ALTERAÇÃO** (D-20): durante a alteração em andamento o selo diz *Em alteração* — os quatro do pedido não
  *    nomeiam esse estado, e mostrar *Publicado* esconderia que há mudança por publicar.
+ * ⚠️ **EM ALTERAÇÃO · SALVA** (RP-9 e D-8 da spec 029): depois de *Salvar alteração*, sem rascunho novo — com o MESMO
+ *    ícone (e o mesmo tom, na tela) da alteração, porque ela continua por publicar. `alteracaoSalva` só qualifica a
+ *    alteração em andamento; nos outros selos não muda nada.
  */
 export function seloDaSituacao(
   situacao: Situacao,
   versaoVigente: number | null,
+  alteracaoSalva = false,
 ): { readonly icone: IconeDoSelo; readonly palavra: string } {
   switch (situacao) {
     case "em_preenchimento":
@@ -172,7 +220,10 @@ export function seloDaSituacao(
           versaoVigente === null || versaoVigente === 0 ? "Publicado" : `ALT ${versaoVigente}`,
       };
     case "alteracao_em_andamento":
-      return { icone: "alteracao", palavra: "Em alteração" };
+      return {
+        icone: "alteracao",
+        palavra: alteracaoSalva ? "Em alteração · salva" : "Em alteração",
+      };
   }
 }
 
@@ -182,7 +233,8 @@ export function seloDaSituacao(
  * > *"o Início mostra só DSA PUBLICADO: a última versão publicada da semana (original ou ALT mais recente), nunca
  * > rascunho nem salvo."* — Bernardo Villas Boas, 26/10/2026 (RD-7)
  *
- * ⚠️ **DURANTE A ALTERAÇÃO**, a última publicada continua a valer — a alteração só vale quando publicada (RP-1).
+ * ⚠️ **DURANTE A ALTERAÇÃO**, a última publicada continua a valer — a alteração só vale quando publicada (RP-1), mesmo
+ *    depois de *Salvar alteração* (RP-9, spec 029): o `salvo` não é publicação, e o papel do Início não muda com ele.
  * ⚠️ **A ORDEM DAS TURMAS É A DA ENTRADA** (a primeira aparição): quem chama decide a ordem do carrossel.
  */
 export function versaoVigentePorTurma<R>(

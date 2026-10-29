@@ -307,9 +307,17 @@ export function IndicadoresDaTurma({
                         {emDias(saldoEmDias ?? 0)}
                       </span>
                     </span>
+                    {/*
+                      ⚠️ SPEC 029 (`FR-005.4`, D-13): COM O TA/DIA VARIANDO DE SEMANA PARA SEMANA (o regime do relógio
+                         do DSA), a capacidade diz a FAIXA — «8 a 9 TA/dia» —, e não o TA/dia do primeiro dia útil, que
+                         sozinho daria a entender que a janela inteira tem aquele regime. A faixa sai do módulo puro.
+                    */}
                     {capacidadeDiaria !== null && diasUteis !== null ? (
                       <span data-andamento="capacidade">
-                        {capacidadeDiaria} TA/dia · {diasUteis} dias úteis
+                        {andamento.faixaDiaria === null
+                          ? capacidadeDiaria
+                          : `${andamento.faixaDiaria.minima} a ${andamento.faixaDiaria.maxima}`}{" "}
+                        TA/dia · {diasUteis} dias úteis
                         {dataTermino === null ? "" : ` até ${dataParaLeitura(dataTermino)}`}
                       </span>
                     ) : null}

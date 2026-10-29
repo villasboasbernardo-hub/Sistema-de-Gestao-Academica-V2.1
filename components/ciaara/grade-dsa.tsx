@@ -45,6 +45,7 @@ import {
 } from "@/components/ciaara/grade-alocacao";
 import type { BlocoNaGrade, Celula, Semana } from "@/lib/dominio/dsa/grade";
 import type { CartaoDaGrade, GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
+import { conteudoOuSubtipo, tituloDoLancamento } from "@/lib/dominio/dsa/rotulos";
 import { dataComDiaDaSemana } from "@/lib/formato/data";
 
 export type GradeDsaProps = {
@@ -598,8 +599,8 @@ function rodapesSemPosicao(
     return (
       <ul key={dia.data} className="flex flex-col gap-1">
         {dia.semPosicao.map(({ fato, motivo }) => {
-          const descricao =
-            [fato.disciplina, fato.conteudo].filter(Boolean).join(" — ") || "Lançamento";
+          /* Spec 029, D-6: o Estudo Individual sem «O que é» se nomeia pelo subtipo, e não «Lançamento». */
+          const descricao = tituloDoLancamento(fato);
           return (
             <li key={fato.fatoId} className="leading-tight">
               {aoEscolherFato ? (
@@ -732,10 +733,16 @@ function GradeNumerada({
            * inteira. O `?? 1` é o que impede isso.
            */
           alturaEmLinhas: Math.max(bloco.tempos ?? 1, 1),
+          /*
+           * ⚠️ D-6 (spec 029): o EI sem «O que é» é anunciado pelo SUBTIPO, que a célula mostra — o `aria-label` substitui
+           *    o conteúdo para o leitor de tela, e só com disciplina e conteúdo (os dois vazios) ele dizia apenas
+           *    «atividade não letiva». `conteudoOuSubtipo`, e não `tituloDoLancamento` inteiro: o código da disciplina já
+           *    entra aqui, e o genérico «Lançamento» não diria nada (achado 12 da revisão do Bloco 14).
+           */
           rotuloAcessivel: rotuloDoCartao(
             bloco.disciplina ?? "",
             nomesDasDisciplinas?.get(bloco.disciplina ?? "") ?? "",
-            bloco.conteudo,
+            conteudoOuSubtipo(bloco),
           ),
           ...(aoMoverBloco ? { arrastavel: true } : {}),
           /*

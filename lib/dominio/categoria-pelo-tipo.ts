@@ -57,20 +57,75 @@ export const ROTULO_DA_CATEGORIA_DE_ATIVIDADE: Readonly<Record<CategoriaDeAtivid
   Apoio_Individualizado: "Apoio Individualizado",
 };
 
+/** A frase da descrição que falta — a mesma do esquema de antes da spec 029, da ação e do `CHECK` traduzido. */
+export const FRASE_DA_DESCRICAO_OBRIGATORIA = "Escreva o que é a atividade.";
+
+/**
+ * O «O que é» é obrigatório na categoria? **Só o Estudo Individual o dispensa** — spec 029, FR-002 *(decisão de
+ * Bernardo Villas Boas, 27/10/2026; D-5 a D-7)*: *"Ao lançar ou editar um Estudo Individual, «O que é» é opcional — na
+ * tela, na Server Action e no banco. Nas demais categorias (AEC, TAD, TR, Apoio Individualizado) continua obrigatório,
+ * nas mesmas três camadas."*
+ *
+ * ⚠️ **É O PONTO ÚNICO DA REGRA NO TYPESCRIPT**: o `required` do formulário, a recusa do lançar
+ *    (`recusaPelaCategoria`) e a da edição (`recusaDaDescricaoNaEdicao`, chamada por `aplicarAtualizacao`) leem daqui.
+ *    O banco tem o irmão, `ativ_descricao_fora_do_estudo_individual` (`20261028182926`, pgTAP `153`).
+ */
+export function descricaoObrigatoria(categoria: CategoriaDeAtividade): boolean {
+  return categoria !== "Estudo_Individual";
+}
+
+/**
+ * A recusa da EDIÇÃO que apaga o «O que é» — spec 029, FR-002.1: *"Ao lançar **ou editar** um Estudo Individual, «O que
+ * é» é opcional (…). Nas demais categorias (…) continua obrigatório"*.
+ *
+ * ⚠️ **`undefined` É «NÃO MANDOU», `null` É «APAGUE»** (a regra do esquema da edição): só o apagar passa por aqui — a
+ *    edição de outro campo não manda o «O que é» e nunca tropeça nesta regra. O texto só de espaços conta como apagado,
+ *    como no lançar (o esquema já o apara para `null`; a conferência aqui não depende disso).
+ * ⚠️ **A CATEGORIA É A DA LINHA GRAVADA**, e `null` quando o fato não é atividade (aula, avaliação): ali o campo é o
+ *    tópico, com as regras dele, e esta função não se aplica.
+ * ⚠️ **A FRASE É A MESMA DO LANÇAR** (`FRASE_DA_DESCRICAO_OBRIGATORIA`): sem esta recusa, a AEC apagada chegaria ao
+ *    banco e voltaria com a frase do `CHECK` traduzido — outra, e depois de ler o teto e a cascata (achado 11 da revisão
+ *    do Bloco 14).
+ */
+export function recusaDaDescricaoNaEdicao(entrada: {
+  readonly categoria: CategoriaDeAtividade | null;
+  /** O que a edição manda no «O que é»: `undefined` (não mandou), `null` (apague) ou o texto novo. */
+  readonly conteudo: string | null | undefined;
+}): { readonly campo: "conteudo"; readonly mensagem: string } | null {
+  if (entrada.categoria === null || entrada.conteudo === undefined) return null;
+  const apagado = entrada.conteudo === null || entrada.conteudo.trim() === "";
+  return apagado && descricaoObrigatoria(entrada.categoria)
+    ? { campo: "conteudo", mensagem: FRASE_DA_DESCRICAO_OBRIGATORIA }
+    : null;
+}
+
 /**
  * As regras da atividade que dependem da CATEGORIA — que agora sai do tipo, e por isso não cabem no
  * Zod (spec 014, FR-011). A ação as confere depois de ler o tipo; o banco tem os `CHECK` irmãos.
  *
+ * - o «O que é» só falta no Estudo Individual (spec 029, FR-002; `ativ_descricao_fora_do_estudo_individual`). ⚠️ Até
+ *   ali quem recusava a descrição vazia era o Zod, para TODA categoria — e o EI sem descrição nunca chegava à ação;
  * - só a AEC leva disciplina (`ativ_disciplina_so_aec_da_turma`, item 1b de 08/10/2026);
  * - o Estudo Individual é sempre de uma turma (`V-5`, `ativ_estudo_individual_de_turma`);
  * - a quantidade de alunos é só do Apoio Individualizado (FR-020).
+ *
+ * ⚠️ A descrição vem primeiro porque era o Zod — que roda antes de tudo — quem a recusava: a frase que a pessoa vê
+ *    primeiro continua a mesma de antes da spec 029.
  */
 export function recusaPelaCategoria(entrada: {
   readonly categoria: CategoriaDeAtividade;
   readonly turmaId: string | null;
   readonly disciplinaId: string | null;
   readonly quantidadeAlunos: number | null;
+  /** Já aparada pelo esquema: vazia chega `null` (`textoOuNulo`). */
+  readonly descricao: string | null;
 }): { readonly campo: string; readonly mensagem: string } | null {
+  if (
+    descricaoObrigatoria(entrada.categoria) &&
+    (entrada.descricao === null || entrada.descricao.trim() === "")
+  ) {
+    return { campo: "descricao", mensagem: FRASE_DA_DESCRICAO_OBRIGATORIA };
+  }
   if (entrada.disciplinaId !== null && entrada.categoria !== "AEC") {
     return { campo: "disciplinaId", mensagem: "Só a AEC leva disciplina." };
   }

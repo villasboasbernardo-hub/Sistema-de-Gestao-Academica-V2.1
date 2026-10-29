@@ -73,7 +73,7 @@ Todo o corpo normativo do SEN — e, por consequência, currículos, PlaDis, CHD
 
 **MF.** Média Final — nota consolidada de uma disciplina a partir das avaliações aplicadas. **Nota de escopo:** o CIAARA-11 **não calcula MF** (`RNF-NORM-06`, decisão D5) — a competência é da CIAARA-32 e da CIAARA-12.3. O termo consta aqui para leitura de documento normativo, não como funcionalidade.
 
-**TFM.** Treinamento Físico Militar — disciplina presente em praticamente todos os cursos, com regra própria e rígida de distribuição semanal (teto de 6 TAs/semana no motor preditivo — documento 04, RN-DIST-03).
+**TFM.** Treinamento Físico Militar — disciplina presente em praticamente todos os cursos, com regra própria e rígida de distribuição semanal (teto de 6 TAs/semana no motor preditivo — documento 04, RN-DIST-03). ⚠️ *(Emenda de 27/10/2026 — decisão de Bernardo Villas Boas; `RN-DIST-03` (a) emendada no documento 04, Bloco 14, spec 029: o TFM **não tem mais teto rígido**; é disciplina comum, que só o alerta do recomendado de 25 TA/semana alcança. O `.docx` não recebeu esta emenda.)*
 
 **LHFC.** Levantamento Hidroceanográfico de Fim de Curso — atividade prática de encerramento de curso, de caráter eliminatório e sem teto de distribuição semanal (junto com "Prática de Fim de Curso", tratada de forma equivalente pelo sistema).
 

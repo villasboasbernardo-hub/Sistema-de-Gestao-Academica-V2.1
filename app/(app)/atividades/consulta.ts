@@ -28,7 +28,8 @@ export type LinhaDaAtividade = {
   readonly categoria: string;
   readonly tipo: string | null;
   readonly turma: string | null;
-  readonly descricao: string;
+  /** Nula só no Estudo Individual sem «O que é» (spec 029, FR-002, D-5); a tela mostra «—». */
+  readonly descricao: string | null;
   readonly alunos: number | null;
 };
 
@@ -40,7 +41,7 @@ type Bruta = {
   categoria_normativa: string;
   subtipo: string | null;
   escopo: string;
-  descricao: string;
+  descricao: string | null;
   quantidade_alunos: number | null;
   turmas: { codigo: string } | null;
 };

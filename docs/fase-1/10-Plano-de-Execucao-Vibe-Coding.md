@@ -907,7 +907,7 @@ justificativa convincente no comentário.
 O catálogo das regras mais convidativas ao "conserto" está no documento 04 e é curto o bastante para
 decorar: `RN-CRUD-03` (o instrutor usa inteiro simples, não prefixo — unificar quebra referências),
 `RN-ANT-02` (antiguidade vem do P/G, não da coluna `antiguidade_declarada`, que é só desempate),
-`RN-CONF-02`, `RN-DIST-03` (rígido × recomendado × sem-teto — três regimes, não um), `RN-MAT-02`
+`RN-CONF-02`, `RN-DIST-03` (rígido × recomendado × sem-teto — três regimes, não um; ⚠️ *(Emenda de 27/10/2026 — decisão de Bernardo Villas Boas; `RN-DIST-03` (a) emendada no documento 04, Bloco 14, spec 029: o TFM **não tem mais teto rígido** — é disciplina comum —, e os regimes da `RN-DIST-03` passam a **dois**: sem teto (fim de curso) e recomendado (25 TA/semana, só alerta). O `.docx` não recebeu esta emenda.)*), `RN-MAT-02`
 (dedução silenciosa de identidade), `RN-2027-06` (o teto é a **faixa** por regime, não o número do
 regime: usar 20 como teto para os 90,4% em 20h permitiria 67% acima do máximo normativo, num
 controle auditado pela CoPeCoD).

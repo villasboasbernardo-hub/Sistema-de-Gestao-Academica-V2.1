@@ -12,6 +12,10 @@
  * ⚠️ **A DATA ABRE COM HOJE, O DE SÃO PAULO**, passado pelo servidor (`hojeNaCiaara()`), e o campo não aceita o
  *    futuro: o executado já aconteceu. O Zod da ação confere de novo.
  * ⚠️ **O INSTRUTOR VEM DO SELETOR ÚNICO** (`SeletorInstrutor`, `RN-ANT-01` de Risco Alto) e é opcional.
+ * ⚠️ **A LISTA VAZIA DIZ O MOTIVO** (spec 029, `FR-006`): disciplina sem habilitado é FILTRO, e o campo dizia *"Nada
+ *    cadastrado ainda"* com instrutor cadastrado e ativo. Agora diz *"Nenhum instrutor habilitado nesta disciplina"*; sem
+ *    `instrutores.ler`, o «você não vê» do seletor; e com a leitura dos habilitados em falha, que ela falhou (D-16).
+ *    Registrar sem instrutor continua valendo — o campo é opcional.
  * ⚠️ **O FORMULÁRIO ABRE NUM DIÁLOGO** (spec 022, Bloco 7, FR-002): até o Bloco 7 ele abria no detalhe da disciplina. A
  *    recusa fica no diálogo, com o que foi digitado.
  */
@@ -29,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { desfazerTaForaDoDsa, registrarTaForaDoDsa } from "@/lib/acoes/ta-fora-do-dsa";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import { vazioDaListaDeInstrutores } from "@/lib/dominio/dsa/instrutores-da-aula";
 import { dataParaLeitura } from "@/lib/formato/data";
 import { LIMITE_DA_OBSERVACAO_FORA_DO_DSA } from "@/lib/validacao/ta-fora-do-dsa";
 
@@ -42,8 +47,15 @@ type PropsDoTaFora = {
   readonly turmaCodigo: string;
   readonly turmaDisciplinaId: string;
   readonly registros: readonly RegistroForaDoDsaDaTela[];
-  /** Os instrutores atribuídos e habilitados da linha — o seletor único os reordena pela antiguidade. */
+  /**
+   * Os instrutores HABILITADOS na disciplina — todos, com vínculo ativo, e não só os atribuídos à linha da turma (quem
+   * chama passa `l.habilitados`, de `lerGradeDeDisciplinas`). O seletor único os reordena pela antiguidade.
+   */
   readonly instrutores: readonly HabilitadoDaLinha[];
+  /** O perfil tem `instrutores.ler`? Decidido no servidor; sem ele a lista chega vazia pela RLS (FR-006 da spec 029). */
+  readonly podeLerInstrutores: boolean;
+  /** A leitura dos habilitados deu certo? Falha não é «nenhum habilitado» (D-16 da spec 029). */
+  readonly habilitadosLidos: boolean;
   readonly escala: EscalaDeAntiguidade;
   readonly podeGravar: boolean;
   readonly hoje: string;
@@ -142,6 +154,8 @@ function FormularioDoTaFora({
   turmaCodigo,
   turmaDisciplinaId,
   instrutores,
+  podeLerInstrutores,
+  habilitadosLidos,
   escala,
   hoje,
   fechar,
@@ -213,6 +227,10 @@ function FormularioDoTaFora({
               valor={instrutorId}
               aoMudar={definirInstrutorId}
               rotulo="Instrutor do TA fora do DSA"
+              vazio={vazioDaListaDeInstrutores(
+                podeLerInstrutores,
+                habilitadosLidos ? "sem-habilitado" : "sem-leitura",
+              )}
               className="w-72"
             />
             {instrutorId ? (

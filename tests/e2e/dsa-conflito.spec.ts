@@ -118,9 +118,11 @@ test.describe("⚠️ critério 5 · o mesmo instrutor em DUAS turmas no mesmo T
 
 test.describe("`RN-CONF-01` e `RN-DEG-02` · o conflito NÃO impede a gravação", () => {
   /*
-   * ⚠️ **ESTE É O CASO QUE SEPARA SINALIZAR DE BLOQUEAR.** Os dois bloqueios do épico são o teto
-   * de TFM (`RN-DIST-03` (a)) e o dia bloqueado no calendário (`RN-EVT-04`); transformar o conflito em impedimento mudaria a regra de negócio, que é o
-   * que a regra inviolável 6 proíbe: *"regra normativa vira alerta, nunca bloqueio"*.
+   * ⚠️ **ESTE É O CASO QUE SEPARA SINALIZAR DE BLOQUEAR.** Os bloqueios do épico são o dia bloqueado
+   * no calendário (`RN-EVT-04`) e o dia fora da etapa presencial (`D-DSA-2`) — o teto de TFM
+   * (`RN-DIST-03` (a)) saiu com a emenda de 27/10/2026 (spec 029, `FR-001`); transformar o conflito em
+   * impedimento mudaria a regra de negócio, que é o que a regra inviolável 6 proíbe: *"regra normativa
+   * vira alerta, nunca bloqueio"*.
    */
   test("lançar em cima de um conflito GRAVA, e a contagem no banco prova", async ({ page }) => {
     await abrirASemana(page);
@@ -142,8 +144,8 @@ test.describe("`RN-CONF-01` e `RN-DEG-02` · o conflito NÃO impede a gravação
 
     /*
      * ⚠️ O TA 8 da segunda está livre. **O que este caso mede é a GRAVAÇÃO**, com conflito na semana:
-     * ela acontece, com ou sem marca na célula — porque conflito é **sinalização**, e o único
-     * bloqueio do épico é o TFM.
+     * ela acontece, com ou sem marca na célula — porque conflito é **sinalização**, e nenhum teto
+     * bloqueia desde a emenda da `RN-DIST-03` (a), de 27/10/2026 (até ali, o único era o do TFM).
      */
     await page.locator(`${GRADE} td[data-celula="7:0"]`).click();
     await escolherDisciplinaEUnidade(page, SEMEADO.codDisciplina);

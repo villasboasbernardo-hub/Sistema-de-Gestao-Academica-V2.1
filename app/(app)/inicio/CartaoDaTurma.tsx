@@ -63,7 +63,7 @@ export function CartaoDaTurma({ turma: t }: { readonly turma: TurmaNoPanorama })
         )}
       </Link>
       {/* ⚠️ TURMA EAD PURO: O AVISO NO LUGAR DO LINK (item 9 da conferência do PR #40) — a frase de `ead-puro.ts`. */}
-      {/* Bloco 11 (item 7): o «Abrir DSA» saiu do cartão — o DSA publicado da semana está logo abaixo, no papel. */}
+      {/* Bloco 11 (item 7): o «Abrir DSA» saiu do cartão — o DSA publicado da semana está acima, no papel (spec 029). */}
       {t.eadPuro ? (
         <p className="text-texto-suave pl-1 text-xs" data-slot="dsa-turma-ead">
           {AVISO_DE_TURMA_EAD}

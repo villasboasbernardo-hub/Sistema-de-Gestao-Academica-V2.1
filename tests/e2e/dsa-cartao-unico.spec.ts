@@ -1,6 +1,8 @@
 /**
- * O cartão único do lançamento (ajustes 1 e 2 do PR #40), o empurrão em cascata (`D-DSA-3`) e o teto
- * de TFM ao editar (dúvida 2) — conferência de Bernardo Villas Boas, 08/10/2026.
+ * O cartão único do lançamento (ajustes 1 e 2 do PR #40) e o empurrão em cascata (`D-DSA-3`) —
+ * conferência de Bernardo Villas Boas, 08/10/2026. E o TFM SEM TETO (`FR-001` da spec 029): a
+ * `RN-DIST-03` (a) foi emendada em 27/10/2026, e o lançar, o editar e o *Salvar minuta* deixam de
+ * recusar o TFM acima de 6 TA na semana — o caso que afirmava a recusa ao editar foi INVERTIDO.
  *
  * Tudo por clique: ficha da turma → Abrir o DSA → o dia no calendário → a semana de referência.
  * A prova é sempre o BANCO, lido pelo cliente de serviço.
@@ -37,10 +39,27 @@ test.afterAll(async () => {
   await apagarConta(EMAIL);
 });
 
-async function abrirASemana(page: Page): Promise<void> {
+/**
+ * As semanas dos casos do TFM sem teto — 2026-W16 e 2026-W20, VAZIAS na semente e sem feriado semeado.
+ *
+ * ⚠️ **NÃO A SEMANA DE REFERÊNCIA (W15), e não por gosto:** nela a quarta é feriado de DIA INTEIRO (o lançar
+ *    recusa pelo calendário ANTES do teto, e o caso reprovaria pelo motivo errado), a quinta tem a AVNOVA nos TA
+ *    1-2 e a aula herdada no 8º, a segunda tem o bloco A1, e a terça e a sexta são dos outros casos deste arquivo
+ *    — que dividem a MESMA turma quando caem no mesmo processo. Sete TA seguidos sem colidir com nada não cabem.
+ * ⚠️ **UMA SEMANA PARA CADA CASO:** na mesma semana, o TFM de um contaria no do outro, e na `main` o segundo a
+ *    rodar reprovaria no lançar, antes da asserção que ele existe para fazer.
+ * ⚠️ **AS DUAS ESTÃO VAZIAS TAMBÉM NO CALENDÁRIO REAL**, medido em 28/10/2026 na cópia do remoto que estava no
+ *    banco local: nenhum feriado ativo, nenhuma parada e nenhuma atividade de todas as turmas de 13/04 a 18/04 nem
+ *    de 11/05 a 16/05. ⚠️ A W19 NÃO serve: a cópia tem 04/05/2026 como dia inteiro (*"Licença pagamento"*), e a W17
+ *    tem 20 e 21/04.
+ */
+const SEMANA_DO_EDITAR = { semana: 16, segunda: "2026-04-13" } as const;
+const SEMANA_DOS_DOIS_DIAS = { semana: 20, segunda: "2026-05-11", quarta: "2026-05-13" } as const;
+
+async function abrirASemana(page: Page, dia = SEGUNDA, semana = SEMANA): Promise<void> {
   await irAFichaDaTurma(page, EMAIL, SEMEADO.turmaComRelogio);
   await page.locator('[data-slot="abrir-o-dsa"]').click();
-  await irParaASemanaDoDia(page, SEGUNDA, SEMANA, ANO);
+  await irParaASemanaDoDia(page, dia, semana, ANO);
   await expect(page.locator(GRADE)).toBeVisible();
 }
 
@@ -53,7 +72,7 @@ const sufixo = (): string =>
 async function aulaPorTopico(topico: string) {
   const { data } = await banco()
     .from("registros_aula")
-    .select("id, local, conteudo_resumo, ta_inicial, tempos_consumidos, editado_em")
+    .select("id, local, conteudo_resumo, ta_inicial, tempos_consumidos, editado_em, salvo")
     .eq("conteudo_resumo", topico)
     .eq("status", "ativo")
     .maybeSingle();
@@ -63,7 +82,20 @@ async function aulaPorTopico(topico: string) {
     conteudo_resumo: string | null;
     ta_inicial: number;
     tempos_consumidos: number;
+    salvo: boolean;
   } | null;
+}
+
+/** A unidade de ensino do TFM da semente — é por ela que o banco diz que a aula é de TFM. */
+async function unidadeDoTfm(): Promise<string> {
+  const { data, error } = await banco()
+    .from("unidades_ensino")
+    .select("id")
+    .eq("codigo", `DSA-${sufixo()}-UE-${SEMEADO.codDisciplinaTfm}`)
+    .maybeSingle();
+  if (error || !data)
+    throw new Error(`a unidade do TFM não foi achada: ${error?.message ?? "vazio"}`);
+  return (data as { id: string }).id;
 }
 
 /** Espera o desfecho de uma gravação no formulário ou no cartão; reprova só a recusa. */
@@ -80,13 +112,16 @@ async function desfecho(page: Page, onde: string, recusa: string, avisos: string
   return ler();
 }
 
-/** Lança uma aula de 1 TA (ou `tempos`) na célula, com o tópico dado. */
+/**
+ * Lança uma aula de 1 TA (ou `tempos`) na célula, com o tópico dado, e devolve o texto dos avisos que
+ * acompanharam a gravação (vazio quando não houve).
+ */
 async function lancarAula(
   page: Page,
   celula: string,
   topico: string,
   opcoes: { tempos?: number; cod?: string; local?: string } = {},
-): Promise<void> {
+): Promise<string> {
   await page.locator(`${GRADE} td[data-celula="${celula}"]`).click();
   await expect(page.locator(FORMULARIO)).toBeVisible();
   await escolherDisciplinaEUnidade(page, opcoes.cod ?? SEMEADO.codDisciplina);
@@ -102,10 +137,13 @@ async function lancarAula(
   await page.locator('[data-slot="gravar-lancamento"]').click();
   const r = await desfecho(page, FORMULARIO, "recusa-do-lancamento", "avisos-do-lancamento");
   expect(r, "o lançamento foi recusado").not.toMatch(/^recusou/);
+  const avisos =
+    r === "avisou" ? await page.locator('[data-slot="avisos-do-lancamento"]').innerText() : "";
   if ((await page.locator(FORMULARIO).count()) > 0) {
     await page.locator(FORMULARIO).getByRole("button", { name: "Cancelar" }).click();
   }
   await expect.poll(async () => (await aulaPorTopico(topico)) !== null).toBe(true);
+  return avisos;
 }
 
 /** Abre o cartão do lançamento pelo tópico — clicando no cartão da grade. */
@@ -224,23 +262,117 @@ test.describe("⚠️ `D-DSA-3` · o bloco que cresce EMPURRA os seguintes, numa
   });
 });
 
-test.describe("⚠️ dúvida 2 · editar «Quantos tempos» confere o teto de TFM, como o mover", () => {
-  test("passar de 6 TA de TFM na semana pelo editar é recusado, e nada grava", async ({ page }) => {
+test.describe("⚠️ `FR-001` da spec 029 · o TFM SEM TETO — a `RN-DIST-03` (a) emendada em 27/10/2026", () => {
+  /*
+   * ⚠️ **ESTE CASO AFIRMAVA O CONTRÁRIO até a spec 029** — *"passar de 6 TA de TFM na semana pelo editar é
+   *    recusado, e nada grava"* (dúvida 2 da conferência de 08/10/2026). Invertido, ele é o caso que
+   *    discrimina (DoD 8): na `main` o editar recusa com *"o teto de TFM é 6"*; depois da emenda, grava.
+   * ⚠️ **1º AO 7º TEMPO, numa semana vazia:** dentro do regime de 8, sem o TA excepcional e sem bloco depois
+   *    para empurrar — nenhum aviso do DIA entra no caso, e a única recusa possível é a do TFM.
+   */
+  test("editar «Quantos tempos» de uma aula de TFM de 4 para 7 GRAVA, sem aviso de TFM", async ({
+    page,
+  }) => {
     test.setTimeout(180_000);
-    const topico = `TFM ${Date.now().toString(36)}`;
-    await abrirASemana(page);
+    const topico = `TFM editado ${Date.now().toString(36)}`;
+    await abrirASemana(page, SEMANA_DO_EDITAR.segunda, SEMANA_DO_EDITAR.semana);
 
-    /* Terça (coluna 1), 3º tempo, 4 TA de TFM — dentro do teto. */
-    await lancarAula(page, "2:1", topico, { tempos: 4, cod: SEMEADO.codDisciplinaTfm });
+    /* Segunda da W16 (coluna 0), 1º tempo, 4 TA de TFM. */
+    const avisosDoLancar = await lancarAula(page, "0:0", topico, {
+      tempos: 4,
+      cod: SEMEADO.codDisciplinaTfm,
+    });
+    expect(avisosDoLancar, "o lançamento de TFM saiu com aviso de TFM").not.toMatch(/TFM|teto/i);
 
     await abrirCartao(page, topico);
     await page.locator("#dsa-editar-tempos").fill("7");
     await page.locator('[data-slot="gravar-edicao"]').click();
     const r = await desfecho(page, CARTAO, "recusa-da-acao", "avisos-da-acao");
-    expect(r, "passar do teto de TFM pelo editar foi aceito").toMatch(/^recusou/);
-    expect((await aulaPorTopico(topico))?.tempos_consumidos, "o TFM cresceu mesmo recusado").toBe(
-      4,
+    expect(r, "o editar de TFM para 7 TA na semana foi recusado").not.toMatch(/^recusou/);
+    if (r === "avisou") {
+      await expect(page.locator('[data-slot="avisos-da-acao"]')).not.toContainText(/TFM|teto/i);
+    }
+    if ((await page.locator(CARTAO).count()) > 0) await page.keyboard.press("Escape");
+
+    /* O BANCO, não o campo digitado: o rascunho cresceu para 7 TA. */
+    await expect
+      .poll(async () => (await aulaPorTopico(topico))?.tempos_consumidos, {
+        message: "o TFM não cresceu para 7 TA no banco",
+      })
+      .toBe(7);
+
+    /* E o *Salvar minuta* guarda os 7 — o Salvar também não confere teto de TFM. */
+    await salvarASemana(page);
+    await expect
+      .poll(async () => {
+        const a = await aulaPorTopico(topico);
+        return `${a?.salvo ? "salvo" : "rascunho"}/${a?.tempos_consumidos}`;
+      })
+      .toBe("salvo/7");
+  });
+
+  /*
+   * ⚠️ **O CASO DO PEDIDO, e o que reprova HOJE no SEGUNDO lançamento**: a semana chega a 7 TA de TFM e a
+   *    Server Action recusa com *"«TFM do percurso» já tem 7 TA nesta semana; o teto de TFM é 6."* — o
+   *    `expect` de `lancarAula` acusa a recusa, não um prazo esgotado.
+   * ⚠️ **DOIS DIAS, e não 7 TA num dia só:** num dia, 7 TA de um bloco trariam o aviso do regime ou do
+   *    excepcional conforme o tempo inicial, que não têm relação com o caso.
+   * ⚠️ **A CONFERÊNCIA É PELO TÓPICO, não pela soma da semana:** com `fullyParallel` a turma é do processo, e
+   *    outro caso deste arquivo pode ter deixado lançamento na turma.
+   */
+  test("4 + 3 TA de TFM em DOIS dias da mesma semana: os dois gravam, e o Salvar minuta guarda os 7", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    const marca = Date.now().toString(36);
+    const topicoDaSegunda = `TFM da segunda ${marca}`;
+    const topicoDaQuarta = `TFM da quarta ${marca}`;
+    await abrirASemana(page, SEMANA_DOS_DOIS_DIAS.segunda, SEMANA_DOS_DOIS_DIAS.semana);
+
+    /* Segunda (coluna 0) e quarta (coluna 2) da W20, 1º tempo. */
+    const avisosDaSegunda = await lancarAula(page, "0:0", topicoDaSegunda, {
+      tempos: 4,
+      cod: SEMEADO.codDisciplinaTfm,
+    });
+    const avisosDaQuarta = await lancarAula(page, "0:2", topicoDaQuarta, {
+      tempos: 3,
+      cod: SEMEADO.codDisciplinaTfm,
+    });
+    expect(`${avisosDaSegunda}\n${avisosDaQuarta}`, "um aviso falou de TFM").not.toMatch(
+      /TFM|teto/i,
     );
+
+    await salvarASemana(page);
+
+    const ueDoTfm = await unidadeDoTfm();
+    await expect
+      .poll(async () => {
+        const { data, error } = await banco()
+          .from("registros_aula")
+          .select("data, tempos_consumidos, salvo, unidade_ensino_id")
+          .in("conteudo_resumo", [topicoDaSegunda, topicoDaQuarta])
+          .eq("status", "ativo")
+          .order("data");
+        if (error) return `erro: ${error.message}`;
+        const linhas = (data ?? []) as {
+          data: string;
+          tempos_consumidos: number;
+          salvo: boolean;
+          unidade_ensino_id: string | null;
+        }[];
+        const soma = linhas.reduce((total, l) => total + l.tempos_consumidos, 0);
+        return (
+          linhas
+            .map(
+              (l) =>
+                `${l.data}:${l.tempos_consumidos}:${l.salvo ? "salvo" : "rascunho"}:${l.unidade_ensino_id === ueDoTfm ? "TFM" : "outra"}`,
+            )
+            .join(" | ") + ` = ${soma} TA`
+        );
+      })
+      .toBe(
+        `${SEMANA_DOS_DOIS_DIAS.segunda}:4:salvo:TFM | ${SEMANA_DOS_DOIS_DIAS.quarta}:3:salvo:TFM = 7 TA`,
+      );
   });
 });
 

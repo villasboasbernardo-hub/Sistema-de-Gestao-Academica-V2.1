@@ -47,6 +47,7 @@ import {
 import { recusaForaDaEtapa } from "@/lib/dominio/dsa/etapa-presencial";
 import {
   categoriaPeloTipo,
+  recusaDaDescricaoNaEdicao,
   recusaPelaCategoria,
   type CategoriaDeAtividade,
   type TipoDeAtividade,
@@ -215,44 +216,59 @@ async function avisoDoAplicador(
 }
 
 /**
- * Os tetos, **lidos de `config_parametros`** (Princípio VII, `RNF-NORM-08`).
+ * O teto recomendado, **lido de `config_parametros`** (Princípio VII, `RNF-NORM-08`).
  *
- * ⚠️ **PARÂMETRO NORMATIVO É DADO, NUNCA CONSTANTE DE CÓDIGO.** O PR B os semeou como
- * `dsa.teto_tfm_semana` e `dsa.teto_recomendado_semana`; escrever `6` e `25` aqui faria dois
- * lugares para a mesma norma, e o dia em que ela mudasse a tela discordaria do banco.
+ * ⚠️ **PARÂMETRO NORMATIVO É DADO, NUNCA CONSTANTE DE CÓDIGO.** O PR B o semeou como
+ * `dsa.teto_recomendado_semana`; escrever `25` aqui faria dois lugares para a mesma norma, e o dia
+ * em que ela mudasse a tela discordaria do banco.
+ *
+ * ⚠️ **SÓ O RECOMENDADO, E A CHAVE DO TFM NÃO É MAIS PEDIDA** (`FR-001.3` e D-3 da spec 029): a
+ * `RN-DIST-03` (a) foi emendada em 27/10/2026, e `dsa.teto_tfm_semana` (= 6) ficou no banco como
+ * **dado inerte**. Pedi-la junto não seria inofensivo: até a emenda, a falta DELA devolvia `null`
+ * e calava o recomendado de toda disciplina — e, pelo `return` antecipado de `vereditoDosTetos`,
+ * também os alertas do dia. Uma linha que ninguém usa não pode ter esse poder.
  *
  * ⚠️ **AUSENTE, O TETO NÃO É INVENTADO: ele cala.** Um padrão escrito aqui transformaria "não
- * medi" em "o teto é 6" — e um bloqueio por número inventado é pior que bloqueio nenhum. Com o
- * parâmetro ausente o veredito sai neutro, e a semente da migration garante que ele exista.
+ * medi" em "o recomendado é 25" — e um alerta por número inventado é pior que alerta nenhum. Com o
+ * parâmetro ausente o veredito **da semana** sai neutro, e a semente da migration garante que ele
+ * exista.
  */
 async function tetosDoBanco(
   supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
 ): Promise<TetosDoDsa | null> {
   const { data } = await supabase
     .from("config_parametros")
-    .select("chave, valor")
-    .in("chave", ["dsa.teto_tfm_semana", "dsa.teto_recomendado_semana"])
+    .select("valor")
+    .eq("chave", "dsa.teto_recomendado_semana")
     .eq("status", "ativo");
-  const por = new Map(
-    ((data ?? []) as { chave: string; valor: string }[]).map((p) => [p.chave, p.valor]),
-  );
-  const tfm = Number(por.get("dsa.teto_tfm_semana"));
-  const recomendado = Number(por.get("dsa.teto_recomendado_semana"));
-  if (!Number.isFinite(tfm) || !Number.isFinite(recomendado)) return null;
-  return { tfmSemana: tfm, recomendadoSemana: recomendado };
+  /*
+   * `chave` não é única na tabela (há `ano_vigencia`), então nada de `maybeSingle`, que daria erro com
+   * duas linhas e calaria o alerta: vale a última que chega, como o `Map` de antes da emenda fazia.
+   */
+  const linhas = (data ?? []) as { valor: string }[];
+  const recomendado = Number(linhas[linhas.length - 1]?.valor);
+  if (!Number.isFinite(recomendado)) return null;
+  return { recomendadoSemana: recomendado };
 }
 
 /**
- * O veredito dos tetos para um lançamento de aula — **o único bloqueio de TETO do DSA**
- * (`RN-DIST-03` (a)). O outro bloqueio do DSA não é teto: é o dia bloqueado no calendário
- * (`RN-EVT-04`, `recusaDoCalendario`).
+ * O veredito dos tetos e do dia para um lançamento de aula — **só alertas** desde 27/10/2026.
+ *
+ * ⚠️ **NENHUM TETO RECUSA MAIS.** O do TFM (`RN-DIST-03` (a)) era o único que bloqueava, e a emenda
+ * de 27/10/2026 o tirou (spec 029, `FR-001`): o TFM passou a disciplina comum do recomendado. As
+ * recusas que o DSA conserva não são teto e não passam por aqui — entre elas, o dia bloqueado no
+ * calendário (`RN-EVT-04`, `recusaDoCalendario`), o dia fora da etapa presencial (`D-DSA-2`) e a
+ * habilitação de quem ministra (`RN-INST-01`). Os chamadores
+ * continuam testando `bloqueios` — sempre vazio — porque o tipo do módulo puro o mantém, e porque
+ * tirar o teste esconderia uma recusa que alguém voltasse a pôr lá.
  *
  * ⚠️ **A CONTA INCLUI O QUE ESTÁ SENDO GRAVADO**, e o módulo puro diz isso no tipo
  * (*"TA já lançados nesta semana, **incluindo** o que está sendo gravado"*). Avaliar só o que já
- * existe deixaria passar exatamente o lançamento que estoura o teto.
+ * existe deixaria de avisar exatamente o lançamento que passa do recomendado.
  *
- * ⚠️ **ELE RODA ANTES DO `insert`**, porque o TFM **recusa**: gravar e depois avisar deixaria a
- * semana com 7 TA de TFM e um aviso — e a `RN-DIST-03` (a) é o único teto rígido do épico.
+ * ⚠️ **ELE RODA ANTES DO `insert`**, e a ordem nasceu do TFM, que recusava: gravar e depois
+ * conferir deixaria a semana acima do teto. Sem bloqueio, ela não muda nada — os alertas acompanham
+ * a gravação de qualquer modo —, e fica para não reabrir a corrida no dia em que um bloqueio voltar.
  */
 async function vereditoDosTetos(
   supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
@@ -266,17 +282,23 @@ async function vereditoDosTetos(
     /**
      * O fato a **desconsiderar** na contagem — o próprio, quando se está MOVENDO.
      *
-     * ⚠️ **SEM ELE, MOVER UM BLOCO DENTRO DA MESMA SEMANA CONTA O BLOCO DUAS VEZES**, e um TFM de
-     * 6 TA movido de terça para quinta viraria 12 na conta: a ação recusaria o movimento com a
-     * frase do teto, dizendo que a pessoa passou de um limite que ela não passou. A `RN-DIST-03`
-     * (a) é o único teto rígido do épico, e um bloqueio por conta errada é pior que bloqueio nenhum.
+     * ⚠️ **SEM ELE, MOVER UM BLOCO DENTRO DA MESMA SEMANA CONTA O BLOCO DUAS VEZES**: uma disciplina
+     * de 15 TA movida de terça para quinta viraria 30 na conta, e o movimento sairia com o alerta do
+     * recomendado (25), dizendo que a pessoa passou de um limite que ela não passou. Até a emenda de
+     * 27/10/2026 o mesmo erro RECUSAVA um TFM de 6 TA movido; hoje ele só avisaria — e um aviso por
+     * conta errada continua pior que aviso nenhum.
      */
     readonly ignorarFatoId?: string;
   },
 ): Promise<{ readonly bloqueios: readonly string[]; readonly alertas: readonly string[] }> {
-  const tetos = await tetosDoBanco(supabase);
   const semana = semanaIsoDe(entrada.data);
-  if (tetos === null || semana === null) return { bloqueios: [], alertas: [] };
+  if (semana === null) return { bloqueios: [], alertas: [] };
+  /*
+   * ⚠️ **SEM O RECOMENDADO, CALA SÓ A SEMANA** (`RN-DEG-01`): a ausência do parâmetro tira o alerta que
+   *    depende dele, e não os do DIA (acima do regime, TA excepcional), que não o leem. Até 27/10/2026 o
+   *    `null` voltava aqui com um `return` e calava os dois — e o `null` vinha também da chave do TFM.
+   */
+  const tetos = await tetosDoBanco(supabase);
 
   /*
    * ⚠️ **O PRÓPRIO SAI PELO ID DO LANÇAMENTO, NÃO PELO `fato_id` DA VIEW** (`RN-AV-12`, 16/10/2026): na sessão de
@@ -333,7 +355,7 @@ async function vereditoDosTetos(
   const nome = (discRes.data as { nome_disciplina?: string } | null)?.nome_disciplina ?? "";
 
   const daSemana =
-    nome === ""
+    nome === "" || tetos === null
       ? { bloqueios: [], alertas: [] }
       : avaliarTetosDaSemana([{ nome, taNaSemana: jaNaSemana + entrada.tempos }], tetos);
 
@@ -528,9 +550,11 @@ const PALAVRA_DA_ORIGEM: Readonly<Record<string, string>> = {
  * Aqui só se lê a ocupação da turma naquele dia, o regime e os códigos das disciplinas, e se traduz o
  * resultado em operações para a função transacional.
  *
- * ⚠️ **OS EMPURRADOS FICAM NO MESMO DIA, e por isso feriado, etapa presencial e teto semanal de TFM
- * não mudam para eles** — o dia é o mesmo do bloco (já conferido), e a semana é a mesma (a soma da
- * disciplina não muda). É o que a decisão chama de *"passa pelas mesmas regras do mover"*.
+ * ⚠️ **OS EMPURRADOS FICAM NO MESMO DIA, e por isso feriado, etapa presencial e teto semanal da
+ * disciplina não mudam para eles** — o dia é o mesmo do bloco (já conferido), e a semana é a mesma (a
+ * soma da disciplina não muda). É o que a decisão chama de *"passa pelas mesmas regras do mover"*.
+ * (Até 27/10/2026 o teto semanal em jogo era o do TFM, que recusava; desde a emenda da `RN-DIST-03`
+ * (a), o único teto semanal é o recomendado, que só alerta — spec 029, `FR-001`.)
  *
  * ⚠️ **SÓ A OCUPAÇÃO DESTA TURMA** (`turma_id = …`): a atividade global vale para todas e não se empurra.
  */
@@ -766,11 +790,13 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     if (categoriaDaAtividade === null) {
       return falha("Escolha um tipo de atividade da lista.", "tipoAtividadeId");
     }
+    /* Spec 029, FR-002: a descrição vai junto — só o Estudo Individual a dispensa, e o esquema não sabe a categoria. */
     const recusa = recusaPelaCategoria({
       categoria: categoriaDaAtividade,
       turmaId: bloco.turmaId,
       disciplinaId: bloco.disciplinaId,
       quantidadeAlunos: bloco.quantidadeAlunos,
+      descricao: bloco.descricao,
     });
     if (recusa !== null) return falha(recusa.mensagem, recusa.campo);
     /*
@@ -887,9 +913,14 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     if (recusa !== null) return falha(recusa, "instrutorId");
 
     /*
-     * ⚠️ **O TETO DE TFM É O ÚNICO TETO QUE BLOQUEIA** (`RN-DIST-03` (a)), e ele é conferido
-     * **antes** de gravar — como o dia bloqueado no calendário, acima (`RN-EVT-04`). Os demais — teto recomendado, dia além do regime, TA excepcional — são
-     * ALERTA, e acompanham a gravação (`RN-DEG-02`): transformá-los em impedimento mudaria a regra.
+     * ⚠️ **NENHUM TETO BLOQUEIA** desde a emenda da `RN-DIST-03` (a), de 27/10/2026 (spec 029,
+     * `FR-001`): o TFM, que era o único teto que recusava aqui, passou a disciplina comum do
+     * recomendado. O que recusa a aula está acima — o dia fora da etapa presencial (`D-DSA-2`), o dia
+     * bloqueado no calendário (`RN-EVT-04`) e a habilitação de quem ministra (`RN-INST-01`). O teto
+     * recomendado, o dia além do regime e o TA excepcional são ALERTA, e acompanham a gravação
+     * (`RN-DEG-02`): transformá-los em impedimento mudaria a regra. O teste de `bloqueios` fica — ele
+     * é sempre vazio, e é o que faria aparecer, como recusa, um bloqueio que alguém voltasse a pôr no
+     * módulo puro.
      */
     const veredito = await vereditoDosTetos(supabase, {
       turmaId: bloco.turmaId,
@@ -1083,6 +1114,7 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     escopo: bloco.turmaId === null ? "global" : "turma",
     turma_id: bloco.turmaId,
     data: bloco.data,
+    /* Spec 029, D-5: o Estudo Individual sem «O que é» grava NULO — nada a preenche no lugar da pessoa. */
     descricao: bloco.descricao,
     ta_inicial: bloco.taInicial,
     tempos_consumidos: bloco.tempos,
@@ -1684,12 +1716,14 @@ async function gravarNoFato(
  * ⚠️ **OS PORTEIROS, NA ORDEM:** o responsável (`RN-RESP-1`: o nome livre só onde o papel o aceita, por
  * `responsavelNaEdicao`); dia bloqueado no calendário (`RN-EVT-04`, só aula) e etapa presencial
  * (`D-DSA-2`) quando o dia muda; a catraca da UE da linha histórica (`Q-1`); a habilitação de quem
- * ministra (`RN-INST-01`); o **teto de TFM** quando o tamanho, o dia ou a disciplina mudam — e isto é a
- * dúvida 2 do lote, que valia só no mover e passa a valer no editar; e a cascata (`D-DSA-3`) quando a
- * posição ou o tamanho mudam.
+ * ministra (`RN-INST-01`); e a cascata (`D-DSA-3`) quando a posição ou o tamanho mudam. O **teto
+ * semanal** é conferido quando o tamanho, o dia ou a disciplina mudam, mas ⚠️ **não é mais porteiro**:
+ * até 27/10/2026 o teto de TFM recusava aqui (a dúvida 2 do lote, que valia só no mover e passou a
+ * valer no editar); desde a emenda da `RN-DIST-03` (a) (spec 029, `FR-001`) ele só devolve o alerta
+ * do recomendado, que acompanha a gravação.
  *
  * ⚠️ **SÓ O QUE MUDOU DISPARA O TETO E A CASCATA**: editar o tópico de uma semana histórica que já
- * passa do teto não pode ser recusado por uma conta que ele não alterou.
+ * passa do recomendado não pode sair com um alerta sobre uma conta que ele não alterou.
  *
  * ⚠️ **CAMPO NÃO MANDADO NÃO É TOCADO.** `undefined` é *"não mandou"*; `null` é *"apague"*.
  */
@@ -1711,6 +1745,20 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
     responsavelExterno: a.responsavelExterno,
   });
   if (!responsavel.ok) return falha(responsavel.mensagem, responsavel.campo);
+
+  /*
+   * ⚠️ **SPEC 029, FR-002: APAGAR O «O QUE É» SÓ VALE NO ESTUDO INDIVIDUAL.** `conteudo: null` é «apague» (o cartão o
+   *    manda quando a pessoa limpa o campo); fora do EI o banco recusaria pelo `CHECK`
+   *    `ativ_descricao_fora_do_estudo_individual` (23514 — até a spec 029, 23502 do NOT NULL), e aqui a recusa chega
+   *    como a mesma frase do lançar, antes de qualquer leitura de teto ou cascata. A categoria é a da LINHA (`lerFato`).
+   * ⚠️ A condição é a função pura `recusaDaDescricaoNaEdicao` (Vitest nos dois sentidos, em
+   *    `tests/unidade/categoria-pelo-tipo.test.ts`); a ligação, por clique, em `dsa-estudo-individual-sem-descricao.spec.ts`.
+   */
+  const daDescricao = recusaDaDescricaoNaEdicao({
+    categoria: a.origem === "atividade_nao_letiva" ? fato.categoria : null,
+    conteudo: a.conteudo,
+  });
+  if (daDescricao !== null) return falha(daDescricao.mensagem, daDescricao.campo);
 
   const data = a.data ?? fato.data;
   const taInicial = a.taInicial ?? fato.taInicial;

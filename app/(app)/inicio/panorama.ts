@@ -32,6 +32,8 @@ import {
   type RegimeDoCurso,
   contagemDaTurma,
   type ContagemPresencial,
+  type ExcecoesDoRegime,
+  regimesDasSemanas,
 } from "@/lib/dominio/andamento-da-turma";
 import { ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 
@@ -126,6 +128,11 @@ export function montarPanorama(
   executadaAteHoje: ReadonlyMap<string, number>,
   /** Spec 024 (FR-020): a etapa presencial das semipresenciais (`lerContagemPresencial`). Ausente = conta tudo. */
   presenciais: ReadonlyMap<string, ContagemPresencial> = new Map(),
+  /**
+   * Spec 029 (`FR-005`): o regime das semanas de cada turma (o `porTurma` de `lerRegimesDasSemanas`) — o gravado, o
+   * «só esta semana» e o «desde» do DSA. Ausente, ou turma fora do mapa = um TA/dia só, a conta de antes do Bloco 14.
+   */
+  semanasDasTurmas: ReadonlyMap<string, ExcecoesDoRegime> = new Map(),
 ): readonly TurmaNoPanorama[] {
   const porId = new Map(cursos.map((c) => [c.id, c]));
   const turmaPorId = new Map(turmas.map((t) => [t.id, t]));
@@ -145,6 +152,7 @@ export function montarPanorama(
     .filter((c) => porId.has(c.curso_id))
     .map((c) => {
       const daTabela = turmaPorId.get(c.turma_id);
+      const doCurso = regimeDoCurso(regimePorCurso.get(c.curso_id));
       /* Spec 024 (FR-020): a semipresencial com marca presencial conta só a etapa presencial. */
       const contagem = contagemDaTurma(
         {
@@ -172,11 +180,13 @@ export function montarPanorama(
         },
         /* Spec 018 (C-9): o regime nomeado da turma troca os TA presenciais; o limite EAD fica (`RN-MAT-04`). */
         regimeEfetivo(
-          regimeDoCurso(regimePorCurso.get(c.curso_id)),
+          doCurso,
           daTabela?.regime ? { regimeTempos: daTabela.regime.regime_tempos } : null,
         ),
         datasQueAlcancam(feriadosDiaInteiro, c.turma_id),
         hoje,
+        /* Spec 029 (`FR-005`, D-12): o regime de cada semana, com o padrão de hoje do curso como o «do curso». */
+        regimesDasSemanas(semanasDasTurmas.get(c.turma_id), doCurso),
       );
 
       return {

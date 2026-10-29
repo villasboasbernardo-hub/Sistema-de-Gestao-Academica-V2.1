@@ -603,7 +603,7 @@ Listas semeadas: `metodologias`, `tipos_atividade`, `tipos_avaliacao`, `escala_a
 
 Seed normativo aplicado em `03`: `teto.aec_percentual_chr` (10), `teto.tad_percentual_chr` (5),
 `teto.tr_percentual_chr` (10), as seis chaves `ch_docente.*.min/max`,
-`alocacao.teto_tfm_rigido` (6), `alocacao.teto_geral_recomendado` (25),
+`alocacao.teto_tfm_rigido` (6) ⚠️ *(Inerte desde 27/10/2026 — decisão de Bernardo Villas Boas; `RN-DIST-03` (a) emendada no documento 04, Bloco 14, spec 029: o TFM não tem mais teto rígido; a linha continua no seed como dado inerte, que nenhuma regra aplica, e nenhuma linha muda (D-3 da spec 029). O `.docx` não recebeu esta emenda.)*, `alocacao.teto_geral_recomendado` (25),
 `alocacao.limite_ta_dia_padrao` (8), `avaliacao.ta_padrao_bloco_prova` (3),
 `avaliacao.prazo_vista_dias` (7).
 

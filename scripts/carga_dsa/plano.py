@@ -11,9 +11,13 @@
    3. habilitacao             `RN-INST-01` (Risco: Alto), por `pode_atuar` — o porte literal de
                               `podeAtuar` em `lib/dominio/habilitacao.ts`: ministrar e ser
                               responsavel EXIGEM vinculo ATIVO; avaliacao e vista de prova NAO.
-   4. teto de TFM             `RN-DIST-03` (a), o UNICO bloqueio do DSA — porte de
-                              `avaliarTetosDaSemana` em `lib/dominio/dsa/tetos.ts`. Fim de curso nao
-                              tem teto algum; o recomendado e ALERTA (`RN-DEG-02`), nunca recusa.
+   4. teto semanal            `RN-DIST-03` — porte de `avaliarTetosDaSemana` em
+                              `lib/dominio/dsa/tetos.ts`. Fim de curso nao tem teto algum; o
+                              recomendado e ALERTA (`RN-DEG-02`), nunca recusa. ⚠️ NENHUM teto recusa
+                              desde 27/10/2026: o TFM, que era o unico bloqueio do DSA (6 TA por
+                              semana), virou disciplina comum do recomendado pela emenda da
+                              `RN-DIST-03` (a) — decisao de Bernardo Villas Boas, spec 029 (`FR-001`,
+                              D-2 a D-4). `dsa.teto_tfm_semana` fica no banco como dado inerte.
 
 ⚠️ CONFLITO COM OUTRA TURMA E RELATORIO, NUNCA BLOQUEIO (o mesmo criterio de
    `public.conflitos_da_semana`: sobreposicao de TA no mesmo dia com o mesmo instrutor ou local).
@@ -68,11 +72,9 @@ def pode_atuar(atuacao: str, instrutor_id: str, disciplina_id: str, vinculos: li
 
 
 # ── RN-DIST-03 ─ porte de `lib/dominio/dsa/tetos.ts` ─────────────────────────────────────────────
-
-
-def eh_tfm(nome: str) -> bool:
-    n = normalizar(nome).lower()
-    return "tfm" in n or "treinamento fisico" in n
+#
+# ⚠️ SEM `eh_tfm` DESDE 27/10/2026, e a ausencia e a emenda da `RN-DIST-03` (a) (spec 029, `FR-001`):
+#    o TFM nao tem mais teto rigido nem tratamento por nome; cai no recomendado como qualquer disciplina.
 
 
 def sem_teto_algum(nome: str) -> bool:
@@ -528,9 +530,13 @@ def _conferencias_internas(plano: Plano, leitura: Leitura, decisoes: dict, disci
 
 
 def _avaliar_tetos(plano: Plano, ref: dict, disciplina_por_id: dict) -> None:
-    """`RN-DIST-03`: TFM acima do teto BLOQUEIA; o recomendado so alerta; fim de curso, nada."""
+    """`RN-DIST-03`: o recomendado so alerta; fim de curso, nada; NENHUM teto recusa.
+
+    ⚠️ Ate 27/10/2026 o TFM acima de `dsa.teto_tfm_semana` (6) RECUSAVA a linha do plano. A emenda da
+       `RN-DIST-03` (a) (spec 029, `FR-001`, D-2 a D-4) tirou o ramo: o TFM recebe o mesmo alerta do
+       recomendado que qualquer disciplina, e a chave do TFM nem e lida — a falta dela nao cala mais nada.
+    """
     try:
-        tfm = float(ref["tetos"]["dsa.teto_tfm_semana"])
         recomendado = float(ref["tetos"]["dsa.teto_recomendado_semana"])
     except (KeyError, ValueError):
         plano.alertas.append("tetos: parametro ausente em `config_parametros` — o teto cala, nao e inventado")
@@ -563,12 +569,7 @@ def _avaliar_tetos(plano: Plano, ref: dict, disciplina_por_id: dict) -> None:
         nome = nome_por_cod.get(cod, cod)
         if sem_teto_algum(nome):
             continue
-        if eh_tfm(nome):
-            if ta > tfm:
-                plano.recusas.append(
-                    f"semana {semana}/{ano}: «{nome}» teria {ta} TA; o teto de TFM e {tfm:g} (RN-DIST-03)"
-                )
-        elif ta > recomendado:
+        if ta > recomendado:
             plano.alertas.append(
                 f"semana {semana}/{ano}: «{nome}» tem {ta} TA; o recomendado e {recomendado:g} (alerta, nao bloqueio)"
             )

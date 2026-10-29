@@ -12,6 +12,10 @@
  * sem ela, a CH dividida pelas semanas da janela efetiva (`mediaSemanalDaJanela`, no módulo da `RN-DIST-01`, com a
  * régua única); sem janela, nulo.
  *
+ * ⚠️ **A JANELA É A DA CARGA** (spec 029, Bloco 14, item 4; `FR-004`, D-9 e D-10): desde então a janela que chega
+ * aqui é a previsão recortada pelo período da turma (`janelaDaCarga`, em `carga-semanal.ts`), e não mais a previsão
+ * crua da view. A precedência não mudou (D-10): a cadastrada vence, mesmo quando a janela vira o período da turma.
+ *
  * ⚠️ **ESTE MÓDULO SÓ DECIDE A PRECEDÊNCIA** — a divisão mora em `distribuicao-semanal.ts`, o único lugar autorizado a
  * dividir carga por semanas (guarda `distribuicao-unica.test.ts`).
  *
@@ -24,7 +28,11 @@ export type AtribuicaoParaMedia = {
   readonly mediaCadastrada: number | null;
   /** Os tempos previstos da atribuição (o rateio já aplicado). */
   readonly tempos: number;
-  /** A janela efetiva da atribuição (M2): linha da turma → disciplina → turma. */
+  /**
+   * A janela da carga da atribuição (`janelaDaCarga`, spec 029, `FR-004`): a previsão da view (linha da turma →
+   * disciplina → turma, a ordem da M2 da spec 016) recortada pelo período da turma, ou o período inteiro quando a
+   * previsão não o toca. Quem chama recorta; este módulo só divide pelas semanas do que recebe.
+   */
   readonly inicio: string | null;
   readonly termino: string | null;
 };

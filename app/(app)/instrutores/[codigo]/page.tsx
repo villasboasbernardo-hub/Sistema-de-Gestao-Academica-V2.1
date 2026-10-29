@@ -21,6 +21,10 @@
  *
  * ⚠️ **A FICHA SEGUE O ANO ESCOLHIDO** (RT-6, D-26): a carga, as atribuições e os alertas são do ano do seletor.
  *
+ * ⚠️ **A JANELA DE CADA ATRIBUIÇÃO É A DA CARGA** (spec 029, Bloco 14, item 4, `FR-004`): a previsão da view recortada
+ * pelo período da turma, que vem embutido na mesma leitura (`janelaDaCarga`). É ela que põe a turma de outro ano — a
+ * `CAHO 2027`, com previsão da disciplina em 2026 — nas semanas do ano dela.
+ *
  * ⚠️ **OS ALERTAS DE FAIXA VOLTARAM, EM LILÁS** (item 9, D-29; emenda a A-2 da spec 022): *"voltar a mostrar EM QUAIS
  * SEMANAS a carga passou da faixa"* — uma linha por semana, pela MESMA função da página Avisos (`alertaAcimaDaFaixa`),
  * só para instrutor ativo (CHK019). Avisam, não bloqueiam (`RN-DEG-02`); o da capacitação continua em Avisos.
@@ -35,7 +39,12 @@ import { NomeInstrutor } from "@/components/ciaara/nome-instrutor";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { alertaAcimaDaFaixa } from "@/lib/dominio/alertas-instrutor";
-import { cargaPorSemana, semanasAcimaDaFaixa, semanasDoAno } from "@/lib/dominio/carga-semanal";
+import {
+  cargaPorSemana,
+  janelaDaCarga,
+  semanasAcimaDaFaixa,
+  semanasDoAno,
+} from "@/lib/dominio/carga-semanal";
 import { motivoDoImpedimento } from "@/lib/dominio/exclusao-de-instrutor";
 import { DICA_SEM_LEITURA } from "@/lib/dominio/exclusao-permanente";
 import { mediaSemanalDaAtribuicao } from "@/lib/dominio/media-semanal";
@@ -50,6 +59,28 @@ import { AcoesDeInstrutor } from "./AcoesDeInstrutor";
 import { ExcluirInstrutor } from "./ExcluirInstrutor";
 import { CargaDoInstrutor } from "./CargaDoInstrutor";
 import { FichaEmLeitura } from "./FichaEmLeitura";
+
+/**
+ * A ordem da tabela de atribuições pela **janela da carga** (spec 029, item 4, `FR-004.2`): o banco ordena pela
+ * PREVISÃO (`previsao_inicio`), e a janela recortada pode começar noutro dia — a da `CAHO 2027` passa de maio de 2026
+ * para janeiro de 2027. Sem início vai para o fim, como os nulos do `order` do banco; o empate fica na ordem do banco
+ * (o `sort` é estável).
+ */
+function pelaJanela(
+  a: { readonly inicio: string | null },
+  b: { readonly inicio: string | null },
+): number {
+  if (a.inicio === b.inicio) return 0;
+  if (a.inicio === null) return 1;
+  if (b.inicio === null) return -1;
+  return a.inicio < b.inicio ? -1 : 1;
+}
+
+/** O período da turma embutido na leitura da prevista (`turma:turmas!…(data_inicio, data_termino)`). */
+type PeriodoEmbutido = {
+  readonly data_inicio: string | null;
+  readonly data_termino: string | null;
+} | null;
 
 const COLUNAS_DA_FICHA =
   "id, codigo, status, posto_graduacao, esp_hab_obs, nome_completo, categoria, om, nome_guerra, nip, data_nascimento, dep_divisao, data_assuncao_setor, email, regime_trabalho, nivel_escolaridade, formacao_principal_secundaria, capacitacoes_didaticas, capacitacao_didatica_a_corrigir, data_inicio_docencia_mb, data_inicio_docencia_ciaara, ultima_avaliacao_desempenho, data_avaliacao_desempenho, preferencia, antiguidade_declarada, area_conhecimento";
@@ -124,8 +155,12 @@ export default async function FichaDoInstrutor({
       .maybeSingle(),
     supabase
       .from("vw_instrutor_carga_prevista")
+      /*
+       * ⚠️ O PERÍODO DA TURMA VEM EMBUTIDO (spec 029, item 4, `FR-004`): a janela da carga é a previsão recortada por
+       *    ele (`janelaDaCarga`), na mesma leitura — nenhuma consulta a mais. A view não muda (D-11).
+       */
       .select(
-        "atribuicao_id, ano, disciplina_id, nome_disciplina, curso_codigo, turma_codigo, previsao_inicio, previsao_termino, tempos_previstos, semanas, media_semanal",
+        "atribuicao_id, ano, disciplina_id, nome_disciplina, curso_codigo, turma_codigo, previsao_inicio, previsao_termino, tempos_previstos, semanas, media_semanal, turma:turmas!turma_disciplina_turma_id_fkey(data_inicio, data_termino)",
       )
       .eq("instrutor_id", instrutor.id)
       /*
@@ -136,6 +171,7 @@ export default async function FichaDoInstrutor({
        *    carga e no alerta de 2026. A lista, a marca "só habilitado" e o alerta de faixa saem desta mesma leitura.
        */
       .eq("ano", ano)
+      // A ordem base, pela previsão; a tabela é reordenada pela janela da carga (`pelaJanela`, spec 029 item 4).
       .order("previsao_inicio"),
     supabase
       .from("instrutor_disciplina")
@@ -193,18 +229,32 @@ export default async function FichaDoInstrutor({
    */
   /*
    * ⚠️ **A MÉDIA SEMANAL É A DA `RN-DIST-02`** (FR-013.3 da spec 016): a que a view entrega (das semanas cadastradas
-   *    da disciplina) e, sem ela, a CH dividida pelas semanas da janela efetiva — a mesma média na lista e no
-   *    alerta de faixa. Sem a de reserva, a atribuição sem `semanas` ficava fora do alerta, mesmo com janela.
+   *    da disciplina) e, sem ela, a CH dividida pelas semanas da janela — a mesma média na lista e no alerta de
+   *    faixa. Sem a de reserva, a atribuição sem `semanas` ficava fora do alerta, mesmo com janela.
+   * ⚠️ **A JANELA É A DA CARGA** (spec 029, item 4, `FR-004`; D-9 a D-11): a previsão da view recortada pelo período
+   *    da turma, e o período inteiro quando a previsão não o toca (`janelaDaCarga`, o ponto único). Ela alimenta, daqui
+   *    para baixo, a coluna «Janela prevista», a média de reserva «(pela janela)», o alerta lilás e a ordem da tabela —
+   *    e nenhum deles lê mais `previsao_*` cru. A média cadastrada continua vencendo (D-10).
    */
   const comMedia = (janelasDoAno ?? []).map((a) => {
+    /*
+     * ⚠️ O TIPO GERADO LÊ O EMBUTIDO DA VIEW COMO LISTA, e o PostgREST o devolve como OBJETO (muitos-para-um: a linha
+     *    aponta para uma turma) — o mesmo caso de `regimeEmbutido`, na ficha da turma. Aceitar as duas formas: lido
+     *    pela forma errada, o período sairia nulo e o recorte não aconteceria, sem erro nenhum.
+     */
+    const turma: PeriodoEmbutido | undefined = Array.isArray(a.turma) ? a.turma[0] : a.turma;
+    const janela = janelaDaCarga(
+      { inicio: a.previsao_inicio, termino: a.previsao_termino },
+      { inicio: turma?.data_inicio ?? null, termino: turma?.data_termino ?? null },
+    );
     const cadastrada = a.media_semanal === null ? null : Number(a.media_semanal);
     const media = mediaSemanalDaAtribuicao({
       mediaCadastrada: cadastrada,
       tempos: Number(a.tempos_previstos ?? 0),
-      inicio: a.previsao_inicio,
-      termino: a.previsao_termino,
+      inicio: janela.inicio,
+      termino: janela.termino,
     });
-    return { ...a, media, mediaDaJanela: cadastrada === null && media !== null };
+    return { ...a, janela, media, mediaDaJanela: cadastrada === null && media !== null };
   });
   const atribuicoes =
     janelasDoAno === null
@@ -216,13 +266,14 @@ export default async function FichaDoInstrutor({
             disciplina: a.nome_disciplina as string,
             curso: a.curso_codigo as string,
             turma: a.turma_codigo as string,
-            inicio: a.previsao_inicio,
-            termino: a.previsao_termino,
+            inicio: a.janela.inicio,
+            termino: a.janela.termino,
             tempos: Number(a.tempos_previstos ?? 0),
             semanas: a.semanas,
             mediaSemanal: a.media,
             mediaDaJanela: a.mediaDaJanela,
-          }));
+          }))
+          .sort(pelaJanela);
 
   const ativo = instrutor.status === "ativo";
 
@@ -246,8 +297,8 @@ export default async function FichaDoInstrutor({
             semanasDoAno(
               cargaPorSemana(
                 comMedia.map((a) => ({
-                  inicio: a.previsao_inicio,
-                  termino: a.previsao_termino,
+                  inicio: a.janela.inicio,
+                  termino: a.janela.termino,
                   mediaSemanal: a.media,
                 })),
               ),

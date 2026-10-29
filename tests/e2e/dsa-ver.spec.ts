@@ -543,7 +543,8 @@ test.describe("`FR-011` · os três caminhos clicáveis até o DSA", () => {
 
   /*
    * ⚠️ **ITEM 7 DO BLOCO 11**: o cartão da turma no `/inicio` perdeu o «Abrir DSA» — o DSA publicado da semana está
-   *    logo abaixo, no papel (RD-7). O caso agora garante a ausência, para o botão não voltar por cópia.
+   *    acima, no papel (RD-7; no topo do Início desde a spec 029, FR-008). O caso agora garante a ausência, para o
+   *    botão não voltar por cópia.
    */
   test("o cartão da turma no `/inicio` não tem mais o «Abrir DSA» (Bloco 11, item 7)", async ({
     page,

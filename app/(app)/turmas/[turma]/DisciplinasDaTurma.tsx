@@ -239,11 +239,20 @@ export function DisciplinasDaTurma({
   hoje,
   executadaDaTurma,
   foraDoDsa,
+  podeLerInstrutores,
+  habilitadosLidos,
 }: {
   readonly linhas: readonly LinhaDaGradeDeDisciplinas[];
   readonly turmaCodigo: string;
   readonly escala: EscalaDeAntiguidade;
   readonly podeEditar: boolean;
+  /**
+   * O perfil tem `instrutores.ler`? Decidido no servidor (`pode`), e é o que separa o «você não vê» do «não há» nas
+   * listas de instrutor do detalhe — a RLS de `instrutores` e `instrutor_disciplina` é tudo ou nada (FR-006 da spec 029).
+   */
+  readonly podeLerInstrutores: boolean;
+  /** A leitura dos habilitados deu certo? `false` = falhou, e a lista vazia NÃO é «nenhum habilitado» (D-16). */
+  readonly habilitadosLidos: boolean;
   /** Quantos dias antes do início a disciplina sem instrutor passa a avisar — de `config_parametros`. */
   readonly avisoInicioDias: number;
   readonly hoje: string;
@@ -350,6 +359,8 @@ export function DisciplinasDaTurma({
                 unidades={l.unidades}
                 escala={escala}
                 podeEditar={podeEditar}
+                podeLerInstrutores={podeLerInstrutores}
+                habilitadosLidos={habilitadosLidos}
               />
 
               {foraDoDsa ? (
@@ -358,6 +369,8 @@ export function DisciplinasDaTurma({
                   turmaDisciplinaId={l.turmaDisciplinaId}
                   registros={registrosDaLinha(l)}
                   instrutores={l.habilitados}
+                  podeLerInstrutores={podeLerInstrutores}
+                  habilitadosLidos={habilitadosLidos}
                   escala={escala}
                   podeGravar={foraDoDsa.podeGravar}
                   hoje={hoje}

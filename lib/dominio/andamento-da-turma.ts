@@ -29,12 +29,23 @@
  *   em `capacidadeDiaria`.
  * - **`RN-DEG-02`** — *regra normativa vira alerta, nunca bloqueio.* `emAtraso` é alerta; nada neste
  *   módulo impede ação nenhuma.
+ * - **RD-3 no saldo** (spec 029, Bloco 14, item 5, `FR-005`; fecha a `PEND-026-1` e supera a D-15 da spec 026) —
+ *   > *"regra: o saldo e a capacidade seguem o regime «desde» (Desta semana em diante, no DSA), e não só o de Editar
+ *   > turma."* — Bernardo Villas Boas, 26/10/2026 (`docs/correcoes/plano-de-correcoes-em-blocos.md`, `PEND-026-1`)
+ *
+ *   A capacidade soma, **dia útil a dia útil**, o TA/dia do regime **da semana** de cada dia, pela mesma
+ *   `regimeDaSemana` do DSA (gravado ou *só esta semana* > *desde* > *Editar turma* > curso; D-14 da spec 026) — a
+ *   ordem **não** é copiada aqui, e a guarda de `andamento-da-turma.test.ts` confere que este módulo a chama. O «do
+ *   curso» do saldo continua sendo o **padrão vigente hoje** (D-12 da spec 029), e não o do DSA (exceção > padrão na
+ *   data da semana): é o que faz só as turmas com «desde» ou *só esta semana* mudarem.
  *
  * ⚠️ **TypeScript puro: sem `next`, sem `react`, sem `supabase`.** `hoje`, os feriados e o regime
  * chegam **por parâmetro**, como em todo módulo desta pasta — é o que permite provar as contas com
  * casos sintéticos, sem subir banco. E `hoje` é `string` `yyyy-mm-dd`, nunca `Date`: a convenção da
  * pasta inteira, porque comparação lexicográfica de data ISO é exata e não tem fuso.
  */
+import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
+import { regimeDaSemana } from "@/lib/dominio/dsa/regime-da-semana";
 
 /** O regime vigente do curso, como `vw_cursos_regime_vigente` o entrega. */
 export type RegimeDoCurso = {
@@ -83,7 +94,16 @@ export type Andamento = {
   readonly percentual: number | null;
   /** `true` quando nada foi lançado — a tela diz "ainda sem lançamentos", e não `0%`. */
   readonly semLancamentos: boolean;
+  /**
+   * O TA/dia — com a capacidade calculada, o do **primeiro dia útil** da janela (D-13 da spec 029): é o regime em
+   * vigor, e é por ele que `saldoEmDias` divide. Sem dia útil na janela, o do regime da turma.
+   */
   readonly capacidadeDiaria: number | null;
+  /**
+   * Spec 029 (D-13): a faixa do TA/dia na janela **quando ele varia** de uma semana para outra — a ficha escreve
+   * *"8 a 9 TA/dia"*. `null` quando é um só, e sempre que a capacidade não foi calculada.
+   */
+  readonly faixaDiaria: { readonly minima: number; readonly maxima: number } | null;
   readonly diasUteis: number | null;
   readonly capacidade: number | null;
   /** **O "Saldo de capacidade (TA)"** (`D-NAV-4`): `capacidade − restante`. */
@@ -93,6 +113,52 @@ export type Andamento = {
   /** `status === "ativa" && saldo < 0` — só com capacidade calculada (`RF-INI-01`). */
   readonly emAtraso: boolean;
 };
+
+/**
+ * O regime **das semanas** da turma — o que o DSA guarda além do regime de *Editar turma* (spec 029, `FR-005`; RD-3).
+ *
+ * ⚠️ **`tempos` NULO É «O DO CURSO»**, nas duas listas — é o que a linha sem regime nomeado significa no banco
+ *    (`dsa_regime_da_semana` sem retrato; `turma_regime_vigencia` sem regime).
+ * ⚠️ **`temposDoCurso` VEM À PARTE, E É O PADRÃO VIGENTE HOJE** (D-12 da spec 029): o `regime` de `andamentoDaTurma`
+ *    chega já fundido por `regimeEfetivo` (*Editar turma* > curso), e o «desde» de regime nulo volta ao **curso**
+ *    mesmo quando há regime em *Editar turma* — sem este campo, não haveria como chegar a ele.
+ */
+export type RegimesDasSemanas = {
+  /** O regime gravado com a semana ao salvar, ou o «só esta semana» — uma linha ativa por semana ISO. */
+  readonly registros: readonly {
+    readonly ano: number;
+    readonly semana: number;
+    readonly origem: "gravado" | "so_esta_semana";
+    readonly tempos: number | null;
+  }[];
+  /** As vigências «desta semana em diante»: `vigenteDe` é sempre uma segunda-feira, `aaaa-mm-dd`. */
+  readonly vigencias: readonly { readonly vigenteDe: string; readonly tempos: number | null }[];
+  readonly temposDoCurso: number | null;
+};
+
+/** As exceções do regime de UMA turma como a leitura as entrega — sem o «do curso», que cada leitor já lê. */
+export type ExcecoesDoRegime = Omit<RegimesDasSemanas, "temposDoCurso">;
+
+/**
+ * O 5º parâmetro de `andamentoDaTurma` a partir das exceções lidas e do regime vigente do curso.
+ *
+ * ⚠️ **A D-12 DA SPEC 029 MORA AQUI, E NÃO NOS QUATRO LEITORES**: o «do curso» do saldo é o **padrão vigente hoje**
+ *    (`vw_cursos_regime_vigente.regime_padrao_tempos`), o mesmo número que o saldo já usava — a exceção do curso e o
+ *    padrão de outra data não entram. Escrito uma vez, os quatro leitores (Início, Avisos, `/turmas`, ficha) não podem
+ *    discordar sobre ele.
+ * ⚠️ **SEM EXCEÇÕES LIDAS, `undefined`** — e `andamentoDaTurma` faz a conta de antes do Bloco 14 (FR-005.3).
+ */
+export function regimesDasSemanas(
+  excecoes: ExcecoesDoRegime | undefined,
+  doCurso: RegimeDoCurso,
+): RegimesDasSemanas | undefined {
+  if (excecoes === undefined) return undefined;
+  return {
+    registros: excecoes.registros,
+    vigencias: excecoes.vigencias,
+    temposDoCurso: doCurso.regimePadraoTempos,
+  };
+}
 
 /** Meia-noite UTC de uma data ISO, ou `null` se o texto não for uma data. */
 function meiaNoiteUtc(iso: string): number | null {
@@ -141,12 +207,28 @@ export function diasUteisEntre(
   termino: string,
   feriadosDiaInteiro: readonly string[],
 ): number {
+  return datasUteisEntre(hoje, termino, feriadosDiaInteiro).length;
+}
+
+/**
+ * As **datas** dos dias úteis que `diasUteisEntre` conta, em ordem — a mesma regra, devolvendo cada dia.
+ *
+ * ⚠️ **É UMA REGRA SÓ, COM DUAS SAÍDAS** (spec 029, `FR-005`): a capacidade passou a somar o TA/dia **de cada dia**
+ *    (o da semana dele), e para isso precisa saber **quais** dias contam, não só quantos. Uma segunda varredura de
+ *    calendário escrita para a soma seria o lugar onde as pontas, o fim de semana ou o feriado repetido divergiriam
+ *    da contagem — e `diasUteis` e `capacidade` deixariam de falar dos mesmos dias sem erro nenhum.
+ */
+function datasUteisEntre(
+  hoje: string,
+  termino: string,
+  feriadosDiaInteiro: readonly string[],
+): readonly string[] {
   const de = meiaNoiteUtc(hoje);
   const ate = meiaNoiteUtc(termino);
-  if (de === null || ate === null || ate < de) return 0;
+  if (de === null || ate === null || ate < de) return [];
 
   const feriados = new Set(feriadosDiaInteiro);
-  let uteis = 0;
+  const uteis: string[] = [];
 
   for (let t = de; t <= ate; t += UM_DIA) {
     const data = new Date(t);
@@ -157,7 +239,7 @@ export function diasUteisEntre(
     const iso = data.toISOString().slice(0, 10);
     if (feriados.has(iso)) continue;
 
-    uteis += 1;
+    uteis.push(iso);
   }
 
   return uteis;
@@ -218,11 +300,81 @@ export function percentualExecutado(prevista: number, executada: number): number
   return Math.round(((Number(executada) || 0) / prev) * 100);
 }
 
+/**
+ * O TA/dia de um dia útil — **o da semana dele** (spec 029, `FR-005.1`), ou o do regime da turma quando não há
+ * semanas.
+ *
+ * ⚠️ **A ORDEM É A DE `regimeDaSemana`, CHAMADA, NUNCA COPIADA** (D-14 da spec 026): gravado ou *só esta semana* >
+ *    *desde* (o de maior segunda-feira ≤ a da semana) > *Editar turma* > curso. Uma segunda cópia dela aqui faria a
+ *    ficha e a grade do DSA discordarem da mesma semana em silêncio no dia em que uma das duas mudasse.
+ * ⚠️ **O «EDITAR TURMA» É O `regime` JÁ FUNDIDO** por `regimeEfetivo`: sem regime nomeado na turma, ele é o padrão do
+ *    curso, e o passo «turma» dá o mesmo número que o passo «curso» daria — a fonte muda, o TA/dia não.
+ * ⚠️ **O NULO DO REGISTRO E DO «DESDE» É O DO CURSO DE HOJE** (D-12 da spec 029): `temposDoCurso`, nunca o de
+ *    *Editar turma*. Sem ele também (curso sem padrão vigente), o dia fica **sem TA/dia** — e a capacidade inteira,
+ *    sem regime (D-14 da spec 029), o que `andamentoDaTurma` decide.
+ * ⚠️ **SÓ OS TA PRESENCIAIS VARIAM POR SEMANA**, como em `regimeEfetivo`: o TA/dia sai de `capacidadeDiaria`, que
+ *    continua escolhendo pela modalidade da turma (`RN-MAT-04`) e chamando zero e negativo de "sem dado". A EAD nem
+ *    chega aqui: ela sai antes, em `andamentoDaTurma`.
+ * ⚠️ **UMA RESOLUÇÃO POR SEMANA**: os dias da mesma semana ISO têm o mesmo regime, e a resposta fica guardada pela
+ *    segunda-feira.
+ */
+function temposDoDiaPelaSemana(
+  modalidade: string,
+  regime: RegimeDoCurso,
+  semanas: RegimesDasSemanas | undefined,
+): (data: string) => number | null {
+  const doRegime = capacidadeDiaria(modalidade, regime);
+  /* Sem as semanas, o TA/dia é um só para a janela inteira — a conta de antes do Bloco 14 (FR-005.3). */
+  if (semanas === undefined) return () => doRegime;
+
+  const registroDaSemana = new Map(
+    semanas.registros.map((r) => [`${r.ano}-${r.semana}`, r] as const),
+  );
+  const vigenciasDaTurma = semanas.vigencias.map((v) => ({
+    vigenteDe: v.vigenteDe,
+    regime: v.tempos,
+  }));
+  const porSegunda = new Map<string, number | null>();
+
+  return (data) => {
+    const semana = semanaIsoDe(data);
+    /* Data fora do formato não acontece (as datas saem de `datasUteisEntre`); se acontecer, é dia sem TA/dia. */
+    if (semana === null) return null;
+    if (porSegunda.has(semana.segunda)) return porSegunda.get(semana.segunda) ?? null;
+    const registro = registroDaSemana.get(`${semana.ano}-${semana.numero}`);
+    const { regime: tempos } = regimeDaSemana<number | null>({
+      segunda: semana.segunda,
+      registro:
+        registro === undefined
+          ? null
+          : { regime: registro.tempos ?? semanas.temposDoCurso, origem: registro.origem },
+      vigenciasDaTurma,
+      daTurma: regime.regimePadraoTempos,
+      doCurso: semanas.temposDoCurso,
+    });
+    const ta = capacidadeDiaria(modalidade, { ...regime, regimePadraoTempos: tempos });
+    porSegunda.set(semana.segunda, ta);
+    return ta;
+  };
+}
+
+/**
+ * O andamento da turma — o único lugar que decide `emAtraso` (`SC-006`).
+ *
+ * `semanas` (spec 029, `FR-005`) é o regime das semanas que o DSA guarda; ausente, a conta é a de antes do Bloco 14,
+ * com um TA/dia só para a janela inteira. Sem nenhum registro de semana dentro da janela e sem «desde» com início até o
+ * término, o resultado é **idêntico** ao de antes, campo a campo (FR-005.3) — a não regressão está no teste de unidade.
+ * ⚠️ **O «DESDE» ANTERIOR À JANELA VALE NELA INTEIRA** (o de maior segunda-feira ≤ a da semana, `regimeDaSemana`): o de
+ *    meses atrás muda o TA/dia de todos os dias dela — o caso S5 prova (81, e não 72). E o registro **gravado** dentro
+ *    da janela conta mesmo sem «desde» nem «só esta semana»: a semana salva com o regime do curso numa turma que depois
+ *    ganhou regime em *Editar turma* soma o TA/dia do curso, e não o da turma (o caso do limite do «idêntico», no teste).
+ */
 export function andamentoDaTurma(
   turma: TurmaParaAndamento,
   regime: RegimeDoCurso,
   feriadosDiaInteiro: readonly string[],
   hoje: string,
+  semanas?: RegimesDasSemanas,
 ): Andamento {
   /*
    * ⚠️ **SPEC 024 (FR-018): A EAD NÃO CONTA TA EM LUGAR NENHUM** — o andamento dela é da Divisão de Ensino a Distância
@@ -236,6 +388,7 @@ export function andamentoDaTurma(
       percentual: null,
       semLancamentos: true,
       capacidadeDiaria: null,
+      faixaDiaria: null,
       diasUteis: null,
       capacidade: null,
       saldo: null,
@@ -266,6 +419,7 @@ export function andamentoDaTurma(
     percentual,
     semLancamentos,
     capacidadeDiaria: capDiaria,
+    faixaDiaria: null,
   };
 
   if (turma.dataTermino === null || turma.dataTermino === "") {
@@ -280,18 +434,6 @@ export function andamentoDaTurma(
     };
   }
 
-  if (capDiaria === null) {
-    return {
-      ...base,
-      diasUteis: null,
-      capacidade: null,
-      saldo: null,
-      saldoEmDias: null,
-      situacaoDaCapacidade: "sem_regime",
-      emAtraso: false,
-    };
-  }
-
   /*
    * ⚠️ **DE AMANHÃ, E NÃO DE HOJE** (D-COR-2, FR-014.2): a executada já conta o lançado até hoje, inclusive.
    *    Num sábado ou domingo nada muda — os dias úteis começam na segunda dos dois jeitos.
@@ -302,12 +444,52 @@ export function andamentoDaTurma(
     turma.inicioDaCapacidade && turma.inicioDaCapacidade > amanha
       ? turma.inicioDaCapacidade
       : amanha;
-  const diasUteis = diasUteisEntre(inicio, turma.dataTermino, feriadosDiaInteiro);
-  const capacidade = diasUteis * capDiaria;
+  /*
+   * ⚠️ **SPEC 029 (`FR-005`): O TA/DIA DE CADA DIA ÚTIL É O DA SEMANA DELE**, e a capacidade é a soma, dia útil a dia
+   *    útil. Antes do Bloco 14 ela era `dias úteis × um TA/dia` (Editar turma > curso, D-15 da spec 026) — e o regime
+   *    trocado no relógio do DSA valia para a grade e não para o saldo. Os dias são os mesmos que `diasUteisEntre`
+   *    conta: `diasUteis` continua sendo a contagem de sempre.
+   */
+  const temposDoDia = temposDoDiaPelaSemana(turma.modalidade, regime, semanas);
+  const datas = datasUteisEntre(inicio, turma.dataTermino, feriadosDiaInteiro);
+  const tempos = datas.map(temposDoDia);
+  /* D-13: o TA/dia do primeiro dia útil; sem dia útil na janela, o do regime da turma, como antes. */
+  const taDoPrimeiroDia = datas.length > 0 ? (tempos[0] ?? null) : capDiaria;
+
+  /*
+   * ⚠️ **D-14 DA SPEC 029: UM DIA ÚTIL SEM TA/DIA DEIXA A CAPACIDADE INTEIRA SEM REGIME** — sem saldo e sem veredito,
+   *    o lado seguro da `RN-DEG-01`. Somar só os dias com regime subestimaria a capacidade e inventaria um «em atraso».
+   *    Sem as semanas, é a condição de antes (o regime da turma sem TA/dia), na mesma ordem: depois do término.
+   */
+  if (taDoPrimeiroDia === null || tempos.some((t) => t === null)) {
+    return {
+      ...base,
+      capacidadeDiaria: null,
+      diasUteis: null,
+      capacidade: null,
+      saldo: null,
+      saldoEmDias: null,
+      situacaoDaCapacidade: "sem_regime",
+      emAtraso: false,
+    };
+  }
+
+  const diasUteis = datas.length;
+  const validos = tempos.filter((t): t is number => t !== null);
+  const minima = Math.min(taDoPrimeiroDia, ...validos);
+  const maxima = Math.max(taDoPrimeiroDia, ...validos);
+  /*
+   * ⚠️ **COM UM TA/DIA SÓ, A CONTA É A MULTIPLICAÇÃO DE ANTES**, e não a soma — o mesmo número por construção
+   *    (FR-005.3), sem depender de a soma repetida dar exatamente o produto.
+   */
+  const capacidade =
+    minima === maxima ? diasUteis * taDoPrimeiroDia : validos.reduce((soma, t) => soma + t, 0);
   const saldo = capacidade - restante;
 
   return {
     ...base,
+    capacidadeDiaria: taDoPrimeiroDia,
+    faixaDiaria: minima === maxima ? null : { minima, maxima },
     diasUteis,
     capacidade,
     saldo,
@@ -315,8 +497,10 @@ export function andamentoDaTurma(
      * ⚠️ **`floor` ARREDONDA PARA BAIXO TAMBÉM NO NEGATIVO, e é o que se quer:** −20 TA sobre 8 TA/dia
      *    dá −3, não −2. Faltam três dias de capacidade, e o conservador é o número que não subestima
      *    o que falta.
+     * ⚠️ **D-13 DA SPEC 029: DIVIDE PELO TA/DIA DO PRIMEIRO DIA ÚTIL** da janela — o regime em vigor —, e não pela
+     *    média: com o TA/dia variando, a média seria um número que nenhum dia tem.
      */
-    saldoEmDias: Math.floor(saldo / capDiaria),
+    saldoEmDias: Math.floor(saldo / taDoPrimeiroDia),
     situacaoDaCapacidade: "calculada",
     emAtraso: turma.status === "ativa" && saldo < 0,
   };

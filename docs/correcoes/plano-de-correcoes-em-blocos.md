@@ -40,6 +40,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **11** | Lançamento do DSA e Início com o DSA publicado — ✅ **concluído em 26/10/2026** | uma migration, que só acrescenta | 026 |
 | **12** | Excluir no Calendário: exclusão lógica, sem bloqueio, com alerta de impacto (D-COR-7) — ✅ **concluído em 27/10/2026** | uma migration, que só acrescenta | 027 |
 | **13** | Abertura com a moeda do CIAARA na raiz — ✅ **concluído em 28/10/2026** | não | 028 |
+| **14** | DSA (TFM sem teto, EI sem «O que é», Salvar alteração), Início em nova ordem e as pendências dos Blocos 10 e 11 — 🟨 **em conferência** | uma migration, que só acrescenta | 029 |
 
 ---
 
@@ -535,14 +536,15 @@ adversarial achou **sete** defeitos e os sete foram corrigidos no mesmo PR (`spe
 _Na aprovação do Bloco 11, Bernardo mandou registrar as três primeiras para o próximo bloco; na do Bloco 12, a quarta.
 Entram no próximo `/corrigir`, no bloco em que couberem; o texto de cada uma está no bloco de origem._
 
-- **`PEND-025-5`** (Bloco 10) — **regra: a janela da carga de uma turma é o período da própria turma (início–fim)**, e
-  não a previsão da disciplina, que tem data de um ano só. Hoje a `CAHO 2027`, no remoto, conta a carga no ano certo, mas
-  o alerta por semana não a vê.
-- **`PEND-026-1`** (Bloco 11) — **regra: o saldo e a capacidade seguem o regime «desde»** (*Desta semana em diante*, no
-  DSA), e não só o de *Editar turma*. No Bloco 11 a D-15 ficou como estava (o saldo do Início, de `/turmas` e da ficha
-  no regime de *Editar turma*); esta é a alternativa dela, para o próximo bloco.
-- **`PEND-026-2`** (Bloco 11) — o seletor canônico de instrutor diz *«o seu perfil não os alcança»* para **qualquer**
-  lista vazia: distinguir *«não há»* de *«você não vê»* (gotcha 4) quando quem chama esvazia a lista por outro motivo.
+- ~~**`PEND-025-5`**~~ (Bloco 10) — ✅ **fechada pelo Bloco 14** (spec 029, FR-004): a janela da carga é a previsão
+  recortada pelo período da turma, e o período inteiro quando ela não o toca (D-9). *(Registro anterior: a janela da
+  carga de uma turma é o período da própria turma, e não a previsão da disciplina, que tem data de um ano só; hoje a
+  `CAHO 2027`, no remoto, conta a carga no ano certo, mas o alerta por semana não a vê.)*
+- ~~**`PEND-026-1`**~~ (Bloco 11) — ✅ **fechada pelo Bloco 14** (spec 029, FR-005): o saldo e a capacidade seguem o
+  regime da semana do DSA, dia útil a dia útil; a D-15 da spec 026 ficou superada.
+- ~~**`PEND-026-2`**~~ (Bloco 11) — ✅ **fechada pelo Bloco 14** (spec 029, FR-006). ⚠️ A premissa estava invertida: a
+  frase *«o seu perfil não os alcança»* **nunca** aparecia; todo vazio dizia *«Nada cadastrado ainda»*, até o que vinha de
+  filtro. Agora quem chama diz o motivo, e o «você não vê» vem da permissão.
 - **`PEND-027-1`** (Bloco 12) — a exclusão física da D-COR-6 (`public.excluir_feriado`) ficou sem uso na tela e segue
   chamável por RPC direta pelo Admin e pelo Encarregado (só apaga linha sem registro). Revogar o `execute` é migration
   que altera permissão: portão 9.4.
@@ -619,6 +621,36 @@ _Pedido de Bernardo Villas Boas, 27/10/2026, pelo `/corrigir`._ Spec `028-bloco-
    `lib/design/vocabulario.ts`, a vitrine).
 
 **Pendências novas:** nenhuma.
+
+---
+
+## Bloco 14 — DSA, Início e pendências dos Blocos 10 e 11 (spec própria) — 🟨 EM CONFERÊNCIA
+
+_Pedido de Bernardo Villas Boas, 28/10/2026, pelo `/corrigir` — chamado de «Bloco 12» no pedido; o 12 e o 13 já
+estavam usados (D-1)._ Spec `029-bloco-14-dsa-inicio-e-pendencias`, ramo `fix/BLOCO-14-dsa-inicio-e-pendencias`, um PR.
+Regras novas: **RP-9** (`regras-da-publicacao-do-dsa.md`) e **RT-8** (`padroes-de-tela.md`); emenda da **RN-DIST-03 (a)**
+do documento 04 (decisão de 27/10/2026). Os itens 1 a 3 mexem no fluxo do DSA, não no papel: o merge não espera virada
+de semana. **Uma migration, que só acrescenta** (`20261028182926_estudo_individual_sem_descricao.sql`), ✅ **no remoto
+desde 29/10/2026** pelo rito completo: backup `remoto-20261029-011810.sql`, **101 e 101** migrations e impressão digital
+**igual nos dois** bancos (2.737 objetos, `32ba63c9…`); nenhuma linha mudou. **PR #105**, CI verde nos três blocos.
+
+1. **TFM sem teto**: o DSA não recusa nem avisa o TFM acima de 6 TA; o TFM vira disciplina comum (só o recomendado de 25
+   o alcança, D-2); os parâmetros ficam inertes (D-3); a sincronização e a carga antiga também (D-4).
+2. **Estudo Individual sem «O que é»**: opcional na tela, na ação e no banco (CHECK por categoria); grava nulo; o papel e
+   a tela mostram o texto do EI.
+3. **Salvar alteração (RP-9)**: guarda a alteração (conta na CH) sem mudar o papel publicado; selo «Em alteração ·
+   salva»; Descartar volta ao último salvo.
+4. **`PEND-025-5`**: a janela da carga recortada pelo período da turma (a CAHO 2027 entra no alerta de 2027).
+5. **`PEND-026-1`**: o saldo e a capacidade pelo regime da semana do DSA (no remoto: 0 turmas mudam hoje).
+6. **`PEND-026-2`**: o seletor de instrutor vazio diz o motivo certo.
+7. **RT-8**: a turma arquivada conta nas estatísticas e nos cartões do ano dela (medido na cópia do remoto, 2026, sem
+   recorte: Concluídas 0 → 13 e Canceladas 0 → 8 nos cartões do Início).
+8. **Início em nova ordem**: os DSA publicados no topo, com o papel enquadrado na janela; depois os cartões e o carrossel.
+
+**Pendências novas, achadas e não corrigidas** (texto na spec 029, §9): **`PEND-029-1`** (a «Atrasada» do DSA usa a
+previsão de um ano só, `vw_disciplinas_execucao`), **`PEND-029-2`** (habilitado inativo na ficha da turma),
+**`PEND-029-3`** (o «do curso» do saldo × o do DSA, com o D20 residual), **`PEND-029-4`** (turma sem período continua
+invisível ao alerta) e **`PEND-029-5`** (o `TipoTeto` do documento 04 nunca existiu no código).
 
 ---
 

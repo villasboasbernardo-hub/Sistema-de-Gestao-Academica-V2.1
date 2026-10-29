@@ -234,6 +234,36 @@ describe("`RF-EXTRA-01` e `Q-8` · a atividade não letiva", () => {
       "Atividade de todas as turmas não leva disciplina.",
     );
   });
+
+  /*
+   * ⚠️ **FR-002 da spec 029 (Bloco 14, item 2) · O «O QUE É» VAZIO PASSA NO ESQUEMA E CHEGA NULO** *(decisão de
+   *    Bernardo Villas Boas, 27/10/2026; D-5)*. O esquema não conhece a categoria — o tipo é um `uuid` —, então ele não
+   *    pode saber se a atividade é Estudo Individual: a obrigatoriedade fora do EI passou para `recusaPelaCategoria`
+   *    (`tests/unidade/categoria-pelo-tipo.test.ts`) e para o `CHECK` `ativ_descricao_fora_do_estudo_individual`.
+   *    Aqui vale a convenção do banco: vazio é AUSÊNCIA, e não string vazia.
+   * ⚠️ **É O CASO QUE VIRA**: até a spec 029 o esquema recusava com *"Escreva o que é a atividade."* para toda
+   *    categoria — e com isso o Estudo Individual sem descrição nunca chegava à ação.
+   */
+  it("spec 029, FR-002 · a descrição VAZIA é aceita e chega NULA", () => {
+    const r = esquemaDoBloco.safeParse({ ...atividadeBase, descricao: "" });
+    expect(r.success ? null : r.error.issues[0]?.message).toBeNull();
+    expect(r.success && r.data.tipo === "atividade" ? r.data.descricao : "não chegou").toBeNull();
+  });
+
+  it("spec 029, FR-002 · só de espaços também chega nula, e a nula passa", () => {
+    const branca = esquemaDoBloco.safeParse({ ...atividadeBase, descricao: "   " });
+    expect(
+      branca.success && branca.data.tipo === "atividade" ? branca.data.descricao : "não chegou",
+    ).toBeNull();
+    expect(recusa({ ...atividadeBase, descricao: null })).toBeNull();
+  });
+
+  it("controle: a descrição escrita chega APARADA, e não nula", () => {
+    const r = esquemaDoBloco.safeParse({ ...atividadeBase, descricao: "  Leitura dirigida  " });
+    expect(r.success && r.data.tipo === "atividade" ? r.data.descricao : "não chegou").toBe(
+      "Leitura dirigida",
+    );
+  });
 });
 
 describe("`Q-7` · o Estudo Individual da semana", () => {
