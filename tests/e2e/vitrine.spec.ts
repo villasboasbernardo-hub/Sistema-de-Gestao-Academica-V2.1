@@ -119,6 +119,22 @@ test.describe("US1 · a vitrine mostra o vocabulário de COMPONENTES inteiro", (
         await page.locator('[data-slot="alternar-grupo"]').first().click();
       },
     },
+    /* Spec 030 (Bloco 15, `FR-001`): a tela cheia do carrossel só monta depois do clique num item. */
+    ...[
+      "tela-cheia",
+      "titulo-da-tela-cheia",
+      "conteudo-da-tela-cheia",
+      "sair-da-tela-cheia",
+      "tela-cheia-anterior",
+      "tela-cheia-proximo",
+    ].map((slot) => ({
+      slot,
+      motivo:
+        "vive dentro da sobreposição da tela cheia do carrossel, montada só depois do clique num item",
+      acionar: async (page: Page) => {
+        await page.locator('[data-slot="abrir-tela-cheia"]').first().click();
+      },
+    })),
     /* Spec 021 (Bloco 6, RC-6): o pedido de justificativa só monta quando a "gravação" da amostra o pede. */
     ...["pedido-de-justificativa", "justificativa-da-correcao", "confirmar-justificativa"].map(
       (slot) => ({

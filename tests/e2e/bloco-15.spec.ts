@@ -541,10 +541,19 @@ test("itens 1 e 2 · no Início: as setas nos cantos e nas laterais, e a tela ch
     await page.keyboard.press("Escape");
     await expect(tela).toHaveCount(0);
 
-    /* Enter no papel abre; o ícone «Sair da tela cheia» fecha. */
-    await carrossel
-      .locator('[data-slot="item-do-carrossel"][data-atual="true"] [data-slot="abrir-tela-cheia"]')
-      .focus();
+    /*
+     * Enter no papel abre, e UM `Esc` fecha. ⚠️ Aberta pelo teclado, a tela cheia punha o foco no ícone, o foco visível
+     * abria a dica dele, e o primeiro `Esc` fechava só a dica (medido em 29/10/2026). Depois, o ícone também fecha.
+     */
+    const papelAtual = carrossel.locator(
+      '[data-slot="item-do-carrossel"][data-atual="true"] [data-slot="abrir-tela-cheia"]',
+    );
+    await papelAtual.focus();
+    await page.keyboard.press("Enter");
+    await expect(tela).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(tela, "um Esc não fechou a tela cheia aberta pelo teclado").toHaveCount(0);
+    await papelAtual.focus();
     await page.keyboard.press("Enter");
     await expect(tela).toBeVisible();
     expect(await dicaDe(page, '[data-slot="sair-da-tela-cheia"]')).toBe("Sair da tela cheia");

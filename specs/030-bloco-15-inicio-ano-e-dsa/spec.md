@@ -257,3 +257,30 @@ item 4 deixa de **desenhar** uma linha que nunca foi registro.
 
 `pnpm verificar` e, sem a ponta a ponta inteira (regra de 26/10/2026), pgTAP e RLS; localmente, a ponta a ponta dos
 arquivos afetados com 1 processo; a suíte inteira no CI. Roteiro de conferência em `roteiro-de-conferencia.md`.
+
+## 11. O que a verificação achou (29/10/2026)
+
+- **A-1 · O `Suspense` do seletor de ano punha DOIS seletores no DOM** (`SC-003`). Medido por uma sonda temporária
+  (descartada) contra o build local: no `load` de `/turmas`, `/instrutores?ano=2027` e `/inicio`, dois `<select>` — a
+  reserva do `Suspense`, com o ano guardado, e o conteúdo, com o do `?ano=`, em pedaços de streaming separados, ocultos
+  até a troca; 1,5 s depois, um. Em `/instrutores?ano=2027` a cópia da casca dizia 2026. Quem pegou foi o modo estrito do
+  `bloco-10` (o caso do link com `?ano=`), no local e no CI. **Conserto:** o seletor sai do `Suspense` — toda página com
+  o cabeçalho é dinâmica (o layout lê cookies), e `useSearchParams` não suspende; medido de novo, um `<select>` no
+  `load` das quatro páginas. **Guarda:** contagem imediata no caso do item 3; com o `Suspense` de volta, ela reprovou com
+  *"/instrutores?ano=2027: mais de um seletor de ano no carregamento — esperado 1, recebido 2"*.
+- **A-2 · Aberta pelo teclado, a tela cheia pedia DOIS `Esc`.** O Radix punha o foco no ícone *Sair da tela cheia*;
+  depois de uma tecla, o foco é visível e abre a dica do ícone, que é uma camada própria — o primeiro `Esc` fechava só a
+  dica. Achado pelo caso da vitrine que abre o que só existe aberto (o diálogo seguia aberto depois do `Esc`).
+  **Conserto:** ao abrir, o foco vai para a própria sobreposição, que também ouve `←`/`→`. **Guarda:** no caso dos
+  itens 1 e 2, `Enter` no papel e um `Esc` fecham — [pendente: visto reprovar com o foco padrão de volta].
+- **A-3 · A tela cheia tem dois títulos** — o do diálogo e o do papel do DSA dentro dele; o caso mira o do diálogo por
+  `data-slot="titulo-da-tela-cheia"`.
+- **A-4 · Escolhido o dia pelo calendário da barra, a semana nova fecha o calendário**: a seção da semana é remontada
+  pela `key` de semana (a que zera a edição das assinaturas). É o que se espera de um seletor de data; o caso de
+  `dsa-ver` reabre o ícone antes de cada escolha.
+- **A-5 · Sem a linha fixa, a semana sem EI e sem técnica não tem legenda** no papel (`dsa-imprimir`): o «EI —» vinha da
+  linha fixa.
+- **A-6 · A vitrine precisa da tela cheia** (invariante I-5, `vitrine.spec.ts`): os marcadores novos do carrossel só
+  existem com ela. A amostra passou a tê-la, e os que só existem com ela aberta estão em `SO_QUANDO_ABERTO`, abertos
+  pelo próprio caso. Pego pelo CI do PR (run `40950731785`), não pela rodada local — o arquivo não estava na lista dos
+  afetados.

@@ -10,7 +10,7 @@ Confira nas duas janelas que o pedido cita (1366×768 e 1920×1080) onde o passo
 2. Clique no papel. **Esperado:** a janela inteira com o papel **ampliado ao máximo que cabe**, a legenda no alto e o
    ícone **«Sair da tela cheia»** no canto superior direito.
 3. Com 2 DSA publicados ou mais: as **setas nas laterais** e as teclas `←`/`→` trocam de papel.
-4. `Esc` fecha; o ícone também. Foque o papel com `Tab` e aperte `Enter`: abre de novo.
+4. `Esc` fecha; o ícone também. Foque o papel com `Tab` e aperte `Enter`: abre de novo — e **um** `Esc` fecha.
 
 ## 2. Setas (FR-002)
 1. *Início* → **Esperado:** a seta da semana anterior no **canto esquerdo**, a da seguinte no **canto direito**, e ao centro

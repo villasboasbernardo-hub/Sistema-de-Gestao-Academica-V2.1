@@ -299,6 +299,10 @@ export function Carrossel({
 /**
  * A sobreposição da tela cheia (Bloco 15, `FR-001`): a janela inteira, o item ampliado no centro, *Sair da tela cheia*
  * no canto superior direito e as setas nas laterais. O `Dialog` do Radix dá o `Esc`, o foco preso e a devolução do foco.
+ * ⚠️ **AO ABRIR, O FOCO VAI PARA A PRÓPRIA SOBREPOSIÇÃO, NÃO PARA O ÍCONE** (medido em 29/10/2026): o padrão do Radix
+ *    focava *Sair da tela cheia*, e — aberto pelo teclado (`Enter` no papel) — o foco visível abria a DICA do ícone, que
+ *    é uma camada própria: o primeiro `Esc` fechava só a dica, e era preciso um segundo para sair. As setas `←`/`→`
+ *    continuam valendo, porque o foco está na sobreposição que as ouve.
  */
 function TelaCheia({
   aberta,
@@ -319,13 +323,19 @@ function TelaCheia({
   readonly posicao: string;
   readonly children: React.ReactNode;
 }) {
+  const sobreposicao = React.useRef<HTMLDivElement>(null);
   return (
     <DialogPrimitivo.Root open={aberta} onOpenChange={(v) => (v ? undefined : aoFechar())}>
       <DialogPrimitivo.Portal>
         <DialogPrimitivo.Overlay className="bg-fundo fixed inset-0 z-50" />
         <DialogPrimitivo.Content
+          ref={sobreposicao}
           className="bg-fundo text-texto fixed inset-0 z-50 flex flex-col focus:outline-none"
           data-slot="tela-cheia"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            sobreposicao.current?.focus();
+          }}
           onKeyDown={(e) => {
             if (!comSetas) return;
             if (e.key === "ArrowRight") {
