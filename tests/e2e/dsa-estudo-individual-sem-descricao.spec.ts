@@ -66,7 +66,13 @@ test.beforeAll(async ({}, info) => {
   const p = info.workerIndex;
   EMAIL = emailDeTeste("dsaestudo", p);
   await criarConta(EMAIL, `USR-DSEI-${p}`);
-  S = await semearDsa(p, EMAIL);
+  /*
+   * ⚠️ UMA TURMA SÓ DESTE ARQUIVO (700 + processo): todo arquivo do DSA semeia com o número do processo do Playwright,
+   *    e por isso DIVIDE a turma — o `bloco-11-dsa`, por exemplo, publica semanas e troca o regime «desde» dela. No CI
+   *    de 29/10/2026 (PR #105) o clique na célula deste arquivo deixou de chegar à grade conforme o que os outros
+   *    arquivos tinham feito antes no mesmo processo; isolado no local, passava sempre.
+   */
+  S = await semearDsa(700 + p, EMAIL);
 });
 
 test.afterAll(async () => {
